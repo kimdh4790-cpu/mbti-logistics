@@ -230,10 +230,10 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
 .pf{display:flex;flex-direction:column;flex:1;max-width:430px;margin:0 auto;width:100%}
 .psb{background:var(--blue);padding:9px 16px 7px;display:flex;justify-content:space-between}
 .psb span{color:#fff;font-size:11px;font-weight:500}
-.pc{flex:1;overflow-y:auto;padding-bottom:68px}
-.pnav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--bg2);border-top:1px solid var(--border);z-index:50;max-width:430px;margin:0 auto}
-.pni{flex:1;padding:8px 2px 6px;text-align:center;cursor:pointer;color:var(--text3);font-size:9px;border:none;background:none}
-.pni.on{color:var(--blue)}
+.pc{flex:1;overflow-y:auto;padding-top:50px;padding-bottom:16px}
+.pnav{position:fixed;top:0;left:0;right:0;display:flex;background:var(--blue);border-bottom:2px solid rgba(255,255,255,.18);z-index:60;max-width:430px;margin:0 auto}
+.pni{flex:1;padding:8px 2px 6px;text-align:center;cursor:pointer;color:rgba(255,255,255,.75);font-size:9px;border:none;background:none}
+.pni.on{color:#fff}
 .pni svg{display:block;margin:0 auto 2px}
 .dh{background:var(--blue);padding:13px 16px 16px;color:#fff}
 .dh h2{font-size:16px;font-weight:700;margin-bottom:2px}
@@ -279,6 +279,12 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
 @keyframes upPulse{from{opacity:.5}to{opacity:1}}
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-thumb{background:var(--gray-m);border-radius:2px}
+
+@keyframes logoScroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.logo-marquee { will-change: transform; }
 </style>
 </head>
 <body>
@@ -543,22 +549,37 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
         <div><div style="font-size:12px;font-weight:500" id="sl-admin-name">관리자</div><div style="font-size:10px;color:var(--text2)" id="sl-conn">데모 모드</div></div>
       </div>
       <nav class="snav">
-        <div class="ns">현황</div>
-        <div class="ni on" onclick="SP('dash',this)">📊 대시보드</div>
-        <div class="ni" onclick="SP('sync',this)">🔄 기사 연동</div>
-        <div class="ns">운행</div>
-        <div class="ni" onclick="SP('schedule_admin',this)">📅 근무표 관리</div>
-        <div class="ni" onclick="SP('memo',this)">📝 메모 달력</div>
-        <div class="ni" onclick="SP('entry',this)">🚪 입차 현황</div>
-        <div class="ni" onclick="SP('delivery_taxi',this)">📦 운행 현황</div>
-        <div class="ni" onclick="SP('delivery_line',this)">🚚 간선 현황</div>
-        <div class="ni" onclick="SP('accident',this)">🚨 사고 접수 <span id="acc-badge" style="display:none;background:var(--red);color:#fff;font-size:9px;padding:1px 5px;border-radius:999px;margin-left:2px">!</span></div>
-        <div class="ni" onclick="SP('temp',this)">🌡 온도 기록</div>
-        <div class="ns">재무</div>
-        <div class="ni" onclick="SP('settle',this)">💰 정산서 관리</div>
-        <div class="ni" onclick="SP('drivers',this)">👤 기사 관리 <span id="new-badge" style="display:none;background:var(--amber);color:#fff;font-size:9px;padding:1px 5px;border-radius:999px;margin-left:2px">대기</span></div>
-        <div class="ni" onclick="SP('insurance',this)">📋 고용·산재표</div>
-        <div class="ni" onclick="SP('mypage',this)">👤 내 정보 수정</div>
+        <!-- 현황 그룹 -->
+        <div class="ns-grp" onclick="toggleGrp('grp-status')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none">
+          <span>📊 현황</span><span id="grp-status-arrow" style="font-size:10px">▼</span>
+        </div>
+        <div id="grp-status" style="overflow:hidden">
+          <div class="ni on" onclick="SP('dash',this)">📊 대시보드</div>
+          <div class="ni" onclick="SP('sync',this)">🔄 기사 연동</div>
+        </div>
+        <!-- 운행 그룹 -->
+        <div class="ns-grp" onclick="toggleGrp('grp-ops')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none">
+          <span>🚚 운행</span><span id="grp-ops-arrow" style="font-size:10px">▼</span>
+        </div>
+        <div id="grp-ops" style="overflow:hidden">
+          <div class="ni" onclick="SP('schedule_admin',this)">📅 근무표 관리</div>
+          <div class="ni" onclick="SP('memo',this)">📝 메모 달력</div>
+          <div class="ni" onclick="SP('entry',this)">🚪 입차 현황</div>
+          <div class="ni" onclick="SP('delivery_taxi',this)">📦 운행 현황</div>
+          <div class="ni" onclick="SP('delivery_line',this)">🚚 간선 현황</div>
+          <div class="ni" onclick="SP('accident',this)">🚨 사고 접수 <span id="acc-badge" style="display:none;background:var(--red);color:#fff;font-size:9px;padding:1px 5px;border-radius:999px;margin-left:2px">!</span></div>
+          <div class="ni" onclick="SP('temp',this)">🌡 온도 기록</div>
+        </div>
+        <!-- 재무 그룹 -->
+        <div class="ns-grp" onclick="toggleGrp('grp-fin')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none">
+          <span>💰 재무</span><span id="grp-fin-arrow" style="font-size:10px">▼</span>
+        </div>
+        <div id="grp-fin" style="overflow:hidden">
+          <div class="ni" onclick="SP('settle',this)">💰 정산서 관리</div>
+          <div class="ni" onclick="SP('drivers',this)">👤 기사 관리 <span id="new-badge" style="display:none;background:var(--amber);color:#fff;font-size:9px;padding:1px 5px;border-radius:999px;margin-left:2px">대기</span></div>
+          <div class="ni" onclick="SP('insurance',this)">📋 고용·산재표</div>
+          <div class="ni" onclick="SP('mypage',this)">👤 내 정보 수정</div>
+        </div>
       </nav>
       <div class="sb-bot">
         <label style="font-size:11px;color:var(--text2);cursor:pointer;display:block;margin-bottom:7px" onclick="toggleDark()">🌙 다크모드</label>
@@ -967,6 +988,16 @@ function updFbUI(){
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
   var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v6.2 · Firebase 실시간':'v6.2 · 데모 모드';
 }
+function toggleGrp(id){
+  var el=document.getElementById(id);
+  var arr=document.getElementById(id+'-arrow');
+  if(!el)return;
+  var open=el.style.maxHeight!=='0px'&&el.style.maxHeight!=='';
+  if(open){el.style.maxHeight='0px';el.style.marginBottom='0';if(arr)arr.textContent='▶';}
+  else{el.style.maxHeight='600px';el.style.marginBottom='';if(arr)arr.textContent='▼';}
+}
+// 초기화: 모든 그룹 열림
+function initGrps(){['grp-status','grp-ops','grp-fin'].forEach(function(id){var el=document.getElementById(id);if(el)el.style.maxHeight='600px';});}
 function toggleDark(){
   S.dark=!S.dark;document.body.classList.toggle('dark',S.dark);
   var t=S.dark?'☀️ 라이트':'🌙 다크모드';
@@ -1597,45 +1628,88 @@ function appSettle(i){var s=ls('settlements');s[i].status='완료';s[i].paidAt=t
 
 // 라우트 단가표 저장
 function buildRpriceGrid(){
-  // 라우트 코드 숫자 기준 오름차순 정렬
-  var sorted=Object.entries(RPRICE).sort(function(a,b){
-    var na=parseInt(a[0]),nb=parseInt(b[0]);
-    if(na!==nb)return na-nb;
-    return a[0].localeCompare(b[0]);
+  // 캠프(앞 숫자)별로 그룹화
+  var campMap={};
+  Object.entries(RPRICE).forEach(function(e){
+    var route=e[0], price=e[1];
+    // 캠프코드: 숫자 부분 (예: 101C→101, 612A→612)
+    var campCode=route.replace(/[A-Z]$/,'');
+    if(!campMap[campCode])campMap[campCode]=[];
+    campMap[campCode].push({route:route,price:price});
   });
-  return sorted.map(function(e){
-    var r=e[0],p=e[1];
-    return '<div style="display:flex;flex-direction:column;align-items:center">'
-      +'<div style="font-size:9px;font-weight:700;color:var(--blue)">'+r+'</div>'
-      +'<input id="rp-'+r+'" type="number" value="'+p+'"'
-      +' style="width:100%;padding:4px;text-align:center;font-size:11px;font-weight:700;'
-      +'border:1px solid var(--border);border-radius:4px;color:var(--teal)">'
+
+  // 캠프 정렬
+  var campCodes=Object.keys(campMap).sort(function(a,b){return parseInt(a)-parseInt(b);});
+
+  // 캠프별 색상
+  var campColors=['#3B82F6','#10B981','#F59E0B','#EF4444','#8B5CF6','#06B6D4','#84CC16','#F97316','#EC4899','#6366F1','#14B8A6','#F43F5E'];
+
+  var html='<div>';
+  // 탭 헤더
+  html+='<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px">';
+  campCodes.forEach(function(camp,i){
+    var color=campColors[i%campColors.length];
+    html+='<button onclick="showCampRoutes(\''+camp+'\')" id="camp-tab-'+camp+'" style="padding:4px 10px;border:none;border-radius:6px;background:'+color+';color:#fff;font-size:11px;font-weight:700;cursor:pointer;opacity:0.7" class="camp-tab">'+camp+'캠프</button>';
+  });
+  html+='</div>';
+
+  // 각 캠프별 라우트 그리드
+  campCodes.forEach(function(camp,i){
+    var color=campColors[i%campColors.length];
+    var routes=campMap[camp].sort(function(a,b){return a.route.localeCompare(b.route);});
+    html+='<div id="camp-group-'+camp+'" class="camp-group" style="display:none;background:var(--bg3);border-radius:var(--r);padding:10px;margin-bottom:8px">';
+    html+='<div style="font-size:12px;font-weight:700;color:'+color+';margin-bottom:8px;border-bottom:2px solid '+color+';padding-bottom:4px">🚚 '+camp+' 캠프 단가표</div>';
+    html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:6px">';
+    routes.forEach(function(r){
+      html+='<div style="display:flex;flex-direction:column;align-items:center;background:var(--bg2);border-radius:6px;padding:6px 4px">'
+        +'<div style="font-size:10px;font-weight:700;color:'+color+';margin-bottom:2px">'+r.route+'</div>'
+        +'<input id="rp-'+r.route+'" type="number" value="'+r.price+'" style="width:100%;text-align:center;padding:3px;border:1px solid var(--border);border-radius:4px;font-size:11px;font-weight:600;background:var(--bg);color:var(--text)">'
+        +'</div>';
+    });
+    html+='</div>';
+    // 추가 입력
+    html+='<div style="display:flex;gap:5px;margin-top:8px">'
+      +'<input id="rp-new-route-'+camp+'" type="text" placeholder="라우트 (예:'+camp+'E)" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:var(--r);font-size:11px;text-transform:uppercase;background:var(--bg);color:var(--text)" oninput="this.value=this.value.toUpperCase()">'
+      +'<input id="rp-new-val-'+camp+'" type="number" placeholder="단가(원)" style="width:80px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--r);font-size:11px;background:var(--bg);color:var(--text)">'
+      +'<button class="btn btn-sm btn-blue" style="font-size:11px" onclick="addRpRoute(\''+camp+'\')">+ 추가</button>'
       +'</div>';
-  }).join('');
-}
-async function saveRprice(){
-  var newPrices={};
-  Object.keys(RPRICE).forEach(function(r){
-    var el=document.getElementById('rp-'+r);
-    var v=el?+el.value:RPRICE[r];
-    if(v>0) newPrices[r]=v;
+    html+='</div>';
   });
-  // RPRICE 업데이트
-  Object.keys(RPRICE).forEach(function(k){delete RPRICE[k];});
-  Object.assign(RPRICE,newPrices);
-  if(FB&&_db){
-    // settings/routePrices 문서에 저장
-    await _db.collection('settings').doc('routePrices').set(newPrices,{merge:false});
-    // settings/unitPrices 하위 routePrices 필드도 동기화
-    await _db.collection('settings').doc('unitPrices').set({routePrices:newPrices},{merge:true});
-    toast('✅ 라우트 단가표 저장 완료 ('+Object.keys(newPrices).length+'개 라우트)');
-  } else {
-    localStorage.setItem('mb_rprice',JSON.stringify(newPrices));
-    toast('라우트 단가 로컬 저장 (Firebase 미연결)');
-  }
+  html+='</div>';
+
+  // 저장 버튼
+  html+='<div style="margin-top:10px;display:flex;gap:8px">'
+    +'<button class="btn btn-teal" onclick="saveRprice()" style="flex:1">💾 단가표 저장</button>'
+    +'</div>';
+
+  return html;
 }
 
-// 신규 라우트 추가
+function showCampRoutes(camp){
+  // 모든 그룹 숨기기
+  document.querySelectorAll('.camp-group').forEach(function(g){g.style.display='none';});
+  document.querySelectorAll('.camp-tab').forEach(function(t){t.style.opacity='0.7';});
+  // 선택 캠프 표시
+  var g=document.getElementById('camp-group-'+camp);
+  if(g)g.style.display='block';
+  var t=document.getElementById('camp-tab-'+camp);
+  if(t)t.style.opacity='1';
+}
+
+function addRpRoute(camp){
+  var rEl=document.getElementById('rp-new-route-'+camp);
+  var vEl=document.getElementById('rp-new-val-'+camp);
+  if(!rEl||!vEl)return;
+  var r=rEl.value.trim().toUpperCase(), v=parseInt(vEl.value);
+  if(!r||!v){toast('라우트명과 단가를 입력하세요');return;}
+  RPRICE[r]=v;
+  // 그리드 새로고침
+  var grid=document.getElementById('rp-grid');
+  if(grid)grid.innerHTML=buildRpriceGrid();
+  setTimeout(function(){showCampRoutes(camp);},50);
+  toast('✅ '+r+' 추가됨');
+}
+
 function addRpRoute(){
   var k=(document.getElementById('rp-new-key')||{}).value||'';
   var v=+(document.getElementById('rp-new-val')||{}).value||0;
@@ -1913,7 +1987,29 @@ function rInsurance(){
   ${drs.map(d=>{var s=ls('settlements').filter(x=>x.driver===d.name).slice(-1)[0];var r=s?calcNet(s):{income:0,tax:0,emp:0,work:0,net:0};var ind=r.work||Math.round((r.income||0)*0.013);return`<tr><td><strong>${d.name}</strong></td><td>${d.employ||'지입'}</td><td><span class="badge b-coral" style="font-size:9px">${d.jobtype||'택배'}</span></td><td>₩${(r.income||0).toLocaleString()}</td><td style="color:var(--red)">₩${(r.tax||0).toLocaleString()}</td><td style="color:var(--red)">₩${(r.emp||0).toLocaleString()}</td><td style="color:var(--red)">₩${ind.toLocaleString()}</td><td style="font-weight:700;color:var(--purple)">₩${Math.max(0,(r.net||0)).toLocaleString()}</td></tr>`;}).join('')}
   </tbody></table></div>
   <div class="card"><div class="ch"><span class="ct">쿠팡 라우트 단가표</span></div>
-  <div class="route-price-grid">${Object.entries(RPRICE).sort(function(a,b){return a[0].localeCompare(b[0],undefined,{numeric:true});}).map(([r,p])=>`<div class="rpc"><div class="rpc-name">${r}</div><div class="rpc-price">${p}원</div></div>`).join('')}</div></div>`;
+  ${(function(){
+    var CAMPS=[
+      {name:'부산1캠프 (주간)',prefix:['101','215'],badge:'주간',color:'var(--blue)'},
+      {name:'부산2캠프 (야간)',prefix:['812'],badge:'야간',color:'#8B5CF6'},
+      {name:'부산3캠프 (주간)',prefix:['508'],badge:'주간',color:'var(--blue)'},
+      {name:'대구2캠프 (야간)',prefix:['109','213'],badge:'야간',color:'#8B5CF6'},
+      {name:'진주M캠프',prefix:['608','612','613','614','619'],badge:'',color:'var(--teal)'}
+    ];
+    var out='';
+    CAMPS.forEach(function(camp){
+      var rows=Object.entries(RPRICE).filter(function([r]){
+        return camp.prefix.some(function(p){return r.startsWith(p);});
+      }).sort(function(a,b){return a[0].localeCompare(b[0],undefined,{numeric:true});});
+      if(!rows.length) return;
+      out+='<div style="margin-bottom:10px"><div style="display:flex;align-items:center;gap:5px;margin-bottom:4px"><span style="font-size:11px;font-weight:700;color:'+camp.color+'">'+camp.name+'</span>'+(camp.badge?'<span style="font-size:9px;background:'+camp.color+';color:#fff;padding:1px 5px;border-radius:4px">'+camp.badge+'</span>':'')+'</div>';
+      out+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px">';
+      rows.forEach(function([r,p]){
+        out+='<div class="rpc"><div class="rpc-name">'+r+'</div><div class="rpc-price">'+p+'원</div></div>';
+      });
+      out+='</div></div>';
+    });
+    return out;
+  })()}</div></div>`;
 }
 // ══ 마이페이지
 function rMypage(){
@@ -2489,7 +2585,7 @@ function dHome(){
 
   function mkW(wD,wK,sc,lbl){
     var h='<div style="font-size:10px;font-weight:700;color:var(--text3);margin-bottom:2px">'+lbl+'</div>'
-         +'<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:5px">';
+         +'<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:5px;min-width:0">';
     for(var i=0;i<7;i++){
       var d=wD[i], ds=d.toISOString().slice(0,10), isTod=(ds===today());
       var st=sc[ds]||'', isWE=(i===0||i===6);
@@ -2497,9 +2593,10 @@ function dHome(){
       var tc=st==='주'?'#3B82F6':st==='야'?'#8B5CF6':st==='휴무'?'#9CA3AF':st==='병가'?'#EF4444':'var(--text3)';
       var bd=isTod?'2px solid var(--teal)':'1px solid var(--border)';
       // 관리자만 탭하여 변경 가능
-      var click=isAdm?'onclick="cycleSchedule(\''+wK+'\',\''+ds+'\')" style="cursor:pointer;':'style="cursor:default;';
+      // 기사는 완전 읽기 전용, 관리자만 수정
+      var click='style="cursor:default;';
       h+='<div '+click+'background:'+bg+';border:'+bd+';border-radius:6px;padding:5px 2px;text-align:center">'
-        +'<div style="font-size:10px;font-weight:700;color:'+(isWE?'#EF4444':'var(--text)')+'">'+(isTod?'<u>':'')+DN[i]+(isTod?'</u>':'')+'</div>'
+        +'<div style="font-size:9px;font-weight:700;color:'+(isWE?'#EF4444':'var(--text)')+'">'+(isTod?'<u>':'')+DN[i]+(isTod?'</u>':'')+'</div>'
         +'<div style="font-size:9px;color:var(--text3)">'+d.getDate()+'</div>'
         +'<div style="font-size:11px;font-weight:700;color:'+tc+'">'+(st||'·')+'</div>'
         +'</div>';
@@ -2507,10 +2604,9 @@ function dHome(){
     return h+'</div>';
   }
 
-  var schHTML='<div style="margin:8px 10px 0">'
+  var schHTML='<div style="margin:8px 10px 0;overflow:hidden">'
     +'<div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:5px;display:flex;align-items:center;gap:6px">📅 2주 근무표 '
-    +(isAdm?'<span style="font-size:9px;color:var(--teal);background:rgba(15,110,86,.12);padding:1px 6px;border-radius:4px">✏️ 관리자 수정가능</span>'
-           :'<span style="font-size:9px;color:var(--text3);background:var(--bg3);padding:1px 5px;border-radius:4px">👁 보기전용</span>')+'</div>'
+    +'<span style="font-size:9px;color:var(--text3);background:var(--bg3);padding:1px 5px;border-radius:4px">👁 관리자가 등록 | 보기전용</span></div>'
     +mkW(w1,wk1,sc1,'이번 주')+mkW(w2,wk2,sc2,'다음 주')
     +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
     +'<span style="font-size:9px;color:#3B82F6">●주간</span><span style="font-size:9px;color:#8B5CF6">●야간</span>'
@@ -2527,9 +2623,24 @@ function dHome(){
     +'<button onclick="DT(\'accident\',document.getElementById(\'pni4\'))" style="padding:10px 4px;border:1px solid rgba(239,68,68,.25);border-radius:8px;background:rgba(239,68,68,.08);color:var(--red);font-size:11px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px"><span style="font-size:18px">🚨</span>사고접수</button>'
     +'</div>';
 
-  return `<div class="dh"><h2><span class="user-name-display">${S.curDriver}</span> 기사님</h2><p>${new Date().toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'})} · ${S.curJobtype} ${S.curJobsub}</p></div>
+  return `<div class="dh" style="overflow:hidden;position:relative;min-height:80px">
+  <div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;overflow:hidden;pointer-events:none">
+    <div class="logo-marquee" style="display:flex;animation:logoScroll 15s linear infinite;white-space:nowrap;align-items:center;gap:20px;opacity:0.15">
+      <span style="font-size:28px;font-weight:900;letter-spacing:2px;color:#fff">MBTI(Co.,Ltd.) LOGISTICS</span>
+      <span style="font-size:22px">🚛</span>
+      <span style="font-size:28px;font-weight:900;letter-spacing:2px;color:#f90">MBTI LOGISTICS</span>
+      <span style="font-size:22px">❄️</span>
+      <span style="font-size:28px;font-weight:900;letter-spacing:2px;color:#fff">MBTI(Co.,Ltd.) LOGISTICS</span>
+      <span style="font-size:22px">🚛</span>
+      <span style="font-size:28px;font-weight:900;letter-spacing:2px;color:#f90">MBTI LOGISTICS</span>
+      <span style="font-size:22px">❄️</span>
+    </div>
+  </div>
+  <h2 style="position:relative;z-index:1"><span class="user-name-display">${S.curDriver}</span> 기사님</h2>
+  <p style="position:relative;z-index:1">${new Date().toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'})} · ${S.curJobtype} ${S.curJobsub}</p>
+  </div>
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:10px 10px 0">
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center"><div style="font-size:17px;font-weight:700">31</div><div style="font-size:10px;color:var(--text2)">입차번호</div></div>
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center"><div style="font-size:14px;font-weight:700;color:var(--blue)">${S.driverNum||'MBTI??'}</div><div style="font-size:10px;color:var(--text2)">가입순번</div></div>
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center"><div style="font-size:14px;font-weight:700;color:var(--teal)">${totD}건</div><div style="font-size:10px;color:var(--text2)">오늘 배송</div></div>
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center"><div style="font-size:13px;font-weight:700;color:${me?'var(--blue)':'var(--text3)'}">${me?'운행중':'대기중'}</div><div style="font-size:10px;color:var(--text2)">상태</div></div>
   </div>
@@ -3046,6 +3157,26 @@ document.querySelectorAll('.mo').forEach(m=>m.addEventListener('click',function(
 function startListeners(){
   if(!FB||!_db)return;
 
+  // ── 근무표 실시간 동기화 (schedules 컬렉션)
+  _db.collection('schedules').onSnapshot(function(snap){
+    snap.forEach(function(doc){
+      var d=doc.data();
+      if(!d.driver||!d.date)return;
+      // 날짜에서 년/월 추출
+      var parts=d.date.split('-');
+      if(parts.length<3)return;
+      var y=parseInt(parts[0]), mo=parseInt(parts[1])-1;
+      var wkKey='schedule_'+d.driver+'_month_'+y+'_'+mo;
+      var sc=JSON.parse(localStorage.getItem(wkKey)||'{}');
+      if(d.status){sc[d.date]=d.status;}else{delete sc[d.date];}
+      localStorage.setItem(wkKey,JSON.stringify(sc));
+    });
+    // 기사 홈 근무표 새로고침
+    if(S.dtab==='home'&&typeof dHome==='function'){
+      var pc=document.getElementById('dpc');if(pc)pc.innerHTML=dHome();
+    }
+  });
+
   // ── drivers: Firestore → localStorage → UI 직접 반영 (1초 이내)
   _db.collection('drivers').orderBy('joinDate','desc').limit(300)
     .onSnapshot({includeMetadataChanges:false}, snap=>{
@@ -3428,6 +3559,18 @@ function miniCalClick(ds){
   toast('📝 메모 저장됨');
 }
 
+
+function saveRprice(){
+  // 현재 입력값으로 RPRICE 업데이트
+  Object.keys(RPRICE).forEach(function(r){
+    var el=document.getElementById('rp-'+r);
+    if(el&&el.value){RPRICE[r]=parseInt(el.value)||RPRICE[r];}
+  });
+  // localStorage + Firebase 저장
+  localStorage.setItem('mbti_rprice',JSON.stringify(RPRICE));
+  if(FB&&_db){_db.collection('settings').doc('rprice').set(RPRICE).then(function(){toast('💾 단가표 저장 (Firebase)');}).catch(function(){toast('💾 단가표 저장 (로컬)');});}
+  else{toast('💾 단가표 로컬 저장');}
+}
 </script>
 </body>
 </html>
