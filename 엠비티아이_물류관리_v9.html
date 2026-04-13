@@ -1534,7 +1534,11 @@ function SP(pg,el){
       var all=[];
       snap.forEach(function(doc){var d=doc.data();d.fbId=doc.id;all.push(d);});
       lss('drivers',all);
-    }).catch(function(){});
+      updBadge();
+      // 데이터 로드 후 화면 즉시 갱신
+      var ca=document.getElementById('ca');
+      if(ca)ca.innerHTML=rDrivers();
+    }).catch(function(e){console.warn('drivers SP get:',e);});
   }
   document.getElementById('ptitle').textContent=PT[pg]||pg;
   if(el){document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));el.classList.add('on');}
@@ -3369,16 +3373,8 @@ function startListeners(){
     snap.forEach(function(doc){var d=doc.data();d.fbId=doc.id;all.push(d);});
     lss('drivers',all);
     updBadge();
-    // 기사 관리 페이지면 즉시 갱신
-    if(S.page==='drivers'||S.page==='dash'){
-      SP(S.page,null);
-    } else if(S.curMode==='admin'){
-      // 관리자 로그인 상태면 대시보드도 갱신
-      updBadge();
-    }
-  }).catch(function(e){console.warn('drivers get 오류:',e);
-    // 오류시 onSnapshot으로 폴백
-  });
+    if(S.page==='drivers'||S.page==='dash')SP(S.page,null);
+  }).catch(function(e){console.warn('drivers get:',e);});
 
   // ── 관리자 정보 Firebase에서 로드
   _db.collection('settings').doc('adminInfo').get().then(function(doc){
