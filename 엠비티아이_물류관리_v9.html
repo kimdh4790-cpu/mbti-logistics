@@ -3862,5 +3862,29 @@ window.addEventListener('message',function(e){
     try{window.parent.postMessage({action:'closeAppIframe'},'*');}catch(err){}
   }
 });
+
+// index에서 postMessage 수신 (로그인/가입/찾기)
+window.addEventListener('message',function(e){
+  if(!e.data||!e.data.action)return;
+  var act=e.data.action, mode=e.data.mode||'driver';
+  if(act==='goLogin'){
+    if(mode==='admin') goLogin('admin');
+    else goLogin('driver');
+  } else if(act==='goRegister'){
+    // 가입 화면으로 이동
+    hide(['splash','login-screen']);
+    if(typeof doSplashReg==='function') doSplashReg();
+    else show('reg-screen');
+  } else if(act==='goFind'){
+    // 로그인 화면 + 도움말 펼치기
+    goLogin('driver');
+    setTimeout(function(){
+      var h=document.getElementById('login-help-box');
+      if(h)h.style.display='block';
+    },300);
+  } else if(act==='closeAppIframe'){
+    try{window.parent.postMessage({action:'closeAppIframe'},'*');}catch(err){}
+  }
+});
 </script>
 </body>

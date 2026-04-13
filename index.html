@@ -800,10 +800,6 @@ body.app-mode{background:#0a0e1a;}
 <span class="nav-clock" id="navClock">06:20</span>
 <span class="nav-date" id="navDate">3월29일(일)</span>
 </div>
-<div class="nav-login-btns-wrap" style="display:flex;gap:7px;align-items:center;margin-right:8px">
-  <button onclick="openMbtiLogin('driver')" style="padding:6px 13px;background:linear-gradient(135deg,#0f6e56,#1aab85);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(15,110,86,.4)">🚛 기사 로그인</button>
-  <button onclick="openMbtiLogin('admin')" style="padding:6px 13px;background:linear-gradient(135deg,#1a4a8a,#2d7dd2);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(24,95,165,.4)">🗂 관리자 로그인</button>
-</div>
 <div class="nav-login-btns-wrap" style="display:flex;gap:5px;align-items:center;margin-right:6px;flex-shrink:0">
   <button onclick="openMbtiLogin('driver')" style="padding:5px 10px;background:linear-gradient(135deg,#0f6e56,#1aab85);color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">🚛 기사</button>
   <button onclick="openMbtiLogin('admin')" style="padding:5px 10px;background:linear-gradient(135deg,#1a4a8a,#2d7dd2);color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">🗂 관리자</button>
@@ -958,8 +954,25 @@ body.app-mode{background:#0a0e1a;}
     <span style="font-size:18px">📱</span> 물류관리앱 바로가기
   </div>
   <div style="font-size:10px;color:rgba(255,255,255,.75);margin-bottom:10px">로그인 유형을 선택 후 앱으로 이동합니다</div>
-  <div style="display:flex;gap:7px">
-    <button onclick="appLoginGo('driver')" style="flex:1;padding:9px 5px;border-radius:9px;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.35);color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;transition:all .18s" onmouseover="this.style.background='rgba(255,255,255,.28)'" onmouseout="this.style.background='rgba(255,255,255,.15)'">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
+    <button onclick="appLoginGo('driver')" style="padding:10px 5px;border-radius:9px;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.35);color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px">
+      <span style="font-size:20px">🧑‍💼</span>기사 로그인
+    </button>
+    <button onclick="appLoginGo('admin')" style="padding:10px 5px;border-radius:9px;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.35);color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px">
+      <span style="font-size:20px">⚙️</span>관리자 로그인
+    </button>
+  </div>
+  <button onclick="appLoginGo('register')" style="width:100%;padding:10px;border-radius:9px;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;color:#fff;font-size:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
+    ✏️ 기사 신규 가입하기
+  </button>
+  <div style="font-size:10px;color:rgba(255,255,255,.5);text-align:center;margin-top:6px">가입 후 관리자 승인이 필요합니다</div>
+  <div style="display:flex;gap:5px;margin-top:6px">
+    <button onclick="appFindAccount()" style="flex:1;padding:7px;border-radius:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7);font-size:10px;cursor:pointer">
+      🔑 아이디/비번 찾기
+    </button>
+  </div>
+  <div style="display:flex;gap:7px;display:none">
+    <button onclick="appLoginGo('driver')" style="flex:1;padding:9px 5px;border-radius:9px;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.35);color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px">
       <span style="font-size:20px">🧑‍💼</span>기사 로그인
     </button>
     <button onclick="appLoginGo('admin')" style="flex:1;padding:9px 5px;border-radius:9px;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.35);color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;transition:all .18s" onmouseover="this.style.background='rgba(255,255,255,.28)'" onmouseout="this.style.background='rgba(255,255,255,.15)'">
@@ -1419,10 +1432,16 @@ var EM = _a + "@" + _b;
 
 /* ── 이메일 발송 (메일 앱 직접 열기) ── */
 function sendMail(subject, body) {
-var link = "mailto:" + EM
-+ "?subject=" + encodeURIComponent(subject)
-+ "&body=" + encodeURIComponent(body);
-window.location.href = link;
+  // mailto 방식 - 기본 메일앱으로 전송
+  var link = "mailto:" + EM
+    + "?subject=" + encodeURIComponent(subject)
+    + "&body=" + encodeURIComponent(body);
+  // 새창으로 열어서 페이지 이탈 방지
+  window.open(link, '_blank');
+  // 사용자 안내
+  setTimeout(function(){
+    alert('📧 이메일 앱이 열립니다.\n메일앱이 없으면 soungkyekim@naver.com 으로 직접 보내주세요.');
+  }, 500);
 }
 
 /* ── 페이지 로드 시 이메일 텍스트 복원 ── */
@@ -1481,10 +1500,29 @@ catch(e) { sc.scrollTop = off; }
 
 /* ── PC/앱 전환 ── */
 function appLoginGo(role) {
-  // 역할 기억 후 앱 뷰로 이동
   localStorage.setItem('mbti_app_role', role);
-  setView('app');
+  var ol=document.getElementById('app-launcher-overlay');
+  if(ol){
+    var ifr=document.getElementById('app-iframe');
+    if(ifr){
+      var action = role==='register' ? 'goRegister' : role==='find' ? 'goFind' : 'goLogin';
+      var mode = (role==='admin') ? 'admin' : 'driver';
+      if(!ifr.src.includes('v9')){
+        ifr.src='엠비티아이_물류관리_v9.html';
+        ifr.onload=function(){
+          try{ifr.contentWindow.postMessage({action:action,mode:mode},'*');}catch(e){}
+          ifr.onload=null;
+        };
+      }else{
+        try{ifr.contentWindow.postMessage({action:action,mode:mode},'*');}catch(e){}
+      }
+    }
+    ol.style.display='flex';document.body.style.overflow='hidden';
+    var p=document.getElementById('pcBtn'),a=document.getElementById('appBtn');
+    if(p)p.classList.remove('active');if(a)a.classList.add('active');
+  }
 }
+function appFindAccount(){ appLoginGo('find'); }
 function setView(v) {
   var pcBtn=document.getElementById('pcBtn');
   var appBtn=document.getElementById('appBtn');
@@ -2427,23 +2465,7 @@ function renderSettlementData(el, rows) {
 })();
 
 function openMbtiLogin(mode){
-  var ol=document.getElementById('app-launcher-overlay');
-  if(!ol)return;
-  var ifr=document.getElementById('app-iframe');
-  if(ifr){
-    if(!ifr.src.includes('v9')){
-      ifr.src='엠비티아이_물류관리_v9.html';
-      ifr.onload=function(){
-        try{ifr.contentWindow.postMessage({action:'goLogin',mode:mode},'*');}catch(e){}
-        ifr.onload=null;
-      };
-    }else{
-      try{ifr.contentWindow.postMessage({action:'goLogin',mode:mode},'*');}catch(e){}
-    }
-  }
-  ol.style.display='flex';document.body.style.overflow='hidden';
-  var p=document.getElementById('pcBtn'),a=document.getElementById('appBtn');
-  if(p)p.classList.remove('active');if(a)a.classList.add('active');
+  appLoginGo(mode);
 }
 window.addEventListener('message',function(e){
   if(e.data&&e.data.action==='closeAppIframe')closeAppLauncher();
