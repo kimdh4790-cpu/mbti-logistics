@@ -962,17 +962,15 @@ body.app-mode{background:#0a0e1a;}
       <span style="font-size:20px">⚙️</span>관리자 로그인
     </button>
   </div>
-  <button onclick="appLoginGo('register')" style="width:100%;padding:10px;border-radius:9px;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;color:#fff;font-size:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
+  <button onclick="appLoginGo('register')" style="width:100%;padding:10px;border-radius:9px;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;color:#fff;font-size:12px;font-weight:800;cursor:pointer;margin-bottom:6px">
     ✏️ 기사 신규 가입하기
   </button>
-  <div style="font-size:10px;color:rgba(255,255,255,.5);text-align:center;margin-top:6px">가입 후 관리자 승인이 필요합니다</div>
-  <div style="display:flex;gap:5px;margin-top:6px">
-    <button onclick="appFindAccount()" style="flex:1;padding:7px;border-radius:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7);font-size:10px;cursor:pointer">
-      🔑 아이디/비번 찾기
-    </button>
-  </div>
-  <div style="display:flex;gap:7px;display:none">
-    <button onclick="appLoginGo('driver')" style="flex:1;padding:9px 5px;border-radius:9px;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.35);color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px">
+  <button onclick="appFindAccount()" style="width:100%;padding:7px;border-radius:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7);font-size:11px;cursor:pointer;margin-bottom:4px">
+    🔑 아이디 / 비밀번호 찾기
+  </button>
+  <div style="font-size:10px;color:rgba(255,255,255,.4);text-align:center">가입 후 관리자 승인 필요</div>
+  <div style="display:none">
+    <button onclick="appLoginGo('driver')" style="flex:1;padding:9px 5px;border-radius:9px;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.35);color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;transition:all .18s" onmouseover="this.style.background='rgba(255,255,255,.28)'" onmouseout="this.style.background='rgba(255,255,255,.15)'">
       <span style="font-size:20px">🧑‍💼</span>기사 로그인
     </button>
     <button onclick="appLoginGo('admin')" style="flex:1;padding:9px 5px;border-radius:9px;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.35);color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;transition:all .18s" onmouseover="this.style.background='rgba(255,255,255,.28)'" onmouseout="this.style.background='rgba(255,255,255,.15)'">
@@ -1432,16 +1430,10 @@ var EM = _a + "@" + _b;
 
 /* ── 이메일 발송 (메일 앱 직접 열기) ── */
 function sendMail(subject, body) {
-  // mailto 방식 - 기본 메일앱으로 전송
-  var link = "mailto:" + EM
-    + "?subject=" + encodeURIComponent(subject)
-    + "&body=" + encodeURIComponent(body);
-  // 새창으로 열어서 페이지 이탈 방지
-  window.open(link, '_blank');
-  // 사용자 안내
-  setTimeout(function(){
-    alert('📧 이메일 앱이 열립니다.\n메일앱이 없으면 soungkyekim@naver.com 으로 직접 보내주세요.');
-  }, 500);
+var link = "mailto:" + EM
++ "?subject=" + encodeURIComponent(subject)
++ "&body=" + encodeURIComponent(body);
+window.location.href = link;
 }
 
 /* ── 페이지 로드 시 이메일 텍스트 복원 ── */
@@ -1500,44 +1492,32 @@ catch(e) { sc.scrollTop = off; }
 
 /* ── PC/앱 전환 ── */
 function appLoginGo(role) {
-  localStorage.setItem('mbti_app_role', role);
   var ol=document.getElementById('app-launcher-overlay');
-  if(ol){
-    var ifr=document.getElementById('app-iframe');
-    if(ifr){
-      var action = role==='register' ? 'goRegister' : role==='find' ? 'goFind' : 'goLogin';
-      var mode = (role==='admin') ? 'admin' : 'driver';
-      if(!ifr.src.includes('v9')){
-        ifr.src='엠비티아이_물류관리_v9.html';
-        ifr.onload=function(){
-          try{ifr.contentWindow.postMessage({action:action,mode:mode},'*');}catch(e){}
-          ifr.onload=null;
-        };
-      }else{
-        try{ifr.contentWindow.postMessage({action:action,mode:mode},'*');}catch(e){}
-      }
-    }
-    ol.style.display='flex';document.body.style.overflow='hidden';
-    var p=document.getElementById('pcBtn'),a=document.getElementById('appBtn');
-    if(p)p.classList.remove('active');if(a)a.classList.add('active');
+  if(!ol)return;
+  var ifr=document.getElementById('app-iframe');
+  var act=role==='register'?'goRegister':role==='find'?'goFind':'goLogin';
+  var mode=role==='admin'?'admin':'driver';
+  if(ifr){
+    if(!ifr.src.includes('v9')){
+      ifr.src='엠비티아이_물류관리_v9.html';
+      ifr.onload=function(){try{ifr.contentWindow.postMessage({action:act,mode:mode},'*');}catch(e){}ifr.onload=null;};
+    }else{try{ifr.contentWindow.postMessage({action:act,mode:mode},'*');}catch(e){}}
   }
+  ol.style.display='flex';document.body.style.overflow='hidden';
+  var p=document.getElementById('pcBtn'),a=document.getElementById('appBtn');
+  if(p)p.classList.remove('active');if(a)a.classList.add('active');
 }
-function appFindAccount(){ appLoginGo('find'); }
+function appFindAccount(){appLoginGo('find');}
 function setView(v) {
-  var pcBtn=document.getElementById('pcBtn');
-  var appBtn=document.getElementById('appBtn');
+  var p=document.getElementById('pcBtn'),a=document.getElementById('appBtn');
   if(v==='app'){
-    if(pcBtn)pcBtn.classList.remove('active');
-    if(appBtn)appBtn.classList.add('active');
+    if(p)p.classList.remove('active');if(a)a.classList.add('active');
     var ol=document.getElementById('app-launcher-overlay');
-    if(ol){
-      var ifr=document.getElementById('app-iframe');
+    if(ol){var ifr=document.getElementById('app-iframe');
       if(ifr&&!ifr.src.includes('v9'))ifr.src='엠비티아이_물류관리_v9.html';
-      ol.style.display='flex';document.body.style.overflow='hidden';
-    }
+      ol.style.display='flex';document.body.style.overflow='hidden';}
   }else{
-    if(pcBtn)pcBtn.classList.add('active');
-    if(appBtn)appBtn.classList.remove('active');
+    if(p)p.classList.add('active');if(a)a.classList.remove('active');
     var ol2=document.getElementById('app-launcher-overlay');
     if(ol2){ol2.style.display='none';document.body.style.overflow='';}
     updateClock();runAppCounters();
@@ -2215,7 +2195,30 @@ var _mbtiUser = null;
 
 function tryOpenApp(){setView('app');}
 
-
+function openMbtiLogin(mode) {
+  var ov = document.getElementById('mbti-auth-overlay');
+  if (!ov) return;
+  ov.style.display = 'flex';
+  authSwitchTab('login');
+  // 힌트 배지 표시
+  var hint = document.getElementById('auth-mode-hint');
+  if (!hint) {
+    hint = document.createElement('div');
+    hint.id = 'auth-mode-hint';
+    hint.style.cssText = 'text-align:center;font-size:11px;padding:5px 10px;border-radius:6px;margin-bottom:8px;font-weight:700';
+    var lp = document.getElementById('auth-panel-login');
+    if (lp) lp.insertBefore(hint, lp.firstChild);
+  }
+  if (mode === 'admin') {
+    hint.textContent = '🗂 관리자 로그인';
+    hint.style.background = 'rgba(24,95,165,.15)';
+    hint.style.color = '#2d7dd2';
+  } else {
+    hint.textContent = '🚛 기사 로그인';
+    hint.style.background = 'rgba(15,110,86,.15)';
+    hint.style.color = '#0f6e56';
+  }
+}
 
 function authSwitchTab(tab) {
   var lp = document.getElementById('auth-panel-login');
@@ -2464,9 +2467,7 @@ function renderSettlementData(el, rows) {
   }
 })();
 
-function openMbtiLogin(mode){
-  appLoginGo(mode);
-}
+function openMbtiLogin(mode){appLoginGo(mode);}
 window.addEventListener('message',function(e){
   if(e.data&&e.data.action==='closeAppIframe')closeAppLauncher();
 });

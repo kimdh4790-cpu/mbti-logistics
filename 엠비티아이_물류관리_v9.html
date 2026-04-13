@@ -3371,7 +3371,7 @@ function startListeners(){
   }).catch(function(){});
 
   // ── drivers: Firestore → localStorage → UI 직접 반영 (1초 이내)
-  _db.collection('drivers').orderBy('joinDate','desc').limit(500)
+  _db.collection('drivers').limit(500)
     .onSnapshot({includeMetadataChanges:false}, snap=>{
       // ① Firestore 전체 데이터 배열화
       var fbDrivers=[];
