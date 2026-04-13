@@ -280,11 +280,7 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-thumb{background:var(--gray-m);border-radius:2px}
 
-@keyframes logoScroll {
-  0%   { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
-}
-.logo-marquee { will-change: transform; }
+@keyframes lgScroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
 </style>
 </head>
 <body>
@@ -347,6 +343,39 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
       <label class="lbl">비밀번호</label>
       <input class="fi" id="lpw" type="password" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doLogin()">
       <button class="btn-login" id="lbtn" onclick="doLogin()">로그인</button>
+      <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
+        <button onclick="toggleLoginHelp()" style="width:100%;padding:9px;background:transparent;border:1.5px dashed var(--border);border-radius:8px;color:var(--text2);font-size:12px;cursor:pointer">
+          🔑 아이디 / 비밀번호를 모르시나요?
+        </button>
+        <div id="login-help-box" style="display:none;margin-top:10px;background:var(--bg3);border-radius:10px;padding:12px;font-size:12px">
+          <div style="font-weight:700;color:var(--text2);margin-bottom:8px">📋 기본 로그인 정보</div>
+          <div style="background:var(--bg2);border-radius:8px;padding:10px;margin-bottom:8px;border-left:3px solid var(--blue)">
+            <div style="font-size:11px;font-weight:700;color:var(--blue);margin-bottom:6px">🗂 관리자</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+              <span style="color:var(--text2)">아이디</span>
+              <button onclick="fillLogin('admin','')" style="font-weight:700;color:var(--text);background:var(--bg3);padding:2px 10px;border-radius:4px;border:1px solid var(--border);cursor:pointer;font-size:12px">admin 입력</button>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+              <span style="color:var(--text2)">비밀번호</span>
+              <button onclick="fillLogin('','1234')" style="font-weight:700;color:var(--text);background:var(--bg3);padding:2px 10px;border-radius:4px;border:1px solid var(--border);cursor:pointer;font-size:12px">1234 입력</button>
+            </div>
+            <button onclick="fillLogin('admin','1234')" style="width:100%;margin-top:4px;padding:7px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">한번에 입력</button>
+            <div style="font-size:10px;color:var(--amber);margin-top:6px">※ 로그인 후 반드시 비밀번호를 변경하세요</div>
+          </div>
+          <div style="background:var(--bg2);border-radius:8px;padding:10px;border-left:3px solid var(--teal)">
+            <div style="font-size:11px;font-weight:700;color:var(--teal);margin-bottom:6px">🚛 기사</div>
+            <div style="font-size:11px;color:var(--text2);margin-bottom:8px">아이디 또는 가입 시 등록한 전화번호로 로그인하세요</div>
+            <div style="border-top:1px solid var(--border);padding-top:8px">
+              <div style="font-size:10px;font-weight:700;color:var(--text2);margin-bottom:5px">이름으로 아이디 찾기</div>
+              <div style="display:flex;gap:5px">
+                <input id="find-id-name" placeholder="이름 입력" style="flex:1;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--bg);color:var(--text)">
+                <button onclick="findDriverId()" style="padding:6px 12px;background:var(--teal);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">찾기</button>
+              </div>
+              <div id="find-id-result" style="margin-top:6px;font-size:11px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
       <span class="back-link" onclick="goSplash()">← 처음으로</span>
     </div>
   </div>
@@ -1628,88 +1657,105 @@ function appSettle(i){var s=ls('settlements');s[i].status='완료';s[i].paidAt=t
 
 // 라우트 단가표 저장
 function buildRpriceGrid(){
-  // 캠프(앞 숫자)별로 그룹화
   var campMap={};
   Object.entries(RPRICE).forEach(function(e){
-    var route=e[0], price=e[1];
-    // 캠프코드: 숫자 부분 (예: 101C→101, 612A→612)
-    var campCode=route.replace(/[A-Z]$/,'');
-    if(!campMap[campCode])campMap[campCode]=[];
-    campMap[campCode].push({route:route,price:price});
+    var r=e[0],p=e[1];
+    var c=r.replace(/[A-Za-z]+$/,'');
+    if(!campMap[c])campMap[c]=[];
+    campMap[c].push({r:r,p:p});
   });
+  var camps=Object.keys(campMap).sort(function(a,b){return parseInt(a)-parseInt(b);});
+  var cols=['#3B82F6','#10B981','#F59E0B','#EF4444','#8B5CF6','#06B6D4','#84CC16','#F97316','#EC4899','#6366F1','#14B8A6','#F43F5E'];
 
-  // 캠프 정렬
-  var campCodes=Object.keys(campMap).sort(function(a,b){return parseInt(a)-parseInt(b);});
-
-  // 캠프별 색상
-  var campColors=['#3B82F6','#10B981','#F59E0B','#EF4444','#8B5CF6','#06B6D4','#84CC16','#F97316','#EC4899','#6366F1','#14B8A6','#F43F5E'];
-
-  var html='<div>';
-  // 탭 헤더
-  html+='<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px">';
-  campCodes.forEach(function(camp,i){
-    var color=campColors[i%campColors.length];
-    html+='<button onclick="showCampRoutes(\''+camp+'\')" id="camp-tab-'+camp+'" style="padding:4px 10px;border:none;border-radius:6px;background:'+color+';color:#fff;font-size:11px;font-weight:700;cursor:pointer;opacity:0.7" class="camp-tab">'+camp+'캠프</button>';
+  var h='<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px" id="camp-tabs">';
+  camps.forEach(function(c,i){
+    var col=cols[i%cols.length];
+    h+='<button onclick="showCampTab(\'' +c+ '\')" id="ctab-'+c+'"'
+      +' class="camp-tab-btn"'
+      +' style="padding:4px 10px;border:2px solid '+col+';border-radius:6px;'
+      +'background:transparent;color:'+col+';font-size:11px;font-weight:700;cursor:pointer">'+c+'</button>';
   });
-  html+='</div>';
+  h+='</div>';
 
-  // 각 캠프별 라우트 그리드
-  campCodes.forEach(function(camp,i){
-    var color=campColors[i%campColors.length];
-    var routes=campMap[camp].sort(function(a,b){return a.route.localeCompare(b.route);});
-    html+='<div id="camp-group-'+camp+'" class="camp-group" style="display:none;background:var(--bg3);border-radius:var(--r);padding:10px;margin-bottom:8px">';
-    html+='<div style="font-size:12px;font-weight:700;color:'+color+';margin-bottom:8px;border-bottom:2px solid '+color+';padding-bottom:4px">🚚 '+camp+' 캠프 단가표</div>';
-    html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:6px">';
-    routes.forEach(function(r){
-      html+='<div style="display:flex;flex-direction:column;align-items:center;background:var(--bg2);border-radius:6px;padding:6px 4px">'
-        +'<div style="font-size:10px;font-weight:700;color:'+color+';margin-bottom:2px">'+r.route+'</div>'
-        +'<input id="rp-'+r.route+'" type="number" value="'+r.price+'" style="width:100%;text-align:center;padding:3px;border:1px solid var(--border);border-radius:4px;font-size:11px;font-weight:600;background:var(--bg);color:var(--text)">'
+  camps.forEach(function(c,i){
+    var col=cols[i%cols.length];
+    var routes=campMap[c].sort(function(a,b){return a.r.localeCompare(b.r);});
+    h+='<div id="cpanel-'+c+'" class="camp-panel" style="display:none">';
+    h+='<div style="font-size:11px;font-weight:700;color:'+col+';margin-bottom:8px;padding:5px 10px;background:'+col+'22;border-left:3px solid '+col+';border-radius:0 6px 6px 0">&#x1F69A; '+c+' 쳠드 ('+routes.length+'개)</div>';
+    h+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:8px">';
+    routes.forEach(function(item){
+      h+='<div style="display:flex;flex-direction:column;align-items:center;background:var(--bg3);border-radius:6px;padding:6px 4px">'
+        +'<div style="font-size:9px;font-weight:700;color:'+col+';margin-bottom:2px">'+item.r+'</div>'
+        +'<input id="rp-'+item.r+'" type="number" value="'+item.p+'"'
+        +' style="width:100%;text-align:center;padding:3px;border:1px solid var(--border);'
+        +'border-radius:4px;font-size:11px;font-weight:700;background:var(--bg);color:var(--teal)">'
         +'</div>';
     });
-    html+='</div>';
-    // 추가 입력
-    html+='<div style="display:flex;gap:5px;margin-top:8px">'
-      +'<input id="rp-new-route-'+camp+'" type="text" placeholder="라우트 (예:'+camp+'E)" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:var(--r);font-size:11px;text-transform:uppercase;background:var(--bg);color:var(--text)" oninput="this.value=this.value.toUpperCase()">'
-      +'<input id="rp-new-val-'+camp+'" type="number" placeholder="단가(원)" style="width:80px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--r);font-size:11px;background:var(--bg);color:var(--text)">'
-      +'<button class="btn btn-sm btn-blue" style="font-size:11px" onclick="addRpRoute(\''+camp+'\')">+ 추가</button>'
+    h+='</div>';
+    h+='<div style="display:flex;gap:5px;margin-bottom:4px">'
+      +'<input id="rp-nk-'+c+'" type="text" placeholder="'+c+'E" maxlength="6"'
+      +' style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:var(--r);font-size:11px;text-transform:uppercase;background:var(--bg);color:var(--text)" oninput="this.value=this.value.toUpperCase()">'
+      +'<input id="rp-nv-'+c+'" type="number" placeholder="단가(원)"'
+      +' style="width:80px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--r);font-size:11px;background:var(--bg);color:var(--text)">'
+      +'<button class="btn btn-sm btn-blue" onclick="addRpCamp(\''+c+'\')" style="font-size:11px;white-space:nowrap">+ 추가</button>'
       +'</div>';
-    html+='</div>';
+    h+='</div>';
   });
-  html+='</div>';
-
-  // 저장 버튼
-  html+='<div style="margin-top:10px;display:flex;gap:8px">'
-    +'<button class="btn btn-teal" onclick="saveRprice()" style="flex:1">💾 단가표 저장</button>'
-    +'</div>';
-
-  return html;
+  return h;
 }
 
-function showCampRoutes(camp){
-  // 모든 그룹 숨기기
-  document.querySelectorAll('.camp-group').forEach(function(g){g.style.display='none';});
-  document.querySelectorAll('.camp-tab').forEach(function(t){t.style.opacity='0.7';});
-  // 선택 캠프 표시
-  var g=document.getElementById('camp-group-'+camp);
-  if(g)g.style.display='block';
-  var t=document.getElementById('camp-tab-'+camp);
-  if(t)t.style.opacity='1';
+function showCampTab(camp){
+  document.querySelectorAll('.camp-panel').forEach(function(p){p.style.display='none';});
+  document.querySelectorAll('.camp-tab-btn').forEach(function(b){
+    b.style.background='transparent';
+  });
+  var panel=document.getElementById('cpanel-'+camp);
+  var tab=document.getElementById('ctab-'+camp);
+  if(panel)panel.style.display='block';
+  if(tab){tab.style.background=tab.style.borderColor;tab.style.color='#fff';}
 }
 
-function addRpRoute(camp){
-  var rEl=document.getElementById('rp-new-route-'+camp);
-  var vEl=document.getElementById('rp-new-val-'+camp);
-  if(!rEl||!vEl)return;
-  var r=rEl.value.trim().toUpperCase(), v=parseInt(vEl.value);
-  if(!r||!v){toast('라우트명과 단가를 입력하세요');return;}
-  RPRICE[r]=v;
-  // 그리드 새로고침
-  var grid=document.getElementById('rp-grid');
-  if(grid)grid.innerHTML=buildRpriceGrid();
-  setTimeout(function(){showCampRoutes(camp);},50);
-  toast('✅ '+r+' 추가됨');
+function initCampTabs(){
+  var first=document.querySelector('.camp-tab-btn');
+  if(first){var c=first.id.replace('ctab-','');showCampTab(c);}
 }
 
+function addRpCamp(camp){
+  var kEl=document.getElementById('rp-nk-'+camp);
+  var vEl=document.getElementById('rp-nv-'+camp);
+  if(!kEl||!vEl)return;
+  var k=kEl.value.trim().toUpperCase(),v=parseInt(vEl.value)||0;
+  if(!k||!v){toast('\ub77c\uc6b0\ud2b8 \ucf54\ub4dc\uc640 \ub2e8\uac00\ub97c \uc785\ub825\ud558\uc138\uc694');return;}
+  RPRICE[k]=v;
+  var g=document.getElementById('rprice-grid');
+  if(g){g.innerHTML=buildRpriceGrid();setTimeout(function(){showCampTab(camp);},30);}
+  toast('\u2705 '+k+' ('+v+'\uc6d0) \ucd94\uac00\ub428');
+}
+
+
+async function saveRprice(){
+  var newPrices={};
+  Object.keys(RPRICE).forEach(function(r){
+    var el=document.getElementById('rp-'+r);
+    var v=el?+el.value:RPRICE[r];
+    if(v>0) newPrices[r]=v;
+  });
+  // RPRICE 업데이트
+  Object.keys(RPRICE).forEach(function(k){delete RPRICE[k];});
+  Object.assign(RPRICE,newPrices);
+  if(FB&&_db){
+    // settings/routePrices 문서에 저장
+    await _db.collection('settings').doc('routePrices').set(newPrices,{merge:false});
+    // settings/unitPrices 하위 routePrices 필드도 동기화
+    await _db.collection('settings').doc('unitPrices').set({routePrices:newPrices},{merge:true});
+    toast('✅ 라우트 단가표 저장 완료 ('+Object.keys(newPrices).length+'개 라우트)');
+  } else {
+    localStorage.setItem('mb_rprice',JSON.stringify(newPrices));
+    toast('라우트 단가 로컬 저장 (Firebase 미연결)');
+  }
+}
+
+// 신규 라우트 추가
 function addRpRoute(){
   var k=(document.getElementById('rp-new-key')||{}).value||'';
   var v=+(document.getElementById('rp-new-val')||{}).value||0;
@@ -2593,8 +2639,7 @@ function dHome(){
       var tc=st==='주'?'#3B82F6':st==='야'?'#8B5CF6':st==='휴무'?'#9CA3AF':st==='병가'?'#EF4444':'var(--text3)';
       var bd=isTod?'2px solid var(--teal)':'1px solid var(--border)';
       // 관리자만 탭하여 변경 가능
-      // 기사는 완전 읽기 전용, 관리자만 수정
-      var click='style="cursor:default;';
+      var click=isAdm?'onclick="cycleSchedule(\''+wK+'\',\''+ds+'\')" style="cursor:pointer;':'style="cursor:default;';
       h+='<div '+click+'background:'+bg+';border:'+bd+';border-radius:6px;padding:5px 2px;text-align:center">'
         +'<div style="font-size:9px;font-weight:700;color:'+(isWE?'#EF4444':'var(--text)')+'">'+(isTod?'<u>':'')+DN[i]+(isTod?'</u>':'')+'</div>'
         +'<div style="font-size:9px;color:var(--text3)">'+d.getDate()+'</div>'
@@ -2606,7 +2651,8 @@ function dHome(){
 
   var schHTML='<div style="margin:8px 10px 0;overflow:hidden">'
     +'<div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:5px;display:flex;align-items:center;gap:6px">📅 2주 근무표 '
-    +'<span style="font-size:9px;color:var(--text3);background:var(--bg3);padding:1px 5px;border-radius:4px">👁 관리자가 등록 | 보기전용</span></div>'
+    +(isAdm?'<span style="font-size:9px;color:var(--teal);background:rgba(15,110,86,.12);padding:1px 6px;border-radius:4px">✏️ 관리자 수정가능</span>'
+           :'<span style="font-size:9px;color:var(--text3);background:var(--bg3);padding:1px 5px;border-radius:4px">👁 보기전용</span>')+'</div>'
     +mkW(w1,wk1,sc1,'이번 주')+mkW(w2,wk2,sc2,'다음 주')
     +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
     +'<span style="font-size:9px;color:#3B82F6">●주간</span><span style="font-size:9px;color:#8B5CF6">●야간</span>'
@@ -2623,22 +2669,8 @@ function dHome(){
     +'<button onclick="DT(\'accident\',document.getElementById(\'pni4\'))" style="padding:10px 4px;border:1px solid rgba(239,68,68,.25);border-radius:8px;background:rgba(239,68,68,.08);color:var(--red);font-size:11px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px"><span style="font-size:18px">🚨</span>사고접수</button>'
     +'</div>';
 
-  return `<div class="dh" style="overflow:hidden;position:relative;min-height:80px">
-  <div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;overflow:hidden;pointer-events:none">
-    <div class="logo-marquee" style="display:flex;animation:logoScroll 15s linear infinite;white-space:nowrap;align-items:center;gap:20px;opacity:0.15">
-      <span style="font-size:28px;font-weight:900;letter-spacing:2px;color:#fff">MBTI(Co.,Ltd.) LOGISTICS</span>
-      <span style="font-size:22px">🚛</span>
-      <span style="font-size:28px;font-weight:900;letter-spacing:2px;color:#f90">MBTI LOGISTICS</span>
-      <span style="font-size:22px">❄️</span>
-      <span style="font-size:28px;font-weight:900;letter-spacing:2px;color:#fff">MBTI(Co.,Ltd.) LOGISTICS</span>
-      <span style="font-size:22px">🚛</span>
-      <span style="font-size:28px;font-weight:900;letter-spacing:2px;color:#f90">MBTI LOGISTICS</span>
-      <span style="font-size:22px">❄️</span>
-    </div>
-  </div>
-  <h2 style="position:relative;z-index:1"><span class="user-name-display">${S.curDriver}</span> 기사님</h2>
-  <p style="position:relative;z-index:1">${new Date().toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'})} · ${S.curJobtype} ${S.curJobsub}</p>
-  </div>
+  return `<div class="dh"><h2><span class="user-name-display">${S.curDriver}</span> 기사님</h2><p>${new Date().toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'})} · ${S.curJobtype} ${S.curJobsub}</p></div>
+  <div style="overflow:hidden;height:40px;display:flex;align-items:center;background:linear-gradient(90deg,#071525,#0c2040,#071525);border-top:1px solid rgba(255,255,255,.08);border-bottom:1px solid rgba(255,255,255,.08)"><div style="display:flex;animation:lgScroll 20s linear infinite;white-space:nowrap;align-items:center;will-change:transform"><span style="color:#f90;font-size:12px;font-weight:900;letter-spacing:1px;padding:0 20px">&#x1F3E2; MBTI(Co.,Ltd.) LOGISTICS</span><span style="color:rgba(255,255,255,.3);padding:0 6px">&#x2736;</span><span style="color:#8cf;font-size:11px;font-weight:700;padding:0 16px">&#x1F69B; 냉동 · 냉장 · 상온 물류 전문</span><span style="color:rgba(255,255,255,.3);padding:0 6px">&#x2736;</span><span style="color:#f90;font-size:12px;font-weight:900;letter-spacing:1px;padding:0 20px">&#x1F3E2; MBTI(Co.,Ltd.) LOGISTICS</span><span style="color:rgba(255,255,255,.3);padding:0 6px">&#x2736;</span><span style="color:#8cf;font-size:11px;font-weight:700;padding:0 16px">&#x1F69B; 냉동 · 냉장 · 상온 물류 전문</span><span style="color:rgba(255,255,255,.3);padding:0 6px">&#x2736;</span></div></div>
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:10px 10px 0">
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center"><div style="font-size:14px;font-weight:700;color:var(--blue)">${S.driverNum||'MBTI??'}</div><div style="font-size:10px;color:var(--text2)">가입순번</div></div>
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center"><div style="font-size:14px;font-weight:700;color:var(--teal)">${totD}건</div><div style="font-size:10px;color:var(--text2)">오늘 배송</div></div>
@@ -3157,26 +3189,6 @@ document.querySelectorAll('.mo').forEach(m=>m.addEventListener('click',function(
 function startListeners(){
   if(!FB||!_db)return;
 
-  // ── 근무표 실시간 동기화 (schedules 컬렉션)
-  _db.collection('schedules').onSnapshot(function(snap){
-    snap.forEach(function(doc){
-      var d=doc.data();
-      if(!d.driver||!d.date)return;
-      // 날짜에서 년/월 추출
-      var parts=d.date.split('-');
-      if(parts.length<3)return;
-      var y=parseInt(parts[0]), mo=parseInt(parts[1])-1;
-      var wkKey='schedule_'+d.driver+'_month_'+y+'_'+mo;
-      var sc=JSON.parse(localStorage.getItem(wkKey)||'{}');
-      if(d.status){sc[d.date]=d.status;}else{delete sc[d.date];}
-      localStorage.setItem(wkKey,JSON.stringify(sc));
-    });
-    // 기사 홈 근무표 새로고침
-    if(S.dtab==='home'&&typeof dHome==='function'){
-      var pc=document.getElementById('dpc');if(pc)pc.innerHTML=dHome();
-    }
-  });
-
   // ── drivers: Firestore → localStorage → UI 직접 반영 (1초 이내)
   _db.collection('drivers').orderBy('joinDate','desc').limit(300)
     .onSnapshot({includeMetadataChanges:false}, snap=>{
@@ -3560,16 +3572,48 @@ function miniCalClick(ds){
 }
 
 
-function saveRprice(){
-  // 현재 입력값으로 RPRICE 업데이트
-  Object.keys(RPRICE).forEach(function(r){
-    var el=document.getElementById('rp-'+r);
-    if(el&&el.value){RPRICE[r]=parseInt(el.value)||RPRICE[r];}
+// ── 로그인 도움말
+function toggleLoginHelp(){
+  var b=document.getElementById('login-help-box');
+  if(b)b.style.display=(b.style.display==='none'?'block':'none');
+}
+function fillLogin(id,pw){
+  var idEl=document.getElementById('lid');
+  var pwEl=document.getElementById('lpw');
+  if(id&&idEl)idEl.value=id;
+  if(pw&&pwEl)pwEl.value=pw;
+  if(id&&pw)toast('로그인 정보 입력됨');
+  else if(id)toast('아이디 입력됨');
+  else toast('비밀번호 입력됨');
+}
+function findDriverId(){
+  var nameEl=document.getElementById('find-id-name');
+  var resEl=document.getElementById('find-id-result');
+  if(!nameEl||!resEl)return;
+  var name=nameEl.value.trim();
+  if(!name){resEl.textContent='이름을 입력해주세요';resEl.style.color='var(--amber)';return;}
+  var drivers=ls('drivers').filter(function(d){
+    return d.name&&d.name.includes(name)&&d.status!=='withdrawn'&&d.status!=='rejected';
   });
-  // localStorage + Firebase 저장
-  localStorage.setItem('mbti_rprice',JSON.stringify(RPRICE));
-  if(FB&&_db){_db.collection('settings').doc('rprice').set(RPRICE).then(function(){toast('💾 단가표 저장 (Firebase)');}).catch(function(){toast('💾 단가표 저장 (로컬)');});}
-  else{toast('💾 단가표 로컬 저장');}
+  if(!drivers.length){
+    resEl.textContent='찾을 수 없습니다. 관리자에게 문의하세요.';
+    resEl.style.color='var(--red)';
+    return;
+  }
+  resEl.style.color='var(--text)';
+  resEl.innerHTML='';
+  drivers.forEach(function(d){
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)';
+    row.innerHTML='<span style="font-weight:700">'+d.name+'</span>'
+      +'<button style="padding:3px 10px;background:var(--teal);color:#fff;border:none;border-radius:4px;font-size:11px;cursor:pointer">ID: '+(d.userId||'미설정')+'</button>';
+    row.querySelector('button').onclick=function(){
+      var lidEl=document.getElementById('lid');
+      if(lidEl&&d.userId)lidEl.value=d.userId;
+      toast(d.name+' 아이디 입력됨');
+    };
+    resEl.appendChild(row);
+  });
 }
 </script>
 </body>
