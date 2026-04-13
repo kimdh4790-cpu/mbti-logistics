@@ -804,6 +804,10 @@ body.app-mode{background:#0a0e1a;}
   <button onclick="openMbtiLogin('driver')" style="padding:6px 13px;background:linear-gradient(135deg,#0f6e56,#1aab85);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(15,110,86,.4)">🚛 기사 로그인</button>
   <button onclick="openMbtiLogin('admin')" style="padding:6px 13px;background:linear-gradient(135deg,#1a4a8a,#2d7dd2);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(24,95,165,.4)">🗂 관리자 로그인</button>
 </div>
+<div class="mbti-login-btns" style="display:flex;gap:6px;align-items:center;margin-right:8px">
+  <button onclick="openMbtiLogin('driver')" style="padding:6px 13px;background:linear-gradient(135deg,#0f6e56,#1aab85);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">🚛 기사 로그인</button>
+  <button onclick="openMbtiLogin('admin')" style="padding:6px 13px;background:linear-gradient(135deg,#1a4a8a,#2d7dd2);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">🗂 관리자 로그인</button>
+</div>
 <div class="nav-toggle">
 <button class="ntab active" id="pcBtn" onclick="setView(&#39;pc&#39;)">🖥 PC</button>
 <button class="ntab" id="appBtn" onclick="tryOpenApp()">📱 앱</button>
@@ -1742,60 +1746,32 @@ function appLoginGo(role) {
   localStorage.setItem('mbti_app_role', role);
   setView('app');
 }
-// ── iframe 전역 변수
-var _appIframeCreated = false;
-
 function setView(v) {
-  var b = document.getElementById('mbtiBody');
   var pcBtn = document.getElementById('pcBtn');
   var appBtn = document.getElementById('appBtn');
-  var wrap = document.getElementById('app-iframe-wrap');
-
+  var b = document.getElementById('mbtiBody');
   if (v === 'app') {
-    // PC 버튼 비활성, 앱 버튼 활성
     if(pcBtn) pcBtn.classList.remove('active');
     if(appBtn) appBtn.classList.add('active');
-    b.classList.add('app-mode');
-
-    if (!wrap) {
-      // 최초 생성
-      wrap = document.createElement('div');
-      wrap.id = 'app-iframe-wrap';
-      wrap.style.cssText = 'position:fixed;inset:0;z-index:9990;background:#0d0d1a;display:flex;flex-direction:column';
-      var topBar = document.createElement('div');
-      topBar.style.cssText = 'background:#111827;padding:8px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;border-bottom:1px solid #222';
-      topBar.innerHTML = '<span style="color:#f90;font-size:13px;font-weight:700">&#x1F4E6; MBTI 물류관리 앱</span>'
-        + '<button id="close-iframe-btn" style="background:#374151;color:#fff;border:none;padding:6px 16px;border-radius:7px;font-size:12px;cursor:pointer;font-weight:700">&#x2715; 홈으로</button>';
-      var iframe = document.createElement('iframe');
-      iframe.id = 'app-iframe';
-      iframe.src = '엠비티아이_물류관리_v9.html';
-      iframe.style.cssText = 'flex:1;border:none;width:100%;height:100%';
-      iframe.allow = 'camera;microphone';
-      wrap.appendChild(topBar);
-      wrap.appendChild(iframe);
-      document.body.appendChild(wrap);
-      // 닫기 버튼
-      document.getElementById('close-iframe-btn').addEventListener('click', function(){ setView('pc'); });
-      // 기사앱 → 홈 postMessage 수신
-      window.addEventListener('message', function(e){
-        if(e.data && e.data.action === 'closeAppIframe') setView('pc');
-      });
-      _appIframeCreated = true;
-    } else {
-      wrap.style.display = 'flex';
+    var overlay = document.getElementById('app-launcher-overlay');
+    if (overlay) {
+      var iframe = document.getElementById('app-iframe');
+      if (iframe && !iframe.src.includes('v9')) {
+        iframe.src = '엠비티아이_물류관리_v9.html';
+      }
+      overlay.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
     }
-    window.scrollTo(0,0);
   } else {
-    // PC 버튼 활성, 앱 버튼 비활성
     if(pcBtn) pcBtn.classList.add('active');
     if(appBtn) appBtn.classList.remove('active');
     b.classList.remove('app-mode');
-    if(wrap) wrap.style.display = 'none';
-    window.scrollTo(0,0);
-    updateClock();
-    runAppCounters();
+    var overlay2 = document.getElementById('app-launcher-overlay');
+    if (overlay2) { overlay2.style.display = 'none'; document.body.style.overflow = ''; }
+    updateClock(); runAppCounters();
   }
 }
+function tryOpenApp(){ setView('app'); }
 
 /* ── 지도 탭 ── */
 function showMap(r) {
@@ -2439,8 +2415,12 @@ function launchApp() {
 
 function closeAppLauncher() {
   var overlay = document.getElementById('app-launcher-overlay');
-  if (overlay) overlay.classList.remove('open');
+  if (overlay) { overlay.style.display = 'none'; overlay.classList.remove('open'); }
   document.body.style.overflow = '';
+  var pcBtn = document.getElementById('pcBtn');
+  var appBtn = document.getElementById('appBtn');
+  if(pcBtn) pcBtn.classList.add('active');
+  if(appBtn) appBtn.classList.remove('active');
 }
 
 function showPwaToast(msg) {
@@ -2462,7 +2442,7 @@ document.addEventListener('keydown', function(e) {
 // ===== MBTI 추가 기능 =====
 var _mbtiUser = null;
 
-function tryOpenApp(){ setView('app'); }
+
 
 function openMbtiLogin(mode) {
   var ov = document.getElementById('mbti-auth-overlay');
@@ -2735,6 +2715,10 @@ function renderSettlementData(el, rows) {
     };
   }
 })();
+
+window.addEventListener('message', function(e){
+  if(e.data && e.data.action === 'closeAppIframe') closeAppLauncher();
+});
 </script>
 </body>
 </html>
