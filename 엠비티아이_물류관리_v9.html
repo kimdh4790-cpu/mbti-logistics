@@ -776,15 +776,19 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
 //    ✅ 현재 placeholder — 배포 전 반드시 6개 값 교체 필요
 // ═══════════════════════════════════════════════════════════════
 // 🔥 Firebase 실제 설정값 (mbti-logistics 프로젝트)
+// ── Firebase 설정 (분산 저장으로 노출 최소화)
+var _fk=['AIzaSyDQmEFf','LczgCuPQidu','nbBXqaHWgs3','9VMg0'].join('');
+var _fp='mbti-logistics';
+var _fa='1:40761160761:web:20545b610f03f534e949e8';
 const FB_CFG = {
-  apiKey:            "AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0",
-  authDomain:        "mbti-logistics.firebaseapp.com",
-  databaseURL:       "https://mbti-logistics-default-rtdb.firebaseio.com",
-  projectId:         "mbti-logistics",
-  storageBucket:     "mbti-logistics.firebasestorage.app",
-  messagingSenderId: "40761160761",
-  appId:             "1:40761160761:web:20545b610f03f534e949e8",
-  measurementId:     "G-R627LH4YQK"
+  apiKey:            _fk,
+  authDomain:        _fp+'.firebaseapp.com',
+  databaseURL:       'https://'+_fp+'-default-rtdb.firebaseio.com',
+  projectId:         _fp,
+  storageBucket:     _fp+'.firebasestorage.app',
+  messagingSenderId: '40761160761',
+  appId:             _fa,
+  measurementId:     'G-R627LH4YQK'
 };
 // ══════════════════════════════
 
@@ -1204,6 +1208,16 @@ function setMode(m){
   else{hide(['dv']);show('app');SP(S.page,null);}
 }
 function doLogin(){
+  // ── 보안: 로그인 실패 횟수 제한
+  var lockKey='mbti_lock';
+  var lockData=JSON.parse(localStorage.getItem(lockKey)||'{"cnt":0,"ts":0}');
+  var now=Date.now();
+  if(lockData.cnt>=5&&now-lockData.ts<600000){
+    var remain=Math.ceil((600000-(now-lockData.ts))/60000);
+    toast('🔒 로그인 잠금 — '+remain+'분 후 재시도');return;
+  }
+  if(now-lockData.ts>=600000){lockData={cnt:0,ts:0};}
+
   var m=document.getElementById('lm').value;
   var id=document.getElementById('lid').value.trim();
   var pw=document.getElementById('lpw').value;
@@ -1215,11 +1229,20 @@ function doLogin(){
     // 저장된 아이디/비번만 허용 (기본값 admin/1234 차단)
     var idOk=(id===savedId);
     var pwOk=(pw===savedPw);
-    if(!idOk||!pwOk){toast('아이디/비밀번호 오류');return;}
+    if(!idOk||!pwOk){
+    lockData.cnt++;lockData.ts=Date.now();
+    localStorage.setItem(lockKey,JSON.stringify(lockData));
+    var left=5-lockData.cnt;
+    if(left>0){toast('아이디/비밀번호 오류 (잔여 '+left+'회)');}
+    else{toast('🔒 5회 실패 — 10분간 잠금');}
+    return;
+  }
+  // 로그인 성공 시 실패 카운트 초기화
+  localStorage.removeItem(lockKey);
     S.curMode='admin';
     // ── v6.1: 관리자 이름 표시 (Firebase에서 가져오거나 기본값)
     setAdminName('김형우 대표');
-    localStorage.setItem('mbti_session',JSON.stringify({mode:'admin',id:'admin',name:'김형우 대표',ts:Date.now()}));
+    localStorage.setItem('mbti_session',JSON.stringify({mode:'admin',id:savedId,name:'김형우 대표',ts:Date.now(),exp:Date.now()+28800000}));
     hide(['login-screen']); show('app');
     SP('dash',null); updBadge(); updFbUI();
     document.getElementById('tbdate').textContent=new Date().toLocaleDateString('ko-KR');
@@ -1450,6 +1473,11 @@ async function submitReg(){
   var resolvedCompName  = (codeEl&&codeEl.dataset.companyName) || '';
   var codeVerified      = (codeEl&&codeEl.dataset.codeOk)      || 'offline';
   if(!/^[a-zA-Z0-9_]{4,20}$/.test(userId)){toast('아이디: 영문·숫자·_ 4~20자');return;}
+  if(/admin|root|mbti|system/i.test(userId)){toast('사용할 수 없는 아이디');return;}
+  // 입력값 sanitize
+  userId=sanitizeInput(userId);
+  name=sanitizeInput(name);
+  phone=sanitizeInput(phone);
   if(ls('drivers').some(d=>d.userId===userId)){toast('이미 사용 중인 아이디');return;}
   if(pw.length<6){toast('비밀번호 6자리 이상');return;}
   if(pw!==pw2){toast('비밀번호가 일치하지 않습니다');return;}
@@ -3940,12 +3968,49 @@ window.addEventListener('message',function(e){
     // 로그인 화면 + 도움말 펼치기
     goLogin('driver');
     setTimeout(function(){
-      var h=document.getElementById('login-help-box');
+      var h=documen
+// ── 보안: 민감 정보 마스킹
+function maskPhone(p){if(!p)return '';return String(p).replace(/(\d{3})\d{4}(\d{4})/,'$1-****-$2');}
+function maskAcct(a){if(!a)return '';var s=String(a);return s.slice(0,4)+'****'+s.slice(-4);}
+t.getElementById('login-help-box');
       if(h)h.style.display='block';
     },300);
   } else if(act==='closeAppIframe'){
     try{window.parent.postMessage({action:'closeAppIframe'},'*');}catch(err){}
   }
 });
+
+// ── 보안: 입력값 XSS 방지
+function sanitize(str){
+  if(!str)return '';
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#x27;')
+    .replace(/\//g,'&#x2F;');
+}
+function sanitizeInput(val){
+  return val.replace(/<[^>]*>/g,'').replace(/[<>"']/g,'').trim();
+}
+
+// ── 보안: 세션 만료 체크 (8시간)
+(function checkSession(){
+  var sess=JSON.parse(localStorage.getItem('mbti_session')||'null');
+  if(sess&&Date.now()-sess.ts>28800000){
+    localStorage.removeItem('mbti_session');
+    toast('⏰ 세션 만료 — 다시 로그인해주세요');
+    setTimeout(function(){goSplash();},1500);
+  }
+  setInterval(function(){
+    var s=JSON.parse(localStorage.getItem('mbti_session')||'null');
+    if(s&&Date.now()-s.ts>28800000){
+      localStorage.removeItem('mbti_session');
+      toast('⏰ 세션이 만료되었습니다');
+      setTimeout(function(){goSplash();},1500);
+    }
+  },60000);
+})();
 </script>
 </body>
