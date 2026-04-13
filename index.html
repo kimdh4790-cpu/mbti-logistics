@@ -75,6 +75,7 @@ flex-shrink:0;
 .nav-links{display:flex;gap:18px;list-style:none;}
 .nav-links a{color:rgba(255,255,255,0.78);font-size:0.79rem;font-weight:600;letter-spacing:0.3px;transition:color 0.2s;padding:4px 0;}
 .nav-links a:hover,.nav-links a.active{color:var(--amber);}
+@media(max-width:768px){.nav-login-btns-wrap{display:none!important;}}
 .nav-toggle{display:flex;gap:4px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:100px;padding:4px;flex-shrink:0;}
 .ntab{padding:5px 13px;border-radius:100px;border:none;font-size:0.72rem;font-weight:700;transition:all 0.2s;background:transparent;color:rgba(255,255,255,0.55);font-family:inherit;}
 .ntab.active{background:var(--amber);color:var(--navy);}
@@ -796,6 +797,10 @@ body.app-mode{background:#0a0e1a;}
 <span class="nav-sep">|</span>
 <span class="nav-clock" id="navClock">06:20</span>
 <span class="nav-date" id="navDate">3월29일(일)</span>
+</div>
+<div class="nav-login-btns-wrap" style="display:flex;gap:7px;align-items:center;margin-right:8px">
+  <button onclick="openMbtiLogin('driver')" style="padding:6px 13px;background:linear-gradient(135deg,#0f6e56,#1aab85);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(15,110,86,.4)">🚛 기사 로그인</button>
+  <button onclick="openMbtiLogin('admin')" style="padding:6px 13px;background:linear-gradient(135deg,#1a4a8a,#2d7dd2);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(24,95,165,.4)">🗂 관리자 로그인</button>
 </div>
 <div class="nav-toggle">
 <button class="ntab active" id="pcBtn" onclick="setView(&#39;pc&#39;)">🖥 PC</button>
@@ -2396,6 +2401,31 @@ function tryOpenApp() {
   } else {
     var ov = document.getElementById('mbti-auth-overlay');
     if (ov) ov.style.display = 'flex';
+  }
+}
+
+function openMbtiLogin(mode) {
+  var ov = document.getElementById('mbti-auth-overlay');
+  if (!ov) return;
+  ov.style.display = 'flex';
+  authSwitchTab('login');
+  // 힌트 배지 표시
+  var hint = document.getElementById('auth-mode-hint');
+  if (!hint) {
+    hint = document.createElement('div');
+    hint.id = 'auth-mode-hint';
+    hint.style.cssText = 'text-align:center;font-size:11px;padding:5px 10px;border-radius:6px;margin-bottom:8px;font-weight:700';
+    var lp = document.getElementById('auth-panel-login');
+    if (lp) lp.insertBefore(hint, lp.firstChild);
+  }
+  if (mode === 'admin') {
+    hint.textContent = '🗂 관리자 로그인';
+    hint.style.background = 'rgba(24,95,165,.15)';
+    hint.style.color = '#2d7dd2';
+  } else {
+    hint.textContent = '🚛 기사 로그인';
+    hint.style.background = 'rgba(15,110,86,.15)';
+    hint.style.color = '#0f6e56';
   }
 }
 
