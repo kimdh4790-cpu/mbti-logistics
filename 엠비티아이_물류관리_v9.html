@@ -3348,8 +3348,16 @@ document.querySelectorAll('.mo').forEach(m=>m.addEventListener('click',function(
 // ── Firebase 리스너
 var _initialLoad=true;
 function startListeners(){
-  _initialLoad=true; // 매번 리셋
+  _initialLoad=true;
   if(!FB||!_db)return;
+  // ── 전체 기사 데이터 초기 1회 로드
+  _db.collection('drivers').get().then(function(snap){
+    var all=[];
+    snap.forEach(function(doc){var d=doc.data();d.fbId=doc.id;all.push(d);});
+    lss('drivers',all);
+    updBadge();
+    if(S.page==='drivers'||S.page==='dash')SP(S.page,null);
+  }).catch(function(e){console.warn('drivers get:',e);});
 
   // ── 관리자 정보 Firebase에서 로드
   _db.collection('settings').doc('adminInfo').get().then(function(doc){
@@ -3363,7 +3371,7 @@ function startListeners(){
   }).catch(function(){});
 
   // ── drivers: Firestore → localStorage → UI 직접 반영 (1초 이내)
-  _db.collection('drivers').orderBy('joinDate','desc').limit(300)
+  _db.collection('drivers').orderBy('joinDate','desc').limit(500)
     .onSnapshot({includeMetadataChanges:false}, snap=>{
       // ① Firestore 전체 데이터 배열화
       var fbDrivers=[];
