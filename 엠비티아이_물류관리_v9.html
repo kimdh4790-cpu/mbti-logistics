@@ -942,7 +942,7 @@ async function fbW(col,d){
 
 // ── v6.1 이미지 압축 (1MB 이하 자동 리사이즈, Firebase 한도 절약)
 async function compressImage(file) {
-  var MAX_PX=360, Q=0.35;  // v9: 360px·35% → 평균 15KB 이하 초고속
+  var MAX_PX=240, Q=0.2;  // v9: 360px·35% → 평균 15KB 이하 초고속
   if (window.createImageBitmap) {
     return createImageBitmap(file).then(function(bmp) {
       var w=bmp.width, h_=bmp.height;
@@ -997,7 +997,7 @@ async function upFile(file,path){
       fd.append('upload_preset','mbti_unsigned');
       fd.append('folder','mbti_logistics/'+path.split('/')[0]);
       var ctrl=new AbortController();
-      var tid=setTimeout(()=>ctrl.abort(),8000);
+      var tid=setTimeout(()=>ctrl.abort(),4000);
       var resp=await fetch('https://api.cloudinary.com/v1_1/mbti-logistics/image/upload',{method:'POST',body:fd,signal:ctrl.signal});
       clearTimeout(tid);
       if(resp.ok){
@@ -2202,7 +2202,7 @@ function rMypage(){
               ?'<img src="'+url+'" style="width:100%;height:100%;object-fit:cover"><div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.6);color:#fff;font-size:9px;font-weight:700;text-align:center;padding:3px">'+s.lbl+' 📷교체</div>'
               :'<div style="font-size:20px;margin-bottom:3px">📷</div><div style="font-size:10px;font-weight:700;color:var(--red)">'+s.lbl+'</div><div style="font-size:9px;color:var(--text3)">탭하여 업로드</div>'
             )
-            +'<input type="file" accept="image/*" capture="environment" style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer" onchange="lateDocUpload(this,\''+s.key+'\',\''+s.lbl+'\')">'
+            +'<input type="file" accept="image/*" style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer" onchange="lateDocUpload(this,\''+s.key+'\',\''+s.lbl+'\')">'
             +'</label>';
         }).join('');
       })()}}
@@ -2879,7 +2879,7 @@ function dEntry(){
     var camInner=camURL
       ?'<img src="'+camURL+'" style="width:100%;height:100%;object-fit:cover;border-radius:10px">'
       :'<span style="font-size:22px">📷</span><div style="font-size:10px;color:var(--text3);margin-top:3px">입차 증빙사진</div>';
-    var camW='<div class="cam-wrap"><input type="file" accept="image/*" capture="environment" onchange="camPhoto(this,\'zone\',\'entry\',\'입차증빙\')">'
+    var camW='<div class="cam-wrap"><input type="file" accept="image/*" onchange="camPhoto(this,\'zone\',\'entry\',\'입차증빙\')">'
       +'<div class="cam-ph cam-btn'+(camURL?' taken':'')+'">'+camInner+'</div></div>';
     var histHTML=me?'<div class="dc" style="margin-top:0"><div class="dct">오늘 입차 이력</div>'
       +'<div style="font-size:12px;display:flex;gap:8px;align-items:center">'
@@ -2909,7 +2909,7 @@ function dEntry(){
   var camHTML=['zone','cargo','tempLog'].map((k,i)=>{
     var lbl=['구역인증','화물상태','온도계'][i];
     var url=S.photos.entry[k]||'';
-    return `<div class="cam-wrap"><input type="file" accept="image/*" capture="environment" onchange="camPhoto(this,'${k}','entry','${lbl}')"><div class="cam-btn ${url?'taken':''}" id="ce-${k}">${url?`<img class="cam-prev" src="${url}"><div class="cam-chk">✓</div>`:`<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="4" stroke="currentColor" stroke-width="1.4"/><path d="M3 7h2l2-3h6l2 3h2a1 1 0 011 1v7a1 1 0 01-1 1H3a1 1 0 01-1-1V8a1 1 0 011-1z" stroke="currentColor" stroke-width="1.2" fill="none"/></svg><span>${lbl}</span>`}</div></div>`;
+    return `<div class="cam-wrap"><input type="file" accept="image/*" onchange="camPhoto(this,'${k}','entry','${lbl}')"><div class="cam-btn ${url?'taken':''}" id="ce-${k}">${url?`<img class="cam-prev" src="${url}"><div class="cam-chk">✓</div>`:`<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="4" stroke="currentColor" stroke-width="1.4"/><path d="M3 7h2l2-3h6l2 3h2a1 1 0 011 1v7a1 1 0 01-1 1H3a1 1 0 01-1-1V8a1 1 0 011-1z" stroke="currentColor" stroke-width="1.2" fill="none"/></svg><span>${lbl}</span>`}</div></div>`;
   }).join('');
   return `<div class="dh"><h2>입차 등록</h2><p>업무유형 선택 → 온도·사진 등록</p></div>
   <div class="dc">
@@ -3054,7 +3054,7 @@ function dTaxi(){
   var ph=phKeys.map(function(arr){
     var k=arr[0],lbl=arr[1];
     var url=S.photos.delivery[k]||'';
-    return '<div class="cam-wrap"><input type="file" accept="image/*" capture="environment" onchange="camPhoto(this,\''+k+'\',\'delivery\',\''+lbl+'\')">'
+    return '<div class="cam-wrap"><input type="file" accept="image/*" onchange="camPhoto(this,\''+k+'\',\'delivery\',\''+lbl+'\')">'
       +'<div class="cam-btn '+(url?'taken':'')+'" id="cd-'+k+'">'
       +(url?'<img class="cam-prev" src="'+url+'"><div class="cam-chk">✓</div>'
           :'<svg width="16" height="16" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="4" stroke="currentColor" stroke-width="1.4"/><path d="M3 7h2l2-3h6l2 3h2a1 1 0 011 1v7a1 1 0 01-1 1H3a1 1 0 01-1-1V8a1 1 0 011-1z" stroke="currentColor" stroke-width="1.2" fill="none"/></svg><span>'+lbl+'</span>')
@@ -3149,7 +3149,7 @@ function dTemp(){
   var logs=ls('tempLogs').filter(l=>l.driver===S.curDriver&&l.date===today());
   var ph=[['log','온도기록지'],['dev','온도계화면']].map(([k,lbl])=>{
     var url=S.photos.temp[k]||'';
-    return `<div class="cam-wrap"><input type="file" accept="image/*" capture="environment" onchange="camPhoto(this,'${k}','temp','${lbl}')"><div class="cam-btn ${url?'taken':''}" id="ct-${k}" style="height:56px">${url?`<img class="cam-prev" src="${url}"><div class="cam-chk">✓</div>`:`<svg width="16" height="16" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="4" stroke="currentColor" stroke-width="1.4"/><path d="M3 7h2l2-3h6l2 3h2a1 1 0 011 1v7a1 1 0 01-1 1H3a1 1 0 01-1-1V8a1 1 0 011-1z" stroke="currentColor" stroke-width="1.2" fill="none"/></svg><span>${lbl}</span>`}</div></div>`;
+    return `<div class="cam-wrap"><input type="file" accept="image/*" onchange="camPhoto(this,'${k}','temp','${lbl}')"><div class="cam-btn ${url?'taken':''}" id="ct-${k}" style="height:56px">${url?`<img class="cam-prev" src="${url}"><div class="cam-chk">✓</div>`:`<svg width="16" height="16" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="4" stroke="currentColor" stroke-width="1.4"/><path d="M3 7h2l2-3h6l2 3h2a1 1 0 011 1v7a1 1 0 01-1 1H3a1 1 0 01-1-1V8a1 1 0 011-1z" stroke="currentColor" stroke-width="1.2" fill="none"/></svg><span>${lbl}</span>`}</div></div>`;
   }).join('');
   return `<div class="dh"><h2>온도 기록</h2><p>사진+숫자 동시 등록 → 관리자 연동</p></div>
   <div class="dc"><div class="dct">온도 입력</div>
@@ -3200,7 +3200,7 @@ function dAccident(){
   var ph=['front','side','damage','scene'].map((k,i)=>{
     var lbl=['전면','측면','파손부위','현장전체'][i];
     var url=S.photos.accident[k]||'';
-    return `<div class="cam-wrap"><input type="file" accept="image/*" capture="environment" onchange="camPhoto(this,'${k}','accident','${lbl}')"><div class="cam-btn ${url?'taken':''}" id="ca-${k}">${url?`<img class="cam-prev" src="${url}"><div class="cam-chk">✓</div>`:`<svg width="16" height="16" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="4" stroke="currentColor" stroke-width="1.4"/><path d="M3 7h2l2-3h6l2 3h2a1 1 0 011 1v7a1 1 0 01-1 1H3a1 1 0 01-1-1V8a1 1 0 011-1z" stroke="currentColor" stroke-width="1.2" fill="none"/></svg><span>${lbl}</span>`}</div></div>`;
+    return `<div class="cam-wrap"><input type="file" accept="image/*" onchange="camPhoto(this,'${k}','accident','${lbl}')"><div class="cam-btn ${url?'taken':''}" id="ca-${k}">${url?`<img class="cam-prev" src="${url}"><div class="cam-chk">✓</div>`:`<svg width="16" height="16" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="4" stroke="currentColor" stroke-width="1.4"/><path d="M3 7h2l2-3h6l2 3h2a1 1 0 011 1v7a1 1 0 01-1 1H3a1 1 0 01-1-1V8a1 1 0 011-1z" stroke="currentColor" stroke-width="1.2" fill="none"/></svg><span>${lbl}</span>`}</div></div>`;
   }).join('');
   return `<div class="dh" style="background:#C04030"><h2>🚨 사고 접수</h2><p>즉시 Firestore 저장 → 관리자 알림</p></div>
   ${me.length?`<div class="dc"><div class="dct">접수 이력</div>${me.map(a=>`<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;display:flex;justify-content:space-between"><span>${a.type} · ${a.time||''}</span><span class="badge ${a.status==='접수중'?'b-red':a.status==='처리중'?'b-wait':'b-done'}">${a.status}</span></div>`).join('')}</div>`:''}
@@ -3333,15 +3333,59 @@ async function camPhoto(inp,slotKey,category,label){
   var idMap={entry:'ce',delivery:'cd',accident:'ca',temp:'ct'};
   var id=(idMap[category]||'c')+'-'+slotKey;
   var btn=document.getElementById(id);
-  if(btn){btn.className='cam-btn';btn.innerHTML='<div style="width:14px;height:14px;border:2px solid rgba(133,79,11,.3);border-top-color:var(--amber);border-radius:50%;animation:spin .7s linear infinite;margin-bottom:3px"></div><span>업로드중</span>';}
+  if(btn){btn.className='cam-btn';btn.innerHTML='<div style="text-align:center"><div style="font-size:18px">⏳</div><div style="font-size:9px">업로드중...</div></div>';}
   try{
-    var path=(category==='accident'?'accidents':category==='temp'?'temp_logs':category==='delivery'?'delivery':'entries')+'/'+today();
-    var url=await upFile(file,path);
-    if(!S.photos[category])S.photos[category]={};
-    S.photos[category][slotKey]=url;
-    if(btn){btn.className='cam-btn taken';btn.innerHTML=`<img class="cam-prev" src="${url}"><div class="cam-chk">✓</div>`;}
-    toast('✅ '+label+' 등록'+(FB?' (Firebase)':''));
-  }catch(err){if(btn){btn.className='cam-btn';btn.innerHTML='<span style="color:var(--red);font-size:9px">재촬영</span>';}toast('❌ '+err.message);}
+    var url=await upFile(file,category+'/'+S.curDriver+'/'+slotKey+'_'+Date.now());
+    if(!url){toast('❌ 업로드 실패');if(btn){btn.className='cam-btn';btn.innerHTML='<div style="text-align:center"><div style="font-size:20px">📷</div><div style="font-size:9px">'+label+'</div><div style="font-size:8px;color:red">재시도</div></div>';}return;}
+
+    // localStorage 저장
+    var photos=JSON.parse(localStorage.getItem(category+'_photos')||'{}');
+    if(!photos[S.curDriver])photos[S.curDriver]={};
+    photos[S.curDriver][slotKey]=url;
+    localStorage.setItem(category+'_photos',JSON.stringify(photos));
+
+    // Firebase 실시간 저장
+    if(FB&&_db){
+      var me=ls('drivers').find(function(d){return d.name===S.curDriver;});
+      if(me&&me.fbId){
+        var upd={};
+        upd['photos.'+category+'.'+slotKey]=url;
+        upd['photos.'+category+'.'+slotKey+'_time']=new Date().toISOString();
+        _db.collection('drivers').doc(me.fbId).update(upd).catch(function(){});
+      }
+    }
+
+    // UI 업데이트 - DOM 방식 (따옴표 충돌 없음)
+    if(btn){
+      btn.className='cam-btn taken';
+      btn.innerHTML='';
+      var img=document.createElement('img');
+      img.src=url;
+      img.style.cssText='width:100%;height:100%;object-fit:cover;border-radius:6px';
+      img.onclick=(function(u,l){return function(){openIV(u,l);};})(url,label);
+      var cap=document.createElement('div');
+      cap.style.cssText='position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.55);color:#fff;font-size:8px;text-align:center;padding:2px';
+      cap.textContent=label+' ✅';
+      btn.appendChild(img);btn.appendChild(cap);
+    }
+    toast('✅ '+label+' 업로드 완료');
+
+    // 관련 컬렉션 오늘 문서에도 저장
+    if(FB&&_db){
+      var colMap={entry:'entries',delivery:'deliveries',accident:'accidents',temp:'entries'};
+      var col=colMap[category]||category;
+      _db.collection(col).where('driver','==',S.curDriver).where('date','==',today()).limit(1).get()
+        .then(function(snap){
+          if(!snap.empty){
+            var u2={};u2['photo_'+slotKey]=url;u2['photoAt_'+slotKey]=new Date().toISOString();
+            snap.docs[0].ref.update(u2).catch(function(){});
+          }
+        }).catch(function(){});
+    }
+  }catch(e){
+    toast('❌ 업로드 오류: '+e.message);
+    if(btn){btn.className='cam-btn';btn.innerHTML='<div style="text-align:center"><div style="font-size:20px">📷</div><div style="font-size:9px">'+label+'</div><div style="font-size:8px;color:red">재시도</div></div>';}
+  }
 }
 
 // ── 이미지 뷰어
