@@ -235,7 +235,7 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
 .pni{flex:1;padding:8px 2px 6px;text-align:center;cursor:pointer;color:rgba(255,255,255,.75);font-size:9px;border:none;background:none}
 .pni.on{color:#fff}
 .pni svg{display:block;margin:0 auto 2px}
-.dh{background:var(--blue);padding:10px 14px 10px;color:#fff}
+.dh{background:var(--blue);padding:13px 16px 16px;color:#fff}
 .dh h2{font-size:16px;font-weight:700;margin-bottom:2px}
 .dh p{font-size:11px;opacity:.85}
 .dc{background:var(--bg2);margin:8px 10px 0;border-radius:var(--rl);padding:12px;border:1px solid var(--border)}
@@ -343,35 +343,33 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
       <label class="lbl">비밀번호</label>
       <input class="fi" id="lpw" type="password" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doLogin()">
       <button class="btn-login" id="lbtn" onclick="doLogin()">로그인</button>
-      <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px">
-        <button onclick="toggleLoginHelp()" style="width:100%;padding:10px;background:transparent;border:1.5px dashed var(--border);border-radius:10px;color:var(--text2);font-size:12px;cursor:pointer;font-weight:600">
+      <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
+        <button id="help-toggle-btn" style="width:100%;padding:9px;background:transparent;border:1.5px dashed var(--border);border-radius:10px;color:var(--text2);font-size:12px;cursor:pointer;font-weight:600">
           🔑 아이디 / 비밀번호를 모르시나요?
         </button>
-        <div id="login-help-box" style="display:none;margin-top:12px;background:var(--bg3);border-radius:12px;padding:14px">
+        <div id="login-help-box" style="display:none;margin-top:10px;background:var(--bg3);border-radius:12px;padding:14px">
           <div style="font-weight:700;color:var(--text);margin-bottom:10px;font-size:13px">📋 기본 로그인 정보</div>
-          <!-- 관리자 -->
-          <div id="admin-info-box" style="background:var(--bg2);border-radius:10px;padding:12px;margin-bottom:10px;border-left:3px solid var(--blue)">
+          <div style="background:var(--bg2);border-radius:10px;padding:12px;margin-bottom:10px;border-left:3px solid var(--blue)">
             <div style="font-size:11px;font-weight:700;color:var(--blue);margin-bottom:8px">🗂 관리자 계정</div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
               <span style="font-size:12px;color:var(--text2)">아이디</span>
-              <button id="btn-fill-adminid" style="font-weight:700;color:var(--text);background:var(--bg3);padding:3px 12px;border-radius:5px;border:1px solid var(--border);cursor:pointer;font-size:12px">admin 입력</button>
+              <button id="btn-admin-id" style="font-weight:700;color:var(--text);background:var(--bg3);padding:3px 12px;border-radius:5px;border:1px solid var(--border);cursor:pointer;font-size:12px">admin 입력</button>
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
               <span style="font-size:12px;color:var(--text2)">비밀번호</span>
-              <button id="btn-fill-adminpw" style="font-weight:700;color:var(--text);background:var(--bg3);padding:3px 12px;border-radius:5px;border:1px solid var(--border);cursor:pointer;font-size:12px">1234 입력</button>
+              <button id="btn-admin-pw" style="font-weight:700;color:var(--text);background:var(--bg3);padding:3px 12px;border-radius:5px;border:1px solid var(--border);cursor:pointer;font-size:12px">1234 입력</button>
             </div>
-            <button id="btn-fill-admin-all" style="width:100%;padding:8px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">한 번에 입력</button>
+            <button id="btn-admin-all" style="width:100%;padding:8px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">한 번에 입력</button>
             <div style="font-size:10px;color:var(--amber);margin-top:6px">⚠️ 로그인 후 반드시 비밀번호를 변경하세요</div>
           </div>
-          <!-- 기사 -->
           <div style="background:var(--bg2);border-radius:10px;padding:12px;border-left:3px solid var(--teal)">
-            <div style="font-size:11px;font-weight:700;color:var(--teal);margin-bottom:6px">🚛 기사 계정</div>
-            <div style="font-size:11px;color:var(--text2);margin-bottom:10px">아이디 또는 가입 시 등록한 전화번호로 로그인하세요</div>
-            <div style="border-top:1px solid var(--border);padding-top:10px">
-              <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">📞 이름으로 아이디 찾기</div>
+            <div style="font-size:11px;font-weight:700;color:var(--teal);margin-bottom:8px">🚛 기사 계정</div>
+            <div style="font-size:11px;color:var(--text2);margin-bottom:10px">가입시 설정한 아이디 또는 전화번호로 로그인</div>
+            <div style="border-top:1px solid var(--border);padding-top:8px">
+              <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">이름으로 아이디 찾기</div>
               <div style="display:flex;gap:6px">
-                <input id="find-id-name" placeholder="이름 입력" style="flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text)">
-                <button id="btn-find-driver" style="padding:7px 14px;background:var(--teal);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">찾기</button>
+                <input id="find-id-name" placeholder="이름 입력" style="flex:1;padding:7px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text)">
+                <button id="btn-find" style="padding:7px 12px;background:var(--teal);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">찾기</button>
               </div>
               <div id="find-id-result" style="margin-top:8px;font-size:11px"></div>
             </div>
@@ -638,7 +636,7 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
   <div class="pf">
     <div class="psb">
       <span id="phtime">05:42</span>
-      <button onclick="goToHomepage()" style="background:rgba(15,110,86,.8);color:#fff;border:none;border-radius:6px;padding:3px 9px;font-size:10px;font-weight:700;cursor:pointer">🏠 홈페이지</button>
+      <button onclick="goToHomepage()" style="background:rgba(15,110,86,.8);color:#fff;border:none;border-radius:6px;padding:3px 9px;font-size:10px;font-weight:700;cursor:pointer">🏠 홈</button>
       <button onclick="goLogout()" style="background:rgba(220,50,50,.85);color:#fff;border:none;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer">🚪 로그아웃</button>
     </div>
     <div class="pc" id="dpc"></div>
@@ -855,15 +853,22 @@ var RPRICE = {
   '619A':930,'619B':930,'619C':860,'619D':880,
   '812A':960,'812B':930,'812C':930,'812D':800
 };
-// ── 캠프 이름 매핑 (사진 기준)
+// 캠프명 매핑 (라우트 숫자코드 → 캠프명)
 var CAMP_NAMES={
   '101':'부산1캠프','215':'부산1캠프',
-  '812':'부산2캠프','508':'부산3캠프',
+  '812':'부산2캠프',
+  '508':'부산3캠프',
   '109':'대구2캠프','213':'대구2캠프',
   '608':'진주M캠프','612':'진주M캠프','613':'진주M캠프',
   '614':'진주M캠프','619':'진주M캠프'
 };
-var CAMP_SHIFT={'812':'야간','508':'주간','101':'야간','215':'야간'};
+// 캠프 표시 순서
+var CAMP_ORDER=['부산1캠프','부산2캠프','부산3캠프','대구2캠프','진주M캠프'];
+// 캠프 색상
+var CAMP_COLOR={
+  '부산1캠프':'#3B82F6','부산2캠프':'#8B5CF6','부산3캠프':'#10B981',
+  '대구2캠프':'#F59E0B','진주M캠프':'#EF4444'
+};
 
 const TERMINALS = ['부산 허브','대구 허브','울산 허브','경남 허브','광주 허브','대전 허브'];
 
@@ -928,7 +933,7 @@ async function fbW(col,d){
 
 // ── v6.1 이미지 압축 (1MB 이하 자동 리사이즈, Firebase 한도 절약)
 async function compressImage(file) {
-  var MAX_PX=300, Q=0.25;  // v10: 300px·25% → 평균 8KB 이하 초고속
+  var MAX_PX=360, Q=0.35;  // v9: 360px·35% → 평균 15KB 이하 초고속
   if (window.createImageBitmap) {
     return createImageBitmap(file).then(function(bmp) {
       var w=bmp.width, h_=bmp.height;
@@ -983,7 +988,7 @@ async function upFile(file,path){
       fd.append('upload_preset','mbti_unsigned');
       fd.append('folder','mbti_logistics/'+path.split('/')[0]);
       var ctrl=new AbortController();
-      var tid=setTimeout(()=>ctrl.abort(),5000);
+      var tid=setTimeout(()=>ctrl.abort(),8000);
       var resp=await fetch('https://api.cloudinary.com/v1_1/mbti-logistics/image/upload',{method:'POST',body:fd,signal:ctrl.signal});
       clearTimeout(tid);
       if(resp.ok){
@@ -1169,7 +1174,7 @@ function goLogout(){
 }
 function goReg(){hide(['splash','login-screen']);show('reg-screen');window.scrollTo(0,0);}
 function goLogin(m){
-  hide(['splash','reg-screen']);show('login-screen');setTimeout(initLoginHelpBtns,100);
+  hide(['splash','reg-screen']);show('login-screen');setTimeout(initLoginHelp,80);
   document.getElementById('lm').value=m;
   if(m==='admin'){
     document.getElementById('lt').textContent='🗂 관리자 로그인';
@@ -1512,6 +1517,7 @@ function SP(pg,el){
   if(el){document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));el.classList.add('on');}
   var m={dash:rDash,sync:rSync,schedule_admin:rScheduleAdmin,memo:rMemoCalendar,entry:rEntry,delivery_taxi:rDeliveryTaxi,delivery_line:rDeliveryLine,delivery:rDelivery,accident:rAcc,temp:rTemp,settle:rSettle,drivers:rDrivers,insurance:rInsurance,mypage:rMypage};
   document.getElementById('ca').innerHTML=(m[pg]||rDash)();
+  if(pg==='mypage'){setTimeout(function(){if(typeof initCampTabs==='function')initCampTabs();},80);}
   if(pg==='dash')setTimeout(initChart,80);
 }
 
@@ -1669,58 +1675,52 @@ function appSettle(i){var s=ls('settlements');s[i].status='완료';s[i].paidAt=t
 
 // 라우트 단가표 저장
 function buildRpriceGrid(){
-  // 캠프별 그룹화
-  var campRoutes={};
+  // 캠프별 라우트 분류
+  var campMap={};
   Object.entries(RPRICE).forEach(function(e){
     var r=e[0],p=e[1];
     var code=r.replace(/[A-Za-z]+$/,'');
-    var cname=(CAMP_NAMES&&CAMP_NAMES[code])?CAMP_NAMES[code]:code+'캠프';
-    if(!campRoutes[cname])campRoutes[cname]=[];
-    campRoutes[cname].push({r:r,p:p,code:code});
+    var cname=(CAMP_NAMES&&CAMP_NAMES[code])||code+'캠프';
+    if(!campMap[cname])campMap[cname]=[];
+    campMap[cname].push({r:r,p:p,code:parseInt(code)});
   });
-  // 캠프 정렬 (부산1→부산2→부산3→대구→진주)
-  var order=['부산1캠프','부산2캠프','부산3캠프','대구2캠프','진주M캠프'];
-  var campList=Object.keys(campRoutes).sort(function(a,b){
-    var ia=order.indexOf(a),ib=order.indexOf(b);
-    return (ia<0?99:ia)-(ib<0?99:ib);
-  });
-  var colors={'부산1캠프':'#3B82F6','부산2캠프':'#8B5CF6','부산3캠프':'#10B981',
-              '대구2캠프':'#F59E0B','진주M캠프':'#EF4444'};
-  var shiftColors={'야간':'rgba(139,92,246,.2)','주간':'rgba(59,130,246,.15)',''  :'rgba(16,185,129,.1)'};
-  var shiftTxt={'야간':'야간','주간':'주간',''  :''};
 
-  // 탭 버튼
-  var h='<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px" id="camp-tabs">';
+  // 캠프 순서대로 정렬
+  var campList=(CAMP_ORDER||[]).filter(function(c){return campMap[c];});
+  Object.keys(campMap).forEach(function(c){if(campList.indexOf(c)<0)campList.push(c);});
+
+  // 탭 버튼 생성
+  var h='<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px" id="camp-tabs">';
   campList.forEach(function(camp){
-    var col=colors[camp]||'#6B7280';
-    var shift=''; Object.entries(CAMP_SHIFT||{}).forEach(function(e){
-      if((CAMP_NAMES||{})[e[0]]===camp)shift=e[1];
-    });
-    var badge=shift?(' <span style="font-size:8px;padding:1px 4px;border-radius:3px;background:'+
-      (shift==='야간'?'#8B5CF6':'#3B82F6')+';color:#fff;vertical-align:middle">'+shift+'</span>'):'';
+    var col=(CAMP_COLOR&&CAMP_COLOR[camp])||'#6B7280';
     h+='<button onclick="showCampTab(\''+camp+'\')" id="ctab-'+camp.replace(/\s/g,'_')+'"'
       +' class="camp-tab-btn"'
       +' style="padding:5px 12px;border:2px solid '+col+';border-radius:8px;'
-      +'background:transparent;color:'+col+';font-size:11px;font-weight:700;cursor:pointer">'+camp+badge+'</button>';
+      +'background:transparent;color:'+col+';font-size:11px;font-weight:700;cursor:pointer;'
+      +'transition:all .15s">'+camp+'</button>';
   });
   h+='</div>';
 
-  // 각 캠프 패널
+  // 캠프별 패널
   campList.forEach(function(camp){
-    var col=colors[camp]||'#6B7280';
-    var routes=campRoutes[camp].sort(function(a,b){return parseInt(a.code)-parseInt(b.code)||a.r.localeCompare(b.r);});
+    var col=(CAMP_COLOR&&CAMP_COLOR[camp])||'#6B7280';
+    var routes=campMap[camp].sort(function(a,b){
+      return a.code-b.code||a.r.localeCompare(b.r);
+    });
     var sid='cpanel-'+camp.replace(/\s/g,'_');
     h+='<div id="'+sid+'" class="camp-panel" style="display:none">';
-    h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:7px 12px;'
-      +'background:'+col+'22;border-left:3px solid '+col+';border-radius:0 8px 8px 0">'
+    // 캠프 헤더
+    h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:8px 12px;'
+      +'background:'+col+'20;border-left:4px solid '+col+';border-radius:0 8px 8px 0">'
       +'<span style="font-size:13px;font-weight:800;color:'+col+'">🏭 '+camp+'</span>'
       +'<span style="font-size:10px;color:var(--text3)">'+routes.length+'개 라우트</span>'
       +'</div>';
+    // 라우트 그리드
     h+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px">';
     routes.forEach(function(item){
       h+='<div style="display:flex;flex-direction:column;align-items:center;background:var(--bg3);'
         +'border-radius:8px;padding:7px 4px;border:1px solid '+col+'44">'
-        +'<div style="font-size:9px;font-weight:700;color:'+col+';margin-bottom:3px">'+item.r+'</div>'
+        +'<div style="font-size:10px;font-weight:700;color:'+col+';margin-bottom:3px">'+item.r+'</div>'
         +'<input id="rp-'+item.r+'" type="number" value="'+item.p+'"'
         +' style="width:100%;text-align:center;padding:4px;border:1px solid var(--border);'
         +'border-radius:5px;font-size:12px;font-weight:700;background:var(--bg);color:var(--teal)">'
@@ -1730,12 +1730,15 @@ function buildRpriceGrid(){
     h+='</div>';
     // 라우트 추가
     var cid=camp.replace(/\s/g,'_');
-    h+='<div style="display:flex;gap:5px;margin-bottom:4px">'
-      +'<input id="rp-nk-'+cid+'" type="text" placeholder="예: '+routes[0].code+'E" maxlength="6"'
-      +' style="flex:1;padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;text-transform:uppercase;background:var(--bg);color:var(--text)" oninput="this.value=this.value.toUpperCase()">'
+    h+='<div style="display:flex;gap:5px;margin-bottom:6px">'
+      +'<input id="rp-nk-'+cid+'" type="text" placeholder="예: '+routes[0].r.replace(/[A-Za-z]$/,'')+'E" maxlength="6"'
+      +' style="flex:1;padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--r);'
+      +'font-size:12px;text-transform:uppercase;background:var(--bg);color:var(--text)" oninput="this.value=this.value.toUpperCase()">'
       +'<input id="rp-nv-'+cid+'" type="number" placeholder="단가(원)"'
-      +' style="width:90px;padding:6px 8px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--text)">'
-      +'<button class="btn btn-sm" style="background:'+col+';color:#fff;border:none;font-size:11px;white-space:nowrap" onclick="addRpCamp(\''+cid+'\')">+ 추가</button>'
+      +' style="width:90px;padding:6px;border:1.5px solid var(--border);border-radius:var(--r);'
+      +'font-size:12px;background:var(--bg);color:var(--text)">'
+      +'<button class="btn btn-sm" style="background:'+col+';color:#fff;border:none;'
+      +'font-size:11px;white-space:nowrap" onclick="addRpCamp(\''+cid+'\')">+ 추가</button>'
       +'</div>';
     h+='</div>';
   });
@@ -1745,23 +1748,31 @@ function buildRpriceGrid(){
 function showCampTab(camp){
   document.querySelectorAll('.camp-panel').forEach(function(p){p.style.display='none';});
   document.querySelectorAll('.camp-tab-btn').forEach(function(b){
-    var c=b.style.borderColor||'#6B7280';
-    b.style.background='transparent'; b.style.color=c;
+    var col=b.style.borderColor;
+    b.style.background='transparent';
+    b.style.color=col;
   });
   var sid='cpanel-'+camp.replace(/\s/g,'_');
   var tid='ctab-'+camp.replace(/\s/g,'_');
   var panel=document.getElementById(sid);
   var tab=document.getElementById(tid);
   if(panel)panel.style.display='block';
-  if(tab){tab.style.background=tab.style.borderColor;tab.style.color='#fff';}
+  if(tab){
+    tab.style.background=tab.style.borderColor;
+    tab.style.color='#fff';
+  }
 }
 
 function initCampTabs(){
   var first=document.querySelector('.camp-tab-btn');
-  if(first){var c=first.id.replace('ctab-','').replace(/_/g,' ');showCampTab(c);}
+  if(first){
+    var camp=first.id.replace('ctab-','').replace(/_/g,' ');
+    showCampTab(camp);
+  }
 }
 
 function addRpCamp(cid){
+  var camp=cid.replace(/_/g,' ');
   var kEl=document.getElementById('rp-nk-'+cid);
   var vEl=document.getElementById('rp-nv-'+cid);
   if(!kEl||!vEl)return;
@@ -1769,7 +1780,7 @@ function addRpCamp(cid){
   if(!k||!v){toast('라우트 코드와 단가를 입력하세요');return;}
   RPRICE[k]=v; kEl.value=''; vEl.value='';
   var g=document.getElementById('rprice-grid');
-  if(g){g.innerHTML=buildRpriceGrid();setTimeout(function(){showCampTab(cid.replace(/_/g,' '));},30);}
+  if(g){g.innerHTML=buildRpriceGrid();setTimeout(function(){showCampTab(camp);},30);}
   toast('\u2705 '+k+' ('+v+'\uC6D0) \uCD94\uAC00');
 }
 
@@ -2134,13 +2145,26 @@ function rMypage(){
 
     <div class="sec-lbl" style="margin-top:14px">서류 현황 (클릭하여 확인/재업로드)</div>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:10px">
-      ${[['bank','통장','bankPhotoUrl','direct'],['license','면허','docs.license','docs'],['cargo_cert','화물자격','docs.cargo_cert','docs'],['car_reg','차량등록','docs.car_reg','docs'],['biz_reg','사업자','docs.biz_reg','docs']].map(([key,lbl,path,mode])=>{
-        var url=mode==='direct'?d.bankPhotoUrl:(d.docs||{})[key]||'';
-        return `<div style="aspect-ratio:3/4;border-radius:var(--r);border:2px solid ${url?'var(--teal)':'var(--red)'};overflow:hidden;position:relative;cursor:pointer;background:var(--bg3)" onclick="${url?`openIV('${url}','${lbl}')`:''}" title="${lbl}">
-          ${url?`<img src="${url}" style="width:100%;height:100%;object-fit:cover"><div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.55);color:#fff;font-size:9px;font-weight:700;text-align:center;padding:2px">${lbl}</div>`:
-            `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;font-size:10px;color:var(--red)"><div>❌</div><div>${lbl}</div><div style="font-size:9px">미첨부</div></div>`}
-        </div>`;
-      }).join('')}
+      ${(function(){
+        var slots=[
+          {key:'bank',lbl:'통장',path:'bankPhotoUrl',mode:'direct'},
+          {key:'license',lbl:'면허',path:'docs.license',mode:'docs'},
+          {key:'cargo_cert',lbl:'화물자격',path:'docs.cargo_cert',mode:'docs'},
+          {key:'car_reg',lbl:'차량등록',path:'docs.car_reg',mode:'docs'},
+          {key:'biz_reg',lbl:'사업자',path:'docs.biz_reg',mode:'docs'}
+        ];
+        return slots.map(function(s){
+          var url=s.mode==='direct'?d.bankPhotoUrl:((d.docs||{})[s.key]||'');
+          var hasImg=(url&&url.length>5);
+          return '<label style="aspect-ratio:3/4;border-radius:var(--r);border:2px solid '+(hasImg?'var(--teal)':'var(--red)')+';overflow:hidden;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg3);cursor:pointer">'
+            +(hasImg
+              ?'<img src="'+url+'" style="width:100%;height:100%;object-fit:cover"><div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.6);color:#fff;font-size:9px;font-weight:700;text-align:center;padding:3px">'+s.lbl+' 📷교체</div>'
+              :'<div style="font-size:20px;margin-bottom:3px">📷</div><div style="font-size:10px;font-weight:700;color:var(--red)">'+s.lbl+'</div><div style="font-size:9px;color:var(--text3)">탭하여 업로드</div>'
+            )
+            +'<input type="file" accept="image/*" capture="environment" style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer" onchange="lateDocUpload(this,\''+s.key+'\',\''+s.lbl+'\')">'
+            +'</label>';
+        }).join('');
+      })()}}
     </div>`:''}
 
     ${!isAdmin && d.docsPending && d.docsPending.length > 0 ? `
@@ -2650,6 +2674,8 @@ function DT(tab,el){
   if(el)el.classList.add('on');
   var m={home:dHome,entry:dEntry,delivery:dDelivery,temp:dTemp,accident:dAccident,settle:dSettle,mypage:dMypageDriver};
   document.getElementById('dpc').innerHTML=(m[tab]||dHome)();
+  // 내정보 탭 진입 시 캠프탭 초기화
+  if(tab==='mypage'){setTimeout(function(){if(typeof initCampTabs==='function')initCampTabs();},80);}
 }
 
 function dHome(){
@@ -2659,68 +2685,91 @@ function dHome(){
   var totD=dels.reduce((s,d)=>s+(d.dcnt||0),0);
   var isAdm=(S.curMode==='admin');
 
-  // ── 2주(이번주+다음주) 날짜 계산
-  var now=new Date(), dayIdx=now.getDay(), allD=[];
-  for(var i=0;i<14;i++){var dd=new Date(now);dd.setDate(now.getDate()-dayIdx+i);allD.push(dd);}
-  var w1=allD.slice(0,7), w2=allD.slice(7,14);
+  // ── 이번달 근무표 (기사 보기전용)
+  var now=new Date();
+  var curY=now.getFullYear(), curM=now.getMonth();
+  var lastDay=new Date(curY,curM+1,0).getDate();
   var DN=['일','월','화','수','목','금','토'];
-  // 월별 통합 키 사용
-  var wk1='schedule_'+S.curDriver+'_month_'+w1[0].getFullYear()+'_'+w1[0].getMonth();
-  var wk2='schedule_'+S.curDriver+'_month_'+w2[0].getFullYear()+'_'+w2[0].getMonth();
-  var sc1=JSON.parse(localStorage.getItem(wk1)||'{}');
-  var sc2=JSON.parse(localStorage.getItem(wk2)||'{}');
+  var stColors={'주':'#3B82F6','야':'#8B5CF6','휴무':'#9CA3AF','병가':'#EF4444'};
+  var stBg={'주':'rgba(59,130,246,.15)','야':'rgba(139,92,246,.15)','휴무':'rgba(107,114,128,.1)','병가':'rgba(239,68,68,.12)',''  :'var(--bg2)'};
+  var wkKey='schedule_'+S.curDriver+'_month_'+curY+'_'+curM;
+  var sc=JSON.parse(localStorage.getItem(wkKey)||'{}');
+  var firstWD=new Date(curY,curM,1).getDay();
 
-  function mkW(wD,wK,sc,lbl){
-    var h='<div style="font-size:10px;font-weight:700;color:var(--text3);margin-bottom:2px">'+lbl+'</div>'
-         +'<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:5px;min-width:0">';
-    for(var i=0;i<7;i++){
-      var d=wD[i], ds=d.toISOString().slice(0,10), isTod=(ds===today());
-      var st=sc[ds]||'', isWE=(i===0||i===6);
-      var bg=st==='주'?'rgba(59,130,246,.15)':st==='야'?'rgba(139,92,246,.15)':st==='휴무'?'rgba(107,114,128,.12)':st==='병가'?'rgba(239,68,68,.12)':'var(--bg2)';
-      var tc=st==='주'?'#3B82F6':st==='야'?'#8B5CF6':st==='휴무'?'#9CA3AF':st==='병가'?'#EF4444':'var(--text3)';
-      var bd=isTod?'2px solid var(--teal)':'1px solid var(--border)';
-      // 관리자만 탭하여 변경 가능
-      var click=isAdm?'onclick="cycleSchedule(\''+wK+'\',\''+ds+'\')" style="cursor:pointer;':'style="cursor:default;';
-      h+='<div '+click+'background:'+bg+';border:'+bd+';border-radius:6px;padding:5px 2px;text-align:center">'
-        +'<div style="font-size:9px;font-weight:700;color:'+(isWE?'#EF4444':'var(--text)')+'">'+(isTod?'<u>':'')+DN[i]+(isTod?'</u>':'')+'</div>'
-        +'<div style="font-size:9px;color:var(--text3)">'+d.getDate()+'</div>'
-        +'<div style="font-size:11px;font-weight:700;color:'+tc+'">'+(st||'·')+'</div>'
-        +'</div>';
-    }
-    return h+'</div>';
+  var calHTML='<div style="margin:10px;background:var(--bg2);border-radius:var(--r);border:1px solid var(--border);overflow:hidden">';
+  calHTML+='<div style="padding:8px 12px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">';
+  calHTML+='<span style="font-size:12px;font-weight:700">📅 '+( curM+1)+'월 근무표</span>';
+  calHTML+='<span style="font-size:10px;color:var(--text3)">관리자가 등록 | 보기전용</span></div>';
+  // 요일 헤더
+  calHTML+='<div style="display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border)">';
+  DN.forEach(function(d,i){
+    calHTML+='<div style="text-align:center;padding:4px;font-size:10px;font-weight:700;color:'+(i===0?'#EF4444':i===6?'#3B82F6':'var(--text2)')+'">'+d+'</div>';
+  });
+  calHTML+='</div>';
+  // 날짜 그리드
+  calHTML+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border)">';
+  for(var b=0;b<firstWD;b++) calHTML+='<div style="background:var(--bg2);min-height:42px"></div>';
+  for(var day=1;day<=lastDay;day++){
+    var ds=curY+'-'+String(curM+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+    var st=sc[ds]||'';
+    var wd=new Date(curY,curM,day).getDay();
+    var isToday=(day===now.getDate());
+    var isWE=(wd===0||wd===6);
+    calHTML+='<div style="background:'+(isToday?'rgba(15,110,86,.15)':stBg[st]||'var(--bg2)')+';'
+      +'min-height:42px;padding:3px;border:'+(isToday?'2px solid var(--teal)':'1px solid transparent')+'">';
+    calHTML+='<div style="font-size:10px;font-weight:700;color:'+(isToday?'var(--teal)':isWE?'#EF4444':'var(--text2)')+'">'+day+'</div>';
+    if(st) calHTML+='<div style="text-align:center;padding:1px 2px;border-radius:3px;background:'+(stColors[st]||'#6B7280')+';color:#fff;font-size:9px;font-weight:700;margin-top:2px">'+st+'</div>';
+    calHTML+='</div>';
   }
+  calHTML+='</div></div>';
 
-  var schHTML='<div style="margin:8px 10px 0;overflow:hidden">'
-    +'<div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:5px;display:flex;align-items:center;gap:6px">📅 2주 근무표 '
-    +(isAdm?'<span style="font-size:9px;color:var(--teal);background:rgba(15,110,86,.12);padding:1px 6px;border-radius:4px">✏️ 관리자 수정가능</span>'
-           :'<span style="font-size:9px;color:var(--text3);background:var(--bg3);padding:1px 5px;border-radius:4px">👁 보기전용</span>')+'</div>'
-    +mkW(w1,wk1,sc1,'이번 주')+mkW(w2,wk2,sc2,'다음 주')
-    +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
-    +'<span style="font-size:9px;color:#3B82F6">●주간</span><span style="font-size:9px;color:#8B5CF6">●야간</span>'
-    +'<span style="font-size:9px;color:#9CA3AF">●휴무</span><span style="font-size:9px;color:#EF4444">●병가</span>'
-    +'</div></div>';
-
-  // ── 사고접수 아래 빠른이동 버튼
-  var qBtns='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:6px 10px 10px">'
-    +'<button onclick="DT(\'entry\',document.getElementById(\'pni1\'))" style="padding:10px 4px;border:none;border-radius:8px;background:var(--bg2);color:var(--text);font-size:11px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px"><span style="font-size:18px">⬇️</span>입차</button>'
-    +'<button onclick="DT(\'delivery\',document.getElementById(\'pni2\'))" style="padding:10px 4px;border:none;border-radius:8px;background:var(--bg2);color:var(--text);font-size:11px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px"><span style="font-size:18px">🚚</span>운행</button>'
-    +'<button onclick="DT(\'temp\',document.getElementById(\'pni3\'))" style="padding:10px 4px;border:none;border-radius:8px;background:var(--bg2);color:var(--text);font-size:11px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px"><span style="font-size:18px">🌡</span>온도</button>'
-    +'<button onclick="DT(\'settle\',document.getElementById(\'pni5\'))" style="padding:10px 4px;border:none;border-radius:8px;background:var(--bg2);color:var(--text);font-size:11px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px"><span style="font-size:18px">💰</span>정산</button>'
-    +'<button onclick="DT(\'mypage\',document.getElementById(\'pni6\'))" style="padding:10px 4px;border:none;border-radius:8px;background:var(--bg2);color:var(--text);font-size:11px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px"><span style="font-size:18px">👤</span>내정보</button>'
-    +'<button onclick="DT(\'accident\',document.getElementById(\'pni4\'))" style="padding:10px 4px;border:1px solid rgba(239,68,68,.25);border-radius:8px;background:rgba(239,68,68,.08);color:var(--red);font-size:11px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px"><span style="font-size:18px">🚨</span>사고접수</button>'
-    +'</div>';
-
-  return `<div class="dh"><h2><span class="user-name-display">${S.curDriver}</span> 기사님</h2><p>${new Date().toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'})} · ${S.curJobtype} ${S.curJobsub}</p></div>
-  <div style="overflow:hidden;height:36px;display:flex;align-items:center;background:linear-gradient(135deg,#071525 0%,#0c2040 50%,#071525 100%)"><div style="display:flex;animation:lgScroll 22s linear infinite;white-space:nowrap;align-items:center"><span style="color:#f90;font-size:11px;font-weight:900;letter-spacing:1px;padding:0 18px">&#x1F3E2; MBTI(Co.,Ltd.) LOGISTICS</span><span style="color:rgba(255,255,255,.25);font-size:14px">&#x2736;</span><span style="color:#8cf;font-size:10px;font-weight:700;padding:0 14px">&#x1F69B; 냉동·냉장·상온 전문</span><span style="color:rgba(255,255,255,.25);font-size:14px">&#x2736;</span><span style="color:#f90;font-size:11px;font-weight:900;letter-spacing:1px;padding:0 18px">&#x1F3E2; MBTI(Co.,Ltd.) LOGISTICS</span><span style="color:rgba(255,255,255,.25);font-size:14px">&#x2736;</span><span style="color:#8cf;font-size:10px;font-weight:700;padding:0 14px">&#x1F69B; 냉동·냉장·상온 전문</span><span style="color:rgba(255,255,255,.25);font-size:14px">&#x2736;</span></div></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:10px 10px 0">
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center"><div style="font-size:14px;font-weight:700;color:var(--blue)">${S.driverNum||'MBTI??'}</div><div style="font-size:10px;color:var(--text2)">가입순번</div></div>
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center"><div style="font-size:14px;font-weight:700;color:var(--teal)">${totD}건</div><div style="font-size:10px;color:var(--text2)">오늘 배송</div></div>
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center"><div style="font-size:13px;font-weight:700;color:${me?'var(--blue)':'var(--text3)'}">${me?'운행중':'대기중'}</div><div style="font-size:10px;color:var(--text2)">상태</div></div>
+  return `<div class="dh" style="padding:0">
+  <!-- 기사 정보 영역 -->
+  <div style="padding:12px 14px 8px;background:var(--blue)">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:20px;font-weight:800;color:#fff;line-height:1.2"><span class="user-name-display">${S.curDriver}</span> <span style="font-size:13px;font-weight:600;opacity:.85">기사님</span></div>
+        <div style="font-size:12px;color:rgba(255,255,255,.75);margin-top:3px">${new Date().toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'})} · ${S.curJobtype} ${S.curJobsub}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:18px;font-weight:800;color:#fff">${totD}<span style="font-size:11px;font-weight:500;opacity:.75">건</span></div>
+        <div style="font-size:10px;color:rgba(255,255,255,.6)">오늘 배송</div>
+      </div>
+    </div>
   </div>
-  ${schHTML}
-  ${me?`<div class="dc"><div class="dct">오늘 입차</div><div style="display:flex;gap:8px;align-items:center;font-size:12px"><span class="badge ${me.type==='쿠팡'?'b-coral':me.type==='컬리'?'b-purple':'b-blue'}">${me.type}</span><span>${me.time}</span><span style="font-weight:600;color:${me.temp==='상온'?'var(--amber)':parseFloat(me.temp)<=-18?'var(--teal)':'var(--red)'}">${me.temp}${me.temp==='상온'?'':' °C'}</span>${me.company?`<span style="color:var(--text2)">${me.company}</span>`:''}</div></div>`:`<div style="margin:8px 10px;padding:10px;background:var(--amber-l);border-radius:var(--r);font-size:12px;color:var(--amber)">아직 입차하지 않았습니다. 입차 탭에서 등록해 주세요.</div>`}
-  <button class="bbtn bb-red" onclick="DT('accident',document.getElementById('pni4'))" style="padding:11px;font-size:13px;margin-top:6px">🚨 사고 접수</button>
-  ${qBtns}`;
+  <!-- 마퀴 로고 배너 -->
+  <div style="overflow:hidden;height:34px;display:flex;align-items:center;background:linear-gradient(90deg,#071525,#0c2040,#071525)">
+    <div style="display:flex;animation:lgScroll 20s linear infinite;white-space:nowrap;align-items:center">
+      <span style="color:#f90;font-size:11px;font-weight:900;letter-spacing:1px;padding:0 16px">&#x1F3E2; MBTI(Co.,Ltd.) LOGISTICS</span>
+      <span style="color:rgba(255,255,255,.3)">&#x2736;</span>
+      <span style="color:#8cf;font-size:10px;font-weight:700;padding:0 12px">&#x1F69B; \ub0c9\ub3d9\u00b7\ub0c9\uc7a5\u00b7\uc0c1\uc628 \uc804\ubb38</span>
+      <span style="color:rgba(255,255,255,.3)">&#x2736;</span>
+      <span style="color:#f90;font-size:11px;font-weight:900;letter-spacing:1px;padding:0 16px">&#x1F3E2; MBTI(Co.,Ltd.) LOGISTICS</span>
+      <span style="color:rgba(255,255,255,.3)">&#x2736;</span>
+      <span style="color:#8cf;font-size:10px;font-weight:700;padding:0 12px">&#x1F69B; \ub0c9\ub3d9\u00b7\ub0c9\uc7a5\u00b7\uc0c1\uc628 \uc804\ubb38</span>
+      <span style="color:rgba(255,255,255,.3)">&#x2736;</span>
+    </div>
+  </div>
+  <!-- 상태 카드 -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:10px 10px 4px">
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center">
+      <div style="font-size:14px;font-weight:700;color:var(--blue)">${S.driverNum||'MBTI??'}</div>
+      <div style="font-size:10px;color:var(--text2)">가입순번</div>
+    </div>
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center">
+      <div style="font-size:13px;font-weight:700;color:${me?'var(--teal)':'var(--text3)'}">
+        ${me?'🟢 운행중':'⚪ 대기중'}
+      </div>
+      <div style="font-size:10px;color:var(--text2)">현재 상태</div>
+    </div>
+  </div>
+  <!-- 입차 정보 -->
+  ${me?`<div class="dc" style="margin:4px 10px"><div class="dct">오늘 입차</div><div style="display:flex;gap:8px;align-items:center;font-size:12px"><span class="badge ${me.type==='쿠팡'?'b-coral':me.type==='컬리'?'b-purple':'b-blue'}">${me.type}</span><span>${me.time}</span><span style="font-weight:600;color:${me.temp==='상온'?'var(--amber)':parseFloat(me.temp)<=-18?'var(--teal)':'var(--red)'}">${me.temp}${me.temp==='상온'?'':' °C'}</span></div></div>`:`<div style="margin:4px 10px 6px;padding:9px;background:var(--amber-l);border-radius:var(--r);font-size:12px;color:var(--amber)">아직 입차하지 않았습니다. 입차 탭에서 등록해 주세요.</div>`}
+  <!-- 한달 근무표 -->
+  ${calHTML}
+  <!-- 사고접수 버튼 -->
+  <button class="bbtn bb-red" onclick="DT('accident',document.getElementById('pni4'))" style="padding:11px;font-size:13px;margin:0 10px 10px">🚨 사고 접수</button>
+  </div>`;
 }
 // ── 근무표 순환 클릭: 빈→주→야→휴무→병가→빈
 function cycleSchedule(weekKey, dateStr){
@@ -3374,7 +3423,7 @@ function startListeners(){
 // [신규] 관리자 월간 근무표 패널
 // ══════════════════════════════════════════════════════
 function rScheduleAdmin(){
-  var drs=ls('drivers').filter(function(d){return d.is_active!==false&&!d.isNew&&d.status!=='pending';});
+  var drs=ls('drivers').filter(d=>d.is_active!==false&&!d.isNew&&d.status!=='pending');
   var now=new Date();
   var curY=parseInt(localStorage.getItem('sched_year')||now.getFullYear());
   var curM=parseInt(localStorage.getItem('sched_month')||now.getMonth());
@@ -3382,87 +3431,56 @@ function rScheduleAdmin(){
   var lastDay=new Date(curY,curM+1,0).getDate();
   var mLabel=(curM+1)+'월 '+curY+'년';
   var DN=['일','월','화','수','목','금','토'];
-  var stColors={'주':'#3B82F6','야':'#8B5CF6','휴무':'#9CA3AF','병가':'#EF4444'};
-  var stBg={'주':'rgba(59,130,246,.15)','야':'rgba(139,92,246,.15)','휴무':'rgba(107,114,128,.1)','병가':'rgba(239,68,68,.12)',''  :'var(--bg2)'};
+  var stColors={'주':'rgba(59,130,246,.18)','야':'rgba(139,92,246,.18)','휴무':'rgba(107,114,128,.15)','병가':'rgba(239,68,68,.15)'};
+  var stTxt={'주':'#3B82F6','야':'#8B5CF6','휴무':'#9CA3AF','병가':'#EF4444'};
   var showDrs=(selDrv==='all')?drs:drs.filter(function(d){return d.name===selDrv;});
+  var dates=[];
+  for(var d=1;d<=lastDay;d++){var dt=new Date(curY,curM,d);dates.push({d:d,wd:dt.getDay(),isWE:dt.getDay()===0||dt.getDay()===6});}
 
-  // ── 달력 그리드 생성 (기사 1명)
-  function makeCalendar(drv){
-    var wkKey='schedule_'+drv.name+'_month_'+curY+'_'+curM;
-    var sc=JSON.parse(localStorage.getItem(wkKey)||'{}');
-    var firstWD=new Date(curY,curM,1).getDay(); // 1일 요일
-    var h='<div style="margin-bottom:16px;background:var(--bg2);border-radius:var(--r);border:1px solid var(--border);overflow:hidden">';
-    // 기사명 헤더
-    h+='<div style="padding:8px 12px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">';
-    h+='<span style="font-size:13px;font-weight:700">'+drv.name+'</span>';
-    h+='<span style="font-size:10px;color:var(--text3)">'+( drv.userId||'')+'</span>';
-    h+='</div>';
-    // 요일 헤더
-    h+='<div style="display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border)">';
-    DN.forEach(function(d,i){
-      h+='<div style="text-align:center;padding:5px;font-size:10px;font-weight:700;'
-        +'color:'+(i===0?'#EF4444':i===6?'#3B82F6':'var(--text2)')+'">'+d+'</div>';
-    });
-    h+='</div>';
-    // 날짜 그리드
-    h+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border)">';
-    // 앞 빈칸
-    for(var b=0;b<firstWD;b++){
-      h+='<div style="background:var(--bg2);min-height:52px"></div>';
-    }
-    // 날짜 셀
-    for(var day=1;day<=lastDay;day++){
-      var ds=curY+'-'+String(curM+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
-      var st=sc[ds]||'';
-      var wd=new Date(curY,curM,day).getDay();
-      var isToday=(day===now.getDate()&&curM===now.getMonth()&&curY===now.getFullYear());
-      var isWE=(wd===0||wd===6);
-      var wkKey2='schedule_'+drv.name+'_month_'+curY+'_'+curM;
-      h+='<div onclick="adminSetSchedule(\''+wkKey2+'\',\''+ds+'\',\''+drv.name+'\')"'
-        +' style="background:'+(isToday?'rgba(15,110,86,.15)':stBg[st]||'var(--bg2)')+';'
-        +'min-height:52px;padding:4px;cursor:pointer;position:relative;'
-        +'border:'+(isToday?'2px solid var(--teal)':'1px solid transparent')+';">';
-      // 날짜 숫자
-      h+='<div style="font-size:10px;font-weight:700;color:'+(isToday?'var(--teal)':isWE?'#EF4444':'var(--text2)')+'">'+day+'</div>';
-      // 근무 상태 배지
-      if(st){
-        h+='<div style="margin-top:3px;text-align:center;padding:2px 4px;border-radius:4px;'
-          +'background:'+(stColors[st]||'#6B7280')+';color:#fff;font-size:10px;font-weight:700">'+st+'</div>';
-      }
-      h+='</div>';
-    }
-    h+='</div></div>';
-    return h;
-  }
+  var header='<div style="display:grid;grid-template-columns:90px repeat('+lastDay+',1fr);gap:2px;margin-bottom:3px;position:sticky;top:0;background:var(--bg2);z-index:10;padding:4px 0;border-bottom:2px solid var(--border)">';
+  header+='<div style="font-size:10px;font-weight:700;color:var(--text2);padding:2px 4px">기사명</div>';
+  dates.forEach(function(dt){
+    var isToday=(dt.d===now.getDate()&&curM===now.getMonth()&&curY===now.getFullYear());
+    header+='<div style="text-align:center;font-size:9px;font-weight:700;color:'+(dt.isWE?'#EF4444':'var(--text2)')+'">'+DN[dt.wd]+'<br><span style="color:'+(isToday?'var(--teal)':'inherit')+'">'+dt.d+'</span></div>';
+  });
+  header+='</div>';
 
-  var drvOpts='<option value="all">전체 기사</option>'
-    +drs.map(function(d){return'<option value="'+d.name+'" '+(selDrv===d.name?'selected':'')+'>'+d.name+'</option>';}).join('');
-
-  var calendars='';
+  var rows='';
   if(!showDrs.length){
-    calendars='<div style="padding:30px;text-align:center;color:var(--text3)">기사가 없습니다</div>';
+    rows='<div style="padding:20px;text-align:center;color:var(--text3);font-size:12px">기사가 없습니다</div>';
   } else {
-    showDrs.forEach(function(drv){calendars+=makeCalendar(drv);});
+    showDrs.forEach(function(drv){
+      var wkKey='schedule_'+drv.name+'_month_'+curY+'_'+curM;
+      var sc=JSON.parse(localStorage.getItem(wkKey)||'{}');
+      rows+='<div style="display:grid;grid-template-columns:90px repeat('+lastDay+',1fr);gap:2px;margin-bottom:2px">';
+      rows+='<div style="font-size:11px;font-weight:600;padding:4px 3px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis" title="'+drv.name+'">'+drv.name.slice(0,5)+'<br><span style="font-size:9px;color:var(--text3)">'+(drv.userId||'')+'</span></div>';
+      dates.forEach(function(dt){
+        var ds=curY+'-'+String(curM+1).padStart(2,'0')+'-'+String(dt.d).padStart(2,'0');
+        var st=sc[ds]||'';
+        var isToday=(dt.d===now.getDate()&&curM===now.getMonth()&&curY===now.getFullYear());
+        rows+='<div onclick="adminSetSchedule(\''+wkKey+'\',\''+ds+'\',\''+drv.name+'\')" style="text-align:center;padding:3px 1px;border-radius:4px;cursor:pointer;min-height:28px;display:flex;align-items:center;justify-content:center;background:'+(isToday?'rgba(15,110,86,.15)':(stColors[st]||'var(--bg2)'))+';border:1px solid '+(isToday?'var(--teal)':'var(--border)')+'"><div style="font-size:10px;font-weight:700;color:'+(stTxt[st]||'var(--text3)')+'">'+( st||'·')+'</div></div>';
+      });
+      rows+='</div>';
+    });
   }
+
+  var drvOpts='<option value="all">전체 기사</option>'+drs.map(function(d){return'<option value="'+d.name+'" '+(selDrv===d.name?'selected':'')+'>'+d.name+'</option>';}).join('');
 
   return '<div class="card"><div class="ch"><span class="ct">📅 기사별 월간 근무표</span>'
     +'<button class="btn btn-sm btn-teal" onclick="SP(\'schedule_admin\',null)">🔄 새로고침</button></div>'
-    +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;padding:10px;background:var(--bg3);border-radius:var(--r)">'
-    +'<button onclick="schedNavMonth(-1)" style="padding:6px 14px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--text);cursor:pointer;font-size:14px;font-weight:700">◀</button>'
-    +'<span style="font-size:15px;font-weight:700;min-width:100px;text-align:center">'+mLabel+'</span>'
-    +'<button onclick="schedNavMonth(1)" style="padding:6px 14px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--text);cursor:pointer;font-size:14px;font-weight:700">▶</button>'
-    +'<select onchange="schedFilterDrv(this.value)" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:12px">'+drvOpts+'</select>'
-    +'<span style="font-size:11px;color:var(--text3)">셀 탭 → 주간↔야간↔휴무↔병가 순환</span>'
-    +'</div>'
-    +'<div style="display:flex;gap:8px;margin-bottom:12px">'
-    +'<span style="display:flex;align-items:center;gap:4px;font-size:11px"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#3B82F6"></span>주간</span>'
-    +'<span style="display:flex;align-items:center;gap:4px;font-size:11px"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#8B5CF6"></span>야간</span>'
-    +'<span style="display:flex;align-items:center;gap:4px;font-size:11px"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#9CA3AF"></span>휴무</span>'
-    +'<span style="display:flex;align-items:center;gap:4px;font-size:11px"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#EF4444"></span>병가</span>'
-    +'</div>'
-    +calendars+'</div>';
+    +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding:8px;background:var(--bg3);border-radius:var(--r)">'
+    +'<button onclick="schedNavMonth(-1)" style="padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg2);color:var(--text);cursor:pointer;font-size:13px">◀</button>'
+    +'<span style="font-size:14px;font-weight:700;min-width:90px;text-align:center">'+mLabel+'</span>'
+    +'<button onclick="schedNavMonth(1)" style="padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg2);color:var(--text);cursor:pointer;font-size:13px">▶</button>'
+    +'<select onchange="schedFilterDrv(this.value)" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:12px">'+drvOpts+'</select>'
+    +'<span style="font-size:11px;color:var(--text3)">셀 탭 → 주간↔야간↔휴무↔병가 순환</span></div>'
+    +'<div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">'
+    +'<span style="font-size:10px;background:rgba(59,130,246,.18);padding:2px 8px;border-radius:4px;color:#3B82F6;font-weight:700">주간</span>'
+    +'<span style="font-size:10px;background:rgba(139,92,246,.18);padding:2px 8px;border-radius:4px;color:#8B5CF6;font-weight:700">야간</span>'
+    +'<span style="font-size:10px;background:rgba(107,114,128,.15);padding:2px 8px;border-radius:4px;color:#9CA3AF;font-weight:700">휴무</span>'
+    +'<span style="font-size:10px;background:rgba(239,68,68,.15);padding:2px 8px;border-radius:4px;color:#EF4444;font-weight:700">병가</span></div>'
+    +'<div style="overflow-x:auto"><div style="min-width:'+(90+lastDay*32)+'px">'+header+rows+'</div></div></div>';
 }
-
 
 function adminSetSchedule(wkKey,ds,drvName){
   var sc=JSON.parse(localStorage.getItem(wkKey)||'{}');
@@ -3644,74 +3662,53 @@ function miniCalClick(ds){
 }
 
 
-// ── 로그인 도움말 ──────────────────────────────
-function toggleLoginHelp(){
-  var b=document.getElementById('login-help-box');
-  if(b)b.style.display=(b.style.display==='none'?'block':'none');
-}
-function initLoginHelpBtns(){
-  var btnAid=document.getElementById('btn-fill-adminid');
-  var btnApw=document.getElementById('btn-fill-adminpw');
-  var btnAll=document.getElementById('btn-fill-admin-all');
-  var btnFind=document.getElementById('btn-find-driver');
-  if(btnAid)btnAid.onclick=function(){
-    var e=document.getElementById('lid');if(e)e.value='admin';toast('아이디 입력됨');
-  };
-  if(btnApw)btnApw.onclick=function(){
-    var e=document.getElementById('lpw');if(e)e.value='1234';toast('비밀번호 입력됨');
-  };
-  if(btnAll)btnAll.onclick=function(){
-    var a=document.getElementById('lid'),b=document.getElementById('lpw');
-    if(a)a.value='admin';if(b)b.value='1234';toast('관리자 정보 입력됨');
-  };
-  if(btnFind)btnFind.onclick=function(){findDriverId();};
-}
-function findDriverId(){
-  var nameEl=document.getElementById('find-id-name');
-  var resEl=document.getElementById('find-id-result');
-  if(!nameEl||!resEl)return;
-  var name=nameEl.value.trim();
-  if(!name){resEl.textContent='이름을 입력해주세요';resEl.style.color='var(--amber)';return;}
-  var drivers=(ls('drivers')||[]).filter(function(d){
-    return d.name&&d.name.includes(name)&&d.status!=='withdrawn'&&d.status!=='rejected';
-  });
-  if(!drivers.length){
-    resEl.textContent='찾을 수 없습니다. 관리자에게 문의하세요.';
-    resEl.style.color='var(--red)';return;
-  }
-  resEl.innerHTML='';
-  resEl.style.color='var(--text)';
-  drivers.forEach(function(d){
-    var row=document.createElement('div');
-    row.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)';
-    var uid=d.userId||d.phone||'(미설정)';
-    var nameSpan=document.createElement('span');
-    nameSpan.style.fontWeight='700';nameSpan.textContent=d.name;
-    var fillBtn=document.createElement('button');
-    fillBtn.textContent='ID: '+uid;
-    fillBtn.style.cssText='padding:3px 10px;background:var(--teal);color:#fff;border:none;border-radius:5px;font-size:11px;cursor:pointer;font-weight:700';
-    fillBtn.onclick=(function(id){
-      return function(){
-        var lidEl=document.getElementById('lid');
-        if(lidEl&&id!=='(미설정)')lidEl.value=id;
-        toast(id+' 입력됨');
-      };
-    })(uid);
-    row.appendChild(nameSpan);row.appendChild(fillBtn);
-    resEl.appendChild(row);
-  });
-}
-
-// ── 홈페이지 이동 ──────────────────────────────
 function goToHomepage(){
-  // iframe 내부라면 부모 창에 메시지, 아니면 직접 이동
   try{
     if(window.parent&&window.parent!==window){
       window.parent.postMessage({action:'closeAppIframe'},'*');
-    } else {
+    }else{
       window.location.href='index.html';
     }
   }catch(e){window.location.href='index.html';}
+}
+
+function initLoginHelp(){
+  var hBtn=document.getElementById('help-toggle-btn');
+  var hBox=document.getElementById('login-help-box');
+  var aId=document.getElementById('btn-admin-id');
+  var aPw=document.getElementById('btn-admin-pw');
+  var aAll=document.getElementById('btn-admin-all');
+  var fBtn=document.getElementById('btn-find');
+  if(hBtn&&hBox) hBtn.onclick=function(){hBox.style.display=(hBox.style.display==='none'?'block':'none');};
+  if(aId) aId.onclick=function(){var e=document.getElementById('lid');if(e)e.value='admin';toast('아이디 입력됨');};
+  if(aPw) aPw.onclick=function(){var e=document.getElementById('lpw');if(e)e.value='1234';toast('비밀번호 입력됨');};
+  if(aAll) aAll.onclick=function(){
+    var a=document.getElementById('lid'),b=document.getElementById('lpw');
+    if(a)a.value='admin';if(b)b.value='1234';toast('관리자 정보 입력됨');
+  };
+  if(fBtn) fBtn.onclick=function(){
+    var nameEl=document.getElementById('find-id-name');
+    var resEl=document.getElementById('find-id-result');
+    if(!nameEl||!resEl)return;
+    var name=nameEl.value.trim();
+    if(!name){resEl.textContent='이름을 입력하세요';resEl.style.color='var(--amber)';return;}
+    var found=(ls('drivers')||[]).filter(function(d){
+      return d.name&&d.name.includes(name)&&d.status!=='withdrawn'&&d.status!=='rejected';
+    });
+    if(!found.length){resEl.textContent='찾을 수 없습니다. 관리자에게 문의하세요.';resEl.style.color='var(--red)';return;}
+    resEl.innerHTML='';resEl.style.color='var(--text)';
+    found.forEach(function(d){
+      var row=document.createElement('div');
+      row.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)';
+      var uid=d.userId||d.phone||'(미설정)';
+      var nm=document.createElement('span');nm.style.fontWeight='700';nm.textContent=d.name;
+      var fb=document.createElement('button');
+      fb.textContent='ID: '+uid;
+      fb.style.cssText='padding:3px 10px;background:var(--teal);color:#fff;border:none;border-radius:5px;font-size:11px;cursor:pointer;font-weight:700';
+      (function(id){fb.onclick=function(){var e=document.getElementById('lid');if(e&&id!=='(미설정)')e.value=id;toast(id+' 입력됨');}})(uid);
+      row.appendChild(nm);row.appendChild(fb);resEl.appendChild(row);
+    });
+  };
 }
 </script>
 </body>
