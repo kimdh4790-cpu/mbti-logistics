@@ -853,8 +853,7 @@ async function fbW(col,d){
 
 // ── v6.1 이미지 압축 (1MB 이하 자동 리사이즈, Firebase 한도 절약)
 async function compressImage(file) {
-  var MAX_PX=480, Q=0.45;  // v7.2 초고속: 480px·45% → 평균 30KB 이하
-  // createImageBitmap 지원 시 (FileReader 불필요 → 훨씬 빠름)
+  var MAX_PX=360, Q=0.35;  // v9: 360px·35% → 평균 15KB 이하 초고속
   if (window.createImageBitmap) {
     return createImageBitmap(file).then(function(bmp) {
       var w=bmp.width, h_=bmp.height;
@@ -871,7 +870,6 @@ async function compressImage(file) {
       });
     }).catch(function(){return file;});
   }
-  // Fallback: FileReader + canvas
   return new Promise(function(resolve){
     var fr=new FileReader();
     fr.onload=function(e){
@@ -1078,7 +1076,12 @@ function selectJobAndReg(jobType){
   var yb=document.getElementById('yong-price-box');
   if(yb)yb.style.display=(jobType==='용차'?'block':'none');
 }
-function goLogout(){goSplash();}
+function goLogout(){
+  // ── 세션 완전 삭제
+  localStorage.removeItem('mbti_session');
+  S.curMode=''; S.curDriver=''; S.curJobtype=''; S.curJobsub=''; S.curPlate='';
+  goSplash();
+}
 function goReg(){hide(['splash','login-screen']);show('reg-screen');window.scrollTo(0,0);}
 function goLogin(m){
   hide(['splash','reg-screen']);show('login-screen');
@@ -1830,7 +1833,19 @@ function rejDriver(id){
   if(FB&&_db&&f.fbId)_db.collection('drivers').doc(f.fbId).update({status:'거부',is_active:false}).catch(()=>{});
   SP(S.page,null);updBadge();toast(f.name+' 거부');
 }
-function deactDriver(id){if(!confirm('탈퇴 처리? 데이터는 보존됩니다.'))return;var d=ls('drivers');var f=d.find(x=>x.id===id);if(!f)return;f.is_active=false;f.status='탈퇴';f.deactivatedAt=today();lss('drivers',d);SP(S.page,null);toast(f.name+' 탈퇴');}
+function deactDriver(id){
+  if(!confirm('탈퇴 처리? 데이터는 보존됩니다.'))return;
+  var d=ls('drivers');
+  var f=d.find(x=>x.id===id);
+  if(!f)return;
+  f.is_active=false; f.status='탈퇴'; f.deactivatedAt=today();
+  lss('drivers',d);
+  // ── Firebase에도 탈퇴 상태 저장 (재접속시 살아나는 버그 방지)
+  if(FB&&_db&&f.fbId){
+    _db.collection('drivers').doc(f.fbId).update({is_active:false, status:'탈퇴', deactivatedAt:today()}).catch(()=>{});
+  }
+  SP(S.page,null); toast(f.name+' 탈퇴');
+}
 
 // 서류 모달
 function openDocModal(id){
@@ -2430,15 +2445,83 @@ function dHome(){
   var ents=ls('entries').filter(e=>e.driver===S.curDriver&&e.date===today());
   var me=ents.pop();
   var totD=dels.reduce((s,d)=>s+(d.dcnt||0),0);
+
+  // ── 이번 주 일~토 날짜 계산
+  var now=new Date();
+  var dayIdx=now.getDay(); // 0=일,1=월,...,6=토
+  var weekDates=[];
+  for(var i=0;i<7;i++){
+    var d=new Date(now);
+    d.setDate(now.getDate()-dayIdx+i);
+    weekDates.push(d);
+  }
+  var dayNames=['일','월','화','수','목','금','토'];
+
+  // ── 근무표 localStorage 키
+  var weekKey='schedule_'+S.curDriver+'_'+weekDates[0].toISOString().slice(0,10);
+  var sched=JSON.parse(localStorage.getItem(weekKey)||'{}');
+
+  // ── 근무 상태 옵션
+  var statusOpts=['주','야','휴무','병가'];
+  var statusColor={'주':'#3B82F6','야':'#8B5CF6','휴무':'#6B7280','병가':'#EF4444','':{bg:'var(--bg2)'}};
+
+  // ── 근무표 HTML
+  var schedHTML='<div style="margin:8px 10px 0">'
+    +'<div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px;display:flex;align-items:center;gap:6px">📅 이번 주 근무표 <span style="font-size:10px;color:var(--text3)">(탭하여 변경)</span></div>'
+    +'<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px">';
+
+  for(var i=0;i<7;i++){
+    var d=weekDates[i];
+    var dateStr=d.toISOString().slice(0,10);
+    var isToday=(dateStr===today());
+    var st=sched[dateStr]||'';
+    var dayN=dayNames[i];
+    var isWeekend=(i===0||i===6);
+    var dayColor=isWeekend?'#EF4444':'var(--text)';
+
+    // 상태별 색상
+    var bgColor=st==='주'?'rgba(59,130,246,0.15)':st==='야'?'rgba(139,92,246,0.15)':st==='휴무'?'rgba(107,114,128,0.12)':st==='병가'?'rgba(239,68,68,0.12)':'var(--bg2)';
+    var txtColor=st==='주'?'#3B82F6':st==='야'?'#8B5CF6':st==='휴무'?'#9CA3AF':st==='병가'?'#EF4444':'var(--text3)';
+    var border=isToday?'2px solid var(--teal)':'1px solid var(--border)';
+
+    schedHTML+='<div onclick="cycleSchedule(\''+weekKey+'\',\''+dateStr+'\')" style="background:'+bgColor+';border:'+border+';border-radius:6px;padding:5px 2px;text-align:center;cursor:pointer;transition:all .2s">'
+      +'<div style="font-size:10px;font-weight:700;color:'+dayColor+'">'+(isToday?'<u>':'')+dayN+(isToday?'</u>':'')+'</div>'
+      +'<div style="font-size:9px;color:var(--text3);margin:1px 0">'+d.getDate()+'</div>'
+      +'<div style="font-size:11px;font-weight:700;color:'+txtColor+';min-height:15px">'+(st||'·')+'</div>'
+      +'</div>';
+  }
+  schedHTML+='</div>'
+    // 범례
+    +'<div style="display:flex;gap:8px;margin-top:5px;flex-wrap:wrap">'
+    +'<span style="font-size:9px;color:#3B82F6">●주간</span>'
+    +'<span style="font-size:9px;color:#8B5CF6">●야간</span>'
+    +'<span style="font-size:9px;color:#9CA3AF">●휴무</span>'
+    +'<span style="font-size:9px;color:#EF4444">●병가</span>'
+    +'</div>'
+    +'</div>';
+
   return `<div class="dh"><h2><span class="user-name-display">${S.curDriver}</span> 기사님</h2><p>${new Date().toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'})} · ${S.curJobtype} ${S.curJobsub}</p></div>
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:10px 10px 0">
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center"><div style="font-size:17px;font-weight:700">31</div><div style="font-size:10px;color:var(--text2)">입차번호</div></div>
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center"><div style="font-size:14px;font-weight:700;color:var(--teal)">${totD}건</div><div style="font-size:10px;color:var(--text2)">오늘 배송</div></div>
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center"><div style="font-size:13px;font-weight:700;color:${me?'var(--blue)':'var(--text3)'}">${me?'운행중':'대기중'}</div><div style="font-size:10px;color:var(--text2)">상태</div></div>
   </div>
+  ${schedHTML}
   ${me?`<div class="dc"><div class="dct">오늘 입차</div><div style="display:flex;gap:8px;align-items:center;font-size:12px"><span class="badge ${me.type==='쿠팡'?'b-coral':me.type==='컬리'?'b-purple':'b-blue'}">${me.type}</span><span>${me.time}</span><span style="font-weight:600;color:${me.temp==='상온'?'var(--amber)':parseFloat(me.temp)<=-18?'var(--teal)':'var(--red)'}">${me.temp}${me.temp==='상온'?'':' °C'}</span>${me.company?`<span style="color:var(--text2)">${me.company}</span>`:''}</div></div>`
   :`<div style="margin:8px 10px;padding:10px;background:var(--amber-l);border-radius:var(--r);font-size:12px;color:var(--amber)">아직 입차하지 않았습니다. 입차 탭에서 등록해 주세요.</div>`}
   <button class="bbtn bb-red" onclick="DT('accident',document.getElementById('pni4'))" style="padding:11px;font-size:13px;margin-top:6px">🚨 사고 접수</button>`;
+}
+
+// ── 근무표 순환 클릭: 빈→주→야→휴무→병가→빈
+function cycleSchedule(weekKey, dateStr){
+  var sched=JSON.parse(localStorage.getItem(weekKey)||'{}');
+  var order=['','주','야','휴무','병가'];
+  var cur=sched[dateStr]||'';
+  var idx=order.indexOf(cur);
+  sched[dateStr]=order[(idx+1)%order.length];
+  localStorage.setItem(weekKey, JSON.stringify(sched));
+  // 홈 화면 갱신
+  DT('home', document.getElementById('pni0'));
 }
 
 // ── 기사 입차 (3단계 분기)
@@ -2943,8 +3026,20 @@ function startListeners(){
       // ① Firestore 전체 데이터 배열화
       var fbDrivers=[];
       snap.forEach(doc=>{ var d=doc.data(); d.fbId=doc.id; fbDrivers.push(d); });
-      // ② localStorage 완전 덮어쓰기 (Firebase가 항상 최신)
-      lss('drivers', fbDrivers);
+      // ② Firebase → localStorage 동기화 (탈퇴/거부 상태 로컬 우선 보호)
+      var localDrivers = ls('drivers');
+      var mergedDrivers = fbDrivers.map(function(fbD){
+        // 로컬에서 탈퇴/거부 처리된 기사는 상태 유지
+        var localD = localDrivers.find(function(ld){ return ld.fbId===fbD.fbId || (ld.userId&&ld.userId===fbD.userId); });
+        if(localD && (localD.status==='탈퇴'||localD.status==='거부'||localD.is_active===false)){
+          // Firebase에서 다시 활성화되지 않은 경우 로컬 상태 유지
+          if(fbD.is_active!==false || fbD.status==='탈퇴' || fbD.status==='거부'){
+            return Object.assign({}, fbD, {status: localD.status, is_active: localD.is_active, deactivatedAt: localD.deactivatedAt});
+          }
+        }
+        return fbD;
+      });
+      lss('drivers', mergedDrivers);
       // ③ 신규 가입자 알림 (added 이벤트만)
       snap.docChanges().forEach(ch=>{
         if(ch.type==='added'){
@@ -3006,7 +3101,63 @@ function startListeners(){
   // 초기화
   initDB();
   loadUnitPrices();  // Firestore 단가 로드
-  goSplash();
+
+  // ── 저장된 세션 자동 복원 (재접속 시 로그인 상태 기억)
+  (function restoreSession(){
+    try{
+      var raw = localStorage.getItem('mbti_session');
+      if(!raw){ goSplash(); return; }
+      var sess = JSON.parse(raw);
+      // 7일 이상 지난 세션은 만료
+      if(!sess || (Date.now()-sess.ts) > 7*24*60*60*1000){ goSplash(); return; }
+      if(sess.mode==='admin'){
+        S.curMode='admin';
+        setAdminName(sess.name||'김형우 대표');
+        hide(['splash','login-screen','reg-screen','dv']); show('app');
+        SP('dash',null); updBadge(); updFbUI();
+        document.getElementById('tbdate').textContent=new Date().toLocaleDateString('ko-KR');
+        startListeners();
+        toast('👋 '+( sess.name||'관리자')+'님 자동 로그인');
+      } else if(sess.mode==='driver'){
+        // 기사 세션 복원 — Firebase/로컬에서 계정 유효 확인
+        var checkAndRestore = async function(){
+          var found = null;
+          if(FB&&_db){
+            try{
+              var q1=await _db.collection('drivers').where('userId','==',sess.id).limit(1).get();
+              if(!q1.empty){var d=q1.docs[0].data();d.fbId=q1.docs[0].id;found=d;}
+            }catch(e){}
+          }
+          if(!found){
+            var drs=ls('drivers');
+            found=drs.find(d=>d.userId===sess.id)||null;
+          }
+          // 탈퇴/거부/비활성 계정은 세션 삭제
+          if(!found||!found.is_active||found.status==='탈퇴'||found.status==='거부'){
+            localStorage.removeItem('mbti_session');
+            goSplash(); return;
+          }
+          // 대기중이면 스플래시로
+          if(found.isNew||found.status==='pending'){
+            localStorage.removeItem('mbti_session');
+            goSplash(); return;
+          }
+          // 정상 복원
+          S.curDriver=found.name||sess.id;
+          S.curPlate=found.plate||sess.plate||'';
+          S.curJobtype=found.jobtype||sess.jobtype||'택배';
+          S.curJobsub=found.jobsub||sess.jobsub||'쿠팡';
+          hide(['splash','login-screen','reg-screen','app']); show('dv');
+          DT('home',document.getElementById('pni0')); updFbUI();
+          loadMyInfo(sess.id);
+          toast('👋 '+S.curDriver+'님 자동 로그인');
+        };
+        checkAndRestore();
+      } else {
+        goSplash();
+      }
+    }catch(e){ goSplash(); }
+  })();
 })();
 </script>
 </body>
