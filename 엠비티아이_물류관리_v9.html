@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v6.2</title>
+<title>엠비티아이 물류관리 v9</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -303,7 +303,7 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
   <span style="color:#fff;font-size:13px;font-weight:700">(Co., Ltd.)</span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v6.2 · 데모 모드</div>
+    <div class="splash-ver" id="fb-ver">v9.0 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -1038,10 +1038,10 @@ function updBadge(){
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
 function updFbUI(){
-  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v6.2 · 🔥 실시간':'v6.2 · 데모';
+  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.0 · 🔥 실시간':'v9.0 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v6.2 · Firebase 실시간':'v6.2 · 데모 모드';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.0 · Firebase 실시간':'v9.0 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -1210,7 +1210,7 @@ function doLogin(){
   if(!pw){toast('비밀번호를 입력해 주세요');return;}
   if(m==='admin'){
     var adminInfo2=JSON.parse(localStorage.getItem('mbti_admin_info')||'{}');
-    var savedId=adminInfo2.userId||'admin';
+    var savedId=adminInfo2.userId||'MBTI';
     var savedPw=adminInfo2.pwPlain||'1234';
     // 저장된 아이디/비번만 허용 (기본값 admin/1234 차단)
     var idOk=(id===savedId);
@@ -2130,8 +2130,8 @@ function rMypage(){
   // 관리자 정보: localStorage 저장값 우선 사용
   var adminInfo=JSON.parse(localStorage.getItem('mbti_admin_info')||'{}');
   var d=isAdmin?{
-    name: adminInfo.name||'관리자',
-    userId: adminInfo.userId||'admin',
+    name: adminInfo.name||'김형우',
+    userId: adminInfo.userId||'MBTI',
     phone: adminInfo.phone||'010-0000-0000',
     email: adminInfo.email||'',
     addr: adminInfo.addr||''
@@ -2411,7 +2411,7 @@ function updSettle(){
     var rAmt=document.getElementById('se-ramt');if(rAmt&&!rAmt.dataset.manual)rAmt.value=rcnt*yRet;
   }
   // 프레시백 인센: 쿠팡만
-        // ── v6.2: 쿠팡 프레시백 인센티브 고정: 확정건수 × 25원
+        // ── v9.0: 쿠팡 프레시백 인센티브 고정: 확정건수 × 25원
       var finc=isCoupang?Math.round(dcnt*25):0;
   var fi=document.getElementById('se-finc');if(fi)fi.value=finc;
   var damt=+document.getElementById('se-damt')?.value||0;
@@ -3838,6 +3838,22 @@ function setPwaIcons(logoDataUrl){
     try{setPwaIcons('');}catch(e){}
   });
 })();
+
+// ── index에서 로그인 버튼 클릭 시 수신
+window.addEventListener('message',function(e){
+  if(!e.data)return;
+  if(e.data.action==='goLogin'){
+    var mode=e.data.mode||'driver';
+    if(mode==='admin'){
+      goLogin('admin');
+    } else {
+      goLogin('driver');
+    }
+  }
+  if(e.data.action==='closeAppIframe'){
+    try{window.parent.postMessage({action:'closeAppIframe'},'*');}catch(err){}
+  }
+});
 </script>
 </body>
 </html>
