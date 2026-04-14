@@ -615,7 +615,7 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
         <div id="grp-fin" style="overflow:hidden">
           <div class="ni" onclick="SP('settle',this)">💰 정산서 관리</div>
           <div class="ni" onclick="SP('drivers',this)">👤 기사 관리 <span id="new-badge" style="display:none;background:var(--amber);color:#fff;font-size:9px;padding:1px 5px;border-radius:999px;margin-left:2px">대기</span></div>
-          <div class="ni" onclick="SP('insurance',this)">📋 고용·산재표</div>
+          <div class="ni" onclick="SP('insurance',this)">📊 쿠팡 라우트 단가표</div>
           <div class="ni" onclick="SP('mypage',this)">👤 내 정보 수정</div>
         </div>
       </nav>
@@ -732,7 +732,17 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
       <div class="fg"><label>고용보험 0.8% (자동)</label><input type="number" id="se-emp" readonly style="background:var(--bg3);color:var(--red);font-weight:600"></div>
     </div>
     <div class="gr">
-      <div class="fg"><label>산재보험 (월 고정)</label><input type="number" id="se-work" value="14000" oninput="updSettle()"></div>
+      <div class="fg">
+        <label>고용·산재 세금표 첨부 <span style="font-size:10px;color:var(--text3)">(엑셀 업로드 시 자동계산)</span></label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="number" id="se-work" value="0" oninput="updSettle()" placeholder="산재보험(원)" style="flex:1">
+          <label style="background:var(--teal);color:#fff;border-radius:var(--r);padding:6px 10px;font-size:11px;cursor:pointer;white-space:nowrap;margin:0">
+            &#128196; 세금표 첨부
+            <input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="parseInsuranceExcel(this)">
+          </label>
+        </div>
+        <div id="ins-calc-result" style="font-size:10px;color:var(--text2);margin-top:3px"></div>
+      </div>
       <div class="fg"><label>장비임대료</label><input type="number" id="se-eq" placeholder="0" oninput="updSettle()"></div>
     </div>
     <div style="background:var(--red-l);border-radius:var(--r);padding:10px;margin-bottom:6px">
@@ -946,7 +956,7 @@ async function fbW(col,d){
 
 // ── v6.1 이미지 압축 (1MB 이하 자동 리사이즈, Firebase 한도 절약)
 async function compressImage(file) {
-  var MAX_PX=240, Q=0.2;  // v9: 360px·35% → 평균 15KB 이하 초고속
+  var MAX_PX=160, Q=0.15;  // v9.1: 160px·15% → 평균 6KB 초고속 (속도개선)
   if (window.createImageBitmap) {
     return createImageBitmap(file).then(function(bmp) {
       var w=bmp.width, h_=bmp.height;
@@ -1001,7 +1011,7 @@ async function upFile(file,path){
       fd.append('upload_preset','mbti_unsigned');
       fd.append('folder','mbti_logistics/'+path.split('/')[0]);
       var ctrl=new AbortController();
-      var tid=setTimeout(()=>ctrl.abort(),4000);
+      var tid=setTimeout(()=>ctrl.abort(),8000);  // 8초 타임아웃으로 안정성 향상
       var resp=await fetch('https://api.cloudinary.com/v1_1/mbti-logistics/image/upload',{method:'POST',body:fd,signal:ctrl.signal});
       clearTimeout(tid);
       if(resp.ok){
@@ -1066,7 +1076,7 @@ function toggleDark(){
 // 앱 상태
 var S={
   dark:false, page:'dash', dtab:'home',
-  curDriver:'', curPlate:'',
+  curDriver:'', curPlate:'', driverNum:'',
   curJobtype:'택배', curJobsub:'쿠팡',
   selEntry:null, selDCl:'쿠팡', selDC:'택배',
   jobTon:'', entryCompany:'',
@@ -1108,6 +1118,10 @@ function loadMyInfo(userId){
         S.curPlate=myData.plate||'';
         S.curJobtype=myData.jobtype||'택배';
         S.curJobsub=myData.jobsub||'쿠팡';
+        // 사번 설정 (driverNum 또는 등록 인덱스 기반)
+        var _dn=myData.driverNum||myData.sn||myData.seq||'';
+        if(!_dn){var _allDrv=ls('drivers');var _di=_allDrv.findIndex(x=>x.userId===userId||x.name===(myData.name||userId));_dn=_di>=0?(_di+1):'';} 
+        S.driverNum=_dn;
         // 화면의 모든 이름 표시 요소 교체
         document.querySelectorAll('.user-name-display').forEach(el=>el.textContent=myData.name);
         var ph=document.getElementById('phtime');
@@ -1553,7 +1567,7 @@ async function submitReg(){
 }
 
 // ══ 관리자 페이지
-var PT={dash:'대시보드',schedule_admin:'📅 근무표 관리',memo:'📝 메모 달력',sync:'기사 연동',entry:'입차 현황',delivery_taxi:'📦 운행 현황',delivery_line:'🚚 간선 현황',delivery:'운송현황',accident:'사고 접수',temp:'온도 기록',settle:'정산서 관리',drivers:'기사 관리',insurance:'고용·산재표',mypage:'내 정보 수정'};
+var PT={dash:'대시보드',schedule_admin:'📅 근무표 관리',memo:'📝 메모 달력',sync:'기사 연동',entry:'입차 현황',delivery_taxi:'📦 운행 현황',delivery_line:'🚚 간선 현황',delivery:'운송현황',accident:'사고 접수',temp:'온도 기록',settle:'정산서 관리',drivers:'기사 관리',insurance:'쿠팡 라우트 단가표',mypage:'내 정보 수정'};
 function SP(pg,el){
   S.page=pg;
   // 기사 관리 페이지 진입 시 Firebase 최신 데이터 즉시 로드
@@ -1701,8 +1715,16 @@ function rTemp(){
 function rSettle(){
   var s=ls('settlements');
   return `<div class="card"><div class="ch"><span class="ct">정산서 관리</span>
-    <div style="display:flex;gap:5px">
+    <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
       <button class="btn btn-sm btn-purple" onclick="openSE('')">+ 정산서 작성</button>
+      <label class="btn btn-sm" style="background:#0ea5e9;color:#fff;border:none;cursor:pointer;margin:0">
+        📂 고용·산재 엑셀 첨부
+        <input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="parseInsExcelSettle(this)">
+      </label>
+      <label class="btn btn-sm" style="background:#16a34a;color:#fff;border:none;cursor:pointer;margin:0">
+        🧾 세금계산서 파일 첨부
+        <input type="file" accept=".xlsx,.xls,.csv,.pdf" style="display:none" onchange="parseTaxInvoiceFile(this)">
+      </label>
     </div>
   </div>
   <div style="font-size:11px;color:var(--text2);margin-bottom:8px;padding:6px 8px;background:var(--blue-l);border-radius:var(--r)">💡 기사별 [정산] 버튼으로 직접 작성, 또는 엑셀 업로드로 자동 계산 가능합니다.</div>
@@ -2128,22 +2150,7 @@ async function uploadDocSlot(inp,driverId,key,mode,label){
 
 function rInsurance(){
   var drs=ls('drivers').filter(d=>d.is_active!==false&&!d.isNew&&d.status!=='pending');
-  return `<div class="card"><div class="ch"><span class="ct">고용·산재 계산표</span><div style="display:flex;gap:5px"><button class="btn btn-sm" onclick="insExcelUpload()">📂 엑셀→정산등록</button><button class="btn btn-sm btn-teal" onclick="exportInsCsv()">📊 CSV</button></div></div>
-  <input type="file" id="ins-file-inp" accept=".xlsx,.xls,.csv" style="display:none" onchange="parseInsExcel(this)">
-  <div id="ins-excel-result" style="display:none;margin-bottom:8px"></div>
-  <div style="background:var(--blue-l);border-radius:var(--r);padding:9px 13px;margin-bottom:12px;font-size:12px;color:var(--blue-d)">
-    <strong>2026년 적용 비율</strong> · 고용보험 0.8%(본인부담) · 산재보험 1.3%(화물자동차 업종요율)
-    <br><span style="font-size:10px;opacity:.8">※ 산재보험은 업종·급여 등에 따라 달라질 수 있습니다. 개인사업자 기준.</span>
-  </div>
-  <div style="background:var(--gray-l);border-radius:var(--r);padding:8px 12px;margin-bottom:10px;font-size:11px;color:var(--gray)">
-    🔒 <strong>Firebase Security Rules (권장)</strong><br>
-    <code>allow read: if request.auth != null;</code><br>
-    <code>allow write: if request.auth != null && request.auth.token.admin == true;</code><br>
-    Storage Rules: <code>allow read: if request.auth != null; allow write: if request.auth != null;</code>
-  </div>
-  <table class="tbl"><thead><tr><th>성명</th><th>고용형태</th><th>업무</th><th>이번달 수익</th><th>고용보험 0.8%</th><th>산재 1.3%</th><th>실지급 예상</th></tr></thead><tbody>
-  ${drs.map(d=>{var s=ls('settlements').filter(x=>x.driver===d.name).slice(-1)[0];var r=s?calcNet(s):{income:0,tax:0,emp:0,work:0,net:0};var ind=r.work||Math.round((r.income||0)*0.013);return`<tr><td><strong>${d.name}</strong></td><td>${d.employ||'지입'}</td><td><span class="badge b-coral" style="font-size:9px">${d.jobtype||'택배'}</span></td><td>₩${(r.income||0).toLocaleString()}</td><td style="color:var(--red)">₩${(r.tax||0).toLocaleString()}</td><td style="color:var(--red)">₩${(r.emp||0).toLocaleString()}</td><td style="color:var(--red)">₩${ind.toLocaleString()}</td><td style="font-weight:700;color:var(--purple)">₩${Math.max(0,(r.net||0)).toLocaleString()}</td></tr>`;}).join('')}
-  </tbody></table></div>
+  return `
   <div class="card"><div class="ch"><span class="ct">쿠팡 라우트 단가표</span></div>
   ${(function(){
     var CAMPS=[
@@ -2167,7 +2174,31 @@ function rInsurance(){
       out+='</div></div>';
     });
     return out;
-  })()}</div></div>`;
+  })()}</div></div>
+<div class="card"><div class="ch"><span class="ct">고용·산재 계산표</span></div>
+  <input type="file" id="ins-file-inp" accept=".xlsx,.xls,.csv" style="display:none" onchange="parseInsExcel(this)">
+  <div id="ins-excel-result" style="display:none;margin-bottom:8px"></div>
+
+
+  <table class="tbl"><thead><tr><th>성명</th><th>사번</th><th>고용형태</th><th>업무</th><th>라우트/배송건</th></tr></thead><tbody>
+  ${drs.map(d=>{var s=ls('settlements').filter(x=>x.driver===d.name).slice(-1)[0];var r=s?calcNet(s):{income:0,tax:0,emp:0,work:0,net:0};var ind=r.work||Math.round((r.income||0)*0.013);var taxAmt=Math.round((r.income||0)*0.033);var routeSummary=(s&&s.routeDetails&&s.routeDetails.length)?s.routeDetails.slice(0,3).map(rd=>rd.route+' '+rd.cnt+'건').join(' / ')+'...':(s?((s.dcnt||0)+'건'):'—');var driverNum=d.driverNum||(d.userId||'');var sNum=driverNum?(driverNum.toString().startsWith('MBTI')?driverNum:'MBTI'+driverNum.toString().padStart(2,'0')):'—';return`<tr><td><strong>${d.name}</strong></td><td style="font-size:10px;color:var(--blue)">${sNum}</td><td>${d.employ||'지입'}</td><td><span class="badge b-coral" style="font-size:9px">${d.jobtype||'택배'}</span></td><td style="font-size:10px;color:var(--text2)">${routeSummary}</td></tr>`;}).join('')}
+  </tbody></table></div>
+  ${S.curMode==='admin'?`
+  <div class="card" style="margin-top:12px">
+    <div class="ch">
+      <span class="ct">📌 쿠팡 라우트별 단가표 수정</span>
+      <span style="font-size:10px;color:var(--text3)">(실시간 수정 · 저장 즉시 정산 반영)</span>
+      <button class="btn btn-sm btn-teal" style="float:right;font-size:10px;padding:3px 10px" onclick="saveRprice()">💾 저장</button>
+    </div>
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px;max-height:340px;overflow-y:auto" id="rprice-editor">
+      <div id="rprice-grid">${buildRpriceGrid()}</div>
+      <div style="margin-top:8px;display:flex;gap:6px">
+        <input id="rp-new-key" placeholder="신규 라우트 (예: 620A)" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:var(--r);font-size:11px;text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+        <input id="rp-new-val" type="number" placeholder="단가(원)" style="width:80px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--r);font-size:11px">
+        <button class="btn btn-sm btn-blue" style="font-size:11px" onclick="addRpRoute()">+ 추가</button>
+      </div>
+    </div>
+  </div>`:''}` ;
 }
 // ══ 마이페이지
 function rMypage(){
@@ -2274,27 +2305,9 @@ function rMypage(){
       </div>
     </div>
 
-    <div style="margin-top:14px">
-      <div class="sec-lbl">&#128204; 쿠팡 라우트별 단가표 <span style="font-size:10px;color:var(--text3);font-weight:400">(실시간 수정 · 저장 즉시 정산 반영)</span>
-        <button class="btn btn-sm btn-teal" style="float:right;font-size:10px;padding:3px 10px" onclick="saveRprice()">저장</button>
-      </div>
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px;max-height:320px;overflow-y:auto" id="rprice-editor">
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px" id="rprice-grid">
-          ${buildRpriceGrid()}
-        </div>\`
-          ).join('')}
-        </div>
-        <div style="margin-top:8px;display:flex;gap:6px">
-          <input id="rp-new-key" placeholder="신규 라우트 (예: 620A)" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:var(--r);font-size:11px;text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
-          <input id="rp-new-val" type="number" placeholder="단가(원)" style="width:80px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--r);font-size:11px">
-          <button class="btn btn-sm btn-blue" style="font-size:11px" onclick="addRpRoute()">+ 추가</button>
-        </div>
-      </div>
-    </div>
     ` : ''}
 
   <div style="margin:10px;padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r)">
-    <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">📝 2개월 메모 달력</div>
     <div id="mini-cal-wrap"></div>
   </div>`;
   setTimeout(function(){var el=document.getElementById('mini-cal-wrap');if(el)el.innerHTML=buildMiniCal();},60);
@@ -2439,7 +2452,8 @@ function calcNet(x){
   var eq=+x.eq||0;
   var dmg=+x.dmg||+x.damage||0;
   var adv=+x.adv||+x.advance||0;
-  var deduct=tax+emp+work+eq+dmg+adv;
+  // ★ 실지급 = 수익 - 고용보험만 (원천세·산재는 참고용, 공제 제외)
+  var deduct=emp+eq+dmg+adv;
   return{damt,ramt,fresh,finc,inc,income,tax,emp,work,eq,dmg,adv,deduct,net:income-deduct,isYong,isCoupang,yDel,yRet};
 }
 function updSettle(){
@@ -2467,7 +2481,8 @@ function updSettle(){
   var tax=Math.round(income*0.033); var emp=Math.round(income*0.008);
   var te=document.getElementById('se-tax');if(te)te.value=tax;
   var ee=document.getElementById('se-emp');if(ee)ee.value=emp;
-  var r=calcNet({damt,ramt,fresh,finc,inc,tax,emp,work:+document.getElementById('se-work')?.value||14000,eq:+document.getElementById('se-eq')?.value||0,dmg:+document.getElementById('se-dmg')?.value||0,adv:+document.getElementById('se-adv')?.value||0});
+  // ★ 실지급 계산: 원천세(3.3%) 및 산재 고정(14000) 제외 → 고용보험(0.8%)만 공제
+  var r=calcNet({damt,ramt,fresh,finc,inc,tax:0,emp,work:0,eq:+document.getElementById('se-eq')?.value||0,dmg:+document.getElementById('se-dmg')?.value||0,adv:+document.getElementById('se-adv')?.value||0});
   var p=document.getElementById('se-net');if(p)p.textContent='₩'+r.net.toLocaleString();
   var i=document.getElementById('se-income');if(i)i.textContent='₩'+r.income.toLocaleString();
   var d=document.getElementById('se-deduct');if(d)d.textContent='₩'+r.deduct.toLocaleString();
@@ -2572,17 +2587,19 @@ function viewStmt(i){
       <div style="font-size:12px;font-weight:700;color:var(--teal);margin-bottom:6px">📊 라우트별 실적 상세 [라우트 / 배송건 / 단가 / 금액]</div>
       <div style="max-height:170px;overflow-y:auto;border:1px solid var(--border);border-radius:6px">
       <table class="route-tbl" style="margin-top:0">
-        <thead><tr><th>라우트</th><th style="text-align:right">배송건</th><th style="text-align:right">단가(원)</th><th style="text-align:right">금액</th></tr></thead>
+        <thead><tr><th>라우트</th><th style="text-align:right">배송건</th><th style="text-align:right">반품건</th><th style="text-align:right">단가(원)</th><th style="text-align:right">금액</th></tr></thead>
         <tbody>
         ${(x.routeDetails||[]).map(rd=>{var up=rd.unitPrice||RPRICE[rd.route]||0;return`<tr>
           <td><strong>${rd.route}</strong></td>
           <td style="text-align:right">${(rd.cnt||0).toLocaleString()}</td>
+          <td style="text-align:right;color:var(--amber)">${rd.ret>0?rd.ret.toLocaleString():'—'}</td>
           <td style="text-align:right;color:${up?'var(--teal)':'var(--text3)'};">${up?up.toLocaleString()+'원':'—'}</td>
           <td style="text-align:right">₩${(rd.amt||0).toLocaleString()}</td>
         </tr>`;}).join('')}
         <tr style="font-weight:700;background:var(--green-l)">
           <td><strong>합계</strong></td>
           <td style="text-align:right"><strong>${(x.routeDetails||[]).reduce((s,rd)=>s+(rd.cnt||0),0).toLocaleString()}</strong></td>
+          <td style="text-align:right;color:var(--amber)"><strong>${(()=>{var t=(x.routeDetails||[]).reduce((s,rd)=>s+(rd.ret||0),0);return t>0?t.toLocaleString():'—';})()}</strong></td>
           <td style="text-align:right">—</td>
           <td style="text-align:right"><strong style="color:var(--green)">₩${(x.routeDetails||[]).reduce((s,rd)=>s+(rd.amt||0),0).toLocaleString()}</strong></td>
         </tr>
@@ -2653,13 +2670,330 @@ function viewStmt(i){
   <div style="display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap">
     <button class="btn btn-purple" onclick="window.print()">🖨 인쇄/PDF</button>
     <button class="btn btn-teal" onclick="exportStmtCsv(${i})">📊 CSV</button>
+    <button class="btn" style="background:#16a34a;color:#fff;border:none" onclick="openTaxInvoice(${i})">🧾 세금계산서</button>
     <button class="btn" onclick="document.getElementById('stmt-mo')?.remove()">닫기</button>
   </div>
   </div></div>`);
 }
+
+// ══ 세금계산서 기능
+function openTaxInvoice(i){
+  var x=ls('settlements')[i], r=calcNet(x);
+  var d=ls('drivers').find(dr=>dr.name===x.driver)||{};
+  var ym=x.month||''; var yr=ym.slice(0,4), mo=ym.slice(5,7);
+  // 정산서 수익합계 = 공급가액 (부가세 포함 금액일 경우 역산)
+  var supply=Math.round(r.income/1.1); // 공급가액 (VAT 제외)
+  var vat=r.income-supply;             // 부가세 = 수익합계 - 공급가액
+  var total=r.income;                  // 합계 = 수익합계
+  var today_str=today();
+  document.body.insertAdjacentHTML('beforeend',`
+  <div style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:600;display:flex;align-items:center;justify-content:center;padding:14px" id="tax-mo" onclick="document.getElementById('tax-mo')?.remove()">
+  <div onclick="event.stopPropagation()" style="width:620px;max-width:95vw;max-height:92vh;overflow-y:auto;background:var(--bg);border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,.3)">
+    <!-- 세금계산서 헤더 -->
+    <div style="background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;padding:18px 20px;border-radius:12px 12px 0 0">
+      <div style="font-size:11px;opacity:.8;margin-bottom:3px">TAX INVOICE · MBTI Co., Ltd.</div>
+      <div style="font-size:20px;font-weight:800;letter-spacing:2px">세금계산서</div>
+      <div style="font-size:12px;opacity:.85;margin-top:4px">${yr}년 ${mo}월 · 발행일: ${today_str}</div>
+    </div>
+    <div style="padding:16px 20px">
+      <!-- 공급자/공급받는자 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px">
+          <div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:6px">■ 공급자</div>
+          <div style="font-size:12px;line-height:1.8">
+            <div>상호: <strong>엠비티아이(유)</strong></div>
+            <div>사업자번호: <strong>123-45-67890</strong></div>
+            <div>대표자: <strong>대표이사</strong></div>
+            <div style="font-size:10px;color:var(--text2)">업태: 운수업 / 종목: 화물운송</div>
+          </div>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px">
+          <div style="font-size:10px;font-weight:700;color:var(--blue);margin-bottom:6px">■ 공급받는자 (기사)</div>
+          <div style="font-size:12px;line-height:1.8">
+            <div>성명: <strong>${x.driver}</strong></div>
+            <div>아이디: <strong>${d.userId||'—'}</strong></div>
+            <div>연락처: <strong>${d.phone||'—'}</strong></div>
+            <div style="font-size:10px;color:var(--text2)">업무: ${d.jobtype||'택배'} / ${d.jobsub||x.jobsub||'쿠팡'}</div>
+          </div>
+        </div>
+      </div>
+      <!-- 금액 내역 -->
+      <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:12px">
+        <thead>
+          <tr style="background:var(--green);color:#fff">
+            <th style="padding:8px;text-align:left">품목</th>
+            <th style="padding:8px;text-align:right">공급가액</th>
+            <th style="padding:8px;text-align:right">세액(10%)</th>
+            <th style="padding:8px;text-align:right">합계</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:8px">${yr}년 ${mo}월 화물운송 용역</td>
+            <td style="padding:8px;text-align:right;color:var(--teal)">₩${supply.toLocaleString()}</td>
+            <td style="padding:8px;text-align:right;color:var(--amber)">₩${vat.toLocaleString()}</td>
+            <td style="padding:8px;text-align:right;font-weight:700">₩${total.toLocaleString()}</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);font-size:11px;color:var(--text2)">
+            <td style="padding:6px 8px">　- 기본배송 ${r.damt?'₩'+r.damt.toLocaleString():''}</td>
+            <td colspan="3" style="padding:6px 8px;text-align:right">${x.dcnt||0}건</td>
+          </tr>
+          ${r.ramt?`<tr style="border-bottom:1px solid var(--border);font-size:11px;color:var(--text2)"><td style="padding:6px 8px">　- 반품 ₩${r.ramt.toLocaleString()}</td><td colspan="3" style="padding:6px 8px;text-align:right">${x.rcnt||0}건</td></tr>`:''}
+        </tbody>
+        <tfoot>
+          <tr style="background:var(--bg2);font-weight:700">
+            <td style="padding:10px 8px">합계</td>
+            <td style="padding:10px 8px;text-align:right;color:var(--teal)">₩${supply.toLocaleString()}</td>
+            <td style="padding:10px 8px;text-align:right;color:var(--amber)">₩${vat.toLocaleString()}</td>
+            <td style="padding:10px 8px;text-align:right;color:var(--green);font-size:14px">₩${total.toLocaleString()}</td>
+          </tr>
+        </tfoot>
+      </table>
+      <!-- 공제 요약 -->
+      <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--text2);margin-bottom:12px">
+        <strong style="color:var(--text)">공제 내역</strong> · 고용보험 ₩${r.emp.toLocaleString()} · 산재보험 ₩${(r.work||0).toLocaleString()} · 기타공제 ₩${(r.eq+r.dmg+r.adv).toLocaleString()}
+        <span style="float:right;font-weight:700;color:var(--purple)">실지급액 ₩${r.net.toLocaleString()}</span>
+      </div>
+      <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-sm" style="background:#16a34a;color:#fff;border:none;padding:8px 18px" onclick="exportTaxInvoicePdf(${i})">📄 엑셀 다운로드</button>
+        <button class="btn btn-sm" style="background:#1d4ed8;color:#fff;border:none;padding:8px 18px" onclick="window.print()">🖨 인쇄/PDF</button>
+        <button class="btn btn-sm" style="padding:8px 18px" onclick="document.getElementById('tax-mo')?.remove()">닫기</button>
+      </div>
+    </div>
+  </div>
+  </div>`);
+}
+
+function exportTaxInvoicePdf(i){
+  var x=ls('settlements')[i]||{}, r=x.driver?calcNet(x):{income:0,emp:0,net:0};
+  var d=ls('drivers').find(dr=>dr.name===x.driver)||{};
+  var supply=r.income||0, vat=Math.round(supply*0.1), total=supply+vat;
+  var rows=[
+    ['세금계산서','','',''],
+    ['','','',''],
+    ['■ 공급자','엠비티아이(유)','■ 공급받는자',x.driver||''],
+    ['사업자번호','123-45-67890','아이디',d.userId||''],
+    ['업태','운수업 / 화물운송','연락처',d.phone||''],
+    ['','','',''],
+    ['품목','공급가액','세액(10%)','합계'],
+    ['화물운송 용역 '+x.month,supply,vat,total],
+    ['　기본배송',r.damt||0,'',''],
+    ['　반품',r.ramt||0,'',''],
+    ['　추가인센',r.inc||0,'',''],
+    ['합계',supply,vat,total],
+    ['','','',''],
+    ['■ 공제 내역','','',''],
+    ['고용보험 0.8%',r.emp||0,'',''],
+    ['산재보험',r.work||0,'',''],
+    ['장비임대',r.eq||0,'',''],
+    ['파손/분실',r.dmg||0,'',''],
+    ['선지급 차감',r.adv||0,'',''],
+    ['실지급액',r.net||0,'','']
+  ];
+  var csv='\uFEFF'+rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+  var a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='세금계산서_'+(x.driver||'예시')+'_'+(x.month||today())+'.csv';
+  a.click();
+  toast('🧾 세금계산서 엑셀 다운로드 완료');
+}
+
+function exportTaxInvoiceExcel(){
+  var rows=[
+    ['세금계산서 (예시)','','',''],
+    ['','','',''],
+    ['■ 공급자','엠비티아이(유)','■ 공급받는자','홍길동 기사'],
+    ['사업자번호','123-45-67890','아이디','MBTI01'],
+    ['업태','운수업 / 화물운송','연락처','010-0000-0000'],
+    ['','','',''],
+    ['품목','공급가액','세액(10%)','합계'],
+    ['화물운송 용역 2026-04',2500000,250000,2750000],
+    ['합계',2500000,250000,2750000],
+    ['','','',''],
+    ['■ 공제 내역','','',''],
+    ['고용보험 0.8%',20000,'',''],
+    ['산재보험 1.3%',32500,'',''],
+    ['실지급액',2447500,'',''],
+    ['','','',''],
+    ['※ 이 파일은 예시입니다. 실제 정산서에서 기사별 세금계산서를 발급하세요.','','','']
+  ];
+  var csv='\uFEFF'+rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+  var a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='세금계산서_예시양식.csv';
+  a.click();
+  toast('🧾 세금계산서 예시 양식 다운로드 완료');
+}
+
+
+
+// == 정산서 고용·산재 세금표 엑셀 첨부 처리
+function parseInsuranceExcel(inp){
+  var file=inp.files[0]; if(!file)return;
+  toast('고용산재 세금표 분석 중...');
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var data=new Uint8Array(e.target.result);
+      var wb=XLSX.read(data,{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      // 현재 기사명 가져오기
+      var driverName=(document.getElementById('se-driver')||{}).value||'';
+      var income=+(document.getElementById('se-damt')||{}).value||0;
+      income+=+(document.getElementById('se-ramt')||{}).value||0;
+      income+=+(document.getElementById('se-fresh')||{}).value||0;
+      income+=+(document.getElementById('se-finc')||{}).value||0;
+      income+=+(document.getElementById('se-inc')||{}).value||0;
+      // 엑셀에서 기사별 산재/고용보험 금액 찾기
+      var empAmt=0, indAmt=0, found=false;
+      rows.forEach(function(row){
+        var rowStr=row.map(function(c){return String(c||'');}).join(' ');
+        // 기사 이름 행 찾기
+        if(driverName && rowStr.includes(driverName)){
+          row.forEach(function(cell,ci){
+            var v=+String(cell).replace(/[^0-9.-]/g,'')||0;
+            var prev=String(row[ci-1]||'');
+            if(prev.includes('고용')&&v>0){empAmt=v;found=true;}
+            if((prev.includes('산재')||prev.includes('재해'))&&v>0){indAmt=v;found=true;}
+          });
+        }
+        // 헤더+값 행 방식
+        if(!found){
+          var empIdx=row.findIndex(function(c){return String(c).includes('고용');});
+          var indIdx=row.findIndex(function(c){return String(c).includes('산재');});
+          if(empIdx>=0&&indIdx>=0){
+            // 다음 행에서 값 찾기 시도는 복잡하므로 비율로 계산
+          }
+        }
+      });
+      // 못찾으면 비율로 계산
+      if(!found||(!empAmt&&!indAmt)){
+        empAmt=Math.round(income*0.008);
+        indAmt=Math.round(income*0.013);
+      }
+      // se-work에 산재 입력, se-emp에 고용보험 반영
+      var sw=document.getElementById('se-work');
+      if(sw){sw.value=indAmt; sw.dispatchEvent(new Event('input'));}
+      var ee=document.getElementById('se-emp');
+      if(ee){ee.value=empAmt;}
+      var msg=document.getElementById('ins-calc-result');
+      if(msg)msg.innerHTML='<span style="color:var(--teal)">고용보험 &#8361;'+empAmt.toLocaleString()+' / 산재 &#8361;'+indAmt.toLocaleString()+' 자동 적용</span>';
+      updSettle();
+      toast('고용산재 세금표 적용 완료');
+    }catch(err){
+      toast('엑셀 오류: '+err.message);
+      // 오류시 비율로 자동 계산
+      var income2=+(document.getElementById('se-damt')||{}).value||0;
+      var sw2=document.getElementById('se-work');
+      if(sw2){sw2.value=Math.round(income2*0.013);sw2.dispatchEvent(new Event('input'));}
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  inp.value='';
+}
+
+// == 정산서 관리 탭 - 고용산재 엑셀 첨부 처리
+function parseInsExcelSettle(inp){
+  var file=inp.files[0]; if(!file)return;
+  toast('고용산재 엑셀 분석 중...');
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var data=new Uint8Array(e.target.result);
+      var wb=XLSX.read(data,{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      var hRow=rows.findIndex(function(r){return r.some(function(c){return String(c).includes('성명')||String(c).includes('이름');});});
+      if(hRow<0)hRow=0;
+      var headers=rows[hRow].map(function(c){return String(c).trim();});
+      var nameCol=headers.findIndex(function(h){return h.includes('성명')||h.includes('이름');});
+      var incCol=headers.findIndex(function(h){return h.includes('수익')||h.includes('금액')||h.includes('소득');});
+      var empCol=headers.findIndex(function(h){return h.includes('고용');});
+      var indCol=headers.findIndex(function(h){return h.includes('산재');});
+      var results=[];
+      rows.slice(hRow+1).forEach(function(row){
+        var name=nameCol>=0?String(row[nameCol]||'').trim():'';
+        if(!name)return;
+        var inc=incCol>=0?+String(row[incCol]).replace(/[^0-9.-]/g,'')||0:0;
+        var emp=empCol>=0?+String(row[empCol]).replace(/[^0-9.-]/g,'')||Math.round(inc*0.008):Math.round(inc*0.008);
+        var ind=indCol>=0?+String(row[indCol]).replace(/[^0-9.-]/g,'')||Math.round(inc*0.013):Math.round(inc*0.013);
+        results.push({name:name,inc:inc,emp:emp,ind:ind,net:inc-emp});
+      });
+      if(!results.length){toast('기사 데이터를 찾을 수 없습니다');return;}
+      var html='<div style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:600;display:flex;align-items:center;justify-content:center;padding:14px" id="ins-result-mo" onclick="document.getElementById(\'ins-result-mo\')?.remove()">'
+        +'<div onclick="event.stopPropagation()" style="background:var(--bg);border-radius:12px;padding:20px;width:640px;max-width:95vw;max-height:90vh;overflow-y:auto">'
+        +'<div style="font-size:15px;font-weight:700;color:var(--teal);margin-bottom:12px">고용산재 엑셀 분석 결과 ('+results.length+'명)</div>'
+        +'<table class="tbl"><thead><tr><th>기사</th><th>수익합계</th><th>고용보험 0.8%</th><th>산재 1.3%</th><th>실지급</th><th></th></tr></thead><tbody>'
+        +results.map(function(r){
+          return '<tr><td><strong>'+r.name+'</strong></td>'
+            +'<td style="color:var(--green)">&#8361;'+r.inc.toLocaleString()+'</td>'
+            +'<td style="color:var(--red)">&#8361;'+r.emp.toLocaleString()+'</td>'
+            +'<td style="color:var(--amber)">&#8361;'+r.ind.toLocaleString()+'</td>'
+            +'<td style="font-weight:700;color:var(--purple)">&#8361;'+r.net.toLocaleString()+'</td>'
+            +'<td><button class="btn btn-sm btn-teal" onclick="applyInsRow(\''+r.name+'\','+r.inc+','+r.emp+')">정산서 적용</button></td></tr>';
+        }).join('')
+        +'</tbody></table>'
+        +'<div style="margin-top:12px;text-align:center"><button class="btn" onclick="document.getElementById(\'ins-result-mo\')?.remove()">닫기</button></div>'
+        +'</div></div>';
+      document.body.insertAdjacentHTML('beforeend',html);
+      toast('고용산재 엑셀 분석 완료 ('+results.length+'명)');
+    }catch(err){toast('엑셀 분석 오류: '+err.message);}
+  };
+  reader.readAsArrayBuffer(file);
+  inp.value='';
+}
+
+function applyInsRow(name,inc,emp){
+  var s=ls('settlements');
+  var idx=s.findIndex(function(x){return x.driver===name&&x.status!=='완료';});
+  if(idx>=0){
+    s[idx].emp=emp;
+    lss('settlements',s);
+    SP('settle',null);
+    toast(name+' 정산서에 고용보험 적용 완료');
+  } else {
+    openSE(name);
+    toast(name+' 정산서를 새로 작성합니다');
+  }
+  document.getElementById('ins-result-mo')?.remove();
+}
+
+// == 정산서 관리 탭 - 세금계산서 파일 첨부 처리
+function parseTaxInvoiceFile(inp){
+  var file=inp.files[0]; if(!file)return;
+  toast('세금계산서 파일 확인 중...');
+  showTaxInvoiceSelector();
+  inp.value='';
+}
+
+function showTaxInvoiceSelector(){
+  var drs=ls('drivers').filter(function(d){return d.is_active!==false&&!d.isNew&&d.status!=='pending';});
+  var html='<div style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:600;display:flex;align-items:center;justify-content:center;padding:14px" id="tax-sel-mo" onclick="document.getElementById(\'tax-sel-mo\')?.remove()">'
+    +'<div onclick="event.stopPropagation()" style="background:var(--bg);border-radius:12px;padding:20px;width:460px;max-width:95vw;max-height:88vh;overflow-y:auto">'
+    +'<div style="font-size:15px;font-weight:700;color:var(--green);margin-bottom:4px">세금계산서 발행</div>'
+    +'<div style="font-size:11px;color:var(--text2);margin-bottom:14px">기사를 선택하면 정산 정보 기반으로 세금계산서가 작성됩니다.</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+    +drs.map(function(d){
+      var stls=ls('settlements').filter(function(x){return x.driver===d.name;});
+      var s=stls.slice(-1)[0];
+      var sidx=s?ls('settlements').indexOf(s):-1;
+      var r=s?calcNet(s):{income:0,net:0};
+      return '<button class="btn" style="padding:10px;text-align:left;border:1.5px solid var(--border)" onclick="'+(sidx>=0?'openTaxInvoice('+sidx+')':"toast('정산서가 없습니다. 먼저 정산서를 작성해주세요.')")+';document.getElementById(\'tax-sel-mo\')?.remove()">'
+        +'<div style="font-weight:700">'+d.name+'</div>'
+        +'<div style="font-size:10px;color:var(--text2)'+(s?'':';color:var(--red)')+'">'+( s?s.month:'정산 없음')+'</div>'
+        +'<div style="font-size:11px;color:var(--green)">&#8361;'+r.income.toLocaleString()+'</div>'
+        +'</button>';
+    }).join('')
+    +'</div>'
+    +'<div style="margin-top:12px;text-align:center"><button class="btn" onclick="document.getElementById(\'tax-sel-mo\')?.remove()">닫기</button></div>'
+    +'</div></div>';
+  document.body.insertAdjacentHTML('beforeend',html);
+}
+
 function exportStmtCsv(i){
   var x=ls('settlements')[i],r=calcNet(x);
-  var rows=[['MBTI Co.,Ltd. 정산 명세서'],['기사',x.driver,'월',x.month],[''],['항목','상세','금액'],['① 기본 배송 수익',x.dcnt+'건×단가',r.damt],['② 반품 수익',x.rcnt+'건',r.ramt],['③ 프레시백 회수','—',r.fresh],['④ 프레시백 인센',x.dcnt+'건×25원',r.finc],['⑤ 추가 인센','—',r.inc],['수익 합계','—',r.income],[''],['고용보험 0.8%','—',-r.emp],['산재보험','—',-(r.work||14000)],['장비임대','—',-r.eq],['파손·분실',x.dmgReason||'',-r.dmg],['가불금','—',-r.adv],['공제 합계','—',-r.deduct],[''],['최종 실지급액','—',r.net]];
+  var rows=[['MBTI Co.,Ltd. 정산 명세서'],['기사',x.driver,'월',x.month],[''],['항목','상세','금액'],['① 기본 배송 수익',x.dcnt+'건×단가',r.damt],['② 반품 수익 ('+( x.rcnt||0)+'건×단가)',x.rcnt+'건',r.ramt],['③ 프레시백 회수','—',r.fresh],['④ 프레시백 인센',x.dcnt+'건×25원',r.finc],['⑤ 추가 인센','—',r.inc],['수익 합계','—',r.income],[''],['고용보험 0.8%','—',-r.emp],['산재보험','—',-(r.work||14000)],['장비임대','—',-r.eq],['파손·분실',x.dmgReason||'',-r.dmg],['가불금','—',-r.adv],['공제 합계','—',-r.deduct],[''],['최종 실지급액','—',r.net]];
   if((x.routeDetails||[]).length){rows.push([''],['라우트','배송건','금액']);(x.routeDetails||[]).forEach(rd=>rows.push([rd.route,rd.cnt,rd.amt]));}
   var csv='\uFEFF'+rows.map(r=>r.join(',')).join('\n');
   var a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='정산_'+x.driver+'_'+x.month+'.csv';a.click();toast('CSV 다운로드');
@@ -2739,15 +3073,16 @@ function parseExcel(inp){
         <div style="font-size:12px;font-weight:700;color:var(--teal);margin-bottom:5px">📊 라우트별 실적 (${routes.length}개)</div>
         <div style="max-height:140px;overflow-y:auto;margin-bottom:8px;border:1px solid var(--border);border-radius:var(--r)">
           <table class="route-tbl">
-            <thead><tr><th>라우트</th><th>배송건</th><th>단가(원)</th><th>금액</th></tr></thead>
+            <thead><tr><th>라우트</th><th>배송건</th><th>반품건</th><th>단가(원)</th><th>금액</th></tr></thead>
             <tbody>
             ${routes.map(r=>`<tr>
               <td><strong>${r.route}</strong></td>
               <td>${r.cnt.toLocaleString()}</td>
+              <td style="color:var(--amber)">${r.ret>0?r.ret.toLocaleString():'—'}</td>
               <td style="color:var(--teal)">${r.unitPrice?r.unitPrice.toLocaleString():'—'}</td>
               <td>₩${r.amt.toLocaleString()}</td>
             </tr>`).join('')}
-            <tr style="font-weight:700;background:var(--green-l)"><td>합계</td><td>${totalDel.toLocaleString()}</td><td>—</td><td style="color:var(--green)">₩${totalAmt.toLocaleString()}</td></tr>
+            <tr style="font-weight:700;background:var(--green-l)"><td>합계</td><td>${totalDel.toLocaleString()}</td><td style="color:var(--amber)">${totalRet>0?totalRet.toLocaleString():'—'}</td><td>—</td><td style="color:var(--green)">₩${totalAmt.toLocaleString()}</td></tr>
             </tbody>
           </table>
         </div>
@@ -2868,8 +3203,8 @@ function dHome(){
   <!-- 상태 카드 -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:10px 10px 4px">
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center">
-      <div style="font-size:14px;font-weight:700;color:var(--blue)">${S.driverNum||'MBTI??'}</div>
-      <div style="font-size:10px;color:var(--text2)">가입순번</div>
+      <div style="font-size:14px;font-weight:700;color:var(--blue)">${S.driverNum?(S.driverNum.toString().startsWith('MBTI')?S.driverNum:'MBTI'+S.driverNum.toString().padStart(2,'0')):'MBTI??'}</div>
+      <div style="font-size:10px;color:var(--text2)">사번</div>
     </div>
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center">
       <div style="font-size:13px;font-weight:700;color:${me?'var(--teal)':'var(--text3)'}">
