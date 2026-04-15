@@ -3591,6 +3591,63 @@ function DT(tab,el){
   }
 }
 
+// ★ 기사 앱 — 세금계산서 이미지 보기 (Firebase Storage URL 또는 base64)
+function dViewTax(month, driver){
+  var drv=driver||S.curDriver;
+  // ① 기사 기기 localStorage (가장 빠름)
+  try{
+    var tk=JSON.parse(localStorage.getItem('mbti_drv_tax')||'{}');
+    if(tk[month]){_showTaxImg(tk[month],month);return;}
+  }catch(e){}
+  // ② 메모리(onSnapshot으로 받은 미삭제 알림)
+  if(window._drvNotes){
+    var found=Object.values(window._drvNotes).find(function(it){
+      return it.type==='tax_invoice'&&it.month===month;
+    });
+    if(found&&found.img){_showTaxImg(found.img,month);return;}
+  }
+  // ③ Firebase — driver 단일 조건으로 조회 후 클라이언트 필터
+  if(FB&&_db){
+    toast('🔍 세금계산서 불러오는 중...');
+    _db.collection('driver_notifications')
+      .where('driver','==',drv)
+      .get().then(function(snap){
+        var matched=null;
+        snap.forEach(function(doc){
+          var d=doc.data();
+          if(d.type==='tax_invoice'&&d.month===month&&d.img)matched=d;
+        });
+        if(matched){
+          // 찾았으면 로컬에도 저장
+          try{var tk2=JSON.parse(localStorage.getItem('mbti_drv_tax')||'{}');
+            tk2[month]=matched.img;
+            localStorage.setItem('mbti_drv_tax',JSON.stringify(tk2));}catch(e){}
+          _showTaxImg(matched.img,month);
+        } else {
+          toast('❌ 세금계산서가 아직 전달되지 않았습니다\n관리자에게 요청해 주세요');
+        }
+      }).catch(function(e){toast('조회 오류: '+e.message);});
+  } else {
+    toast('❌ 세금계산서가 아직 전달되지 않았습니다');
+  }
+}
+function _showTaxImg(imgUrl, month){
+  var mo=document.createElement('div');
+  mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:900;display:flex;align-items:flex-start;justify-content:center;padding:14px;overflow-y:auto';
+  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  mo.innerHTML='<div onclick="event.stopPropagation()" style="width:100%;max-width:720px;margin:4px auto">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
+      '<span style="color:#fff;font-size:14px;font-weight:700">🧾 '+month+' 세금계산서</span>'+
+      '<button onclick="this.parentElement.parentElement.parentElement.remove()" style="padding:6px 14px;background:#6b7280;color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:12px">닫기</button>'+
+    '</div>'+
+    '<img src="'+imgUrl+'" style="width:100%;border-radius:8px;display:block">'+
+    '<div style="margin-top:10px;text-align:center">'+
+      '<a href="'+imgUrl+'" download="세금계산서_'+month+'.jpg" style="padding:10px 24px;background:#7c3aed;color:#fff;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none">⬇ 저장</a>'+
+    '</div>'+
+  '</div>';
+  document.body.appendChild(mo);
+}
+
 function checkDriverNotifications(){
   if(!FB||!_db||!S.curDriver)return;
   // ★ 실시간 onSnapshot으로 변경 (기존 .get() → 실시간 수신)
@@ -3607,6 +3664,16 @@ function checkDriverNotifications(){
       if(S.dtab==='settle')DT('settle',document.getElementById('pni5'));
       // 임시 저장
       window._drvNotes={}; items.forEach(function(it){window._drvNotes[it._id]=it;});
+      // ★ 세금계산서 기사 기기에 영구 저장 (localStorage)
+      items.forEach(function(it){
+        if(it.type==='tax_invoice'&&it.img&&it.month){
+          try{
+            var tk=JSON.parse(localStorage.getItem('mbti_drv_tax')||'{}');
+            tk[it.month]=it.img;
+            localStorage.setItem('mbti_drv_tax',JSON.stringify(tk));
+          }catch(e){}
+        }
+      });
       var existing=document.getElementById('drv-notification-box');
       if(existing)existing.remove();
       var box=document.createElement('div');
@@ -3639,8 +3706,8 @@ function _vdn(id){
     +'<button onclick="this.parentElement.parentElement.parentElement.remove()" style="padding:9px 20px;background:#6b7280;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">확인</button>'
     +'</div></div>';
   document.body.appendChild(mo);
-  // ★ 확인 후 Firebase 알림 삭제 (읽음 처리 — 기사가 한번 보면 사라짐)
-  if(FB&&_db){
+  // ★ 명세서만 삭제, 세금계산서는 보관 (dViewTax로 재열람 가능)
+  if(FB&&_db&&item.type!=='tax_invoice'){
     _db.collection('driver_notifications').doc(id).delete().catch(function(){});
   }
   setTimeout(function(){
@@ -4286,6 +4353,10 @@ function dSettle(){
       '<strong style="font-size:22px;color:#fff">₩'+r.net.toLocaleString()+'</strong>'+
     '</div>'+
     '<div style="padding:7px 20px;font-size:11px;color:var(--text3)">'+(x.sharedAt?'공유일: '+x.sharedAt:'')+'</div>'+
+    // ★ 세금계산서 보기 버튼
+    '<div style="padding:8px 14px;border-top:1px solid var(--border);background:var(--bg2)">'+
+      '<button onclick="dViewTax(\''+x.month+'\',\''+x.driver+'\')" style="width:100%;padding:10px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">🧾 세금계산서 이미지 보기</button>'+
+    '</div>'+
     '</div>';
   });
   html+='<div style="height:12px"></div>';
