@@ -925,7 +925,10 @@ var _db=null,_st=null,FB=false;
             if(idx>=0)drivers.splice(idx,1);
           } else {
             if(idx>=0){Object.assign(drivers[idx],fd);}
-            else{drivers.push(fd);}
+            else{
+              if(!fd.id)fd.id=fd.fbId;
+              drivers.push(fd);
+            }
           }
         });
         lss('drivers',drivers);
@@ -1126,6 +1129,19 @@ var syncRealUserName = function(uid){ return loadMyInfo(uid); };
 // ── v6.1 실시간 본인 정보 로드 (로그인한 사람 이름 표시, 세션 버그 해결)
 function loadMyInfo(userId){
   if(FB&&_db){
+    // ★ 기사 본인 정산서 실시간 Firebase 동기화
+    _db.collection('settlements').where('driver','==',userId)
+      .onSnapshot(function(snap){
+        if(snap.empty)return;
+        var all=ls('settlements');
+        snap.forEach(function(doc){
+          var sd=doc.data();sd.fbId=doc.id;
+          var idx=all.findIndex(function(x){return x.fbId===doc.id||(x.driver===sd.driver&&x.month===sd.month);});
+          if(idx>=0)Object.assign(all[idx],sd);else all.push(sd);
+        });
+        lss('settlements',all);
+        if(S.dtab==='settle')DT('settle',document.getElementById('pni5'));
+      },function(){});
     _db.collection('drivers').where('userId','==',userId).onSnapshot(snap=>{
       if(!snap.empty){
         var myData=snap.docs[0].data();
@@ -1209,7 +1225,7 @@ function selectJobAndReg(jobType){
   if(yb)yb.style.display=(jobType==='용차'?'block':'none');
 }
 function goLogout(){
-  // ── 세션 완전 삭제
+  if(typeof firebase!=='undefined'&&firebase.auth&&firebase.auth()){try{firebase.auth().signOut();}catch(e){}}
   localStorage.removeItem('mbti_session');
   S.curMode=''; S.curDriver=''; S.curJobtype=''; S.curJobsub=''; S.curPlate='';
   goSplash();
@@ -1485,15 +1501,13 @@ function checkCompCode(inp){
         }
       })
       .catch(function(){
-        // 오프라인이면 코드를 그냥 허용 (추후 Firebase에서 검증)
-        inp.dataset.codeOk='offline';
-        msg.textContent='(오프라인 — 저장 후 관리자 승인 대기)';
-        msg.style.color='var(--text3)';
+        // 오프라인/오류시 가입 완전 차단
+        inp.dataset.adminId='';inp.dataset.companyName='';inp.dataset.codeOk='';
+        msg.innerHTML='<span style="color:#dc2626">❌ 코드 확인 실패 — 인터넷 연결 확인 후 재시도</span>';
       });
   } else {
-    inp.dataset.codeOk='offline';
-    msg.textContent='(Firebase 미연결 — 코드 저장됩니다)';
-    msg.style.color='var(--text3)';
+    inp.dataset.codeOk='';
+    msg.innerHTML='<span style="color:#dc2626">❌ 서버 미연결 — 인터넷 확인 후 재시도</span>';
   }
 }
 
@@ -1514,7 +1528,8 @@ async function submitReg(){
   var codeEl=document.getElementById('r-compcode');
   var resolvedAdminId   = (codeEl&&codeEl.dataset.adminId)    || 'admin';
   var resolvedCompName  = (codeEl&&codeEl.dataset.companyName) || '';
-  var codeVerified      = (codeEl&&codeEl.dataset.codeOk)      || 'offline';
+  var codeVerified      = (codeEl&&codeEl.dataset.codeOk)      || '';
+  if(codeVerified!=='true'){toast('🔑 유효하지 않은 가입 코드\n올바른 코드 입력 후 재시도');return;}
   if(!/^[a-zA-Z0-9_]{4,20}$/.test(userId)){toast('아이디: 영문·숫자·_ 4~20자');return;}
   if(/admin|root|mbti|system/i.test(userId)){toast('사용할 수 없는 아이디');return;}
   // 입력값 sanitize
@@ -2060,8 +2075,8 @@ function rDrivers(){
     <td><div style="display:flex;gap:3px;flex-wrap:wrap">${docHtml}</div></td>
     <td style="font-size:11px">${d.joinDate}</td>
     <td style="display:flex;gap:4px">
-      <button class="btn btn-sm btn-teal" onclick="appDriver('${d.id}')">✓ 승인</button>
-      <button class="btn btn-sm btn-red" onclick="rejDriver('${d.id}')">✗ 거부</button>
+      <button class="btn btn-sm btn-teal" onclick="appDriver('${d.fbId||d.id}')">✓ 승인</button>
+      <button class="btn btn-sm btn-red" onclick="rejDriver('${d.fbId||d.id}')">✗ 거부</button>
     </td>
   </tr>`;}).join('')}
   </tbody></table></div>`:''}
@@ -2109,9 +2124,10 @@ function rDrivers(){
   `; // 탈퇴·거부 인원 비표시 (수정7)
 }
 function appDriver(id){
+  if(!id||id==='undefined'){toast('❌ 새로고침 후 다시 시도');return;}
   var d=ls('drivers');
-  var f=d.find(x=>x.id==id||x.fbId===id);
-  if(!f)return;
+  var f=d.find(x=>x.fbId===id)||d.find(x=>String(x.id)===String(id));
+  if(!f){toast('❌ 기사 정보 없음. 새로고침 후 재시도');return;}
   f.isNew=false; f.status='대기'; f.is_active=true; f.approvedAt=today();
   lss('drivers',d);
   // Firebase: 상태 업데이트 + 알림 메모 저장
@@ -2129,10 +2145,11 @@ function appDriver(id){
   SP(S.page,null); updBadge(); toast('✅ '+f.name+' 승인 완료 — 로그인 가능');
 }
 function rejDriver(id){
+  if(!id||id==='undefined'){toast('❌ 새로고침 후 다시 시도');return;}
   if(!confirm('가입 거부?'))return;
   var d=ls('drivers');
-  var f=d.find(x=>x.id==id||x.fbId===id);
-  if(!f)return;
+  var f=d.find(x=>x.fbId===id)||d.find(x=>String(x.id)===String(id));
+  if(!f){toast('❌ 기사 정보 없음. 새로고침 후 재시도');return;}
   f.status='거부';f.is_active=false;
   lss('drivers',d);
   if(FB&&_db&&f.fbId)_db.collection('drivers').doc(f.fbId).update({status:'거부',is_active:false}).catch(()=>{});
@@ -4073,6 +4090,15 @@ function dSettle(){
       <span style="font-weight:700;font-size:20px;color:var(--purple)">₩${r.net.toLocaleString()}</span>
     </div>
     ${x.sharedAt?`<div style="font-size:10px;color:var(--text3);margin-top:4px;text-align:right">정산서 공유일: ${x.sharedAt}</div>`:''}
+    <div style="margin-top:12px;padding:12px;background:#f0fdf4;border:1.5px solid #16a34a;border-radius:var(--r)">
+      <div style="font-size:12px;font-weight:700;color:#15803d;margin-bottom:8px">🧾 세금계산서 상세내역</div>
+      <div style="font-size:11px;display:flex;flex-direction:column;gap:5px">
+        <div style="display:flex;justify-content:space-between"><span style="color:#555">공급가액</span><span style="font-weight:600">₩${r.income.toLocaleString()}</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:#555">소득세 (3.3%)</span><span style="font-weight:600;color:#dc2626">-₩${(x.tax||Math.round(r.income*0.033)).toLocaleString()}</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:#555">고용보험 (0.8%)</span><span style="font-weight:600;color:#dc2626">-₩${r.emp.toLocaleString()}</span></div>
+        <div style="display:flex;justify-content:space-between;border-top:1px solid #86efac;padding-top:5px;margin-top:3px"><span style="font-weight:700">실 수령액</span><span style="font-weight:700;color:#15803d;font-size:14px">₩${r.net.toLocaleString()}</span></div>
+      </div>
+    </div>
   </div>`;}).join('')}
   <div style="height:12px"></div>`;
 }
