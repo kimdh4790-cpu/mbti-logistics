@@ -291,8 +291,9 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
 
 @keyframes lgScroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
-<body onload="setPwaIcons('')">
+<body onload="setPwaIcons('')">>
 
 <!-- ══ 첫 화면 v6.1: 7개 로고 버튼 직접 가입/로그인 분기 ══ -->
 <div id="splash">
@@ -924,11 +925,7 @@ var _db=null,_st=null,FB=false;
             if(idx>=0)drivers.splice(idx,1);
           } else {
             if(idx>=0){Object.assign(drivers[idx],fd);}
-            else{
-              // 신규 push: 로컬 id가 없으면 fbId를 id로도 설정 (승인버튼 조회 안정성)
-              if(!fd.id) fd.id = fd.fbId;
-              drivers.push(fd);
-            }
+            else{drivers.push(fd);}
           }
         });
         lss('drivers',drivers);
@@ -960,7 +957,7 @@ async function fbW(col,d){
 
 // ── v6.1 이미지 압축 (1MB 이하 자동 리사이즈, Firebase 한도 절약)
 async function compressImage(file) {
-  var MAX_PX=160, Q=0.15;  // v9.1: 160px·15% → 평균 6KB 초고속 (속도개선)
+  var MAX_PX=900, Q=0.55;  // v9.2: 900px·55% → 서류 판독 가능 + 적당한 크기
   if (window.createImageBitmap) {
     return createImageBitmap(file).then(function(bmp) {
       var w=bmp.width, h_=bmp.height;
@@ -1003,44 +1000,58 @@ async function compressImage(file) {
 
 async function upFile(file,path){
   if(!file)return null;
-  // 1단계: 이미지 압축 (평균 30KB 이하 → 초고속)
-  if(file.type && file.type.startsWith('image/')) {
-    try { file = await compressImage(file); } catch(e) {}
-  }
-  // 2단계: Cloudinary 무료 CDN (평균 1~2초, Firebase Storage보다 3~5배 빠름)
-  if(file.type && file.type.startsWith('image/')){
-    try{
-      var fd=new FormData();
-      fd.append('file',file);
-      fd.append('upload_preset','mbti_unsigned');
-      fd.append('folder','mbti_logistics/'+path.split('/')[0]);
-      var ctrl=new AbortController();
-      var tid=setTimeout(()=>ctrl.abort(),8000);  // 8초 타임아웃으로 안정성 향상
-      var resp=await fetch('https://api.cloudinary.com/v1_1/mbti-logistics/image/upload',{method:'POST',body:fd,signal:ctrl.signal});
-      clearTimeout(tid);
-      if(resp.ok){
-        var json=await resp.json();
-        if(json.secure_url){
-          if(FB&&_db){_db.collection('photo_refs').add({path:path,url:json.secure_url,ts:new Date().toISOString()}).catch(()=>{});}
-          return json.secure_url;
-        }
-      }
-    }catch(e){console.warn('Cloudinary 실패, Firebase로 전환');}
-  }
-  // 3단계: Firebase Storage 폴백
-  if(FB&&_st){try{
-    var r=_st.ref(path+'/'+Date.now()+'_'+(file.name||'photo.jpg'));
-    var uploadTask=r.put(file);
-    await new Promise((res,rej)=>{
-      uploadTask.on('state_changed',
-        snap=>{ var pct=Math.round(snap.bytesTransferred/snap.totalBytes*100);
-          document.querySelectorAll('[id^="up-bar-"]').forEach(b=>{if(b.style.width<'95%')b.style.width=Math.max(80,pct)+'%';});
-        },rej,res);
+  // ★ v9.2: 즉시 base64로 저장 → UI 즉각 반응, 백그라운드 업로드
+  if(file.type&&file.type.startsWith('image/')){
+    // 1) 우선 압축 base64 즉시 반환 (화면에 바로 표시)
+    var compressed=file;
+    try{compressed=await compressImage(file);}catch(e){}
+    var b64=await new Promise(function(res){
+      var fr=new FileReader();fr.onload=function(e){res(e.target.result);};fr.readAsDataURL(compressed);
     });
-    return await uploadTask.snapshot.ref.getDownloadURL();
-  }catch(e){console.warn('Firebase Storage 실패');}}
-  // 4단계: base64 로컬 저장 (오프라인 폴백)
-  return new Promise(res=>{var fr=new FileReader();fr.onload=e=>res(e.target.result);fr.readAsDataURL(file);});
+    // 2) Firebase 백그라운드 업로드 (완료 시 URL 교체)
+    if(FB&&_st){
+      (async function(){
+        try{
+          var ref=_st.ref(path+'/'+Date.now()+'_'+(file.name||'photo.jpg'));
+          await ref.put(compressed);
+          var url=await ref.getDownloadURL();
+          // localStorage의 base64를 Firebase URL로 자동 교체
+          _replaceB64WithUrl(b64,url);
+        }catch(e){console.warn('백그라운드 업로드 실패:',e);}
+      })();
+    }
+    return b64; // 즉시 base64 반환 → UI 블로킹 없음
+  }
+  // 비이미지 파일: Firebase 직접 업로드
+  if(FB&&_st){try{
+    var r=_st.ref(path+'/'+Date.now()+'_'+(file.name||'file'));
+    await r.put(file);
+    return await r.getDownloadURL();
+  }catch(e){}}
+  return null;
+}
+// 백그라운드 업로드 완료 후 저장된 base64를 URL로 교체
+function _replaceB64WithUrl(b64,url){
+  try{
+    var keys=['drivers','settlements'];
+    keys.forEach(function(k){
+      var arr=ls(k); var changed=false;
+      arr=arr.map(function(item){
+        var s=JSON.stringify(item);
+        if(s.includes(b64.slice(0,50))){
+          changed=true;
+          return JSON.parse(s.replace(new RegExp(b64.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g'),url));
+        }
+        return item;
+      });
+      if(changed){lss(k,arr);}
+    });
+    // adminInfo도 확인
+    var ai=localStorage.getItem('mbti_admin_info')||'{}';
+    if(ai.includes(b64.slice(0,50))){
+      localStorage.setItem('mbti_admin_info',ai.replace(new RegExp(b64.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g'),url));
+    }
+  }catch(e){}
 }
 
 // 유틸
@@ -1069,8 +1080,8 @@ function toggleGrp(id){
   if(open){el.style.maxHeight='0px';el.style.marginBottom='0';if(arr)arr.textContent='▶';}
   else{el.style.maxHeight='600px';el.style.marginBottom='';if(arr)arr.textContent='▼';}
 }
-// 초기화: 모든 그룹 열림
-function initGrps(){['grp-status','grp-ops','grp-fin'].forEach(function(id){var el=document.getElementById(id);if(el)el.style.maxHeight='600px';});}
+// 초기화: 모든 그룹 닫힘
+function initGrps(){['grp-status','grp-ops','grp-fin'].forEach(function(id){var el=document.getElementById(id);var arr=document.getElementById(id+'-arrow');if(el){el.style.maxHeight='0px';}if(arr)arr.textContent='▶';});}
 function toggleDark(){
   S.dark=!S.dark;document.body.classList.toggle('dark',S.dark);
   var t=S.dark?'☀️ 라이트':'🌙 다크모드';
@@ -1198,11 +1209,7 @@ function selectJobAndReg(jobType){
   if(yb)yb.style.display=(jobType==='용차'?'block':'none');
 }
 function goLogout(){
-  // Firebase 인증 세션 완전 종료
-  if(typeof firebase!=='undefined'&&firebase.auth&&firebase.auth()){
-    try{firebase.auth().signOut();}catch(e){}
-  }
-  // 로컬 세션 완전 삭제
+  // ── 세션 완전 삭제
   localStorage.removeItem('mbti_session');
   S.curMode=''; S.curDriver=''; S.curJobtype=''; S.curJobsub=''; S.curPlate='';
   goSplash();
@@ -1249,26 +1256,39 @@ function doLogin(){
     var savedId=adminInfo2.userId||'MBTI';
     var savedPw=adminInfo2.pwPlain||'1234';
     // 저장된 아이디/비번만 허용 (기본값 admin/1234 차단)
-    var idOk=(id===savedId);
-    var pwOk=(pw===savedPw);
-    if(!idOk||!pwOk){
-    lockData.cnt++;lockData.ts=Date.now();
-    localStorage.setItem(lockKey,JSON.stringify(lockData));
-    var left=5-lockData.cnt;
-    if(left>0){toast('아이디/비밀번호 오류 (잔여 '+left+'회)');}
-    else{toast('🔒 5회 실패 — 10분간 잠금');}
+    // ★ Firebase에서 최신 adminInfo 먼저 조회
+    var _doAdminCheck=async function(info){
+      var sId=info.userId||'MBTI'; var sPwHash=info.pw||''; var sPwPlain=info.pwPlain||'1234';
+      var idOk2=(id===sId); var pwOk2=false;
+      if(sPwHash&&sPwHash.length===64){var h=await hashPw(pw);pwOk2=(h===sPwHash);}
+      else{pwOk2=(pw===sPwPlain);}
+      if(!idOk2||!pwOk2){
+        lockData.cnt++;lockData.ts=Date.now();
+        localStorage.setItem(lockKey,JSON.stringify(lockData));
+        var left=5-lockData.cnt;
+        if(left>0){toast('아이디/비밀번호 오류 (잔여 '+left+'회)');}
+        else{toast('🔒 5회 실패 — 10분간 잠금');}
+        return;
+      }
+      localStorage.removeItem(lockKey);
+      S.curMode='admin';
+      var aName=info.name||'김형우 대표';
+      setAdminName(aName);
+      localStorage.setItem('mbti_admin_info',JSON.stringify(info));
+      localStorage.setItem('mbti_session',JSON.stringify({mode:'admin',id:sId,name:aName,ts:Date.now(),exp:Date.now()+28800000}));
+      hide(['login-screen']); show('app');
+      SP('dash',null); updBadge(); updFbUI();
+      document.getElementById('tbdate').textContent=new Date().toLocaleDateString('ko-KR');
+      startListeners();
+    };
+    if(FB&&_db){
+      _db.collection('settings').doc('adminInfo').get().then(function(doc){
+        var info=JSON.parse(localStorage.getItem('mbti_admin_info')||'{}');
+        if(doc.exists)Object.assign(info,doc.data());
+        _doAdminCheck(info);
+      }).catch(function(){_doAdminCheck(JSON.parse(localStorage.getItem('mbti_admin_info')||'{}'));});
+    } else {_doAdminCheck(JSON.parse(localStorage.getItem('mbti_admin_info')||'{}'));}
     return;
-  }
-  // 로그인 성공 시 실패 카운트 초기화
-  localStorage.removeItem(lockKey);
-    S.curMode='admin';
-    // ── v6.1: 관리자 이름 표시 (Firebase에서 가져오거나 기본값)
-    setAdminName('김형우 대표');
-    localStorage.setItem('mbti_session',JSON.stringify({mode:'admin',id:savedId,name:'김형우 대표',ts:Date.now(),exp:Date.now()+28800000}));
-    hide(['login-screen']); show('app');
-    SP('dash',null); updBadge(); updFbUI();
-    document.getElementById('tbdate').textContent=new Date().toLocaleDateString('ko-KR');
-    startListeners();
   } else {
     // ── v6.1: Firebase에서 먼저 찾고, 없으면 localStorage
     var loginDriver=async function(){
@@ -1323,6 +1343,7 @@ function doLogin(){
         hide(['login-screen']); show('dv');
         DT('home',document.getElementById('pni0')); updFbUI();
         loadMyInfo(id);
+        setTimeout(checkDriverNotifications, 1500); // 기사 전달 내역 확인
       } else {toast('등록되지 않은 아이디');return;}
     };
     loginDriver();
@@ -1464,15 +1485,15 @@ function checkCompCode(inp){
         }
       })
       .catch(function(){
-        // 오프라인/Firebase 오류 시 가입 차단 (보안)
-        inp.dataset.adminId=''; inp.dataset.companyName=''; inp.dataset.codeOk='';
-        msg.innerHTML='<span style="color:var(--red,#dc2626)">❌ 코드 확인 실패 — 인터넷 연결을 확인하거나 관리자(김형우 대표)에게 문의하세요</span>';
-        msg.style.color='var(--red)';
+        // 오프라인이면 코드를 그냥 허용 (추후 Firebase에서 검증)
+        inp.dataset.codeOk='offline';
+        msg.textContent='(오프라인 — 저장 후 관리자 승인 대기)';
+        msg.style.color='var(--text3)';
       });
   } else {
-    inp.dataset.codeOk='';
-    msg.innerHTML='<span style="color:var(--red,#dc2626)">❌ 서버 연결 안됨 — 코드 확인 불가, 인터넷 연결 후 재시도</span>';
-    msg.style.color='var(--red)';
+    inp.dataset.codeOk='offline';
+    msg.textContent='(Firebase 미연결 — 코드 저장됩니다)';
+    msg.style.color='var(--text3)';
   }
 }
 
@@ -1488,13 +1509,12 @@ async function submitReg(){
   var jobtype=document.getElementById('r-jobtype').value;
   var compcode=document.getElementById('r-compcode')?.value.trim().toUpperCase()||'';
   if(!userId||!name||!phone||!pw||!plate||!acct||!holder){toast('필수 항목(*)을 모두 입력해 주세요');return;}
-  // 회사코드 필수 + 반드시 Firebase에서 'true'로 검증된 코드만 허용
+  // 회사코드 필수 + 오프라인(offline) 허용
   if(!compcode){toast('🔑 회사 가입 코드를 입력해 주세요\n(관리자 김형우 대표님에게 문의)');return;}
   var codeEl=document.getElementById('r-compcode');
   var resolvedAdminId   = (codeEl&&codeEl.dataset.adminId)    || 'admin';
   var resolvedCompName  = (codeEl&&codeEl.dataset.companyName) || '';
-  var codeVerified      = (codeEl&&codeEl.dataset.codeOk)      || '';
-  if(codeVerified!=='true'){toast('🔑 유효하지 않은 가입 코드입니다.\n코드를 다시 확인하거나 인터넷 연결 후 재시도해 주세요.');return;}
+  var codeVerified      = (codeEl&&codeEl.dataset.codeOk)      || 'offline';
   if(!/^[a-zA-Z0-9_]{4,20}$/.test(userId)){toast('아이디: 영문·숫자·_ 4~20자');return;}
   if(/admin|root|mbti|system/i.test(userId)){toast('사용할 수 없는 아이디');return;}
   // 입력값 sanitize
@@ -1723,18 +1743,27 @@ function rTemp(){
 
 function rSettle(){
   var s=ls('settlements');
-  return `<div class="card"><div class="ch"><span class="ct">정산서 관리</span>
-    <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
-      <button class="btn btn-sm btn-purple" onclick="openSE('')">+ 정산서 작성</button>
-      <label class="btn btn-sm" style="background:#0ea5e9;color:#fff;border:none;cursor:pointer;margin:0">
+  return `<div class="card">
+  <div class="ch"><span class="ct">정산서 관리</span>
+    <button class="btn btn-sm btn-purple" onclick="openSE('')">+ 정산서 작성</button>
+  </div>
+  <!-- ★ 통합 정산 자동화 박스 -->
+  <div style="background:linear-gradient(135deg,rgba(249,115,22,.08),rgba(234,88,12,.04));border:1.5px solid rgba(249,115,22,.25);border-radius:12px;padding:14px;margin-bottom:10px">
+    <div style="font-size:12px;font-weight:700;color:#ea580c;margin-bottom:10px">📦 정산 자동화</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#f97316;color:#fff;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">
+        📤 쿠팡 엑셀 업로드 → 자동정산
+        <input type="file" accept=".xlsx,.xls" style="display:none" onchange="parseCoupangExcel(this)">
+      </label>
+      <label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#0ea5e9;color:#fff;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">
         📂 고용·산재 엑셀 첨부
         <input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="parseInsExcelSettle(this)">
       </label>
-      <label class="btn btn-sm" style="background:#16a34a;color:#fff;border:none;cursor:pointer;margin:0">
-        🧾 세금계산서 파일 첨부
-        <input type="file" accept=".xlsx,.xls,.csv,.pdf" style="display:none" onchange="parseTaxInvoiceFile(this)">
-      </label>
+
+      <button onclick="exportAllSettlements()" style="padding:8px 14px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⬇️ 전체 정산 다운로드</button>
+      <button onclick="openTaxStore()" style="padding:8px 14px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗂 기사별 세금계산서 보관함</button>
     </div>
+    <div style="font-size:10px;color:var(--text3);margin-top:8px">💡 쿠팡 엑셀(정산Raw/정산총괄 포함) 업로드 → 기사 자동 매칭 → 고용·산재·원천세 자동 계산</div>
   </div>
   <div style="font-size:11px;color:var(--text2);margin-bottom:8px;padding:6px 8px;background:var(--blue-l);border-radius:var(--r)">💡 기사별 [정산] 버튼으로 직접 작성, 또는 엑셀 업로드로 자동 계산 가능합니다.</div>
   <table class="tbl"><thead><tr><th>기사</th><th>화주사</th><th>월</th><th>총수익</th><th>고용보험</th><th>실지급</th><th>상태</th><th></th></tr></thead><tbody>
@@ -1748,8 +1777,8 @@ function rSettle(){
     <td><span class="badge ${x.status==='완료'?'b-green':'b-wait'}">${x.status}</span></td>
     <td style="display:flex;gap:3px;flex-wrap:wrap">
       <button class="btn btn-sm" onclick="viewStmt(${i})">명세서</button>
-      <button class="btn btn-sm btn-purple" onclick="openSEi(${i})">수정</button>
       ${x.status==='정산예정'?`<button class="btn btn-sm btn-teal" onclick="appSettle(${i})">승인</button>`:''}
+      <button class="btn btn-sm" style="background:#16a34a;color:#fff;border:none" onclick="openTaxInvoice(${i})">🧾 세금계산서</button>
     </td>
   </tr>`;}).join('')||'<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:12px">데이터 없음</td></tr>'}
   </tbody></table></div>`;
@@ -2031,8 +2060,8 @@ function rDrivers(){
     <td><div style="display:flex;gap:3px;flex-wrap:wrap">${docHtml}</div></td>
     <td style="font-size:11px">${d.joinDate}</td>
     <td style="display:flex;gap:4px">
-      <button class="btn btn-sm btn-teal" onclick="appDriver('${d.fbId||d.id}')">✓ 승인</button>
-      <button class="btn btn-sm btn-red" onclick="rejDriver('${d.fbId||d.id}')">✗ 거부</button>
+      <button class="btn btn-sm btn-teal" onclick="appDriver('${d.id}')">✓ 승인</button>
+      <button class="btn btn-sm btn-red" onclick="rejDriver('${d.id}')">✗ 거부</button>
     </td>
   </tr>`;}).join('')}
   </tbody></table></div>`:''}
@@ -2080,11 +2109,9 @@ function rDrivers(){
   `; // 탈퇴·거부 인원 비표시 (수정7)
 }
 function appDriver(id){
-  if(!id||id==='undefined'||id==='null'){toast('❌ 기사 정보를 찾을 수 없습니다. 새로고침 후 재시도 해주세요.');return;}
   var d=ls('drivers');
-  // fbId 우선, 없으면 로컬 id로 fallback
-  var f=d.find(x=>x.fbId===id)||d.find(x=>String(x.id)===String(id));
-  if(!f){toast('❌ 기사 정보를 찾을 수 없습니다 (ID:'+id+'). 새로고침 후 재시도.');return;}
+  var f=d.find(x=>x.id==id||x.fbId===id);
+  if(!f)return;
   f.isNew=false; f.status='대기'; f.is_active=true; f.approvedAt=today();
   lss('drivers',d);
   // Firebase: 상태 업데이트 + 알림 메모 저장
@@ -2102,12 +2129,10 @@ function appDriver(id){
   SP(S.page,null); updBadge(); toast('✅ '+f.name+' 승인 완료 — 로그인 가능');
 }
 function rejDriver(id){
-  if(!id||id==='undefined'||id==='null'){toast('❌ 기사 정보를 찾을 수 없습니다. 새로고침 후 재시도 해주세요.');return;}
   if(!confirm('가입 거부?'))return;
   var d=ls('drivers');
-  // fbId 우선, 없으면 로컬 id로 fallback
-  var f=d.find(x=>x.fbId===id)||d.find(x=>String(x.id)===String(id));
-  if(!f){toast('❌ 기사 정보를 찾을 수 없습니다 (ID:'+id+'). 새로고침 후 재시도.');return;}
+  var f=d.find(x=>x.id==id||x.fbId===id);
+  if(!f)return;
   f.status='거부';f.is_active=false;
   lss('drivers',d);
   if(FB&&_db&&f.fbId)_db.collection('drivers').doc(f.fbId).update({status:'거부',is_active:false}).catch(()=>{});
@@ -2133,8 +2158,9 @@ function openDocModal(id){
   var docs=d.docs||{};
   var slots=[{k:'bankPhotoUrl',lbl:'통장 사본',ico:'🏦',u:d.bankPhotoUrl,direct:true},{k:'license',lbl:'면허증',ico:'🪪',u:docs.license},{k:'cargo_cert',lbl:'화물운송자격증',ico:'📜',u:docs.cargo_cert},{k:'car_reg',lbl:'자동차등록증',ico:'🚗',u:docs.car_reg},{k:'biz_reg',lbl:'사업자등록증',ico:'📋',u:docs.biz_reg}];
   var html=`<div id="doc-mo" style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:490;display:flex;align-items:center;justify-content:center;padding:14px" onclick="if(event.target.id==='doc-mo')this.remove()">
-  <div onclick="event.stopPropagation()" style="background:var(--bg2);border-radius:var(--rl);padding:20px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto">
-    <div style="font-size:15px;font-weight:700;margin-bottom:14px">📂 ${d.name} 서류 관리</div>
+  <div onclick="event.stopPropagation()" style="background:var(--bg2);border-radius:var(--rl);padding:20px;width:580px;max-width:95vw;max-height:90vh;overflow-y:auto">
+    <div style="font-size:15px;font-weight:700;margin-bottom:4px">📂 ${d.name} 서류 관리</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:14px">이미지 클릭: 확대 | 이미지 없는 칸 클릭: 업로드</div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
     ${slots.map(s=>`<div>
       <div style="border-radius:var(--r);border:2px ${s.u&&s.u.length>5?'solid var(--teal)':'dashed var(--border)'};position:relative;aspect-ratio:4/3;background:var(--bg3);overflow:hidden;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center"
@@ -2145,9 +2171,39 @@ function openDocModal(id){
       </div>
     </div>`).join('')}
     </div>
-    <div style="text-align:right"><button class="btn" onclick="document.getElementById('doc-mo').remove()">닫기</button></div>
+    <!-- 세금계산서 발행 정보 (관리자 편집) -->
+    <div style="background:rgba(22,163,74,.08);border:1px solid rgba(22,163,74,.25);border-radius:8px;padding:12px;margin-top:10px">
+      <div style="font-weight:700;color:#15803d;margin-bottom:8px;font-size:12px">🧾 세금계산서 발행 정보 <span style="font-size:10px;font-weight:400;color:var(--text3)">(사업자등록증 보고 입력)</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px">
+        <div><div style="color:var(--text3);margin-bottom:2px">📋 사업자등록번호</div><input id="dm-biznum-${id}" value="${d.bizNum||''}" placeholder="000-00-00000" style="width:100%;box-sizing:border-box;padding:5px 8px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--bg);color:var(--text)"></div>
+        <div><div style="color:var(--text3);margin-bottom:2px">🏢 상호</div><input id="dm-bizname-${id}" value="${d.bizName||''}" placeholder="예: 홍길동운수" style="width:100%;box-sizing:border-box;padding:5px 8px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--bg);color:var(--text)"></div>
+        <div style="grid-column:span 2"><div style="color:var(--text3);margin-bottom:2px">📍 사업장 주소</div><input id="dm-bizaddr-${id}" value="${d.bizAddr||d.addr||''}" placeholder="부산시 수영구..." style="width:100%;box-sizing:border-box;padding:5px 8px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--bg);color:var(--text)"></div>
+        <div><div style="color:var(--text3);margin-bottom:2px">🏭 업태</div><input id="dm-biztype-${id}" value="${d.bizType||'서비스업'}" placeholder="서비스업" style="width:100%;box-sizing:border-box;padding:5px 8px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--bg);color:var(--text)"></div>
+        <div><div style="color:var(--text3);margin-bottom:2px">📦 종목</div><input id="dm-bizitem-${id}" value="${d.bizItem||'기타물품운반원'}" placeholder="기타물품운반원" style="width:100%;box-sizing:border-box;padding:5px 8px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--bg);color:var(--text)"></div>
+      </div>
+      <button onclick="saveDrvBizInfo(${id})" style="width:100%;margin-top:8px;padding:7px;background:#15803d;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">💾 사업자 정보 저장</button>
+    </div>
+    <div style="text-align:right;margin-top:10px"><button class="btn" onclick="document.getElementById('doc-mo').remove()">닫기</button></div>
   </div></div>`;
   document.body.insertAdjacentHTML('beforeend',html);
+}
+function saveDrvBizInfo(driverId){
+  var drs=ls('drivers');
+  var d=drs.find(function(x){return x.id===driverId;});
+  if(!d){toast('기사 정보를 찾을 수 없습니다');return;}
+  var get=function(sfx){var el=document.getElementById('dm-'+sfx+'-'+driverId);return el?el.value.trim():'';};
+  d.bizNum=get('biznum')||d.bizNum||'';
+  d.bizName=get('bizname')||d.bizName||'';
+  d.bizAddr=get('bizaddr')||d.bizAddr||'';
+  d.bizType=get('biztype')||d.bizType||'';
+  d.bizItem=get('bizitem')||d.bizItem||'';
+  lss('drivers',drs);
+  if(FB&&_db){
+    _db.collection('drivers').doc(d.fbId||'').update({
+      bizNum:d.bizNum,bizName:d.bizName,bizAddr:d.bizAddr,bizType:d.bizType,bizItem:d.bizItem
+    }).catch(function(){});
+  }
+  toast('✅ '+d.name+' 사업자 정보 저장 완료');
 }
 async function uploadDocSlot(inp,driverId,key,mode,label){
   var file=inp.files[0];if(!file)return;
@@ -2188,14 +2244,7 @@ function rInsurance(){
     });
     return out;
   })()}</div></div>
-<div class="card"><div class="ch"><span class="ct">고용·산재 계산표</span></div>
-  <input type="file" id="ins-file-inp" accept=".xlsx,.xls,.csv" style="display:none" onchange="parseInsExcel(this)">
-  <div id="ins-excel-result" style="display:none;margin-bottom:8px"></div>
 
-
-  <table class="tbl"><thead><tr><th>성명</th><th>사번</th><th>고용형태</th><th>업무</th><th>라우트/배송건</th></tr></thead><tbody>
-  ${drs.map(d=>{var s=ls('settlements').filter(x=>x.driver===d.name).slice(-1)[0];var r=s?calcNet(s):{income:0,tax:0,emp:0,work:0,net:0};var ind=r.work||Math.round((r.income||0)*0.013);var taxAmt=Math.round((r.income||0)*0.033);var routeSummary=(s&&s.routeDetails&&s.routeDetails.length)?s.routeDetails.slice(0,3).map(rd=>rd.route+' '+rd.cnt+'건').join(' / ')+'...':(s?((s.dcnt||0)+'건'):'—');var driverNum=d.driverNum||(d.userId||'');var sNum=driverNum?(driverNum.toString().startsWith('MBTI')?driverNum:'MBTI'+driverNum.toString().padStart(2,'0')):'—';return`<tr><td><strong>${d.name}</strong></td><td style="font-size:10px;color:var(--blue)">${sNum}</td><td>${d.employ||'지입'}</td><td><span class="badge b-coral" style="font-size:9px">${d.jobtype||'택배'}</span></td><td style="font-size:10px;color:var(--text2)">${routeSummary}</td></tr>`;}).join('')}
-  </tbody></table></div>
   ${S.curMode==='admin'?`
   <div class="card" style="margin-top:12px">
     <div class="ch">
@@ -2235,8 +2284,8 @@ function rMypage(){
       <div class="fg"><label>전화번호</label><input id="mp-phone" type="tel" value="${d.phone||''}" placeholder="010-0000-0000"></div>
     </div>
     ${isAdmin?`<div class="fg"><label>🔑 로그인 아이디 변경</label><input id="mp-userid" value="${d.userId||'admin'}" placeholder="새 아이디 입력" style="border:1.5px solid var(--blue)"><div style="font-size:10px;color:var(--text3);margin-top:3px">※ 변경 후 새 아이디로 로그인하세요</div></div>`:''}
-    <div class="fg"><label>이메일</label><input id="mp-email" type="email" value="${d.email||''}" placeholder="email@example.com"></div>
-    <div class="fg"><label>주소</label><input id="mp-addr" value="${d.addr||''}" placeholder="도로명 주소"></div>
+    ${!isAdmin?`<div class="fg"><label>이메일</label><input id="mp-email" type="email" value="${d.email||''}" placeholder="email@example.com"></div>
+    <div class="fg"><label>주소</label><input id="mp-addr" value="${d.addr||''}" placeholder="도로명 주소"></div>`:''}
 
     <div class="sec-lbl" style="margin-top:14px">비밀번호 변경 <span style="font-size:10px;color:var(--text3)">(변경 시만 입력)</span></div>
     <div class="fg"><label>현재 비밀번호</label><input id="mp-pw-cur" type="password" placeholder="현재 비밀번호"></div>
@@ -2256,45 +2305,60 @@ function rMypage(){
       <input value="${(d.jobtype||'')+(d.jobsub?' / '+d.jobsub:'')}" readonly style="background:var(--bg3)">
     </div>
 
-    <div class="sec-lbl" style="margin-top:14px">서류 현황 (클릭하여 확인/재업로드)</div>
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:10px">
+    <div class="sec-lbl" style="margin-top:14px">📂 서류 5종 (이미지 탭→확대, 다시 탭→교체)</div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:14px">
       ${(function(){
         var slots=[
-          {key:'bank',lbl:'통장',path:'bankPhotoUrl',mode:'direct'},
-          {key:'license',lbl:'면허',path:'docs.license',mode:'docs'},
-          {key:'cargo_cert',lbl:'화물자격',path:'docs.cargo_cert',mode:'docs'},
-          {key:'car_reg',lbl:'차량등록',path:'docs.car_reg',mode:'docs'},
-          {key:'biz_reg',lbl:'사업자',path:'docs.biz_reg',mode:'docs'}
+          {key:'bank',lbl:'통장',mode:'direct'},
+          {key:'license',lbl:'면허',mode:'docs'},
+          {key:'cargo_cert',lbl:'화물자격',mode:'docs'},
+          {key:'car_reg',lbl:'차량등록',mode:'docs'},
+          {key:'biz_reg',lbl:'사업자',mode:'docs'}
         ];
         return slots.map(function(s){
           var url=s.mode==='direct'?d.bankPhotoUrl:((d.docs||{})[s.key]||'');
           var hasImg=(url&&url.length>5);
           return '<label style="aspect-ratio:3/4;border-radius:var(--r);border:2px solid '+(hasImg?'var(--teal)':'var(--red)')+';overflow:hidden;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg3);cursor:pointer">'
             +(hasImg
-              ?'<img src="'+url+'" style="width:100%;height:100%;object-fit:cover"><div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.6);color:#fff;font-size:9px;font-weight:700;text-align:center;padding:3px">'+s.lbl+' 📷교체</div>'
+              ?'<img src="'+url+'" style="width:100%;height:100%;object-fit:cover" onclick="event.preventDefault();openIV(\''+url+'\',\''+s.lbl+'\')"><div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.6);color:#fff;font-size:9px;font-weight:700;text-align:center;padding:3px">'+s.lbl+' ✅</div>'
               :'<div style="font-size:20px;margin-bottom:3px">📷</div><div style="font-size:10px;font-weight:700;color:var(--red)">'+s.lbl+'</div><div style="font-size:9px;color:var(--text3)">탭하여 업로드</div>'
             )
             +'<input type="file" accept="image/*" style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer" onchange="lateDocUpload(this,\''+s.key+'\',\''+s.lbl+'\')">'
             +'</label>';
         }).join('');
-      })()}}
+      })()}
+    </div>
+
+    <!-- ★ 세금계산서 발행 정보 — 사업자등록증/차량등록증 이미지 보고 입력 -->
+    <div style="background:linear-gradient(135deg,rgba(22,163,74,.07),rgba(16,185,129,.03));border:1.5px solid rgba(22,163,74,.3);border-radius:12px;padding:14px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;color:#15803d;margin-bottom:2px">🧾 세금계산서 발행 정보</div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:10px">위 사업자등록증·차량등록증 이미지를 확인 후 정확히 입력하세요 → 세금계산서에 자동 반영</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">📋 사업자등록번호 *</div>
+          <input id="mp-biznum" value="${d.bizNum||''}" placeholder="123-45-67890" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;font-weight:700;background:var(--bg);color:var(--text)">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">🏢 상호 (사업체명)</div>
+          <input id="mp-bizname" value="${d.bizName||''}" placeholder="예: 홍길동운수" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--text)">
+        </div>
+        <div style="grid-column:span 2">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">📍 사업장 주소</div>
+          <input id="mp-bizaddr" value="${d.bizAddr||d.addr||''}" placeholder="예: 부산시 수영구 수영로 668" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--text)">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">🏭 업태</div>
+          <input id="mp-biztype" value="${d.bizType||'서비스'}" placeholder="서비스" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--text)">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">📦 종목</div>
+          <input id="mp-bizitem" value="${d.bizItem||'기타물품운반원'}" placeholder="기타물품운반원" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--text)">
+        </div>
+      </div>
     </div>`:''}
 
-    ${!isAdmin && d.docsPending && d.docsPending.length > 0 ? `
-    <div style="background:var(--amber-l,#fffbeb);border:1.5px solid var(--amber,#f59e0b);border-radius:var(--r);padding:12px;margin-bottom:12px">
-      <div style="font-size:12px;font-weight:700;color:var(--amber,#d97706);margin-bottom:8px">📎 선택 서류 추가 제출</div>
-      <div style="font-size:11px;color:var(--text2);margin-bottom:10px">아래 서류를 추가로 제출하면 관리자 심사에 유리합니다</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        ${buildPendingDocSlots(d)}
-      </div>
-    </div>
-    ` : ''}
+
     <button class="btn btn-blue" style="width:100%;padding:13px;font-size:14px;margin-top:8px" onclick="saveMypage()">💾 정보 저장</button>
-    ${!isAdmin?`
-    <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
-      <button onclick="if(confirm('로그아웃 하시겠습니까?'))goLogout()" style="width:100%;padding:13px;background:rgba(220,50,50,.12);color:#dc2626;border:1.5px solid rgba(220,50,50,.35);border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.02em">🚪 로그아웃</button>
-    </div>
-    `:''}
 
     ${isAdmin ? `
     <div style="margin-top:18px">
@@ -2418,6 +2482,12 @@ async function saveMypage(){
   var me2=drs2.find(x=>x.name===S.curDriver);
   if(me2){
     me2.phone=document.getElementById('mp-phone')?.value||me2.phone;
+    // ★ 세금계산서 발행 정보 저장
+    if(document.getElementById('mp-biznum')) me2.bizNum=document.getElementById('mp-biznum').value.trim();
+    if(document.getElementById('mp-bizname')) me2.bizName=document.getElementById('mp-bizname').value.trim();
+    if(document.getElementById('mp-bizaddr')) me2.bizAddr=document.getElementById('mp-bizaddr').value.trim();
+    if(document.getElementById('mp-biztype')) me2.bizType=document.getElementById('mp-biztype').value.trim();
+    if(document.getElementById('mp-bizitem')) me2.bizItem=document.getElementById('mp-bizitem').value.trim();
     me2.email=document.getElementById('mp-email')?.value||me2.email;
     me2.addr=document.getElementById('mp-addr')?.value||me2.addr;
     lss('drivers',drs2);
@@ -2470,8 +2540,8 @@ function calcNet(x){
   var eq=+x.eq||0;
   var dmg=+x.dmg||+x.damage||0;
   var adv=+x.adv||+x.advance||0;
-  // ★ 실지급 = 수익 - 고용보험만 (원천세·산재는 참고용, 공제 제외)
-  var deduct=emp+eq+dmg+adv;
+  // ★ 실지급 = 세금계산서금액 - 고용보험 - 산재보험 - 기타공제
+  var deduct=emp+work+eq+dmg+adv;
   return{damt,ramt,fresh,finc,inc,income,tax,emp,work,eq,dmg,adv,deduct,net:income-deduct,isYong,isCoupang,yDel,yRet};
 }
 function updSettle(){
@@ -2598,36 +2668,57 @@ function saveSettle(){
 
 // 정산서 상세
 function viewStmt(i){
-  var x=ls('settlements')[i], r=calcNet(x);
-  // 라우트별 상세 (단가 컬럼 포함)
-  var routeRows=(x.routeDetails||[]).length?`
+  var x=ls('settlements')[i];
+  // ★ 반품/프레시백 데이터 보정 (구버전 데이터 자동 수정)
+  var rdList=x.routeDetails||[];
+  var retAmtFromRoutes=rdList.reduce(function(s,rd){var up=rd.unitPrice||RPRICE[rd.route]||0;return s+(rd.ret||0)*up;},0);
+  var needsUpdate=false;
+  var ss=ls('settlements');
+  // ramt 보정: 저장값 없으면 routeDetails에서 계산
+  if((!x.ramt||x.ramt===0)&&retAmtFromRoutes>0){ss[i].ramt=retAmtFromRoutes;needsUpdate=true;}
+  // inc 강제 0 (추가인센 표시 안함)
+  if(ss[i].inc>0){ss[i].inc=0;needsUpdate=true;}
+  if(needsUpdate){lss('settlements',ss);x=ls('settlements')[i];}
+  var r=calcNet(x);
+
+  // 라우트별 테이블
+  var routeRows=rdList.length?`
     <div style="margin-bottom:12px">
-      <div style="font-size:12px;font-weight:700;color:var(--teal);margin-bottom:6px">📊 라우트별 실적 상세 [라우트 / 배송건 / 단가 / 금액]</div>
-      <div style="max-height:170px;overflow-y:auto;border:1px solid var(--border);border-radius:6px">
+      <div style="font-size:11px;font-weight:700;color:var(--teal);margin-bottom:5px">📊 라우트별 실적 [라우트 / 배송건 / 반품건 / 단가 / 배송금액 / 반품금액 / 소계]</div>
+      <div style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:6px">
       <table class="route-tbl" style="margin-top:0">
-        <thead><tr><th>라우트</th><th style="text-align:right">배송건</th><th style="text-align:right">반품건</th><th style="text-align:right">단가(원)</th><th style="text-align:right">금액</th></tr></thead>
+        <thead><tr><th>라우트</th><th style="text-align:right">배송건</th><th style="text-align:right;color:var(--amber)">반품건</th><th style="text-align:right">단가</th><th style="text-align:right">배송금액</th><th style="text-align:right;color:var(--amber)">반품금액</th><th style="text-align:right;color:var(--green)">소계</th></tr></thead>
         <tbody>
-        ${(x.routeDetails||[]).map(rd=>{var up=rd.unitPrice||RPRICE[rd.route]||0;return`<tr>
+        ${rdList.map(function(rd){var up=rd.unitPrice||RPRICE[rd.route]||0;var da=rd.amt||(rd.cnt||0)*up;var ra=(rd.ret||0)*up;return`<tr>
           <td><strong>${rd.route}</strong></td>
           <td style="text-align:right">${(rd.cnt||0).toLocaleString()}</td>
-          <td style="text-align:right;color:var(--amber)">${rd.ret>0?rd.ret.toLocaleString():'—'}</td>
-          <td style="text-align:right;color:${up?'var(--teal)':'var(--text3)'};">${up?up.toLocaleString()+'원':'—'}</td>
-          <td style="text-align:right">₩${(rd.amt||0).toLocaleString()}</td>
+          <td style="text-align:right;color:${(rd.ret||0)>0?'var(--amber)':'var(--text3)'}">${(rd.ret||0)>0?rd.ret.toLocaleString():'—'}</td>
+          <td style="text-align:right;color:var(--teal)">${up?up.toLocaleString()+'원':'—'}</td>
+          <td style="text-align:right">₩${da.toLocaleString()}</td>
+          <td style="text-align:right;color:var(--amber)">${ra>0?'₩'+ra.toLocaleString():'—'}</td>
+          <td style="text-align:right;font-weight:600;color:var(--green)">₩${(da+ra).toLocaleString()}</td>
         </tr>`;}).join('')}
         <tr style="font-weight:700;background:var(--green-l)">
           <td><strong>합계</strong></td>
-          <td style="text-align:right"><strong>${(x.routeDetails||[]).reduce((s,rd)=>s+(rd.cnt||0),0).toLocaleString()}</strong></td>
-          <td style="text-align:right;color:var(--amber)"><strong>${(()=>{var t=(x.routeDetails||[]).reduce((s,rd)=>s+(rd.ret||0),0);return t>0?t.toLocaleString():'—';})()}</strong></td>
-          <td style="text-align:right">—</td>
-          <td style="text-align:right"><strong style="color:var(--green)">₩${(x.routeDetails||[]).reduce((s,rd)=>s+(rd.amt||0),0).toLocaleString()}</strong></td>
+          <td style="text-align:right">${rdList.reduce(function(s,rd){return s+(rd.cnt||0);},0).toLocaleString()}</td>
+          <td style="text-align:right;color:var(--amber)">${(function(){var t=rdList.reduce(function(s,rd){return s+(rd.ret||0);},0);return t>0?t.toLocaleString():'—';})()}</td>
+          <td>—</td>
+          <td style="text-align:right">₩${rdList.reduce(function(s,rd){var up=rd.unitPrice||RPRICE[rd.route]||0;return s+(rd.amt||(rd.cnt||0)*up);},0).toLocaleString()}</td>
+          <td style="text-align:right;color:var(--amber)">${(function(){var t=rdList.reduce(function(s,rd){var up=rd.unitPrice||RPRICE[rd.route]||0;return s+(rd.ret||0)*up;},0);return t>0?'₩'+t.toLocaleString():'—';})()}</td>
+          <td style="text-align:right;color:var(--green)">₩${rdList.reduce(function(s,rd){var up=rd.unitPrice||RPRICE[rd.route]||0;return s+(rd.amt||(rd.cnt||0)*up)+(rd.ret||0)*up;},0).toLocaleString()}</td>
         </tr>
         </tbody>
       </table>
       </div>
-    </div>`:'';
+    </div>`:''
+
+  // ★ 세금계산서 작성금액 = 배송+반품+프레시백+프레시백인센 (추가인센 제외)
+  var taxBase=r.damt+r.ramt+r.fresh+r.finc;
+  var realPay=taxBase-r.emp-(r.work||0);
+
   document.body.insertAdjacentHTML('beforeend',`
   <div style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;display:flex;align-items:center;justify-content:center;padding:14px" id="stmt-mo" onclick="document.getElementById('stmt-mo')?.remove()">
-  <div onclick="event.stopPropagation()" style="width:580px;max-width:95vw;max-height:92vh;overflow-y:auto">
+  <div onclick="event.stopPropagation()" style="width:600px;max-width:95vw;max-height:92vh;overflow-y:auto">
   <div class="stmt">
     <div class="stmt-hdr">
       <div style="font-size:11px;opacity:.7;margin-bottom:3px">OFFICIAL STATEMENT · MBTI Co., Ltd.</div>
@@ -2638,149 +2729,344 @@ function viewStmt(i){
       </div>
     </div>
     <div class="stmt-totals">
-      <div class="stbox"><div class="stlbl">수익 합계</div><div class="stval inc">₩${r.income.toLocaleString()}</div></div>
-      <div class="stbox"><div class="stlbl">공제 합계</div><div class="stval ded">₩${r.deduct.toLocaleString()}</div></div>
-      <div class="stbox hl"><div class="stlbl">실지급액</div><div class="stval" style="color:#fff;font-size:17px;font-weight:700">₩${r.net.toLocaleString()}</div></div>
+      <div class="stbox"><div class="stlbl">세금계산서 금액</div><div class="stval inc">₩${taxBase.toLocaleString()}</div></div>
+      <div class="stbox"><div class="stlbl">공제(고용+산재)</div><div class="stval ded">-₩${(r.emp+(r.work||0)).toLocaleString()}</div></div>
+      <div class="stbox hl"><div class="stlbl">실 지급액</div><div class="stval" style="color:#fff;font-size:17px;font-weight:700">₩${r.net.toLocaleString()}</div></div>
     </div>
     <div class="stmt-sec">
-      <div style="font-size:13px;font-weight:600;padding-left:8px;border-left:3px solid var(--purple);margin-bottom:10px">수익 항목</div>
+      <div style="font-size:13px;font-weight:600;padding-left:8px;border-left:3px solid var(--purple);margin-bottom:10px">📋 세금계산서 작성금액</div>
       ${routeRows}
-      <div class="sitem"><div class="sitem-ico">📦</div><div class="sitem-lbl"><strong>① 기본 배송 수익</strong><small>${(+x.dcnt||0).toLocaleString()}건${r.isYong?' × '+r.yDel.toLocaleString()+'원/건':' × 라우트별 단가'}</small></div><div class="sitem-amt plus">+₩${r.damt.toLocaleString()}</div></div>
-      <div class="sitem"><div class="sitem-ico">↩</div><div class="sitem-lbl"><strong>② 반품 수익</strong><small>${(+x.rcnt||0).toLocaleString()}건${r.isYong?' × '+r.yRet.toLocaleString()+'원/건':''}</small></div><div class="sitem-amt plus">+₩${r.ramt.toLocaleString()}</div></div>
-      ${r.isYong?`<div style="background:var(--gray-l);border-radius:var(--r);padding:6px 10px;font-size:11px;color:var(--gray);margin-bottom:4px">🚛 용차: 배송 ${r.yDel.toLocaleString()}원/건 · 반품 ${r.yRet.toLocaleString()}원/건 (관리자 설정)</div>`:''}
-      <div class="sitem"><div class="sitem-ico">🎒</div><div class="sitem-lbl"><strong>③ 프레시백 회수금액</strong><small>당월 회수 인센티브</small></div><div class="sitem-amt plus">+₩${r.fresh.toLocaleString()}</div></div>
-      ${r.isCoupang?`<div class="sitem"><div class="sitem-ico">⭐</div><div class="sitem-lbl"><strong>④ 프레시백 인센티브</strong><small>${(+x.dcnt||0).toLocaleString()}건 × 25원 (쿠팡 자동)</small></div><div class="sitem-amt plus" style="color:var(--blue)">+₩${r.finc.toLocaleString()}</div></div>`:''}
-      ${r.inc>0?`<div class="sitem"><div class="sitem-ico">➕</div><div class="sitem-lbl"><strong>${r.isCoupang?'⑤':'④'} 추가 인센티브</strong><small>기타</small></div><div class="sitem-amt plus">+₩${r.inc.toLocaleString()}</div></div>`:''}
-      <div class="stmt-sub"><span>수익 합계</span><span style="color:var(--green)">₩${r.income.toLocaleString()}</span></div>
+      <!-- 각 항목 (수정 가능) -->
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">
+        <div class="sitem">
+          <div class="sitem-ico">📦</div>
+          <div class="sitem-lbl"><strong>① 배송 수익</strong><small>${(+x.dcnt||0).toLocaleString()}건 × 라우트별 단가</small></div>
+          <div class="sitem-amt plus">+₩${r.damt.toLocaleString()}</div>
+        </div>
+        <div class="sitem">
+          <div class="sitem-ico">↩</div>
+          <div class="sitem-lbl"><strong>② 반품 수익</strong><small>${(+x.rcnt||0).toLocaleString()}건 × 라우트별 단가</small></div>
+          <div class="sitem-amt plus">+₩${r.ramt.toLocaleString()}</div>
+        </div>
+        <div class="sitem" id="st-fresh-row">
+          <div class="sitem-ico">🎒</div>
+          <div class="sitem-lbl"><strong>③ 프레시백 회수금액</strong></div>
+          <div style="display:flex;align-items:center;gap:4px">
+            <input type="number" id="st-fresh-inp" value="${x.fresh||0}" style="width:90px;padding:3px 6px;border:1.5px solid var(--border);border-radius:5px;font-size:12px;text-align:right;background:var(--bg);color:var(--text)" oninput="stUpdCalc(${i})">
+            <span style="font-size:11px">원</span>
+          </div>
+        </div>
+        <div class="sitem" id="st-finc-row">
+          <div class="sitem-ico">⭐</div>
+          <div class="sitem-lbl"><strong>④ 프레시백 인센티브</strong><small>${(+x.dcnt||0).toLocaleString()}건 × 25원</small></div>
+          <div style="display:flex;align-items:center;gap:4px">
+            <input type="number" id="st-finc-inp" value="${x.finc||r.finc||0}" style="width:90px;padding:3px 6px;border:1.5px solid var(--border);border-radius:5px;font-size:12px;text-align:right;background:var(--bg);color:var(--text)" oninput="stUpdCalc(${i})">
+            <span style="font-size:11px">원</span>
+          </div>
+        </div>
+        <div class="sitem" id="st-dmg-row">
+          <div class="sitem-ico">⚠️</div>
+          <div class="sitem-lbl"><strong>⑤ 분실/파손 공제</strong><small id="st-dmg-reason">${x.dmgReason||'사유 입력'}</small></div>
+          <div style="display:flex;align-items:center;gap:4px">
+            <span style="color:var(--red);font-size:12px">-</span>
+            <input type="number" id="st-dmg-inp" value="${x.dmg||0}" style="width:90px;padding:3px 6px;border:1.5px solid var(--red);border-radius:5px;font-size:12px;text-align:right;background:var(--bg);color:var(--red)" oninput="stUpdCalc(${i})">
+            <span style="font-size:11px">원</span>
+          </div>
+        </div>
+      </div>
+      <div class="stmt-sub" style="background:rgba(99,102,241,.08);border-radius:6px;padding:8px 12px">
+        <span style="font-weight:700">세금계산서 작성금액 합계</span>
+        <span id="st-taxbase-disp" style="color:var(--green);font-size:15px;font-weight:700">₩${taxBase.toLocaleString()}</span>
+      </div>
     </div>
     <div class="stmt-sec" style="border-top:1px solid #e0dfd8">
       <div style="font-size:13px;font-weight:600;padding-left:8px;border-left:3px solid #D85A30;margin-bottom:8px">공제 항목</div>
       <div class="tax-box">
-        <div style="font-size:11px;font-weight:700;color:var(--red);margin-bottom:6px">공제 내역</div>
-        <div class="tax-row">
-          <span>고용보험 0.8% <small style="color:var(--text3)">(근로자 부담분)</small></span>
-          <span style="color:var(--red);font-weight:600">-₩${r.emp.toLocaleString()}</span>
-        </div>
-        <div class="tax-row">
-          <span>산재보험 <small style="color:var(--text3)">(월 고정)</small></span>
-          <span style="color:var(--red);font-weight:600">-₩${(r.work||14000).toLocaleString()}</span>
-        </div>
-        <div class="tax-total">
-          <span>보험 소계</span>
-          <span>-₩${(r.emp+(r.work||14000)).toLocaleString()}</span>
-        </div>
+        <div class="tax-row"><span>고용보험 0.8%</span><span style="color:var(--red);font-weight:600">-₩${r.emp.toLocaleString()}</span></div>
+        <div class="tax-row"><span>산재보험 1.3%</span><span style="color:var(--red);font-weight:600">-₩${(r.work||0).toLocaleString()}</span></div>
+        ${r.eq>0?`<div class="tax-row"><span>장비임대료</span><span style="color:var(--red)">-₩${r.eq.toLocaleString()}</span></div>`:''}
+        ${r.adv>0?`<div class="tax-row"><span>가불금</span><span style="color:var(--red)">-₩${r.adv.toLocaleString()}</span></div>`:''}
+        <div class="tax-total"><span>공제 합계</span><span>-₩${r.deduct.toLocaleString()}</span></div>
       </div>
-      ${r.eq>0?`<div class="sitem"><div class="sitem-ico">🔧</div><div class="sitem-lbl"><strong>장비임대료</strong></div><div class="sitem-amt minus">-₩${r.eq.toLocaleString()}</div></div>`:''}
-      ${r.dmg>0?`<div class="sitem"><div class="sitem-ico">⚠</div><div class="sitem-lbl"><strong>파손·분실 공제</strong><small>${x.dmgReason||'사유 미기재'}</small></div><div class="sitem-amt minus">-₩${r.dmg.toLocaleString()}</div></div>`:''}
-      ${r.adv>0?`<div class="sitem"><div class="sitem-ico">💰</div><div class="sitem-lbl"><strong>가불금 차감</strong></div><div class="sitem-amt minus">-₩${r.adv.toLocaleString()}</div></div>`:''}
-      <div class="stmt-sub"><span>공제 합계</span><span style="color:var(--red)">₩${r.deduct.toLocaleString()}</span></div>
     </div>
     <div class="stmt-fin">
       <div>
-        <div style="font-size:12px;opacity:.8;font-weight:600">총 지급 금액</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:3px">수익 ₩${r.income.toLocaleString()} − 공제 ₩${r.deduct.toLocaleString()}</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:2px">(고용보험 ₩${r.emp.toLocaleString()} + 기타 공제 포함)</div>
+        <div style="font-size:12px;font-weight:700">실 지급액</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">세금계산서금액 ₩${taxBase.toLocaleString()} − 고용·산재 ₩${(r.emp+(r.work||0)).toLocaleString()}</div>
       </div>
-      <strong style="font-size:22px;color:var(--purple)">₩${r.net.toLocaleString()}</strong>
+      <strong id="st-net-disp" style="font-size:22px;color:var(--purple)">₩${r.net.toLocaleString()}</strong>
     </div>
-    <div style="padding:7px 20px;font-size:11px;color:var(--text3)">발행: ${new Date().toLocaleDateString('ko-KR')} · 공유: ${x.sharedAt||''}</div>
+    <div style="padding:7px 20px;font-size:11px;color:var(--text3)">발행: ${new Date().toLocaleDateString('ko-KR')}</div>
   </div>
   <div style="display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap">
-    <button class="btn btn-purple" onclick="window.print()">🖨 인쇄/PDF</button>
-    <button class="btn btn-teal" onclick="exportStmtCsv(${i})">📊 CSV</button>
+    <button class="btn btn-purple" onclick="stSaveEdit(${i})">💾 수정 저장</button>
+    <button class="btn btn-teal" onclick="sendStmtToDriver(${i})">📤 기사 전달</button>
     <button class="btn" style="background:#16a34a;color:#fff;border:none" onclick="openTaxInvoice(${i})">🧾 세금계산서</button>
+    <button class="btn" onclick="window.print()">🖨 인쇄</button>
     <button class="btn" onclick="document.getElementById('stmt-mo')?.remove()">닫기</button>
   </div>
   </div></div>`);
 }
 
+// 명세서 수정 실시간 합계 업데이트
+function stUpdCalc(i){
+  var x=ls('settlements')[i], r=calcNet(x);
+  var fresh=+document.getElementById('st-fresh-inp')?.value||0;
+  var finc=+document.getElementById('st-finc-inp')?.value||0;
+  var dmg=+document.getElementById('st-dmg-inp')?.value||0;
+  var newBase=r.damt+r.ramt+fresh+finc;
+  var newNet=newBase-r.emp-(r.work||0)-dmg;
+  var tb=document.getElementById('st-taxbase-disp'); if(tb)tb.textContent='₩'+newBase.toLocaleString();
+  var nd=document.getElementById('st-net-disp'); if(nd)nd.textContent='₩'+newNet.toLocaleString();
+}
+
+// 명세서 수정 저장
+function stSaveEdit(i){
+  var s=ls('settlements');
+  s[i].fresh=+document.getElementById('st-fresh-inp')?.value||0;
+  s[i].finc=+document.getElementById('st-finc-inp')?.value||0;
+  s[i].dmg=+document.getElementById('st-dmg-inp')?.value||0;
+  s[i].inc=0; // 추가인센 강제 0
+  lss('settlements',s);
+  if(FB&&_db){_db.collection('settlements').doc(s[i].fbId||s[i].driver+'_'+s[i].month).set(s[i],{merge:true}).catch(function(){});}
+  toast('✅ 명세서 수정 저장 완료');
+  document.getElementById('stmt-mo')?.remove();
+  SP('settle',null);
+}
+
+// 기사 전달 (Firebase에 알림 저장)
+function sendStmtToDriver(i){
+  var x=ls('settlements')[i];
+  var r=calcNet(x);
+  var fresh=+document.getElementById('st-fresh-inp')?.value||0;
+  var finc=+document.getElementById('st-finc-inp')?.value||0;
+  var dmg=+document.getElementById('st-dmg-inp')?.value||0;
+  stSaveEdit(i);
+  var msg={type:'settlement',driver:x.driver,month:x.month,income:r.income,net:r.net,
+    fresh:fresh,finc:finc,dmg:dmg,sentAt:new Date().toISOString(),status:'전달완료'};
+  if(FB&&_db){
+    _db.collection('driver_notifications').add(msg).then(function(){
+      toast('📤 '+x.driver+' 기사님께 정산 내역 전달 완료!');
+    }).catch(function(){toast('전달 완료 (오프라인 저장)');});
+  } else {
+    // localStorage에 저장
+    var notes=JSON.parse(localStorage.getItem('driver_notes')||'[]');
+    notes.push(msg); localStorage.setItem('driver_notes',JSON.stringify(notes));
+    toast('📤 '+x.driver+' 기사님께 정산 내역 전달 완료!');
+  }
+}
+
 // ══ 세금계산서 기능
 function openTaxInvoice(i){
   var x=ls('settlements')[i], r=calcNet(x);
-  var d=ls('drivers').find(dr=>dr.name===x.driver)||{};
+  var d=ls('drivers').find(function(dr){return dr.name===x.driver;})||{};
   var ym=x.month||''; var yr=ym.slice(0,4), mo=ym.slice(5,7);
-  // 정산서 수익합계 = 공급가액 (부가세 포함 금액일 경우 역산)
-  var supply=Math.round(r.income/1.1); // 공급가액 (VAT 제외)
-  var vat=r.income-supply;             // 부가세 = 수익합계 - 공급가액
-  var total=r.income;                  // 합계 = 수익합계
-  var today_str=today();
-  document.body.insertAdjacentHTML('beforeend',`
-  <div style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:600;display:flex;align-items:center;justify-content:center;padding:14px" id="tax-mo" onclick="document.getElementById('tax-mo')?.remove()">
-  <div onclick="event.stopPropagation()" style="width:620px;max-width:95vw;max-height:92vh;overflow-y:auto;background:var(--bg);border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,.3)">
-    <!-- 세금계산서 헤더 -->
-    <div style="background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;padding:18px 20px;border-radius:12px 12px 0 0">
-      <div style="font-size:11px;opacity:.8;margin-bottom:3px">TAX INVOICE · MBTI Co., Ltd.</div>
-      <div style="font-size:20px;font-weight:800;letter-spacing:2px">세금계산서</div>
-      <div style="font-size:12px;opacity:.85;margin-top:4px">${yr}년 ${mo}월 · 발행일: ${today_str}</div>
-    </div>
-    <div style="padding:16px 20px">
-      <!-- 공급자/공급받는자 -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px">
-          <div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:6px">■ 공급자</div>
-          <div style="font-size:12px;line-height:1.8">
-            <div>상호: <strong>엠비티아이(유)</strong></div>
-            <div>사업자번호: <strong>123-45-67890</strong></div>
-            <div>대표자: <strong>대표이사</strong></div>
-            <div style="font-size:10px;color:var(--text2)">업태: 운수업 / 종목: 화물운송</div>
-          </div>
-        </div>
-        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px">
-          <div style="font-size:10px;font-weight:700;color:var(--blue);margin-bottom:6px">■ 공급받는자 (기사)</div>
-          <div style="font-size:12px;line-height:1.8">
-            <div>성명: <strong>${x.driver}</strong></div>
-            <div>아이디: <strong>${d.userId||'—'}</strong></div>
-            <div>연락처: <strong>${d.phone||'—'}</strong></div>
-            <div style="font-size:10px;color:var(--text2)">업무: ${d.jobtype||'택배'} / ${d.jobsub||x.jobsub||'쿠팡'}</div>
-          </div>
-        </div>
-      </div>
-      <!-- 금액 내역 -->
-      <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:12px">
+  var issueDate=today();
+  var issDay=issueDate.slice(8,10);
+  // 공급자(기사) 정보
+  // ★ 기사 사업자 정보 검증 (미입력 시 경고 표시)
+  var bizNum=d.bizNum||'';
+  var bizName=d.bizName||'';
+  var drvAddr=d.bizAddr||d.addr||'';
+  var drvBiz=d.bizType||'서비스업';
+  var drvItem=d.bizItem||'기타물품운반원';
+  var missingInfo=[];
+  if(!bizNum)missingInfo.push('사업자등록번호');
+  if(!bizName)missingInfo.push('상호(사업체명)');
+  if(!drvAddr)missingInfo.push('사업장 주소');
+  // 미입력 시 기본값
+  if(!bizNum)bizNum='___-__-_____';
+  if(!bizName)bizName=x.driver||'';
+  // ★ 금액 계산: income = 합계금액(공급가액+세액), 역산
+  var total=r.income;                     // 합계금액 = 수익 합계
+  var supply=Math.round(total/1.1);       // 공급가액 = 합계÷1.1
+  var vat=total-supply;                   // 세액 = 합계-공급가액
+
+  // ★ 품목: 이미지 예시 기준 - 건수 없이 "X월 수수료정산" 단순 표기
+  var moNum=parseInt(mo,10);
+  var detailRows=`<tr>
+    <td style="border:1px solid #999;padding:5px 3px;text-align:center">${mo}</td>
+    <td style="border:1px solid #999;padding:5px 3px;text-align:center">${issDay}</td>
+    <td style="border:1px solid #999;padding:5px 6px">&nbsp;${moNum}월 수수료정산</td>
+    <td style="border:1px solid #999;padding:5px 3px;text-align:center"></td>
+    <td style="border:1px solid #999;padding:5px 3px;text-align:right"></td>
+    <td style="border:1px solid #999;padding:5px 3px;text-align:right"></td>
+    <td style="border:1px solid #999;padding:5px 3px;text-align:right">${supply.toLocaleString()}</td>
+    <td style="border:1px solid #999;padding:5px 3px;text-align:right">${vat.toLocaleString()}</td>
+    <td style="border:1px solid #999;padding:5px 3px"></td>
+  </tr>
+  <tr><td colspan="9" style="border:1px solid #999;padding:5px">&nbsp;</td></tr>
+  <tr><td colspan="9" style="border:1px solid #999;padding:5px">&nbsp;</td></tr>
+  <tr><td colspan="9" style="border:1px solid #999;padding:5px">&nbsp;</td></tr>`;
+
+  var moEl=document.createElement('div');
+  moEl.id='tax-mo';
+  moEl.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:700;display:flex;align-items:flex-start;justify-content:center;padding:8px;overflow-y:auto';
+  moEl.onclick=function(e){if(e.target===moEl)moEl.remove();};
+
+  moEl.innerHTML=`
+  <div style="display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;max-width:720px;margin:4px auto">
+    <!-- 공식 세금계산서 -->
+    ${missingInfo.length?`<div style="background:#fef2f2;border:2px solid #ef4444;border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:12px;font-weight:700;color:#dc2626">⚠️ 미입력 정보: ${missingInfo.join(' · ')} — 기사 내 정보 수정에서 입력해야 정확한 세금계산서 발행 가능</div>`:''}
+  <div id="tax-invoice-wrap" style="width:100%;background:#fff;border:2px solid #000;font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:11px">
+
+      <!-- 상단 타이틀 -->
+      <table style="width:100%;border-collapse:collapse">
+        <tr>
+          <td style="border:1px solid #000;width:14%;padding:3px 6px;font-size:9px">[별지 제11호 서식]</td>
+          <td style="border:1px solid #000;text-align:center;font-size:20px;font-weight:900;letter-spacing:4px;padding:6px">세 금 계 산 서</td>
+          <td style="border:1px solid #000;width:18%;text-align:center;padding:3px;font-size:10px">
+            <div>(공급받는자</div><div style="font-weight:700">보&nbsp;관&nbsp;용)</div>
+          </td>
+          <td style="border:1px solid #000;width:22%;font-size:9px;padding:3px">
+            <div>책&nbsp;&nbsp;&nbsp;번&nbsp;&nbsp;&nbsp;호 : ______권 ______호</div>
+            <div style="margin-top:3px">일 련 번 호 : ${issueDate.replace(/-/g,'')}-${String(i+1).padStart(4,'0')}</div>
+          </td>
+        </tr>
+      </table>
+
+      <!-- 공급자 / 공급받는자 -->
+      <table style="width:100%;border-collapse:collapse;font-size:10.5px">
+        <tr>
+          <td rowspan="4" style="border:1px solid #000;text-align:center;writing-mode:vertical-rl;width:18px;font-weight:700;padding:3px;background:#f0f0f0">공<br>급<br>자</td>
+          <td style="border:1px solid #000;background:#f0f0f0;padding:3px 6px;width:55px">등 록 번 호</td>
+          <td colspan="2" style="border:1px solid #000;padding:3px 6px;font-weight:700;letter-spacing:3px;font-size:13px">${bizNum}</td>
+          <td rowspan="4" style="border:1px solid #000;text-align:center;writing-mode:vertical-rl;width:18px;font-weight:700;padding:3px;background:#f0f0f0">공<br>급<br>받<br>는<br>자</td>
+          <td style="border:1px solid #000;background:#f0f0f0;padding:3px 6px;width:55px">등 록 번 호</td>
+          <td colspan="2" style="border:1px solid #000;padding:3px 6px;font-weight:700;letter-spacing:3px;font-size:13px">373-86-02536</td>
+        </tr>
+        <tr>
+          <td style="border:1px solid #000;background:#f0f0f0;padding:3px 6px">상&nbsp;&nbsp;&nbsp;&nbsp;호<br><span style="font-size:9px">(법 인 명)</span></td>
+          <td style="border:1px solid #000;padding:3px 6px;font-weight:700">${bizName}</td>
+          <td style="border:1px solid #000;padding:3px 6px;font-size:10px">성명 <strong>${x.driver||''}</strong> <span style="border:1px solid #555;padding:0 4px;font-size:8px">인</span></td>
+          <td style="border:1px solid #000;background:#f0f0f0;padding:3px 6px">상&nbsp;&nbsp;&nbsp;&nbsp;호<br><span style="font-size:9px">(법 인 명)</span></td>
+          <td style="border:1px solid #000;padding:3px 6px;font-weight:700">엠비티아이유한회사</td>
+          <td style="border:1px solid #000;padding:3px 6px;font-size:10px">성명 <strong>김형우</strong> <span style="border:1px solid #555;padding:0 4px;font-size:8px">인</span></td>
+        </tr>
+        <tr>
+          <td style="border:1px solid #000;background:#f0f0f0;padding:3px 6px">사 업 장<br>주&nbsp;&nbsp;&nbsp;&nbsp;소</td>
+          <td colspan="2" style="border:1px solid #000;padding:3px 6px">${drvAddr||'(주소 미입력)'}</td>
+          <td style="border:1px solid #000;background:#f0f0f0;padding:3px 6px">사 업 장<br>주&nbsp;&nbsp;&nbsp;&nbsp;소</td>
+          <td colspan="2" style="border:1px solid #000;padding:3px 6px">부산시 수영구 수영로 668, 607호</td>
+        </tr>
+        <tr>
+          <td style="border:1px solid #000;background:#f0f0f0;padding:3px 6px">업&nbsp;&nbsp;&nbsp;&nbsp;태</td>
+          <td style="border:1px solid #000;padding:3px 6px">${drvBiz}</td>
+          <td style="border:1px solid #000;padding:3px 6px">종목 ${drvItem}</td>
+          <td style="border:1px solid #000;background:#f0f0f0;padding:3px 6px">업&nbsp;&nbsp;&nbsp;&nbsp;태</td>
+          <td style="border:1px solid #000;padding:3px 6px">서비스업</td>
+          <td style="border:1px solid #000;padding:3px 6px">종목 택배</td>
+        </tr>
+      </table>
+
+      <!-- 작성일 / 공급가액 / 세액 -->
+      <table style="width:100%;border-collapse:collapse;font-size:10.5px">
+        <tr style="background:#f0f0f0;text-align:center">
+          <td colspan="2" style="border:1px solid #000;padding:3px;font-weight:700">작&nbsp;&nbsp;&nbsp;&nbsp;성</td>
+          <td colspan="4" style="border:1px solid #000;padding:3px;font-weight:700">공&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;급&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;가&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;액</td>
+          <td colspan="3" style="border:1px solid #000;padding:3px;font-weight:700">세&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;액</td>
+          <td style="border:1px solid #000;padding:3px;font-weight:700">비&nbsp;고</td>
+        </tr>
+        <tr style="text-align:center">
+          <td style="border:1px solid #000;padding:4px;font-weight:700">${yr}년</td>
+          <td style="border:1px solid #000;padding:4px;font-weight:700">${mo}월 ${issDay}일</td>
+          <td colspan="4" style="border:1px solid #000;padding:4px;font-weight:900;font-size:15px;text-align:right;padding-right:12px">${supply.toLocaleString()}</td>
+          <td colspan="3" style="border:1px solid #000;padding:4px;font-weight:900;font-size:15px;text-align:right;padding-right:12px">${vat.toLocaleString()}</td>
+          <td style="border:1px solid #000;padding:4px"></td>
+        </tr>
+      </table>
+
+      <!-- 품목 명세 -->
+      <table style="width:100%;border-collapse:collapse;font-size:10px">
         <thead>
-          <tr style="background:var(--green);color:#fff">
-            <th style="padding:8px;text-align:left">품목</th>
-            <th style="padding:8px;text-align:right">공급가액</th>
-            <th style="padding:8px;text-align:right">세액(10%)</th>
-            <th style="padding:8px;text-align:right">합계</th>
+          <tr style="background:#f0f0f0;text-align:center">
+            <th style="border:1px solid #999;padding:3px;width:28px">월</th>
+            <th style="border:1px solid #999;padding:3px;width:22px">일</th>
+            <th style="border:1px solid #999;padding:3px">품&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;목</th>
+            <th style="border:1px solid #999;padding:3px;width:36px">규격</th>
+            <th style="border:1px solid #999;padding:3px;width:40px">수량</th>
+            <th style="border:1px solid #999;padding:3px;width:70px">단&nbsp;&nbsp;&nbsp;가</th>
+            <th style="border:1px solid #999;padding:3px;width:82px">공&nbsp;급&nbsp;가&nbsp;액</th>
+            <th style="border:1px solid #999;padding:3px;width:72px">세&nbsp;&nbsp;&nbsp;&nbsp;액</th>
+            <th style="border:1px solid #999;padding:3px;width:50px">비고</th>
           </tr>
         </thead>
         <tbody>
-          <tr style="border-bottom:1px solid var(--border)">
-            <td style="padding:8px">${yr}년 ${mo}월 화물운송 용역</td>
-            <td style="padding:8px;text-align:right;color:var(--teal)">₩${supply.toLocaleString()}</td>
-            <td style="padding:8px;text-align:right;color:var(--amber)">₩${vat.toLocaleString()}</td>
-            <td style="padding:8px;text-align:right;font-weight:700">₩${total.toLocaleString()}</td>
-          </tr>
-          <tr style="border-bottom:1px solid var(--border);font-size:11px;color:var(--text2)">
-            <td style="padding:6px 8px">　- 기본배송 ${r.damt?'₩'+r.damt.toLocaleString():''}</td>
-            <td colspan="3" style="padding:6px 8px;text-align:right">${x.dcnt||0}건</td>
-          </tr>
-          ${r.ramt?`<tr style="border-bottom:1px solid var(--border);font-size:11px;color:var(--text2)"><td style="padding:6px 8px">　- 반품 ₩${r.ramt.toLocaleString()}</td><td colspan="3" style="padding:6px 8px;text-align:right">${x.rcnt||0}건</td></tr>`:''}
+          ${detailRows}
         </tbody>
-        <tfoot>
-          <tr style="background:var(--bg2);font-weight:700">
-            <td style="padding:10px 8px">합계</td>
-            <td style="padding:10px 8px;text-align:right;color:var(--teal)">₩${supply.toLocaleString()}</td>
-            <td style="padding:10px 8px;text-align:right;color:var(--amber)">₩${vat.toLocaleString()}</td>
-            <td style="padding:10px 8px;text-align:right;color:var(--green);font-size:14px">₩${total.toLocaleString()}</td>
-          </tr>
-        </tfoot>
       </table>
-      <!-- 공제 요약 -->
-      <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--text2);margin-bottom:12px">
-        <strong style="color:var(--text)">공제 내역</strong> · 고용보험 ₩${r.emp.toLocaleString()} · 산재보험 ₩${(r.work||0).toLocaleString()} · 기타공제 ₩${(r.eq+r.dmg+r.adv).toLocaleString()}
-        <span style="float:right;font-weight:700;color:var(--purple)">실지급액 ₩${r.net.toLocaleString()}</span>
-      </div>
-      <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap">
-        <button class="btn btn-sm" style="background:#16a34a;color:#fff;border:none;padding:8px 18px" onclick="exportTaxInvoicePdf(${i})">📄 엑셀 다운로드</button>
-        <button class="btn btn-sm" style="background:#1d4ed8;color:#fff;border:none;padding:8px 18px" onclick="window.print()">🖨 인쇄/PDF</button>
-        <button class="btn btn-sm" style="padding:8px 18px" onclick="document.getElementById('tax-mo')?.remove()">닫기</button>
+
+      <!-- 합계금액 -->
+      <table style="width:100%;border-collapse:collapse;font-size:10.5px">
+        <tr>
+          <td style="border:1px solid #000;background:#f0f0f0;text-align:center;padding:4px;font-weight:700;width:70px">합계금액</td>
+          <td style="border:1px solid #000;background:#f0f0f0;text-align:center;padding:4px;font-weight:700;width:65px">현&nbsp;&nbsp;&nbsp;금</td>
+          <td style="border:1px solid #000;background:#f0f0f0;text-align:center;padding:4px;font-weight:700;width:65px">수&nbsp;&nbsp;&nbsp;표</td>
+          <td style="border:1px solid #000;background:#f0f0f0;text-align:center;padding:4px;font-weight:700;width:65px">어&nbsp;&nbsp;&nbsp;음</td>
+          <td style="border:1px solid #000;background:#f0f0f0;text-align:center;padding:4px;font-weight:700;width:75px">외상미수금</td>
+          <td style="border:1px solid #000;text-align:center;padding:5px;font-size:11px" colspan="3">이 금액을 &nbsp;<strong style="font-size:14px;letter-spacing:2px">영&nbsp;수</strong>&nbsp; 함</td>
+        </tr>
+        <tr>
+          <td style="border:1px solid #000;text-align:right;padding:5px 8px;font-weight:900;font-size:14px">${total.toLocaleString()}</td>
+          <td style="border:1px solid #000;text-align:right;padding:5px 8px;font-weight:700">${total.toLocaleString()}</td>
+          <td style="border:1px solid #000;padding:5px"></td>
+          <td style="border:1px solid #000;padding:5px"></td>
+          <td style="border:1px solid #000;padding:5px"></td>
+          <td colspan="3" style="border:1px solid #000;text-align:center;padding:5px;font-size:9px;color:#555">공급가 ${supply.toLocaleString()} + 세액 ${vat.toLocaleString()}</td>
+        </tr>
+      </table>
+
+      <!-- 공제 안내 -->
+      <div style="padding:5px 8px;background:#fffbeb;border-top:1px dashed #999;font-size:9.5px;color:#555">
+        ※ 정산 공제: 고용보험(0.8%) ₩${r.emp.toLocaleString()} · 산재(1.3%) ₩${(r.work||0).toLocaleString()} · 원천세(3.3%) ₩${Math.round(r.income*0.033).toLocaleString()} &nbsp;→&nbsp; <strong style="color:#7c3aed">실지급액 ₩${r.net.toLocaleString()}</strong>
       </div>
     </div>
-  </div>
-  </div>`);
+
+    <!-- 버튼 영역 -->
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:4px 0 8px">
+      <button onclick="sendTaxToDriver(${i})" style="padding:9px 22px;background:#0ea5e9;color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer">📤 기사 전달</button>
+      <button onclick="saveTaxInvoiceImage(${i})" style="padding:9px 22px;background:#7c3aed;color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer">🖼 PNG 저장</button>
+      <button onclick="exportTaxInvoicePdf(${i})" style="padding:9px 22px;background:#16a34a;color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer">📄 엑셀 다운로드</button>
+      <button onclick="window.print()" style="padding:9px 22px;background:#1d4ed8;color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer">🖨 인쇄</button>
+      <button onclick="document.getElementById('tax-mo')?.remove()" style="padding:9px 22px;background:#6b7280;color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer">닫기</button>
+    </div>
+  </div>`;
+
+  document.body.appendChild(moEl);
 }
+
+// ★ 세금계산서 이미지(PNG) 저장
+function saveTaxInvoiceImage(i){
+  var mo=document.getElementById('tax-mo');
+  if(!mo){toast('세금계산서 창이 열려있지 않습니다');return;}
+  var target=document.getElementById('tax-invoice-wrap');
+  if(!target){toast('렌더링 대상을 찾을 수 없습니다');return;}
+  if(typeof html2canvas==='undefined'){toast('⚠️ 이미지 라이브러리 로딩 중... 잠시 후 다시 시도해주세요');return;}
+  var x=ls('settlements')[i]||{};
+  toast('📸 이미지 생성 중...');
+  html2canvas(target,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false})
+  .then(function(canvas){
+    var dataUrl=canvas.toDataURL('image/png');
+    // ★ 보관함에 저장
+    try{
+      var store=JSON.parse(localStorage.getItem('mbti_tax_store')||'{}');
+      var drv=x.driver||'기사';
+      if(!store[drv])store[drv]=[];
+      // 같은 월 있으면 덮어쓰기
+      var idx2=store[drv].findIndex(function(it){return it.month===x.month;});
+      var entry={month:x.month||'',img:dataUrl,savedAt:new Date().toISOString()};
+      if(idx2>=0)store[drv][idx2]=entry; else store[drv].push(entry);
+      localStorage.setItem('mbti_tax_store',JSON.stringify(store));
+    }catch(e){console.warn('보관함 저장 실패',e);}
+    // 파일 다운로드
+    var a=document.createElement('a');
+    a.href=dataUrl;
+    a.download='세금계산서_'+(x.driver||'기사')+'_'+(x.month||new Date().toISOString().slice(0,7))+'.png';
+    a.click();
+    toast('🖼 저장 완료 → 보관함에도 자동 저장됨 ('+a.download+')');
+  }).catch(function(err){toast('이미지 생성 오류: '+err.message);});
+}
+
 
 function exportTaxInvoicePdf(i){
   var x=ls('settlements')[i]||{}, r=x.driver?calcNet(x):{income:0,emp:0,net:0};
@@ -2936,25 +3222,36 @@ function parseInsExcelSettle(inp){
         var inc=incCol>=0?+String(row[incCol]).replace(/[^0-9.-]/g,'')||0:0;
         var emp=empCol>=0?+String(row[empCol]).replace(/[^0-9.-]/g,'')||Math.round(inc*0.008):Math.round(inc*0.008);
         var ind=indCol>=0?+String(row[indCol]).replace(/[^0-9.-]/g,'')||Math.round(inc*0.013):Math.round(inc*0.013);
-        results.push({name:name,inc:inc,emp:emp,ind:ind,net:inc-emp});
+        var tax=Math.round(inc*0.033);
+        results.push({name:name,inc:inc,emp:emp,ind:ind,tax:tax,net:inc-emp});
       });
       if(!results.length){toast('기사 데이터를 찾을 수 없습니다');return;}
-      var html='<div style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:600;display:flex;align-items:center;justify-content:center;padding:14px" id="ins-result-mo" onclick="document.getElementById(\'ins-result-mo\')?.remove()">'
-        +'<div onclick="event.stopPropagation()" style="background:var(--bg);border-radius:12px;padding:20px;width:640px;max-width:95vw;max-height:90vh;overflow-y:auto">'
-        +'<div style="font-size:15px;font-weight:700;color:var(--teal);margin-bottom:12px">고용산재 엑셀 분석 결과 ('+results.length+'명)</div>'
-        +'<table class="tbl"><thead><tr><th>기사</th><th>수익합계</th><th>고용보험 0.8%</th><th>산재 1.3%</th><th>실지급</th><th></th></tr></thead><tbody>'
+      window._insResults=results;
+      var mo=document.createElement('div');
+      mo.id='ins-result-mo';
+      mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:600;display:flex;align-items:center;justify-content:center;padding:14px';
+      mo.onclick=function(e){if(e.target===mo)mo.remove();};
+      mo.innerHTML='<div onclick="event.stopPropagation()" style="background:var(--bg);border-radius:12px;padding:20px;width:700px;max-width:95vw;max-height:90vh;overflow-y:auto">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
+        +'<div style="font-size:15px;font-weight:700;color:var(--teal)">📊 고용·산재 분석 결과 ('+results.length+'명)</div>'
+        +'<div style="display:flex;gap:6px">'
+        +'<button class="btn btn-sm" style="background:#0ea5e9;color:#fff;border:none" onclick="applyInsAll(window._insResults)">✅ 전체 일괄 적용</button>'
+        +'<button class="btn btn-sm" onclick="document.getElementById(\'ins-result-mo\')?.remove()">닫기</button>'
+        +'</div></div>'
+        +'<div style="font-size:11px;color:var(--text3);margin-bottom:10px;padding:8px;background:var(--bg2);border-radius:8px">'
+        +'💡 고용보험 0.8% · 산재보험 1.3% · 원천세 3.3% (참고용) | [적용] 클릭 또는 [전체 일괄 적용]으로 정산서에 반영</div>'
+        +'<table class="tbl"><thead><tr><th>기사</th><th>수익합계</th><th>고용보험(0.8%)</th><th>산재(1.3%)</th><th>원천세(3.3%)</th><th>실지급</th><th></th></tr></thead><tbody>'
         +results.map(function(r){
           return '<tr><td><strong>'+r.name+'</strong></td>'
-            +'<td style="color:var(--green)">&#8361;'+r.inc.toLocaleString()+'</td>'
-            +'<td style="color:var(--red)">&#8361;'+r.emp.toLocaleString()+'</td>'
-            +'<td style="color:var(--amber)">&#8361;'+r.ind.toLocaleString()+'</td>'
-            +'<td style="font-weight:700;color:var(--purple)">&#8361;'+r.net.toLocaleString()+'</td>'
-            +'<td><button class="btn btn-sm btn-teal" onclick="applyInsRow(\''+r.name+'\','+r.inc+','+r.emp+')">정산서 적용</button></td></tr>';
+            +'<td style="color:var(--green)">₩'+r.inc.toLocaleString()+'</td>'
+            +'<td style="color:var(--red)">₩'+r.emp.toLocaleString()+'</td>'
+            +'<td style="color:var(--amber)">₩'+r.ind.toLocaleString()+'</td>'
+            +'<td style="color:var(--text3)">₩'+r.tax.toLocaleString()+'</td>'
+            +'<td style="font-weight:700;color:var(--purple)">₩'+(r.inc-r.emp).toLocaleString()+'</td>'
+            +'<td><button class="btn btn-sm btn-teal" onclick="applyInsRow(\''+r.name+'\','+r.inc+','+r.emp+','+r.ind+')">적용</button></td></tr>';
         }).join('')
-        +'</tbody></table>'
-        +'<div style="margin-top:12px;text-align:center"><button class="btn" onclick="document.getElementById(\'ins-result-mo\')?.remove()">닫기</button></div>'
-        +'</div></div>';
-      document.body.insertAdjacentHTML('beforeend',html);
+        +'</tbody></table></div>';
+      document.body.appendChild(mo);
       toast('고용산재 엑셀 분석 완료 ('+results.length+'명)');
     }catch(err){toast('엑셀 분석 오류: '+err.message);}
   };
@@ -2962,18 +3259,32 @@ function parseInsExcelSettle(inp){
   inp.value='';
 }
 
-function applyInsRow(name,inc,emp){
+function applyInsRow(name,inc,emp,ind){
   var s=ls('settlements');
   var idx=s.findIndex(function(x){return x.driver===name&&x.status!=='완료';});
+  ind=ind||Math.round(inc*0.013);
   if(idx>=0){
-    s[idx].emp=emp;
+    s[idx].emp=emp; s[idx].work=ind; s[idx].inc=inc;
     lss('settlements',s);
     SP('settle',null);
-    toast(name+' 정산서에 고용보험 적용 완료');
+    toast('✅ '+name+' 정산서 고용보험/산재 적용 완료');
   } else {
     openSE(name);
     toast(name+' 정산서를 새로 작성합니다');
   }
+  document.getElementById('ins-result-mo')?.remove();
+}
+// ★ 고용산재 일괄 적용
+function applyInsAll(results){
+  var s=ls('settlements');
+  var cnt=0;
+  results.forEach(function(r){
+    var idx=s.findIndex(function(x){return x.driver===r.name&&x.status!=='완료';});
+    if(idx>=0){s[idx].emp=r.emp;s[idx].work=r.ind;s[idx].inc=r.inc;cnt++;}
+  });
+  lss('settlements',s);
+  SP('settle',null);
+  toast('✅ '+cnt+'명 전체 정산서에 고용보험·산재 일괄 적용 완료');
   document.getElementById('ins-result-mo')?.remove();
 }
 
@@ -3146,6 +3457,64 @@ function DT(tab,el){
   if(tab==='mypage'){setTimeout(function(){if(typeof initCampTabs==='function')initCampTabs();},80);}
 }
 
+function checkDriverNotifications(){
+  if(!FB||!_db)return;
+  _db.collection('driver_notifications')
+    .where('driver','==',S.curDriver)
+    .orderBy('sentAt','desc').limit(5)
+    .get().then(function(snap){
+      if(snap.empty)return;
+      var items=[]; var nids=[];
+      snap.forEach(function(doc){var d=doc.data();d._id=doc.id;items.push(d);nids.push(doc.id);});
+      // 임시 저장
+      window._drvNotes={}; items.forEach(function(it){window._drvNotes[it._id]=it;});
+      var existing=document.getElementById('drv-notification-box');
+      if(existing)existing.remove();
+      var box=document.createElement('div');
+      box.id='drv-notification-box';
+      box.style.cssText='position:fixed;bottom:70px;left:50%;transform:translateX(-50%);z-index:400;width:90%;max-width:360px';
+      var listHtml=items.map(function(it){
+        return '<div style="padding:8px;background:var(--bg3);border-radius:8px;margin-bottom:6px;cursor:pointer" onclick="_vdn('+JSON.stringify(it._id)+')">'
+          +'<div style="font-size:12px;font-weight:700">'+(it.type==='tax_invoice'?'🧾 세금계산서':'📋 정산 명세서')+' — '+it.month+'</div>'
+          +'<div style="font-size:10px;color:var(--text3)">'+new Date(it.sentAt).toLocaleDateString('ko-KR')+' 전달</div>'
+          +'</div>';
+      }).join('');
+      box.innerHTML='<div style="background:var(--bg2);border:2px solid var(--blue);border-radius:12px;padding:14px;box-shadow:0 4px 20px rgba(0,0,0,.2)">'
+        +'<div style="font-size:12px;font-weight:700;color:var(--blue);margin-bottom:8px">📬 관리자 전달 내역 ('+items.length+'건)</div>'
+        +listHtml
+        +'<button onclick="document.getElementById(\'drv-notification-box\')?.remove()" style="width:100%;margin-top:6px;padding:7px;background:var(--bg3);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:12px">닫기</button>'
+        +'</div>';
+      document.body.appendChild(box);
+    }).catch(function(){});
+}
+function _vdn(id){
+  var item=window._drvNotes&&window._drvNotes[id];
+  if(!item||!item.img)return;
+  var mo=document.createElement('div');
+  mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:800;display:flex;align-items:center;justify-content:center;padding:14px';
+  mo.onclick=function(){mo.remove();};
+  mo.innerHTML='<div onclick="event.stopPropagation()" style="max-width:95vw;max-height:90vh;overflow-y:auto;text-align:center">'
+    +'<img src="'+item.img+'" style="max-width:100%;border-radius:8px">'
+    +'<div style="margin-top:10px;display:flex;gap:8px;justify-content:center">'
+    +'<a href="'+item.img+'" download="'+(item.type==='tax_invoice'?'세금계산서':'명세서')+'_'+item.month+'.png" style="padding:9px 20px;background:#7c3aed;color:#fff;border-radius:7px;font-size:12px;font-weight:700;text-decoration:none">⬇ 저장</a>'
+    +'<button onclick="this.parentElement.parentElement.parentElement.remove()" style="padding:9px 20px;background:#6b7280;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">닫기</button>'
+    +'</div></div>';
+  document.body.appendChild(mo);
+}
+function viewDriverNotification(el,item){
+  if(item.img){
+    var mo=document.createElement('div');
+    mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:800;display:flex;align-items:center;justify-content:center;padding:14px';
+    mo.onclick=function(){mo.remove();};
+    mo.innerHTML='<div onclick="event.stopPropagation()" style="max-width:95vw;max-height:90vh;overflow-y:auto;text-align:center">'
+      +'<img src="'+item.img+'" style="max-width:100%;border-radius:8px">'
+      +'<div style="margin-top:10px;display:flex;gap:8px;justify-content:center">'
+      +'<a href="'+item.img+'" download="'+(item.type==='tax_invoice'?'세금계산서':'명세서')+'_'+item.month+'.png" style="padding:9px 20px;background:#7c3aed;color:#fff;border-radius:7px;font-size:12px;font-weight:700;text-decoration:none">⬇ 저장</a>'
+      +'<button onclick="this.parentElement.parentElement.parentElement.remove()" style="padding:9px 20px;background:#6b7280;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">닫기</button>'
+      +'</div></div>';
+    document.body.appendChild(mo);
+  }
+}
 function dHome(){
   var dels=ls('deliveries').filter(d=>d.driver===S.curDriver&&d.date===today());
   var ents=ls('entries').filter(e=>e.driver===S.curDriver&&e.date===today());
@@ -3789,6 +4158,375 @@ document.querySelectorAll('.mo').forEach(m=>m.addEventListener('click',function(
 
 // ── Firebase 리스너
 var _initialLoad=true;
+
+// ★ 쿠팡 정산 엑셀 업로드 → 기사별 자동 정산 등록
+function parseCoupangExcel(inp){
+  var file=inp.files[0]; if(!file)return;
+  if(typeof XLSX==='undefined'){toast('⚠️ 엑셀 라이브러리 로딩 중...'); return;}
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+      var rawSheet=wb.Sheets['정산Raw']||wb.Sheets[wb.SheetNames[2]];
+      var totalSheet=wb.Sheets['정산총괄']||wb.Sheets[wb.SheetNames[1]];
+      if(!rawSheet){toast('❌ 정산Raw 시트를 찾을 수 없습니다');return;}
+      var raw=XLSX.utils.sheet_to_json(rawSheet,{header:1});
+      var total=totalSheet?XLSX.utils.sheet_to_json(totalSheet,{header:1}):[];
+      if(raw.length<2){toast('❌ 데이터가 없습니다');return;}
+
+      // ★ 컬럼 정확 매핑 (엑셀 실측 기준):
+      // [7]=H 배송건수, [8]=I 반품건수, [9]=J 단가(배송=반품 동일)
+      // [10]=K 추가인센티브(건당), [11]=L 기본배송단가금액=(H+I)×J (반품포함!)
+      // [12]=M 추가인센가중금액=K×H, [13]=N 총금액=L+M
+      // [14]=O 프레시백 회수 인센티브
+      var drvMap={};
+      for(var i=1;i<raw.length;i++){
+        var row=raw[i]; if(!row[1])continue;
+        var userId=String(row[1]).trim();
+        var dcnt=Number(row[7])||0;
+        var rcnt=Number(row[8])||0;
+        var unitPrc=Number(row[9])||0;
+        var freshInc=Number(row[14])||0;  // O열 프레시백 회수 인센티브
+        // 배송금액(반품제외) = 배송건수 × 단가
+        var delAmt=dcnt*unitPrc;
+        // 반품금액 = 반품건수 × 단가 (단가 동일)
+        var retAmt=rcnt*unitPrc;
+
+        if(!drvMap[userId])drvMap[userId]={
+          userId:userId,dcnt:0,rcnt:0,
+          delAmt:0,retAmt:0,freshAmt:0,
+          routes:{}
+        };
+        drvMap[userId].dcnt+=dcnt;
+        drvMap[userId].rcnt+=rcnt;
+        drvMap[userId].delAmt+=delAmt;
+        drvMap[userId].retAmt+=retAmt;
+        drvMap[userId].freshAmt+=freshInc;
+
+        // 라우트별 상세 (배송+반품 모두)
+        var route=String(row[2]||'');
+        if(route){
+          if(!drvMap[userId].routes[route])
+            drvMap[userId].routes[route]={cnt:0,ret:0,unitPrc:0};
+          drvMap[userId].routes[route].cnt+=dcnt;
+          drvMap[userId].routes[route].ret+=rcnt;
+          if(unitPrc>0)drvMap[userId].routes[route].unitPrc=unitPrc;
+        }
+      }
+
+      // 정산총괄 L열(총합계) → 최종 검증용
+      var totalMap={};
+      if(total.length>4){
+        for(var j=5;j<total.length;j++){
+          var tr=total[j]; if(!tr||!tr[3])continue;
+          var uid=String(tr[3]).trim();
+          // L열(index 11)=금액(총합계), I열(index 8)=프레시백
+          var tAmt=Number(tr[11])||0;
+          var tFresh=Number(tr[8])||0;
+          if(tAmt>0)totalMap[uid]={totalAmt:tAmt,freshAmt:tFresh};
+        }
+      }
+
+      var drivers=ls('drivers');
+      var settlements=ls('settlements');
+      var month=new Date().toISOString().slice(0,7);
+      var added=0,skipped=0,updated=0,skippedIds=[];
+
+      Object.keys(drvMap).forEach(function(userId){
+        var cleanId=userId.replace(/@df$/i,'').replace(/@.*$/,'').trim();
+        var d=drivers.find(function(dr){
+          var dId=(dr.userId||'').toLowerCase();
+          return dId===userId.toLowerCase()||dId===cleanId.toLowerCase();
+        });
+        if(!d){skipped++;skippedIds.push(cleanId);return;}
+
+        var dm=drvMap[userId];
+        // 정산총괄 기준으로 프레시백 보정 (더 정확)
+        var tm=totalMap[userId]||totalMap[cleanId]||{};
+        var freshAmt=tm.freshAmt||dm.freshAmt||0;
+        // 총수익 = 배송 + 반품 + 프레시백 (추가인센은 별도로 관리)
+        var income=dm.delAmt+dm.retAmt+freshAmt;
+
+        var routeDetails=Object.keys(dm.routes).map(function(r){
+          var rv=dm.routes[r];
+          var up=rv.unitPrc||RPRICE[r]||0;
+          return{
+            route:r,cnt:rv.cnt,ret:rv.ret,unitPrice:up,
+            amt:rv.cnt*up,retAmt:rv.ret*up
+          };
+        });
+
+        var existing=settlements.findIndex(function(s){return s.driver===d.name&&s.month===month;});
+        var entry={
+          driver:d.name, userId:cleanId, coupangId:userId,
+          jobsub:d.jobsub||'쿠팡', month:month,
+          dcnt:dm.dcnt, rcnt:dm.rcnt,
+          damt:dm.delAmt,        // ★ 배송금액만
+          ramt:dm.retAmt,        // ★ 반품금액만
+          fresh:freshAmt,        // ★ O열 프레시백 회수
+          finc:Math.round(dm.dcnt*25),  // 프레시백 인센티브 (건당25원)
+          inc:0,                 // 추가인센 미표시
+          tax:0,
+          emp:Math.round(income*0.008),
+          work:Math.round(income*0.013),
+          eq:0,dmg:0,adv:0,
+          status:'정산예정',
+          routeDetails:routeDetails,
+          createdAt:new Date().toISOString()
+        };
+        if(existing>=0){settlements[existing]=Object.assign(settlements[existing],entry);updated++;}
+        else{settlements.push(entry); added++;}
+      });
+      lss('settlements',settlements);
+      var skipMsg=skippedIds.length?('\n⚠️ 미매칭: '+skippedIds.slice(0,5).join(', ')+(skippedIds.length>5?'... 외'+(skippedIds.length-5)+'명':'')):'';      toast('✅ 쿠팡 엑셀 정산 완료: '+added+'건 등록 / '+updated+'건 갱신 / '+skipped+'건 미매칭'+skipMsg);
+      SP('settle',null);
+    }catch(err){console.error(err);toast('❌ 파싱 오류: '+err.message);}
+  };
+  reader.readAsArrayBuffer(file);
+  inp.value='';
+}
+
+// ★ 전체 기사 정산 CSV 다운로드
+function exportAllSettlements(){
+  var s=ls('settlements');
+  if(!s.length){toast('정산 데이터 없음');return;}
+  // ★ 전체 라우트 목록 수집 (모든 기사의 routeDetails에서)
+  var allRoutes=[];
+  s.forEach(function(x){
+    if(x.routeDetails&&x.routeDetails.length){
+      x.routeDetails.forEach(function(rd){
+        if(rd.route&&allRoutes.indexOf(rd.route)<0)allRoutes.push(rd.route);
+      });
+    }
+  });
+  allRoutes.sort(function(a,b){return a.localeCompare(b,undefined,{numeric:true});});
+
+  // 헤더: 기본정보 + 라우트별 배송건수 + 라우트별 반품 + 정산요약
+  var baseHdr=['기사명','쿠팡ID','정산월','총배송건','총반품건'];
+  var routeDelHdr=allRoutes.map(function(r){return r+'_배송';});
+  var routeRetHdr=allRoutes.map(function(r){return r+'_반품';});
+  var summaryHdr=['총수익(원)','고용보험(원)','산재보험(원)','원천세(원)','실지급(원)','상태'];
+  var header=baseHdr.concat(routeDelHdr).concat(routeRetHdr).concat(summaryHdr);
+  var rows=[header];
+
+  s.forEach(function(x){
+    var r=calcNet(x);
+    // 라우트별 건수 맵
+    var rdMap={};
+    if(x.routeDetails&&x.routeDetails.length){
+      x.routeDetails.forEach(function(rd){rdMap[rd.route]={cnt:rd.cnt||0,ret:rd.ret||0};});
+    }
+    var base=[
+      x.driver||'', x.userId||'', x.month||'',
+      x.dcnt||0, x.rcnt||0
+    ];
+    var routeDel=allRoutes.map(function(r){return (rdMap[r]&&rdMap[r].cnt)||0;});
+    var routeRet=allRoutes.map(function(r){return (rdMap[r]&&rdMap[r].ret)||0;});
+    var summary=[
+      r.income||0, r.emp||0,
+      Math.round((r.income||0)*0.013), Math.round((r.income||0)*0.033),
+      r.net||0, x.status||''
+    ];
+    rows.push(base.concat(routeDel).concat(routeRet).concat(summary));
+  });
+
+  var csv=rows.map(function(row){return row.map(function(v){return'"'+String(v||'').replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+  var bom='\uFEFF';
+  var blob=new Blob([bom+csv],{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='엠비티아이_전체정산_라우트별_'+new Date().toISOString().slice(0,7)+'.csv';
+  a.click();
+  toast('⬇️ 전체 정산 다운로드 완료 ('+s.length+'건 · 라우트 '+allRoutes.length+'개)');
+}
+
+// ★ 기사별 세금계산서 전체 저장 (각각 CSV로 다운로드)
+function exportAllTaxInvoices(){
+  var s=ls('settlements');
+  if(!s.length){toast('정산 데이터 없음');return;}
+  if(typeof html2canvas==='undefined'){toast('⚠️ 이미지 라이브러리 로딩 중... 잠시 후 다시 시도');return;}
+  var total=s.length; var done=0;
+  toast('🧾 세금계산서 이미지 생성 중... ('+total+'건)');
+  // 순차적으로 각 기사 세금계산서 PNG 저장
+  function saveOne(idx){
+    if(idx>=s.length){toast('✅ 기사별 세금계산서 '+done+'건 저장 완료');return;}
+    openTaxInvoice(idx);
+    setTimeout(function(){
+      var wrap=document.getElementById('tax-invoice-wrap');
+      if(!wrap){saveOne(idx+1);return;}
+      var x=s[idx];
+      html2canvas(wrap,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false})
+        .then(function(canvas){
+          var a=document.createElement('a');
+          a.href=canvas.toDataURL('image/png');
+          a.download='세금계산서_'+(x.driver||'기사')+'_'+(x.month||'')+'.png';
+          a.click(); done++;
+          document.getElementById('tax-mo')?.remove();
+          setTimeout(function(){saveOne(idx+1);},500);
+        }).catch(function(){
+          document.getElementById('tax-mo')?.remove();
+          saveOne(idx+1);
+        });
+    },600);
+  }
+  saveOne(0);
+}
+
+function _exportAllTaxInvoices_csv_unused(){
+  var s=ls('settlements');
+  if(!s.length){toast('정산 데이터 없음');return;}
+  var idx=0;
+  function next(){
+    if(idx>=s.length)return;
+    var x=s[idx++];
+    var r=calcNet(x);
+    // 기사 상세 정보 조회 (사업자번호, 차량번호)
+    var drvInfo=ls('drivers').find(function(d){return d.name===x.driver||(d.userId&&(d.userId===x.userId||(d.userId+'@df')===x.userId));});
+    var bizNum=(drvInfo&&drvInfo.bizNum)||'';
+    var plate=(drvInfo&&drvInfo.plate)||x.plate||'';
+    var phone=(drvInfo&&drvInfo.phone)||'';
+    var rows=[
+      ['세금계산서','','',''],
+      ['공급자','엠비티아이(유)','',''],
+      ['공급받는자',x.driver||'','',''],
+      ['사업자번호',bizNum,'차량번호',plate],
+      ['연락처',phone,'정산월',x.month||''],
+      ['쿠팡ID',x.userId||'','',''],
+      ['','','',''],
+      ['항목','내용','금액','비고'],
+      ['배송건수',(x.dcnt||0)+'건','반품건수',(x.rcnt||0)+'건'],
+      ['총 배송 수익','배송+반품',r.income.toLocaleString()+'원',''],
+      ['고용보험 (0.8%)','',(-r.emp).toLocaleString()+'원',''],
+      ['산재보험 (1.4%)','',(-Math.round(r.income*0.014)).toLocaleString()+'원',''],
+      ['원천세 (3.3%)','',(-Math.round(r.income*0.033)).toLocaleString()+'원',''],
+      ['실지급액','',r.net.toLocaleString()+'원',''],
+    ];
+    var csv=rows.map(function(r){return r.map(function(v){return'"'+String(v||'').replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+    var bom='\uFEFF';
+    var blob=new Blob([bom+csv],{type:'text/csv;charset=utf-8'});
+    var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download='세금계산서_'+(x.driver||'기사')+'_'+(x.month||'')+'.csv';
+    a.click();
+    setTimeout(next,300);
+  }
+  next();
+  toast('🧾 기사별 세금계산서 저장 중... ('+s.length+'건)');
+}
+
+
+// ★ 기사별 세금계산서 보관함
+function openTaxStore(){
+  var stored=JSON.parse(localStorage.getItem('mbti_tax_store')||'{}');
+  var drivers=Object.keys(stored);
+  var moEl=document.createElement('div');
+  moEl.id='tax-store-mo';
+  moEl.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:700;display:flex;align-items:center;justify-content:center;padding:14px;overflow-y:auto';
+  moEl.onclick=function(e){if(e.target===moEl)moEl.remove();};
+  var cardHtml=drivers.length?drivers.map(function(drv){
+    var items=stored[drv]||[];
+    var latest=items[items.length-1]||{};
+    return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;min-width:160px;max-width:180px;cursor:pointer" onclick="showStoredTax(this.dataset.drv)" data-drv="'+drv+'"">'
+      +'<div style="font-size:12px;font-weight:700;margin-bottom:6px">👤 '+drv+'</div>'
+      +(latest.img?'<img src="'+latest.img+'" style="width:100%;border-radius:6px;border:1px solid var(--border);margin-bottom:6px">':'<div style="height:80px;background:var(--bg3);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text3);margin-bottom:6px">이미지 없음</div>')
+      +'<div style="font-size:10px;color:var(--text3)">📅 '+latest.month+' · '+items.length+'건</div>'
+      +'</div>';
+  }).join(''):'<div style="color:var(--text3);font-size:13px;padding:20px">저장된 세금계산서가 없습니다.<br>기사별 세금계산서에서 PNG 이미지 저장 시 자동 보관됩니다.</div>';
+  moEl.innerHTML='<div onclick="event.stopPropagation()" style="background:var(--bg);border-radius:14px;padding:20px;width:700px;max-width:95vw;max-height:90vh;overflow-y:auto">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'
+    +'<div style="font-size:16px;font-weight:700">🗂 기사별 세금계산서 보관함</div>'
+    +'<div style="display:flex;gap:8px">'
+    +'<button onclick="exportAllTaxInvoices()" style="padding:7px 14px;background:#7c3aed;color:#fff;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">📥 전체 PNG 저장</button>'
+    +'<button onclick="document.getElementById(\'tax-store-mo\')?.remove()" style="padding:7px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:7px;font-size:11px;cursor:pointer">닫기</button>'
+    +'</div></div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-bottom:12px">세금계산서 PNG 저장 시 자동 보관 · 기사별 클릭하면 전체 목록 확인</div>'
+    +'<div style="display:flex;gap:10px;flex-wrap:wrap">'+cardHtml+'</div>'
+    +'</div>';
+  document.body.appendChild(moEl);
+}
+
+function showStoredTax(drv){
+  var stored=JSON.parse(localStorage.getItem('mbti_tax_store')||'{}');
+  var items=(stored[drv]||[]).slice().reverse();
+  if(!items.length){toast('저장된 세금계산서가 없습니다');return;}
+  var moEl=document.createElement('div');
+  moEl.id='tax-drv-mo';
+  moEl.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:800;display:flex;align-items:center;justify-content:center;padding:14px;overflow-y:auto';
+  moEl.onclick=function(e){if(e.target===moEl)moEl.remove();};
+  var listHtml=items.map(function(it){
+    return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;overflow:hidden;min-width:200px">'
+      +'<div style="padding:8px 10px;font-size:11px;font-weight:700;background:var(--bg3)">📅 '+it.month+'</div>'
+      +(it.img?'<img src="'+it.img+'" style="width:100%;display:block" onclick="window.open(this.src)">'
+        :'<div style="height:100px;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:12px">이미지 없음</div>')
+      +'<div style="padding:6px;display:flex;gap:5px">'
+      +(it.img?'<a href="'+it.img+'" download="세금계산서_'+drv+'_'+it.month+'.png" style="flex:1;padding:6px;background:#7c3aed;color:#fff;border-radius:6px;font-size:11px;font-weight:700;text-align:center;text-decoration:none">⬇ 다운로드</a>':'')
+      +'</div>'
+      +'</div>';
+  }).join('');
+  moEl.innerHTML='<div onclick="event.stopPropagation()" style="background:var(--bg);border-radius:14px;padding:20px;width:680px;max-width:95vw;max-height:90vh;overflow-y:auto">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'
+    +'<div style="font-size:15px;font-weight:700">🧾 '+drv+' 세금계산서 목록</div>'
+    +'<button onclick="document.getElementById(\'tax-drv-mo\')?.remove()" style="padding:6px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:7px;cursor:pointer">닫기</button>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">'+listHtml+'</div>'
+    +'</div>';
+  document.body.appendChild(moEl);
+}
+
+
+// ★ 세금계산서 기사 전달
+function sendTaxToDriver(i){
+  var x=ls('settlements')[i];
+  if(!x){toast('정산 데이터 없음');return;}
+  // PNG 이미지 먼저 생성 후 Firebase 저장
+  var wrap=document.getElementById('tax-invoice-wrap');
+  if(!wrap){toast('세금계산서 창이 열려있지 않습니다');return;}
+  if(typeof html2canvas==='undefined'){toast('⚠️ 이미지 라이브러리 로딩 중...');return;}
+  toast('📸 이미지 생성 후 전달 중...');
+  html2canvas(wrap,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false})
+  .then(function(canvas){
+    var img=canvas.toDataURL('image/png');
+    var note={type:'tax_invoice',driver:x.driver,month:x.month,img:img,
+      sentAt:new Date().toISOString(),status:'전달완료',sentBy:'관리자'};
+    // ① 보관함 저장
+    try{var st=JSON.parse(localStorage.getItem('mbti_tax_store')||'{}');
+      if(!st[x.driver])st[x.driver]=[];
+      var idx2=st[x.driver].findIndex(function(it){return it.month===x.month;});
+      if(idx2>=0)st[x.driver][idx2]=note; else st[x.driver].push(note);
+      localStorage.setItem('mbti_tax_store',JSON.stringify(st));}catch(e){}
+    // ② Firebase 알림 저장 (기사 앱에서 확인)
+    if(FB&&_db){
+      _db.collection('driver_notifications').add(note)
+      .then(function(){toast('📤 '+x.driver+' 기사님께 세금계산서 전달 완료! 기사 앱에서 확인 가능');})
+      .catch(function(){toast('📤 '+x.driver+' 세금계산서 전달 완료 (로컬 저장)');});
+    } else {
+      toast('📤 '+x.driver+' 세금계산서 보관함에 저장됨 (앱 연결 시 자동 전달)');
+    }
+  }).catch(function(e){toast('전달 오류: '+e.message);});
+}
+
+
+// ★ 데이터 3개월 자동 정리 (90일 이상 된 데이터 삭제, 정산은 보존)
+function purgeOldData(){
+  var cutoff=new Date();
+  cutoff.setDate(cutoff.getDate()-90);
+  var cutStr=cutoff.toISOString().slice(0,10);
+  // entries, deliveries, accidents: 날짜 기준 90일 이상 삭제
+  ['entries','deliveries','accidents'].forEach(function(key){
+    var arr=ls(key);
+    var before=arr.length;
+    arr=arr.filter(function(x){return (x.date||x.createdAt||'9999')>=cutStr;});
+    if(arr.length<before){lss(key,arr);console.log('[purge]',key,before-arr.length,'건 정리');}
+  });
+  // settlements: 3개월 이상 + status=완료인 것만 정리 (미완료는 보존)
+  var sets=ls('settlements');
+  var beforeS=sets.length;
+  sets=sets.filter(function(x){
+    if(x.status!=='완료')return true; // 미완료 보존
+    var d=x.paidAt||x.month||'9999';
+    return d>=cutStr;
+  });
+  if(sets.length<beforeS){lss('settlements',sets);console.log('[purge] settlements',beforeS-sets.length,'건 정리');}
+}
+
 function startListeners(){
   _initialLoad=true;
   if(!FB||!_db)return;
@@ -3800,6 +4538,17 @@ function startListeners(){
     updBadge();
     if(S.page==='drivers'||S.page==='dash')SP(S.page,null);
   }).catch(function(e){console.warn('drivers get:',e);});
+
+  // ── 메모 Firebase→localStorage 동기화 (메모 사라짐 방지)
+  _db.collection('settings').doc('memos').get().then(function(doc){
+    if(doc.exists){
+      var fbMemos=doc.data().data||{};
+      var localMemos=JSON.parse(localStorage.getItem('mbti_memos')||'{}');
+      // 병합: Firebase 우선, 로컬에만 있는 것도 보존
+      Object.assign(fbMemos, localMemos);
+      localStorage.setItem('mbti_memos',JSON.stringify(fbMemos));
+    }
+  }).catch(function(){});
 
   // ── 관리자 정보 Firebase에서 로드
   _db.collection('settings').doc('adminInfo').get().then(function(doc){
@@ -4079,6 +4828,11 @@ function editMemo(ds){
   var txt=prompt('📝 '+ds,cur); if(txt===null)return;
   if(txt.trim())memos[ds]=txt.trim();else delete memos[ds];
   localStorage.setItem(KEY,JSON.stringify(memos));
+  // ★ Firebase 동기화 (메모 사라짐 방지)
+  if(FB&&_db){
+    _db.collection('settings').doc('memos').set({data:memos,updatedAt:new Date().toISOString()},{merge:false})
+    .catch(function(e){console.warn('메모 Firebase 저장 실패',e);});
+  }
   SP('memo',null); toast('📝 메모 저장됨');
 }
 
@@ -4194,6 +4948,7 @@ function miniCalClick(ds){
   var txt=prompt('📝 '+ds,cur);if(txt===null)return;
   if(txt.trim())memos[ds]=txt.trim();else delete memos[ds];
   localStorage.setItem(KEY,JSON.stringify(memos));
+  if(FB&&_db){_db.collection('settings').doc('memos').set({data:memos,updatedAt:new Date().toISOString()},{merge:false}).catch(function(){});}
   var el=document.getElementById('mini-cal-wrap');if(el)el.innerHTML=buildMiniCal();
   toast('📝 메모 저장됨');
 }
