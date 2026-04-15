@@ -1154,9 +1154,23 @@ function loadMyInfo(userId){
         S.curJobtype=myData.jobtype||'택배';
         S.curJobsub=myData.jobsub||'쿠팡';
         syncSettlements(myData.name||userId);
-        // 사번 설정 (driverNum 또는 등록 인덱스 기반)
+        // ★ 이름 확정 즉시 알림 실시간 감시 시작
+        setTimeout(checkDriverNotifications, 500);
+        // 사번 설정 — Firebase 저장값 우선, 없으면 가입순번으로 1회 계산 후 Firebase에 고정 저장
         var _dn=myData.driverNum||myData.sn||myData.seq||'';
-        if(!_dn){var _allDrv=ls('drivers');var _di=_allDrv.findIndex(x=>x.userId===userId||x.name===(myData.name||userId));_dn=_di>=0?(_di+1):'';} 
+        if(!_dn){
+          var _allDrv=ls('drivers').filter(function(d){return d.is_active!==false&&d.status!=='탈퇴'&&d.status!=='거부';});
+          // 승인일 기준 정렬 후 순번 부여
+          _allDrv.sort(function(a,b){return (a.approvedAt||a.createdAt||'').localeCompare(b.approvedAt||b.createdAt||'');});
+          var _di=_allDrv.findIndex(function(x){return x.userId===userId||x.name===(myData.name||userId);});
+          _dn=_di>=0?(_di+1):'';
+          // Firebase에 영구 저장 (사번 고정)
+          if(_dn&&FB&&_db&&myData.fbId){
+            _db.collection('drivers').doc(myData.fbId).update({driverNum:'MBTI'+String(_dn).padStart(2,'0')}).catch(function(){});
+          }
+        }
+        // 이미 MBTI 형식이면 그대로, 숫자면 변환
+        if(_dn&&!String(_dn).startsWith('MBTI'))_dn='MBTI'+String(_dn).padStart(2,'0');
         S.driverNum=_dn;
         // 화면의 모든 이름 표시 요소 교체
         document.querySelectorAll('.user-name-display').forEach(el=>el.textContent=myData.name);
@@ -1364,7 +1378,7 @@ function doLogin(){
         hide(['login-screen']); show('dv');
         DT('home',document.getElementById('pni0')); updFbUI();
         loadMyInfo(id);
-        setTimeout(checkDriverNotifications, 1500); // 기사 전달 내역 확인
+        setTimeout(checkDriverNotifications, 2000); // 기사 전달 내역 실시간 감시 시작
       } else {toast('등록되지 않은 아이디');return;}
     };
     loginDriver();
@@ -3469,6 +3483,33 @@ function parseExcel(inp){
 }
 
 // ══ 기사 앱
+// ★ 정산서 강제 불러오기 (기사용)
+function forceLoadSettle(){
+  toast('🔄 정산서 불러오는 중...');
+  if(!FB||!_db){toast('⚠ Firebase 연결 필요');return;}
+  var _ses=JSON.parse(localStorage.getItem('mbti_session')||'null');
+  var keys=[S.curDriver,_ses&&_ses.id,_ses&&_ses.name].filter(function(k,i,a){return k&&a.indexOf(k)===i;});
+  var done=0;
+  keys.forEach(function(key){
+    _db.collection('settlements').where('driver','==',key)
+      .get().then(function(snap){
+        var all=ls('settlements');
+        snap.forEach(function(doc){
+          var sd=doc.data();sd.fbId=doc.id;
+          var idx=all.findIndex(function(x){return x.fbId===doc.id||(x.driver===sd.driver&&x.month===sd.month);});
+          if(idx>=0)Object.assign(all[idx],sd);else all.push(sd);
+        });
+        lss('settlements',all);
+        done++;
+        if(done===keys.length){
+          DT('settle',document.getElementById('pni5'));
+          var cnt=ls('settlements').filter(function(x){return x.driver===S.curDriver||x.driver===(S.sess&&S.sess.id);}).length;
+          toast(cnt>0?'✅ 정산서 '+cnt+'건 로드됨':'정산서 없음 (관리자 확인 요청)');
+        }
+      }).catch(function(e){toast('오류: '+e.message);});
+  });
+}
+
 function DT(tab,el){
   // 쿠팡 기사가 온도탭 클릭해도 진입은 되지만 안내 메시지 표시 (막지는 않음)
   S.dtab=tab;
@@ -3478,17 +3519,38 @@ function DT(tab,el){
   document.getElementById('dpc').innerHTML=(m[tab]||dHome)();
   // 내정보 탭 진입 시 캠프탭 초기화
   if(tab==='mypage'){setTimeout(function(){if(typeof initCampTabs==='function')initCampTabs();},80);}
+  // ★ 정산탭 열 때 최신 알림 + Firebase 재동기화
+  if(tab==='settle'){
+    checkDriverNotifications();
+    if(FB&&_db&&S.curDriver){
+      _db.collection('settlements').where('driver','==',S.curDriver)
+        .orderBy('ts','desc').limit(20).get().then(function(snap){
+          var all=ls('settlements');
+          snap.forEach(function(doc){
+            var sd=doc.data();sd.fbId=doc.id;
+            var idx=all.findIndex(function(x){return x.fbId===doc.id||(x.driver===sd.driver&&x.month===sd.month);});
+            if(idx>=0)Object.assign(all[idx],sd);else all.push(sd);
+          });
+          lss('settlements',all);
+          DT('settle',document.getElementById('pni5'));
+        }).catch(function(){});
+    }
+  }
 }
 
 function checkDriverNotifications(){
-  if(!FB||!_db)return;
-  _db.collection('driver_notifications')
+  if(!FB||!_db||!S.curDriver)return;
+  // ★ 실시간 onSnapshot으로 변경 (기존 .get() → 실시간 수신)
+  if(window._notifUnsub)window._notifUnsub(); // 기존 리스너 해제
+  window._notifUnsub = _db.collection('driver_notifications')
     .where('driver','==',S.curDriver)
-    .orderBy('sentAt','desc').limit(5)
-    .get().then(function(snap){
+    .orderBy('sentAt','desc').limit(10)
+    .onSnapshot(function(snap){
       if(snap.empty)return;
       var items=[]; var nids=[];
       snap.forEach(function(doc){var d=doc.data();d._id=doc.id;items.push(d);nids.push(doc.id);});
+      // 정산탭 자동 갱신
+      if(S.dtab==='settle')DT('settle',document.getElementById('pni5'));
       // 임시 저장
       window._drvNotes={}; items.forEach(function(it){window._drvNotes[it._id]=it;});
       var existing=document.getElementById('drv-notification-box');
@@ -3613,7 +3675,7 @@ function dHome(){
   <!-- 상태 카드 -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:10px 10px 4px">
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center">
-      <div style="font-size:14px;font-weight:700;color:var(--blue)">${S.driverNum?(S.driverNum.toString().startsWith('MBTI')?S.driverNum:'MBTI'+S.driverNum.toString().padStart(2,'0')):'MBTI??'}</div>
+      <div style="font-size:14px;font-weight:700;color:var(--blue)">${S.driverNum||'MBTI??'}</div>
       <div style="font-size:10px;color:var(--text2)">사번</div>
     </div>
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center">
@@ -4063,7 +4125,14 @@ function dMypageDriver(){
 function dSettle(){
   var s=ls('settlements').filter(x=>x.driver===S.curDriver);
   return `<div class="dh"><h2>내 정산</h2><p>관리자 공유 정산서</p></div>
-  ${!s.length?'<div style="padding:24px;text-align:center;color:var(--text3);font-size:12px">정산서 없음 — 관리자 작성 후 표시됩니다</div>':
+  <div style="padding:0 0 10px;text-align:right">
+    <button onclick="forceLoadSettle()" style="padding:7px 16px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔄 새로고침</button>
+  </div>
+  ${!s.length?`<div style="padding:24px;text-align:center;font-size:12px">
+    <div style="color:var(--text3);margin-bottom:12px">정산서 없음 — 관리자 작성 후 표시됩니다</div>
+    <button onclick="forceLoadSettle()" style="padding:9px 18px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔄 정산서 불러오기</button>
+  </div>`:
+  
   s.map((x,i)=>{var r=calcNet(x);return`<div class="dc">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <span style="font-size:15px;font-weight:700">📅 ${x.month} 정산서</span>
