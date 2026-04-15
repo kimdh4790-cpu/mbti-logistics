@@ -1138,6 +1138,7 @@ var syncRealUserName = function(uid){ return loadMyInfo(uid); };
 
 // ── v6.1 실시간 본인 정보 로드 (로그인한 사람 이름 표시, 세션 버그 해결)
 function loadMyInfo(userId){
+  loadUnitPrices(); // 기사 로그인시 단가 동기화
   if(FB&&_db){
     // ★ settlements 동기화: name 기반 조회 (실제 필드값) + userId 기반 보조 조회
     function syncSettlements(driverName){
@@ -2718,7 +2719,7 @@ function viewStmt(i){
   var x=ls('settlements')[i];
   // ★ 반품/프레시백 데이터 보정 (구버전 데이터 자동 수정)
   var rdList=x.routeDetails||[];
-  var retAmtFromRoutes=rdList.reduce(function(s,rd){var up=rd.unitPrice||RPRICE[rd.route]||0;return s+(rd.ret||0)*up;},0);
+  var retAmtFromRoutes=rdList.reduce(function(s,rd){var up=RPRICE[rd.route]||rd.unitPrice||0;return s+(rd.ret||0)*up;},0);
   var needsUpdate=false;
   var ss=ls('settlements');
   // ramt 보정: 저장값 없으면 routeDetails에서 계산
@@ -2736,7 +2737,7 @@ function viewStmt(i){
       <table class="route-tbl" style="margin-top:0">
         <thead><tr><th>라우트</th><th style="text-align:right">배송건</th><th style="text-align:right;color:var(--amber)">반품건</th><th style="text-align:right">단가</th><th style="text-align:right">배송금액</th><th style="text-align:right;color:var(--amber)">반품금액</th><th style="text-align:right;color:var(--green)">소계</th></tr></thead>
         <tbody>
-        ${rdList.map(function(rd){var up=rd.unitPrice||RPRICE[rd.route]||0;var da=rd.amt||(rd.cnt||0)*up;var ra=(rd.ret||0)*up;return`<tr>
+        ${rdList.map(function(rd){var up=RPRICE[rd.route]||rd.unitPrice||0;var da=(rd.cnt||0)*up;var ra=rd.retAmt!=null?rd.retAmt:(rd.ret||0)*up;return`<tr>
           <td><strong>${rd.route}</strong></td>
           <td style="text-align:right">${(rd.cnt||0).toLocaleString()}</td>
           <td style="text-align:right;color:${(rd.ret||0)>0?'var(--amber)':'var(--text3)'}">${(rd.ret||0)>0?rd.ret.toLocaleString():'—'}</td>
@@ -2750,9 +2751,9 @@ function viewStmt(i){
           <td style="text-align:right">${rdList.reduce(function(s,rd){return s+(rd.cnt||0);},0).toLocaleString()}</td>
           <td style="text-align:right;color:var(--amber)">${(function(){var t=rdList.reduce(function(s,rd){return s+(rd.ret||0);},0);return t>0?t.toLocaleString():'—';})()}</td>
           <td>—</td>
-          <td style="text-align:right">₩${rdList.reduce(function(s,rd){var up=rd.unitPrice||RPRICE[rd.route]||0;return s+(rd.amt||(rd.cnt||0)*up);},0).toLocaleString()}</td>
+          <td style="text-align:right">₩${rdList.reduce(function(s,rd){var up=rd.unitPrice||RPRICE[rd.route]||0;return s+(rd.cnt||0)*up;},0).toLocaleString()}</td>
           <td style="text-align:right;color:var(--amber)">${(function(){var t=rdList.reduce(function(s,rd){var up=rd.unitPrice||RPRICE[rd.route]||0;return s+(rd.ret||0)*up;},0);return t>0?'₩'+t.toLocaleString():'—';})()}</td>
-          <td style="text-align:right;color:var(--green)">₩${rdList.reduce(function(s,rd){var up=rd.unitPrice||RPRICE[rd.route]||0;return s+(rd.amt||(rd.cnt||0)*up)+(rd.ret||0)*up;},0).toLocaleString()}</td>
+          <td style="text-align:right;color:var(--green)">₩${rdList.reduce(function(s,rd){var up=rd.unitPrice||RPRICE[rd.route]||0;return s+(rd.cnt||0)*up+(rd.retAmt!=null?rd.retAmt:(rd.ret||0)*up);},0).toLocaleString()}</td>
         </tr>
         </tbody>
       </table>
@@ -2881,26 +2882,38 @@ function stSaveEdit(i){
   SP('settle',null);
 }
 
-// 기사 전달 (Firebase에 알림 저장)
+// 기사 전달 — 명세서 이미지 캡처 후 Firebase 전송
 function sendStmtToDriver(i){
   var x=ls('settlements')[i];
-  var r=calcNet(x);
-  var fresh=+document.getElementById('st-fresh-inp')?.value||0;
-  var finc=+document.getElementById('st-finc-inp')?.value||0;
-  var dmg=+document.getElementById('st-dmg-inp')?.value||0;
-  stSaveEdit(i);
-  var msg={type:'settlement',driver:x.driver,month:x.month,income:r.income,net:r.net,
-    fresh:fresh,finc:finc,dmg:dmg,sentAt:new Date().toISOString(),status:'전달완료'};
-  if(FB&&_db){
-    _db.collection('driver_notifications').add(msg).then(function(){
-      toast('📤 '+x.driver+' 기사님께 정산 내역 전달 완료!');
-    }).catch(function(){toast('전달 완료 (오프라인 저장)');});
-  } else {
-    // localStorage에 저장
-    var notes=JSON.parse(localStorage.getItem('driver_notes')||'[]');
-    notes.push(msg); localStorage.setItem('driver_notes',JSON.stringify(notes));
-    toast('📤 '+x.driver+' 기사님께 정산 내역 전달 완료!');
-  }
+  if(!x){toast('정산 데이터 없음');return;}
+  var wrap=document.querySelector('.stmt');
+  if(!wrap){toast('명세서 창이 열려있지 않습니다');return;}
+  if(typeof html2canvas==='undefined'){toast('⚠️ 이미지 라이브러리 로딩 중...');return;}
+  stSaveEdit(i); // 수정내용 먼저 저장
+  toast('📸 명세서 이미지 생성 중...');
+  html2canvas(wrap,{scale:0.8,useCORS:true,backgroundColor:'#ffffff',logging:false})
+  .then(function(canvas){
+    var img=canvas.toDataURL('image/jpeg',0.70);
+    if(img.length>900000){toast('⚠️ 명세서 이미지가 너무 큽니다');return;}
+    var r=calcNet(x);
+    var note={type:'settlement',driver:x.driver,month:x.month,
+      income:r.income,net:r.net,img:img,
+      sentAt:new Date().toISOString(),status:'전달완료',sentBy:'관리자'};
+    // ① 보관함 저장
+    try{var st=JSON.parse(localStorage.getItem('mbti_stmt_store')||'{}');
+      if(!st[x.driver])st[x.driver]=[];
+      var idx2=st[x.driver].findIndex(function(it){return it.month===x.month;});
+      if(idx2>=0)st[x.driver][idx2]=note; else st[x.driver].push(note);
+      localStorage.setItem('mbti_stmt_store',JSON.stringify(st));}catch(e){}
+    // ② Firebase 전송
+    if(FB&&_db){
+      _db.collection('driver_notifications').add(note)
+      .then(function(){toast('📤 '+x.driver+' 기사님께 정산 명세서 전달 완료! 기사 앱에서 확인 가능');})
+      .catch(function(){toast('📤 '+x.driver+' 명세서 보관함에 저장됨');});
+    } else {
+      toast('📤 '+x.driver+' 명세서 보관함에 저장됨 (앱 연결 시 자동 전달)');
+    }
+  }).catch(function(e){toast('전달 오류: '+e.message);});
 }
 
 // ══ 세금계산서 기능
@@ -3091,7 +3104,7 @@ function saveTaxInvoiceImage(i){
   if(typeof html2canvas==='undefined'){toast('⚠️ 이미지 라이브러리 로딩 중... 잠시 후 다시 시도해주세요');return;}
   var x=ls('settlements')[i]||{};
   toast('📸 이미지 생성 중...');
-  html2canvas(target,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false})
+  html2canvas(target,{scale:1.5,useCORS:true,backgroundColor:'#ffffff',logging:false})
   .then(function(canvas){
     var dataUrl=canvas.toDataURL('image/png');
     // ★ 보관함에 저장
@@ -3387,7 +3400,7 @@ function parseExcel(inp){
       var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
       var hIdx=rows.findIndex(r=>r&&r[0]==='구분');
       if(hIdx<0){toast('❌ 형식 오류 — 엑셀 파일(.xlsx) 형식 오류');return;}
-      var totalAmt=0,totalFresh=0,totalDel=0,totalRet=0;
+      var totalAmt=0,totalFresh=0,totalDel=0,totalRet=0,totalRetAmt=0;
       var routeMap={};
       var dailyRows=[];  // [{date,route,cnt,ret,unitPrice,amt}]
       rows.slice(hIdx+1).forEach(row=>{
@@ -3396,36 +3409,37 @@ function parseExcel(inp){
         if(cat==='배송'||cat==='수기반영'){
           var route=row[2]?String(row[2]).trim():'기타';
           var del=+row[7]||0, ret=+row[8]||0;
-          // 라우트 단가표(RPRICE) 기준 계산 — 실시간 수정 가능
-          var unitPrice = RPRICE[route] || (+row[9]) || 0;
-          // 배송건수 × 라우트 단가 (엑셀 금액 무시, 단가표 우선)
-          var amt = unitPrice > 0 ? del * unitPrice : (+row[13] || 0);
+          // 라우트 단가표(RPRICE) 기준 계산
+          // 관리자 단가표(RPRICE) 100% 기준 — 엑셀 금액 무시
+          var unitPrice = RPRICE[route] || 0;
+          var delAmt = del * unitPrice;   // 배송금액 = 배송건수 × RPRICE
+          var retAmt = ret * unitPrice;   // 반품금액 = 반품건수 × RPRICE
           // 날짜 파싱
           var dateRaw=row[3];
           var dateStr='';
           if(dateRaw instanceof Date) dateStr=dateRaw.toISOString().slice(0,10);
           else if(dateRaw) dateStr=String(dateRaw).slice(0,10);
-          totalAmt+=amt; totalDel+=del; totalRet+=ret;
-          if(!routeMap[route])routeMap[route]={cnt:0,ret:0,amt:0,unitPrice:unitPrice};
-          routeMap[route].cnt+=del; routeMap[route].ret+=ret; routeMap[route].amt+=amt;
+          totalAmt+=delAmt; totalDel+=del; totalRet+=ret; totalRetAmt+=retAmt;
+          if(!routeMap[route])routeMap[route]={cnt:0,ret:0,amt:0,retAmt:0,unitPrice:unitPrice};
+          routeMap[route].cnt+=del; routeMap[route].ret+=ret;
+          routeMap[route].amt+=delAmt; routeMap[route].retAmt+=retAmt;
           if(unitPrice&&!routeMap[route].unitPrice)routeMap[route].unitPrice=unitPrice;
           // 날짜별 상세 행 기록
-          if(del>0)dailyRows.push({date:dateStr,route,cnt:del,ret,unitPrice,amt});
+          if(del>0)dailyRows.push({date:dateStr,route,cnt:del,ret,unitPrice,amt:delAmt,retAmt});
         } else if(cat.includes('프레쉬백')||cat.includes('프레시백')){
           totalFresh+=+row[14]||0;
         } else if(cat==='반품'||cat==='반품처리'){
-          var retAmt=+row[13]||0;
-          totalRet+=(+row[7]||0); totalAmt+=retAmt;
-          dailyRows.push({date:'월계',route:'반품',cnt:+row[7]||0,ret:0,unitPrice:0,amt:retAmt});
+          // 반품 전용 행은 라우트 없으므로 배송 행에서 이미 RPRICE 계산됨 → 건수만 합산
+          totalRet+=(+row[7]||0);
         } else if(cat==='미계약 라우트'){
-          var miscAmt=+row[13]||0; totalAmt+=miscAmt;
-          if(!routeMap['미계약'])routeMap['미계약']={cnt:+row[7]||0,ret:0,amt:miscAmt,unitPrice:0};
-          else{routeMap['미계약'].cnt+=(+row[7]||0);routeMap['미계약'].amt+=miscAmt;}
-          dailyRows.push({date:'월계',route:'미계약',cnt:+row[7]||0,ret:0,unitPrice:0,amt:miscAmt});
+          // 미계약: RPRICE 없으면 금액 0 (단가표에 없는 라우트)
+          var miscCnt=+row[7]||0;
+          if(!routeMap['미계약'])routeMap['미계약']={cnt:miscCnt,ret:0,amt:0,retAmt:0,unitPrice:0};
+          else{routeMap['미계약'].cnt+=miscCnt;}
         }
       });
       var routes=Object.entries(routeMap)
-        .map(([r,v])=>({route:r,cnt:v.cnt,ret:v.ret,amt:v.amt,unitPrice:v.unitPrice}))
+        .map(([r,v])=>({route:r,cnt:v.cnt,ret:v.ret,amt:v.amt,retAmt:v.retAmt||0,unitPrice:v.unitPrice}))
         .sort((a,b)=>b.amt-a.amt);
       S.excelRoutes=routes;
       S.excelDaily=dailyRows;  // 날짜별 상세 저장
@@ -3437,9 +3451,9 @@ function parseExcel(inp){
       // 정산서 모달 자동 입력
       var setVal=(id,v)=>{var el=document.getElementById(id);if(el)el.value=v;};
       setVal('se-dcnt',totalDel);
-      setVal('se-damt',totalAmt);
+      setVal('se-damt',totalAmt);   // 배송금액(배송건수×RPRICE)
       setVal('se-rcnt',totalRet);
-      setVal('se-ramt',0);
+      setVal('se-ramt',totalRetAmt);  // 반품금액 = 반품건수 × RPRICE
       setVal('se-fresh',totalFresh);
       setVal('se-finc',finc);  // 프레시백 인센 자동
       updSettle();
@@ -3449,7 +3463,7 @@ function parseExcel(inp){
         <div style="font-size:12px;font-weight:700;color:var(--teal);margin-bottom:5px">📊 라우트별 실적 (${routes.length}개)</div>
         <div style="max-height:140px;overflow-y:auto;margin-bottom:8px;border:1px solid var(--border);border-radius:var(--r)">
           <table class="route-tbl">
-            <thead><tr><th>라우트</th><th>배송건</th><th>반품건</th><th>단가(원)</th><th>금액</th></tr></thead>
+            <thead><tr><th>라우트</th><th>배송건</th><th>반품건</th><th>단가(원)</th><th>배송금액</th><th>반품금액</th><th>소계</th></tr></thead>
             <tbody>
             ${routes.map(r=>`<tr>
               <td><strong>${r.route}</strong></td>
@@ -3457,6 +3471,8 @@ function parseExcel(inp){
               <td style="color:var(--amber)">${r.ret>0?r.ret.toLocaleString():'—'}</td>
               <td style="color:var(--teal)">${r.unitPrice?r.unitPrice.toLocaleString():'—'}</td>
               <td>₩${r.amt.toLocaleString()}</td>
+              <td style="color:var(--amber)">${r.retAmt>0?'₩'+r.retAmt.toLocaleString():'—'}</td>
+              <td style="color:var(--green)">₩${(r.amt+(r.retAmt||0)).toLocaleString()}</td>
             </tr>`).join('')}
             <tr style="font-weight:700;background:var(--green-l)"><td>합계</td><td>${totalDel.toLocaleString()}</td><td style="color:var(--amber)">${totalRet>0?totalRet.toLocaleString():'—'}</td><td>—</td><td style="color:var(--green)">₩${totalAmt.toLocaleString()}</td></tr>
             </tbody>
@@ -3561,7 +3577,7 @@ function DT(tab,el){
     checkDriverNotifications();
     if(FB&&_db&&S.curDriver){
       _db.collection('settlements').where('driver','==',S.curDriver)
-        .orderBy('ts','desc').limit(20).get().then(function(snap){
+        .get().then(function(snap){
           var all=ls('settlements');
           snap.forEach(function(doc){
             var sd=doc.data();sd.fbId=doc.id;
@@ -3581,11 +3597,12 @@ function checkDriverNotifications(){
   if(window._notifUnsub)window._notifUnsub(); // 기존 리스너 해제
   window._notifUnsub = _db.collection('driver_notifications')
     .where('driver','==',S.curDriver)
-    .orderBy('sentAt','desc').limit(10)
     .onSnapshot(function(snap){
       if(snap.empty)return;
       var items=[]; var nids=[];
       snap.forEach(function(doc){var d=doc.data();d._id=doc.id;items.push(d);nids.push(doc.id);});
+      items.sort(function(a,b){return (b.sentAt||'').localeCompare(a.sentAt||'');});
+      if(items.length>10)items=items.slice(0,10);
       // 정산탭 자동 갱신
       if(S.dtab==='settle')DT('settle',document.getElementById('pni5'));
       // 임시 저장
@@ -3619,9 +3636,16 @@ function _vdn(id){
     +'<img src="'+item.img+'" style="max-width:100%;border-radius:8px">'
     +'<div style="margin-top:10px;display:flex;gap:8px;justify-content:center">'
     +'<a href="'+item.img+'" download="'+(item.type==='tax_invoice'?'세금계산서':'명세서')+'_'+item.month+'.png" style="padding:9px 20px;background:#7c3aed;color:#fff;border-radius:7px;font-size:12px;font-weight:700;text-decoration:none">⬇ 저장</a>'
-    +'<button onclick="this.parentElement.parentElement.parentElement.remove()" style="padding:9px 20px;background:#6b7280;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">닫기</button>'
+    +'<button onclick="this.parentElement.parentElement.parentElement.remove()" style="padding:9px 20px;background:#6b7280;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">확인</button>'
     +'</div></div>';
   document.body.appendChild(mo);
+  // ★ 확인 후 Firebase 알림 삭제 (읽음 처리 — 기사가 한번 보면 사라짐)
+  if(FB&&_db){
+    _db.collection('driver_notifications').doc(id).delete().catch(function(){});
+  }
+  setTimeout(function(){
+    document.getElementById('drv-notification-box')?.remove();
+  }, 1500);
 }
 function viewDriverNotification(el,item){
   if(item.img){
@@ -4160,60 +4184,114 @@ function dMypageDriver(){
   return rMypage();
 }
 function dSettle(){
-  var s=ls('settlements').filter(x=>x.driver===S.curDriver);
-  return `<div class="dh"><h2>내 정산</h2><p>관리자 공유 정산서</p></div>
-  <div style="padding:0 0 10px;text-align:right">
-    <button onclick="forceLoadSettle()" style="padding:7px 16px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔄 새로고침</button>
-  </div>
-  ${!s.length?`<div style="padding:24px;text-align:center;font-size:12px">
-    <div style="color:var(--text3);margin-bottom:12px">정산서 없음 — 관리자 작성 후 표시됩니다</div>
-    <button onclick="forceLoadSettle()" style="padding:9px 18px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔄 정산서 불러오기</button>
-  </div>`:
-  
-  s.map((x,i)=>{var r=calcNet(x);return`<div class="dc">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <span style="font-size:15px;font-weight:700">📅 ${x.month} 정산서</span>
-      <span class="badge ${x.status==='완료'?'b-green':'b-wait'}">${x.status}</span>
-    </div>
-    <div style="background:var(--bg3);border-radius:var(--r);padding:12px;margin-bottom:10px">
-      <div style="text-align:center;font-size:28px;font-weight:700;color:var(--purple)">₩${r.net.toLocaleString()}</div>
-      <div style="text-align:center;font-size:11px;color:var(--text2);margin-top:3px">최종 지급액</div>
-    </div>
-    <div style="font-size:12px;display:flex;flex-direction:column;gap:6px">
-      <div style="font-weight:700;color:var(--text2);font-size:11px;border-bottom:1px solid var(--border);padding-bottom:4px;margin-bottom:2px">📊 수익 내역</div>
-      <div style="display:flex;justify-content:space-between"><span>① 배송 건수</span><span style="font-weight:600">${(+x.dcnt||0)}건</span></div>
-      <div style="display:flex;justify-content:space-between"><span>① 배송 단가</span><span>₩${(r.damt&&x.dcnt?(r.damt/x.dcnt)|0:0).toLocaleString()}/건</span></div>
-      <div style="display:flex;justify-content:space-between;color:var(--green)"><span>① 배송 수익</span><span style="font-weight:600">₩${r.damt.toLocaleString()}</span></div>
-      <div style="display:flex;justify-content:space-between"><span>② 반품 (${(+x.rcnt||0)}건)</span><span style="color:var(--green)">₩${r.ramt.toLocaleString()}</span></div>
-      <div style="display:flex;justify-content:space-between"><span>③ 프레시백 회수</span><span style="color:var(--green)">₩${r.fresh.toLocaleString()}</span></div>
-      <div style="display:flex;justify-content:space-between;color:var(--blue)"><span>④ 프레시백 인센 (${(+x.dcnt||0)}건×25원)</span><span>₩${r.finc.toLocaleString()}</span></div>
-      ${r.inc>0?`<div style="display:flex;justify-content:space-between;color:var(--blue)"><span>⑤ 추가 인센</span><span>₩${r.inc.toLocaleString()}</span></div>`:''}
-      <div style="display:flex;justify-content:space-between;font-weight:600;border-top:1px solid var(--border);padding-top:4px;margin-top:2px"><span>수익 합계</span><span style="color:var(--green)">₩${r.income.toLocaleString()}</span></div>
-      <div style="font-weight:700;color:var(--text2);font-size:11px;border-bottom:1px solid var(--border);padding-bottom:4px;margin-top:4px">📉 공제 내역</div>
-      <div style="display:flex;justify-content:space-between;color:var(--red)"><span>고용보험 (0.8%)</span><span>-₩${r.emp.toLocaleString()}</span></div>
-      <div style="display:flex;justify-content:space-between;color:var(--red)"><span>산재보험 (월 고정)</span><span>-₩${(r.work||14000).toLocaleString()}</span></div>
-      ${r.eq>0?`<div style="display:flex;justify-content:space-between;color:var(--red)"><span>장비임대료</span><span>-₩${r.eq.toLocaleString()}</span></div>`:''}
-      ${r.dmg>0?`<div style="display:flex;justify-content:space-between;color:var(--red)"><span>⚠ 파손공제 (${x.dmgReason||''})</span><span>-₩${r.dmg.toLocaleString()}</span></div>`:''}
-      ${r.adv>0?`<div style="display:flex;justify-content:space-between;color:var(--red)"><span>가불금 차감</span><span>-₩${r.adv.toLocaleString()}</span></div>`:''}
-      <div style="display:flex;justify-content:space-between;font-weight:600;border-top:1px solid var(--border);padding-top:4px;margin-top:2px"><span>공제 합계</span><span style="color:var(--red)">-₩${r.deduct.toLocaleString()}</span></div>
-    </div>
-    <div style="margin-top:10px;padding:12px;background:var(--purple-l,rgba(124,58,237,.1));border:1.5px solid var(--purple);border-radius:var(--r);display:flex;justify-content:space-between;align-items:center">
-      <span style="font-weight:700;font-size:14px">💰 최종 지급액</span>
-      <span style="font-weight:700;font-size:20px;color:var(--purple)">₩${r.net.toLocaleString()}</span>
-    </div>
-    ${x.sharedAt?`<div style="font-size:10px;color:var(--text3);margin-top:4px;text-align:right">정산서 공유일: ${x.sharedAt}</div>`:''}
-    <div style="margin-top:12px;padding:12px;background:#f0fdf4;border:1.5px solid #16a34a;border-radius:var(--r)">
-      <div style="font-size:12px;font-weight:700;color:#15803d;margin-bottom:8px">🧾 세금계산서 상세내역</div>
-      <div style="font-size:11px;display:flex;flex-direction:column;gap:5px">
-        <div style="display:flex;justify-content:space-between"><span style="color:#555">공급가액</span><span style="font-weight:600">₩${r.income.toLocaleString()}</span></div>
-        <div style="display:flex;justify-content:space-between"><span style="color:#555">소득세 (3.3%)</span><span style="font-weight:600;color:#dc2626">-₩${(x.tax||Math.round(r.income*0.033)).toLocaleString()}</span></div>
-        <div style="display:flex;justify-content:space-between"><span style="color:#555">고용보험 (0.8%)</span><span style="font-weight:600;color:#dc2626">-₩${r.emp.toLocaleString()}</span></div>
-        <div style="display:flex;justify-content:space-between;border-top:1px solid #86efac;padding-top:5px;margin-top:3px"><span style="font-weight:700">실 수령액</span><span style="font-weight:700;color:#15803d;font-size:14px">₩${r.net.toLocaleString()}</span></div>
-      </div>
-    </div>
-  </div>`;}).join('')}
-  <div style="height:12px"></div>`;
+  var s=ls('settlements').filter(function(x){return x.driver===S.curDriver;});
+  var html='<div class="dh"><h2>내 정산</h2><p>관리자 공유 정산서</p></div>';
+  html+='<div style="padding:0 0 10px;text-align:right"><button onclick="forceLoadSettle()" style="padding:7px 16px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔄 새로고침</button></div>';
+  if(!s.length){
+    html+='<div style="padding:24px;text-align:center;font-size:12px"><div style="color:var(--text3);margin-bottom:12px">정산서 없음 — 관리자 작성 후 표시됩니다</div><button onclick="forceLoadSettle()" style="padding:9px 18px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔄 정산서 불러오기</button></div>';
+    return html;
+  }
+  s.forEach(function(x){
+    var r=calcNet(x);
+    var rdList=x.routeDetails||[];
+    var taxBase=r.damt+r.ramt+r.fresh+r.finc;
+
+    // 라우트별 테이블
+    var routeRows='';
+    if(rdList.length){
+      var rows='';
+      rdList.forEach(function(rd){
+        var up=RPRICE[rd.route]||rd.unitPrice||0;
+        var da=(rd.cnt||0)*up;
+        var ra=(rd.retAmt!=null)?rd.retAmt:(rd.ret||0)*up;
+        var retColor=(rd.ret||0)>0?'var(--amber)':'var(--text3)';
+        var retTxt=(rd.ret||0)>0?(rd.ret).toLocaleString():'—';
+        var raTxt=ra>0?'₩'+ra.toLocaleString():'—';
+        rows+='<tr>'+
+          '<td><strong>'+rd.route+'</strong></td>'+
+          '<td style="text-align:right">'+(rd.cnt||0).toLocaleString()+'건</td>'+
+          '<td style="text-align:right;color:'+retColor+'">'+retTxt+'건</td>'+
+          '<td style="text-align:right;color:var(--teal)">'+(up?up.toLocaleString()+'원':'—')+'</td>'+
+          '<td style="text-align:right">₩'+da.toLocaleString()+'</td>'+
+          '<td style="text-align:right;color:var(--amber)">'+raTxt+'</td>'+
+          '<td style="text-align:right;font-weight:600;color:var(--green)">₩'+(da+ra).toLocaleString()+'</td>'+
+        '</tr>';
+      });
+      routeRows='<div style="margin-bottom:12px">'+
+        '<div style="font-size:11px;font-weight:700;color:var(--teal);margin-bottom:5px">📊 라우트별 실적</div>'+
+        '<div style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:6px">'+
+        '<table class="route-tbl" style="margin-top:0">'+
+        '<thead><tr>'+
+          '<th>라우트</th>'+
+          '<th style="text-align:right">배송건</th>'+
+          '<th style="text-align:right;color:var(--amber)">반품건</th>'+
+          '<th style="text-align:right">단가</th>'+
+          '<th style="text-align:right">배송금액</th>'+
+          '<th style="text-align:right;color:var(--amber)">반품금액</th>'+
+          '<th style="text-align:right;color:var(--green)">소계</th>'+
+        '</tr></thead>'+
+        '<tbody>'+rows+'</tbody>'+
+        '</table></div></div>';
+    }
+
+    html+='<div class="stmt" style="margin-bottom:16px">'+
+    // ── 헤더
+    '<div class="stmt-hdr">'+
+      '<div style="font-size:11px;opacity:.7;margin-bottom:3px">OFFICIAL STATEMENT · MBTI Co., Ltd.</div>'+
+      '<div class="stmt-title">'+x.month.replace('-','년 ')+'월 정산 명세서</div>'+
+      '<div style="display:flex;justify-content:space-between;font-size:13px;margin-top:5px;opacity:.9">'+
+        '<span>'+x.driver+' 기사</span>'+
+        '<span style="font-size:11px;opacity:.7">'+(x.jobsub||'쿠팡')+'</span>'+
+      '</div>'+
+    '</div>'+
+    // ── 상단 3칸 요약
+    '<div class="stmt-totals">'+
+      '<div class="stbox"><div class="stlbl">세금계산서 금액</div><div class="stval" style="font-size:15px;font-weight:700;color:var(--green)">₩'+taxBase.toLocaleString()+'</div></div>'+
+      '<div class="stbox"><div class="stlbl">공제(고용+산재)</div><div class="stval" style="font-size:15px;font-weight:700;color:var(--red)">-₩'+(r.emp+(r.work||0)).toLocaleString()+'</div></div>'+
+      '<div class="stbox hl"><div class="stlbl">실 지급액</div><div class="stval" style="color:#fff;font-size:17px;font-weight:700">₩'+r.net.toLocaleString()+'</div></div>'+
+    '</div>'+
+    // ── 수익 항목
+    '<div class="stmt-sec">'+
+      '<div style="font-size:13px;font-weight:600;padding-left:8px;border-left:3px solid var(--purple);margin-bottom:10px">📋 세금계산서 작성금액</div>'+
+      routeRows+
+      '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">'+
+        '<div class="sitem"><div class="sitem-ico">📦</div><div class="sitem-lbl"><strong>① 배송 수익</strong><small>'+(+x.dcnt||0).toLocaleString()+'건 × 라우트별 단가</small></div><div class="sitem-amt plus">+₩'+r.damt.toLocaleString()+'</div></div>'+
+        '<div class="sitem"><div class="sitem-ico">↩</div><div class="sitem-lbl"><strong>② 반품 수익</strong><small>'+(+x.rcnt||0).toLocaleString()+'건 × 라우트별 단가</small></div><div class="sitem-amt plus">+₩'+r.ramt.toLocaleString()+'</div></div>'+
+        (r.fresh>0?'<div class="sitem"><div class="sitem-ico">🎒</div><div class="sitem-lbl"><strong>③ 프레시백 회수금액</strong></div><div class="sitem-amt plus">+₩'+r.fresh.toLocaleString()+'</div></div>':'')+
+        (r.finc>0?'<div class="sitem"><div class="sitem-ico">⭐</div><div class="sitem-lbl"><strong>④ 프레시백 인센티브</strong><small>'+(+x.dcnt||0).toLocaleString()+'건×25원</small></div><div class="sitem-amt plus">+₩'+r.finc.toLocaleString()+'</div></div>':'')+
+        (r.dmg>0?'<div class="sitem"><div class="sitem-ico">⚠️</div><div class="sitem-lbl"><strong>⑤ 파손공제</strong><small>'+(x.dmgReason||'')+'</small></div><div class="sitem-amt minus">-₩'+r.dmg.toLocaleString()+'</div></div>':'')+
+      '</div>'+
+      '<div class="stmt-sub" style="background:rgba(99,102,241,.08);border-radius:6px;padding:8px 12px">'+
+        '<span style="font-weight:700">세금계산서 작성금액 합계</span>'+
+        '<span style="color:var(--green);font-size:15px;font-weight:700">₩'+taxBase.toLocaleString()+'</span>'+
+      '</div>'+
+    '</div>'+
+    // ── 공제 항목
+    '<div class="stmt-sec" style="border-top:1px solid #e0dfd8">'+
+      '<div style="font-size:13px;font-weight:600;padding-left:8px;border-left:3px solid #D85A30;margin-bottom:8px">공제 항목</div>'+
+      '<div class="tax-box">'+
+        '<div class="tax-row"><span>고용보험 0.8%</span><span style="color:var(--red);font-weight:600">-₩'+r.emp.toLocaleString()+'</span></div>'+
+        '<div class="tax-row"><span>산재보험 1.3%</span><span style="color:var(--red);font-weight:600">-₩'+(r.work||0).toLocaleString()+'</span></div>'+
+        (r.eq>0?'<div class="tax-row"><span>장비임대료</span><span style="color:var(--red)">-₩'+r.eq.toLocaleString()+'</span></div>':'')+
+        (r.adv>0?'<div class="tax-row"><span>가불금</span><span style="color:var(--red)">-₩'+r.adv.toLocaleString()+'</span></div>':'')+
+        '<div class="tax-total"><span>공제 합계</span><span>-₩'+r.deduct.toLocaleString()+'</span></div>'+
+      '</div>'+
+    '</div>'+
+    // ── 최종 실지급
+    '<div class="stmt-fin">'+
+      '<div>'+
+        '<div style="font-size:12px;font-weight:700">실 지급액</div>'+
+        '<div style="font-size:10px;opacity:.7;margin-top:2px">세금계산서금액 ₩'+taxBase.toLocaleString()+' − 고용·산재 ₩'+(r.emp+(r.work||0)).toLocaleString()+'</div>'+
+      '</div>'+
+      '<strong style="font-size:22px;color:#fff">₩'+r.net.toLocaleString()+'</strong>'+
+    '</div>'+
+    '<div style="padding:7px 20px;font-size:11px;color:var(--text3)">'+(x.sharedAt?'공유일: '+x.sharedAt:'')+'</div>'+
+    '</div>';
+  });
+  html+='<div style="height:12px"></div>';
+  return html;
 }
+
 
 // ── 카메라 업로드
 async function camPhoto(inp,slotKey,category,label){
@@ -4323,7 +4401,7 @@ function parseCoupangExcel(inp){
         var userId=String(row[1]).trim();
         var dcnt=Number(row[7])||0;
         var rcnt=Number(row[8])||0;
-        var unitPrc=Number(row[9])||0;
+        var unitPrc=RPRICE[r]||Number(row[9])||0;  // RPRICE 우선
         var freshInc=Number(row[14])||0;  // O열 프레시백 회수 인센티브
         // 배송금액(반품제외) = 배송건수 × 단가
         var delAmt=dcnt*unitPrc;
@@ -4492,7 +4570,7 @@ function exportAllTaxInvoices(){
       var wrap=document.getElementById('tax-invoice-wrap');
       if(!wrap){saveOne(idx+1);return;}
       var x=s[idx];
-      html2canvas(wrap,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false})
+      html2canvas(wrap,{scale:1.5,useCORS:true,backgroundColor:'#ffffff',logging:false})
         .then(function(canvas){
           var a=document.createElement('a');
           a.href=canvas.toDataURL('image/png');
@@ -4619,26 +4697,45 @@ function sendTaxToDriver(i){
   if(!wrap){toast('세금계산서 창이 열려있지 않습니다');return;}
   if(typeof html2canvas==='undefined'){toast('⚠️ 이미지 라이브러리 로딩 중...');return;}
   toast('📸 이미지 생성 후 전달 중...');
-  html2canvas(wrap,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false})
+  html2canvas(wrap,{scale:1.0,useCORS:true,backgroundColor:'#ffffff',logging:false})
   .then(function(canvas){
-    var img=canvas.toDataURL('image/png');
-    var note={type:'tax_invoice',driver:x.driver,month:x.month,img:img,
-      sentAt:new Date().toISOString(),status:'전달완료',sentBy:'관리자'};
-    // ① 보관함 저장
-    try{var st=JSON.parse(localStorage.getItem('mbti_tax_store')||'{}');
-      if(!st[x.driver])st[x.driver]=[];
-      var idx2=st[x.driver].findIndex(function(it){return it.month===x.month;});
-      if(idx2>=0)st[x.driver][idx2]=note; else st[x.driver].push(note);
-      localStorage.setItem('mbti_tax_store',JSON.stringify(st));}catch(e){}
-    // ② Firebase 알림 저장 (기사 앱에서 확인)
-    if(FB&&_db){
-      _db.collection('driver_notifications').add(note)
-      .then(function(){toast('📤 '+x.driver+' 기사님께 세금계산서 전달 완료! 기사 앱에서 확인 가능');})
-      .catch(function(){toast('📤 '+x.driver+' 세금계산서 전달 완료 (로컬 저장)');});
+    var dataUrl=canvas.toDataURL('image/jpeg',0.80);
+    var saveNote=function(imgUrl){
+      var note={type:'tax_invoice',driver:x.driver,month:x.month,img:imgUrl,
+        sentAt:new Date().toISOString(),status:'전달완료',sentBy:'관리자'};
+      try{var st=JSON.parse(localStorage.getItem('mbti_tax_store')||'{}');
+        if(!st[x.driver])st[x.driver]=[];
+        var idx2=st[x.driver].findIndex(function(it){return it.month===x.month;});
+        if(idx2>=0)st[x.driver][idx2]=note; else st[x.driver].push(note);
+        localStorage.setItem('mbti_tax_store',JSON.stringify(st));}catch(e){}
+      if(FB&&_db){
+        _db.collection('driver_notifications').add(note)
+        .then(function(){toast('📤 '+x.driver+' 기사님 세금계산서 전달 완료!');})
+        .catch(function(err){toast('❌ 전달 오류: '+err.message);});
+      } else {
+        toast('📤 '+x.driver+' 세금계산서 보관함 저장 완료');
+      }
+    };
+    // ★ Firebase Storage 업로드 → URL만 Firestore 저장 (1MB 제한 완전 우회)
+    if(FB&&_st){
+      toast('📤 세금계산서 업로드 중...');
+      var byteStr=atob(dataUrl.split(',')[1]);
+      var ab=new ArrayBuffer(byteStr.length);
+      var ia=new Uint8Array(ab);
+      for(var i2=0;i2<byteStr.length;i2++)ia[i2]=byteStr.charCodeAt(i2);
+      var blob=new Blob([ab],{type:'image/jpeg'});
+      var storePath='tax_invoices/'+x.driver+'/'+x.month+'_'+Date.now()+'.jpg';
+      var ref=_st.ref(storePath);
+      ref.put(blob).then(function(){return ref.getDownloadURL();})
+      .then(function(url){saveNote(url);})
+      .catch(function(e){
+        console.warn('Storage 실패, base64 직접 저장:', e);
+        saveNote(dataUrl);
+      });
     } else {
-      toast('📤 '+x.driver+' 세금계산서 보관함에 저장됨 (앱 연결 시 자동 전달)');
+      saveNote(dataUrl);
     }
-  }).catch(function(e){toast('전달 오류: '+e.message);});
+  }).catch(function(e){toast('이미지 생성 오류: '+e.message);});
 }
 
 
