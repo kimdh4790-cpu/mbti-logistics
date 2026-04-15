@@ -1129,19 +1129,23 @@ var syncRealUserName = function(uid){ return loadMyInfo(uid); };
 // ── v6.1 실시간 본인 정보 로드 (로그인한 사람 이름 표시, 세션 버그 해결)
 function loadMyInfo(userId){
   if(FB&&_db){
-    // ★ 기사 본인 정산서 실시간 Firebase 동기화
-    _db.collection('settlements').where('driver','==',userId)
-      .onSnapshot(function(snap){
-        if(snap.empty)return;
-        var all=ls('settlements');
-        snap.forEach(function(doc){
-          var sd=doc.data();sd.fbId=doc.id;
-          var idx=all.findIndex(function(x){return x.fbId===doc.id||(x.driver===sd.driver&&x.month===sd.month);});
-          if(idx>=0)Object.assign(all[idx],sd);else all.push(sd);
-        });
-        lss('settlements',all);
-        if(S.dtab==='settle')DT('settle',document.getElementById('pni5'));
-      },function(){});
+    // ★ settlements 동기화: name 기반 조회 (실제 필드값) + userId 기반 보조 조회
+    function syncSettlements(driverName){
+      [driverName, userId].filter(Boolean).forEach(function(key){
+        _db.collection('settlements').where('driver','==',key)
+          .onSnapshot(function(snap){
+            if(snap.empty)return;
+            var all=ls('settlements');
+            snap.forEach(function(doc){
+              var sd=doc.data();sd.fbId=doc.id;
+              var idx=all.findIndex(function(x){return x.fbId===doc.id||(x.driver===sd.driver&&x.month===sd.month);});
+              if(idx>=0)Object.assign(all[idx],sd);else all.push(sd);
+            });
+            lss('settlements',all);
+            if(S.dtab==='settle')DT('settle',document.getElementById('pni5'));
+          },function(){});
+      });
+    }
     _db.collection('drivers').where('userId','==',userId).onSnapshot(snap=>{
       if(!snap.empty){
         var myData=snap.docs[0].data();
@@ -1149,6 +1153,7 @@ function loadMyInfo(userId){
         S.curPlate=myData.plate||'';
         S.curJobtype=myData.jobtype||'택배';
         S.curJobsub=myData.jobsub||'쿠팡';
+        syncSettlements(myData.name||userId);
         // 사번 설정 (driverNum 또는 등록 인덱스 기반)
         var _dn=myData.driverNum||myData.sn||myData.seq||'';
         if(!_dn){var _allDrv=ls('drivers');var _di=_allDrv.findIndex(x=>x.userId===userId||x.name===(myData.name||userId));_dn=_di>=0?(_di+1):'';} 
@@ -2115,7 +2120,7 @@ function rDrivers(){
       <td><span class="badge ${d.status==='운행중'?'b-run':'b-wait'}">${d.status}</span></td>
       <td style="display:flex;gap:3px;flex-wrap:wrap">
         <button class="btn btn-sm btn-purple" onclick="openSE('${d.name}')">정산</button>
-        <button class="btn btn-sm" onclick="openDocModal(${d.id})">서류</button>
+        <button class="btn btn-sm" onclick="openDocModal(${d.id})" style="${d.bizNum?'border-color:var(--green);color:var(--green)':''}">서류${d.bizNum?'🧾':''}</button>
         <button class="btn btn-sm" style="color:var(--red)" onclick="deactDriver(${d.id})">탈퇴</button>
       </td>
     </tr>`).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:12px">해당 없음</td></tr>'}
@@ -2376,6 +2381,7 @@ function rMypage(){
 
 
     <button class="btn btn-blue" style="width:100%;padding:13px;font-size:14px;margin-top:8px" onclick="saveMypage()">💾 정보 저장</button>
+    ${!isAdmin?`<button onclick="if(confirm('로그아웃 하시겠습니까?'))goLogout()" style="width:100%;padding:13px;font-size:14px;margin-top:8px;background:rgba(220,50,50,.85);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer">🚪 로그아웃</button>`:''}
 
     ${isAdmin ? `
     <div style="margin-top:18px">
@@ -2508,7 +2514,7 @@ async function saveMypage(){
     me2.email=document.getElementById('mp-email')?.value||me2.email;
     me2.addr=document.getElementById('mp-addr')?.value||me2.addr;
     lss('drivers',drs2);
-    if(FB&&_db&&me2.fbId)_db.collection('drivers').doc(me2.fbId).update({phone:me2.phone,email:me2.email,addr:me2.addr}).catch(()=>{});
+    if(FB&&_db&&me2.fbId)_db.collection('drivers').doc(me2.fbId).update({phone:me2.phone,email:me2.email,addr:me2.addr,bizNum:me2.bizNum||'',bizName:me2.bizName||'',bizAddr:me2.bizAddr||'',bizType:me2.bizType||'',bizItem:me2.bizItem||''}).catch(()=>{});
   }
   toast('✅ 정보가 저장되었습니다');
 }
@@ -4872,7 +4878,11 @@ function matchDrvById(uid){
   var found=ls('drivers').find(function(d){return(d.userId||'').toLowerCase()===uid.toLowerCase()||(d.phone||'').replace(/-/g,'')===uid.replace(/-/g,'');});
   if(found){
     if(nameEl)nameEl.value=found.name;
-    if(msgEl){msgEl.textContent='✅ '+found.name+' ('+( found.jobtype||'택배')+' · '+(found.route||'')+')';msgEl.style.color='var(--teal)';}
+    if(msgEl){
+      var bizBadge=found.bizNum?(' | 🧾 사업자: '+found.bizNum+(found.bizName?' ('+found.bizName+')':'')):'<span style="color:var(--red)"> | ⚠ 사업자번호 미입력</span>';
+      msgEl.innerHTML='✅ '+found.name+' ('+( found.jobtype||'택배')+' · '+(found.route||'')+')'+bizBadge;
+      msgEl.style.color='var(--teal)';
+    }
     var sjb=document.getElementById('se-jobsub');if(sjb)sjb.value=found.jobsub||'쿠팡';
     var xs=document.getElementById('se-excel-section');if(xs)xs.style.display=((found.jobsub||'쿠팡')==='용차'?'none':'block');
   } else {
@@ -5129,22 +5139,31 @@ function sanitizeInput(val){
   return val.replace(/<[^>]*>/g,'').replace(/[<>"']/g,'').trim();
 }
 
-// ── 보안: 세션 만료 체크 (8시간)
+// ── 보안: 세션 만료 체크 (7일) + 포그라운드 복귀 시 갱신
 (function checkSession(){
-  var sess=JSON.parse(localStorage.getItem('mbti_session')||'null');
-  if(sess&&Date.now()-sess.ts>28800000){
-    localStorage.removeItem('mbti_session');
-    toast('⏰ 세션 만료 — 다시 로그인해주세요');
-    setTimeout(function(){goSplash();},1500);
-  }
-  setInterval(function(){
+  var SESSION_MAX=7*24*60*60*1000; // 7일
+  function refreshTs(){
     var s=JSON.parse(localStorage.getItem('mbti_session')||'null');
-    if(s&&Date.now()-s.ts>28800000){
+    if(s){ s.ts=Date.now(); localStorage.setItem('mbti_session',JSON.stringify(s)); }
+  }
+  function checkExpiry(){
+    var s=JSON.parse(localStorage.getItem('mbti_session')||'null');
+    if(s&&Date.now()-s.ts>SESSION_MAX){
       localStorage.removeItem('mbti_session');
-      toast('⏰ 세션이 만료되었습니다');
+      toast('⏰ 세션이 만료되었습니다. 다시 로그인해주세요');
       setTimeout(function(){goSplash();},1500);
     }
-  },60000);
+  }
+  // 앱 전환 후 돌아올 때 세션 ts 갱신 (핵심 수정)
+  document.addEventListener('visibilitychange',function(){
+    if(!document.hidden){ refreshTs(); checkExpiry(); }
+  });
+  // 포커스 복귀 시도 갱신
+  window.addEventListener('focus',function(){ refreshTs(); });
+  // 초기 체크
+  checkExpiry();
+  // 1분마다 백그라운드 체크
+  setInterval(checkExpiry, 60000);
 })();
 </script>
 </body>
