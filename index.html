@@ -1493,7 +1493,7 @@ function appLoginGo(role){
     if(!ifr.src.includes('v9')){ifr.src='엠비티아이_물류관리_v9.html';ifr.onload=function(){try{ifr.contentWindow.postMessage({action:act,mode:mode},'*');}catch(e){}ifr.onload=null;};}
     else{try{ifr.contentWindow.postMessage({action:act,mode:mode},'*');}catch(e){}}
   }
-  ol.style.display='flex';document.body.style.overflow='hidden';
+  ol.style.display='';ol.classList.add('open');document.body.style.overflow='hidden';
   var p=document.getElementById('pcBtn'),a=document.getElementById('appBtn');
   if(p)p.classList.remove('active');if(a)a.classList.add('active');
 }
@@ -1505,11 +1505,11 @@ function setView(v){
     var ol=document.getElementById('app-launcher-overlay');
     if(ol){var ifr=document.getElementById('app-iframe');
       if(ifr&&!ifr.src.includes('v9'))ifr.src='엠비티아이_물류관리_v9.html';
-      ol.style.display='flex';document.body.style.overflow='hidden';}
+      ol.style.display='';ol.classList.add('open');document.body.style.overflow='hidden';}
   }else{
     if(p)p.classList.add('active');if(a)a.classList.remove('active');
     var ol2=document.getElementById('app-launcher-overlay');
-    if(ol2){ol2.style.display='none';document.body.style.overflow='';}
+    if(ol2){ol2.style.display='';ol2.classList.remove('open');document.body.style.overflow='';}
     updateClock();runAppCounters();
   }
 }
@@ -2158,7 +2158,7 @@ function launchApp() {
 
 function closeAppLauncher(){
   var ol=document.getElementById('app-launcher-overlay');
-  if(ol){ol.style.display='none';ol.classList.remove('open');}
+  if(ol){ol.style.display='';ol.classList.remove('open');}
   document.body.style.overflow='';
   var p=document.getElementById('pcBtn'),a=document.getElementById('appBtn');
   if(p)p.classList.add('active');if(a)a.classList.remove('active');
