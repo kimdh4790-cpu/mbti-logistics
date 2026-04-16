@@ -4132,7 +4132,7 @@ function checkDriverNotifications(){
       snap.forEach(function(doc){var d=doc.data();d._id=doc.id;items.push(d);nids.push(doc.id);});
       items.sort(function(a,b){return (b.sentAt||'').localeCompare(a.sentAt||'');});
       if(items.length>10)items=items.slice(0,10);
-      if(S.dtab==='settle')DT('settle',document.getElementById('pni5'));
+      // ★ DT 호출 제거 - 무한루프 원인
       window._drvNotes={}; items.forEach(function(it){window._drvNotes[it._id]=it;});
       items.forEach(function(it){
         if(it.type==='tax_invoice'&&it.img&&it.month){
@@ -4143,6 +4143,9 @@ function checkDriverNotifications(){
           }catch(e){}
         }
       });
+      // ★ 이미 알림 표시했으면 다시 안 뜨게 (세션당 1회)
+      if(window._notifShown)return;
+      window._notifShown=true;
       var existing=document.getElementById('drv-notification-box');
       if(existing)existing.remove();
       var box=document.createElement('div');
@@ -4214,6 +4217,28 @@ function dHome(){
   var stBg={'주':'rgba(59,130,246,.15)','야':'rgba(139,92,246,.15)','휴무':'rgba(107,114,128,.1)','병가':'rgba(239,68,68,.12)',''  :'var(--bg2)'};
   var wkKey='schedule_'+S.curDriver+'_month_'+curY+'_'+curM;
   var sc=JSON.parse(localStorage.getItem(wkKey)||'{}');
+
+  // ★ Firebase에서 기사 본인 스케줄 로드 (백그라운드)
+  if(FB&&_db&&S.curDriver&&Object.keys(sc).length===0){
+    var monthStr=curY+'-'+String(curM+1).padStart(2,'0');
+    _db.collection('schedules')
+      .where('driver','==',S.curDriver)
+      .get().then(function(snap){
+        if(snap.empty)return;
+        var loaded={};
+        snap.forEach(function(doc){
+          var d=doc.data();
+          if(d.date&&d.date.startsWith(monthStr)){
+            loaded[d.date]={status:d.status||'',route:d.route||'',wave:d.wave||'',rotation:d.rotation||''};
+          }
+        });
+        if(Object.keys(loaded).length>0){
+          localStorage.setItem(wkKey,JSON.stringify(loaded));
+          // 홈 화면 갱신
+          if(S.dtab==='home'){document.getElementById('dpc').innerHTML=dHome();}
+        }
+      }).catch(function(){});
+  }
   var firstWD=new Date(curY,curM,1).getDay();
 
   var calHTML='<div style="margin:10px;background:var(--bg2);border-radius:var(--r);border:1px solid var(--border);overflow:hidden">';
@@ -4233,6 +4258,7 @@ function dHome(){
     var ds=curY+'-'+String(curM+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
     var sc_raw=sc[ds]||'';
     var st=typeof sc_raw==='object'?(sc_raw.status||''):sc_raw;
+    var route=typeof sc_raw==='object'?(sc_raw.route||''):'';
     var wd=new Date(curY,curM,day).getDay();
     var isToday=(day===now.getDate());
     var isWE=(wd===0||wd===6);
@@ -4240,6 +4266,7 @@ function dHome(){
       +'min-height:42px;padding:3px;border:'+(isToday?'2px solid var(--teal)':'1px solid transparent')+'">';
     calHTML+='<div style="font-size:10px;font-weight:700;color:'+(isToday?'var(--teal)':isWE?'#EF4444':'var(--text2)')+'">'+day+'</div>';
     if(st) calHTML+='<div style="text-align:center;padding:1px 2px;border-radius:3px;background:'+(stColors[st]||'#6B7280')+';color:#fff;font-size:9px;font-weight:700;margin-top:2px">'+st+'</div>';
+    if(route) calHTML+='<div style="font-size:7px;color:var(--text3);text-align:center;line-height:1.2;margin-top:1px;word-break:break-all">'+route+'</div>';
     calHTML+='</div>';
   }
   calHTML+='</div></div>';
