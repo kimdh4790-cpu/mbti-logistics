@@ -905,61 +905,75 @@ var _db=null,_st=null,FB=false;
     if(FB_CFG.projectId&&FB_CFG.projectId.length>3){
       firebase.initializeApp(FB_CFG);
       _db=firebase.firestore(); _st=firebase.storage();
-      // ★ 익명 로그인으로 Firestore 권한 확보
-      // ★ 익명 로그인 - 완료까지 대기 후 상태 표시
+      _db.enablePersistence({synchronizeTabs:true}).catch(e=>console.warn(e.code));
+      FB=true;
+
+      // ★ 인증 완료 후 리스너 설정 (타이밍 오류 방지)
       firebase.auth().onAuthStateChanged(function(user){
-        if(!user){
+        if(user){
+          _setupFbListeners(); // 인증 완료 후 리스너 시작
+        } else {
           firebase.auth().signInAnonymously().catch(function(e){
             console.warn('익명로그인 실패:',e.code);
+            _setupFbListeners(); // 실패해도 시도
           });
         }
       });
-      _db.enablePersistence({synchronizeTabs:true}).catch(e=>console.warn(e.code));
-      FB=true;
-      // ★ 수정10: Firebase 실시간 연결 상태 감시
-      _db.collection('settings').doc('status').onSnapshot(function(){
-        document.querySelectorAll('.fb-status').forEach(function(el){
-          el.textContent='🔥 Firebase 실시간';el.style.color='#4CAF50';
-        });
-      },function(){
-        document.querySelectorAll('.fb-status').forEach(function(el){
-          el.textContent='⚠ 연결 재시도중';el.style.color='#FF9800';
-        });
-      });
-      // ★ 수정10+11: 기사 목록 실시간 감시 - 탈퇴/거부 즉시 반영
-      _db.collection('drivers').onSnapshot(function(snap){
-        var drivers=ls('drivers');
-        snap.docChanges().forEach(function(change){
-          var fd=change.doc.data();fd.fbId=change.doc.id;
-          var idx=drivers.findIndex(function(d){return d.fbId===change.doc.id;});
-          if(change.type==='removed'){
-            if(idx>=0)drivers.splice(idx,1);
-          } else {
-            if(idx>=0){Object.assign(drivers[idx],fd);}
-            else{
-              if(!fd.id)fd.id=fd.fbId;
-              drivers.push(fd);
-            }
-          }
-        });
-        lss('drivers',drivers);
-        // 현재 기사관리 페이지면 즉시 새로고침
-        if(S.page==='drivers'||S.page==='dash')SP(S.page,null);
-      },function(e){console.warn('drivers onSnapshot:',e.message);});
-      // ★ 수정10: 입차/운행 실시간 감시
-      _db.collection('entries').orderBy('ts','desc').limit(100).onSnapshot(function(snap){
-        var entries=[];snap.forEach(function(doc){var d=doc.data();d.fbId=doc.id;entries.push(d);});
-        lss('entries',entries);
-        if(S.page==='entry'||S.page==='dash')SP(S.page,null);
-      },function(){});
-      _db.collection('deliveries').orderBy('ts','desc').limit(200).onSnapshot(function(snap){
-        var deliveries=[];snap.forEach(function(doc){var d=doc.data();d.fbId=doc.id;deliveries.push(d);});
-        lss('deliveries',deliveries);
-        if(S.page==='delivery_taxi'||S.page==='delivery_line'||S.page==='dash')SP(S.page,null);
-      },function(){});
     }
   }catch(e){console.warn('Firebase:',e.message);}
 })();
+
+var _listenersReady=false;
+function _setupFbListeners(){
+  if(_listenersReady||!FB||!_db)return;
+  _listenersReady=true;
+
+  // ★ Firebase 연결 상태 감시
+  _db.collection('settings').doc('status').onSnapshot(function(){
+    document.querySelectorAll('.fb-status').forEach(function(el){
+      el.textContent='🔥 Firebase 실시간';el.style.color='#4CAF50';
+    });
+  },function(){
+    document.querySelectorAll('.fb-status').forEach(function(el){
+      el.textContent='⚠ 연결 재시도중';el.style.color='#FF9800';
+    });
+  });
+
+  // ★ 기사 목록: 첫 수신 시 전체 교체, 이후 증분 업데이트
+  var _driversInit=false;
+  _db.collection('drivers').onSnapshot(function(snap){
+    if(!_driversInit){
+      // 최초 수신: Firebase 전체 데이터로 교체
+      var drivers=[];
+      snap.forEach(function(doc){var fd=doc.data();fd.fbId=doc.id;if(!fd.id)fd.id=fd.fbId;drivers.push(fd);});
+      lss('drivers',drivers);
+      _driversInit=true;
+    } else {
+      // 이후: 변경분만 적용
+      var drivers=ls('drivers');
+      snap.docChanges().forEach(function(change){
+        var fd=change.doc.data();fd.fbId=change.doc.id;
+        var idx=drivers.findIndex(function(d){return d.fbId===change.doc.id;});
+        if(change.type==='removed'){if(idx>=0)drivers.splice(idx,1);}
+        else{if(idx>=0){Object.assign(drivers[idx],fd);}else{if(!fd.id)fd.id=fd.fbId;drivers.push(fd);}}
+      });
+      lss('drivers',drivers);
+    }
+    if(S.page==='drivers'||S.page==='dash')SP(S.page,null);
+  },function(e){console.warn('drivers onSnapshot:',e.message);});
+
+  // ★ 입차/운행/배송 실시간 감시
+  _db.collection('entries').orderBy('ts','desc').limit(100).onSnapshot(function(snap){
+    var entries=[];snap.forEach(function(doc){var d=doc.data();d.fbId=doc.id;entries.push(d);});
+    lss('entries',entries);
+    if(S.page==='entry'||S.page==='dash')SP(S.page,null);
+  },function(){});
+  _db.collection('deliveries').orderBy('ts','desc').limit(200).onSnapshot(function(snap){
+    var deliveries=[];snap.forEach(function(doc){var d=doc.data();d.fbId=doc.id;deliveries.push(d);});
+    lss('deliveries',deliveries);
+    if(S.page==='delivery_taxi'||S.page==='delivery_line'||S.page==='dash')SP(S.page,null);
+  },function(){});
+}
 
 function ls(k){return JSON.parse(localStorage.getItem('mb60_'+k)||'[]');}
 function lss(k,v){localStorage.setItem('mb60_'+k,JSON.stringify(v));}
@@ -3285,6 +3299,9 @@ function openTaxInvoice(i){
   var ym=x.month||''; var yr=ym.slice(0,4), mo=ym.slice(5,7);
   var issueDate=today();
   var issDay=issueDate.slice(8,10);
+  // ★ 공급받는자(MBTI) 대표자명 - adminInfo에서 읽기
+  var adminInfo=JSON.parse(localStorage.getItem('mbti_admin_info')||'{}');
+  var mbtiCeoName=adminInfo.name||'김형우';
   // 공급자(기사) 정보
   // ★ 기사 사업자 정보 검증 (미입력 시 경고 표시)
   var bizNum=d.bizNum||'';
@@ -3363,7 +3380,7 @@ function openTaxInvoice(i){
           <td style="border:1px solid #000;padding:3px 6px;font-size:10px">성명 <strong>${x.driver||''}</strong> <span style="border:1px solid #555;padding:0 4px;font-size:8px">인</span></td>
           <td style="border:1px solid #000;background:#f0f0f0;padding:3px 6px">상&nbsp;&nbsp;&nbsp;&nbsp;호<br><span style="font-size:9px">(법 인 명)</span></td>
           <td style="border:1px solid #000;padding:3px 6px;font-weight:700">엠비티아이유한회사</td>
-          <td style="border:1px solid #000;padding:3px 6px;font-size:10px">성명 <strong>김형우</strong> <span style="border:1px solid #555;padding:0 4px;font-size:8px">인</span></td>
+          <td style="border:1px solid #000;padding:3px 6px;font-size:10px">성명 <strong>${mbtiCeoName}</strong> <span style="border:1px solid #555;padding:0 4px;font-size:8px">인</span></td>
         </tr>
         <tr>
           <td style="border:1px solid #000;background:#f0f0f0;padding:3px 6px">사 업 장<br>주&nbsp;&nbsp;&nbsp;&nbsp;소</td>
@@ -3960,7 +3977,8 @@ function dViewTax(month, driver, btn){
   // ① 기사 기기 localStorage (가장 빠름)
   try{
     var tk=JSON.parse(localStorage.getItem('mbti_drv_tax')||'{}');
-    if(tk[month]){_showTaxImg(tk[month],month);return;}
+    var tkKey=(drv||'')+'_'+month;
+    if(tk[tkKey]){_showTaxImg(tk[tkKey],month);return;}
   }catch(e){}
   // ② 메모리(onSnapshot으로 받은 미삭제 알림)
   if(window._drvNotes){
@@ -3983,7 +4001,7 @@ function dViewTax(month, driver, btn){
         if(matched){
           // 찾았으면 로컬에도 저장
           try{var tk2=JSON.parse(localStorage.getItem('mbti_drv_tax')||'{}');
-            tk2[month]=matched.img;
+            tk2[(drv||'')+'_'+month]=matched.img;
             localStorage.setItem('mbti_drv_tax',JSON.stringify(tk2));}catch(e){}
           _showTaxImg(matched.img,month);
         } else {
@@ -4013,8 +4031,13 @@ function _showTaxImg(imgUrl, month){
 
 function checkDriverNotifications(){
   if(!FB||!_db||!S.curDriver){
-    // ★ curDriver null이어도 기존 리스너는 반드시 해제
     if(window._notifUnsub){window._notifUnsub();window._notifUnsub=null;}
+    return;
+  }
+  // ★ 익명 인증 완료 후 실행 (auth 없으면 500ms 후 재시도)
+  var user=firebase.auth&&firebase.auth().currentUser;
+  if(!user){
+    setTimeout(checkDriverNotifications, 500);
     return;
   }
   if(window._notifUnsub)window._notifUnsub();
@@ -4032,7 +4055,7 @@ function checkDriverNotifications(){
         if(it.type==='tax_invoice'&&it.img&&it.month){
           try{
             var tk=JSON.parse(localStorage.getItem('mbti_drv_tax')||'{}');
-            tk[it.month]=it.img;
+            tk[(it.driver||S.curDriver||'')+'_'+it.month]=it.img;
             localStorage.setItem('mbti_drv_tax',JSON.stringify(tk));
           }catch(e){}
         }
