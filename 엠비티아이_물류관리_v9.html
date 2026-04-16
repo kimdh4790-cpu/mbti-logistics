@@ -1112,6 +1112,51 @@ function nowT(){var n=new Date();return n.getHours().toString().padStart(2,'0')+
 function nid(k){var n=JSON.parse(localStorage.getItem('mb60_nid')||'{}');var v=n[k]||1;n[k]=v+1;localStorage.setItem('mb60_nid',JSON.stringify(n));return v;}
 function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);}
 function addAct(tp,tx,dr){var a=ls('activity');a.unshift({tp,tx,dr,t:nowT(),ts:new Date().toISOString()});if(a.length>80)a=a.slice(0,80);lss('activity',a);}
+
+// ★ 중복 활동 로그 정리 (같은 기사, 같은 내용이 1시간 내 반복된 경우 첫 번째만 유지)
+function cleanActLog(){
+  var a=ls('activity');
+  var before=a.length;
+  var seen={};
+  var cleaned=a.filter(function(item){
+    // 키: 기사+타입+내용 (ts 앞 13자리 = 1시간 단위)
+    var hourKey=(item.ts||'').slice(0,13); // "2026-04-16T21"
+    var key=(item.dr||'')+'|'+(item.tp||'')+'|'+(item.tx||'').slice(0,30)+'|'+hourKey;
+    if(seen[key])return false;
+    seen[key]=true;
+    return true;
+  });
+  lss('activity',cleaned);
+  // Firebase activity 컬렉션도 정리
+  if(FB&&_db){
+    // 중복 제거된 항목들의 ts 기준으로 Firebase에서 삭제
+    var removed=a.filter(function(item){
+      var hourKey=(item.ts||'').slice(0,13);
+      var key=(item.dr||'')+'|'+(item.tp||'')+'|'+(item.tx||'').slice(0,30)+'|'+hourKey;
+      return !cleaned.some(function(c){return c.ts===item.ts&&c.tx===item.tx;});
+    });
+    if(removed.length&&_db){
+      // Firebase activity에서 중복 항목 삭제 (driver + msg + 1시간 내)
+      _db.collection('activity').get().then(function(snap){
+        var fbSeen={};
+        var toDelete=[];
+        snap.forEach(function(doc){
+          var d=doc.data();
+          var hourKey=(d.ts||'').slice(0,13);
+          var key=(d.driver||d.dr||'')+'|'+(d.type||d.tp||'')+'|'+(d.msg||d.tx||'').slice(0,30)+'|'+hourKey;
+          if(fbSeen[key]){toDelete.push(doc.id);}
+          else{fbSeen[key]=true;}
+        });
+        var batch=_db.batch();
+        toDelete.forEach(function(id){batch.delete(_db.collection('activity').doc(id));});
+        if(toDelete.length)batch.commit().then(function(){}).catch(function(){});
+      }).catch(function(){});
+    }
+  }
+  var removed2=before-cleaned.length;
+  toast('🧹 중복 로그 '+removed2+'건 정리 완료');
+  SP(S.page,null);
+}
 function updBadge(){
   var oa=ls('accidents').filter(a=>a.status==='접수중'||a.status==='처리중').length;
   var ab=document.getElementById('acc-badge');if(ab)ab.style.display=oa?'':'none';
@@ -1715,7 +1760,9 @@ function rDash(){
     <div class="kc"><div class="kl">달성률</div><div class="kv">38.4<span style="font-size:12px;font-weight:400;color:var(--text2)">%</span></div><div class="ks" style="color:var(--text2)">19.2억/50억</div></div>
   </div>
   <div class="two-col">
-    <div class="card"><div class="ch"><span class="ct">실시간 활동</span><span class="sync-badge"><span class="sdot"></span>연동</span></div>
+    <div class="card"><div class="ch"><span class="ct">실시간 활동</span><span class="sync-badge"><span class="sdot"></span>연동</span>
+      <button onclick="cleanActLog()" style="padding:3px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer">🧹 중복 정리</button>
+    </div>
       <div class="act-feed">${ac.slice(0,10).map(a=>`<div class="act-row"><span class="act-time">${a.t||''}</span><span class="act-text">${a.tx}</span><span class="act-tag">${a.tp}</span></div>`).join('')||'<p style="font-size:12px;color:var(--text3);padding:4px">활동 없음</p>'}</div>
     </div>
     <div class="card"><div class="ch"><span class="ct">시간대별 입차</span></div><div style="height:180px;position:relative"><canvas id="hchart"></canvas></div></div>
@@ -3968,13 +4015,15 @@ function dViewTax(month, driver, btn){
   }
   // ③ Firebase — driver 단일 조건으로 조회 후 클라이언트 필터
   if(FB&&_db){
-    toast('🔍 세금계산서 불러오는 중...');
+    toast('🔍 조회 중... (기사: '+drv+' / 월: '+month+')');
     _db.collection('driver_notifications')
       .where('driver','==',drv)
       .get().then(function(snap){
         var matched=null;
+        var allMonths=[];
         snap.forEach(function(doc){
           var d=doc.data();
+          allMonths.push(d.month||'?');
           if(d.type==='tax_invoice'&&d.month===month&&d.img)matched=d;
         });
         if(matched){
@@ -3983,10 +4032,20 @@ function dViewTax(month, driver, btn){
             localStorage.setItem('mbti_drv_tax',JSON.stringify(tk2));}catch(e){}
           _showTaxImg(matched.img,month);
         } else if(snap.size>0){
-          // 알림은 있는데 해당 월 세금계산서 없음
-          toast('❌ '+month+' 세금계산서가 없습니다\n(다른 월 자료 '+snap.size+'건 있음)');
+          toast('❌ '+month+' 세금계산서 없음\n전달된 월: '+allMonths.join(', '));
         } else {
-          toast('❌ 세금계산서가 아직 전달되지 않았습니다\n관리자에게 요청해 주세요');
+          // ★ 이름이 다를 수 있으니 S.curDriver로도 시도
+          if(drv!==S.curDriver&&S.curDriver){
+            _db.collection('driver_notifications').where('driver','==',S.curDriver)
+            .get().then(function(snap2){
+              var matched2=null;
+              snap2.forEach(function(doc){var d=doc.data();if(d.type==='tax_invoice'&&d.month===month&&d.img)matched2=d;});
+              if(matched2){_showTaxImg(matched2.img,month);}
+              else{toast('❌ 세금계산서 미전달\n조회명: '+drv+' / 세션명: '+S.curDriver);}
+            }).catch(function(){toast('❌ 미전달 (조회명: '+drv+')');});
+          } else {
+            toast('❌ 세금계산서 미전달\n조회 기사명: '+drv);
+          }
         }
       }).catch(function(e){
         console.error('dViewTax 오류:', e);
