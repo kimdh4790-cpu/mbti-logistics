@@ -3999,17 +3999,22 @@ function dViewTax(month, driver, btn){
           if(d.type==='tax_invoice'&&d.month===month&&d.img)matched=d;
         });
         if(matched){
-          // 찾았으면 로컬에도 저장
           try{var tk2=JSON.parse(localStorage.getItem('mbti_drv_tax')||'{}');
             tk2[(drv||'')+'_'+month]=matched.img;
             localStorage.setItem('mbti_drv_tax',JSON.stringify(tk2));}catch(e){}
           _showTaxImg(matched.img,month);
+        } else if(snap.size>0){
+          // 알림은 있는데 해당 월 세금계산서 없음
+          toast('❌ '+month+' 세금계산서가 없습니다\n(다른 월 자료 '+snap.size+'건 있음)');
         } else {
           toast('❌ 세금계산서가 아직 전달되지 않았습니다\n관리자에게 요청해 주세요');
         }
-      }).catch(function(e){toast('조회 오류: '+e.message+' (Firebase 연결 확인)');});
+      }).catch(function(e){
+        console.error('dViewTax 오류:', e);
+        toast('❌ 조회 오류: '+e.message);
+      });
   } else {
-    toast('❌ 앱이 Firebase에 연결되지 않았습니다\n깃허브 배포 버전에서 확인해 주세요');
+    toast('❌ Firebase 미연결 — 앱을 새로고침 해주세요');
   }
 }
 function _showTaxImg(imgUrl, month){
@@ -4034,12 +4039,15 @@ function checkDriverNotifications(){
     if(window._notifUnsub){window._notifUnsub();window._notifUnsub=null;}
     return;
   }
-  // ★ 익명 인증 완료 후 실행 (auth 없으면 500ms 후 재시도)
+  // ★ 익명 인증 완료 대기 (최대 10회=5초, 이후 강행)
+  if(!window._notifAuthRetry)window._notifAuthRetry=0;
   var user=firebase.auth&&firebase.auth().currentUser;
-  if(!user){
-    setTimeout(checkDriverNotifications, 500);
+  if(!user&&window._notifAuthRetry<10){
+    window._notifAuthRetry++;
+    setTimeout(checkDriverNotifications,500);
     return;
   }
+  window._notifAuthRetry=0;
   if(window._notifUnsub)window._notifUnsub();
   window._notifUnsub = _db.collection('driver_notifications')
     .where('driver','==',S.curDriver)
