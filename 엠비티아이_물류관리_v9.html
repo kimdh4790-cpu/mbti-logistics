@@ -3489,7 +3489,7 @@ function openTaxInvoice(i){
 
     <!-- 버튼 영역 -->
     <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:4px 0 8px">
-      <button onclick="sendTaxToDriver(${i})" style="padding:9px 22px;background:#0ea5e9;color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer">📤 기사 전달</button>
+      <button onclick="sendTaxToDriver('${x.driver}','${x.month}')" style="padding:9px 22px;background:#0ea5e9;color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer">📤 기사 전달</button>
       <button onclick="saveTaxInvoiceImage(${i})" style="padding:9px 22px;background:#7c3aed;color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer">🖼 PNG 저장</button>
       <button onclick="exportTaxInvoicePdf(${i})" style="padding:9px 22px;background:#16a34a;color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer">📄 엑셀 다운로드</button>
       <button onclick="window.print()" style="padding:9px 22px;background:#1d4ed8;color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer">🖨 인쇄</button>
@@ -5473,8 +5473,16 @@ function showStoredTax(drv){
 
 
 // ★ 세금계산서 기사 전달
-function sendTaxToDriver(i){
-  var x=ls('settlements')[i];
+function sendTaxToDriver(driverOrIdx, month){
+  // 인덱스 방식(구버전) 호환 처리
+  var x;
+  if(typeof driverOrIdx==='number'||!month){
+    x=ls('settlements')[driverOrIdx];
+  } else {
+    // ★ 이름+월로 직접 찾기 (인덱스 오류 완전 방지)
+    var driver=driverOrIdx;
+    x=ls('settlements').find(function(s){return s.driver===driver&&s.month===month;});
+  }
   if(!x){toast('정산 데이터 없음');return;}
   // PNG 이미지 먼저 생성 후 Firebase 저장
   var wrap=document.getElementById('tax-invoice-wrap');
