@@ -4013,44 +4013,35 @@ function dViewTax(month, driver, btn){
     });
     if(found&&found.img){_showTaxImg(found.img,month);return;}
   }
-  // ③ Firebase — driver 단일 조건으로 조회 후 클라이언트 필터
+  // ③ Firebase — 고정 키 직접 조회 (가장 확실한 방법)
   if(FB&&_db){
-    toast('🔍 조회 중... (기사: '+drv+' / 월: '+month+')');
-    _db.collection('driver_notifications')
-      .where('driver','==',drv)
-      .get().then(function(snap){
-        var matched=null;
-        var allMonths=[];
-        snap.forEach(function(doc){
-          var d=doc.data();
-          allMonths.push(d.month||'?');
-          if(d.type==='tax_invoice'&&d.month===month&&d.img)matched=d;
-        });
-        if(matched){
+    var docKey=(drv+'_'+month).replace(/\s/g,'_').replace(/[\/\\'"]/g,'');
+    toast('🔍 세금계산서 불러오는 중...');
+    _db.collection('driver_notifications').doc(docKey).get()
+    .then(function(doc){
+      if(doc.exists){
+        var d=doc.data();
+        if(d.img){
           try{var tk2=JSON.parse(localStorage.getItem('mbti_drv_tax')||'{}');
-            tk2[(drv||'')+'_'+month]=matched.img;
+            tk2[(drv||'')+'_'+month]=d.img;
             localStorage.setItem('mbti_drv_tax',JSON.stringify(tk2));}catch(e){}
-          _showTaxImg(matched.img,month);
-        } else if(snap.size>0){
-          toast('❌ '+month+' 세금계산서 없음\n전달된 월: '+allMonths.join(', '));
+          _showTaxImg(d.img,month);
         } else {
-          // ★ 이름이 다를 수 있으니 S.curDriver로도 시도
-          if(drv!==S.curDriver&&S.curDriver){
-            _db.collection('driver_notifications').where('driver','==',S.curDriver)
-            .get().then(function(snap2){
-              var matched2=null;
-              snap2.forEach(function(doc){var d=doc.data();if(d.type==='tax_invoice'&&d.month===month&&d.img)matched2=d;});
-              if(matched2){_showTaxImg(matched2.img,month);}
-              else{toast('❌ 세금계산서 미전달\n조회명: '+drv+' / 세션명: '+S.curDriver);}
-            }).catch(function(){toast('❌ 미전달 (조회명: '+drv+')');});
-          } else {
-            toast('❌ 세금계산서 미전달\n조회 기사명: '+drv);
-          }
+          toast('❌ 이미지 데이터 없음 — 관리자에게 재전달 요청');
         }
-      }).catch(function(e){
-        console.error('dViewTax 오류:', e);
-        toast('❌ 조회 오류: '+e.message);
-      });
+      } else {
+        // 혹시 구버전 add()로 저장된 경우 쿼리 fallback
+        _db.collection('driver_notifications').where('driver','==',drv).get()
+        .then(function(snap){
+          var matched=null;
+          snap.forEach(function(d2){var dd=d2.data();if(dd.type==='tax_invoice'&&dd.month===month&&dd.img)matched=dd;});
+          if(matched){_showTaxImg(matched.img,month);}
+          else{toast('❌ 세금계산서가 아직 전달되지 않았습니다\n관리자에게 요청해 주세요');}
+        }).catch(function(){toast('❌ 세금계산서 미전달 — 관리자에게 요청해 주세요');});
+      }
+    }).catch(function(e){
+      toast('❌ 조회 오류: '+e.message);
+    });
   } else {
     toast('❌ Firebase 미연결 — 앱을 새로고침 해주세요');
   }
@@ -5502,7 +5493,9 @@ function sendTaxToDriver(i){
         if(idx2>=0)st[x.driver][idx2]=note; else st[x.driver].push(note);
         localStorage.setItem('mbti_tax_store',JSON.stringify(st));}catch(e){}
       if(FB&&_db){
-        _db.collection('driver_notifications').add(note)
+        // ★ 기사명_월 고정 키로 저장 (쿼리 불일치 방지)
+        var docKey=(x.driver+'_'+x.month).replace(/\s/g,'_').replace(/[\/\\'"]/g,'');
+        _db.collection('driver_notifications').doc(docKey).set(note)
         .then(function(){toast('📤 '+x.driver+' 기사님 세금계산서 전달 완료!');})
         .catch(function(err){toast('❌ 전달 오류: '+err.message);});
       } else {
