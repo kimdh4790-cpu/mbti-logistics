@@ -591,17 +591,17 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
       <nav class="snav">
         <!-- 현황 그룹 -->
         <div class="ns-grp" onclick="toggleGrp('grp-status')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none">
-          <span>📊 현황</span><span id="grp-status-arrow" style="font-size:10px">▼</span>
+          <span>📊 현황</span><span id="grp-status-arrow" style="font-size:10px">▶</span>
         </div>
-        <div id="grp-status" style="overflow:hidden">
+        <div id="grp-status" style="overflow:hidden;max-height:0px">
           <div class="ni on" onclick="SP('dash',this)">📊 대시보드</div>
           <div class="ni" onclick="SP('sync',this)">🔄 기사 연동</div>
         </div>
         <!-- 운행 그룹 -->
         <div class="ns-grp" onclick="toggleGrp('grp-ops')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none">
-          <span>🚚 운행</span><span id="grp-ops-arrow" style="font-size:10px">▼</span>
+          <span>🚚 운행</span><span id="grp-ops-arrow" style="font-size:10px">▶</span>
         </div>
-        <div id="grp-ops" style="overflow:hidden">
+        <div id="grp-ops" style="overflow:hidden;max-height:0px">
           <div class="ni" onclick="SP('schedule_admin',this)">📅 근무표 관리</div>
           <div class="ni" onclick="SP('memo',this)">📝 메모 달력</div>
           <div class="ni" onclick="SP('entry',this)">🚪 입차 현황</div>
@@ -612,9 +612,9 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
         </div>
         <!-- 재무 그룹 -->
         <div class="ns-grp" onclick="toggleGrp('grp-fin')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none">
-          <span>💰 재무</span><span id="grp-fin-arrow" style="font-size:10px">▼</span>
+          <span>💰 재무</span><span id="grp-fin-arrow" style="font-size:10px">▶</span>
         </div>
-        <div id="grp-fin" style="overflow:hidden">
+        <div id="grp-fin" style="overflow:hidden;max-height:0px">
           <div class="ni" onclick="SP('settle',this)">💰 정산서 관리</div>
           <div class="ni" onclick="SP('drivers',this)">👤 기사 관리 <span id="new-badge" style="display:none;background:var(--amber);color:#fff;font-size:9px;padding:1px 5px;border-radius:999px;margin-left:2px">대기</span></div>
           <div class="ni" onclick="SP('archive',this)">📋 3개월 기록 보관소</div>
@@ -964,9 +964,54 @@ var _db=null,_st=null,FB=false;
 function ls(k){return JSON.parse(localStorage.getItem('mb60_'+k)||'[]');}
 function lss(k,v){localStorage.setItem('mb60_'+k,JSON.stringify(v));}
 async function fbW(col,d){
-  if(FB&&_db){var r=await _db.collection(col).add({...d,ts:firebase.firestore.FieldValue.serverTimestamp()});d.fbId=r.id;}
-  var a=ls(col);d.id=d.id||(col+'_'+Date.now());d.localTs=new Date().toISOString();
-  a.unshift(d);if(a.length>300)a=a.slice(0,300);lss(col,a);
+  // 로컬 먼저 저장 (오프라인/오류 대비)
+  d.id=d.id||(col+'_'+Date.now());d.localTs=new Date().toISOString();
+  var a=ls(col);a.unshift(d);if(a.length>300)a=a.slice(0,300);lss(col,a);
+  // Firebase 쓰기 (최대 3회 재시도)
+  if(FB&&_db){
+    var attempt=0;
+    var tryWrite=async function(){
+      try{
+        var r=await _db.collection(col).add({...d,ts:firebase.firestore.FieldValue.serverTimestamp()});
+        d.fbId=r.id;
+        // fbId를 로컬에도 반영
+        var a2=ls(col);var idx=a2.findIndex(function(x){return x.id===d.id;});
+        if(idx>=0){a2[idx].fbId=r.id;lss(col,a2);}
+      }catch(e){
+        attempt++;
+        if(attempt<3){
+          // 지수 백오프: 1초, 2초, 4초
+          await new Promise(function(res){setTimeout(res,1000*Math.pow(2,attempt-1));});
+          return tryWrite();
+        }
+        // 3회 실패 시 pending 큐에 저장 (재연결 시 자동 재전송)
+        var pq=JSON.parse(localStorage.getItem('mb60_pending_writes')||'[]');
+        pq.push({col:col,d:d,failedAt:new Date().toISOString()});
+        if(pq.length>100)pq=pq.slice(-100);
+        localStorage.setItem('mb60_pending_writes',JSON.stringify(pq));
+        console.warn('[fbW] '+col+' 쓰기 실패, pending 저장:', e.message);
+      }
+    };
+    tryWrite();
+  }
+}
+// pending 큐 재전송 (Firebase 재연결 시 호출)
+async function flushPendingWrites(){
+  if(!FB||!_db)return;
+  var pq=JSON.parse(localStorage.getItem('mb60_pending_writes')||'[]');
+  if(!pq.length)return;
+  var success=[];
+  for(var i=0;i<pq.length;i++){
+    try{
+      await _db.collection(pq[i].col).add({...pq[i].d,ts:firebase.firestore.FieldValue.serverTimestamp()});
+      success.push(i);
+    }catch(e){break;}
+  }
+  if(success.length){
+    pq=pq.filter(function(_,idx){return success.indexOf(idx)<0;});
+    localStorage.setItem('mb60_pending_writes',JSON.stringify(pq));
+    toast('📡 오프라인 데이터 '+success.length+'건 재전송 완료');
+  }
 }
 
 // ── v6.1 이미지 압축 (1MB 이하 자동 리사이즈, Firebase 한도 절약)
@@ -1014,29 +1059,26 @@ async function compressImage(file) {
 
 async function upFile(file,path){
   if(!file)return null;
-  // ★ v9.2: 즉시 base64로 저장 → UI 즉각 반응, 백그라운드 업로드
   if(file.type&&file.type.startsWith('image/')){
-    // 1) 우선 압축 base64 즉시 반환 (화면에 바로 표시)
+    var uniqueKey='upf_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
     var compressed=file;
     try{compressed=await compressImage(file);}catch(e){}
     var b64=await new Promise(function(res){
       var fr=new FileReader();fr.onload=function(e){res(e.target.result);};fr.readAsDataURL(compressed);
     });
-    // 2) Firebase 백그라운드 업로드 (완료 시 URL 교체)
+    // b64에 uniqueKey 태그 삽입 (data URL 구조 유지하면서 식별 가능하게)
     if(FB&&_st){
       (async function(){
         try{
           var ref=_st.ref(path+'/'+Date.now()+'_'+(file.name||'photo.jpg'));
           await ref.put(compressed);
           var url=await ref.getDownloadURL();
-          // localStorage의 base64를 Firebase URL로 자동 교체
-          _replaceB64WithUrl(b64,url);
+          _replaceB64WithUrl(b64,url,uniqueKey);
         }catch(e){console.warn('백그라운드 업로드 실패:',e);}
       })();
     }
-    return b64; // 즉시 base64 반환 → UI 블로킹 없음
+    return b64;
   }
-  // 비이미지 파일: Firebase 직접 업로드
   if(FB&&_st){try{
     var r=_st.ref(path+'/'+Date.now()+'_'+(file.name||'file'));
     await r.put(file);
@@ -1045,24 +1087,27 @@ async function upFile(file,path){
   return null;
 }
 // 백그라운드 업로드 완료 후 저장된 base64를 URL로 교체
-function _replaceB64WithUrl(b64,url){
+// 백그라운드 업로드 완료 후 저장된 base64를 URL로 교체
+function _replaceB64WithUrl(b64,url,uniqueKey){
+  // uniqueKey(타임스탬프)로 매칭 → base64 앞자리 충돌 방지
+  if(!uniqueKey)return;
   try{
     var keys=['drivers','settlements'];
     keys.forEach(function(k){
       var arr=ls(k); var changed=false;
       arr=arr.map(function(item){
         var s=JSON.stringify(item);
-        if(s.includes(b64.slice(0,50))){
+        if(s.includes(uniqueKey)){
           changed=true;
+          // uniqueKey를 포함하는 base64 전체를 url로 교체
           return JSON.parse(s.replace(new RegExp(b64.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g'),url));
         }
         return item;
       });
       if(changed){lss(k,arr);}
     });
-    // adminInfo도 확인
     var ai=localStorage.getItem('mbti_admin_info')||'{}';
-    if(ai.includes(b64.slice(0,50))){
+    if(ai.includes(uniqueKey)){
       localStorage.setItem('mbti_admin_info',ai.replace(new RegExp(b64.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g'),url));
     }
   }catch(e){}
@@ -1324,7 +1369,7 @@ function doLogin(){
       localStorage.setItem('mbti_admin_info',JSON.stringify(info));
       localStorage.setItem('mbti_session',JSON.stringify({mode:'admin',id:sId,name:aName,ts:Date.now(),exp:Date.now()+28800000}));
       hide(['login-screen']); show('app');
-      SP('dash',null); updBadge(); updFbUI();
+      SP('dash',null); updBadge(); updFbUI(); initGrps();
       document.getElementById('tbdate').textContent=new Date().toLocaleDateString('ko-KR');
       startListeners();
       setTimeout(archiveAndPurge,5000); // 로그인 5초 후 자동 아카이빙
@@ -1698,103 +1743,246 @@ function rSync(){
   }).join('')||'<p style="font-size:13px;color:var(--text3);padding:10px">활성 기사 없음</p>';
 }
 
+// ══ 관리자 날짜 필터 공통 헬퍼 ══
+function _admCut(period){
+  var d=new Date();
+  if(period==='yesterday'){d.setDate(d.getDate()-1);return d.toISOString().slice(0,10);}
+  if(period==='week'){d.setDate(d.getDate()-6);return d.toISOString().slice(0,10);}
+  if(period==='month'){d.setDate(d.getDate()-29);return d.toISOString().slice(0,10);}
+  return today(); // today
+}
+function _admDateTabs(key, active){
+  var tabs=[
+    {v:'today',l:'오늘'},
+    {v:'yesterday',l:'어제~오늘'},
+    {v:'week',l:'7일'},
+    {v:'month',l:'30일'}
+  ];
+  return '<div style="display:flex;gap:5px;padding:8px 0 6px;flex-wrap:wrap">'
+    +tabs.map(function(t){
+      var on=t.v===active;
+      return '<button onclick="window._adm_'+key+'_period=\''+t.v+'\';SP(S.page,null)" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(on?'var(--blue)':'var(--border)')+';background:'+(on?'var(--blue)':'var(--bg)')+';color:'+(on?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">'+t.l+'</button>';
+    }).join('')
+    +'</div>';
+}
+function _admGroupByDate(rows){
+  var map={};
+  rows.forEach(function(r){
+    var d=r.date||r.month||'—';
+    if(!map[d])map[d]=[];
+    map[d].push(r);
+  });
+  return Object.keys(map).sort(function(a,b){return b.localeCompare(a);}).map(function(d){return{date:d,rows:map[d]};});
+}
+function _admDateGroup(date, cnt, innerHTML){
+  var gid='adg_'+date.replace(/-/g,'');
+  var isToday=date===today();
+  return '<div style="margin-bottom:8px">'
+    +'<div onclick="var b=document.getElementById(\''+gid+'\');var a=document.getElementById(\''+gid+'_a\');if(b){b.style.display=b.style.display===\'none\'?\'block\':\'none\';a.textContent=b.style.display===\'none\'?\'▼\':\'▲\'}" style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--bg3);border-radius:var(--r);cursor:pointer;border:1px solid var(--border)">'
+    +'<span style="font-size:13px;font-weight:700;color:'+(isToday?'var(--blue)':'var(--text)')+'">'+date+(isToday?' <span style="font-size:10px;background:var(--blue);color:#fff;padding:1px 6px;border-radius:100px;margin-left:4px">오늘</span>':'')+'</span>'
+    +'<span style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;color:var(--text3)">'+cnt+'건</span><span id="'+gid+'_a" style="font-size:11px;color:var(--text3)">▼</span></span>'
+    +'</div>'
+    +'<div id="'+gid+'" style="display:none">'+innerHTML+'</div>'
+    +'</div>';
+}
 function rEntry(){
-  var e=ls('entries').filter(x=>x.date===today());
-  return `<div class="card"><div class="ch"><span class="ct">입차 기록 (${e.length}건)</span></div>
-  <table class="tbl"><thead><tr><th>기사</th><th>유형</th><th>회사</th><th>시각</th><th>온도</th><th>사진</th></tr></thead><tbody>
-  ${e.map(x=>`<tr>
-    <td><strong>${x.driver}</strong></td>
-    <td><span class="badge ${x.type==='쿠팡'?'b-coral':x.type==='컬리'?'b-purple':x.type==='간선'?'b-blue':'b-wait'}">${x.type}</span></td>
-    <td style="font-size:11px">${x.company||'—'}</td>
-    <td>${x.time}</td>
-    <td style="font-weight:600;color:${x.temp==='상온'?'var(--amber)':parseFloat(x.temp)<=-18?'var(--teal)':'var(--red)'}">${x.temp}${x.temp==='상온'?'':' °C'}</td>
-    <td class="thumb-row">${Object.entries(x.photos||{}).filter(([k,v])=>v&&v.length>5).map(([k,v])=>`<img class="thumb" src="${v}" onclick="openIV('${v}','입차사진')" title="${k}">`).join('')||'—'}</td>
-  </tr>`).join('')||'<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:12px">오늘 입차 없음</td></tr>'}
-  </tbody></table></div>`;
+  var period=window._adm_entry_period||'today';
+  var cut=_admCut(period);
+  var e=ls('entries').filter(x=>(period==='today'?x.date===today():x.date>=cut));
+  var tabHTML=_admDateTabs('entry',period);
+  // 날짜별 그룹
+  var grouped=_admGroupByDate(e);
+  var bodyHTML=grouped.length?grouped.map(function(g){
+    var rows=g.rows.map(x=>`<tr>
+      <td><strong>${x.driver}</strong></td>
+      <td><span class="badge ${x.type==='쿠팡'?'b-coral':x.type==='컬리'?'b-purple':x.type==='간선'?'b-blue':'b-wait'}">${x.type}</span></td>
+      <td style="font-size:11px">${x.company||'—'}</td>
+      <td>${x.time}</td>
+      <td style="font-weight:600;color:${x.temp==='상온'?'var(--amber)':parseFloat(x.temp)<=-18?'var(--teal)':'var(--red)'}">${x.temp}${x.temp==='상온'?'':' °C'}</td>
+      <td class="thumb-row">${Object.entries(x.photos||{}).filter(([k,v])=>v&&v.length>5).map(([k,v])=>`<img class="thumb" src="${v}" onclick="openIV('${v}','입차사진')" title="${k}">`).join('')||'—'}</td>
+    </tr>`).join('');
+    return _admDateGroup(g.date,g.rows.length,`<table class="tbl"><thead><tr><th>기사</th><th>유형</th><th>회사</th><th>시각</th><th>온도</th><th>사진</th></tr></thead><tbody>${rows}</tbody></table>`);
+  }).join(''):'<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">해당 기간 입차 없음</div>';
+  return `<div class="card"><div class="ch"><span class="ct">입차 기록 (${e.length}건)</span></div>${tabHTML}${bodyHTML}</div>`;
 }
 
 function rDeliveryTaxi(){
-  var d=ls('deliveries').filter(x=>x.date===today()&&x.category!=='간선');
-  return `<div class="card"><div class="ch"><span class="ct">📦 운행 현황 (${d.length}건)</span></div>
-  <table class="tbl"><thead><tr><th>기사</th><th>화주사</th><th>배송</th><th>반품</th><th>프레쉬</th><th>완료</th><th>사진</th></tr></thead><tbody>
-  ${d.map(x=>`<tr>
-    <td><strong>${x.driver}</strong></td>
-    <td><span class="badge ${x.client==='쿠팡'?'b-coral':x.client==='컬리'?'b-purple':'b-wait'}">${x.client||x.category}</span></td>
-    <td style="font-weight:700;color:var(--teal)">${x.dcnt||0}</td>
-    <td>${x.rcnt||0}</td>
-    <td style="color:var(--purple)">${x.fresh||0}</td>
-    <td>${x.completedAt||'—'}</td>
-    <td class="thumb-row">${Object.values(x.photos||{}).filter(v=>v&&v.length>5).map(v=>`<img class="thumb" src="${v}" onclick="openIV('${v}','배송완료사진')">`).join('')||'—'}</td>
-  </tr>`).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:12px">오늘 택배 데이터 없음</td></tr>'}
-  </tbody></table></div>`;
+  var period=window._adm_deliv_period||'today';
+  var cut=_admCut(period);
+  var d=ls('deliveries').filter(x=>x.category!=='간선'&&(period==='today'?x.date===today():x.date>=cut));
+  var tabHTML=_admDateTabs('deliv',period);
+  var grouped=_admGroupByDate(d);
+  var bodyHTML=grouped.length?grouped.map(function(g){
+    var rows=g.rows.map(x=>`<tr>
+      <td><strong>${x.driver}</strong></td>
+      <td><span class="badge ${x.client==='쿠팡'?'b-coral':x.client==='컬리'?'b-purple':'b-wait'}">${x.client||x.category}</span></td>
+      <td style="font-weight:700;color:var(--teal)">${x.dcnt||0}</td>
+      <td>${x.rcnt||0}</td>
+      <td style="color:var(--purple)">${x.fresh||0}</td>
+      <td>${x.completedAt||'—'}</td>
+      <td class="thumb-row">${Object.values(x.photos||{}).filter(v=>v&&v.length>5).map(v=>`<img class="thumb" src="${v}" onclick="openIV('${v}','배송완료사진')">`).join('')||'—'}</td>
+    </tr>`).join('');
+    var totD=g.rows.reduce(function(s,x){return s+(x.dcnt||0);},0);
+    var totR=g.rows.reduce(function(s,x){return s+(x.rcnt||0);},0);
+    var summary='<div style="font-size:11px;color:var(--text2);padding:4px 0 6px">배송 합계 <strong style="color:var(--teal)">'+totD+'건</strong> · 반품 <strong>'+totR+'건</strong></div>';
+    return _admDateGroup(g.date,g.rows.length,summary+'<table class="tbl"><thead><tr><th>기사</th><th>화주사</th><th>배송</th><th>반품</th><th>프레쉬</th><th>완료</th><th>사진</th></tr></thead><tbody>'+rows+'</tbody></table>');
+  }).join(''):'<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">해당 기간 데이터 없음</div>';
+  return `<div class="card"><div class="ch"><span class="ct">📦 운행 현황 (${d.length}건)</span></div>${tabHTML}${bodyHTML}</div>`;
 }
 function rDeliveryLine(){
-  var d=ls('deliveries').filter(x=>x.date===today()&&x.category==='간선');
-  return `<div class="card"><div class="ch"><span class="ct">🚚 간선 현황 (${d.length}건)</span></div>
-  <table class="tbl"><thead><tr><th>기사</th><th>구간</th><th>출발</th><th>완료</th></tr></thead><tbody>
-  ${d.map(x=>`<tr>
-    <td><strong>${x.driver}</strong></td>
-    <td style="font-size:11px;font-weight:600">${x.route||'—'}</td>
-    <td style="font-size:11px">${x.departTime||x.completedAt||'—'}</td>
-    <td>${x.completedAt||'—'}</td>
-  </tr>`).join('')||'<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:12px">오늘 간선 데이터 없음</td></tr>'}
-  </tbody></table></div>`;
+  var period=window._adm_deliv_period||'today';
+  var cut=_admCut(period);
+  var d=ls('deliveries').filter(x=>x.category==='간선'&&(period==='today'?x.date===today():x.date>=cut));
+  var grouped=_admGroupByDate(d);
+  var bodyHTML=grouped.length?grouped.map(function(g){
+    var rows=g.rows.map(x=>`<tr>
+      <td><strong>${x.driver}</strong></td>
+      <td style="font-size:11px;font-weight:600">${x.route||'—'}</td>
+      <td style="font-size:11px">${x.departTime||x.completedAt||'—'}</td>
+      <td>${x.completedAt||'—'}</td>
+    </tr>`).join('');
+    return _admDateGroup(g.date,g.rows.length,'<table class="tbl"><thead><tr><th>기사</th><th>구간</th><th>출발</th><th>완료</th></tr></thead><tbody>'+rows+'</tbody></table>');
+  }).join(''):'<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">해당 기간 간선 데이터 없음</div>';
+  return `<div class="card"><div class="ch"><span class="ct">🚚 간선 현황 (${d.length}건)</span></div>${bodyHTML}</div>`;
 }
 function rDelivery(){
-  var d=ls('deliveries').filter(x=>x.date===today());
-  return `<div class="card"><div class="ch"><span class="ct">배송·간선 현황 (${d.length}건)</span></div>
-  <table class="tbl"><thead><tr><th>기사</th><th>화주사</th><th>배송</th><th>반품</th><th>프레쉬</th><th>완료</th><th>사진</th></tr></thead><tbody>
-  ${d.map(x=>`<tr>
-    <td><strong>${x.driver}</strong></td>
-    <td><span class="badge ${x.client==='쿠팡'?'b-coral':x.client==='컬리'?'b-purple':x.client==='간선'?'b-blue':'b-wait'}">${x.client||x.category}</span></td>
-    <td style="font-weight:700;color:var(--teal)">${x.dcnt||0}</td>
-    <td>${x.rcnt||0}</td>
-    <td style="color:var(--purple)">${x.fresh||0}</td>
-    <td>${x.completedAt||'—'}</td>
-    <td class="thumb-row">${Object.values(x.photos||{}).filter(v=>v&&v.length>5).map(v=>`<img class="thumb" src="${v}" onclick="openIV('${v}','배송완료사진')">`).join('')||'—'}</td>
-  </tr>`).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:12px">오늘 데이터 없음</td></tr>'}
-  </tbody></table></div>`;
+  var period=window._adm_deliv_period||'today';
+  var cut=_admCut(period);
+  var d=ls('deliveries').filter(x=>(period==='today'?x.date===today():x.date>=cut));
+  var tabHTML=_admDateTabs('deliv',period);
+  var grouped=_admGroupByDate(d);
+  var bodyHTML=grouped.length?grouped.map(function(g){
+    var rows=g.rows.map(x=>`<tr>
+      <td><strong>${x.driver}</strong></td>
+      <td><span class="badge ${x.client==='쿠팡'?'b-coral':x.client==='컬리'?'b-purple':x.client==='간선'?'b-blue':'b-wait'}">${x.client||x.category}</span></td>
+      <td style="font-weight:700;color:var(--teal)">${x.dcnt||0}</td>
+      <td>${x.rcnt||0}</td>
+      <td style="color:var(--purple)">${x.fresh||0}</td>
+      <td>${x.completedAt||'—'}</td>
+      <td class="thumb-row">${Object.values(x.photos||{}).filter(v=>v&&v.length>5).map(v=>`<img class="thumb" src="${v}" onclick="openIV('${v}','배송완료사진')">`).join('')||'—'}</td>
+    </tr>`).join('');
+    var totD=g.rows.reduce(function(s,x){return s+(x.dcnt||0);},0);
+    var totR=g.rows.reduce(function(s,x){return s+(x.rcnt||0);},0);
+    var summary='<div style="font-size:11px;color:var(--text2);padding:4px 0 6px">배송 합계 <strong style="color:var(--teal)">'+totD+'건</strong> · 반품 <strong>'+totR+'건</strong></div>';
+    return _admDateGroup(g.date,g.rows.length,summary+'<table class="tbl"><thead><tr><th>기사</th><th>화주사</th><th>배송</th><th>반품</th><th>프레쉬</th><th>완료</th><th>사진</th></tr></thead><tbody>'+rows+'</tbody></table>');
+  }).join(''):'<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">해당 기간 데이터 없음</div>';
+  return `<div class="card"><div class="ch"><span class="ct">배송·간선 현황 (${d.length}건)</span></div>${tabHTML}${bodyHTML}</div>`;
+}
+
+function rDeliveryLine(){
+  var period=window._adm_line_period||'today';
+  var cut=_admCut(period);
+  var d=ls('deliveries').filter(x=>x.category==='간선'&&(period==='today'?x.date===today():x.date>=cut));
+  var tabHTML=_admDateTabs('line',period);
+  var grouped=_admGroupByDate(d);
+  var bodyHTML=grouped.length?grouped.map(function(g){
+    var rows=g.rows.map(x=>`<tr>
+      <td><strong>${x.driver}</strong></td>
+      <td style="font-size:11px;font-weight:600">${x.route||'—'}</td>
+      <td style="font-size:11px">${x.departTime||x.completedAt||'—'}</td>
+      <td>${x.completedAt||'—'}</td>
+    </tr>`).join('');
+    return _admDateGroup(g.date,g.rows.length,'<table class="tbl"><thead><tr><th>기사</th><th>구간</th><th>출발</th><th>완료</th></tr></thead><tbody>'+rows+'</tbody></table>');
+  }).join(''):'<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">해당 기간 간선 데이터 없음</div>';
+  return `<div class="card"><div class="ch"><span class="ct">🚚 간선 현황 (${d.length}건)</span></div>${tabHTML}${bodyHTML}</div>`;
 }
 
 function rAcc(){
-  var a=ls('accidents');
-  return `<div class="card"><div class="ch"><span class="ct">사고 접수 (${a.length}건)</span></div>
-  ${!a.length?'<p style="font-size:13px;color:var(--text3);padding:10px">접수 없음</p>':
-  `<table class="tbl"><thead><tr><th>기사</th><th>유형</th><th>내용</th><th>사진</th><th>상태</th><th></th></tr></thead><tbody>
-  ${a.map((x,i)=>`<tr>
-    <td><strong>${x.driver}</strong></td>
-    <td style="font-size:11px">${x.type}</td>
-    <td style="font-size:11px;max-width:120px">${x.description}</td>
-    <td class="thumb-row">${Object.values(x.photos||{}).filter(v=>v&&v.length>5).map(v=>`<img class="thumb" style="border-color:var(--red)" src="${v}" onclick="openIV('${v}','사고현장')">`).join('')||'—'}</td>
-    <td><span class="badge ${x.status==='접수중'?'b-red':x.status==='처리중'?'b-wait':'b-done'}">${x.status}</span></td>
-    <td><button class="btn btn-sm" onclick="nextAccSt(${i})">변경</button></td>
-  </tr>`).join('')}
-  </tbody></table>`}</div>`;
+  var period=window._adm_acc_period||'today';
+  var cut=_admCut(period);
+  var a=ls('accidents').filter(x=>period==='today'?x.date===today():x.date>=cut);
+  var tabHTML=_admDateTabs('acc',period);
+  var grouped=_admGroupByDate(a);
+  var bodyHTML=grouped.length?grouped.map(function(g){
+    var rows=g.rows.map(function(x,_){
+      var origIdx=ls('accidents').findIndex(function(o){return o.id===x.id||o.fbId===x.fbId;});
+      return `<tr>
+        <td><strong>${x.driver}</strong></td>
+        <td style="font-size:11px">${x.type}</td>
+        <td style="font-size:11px;max-width:120px">${x.description}</td>
+        <td class="thumb-row">${Object.values(x.photos||{}).filter(v=>v&&v.length>5).map(v=>`<img class="thumb" style="border-color:var(--red)" src="${v}" onclick="openIV('${v}','사고현장')">`).join('')||'—'}</td>
+        <td><span class="badge ${x.status==='접수중'?'b-red':x.status==='처리중'?'b-wait':'b-done'}">${x.status}</span></td>
+        <td><button class="btn btn-sm" onclick="nextAccSt(${origIdx})">변경</button></td>
+      </tr>`;
+    }).join('');
+    return _admDateGroup(g.date,g.rows.length,'<table class="tbl"><thead><tr><th>기사</th><th>유형</th><th>내용</th><th>사진</th><th>상태</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>');
+  }).join(''):'<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">해당 기간 사고 없음</div>';
+  return `<div class="card"><div class="ch"><span class="ct">사고 접수 (${a.length}건)</span></div>${tabHTML}${bodyHTML}</div>`;
 }
-function nextAccSt(i){var a=ls('accidents');var o=['접수중','처리중','완료'];a[i].status=o[(o.indexOf(a[i].status)+1)%o.length];lss('accidents',a);SP('accident',null);toast('상태: '+a[i].status);}
 
 function rTemp(){
-  var l=ls('tempLogs'), w=l.filter(x=>x.temp!=='상온'&&parseFloat(x.temp)>-18);
-  return `${w.length?`<div style="background:var(--red-l);border:1px solid var(--red);border-radius:var(--r);padding:9px 13px;margin-bottom:10px;font-size:13px;color:var(--red)">⚠ 온도 이상 ${w.length}건</div>`:''}
-  <div class="card"><div class="ch"><span class="ct">온도 기록 (${l.length}건)</span></div>
-  <table class="tbl"><thead><tr><th>기사</th><th>시각</th><th>온도</th><th>위치</th><th>사진</th><th>메모</th></tr></thead><tbody>
-  ${l.map(x=>`<tr>
-    <td><strong>${x.driver}</strong></td><td>${x.time}</td>
-    <td style="font-weight:700;color:${x.temp==='상온'?'var(--amber)':parseFloat(x.temp)<=-18?'var(--teal)':'var(--red)'}">${x.temp}${x.temp==='상온'?'':' °C'}</td>
-    <td>${x.location}</td>
-    <td>${x.photoUrl&&x.photoUrl.length>5?`<img class="thumb" src="${x.photoUrl}" onclick="openIV('${x.photoUrl}','온도기록')">`:'—'}</td>
-    <td style="font-size:11px;color:var(--text2)">${x.note||'—'}</td>
-  </tr>`).join('')||'<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:12px">데이터 없음</td></tr>'}
-  </tbody></table></div>`;
+  var period=window._adm_temp_period||'today';
+  var cut=_admCut(period);
+  var l=ls('tempLogs').filter(x=>period==='today'?x.date===today():x.date>=cut);
+  var w=l.filter(x=>x.temp!=='상온'&&parseFloat(x.temp)>-18);
+  var tabHTML=_admDateTabs('temp',period);
+  var grouped=_admGroupByDate(l);
+  var bodyHTML=grouped.length?grouped.map(function(g){
+    var warnCnt=g.rows.filter(x=>x.temp!=='상온'&&parseFloat(x.temp)>-18).length;
+    var rows=g.rows.map(x=>`<tr>
+      <td><strong>${x.driver}</strong></td><td>${x.time}</td>
+      <td style="font-weight:700;color:${x.temp==='상온'?'var(--amber)':parseFloat(x.temp)<=-18?'var(--teal)':'var(--red)'}">${x.temp}${x.temp==='상온'?'':' °C'}</td>
+      <td>${x.location}</td>
+      <td>${x.photoUrl&&x.photoUrl.length>5?`<img class="thumb" src="${x.photoUrl}" onclick="openIV('${x.photoUrl}','온도기록')">`:'—'}</td>
+      <td style="font-size:11px;color:var(--text2)">${x.note||'—'}</td>
+    </tr>`).join('');
+    var warn=warnCnt>0?'<div style="font-size:11px;color:var(--red);padding:3px 0 5px">⚠ 이상온도 '+warnCnt+'건</div>':'';
+    return _admDateGroup(g.date,g.rows.length,warn+'<table class="tbl"><thead><tr><th>기사</th><th>시각</th><th>온도</th><th>위치</th><th>사진</th><th>메모</th></tr></thead><tbody>'+rows+'</tbody></table>');
+  }).join(''):'<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">해당 기간 온도 기록 없음</div>';
+  return `${w.length?`<div style="background:var(--red-l);border:1px solid var(--red);border-radius:var(--r);padding:9px 13px;margin-bottom:10px;font-size:13px;color:var(--red)">⚠ 이상온도 ${w.length}건 (기준 미달: -18°C 초과)</div>`:''}
+  <div class="card"><div class="ch"><span class="ct">온도 기록 (${l.length}건)</span></div>${tabHTML}${bodyHTML}</div>`;
 }
 
 function rSettle(){
   var s=ls('settlements');
-  return `<div class="card">
+  var filterMonth=window._adm_settle_month||'all';
+  // 월 목록 추출
+  var months=[...new Set(s.map(x=>x.month).filter(Boolean))].sort(function(a,b){return b.localeCompare(a);});
+  var monthTabs='<div style="display:flex;gap:5px;padding:8px 0 6px;flex-wrap:wrap">'
+    +'<button onclick="window._adm_settle_month=\'all\';SP(S.page,null)" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(filterMonth==='all'?'var(--blue)':'var(--border)')+';background:'+(filterMonth==='all'?'var(--blue)':'var(--bg)')+';color:'+(filterMonth==='all'?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">전체</button>'
+    +months.map(function(m){
+      var on=m===filterMonth;
+      return '<button onclick="window._adm_settle_month=\''+m+'\';SP(S.page,null)" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(on?'var(--blue)':'var(--border)')+';background:'+(on?'var(--blue)':'var(--bg)')+';color:'+(on?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">'+m+'</button>';
+    }).join('')
+    +'</div>';
+  var filtered=filterMonth==='all'?s:s.filter(function(x){return x.month===filterMonth;});
+  // 월별 그룹
+  var mmap={};
+  filtered.forEach(function(x,origIdx){x._origIdx=s.indexOf(x);if(!mmap[x.month||'—'])mmap[x.month||'—']=[];mmap[x.month||'—'].push(x);});
+  var mGroups=Object.keys(mmap).sort(function(a,b){return b.localeCompare(a);});
+  var tableBody=mGroups.map(function(mo){
+    var gid='sg_'+mo.replace(/-/g,'');
+    var gRows=mmap[mo];
+    var totNet=gRows.reduce(function(s,x){return s+calcNet(x).net;},0);
+    var rows=gRows.map(function(x){var i=x._origIdx;var r=calcNet(x);var jobBadge={'쿠팡':'b-coral','컬리':'b-purple','CJ':'b-blue','용차':'b-done'}[x.jobsub]||'b-wait';
+      return`<tr>
+        <td><strong>${x.driver}</strong></td>
+        <td><span class="badge ${jobBadge}" style="font-size:10px">${x.jobsub||'쿠팡'}</span></td>
+        <td>${x.month}</td>
+        <td style="color:var(--green)">₩${r.income.toLocaleString()}</td>
+        <td style="color:var(--red);font-size:11px">₩${r.emp.toLocaleString()}</td>
+        <td style="font-weight:700;color:var(--purple)">₩${r.net.toLocaleString()}</td>
+        <td><span class="badge ${x.status==='완료'?'b-green':'b-wait'}">${x.status}</span></td>
+        <td style="display:flex;gap:3px;flex-wrap:wrap">
+          <button class="btn btn-sm" onclick="viewStmt(${i})">명세서</button>
+          ${x.status==='정산예정'?`<button class="btn btn-sm btn-teal" onclick="appSettle(${i})">승인</button>`:''}
+          <button class="btn btn-sm" style="background:#16a34a;color:#fff;border:none" onclick="openTaxInvoice(${i})">🧾 세금계산서</button>
+        </td>
+      </tr>`;}).join('');
+    var summary='<div style="font-size:11px;color:var(--text2);padding:4px 0 6px">'+gRows.length+'명 · 실지급 합계 <strong style="color:var(--purple)">₩'+totNet.toLocaleString()+'</strong></div>';
+    return '<div style="margin-bottom:8px">'
+      +'<div onclick="var b=document.getElementById(\''+gid+'\');var a=document.getElementById(\''+gid+'_a\');if(b){b.style.display=b.style.display===\'none\'?\'block\':\'none\';a.textContent=b.style.display===\'none\'?\'▼\':\'▲\'}" style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--bg3);border-radius:var(--r);cursor:pointer;border:1px solid var(--border)">'
+      +'<span style="font-size:13px;font-weight:700;color:var(--purple)">'+mo+'</span>'
+      +'<span style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;color:var(--text3)">'+gRows.length+'명</span><span id="'+gid+'_a" style="font-size:11px;color:var(--text3)">▼</span></span>'
+      +'</div>'
+      +'<div id="'+gid+'" style="display:none">'+summary+'<table class="tbl"><thead><tr><th>기사</th><th>화주사</th><th>월</th><th>총수익</th><th>고용보험</th><th>실지급</th><th>상태</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+      +'</div>';
+  }).join('')||'<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">데이터 없음</div>';
+
+  var _settleHTML = `<div class="card">
   <div class="ch"><span class="ct">정산서 관리</span>
     <button class="btn btn-sm btn-purple" onclick="openSE('')">+ 정산서 작성</button>
   </div>
-  <!-- ★ 통합 정산 자동화 박스 -->
   <div style="background:linear-gradient(135deg,rgba(249,115,22,.08),rgba(234,88,12,.04));border:1.5px solid rgba(249,115,22,.25);border-radius:12px;padding:14px;margin-bottom:10px">
     <div style="font-size:12px;font-weight:700;color:#ea580c;margin-bottom:10px">📦 정산 자동화</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
@@ -1806,31 +1994,179 @@ function rSettle(){
         📂 고용·산재 엑셀 첨부
         <input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="parseInsExcelSettle(this)">
       </label>
-
       <button onclick="exportAllSettlements()" style="padding:8px 14px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⬇️ 전체 정산 다운로드</button>
       <button onclick="openTaxStore()" style="padding:8px 14px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗂 기사별 세금계산서 보관함</button>
+      <button id="jinju-inc-btn" onclick="openIncPanel()" style="padding:8px 14px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⚙️ 기사별 인센 설정</button>
     </div>
     <div style="font-size:10px;color:var(--text3);margin-top:8px">💡 쿠팡 엑셀(정산Raw/정산총괄 포함) 업로드 → 기사 자동 매칭 → 고용·산재·원천세 자동 계산</div>
   </div>
   <div style="font-size:11px;color:var(--text2);margin-bottom:8px;padding:6px 8px;background:var(--blue-l);border-radius:var(--r)">💡 기사별 [정산] 버튼으로 직접 작성, 또는 엑셀 업로드로 자동 계산 가능합니다.</div>
-  <table class="tbl"><thead><tr><th>기사</th><th>화주사</th><th>월</th><th>총수익</th><th>고용보험</th><th>실지급</th><th>상태</th><th></th></tr></thead><tbody>
-  ${s.map((x,i)=>{var r=calcNet(x);var jobBadge={'쿠팡':'b-coral','컬리':'b-purple','CJ':'b-blue','용차':'b-done'}[x.jobsub]||'b-wait';return`<tr>
-    <td><strong>${x.driver}</strong></td>
-    <td><span class="badge ${jobBadge}" style="font-size:10px">${x.jobsub||'쿠팡'}</span></td>
-    <td>${x.month}</td>
-    <td style="color:var(--green)">₩${r.income.toLocaleString()}</td>
-    <td style="color:var(--red);font-size:11px">₩${r.emp.toLocaleString()}</td>
-    <td style="font-weight:700;color:var(--purple)">₩${r.net.toLocaleString()}</td>
-    <td><span class="badge ${x.status==='완료'?'b-green':'b-wait'}">${x.status}</span></td>
-    <td style="display:flex;gap:3px;flex-wrap:wrap">
-      <button class="btn btn-sm" onclick="viewStmt(${i})">명세서</button>
-      ${x.status==='정산예정'?`<button class="btn btn-sm btn-teal" onclick="appSettle(${i})">승인</button>`:''}
-      <button class="btn btn-sm" style="background:#16a34a;color:#fff;border:none" onclick="openTaxInvoice(${i})">🧾 세금계산서</button>
-    </td>
-  </tr>`;}).join('')||'<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:12px">데이터 없음</td></tr>'}
-  </tbody></table></div>`;
+  ${monthTabs}${tableBody}</div>`;
+  setTimeout(_updJinjuBtn, 50);
+  return _settleHTML;
 }
 function appSettle(i){var s=ls('settlements');s[i].status='완료';s[i].paidAt=today();lss('settlements',s);SP('settle',null);toast('정산 승인됨');}
+
+// ══════════════════════════════════════
+// ★ 기사별 라우트별 인센티브 설정 패널
+// ══════════════════════════════════════
+function _incKey(driver,route){return 'inc_'+driver.replace(/\s/g,'_')+'_'+route;}
+function _getIncSetting(driver,route){
+  var raw=localStorage.getItem(_incKey(driver,route));
+  if(!raw)return{on:true,rate:25};
+  try{return JSON.parse(raw);}catch(e){return{on:true,rate:25};}
+}
+function _setIncSetting(driver,route,on,rate){
+  localStorage.setItem(_incKey(driver,route),JSON.stringify({on:on,rate:rate}));
+}
+function openIncPanel(){
+  // 정산서 있는 기사 + routeDetails 수집
+  var settlements=ls('settlements');
+  var panelData={};
+  settlements.forEach(function(s){
+    if(!s.routeDetails||!s.routeDetails.length)return;
+    if(!panelData[s.driver])panelData[s.driver]=[];
+    s.routeDetails.forEach(function(rd){
+      if(rd.route&&panelData[s.driver].indexOf(rd.route)<0)
+        panelData[s.driver].push(rd.route);
+    });
+  });
+  var drivers=Object.keys(panelData).sort();
+  if(!drivers.length){toast('정산서 없음 — 먼저 엑셀 업로드 해주세요');return;}
+
+  var rows=drivers.map(function(drv){
+    return panelData[drv].sort().map(function(route){
+      var s=_getIncSetting(drv,route);
+      var rateOpts=[10,15,25].map(function(r){
+        return '<button onclick="_incRate(\''+drv+'\',\''+route+'\','+r+')" id="incr_'+drv.replace(/\s/g,'_')+'_'+route+'_'+r+'" '
+          +'style="padding:3px 8px;border-radius:6px;border:1.5px solid '+(s.rate===r?'var(--blue)':'var(--border)')+';background:'+(s.rate===r?'var(--blue)':'var(--bg)')+';color:'+(s.rate===r?'#fff':'var(--text2)')+';font-size:11px;font-weight:700;cursor:pointer">×'+r+'</button>';
+      }).join('');
+      var customId='incc_'+drv.replace(/\s/g,'_')+'_'+route;
+      return '<tr style="border-bottom:1px solid var(--border)">'
+        +'<td style="padding:7px 8px;font-weight:600;font-size:12px">'+drv+'</td>'
+        +'<td style="padding:7px 8px;font-size:12px;color:var(--blue);font-weight:700">'+route+'</td>'
+        +'<td style="padding:7px 8px">'
+          +'<button onclick="_incToggle(\''+drv+'\',\''+route+'\')" id="inct_'+drv.replace(/\s/g,'_')+'_'+route+'" '
+          +'style="padding:3px 10px;border-radius:100px;border:none;font-size:11px;font-weight:700;cursor:pointer;background:'+(s.on?'#059669':'#6b7280')+';color:#fff">'+(s.on?'🟢 ON':'🔴 OFF')+'</button>'
+        +'</td>'
+        +'<td style="padding:7px 8px"><div style="display:flex;gap:4px;align-items:center">'
+          +rateOpts
+          +'<input id="'+customId+'" type="number" value="'+(![10,15,25].includes(s.rate)?s.rate:'')+'" placeholder="직접" '
+          +'style="width:52px;padding:3px 5px;border:1.5px solid var(--border);border-radius:6px;font-size:11px;background:var(--bg);color:var(--text)" '
+          +'oninput="_incCustom(\''+drv+'\',\''+route+'\',this.value)">'
+          +'<span style="font-size:11px;color:var(--text3)">원</span>'
+        +'</div></td>'
+      +'</tr>';
+    }).join('');
+  }).join('');
+
+  var mo=document.createElement('div');
+  mo.id='inc-panel-mo';
+  mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:700;display:flex;align-items:center;justify-content:center;padding:14px';
+  mo.innerHTML='<div onclick="event.stopPropagation()" style="background:var(--bg);border-radius:14px;width:700px;max-width:95vw;max-height:88vh;overflow:hidden;display:flex;flex-direction:column">'
+    +'<div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">'
+      +'<span style="font-weight:700;font-size:14px">⚙️ 기사별 라우트 인센티브 설정</span>'
+      +'<button onclick="document.getElementById(\'inc-panel-mo\').remove()" style="padding:5px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer">닫기</button>'
+    +'</div>'
+    +'<div style="padding:10px 16px;border-bottom:1px solid var(--border);background:var(--bg3)">'
+      +'<div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px">캠프별 일괄 설정</div>'
+      +'<div style="display:flex;gap:10px;flex-wrap:wrap">'
+      +[
+        {name:'부산1캠프',prefixes:['101','215'],color:'#1E5FAD'},
+        {name:'부산2캠프',prefixes:['812'],color:'#8B5CF6'},
+        {name:'부산3캠프',prefixes:['508'],color:'#1E5FAD'},
+        {name:'대구2캠프',prefixes:['109','213'],color:'#F59E0B'},
+        {name:'진주M캠프',prefixes:['608','612','613','614','619'],color:'#EF4444'}
+      ].map(function(camp){
+        var prefixJS=JSON.stringify(camp.prefixes).replace(/"/g,"'");
+        // ★ 해당 캠프 라우트들의 현재 상태 파악
+        var campRoutes=[];
+        Object.keys(panelData).forEach(function(drv){
+          panelData[drv].forEach(function(route){
+            if(camp.prefixes.some(function(p){return route.startsWith(p);}))
+              campRoutes.push({drv:drv,route:route});
+          });
+        });
+        var onCount=campRoutes.filter(function(x){return _getIncSetting(x.drv,x.route).on;}).length;
+        var total=campRoutes.length;
+        var allOn=(total>0&&onCount===total);
+        var allOff=(total>0&&onCount===0);
+        return '<div style="display:flex;align-items:center;gap:4px;padding:4px 8px;background:var(--bg2);border-radius:8px;border:1.5px solid '+(allOn?camp.color:allOff?'#6b7280':camp.color)+'">'
+          +'<span style="font-size:11px;font-weight:700;color:'+camp.color+'">'+camp.name+'</span>'
+          +'<button onclick="_incCampAll('+prefixJS+',true)" style="padding:2px 8px;border:none;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;background:'+(allOn?'#059669':'var(--bg3)')+';color:'+(allOn?'#fff':'var(--text3)')+'">ON</button>'
+          +'<button onclick="_incCampAll('+prefixJS+',false)" style="padding:2px 8px;border:none;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;background:'+(allOff?'#6b7280':'var(--bg3)')+';color:'+(allOff?'#fff':'var(--text3)')+'">OFF</button>'
+          +'</div>';
+      }).join('')
+      +'</div>'
+    +'</div>'
+    +'<div style="padding:8px 16px;background:var(--blue-l);font-size:11px;color:var(--blue);border-bottom:1px solid var(--border)">💡 설정 후 엑셀 업로드하면 자동 반영. ON이면 건수 × 설정단가로 인센 계산</div>'
+    +'<div style="padding:10px 16px;background:var(--blue-l);font-size:11px;color:var(--blue)">💡 설정 후 엑셀 업로드하면 자동 반영. ON이면 건수 × 설정단가로 인센 계산</div>'
+    +'<div style="overflow:auto;flex:1;padding:0">'
+      +'<table style="width:100%;border-collapse:collapse;min-width:600px">'
+        +'<thead><tr style="background:var(--bg3);font-size:11px;color:var(--text3);position:sticky;top:0">'
+          +'<th style="padding:8px 12px;text-align:left;white-space:nowrap">기사</th>'
+          +'<th style="padding:8px 12px;text-align:left;white-space:nowrap">라우트</th>'
+          +'<th style="padding:8px 12px;text-align:left;white-space:nowrap">ON/OFF</th>'
+          +'<th style="padding:8px 12px;text-align:left;white-space:nowrap">단가 선택</th>'
+        +'</tr></thead>'
+        +'<tbody>'+rows+'</tbody>'
+      +'</table>'
+    +'</div>'
+  +'</div>';
+  document.body.appendChild(mo);
+}
+function _incToggle(drv,route){
+  var s=_getIncSetting(drv,route);
+  s.on=!s.on;
+  _setIncSetting(drv,route,s.on,s.rate);
+  var btn=document.getElementById('inct_'+drv.replace(/\s/g,'_')+'_'+route);
+  if(btn){btn.textContent=s.on?'🟢 ON':'🔴 OFF';btn.style.background=s.on?'#059669':'#6b7280';}
+}
+function _incRate(drv,route,rate){
+  var s=_getIncSetting(drv,route);
+  s.rate=rate;
+  _setIncSetting(drv,route,s.on,s.rate);
+  // 버튼 스타일 업데이트
+  [10,15,25].forEach(function(r){
+    var b=document.getElementById('incr_'+drv.replace(/\s/g,'_')+'_'+route+'_'+r);
+    if(b){b.style.background=r===rate?'var(--blue)':'var(--bg)';b.style.color=r===rate?'#fff':'var(--text2)';b.style.borderColor=r===rate?'var(--blue)':'var(--border)';}
+  });
+  // 직접입력 초기화
+  var ci=document.getElementById('incc_'+drv.replace(/\s/g,'_')+'_'+route);
+  if(ci)ci.value='';
+}
+function _incCustom(drv,route,val){
+  var rate=parseInt(val);
+  if(!isNaN(rate)&&rate>0){
+    var s=_getIncSetting(drv,route);
+    s.rate=rate;
+    _setIncSetting(drv,route,s.on,s.rate);
+    // 기존 ×10/15/25 버튼 비활성화
+    [10,15,25].forEach(function(r){
+      var b=document.getElementById('incr_'+drv.replace(/\s/g,'_')+'_'+route+'_'+r);
+      if(b){b.style.background='var(--bg)';b.style.color='var(--text2)';b.style.borderColor='var(--border)';}
+    });
+  }
+}
+// 캠프별 전체 ON/OFF
+function _incCampAll(prefixes, onVal){
+  var settlements=ls('settlements');
+  settlements.forEach(function(s){
+    if(!s.routeDetails)return;
+    s.routeDetails.forEach(function(rd){
+      if(!rd.route)return;
+      var isCamp=prefixes.some(function(p){return rd.route.startsWith(p);});
+      if(isCamp){
+        var cur=_getIncSetting(s.driver,rd.route);
+        _setIncSetting(s.driver,rd.route,onVal,cur.rate);
+      }
+    });
+  });
+  document.getElementById('inc-panel-mo')?.remove();
+  openIncPanel();
+  toast((onVal?'🟢':'🔴')+' 캠프 인센티브 '+(onVal?'ON':'OFF')+' 적용');
+}
+function _updJinjuBtn(){} // 하위호환 유지
 
 
 // ── 회사 코드 생성/조회
@@ -2268,37 +2604,47 @@ async function uploadDocSlot(inp,driverId,key,mode,label){
 
 function rInsurance(){
   var drs=ls('drivers').filter(d=>d.is_active!==false&&!d.isNew&&d.status!=='pending');
-  return `
-  <div class="card"><div class="ch"><span class="ct">쿠팡 라우트 단가표</span></div>
-  ${(function(){
-    var CAMPS=[
-      {name:'부산1캠프 (주간)',prefix:['101','215'],badge:'주간',color:'var(--blue)'},
-      {name:'부산2캠프 (야간)',prefix:['812'],badge:'야간',color:'#8B5CF6'},
-      {name:'부산3캠프 (주간)',prefix:['508'],badge:'주간',color:'var(--blue)'},
-      {name:'대구2캠프 (야간)',prefix:['109','213'],badge:'야간',color:'#8B5CF6'},
-      {name:'진주M캠프',prefix:['608','612','613','614','619'],badge:'',color:'var(--teal)'}
-    ];
-    var out='';
-    CAMPS.forEach(function(camp){
-      var rows=Object.entries(RPRICE).filter(function([r]){
-        return camp.prefix.some(function(p){return r.startsWith(p);});
-      }).sort(function(a,b){return a[0].localeCompare(b[0],undefined,{numeric:true});});
-      if(!rows.length) return;
-      out+='<div style="margin-bottom:10px"><div style="display:flex;align-items:center;gap:5px;margin-bottom:4px"><span style="font-size:11px;font-weight:700;color:'+camp.color+'">'+camp.name+'</span>'+(camp.badge?'<span style="font-size:9px;background:'+camp.color+';color:#fff;padding:1px 5px;border-radius:4px">'+camp.badge+'</span>':'')+'</div>';
-      out+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px">';
-      rows.forEach(function([r,p]){
-        out+='<div class="rpc"><div class="rpc-name">'+r+'</div><div class="rpc-price">'+p+'원</div></div>';
-      });
-      out+='</div></div>';
-    });
-    return out;
-  })()}</div></div>
+  var CAMPS=[
+    {name:'부산1캠프 (주간)',prefix:['101','215'],badge:'주간',color:'var(--blue)'},
+    {name:'부산2캠프 (야간)',prefix:['812'],badge:'야간',color:'#8B5CF6'},
+    {name:'부산3캠프 (주간)',prefix:['508'],badge:'주간',color:'var(--blue)'},
+    {name:'대구2캠프 (야간)',prefix:['109','213'],badge:'야간',color:'#8B5CF6'},
+    {name:'진주M캠프',prefix:['608','612','613','614','619'],badge:'',color:'var(--teal)'}
+  ];
+  var campHTML=CAMPS.map(function(camp,ci){
+    var rows=Object.entries(RPRICE).filter(function(e){
+      return camp.prefix.some(function(p){return e[0].startsWith(p);});
+    }).sort(function(a,b){return a[0].localeCompare(b[0],undefined,{numeric:true});});
+    if(!rows.length)return '';
+    var gid='camp_'+ci;
+    var grid='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:8px 0">'
+      +rows.map(function(e){return'<div class="rpc"><div class="rpc-name">'+e[0]+'</div><div class="rpc-price">'+e[1]+'원</div></div>';}).join('')
+      +'</div>';
+    return '<div style="margin-bottom:6px">'
+      +'<div onclick="var b=document.getElementById(\''+gid+'\');var a=document.getElementById(\''+gid+'_a\');if(b){b.style.display=b.style.display===\'none\'?\'block\':\'none\';a.textContent=b.style.display===\'none\'?\'▼\':\'▲\'}" style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:var(--bg3);border-radius:var(--r);cursor:pointer;border:1px solid var(--border)">'
+      +'<div style="display:flex;align-items:center;gap:6px">'
+      +'<span style="font-size:13px;font-weight:700;color:'+camp.color+'">'+camp.name+'</span>'
+      +(camp.badge?'<span style="font-size:9px;background:'+camp.color+';color:#fff;padding:1px 7px;border-radius:4px">'+camp.badge+'</span>':'')
+      +'</div>'
+      +'<span style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;color:var(--text3)">'+rows.length+'개 라우트</span><span id="'+gid+'_a" style="font-size:11px;color:var(--text3)">▼</span></span>'
+      +'</div>'
+      +'<div id="'+gid+'" style="display:none">'+grid+'</div>'
+      +'</div>';
+  }).join('');
 
+  return `
+  <div class="card">
+    <div class="ch">
+      <span class="ct">쿠팡 라우트 단가표</span>
+      <span style="font-size:11px;color:var(--text3)">캠프명 탭 눌러서 펼치기</span>
+    </div>
+    ${campHTML}
+  </div>
   ${S.curMode==='admin'?`
   <div class="card" style="margin-top:12px">
     <div class="ch">
-      <span class="ct">📌 쿠팡 라우트별 단가표 수정</span>
-      <span style="font-size:10px;color:var(--text3)">(실시간 수정 · 저장 즉시 정산 반영)</span>
+      <span class="ct">📌 라우트별 단가 수정</span>
+      <span style="font-size:10px;color:var(--text3)">(저장 즉시 정산 반영)</span>
       <button class="btn btn-sm btn-teal" style="float:right;font-size:10px;padding:3px 10px" onclick="saveRprice()">💾 저장</button>
     </div>
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px;max-height:340px;overflow-y:auto" id="rprice-editor">
@@ -2309,7 +2655,7 @@ function rInsurance(){
         <button class="btn btn-sm btn-blue" style="font-size:11px" onclick="addRpRoute()">+ 추가</button>
       </div>
     </div>
-  </div>`:''}` ;
+  </div>`:''}`;
 }
 // ══ 마이페이지
 function rMypage(){
@@ -2350,8 +2696,10 @@ function rMypage(){
       <div class="fg"><label>차량 번호</label><input id="mp-plate" value="${d.plate||''}" readonly style="background:var(--bg3)"></div>
       <div class="fg"><label>톤수</label><input id="mp-ton" value="${d.ton||''}" readonly style="background:var(--bg3)"></div>
     </div>
-    <div class="fg"><label>업무 유형</label>
-      <input value="${(d.jobtype||'')+(d.jobsub?' / '+d.jobsub:'')}" readonly style="background:var(--bg3)">
+    <div class="fg"><label>업무 유형 <span style="font-size:10px;color:var(--blue)">(실제 배송 화주사 변경 가능)</span></label>
+      <select id="mp-jobsub" style="width:100%;padding:9px 11px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--bg);color:var(--text)">
+        ${['쿠팡','컬리','CJ','용차','MBTI본사'].map(v=>`<option value="${v}" ${(d.jobsub||'쿠팡')===v?'selected':''}>${v}</option>`).join('')}
+      </select>
     </div>
 
     <div class="sec-lbl" style="margin-top:14px">📂 서류 5종 (이미지 탭→확대, 다시 탭→교체)</div>
@@ -2532,6 +2880,12 @@ async function saveMypage(){
   var me2=drs2.find(x=>x.name===S.curDriver);
   if(me2){
     me2.phone=document.getElementById('mp-phone')?.value||me2.phone;
+    // ★ 업무유형 저장 (컬리→쿠팡 등 변경 가능)
+    var newJobsub=document.getElementById('mp-jobsub')?.value;
+    if(newJobsub){
+      me2.jobsub=newJobsub;
+      S.curJobsub=newJobsub;  // 현재 세션 즉시 반영
+    }
     // ★ 세금계산서 발행 정보 저장
     if(document.getElementById('mp-biznum')) me2.bizNum=document.getElementById('mp-biznum').value.trim();
     if(document.getElementById('mp-bizname')) me2.bizName=document.getElementById('mp-bizname').value.trim();
@@ -2541,14 +2895,14 @@ async function saveMypage(){
     me2.email=document.getElementById('mp-email')?.value||me2.email;
     me2.addr=document.getElementById('mp-addr')?.value||me2.addr;
     lss('drivers',drs2);
-    if(FB&&_db&&me2.fbId)_db.collection('drivers').doc(me2.fbId).update({phone:me2.phone,email:me2.email,addr:me2.addr,bizNum:me2.bizNum||'',bizName:me2.bizName||'',bizAddr:me2.bizAddr||'',bizType:me2.bizType||'',bizItem:me2.bizItem||''}).catch(()=>{});
+    if(FB&&_db&&me2.fbId)_db.collection('drivers').doc(me2.fbId).update({phone:me2.phone,email:me2.email,addr:me2.addr,jobsub:me2.jobsub||'쿠팡',bizNum:me2.bizNum||'',bizName:me2.bizName||'',bizAddr:me2.bizAddr||'',bizType:me2.bizType||'',bizItem:me2.bizItem||''}).catch(()=>{});
   }
   toast('✅ 정보가 저장되었습니다');
 }
 
 function exportInsCsv(){
   var drs=ls('drivers').filter(d=>d.is_active!==false&&!d.isNew&&d.status!=='pending');
-  var rows=[['성명','아이디','고용형태','업무','이번달수익','고용보험0.8%','산재1.4%','원천세3.3%','실지급액','원천세등록여부']];
+  var rows=[['성명','아이디','고용형태','업무','이번달수익','고용보험0.8%','산재0.88%','원천세3.3%','실지급액','원천세등록여부']];
   drs.forEach(function(d){
     var s=ls('settlements').filter(x=>x.driver===d.name||x.userId===d.userId).slice(-1)[0];
     var r=s?calcNet(s):{income:0,emp:0,net:0};
@@ -2572,27 +2926,32 @@ function calcNet(x){
   var ramt=isYong ? rcnt*yRet : (+x.ramt||+x.retAmt||0);
   var fresh=+x.fresh||+x.freshAmt||0;
   // 프레시백 인센: 쿠팡만 건수×25원, 용차/컬리/CJ는 0
+  // ★ finc: x.finc가 명시적으로 설정된 경우 그 값 사용 (0 포함), 미설정 시 기본값
   var isCoupang=(x.jobsub==='쿠팡'||x.client==='쿠팡');
-  var finc=isCoupang ? (+x.finc||+x.freshInc||Math.round(dcnt*(G_PRICES.freshbag_inc||25))) : 0;
+  var finc = isCoupang
+    ? (x.finc !== undefined && x.finc !== null && x.finc !== '' ? +x.finc : Math.round(dcnt*(G_PRICES.freshbag_inc||25)))
+    : 0;
   var inc=+x.inc||0;
   var income=damt+ramt+fresh+finc+inc;
-  // 세금/보험 비율 (2026년 기준)
-  // 원천세: 내부 계산용 (UI 미표시) - 사업소득세 3% + 지방소득세 0.3%
-  // 고용보험: 피보험자 0.8% (일용근로자 기준 1.6% 중 본인부담 0.8%)
-  // 산재보험: 업종요율 화물자동차 1.3% → 월 고정액 또는 요율 적용
-  var TAX_RATE = +x.taxRate || 0.033;   // 원천세 3.3%
-  var EMP_RATE = +x.empRate || 0.008;   // 고용보험 0.8%
-  var IND_RATE = +x.indRate || 0.013;   // 산재보험 1.3% (화물자동차 업종요율)
-  var tax=+x.tax||(x.taxFixed?+x.taxFixed:Math.round(income*TAX_RATE));
-  var emp=+x.emp||(x.empFixed?+x.empFixed:Math.round(income*EMP_RATE));
-  var ind=+x.ind||(x.indFixed?+x.indFixed:Math.round(income*IND_RATE));  // 산재 요율 적용
-  var work=+x.work||ind||14000;  // 산재: 요율계산 or 고정액
-  var eq=+x.eq||0;
-  var dmg=+x.dmg||+x.damage||0;
-  var adv=+x.adv||+x.advance||0;
-  // ★ 실지급 = 세금계산서금액 - 고용보험 - 산재보험 - 기타공제
-  var deduct=emp+work+eq+dmg+adv;
-  return{damt,ramt,fresh,finc,inc,income,tax,emp,work,eq,dmg,adv,deduct,net:income-deduct,isYong,isCoupang,yDel,yRet};
+  // ★ 세금계산서 기준 금액 = 배송+반품+롤백+인센 (고용산재 계산 기준)
+  var totalAmt = income;  // 세금계산서 합계가 곧 공급대가 기준
+  var supplyAmt = Math.round(totalAmt / 1.1);
+  var expenseAmt = Math.round(supplyAmt * 0.346);
+  var monthlyWage = supplyAmt - expenseAmt;
+  var empCalc  = monthlyWage >= 800000 ? Math.floor(monthlyWage * 0.008  / 10) * 10 : 0;
+  var workCalc = Math.floor(monthlyWage * 0.0088 / 10) * 10;
+  var TAX_RATE = +x.taxRate || 0.033;
+  var tax  = +x.tax  || (x.taxFixed ? +x.taxFixed : Math.round(income * TAX_RATE));
+  // ★ emp: 저장값이 명시적으로 설정됐을 때만 사용 (0은 재계산)
+  var emp  = (x.emp !== undefined && x.emp !== null && x.emp !== '' && +x.emp > 0) ? +x.emp : empCalc;
+  var work = (x.work !== undefined && x.work !== null && x.work !== '' && +x.work > 0) ? +x.work : workCalc;
+  var eq   = +x.eq  || 0;
+  var dmg  = +x.dmg || +x.damage || 0;
+  var adv  = +x.adv || +x.advance || 0;
+  var deduct = emp + work + eq + dmg + adv;
+  // 실지급 = 공급대가 - 전체공제 (공급대가 기준)
+  var net = totalAmt - deduct;
+  return{damt,ramt,fresh,finc,inc,income,totalAmt,supplyAmt,monthlyWage,tax,emp,work,eq,dmg,adv,deduct,net,isYong,isCoupang,yDel,yRet};
 }
 function updSettle(){
   var dcnt=+document.getElementById('se-dcnt')?.value||0;
@@ -2619,7 +2978,7 @@ function updSettle(){
   var tax=Math.round(income*0.033); var emp=Math.round(income*0.008);
   var te=document.getElementById('se-tax');if(te)te.value=tax;
   var ee=document.getElementById('se-emp');if(ee)ee.value=emp;
-  // ★ 실지급 계산: 원천세(3.3%) 및 산재 고정(14000) 제외 → 고용보험(0.8%)만 공제
+  // ★ 실지급 계산: 원천세(3.3%) 및 산재 고정(14000) 제외 → 고용보험(0.8%,80만↑)만 공제
   var r=calcNet({damt,ramt,fresh,finc,inc,tax:0,emp,work:0,eq:+document.getElementById('se-eq')?.value||0,dmg:+document.getElementById('se-dmg')?.value||0,adv:+document.getElementById('se-adv')?.value||0});
   var p=document.getElementById('se-net');if(p)p.textContent='₩'+r.net.toLocaleString();
   var i=document.getElementById('se-income');if(i)i.textContent='₩'+r.income.toLocaleString();
@@ -2762,9 +3121,10 @@ function viewStmt(i){
       </div>
     </div>`:''
 
-  // ★ 세금계산서 작성금액 = 배송+반품+프레시백+프레시백인센 (추가인센 제외)
-  var taxBase=r.damt+r.ramt+r.fresh+r.finc;
-  var realPay=taxBase-r.emp-(r.work||0);
+  // ★ 세금계산서 금액 = 공급대가 (고용·산재 빼기 전 금액)
+  var taxBase = r.income;  // ★ 세금계산서 합계 = 배송+반품+롤백+인센
+  // ★ 실지급액 = 세금계산서 금액 - 고용보험 - 산재보험
+  var realPay = taxBase - r.emp - (r.work||0);
 
   document.body.insertAdjacentHTML('beforeend',`
   <div style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;display:flex;align-items:center;justify-content:center;padding:14px" id="stmt-mo" onclick="document.getElementById('stmt-mo')?.remove()">
@@ -2781,7 +3141,7 @@ function viewStmt(i){
     <div class="stmt-totals">
       <div class="stbox"><div class="stlbl">세금계산서 금액</div><div class="stval inc">₩${taxBase.toLocaleString()}</div></div>
       <div class="stbox"><div class="stlbl">공제(고용+산재)</div><div class="stval ded">-₩${(r.emp+(r.work||0)).toLocaleString()}</div></div>
-      <div class="stbox hl"><div class="stlbl">실 지급액</div><div class="stval" style="color:#fff;font-size:17px;font-weight:700">₩${r.net.toLocaleString()}</div></div>
+      <div class="stbox hl"><div class="stlbl">실 지급액</div><div class="stval" style="color:#fff;font-size:17px;font-weight:700">₩${realPay.toLocaleString()}</div></div>
     </div>
     <div class="stmt-sec">
       <div style="font-size:13px;font-weight:600;padding-left:8px;border-left:3px solid var(--purple);margin-bottom:10px">📋 세금계산서 작성금액</div>
@@ -2832,8 +3192,8 @@ function viewStmt(i){
     <div class="stmt-sec" style="border-top:1px solid #e0dfd8">
       <div style="font-size:13px;font-weight:600;padding-left:8px;border-left:3px solid #D85A30;margin-bottom:8px">공제 항목</div>
       <div class="tax-box">
-        <div class="tax-row"><span>고용보험 0.8%</span><span style="color:var(--red);font-weight:600">-₩${r.emp.toLocaleString()}</span></div>
-        <div class="tax-row"><span>산재보험 1.3%</span><span style="color:var(--red);font-weight:600">-₩${(r.work||0).toLocaleString()}</span></div>
+        <div style="font-size:11px;color:var(--text3);padding:3px 0 5px">📌 월보수액 ₩${(r.monthlyWage||0).toLocaleString()} (공급가액 ₩${(r.supplyAmt||0).toLocaleString()} × 65.4%)</div><div class="tax-row"><span>고용보험 0.8% <small style="color:var(--text3)">(월보수액기준, 80만↑)</small></span><span style="color:var(--red);font-weight:600">-₩${r.emp.toLocaleString()}</span></div>
+        <div class="tax-row"><span>산재보험 0.88%</span><span style="color:var(--red);font-weight:600">-₩${(r.work||0).toLocaleString()}</span></div>
         ${r.eq>0?`<div class="tax-row"><span>장비임대료</span><span style="color:var(--red)">-₩${r.eq.toLocaleString()}</span></div>`:''}
         ${r.adv>0?`<div class="tax-row"><span>가불금</span><span style="color:var(--red)">-₩${r.adv.toLocaleString()}</span></div>`:''}
         <div class="tax-total"><span>공제 합계</span><span>-₩${r.deduct.toLocaleString()}</span></div>
@@ -2842,9 +3202,9 @@ function viewStmt(i){
     <div class="stmt-fin">
       <div>
         <div style="font-size:12px;font-weight:700">실 지급액</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:2px">세금계산서금액 ₩${taxBase.toLocaleString()} − 고용·산재 ₩${(r.emp+(r.work||0)).toLocaleString()}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">세금계산서 ₩${taxBase.toLocaleString()} − 고용·산재 ₩${(r.emp+(r.work||0)).toLocaleString()}</div>
       </div>
-      <strong id="st-net-disp" style="font-size:22px;color:var(--purple)">₩${r.net.toLocaleString()}</strong>
+      <strong id="st-net-disp" style="font-size:22px;color:var(--purple)">₩${realPay.toLocaleString()}</strong>
     </div>
     <div style="padding:7px 20px;font-size:11px;color:var(--text3)">발행: ${new Date().toLocaleDateString('ko-KR')}</div>
   </div>
@@ -2864,8 +3224,8 @@ function stUpdCalc(i){
   var fresh=+document.getElementById('st-fresh-inp')?.value||0;
   var finc=+document.getElementById('st-finc-inp')?.value||0;
   var dmg=+document.getElementById('st-dmg-inp')?.value||0;
-  var newBase=r.damt+r.ramt+fresh+finc;
-  var newNet=newBase-r.emp-(r.work||0)-dmg;
+  var newBase = r.damt + r.ramt + fresh + finc;  // ★ 세금계산서 = 배송+반품+롤백+인센
+  var newNet = newBase - r.emp - (r.work||0) - dmg;
   var tb=document.getElementById('st-taxbase-disp'); if(tb)tb.textContent='₩'+newBase.toLocaleString();
   var nd=document.getElementById('st-net-disp'); if(nd)nd.textContent='₩'+newNet.toLocaleString();
 }
@@ -3080,7 +3440,7 @@ function openTaxInvoice(i){
 
       <!-- 공제 안내 -->
       <div style="padding:5px 8px;background:#fffbeb;border-top:1px dashed #999;font-size:9.5px;color:#555">
-        ※ 정산 공제: 고용보험(0.8%) ₩${r.emp.toLocaleString()} · 산재(1.3%) ₩${(r.work||0).toLocaleString()} · 원천세(3.3%) ₩${Math.round(r.income*0.033).toLocaleString()} &nbsp;→&nbsp; <strong style="color:#7c3aed">실지급액 ₩${r.net.toLocaleString()}</strong>
+        ※ 정산 공제: 고용보험(0.8%,80만↑) ₩${r.emp.toLocaleString()} · 산재(0.88%) ₩${(r.work||0).toLocaleString()} · 원천세(3.3%) ₩${Math.round(r.income*0.033).toLocaleString()} &nbsp;→&nbsp; <strong style="color:#7c3aed">실지급액 ₩${r.net.toLocaleString()}</strong>
       </div>
     </div>
 
@@ -3178,7 +3538,7 @@ function exportTaxInvoiceExcel(){
     ['','','',''],
     ['■ 공제 내역','','',''],
     ['고용보험 0.8%',20000,'',''],
-    ['산재보험 1.3%',32500,'',''],
+    ['산재보험 0.88%',32500,'',''],
     ['실지급액',2447500,'',''],
     ['','','',''],
     ['※ 이 파일은 예시입니다. 실제 정산서에서 기사별 세금계산서를 발급하세요.','','','']
@@ -3301,8 +3661,8 @@ function parseInsExcelSettle(inp){
         +'<button class="btn btn-sm" onclick="document.getElementById(\'ins-result-mo\')?.remove()">닫기</button>'
         +'</div></div>'
         +'<div style="font-size:11px;color:var(--text3);margin-bottom:10px;padding:8px;background:var(--bg2);border-radius:8px">'
-        +'💡 고용보험 0.8% · 산재보험 1.3% · 원천세 3.3% (참고용) | [적용] 클릭 또는 [전체 일괄 적용]으로 정산서에 반영</div>'
-        +'<table class="tbl"><thead><tr><th>기사</th><th>수익합계</th><th>고용보험(0.8%)</th><th>산재(1.3%)</th><th>원천세(3.3%)</th><th>실지급</th><th></th></tr></thead><tbody>'
+        +'💡 고용보험 0.8% · 산재보험 0.88% · 원천세 3.3% (참고용) | [적용] 클릭 또는 [전체 일괄 적용]으로 정산서에 반영</div>'
+        +'<table class="tbl"><thead><tr><th>기사</th><th>수익합계</th><th>고용보험(0.8%,80만↑)</th><th>산재(0.88%)</th><th>원천세(3.3%)</th><th>실지급</th><th></th></tr></thead><tbody>'
         +results.map(function(r){
           return '<tr><td><strong>'+r.name+'</strong></td>'
             +'<td style="color:var(--green)">₩'+r.inc.toLocaleString()+'</td>'
@@ -3498,8 +3858,8 @@ function parseExcel(inp){
           </div>
           <div class="xrow" style="font-weight:700;border-top:1px solid var(--border);padding-top:5px"><span>수익 합계</span><span style="color:var(--green)">₩${income.toLocaleString()}</span></div>
           <div style="margin-top:5px;padding:6px 8px;background:var(--red-l);border-radius:5px;font-size:11px">
-            <div style="display:flex;justify-content:space-between"><span>고용보험 0.8%</span><span style="color:var(--red)">−₩${emp.toLocaleString()}</span></div>
-            <div style="display:flex;justify-content:space-between"><span>산재보험 1.3%</span><span style="color:var(--red)">−₩${ind.toLocaleString()}</span></div>
+            <div style="display:flex;justify-content:space-between"><span>고용보험 0.8% (월보수액기준)</span><span style="color:var(--red)">−₩${emp.toLocaleString()}</span></div>
+            <div style="display:flex;justify-content:space-between"><span>산재보험 0.88%</span><span style="color:var(--red)">−₩${ind.toLocaleString()}</span></div>
           </div>
           <div class="xrow" style="font-size:14px;font-weight:700;padding-top:7px;border-top:1px solid var(--border);margin-top:4px">
             <span>✅ 예상 실지급액</span><span style="color:var(--purple);font-size:16px">₩${netPay.toLocaleString()}</span>
@@ -3652,9 +4012,12 @@ function _showTaxImg(imgUrl, month){
 }
 
 function checkDriverNotifications(){
-  if(!FB||!_db||!S.curDriver)return;
-  // ★ 실시간 onSnapshot으로 변경 (기존 .get() → 실시간 수신)
-  if(window._notifUnsub)window._notifUnsub(); // 기존 리스너 해제
+  if(!FB||!_db||!S.curDriver){
+    // ★ curDriver null이어도 기존 리스너는 반드시 해제
+    if(window._notifUnsub){window._notifUnsub();window._notifUnsub=null;}
+    return;
+  }
+  if(window._notifUnsub)window._notifUnsub();
   window._notifUnsub = _db.collection('driver_notifications')
     .where('driver','==',S.curDriver)
     .onSnapshot(function(snap){
@@ -3663,11 +4026,8 @@ function checkDriverNotifications(){
       snap.forEach(function(doc){var d=doc.data();d._id=doc.id;items.push(d);nids.push(doc.id);});
       items.sort(function(a,b){return (b.sentAt||'').localeCompare(a.sentAt||'');});
       if(items.length>10)items=items.slice(0,10);
-      // 정산탭 자동 갱신
       if(S.dtab==='settle')DT('settle',document.getElementById('pni5'));
-      // 임시 저장
       window._drvNotes={}; items.forEach(function(it){window._drvNotes[it._id]=it;});
-      // ★ 세금계산서 기사 기기에 영구 저장 (localStorage)
       items.forEach(function(it){
         if(it.type==='tax_invoice'&&it.img&&it.month){
           try{
@@ -3694,7 +4054,8 @@ function checkDriverNotifications(){
         +'<button onclick="document.getElementById(\'drv-notification-box\')?.remove()" style="width:100%;margin-top:6px;padding:7px;background:var(--bg3);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:12px">닫기</button>'
         +'</div>';
       document.body.appendChild(box);
-    }).catch(function(){});
+    // ★ onSnapshot 두 번째 파라미터로 에러 핸들러 (기존 .catch() 대신)
+    }, function(e){console.warn('driver_notifications 리스너 오류:', e.code, e.message);});
 }
 function _vdn(id){
   var item=window._drvNotes&&window._drvNotes[id];
@@ -3820,8 +4181,9 @@ function dHome(){
   ${me?`<div class="dc" style="margin:4px 10px"><div class="dct">오늘 입차</div><div style="display:flex;gap:8px;align-items:center;font-size:12px"><span class="badge ${me.type==='쿠팡'?'b-coral':me.type==='컬리'?'b-purple':'b-blue'}">${me.type}</span><span>${me.time}</span><span style="font-weight:600;color:${me.temp==='상온'?'var(--amber)':parseFloat(me.temp)<=-18?'var(--teal)':'var(--red)'}">${me.temp}${me.temp==='상온'?'':' °C'}</span></div></div>`:`<div style="margin:4px 10px 6px;padding:9px;background:var(--amber-l);border-radius:var(--r);font-size:12px;color:var(--amber)">아직 입차하지 않았습니다. 입차 탭에서 등록해 주세요.</div>`}
   <!-- 한달 근무표 -->
   ${calHTML}
-  <!-- 사고접수 버튼 -->
-  <button class="bbtn bb-red" onclick="DT('accident',document.getElementById('pni4'))" style="padding:11px;font-size:13px;margin:0 10px 10px">🚨 사고 접수</button>
+  <!-- 사고접수 + 사진 모아보기 버튼 -->
+  <button class="bbtn bb-red" onclick="DT('accident',document.getElementById('pni4'))" style="padding:11px;font-size:13px;margin:0 10px 6px">🚨 사고 접수</button>
+  <button onclick="drvPhotoGallery()" style="width:calc(100% - 20px);margin:0 10px 10px;padding:11px;background:var(--purple-l);color:var(--purple);border:1.5px solid var(--purple);border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer">📸 사진 모아보기 (60일)</button>
   </div>`;
 }
 // ── 근무표 순환 클릭: 빈→주→야→휴무→병가→빈
@@ -3837,6 +4199,156 @@ function cycleSchedule(weekKey, dateStr){
 }
 
 // ── 기사 입차 (3단계 분기)
+// ══════════════════════════════════════
+// ★ 기사 60일 이력 공통 헬퍼
+// ══════════════════════════════════════
+function _drv60Cut(){
+  var d=new Date(); d.setDate(d.getDate()-60);
+  return d.toISOString().slice(0,10);
+}
+// 공통 이력 렌더 (접을 수 있는 섹션)
+function _drvHistSection(id, title, innerHTML){
+  return '<div class="dc" style="margin-top:0">'
+    +'<div class="dct" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center" onclick="var b=document.getElementById(\''+id+'\');var a=document.getElementById(\''+id+'_arr\');if(b){b.style.display=b.style.display===\'none\'?\'block\':\'none\';a.textContent=b.style.display===\'none\'?\'▼\':\'▲\'}">'
+    +title+'<span id="'+id+'_arr" style="font-size:11px;color:var(--text3)">▼</span></div>'
+    +'<div id="'+id+'" style="display:none;margin-top:8px">'+innerHTML+'</div>'
+    +'</div>';
+}
+// 입차 이력
+function _drvHistEntry(){
+  var cut=_drv60Cut();
+  var rows=ls('entries').filter(function(e){return e.driver===S.curDriver&&(e.date||'')>=cut;})
+    .sort(function(a,b){return (b.date+b.time).localeCompare(a.date+a.time);});
+  if(!rows.length)return _drvHistSection('hist_entry','📅 입차 이력 (60일)','<div style="text-align:center;padding:14px;font-size:12px;color:var(--text3)">기록 없음</div>');
+  var html=rows.map(function(r){
+    var photos=r.photos?Object.values(r.photos).filter(function(u){return u&&u.startsWith('http');}).slice(0,3):[];
+    var phHTML=photos.length?'<div style="display:flex;gap:4px;margin-top:5px">'+photos.map(function(u){return'<img src="'+u+'" style="width:52px;height:52px;object-fit:cover;border-radius:5px;cursor:pointer" onclick="openIV(\''+u+'\',\'입차사진\')">';}).join('')+'</div>':'';
+    return '<div style="padding:8px 0;border-bottom:1px solid var(--border)">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center">'
+      +'<span style="font-size:12px;font-weight:600">'+r.date+' '+r.time+'</span>'
+      +'<span class="badge b-coral" style="font-size:10px">'+(r.type||r.company||'-')+'</span>'
+      +'</div>'
+      +(r.routeFrom?'<div style="font-size:11px;color:var(--text2);margin-top:2px">'+r.routeFrom+' → '+r.routeTo+'</div>':'')
+      +(r.temp&&r.temp!=='상온'?'<div style="font-size:11px;color:var(--blue)">🌡 '+r.temp+'°C</div>':'')
+      +phHTML
+      +'</div>';
+  }).join('');
+  return _drvHistSection('hist_entry','📅 입차 이력 (60일) — '+rows.length+'건',html);
+}
+// 운행 이력
+function _drvHistDelivery(){
+  var cut=_drv60Cut();
+  var rows=ls('deliveries').filter(function(d){return d.driver===S.curDriver&&(d.date||'')>=cut;})
+    .sort(function(a,b){return (b.date+b.completedAt).localeCompare(a.date+a.completedAt);});
+  if(!rows.length)return _drvHistSection('hist_deliv','📅 운행 이력 (60일)','<div style="text-align:center;padding:14px;font-size:12px;color:var(--text3)">기록 없음</div>');
+  var html=rows.map(function(r){
+    var photos=r.photos?Object.values(r.photos).filter(function(u){return u&&u.startsWith('http');}).slice(0,3):[];
+    var phHTML=photos.length?'<div style="display:flex;gap:4px;margin-top:5px">'+photos.map(function(u){return'<img src="'+u+'" style="width:52px;height:52px;object-fit:cover;border-radius:5px;cursor:pointer" onclick="openIV(\''+u+'\',\'배송사진\')">';}).join('')+'</div>':'';
+    return '<div style="padding:8px 0;border-bottom:1px solid var(--border)">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center">'
+      +'<span style="font-size:12px;font-weight:600">'+r.date+' '+r.completedAt+'</span>'
+      +'<span class="badge b-coral" style="font-size:10px">'+(r.client||r.category||'-')+'</span>'
+      +'</div>'
+      +'<div style="font-size:11px;color:var(--text2);margin-top:2px">배송 '+(r.dcnt||0)+'건 · 반품 '+(r.rcnt||0)+'건'+(r.fresh>0?' · 프레시 '+r.fresh:'')+'</div>'
+      +(r.route?'<div style="font-size:11px;color:var(--blue)">'+r.route+'</div>':'')
+      +phHTML
+      +'</div>';
+  }).join('');
+  return _drvHistSection('hist_deliv','📅 운행 이력 (60일) — '+rows.length+'건',html);
+}
+// 온도 이력
+function _drvHistTemp(){
+  var cut=_drv60Cut();
+  var rows=ls('tempLogs').filter(function(l){return l.driver===S.curDriver&&(l.date||'')>=cut;})
+    .sort(function(a,b){return (b.date+b.time).localeCompare(a.date+a.time);});
+  if(!rows.length)return _drvHistSection('hist_temp','📅 온도 이력 (60일)','<div style="text-align:center;padding:14px;font-size:12px;color:var(--text3)">기록 없음</div>');
+  var html=rows.map(function(r){
+    var warn=r.temp!=='상온'&&parseFloat(r.temp)>-18;
+    var phHTML=r.photoUrl&&r.photoUrl.startsWith('http')
+      ?'<img src="'+r.photoUrl+'" style="width:52px;height:52px;object-fit:cover;border-radius:5px;margin-top:4px;cursor:pointer" onclick="openIV(\''+r.photoUrl+'\',\'온도기록\')">':'';
+    return '<div style="padding:8px 0;border-bottom:1px solid var(--border)">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center">'
+      +'<span style="font-size:12px;font-weight:600">'+r.date+' '+r.time+'</span>'
+      +'<span style="font-size:13px;font-weight:700;color:'+(warn?'var(--red)':'var(--blue)')+'">'+r.temp+(r.temp==='상온'?'':'°C')+(warn?' ⚠️':'')+'</span>'
+      +'</div>'
+      +'<div style="font-size:11px;color:var(--text2)">'+r.location+(r.note?' · '+r.note:'')+'</div>'
+      +phHTML
+      +'</div>';
+  }).join('');
+  return _drvHistSection('hist_temp','📅 온도 이력 (60일) — '+rows.length+'건',html);
+}
+// 사고 이력
+function _drvHistAccident(){
+  var cut=_drv60Cut();
+  var rows=ls('accidents').filter(function(a){return a.driver===S.curDriver&&(a.date||'')>=cut;})
+    .sort(function(a,b){return (b.date+b.time).localeCompare(a.date+a.time);});
+  if(!rows.length)return _drvHistSection('hist_acc','📅 사고 이력 (60일)','<div style="text-align:center;padding:14px;font-size:12px;color:var(--text3)">사고 없음</div>');
+  var html=rows.map(function(r){
+    var photos=r.photos?Object.values(r.photos).filter(function(u){return u&&u.startsWith('http');}):[];
+    var phHTML=photos.length?'<div style="display:flex;gap:4px;margin-top:5px;flex-wrap:wrap">'+photos.map(function(u){return'<img src="'+u+'" style="width:52px;height:52px;object-fit:cover;border-radius:5px;cursor:pointer" onclick="openIV(\''+u+'\',\'사고사진\')">';}).join('')+'</div>':'';
+    return '<div style="padding:8px 0;border-bottom:1px solid var(--border)">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center">'
+      +'<span style="font-size:12px;font-weight:600">'+r.date+' '+r.time+'</span>'
+      +'<span class="badge '+(r.status==='접수중'?'b-red':r.status==='처리중'?'b-wait':'b-done')+'" style="font-size:10px">'+r.status+'</span>'
+      +'</div>'
+      +'<div style="font-size:12px;font-weight:600;color:var(--red);margin-top:2px">'+r.type+'</div>'
+      +'<div style="font-size:11px;color:var(--text2)">'+r.description+'</div>'
+      +(r.progressNote?'<div style="font-size:11px;color:var(--text3)">진행: '+r.progressNote+'</div>':'')
+      +phHTML
+      +'</div>';
+  }).join('');
+  return _drvHistSection('hist_acc','📅 사고 이력 (60일) — '+rows.length+'건',html);
+}
+// 사진 모아보기
+function drvPhotoGallery(){
+  var cut=_drv60Cut();
+  var allPhotos=[];
+  // 각 컬렉션에서 사진 수집
+  [{col:'entries',label:'입차'},{col:'deliveries',label:'운행'},{col:'accidents',label:'사고'}].forEach(function(c){
+    ls(c.col).filter(function(r){return r.driver===S.curDriver&&(r.date||'')>=cut;}).forEach(function(r){
+      if(r.photos&&typeof r.photos==='object'){
+        Object.entries(r.photos).forEach(function(e){
+          if(e[1]&&typeof e[1]==='object'){
+            Object.entries(e[1]).forEach(function(e2){
+              if(e2[1]&&e2[1].startsWith('http'))allPhotos.push({url:e2[1],label:c.label,date:r.date,time:r.time||r.completedAt||''});
+            });
+          } else if(e[1]&&e[1].startsWith('http')){
+            allPhotos.push({url:e[1],label:c.label,date:r.date,time:r.time||r.completedAt||''});
+          }
+        });
+      }
+    });
+  });
+  ls('tempLogs').filter(function(l){return l.driver===S.curDriver&&(l.date||'')>=cut&&l.photoUrl&&l.photoUrl.startsWith('http');}).forEach(function(l){
+    allPhotos.push({url:l.photoUrl,label:'온도',date:l.date,time:l.time});
+  });
+  allPhotos.sort(function(a,b){return (b.date+b.time).localeCompare(a.date+a.time);});
+
+  var mo=document.createElement('div');
+  mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:700;display:flex;flex-direction:column;overflow:hidden';
+  var hdr='<div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0">'
+    +'<span style="font-weight:700;font-size:14px">📸 사진 모아보기 (60일) — '+allPhotos.length+'장</span>'
+    +'<button onclick="this.parentElement.parentElement.remove()" style="padding:5px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:12px">닫기</button>'
+    +'</div>';
+  var body='';
+  if(!allPhotos.length){
+    body='<div style="flex:1;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.5);font-size:14px">60일 내 사진이 없습니다</div>';
+  } else {
+    body='<div style="flex:1;overflow-y:auto;padding:12px">'
+      +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">'
+      +allPhotos.map(function(p){
+        return '<div style="position:relative;cursor:pointer" onclick="openIV(\''+p.url+'\',\''+p.label+' '+p.date+'\')">'
+          +'<img src="'+p.url+'" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px">'
+          +'<div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.7));padding:4px 5px;border-radius:0 0 6px 6px">'
+          +'<div style="color:#fff;font-size:9px;font-weight:600">'+p.label+'</div>'
+          +'<div style="color:rgba(255,255,255,.7);font-size:8px">'+p.date+'</div>'
+          +'</div></div>';
+      }).join('')
+      +'</div></div>';
+  }
+  mo.innerHTML=hdr+body;
+  document.body.appendChild(mo);
+}
 function dEntry(){
   var me=ls('entries').filter(e=>e.driver===S.curDriver&&e.date===today()).pop();
   // ── 쿠팡 기사: 단순 입차 화면 ──
@@ -3867,6 +4379,7 @@ function dEntry(){
       +'<button class="bbtn bb-teal" onclick="submitEntryCoupang()" style="margin:12px 0 0">✅ 쿠팡 입차 등록 → 관리자 연동</button>'
       +'</div>'
       +histHTML
+      +_drvHistEntry()
       +'<div style="height:10px"></div>';
   }
   var isLine=(S.selEntry==='간선');
@@ -4062,7 +4575,8 @@ function dTaxi(){
     +'<label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">📷 배송완료 증빙 (후면 카메라 즉시 호출)</label>'
     +'<div class="cam-grid cam-3" style="'+camCols+'">'+ph+'</div>'
     +'</div>'
-    +'<button class="bbtn bb-teal" onclick="submitDelivery()">배송 완료 등록 → 관리자 연동</button>';
+    +'<button class="bbtn bb-teal" onclick="submitDelivery()">배송 완료 등록 → 관리자 연동</button>'
+    +_drvHistDelivery();
 }
 function dLine(){
   var terminals=S.termList.map(t=>`<option>${t}</option>`).join('');
@@ -4145,6 +4659,7 @@ function dTemp(){
     <div style="flex:1"><span style="font-size:14px;font-weight:700;color:${l.temp==='상온'?'var(--amber)':parseFloat(l.temp)<=-18?'var(--teal)':'var(--red)'}">${l.temp}${l.temp==='상온'?'':' °C'}</span><span style="font-size:11px;color:var(--text2);margin-left:6px">${l.location} · ${l.time}</span></div>
     ${l.photoUrl&&l.photoUrl.length>5?`<img class="thumb" src="${l.photoUrl}" onclick="openIV('${l.photoUrl}','온도기록')">`:'' }
   </div>`).join('')}</div>`:''}
+  ${_drvHistTemp()}
   <div style="height:12px"></div>`;
 }
 async function submitTemp(){
@@ -4190,6 +4705,7 @@ function dAccident(){
     </div>
   </div>
   <button class="bbtn bb-red" onclick="submitAccident()">🚨 즉시 보고 → 관리자 알림</button>
+  ${_drvHistAccident()}
   <div style="height:12px"></div>`;
 }
 async function submitAccident(){
@@ -4264,7 +4780,10 @@ function dSettle(){
   s.forEach(function(x){
     var r=calcNet(x);
     var rdList=x.routeDetails||[];
-    var taxBase=r.damt+r.ramt+r.fresh+r.finc;
+    // ★ 세금계산서 금액 = 공급대가 (고용·산재 빼기 전)
+    var taxBase = r.income;  // ★ 세금계산서 합계 = 배송+반품+롤백+인센
+    // ★ 실지급액 = 세금계산서 금액 - 고용 - 산재
+    var realPay = taxBase - r.emp - (r.work||0);
 
     // 라우트별 테이블
     var routeRows='';
@@ -4318,7 +4837,7 @@ function dSettle(){
     '<div class="stmt-totals">'+
       '<div class="stbox"><div class="stlbl">세금계산서 금액</div><div class="stval" style="font-size:15px;font-weight:700;color:var(--green)">₩'+taxBase.toLocaleString()+'</div></div>'+
       '<div class="stbox"><div class="stlbl">공제(고용+산재)</div><div class="stval" style="font-size:15px;font-weight:700;color:var(--red)">-₩'+(r.emp+(r.work||0)).toLocaleString()+'</div></div>'+
-      '<div class="stbox hl"><div class="stlbl">실 지급액</div><div class="stval" style="color:#fff;font-size:17px;font-weight:700">₩'+r.net.toLocaleString()+'</div></div>'+
+      '<div class="stbox hl"><div class="stlbl">실 지급액</div><div class="stval" style="color:#fff;font-size:17px;font-weight:700">₩'+realPay.toLocaleString()+'</div></div>'+
     '</div>'+
     // ── 수익 항목
     '<div class="stmt-sec">'+
@@ -4340,8 +4859,8 @@ function dSettle(){
     '<div class="stmt-sec" style="border-top:1px solid #e0dfd8">'+
       '<div style="font-size:13px;font-weight:600;padding-left:8px;border-left:3px solid #D85A30;margin-bottom:8px">공제 항목</div>'+
       '<div class="tax-box">'+
-        '<div class="tax-row"><span>고용보험 0.8%</span><span style="color:var(--red);font-weight:600">-₩'+r.emp.toLocaleString()+'</span></div>'+
-        '<div class="tax-row"><span>산재보험 1.3%</span><span style="color:var(--red);font-weight:600">-₩'+(r.work||0).toLocaleString()+'</span></div>'+
+        '<div style="font-size:11px;color:var(--text3);padding:3px 0 5px">📌 월보수액 ₩'+(r.monthlyWage||0).toLocaleString()+' (공급가액 ₩'+(r.supplyAmt||0).toLocaleString()+' × 65.4%)</div><div class="tax-row"><span>고용보험 0.8% <small>(월보수액기준, 80만↑)</small></span><span style="color:var(--red);font-weight:600">-₩'+r.emp.toLocaleString()+'</span></div>'+
+        '<div class="tax-row"><span>산재보험 0.88%</span><span style="color:var(--red);font-weight:600">-₩'+(r.work||0).toLocaleString()+'</span></div>'+
         (r.eq>0?'<div class="tax-row"><span>장비임대료</span><span style="color:var(--red)">-₩'+r.eq.toLocaleString()+'</span></div>':'')+
         (r.adv>0?'<div class="tax-row"><span>가불금</span><span style="color:var(--red)">-₩'+r.adv.toLocaleString()+'</span></div>':'')+
         '<div class="tax-total"><span>공제 합계</span><span>-₩'+r.deduct.toLocaleString()+'</span></div>'+
@@ -4351,14 +4870,15 @@ function dSettle(){
     '<div class="stmt-fin">'+
       '<div>'+
         '<div style="font-size:12px;font-weight:700">실 지급액</div>'+
-        '<div style="font-size:10px;opacity:.7;margin-top:2px">세금계산서금액 ₩'+taxBase.toLocaleString()+' − 고용·산재 ₩'+(r.emp+(r.work||0)).toLocaleString()+'</div>'+
+        '<div style="font-size:10px;opacity:.7;margin-top:2px">세금계산서 ₩'+taxBase.toLocaleString()+' − 고용·산재 ₩'+(r.emp+(r.work||0)).toLocaleString()+'</div>'+
       '</div>'+
-      '<strong style="font-size:22px;color:#fff">₩'+r.net.toLocaleString()+'</strong>'+
+      '<strong style="font-size:22px;color:#fff">₩'+realPay.toLocaleString()+'</strong>'+
     '</div>'+
     '<div style="padding:7px 20px;font-size:11px;color:var(--text3)">'+(x.sharedAt?'공유일: '+x.sharedAt:'')+'</div>'+
-    // ★ 세금계산서 보기 버튼
-    '<div style="padding:8px 14px;border-top:1px solid var(--border);background:var(--bg2)">'+
-      '<button onclick="dViewTax(\''+x.month+'\',\''+x.driver+'\',this)" style="width:100%;padding:10px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">🧾 세금계산서 이미지 보기</button>'+
+    // ★ 명세서 이미지 저장 + 세금계산서 보기
+    '<div style="padding:8px 14px;border-top:1px solid var(--border);background:var(--bg2);display:flex;gap:8px">'+
+      '<button onclick="drvSaveStmtImg(this)" style="flex:1;padding:10px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">📋 명세서 이미지 저장</button>'+
+      '<button onclick="dViewTax(\''+x.month+'\',\''+x.driver+'\',this)" style="flex:1;padding:10px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">🧾 세금계산서 보기</button>'+
     '</div>'+
     '</div>';
   });
@@ -4367,15 +4887,36 @@ function dSettle(){
 }
 
 
-// ── 카메라 업로드 (Storage URL 저장 → 관리자 실시간 연동)
+// ★ 기사용 명세서 이미지 저장
+function drvSaveStmtImg(btn){
+  if(typeof html2canvas==='undefined'){toast('⚠️ 잠시 후 다시 시도해주세요');return;}
+  var stmts=document.querySelectorAll('.stmt');
+  // 버튼이 속한 명세서 찾기
+  var wrap=btn.closest('.stmt');
+  if(!wrap&&stmts.length>0)wrap=stmts[0];
+  if(!wrap){toast('명세서를 찾을 수 없습니다');return;}
+  var origBtn=btn.textContent;
+  btn.textContent='📸 저장 중...'; btn.disabled=true;
+  html2canvas(wrap,{scale:1.5,useCORS:true,backgroundColor:'#ffffff',logging:false})
+  .then(function(canvas){
+    var a=document.createElement('a');
+    a.href=canvas.toDataURL('image/jpeg',0.92);
+    a.download='명세서_'+S.curDriver+'_'+new Date().toLocaleDateString('ko-KR').replace(/\./g,'').replace(/\s/g,'')+'.jpg';
+    a.click();
+    toast('✅ 명세서 이미지 저장 완료');
+  })
+  .catch(function(e){toast('❌ 저장 오류: '+e.message);})
+  .finally(function(){btn.textContent=origBtn;btn.disabled=false;});
+}
 async function camPhoto(inp,slotKey,category,label){
   var file=inp.files[0]; if(!file)return;
+  // ★ S.curDriver null 체크
+  if(!S.curDriver){toast('❌ 로그인 정보가 없습니다. 다시 로그인해 주세요.');return;}
   var idMap={entry:'ce',delivery:'cd',accident:'ca',temp:'ct'};
   var id=(idMap[category]||'c')+'-'+slotKey;
   var btn=document.getElementById(id);
   if(btn){btn.className='cam-btn';btn.innerHTML='<div style="text-align:center"><div style="font-size:18px">⏳</div><div style="font-size:9px">업로드중...</div></div>';}
 
-  // ① 로컬 미리보기 즉시 표시
   var previewUrl=await new Promise(function(res){
     var fr=new FileReader(); fr.onload=function(e){res(e.target.result);}; fr.readAsDataURL(file);
   });
@@ -4384,25 +4925,24 @@ async function camPhoto(inp,slotKey,category,label){
   try{
     var storageUrl=null;
 
-    // ② Firebase Storage에 직접 업로드 → 실제 URL 획득
     if(FB&&_st){
       toast('📤 '+label+' 업로드 중...');
       var compressed=file;
       try{compressed=await compressImage(file);}catch(e){}
       var blob=compressed instanceof Blob?compressed:file;
-      var path='photos/'+category+'/'+S.curDriver+'/'+slotKey+'_'+Date.now()+'.jpg';
+      // ★ curDriver가 확실히 있을 때만 경로 생성
+      var safeName=S.curDriver.replace(/[^a-zA-Z0-9가-힣]/g,'_');
+      var path='photos/'+category+'/'+safeName+'/'+slotKey+'_'+Date.now()+'.jpg';
       var ref=_st.ref(path);
       await ref.put(blob);
       storageUrl=await ref.getDownloadURL();
     }
 
-    var finalUrl=storageUrl||previewUrl; // Storage URL 우선, 없으면 base64
+    var finalUrl=storageUrl||previewUrl;
 
-    // ③ S.photos 메모리 업데이트
     if(!S.photos[category])S.photos[category]={};
     S.photos[category][slotKey]=finalUrl;
 
-    // ④ localStorage 저장
     try{
       var ph=JSON.parse(localStorage.getItem(category+'_photos')||'{}');
       if(!ph[S.curDriver])ph[S.curDriver]={};
@@ -4410,7 +4950,6 @@ async function camPhoto(inp,slotKey,category,label){
       localStorage.setItem(category+'_photos',JSON.stringify(ph));
     }catch(e){}
 
-    // ⑤ Firestore drivers 문서 업데이트 (관리자 실시간 연동)
     if(FB&&_db){
       var me=ls('drivers').find(function(d){return d.name===S.curDriver;});
       if(me&&me.fbId){
@@ -4421,14 +4960,13 @@ async function camPhoto(inp,slotKey,category,label){
           .catch(function(e){console.warn('drivers photo update:',e);});
       }
 
-      // ⑥ photo_logs 컬렉션에도 저장 (관리자 전용 실시간 피드)
       _db.collection('photo_logs').add({
         driver:S.curDriver, category:category, slotKey:slotKey,
         label:label, url:finalUrl, date:today(),
         time:new Date().toISOString()
       }).catch(function(){});
 
-      // ⑦ 관련 컬렉션(entries/deliveries 등) 오늘 문서에도 URL 저장
+      // ★ docs[0]만 → 오늘 일치하는 모든 문서 업데이트
       var colMap={entry:'entries',delivery:'deliveries',accident:'accidents',temp:'entries'};
       var col=colMap[category]||category;
       _db.collection(col)
@@ -4438,7 +4976,10 @@ async function camPhoto(inp,slotKey,category,label){
             var u2={};
             u2['photo_'+slotKey]=finalUrl;
             u2['photoAt_'+slotKey]=new Date().toISOString();
-            snap.docs[0].ref.update(u2).catch(function(){});
+            // ★ 모든 문서에 업데이트
+            snap.docs.forEach(function(doc){
+              doc.ref.update(u2).catch(function(){});
+            });
           }
         }).catch(function(){});
     }
@@ -4502,22 +5043,38 @@ function parseCoupangExcel(inp){
       var total=totalSheet?XLSX.utils.sheet_to_json(totalSheet,{header:1}):[];
       if(raw.length<2){toast('❌ 데이터가 없습니다');return;}
 
-      // ★ 컬럼 정확 매핑 (엑셀 실측 기준):
-      // [7]=H 배송건수, [8]=I 반품건수, [9]=J 단가(배송=반품 동일)
-      // [10]=K 추가인센티브(건당), [11]=L 기본배송단가금액=(H+I)×J (반품포함!)
-      // [12]=M 추가인센가중금액=K×H, [13]=N 총금액=L+M
-      // [14]=O 프레시백 회수 인센티브
+      // ★ 정산Raw 헤더 행 자동 탐지 (컬럼 동적 매핑)
+      var rawHdrIdx=0;
+      for(var h=0;h<Math.min(raw.length,5);h++){
+        if(raw[h]&&(String(raw[h][0]||'').includes('구분')||String(raw[h][1]||'').toLowerCase()==='id')){
+          rawHdrIdx=h; break;
+        }
+      }
+      var rh=raw[rawHdrIdx]||[];
+      var rColID=1,rColRoute=2,rColDcnt=7,rColRcnt=8,rColUnit=9,rColFresh=14;
+      for(var c=0;c<rh.length;c++){
+        var cn=String(rh[c]||'').replace(/\s+/g,'');
+        if(cn==='ID'||cn==='id')rColID=c;
+        else if(cn.includes('Route')||cn.includes('라우트'))rColRoute=c;
+        else if(cn.includes('배송건수')||cn.includes('배송(parcel)'))rColDcnt=c;
+        else if(cn.includes('반품')&&(cn.includes('운송장')||cn.includes('parcel')))rColRcnt=c;
+        // ★ 단가 컬럼: "금액"이나 "기본"이 없는 순수 단가만 (기본배송단가금액 제외)
+        else if(cn.includes('단가')&&!cn.includes('금액')&&!cn.includes('기본')&&!cn.includes('인센'))rColUnit=c;
+        else if(cn.includes('프레시백')||cn.includes('프레쉬백'))rColFresh=c;
+      }
+
       var drvMap={};
-      for(var i=1;i<raw.length;i++){
-        var row=raw[i]; if(!row[1])continue;
-        var userId=String(row[1]).trim();
-        var dcnt=Number(row[7])||0;
-        var rcnt=Number(row[8])||0;
-        var unitPrc=RPRICE[r]||Number(row[9])||0;  // RPRICE 우선
-        var freshInc=Number(row[14])||0;  // O열 프레시백 회수 인센티브
-        // 배송금액(반품제외) = 배송건수 × 단가
+      for(var i=rawHdrIdx+1;i<raw.length;i++){
+        var row=raw[i]; if(!row[rColID])continue;
+        var userId=String(row[rColID]).trim();
+        if(userId===''||userId.toLowerCase()==='id')continue;
+        var route=String(row[rColRoute]||'').trim();
+        var dcnt=Number(row[rColDcnt])||0;
+        var rcnt=Number(row[rColRcnt])||0;
+        // ★ 단가: 회사 RPRICE 기준 (고정 계약단가)
+        var unitPrc=(route&&RPRICE[route])||Number(row[rColUnit])||0;
+        var freshInc=Number(row[rColFresh])||0;
         var delAmt=dcnt*unitPrc;
-        // 반품금액 = 반품건수 × 단가 (단가 동일)
         var retAmt=rcnt*unitPrc;
 
         if(!drvMap[userId])drvMap[userId]={
@@ -4531,27 +5088,54 @@ function parseCoupangExcel(inp){
         drvMap[userId].retAmt+=retAmt;
         drvMap[userId].freshAmt+=freshInc;
 
-        // 라우트별 상세 (배송+반품 모두)
-        var route=String(row[2]||'');
         if(route){
           if(!drvMap[userId].routes[route])
-            drvMap[userId].routes[route]={cnt:0,ret:0,unitPrc:0};
+            drvMap[userId].routes[route]={cnt:0,ret:0,unitPrc:0,delAmt:0,retAmt:0};
           drvMap[userId].routes[route].cnt+=dcnt;
           drvMap[userId].routes[route].ret+=rcnt;
+          drvMap[userId].routes[route].delAmt+=delAmt;   // ★ 금액 누적
+          drvMap[userId].routes[route].retAmt+=retAmt;   // ★ 반품 금액 누적
           if(unitPrc>0)drvMap[userId].routes[route].unitPrc=unitPrc;
         }
       }
 
-      // 정산총괄 L열(총합계) → 최종 검증용
+      // 정산총괄 — 헤더 행 자동 탐지 후 컬럼 인덱스 동적 매핑
       var totalMap={};
-      if(total.length>4){
-        for(var j=5;j<total.length;j++){
-          var tr=total[j]; if(!tr||!tr[3])continue;
-          var uid=String(tr[3]).trim();
-          // L열(index 11)=금액(총합계), I열(index 8)=프레시백
-          var tAmt=Number(tr[11])||0;
-          var tFresh=Number(tr[8])||0;
-          if(tAmt>0)totalMap[uid]={totalAmt:tAmt,freshAmt:tFresh};
+      if(total.length>2){
+        // ★ "ID" 또는 "vendor" 포함 행을 헤더로 자동 탐지
+        var totalHdrIdx=-1;
+        for(var h=0;h<Math.min(total.length,10);h++){
+          var hr=total[h];
+          if(hr&&(String(hr[3]||'').toLowerCase()==='id'||String(hr[2]||'').toLowerCase()==='vendor'||String(hr[0]||'').toLowerCase()==='no')){
+            totalHdrIdx=h; break;
+          }
+        }
+        if(totalHdrIdx>=0){
+          var hRow=total[totalHdrIdx];
+          // 컬럼명으로 인덱스 탐지
+          var colID=-1,colFresh=-1,colDmg=-1,colTotal=-1;
+          for(var c=0;c<hRow.length;c++){
+            var cell=String(hRow[c]||'').replace(/\s+/g,'');
+            if(cell==='ID'||cell==='id')colID=c;
+            else if(cell.includes('프레시백')||cell.includes('프레쉬백'))colFresh=c;
+            else if(cell.includes('분실파손'))colDmg=c;
+            else if(cell.includes('총합계')||cell.includes('TOTAL'))colTotal=c;
+          }
+          // 탐지 실패 시 기본값
+          if(colID<0)colID=3;
+          if(colFresh<0)colFresh=8;
+          if(colDmg<0)colDmg=10;
+          if(colTotal<0)colTotal=11;
+
+          for(var j=totalHdrIdx+1;j<total.length;j++){
+            var tr=total[j]; if(!tr||!tr[colID])continue;
+            var uid=String(tr[colID]).trim();
+            if(uid===''||uid==='ID')continue;
+            var tAmt=Number(tr[colTotal])||0;
+            var tFresh=Number(tr[colFresh])||0;
+            var tDmg=Number(tr[colDmg])||0;
+            if(tAmt>0)totalMap[uid]={totalAmt:tAmt,freshAmt:tFresh,dmgAmt:tDmg};
+          }
         }
       }
 
@@ -4569,19 +5153,39 @@ function parseCoupangExcel(inp){
         if(!d){skipped++;skippedIds.push(cleanId);return;}
 
         var dm=drvMap[userId];
-        // 정산총괄 기준으로 프레시백 보정 (더 정확)
         var tm=totalMap[userId]||totalMap[cleanId]||{};
         var freshAmt=tm.freshAmt||dm.freshAmt||0;
-        // 총수익 = 배송 + 반품 + 프레시백 (추가인센은 별도로 관리)
-        var income=dm.delAmt+dm.retAmt+freshAmt;
+        var dmgAmt=tm.dmgAmt||0;
+        // ★ 세금계산서 기준 금액 = 배송(RPRICE) + 반품(RPRICE) + 롤백회수 + 인센(진주OFF시 0)
+        var taxBase=dm.delAmt+dm.retAmt+freshAmt+fincVal;
+        // 고용·산재 기준 = 세금계산서 금액 (정산총괄 total 아님)
+        var totalAmt=taxBase;
+        var income=taxBase;
+        // ★ 고용·산재 계산 (세금계산서 방식)
+        var supplyAmt=Math.round(totalAmt/1.1);
+        var expenseAmt=Math.round(supplyAmt*0.346);
+        var monthlyWage=supplyAmt-expenseAmt;
+        var empIns=monthlyWage>=800000?Math.floor(monthlyWage*0.008/10)*10:0;
+        var workIns=Math.floor(monthlyWage*0.0088/10)*10;
 
         var routeDetails=Object.keys(dm.routes).map(function(r){
           var rv=dm.routes[r];
-          var up=rv.unitPrc||RPRICE[r]||0;
+          var up=rv.unitPrc||0;
           return{
-            route:r,cnt:rv.cnt,ret:rv.ret,unitPrice:up,
-            amt:rv.cnt*up,retAmt:rv.ret*up
+            route:r, cnt:rv.cnt, ret:rv.ret, unitPrice:up,
+            amt:rv.delAmt||0,       // ★ 누적 배송금액 사용
+            retAmt:rv.retAmt||0     // ★ 누적 반품금액 사용
           };
+        });
+
+        // ★ 기사별 라우트별 인센티브 합산
+        var fincVal=0;
+        Object.keys(dm.routes).forEach(function(route){
+          var rv=dm.routes[route];
+          var s=_getIncSetting(d.name, route);
+          if(s.on && s.rate>0){
+            fincVal+=rv.cnt*s.rate;
+          }
         });
 
         var existing=settlements.findIndex(function(s){return s.driver===d.name&&s.month===month;});
@@ -4589,20 +5193,28 @@ function parseCoupangExcel(inp){
           driver:d.name, userId:cleanId, coupangId:userId,
           jobsub:d.jobsub||'쿠팡', month:month,
           dcnt:dm.dcnt, rcnt:dm.rcnt,
-          damt:dm.delAmt,        // ★ 배송금액만
-          ramt:dm.retAmt,        // ★ 반품금액만
-          fresh:freshAmt,        // ★ O열 프레시백 회수
-          finc:Math.round(dm.dcnt*25),  // 프레시백 인센티브 (건당25원)
-          inc:0,                 // 추가인센 미표시
+          damt:dm.delAmt,
+          ramt:dm.retAmt,
+          fresh:freshAmt,
+          finc:fincVal,               // ★ 진주캠프 OFF시 0, 나머지 건수×25원
+          inc:0,
           tax:0,
-          emp:Math.round(income*0.008),
-          work:Math.round(income*0.013),
-          eq:0,dmg:0,adv:0,
+          totalAmt:totalAmt,          // ★ 공급대가 저장
+          supplyAmt:supplyAmt,        // ★ 공급가액
+          monthlyWage:monthlyWage,    // ★ 월보수액
+          emp:empIns,                 // ★ 고용보험 (월보수액×0.8%, 80만미만 제외)
+          work:workIns,               // ★ 산재보험 (월보수액×0.88%)
+          eq:0, dmg:dmgAmt, adv:0,
           status:'정산예정',
           routeDetails:routeDetails,
           createdAt:new Date().toISOString()
         };
-        if(existing>=0){settlements[existing]=Object.assign(settlements[existing],entry);updated++;}
+        if(existing>=0){
+          // ★ finc는 항상 새 값으로 덮어쓰기 (진주 OFF 설정 반영)
+          settlements[existing]=Object.assign(settlements[existing],entry);
+          settlements[existing].finc=entry.finc;
+          updated++;
+        }
         else{settlements.push(entry); added++;}
       });
       lss('settlements',settlements);
@@ -4724,7 +5336,7 @@ function _exportAllTaxInvoices_csv_unused(){
       ['배송건수',(x.dcnt||0)+'건','반품건수',(x.rcnt||0)+'건'],
       ['총 배송 수익','배송+반품',r.income.toLocaleString()+'원',''],
       ['고용보험 (0.8%)','',(-r.emp).toLocaleString()+'원',''],
-      ['산재보험 (1.4%)','',(-Math.round(r.income*0.014)).toLocaleString()+'원',''],
+      ['산재보험 (0.88%)','',(-Math.round(r.income*0.014)).toLocaleString()+'원',''],
       ['원천세 (3.3%)','',(-Math.round(r.income*0.033)).toLocaleString()+'원',''],
       ['실지급액','',r.net.toLocaleString()+'원',''],
     ];
@@ -4861,38 +5473,59 @@ async function archiveAndPurge(){
   if(!FB||!_db){purgeOldData();return;}
   var cutoff=new Date(); cutoff.setDate(cutoff.getDate()-90);
   var cutStr=cutoff.toISOString().slice(0,10);
-  var batch=_db.batch();
-  var batchCount=0;
 
+  // ★ 배치를 배열로 관리 (490건 초과 시 새 배치 생성)
+  var batches=[_db.batch()];
+  var batchCount=0;
   var archiveItem=function(col,item){
+    var currentBatch=batches[batches.length-1];
     var ref=_db.collection('archive').doc();
-    batch.set(ref,{...item,_col:col,_archivedAt:new Date().toISOString()});
+    currentBatch.set(ref,{...item,_col:col,_archivedAt:new Date().toISOString()});
     batchCount++;
-    if(batchCount>=490){batch.commit().catch(function(){});batch=_db.batch();batchCount=0;}
+    if(batchCount%490===0){
+      // 490건마다 새 배치 생성
+      batches.push(_db.batch());
+    }
   };
 
-  ['entries','deliveries','accidents','tempLogs'].forEach(function(key){
-    var arr=ls(key);
+  // ★ 아카이빙할 항목 수집 (localStorage 삭제는 Firebase 커밋 완료 후)
+  var toKeep={};
+  // tempLogs 키명 통일: localStorage는 'tempLogs', Firestore는 'temp_logs'
+  var keyMap={entries:'entries',deliveries:'deliveries',accidents:'accidents',tempLogs:'temp_logs'};
+  Object.keys(keyMap).forEach(function(lsKey){
+    var arr=ls(lsKey);
     var keep=[],arch=[];
     arr.forEach(function(x){
       var d=x.date||x.createdAt||'9999';
       if(d<cutStr)arch.push(x); else keep.push(x);
     });
-    arch.forEach(function(x){archiveItem(key,x);});
-    if(arch.length){lss(key,keep);toast('[아카이빙] '+key+' '+arch.length+'건 보관');}
+    arch.forEach(function(x){archiveItem(keyMap[lsKey],x);});
+    toKeep[lsKey]={keep:keep,archLen:arch.length};
   });
 
-  // settlements: 완료된 것만 아카이빙
   var sets=ls('settlements'),keepS=[],archS=[];
   sets.forEach(function(x){
     var d=x.paidAt||x.month||'9999';
     if(x.status==='완료'&&d<cutStr)archS.push(x); else keepS.push(x);
   });
   archS.forEach(function(x){archiveItem('settlements',x);});
-  if(archS.length){lss('settlements',keepS);}
 
-  if(batchCount>0)batch.commit().catch(function(){});
-  toast('✅ 3개월 이전 데이터 아카이빙 완료');
+  // ★ 모든 배치 커밋 완료 후 localStorage 삭제
+  try{
+    await Promise.all(batches.map(function(b){return b.commit();}));
+    // 커밋 성공 시에만 localStorage 삭제
+    Object.keys(toKeep).forEach(function(lsKey){
+      if(toKeep[lsKey].archLen>0){
+        lss(lsKey,toKeep[lsKey].keep);
+        toast('[아카이빙] '+lsKey+' '+toKeep[lsKey].archLen+'건 보관');
+      }
+    });
+    if(archS.length){lss('settlements',keepS);}
+    toast('✅ 3개월 이전 데이터 아카이빙 완료 (총 '+(batchCount)+'건)');
+  }catch(e){
+    toast('❌ 아카이빙 오류 — 데이터 보존됨. 재시도해 주세요.');
+    console.error('[archiveAndPurge] 배치 커밋 실패:', e);
+  }
 }
 
 // 3개월 기록 보관소 UI
@@ -4983,8 +5616,15 @@ function archLoad(){
     // localStorage 최근 데이터도 합산
     var localRows=archGetLocal(s);
     var allRows=rows.concat(localRows);
-    // 중복 제거 (id 기준)
-    var seen={}; allRows=allRows.filter(function(r){var k=r.id||r._id||'';if(seen[k]||!k)return true;seen[k]=true;return true;});
+    // ★ 중복 제거 수정 (id 있는 경우 seen에 기록 후 필터)
+    var seen={};
+    allRows=allRows.filter(function(r){
+      var k=r.id||r._id||'';
+      if(!k)return true; // id 없는 항목은 통과
+      if(seen[k])return false; // 이미 본 id는 제거
+      seen[k]=true;
+      return true;
+    });
     allRows.sort(function(a,b){return(b.date||b.createdAt||b.month||'').localeCompare(a.date||a.createdAt||a.month||'');});
 
     window._archState.data=allRows;
@@ -5075,23 +5715,50 @@ function archRender(rows,result){
 function archDetail(idx){
   var rows=window._archState&&window._archState.data||[];
   var r=rows[idx]; if(!r)return;
+
+  // ★ 필드명 한글 매핑
+  var FIELD_KO={
+    driver:'기사명', date:'날짜', time:'시간', temp:'온도',
+    type:'업무유형', company:'화주사', ton:'차량톤수',
+    routeFrom:'출발지', routeTo:'도착지', route:'노선',
+    dcnt:'배송건수', rcnt:'반품건수', fresh:'프레시백',
+    completedAt:'완료시각', location:'위치', source:'기록방식',
+    note:'메모', status:'상태', paidAt:'지급일', month:'정산월',
+    income:'수입', net:'실지급', deduction:'공제',
+    incentive:'인센티브', base:'기본료', count:'건수',
+    unitPrice:'단가', workDays:'근무일수', employ:'고용형태',
+    photos:'사진', fbId:'Firebase ID', id:'항목ID',
+    ts:'서버시각', localTs:'로컬저장시각', sentAt:'전달시각'
+  };
+
   var html='<div style="font-size:12px;display:flex;flex-direction:column;gap:5px">';
   Object.entries(r).forEach(function(e){
     if(e[0].startsWith('_'))return;
+    // fbId, id, ts, localTs 숨김 처리
+    if(['fbId','id','ts','localTs'].indexOf(e[0])>=0)return;
+    var label=FIELD_KO[e[0]]||e[0];
     var v=e[1];
     if(typeof v==='object'&&v){
-      // 사진 URL 표시
       var imgs=Object.entries(v).filter(function(x){return typeof x[1]==='string'&&x[1].startsWith('http');});
       if(imgs.length){
-        html+='<div style="font-weight:600;color:var(--text2);margin-top:4px">📷 '+e[0]+'</div>';
+        html+='<div style="font-weight:600;color:var(--text2);margin-top:4px">📷 '+label+'</div>';
         html+='<div style="display:flex;gap:6px;flex-wrap:wrap">';
         imgs.forEach(function(x){html+='<img src="'+x[1]+'" style="width:80px;height:80px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="openIV(\''+x[1]+'\',\''+x[0]+'\')">';});
         html+='</div>';
         return;
       }
-      v=JSON.stringify(v).slice(0,60);
+      // photos:{} 처럼 빈 객체면 '-' 표시
+      var str=JSON.stringify(v);
+      if(str==='{}'||str==='[]'){v='-';}
+      else{v=str.slice(0,80);}
     }
-    html+='<div style="display:flex;gap:8px"><span style="color:var(--text3);min-width:80px">'+e[0]+'</span><span>'+v+'</span></div>';
+    // ts 객체(Firestore 타임스탬프)는 날짜로 변환
+    if(e[0]==='ts'&&v&&typeof v==='object'&&v.seconds){
+      v=new Date(v.seconds*1000).toLocaleString('ko-KR');
+    }
+    html+='<div style="display:flex;gap:8px;padding:4px 0;border-bottom:1px solid var(--border)">'+
+      '<span style="color:var(--text3);min-width:90px;font-weight:600">'+label+'</span>'+
+      '<span style="color:var(--text)">'+v+'</span></div>';
   });
   html+='</div>';
   var mo=document.createElement('div');
@@ -5110,7 +5777,7 @@ function archExcel(){
   var rows=window._archState&&window._archState.data||[];
   if(!rows.length){toast('먼저 조회해주세요');return;}
   var colName={entries:'입차',deliveries:'운행',accidents:'사고',tempLogs:'온도',settlements:'정산'};
-  var header=['날짜','구분','기사','유형/내용','금액/건수','상태','메모'];
+  var header=['날짜','구분','기사','유형/내용','금액/건수','상태','메모','사진1','사진2','사진3'];
   var data=[header];
   rows.forEach(function(r){
     var col=r._col||'';
@@ -5120,7 +5787,31 @@ function archExcel(){
     else if(col==='accidents'){detail=(r.type||'')+' '+(r.description||'').slice(0,40);memo=r.progressNote||'';}
     else if(col==='tempLogs'){detail=(r.temp||'')+'°C '+(r.location||'');}
     else if(col==='settlements'){detail=r.month||'';amount='₩'+(r.net?Number(r.net).toLocaleString():'0');}
-    data.push([r.date||r.month||'',colName[col]||col,r.driver||'',detail,amount,status,memo]);
+
+    // ★ 사진 URL 추출 (Firebase Storage URL만, base64 제외)
+    var photoUrls=[];
+    if(r.photos&&typeof r.photos==='object'){
+      // photos.delivery.p1, photos.entry.zone 등 중첩 구조
+      Object.values(r.photos).forEach(function(cat){
+        if(typeof cat==='object'&&cat){
+          Object.values(cat).forEach(function(url){
+            if(typeof url==='string'&&url.startsWith('http')&&photoUrls.indexOf(url)<0)
+              photoUrls.push(url);
+          });
+        } else if(typeof cat==='string'&&cat.startsWith('http')){
+          photoUrls.push(cat);
+        }
+      });
+    }
+    // photoUrl 단일 필드도 확인 (온도기록)
+    if(r.photoUrl&&typeof r.photoUrl==='string'&&r.photoUrl.startsWith('http')&&photoUrls.indexOf(r.photoUrl)<0)
+      photoUrls.push(r.photoUrl);
+
+    data.push([
+      r.date||r.month||'', colName[col]||col, r.driver||'',
+      detail, amount, status, memo,
+      photoUrls[0]||'', photoUrls[1]||'', photoUrls[2]||''
+    ]);
   });
   var csv=data.map(function(row){return row.map(function(v){return'"'+String(v||'').replace(/"/g,'""')+'"';}).join(',');}).join('\n');
   var bom='\uFEFF';
@@ -5129,7 +5820,7 @@ function archExcel(){
   a.href=URL.createObjectURL(blob);
   a.download='MBTI_3개월기록_'+(today()||'archive')+'.csv';
   a.click();
-  toast('📥 엑셀 다운로드 완료');
+  toast('📥 엑셀 다운로드 완료 (사진 URL 포함)');
 }
 
 function purgeOldData(){
@@ -5189,13 +5880,15 @@ function startListeners(){
   }).catch(function(){});
 
   // ── photo_logs: 기사 사진 업로드 실시간 감지 → 관리자 UI 알림
+  // ★ 오늘+어제 날짜 모두 감시 (자정 전후 사진 누락 방지)
+  var yesterday=new Date();yesterday.setDate(yesterday.getDate()-1);
+  var yesterdayStr=yesterday.toISOString().slice(0,10);
   _db.collection('photo_logs')
-    .where('date','==',today())
+    .where('date','>=',yesterdayStr)
     .onSnapshot(function(snap){
       snap.docChanges().forEach(function(change){
         if(change.type==='added'){
           var d=change.doc.data();
-          // drivers 컬렉션 로컬 데이터도 즉시 업데이트
           var drivers=ls('drivers');
           var idx=drivers.findIndex(function(dr){return dr.name===d.driver;});
           if(idx>=0){
@@ -5204,15 +5897,13 @@ function startListeners(){
             drivers[idx].photos[d.category][d.slotKey]=d.url;
             lss('drivers',drivers);
           }
-          // 관리자가 해당 기사 페이지 보고 있으면 자동 갱신
           if(S.curMode==='admin'){
             if(S.page==='drivers'||S.page==='sync')SP(S.page,null);
-            // 토스트 알림
             toast('📸 '+d.driver+' — '+d.label+' 사진 업로드됨');
           }
         }
       });
-    },function(e){console.warn('photo_logs listener:',e);});
+    },function(e){console.warn('photo_logs listener 오류:', e.code);});
 
   // ── photo_logs: Firestore → localStorage → UI 직접 반영 (1초 이내)
   // ── drivers: Firestore → localStorage → UI 직접 반영 (1초 이내)
@@ -5267,7 +5958,8 @@ function startListeners(){
     accidents:'accident', settlements:'settle'
   };
   Object.keys(colPageMap).forEach(col=>{
-    _db.collection(col).orderBy('ts','desc').limit(100)
+    // ★ limit 100 → 300 (30명 × 하루 평균 5건 × 2배 여유)
+    _db.collection(col).orderBy('ts','desc').limit(300)
       .onSnapshot(snap=>{
         snap.docChanges().forEach(ch=>{
           if(ch.type==='added'||ch.type==='modified'){
@@ -5276,7 +5968,7 @@ function startListeners(){
             var i=a.findIndex(x=>x.fbId===d.fbId||x.id===d.id);
             if(i>=0) a[i]=Object.assign({},a[i],d);
             else a.unshift(d);
-            if(a.length>200)a=a.slice(0,200);
+            if(a.length>300)a=a.slice(0,300);
             lss(col,a);
             if(col==='accidents'&&ch.type==='added')
               addAct('acc','🚨 사고접수: '+(d.driver||''),d.driver||'');
@@ -5285,7 +5977,12 @@ function startListeners(){
         if(S.page==='dash'||S.page===colPageMap[col]) SP(S.page, null);
       }, err=>console.warn(col+' listener 오류:', err.code));
   });
-}
+
+  // ★ Firebase 재연결 시 pending 큐 재전송
+  firebase.firestore().enableNetwork().then(function(){
+    flushPendingWrites();
+  }).catch(function(){});
+} // ── startListeners 종료
 
 // ── INIT
 (function(){
@@ -5313,7 +6010,7 @@ function startListeners(){
         S.curMode='admin';
         setAdminName(sess.name||'김형우 대표');
         hide(['splash','login-screen','reg-screen','dv']); show('app');
-        SP('dash',null); updBadge(); updFbUI();
+        SP('dash',null); updBadge(); updFbUI(); initGrps();
         document.getElementById('tbdate').textContent=new Date().toLocaleDateString('ko-KR');
         startListeners();
         toast('👋 '+( sess.name||'관리자')+'님 자동 로그인');
