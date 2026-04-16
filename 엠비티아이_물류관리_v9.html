@@ -576,7 +576,7 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
 </div>
 
 <!-- ══ 관리자 앱 ══ -->
-<div id="app" style="flex-direction:column">
+<div id="app" style="display:none;flex-direction:column">
   <div class="layout">
     <div class="sidebar">
       <div class="sl">
@@ -644,7 +644,7 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
 </div>
 
 <!-- ══ 기사 앱 ══ -->
-<div id="dv" style="flex-direction:column">
+<div id="dv" style="display:none;flex-direction:column">
   <div class="pf">
     <div class="psb">
       <span id="phtime">05:42</span>
@@ -2006,7 +2006,7 @@ function rSettle(){
         <td style="display:flex;gap:3px;flex-wrap:wrap">
           <button class="btn btn-sm" onclick="viewStmt(${i})">명세서</button>
           ${x.status==='정산예정'?`<button class="btn btn-sm btn-teal" onclick="appSettle(${i})">승인</button>`:''}
-          <button class="btn btn-sm" style="background:#16a34a;color:#fff;border:none" onclick="openTaxInvoice(${i})">🧾 세금계산서</button>
+          <button class="btn btn-sm" style="background:#16a34a;color:#fff;border:none" onclick="openTaxInvoice(${i})">🧾 세금계산서${x.taxSent?'<span style="font-size:9px;margin-left:2px">✅</span>':'<span style="font-size:9px;margin-left:2px;color:#fbbf24">⬜</span>'}</button>
         </td>
       </tr>`;}).join('');
     var summary='<div style="font-size:11px;color:var(--text2);padding:4px 0 6px">'+gRows.length+'명 · 실지급 합계 <strong style="color:var(--purple)">₩'+totNet.toLocaleString()+'</strong></div>';
@@ -2074,15 +2074,31 @@ function openIncPanel(){
   var drivers=Object.keys(panelData).sort();
   if(!drivers.length){toast('정산서 없음 — 먼저 엑셀 업로드 해주세요');return;}
 
+  var CAMP_DEFS=[
+    {name:'부산1캠프',prefixes:['101','215'],color:'#1E5FAD'},
+    {name:'부산2캠프',prefixes:['812'],color:'#8B5CF6'},
+    {name:'부산3캠프',prefixes:['508'],color:'#1E5FAD'},
+    {name:'대구2캠프',prefixes:['109','213'],color:'#F59E0B'},
+    {name:'진주M캠프',prefixes:['608','612','613','614','619'],color:'#EF4444'}
+  ];
+  function getCampForRoute(route){
+    for(var ci=0;ci<CAMP_DEFS.length;ci++){
+      if(CAMP_DEFS[ci].prefixes.some(function(p){return route.startsWith(p);}))
+        return CAMP_DEFS[ci].name;
+    }
+    return '기타';
+  }
+
   var rows=drivers.map(function(drv){
     return panelData[drv].sort().map(function(route){
       var s=_getIncSetting(drv,route);
+      var campName=getCampForRoute(route);
       var rateOpts=[10,15,25].map(function(r){
         return '<button onclick="_incRate(\''+drv+'\',\''+route+'\','+r+')" id="incr_'+drv.replace(/\s/g,'_')+'_'+route+'_'+r+'" '
           +'style="padding:3px 8px;border-radius:6px;border:1.5px solid '+(s.rate===r?'var(--blue)':'var(--border)')+';background:'+(s.rate===r?'var(--blue)':'var(--bg)')+';color:'+(s.rate===r?'#fff':'var(--text2)')+';font-size:11px;font-weight:700;cursor:pointer">×'+r+'</button>';
       }).join('');
       var customId='incc_'+drv.replace(/\s/g,'_')+'_'+route;
-      return '<tr style="border-bottom:1px solid var(--border)">'
+      return '<tr class="inc-row" data-camp="'+campName+'" style="border-bottom:1px solid var(--border)">'
         +'<td style="padding:7px 8px;font-weight:600;font-size:12px">'+drv+'</td>'
         +'<td style="padding:7px 8px;font-size:12px;color:var(--blue);font-weight:700">'+route+'</td>'
         +'<td style="padding:7px 8px">'
@@ -2142,6 +2158,18 @@ function openIncPanel(){
     +'<div style="padding:8px 16px;background:var(--blue-l);font-size:11px;color:var(--blue);border-bottom:1px solid var(--border)">💡 설정 후 엑셀 업로드하면 자동 반영. ON이면 건수 × 설정단가로 인센 계산</div>'
     +'<div style="padding:10px 16px;background:var(--blue-l);font-size:11px;color:var(--blue)">💡 설정 후 엑셀 업로드하면 자동 반영. ON이면 건수 × 설정단가로 인센 계산</div>'
     +'<div style="overflow:auto;flex:1;padding:0">'
+      +'<div style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;gap:5px;flex-wrap:wrap;background:var(--bg3)">'
+        +'<button onclick="_filterIncCamp(\'전체\')" id="incf-전체" style="padding:3px 10px;border-radius:100px;border:1.5px solid var(--border);background:var(--blue);color:#fff;font-size:11px;font-weight:700;cursor:pointer">전체</button>'
+        +[
+          {name:'부산1캠프',color:'#1E5FAD'},
+          {name:'부산2캠프',color:'#8B5CF6'},
+          {name:'부산3캠프',color:'#1E5FAD'},
+          {name:'대구2캠프',color:'#F59E0B'},
+          {name:'진주M캠프',color:'#EF4444'}
+        ].map(function(c){
+          return '<button onclick="_filterIncCamp(\''+c.name+'\')" id="incf-'+c.name+'" style="padding:3px 10px;border-radius:100px;border:1.5px solid '+c.color+';background:transparent;color:'+c.color+';font-size:11px;font-weight:700;cursor:pointer">'+c.name+'</button>';
+        }).join('')
+      +'</div>'
       +'<table style="width:100%;border-collapse:collapse;min-width:600px">'
         +'<thead><tr style="background:var(--bg3);font-size:11px;color:var(--text3);position:sticky;top:0">'
           +'<th style="padding:8px 12px;text-align:left;white-space:nowrap">기사</th>'
@@ -2154,6 +2182,16 @@ function openIncPanel(){
     +'</div>'
   +'</div>';
   document.body.appendChild(mo);
+}
+function _filterIncCamp(camp){
+  document.querySelectorAll('.inc-row').forEach(function(tr){
+    tr.style.display=(camp==='전체'||tr.dataset.camp===camp)?'':'none';
+  });
+  document.querySelectorAll('[id^="incf-"]').forEach(function(b){
+    var isSel=b.id==='incf-'+camp;
+    b.style.background=isSel?'var(--blue)':'transparent';
+    b.style.color=isSel?'#fff':b.style.borderColor||'var(--text2)';
+  });
 }
 function _incToggle(drv,route){
   var s=_getIncSetting(drv,route);
@@ -2590,7 +2628,12 @@ function openDocModal(id){
     ${slots.map(s=>`<div>
       <div style="border-radius:var(--r);border:2px ${s.u&&s.u.length>5?'solid var(--teal)':'dashed var(--border)'};position:relative;aspect-ratio:4/3;background:var(--bg3);overflow:hidden;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center"
         onclick="${s.u&&s.u.length>5?`openIV('${s.u}','${s.lbl}')`:''}" >
-        ${s.u&&s.u.length>5?`<img src="${s.u}" style="width:100%;height:100%;object-fit:cover"><div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.6));color:#fff;font-size:10px;font-weight:600;padding:4px 6px">${s.ico} ${s.lbl}</div>`:
+        ${s.u&&s.u.length>5?
+        `<img src="${s.u}" style="width:100%;height:100%;object-fit:cover">
+        <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.6));color:#fff;font-size:10px;font-weight:600;padding:4px 6px">${s.ico} ${s.lbl}</div>
+        <label style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;cursor:pointer;z-index:10" onclick="event.stopPropagation()">📷 변경
+          <input type="file" accept="image/*" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%" onchange="uploadDocSlot(this,${id},'${s.k}','${s.direct?'direct':'docs'}','${s.lbl}')">
+        </label>`:
         `<div style="font-size:24px;margin-bottom:4px">${s.ico}</div><div style="font-size:11px;font-weight:600;color:var(--text2)">${s.lbl}</div><div style="font-size:10px;color:var(--text3)">미첨부</div>
         <input type="file" accept="image/*" style="position:absolute;inset:0;opacity:0;cursor:pointer;z-index:9" onchange="uploadDocSlot(this,${id},'${s.k}','${s.direct?'direct':'docs'}','${s.lbl}')">`}
       </div>
@@ -5489,9 +5532,12 @@ function sendTaxToDriver(driverOrIdx, month){
   if(!wrap){toast('세금계산서 창이 열려있지 않습니다');return;}
   if(typeof html2canvas==='undefined'){toast('⚠️ 이미지 라이브러리 로딩 중...');return;}
   toast('📸 이미지 생성 후 전달 중...');
-  html2canvas(wrap,{scale:1.0,useCORS:true,backgroundColor:'#ffffff',logging:false})
+  html2canvas(wrap,{scale:0.7,useCORS:true,backgroundColor:'#ffffff',logging:false})
   .then(function(canvas){
-    var dataUrl=canvas.toDataURL('image/jpeg',0.80);
+    // 품질 단계적으로 낮춰서 750KB 이하로 맞추기
+    var dataUrl=canvas.toDataURL('image/jpeg',0.55);
+    if(dataUrl.length>900000) dataUrl=canvas.toDataURL('image/jpeg',0.40);
+    if(dataUrl.length>900000) dataUrl=canvas.toDataURL('image/jpeg',0.25);
     var saveNote=function(imgUrl){
       var note={type:'tax_invoice',driver:x.driver,month:x.month,img:imgUrl,
         sentAt:new Date().toISOString(),status:'전달완료',sentBy:'관리자'};
@@ -5504,7 +5550,18 @@ function sendTaxToDriver(driverOrIdx, month){
         // ★ 기사명_월 고정 키로 저장 (쿼리 불일치 방지)
         var docKey=(x.driver+'_'+x.month).replace(/\s/g,'_').replace(/[\/\\'"]/g,'');
         _db.collection('driver_notifications').doc(docKey).set(note)
-        .then(function(){toast('📤 전달완료 (키: '+docKey+')');})
+        .then(function(){
+          toast('📤 전달완료 (키: '+docKey+')');
+          // ★ 정산서에도 taxSent 저장 → 로그인해도 유지
+          var s=ls('settlements');
+          var si=s.findIndex(function(it){return it.driver===x.driver&&it.month===x.month;});
+          if(si>=0){
+            s[si].taxSent=true; s[si].taxSentAt=new Date().toISOString();
+            lss('settlements',s);
+            var fbKey=s[si].fbId||s[si].driver+'_'+s[si].month;
+            _db.collection('settlements').doc(fbKey).set({taxSent:true,taxSentAt:s[si].taxSentAt},{merge:true}).catch(function(){});
+          }
+        })
         .catch(function(err){toast('❌ 전달 오류: '+err.message);});
       } else {
         toast('📤 '+x.driver+' 세금계산서 보관함 저장 완료');
@@ -6167,9 +6224,11 @@ function rScheduleAdmin(){
       rows+='<div style="font-size:11px;font-weight:600;padding:4px 3px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis" title="'+drv.name+'">'+drv.name.slice(0,5)+'<br><span style="font-size:9px;color:var(--text3)">'+(drv.userId||'')+'</span></div>';
       dates.forEach(function(dt){
         var ds=curY+'-'+String(curM+1).padStart(2,'0')+'-'+String(dt.d).padStart(2,'0');
-        var st=sc[ds]||'';
+        var sc_val=sc[ds]||'';
+        var st=typeof sc_val==='object'?sc_val.status:(sc_val||'');
+        var route=typeof sc_val==='object'?(sc_val.route||''):'';
         var isToday=(dt.d===now.getDate()&&curM===now.getMonth()&&curY===now.getFullYear());
-        rows+='<div onclick="adminSetSchedule(\''+wkKey+'\',\''+ds+'\',\''+drv.name+'\')" style="text-align:center;padding:3px 1px;border-radius:4px;cursor:pointer;min-height:28px;display:flex;align-items:center;justify-content:center;background:'+(isToday?'rgba(15,110,86,.15)':(stColors[st]||'var(--bg2)'))+';border:1px solid '+(isToday?'var(--teal)':'var(--border)')+'"><div style="font-size:10px;font-weight:700;color:'+(stTxt[st]||'var(--text3)')+'">'+( st||'·')+'</div></div>';
+        rows+='<div onclick="adminSetSchedule(\''+wkKey+'\',\''+ds+'\',\''+drv.name+'\')" style="text-align:center;padding:2px 1px;border-radius:4px;cursor:pointer;min-height:28px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:'+(isToday?'rgba(15,110,86,.15)':(stColors[st]||'var(--bg2)'))+';border:1px solid '+(isToday?'var(--teal)':'var(--border)')+'"><div style="font-size:10px;font-weight:700;color:'+(stTxt[st]||'var(--text3)')+'">'+( st||'·')+'</div>'+(route?'<div style="font-size:8px;color:var(--text3);line-height:1.1">'+route+'</div>':'')+'</div>';
       });
       rows+='</div>';
     });
@@ -6178,7 +6237,10 @@ function rScheduleAdmin(){
   var drvOpts='<option value="all">전체 기사</option>'+drs.map(function(d){return'<option value="'+d.name+'" '+(selDrv===d.name?'selected':'')+'>'+d.name+'</option>';}).join('');
 
   return '<div class="card"><div class="ch"><span class="ct">📅 기사별 월간 근무표</span>'
-    +'<button class="btn btn-sm btn-teal" onclick="SP(\'schedule_admin\',null)">🔄 새로고침</button></div>'
+    +'<div style="display:flex;gap:6px;align-items:center">'
+    +'<label style="padding:5px 12px;background:var(--teal);color:#fff;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">📂 엑셀 업로드<input type="file" accept=".xlsx,.xls" style="display:none" onchange="parseScheduleExcel(this)"></label>'
+    +'<button class="btn btn-sm btn-teal" onclick="SP(\'schedule_admin\',null)">🔄 새로고침</button>'
+    +'</div></div>'
     +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding:8px;background:var(--bg3);border-radius:var(--r)">'
     +'<button onclick="schedNavMonth(-1)" style="padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg2);color:var(--text);cursor:pointer;font-size:13px">◀</button>'
     +'<span style="font-size:14px;font-weight:700;min-width:90px;text-align:center">'+mLabel+'</span>'
@@ -6193,6 +6255,76 @@ function rScheduleAdmin(){
     +'<div style="overflow-x:auto"><div style="min-width:'+(90+lastDay*32)+'px">'+header+rows+'</div></div></div>';
 }
 
+function parseScheduleExcel(inp){
+  var file=inp.files[0]; if(!file)return;
+  if(typeof XLSX==='undefined'){toast('⚠️ 라이브러리 로딩 중...');return;}
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      if(rows.length<2){toast('데이터 없음');return;}
+      // 헤더 파악
+      var hdr=rows[0];
+      var iDate=hdr.indexOf('업무일'), iName=hdr.indexOf('이름'), iId=hdr.indexOf('아이디');
+      var iStatus=hdr.indexOf('업무상태'), iRoute=hdr.indexOf('업무라우트'), iWave=hdr.indexOf('웨이브');
+      var iRot=hdr.indexOf('회전'), iCamp=hdr.indexOf('캠프명');
+      if(iDate<0||iName<0||iStatus<0){toast('❌ 형식 불일치: 업무일/이름/업무상태 컬럼 필요');return;}
+
+      var count=0, errors=0;
+      rows.slice(1).forEach(function(row){
+        if(!row[iDate]||!row[iName])return;
+        var rawDate=row[iDate];
+        var ds;
+        if(rawDate instanceof Date){
+          ds=rawDate.toISOString().slice(0,10);
+        } else if(typeof rawDate==='number'){
+          // Excel 시리얼 날짜 변환
+          var d=new Date(Math.round((rawDate-25569)*86400*1000));
+          ds=d.toISOString().slice(0,10);
+        } else {
+          ds=String(rawDate).slice(0,10);
+        }
+        var name=String(row[iName]).trim();
+        var status=String(row[iStatus]||'').trim();
+        var route=String(row[iRoute]||'').trim();
+        var wave=String(row[iWave]||'').trim();
+        var rot=String(row[iRot]||'').trim();
+        var camp=String(row[iCamp]||'').trim();
+        // 상태 매핑: 출근 → 주(WAVE2=주간), 야간WAVE는 야, 휴무→휴무
+        var appStatus;
+        if(status==='휴무') appStatus='휴무';
+        else if(status==='출근'){
+          appStatus=(wave&&wave.indexOf('1')>=0)?'야':'주'; // WAVE1=야간, WAVE2=주간
+        } else appStatus='';
+
+        var ymd=ds.split('-');
+        var y=parseInt(ymd[0]),m=parseInt(ymd[1])-1;
+        var wkKey='schedule_'+name+'_month_'+y+'_'+m;
+        try{
+          var sc=JSON.parse(localStorage.getItem(wkKey)||'{}');
+          sc[ds]={status:appStatus,route:route,wave:wave,rotation:rot,camp:camp};
+          localStorage.setItem(wkKey,JSON.stringify(sc));
+          // Firebase 저장
+          if(FB&&_db){
+            var drv=ls('drivers').find(function(d){return d.name===name||(iId>=0&&d.userId===row[iId]);});
+            if(drv&&drv.fbId){
+              _db.collection('schedules').doc(drv.fbId+'_'+ds).set(
+                {driver:name,date:ds,status:appStatus,route:route,wave:wave,rotation:rot,camp:camp,updAt:new Date().toISOString()},{merge:true}
+              ).catch(function(){});
+            }
+          }
+          count++;
+        }catch(ex){errors++;}
+      });
+      inp.value='';
+      toast('✅ 근무표 '+count+'건 업로드 완료'+(errors?(' (오류 '+errors+'건)'):''));
+      SP('schedule_admin',null);
+    }catch(ex){toast('❌ 파싱 오류: '+ex.message);}
+  };
+  reader.readAsArrayBuffer(file);
+}
 function adminSetSchedule(wkKey,ds,drvName){
   var sc=JSON.parse(localStorage.getItem(wkKey)||'{}');
   var order=['','주','야','휴무','병가'];
