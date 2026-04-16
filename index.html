@@ -1883,7 +1883,8 @@ fetch('https://formsubmit.co/ajax/soungkyekim@naver.com', {
               // fb-visitor-wrap도 표시
               var wrap = document.getElementById('fb-visitor-wrap');
               if (wrap) wrap.style.display = 'inline';
-              // 상태바도 강제로 표시
+              // ★ 방문자 카운팅 성공 = Firebase 연결 확인
+              showFbStatus('connected', '🟢 실시간 연결됨 · 오늘 ' + cnt + '명 방문');
               var bar = document.getElementById('fbStatusBar');
               if (bar) { bar.classList.remove('hidden'); }
             }, function() {
@@ -1920,10 +1921,10 @@ fetch('https://formsubmit.co/ajax/soungkyekim@naver.com', {
               });
               renderDriverList(drivers);
             }, function(err) {
-              console.warn('Firestore 오류:', err.message);
+              console.warn('Firestore drivers 오류 (권한):', err.message);
               renderDriverList([]);
-              showFbStatus('disconnected', '⚠️ 데모 모드 (Firebase 설정 필요)');
-              loadDemoDrivers();
+              // ★ Firebase 연결은 됐지만 drivers 읽기 권한 없음 → 연결 상태 유지
+              // showFbStatus 건드리지 않음 (visitor 카운팅으로 이미 연결 확인됨)
             });
 
           /* ── onSnapshot: 일일체크 실시간 감시 (수정10) ── */
@@ -1945,6 +1946,7 @@ fetch('https://formsubmit.co/ajax/soungkyekim@naver.com', {
             }, function(){});
 
         } catch(e) {
+          console.warn('Firebase 초기화 오류:', e.message);
           showFbStatus('disconnected', '⚠️ 데모 모드');
           loadDemoDrivers();
         }
