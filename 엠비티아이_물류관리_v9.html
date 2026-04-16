@@ -4231,7 +4231,8 @@ function dHome(){
   for(var b=0;b<firstWD;b++) calHTML+='<div style="background:var(--bg2);min-height:42px"></div>';
   for(var day=1;day<=lastDay;day++){
     var ds=curY+'-'+String(curM+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
-    var st=sc[ds]||'';
+    var sc_raw=sc[ds]||'';
+    var st=typeof sc_raw==='object'?(sc_raw.status||''):sc_raw;
     var wd=new Date(curY,curM,day).getDay();
     var isToday=(day===now.getDate());
     var isWE=(wd===0||wd===6);
@@ -6331,10 +6332,16 @@ function parseScheduleExcel(inp){
 function adminSetSchedule(wkKey,ds,drvName){
   var sc=JSON.parse(localStorage.getItem(wkKey)||'{}');
   var order=['','주','야','휴무','병가'];
-  var next=order[(order.indexOf(sc[ds]||'')+1)%order.length];
-  if(next)sc[ds]=next;else delete sc[ds];
+  var cur=sc[ds]||'';
+  var curStatus=typeof cur==='object'?(cur.status||''):cur;
+  var next=order[(order.indexOf(curStatus)+1)%order.length];
+  // 객체면 status만 업데이트, 문자열이면 그냥 저장
+  if(next){
+    if(typeof cur==='object'){cur.status=next;sc[ds]=cur;}
+    else{sc[ds]=next;}
+  } else {delete sc[ds];}
   localStorage.setItem(wkKey,JSON.stringify(sc));
-  if(FB&&_db){var drv=ls('drivers').find(function(d){return d.name===drvName;});if(drv&&drv.fbId){_db.collection('schedules').doc(drv.fbId+'_'+ds).set({driver:drvName,date:ds,status:next||'',updAt:new Date().toISOString()}).catch(function(){});}}
+  if(FB&&_db){var drv=ls('drivers').find(function(d){return d.name===drvName;});if(drv&&drv.fbId){_db.collection('schedules').doc(drv.fbId+'_'+ds).set({driver:drvName,date:ds,status:next||'',updAt:new Date().toISOString()},{merge:true}).catch(function(){});}}
   SP('schedule_admin',null);
 }
 
