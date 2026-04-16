@@ -4144,8 +4144,9 @@ function checkDriverNotifications(){
         }
       });
       // ★ 이미 알림 표시했으면 다시 안 뜨게 (세션당 1회)
-      if(window._notifShown)return;
-      window._notifShown=true;
+      var seenKey='notif_seen_'+S.curDriver;
+      if(sessionStorage.getItem(seenKey))return;
+      sessionStorage.setItem(seenKey,'1');
       var existing=document.getElementById('drv-notification-box');
       if(existing)existing.remove();
       var box=document.createElement('div');
