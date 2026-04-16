@@ -5502,9 +5502,9 @@ function sendTaxToDriver(i){
         toast('📤 '+x.driver+' 세금계산서 보관함 저장 완료');
       }
     };
-    // ★ Firebase Storage 업로드 → URL만 Firestore 저장 (1MB 제한 완전 우회)
+    // ★ Firebase Storage 업로드 (타임아웃 10초 → 실패시 base64 직접 저장)
     if(FB&&_st){
-      toast('📤 세금계산서 업로드 중...');
+      toast('📤 업로드 중...');
       var byteStr=atob(dataUrl.split(',')[1]);
       var ab=new ArrayBuffer(byteStr.length);
       var ia=new Uint8Array(ab);
@@ -5512,12 +5512,13 @@ function sendTaxToDriver(i){
       var blob=new Blob([ab],{type:'image/jpeg'});
       var storePath='tax_invoices/'+x.driver+'/'+x.month+'_'+Date.now()+'.jpg';
       var ref=_st.ref(storePath);
+      var done=false;
+      var timer=setTimeout(function(){
+        if(!done){done=true;console.warn('Storage 타임아웃, base64 직접 저장');saveNote(dataUrl);}
+      },10000);
       ref.put(blob).then(function(){return ref.getDownloadURL();})
-      .then(function(url){saveNote(url);})
-      .catch(function(e){
-        console.warn('Storage 실패, base64 직접 저장:', e);
-        saveNote(dataUrl);
-      });
+      .then(function(url){if(!done){done=true;clearTimeout(timer);saveNote(url);}})
+      .catch(function(e){if(!done){done=true;clearTimeout(timer);console.warn('Storage 실패:',e);saveNote(dataUrl);}});
     } else {
       saveNote(dataUrl);
     }
