@@ -1346,7 +1346,7 @@ function goLogout(){
 }
 function goReg(){hide(['splash','login-screen']);show('reg-screen');window.scrollTo(0,0);}
 function goLogin(m){
-  hide(['splash','reg-screen']);show('login-screen');setTimeout(initLoginHelp,80);
+  hide(['splash','reg-screen','app','dv']);show('login-screen');setTimeout(initLoginHelp,80);
   document.getElementById('lm').value=m;
   if(m==='admin'){
     document.getElementById('lt').textContent='🗂 관리자 로그인';
@@ -4033,7 +4033,10 @@ function DT(tab,el){
             if(idx>=0)Object.assign(all[idx],sd);else all.push(sd);
           });
           lss('settlements',all);
-          DT('settle',document.getElementById('pni5'));
+          // ★ 현재도 정산탭일 때만 갱신 (다른 탭 이동 중이면 무시)
+          if(S.dtab==='settle'){
+            document.getElementById('dpc').innerHTML=dSettle();
+          }
         }).catch(function(){});
     }
   }
