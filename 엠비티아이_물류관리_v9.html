@@ -4016,7 +4016,7 @@ function dViewTax(month, driver, btn){
   // ③ Firebase — 고정 키 직접 조회 (가장 확실한 방법)
   if(FB&&_db){
     var docKey=(drv+'_'+month).replace(/\s/g,'_').replace(/[\/\\'"]/g,'');
-    toast('🔍 세금계산서 불러오는 중...');
+    toast('🔍 조회키: '+docKey);
     _db.collection('driver_notifications').doc(docKey).get()
     .then(function(doc){
       if(doc.exists){
@@ -5496,7 +5496,7 @@ function sendTaxToDriver(i){
         // ★ 기사명_월 고정 키로 저장 (쿼리 불일치 방지)
         var docKey=(x.driver+'_'+x.month).replace(/\s/g,'_').replace(/[\/\\'"]/g,'');
         _db.collection('driver_notifications').doc(docKey).set(note)
-        .then(function(){toast('📤 '+x.driver+' 기사님 세금계산서 전달 완료!');})
+        .then(function(){toast('📤 전달완료 (키: '+docKey+')');})
         .catch(function(err){toast('❌ 전달 오류: '+err.message);});
       } else {
         toast('📤 '+x.driver+' 세금계산서 보관함 저장 완료');
