@@ -1856,10 +1856,10 @@ function rEntry(){
   var cut=_admCut(period);
   var e=ls('entries').filter(x=>(period==='today'?x.date===today():x.date>=cut));
   var tabHTML=_admDateTabs('entry',period);
-  // 날짜별 그룹
   var grouped=_admGroupByDate(e);
   var bodyHTML=grouped.length?grouped.map(function(g){
     var rows=g.rows.map(x=>`<tr>
+      <td><input type="checkbox" class="row-chk" data-col="entries" data-id="${x.id||x.fbId||''}" style="width:15px;height:15px;cursor:pointer"></td>
       <td><strong>${x.driver}</strong></td>
       <td><span class="badge ${x.type==='쿠팡'?'b-coral':x.type==='컬리'?'b-purple':x.type==='간선'?'b-blue':'b-wait'}">${x.type}</span></td>
       <td style="font-size:11px">${x.company||'—'}</td>
@@ -1867,10 +1867,10 @@ function rEntry(){
       <td style="font-weight:600;color:${x.temp==='상온'?'var(--amber)':parseFloat(x.temp)<=-18?'var(--teal)':'var(--red)'}">${x.temp}${x.temp==='상온'?'':' °C'}</td>
       <td class="thumb-row">${Object.entries(x.photos||{}).filter(([k,v])=>v&&v.length>5).map(([k,v])=>`<img class="thumb" src="${v}" onclick="openIV('${v}','입차사진')" title="${k}">`).join('')||'—'}</td>
     </tr>`).join('');
-    return _admDateGroup(g.date,g.rows.length,`<table class="tbl"><thead><tr><th>기사</th><th>유형</th><th>회사</th><th>시각</th><th>온도</th><th>사진</th></tr></thead><tbody>${rows}</tbody></table>`);
+    return _admDateGroup(g.date,g.rows.length,`<table class="tbl"><thead><tr><th style="width:30px"><input type="checkbox" onchange="toggleAllChk(this,'entries')" style="width:15px;height:15px;cursor:pointer"></th><th>기사</th><th>유형</th><th>회사</th><th>시각</th><th>온도</th><th>사진</th></tr></thead><tbody>${rows}</tbody></table>`);
   }).join(''):'<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">해당 기간 입차 없음</div>';
   return `<div class="card"><div class="ch"><span class="ct">입차 기록 (${e.length}건)</span>
-    <button onclick="deleteColData('entries','입차')" style="padding:4px 10px;background:var(--red-l);border:1px solid var(--red);border-radius:6px;font-size:11px;color:var(--red);cursor:pointer;font-weight:600">🗑 전체삭제</button>
+    <button onclick="deleteSelected('entries','입차')" style="padding:4px 10px;background:var(--red-l);border:1px solid var(--red);border-radius:6px;font-size:11px;color:var(--red);cursor:pointer;font-weight:600">🗑 선택삭제</button>
   </div>${tabHTML}${bodyHTML}</div>`;
 }
 
@@ -1882,6 +1882,7 @@ function rDeliveryTaxi(){
   var grouped=_admGroupByDate(d);
   var bodyHTML=grouped.length?grouped.map(function(g){
     var rows=g.rows.map(x=>`<tr>
+      <td><input type="checkbox" class="row-chk" data-col="deliveries" data-id="${x.id||x.fbId||''}" style="width:15px;height:15px;cursor:pointer"></td>
       <td><strong>${x.driver}</strong></td>
       <td><span class="badge ${x.client==='쿠팡'?'b-coral':x.client==='컬리'?'b-purple':'b-wait'}">${x.client||x.category}</span></td>
       <td style="font-weight:700;color:var(--teal)">${x.dcnt||0}</td>
@@ -1893,9 +1894,9 @@ function rDeliveryTaxi(){
     var totD=g.rows.reduce(function(s,x){return s+(x.dcnt||0);},0);
     var totR=g.rows.reduce(function(s,x){return s+(x.rcnt||0);},0);
     var summary='<div style="font-size:11px;color:var(--text2);padding:4px 0 6px">배송 합계 <strong style="color:var(--teal)">'+totD+'건</strong> · 반품 <strong>'+totR+'건</strong></div>';
-    return _admDateGroup(g.date,g.rows.length,summary+'<table class="tbl"><thead><tr><th>기사</th><th>화주사</th><th>배송</th><th>반품</th><th>프레쉬</th><th>완료</th><th>사진</th></tr></thead><tbody>'+rows+'</tbody></table>');
+    return _admDateGroup(g.date,g.rows.length,summary+'<table class="tbl"><thead><tr><th style="width:30px"><input type="checkbox" onchange="toggleAllChk(this,\'deliveries\')" style="width:15px;height:15px;cursor:pointer"></th><th>기사</th><th>화주사</th><th>배송</th><th>반품</th><th>프레쉬</th><th>완료</th><th>사진</th></tr></thead><tbody>'+rows+'</tbody></table>');
   }).join(''):'<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">해당 기간 데이터 없음</div>';
-  return `<div class="card"><div class="ch"><span class="ct">📦 운행 현황 (${d.length}건)</span><button onclick="deleteColData('deliveries','운행')" style="padding:4px 10px;background:var(--red-l);border:1px solid var(--red);border-radius:6px;font-size:11px;color:var(--red);cursor:pointer;font-weight:600">🗑 전체삭제</button></div>${tabHTML}${bodyHTML}</div>`;
+  return `<div class="card"><div class="ch"><span class="ct">📦 운행 현황 (${d.length}건)</span><button onclick="deleteSelected('deliveries','운행')" style="padding:4px 10px;background:var(--red-l);border:1px solid var(--red);border-radius:6px;font-size:11px;color:var(--red);cursor:pointer;font-weight:600">🗑 선택삭제</button></div>${tabHTML}${bodyHTML}</div>`;
 }
 function rDeliveryLine(){
   var period=window._adm_deliv_period||'today';
@@ -1965,6 +1966,7 @@ function rAcc(){
     var rows=g.rows.map(function(x,_){
       var origIdx=ls('accidents').findIndex(function(o){return o.id===x.id||o.fbId===x.fbId;});
       return `<tr>
+        <td><input type="checkbox" class="row-chk" data-col="accidents" data-id="${x.id||x.fbId||''}" style="width:15px;height:15px;cursor:pointer"></td>
         <td><strong>${x.driver}</strong></td>
         <td style="font-size:11px">${x.type}</td>
         <td style="font-size:11px;max-width:120px">${x.description}</td>
@@ -1973,9 +1975,9 @@ function rAcc(){
         <td><button class="btn btn-sm" onclick="nextAccSt(${origIdx})">변경</button></td>
       </tr>`;
     }).join('');
-    return _admDateGroup(g.date,g.rows.length,'<table class="tbl"><thead><tr><th>기사</th><th>유형</th><th>내용</th><th>사진</th><th>상태</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>');
+    return _admDateGroup(g.date,g.rows.length,'<table class="tbl"><thead><tr><th style="width:30px"><input type="checkbox" onchange="toggleAllChk(this,\'accidents\')" style="width:15px;height:15px;cursor:pointer"></th><th>기사</th><th>유형</th><th>내용</th><th>사진</th><th>상태</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>');
   }).join(''):'<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">해당 기간 사고 없음</div>';
-  return `<div class="card"><div class="ch"><span class="ct">사고 접수 (${a.length}건)</span><button onclick="deleteColData('accidents','사고')" style="padding:4px 10px;background:var(--red-l);border:1px solid var(--red);border-radius:6px;font-size:11px;color:var(--red);cursor:pointer;font-weight:600">🗑 전체삭제</button></div>${tabHTML}${bodyHTML}</div>`;
+  return `<div class="card"><div class="ch"><span class="ct">사고 접수 (${a.length}건)</span><button onclick="deleteSelected('accidents','사고')" style="padding:4px 10px;background:var(--red-l);border:1px solid var(--red);border-radius:6px;font-size:11px;color:var(--red);cursor:pointer;font-weight:600">🗑 선택삭제</button></div>${tabHTML}${bodyHTML}</div>`;
 }
 
 function rTemp(){
@@ -1988,6 +1990,7 @@ function rTemp(){
   var bodyHTML=grouped.length?grouped.map(function(g){
     var warnCnt=g.rows.filter(x=>x.temp!=='상온'&&parseFloat(x.temp)>-18).length;
     var rows=g.rows.map(x=>`<tr>
+      <td><input type="checkbox" class="row-chk" data-col="tempLogs" data-id="${x.id||x.fbId||''}" style="width:15px;height:15px;cursor:pointer"></td>
       <td><strong>${x.driver}</strong></td><td>${x.time}</td>
       <td style="font-weight:700;color:${x.temp==='상온'?'var(--amber)':parseFloat(x.temp)<=-18?'var(--teal)':'var(--red)'}">${x.temp}${x.temp==='상온'?'':' °C'}</td>
       <td>${x.location}</td>
@@ -1995,10 +1998,10 @@ function rTemp(){
       <td style="font-size:11px;color:var(--text2)">${x.note||'—'}</td>
     </tr>`).join('');
     var warn=warnCnt>0?'<div style="font-size:11px;color:var(--red);padding:3px 0 5px">⚠ 이상온도 '+warnCnt+'건</div>':'';
-    return _admDateGroup(g.date,g.rows.length,warn+'<table class="tbl"><thead><tr><th>기사</th><th>시각</th><th>온도</th><th>위치</th><th>사진</th><th>메모</th></tr></thead><tbody>'+rows+'</tbody></table>');
+    return _admDateGroup(g.date,g.rows.length,warn+'<table class="tbl"><thead><tr><th style="width:30px"><input type="checkbox" onchange="toggleAllChk(this,\'tempLogs\')" style="width:15px;height:15px;cursor:pointer"></th><th>기사</th><th>시각</th><th>온도</th><th>위치</th><th>사진</th><th>메모</th></tr></thead><tbody>'+rows+'</tbody></table>');
   }).join(''):'<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">해당 기간 온도 기록 없음</div>';
   return `${w.length?`<div style="background:var(--red-l);border:1px solid var(--red);border-radius:var(--r);padding:9px 13px;margin-bottom:10px;font-size:13px;color:var(--red)">⚠ 이상온도 ${w.length}건 (기준 미달: -18°C 초과)</div>`:''}
-  <div class="card"><div class="ch"><span class="ct">온도 기록 (${l.length}건)</span><button onclick="deleteColData('tempLogs','온도')" style="padding:4px 10px;background:var(--red-l);border:1px solid var(--red);border-radius:6px;font-size:11px;color:var(--red);cursor:pointer;font-weight:600">🗑 전체삭제</button></div>${tabHTML}${bodyHTML}</div>`;
+  <div class="card"><div class="ch"><span class="ct">온도 기록 (${l.length}건)</span><button onclick="deleteSelected('tempLogs','온도')" style="padding:4px 10px;background:var(--red-l);border:1px solid var(--red);border-radius:6px;font-size:11px;color:var(--red);cursor:pointer;font-weight:600">🗑 선택삭제</button></div>${tabHTML}${bodyHTML}</div>`;
 }
 
 function rSettle(){
@@ -2815,7 +2818,7 @@ function rMypage(){
     phone: adminInfo.phone||'010-0000-0000',
     email: adminInfo.email||'',
     addr: adminInfo.addr||''
-  }:(ls('drivers').find(x=>x.name===S.curDriver)||{});
+  }:(ls('drivers').find(x=>x.name===S.curDriver)||{name:S.curDriver||'',phone:'',email:'',addr:'',plate:'',ton:'',jobsub:'쿠팡'});
   return `<div class="mypage-box">
     <div style="font-size:18px;font-weight:700;color:var(--blue);margin-bottom:3px">👤 내 정보 수정</div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:18px">정보 변경 후 저장 버튼을 눌러주세요</div>
@@ -2944,6 +2947,28 @@ function rMypage(){
   +'<div style="display:flex;gap:8px;flex-wrap:wrap;padding:6px 0">'+chkHTML+'</div>'
   +'</div>';
   setTimeout(function(){var el=document.getElementById('mini-cal-wrap');if(el)el.innerHTML=buildMiniCal();},60);
+}
+function toggleAllChk(el,col){
+  document.querySelectorAll('.row-chk[data-col="'+col+'"]').forEach(function(c){c.checked=el.checked;});
+}
+function deleteSelected(col,label){
+  var ids=[];
+  document.querySelectorAll('.row-chk[data-col="'+col+'"]:checked').forEach(function(c){
+    if(c.dataset.id)ids.push(c.dataset.id);
+  });
+  if(!ids.length){toast('삭제할 항목을 선택해주세요');return;}
+  if(!confirm(label+' '+ids.length+'건을 삭제하시겠습니까?'))return;
+  // localStorage 삭제
+  var arr=ls(col).filter(function(x){return !ids.includes(x.id||x.fbId||'');});
+  lss(col,arr);
+  // Firebase 삭제
+  if(FB&&_db){
+    ids.forEach(function(id){
+      _db.collection(col).doc(id).delete().catch(function(){});
+    });
+  }
+  toast('✅ '+ids.length+'건 삭제 완료');
+  SP(S.page,null);
 }
 function deleteColData(col,label){
   if(!confirm(label+' 데이터를 전체 삭제하시겠습니까?'))return;
@@ -5071,7 +5096,6 @@ async function lateDocUpload(inp, key, label){
 }
 
 function dMypageDriver(){
-  S.curMode='driver';
   return rMypage();
 }
 function dSettle(){
