@@ -942,12 +942,12 @@ function _setupFbListeners(){
   // ★ 기사 목록 onSnapshot은 startListeners()에서 별도 처리
 
   // ★ 입차/운행/배송 실시간 감시
-  _db.collection('entries').orderBy('ts','desc').limit(100).onSnapshot(function(snap){
+  _db.collection('entries').limit(100).onSnapshot(function(snap){
     var entries=[];snap.forEach(function(doc){var d=doc.data();d.fbId=doc.id;entries.push(d);});
     lss('entries',entries);
     if(S.page==='entry'||S.page==='dash')SP(S.page,null);
   },function(){});
-  _db.collection('deliveries').orderBy('ts','desc').limit(200).onSnapshot(function(snap){
+  _db.collection('deliveries').limit(200).onSnapshot(function(snap){
     var deliveries=[];snap.forEach(function(doc){var d=doc.data();d.fbId=doc.id;deliveries.push(d);});
     lss('deliveries',deliveries);
     if(S.page==='delivery_taxi'||S.page==='delivery_line'||S.page==='dash')SP(S.page,null);
@@ -1761,6 +1761,24 @@ function rDash(){
   var e=ls('entries'),a=ls('accidents'),ac=ls('activity');
   var w=ls('tempLogs').filter(l=>l.temp!=='상온'&&l.temp>-18).length;
   var oa=a.filter(x=>x.status==='접수중'||x.status==='처리중').length;
+
+  var delItems=[
+    {key:'entries',label:'입차',icon:'🚪'},
+    {key:'deliveries',label:'운행',icon:'📦'},
+    {key:'accidents',label:'사고',icon:'🚨'},
+    {key:'tempLogs',label:'온도',icon:'🌡'},
+    {key:'activity',label:'활동로그',icon:'📋'}
+  ];
+  var chkHTML=delItems.map(function(item){
+    var cnt=ls(item.key).length;
+    return '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:6px 10px;background:var(--bg3);border-radius:8px;border:1.5px solid var(--border)">'
+      +'<input type="checkbox" id="del-chk-'+item.key+'" style="width:16px;height:16px;cursor:pointer">'
+      +'<span style="font-size:13px">'+item.icon+'</span>'
+      +'<span style="font-size:12px;font-weight:600">'+item.label+'</span>'
+      +'<span style="font-size:11px;color:var(--text3)">('+cnt+'건)</span>'
+      +'</label>';
+  }).join('');
+
   return `<div class="kpi-row">
     <div class="kc"><div class="kl">오늘 입차</div><div class="kv">${e.filter(x=>x.date===today()).length}</div><div class="ks" style="color:var(--teal)">실시간</div></div>
     <div class="kc"><div class="kl">온도 이상</div><div class="kv" style="color:${w?'var(--red)':'var(--teal)'}">${w}</div><div class="ks" style="color:${w?'var(--red)':'var(--teal)'}">${w?'확인필요':'정상'}</div></div>
@@ -2916,9 +2934,42 @@ function rMypage(){
 
   <div style="margin:10px;padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r)">
     <div id="mini-cal-wrap"></div>
-  </div>`;
+  </div>`
+  +'<div class="card">'
+  +'<div class="ch"><span class="ct" style="color:var(--red)">🧹 테스트 데이터 삭제</span>'
+  +'<button onclick="deleteCheckedData()" style="padding:5px 14px;background:var(--red);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">🗑 선택 삭제</button>'
+  +'</div>'
+  +'<div style="display:flex;gap:8px;flex-wrap:wrap;padding:6px 0">'+chkHTML+'</div>'
+  +'</div>';
   setTimeout(function(){var el=document.getElementById('mini-cal-wrap');if(el)el.innerHTML=buildMiniCal();},60);
 }
+function deleteCheckedData(){
+  var cols=['entries','deliveries','accidents','tempLogs','activity'];
+  var selected=cols.filter(function(k){
+    var el=document.getElementById('del-chk-'+k);
+    return el&&el.checked;
+  });
+  if(!selected.length){toast('삭제할 항목을 선택해주세요');return;}
+  if(!confirm(selected.map(function(k){
+    return {entries:'입차',deliveries:'운행',accidents:'사고',tempLogs:'온도',activity:'활동로그'}[k];
+  }).join(', ')+' 데이터를 삭제하시겠습니까?'))return;
+
+  selected.forEach(function(col){
+    // localStorage 삭제
+    lss(col,[]);
+    // Firebase 삭제
+    if(FB&&_db){
+      _db.collection(col).get().then(function(snap){
+        var batch=_db.batch();
+        snap.forEach(function(doc){batch.delete(doc.ref);});
+        return batch.commit();
+      }).catch(function(){});
+    }
+  });
+  toast('✅ 선택 데이터 삭제 완료');
+  SP('dash',null);
+}
+function resetTestData(col){}
 function chkPwStr(inp){
   var v=inp.value;
   var bar=document.getElementById('pw-strength-bar');
@@ -6295,8 +6346,7 @@ function startListeners(){
     accidents:'accident', settlements:'settle'
   };
   Object.keys(colPageMap).forEach(col=>{
-    // ★ limit 100 → 300 (30명 × 하루 평균 5건 × 2배 여유)
-    _db.collection(col).orderBy('ts','desc').limit(300)
+    _db.collection(col).limit(300)
       .onSnapshot(snap=>{
         snap.docChanges().forEach(ch=>{
           if(ch.type==='added'||ch.type==='modified'){
@@ -6499,9 +6549,9 @@ function parseScheduleExcel(inp){
   var reader=new FileReader();
   reader.onload=function(e){
     try{
-      var wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+      var wb=XLSX.read(e.target.result,{type:'array'});
       var ws=wb.Sheets[wb.SheetNames[0]];
-      var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true});
       if(rows.length<2){toast('데이터 없음');return;}
       // 헤더 파악
       var hdr=rows[0];
@@ -6516,10 +6566,10 @@ function parseScheduleExcel(inp){
         var rawDate=row[iDate];
         var ds;
         if(rawDate instanceof Date){
-          // ★ XLSX는 UTC 자정으로 Date 생성 → UTC 기준으로 읽어야 날짜 정확
-          var yr=rawDate.getUTCFullYear();
-          var mo=String(rawDate.getUTCMonth()+1).padStart(2,'0');
-          var dy=String(rawDate.getUTCDate()).padStart(2,'0');
+          // ★ XLSX cellDates:true 옵션 시 로컬 자정으로 옴 → 로컬 기준으로 읽기
+          var yr=rawDate.getFullYear();
+          var mo=String(rawDate.getMonth()+1).padStart(2,'0');
+          var dy=String(rawDate.getDate()).padStart(2,'0');
           ds=yr+'-'+mo+'-'+dy;
         } else if(typeof rawDate==='number'){
           // Excel 시리얼 날짜 변환 (로컬 시간 기준)
