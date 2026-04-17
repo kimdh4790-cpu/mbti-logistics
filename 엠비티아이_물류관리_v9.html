@@ -1009,7 +1009,7 @@ async function flushPendingWrites(){
 
 // ── v6.1 이미지 압축 (1MB 이하 자동 리사이즈, Firebase 한도 절약)
 async function compressImage(file) {
-  var MAX_PX=900, Q=0.55;  // v9.2: 900px·55% → 서류 판독 가능 + 적당한 크기
+  var MAX_PX=800, Q=0.40;  // Storage 없을때 Firestore 직접저장 → 800px·40% 강압축
   if (window.createImageBitmap) {
     return createImageBitmap(file).then(function(bmp) {
       var w=bmp.width, h_=bmp.height;
@@ -1053,22 +1053,22 @@ async function compressImage(file) {
 async function upFile(file,path){
   if(!file)return null;
   if(file.type&&file.type.startsWith('image/')){
-    var uniqueKey='upf_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
     var compressed=file;
     try{compressed=await compressImage(file);}catch(e){}
     var b64=await new Promise(function(res){
       var fr=new FileReader();fr.onload=function(e){res(e.target.result);};fr.readAsDataURL(compressed);
     });
-    // b64에 uniqueKey 태그 삽입 (data URL 구조 유지하면서 식별 가능하게)
+    // Storage 사용 가능하면 업로드, 아니면 base64 직접 사용
     if(FB&&_st){
-      (async function(){
-        try{
-          var ref=_st.ref(path+'/'+Date.now()+'_'+(file.name||'photo.jpg'));
-          await ref.put(compressed);
-          var url=await ref.getDownloadURL();
-          _replaceB64WithUrl(b64,url,uniqueKey);
-        }catch(e){console.warn('백그라운드 업로드 실패:',e);}
-      })();
+      try{
+        var ref=_st.ref(path+'/'+Date.now()+'_'+(file.name||'photo.jpg'));
+        await ref.put(compressed);
+        var url=await ref.getDownloadURL();
+        return url;
+      }catch(e){
+        console.warn('Storage 실패, base64 사용:', e);
+        return b64;
+      }
     }
     return b64;
   }
