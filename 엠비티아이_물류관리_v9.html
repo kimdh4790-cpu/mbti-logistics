@@ -2681,7 +2681,24 @@ async function uploadDocSlot(inp,driverId,key,mode,label){
   var drs=ls('drivers');var d=drs.find(x=>x.id===driverId);if(!d)return;
   if(mode==='direct')d[key]=url;else{if(!d.docs)d.docs={};d.docs[key]=url;}
   lss('drivers',drs);
-  if(FB&&_db)_db.collection('drivers').doc(d.fbId||'').update(mode==='direct'?{[key]:url}:{['docs.'+key]:url}).catch(()=>{});
+  if(FB&&_db){
+    var fbId=d.fbId||'';
+    if(fbId){
+      _db.collection('drivers').doc(fbId).update(mode==='direct'?{[key]:url}:{['docs.'+key]:url}).catch(function(){
+        // update 실패 시 set으로 재시도
+        _db.collection('drivers').doc(fbId).set(mode==='direct'?{[key]:url}:{['docs.'+key]:url},{merge:true}).catch(()=>{});
+      });
+    } else {
+      // fbId 없으면 userId로 찾아서 저장
+      _db.collection('drivers').where('userId','==',d.userId).limit(1).get().then(function(snap){
+        if(!snap.empty){
+          var docRef=snap.docs[0].ref;
+          docRef.update(mode==='direct'?{[key]:url}:{['docs.'+key]:url}).catch(()=>{});
+          d.fbId=snap.docs[0].id;lss('drivers',drs);
+        }
+      }).catch(()=>{});
+    }
+  }
   var mo=document.getElementById('doc-mo');if(mo){mo.remove();openDocModal(driverId);}
   toast('✅ '+label+' 등록 완료');
 }
@@ -3295,7 +3312,7 @@ function viewStmt(i){
   <div style="display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap">
     <button class="btn btn-purple" onclick="stSaveEdit(${i})">💾 수정 저장</button>
     <button class="btn btn-teal" onclick="sendStmtToDriver(${i})">📤 기사 전달</button>
-    <button class="btn" style="background:#16a34a;color:#fff;border:none" onclick="openTaxInvoice(${i})">🧾 세금계산서</button>
+    <button class="btn" style="background:#16a34a;color:#fff;border:none" onclick="stSaveEdit(${i});openTaxInvoice('${x.driver}','${x.month}')">🧾 세금계산서</button>
     <button class="btn" onclick="window.print()">🖨 인쇄</button>
     <button class="btn" onclick="document.getElementById('stmt-mo')?.remove()">닫기</button>
   </div>
@@ -4489,117 +4506,128 @@ function drvPhotoGallery(){
 }
 function dEntry(){
   var me=ls('entries').filter(e=>e.driver===S.curDriver&&e.date===today()).pop();
-  // ── 쿠팡 기사: 단순 입차 화면 ──
-  if(S.curJobsub==='쿠팡'||S.curJobtype==='쿠팡'){
-    var camURL=S.photos.entry.zone||'';
-    var camInner=camURL
-      ?'<img src="'+camURL+'" style="width:100%;height:100%;object-fit:cover;border-radius:10px">'
-      :'<span style="font-size:22px">📷</span><div style="font-size:10px;color:var(--text3);margin-top:3px">입차 증빙사진</div>';
-    var camW='<div class="cam-wrap"><input type="file" accept="image/*" onchange="camPhoto(this,\'zone\',\'entry\',\'입차증빙\')">'
-      +'<div class="cam-ph cam-btn'+(camURL?' taken':'')+'">'+camInner+'</div></div>';
-    var histHTML=me?'<div class="dc" style="margin-top:0"><div class="dct">오늘 입차 이력</div>'
-      +'<div style="font-size:12px;display:flex;gap:8px;align-items:center">'
-      +'<span class="badge b-coral">쿠팡</span>'
-      +'<span>'+me.time+'</span>'
-      +'<span style="color:var(--text2)">입차완료</span>'
-      +'</div></div>':'';
-    return '<div class="dh"><h2>입차 등록</h2><p>쿠팡 입차 → 관리자 연동</p></div>'
-      +'<div class="dc">'
-      +'<div style="text-align:center;margin-bottom:12px">'
-      +'<div style="display:inline-block;background:rgba(255,165,0,.15);border:2px solid #FFA500;border-radius:12px;padding:10px 24px;font-size:15px;font-weight:700;color:#E68000">📦 쿠팡 입차</div>'
-      +'</div>'
-      +'<div style="display:flex;flex-direction:column;gap:9px">'
-      +'<div><label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">입차 시간</label>'
-      +'<div style="padding:10px;background:var(--bg3);border-radius:var(--r);font-size:14px;font-weight:600">'+nowT()+'</div></div>'
-      +'<div><label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">📷 입차 증빙사진 (선택)</label>'
-      +'<div style="max-width:200px">'+camW+'</div></div>'
-      +'</div>'
-      +'<button class="bbtn bb-teal" onclick="submitEntryCoupang()" style="margin:12px 0 0">✅ 쿠팡 입차 등록 → 관리자 연동</button>'
-      +'</div>'
-      +histHTML
-      +_drvHistEntry()
-      +'<div style="height:10px"></div>';
-  }
-  var isLine=(S.selEntry==='간선');
-  var isCoupang=(S.selEntry==='쿠팡');
-  var terminals=S.termList.map(t=>`<option>${t}</option>`).join('');
-  var camHTML=['zone','cargo','tempLog'].map((k,i)=>{
-    var lbl=['구역인증','화물상태','온도계'][i];
+  var jsub=S.curJobsub||S.curJobtype||'쿠팡';
+  var isNoTemp=['쿠팡','CJ','생수'].includes(jsub);
+  var isKurly=(jsub==='컬리');
+  var isLine=(jsub==='간선');
+  var isCJ=(jsub==='CJ');
+  var isHQ=(jsub==='MBTI본사'||jsub==='본사');
+
+  // ── 공통 사진 버튼 생성
+  function camBtn(k,lbl){
     var url=S.photos.entry[k]||'';
     return `<div class="cam-wrap"><input type="file" accept="image/*" onchange="camPhoto(this,'${k}','entry','${lbl}')"><div class="cam-btn ${url?'taken':''}" id="ce-${k}">${url?`<img class="cam-prev" src="${url}"><div class="cam-chk">✓</div>`:`<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="4" stroke="currentColor" stroke-width="1.4"/><path d="M3 7h2l2-3h6l2 3h2a1 1 0 011 1v7a1 1 0 01-1 1H3a1 1 0 01-1-1V8a1 1 0 011-1z" stroke="currentColor" stroke-width="1.2" fill="none"/></svg><span>${lbl}</span>`}</div></div>`;
-  }).join('');
-  return `<div class="dh"><h2>입차 등록</h2><p>업무유형 선택 → 온도·사진 등록</p></div>
-  <div class="dc">
-    <div class="step-lbl"><span class="step-num">1</span> 대분류 선택</div>
-    <div class="jbtns">
-      <button class="jbtn ${S.selEntry&&!isLine?'on-taxi':''}" onclick="selJobType('택배')">📦 택배</button>
-      <button class="jbtn ${isLine?'on-line':''}" onclick="selJobType('간선')">🚚 간선</button>
-    </div>
-    ${S.selEntry!==null?`
-    ${!isLine?`
-    <div class="step-lbl" style="margin-top:4px"><span class="step-num">2</span> 화주사 선택</div>
-    <div class="jbtns">
-      ${['쿠팡','컬리','CJ'].map(c=>`<button class="jbtn ${S.selEntry===c?(c==='쿠팡'?'on-taxi':c==='컬리'?'on-sub':'on-line'):''}" onclick="selJobSub('${c}')">${c}</button>`).join('')}
-    </div>`:`
-    <div class="step-lbl" style="margin-top:4px"><span class="step-num">2</span> 차량 톤수</div>
-    <div class="jbtns">
-      ${['1t','2.5t','5t','11t','25t'].map(t=>`<button class="jbtn ${S.jobTon===t?'on-ton':''}" onclick="S.jobTon='${t}';DT('entry',document.getElementById('pni1'))">${t}</button>`).join('')}
-    </div>`}
-    <div class="step-lbl" style="margin-top:4px"><span class="step-num">${isLine?'3':'3'}</span> 세부 입력</div>
-    <div style="display:flex;flex-direction:column;gap:9px">
-      <div>
-        <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">입차 회사명</label>
-        <input id="en-company" value="${S.selEntry==='쿠팡'?'쿠팡':S.selEntry==='컬리'?'마켓컬리':S.selEntry==='CJ'?'CJ대한통운':''}" placeholder="${isLine?'예: 동방 CLS':'예: 쿠팡 부산DC'}" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--bg);color:var(--text)">
-      </div>
-      ${isLine?`
-      <div>
-        <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">상차지 *</label>
-        <div style="display:flex;gap:5px">
-          <select id="en-from-sel" onchange="var t=document.getElementById('en-from-txt');if(this.value&&!t.value)t.value=this.value" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--text)"><option value="">선택</option>${terminals}</select>
-          <input id="en-from-txt" placeholder="직접 입력" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--text)">
-        </div>
-      </div>
-      <div>
-        <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">하차지 *</label>
-        <div style="display:flex;gap:5px">
-          <select id="en-to-sel" onchange="var t=document.getElementById('en-to-txt');if(this.value&&!t.value)t.value=this.value" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--text)"><option value="">선택</option>${terminals}</select>
-          <input id="en-to-txt" placeholder="직접 입력" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--text)">
-        </div>
-      </div>`:''}
-      <div>
-        <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">⏱ 입차 시간</label>
-        <div style="display:flex;gap:6px;align-items:center">
-          <div id="en-time-display" style="flex:1;padding:10px;background:var(--bg3);border-radius:var(--r);font-size:16px;font-weight:700;text-align:center">${nowT()}</div>
-          <button onclick="document.getElementById('en-time-display').textContent=document.getElementById('en-time-val').value=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});this.textContent='✅ 기록됨'" style="padding:9px 14px;background:var(--teal);color:#fff;border:none;border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">⏱ 지금 시간 체크</button>
-        </div>
-        <input type="hidden" id="en-time-val" value="${nowT()}">
-      </div>
-      <div>
-        <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">차량 내부 온도 *</label>
-        <input id="en-temp" type="${isCoupang?'text':'number'}" step="0.1" value="${isCoupang?'상온':''}" placeholder="${isCoupang?'상온 (또는 숫자)':'-21.5'}"
-          oninput="var v=parseFloat(this.value);document.getElementById('en-warn').style.display=(!isNaN(v)&&v>-18)?'block':'none'"
-          style="width:100%;padding:11px;border:1.5px solid var(--border);border-radius:var(--r);font-size:18px;font-weight:700;background:var(--bg);color:var(--text);text-align:center">
-        <div id="en-warn" style="display:none;background:var(--red-l);border-radius:6px;padding:7px;font-size:12px;color:var(--red);margin-top:4px">⚠ 냉동 기준(-18°C) 초과</div>
-        <button onclick="document.getElementById('en-temp').value='상온';document.getElementById('en-warn').style.display='none';this.style.background='var(--amber)';this.textContent='✅ 상온 선택됨'" style="width:100%;margin-top:6px;padding:9px;background:var(--amber-l);border:1.5px solid var(--amber);color:var(--amber);border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer">☀️ 상온 업무 - 온도체크 건너뛰기</button>
-      </div>
-      <div>
-        <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">📷 사진 (후면 카메라)</label>
-        <div class="cam-grid cam-3">${camHTML}</div>
-      </div>
-    </div>
-    <button class="bbtn bb-teal" onclick="submitEntry()" style="margin:12px 0 0">✅ 입차 등록 → 관리자 연동</button>
-    `:''}
-  </div>
-  ${me?`<div class="dc" style="margin-top:0"><div class="dct">오늘 입차 이력</div>
+  }
+
+  // ── 이력 표시
+  var histHTML=me?`<div class="dc" style="margin-top:0"><div class="dct">오늘 입차 이력</div>
     <div style="font-size:12px;display:flex;gap:8px;align-items:center">
-      <span class="badge ${me.type==='쿠팡'?'b-coral':me.type==='컬리'?'b-purple':'b-blue'}">${me.type}</span>
+      <span class="badge b-coral">${me.type||jsub}</span>
       <span>${me.time}</span>
       <span style="font-weight:600">${me.temp}${me.temp==='상온'?'':' °C'}</span>
       ${me.company?`<span style="color:var(--text2)">${me.company}</span>`:''}
       ${me.routeFrom?`<span style="font-size:11px;color:var(--text2)">${me.routeFrom}→${me.routeTo}</span>`:''}
+    </div></div>`:'';
+
+  // ── 온도 입력 영역
+  var tempHTML='';
+  if(isNoTemp||isCJ){
+    tempHTML=`<input type="hidden" id="en-temp" value="상온">
+    <div style="padding:9px 14px;background:rgba(255,165,0,.1);border:1.5px solid var(--amber);border-radius:var(--r);font-size:13px;font-weight:700;color:#E68000;text-align:center">☀️ 상온 업무 — 온도 기록 불필요</div>`;
+  } else if(isLine){
+    tempHTML=`<div><label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">차량 내부 온도 *</label>
+      <div style="display:flex;gap:6px;margin-bottom:6px">
+        <button onclick="document.getElementById('en-temp').value='상온';document.getElementById('en-warn').style.display='none';this.style.background='var(--amber)'" style="flex:1;padding:8px;background:var(--amber-l);border:1.5px solid var(--amber);color:#E68000;border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer">☀️ 상온</button>
+        <button onclick="document.getElementById('en-temp').focus()" style="flex:1;padding:8px;background:rgba(59,130,246,.1);border:1.5px solid var(--blue);color:var(--blue);border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer">❄️ 냉장/냉동 입력</button>
+      </div>
+      <input id="en-temp" type="number" step="0.1" placeholder="-18.0 (냉장/냉동)" oninput="var v=parseFloat(this.value);document.getElementById('en-warn').style.display=(!isNaN(v)&&v>-18)?'block':'none'"
+        style="width:100%;padding:11px;border:1.5px solid var(--border);border-radius:var(--r);font-size:18px;font-weight:700;background:var(--bg);color:var(--text);text-align:center">
+      <div id="en-warn" style="display:none;background:var(--red-l);border-radius:6px;padding:7px;font-size:12px;color:var(--red);margin-top:4px">⚠ 냉동 기준(-18°C) 초과</div>
+    </div>`;
+  } else {
+    // 컬리, 본사
+    tempHTML=`<div><label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">차량 내부 온도(°C) *</label>
+      <input id="en-temp" type="number" step="0.1" placeholder="-18.0" oninput="var v=parseFloat(this.value);document.getElementById('en-warn').style.display=(!isNaN(v)&&v>-18)?'block':'none'"
+        style="width:100%;padding:11px;border:1.5px solid var(--border);border-radius:var(--r);font-size:18px;font-weight:700;background:var(--bg);color:var(--text);text-align:center">
+      <div id="en-warn" style="display:none;background:var(--red-l);border-radius:6px;padding:7px;font-size:12px;color:var(--red);margin-top:4px">⚠ 냉동 기준(-18°C) 초과</div>
+    </div>`;
+  }
+
+  // ── 간선 상차지/하차지
+  var terminals=S.termList.map(t=>`<option>${t}</option>`).join('');
+  var lineHTML=isLine?`
+    <div><label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">상차지 *</label>
+      <div style="display:flex;gap:5px">
+        <select id="en-from-sel" onchange="var t=document.getElementById('en-from-txt');if(this.value&&!t.value)t.value=this.value" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--text)"><option value="">선택</option>${terminals}</select>
+        <input id="en-from-txt" placeholder="직접 입력" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--text)">
+      </div>
     </div>
-  </div>`:''}
+    <div><label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">하차지 *</label>
+      <div style="display:flex;gap:5px">
+        <select id="en-to-sel" onchange="var t=document.getElementById('en-to-txt');if(this.value&&!t.value)t.value=this.value" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--text)"><option value="">선택</option>${terminals}</select>
+        <input id="en-to-txt" placeholder="직접 입력" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--text)">
+      </div>
+    </div>`:'';
+
+  // ── 사진 버튼 (1장 통일)
+  var camGrid=`<div style="max-width:200px">${camBtn('zone','입차증빙')}</div>`;
+  // 컬리/간선은 온도계 사진 추가
+  if(isKurly||isLine){
+    camGrid=`<div class="cam-grid cam-2">${camBtn('zone','입차증빙')}${camBtn('tempLog','온도계')}</div>`;
+  }
+
+  // ── 회사 배지 색상
+  var badgeColor={'쿠팡':'#FFA500','CJ':'#0066CC','컬리':'#7C3AED','간선':'#059669','MBTI본사':'#DC2626','본사':'#DC2626'}[jsub]||'#6B7280';
+
+  return `<div class="dh"><h2>입차 등록</h2><p>${jsub} 입차 → 관리자 연동</p></div>
+  <div class="dc">
+    <div style="text-align:center;margin-bottom:12px">
+      <div style="display:inline-block;background:${badgeColor}20;border:2px solid ${badgeColor};border-radius:12px;padding:8px 24px;font-size:15px;font-weight:700;color:${badgeColor}">${jsub} 입차</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:9px">
+      ${lineHTML}
+      <div>
+        <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">⏱ 입차 시간</label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <div id="en-time-display" style="flex:1;padding:10px;background:var(--bg3);border-radius:var(--r);font-size:16px;font-weight:700;text-align:center">${nowT()}</div>
+          <button onclick="document.getElementById('en-time-display').textContent=document.getElementById('en-time-val').value=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});this.textContent='✅ 기록됨'" style="padding:9px 14px;background:var(--teal);color:#fff;border:none;border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">⏱ 지금 체크</button>
+        </div>
+        <input type="hidden" id="en-time-val" value="${nowT()}">
+      </div>
+      ${tempHTML}
+      <div>
+        <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">📷 입차 사진</label>
+        ${camGrid}
+      </div>
+    </div>
+    <button class="bbtn bb-teal" onclick="submitEntryAuto()" style="margin:12px 0 0">✅ 입차 등록 → 관리자 연동</button>
+  </div>
+  ${histHTML}
+  ${_drvHistEntry()}
   <div style="height:10px"></div>`;
+}
+function submitEntryAuto(){
+  var jsub=S.curJobsub||S.curJobtype||'쿠팡';
+  var isNoTemp=['쿠팡','CJ','생수'].includes(jsub);
+  var tv=document.getElementById('en-temp')?.value||'상온';
+  if(!isNoTemp&&!tv){toast('온도를 입력해 주세요');return;}
+  var fromTxt=document.getElementById('en-from-txt')?.value||document.getElementById('en-from-sel')?.value||'';
+  var toTxt=document.getElementById('en-to-txt')?.value||document.getElementById('en-to-sel')?.value||'';
+  var timeVal=document.getElementById('en-time-val')?.value||nowT();
+  var data={
+    driver:S.curDriver, type:jsub, company:jsub,
+    routeFrom:fromTxt, routeTo:toTxt,
+    ton:S.jobTon||'', time:timeVal,
+    temp:tv||'상온',
+    photos:{...S.photos.entry}, date:today(),
+    ts:new Date().toISOString()
+  };
+  var e=ls('entries');e.push({id:nid('entry'),...data});lss('entries',e);
+  fbW('entries',data).catch(()=>{});
+  addAct('entry',S.curDriver+' '+jsub+' 입차',S.curDriver);
+  S.photos.entry={};
+  DT('entry',document.getElementById('pni1'));
+  toast(jsub+' 입차 완료 → 관리자 실시간 연동');
 }
 function selJobType(type){
   if(type==='간선'){S.selEntry='간선';}else{S.selEntry=null;}
@@ -4649,13 +4677,43 @@ function submitEntry(){
 }
 
 function dDelivery(){
-  // 쿠팡 기사: 바로 쿠팡 화면
-  if(S.curJobsub==='쿠팡'||S.curJobtype==='쿠팡'){
+  var jsub=S.curJobsub||S.curJobtype||'쿠팡';
+  // 쿠팡: 바로 쿠팡 화면
+  if(jsub==='쿠팡'){
     S.selDC='택배'; S.selDCl='쿠팡';
     return `<div class="dh"><h2>운행 기록</h2><p>배송 완료 → 관리자 연동</p></div>
     ${dTaxi()}
     <div style="height:12px"></div>`;
   }
+  // CJ: 택배만
+  if(jsub==='CJ'){
+    S.selDC='택배'; S.selDCl='CJ';
+    return `<div class="dh"><h2>운행 기록</h2><p>배송 완료 → 관리자 연동</p></div>
+    ${dTaxi()}
+    <div style="height:12px"></div>`;
+  }
+  // 간선: 간선만
+  if(jsub==='간선'){
+    S.selDC='간선';
+    return `<div class="dh"><h2>운행 기록</h2><p>배송 완료 → 관리자 연동</p></div>
+    ${dLine()}
+    <div style="height:12px"></div>`;
+  }
+  // 본사: 본사 전용
+  if(jsub==='MBTI본사'||jsub==='본사'){
+    S.selDC='택배'; S.selDCl='MBTI본사';
+    return `<div class="dh"><h2>운행 기록</h2><p>배송 완료 → 관리자 연동</p></div>
+    ${dTaxi()}
+    <div style="height:12px"></div>`;
+  }
+  // 컬리: 컬리만
+  if(jsub==='컬리'){
+    S.selDC='택배'; S.selDCl='컬리';
+    return `<div class="dh"><h2>운행 기록</h2><p>배송 완료 → 관리자 연동</p></div>
+    ${dTaxi()}
+    <div style="height:12px"></div>`;
+  }
+  // 기타(용차 등): 택배/간선 탭
   return `<div class="dh"><h2>운행 기록</h2><p>배송 완료 → 관리자 연동</p></div>
   <div style="display:flex;gap:6px;padding:10px 10px 0">
     <button onclick="S.selDC='택배';DT('delivery',document.getElementById('pni2'))" style="flex:1;padding:9px;border-radius:var(--r);background:${S.selDC==='택배'?'var(--blue)':'var(--bg3)'};color:${S.selDC==='택배'?'#fff':'var(--text)'};border:none;font-size:13px;font-weight:600;cursor:pointer">📦 택배</button>
@@ -4677,24 +4735,22 @@ function dTaxi(){
           :'<svg width="16" height="16" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="4" stroke="currentColor" stroke-width="1.4"/><path d="M3 7h2l2-3h6l2 3h2a1 1 0 011 1v7a1 1 0 01-1 1H3a1 1 0 01-1-1V8a1 1 0 011-1z" stroke="currentColor" stroke-width="1.2" fill="none"/></svg><span>'+lbl+'</span>')
       +'</div></div>';
   }).join('');
-  // 화주사 선택 버튼 (쿠팡 기사면 숨김)
+  // 화주사 선택 버튼 (쿠팡 기사면 숨김, 그 외는 본인 회사만)
   var clientBtns='';
   if(!isCoupangDriver){
-  var cList=['쿠팡','컬리','CJ','용차','MBTI본사'].filter(function(cl){
-    // 기사 본인 소속 회사만 보이게 (MBTI본사/용차는 전체 표시)
-    if(S.curJobsub==='MBTI본사'||S.curJobsub==='용차') return true;
-    return cl===S.curJobsub||cl==='MBTI본사';
-  });
-    clientBtns='<div style="display:flex;gap:6px;padding:8px 10px 0">'
-      +cList.map(function(cl){
-        var sel=(S.selDCl===cl);
-        var colMap={쿠팡:'var(--coral)',컬리:'var(--purple)',CJ:'var(--blue)',용차:'var(--gray)'};
-        var col=colMap[cl]||'var(--gray)';
-        var bg=sel?(cl==='쿠팡'?'var(--coral-l)':cl==='컬리'?'var(--purple-l)':cl==='CJ'?'var(--blue-l)':'var(--gray-l)'):'var(--bg2)';
-        var bd=sel?col:'var(--border)';
-        return '<button onclick="S.selDCl=\''+cl+'\';DT(\'delivery\',document.getElementById(\'pni2\'))" style="flex:1;padding:8px;border-radius:var(--r);border:2px solid '+bd+';background:'+bg+';color:'+col+';font-size:12px;font-weight:700;cursor:pointer">'+cl+'</button>';
-      }).join('')
-      +'</div>';
+    // 본인 jobsub만 보이게 (탭 1개면 버튼 불필요)
+    var cList=[S.curJobsub||S.curJobtype].filter(Boolean);
+    if(cList.length>1){
+      clientBtns='<div style="display:flex;gap:6px;padding:8px 10px 0">'
+        +cList.map(function(cl){
+          var sel=(S.selDCl===cl);
+          var colMap={쿠팡:'var(--coral)',컬리:'var(--purple)',CJ:'var(--blue)',용차:'var(--gray)',MBTI본사:'var(--red)',본사:'var(--red)'};
+          var col=colMap[cl]||'var(--gray)';
+          var bd=sel?col:'var(--border)';
+          return '<button onclick="S.selDCl=\''+cl+'\';DT(\'delivery\',document.getElementById(\'pni2\'))" style="flex:1;padding:8px;border-radius:var(--r);border:2px solid '+bd+';background:'+(sel?col+'22':'var(--bg2)')+';color:'+col+';font-size:12px;font-weight:700;cursor:pointer">'+cl+'</button>';
+        }).join('')
+        +'</div>';
+    }
   }
   var delivLabel=isCoupangDriver?'쿠팡':S.selDCl;
   var insenHTML=(S.selDCl==='쿠팡'||isCoupangDriver)
@@ -4702,12 +4758,13 @@ function dTaxi(){
   var yongHTML=(!isCoupangDriver&&S.selDCl==='용차')
     ?'<span style="margin-left:8px;color:var(--gray);font-weight:600">단가: 배송₩'+S.yongPrice.del+'/반품₩'+S.yongPrice.ret+'</span>':'';
   var camCols=isCoupangDriver?'max-width:180px':'';
+  var isCoupangDrv=(S.curJobsub==='쿠팡'||S.curJobtype==='쿠팡'||S.selDCl==='쿠팡');
   return clientBtns
     +'<div class="dc"><div class="dct">'+delivLabel+' 배송 건수</div>'
     +'<div class="count-row"><div><div class="count-label">배송 상품</div><div class="count-sub">일반 배송</div></div><div class="count-ctrl"><button class="count-btn" onclick="cc(\'del\',-1)">−</button><div class="count-num" id="cnt-del">'+S.cnt.del+'</div><button class="count-btn" onclick="cc(\'del\',1)">+</button></div></div>'
     +'<div class="count-row"><div><div class="count-label">반품</div></div><div class="count-ctrl"><button class="count-btn" onclick="cc(\'ret\',-1)">−</button><div class="count-num" id="cnt-ret">'+S.cnt.ret+'</div><button class="count-btn" onclick="cc(\'ret\',1)">+</button></div></div>'
-    +'<div class="count-row"><div><div class="count-label">프레쉬백</div></div><div class="count-ctrl"><button class="count-btn" onclick="cc(\'fresh\',-1)">−</button><div class="count-num" id="cnt-fresh">'+S.cnt.fresh+'</div><button class="count-btn" onclick="cc(\'fresh\',1)">+</button></div></div>'
-    +'<div style="margin-top:8px;padding:7px;background:var(--bg3);border-radius:var(--r);font-size:12px">배송 <strong>'+S.cnt.del+'</strong>건 · 반품 <strong>'+S.cnt.ret+'</strong> · 프레쉬 <strong>'+S.cnt.fresh+'</strong>'+insenHTML+yongHTML+'</div>'
+    +(isCoupangDrv?'<div class="count-row"><div><div class="count-label">프레쉬백</div></div><div class="count-ctrl"><button class="count-btn" onclick="cc(\'fresh\',-1)">−</button><div class="count-num" id="cnt-fresh">'+S.cnt.fresh+'</div><button class="count-btn" onclick="cc(\'fresh\',1)">+</button></div></div>':'')
+    +'<div style="margin-top:8px;padding:7px;background:var(--bg3);border-radius:var(--r);font-size:12px">배송 <strong>'+S.cnt.del+'</strong>건 · 반품 <strong>'+S.cnt.ret+'</strong>'+(isCoupangDrv?' · 프레쉬 <strong>'+S.cnt.fresh+'</strong>'+insenHTML:'')+yongHTML+'</div>'
     +'</div>'
     +'<div style="padding:0 10px;margin-top:6px">'
     +'<label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">📷 배송완료 증빙 (후면 카메라 즉시 호출)</label>'
@@ -4754,13 +4811,14 @@ function submitLinehaul(){
 }
 
 function dTemp(){
-  // 쿠팡 기사: 온도 기록 불필요
-  if(S.curJobsub==='쿠팡'||S.curJobtype==='쿠팡'){
-    return `<div class="dh"><h2>온도 기록</h2><p>쿠팡 배송 기사</p></div>
+  // 상온 기사: 온도 기록 불필요 (쿠팡, CJ, 생수)
+  var isNoTemp=['쿠팡','CJ','생수'].includes(S.curJobsub)||['쿠팡','CJ','생수'].includes(S.curJobtype);
+  if(isNoTemp){
+    return `<div class="dh"><h2>온도 기록</h2><p>${S.curJobsub||S.curJobtype} 기사</p></div>
     <div class="dc" style="text-align:center;padding:28px 16px">
-      <div style="font-size:40px;margin-bottom:10px">📦</div>
-      <div style="font-size:15px;font-weight:700;margin-bottom:6px">쿠팡 기사는 온도 기록 불필요</div>
-      <div style="font-size:12px;color:var(--text2)">냉동·냉장 기사(컬리·CJ)만 온도를 기록합니다.<br>다른 메뉴를 이용해 주세요.</div>
+      <div style="font-size:40px;margin-bottom:10px">🌡</div>
+      <div style="font-size:15px;font-weight:700;margin-bottom:6px">${S.curJobsub||S.curJobtype}는 온도 기록 불필요</div>
+      <div style="font-size:12px;color:var(--text2)">상온 배송 기사는 온도 기록이 필요 없습니다.<br>냉동·냉장 기사(컬리·간선)만 온도를 기록합니다.</div>
     </div>
     <div style="height:10px"></div>`;
   }
