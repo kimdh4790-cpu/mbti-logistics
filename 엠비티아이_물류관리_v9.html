@@ -1085,7 +1085,7 @@ function _replaceB64WithUrl(b64,url,uniqueKey){
   // uniqueKey(타임스탬프)로 매칭 → base64 앞자리 충돌 방지
   if(!uniqueKey)return;
   try{
-    var keys=['drivers','settlements'];
+    var keys=['drivers','settlements','entries','deliveries','accidents','tempLogs'];
     keys.forEach(function(k){
       var arr=ls(k); var changed=false;
       arr=arr.map(function(item){
@@ -4796,9 +4796,9 @@ function dTaxi(){
   var isCoupangDrv=(S.curJobsub==='쿠팡'||S.curJobtype==='쿠팡'||S.selDCl==='쿠팡');
   return clientBtns
     +'<div class="dc"><div class="dct">'+delivLabel+' 배송 건수</div>'
-    +'<div class="count-row"><div><div class="count-label">배송 상품</div><div class="count-sub">일반 배송</div></div><div class="count-ctrl"><button class="count-btn" onclick="cc(\'del\',-1)">−</button><div class="count-num" id="cnt-del">'+S.cnt.del+'</div><button class="count-btn" onclick="cc(\'del\',1)">+</button></div></div>'
-    +'<div class="count-row"><div><div class="count-label">반품</div></div><div class="count-ctrl"><button class="count-btn" onclick="cc(\'ret\',-1)">−</button><div class="count-num" id="cnt-ret">'+S.cnt.ret+'</div><button class="count-btn" onclick="cc(\'ret\',1)">+</button></div></div>'
-    +(isCoupangDrv?'<div class="count-row"><div><div class="count-label">프레쉬백</div></div><div class="count-ctrl"><button class="count-btn" onclick="cc(\'fresh\',-1)">−</button><div class="count-num" id="cnt-fresh">'+S.cnt.fresh+'</div><button class="count-btn" onclick="cc(\'fresh\',1)">+</button></div></div>':'')
+    +'<div class="count-row"><div><div class="count-label">배송 상품</div><div class="count-sub">일반 배송</div></div><div class="count-ctrl"><button class="count-btn" onclick="cc(\'del\',-1)">−</button><div class="count-num" id="cnt-del">'+S.cnt.del+'</div><button class="count-btn" onclick="cc(\'del\',1)">+</button><input type="number" placeholder="직접입력" oninput="S.cnt.del=Math.max(0,+this.value||0);document.getElementById(\'cnt-del\').textContent=S.cnt.del" style="width:70px;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--text);text-align:center"></div></div>'
+    +'<div class="count-row"><div><div class="count-label">반품</div></div><div class="count-ctrl"><button class="count-btn" onclick="cc(\'ret\',-1)">−</button><div class="count-num" id="cnt-ret">'+S.cnt.ret+'</div><button class="count-btn" onclick="cc(\'ret\',1)">+</button><input type="number" placeholder="직접입력" oninput="S.cnt.ret=Math.max(0,+this.value||0);document.getElementById(\'cnt-ret\').textContent=S.cnt.ret" style="width:70px;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--text);text-align:center"></div></div>'
+    +(isCoupangDrv?'<div class="count-row"><div><div class="count-label">프레쉬백</div></div><div class="count-ctrl"><button class="count-btn" onclick="cc(\'fresh\',-1)">−</button><div class="count-num" id="cnt-fresh">'+S.cnt.fresh+'</div><button class="count-btn" onclick="cc(\'fresh\',1)">+</button><input type="number" placeholder="직접입력" oninput="S.cnt.fresh=Math.max(0,+this.value||0);document.getElementById(\'cnt-fresh\').textContent=S.cnt.fresh" style="width:70px;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--text);text-align:center"></div></div>':'')
     +'<div style="margin-top:8px;padding:7px;background:var(--bg3);border-radius:var(--r);font-size:12px">배송 <strong>'+S.cnt.del+'</strong>건 · 반품 <strong>'+S.cnt.ret+'</strong>'+(isCoupangDrv?' · 프레쉬 <strong>'+S.cnt.fresh+'</strong>'+insenHTML:'')+yongHTML+'</div>'
     +'</div>'
     +'<div style="padding:0 10px;margin-top:6px">'
