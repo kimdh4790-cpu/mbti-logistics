@@ -1411,6 +1411,7 @@ function doLogin(){
       document.getElementById('tbdate').textContent=new Date().toLocaleDateString('ko-KR');
       startListeners();
       setTimeout(archiveAndPurge,5000); // 로그인 5초 후 자동 아카이빙
+      setTimeout(autoCleanupFirebase,8000); // 로그인 8초 후 Firebase 자동 정리
     };
     if(FB&&_db){
       _db.collection('settings').doc('adminInfo').get().then(function(doc){
@@ -4219,8 +4220,8 @@ function dHome(){
   var wkKey='schedule_'+S.curDriver+'_month_'+curY+'_'+curM;
   var sc=JSON.parse(localStorage.getItem(wkKey)||'{}');
 
-  // ★ Firebase에서 기사 본인 스케줄 로드 (백그라운드)
-  if(FB&&_db&&S.curDriver&&Object.keys(sc).length===0){
+  // ★ Firebase에서 기사 본인 스케줄 로드 (항상 최신 동기화)
+  if(FB&&_db&&S.curDriver){
     var monthStr=curY+'-'+String(curM+1).padStart(2,'0');
     _db.collection('schedules')
       .where('driver','==',S.curDriver)
@@ -4234,8 +4235,10 @@ function dHome(){
           }
         });
         if(Object.keys(loaded).length>0){
-          localStorage.setItem(wkKey,JSON.stringify(loaded));
-          // 홈 화면 갱신
+          // 기존 localStorage와 병합 (Firebase가 우선)
+          var existing=JSON.parse(localStorage.getItem(wkKey)||'{}');
+          var merged=Object.assign({},existing,loaded);
+          localStorage.setItem(wkKey,JSON.stringify(merged));
           if(S.dtab==='home'){document.getElementById('dpc').innerHTML=dHome();}
         }
       }).catch(function(){});
@@ -5987,22 +5990,85 @@ function purgeOldData(){
   var cutoff=new Date();
   cutoff.setDate(cutoff.getDate()-90);
   var cutStr=cutoff.toISOString().slice(0,10);
-  // entries, deliveries, accidents: 날짜 기준 90일 이상 삭제
   ['entries','deliveries','accidents'].forEach(function(key){
     var arr=ls(key);
     var before=arr.length;
     arr=arr.filter(function(x){return (x.date||x.createdAt||'9999')>=cutStr;});
-    if(arr.length<before){lss(key,arr);console.log('[purge]',key,before-arr.length,'건 정리');}
+    if(arr.length<before){lss(key,arr);}
   });
-  // settlements: 3개월 이상 + status=완료인 것만 정리 (미완료는 보존)
   var sets=ls('settlements');
   var beforeS=sets.length;
   sets=sets.filter(function(x){
-    if(x.status!=='완료')return true; // 미완료 보존
+    if(x.status!=='완료')return true;
     var d=x.paidAt||x.month||'9999';
     return d>=cutStr;
   });
-  if(sets.length<beforeS){lss('settlements',sets);console.log('[purge] settlements',beforeS-sets.length,'건 정리');}
+  if(sets.length<beforeS){lss('settlements',sets);}
+}
+
+// ★ Firebase 자동 정리 (관리자 로그인 시 실행)
+function autoCleanupFirebase(){
+  if(!FB||!_db)return;
+  var lastRun=localStorage.getItem('auto_cleanup_last');
+  var today=new Date().toISOString().slice(0,10);
+  if(lastRun===today)return; // 하루 1회만 실행
+  localStorage.setItem('auto_cleanup_last',today);
+
+  var cut90=new Date(); cut90.setDate(cut90.getDate()-90);
+  var cut90Str=cut90.toISOString();
+  var cut1yr=new Date(); cut1yr.setFullYear(cut1yr.getFullYear()-1);
+  var cut1yrStr=cut1yr.toISOString();
+
+  // ① 입차·운행·온도·사고 → 90일 이상 삭제 (Storage 이미지 포함)
+  var photoCollections=[
+    {col:'entries',dateField:'ts'},
+    {col:'deliveries',dateField:'ts'},
+    {col:'tempLogs',dateField:'ts'},
+    {col:'accidents',dateField:'ts'}
+  ];
+  photoCollections.forEach(function(c){
+    _db.collection(c.col).where(c.dateField,'<',cut90Str).limit(100).get()
+    .then(function(snap){
+      if(snap.empty)return;
+      var batch=_db.batch();
+      snap.forEach(function(doc){
+        var d=doc.data();
+        // Storage 이미지 삭제
+        var urls=[];
+        if(d.photoUrl)urls.push(d.photoUrl);
+        if(d.photos)Object.values(d.photos).forEach(function(u){if(u)urls.push(u);});
+        urls.forEach(function(url){
+          if(url&&url.startsWith('https://firebasestorage')&&FB&&_st){
+            try{_st.refFromURL(url).delete().catch(function(){});}catch(e){}
+          }
+        });
+        batch.delete(doc.ref);
+      });
+      batch.commit().catch(function(){});
+    }).catch(function(){});
+  });
+
+  // ② 세금계산서·정산 알림 → 1년 이상 삭제
+  _db.collection('driver_notifications').where('sentAt','<',cut1yrStr).limit(100).get()
+  .then(function(snap){
+    if(snap.empty)return;
+    var batch=_db.batch();
+    snap.forEach(function(doc){batch.delete(doc.ref);});
+    batch.commit().catch(function(){});
+  }).catch(function(){});
+
+  // ③ 정산서 → 1년 이상 + 완료 상태만 삭제
+  _db.collection('settlements').where('paidAt','<',cut1yrStr.slice(0,10)).limit(100).get()
+  .then(function(snap){
+    if(snap.empty)return;
+    var batch=_db.batch();
+    snap.forEach(function(doc){
+      if(doc.data().status==='완료')batch.delete(doc.ref);
+    });
+    batch.commit().catch(function(){});
+  }).catch(function(){});
+
+  console.log('[autoCleanup] 실행됨 - '+today);
 }
 
 function startListeners(){
@@ -6176,6 +6242,7 @@ function startListeners(){
         SP('dash',null); updBadge(); updFbUI(); initGrps();
         document.getElementById('tbdate').textContent=new Date().toLocaleDateString('ko-KR');
         startListeners();
+        setTimeout(autoCleanupFirebase,8000); // 자동 로그인 시에도 Firebase 정리
         toast('👋 '+( sess.name||'관리자')+'님 자동 로그인');
       } else if(sess.mode==='driver'){
         // 기사 세션 복원 — Firebase/로컬에서 계정 유효 확인
@@ -6339,13 +6406,13 @@ function parseScheduleExcel(inp){
           sc[ds]={status:appStatus,route:route,wave:wave,rotation:rot,camp:camp};
           localStorage.setItem(wkKey,JSON.stringify(sc));
           // Firebase 저장
+          // Firebase 저장 - fbId 없으면 이름 기반 키 사용
           if(FB&&_db){
             var drv=ls('drivers').find(function(d){return d.name===name||(iId>=0&&d.userId===row[iId]);});
-            if(drv&&drv.fbId){
-              _db.collection('schedules').doc(drv.fbId+'_'+ds).set(
-                {driver:name,date:ds,status:appStatus,route:route,wave:wave,rotation:rot,camp:camp,updAt:new Date().toISOString()},{merge:true}
-              ).catch(function(){});
-            }
+            var fbKey=(drv&&drv.fbId)?(drv.fbId+'_'+ds):(name+'_'+ds);
+            _db.collection('schedules').doc(fbKey).set(
+              {driver:name,date:ds,status:appStatus,route:route,wave:wave,rotation:rot,camp:camp,updAt:new Date().toISOString()},{merge:true}
+            ).catch(function(){});
           }
           count++;
         }catch(ex){errors++;}
