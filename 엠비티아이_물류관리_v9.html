@@ -1869,7 +1869,9 @@ function rEntry(){
     </tr>`).join('');
     return _admDateGroup(g.date,g.rows.length,`<table class="tbl"><thead><tr><th>기사</th><th>유형</th><th>회사</th><th>시각</th><th>온도</th><th>사진</th></tr></thead><tbody>${rows}</tbody></table>`);
   }).join(''):'<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">해당 기간 입차 없음</div>';
-  return `<div class="card"><div class="ch"><span class="ct">입차 기록 (${e.length}건)</span></div>${tabHTML}${bodyHTML}</div>`;
+  return `<div class="card"><div class="ch"><span class="ct">입차 기록 (${e.length}건)</span>
+    <button onclick="deleteColData('entries','입차')" style="padding:4px 10px;background:var(--red-l);border:1px solid var(--red);border-radius:6px;font-size:11px;color:var(--red);cursor:pointer;font-weight:600">🗑 전체삭제</button>
+  </div>${tabHTML}${bodyHTML}</div>`;
 }
 
 function rDeliveryTaxi(){
@@ -1893,7 +1895,7 @@ function rDeliveryTaxi(){
     var summary='<div style="font-size:11px;color:var(--text2);padding:4px 0 6px">배송 합계 <strong style="color:var(--teal)">'+totD+'건</strong> · 반품 <strong>'+totR+'건</strong></div>';
     return _admDateGroup(g.date,g.rows.length,summary+'<table class="tbl"><thead><tr><th>기사</th><th>화주사</th><th>배송</th><th>반품</th><th>프레쉬</th><th>완료</th><th>사진</th></tr></thead><tbody>'+rows+'</tbody></table>');
   }).join(''):'<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">해당 기간 데이터 없음</div>';
-  return `<div class="card"><div class="ch"><span class="ct">📦 운행 현황 (${d.length}건)</span></div>${tabHTML}${bodyHTML}</div>`;
+  return `<div class="card"><div class="ch"><span class="ct">📦 운행 현황 (${d.length}건)</span><button onclick="deleteColData('deliveries','운행')" style="padding:4px 10px;background:var(--red-l);border:1px solid var(--red);border-radius:6px;font-size:11px;color:var(--red);cursor:pointer;font-weight:600">🗑 전체삭제</button></div>${tabHTML}${bodyHTML}</div>`;
 }
 function rDeliveryLine(){
   var period=window._adm_deliv_period||'today';
@@ -1973,7 +1975,7 @@ function rAcc(){
     }).join('');
     return _admDateGroup(g.date,g.rows.length,'<table class="tbl"><thead><tr><th>기사</th><th>유형</th><th>내용</th><th>사진</th><th>상태</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>');
   }).join(''):'<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">해당 기간 사고 없음</div>';
-  return `<div class="card"><div class="ch"><span class="ct">사고 접수 (${a.length}건)</span></div>${tabHTML}${bodyHTML}</div>`;
+  return `<div class="card"><div class="ch"><span class="ct">사고 접수 (${a.length}건)</span><button onclick="deleteColData('accidents','사고')" style="padding:4px 10px;background:var(--red-l);border:1px solid var(--red);border-radius:6px;font-size:11px;color:var(--red);cursor:pointer;font-weight:600">🗑 전체삭제</button></div>${tabHTML}${bodyHTML}</div>`;
 }
 
 function rTemp(){
@@ -1996,7 +1998,7 @@ function rTemp(){
     return _admDateGroup(g.date,g.rows.length,warn+'<table class="tbl"><thead><tr><th>기사</th><th>시각</th><th>온도</th><th>위치</th><th>사진</th><th>메모</th></tr></thead><tbody>'+rows+'</tbody></table>');
   }).join(''):'<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">해당 기간 온도 기록 없음</div>';
   return `${w.length?`<div style="background:var(--red-l);border:1px solid var(--red);border-radius:var(--r);padding:9px 13px;margin-bottom:10px;font-size:13px;color:var(--red)">⚠ 이상온도 ${w.length}건 (기준 미달: -18°C 초과)</div>`:''}
-  <div class="card"><div class="ch"><span class="ct">온도 기록 (${l.length}건)</span></div>${tabHTML}${bodyHTML}</div>`;
+  <div class="card"><div class="ch"><span class="ct">온도 기록 (${l.length}건)</span><button onclick="deleteColData('tempLogs','온도')" style="padding:4px 10px;background:var(--red-l);border:1px solid var(--red);border-radius:6px;font-size:11px;color:var(--red);cursor:pointer;font-weight:600">🗑 전체삭제</button></div>${tabHTML}${bodyHTML}</div>`;
 }
 
 function rSettle(){
@@ -2942,6 +2944,20 @@ function rMypage(){
   +'<div style="display:flex;gap:8px;flex-wrap:wrap;padding:6px 0">'+chkHTML+'</div>'
   +'</div>';
   setTimeout(function(){var el=document.getElementById('mini-cal-wrap');if(el)el.innerHTML=buildMiniCal();},60);
+}
+function deleteColData(col,label){
+  if(!confirm(label+' 데이터를 전체 삭제하시겠습니까?'))return;
+  lss(col,[]);
+  if(FB&&_db){
+    _db.collection(col).get().then(function(snap){
+      var batch=_db.batch();
+      snap.forEach(function(doc){batch.delete(doc.ref);});
+      return batch.commit();
+    }).then(function(){toast('✅ '+label+' 데이터 삭제 완료');SP(S.page,null);})
+    .catch(function(){toast('✅ '+label+' 로컬 삭제 완료');SP(S.page,null);});
+  } else {
+    toast('✅ '+label+' 데이터 삭제 완료');SP(S.page,null);
+  }
 }
 function deleteCheckedData(){
   var cols=['entries','deliveries','accidents','tempLogs','activity'];
@@ -6689,7 +6705,8 @@ function editMemo(ds){
   // ★ Firebase 동기화 (메모 사라짐 방지)
   if(FB&&_db){
     _db.collection('settings').doc('memos').set({data:memos,updatedAt:new Date().toISOString()},{merge:true})
-    .catch(function(e){console.warn('메모 Firebase 저장 실패',e);});
+    .then(function(){toast('📝 메모 저장됨 (Firebase)');})
+    .catch(function(e){console.warn('메모 Firebase 저장 실패',e);toast('📝 메모 저장됨 (로컬)');});
   }
   SP('memo',null); toast('📝 메모 저장됨');
 }
