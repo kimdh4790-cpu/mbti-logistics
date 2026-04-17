@@ -4284,6 +4284,7 @@ function dHome(){
     };
     _db.collection('schedules').where('driver','==',S.curDriver).get()
     .then(function(snap){
+      toast('📅 조회: '+S.curDriver+' → '+snap.size+'건');
       if(!snap.empty){_loadSched(snap);return;}
       // 이름으로 못 찾으면 fbId 기반 키로 재시도
       var myDrv=ls('drivers').find(function(d){return d.name===S.curDriver;});
