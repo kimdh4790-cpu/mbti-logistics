@@ -1251,22 +1251,29 @@ function loadMyInfo(userId){
         syncSettlements(myData.name||userId);
         // ★ 이름 확정 즉시 알림 실시간 감시 시작
         setTimeout(checkDriverNotifications, 500);
-        // 사번 설정 — Firebase 저장값 우선, 없으면 가입순번으로 1회 계산 후 Firebase에 고정 저장
+        // 사번 설정 — Firebase 저장값 우선, 없으면 Firebase drivers에서 직접 조회
         var _dn=myData.driverNum||myData.sn||myData.seq||'';
-        if(!_dn){
-          var _allDrv=ls('drivers').filter(function(d){return d.is_active!==false&&d.status!=='탈퇴'&&d.status!=='거부';});
-          // 승인일 기준 정렬 후 순번 부여
-          _allDrv.sort(function(a,b){return (a.approvedAt||a.createdAt||'').localeCompare(b.approvedAt||b.createdAt||'');});
-          var _di=_allDrv.findIndex(function(x){return x.userId===userId||x.name===(myData.name||userId);});
-          _dn=_di>=0?(_di+1):'';
-          // Firebase에 영구 저장 (사번 고정)
-          if(_dn&&FB&&_db&&myData.fbId){
-            _db.collection('drivers').doc(myData.fbId).update({driverNum:'MBTI'+String(_dn).padStart(2,'0')}).catch(function(){});
-          }
+        if(_dn){
+          if(!String(_dn).startsWith('MBTI'))_dn='MBTI'+String(_dn).padStart(2,'0');
+          S.driverNum=_dn;
+          if(S.dtab==='home')DT('home',document.getElementById('pni0'));
+        } else if(FB&&_db){
+          // Firebase에서 전체 drivers 조회 후 순번 계산
+          _db.collection('drivers').get().then(function(snap){
+            var allDrv=[];
+            snap.forEach(function(doc){var d=doc.data();d.fbId=doc.id;allDrv.push(d);});
+            allDrv=allDrv.filter(function(d){return d.is_active!==false&&d.status!=='탈퇴'&&d.status!=='거부';});
+            allDrv.sort(function(a,b){return (a.approvedAt||a.createdAt||'').localeCompare(b.approvedAt||b.createdAt||'');});
+            var _di=allDrv.findIndex(function(x){return x.userId===userId||x.name===(myData.name||userId);});
+            var _num=_di>=0?(_di+1):'';
+            if(_num){
+              _dn='MBTI'+String(_num).padStart(2,'0');
+              S.driverNum=_dn;
+              if(myData.fbId)_db.collection('drivers').doc(myData.fbId).update({driverNum:_dn}).catch(function(){});
+              if(S.dtab==='home')DT('home',document.getElementById('pni0'));
+            }
+          }).catch(function(){});
         }
-        // 이미 MBTI 형식이면 그대로, 숫자면 변환
-        if(_dn&&!String(_dn).startsWith('MBTI'))_dn='MBTI'+String(_dn).padStart(2,'0');
-        S.driverNum=_dn;
         // 화면의 모든 이름 표시 요소 교체
         document.querySelectorAll('.user-name-display').forEach(el=>el.textContent=myData.name);
         var ph=document.getElementById('phtime');
@@ -4240,25 +4247,33 @@ function dHome(){
   // ★ Firebase에서 기사 본인 스케줄 로드 (항상 최신 동기화)
   if(FB&&_db&&S.curDriver){
     var monthStr=curY+'-'+String(curM+1).padStart(2,'0');
-    _db.collection('schedules')
-      .where('driver','==',S.curDriver)
-      .get().then(function(snap){
-        if(snap.empty)return;
-        var loaded={};
-        snap.forEach(function(doc){
-          var d=doc.data();
-          if(d.date&&d.date.startsWith(monthStr)){
-            loaded[d.date]={status:d.status||'',route:d.route||'',wave:d.wave||'',rotation:d.rotation||''};
-          }
-        });
-        if(Object.keys(loaded).length>0){
-          // 기존 localStorage와 병합 (Firebase가 우선)
-          var existing=JSON.parse(localStorage.getItem(wkKey)||'{}');
-          var merged=Object.assign({},existing,loaded);
-          localStorage.setItem(wkKey,JSON.stringify(merged));
-          if(S.dtab==='home'){document.getElementById('dpc').innerHTML=dHome();}
+    var _loadSched=function(snap){
+      if(snap.empty)return;
+      var loaded={};
+      snap.forEach(function(doc){
+        var d=doc.data();
+        if(d.date&&d.date.startsWith(monthStr)){
+          loaded[d.date]={status:d.status||'',route:d.route||'',wave:d.wave||'',rotation:d.rotation||''};
         }
-      }).catch(function(){});
+      });
+      if(Object.keys(loaded).length>0){
+        var existing=JSON.parse(localStorage.getItem(wkKey)||'{}');
+        var merged=Object.assign({},existing,loaded);
+        localStorage.setItem(wkKey,JSON.stringify(merged));
+        if(S.dtab==='home'){document.getElementById('dpc').innerHTML=dHome();}
+      }
+    };
+    _db.collection('schedules').where('driver','==',S.curDriver).get()
+    .then(function(snap){
+      if(!snap.empty){_loadSched(snap);return;}
+      // 이름으로 못 찾으면 fbId 기반 키로 재시도
+      var myDrv=ls('drivers').find(function(d){return d.name===S.curDriver;});
+      if(myDrv&&myDrv.fbId){
+        _db.collection('schedules').where('__name__','>=',myDrv.fbId+'_'+monthStr)
+          .where('__name__','<',myDrv.fbId+'_'+monthStr+'Z').get()
+          .then(_loadSched).catch(function(){});
+      }
+    }).catch(function(){});
   }
   var firstWD=new Date(curY,curM,1).getDay();
 
