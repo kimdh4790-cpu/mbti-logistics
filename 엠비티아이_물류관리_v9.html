@@ -6423,8 +6423,7 @@ function rScheduleAdmin(){
   return '<div class="card"><div class="ch"><span class="ct">📅 기사별 월간 근무표</span>'
     +'<div style="display:flex;gap:6px;align-items:center">'
     +'<label style="padding:5px 12px;background:var(--teal);color:#fff;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">📂 엑셀 업로드<input type="file" accept=".xlsx,.xls" style="display:none" onchange="parseScheduleExcel(this)"></label>'
-    +'<button class="btn btn-sm" style="background:#ef4444;color:#fff;border:none" onclick="resetSchedule()">🗑 초기화</button>'
-    +'<button onclick="resetSchedule()" style="padding:5px 12px;background:#ef4444;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">🗑 근무표 초기화</button>'
+    +'<button onclick="resetSchedule()" style="padding:5px 12px;background:#ef4444;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">🗑 초기화</button>'
     +'<button class="btn btn-sm btn-teal" onclick="SP(\'schedule_admin\',null)">🔄 새로고침</button>'
     +'</div></div>'
     +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding:8px;background:var(--bg3);border-radius:var(--r)">'
@@ -6441,37 +6440,6 @@ function rScheduleAdmin(){
     +'<div style="overflow-x:auto"><div style="min-width:'+(90+lastDay*32)+'px">'+header+rows+'</div></div></div>';
 }
 
-function resetSchedule(){
-  if(!confirm('이번달 근무표를 전체 초기화할까요?\n(Firebase 데이터도 삭제됩니다)'))return;
-  var now=new Date();
-  var curY=parseInt(localStorage.getItem('sched_year')||now.getFullYear());
-  var curM=parseInt(localStorage.getItem('sched_month')||now.getMonth());
-  var monthStr=curY+'-'+String(curM+1).padStart(2,'0');
-  // localStorage 초기화
-  var drs=ls('drivers').filter(function(d){return d.is_active===true;});
-  drs.forEach(function(d){
-    var key='schedule_'+d.name+'_month_'+curY+'_'+curM;
-    localStorage.removeItem(key);
-  });
-  // Firebase 삭제
-  if(FB&&_db){
-    _db.collection('schedules').where('date','>=',monthStr+'-01').where('date','<=',monthStr+'-31').get()
-    .then(function(snap){
-      var batch=_db.batch();
-      snap.forEach(function(doc){batch.delete(doc.ref);});
-      return batch.commit();
-    }).then(function(){
-      toast('✅ 근무표 초기화 완료');
-      SP('schedule_admin',null);
-    }).catch(function(){
-      toast('✅ 근무표 초기화 완료 (로컬)');
-      SP('schedule_admin',null);
-    });
-  } else {
-    toast('✅ 근무표 초기화 완료');
-    SP('schedule_admin',null);
-  }
-}
 function resetSchedule(){
   if(!confirm('이번 달 근무표를 전체 초기화하시겠습니까?\n(Firebase 데이터도 삭제됩니다)'))return;
   var now=new Date();
