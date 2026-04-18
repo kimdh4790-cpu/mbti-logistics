@@ -5814,6 +5814,22 @@ function parseCoupangExcel(inp){
         else{settlements.push(entry); added++;}
       });
       lss('settlements',settlements);
+      // ★ Firebase에도 자동 저장 (다른 기기 동기화용)
+      var fbOk=0,fbFail=0;
+      if(FB&&_db){
+        var promises=[];
+        settlements.forEach(function(x){
+          if(x.month!==month)return; // 이번 업로드 월만
+          var docId=x.fbId||x.driver+'_'+x.month;
+          promises.push(_db.collection('settlements').doc(docId).set(x,{merge:true})
+            .then(function(){fbOk++;x.fbId=docId;})
+            .catch(function(e){fbFail++;console.warn('FB 저장 실패:',x.driver,e.message);}));
+        });
+        Promise.all(promises).then(function(){
+          lss('settlements',settlements); // fbId 저장을 위해 다시 저장
+          if(fbFail>0)toast('⚠️ Firebase '+fbFail+'건 저장 실패 (로컬은 정상)');
+        });
+      }
       var skipMsg=skippedIds.length?('\n⚠️ 미매칭: '+skippedIds.slice(0,5).join(', ')+(skippedIds.length>5?'... 외'+(skippedIds.length-5)+'명':'')):'';      toast('✅ 쿠팡 엑셀 정산 완료: '+added+'건 등록 / '+updated+'건 갱신 / '+skipped+'건 미매칭'+skipMsg);
       SP('settle',null);
     }catch(err){console.error(err);toast('❌ 파싱 오류: '+err.message);}
