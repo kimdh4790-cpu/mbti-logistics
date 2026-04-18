@@ -2074,6 +2074,7 @@ function rSettle(){
       <button onclick="openTaxStore()" style="padding:8px 14px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗂 기사별 세금계산서 보관함</button>
       <button id="jinju-inc-btn" onclick="openIncPanel()" style="padding:8px 14px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⚙️ 기사별 인센 설정</button>
       <button onclick="checkDuplicateSettlements()" style="padding:8px 14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔍 중복 검사</button>
+      <button onclick="syncFirebaseSettlements()" style="padding:8px 14px;background:#0d9488;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔄 Firebase 동기화</button>
     </div>
     <div style="font-size:10px;color:var(--text3);margin-top:8px">💡 쿠팡 엑셀(정산Raw/정산총괄 포함) 업로드 → 기사 자동 매칭 → 고용·산재·원천세 자동 계산</div>
   </div>
@@ -2107,6 +2108,70 @@ function appSettle(i){
     window.scrollTo(0,scrollY);
   },30);
   toast('✅ 정산 승인됨 ('+s[i].driver+')');
+}
+
+// ── 관리자: Firebase ↔ localStorage 양방향 동기화
+// 로컬에만 있으면 Firebase로 업로드, Firebase에만 있으면 로컬에 다운로드
+async function syncFirebaseSettlements(){
+  if(!FB||!_db){alert('❌ Firebase 연결이 안 되어 있습니다.');return;}
+  try{
+    toast('🔄 Firebase 동기화 검사 중...');
+    var local=ls('settlements');
+    var snap=await _db.collection('settlements').get();
+    var fbMap={},fbArr=[];
+    snap.forEach(function(d){
+      var x=d.data();x.fbId=d.id;
+      var key=(x.driver||'')+'_'+(x.month||'');
+      if(x.driver&&x.month){fbMap[key]=x;fbArr.push(x);}
+    });
+    var localMap={};
+    local.forEach(function(x){
+      if(x&&x.driver&&x.month)localMap[x.driver+'_'+x.month]=x;
+    });
+    // 차이 계산
+    var localOnly=[],fbOnly=[];
+    Object.keys(localMap).forEach(function(k){if(!fbMap[k])localOnly.push(localMap[k]);});
+    Object.keys(fbMap).forEach(function(k){if(!localMap[k])fbOnly.push(fbMap[k]);});
+    if(!localOnly.length&&!fbOnly.length){
+      alert('✅ 이미 동기화됨\n\n로컬: '+local.length+'건\nFirebase: '+fbArr.length+'건');
+      return;
+    }
+    // 확인 메시지
+    var msg='📊 동기화 대상\n\n';
+    if(localOnly.length){
+      msg+='📤 Firebase에 업로드: '+localOnly.length+'건\n';
+      localOnly.slice(0,5).forEach(function(x){msg+='   · '+x.driver+' / '+x.month+'\n';});
+      if(localOnly.length>5)msg+='   · ... 외 '+(localOnly.length-5)+'건\n';
+    }
+    if(fbOnly.length){
+      msg+=(localOnly.length?'\n':'')+'📥 로컬에 다운로드: '+fbOnly.length+'건\n';
+      fbOnly.slice(0,5).forEach(function(x){msg+='   · '+x.driver+' / '+x.month+'\n';});
+      if(fbOnly.length>5)msg+='   · ... 외 '+(fbOnly.length-5)+'건\n';
+    }
+    msg+='\n동기화하시겠습니까?';
+    if(!confirm(msg))return;
+    // 1) 로컬 → Firebase 업로드
+    var upOk=0,upFail=0;
+    for(var i=0;i<localOnly.length;i++){
+      var x=localOnly[i];
+      var docId=x.fbId||x.driver+'_'+x.month;
+      try{
+        await _db.collection('settlements').doc(docId).set(x,{merge:true});
+        x.fbId=docId; // 로컬 객체에도 fbId 기록
+        upOk++;
+      }catch(e){upFail++;console.warn('업로드 실패:',x.driver,e.message);}
+    }
+    // 2) Firebase → 로컬 다운로드
+    if(fbOnly.length)fbOnly.forEach(function(x){local.push(x);});
+    // 3) 로컬 저장 (fbId 업데이트 포함)
+    lss('settlements',local);
+    addAct('sync','Firebase 동기화: 업로드 '+upOk+'건 / 다운로드 '+fbOnly.length+'건',null);
+    alert('✅ 동기화 완료\n\n📤 업로드: '+upOk+'건'+(upFail?' (실패 '+upFail+'건)':'')+'\n📥 다운로드: '+fbOnly.length+'건\n\n총 정산서: '+local.length+'건');
+    SP('settle',null);
+  }catch(err){
+    console.error('Sync error:',err);
+    alert('❌ 동기화 오류: '+(err&&err.message||err));
+  }
 }
 
 // ── 관리자: 정산서 중복(driver+month) 검사 및 자동 정리
