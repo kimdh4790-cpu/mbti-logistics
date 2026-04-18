@@ -2073,6 +2073,7 @@ function rSettle(){
       <button onclick="exportAllSettlements()" style="padding:8px 14px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⬇️ 전체 정산 다운로드</button>
       <button onclick="openTaxStore()" style="padding:8px 14px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗂 기사별 세금계산서 보관함</button>
       <button id="jinju-inc-btn" onclick="openIncPanel()" style="padding:8px 14px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⚙️ 기사별 인센 설정</button>
+      <button onclick="checkDuplicateSettlements()" style="padding:8px 14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔍 중복 검사</button>
     </div>
     <div style="font-size:10px;color:var(--text3);margin-top:8px">💡 쿠팡 엑셀(정산Raw/정산총괄 포함) 업로드 → 기사 자동 매칭 → 고용·산재·원천세 자동 계산</div>
   </div>
@@ -2082,6 +2083,56 @@ function rSettle(){
   return _settleHTML;
 }
 function appSettle(i){var s=ls('settlements');s[i].status='완료';s[i].paidAt=today();lss('settlements',s);SP('settle',null);toast('정산 승인됨');}
+
+// ── 관리자: 정산서 중복(driver+month) 검사 및 자동 정리
+// 최신 createdAt 건을 유지하고 나머지 중복을 삭제
+function checkDuplicateSettlements(){
+  var s=ls('settlements');
+  if(!s.length){alert('정산서가 없습니다.');return;}
+  // driver+month 기준 그룹화
+  var map={};
+  s.forEach(function(x,i){
+    var k=(x.driver||'(무명)')+'___'+(x.month||'(월없음)');
+    (map[k]=map[k]||[]).push({idx:i,createdAt:x.createdAt||'',fbId:x.fbId||'',driver:x.driver,month:x.month,totalAmt:x.totalAmt||0});
+  });
+  // 중복만 추출
+  var dupGroups=[];
+  Object.keys(map).forEach(function(k){
+    if(map[k].length>1){
+      // createdAt 최신순 정렬 (최신이 앞에)
+      map[k].sort(function(a,b){return (b.createdAt||'').localeCompare(a.createdAt||'');});
+      dupGroups.push(map[k]);
+    }
+  });
+  if(dupGroups.length===0){
+    alert('✅ 중복 정산서 없음\n\n전체 '+s.length+'건 모두 고유합니다.');
+    return;
+  }
+  // 메시지 구성
+  var msg='⚠️ 중복 정산서 발견\n\n';
+  var toDelete=[];
+  dupGroups.forEach(function(g){
+    msg+='• '+g[0].driver+' / '+g[0].month+' ('+g.length+'건 → 1건 유지)\n';
+    // 첫 번째(최신) 유지, 나머지 삭제 대상
+    for(var i=1;i<g.length;i++)toDelete.push(g[i]);
+  });
+  msg+='\n→ 총 '+toDelete.length+'건 삭제됩니다.\n(최신 생성일 기준 1건만 유지)\n\n정리하시겠습니까?';
+  if(!confirm(msg))return;
+  // 삭제 실행 (뒤에서부터 splice하여 인덱스 보존)
+  toDelete.sort(function(a,b){return b.idx-a.idx;});
+  var fbDelCnt=0;
+  toDelete.forEach(function(item){
+    if(item.fbId&&FB&&_db){
+      _db.collection('settlements').doc(item.fbId).delete().catch(function(){});
+      fbDelCnt++;
+    }
+    s.splice(item.idx,1);
+  });
+  lss('settlements',s);
+  addAct('settle','중복 정산서 '+toDelete.length+'건 정리 (Firebase '+fbDelCnt+'건)',null);
+  toast('✅ 중복 '+toDelete.length+'건 정리 완료');
+  SP('settle',null);
+}
 
 // ══════════════════════════════════════
 // ★ 기사별 라우트별 인센티브 설정 패널
@@ -2916,12 +2967,9 @@ function rMypage(){
       html+='<div class="fg"><label>차량 번호</label><input id="mp-plate" value="'+(d.plate||'')+'" readonly style="background:var(--bg3)"></div>';
       html+='<div class="fg"><label>톤수</label><input id="mp-ton" value="'+(d.ton||'')+'" readonly style="background:var(--bg3)"></div>';
       html+='</div>';
-      html+='<div class="fg"><label>업무 유형</label>';
-      html+='<select id="mp-jobsub" style="width:100%;padding:9px 11px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--bg);color:var(--text)">';
-      ['쿠팡','컬리','CJ','용차','MBTI본사'].forEach(function(v){
-        html+='<option value="'+v+'" '+(( d.jobsub||'쿠팡')===v?'selected':'')+'>'+v+'</option>';
-      });
-      html+='</select></div>';
+      html+='<div class="fg"><label>업무 유형 <small style="color:var(--text3);font-weight:400;margin-left:4px">🔒 관리자만 변경 가능 (변경 요청 시 관리자 문의)</small></label>';
+      html+='<input type="text" id="mp-jobsub-view" value="'+(d.jobsub||'쿠팡')+'" readonly style="width:100%;padding:9px 11px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--bg3);color:var(--text2);cursor:not-allowed">';
+      html+='</div>';
 
       // 서류 5종
       html+='<div class="sec-lbl" style="margin-top:14px">📂 서류 5종</div>';
@@ -3136,12 +3184,7 @@ async function saveMypage(){
   var me2=drs2.find(x=>x.name===S.curDriver);
   if(me2){
     me2.phone=document.getElementById('mp-phone')?.value||me2.phone;
-    // ★ 업무유형 저장 (컬리→쿠팡 등 변경 가능)
-    var newJobsub=document.getElementById('mp-jobsub')?.value;
-    if(newJobsub){
-      me2.jobsub=newJobsub;
-      S.curJobsub=newJobsub;  // 현재 세션 즉시 반영
-    }
+    // ★ 업무유형(jobsub)은 관리자만 수정 가능 — 기사 본인 수정 불가 (기존 값 유지)
     // ★ 세금계산서 발행 정보 저장
     if(document.getElementById('mp-biznum')) me2.bizNum=document.getElementById('mp-biznum').value.trim();
     if(document.getElementById('mp-bizname')) me2.bizName=document.getElementById('mp-bizname').value.trim();
@@ -4580,16 +4623,20 @@ function _drv60Cut(){
 }
 // 공통 이력 렌더 (접을 수 있는 섹션)
 function _drvHistSection(id, title, innerHTML, col){
-  var delBtn=col?'<button onclick="drvDeleteCol(\''+col+'\',\''+title+'\')" style="padding:2px 8px;background:var(--red-l);border:1px solid var(--red);border-radius:5px;font-size:10px;color:var(--red);cursor:pointer">🗑 삭제</button>':'';
+  var btns='';
+  if(col){
+    btns = '<button onclick="event.stopPropagation();drvDeleteSelected(\''+col+'\',\''+title+'\',\''+id+'\')" style="padding:2px 8px;background:var(--amber-l);border:1px solid var(--amber);border-radius:5px;font-size:10px;color:var(--amber);cursor:pointer">☑ 선택삭제</button>'
+         + '<button onclick="event.stopPropagation();drvDeleteCol(\''+col+'\',\''+title+'\')" style="padding:2px 8px;background:var(--red-l);border:1px solid var(--red);border-radius:5px;font-size:10px;color:var(--red);cursor:pointer">🗑 전체삭제</button>';
+  }
   return '<div class="dc" style="margin-top:0">'
     +'<div class="dct" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center" onclick="var b=document.getElementById(\''+id+'\');var a=document.getElementById(\''+id+'_arr\');if(b){b.style.display=b.style.display===\'none\'?\'block\':\'none\';a.textContent=b.style.display===\'none\'?\'▼\':\'▲\'}">'
-    +title+'<div style="display:flex;gap:6px;align-items:center">'+delBtn+'<span id="'+id+'_arr" style="font-size:11px;color:var(--text3)">▼</span></div></div>'
+    +title+'<div style="display:flex;gap:4px;align-items:center">'+btns+'<span id="'+id+'_arr" style="font-size:11px;color:var(--text3)">▼</span></div></div>'
     +'<div id="'+id+'" style="display:none;margin-top:8px">'+innerHTML+'</div>'
     +'</div>';
 }
 // 입차 이력
 function drvDeleteCol(col,title){
-  if(!confirm(title+' 기록을 전체 삭제하시겠습니까?'))return;
+  if(!confirm('⚠️ '+title+'\n\n본인의 해당 기록을 전체 삭제하시겠습니까?\n(되돌릴 수 없습니다)'))return;
   // 본인 데이터만 삭제
   var arr=ls(col).filter(function(x){return x.driver!==S.curDriver;});
   lss(col,arr);
@@ -4604,6 +4651,36 @@ function drvDeleteCol(col,title){
     toast('✅ 삭제 완료');DT(S.dtab,null);
   }
 }
+// ── 기사: 이력 선택 삭제 (체크박스 기반)
+function drvDeleteSelected(col, title, sectionId){
+  var section=document.getElementById(sectionId);
+  if(!section){toast('섹션을 먼저 펼쳐주세요');return;}
+  if(section.style.display==='none'){toast('섹션을 펼친 후 선택해주세요');return;}
+  var checked=section.querySelectorAll('.drv-hist-chk:checked');
+  if(!checked.length){toast('⚠️ 삭제할 항목을 선택하세요 (체크박스)');return;}
+  if(!confirm(title+'\n\n선택한 '+checked.length+'건을 삭제하시겠습니까?'))return;
+  var fbIds=[],localIds=[];
+  checked.forEach(function(c){
+    if(c.dataset.fbid)fbIds.push(c.dataset.fbid);
+    if(c.dataset.lid)localIds.push(String(c.dataset.lid));
+  });
+  // localStorage에서 본인 데이터 중 선택된 항목만 제거
+  var arr=ls(col).filter(function(x){
+    if(x.driver!==S.curDriver)return true;
+    if(x.fbId&&fbIds.indexOf(x.fbId)>=0)return false;
+    if(x.id!=null&&localIds.indexOf(String(x.id))>=0)return false;
+    return true;
+  });
+  lss(col,arr);
+  // Firebase 삭제
+  if(FB&&_db&&fbIds.length){
+    fbIds.forEach(function(fid){
+      _db.collection(col).doc(fid).delete().catch(function(){});
+    });
+  }
+  toast('✅ '+checked.length+'건 삭제 완료');
+  DT(S.dtab,null);
+}
 function _drvHistEntry(){
   var cut=_drv60Cut();
   var rows=ls('entries').filter(function(e){return e.driver===S.curDriver&&(e.date||'')>=cut;})
@@ -4612,7 +4689,9 @@ function _drvHistEntry(){
   var html=rows.map(function(r){
     var photos=r.photos?Object.values(r.photos).filter(function(u){return u&&u.startsWith('http');}).slice(0,3):[];
     var phHTML=photos.length?'<div style="display:flex;gap:4px;margin-top:5px">'+photos.map(function(u){return'<img src="'+u+'" style="width:52px;height:52px;object-fit:cover;border-radius:5px;cursor:pointer" onclick="openIV(\''+u+'\',\'입차사진\')">';}).join('')+'</div>':'';
-    return '<div style="padding:8px 0;border-bottom:1px solid var(--border)">'
+    return '<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:8px">'
+      +'<input type="checkbox" class="drv-hist-chk" data-fbid="'+(r.fbId||'')+'" data-lid="'+(r.id||'')+'" style="margin-top:3px;transform:scale(1.25);flex-shrink:0;cursor:pointer">'
+      +'<div style="flex:1;min-width:0">'
       +'<div style="display:flex;justify-content:space-between;align-items:center">'
       +'<span style="font-size:12px;font-weight:600">'+r.date+' '+r.time+'</span>'
       +'<span class="badge b-coral" style="font-size:10px">'+(r.type||r.company||'-')+'</span>'
@@ -4620,7 +4699,7 @@ function _drvHistEntry(){
       +(r.routeFrom?'<div style="font-size:11px;color:var(--text2);margin-top:2px">'+r.routeFrom+' → '+r.routeTo+'</div>':'')
       +(r.temp&&r.temp!=='상온'?'<div style="font-size:11px;color:var(--blue)">🌡 '+r.temp+'°C</div>':'')
       +phHTML
-      +'</div>';
+      +'</div></div>';
   }).join('');
   return _drvHistSection('hist_entry','📅 입차 이력 (60일) — '+rows.length+'건',html,'entries');
 }
@@ -4633,7 +4712,9 @@ function _drvHistDelivery(){
   var html=rows.map(function(r){
     var photos=r.photos?Object.values(r.photos).filter(function(u){return u&&u.startsWith('http');}).slice(0,3):[];
     var phHTML=photos.length?'<div style="display:flex;gap:4px;margin-top:5px">'+photos.map(function(u){return'<img src="'+u+'" style="width:52px;height:52px;object-fit:cover;border-radius:5px;cursor:pointer" onclick="openIV(\''+u+'\',\'배송사진\')">';}).join('')+'</div>':'';
-    return '<div style="padding:8px 0;border-bottom:1px solid var(--border)">'
+    return '<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:8px">'
+      +'<input type="checkbox" class="drv-hist-chk" data-fbid="'+(r.fbId||'')+'" data-lid="'+(r.id||'')+'" style="margin-top:3px;transform:scale(1.25);flex-shrink:0;cursor:pointer">'
+      +'<div style="flex:1;min-width:0">'
       +'<div style="display:flex;justify-content:space-between;align-items:center">'
       +'<span style="font-size:12px;font-weight:600">'+r.date+' '+r.completedAt+'</span>'
       +'<span class="badge b-coral" style="font-size:10px">'+(r.client||r.category||'-')+'</span>'
@@ -4641,7 +4722,7 @@ function _drvHistDelivery(){
       +'<div style="font-size:11px;color:var(--text2);margin-top:2px">배송 '+(r.dcnt||0)+'건 · 반품 '+(r.rcnt||0)+'건'+(r.fresh>0?' · 프레시 '+r.fresh:'')+'</div>'
       +(r.route?'<div style="font-size:11px;color:var(--blue)">'+r.route+'</div>':'')
       +phHTML
-      +'</div>';
+      +'</div></div>';
   }).join('');
   return _drvHistSection('hist_deliv','📅 운행 이력 (60일) — '+rows.length+'건',html,'deliveries');
 }
@@ -4655,14 +4736,16 @@ function _drvHistTemp(){
     var warn=r.temp!=='상온'&&parseFloat(r.temp)>-18;
     var phHTML=r.photoUrl&&r.photoUrl.startsWith('http')
       ?'<img src="'+r.photoUrl+'" style="width:52px;height:52px;object-fit:cover;border-radius:5px;margin-top:4px;cursor:pointer" onclick="openIV(\''+r.photoUrl+'\',\'온도기록\')">':'';
-    return '<div style="padding:8px 0;border-bottom:1px solid var(--border)">'
+    return '<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:8px">'
+      +'<input type="checkbox" class="drv-hist-chk" data-fbid="'+(r.fbId||'')+'" data-lid="'+(r.id||'')+'" style="margin-top:3px;transform:scale(1.25);flex-shrink:0;cursor:pointer">'
+      +'<div style="flex:1;min-width:0">'
       +'<div style="display:flex;justify-content:space-between;align-items:center">'
       +'<span style="font-size:12px;font-weight:600">'+r.date+' '+r.time+'</span>'
       +'<span style="font-size:13px;font-weight:700;color:'+(warn?'var(--red)':'var(--blue)')+'">'+r.temp+(r.temp==='상온'?'':'°C')+(warn?' ⚠️':'')+'</span>'
       +'</div>'
       +'<div style="font-size:11px;color:var(--text2)">'+r.location+(r.note?' · '+r.note:'')+'</div>'
       +phHTML
-      +'</div>';
+      +'</div></div>';
   }).join('');
   return _drvHistSection('hist_temp','📅 온도 이력 (60일) — '+rows.length+'건',html,'tempLogs');
 }
@@ -4675,7 +4758,9 @@ function _drvHistAccident(){
   var html=rows.map(function(r){
     var photos=r.photos?Object.values(r.photos).filter(function(u){return u&&u.startsWith('http');}):[];
     var phHTML=photos.length?'<div style="display:flex;gap:4px;margin-top:5px;flex-wrap:wrap">'+photos.map(function(u){return'<img src="'+u+'" style="width:52px;height:52px;object-fit:cover;border-radius:5px;cursor:pointer" onclick="openIV(\''+u+'\',\'사고사진\')">';}).join('')+'</div>':'';
-    return '<div style="padding:8px 0;border-bottom:1px solid var(--border)">'
+    return '<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:8px">'
+      +'<input type="checkbox" class="drv-hist-chk" data-fbid="'+(r.fbId||'')+'" data-lid="'+(r.id||'')+'" style="margin-top:3px;transform:scale(1.25);flex-shrink:0;cursor:pointer">'
+      +'<div style="flex:1;min-width:0">'
       +'<div style="display:flex;justify-content:space-between;align-items:center">'
       +'<span style="font-size:12px;font-weight:600">'+r.date+' '+r.time+'</span>'
       +'<span class="badge '+(r.status==='접수중'?'b-red':r.status==='처리중'?'b-wait':'b-done')+'" style="font-size:10px">'+r.status+'</span>'
@@ -4684,7 +4769,7 @@ function _drvHistAccident(){
       +'<div style="font-size:11px;color:var(--text2)">'+r.description+'</div>'
       +(r.progressNote?'<div style="font-size:11px;color:var(--text3)">진행: '+r.progressNote+'</div>':'')
       +phHTML
-      +'</div>';
+      +'</div></div>';
   }).join('');
   return _drvHistSection('hist_acc','📅 사고 이력 (60일) — '+rows.length+'건',html,'accidents');
 }
