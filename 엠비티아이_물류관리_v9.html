@@ -1349,7 +1349,8 @@ function goLogout(){
   if(typeof firebase!=='undefined'&&firebase.auth&&firebase.auth()){try{firebase.auth().signOut();}catch(e){}}
   localStorage.removeItem('mbti_session');
   S.curMode=''; S.curDriver=''; S.curJobtype=''; S.curJobsub=''; S.curPlate='';
-  goSplash();
+  // ★ 홈페이지로 이동
+  window.location.href='./';
 }
 function goReg(){hide(['splash','login-screen']);show('reg-screen');window.scrollTo(0,0);}
 function goLogin(m){
@@ -2094,6 +2095,23 @@ function _getIncSetting(driver,route){
 }
 function _setIncSetting(driver,route,on,rate){
   localStorage.setItem(_incKey(driver,route),JSON.stringify({on:on,rate:rate}));
+  // ★ Firebase에도 저장
+  if(FB&&_db){
+    var key=_incKey(driver,route);
+    var obj={};obj[key]={on:on,rate:rate};
+    _db.collection('settings').doc('incSettings').set(obj,{merge:true}).catch(function(){});
+  }
+}
+// ★ Firebase에서 인센 설정 로드
+function loadIncSettingsFromFB(){
+  if(!FB||!_db)return;
+  _db.collection('settings').doc('incSettings').get().then(function(doc){
+    if(!doc.exists)return;
+    var data=doc.data();
+    Object.keys(data).forEach(function(k){
+      if(k.startsWith('inc_'))localStorage.setItem(k,JSON.stringify(data[k]));
+    });
+  }).catch(function(){});
 }
 function openIncPanel(){
   // 정산서 있는 기사 + routeDetails 수집
@@ -2814,6 +2832,7 @@ function rInsurance(){
 }
 // ══ 마이페이지
 function rMypage(){
+  try{
   var isAdmin=(S.curMode==='admin');
   // 관리자 정보: localStorage 저장값 우선 사용
   var adminInfo=JSON.parse(localStorage.getItem('mbti_admin_info')||'{}');
@@ -2943,6 +2962,10 @@ function rMypage(){
     ` : ''}
 
   </div>`;
+  }catch(e){
+    console.error('rMypage 오류:',e);
+    return '<div style="padding:20px;text-align:center;color:var(--red)">⚠️ 내정보 로딩 오류<br><small>'+(e.message||'알수없는오류')+'</small></div>';
+  }
 }
 function toggleAllChk(el,col){
   document.querySelectorAll('.row-chk[data-col="'+col+'"]').forEach(function(c){c.checked=el.checked;});
@@ -5528,17 +5551,15 @@ function parseCoupangExcel(inp){
         var damt=dm.delAmt||0;
         var ramt=dm.retAmt||0;
 
-        // ★ 인센티브 먼저 계산 (taxBase보다 앞에 와야 함)
+        // ★ 인센티브: 기사별 설정 기준 (Firebase에서 로드된 설정 사용)
         var fincVal=0;
         Object.keys(dm.routes).forEach(function(route){
           var rv=dm.routes[route];
           var s=_getIncSetting(d.name, route);
-          if(s.on && s.rate>0){
-            fincVal+=rv.cnt*s.rate;
-          }
+          if(s.on && s.rate>0) fincVal+=rv.cnt*s.rate;
         });
 
-        // ★ 세금계산서 기준 금액 = 배송+반품소계(가중요인포함) + 프레시백회수 + 프레시백인센
+        // ★ 세금계산서 기준 금액 = 배송+반품 + 프레시백회수 + 프레시백인센
         var taxBase=damt+ramt+freshAmt+fincVal;
         var totalAmt=taxBase;
         var income=taxBase;
@@ -6329,6 +6350,9 @@ function startListeners(){
       localStorage.setItem('mbti_admin_info',JSON.stringify(local));
     }
   }).catch(function(){});
+
+  // ── 인센티브 설정 Firebase에서 로드
+  loadIncSettingsFromFB();
 
   // ── photo_logs: 기사 사진 업로드 실시간 감지 → 관리자 UI 알림
   // ★ 오늘+어제 날짜 모두 감시 (자정 전후 사진 누락 방지)
