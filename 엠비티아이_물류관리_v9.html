@@ -2082,7 +2082,32 @@ function rSettle(){
   setTimeout(_updJinjuBtn, 50);
   return _settleHTML;
 }
-function appSettle(i){var s=ls('settlements');s[i].status='완료';s[i].paidAt=today();lss('settlements',s);SP('settle',null);toast('정산 승인됨');}
+function appSettle(i){
+  var s=ls('settlements');
+  s[i].status='완료';s[i].paidAt=today();
+  lss('settlements',s);
+  // Firebase 동기화
+  if(FB&&_db&&s[i].fbId){
+    _db.collection('settlements').doc(s[i].fbId).update({status:'완료',paidAt:s[i].paidAt}).catch(function(){});
+  }
+  // ★ 스크롤 위치 + 열려있던 월 그룹 상태 저장
+  var scrollY=window.scrollY||document.documentElement.scrollTop||0;
+  var openGroups=[];
+  document.querySelectorAll('[id^="sg_"]').forEach(function(el){
+    if(el.style.display!=='none'&&!el.id.endsWith('_a'))openGroups.push(el.id);
+  });
+  SP('settle',null);
+  // 리렌더 후 상태 복원
+  setTimeout(function(){
+    openGroups.forEach(function(gid){
+      var b=document.getElementById(gid);
+      var a=document.getElementById(gid+'_a');
+      if(b){b.style.display='block';if(a)a.textContent='▲';}
+    });
+    window.scrollTo(0,scrollY);
+  },30);
+  toast('✅ 정산 승인됨 ('+s[i].driver+')');
+}
 
 // ── 관리자: 정산서 중복(driver+month) 검사 및 자동 정리
 // 최신 createdAt 건을 유지하고 나머지 중복을 삭제
