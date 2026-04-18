@@ -5476,28 +5476,33 @@ function parseCoupangExcel(inp){
         if(totalHdrIdx>=0){
           var hRow=total[totalHdrIdx];
           // 컬럼명으로 인덱스 탐지
-          var colID=-1,colFresh=-1,colDmg=-1,colTotal=-1;
+          var colID=-1,colFresh=-1,colDmg=-1,colTotal=-1,colInc=-1,colSub=-1;
           for(var c=0;c<hRow.length;c++){
             var cell=String(hRow[c]||'').replace(/\s+/g,'');
             if(cell==='ID'||cell==='id')colID=c;
             else if(cell.includes('프레시백')||cell.includes('프레쉬백'))colFresh=c;
             else if(cell.includes('분실파손'))colDmg=c;
             else if(cell.includes('총합계')||cell.includes('TOTAL'))colTotal=c;
+            else if(cell.includes('추가인센')||cell.includes('가중요인'))colInc=c;
+            else if(cell.includes('금액(소계)')||cell.includes('소계'))colSub=c;
           }
-          // 탐지 실패 시 기본값
           if(colID<0)colID=3;
           if(colFresh<0)colFresh=8;
+          if(colInc<0)colInc=9;
           if(colDmg<0)colDmg=10;
           if(colTotal<0)colTotal=11;
+          if(colSub<0)colSub=7;
 
           for(var j=totalHdrIdx+1;j<total.length;j++){
             var tr=total[j]; if(!tr||!tr[colID])continue;
             var uid=String(tr[colID]).trim();
             if(uid===''||uid==='ID')continue;
             var tAmt=Number(tr[colTotal])||0;
+            var tSub=Number(tr[colSub])||0;
             var tFresh=Number(tr[colFresh])||0;
             var tDmg=Number(tr[colDmg])||0;
-            if(tAmt>0)totalMap[uid]={totalAmt:tAmt,freshAmt:tFresh,dmgAmt:tDmg};
+            var tInc=Number(tr[colInc])||0;
+            if(tAmt>0)totalMap[uid]={totalAmt:tAmt,subAmt:tSub,freshAmt:tFresh,dmgAmt:tDmg,incAmt:tInc};
           }
         }
       }
@@ -5519,6 +5524,9 @@ function parseCoupangExcel(inp){
         var tm=totalMap[userId]||totalMap[cleanId]||{};
         var freshAmt=tm.freshAmt||dm.freshAmt||0;
         var dmgAmt=tm.dmgAmt||0;
+        // ★ 배송/반품은 RPRICE 기준으로 계산 (총괄 소계 사용 안 함)
+        var damt=dm.delAmt||0;
+        var ramt=dm.retAmt||0;
 
         // ★ 인센티브 먼저 계산 (taxBase보다 앞에 와야 함)
         var fincVal=0;
@@ -5530,8 +5538,8 @@ function parseCoupangExcel(inp){
           }
         });
 
-        // ★ 세금계산서 기준 금액 = 배송(RPRICE) + 반품(RPRICE) + 롤백회수 + 인센
-        var taxBase=dm.delAmt+dm.retAmt+freshAmt+fincVal;
+        // ★ 세금계산서 기준 금액 = 배송+반품소계(가중요인포함) + 프레시백회수 + 프레시백인센
+        var taxBase=damt+ramt+freshAmt+fincVal;
         var totalAmt=taxBase;
         var income=taxBase;
         // ★ 고용·산재 계산 (세금계산서 방식)
@@ -5556,11 +5564,11 @@ function parseCoupangExcel(inp){
           driver:d.name, userId:cleanId, coupangId:userId,
           jobsub:d.jobsub||'쿠팡', month:month,
           dcnt:dm.dcnt, rcnt:dm.rcnt,
-          damt:dm.delAmt,
-          ramt:dm.retAmt,
+          damt:damt,
+          ramt:ramt,
           fresh:freshAmt,
-          finc:fincVal,               // ★ 진주캠프 OFF시 0, 나머지 건수×25원
-          inc:0,
+          finc:fincVal,               // ★ 프레시백 인센티브
+          inc:0,                      // ★ 가중요인은 damt에 포함됨
           tax:0,
           totalAmt:totalAmt,          // ★ 공급대가 저장
           supplyAmt:supplyAmt,        // ★ 공급가액
