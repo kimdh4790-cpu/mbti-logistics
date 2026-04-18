@@ -3424,8 +3424,9 @@ function viewStmt(i){
 
   // ★ 세금계산서 금액 = 공급대가 (고용·산재 빼기 전 금액)
   var taxBase = r.income;  // ★ 세금계산서 합계 = 배송+반품+롤백+인센
-  // ★ 실지급액 = 세금계산서 금액 - 고용보험 - 산재보험
-  var realPay = taxBase - r.emp - (r.work||0);
+  // ★ 실지급액 = 세금계산서 금액 - 고용보험 - 산재보험 - 분실/파손 공제
+  var dmgVal = +r.dmg||0;
+  var realPay = taxBase - r.emp - (r.work||0) - dmgVal;
 
   document.body.insertAdjacentHTML('beforeend',`
   <div style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;display:flex;align-items:center;justify-content:center;padding:14px" id="stmt-mo" onclick="document.getElementById('stmt-mo')?.remove()">
@@ -3441,7 +3442,7 @@ function viewStmt(i){
     </div>
     <div class="stmt-totals">
       <div class="stbox"><div class="stlbl">세금계산서 금액</div><div class="stval inc">₩${taxBase.toLocaleString()}</div></div>
-      <div class="stbox"><div class="stlbl">공제(고용+산재)</div><div class="stval ded">-₩${(r.emp+(r.work||0)).toLocaleString()}</div></div>
+      <div class="stbox"><div class="stlbl">공제(고용+산재${dmgVal>0?'+분실':''})</div><div class="stval ded">-₩${(r.emp+(r.work||0)+dmgVal).toLocaleString()}</div></div>
       <div class="stbox hl"><div class="stlbl">실 지급액</div><div class="stval" style="color:#fff;font-size:17px;font-weight:700">₩${realPay.toLocaleString()}</div></div>
     </div>
     <div class="stmt-sec">
@@ -3503,7 +3504,7 @@ function viewStmt(i){
     <div class="stmt-fin">
       <div>
         <div style="font-size:12px;font-weight:700">실 지급액</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:2px">세금계산서 ₩${taxBase.toLocaleString()} − 고용·산재 ₩${(r.emp+(r.work||0)).toLocaleString()}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">세금계산서 ₩${taxBase.toLocaleString()} − 고용·산재 ₩${(r.emp+(r.work||0)).toLocaleString()}${dmgVal>0?' − 분실/파손 ₩'+dmgVal.toLocaleString():''}</div>
       </div>
       <strong id="st-net-disp" style="font-size:22px;color:var(--purple)">₩${realPay.toLocaleString()}</strong>
     </div>
@@ -3593,12 +3594,22 @@ function changeStmtMonth(i){
 
 // 기사 전달 — 명세서 이미지 캡처 후 Firebase 전송
 function sendStmtToDriver(i){
-  var x=ls('settlements')[i];
+  var s=ls('settlements');
+  var x=s[i];
   if(!x){toast('정산 데이터 없음');return;}
   var wrap=document.querySelector('.stmt');
   if(!wrap){toast('명세서 창이 열려있지 않습니다');return;}
   if(typeof html2canvas==='undefined'){toast('⚠️ 이미지 라이브러리 로딩 중...');return;}
-  stSaveEdit(i); // 수정내용 먼저 저장
+  // ★ 수정내용 인라인 저장 (모달 유지 — html2canvas가 .stmt를 찾아야 하므로)
+  try{
+    s[i].fresh=+document.getElementById('st-fresh-inp')?.value||s[i].fresh||0;
+    s[i].finc=+document.getElementById('st-finc-inp')?.value||s[i].finc||0;
+    s[i].dmg=+document.getElementById('st-dmg-inp')?.value||s[i].dmg||0;
+    s[i].inc=0;
+    lss('settlements',s);
+    if(FB&&_db){_db.collection('settlements').doc(s[i].fbId||s[i].driver+'_'+s[i].month).set(s[i],{merge:true}).catch(function(){});}
+    x=s[i]; // 업데이트된 값 반영
+  }catch(e){/* 저장 실패해도 이미지 생성 계속 */}
   toast('📸 명세서 이미지 생성 중...');
   html2canvas(wrap,{scale:0.8,useCORS:true,backgroundColor:'#ffffff',logging:false})
   .then(function(canvas){
@@ -3618,11 +3629,11 @@ function sendStmtToDriver(i){
     if(FB&&_db){
       _db.collection('driver_notifications').add(note)
       .then(function(){toast('📤 '+x.driver+' 기사님께 정산 명세서 전달 완료! 기사 앱에서 확인 가능');})
-      .catch(function(){toast('📤 '+x.driver+' 명세서 보관함에 저장됨');});
+      .catch(function(e){toast('📤 '+x.driver+' 명세서 보관함에 저장됨 (FB 실패: '+(e&&e.message||'')+')');});
     } else {
       toast('📤 '+x.driver+' 명세서 보관함에 저장됨 (앱 연결 시 자동 전달)');
     }
-  }).catch(function(e){toast('전달 오류: '+e.message);});
+  }).catch(function(e){toast('전달 오류: '+(e&&e.message||e||'이미지 생성 실패'));});
 }
 
 // ══ 세금계산서 기능
@@ -5303,8 +5314,9 @@ function dSettle(){
     var rdList=x.routeDetails||[];
     // ★ 세금계산서 금액 = 공급대가 (고용·산재 빼기 전)
     var taxBase = r.income;  // ★ 세금계산서 합계 = 배송+반품+롤백+인센
-    // ★ 실지급액 = 세금계산서 금액 - 고용 - 산재
-    var realPay = taxBase - r.emp - (r.work||0);
+    // ★ 실지급액 = 세금계산서 금액 - 고용 - 산재 - 분실/파손
+    var dmgVal = +r.dmg||0;
+    var realPay = taxBase - r.emp - (r.work||0) - dmgVal;
 
     // 라우트별 테이블
     var routeRows='';
@@ -5357,7 +5369,7 @@ function dSettle(){
     // ── 상단 3칸 요약
     '<div class="stmt-totals">'+
       '<div class="stbox"><div class="stlbl">세금계산서 금액</div><div class="stval" style="font-size:15px;font-weight:700;color:var(--green)">₩'+taxBase.toLocaleString()+'</div></div>'+
-      '<div class="stbox"><div class="stlbl">공제(고용+산재)</div><div class="stval" style="font-size:15px;font-weight:700;color:var(--red)">-₩'+(r.emp+(r.work||0)).toLocaleString()+'</div></div>'+
+      '<div class="stbox"><div class="stlbl">공제(고용+산재'+(dmgVal>0?'+분실':'')+')</div><div class="stval" style="font-size:15px;font-weight:700;color:var(--red)">-₩'+(r.emp+(r.work||0)+dmgVal).toLocaleString()+'</div></div>'+
       '<div class="stbox hl"><div class="stlbl">실 지급액</div><div class="stval" style="color:#fff;font-size:17px;font-weight:700">₩'+realPay.toLocaleString()+'</div></div>'+
     '</div>'+
     // ── 수익 항목
@@ -5391,7 +5403,7 @@ function dSettle(){
     '<div class="stmt-fin">'+
       '<div>'+
         '<div style="font-size:12px;font-weight:700">실 지급액</div>'+
-        '<div style="font-size:10px;opacity:.7;margin-top:2px">세금계산서 ₩'+taxBase.toLocaleString()+' − 고용·산재 ₩'+(r.emp+(r.work||0)).toLocaleString()+'</div>'+
+        '<div style="font-size:10px;opacity:.7;margin-top:2px">세금계산서 ₩'+taxBase.toLocaleString()+' − 고용·산재 ₩'+(r.emp+(r.work||0)).toLocaleString()+(dmgVal>0?' − 분실/파손 ₩'+dmgVal.toLocaleString():'')+'</div>'+
       '</div>'+
       '<strong style="font-size:22px;color:#fff">₩'+realPay.toLocaleString()+'</strong>'+
     '</div>'+
