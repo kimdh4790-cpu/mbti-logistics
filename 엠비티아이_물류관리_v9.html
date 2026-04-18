@@ -2610,7 +2610,7 @@ function rDrivers(){
     ${filtered.map(d=>`<tr>
       <td><strong>${d.name}</strong><br><span style="font-size:10px;color:var(--blue)">${d.userId||d.phone}</span></td>
       <td style="font-size:11px">${d.plate}<br><span class="badge b-done" style="font-size:9px">${d.ton||''}</span></td>
-      <td><span class="badge ${d.jobtype==='택배'?'b-coral':'b-blue'}" style="font-size:10px">${d.jobtype||'택배'}</span><br><span style="font-size:10px;color:var(--text2)">${d.jobsub||''}</span></td>
+      <td><span class="badge ${d.jobtype==='택배'?'b-coral':'b-blue'}" style="font-size:10px">${d.jobtype||'택배'}</span><br><select onchange="setDrvJobsub('${d.fbId||d.id}',this.value)" title="업무 유형 변경" style="font-size:10px;padding:2px 3px;margin-top:2px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text2);cursor:pointer">${['쿠팡','컬리','CJ','용차','MBTI본사'].map(v=>`<option value="${v}" ${(d.jobsub||'')===v?'selected':''}>${v}</option>`).join('')}</select></td>
       <td><span class="badge b-done" style="font-size:10px">${d.employ||'지입'}</span></td>
       <td style="font-size:11px">${d.route}</td>
       <td>${docThumbs(d)}</td>
@@ -2669,6 +2669,55 @@ function deactDriver(id){
     _db.collection('drivers').doc(f.fbId).update({is_active:false, status:'탈퇴', deactivatedAt:today()}).catch(()=>{});
   }
   SP(S.page,null); toast(f.name+' 탈퇴');
+}
+
+// ── 관리자: 기사 업무 유형(jobsub) 변경 — 기존 정산서 일괄 반영 옵션 포함
+function setDrvJobsub(driverId, newJobsub){
+  var drivers=ls('drivers');
+  var idx=drivers.findIndex(function(d){return String(d.fbId||d.id)===String(driverId);});
+  if(idx<0){toast('❌ 기사 찾을 수 없음');SP('drivers',null);return;}
+  var d=drivers[idx];
+  var oldJobsub=d.jobsub||'(없음)';
+  if(oldJobsub===newJobsub)return; // 변경 없음
+  // 기존 정산서 영향 체크
+  var settlements=ls('settlements');
+  var affectedIdx=[];
+  settlements.forEach(function(s,i){if(s.driver===d.name&&s.jobsub!==newJobsub)affectedIdx.push(i);});
+  var updateSettles=false;
+  if(affectedIdx.length>0){
+    updateSettles=confirm(
+      d.name+' 기사 업무 유형 변경\n\n  ['+oldJobsub+'] → ['+newJobsub+']\n\n'+
+      '기존 정산서 '+affectedIdx.length+'건도 함께 업데이트하시겠습니까?\n\n'+
+      '[확인] 기사정보 + 정산서 모두 변경 (프레시백 인센 등 재계산됨)\n'+
+      '[취소] 기사정보만 변경 (과거 정산서는 현재 값 유지)'
+    );
+  } else {
+    if(!confirm(d.name+' 기사 업무 유형을 ['+oldJobsub+'] → ['+newJobsub+']로 변경합니다.\n\n계속하시겠습니까?')){
+      SP('drivers',null);return;
+    }
+  }
+  // 1) 기사 데이터 업데이트
+  drivers[idx].jobsub=newJobsub;
+  lss('drivers',drivers);
+  if(FB&&_db&&d.fbId){
+    _db.collection('drivers').doc(d.fbId).update({jobsub:newJobsub}).catch(function(){});
+  }
+  // 2) 정산서 일괄 업데이트 (선택 시)
+  if(updateSettles&&affectedIdx.length>0){
+    affectedIdx.forEach(function(i){
+      settlements[i].jobsub=newJobsub;
+      if(FB&&_db&&settlements[i].fbId){
+        _db.collection('settlements').doc(settlements[i].fbId).update({jobsub:newJobsub}).catch(function(){});
+      }
+    });
+    lss('settlements',settlements);
+    addAct('drivers',d.name+' 업무유형 변경: '+oldJobsub+'→'+newJobsub+' (정산서 '+affectedIdx.length+'건 반영)',d.name);
+    toast('✅ '+d.name+' 업무유형 + 정산서 '+affectedIdx.length+'건 업데이트');
+  } else {
+    addAct('drivers',d.name+' 업무유형 변경: '+oldJobsub+'→'+newJobsub,d.name);
+    toast('✅ '+d.name+' 업무유형 변경 완료');
+  }
+  SP('drivers',null);
 }
 
 // 서류 모달
@@ -3419,6 +3468,7 @@ function viewStmt(i){
     <button class="btn btn-purple" onclick="stSaveEdit(${i})">💾 수정 저장</button>
     <button class="btn btn-teal" onclick="sendStmtToDriver(${i})">📤 기사 전달</button>
     <button class="btn" style="background:#16a34a;color:#fff;border:none" onclick="stSaveEdit(${i});openTaxInvoice('${x.driver}','${x.month}')">🧾 세금계산서</button>
+    <button class="btn" style="background:#d97706;color:#fff;border:none" onclick="changeStmtMonth(${i})">📅 월 변경</button>
     <button class="btn" onclick="window.print()">🖨 인쇄</button>
     <button class="btn" onclick="document.getElementById('stmt-mo')?.remove()">닫기</button>
   </div>
@@ -3447,6 +3497,51 @@ function stSaveEdit(i){
   lss('settlements',s);
   if(FB&&_db){_db.collection('settlements').doc(s[i].fbId||s[i].driver+'_'+s[i].month).set(s[i],{merge:true}).catch(function(){});}
   toast('✅ 명세서 수정 저장 완료');
+  document.getElementById('stmt-mo')?.remove();
+  SP('settle',null);
+}
+
+// ── 관리자: 정산서 월 변경 (업로드 시점과 실제 정산월이 다를 때)
+function changeStmtMonth(i){
+  var s=ls('settlements');
+  var x=s[i];
+  if(!x){toast('❌ 정산 데이터 없음');return;}
+  var oldMonth=x.month||'';
+  var newMonth=prompt(
+    '📅 정산월 변경 ('+x.driver+')\n\n'+
+    'YYYY-MM 형식으로 입력하세요.\n\n'+
+    '현재: '+oldMonth,
+    oldMonth
+  );
+  if(!newMonth||newMonth===oldMonth)return;
+  if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(newMonth)){
+    toast('❌ 형식 오류 (YYYY-MM 예: 2026-03)');return;
+  }
+  // 동일 기사+새 월 정산서가 이미 있는지 중복 체크
+  var dup=-1;
+  for(var j=0;j<s.length;j++){
+    if(j!==i&&s[j].driver===x.driver&&s[j].month===newMonth){dup=j;break;}
+  }
+  if(dup>=0){
+    if(!confirm('⚠️ '+x.driver+'의 '+newMonth+' 정산서가 이미 존재합니다.\n\n[확인] 기존 것을 덮어쓰기 (기존 삭제 후 이것으로 교체)\n[취소] 변경 취소')){return;}
+    // 기존 중복 삭제
+    if(FB&&_db&&s[dup].fbId){
+      _db.collection('settlements').doc(s[dup].fbId).delete().catch(function(){});
+    }
+    s.splice(dup,1);
+    if(dup<i)i--; // 인덱스 보정
+  }
+  // 월 변경 적용
+  var oldFbId=s[i].fbId;
+  s[i].month=newMonth;
+  lss('settlements',s);
+  // Firebase 동기화 (merge)
+  if(FB&&_db){
+    var docId=oldFbId||s[i].driver+'_'+newMonth;
+    _db.collection('settlements').doc(docId).set(s[i],{merge:true}).catch(function(){});
+  }
+  addAct('settle',x.driver+' 정산월 변경: '+oldMonth+'→'+newMonth,x.driver);
+  toast('✅ '+x.driver+' 정산월 변경 완료 ('+oldMonth+' → '+newMonth+')');
   document.getElementById('stmt-mo')?.remove();
   SP('settle',null);
 }
@@ -5501,7 +5596,23 @@ function parseCoupangExcel(inp){
 
       var drivers=ls('drivers');
       var settlements=ls('settlements');
-      var month=new Date().toISOString().slice(0,7);
+      // ★ 정산월 선택: 기본값 = 전월 (쿠팡 관행: 전월 배송분을 익월에 정산)
+      var _now=new Date();
+      var _prev=new Date(_now.getFullYear(),_now.getMonth()-1,1);
+      var _defaultMonth=_prev.getFullYear()+'-'+String(_prev.getMonth()+1).padStart(2,'0');
+      var _curMonth=_now.getFullYear()+'-'+String(_now.getMonth()+1).padStart(2,'0');
+      var inputMonth=prompt(
+        '📅 정산월을 입력하세요 (YYYY-MM)\n\n'+
+        '쿠팡은 일반적으로 전월 배송분을 당월에 정산합니다.\n\n'+
+        '• 전월: '+_defaultMonth+' (기본값)\n'+
+        '• 당월: '+_curMonth,
+        _defaultMonth
+      );
+      if(!inputMonth){toast('정산 업로드 취소됨');return;}
+      if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(inputMonth)){
+        toast('❌ 형식 오류 (YYYY-MM 예: 2026-03): '+inputMonth);return;
+      }
+      var month=inputMonth;
       var added=0,skipped=0,updated=0,skippedIds=[];
 
       Object.keys(drvMap).forEach(function(userId){
