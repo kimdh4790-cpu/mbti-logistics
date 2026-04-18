@@ -1349,8 +1349,10 @@ function goLogout(){
   if(typeof firebase!=='undefined'&&firebase.auth&&firebase.auth()){try{firebase.auth().signOut();}catch(e){}}
   localStorage.removeItem('mbti_session');
   S.curMode=''; S.curDriver=''; S.curJobtype=''; S.curJobsub=''; S.curPlate='';
-  // ★ 홈페이지로 이동
-  window.location.href='./';
+  // ★ v10: 세션 초기화 후 스플래시(초기화면)로 이동 — index.html 대신 앱 내 스플래시 표시
+  hide(['app','dv','login-screen','reg-screen']);
+  show('splash');
+  splashBack(); // 잡 선택 화면 초기화
 }
 function goReg(){hide(['splash','login-screen']);show('reg-screen');window.scrollTo(0,0);}
 function goLogin(m){
@@ -2843,6 +2845,8 @@ function rMypage(){
     email: adminInfo.email||'',
     addr: adminInfo.addr||''
   }:(ls('drivers').find(x=>x.name===S.curDriver)||{name:S.curDriver||'',phone:'',email:'',addr:'',plate:'',ton:'',jobsub:'쿠팡'});
+  // ★ v10: d null/undefined 방어
+  if(!d)d={name:S.curDriver||'',phone:'',email:'',addr:'',plate:'',ton:'',jobsub:'쿠팡',bizNum:'',bizName:'',bizAddr:'',bizType:'서비스',bizItem:'기타물품운반원'};
   return `<div class="mypage-box">
     <div style="font-size:18px;font-weight:700;color:var(--blue);margin-bottom:3px">👤 내 정보 수정</div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:18px">정보 변경 후 저장 버튼을 눌러주세요</div>
@@ -3165,7 +3169,7 @@ function calcNet(x){
   var fresh=+x.fresh||+x.freshAmt||0;
   // 프레시백 인센: 쿠팡만 건수×25원, 용차/컬리/CJ는 0
   // ★ finc: x.finc가 명시적으로 설정된 경우 그 값 사용 (0 포함), 미설정 시 기본값
-  var isCoupang=(x.jobsub==='쿠팡'||x.client==='쿠팡');
+  var isCoupang=(x.jobsub==='쿠팡'||x.client==='쿠팡'||((!x.jobsub||x.jobsub==='')&&!x.client));  // ★ v10: jobsub/client 모두 없으면 쿠팡으로 기본 처리
   var finc = isCoupang
     ? (x.finc !== undefined && x.finc !== null && x.finc !== '' ? +x.finc : Math.round(dcnt*(G_PRICES.freshbag_inc||25)))
     : 0;
@@ -3195,7 +3199,7 @@ function updSettle(){
   var dcnt=+document.getElementById('se-dcnt')?.value||0;
   var jobsub=document.getElementById('se-jobsub')?.value||'쿠팡';
   var isYong=(jobsub==='용차');
-  var isCoupang=(jobsub==='쿠팡');
+  var isCoupang=(jobsub==='쿠팡'||(!jobsub||jobsub===''));  // ★ v10: jobsub 빈값이면 쿠팡으로 간주
   // 용차: 건수×단가 자동 계산
   if(isYong){
     var yDel=+document.getElementById('se-yong-del')?.value||900;
@@ -3283,7 +3287,7 @@ function saveSettle(){
   var idx=s.findIndex(x=>x.driver===driver&&x.month===month);
   var dcnt=+document.getElementById('se-dcnt').value||0;
   var jobsub=document.getElementById('se-jobsub')?.value||'쿠팡';
-  var isYong=(jobsub==='용차'); var isCoupang=(jobsub==='쿠팡');
+  var isYong=(jobsub==='용차'); var isCoupang=(jobsub==='쿠팡'||(!jobsub||jobsub===''));  // ★ v10: jobsub 미설정시 쿠팡으로 처리
   var rcnt=+document.getElementById('se-rcnt').value||0;
   var yDel=+document.getElementById('se-yong-del')?.value||900;
   var yRet=+document.getElementById('se-yong-ret')?.value||900;
@@ -6476,13 +6480,15 @@ function startListeners(){
   loadUnitPrices();  // Firestore 단가 로드
 
   // ── 저장된 세션 자동 복원 (재접속 시 로그인 상태 기억)
+  // ★ v10: 항상 스플래시 먼저 표시 → 세션 있으면 자동 로그인
+  goSplash();
   (function restoreSession(){
     try{
       var raw = localStorage.getItem('mbti_session');
-      if(!raw){ goSplash(); return; }
+      if(!raw){ return; } // 이미 스플래시 표시 중
       var sess = JSON.parse(raw);
       // 7일 이상 지난 세션은 만료
-      if(!sess || (Date.now()-sess.ts) > 7*24*60*60*1000){ goSplash(); return; }
+      if(!sess || (Date.now()-sess.ts) > 7*24*60*60*1000){ localStorage.removeItem('mbti_session'); return; }
       if(sess.mode==='admin'){
         S.curMode='admin';
         setAdminName(sess.name||'김형우 대표');
@@ -6509,12 +6515,12 @@ function startListeners(){
           // 탈퇴/거부/비활성 계정은 세션 삭제
           if(!found||!found.is_active||found.status==='탈퇴'||found.status==='거부'){
             localStorage.removeItem('mbti_session');
-            goSplash(); return;
+            return; // 이미 스플래시 표시 중
           }
           // 대기중이면 스플래시로
           if(found.isNew||found.status==='pending'){
             localStorage.removeItem('mbti_session');
-            goSplash(); return;
+            return; // 이미 스플래시 표시 중
           }
           // 정상 복원
           S.curDriver=found.name||sess.id;
@@ -6528,9 +6534,9 @@ function startListeners(){
         };
         checkAndRestore();
       } else {
-        goSplash();
+        localStorage.removeItem('mbti_session');
       }
-    }catch(e){ goSplash(); }
+    }catch(e){ localStorage.removeItem('mbti_session'); }
   })();
 })();
 
