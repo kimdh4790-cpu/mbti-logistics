@@ -1349,10 +1349,7 @@ function goLogout(){
   if(typeof firebase!=='undefined'&&firebase.auth&&firebase.auth()){try{firebase.auth().signOut();}catch(e){}}
   localStorage.removeItem('mbti_session');
   S.curMode=''; S.curDriver=''; S.curJobtype=''; S.curJobsub=''; S.curPlate='';
-  // ★ v10: 세션 초기화 후 스플래시(초기화면)로 이동 — index.html 대신 앱 내 스플래시 표시
-  hide(['app','dv','login-screen','reg-screen']);
-  show('splash');
-  splashBack(); // 잡 선택 화면 초기화
+  window.location.href='./';
 }
 function goReg(){hide(['splash','login-screen']);show('reg-screen');window.scrollTo(0,0);}
 function goLogin(m){
@@ -2835,140 +2832,108 @@ function rInsurance(){
 // ══ 마이페이지
 function rMypage(){
   try{
-  var isAdmin=(S.curMode==='admin');
-  // 관리자 정보: localStorage 저장값 우선 사용
-  var adminInfo=JSON.parse(localStorage.getItem('mbti_admin_info')||'{}');
-  var d=isAdmin?{
-    name: adminInfo.name||'김형우',
-    userId: adminInfo.userId||'MBTI',
-    phone: adminInfo.phone||'010-0000-0000',
-    email: adminInfo.email||'',
-    addr: adminInfo.addr||''
-  }:(ls('drivers').find(x=>x.name===S.curDriver)||{name:S.curDriver||'',phone:'',email:'',addr:'',plate:'',ton:'',jobsub:'쿠팡'});
-  // ★ v10: d null/undefined 방어
-  if(!d)d={name:S.curDriver||'',phone:'',email:'',addr:'',plate:'',ton:'',jobsub:'쿠팡',bizNum:'',bizName:'',bizAddr:'',bizType:'서비스',bizItem:'기타물품운반원'};
-  return `<div class="mypage-box">
-    <div style="font-size:18px;font-weight:700;color:var(--blue);margin-bottom:3px">👤 내 정보 수정</div>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:18px">정보 변경 후 저장 버튼을 눌러주세요</div>
+    var isAdmin=(S.curMode==='admin');
+    var adminInfo=JSON.parse(localStorage.getItem('mbti_admin_info')||'{}');
+    var d=isAdmin?{
+      name:adminInfo.name||'관리자',
+      userId:adminInfo.userId||'MBTI',
+      phone:adminInfo.phone||'',
+      email:adminInfo.email||'',
+      addr:adminInfo.addr||''
+    }:(ls('drivers').find(function(x){return x.name===S.curDriver;})||{name:S.curDriver||'',phone:'',email:'',addr:'',plate:'',ton:'',jobsub:'쿠팡',docs:{},bizNum:'',bizName:'',bizAddr:'',bizType:'서비스',bizItem:'기타물품운반원'});
 
-    <div class="sec-lbl">기본 정보</div>
-    <div class="gr">
-      <div class="fg"><label>성명</label><input id="mp-name" value="${d.name||''}" placeholder="홍길동"></div>
-      <div class="fg"><label>전화번호</label><input id="mp-phone" type="tel" value="${d.phone||''}" placeholder="010-0000-0000"></div>
-    </div>
-    ${isAdmin?`<div class="fg"><label>🔑 로그인 아이디 변경</label><input id="mp-userid" value="${d.userId||'admin'}" placeholder="새 아이디 입력" style="border:1.5px solid var(--blue)"><div style="font-size:10px;color:var(--text3);margin-top:3px">※ 변경 후 새 아이디로 로그인하세요</div></div>`:''}
-    ${!isAdmin?`<div class="fg"><label>이메일</label><input id="mp-email" type="email" value="${d.email||''}" placeholder="email@example.com"></div>
-    <div class="fg"><label>주소</label><input id="mp-addr" value="${d.addr||''}" placeholder="도로명 주소"></div>`:''}
+    var html='<div class="mypage-box">';
+    html+='<div style="font-size:18px;font-weight:700;color:var(--blue);margin-bottom:3px">👤 내 정보 수정</div>';
+    html+='<div style="font-size:12px;color:var(--text2);margin-bottom:18px">정보 변경 후 저장 버튼을 눌러주세요</div>';
+    html+='<div class="sec-lbl">기본 정보</div>';
+    html+='<div class="gr">';
+    html+='<div class="fg"><label>성명</label><input id="mp-name" value="'+(d.name||'')+'" placeholder="홍길동"></div>';
+    html+='<div class="fg"><label>전화번호</label><input id="mp-phone" type="tel" value="'+(d.phone||'')+'" placeholder="010-0000-0000"></div>';
+    html+='</div>';
+    if(isAdmin){
+      html+='<div class="fg"><label>🔑 로그인 아이디</label><input id="mp-userid" value="'+(d.userId||'admin')+'" style="border:1.5px solid var(--blue)"></div>';
+    } else {
+      html+='<div class="fg"><label>이메일</label><input id="mp-email" type="email" value="'+(d.email||'')+'" placeholder="email@example.com"></div>';
+      html+='<div class="fg"><label>주소</label><input id="mp-addr" value="'+(d.addr||'')+'" placeholder="도로명 주소"></div>';
+    }
+    html+='<div class="sec-lbl" style="margin-top:14px">비밀번호 변경 <span style="font-size:10px;color:var(--text3)">(변경 시만 입력)</span></div>';
+    html+='<div class="fg"><label>현재 비밀번호</label><input id="mp-pw-cur" type="password" placeholder="현재 비밀번호"></div>';
+    html+='<div class="fg"><label>새 비밀번호 (6자↑)</label><input id="mp-pw-new" type="password" placeholder="새 비밀번호" oninput="chkPwStr(this)"><div id="pw-strength-bar" class="pw-strength pw-s0"></div><div id="pw-strength-txt" style="font-size:10px;color:var(--text3);margin-top:2px"></div></div>';
+    html+='<div class="fg"><label>새 비밀번호 확인</label><input id="mp-pw-new2" type="password" placeholder="새 비밀번호 확인"></div>';
 
-    <div class="sec-lbl" style="margin-top:14px">비밀번호 변경 <span style="font-size:10px;color:var(--text3)">(변경 시만 입력)</span></div>
-    <div class="fg"><label>현재 비밀번호</label><input id="mp-pw-cur" type="password" placeholder="현재 비밀번호"></div>
-    <div class="fg"><label>새 비밀번호 (6자↑)</label><input id="mp-pw-new" type="password" placeholder="새 비밀번호" oninput="chkPwStr(this)">
-      <div id="pw-strength-bar" class="pw-strength pw-s0"></div>
-      <div id="pw-strength-txt" style="font-size:10px;color:var(--text3);margin-top:2px"></div>
-    </div>
-    <div class="fg"><label>새 비밀번호 확인</label><input id="mp-pw-new2" type="password" placeholder="새 비밀번호 확인"></div>
+    if(!isAdmin){
+      html+='<div class="sec-lbl" style="margin-top:14px">차량 정보</div>';
+      html+='<div class="gr">';
+      html+='<div class="fg"><label>차량 번호</label><input id="mp-plate" value="'+(d.plate||'')+'" readonly style="background:var(--bg3)"></div>';
+      html+='<div class="fg"><label>톤수</label><input id="mp-ton" value="'+(d.ton||'')+'" readonly style="background:var(--bg3)"></div>';
+      html+='</div>';
+      html+='<div class="fg"><label>업무 유형</label>';
+      html+='<select id="mp-jobsub" style="width:100%;padding:9px 11px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--bg);color:var(--text)">';
+      ['쿠팡','컬리','CJ','용차','MBTI본사'].forEach(function(v){
+        html+='<option value="'+v+'" '+(( d.jobsub||'쿠팡')===v?'selected':'')+'>'+v+'</option>';
+      });
+      html+='</select></div>';
 
-    ${!isAdmin?`
-    <div class="sec-lbl" style="margin-top:14px">차량 정보</div>
-    <div class="gr">
-      <div class="fg"><label>차량 번호</label><input id="mp-plate" value="${d.plate||''}" readonly style="background:var(--bg3)"></div>
-      <div class="fg"><label>톤수</label><input id="mp-ton" value="${d.ton||''}" readonly style="background:var(--bg3)"></div>
-    </div>
-    <div class="fg"><label>업무 유형 <span style="font-size:10px;color:var(--blue)">(실제 배송 화주사 변경 가능)</span></label>
-      <select id="mp-jobsub" style="width:100%;padding:9px 11px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--bg);color:var(--text)">
-        ${['쿠팡','컬리','CJ','용차','MBTI본사'].map(v=>`<option value="${v}" ${(d.jobsub||'쿠팡')===v?'selected':''}>${v}</option>`).join('')}
-      </select>
-    </div>
+      // 서류 5종
+      html+='<div class="sec-lbl" style="margin-top:14px">📂 서류 5종</div>';
+      html+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:14px">';
+      var slots=[{key:'bank',lbl:'통장',mode:'direct'},{key:'license',lbl:'면허',mode:'docs'},{key:'cargo_cert',lbl:'화물자격',mode:'docs'},{key:'car_reg',lbl:'차량등록',mode:'docs'},{key:'biz_reg',lbl:'사업자',mode:'docs'}];
+      slots.forEach(function(s){
+        var url=s.mode==='direct'?(d.bankPhotoUrl||''):((d.docs||{})[s.key]||'');
+        var hasImg=(url&&url.length>5);
+        html+='<label style="aspect-ratio:3/4;border-radius:var(--r);border:2px solid '+(hasImg?'var(--teal)':'var(--red)')+';overflow:hidden;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg3);cursor:pointer">';
+        if(hasImg){
+          html+='<img src="'+url+'" style="width:100%;height:100%;object-fit:cover" onclick="event.preventDefault();openIV(\''+url+'\',\''+s.lbl+'\')">';
+          html+='<div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.6);color:#fff;font-size:9px;font-weight:700;text-align:center;padding:3px">'+s.lbl+' ✅</div>';
+        } else {
+          html+='<div style="font-size:20px;margin-bottom:3px">📷</div>';
+          html+='<div style="font-size:10px;font-weight:700;color:var(--red)">'+s.lbl+'</div>';
+        }
+        html+='<input type="file" accept="image/*" style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer" onchange="lateDocUpload(this,\''+s.key+'\',\''+s.lbl+'\')">';
+        html+='</label>';
+      });
+      html+='</div>';
 
-    <div class="sec-lbl" style="margin-top:14px">📂 서류 5종 (이미지 탭→확대, 다시 탭→교체)</div>
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:14px">
-      ${(function(){try{
-        var slots=[
-          {key:'bank',lbl:'통장',mode:'direct'},
-          {key:'license',lbl:'면허',mode:'docs'},
-          {key:'cargo_cert',lbl:'화물자격',mode:'docs'},
-          {key:'car_reg',lbl:'차량등록',mode:'docs'},
-          {key:'biz_reg',lbl:'사업자',mode:'docs'}
-        ];
-        return slots.map(function(s){
-          var url=s.mode==='direct'?d.bankPhotoUrl:((d.docs||{})[s.key]||'');
-          var hasImg=(url&&url.length>5);
-          return '<label style="aspect-ratio:3/4;border-radius:var(--r);border:2px solid '+(hasImg?'var(--teal)':'var(--red)')+';overflow:hidden;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg3);cursor:pointer">'
-            +(hasImg
-              ?'<img src="'+url+'" style="width:100%;height:100%;object-fit:cover" onclick="event.preventDefault();openIV(\''+url+'\',\''+s.lbl+'\')"><div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.6);color:#fff;font-size:9px;font-weight:700;text-align:center;padding:3px">'+s.lbl+' ✅</div>'
-              :'<div style="font-size:20px;margin-bottom:3px">📷</div><div style="font-size:10px;font-weight:700;color:var(--red)">'+s.lbl+'</div><div style="font-size:9px;color:var(--text3)">탭하여 업로드</div>'
-            )
-            +'<input type="file" accept="image/*" style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer" onchange="lateDocUpload(this,\''+s.key+'\',\''+s.lbl+'\')">'
-            +'</label>';
-        }).join('');
-      }catch(e){return '';}})()}
-    </div>
+      // 세금계산서 정보
+      html+='<div style="background:var(--teal-l);border:1.5px solid var(--teal);border-radius:12px;padding:14px;margin-bottom:12px">';
+      html+='<div style="font-size:12px;font-weight:700;color:var(--teal);margin-bottom:8px">🧾 세금계산서 발행 정보</div>';
+      html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+      html+='<div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">사업자등록번호</div><input id="mp-biznum" value="'+(d.bizNum||'')+'" placeholder="123-45-67890" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--text)"></div>';
+      html+='<div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">상호</div><input id="mp-bizname" value="'+(d.bizName||'')+'" placeholder="홍길동운수" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--text)"></div>';
+      html+='<div style="grid-column:span 2"><div style="font-size:11px;color:var(--text3);margin-bottom:3px">사업장 주소</div><input id="mp-bizaddr" value="'+(d.bizAddr||d.addr||'')+'" placeholder="부산시..." style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--text)"></div>';
+      html+='<div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">업태</div><input id="mp-biztype" value="'+(d.bizType||'서비스')+'" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--text)"></div>';
+      html+='<div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">종목</div><input id="mp-bizitem" value="'+(d.bizItem||'기타물품운반원')+'" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--text)"></div>';
+      html+='</div></div>';
+    }
 
-    <!-- ★ 세금계산서 발행 정보 — 사업자등록증/차량등록증 이미지 보고 입력 -->
-    <div style="background:linear-gradient(135deg,rgba(22,163,74,.07),rgba(16,185,129,.03));border:1.5px solid rgba(22,163,74,.3);border-radius:12px;padding:14px;margin-bottom:12px">
-      <div style="font-size:12px;font-weight:700;color:#15803d;margin-bottom:2px">🧾 세금계산서 발행 정보</div>
-      <div style="font-size:10px;color:var(--text3);margin-bottom:10px">위 사업자등록증·차량등록증 이미지를 확인 후 정확히 입력하세요 → 세금계산서에 자동 반영</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">📋 사업자등록번호 *</div>
-          <input id="mp-biznum" value="${d.bizNum||''}" placeholder="123-45-67890" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;font-weight:700;background:var(--bg);color:var(--text)">
-        </div>
-        <div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">🏢 상호 (사업체명)</div>
-          <input id="mp-bizname" value="${d.bizName||''}" placeholder="예: 홍길동운수" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--text)">
-        </div>
-        <div style="grid-column:span 2">
-          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">📍 사업장 주소</div>
-          <input id="mp-bizaddr" value="${d.bizAddr||d.addr||''}" placeholder="예: 부산시 수영구 수영로 668" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--text)">
-        </div>
-        <div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">🏭 업태</div>
-          <input id="mp-biztype" value="${d.bizType||'서비스'}" placeholder="서비스" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--text)">
-        </div>
-        <div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">📦 종목</div>
-          <input id="mp-bizitem" value="${d.bizItem||'기타물품운반원'}" placeholder="기타물품운반원" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--text)">
-        </div>
-      </div>
-    </div>`:''}
+    html+='<button class="btn btn-blue" style="width:100%;padding:13px;font-size:14px;margin-top:8px" onclick="saveMypage()">💾 정보 저장</button>';
+    if(!isAdmin){
+      html+='<button onclick="if(confirm(\'로그아웃 하시겠습니까?\'))goLogout()" style="width:100%;padding:13px;font-size:14px;margin-top:8px;background:rgba(220,50,50,.85);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer">🚪 로그아웃</button>';
+    }
 
+    if(isAdmin){
+      var gp=G_PRICES||{};
+      html+='<div style="margin-top:18px"><div class="sec-lbl">업무별 단가 설정</div>';
+      html+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px">';
+      html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+      html+='<div class="fg"><label style="font-size:11px">쿠팡 일반 (원/건)</label><input id="up-coupang_normal" type="number" value="'+(gp.coupang_normal||1100)+'" style="font-weight:700;color:var(--teal)"></div>';
+      html+='<div class="fg"><label style="font-size:11px">쿠팡 신선 (원/건)</label><input id="up-coupang_fresh" type="number" value="'+(gp.coupang_fresh||1300)+'" style="font-weight:700;color:var(--teal)"></div>';
+      html+='<div class="fg"><label style="font-size:11px">쿠팡 반품 (원/건)</label><input id="up-coupang_return" type="number" value="'+(gp.coupang_return||900)+'"></div>';
+      html+='<div class="fg"><label style="font-size:11px">프레시백 인센 (원/건)</label><input id="up-freshbag_inc" type="number" value="'+(gp.freshbag_inc||25)+'" style="font-weight:700;color:var(--blue)"></div>';
+      html+='<div class="fg"><label style="font-size:11px">CJ대한통운 (원/건)</label><input id="up-cj_normal" type="number" value="'+(gp.cj_normal||1050)+'"></div>';
+      html+='<div class="fg"><label style="font-size:11px">마켓컬리 (원/건)</label><input id="up-kurly_normal" type="number" value="'+(gp.kurly_normal||1200)+'"></div>';
+      html+='<div class="fg"><label style="font-size:11px">용차 배송 (원/건)</label><input id="up-yong_del" type="number" value="'+(gp.yong_del||900)+'"></div>';
+      html+='<div class="fg"><label style="font-size:11px">용차 반품 (원/건)</label><input id="up-yong_ret" type="number" value="'+(gp.yong_ret||900)+'"></div>';
+      html+='</div>';
+      html+='<button class="btn btn-teal" style="width:100%;margin-top:12px" onclick="saveUnitPrices()">💾 단가 저장</button>';
+      html+='</div></div>';
+    }
 
-    <button class="btn btn-blue" style="width:100%;padding:13px;font-size:14px;margin-top:8px" onclick="saveMypage()">💾 정보 저장</button>
-    ${!isAdmin?`<button onclick="if(confirm('로그아웃 하시겠습니까?'))goLogout()" style="width:100%;padding:13px;font-size:14px;margin-top:8px;background:rgba(220,50,50,.85);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer">🚪 로그아웃</button>`:''}
-
-    ${isAdmin ? `
-    <div style="margin-top:18px">
-      <div class="sec-lbl">&#128176; 업무별 단가 설정 <span style="font-size:10px;color:var(--text3);font-weight:400">(부가세 포함 · 저장 즉시 전체 정산 반영)</span></div>
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px">
-        <div style="font-size:10px;color:var(--text3);margin-bottom:10px">&#9888;&#65039; 쿠팡 라우트별 단가(RPRICE)는 별도. 아래는 업무 유형 기본 단가입니다.</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <div class="fg"><label style="font-size:11px">&#128230; 쿠팡 일반 (원/건)</label>
-            <input id="up-coupang_normal" type="number" value="\${G_PRICES.coupang_normal||1100}" style="font-weight:700;color:var(--teal)"></div>
-          <div class="fg"><label style="font-size:11px">&#127803; 쿠팡 신선 (원/건)</label>
-            <input id="up-coupang_fresh" type="number" value="\${G_PRICES.coupang_fresh||1300}" style="font-weight:700;color:var(--teal)"></div>
-          <div class="fg"><label style="font-size:11px">&#8617; 쿠팡 반품 (원/건)</label>
-            <input id="up-coupang_return" type="number" value="\${G_PRICES.coupang_return||900}" style="font-weight:700;color:var(--amber,#d97706)"></div>
-          <div class="fg"><label style="font-size:11px">&#127760; 프레시백 인센 (원/건)</label>
-            <input id="up-freshbag_inc" type="number" value="\${G_PRICES.freshbag_inc||25}" style="font-weight:700;color:var(--blue)"></div>
-          <div class="fg"><label style="font-size:11px">&#128652; CJ대한통운 (원/건)</label>
-            <input id="up-cj_normal" type="number" value="\${G_PRICES.cj_normal||1050}"></div>
-          <div class="fg"><label style="font-size:11px">&#128248; 마켓컬리 (원/건)</label>
-            <input id="up-kurly_normal" type="number" value="\${G_PRICES.kurly_normal||1200}"></div>
-          <div class="fg"><label style="font-size:11px">&#128666; 용차 배송 (원/건)</label>
-            <input id="up-yong_del" type="number" value="\${G_PRICES.yong_del||900}" style="font-weight:700;color:var(--purple,#7c3aed)"></div>
-          <div class="fg"><label style="font-size:11px">&#128666; 용차 반품 (원/건)</label>
-            <input id="up-yong_ret" type="number" value="\${G_PRICES.yong_ret||900}" style="font-weight:700;color:var(--purple,#7c3aed)"></div>
-        </div>
-        <button class="btn btn-teal" style="width:100%;margin-top:12px" onclick="saveUnitPrices()">&#128190; 단가 저장 (Firestore &#8594; 전체 반영)</button>
-      </div>
-    </div>
-
-    ` : ''}
-
-  </div>`;
+    html+='</div>';
+    return html;
   }catch(e){
     console.error('rMypage 오류:',e);
-    return '<div style="padding:20px;text-align:center;color:var(--red)">⚠️ 내정보 로딩 오류<br><small>'+(e.message||'알수없는오류')+'</small></div>';
+    return '<div style="padding:20px;text-align:center;color:var(--red)">⚠️ 오류: '+(e.message||e.toString()||JSON.stringify(e)||'알수없는오류')+'</div>';
   }
 }
 function toggleAllChk(el,col){
@@ -3169,7 +3134,7 @@ function calcNet(x){
   var fresh=+x.fresh||+x.freshAmt||0;
   // 프레시백 인센: 쿠팡만 건수×25원, 용차/컬리/CJ는 0
   // ★ finc: x.finc가 명시적으로 설정된 경우 그 값 사용 (0 포함), 미설정 시 기본값
-  var isCoupang=(x.jobsub==='쿠팡'||x.client==='쿠팡'||((!x.jobsub||x.jobsub==='')&&!x.client));  // ★ v10: jobsub/client 모두 없으면 쿠팡으로 기본 처리
+  var isCoupang=(x.jobsub==='쿠팡'||x.client==='쿠팡');
   var finc = isCoupang
     ? (x.finc !== undefined && x.finc !== null && x.finc !== '' ? +x.finc : Math.round(dcnt*(G_PRICES.freshbag_inc||25)))
     : 0;
@@ -3199,7 +3164,7 @@ function updSettle(){
   var dcnt=+document.getElementById('se-dcnt')?.value||0;
   var jobsub=document.getElementById('se-jobsub')?.value||'쿠팡';
   var isYong=(jobsub==='용차');
-  var isCoupang=(jobsub==='쿠팡'||(!jobsub||jobsub===''));  // ★ v10: jobsub 빈값이면 쿠팡으로 간주
+  var isCoupang=(jobsub==='쿠팡');
   // 용차: 건수×단가 자동 계산
   if(isYong){
     var yDel=+document.getElementById('se-yong-del')?.value||900;
@@ -3287,7 +3252,7 @@ function saveSettle(){
   var idx=s.findIndex(x=>x.driver===driver&&x.month===month);
   var dcnt=+document.getElementById('se-dcnt').value||0;
   var jobsub=document.getElementById('se-jobsub')?.value||'쿠팡';
-  var isYong=(jobsub==='용차'); var isCoupang=(jobsub==='쿠팡'||(!jobsub||jobsub===''));  // ★ v10: jobsub 미설정시 쿠팡으로 처리
+  var isYong=(jobsub==='용차'); var isCoupang=(jobsub==='쿠팡');
   var rcnt=+document.getElementById('se-rcnt').value||0;
   var yDel=+document.getElementById('se-yong-del')?.value||900;
   var yRet=+document.getElementById('se-yong-ret')?.value||900;
@@ -6480,15 +6445,13 @@ function startListeners(){
   loadUnitPrices();  // Firestore 단가 로드
 
   // ── 저장된 세션 자동 복원 (재접속 시 로그인 상태 기억)
-  // ★ v10: 항상 스플래시 먼저 표시 → 세션 있으면 자동 로그인
-  goSplash();
   (function restoreSession(){
     try{
       var raw = localStorage.getItem('mbti_session');
-      if(!raw){ return; } // 이미 스플래시 표시 중
+      if(!raw){ goSplash(); return; }
       var sess = JSON.parse(raw);
       // 7일 이상 지난 세션은 만료
-      if(!sess || (Date.now()-sess.ts) > 7*24*60*60*1000){ localStorage.removeItem('mbti_session'); return; }
+      if(!sess || (Date.now()-sess.ts) > 7*24*60*60*1000){ goSplash(); return; }
       if(sess.mode==='admin'){
         S.curMode='admin';
         setAdminName(sess.name||'김형우 대표');
@@ -6515,12 +6478,12 @@ function startListeners(){
           // 탈퇴/거부/비활성 계정은 세션 삭제
           if(!found||!found.is_active||found.status==='탈퇴'||found.status==='거부'){
             localStorage.removeItem('mbti_session');
-            return; // 이미 스플래시 표시 중
+            goSplash(); return;
           }
           // 대기중이면 스플래시로
           if(found.isNew||found.status==='pending'){
             localStorage.removeItem('mbti_session');
-            return; // 이미 스플래시 표시 중
+            goSplash(); return;
           }
           // 정상 복원
           S.curDriver=found.name||sess.id;
@@ -6534,9 +6497,9 @@ function startListeners(){
         };
         checkAndRestore();
       } else {
-        localStorage.removeItem('mbti_session');
+        goSplash();
       }
-    }catch(e){ localStorage.removeItem('mbti_session'); }
+    }catch(e){ goSplash(); }
   })();
 })();
 
@@ -6997,7 +6960,7 @@ function setPwaIcons(logoDataUrl){
     name:'MBTI(Co.,Ltd.) 물류관리',
     short_name:'MBTI물류',
     description:'엠비티아이 냉동·냉장·상온 물류 관리 시스템',
-    start_url:'./엠비티아이_물류관리_v9.html',
+    start_url:'./',
     display:'standalone',
     orientation:'portrait',
     background_color:'#0d0d1a',
