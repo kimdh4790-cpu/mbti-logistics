@@ -3181,12 +3181,14 @@ function calcNet(x){
   var damt=isYong ? dcnt*yDel : (+x.damt||+x.delivAmt||+x.base||0);
   var ramt=isYong ? rcnt*yRet : (+x.ramt||+x.retAmt||0);
   var fresh=+x.fresh||+x.freshAmt||0;
-  // 프레시백 인센: 쿠팡만 건수×25원, 용차/컬리/CJ는 0
-  // ★ finc: x.finc가 명시적으로 설정된 경우 그 값 사용 (0 포함), 미설정 시 기본값
+  // ★ 프레시백 인센 계산 (v9.1 방어 로직)
+  // 1순위: 저장된 x.finc 값이 있으면 jobsub과 무관하게 그대로 사용 (데이터 정합성 우선)
+  // 2순위: x.finc 없으면 쿠팡은 건수×25원, 그 외(용차/컬리/CJ)는 0
   var isCoupang=(x.jobsub==='쿠팡'||x.client==='쿠팡');
-  var finc = isCoupang
-    ? (x.finc !== undefined && x.finc !== null && x.finc !== '' ? +x.finc : Math.round(dcnt*(G_PRICES.freshbag_inc||25)))
-    : 0;
+  var hasStoredFinc=(x.finc!==undefined&&x.finc!==null&&x.finc!=='');
+  var finc = hasStoredFinc
+    ? +x.finc
+    : (isCoupang ? Math.round(dcnt*(G_PRICES.freshbag_inc||25)) : 0);
   var inc=+x.inc||0;
   var income=damt+ramt+fresh+finc+inc;
   // ★ 세금계산서 기준 금액 = 배송+반품+롤백+인센 (고용산재 계산 기준)
