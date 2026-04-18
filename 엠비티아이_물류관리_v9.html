@@ -4490,14 +4490,31 @@ function _drv60Cut(){
   return d.toISOString().slice(0,10);
 }
 // 공통 이력 렌더 (접을 수 있는 섹션)
-function _drvHistSection(id, title, innerHTML){
+function _drvHistSection(id, title, innerHTML, col){
+  var delBtn=col?'<button onclick="drvDeleteCol(\''+col+'\',\''+title+'\')" style="padding:2px 8px;background:var(--red-l);border:1px solid var(--red);border-radius:5px;font-size:10px;color:var(--red);cursor:pointer">🗑 삭제</button>':'';
   return '<div class="dc" style="margin-top:0">'
     +'<div class="dct" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center" onclick="var b=document.getElementById(\''+id+'\');var a=document.getElementById(\''+id+'_arr\');if(b){b.style.display=b.style.display===\'none\'?\'block\':\'none\';a.textContent=b.style.display===\'none\'?\'▼\':\'▲\'}">'
-    +title+'<span id="'+id+'_arr" style="font-size:11px;color:var(--text3)">▼</span></div>'
+    +title+'<div style="display:flex;gap:6px;align-items:center">'+delBtn+'<span id="'+id+'_arr" style="font-size:11px;color:var(--text3)">▼</span></div></div>'
     +'<div id="'+id+'" style="display:none;margin-top:8px">'+innerHTML+'</div>'
     +'</div>';
 }
 // 입차 이력
+function drvDeleteCol(col,title){
+  if(!confirm(title+' 기록을 전체 삭제하시겠습니까?'))return;
+  // 본인 데이터만 삭제
+  var arr=ls(col).filter(function(x){return x.driver!==S.curDriver;});
+  lss(col,arr);
+  if(FB&&_db){
+    _db.collection(col).where('driver','==',S.curDriver).get().then(function(snap){
+      var batch=_db.batch();
+      snap.forEach(function(doc){batch.delete(doc.ref);});
+      return batch.commit();
+    }).then(function(){toast('✅ 삭제 완료');DT(S.dtab,null);})
+    .catch(function(){toast('✅ 로컬 삭제 완료');DT(S.dtab,null);});
+  } else {
+    toast('✅ 삭제 완료');DT(S.dtab,null);
+  }
+}
 function _drvHistEntry(){
   var cut=_drv60Cut();
   var rows=ls('entries').filter(function(e){return e.driver===S.curDriver&&(e.date||'')>=cut;})
@@ -4516,7 +4533,7 @@ function _drvHistEntry(){
       +phHTML
       +'</div>';
   }).join('');
-  return _drvHistSection('hist_entry','📅 입차 이력 (60일) — '+rows.length+'건',html);
+  return _drvHistSection('hist_entry','📅 입차 이력 (60일) — '+rows.length+'건',html,'entries');
 }
 // 운행 이력
 function _drvHistDelivery(){
@@ -4537,7 +4554,7 @@ function _drvHistDelivery(){
       +phHTML
       +'</div>';
   }).join('');
-  return _drvHistSection('hist_deliv','📅 운행 이력 (60일) — '+rows.length+'건',html);
+  return _drvHistSection('hist_deliv','📅 운행 이력 (60일) — '+rows.length+'건',html,'deliveries');
 }
 // 온도 이력
 function _drvHistTemp(){
@@ -4558,7 +4575,7 @@ function _drvHistTemp(){
       +phHTML
       +'</div>';
   }).join('');
-  return _drvHistSection('hist_temp','📅 온도 이력 (60일) — '+rows.length+'건',html);
+  return _drvHistSection('hist_temp','📅 온도 이력 (60일) — '+rows.length+'건',html,'tempLogs');
 }
 // 사고 이력
 function _drvHistAccident(){
@@ -4580,7 +4597,7 @@ function _drvHistAccident(){
       +phHTML
       +'</div>';
   }).join('');
-  return _drvHistSection('hist_acc','📅 사고 이력 (60일) — '+rows.length+'건',html);
+  return _drvHistSection('hist_acc','📅 사고 이력 (60일) — '+rows.length+'건',html,'accidents');
 }
 // 사진 모아보기
 function drvPhotoGallery(){
@@ -6727,13 +6744,25 @@ function editMemo(ds){
   var txt=prompt('📝 '+ds,cur); if(txt===null)return;
   if(txt.trim())memos[ds]=txt.trim();else delete memos[ds];
   localStorage.setItem(KEY,JSON.stringify(memos));
-  // ★ Firebase 동기화 (메모 사라짐 방지)
   if(FB&&_db){
-    _db.collection('settings').doc('memos').set({data:memos,updatedAt:new Date().toISOString()},{merge:true})
-    .then(function(){toast('📝 메모 저장됨 (Firebase)');})
-    .catch(function(e){console.warn('메모 Firebase 저장 실패',e);toast('📝 메모 저장됨 (로컬)');});
+    // ★ update로 data 필드 내 특정 날짜만 업데이트 (다른 날짜 보존)
+    var updateObj={updatedAt:new Date().toISOString()};
+    updateObj['data.'+ds]=txt.trim()||firebase.firestore.FieldValue.delete();
+    _db.collection('settings').doc('memos').set({data:{}},{merge:true})
+      .then(function(){
+        return _db.collection('settings').doc('memos').update(updateObj);
+      })
+      .then(function(){toast('📝 메모 저장됨 ✅');})
+      .catch(function(){
+        // update 실패 시 전체 set으로 fallback
+        _db.collection('settings').doc('memos').set({data:memos,updatedAt:new Date().toISOString()},{merge:true})
+        .then(function(){toast('📝 메모 저장됨 ✅');})
+        .catch(function(){toast('📝 메모 저장됨 (로컬만)');});
+      });
+  } else {
+    toast('📝 메모 저장됨');
   }
-  SP('memo',null); toast('📝 메모 저장됨');
+  SP('memo',null);
 }
 
 // ══════════════════════════════════════════════════════
@@ -6852,7 +6881,13 @@ function miniCalClick(ds){
   var txt=prompt('📝 '+ds,cur);if(txt===null)return;
   if(txt.trim())memos[ds]=txt.trim();else delete memos[ds];
   localStorage.setItem(KEY,JSON.stringify(memos));
-  if(FB&&_db){_db.collection('settings').doc('memos').set({data:memos,updatedAt:new Date().toISOString()},{merge:true}).catch(function(){});}
+  if(FB&&_db){
+    var updateObj={updatedAt:new Date().toISOString()};
+    updateObj['data.'+ds]=txt.trim()||firebase.firestore.FieldValue.delete();
+    _db.collection('settings').doc('memos').set({data:{}},{merge:true})
+      .then(function(){return _db.collection('settings').doc('memos').update(updateObj);})
+      .catch(function(){_db.collection('settings').doc('memos').set({data:memos,updatedAt:new Date().toISOString()},{merge:true}).catch(function(){});});
+  }
   var el=document.getElementById('mini-cal-wrap');if(el)el.innerHTML=buildMiniCal();
   toast('📝 메모 저장됨');
 }
