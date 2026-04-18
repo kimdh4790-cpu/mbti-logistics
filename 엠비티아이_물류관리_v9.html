@@ -1752,7 +1752,12 @@ function SP(pg,el){
   document.getElementById('ptitle').textContent=PT[pg]||pg;
   if(el){document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));el.classList.add('on');}
   var m={archive:rArchive,dash:rDash,sync:rSync,schedule_admin:rScheduleAdmin,memo:rMemoCalendar,entry:rEntry,delivery_taxi:rDeliveryTaxi,delivery_line:rDeliveryLine,delivery:rDelivery,accident:rAcc,temp:rTemp,settle:rSettle,drivers:rDrivers,insurance:rInsurance,mypage:rMypage};
-  document.getElementById('ca').innerHTML=(m[pg]||rDash)();
+  try{
+    document.getElementById('ca').innerHTML=(m[pg]||rDash)();
+  }catch(e){
+    console.error('SP 렌더링 오류('+pg+'):',e);
+    document.getElementById('ca').innerHTML='<div style="padding:30px;text-align:center;color:var(--red)">⚠️ 화면 로딩 오류<br><small>'+e.message+'</small><br><br><button onclick="SP(\'dash\',null)" class="btn btn-blue" style="margin-top:10px">대시보드로 이동</button></div>';
+  }
   if(pg==='mypage'){setTimeout(function(){if(typeof initCampTabs==='function')initCampTabs();},80);}
   if(pg==='dash')setTimeout(initChart,80);
 }
@@ -2854,7 +2859,7 @@ function rMypage(){
 
     <div class="sec-lbl" style="margin-top:14px">📂 서류 5종 (이미지 탭→확대, 다시 탭→교체)</div>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:14px">
-      ${(function(){
+      ${(function(){try{
         var slots=[
           {key:'bank',lbl:'통장',mode:'direct'},
           {key:'license',lbl:'면허',mode:'docs'},
@@ -2873,7 +2878,7 @@ function rMypage(){
             +'<input type="file" accept="image/*" style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer" onchange="lateDocUpload(this,\''+s.key+'\',\''+s.lbl+'\')">'
             +'</label>';
         }).join('');
-      })()}
+      }catch(e){return '';}})()}
     </div>
 
     <!-- ★ 세금계산서 발행 정보 — 사업자등록증/차량등록증 이미지 보고 입력 -->
@@ -2937,16 +2942,7 @@ function rMypage(){
 
     ` : ''}
 
-  <div style="margin:10px;padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r)">
-    <div id="mini-cal-wrap"></div>
-  </div>`
-  +'<div class="card">'
-  +'<div class="ch"><span class="ct" style="color:var(--red)">🧹 테스트 데이터 삭제</span>'
-  +'<button onclick="deleteCheckedData()" style="padding:5px 14px;background:var(--red);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">🗑 선택 삭제</button>'
-  +'</div>'
-  +'<div style="display:flex;gap:8px;flex-wrap:wrap;padding:6px 0">'+chkHTML+'</div>'
-  +'</div>';
-  setTimeout(function(){var el=document.getElementById('mini-cal-wrap');if(el)el.innerHTML=buildMiniCal();},60);
+  </div>`;
 }
 function toggleAllChk(el,col){
   document.querySelectorAll('.row-chk[data-col="'+col+'"]').forEach(function(c){c.checked=el.checked;});
@@ -4153,7 +4149,12 @@ function DT(tab,el){
   document.querySelectorAll('.pni').forEach(n=>n.classList.remove('on'));
   if(el)el.classList.add('on');
   var m={home:dHome,entry:dEntry,delivery:dDelivery,temp:dTemp,accident:dAccident,settle:dSettle,mypage:dMypageDriver};
-  document.getElementById('dpc').innerHTML=(m[tab]||dHome)();
+  try{
+    document.getElementById('dpc').innerHTML=(m[tab]||dHome)();
+  }catch(e){
+    console.error('DT 렌더링 오류('+tab+'):',e);
+    document.getElementById('dpc').innerHTML='<div style="padding:30px;text-align:center;color:var(--red)">⚠️ 화면 로딩 오류<br><small>'+e.message+'</small></div>';
+  }
   // 내정보 탭 진입 시 캠프탭 초기화
   if(tab==='mypage'){setTimeout(function(){if(typeof initCampTabs==='function')initCampTabs();},80);}
   // ★ 정산탭 열 때 최신 알림 + Firebase 재동기화
