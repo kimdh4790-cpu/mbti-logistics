@@ -3497,11 +3497,11 @@ function viewStmt(i){
       <table class="route-tbl" style="margin-top:0">
         <thead><tr><th>라우트</th><th style="text-align:right">배송건</th><th style="text-align:right;color:var(--amber)">반품건</th><th style="text-align:right">단가</th><th style="text-align:right">배송금액</th><th style="text-align:right;color:var(--amber)">반품금액</th><th style="text-align:right;color:var(--green)">소계</th></tr></thead>
         <tbody>
-        ${rdList.map(function(rd){var up=RPRICE[rd.route]||rd.unitPrice||0;var da=(rd.cnt||0)*up;var ra=rd.retAmt!=null?rd.retAmt:(rd.ret||0)*up;return`<tr>
+        ${rdList.map(function(rd,ri){var up=rd.unitPrice||RPRICE[rd.route]||0;var da=(rd.cnt||0)*up;var ra=rd.retAmt!=null?rd.retAmt:(rd.ret||0)*up;return`<tr>
           <td><strong>${rd.route}</strong></td>
           <td style="text-align:right">${(rd.cnt||0).toLocaleString()}</td>
           <td style="text-align:right;color:${(rd.ret||0)>0?'var(--amber)':'var(--text3)'}">${(rd.ret||0)>0?rd.ret.toLocaleString():'—'}</td>
-          <td style="text-align:right;color:var(--teal)">${up?up.toLocaleString()+'원':'—'}</td>
+          <td style="text-align:right"><button onclick="stEditUnitPrice(${i},${ri})" style="padding:2px 7px;font-size:11px;background:transparent;border:1px dashed var(--teal);border-radius:4px;color:var(--teal);cursor:pointer;font-weight:700;white-space:nowrap" title="단가 수정">${up?up.toLocaleString()+'원':'— 설정'} ✏️</button></td>
           <td style="text-align:right">₩${da.toLocaleString()}</td>
           <td style="text-align:right;color:var(--amber)">${ra>0?'₩'+ra.toLocaleString():'—'}</td>
           <td style="text-align:right;font-weight:600;color:var(--green)">₩${(da+ra).toLocaleString()}</td>
@@ -3643,6 +3643,60 @@ function stSaveEdit(i){
   toast('✅ 명세서 수정 저장 완료');
   document.getElementById('stmt-mo')?.remove();
   SP('settle',null);
+}
+
+
+// ★ 관리자: 라우트 단가 개별 수정 (기사별 커스터마이즈 지원)
+function stEditUnitPrice(i, routeIdx){
+  var s = ls('settlements');
+  var x = s[i];
+  if(!x || !x.routeDetails || !x.routeDetails[routeIdx]){ toast('❌ 정산 데이터 없음'); return; }
+  var rd = x.routeDetails[routeIdx];
+  var curUp = rd.unitPrice || RPRICE[rd.route] || 0;
+  var stdUp = RPRICE[rd.route] || 0;
+  var msg = '📝 ['+rd.route+'] 단가 수정 — '+x.driver+' 기사\n\n'
+          + '📦 배송건: '+(rd.cnt||0).toLocaleString()+'건\n'
+          + '↩ 반품건: '+(rd.ret||0).toLocaleString()+'건\n'
+          + (stdUp?'📋 기본 단가표: '+stdUp.toLocaleString()+'원\n':'')
+          + '💰 현재 적용: '+curUp.toLocaleString()+'원\n\n'
+          + '새 단가 (원) — 이 기사의 이 라우트에만 적용됩니다:';
+  var nv = prompt(msg, curUp);
+  if(nv === null) return;
+  nv = parseInt(String(nv).replace(/[^0-9]/g,''));
+  if(isNaN(nv) || nv < 0){ toast('❌ 올바른 숫자를 입력하세요'); return; }
+
+  // 라우트 단가 저장 (기사별 커스텀)
+  rd.unitPrice = nv;
+  // 반품금액도 재계산 (단가 변경에 연동)
+  if((rd.ret||0) > 0){ rd.retAmt = (rd.ret||0) * nv; }
+  s[i].routeDetails[routeIdx] = rd;
+
+  // 전체 배송금액/반품금액 재계산
+  var newDamt = s[i].routeDetails.reduce(function(sum, r){
+    var up = r.unitPrice || RPRICE[r.route] || 0;
+    return sum + (r.cnt||0) * up;
+  }, 0);
+  var newRamt = s[i].routeDetails.reduce(function(sum, r){
+    var up = r.unitPrice || RPRICE[r.route] || 0;
+    return sum + (r.retAmt != null ? r.retAmt : (r.ret||0) * up);
+  }, 0);
+  s[i].damt = newDamt;
+  s[i].ramt = newRamt;
+
+  lss('settlements', s);
+  if(FB && _db){
+    _db.collection('settlements').doc(s[i].fbId || (s[i].driver+'_'+s[i].month))
+      .set(s[i], {merge:true})
+      .catch(function(err){ console.warn('단가 수정 FB 저장 실패:', err&&err.message); });
+  }
+
+  if(typeof addAct === 'function'){
+    addAct('settle', x.driver+' '+rd.route+' 단가 '+curUp+'→'+nv+'원 수정', x.driver);
+  }
+
+  document.getElementById('stmt-mo')?.remove();
+  viewStmt(i);
+  toast('✅ '+rd.route+' 단가 '+nv.toLocaleString()+'원 적용 완료 (배송금액 ₩'+newDamt.toLocaleString()+')');
 }
 
 // ── 관리자: 정산서 월 변경 (업로드 시점과 실제 정산월이 다를 때)
