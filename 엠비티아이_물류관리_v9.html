@@ -1801,6 +1801,14 @@ function rDash(){
 }
 function initChart(){
   var ctx=document.getElementById('hchart');if(!ctx)return;
+  // ★ 기존 Chart 인스턴스가 있으면 먼저 destroy (중복 생성 방지)
+  // Chart.js v4: Chart.getChart(canvas) 로 해당 canvas에 연결된 인스턴스 조회
+  try{
+    if(typeof Chart!=='undefined'&&Chart.getChart){
+      var existing=Chart.getChart(ctx);
+      if(existing)existing.destroy();
+    }
+  }catch(e){console.warn('기존 차트 파괴 실패:',e&&e.message);}
   var tc=S.dark?'#a0a09a':'#5F5E5A', gc=S.dark?'rgba(255,255,255,.06)':'rgba(0,0,0,.05)';
   new Chart(ctx,{type:'bar',data:{labels:['03시','04시','05시','06시','07시','08시'],datasets:[{data:[1,4,14,22,18,10],backgroundColor:'#185FA599',borderColor:'#185FA5',borderWidth:1,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:tc,font:{size:11}},grid:{color:gc}},y:{ticks:{color:tc,font:{size:11}},grid:{color:gc}}}}});
 }
@@ -5666,6 +5674,13 @@ document.querySelectorAll('.mo').forEach(m=>m.addEventListener('click',function(
 
 // ── Firebase 리스너
 var _initialLoad=true;
+// ★ 리스너 중복 방지: 등록된 unsubscribe 함수들 저장 (재호출 시 해제 후 재등록)
+var _fbUnsubs=[];
+function _unsubAll(){
+  if(!_fbUnsubs.length)return;
+  _fbUnsubs.forEach(function(u){try{if(typeof u==='function')u();}catch(e){}});
+  _fbUnsubs=[];
+}
 
 // ★ 쿠팡 정산 엑셀 업로드 → 기사별 자동 정산 등록
 function parseCoupangExcel(inp){
@@ -6603,6 +6618,8 @@ function autoCleanupFirebase(){
 function startListeners(){
   _initialLoad=true;
   if(!FB||!_db)return;
+  // ★ 기존 리스너 먼저 모두 해제 (중복 등록 → Target ID already exists 에러 방지)
+  _unsubAll();
   // ── 전체 기사 데이터 초기 1회 로드
   _db.collection('drivers').get().then(function(snap){
     var all=[];
@@ -6695,7 +6712,7 @@ function startListeners(){
   // ★ 오늘+어제 날짜 모두 감시 (자정 전후 사진 누락 방지)
   var yesterday=new Date();yesterday.setDate(yesterday.getDate()-1);
   var yesterdayStr=yesterday.toISOString().slice(0,10);
-  _db.collection('photo_logs')
+  _fbUnsubs.push(_db.collection('photo_logs')
     .where('date','>=',yesterdayStr)
     .onSnapshot(function(snap){
       snap.docChanges().forEach(function(change){
@@ -6715,11 +6732,11 @@ function startListeners(){
           }
         }
       });
-    },function(e){console.warn('photo_logs listener 오류:', e.code);});
+    },function(e){console.warn('photo_logs listener 오류:', e.code);}));
 
   // ── photo_logs: Firestore → localStorage → UI 직접 반영 (1초 이내)
   // ── drivers: Firestore → localStorage → UI 직접 반영 (1초 이내)
-  _db.collection('drivers').limit(500)
+  _fbUnsubs.push(_db.collection('drivers').limit(500)
     .onSnapshot({includeMetadataChanges:false}, snap=>{
       // ① Firestore 전체 데이터 배열화
       var fbDrivers=[];
@@ -6765,7 +6782,7 @@ function startListeners(){
         lss('drivers',a); updBadge();
         if(S.page==='drivers'||S.page==='dash') SP(S.page, null);
       }).catch(e=>console.warn('drivers fetch 실패:', e));
-    });
+    }));
 
   // ── 운행 데이터 리스너 (entries/deliveries/temp_logs/accidents/settlements)
   var colPageMap={
@@ -6773,7 +6790,7 @@ function startListeners(){
     accidents:'accident', settlements:'settle'
   };
   Object.keys(colPageMap).forEach(col=>{
-    _db.collection(col).limit(300)
+    _fbUnsubs.push(_db.collection(col).limit(300)
       .onSnapshot(snap=>{
         snap.docChanges().forEach(ch=>{
           if(ch.type==='added'||ch.type==='modified'){
@@ -6789,7 +6806,7 @@ function startListeners(){
           }
         });
         if(S.page==='dash'||S.page===colPageMap[col]) SP(S.page, null);
-      }, err=>console.warn(col+' listener 오류:', err.code));
+      }, err=>console.warn(col+' listener 오류:', err.code)));
   });
 
   // ★ Firebase 재연결 시 pending 큐 재전송
