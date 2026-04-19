@@ -12,7 +12,7 @@
 <meta name="theme-color" content="#185FA5">
 <link id="pwa-icon-apple" rel="apple-touch-icon" href="data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20rx%3D%2218%22%20fill%3D%22%23185FA5%22%2F%3E%3Ctext%20x%3D%2250%22%20y%3D%2268%22%20text-anchor%3D%22middle%22%20fill%3D%22white%22%20font-size%3D%2256%22%20font-weight%3D%22bold%22%20font-family%3D%22sans-serif%22%3EM%3C%2Ftext%3E%3C%2Fsvg%3E">
 <link id="pwa-icon-shortcut" rel="icon" href="data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20rx%3D%2218%22%20fill%3D%22%23185FA5%22%2F%3E%3Ctext%20x%3D%2250%22%20y%3D%2268%22%20text-anchor%3D%22middle%22%20fill%3D%22white%22%20font-size%3D%2256%22%20font-weight%3D%22bold%22%20font-family%3D%22sans-serif%22%3EM%3C%2Ftext%3E%3C%2Fsvg%3E">
-<link id="pwa-manifest" rel="manifest" href='data:application/manifest+json;charset=utf-8,{"name":"MBTI%20%EB%AC%BC%EB%A5%98","short_name":"MBTI","start_url":"./","display":"standalone","background_color":"%230d0d1a","theme_color":"%23185FA5"}'>
+<link id="pwa-manifest" rel="manifest" href='data:application/manifest+json;charset=utf-8,{"name":"MBTI%20%EB%AC%BC%EB%A5%98","short_name":"MBTI","display":"standalone","background_color":"%230d0d1a","theme_color":"%23185FA5"}'>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -928,8 +928,8 @@ function _setupFbListeners(){
   if(_listenersReady||!FB||!_db)return;
   _listenersReady=true;
 
-  // ★ Firebase 연결 상태 감시
-  _db.collection('settings').doc('status').onSnapshot(function(){
+  // ★ Firebase 연결 상태 감시 — v9: _fbUnsubs에 등록해 admin 로그인 시 unsub 되도록
+  _fbUnsubs.push(_db.collection('settings').doc('status').onSnapshot(function(){
     document.querySelectorAll('.fb-status').forEach(function(el){
       el.textContent='🔥 Firebase 실시간';el.style.color='#4CAF50';
     });
@@ -937,21 +937,21 @@ function _setupFbListeners(){
     document.querySelectorAll('.fb-status').forEach(function(el){
       el.textContent='⚠ 연결 재시도중';el.style.color='#FF9800';
     });
-  });
+  }));
 
   // ★ 기사 목록 onSnapshot은 startListeners()에서 별도 처리
 
-  // ★ 입차/운행/배송 실시간 감시
-  _db.collection('entries').limit(100).onSnapshot(function(snap){
+  // ★ 입차/운행/배송 실시간 감시 — v9: _fbUnsubs에 등록 (Target ID 충돌 방지)
+  _fbUnsubs.push(_db.collection('entries').limit(100).onSnapshot(function(snap){
     var entries=[];snap.forEach(function(doc){var d=doc.data();d.fbId=doc.id;entries.push(d);});
     lss('entries',entries);
     if(S.page==='entry'||S.page==='dash')SP(S.page,null);
-  },function(){});
-  _db.collection('deliveries').limit(200).onSnapshot(function(snap){
+  },function(){}));
+  _fbUnsubs.push(_db.collection('deliveries').limit(200).onSnapshot(function(snap){
     var deliveries=[];snap.forEach(function(doc){var d=doc.data();d.fbId=doc.id;deliveries.push(d);});
     lss('deliveries',deliveries);
     if(S.page==='delivery_taxi'||S.page==='delivery_line'||S.page==='dash')SP(S.page,null);
-  },function(){});
+  },function(){}));
 }
 
 function ls(k){return JSON.parse(localStorage.getItem('mb60_'+k)||'[]');}
@@ -6615,7 +6615,17 @@ function autoCleanupFirebase(){
   console.log('[autoCleanup] 실행됨 - '+today);
 }
 
+var _lastStartListenersTs=0;
 function startListeners(){
+  // ★ v9.1: 1초 내 재호출 스킵 (Target ID already exists 방지)
+  //   로컬 _unsubAll()은 즉시 반영되지만 Firebase 서버 측 target 해제에는 지연이 있음
+  //   → 로그인 직후 + 세션 복원 등이 동시에 호출되면 같은 쿼리가 두 번 등록되어 충돌
+  var _now=Date.now();
+  if(_now-_lastStartListenersTs<1000){
+    console.log('[startListeners] 중복 호출 스킵 ('+(_now-_lastStartListenersTs)+'ms 전 실행됨)');
+    return;
+  }
+  _lastStartListenersTs=_now;
   _initialLoad=true;
   if(!FB||!_db)return;
   // ★ 기존 리스너 먼저 모두 해제 (중복 등록 → Target ID already exists 에러 방지)
@@ -7340,12 +7350,15 @@ function setPwaIcons(logoDataUrl){
   // shortcut icon (파비콘)
   var shortcut=document.getElementById('pwa-icon-shortcut');
   if(shortcut)shortcut.href=MBTI_ICON_512;
-  // manifest (동적 생성)
+  // manifest (동적 생성) — ★ v9: Blob URL 대신 Data URI 사용 (origin 문제 회피)
+  // start_url/scope는 절대 경로로 지정 (상대 "./"은 data/blob URI 기준에서 invalid)
+  var base = location.origin + location.pathname.replace(/[^/]*$/, '');
   var manifest={
     name:'MBTI(Co.,Ltd.) 물류관리',
     short_name:'MBTI물류',
     description:'엠비티아이 냉동·냉장·상온 물류 관리 시스템',
-    start_url:'./',
+    start_url: base,
+    scope: base,
     display:'standalone',
     orientation:'portrait',
     background_color:'#0d0d1a',
@@ -7355,10 +7368,9 @@ function setPwaIcons(logoDataUrl){
       {src:MBTI_ICON_512,sizes:'512x512',type:'image/png',purpose:'any maskable'}
     ]
   };
-  var blob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
-  var url=URL.createObjectURL(blob);
+  var dataUri = 'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(JSON.stringify(manifest));
   var mLink=document.getElementById('pwa-manifest');
-  if(mLink)mLink.href=url;
+  if(mLink)mLink.href=dataUri;
 }
 
 // ── PWA 아이콘 즉시 적용 ──
