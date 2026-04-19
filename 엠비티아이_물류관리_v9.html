@@ -6615,20 +6615,20 @@ function autoCleanupFirebase(){
   console.log('[autoCleanup] 실행됨 - '+today);
 }
 
-var _lastStartListenersTs=0;
+var _listenersInitDone=false;
 function startListeners(){
-  // ★ v9.1: 1초 내 재호출 스킵 (Target ID already exists 방지)
-  //   로컬 _unsubAll()은 즉시 반영되지만 Firebase 서버 측 target 해제에는 지연이 있음
-  //   → 로그인 직후 + 세션 복원 등이 동시에 호출되면 같은 쿼리가 두 번 등록되어 충돌
-  var _now=Date.now();
-  if(_now-_lastStartListenersTs<1000){
-    console.log('[startListeners] 중복 호출 스킵 ('+(_now-_lastStartListenersTs)+'ms 전 실행됨)');
+  // ★ v9.2: 페이지 세션당 1회만 실행 (Target ID already exists 완전 방지)
+  //   _setupFbListeners()와 startListeners()가 entries/deliveries를 중복 등록하면서
+  //   Firebase SDK 내부 target ID 충돌 발생 (especially with synchronizeTabs 지속성)
+  //   → 영구 락으로 재진입 완전 차단. 재연결은 페이지 새로고침으로 처리.
+  if(_listenersInitDone){
+    console.log('[startListeners] 이미 초기화 완료 - 재진입 차단');
     return;
   }
-  _lastStartListenersTs=_now;
+  _listenersInitDone=true;
   _initialLoad=true;
-  if(!FB||!_db)return;
-  // ★ 기존 리스너 먼저 모두 해제 (중복 등록 → Target ID already exists 에러 방지)
+  if(!FB||!_db){_listenersInitDone=false;return;}
+  // ★ 기존 리스너 먼저 모두 해제 (_setupFbListeners가 먼저 등록한 entries/deliveries 포함)
   _unsubAll();
   // ── 전체 기사 데이터 초기 1회 로드
   _db.collection('drivers').get().then(function(snap){
