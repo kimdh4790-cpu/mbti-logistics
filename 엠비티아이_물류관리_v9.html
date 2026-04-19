@@ -2081,6 +2081,7 @@ function rSettle(){
       <button onclick="exportAllSettlements()" style="padding:8px 14px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⬇️ 전체 정산 다운로드</button>
       <button onclick="openTaxStore()" style="padding:8px 14px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗂 기사별 세금계산서 보관함</button>
       <button id="jinju-inc-btn" onclick="openIncPanel()" style="padding:8px 14px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⚙️ 기사별 인센 설정</button>
+      <button onclick="openCoupangStatsPanel()" style="padding:8px 14px;background:#f97316;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📊 쿠팡 건수 통계</button>
       <button onclick="checkDuplicateSettlements()" style="padding:8px 14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔍 중복 검사</button>
       <button onclick="syncFirebaseSettlements()" style="padding:8px 14px;background:#0d9488;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔄 Firebase 동기화</button>
     </div>
@@ -2447,6 +2448,221 @@ function _incCampAll(prefixes, onVal){
   toast((onVal?'🟢':'🔴')+' 캠프 인센티브 '+(onVal?'ON':'OFF')+' 적용');
 }
 function _updJinjuBtn(){} // 하위호환 유지
+
+// ══════════════════════════════════════
+// ★ 쿠팡 건수 통계 패널 (캠프 → 라우트 네비게이션)
+// ══════════════════════════════════════
+var _cpsCamp='전체';    // 선택된 캠프
+var _cpsMonth='전체';   // 선택된 월
+
+function openCoupangStatsPanel(){
+  var settlements=ls('settlements');
+  var coupang=settlements.filter(function(s){return s.jobsub==='쿠팡';});
+  if(!coupang.length){toast('쿠팡 정산서 없음 — 먼저 엑셀 업로드 해주세요');return;}
+
+  // 월 목록 수집
+  var months={};
+  coupang.forEach(function(s){if(s.month)months[s.month]=1;});
+  var monthList=Object.keys(months).sort().reverse();
+  _cpsMonth='전체';
+  _cpsCamp='전체';
+
+  var mo=document.createElement('div');
+  mo.id='cps-mo';
+  mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:700;display:flex;align-items:center;justify-content:center;padding:14px';
+  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+
+  var monthOpts='<option value="전체">전체 기간</option>'+monthList.map(function(m){
+    return '<option value="'+m+'">'+m+'</option>';
+  }).join('');
+
+  mo.innerHTML='<div onclick="event.stopPropagation()" style="background:var(--bg);border-radius:14px;width:780px;max-width:95vw;max-height:90vh;overflow:hidden;display:flex;flex-direction:column">'
+    +'<div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">'
+      +'<span style="font-weight:700;font-size:14px">📊 쿠팡 건수 통계 · 캠프별 → 라우트별</span>'
+      +'<button onclick="document.getElementById(\'cps-mo\').remove()" style="padding:5px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer">닫기</button>'
+    +'</div>'
+    +'<div style="padding:10px 16px;border-bottom:1px solid var(--border);background:var(--bg3);display:flex;gap:10px;align-items:center;flex-wrap:wrap">'
+      +'<span style="font-size:11px;font-weight:700;color:var(--text2)">정산월</span>'
+      +'<select id="cps-month" onchange="_cpsSetMonth(this.value)" style="padding:5px 12px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-weight:700;background:var(--bg);color:var(--text);cursor:pointer">'+monthOpts+'</select>'
+      +'<span style="font-size:10px;color:var(--text3);margin-left:auto">💡 쿠팡 정산서의 확정건수(routeDetails) 기준 집계</span>'
+    +'</div>'
+    +'<div id="cps-body" style="overflow:auto;flex:1"></div>'
+  +'</div>';
+  document.body.appendChild(mo);
+  _renderCpsStats();
+}
+
+function _cpsSetMonth(m){ _cpsMonth=m; _renderCpsStats(); }
+function _cpsSetCamp(c){ _cpsCamp=c; _renderCpsStats(); }
+
+function _renderCpsStats(){
+  var body=document.getElementById('cps-body');
+  if(!body)return;
+
+  var CAMP_DEFS=[
+    {name:'부산1캠프',prefixes:['101','215'],color:'#1E5FAD'},
+    {name:'부산2캠프',prefixes:['812'],color:'#8B5CF6'},
+    {name:'부산3캠프',prefixes:['508'],color:'#1E5FAD'},
+    {name:'대구2캠프',prefixes:['109','213'],color:'#F59E0B'},
+    {name:'진주M캠프',prefixes:['608','612','613','614','619'],color:'#EF4444'}
+  ];
+  function getCampForRoute(route){
+    for(var ci=0;ci<CAMP_DEFS.length;ci++){
+      if(CAMP_DEFS[ci].prefixes.some(function(p){return route.startsWith(p);}))
+        return CAMP_DEFS[ci].name;
+    }
+    return '기타';
+  }
+
+  var settlements=ls('settlements');
+  var coupang=settlements.filter(function(s){
+    if(s.jobsub!=='쿠팡')return false;
+    if(_cpsMonth!=='전체'&&s.month!==_cpsMonth)return false;
+    return true;
+  });
+
+  // 집계: 캠프 → 라우트 → 기사
+  var campAgg={};
+  var totalCnt=0, totalRet=0, driverSet={};
+
+  coupang.forEach(function(s){
+    if(!s.routeDetails||!s.routeDetails.length)return;
+    s.routeDetails.forEach(function(rd){
+      if(!rd.route)return;
+      var cnt=+rd.cnt||0, ret=+rd.ret||0;
+      var camp=getCampForRoute(rd.route);
+      if(!campAgg[camp])campAgg[camp]={cnt:0,ret:0,routes:{}};
+      campAgg[camp].cnt+=cnt;
+      campAgg[camp].ret+=ret;
+      if(!campAgg[camp].routes[rd.route])campAgg[camp].routes[rd.route]={cnt:0,ret:0,drivers:{}};
+      campAgg[camp].routes[rd.route].cnt+=cnt;
+      campAgg[camp].routes[rd.route].ret+=ret;
+      if(!campAgg[camp].routes[rd.route].drivers[s.driver])campAgg[camp].routes[rd.route].drivers[s.driver]={cnt:0,ret:0};
+      campAgg[camp].routes[rd.route].drivers[s.driver].cnt+=cnt;
+      campAgg[camp].routes[rd.route].drivers[s.driver].ret+=ret;
+      totalCnt+=cnt;
+      totalRet+=ret;
+      driverSet[s.driver]=1;
+    });
+  });
+
+  // ── 상단 요약 + 네비게이션 버튼
+  var navH='<div style="padding:14px 16px;background:linear-gradient(135deg,rgba(249,115,22,.10),rgba(234,88,12,.03));border-bottom:1.5px solid rgba(249,115,22,.25)">'
+    +'<div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;flex-wrap:wrap">'
+      +'<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;border-radius:10px;box-shadow:0 2px 6px rgba(249,115,22,.3)">'
+        +'<span style="font-size:22px">📦</span>'
+        +'<div>'
+          +'<div style="font-size:10px;opacity:.9;font-weight:600">쿠팡 총 확정건수</div>'
+          +'<div style="font-size:24px;font-weight:800;line-height:1">'+totalCnt.toLocaleString()+'<span style="font-size:12px;font-weight:600;opacity:.9"> 건</span></div>'
+        +'</div>'
+      +'</div>'
+      +'<div style="font-size:11px;color:var(--text2);line-height:1.6">'
+        +'반품 <strong style="color:var(--amber)">'+totalRet.toLocaleString()+'</strong>건<br>'
+        +'기사 <strong>'+Object.keys(driverSet).length+'</strong>명 · 정산서 <strong>'+coupang.length+'</strong>건'
+      +'</div>'
+    +'</div>'
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap">';
+
+  // 전체 탭
+  var allSel=_cpsCamp==='전체';
+  navH+='<button onclick="_cpsSetCamp(\'전체\')" style="padding:6px 14px;border:2px solid #f97316;border-radius:100px;background:'+(allSel?'#f97316':'transparent')+';color:'+(allSel?'#fff':'#f97316')+';font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px">'
+    +'<span>📊 전체 캠프</span>'
+    +'<span style="padding:1px 7px;background:'+(allSel?'rgba(255,255,255,.25)':'#f9731622')+';border-radius:100px;font-size:10px;font-weight:800">'+totalCnt.toLocaleString()+'</span>'
+    +'</button>';
+
+  CAMP_DEFS.forEach(function(camp){
+    var agg=campAgg[camp.name];
+    var cnt=agg?agg.cnt:0;
+    var isSel=_cpsCamp===camp.name;
+    navH+='<button onclick="_cpsSetCamp(\''+camp.name+'\')" style="padding:6px 14px;border:2px solid '+camp.color+';border-radius:100px;background:'+(isSel?camp.color:'transparent')+';color:'+(isSel?'#fff':camp.color)+';font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;opacity:'+(cnt===0?'0.45':'1')+'">'
+      +'<span>'+camp.name+'</span>'
+      +'<span style="padding:1px 7px;background:'+(isSel?'rgba(255,255,255,.25)':camp.color+'22')+';border-radius:100px;font-size:10px;font-weight:800">'+cnt.toLocaleString()+'</span>'
+      +'</button>';
+  });
+  navH+='</div></div>';
+
+  // ── 콘텐츠
+  var contentH='';
+
+  if(_cpsCamp==='전체'){
+    // 캠프별 카드 (클릭 → 해당 캠프 라우트별로 이동)
+    contentH='<div style="padding:14px 16px">'
+      +'<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px">🏭 캠프별 건수 요약 <span style="color:var(--text3);font-weight:500">— 카드 클릭 시 라우트별 상세로 이동</span></div>'
+      +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px">';
+    CAMP_DEFS.forEach(function(camp){
+      var agg=campAgg[camp.name]||{cnt:0,ret:0,routes:{}};
+      var routeCnt=Object.keys(agg.routes).length;
+      var pct=totalCnt>0?(agg.cnt/totalCnt*100).toFixed(1):'0.0';
+      var disabled=agg.cnt===0;
+      contentH+='<div onclick="'+(disabled?'':'_cpsSetCamp(\''+camp.name+'\')')+'" style="'+(disabled?'':'cursor:pointer;')+'background:var(--bg2);border:1.5px solid '+camp.color+'44;border-left:5px solid '+camp.color+';border-radius:10px;padding:12px 14px;transition:all .15s;opacity:'+(disabled?'0.5':'1')+'" '
+        +(disabled?'':'onmouseover="this.style.background=\''+camp.color+'11\';this.style.transform=\'translateY(-1px)\'" onmouseout="this.style.background=\'var(--bg2)\';this.style.transform=\'translateY(0)\'"')
+        +'>'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+          +'<span style="font-size:13px;font-weight:800;color:'+camp.color+'">🏭 '+camp.name+'</span>'
+          +'<span style="font-size:11px;color:'+camp.color+'">'+(disabled?'':'▶')+'</span>'
+        +'</div>'
+        +'<div style="font-size:24px;font-weight:800;color:var(--text);margin-bottom:4px;line-height:1">'+agg.cnt.toLocaleString()+'<span style="font-size:11px;color:var(--text3);font-weight:600"> 건</span></div>'
+        +'<div style="font-size:10px;color:var(--text3)">전체 '+pct+'% · 라우트 '+routeCnt+'개 · 반품 '+agg.ret.toLocaleString()+'건</div>'
+      +'</div>';
+    });
+    contentH+='</div></div>';
+  }else{
+    // 특정 캠프 → 라우트별 테이블
+    var sel=CAMP_DEFS.find(function(c){return c.name===_cpsCamp;})||{color:'#6b7280'};
+    var agg=campAgg[_cpsCamp]||{cnt:0,ret:0,routes:{}};
+    var routes=Object.keys(agg.routes).sort();
+
+    contentH='<div style="padding:14px 16px">'
+      +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:10px 14px;background:'+sel.color+'15;border-left:5px solid '+sel.color+';border-radius:0 10px 10px 0;flex-wrap:wrap">'
+        +'<span style="font-size:14px;font-weight:800;color:'+sel.color+'">🏭 '+_cpsCamp+'</span>'
+        +'<span style="font-size:11px;color:var(--text2)">라우트 <strong>'+routes.length+'</strong>개 · 확정 <strong>'+agg.cnt.toLocaleString()+'</strong>건 · 반품 <strong>'+agg.ret.toLocaleString()+'</strong>건</span>'
+        +'<button onclick="_cpsSetCamp(\'전체\')" style="margin-left:auto;padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;color:var(--text2)">◀ 전체로</button>'
+      +'</div>';
+
+    if(!routes.length){
+      contentH+='<div style="text-align:center;padding:30px;color:var(--text3);font-size:12px">해당 캠프에 등록된 라우트 데이터가 없습니다.</div>';
+    }else{
+      contentH+='<div style="overflow:auto;border:1px solid var(--border);border-radius:8px">'
+        +'<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:560px">'
+        +'<thead><tr style="background:var(--bg3);color:var(--text3);font-size:11px;position:sticky;top:0">'
+          +'<th style="padding:9px 10px;text-align:left;white-space:nowrap">라우트</th>'
+          +'<th style="padding:9px 10px;text-align:right;white-space:nowrap">확정건수</th>'
+          +'<th style="padding:9px 10px;text-align:right;white-space:nowrap">반품건수</th>'
+          +'<th style="padding:9px 10px;text-align:right;white-space:nowrap">캠프 비중</th>'
+          +'<th style="padding:9px 10px;text-align:left;white-space:nowrap">담당 기사 (건수)</th>'
+        +'</tr></thead><tbody>';
+
+      // 건수 내림차순 정렬
+      routes.sort(function(a,b){return agg.routes[b].cnt-agg.routes[a].cnt;});
+      routes.forEach(function(r){
+        var ra=agg.routes[r];
+        var pct=agg.cnt>0?(ra.cnt/agg.cnt*100).toFixed(1):'0.0';
+        var drvList=Object.keys(ra.drivers).sort(function(a,b){return ra.drivers[b].cnt-ra.drivers[a].cnt;}).map(function(d){
+          return '<span style="display:inline-block;padding:1px 7px;margin:1px 3px 1px 0;background:var(--bg3);border-radius:10px;font-size:10px;color:var(--text2)">'+d+' <strong style="color:'+sel.color+'">'+ra.drivers[d].cnt.toLocaleString()+'</strong></span>';
+        }).join('');
+        contentH+='<tr style="border-bottom:1px solid var(--border)">'
+          +'<td style="padding:8px 10px;font-weight:700;color:'+sel.color+'">'+r+'</td>'
+          +'<td style="padding:8px 10px;text-align:right;font-weight:700;color:var(--teal)">'+ra.cnt.toLocaleString()+'</td>'
+          +'<td style="padding:8px 10px;text-align:right;color:'+(ra.ret>0?'var(--amber)':'var(--text3)')+'">'+(ra.ret>0?ra.ret.toLocaleString():'—')+'</td>'
+          +'<td style="padding:8px 10px;text-align:right;color:var(--text2);font-size:11px">'+pct+'%</td>'
+          +'<td style="padding:8px 10px">'+(drvList||'<span style="color:var(--text3);font-size:11px">—</span>')+'</td>'
+        +'</tr>';
+      });
+      // 합계
+      contentH+='<tr style="background:'+sel.color+'15;font-weight:800">'
+        +'<td style="padding:10px;color:'+sel.color+'">합계</td>'
+        +'<td style="padding:10px;text-align:right;color:'+sel.color+'">'+agg.cnt.toLocaleString()+'</td>'
+        +'<td style="padding:10px;text-align:right;color:var(--amber)">'+(agg.ret>0?agg.ret.toLocaleString():'—')+'</td>'
+        +'<td style="padding:10px;text-align:right">100%</td>'
+        +'<td style="padding:10px"></td>'
+      +'</tr>';
+      contentH+='</tbody></table></div>';
+    }
+    contentH+='</div>';
+  }
+
+  body.innerHTML=navH+contentH;
+}
 
 
 // ── 회사 코드 생성/조회
