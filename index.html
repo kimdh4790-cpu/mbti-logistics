@@ -803,8 +803,7 @@ body.app-mode{background:#0a0e1a;}
 <span class="nav-date" id="navDate">3월29일(일)</span>
 </div>
 <div class="nav-login-btns-wrap" style="display:flex;gap:5px;align-items:center;margin-right:6px;flex-shrink:0">
-  <button onclick="openMbtiLogin('driver')" style="padding:5px 10px;background:linear-gradient(135deg,#0f6e56,#1aab85);color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">🚛 기사</button>
-  <button onclick="openMbtiLogin('admin')" style="padding:5px 10px;background:linear-gradient(135deg,#1a4a8a,#2d7dd2);color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">🗂 관리자</button>
+  <button onclick="openMbtiLogin('driver')" style="padding:5px 12px;background:linear-gradient(135deg,#0f6e56,#1aab85);color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">🚛 기사 로그인</button>
 </div>
 <div class="nav-toggle">
 <button class="ntab active" id="pcBtn" onclick="setView(&#39;pc&#39;)">🖥 PC</button>
@@ -1003,21 +1002,12 @@ body.app-mode{background:#0a0e1a;}
     <span style="font-size:18px">📱</span> 물류관리앱 바로가기
   </div>
   <div style="font-size:10px;color:rgba(255,255,255,.75);margin-bottom:10px">로그인 유형을 선택 후 앱으로 이동합니다</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
-    <button onclick="appLoginGo('driver')" style="padding:10px 5px;border-radius:9px;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.35);color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px"><span style="font-size:20px">🧑‍💼</span>기사 로그인</button>
-    <button onclick="appLoginGo('admin')" style="padding:10px 5px;border-radius:9px;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.35);color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px"><span style="font-size:20px">⚙️</span>관리자 로그인</button>
+  <div style="margin-bottom:8px">
+    <button onclick="appLoginGo('driver')" style="width:100%;padding:12px 10px;border-radius:9px;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.35);color:#fff;font-size:12px;font-weight:700;cursor:pointer;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:8px"><span style="font-size:20px">🧑‍💼</span>기사 로그인</button>
   </div>
   <button onclick="appLoginGo('register')" style="width:100%;padding:10px;border-radius:9px;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;color:#fff;font-size:12px;font-weight:800;cursor:pointer;margin-bottom:6px">✏️ 기사 신규 가입하기</button>
   <button onclick="appFindAccount()" style="width:100%;padding:7px;border-radius:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7);font-size:11px;cursor:pointer;margin-bottom:4px">🔑 아이디 / 비밀번호 찾기</button>
   <div style="font-size:10px;color:rgba(255,255,255,.4);text-align:center;margin-bottom:4px">가입 후 관리자 승인 필요</div>
-  <div style="display:none">
-    <button onclick="appLoginGo('driver')" style="flex:1;padding:9px 5px;border-radius:9px;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.35);color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;transition:all .18s" onmouseover="this.style.background='rgba(255,255,255,.28)'" onmouseout="this.style.background='rgba(255,255,255,.15)'">
-      <span style="font-size:20px">🧑‍💼</span>기사 로그인
-    </button>
-    <button onclick="appLoginGo('admin')" style="flex:1;padding:9px 5px;border-radius:9px;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.35);color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;transition:all .18s" onmouseover="this.style.background='rgba(255,255,255,.28)'" onmouseout="this.style.background='rgba(255,255,255,.15)'">
-      <span style="font-size:20px">⚙️</span>관리자 로그인
-    </button>
-  </div>
 </div>
 </div>
 </div>
@@ -2339,12 +2329,8 @@ function doAuthLogin() {
   var pw = (document.getElementById('auth-pw').value||'').trim();
   var msg = document.getElementById('auth-msg');
   if (!id||!pw) { msg.textContent='아이디와 비밀번호를 입력하세요.'; return; }
-  // 관리자
-  if (id === 'admin' && pw === '1234') {
-    _mbtiUser = { role:'admin', id:'admin', name:'관리자' };
-    afterMbtiLogin(); return;
-  }
-  // Firebase
+  // ★ Phase 2 보안: 관리자 로그인은 v9 앱에서만 가능 (하드코딩 PW 제거)
+  // 기사 계정만 홈페이지에서 로그인 허용
   if (window._mbtiDb) {
     window._mbtiDb.collection('drivers').where('id','==',id).where('pw','==',pw).get()
       .then(function(snap) {
