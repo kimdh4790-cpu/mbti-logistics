@@ -3,13 +3,14 @@
 <html lang="ko"><head><meta name="naver-site-verification"content="43aa4eee36f9317cf33ec549ebefbae74af5db89"/>
 <title>엠비티아이(유) | 영남권 냉동·냉장 물류 리더 및 쿠팡 대리점 | MBTI(Co.,Ltd.)</title>
 <!-- ★ PWA 설정 (구글플레이 없이 홈화면 설치) -->
-<link rel="manifest" href="manifest.json" id="pwa-manifest">
+<link rel="manifest" href='data:application/manifest+json;charset=utf-8,{"name":"MBTI%20%EB%AC%BC%EB%A5%98","short_name":"MBTI","display":"standalone","background_color":"%230a1628","theme_color":"%230a1628"}' id="pwa-manifest">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MBTI물류">
 <meta name="application-name" content="MBTI물류">
 <link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAALEwAACxMBAJqcGAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAGASURBVHic7dpBDoIwEEDRIh7Ai+jFC3gLr+PBWBfGBUjahLTTmf8SQgIkL5MyHQAAAAAAAAAAAAAAAAD+ouu6oWmaIcZYQ4yxhhhjDTHGGmKMNcQYa4gx1hBjrCHGWEOMsYYYYw0xxhpijDXEGGuIMdYQY6whxlhDjLGGGGMNMcYaYow1xBhriBljDTHGGmKMNcQYa4gx1hBjrCHGWEOMsYYYYw0xxhpijDXEGGuIMdYQY6whxlhDjLGGGGMNMcYaYow1xBhriBljDTHGGmKMNcQYa4gx1hBjrCHGWEOMsYYYYw0xxhpijDXEGGuIMdYQY6whxlhDjLGGGGMNMcYaYow1xBhriBljDTHGGmKMNcQYa4gx1hBjrCHGWEOMsYYYYw0xxhpijDXEGGuIMdYQY6whxlhDjLGGGGMNMcYaYow1xBhriBljDTHGGmKMNcQYa4gx1hBjrCHGWEOMsYYYYw0xxhpijDXEGGuIMdYQY6whxlhDjLGGGGMNMcYaYow1xBhriBljDTHGGmKMNQAAAAAAAAAAAAAAAAD+3AefzAmzlQAAAABJRU5ErkJggg==">
+<link rel="icon" href="data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20rx%3D%2218%22%20fill%3D%22%230a1628%22%2F%3E%3Ctext%20x%3D%2250%22%20y%3D%2268%22%20text-anchor%3D%22middle%22%20fill%3D%22white%22%20font-size%3D%2256%22%20font-weight%3D%22bold%22%20font-family%3D%22sans-serif%22%3EM%3C%2Ftext%3E%3C%2Fsvg%3E">
 <meta name="description" content="대구, 부산, 진주 지역 냉동·냉장 화물 배송 전문 엠비티아이(유)입니다. 100여 대의 냉동 차량 보유, 쿠팡 대리점 운영 및 지입 기사님 상시 모집.">
 <meta property="og:title" content="엠비티아이(유) - 영남권 물류의 중심">
 <meta property="og:description" content="냉동·냉장 물류 전문 기업 엠비티아이(유) 공식 홈페이지입니다."><meta name="naver-site-verification" content="5d16a8f649886b3f075c8b3288bca08b5781232f" />
@@ -1746,7 +1747,7 @@ fetch('https://formsubmit.co/ajax/soungkyekim@naver.com', {
     name: 'MBTI 물류관리',
     short_name: 'MBTI물류',
     description: '엠비티아이(유) 물류관리 앱',
-    start_url: './',
+    start_url: location.href.split('?')[0].split('#')[0],  // v9.2: blob URI 기준 절대 URL 필요
     display: 'standalone',
     background_color: '#0a1628',
     theme_color: '#0a1628',
@@ -1912,8 +1913,10 @@ fetch('https://formsubmit.co/ajax/soungkyekim@naver.com', {
           });
 
           /* ── onSnapshot: 기사 관리 실시간 감지 (수정10+11) ── */
+          /* v9.2: 이전 리스너 unsub 후 재등록 (Target ID 충돌 방지) */
+          if (window._mbtiDriversUnsub) { try { window._mbtiDriversUnsub(); } catch(e){} }
           var prevStatuses = {};
-          db.collection('drivers')
+          window._mbtiDriversUnsub = db.collection('drivers')
             .where('status', 'in', ['active','pending'])
             .onSnapshot(function(snap) {
               showFbStatus('connected', '✅ 실시간 동기화 중');
@@ -1940,7 +1943,8 @@ fetch('https://formsubmit.co/ajax/soungkyekim@naver.com', {
             });
 
           /* ── onSnapshot: 일일체크 실시간 감시 (수정10) ── */
-          db.collection('daily_checks')
+          if (window._mbtiDailyChecksUnsub) { try { window._mbtiDailyChecksUnsub(); } catch(e){} }
+          window._mbtiDailyChecksUnsub = db.collection('daily_checks')
             .orderBy('submittedAt','desc').limit(20)
             .onSnapshot(function(snap) {
               var checkList = document.getElementById('adminCheckList');
@@ -2365,8 +2369,10 @@ function afterMbtiLogin() {
   }
 
   // ★ 수정10: 기사 로그인 시 본인 정산 실시간 구독
+  // v9.2: 이전 settlements 구독 해제 후 재구독 (Target ID 충돌 방지)
+  if (window._mbtiSettlementsUnsub) { try { window._mbtiSettlementsUnsub(); } catch(e){} }
   if (_mbtiUser && _mbtiUser.role === 'driver' && window._mbtiDb) {
-    window._mbtiDb.collection('settlements')
+    window._mbtiSettlementsUnsub = window._mbtiDb.collection('settlements')
       .where('driverId','==',_mbtiUser.id)
       .orderBy('date','desc').limit(5)
       .onSnapshot(function(snap) {
