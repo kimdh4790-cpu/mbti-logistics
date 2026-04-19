@@ -2324,31 +2324,57 @@ function selectSuType(btn, type) {
   else { pw.style.display='none'; tw.style.display=''; }
 }
 
-function doAuthLogin() {
+// ★ Phase 2 보안: SHA-256 해시 함수 (v9 앱과 호환)
+async function hashPw(pw){
+  if(!pw) return '';
+  var enc = new TextEncoder();
+  var buf = await crypto.subtle.digest('SHA-256', enc.encode(pw));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+async function doAuthLogin() {
   var id = (document.getElementById('auth-id').value||'').trim();
   var pw = (document.getElementById('auth-pw').value||'').trim();
   var msg = document.getElementById('auth-msg');
   if (!id||!pw) { msg.textContent='아이디와 비밀번호를 입력하세요.'; return; }
   // ★ Phase 2 보안: 관리자 로그인은 v9 앱에서만 가능 (하드코딩 PW 제거)
   // 기사 계정만 홈페이지에서 로그인 허용
-  if (window._mbtiDb) {
-    window._mbtiDb.collection('drivers').where('id','==',id).where('pw','==',pw).get()
-      .then(function(snap) {
-        if (snap.empty) { msg.textContent='아이디 또는 비밀번호가 틀렸습니다.'; return; }
-        var d = snap.docs[0].data();
-        if (d.status==='pending') { msg.textContent='승인 대기 중입니다.'; return; }
-        if (d.status==='rejected') { msg.textContent='가입이 거부되었습니다.'; return; }
-        _mbtiUser = Object.assign({ role:'driver', docId:snap.docs[0].id }, d);
-        afterMbtiLogin();
-      }).catch(function(){ mbtiLocalLogin(id, pw, msg); });
-  } else {
+  // ★ Phase 2-2: 점진적 해시 마이그레이션
+  //   - 신규 가입: pw는 SHA-256 해시로 저장됨
+  //   - 기존 17명: 다음 로그인 시 자동으로 해시로 변환됨
+  if (!window._mbtiDb) { return mbtiLocalLogin(id, pw, msg); }
+
+  try {
+    var pwHash = await hashPw(pw);
+    // 1단계: 해시로 매칭 시도 (신규 방식)
+    var snap = await window._mbtiDb.collection('drivers').where('id','==',id).where('pw','==',pwHash).get();
+
+    // 2단계: 해시 매칭 실패 → 평문으로 매칭 (구버전) + 자동 변환
+    if (snap.empty) {
+      var plainSnap = await window._mbtiDb.collection('drivers').where('id','==',id).where('pw','==',pw).get();
+      if (plainSnap.empty) { msg.textContent='아이디 또는 비밀번호가 틀렸습니다.'; return; }
+      // 자동 해시 업그레이드
+      var docRef = plainSnap.docs[0].ref;
+      try { await docRef.update({ pw: pwHash, pwMigratedAt: new Date().toISOString() }); } catch(e){}
+      snap = plainSnap;
+    }
+
+    var d = snap.docs[0].data();
+    if (d.status==='pending') { msg.textContent='승인 대기 중입니다.'; return; }
+    if (d.status==='rejected') { msg.textContent='가입이 거부되었습니다.'; return; }
+    _mbtiUser = Object.assign({ role:'driver', docId:snap.docs[0].id }, d);
+    afterMbtiLogin();
+  } catch(e) {
+    console.error('로그인 오류', e);
     mbtiLocalLogin(id, pw, msg);
   }
 }
 
-function mbtiLocalLogin(id, pw, msg) {
+async function mbtiLocalLogin(id, pw, msg) {
   var list = JSON.parse(localStorage.getItem('mbti_drivers')||'[]');
-  var found = list.find(function(x){ return x.id===id && x.pw===pw; });
+  var pwHash = await hashPw(pw);
+  // 해시 또는 평문 둘 다 허용 (로컬 백업용)
+  var found = list.find(function(x){ return x.id===id && (x.pw===pwHash || x.pw===pw); });
   if (!found) { msg.textContent='아이디 또는 비밀번호가 틀렸습니다.'; return; }
   if (found.status==='pending') { msg.textContent='승인 대기 중입니다.'; return; }
   if (found.status==='rejected') { msg.textContent='가입이 거부되었습니다.'; return; }
@@ -2408,7 +2434,7 @@ function doLogout() {
   setView('pc');
 }
 
-function doSignup() {
+async function doSignup() {
   var id = (document.getElementById('su-id').value||'').trim();
   var pw = (document.getElementById('su-pw').value||'').trim();
   var name = (document.getElementById('su-name').value||'').trim();
@@ -2423,8 +2449,10 @@ function doSignup() {
   var route = isParcel ? (document.getElementById('su-route-parcel').value||'') :
               isTrunk  ? (document.getElementById('su-route-trunk').value||'') : '';
   var workType = isParcel ? 'parcel' : isTrunk ? 'trunk' : '';
+  // ★ Phase 2-2: 비밀번호 SHA-256 해시로 저장 (평문 저장 금지)
+  var pwHash = await hashPw(pw);
   var data = {
-    id:id, pw:pw, name:name, company:company,
+    id:id, pw:pwHash, name:name, company:company,
     route:route, workType:workType,
     car:(document.getElementById('su-car').value||'').trim(),
     work:document.getElementById('su-work').value,
