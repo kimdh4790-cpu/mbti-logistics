@@ -6999,78 +6999,104 @@ function resetSchedule(){
 }
 function parseScheduleExcel(inp){
   var file=inp.files[0]; if(!file)return;
-  if(typeof XLSX==='undefined'){toast('⚠️ 라이브러리 로딩 중...');return;}
+  if(typeof XLSX==='undefined'){
+    toast('⚠️ XLSX 라이브러리 로딩 중... 3초 후 다시 시도');
+    setTimeout(function(){inp.click();},3000);
+    return;
+  }
   var reader=new FileReader();
   reader.onload=function(e){
     try{
-      var wb=XLSX.read(e.target.result,{type:'array'});
+      // ★ cellDates:true 로 날짜를 항상 Date 객체로 받기
+      var wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
       var ws=wb.Sheets[wb.SheetNames[0]];
       var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true});
-      if(rows.length<2){toast('데이터 없음');return;}
-      // 헤더 파악
+      if(rows.length<2){toast('❌ 데이터 없음');return;}
       var hdr=rows[0];
       var iDate=hdr.indexOf('업무일'), iName=hdr.indexOf('이름'), iId=hdr.indexOf('아이디');
       var iStatus=hdr.indexOf('업무상태'), iRoute=hdr.indexOf('업무라우트'), iWave=hdr.indexOf('웨이브');
       var iRot=hdr.indexOf('회전'), iCamp=hdr.indexOf('캠프명');
       if(iDate<0||iName<0||iStatus<0){toast('❌ 형식 불일치: 업무일/이름/업무상태 컬럼 필요');return;}
 
-      var count=0, errors=0;
+      var count=0, errors=0, monthsTouched={}, firstDs=null;
       rows.slice(1).forEach(function(row){
         if(!row[iDate]||!row[iName])return;
         var rawDate=row[iDate];
         var ds;
-        if(rawDate instanceof Date){
-          // ★ XLSX cellDates:true 옵션 시 로컬 자정으로 옴 → 로컬 기준으로 읽기
-          var yr=rawDate.getFullYear();
-          var mo=String(rawDate.getMonth()+1).padStart(2,'0');
-          var dy=String(rawDate.getDate()).padStart(2,'0');
-          ds=yr+'-'+mo+'-'+dy;
-        } else if(typeof rawDate==='number'){
-          // Excel 시리얼 날짜 변환 (로컬 시간 기준)
-          var tmp=new Date(Math.round((rawDate-25569)*86400*1000));
-          var yr2=tmp.getUTCFullYear();
-          var mo2=String(tmp.getUTCMonth()+1).padStart(2,'0');
-          var dy2=String(tmp.getUTCDate()).padStart(2,'0');
-          ds=yr2+'-'+mo2+'-'+dy2;
-        } else {
-          ds=String(rawDate).slice(0,10);
-        }
+        try{
+          if(rawDate instanceof Date){
+            // ★ 로컬 시간 기준으로 YYYY-MM-DD 생성 (UTC 사용 금지)
+            var yr=rawDate.getFullYear();
+            var mo=String(rawDate.getMonth()+1).padStart(2,'0');
+            var dy=String(rawDate.getDate()).padStart(2,'0');
+            ds=yr+'-'+mo+'-'+dy;
+          } else if(typeof rawDate==='number'){
+            // Excel 시리얼 → 로컬 Date (UTC offset 보정)
+            var utcMs=Math.round((rawDate-25569)*86400*1000);
+            var tmp=new Date(utcMs + new Date().getTimezoneOffset()*60000);
+            var yr2=tmp.getFullYear();
+            var mo2=String(tmp.getMonth()+1).padStart(2,'0');
+            var dy2=String(tmp.getDate()).padStart(2,'0');
+            ds=yr2+'-'+mo2+'-'+dy2;
+          } else {
+            ds=String(rawDate).slice(0,10);
+            if(!/^\d{4}-\d{2}-\d{2}$/.test(ds)){errors++;return;}
+          }
+        }catch(dErr){errors++;return;}
+
+        if(!firstDs)firstDs=ds;
         var name=String(row[iName]).trim();
+        if(!name){errors++;return;}
         var status=String(row[iStatus]||'').trim();
         var route=String(row[iRoute]||'').trim();
         var wave=String(row[iWave]||'').trim();
         var rot=String(row[iRot]||'').trim();
         var camp=String(row[iCamp]||'').trim();
-        // 상태 매핑: 출근 → 주(WAVE2=주간), 야간WAVE는 야, 휴무→휴무
-        var appStatus;
+        
+        // 상태 매핑: 출근 → WAVE1=야간, WAVE2=주간, 휴무→휴무
+        var appStatus='';
         if(status==='휴무') appStatus='휴무';
+        else if(status==='병가') appStatus='병가';
         else if(status==='출근'){
-          appStatus=(wave&&wave.indexOf('1')>=0)?'야':'주'; // WAVE1=야간, WAVE2=주간
-        } else appStatus='';
+          appStatus=(wave&&wave.indexOf('1')>=0)?'야':'주';
+        }
 
         var ymd=ds.split('-');
         var y=parseInt(ymd[0]),m=parseInt(ymd[1])-1;
         var wkKey='schedule_'+name+'_month_'+y+'_'+m;
+        monthsTouched[y+'_'+m]=1;
         try{
           var sc=JSON.parse(localStorage.getItem(wkKey)||'{}');
           sc[ds]={status:appStatus,route:route,wave:wave,rotation:rot,camp:camp};
           localStorage.setItem(wkKey,JSON.stringify(sc));
           // Firebase 저장
-          // Firebase 저장 - fbId 없으면 이름 기반 키 사용
           if(FB&&_db){
             var drv=ls('drivers').find(function(d){return d.name===name||(iId>=0&&d.userId===row[iId]);});
             var fbKey=(drv&&drv.fbId)?(drv.fbId+'_'+ds):(name+'_'+ds);
             _db.collection('schedules').doc(fbKey).set(
               {driver:name,date:ds,status:appStatus,route:route,wave:wave,rotation:rot,camp:camp,updAt:new Date().toISOString()},{merge:true}
-            ).catch(function(){});
+            ).catch(function(fbErr){console.warn('FB save fail:',name,ds,fbErr&&fbErr.message);});
           }
           count++;
-        }catch(ex){errors++;}
+        }catch(ex){errors++;console.warn('parse err:',name,ds,ex.message);}
       });
       inp.value='';
-      toast('✅ 근무표 '+count+'건 업로드 완료'+(errors?(' (오류 '+errors+'건)'):''));
+      
+      // ★ 업로드한 데이터의 첫 날짜로 월 자동 전환
+      if(firstDs){
+        var fYmd=firstDs.split('-');
+        localStorage.setItem('sched_year',parseInt(fYmd[0]));
+        localStorage.setItem('sched_month',parseInt(fYmd[1])-1);
+      }
+      
+      var monthList=Object.keys(monthsTouched).map(function(k){var p=k.split('_');return p[0]+'-'+(parseInt(p[1])+1)+'월';}).join(', ');
+      toast('✅ 근무표 '+count+'건 업로드 완료'+(errors?(' (오류 '+errors+'건)'):'')+' — '+monthList);
+      console.log('[스케줄 업로드] 성공:'+count+' 오류:'+errors+' 월:'+monthList+' 첫날:'+firstDs);
       SP('schedule_admin',null);
-    }catch(ex){toast('❌ 파싱 오류: '+ex.message);}
+    }catch(ex){
+      toast('❌ 파싱 오류: '+ex.message);
+      console.error('[스케줄 업로드] 실패:',ex);
+    }
   };
   reader.readAsArrayBuffer(file);
 }
