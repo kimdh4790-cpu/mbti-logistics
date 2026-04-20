@@ -928,7 +928,8 @@ function _setupFbListeners(){
   if(_listenersReady||!FB||!_db)return;
   _listenersReady=true;
 
-  // ★ Firebase 연결 상태 감시 — v9: _fbUnsubs에 등록해 admin 로그인 시 unsub 되도록
+  // ★ Firebase 연결 상태 감시만 담당 (v9.3 Target ID 충돌 완전 방지)
+  //   entries/deliveries/drivers 등은 startListeners()에서만 등록
   _fbUnsubs.push(_db.collection('settings').doc('status').onSnapshot(function(){
     document.querySelectorAll('.fb-status').forEach(function(el){
       el.textContent='🔥 Firebase 실시간';el.style.color='#4CAF50';
@@ -939,19 +940,8 @@ function _setupFbListeners(){
     });
   }));
 
-  // ★ 기사 목록 onSnapshot은 startListeners()에서 별도 처리
-
-  // ★ 입차/운행/배송 실시간 감시 — v9: _fbUnsubs에 등록 (Target ID 충돌 방지)
-  _fbUnsubs.push(_db.collection('entries').limit(100).onSnapshot(function(snap){
-    var entries=[];snap.forEach(function(doc){var d=doc.data();d.fbId=doc.id;entries.push(d);});
-    lss('entries',entries);
-    if(S.page==='entry'||S.page==='dash')SP(S.page,null);
-  },function(){}));
-  _fbUnsubs.push(_db.collection('deliveries').limit(200).onSnapshot(function(snap){
-    var deliveries=[];snap.forEach(function(doc){var d=doc.data();d.fbId=doc.id;deliveries.push(d);});
-    lss('deliveries',deliveries);
-    if(S.page==='delivery_taxi'||S.page==='delivery_line'||S.page==='dash')SP(S.page,null);
-  },function(){}));
+  // ★ 기사 목록/entries/deliveries onSnapshot은 startListeners()에서 중앙 관리
+  //   (이전 v9.2까지는 여기서도 entries/deliveries를 등록해 Target ID 충돌 발생)
 }
 
 function ls(k){return JSON.parse(localStorage.getItem('mb60_'+k)||'[]');}
@@ -6887,9 +6877,9 @@ function autoCleanupFirebase(){
 
 var _listenersInitDone=false;
 function startListeners(){
-  // ★ v9.2: 페이지 세션당 1회만 실행 (Target ID already exists 완전 방지)
-  //   _setupFbListeners()와 startListeners()가 entries/deliveries를 중복 등록하면서
-  //   Firebase SDK 내부 target ID 충돌 발생 (especially with synchronizeTabs 지속성)
+  // ★ v9.3: 페이지 세션당 1회만 실행 (Target ID already exists 완전 방지)
+  //   _setupFbListeners()는 이제 status 리스너만 담당
+  //   entries/deliveries/drivers는 여기서만 등록 → 중복 불가
   //   → 영구 락으로 재진입 완전 차단. 재연결은 페이지 새로고침으로 처리.
   if(_listenersInitDone){
     console.log('[startListeners] 이미 초기화 완료 - 재진입 차단');
@@ -6898,8 +6888,11 @@ function startListeners(){
   _listenersInitDone=true;
   _initialLoad=true;
   if(!FB||!_db){_listenersInitDone=false;return;}
-  // ★ 기존 리스너 먼저 모두 해제 (_setupFbListeners가 먼저 등록한 entries/deliveries 포함)
+  // ★ 기존 리스너 먼저 모두 해제 (혹시 남아있을 수 있는 status 리스너 등)
   _unsubAll();
+  // status 리스너는 다시 등록 필요
+  _listenersReady=false;
+  _setupFbListeners();
   // ── 전체 기사 데이터 초기 1회 로드
   _db.collection('drivers').get().then(function(snap){
     var all=[];
