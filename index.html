@@ -1924,61 +1924,16 @@ fetch('https://formsubmit.co/ajax/soungkyekim@naver.com', {
             showFbStatus('disconnected', '❌ 오프라인 모드');
           });
 
-          /* ── onSnapshot: 기사 관리 실시간 감지 (수정10+11) ── */
-          /* v9.2: 이전 리스너 unsub 후 재등록 (Target ID 충돌 방지) */
-          if (window._mbtiDriversUnsub) { try { window._mbtiDriversUnsub(); } catch(e){} }
-          var prevStatuses = {};
-          window._mbtiDriversUnsub = db.collection('drivers')
-            .where('status', 'in', ['active','pending'])
-            .onSnapshot(function(snap) {
-              showFbStatus('connected', '✅ 실시간 동기화 중');
-              var drivers = [];
-              snap.forEach(function(doc) {
-                var d = doc.data();
-                d._id = doc.id;
-                /* ★ 수정11: 탈퇴·거부 완전 숨김 (active, pending만 표시) */
-                if (d.status === 'withdrawn' || d.status === 'rejected') return;
-                drivers.push(d);
-
-                /* ★ 승인 즉시 토스트 알림 */
-                if (prevStatuses[doc.id] === 'pending' && d.status === 'active') {
-                  showToast('🎉 ' + (d.name||'기사님') + ' 승인 완료!');
-                }
-                prevStatuses[doc.id] = d.status;
-              });
-              renderDriverList(drivers);
-            }, function(err) {
-              // v9.2: already-exists/unavailable은 네트워크 일시 오류 (QUIC 폴백 등) → 자동 복구되므로 로그 제외
-              if (err && (err.code === 'already-exists' || err.code === 'unavailable' || err.code === 'cancelled')) return;
-              console.warn('Firestore drivers 오류 (권한):', err.message);
-              renderDriverList([]);
-              // ★ Firebase 연결은 됐지만 drivers 읽기 권한 없음 → 연결 상태 유지
-              // showFbStatus 건드리지 않음 (visitor 카운팅으로 이미 연결 확인됨)
-            });
-
-          /* ── onSnapshot: 일일체크 실시간 감시 (수정10) ── */
-          if (window._mbtiDailyChecksUnsub) { try { window._mbtiDailyChecksUnsub(); } catch(e){} }
-          window._mbtiDailyChecksUnsub = db.collection('daily_checks')
-            .orderBy('submittedAt','desc').limit(20)
-            .onSnapshot(function(snap) {
-              var checkList = document.getElementById('adminCheckList');
-              if (!checkList) return;
-              var rows = [];
-              snap.forEach(function(doc){ rows.push(doc.data()); });
-              if (rows.length === 0) { checkList.innerHTML = '<div style="color:#888;padding:8px;font-size:12px;">운행 기록 없음</div>'; return; }
-              checkList.innerHTML = rows.map(function(r){
-                return '<div style="padding:8px 0;border-bottom:1px solid #2a2a4a;font-size:12px;">'
-                  +'<span style="color:#f90;">'+r.driverId+'</span> '
-                  +'<span style="color:#aaa;">'+r.date+'</span> '
-                  +'입차:'+r.arrival+' 온도:'+r.temp
-                  +'</div>';
-              }).join('');
-            }, function(){});
+          /* ── [Phase 2-6] 관리자용 drivers/daily_checks 리스너 제거 ──
+           *   이 리스너들은 관리자 UI 전용이었으나 Phase 2-1에서 관리자 로그인을
+           *   v9 앱 전용으로 분리하면서 홈페이지에서는 불필요해짐.
+           *   불필요한 실시간 쿼리 제거 → Firebase 비용 절감 + 권한 에러 해소.
+           *   관리자 기사 관리는 v9 앱(엠비티아이_물류관리_v9.html)에서 처리.
+           */
 
         } catch(e) {
           console.warn('Firebase 초기화 오류:', e.message);
-          showFbStatus('disconnected', '⚠️ 데모 모드');
-          loadDemoDrivers();
+          showFbStatus('disconnected', '⚠️ 오프라인');
         }
       });  // ← firebase-auth-compat 콜백 닫기 (Phase 1 보안 추가)
       });
