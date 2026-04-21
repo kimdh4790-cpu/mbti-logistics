@@ -7889,6 +7889,7 @@ function rScheduleAdmin(){
   return '<div class="card"><div class="ch"><span class="ct">📅 기사별 월간 근무표</span>'
     +'<div style="display:flex;gap:6px;align-items:center">'
     +'<label style="padding:5px 12px;background:var(--teal);color:#fff;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">📂 엑셀 업로드<input type="file" accept=".xlsx,.xls" style="display:none" onchange="parseScheduleExcel(this)"></label>'
+    +'<button onclick="downloadScheduleExcel()" style="padding:5px 12px;background:#0ea5e9;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer" title="현재 월의 근무표를 쿠팡 엑셀 양식으로 다운로드">📥 엑셀 다운로드</button>'
     +'<button onclick="resetSchedule()" style="padding:5px 12px;background:#ef4444;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">🗑 초기화</button>'
     +'<button class="btn btn-sm btn-teal" onclick="SP(\'schedule_admin\',null)">🔄 새로고침</button>'
     +'</div></div>'
@@ -8105,6 +8106,160 @@ function parseScheduleExcel(inp){
   };
   reader.readAsArrayBuffer(file);
 }
+
+// ═══════════════════════════════════════════════════════════
+// 📥 근무표를 쿠팡 엑셀 양식으로 다운로드
+// (관리자가 수정한 근무표를 쿠팡 원본 포맷으로 백업/재업로드 용)
+// ═══════════════════════════════════════════════════════════
+function downloadScheduleExcel(){
+  if(typeof XLSX==='undefined'){
+    toast('⚠️ XLSX 라이브러리 로딩 중... 3초 후 다시 시도');
+    setTimeout(downloadScheduleExcel, 3000);
+    return;
+  }
+  
+  // 현재 표시 중인 월 가져오기
+  var year = parseInt(localStorage.getItem('sched_year')||new Date().getFullYear());
+  var month0 = parseInt(localStorage.getItem('sched_month')||new Date().getMonth());  // 0-indexed
+  var yearMonth = year+'-'+String(month0+1).padStart(2,'0');
+  
+  // 해당 월의 일수 계산
+  var daysInMonth = new Date(year, month0+1, 0).getDate();
+  
+  // 전체 기사 목록
+  var allDrivers = ls('drivers').filter(function(d){
+    return d.is_active!==false && d.status!=='탈퇴' && d.status!=='거부' && d.isNew!==true;
+  });
+  
+  // 회사 기본 정보
+  var vendorName = '엠비티아이 유한회사/MBTIU';
+  var bizNum = '3738602536';
+  
+  // 데이터 수집
+  var rows = [];
+  // 헤더
+  rows.push(['업무일','벤더명','사업자등록번호','캠프명','웨이브','이름','아이디','업무상태','회전','업무라우트']);
+  
+  var totalCount = 0;
+  
+  allDrivers.forEach(function(drv){
+    var wkKey = 'schedule_'+drv.name+'_month_'+year+'_'+month0;
+    var sc = {};
+    try{ sc = JSON.parse(localStorage.getItem(wkKey)||'{}'); } catch(e){ return; }
+    
+    for(var day=1; day<=daysInMonth; day++){
+      var ds = year+'-'+String(month0+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+      var data = sc[ds];
+      if(!data) continue;
+      
+      // data는 { status, route, wave, rotation, camp } 객체 또는 단순 문자열(구버전)
+      var status, route, wave, rotation, camp;
+      if(typeof data === 'object'){
+        status = data.status||'';
+        route = data.route||'';
+        wave = data.wave||'';
+        rotation = data.rotation||'';
+        camp = data.camp||'';
+      } else {
+        status = String(data);
+        route = ''; wave = ''; rotation = ''; camp = '';
+      }
+      
+      if(!status) continue;  // 빈 상태는 skip
+      
+      // 앱의 상태값 → 쿠팡 엑셀 형식 변환
+      var excelStatus = '';
+      var excelWave = wave;
+      var excelRotation = rotation;
+      
+      if(status === '주'){
+        excelStatus = '출근';
+        if(!excelWave) excelWave = 'WAVE2';
+        if(!excelRotation) excelRotation = '1회전,2회전';
+      } else if(status === '야'){
+        excelStatus = '출근';
+        if(!excelWave) excelWave = 'WAVE1';
+        if(!excelRotation) excelRotation = '1회전,2회전';
+      } else if(status === '휴무'){
+        excelStatus = '휴무';
+        if(!excelWave) excelWave = 'WAVE2';
+        excelRotation = '';  // 휴무는 회전 없음
+      } else if(status === '병가'){
+        excelStatus = '병가';
+        if(!excelWave) excelWave = 'WAVE2';
+        excelRotation = '';
+      } else {
+        excelStatus = status;  // 기타는 그대로
+      }
+      
+      // 캠프명 기본값 (기사 노선 정보에서 추측)
+      if(!camp){
+        var r = drv.route || '';
+        if(r.indexOf('부산1')>=0) camp='부산1';
+        else if(r.indexOf('부산2')>=0) camp='부산2';
+        else if(r.indexOf('부산3')>=0) camp='부산3';
+        else if(r.indexOf('대구')>=0) camp='대구2';
+        else if(r.indexOf('진주')>=0) camp='진주M';
+        else camp='부산1';  // 기본값
+      }
+      
+      // 날짜: Excel에서 Date 타입으로 정상 표시되도록 Date 객체로
+      var dateObj = new Date(year, month0, day, 0, 0, 0);
+      
+      rows.push([
+        dateObj,
+        vendorName,
+        bizNum,
+        camp,
+        excelWave || 'WAVE2',
+        drv.name,
+        drv.userId || '',
+        excelStatus,
+        excelRotation || '',
+        route || ''
+      ]);
+      totalCount++;
+    }
+  });
+  
+  if(totalCount === 0){
+    toast('⚠️ 다운로드할 근무 데이터가 없습니다 ('+yearMonth+')');
+    return;
+  }
+  
+  try{
+    // XLSX 생성
+    var ws = XLSX.utils.aoa_to_sheet(rows);
+    
+    // 컬럼 폭 설정 (선택)
+    ws['!cols'] = [
+      {wch:12},{wch:25},{wch:14},{wch:8},{wch:8},
+      {wch:10},{wch:14},{wch:10},{wch:14},{wch:20}
+    ];
+    
+    // 날짜 셀 포맷 지정 (B2:B... 열의 각 셀)
+    for(var r=2; r<=rows.length; r++){
+      var cellRef = 'A'+r;
+      if(ws[cellRef]){
+        ws[cellRef].t = 'd';
+        ws[cellRef].z = 'yyyy-mm-dd';
+      }
+    }
+    
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '근무표');
+    
+    var fileName = 'MBTI_근무표_'+yearMonth+'_'+new Date().toISOString().slice(0,10)+'.xlsx';
+    XLSX.writeFile(wb, fileName);
+    
+    toast('✅ '+fileName+' 다운로드 완료 ('+totalCount+'건)');
+    console.log('[근무표 다운로드] '+fileName+' / '+totalCount+'건 / '+allDrivers.length+'명');
+  } catch(ex){
+    toast('❌ 다운로드 오류: '+ex.message);
+    console.error('[근무표 다운로드] 실패:',ex);
+  }
+}
+
 function adminSetSchedule(wkKey,ds,drvName){
   var sc=JSON.parse(localStorage.getItem(wkKey)||'{}');
   var order=['','주','야','휴무','병가'];
