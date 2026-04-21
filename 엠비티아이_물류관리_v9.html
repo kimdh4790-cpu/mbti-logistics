@@ -7968,16 +7968,32 @@ function parseScheduleExcel(inp){
         var ds;
         try{
           if(rawDate instanceof Date){
-            var yr=rawDate.getFullYear();
-            var mo=String(rawDate.getMonth()+1).padStart(2,'0');
-            var dy=String(rawDate.getDate()).padStart(2,'0');
+            // ★ xlsx.js는 환경에 따라 "UTC 자정" 또는 "로컬 자정"으로 Date를 만듦
+            // → 자동 감지: getHours()가 0이면 로컬 자정, 아니면 UTC 자정
+            // Excel 원본 날짜는 시간대가 없는 "절대 날짜"이므로
+            // 어느 쪽이든 엑셀에 찍힌 날짜 그대로 추출하는 게 목표
+            var isLocalMidnight = (rawDate.getHours()===0 && rawDate.getMinutes()===0);
+            var yr, mo, dy;
+            if(isLocalMidnight){
+              // 로컬 기준 자정 → 로컬 메서드로 뽑으면 엑셀 날짜 그대로
+              yr=rawDate.getFullYear();
+              mo=String(rawDate.getMonth()+1).padStart(2,'0');
+              dy=String(rawDate.getDate()).padStart(2,'0');
+            } else {
+              // UTC 자정 → UTC 메서드로 뽑으면 엑셀 날짜 그대로
+              // (로컬 메서드 쓰면 +9시간/-9시간 만큼 밀림)
+              yr=rawDate.getUTCFullYear();
+              mo=String(rawDate.getUTCMonth()+1).padStart(2,'0');
+              dy=String(rawDate.getUTCDate()).padStart(2,'0');
+            }
             ds=yr+'-'+mo+'-'+dy;
           } else if(typeof rawDate==='number'){
+            // Excel 시리얼 → UTC 기준으로 변환 후 UTC 메서드로 추출
             var utcMs=Math.round((rawDate-25569)*86400*1000);
-            var tmp=new Date(utcMs + new Date().getTimezoneOffset()*60000);
-            var yr2=tmp.getFullYear();
-            var mo2=String(tmp.getMonth()+1).padStart(2,'0');
-            var dy2=String(tmp.getDate()).padStart(2,'0');
+            var tmp=new Date(utcMs);
+            var yr2=tmp.getUTCFullYear();
+            var mo2=String(tmp.getUTCMonth()+1).padStart(2,'0');
+            var dy2=String(tmp.getUTCDate()).padStart(2,'0');
             ds=yr2+'-'+mo2+'-'+dy2;
           } else {
             ds=String(rawDate).slice(0,10);
