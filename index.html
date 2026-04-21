@@ -19,6 +19,34 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <meta name="theme-color" content="#0a1628">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&family=Bebas+Neue&family=Barlow+Condensed:wght@700;800&display=swap" rel="stylesheet">
+<!-- ★ EmailJS 라이브러리 (문의 즉시 발송) -->
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════
+   EmailJS 설정 — 가입 후 아래 3개 값 교체 필요
+   ═══════════════════════════════════════════════════════════
+   1. https://www.emailjs.com 가입 (무료, 월 200건)
+   2. Add New Service → Gmail/Naver 연결 → SERVICE_ID 복사
+   3. Create Email Template → TEMPLATE_ID 복사
+   4. Account → General → PUBLIC_KEY 복사
+   5. 아래 세 값 교체 후 GitHub 업로드
+   ═══════════════════════════════════════════════════════════ */
+var EMAILJS_PUBLIC_KEY = "YOUR_PUBLIC_KEY_HERE";
+var EMAILJS_SERVICE_ID = "YOUR_SERVICE_ID_HERE";
+var EMAILJS_TEMPLATE_ID = "YOUR_TEMPLATE_ID_HERE";
+
+// EmailJS 초기화 (스크립트 로드 후)
+window.addEventListener('load', function(){
+  try {
+    if (window.emailjs && EMAILJS_PUBLIC_KEY !== "YOUR_PUBLIC_KEY_HERE") {
+      emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+      console.log('✅ EmailJS 초기화 완료');
+    } else {
+      console.warn('⚠️ EmailJS 키 미설정 - Firestore 저장만 사용');
+    }
+  } catch(e){ console.warn('EmailJS init fail:', e); }
+});
+</script>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
 :root{
@@ -1659,7 +1687,7 @@ sendMail(
 );
 }
 
-/* ── 파트너십 문의 ── */
+/* ── 파트너십 문의 (Firestore 저장 + EmailJS 즉시 발송) ── */
 function doPI(){
 var co = (document.getElementById('pi-co') ||{}).value||'';
 var nm = (document.getElementById('pi-nm') ||{}).value||'';
@@ -1670,60 +1698,116 @@ var msg = (document.getElementById('pi-msg') ||{}).value||'';
 if (!co||!nm||!tel||!msg){ alert('필수 항목을 입력해 주세요.'); return; }
 var btn = document.querySelector('.btn-pi');
 if(btn){btn.disabled=true;btn.textContent='전송 중...';}
-fetch('https://formsubmit.co/ajax/soungkyekim@naver.com', {
-  method:'POST',
-  headers:{'Content-Type':'application/json','Accept':'application/json'},
-  body:JSON.stringify({
-    _subject:'[MBTI 파트너십 문의] ' + tp + ' — ' + co,
-    _template:'table',
-    회사명:co, 담당자:nm, 연락처:tel,
-    문의유형:tp, 이메일:em, 문의내용:msg
-  })
-})
-.then(function(r){return r.json();})
-.then(function(){
-  alert('✅ 문의가 접수되었습니다!\n빠르게 연락드리겠습니다.');
-  ['pi-co','pi-nm','pi-tel','pi-em','pi-msg'].forEach(function(id){
-    var el=document.getElementById(id); if(el)el.value='';
-  });
-})
-.catch(function(){
-  alert('❌ 전송에 실패했습니다.\nsoungkyekim@naver.com 으로 직접 연락 주세요.');
-})
-.finally(function(){
+
+var inquiryData = {
+  type: 'partnership',
+  category: tp || '파트너십 문의',
+  company: co, name: nm, tel: tel, email: em, message: msg,
+  status: 'new',
+  createdAt: new Date().toISOString(),
+  userAgent: navigator.userAgent.slice(0,100)
+};
+
+// ① Firestore 저장 (관리자 앱에서 확인 가능, 절대 유실 안 됨)
+var fsPromise = (window._mbtiDb)
+  ? window._mbtiDb.collection('inquiries').add(inquiryData).then(function(){
+      console.log('✅ Firestore 저장 완료'); return true;
+    }).catch(function(e){
+      console.warn('❌ Firestore 저장 실패:', e); return false;
+    })
+  : Promise.resolve(false);
+
+// ② EmailJS 즉시 발송 (설정된 경우만)
+var emailPromise;
+if (window.emailjs && EMAILJS_PUBLIC_KEY !== "YOUR_PUBLIC_KEY_HERE") {
+  emailPromise = emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+    subject: '[MBTI 파트너십 문의] ' + tp + ' — ' + co,
+    type: '파트너십 문의',
+    category: tp, company: co, name: nm, tel: tel, email: em, message: msg,
+    to_email: 'soungkyekim@naver.com'
+  }).then(function(){ console.log('✅ EmailJS 발송 완료'); return true; })
+    .catch(function(e){ console.warn('❌ EmailJS 실패:', e); return false; });
+} else {
+  emailPromise = Promise.resolve(null);
+}
+
+// 둘 중 하나라도 성공하면 완료 처리
+Promise.all([fsPromise, emailPromise]).then(function(results){
+  var fsOk = results[0], emailOk = results[1];
+  if(fsOk || emailOk){
+    alert('✅ 문의가 접수되었습니다!\n빠르게 연락드리겠습니다.');
+    ['pi-co','pi-nm','pi-tel','pi-em','pi-msg'].forEach(function(id){
+      var el=document.getElementById(id); if(el)el.value='';
+    });
+  } else {
+    alert('❌ 전송에 실패했습니다.\nsoungkyekim@naver.com 으로 직접 연락 주세요.');
+  }
+}).finally(function(){
   if(btn){btn.disabled=false;btn.textContent='📨 파트너십 문의 보내기';}
 });
 }
 
-/* ── 협력사 등록 ── */
+/* ── 협력사 등록 (Firestore 저장 + EmailJS 즉시 발송) ── */
 function doPartner(){
 var co = (document.getElementById('pa-co')||{}).value||'';
 var nm = (document.getElementById('pa-nm')||{}).value||'';
 var tel = (document.getElementById('pa-tel')||{}).value||'';
 var msg = (document.getElementById('pa-msg')||{}).value||'';
+// pr- prefix도 체크 (HTML 구조상)
+if(!co) co = (document.getElementById('pr-co')||{}).value||'';
+if(!nm) nm = (document.getElementById('pr-nm')||{}).value||'';
+if(!tel) tel = (document.getElementById('pr-tel')||{}).value||'';
+if(!msg) msg = (document.getElementById('pr-msg')||{}).value||'';
+var em = (document.getElementById('pr-em')||{}).value||'';
+var tp = (document.getElementById('pr-type')||{}).value||'';
+
 if (!co||!nm||!tel){ alert('필수 항목을 입력해 주세요.'); return; }
 var btn = document.querySelector('.btn-pr');
 if(btn){btn.disabled=true;btn.textContent='전송 중...';}
-fetch('https://formsubmit.co/ajax/soungkyekim@naver.com', {
-  method:'POST',
-  headers:{'Content-Type':'application/json','Accept':'application/json'},
-  body:JSON.stringify({
-    _subject:'[MBTI 협력사 등록] ' + co,
-    _template:'table',
-    회사명:co, 담당자:nm, 연락처:tel, 내용:msg||'(내용 없음)'
-  })
-})
-.then(function(r){return r.json();})
-.then(function(){
-  alert('✅ 협력사 등록 신청이 완료되었습니다!\n검토 후 연락드리겠습니다.');
-  ['pa-co','pa-nm','pa-tel','pa-msg'].forEach(function(id){
-    var el=document.getElementById(id); if(el)el.value='';
-  });
-})
-.catch(function(){
-  alert('❌ 전송에 실패했습니다.\nsoungkyekim@naver.com 으로 직접 연락 주세요.');
-})
-.finally(function(){
+
+var inquiryData = {
+  type: 'partner_register',
+  category: tp || '협력사 등록',
+  company: co, name: nm, tel: tel, email: em, message: msg||'(내용 없음)',
+  status: 'new',
+  createdAt: new Date().toISOString(),
+  userAgent: navigator.userAgent.slice(0,100)
+};
+
+// ① Firestore 저장
+var fsPromise = (window._mbtiDb)
+  ? window._mbtiDb.collection('inquiries').add(inquiryData).then(function(){
+      console.log('✅ Firestore 저장 완료'); return true;
+    }).catch(function(e){
+      console.warn('❌ Firestore 저장 실패:', e); return false;
+    })
+  : Promise.resolve(false);
+
+// ② EmailJS 즉시 발송
+var emailPromise;
+if (window.emailjs && EMAILJS_PUBLIC_KEY !== "YOUR_PUBLIC_KEY_HERE") {
+  emailPromise = emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+    subject: '[MBTI 협력사 등록] ' + co,
+    type: '협력사 등록',
+    category: tp, company: co, name: nm, tel: tel, email: em, message: msg||'(내용 없음)',
+    to_email: 'soungkyekim@naver.com'
+  }).then(function(){ console.log('✅ EmailJS 발송 완료'); return true; })
+    .catch(function(e){ console.warn('❌ EmailJS 실패:', e); return false; });
+} else {
+  emailPromise = Promise.resolve(null);
+}
+
+Promise.all([fsPromise, emailPromise]).then(function(results){
+  var fsOk = results[0], emailOk = results[1];
+  if(fsOk || emailOk){
+    alert('✅ 협력사 등록 신청이 완료되었습니다!\n검토 후 연락드리겠습니다.');
+    ['pa-co','pa-nm','pa-tel','pa-msg','pr-co','pr-nm','pr-tel','pr-em','pr-msg'].forEach(function(id){
+      var el=document.getElementById(id); if(el)el.value='';
+    });
+  } else {
+    alert('❌ 전송에 실패했습니다.\nsoungkyekim@naver.com 으로 직접 연락 주세요.');
+  }
+}).finally(function(){
   if(btn){btn.disabled=false;btn.textContent='🤝 협력사 등록 신청하기';}
 });
 }
