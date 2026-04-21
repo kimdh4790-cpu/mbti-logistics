@@ -619,6 +619,7 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
           <div class="ni" onclick="SP('drivers',this)">👤 기사 관리 <span id="new-badge" style="display:none;background:var(--amber);color:#fff;font-size:9px;padding:1px 5px;border-radius:999px;margin-left:2px">대기</span></div>
           <div class="ni" onclick="SP('inquiries',this)">📩 홈페이지 문의함 <span id="inq-badge" style="display:none;background:var(--red);color:#fff;font-size:9px;padding:1px 5px;border-radius:999px;margin-left:2px">N</span></div>
           <div class="ni" onclick="SP('archive',this)">📋 3개월 기록 보관소</div>
+          <div class="ni" onclick="SP('audit',this)">🔒 보안 감사 로그</div>
           <div class="ni" onclick="SP('insurance',this)">📊 쿠팡 라우트 단가표</div>
           <div class="ni" onclick="SP('mypage',this)">👤 내 정보 수정</div>
         </div>
@@ -1106,7 +1107,39 @@ function today(){return new Date().toISOString().slice(0,10);}
 function nowT(){var n=new Date();return n.getHours().toString().padStart(2,'0')+':'+n.getMinutes().toString().padStart(2,'0');}
 function nid(k){var n=JSON.parse(localStorage.getItem('mb60_nid')||'{}');var v=n[k]||1;n[k]=v+1;localStorage.setItem('mb60_nid',JSON.stringify(n));return v;}
 function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);}
-function addAct(tp,tx,dr){var a=ls('activity');a.unshift({tp,tx,dr,t:nowT(),ts:new Date().toISOString()});if(a.length>80)a=a.slice(0,80);lss('activity',a);}
+// ── 보안: 강화된 활동 로그 (actor, mode, details 포함)
+function addAct(tp,tx,dr,details){
+  var a=ls('activity');
+  // 실행자 정보 자동 수집
+  var actorName=(S.curMode==='admin')?(ls('mbti_admin_info')?.name||'관리자'):(S.curDriver||'기사');
+  var actorId=(S.curMode==='admin')?(ls('mbti_admin_info')?.userId||'admin'):(S.curDriver||'');
+  var entry={
+    tp:tp, tx:tx, dr:dr,
+    actor:actorName,
+    actorId:actorId,
+    mode:S.curMode||'unknown',
+    details:details||null,
+    t:nowT(),
+    ts:new Date().toISOString()
+  };
+  a.unshift(entry);
+  if(a.length>200)a=a.slice(0,200);  // 로컬은 200건 유지 (기존 80 → 200)
+  lss('activity',a);
+  // ★ 중요 활동은 Firebase에도 장기 보관 (audit_logs 컬렉션)
+  //   수정/삭제/승인/보안 관련만 저장 (일반 입차/운행 제외)
+  var importantTypes=['drivers','settle','security','sync','reg','archive','schedule'];
+  if(FB&&_db&&importantTypes.indexOf(tp)>=0){
+    try{
+      _db.collection('audit_logs').add({
+        type:tp, text:tx, driver:dr||null,
+        actor:actorName, actorId:actorId, mode:entry.mode,
+        details:details||null,
+        timestamp:firebase.firestore.FieldValue.serverTimestamp(),
+        clientTime:entry.ts
+      }).catch(function(e){console.warn('audit log 저장 실패:',e&&e.message);});
+    }catch(e){}
+  }
+}
 
 // ★ 중복 활동 로그 정리 (같은 기사, 같은 내용이 1시간 내 반복된 경우 첫 번째만 유지)
 function cleanActLog(){
@@ -1442,6 +1475,12 @@ function doLogin(){
         found=drs.find(d=>d.userId===id||d.phone===id||d.name===id)||null;
       }
       if(found){
+        // ★ 강화: 탈퇴/거부 계정 완전 차단 (상태/활성 양쪽 체크)
+        if(found.status==='탈퇴'||found.status==='거부'||found.is_active===false){
+          toast('❌ 이 계정은 비활성화되었습니다 (관리자 문의)');
+          addAct('security','비활성 계정 로그인 시도: '+id,id);
+          return;
+        }
         if(found.status==='pending'||found.isNew){
           toast('⏳ 관리자 승인 대기 중 — 승인 즉시 자동 알림됩니다');
           // 실시간 승인 감지
@@ -1456,9 +1495,8 @@ function doLogin(){
           }
           return;
         }
-        if(!found.is_active||found.status==='탈퇴'){toast('비활성화 계정');return;}
         // ── v6.1 비밀번호 검증 (해시 or 평문 하위호환)
-        var storedPw=found.pw||'';
+        var storedPw=found.pw||found.password||'';
         var pwOk=false;
         if(storedPw.length===64){
           // SHA-256 해시 비교
@@ -1468,18 +1506,48 @@ function doLogin(){
           // 구버전 평문 비교 (하위호환)
           pwOk=(storedPw===''||storedPw===pw);
         }
-        if(!pwOk){toast('비밀번호가 틀립니다');return;}
+        if(!pwOk){
+          // ★ 기사 로그인 실패 횟수 증가 (관리자와 동일 락 사용)
+          lockData.cnt++;lockData.ts=Date.now();
+          localStorage.setItem(lockKey,JSON.stringify(lockData));
+          var leftD=5-lockData.cnt;
+          if(leftD>0){
+            toast('❌ 비밀번호 틀림 (잔여 '+leftD+'회)');
+          } else {
+            toast('🔒 5회 실패 — 10분간 잠금');
+            addAct('security','기사 로그인 5회 실패 잠금: '+id,id);
+          }
+          return;
+        }
+        // 로그인 성공 시 잠금 해제
+        localStorage.removeItem(lockKey);
         // ── v6.1: 로그인한 사람 이름으로 즉시 교체 (세션 버그 해결)
         S.curDriver=found.name||id;
         S.curPlate=found.plate||'';
         S.curJobtype=found.jobtype||'택배';
         S.curJobsub=found.jobsub||'쿠팡';
-        localStorage.setItem('mbti_session',JSON.stringify({mode:'driver',id:found.userId||id,name:found.name||id,plate:found.plate||'',jobtype:found.jobtype||'택배',jobsub:found.jobsub||'쿠팡',ts:Date.now()}));
+        // ★ 세션 24시간 만료 (기존 무기한 → 만료 시간 추가)
+        localStorage.setItem('mbti_session',JSON.stringify({
+          mode:'driver',id:found.userId||id,name:found.name||id,
+          plate:found.plate||'',jobtype:found.jobtype||'택배',jobsub:found.jobsub||'쿠팡',
+          ts:Date.now(),exp:Date.now()+86400000  // 24시간 후 만료
+        }));
         hide(['login-screen']); show('dv');
         DT('home',document.getElementById('pni0')); updFbUI();
         loadMyInfo(id);
         setTimeout(checkDriverNotifications, 2000); // 기사 전달 내역 실시간 감시 시작
-      } else {toast('등록되지 않은 아이디');return;}
+      } else {
+        // ★ 존재하지 않는 아이디도 실패 카운트 (ID 추측 공격 방지)
+        lockData.cnt++;lockData.ts=Date.now();
+        localStorage.setItem(lockKey,JSON.stringify(lockData));
+        var leftX=5-lockData.cnt;
+        if(leftX>0){
+          toast('❌ 등록되지 않은 아이디 (잔여 '+leftX+'회)');
+        } else {
+          toast('🔒 5회 실패 — 10분간 잠금');
+        }
+        return;
+      }
     };
     loginDriver();
   }
@@ -1730,7 +1798,7 @@ async function submitReg(){
 }
 
 // ══ 관리자 페이지
-var PT={archive:'📋 3개월 기록 보관소',dash:'대시보드',schedule_admin:'📅 근무표 관리',memo:'📝 메모 달력',sync:'기사 연동',entry:'입차 현황',delivery_taxi:'📦 운행 현황',delivery_line:'🚚 간선 현황',delivery:'운송현황',accident:'사고 접수',temp:'온도 기록',settle:'정산서 관리',drivers:'기사 관리',insurance:'쿠팡 라우트 단가표',mypage:'내 정보 수정',inquiries:'📩 홈페이지 문의함'};
+var PT={archive:'📋 3개월 기록 보관소',audit:'🔒 보안 감사 로그',dash:'대시보드',schedule_admin:'📅 근무표 관리',memo:'📝 메모 달력',sync:'기사 연동',entry:'입차 현황',delivery_taxi:'📦 운행 현황',delivery_line:'🚚 간선 현황',delivery:'운송현황',accident:'사고 접수',temp:'온도 기록',settle:'정산서 관리',drivers:'기사 관리',insurance:'쿠팡 라우트 단가표',mypage:'내 정보 수정',inquiries:'📩 홈페이지 문의함'};
 function SP(pg,el){
   S.page=pg;
   // 기사 관리 페이지 진입 시 Firebase 최신 데이터 즉시 로드
@@ -1747,7 +1815,7 @@ function SP(pg,el){
   }
   document.getElementById('ptitle').textContent=PT[pg]||pg;
   if(el){document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));el.classList.add('on');}
-  var m={archive:rArchive,dash:rDash,sync:rSync,schedule_admin:rScheduleAdmin,memo:rMemoCalendar,entry:rEntry,delivery_taxi:rDeliveryTaxi,delivery_line:rDeliveryLine,delivery:rDelivery,accident:rAcc,temp:rTemp,settle:rSettle,drivers:rDrivers,insurance:rInsurance,mypage:rMypage,inquiries:rInquiries};
+  var m={archive:rArchive,audit:rAuditLog,dash:rDash,sync:rSync,schedule_admin:rScheduleAdmin,memo:rMemoCalendar,entry:rEntry,delivery_taxi:rDeliveryTaxi,delivery_line:rDeliveryLine,delivery:rDelivery,accident:rAcc,temp:rTemp,settle:rSettle,drivers:rDrivers,insurance:rInsurance,mypage:rMypage,inquiries:rInquiries};
   try{
     document.getElementById('ca').innerHTML=(m[pg]||rDash)();
   }catch(e){
@@ -7232,6 +7300,140 @@ function initInqListener(){
   },function(e){console.warn('inq listener:',e&&e.message);});
 }
 
+// ═══════════════════════════════════════════════════════════
+// 🔒 보안 감사 로그 — 관리자 전용
+// 로컬 activity + Firebase audit_logs 병합 조회
+// ═══════════════════════════════════════════════════════════
+function rAuditLog(){
+  if(S.curMode!=='admin'){
+    return '<div class="card"><div style="text-align:center;padding:30px;color:var(--red)">🔒 관리자 전용 페이지입니다</div></div>';
+  }
+  
+  // 상태 초기화
+  if(!window._auditState)window._auditState={tpFilter:'all',actorFilter:'all',source:'local'};
+  var AS=window._auditState;
+  
+  var local=ls('activity');
+  // 타입 필터 적용
+  var filtered=local.filter(function(a){
+    if(AS.tpFilter!=='all' && a.tp!==AS.tpFilter)return false;
+    if(AS.actorFilter!=='all' && a.actor!==AS.actorFilter)return false;
+    return true;
+  });
+  
+  // 타입별 아이콘/색상
+  var typeStyle={
+    'security':{icon:'🔒',color:'var(--red)',bg:'rgba(239,68,68,.12)',label:'보안'},
+    'drivers':{icon:'👤',color:'#3B82F6',bg:'rgba(59,130,246,.12)',label:'기사'},
+    'settle':{icon:'💰',color:'#8B5CF6',bg:'rgba(139,92,246,.12)',label:'정산'},
+    'sync':{icon:'🔄',color:'#10B981',bg:'rgba(16,185,129,.12)',label:'동기화'},
+    'reg':{icon:'📝',color:'var(--amber)',bg:'rgba(245,158,11,.12)',label:'등록'},
+    'schedule':{icon:'📅',color:'var(--teal)',bg:'rgba(15,110,86,.12)',label:'근무'},
+    'archive':{icon:'📋',color:'#6B7280',bg:'rgba(107,114,128,.12)',label:'보관'},
+    'entry':{icon:'🚚',color:'#3B82F6',bg:'rgba(59,130,246,.08)',label:'입차'},
+    'delivery':{icon:'📦',color:'#8B5CF6',bg:'rgba(139,92,246,.08)',label:'운행'}
+  };
+  
+  // 필터 옵션 수집
+  var allTypes=Array.from(new Set(local.map(function(a){return a.tp;}))).sort();
+  var allActors=Array.from(new Set(local.map(function(a){return a.actor||'알수없음';}))).sort();
+  
+  var tpOpts='<option value="all">전체 유형</option>'
+    +allTypes.map(function(t){var ts=typeStyle[t]||{label:t};return '<option value="'+t+'" '+(AS.tpFilter===t?'selected':'')+'>'+ts.label+' ('+t+')</option>';}).join('');
+  var actorOpts='<option value="all">전체 사용자</option>'
+    +allActors.map(function(a){return '<option value="'+a+'" '+(AS.actorFilter===a?'selected':'')+'>'+a+'</option>';}).join('');
+  
+  var html='<div class="card"><div class="ch"><span class="ct">🔒 보안 감사 로그 ('+filtered.length+'/'+local.length+'건)</span>'
+    +'<button class="btn btn-sm" onclick="auditExportCSV()" style="background:#0ea5e9;color:#fff;border:none;font-size:11px">📥 CSV 내보내기</button>'
+    +'</div>'
+    // 필터
+    +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;padding:8px;background:var(--bg3);border-radius:var(--r)">'
+      +'<span style="font-size:11px;color:var(--text2);font-weight:600">🏷 유형</span>'
+      +'<select onchange="window._auditState.tpFilter=this.value;SP(\'audit\',null)" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px">'+tpOpts+'</select>'
+      +'<span style="font-size:11px;color:var(--text2);font-weight:600;margin-left:6px">👤 사용자</span>'
+      +'<select onchange="window._auditState.actorFilter=this.value;SP(\'audit\',null)" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px">'+actorOpts+'</select>'
+      +'<button onclick="if(confirm(\'로컬 감사 로그를 모두 지울까요?\\nFirebase 로그는 유지됩니다.\')){localStorage.removeItem(\'activity\');SP(\'audit\',null);toast(\'🗑 로컬 로그 초기화됨\');}" style="margin-left:auto;padding:5px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer">🗑 로컬 초기화</button>'
+    +'</div>'
+    // 보안 경고 요약
+    +(function(){
+      var secLogs=filtered.filter(function(a){return a.tp==='security';});
+      if(secLogs.length>0){
+        return '<div style="background:rgba(239,68,68,.08);border:1px solid var(--red);border-radius:var(--r);padding:8px 12px;margin-bottom:10px;font-size:12px;color:var(--red);font-weight:600">⚠️ 최근 보안 이벤트 '+secLogs.length+'건 (로그인 실패, 비활성 계정 접근 시도 등)</div>';
+      }
+      return '';
+    })();
+  
+  if(!filtered.length){
+    html+='<div style="text-align:center;padding:30px;color:var(--text3);font-size:13px">조건에 맞는 로그가 없습니다</div>';
+  } else {
+    // 테이블 렌더
+    html+='<div style="overflow-x:auto"><table class="tbl" style="font-size:12px">'
+      +'<thead><tr><th>시간</th><th>유형</th><th>실행자</th><th>모드</th><th>내용</th><th>대상</th></tr></thead><tbody>';
+    filtered.slice(0,100).forEach(function(a){
+      var ts=typeStyle[a.tp]||{icon:'•',color:'var(--text2)',bg:'var(--bg2)',label:a.tp};
+      var dt=a.ts?new Date(a.ts):null;
+      var dtStr=dt?(dt.getMonth()+1)+'/'+dt.getDate()+' '+String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0'):'-';
+      html+='<tr>'
+        +'<td style="font-size:11px;white-space:nowrap">'+dtStr+'</td>'
+        +'<td><span style="display:inline-block;background:'+ts.bg+';color:'+ts.color+';padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700">'+ts.icon+' '+ts.label+'</span></td>'
+        +'<td style="font-size:11px;font-weight:600">'+(a.actor||'-')+(a.actorId?'<br><small style="color:var(--text3);font-weight:400">'+a.actorId+'</small>':'')+'</td>'
+        +'<td><span class="badge '+(a.mode==='admin'?'b-run':'b-done')+'" style="font-size:9px">'+(a.mode||'-')+'</span></td>'
+        +'<td style="font-size:11px;max-width:280px;word-break:break-word">'+(a.tx||'')+'</td>'
+        +'<td style="font-size:11px;color:var(--text3)">'+(a.dr||'-')+'</td>'
+      +'</tr>';
+    });
+    html+='</tbody></table></div>';
+    if(filtered.length>100){
+      html+='<div style="text-align:center;padding:8px;color:var(--text3);font-size:11px">최근 100건 표시 · 전체 '+filtered.length+'건 (CSV 내보내기로 전체 확인)</div>';
+    }
+  }
+  
+  html+='<div style="margin-top:10px;padding:10px;background:var(--bg3);border-radius:var(--r);font-size:11px;color:var(--text2);line-height:1.5">'
+    +'💡 <strong>감사 로그 안내</strong><br>'
+    +'· 로컬 저장: 최근 200건 (브라우저에 저장, 빠른 조회)<br>'
+    +'· Firebase 저장: 중요 활동은 영구 보관 (audit_logs 컬렉션)<br>'
+    +'· 저장 유형: 보안(security), 기사정보(drivers), 정산(settle), 동기화(sync), 등록(reg), 보관(archive), 근무(schedule)'
+    +'</div></div>';
+  
+  return html;
+}
+
+// 감사 로그 CSV 내보내기
+function auditExportCSV(){
+  var local=ls('activity');
+  var AS=window._auditState||{tpFilter:'all',actorFilter:'all'};
+  var filtered=local.filter(function(a){
+    if(AS.tpFilter!=='all' && a.tp!==AS.tpFilter)return false;
+    if(AS.actorFilter!=='all' && a.actor!==AS.actorFilter)return false;
+    return true;
+  });
+  if(!filtered.length){toast('❌ 내보낼 로그 없음');return;}
+  
+  // CSV 생성 (BOM + UTF-8)
+  var csv='\uFEFF시간,유형,실행자,실행자ID,모드,내용,대상\n';
+  filtered.forEach(function(a){
+    var esc=function(v){return '"'+String(v||'').replace(/"/g,'""').replace(/\n/g,' ')+'"';};
+    csv+=[
+      esc(a.ts||''),
+      esc(a.tp||''),
+      esc(a.actor||''),
+      esc(a.actorId||''),
+      esc(a.mode||''),
+      esc(a.tx||''),
+      esc(a.dr||'')
+    ].join(',')+'\n';
+  });
+  
+  var blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;
+  a.download='감사로그_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('✅ '+filtered.length+'건 CSV 내보내기 완료');
+}
+
 function rArchive(){
   var now=new Date();
   var S_arch=window._archState||{col:'all',driver:'all',from:'',to:''};
@@ -8998,27 +9200,37 @@ function sanitizeInput(val){
   return val.replace(/<[^>]*>/g,'').replace(/[<>"']/g,'').trim();
 }
 
-// ── 보안: 세션 만료 체크 (7일) + 포그라운드 복귀 시 갱신
+// ── 보안: 세션 만료 체크 (exp 필드 기반) + 주기적 검사
 (function checkSession(){
-  var SESSION_MAX=7*24*60*60*1000; // 7일
-  function refreshTs(){
-    var s=JSON.parse(localStorage.getItem('mbti_session')||'null');
-    if(s){ s.ts=Date.now(); localStorage.setItem('mbti_session',JSON.stringify(s)); }
+  function doLogout(reason){
+    localStorage.removeItem('mbti_session');
+    toast('⏰ '+reason+' — 다시 로그인해 주세요');
+    setTimeout(function(){goSplash();},1500);
   }
   function checkExpiry(){
     var s=JSON.parse(localStorage.getItem('mbti_session')||'null');
-    if(s&&Date.now()-s.ts>SESSION_MAX){
-      localStorage.removeItem('mbti_session');
-      toast('⏰ 세션이 만료되었습니다. 다시 로그인해주세요');
-      setTimeout(function(){goSplash();},1500);
+    if(!s)return;
+    var now=Date.now();
+    // ★ exp 필드가 있으면 우선 사용 (관리자 8h / 기사 24h)
+    if(s.exp && now>s.exp){
+      doLogout('세션이 만료되었습니다');
+      return;
+    }
+    // ★ exp 없는 구버전 세션: 7일 유휴 기준
+    if(!s.exp){
+      var SESSION_MAX=7*24*60*60*1000;
+      if(s.ts && now-s.ts>SESSION_MAX){
+        doLogout('세션이 만료되었습니다');
+        return;
+      }
     }
   }
-  // 앱 전환 후 돌아올 때 세션 ts 갱신 (핵심 수정)
+  // 앱 전환 후 돌아올 때 세션 체크
   document.addEventListener('visibilitychange',function(){
-    if(!document.hidden){ refreshTs(); checkExpiry(); }
+    if(!document.hidden){ checkExpiry(); }
   });
-  // 포커스 복귀 시도 갱신
-  window.addEventListener('focus',function(){ refreshTs(); });
+  // 포커스 복귀 시 체크만 (ts 갱신은 exp 기반이므로 불필요)
+  window.addEventListener('focus',function(){ checkExpiry(); });
   // 초기 체크
   checkExpiry();
   // 1분마다 백그라운드 체크
