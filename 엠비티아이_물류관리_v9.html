@@ -8122,11 +8122,26 @@ function editScheduleCell(drvName, ds){
   
   var statusBtns=statuses.map(function(s){
     var sel=(cur.status||'')===s;
-    return '<button onclick="document.getElementById(\'ed-sch-status\').value=\''+s+'\';document.querySelectorAll(\'.ed-sch-sbtn\').forEach(function(b){b.style.background=\'var(--bg2)\';b.style.color=\'var(--text)\';});this.style.background=\''+stColors[s]+'\';this.style.color=\'#fff\'" class="ed-sch-sbtn" style="padding:7px 14px;border:1.5px solid '+stColors[s]+';border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;background:'+(sel?stColors[s]:'var(--bg2)')+';color:'+(sel?'#fff':'var(--text)')+'">'+statusLabels[s]+'</button>';
+    // 상태별 자동 설정 (주간=1회전,2회전+WAVE2 / 야간=D1,D2,D3+WAVE1)
+    var autoRot='', autoWave='';
+    if(s==='주'){autoRot='1회전,2회전';autoWave='WAVE2';}
+    else if(s==='야'){autoRot='D1,D2,D3';autoWave='WAVE1';}
+    else if(s==='휴무'||s==='병가'){autoRot='';}  // 회전 비우기
+    // 버튼 클릭 시 실행할 JS
+    var clickJs='document.getElementById(\'ed-sch-status\').value=\''+s+'\';'
+      +'document.querySelectorAll(\'.ed-sch-sbtn\').forEach(function(b){b.style.background=\'var(--bg2)\';b.style.color=\'var(--text)\';});'
+      +'this.style.background=\''+stColors[s]+'\';this.style.color=\'#fff\';'
+      // 회전 자동 입력 (빈 상태이거나 주/야 전환 시 덮어쓰기)
+      +'var rotEl=document.getElementById(\'ed-sch-rotation\');'
+      +'if(rotEl && (!rotEl.value.trim() || \''+s+'\'===\'주\' || \''+s+'\'===\'야\' || \''+s+'\'===\'휴무\' || \''+s+'\'===\'병가\'))rotEl.value=\''+autoRot+'\';'
+      // 웨이브 자동 설정 (있으면)
+      +(autoWave?'var waveEl=document.getElementById(\'ed-sch-wave\');if(waveEl && !waveEl.value)waveEl.value=\''+autoWave+'\';':'');
+    return '<button onclick="'+clickJs+'" class="ed-sch-sbtn" style="padding:7px 14px;border:1.5px solid '+stColors[s]+';border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;background:'+(sel?stColors[s]:'var(--bg2)')+';color:'+(sel?'#fff':'var(--text)')+'">'+statusLabels[s]+'</button>';
   }).join('');
   
-  var rotOpts=['','1회전','2회전','1회전,2회전','1회전,2회전,3회전'];
-  var rotSelect=rotOpts.map(function(r){return '<option value="'+r+'" '+((cur.rotation||'')===r?'selected':'')+'>'+(r||'(없음)')+'</option>';}).join('');
+  // ★ 회전 추천값 (주간: 1회전,2회전 형식 / 야간: D1,D2,D3 형식)
+  var rotSuggestions=['1회전','2회전','1회전,2회전','1회전,2회전,3회전','D1','D2','D3','D1,D2','D1,D2,D3','D1,D2,F3'];
+  var rotDatalist='<datalist id="ed-sch-rot-list">'+rotSuggestions.map(function(r){return '<option value="'+r+'">';}).join('')+'</datalist>';
   
   var campOpts=['','부산1','부산2','부산3','대구2','진주M'];
   var campSelect=campOpts.map(function(c){return '<option value="'+c+'" '+((cur.camp||'')===c?'selected':'')+'>'+(c||'(미지정)')+'</option>';}).join('');
@@ -8146,7 +8161,13 @@ function editScheduleCell(drvName, ds){
         +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">'+statusBtns+'</div>'
         +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">'
           +'<div><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:3px;font-weight:600">🚚 업무 라우트</label><input id="ed-sch-route" value="'+(cur.route||'')+'" placeholder="예: 215C, 215C,215D" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px"></div>'
-          +'<div><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:3px;font-weight:600">🔁 회전</label><select id="ed-sch-rotation" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px">'+rotSelect+'</select></div>'
+          +'<div><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:3px;font-weight:600">🔁 회전 <small style="color:var(--text3);font-weight:400">상태 선택 시 자동</small></label>'
+            +rotDatalist
+            +'<div style="display:flex;gap:4px;margin-bottom:4px">'
+              +'<button type="button" onclick="document.getElementById(\'ed-sch-rotation\').value=\'1회전,2회전\';" style="flex:1;padding:4px 6px;background:rgba(59,130,246,.15);color:#3B82F6;border:1px solid #3B82F6;border-radius:5px;font-size:10px;font-weight:700;cursor:pointer">☀ 1회전,2회전</button>'
+              +'<button type="button" onclick="document.getElementById(\'ed-sch-rotation\').value=\'D1,D2,D3\';" style="flex:1;padding:4px 6px;background:rgba(139,92,246,.15);color:#8B5CF6;border:1px solid #8B5CF6;border-radius:5px;font-size:10px;font-weight:700;cursor:pointer">🌙 D1,D2,D3</button>'
+            +'</div>'
+            +'<input id="ed-sch-rotation" list="ed-sch-rot-list" value="'+(cur.rotation||'')+'" placeholder="자동입력 또는 직접 입력" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px"></div>'
           +'<div><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:3px;font-weight:600">🏕 캠프명</label><select id="ed-sch-camp" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px">'+campSelect+'</select></div>'
           +'<div><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:3px;font-weight:600">🌊 웨이브</label><select id="ed-sch-wave" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px">'+waveSelect+'</select></div>'
         +'</div>'
@@ -8166,7 +8187,7 @@ function editScheduleCell(drvName, ds){
 function saveScheduleCell(drvName, ds){
   var status=(document.getElementById('ed-sch-status')||{}).value||'';
   var route=(document.getElementById('ed-sch-route')||{}).value.trim()||'';
-  var rotation=(document.getElementById('ed-sch-rotation')||{}).value||'';
+  var rotation=((document.getElementById('ed-sch-rotation')||{}).value||'').trim();
   var camp=(document.getElementById('ed-sch-camp')||{}).value||'';
   var wave=(document.getElementById('ed-sch-wave')||{}).value||'';
   
@@ -8499,6 +8520,9 @@ function downloadScheduleExcel(){
       var excelWave = wave;
       var excelRotation = rotation;
       
+      // ★ 기사 프로필의 shift 기준 기본 웨이브 결정
+      var defaultWave = (drv.shift === '야간') ? 'WAVE1' : 'WAVE2';
+      
       if(status === '주'){
         excelStatus = '출근';
         if(!excelWave) excelWave = 'WAVE2';
@@ -8506,14 +8530,15 @@ function downloadScheduleExcel(){
       } else if(status === '야'){
         excelStatus = '출근';
         if(!excelWave) excelWave = 'WAVE1';
-        if(!excelRotation) excelRotation = '1회전,2회전';
+        // ★ 야간은 쿠팡 양식 "D1,D2,D3"
+        if(!excelRotation) excelRotation = 'D1,D2,D3';
       } else if(status === '휴무'){
         excelStatus = '휴무';
-        if(!excelWave) excelWave = 'WAVE2';
+        if(!excelWave) excelWave = defaultWave;  // 기사 시간대 기반
         excelRotation = '';  // 휴무는 회전 없음
       } else if(status === '병가'){
         excelStatus = '병가';
-        if(!excelWave) excelWave = 'WAVE2';
+        if(!excelWave) excelWave = defaultWave;
         excelRotation = '';
       } else {
         excelStatus = status;  // 기타는 그대로
