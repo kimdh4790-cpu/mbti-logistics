@@ -2277,7 +2277,16 @@ async function syncFirebaseSettlements(){
     SP('settle',null);
   }catch(err){
     console.error('Sync error:',err);
-    alert('❌ 동기화 오류: '+(err&&err.message||err));
+    var emsg=(err&&err.message)||String(err);
+    // ★ Target ID already exists 는 Firebase 리스너 중복 충돌 (기능 영향 없음)
+    //   페이지 새로고침으로 해결되므로 자동 복구 안내
+    if(emsg.indexOf('Target ID already exists')>=0 || emsg.indexOf('already-exists')>=0){
+      if(confirm('⚠️ Firebase 연결 상태 충돌\n\n여러 탭에서 동시 접속하거나 오래 열려있을 때 발생합니다.\n(실제 데이터에는 문제없음)\n\n페이지 새로고침으로 즉시 해결됩니다.\n지금 새로고침할까요?')){
+        location.reload();
+      }
+    } else {
+      alert('❌ 동기화 오류: '+emsg);
+    }
   }
 }
 
@@ -6481,6 +6490,26 @@ document.querySelectorAll('.mo').forEach(m=>m.addEventListener('click',function(
 var _initialLoad=true;
 // ★ 리스너 중복 방지: 등록된 unsubscribe 함수들 저장 (재호출 시 해제 후 재등록)
 var _fbUnsubs=[];
+// ★ Target ID 충돌 에러를 한번만 사용자에게 보여주는 플래그
+var _targetIdAlertShown=false;
+// ★ 전역 Promise 미처리 에러 캐치 — Target ID 에러는 조용히 무시 + 1회 안내
+window.addEventListener('unhandledrejection', function(event){
+  var reason = event.reason;
+  var msg = reason && (reason.message || String(reason)) || '';
+  if(msg.indexOf('Target ID already exists')>=0 || msg.indexOf('already-exists')>=0){
+    console.warn('[Firestore] Target ID 충돌 (자동 무시):', msg);
+    event.preventDefault();  // 브라우저 콘솔 에러 억제
+    // 1회만 안내 (새로고침 제안)
+    if(!_targetIdAlertShown){
+      _targetIdAlertShown=true;
+      setTimeout(function(){
+        if(typeof toast==='function'){
+          toast('⚠️ Firebase 연결 충돌 감지 — F5 새로고침 권장');
+        }
+      }, 2000);
+    }
+  }
+});
 function _unsubAll(){
   if(!_fbUnsubs.length)return;
   _fbUnsubs.forEach(function(u){try{if(typeof u==='function')u();}catch(e){}});
