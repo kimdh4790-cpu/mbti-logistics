@@ -1815,6 +1815,13 @@ function SP(pg,el){
   }
   document.getElementById('ptitle').textContent=PT[pg]||pg;
   if(el){document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));el.classList.add('on');}
+  // ★ 보안: 관리자 전용 페이지 권한 체크
+  var adminOnlyPages=['drivers','settle','audit','archive','inquiries','insurance','sync','schedule_admin','memo','accident','temp','entry','delivery','delivery_taxi','delivery_line'];
+  if(adminOnlyPages.indexOf(pg)>=0 && S.curMode!=='admin'){
+    document.getElementById('ca').innerHTML='<div class="card" style="padding:40px;text-align:center"><div style="font-size:48px;margin-bottom:12px">🔒</div><div style="font-size:18px;font-weight:700;color:var(--red);margin-bottom:8px">접근 권한이 없습니다</div><div style="font-size:13px;color:var(--text2);margin-bottom:20px">이 페이지는 관리자 전용입니다</div><button onclick="SP(\'dash\',null)" class="btn btn-blue">대시보드로 이동</button></div>';
+    if(typeof addAct==='function')addAct('security','관리자 페이지 무단 접근 시도: '+pg,null);
+    return;
+  }
   var m={archive:rArchive,audit:rAuditLog,dash:rDash,sync:rSync,schedule_admin:rScheduleAdmin,memo:rMemoCalendar,entry:rEntry,delivery_taxi:rDeliveryTaxi,delivery_line:rDeliveryLine,delivery:rDelivery,accident:rAcc,temp:rTemp,settle:rSettle,drivers:rDrivers,insurance:rInsurance,mypage:rMypage,inquiries:rInquiries};
   try{
     document.getElementById('ca').innerHTML=(m[pg]||rDash)();
