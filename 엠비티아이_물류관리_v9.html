@@ -7846,65 +7846,322 @@ function rScheduleAdmin(){
   var curY=parseInt(localStorage.getItem('sched_year')||now.getFullYear());
   var curM=parseInt(localStorage.getItem('sched_month')||now.getMonth());
   var selDrv=localStorage.getItem('sched_driver')||'all';
+  var selCamp=localStorage.getItem('sched_camp')||'all';
+  var viewMode=localStorage.getItem('sched_view')||'month'; // 'month' 또는 'week'
+  var weekStart=localStorage.getItem('sched_weekstart')||''; // 'YYYY-MM-DD' (주간 모드에서 일요일 날짜)
   var lastDay=new Date(curY,curM+1,0).getDate();
   var mLabel=(curM+1)+'월 '+curY+'년';
   var DN=['일','월','화','수','목','금','토'];
   var stColors={'주':'rgba(59,130,246,.18)','야':'rgba(139,92,246,.18)','휴무':'rgba(107,114,128,.15)','병가':'rgba(239,68,68,.15)'};
   var stTxt={'주':'#3B82F6','야':'#8B5CF6','휴무':'#9CA3AF','병가':'#EF4444'};
-  var showDrs=(selDrv==='all')?drs:drs.filter(function(d){return d.name===selDrv;});
+  
+  // 캠프 목록 수집 (기사의 route 또는 스케줄 데이터에서)
+  var campSet=new Set();
+  drs.forEach(function(d){
+    var r=d.route||'';
+    if(r.indexOf('부산1')>=0)campSet.add('부산1');
+    else if(r.indexOf('부산2')>=0)campSet.add('부산2');
+    else if(r.indexOf('부산3')>=0)campSet.add('부산3');
+    else if(r.indexOf('대구')>=0)campSet.add('대구2');
+    else if(r.indexOf('진주')>=0)campSet.add('진주M');
+    // 스케줄 데이터에서 camp 읽기
+    var wkKey='schedule_'+d.name+'_month_'+curY+'_'+curM;
+    try{
+      var sc=JSON.parse(localStorage.getItem(wkKey)||'{}');
+      Object.values(sc).forEach(function(v){if(typeof v==='object'&&v.camp)campSet.add(v.camp);});
+    }catch(e){}
+  });
+  var camps=Array.from(campSet).sort();
+  
+  // 캠프 필터 적용
+  var showDrs=drs.filter(function(d){
+    if(selDrv!=='all'&&d.name!==selDrv)return false;
+    if(selCamp!=='all'){
+      // 기사의 route 또는 스케줄 데이터의 camp가 선택된 캠프와 일치하는지
+      var r=d.route||'';
+      var matchByRoute=(r.indexOf(selCamp)>=0);
+      var matchByScheduleCamp=false;
+      var wkKey='schedule_'+d.name+'_month_'+curY+'_'+curM;
+      try{
+        var sc=JSON.parse(localStorage.getItem(wkKey)||'{}');
+        Object.values(sc).forEach(function(v){if(typeof v==='object'&&v.camp===selCamp)matchByScheduleCamp=true;});
+      }catch(e){}
+      if(!matchByRoute && !matchByScheduleCamp)return false;
+    }
+    return true;
+  });
+  
+  // 표시할 날짜 계산 (월간 or 주간)
   var dates=[];
-  for(var d=1;d<=lastDay;d++){var dt=new Date(curY,curM,d);dates.push({d:d,wd:dt.getDay(),isWE:dt.getDay()===0||dt.getDay()===6});}
-
-  var header='<div style="display:grid;grid-template-columns:90px repeat('+lastDay+',1fr);gap:2px;margin-bottom:3px;position:sticky;top:0;background:var(--bg2);z-index:10;padding:4px 0;border-bottom:2px solid var(--border)">';
+  if(viewMode==='week'){
+    // 주간 모드: weekStart 기준 7일 (일~토)
+    var startDate;
+    if(weekStart && /^\d{4}-\d{2}-\d{2}$/.test(weekStart)){
+      var wp=weekStart.split('-');
+      startDate=new Date(parseInt(wp[0]),parseInt(wp[1])-1,parseInt(wp[2]));
+    } else {
+      // 오늘이 포함된 주의 일요일 찾기
+      startDate=new Date(now);
+      startDate.setDate(now.getDate()-now.getDay()); // 일요일로
+      localStorage.setItem('sched_weekstart',startDate.getFullYear()+'-'+String(startDate.getMonth()+1).padStart(2,'0')+'-'+String(startDate.getDate()).padStart(2,'0'));
+    }
+    for(var i=0;i<7;i++){
+      var d=new Date(startDate);
+      d.setDate(startDate.getDate()+i);
+      dates.push({d:d.getDate(),wd:d.getDay(),isWE:d.getDay()===0||d.getDay()===6,y:d.getFullYear(),m:d.getMonth(),full:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')});
+    }
+  } else {
+    // 월간 모드: 기존
+    for(var d=1;d<=lastDay;d++){
+      var dt=new Date(curY,curM,d);
+      dates.push({d:d,wd:dt.getDay(),isWE:dt.getDay()===0||dt.getDay()===6,y:curY,m:curM,full:curY+'-'+String(curM+1).padStart(2,'0')+'-'+String(d).padStart(2,'0')});
+    }
+  }
+  
+  var colCount=dates.length;
+  var header='<div style="display:grid;grid-template-columns:90px repeat('+colCount+',1fr);gap:2px;margin-bottom:3px;position:sticky;top:0;background:var(--bg2);z-index:10;padding:4px 0;border-bottom:2px solid var(--border)">';
   header+='<div style="font-size:10px;font-weight:700;color:var(--text2);padding:2px 4px">기사명</div>';
   dates.forEach(function(dt){
-    var isToday=(dt.d===now.getDate()&&curM===now.getMonth()&&curY===now.getFullYear());
+    var isToday=(dt.d===now.getDate()&&dt.m===now.getMonth()&&dt.y===now.getFullYear());
     header+='<div style="text-align:center;font-size:9px;font-weight:700;color:'+(dt.isWE?'#EF4444':'var(--text2)')+'">'+DN[dt.wd]+'<br><span style="color:'+(isToday?'var(--teal)':'inherit')+'">'+dt.d+'</span></div>';
   });
   header+='</div>';
 
   var rows='';
   if(!showDrs.length){
-    rows='<div style="padding:20px;text-align:center;color:var(--text3);font-size:12px">기사가 없습니다</div>';
+    rows='<div style="padding:20px;text-align:center;color:var(--text3);font-size:12px">조건에 맞는 기사가 없습니다</div>';
   } else {
     showDrs.forEach(function(drv){
       var wkKey='schedule_'+drv.name+'_month_'+curY+'_'+curM;
       var sc=JSON.parse(localStorage.getItem(wkKey)||'{}');
-      rows+='<div style="display:grid;grid-template-columns:90px repeat('+lastDay+',1fr);gap:2px;margin-bottom:2px">';
+      // 주간 모드에서 다른 월 포함될 수 있으므로 각 날짜마다 해당 월의 localStorage 키 조회
+      rows+='<div style="display:grid;grid-template-columns:90px repeat('+colCount+',1fr);gap:2px;margin-bottom:2px">';
       rows+='<div style="font-size:11px;font-weight:600;padding:4px 3px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis" title="'+drv.name+'">'+drv.name.slice(0,5)+'<br><span style="font-size:9px;color:var(--text3)">'+(drv.userId||'')+'</span></div>';
       dates.forEach(function(dt){
-        var ds=curY+'-'+String(curM+1).padStart(2,'0')+'-'+String(dt.d).padStart(2,'0');
-        var sc_val=sc[ds]||'';
+        var ds=dt.full;
+        var scForDate=sc;
+        if(dt.m!==curM||dt.y!==curY){
+          // 다른 월이면 별도 조회
+          var altKey='schedule_'+drv.name+'_month_'+dt.y+'_'+dt.m;
+          try{scForDate=JSON.parse(localStorage.getItem(altKey)||'{}');}catch(e){scForDate={};}
+        }
+        var sc_val=scForDate[ds]||'';
         var st=typeof sc_val==='object'?sc_val.status:(sc_val||'');
         var route=typeof sc_val==='object'?(sc_val.route||''):'';
-        var isToday=(dt.d===now.getDate()&&curM===now.getMonth()&&curY===now.getFullYear());
-        rows+='<div onclick="adminSetSchedule(\''+wkKey+'\',\''+ds+'\',\''+drv.name+'\')" style="text-align:center;padding:2px 1px;border-radius:4px;cursor:pointer;min-height:30px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:'+(isToday?'rgba(15,110,86,.15)':(stColors[st]||'var(--bg2)'))+';border:1px solid '+(isToday?'var(--teal)':'var(--border)')+'"><div style="font-size:10px;font-weight:700;color:'+(stTxt[st]||'var(--text3)')+'">'+( st||'·')+'</div>'+(route?'<div style="font-size:9px;color:var(--blue);line-height:1.1;font-weight:600">'+route+'</div>':'')+'</div>';
+        var isToday=(dt.d===now.getDate()&&dt.m===now.getMonth()&&dt.y===now.getFullYear());
+        var cellKey='schedule_'+drv.name+'_month_'+dt.y+'_'+dt.m;
+        rows+='<div style="position:relative;text-align:center;padding:2px 1px;border-radius:4px;cursor:pointer;min-height:30px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:'+(isToday?'rgba(15,110,86,.15)':(stColors[st]||'var(--bg2)'))+';border:1px solid '+(isToday?'var(--teal)':'var(--border)')+'">'
+          +'<div onclick="adminSetSchedule(\''+cellKey+'\',\''+ds+'\',\''+drv.name+'\')" style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center">'
+            +'<div style="font-size:10px;font-weight:700;color:'+(stTxt[st]||'var(--text3)')+'">'+(st||'·')+'</div>'
+            +(route?'<div style="font-size:9px;color:var(--blue);line-height:1.1;font-weight:600">'+route+'</div>':'')
+          +'</div>'
+          +'<div onclick="event.stopPropagation();editScheduleCell(\''+drv.name+'\',\''+ds+'\')" style="position:absolute;top:1px;right:1px;width:14px;height:14px;font-size:8px;color:var(--blue);cursor:pointer;opacity:0.6;line-height:14px;text-align:center" title="상세 수정">✏</div>'
+          +'</div>';
       });
       rows+='</div>';
     });
   }
 
   var drvOpts='<option value="all">전체 기사</option>'+drs.map(function(d){return'<option value="'+d.name+'" '+(selDrv===d.name?'selected':'')+'>'+d.name+'</option>';}).join('');
+  var campOpts='<option value="all">전체 캠프</option>'+camps.map(function(c){return'<option value="'+c+'" '+(selCamp===c?'selected':'')+'>'+c+'</option>';}).join('');
+  
+  // 주간 모드 네비게이션 라벨
+  var weekLabel='';
+  if(viewMode==='week' && dates.length===7){
+    var s=dates[0], e=dates[6];
+    weekLabel=s.y+'.'+String(s.m+1).padStart(2,'0')+'.'+String(s.d).padStart(2,'0')+' ~ '+e.y+'.'+String(e.m+1).padStart(2,'0')+'.'+String(e.d).padStart(2,'0');
+  }
 
-  return '<div class="card"><div class="ch"><span class="ct">📅 기사별 월간 근무표</span>'
-    +'<div style="display:flex;gap:6px;align-items:center">'
+  return '<div class="card"><div class="ch"><span class="ct">📅 기사별 '+(viewMode==='week'?'주간':'월간')+' 근무표</span>'
+    +'<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
     +'<label style="padding:5px 12px;background:var(--teal);color:#fff;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">📂 엑셀 업로드<input type="file" accept=".xlsx,.xls" style="display:none" onchange="parseScheduleExcel(this)"></label>'
     +'<button onclick="downloadScheduleExcel()" style="padding:5px 12px;background:#0ea5e9;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer" title="현재 월의 근무표를 쿠팡 엑셀 양식으로 다운로드">📥 엑셀 다운로드</button>'
     +'<button onclick="resetSchedule()" style="padding:5px 12px;background:#ef4444;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">🗑 초기화</button>'
     +'<button class="btn btn-sm btn-teal" onclick="SP(\'schedule_admin\',null)">🔄 새로고침</button>'
     +'</div></div>'
-    +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding:8px;background:var(--bg3);border-radius:var(--r)">'
-    +'<button onclick="schedNavMonth(-1)" style="padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg2);color:var(--text);cursor:pointer;font-size:13px">◀</button>'
-    +'<span style="font-size:14px;font-weight:700;min-width:90px;text-align:center">'+mLabel+'</span>'
-    +'<button onclick="schedNavMonth(1)" style="padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg2);color:var(--text);cursor:pointer;font-size:13px">▶</button>'
-    +'<select onchange="schedFilterDrv(this.value)" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:12px">'+drvOpts+'</select>'
-    +'<span style="font-size:11px;color:var(--text3)">셀 탭 → 주간↔야간↔휴무↔병가 순환</span></div>'
+    // 뷰 모드 전환 + 네비게이션
+    +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;padding:8px;background:var(--bg3);border-radius:var(--r)">'
+      +'<div style="display:flex;gap:3px;background:var(--bg2);border-radius:6px;padding:2px">'
+        +'<button onclick="schedSwitchView(\'month\')" style="padding:4px 12px;border:none;border-radius:5px;font-size:12px;font-weight:700;cursor:pointer;background:'+(viewMode==='month'?'var(--teal)':'transparent')+';color:'+(viewMode==='month'?'#fff':'var(--text2)')+'">📅 월간</button>'
+        +'<button onclick="schedSwitchView(\'week\')" style="padding:4px 12px;border:none;border-radius:5px;font-size:12px;font-weight:700;cursor:pointer;background:'+(viewMode==='week'?'var(--teal)':'transparent')+';color:'+(viewMode==='week'?'#fff':'var(--text2)')+'">📆 주간</button>'
+      +'</div>'
+      +(viewMode==='month'
+        ? '<button onclick="schedNavMonth(-1)" style="padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg2);color:var(--text);cursor:pointer;font-size:13px">◀</button>'
+          +'<span style="font-size:14px;font-weight:700;min-width:90px;text-align:center">'+mLabel+'</span>'
+          +'<button onclick="schedNavMonth(1)" style="padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg2);color:var(--text);cursor:pointer;font-size:13px">▶</button>'
+        : '<button onclick="schedNavWeek(-1)" style="padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg2);color:var(--text);cursor:pointer;font-size:13px">◀</button>'
+          +'<span style="font-size:13px;font-weight:700;min-width:160px;text-align:center">'+weekLabel+'</span>'
+          +'<button onclick="schedNavWeek(1)" style="padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg2);color:var(--text);cursor:pointer;font-size:13px">▶</button>'
+          +'<button onclick="schedToThisWeek()" style="padding:5px 10px;border:1px solid var(--teal);color:var(--teal);border-radius:6px;background:var(--bg);cursor:pointer;font-size:11px;font-weight:700">이번주</button>'
+      )
+    +'</div>'
+    // 필터
+    +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;padding:8px;background:var(--bg3);border-radius:var(--r)">'
+      +'<span style="font-size:11px;color:var(--text2);font-weight:600">🏕 캠프</span>'
+      +'<select onchange="schedFilterCamp(this.value)" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:12px">'+campOpts+'</select>'
+      +'<span style="font-size:11px;color:var(--text2);font-weight:600;margin-left:6px">👤 기사</span>'
+      +'<select onchange="schedFilterDrv(this.value)" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:12px">'+drvOpts+'</select>'
+      +'<span style="font-size:11px;color:var(--text3);margin-left:auto">셀 탭: 상태순환 · ✏ 클릭: 상세수정</span>'
+    +'</div>'
     +'<div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">'
     +'<span style="font-size:10px;background:rgba(59,130,246,.18);padding:2px 8px;border-radius:4px;color:#3B82F6;font-weight:700">주간</span>'
     +'<span style="font-size:10px;background:rgba(139,92,246,.18);padding:2px 8px;border-radius:4px;color:#8B5CF6;font-weight:700">야간</span>'
     +'<span style="font-size:10px;background:rgba(107,114,128,.15);padding:2px 8px;border-radius:4px;color:#9CA3AF;font-weight:700">휴무</span>'
     +'<span style="font-size:10px;background:rgba(239,68,68,.15);padding:2px 8px;border-radius:4px;color:#EF4444;font-weight:700">병가</span></div>'
-    +'<div style="overflow-x:auto"><div style="min-width:'+(90+lastDay*32)+'px">'+header+rows+'</div></div></div>';
+    +'<div style="overflow-x:auto"><div style="min-width:'+(90+colCount*50)+'px">'+header+rows+'</div></div></div>';
+}
+
+// 뷰 모드 전환 (월간↔주간)
+function schedSwitchView(mode){
+  localStorage.setItem('sched_view', mode);
+  SP('schedule_admin', null);
+}
+
+// 주간 네비게이션
+function schedNavWeek(direction){
+  var cur=localStorage.getItem('sched_weekstart')||'';
+  var d;
+  if(cur && /^\d{4}-\d{2}-\d{2}$/.test(cur)){
+    var p=cur.split('-');
+    d=new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]));
+  } else {
+    d=new Date();d.setDate(d.getDate()-d.getDay());
+  }
+  d.setDate(d.getDate()+direction*7);
+  var newStart=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  localStorage.setItem('sched_weekstart', newStart);
+  SP('schedule_admin', null);
+}
+
+// 이번 주로 이동
+function schedToThisWeek(){
+  var now=new Date();
+  var sun=new Date(now);
+  sun.setDate(now.getDate()-now.getDay());
+  var s=sun.getFullYear()+'-'+String(sun.getMonth()+1).padStart(2,'0')+'-'+String(sun.getDate()).padStart(2,'0');
+  localStorage.setItem('sched_weekstart', s);
+  SP('schedule_admin', null);
+}
+
+// 캠프 필터
+function schedFilterCamp(v){
+  localStorage.setItem('sched_camp', v);
+  SP('schedule_admin', null);
+}
+
+// 근무 셀 상세 수정 모달 (상태/라우트/회전 한번에)
+function editScheduleCell(drvName, ds){
+  var ymd=ds.split('-');
+  var y=parseInt(ymd[0]), m=parseInt(ymd[1])-1;
+  var wkKey='schedule_'+drvName+'_month_'+y+'_'+m;
+  var sc={};
+  try{ sc=JSON.parse(localStorage.getItem(wkKey)||'{}'); }catch(e){}
+  var cur=sc[ds]||{};
+  if(typeof cur==='string') cur={status:cur, route:'', wave:'', rotation:'', camp:''};
+  
+  document.getElementById('sched-edit-mo')?.remove();
+  
+  var statuses=['주','야','휴무','병가',''];
+  var statusLabels={'주':'주간 출근','야':'야간 출근','휴무':'휴무','병가':'병가','':'(없음)'};
+  var stColors={'주':'#3B82F6','야':'#8B5CF6','휴무':'#9CA3AF','병가':'#EF4444','':'#6B7280'};
+  
+  var statusBtns=statuses.map(function(s){
+    var sel=(cur.status||'')===s;
+    return '<button onclick="document.getElementById(\'ed-sch-status\').value=\''+s+'\';document.querySelectorAll(\'.ed-sch-sbtn\').forEach(function(b){b.style.background=\'var(--bg2)\';b.style.color=\'var(--text)\';});this.style.background=\''+stColors[s]+'\';this.style.color=\'#fff\'" class="ed-sch-sbtn" style="padding:7px 14px;border:1.5px solid '+stColors[s]+';border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;background:'+(sel?stColors[s]:'var(--bg2)')+';color:'+(sel?'#fff':'var(--text)')+'">'+statusLabels[s]+'</button>';
+  }).join('');
+  
+  var rotOpts=['','1회전','2회전','1회전,2회전','1회전,2회전,3회전'];
+  var rotSelect=rotOpts.map(function(r){return '<option value="'+r+'" '+((cur.rotation||'')===r?'selected':'')+'>'+(r||'(없음)')+'</option>';}).join('');
+  
+  var campOpts=['','부산1','부산2','부산3','대구2','진주M'];
+  var campSelect=campOpts.map(function(c){return '<option value="'+c+'" '+((cur.camp||'')===c?'selected':'')+'>'+(c||'(미지정)')+'</option>';}).join('');
+  
+  var waveOpts=['','WAVE1','WAVE2'];
+  var waveSelect=waveOpts.map(function(w){return '<option value="'+w+'" '+((cur.wave||'')===w?'selected':'')+'>'+(w||'(없음)')+'</option>';}).join('');
+  
+  var html='<div style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;display:flex;align-items:center;justify-content:center;padding:14px" id="sched-edit-mo" onclick="if(event.target===this)this.remove()">'
+    +'<div onclick="event.stopPropagation()" style="width:460px;max-width:95vw;background:var(--bg);border-radius:14px;padding:0">'
+      +'<div style="padding:14px 18px;border-bottom:1px solid var(--border)">'
+        +'<span style="font-size:16px;font-weight:700">✏️ 근무 상세 수정</span><br>'
+        +'<small style="color:var(--text3)">'+drvName+' · '+ds+'</small>'
+      +'</div>'
+      +'<div style="padding:16px 18px">'
+        +'<input type="hidden" id="ed-sch-status" value="'+(cur.status||'')+'">'
+        +'<label style="font-size:11px;color:var(--text2);display:block;margin-bottom:6px;font-weight:600">📌 근무 상태</label>'
+        +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">'+statusBtns+'</div>'
+        +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">'
+          +'<div><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:3px;font-weight:600">🚚 업무 라우트</label><input id="ed-sch-route" value="'+(cur.route||'')+'" placeholder="예: 215C, 215C,215D" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px"></div>'
+          +'<div><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:3px;font-weight:600">🔁 회전</label><select id="ed-sch-rotation" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px">'+rotSelect+'</select></div>'
+          +'<div><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:3px;font-weight:600">🏕 캠프명</label><select id="ed-sch-camp" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px">'+campSelect+'</select></div>'
+          +'<div><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:3px;font-weight:600">🌊 웨이브</label><select id="ed-sch-wave" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px">'+waveSelect+'</select></div>'
+        +'</div>'
+        +'<div style="display:flex;gap:8px;justify-content:space-between;padding-top:10px;border-top:1px solid var(--border)">'
+          +'<button onclick="deleteScheduleCell(\''+drvName+'\',\''+ds+'\')" style="padding:9px 14px;background:var(--red-l);color:var(--red);border:1.5px solid var(--red);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">🗑 이 날짜 삭제</button>'
+          +'<div style="display:flex;gap:8px">'
+            +'<button onclick="document.getElementById(\'sched-edit-mo\').remove()" style="padding:9px 18px;background:var(--bg2);border:1.5px solid var(--border);border-radius:6px;font-size:13px;font-weight:600;cursor:pointer">취소</button>'
+            +'<button onclick="saveScheduleCell(\''+drvName+'\',\''+ds+'\')" class="btn btn-blue" style="padding:9px 22px;font-size:13px;font-weight:700">💾 저장</button>'
+          +'</div>'
+        +'</div>'
+      +'</div>'
+    +'</div>'
+  +'</div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function saveScheduleCell(drvName, ds){
+  var status=(document.getElementById('ed-sch-status')||{}).value||'';
+  var route=(document.getElementById('ed-sch-route')||{}).value.trim()||'';
+  var rotation=(document.getElementById('ed-sch-rotation')||{}).value||'';
+  var camp=(document.getElementById('ed-sch-camp')||{}).value||'';
+  var wave=(document.getElementById('ed-sch-wave')||{}).value||'';
+  
+  var ymd=ds.split('-');
+  var y=parseInt(ymd[0]), m=parseInt(ymd[1])-1;
+  var wkKey='schedule_'+drvName+'_month_'+y+'_'+m;
+  var sc={};
+  try{ sc=JSON.parse(localStorage.getItem(wkKey)||'{}'); }catch(e){}
+  
+  sc[ds]={status:status, route:route, rotation:rotation, camp:camp, wave:wave};
+  localStorage.setItem(wkKey, JSON.stringify(sc));
+  
+  // Firebase 동기화
+  if(FB&&_db){
+    var drv=ls('drivers').find(function(d){return d.name===drvName;});
+    var fbKey=(drv&&drv.fbId)?(drv.fbId+'_'+ds):(drvName+'_'+ds);
+    _db.collection('schedules').doc(fbKey).set(
+      {driver:drvName, date:ds, status:status, route:route, wave:wave, rotation:rotation, camp:camp, updAt:new Date().toISOString()},
+      {merge:true}
+    ).catch(function(e){console.warn('근무 셀 저장 FB:', e&&e.message);});
+  }
+  
+  if(typeof addAct==='function'){
+    addAct('schedule', drvName+' '+ds+' 근무 수정: '+(status||'(없음)')+(route?' / '+route:''), drvName);
+  }
+  
+  document.getElementById('sched-edit-mo')?.remove();
+  SP('schedule_admin', null);
+  toast('✅ '+drvName+' '+ds+' 저장됨');
+}
+
+function deleteScheduleCell(drvName, ds){
+  if(!confirm(drvName+' '+ds+' 근무 기록을 삭제하시겠습니까?'))return;
+  var ymd=ds.split('-');
+  var y=parseInt(ymd[0]), m=parseInt(ymd[1])-1;
+  var wkKey='schedule_'+drvName+'_month_'+y+'_'+m;
+  var sc={};
+  try{ sc=JSON.parse(localStorage.getItem(wkKey)||'{}'); }catch(e){}
+  delete sc[ds];
+  localStorage.setItem(wkKey, JSON.stringify(sc));
+  
+  if(FB&&_db){
+    var drv=ls('drivers').find(function(d){return d.name===drvName;});
+    var fbKey=(drv&&drv.fbId)?(drv.fbId+'_'+ds):(drvName+'_'+ds);
+    _db.collection('schedules').doc(fbKey).delete().catch(function(){});
+  }
+  
+  document.getElementById('sched-edit-mo')?.remove();
+  SP('schedule_admin', null);
+  toast('🗑 '+drvName+' '+ds+' 삭제됨');
 }
 
 function resetSchedule(){
@@ -7947,9 +8204,10 @@ function parseScheduleExcel(inp){
   var reader=new FileReader();
   reader.onload=function(e){
     try{
-      // ★ cellDates:true 로 날짜를 항상 Date 객체로 받기
-      var wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+      // ★ cellDates 옵션 제거 → Excel 원본 시리얼(숫자)로 받음 (xlsx.js 시간대 버그 우회)
+      var wb=XLSX.read(e.target.result,{type:'array'});
       var ws=wb.Sheets[wb.SheetNames[0]];
+      // raw:true → 숫자형 유지 (서식 적용된 텍스트가 아닌 원본 값)
       var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true});
       if(rows.length<2){toast('❌ 데이터 없음');return;}
       var hdr=rows[0];
@@ -7968,30 +8226,44 @@ function parseScheduleExcel(inp){
         var rawDate=row[iDate];
         var ds;
         try{
-          if(rawDate instanceof Date){
-            // ★ xlsx.js가 Excel 날짜를 Date 객체로 바꿀 때 환경마다 시간대 해석이 다름
-            // 가장 안전한 방법: Date의 UTC epoch에 로컬 타임존 오프셋을 더해서 "시간대 중립" 날짜 추출
-            // 결과적으로 엑셀에 찍힌 연/월/일이 그대로 나옴
-            var tzOffsetMs = rawDate.getTimezoneOffset() * 60000;  // KST = -540분 → -32400000ms
+          if(typeof rawDate==='number'){
+            // ★ Excel serial number → YYYY-MM-DD 직접 변환 (시간대 무관)
+            // Excel serial 1 = 1900-01-01 (1900 윤년 버그 포함)
+            // Unix epoch 25569 = 1970-01-01
+            // 1 day = 86400 * 1000 ms
+            var utcMs = Math.round((rawDate - 25569) * 86400 * 1000);
+            var tmp = new Date(utcMs);
+            // UTC 기준으로 날짜 추출 (시간대 무관, Excel 날짜 그대로)
+            var yr = tmp.getUTCFullYear();
+            var mo = String(tmp.getUTCMonth()+1).padStart(2,'0');
+            var dy = String(tmp.getUTCDate()).padStart(2,'0');
+            ds = yr+'-'+mo+'-'+dy;
+          } else if(rawDate instanceof Date){
+            // 혹시 Date 객체로 들어올 경우: 타임존 보정 후 UTC 추출
+            var tzOffsetMs = rawDate.getTimezoneOffset() * 60000;
             var adjustedMs = rawDate.getTime() - tzOffsetMs;
             var adj = new Date(adjustedMs);
-            var yr = adj.getUTCFullYear();
-            var mo = String(adj.getUTCMonth()+1).padStart(2,'0');
-            var dy = String(adj.getUTCDate()).padStart(2,'0');
-            ds = yr+'-'+mo+'-'+dy;
-          } else if(typeof rawDate==='number'){
-            // Excel 시리얼 → UTC 기준으로 변환 후 UTC 메서드로 추출
-            var utcMs=Math.round((rawDate-25569)*86400*1000);
-            var tmp=new Date(utcMs);
-            var yr2=tmp.getUTCFullYear();
-            var mo2=String(tmp.getUTCMonth()+1).padStart(2,'0');
-            var dy2=String(tmp.getUTCDate()).padStart(2,'0');
-            ds=yr2+'-'+mo2+'-'+dy2;
+            var yr3 = adj.getUTCFullYear();
+            var mo3 = String(adj.getUTCMonth()+1).padStart(2,'0');
+            var dy3 = String(adj.getUTCDate()).padStart(2,'0');
+            ds = yr3+'-'+mo3+'-'+dy3;
+          } else if(typeof rawDate === 'string'){
+            // 문자열 날짜 (예: "2026-04-19" 또는 "2026/04/19")
+            var s = rawDate.trim().replace(/\//g,'-').slice(0,10);
+            if(/^\d{4}-\d{1,2}-\d{1,2}$/.test(s)){
+              var parts = s.split('-');
+              ds = parts[0]+'-'+parts[1].padStart(2,'0')+'-'+parts[2].padStart(2,'0');
+            } else {
+              errors++;return;
+            }
           } else {
-            ds=String(rawDate).slice(0,10);
-            if(!/^\d{4}-\d{2}-\d{2}$/.test(ds)){errors++;return;}
+            errors++;return;
           }
-        }catch(dErr){errors++;return;}
+          // 디버그 로그 (첫 5개 행만)
+          if(count<5 && errors<3){
+            console.log('[DEBUG 날짜변환] raw:', rawDate, 'type:', typeof rawDate, '→ ds:', ds);
+          }
+        }catch(dErr){errors++;console.warn('날짜 파싱 실패:',rawDate,dErr);return;}
         
         var name=String(row[iName]).trim();
         if(!name){errors++;return;}
@@ -8203,11 +8475,11 @@ function downloadScheduleExcel(){
         else camp='부산1';  // 기본값
       }
       
-      // 날짜: Excel에서 Date 타입으로 정상 표시되도록 Date 객체로
-      var dateObj = new Date(year, month0, day, 0, 0, 0);
+      // 날짜: 문자열 "YYYY-MM-DD"로 저장 (쿠팡 업로드 시 안정적)
+      var dateStr = ds;  // 이미 "YYYY-MM-DD" 포맷
       
       rows.push([
-        dateObj,
+        dateStr,
         vendorName,
         bizNum,
         camp,
@@ -8231,20 +8503,11 @@ function downloadScheduleExcel(){
     // XLSX 생성
     var ws = XLSX.utils.aoa_to_sheet(rows);
     
-    // 컬럼 폭 설정 (선택)
+    // 컬럼 폭 설정
     ws['!cols'] = [
       {wch:12},{wch:25},{wch:14},{wch:8},{wch:8},
       {wch:10},{wch:14},{wch:10},{wch:14},{wch:20}
     ];
-    
-    // 날짜 셀 포맷 지정 (B2:B... 열의 각 셀)
-    for(var r=2; r<=rows.length; r++){
-      var cellRef = 'A'+r;
-      if(ws[cellRef]){
-        ws[cellRef].t = 'd';
-        ws[cellRef].z = 'yyyy-mm-dd';
-      }
-    }
     
     var wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, '근무표');
