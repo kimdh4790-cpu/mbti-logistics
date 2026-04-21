@@ -3075,7 +3075,7 @@ function rDrivers(){
       <td style="font-size:11px">${d.plate}<br><span class="badge b-done" style="font-size:9px">${d.ton||''}</span></td>
       <td><span class="badge ${d.jobtype==='택배'?'b-coral':'b-blue'}" style="font-size:10px">${d.jobtype||'택배'}</span><br><select onchange="setDrvJobsub('${d.fbId||d.id}',this.value)" title="업무 유형 변경" style="font-size:10px;padding:2px 3px;margin-top:2px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text2);cursor:pointer">${['쿠팡','컬리','CJ','용차','MBTI본사'].map(v=>`<option value="${v}" ${(d.jobsub||'')===v?'selected':''}>${v}</option>`).join('')}</select></td>
       <td><span class="badge b-done" style="font-size:10px">${d.employ||'지입'}</span></td>
-      <td style="font-size:11px">${d.route}</td>
+      <td style="font-size:11px">${d.camp?`<span style="display:inline-block;background:rgba(245,158,11,.18);color:var(--amber);padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;margin-right:3px">🏕${d.camp}</span>`:''}${d.shift?`<span style="display:inline-block;background:${d.shift==='주간'?'rgba(59,130,246,.18)':d.shift==='야간'?'rgba(139,92,246,.18)':'rgba(16,185,129,.18)'};color:${d.shift==='주간'?'#3B82F6':d.shift==='야간'?'#8B5CF6':'#10B981'};padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;margin-right:3px">${d.shift==='주간'?'☀':d.shift==='야간'?'🌙':'🌓'}${d.shift}</span>`:''}${d.route||''}</td>
       <td>${docThumbs(d)}</td>
       <td><span class="badge ${d.status==='운행중'?'b-run':'b-wait'}">${d.status}</span></td>
       <td style="display:flex;gap:3px;flex-wrap:wrap">
@@ -3146,6 +3146,12 @@ function openEditDriver(fbIdOrId){
   var employOpts=['지입','직고용','위수탁'].map(function(t){
     return '<option value="'+t+'" '+((d.employ||'지입')===t?'selected':'')+'>'+t+'</option>';
   }).join('');
+  var campOpts=['','부산1','부산2','부산3','대구2','진주M','기타'].map(function(t){
+    return '<option value="'+t+'" '+((d.camp||'')===t?'selected':'')+'>'+(t||'(미지정)')+'</option>';
+  }).join('');
+  var shiftOpts=['','주간','야간','주야간'].map(function(t){
+    return '<option value="'+t+'" '+((d.shift||'')===t?'selected':'')+'>'+(t||'(미지정)')+'</option>';
+  }).join('');
   
   var html = '<div style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;display:flex;align-items:center;justify-content:center;padding:14px" id="edit-drv-mo" onclick="if(event.target===this)this.remove()">'
     +'<div onclick="event.stopPropagation()" style="width:520px;max-width:95vw;max-height:92vh;overflow-y:auto;background:var(--bg);border-radius:14px;padding:0">'
@@ -3168,7 +3174,9 @@ function openEditDriver(fbIdOrId){
           +'<div><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:3px">업무 유형</label><select id="ed-jobtype" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px">'+jobtypeOpts+'</select></div>'
           +'<div><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:3px">화주사</label><select id="ed-jobsub" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px">'+jobsubOpts+'</select></div>'
           +'<div><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:3px">고용 형태</label><select id="ed-employ" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px">'+employOpts+'</select></div>'
-          +'<div><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:3px">노선</label><input id="ed-route" value="'+(d.route||'')+'" placeholder="예: 부산1캠프" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px"></div>'
+          +'<div><label style="font-size:11px;color:var(--amber);display:block;margin-bottom:3px;font-weight:700">🏕 소속 캠프</label><select id="ed-camp" style="width:100%;padding:8px;border:1.5px solid var(--amber);border-radius:6px;font-size:13px;font-weight:600">'+campOpts+'</select></div>'
+          +'<div><label style="font-size:11px;color:var(--purple);display:block;margin-bottom:3px;font-weight:700">🌓 근무 시간대</label><select id="ed-shift" style="width:100%;padding:8px;border:1.5px solid var(--purple);border-radius:6px;font-size:13px;font-weight:600">'+shiftOpts+'</select></div>'
+          +'<div style="grid-column:1/3"><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:3px">노선</label><input id="ed-route" value="'+(d.route||'')+'" placeholder="예: 부산1캠프 215C" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px"></div>'
         +'</div>'
         +'<div style="font-size:12px;font-weight:700;color:var(--amber);margin-bottom:8px;padding-left:8px;border-left:3px solid var(--amber)">💼 사업자 정보 (선택)</div>'
         +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">'
@@ -3204,6 +3212,8 @@ function saveEditDriver(fbIdOrId){
   var newJobsub=getVal('ed-jobsub');
   var newEmploy=getVal('ed-employ');
   var newRoute=getVal('ed-route').trim();
+  var newCamp=getVal('ed-camp');
+  var newShift=getVal('ed-shift');
   var newBizNum=getVal('ed-bizNum').trim();
   var newBizName=getVal('ed-bizName').trim();
   var newBizAddr=getVal('ed-bizAddr').trim();
@@ -3227,6 +3237,8 @@ function saveEditDriver(fbIdOrId){
   d.jobsub=newJobsub||d.jobsub;
   d.employ=newEmploy||d.employ;
   d.route=newRoute;
+  d.camp=newCamp;  // ★ 소속 캠프
+  d.shift=newShift;  // ★ 근무 시간대
   d.bizNum=newBizNum;
   d.bizName=newBizName;
   d.bizAddr=newBizAddr;
@@ -3242,6 +3254,7 @@ function saveEditDriver(fbIdOrId){
       name:d.name, userId:d.userId, phone:d.phone,
       password:d.password||'', plate:d.plate, ton:d.ton,
       jobtype:d.jobtype, jobsub:d.jobsub, employ:d.employ, route:d.route,
+      camp:d.camp||'', shift:d.shift||'',
       bizNum:d.bizNum, bizName:d.bizName, bizAddr:d.bizAddr,
       updatedAt:d.updatedAt, updatedBy:d.updatedBy
     }).then(function(){
@@ -3599,6 +3612,14 @@ function rMypage(){
       html+='</div>';
       html+='<div class="fg"><label>업무 유형 <small style="color:var(--text3);font-weight:400;margin-left:4px">🔒 관리자만 변경 가능 (변경 요청 시 관리자 문의)</small></label>';
       html+='<input type="text" id="mp-jobsub-view" value="'+(d.jobsub||'쿠팡')+'" readonly style="width:100%;padding:9px 11px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--bg3);color:var(--text2);cursor:not-allowed">';
+      html+='</div>';
+      html+='<div class="fg"><label>🏕 소속 캠프 <small style="color:var(--text3);font-weight:400;margin-left:4px">🔒 관리자가 배정</small></label>';
+      html+='<input type="text" id="mp-camp-view" value="'+(d.camp||'(미지정)')+'" readonly style="width:100%;padding:9px 11px;border:1.5px solid '+(d.camp?'var(--amber)':'var(--border)')+';border-radius:var(--r);font-size:13px;background:var(--bg3);color:'+(d.camp?'var(--amber)':'var(--text2)')+';font-weight:'+(d.camp?'700':'400')+';cursor:not-allowed">';
+      html+='</div>';
+      html+='<div class="fg"><label>🌓 근무 시간대 <small style="color:var(--text3);font-weight:400;margin-left:4px">🔒 관리자가 배정</small></label>';
+      var shiftIcon=d.shift==='주간'?'☀':d.shift==='야간'?'🌙':d.shift==='주야간'?'🌓':'';
+      var shiftColor=d.shift==='주간'?'#3B82F6':d.shift==='야간'?'#8B5CF6':d.shift==='주야간'?'#10B981':'var(--text2)';
+      html+='<input type="text" id="mp-shift-view" value="'+(shiftIcon+' '+(d.shift||'(미지정)'))+'" readonly style="width:100%;padding:9px 11px;border:1.5px solid '+(d.shift?shiftColor:'var(--border)')+';border-radius:var(--r);font-size:13px;background:var(--bg3);color:'+shiftColor+';font-weight:'+(d.shift?'700':'400')+';cursor:not-allowed">';
       html+='</div>';
 
       // 서류 5종
@@ -7847,6 +7868,7 @@ function rScheduleAdmin(){
   var curM=parseInt(localStorage.getItem('sched_month')||now.getMonth());
   var selDrv=localStorage.getItem('sched_driver')||'all';
   var selCamp=localStorage.getItem('sched_camp')||'all';
+  var selShift=localStorage.getItem('sched_shift')||'all';
   var viewMode=localStorage.getItem('sched_view')||'month'; // 'month' 또는 'week'
   var weekStart=localStorage.getItem('sched_weekstart')||''; // 'YYYY-MM-DD' (주간 모드에서 일요일 날짜)
   var lastDay=new Date(curY,curM+1,0).getDate();
@@ -7855,44 +7877,58 @@ function rScheduleAdmin(){
   var stColors={'주':'rgba(59,130,246,.18)','야':'rgba(139,92,246,.18)','휴무':'rgba(107,114,128,.15)','병가':'rgba(239,68,68,.15)'};
   var stTxt={'주':'#3B82F6','야':'#8B5CF6','휴무':'#9CA3AF','병가':'#EF4444'};
   
-  // 캠프 목록 수집 — 기본 5개 캠프를 항상 포함 + 기사/스케줄 데이터에서 자동 감지
+  // 캠프 목록 수집 — 기본 5개 캠프를 항상 포함 + 기사 profile/스케줄 데이터에서 자동 감지
   var campSet=new Set();
-  // ★ 기본 캠프 5개 강제 포함 (기사 데이터와 무관하게 항상 드롭다운에 표시)
+  // ★ 기본 캠프 5개 강제 포함
   ['부산1','부산2','부산3','대구2','진주M'].forEach(function(c){campSet.add(c);});
   drs.forEach(function(d){
+    // ★ 기사 프로필의 camp 필드 우선
+    if(d.camp)campSet.add(d.camp);
+    // route에서 보조 추출 (fallback)
     var r=d.route||'';
     if(r.indexOf('부산1')>=0)campSet.add('부산1');
     else if(r.indexOf('부산2')>=0)campSet.add('부산2');
     else if(r.indexOf('부산3')>=0)campSet.add('부산3');
     else if(r.indexOf('대구')>=0)campSet.add('대구2');
     else if(r.indexOf('진주')>=0)campSet.add('진주M');
-    // 스케줄 데이터에서 camp 읽기
+    // 스케줄 데이터의 camp도 수집
     var wkKey='schedule_'+d.name+'_month_'+curY+'_'+curM;
     try{
       var sc=JSON.parse(localStorage.getItem(wkKey)||'{}');
       Object.values(sc).forEach(function(v){if(typeof v==='object'&&v.camp)campSet.add(v.camp);});
     }catch(e){}
   });
-  // 지정된 순서대로 정렬 (부산1,2,3 → 대구2 → 진주M → 기타)
+  // 지정된 순서대로 정렬
   var campOrder=['부산1','부산2','부산3','대구2','진주M'];
   var camps=[];
   campOrder.forEach(function(c){if(campSet.has(c)){camps.push(c);campSet.delete(c);}});
   Array.from(campSet).sort().forEach(function(c){camps.push(c);});
   
-  // 캠프 필터 적용
+  // 캠프/시간대 필터 적용 - 기사 프로필의 camp/shift 우선
   var showDrs=drs.filter(function(d){
     if(selDrv!=='all'&&d.name!==selDrv)return false;
+    // 시간대 필터
+    if(selShift!=='all'){
+      // '주야간' 기사는 주간/야간 필터 모두에서 포함
+      if(selShift==='주간' && d.shift!=='주간' && d.shift!=='주야간')return false;
+      if(selShift==='야간' && d.shift!=='야간' && d.shift!=='주야간')return false;
+      if(selShift==='주야간' && d.shift!=='주야간')return false;
+      if(selShift==='미지정' && d.shift)return false;
+    }
     if(selCamp!=='all'){
-      // 기사의 route 또는 스케줄 데이터의 camp가 선택된 캠프와 일치하는지
-      var r=d.route||'';
-      var matchByRoute=(r.indexOf(selCamp)>=0);
-      var matchByScheduleCamp=false;
+      // 1순위: 기사 프로필 d.camp
+      if(d.camp===selCamp)return true;
+      // 2순위: d.route 문자열에 캠프명 포함
+      if((d.route||'').indexOf(selCamp)>=0)return true;
+      // 3순위: 스케줄 데이터의 camp
       var wkKey='schedule_'+d.name+'_month_'+curY+'_'+curM;
       try{
         var sc=JSON.parse(localStorage.getItem(wkKey)||'{}');
-        Object.values(sc).forEach(function(v){if(typeof v==='object'&&v.camp===selCamp)matchByScheduleCamp=true;});
+        for(var k in sc){
+          if(typeof sc[k]==='object' && sc[k].camp===selCamp)return true;
+        }
       }catch(e){}
-      if(!matchByRoute && !matchByScheduleCamp)return false;
+      return false;
     }
     return true;
   });
@@ -7970,6 +8006,11 @@ function rScheduleAdmin(){
 
   var drvOpts='<option value="all">전체 기사</option>'+drs.map(function(d){return'<option value="'+d.name+'" '+(selDrv===d.name?'selected':'')+'>'+d.name+'</option>';}).join('');
   var campOpts='<option value="all">전체 캠프</option>'+camps.map(function(c){return'<option value="'+c+'" '+(selCamp===c?'selected':'')+'>'+c+'</option>';}).join('');
+  var shiftFilterOpts='<option value="all">전체 시간대</option>'
+    +'<option value="주간" '+(selShift==='주간'?'selected':'')+'>☀ 주간</option>'
+    +'<option value="야간" '+(selShift==='야간'?'selected':'')+'>🌙 야간</option>'
+    +'<option value="주야간" '+(selShift==='주야간'?'selected':'')+'>🌓 주야간</option>'
+    +'<option value="미지정" '+(selShift==='미지정'?'selected':'')+'>(미지정)</option>';
   
   // 주간 모드 네비게이션 라벨
   var weekLabel='';
@@ -8005,6 +8046,8 @@ function rScheduleAdmin(){
     +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;padding:8px;background:var(--bg3);border-radius:var(--r)">'
       +'<span style="font-size:11px;color:var(--text2);font-weight:600">🏕 캠프</span>'
       +'<select onchange="schedFilterCamp(this.value)" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:12px">'+campOpts+'</select>'
+      +'<span style="font-size:11px;color:var(--text2);font-weight:600;margin-left:6px">🌓 시간대</span>'
+      +'<select onchange="schedFilterShift(this.value)" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:12px">'+shiftFilterOpts+'</select>'
       +'<span style="font-size:11px;color:var(--text2);font-weight:600;margin-left:6px">👤 기사</span>'
       +'<select onchange="schedFilterDrv(this.value)" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:12px">'+drvOpts+'</select>'
       +'<span style="font-size:11px;color:var(--text3);margin-left:auto">셀 탭: 상태순환 · ✏ 클릭: 상세수정</span>'
@@ -8052,6 +8095,12 @@ function schedToThisWeek(){
 // 캠프 필터
 function schedFilterCamp(v){
   localStorage.setItem('sched_camp', v);
+  SP('schedule_admin', null);
+}
+
+// 시간대 필터
+function schedFilterShift(v){
+  localStorage.setItem('sched_shift', v);
   SP('schedule_admin', null);
 }
 
