@@ -7855,8 +7855,10 @@ function rScheduleAdmin(){
   var stColors={'주':'rgba(59,130,246,.18)','야':'rgba(139,92,246,.18)','휴무':'rgba(107,114,128,.15)','병가':'rgba(239,68,68,.15)'};
   var stTxt={'주':'#3B82F6','야':'#8B5CF6','휴무':'#9CA3AF','병가':'#EF4444'};
   
-  // 캠프 목록 수집 (기사의 route 또는 스케줄 데이터에서)
+  // 캠프 목록 수집 — 기본 5개 캠프를 항상 포함 + 기사/스케줄 데이터에서 자동 감지
   var campSet=new Set();
+  // ★ 기본 캠프 5개 강제 포함 (기사 데이터와 무관하게 항상 드롭다운에 표시)
+  ['부산1','부산2','부산3','대구2','진주M'].forEach(function(c){campSet.add(c);});
   drs.forEach(function(d){
     var r=d.route||'';
     if(r.indexOf('부산1')>=0)campSet.add('부산1');
@@ -7871,7 +7873,11 @@ function rScheduleAdmin(){
       Object.values(sc).forEach(function(v){if(typeof v==='object'&&v.camp)campSet.add(v.camp);});
     }catch(e){}
   });
-  var camps=Array.from(campSet).sort();
+  // 지정된 순서대로 정렬 (부산1,2,3 → 대구2 → 진주M → 기타)
+  var campOrder=['부산1','부산2','부산3','대구2','진주M'];
+  var camps=[];
+  campOrder.forEach(function(c){if(campSet.has(c)){camps.push(c);campSet.delete(c);}});
+  Array.from(campSet).sort().forEach(function(c){camps.push(c);});
   
   // 캠프 필터 적용
   var showDrs=drs.filter(function(d){
@@ -7981,9 +7987,9 @@ function rScheduleAdmin(){
     +'</div></div>'
     // 뷰 모드 전환 + 네비게이션
     +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;padding:8px;background:var(--bg3);border-radius:var(--r)">'
-      +'<div style="display:flex;gap:3px;background:var(--bg2);border-radius:6px;padding:2px">'
-        +'<button onclick="schedSwitchView(\'month\')" style="padding:4px 12px;border:none;border-radius:5px;font-size:12px;font-weight:700;cursor:pointer;background:'+(viewMode==='month'?'var(--teal)':'transparent')+';color:'+(viewMode==='month'?'#fff':'var(--text2)')+'">📅 월간</button>'
-        +'<button onclick="schedSwitchView(\'week\')" style="padding:4px 12px;border:none;border-radius:5px;font-size:12px;font-weight:700;cursor:pointer;background:'+(viewMode==='week'?'var(--teal)':'transparent')+';color:'+(viewMode==='week'?'#fff':'var(--text2)')+'">📆 주간</button>'
+      +'<div style="display:flex;gap:4px;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:3px">'
+        +'<button onclick="schedSwitchView(\'month\')" style="padding:6px 16px;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;background:'+(viewMode==='month'?'var(--teal)':'transparent')+';color:'+(viewMode==='month'?'#fff':'var(--text2)')+';box-shadow:'+(viewMode==='month'?'0 2px 4px rgba(0,0,0,.1)':'none')+'">📅 월간</button>'
+        +'<button onclick="schedSwitchView(\'week\')" style="padding:6px 16px;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;background:'+(viewMode==='week'?'var(--teal)':'transparent')+';color:'+(viewMode==='week'?'#fff':'var(--text2)')+';box-shadow:'+(viewMode==='week'?'0 2px 4px rgba(0,0,0,.1)':'none')+'">📆 주간</button>'
       +'</div>'
       +(viewMode==='month'
         ? '<button onclick="schedNavMonth(-1)" style="padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg2);color:var(--text);cursor:pointer;font-size:13px">◀</button>'
