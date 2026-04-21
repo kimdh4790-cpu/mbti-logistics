@@ -7968,25 +7968,16 @@ function parseScheduleExcel(inp){
         var ds;
         try{
           if(rawDate instanceof Date){
-            // ★ xlsx.js는 환경에 따라 "UTC 자정" 또는 "로컬 자정"으로 Date를 만듦
-            // → 자동 감지: getHours()가 0이면 로컬 자정, 아니면 UTC 자정
-            // Excel 원본 날짜는 시간대가 없는 "절대 날짜"이므로
-            // 어느 쪽이든 엑셀에 찍힌 날짜 그대로 추출하는 게 목표
-            var isLocalMidnight = (rawDate.getHours()===0 && rawDate.getMinutes()===0);
-            var yr, mo, dy;
-            if(isLocalMidnight){
-              // 로컬 기준 자정 → 로컬 메서드로 뽑으면 엑셀 날짜 그대로
-              yr=rawDate.getFullYear();
-              mo=String(rawDate.getMonth()+1).padStart(2,'0');
-              dy=String(rawDate.getDate()).padStart(2,'0');
-            } else {
-              // UTC 자정 → UTC 메서드로 뽑으면 엑셀 날짜 그대로
-              // (로컬 메서드 쓰면 +9시간/-9시간 만큼 밀림)
-              yr=rawDate.getUTCFullYear();
-              mo=String(rawDate.getUTCMonth()+1).padStart(2,'0');
-              dy=String(rawDate.getUTCDate()).padStart(2,'0');
-            }
-            ds=yr+'-'+mo+'-'+dy;
+            // ★ xlsx.js가 Excel 날짜를 Date 객체로 바꿀 때 환경마다 시간대 해석이 다름
+            // 가장 안전한 방법: Date의 UTC epoch에 로컬 타임존 오프셋을 더해서 "시간대 중립" 날짜 추출
+            // 결과적으로 엑셀에 찍힌 연/월/일이 그대로 나옴
+            var tzOffsetMs = rawDate.getTimezoneOffset() * 60000;  // KST = -540분 → -32400000ms
+            var adjustedMs = rawDate.getTime() - tzOffsetMs;
+            var adj = new Date(adjustedMs);
+            var yr = adj.getUTCFullYear();
+            var mo = String(adj.getUTCMonth()+1).padStart(2,'0');
+            var dy = String(adj.getUTCDate()).padStart(2,'0');
+            ds = yr+'-'+mo+'-'+dy;
           } else if(typeof rawDate==='number'){
             // Excel 시리얼 → UTC 기준으로 변환 후 UTC 메서드로 추출
             var utcMs=Math.round((rawDate-25569)*86400*1000);
@@ -8022,16 +8013,22 @@ function parseScheduleExcel(inp){
       if(FB&&_db){
         Object.keys(driverMap).forEach(function(name){
           var info=driverMap[name];
-          // 이름 기반 쿼리
+          // ★ 단일 where 쿼리(driver만) + 클라이언트 사이드 날짜 필터
+          //   → Firestore 복합 인덱스 불필요, 안정적으로 동작
           deleteQueue.push(
             _db.collection('schedules')
               .where('driver','==',name)
-              .where('date','>=',info.minDate)
-              .where('date','<=',info.maxDate)
               .get()
               .then(function(snap){
                 var batch=_db.batch(), cnt=0;
-                snap.forEach(function(doc){batch.delete(doc.ref);cnt++;});
+                snap.forEach(function(doc){
+                  var d=doc.data();
+                  // 날짜가 엑셀 기간 내일 때만 삭제
+                  if(d.date && d.date>=info.minDate && d.date<=info.maxDate){
+                    batch.delete(doc.ref);
+                    cnt++;
+                  }
+                });
                 if(cnt>0){
                   console.log('[기존삭제]',name,info.minDate,'~',info.maxDate,':',cnt,'건');
                   return batch.commit();
