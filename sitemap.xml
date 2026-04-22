@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
+                            http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <url>
+    <loc>https://kimdh4790-cpu.github.io/mbti-logistics/</loc>
+    <lastmod>2026-04-22</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://kimdh4790-cpu.github.io/mbti-logistics/og_banner.jpg</image:loc>
+      <image:title>엠비티아이(유) MBTI Logistics</image:title>
+      <image:caption>냉동·냉장·상온 물류 전문 기업 엠비티아이(유) - 쿠팡·CJ·컬리 공식 파트너</image:caption>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://kimdh4790-cpu.github.io/mbti-logistics/%EC%97%A0%EB%B9%84%ED%8B%B0%EC%95%84%EC%9D%B4_%EB%AC%BC%EB%A5%98%EA%B4%80%EB%A6%AC_v9.html</loc>
+    <lastmod>2026-04-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+</urlset>

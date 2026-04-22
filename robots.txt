@@ -1,0 +1,27 @@
+# robots.txt for 엠비티아이(유) 공식 홈페이지
+# https://kimdh4790-cpu.github.io/mbti-logistics/
+
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://kimdh4790-cpu.github.io/mbti-logistics/sitemap.xml
+
+# 네이버 검색 봇
+User-agent: Yeti
+Allow: /
+Crawl-delay: 1
+
+# 구글 검색 봇
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 1
+
+# 다음 검색 봇
+User-agent: Daumoa
+Allow: /
+Crawl-delay: 1
+
+# 빙 검색 봇
+User-agent: bingbot
+Allow: /
