@@ -1,11 +1,11 @@
-# robots.txt for 엠비티아이(유) 공식 홈페이지
-# https://kimdh4790-cpu.github.io/mbti-logistics/
+# robots.txt for 엠비티아이(유) MBTI Co. LOGISTICS
+# https://mbti-logistics.kimdh4790.workers.dev/
 
 User-agent: *
 Allow: /
 
 # Sitemap
-Sitemap: https://kimdh4790-cpu.github.io/mbti-logistics/sitemap.xml
+Sitemap: https://mbti-logistics.kimdh4790.workers.dev/sitemap.xml
 
 # 네이버 검색 봇
 User-agent: Yeti
