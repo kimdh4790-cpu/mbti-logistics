@@ -291,7 +291,9 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-thumb{background:var(--gray-m);border-radius:2px}
 
-@keyframes lgScroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+@keyframes lgScroll{0%{transform:translate3d(0,0,0)}100%{transform:translate3d(-50%,0,0)}}
+@-webkit-keyframes lgScroll{0%{-webkit-transform:translate3d(0,0,0)}100%{-webkit-transform:translate3d(-50%,0,0)}}
+.lg-scroll-track{will-change:transform;-webkit-backface-visibility:hidden;backface-visibility:hidden;-webkit-transform:translateZ(0);transform:translateZ(0);animation:lgScroll 20s linear infinite;-webkit-animation:lgScroll 20s linear infinite;animation-play-state:running;-webkit-animation-play-state:running}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
@@ -5516,9 +5518,13 @@ function dHome(){
   var totD=dels.reduce((s,d)=>s+(d.dcnt||0),0);
   var isAdm=(S.curMode==='admin');
 
-  // ── 이번달 근무표 (기사 보기전용)
+  // ── 이번달 근무표 (기사 보기전용, S.drvSchedMonth로 월 이동 가능)
   var now=new Date();
-  var curY=now.getFullYear(), curM=now.getMonth();
+  if(typeof S.drvSchedMonth==='undefined'||S.drvSchedMonth===null){
+    S.drvSchedMonth={y:now.getFullYear(), m:now.getMonth()};
+  }
+  var curY=S.drvSchedMonth.y, curM=S.drvSchedMonth.m;
+  var isCurMonth=(curY===now.getFullYear()&&curM===now.getMonth());
   var lastDay=new Date(curY,curM+1,0).getDate();
   var DN=['일','월','화','수','목','금','토'];
   var stColors={'주':'#3B82F6','야':'#8B5CF6','휴무':'#9CA3AF','병가':'#EF4444'};
@@ -5560,8 +5566,15 @@ function dHome(){
   var firstWD=new Date(curY,curM,1).getDay();
 
   var calHTML='<div style="margin:10px;background:var(--bg2);border-radius:var(--r);border:1px solid var(--border);overflow:hidden">';
-  calHTML+='<div style="padding:8px 12px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">';
-  calHTML+='<span style="font-size:12px;font-weight:700">📅 '+( curM+1)+'월 근무표</span>';
+  calHTML+='<div style="padding:8px 12px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px">';
+  calHTML+='<div style="display:flex;align-items:center;gap:6px">';
+  calHTML+='<button onclick="dSchedMove(-1)" style="width:28px;height:28px;background:var(--bg2);border:1.5px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;font-weight:700;cursor:pointer;line-height:1;padding:0">◀</button>';
+  calHTML+='<span style="font-size:12px;font-weight:700;min-width:100px;text-align:center">📅 '+curY+'년 '+(curM+1)+'월 근무표</span>';
+  calHTML+='<button onclick="dSchedMove(1)" style="width:28px;height:28px;background:var(--bg2);border:1.5px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;font-weight:700;cursor:pointer;line-height:1;padding:0">▶</button>';
+  if(!isCurMonth){
+    calHTML+='<button onclick="dSchedToday()" style="padding:4px 10px;background:var(--blue);border:none;border-radius:6px;color:#fff;font-size:10px;font-weight:700;cursor:pointer;margin-left:4px">오늘</button>';
+  }
+  calHTML+='</div>';
   calHTML+='<span style="font-size:10px;color:var(--text3)">관리자가 등록 | 보기전용</span></div>';
   // 요일 헤더
   calHTML+='<div style="display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border)">';
@@ -5605,7 +5618,7 @@ function dHome(){
   </div>
   <!-- 마퀴 로고 배너 -->
   <div style="overflow:hidden;height:34px;display:flex;align-items:center;background:linear-gradient(90deg,#071525,#0c2040,#071525)">
-    <div style="display:flex;animation:lgScroll 20s linear infinite;white-space:nowrap;align-items:center">
+    <div class="lg-scroll-track" style="display:flex;white-space:nowrap;align-items:center">
       <span style="color:#f90;font-size:11px;font-weight:900;letter-spacing:1px;padding:0 16px">&#x1F3E2; MBTI(Co.,Ltd.) LOGISTICS</span>
       <span style="color:rgba(255,255,255,.3)">&#x2736;</span>
       <span style="color:#8cf;font-size:10px;font-weight:700;padding:0 12px">&#x1F69B; \ub0c9\ub3d9\u00b7\ub0c9\uc7a5\u00b7\uc0c1\uc628 \uc804\ubb38</span>
@@ -5637,6 +5650,20 @@ function dHome(){
   <button class="bbtn bb-red" onclick="DT('accident',document.getElementById('pni4'))" style="padding:11px;font-size:13px;margin:0 10px 6px">🚨 사고 접수</button>
   <button onclick="drvPhotoGallery()" style="width:calc(100% - 20px);margin:0 10px 10px;padding:11px;background:var(--purple-l);color:var(--purple);border:1.5px solid var(--purple);border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer">📸 사진 모아보기 (60일)</button>
   </div>`;
+}
+// ── 기사 홈 근무표: 월 이동 (-1 이전달, +1 다음달)
+function dSchedMove(delta){
+  var now=new Date();
+  if(!S.drvSchedMonth)S.drvSchedMonth={y:now.getFullYear(),m:now.getMonth()};
+  var d=new Date(S.drvSchedMonth.y, S.drvSchedMonth.m+delta, 1);
+  S.drvSchedMonth={y:d.getFullYear(), m:d.getMonth()};
+  if(document.getElementById('dpc'))document.getElementById('dpc').innerHTML=dHome();
+}
+// ── 기사 홈 근무표: 오늘(이번달)로 복귀
+function dSchedToday(){
+  var now=new Date();
+  S.drvSchedMonth={y:now.getFullYear(), m:now.getMonth()};
+  if(document.getElementById('dpc'))document.getElementById('dpc').innerHTML=dHome();
 }
 // ── 근무표 순환 클릭: 빈→주→야→휴무→병가→빈
 function cycleSchedule(weekKey, dateStr){
