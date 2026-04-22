@@ -20,6 +20,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/browser-image-compression/2.0.2/browser-image-compression.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 :root{
   --blue:#185FA5;--blue-l:#E6F1FB;--blue-d:#0C447C;
@@ -1437,19 +1438,28 @@ function doLogin(){
         else{toast('🔒 5회 실패 — 10분간 잠금');}
         return;
       }
-      localStorage.removeItem(lockKey);
-      S.curMode='admin';
-      var aName=info.name||'김형우 대표';
-      setAdminName(aName);
-      localStorage.setItem('mbti_admin_info',JSON.stringify(info));
-      localStorage.setItem('mbti_session',JSON.stringify({mode:'admin',id:sId,name:aName,ts:Date.now(),exp:Date.now()+28800000}));
-      hide(['login-screen']); show('app');
-      SP('dash',null); updBadge(); updFbUI(); initGrps();
-      document.getElementById('tbdate').textContent=new Date().toLocaleDateString('ko-KR');
-      startListeners();
-      setTimeout(archiveAndPurge,5000); // 로그인 5초 후 자동 아카이빙
-      setTimeout(autoCleanupFirebase,8000); // 로그인 8초 후 Firebase 자동 정리
-      setTimeout(initInqListener,3000); // 로그인 3초 후 문의함 실시간 감시 시작
+      // ── 2단계 인증 체크 (관리자만)
+      var _finishAdminLogin=function(finalInfo){
+        localStorage.removeItem(lockKey);
+        S.curMode='admin';
+        var aName=finalInfo.name||'김형우 대표';
+        setAdminName(aName);
+        localStorage.setItem('mbti_admin_info',JSON.stringify(finalInfo));
+        localStorage.setItem('mbti_session',JSON.stringify({mode:'admin',id:sId,name:aName,ts:Date.now(),exp:Date.now()+28800000}));
+        hide(['login-screen']); show('app');
+        SP('dash',null); updBadge(); updFbUI(); initGrps();
+        document.getElementById('tbdate').textContent=new Date().toLocaleDateString('ko-KR');
+        startListeners();
+        setTimeout(archiveAndPurge,5000); // 로그인 5초 후 자동 아카이빙
+        setTimeout(autoCleanupFirebase,8000); // 로그인 8초 후 Firebase 자동 정리
+        setTimeout(initInqListener,3000); // 로그인 3초 후 문의함 실시간 감시 시작
+      };
+      if(info.otpEnabled && info.otpSecret){
+        // OTP 단계로 전환
+        otpShowLoginStep(info, _finishAdminLogin);
+      } else {
+        _finishAdminLogin(info);
+      }
     };
     if(FB&&_db){
       _db.collection('settings').doc('adminInfo').get().then(function(doc){
@@ -3689,6 +3699,33 @@ function rMypage(){
     html+='<div class="fg"><label>현재 비밀번호</label><input id="mp-pw-cur" type="password" placeholder="현재 비밀번호"></div>';
     html+='<div class="fg"><label>새 비밀번호 (6자↑)</label><input id="mp-pw-new" type="password" placeholder="새 비밀번호" oninput="chkPwStr(this)"><div id="pw-strength-bar" class="pw-strength pw-s0"></div><div id="pw-strength-txt" style="font-size:10px;color:var(--text3);margin-top:2px"></div></div>';
     html+='<div class="fg"><label>새 비밀번호 확인</label><input id="mp-pw-new2" type="password" placeholder="새 비밀번호 확인"></div>';
+
+    // ── 관리자 전용: 2단계 인증 섹션
+    if(isAdmin){
+      var otpEnabled = !!(adminInfo.otpEnabled && adminInfo.otpSecret);
+      var recoveryCnt = (adminInfo.otpRecoveryHashes||[]).length;
+      html+='<div class="sec-lbl" style="margin-top:14px">🔐 2단계 인증 (OTP)</div>';
+      html+='<div style="background:var(--bg3);border-radius:12px;padding:14px;margin-bottom:12px;border-left:3px solid '+(otpEnabled?'var(--teal)':'var(--amber)')+'">';
+      if(otpEnabled){
+        html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">';
+        html+='<div style="font-weight:700;color:var(--teal);font-size:13px">✅ 활성화됨</div>';
+        html+='<div style="font-size:10px;color:var(--text3)">복구 코드 '+recoveryCnt+'개 남음</div>';
+        html+='</div>';
+        html+='<div style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.5">로그인 시 비밀번호 외에 OTP 앱의 6자리 숫자를 추가로 입력합니다.</div>';
+        html+='<div style="display:flex;gap:6px;flex-wrap:wrap">';
+        html+='<button onclick="otpSetupStart()" style="flex:1;min-width:110px;padding:9px;background:var(--bg);color:var(--text);border:1.5px solid var(--border);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">🔄 재설정</button>';
+        html+='<button onclick="otpRegenRecovery()" style="flex:1;min-width:110px;padding:9px;background:var(--bg);color:var(--amber);border:1.5px solid var(--amber);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">🔑 복구코드 재발급</button>';
+        html+='<button onclick="otpDisable()" style="flex:1;min-width:80px;padding:9px;background:rgba(220,50,50,.85);color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">🔓 해제</button>';
+        html+='</div>';
+      } else {
+        html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">';
+        html+='<div style="font-weight:700;color:var(--amber);font-size:13px">⚠️ 비활성</div>';
+        html+='</div>';
+        html+='<div style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.5">Google Authenticator 앱으로 생성된 6자리 숫자를 로그인 시 추가 입력하게 됩니다. 계정 탈취 위험이 거의 0%가 됩니다.</div>';
+        html+='<button onclick="otpSetupStart()" style="width:100%;padding:11px;background:var(--teal);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">🔐 2단계 인증 설정하기</button>';
+      }
+      html+='</div>';
+    }
 
     if(!isAdmin){
       html+='<div class="sec-lbl" style="margin-top:14px">차량 정보</div>';
@@ -9245,5 +9282,350 @@ function sanitizeInput(val){
   // 1분마다 백그라운드 체크
   setInterval(checkExpiry, 60000);
 })();
+
+// ══════════════════════════════════════════════════════════════════
+// 🔐 2단계 인증 (OTP) 모듈 — Google Authenticator 호환
+// ══════════════════════════════════════════════════════════════════
+var OTP_B32_ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+
+// Base32 인코딩 (RFC 4648)
+function otpB32Encode(bytes){
+  var bits=0,val=0,out='';
+  for(var i=0;i<bytes.length;i++){
+    val=(val<<8)|bytes[i]; bits+=8;
+    while(bits>=5){bits-=5; out+=OTP_B32_ALPHA[(val>>bits)&31];}
+  }
+  if(bits>0) out+=OTP_B32_ALPHA[(val<<(5-bits))&31];
+  return out;
+}
+
+// Base32 디코딩
+function otpB32Decode(str){
+  str=(str||'').replace(/=+$/,'').toUpperCase().replace(/[^A-Z2-7]/g,'');
+  var bits=0,val=0,out=[];
+  for(var i=0;i<str.length;i++){
+    var idx=OTP_B32_ALPHA.indexOf(str[i]);
+    if(idx<0) continue;
+    val=(val<<5)|idx; bits+=5;
+    if(bits>=8){bits-=8; out.push((val>>bits)&0xFF);}
+  }
+  return new Uint8Array(out);
+}
+
+// Secret 생성 (20바이트 = 160비트, Google Authenticator 권장)
+function otpGenerateSecret(){
+  var bytes=new Uint8Array(20);
+  crypto.getRandomValues(bytes);
+  return otpB32Encode(bytes);
+}
+
+// TOTP 코드 생성
+async function otpGenerateCode(secret, time){
+  if(!time) time=Math.floor(Date.now()/1000);
+  var counter=Math.floor(time/30);
+  var buf=new ArrayBuffer(8);
+  var view=new DataView(buf);
+  view.setUint32(0, Math.floor(counter/0x100000000));
+  view.setUint32(4, counter&0xFFFFFFFF);
+  var keyBytes=otpB32Decode(secret);
+  if(keyBytes.length===0) return '000000';
+  var cryptoKey=await crypto.subtle.importKey('raw', keyBytes, {name:'HMAC',hash:'SHA-1'}, false, ['sign']);
+  var hmac=await crypto.subtle.sign('HMAC', cryptoKey, buf);
+  var arr=new Uint8Array(hmac);
+  var offset=arr[19]&0x0F;
+  var code=((arr[offset]&0x7F)<<24)|(arr[offset+1]<<16)|(arr[offset+2]<<8)|arr[offset+3];
+  return (code%1000000).toString().padStart(6,'0');
+}
+
+// TOTP 검증 (시계 오차 허용: ±30초 윈도우)
+async function otpVerifyCode(secret, code){
+  if(!secret||!code) return false;
+  code=(''+code).replace(/\s/g,'').padStart(6,'0');
+  if(!/^\d{6}$/.test(code)) return false;
+  var now=Math.floor(Date.now()/1000);
+  for(var delta=-1; delta<=1; delta++){
+    var expected=await otpGenerateCode(secret, now+(delta*30));
+    if(expected===code) return true;
+  }
+  return false;
+}
+
+// otpauth:// URL (QR 코드용)
+function otpBuildAuthUrl(secret, account, issuer){
+  var iss=encodeURIComponent(issuer||'MBTI Logistics');
+  var acc=encodeURIComponent(account||'admin');
+  return 'otpauth://totp/'+iss+':'+acc+'?secret='+secret+'&issuer='+iss+'&algorithm=SHA1&digits=6&period=30';
+}
+
+// 복구 코드 생성 (형식: XXXX-XXXX, 5개)
+function otpGenerateRecoveryCodes(){
+  var codes=[];
+  var chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 헷갈리는 문자(I,O,0,1) 제외
+  for(var i=0;i<5;i++){
+    var code='';
+    var bytes=new Uint8Array(8);
+    crypto.getRandomValues(bytes);
+    for(var j=0;j<8;j++){
+      code+=chars[bytes[j]%chars.length];
+      if(j===3) code+='-';
+    }
+    codes.push(code);
+  }
+  return codes;
+}
+
+// 복구 코드 SHA-256 해시 (저장용)
+async function otpHashRecoveryCode(code){
+  var normalized=(code||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  var enc=new TextEncoder().encode(normalized);
+  var hash=await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+// 복구 코드 검증 (일치하면 해당 해시를 반환, 나중에 삭제 처리)
+async function otpVerifyRecoveryCode(inputCode, hashedCodes){
+  if(!inputCode||!hashedCodes||!hashedCodes.length) return null;
+  var inputHash=await otpHashRecoveryCode(inputCode);
+  for(var i=0;i<hashedCodes.length;i++){
+    if(hashedCodes[i]===inputHash) return inputHash;
+  }
+  return null;
+}
+
+// ─────────────────────────────────────────────────────
+// OTP 설정 마법사 (관리자 전용)
+// ─────────────────────────────────────────────────────
+var _otpSetupData = null; // 설정 중인 secret과 복구코드 임시 저장
+
+async function otpSetupStart(){
+  if(S.curMode!=='admin'){ toast('관리자만 설정 가능합니다'); return; }
+  var adminInfo=JSON.parse(localStorage.getItem('mbti_admin_info')||'{}');
+  var secret=otpGenerateSecret();
+  var recoveryCodes=otpGenerateRecoveryCodes();
+  _otpSetupData={secret:secret, recoveryCodes:recoveryCodes, userId:adminInfo.userId||'admin'};
+
+  var modalHtml = '<div id="otp-setup-modal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto">'
+    +'<div style="background:var(--bg2);border-radius:16px;padding:22px;max-width:440px;width:100%;max-height:92vh;overflow-y:auto;border:2px solid var(--blue)">'
+    +'<div style="font-size:18px;font-weight:800;color:var(--blue);margin-bottom:14px">🔐 2단계 인증 설정</div>'
+    +'<div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:14px">'
+    +'<div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px">1단계: Google Authenticator 앱에서 QR 스캔</div>'
+    +'<div id="otp-qr-box" style="background:#fff;padding:14px;border-radius:10px;display:flex;justify-content:center;margin:10px 0"></div>'
+    +'<div style="font-size:10px;color:var(--text3);text-align:center;margin-top:6px">또는 수동 입력 키:</div>'
+    +'<div style="background:var(--bg);padding:6px 10px;border-radius:6px;margin-top:4px;font-family:monospace;font-size:11px;text-align:center;word-break:break-all;color:var(--amber);font-weight:700">'+secret+'</div>'
+    +'</div>'
+    +'<div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:14px">'
+    +'<div style="font-size:12px;font-weight:700;color:var(--red);margin-bottom:8px">⚠️ 2단계: 복구 코드 5개 — 반드시 출력해서 보관</div>'
+    +'<div style="font-size:10px;color:var(--text2);margin-bottom:8px">폰 분실/OTP 앱 삭제 시 복구용. 각 1회만 사용 가능.</div>'
+    +'<div style="background:var(--bg);padding:10px;border-radius:8px;font-family:monospace;font-size:13px;line-height:1.8;text-align:center;border:2px dashed var(--amber)">'
+    + recoveryCodes.map(function(c){return '<div style="color:var(--text);font-weight:700;letter-spacing:.1em">'+c+'</div>';}).join('')
+    +'</div>'
+    +'<button onclick="otpPrintRecovery()" style="width:100%;padding:9px;margin-top:8px;background:var(--amber);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:12px">📄 인쇄/저장용 창 열기</button>'
+    +'</div>'
+    +'<div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:14px">'
+    +'<div style="font-size:12px;font-weight:700;color:var(--teal);margin-bottom:8px">3단계: 앱에 표시된 6자리 숫자 입력</div>'
+    +'<input id="otp-verify-input" type="text" inputmode="numeric" maxlength="6" placeholder="000000" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:8px;font-size:22px;text-align:center;letter-spacing:.3em;font-family:monospace" onkeydown="if(event.key===\'Enter\')otpSetupConfirm()">'
+    +'</div>'
+    +'<div style="display:flex;gap:8px">'
+    +'<button onclick="otpSetupCancel()" style="flex:1;padding:11px;background:var(--bg3);color:var(--text);border:1.5px solid var(--border);border-radius:8px;font-weight:700;cursor:pointer">취소</button>'
+    +'<button onclick="otpSetupConfirm()" style="flex:2;padding:11px;background:var(--teal);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer">✅ 활성화</button>'
+    +'</div>'
+    +'</div></div>';
+  var div=document.createElement('div');
+  div.innerHTML=modalHtml;
+  document.body.appendChild(div.firstChild);
+
+  // QR 코드 생성
+  setTimeout(function(){
+    try{
+      var qrBox=document.getElementById('otp-qr-box');
+      if(qrBox&&typeof QRCode!=='undefined'){
+        var url=otpBuildAuthUrl(secret, adminInfo.userId||'admin', 'MBTI Logistics');
+        new QRCode(qrBox, {text:url, width:200, height:200, colorDark:'#000000', colorLight:'#ffffff', correctLevel:QRCode.CorrectLevel.M});
+      }
+    }catch(e){ console.error('QR 생성 오류',e); }
+    var inp=document.getElementById('otp-verify-input');
+    if(inp) inp.focus();
+  }, 100);
+}
+
+function otpPrintRecovery(){
+  if(!_otpSetupData) return;
+  var d=_otpSetupData;
+  var w=window.open('','_blank','width=500,height=600');
+  if(!w){ toast('팝업 차단됨 — 스크린샷으로 저장하세요'); return; }
+  w.document.write('<html><head><title>MBTI 2단계 인증 복구 코드</title><meta charset="utf-8"></head><body style="font-family:sans-serif;padding:30px;line-height:1.6">'
+    +'<h2 style="color:#185FA5">🔐 MBTI 물류관리 — 2단계 인증 복구 코드</h2>'
+    +'<p style="color:#666;font-size:13px">생성일: '+new Date().toLocaleString('ko-KR')+'<br>계정: '+d.userId+'</p>'
+    +'<div style="border:2px dashed #f39c12;padding:18px;border-radius:10px;margin:20px 0">'
+    +'<p style="margin-top:0;font-weight:700;color:#e74c3c">⚠️ 이 코드는 폰을 분실했을 때 사용하는 비상용 코드입니다.</p>'
+    +'<ul style="font-size:13px;color:#555"><li>안전한 곳에 출력/저장해 두세요</li><li>각 코드는 1회만 사용 가능</li><li>타인에게 공유하지 마세요</li></ul></div>'
+    +'<h3 style="color:#333">복구 코드 5개:</h3>'
+    +'<div style="font-family:monospace;font-size:18px;line-height:2.5;background:#f7f7f7;padding:20px;border-radius:10px;text-align:center;letter-spacing:.15em">'
+    + d.recoveryCodes.map(function(c){return '<div>'+c+'</div>';}).join('')
+    +'</div>'
+    +'<p style="margin-top:30px;font-size:11px;color:#999">ⓒ MBTI Logistics — 이 페이지는 저장 후 브라우저를 닫으세요.</p>'
+    +'<button onclick="window.print()" style="margin-top:20px;padding:12px 24px;background:#185FA5;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">🖨 인쇄</button>'
+    +'</body></html>');
+}
+
+function otpSetupCancel(){
+  _otpSetupData=null;
+  var modal=document.getElementById('otp-setup-modal');
+  if(modal) modal.remove();
+}
+
+async function otpSetupConfirm(){
+  if(!_otpSetupData){ toast('설정 정보가 없습니다'); return; }
+  var inp=document.getElementById('otp-verify-input');
+  var code=(inp?inp.value:'').trim();
+  if(!/^\d{6}$/.test(code)){ toast('6자리 숫자를 입력하세요'); return; }
+  var ok=await otpVerifyCode(_otpSetupData.secret, code);
+  if(!ok){ toast('❌ OTP 코드가 일치하지 않습니다 (시계 확인)'); return; }
+
+  // 복구 코드 해시화
+  var hashedRecovery=[];
+  for(var i=0;i<_otpSetupData.recoveryCodes.length;i++){
+    hashedRecovery.push(await otpHashRecoveryCode(_otpSetupData.recoveryCodes[i]));
+  }
+
+  // Firebase + localStorage에 저장
+  var adminInfo=JSON.parse(localStorage.getItem('mbti_admin_info')||'{}');
+  adminInfo.otpEnabled=true;
+  adminInfo.otpSecret=_otpSetupData.secret;
+  adminInfo.otpRecoveryHashes=hashedRecovery;
+  adminInfo.otpEnabledAt=Date.now();
+  localStorage.setItem('mbti_admin_info', JSON.stringify(adminInfo));
+  if(typeof FB!=='undefined' && FB && typeof _db!=='undefined' && _db){
+    try{ await _db.collection('settings').doc('adminInfo').set(adminInfo,{merge:true}); }catch(e){}
+  }
+  _otpSetupData=null;
+  otpSetupCancel();
+  toast('✅ 2단계 인증 활성화 완료');
+  if(typeof SP==='function') SP('mypage',null);
+}
+
+async function otpDisable(){
+  if(!confirm('2단계 인증을 해제하시겠습니까?\n(보안이 약해집니다)')) return;
+  var code=prompt('현재 OTP 6자리 또는 복구 코드를 입력하세요:');
+  if(!code) return;
+  var adminInfo=JSON.parse(localStorage.getItem('mbti_admin_info')||'{}');
+  var ok=false;
+  if(/^\d{6}$/.test(code.trim())){
+    ok=await otpVerifyCode(adminInfo.otpSecret, code.trim());
+  } else {
+    var match=await otpVerifyRecoveryCode(code, adminInfo.otpRecoveryHashes||[]);
+    ok=!!match;
+  }
+  if(!ok){ toast('❌ 코드 불일치 — 해제 취소'); return; }
+  delete adminInfo.otpEnabled;
+  delete adminInfo.otpSecret;
+  delete adminInfo.otpRecoveryHashes;
+  delete adminInfo.otpEnabledAt;
+  localStorage.setItem('mbti_admin_info', JSON.stringify(adminInfo));
+  if(typeof FB!=='undefined' && FB && typeof _db!=='undefined' && _db){
+    try{
+      await _db.collection('settings').doc('adminInfo').update({
+        otpEnabled: firebase.firestore.FieldValue.delete(),
+        otpSecret: firebase.firestore.FieldValue.delete(),
+        otpRecoveryHashes: firebase.firestore.FieldValue.delete(),
+        otpEnabledAt: firebase.firestore.FieldValue.delete()
+      });
+    }catch(e){}
+  }
+  toast('🔓 2단계 인증 해제됨');
+  if(typeof SP==='function') SP('mypage',null);
+}
+
+async function otpRegenRecovery(){
+  if(!confirm('복구 코드를 재발급하시겠습니까?\n(기존 코드는 모두 무효화됩니다)')) return;
+  var adminInfo=JSON.parse(localStorage.getItem('mbti_admin_info')||'{}');
+  if(!adminInfo.otpEnabled){ toast('먼저 2단계 인증을 활성화하세요'); return; }
+  var newCodes=otpGenerateRecoveryCodes();
+  var hashedNew=[];
+  for(var i=0;i<newCodes.length;i++){
+    hashedNew.push(await otpHashRecoveryCode(newCodes[i]));
+  }
+  adminInfo.otpRecoveryHashes=hashedNew;
+  localStorage.setItem('mbti_admin_info', JSON.stringify(adminInfo));
+  if(typeof FB!=='undefined' && FB && typeof _db!=='undefined' && _db){
+    try{ await _db.collection('settings').doc('adminInfo').set(adminInfo,{merge:true}); }catch(e){}
+  }
+  // 새 코드 표시
+  _otpSetupData={secret:adminInfo.otpSecret, recoveryCodes:newCodes, userId:adminInfo.userId||'admin'};
+  otpPrintRecovery();
+  _otpSetupData=null;
+  toast('✅ 복구 코드 재발급 완료 (출력창 확인)');
+}
+
+// ─────────────────────────────────────────────────────
+// 로그인 OTP 단계 UI
+// ─────────────────────────────────────────────────────
+var _otpLoginCtx = null; // 1차 인증 통과한 관리자 정보 임시 저장
+
+function otpShowLoginStep(adminInfo, onSuccess){
+  _otpLoginCtx = {info:adminInfo, onSuccess:onSuccess, attempts:0};
+  var modalHtml = '<div id="otp-login-modal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.9);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px">'
+    +'<div style="background:var(--bg2);border-radius:16px;padding:24px;max-width:380px;width:100%;border:2px solid var(--teal)">'
+    +'<div style="font-size:18px;font-weight:800;color:var(--teal);margin-bottom:6px;text-align:center">🔐 2단계 인증</div>'
+    +'<div style="font-size:12px;color:var(--text2);text-align:center;margin-bottom:18px">Google Authenticator 앱의<br>6자리 숫자를 입력하세요</div>'
+    +'<input id="otp-login-input" type="text" inputmode="numeric" maxlength="8" placeholder="000000" style="width:100%;padding:14px;border:2px solid var(--border);border-radius:10px;font-size:24px;text-align:center;letter-spacing:.3em;font-family:monospace;margin-bottom:10px" onkeydown="if(event.key===\'Enter\')otpLoginVerify()">'
+    +'<div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:14px">💡 OTP 앱 없으시나요? 복구 코드(XXXX-XXXX) 입력</div>'
+    +'<div style="display:flex;gap:8px">'
+    +'<button onclick="otpLoginCancel()" style="flex:1;padding:12px;background:var(--bg3);color:var(--text);border:1.5px solid var(--border);border-radius:10px;font-weight:700;cursor:pointer">취소</button>'
+    +'<button onclick="otpLoginVerify()" style="flex:2;padding:12px;background:var(--teal);color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer">로그인</button>'
+    +'</div>'
+    +'</div></div>';
+  var div=document.createElement('div');
+  div.innerHTML=modalHtml;
+  document.body.appendChild(div.firstChild);
+  setTimeout(function(){ var inp=document.getElementById('otp-login-input'); if(inp)inp.focus(); },100);
+}
+
+function otpLoginCancel(){
+  _otpLoginCtx=null;
+  var m=document.getElementById('otp-login-modal');
+  if(m) m.remove();
+}
+
+async function otpLoginVerify(){
+  if(!_otpLoginCtx){ return; }
+  var inp=document.getElementById('otp-login-input');
+  var code=(inp?inp.value:'').trim();
+  if(!code){ toast('코드를 입력하세요'); return; }
+  var info=_otpLoginCtx.info;
+  var ok=false, usedRecoveryHash=null;
+  if(/^\d{6}$/.test(code)){
+    ok=await otpVerifyCode(info.otpSecret, code);
+  } else {
+    usedRecoveryHash=await otpVerifyRecoveryCode(code, info.otpRecoveryHashes||[]);
+    ok=!!usedRecoveryHash;
+  }
+  if(!ok){
+    _otpLoginCtx.attempts++;
+    if(_otpLoginCtx.attempts>=3){
+      toast('❌ 3회 실패 — 로그인 취소됨');
+      otpLoginCancel();
+      return;
+    }
+    toast('❌ 코드 불일치 ('+(3-_otpLoginCtx.attempts)+'회 남음)');
+    if(inp){ inp.value=''; inp.focus(); }
+    return;
+  }
+  // 복구 코드 사용 시 해당 해시 삭제
+  if(usedRecoveryHash){
+    var newHashes=(info.otpRecoveryHashes||[]).filter(function(h){return h!==usedRecoveryHash;});
+    info.otpRecoveryHashes=newHashes;
+    var adminInfo=JSON.parse(localStorage.getItem('mbti_admin_info')||'{}');
+    adminInfo.otpRecoveryHashes=newHashes;
+    localStorage.setItem('mbti_admin_info',JSON.stringify(adminInfo));
+    if(typeof FB!=='undefined' && FB && typeof _db!=='undefined' && _db){
+      try{ await _db.collection('settings').doc('adminInfo').set(adminInfo,{merge:true}); }catch(e){}
+    }
+    toast('⚠️ 복구 코드 사용 — 남은 코드: '+newHashes.length+'개');
+  }
+  var cb=_otpLoginCtx.onSuccess;
+  otpLoginCancel();
+  if(cb) cb(info);
+}
 </script>
 </body>
