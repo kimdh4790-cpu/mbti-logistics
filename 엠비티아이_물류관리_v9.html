@@ -2114,14 +2114,41 @@ function rSettle(){
   var s=ls('settlements');
   var filterMonth=window._adm_settle_month||'all';
   var filterCamp=window._adm_settle_camp||'all';
-  // ★ settlement의 캠프 판별 (routeDetails의 라우트 prefix 기준)
+  // ★ 캠프 목록 (근무표관리와 동일한 형식: 접미사 '캠프' 없음)
+  var CAMP_LIST_S=['부산1','부산2','부산3','대구2','진주M'];
+  var CAMP_COL_S={'부산1':'#3B82F6','부산2':'#8B5CF6','부산3':'#10B981','대구2':'#F59E0B','진주M':'#EF4444'};
+  // ★ settlement의 캠프 판별 (drivers 기반 - 근무표관리와 동일 로직)
+  var _drvMap_S={};
+  ls('drivers').forEach(function(d){ if(d&&d.name) _drvMap_S[d.name]=d; });
   function _getSettleCamp(x){
-    var rds=x.routeDetails||[];
-    for(var i=0;i<rds.length;i++){
-      var route=(rds[i]&&rds[i].route)||'';
+    var nm=(x&&x.driver)||'';
+    var d=_drvMap_S[nm];
+    if(d){
+      // 1순위: 기사 프로필의 camp
+      if(d.camp){
+        for(var i=0;i<CAMP_LIST_S.length;i++){
+          if(d.camp===CAMP_LIST_S[i]||d.camp===CAMP_LIST_S[i]+'캠프') return CAMP_LIST_S[i];
+        }
+        return d.camp; // 매핑 외 캠프도 반환 (표시용)
+      }
+      // 2순위: d.route 문자열에 캠프명 포함
+      var r=d.route||'';
+      for(var j=0;j<CAMP_LIST_S.length;j++){
+        if(r.indexOf(CAMP_LIST_S[j])>=0) return CAMP_LIST_S[j];
+      }
+      if(r.indexOf('대구')>=0) return '대구2';
+      if(r.indexOf('진주')>=0) return '진주M';
+    }
+    // 3순위: routeDetails의 라우트 prefix 매칭 (기존 로직)
+    var rds=(x&&x.routeDetails)||[];
+    for(var k=0;k<rds.length;k++){
+      var route=(rds[k]&&rds[k].route)||'';
       if(!route)continue;
       for(var p in CAMP_NAMES){
-        if(route.indexOf(p)===0) return CAMP_NAMES[p];
+        if(route.indexOf(p)===0){
+          var full=CAMP_NAMES[p]; // 예: '부산1캠프'
+          return full.replace('캠프',''); // '부산1'
+        }
       }
     }
     return '기타';
@@ -2135,14 +2162,18 @@ function rSettle(){
       return '<button onclick="window._adm_settle_month=\''+m+'\';SP(S.page,null)" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(on?'var(--blue)':'var(--border)')+';background:'+(on?'var(--blue)':'var(--bg)')+';color:'+(on?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">'+m+'</button>';
     }).join('')
     +'</div>';
-  // ★ 캠프별 필터 탭
+  // ★ 캠프별 필터 탭 - 각 캠프별 인원수 표시
+  var campCount={all:s.length};
+  CAMP_LIST_S.forEach(function(c){campCount[c]=0;});
+  s.forEach(function(x){var c=_getSettleCamp(x); campCount[c]=(campCount[c]||0)+1;});
   var campTabs='<div style="display:flex;gap:5px;padding:0 0 10px;flex-wrap:wrap;align-items:center">'
     +'<span style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:0.5px;margin-right:4px">🏕️ 캠프</span>'
-    +'<button onclick="window._adm_settle_camp=\'all\';SP(S.page,null)" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(filterCamp==='all'?'var(--purple)':'var(--border)')+';background:'+(filterCamp==='all'?'var(--purple)':'var(--bg)')+';color:'+(filterCamp==='all'?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">전체</button>'
-    +CAMP_ORDER.map(function(c){
+    +'<button onclick="window._adm_settle_camp=\'all\';SP(S.page,null)" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(filterCamp==='all'?'var(--purple)':'var(--border)')+';background:'+(filterCamp==='all'?'var(--purple)':'var(--bg)')+';color:'+(filterCamp==='all'?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">전체 ('+campCount.all+')</button>'
+    +CAMP_LIST_S.map(function(c){
       var on=c===filterCamp;
-      var col=CAMP_COLOR[c]||'var(--purple)';
-      return '<button onclick="window._adm_settle_camp=\''+c+'\';SP(S.page,null)" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(on?col:'var(--border)')+';background:'+(on?col:'var(--bg)')+';color:'+(on?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">'+c+'</button>';
+      var col=CAMP_COL_S[c]||'var(--purple)';
+      var cnt=campCount[c]||0;
+      return '<button onclick="window._adm_settle_camp=\''+c+'\';SP(S.page,null)" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(on?col:'var(--border)')+';background:'+(on?col:'var(--bg)')+';color:'+(on?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">'+c+' ('+cnt+')</button>';
     }).join('')
     +'</div>';
   var filtered=filterMonth==='all'?s:s.filter(function(x){return x.month===filterMonth;});
@@ -2157,7 +2188,7 @@ function rSettle(){
     var totNet=gRows.reduce(function(s,x){return s+calcNet(x).net;},0);
     var rows=gRows.map(function(x){var i=x._origIdx;var r=calcNet(x);var jobBadge={'쿠팡':'b-coral','컬리':'b-purple','CJ':'b-blue','용차':'b-done'}[x.jobsub]||'b-wait';
       var _cp=_getSettleCamp(x);
-      var _cpCol=CAMP_COLOR[_cp]||'#94a3b8';
+      var _cpCol=CAMP_COL_S[_cp]||'#94a3b8';
       return`<tr>
         <td><strong>${x.driver}</strong> <span style="display:inline-block;padding:1px 6px;margin-left:3px;border-radius:4px;font-size:9px;font-weight:700;color:#fff;background:${_cpCol};letter-spacing:-0.3px">${_cp}</span></td>
         <td><span class="badge ${jobBadge}" style="font-size:10px">${x.jobsub||'쿠팡'}</span></td>
@@ -3116,13 +3147,40 @@ function rDrivers(){
   var ina=all.filter(d=>d.status==='탈퇴'||d.status==='거부');
 
   // 필터 적용
+  if(typeof S.cFilter==='undefined') S.cFilter='all';
+  // ★ 기사 캠프 판별 헬퍼 (근무표관리와 동일 로직)
+  function _getDrvCamp_S(d){
+    if(!d)return '';
+    // 1순위: d.camp 필드 (근무표관리에서 쓰는 '부산1', '진주M' 형식)
+    if(d.camp){
+      // '부산1캠프' 형식이면 '캠프' 제거
+      if(d.camp.indexOf('캠프')>=0) return d.camp.replace('캠프','');
+      return d.camp;
+    }
+    // 2순위: d.route 문자열에서 캠프명 찾기
+    var r=d.route||'';
+    var ORDER=['부산1','부산2','부산3','대구2','진주M'];
+    for(var i=0;i<ORDER.length;i++){
+      if(r.indexOf(ORDER[i])>=0) return ORDER[i];
+    }
+    if(r.indexOf('대구')>=0) return '대구2';
+    if(r.indexOf('진주')>=0) return '진주M';
+    return '';
+  }
   var filtered=act.filter(d=>{
     if(S.eFilter!=='all'&&d.employ!==S.eFilter)return false;
     if(S.tFilter!=='all'&&d.ton!==S.tFilter)return false;
     if(S.dFilter!=='all'&&d.jobtype!==S.dFilter)return false;
+    if(S.cFilter!=='all'&&_getDrvCamp_S(d)!==S.cFilter)return false;
     return true;
   });
   var tons=[...new Set(act.map(d=>d.ton||'미정').filter(Boolean))].sort();
+  // ★ 캠프 탭용 카운트 (활성 기사만)
+  var _CAMPS_D=['부산1','부산2','부산3','대구2','진주M'];
+  var _CAMPCOL_D={'부산1':'#3B82F6','부산2':'#8B5CF6','부산3':'#10B981','대구2':'#F59E0B','진주M':'#EF4444'};
+  var _cntD={};
+  _CAMPS_D.forEach(function(c){_cntD[c]=0;});
+  act.forEach(function(d){var c=_getDrvCamp_S(d); if(_cntD[c]!==undefined)_cntD[c]++;});
 
   function docThumbs(d){
     var slots=[{key:'bankPhotoUrl',u:d.bankPhotoUrl,label:'통장',color:'var(--teal)'},{key:'license',u:(d.docs||{}).license,label:'면허',color:'var(--blue)'},{key:'cargo_cert',u:(d.docs||{}).cargo_cert,label:'화물자격',color:'var(--purple)'},{key:'car_reg',u:(d.docs||{}).car_reg,label:'자동차등록',color:'var(--amber)'},{key:'biz_reg',u:(d.docs||{}).biz_reg,label:'사업자',color:'var(--coral)'}];
@@ -3179,7 +3237,7 @@ function rDrivers(){
     <div class="ch"><span class="ct">활성 기사 (${filtered.length}/${act.length}명)</span>
       <div style="display:flex;gap:6px">
         <button class="btn btn-sm" style="background:#7c3aed;color:#fff;border:none" onclick="assignAllDriverNums()">🔢 사번 일괄저장</button>
-        <button class="btn btn-sm" onclick="S.eFilter='all';S.tFilter='all';S.dFilter='all';SP('drivers',null)">전체보기</button>
+        <button class="btn btn-sm" onclick="S.eFilter='all';S.tFilter='all';S.dFilter='all';S.cFilter='all';SP('drivers',null)">전체보기</button>
       </div>
     </div>
     <div style="margin-bottom:10px">
@@ -3199,6 +3257,11 @@ function rDrivers(){
       <div class="filter-tabs">
         <span class="ftab ${S.tFilter==='all'?'on':''}" onclick="S.tFilter='all';SP('drivers',null)">전체</span>
         ${tons.map(t=>`<span class="ftab ${S.tFilter===t?'on':''}" onclick="S.tFilter='${t}';SP('drivers',null)">${t}</span>`).join('')}
+      </div>
+      <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px;margin-top:8px">🏕️ 캠프</div>
+      <div class="filter-tabs">
+        <span class="ftab ${S.cFilter==='all'?'on':''}" onclick="S.cFilter='all';SP('drivers',null)">전체 (${act.length})</span>
+        ${_CAMPS_D.map(c=>`<span class="ftab ${S.cFilter===c?'on':''}" onclick="S.cFilter='${c}';SP('drivers',null)" style="${S.cFilter===c?'background:'+_CAMPCOL_D[c]+';color:#fff;border-color:'+_CAMPCOL_D[c]:''}">${c} (${_cntD[c]||0})</span>`).join('')}
       </div>
     </div>
     <table class="tbl"><thead><tr><th>성명(아이디)</th><th>차량/톤수</th><th>업무</th><th>고용</th><th>노선</th><th>서류 5종</th><th>상태</th><th></th></tr></thead><tbody>
