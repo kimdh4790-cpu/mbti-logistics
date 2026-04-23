@@ -2113,6 +2113,19 @@ function rTemp(){
 function rSettle(){
   var s=ls('settlements');
   var filterMonth=window._adm_settle_month||'all';
+  var filterCamp=window._adm_settle_camp||'all';
+  // ★ settlement의 캠프 판별 (routeDetails의 라우트 prefix 기준)
+  function _getSettleCamp(x){
+    var rds=x.routeDetails||[];
+    for(var i=0;i<rds.length;i++){
+      var route=(rds[i]&&rds[i].route)||'';
+      if(!route)continue;
+      for(var p in CAMP_NAMES){
+        if(route.indexOf(p)===0) return CAMP_NAMES[p];
+      }
+    }
+    return '기타';
+  }
   // 월 목록 추출
   var months=[...new Set(s.map(x=>x.month).filter(Boolean))].sort(function(a,b){return b.localeCompare(a);});
   var monthTabs='<div style="display:flex;gap:5px;padding:8px 0 6px;flex-wrap:wrap">'
@@ -2122,7 +2135,18 @@ function rSettle(){
       return '<button onclick="window._adm_settle_month=\''+m+'\';SP(S.page,null)" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(on?'var(--blue)':'var(--border)')+';background:'+(on?'var(--blue)':'var(--bg)')+';color:'+(on?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">'+m+'</button>';
     }).join('')
     +'</div>';
+  // ★ 캠프별 필터 탭
+  var campTabs='<div style="display:flex;gap:5px;padding:0 0 10px;flex-wrap:wrap;align-items:center">'
+    +'<span style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:0.5px;margin-right:4px">🏕️ 캠프</span>'
+    +'<button onclick="window._adm_settle_camp=\'all\';SP(S.page,null)" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(filterCamp==='all'?'var(--purple)':'var(--border)')+';background:'+(filterCamp==='all'?'var(--purple)':'var(--bg)')+';color:'+(filterCamp==='all'?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">전체</button>'
+    +CAMP_ORDER.map(function(c){
+      var on=c===filterCamp;
+      var col=CAMP_COLOR[c]||'var(--purple)';
+      return '<button onclick="window._adm_settle_camp=\''+c+'\';SP(S.page,null)" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(on?col:'var(--border)')+';background:'+(on?col:'var(--bg)')+';color:'+(on?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">'+c+'</button>';
+    }).join('')
+    +'</div>';
   var filtered=filterMonth==='all'?s:s.filter(function(x){return x.month===filterMonth;});
+  if(filterCamp!=='all') filtered=filtered.filter(function(x){return _getSettleCamp(x)===filterCamp;});
   // 월별 그룹
   var mmap={};
   filtered.forEach(function(x,origIdx){x._origIdx=s.indexOf(x);if(!mmap[x.month||'—'])mmap[x.month||'—']=[];mmap[x.month||'—'].push(x);});
@@ -2132,8 +2156,10 @@ function rSettle(){
     var gRows=mmap[mo];
     var totNet=gRows.reduce(function(s,x){return s+calcNet(x).net;},0);
     var rows=gRows.map(function(x){var i=x._origIdx;var r=calcNet(x);var jobBadge={'쿠팡':'b-coral','컬리':'b-purple','CJ':'b-blue','용차':'b-done'}[x.jobsub]||'b-wait';
+      var _cp=_getSettleCamp(x);
+      var _cpCol=CAMP_COLOR[_cp]||'#94a3b8';
       return`<tr>
-        <td><strong>${x.driver}</strong></td>
+        <td><strong>${x.driver}</strong> <span style="display:inline-block;padding:1px 6px;margin-left:3px;border-radius:4px;font-size:9px;font-weight:700;color:#fff;background:${_cpCol};letter-spacing:-0.3px">${_cp}</span></td>
         <td><span class="badge ${jobBadge}" style="font-size:10px">${x.jobsub||'쿠팡'}</span></td>
         <td>${x.month}</td>
         <td style="color:var(--green)">₩${r.income.toLocaleString()}</td>
@@ -2181,7 +2207,7 @@ function rSettle(){
     <div style="font-size:10px;color:var(--text3);margin-top:8px">💡 쿠팡 엑셀(정산Raw/정산총괄 포함) 업로드 → 기사 자동 매칭 → 고용·산재·원천세 자동 계산</div>
   </div>
   <div style="font-size:11px;color:var(--text2);margin-bottom:8px;padding:6px 8px;background:var(--blue-l);border-radius:var(--r)">💡 기사별 [정산] 버튼으로 직접 작성, 또는 엑셀 업로드로 자동 계산 가능합니다.</div>
-  ${monthTabs}${tableBody}</div>`;
+  ${monthTabs}${campTabs}${tableBody}</div>`;
   setTimeout(_updJinjuBtn, 50);
   return _settleHTML;
 }
