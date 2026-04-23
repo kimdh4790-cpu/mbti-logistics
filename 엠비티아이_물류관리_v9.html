@@ -1347,6 +1347,33 @@ async function hashPw(pw){
   var buf=await crypto.subtle.digest('SHA-256',enc.encode(pw));
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
+// ── Firebase Auth 연동 헬퍼 (v9.1 신규: 익명→이메일 인증 전환)
+async function _fbAuthPw(plainPw){
+  // Firestore 저장 해시와 다른 별도 해시 (동일 값 노출 방지)
+  return await hashPw(plainPw+'_mbti_fb_2026');
+}
+async function _ensureFbLogin(userId,plainPw){
+  // 자체 로그인 성공 후 Firebase Auth로 전환 (계정 없으면 자동 생성)
+  if(typeof firebase==='undefined'||!firebase.auth||!userId||!plainPw)return null;
+  var clean=String(userId).replace(/[^a-zA-Z0-9._-]/g,'_');
+  if(!clean)return null;
+  var email=clean+'@df.local';
+  var fbPw=await _fbAuthPw(plainPw);
+  try{
+    var cred=await firebase.auth().signInWithEmailAndPassword(email,fbPw);
+    return cred.user?cred.user.uid:null;
+  }catch(e){
+    if(e.code==='auth/user-not-found'){
+      try{
+        var cred2=await firebase.auth().createUserWithEmailAndPassword(email,fbPw);
+        console.log('FB Auth 신규 계정 생성:',email);
+        return cred2.user?cred2.user.uid:null;
+      }catch(e2){console.warn('FB Auth 생성 실패:',e2.code,userId);return null;}
+    }
+    console.warn('FB Auth 로그인 오류:',e.code,userId);
+    return null;
+  }
+}
 // ── v6.1 스플래시 — 7개 로고 버튼 클릭
 var _splashSelectedJob='';
 function splashJobClick(job,ico){
@@ -1451,6 +1478,12 @@ function doLogin(){
       // ── 2단계 인증 체크 (관리자만)
       var _finishAdminLogin=function(finalInfo){
         localStorage.removeItem(lockKey);
+        // ★ Firebase Auth 연동 (백그라운드, 실패해도 로그인 계속)
+        _ensureFbLogin(sId,pw).then(function(uid){
+          if(uid&&FB&&_db){
+            _db.collection('settings').doc('adminInfo').update({authUid:uid}).catch(function(){});
+          }
+        }).catch(function(){});
         S.curMode='admin';
         var aName=finalInfo.name||'김형우 대표';
         setAdminName(aName);
@@ -1543,6 +1576,12 @@ function doLogin(){
         }
         // 로그인 성공 시 잠금 해제
         localStorage.removeItem(lockKey);
+        // ★ Firebase Auth 연동 (백그라운드, 실패해도 로그인 계속)
+        _ensureFbLogin(found.userId||id,pw).then(function(uid){
+          if(uid&&FB&&_db&&found.fbId&&uid!==found.authUid){
+            _db.collection('drivers').doc(found.fbId).update({authUid:uid}).catch(function(){});
+          }
+        }).catch(function(){});
         // ── v6.1: 로그인한 사람 이름으로 즉시 교체 (세션 버그 해결)
         S.curDriver=found.name||id;
         S.curPlate=found.plate||'';
@@ -4037,6 +4076,14 @@ async function saveMypage(){
       var newHash=await hashPw(newPw);
       adminInfo.pw=newHash;
       adminInfo.pwPlain=newPw; // 긴급 복구용
+      // ★ Firebase Auth 비번 동기화 (백그라운드)
+      try{
+        var curU=firebase.auth&&firebase.auth().currentUser;
+        if(curU&&!curU.isAnonymous){
+          var newFbPw=await _fbAuthPw(newPw);
+          await curU.updatePassword(newFbPw);
+        }
+      }catch(e){console.warn('FB Auth 비번 동기화 실패:',e.code);}
       toast('🔐 관리자 비밀번호 변경됨');
     }
 
@@ -4073,6 +4120,14 @@ async function saveMypage(){
       var newHash=await hashPw(newPw);
       me.pw=newHash;
       lss('drivers',drs);
+      // ★ Firebase Auth 비번 동기화 (백그라운드)
+      try{
+        var curU=firebase.auth&&firebase.auth().currentUser;
+        if(curU&&!curU.isAnonymous){
+          var newFbPw=await _fbAuthPw(newPw);
+          await curU.updatePassword(newFbPw);
+        }
+      }catch(e){console.warn('FB Auth 비번 동기화 실패:',e.code);}
       if(FB&&_db&&me.fbId)_db.collection('drivers').doc(me.fbId).update({pw:newHash}).catch(()=>{});
       toast('🔐 비밀번호 변경됨');
     }
