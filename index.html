@@ -218,10 +218,12 @@ section[id],div[id]{scroll-margin-top:68px;}
 nav{
 position:fixed;top:0;left:0;right:0;z-index:9999;
 background:rgba(8,16,32,0.97);backdrop-filter:blur(16px);
+-webkit-backdrop-filter:blur(16px);
 border-bottom:1px solid rgba(255,255,255,0.08);
 height:68px;padding:0 4%;
 display:flex;align-items:center;justify-content:space-between;
 gap:12px;
+box-shadow:0 4px 20px rgba(0,0,0,0.15);
 }
 .nav-logo{display:flex;align-items:center;gap:12px;flex-shrink:0;}
 .nav-logo img{height:52px;width:52px;object-fit:contain;border-radius:10px;filter:drop-shadow(0 2px 8px rgba(255,255,255,0.15));}
@@ -244,6 +246,93 @@ flex-shrink:0;
 .nav-links{display:flex;gap:18px;list-style:none;}
 .nav-links a{color:rgba(255,255,255,0.78);font-size:0.79rem;font-weight:600;letter-spacing:0.3px;transition:color 0.2s;padding:4px 0;}
 .nav-links a:hover,.nav-links a.active{color:var(--amber);}
+
+/* ━━━━━━ 햄버거 메뉴 버튼 (모바일) ━━━━━━ */
+.nav-hamburger {
+  display:none; background:rgba(255,255,255,0.08);
+  border:1px solid rgba(255,255,255,0.15); border-radius:10px;
+  width:42px; height:42px; cursor:pointer;
+  padding:0; flex-direction:column; justify-content:center;
+  align-items:center; gap:5px; flex-shrink:0;
+  transition:background 0.2s;
+}
+.nav-hamburger:hover { background:rgba(251,191,36,0.2); }
+.nav-hamburger span {
+  display:block; width:20px; height:2px;
+  background:#fbbf24; border-radius:2px;
+  transition:all 0.3s ease;
+}
+.nav-hamburger.open span:nth-child(1) { transform:translateY(7px) rotate(45deg); }
+.nav-hamburger.open span:nth-child(2) { opacity:0; }
+.nav-hamburger.open span:nth-child(3) { transform:translateY(-7px) rotate(-45deg); }
+
+/* ━━━━━━ 모바일 드로어 메뉴 ━━━━━━ */
+.mobile-drawer {
+  position:fixed; top:0; right:-100%;
+  width:min(320px,85vw); height:100vh;
+  background:linear-gradient(180deg,#0a1628 0%,#102845 100%);
+  border-left:1px solid rgba(251,191,36,0.2);
+  box-shadow:-20px 0 60px rgba(0,0,0,0.6);
+  z-index:10000; padding:80px 0 30px;
+  overflow-y:auto; transition:right 0.35s cubic-bezier(0.4,0,0.2,1);
+}
+.mobile-drawer.open { right:0; }
+.mobile-drawer-backdrop {
+  position:fixed; inset:0; background:rgba(0,0,0,0.6);
+  backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);
+  z-index:9998; opacity:0; pointer-events:none;
+  transition:opacity 0.3s;
+}
+.mobile-drawer-backdrop.open { opacity:1; pointer-events:auto; }
+.mobile-drawer-close {
+  position:absolute; top:20px; right:20px;
+  width:40px; height:40px; border-radius:50%;
+  background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15);
+  color:#fbbf24; font-size:1.5rem; cursor:pointer;
+  display:grid; place-items:center; line-height:1;
+}
+.mobile-drawer ul {
+  list-style:none; padding:0; margin:0;
+}
+.mobile-drawer li {
+  border-bottom:1px solid rgba(255,255,255,0.06);
+}
+.mobile-drawer li a {
+  display:flex; align-items:center; gap:14px;
+  padding:18px 26px; color:#fff; font-size:0.95rem;
+  font-weight:600; letter-spacing:0.5px;
+  transition:all 0.2s; text-decoration:none;
+}
+.mobile-drawer li a:hover,
+.mobile-drawer li a.active {
+  background:rgba(251,191,36,0.1);
+  color:#fbbf24; padding-left:34px;
+}
+.mobile-drawer li a .md-ico { font-size:1.2rem; }
+.mobile-drawer-footer {
+  padding:20px 26px; margin-top:20px;
+  border-top:1px solid rgba(255,255,255,0.1);
+  display:flex; flex-direction:column; gap:10px;
+}
+.mobile-drawer-footer button,
+.mobile-drawer-footer a {
+  padding:12px; border-radius:10px;
+  font-size:0.85rem; font-weight:700;
+  text-align:center; border:none; cursor:pointer;
+  text-decoration:none; display:block;
+}
+
+/* ━━━━━━ 반응형 ━━━━━━ */
+@media(max-width:960px) {
+  .nav-links { display:none !important; }
+  .nav-live { display:none !important; }
+  .nav-hamburger { display:flex !important; }
+  nav { padding:0 5%; gap:8px; }
+  .nav-logo img { height:44px; width:44px; }
+  .nav-logo-name { font-size:1.1rem; }
+  .nav-toggle { padding:3px; }
+  .ntab { padding:4px 8px; font-size:0.65rem; }
+}
 @media(max-width:768px){.nav-login-btns-wrap{display:none!important;}}
 .nav-toggle{display:flex;gap:4px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:100px;padding:4px;flex-shrink:0;}
 .ntab{padding:5px 13px;border-radius:100px;border:none;font-size:0.72rem;font-weight:700;transition:all 0.2s;background:transparent;color:rgba(255,255,255,0.55);font-family:inherit;}
@@ -826,6 +915,33 @@ body.app-mode{background:#0a0e1a;}
 #pwa-float-btn:hover { transform:translateY(-2px);box-shadow:0 10px 30px rgba(24,95,165,0.6); }
 
 @media(max-width:700px){.nav-login-btns-wrap{display:none!important;}}
+
+/* ═══════════════════════════════════════════════════════════
+   이미지 섹션 반응형 (2026.04 추가)
+   ═══════════════════════════════════════════════════════════ */
+.brand-collage-wrap, .services-banner-wrap, .promo-video-wrap {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.brand-collage-wrap:hover, .services-banner-wrap:hover {
+  transform: translateY(-3px);
+}
+.promo-video-wrap:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 40px 100px rgba(0,0,0,0.6) !important;
+}
+@media (max-width: 768px) {
+  .brand-collage-wrap { margin: 20px 0 30px !important; border-radius: 12px !important; min-height:180px !important; }
+  .brand-collage-wrap .collage-overlay { padding: 40px 16px 16px !important; }
+  .services-banner-wrap { margin: 0 auto 30px !important; border-radius: 14px !important; min-height:220px !important; }
+  .promo-video-wrap { border-radius: 12px !important; min-height:220px !important; }
+  #promo-video { padding: 50px 4% !important; }
+  #promo-video .play-btn { width: 64px !important; height: 64px !important; }
+  #promo-video .play-btn > div {
+    border-left-width: 20px !important;
+    border-top-width: 13px !important;
+    border-bottom-width: 13px !important;
+  }
+}
 </style>
 </head>
 <body id="mbtiBody">
@@ -977,7 +1093,55 @@ body.app-mode{background:#0a0e1a;}
 <button class="ntab active" id="pcBtn" onclick="setView(&#39;pc&#39;)">🖥 PC</button>
 <button class="ntab" id="appBtn" onclick="tryOpenApp()">📱 앱</button>
 </div>
+<!-- ★ 햄버거 메뉴 버튼 (모바일) -->
+<button class="nav-hamburger" id="navHamburger" onclick="toggleMobileDrawer()" aria-label="메뉴 열기">
+  <span></span><span></span><span></span>
+</button>
 </nav>
+
+<!-- ★ 모바일 드로어 메뉴 -->
+<div class="mobile-drawer-backdrop" id="mobileDrawerBackdrop" onclick="closeMobileDrawer()"></div>
+<div class="mobile-drawer" id="mobileDrawer">
+  <button class="mobile-drawer-close" onclick="closeMobileDrawer()" aria-label="메뉴 닫기">✕</button>
+  <div style="padding:0 26px 20px;border-bottom:1px solid rgba(255,255,255,0.1);margin-bottom:10px;">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;background:linear-gradient(90deg,#f00,#f80,#dd0,#0a0,#00f,#80f);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:2px;">MBTI(Co.,Ltd.)</div>
+    <div style="font-size:0.6rem;color:rgba(255,255,255,0.4);letter-spacing:3px;margin-top:2px;">LOGISTICS · 영남권 물류 전문</div>
+  </div>
+  <ul>
+    <li><a href="javascript:void(0)" onclick="goTo('#home');closeMobileDrawer();"><span class="md-ico">🏠</span>홈</a></li>
+    <li><a href="javascript:void(0)" onclick="goTo('#about');closeMobileDrawer();"><span class="md-ico">📋</span>사업 개요</a></li>
+    <li><a href="javascript:void(0)" onclick="goTo('#services');closeMobileDrawer();"><span class="md-ico">🚚</span>서비스</a></li>
+    <li><a href="javascript:void(0)" onclick="goTo('#vision');closeMobileDrawer();"><span class="md-ico">📈</span>성장 로드맵</a></li>
+    <li><a href="javascript:void(0)" onclick="goTo('#promo-video');closeMobileDrawer();"><span class="md-ico">🎬</span>브랜드 영상</a></li>
+    <li><a href="javascript:void(0)" onclick="goTo('#culture');closeMobileDrawer();"><span class="md-ico">❤️</span>기업 문화</a></li>
+    <li><a href="javascript:void(0)" onclick="goTo('#recruit');closeMobileDrawer();"><span class="md-ico">🧑‍💼</span>기사 모집</a></li>
+    <li><a href="javascript:void(0)" onclick="goTo('#partner-inquiry');closeMobileDrawer();"><span class="md-ico">🤝</span>파트너 문의</a></li>
+    <li><a href="javascript:void(0)" onclick="goTo('#contact');closeMobileDrawer();"><span class="md-ico">📞</span>연락처</a></li>
+  </ul>
+  <div class="mobile-drawer-footer">
+    <button onclick="openMbtiLogin('driver');closeMobileDrawer();" style="background:linear-gradient(135deg,#0f6e56,#1aab85);color:#fff;">🚛 기사 로그인</button>
+    <a href="tel:01047903103" style="background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.4);color:#fbbf24;">📞 010-4790-3103</a>
+  </div>
+</div>
+
+<script>
+function toggleMobileDrawer() {
+  var d = document.getElementById('mobileDrawer');
+  var b = document.getElementById('mobileDrawerBackdrop');
+  var h = document.getElementById('navHamburger');
+  var isOpen = d.classList.contains('open');
+  if (isOpen) { closeMobileDrawer(); } else {
+    d.classList.add('open'); b.classList.add('open'); h.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+}
+function closeMobileDrawer() {
+  document.getElementById('mobileDrawer').classList.remove('open');
+  document.getElementById('mobileDrawerBackdrop').classList.remove('open');
+  document.getElementById('navHamburger').classList.remove('open');
+  document.body.style.overflow = '';
+}
+</script>
 
 <div class="pc-wrap">
 
@@ -1197,6 +1361,27 @@ body.app-mode{background:#0a0e1a;}
 <div class="sec-tag blue">COMPANY PROFILE</div>
 <h2 class="sec-title">사업 개요</h2>
 <p class="sec-desc">2022년 12월 설립된 <strong>MBTI(Co.,Ltd.)</strong>는 영남권 물류 네트워크를 기반으로 라스트마일 배송 서비스를 전문으로 합니다.</p>
+
+<!-- ★ 브랜드 콜라주 이미지 (이미지 로드 실패 시 placeholder 표시) -->
+<div class="brand-collage-wrap" style="margin:30px 0 40px;border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(10,22,40,0.15);position:relative;background:linear-gradient(135deg,#0a1628 0%,#102845 45%,#1e3a5f 100%);min-height:240px;">
+  <!-- 이미지가 없을 때 보여지는 placeholder 배경 -->
+  <div class="collage-placeholder" style="position:absolute;inset:0;display:grid;place-items:center;z-index:0;">
+    <div style="text-align:center;padding:40px 20px;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(40px,10vw,120px);color:#fbbf24;letter-spacing:8px;font-weight:900;line-height:1;opacity:0.2;">MBTI</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(18px,3vw,32px);color:rgba(255,255,255,0.4);letter-spacing:4px;margin-top:8px;">LOGISTICS</div>
+      <div style="width:60px;height:2px;background:rgba(251,191,36,0.4);margin:16px auto;"></div>
+      <div style="font-family:'Playfair Display',serif;font-size:clamp(14px,2.2vw,22px);color:rgba(255,255,255,0.85);font-style:italic;">Delivering Trust, Connecting the World</div>
+      <div style="font-size:clamp(11px,1.5vw,14px);color:rgba(251,191,36,0.8);margin-top:8px;font-weight:600;">글로벌 물류의 연결, 신뢰의 가치로 전합니다</div>
+    </div>
+  </div>
+  <!-- 실제 브랜드 이미지 (images/mbti-collage.jpg) -->
+  <img src="images/mbti-collage.jpg" alt="MBTI Logistics Brand Collage" style="width:100%;height:auto;display:block;position:relative;z-index:1;" loading="lazy" onerror="this.style.display='none';">
+  <!-- 이미지 로드 성공 시 하단 그라데이션 오버레이 (이미지 위에) -->
+  <div class="collage-overlay" style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(to top,rgba(10,22,40,0.92) 0%,rgba(10,22,40,0) 100%);padding:60px 30px 24px;color:#fff;z-index:2;pointer-events:none;">
+    <div style="font-family:'Playfair Display',serif;font-size:clamp(18px,3vw,28px);font-weight:700;letter-spacing:0.02em;">Delivering Trust, Connecting the World</div>
+    <div style="font-size:clamp(13px,1.8vw,15px);color:#fbbf24;margin-top:6px;font-weight:600;">글로벌 물류의 연결, 신뢰의 가치로 전합니다</div>
+  </div>
+</div>
 <div style="margin:20px 0;border-radius:14px;overflow:hidden;">
 <div class="hero-net-box">
 <div class="hero-net-title">🗺️ 영남권 물류 네트워크</div>
@@ -1242,11 +1427,32 @@ body.app-mode{background:#0a0e1a;}
 
 <!-- SERVICES -->
 <section id="services" class="sec">
-<div style="text-align:center;margin-bottom:40px;">
+<div style="text-align:center;margin-bottom:30px;">
 <div class="sec-tag blue">SERVICES</div>
 <h2 class="sec-title" style="text-align:center;">최적의 물류 솔루션</h2>
 <p class="sec-desc" style="margin:10px auto;text-align:center;">기술과 사람이 만드는 <strong>완벽한 물류 시스템</strong>으로 고객의 성장을 함께합니다.</p>
 </div>
+
+<!-- ★ 서비스 메인 배너 이미지 (로드 실패 시 placeholder) -->
+<div class="services-banner-wrap" style="margin:0 auto 40px;max-width:1400px;border-radius:20px;overflow:hidden;box-shadow:0 24px 70px rgba(10,22,40,0.25);position:relative;background:linear-gradient(135deg,#1e3a5f 0%,#0a1628 50%,#102845 100%);min-height:280px;">
+  <!-- placeholder (이미지 없을 때 보임) -->
+  <div class="banner-placeholder" style="position:absolute;inset:0;display:grid;place-items:center;padding:40px 20px;z-index:0;">
+    <div style="text-align:center;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(32px,5vw,56px);color:#fbbf24;letter-spacing:3px;font-weight:900;line-height:1;margin-bottom:12px;">MBTI LOGISTICS</div>
+      <div style="font-size:clamp(12px,1.8vw,16px);color:rgba(255,255,255,0.6);letter-spacing:1px;margin-bottom:24px;">영남권 물류 네트워크 전문 기업</div>
+      <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:clamp(12px,3vw,36px);color:rgba(255,255,255,0.85);">
+        <div style="text-align:center;"><div style="font-size:clamp(20px,4vw,32px);">🌐</div><div style="font-size:10px;letter-spacing:1px;margin-top:4px;">Global Network</div></div>
+        <div style="text-align:center;"><div style="font-size:clamp(20px,4vw,32px);">🚚</div><div style="font-size:10px;letter-spacing:1px;margin-top:4px;">Land Transport</div></div>
+        <div style="text-align:center;"><div style="font-size:clamp(20px,4vw,32px);">🚢</div><div style="font-size:10px;letter-spacing:1px;margin-top:4px;">Sea Transport</div></div>
+        <div style="text-align:center;"><div style="font-size:clamp(20px,4vw,32px);">✈️</div><div style="font-size:10px;letter-spacing:1px;margin-top:4px;">Air Transport</div></div>
+        <div style="text-align:center;"><div style="font-size:clamp(20px,4vw,32px);">🏢</div><div style="font-size:10px;letter-spacing:1px;margin-top:4px;">Warehousing</div></div>
+        <div style="text-align:center;"><div style="font-size:clamp(20px,4vw,32px);">🛡️</div><div style="font-size:10px;letter-spacing:1px;margin-top:4px;">Safety & Trust</div></div>
+      </div>
+    </div>
+  </div>
+  <img src="images/mbti-main-banner.jpg" alt="MBTI Logistics Services Banner" style="width:100%;height:auto;display:block;position:relative;z-index:1;" loading="lazy" onerror="this.style.display='none';">
+</div>
+
 <div class="svc-grid">
 <div class="svc-card"><div class="svc-icon" style="background:linear-gradient(135deg,#e0f2fe,#bae6fd);">❄️</div><div class="svc-badge red">NEW</div><div class="svc-title">콜드체인 솔루션</div><div class="svc-desc">신선식품에서 의약품까지, 완벽한 온도 관리 및 정시 배송.</div><div class="svc-tags"><span class="svc-tag">냉장탑차</span><span class="svc-tag">냉동배송</span><span class="svc-tag">품질보장</span></div></div>
 <div class="svc-card featured"><div class="svc-icon" style="background:linear-gradient(135deg,#eff6ff,#dbeafe);">🚀</div><div class="svc-badge blue">핵심</div><div class="svc-title">스마트 물류 시스템</div><div class="svc-desc">AI 기반 배송 경로 최적화 및 MBTI 성향 기반 데이터 배차.</div><div class="svc-tags"><span class="svc-tag">AI배차</span><span class="svc-tag">경로최적화</span><span class="svc-tag">실시간관제</span></div></div>
@@ -1432,6 +1638,32 @@ body.app-mode{background:#0a0e1a;}
 </div>
 </section>
 
+<!-- ═══════════════════════════════════════════════════════════
+     PROMO VIDEO SECTION (프로모션 영상)
+     ═══════════════════════════════════════════════════════════ -->
+<section id="promo-video" class="sec" style="background:linear-gradient(135deg,#0a1628 0%,#102845 50%,#0a1628 100%);padding:70px 5%;text-align:center;color:#fff;">
+  <div class="sec-tag amber" style="color:#fbbf24;border-color:#fbbf24;">BRAND STORY · 0:30</div>
+  <h2 class="sec-title white" style="color:#fff;">영상으로 만나는 <span style="color:#fbbf24;">MBTI LOGISTICS</span></h2>
+  <p class="sec-desc white" style="color:rgba(255,255,255,0.85);margin-bottom:30px;">글로벌 물류의 연결, 신뢰의 가치를 30초 영상으로 확인하세요.</p>
+
+  <div class="promo-video-wrap" style="max-width:960px;margin:0 auto;border-radius:16px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,0.5);position:relative;cursor:pointer;background:linear-gradient(135deg,#1e3a5f 0%,#0a1628 50%,#102845 100%);min-height:300px;" onclick="alert('유튜브 영상 URL을 알려주시면 바로 연결해 드립니다.');">
+    <!-- placeholder -->
+    <div class="video-placeholder" style="position:absolute;inset:0;display:grid;place-items:center;z-index:0;">
+      <div style="text-align:center;padding:40px 20px;opacity:0.3;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(32px,6vw,72px);color:#fbbf24;letter-spacing:4px;font-weight:900;line-height:1;">MBTI</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(14px,2vw,20px);color:rgba(255,255,255,0.7);letter-spacing:3px;margin-top:6px;">PROMOTIONAL VIDEO</div>
+      </div>
+    </div>
+    <img src="images/mbti-promo-video.jpg" alt="MBTI Logistics Promotional Video" style="width:100%;height:auto;display:block;position:relative;z-index:1;" loading="lazy" onerror="this.style.display='none';">
+    <!-- 재생 버튼 오버레이 -->
+    <div class="play-btn" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:90px;height:90px;background:rgba(251,191,36,0.95);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 40px rgba(251,191,36,0.5);transition:all 0.3s;z-index:3;" onmouseover="this.style.transform='translate(-50%,-50%) scale(1.1)';" onmouseout="this.style.transform='translate(-50%,-50%) scale(1)';">
+      <div style="width:0;height:0;border-left:28px solid #0a1628;border-top:18px solid transparent;border-bottom:18px solid transparent;margin-left:6px;"></div>
+    </div>
+  </div>
+
+  <div style="margin-top:24px;font-family:'Playfair Display',serif;font-size:clamp(18px,2.5vw,24px);font-style:italic;color:#fbbf24;letter-spacing:0.03em;">"Delivering Trust, Connecting the World"</div>
+</section>
+
 <!-- MBTI CARE + CULTURE -->
 <section id="culture" class="sec sec-light">
 <div class="care-hdr">
@@ -1568,16 +1800,16 @@ body.app-mode{background:#0a0e1a;}
     <div style="position:absolute;top:12px;right:14px;font-size:0.62rem;color:rgba(245,158,11,0.6);letter-spacing:3px;font-weight:700;font-family:'Bebas Neue',sans-serif;">CERTIFIED PARTNER</div>
 
     <div class="cpd-wrap" style="display:grid;grid-template-columns:auto 1fr auto;gap:28px;align-items:center;position:relative;">
-      <!-- 왼쪽: 쿠팡 로고 블록 -->
-      <div style="width:120px;height:120px;background:#fff;border-radius:14px;display:grid;place-items:center;box-shadow:0 6px 20px rgba(0,0,0,0.25);position:relative;">
+      <!-- 왼쪽: 쿠팡 실제 브랜드 스타일 로고 블록 (빨간색) -->
+      <div style="width:120px;height:120px;background:linear-gradient(135deg,#ED1C24 0%,#C81017 100%);border-radius:14px;display:grid;place-items:center;box-shadow:0 6px 20px rgba(237,28,36,0.35);position:relative;">
         <div style="text-align:center;padding:8px;">
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.75rem;color:#003DA5;letter-spacing:1px;line-height:1;">Coupang</div>
-          <div style="width:40px;height:2px;background:#003DA5;margin:6px auto;"></div>
-          <div style="font-size:0.6rem;color:#003DA5;font-weight:800;letter-spacing:1.5px;">OFFICIAL</div>
-          <div style="font-size:0.6rem;color:#003DA5;font-weight:800;letter-spacing:1.5px;">DEALER</div>
+          <div style="font-family:'Black Han Sans','Noto Sans KR',sans-serif;font-size:2.2rem;color:#fff;letter-spacing:-1px;line-height:1;font-weight:900;text-shadow:0 2px 4px rgba(0,0,0,0.15);">쿠팡<span style="color:#FDE047;">!</span></div>
+          <div style="width:42px;height:2px;background:rgba(255,255,255,0.55);margin:7px auto 5px;"></div>
+          <div style="font-size:0.58rem;color:#fff;font-weight:800;letter-spacing:1.5px;opacity:0.95;">OFFICIAL</div>
+          <div style="font-size:0.58rem;color:#fff;font-weight:800;letter-spacing:1.5px;opacity:0.95;">DEALER</div>
         </div>
-        <!-- 골드 씰 -->
-        <div style="position:absolute;top:-10px;right:-10px;width:36px;height:36px;background:linear-gradient(135deg,#fbbf24,#f59e0b);border-radius:50%;display:grid;place-items:center;font-size:1.1rem;box-shadow:0 4px 10px rgba(245,158,11,0.5);">✓</div>
+        <!-- 골드 씰 체크마크 -->
+        <div style="position:absolute;top:-10px;right:-10px;width:36px;height:36px;background:linear-gradient(135deg,#fbbf24,#f59e0b);border-radius:50%;display:grid;place-items:center;font-size:1.1rem;box-shadow:0 4px 10px rgba(245,158,11,0.5);color:#fff;font-weight:900;">✓</div>
       </div>
 
       <!-- 중앙: 설명 -->
