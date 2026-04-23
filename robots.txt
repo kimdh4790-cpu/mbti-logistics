@@ -3,6 +3,11 @@
 
 User-agent: *
 Allow: /
+Disallow: /*v9.html
+Disallow: /*v9
+Disallow: /*물류관리*
+Disallow: /*admin*
+Disallow: /*login*
 
 # Sitemap
 Sitemap: https://mbti-logistics.kimdh4790.workers.dev/sitemap.xml
@@ -10,18 +15,31 @@ Sitemap: https://mbti-logistics.kimdh4790.workers.dev/sitemap.xml
 # 네이버 검색 봇
 User-agent: Yeti
 Allow: /
+Disallow: /*v9.html
+Disallow: /*v9
+Disallow: /*물류관리*
 Crawl-delay: 1
 
 # 구글 검색 봇
 User-agent: Googlebot
 Allow: /
+Disallow: /*v9.html
+Disallow: /*v9
+Disallow: /*물류관리*
 Crawl-delay: 1
 
 # 다음 검색 봇
 User-agent: Daumoa
 Allow: /
+Disallow: /*v9.html
+Disallow: /*v9
+Disallow: /*물류관리*
 Crawl-delay: 1
 
 # 빙 검색 봇
 User-agent: bingbot
 Allow: /
+Disallow: /*v9.html
+Disallow: /*v9
+Disallow: /*물류관리*
+Crawl-delay: 1
