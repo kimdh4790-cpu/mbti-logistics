@@ -916,7 +916,11 @@ var _db=null,_st=null,FB=false;
     if(FB_CFG.projectId&&FB_CFG.projectId.length>3){
       firebase.initializeApp(FB_CFG);
       _db=firebase.firestore(); _st=firebase.storage();
-      _db.enablePersistence({synchronizeTabs:true}).catch(e=>console.warn(e.code));
+      // ★ v9.4 수정: synchronizeTabs 제거 → Target ID already exists 에러 근본 해결
+      //   (다중 탭 지속성이 내정보 탭에서 리스너 재등록 시 Target ID 충돌을 일으켰음)
+      //   enablePersistence() 자체를 끔 - 실시간 리스너(onSnapshot)는 영향 없음
+      //   Firebase v10+에서 deprecated 될 API이기도 함
+      // _db.enablePersistence({synchronizeTabs:true}).catch(e=>console.warn(e.code));
       FB=true;
 
       // ★ 인증 완료 후 리스너 설정 (타이밍 오류 방지)
@@ -3675,13 +3679,32 @@ function rMypage(){
   try{
     var isAdmin=(S.curMode==='admin');
     var adminInfo=JSON.parse(localStorage.getItem('mbti_admin_info')||'{}');
+    // ★ v9.4 방어 강화: 기사 데이터가 아직 로드 안 됐으면 재시도 UI
+    if(!isAdmin){
+      var allDrv=ls('drivers');
+      if(!allDrv.length && FB && _db){
+        // Firebase에서 직접 fetch 시도
+        _db.collection('drivers').get().then(function(snap){
+          var all=[];
+          snap.forEach(function(doc){var d=doc.data();d.fbId=doc.id;all.push(d);});
+          lss('drivers',all);
+          setTimeout(function(){SP('mypage',null);}, 100);
+        }).catch(function(e){console.warn('mypage drivers fetch:',e);});
+        return '<div class="mypage-box" style="text-align:center;padding:40px 20px">'
+          +'<div style="font-size:40px;margin-bottom:14px">⏳</div>'
+          +'<div style="font-size:15px;font-weight:700;margin-bottom:8px">기사 정보 불러오는 중...</div>'
+          +'<div style="font-size:12px;color:var(--text2);margin-bottom:16px">잠시만 기다려주세요</div>'
+          +'<button onclick="SP(\'mypage\',null)" class="btn btn-blue" style="padding:10px 24px">🔄 새로고침</button>'
+          +'</div>';
+      }
+    }
     var d=isAdmin?{
       name:adminInfo.name||'관리자',
       userId:adminInfo.userId||'MBTI',
       phone:adminInfo.phone||'',
       email:adminInfo.email||'',
       addr:adminInfo.addr||''
-    }:(ls('drivers').find(function(x){return x.name===S.curDriver;})||{name:S.curDriver||'',phone:'',email:'',addr:'',plate:'',ton:'',jobsub:'쿠팡',docs:{},bizNum:'',bizName:'',bizAddr:'',bizType:'서비스',bizItem:'기타물품운반원'});
+    }:(ls('drivers').find(function(x){return x.name===S.curDriver||x.userId===S.curDriver;})||{name:S.curDriver||'',phone:'',email:'',addr:'',plate:'',ton:'',jobsub:'쿠팡',camp:'',shift:'',docs:{},bizNum:'',bizName:'',bizAddr:'',bizType:'서비스',bizItem:'기타물품운반원'});
 
     var html='<div class="mypage-box">';
     html+='<div style="font-size:18px;font-weight:700;color:var(--blue);margin-bottom:3px">👤 내 정보 수정</div>';
@@ -3806,7 +3829,13 @@ function rMypage(){
     return html;
   }catch(e){
     console.error('rMypage 오류:',e);
-    return '<div style="padding:20px;text-align:center;color:var(--red)">⚠️ 오류: '+(e.message||e.toString()||JSON.stringify(e)||'알수없는오류')+'</div>';
+    return '<div class="mypage-box" style="text-align:center;padding:40px 20px">'
+      +'<div style="font-size:40px;margin-bottom:14px">⚠️</div>'
+      +'<div style="font-size:15px;font-weight:700;color:var(--red);margin-bottom:8px">화면 로딩 오류</div>'
+      +'<div style="font-size:11px;color:var(--text2);background:var(--bg3);border-radius:8px;padding:10px;margin-bottom:16px;font-family:monospace;text-align:left;word-break:break-all">'+(e.message||e.toString()||'알수없는오류')+'</div>'
+      +'<button onclick="SP(\'mypage\',null)" class="btn btn-blue" style="padding:10px 24px;margin-right:8px">🔄 재시도</button>'
+      +'<button onclick="SP(\'dash\',null)" style="padding:10px 24px;background:var(--bg3);color:var(--text);border:1.5px solid var(--border);border-radius:8px;font-weight:700;cursor:pointer">🏠 홈으로</button>'
+      +'</div>';
   }
 }
 function toggleAllChk(el,col){
