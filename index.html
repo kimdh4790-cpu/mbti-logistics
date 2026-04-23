@@ -919,10 +919,10 @@ body.app-mode{background:#0a0e1a;}
 /* ═══════════════════════════════════════════════════════════
    이미지 섹션 반응형 (2026.04 추가)
    ═══════════════════════════════════════════════════════════ */
-.brand-collage-wrap, .services-banner-wrap, .promo-video-wrap {
+.brand-collage-wrap, .services-banner-wrap, .promo-video-wrap, .handshake-wrap {
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
-.brand-collage-wrap:hover, .services-banner-wrap:hover {
+.brand-collage-wrap:hover, .services-banner-wrap:hover, .handshake-wrap:hover {
   transform: translateY(-3px);
 }
 .promo-video-wrap:hover {
@@ -934,6 +934,8 @@ body.app-mode{background:#0a0e1a;}
   .brand-collage-wrap .collage-overlay { padding: 40px 16px 16px !important; }
   .services-banner-wrap { margin: 0 auto 30px !important; border-radius: 14px !important; min-height:220px !important; }
   .promo-video-wrap { border-radius: 12px !important; min-height:220px !important; }
+  .handshake-wrap { margin: 0 auto 30px !important; border-radius: 14px !important; min-height:200px !important; }
+  .handshake-wrap .handshake-overlay { padding: 50px 18px 18px !important; }
   #promo-video { padding: 50px 4% !important; }
   #promo-video .play-btn { width: 64px !important; height: 64px !important; }
   #promo-video .play-btn > div {
@@ -1072,7 +1074,9 @@ body.app-mode{background:#0a0e1a;}
 <ul class="nav-links">
 <li><a href="javascript:void(0)" data-anchor="about" onclick="goTo(&#39;#about&#39;);return false;" class="">사업개요</a></li>
 <li><a href="javascript:void(0)" data-anchor="services" onclick="goTo(&#39;#services&#39;);return false;" class="">서비스</a></li>
+<li><a href="javascript:void(0)" data-anchor="b2b-process" onclick="goTo(&#39;#b2b-process&#39;);return false;" class="">거래 프로세스</a></li>
 <li><a href="javascript:void(0)" data-anchor="vision" onclick="goTo(&#39;#vision&#39;);return false;" class="">성장맵</a></li>
+<li><a href="javascript:void(0)" data-anchor="partners" onclick="goTo(&#39;#partners&#39;);return false;" class="">협력사</a></li>
 <li><a href="javascript:void(0)" data-anchor="culture" onclick="goTo(&#39;#culture&#39;);return false;" class="">기업문화</a></li>
 <li><a href="javascript:void(0)" data-anchor="recruit" onclick="goTo(&#39;#recruit&#39;);return false;" class="">기사모집</a></li>
 <li><a href="javascript:void(0)" data-anchor="partner-inquiry" onclick="goTo(&#39;#partner-inquiry&#39;);return false;" class="">파트너문의</a></li>
@@ -1111,8 +1115,9 @@ body.app-mode{background:#0a0e1a;}
     <li><a href="javascript:void(0)" onclick="goTo('#home');closeMobileDrawer();"><span class="md-ico">🏠</span>홈</a></li>
     <li><a href="javascript:void(0)" onclick="goTo('#about');closeMobileDrawer();"><span class="md-ico">📋</span>사업 개요</a></li>
     <li><a href="javascript:void(0)" onclick="goTo('#services');closeMobileDrawer();"><span class="md-ico">🚚</span>서비스</a></li>
+    <li><a href="javascript:void(0)" onclick="goTo('#b2b-process');closeMobileDrawer();"><span class="md-ico">🔄</span>거래 프로세스</a></li>
     <li><a href="javascript:void(0)" onclick="goTo('#vision');closeMobileDrawer();"><span class="md-ico">📈</span>성장 로드맵</a></li>
-    <li><a href="javascript:void(0)" onclick="goTo('#promo-video');closeMobileDrawer();"><span class="md-ico">🎬</span>브랜드 영상</a></li>
+    <li><a href="javascript:void(0)" onclick="goTo('#partners');closeMobileDrawer();"><span class="md-ico">🏢</span>협력사</a></li>
     <li><a href="javascript:void(0)" onclick="goTo('#culture');closeMobileDrawer();"><span class="md-ico">❤️</span>기업 문화</a></li>
     <li><a href="javascript:void(0)" onclick="goTo('#recruit');closeMobileDrawer();"><span class="md-ico">🧑‍💼</span>기사 모집</a></li>
     <li><a href="javascript:void(0)" onclick="goTo('#partner-inquiry');closeMobileDrawer();"><span class="md-ico">🤝</span>파트너 문의</a></li>
@@ -1362,26 +1367,6 @@ function closeMobileDrawer() {
 <h2 class="sec-title">사업 개요</h2>
 <p class="sec-desc">2022년 12월 설립된 <strong>MBTI(Co.,Ltd.)</strong>는 영남권 물류 네트워크를 기반으로 라스트마일 배송 서비스를 전문으로 합니다.</p>
 
-<!-- ★ 브랜드 콜라주 이미지 (이미지 로드 실패 시 placeholder 표시) -->
-<div class="brand-collage-wrap" style="margin:30px 0 40px;border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(10,22,40,0.15);position:relative;background:linear-gradient(135deg,#0a1628 0%,#102845 45%,#1e3a5f 100%);min-height:240px;">
-  <!-- 이미지가 없을 때 보여지는 placeholder 배경 -->
-  <div class="collage-placeholder" style="position:absolute;inset:0;display:grid;place-items:center;z-index:0;">
-    <div style="text-align:center;padding:40px 20px;">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(40px,10vw,120px);color:#fbbf24;letter-spacing:8px;font-weight:900;line-height:1;opacity:0.2;">MBTI</div>
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(18px,3vw,32px);color:rgba(255,255,255,0.4);letter-spacing:4px;margin-top:8px;">LOGISTICS</div>
-      <div style="width:60px;height:2px;background:rgba(251,191,36,0.4);margin:16px auto;"></div>
-      <div style="font-family:'Playfair Display',serif;font-size:clamp(14px,2.2vw,22px);color:rgba(255,255,255,0.85);font-style:italic;">Delivering Trust, Connecting the World</div>
-      <div style="font-size:clamp(11px,1.5vw,14px);color:rgba(251,191,36,0.8);margin-top:8px;font-weight:600;">글로벌 물류의 연결, 신뢰의 가치로 전합니다</div>
-    </div>
-  </div>
-  <!-- 실제 브랜드 이미지 (images/mbti-collage.jpg) -->
-  <img src="images/mbti-collage.jpg" alt="MBTI Logistics Brand Collage" style="width:100%;height:auto;display:block;position:relative;z-index:1;" loading="lazy" onerror="this.style.display='none';">
-  <!-- 이미지 로드 성공 시 하단 그라데이션 오버레이 (이미지 위에) -->
-  <div class="collage-overlay" style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(to top,rgba(10,22,40,0.92) 0%,rgba(10,22,40,0) 100%);padding:60px 30px 24px;color:#fff;z-index:2;pointer-events:none;">
-    <div style="font-family:'Playfair Display',serif;font-size:clamp(18px,3vw,28px);font-weight:700;letter-spacing:0.02em;">Delivering Trust, Connecting the World</div>
-    <div style="font-size:clamp(13px,1.8vw,15px);color:#fbbf24;margin-top:6px;font-weight:600;">글로벌 물류의 연결, 신뢰의 가치로 전합니다</div>
-  </div>
-</div>
 <div style="margin:20px 0;border-radius:14px;overflow:hidden;">
 <div class="hero-net-box">
 <div class="hero-net-title">🗺️ 영남권 물류 네트워크</div>
@@ -1638,32 +1623,6 @@ function closeMobileDrawer() {
 </div>
 </section>
 
-<!-- ═══════════════════════════════════════════════════════════
-     PROMO VIDEO SECTION (프로모션 영상)
-     ═══════════════════════════════════════════════════════════ -->
-<section id="promo-video" class="sec" style="background:linear-gradient(135deg,#0a1628 0%,#102845 50%,#0a1628 100%);padding:70px 5%;text-align:center;color:#fff;">
-  <div class="sec-tag amber" style="color:#fbbf24;border-color:#fbbf24;">BRAND STORY · 0:30</div>
-  <h2 class="sec-title white" style="color:#fff;">영상으로 만나는 <span style="color:#fbbf24;">MBTI LOGISTICS</span></h2>
-  <p class="sec-desc white" style="color:rgba(255,255,255,0.85);margin-bottom:30px;">글로벌 물류의 연결, 신뢰의 가치를 30초 영상으로 확인하세요.</p>
-
-  <div class="promo-video-wrap" style="max-width:960px;margin:0 auto;border-radius:16px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,0.5);position:relative;cursor:pointer;background:linear-gradient(135deg,#1e3a5f 0%,#0a1628 50%,#102845 100%);min-height:300px;" onclick="alert('유튜브 영상 URL을 알려주시면 바로 연결해 드립니다.');">
-    <!-- placeholder -->
-    <div class="video-placeholder" style="position:absolute;inset:0;display:grid;place-items:center;z-index:0;">
-      <div style="text-align:center;padding:40px 20px;opacity:0.3;">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(32px,6vw,72px);color:#fbbf24;letter-spacing:4px;font-weight:900;line-height:1;">MBTI</div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(14px,2vw,20px);color:rgba(255,255,255,0.7);letter-spacing:3px;margin-top:6px;">PROMOTIONAL VIDEO</div>
-      </div>
-    </div>
-    <img src="images/mbti-promo-video.jpg" alt="MBTI Logistics Promotional Video" style="width:100%;height:auto;display:block;position:relative;z-index:1;" loading="lazy" onerror="this.style.display='none';">
-    <!-- 재생 버튼 오버레이 -->
-    <div class="play-btn" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:90px;height:90px;background:rgba(251,191,36,0.95);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 40px rgba(251,191,36,0.5);transition:all 0.3s;z-index:3;" onmouseover="this.style.transform='translate(-50%,-50%) scale(1.1)';" onmouseout="this.style.transform='translate(-50%,-50%) scale(1)';">
-      <div style="width:0;height:0;border-left:28px solid #0a1628;border-top:18px solid transparent;border-bottom:18px solid transparent;margin-left:6px;"></div>
-    </div>
-  </div>
-
-  <div style="margin-top:24px;font-family:'Playfair Display',serif;font-size:clamp(18px,2.5vw,24px);font-style:italic;color:#fbbf24;letter-spacing:0.03em;">"Delivering Trust, Connecting the World"</div>
-</section>
-
 <!-- MBTI CARE + CULTURE -->
 <section id="culture" class="sec sec-light">
 <div class="care-hdr">
@@ -1761,6 +1720,27 @@ function closeMobileDrawer() {
 <h2 class="sec-title" style="margin-top:10px;">파트너십 문의</h2>
 <p class="sec-desc" style="margin:8px auto;text-align:center;"><strong>위수탁 계약</strong>, <strong>물류 협력</strong>, <strong>사업 제휴</strong> 등 모든 문의를 환영합니다.</p>
 </div>
+
+<!-- ★ 파트너십 손잡는 이미지 (이미지 로드 실패 시 placeholder) -->
+<div class="handshake-wrap" style="max-width:1200px;margin:0 auto 40px;border-radius:18px;overflow:hidden;box-shadow:0 20px 60px rgba(10,22,40,0.25);position:relative;background:linear-gradient(135deg,#0a1628 0%,#1e3a5f 50%,#102845 100%);min-height:260px;">
+  <!-- placeholder (이미지 없을 때 보임) -->
+  <div class="handshake-placeholder" style="position:absolute;inset:0;display:grid;place-items:center;z-index:0;padding:40px 20px;">
+    <div style="text-align:center;">
+      <div style="font-size:clamp(36px,7vw,72px);margin-bottom:16px;">🤝</div>
+      <div style="font-family:'Noto Sans KR',sans-serif;font-size:clamp(16px,2.8vw,26px);color:#fff;font-weight:800;letter-spacing:0.5px;margin-bottom:8px;">신뢰로 연결하고, 가치로 성장합니다</div>
+      <div style="width:60px;height:2px;background:rgba(251,191,36,0.6);margin:12px auto;"></div>
+      <div style="font-family:'Playfair Display',serif;font-size:clamp(13px,2vw,20px);color:#fbbf24;font-style:italic;font-weight:600;">Delivering Trust, Connecting the World</div>
+    </div>
+  </div>
+  <!-- 실제 악수 이미지 -->
+  <img src="images/mbti-handshake.jpg" alt="MBTI Logistics Partnership - Delivering Trust, Connecting the World" style="width:100%;height:auto;display:block;position:relative;z-index:1;" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='none';">
+  <!-- 이미지 위 오버레이 텍스트 (이미지 로드 시) -->
+  <div class="handshake-overlay" style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(to top,rgba(10,22,40,0.85) 0%,rgba(10,22,40,0.3) 50%,rgba(10,22,40,0) 100%);padding:80px 32px 28px;color:#fff;z-index:2;pointer-events:none;">
+    <div style="font-family:'Noto Sans KR',sans-serif;font-size:clamp(16px,2.6vw,28px);font-weight:800;letter-spacing:0.5px;text-shadow:0 2px 10px rgba(0,0,0,0.5);">신뢰로 연결하고, 가치로 성장합니다</div>
+    <div style="font-family:'Playfair Display',serif;font-size:clamp(13px,1.9vw,20px);color:#fbbf24;margin-top:6px;font-style:italic;font-weight:600;text-shadow:0 2px 10px rgba(0,0,0,0.5);">Delivering Trust, Connecting the World</div>
+  </div>
+</div>
+
 <div class="pi-wrap">
 <div class="pi-types">
 <div class="pi-card" onclick="selPI(this,&#39;위수탁 계약&#39;)"><div class="pi-card-ico">🚚</div><div class="pi-card-name">위수탁 계약</div><div class="pi-card-desc">기사님 파트너 계약</div></div>
