@@ -1363,12 +1363,18 @@ async function _ensureFbLogin(userId,plainPw){
     var cred=await firebase.auth().signInWithEmailAndPassword(email,fbPw);
     return cred.user?cred.user.uid:null;
   }catch(e){
-    if(e.code==='auth/user-not-found'){
+    // 최신 Firebase: 계정없음/비번틀림을 모두 invalid-(login-)credentials로 통합
+    if(e.code==='auth/user-not-found'||e.code==='auth/invalid-login-credentials'||e.code==='auth/invalid-credential'){
       try{
         var cred2=await firebase.auth().createUserWithEmailAndPassword(email,fbPw);
         console.log('FB Auth 신규 계정 생성:',email);
         return cred2.user?cred2.user.uid:null;
-      }catch(e2){console.warn('FB Auth 생성 실패:',e2.code,userId);return null;}
+      }catch(e2){
+        if(e2.code==='auth/email-already-in-use'){
+          console.warn('FB Auth 비번 불일치(동기화 필요):',email);
+        }else{console.warn('FB Auth 생성 실패:',e2.code,userId);}
+        return null;
+      }
     }
     console.warn('FB Auth 로그인 오류:',e.code,userId);
     return null;
