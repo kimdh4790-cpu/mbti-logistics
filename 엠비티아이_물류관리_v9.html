@@ -2155,6 +2155,36 @@ function rTemp(){
   <div class="card"><div class="ch"><span class="ct">온도 기록 (${l.length}건)</span><button onclick="deleteSelected('tempLogs','온도')" style="padding:4px 10px;background:var(--red-l);border:1px solid var(--red);border-radius:6px;font-size:11px;color:var(--red);cursor:pointer;font-weight:600">🗑 선택삭제</button></div>${tabHTML}${bodyHTML}</div>`;
 }
 
+function _settleSaveOpen(){
+  // 정산 월 그룹의 열림 상태를 저장 (캠프/월 탭 전환 전에 호출)
+  var open=[];
+  document.querySelectorAll('[id^="sg_"]').forEach(function(el){
+    if(el.id.endsWith('_a'))return;
+    if(el.style.display!=='none') open.push(el.id);
+  });
+  window._adm_settle_openGroups=open;
+}
+function _settleRestoreOpen(){
+  // 저장된 월 그룹 열림 상태를 복원, 없으면 단일 그룹 자동 펼침
+  var open=window._adm_settle_openGroups||[];
+  var anyOpened=false;
+  open.forEach(function(id){
+    var el=document.getElementById(id);
+    var a=document.getElementById(id+'_a');
+    if(el){el.style.display='block';if(a)a.textContent='▲';anyOpened=true;}
+  });
+  if(!anyOpened){
+    var groups=[];
+    document.querySelectorAll('[id^="sg_"]').forEach(function(el){
+      if(!el.id.endsWith('_a'))groups.push(el);
+    });
+    if(groups.length===1){
+      groups[0].style.display='block';
+      var a=document.getElementById(groups[0].id+'_a');
+      if(a)a.textContent='▲';
+    }
+  }
+}
 function rSettle(){
   var s=ls('settlements');
   var filterMonth=window._adm_settle_month||'all';
@@ -2201,10 +2231,10 @@ function rSettle(){
   // 월 목록 추출
   var months=[...new Set(s.map(x=>x.month).filter(Boolean))].sort(function(a,b){return b.localeCompare(a);});
   var monthTabs='<div style="display:flex;gap:5px;padding:8px 0 6px;flex-wrap:wrap">'
-    +'<button onclick="window._adm_settle_month=\'all\';SP(S.page,null)" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(filterMonth==='all'?'var(--blue)':'var(--border)')+';background:'+(filterMonth==='all'?'var(--blue)':'var(--bg)')+';color:'+(filterMonth==='all'?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">전체</button>'
+    +'<button onclick="_settleSaveOpen();window._adm_settle_month=\'all\';SP(S.page,null)" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(filterMonth==='all'?'var(--blue)':'var(--border)')+';background:'+(filterMonth==='all'?'var(--blue)':'var(--bg)')+';color:'+(filterMonth==='all'?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">전체</button>'
     +months.map(function(m){
       var on=m===filterMonth;
-      return '<button onclick="window._adm_settle_month=\''+m+'\';SP(S.page,null)" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(on?'var(--blue)':'var(--border)')+';background:'+(on?'var(--blue)':'var(--bg)')+';color:'+(on?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">'+m+'</button>';
+      return '<button onclick="_settleSaveOpen();window._adm_settle_month=\''+m+'\';SP(S.page,null)" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(on?'var(--blue)':'var(--border)')+';background:'+(on?'var(--blue)':'var(--bg)')+';color:'+(on?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">'+m+'</button>';
     }).join('')
     +'</div>';
   // ★ 캠프별 필터 탭 - 각 캠프별 인원수 표시
@@ -2213,12 +2243,12 @@ function rSettle(){
   s.forEach(function(x){var c=_getSettleCamp(x); campCount[c]=(campCount[c]||0)+1;});
   var campTabs='<div style="display:flex;gap:5px;padding:0 0 10px;flex-wrap:wrap;align-items:center">'
     +'<span style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:0.5px;margin-right:4px">🏕️ 캠프</span>'
-    +'<button onclick="window._adm_settle_camp=\'all\';SP(S.page,null)" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(filterCamp==='all'?'var(--purple)':'var(--border)')+';background:'+(filterCamp==='all'?'var(--purple)':'var(--bg)')+';color:'+(filterCamp==='all'?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">전체 ('+campCount.all+')</button>'
+    +'<button onclick="_settleSaveOpen();window._adm_settle_camp=\'all\';SP(S.page,null)" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(filterCamp==='all'?'var(--purple)':'var(--border)')+';background:'+(filterCamp==='all'?'var(--purple)':'var(--bg)')+';color:'+(filterCamp==='all'?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">전체 ('+campCount.all+')</button>'
     +CAMP_LIST_S.map(function(c){
       var on=c===filterCamp;
       var col=CAMP_COL_S[c]||'var(--purple)';
       var cnt=campCount[c]||0;
-      return '<button onclick="window._adm_settle_camp=\''+c+'\';SP(S.page,null)" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(on?col:'var(--border)')+';background:'+(on?col:'var(--bg)')+';color:'+(on?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">'+c+' ('+cnt+')</button>';
+      return '<button onclick="_settleSaveOpen();window._adm_settle_camp=\''+c+'\';SP(S.page,null)" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(on?col:'var(--border)')+';background:'+(on?col:'var(--bg)')+';color:'+(on?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">'+c+' ('+cnt+')</button>';
     }).join('')
     +'</div>';
   var filtered=filterMonth==='all'?s:s.filter(function(x){return x.month===filterMonth;});
@@ -2285,6 +2315,7 @@ function rSettle(){
   <div style="font-size:11px;color:var(--text2);margin-bottom:8px;padding:6px 8px;background:var(--blue-l);border-radius:var(--r)">💡 기사별 [정산] 버튼으로 직접 작성, 또는 엑셀 업로드로 자동 계산 가능합니다.</div>
   ${monthTabs}${campTabs}${tableBody}</div>`;
   setTimeout(_updJinjuBtn, 50);
+  setTimeout(_settleRestoreOpen, 60);
   return _settleHTML;
 }
 function appSettle(i){
