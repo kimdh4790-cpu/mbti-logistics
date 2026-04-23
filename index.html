@@ -1133,6 +1133,65 @@ body.app-mode{background:#0a0e1a;}
 </div>
 </section>
 
+<!-- TRUST INDICATOR BAR (B2B 거래처 확보용 - 2026.04 추가) -->
+<section id="trust-bar" style="background:linear-gradient(135deg,#0a1628 0%,#102845 100%);padding:28px 5%;border-top:1px solid rgba(245,158,11,0.15);border-bottom:1px solid rgba(245,158,11,0.15);position:relative;overflow:hidden;">
+  <div style="max-width:1280px;margin:0 auto;">
+    <div style="text-align:center;margin-bottom:18px;">
+      <div style="display:inline-flex;align-items:center;gap:8px;padding:5px 14px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.35);border-radius:100px;font-size:0.7rem;font-weight:700;color:#fbbf24;letter-spacing:2px;text-transform:uppercase;">
+        <span style="width:6px;height:6px;background:#fbbf24;border-radius:50%;box-shadow:0 0 8px #fbbf24;animation:tpulse 2s infinite;"></span>
+        <span>TRUSTED B2B PARTNER</span>
+      </div>
+      <div style="font-size:0.82rem;color:#d4d0c5;margin-top:8px;">전국 거래처와 함께 만드는 <strong style="color:#fbbf24;">검증된 물류 파트너십</strong></div>
+    </div>
+    <div class="tb-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:0;">
+      <div class="tb-cell" style="text-align:center;padding:14px 10px;border-right:1px solid rgba(245,158,11,0.15);">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:2.4rem;color:#f59e0b;line-height:1;letter-spacing:1px;">2022<span style="font-size:1rem;color:#8b9dad;margin-left:3px;">설립</span></div>
+        <div style="font-size:0.7rem;color:#8b9dad;letter-spacing:2px;margin-top:6px;text-transform:uppercase;font-weight:600;">Since</div>
+        <div style="font-size:0.7rem;color:#6b7280;margin-top:2px;">3년+ 운영 이력</div>
+      </div>
+      <div class="tb-cell" style="text-align:center;padding:14px 10px;border-right:1px solid rgba(245,158,11,0.15);">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:2.4rem;color:#f59e0b;line-height:1;letter-spacing:1px;">COUPANG</div>
+        <div style="font-size:0.7rem;color:#8b9dad;letter-spacing:2px;margin-top:6px;text-transform:uppercase;font-weight:600;">Official</div>
+        <div style="font-size:0.7rem;color:#6b7280;margin-top:2px;">쿠팡 공식 대리점</div>
+      </div>
+      <div class="tb-cell" style="text-align:center;padding:14px 10px;border-right:1px solid rgba(245,158,11,0.15);">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:2.4rem;color:#f59e0b;line-height:1;letter-spacing:1px;">3<span style="font-size:1rem;color:#8b9dad;margin-left:3px;">거점</span></div>
+        <div style="font-size:0.7rem;color:#8b9dad;letter-spacing:2px;margin-top:6px;text-transform:uppercase;font-weight:600;">Network</div>
+        <div style="font-size:0.7rem;color:#6b7280;margin-top:2px;">부산·대구·진주</div>
+      </div>
+      <div class="tb-cell" style="text-align:center;padding:14px 10px;border-right:1px solid rgba(245,158,11,0.15);">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:2.4rem;color:#f59e0b;line-height:1;letter-spacing:1px;">6<span style="font-size:1rem;color:#8b9dad;margin-left:3px;">개 라인</span></div>
+        <div style="font-size:0.7rem;color:#8b9dad;letter-spacing:2px;margin-top:6px;text-transform:uppercase;font-weight:600;">Services</div>
+        <div style="font-size:0.7rem;color:#6b7280;margin-top:2px;">콜드체인·3PL·TMS</div>
+      </div>
+      <div class="tb-cell" style="text-align:center;padding:14px 10px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:2.4rem;color:#f59e0b;line-height:1;letter-spacing:1px;">24<span style="font-size:1rem;color:#8b9dad;">/</span>7</div>
+        <div style="font-size:0.7rem;color:#8b9dad;letter-spacing:2px;margin-top:6px;text-transform:uppercase;font-weight:600;">Operation</div>
+        <div style="font-size:0.7rem;color:#6b7280;margin-top:2px;">상시 관제 · 대응</div>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:20px;padding-top:18px;border-top:1px dashed rgba(245,158,11,0.2);">
+      <a href="#partner-inquiry" style="display:inline-flex;align-items:center;gap:8px;padding:11px 26px;background:linear-gradient(135deg,#f59e0b,#f97316);color:#0a1628;text-decoration:none;font-weight:800;font-size:0.85rem;border-radius:100px;letter-spacing:0.5px;box-shadow:0 4px 14px rgba(245,158,11,0.3);transition:all .2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(245,158,11,0.45)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 14px rgba(245,158,11,0.3)'">
+        📨 거래 문의하기 (24시간 내 회신)
+        <span style="font-size:1rem;">→</span>
+      </a>
+    </div>
+  </div>
+</section>
+<style>
+@keyframes tpulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+@media (max-width: 860px) {
+  #trust-bar .tb-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 0 !important; }
+  #trust-bar .tb-cell { border-right: 1px solid rgba(245,158,11,0.15) !important; border-bottom: 1px solid rgba(245,158,11,0.15); padding: 18px 10px !important; }
+  #trust-bar .tb-cell:nth-child(2n) { border-right: none !important; }
+  #trust-bar .tb-cell:nth-last-child(-n+2) { border-bottom: none; }
+  #trust-bar .tb-cell:last-child:nth-child(odd) { grid-column: span 2; border-bottom: none; border-right: none !important; }
+}
+@media (max-width: 480px) {
+  #trust-bar .tb-cell div:first-child { font-size: 1.8rem !important; }
+}
+</style>
+
 <!-- ABOUT -->
 <section id="about" class="sec sec-light">
 <div class="sec-tag blue">COMPANY PROFILE</div>
@@ -1197,6 +1256,116 @@ body.app-mode{background:#0a0e1a;}
 <div class="svc-card"><div class="svc-icon" style="background:linear-gradient(135deg,#fefce8,#fef08a);">💻</div><div class="svc-title">TMS 운송관리</div><div class="svc-desc">자체 TMS 도입 예정. 정확한 정산·노무·세무 자동화로 투명 운영.</div><div class="svc-tags"><span class="svc-tag">TMS</span><span class="svc-tag">자동정산</span><span class="svc-tag">투명운영</span></div></div>
 </div>
 </section>
+
+<!-- B2B PROCESS (거래 시작 프로세스 - 2026.04 추가) -->
+<section id="b2b-process" class="sec sec-light" style="background:linear-gradient(180deg,#f8fafc 0%,#eef2f7 100%);">
+  <div style="text-align:center;margin-bottom:44px;">
+    <div class="sec-tag blue">HOW WE WORK</div>
+    <h2 class="sec-title" style="margin-top:10px;">거래 시작부터 정산까지, <span style="color:var(--blue);">단 5단계</span></h2>
+    <p class="sec-desc" style="margin:8px auto;text-align:center;">복잡한 절차 없이 빠르게 거래 개시. 물량·지역·조건 확인 후 <strong>최대 7일 내 정식 운영</strong>이 가능합니다.</p>
+  </div>
+
+  <div style="max-width:1180px;margin:0 auto;padding:0 5%;position:relative;">
+    <!-- 점선 연결선 (데스크탑) -->
+    <div class="bp-line" style="position:absolute;top:54px;left:12%;right:12%;height:2px;background:repeating-linear-gradient(90deg,#1e5fad 0,#1e5fad 6px,transparent 6px,transparent 14px);z-index:0;"></div>
+
+    <div class="bp-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px;position:relative;z-index:1;">
+
+      <div class="bp-step" style="text-align:center;">
+        <div style="width:108px;height:108px;margin:0 auto 18px;background:#fff;border:3px solid #f59e0b;border-radius:50%;display:grid;place-items:center;box-shadow:0 8px 22px rgba(10,22,40,0.08);position:relative;">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:2.4rem;color:#0a1628;line-height:1;">01</div>
+          <div style="position:absolute;top:-8px;right:-8px;background:#f59e0b;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:1rem;">📨</div>
+        </div>
+        <div style="font-weight:800;font-size:1rem;color:#0a1628;margin-bottom:6px;">문의 · 상담</div>
+        <div style="font-size:0.78rem;color:#6b7280;line-height:1.6;">전화·이메일·폼으로<br>문의 접수</div>
+        <div style="display:inline-block;margin-top:10px;padding:3px 10px;background:rgba(30,95,173,0.1);color:#1e5fad;font-size:0.68rem;font-weight:700;border-radius:100px;letter-spacing:0.5px;">⏱ 24시간 내 회신</div>
+      </div>
+
+      <div class="bp-step" style="text-align:center;">
+        <div style="width:108px;height:108px;margin:0 auto 18px;background:#fff;border:3px solid #f59e0b;border-radius:50%;display:grid;place-items:center;box-shadow:0 8px 22px rgba(10,22,40,0.08);position:relative;">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:2.4rem;color:#0a1628;line-height:1;">02</div>
+          <div style="position:absolute;top:-8px;right:-8px;background:#f59e0b;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:1rem;">📊</div>
+        </div>
+        <div style="font-weight:800;font-size:1rem;color:#0a1628;margin-bottom:6px;">견적 · 제안</div>
+        <div style="font-size:0.78rem;color:#6b7280;line-height:1.6;">물량·구간 분석 후<br>맞춤 견적서 제공</div>
+        <div style="display:inline-block;margin-top:10px;padding:3px 10px;background:rgba(30,95,173,0.1);color:#1e5fad;font-size:0.68rem;font-weight:700;border-radius:100px;letter-spacing:0.5px;">📋 최적화 설계</div>
+      </div>
+
+      <div class="bp-step" style="text-align:center;">
+        <div style="width:108px;height:108px;margin:0 auto 18px;background:#fff;border:3px solid #f59e0b;border-radius:50%;display:grid;place-items:center;box-shadow:0 8px 22px rgba(10,22,40,0.08);position:relative;">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:2.4rem;color:#0a1628;line-height:1;">03</div>
+          <div style="position:absolute;top:-8px;right:-8px;background:#f59e0b;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:1rem;">📝</div>
+        </div>
+        <div style="font-weight:800;font-size:1rem;color:#0a1628;margin-bottom:6px;">계약 체결</div>
+        <div style="font-size:0.78rem;color:#6b7280;line-height:1.6;">SLA 조건 협의 후<br>정식 계약 체결</div>
+        <div style="display:inline-block;margin-top:10px;padding:3px 10px;background:rgba(30,95,173,0.1);color:#1e5fad;font-size:0.68rem;font-weight:700;border-radius:100px;letter-spacing:0.5px;">🤝 조건 유연 협의</div>
+      </div>
+
+      <div class="bp-step" style="text-align:center;">
+        <div style="width:108px;height:108px;margin:0 auto 18px;background:#fff;border:3px solid #f59e0b;border-radius:50%;display:grid;place-items:center;box-shadow:0 8px 22px rgba(10,22,40,0.08);position:relative;">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:2.4rem;color:#0a1628;line-height:1;">04</div>
+          <div style="position:absolute;top:-8px;right:-8px;background:#f59e0b;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:1rem;">🚚</div>
+        </div>
+        <div style="font-weight:800;font-size:1rem;color:#0a1628;margin-bottom:6px;">운영 개시</div>
+        <div style="font-size:0.78rem;color:#6b7280;line-height:1.6;">전담 매니저 배정<br>정식 운영 시작</div>
+        <div style="display:inline-block;margin-top:10px;padding:3px 10px;background:rgba(16,185,129,0.12);color:#059669;font-size:0.68rem;font-weight:700;border-radius:100px;letter-spacing:0.5px;">⚡ 7일 내 Live</div>
+      </div>
+
+      <div class="bp-step" style="text-align:center;">
+        <div style="width:108px;height:108px;margin:0 auto 18px;background:linear-gradient(135deg,#f59e0b,#f97316);border:3px solid #f59e0b;border-radius:50%;display:grid;place-items:center;box-shadow:0 8px 22px rgba(245,158,11,0.35);position:relative;">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:2.4rem;color:#fff;line-height:1;">05</div>
+          <div style="position:absolute;top:-8px;right:-8px;background:#0a1628;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:1rem;">💰</div>
+        </div>
+        <div style="font-weight:800;font-size:1rem;color:#0a1628;margin-bottom:6px;">정산 · 리포팅</div>
+        <div style="font-size:0.78rem;color:#6b7280;line-height:1.6;">월별 자동 정산<br>운영 리포트 제공</div>
+        <div style="display:inline-block;margin-top:10px;padding:3px 10px;background:rgba(16,185,129,0.12);color:#059669;font-size:0.68rem;font-weight:700;border-radius:100px;letter-spacing:0.5px;">📈 투명 운영</div>
+      </div>
+
+    </div>
+
+    <!-- 3가지 약속 -->
+    <div class="bp-promise" style="margin-top:54px;padding:28px 24px;background:#fff;border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 4px 14px rgba(10,22,40,0.04);display:grid;grid-template-columns:repeat(3,1fr);gap:24px;">
+      <div style="text-align:center;border-right:1px solid #e5e7eb;padding-right:24px;">
+        <div style="font-size:1.8rem;margin-bottom:8px;">✅</div>
+        <div style="font-weight:800;font-size:0.95rem;color:#0a1628;margin-bottom:4px;">최소 물량 제한 없음</div>
+        <div style="font-size:0.75rem;color:#6b7280;line-height:1.5;">소량 시험 운영부터<br>대량 정기 계약까지</div>
+      </div>
+      <div style="text-align:center;border-right:1px solid #e5e7eb;padding-right:24px;">
+        <div style="font-size:1.8rem;margin-bottom:8px;">👤</div>
+        <div style="font-weight:800;font-size:0.95rem;color:#0a1628;margin-bottom:4px;">전담 매니저 1:1 배정</div>
+        <div style="font-size:0.75rem;color:#6b7280;line-height:1.5;">계약 거래처별<br>소통 창구 단일화</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:1.8rem;margin-bottom:8px;">📊</div>
+        <div style="font-weight:800;font-size:0.95rem;color:#0a1628;margin-bottom:4px;">월별 투명 정산</div>
+        <div style="font-size:0.75rem;color:#6b7280;line-height:1.5;">자동 세금계산서 발행<br>상세 운영 리포트</div>
+      </div>
+    </div>
+
+    <!-- 하단 CTA -->
+    <div style="text-align:center;margin-top:36px;">
+      <a href="#partner-inquiry" style="display:inline-flex;align-items:center;gap:10px;padding:14px 32px;background:#0a1628;color:#fff;text-decoration:none;font-weight:800;font-size:0.9rem;border-radius:100px;letter-spacing:0.5px;box-shadow:0 6px 18px rgba(10,22,40,0.25);transition:all .2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.background='#1e5fad'" onmouseout="this.style.transform='translateY(0)';this.style.background='#0a1628'">
+        1단계부터 시작하기
+        <span style="font-size:1.1rem;">→</span>
+      </a>
+      <div style="margin-top:12px;font-size:0.75rem;color:#6b7280;">📞 바로 통화도 가능합니다 · <a href="tel:01047903103" style="color:#1e5fad;font-weight:700;text-decoration:none;">010-4790-3103</a></div>
+    </div>
+  </div>
+</section>
+<style>
+@media (max-width: 860px) {
+  #b2b-process .bp-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 32px 16px !important; }
+  #b2b-process .bp-line { display: none !important; }
+  #b2b-process .bp-promise { grid-template-columns: 1fr !important; gap: 20px !important; }
+  #b2b-process .bp-promise > div { border-right: none !important; border-bottom: 1px solid #e5e7eb; padding: 0 0 20px 0 !important; }
+  #b2b-process .bp-promise > div:last-child { border-bottom: none; padding-bottom: 0 !important; }
+}
+@media (max-width: 480px) {
+  #b2b-process .bp-grid { grid-template-columns: 1fr !important; }
+  #b2b-process .bp-step > div:first-child { width:92px !important; height:92px !important; }
+  #b2b-process .bp-step > div:first-child > div:first-child { font-size:2rem !important; }
+}
+</style>
 
 <!-- VISION -->
 <section id="vision" class="sec sec-dark">
@@ -1390,6 +1559,64 @@ body.app-mode{background:#0a0e1a;}
 <h2 class="sec-title white" style="margin-top:8px;">협력사 소개</h2>
 <p class="sec-desc white" style="margin:0 auto;">MBTI(Co.,Ltd.)와 함께하는 <span style="color:#fbbf24;font-weight:700;">신뢰받는 파트너사</span>를 소개합니다.</p>
 </div>
+
+<!-- COUPANG OFFICIAL DEALER BADGE (2026.04 추가) -->
+<div style="max-width:920px;margin:36px auto 0;padding:0 5%;">
+  <div style="position:relative;background:linear-gradient(135deg,rgba(255,255,255,0.06) 0%,rgba(245,158,11,0.08) 100%);border:1px solid rgba(245,158,11,0.35);border-radius:16px;padding:28px 32px;overflow:hidden;box-shadow:0 10px 40px rgba(245,158,11,0.08);">
+    <!-- 배경 장식 -->
+    <div style="position:absolute;top:-40px;right:-40px;width:180px;height:180px;background:radial-gradient(circle,rgba(245,158,11,0.12) 0%,transparent 70%);border-radius:50%;pointer-events:none;"></div>
+    <div style="position:absolute;top:12px;right:14px;font-size:0.62rem;color:rgba(245,158,11,0.6);letter-spacing:3px;font-weight:700;font-family:'Bebas Neue',sans-serif;">CERTIFIED PARTNER</div>
+
+    <div class="cpd-wrap" style="display:grid;grid-template-columns:auto 1fr auto;gap:28px;align-items:center;position:relative;">
+      <!-- 왼쪽: 쿠팡 로고 블록 -->
+      <div style="width:120px;height:120px;background:#fff;border-radius:14px;display:grid;place-items:center;box-shadow:0 6px 20px rgba(0,0,0,0.25);position:relative;">
+        <div style="text-align:center;padding:8px;">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.75rem;color:#003DA5;letter-spacing:1px;line-height:1;">Coupang</div>
+          <div style="width:40px;height:2px;background:#003DA5;margin:6px auto;"></div>
+          <div style="font-size:0.6rem;color:#003DA5;font-weight:800;letter-spacing:1.5px;">OFFICIAL</div>
+          <div style="font-size:0.6rem;color:#003DA5;font-weight:800;letter-spacing:1.5px;">DEALER</div>
+        </div>
+        <!-- 골드 씰 -->
+        <div style="position:absolute;top:-10px;right:-10px;width:36px;height:36px;background:linear-gradient(135deg,#fbbf24,#f59e0b);border-radius:50%;display:grid;place-items:center;font-size:1.1rem;box-shadow:0 4px 10px rgba(245,158,11,0.5);">✓</div>
+      </div>
+
+      <!-- 중앙: 설명 -->
+      <div>
+        <div style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);border-radius:100px;font-size:0.64rem;color:#10b981;font-weight:700;letter-spacing:1.5px;margin-bottom:10px;">
+          <span style="width:6px;height:6px;background:#10b981;border-radius:50%;"></span>
+          ACTIVE · 2022 —
+        </div>
+        <h3 style="font-size:1.35rem;font-weight:800;color:#fff;margin:0 0 8px 0;line-height:1.3;">쿠팡 공식 대리점</h3>
+        <p style="font-size:0.82rem;color:rgba(255,255,255,0.75);line-height:1.65;margin:0;">
+          (유)엠비티아이는 국내 최대 이커머스 <strong style="color:#fbbf24;">쿠팡의 공식 배송 대리점</strong>으로 2022년 선정되어,
+          하루 수천 건 규모의 배송 운영 경험을 축적해왔습니다.
+          검증된 운영 역량이 B2B 거래처 여러분의 물류를 안전하게 지켜드립니다.
+        </p>
+      </div>
+
+      <!-- 오른쪽: 세로 지표 -->
+      <div class="cpd-meta" style="text-align:right;border-left:1px solid rgba(245,158,11,0.2);padding-left:24px;">
+        <div style="margin-bottom:14px;">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:#fbbf24;line-height:1;">3<span style="font-size:0.8rem;color:rgba(255,255,255,0.6);margin-left:3px;">년+</span></div>
+          <div style="font-size:0.62rem;color:rgba(255,255,255,0.5);letter-spacing:1.5px;margin-top:3px;font-weight:700;">OPERATION</div>
+        </div>
+        <div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:#fbbf24;line-height:1;">24<span style="font-size:0.8rem;color:rgba(255,255,255,0.6);">/</span>7</div>
+          <div style="font-size:0.62rem;color:rgba(255,255,255,0.5);letter-spacing:1.5px;margin-top:3px;font-weight:700;">ACTIVE</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<style>
+@media (max-width: 720px) {
+  #partners .cpd-wrap { grid-template-columns: 1fr !important; gap: 20px !important; text-align:center; }
+  #partners .cpd-wrap > div:first-child { margin: 0 auto; }
+  #partners .cpd-meta { border-left: none !important; border-top: 1px solid rgba(245,158,11,0.2); padding: 18px 0 0 0 !important; text-align: center !important; display:flex; justify-content:center; gap: 32px; }
+  #partners .cpd-meta > div { margin-bottom: 0 !important; }
+}
+</style>
+
 <div style="padding:28px 5% 0;max-width:960px;margin:0 auto;">
 <div style="margin-bottom:22px;"><div class="pcat-title">🚛 물류 · 배송 협력사</div>
 <div class="partner-grid3">
