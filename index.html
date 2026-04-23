@@ -148,21 +148,40 @@
    4. Account → General → PUBLIC_KEY 복사
    5. 아래 세 값 교체 후 GitHub 업로드
    ═══════════════════════════════════════════════════════════ */
-var EMAILJS_PUBLIC_KEY = "YOUR_PUBLIC_KEY_HERE";
-var EMAILJS_SERVICE_ID = "YOUR_SERVICE_ID_HERE";
-var EMAILJS_TEMPLATE_ID = "YOUR_TEMPLATE_ID_HERE";
+var EMAILJS_PUBLIC_KEY = "tKFXRw76G80AHwPqH";
+var EMAILJS_SERVICE_ID = "service_n6w55mr";
+var EMAILJS_TEMPLATE_ID = "template_mz0dzic";
 
 // EmailJS 초기화 (스크립트 로드 후)
 window.addEventListener('load', function(){
   try {
-    if (window.emailjs && EMAILJS_PUBLIC_KEY !== "YOUR_PUBLIC_KEY_HERE") {
+    if (window.emailjs) {
       emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
       console.log('✅ EmailJS 초기화 완료');
     } else {
-      console.warn('⚠️ EmailJS 키 미설정 - Firestore 저장만 사용');
+      console.warn('⚠️ EmailJS 라이브러리 로드 실패');
     }
   } catch(e){ console.warn('EmailJS init fail:', e); }
 });
+
+// 스팸 방지: 중복 제출 차단 (60초 쿨다운)
+window._mbtiLastSubmit = 0;
+function _mbtiCanSubmit(){
+  var now = Date.now();
+  if (now - window._mbtiLastSubmit < 60000) {
+    var wait = Math.ceil((60000 - (now - window._mbtiLastSubmit))/1000);
+    alert('⏱️ 잠시만 기다려주세요.\n중복 제출 방지를 위해 ' + wait + '초 후 다시 시도해주세요.');
+    return false;
+  }
+  window._mbtiLastSubmit = now;
+  return true;
+}
+// 타임스탬프 포맷 헬퍼
+function _mbtiTs(){
+  var d = new Date();
+  var pad = function(n){return n<10?'0'+n:n;};
+  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+' '+pad(d.getHours())+':'+pad(d.getMinutes());
+}
 </script>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
@@ -1813,6 +1832,7 @@ var tp = (document.getElementById('pi-type') ||{}).value||'';
 var em = (document.getElementById('pi-em') ||{}).value||'';
 var msg = (document.getElementById('pi-msg') ||{}).value||'';
 if (!co||!nm||!tel||!msg){ alert('필수 항목을 입력해 주세요.'); return; }
+if (!_mbtiCanSubmit()) return;
 var btn = document.querySelector('.btn-pi');
 if(btn){btn.disabled=true;btn.textContent='전송 중...';}
 
@@ -1834,13 +1854,16 @@ var fsPromise = (window._mbtiDb)
     })
   : Promise.resolve(false);
 
-// ② EmailJS 즉시 발송 (설정된 경우만)
+// ② EmailJS 즉시 발송 (템플릿 변수명에 맞춤)
 var emailPromise;
-if (window.emailjs && EMAILJS_PUBLIC_KEY !== "YOUR_PUBLIC_KEY_HERE") {
+if (window.emailjs) {
   emailPromise = emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-    subject: '[MBTI 파트너십 문의] ' + tp + ' — ' + co,
-    type: '파트너십 문의',
-    category: tp, company: co, name: nm, tel: tel, email: em, message: msg,
+    inquiry_type: '[파트너십] ' + (tp || '일반 문의') + ' (' + co + ')',
+    from_name: nm + ' / ' + co,
+    from_email: em || 'noreply@mbti-logistics.com',
+    phone: tel,
+    message: msg,
+    timestamp: _mbtiTs(),
     to_email: 'soungkyekim@naver.com'
   }).then(function(){ console.log('✅ EmailJS 발송 완료'); return true; })
     .catch(function(e){ console.warn('❌ EmailJS 실패:', e); return false; });
@@ -1879,6 +1902,7 @@ var em = (document.getElementById('pr-em')||{}).value||'';
 var tp = (document.getElementById('pr-type')||{}).value||'';
 
 if (!co||!nm||!tel){ alert('필수 항목을 입력해 주세요.'); return; }
+if (!_mbtiCanSubmit()) return;
 var btn = document.querySelector('.btn-pr');
 if(btn){btn.disabled=true;btn.textContent='전송 중...';}
 
@@ -1900,13 +1924,16 @@ var fsPromise = (window._mbtiDb)
     })
   : Promise.resolve(false);
 
-// ② EmailJS 즉시 발송
+// ② EmailJS 즉시 발송 (템플릿 변수명에 맞춤)
 var emailPromise;
-if (window.emailjs && EMAILJS_PUBLIC_KEY !== "YOUR_PUBLIC_KEY_HERE") {
+if (window.emailjs) {
   emailPromise = emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-    subject: '[MBTI 협력사 등록] ' + co,
-    type: '협력사 등록',
-    category: tp, company: co, name: nm, tel: tel, email: em, message: msg||'(내용 없음)',
+    inquiry_type: '[협력사 등록] ' + (tp || '기사 모집') + ' (' + co + ')',
+    from_name: nm + ' / ' + co,
+    from_email: em || 'noreply@mbti-logistics.com',
+    phone: tel,
+    message: msg || '(내용 없음)',
+    timestamp: _mbtiTs(),
     to_email: 'soungkyekim@naver.com'
   }).then(function(){ console.log('✅ EmailJS 발송 완료'); return true; })
     .catch(function(e){ console.warn('❌ EmailJS 실패:', e); return false; });
