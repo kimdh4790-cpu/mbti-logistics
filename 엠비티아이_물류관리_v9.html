@@ -2184,6 +2184,8 @@ function rSettle(){
   var mmap={};
   filtered.forEach(function(x,origIdx){x._origIdx=s.indexOf(x);if(!mmap[x.month||'—'])mmap[x.month||'—']=[];mmap[x.month||'—'].push(x);});
   var mGroups=Object.keys(mmap).sort(function(a,b){return b.localeCompare(a);});
+  // ★ 필터(캠프/월)가 걸려있거나 결과가 1~2개 그룹뿐이면 자동 펼침
+  var autoOpen=(filterCamp!=='all')||(filterMonth!=='all')||(mGroups.length<=2);
   var tableBody=mGroups.map(function(mo){
     var gid='sg_'+mo.replace(/-/g,'');
     var gRows=mmap[mo];
@@ -2206,12 +2208,15 @@ function rSettle(){
         </td>
       </tr>`;}).join('');
     var summary='<div style="font-size:11px;color:var(--text2);padding:4px 0 6px">'+gRows.length+'명 · 실지급 합계 <strong style="color:var(--purple)">₩'+totNet.toLocaleString()+'</strong></div>';
+    // ★ 필터 상태에 따라 펼침/접힘 결정
+    var openStyle=autoOpen?'block':'none';
+    var arrow=autoOpen?'▲':'▼';
     return '<div style="margin-bottom:8px">'
       +'<div onclick="var b=document.getElementById(\''+gid+'\');var a=document.getElementById(\''+gid+'_a\');if(b){b.style.display=b.style.display===\'none\'?\'block\':\'none\';a.textContent=b.style.display===\'none\'?\'▼\':\'▲\'}" style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--bg3);border-radius:var(--r);cursor:pointer;border:1px solid var(--border)">'
       +'<span style="font-size:13px;font-weight:700;color:var(--purple)">'+mo+'</span>'
-      +'<span style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;color:var(--text3)">'+gRows.length+'명</span><span id="'+gid+'_a" style="font-size:11px;color:var(--text3)">▼</span></span>'
+      +'<span style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;color:var(--text3)">'+gRows.length+'명</span><span id="'+gid+'_a" style="font-size:11px;color:var(--text3)">'+arrow+'</span></span>'
       +'</div>'
-      +'<div id="'+gid+'" style="display:none">'+summary+'<table class="tbl"><thead><tr><th>기사</th><th>화주사</th><th>월</th><th>총수익</th><th>고용보험</th><th>실지급</th><th>상태</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+      +'<div id="'+gid+'" style="display:'+openStyle+'">'+summary+'<table class="tbl"><thead><tr><th>기사</th><th>화주사</th><th>월</th><th>총수익</th><th>고용보험</th><th>실지급</th><th>상태</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>'
       +'</div>';
   }).join('')||'<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">데이터 없음</div>';
 
