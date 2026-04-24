@@ -612,6 +612,8 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
         </div>
         <div id="grp-ops" style="overflow:hidden;max-height:0px">
           <div class="ni" onclick="SP('schedule_admin',this)">📅 근무표 관리</div>
+          <div class="ni" onclick="SP('attend',this)">📍 출퇴근 조회</div>
+          <div class="ni" onclick="SP('notice',this)">📢 공지사항 게시판</div>
           <div class="ni" onclick="SP('memo',this)">📝 메모 달력</div>
           <div class="ni" onclick="SP('entry',this)">🚪 입차 현황</div>
           <div class="ni" onclick="SP('delivery_taxi',this)">📦 운행 현황</div>
@@ -1347,39 +1349,6 @@ async function hashPw(pw){
   var buf=await crypto.subtle.digest('SHA-256',enc.encode(pw));
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
-// ── Firebase Auth 연동 헬퍼 (v9.1 신규: 익명→이메일 인증 전환)
-async function _fbAuthPw(plainPw){
-  // Firestore 저장 해시와 다른 별도 해시 (동일 값 노출 방지)
-  return await hashPw(plainPw+'_mbti_fb_2026');
-}
-async function _ensureFbLogin(userId,plainPw){
-  // 자체 로그인 성공 후 Firebase Auth로 전환 (계정 없으면 자동 생성)
-  if(typeof firebase==='undefined'||!firebase.auth||!userId||!plainPw)return null;
-  var clean=String(userId).replace(/[^a-zA-Z0-9._-]/g,'_');
-  if(!clean)return null;
-  var email=clean+'@df.local';
-  var fbPw=await _fbAuthPw(plainPw);
-  try{
-    var cred=await firebase.auth().signInWithEmailAndPassword(email,fbPw);
-    return cred.user?cred.user.uid:null;
-  }catch(e){
-    // 최신 Firebase: 계정없음/비번틀림을 모두 invalid-(login-)credentials로 통합
-    if(e.code==='auth/user-not-found'||e.code==='auth/invalid-login-credentials'||e.code==='auth/invalid-credential'){
-      try{
-        var cred2=await firebase.auth().createUserWithEmailAndPassword(email,fbPw);
-        console.log('FB Auth 신규 계정 생성:',email);
-        return cred2.user?cred2.user.uid:null;
-      }catch(e2){
-        if(e2.code==='auth/email-already-in-use'){
-          console.warn('FB Auth 비번 불일치(동기화 필요):',email);
-        }else{console.warn('FB Auth 생성 실패:',e2.code,userId);}
-        return null;
-      }
-    }
-    console.warn('FB Auth 로그인 오류:',e.code,userId);
-    return null;
-  }
-}
 // ── v6.1 스플래시 — 7개 로고 버튼 클릭
 var _splashSelectedJob='';
 function splashJobClick(job,ico){
@@ -1484,12 +1453,6 @@ function doLogin(){
       // ── 2단계 인증 체크 (관리자만)
       var _finishAdminLogin=function(finalInfo){
         localStorage.removeItem(lockKey);
-        // ★ Firebase Auth 연동 (백그라운드, 실패해도 로그인 계속)
-        _ensureFbLogin(sId,pw).then(function(uid){
-          if(uid&&FB&&_db){
-            _db.collection('settings').doc('adminInfo').update({authUid:uid}).catch(function(){});
-          }
-        }).catch(function(){});
         S.curMode='admin';
         var aName=finalInfo.name||'김형우 대표';
         setAdminName(aName);
@@ -1582,12 +1545,6 @@ function doLogin(){
         }
         // 로그인 성공 시 잠금 해제
         localStorage.removeItem(lockKey);
-        // ★ Firebase Auth 연동 (백그라운드, 실패해도 로그인 계속)
-        _ensureFbLogin(found.userId||id,pw).then(function(uid){
-          if(uid&&FB&&_db&&found.fbId&&uid!==found.authUid){
-            _db.collection('drivers').doc(found.fbId).update({authUid:uid}).catch(function(){});
-          }
-        }).catch(function(){});
         // ── v6.1: 로그인한 사람 이름으로 즉시 교체 (세션 버그 해결)
         S.curDriver=found.name||id;
         S.curPlate=found.plate||'';
@@ -1865,7 +1822,7 @@ async function submitReg(){
 }
 
 // ══ 관리자 페이지
-var PT={archive:'📋 3개월 기록 보관소',audit:'🔒 보안 감사 로그',dash:'대시보드',schedule_admin:'📅 근무표 관리',memo:'📝 메모 달력',sync:'기사 연동',entry:'입차 현황',delivery_taxi:'📦 운행 현황',delivery_line:'🚚 간선 현황',delivery:'운송현황',accident:'사고 접수',temp:'온도 기록',settle:'정산서 관리',drivers:'기사 관리',insurance:'쿠팡 라우트 단가표',mypage:'내 정보 수정',inquiries:'📩 홈페이지 문의함'};
+var PT={archive:'📋 3개월 기록 보관소',audit:'🔒 보안 감사 로그',dash:'대시보드',schedule_admin:'📅 근무표 관리',memo:'📝 메모 달력',sync:'기사 연동',entry:'입차 현황',delivery_taxi:'📦 운행 현황',delivery_line:'🚚 간선 현황',delivery:'운송현황',accident:'사고 접수',temp:'온도 기록',settle:'정산서 관리',drivers:'기사 관리',insurance:'쿠팡 라우트 단가표',mypage:'내 정보 수정',inquiries:'📩 홈페이지 문의함',notice:'📢 공지사항 게시판',attend:'📍 출퇴근 조회'};
 function SP(pg,el){
   S.page=pg;
   // 기사 관리 페이지 진입 시 Firebase 최신 데이터 즉시 로드
@@ -1883,13 +1840,13 @@ function SP(pg,el){
   document.getElementById('ptitle').textContent=PT[pg]||pg;
   if(el){document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));el.classList.add('on');}
   // ★ 보안: 관리자 전용 페이지 권한 체크
-  var adminOnlyPages=['drivers','settle','audit','archive','inquiries','insurance','sync','schedule_admin','memo','accident','temp','entry','delivery','delivery_taxi','delivery_line'];
+  var adminOnlyPages=['drivers','settle','audit','archive','inquiries','insurance','sync','schedule_admin','memo','accident','temp','entry','delivery','delivery_taxi','delivery_line','notice','attend'];
   if(adminOnlyPages.indexOf(pg)>=0 && S.curMode!=='admin'){
     document.getElementById('ca').innerHTML='<div class="card" style="padding:40px;text-align:center"><div style="font-size:48px;margin-bottom:12px">🔒</div><div style="font-size:18px;font-weight:700;color:var(--red);margin-bottom:8px">접근 권한이 없습니다</div><div style="font-size:13px;color:var(--text2);margin-bottom:20px">이 페이지는 관리자 전용입니다</div><button onclick="SP(\'dash\',null)" class="btn btn-blue">대시보드로 이동</button></div>';
     if(typeof addAct==='function')addAct('security','관리자 페이지 무단 접근 시도: '+pg,null);
     return;
   }
-  var m={archive:rArchive,audit:rAuditLog,dash:rDash,sync:rSync,schedule_admin:rScheduleAdmin,memo:rMemoCalendar,entry:rEntry,delivery_taxi:rDeliveryTaxi,delivery_line:rDeliveryLine,delivery:rDelivery,accident:rAcc,temp:rTemp,settle:rSettle,drivers:rDrivers,insurance:rInsurance,mypage:rMypage,inquiries:rInquiries};
+  var m={archive:rArchive,audit:rAuditLog,dash:rDash,sync:rSync,schedule_admin:rScheduleAdmin,memo:rMemoCalendar,entry:rEntry,delivery_taxi:rDeliveryTaxi,delivery_line:rDeliveryLine,delivery:rDelivery,accident:rAcc,temp:rTemp,settle:rSettle,drivers:rDrivers,insurance:rInsurance,mypage:rMypage,inquiries:rInquiries,notice:rNoticePanel,attend:rAttendPanel};
   try{
     document.getElementById('ca').innerHTML=(m[pg]||rDash)();
   }catch(e){
@@ -2155,36 +2112,6 @@ function rTemp(){
   <div class="card"><div class="ch"><span class="ct">온도 기록 (${l.length}건)</span><button onclick="deleteSelected('tempLogs','온도')" style="padding:4px 10px;background:var(--red-l);border:1px solid var(--red);border-radius:6px;font-size:11px;color:var(--red);cursor:pointer;font-weight:600">🗑 선택삭제</button></div>${tabHTML}${bodyHTML}</div>`;
 }
 
-function _settleSaveOpen(){
-  // 정산 월 그룹의 열림 상태를 저장 (캠프/월 탭 전환 전에 호출)
-  var open=[];
-  document.querySelectorAll('[id^="sg_"]').forEach(function(el){
-    if(el.id.endsWith('_a'))return;
-    if(el.style.display!=='none') open.push(el.id);
-  });
-  window._adm_settle_openGroups=open;
-}
-function _settleRestoreOpen(){
-  // 저장된 월 그룹 열림 상태를 복원, 없으면 단일 그룹 자동 펼침
-  var open=window._adm_settle_openGroups||[];
-  var anyOpened=false;
-  open.forEach(function(id){
-    var el=document.getElementById(id);
-    var a=document.getElementById(id+'_a');
-    if(el){el.style.display='block';if(a)a.textContent='▲';anyOpened=true;}
-  });
-  if(!anyOpened){
-    var groups=[];
-    document.querySelectorAll('[id^="sg_"]').forEach(function(el){
-      if(!el.id.endsWith('_a'))groups.push(el);
-    });
-    if(groups.length===1){
-      groups[0].style.display='block';
-      var a=document.getElementById(groups[0].id+'_a');
-      if(a)a.textContent='▲';
-    }
-  }
-}
 function rSettle(){
   var s=ls('settlements');
   var filterMonth=window._adm_settle_month||'all';
@@ -2231,10 +2158,10 @@ function rSettle(){
   // 월 목록 추출
   var months=[...new Set(s.map(x=>x.month).filter(Boolean))].sort(function(a,b){return b.localeCompare(a);});
   var monthTabs='<div style="display:flex;gap:5px;padding:8px 0 6px;flex-wrap:wrap">'
-    +'<button onclick="_settleSaveOpen();window._adm_settle_month=\'all\';SP(S.page,null)" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(filterMonth==='all'?'var(--blue)':'var(--border)')+';background:'+(filterMonth==='all'?'var(--blue)':'var(--bg)')+';color:'+(filterMonth==='all'?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">전체</button>'
+    +'<button onclick="window._adm_settle_month=\'all\';SP(S.page,null)" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(filterMonth==='all'?'var(--blue)':'var(--border)')+';background:'+(filterMonth==='all'?'var(--blue)':'var(--bg)')+';color:'+(filterMonth==='all'?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">전체</button>'
     +months.map(function(m){
       var on=m===filterMonth;
-      return '<button onclick="_settleSaveOpen();window._adm_settle_month=\''+m+'\';SP(S.page,null)" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(on?'var(--blue)':'var(--border)')+';background:'+(on?'var(--blue)':'var(--bg)')+';color:'+(on?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">'+m+'</button>';
+      return '<button onclick="window._adm_settle_month=\''+m+'\';SP(S.page,null)" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(on?'var(--blue)':'var(--border)')+';background:'+(on?'var(--blue)':'var(--bg)')+';color:'+(on?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">'+m+'</button>';
     }).join('')
     +'</div>';
   // ★ 캠프별 필터 탭 - 각 캠프별 인원수 표시
@@ -2243,12 +2170,12 @@ function rSettle(){
   s.forEach(function(x){var c=_getSettleCamp(x); campCount[c]=(campCount[c]||0)+1;});
   var campTabs='<div style="display:flex;gap:5px;padding:0 0 10px;flex-wrap:wrap;align-items:center">'
     +'<span style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:0.5px;margin-right:4px">🏕️ 캠프</span>'
-    +'<button onclick="_settleSaveOpen();window._adm_settle_camp=\'all\';SP(S.page,null)" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(filterCamp==='all'?'var(--purple)':'var(--border)')+';background:'+(filterCamp==='all'?'var(--purple)':'var(--bg)')+';color:'+(filterCamp==='all'?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">전체 ('+campCount.all+')</button>'
+    +'<button onclick="window._adm_settle_camp=\'all\';SP(S.page,null)" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(filterCamp==='all'?'var(--purple)':'var(--border)')+';background:'+(filterCamp==='all'?'var(--purple)':'var(--bg)')+';color:'+(filterCamp==='all'?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">전체 ('+campCount.all+')</button>'
     +CAMP_LIST_S.map(function(c){
       var on=c===filterCamp;
       var col=CAMP_COL_S[c]||'var(--purple)';
       var cnt=campCount[c]||0;
-      return '<button onclick="_settleSaveOpen();window._adm_settle_camp=\''+c+'\';SP(S.page,null)" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(on?col:'var(--border)')+';background:'+(on?col:'var(--bg)')+';color:'+(on?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">'+c+' ('+cnt+')</button>';
+      return '<button onclick="window._adm_settle_camp=\''+c+'\';SP(S.page,null)" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(on?col:'var(--border)')+';background:'+(on?col:'var(--bg)')+';color:'+(on?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">'+c+' ('+cnt+')</button>';
     }).join('')
     +'</div>';
   var filtered=filterMonth==='all'?s:s.filter(function(x){return x.month===filterMonth;});
@@ -2315,7 +2242,6 @@ function rSettle(){
   <div style="font-size:11px;color:var(--text2);margin-bottom:8px;padding:6px 8px;background:var(--blue-l);border-radius:var(--r)">💡 기사별 [정산] 버튼으로 직접 작성, 또는 엑셀 업로드로 자동 계산 가능합니다.</div>
   ${monthTabs}${campTabs}${tableBody}</div>`;
   setTimeout(_updJinjuBtn, 50);
-  setTimeout(_settleRestoreOpen, 60);
   return _settleHTML;
 }
 function appSettle(i){
@@ -4113,14 +4039,6 @@ async function saveMypage(){
       var newHash=await hashPw(newPw);
       adminInfo.pw=newHash;
       adminInfo.pwPlain=newPw; // 긴급 복구용
-      // ★ Firebase Auth 비번 동기화 (백그라운드)
-      try{
-        var curU=firebase.auth&&firebase.auth().currentUser;
-        if(curU&&!curU.isAnonymous){
-          var newFbPw=await _fbAuthPw(newPw);
-          await curU.updatePassword(newFbPw);
-        }
-      }catch(e){console.warn('FB Auth 비번 동기화 실패:',e.code);}
       toast('🔐 관리자 비밀번호 변경됨');
     }
 
@@ -4157,14 +4075,6 @@ async function saveMypage(){
       var newHash=await hashPw(newPw);
       me.pw=newHash;
       lss('drivers',drs);
-      // ★ Firebase Auth 비번 동기화 (백그라운드)
-      try{
-        var curU=firebase.auth&&firebase.auth().currentUser;
-        if(curU&&!curU.isAnonymous){
-          var newFbPw=await _fbAuthPw(newPw);
-          await curU.updatePassword(newFbPw);
-        }
-      }catch(e){console.warn('FB Auth 비번 동기화 실패:',e.code);}
       if(FB&&_db&&me.fbId)_db.collection('drivers').doc(me.fbId).update({pw:newHash}).catch(()=>{});
       toast('🔐 비밀번호 변경됨');
     }
@@ -5676,6 +5586,15 @@ function checkDriverNotifications(){
       box.id='drv-notification-box';
       box.style.cssText='position:fixed;bottom:70px;left:50%;transform:translateX(-50%);z-index:400;width:90%;max-width:360px';
       var listHtml=items.map(function(it){
+        if(it.type==='notice'){
+          var cIco={'일반':'📣','긴급':'🚨','업무':'💼','교육':'📚','이벤트':'🎁'};
+          var ico=cIco[it.category]||'📢';
+          return '<div style="padding:10px;background:'+(it.category==='긴급'?'var(--red-l)':'var(--bg3)')+';border:'+(it.category==='긴급'?'1.5px solid var(--red)':'1px solid var(--border)')+';border-radius:8px;margin-bottom:6px;cursor:pointer" onclick="_viewNotice('+JSON.stringify(it._id)+')">'
+            +'<div style="font-size:11px;color:'+(it.category==='긴급'?'var(--red)':'var(--blue)')+';font-weight:700;margin-bottom:2px">'+ico+' '+it.category+(it.pinned?' 📌':'')+'</div>'
+            +'<div style="font-size:12px;font-weight:700;color:var(--text)">'+((it.title||'').slice(0,30))+'</div>'
+            +'<div style="font-size:10px;color:var(--text3);margin-top:2px">'+new Date(it.sentAt).toLocaleDateString('ko-KR')+' 발송</div>'
+            +'</div>';
+        }
         return '<div style="padding:8px;background:var(--bg3);border-radius:8px;margin-bottom:6px;cursor:pointer" onclick="_vdn('+JSON.stringify(it._id)+')">'
           +'<div style="font-size:12px;font-weight:700">'+(it.type==='tax_invoice'?'🧾 세금계산서':'📋 정산 명세서')+' — '+it.month+'</div>'
           +'<div style="font-size:10px;color:var(--text3)">'+new Date(it.sentAt).toLocaleDateString('ko-KR')+' 전달</div>'
@@ -5692,7 +5611,10 @@ function checkDriverNotifications(){
 }
 function _vdn(id){
   var item=window._drvNotes&&window._drvNotes[id];
-  if(!item||!item.img)return;
+  if(!item)return;
+  // 📢 공지사항이면 전용 뷰어로 분기
+  if(item.type==='notice'){_viewNotice(id);return;}
+  if(!item.img)return;
   var mo=document.createElement('div');
   mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:800;display:flex;align-items:center;justify-content:center;padding:14px';
   mo.onclick=function(){mo.remove();};
@@ -5725,6 +5647,207 @@ function viewDriverNotification(el,item){
     document.body.appendChild(mo);
   }
 }
+
+// 📢 공지사항 상세 보기 (기사용)
+function _viewNotice(id){
+  var item=window._drvNotes&&window._drvNotes[id];
+  if(!item)return;
+  var cIco={'일반':'📣','긴급':'🚨','업무':'💼','교육':'📚','이벤트':'🎁'};
+  var ico=cIco[item.category]||'📢';
+  var isUrgent=(item.category==='긴급');
+  
+  var mo=document.createElement('div');
+  mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:800;display:flex;align-items:center;justify-content:center;padding:14px';
+  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  
+  var contentHtml=(item.content||'').replace(/</g,'&lt;').replace(/\n/g,'<br>');
+  
+  mo.innerHTML='<div onclick="event.stopPropagation()" style="background:var(--bg);border:'+(isUrgent?'2px solid var(--red)':'1px solid var(--border)')+';border-radius:12px;max-width:90vw;width:400px;max-height:85vh;overflow-y:auto">'
+    +'<div style="padding:14px;background:'+(isUrgent?'var(--red)':'var(--blue)')+';color:#fff;border-radius:10px 10px 0 0">'
+    +'<div style="font-size:11px;font-weight:700;opacity:.9;margin-bottom:4px">'+ico+' '+(item.category||'공지')+(item.pinned?' · 📌 고정':'')+'</div>'
+    +'<div style="font-size:16px;font-weight:800;line-height:1.3">'+(item.title||'-')+'</div>'
+    +'<div style="font-size:10px;opacity:.85;margin-top:6px">'+new Date(item.sentAt).toLocaleString('ko-KR')+' · '+(item.sentBy||'관리자')+'</div>'
+    +'</div>'
+    +'<div style="padding:16px;font-size:13px;line-height:1.6;color:var(--text);white-space:pre-wrap;word-break:break-word">'+contentHtml+'</div>'
+    +'<div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:8px">'
+    +'<button onclick="_markNoticeRead('+JSON.stringify(id)+','+JSON.stringify(item.noticeId||'')+');this.closest(\'div[style*=z-index]\').parentElement.remove();" style="flex:1;padding:10px;background:var(--teal);color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer">✓ 확인 (읽음 처리)</button>'
+    +'<button onclick="this.closest(\'div[style*=z-index]\').parentElement.remove()" style="padding:10px 16px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:7px;font-size:13px;cursor:pointer">닫기</button>'
+    +'</div>'
+    +'</div>';
+  document.body.appendChild(mo);
+  
+  var box=document.getElementById('drv-notification-box');
+  if(box)box.remove();
+}
+
+// 공지사항 읽음 처리
+function _markNoticeRead(notifId,noticeId){
+  if(!FB||!_db)return;
+  // 1) 개별 알림 삭제 (읽음 = 알림함에서 제거)
+  _db.collection('driver_notifications').doc(notifId).delete().catch(function(){});
+  // 2) 마스터 공지의 readBy에 기록 (관리자 통계용)
+  if(noticeId){
+    var upd={};
+    upd['readBy.'+S.curDriver]=new Date().toISOString();
+    _db.collection('notices').doc(noticeId).update(upd).catch(function(){});
+  }
+  toast('✓ 확인 완료');
+}
+// ════════════════════════════════════════════
+// 📍 출퇴근 체크인 시스템
+// ════════════════════════════════════════════
+function _todayAttendKey(){
+  return 'attend_'+S.curDriver+'_'+today();
+}
+function _getAttend(){
+  try{return JSON.parse(localStorage.getItem(_todayAttendKey())||'{}');}
+  catch(e){return {};}
+}
+function _saveAttend(a){
+  localStorage.setItem(_todayAttendKey(),JSON.stringify(a));
+}
+function _buildAttendCard(){
+  var a=_getAttend();
+  var hasIn=!!a.checkIn, hasOut=!!a.checkOut;
+  var fmtT=function(iso){
+    if(!iso)return'-';
+    var d=new Date(iso);
+    return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+  };
+  var workDur='';
+  if(hasIn&&hasOut){
+    var ms=new Date(a.checkOut)-new Date(a.checkIn);
+    var hr=Math.floor(ms/3600000), mn=Math.floor((ms%3600000)/60000);
+    workDur=' · 총 '+hr+'시간 '+mn+'분';
+  }else if(hasIn){
+    var ms=new Date()-new Date(a.checkIn);
+    var hr=Math.floor(ms/3600000), mn=Math.floor((ms%3600000)/60000);
+    workDur=' · 진행 '+hr+'시간 '+mn+'분';
+  }
+  
+  var html='<div style="background:linear-gradient(135deg,var(--bg2) 0%,var(--bg3) 100%);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px">';
+  html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">';
+  html+='<div style="font-size:12px;font-weight:800;color:var(--text)">📍 오늘 출퇴근'+workDur+'</div>';
+  html+='<div style="font-size:9px;color:var(--text3)">GPS 자동 기록</div>';
+  html+='</div>';
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+  // 출근
+  if(!hasIn){
+    html+='<button onclick="doCheckIn()" style="padding:12px 8px;background:var(--teal);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px">';
+    html+='<span style="font-size:18px">🚪</span><span>출근 체크인</span></button>';
+  }else{
+    html+='<div style="padding:10px 8px;background:var(--teal-l);border:1.5px solid var(--teal);border-radius:8px;text-align:center">';
+    html+='<div style="font-size:9px;color:var(--teal);font-weight:700">🚪 출근 완료</div>';
+    html+='<div style="font-size:15px;font-weight:900;color:var(--teal);margin-top:2px">'+fmtT(a.checkIn)+'</div>';
+    html+='</div>';
+  }
+  // 퇴근
+  if(hasIn&&!hasOut){
+    html+='<button onclick="doCheckOut()" style="padding:12px 8px;background:var(--red);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px">';
+    html+='<span style="font-size:18px">🏁</span><span>퇴근 체크아웃</span></button>';
+  }else if(hasOut){
+    html+='<div style="padding:10px 8px;background:var(--red-l);border:1.5px solid var(--red);border-radius:8px;text-align:center">';
+    html+='<div style="font-size:9px;color:var(--red);font-weight:700">🏁 퇴근 완료</div>';
+    html+='<div style="font-size:15px;font-weight:900;color:var(--red);margin-top:2px">'+fmtT(a.checkOut)+'</div>';
+    html+='</div>';
+  }else{
+    html+='<button disabled style="padding:12px 8px;background:var(--bg3);color:var(--text3);border:1px solid var(--border);border-radius:8px;font-size:13px;font-weight:700;cursor:not-allowed;display:flex;flex-direction:column;align-items:center;gap:2px">';
+    html+='<span style="font-size:18px">🏁</span><span>퇴근 (출근 후)</span></button>';
+  }
+  html+='</div>';
+  return html;
+}
+
+// ── GPS 좌표 수집 (최대 5초)
+function _getGPS(){
+  return new Promise(function(res){
+    if(!navigator.geolocation){res(null);return;}
+    var done=false;
+    var timer=setTimeout(function(){if(!done){done=true;res(null);}},5000);
+    navigator.geolocation.getCurrentPosition(
+      function(pos){
+        if(done)return;
+        done=true; clearTimeout(timer);
+        res({
+          lat:pos.coords.latitude,
+          lng:pos.coords.longitude,
+          accuracy:Math.round(pos.coords.accuracy||0),
+          ts:new Date().toISOString()
+        });
+      },
+      function(err){if(done)return; done=true; clearTimeout(timer); res(null);},
+      {enableHighAccuracy:true,timeout:4500,maximumAge:30000}
+    );
+  });
+}
+
+// ── 출근 체크인
+async function doCheckIn(){
+  if(!S.curDriver){toast('❌ 로그인 정보 없음');return;}
+  var btn=event.target.closest('button');
+  if(btn){btn.innerHTML='<span style="font-size:14px">⏳</span><span>위치 확인중...</span>';btn.disabled=true;}
+  
+  var gps=await _getGPS();
+  var now=new Date().toISOString();
+  var a=_getAttend();
+  a.checkIn=now;
+  a.checkInGps=gps;
+  _saveAttend(a);
+  
+  // Firebase 저장
+  if(FB&&_db){
+    var docId=S.curDriver+'_'+today();
+    _db.collection('attendance').doc(docId).set({
+      driver:S.curDriver,
+      date:today(),
+      checkIn:now,
+      checkInGps:gps,
+      checkInLat:gps?gps.lat:null,
+      checkInLng:gps?gps.lng:null,
+      updatedAt:new Date().toISOString()
+    },{merge:true}).catch(function(e){console.warn('attendance save:',e);});
+  }
+  
+  toast('✅ 출근 체크인 완료'+(gps?' 📍':' (GPS 없음)'));
+  var card=document.getElementById('attend-card');
+  if(card)card.innerHTML=_buildAttendCard();
+}
+
+// ── 퇴근 체크아웃
+async function doCheckOut(){
+  if(!S.curDriver){toast('❌ 로그인 정보 없음');return;}
+  var a=_getAttend();
+  if(!a.checkIn){toast('❌ 먼저 출근 체크인을 해주세요');return;}
+  
+  if(!confirm('퇴근 체크아웃 하시겠습니까?\n(이후에는 수정 불가합니다)'))return;
+  
+  var btn=event.target.closest('button');
+  if(btn){btn.innerHTML='<span style="font-size:14px">⏳</span><span>위치 확인중...</span>';btn.disabled=true;}
+  
+  var gps=await _getGPS();
+  var now=new Date().toISOString();
+  a.checkOut=now;
+  a.checkOutGps=gps;
+  _saveAttend(a);
+  
+  if(FB&&_db){
+    var docId=S.curDriver+'_'+today();
+    _db.collection('attendance').doc(docId).set({
+      checkOut:now,
+      checkOutGps:gps,
+      checkOutLat:gps?gps.lat:null,
+      checkOutLng:gps?gps.lng:null,
+      updatedAt:new Date().toISOString()
+    },{merge:true}).catch(function(e){console.warn('attendance save:',e);});
+  }
+  
+  var ms=new Date(now)-new Date(a.checkIn);
+  var hr=Math.floor(ms/3600000), mn=Math.floor((ms%3600000)/60000);
+  toast('✅ 퇴근 완료! 근무 '+hr+'시간 '+mn+'분');
+  var card=document.getElementById('attend-card');
+  if(card)card.innerHTML=_buildAttendCard();
+}
+
 function dHome(){
   var dels=ls('deliveries').filter(d=>d.driver===S.curDriver&&d.date===today());
   var ents=ls('entries').filter(e=>e.driver===S.curDriver&&e.date===today());
@@ -5852,6 +5975,8 @@ function dHome(){
       <div style="font-size:10px;color:var(--text2)">현재 상태</div>
     </div>
   </div>
+  <!-- 출퇴근 체크인 -->
+  <div id="attend-card" style="margin:4px 10px 6px">${_buildAttendCard()}</div>
   <!-- 입차 정보 -->
   ${me?`<div class="dc" style="margin:4px 10px"><div class="dct">오늘 입차</div><div style="display:flex;gap:8px;align-items:center;font-size:12px"><span class="badge ${me.type==='쿠팡'?'b-coral':me.type==='컬리'?'b-purple':'b-blue'}">${me.type}</span><span>${me.time}</span><span style="font-weight:600;color:${me.temp==='상온'?'var(--amber)':parseFloat(me.temp)<=-18?'var(--teal)':'var(--red)'}">${me.temp}${me.temp==='상온'?'':' °C'}</span></div></div>`:`<div style="margin:4px 10px 6px;padding:9px;background:var(--amber-l);border-radius:var(--r);font-size:12px;color:var(--amber)">아직 입차하지 않았습니다. 입차 탭에서 등록해 주세요.</div>`}
   <!-- 한달 근무표 -->
@@ -6724,6 +6849,34 @@ async function camPhoto(inp,slotKey,category,label){
   var file=inp.files[0]; if(!file)return;
   // ★ S.curDriver null 체크
   if(!S.curDriver){toast('❌ 로그인 정보가 없습니다. 다시 로그인해 주세요.');return;}
+  
+  // ── 📍 GPS 위치 수집 (비동기 병렬 - 업로드를 지연시키지 않음)
+  var gpsPromise=Promise.resolve(null);
+  try{
+    if(navigator.geolocation){
+      gpsPromise=new Promise(function(res){
+        var done=false;
+        var timer=setTimeout(function(){if(!done){done=true;res(null);}},3000);
+        try{
+          navigator.geolocation.getCurrentPosition(
+            function(pos){
+              if(done)return;
+              done=true; clearTimeout(timer);
+              res({
+                lat:pos.coords.latitude,
+                lng:pos.coords.longitude,
+                accuracy:Math.round(pos.coords.accuracy||0),
+                ts:new Date().toISOString()
+              });
+            },
+            function(err){if(done)return; done=true; clearTimeout(timer); res(null);},
+            {enableHighAccuracy:false,timeout:2500,maximumAge:60000}
+          );
+        }catch(e){if(!done){done=true; clearTimeout(timer); res(null);}}
+      });
+    }
+  }catch(e){gpsPromise=Promise.resolve(null);}
+  
   var idMap={entry:'ce',delivery:'cd',accident:'ca',temp:'ct'};
   var id=(idMap[category]||'c')+'-'+slotKey;
   var btn=document.getElementById(id);
@@ -6763,6 +6916,9 @@ async function camPhoto(inp,slotKey,category,label){
     }catch(e){}
 
     if(FB&&_db){
+      // GPS 결과 받기 (업로드 진행 중에 이미 병렬로 수집됨, 즉시 resolve됨)
+      var gpsData=await gpsPromise.catch(function(){return null;});
+      
       var me=ls('drivers').find(function(d){return d.name===S.curDriver;});
       if(me&&me.fbId){
         var upd={};
@@ -6775,7 +6931,11 @@ async function camPhoto(inp,slotKey,category,label){
       _db.collection('photo_logs').add({
         driver:S.curDriver, category:category, slotKey:slotKey,
         label:label, url:finalUrl, date:today(),
-        time:new Date().toISOString()
+        time:new Date().toISOString(),
+        gps:gpsData||null,
+        gpsLat:gpsData?gpsData.lat:null,
+        gpsLng:gpsData?gpsData.lng:null,
+        gpsAccuracy:gpsData?gpsData.accuracy:null
       }).catch(function(){});
 
       // ★ docs[0]만 → 오늘 일치하는 모든 문서 업데이트
@@ -6790,14 +6950,20 @@ async function camPhoto(inp,slotKey,category,label){
             u2['photoAt_'+slotKey]=new Date().toISOString();
             // ★ 모든 문서에 업데이트
             snap.docs.forEach(function(doc){
-              doc.ref.update(u2).catch(function(){});
+              var u3=Object.assign({},u2);
+              if(gpsData){
+                u3['gps_'+slotKey]=gpsData;
+                u3['gpsLat_'+slotKey]=gpsData.lat;
+                u3['gpsLng_'+slotKey]=gpsData.lng;
+              }
+              doc.ref.update(u3).catch(function(){});
             });
           }
         }).catch(function(){});
     }
 
     _setCamBtn(btn,finalUrl,label);
-    toast('✅ '+label+' 업로드 완료');
+    toast('✅ '+label+' 업로드 완료'+(gpsData?' 📍':''));
   }catch(e){
     toast('❌ 업로드 오류: '+e.message);
     if(btn){btn.className='cam-btn';btn.innerHTML='<div style="text-align:center"><div style="font-size:20px">📷</div><div style="font-size:9px">'+label+'</div><div style="font-size:8px;color:red">재시도</div></div>';}
@@ -8402,6 +8568,345 @@ function startListeners(){
     }catch(e){ goSplash(); }
   })();
 })();
+
+// ══════════════════════════════════════════════════════
+// 📢 공지사항 게시판 (관리자 → 기사 대량 전송)
+// ══════════════════════════════════════════════════════
+window._noticeCache=window._noticeCache||[];
+
+function rNoticePanel(){
+  if(!FB||!_db){return '<div style="padding:20px;text-align:center;color:var(--red)">⚠️ Firebase 연결 필요</div>';}
+  var drs=ls('drivers').filter(function(d){return d.is_active!==false&&!d.isNew&&d.status!=='pending';});
+  var camps=['전체','부산1','부산2','부산3','대구2','진주M'];
+  
+  var html='<div style="padding:14px">';
+  html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">';
+  html+='<h2 style="font-size:17px;font-weight:800;margin:0">📢 공지사항 게시판</h2>';
+  html+='<button onclick="SP(\'dash\',null)" style="padding:6px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px">닫기</button>';
+  html+='</div>';
+  
+  // ── 새 공지 작성 폼
+  html+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:14px">';
+  html+='<div style="font-size:13px;font-weight:800;color:var(--blue);margin-bottom:10px">✍️ 새 공지 등록</div>';
+  html+='<div style="display:flex;gap:6px;margin-bottom:8px">';
+  html+='<select id="nt-category" style="flex:1;padding:7px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--bg)">';
+  html+='<option value="일반">📣 일반 공지</option>';
+  html+='<option value="긴급">🚨 긴급 공지</option>';
+  html+='<option value="업무">💼 업무 안내</option>';
+  html+='<option value="교육">📚 교육/매뉴얼</option>';
+  html+='<option value="이벤트">🎁 이벤트</option>';
+  html+='</select>';
+  html+='<select id="nt-target" style="flex:1;padding:7px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--bg)">';
+  camps.forEach(function(c){html+='<option value="'+c+'">'+(c==='전체'?'👥 전체 기사':'📍 '+c+' 캠프')+'</option>';});
+  html+='</select>';
+  html+='</div>';
+  html+='<input type="text" id="nt-title" placeholder="공지 제목 (필수)" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;margin-bottom:6px;box-sizing:border-box">';
+  html+='<textarea id="nt-content" placeholder="공지 내용 (줄바꿈 가능)" rows="4" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:12px;box-sizing:border-box;resize:vertical;font-family:inherit"></textarea>';
+  html+='<div style="display:flex;gap:6px;margin-top:8px">';
+  html+='<label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer">';
+  html+='<input type="checkbox" id="nt-pinned"> 📌 상단 고정</label>';
+  html+='<div style="flex:1"></div>';
+  html+='<button onclick="sendNotice()" style="padding:8px 20px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">📤 공지 전송</button>';
+  html+='</div>';
+  html+='</div>';
+  
+  // ── 발송 이력
+  html+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px">';
+  html+='<div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:10px">📋 발송 이력 <span style="font-size:10px;color:var(--text3);font-weight:500">(최근 30건)</span></div>';
+  html+='<div id="nt-list" style="min-height:100px">로딩 중...</div>';
+  html+='</div>';
+  
+  html+='</div>';
+  
+  // ── 발송 이력 실시간 로드
+  setTimeout(function(){_loadNoticeList();},100);
+  
+  return html;
+}
+
+function _loadNoticeList(){
+  if(!FB||!_db)return;
+  _db.collection('notices').orderBy('sentAt','desc').limit(30).get().then(function(snap){
+    var box=document.getElementById('nt-list');
+    if(!box)return;
+    if(snap.empty){
+      box.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3);font-size:12px">아직 등록된 공지가 없습니다</div>';
+      return;
+    }
+    var html='';
+    var cIco={'일반':'📣','긴급':'🚨','업무':'💼','교육':'📚','이벤트':'🎁'};
+    snap.forEach(function(doc){
+      var d=doc.data();
+      var sentD=d.sentAt?new Date(d.sentAt):new Date();
+      var timeStr=sentD.toLocaleDateString('ko-KR',{month:'2-digit',day:'2-digit'})+' '+('0'+sentD.getHours()).slice(-2)+':'+('0'+sentD.getMinutes()).slice(-2);
+      var readCnt=d.readBy?Object.keys(d.readBy).length:0;
+      var totalCnt=d.targetCount||0;
+      html+='<div style="border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:6px;background:var(--bg)">';
+      html+='<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">';
+      html+='<span style="background:var(--blue-l);color:var(--blue);padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700">'+(cIco[d.category]||'📣')+' '+(d.category||'일반')+'</span>';
+      if(d.pinned)html+='<span style="background:var(--amber-l);color:var(--amber);padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700">📌 고정</span>';
+      html+='<span style="font-size:10px;color:var(--text3)">→ '+(d.target||'전체')+'</span>';
+      html+='<span style="flex:1"></span>';
+      html+='<span style="font-size:10px;color:var(--text3)">'+timeStr+'</span>';
+      html+='</div>';
+      html+='<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:3px">'+(d.title||'-')+'</div>';
+      if(d.content)html+='<div style="font-size:11px;color:var(--text2);line-height:1.4;white-space:pre-wrap;max-height:60px;overflow:hidden">'+d.content.replace(/</g,'&lt;').slice(0,200)+(d.content.length>200?'...':'')+'</div>';
+      html+='<div style="display:flex;align-items:center;gap:6px;margin-top:6px;padding-top:6px;border-top:1px dashed var(--border)">';
+      html+='<span style="font-size:10px;color:var(--teal);font-weight:700">✓ 읽음 '+readCnt+(totalCnt?'/'+totalCnt:'')+'</span>';
+      html+='<span style="flex:1"></span>';
+      html+='<button onclick="deleteNotice(\''+doc.id+'\')" style="padding:3px 8px;background:var(--red-l);color:var(--red);border:1px solid var(--red);border-radius:4px;font-size:10px;font-weight:700;cursor:pointer">🗑 삭제</button>';
+      html+='</div>';
+      html+='</div>';
+    });
+    box.innerHTML=html;
+  }).catch(function(e){
+    var box=document.getElementById('nt-list');
+    if(box)box.innerHTML='<div style="padding:10px;color:var(--red);font-size:11px">로드 실패: '+(e&&e.message||'')+'</div>';
+  });
+}
+
+function sendNotice(){
+  if(!FB||!_db){toast('❌ Firebase 연결 필요');return;}
+  var category=document.getElementById('nt-category').value;
+  var target=document.getElementById('nt-target').value;
+  var title=document.getElementById('nt-title').value.trim();
+  var content=document.getElementById('nt-content').value.trim();
+  var pinned=document.getElementById('nt-pinned').checked;
+  
+  if(!title){toast('❌ 제목을 입력해주세요');return;}
+  if(!content){toast('❌ 내용을 입력해주세요');return;}
+  
+  // 대상 기사 목록
+  var allDrs=ls('drivers').filter(function(d){return d.is_active!==false&&!d.isNew&&d.status!=='pending';});
+  var targets=(target==='전체')?allDrs:allDrs.filter(function(d){return d.camp===target;});
+  
+  if(targets.length===0){toast('❌ 대상 기사가 없습니다');return;}
+  if(!confirm('📢 '+targets.length+'명에게 공지를 전송할까요?\n\n제목: '+title+'\n대상: '+target))return;
+  
+  var sentAt=new Date().toISOString();
+  var notice={
+    category:category,
+    target:target,
+    title:title,
+    content:content,
+    pinned:pinned,
+    sentAt:sentAt,
+    sentBy:S.curAdmin||'관리자',
+    targetCount:targets.length,
+    readBy:{}
+  };
+  
+  toast('📤 공지 전송 중...');
+  
+  // 1) notices 컬렉션에 마스터 공지 저장
+  _db.collection('notices').add(notice).then(function(ref){
+    // 2) 각 기사별 driver_notifications에 개별 전송
+    var batch=_db.batch();
+    targets.forEach(function(d){
+      var docRef=_db.collection('driver_notifications').doc();
+      batch.set(docRef,{
+        type:'notice',
+        noticeId:ref.id,
+        driver:d.name,
+        category:category,
+        title:title,
+        content:content,
+        pinned:pinned,
+        sentAt:sentAt,
+        sentBy:notice.sentBy,
+        status:'대기'
+      });
+    });
+    return batch.commit().then(function(){return ref;});
+  }).then(function(){
+    toast('✅ '+targets.length+'명에게 공지 전송 완료!');
+    document.getElementById('nt-title').value='';
+    document.getElementById('nt-content').value='';
+    document.getElementById('nt-pinned').checked=false;
+    _loadNoticeList();
+  }).catch(function(e){
+    toast('❌ 전송 실패: '+(e&&e.message||''));
+  });
+}
+
+function deleteNotice(id){
+  if(!FB||!_db)return;
+  if(!confirm('⚠️ 이 공지를 삭제하시겠습니까?\n관련된 기사 알림도 모두 삭제됩니다.'))return;
+  
+  // 마스터 공지 삭제
+  _db.collection('notices').doc(id).delete().then(function(){
+    // 관련 기사 알림 삭제
+    return _db.collection('driver_notifications').where('noticeId','==',id).get();
+  }).then(function(snap){
+    if(snap.empty)return;
+    var batch=_db.batch();
+    snap.forEach(function(doc){batch.delete(doc.ref);});
+    return batch.commit();
+  }).then(function(){
+    toast('🗑 공지 삭제 완료');
+    _loadNoticeList();
+  }).catch(function(e){toast('❌ 삭제 실패: '+(e&&e.message||''));});
+}
+
+// ══════════════════════════════════════════════════════
+// 📍 출퇴근 조회 (관리자)
+// ══════════════════════════════════════════════════════
+function rAttendPanel(){
+  var dateStr=localStorage.getItem('attend_query_date')||today();
+  
+  var html='<div style="padding:14px">';
+  html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">';
+  html+='<h2 style="font-size:17px;font-weight:800;margin:0">📍 출퇴근 조회</h2>';
+  html+='<button onclick="SP(\'dash\',null)" style="padding:6px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px">닫기</button>';
+  html+='</div>';
+  
+  // 날짜 필터
+  html+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px;margin-bottom:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">';
+  html+='<span style="font-size:12px;font-weight:700">📅 날짜:</span>';
+  html+='<input type="date" id="att-date" value="'+dateStr+'" onchange="_changeAttendDate(this.value)" style="padding:5px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px">';
+  html+='<button onclick="_attendQuick(0)" style="padding:5px 10px;background:var(--blue);color:#fff;border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer">오늘</button>';
+  html+='<button onclick="_attendQuick(-1)" style="padding:5px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;font-size:11px;cursor:pointer">어제</button>';
+  html+='<div style="flex:1"></div>';
+  html+='<button onclick="_exportAttendCSV()" style="padding:5px 12px;background:var(--teal);color:#fff;border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer">📥 CSV 내보내기</button>';
+  html+='</div>';
+  
+  // 결과 영역
+  html+='<div id="att-result" style="min-height:200px">로딩 중...</div>';
+  
+  html+='</div>';
+  
+  setTimeout(function(){_loadAttendList();},100);
+  return html;
+}
+
+function _changeAttendDate(v){
+  localStorage.setItem('attend_query_date',v);
+  _loadAttendList();
+}
+
+function _attendQuick(dayOffset){
+  var d=new Date();
+  d.setDate(d.getDate()+dayOffset);
+  var s=d.toISOString().slice(0,10);
+  localStorage.setItem('attend_query_date',s);
+  var inp=document.getElementById('att-date');
+  if(inp)inp.value=s;
+  _loadAttendList();
+}
+
+function _loadAttendList(){
+  if(!FB||!_db)return;
+  var date=localStorage.getItem('attend_query_date')||today();
+  var allDrs=ls('drivers').filter(function(d){return d.is_active!==false&&!d.isNew&&d.status!=='pending';});
+  
+  _db.collection('attendance').where('date','==',date).get().then(function(snap){
+    var box=document.getElementById('att-result');
+    if(!box)return;
+    
+    var attMap={};
+    snap.forEach(function(doc){
+      var d=doc.data();
+      attMap[d.driver]=d;
+    });
+    
+    // 통계
+    var chkIn=0, chkOut=0, noShow=0;
+    allDrs.forEach(function(d){
+      var a=attMap[d.name];
+      if(a&&a.checkIn){chkIn++; if(a.checkOut)chkOut++;}
+      else noShow++;
+    });
+    
+    var html='';
+    // 상단 요약
+    html+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px">';
+    html+='<div style="background:var(--teal-l);border:1px solid var(--teal);border-radius:6px;padding:8px;text-align:center">';
+    html+='<div style="font-size:18px;font-weight:900;color:var(--teal)">'+chkIn+'</div>';
+    html+='<div style="font-size:9px;color:var(--teal);font-weight:700">출근</div></div>';
+    html+='<div style="background:var(--blue-l);border:1px solid var(--blue);border-radius:6px;padding:8px;text-align:center">';
+    html+='<div style="font-size:18px;font-weight:900;color:var(--blue)">'+chkOut+'</div>';
+    html+='<div style="font-size:9px;color:var(--blue);font-weight:700">퇴근</div></div>';
+    html+='<div style="background:var(--amber-l);border:1px solid var(--amber);border-radius:6px;padding:8px;text-align:center">';
+    html+='<div style="font-size:18px;font-weight:900;color:var(--amber)">'+(chkIn-chkOut)+'</div>';
+    html+='<div style="font-size:9px;color:var(--amber);font-weight:700">근무중</div></div>';
+    html+='<div style="background:var(--red-l);border:1px solid var(--red);border-radius:6px;padding:8px;text-align:center">';
+    html+='<div style="font-size:18px;font-weight:900;color:var(--red)">'+noShow+'</div>';
+    html+='<div style="font-size:9px;color:var(--red);font-weight:700">미출근</div></div>';
+    html+='</div>';
+    
+    // 기사별 목록
+    html+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden">';
+    html+='<div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr 0.6fr;gap:4px;padding:8px;background:var(--bg3);border-bottom:1px solid var(--border);font-size:10px;font-weight:800;color:var(--text2)">';
+    html+='<div>기사명</div><div>캠프</div><div>출근</div><div>퇴근</div><div>근무</div></div>';
+    
+    allDrs.sort(function(a,b){return (a.camp||'').localeCompare(b.camp||'')||(a.name||'').localeCompare(b.name||'');}).forEach(function(d){
+      var a=attMap[d.name];
+      var fmtT=function(iso){if(!iso)return'-';var x=new Date(iso);return ('0'+x.getHours()).slice(-2)+':'+('0'+x.getMinutes()).slice(-2);};
+      var dur='-';
+      if(a&&a.checkIn&&a.checkOut){
+        var ms=new Date(a.checkOut)-new Date(a.checkIn);
+        var hr=Math.floor(ms/3600000), mn=Math.floor((ms%3600000)/60000);
+        dur=hr+'h'+mn+'m';
+      }else if(a&&a.checkIn){
+        dur='진행중';
+      }
+      var statusColor=a&&a.checkIn?(a.checkOut?'var(--blue)':'var(--teal)'):'var(--text3)';
+      var rowBg=a&&a.checkIn?'var(--bg)':'var(--red-l)';
+      html+='<div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr 0.6fr;gap:4px;padding:8px;border-bottom:1px solid var(--border);font-size:11px;background:'+rowBg+';align-items:center">';
+      html+='<div style="font-weight:700;color:'+statusColor+'">'+(a&&a.checkIn?'🟢 ':'⚪ ')+d.name+'</div>';
+      html+='<div style="font-size:10px;color:var(--text2)">'+(d.camp||'-')+'</div>';
+      html+='<div style="font-weight:700">'+fmtT(a&&a.checkIn)+(a&&a.checkInGps?' 📍':'')+'</div>';
+      html+='<div style="font-weight:700">'+fmtT(a&&a.checkOut)+(a&&a.checkOutGps?' 📍':'')+'</div>';
+      html+='<div style="font-size:10px;font-weight:700;color:var(--blue)">'+dur+'</div>';
+      html+='</div>';
+    });
+    
+    html+='</div>';
+    box.innerHTML=html;
+  }).catch(function(e){
+    var box=document.getElementById('att-result');
+    if(box)box.innerHTML='<div style="padding:10px;color:var(--red);font-size:11px">로드 실패: '+(e&&e.message||'')+'</div>';
+  });
+}
+
+function _exportAttendCSV(){
+  if(!FB||!_db){toast('❌ Firebase 연결 필요');return;}
+  var date=localStorage.getItem('attend_query_date')||today();
+  var allDrs=ls('drivers').filter(function(d){return d.is_active!==false&&!d.isNew&&d.status!=='pending';});
+  
+  _db.collection('attendance').where('date','==',date).get().then(function(snap){
+    var attMap={};
+    snap.forEach(function(doc){var d=doc.data();attMap[d.driver]=d;});
+    
+    var csv='\ufeff'; // BOM for Excel
+    csv+='기사명,캠프,출근시각,출근위도,출근경도,퇴근시각,퇴근위도,퇴근경도,근무시간\n';
+    allDrs.forEach(function(d){
+      var a=attMap[d.name]||{};
+      var fmtT=function(iso){if(!iso)return'';var x=new Date(iso);return x.toLocaleString('ko-KR');};
+      var dur='';
+      if(a.checkIn&&a.checkOut){
+        var ms=new Date(a.checkOut)-new Date(a.checkIn);
+        var hr=Math.floor(ms/3600000), mn=Math.floor((ms%3600000)/60000);
+        dur=hr+'시간 '+mn+'분';
+      }
+      csv+=[
+        d.name,d.camp||'',
+        fmtT(a.checkIn), a.checkInLat||'', a.checkInLng||'',
+        fmtT(a.checkOut), a.checkOutLat||'', a.checkOutLng||'',
+        dur
+      ].map(function(v){return '"'+String(v).replace(/"/g,'""')+'"';}).join(',')+'\n';
+    });
+    
+    var blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');
+    a.href=url; a.download='출퇴근_'+date+'.csv';
+    a.click();
+    setTimeout(function(){URL.revokeObjectURL(url);},1000);
+    toast('📥 CSV 다운로드 완료');
+  });
+}
+
 
 // ══════════════════════════════════════════════════════
 // [신규] 관리자 월간 근무표 패널
