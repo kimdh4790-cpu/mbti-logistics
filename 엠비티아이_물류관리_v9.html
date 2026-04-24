@@ -6007,28 +6007,45 @@ function _viewNotice(id){
   var ico=cIco[item.category]||'📢';
   var isUrgent=(item.category==='긴급');
   
+  // 기존 모달 있으면 제거
+  var oldMo=document.getElementById('urgent-notice-modal');
+  if(oldMo)oldMo.remove();
+  
   var mo=document.createElement('div');
+  mo.id='urgent-notice-modal';
   mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:800;display:flex;align-items:center;justify-content:center;padding:14px';
-  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  mo.onclick=function(e){if(e.target===mo)_closeUrgentNoticeModal();};
   
   var contentHtml=(item.content||'').replace(/</g,'&lt;').replace(/\n/g,'<br>');
   
-  mo.innerHTML='<div onclick="event.stopPropagation()" style="background:var(--bg);border:'+(isUrgent?'2px solid var(--red)':'1px solid var(--border)')+';border-radius:12px;max-width:90vw;width:400px;max-height:85vh;overflow-y:auto">'
-    +'<div style="padding:14px;background:'+(isUrgent?'var(--red)':'var(--blue)')+';color:#fff;border-radius:10px 10px 0 0">'
+  mo.innerHTML='<div onclick="event.stopPropagation()" style="background:var(--bg);border:'+(isUrgent?'2px solid var(--red)':'1px solid var(--border)')+';border-radius:12px;max-width:90vw;width:400px;max-height:85vh;overflow-y:auto;display:flex;flex-direction:column">'
+    +'<div style="padding:14px;background:'+(isUrgent?'var(--red)':'var(--blue)')+';color:#fff;border-radius:10px 10px 0 0;flex-shrink:0">'
     +'<div style="font-size:11px;font-weight:700;opacity:.9;margin-bottom:4px">'+ico+' '+(item.category||'공지')+(item.pinned?' · 📌 고정':'')+'</div>'
     +'<div style="font-size:16px;font-weight:800;line-height:1.3">'+(item.title||'-')+'</div>'
     +'<div style="font-size:10px;opacity:.85;margin-top:6px">'+new Date(item.sentAt).toLocaleString('ko-KR')+' · '+(item.sentBy||'관리자')+'</div>'
     +'</div>'
-    +'<div style="padding:16px;font-size:13px;line-height:1.6;color:var(--text);white-space:pre-wrap;word-break:break-word">'+contentHtml+'</div>'
-    +'<div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:8px">'
-    +'<button onclick="_markNoticeRead('+JSON.stringify(id)+','+JSON.stringify(item.noticeId||'')+');this.closest(\'div[style*=z-index]\').parentElement.remove();" style="flex:1;padding:10px;background:var(--teal);color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer">✓ 확인 (읽음 처리)</button>'
-    +'<button onclick="this.closest(\'div[style*=z-index]\').parentElement.remove()" style="padding:10px 16px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:7px;font-size:13px;cursor:pointer">닫기</button>'
+    +'<div style="padding:16px;font-size:13px;line-height:1.6;color:var(--text);white-space:pre-wrap;word-break:break-word;flex:1;overflow-y:auto">'+contentHtml+'</div>'
+    +'<div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0">'
+    +'<button onclick="_confirmUrgentNotice('+JSON.stringify(id)+','+JSON.stringify(item.noticeId||'')+')" style="flex:1;padding:10px;background:var(--teal);color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer">✓ 확인 (읽음 처리)</button>'
+    +'<button onclick="_closeUrgentNoticeModal()" style="padding:10px 16px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:7px;font-size:13px;cursor:pointer">닫기</button>'
     +'</div>'
     +'</div>';
   document.body.appendChild(mo);
   
   var box=document.getElementById('drv-notification-box');
   if(box)box.remove();
+}
+
+// 긴급 모달 안전 닫기
+function _closeUrgentNoticeModal(){
+  var mo=document.getElementById('urgent-notice-modal');
+  if(mo)mo.remove();
+}
+
+// 긴급 공지 확인 (읽음 처리 + 닫기)
+function _confirmUrgentNotice(notifId,noticeId){
+  _markNoticeRead(notifId,noticeId);
+  _closeUrgentNoticeModal();
 }
 
 // 공지사항 읽음 처리 (긴급 팝업용)
@@ -6316,24 +6333,48 @@ function _viewDrvNotice(id){
   var ico=cIco[item.category]||'📢';
   var isUrgent=(item.category==='긴급');
   
+  // 기존 모달 있으면 먼저 제거 (중복 방지)
+  var oldMo=document.getElementById('drv-notice-modal');
+  if(oldMo)oldMo.remove();
+  
   var mo=document.createElement('div');
+  mo.id='drv-notice-modal';
   mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:800;display:flex;align-items:center;justify-content:center;padding:14px';
-  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  mo.onclick=function(e){if(e.target===mo)_closeDrvNoticeModal();};
   
   var contentHtml=(item.content||'').replace(/</g,'&lt;').replace(/\n/g,'<br>');
   
-  mo.innerHTML='<div onclick="event.stopPropagation()" style="background:var(--bg);border:'+(isUrgent?'2px solid var(--red)':'1px solid var(--border)')+';border-radius:12px;max-width:90vw;width:420px;max-height:85vh;overflow-y:auto">'
-    +'<div style="padding:14px;background:'+(isUrgent?'var(--red)':'var(--blue)')+';color:#fff;border-radius:10px 10px 0 0">'
+  mo.innerHTML='<div onclick="event.stopPropagation()" style="background:var(--bg);border:'+(isUrgent?'2px solid var(--red)':'1px solid var(--border)')+';border-radius:12px;max-width:90vw;width:420px;max-height:85vh;overflow-y:auto;display:flex;flex-direction:column">'
+    +'<div style="padding:14px;background:'+(isUrgent?'var(--red)':'var(--blue)')+';color:#fff;border-radius:10px 10px 0 0;flex-shrink:0">'
     +'<div style="font-size:11px;font-weight:700;opacity:.9;margin-bottom:4px">'+ico+' '+(item.category||'공지')+(item.pinned?' · 📌 고정':'')+'</div>'
     +'<div style="font-size:16px;font-weight:800;line-height:1.3">'+(item.title||'-')+'</div>'
     +'<div style="font-size:10px;opacity:.85;margin-top:6px">'+new Date(item.sentAt).toLocaleString('ko-KR')+' · '+(item.sentBy||'관리자')+'</div>'
     +'</div>'
-    +'<div style="padding:16px;font-size:13px;line-height:1.6;color:var(--text);white-space:pre-wrap;word-break:break-word">'+contentHtml+'</div>'
-    +'<div style="padding:10px 14px;border-top:1px solid var(--border)">'
-    +'<button onclick="_markDrvNoticeRead(\''+id+'\',\''+(item.noticeId||'')+'\');this.closest(\'div[style*=z-index]\').parentElement.remove();" style="width:100%;padding:12px;background:var(--teal);color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer">✓ 확인 했습니다</button>'
+    +'<div style="padding:16px;font-size:13px;line-height:1.6;color:var(--text);white-space:pre-wrap;word-break:break-word;flex:1;overflow-y:auto">'+contentHtml+'</div>'
+    +'<div style="padding:10px 14px;border-top:1px solid var(--border);flex-shrink:0;display:flex;gap:6px">'
+    +'<button onclick="_confirmDrvNotice(\''+id+'\',\''+(item.noticeId||'')+'\')" style="flex:1;padding:12px;background:var(--teal);color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer">✓ 확인 했습니다</button>'
+    +'<button onclick="_closeDrvNoticeModal()" style="padding:12px 16px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:7px;font-size:13px;cursor:pointer">닫기</button>'
     +'</div>'
     +'</div>';
   document.body.appendChild(mo);
+}
+
+// 모달 안전 닫기
+function _closeDrvNoticeModal(){
+  var mo=document.getElementById('drv-notice-modal');
+  if(mo)mo.remove();
+  // 전체목록 모달이 열려있으면 내용 갱신 (읽음 상태 반영)
+  var listMo=document.getElementById('drv-notice-list-modal');
+  if(listMo){
+    listMo.remove();
+    setTimeout(function(){openDrvNoticeList();},100);
+  }
+}
+
+// "확인 했습니다" 버튼 → 읽음 처리 + 모달 닫기 + 카드 갱신
+function _confirmDrvNotice(notifId,noticeId){
+  _markDrvNoticeRead(notifId,noticeId);
+  _closeDrvNoticeModal();
 }
 
 // ── 공지 읽음 처리
@@ -6368,9 +6409,14 @@ function openDrvNoticeList(){
   var list=window._drvNoticeList||[];
   var cIco={'일반':'📣','긴급':'🚨','업무':'💼','교육':'📚','이벤트':'🎁'};
   
+  // 기존 모달 있으면 제거
+  var oldMo=document.getElementById('drv-notice-list-modal');
+  if(oldMo)oldMo.remove();
+  
   var mo=document.createElement('div');
+  mo.id='drv-notice-list-modal';
   mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:800;display:flex;align-items:center;justify-content:center;padding:14px';
-  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  mo.onclick=function(e){if(e.target===mo)_closeDrvNoticeListModal();};
   
   var listHtml='';
   if(list.length===0){
@@ -6400,11 +6446,17 @@ function openDrvNoticeList(){
   mo.innerHTML='<div onclick="event.stopPropagation()" style="background:var(--bg);border:1px solid var(--border);border-radius:12px;max-width:90vw;width:450px;max-height:85vh;display:flex;flex-direction:column">'
     +'<div style="padding:14px;background:var(--blue);color:#fff;border-radius:10px 10px 0 0;display:flex;align-items:center;justify-content:space-between">'
     +'<div style="font-size:15px;font-weight:800">📢 공지사항 전체보기</div>'
-    +'<button onclick="this.closest(\'div[style*=z-index]\').parentElement.remove()" style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer">✕</button>'
+    +'<button onclick="_closeDrvNoticeListModal()" style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer">✕</button>'
     +'</div>'
     +'<div style="padding:12px;overflow-y:auto;flex:1">'+listHtml+'</div>'
     +'</div>';
   document.body.appendChild(mo);
+}
+
+// 전체목록 모달 안전 닫기
+function _closeDrvNoticeListModal(){
+  var mo=document.getElementById('drv-notice-list-modal');
+  if(mo)mo.remove();
 }
 
 function dHome(){
