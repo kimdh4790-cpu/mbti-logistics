@@ -1407,7 +1407,72 @@ function closeMobileDrawer() {
   <div style="font-size:10px;color:rgba(255,255,255,.4);text-align:center;margin-bottom:4px">가입 후 관리자 승인 필요</div>
 </div>
 </div>
+
+<!-- ═══ 공식 인증 뱃지 3종 (v3 신규 추가) ═══ -->
+<div style="margin-top:22px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;" class="cert-badges-grid">
+  <!-- 뱃지 1: 중소기업 확인 -->
+  <div style="background:linear-gradient(135deg,#0a1628 0%,#102845 100%);border-radius:14px;padding:18px 14px;border:1px solid rgba(245,158,11,0.3);text-align:center;position:relative;overflow:hidden;box-shadow:0 6px 20px rgba(10,22,40,0.35);">
+    <div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;background:radial-gradient(circle,rgba(245,158,11,0.18) 0%,transparent 70%);pointer-events:none;"></div>
+    <div style="position:relative;z-index:2">
+      <div style="font-size:28px;margin-bottom:6px">🏆</div>
+      <div style="font-size:0.65rem;font-weight:800;color:#fbbf24;letter-spacing:2px;margin-bottom:4px">CERTIFIED</div>
+      <div style="font-size:0.98rem;font-weight:800;color:#fff;margin-bottom:3px">중소기업 확인</div>
+      <div style="font-size:0.68rem;color:rgba(255,255,255,0.65);line-height:1.4">중소벤처기업부<br>2026.04 · 유효 27.03.31</div>
+    </div>
+  </div>
+
+  <!-- 뱃지 2: 소상공인 인증 -->
+  <div style="background:linear-gradient(135deg,#0a1628 0%,#102845 100%);border-radius:14px;padding:18px 14px;border:1px solid rgba(245,158,11,0.3);text-align:center;position:relative;overflow:hidden;box-shadow:0 6px 20px rgba(10,22,40,0.35);">
+    <div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;background:radial-gradient(circle,rgba(245,158,11,0.18) 0%,transparent 70%);pointer-events:none;"></div>
+    <div style="position:relative;z-index:2">
+      <div style="font-size:28px;margin-bottom:6px">💎</div>
+      <div style="font-size:0.65rem;font-weight:800;color:#fbbf24;letter-spacing:2px;margin-bottom:4px">SMALL BUSINESS</div>
+      <div style="font-size:0.98rem;font-weight:800;color:#fff;margin-bottom:3px">소상공인 인증</div>
+      <div style="font-size:0.68rem;color:rgba(255,255,255,0.65);line-height:1.4">소상공인기본법<br>제2조 인증 기업</div>
+    </div>
+  </div>
+
+  <!-- 뱃지 3: 매출 성장 -->
+  <div style="background:linear-gradient(135deg,#0a1628 0%,#102845 100%);border-radius:14px;padding:18px 14px;border:1px solid rgba(245,158,11,0.3);text-align:center;position:relative;overflow:hidden;box-shadow:0 6px 20px rgba(10,22,40,0.35);">
+    <div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;background:radial-gradient(circle,rgba(16,185,129,0.18) 0%,transparent 70%);pointer-events:none;"></div>
+    <div style="position:relative;z-index:2">
+      <div style="font-size:28px;margin-bottom:6px">📈</div>
+      <div style="font-size:0.65rem;font-weight:800;color:#10b981;letter-spacing:2px;margin-bottom:4px">GROWTH</div>
+      <div style="font-size:0.98rem;font-weight:800;color:#fff;margin-bottom:3px">매출 +188% 성장</div>
+      <div style="font-size:0.68rem;color:rgba(255,255,255,0.65);line-height:1.4">2025년 13.16억<br>흑자 전환 달성</div>
+    </div>
+  </div>
 </div>
+
+<!-- ═══ 회사 소개서 다운로드 (v2 신규 추가) ═══ -->
+<div style="margin-top:22px;background:linear-gradient(135deg,#0a1628 0%,#102845 60%,#1a3a6b 100%);border-radius:16px;padding:22px 24px;position:relative;overflow:hidden;border:1px solid rgba(245,158,11,0.25);box-shadow:0 8px 30px rgba(10,22,40,0.4);">
+  <!-- 우측 상단 장식 -->
+  <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:radial-gradient(circle,rgba(245,158,11,0.15) 0%,transparent 70%);pointer-events:none;"></div>
+  <div style="position:relative;z-index:2;display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;flex-wrap:wrap;" class="profile-dl-grid">
+    <div style="width:56px;height:56px;background:linear-gradient(135deg,#f59e0b,#fbbf24);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:30px;box-shadow:0 4px 16px rgba(245,158,11,0.4);flex-shrink:0">📄</div>
+    <div style="min-width:0">
+      <div style="font-size:0.72rem;font-weight:800;color:#fbbf24;letter-spacing:2px;margin-bottom:4px">COMPANY PROFILE · 2026</div>
+      <div style="font-size:1.15rem;font-weight:800;color:#fff;margin-bottom:4px;line-height:1.25">(유)엠비티아이 회사 소개서</div>
+      <div style="font-size:0.78rem;color:rgba(255,255,255,0.7);line-height:1.4">사업 현황·실적·성장 로드맵 한눈에 확인 (10페이지)</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-shrink:0" class="profile-dl-btns">
+      <a href="MBTI_Company_Profile.pdf" target="_blank" rel="noopener" style="padding:11px 18px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;text-decoration:none;border-radius:10px;font-size:0.8rem;font-weight:800;letter-spacing:0.3px;box-shadow:0 4px 14px rgba(245,158,11,0.45);transition:transform 0.15s;white-space:nowrap" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">📖 소개서 보기</a>
+      <a href="MBTI_Company_Profile.pdf" download="MBTI_회사소개서_2026.pdf" style="padding:11px 16px;background:rgba(255,255,255,0.1);color:#fff;text-decoration:none;border-radius:10px;font-size:0.8rem;font-weight:700;border:1px solid rgba(255,255,255,0.25);transition:background 0.15s;white-space:nowrap" onmouseover="this.style.background='rgba(255,255,255,0.18)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">📥 다운로드</a>
+    </div>
+  </div>
+</div>
+<style>
+@media (max-width:640px){
+  .profile-dl-grid{grid-template-columns:1fr !important;text-align:center;}
+  .profile-dl-grid > div:first-child{margin:0 auto;}
+  .profile-dl-btns{justify-content:center;flex-wrap:wrap;}
+  .profile-dl-btns a{flex:1;min-width:130px;text-align:center;}
+  .cert-badges-grid{grid-template-columns:1fr !important;gap:10px !important;}
+}
+@media (min-width:641px) and (max-width:900px){
+  .cert-badges-grid{grid-template-columns:repeat(3,1fr) !important;gap:8px !important;}
+}
+</style>
 </section>
 
 <!-- SERVICES -->
