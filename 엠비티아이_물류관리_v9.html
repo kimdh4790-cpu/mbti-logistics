@@ -6131,12 +6131,21 @@ function _buildAttendCard(){
   var workDur='';
   if(hasIn&&hasOut){
     var ms=new Date(a.checkOut)-new Date(a.checkIn);
-    var hr=Math.floor(ms/3600000), mn=Math.floor((ms%3600000)/60000);
-    workDur=' · 총 '+hr+'시간 '+mn+'분';
+    if(ms<0){
+      // ★ 역전 데이터 (퇴근 < 출근) — 오류 표시
+      workDur=' · ⚠️ 데이터 오류';
+    }else{
+      var hr=Math.floor(ms/3600000), mn=Math.floor((ms%3600000)/60000);
+      workDur=' · 총 '+hr+'시간 '+mn+'분';
+    }
   }else if(hasIn){
     var ms=new Date()-new Date(a.checkIn);
-    var hr=Math.floor(ms/3600000), mn=Math.floor((ms%3600000)/60000);
-    workDur=' · 진행 '+hr+'시간 '+mn+'분';
+    if(ms<0){
+      workDur=' · ⚠️ 시간 오류';
+    }else{
+      var hr=Math.floor(ms/3600000), mn=Math.floor((ms%3600000)/60000);
+      workDur=' · 진행 '+hr+'시간 '+mn+'분';
+    }
   }
   
   var html='<div style="background:linear-gradient(135deg,var(--bg2) 0%,var(--bg3) 100%);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px">';
@@ -6203,12 +6212,16 @@ async function doCheckIn(){
   
   var gps=await _getGPS();
   var now=new Date().toISOString();
-  var a=_getAttend();
-  a.checkIn=now;
-  a.checkInGps=gps;
+  // ★ 출근은 하루를 새로 시작 — checkOut/checkOutGps 초기화
+  var a={
+    checkIn:now,
+    checkInGps:gps,
+    checkOut:null,
+    checkOutGps:null
+  };
   _saveAttend(a);
   
-  // Firebase 저장
+  // Firebase 저장 (checkOut 명시적으로 null 처리)
   if(FB&&_db){
     var docId=S.curDriver+'_'+today();
     _db.collection('attendance').doc(docId).set({
@@ -6218,6 +6231,10 @@ async function doCheckIn(){
       checkInGps:gps,
       checkInLat:gps?gps.lat:null,
       checkInLng:gps?gps.lng:null,
+      checkOut:null,
+      checkOutGps:null,
+      checkOutLat:null,
+      checkOutLng:null,
       updatedAt:new Date().toISOString()
     },{merge:true}).catch(function(e){console.warn('attendance save:',e);});
   }
@@ -6256,8 +6273,13 @@ async function doCheckOut(){
   }
   
   var ms=new Date(now)-new Date(a.checkIn);
-  var hr=Math.floor(ms/3600000), mn=Math.floor((ms%3600000)/60000);
-  toast('✅ 퇴근 완료! 근무 '+hr+'시간 '+mn+'분');
+  if(ms<0){
+    // ★ 퇴근이 출근보다 이르면 경고
+    toast('⚠️ 퇴근 완료 (출근 시간보다 이른 기록 — 관리자 확인 필요)');
+  }else{
+    var hr=Math.floor(ms/3600000), mn=Math.floor((ms%3600000)/60000);
+    toast('✅ 퇴근 완료! 근무 '+hr+'시간 '+mn+'분');
+  }
   var card=document.getElementById('attend-card');
   if(card)card.innerHTML=_buildAttendCard();
 }
@@ -9573,15 +9595,21 @@ function _loadAttendList(){
         var a=attMap[d.name];
         var fmtT=function(iso){if(!iso)return'-';var x=new Date(iso);return ('0'+x.getHours()).slice(-2)+':'+('0'+x.getMinutes()).slice(-2);};
         var dur='-';
+        var hasError=false;
         if(a&&a.checkIn&&a.checkOut){
           var ms=new Date(a.checkOut)-new Date(a.checkIn);
-          var hr=Math.floor(ms/3600000), mn=Math.floor((ms%3600000)/60000);
-          dur=hr+'h'+mn+'m';
+          if(ms<0){
+            dur='⚠️오류';
+            hasError=true;
+          }else{
+            var hr=Math.floor(ms/3600000), mn=Math.floor((ms%3600000)/60000);
+            dur=hr+'h'+mn+'m';
+          }
         }else if(a&&a.checkIn){
           dur='진행중';
         }
-        var statusColor=a&&a.checkIn?(a.checkOut?'var(--blue)':'var(--teal)'):'var(--text3)';
-        var rowBg=a&&a.checkIn?'var(--bg)':'var(--red-l)';
+        var statusColor=hasError?'var(--red)':(a&&a.checkIn?(a.checkOut?'var(--blue)':'var(--teal)'):'var(--text3)');
+        var rowBg=hasError?'rgba(239,68,68,.1)':(a&&a.checkIn?'var(--bg)':'var(--red-l)');
         
         // GPS 위치 확인 버튼
         var mapBtn='<span style="color:var(--text3);font-size:10px">-</span>';
@@ -9591,13 +9619,21 @@ function _loadAttendList(){
           var btnLabel=ckOutLat?'🗺️':'🗺';
           var btnArg="'"+d.name+"','"+a.date+"'";
           mapBtn='<button onclick="_viewAttendMap('+btnArg+')" style="padding:3px 8px;background:var(--blue-l);color:var(--blue);border:1px solid var(--blue);border-radius:4px;font-size:10px;font-weight:700;cursor:pointer">🗺️ 지도</button>';
+        }else if(a&&(a.checkIn||a.checkOut)){
+          // 출퇴근 기록은 있지만 GPS 없음 - 수정 버튼 제공
+          mapBtn='<button onclick="_editAttend(\''+d.name.replace(/'/g,"\\\\'")+'\',\''+a.date+'\')" style="padding:3px 8px;background:var(--amber-l);color:var(--amber);border:1px solid var(--amber);border-radius:4px;font-size:10px;font-weight:700;cursor:pointer">✏️ 수정</button>';
+        }
+        
+        // 오류 데이터면 수정 버튼으로 대체
+        if(hasError){
+          mapBtn='<button onclick="_editAttend(\''+d.name.replace(/'/g,"\\\\'")+'\',\''+a.date+'\')" style="padding:3px 8px;background:var(--red-l);color:var(--red);border:1px solid var(--red);border-radius:4px;font-size:10px;font-weight:700;cursor:pointer">🔧 수정</button>';
         }
         
         html+='<div style="display:grid;grid-template-columns:1.4fr 1fr 1fr 0.6fr 0.5fr;gap:4px;padding:8px;border-bottom:1px solid var(--border);font-size:11px;background:'+rowBg+';align-items:center">';
         html+='<div style="font-weight:700;color:'+statusColor+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(a&&a.checkIn?'🟢 ':'⚪ ')+d.name+'</div>';
         html+='<div style="font-weight:700">'+fmtT(a&&a.checkIn)+(a&&a.checkInGps?' 📍':'')+'</div>';
         html+='<div style="font-weight:700">'+fmtT(a&&a.checkOut)+(a&&a.checkOutGps?' 📍':'')+'</div>';
-        html+='<div style="font-size:10px;font-weight:700;color:var(--blue)">'+dur+'</div>';
+        html+='<div style="font-size:10px;font-weight:700;color:'+(hasError?'var(--red)':'var(--blue)')+'">'+dur+'</div>';
         html+='<div style="text-align:center">'+mapBtn+'</div>';
         html+='</div>';
       });
@@ -9726,6 +9762,114 @@ function _calcDistance(lat1,lng1,lat2,lng2){
   return R*c;
 }
 
+// ── 관리자: 출퇴근 데이터 수동 수정/삭제 (오류 복구용)
+function _editAttend(driverName,date){
+  if(!FB||!_db){toast('❌ Firebase 연결 필요');return;}
+  var docId=driverName+'_'+date;
+  
+  _db.collection('attendance').doc(docId).get().then(function(doc){
+    if(!doc.exists){toast('❌ 데이터 없음');return;}
+    var a=doc.data();
+    
+    // 기존 모달 제거
+    var oldMo=document.getElementById('edit-attend-modal');
+    if(oldMo)oldMo.remove();
+    
+    var fmtInput=function(iso){
+      if(!iso)return '';
+      var d=new Date(iso);
+      // datetime-local 형식: YYYY-MM-DDTHH:mm
+      var pad=function(n){return ('0'+n).slice(-2);};
+      return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes());
+    };
+    
+    var mo=document.createElement('div');
+    mo.id='edit-attend-modal';
+    mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:900;display:flex;align-items:center;justify-content:center;padding:14px';
+    mo.onclick=function(e){if(e.target===mo)mo.remove();};
+    
+    mo.innerHTML='<div onclick="event.stopPropagation()" style="background:var(--bg);border:1px solid var(--border);border-radius:12px;max-width:95vw;width:420px;max-height:90vh;overflow-y:auto">'
+      +'<div style="padding:14px;background:var(--amber);color:#fff;border-radius:10px 10px 0 0;display:flex;align-items:center;justify-content:space-between">'
+      +'<div><div style="font-size:15px;font-weight:800">🔧 출퇴근 수정</div><div style="font-size:11px;opacity:.85;margin-top:3px">'+driverName+' · '+date+'</div></div>'
+      +'<button onclick="document.getElementById(\'edit-attend-modal\').remove()" style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer">✕</button>'
+      +'</div>'
+      +'<div style="padding:16px">'
+      +'<div style="padding:10px;background:var(--amber-l);border:1px solid var(--amber);border-radius:6px;margin-bottom:12px;font-size:11px;color:var(--text2);line-height:1.5">'
+      +'⚠️ <b>관리자 전용 기능</b><br>'
+      +'잘못 찍힌 출퇴근을 수정하거나 삭제할 수 있습니다.<br>'
+      +'수정 시 기사 앱에도 반영됩니다.'
+      +'</div>'
+      +'<div style="margin-bottom:10px">'
+      +'<label style="font-size:11px;font-weight:700;color:var(--teal);display:block;margin-bottom:4px">🚪 출근 시각</label>'
+      +'<input id="edit-checkin" type="datetime-local" value="'+fmtInput(a.checkIn)+'" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px">'
+      +'</div>'
+      +'<div style="margin-bottom:14px">'
+      +'<label style="font-size:11px;font-weight:700;color:var(--red);display:block;margin-bottom:4px">🏁 퇴근 시각</label>'
+      +'<input id="edit-checkout" type="datetime-local" value="'+fmtInput(a.checkOut)+'" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px">'
+      +'</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">'
+      +'<button onclick="_saveAttendEdit(\''+docId+'\',\''+driverName.replace(/'/g,"\\\\'")+'\',\''+date+'\')" style="padding:11px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">💾 저장</button>'
+      +'<button onclick="_deleteAttend(\''+docId+'\',\''+driverName.replace(/'/g,"\\\\'")+'\')" style="padding:11px;background:var(--red);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">🗑 전체 삭제</button>'
+      +'</div>'
+      +'<div style="margin-top:10px;padding:8px;background:var(--bg3);border-radius:6px;font-size:10px;color:var(--text3);line-height:1.5">'
+      +'💡 <b>TIP:</b> 출근/퇴근 순서가 바뀌었다면 값을 수정 후 저장하세요.<br>'
+      +'• 완전히 잘못된 기록이면 "전체 삭제" 후 기사가 다시 찍도록 안내'
+      +'</div>'
+      +'</div></div>';
+    document.body.appendChild(mo);
+  }).catch(function(e){toast('❌ 로드 실패: '+(e&&e.message||''));});
+}
+
+function _saveAttendEdit(docId, driverName, date){
+  var checkInVal=document.getElementById('edit-checkin').value;
+  var checkOutVal=document.getElementById('edit-checkout').value;
+  
+  var upd={updatedAt:new Date().toISOString(), editedBy:'관리자'};
+  
+  if(checkInVal){
+    var dIn=new Date(checkInVal);
+    upd.checkIn=dIn.toISOString();
+  }else{
+    upd.checkIn=null;
+    upd.checkInGps=null;
+    upd.checkInLat=null;
+    upd.checkInLng=null;
+  }
+  
+  if(checkOutVal){
+    var dOut=new Date(checkOutVal);
+    upd.checkOut=dOut.toISOString();
+  }else{
+    upd.checkOut=null;
+    upd.checkOutGps=null;
+    upd.checkOutLat=null;
+    upd.checkOutLng=null;
+  }
+  
+  // 역전 체크
+  if(upd.checkIn && upd.checkOut && new Date(upd.checkOut)<new Date(upd.checkIn)){
+    if(!confirm('⚠️ 퇴근 시각이 출근보다 빠릅니다. 그대로 저장하시겠습니까?'))return;
+  }
+  
+  _db.collection('attendance').doc(docId).update(upd).then(function(){
+    toast('✅ '+driverName+' 출퇴근 수정 완료');
+    document.getElementById('edit-attend-modal').remove();
+    _loadAttendList();
+    if(typeof addAct==='function')addAct('attend','출퇴근 수정: '+driverName+' ('+date+')',driverName);
+  }).catch(function(e){toast('❌ 저장 실패: '+(e&&e.message||''));});
+}
+
+function _deleteAttend(docId, driverName){
+  if(!confirm('⚠️ '+driverName+' 기사님의 해당일 출퇴근 기록을 완전히 삭제하시겠습니까?\n\n기사가 다시 찍어야 합니다.'))return;
+  
+  _db.collection('attendance').doc(docId).delete().then(function(){
+    toast('🗑 '+driverName+' 출퇴근 기록 삭제 완료');
+    document.getElementById('edit-attend-modal').remove();
+    _loadAttendList();
+    if(typeof addAct==='function')addAct('attend','출퇴근 삭제: '+driverName,driverName);
+  }).catch(function(e){toast('❌ 삭제 실패: '+(e&&e.message||''));});
+}
+
 function _exportAttendCSV(){
   if(!FB||!_db){toast('❌ Firebase 연결 필요');return;}
   var date=localStorage.getItem('attend_query_date')||today();
@@ -9743,8 +9887,12 @@ function _exportAttendCSV(){
       var dur='';
       if(a.checkIn&&a.checkOut){
         var ms=new Date(a.checkOut)-new Date(a.checkIn);
-        var hr=Math.floor(ms/3600000), mn=Math.floor((ms%3600000)/60000);
-        dur=hr+'시간 '+mn+'분';
+        if(ms<0){
+          dur='⚠️ 오류 (역전)';
+        }else{
+          var hr=Math.floor(ms/3600000), mn=Math.floor((ms%3600000)/60000);
+          dur=hr+'시간 '+mn+'분';
+        }
       }
       csv+=[
         d.name,d.camp||'',
