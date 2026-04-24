@@ -5918,20 +5918,27 @@ function checkDriverNotifications(){
           }catch(e){}
         }
       });
-      // ⚠️ 긴급 공지 체크 (읽지 않은 긴급만 팝업)
+      // ⚠️ 긴급 공지 체크 (읽지 않은 긴급만 팝업, 세션당 1회)
       var urgentNotices=items.filter(function(it){
         if(it.type!=='notice')return false;
         if(it.category!=='긴급')return false;
+        // ★ Firebase readAt 또는 로컬 읽음 기록 둘 중 하나라도 있으면 이미 읽음
+        if(it.readAt || it.readStatus==='read')return false;
         try{
           var readSet=JSON.parse(localStorage.getItem('drv_notice_read_'+S.curDriver)||'{}');
           return !readSet[it._id];
         }catch(e){return true;}
       });
       if(urgentNotices.length>0){
-        // 긴급 공지는 즉시 모달로
-        var first=urgentNotices[0];
-        window._drvNotes[first._id]=first;
-        setTimeout(function(){_viewNotice(first._id);},200);
+        // ★ 긴급 공지는 세션당 1번만 자동 팝업 (탭 이동 시 반복 방지)
+        var urgentSeenKey='urgent_notice_seen_'+S.curDriver+'_'+urgentNotices[0]._id;
+        var alreadyOpen=document.getElementById('urgent-notice-modal');
+        if(!sessionStorage.getItem(urgentSeenKey) && !alreadyOpen){
+          sessionStorage.setItem(urgentSeenKey,'1');
+          var first=urgentNotices[0];
+          window._drvNotes[first._id]=first;
+          setTimeout(function(){_viewNotice(first._id);},200);
+        }
       }
       // 공지사항(notice)는 일반 팝업에서 제외 - 홈 카드로 따로 표시
       var nonNotice=items.filter(function(it){return it.type!=='notice';});
@@ -6026,11 +6033,30 @@ function _viewNotice(id){
     +'</div>'
     +'<div style="padding:16px;font-size:13px;line-height:1.6;color:var(--text);white-space:pre-wrap;word-break:break-word;flex:1;overflow-y:auto">'+contentHtml+'</div>'
     +'<div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0">'
-    +'<button onclick="_confirmUrgentNotice('+JSON.stringify(id)+','+JSON.stringify(item.noticeId||'')+')" style="flex:1;padding:10px;background:var(--teal);color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer">✓ 확인 (읽음 처리)</button>'
-    +'<button onclick="_closeUrgentNoticeModal()" style="padding:10px 16px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:7px;font-size:13px;cursor:pointer">닫기</button>'
+    +'<button id="urgent-notice-confirm-btn" style="flex:1;padding:10px;background:var(--teal);color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer">✓ 확인 (읽음 처리)</button>'
+    +'<button id="urgent-notice-close-btn" style="padding:10px 16px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:7px;font-size:13px;cursor:pointer">닫기</button>'
     +'</div>'
     +'</div>';
   document.body.appendChild(mo);
+  
+  // ★ onclick 인라인 대신 addEventListener 사용 (ID 이스케이프 문제 회피)
+  var _nId = id;
+  var _nocId = item.noticeId || '';
+  var confirmBtn = document.getElementById('urgent-notice-confirm-btn');
+  var closeBtn = document.getElementById('urgent-notice-close-btn');
+  if(confirmBtn){
+    confirmBtn.addEventListener('click', function(){
+      // ★ 모달 먼저 닫고 (즉시 UI 반응)
+      _closeUrgentNoticeModal();
+      // 백그라운드 읽음 처리 (에러나도 모달은 이미 닫힘)
+      try{_markNoticeRead(_nId, _nocId);}catch(e){console.warn('[markNoticeRead err]',e);}
+    });
+  }
+  if(closeBtn){
+    closeBtn.addEventListener('click', function(){
+      _closeUrgentNoticeModal();
+    });
+  }
   
   var box=document.getElementById('drv-notification-box');
   if(box)box.remove();
@@ -6056,6 +6082,19 @@ function _markNoticeRead(notifId,noticeId){
     readSet[notifId]=new Date().toISOString();
     localStorage.setItem('drv_notice_read_'+S.curDriver,JSON.stringify(readSet));
   }catch(e){}
+  
+  // ★ 긴급 공지 세션 플래그도 설정 (이번 세션 내 재팝업 방지)
+  try{
+    sessionStorage.setItem('urgent_notice_seen_'+S.curDriver+'_'+notifId,'1');
+  }catch(e){}
+  
+  // ★ Firebase driver_notifications 문서에 readAt 저장 (확실한 재팝업 방지)
+  if(FB&&_db&&notifId){
+    _db.collection('driver_notifications').doc(notifId).update({
+      readAt:new Date().toISOString(),
+      readStatus:'read'
+    }).catch(function(e){console.warn('notif readAt:',e&&e.message);});
+  }
   
   // Firebase: 마스터 공지의 readBy에 기록 (관리자 통계용)
   if(FB&&_db&&noticeId){
@@ -6308,7 +6347,8 @@ function _loadDrvNotices(){
       snap.forEach(function(doc){
         var d=doc.data();
         d._id=doc.id;
-        d._read=!!readSet[doc.id];
+        // ★ Firebase의 readAt 또는 로컬 읽음 기록 둘 중 하나라도 있으면 읽음 처리
+        d._read = !!(d.readAt || d.readStatus==='read' || readSet[doc.id]);
         list.push(d);
       });
       // 정렬: 안 읽은 것 우선 + 고정 우선 + 최신
@@ -6352,11 +6392,30 @@ function _viewDrvNotice(id){
     +'</div>'
     +'<div style="padding:16px;font-size:13px;line-height:1.6;color:var(--text);white-space:pre-wrap;word-break:break-word;flex:1;overflow-y:auto">'+contentHtml+'</div>'
     +'<div style="padding:10px 14px;border-top:1px solid var(--border);flex-shrink:0;display:flex;gap:6px">'
-    +'<button onclick="_confirmDrvNotice(\''+id+'\',\''+(item.noticeId||'')+'\')" style="flex:1;padding:12px;background:var(--teal);color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer">✓ 확인 했습니다</button>'
-    +'<button onclick="_closeDrvNoticeModal()" style="padding:12px 16px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:7px;font-size:13px;cursor:pointer">닫기</button>'
+    +'<button id="drv-notice-confirm-btn" style="flex:1;padding:12px;background:var(--teal);color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer">✓ 확인 했습니다</button>'
+    +'<button id="drv-notice-close-btn" style="padding:12px 16px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:7px;font-size:13px;cursor:pointer">닫기</button>'
     +'</div>'
     +'</div>';
   document.body.appendChild(mo);
+  
+  // ★ onclick 인라인 대신 addEventListener 사용 (ID 이스케이프 문제 회피)
+  var _nId = id;
+  var _nocId = item.noticeId || '';
+  var confirmBtn = document.getElementById('drv-notice-confirm-btn');
+  var closeBtn = document.getElementById('drv-notice-close-btn');
+  if(confirmBtn){
+    confirmBtn.addEventListener('click', function(){
+      // ★ 모달 먼저 닫고 (즉시 UI 반응)
+      _closeDrvNoticeModal();
+      // 백그라운드 읽음 처리
+      try{_markDrvNoticeRead(_nId, _nocId);}catch(e){console.warn('[markDrvNoticeRead err]',e);}
+    });
+  }
+  if(closeBtn){
+    closeBtn.addEventListener('click', function(){
+      _closeDrvNoticeModal();
+    });
+  }
 }
 
 // 모달 안전 닫기
@@ -6377,28 +6436,41 @@ function _confirmDrvNotice(notifId,noticeId){
   _closeDrvNoticeModal();
 }
 
-// ── 공지 읽음 처리
+// ── 공지 읽음 처리 (확실한 Firebase 업데이트)
 function _markDrvNoticeRead(notifId,noticeId){
-  // 로컬에 읽음 기록 (localStorage)
+  // 1) 로컬 즉시 반영 (UI 반응 속도)
   try{
     var readSet=JSON.parse(localStorage.getItem('drv_notice_read_'+S.curDriver)||'{}');
     readSet[notifId]=new Date().toISOString();
     localStorage.setItem('drv_notice_read_'+S.curDriver,JSON.stringify(readSet));
   }catch(e){}
   
-  // 메모리 리스트도 즉시 업데이트
-  var list=window._drvNoticeList||[];
-  list.forEach(function(n){if(n._id===notifId)n._read=true;});
+  // 2) 긴급 공지 재팝업 방지 플래그
+  try{
+    sessionStorage.setItem('urgent_notice_seen_'+S.curDriver+'_'+notifId,'1');
+  }catch(e){}
   
-  // 카드 즉시 갱신
+  // 3) 메모리 리스트 즉시 업데이트
+  var list=window._drvNoticeList||[];
+  list.forEach(function(n){if(n._id===notifId){n._read=true;n.readAt=new Date().toISOString();}});
+  
+  // 4) 홈 카드 즉시 갱신
   var card=document.getElementById('drv-notice-card');
   if(card)card.innerHTML=_buildDrvNoticeCard();
   
-  // Firebase: 마스터 공지의 readBy에 기록 (관리자 통계용)
+  // 5) Firebase: driver_notifications 문서에 readAt 저장 (확실한 중복 방지)
+  if(FB&&_db&&notifId){
+    _db.collection('driver_notifications').doc(notifId).update({
+      readAt:new Date().toISOString(),
+      readStatus:'read'
+    }).catch(function(e){console.warn('notif readAt:',e&&e.message);});
+  }
+  
+  // 6) Firebase: 마스터 공지 readBy 기록 (관리자 통계용)
   if(FB&&_db&&noticeId){
     var upd={};
     upd['readBy.'+S.curDriver]=new Date().toISOString();
-    _db.collection('notices').doc(noticeId).update(upd).catch(function(){});
+    _db.collection('notices').doc(noticeId).update(upd).catch(function(e){console.warn('notice readBy:',e&&e.message);});
   }
   
   toast('✓ 확인 완료');
