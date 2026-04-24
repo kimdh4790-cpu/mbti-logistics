@@ -3147,6 +3147,8 @@ function rDrivers(){
   });
   var act=all.filter(d=>d.is_active===true&&d.isNew!==true&&d.status!=='pending'&&d.status!=='탈퇴'&&d.status!=='거부');
   var ina=all.filter(d=>d.status==='탈퇴'||d.status==='거부');
+  // ★ 탈퇴 신청 중인 활성 기사
+  var wdReq=act.filter(d=>d.withdrawalRequest && d.withdrawalRequest.status==='pending');
 
   // 필터 적용
   if(typeof S.cFilter==='undefined') S.cFilter='all';
@@ -3206,6 +3208,16 @@ function rDrivers(){
     <div id="ccode-list" style="margin-top:8px;font-size:11px"></div>
   </div>
   ${pnd.length?`<div style="background:var(--amber-l);border:1px solid var(--amber);border-radius:var(--r);padding:10px 14px;margin-bottom:10px;font-size:13px;color:var(--amber);display:flex;align-items:center;justify-content:space-between"><span>⏳ 승인 대기 ${pnd.length}명 <span class="sync-badge" style="margin-left:6px"><span class="sdot"></span>실시간</span></span></div>`:''}
+  ${wdReq.length?`<div style="background:var(--red-l);border:1.5px solid var(--red);border-radius:var(--r);padding:12px 14px;margin-bottom:10px;font-size:13px;color:var(--red)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <span style="font-weight:800">🚪 탈퇴 신청 ${wdReq.length}명</span>
+      <button onclick="showWithdrawalList()" style="padding:5px 12px;background:var(--red);color:#fff;border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer">상세 보기 →</button>
+    </div>
+    <div style="font-size:11px;color:var(--text2);line-height:1.5">
+      ${wdReq.slice(0,3).map(function(w){return '• '+w.name+' — '+((w.withdrawalRequest.reason||'').slice(0,25))+(w.withdrawalRequest.reason&&w.withdrawalRequest.reason.length>25?'...':'');}).join('<br>')}
+      ${wdReq.length>3?'<br>외 '+(wdReq.length-3)+'명':''}
+    </div>
+  </div>`:''}
   ${pnd.length?`<div class="card"><div class="ch"><span class="ct">✅ 승인 대기 (${pnd.length}명) — 서류 클릭 시 확대</span></div>
   <table class="tbl"><thead><tr><th>성명(아이디)</th><th>차량번호</th><th>업무</th><th>고용</th><th>서류 5종 (클릭확대)</th><th>가입일</th><th>승인</th></tr></thead><tbody>
   ${pnd.map(d=>{
@@ -3318,6 +3330,182 @@ function rejDriver(id){
   if(FB&&_db&&f.fbId)_db.collection('drivers').doc(f.fbId).update({status:'거부',is_active:false}).catch(()=>{});
   SP(S.page,null);updBadge();toast(f.name+' 거부');
 }
+
+// ════════════════════════════════════════════════════════════
+// 🚪 관리자: 기사 탈퇴 신청 관리
+// ════════════════════════════════════════════════════════════
+
+// 탈퇴 신청 목록 모달 표시
+function showWithdrawalList(){
+  var all=ls('drivers');
+  var list=all.filter(function(d){return d.withdrawalRequest && d.withdrawalRequest.status==='pending';});
+  
+  var mo=document.createElement('div');
+  mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:900;display:flex;align-items:center;justify-content:center;padding:14px';
+  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  
+  var bodyHtml='';
+  if(list.length===0){
+    bodyHtml='<div style="padding:40px;text-align:center;color:var(--text3);font-size:13px">📭 탈퇴 신청이 없습니다</div>';
+  }else{
+    list.sort(function(a,b){return (b.withdrawalRequest.requestedAt||'').localeCompare(a.withdrawalRequest.requestedAt||'');});
+    list.forEach(function(d){
+      var req=d.withdrawalRequest||{};
+      var reqDate=req.requestedAt?new Date(req.requestedAt).toLocaleString('ko-KR'):'-';
+      var reason=(req.reason||'사유 없음').replace(/</g,'&lt;').replace(/'/g,'&#39;').replace(/"/g,'&quot;');
+      
+      // 기사 기본 정보
+      var camp=d.camp||'미배정';
+      var phone=d.phone||'-';
+      var employ=d.employ||'-';
+      var ton=d.ton||'-';
+      
+      // 미지급 정산 체크
+      var settles=ls('settlements').filter(function(s){return s.driver===d.name;});
+      var unpaidCnt=settles.filter(function(s){return !s.paid;}).length;
+      
+      bodyHtml+='<div style="background:var(--bg2);border:1.5px solid var(--red);border-radius:10px;padding:14px;margin-bottom:10px">';
+      // 상단: 이름/캠프
+      bodyHtml+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border)">';
+      bodyHtml+='<div>';
+      bodyHtml+='<div style="font-size:15px;font-weight:800;color:var(--text)">🚪 '+d.name+' 기사님</div>';
+      bodyHtml+='<div style="font-size:11px;color:var(--text3);margin-top:3px">'+camp+' · '+employ+' · '+ton+' · '+phone+'</div>';
+      bodyHtml+='</div>';
+      if(unpaidCnt>0){
+        bodyHtml+='<div style="background:var(--amber);color:#fff;padding:5px 10px;border-radius:6px;font-size:10px;font-weight:800">⚠️ 미지급 정산 '+unpaidCnt+'건</div>';
+      }
+      bodyHtml+='</div>';
+      // 사유
+      bodyHtml+='<div style="background:var(--bg3);border-radius:6px;padding:10px;margin-bottom:10px">';
+      bodyHtml+='<div style="font-size:10px;color:var(--text3);margin-bottom:4px">신청일: '+reqDate+'</div>';
+      bodyHtml+='<div style="font-size:12px;color:var(--text);line-height:1.5"><b>사유:</b> '+reason+'</div>';
+      bodyHtml+='</div>';
+      // 버튼
+      bodyHtml+='<div style="display:flex;gap:6px">';
+      bodyHtml+='<button onclick="approveWithdrawal(\''+d.fbId+'\',\''+d.name.replace(/'/g,"\\\\'")+'\')" style="flex:1;padding:10px;background:var(--red);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">✅ 탈퇴 승인</button>';
+      bodyHtml+='<button onclick="rejectWithdrawal(\''+d.fbId+'\',\''+d.name.replace(/'/g,"\\\\'")+'\')" style="flex:1;padding:10px;background:var(--bg);color:var(--text);border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">❌ 반려 (유지)</button>';
+      bodyHtml+='</div>';
+      bodyHtml+='</div>';
+    });
+  }
+  
+  mo.innerHTML='<div onclick="event.stopPropagation()" style="background:var(--bg);border:1px solid var(--border);border-radius:12px;max-width:95vw;width:500px;max-height:90vh;overflow-y:auto">'
+    +'<div style="padding:14px;background:var(--red);color:#fff;border-radius:10px 10px 0 0;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10">'
+    +'<div style="font-size:15px;font-weight:800">🚪 탈퇴 신청 관리 ('+list.length+'건)</div>'
+    +'<button onclick="this.closest(\'div[style*=z-index]\').parentElement.remove()" style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer">✕</button>'
+    +'</div>'
+    +'<div style="padding:14px">'+bodyHtml+'</div>'
+    +'</div>';
+  document.body.appendChild(mo);
+}
+
+// 탈퇴 승인
+function approveWithdrawal(fbId, driverName){
+  var drs=ls('drivers');
+  var d=drs.find(function(x){return x.fbId===fbId;});
+  if(!d){toast('❌ 기사 정보 없음');return;}
+  
+  // 미지급 정산 확인
+  var settles=ls('settlements').filter(function(s){return s.driver===d.name;});
+  var unpaidCnt=settles.filter(function(s){return !s.paid;}).length;
+  
+  var msg='⚠️ '+driverName+' 기사님 탈퇴를 승인하시겠습니까?\n\n';
+  if(unpaidCnt>0){
+    msg+='🚨 미지급 정산 '+unpaidCnt+'건 있음!\n먼저 정산 처리를 권장합니다.\n\n';
+  }
+  msg+='승인 시:\n• 로그인 즉시 차단\n• 기사 상태: "탈퇴" 변경\n• 배송 기록은 보관\n\n계속하시겠습니까?';
+  
+  if(!confirm(msg))return;
+  
+  var now=new Date().toISOString();
+  d.status='탈퇴';
+  d.is_active=false;
+  d.withdrawnAt=now;
+  d.withdrawalRequest=Object.assign({},d.withdrawalRequest||{},{
+    status:'approved',
+    approvedAt:now,
+    approvedBy:(JSON.parse(localStorage.getItem('mbti_admin_info')||'{}').name)||'관리자'
+  });
+  lss('drivers',drs);
+  
+  if(FB&&_db&&fbId){
+    _db.collection('drivers').doc(fbId).update({
+      status:'탈퇴',
+      is_active:false,
+      withdrawnAt:now,
+      withdrawalRequest:d.withdrawalRequest
+    }).catch(function(e){console.warn('withdrawal approve:',e);});
+    
+    _db.collection('activity').add({
+      type:'withdrawal_approve',
+      driver:driverName,
+      ts:now,
+      msg:driverName+' 탈퇴 승인 완료'
+    }).catch(function(){});
+  }
+  
+  addAct('reg', driverName+' 탈퇴 승인 완료 🚪', driverName);
+  toast('✅ '+driverName+' 탈퇴 처리 완료');
+  
+  // 모달 닫기
+  document.querySelectorAll('div[style*="z-index:900"]').forEach(function(x){
+    if(x.parentElement)x.parentElement.remove();
+  });
+  
+  SP(S.page||'drivers',null);
+  updBadge();
+}
+
+// 탈퇴 반려
+function rejectWithdrawal(fbId, driverName){
+  var reason=prompt('반려 사유를 입력해주세요 (기사에게 전달됩니다)\n\n예: 미지급 정산 처리 후 재신청 바랍니다.','');
+  if(reason===null)return;
+  reason=reason.trim();
+  if(!reason){
+    toast('❌ 반려 사유를 입력해주세요');
+    return;
+  }
+  
+  var drs=ls('drivers');
+  var d=drs.find(function(x){return x.fbId===fbId;});
+  if(!d){toast('❌ 기사 정보 없음');return;}
+  
+  var now=new Date().toISOString();
+  d.withdrawalRequest=Object.assign({},d.withdrawalRequest||{},{
+    status:'rejected',
+    rejectedAt:now,
+    rejectReason:reason,
+    rejectedBy:(JSON.parse(localStorage.getItem('mbti_admin_info')||'{}').name)||'관리자'
+  });
+  lss('drivers',drs);
+  
+  if(FB&&_db&&fbId){
+    _db.collection('drivers').doc(fbId).update({
+      withdrawalRequest:d.withdrawalRequest
+    }).catch(function(){});
+    
+    // 기사에게 알림
+    _db.collection('driver_notifications').add({
+      type:'withdrawal_rejected',
+      driver:driverName,
+      reason:reason,
+      sentAt:now,
+      status:'대기'
+    }).catch(function(){});
+  }
+  
+  addAct('reg', driverName+' 탈퇴 신청 반려: '+reason, driverName);
+  toast('✅ 탈퇴 신청 반려 완료');
+  
+  // 모달 닫고 재렌더
+  document.querySelectorAll('div[style*="z-index:900"]').forEach(function(x){
+    if(x.parentElement)x.parentElement.remove();
+  });
+  
+  SP(S.page||'drivers',null);
+  updBadge();
+}
+
 // ═══════════════════════════════════════════════════════════
 // 🔧 관리자 전용: 기사 정보 수정 (성명/아이디/연락처/차량/노선 등)
 // 예) 성함 오타 "이장민" → "이정민"
@@ -3900,6 +4088,49 @@ function rMypage(){
     html+='<button class="btn btn-blue" style="width:100%;padding:13px;font-size:14px;margin-top:8px" onclick="saveMypage()">💾 정보 저장</button>';
     if(!isAdmin){
       html+='<button onclick="if(confirm(\'로그아웃 하시겠습니까?\'))goLogout()" style="width:100%;padding:13px;font-size:14px;margin-top:8px;background:rgba(220,50,50,.85);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer">🚪 로그아웃</button>';
+      
+      // ── 탈퇴 신청 섹션 (숨겨진 하단 배치)
+      var wReq=d.withdrawalRequest||null;
+      html+='<div style="margin-top:30px;padding-top:20px;border-top:1px dashed var(--border)">';
+      html+='<details style="cursor:pointer"><summary style="font-size:11px;color:var(--text3);padding:8px;text-align:center;list-style:none">⚠️ 계정 관리 · 탈퇴 신청</summary>';
+      html+='<div style="margin-top:12px;padding:14px;background:var(--red-l);border:1px solid var(--red);border-radius:8px">';
+      
+      if(wReq && wReq.status==='pending'){
+        // 신청 대기 중
+        html+='<div style="text-align:center;padding:10px">';
+        html+='<div style="font-size:28px;margin-bottom:8px">⏳</div>';
+        html+='<div style="font-size:13px;font-weight:800;color:var(--red);margin-bottom:6px">탈퇴 신청 접수됨</div>';
+        html+='<div style="font-size:11px;color:var(--text2);line-height:1.5;margin-bottom:10px">';
+        html+='신청일: '+(wReq.requestedAt?new Date(wReq.requestedAt).toLocaleString('ko-KR'):'-')+'<br>';
+        html+='사유: '+(wReq.reason||'-').replace(/</g,'&lt;')+'<br>';
+        html+='<b>관리자 승인 대기 중입니다</b>';
+        html+='</div>';
+        html+='<button onclick="cancelWithdrawalRequest()" style="padding:8px 18px;background:var(--bg);color:var(--text);border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">신청 취소</button>';
+        html+='</div>';
+      } else if(wReq && wReq.status==='rejected'){
+        // 반려됨
+        html+='<div style="padding:10px;background:var(--amber-l);border-radius:6px;margin-bottom:10px">';
+        html+='<div style="font-size:12px;font-weight:700;color:var(--amber);margin-bottom:4px">❌ 이전 신청 반려됨</div>';
+        html+='<div style="font-size:11px;color:var(--text2)">반려 사유: '+(wReq.rejectReason||'관리자가 사유 미기재').replace(/</g,'&lt;')+'</div>';
+        html+='</div>';
+        html+='<div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.5">';
+        html+='⚠️ <b>탈퇴 신청</b>은 관리자 승인 후 처리됩니다.<br>';
+        html+='미지급 정산 금액이 있는지 확인해주세요.';
+        html+='</div>';
+        html+='<button onclick="requestWithdrawal()" style="width:100%;padding:10px;background:var(--red);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">🚪 탈퇴 신청</button>';
+      } else {
+        // 정상 상태
+        html+='<div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.5">';
+        html+='⚠️ 탈퇴하시면 앱에 로그인할 수 없게 됩니다.<br>';
+        html+='• 관리자 승인 후 처리됩니다<br>';
+        html+='• 미지급 정산이 있으면 먼저 받으세요<br>';
+        html+='• 배송 기록은 보관됩니다';
+        html+='</div>';
+        html+='<button onclick="requestWithdrawal()" style="width:100%;padding:10px;background:var(--red);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">🚪 탈퇴 신청</button>';
+      }
+      
+      html+='</div></details>';
+      html+='</div>';
     }
 
     if(isAdmin){
@@ -4009,6 +4240,112 @@ function chkPwStr(inp){
   if(bar){bar.className='pw-strength '+cls[score];}
   if(txt){txt.textContent=score>0?'비밀번호 강도: '+levels[score]:'';}
 }
+// ════════════════════════════════════════════
+// 🚪 기사 탈퇴 신청 시스템
+// ════════════════════════════════════════════
+
+// 탈퇴 신청
+function requestWithdrawal(){
+  if(!S.curDriver){toast('❌ 로그인 정보 없음');return;}
+  
+  // 1단계: 확인
+  if(!confirm('⚠️ 정말 탈퇴 신청을 하시겠습니까?\n\n' +
+              '• 관리자 승인 후 처리됩니다\n' +
+              '• 미지급 정산이 있다면 받지 못할 수 있습니다\n' +
+              '• 승인 시 앱 로그인이 차단됩니다\n\n' +
+              '계속하시겠어요?')){
+    return;
+  }
+  
+  // 2단계: 사유 입력
+  var reason=prompt('탈퇴 사유를 입력해주세요 (필수)\n\n예: 이직, 개인 사유, 업무 변경 등',''); 
+  if(reason===null)return; // 취소
+  reason=reason.trim();
+  if(!reason){
+    toast('❌ 사유를 입력해주세요');
+    return;
+  }
+  if(reason.length<3){
+    toast('❌ 사유를 3자 이상 입력해주세요');
+    return;
+  }
+  
+  // 3단계: 최종 확인
+  if(!confirm('📋 탈퇴 신청 내용 확인\n\n' +
+              '기사: ' + S.curDriver + '\n' +
+              '사유: ' + reason + '\n\n' +
+              '위 내용으로 관리자에게 제출하시겠습니까?')){
+    return;
+  }
+  
+  // Firebase 저장
+  var me=ls('drivers').find(function(x){return x.name===S.curDriver;});
+  if(!me||!me.fbId){
+    toast('❌ 기사 정보를 찾을 수 없습니다');
+    return;
+  }
+  
+  var req={
+    status:'pending',
+    requestedAt:new Date().toISOString(),
+    reason:reason,
+    requestedBy:S.curDriver
+  };
+  
+  if(FB&&_db){
+    _db.collection('drivers').doc(me.fbId).update({
+      withdrawalRequest:req
+    }).then(function(){
+      // localStorage 동기화
+      var drs=ls('drivers');
+      drs.forEach(function(x){
+        if(x.name===S.curDriver)x.withdrawalRequest=req;
+      });
+      lss('drivers',drs);
+      
+      // 관리자에게 알림
+      _db.collection('admin_notifications').add({
+        type:'withdrawal_request',
+        driver:S.curDriver,
+        reason:reason,
+        requestedAt:req.requestedAt,
+        status:'unread'
+      }).catch(function(){});
+      
+      toast('✅ 탈퇴 신청 접수 완료\n관리자 승인 대기 중');
+      setTimeout(function(){SP('mypage',null);},800);
+    }).catch(function(e){
+      toast('❌ 신청 실패: '+(e&&e.message||''));
+    });
+  } else {
+    toast('❌ Firebase 연결이 필요합니다');
+  }
+}
+
+// 탈퇴 신청 취소
+function cancelWithdrawalRequest(){
+  if(!confirm('탈퇴 신청을 취소하시겠습니까?'))return;
+  
+  var me=ls('drivers').find(function(x){return x.name===S.curDriver;});
+  if(!me||!me.fbId){toast('❌ 기사 정보 없음');return;}
+  
+  if(FB&&_db){
+    _db.collection('drivers').doc(me.fbId).update({
+      withdrawalRequest:firebase.firestore.FieldValue.delete()
+    }).then(function(){
+      var drs=ls('drivers');
+      drs.forEach(function(x){
+        if(x.name===S.curDriver)delete x.withdrawalRequest;
+      });
+      lss('drivers',drs);
+      toast('✅ 탈퇴 신청이 취소되었습니다');
+      setTimeout(function(){SP('mypage',null);},500);
+    }).catch(function(e){
+      toast('❌ 취소 실패: '+(e&&e.message||''));
+    });
+  }
+}
+
 async function saveMypage(){
   var isAdm=(S.curMode==='admin');
   var curPw=document.getElementById('mp-pw-cur')?.value||'';
@@ -5576,6 +5913,24 @@ function checkDriverNotifications(){
           }catch(e){}
         }
       });
+      // ⚠️ 긴급 공지 체크 (읽지 않은 긴급만 팝업)
+      var urgentNotices=items.filter(function(it){
+        if(it.type!=='notice')return false;
+        if(it.category!=='긴급')return false;
+        try{
+          var readSet=JSON.parse(localStorage.getItem('drv_notice_read_'+S.curDriver)||'{}');
+          return !readSet[it._id];
+        }catch(e){return true;}
+      });
+      if(urgentNotices.length>0){
+        // 긴급 공지는 즉시 모달로
+        var first=urgentNotices[0];
+        window._drvNotes[first._id]=first;
+        setTimeout(function(){_viewNotice(first._id);},200);
+      }
+      // 공지사항(notice)는 일반 팝업에서 제외 - 홈 카드로 따로 표시
+      var nonNotice=items.filter(function(it){return it.type!=='notice';});
+      if(nonNotice.length===0)return;
       // ★ 이미 알림 표시했으면 다시 안 뜨게 (세션당 1회)
       var seenKey='notif_seen_'+S.curDriver;
       if(sessionStorage.getItem(seenKey))return;
@@ -5585,23 +5940,14 @@ function checkDriverNotifications(){
       var box=document.createElement('div');
       box.id='drv-notification-box';
       box.style.cssText='position:fixed;bottom:70px;left:50%;transform:translateX(-50%);z-index:400;width:90%;max-width:360px';
-      var listHtml=items.map(function(it){
-        if(it.type==='notice'){
-          var cIco={'일반':'📣','긴급':'🚨','업무':'💼','교육':'📚','이벤트':'🎁'};
-          var ico=cIco[it.category]||'📢';
-          return '<div style="padding:10px;background:'+(it.category==='긴급'?'var(--red-l)':'var(--bg3)')+';border:'+(it.category==='긴급'?'1.5px solid var(--red)':'1px solid var(--border)')+';border-radius:8px;margin-bottom:6px;cursor:pointer" onclick="_viewNotice('+JSON.stringify(it._id)+')">'
-            +'<div style="font-size:11px;color:'+(it.category==='긴급'?'var(--red)':'var(--blue)')+';font-weight:700;margin-bottom:2px">'+ico+' '+it.category+(it.pinned?' 📌':'')+'</div>'
-            +'<div style="font-size:12px;font-weight:700;color:var(--text)">'+((it.title||'').slice(0,30))+'</div>'
-            +'<div style="font-size:10px;color:var(--text3);margin-top:2px">'+new Date(it.sentAt).toLocaleDateString('ko-KR')+' 발송</div>'
-            +'</div>';
-        }
+      var listHtml=nonNotice.map(function(it){
         return '<div style="padding:8px;background:var(--bg3);border-radius:8px;margin-bottom:6px;cursor:pointer" onclick="_vdn('+JSON.stringify(it._id)+')">'
           +'<div style="font-size:12px;font-weight:700">'+(it.type==='tax_invoice'?'🧾 세금계산서':'📋 정산 명세서')+' — '+it.month+'</div>'
           +'<div style="font-size:10px;color:var(--text3)">'+new Date(it.sentAt).toLocaleDateString('ko-KR')+' 전달</div>'
           +'</div>';
       }).join('');
       box.innerHTML='<div style="background:var(--bg2);border:2px solid var(--blue);border-radius:12px;padding:14px;box-shadow:0 4px 20px rgba(0,0,0,.2)">'
-        +'<div style="font-size:12px;font-weight:700;color:var(--blue);margin-bottom:8px">📬 관리자 전달 내역 ('+items.length+'건)</div>'
+        +'<div style="font-size:12px;font-weight:700;color:var(--blue);margin-bottom:8px">📬 관리자 전달 내역 ('+nonNotice.length+'건)</div>'
         +listHtml
         +'<button onclick="document.getElementById(\'drv-notification-box\')?.remove()" style="width:100%;margin-top:6px;padding:7px;background:var(--bg3);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:12px">닫기</button>'
         +'</div>';
@@ -5680,17 +6026,24 @@ function _viewNotice(id){
   if(box)box.remove();
 }
 
-// 공지사항 읽음 처리
+// 공지사항 읽음 처리 (긴급 팝업용)
 function _markNoticeRead(notifId,noticeId){
-  if(!FB||!_db)return;
-  // 1) 개별 알림 삭제 (읽음 = 알림함에서 제거)
-  _db.collection('driver_notifications').doc(notifId).delete().catch(function(){});
-  // 2) 마스터 공지의 readBy에 기록 (관리자 통계용)
-  if(noticeId){
+  // 로컬 읽음 기록 (Firebase 삭제 X — 홈 카드에 계속 보여야 함)
+  try{
+    var readSet=JSON.parse(localStorage.getItem('drv_notice_read_'+S.curDriver)||'{}');
+    readSet[notifId]=new Date().toISOString();
+    localStorage.setItem('drv_notice_read_'+S.curDriver,JSON.stringify(readSet));
+  }catch(e){}
+  
+  // Firebase: 마스터 공지의 readBy에 기록 (관리자 통계용)
+  if(FB&&_db&&noticeId){
     var upd={};
     upd['readBy.'+S.curDriver]=new Date().toISOString();
     _db.collection('notices').doc(noticeId).update(upd).catch(function(){});
   }
+  
+  // 홈 카드 갱신
+  if(typeof _loadDrvNotices==='function')_loadDrvNotices();
   toast('✓ 확인 완료');
 }
 // ════════════════════════════════════════════
@@ -5848,6 +6201,207 @@ async function doCheckOut(){
   if(card)card.innerHTML=_buildAttendCard();
 }
 
+// ════════════════════════════════════════════
+// 📢 기사용 공지사항 카드 (홈 상단)
+// ════════════════════════════════════════════
+window._drvNoticeList=window._drvNoticeList||[];
+
+function _buildDrvNoticeCard(){
+  var list=window._drvNoticeList||[];
+  var unreadCnt=list.filter(function(n){return !n._read;}).length;
+  var hasUrgent=list.some(function(n){return !n._read && n.category==='긴급';});
+  
+  var html='<div style="background:'+(hasUrgent?'linear-gradient(135deg,var(--red-l) 0%,var(--bg2) 60%)':'var(--bg2)')+';border:'+(hasUrgent?'2px solid var(--red)':'1px solid var(--border)')+';border-radius:var(--r);padding:10px 12px">';
+  // 헤더
+  html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">';
+  html+='<div style="display:flex;align-items:center;gap:6px">';
+  html+='<span style="font-size:14px;font-weight:800;color:var(--text)">📢 공지사항</span>';
+  if(unreadCnt>0){
+    html+='<span style="background:var(--red);color:#fff;padding:1px 8px;border-radius:999px;font-size:10px;font-weight:800">신규 '+unreadCnt+'</span>';
+  }
+  html+='</div>';
+  html+='<button onclick="openDrvNoticeList()" style="padding:4px 10px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer">전체 보기 →</button>';
+  html+='</div>';
+  
+  // 공지 목록 (최대 3건)
+  if(list.length===0){
+    html+='<div style="padding:8px;text-align:center;color:var(--text3);font-size:11px">최근 공지사항이 없습니다</div>';
+  }else{
+    var cIco={'일반':'📣','긴급':'🚨','업무':'💼','교육':'📚','이벤트':'🎁'};
+    var top3=list.slice(0,3);
+    top3.forEach(function(n){
+      var ico=cIco[n.category]||'📣';
+      var isUrgent=(n.category==='긴급'&&!n._read);
+      var isNew=!n._read;
+      html+='<div onclick="_viewDrvNotice(\''+n._id+'\')" style="padding:7px 9px;margin-bottom:4px;background:'+(isUrgent?'var(--red-l)':isNew?'var(--blue-l)':'var(--bg3)')+';border:'+(isUrgent?'1.5px solid var(--red)':isNew?'1.5px solid var(--blue)':'1px solid var(--border)')+';border-radius:7px;cursor:pointer;display:flex;align-items:center;gap:8px">';
+      html+='<span style="font-size:14px;flex-shrink:0">'+ico+'</span>';
+      html+='<div style="flex:1;min-width:0">';
+      html+='<div style="font-size:11px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(n.title||'-')+'</div>';
+      html+='<div style="font-size:9px;color:var(--text3);margin-top:1px">'+(n.category||'일반')+(n.pinned?' · 📌':'')+' · '+_formatRelTime(n.sentAt)+'</div>';
+      html+='</div>';
+      if(isNew)html+='<span style="background:var(--red);color:#fff;padding:1px 6px;border-radius:999px;font-size:9px;font-weight:800;flex-shrink:0">NEW</span>';
+      html+='</div>';
+    });
+    if(list.length>3){
+      html+='<div style="text-align:center;padding:4px;font-size:10px;color:var(--text3)">+ '+(list.length-3)+'개 더 보기</div>';
+    }
+  }
+  
+  html+='</div>';
+  return html;
+}
+
+// ── 상대 시간 포맷 (방금 전, 3시간 전, 2일 전 등)
+function _formatRelTime(isoStr){
+  if(!isoStr)return '';
+  try{
+    var now=new Date();
+    var then=new Date(isoStr);
+    var diffMs=now-then;
+    var diffMin=Math.floor(diffMs/60000);
+    if(diffMin<1)return '방금';
+    if(diffMin<60)return diffMin+'분 전';
+    var diffHr=Math.floor(diffMin/60);
+    if(diffHr<24)return diffHr+'시간 전';
+    var diffDay=Math.floor(diffHr/24);
+    if(diffDay<7)return diffDay+'일 전';
+    return then.toLocaleDateString('ko-KR',{month:'2-digit',day:'2-digit'});
+  }catch(e){return '';}
+}
+
+// ── 기사 공지 목록 Firebase에서 로드 (본인 대상)
+function _loadDrvNotices(){
+  if(!FB||!_db||!S.curDriver)return;
+  // 1) 본인에게 온 notifications에서 공지 type만
+  _db.collection('driver_notifications')
+    .where('driver','==',S.curDriver)
+    .where('type','==','notice')
+    .get()
+    .then(function(snap){
+      var list=[];
+      var readSet={};
+      try{
+        readSet=JSON.parse(localStorage.getItem('drv_notice_read_'+S.curDriver)||'{}');
+      }catch(e){}
+      snap.forEach(function(doc){
+        var d=doc.data();
+        d._id=doc.id;
+        d._read=!!readSet[doc.id];
+        list.push(d);
+      });
+      // 정렬: 안 읽은 것 우선 + 고정 우선 + 최신
+      list.sort(function(a,b){
+        if(a._read!==b._read)return a._read?1:-1;
+        if(!!a.pinned!==!!b.pinned)return a.pinned?-1:1;
+        return (b.sentAt||'').localeCompare(a.sentAt||'');
+      });
+      window._drvNoticeList=list;
+      // 홈 카드 업데이트
+      var card=document.getElementById('drv-notice-card');
+      if(card)card.innerHTML=_buildDrvNoticeCard();
+    })
+    .catch(function(e){console.warn('공지 로드 오류:',e&&e.message);});
+}
+
+// ── 공지 상세 보기 (읽음 처리)
+function _viewDrvNotice(id){
+  var item=(window._drvNoticeList||[]).find(function(n){return n._id===id;});
+  if(!item)return;
+  var cIco={'일반':'📣','긴급':'🚨','업무':'💼','교육':'📚','이벤트':'🎁'};
+  var ico=cIco[item.category]||'📢';
+  var isUrgent=(item.category==='긴급');
+  
+  var mo=document.createElement('div');
+  mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:800;display:flex;align-items:center;justify-content:center;padding:14px';
+  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  
+  var contentHtml=(item.content||'').replace(/</g,'&lt;').replace(/\n/g,'<br>');
+  
+  mo.innerHTML='<div onclick="event.stopPropagation()" style="background:var(--bg);border:'+(isUrgent?'2px solid var(--red)':'1px solid var(--border)')+';border-radius:12px;max-width:90vw;width:420px;max-height:85vh;overflow-y:auto">'
+    +'<div style="padding:14px;background:'+(isUrgent?'var(--red)':'var(--blue)')+';color:#fff;border-radius:10px 10px 0 0">'
+    +'<div style="font-size:11px;font-weight:700;opacity:.9;margin-bottom:4px">'+ico+' '+(item.category||'공지')+(item.pinned?' · 📌 고정':'')+'</div>'
+    +'<div style="font-size:16px;font-weight:800;line-height:1.3">'+(item.title||'-')+'</div>'
+    +'<div style="font-size:10px;opacity:.85;margin-top:6px">'+new Date(item.sentAt).toLocaleString('ko-KR')+' · '+(item.sentBy||'관리자')+'</div>'
+    +'</div>'
+    +'<div style="padding:16px;font-size:13px;line-height:1.6;color:var(--text);white-space:pre-wrap;word-break:break-word">'+contentHtml+'</div>'
+    +'<div style="padding:10px 14px;border-top:1px solid var(--border)">'
+    +'<button onclick="_markDrvNoticeRead(\''+id+'\',\''+(item.noticeId||'')+'\');this.closest(\'div[style*=z-index]\').parentElement.remove();" style="width:100%;padding:12px;background:var(--teal);color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer">✓ 확인 했습니다</button>'
+    +'</div>'
+    +'</div>';
+  document.body.appendChild(mo);
+}
+
+// ── 공지 읽음 처리
+function _markDrvNoticeRead(notifId,noticeId){
+  // 로컬에 읽음 기록 (localStorage)
+  try{
+    var readSet=JSON.parse(localStorage.getItem('drv_notice_read_'+S.curDriver)||'{}');
+    readSet[notifId]=new Date().toISOString();
+    localStorage.setItem('drv_notice_read_'+S.curDriver,JSON.stringify(readSet));
+  }catch(e){}
+  
+  // 메모리 리스트도 즉시 업데이트
+  var list=window._drvNoticeList||[];
+  list.forEach(function(n){if(n._id===notifId)n._read=true;});
+  
+  // 카드 즉시 갱신
+  var card=document.getElementById('drv-notice-card');
+  if(card)card.innerHTML=_buildDrvNoticeCard();
+  
+  // Firebase: 마스터 공지의 readBy에 기록 (관리자 통계용)
+  if(FB&&_db&&noticeId){
+    var upd={};
+    upd['readBy.'+S.curDriver]=new Date().toISOString();
+    _db.collection('notices').doc(noticeId).update(upd).catch(function(){});
+  }
+  
+  toast('✓ 확인 완료');
+}
+
+// ── 전체 공지 목록 화면 (모달 전체보기)
+function openDrvNoticeList(){
+  var list=window._drvNoticeList||[];
+  var cIco={'일반':'📣','긴급':'🚨','업무':'💼','교육':'📚','이벤트':'🎁'};
+  
+  var mo=document.createElement('div');
+  mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:800;display:flex;align-items:center;justify-content:center;padding:14px';
+  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  
+  var listHtml='';
+  if(list.length===0){
+    listHtml='<div style="padding:40px;text-align:center;color:var(--text3);font-size:13px">📭 공지사항이 없습니다</div>';
+  }else{
+    list.forEach(function(n){
+      var ico=cIco[n.category]||'📣';
+      var isUrgent=(n.category==='긴급'&&!n._read);
+      var isNew=!n._read;
+      listHtml+='<div onclick="_viewDrvNotice(\''+n._id+'\')" style="padding:10px 12px;margin-bottom:6px;background:'+(isUrgent?'var(--red-l)':isNew?'var(--blue-l)':'var(--bg2)')+';border:'+(isUrgent?'1.5px solid var(--red)':isNew?'1px solid var(--blue)':'1px solid var(--border)')+';border-radius:8px;cursor:pointer">';
+      listHtml+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;flex-wrap:wrap">';
+      listHtml+='<span style="font-size:14px">'+ico+'</span>';
+      listHtml+='<span style="font-size:10px;background:var(--bg3);padding:1px 7px;border-radius:4px;color:var(--text2);font-weight:700">'+(n.category||'일반')+'</span>';
+      if(n.pinned)listHtml+='<span style="font-size:10px;background:var(--amber-l);color:var(--amber);padding:1px 7px;border-radius:4px;font-weight:700">📌 고정</span>';
+      if(isNew)listHtml+='<span style="font-size:10px;background:var(--red);color:#fff;padding:1px 7px;border-radius:4px;font-weight:800">NEW</span>';
+      listHtml+='<span style="flex:1"></span>';
+      listHtml+='<span style="font-size:10px;color:var(--text3)">'+_formatRelTime(n.sentAt)+'</span>';
+      listHtml+='</div>';
+      listHtml+='<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px">'+(n.title||'-')+'</div>';
+      if(n.content){
+        listHtml+='<div style="font-size:11px;color:var(--text2);line-height:1.4;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">'+n.content.replace(/</g,'&lt;').slice(0,100)+'</div>';
+      }
+      listHtml+='</div>';
+    });
+  }
+  
+  mo.innerHTML='<div onclick="event.stopPropagation()" style="background:var(--bg);border:1px solid var(--border);border-radius:12px;max-width:90vw;width:450px;max-height:85vh;display:flex;flex-direction:column">'
+    +'<div style="padding:14px;background:var(--blue);color:#fff;border-radius:10px 10px 0 0;display:flex;align-items:center;justify-content:space-between">'
+    +'<div style="font-size:15px;font-weight:800">📢 공지사항 전체보기</div>'
+    +'<button onclick="this.closest(\'div[style*=z-index]\').parentElement.remove()" style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer">✕</button>'
+    +'</div>'
+    +'<div style="padding:12px;overflow-y:auto;flex:1">'+listHtml+'</div>'
+    +'</div>';
+  document.body.appendChild(mo);
+}
+
 function dHome(){
   var dels=ls('deliveries').filter(d=>d.driver===S.curDriver&&d.date===today());
   var ents=ls('entries').filter(e=>e.driver===S.curDriver&&e.date===today());
@@ -5868,6 +6422,9 @@ function dHome(){
   var stBg={'주':'rgba(59,130,246,.15)','야':'rgba(139,92,246,.15)','휴무':'rgba(107,114,128,.1)','병가':'rgba(239,68,68,.12)',''  :'var(--bg2)'};
   var wkKey='schedule_'+S.curDriver+'_month_'+curY+'_'+curM;
   var sc=JSON.parse(localStorage.getItem(wkKey)||'{}');
+
+  // ★ 공지사항 로드 트리거 (비동기)
+  if(FB&&_db&&S.curDriver){setTimeout(_loadDrvNotices,100);}
 
   // ★ Firebase에서 기사 본인 스케줄 로드 (항상 최신 동기화)
   if(FB&&_db&&S.curDriver){
@@ -5977,6 +6534,8 @@ function dHome(){
   </div>
   <!-- 출퇴근 체크인 -->
   <div id="attend-card" style="margin:4px 10px 6px">${_buildAttendCard()}</div>
+  <!-- 공지사항 카드 -->
+  <div id="drv-notice-card" style="margin:4px 10px 6px">${_buildDrvNoticeCard()}</div>
   <!-- 입차 정보 -->
   ${me?`<div class="dc" style="margin:4px 10px"><div class="dct">오늘 입차</div><div style="display:flex;gap:8px;align-items:center;font-size:12px"><span class="badge ${me.type==='쿠팡'?'b-coral':me.type==='컬리'?'b-purple':'b-blue'}">${me.type}</span><span>${me.time}</span><span style="font-weight:600;color:${me.temp==='상온'?'var(--amber)':parseFloat(me.temp)<=-18?'var(--teal)':'var(--red)'}">${me.temp}${me.temp==='상온'?'':' °C'}</span></div></div>`:`<div style="margin:4px 10px 6px;padding:9px;background:var(--amber-l);border-radius:var(--r);font-size:12px;color:var(--amber)">아직 입차하지 않았습니다. 입차 탭에서 등록해 주세요.</div>`}
   <!-- 한달 근무표 -->
@@ -8817,6 +9376,20 @@ function _loadAttendList(){
       else noShow++;
     });
     
+    // 캠프별 그룹화
+    var CAMP_LIST=['부산1','부산2','부산3','대구2','진주M'];
+    var CAMP_COL={'부산1':'#3B82F6','부산2':'#8B5CF6','부산3':'#10B981','대구2':'#F59E0B','진주M':'#EF4444','기타':'#6B7280'};
+    var campGroups={};
+    CAMP_LIST.forEach(function(c){campGroups[c]=[];});
+    campGroups['기타']=[];
+    allDrs.forEach(function(d){
+      var camp=d.camp||'기타';
+      if(!campGroups[camp])campGroups[camp]=[];
+      campGroups[camp].push(d);
+    });
+    // 빈 그룹 제거
+    Object.keys(campGroups).forEach(function(k){if(campGroups[k].length===0)delete campGroups[k];});
+    
     var html='';
     // 상단 요약
     html+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px">';
@@ -8834,39 +9407,194 @@ function _loadAttendList(){
     html+='<div style="font-size:9px;color:var(--red);font-weight:700">미출근</div></div>';
     html+='</div>';
     
-    // 기사별 목록
-    html+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden">';
-    html+='<div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr 0.6fr;gap:4px;padding:8px;background:var(--bg3);border-bottom:1px solid var(--border);font-size:10px;font-weight:800;color:var(--text2)">';
-    html+='<div>기사명</div><div>캠프</div><div>출근</div><div>퇴근</div><div>근무</div></div>';
+    // ── 캠프 탭 버튼
+    var campKeys=Object.keys(campGroups);
+    html+='<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px" id="att-camp-tabs">';
+    campKeys.forEach(function(camp){
+      var col=CAMP_COL[camp]||'#6B7280';
+      var grp=campGroups[camp];
+      var campChkIn=grp.filter(function(d){return attMap[d.name]&&attMap[d.name].checkIn;}).length;
+      html+='<button onclick="_showAttCamp(\''+camp+'\')" id="attctab-'+camp.replace(/\s/g,'_')+'"'
+        +' class="att-camp-tab-btn"'
+        +' style="padding:6px 12px;border:2px solid '+col+';border-radius:8px;'
+        +'background:transparent;color:'+col+';font-size:11px;font-weight:700;cursor:pointer;'
+        +'transition:all .15s">'+camp+' <span style="opacity:.7">('+campChkIn+'/'+grp.length+')</span></button>';
+    });
+    html+='</div>';
     
-    allDrs.sort(function(a,b){return (a.camp||'').localeCompare(b.camp||'')||(a.name||'').localeCompare(b.name||'');}).forEach(function(d){
-      var a=attMap[d.name];
-      var fmtT=function(iso){if(!iso)return'-';var x=new Date(iso);return ('0'+x.getHours()).slice(-2)+':'+('0'+x.getMinutes()).slice(-2);};
-      var dur='-';
-      if(a&&a.checkIn&&a.checkOut){
-        var ms=new Date(a.checkOut)-new Date(a.checkIn);
-        var hr=Math.floor(ms/3600000), mn=Math.floor((ms%3600000)/60000);
-        dur=hr+'h'+mn+'m';
-      }else if(a&&a.checkIn){
-        dur='진행중';
-      }
-      var statusColor=a&&a.checkIn?(a.checkOut?'var(--blue)':'var(--teal)'):'var(--text3)';
-      var rowBg=a&&a.checkIn?'var(--bg)':'var(--red-l)';
-      html+='<div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr 0.6fr;gap:4px;padding:8px;border-bottom:1px solid var(--border);font-size:11px;background:'+rowBg+';align-items:center">';
-      html+='<div style="font-weight:700;color:'+statusColor+'">'+(a&&a.checkIn?'🟢 ':'⚪ ')+d.name+'</div>';
-      html+='<div style="font-size:10px;color:var(--text2)">'+(d.camp||'-')+'</div>';
-      html+='<div style="font-weight:700">'+fmtT(a&&a.checkIn)+(a&&a.checkInGps?' 📍':'')+'</div>';
-      html+='<div style="font-weight:700">'+fmtT(a&&a.checkOut)+(a&&a.checkOutGps?' 📍':'')+'</div>';
-      html+='<div style="font-size:10px;font-weight:700;color:var(--blue)">'+dur+'</div>';
+    // ── 캠프별 패널
+    campKeys.forEach(function(camp){
+      var col=CAMP_COL[camp]||'#6B7280';
+      var grp=campGroups[camp];
+      var sid='attcpanel-'+camp.replace(/\s/g,'_');
+      html+='<div id="'+sid+'" class="att-camp-panel" style="display:none">';
+      // 캠프 헤더
+      html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 12px;'
+        +'background:'+col+'20;border-left:4px solid '+col+';border-radius:0 8px 8px 0">'
+        +'<span style="font-size:13px;font-weight:800;color:'+col+'">🏭 '+camp+' 캠프</span>'
+        +'<span style="font-size:10px;color:var(--text3)">기사 '+grp.length+'명</span>'
+        +'</div>';
+      
+      // 기사 목록 테이블
+      html+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:10px">';
+      html+='<div style="display:grid;grid-template-columns:1.4fr 1fr 1fr 0.6fr 0.5fr;gap:4px;padding:8px;background:var(--bg3);border-bottom:1px solid var(--border);font-size:10px;font-weight:800;color:var(--text2)">';
+      html+='<div>기사명</div><div>출근</div><div>퇴근</div><div>근무</div><div style="text-align:center">위치</div></div>';
+      
+      grp.sort(function(a,b){return (a.name||'').localeCompare(b.name||'');}).forEach(function(d){
+        var a=attMap[d.name];
+        var fmtT=function(iso){if(!iso)return'-';var x=new Date(iso);return ('0'+x.getHours()).slice(-2)+':'+('0'+x.getMinutes()).slice(-2);};
+        var dur='-';
+        if(a&&a.checkIn&&a.checkOut){
+          var ms=new Date(a.checkOut)-new Date(a.checkIn);
+          var hr=Math.floor(ms/3600000), mn=Math.floor((ms%3600000)/60000);
+          dur=hr+'h'+mn+'m';
+        }else if(a&&a.checkIn){
+          dur='진행중';
+        }
+        var statusColor=a&&a.checkIn?(a.checkOut?'var(--blue)':'var(--teal)'):'var(--text3)';
+        var rowBg=a&&a.checkIn?'var(--bg)':'var(--red-l)';
+        
+        // GPS 위치 확인 버튼
+        var mapBtn='<span style="color:var(--text3);font-size:10px">-</span>';
+        var ckInLat=a&&a.checkInLat, ckInLng=a&&a.checkInLng;
+        var ckOutLat=a&&a.checkOutLat, ckOutLng=a&&a.checkOutLng;
+        if(ckInLat&&ckInLng){
+          var btnLabel=ckOutLat?'🗺️':'🗺';
+          var btnArg="'"+d.name+"','"+a.date+"'";
+          mapBtn='<button onclick="_viewAttendMap('+btnArg+')" style="padding:3px 8px;background:var(--blue-l);color:var(--blue);border:1px solid var(--blue);border-radius:4px;font-size:10px;font-weight:700;cursor:pointer">🗺️ 지도</button>';
+        }
+        
+        html+='<div style="display:grid;grid-template-columns:1.4fr 1fr 1fr 0.6fr 0.5fr;gap:4px;padding:8px;border-bottom:1px solid var(--border);font-size:11px;background:'+rowBg+';align-items:center">';
+        html+='<div style="font-weight:700;color:'+statusColor+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(a&&a.checkIn?'🟢 ':'⚪ ')+d.name+'</div>';
+        html+='<div style="font-weight:700">'+fmtT(a&&a.checkIn)+(a&&a.checkInGps?' 📍':'')+'</div>';
+        html+='<div style="font-weight:700">'+fmtT(a&&a.checkOut)+(a&&a.checkOutGps?' 📍':'')+'</div>';
+        html+='<div style="font-size:10px;font-weight:700;color:var(--blue)">'+dur+'</div>';
+        html+='<div style="text-align:center">'+mapBtn+'</div>';
+        html+='</div>';
+      });
+      html+='</div>';
       html+='</div>';
     });
     
-    html+='</div>';
     box.innerHTML=html;
+    
+    // 첫 번째 탭 자동 활성화
+    setTimeout(function(){
+      var savedCamp=localStorage.getItem('att_active_camp');
+      if(savedCamp && campGroups[savedCamp]){_showAttCamp(savedCamp);}
+      else if(campKeys.length>0){_showAttCamp(campKeys[0]);}
+    },50);
   }).catch(function(e){
     var box=document.getElementById('att-result');
     if(box)box.innerHTML='<div style="padding:10px;color:var(--red);font-size:11px">로드 실패: '+(e&&e.message||'')+'</div>';
   });
+}
+
+// 캠프 탭 전환
+function _showAttCamp(camp){
+  localStorage.setItem('att_active_camp',camp);
+  document.querySelectorAll('.att-camp-panel').forEach(function(p){p.style.display='none';});
+  document.querySelectorAll('.att-camp-tab-btn').forEach(function(b){
+    var col=b.style.borderColor;
+    b.style.background='transparent';
+    b.style.color=col;
+  });
+  var sid='attcpanel-'+camp.replace(/\s/g,'_');
+  var tid='attctab-'+camp.replace(/\s/g,'_');
+  var panel=document.getElementById(sid);
+  var tab=document.getElementById(tid);
+  if(panel)panel.style.display='block';
+  if(tab){
+    tab.style.background=tab.style.borderColor;
+    tab.style.color='#fff';
+  }
+}
+
+// ── 출퇴근 위치 지도 모달
+function _viewAttendMap(driverName,date){
+  if(!FB||!_db){toast('❌ Firebase 연결 필요');return;}
+  var docId=driverName+'_'+date;
+  _db.collection('attendance').doc(docId).get().then(function(doc){
+    if(!doc.exists){toast('데이터 없음');return;}
+    var a=doc.data();
+    var inLat=a.checkInLat, inLng=a.checkInLng;
+    var outLat=a.checkOutLat, outLng=a.checkOutLng;
+    
+    var mo=document.createElement('div');
+    mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:900;display:flex;align-items:center;justify-content:center;padding:14px';
+    mo.onclick=function(e){if(e.target===mo)mo.remove();};
+    
+    var fmtT=function(iso){if(!iso)return'-';var x=new Date(iso);return x.toLocaleString('ko-KR');};
+    
+    var html='<div onclick="event.stopPropagation()" style="background:var(--bg);border:1px solid var(--border);border-radius:12px;max-width:95vw;width:500px;max-height:90vh;overflow-y:auto">';
+    html+='<div style="padding:14px;background:var(--blue);color:#fff;border-radius:10px 10px 0 0;display:flex;align-items:center;justify-content:space-between">';
+    html+='<div><div style="font-size:15px;font-weight:800">🗺️ '+driverName+' 기사님</div><div style="font-size:11px;opacity:.85;margin-top:3px">'+date+' 출퇴근 위치</div></div>';
+    html+='<button onclick="this.closest(\'div[style*=z-index]\').parentElement.remove()" style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer">✕</button>';
+    html+='</div>';
+    html+='<div style="padding:14px">';
+    
+    // 출근
+    if(inLat&&inLng){
+      html+='<div style="background:var(--teal-l);border:1.5px solid var(--teal);border-radius:8px;padding:10px;margin-bottom:8px">';
+      html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">';
+      html+='<div style="font-size:13px;font-weight:800;color:var(--teal)">🚪 출근 위치</div>';
+      html+='<div style="font-size:11px;color:var(--teal)">'+fmtT(a.checkIn)+'</div>';
+      html+='</div>';
+      html+='<div style="font-size:11px;color:var(--text2);font-family:monospace;margin-bottom:8px">위도: '+inLat.toFixed(6)+', 경도: '+inLng.toFixed(6)+(a.checkInGps&&a.checkInGps.accuracy?' (±'+a.checkInGps.accuracy+'m)':'')+'</div>';
+      html+='<div style="display:flex;gap:6px;flex-wrap:wrap">';
+      html+='<a href="https://map.kakao.com/link/map/출근지,'+inLat+','+inLng+'" target="_blank" style="flex:1;min-width:100px;padding:8px;background:#FEE500;color:#000;text-align:center;text-decoration:none;border-radius:6px;font-size:12px;font-weight:700">카카오맵</a>';
+      html+='<a href="https://map.naver.com/v5/?lat='+inLat+'&lng='+inLng+'&zoom=17" target="_blank" style="flex:1;min-width:100px;padding:8px;background:#03C75A;color:#fff;text-align:center;text-decoration:none;border-radius:6px;font-size:12px;font-weight:700">네이버맵</a>';
+      html+='<a href="https://www.google.com/maps?q='+inLat+','+inLng+'" target="_blank" style="flex:1;min-width:100px;padding:8px;background:#4285F4;color:#fff;text-align:center;text-decoration:none;border-radius:6px;font-size:12px;font-weight:700">구글맵</a>';
+      html+='</div>';
+      html+='</div>';
+    }
+    
+    // 퇴근
+    if(outLat&&outLng){
+      html+='<div style="background:var(--red-l);border:1.5px solid var(--red);border-radius:8px;padding:10px;margin-bottom:8px">';
+      html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">';
+      html+='<div style="font-size:13px;font-weight:800;color:var(--red)">🏁 퇴근 위치</div>';
+      html+='<div style="font-size:11px;color:var(--red)">'+fmtT(a.checkOut)+'</div>';
+      html+='</div>';
+      html+='<div style="font-size:11px;color:var(--text2);font-family:monospace;margin-bottom:8px">위도: '+outLat.toFixed(6)+', 경도: '+outLng.toFixed(6)+(a.checkOutGps&&a.checkOutGps.accuracy?' (±'+a.checkOutGps.accuracy+'m)':'')+'</div>';
+      html+='<div style="display:flex;gap:6px;flex-wrap:wrap">';
+      html+='<a href="https://map.kakao.com/link/map/퇴근지,'+outLat+','+outLng+'" target="_blank" style="flex:1;min-width:100px;padding:8px;background:#FEE500;color:#000;text-align:center;text-decoration:none;border-radius:6px;font-size:12px;font-weight:700">카카오맵</a>';
+      html+='<a href="https://map.naver.com/v5/?lat='+outLat+'&lng='+outLng+'&zoom=17" target="_blank" style="flex:1;min-width:100px;padding:8px;background:#03C75A;color:#fff;text-align:center;text-decoration:none;border-radius:6px;font-size:12px;font-weight:700">네이버맵</a>';
+      html+='<a href="https://www.google.com/maps?q='+outLat+','+outLng+'" target="_blank" style="flex:1;min-width:100px;padding:8px;background:#4285F4;color:#fff;text-align:center;text-decoration:none;border-radius:6px;font-size:12px;font-weight:700">구글맵</a>';
+      html+='</div>';
+      html+='</div>';
+    }
+    
+    // 거리 계산 (출근지 ↔ 퇴근지)
+    if(inLat&&outLat){
+      var dist=_calcDistance(inLat,inLng,outLat,outLng);
+      var distStr=dist<1000?Math.round(dist)+'m':(dist/1000).toFixed(2)+'km';
+      html+='<div style="background:var(--bg2);border:1px dashed var(--border);border-radius:8px;padding:10px;text-align:center">';
+      html+='<div style="font-size:11px;color:var(--text2)">📏 출근지 ↔ 퇴근지 직선거리</div>';
+      html+='<div style="font-size:16px;font-weight:800;color:var(--blue);margin-top:3px">'+distStr+'</div>';
+      html+='</div>';
+    }
+    
+    html+='<div style="margin-top:10px;padding:8px;background:var(--bg3);border-radius:6px;font-size:10px;color:var(--text3);line-height:1.5">';
+    html+='💡 <b>지도 버튼</b>을 누르면 해당 앱 또는 브라우저에서 정확한 위치를 확인할 수 있습니다.<br>';
+    html+='정확도는 ±5m ~ ±50m 수준 (실내는 오차 큼)';
+    html+='</div>';
+    
+    html+='</div></div>';
+    mo.innerHTML=html;
+    document.body.appendChild(mo);
+  }).catch(function(e){toast('❌ 로드 실패: '+(e&&e.message||''));});
+}
+
+// 두 좌표 간 거리 계산 (Haversine 공식)
+function _calcDistance(lat1,lng1,lat2,lng2){
+  var R=6371000; // 지구 반경 (m)
+  var φ1=lat1*Math.PI/180, φ2=lat2*Math.PI/180;
+  var dφ=(lat2-lat1)*Math.PI/180;
+  var dλ=(lng2-lng1)*Math.PI/180;
+  var a=Math.sin(dφ/2)*Math.sin(dφ/2)+Math.cos(φ1)*Math.cos(φ2)*Math.sin(dλ/2)*Math.sin(dλ/2);
+  var c=2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+  return R*c;
 }
 
 function _exportAttendCSV(){
