@@ -1,0 +1,41 @@
+{
+  "name": "MBTI(Co.,Ltd.) 물류관리",
+  "short_name": "MBTI물류",
+  "description": "엠비티아이 냉동·냉장·상온 물류 관리 시스템 — 출퇴근, 입차, 운행, 정산, 본인확인",
+  "start_url": "./엠비티아이_물류관리_v9.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d0d1a",
+  "theme_color": "#185FA5",
+  "lang": "ko-KR",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "기사 입차",
+      "short_name": "입차",
+      "url": "./엠비티아이_물류관리_v9.html#entry",
+      "description": "출근 → 자동 입차 등록"
+    },
+    {
+      "name": "오늘 정산",
+      "short_name": "정산",
+      "url": "./엠비티아이_물류관리_v9.html#today_settle",
+      "description": "오늘 정산 (실시간)"
+    }
+  ]
+}
