@@ -675,12 +675,6 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
       <button class="pni" id="pni2" onclick="DT('delivery',this)">
         <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><rect x="1" y="7" width="18" height="9" rx="2.5" fill="currentColor" opacity=".6"/><circle cx="5" cy="17" r="2" fill="currentColor"/><circle cx="15" cy="17" r="2" fill="currentColor"/></svg>운행
       </button>
-      <button class="pni" id="pni3" onclick="DT('temp',this)">
-        <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><path d="M10 3v9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="15" r="2.5" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>온도
-      </button>
-      <button class="pni" id="pni4" onclick="DT('accident',this)">
-        <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><path d="M10 2L1 18h18L10 2z" stroke="currentColor" stroke-width="1.4" fill="none"/><path d="M10 8v5M10 15.5v.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>사고
-      </button>
       <button class="pni" id="pni5" onclick="DT('settle',this)">
         <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><path d="M10 2v16M6 6h5a2 2 0 010 4H6M6 10h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/></svg>정산
       </button>
@@ -1237,8 +1231,8 @@ var S={
   jobTon:'', entryCompany:'',
   lineTo:'', lineFrom:'',
   accType:null,
-  cnt:{del:0,ret:0,fresh:0},
-  photos:{entry:{},delivery:{},accident:{},temp:{}},
+  cnt:{del:0,ret:0,fresh:0,jeon:0,dmg:0,pick:0},
+  photos:{entry:{},delivery:{},accident:{},temp:{},memo:{}},
   bankUrl:'',
   regDocs:{bank:null,license:null,cargo_cert:null,car_reg:null,biz_reg:null},
   regDocUrls:{bank:'',license:'',cargo_cert:'',car_reg:'',biz_reg:''},
@@ -1341,6 +1335,47 @@ function goSplash(){
   hide(['login-screen','reg-screen','app','dv']);
   show('splash');
   showJobSelect(false);
+  // ★ v9.5: 마지막 가입 회사만 표시 (한 회사로 가입했으면 다른 카드는 숨김)
+  setTimeout(_filterSplashByLastJob, 50);
+}
+// ★ v9.5: 가입한 회사 카드만 표시
+function _filterSplashByLastJob(){
+  try{
+    var lastJob=localStorage.getItem('mbti_lastJobsub');
+    var cards=document.querySelectorAll('#splash-main-btns .job-card');
+    if(!cards.length)return;
+    if(!lastJob){
+      // 첫 방문: 모두 표시
+      cards.forEach(function(c){c.style.display='';});
+      var resetBtn=document.getElementById('splash-reset-btn');
+      if(resetBtn)resetBtn.style.display='none';
+      return;
+    }
+    // 매칭되는 카드만 표시
+    cards.forEach(function(c){
+      var nameEl=c.querySelector('.job-card-name');
+      var name=nameEl?nameEl.textContent.trim():'';
+      c.style.display=(name===lastJob)?'':'none';
+    });
+    // 다른 회사로 가입할 수 있는 리셋 버튼 표시
+    var resetBtn=document.getElementById('splash-reset-btn');
+    if(!resetBtn){
+      resetBtn=document.createElement('div');
+      resetBtn.id='splash-reset-btn';
+      resetBtn.style.cssText='margin-top:10px;text-align:center;font-size:11px;color:rgba(255,255,255,.5);cursor:pointer;text-decoration:underline';
+      resetBtn.textContent='다른 회사로 가입';
+      resetBtn.onclick=function(){
+        if(confirm('다른 회사 카드를 모두 표시할까요?')){
+          localStorage.removeItem('mbti_lastJobsub');
+          _filterSplashByLastJob();
+        }
+      };
+      var btnsContainer=document.getElementById('splash-main-btns');
+      if(btnsContainer)btnsContainer.appendChild(resetBtn);
+    } else {
+      resetBtn.style.display='';
+    }
+  }catch(e){console.warn('splash filter:',e);}
 }
 // ── v6.1 비밀번호 SHA-256 해시 (Web Crypto API)
 async function hashPw(pw){
@@ -1550,6 +1585,8 @@ function doLogin(){
         S.curPlate=found.plate||'';
         S.curJobtype=found.jobtype||'택배';
         S.curJobsub=found.jobsub||'쿠팡';
+        // ★ v9.5: 로그인 성공 시 가입 회사 기억
+        try{localStorage.setItem('mbti_lastJobsub',found.jobsub||'쿠팡');}catch(e){}
         // ★ 세션 24시간 만료 (기존 무기한 → 만료 시간 추가)
         localStorage.setItem('mbti_session',JSON.stringify({
           mode:'driver',id:found.userId||id,name:found.name||id,
@@ -1815,6 +1852,8 @@ async function submitReg(){
     if(idx>=0&&d.fbId)a[idx].fbId=d.fbId;lss('drivers',a);
   }).catch(()=>{});
   addAct('reg',name+'('+userId+') 가입 — '+jobtype+(d.jobsub?'/'+d.jobsub:''),name);
+  // ★ v9.5: 가입한 회사 기억 (다음 스플래시에서 해당 회사만 표시)
+  if(d.jobsub)try{localStorage.setItem('mbti_lastJobsub',d.jobsub);}catch(e){}
   S.bankUrl='';
   DOCS={};
   toast('✅ '+name+' 가입 완료\n관리자(김형우 대표) 승인 후 로그인 가능합니다');
@@ -1970,12 +2009,12 @@ function rEntry(){
       <td><input type="checkbox" class="row-chk" data-col="entries" data-id="${x.id||x.fbId||''}" style="width:15px;height:15px;cursor:pointer"></td>
       <td><strong>${x.driver}</strong></td>
       <td><span class="badge ${x.type==='쿠팡'?'b-coral':x.type==='컬리'?'b-purple':x.type==='간선'?'b-blue':'b-wait'}">${x.type}</span></td>
-      <td style="font-size:11px">${x.company||'—'}</td>
+      <td style="font-weight:700;color:var(--teal)">${x.routeNo||'—'}</td>
       <td>${x.time}</td>
       <td style="font-weight:600;color:${x.temp==='상온'?'var(--amber)':parseFloat(x.temp)<=-18?'var(--teal)':'var(--red)'}">${x.temp}${x.temp==='상온'?'':' °C'}</td>
       <td class="thumb-row">${Object.entries(x.photos||{}).filter(([k,v])=>v&&v.length>5).map(([k,v])=>`<img class="thumb" src="${v}" onclick="openIV('${v}','입차사진')" title="${k}">`).join('')||'—'}</td>
     </tr>`).join('');
-    return _admDateGroup(g.date,g.rows.length,`<table class="tbl"><thead><tr><th style="width:30px"><input type="checkbox" onchange="toggleAllChk(this,'entries')" style="width:15px;height:15px;cursor:pointer"></th><th>기사</th><th>유형</th><th>회사</th><th>시각</th><th>온도</th><th>사진</th></tr></thead><tbody>${rows}</tbody></table>`);
+    return _admDateGroup(g.date,g.rows.length,`<table class="tbl"><thead><tr><th style="width:30px"><input type="checkbox" onchange="toggleAllChk(this,'entries')" style="width:15px;height:15px;cursor:pointer"></th><th>기사</th><th>유형</th><th>라우트</th><th>시각</th><th>온도</th><th>사진</th></tr></thead><tbody>${rows}</tbody></table>`);
   }).join(''):'<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">해당 기간 입차 없음</div>';
   return `<div class="card"><div class="ch"><span class="ct">입차 기록 (${e.length}건)</span>
     <button onclick="deleteSelected('entries','입차')" style="padding:4px 10px;background:var(--red-l);border:1px solid var(--red);border-radius:6px;font-size:11px;color:var(--red);cursor:pointer;font-weight:600">🗑 선택삭제</button>
@@ -3567,6 +3606,7 @@ function openEditDriver(fbIdOrId){
           +'<div><label style="font-size:11px;color:var(--amber);display:block;margin-bottom:3px;font-weight:700">🏕 소속 캠프</label><select id="ed-camp" style="width:100%;padding:8px;border:1.5px solid var(--amber);border-radius:6px;font-size:13px;font-weight:600">'+campOpts+'</select></div>'
           +'<div><label style="font-size:11px;color:var(--purple);display:block;margin-bottom:3px;font-weight:700">🌓 근무 시간대</label><select id="ed-shift" style="width:100%;padding:8px;border:1.5px solid var(--purple);border-radius:6px;font-size:13px;font-weight:600">'+shiftOpts+'</select></div>'
           +'<div style="grid-column:1/3"><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:3px">노선</label><input id="ed-route" value="'+(d.route||'')+'" placeholder="예: 부산1캠프 215C" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px"></div>'
+          +'<div style="grid-column:1/3;background:var(--teal-l);border:1.5px solid var(--teal);border-radius:8px;padding:10px"><label style="font-size:11px;color:var(--teal);display:block;margin-bottom:4px;font-weight:700">💰 기사 배송 단가 (₩/건) — 미입력 시 라우트 단가 자동 적용</label><input id="ed-customUnitPrice" type="number" min="0" value="'+(d.customUnitPrice||'')+'" placeholder="예: 850 (라우트 단가 사용 시 비워두기)" style="width:100%;padding:9px;border:1.5px solid var(--teal);border-radius:6px;font-size:14px;font-weight:700;color:var(--teal);background:var(--bg)"></div>'
         +'</div>'
         +'<div style="font-size:12px;font-weight:700;color:var(--amber);margin-bottom:8px;padding-left:8px;border-left:3px solid var(--amber)">💼 사업자 정보 (선택)</div>'
         +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">'
@@ -3607,6 +3647,7 @@ function saveEditDriver(fbIdOrId){
   var newBizNum=getVal('ed-bizNum').trim();
   var newBizName=getVal('ed-bizName').trim();
   var newBizAddr=getVal('ed-bizAddr').trim();
+  var newCustomUP=getVal('ed-customUnitPrice').trim();
   
   if(!newName){toast('❌ 성명은 필수 입력입니다');return;}
   
@@ -3632,6 +3673,7 @@ function saveEditDriver(fbIdOrId){
   d.bizNum=newBizNum;
   d.bizName=newBizName;
   d.bizAddr=newBizAddr;
+  d.customUnitPrice=newCustomUP?+newCustomUP:0;
   d.updatedAt=new Date().toISOString();
   d.updatedBy='관리자';
   
@@ -3646,6 +3688,7 @@ function saveEditDriver(fbIdOrId){
       jobtype:d.jobtype, jobsub:d.jobsub, employ:d.employ, route:d.route,
       camp:d.camp||'', shift:d.shift||'',
       bizNum:d.bizNum, bizName:d.bizName, bizAddr:d.bizAddr,
+      customUnitPrice:d.customUnitPrice||0,
       updatedAt:d.updatedAt, updatedBy:d.updatedBy
     }).then(function(){
       // 성명 변경 시 관련 컬렉션도 동기화 (settlements, schedules, entries 등)
@@ -4092,6 +4135,36 @@ function rMypage(){
 
     html+='<button class="btn btn-blue" style="width:100%;padding:13px;font-size:14px;margin-top:8px" onclick="saveMypage()">💾 정보 저장</button>';
     if(!isAdmin){
+      // ★ v9.5: 본인확인 (한 번만 인증, 수정 가능)
+      var verifiedAt=d.verifiedAt||'';
+      var hasVerified=!!verifiedAt;
+      html+='<div class="sec-lbl" style="margin-top:18px">🔐 본인확인 인증</div>';
+      html+='<div style="background:'+(hasVerified?'var(--teal-l)':'var(--amber-l)')+';border:1.5px solid '+(hasVerified?'var(--teal)':'var(--amber)')+';border-radius:12px;padding:14px;margin-bottom:12px">';
+      if(hasVerified){
+        var vDate=new Date(verifiedAt).toLocaleDateString('ko-KR');
+        html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">';
+        html+='<div style="font-weight:700;color:var(--teal);font-size:13px">✅ 본인확인 완료</div>';
+        html+='<div style="font-size:10px;color:var(--text3)">'+vDate+' 인증</div>';
+        html+='</div>';
+        html+='<div style="font-size:11px;color:var(--text2);line-height:1.5;margin-bottom:10px">한 번만 인증하면 됩니다. PIN 변경 시 아래에서 새 PIN을 설정하세요.</div>';
+        html+='<details style="cursor:pointer">';
+        html+='<summary style="font-size:11px;color:var(--blue);padding:4px 0">🔄 본인확인 PIN 변경</summary>';
+        html+='<div style="margin-top:8px;display:flex;flex-direction:column;gap:6px">';
+        html+='<input id="mp-verify-cur" type="password" inputmode="numeric" maxlength="6" placeholder="현재 PIN (6자리)" style="padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;letter-spacing:3px;text-align:center;background:var(--bg);color:var(--text)">';
+        html+='<input id="mp-verify-new" type="password" inputmode="numeric" maxlength="6" placeholder="새 PIN (6자리)" style="padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;letter-spacing:3px;text-align:center;background:var(--bg);color:var(--text)">';
+        html+='<button onclick="changeVerifyPin()" style="padding:9px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">PIN 변경</button>';
+        html+='</div></details>';
+      } else {
+        html+='<div style="font-weight:700;color:var(--amber);font-size:13px;margin-bottom:6px">⚠️ 본인확인 미완료</div>';
+        html+='<div style="font-size:11px;color:var(--text2);line-height:1.5;margin-bottom:10px">6자리 PIN을 설정하면 본인확인이 완료됩니다. 한 번만 설정하면 되며, 이후 변경 가능합니다.</div>';
+        html+='<div style="display:flex;flex-direction:column;gap:6px">';
+        html+='<input id="mp-verify-set" type="password" inputmode="numeric" maxlength="6" placeholder="6자리 PIN 설정" style="padding:9px;border:1.5px solid var(--amber);border-radius:6px;font-size:14px;letter-spacing:4px;text-align:center;background:var(--bg);color:var(--text);font-weight:700">';
+        html+='<input id="mp-verify-set2" type="password" inputmode="numeric" maxlength="6" placeholder="PIN 확인" style="padding:9px;border:1.5px solid var(--amber);border-radius:6px;font-size:14px;letter-spacing:4px;text-align:center;background:var(--bg);color:var(--text);font-weight:700">';
+        html+='<button onclick="setVerifyPin()" style="padding:10px;background:var(--amber);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">✅ 본인확인 완료하기</button>';
+        html+='</div>';
+      }
+      html+='</div>';
+
       html+='<button onclick="if(confirm(\'로그아웃 하시겠습니까?\'))goLogout()" style="width:100%;padding:13px;font-size:14px;margin-top:8px;background:rgba(220,50,50,.85);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer">🚪 로그아웃</button>';
       
       // ── 탈퇴 신청 섹션 (숨겨진 하단 배치)
@@ -4325,6 +4398,65 @@ function requestWithdrawal(){
   } else {
     toast('❌ Firebase 연결이 필요합니다');
   }
+}
+
+// ★ v9.5: 본인확인 PIN 설정 (한 번만)
+async function setVerifyPin(){
+  var pin1=(document.getElementById('mp-verify-set')?.value||'').trim();
+  var pin2=(document.getElementById('mp-verify-set2')?.value||'').trim();
+  if(!/^\d{6}$/.test(pin1)){toast('❌ 6자리 숫자를 입력해 주세요');return;}
+  if(pin1!==pin2){toast('❌ PIN이 일치하지 않습니다');return;}
+  var me=ls('drivers').find(function(x){return x.name===S.curDriver||x.userId===S.curDriver;});
+  if(!me){toast('❌ 기사 정보 없음');return;}
+  var pinHash=await hashPw(pin1);
+  var verifiedAt=new Date().toISOString();
+  // 로컬 저장
+  var drs=ls('drivers');
+  var idx=drs.findIndex(function(x){return x.userId===me.userId;});
+  if(idx>=0){
+    drs[idx].verifyPinHash=pinHash;
+    drs[idx].verifiedAt=verifiedAt;
+    lss('drivers',drs);
+  }
+  // Firebase 저장
+  if(FB&&_db&&me.fbId){
+    _db.collection('drivers').doc(me.fbId).update({
+      verifyPinHash:pinHash,
+      verifiedAt:verifiedAt
+    }).catch(function(e){console.warn('verify pin save:',e);});
+  }
+  addAct('verify',S.curDriver+' 본인확인 완료',S.curDriver);
+  toast('✅ 본인확인 완료');
+  setTimeout(function(){SP('mypage',null);DT('mypage',document.getElementById('pni6'));},500);
+}
+
+// ★ v9.5: 본인확인 PIN 변경
+async function changeVerifyPin(){
+  var cur=(document.getElementById('mp-verify-cur')?.value||'').trim();
+  var newPin=(document.getElementById('mp-verify-new')?.value||'').trim();
+  if(!/^\d{6}$/.test(cur)||!/^\d{6}$/.test(newPin)){toast('❌ 6자리 숫자를 입력해 주세요');return;}
+  var me=ls('drivers').find(function(x){return x.name===S.curDriver||x.userId===S.curDriver;});
+  if(!me||!me.verifyPinHash){toast('❌ 기존 PIN 정보 없음');return;}
+  var curHash=await hashPw(cur);
+  if(curHash!==me.verifyPinHash){toast('❌ 현재 PIN이 일치하지 않습니다');return;}
+  var newHash=await hashPw(newPin);
+  var drs=ls('drivers');
+  var idx=drs.findIndex(function(x){return x.userId===me.userId;});
+  if(idx>=0){
+    drs[idx].verifyPinHash=newHash;
+    drs[idx].verifyPinChangedAt=new Date().toISOString();
+    lss('drivers',drs);
+  }
+  if(FB&&_db&&me.fbId){
+    _db.collection('drivers').doc(me.fbId).update({
+      verifyPinHash:newHash,
+      verifyPinChangedAt:new Date().toISOString()
+    }).catch(function(){});
+  }
+  addAct('verify',S.curDriver+' PIN 변경',S.curDriver);
+  toast('✅ PIN 변경 완료');
+  document.getElementById('mp-verify-cur').value='';
+  document.getElementById('mp-verify-new').value='';
 }
 
 // 탈퇴 신청 취소
@@ -5943,25 +6075,34 @@ function checkDriverNotifications(){
       // 공지사항(notice)는 일반 팝업에서 제외 - 홈 카드로 따로 표시
       var nonNotice=items.filter(function(it){return it.type!=='notice';});
       if(nonNotice.length===0)return;
-      // ★ 이미 알림 표시했으면 다시 안 뜨게 (세션당 1회)
-      var seenKey='notif_seen_'+S.curDriver;
-      if(sessionStorage.getItem(seenKey))return;
-      sessionStorage.setItem(seenKey,'1');
+      // ★ v9.5: 항목별 dismiss 영구 추적 (localStorage) — 한번 닫으면 다시 안 뜸
+      var seenMapKey='notif_dismissed_'+S.curDriver;
+      var seenMap={};
+      try{seenMap=JSON.parse(localStorage.getItem(seenMapKey)||'{}');}catch(e){}
+      var unseenItems=nonNotice.filter(function(it){return !seenMap[it._id];});
+      if(unseenItems.length===0)return;
       var existing=document.getElementById('drv-notification-box');
       if(existing)existing.remove();
       var box=document.createElement('div');
       box.id='drv-notification-box';
       box.style.cssText='position:fixed;bottom:70px;left:50%;transform:translateX(-50%);z-index:400;width:90%;max-width:360px';
-      var listHtml=nonNotice.map(function(it){
+      var listHtml=unseenItems.map(function(it){
         return '<div style="padding:8px;background:var(--bg3);border-radius:8px;margin-bottom:6px;cursor:pointer" onclick="_vdn('+JSON.stringify(it._id)+')">'
           +'<div style="font-size:12px;font-weight:700">'+(it.type==='tax_invoice'?'🧾 세금계산서':'📋 정산 명세서')+' — '+it.month+'</div>'
           +'<div style="font-size:10px;color:var(--text3)">'+new Date(it.sentAt).toLocaleDateString('ko-KR')+' 전달</div>'
           +'</div>';
       }).join('');
+      // ★ '다시 보지 않기' 버튼 — 모든 현재 항목을 dismissed 처리
+      var dismissAllJS='var k="'+seenMapKey+'";var m={};try{m=JSON.parse(localStorage.getItem(k)||"{}");}catch(e){}'
+        +unseenItems.map(function(it){return 'm["'+it._id+'"]=Date.now();';}).join('')
+        +'localStorage.setItem(k,JSON.stringify(m));document.getElementById("drv-notification-box")?.remove();';
       box.innerHTML='<div style="background:var(--bg2);border:2px solid var(--blue);border-radius:12px;padding:14px;box-shadow:0 4px 20px rgba(0,0,0,.2)">'
-        +'<div style="font-size:12px;font-weight:700;color:var(--blue);margin-bottom:8px">📬 관리자 전달 내역 ('+nonNotice.length+'건)</div>'
+        +'<div style="font-size:12px;font-weight:700;color:var(--blue);margin-bottom:8px">📬 관리자 전달 내역 ('+unseenItems.length+'건)</div>'
         +listHtml
-        +'<button onclick="document.getElementById(\'drv-notification-box\')?.remove()" style="width:100%;margin-top:6px;padding:7px;background:var(--bg3);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:12px">닫기</button>'
+        +'<div style="display:flex;gap:5px;margin-top:6px">'
+        +'<button onclick="document.getElementById(\'drv-notification-box\')?.remove()" style="flex:1;padding:7px;background:var(--bg3);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:12px">닫기</button>'
+        +'<button onclick="'+dismissAllJS.replace(/"/g,'&quot;')+'" style="flex:1;padding:7px;background:var(--red-l);color:var(--red);border:1px solid var(--red);border-radius:7px;cursor:pointer;font-size:11px;font-weight:600">🚫 다시 보지 않기</button>'
+        +'</div>'
         +'</div>';
       document.body.appendChild(box);
     // ★ onSnapshot 두 번째 파라미터로 에러 핸들러 (기존 .catch() 대신)
@@ -6242,6 +6383,40 @@ async function doCheckIn(){
   toast('✅ 출근 체크인 완료'+(gps?' 📍':' (GPS 없음)'));
   var card=document.getElementById('attend-card');
   if(card)card.innerHTML=_buildAttendCard();
+
+  // ★ v9.4: 출근 체크인 = 입차 등록 (오늘 첫 체크인 시 자동 entries 생성)
+  try{
+    var jsub=S.curJobsub||S.curJobtype||'쿠팡';
+    // ★ v9.5: 라우트 번호 입력값 캡처 (입차 페이지에서 입력한 값)
+    var routeNo=(document.getElementById('entry-route-no')?.value||'').trim().toUpperCase();
+    if(!routeNo){routeNo=localStorage.getItem('drv_lastRoute_'+S.curDriver)||'';}
+    var ents=ls('entries');
+    var alreadyEntered=ents.some(function(e){return e.driver===S.curDriver&&e.date===today();});
+    if(!alreadyEntered){
+      var entryData={
+        driver:S.curDriver, type:jsub, company:jsub,
+        routeFrom:'', routeTo:'', ton:S.jobTon||'',
+        routeNo:routeNo,  // ★ 라우트 번호 (관리자 단가 측정용)
+        time:nowT(), temp:'상온', photos:{},
+        gps:gps||null,
+        date:today(), ts:new Date().toISOString()
+      };
+      ents.push({id:nid('entry'),...entryData});
+      lss('entries',ents);
+      fbW('entries',entryData).catch(function(){});
+      addAct('entry',S.curDriver+' '+jsub+(routeNo?' ['+routeNo+']':'')+' 출근→입차 자동 등록',S.curDriver);
+    } else if(routeNo){
+      // 이미 입차했더라도 라우트 번호가 비어있으면 업데이트
+      var lastIdx=-1;
+      for(var i=ents.length-1;i>=0;i--){
+        if(ents[i].driver===S.curDriver&&ents[i].date===today()){lastIdx=i;break;}
+      }
+      if(lastIdx>=0&&!ents[lastIdx].routeNo){
+        ents[lastIdx].routeNo=routeNo;
+        lss('entries',ents);
+      }
+    }
+  }catch(e){console.warn('자동 입차 등록 실패:',e);}
 }
 
 // ── 퇴근 체크아웃
@@ -6683,8 +6858,7 @@ function dHome(){
       <div style="font-size:10px;color:var(--text2)">현재 상태</div>
     </div>
   </div>
-  <!-- 출퇴근 체크인 -->
-  <div id="attend-card" style="margin:4px 10px 6px">${_buildAttendCard()}</div>
+  <!-- 출퇴근 체크인은 입차 탭으로 이동 -->
   <!-- 공지사항 카드 -->
   <div id="drv-notice-card" style="margin:4px 10px 6px">${_buildDrvNoticeCard()}</div>
   <!-- 입차 정보 -->
@@ -6805,6 +6979,7 @@ function _drvHistEntry(){
       +'<span style="font-size:12px;font-weight:600">'+r.date+' '+r.time+'</span>'
       +'<span class="badge b-coral" style="font-size:10px">'+(r.type||r.company||'-')+'</span>'
       +'</div>'
+      +(r.routeNo?'<div style="font-size:12px;color:var(--teal);font-weight:700;margin-top:2px">📍 라우트: '+r.routeNo+'</div>':'')
       +(r.routeFrom?'<div style="font-size:11px;color:var(--text2);margin-top:2px">'+r.routeFrom+' → '+r.routeTo+'</div>':'')
       +(r.temp&&r.temp!=='상온'?'<div style="font-size:11px;color:var(--blue)">🌡 '+r.temp+'°C</div>':'')
       +phHTML
@@ -6905,6 +7080,10 @@ function drvPhotoGallery(){
   ls('tempLogs').filter(function(l){return l.driver===S.curDriver&&(l.date||'')>=cut&&l.photoUrl&&l.photoUrl.startsWith('http');}).forEach(function(l){
     allPhotos.push({url:l.photoUrl,label:'온도',date:l.date,time:l.time});
   });
+  // ★ 운행 메모 사진도 포함
+  ls('deliveryMemos').filter(function(m){return m.driver===S.curDriver&&(m.date||'')>=cut&&m.photoUrl&&m.photoUrl.startsWith('http');}).forEach(function(m){
+    allPhotos.push({url:m.photoUrl,label:'메모',date:m.date,time:m.time||''});
+  });
   allPhotos.sort(function(a,b){return (b.date+b.time).localeCompare(a.date+a.time);});
 
   var mo=document.createElement('div');
@@ -6933,121 +7112,82 @@ function drvPhotoGallery(){
   document.body.appendChild(mo);
 }
 function dEntry(){
-  var me=ls('entries').filter(e=>e.driver===S.curDriver&&e.date===today()).pop();
   var jsub=S.curJobsub||S.curJobtype||'쿠팡';
-  var isNoTemp=['쿠팡','CJ','생수'].includes(jsub);
-  var isKurly=(jsub==='컬리');
-  var isLine=(jsub==='간선');
-  var isCJ=(jsub==='CJ');
-  var isHQ=(jsub==='MBTI본사'||jsub==='본사');
-
-  // ── 공통 사진 버튼 생성
-  function camBtn(k,lbl){
-    var url=S.photos.entry[k]||'';
-    if(url){
-      return `<div style="position:relative;max-width:80px">
-        <div class="cam-btn taken" id="ce-${k}" onclick="openIV('${url}','${lbl}')"><img class="cam-prev" src="${url}"><div class="cam-chk">✓</div></div>
-        <div style="display:flex;gap:2px;margin-top:2px">
-          <label style="flex:1;text-align:center;font-size:9px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:2px;cursor:pointer">📷<input type="file" accept="image/*" capture="environment" style="display:none" onchange="camPhoto(this,'${k}','entry','${lbl}')"></label>
-          <label style="flex:1;text-align:center;font-size:9px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:2px;cursor:pointer">🖼<input type="file" accept="image/*" style="display:none" onchange="camPhoto(this,'${k}','entry','${lbl}')"></label>
-        </div>
-      </div>`;
-    }
-    return `<div style="max-width:80px">
-      <div class="cam-btn" id="ce-${k}"><svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="4" stroke="currentColor" stroke-width="1.4"/><path d="M3 7h2l2-3h6l2 3h2a1 1 0 011 1v7a1 1 0 01-1 1H3a1 1 0 01-1-1V8a1 1 0 011-1z" stroke="currentColor" stroke-width="1.2" fill="none"/></svg><span>${lbl}</span></div>
-      <div style="display:flex;gap:2px;margin-top:2px">
-        <label style="flex:1;text-align:center;font-size:9px;background:var(--blue-l);border:1px solid var(--blue);border-radius:4px;padding:2px;cursor:pointer;color:var(--blue)">📷카메라<input type="file" accept="image/*" capture="environment" style="display:none" onchange="camPhoto(this,'${k}','entry','${lbl}')"></label>
-        <label style="flex:1;text-align:center;font-size:9px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:2px;cursor:pointer">🖼갤러리<input type="file" accept="image/*" style="display:none" onchange="camPhoto(this,'${k}','entry','${lbl}')"></label>
-      </div>
-    </div>`;
-  }
-
-  // ── 이력 표시
-  var histHTML=me?`<div class="dc" style="margin-top:0"><div class="dct">오늘 입차 이력</div>
-    <div style="font-size:12px;display:flex;gap:8px;align-items:center">
-      <span class="badge b-coral">${me.type||jsub}</span>
-      <span>${me.time}</span>
-      <span style="font-weight:600">${me.temp}${me.temp==='상온'?'':' °C'}</span>
-      ${me.company?`<span style="color:var(--text2)">${me.company}</span>`:''}
-      ${me.routeFrom?`<span style="font-size:11px;color:var(--text2)">${me.routeFrom}→${me.routeTo}</span>`:''}
-    </div></div>`:'';
-
-  // ── 온도 입력 영역
-  var tempHTML='';
-  if(isNoTemp||isCJ){
-    tempHTML=`<input type="hidden" id="en-temp" value="상온">
-    <div style="padding:9px 14px;background:rgba(255,165,0,.1);border:1.5px solid var(--amber);border-radius:var(--r);font-size:13px;font-weight:700;color:#E68000;text-align:center">☀️ 상온 업무 — 온도 기록 불필요</div>`;
-  } else if(isLine){
-    tempHTML=`<div><label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">차량 내부 온도 *</label>
-      <div style="display:flex;gap:6px;margin-bottom:6px">
-        <button onclick="document.getElementById('en-temp').value='상온';document.getElementById('en-warn').style.display='none';this.style.background='var(--amber)'" style="flex:1;padding:8px;background:var(--amber-l);border:1.5px solid var(--amber);color:#E68000;border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer">☀️ 상온</button>
-        <button onclick="document.getElementById('en-temp').focus()" style="flex:1;padding:8px;background:rgba(59,130,246,.1);border:1.5px solid var(--blue);color:var(--blue);border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer">❄️ 냉장/냉동 입력</button>
-      </div>
-      <input id="en-temp" type="number" step="0.1" placeholder="-18.0 (냉장/냉동)" oninput="var v=parseFloat(this.value);document.getElementById('en-warn').style.display=(!isNaN(v)&&v>-18)?'block':'none'"
-        style="width:100%;padding:11px;border:1.5px solid var(--border);border-radius:var(--r);font-size:18px;font-weight:700;background:var(--bg);color:var(--text);text-align:center">
-      <div id="en-warn" style="display:none;background:var(--red-l);border-radius:6px;padding:7px;font-size:12px;color:var(--red);margin-top:4px">⚠ 냉동 기준(-18°C) 초과</div>
-    </div>`;
-  } else {
-    // 컬리, 본사
-    tempHTML=`<div><label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">차량 내부 온도(°C) *</label>
-      <input id="en-temp" type="number" step="0.1" placeholder="-18.0" oninput="var v=parseFloat(this.value);document.getElementById('en-warn').style.display=(!isNaN(v)&&v>-18)?'block':'none'"
-        style="width:100%;padding:11px;border:1.5px solid var(--border);border-radius:var(--r);font-size:18px;font-weight:700;background:var(--bg);color:var(--text);text-align:center">
-      <div id="en-warn" style="display:none;background:var(--red-l);border-radius:6px;padding:7px;font-size:12px;color:var(--red);margin-top:4px">⚠ 냉동 기준(-18°C) 초과</div>
-    </div>`;
-  }
-
-  // ── 간선 상차지/하차지
-  var terminals=S.termList.map(t=>`<option>${t}</option>`).join('');
-  var lineHTML=isLine?`
-    <div><label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">상차지 *</label>
-      <div style="display:flex;gap:5px">
-        <select id="en-from-sel" onchange="var t=document.getElementById('en-from-txt');if(this.value&&!t.value)t.value=this.value" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--text)"><option value="">선택</option>${terminals}</select>
-        <input id="en-from-txt" placeholder="직접 입력" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--text)">
-      </div>
-    </div>
-    <div><label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">하차지 *</label>
-      <div style="display:flex;gap:5px">
-        <select id="en-to-sel" onchange="var t=document.getElementById('en-to-txt');if(this.value&&!t.value)t.value=this.value" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--text)"><option value="">선택</option>${terminals}</select>
-        <input id="en-to-txt" placeholder="직접 입력" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--text)">
-      </div>
-    </div>`:'';
-
-  // ── 사진 버튼 (1장 통일)
-  var camGrid=`<div style="max-width:200px">${camBtn('zone','입차증빙')}</div>`;
-  // 컬리/간선은 온도계 사진 추가
-  if(isKurly||isLine){
-    camGrid=`<div class="cam-grid cam-2">${camBtn('zone','입차증빙')}${camBtn('tempLog','온도계')}</div>`;
-  }
-
-  // ── 회사 배지 색상
   var badgeColor={'쿠팡':'#FFA500','CJ':'#0066CC','컬리':'#7C3AED','간선':'#059669','MBTI본사':'#DC2626','본사':'#DC2626'}[jsub]||'#6B7280';
 
-  return `<div class="dh"><h2>입차 등록</h2><p>${jsub} 입차 → 관리자 연동</p></div>
-  <div class="dc">
-    <div style="text-align:center;margin-bottom:12px">
-      <div style="display:inline-block;background:${badgeColor}20;border:2px solid ${badgeColor};border-radius:12px;padding:8px 24px;font-size:15px;font-weight:700;color:${badgeColor}">${jsub} 입차</div>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:9px">
-      ${lineHTML}
-      <div>
-        <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">⏱ 입차 시간</label>
-        <div style="display:flex;gap:6px;align-items:center">
-          <div id="en-time-display" style="flex:1;padding:10px;background:var(--bg3);border-radius:var(--r);font-size:16px;font-weight:700;text-align:center">${nowT()}</div>
-          <button onclick="document.getElementById('en-time-display').textContent=document.getElementById('en-time-val').value=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});this.textContent='✅ 기록됨'" style="padding:9px 14px;background:var(--teal);color:#fff;border:none;border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">⏱ 지금 체크</button>
-        </div>
-        <input type="hidden" id="en-time-val" value="${nowT()}">
-      </div>
-      ${tempHTML}
-      <div>
-        <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">📷 입차 사진</label>
-        ${camGrid}
-      </div>
-    </div>
-    <button class="bbtn bb-teal" onclick="submitEntryAuto()" style="margin:12px 0 0">✅ 입차 등록 → 관리자 연동</button>
+  return `<div class="dh"><h2>입차 / 출근</h2><p>${jsub} — 출근 버튼이 곧 입차 등록입니다</p></div>
+  <!-- 회사 배지 -->
+  <div style="text-align:center;margin:8px 10px 4px">
+    <div style="display:inline-block;background:${badgeColor}20;border:2px solid ${badgeColor};border-radius:12px;padding:6px 22px;font-size:14px;font-weight:700;color:${badgeColor}">${jsub} 입차</div>
   </div>
-  ${histHTML}
+  <!-- 라우트 번호 입력 (관리자 단가 측정용) -->
+  <div style="margin:6px 10px;padding:10px 12px;background:var(--bg2);border:1.5px solid var(--teal);border-radius:var(--r)">
+    <label style="font-size:11px;color:var(--teal);font-weight:700;display:block;margin-bottom:4px">📍 오늘 배정 라우트 번호 <span style="color:var(--text3);font-weight:400">(예: 215A, 215B)</span></label>
+    <input id="entry-route-no" placeholder="예: 215A" value="${(localStorage.getItem('drv_lastRoute_'+S.curDriver)||'')}" oninput="this.value=this.value.toUpperCase();localStorage.setItem('drv_lastRoute_'+S.curDriver,this.value)" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-weight:700;text-align:center;background:var(--bg);color:var(--text);text-transform:uppercase">
+    <div style="font-size:10px;color:var(--text3);margin-top:4px">출근 전에 라우트 번호를 입력하세요. 관리자가 단가 적용에 사용합니다.</div>
+  </div>
+  <!-- 출퇴근 체크인 (출근 버튼 = 입차 등록) -->
+  <div id="attend-card" style="margin:6px 10px">${_buildAttendCard()}</div>
+  <!-- 현재 위치 지도 -->
+  <div id="entry-map-card" style="margin:6px 10px">${_buildLocMap()}</div>
   ${_drvHistEntry()}
   <div style="height:10px"></div>`;
+}
+
+// ★ 현재 위치 지도 카드 (OpenStreetMap 임베드 + 역지오코딩)
+function _buildLocMap(){
+  // 200ms 후 GPS 호출 (DOM 마운트 보장)
+  setTimeout(_refreshLocMap, 200);
+  return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
+    +'<div style="font-size:12px;font-weight:800">🗺 현재 위치</div>'
+    +'<button onclick="_refreshLocMap()" style="padding:3px 9px;background:var(--blue-l);color:var(--blue);border:1px solid var(--blue);border-radius:5px;font-size:10px;font-weight:600;cursor:pointer">🔄 새로고침</button>'
+    +'</div>'
+    +'<div id="loc-addr" style="font-size:12px;color:var(--text2);margin-bottom:6px;min-height:18px;line-height:1.4">📍 위치 확인 중...</div>'
+    +'<div id="loc-map-wrap" style="background:var(--bg3);border-radius:6px;height:180px;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:11px;overflow:hidden">GPS 수신 대기...</div>'
+    +'</div>';
+}
+
+function _refreshLocMap(){
+  var addrEl=document.getElementById('loc-addr');
+  var mapEl=document.getElementById('loc-map-wrap');
+  if(!addrEl||!mapEl)return;
+  if(!navigator.geolocation){
+    addrEl.textContent='⚠️ 이 기기는 GPS를 지원하지 않습니다';
+    return;
+  }
+  addrEl.textContent='📍 위치 확인 중...';
+  mapEl.innerHTML='<div style="color:var(--text3)">GPS 수신 중...</div>';
+  navigator.geolocation.getCurrentPosition(
+    function(pos){
+      var lat=pos.coords.latitude, lng=pos.coords.longitude;
+      // OpenStreetMap 임베드
+      var d=0.004;
+      var bbox=(lng-d)+','+(lat-d*0.7)+','+(lng+d)+','+(lat+d*0.7);
+      mapEl.innerHTML='<iframe src="https://www.openstreetmap.org/export/embed.html?bbox='+encodeURIComponent(bbox)+'&layer=mapnik&marker='+lat+'%2C'+lng+'" style="width:100%;height:180px;border:0;display:block"></iframe>';
+      addrEl.innerHTML='📍 좌표: <span style="color:var(--text3);font-size:11px">'+lat.toFixed(5)+', '+lng.toFixed(5)+'</span>';
+      // 역지오코딩 (OpenStreetMap Nominatim)
+      fetch('https://nominatim.openstreetmap.org/reverse?lat='+lat+'&lon='+lng+'&format=json&accept-language=ko&zoom=18')
+        .then(function(r){return r.json();})
+        .then(function(j){
+          if(j&&j.display_name){
+            var ae=document.getElementById('loc-addr');
+            if(ae)ae.innerHTML='📍 <strong style="color:var(--text)">'+j.display_name+'</strong>';
+          }
+        }).catch(function(){});
+    },
+    function(err){
+      var ae=document.getElementById('loc-addr');
+      var me=document.getElementById('loc-map-wrap');
+      var msg='⚠️ GPS 권한이 거부되었거나 위치를 가져올 수 없습니다';
+      if(err&&err.code===1)msg='⚠️ 위치 권한을 허용해 주세요 (브라우저 설정)';
+      if(err&&err.code===2)msg='⚠️ 위치를 확인할 수 없습니다 (실외 또는 신호 양호한 곳에서 시도)';
+      if(err&&err.code===3)msg='⚠️ GPS 시간 초과 — 새로고침 시도';
+      if(ae)ae.textContent=msg;
+      if(me)me.innerHTML='<div style="color:var(--text3);padding:10px;text-align:center">📍 위치 확인 실패</div>';
+    },
+    {enableHighAccuracy:true,timeout:10000,maximumAge:30000}
+  );
 }
 function submitEntryAuto(){
   var jsub=S.curJobsub||S.curJobtype||'쿠팡';
@@ -7196,19 +7336,149 @@ function dTaxi(){
     ?'<span style="margin-left:8px;color:var(--gray);font-weight:600">단가: 배송₩'+S.yongPrice.del+'/반품₩'+S.yongPrice.ret+'</span>':'';
   var camCols=isCoupangDriver?'max-width:180px':'';
   var isCoupangDrv=(S.curJobsub==='쿠팡'||S.curJobtype==='쿠팡'||S.selDCl==='쿠팡');
+
+  // ★ 오늘 배송금액 카드 (기사별 단가 적용)
+  var todayAmountCard=_buildTodayAmountCard();
+
   return clientBtns
+    +todayAmountCard
     +'<div class="dc"><div class="dct">'+delivLabel+' 배송 건수</div>'
     +'<div class="count-row"><div><div class="count-label">배송 상품</div><div class="count-sub">일반 배송</div></div><div class="count-ctrl"><button class="count-btn" onclick="cc(\'del\',-1)">−</button><div class="count-num" id="cnt-del">'+S.cnt.del+'</div><button class="count-btn" onclick="cc(\'del\',1)">+</button><input type="number" placeholder="직접입력" oninput="S.cnt.del=Math.max(0,+this.value||0);document.getElementById(\'cnt-del\').textContent=S.cnt.del" style="width:70px;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--text);text-align:center"></div></div>'
     +'<div class="count-row"><div><div class="count-label">반품</div></div><div class="count-ctrl"><button class="count-btn" onclick="cc(\'ret\',-1)">−</button><div class="count-num" id="cnt-ret">'+S.cnt.ret+'</div><button class="count-btn" onclick="cc(\'ret\',1)">+</button><input type="number" placeholder="직접입력" oninput="S.cnt.ret=Math.max(0,+this.value||0);document.getElementById(\'cnt-ret\').textContent=S.cnt.ret" style="width:70px;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--text);text-align:center"></div></div>'
     +(isCoupangDrv?'<div class="count-row"><div><div class="count-label">프레쉬백</div></div><div class="count-ctrl"><button class="count-btn" onclick="cc(\'fresh\',-1)">−</button><div class="count-num" id="cnt-fresh">'+S.cnt.fresh+'</div><button class="count-btn" onclick="cc(\'fresh\',1)">+</button><input type="number" placeholder="직접입력" oninput="S.cnt.fresh=Math.max(0,+this.value||0);document.getElementById(\'cnt-fresh\').textContent=S.cnt.fresh" style="width:70px;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--text);text-align:center"></div></div>':'')
-    +'<div style="margin-top:8px;padding:7px;background:var(--bg3);border-radius:var(--r);font-size:12px">배송 <strong>'+S.cnt.del+'</strong>건 · 반품 <strong>'+S.cnt.ret+'</strong>'+(isCoupangDrv?' · 프레쉬 <strong>'+S.cnt.fresh+'</strong>'+insenHTML:'')+yongHTML+'</div>'
+    +'<div class="count-row"><div><div class="count-label">전쥐건</div></div><div class="count-ctrl"><button class="count-btn" onclick="cc(\'jeon\',-1)">−</button><div class="count-num" id="cnt-jeon">'+S.cnt.jeon+'</div><button class="count-btn" onclick="cc(\'jeon\',1)">+</button><input type="number" placeholder="직접입력" oninput="S.cnt.jeon=Math.max(0,+this.value||0);document.getElementById(\'cnt-jeon\').textContent=S.cnt.jeon" style="width:70px;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--text);text-align:center"></div></div>'
+    +'<div class="count-row"><div><div class="count-label">파손</div></div><div class="count-ctrl"><button class="count-btn" onclick="cc(\'dmg\',-1)">−</button><div class="count-num" id="cnt-dmg">'+S.cnt.dmg+'</div><button class="count-btn" onclick="cc(\'dmg\',1)">+</button><input type="number" placeholder="직접입력" oninput="S.cnt.dmg=Math.max(0,+this.value||0);document.getElementById(\'cnt-dmg\').textContent=S.cnt.dmg" style="width:70px;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--text);text-align:center"></div></div>'
+    +'<div class="count-row"><div><div class="count-label">채번수량</div></div><div class="count-ctrl"><button class="count-btn" onclick="cc(\'pick\',-1)">−</button><div class="count-num" id="cnt-pick">'+S.cnt.pick+'</div><button class="count-btn" onclick="cc(\'pick\',1)">+</button><input type="number" placeholder="직접입력" oninput="S.cnt.pick=Math.max(0,+this.value||0);document.getElementById(\'cnt-pick\').textContent=S.cnt.pick" style="width:70px;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--text);text-align:center"></div></div>'
+    +'<div style="margin-top:8px;padding:7px;background:var(--bg3);border-radius:var(--r);font-size:12px">배송 <strong>'+S.cnt.del+'</strong>건 · 반품 <strong>'+S.cnt.ret+'</strong>'+(isCoupangDrv?' · 프레쉬 <strong>'+S.cnt.fresh+'</strong>'+insenHTML:'')+' · 전쥐 <strong>'+S.cnt.jeon+'</strong> · 파손 <strong style="color:var(--red)">'+S.cnt.dmg+'</strong> · 채번 <strong>'+S.cnt.pick+'</strong>'+yongHTML+'</div>'
     +'</div>'
     +'<div style="padding:0 10px;margin-top:6px">'
     +'<label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">📷 배송완료 증빙 (후면 카메라 즉시 호출)</label>'
     +'<div class="cam-grid cam-3" style="'+camCols+'">'+ph+'</div>'
     +'</div>'
     +'<button class="bbtn bb-teal" onclick="submitDelivery()">배송 완료 등록 → 관리자 연동</button>'
-    +_drvHistDelivery();
+    +_drvMemoCard()
+    +_drvHistDelivery()
+    +_drvHistMemo();
+}
+
+// ★ 오늘 배송금액 카드 — 기사별 단가 × 오늘 누적 배송건
+function _buildTodayAmountCard(){
+  var todayDels=ls('deliveries').filter(function(d){return d.driver===S.curDriver&&d.date===today();});
+  var savedDcnt=todayDels.reduce(function(s,d){return s+(+d.dcnt||0);},0);
+  var savedRcnt=todayDels.reduce(function(s,d){return s+(+d.rcnt||0);},0);
+  var pendingDcnt=+S.cnt.del||0;
+  var pendingRcnt=+S.cnt.ret||0;
+  var totalDcnt=savedDcnt+pendingDcnt;
+  var totalRcnt=savedRcnt+pendingRcnt;
+
+  // 기사 단가 결정: customUnitPrice > 라우트 단가(RPRICE) > 기본값
+  var meDrv=ls('drivers').find(function(x){return x.name===S.curDriver||x.userId===S.curDriver;});
+  var customUP=meDrv&&+meDrv.customUnitPrice>0?+meDrv.customUnitPrice:0;
+  var routeUP=meDrv&&meDrv.route&&RPRICE[meDrv.route]?+RPRICE[meDrv.route]:0;
+  var unitPrice=customUP||routeUP||0;
+  var priceSource=customUP?'기사단가':(routeUP?'라우트단가':'미설정');
+
+  // 반품 단가는 기존 GP.coupang_return 또는 900원
+  var retPrice=900;
+  try{var gp=window.GP||{};retPrice=+gp.coupang_return||900;}catch(e){}
+
+  var delAmount=totalDcnt*unitPrice;
+  var retAmount=totalRcnt*retPrice;
+  var freshInc=(totalDcnt)*25;  // 쿠팡 프레시백 인센 (확정건수×25원)
+  var totalAmount=delAmount+retAmount+freshInc;
+
+  var unitDisplay=unitPrice>0
+    ? '₩'+unitPrice.toLocaleString()+'/건 ('+priceSource+')'
+    : '<span style="color:var(--red)">⚠ 단가 미설정 — 관리자 문의</span>';
+
+  return '<div class="dc" style="margin:8px 10px 0;background:linear-gradient(135deg,var(--teal-l) 0%,var(--bg2) 70%);border:1.5px solid var(--teal)">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+    +'<div style="font-size:13px;font-weight:800;color:var(--teal)">💰 오늘 배송금액</div>'
+    +'<div style="font-size:10px;color:var(--text3)">'+today()+'</div>'
+    +'</div>'
+    +'<div style="text-align:center;padding:6px 0">'
+    +'<div style="font-size:26px;font-weight:900;color:var(--teal);line-height:1.1">₩'+totalAmount.toLocaleString()+'</div>'
+    +'<div style="font-size:10px;color:var(--text2);margin-top:2px">단가: '+unitDisplay+'</div>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px;font-size:11px">'
+    +'<div style="background:var(--bg2);border-radius:6px;padding:6px;text-align:center">'
+    +'<div style="color:var(--text3);font-size:10px">배송 '+totalDcnt+'건</div>'
+    +'<div style="font-weight:700;color:var(--text)">₩'+delAmount.toLocaleString()+'</div></div>'
+    +'<div style="background:var(--bg2);border-radius:6px;padding:6px;text-align:center">'
+    +'<div style="color:var(--text3);font-size:10px">반품 '+totalRcnt+'건</div>'
+    +'<div style="font-weight:700;color:var(--amber)">₩'+retAmount.toLocaleString()+'</div></div>'
+    +'<div style="background:var(--bg2);border-radius:6px;padding:6px;text-align:center">'
+    +'<div style="color:var(--text3);font-size:10px">프레시백 인센</div>'
+    +'<div style="font-weight:700;color:var(--blue)">₩'+freshInc.toLocaleString()+'</div></div>'
+    +'</div>'
+    +(savedDcnt>0?'<div style="font-size:10px;color:var(--text3);margin-top:6px;text-align:center">※ 저장 완료 '+savedDcnt+'건 + 입력 중 '+pendingDcnt+'건</div>':'')
+    +'</div>';
+}
+
+// ★ 운행 메모 카드 (송장번호 + 사유 + 사진, 60일 보관)
+function _drvMemoCard(){
+  var ph=makeCamBtn('shot','memo','송장사진','cm');
+  return '<div class="dc" style="margin-top:10px;border:1.5px solid var(--amber);background:linear-gradient(135deg,var(--amber-l) 0%,var(--bg2) 80%)">'
+    +'<div class="dct" style="color:#E68000">📝 운행 메모 (송장번호·사유·사진)</div>'
+    +'<div style="font-size:10px;color:var(--text3);margin-bottom:8px">예외 상황(미배송·재배송·파손 등) 발생 시 송장 번호와 사유를 기록하세요. 60일간 자동 보관됩니다.</div>'
+    +'<div style="display:flex;flex-direction:column;gap:8px">'
+    +'<div><label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">📦 송장번호</label>'
+    +'<input id="mm-waybill" placeholder="예: 6000123456789" inputmode="numeric" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-weight:600;background:var(--bg);color:var(--text)"></div>'
+    +'<div><label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">📝 사유</label>'
+    +'<textarea id="mm-reason" placeholder="예: 부재중 미배송, 주소오류, 파손 등" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--bg);color:var(--text);height:60px;resize:none"></textarea></div>'
+    +'<div><label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">📷 사진 (송장 코드/현장)</label>'
+    +'<div style="max-width:120px">'+ph+'</div></div>'
+    +'</div>'
+    +'<button class="bbtn bb-amber" onclick="submitDeliveryMemo()" style="margin-top:10px;background:var(--amber);color:#fff">💾 메모 저장 → 60일 보관</button>'
+    +'</div>';
+}
+
+async function submitDeliveryMemo(){
+  var waybill=(document.getElementById('mm-waybill')?.value||'').trim();
+  var reason=(document.getElementById('mm-reason')?.value||'').trim();
+  var photo=S.photos.memo.shot||'';
+  if(!waybill&&!reason&&!photo){toast('⚠️ 송장번호·사유·사진 중 하나는 필수');return;}
+  var data={
+    driver:S.curDriver,
+    waybill:waybill,
+    reason:reason,
+    photoUrl:photo,
+    time:nowT(),
+    date:today(),
+    ts:new Date().toISOString()
+  };
+  var arr=ls('deliveryMemos');arr.push({id:nid('memo'),...data});lss('deliveryMemos',arr);
+  fbW('delivery_memos',data).catch(function(){});
+  addAct('memo',S.curDriver+' 메모 '+(waybill||'(송장없음)')+(reason?' — '+reason.slice(0,20):''),S.curDriver);
+  S.photos.memo={};
+  // 입력 필드 초기화
+  var w=document.getElementById('mm-waybill');if(w)w.value='';
+  var r=document.getElementById('mm-reason');if(r)r.value='';
+  DT('delivery',document.getElementById('pni2'));
+  toast('✅ 메모 저장 완료 (60일 보관)');
+}
+
+// ★ 운행 메모 60일 이력
+function _drvHistMemo(){
+  var cut=_drv60Cut();
+  var rows=ls('deliveryMemos').filter(function(m){return m.driver===S.curDriver&&(m.date||'')>=cut;})
+    .sort(function(a,b){return (b.date+(b.time||'')).localeCompare(a.date+(a.time||''));});
+  if(!rows.length)return _drvHistSection('hist_memo','📝 운행 메모 (60일)','<div style="text-align:center;padding:14px;font-size:12px;color:var(--text3)">메모 없음</div>');
+  var html=rows.map(function(r){
+    var phHTML=r.photoUrl&&r.photoUrl.startsWith('http')
+      ?'<img src="'+r.photoUrl+'" style="width:52px;height:52px;object-fit:cover;border-radius:5px;margin-top:4px;cursor:pointer" onclick="openIV(\''+r.photoUrl+'\',\'운행메모\')">':'';
+    return '<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:8px">'
+      +'<input type="checkbox" class="drv-hist-chk" data-fbid="'+(r.fbId||'')+'" data-lid="'+(r.id||'')+'" style="margin-top:3px;transform:scale(1.25);flex-shrink:0;cursor:pointer">'
+      +'<div style="flex:1;min-width:0">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center">'
+      +'<span style="font-size:12px;font-weight:600">'+r.date+' '+(r.time||'')+'</span>'
+      +(r.waybill?'<span class="badge b-amber" style="font-size:10px;background:var(--amber-l);color:#E68000;border:1px solid var(--amber)">📦 '+r.waybill+'</span>':'')
+      +'</div>'
+      +(r.reason?'<div style="font-size:12px;color:var(--text);margin-top:3px;white-space:pre-wrap">'+r.reason+'</div>':'')
+      +phHTML
+      +'</div></div>';
+  }).join('');
+  return _drvHistSection('hist_memo','📝 운행 메모 (60일) — '+rows.length+'건',html,'deliveryMemos');
 }
 function dLine(){
   var terminals=S.termList.map(t=>`<option>${t}</option>`).join('');
@@ -7228,12 +7498,12 @@ function dLine(){
 }
 function cc(k,d){S.cnt[k]=Math.max(0,(S.cnt[k]||0)+d);var el=document.getElementById('cnt-'+k);if(el)el.textContent=S.cnt[k];}
 function submitDelivery(){
-  if(!S.cnt.del&&!S.cnt.ret){toast('배송 건수를 입력해 주세요');return;}
-  var data={driver:S.curDriver,category:'택배',client:S.selDCl,dcnt:S.cnt.del,rcnt:S.cnt.ret,fresh:S.cnt.fresh,completedAt:nowT(),photos:{...S.photos.delivery},date:today()};
+  if(!S.cnt.del&&!S.cnt.ret&&!S.cnt.jeon&&!S.cnt.dmg&&!S.cnt.pick){toast('배송 건수를 입력해 주세요');return;}
+  var data={driver:S.curDriver,category:'택배',client:S.selDCl,dcnt:S.cnt.del,rcnt:S.cnt.ret,fresh:S.cnt.fresh,jeon:S.cnt.jeon,dmg:S.cnt.dmg,pick:S.cnt.pick,completedAt:nowT(),photos:{...S.photos.delivery},date:today()};
   var d=ls('deliveries');d.push({id:nid('deliv'),...data});lss('deliveries',d);
   fbW('deliveries',data).catch(()=>{});
-  addAct('delivery',S.curDriver+' '+S.selDCl+' 배송'+S.cnt.del+'건 · 프레시백인센 ₩'+(S.cnt.del*25).toLocaleString(),S.curDriver);
-  S.cnt={del:0,ret:0,fresh:0};S.photos.delivery={};
+  addAct('delivery',S.curDriver+' '+S.selDCl+' 배송'+S.cnt.del+'건'+(S.cnt.dmg?' · 파손'+S.cnt.dmg+'건':'')+' · 프레시백인센 ₩'+(S.cnt.del*25).toLocaleString(),S.curDriver);
+  S.cnt={del:0,ret:0,fresh:0,jeon:0,dmg:0,pick:0};S.photos.delivery={};
   DT('delivery',document.getElementById('pni2'));toast('배송 완료 → 관리자 연동');
 }
 function submitLinehaul(){
@@ -7402,7 +7672,9 @@ function dMypageDriver(){
 function dSettle(){
   var s=ls('settlements').filter(function(x){return x.driver===S.curDriver;});
   var html='<div class="dh"><h2>내 정산</h2><p>관리자 공유 정산서</p></div>';
-  html+='<div style="padding:0 0 10px;text-align:right"><button onclick="forceLoadSettle()" style="padding:7px 16px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔄 새로고침</button></div>';
+  // ★ 정산 페이지 상단에도 오늘 배송금액 카드 표시
+  html+=_buildTodayAmountCard();
+  html+='<div style="padding:8px 0 10px;text-align:right"><button onclick="forceLoadSettle()" style="padding:7px 16px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔄 새로고침</button></div>';
   if(!s.length){
     html+='<div style="padding:24px;text-align:center;font-size:12px"><div style="color:var(--text3);margin-bottom:12px">정산서 없음 — 관리자 작성 후 표시됩니다</div><button onclick="forceLoadSettle()" style="padding:9px 18px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔄 정산서 불러오기</button></div>';
     return html;
