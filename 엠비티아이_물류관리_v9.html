@@ -768,6 +768,20 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
         <div class="fg"><label>공제 사유 (상세)</label><input id="se-dmg-reason" placeholder="예: 3/20 물품 파손"></div>
       </div>
     </div>
+    <div style="background:var(--green-l,#e6f9f0);border-radius:var(--r);padding:10px;margin-bottom:6px;border:1px solid var(--green)">
+      <div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:6px">➕ 기타 수익 (+)</div>
+      <div class="gr">
+        <div class="fg"><label>기타 수익 금액(원)</label><input type="number" id="se-etc-plus" placeholder="0" oninput="updSettle()" style="font-weight:600;color:var(--green)"></div>
+        <div class="fg"><label>기타 수익 사유</label><input id="se-etc-plus-reason" placeholder="예: 특별 보너스"></div>
+      </div>
+    </div>
+    <div style="background:var(--amber-l,#fff8e6);border-radius:var(--r);padding:10px;margin-bottom:6px;border:1px solid var(--amber)">
+      <div style="font-size:11px;font-weight:700;color:var(--amber);margin-bottom:6px">➖ 기타 공제 (-)</div>
+      <div class="gr">
+        <div class="fg"><label>기타 공제 금액(원)</label><input type="number" id="se-etc-minus" placeholder="0" oninput="updSettle()" style="font-weight:600;color:var(--red)"></div>
+        <div class="fg"><label>기타 공제 사유</label><input id="se-etc-minus-reason" placeholder="예: 유니폼 비용"></div>
+      </div>
+    </div>
     <div class="fg"><label>💰 가불금 차감</label><input type="number" id="se-adv" placeholder="0" oninput="updSettle()"></div>
 
     <div style="background:var(--purple-l);border:1px solid var(--purple);border-radius:var(--r);padding:11px;font-size:12px;margin:8px 0;display:flex;gap:16px;flex-wrap:wrap">
@@ -5409,12 +5423,14 @@ function updSettle(){
   var fresh=+document.getElementById('se-fresh')?.value||0;
   var inc=+document.getElementById('se-inc')?.value||0;
   var nocont=+document.getElementById('se-nocont')?.value||0;  // ★ 미계약건
-  var income=damt+ramt+fresh+finc+inc+nocont;
+  var etcPlus=+document.getElementById('se-etc-plus')?.value||0;   // ★ 기타(+)
+  var etcMinus=+document.getElementById('se-etc-minus')?.value||0; // ★ 기타(-)
+  var income=damt+ramt+fresh+finc+inc+nocont+etcPlus-etcMinus;
   var tax=Math.round(income*0.033); var emp=Math.round(income*0.008);
   var te=document.getElementById('se-tax');if(te)te.value=tax;
   var ee=document.getElementById('se-emp');if(ee)ee.value=emp;
   // ★ 실지급 계산: 원천세(3.3%) 및 산재 고정(14000) 제외 → 고용보험(0.8%,80만↑)만 공제
-  var r=calcNet({damt,ramt,fresh,finc,inc,nocont,tax:0,emp,work:0,eq:+document.getElementById('se-eq')?.value||0,dmg:+document.getElementById('se-dmg')?.value||0,adv:+document.getElementById('se-adv')?.value||0});
+  var r=calcNet({damt,ramt,fresh,finc,inc,nocont,etcPlus,etcMinus,tax:0,emp,work:0,eq:+document.getElementById('se-eq')?.value||0,dmg:+document.getElementById('se-dmg')?.value||0,adv:+document.getElementById('se-adv')?.value||0});
   var p=document.getElementById('se-net');if(p)p.textContent='₩'+r.net.toLocaleString();
   var i=document.getElementById('se-income');if(i)i.textContent='₩'+r.income.toLocaleString();
   var d=document.getElementById('se-deduct');if(d)d.textContent='₩'+r.deduct.toLocaleString();
@@ -5429,9 +5445,11 @@ function openSE(name){
   var _df=ls('drivers').find(d=>d.name===name);var _di=document.getElementById('se-driver-id');if(_di)_di.value=_df&&_df.userId?_df.userId:'';
   document.getElementById('se-driver').value=name;
   document.getElementById('se-month').value=new Date().toISOString().slice(0,7);
-  ['se-dcnt','se-damt','se-rcnt','se-ramt','se-fresh','se-finc','se-inc','se-nocont','se-nocont-cnt','se-tax','se-emp','se-eq','se-dmg','se-adv'].forEach(id=>{var el=document.getElementById(id);if(el)el.value='';});
+  ['se-dcnt','se-damt','se-rcnt','se-ramt','se-fresh','se-finc','se-inc','se-nocont','se-nocont-cnt','se-tax','se-emp','se-eq','se-dmg','se-adv','se-etc-plus','se-etc-minus'].forEach(id=>{var el=document.getElementById(id);if(el)el.value='';});
   var sw=document.getElementById('se-work');if(sw)sw.value=14000;
   var sr=document.getElementById('se-dmg-reason');if(sr)sr.value='';
+  var sep=document.getElementById('se-etc-plus-reason');if(sep)sep.value='';
+  var sem=document.getElementById('se-etc-minus-reason');if(sem)sem.value='';
   // 기사 jobsub 확인 → 화주사별 모달 설정
   var d=ls('drivers').find(x=>x.name===name);
   var jobsub=d?.jobsub||'쿠팡';
@@ -5454,9 +5472,11 @@ function openSEi(i){
   var x=ls('settlements')[i];
   document.getElementById('se-driver').value=x.driver;
   document.getElementById('se-month').value=x.month;
-  var mp={dcnt:'dcnt',damt:'damt',rcnt:'rcnt',ramt:'ramt',fresh:'fresh',finc:'finc',inc:'inc','nocont':'nocont','nocont-cnt':'nocontCnt',tax:'tax',emp:'emp',work:'work',eq:'eq',dmg:'dmg',adv:'adv'};
+  var mp={dcnt:'dcnt',damt:'damt',rcnt:'rcnt',ramt:'ramt',fresh:'fresh',finc:'finc',inc:'inc','nocont':'nocont','nocont-cnt':'nocontCnt',tax:'tax',emp:'emp',work:'work',eq:'eq',dmg:'dmg',adv:'adv','etc-plus':'etcPlus','etc-minus':'etcMinus'};
   Object.entries(mp).forEach(([id,k])=>{var el=document.getElementById('se-'+id);if(el)el.value=x[k]||0;});
   var sr=document.getElementById('se-dmg-reason');if(sr)sr.value=x.dmgReason||'';
+  var sep=document.getElementById('se-etc-plus-reason');if(sep)sep.value=x.etcPlusReason||'';
+  var sem=document.getElementById('se-etc-minus-reason');if(sem)sem.value=x.etcMinusReason||'';
   // 용차 처리
   var d=ls('drivers').find(dr=>dr.name===x.driver);
   var jobsub=x.jobsub||d?.jobsub||'쿠팡';
@@ -5493,6 +5513,10 @@ function saveSettle(){
     finc:isCoupang?Math.round(dcnt*25):0, inc:+document.getElementById('se-inc').value||0,
     nocont:+document.getElementById('se-nocont')?.value||0,  // ★ 미계약건 (+수익)
     nocontCnt:+document.getElementById('se-nocont-cnt')?.value||0,  // ★ 미계약 건수
+    etcPlus:+document.getElementById('se-etc-plus')?.value||0,          // ★ 기타(+)
+    etcPlusReason:document.getElementById('se-etc-plus-reason')?.value||'', // ★ 기타(+) 사유
+    etcMinus:+document.getElementById('se-etc-minus')?.value||0,         // ★ 기타(-)
+    etcMinusReason:document.getElementById('se-etc-minus-reason')?.value||'',// ★ 기타(-) 사유
     yongDel:isYong?yDel:0, yongRet:isYong?yRet:0,
     work:+document.getElementById('se-work').value||14000,
     eq:+document.getElementById('se-eq').value||0,
@@ -5503,7 +5527,7 @@ function saveSettle(){
     status:'정산예정',sharedAt:today()
   };
   // 세금 자동 계산
-  var income=data.damt+data.ramt+data.fresh+data.finc+data.inc+data.nocont;
+  var income=data.damt+data.ramt+data.fresh+data.finc+data.inc+data.nocont+(data.etcPlus||0)-(data.etcMinus||0);
   data.tax=Math.round(income*0.033); data.emp=Math.round(income*0.008);
   if(idx>=0)s[idx]=Object.assign(s[idx],data);else{data.id=nid('settle');s.push(data);}
   lss('settlements',s);fbW('settlements',data).catch(()=>{});
