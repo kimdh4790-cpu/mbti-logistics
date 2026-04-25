@@ -12589,7 +12589,7 @@ window._installPromptEvent=null;
   if(location.protocol==='file:'){console.warn('[SW] file:// 환경 — SW 등록 생략');return;}
   // ★ v9.9: 샌드박스/미리보기/Cloudflare Workers 환경 감지 (sw.js 미배치 호스트)
   var host=location.hostname||'';
-  var skipHosts=['claudeusercontent','codepen','jsfiddle','codesandbox','workers.dev'];
+  var skipHosts=['claudeusercontent','codepen','jsfiddle','codesandbox'];
   var shouldSkip=skipHosts.some(function(h){return host.indexOf(h)>=0;});
   if(shouldSkip){
     console.info('[SW] sw.js 미배치 환경 감지 ('+host+') — SW 등록 생략');
