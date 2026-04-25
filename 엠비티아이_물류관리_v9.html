@@ -1200,7 +1200,11 @@ function cleanActLog(){
 function updBadge(){
   var oa=ls('accidents').filter(a=>a.status==='접수중'||a.status==='처리중').length;
   var ab=document.getElementById('acc-badge');if(ab)ab.style.display=oa?'':'none';
-  var pnd=ls('drivers').filter(d=>d.isNew||d.status==='pending').length;
+  // ★ 수정: 실제 승인 대기 중인 기사만 정확히 필터링
+  var pnd=ls('drivers').filter(d=>{
+    // 완전 새로운 기사(isNew=true)이거나 명시적으로 pending 상태이고, 활성화되지 않은 경우만
+    return (d.isNew===true || d.status==='pending') && d.is_active!==true;
+  }).length;
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
 function updFbUI(){
@@ -2068,8 +2072,8 @@ function rDeliveryTaxi(){
     var totJ=g.rows.reduce(function(s,x){return s+(x.jeon||0);},0);
     var totDmg=g.rows.reduce(function(s,x){return s+(x.dmg||0);},0);
     var totP=g.rows.reduce(function(s,x){return s+(x.pick||0);},0);
-    var summary='<div style="font-size:11px;color:var(--text2);padding:4px 0 6px">배송 <strong style="color:var(--teal)">'+totD+'</strong> · 반품 <strong>'+totR+'</strong> · 전쥐 <strong style="color:var(--blue)">'+totJ+'</strong> · 파손 <strong style="color:var(--red)">'+totDmg+'</strong> · 채번 <strong>'+totP+'</strong></div>';
-    return _admDateGroup(g.date,g.rows.length,summary+'<table class="tbl"><thead><tr><th style="width:30px"><input type="checkbox" onchange="toggleAllChk(this,\'deliveries\')" style="width:15px;height:15px;cursor:pointer"></th><th>기사</th><th>화주사</th><th>배송</th><th>반품</th><th>프레쉬</th><th>전쥐</th><th>파손</th><th>채번</th><th>완료</th><th>사진</th></tr></thead><tbody>'+rows+'</tbody></table>');
+    var summary='<div style="font-size:11px;color:var(--text2);padding:4px 0 6px">배송 <strong style="color:var(--teal)">'+totD+'</strong> · 반품 <strong>'+totR+'</strong> · 전취 <strong style="color:var(--blue)">'+totJ+'</strong> · 파손 <strong style="color:var(--red)">'+totDmg+'</strong> · 채번 <strong>'+totP+'</strong></div>';
+    return _admDateGroup(g.date,g.rows.length,summary+'<table class="tbl"><thead><tr><th style="width:30px"><input type="checkbox" onchange="toggleAllChk(this,\'deliveries\')" style="width:15px;height:15px;cursor:pointer"></th><th>기사</th><th>화주사</th><th>배송</th><th>반품</th><th>프레쉬</th><th>전취</th><th>파손</th><th>채번</th><th>완료</th><th>사진</th></tr></thead><tbody>'+rows+'</tbody></table>');
   }).join(''):'<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">해당 기간 데이터 없음</div>';
   return `<div class="card"><div class="ch"><span class="ct">📦 운행 현황 (${d.length}건)</span><button onclick="deleteSelected('deliveries','운행')" style="padding:4px 10px;background:var(--red-l);border:1px solid var(--red);border-radius:6px;font-size:11px;color:var(--red);cursor:pointer;font-weight:600">🗑 선택삭제</button></div>${tabHTML}${bodyHTML}</div>`;
 }
@@ -2111,7 +2115,7 @@ function rDelivery(){
     var totD=g.rows.reduce(function(s,x){return s+(x.dcnt||0);},0);
     var totR=g.rows.reduce(function(s,x){return s+(x.rcnt||0);},0);
     var summary='<div style="font-size:11px;color:var(--text2);padding:4px 0 6px">배송 합계 <strong style="color:var(--teal)">'+totD+'건</strong> · 반품 <strong>'+totR+'건</strong></div>';
-    return _admDateGroup(g.date,g.rows.length,summary+'<table class="tbl"><thead><tr><th>기사</th><th>화주사</th><th>배송</th><th>반품</th><th>프레쉬</th><th>전쥐</th><th>파손</th><th>채번</th><th>완료</th><th>사진</th></tr></thead><tbody>'+rows+'</tbody></table>');
+    return _admDateGroup(g.date,g.rows.length,summary+'<table class="tbl"><thead><tr><th>기사</th><th>화주사</th><th>배송</th><th>반품</th><th>프레쉬</th><th>전취</th><th>파손</th><th>채번</th><th>완료</th><th>사진</th></tr></thead><tbody>'+rows+'</tbody></table>');
   }).join(''):'<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">해당 기간 데이터 없음</div>';
   return `<div class="card"><div class="ch"><span class="ct">배송·간선 현황 (${d.length}건)</span></div>${tabHTML}${bodyHTML}</div>`;
 }
@@ -2367,7 +2371,7 @@ function rTodaySettle(){
     +'<th style="text-align:right">배송</th>'
     +'<th style="text-align:right">반품</th>'
     +'<th style="text-align:right">프레시</th>'
-    +'<th style="text-align:right">전쥐</th>'
+    +'<th style="text-align:right">전취</th>'
     +'<th style="text-align:right">파손</th>'
     +'<th style="text-align:right">채번</th>'
     +'<th style="text-align:right">합계금액</th>'
@@ -2423,7 +2427,7 @@ function exportTodaySettleCSV(){
     if(!driversToday[d.driver])driversToday[d.driver]={driver:d.driver,routeNo:'',dels:[]};
     driversToday[d.driver].dels.push(d);
   });
-  var rows=[['일자','기사','라우트','단가','배송','반품','프레시','전쥐','파손','채번','합계금액']];
+  var rows=[['일자','기사','라우트','단가','배송','반품','프레시','전취','파손','채번','합계금액']];
   Object.keys(driversToday).sort().forEach(function(name){
     var info=driversToday[name];
     var drv=allDrivers.find(function(x){return x.name===name;})||{};
@@ -2701,10 +2705,10 @@ function autoSendTaxOnApprove(driverName, month){
       toast('⚠️ 세금계산서 자동 생성 실패 - 수동으로 전달해주세요');
       return;
     }
-    // ★ v9.7: 고화질 캡처 (scale 2.0 + 품질 0.92, 잘림 방지 width/height 명시)
+    // ★ v9.7: 고화질 캡처 (scale 2.5 + 품질 0.95, 잘림 방지 width/height 명시)
     var wrapW=wrap.scrollWidth, wrapH=wrap.scrollHeight;
     html2canvas(wrap,{
-      scale:2,
+      scale:2.5,
       useCORS:true,
       backgroundColor:'#ffffff',
       logging:false,
@@ -2714,13 +2718,19 @@ function autoSendTaxOnApprove(driverName, month){
       windowHeight:wrapH
     })
     .then(function(canvas){
-      var dataUrl=canvas.toDataURL('image/jpeg',0.92);
+      var dataUrl=canvas.toDataURL('image/jpeg',0.95);
       // Firebase Storage 사용 가능하면 고화질 그대로 (Storage는 크기 제한 없음)
-      // base64 fallback은 단계적으로 낮춤
+      // base64 fallback은 단계적으로 낮춤 (최저 0.75 유지)
       var fallbackUrl=dataUrl;
+      if(fallbackUrl.length>900000) fallbackUrl=canvas.toDataURL('image/jpeg',0.85);
       if(fallbackUrl.length>900000) fallbackUrl=canvas.toDataURL('image/jpeg',0.75);
-      if(fallbackUrl.length>900000) fallbackUrl=canvas.toDataURL('image/jpeg',0.55);
-      if(fallbackUrl.length>900000) fallbackUrl=canvas.toDataURL('image/jpeg',0.40);
+      // 마지막에도 너무 크면 scale 낮춰서 다시 시도
+      if(fallbackUrl.length>900000){
+        var c2=document.createElement('canvas');
+        c2.width=canvas.width*0.7; c2.height=canvas.height*0.7;
+        c2.getContext('2d').drawImage(canvas,0,0,c2.width,c2.height);
+        fallbackUrl=c2.toDataURL('image/jpeg',0.85);
+      }
       
       var saveNote=function(imgUrl){
         var note={type:'tax_invoice',driver:driverName,month:month,img:imgUrl,
@@ -3749,12 +3759,37 @@ function editDrvTodayDispatch(fbId, name){
   var curCamp=isToday?(cur.camp||drv.camp||''):(drv.camp||'');
   var curRoute=isToday?(cur.routeNo||''):'';
 
-  // 캠프 입력
-  var camp=prompt('📍 '+name+' 당일 배차 — 캠프 (예: 부산1캠프)\n\n현재: '+(curCamp||'없음'),curCamp);
+  // ★ 스케줄에서 자동으로 라우트 정보 가져오기
+  var schedRoute='', schedCamp='';
+  try{
+    var td=today(); // YYYY-MM-DD
+    var yr=td.slice(0,4), mo=td.slice(5,7);
+    var schedKey='schedule_'+name+'_month_'+yr+'_'+(parseInt(mo,10)-1); // month는 0-based
+    var schedData=JSON.parse(localStorage.getItem(schedKey)||'{}');
+    var todayEntry=schedData[td];
+    if(todayEntry&&typeof todayEntry==='object'){
+      schedRoute=todayEntry.route||'';
+      schedCamp=todayEntry.camp||'';
+    }
+  }catch(e){}
+
+  // 스케줄에서 가져온 정보가 있으면 우선 사용, 없으면 현재 정보 사용
+  var suggestCamp=schedCamp||curCamp;
+  var suggestRoute=schedRoute||curRoute;
+
+  // 캠프 입력 (스케줄 자동 채워짐)
+  var campPrompt='📍 '+name+' 당일 배차 — 캠프 (예: 부산1캠프)';
+  if(schedCamp) campPrompt+='\n🔄 근무표에서 자동: '+schedCamp;
+  campPrompt+='\n\n현재: '+(suggestCamp||'없음');
+  var camp=prompt(campPrompt, suggestCamp);
   if(camp===null)return;
   camp=(camp||'').trim();
-  // 라우트 입력
-  var routeNo=prompt('📍 '+name+' 당일 배차 — 라우트 번호 (예: 215A, 215B 또는 215A,215B)\n\n현재: '+(curRoute||'없음'),curRoute);
+  
+  // 라우트 입력 (스케줄 자동 채워짐)
+  var routePrompt='📍 '+name+' 당일 배차 — 라우트 번호 (예: 215A, 215B 또는 215A,215B)';
+  if(schedRoute) routePrompt+='\n🔄 근무표에서 자동: '+schedRoute;
+  routePrompt+='\n\n현재: '+(suggestRoute||'없음');
+  var routeNo=prompt(routePrompt, suggestRoute);
   if(routeNo===null)return;
   routeNo=(routeNo||'').trim().toUpperCase();
 
@@ -3883,7 +3918,7 @@ function showWithdrawalList(){
   mo.innerHTML='<div onclick="event.stopPropagation()" style="background:var(--bg);border:1px solid var(--border);border-radius:12px;max-width:95vw;width:500px;max-height:90vh;overflow-y:auto">'
     +'<div style="padding:14px;background:var(--red);color:#fff;border-radius:10px 10px 0 0;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10">'
     +'<div style="font-size:15px;font-weight:800">🚪 탈퇴 신청 관리 ('+list.length+'건)</div>'
-    +'<button onclick="this.closest(\'div[style*=z-index]\').parentElement.remove()" style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer">✕</button>'
+    +'<button onclick="this.closest(\'div[style*=&quot;position:fixed&quot;]\').remove()" style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer">✕</button>'
     +'</div>'
     +'<div style="padding:14px">'+bodyHtml+'</div>'
     +'</div>';
@@ -6645,6 +6680,14 @@ function _vdn(id){
   // 📢 공지사항이면 전용 뷰어로 분기
   if(item.type==='notice'){_viewNotice(id);return;}
   if(!item.img)return;
+  // ★ v9.9: 한번 본 알림은 자동으로 dismiss 처리 (재팝업 방지)
+  // 세금계산서/명세서는 보관함에서 재열람 가능하므로 알림박스에서만 숨김
+  try{
+    var seenMapKey='notif_dismissed_'+S.curDriver;
+    var seenMap=JSON.parse(localStorage.getItem(seenMapKey)||'{}');
+    seenMap[id]=Date.now();
+    localStorage.setItem(seenMapKey,JSON.stringify(seenMap));
+  }catch(e){}
   var mo=document.createElement('div');
   mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:800;display:flex;align-items:center;justify-content:center;padding:14px';
   mo.onclick=function(){mo.remove();};
@@ -7892,19 +7935,18 @@ function dTaxi(){
   var camCols=isCoupangDriver?'max-width:180px':'';
   var isCoupangDrv=(S.curJobsub==='쿠팡'||S.curJobtype==='쿠팡'||S.selDCl==='쿠팡');
 
-  // ★ 오늘 배송금액 카드 (기사별 단가 적용)
-  var todayAmountCard=_buildTodayAmountCard();
+  // ★ 오늘 배송금액 카드 (기사별 단가 적용) - 삭제됨
+  // var todayAmountCard=_buildTodayAmountCard();
 
   return clientBtns
-    +todayAmountCard
     +'<div class="dc"><div class="dct">'+delivLabel+' 배송 건수</div>'
     +'<div class="count-row"><div><div class="count-label">배송 상품</div><div class="count-sub">일반 배송</div></div><div class="count-ctrl"><button class="count-btn" onclick="cc(\'del\',-1)">−</button><div class="count-num" id="cnt-del">'+S.cnt.del+'</div><button class="count-btn" onclick="cc(\'del\',1)">+</button><input type="number" placeholder="직접입력" oninput="S.cnt.del=Math.max(0,+this.value||0);document.getElementById(\'cnt-del\').textContent=S.cnt.del" style="width:70px;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--text);text-align:center"></div></div>'
     +'<div class="count-row"><div><div class="count-label">반품</div></div><div class="count-ctrl"><button class="count-btn" onclick="cc(\'ret\',-1)">−</button><div class="count-num" id="cnt-ret">'+S.cnt.ret+'</div><button class="count-btn" onclick="cc(\'ret\',1)">+</button><input type="number" placeholder="직접입력" oninput="S.cnt.ret=Math.max(0,+this.value||0);document.getElementById(\'cnt-ret\').textContent=S.cnt.ret" style="width:70px;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--text);text-align:center"></div></div>'
     +(isCoupangDrv?'<div class="count-row"><div><div class="count-label">프레쉬백</div></div><div class="count-ctrl"><button class="count-btn" onclick="cc(\'fresh\',-1)">−</button><div class="count-num" id="cnt-fresh">'+S.cnt.fresh+'</div><button class="count-btn" onclick="cc(\'fresh\',1)">+</button><input type="number" placeholder="직접입력" oninput="S.cnt.fresh=Math.max(0,+this.value||0);document.getElementById(\'cnt-fresh\').textContent=S.cnt.fresh" style="width:70px;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--text);text-align:center"></div></div>':'')
-    +'<div class="count-row"><div><div class="count-label">전쥐건</div></div><div class="count-ctrl"><button class="count-btn" onclick="cc(\'jeon\',-1)">−</button><div class="count-num" id="cnt-jeon">'+S.cnt.jeon+'</div><button class="count-btn" onclick="cc(\'jeon\',1)">+</button><input type="number" placeholder="직접입력" oninput="S.cnt.jeon=Math.max(0,+this.value||0);document.getElementById(\'cnt-jeon\').textContent=S.cnt.jeon" style="width:70px;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--text);text-align:center"></div></div>'
+    +'<div class="count-row"><div><div class="count-label">전취건</div></div><div class="count-ctrl"><button class="count-btn" onclick="cc(\'jeon\',-1)">−</button><div class="count-num" id="cnt-jeon">'+S.cnt.jeon+'</div><button class="count-btn" onclick="cc(\'jeon\',1)">+</button><input type="number" placeholder="직접입력" oninput="S.cnt.jeon=Math.max(0,+this.value||0);document.getElementById(\'cnt-jeon\').textContent=S.cnt.jeon" style="width:70px;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--text);text-align:center"></div></div>'
     +'<div class="count-row"><div><div class="count-label">파손</div></div><div class="count-ctrl"><button class="count-btn" onclick="cc(\'dmg\',-1)">−</button><div class="count-num" id="cnt-dmg">'+S.cnt.dmg+'</div><button class="count-btn" onclick="cc(\'dmg\',1)">+</button><input type="number" placeholder="직접입력" oninput="S.cnt.dmg=Math.max(0,+this.value||0);document.getElementById(\'cnt-dmg\').textContent=S.cnt.dmg" style="width:70px;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--text);text-align:center"></div></div>'
     +'<div class="count-row"><div><div class="count-label">채번수량</div></div><div class="count-ctrl"><button class="count-btn" onclick="cc(\'pick\',-1)">−</button><div class="count-num" id="cnt-pick">'+S.cnt.pick+'</div><button class="count-btn" onclick="cc(\'pick\',1)">+</button><input type="number" placeholder="직접입력" oninput="S.cnt.pick=Math.max(0,+this.value||0);document.getElementById(\'cnt-pick\').textContent=S.cnt.pick" style="width:70px;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--text);text-align:center"></div></div>'
-    +'<div style="margin-top:8px;padding:7px;background:var(--bg3);border-radius:var(--r);font-size:12px">배송 <strong>'+S.cnt.del+'</strong>건 · 반품 <strong>'+S.cnt.ret+'</strong>'+(isCoupangDrv?' · 프레쉬 <strong>'+S.cnt.fresh+'</strong>'+insenHTML:'')+' · 전쥐 <strong>'+S.cnt.jeon+'</strong> · 파손 <strong style="color:var(--red)">'+S.cnt.dmg+'</strong> · 채번 <strong>'+S.cnt.pick+'</strong>'+yongHTML+'</div>'
+    +'<div style="margin-top:8px;padding:7px;background:var(--bg3);border-radius:var(--r);font-size:12px">배송 <strong>'+S.cnt.del+'</strong>건 · 반품 <strong>'+S.cnt.ret+'</strong>'+(isCoupangDrv?' · 프레쉬 <strong>'+S.cnt.fresh+'</strong>'+insenHTML:'')+' · 전취 <strong>'+S.cnt.jeon+'</strong> · 파손 <strong style="color:var(--red)">'+S.cnt.dmg+'</strong> · 채번 <strong>'+S.cnt.pick+'</strong>'+yongHTML+'</div>'
     +'</div>'
     +'<div style="padding:0 10px;margin-top:6px">'
     +'<label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">📷 배송완료 증빙 (후면 카메라 즉시 호출)</label>'
@@ -7916,7 +7958,8 @@ function dTaxi(){
     +_drvHistMemo();
 }
 
-// ★ 오늘 배송금액 카드 — 기사별 단가 × 오늘 누적 배송건
+// ★ 오늘 배송금액 카드 — 기사별 단가 × 오늘 누적 배송건 (사용 중지)
+/*
 function _buildTodayAmountCard(){
   var todayDels=ls('deliveries').filter(function(d){return d.driver===S.curDriver&&d.date===today();});
   var savedDcnt=todayDels.reduce(function(s,d){return s+(+d.dcnt||0);},0);
@@ -7969,6 +8012,7 @@ function _buildTodayAmountCard(){
     +(savedDcnt>0?'<div style="font-size:10px;color:var(--text3);margin-top:6px;text-align:center">※ 저장 완료 '+savedDcnt+'건 + 입력 중 '+pendingDcnt+'건</div>':'')
     +'</div>';
 }
+*/
 
 // ★ 운행 메모 카드 (송장번호 + 사유 + 사진, 60일 보관)
 function _drvMemoCard(){
@@ -8227,8 +8271,8 @@ function dMypageDriver(){
 function dSettle(){
   var s=ls('settlements').filter(function(x){return x.driver===S.curDriver;});
   var html='<div class="dh"><h2>내 정산</h2><p>관리자 공유 정산서</p></div>';
-  // ★ 정산 페이지 상단에도 오늘 배송금액 카드 표시
-  html+=_buildTodayAmountCard();
+  // ★ 정산 페이지 상단에도 오늘 배송금액 카드 표시 (사용 중지)
+  // html+=_buildTodayAmountCard();
   html+='<div style="padding:8px 0 10px;text-align:right"><button onclick="forceLoadSettle()" style="padding:7px 16px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔄 새로고침</button></div>';
   if(!s.length){
     html+='<div style="padding:24px;text-align:center;font-size:12px"><div style="color:var(--text3);margin-bottom:12px">정산서 없음 — 관리자 작성 후 표시됩니다</div><button onclick="forceLoadSettle()" style="padding:9px 18px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔄 정산서 불러오기</button></div>';
@@ -9043,7 +9087,7 @@ function sendTaxToDriver(driverOrIdx, month){
   // ★ v9.7: 고화질 캡처
   var wrapW=wrap.scrollWidth, wrapH=wrap.scrollHeight;
   html2canvas(wrap,{
-    scale:2,
+    scale:2.5,
     useCORS:true,
     backgroundColor:'#ffffff',
     logging:false,
@@ -9053,12 +9097,18 @@ function sendTaxToDriver(driverOrIdx, month){
     windowHeight:wrapH
   })
   .then(function(canvas){
-    var dataUrl=canvas.toDataURL('image/jpeg',0.92);
-    // base64 fallback용 단계적 압축
+    var dataUrl=canvas.toDataURL('image/jpeg',0.95);
+    // base64 fallback용 단계적 압축 (최저 0.75 유지 → 글자 가독성 보장)
     var fallbackUrl=dataUrl;
+    if(fallbackUrl.length>900000) fallbackUrl=canvas.toDataURL('image/jpeg',0.85);
     if(fallbackUrl.length>900000) fallbackUrl=canvas.toDataURL('image/jpeg',0.75);
-    if(fallbackUrl.length>900000) fallbackUrl=canvas.toDataURL('image/jpeg',0.55);
-    if(fallbackUrl.length>900000) fallbackUrl=canvas.toDataURL('image/jpeg',0.40);
+    // 마지막에도 너무 크면 scale 낮춰서 다시 시도 (압축 대신 해상도 낮춤)
+    if(fallbackUrl.length>900000){
+      var c2=document.createElement('canvas');
+      c2.width=canvas.width*0.7; c2.height=canvas.height*0.7;
+      c2.getContext('2d').drawImage(canvas,0,0,c2.width,c2.height);
+      fallbackUrl=c2.toDataURL('image/jpeg',0.85);
+    }
     var saveNote=function(imgUrl){
       var note={type:'tax_invoice',driver:x.driver,month:x.month,img:imgUrl,
         sentAt:new Date().toISOString(),status:'전달완료',sentBy:'관리자'};
@@ -10562,7 +10612,7 @@ function _viewAttendMap(driverName,date){
     var html='<div onclick="event.stopPropagation()" style="background:var(--bg);border:1px solid var(--border);border-radius:12px;max-width:95vw;width:500px;max-height:90vh;overflow-y:auto">';
     html+='<div style="padding:14px;background:var(--blue);color:#fff;border-radius:10px 10px 0 0;display:flex;align-items:center;justify-content:space-between">';
     html+='<div><div style="font-size:15px;font-weight:800">🗺️ '+driverName+' 기사님</div><div style="font-size:11px;opacity:.85;margin-top:3px">'+date+' 출퇴근 위치</div></div>';
-    html+='<button onclick="this.closest(\'div[style*=z-index]\').parentElement.remove()" style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer">✕</button>';
+    html+='<button onclick="this.closest(\'div[style*=&quot;position:fixed&quot;]\').remove()" style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer">✕</button>';
     html+='</div>';
     html+='<div style="padding:14px">';
     
@@ -11844,24 +11894,37 @@ window._installPromptEvent=null;
   if(!('serviceWorker' in navigator))return;
   // file:// 환경에서는 등록 불가 (https / localhost / GitHub Pages 만 가능)
   if(location.protocol==='file:'){console.warn('[SW] file:// 환경 — SW 등록 생략');return;}
+  // ★ v9.9: 샌드박스/미리보기 환경 감지 (claudeusercontent, codepen 등)
+  var host=location.hostname||'';
+  if(host.indexOf('claudeusercontent')>=0||host.indexOf('codepen')>=0||host.indexOf('jsfiddle')>=0||host.indexOf('codesandbox')>=0){
+    console.info('[SW] 미리보기 환경 — SW 등록 생략 (배포 시 정상 작동)');
+    return;
+  }
   window.addEventListener('load',function(){
-    navigator.serviceWorker.register('./sw.js',{scope:'./'})
-      .then(function(reg){
-        console.log('[SW] 등록 완료, scope:', reg.scope);
-        window._swRegistration=reg;
-        // 업데이트 감지
-        reg.addEventListener('updatefound',function(){
-          var newSw=reg.installing;
-          if(!newSw)return;
-          newSw.addEventListener('statechange',function(){
-            if(newSw.state==='installed'&&navigator.serviceWorker.controller){
-              console.log('[SW] 새 버전 감지 — 다음 새로고침 시 적용');
-              if(typeof toast==='function')toast('🔄 앱이 업데이트되었습니다 (새로고침 시 적용)');
-            }
+    // ★ sw.js 파일 존재 여부 먼저 체크 (404 경고 방지)
+    fetch('./sw.js',{method:'HEAD'}).then(function(res){
+      if(!res.ok){
+        console.info('[SW] sw.js 미배치 — SW 등록 생략 ('+res.status+')');
+        return;
+      }
+      navigator.serviceWorker.register('./sw.js',{scope:'./'})
+        .then(function(reg){
+          console.log('[SW] 등록 완료, scope:', reg.scope);
+          window._swRegistration=reg;
+          // 업데이트 감지
+          reg.addEventListener('updatefound',function(){
+            var newSw=reg.installing;
+            if(!newSw)return;
+            newSw.addEventListener('statechange',function(){
+              if(newSw.state==='installed'&&navigator.serviceWorker.controller){
+                console.log('[SW] 새 버전 감지 — 다음 새로고침 시 적용');
+                if(typeof toast==='function')toast('🔄 앱이 업데이트되었습니다 (새로고침 시 적용)');
+              }
+            });
           });
-        });
-      })
-      .catch(function(e){console.warn('[SW] 등록 실패:',e);});
+        })
+        .catch(function(e){console.warn('[SW] 등록 실패:',e&&e.message||e);});
+    }).catch(function(){console.info('[SW] sw.js fetch 실패 — SW 등록 생략');});
   });
   // SW에서 메인 페이지로 메시지 (백그라운드 동기화 등)
   navigator.serviceWorker.addEventListener('message',function(e){
