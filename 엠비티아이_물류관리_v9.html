@@ -620,7 +620,6 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
           <div class="ni" onclick="SP('delivery_taxi',this)">📦 운행 현황</div>
           <div class="ni" onclick="SP('delivery_line',this)">🚚 간선 현황</div>
           <div class="ni" onclick="SP('memo_log',this)">📝 운행 메모 <span id="memo-badge" style="display:none;background:var(--amber);color:#fff;font-size:9px;padding:1px 5px;border-radius:999px;margin-left:2px">N</span></div>
-          <div class="ni" onclick="SP('today_settle',this)">📊 오늘 정산 (실시간)</div>
           <div class="ni" onclick="SP('accident',this)">🚨 사고 접수 <span id="acc-badge" style="display:none;background:var(--red);color:#fff;font-size:9px;padding:1px 5px;border-radius:999px;margin-left:2px">!</span></div>
           <div class="ni" onclick="SP('temp',this)">🌡 온도 기록</div>
         </div>
@@ -1200,10 +1199,22 @@ function cleanActLog(){
 function updBadge(){
   var oa=ls('accidents').filter(a=>a.status==='접수중'||a.status==='처리중').length;
   var ab=document.getElementById('acc-badge');if(ab)ab.style.display=oa?'':'none';
-  // ★ 수정: 실제 승인 대기 중인 기사만 정확히 필터링
+  // ★ v9.9: 데이터 자동 정리 — 거부/탈퇴된 기사의 stale isNew=true 제거
+  try{
+    var allD=ls('drivers');
+    var fixed=false;
+    allD.forEach(function(d){
+      if((d.status==='거부'||d.status==='탈퇴'||d.status==='reject'||d.status==='withdrawal')&&d.isNew===true){
+        d.isNew=false; fixed=true;
+        if(FB&&_db&&d.fbId){_db.collection('drivers').doc(d.fbId).update({isNew:false}).catch(function(){});}
+      }
+    });
+    if(fixed)lss('drivers',allD);
+  }catch(e){}
+  // ★ v9.9: 거부/탈퇴는 제외 — 실제 승인 대기 중인 기사만 카운트
   var pnd=ls('drivers').filter(d=>{
-    // 완전 새로운 기사(isNew=true)이거나 명시적으로 pending 상태이고, 활성화되지 않은 경우만
-    return (d.isNew===true || d.status==='pending') && d.is_active!==true;
+    return (d.isNew===true || d.status==='pending') && d.is_active!==true
+      && d.status!=='거부' && d.status!=='탈퇴' && d.status!=='reject' && d.status!=='withdrawal';
   }).length;
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
@@ -1868,7 +1879,7 @@ async function submitReg(){
 }
 
 // ══ 관리자 페이지
-var PT={archive:'📋 3개월 기록 보관소',audit:'🔒 보안 감사 로그',dash:'대시보드',schedule_admin:'📅 근무표 관리',memo:'📝 메모 달력',sync:'기사 연동',entry:'입차 현황',delivery_taxi:'📦 운행 현황',delivery_line:'🚚 간선 현황',delivery:'운송현황',accident:'사고 접수',temp:'온도 기록',settle:'정산서 관리',drivers:'기사 관리',insurance:'쿠팡 라우트 단가표',mypage:'내 정보 수정',inquiries:'📩 홈페이지 문의함',notice:'📢 공지사항 게시판',attend:'📍 출퇴근 조회',memo_log:'📝 운행 메모 (60일)',today_settle:'📊 오늘 정산 (실시간)'};
+var PT={archive:'📋 3개월 기록 보관소',audit:'🔒 보안 감사 로그',dash:'대시보드',schedule_admin:'📅 근무표 관리',memo:'📝 메모 달력',sync:'기사 연동',entry:'입차 현황',delivery_taxi:'📦 운행 현황',delivery_line:'🚚 간선 현황',delivery:'운송현황',accident:'사고 접수',temp:'온도 기록',settle:'정산서 관리',drivers:'기사 관리',insurance:'쿠팡 라우트 단가표',mypage:'내 정보 수정',inquiries:'📩 홈페이지 문의함',notice:'📢 공지사항 게시판',attend:'📍 출퇴근 조회',memo_log:'📝 운행 메모 (60일)'};
 function SP(pg,el){
   S.page=pg;
   // 기사 관리 페이지 진입 시 Firebase 최신 데이터 즉시 로드
@@ -1892,7 +1903,7 @@ function SP(pg,el){
     if(typeof addAct==='function')addAct('security','관리자 페이지 무단 접근 시도: '+pg,null);
     return;
   }
-  var m={archive:rArchive,audit:rAuditLog,dash:rDash,sync:rSync,schedule_admin:rScheduleAdmin,memo:rMemoCalendar,entry:rEntry,delivery_taxi:rDeliveryTaxi,delivery_line:rDeliveryLine,delivery:rDelivery,accident:rAcc,temp:rTemp,settle:rSettle,drivers:rDrivers,insurance:rInsurance,mypage:rMypage,inquiries:rInquiries,notice:rNoticePanel,attend:rAttendPanel,memo_log:rMemoLog,today_settle:rTodaySettle};
+  var m={archive:rArchive,audit:rAuditLog,dash:rDash,sync:rSync,schedule_admin:rScheduleAdmin,memo:rMemoCalendar,entry:rEntry,delivery_taxi:rDeliveryTaxi,delivery_line:rDeliveryLine,delivery:rDelivery,accident:rAcc,temp:rTemp,settle:rSettle,drivers:rDrivers,insurance:rInsurance,mypage:rMypage,inquiries:rInquiries,notice:rNoticePanel,attend:rAttendPanel,memo_log:rMemoLog};
   try{
     document.getElementById('ca').innerHTML=(m[pg]||rDash)();
   }catch(e){
@@ -1911,7 +1922,11 @@ function rDash(){
   var allDrv=ls('drivers').filter(function(d){return d.is_active!==false&&d.status!=='탈퇴'&&!d.isNew;});
   var unverified=allDrv.filter(function(d){return !d.verifiedAt;}).length;
   var todayMemos=ls('deliveryMemos').filter(function(m){return m.date===today();}).length;
-  var pendingApprovals=ls('drivers').filter(function(d){return d.isNew||d.status==='pending';}).length;
+  var pendingApprovals=ls('drivers').filter(function(d){
+    // ★ v9.9: 거부/탈퇴 제외 + is_active 체크 — updBadge와 동일 필터
+    return (d.isNew||d.status==='pending') && d.is_active!==true
+      && d.status!=='거부' && d.status!=='탈퇴' && d.status!=='reject' && d.status!=='withdrawal';
+  }).length;
 
   var delItems=[
     {key:'entries',label:'입차',icon:'🚪'},
@@ -3851,9 +3866,9 @@ function rejDriver(id){
   var d=ls('drivers');
   var f=d.find(x=>x.fbId===id)||d.find(x=>String(x.id)===String(id));
   if(!f){toast('❌ 기사 정보 없음. 새로고침 후 재시도');return;}
-  f.status='거부';f.is_active=false;
+  f.status='거부';f.is_active=false;f.isNew=false;  // ★ v9.9: isNew도 false로 (대기 알림 방지)
   lss('drivers',d);
-  if(FB&&_db&&f.fbId)_db.collection('drivers').doc(f.fbId).update({status:'거부',is_active:false}).catch(()=>{});
+  if(FB&&_db&&f.fbId)_db.collection('drivers').doc(f.fbId).update({status:'거부',is_active:false,isNew:false}).catch(()=>{});
   SP(S.page,null);updBadge();toast(f.name+' 거부');
 }
 
@@ -3866,7 +3881,10 @@ function showWithdrawalList(){
   var all=ls('drivers');
   var list=all.filter(function(d){return d.withdrawalRequest && d.withdrawalRequest.status==='pending';});
   
+  // ★ v9.9: 모달 ID로 직접 참조 (selector 매칭 실패 방지)
+  var moId='withdraw-list-modal-'+Date.now();
   var mo=document.createElement('div');
+  mo.id=moId;
   mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:900;display:flex;align-items:center;justify-content:center;padding:14px';
   mo.onclick=function(e){if(e.target===mo)mo.remove();};
   
@@ -3918,7 +3936,7 @@ function showWithdrawalList(){
   mo.innerHTML='<div onclick="event.stopPropagation()" style="background:var(--bg);border:1px solid var(--border);border-radius:12px;max-width:95vw;width:500px;max-height:90vh;overflow-y:auto">'
     +'<div style="padding:14px;background:var(--red);color:#fff;border-radius:10px 10px 0 0;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10">'
     +'<div style="font-size:15px;font-weight:800">🚪 탈퇴 신청 관리 ('+list.length+'건)</div>'
-    +'<button onclick="this.closest(\'div[style*=&quot;position:fixed&quot;]\').remove()" style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer">✕</button>'
+    +'<button onclick="document.getElementById(\''+moId+'\').remove()" style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer">✕</button>'
     +'</div>'
     +'<div style="padding:14px">'+bodyHtml+'</div>'
     +'</div>';
@@ -5766,27 +5784,69 @@ function sendStmtToDriver(i){
     x=s[i]; // 업데이트된 값 반영
   }catch(e){/* 저장 실패해도 이미지 생성 계속 */}
   toast('📸 명세서 이미지 생성 중...');
-  html2canvas(wrap,{scale:0.8,useCORS:true,backgroundColor:'#ffffff',logging:false})
+  // ★ v9.9: 고화질 캡처 + Storage 사용 (기사 화질 동일하게 유지)
+  var wrapW=wrap.scrollWidth, wrapH=wrap.scrollHeight;
+  html2canvas(wrap,{
+    scale:2.5,
+    useCORS:true,
+    backgroundColor:'#ffffff',
+    logging:false,
+    width:wrapW,
+    height:wrapH,
+    windowWidth:wrapW,
+    windowHeight:wrapH
+  })
   .then(function(canvas){
-    var img=canvas.toDataURL('image/jpeg',0.70);
-    if(img.length>900000){toast('⚠️ 명세서 이미지가 너무 큽니다');return;}
+    var dataUrl=canvas.toDataURL('image/jpeg',0.95);
+    // base64 fallback (Storage 실패 시) — 가독성 유지
+    var fallbackUrl=dataUrl;
+    if(fallbackUrl.length>900000) fallbackUrl=canvas.toDataURL('image/jpeg',0.85);
+    if(fallbackUrl.length>900000) fallbackUrl=canvas.toDataURL('image/jpeg',0.75);
+    if(fallbackUrl.length>900000){
+      var c2=document.createElement('canvas');
+      c2.width=canvas.width*0.7; c2.height=canvas.height*0.7;
+      c2.getContext('2d').drawImage(canvas,0,0,c2.width,c2.height);
+      fallbackUrl=c2.toDataURL('image/jpeg',0.85);
+    }
     var r=calcNet(x);
-    var note={type:'settlement',driver:x.driver,month:x.month,
-      income:r.income,net:r.net,img:img,
-      sentAt:new Date().toISOString(),status:'전달완료',sentBy:'관리자'};
-    // ① 보관함 저장
-    try{var st=JSON.parse(localStorage.getItem('mbti_stmt_store')||'{}');
-      if(!st[x.driver])st[x.driver]=[];
-      var idx2=st[x.driver].findIndex(function(it){return it.month===x.month;});
-      if(idx2>=0)st[x.driver][idx2]=note; else st[x.driver].push(note);
-      localStorage.setItem('mbti_stmt_store',JSON.stringify(st));}catch(e){}
-    // ② Firebase 전송
-    if(FB&&_db){
-      _db.collection('driver_notifications').add(note)
-      .then(function(){toast('📤 '+x.driver+' 기사님께 정산 명세서 전달 완료! 기사 앱에서 확인 가능');})
-      .catch(function(e){toast('📤 '+x.driver+' 명세서 보관함에 저장됨 (FB 실패: '+(e&&e.message||'')+')');});
+    var saveStmt=function(imgUrl){
+      var note={type:'settlement',driver:x.driver,month:x.month,
+        income:r.income,net:r.net,img:imgUrl,
+        sentAt:new Date().toISOString(),status:'전달완료',sentBy:'관리자'};
+      // ① 보관함 저장
+      try{var st=JSON.parse(localStorage.getItem('mbti_stmt_store')||'{}');
+        if(!st[x.driver])st[x.driver]=[];
+        var idx2=st[x.driver].findIndex(function(it){return it.month===x.month;});
+        if(idx2>=0)st[x.driver][idx2]=note; else st[x.driver].push(note);
+        localStorage.setItem('mbti_stmt_store',JSON.stringify(st));}catch(e){}
+      // ② Firebase 전송
+      if(FB&&_db){
+        _db.collection('driver_notifications').add(note)
+        .then(function(){toast('📤 '+x.driver+' 기사님께 정산 명세서 전달 완료! 기사 앱에서 확인 가능');})
+        .catch(function(e){toast('📤 '+x.driver+' 명세서 보관함에 저장됨 (FB 실패: '+(e&&e.message||'')+')');});
+      } else {
+        toast('📤 '+x.driver+' 명세서 보관함에 저장됨 (앱 연결 시 자동 전달)');
+      }
+    };
+    // ★ Firebase Storage 우선 사용 → 화질 보존
+    if(FB&&_st){
+      toast('📤 업로드 중...');
+      var byteStr=atob(dataUrl.split(',')[1]);
+      var ab=new ArrayBuffer(byteStr.length);
+      var ia=new Uint8Array(ab);
+      for(var i2=0;i2<byteStr.length;i2++)ia[i2]=byteStr.charCodeAt(i2);
+      var blob=new Blob([ab],{type:'image/jpeg'});
+      var storePath='settlements/'+x.driver+'/'+x.month+'_'+Date.now()+'.jpg';
+      var ref=_st.ref(storePath);
+      var done=false;
+      var timer=setTimeout(function(){
+        if(!done){done=true;console.warn('Storage 타임아웃, base64 fallback');saveStmt(fallbackUrl);}
+      },10000);
+      ref.put(blob).then(function(){return ref.getDownloadURL();})
+      .then(function(url){if(!done){done=true;clearTimeout(timer);saveStmt(url);}})
+      .catch(function(e){if(!done){done=true;clearTimeout(timer);console.warn('Storage 실패:',e);saveStmt(fallbackUrl);}});
     } else {
-      toast('📤 '+x.driver+' 명세서 보관함에 저장됨 (앱 연결 시 자동 전달)');
+      saveStmt(fallbackUrl);
     }
   }).catch(function(e){toast('전달 오류: '+(e&&e.message||e||'이미지 생성 실패'));});
 }
@@ -5982,7 +6042,9 @@ function saveTaxInvoiceImage(i){
   if(typeof html2canvas==='undefined'){toast('⚠️ 이미지 라이브러리 로딩 중... 잠시 후 다시 시도해주세요');return;}
   var x=ls('settlements')[i]||{};
   toast('📸 이미지 생성 중...');
-  html2canvas(target,{scale:1.5,useCORS:true,backgroundColor:'#ffffff',logging:false})
+  // ★ v9.9: 고화질 캡처 (PNG 무압축이라 화질 보존)
+  var tW=target.scrollWidth, tH=target.scrollHeight;
+  html2canvas(target,{scale:2.5,useCORS:true,backgroundColor:'#ffffff',logging:false,width:tW,height:tH,windowWidth:tW,windowHeight:tH})
   .then(function(canvas){
     var dataUrl=canvas.toDataURL('image/png');
     // ★ 보관함에 저장
@@ -7700,8 +7762,30 @@ function dEntry(){
   var isDispatchToday=(disp.date===today());
   var assignedCamp=isDispatchToday?(disp.camp||''):'';
   var assignedRoute=isDispatchToday?(disp.routeNo||''):'';
-  // 라우트 자동 채움: 관리자 배차 > localStorage 마지막값
-  var defaultRoute=assignedRoute||localStorage.getItem('drv_lastRoute_'+S.curDriver)||'';
+  // ★ v9.9: 근무표(schedule)에서 오늘 라우트 자동 조회
+  var scheduleRoute='';
+  var scheduleStatus='';
+  try{
+    var nowDt=new Date();
+    var todayKey=today(); // YYYY-MM-DD
+    var schKey='schedule_'+S.curDriver+'_month_'+nowDt.getFullYear()+'_'+nowDt.getMonth();
+    var schData=JSON.parse(localStorage.getItem(schKey)||'{}');
+    var todaySch=schData[todayKey];
+    if(todaySch){
+      if(typeof todaySch==='object'){
+        scheduleRoute=todaySch.route||'';
+        scheduleStatus=todaySch.status||'';
+      } else if(typeof todaySch==='string'){
+        scheduleStatus=todaySch;
+      }
+    }
+  }catch(e){}
+  // 라우트 자동 채움 우선순위: 관리자 당일배차 > 근무표 라우트 > localStorage 마지막값
+  var defaultRoute=assignedRoute||scheduleRoute||localStorage.getItem('drv_lastRoute_'+S.curDriver)||'';
+  var routeSource='';
+  if(assignedRoute) routeSource='관리자 배차';
+  else if(scheduleRoute) routeSource='근무표 자동입력';
+  else if(defaultRoute) routeSource='마지막 입력값';
 
   return `<div class="dh"><h2>입차 / 출근</h2><p>${jsub} — 출근 버튼이 곧 입차 등록입니다</p></div>
   <!-- 회사 배지 -->
@@ -7718,11 +7802,21 @@ function dEntry(){
     </div>
     <div style="font-size:10px;color:var(--text3);margin-top:5px">출근 버튼 누르면 자동 적용됩니다</div>
   </div>`:''}
+  ${(!assignedRoute&&scheduleRoute)?`
+  <!-- 근무표 자동입력 안내 -->
+  <div style="margin:6px 10px;padding:10px 12px;background:linear-gradient(135deg,rgba(20,184,166,.1) 0%,var(--bg2) 100%);border:2px solid var(--teal);border-radius:var(--r)">
+    <div style="font-size:11px;color:var(--teal);font-weight:800;margin-bottom:4px">📅 근무표 자동입력 (${today()})</div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="background:var(--teal);color:#fff;padding:4px 10px;border-radius:6px;font-size:14px;font-weight:900;letter-spacing:1px">📍 ${scheduleRoute}</span>
+      ${scheduleStatus?`<span style="background:var(--bg3);color:var(--text);padding:3px 8px;border-radius:5px;font-size:11px">${scheduleStatus}</span>`:''}
+    </div>
+    <div style="font-size:10px;color:var(--text3);margin-top:5px">근무표에서 자동으로 가져왔습니다 — 필요시 아래에서 수정 가능</div>
+  </div>`:''}
   <!-- 라우트 번호 입력 (관리자 단가 측정용) -->
   <div style="margin:6px 10px;padding:10px 12px;background:var(--bg2);border:1.5px solid var(--teal);border-radius:var(--r)">
-    <label style="font-size:11px;color:var(--teal);font-weight:700;display:block;margin-bottom:4px">📍 오늘 배정 라우트 번호 <span style="color:var(--text3);font-weight:400">(예: 215A, 215B)</span>${assignedRoute?'<span style="color:var(--blue);margin-left:6px">· 관리자 배차 자동입력됨</span>':''}</label>
-    <input id="entry-route-no" placeholder="예: 215A" value="${defaultRoute}" oninput="this.value=this.value.toUpperCase();localStorage.setItem('drv_lastRoute_'+S.curDriver,this.value)" style="width:100%;padding:9px;border:1.5px solid ${assignedRoute?'var(--blue)':'var(--border)'};border-radius:var(--r);font-size:14px;font-weight:700;text-align:center;background:var(--bg);color:var(--text);text-transform:uppercase">
-    <div style="font-size:10px;color:var(--text3);margin-top:4px">${assignedRoute?'관리자가 배정한 라우트입니다. 필요시 수정 가능':'출근 전에 라우트 번호를 입력하세요. 관리자가 단가 적용에 사용합니다.'}</div>
+    <label style="font-size:11px;color:var(--teal);font-weight:700;display:block;margin-bottom:4px">📍 오늘 배정 라우트 번호 <span style="color:var(--text3);font-weight:400">(예: 215A, 215B)</span>${routeSource?'<span style="color:var(--blue);margin-left:6px">· '+routeSource+'</span>':''}</label>
+    <input id="entry-route-no" placeholder="예: 215A" value="${defaultRoute}" oninput="this.value=this.value.toUpperCase();localStorage.setItem('drv_lastRoute_'+S.curDriver,this.value)" style="width:100%;padding:9px;border:1.5px solid ${defaultRoute?'var(--blue)':'var(--border)'};border-radius:var(--r);font-size:14px;font-weight:700;text-align:center;background:var(--bg);color:var(--text);text-transform:uppercase">
+    <div style="font-size:10px;color:var(--text3);margin-top:4px">${defaultRoute?'자동 입력됨 — 기사·관리자 모두 수정 가능':'출근 전에 라우트 번호를 입력하세요. 관리자가 단가 적용에 사용합니다.'}</div>
   </div>
   <!-- 출퇴근 체크인 (출근 버튼 = 입차 등록) -->
   <div id="attend-card" style="margin:6px 10px">${_buildAttendCard()}</div>
@@ -8399,10 +8493,10 @@ function drvSaveStmtImg(btn){
   if(!wrap){toast('명세서를 찾을 수 없습니다');return;}
   var origBtn=btn.textContent;
   btn.textContent='📸 저장 중...'; btn.disabled=true;
-  html2canvas(wrap,{scale:1.5,useCORS:true,backgroundColor:'#ffffff',logging:false})
+  html2canvas(wrap,{scale:2.5,useCORS:true,backgroundColor:'#ffffff',logging:false})
   .then(function(canvas){
     var a=document.createElement('a');
-    a.href=canvas.toDataURL('image/jpeg',0.92);
+    a.href=canvas.toDataURL('image/jpeg',0.95);
     a.download='명세서_'+S.curDriver+'_'+new Date().toLocaleDateString('ko-KR').replace(/\./g,'').replace(/\s/g,'')+'.jpg';
     a.click();
     toast('✅ 명세서 이미지 저장 완료');
@@ -8949,7 +9043,7 @@ function exportAllTaxInvoices(){
       var wrap=document.getElementById('tax-invoice-wrap');
       if(!wrap){saveOne(idx+1);return;}
       var x=s[idx];
-      html2canvas(wrap,{scale:1.5,useCORS:true,backgroundColor:'#ffffff',logging:false})
+      html2canvas(wrap,{scale:2.5,useCORS:true,backgroundColor:'#ffffff',logging:false,width:wrap.scrollWidth,height:wrap.scrollHeight,windowWidth:wrap.scrollWidth,windowHeight:wrap.scrollHeight})
         .then(function(canvas){
           var a=document.createElement('a');
           a.href=canvas.toDataURL('image/png');
@@ -10603,7 +10697,10 @@ function _viewAttendMap(driverName,date){
     var inLat=a.checkInLat, inLng=a.checkInLng;
     var outLat=a.checkOutLat, outLng=a.checkOutLng;
     
+    // ★ v9.9: 모달 ID로 직접 참조 (selector 매칭 실패 방지)
+    var moId='attend-map-modal-'+Date.now();
     var mo=document.createElement('div');
+    mo.id=moId;
     mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:900;display:flex;align-items:center;justify-content:center;padding:14px';
     mo.onclick=function(e){if(e.target===mo)mo.remove();};
     
@@ -10612,7 +10709,7 @@ function _viewAttendMap(driverName,date){
     var html='<div onclick="event.stopPropagation()" style="background:var(--bg);border:1px solid var(--border);border-radius:12px;max-width:95vw;width:500px;max-height:90vh;overflow-y:auto">';
     html+='<div style="padding:14px;background:var(--blue);color:#fff;border-radius:10px 10px 0 0;display:flex;align-items:center;justify-content:space-between">';
     html+='<div><div style="font-size:15px;font-weight:800">🗺️ '+driverName+' 기사님</div><div style="font-size:11px;opacity:.85;margin-top:3px">'+date+' 출퇴근 위치</div></div>';
-    html+='<button onclick="this.closest(\'div[style*=&quot;position:fixed&quot;]\').remove()" style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer">✕</button>';
+    html+='<button onclick="document.getElementById(\''+moId+'\').remove()" style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer">✕</button>';
     html+='</div>';
     html+='<div style="padding:14px">';
     
@@ -11894,10 +11991,12 @@ window._installPromptEvent=null;
   if(!('serviceWorker' in navigator))return;
   // file:// 환경에서는 등록 불가 (https / localhost / GitHub Pages 만 가능)
   if(location.protocol==='file:'){console.warn('[SW] file:// 환경 — SW 등록 생략');return;}
-  // ★ v9.9: 샌드박스/미리보기 환경 감지 (claudeusercontent, codepen 등)
+  // ★ v9.9: 샌드박스/미리보기/Cloudflare Workers 환경 감지 (sw.js 미배치 호스트)
   var host=location.hostname||'';
-  if(host.indexOf('claudeusercontent')>=0||host.indexOf('codepen')>=0||host.indexOf('jsfiddle')>=0||host.indexOf('codesandbox')>=0){
-    console.info('[SW] 미리보기 환경 — SW 등록 생략 (배포 시 정상 작동)');
+  var skipHosts=['claudeusercontent','codepen','jsfiddle','codesandbox','workers.dev'];
+  var shouldSkip=skipHosts.some(function(h){return host.indexOf(h)>=0;});
+  if(shouldSkip){
+    console.info('[SW] sw.js 미배치 환경 감지 ('+host+') — SW 등록 생략');
     return;
   }
   window.addEventListener('load',function(){
