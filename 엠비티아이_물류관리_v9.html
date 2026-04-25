@@ -21,6 +21,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/browser-image-compression/2.0.2/browser-image-compression.min.js"></script>
@@ -12796,14 +12797,55 @@ function _scheduleNotiInit(){
   clearTimeout(window._notiInitTimer);
   window._notiInitTimer=setTimeout(function(){
     if(S.curMode==='driver' && S.curDriver){
-      // 권한 1회만 자동 요청 (사용자가 거부했으면 더 묻지 않음)
+      // 권한 1회만 자동 요청
       if(!window._notiPermAsked && Notification.permission==='default'){
         window._notiPermAsked=true;
-        requestNotiPermission(true);
+        requestNotiPermission(true).then(function(granted){
+          if(granted) _registerFCMToken();
+        });
+      } else if(Notification.permission==='granted'){
+        _registerFCMToken();
       }
       startNotiListeners();
     }
   },2000);
+}
+
+// ── FCM 토큰 발급 및 Firestore 저장 ──
+window._fcmTokenRegistered=false;
+async function _registerFCMToken(){
+  if(window._fcmTokenRegistered)return;
+  if(!FB||!_db)return;
+  if(typeof firebase.messaging!=='function')return;
+  if(!window._swRegistration)return;
+  try{
+    var msg=firebase.messaging();
+    var token=await msg.getToken({
+      vapidKey:'BACfjIAqO1zwJtkKBv5dI8SlSjHci1BDbb5dVENG-KVlI8qzBVa646bt2lSoUhzmZGNO8s8AxAALFhFr8Jkwdjs',
+      serviceWorkerRegistration:window._swRegistration
+    });
+    if(!token){console.warn('[FCM] 토큰 발급 실패');return;}
+    window._fcmTokenRegistered=true;
+    console.log('[FCM] 토큰 발급 완료');
+    // Firestore drivers 컬렉션에 토큰 저장
+    var drv=ls('drivers').find(function(x){return x.name===S.curDriver;});
+    if(drv&&drv.fbId){
+      _db.collection('drivers').doc(drv.fbId).update({fcmToken:token}).catch(function(){});
+    }
+    // 포그라운드 메시지 핸들러
+    msg.onMessage(function(payload){
+      console.log('[FCM] 포그라운드 수신:',payload);
+      var n=payload.notification||{};
+      var d=payload.data||{};
+      var title=n.title||d.title||'📬 새 알림';
+      var body=n.body||d.body||'관리자 알림이 도착했습니다';
+      sendLocalNoti({title:title,body:body,tag:d.tag||('fcm-'+Date.now()),urgent:d.urgent==='true',cat:d.type||''});
+      // 세금계산서/명세서는 checkDriverNotifications 로 자동 갱신
+      if(d.type==='tax_invoice'||d.type==='settlement'){
+        setTimeout(checkDriverNotifications,1000);
+      }
+    });
+  }catch(e){console.warn('[FCM] 토큰 등록 오류:',e.message);}
 }
 // 페이지 가시성 변경 (백그라운드 ↔ 포그라운드)
 document.addEventListener('visibilitychange',function(){
