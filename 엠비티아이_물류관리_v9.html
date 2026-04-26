@@ -11011,11 +11011,11 @@ function sendNotice(){
     return batch.commit().then(function(){return ref;});
   }).then(function(){
     toast('✅ '+targets.length+'명에게 공지 전송 완료!');
-    // ★ FCM 백그라운드 푸시 발송
+    // ★ FCM 백그라운드 푸시 발송 (토큰 직접 전달)
     var _FCM_URL='https://us-central1-mbti-logistics.cloudfunctions.net/sendPush';
     targets.forEach(function(d){
-      if(!d.name)return;
-      fetch(_FCM_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({driverName:d.name,title:title,body:content,pinned:pinned})}).catch(function(){});
+      if(!d.fcmToken)return;
+      fetch(_FCM_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:d.fcmToken,title:title,body:content,pinned:pinned})}).catch(function(){});
     });
     // ★ v9.12: SMS 발송 (sms: 링크)
     if(smsOpt && smsList.length){
