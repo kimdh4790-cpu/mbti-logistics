@@ -7749,6 +7749,26 @@ function _loadDrvNotices(){
       try{
         readSet=JSON.parse(localStorage.getItem('drv_notice_read_'+S.curDriver)||'{}');
       }catch(e){}
+
+      // ★ Fix1: 새 공지 in-app 알림 (added 감지)
+      snap.docChanges().forEach(function(change){
+        if(change.type==='added' && window._drvNoticeReady){
+          var nd=change.doc.data();
+          var isUrgent=(nd.category==='긴급');
+          if(isUrgent){
+            // 긴급은 팝업 모달
+            setTimeout(function(){_viewDrvNotice(change.doc.id);},400);
+          }
+          toast((isUrgent?'🚨':'📢')+' 새 공지: '+(nd.title||'공지사항'));
+        }
+        // ★ Fix3: 삭제된 공지 즉시 제거
+        if(change.type==='removed'){
+          window._drvNoticeList=(window._drvNoticeList||[]).filter(function(n){return n._id!==change.doc.id;});
+          var card2=document.getElementById('drv-notice-card');
+          if(card2)card2.innerHTML=_buildDrvNoticeCard();
+        }
+      });
+
       snap.forEach(function(doc){
         var d=doc.data();
         d._id=doc.id;
@@ -7763,6 +7783,8 @@ function _loadDrvNotices(){
       window._drvNoticeList=list;
       var card=document.getElementById('drv-notice-card');
       if(card)card.innerHTML=_buildDrvNoticeCard();
+      // ★ 초기 로드 완료 플래그 (added 오탐 방지)
+      setTimeout(function(){window._drvNoticeReady=true;},1500);
     }, function(e){console.warn('공지 리스너 오류:',e&&e.message);});
 }
 
@@ -8079,7 +8101,7 @@ function dHome(){
   ${calHTML}
   <!-- 사고접수 + 사진 모아보기 버튼 -->
   <button class="bbtn bb-red" onclick="DT('accident',document.getElementById('pni4'))" style="padding:11px;font-size:13px;margin:0 10px 6px">🚨 사고 접수</button>
-  <button onclick="openComplaintModal()" style="width:calc(100% - 20px);margin:0 10px 6px;padding:11px;background:rgba(245,158,11,.15);color:var(--amber,#d97706);border:1.5px solid var(--amber,#d97706);border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer">📝 불편함 접수 → 관리자 전달</button>
+  <button onclick="openComplaintModal()" style="width:calc(100% - 20px);margin:0 10px 6px;padding:11px;background:var(--amber,#d97706);color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer">📝 불편함 접수 → 관리자 전달</button>
   <button onclick="drvPhotoGallery()" style="width:calc(100% - 20px);margin:0 10px 10px;padding:11px;background:var(--purple-l);color:var(--purple);border:1.5px solid var(--purple);border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer">📸 사진 모아보기 (60일)</button>
   </div>`;
 }
@@ -10959,7 +10981,9 @@ function rNoticePanel(){
 
 function _loadNoticeList(){
   if(!FB||!_db)return;
-  _db.collection('notices').orderBy('sentAt','desc').limit(30).get().then(function(snap){
+  // ★ Fix4: onSnapshot으로 실시간 반영
+  if(window._noticeListUnsub)window._noticeListUnsub();
+  window._noticeListUnsub=_db.collection('notices').orderBy('sentAt','desc').limit(30).onSnapshot(function(snap){
     var box=document.getElementById('nt-list');
     if(!box)return;
     if(snap.empty){
@@ -10992,7 +11016,7 @@ function _loadNoticeList(){
       html+='</div>';
     });
     box.innerHTML=html;
-  }).catch(function(e){
+  }, function(e){
     var box=document.getElementById('nt-list');
     if(box)box.innerHTML='<div style="padding:10px;color:var(--red);font-size:11px">로드 실패: '+(e&&e.message||'')+'</div>';
   });
