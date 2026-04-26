@@ -1,4 +1,4 @@
-// ★ MBTI 물류관리 v9.17 — Service Worker (FCM 백그라운드 완전 지원)
+// ★ MBTI 물류관리 v9.19 — Service Worker (FCM 백그라운드 완전 지원)
 // GitHub Pages: kimdh4790-cpu.github.io/mbti-logistics/sw.js
 
 // ── Firebase 스크립트 임포트 (FCM 백그라운드 처리 필수)
@@ -18,21 +18,22 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 // ── 아이콘 경로
-const ICON = 'https://kimdh4790-cpu.github.io/mbti-logistics/icon-192.png';
+// 아이콘: 상대경로 우선, 없으면 빈 문자열 (chrome-extension 404 방지)
+const ICON = '/icon-192.png';
 
 // ── 캐시 버전
-const CACHE = 'mbti-v9-17';
+const CACHE = 'mbti-v9-19';
 
 // ──────────────────────────────────────────
 // 설치 / 활성화
 // ──────────────────────────────────────────
 self.addEventListener('install', e => {
-  console.log('[SW] install v9.17');
+  console.log('[SW] install v9.19');
   self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
-  console.log('[SW] activate v9.17');
+  console.log('[SW] activate v9.19');
   e.waitUntil(
     caches.keys()
       .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
@@ -128,9 +129,12 @@ self.addEventListener('notificationclick', function(e) {
 // 오프라인 캐시 (네트워크 우선)
 // ──────────────────────────────────────────
 self.addEventListener('fetch', function(e) {
-  // Firebase / CDN 요청은 캐시 안 함
+  // chrome-extension / blob / 비GET 요청은 무시 (캐시 에러 방지)
   const url = e.request.url;
-  if (url.includes('firestore.googleapis.com') ||
+  if (url.startsWith('chrome-extension://') ||
+      url.startsWith('chrome://') ||
+      url.startsWith('blob:') ||
+      url.includes('firestore.googleapis.com') ||
       url.includes('firebase') ||
       url.includes('googleapis.com') ||
       url.includes('gstatic.com') ||

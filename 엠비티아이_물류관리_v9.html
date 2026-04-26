@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<!-- ★ v9.14: 알림 시스템 개편 — 세금계산서/공지 깜빡임 해결, 빠른알림(소리+진동+큰배너), 공지 실시간 삭제 동기화 -->
+<!-- ★ v9.19: 전체 기능 통합 (공지삭제/카운터/네비/FCM) — 세금계산서/공지 깜빡임 해결, 빠른알림(소리+진동+큰배너), 공지 실시간 삭제 동기화 -->
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.14</title>
+<title>엠비티아이 물류관리 v9.19</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -316,7 +316,7 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.14 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.19 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -1286,7 +1286,7 @@ function updFbUI(){
   var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.14 · 🔥 실시간':'v9.14 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.14 · Firebase 실시간':'v9.14 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.14 · Firebase 실시간':'v9.19 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -7461,35 +7461,55 @@ async function doCheckOut(){
 }
 
 // ════════════════════════════════════════════
-// ★ v9.12: 배송 마감 카운트다운 카드
 // ════════════════════════════════════════════
+// ★ v9.19: 배송 마감 카운트다운 (근무표 연동 + 합의사항 전체 적용)
+// ════════════════════════════════════════════
+// 오늘 근무표 일별 상태 ('주','야','휴무','병가','')
+function _getTodaySchedShift(){
+  if(!S.curDriver)return null;
+  var td=today(),yr=td.slice(0,4),mo=parseInt(td.slice(5,7),10)-1;
+  try{
+    var sd=JSON.parse(localStorage.getItem('schedule_'+S.curDriver+'_month_'+yr+'_'+mo)||'{}');
+    var e=sd[td];
+    if(!e)return null;
+    return(typeof e==='string')?e:(e.status||e.st||null);
+  }catch(e2){return null;}
+}
 function _getMyShift(){
   var me=ls('drivers').find(function(x){return x.name===S.curDriver;});
-  return (me&&me.shift)||'';
+  return(me&&me.shift)||'';
 }
 function _buildDeadlineCard(){
-  var shift=_getMyShift();
-  // 시프트 별 마감 시간 결정
+  // 1) 근무표 상태 — 휴무/병가는 숨김
+  var schedSt=_getTodaySchedShift();
+  if(schedSt==='휴무'||schedSt==='병가')return '';
+  // 2) 유효 시프트 결정 (근무표 우선 → 프로필 폴백)
+  var profileShift=_getMyShift();
+  var effectiveShift;
+  if(schedSt==='주')      effectiveShift='주간';
+  else if(schedSt==='야') effectiveShift='야간';
+  else                     effectiveShift=profileShift;
+  if(!effectiveShift)return '';
+  // 3) 입차(출근) 확인
+  if(!ls('entries').some(function(e){return e.driver===S.curDriver&&e.date===today();}))return '';
+  // 4) ★ 퇴근 확인 — checkOut 있으면 즉시 숨김
+  var att=_getAttend();
+  if(att&&att.checkOut)return '';
+  // 5) ★ 23:59 리셋 (주간) / 08:00 리셋 (야간)
+  var now=new Date(),h=now.getHours(),mi=now.getMinutes();
+  if(effectiveShift==='주간'&&h===23&&mi>=59)return '';
+  if(effectiveShift==='야간'&&h>=8)return '';
+  // 6) 마감 시간 결정
   var dl=null;
-  if(shift==='야간')dl=DELIVERY_DEADLINE.night;
-  else if(shift==='주간')dl=DELIVERY_DEADLINE.day;
-  else if(shift==='주야간'){
-    // 주야간 — 가까운 마감 자동 선택
-    var now=new Date();
-    var hr=now.getHours();
-    if(hr>=8&&hr<20)dl=DELIVERY_DEADLINE.day;
-    else dl=DELIVERY_DEADLINE.night;
+  if(effectiveShift==='야간')dl=DELIVERY_DEADLINE.night;
+  else if(effectiveShift==='주간')dl=DELIVERY_DEADLINE.day;
+  else if(effectiveShift==='주야간'){
+    dl=(h>=8&&h<20)?DELIVERY_DEADLINE.day:DELIVERY_DEADLINE.night;
   }
-  if(!dl){
-    return ''; // 시프트 미설정 시 표시 안함
-  }
-  var now=new Date();
+  if(!dl)return '';
   var deadline=new Date(now);
   deadline.setHours(dl.hour,dl.minute,0,0);
-  // 마감이 이미 지났으면 다음 마감으로 (야간 07시는 다음날 새벽일 수 있음)
-  if(deadline.getTime()<=now.getTime()){
-    deadline.setDate(deadline.getDate()+1);
-  }
+  if(deadline.getTime()<=now.getTime())deadline.setDate(deadline.getDate()+1);
   var diffMs=deadline.getTime()-now.getTime();
   var hrs=Math.floor(diffMs/3600000);
   var mns=Math.floor((diffMs%3600000)/60000);
@@ -7497,47 +7517,79 @@ function _buildDeadlineCard(){
   var bg=hrs<1?'linear-gradient(135deg,#ef4444 0%,#dc2626 100%)':hrs<3?'linear-gradient(135deg,#f59e0b 0%,#d97706 100%)':'linear-gradient(135deg,#3b82f6 0%,#2563eb 100%)';
   var pulse=hrs<1?'animation:pulse 1.5s infinite;':'';
   var hh=('0'+dl.hour).slice(-2)+':'+('0'+dl.minute).slice(-2);
+  var shiftLabel=schedSt==='주'?'주간':schedSt==='야'?'야간':effectiveShift;
+  // ★ 오늘 라우트 표시 (근무표 > 관리자배차 > localStorage 순)
+  var todayRoute='';
+  try{
+    var td2=today(),yr2=td2.slice(0,4),mo2=parseInt(td2.slice(5,7),10)-1;
+    var sd2=JSON.parse(localStorage.getItem('schedule_'+S.curDriver+'_month_'+yr2+'_'+mo2)||'{}');
+    var se2=sd2[td2];
+    if(se2&&typeof se2==='object')todayRoute=se2.route||'';
+    if(!todayRoute){
+      var meDrv2=ls('drivers').find(function(x){return x.name===S.curDriver;});
+      if(meDrv2&&meDrv2.todayDispatch&&meDrv2.todayDispatch.date===td2)todayRoute=meDrv2.todayDispatch.routeNo||'';
+    }
+    if(!todayRoute)todayRoute=localStorage.getItem('drv_lastRoute_'+S.curDriver)||'';
+  }catch(e2){}
   return '<div style="background:'+bg+';color:#fff;border-radius:var(--r);padding:10px 13px;'+pulse+'box-shadow:0 2px 8px rgba(0,0,0,.15)">'
     +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">'
     +'<div style="font-size:12px;font-weight:800;letter-spacing:.02em">'+dl.label+' '+hh+'</div>'
-    +'<div style="font-size:9px;opacity:.85;background:rgba(255,255,255,.2);padding:2px 7px;border-radius:99px">'+(shift==='주야간'?'주야간':shift)+'</div>'
+    +'<div style="display:flex;align-items:center;gap:5px">'
+    +(todayRoute?'<div style="font-size:10px;font-weight:800;background:rgba(255,255,255,.25);padding:2px 7px;border-radius:99px">📍 '+todayRoute+'</div>':'')
+    +'<div style="font-size:9px;opacity:.85;background:rgba(255,255,255,.15);padding:2px 7px;border-radius:99px">'+shiftLabel+'</div>'
+    +'</div>'
     +'</div>'
     +'<div style="display:flex;align-items:baseline;gap:8px">'
     +'<div style="font-size:9px;opacity:.85">남은 시간</div>'
     +'<div style="font-size:18px;font-weight:900;letter-spacing:.02em;font-variant-numeric:tabular-nums">'+hrs+'시간 '+('0'+mns).slice(-2)+'분 '+('0'+secs).slice(-2)+'초</div>'
     +'</div></div>';
 }
-// 마감 카운트다운 1초마다 갱신 + 알림
+// ★ 마감 카운트다운 1초마다 갱신 + A안 알람
+// 주간: 17:00/18:00/19:00/19:30/19:50 | 야간: 04:00/05:00/06:00/06:30/06:50
 window._dlTickTimer=window._dlTickTimer||null;
 window._dlNotifiedAt=window._dlNotifiedAt||{};
+var _DL_ALARMS={
+  주간:[{h:17,m:0},{h:18,m:0},{h:19,m:0},{h:19,m:30},{h:19,m:50}],
+  야간:[{h:4,m:0},{h:5,m:0},{h:6,m:0},{h:6,m:30},{h:6,m:50}]
+};
 function _startDeadlineTick(){
   if(window._dlTickTimer)clearInterval(window._dlTickTimer);
   window._dlTickTimer=setInterval(function(){
     var card=document.getElementById('drv-deadline-card');
     if(!card){clearInterval(window._dlTickTimer);window._dlTickTimer=null;return;}
     if(S.curMode!=='driver'){clearInterval(window._dlTickTimer);window._dlTickTimer=null;return;}
+    // 퇴근 감지 → 즉시 종료
+    var att=_getAttend();
+    if(att&&att.checkOut){card.innerHTML='';clearInterval(window._dlTickTimer);window._dlTickTimer=null;return;}
+    // 근무표 휴무/병가 감지
+    var sc=_getTodaySchedShift();
+    if(sc==='휴무'||sc==='병가'){card.innerHTML='';clearInterval(window._dlTickTimer);window._dlTickTimer=null;return;}
     card.innerHTML=_buildDeadlineCard();
-    // 알림 (1시간/30분/10분 전)
-    var shift=_getMyShift(); if(!shift)return;
-    var dl=shift==='야간'?DELIVERY_DEADLINE.night:DELIVERY_DEADLINE.day;
-    var now=new Date(); var deadline=new Date(now);
-    deadline.setHours(dl.hour,dl.minute,0,0);
-    if(deadline.getTime()<=now.getTime())deadline.setDate(deadline.getDate()+1);
-    var mLeft=Math.floor((deadline-now)/60000);
-    [60,30,10].forEach(function(min){
-      var key=today()+'_'+dl.hour+'_'+min;
-      if(mLeft===min&&!window._dlNotifiedAt[key]){
+    // ★ A안 알람 체크 (특정 시각에 1회씩)
+    var schedSt2=_getTodaySchedShift();
+    var eff=schedSt2==='주'?'주간':schedSt2==='야'?'야간':_getMyShift();
+    if(!eff)return;
+    var alarmList=_DL_ALARMS[eff==='야간'?'야간':'주간']||[];
+    var now2=new Date(),hh2=now2.getHours(),mm2=now2.getMinutes();
+    var dl=eff==='야간'?DELIVERY_DEADLINE.night:DELIVERY_DEADLINE.day;
+    alarmList.forEach(function(alarm){
+      var key=today()+'_alarm_'+alarm.h+'_'+alarm.m;
+      if(hh2===alarm.h&&mm2===alarm.m&&!window._dlNotifiedAt[key]){
         window._dlNotifiedAt[key]=true;
-        toast('⏰ '+dl.label+' '+min+'분 전!');
+        var remain=(dl.hour*60+dl.minute)-(alarm.h*60+alarm.m);
+        var msg='⏰ '+dl.label+' '+remain+'분 전!';
+        toast(msg);
+        if(typeof _showInstantAlert==='function'){
+          _showInstantAlert({title:msg,body:'마감 '+remain+'분 전 — 서둘러 주세요!',urgent:remain<=10});
+        }
         if(window.Notification&&Notification.permission==='granted'){
-          try{new Notification('⏰ '+dl.label+' '+min+'분 전',{body:S.curDriver+' 기사님 — 서둘러 주세요'});}catch(e){}
+          try{new Notification(msg,{body:S.curDriver+' 기사님 — 마감 '+remain+'분 전'});}catch(e){}
         }
       }
     });
   },1000);
 }
 
-// ════════════════════════════════════════════
 // ★ v9.12: 캠프 내 배송 지원 알림 (Firebase 실시간)
 // ════════════════════════════════════════════
 function _buildCampSupportCard(){
@@ -7782,15 +7834,11 @@ function _loadDrvNotices(){
   if(window._drvNoticeUnsub){window._drvNoticeUnsub();window._drvNoticeUnsub=null;}
   if(window._masterNoticeUnsub){window._masterNoticeUnsub();window._masterNoticeUnsub=null;}
   window._masterNoticeIds={};
-
-  // ★ v9.18: notices.get()으로 마스터 먼저 확정 로드 → 그 다음 driver_notifications 리스너 시작
-  // 이전 방식: 두 onSnapshot 동시 시작 → driver_notifications가 먼저 firing 시 삭제공지 표시 버그
+  // ★ v9.19: notices.get()으로 마스터 먼저 확정 로드 → driver_notifications 리스너 시작
   _db.collection('notices').get().then(function(msnap){
     var ids={};
     msnap.forEach(function(d){ids[d.id]=true;});
     window._masterNoticeIds=ids;
-
-    // 이후 삭제/추가 실시간 감시 (초기값 확정 후 시작)
     window._masterNoticeUnsub=_db.collection('notices').onSnapshot(function(ms){
       var newIds={};
       ms.forEach(function(d){newIds[d.id]=true;});
@@ -7808,10 +7856,9 @@ function _loadDrvNotices(){
         }
       }
     },function(){});
-
-    _startDrvNoticeListener(); // ★ 마스터 확정 후 driver_notifications 리스너 시작
+    _startDrvNoticeListener();
   }).catch(function(e){
-    console.warn('[공지] notices 로드 실패, 리스너 즉시 시작:', e&&e.message);
+    console.warn('[공지] notices 로드 실패:', e&&e.message);
     _startDrvNoticeListener();
   });
 }
@@ -7821,10 +7868,8 @@ function _startDrvNoticeListener(){
     .where('driver','==',S.curDriver)
     .where('type','==','notice')
     .onSnapshot(function(snap){
-      var list=[];
-      var readSet={};
+      var list=[],readSet={};
       try{readSet=JSON.parse(localStorage.getItem('drv_notice_read_'+S.curDriver)||'{}');}catch(e){}
-
       snap.docChanges().forEach(function(change){
         if(change.type==='added'&&window._drvNoticeReady){
           var nd=change.doc.data();
@@ -7850,17 +7895,11 @@ function _startDrvNoticeListener(){
           if(c2)c2.innerHTML=_buildDrvNoticeCard();
         }
       });
-
       snap.forEach(function(doc){
         var d=doc.data();d._id=doc.id;
         d._read=!!(d.readAt||d.readStatus==='read'||readSet[doc.id]);
-        // ★ 마스터 get() 완료 후이므로 noticeId 필터 무조건 적용
-        if(d.noticeId){
-          if(!window._masterNoticeIds[d.noticeId])return;
-        } else {
-          var ms3=d.sentAt?new Date(d.sentAt).getTime():0;
-          if(ms3&&(Date.now()-ms3>30*24*3600000))return;
-        }
+        if(d.noticeId){if(!window._masterNoticeIds[d.noticeId])return;}
+        else{var ms3=d.sentAt?new Date(d.sentAt).getTime():0;if(ms3&&(Date.now()-ms3>30*24*3600000))return;}
         list.push(d);
       });
       list.sort(function(a,b){
@@ -7874,7 +7913,6 @@ function _startDrvNoticeListener(){
       setTimeout(function(){window._drvNoticeReady=true;},1200);
     },function(e){console.warn('공지 리스너 오류:',e&&e.message);});
 }
-
 
 // ── 공지 상세 보기 (읽음 처리)
 function _viewDrvNotice(id){
@@ -8503,57 +8541,46 @@ function dEntry(){
   <div id="attend-card" style="margin:6px 10px">${_buildAttendCard()}</div>
   <!-- 현재 위치 지도 -->
   <div id="entry-map-card" style="margin:6px 10px">${_buildLocMap()}</div>
-  <!-- ★ v9.18: 캠프 네비게이션 -->
+  <!-- ★ v9.19: 캠프 네비게이션 -->
   <div style="margin:6px 10px">${_buildCampNavCard(meDrv)}</div>
   ${_drvHistEntry()}
   <div style="height:10px"></div>`;
 }
 
-// ★ v9.18: 캠프 네비게이션 카드
+// ★ v9.19: 캠프 네비게이션 카드
 function _buildCampNavCard(meDrv){
   meDrv=meDrv||ls('drivers').find(function(x){return x.name===S.curDriver;})||{};
   var gpsMap=getCampGps();
-
-  // 오늘 배차 캠프 > 프로필 캠프 순으로 우선순위
   var disp=meDrv.todayDispatch||{};
   var isDispToday=(disp.date===today());
   var campRaw=isDispToday?(disp.camp||meDrv.camp||''):(meDrv.camp||'');
-
-  // 캠프명 정규화 ('부산1' → '부산1캠프')
   var campFull=campRaw?(campRaw.indexOf('캠프')>=0?campRaw:campRaw+'캠프'):'';
   var gps=campFull?gpsMap[campFull]:null;
-
-  // 캠프 선택 드롭다운용
   var campOpts=Object.keys(gpsMap).map(function(k){
     return '<option value="'+k+'"'+(k===campFull?' selected':'')+'>'+k+'</option>';
   }).join('');
-
   var html='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px">';
   html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">';
   html+='<div style="font-size:12px;font-weight:800">🧭 캠프 네비게이션</div>';
   html+='<select id="nav-camp-sel" onchange="_onNavCampChange()" style="padding:4px 7px;border:1px solid var(--border);border-radius:6px;font-size:11px;background:var(--bg);color:var(--text)">'+campOpts+'</select>';
   html+='</div>';
-
   if(!gps){
-    html+='<div style="font-size:11px;color:var(--text3);padding:6px 0">캠프가 미지정이거나 GPS 좌표가 없습니다.<br>위 드롭다운에서 목적지 캠프를 선택하세요.</div>';
+    html+='<div style="font-size:11px;color:var(--text3);padding:4px 0">드롭다운에서 목적지 캠프를 선택하세요.</div>';
   } else {
-    html+='<div id="nav-camp-info" style="font-size:11px;color:var(--text2);margin-bottom:8px">📍 <strong>'+campFull+'</strong> — '+gps.addr+'<br><span style="color:var(--text3)">좌표: '+gps.lat.toFixed(5)+', '+gps.lng.toFixed(5)+'</span></div>';
+    html+='<div id="nav-camp-info" style="font-size:11px;color:var(--text2);margin-bottom:8px">📍 <strong>'+campFull+'</strong> — '+gps.addr+'<br><span style="color:var(--text3)">'+gps.lat.toFixed(5)+', '+gps.lng.toFixed(5)+'</span></div>';
   }
-
   html+='<div id="nav-btns" style="display:flex;gap:6px;flex-wrap:wrap">';
-  if(gps){
-    html+=_buildNavBtns(campFull,gps.lat,gps.lng);
-  }
-  html+='</div>';
-  html+='</div>';
+  if(gps)html+=_buildNavBtns(campFull,gps.lat,gps.lng);
+  html+='</div></div>';
   return html;
 }
 function _buildNavBtns(campName,lat,lng){
+  // ★ 네이버맵: dlng (수정), T맵: 올바른 URL 형식
   var kakao='https://map.kakao.com/link/to/'+encodeURIComponent(campName)+','+lat+','+lng;
-  var naver='https://map.naver.com/index.nhn?dlngt='+lng+'&dlat='+lat+'&dname='+encodeURIComponent(campName)+'&pathType=0&showMap=true';
-  var google='https://www.google.com/maps/dir/?api=1&destination='+lat+','+lng;
+  var naver='https://map.naver.com/index.nhn?dlng='+lng+'&dlat='+lat+'&dname='+encodeURIComponent(campName)+'&pathType=0&showMap=true';
   var tmap='https://tmap.life/route?goalname='+encodeURIComponent(campName)+'&goaly='+lat+'&goalx='+lng;
-  var style='padding:8px 12px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;flex:1;min-width:70px;text-align:center;text-decoration:none;display:inline-block;';
+  var google='https://www.google.com/maps/dir/?api=1&destination='+lat+','+lng;
+  var style='padding:8px 10px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;flex:1;min-width:60px;text-align:center;text-decoration:none;display:inline-block;';
   return '<a href="'+kakao+'" target="_blank" style="'+style+'background:#FEE500;color:#3A1D1D">카카오맵</a>'
     +'<a href="'+naver+'" target="_blank" style="'+style+'background:#03C75A;color:#fff">네이버맵</a>'
     +'<a href="'+tmap+'" target="_blank" style="'+style+'background:#E8192C;color:#fff">T맵</a>'
@@ -8568,11 +8595,11 @@ function _onNavCampChange(){
   var infoEl=document.getElementById('nav-camp-info');
   var btnsEl=document.getElementById('nav-btns');
   if(!gps){
-    if(infoEl)infoEl.innerHTML='<span style="color:var(--text3)">GPS 좌표 없음 — 관리자에게 좌표 등록 요청</span>';
+    if(infoEl)infoEl.innerHTML='<span style="color:var(--text3)">GPS 좌표 없음</span>';
     if(btnsEl)btnsEl.innerHTML='';
     return;
   }
-  if(infoEl)infoEl.innerHTML='📍 <strong>'+campFull+'</strong> — '+gps.addr+'<br><span style="color:var(--text3)">좌표: '+gps.lat.toFixed(5)+', '+gps.lng.toFixed(5)+'</span>';
+  if(infoEl)infoEl.innerHTML='📍 <strong>'+campFull+'</strong> — '+gps.addr+'<br><span style="color:var(--text3)">'+gps.lat.toFixed(5)+', '+gps.lng.toFixed(5)+'</span>';
   if(btnsEl)btnsEl.innerHTML=_buildNavBtns(campFull,gps.lat,gps.lng);
 }
 // ★ 현재 위치 지도 카드 (OpenStreetMap 임베드 + 역지오코딩)
@@ -11188,15 +11215,32 @@ function sendNotice(){
   var pinned=document.getElementById('nt-pinned').checked;
   var smsOpt=document.getElementById('nt-sms')&&document.getElementById('nt-sms').checked;
   var kakaoOpt=document.getElementById('nt-kakao')&&document.getElementById('nt-kakao').checked;
-  
   if(!title){toast('❌ 제목을 입력해주세요');return;}
   if(!content){toast('❌ 내용을 입력해주세요');return;}
-  
-  // 대상 기사 목록
-  var allDrs=ls('drivers').filter(function(d){return d.is_active!==false&&!d.isNew&&d.status!=='pending';});
+  // ★ v9.19: localStorage 우선, 비면 Firebase 직접 조회
+  function _filterActive(list){
+    return list.filter(function(d){
+      return d.is_active===true&&d.isNew!==true&&d.status!=='pending'&&d.status!=='거부'&&d.status!=='탈퇴';
+    });
+  }
+  var localDrs=_filterActive(ls('drivers'));
+  if(localDrs.length>0){
+    _doSendNotice(localDrs,target,category,title,content,pinned,smsOpt,kakaoOpt);
+  } else {
+    toast('⏳ 기사 목록 로딩 중...');
+    _db.collection('drivers').get().then(function(snap){
+      var all=[];
+      snap.forEach(function(doc){var d=doc.data();d.fbId=doc.id;all.push(d);});
+      lss('drivers',all);
+      var fresh=_filterActive(all);
+      if(!fresh.length){toast('❌ 대상 기사가 없습니다 (Firebase 확인 필요)');return;}
+      _doSendNotice(fresh,target,category,title,content,pinned,smsOpt,kakaoOpt);
+    }).catch(function(e){toast('❌ Firebase 조회 실패: '+e.message);});
+  }
+}
+function _doSendNotice(allDrs,target,category,title,content,pinned,smsOpt,kakaoOpt){
   var targets=(target==='전체')?allDrs:allDrs.filter(function(d){return d.camp===target;});
-  
-  if(targets.length===0){toast('❌ 대상 기사가 없습니다');return;}
+  if(targets.length===0){toast('❌ 대상 캠프에 기사가 없습니다');return;}
   // SMS/카톡 정보 카운트
   var smsList=targets.filter(function(d){return d.phone&&d.smsOk!=='N';});
   var kakaoList=targets.filter(function(d){return d.kakaoId;});
@@ -11242,12 +11286,26 @@ function sendNotice(){
     return batch.commit().then(function(){return ref;});
   }).then(function(){
     toast('✅ '+targets.length+'명에게 공지 전송 완료!');
-    // ★ FCM 백그라운드 푸시 발송 (토큰 직접 전달)
+    // ★ v9.19: FCM 푸시 — Firebase에서 최신 fcmToken 직접 조회
     var _FCM_URL='https://us-central1-mbti-logistics.cloudfunctions.net/sendPush';
-    targets.forEach(function(d){
-      if(!d.fcmToken)return;
-      fetch(_FCM_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:d.fcmToken,title:title,body:content,pinned:pinned})}).catch(function(){});
-    });
+    var _targetNames=targets.map(function(d){return d.name;});
+    function _sendFcmPush(token){
+      if(!token||typeof token!=='string'||token.length<20)return;
+      fetch(_FCM_URL,{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({token:token,title:title,body:content,pinned:!!pinned})
+      }).catch(function(){});
+    }
+    _db.collection('drivers').get().then(function(snap){
+      snap.forEach(function(doc){
+        var d=doc.data();
+        if(!d.fcmToken)return;
+        if(_targetNames.indexOf(d.name)<0)return;
+        _sendFcmPush(d.fcmToken);
+        var drs=ls('drivers');
+        var idx=drs.findIndex(function(x){return x.name===d.name;});
+        if(idx>=0&&drs[idx].fcmToken!==d.fcmToken){drs[idx].fcmToken=d.fcmToken;lss('drivers',drs);}
+      });
+    }).catch(function(){targets.forEach(function(d){_sendFcmPush(d.fcmToken);});});
     // ★ v9.12: SMS 발송 (sms: 링크)
     if(smsOpt && smsList.length){
       var smsMsg='[MBTI물류] '+title+'\n\n'+content;
@@ -11282,7 +11340,7 @@ function sendNotice(){
   }).catch(function(e){
     toast('❌ 전송 실패: '+(e&&e.message||''));
   });
-}
+} // end _doSendNotice
 
 function deleteNotice(id){
   if(!FB||!_db)return;
@@ -13157,7 +13215,17 @@ function sendLocalNoti(opts){
 
 // Firestore 실시간 리스너 (공지/캠프지원/긴급 알림)
 window._firestoreListeners=window._firestoreListeners||[];
-window._notiSeen=window._notiSeen||{};
+// ★ v9.19: _notiSeen → localStorage 영속화
+(function(){
+  var KEY='mbti_notiSeen';
+  var raw={};
+  try{raw=JSON.parse(localStorage.getItem(KEY)||'{}');}catch(e){}
+  var now=Date.now();
+  Object.keys(raw).forEach(function(k){if(now-raw[k]>30*24*3600000)delete raw[k];});
+  try{localStorage.setItem(KEY,JSON.stringify(raw));}catch(e){}
+  window._notiSeen=raw;
+  window._notiSeenSave=function(){try{localStorage.setItem(KEY,JSON.stringify(window._notiSeen));}catch(e){}};
+})();
 
 function startNotiListeners(){
   if(!FB||!_db||!S.curDriver)return;
@@ -13180,15 +13248,16 @@ function startNotiListeners(){
         var d=change.doc.data();
         var key='dn_'+change.doc.id;
         if(window._notiSeen[key])return;
-        window._notiSeen[key]=true;
+        window._notiSeen[key]=Date.now();
+        if(window._notiSeenSave)window._notiSeenSave();
         // 알림 발사
         var titleMap={notice:'📢 새 공지',tax_invoice:'🧾 세금계산서 도착',settlement:'📋 정산서 도착'};
         var title=titleMap[d.type]||'📢 새 알림';
         var body=d.title||(d.type==='tax_invoice'?'세금계산서가 도착했습니다':'새 알림이 있습니다');
         var urgent=(d.category==='긴급');
         sendLocalNoti({title:title+(d.category==='긴급'?' (긴급)':''),body:body,tag:key,urgent:urgent,cat:d.type});
-        // ★ v10.0: 화면이 켜져 있을 때 강력 알림 (배너 + 진동 + 사운드)
-        if(typeof _showInstantAlert==='function'){
+        // ★ v9.19: notice는 _loadDrvNotices 전담 → 비notice만 인앱 배너
+        if(d.type!=='notice'&&typeof _showInstantAlert==='function'){
           _showInstantAlert({title:title,body:body,urgent:urgent});
         }
       });
@@ -13207,7 +13276,8 @@ function startNotiListeners(){
           if(d.driver===S.curDriver)return; // 본인 요청은 알림 안 함
           var key='cs_'+change.doc.id;
           if(window._notiSeen[key])return;
-          window._notiSeen[key]=true;
+          window._notiSeen[key]=Date.now();
+        if(window._notiSeenSave)window._notiSeenSave();
           sendLocalNoti({
             title:'🤝 '+myCampFull+' 배송 지원 요청',
             body:(d.driver||'기사')+': '+(d.message||'').substring(0,80),
@@ -13238,7 +13308,8 @@ function startNotiListeners(){
           if(d.driver===S.curDriver)return; // 본인 사고는 알림 안 함
           var key='ac_'+change.doc.id;
           if(window._notiSeen[key])return;
-          window._notiSeen[key]=true;
+          window._notiSeen[key]=Date.now();
+        if(window._notiSeenSave)window._notiSeenSave();
           sendLocalNoti({
             title:'🚨 '+myCampFull+' 사고 발생',
             body:(d.driver||'기사')+': '+(d.kind||d.summary||'사고가 접수되었습니다'),
@@ -13265,6 +13336,13 @@ function stopNotiListeners(){
 
 // 로그인 후 자동 시작 (driver 모드)
 window._notiInitTimer=null;
+// ★ TTS 음성 목록 사전 로드 (첫 발화 전 준비)
+if(window.speechSynthesis){
+  window.speechSynthesis.getVoices();
+  window.speechSynthesis.addEventListener('voiceschanged',function(){
+    window.speechSynthesis.getVoices();
+  });
+}
 function _scheduleNotiInit(){
   clearTimeout(window._notiInitTimer);
   window._notiInitTimer=setTimeout(function(){
@@ -13548,42 +13626,77 @@ function _showInstantAlert(opts){
 
 // ★ v10.0: 알림 사운드 (Web Audio API — 외부 파일 불필요)
 function _playAlertSound(urgent){
+  if(urgent){
+    // ★ 긴급: TTS "엠티엠티" + 경보음 동시
+    _playBeepSound(true);
+    if(window.speechSynthesis){
+      try{
+        window.speechSynthesis.cancel();
+        var u=new SpeechSynthesisUtterance('엠티엠티');
+        var kv=window.speechSynthesis.getVoices().find(function(v){return v.lang==='ko-KR'||v.lang==='ko';});
+        if(kv)u.voice=kv;
+        u.lang='ko-KR'; u.rate=1.4; u.pitch=1.4; u.volume=1.0;
+        window.speechSynthesis.speak(u);
+      }catch(e){}
+    }
+  } else {
+    // ★ 일반: TTS로 "엠비티아이" 발화 (카톡처럼 앱 이름 말하기)
+    // SpeechSynthesis 지원 & 음성 목록 로드 확인
+    if(window.speechSynthesis){
+      try{
+        window.speechSynthesis.cancel(); // 이전 발화 취소
+        var voices=window.speechSynthesis.getVoices();
+        var utter=new SpeechSynthesisUtterance('엠비티아이');
+        // 한국어 음성 우선, 없으면 기본값
+        var koVoice=voices.find(function(v){return v.lang==='ko-KR'||v.lang==='ko';});
+        if(koVoice)utter.voice=koVoice;
+        utter.lang='ko-KR';
+        utter.rate=0.95;   // 약간 천천히 (명확하게)
+        utter.pitch=1.1;   // 약간 높게 (경쾌하게)
+        utter.volume=1.0;
+        window.speechSynthesis.speak(utter);
+        return; // TTS 성공 시 멜로디 생략
+      }catch(e){
+        // TTS 실패 시 멜로디 폴백
+      }
+    }
+    _playBeepSound(false);
+  }
+}
+// 실제 오디오 생성 (TTS 불가 시 폴백 + 긴급음)
+function _playBeepSound(urgent){
   try{
     var Ctx=window.AudioContext||window.webkitAudioContext;
     if(!Ctx)return;
-    if(!window._mbtiAudioCtx)window._mbtiAudioCtx=new Ctx();
+    if(!window._mbtiAudioCtx||window._mbtiAudioCtx.state==='closed'){
+      window._mbtiAudioCtx=new Ctx();
+    }
     var ctx=window._mbtiAudioCtx;
     if(ctx.state==='suspended')ctx.resume();
-    
     var now=ctx.currentTime;
+    function _tone(freq,t,dur,vol,type){
+      var osc=ctx.createOscillator();
+      var gain=ctx.createGain();
+      osc.type=type||'sine';
+      osc.frequency.value=freq;
+      gain.gain.setValueAtTime(0,now+t);
+      gain.gain.linearRampToValueAtTime(vol||0.3,now+t+0.015);
+      gain.gain.exponentialRampToValueAtTime(0.001,now+t+dur);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now+t);
+      osc.stop(now+t+dur+0.05);
+    }
     if(urgent){
-      // 긴급: "삐-삐-삐" 3회 (높은 음)
-      [0, 0.25, 0.5].forEach(function(t){
-        var osc=ctx.createOscillator();
-        var gain=ctx.createGain();
-        osc.type='sine';
-        osc.frequency.value=988; // B5
-        gain.gain.setValueAtTime(0, now+t);
-        gain.gain.linearRampToValueAtTime(0.3, now+t+0.02);
-        gain.gain.linearRampToValueAtTime(0, now+t+0.18);
-        osc.connect(gain).connect(ctx.destination);
-        osc.start(now+t);
-        osc.stop(now+t+0.2);
-      });
+      // 긴급: 띵·띵·띵 빠른 3연타
+      [0,0.18,0.36].forEach(function(t){_tone(1047,t,0.15,0.4,'square');});
+      [0.55,0.7,0.85].forEach(function(t){_tone(880,t,0.12,0.35,'sine');});
     } else {
-      // 일반: "딩-동" (2음 차임)
-      [{f:880,t:0},{f:659,t:0.18}].forEach(function(p){
-        var osc=ctx.createOscillator();
-        var gain=ctx.createGain();
-        osc.type='sine';
-        osc.frequency.value=p.f;
-        gain.gain.setValueAtTime(0, now+p.t);
-        gain.gain.linearRampToValueAtTime(0.25, now+p.t+0.02);
-        gain.gain.linearRampToValueAtTime(0, now+p.t+0.3);
-        osc.connect(gain).connect(ctx.destination);
-        osc.start(now+p.t);
-        osc.stop(now+p.t+0.3);
-      });
+      // 폴백 멜로디: 엠·비·티·아이
+      _tone(330,0,0.22,0.28,'sine');
+      _tone(392,0.25,0.22,0.28,'sine');
+      _tone(494,0.5,0.22,0.28,'sine');
+      _tone(659,0.75,0.35,0.32,'sine');
     }
   }catch(e){console.warn('[Sound]',e&&e.message);}
 }
