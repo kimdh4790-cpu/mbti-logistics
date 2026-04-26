@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
+                            http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <url>
+    <loc>https://mbti-logistics.kimdh4790.workers.dev/</loc>
+    <lastmod>2026-04-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://mbti-logistics.kimdh4790.workers.dev/og_banner.jpg</image:loc>
+      <image:title>엠비티아이(유) MBTI Co. LOGISTICS</image:title>
+      <image:caption>국내 주요 물류·유통사 공식 협력 파트너. 부산·대구·진주 영남권 냉동·냉장·상온 물류 전문 기업 엠비티아이(유).</image:caption>
+    </image:image>
+  </url>
+</urlset>

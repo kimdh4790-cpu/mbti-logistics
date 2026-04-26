@@ -1,0 +1,44 @@
+# robots.txt for MBTI Co. LOGISTICS
+# https://mbti-logistics.kimdh4790.workers.dev/
+
+User-agent: *
+Allow: /
+Disallow: /*v9.html
+Disallow: /*v9
+Disallow: /*관리자*
+Disallow: /*로그인*
+
+# Sitemap
+Sitemap: https://mbti-logistics.kimdh4790.workers.dev/sitemap.xml
+
+# Naver Bot
+User-agent: Yeti
+Allow: /
+Disallow: /*v9.html
+Disallow: /*v9
+Disallow: /*관리자*
+Crawl-delay: 1
+
+# Google Bot
+User-agent: Googlebot
+Allow: /
+Disallow: /*v9.html
+Disallow: /*v9
+Disallow: /*관리자*
+Crawl-delay: 1
+
+# Daum Bot
+User-agent: Daumoa
+Allow: /
+Disallow: /*v9.html
+Disallow: /*v9
+Disallow: /*관리자*
+Crawl-delay: 1
+
+# Bing Bot
+User-agent: bingbot
+Allow: /
+Disallow: /*v9.html
+Disallow: /*v9
+Disallow: /*관리자*
+Crawl-delay: 1
