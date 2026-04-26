@@ -3015,7 +3015,11 @@ function _setIncSetting(driver,route,on,rate){
 function loadIncSettingsFromFB(){
   if(!FB||!_db)return;
   _db.collection('settings').doc('incSettings').get().then(function(doc){
-    if(!doc.exists)return;
+    if(!doc.exists){
+      // ★ 문서 없으면 자동 생성 (첫 실행 시)
+      _db.collection('settings').doc('incSettings').set({_created:new Date().toISOString()},{merge:true}).catch(function(){});
+      return;
+    }
     var data=doc.data();
     Object.keys(data).forEach(function(k){
       if(k.startsWith('inc_'))localStorage.setItem(k,JSON.stringify(data[k]));
