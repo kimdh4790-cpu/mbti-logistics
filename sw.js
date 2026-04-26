@@ -3,11 +3,9 @@
 // FCM 백그라운드 푸시 + 오프라인 캐시 + 앱 업데이트 감지
 // ══════════════════════════════════════════════════════
 
-// Firebase SDK (compat) — FCM 백그라운드 메시지 처리용
 importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');
 
-// Firebase 설정 (앱과 동일)
 firebase.initializeApp({
   apiKey:            'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',
   authDomain:        'mbti-logistics.firebaseapp.com',
@@ -19,66 +17,59 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// ── 백그라운드 / 종료 상태에서 FCM 메시지 수신 ──
-messaging.onBackgroundMessage(function(payload) {
-  console.log('[SW] 백그라운드 FCM 수신:', payload);
-
-  var n   = payload.notification || {};
-  var d   = payload.data          || {};
-  var title   = n.title || d.title || '📬 새 알림';
-  var body    = n.body  || d.body  || '관리자 알림이 도착했습니다';
-  var isUrgent = d.urgent === 'true';
-
+// ── 알림 표시 공통 함수 ──
+function showMbtiNoti(title, body, tag, isUrgent) {
   var options = {
     body:               body,
     icon:               '/og_banner.jpg',
     badge:              '/og_banner.jpg',
-    tag:                d.tag || ('mbti-' + Date.now()),
+    tag:                tag || ('mbti-' + Date.now()),
     renotify:           true,
-    requireInteraction: isUrgent,
-    vibrate:            [200, 100, 200, 100, 200],
-    data:               { url: 'https://mbti-logistics.kimdh4790.workers.dev/', type: d.type || '' }
+    requireInteraction: !!isUrgent,
+    vibrate:            [300, 100, 300, 100, 500],
+    data:               { url: 'https://mbti-logistics.kimdh4790.workers.dev/엠비티아이_물류관리_v9.html' }
   };
-
+  // 열린 창에 소리 재생 요청
+  self.clients.matchAll({type:'window'}).then(function(list){
+    list.forEach(function(c){ c.postMessage({type:'PLAY_NOTI_SOUND'}); });
+  });
   return self.registration.showNotification(title, options);
+}
+
+// ── 백그라운드 FCM 수신 ──
+messaging.onBackgroundMessage(function(payload) {
+  var n = payload.notification || {};
+  var d = payload.data || {};
+  var title = n.title || d.title || '📬 엠비티아이';
+  var body  = n.body  || d.body  || '새 공지가 도착했습니다';
+  return showMbtiNoti(title, body, d.tag, d.urgent === 'true');
 });
 
-// ── 알림 클릭 → 앱 포커스 or 새 탭 ──
+// ── 알림 클릭 → 앱 포커스 ──
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
-  var targetUrl = (event.notification.data && event.notification.data.url)
-    || 'https://mbti-logistics.kimdh4790.workers.dev/';
-
+  var url = (event.notification.data && event.notification.data.url)
+    || 'https://mbti-logistics.kimdh4790.workers.dev/엠비티아이_물류관리_v9.html';
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(list) {
-      for (var i = 0; i < list.length; i++) {
+    clients.matchAll({type:'window', includeUncontrolled:true}).then(function(list){
+      for (var i=0; i<list.length; i++) {
         if ('focus' in list[i]) return list[i].focus();
       }
-      if (clients.openWindow) return clients.openWindow(targetUrl);
+      if (clients.openWindow) return clients.openWindow(url);
     })
   );
 });
 
-// ── 인라인 SHOW_NOTI 메시지 (포그라운드 알림용) ──
+// ── 메시지 처리 (포그라운드 알림 + 소리) ──
 self.addEventListener('message', function(event) {
   if (!event.data) return;
   if (event.data.type === 'SHOW_NOTI') {
     var d = event.data.data || {};
-    self.registration.showNotification(d.title || '알림', {
-      body:               d.body   || '',
-      icon:               d.icon   || '/og_banner.jpg',
-      badge:              d.badge  || '/og_banner.jpg',
-      tag:                d.tag    || ('mbti_' + Date.now()),
-      renotify:           true,
-      vibrate:            [200, 100, 200, 100, 200],
-      requireInteraction: !!d.urgent,
-      data:               { url: d.url || '/', cat: d.cat || '' }
-    });
+    showMbtiNoti(d.title||'알림', d.body||'', d.tag, d.urgent);
   }
   if (event.data.type === 'FLUSH_PENDING_WRITES') {
-    // 메인 페이지에 위임
-    clients.matchAll({ type: 'window' }).then(function(list) {
-      list.forEach(function(c) { c.postMessage({ type: 'FLUSH_PENDING_WRITES' }); });
+    clients.matchAll({type:'window'}).then(function(list){
+      list.forEach(function(c){ c.postMessage({type:'FLUSH_PENDING_WRITES'}); });
     });
   }
 });
