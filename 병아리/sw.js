@@ -1,7 +1,7 @@
-// ★ MBTI 물류관리 v9 — Service Worker
+// ★ MBTI 물류관리 v9.14 — Service Worker
 // 오프라인 캐싱 + 푸시 알림 수신
 
-const CACHE_NAME = 'mbti-logistics-v9';
+const CACHE_NAME = 'mbti-logistics-v9-14';
 const CACHE_URLS = [
   './',
   './index.html'
