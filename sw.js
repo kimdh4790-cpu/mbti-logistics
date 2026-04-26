@@ -1,13 +1,11 @@
-// ══════════════════════════════════════════════════════
-// MBTI 물류관리 Service Worker
-// FCM 백그라운드 푸시 + 오프라인 캐시 + 앱 업데이트 감지
-// ══════════════════════════════════════════════════════
+// ★ MBTI 물류관리 v9.17 — Service Worker (FCM 백그라운드 완전 지원)
+// GitHub Pages: kimdh4790-cpu.github.io/mbti-logistics/sw.js
 
-// Firebase SDK (compat) — FCM 백그라운드 메시지 처리용
+// ── Firebase 스크립트 임포트 (FCM 백그라운드 처리 필수)
 importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');
 
-// Firebase 설정 (앱과 동일)
+// ── Firebase 초기화
 firebase.initializeApp({
   apiKey:            'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',
   authDomain:        'mbti-logistics.firebaseapp.com',
@@ -19,70 +17,142 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// ── 백그라운드 / 종료 상태에서 FCM 메시지 수신 ──
-messaging.onBackgroundMessage(function(payload) {
-  console.log('[SW] 백그라운드 FCM 수신:', payload);
+// ── 아이콘 경로
+const ICON = 'https://kimdh4790-cpu.github.io/mbti-logistics/icon-192.png';
 
-  var n   = payload.notification || {};
-  var d   = payload.data          || {};
-  var title   = n.title || d.title || '📬 새 알림';
-  var body    = n.body  || d.body  || '관리자 알림이 도착했습니다';
-  var isUrgent = d.urgent === 'true';
+// ── 캐시 버전
+const CACHE = 'mbti-v9-17';
 
-  var options = {
-    body:               body,
-    icon:               '/og_banner.svg',
-    badge:              '/og_banner.svg',
-    tag:                d.tag || ('mbti-' + Date.now()),
-    renotify:           true,
-    requireInteraction: isUrgent,
-    vibrate:            [200, 100, 200, 100, 200],
-    data:               { url: 'https://mbti-logistics.kimdh4790.workers.dev/', type: d.type || '' }
-  };
-
-  return self.registration.showNotification(title, options);
+// ──────────────────────────────────────────
+// 설치 / 활성화
+// ──────────────────────────────────────────
+self.addEventListener('install', e => {
+  console.log('[SW] install v9.17');
+  self.skipWaiting();
 });
 
-// ── 알림 클릭 → 앱 포커스 or 새 탭 ──
-self.addEventListener('notificationclick', function(event) {
-  event.notification.close();
-  var targetUrl = (event.notification.data && event.notification.data.url)
-    || 'https://mbti-logistics.kimdh4790.workers.dev/';
-
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(list) {
-      for (var i = 0; i < list.length; i++) {
-        if ('focus' in list[i]) return list[i].focus();
-      }
-      if (clients.openWindow) return clients.openWindow(targetUrl);
-    })
+self.addEventListener('activate', e => {
+  console.log('[SW] activate v9.17');
+  e.waitUntil(
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(() => self.clients.claim())
   );
 });
 
-// ── 인라인 SHOW_NOTI 메시지 (포그라운드 알림용) ──
-self.addEventListener('message', function(event) {
-  if (!event.data) return;
-  if (event.data.type === 'SHOW_NOTI') {
-    var d = event.data.data || {};
-    self.registration.showNotification(d.title || '알림', {
-      body:               d.body   || '',
-      icon:               d.icon   || '/og_banner.svg',
-      badge:              d.badge  || '/og_banner.svg',
-      tag:                d.tag    || ('mbti_' + Date.now()),
-      renotify:           true,
-      vibrate:            [200, 100, 200, 100, 200],
-      requireInteraction: !!d.urgent,
-      data:               { url: d.url || '/', cat: d.cat || '' }
+// ──────────────────────────────────────────
+// ★ FCM 백그라운드 메시지 처리
+//    앱이 닫혀있거나 백그라운드일 때도 알림 표시
+// ──────────────────────────────────────────
+messaging.onBackgroundMessage(function(payload) {
+  console.log('[FCM SW] 백그라운드 수신:', payload);
+
+  const n   = payload.notification || {};
+  const d   = payload.data         || {};
+
+  const title    = n.title || d.title || '📢 MBTI 물류';
+  const body     = n.body  || d.body  || '';
+  const isUrgent = d.urgent === 'true' || d.pinned === 'true';
+  const tag      = d.tag   || 'mbti-' + Date.now();
+
+  return self.registration.showNotification(title, {
+    body:              body,
+    icon:              ICON,
+    badge:             ICON,
+    tag:               tag,
+    renotify:          true,
+    vibrate:           isUrgent ? [300,100,300,100,300,100,300] : [200,100,200],
+    requireInteraction:isUrgent,
+    data: {
+      url:   d.url  || '/',
+      type:  d.type || '',
+      tag:   tag,
+      ...d
+    }
+  });
+});
+
+// ──────────────────────────────────────────
+// ★ 인앱 → SW 수동 알림 표시
+//    포그라운드에서 sendLocalNoti()가 postMessage()로 호출
+// ──────────────────────────────────────────
+self.addEventListener('message', function(e) {
+  if (!e.data) return;
+
+  if (e.data.type === 'SHOW_NOTI') {
+    const d        = e.data.data || {};
+    const isUrgent = !!d.urgent;
+    self.registration.showNotification(d.title || '📢 MBTI 물류', {
+      body:              d.body  || '',
+      icon:              ICON,
+      badge:             ICON,
+      tag:               d.tag || 'mbti-' + Date.now(),
+      renotify:          true,
+      vibrate:           isUrgent ? [300,100,300,100,300] : [200,100,200],
+      requireInteraction:isUrgent,
+      data:              { url: '/', cat: d.cat || '', ...d }
     });
   }
-  if (event.data.type === 'FLUSH_PENDING_WRITES') {
-    // 메인 페이지에 위임
-    clients.matchAll({ type: 'window' }).then(function(list) {
-      list.forEach(function(c) { c.postMessage({ type: 'FLUSH_PENDING_WRITES' }); });
-    });
+
+  if (e.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
   }
 });
 
-// ── SW 설치 / 활성화 ──
-self.addEventListener('install',  function(e) { self.skipWaiting(); });
-self.addEventListener('activate', function(e) { e.waitUntil(self.clients.claim()); });
+// ──────────────────────────────────────────
+// ★ 알림 클릭 → 앱 포커스 / 열기
+// ──────────────────────────────────────────
+self.addEventListener('notificationclick', function(e) {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || '/';
+
+  e.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then(function(list) {
+        // 이미 열린 탭이 있으면 포커스
+        for (let i = 0; i < list.length; i++) {
+          if ('focus' in list[i]) {
+            list[i].focus();
+            // 탭에 클릭 이벤트 전달 (인앱 딥링크 처리용)
+            list[i].postMessage({ type: 'NOTIFICATION_CLICK', data: e.notification.data });
+            return list[i];
+          }
+        }
+        // 탭 없으면 새로 열기
+        if (clients.openWindow) return clients.openWindow(url);
+      })
+  );
+});
+
+// ──────────────────────────────────────────
+// 오프라인 캐시 (네트워크 우선)
+// ──────────────────────────────────────────
+self.addEventListener('fetch', function(e) {
+  // Firebase / CDN 요청은 캐시 안 함
+  const url = e.request.url;
+  if (url.includes('firestore.googleapis.com') ||
+      url.includes('firebase') ||
+      url.includes('googleapis.com') ||
+      url.includes('gstatic.com') ||
+      e.request.method !== 'GET') {
+    return;
+  }
+
+  e.respondWith(
+    fetch(e.request)
+      .then(function(res) {
+        // HTML/JS/CSS만 캐시
+        if (res && res.status === 200) {
+          const ct = res.headers.get('content-type') || '';
+          if (ct.includes('html') || ct.includes('javascript') || ct.includes('css')) {
+            const clone = res.clone();
+            caches.open(CACHE).then(c => c.put(e.request, clone));
+          }
+        }
+        return res;
+      })
+      .catch(function() {
+        return caches.match(e.request);
+      })
+  );
+});
