@@ -10809,227 +10809,227 @@ function startListeners(){
   firebase.firestore().disableNetwork().then(function(){
     return firebase.firestore().enableNetwork();
   }).catch(function(){}).then(function(){
-    _setupFbListeners();
-  // ── 전체 기사 데이터 초기 1회 로드
-  _db.collection('drivers').get().then(function(snap){
-    var all=[];
-    snap.forEach(function(doc){var d=doc.data();d.fbId=doc.id;all.push(d);});
-    lss('drivers',all);
-    updBadge();
-    if(S.page==='drivers'||S.page==='dash')SP(S.page,null);
-  }).catch(function(e){console.warn('drivers get:',e);});
-
-  // ── 전체 정산서 Firebase에서 초기 로드 (다른 기기 동기화)
-  // driver+month 기준으로 로컬과 병합: Firebase가 최신이면 덮어쓰기, 로컬에만 있는 것도 유지
-  _db.collection('settlements').get().then(function(snap){
-    var fbArr=[];
-    snap.forEach(function(doc){var x=doc.data();x.fbId=doc.id;fbArr.push(x);});
-    var local=ls('settlements');
-    var map={};
-    // 로컬 먼저 등록 (키: driver+month)
-    local.forEach(function(x){
-      if(x&&x.driver&&x.month)map[x.driver+'_'+x.month]=x;
-    });
-    // Firebase로 덮어쓰기 (최신 기준)
-    fbArr.forEach(function(x){
-      if(x.driver&&x.month)map[x.driver+'_'+x.month]=x;
-    });
-    var merged=Object.values(map);
-    lss('settlements',merged);
-    if(S.page==='settle'||S.page==='dash')SP(S.page,null);
-    console.log('[Firebase] settlements 로드:',fbArr.length,'건 / 병합 후:',merged.length,'건');
-  }).catch(function(e){console.warn('settlements get:',e&&e.message);});
-
-  // ── 근무표(schedules) Firebase에서 초기 로드
-  // Firebase: {driver, date:YYYY-MM-DD, status, route?, wave?, ...} 날짜별 개별 문서
-  // localStorage: schedule_{name}_month_{year}_{month0} 키에 {date: status|object} 맵으로 저장
-  _db.collection('schedules').get().then(function(snap){
-    var grouped={};
-    snap.forEach(function(doc){
-      var x=doc.data();
-      if(!x.driver||!x.date)return;
-      var parts=x.date.split('-');
-      if(parts.length<3)return;
-      var yy=parseInt(parts[0],10);
-      var mm=parseInt(parts[1],10)-1; // 0-indexed
-      var key='schedule_'+x.driver+'_month_'+yy+'_'+mm;
-      if(!grouped[key])grouped[key]={};
-      // route/wave/camp 등 추가 정보가 있으면 객체로, 없으면 문자열로 저장
-      if(x.route||x.wave||x.rotation||x.camp){
-        grouped[key][x.date]={status:x.status||'',route:x.route||'',wave:x.wave||'',rotation:x.rotation||'',camp:x.camp||''};
-      } else {
-        grouped[key][x.date]=x.status||'';
+      _setupFbListeners();
+    // ── 전체 기사 데이터 초기 1회 로드
+    _db.collection('drivers').get().then(function(snap){
+      var all=[];
+      snap.forEach(function(doc){var d=doc.data();d.fbId=doc.id;all.push(d);});
+      lss('drivers',all);
+      updBadge();
+      if(S.page==='drivers'||S.page==='dash')SP(S.page,null);
+    }).catch(function(e){console.warn('drivers get:',e);});
+  
+    // ── 전체 정산서 Firebase에서 초기 로드 (다른 기기 동기화)
+    // driver+month 기준으로 로컬과 병합: Firebase가 최신이면 덮어쓰기, 로컬에만 있는 것도 유지
+    _db.collection('settlements').get().then(function(snap){
+      var fbArr=[];
+      snap.forEach(function(doc){var x=doc.data();x.fbId=doc.id;fbArr.push(x);});
+      var local=ls('settlements');
+      var map={};
+      // 로컬 먼저 등록 (키: driver+month)
+      local.forEach(function(x){
+        if(x&&x.driver&&x.month)map[x.driver+'_'+x.month]=x;
+      });
+      // Firebase로 덮어쓰기 (최신 기준)
+      fbArr.forEach(function(x){
+        if(x.driver&&x.month)map[x.driver+'_'+x.month]=x;
+      });
+      var merged=Object.values(map);
+      lss('settlements',merged);
+      if(S.page==='settle'||S.page==='dash')SP(S.page,null);
+      console.log('[Firebase] settlements 로드:',fbArr.length,'건 / 병합 후:',merged.length,'건');
+    }).catch(function(e){console.warn('settlements get:',e&&e.message);});
+  
+    // ── 근무표(schedules) Firebase에서 초기 로드
+    // Firebase: {driver, date:YYYY-MM-DD, status, route?, wave?, ...} 날짜별 개별 문서
+    // localStorage: schedule_{name}_month_{year}_{month0} 키에 {date: status|object} 맵으로 저장
+    _db.collection('schedules').get().then(function(snap){
+      var grouped={};
+      snap.forEach(function(doc){
+        var x=doc.data();
+        if(!x.driver||!x.date)return;
+        var parts=x.date.split('-');
+        if(parts.length<3)return;
+        var yy=parseInt(parts[0],10);
+        var mm=parseInt(parts[1],10)-1; // 0-indexed
+        var key='schedule_'+x.driver+'_month_'+yy+'_'+mm;
+        if(!grouped[key])grouped[key]={};
+        // route/wave/camp 등 추가 정보가 있으면 객체로, 없으면 문자열로 저장
+        if(x.route||x.wave||x.rotation||x.camp){
+          grouped[key][x.date]={status:x.status||'',route:x.route||'',wave:x.wave||'',rotation:x.rotation||'',camp:x.camp||''};
+        } else {
+          grouped[key][x.date]=x.status||'';
+        }
+      });
+      // 기존 로컬과 병합 (Firebase가 최신 기준)
+      Object.keys(grouped).forEach(function(key){
+        var existing=JSON.parse(localStorage.getItem(key)||'{}');
+        var merged=Object.assign({},existing,grouped[key]);
+        localStorage.setItem(key,JSON.stringify(merged));
+      });
+      if(S.page==='schedule_admin'||S.page==='dash')SP(S.page,null);
+      console.log('[Firebase] schedules 로드:',snap.size,'건');
+    }).catch(function(e){console.warn('schedules get:',e&&e.message);});
+  
+    // ── 메모 Firebase→localStorage 동기화 (메모 사라짐 방지)
+    _db.collection('settings').doc('memos').get().then(function(doc){
+      if(doc.exists){
+        var fbMemos=doc.data().data||{};
+        var localMemos=JSON.parse(localStorage.getItem('mbti_memos')||'{}');
+        // 병합: 로컬 우선 (최근 입력 보존), Firebase에 없는 것만 추가
+        var merged=Object.assign({},fbMemos,localMemos);
+        localStorage.setItem('mbti_memos',JSON.stringify(merged));
+        // 병합된 결과를 Firebase에도 저장
+        _db.collection('settings').doc('memos').set({data:merged,updatedAt:new Date().toISOString()},{merge:true}).catch(function(){});
       }
-    });
-    // 기존 로컬과 병합 (Firebase가 최신 기준)
-    Object.keys(grouped).forEach(function(key){
-      var existing=JSON.parse(localStorage.getItem(key)||'{}');
-      var merged=Object.assign({},existing,grouped[key]);
-      localStorage.setItem(key,JSON.stringify(merged));
-    });
-    if(S.page==='schedule_admin'||S.page==='dash')SP(S.page,null);
-    console.log('[Firebase] schedules 로드:',snap.size,'건');
-  }).catch(function(e){console.warn('schedules get:',e&&e.message);});
-
-  // ── 메모 Firebase→localStorage 동기화 (메모 사라짐 방지)
-  _db.collection('settings').doc('memos').get().then(function(doc){
-    if(doc.exists){
-      var fbMemos=doc.data().data||{};
-      var localMemos=JSON.parse(localStorage.getItem('mbti_memos')||'{}');
-      // 병합: 로컬 우선 (최근 입력 보존), Firebase에 없는 것만 추가
-      var merged=Object.assign({},fbMemos,localMemos);
-      localStorage.setItem('mbti_memos',JSON.stringify(merged));
-      // 병합된 결과를 Firebase에도 저장
-      _db.collection('settings').doc('memos').set({data:merged,updatedAt:new Date().toISOString()},{merge:true}).catch(function(){});
-    }
-  }).catch(function(){});
-
-  // ── 관리자 정보 Firebase에서 로드
-  _db.collection('settings').doc('adminInfo').get().then(function(doc){
-    if(doc.exists){
-      var data=doc.data();
-      var local=JSON.parse(localStorage.getItem('mbti_admin_info')||'{}');
-      // Firebase가 더 최신이면 덮어쓰기
-      Object.assign(local,data);
-      localStorage.setItem('mbti_admin_info',JSON.stringify(local));
-    }
-  }).catch(function(){});
-
-  // ── 인센티브 설정 Firebase에서 로드
-  loadIncSettingsFromFB();
-
-  // ── photo_logs: 기사 사진 업로드 실시간 감지 → 관리자 UI 알림
-  // ★ 오늘+어제 날짜 모두 감시 (자정 전후 사진 누락 방지)
-  var yesterday=new Date();yesterday.setDate(yesterday.getDate()-1);
-  var yesterdayStr=yesterday.toISOString().slice(0,10);
-  _fbUnsubs.push(_db.collection('photo_logs')
-    .where('date','>=',yesterdayStr)
-    .onSnapshot(function(snap){
-      snap.docChanges().forEach(function(change){
-        if(change.type==='added'){
-          var d=change.doc.data();
-          var drivers=ls('drivers');
-          var idx=drivers.findIndex(function(dr){return dr.name===d.driver;});
-          if(idx>=0){
-            if(!drivers[idx].photos)drivers[idx].photos={};
-            if(!drivers[idx].photos[d.category])drivers[idx].photos[d.category]={};
-            drivers[idx].photos[d.category][d.slotKey]=d.url;
-            lss('drivers',drivers);
-          }
-          if(S.curMode==='admin'){
-            if(S.page==='drivers'||S.page==='sync')SP(S.page,null);
-            toast('📸 '+d.driver+' — '+d.label+' 사진 업로드됨');
-          }
-        }
-      });
-    },function(e){console.warn('photo_logs listener 오류:', e.code);}));
-
-  // ── photo_logs: Firestore → localStorage → UI 직접 반영 (1초 이내)
-  // ── drivers: Firestore → localStorage → UI 직접 반영 (1초 이내)
-  _fbUnsubs.push(_db.collection('drivers').limit(500)
-    .onSnapshot({includeMetadataChanges:false}, snap=>{
-      // ① Firestore 전체 데이터 배열화
-      var fbDrivers=[];
-      snap.forEach(doc=>{ var d=doc.data(); d.fbId=doc.id; fbDrivers.push(d); });
-      // ② Firebase → localStorage 동기화 (탈퇴/거부 상태 로컬 우선 보호)
-      var localDrivers = ls('drivers');
-      var mergedDrivers = fbDrivers.map(function(fbD){
-        var localD = localDrivers.find(function(ld){ return ld.fbId===fbD.fbId || (ld.userId&&ld.userId===fbD.userId); });
-        if(localD){
-          // ★ 로컬에서 탈퇴/거부/비활성화된 경우 → 로컬 상태 유지
-          if(localD.status==='탈퇴'||localD.status==='거부'||localD.is_active===false){
-            return Object.assign({}, fbD, {status:localD.status, is_active:localD.is_active, deactivatedAt:localD.deactivatedAt});
-          }
-          // ★ 로컬에서 이미 승인됐는데 Firebase가 아직 pending인 경우 → 로컬 승인 유지
-          if((localD.status==='대기'||localD.status==='active'||localD.is_active===true) && fbD.status==='pending'){
-            return Object.assign({}, fbD, {status:localD.status, is_active:localD.is_active, isNew:false, approvedAt:localD.approvedAt});
-          }
-        }
-        return fbD;
-      });
-      lss('drivers', mergedDrivers);
-      // ③ 신규 가입자 알림 (앱 시작 후 실제 추가된 경우만)
-      if(!_initialLoad){
-        snap.docChanges().forEach(ch=>{
-          if(ch.type==='added'){
-            var d=ch.doc.data(); d.fbId=ch.doc.id;
-            if(d.isNew===true||d.status==='pending'){
-              addAct('reg','🆕 신규가입: '+(d.name||'기사'),d.name||'');
-              toast('🔔 신규 가입: '+(d.name||'기사')+'님 — 서류 확인 후 승인해 주세요');
+    }).catch(function(){});
+  
+    // ── 관리자 정보 Firebase에서 로드
+    _db.collection('settings').doc('adminInfo').get().then(function(doc){
+      if(doc.exists){
+        var data=doc.data();
+        var local=JSON.parse(localStorage.getItem('mbti_admin_info')||'{}');
+        // Firebase가 더 최신이면 덮어쓰기
+        Object.assign(local,data);
+        localStorage.setItem('mbti_admin_info',JSON.stringify(local));
+      }
+    }).catch(function(){});
+  
+    // ── 인센티브 설정 Firebase에서 로드
+    loadIncSettingsFromFB();
+  
+    // ── photo_logs: 기사 사진 업로드 실시간 감지 → 관리자 UI 알림
+    // ★ 오늘+어제 날짜 모두 감시 (자정 전후 사진 누락 방지)
+    var yesterday=new Date();yesterday.setDate(yesterday.getDate()-1);
+    var yesterdayStr=yesterday.toISOString().slice(0,10);
+    _fbUnsubs.push(_db.collection('photo_logs')
+      .where('date','>=',yesterdayStr)
+      .onSnapshot(function(snap){
+        snap.docChanges().forEach(function(change){
+          if(change.type==='added'){
+            var d=change.doc.data();
+            var drivers=ls('drivers');
+            var idx=drivers.findIndex(function(dr){return dr.name===d.driver;});
+            if(idx>=0){
+              if(!drivers[idx].photos)drivers[idx].photos={};
+              if(!drivers[idx].photos[d.category])drivers[idx].photos[d.category]={};
+              drivers[idx].photos[d.category][d.slotKey]=d.url;
+              lss('drivers',drivers);
+            }
+            if(S.curMode==='admin'){
+              if(S.page==='drivers'||S.page==='sync')SP(S.page,null);
+              toast('📸 '+d.driver+' — '+d.label+' 사진 업로드됨');
             }
           }
         });
-      }
-      _initialLoad=false;
-      // ④ 즉시 UI 갱신
-      updBadge();
-      if(S.page==='drivers'||S.page==='dash') SP(S.page, null);
-    }, err=>{
-      console.error('drivers onSnapshot 오류:', err.code, err.message);
-      // 오류 시 1회성 fetch로 보완
-      _db.collection('drivers').get().then(snap=>{
-        var a=[]; snap.forEach(doc=>{ var d=doc.data(); d.fbId=doc.id; a.push(d); });
-        lss('drivers',a); updBadge();
+      },function(e){console.warn('photo_logs listener 오류:', e.code);}));
+  
+    // ── photo_logs: Firestore → localStorage → UI 직접 반영 (1초 이내)
+    // ── drivers: Firestore → localStorage → UI 직접 반영 (1초 이내)
+    _fbUnsubs.push(_db.collection('drivers').limit(500)
+      .onSnapshot({includeMetadataChanges:false}, snap=>{
+        // ① Firestore 전체 데이터 배열화
+        var fbDrivers=[];
+        snap.forEach(doc=>{ var d=doc.data(); d.fbId=doc.id; fbDrivers.push(d); });
+        // ② Firebase → localStorage 동기화 (탈퇴/거부 상태 로컬 우선 보호)
+        var localDrivers = ls('drivers');
+        var mergedDrivers = fbDrivers.map(function(fbD){
+          var localD = localDrivers.find(function(ld){ return ld.fbId===fbD.fbId || (ld.userId&&ld.userId===fbD.userId); });
+          if(localD){
+            // ★ 로컬에서 탈퇴/거부/비활성화된 경우 → 로컬 상태 유지
+            if(localD.status==='탈퇴'||localD.status==='거부'||localD.is_active===false){
+              return Object.assign({}, fbD, {status:localD.status, is_active:localD.is_active, deactivatedAt:localD.deactivatedAt});
+            }
+            // ★ 로컬에서 이미 승인됐는데 Firebase가 아직 pending인 경우 → 로컬 승인 유지
+            if((localD.status==='대기'||localD.status==='active'||localD.is_active===true) && fbD.status==='pending'){
+              return Object.assign({}, fbD, {status:localD.status, is_active:localD.is_active, isNew:false, approvedAt:localD.approvedAt});
+            }
+          }
+          return fbD;
+        });
+        lss('drivers', mergedDrivers);
+        // ③ 신규 가입자 알림 (앱 시작 후 실제 추가된 경우만)
+        if(!_initialLoad){
+          snap.docChanges().forEach(ch=>{
+            if(ch.type==='added'){
+              var d=ch.doc.data(); d.fbId=ch.doc.id;
+              if(d.isNew===true||d.status==='pending'){
+                addAct('reg','🆕 신규가입: '+(d.name||'기사'),d.name||'');
+                toast('🔔 신규 가입: '+(d.name||'기사')+'님 — 서류 확인 후 승인해 주세요');
+              }
+            }
+          });
+        }
+        _initialLoad=false;
+        // ④ 즉시 UI 갱신
+        updBadge();
         if(S.page==='drivers'||S.page==='dash') SP(S.page, null);
-      }).catch(e=>console.warn('drivers fetch 실패:', e));
-    }));
-
-  // ── 운행 데이터 리스너 (entries/deliveries/temp_logs/accidents/settlements)
-  var colPageMap={
-    entries:'entry', deliveries:'delivery', temp_logs:'temp',
-    accidents:'accident', settlements:'settle'
-  };
-  Object.keys(colPageMap).forEach(col=>{
-    _fbUnsubs.push(_db.collection(col).limit(300)
+      }, err=>{
+        console.error('drivers onSnapshot 오류:', err.code, err.message);
+        // 오류 시 1회성 fetch로 보완
+        _db.collection('drivers').get().then(snap=>{
+          var a=[]; snap.forEach(doc=>{ var d=doc.data(); d.fbId=doc.id; a.push(d); });
+          lss('drivers',a); updBadge();
+          if(S.page==='drivers'||S.page==='dash') SP(S.page, null);
+        }).catch(e=>console.warn('drivers fetch 실패:', e));
+      }));
+  
+    // ── 운행 데이터 리스너 (entries/deliveries/temp_logs/accidents/settlements)
+    var colPageMap={
+      entries:'entry', deliveries:'delivery', temp_logs:'temp',
+      accidents:'accident', settlements:'settle'
+    };
+    Object.keys(colPageMap).forEach(col=>{
+      _fbUnsubs.push(_db.collection(col).limit(300)
+        .onSnapshot(snap=>{
+          snap.docChanges().forEach(ch=>{
+            if(ch.type==='added'||ch.type==='modified'){
+              var d=ch.doc.data(); d.id=ch.doc.id; d.fbId=ch.doc.id;
+              var a=ls(col);
+              var i=a.findIndex(x=>x.fbId===d.fbId||x.id===d.id);
+              if(i>=0) a[i]=Object.assign({},a[i],d);
+              else a.unshift(d);
+              if(a.length>300)a=a.slice(0,300);
+              lss(col,a);
+              if(col==='accidents'&&ch.type==='added')
+                addAct('acc','🚨 사고접수: '+(d.driver||''),d.driver||'');
+            }
+          });
+          if(S.page==='dash'||S.page===colPageMap[col]) SP(S.page, null);
+        }, err=>console.warn(col+' listener 오류:', err.code)));
+    });
+  
+    // ★ v9.5: 운행 메모(delivery_memos) 실시간 동기화 (관리자용 뱃지/페이지 자동 갱신)
+    _fbUnsubs.push(_db.collection('delivery_memos').limit(500)
       .onSnapshot(snap=>{
+        var arr=ls('deliveryMemos');
+        var newCount=0;
         snap.docChanges().forEach(ch=>{
           if(ch.type==='added'||ch.type==='modified'){
             var d=ch.doc.data(); d.id=ch.doc.id; d.fbId=ch.doc.id;
-            var a=ls(col);
-            var i=a.findIndex(x=>x.fbId===d.fbId||x.id===d.id);
-            if(i>=0) a[i]=Object.assign({},a[i],d);
-            else a.unshift(d);
-            if(a.length>300)a=a.slice(0,300);
-            lss(col,a);
-            if(col==='accidents'&&ch.type==='added')
-              addAct('acc','🚨 사고접수: '+(d.driver||''),d.driver||'');
+            var i=arr.findIndex(x=>x.fbId===d.fbId||x.id===d.id);
+            if(i>=0) arr[i]=Object.assign({},arr[i],d);
+            else { arr.unshift(d); if(ch.type==='added') newCount++; }
           }
         });
-        if(S.page==='dash'||S.page===colPageMap[col]) SP(S.page, null);
-      }, err=>console.warn(col+' listener 오류:', err.code)));
-  });
-
-  // ★ v9.5: 운행 메모(delivery_memos) 실시간 동기화 (관리자용 뱃지/페이지 자동 갱신)
-  _fbUnsubs.push(_db.collection('delivery_memos').limit(500)
-    .onSnapshot(snap=>{
-      var arr=ls('deliveryMemos');
-      var newCount=0;
-      snap.docChanges().forEach(ch=>{
-        if(ch.type==='added'||ch.type==='modified'){
-          var d=ch.doc.data(); d.id=ch.doc.id; d.fbId=ch.doc.id;
-          var i=arr.findIndex(x=>x.fbId===d.fbId||x.id===d.id);
-          if(i>=0) arr[i]=Object.assign({},arr[i],d);
-          else { arr.unshift(d); if(ch.type==='added') newCount++; }
-        }
-      });
-      if(arr.length>500)arr=arr.slice(0,500);
-      lss('deliveryMemos',arr);
-      // 메모 뱃지: 오늘 등록된 메모 수
-      try{
-        var todayMemos=arr.filter(function(m){return m.date===today();}).length;
-        var badge=document.getElementById('memo-badge');
-        if(badge){
-          if(todayMemos>0){badge.textContent=todayMemos;badge.style.display='';}
-          else{badge.style.display='none';}
-        }
-      }catch(e){}
-      if(S.page==='memo_log') SP('memo_log',null);
-    }, err=>console.warn('delivery_memos listener 오류:', err.code)));
-
-  // ★ Firebase 재연결 시 pending 큐 재전송
-  firebase.firestore().enableNetwork().then(function(){
-    flushPendingWrites();
-  }).catch(function(){});
+        if(arr.length>500)arr=arr.slice(0,500);
+        lss('deliveryMemos',arr);
+        // 메모 뱃지: 오늘 등록된 메모 수
+        try{
+          var todayMemos=arr.filter(function(m){return m.date===today();}).length;
+          var badge=document.getElementById('memo-badge');
+          if(badge){
+            if(todayMemos>0){badge.textContent=todayMemos;badge.style.display='';}
+            else{badge.style.display='none';}
+          }
+        }catch(e){}
+        if(S.page==='memo_log') SP('memo_log',null);
+      }, err=>console.warn('delivery_memos listener 오류:', err.code)));
+  
+    // ★ Firebase 재연결 시 pending 큐 재전송
+    firebase.firestore().enableNetwork().then(function(){
+      flushPendingWrites();
+    }).catch(function(){});
   }); // ── disableNetwork→enableNetwork .then() 닫음
 } // ── startListeners 종료
 
