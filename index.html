@@ -180,6 +180,14 @@ function _mbtiCanSubmit(){
   window._mbtiLastSubmit = now;
   return true;
 }
+// ★ tryOpenApp 안전 스텁 — 버튼이 스크립트보다 먼저 렌더링되어
+//   페이지 로딩 중 클릭 시 'not defined' 방지용 (실제 구현은 하단 main script)
+function tryOpenApp(){
+  if(typeof setView==='function'){setView('app');return;}
+  // setView 미로드 시 직접 오버레이 열기
+  var ol=document.getElementById('app-launcher-overlay');
+  if(ol){ol.classList.add('open');document.body.style.overflow='hidden';}
+}
 // 타임스탬프 포맷 헬퍼
 function _mbtiTs(){
   var d = new Date();
