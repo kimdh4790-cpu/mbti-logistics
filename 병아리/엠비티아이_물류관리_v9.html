@@ -615,6 +615,8 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
         <div id="grp-ops" style="overflow:hidden;max-height:0px">
           <div class="ni" onclick="SP('schedule_admin',this)">📅 근무표 관리</div>
           <div class="ni" onclick="SP('attend',this)">📍 출퇴근 조회</div>
+          <div class="ni" onclick="SP('support_admin',this)">🤝 기사 지원요청</div>
+          <div class="ni" onclick="SP('complaint_admin',this)">📝 불편함 접수</div>
           <div class="ni" onclick="SP('notice',this)">📢 공지사항 게시판</div>
           <div class="ni" onclick="SP('memo',this)">📝 메모 달력</div>
           <div class="ni" onclick="SP('entry',this)">🚪 입차 현황</div>
@@ -1941,7 +1943,7 @@ async function submitReg(){
 }
 
 // ══ 관리자 페이지
-var PT={archive:'📋 3개월 기록 보관소',audit:'🔒 보안 감사 로그',dash:'대시보드',schedule_admin:'📅 근무표 관리',memo:'📝 메모 달력',sync:'기사 연동',entry:'입차 현황',delivery_taxi:'📦 운행 현황',delivery_line:'🚚 간선 현황',delivery:'운송현황',accident:'사고 접수',temp:'온도 기록',settle:'정산서 관리',drivers:'기사 관리',insurance:'쿠팡 라우트 단가표',mypage:'내 정보 수정',inquiries:'📩 홈페이지 문의함',notice:'📢 공지사항 게시판',attend:'📍 출퇴근 조회',memo_log:'📝 운행 메모 (60일)'};
+var PT={archive:'📋 3개월 기록 보관소',audit:'🔒 보안 감사 로그',dash:'대시보드',schedule_admin:'📅 근무표 관리',memo:'📝 메모 달력',sync:'기사 연동',entry:'입차 현황',delivery_taxi:'📦 운행 현황',delivery_line:'🚚 간선 현황',delivery:'운송현황',accident:'사고 접수',temp:'온도 기록',settle:'정산서 관리',drivers:'기사 관리',insurance:'쿠팡 라우트 단가표',mypage:'내 정보 수정',inquiries:'📩 홈페이지 문의함',notice:'📢 공지사항 게시판',attend:'📍 출퇴근 조회',memo_log:'📝 운행 메모 (60일)',support_admin:'🤝 기사 지원요청',complaint_admin:'📝 불편함 접수'};
 function SP(pg,el){
   S.page=pg;
   // 기사 관리 페이지 진입 시 Firebase 최신 데이터 즉시 로드
@@ -1959,13 +1961,13 @@ function SP(pg,el){
   document.getElementById('ptitle').textContent=PT[pg]||pg;
   if(el){document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));el.classList.add('on');}
   // ★ 보안: 관리자 전용 페이지 권한 체크
-  var adminOnlyPages=['drivers','settle','audit','archive','inquiries','insurance','sync','schedule_admin','memo','accident','temp','entry','delivery','delivery_taxi','delivery_line','notice','attend'];
+  var adminOnlyPages=['drivers','settle','audit','archive','inquiries','insurance','sync','schedule_admin','memo','accident','temp','entry','delivery','delivery_taxi','delivery_line','notice','attend','support_admin','complaint_admin'];
   if(adminOnlyPages.indexOf(pg)>=0 && S.curMode!=='admin'){
     document.getElementById('ca').innerHTML='<div class="card" style="padding:40px;text-align:center"><div style="font-size:48px;margin-bottom:12px">🔒</div><div style="font-size:18px;font-weight:700;color:var(--red);margin-bottom:8px">접근 권한이 없습니다</div><div style="font-size:13px;color:var(--text2);margin-bottom:20px">이 페이지는 관리자 전용입니다</div><button onclick="SP(\'dash\',null)" class="btn btn-blue">대시보드로 이동</button></div>';
     if(typeof addAct==='function')addAct('security','관리자 페이지 무단 접근 시도: '+pg,null);
     return;
   }
-  var m={archive:rArchive,audit:rAuditLog,dash:rDash,sync:rSync,schedule_admin:rScheduleAdmin,memo:rMemoCalendar,entry:rEntry,delivery_taxi:rDeliveryTaxi,delivery_line:rDeliveryLine,delivery:rDelivery,accident:rAcc,temp:rTemp,settle:rSettle,drivers:rDrivers,insurance:rInsurance,mypage:rMypage,inquiries:rInquiries,notice:rNoticePanel,attend:rAttendPanel,memo_log:rMemoLog};
+  var m={archive:rArchive,audit:rAuditLog,dash:rDash,sync:rSync,schedule_admin:rScheduleAdmin,memo:rMemoCalendar,entry:rEntry,delivery_taxi:rDeliveryTaxi,delivery_line:rDeliveryLine,delivery:rDelivery,accident:rAcc,temp:rTemp,settle:rSettle,drivers:rDrivers,insurance:rInsurance,mypage:rMypage,inquiries:rInquiries,notice:rNoticePanel,attend:rAttendPanel,memo_log:rMemoLog,support_admin:rSupportAdmin,complaint_admin:rComplaintAdmin};
   try{
     document.getElementById('ca').innerHTML=(m[pg]||rDash)();
   }catch(e){
@@ -1980,7 +1982,7 @@ function rDash(){
   var e=ls('entries'),a=ls('accidents'),ac=ls('activity');
   var w=ls('tempLogs').filter(l=>l.temp!=='상온'&&l.temp>-18).length;
   var oa=a.filter(x=>x.status==='접수중'||x.status==='처리중').length;
-  // ★ v9.5: 본인확인 미완료 기사 수 / 오늘 운행 메모 수 / 가입 승인 대기 수
+  // ★ v9.5: 개인 PIN 미설정 기사 수 / 오늘 운행 메모 수 / 가입 승인 대기 수
   var allDrv=ls('drivers').filter(function(d){return d.is_active!==false&&d.status!=='탈퇴'&&!d.isNew;});
   var unverified=allDrv.filter(function(d){return !d.verifiedAt;}).length;
   var todayMemos=ls('deliveryMemos').filter(function(m){return m.date===today();}).length;
@@ -1989,6 +1991,15 @@ function rDash(){
     return (d.isNew||d.status==='pending') && d.is_active!==true
       && d.status!=='거부' && d.status!=='탈퇴' && d.status!=='reject' && d.status!=='withdrawal';
   }).length;
+
+  // ★ v9.13: 주간/야간 배송 카운터 — 오늘 출근(입차)한 기사만 집계
+  var todayEntryDrivers=new Set(e.filter(function(x){return x.date===today();}).map(function(x){return x.driver;}));
+  var todayDels=ls('deliveries').filter(function(d){return d.date===today();});
+  // 주간 출근기사 (shift=주간 또는 주야간) 중 오늘 입차한 기사
+  var dayDrvs=allDrv.filter(function(d){return (d.shift==='주간'||d.shift==='주야간')&&todayEntryDrivers.has(d.name);});
+  var nightDrvs=allDrv.filter(function(d){return (d.shift==='야간'||d.shift==='주야간')&&todayEntryDrivers.has(d.name);});
+  var dayDelCnt=todayDels.filter(function(d){return dayDrvs.some(function(dr){return dr.name===d.driver;});}).reduce(function(s,d){return s+(+d.dcnt||0);},0);
+  var nightDelCnt=todayDels.filter(function(d){return nightDrvs.some(function(dr){return dr.name===d.driver;});}).reduce(function(s,d){return s+(+d.dcnt||0);},0);
 
   var delItems=[
     {key:'entries',label:'입차',icon:'🚪'},
@@ -2013,13 +2024,19 @@ function rDash(){
     <div class="kc"><div class="kl">미처리 사고</div><div class="kv" style="color:${oa?'var(--red)':'var(--teal)'}">${oa}</div><div class="ks" style="color:${oa?'var(--red)':'var(--teal)'}">${oa?'처리필요':'없음'}</div></div>
     <div class="kc"><div class="kl">달성률</div><div class="kv">38.4<span style="font-size:12px;font-weight:400;color:var(--text2)">%</span></div><div class="ks" style="color:var(--text2)">19.2억/50억</div></div>
   </div>
+  <div class="kpi-row" style="margin-top:6px">
+    <div class="kc" style="border-left:3px solid #3B82F6"><div class="kl">☀ 주간 출근</div><div class="kv" style="color:#3B82F6">${dayDrvs.length}<span style="font-size:11px;font-weight:400;color:var(--text2)">명</span></div><div class="ks" style="color:#3B82F6">${dayDelCnt}건 배송</div></div>
+    <div class="kc" style="border-left:3px solid #8B5CF6"><div class="kl">🌙 야간 출근</div><div class="kv" style="color:#8B5CF6">${nightDrvs.length}<span style="font-size:11px;font-weight:400;color:var(--text2)">명</span></div><div class="ks" style="color:#8B5CF6">${nightDelCnt}건 배송</div></div>
+    <div class="kc"><div class="kl">배송 합계</div><div class="kv" style="color:var(--teal)">${dayDelCnt+nightDelCnt}<span style="font-size:11px;font-weight:400;color:var(--text2)">건</span></div><div class="ks" style="color:var(--text3)">출근기사 기준</div></div>
+    <div class="kc"><div class="kl">오늘 출근</div><div class="kv">${todayEntryDrivers.size}<span style="font-size:11px;font-weight:400;color:var(--text2)">명</span></div><div class="ks" style="color:var(--text3)">전체 ${allDrv.length}명 중</div></div>
+  </div>
   ${(unverified>0||todayMemos>0||pendingApprovals>0)?`<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
     ${pendingApprovals>0?`<div style="flex:1;min-width:200px;padding:10px 14px;background:linear-gradient(135deg,var(--red-l) 0%,var(--bg2) 100%);border:2px solid var(--red);border-radius:10px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;animation:pulse 2s infinite" onclick="SP('drivers',null)">
       <div><div style="font-size:12px;color:var(--red);font-weight:800">🆕 가입 승인 대기</div><div style="font-size:10px;color:var(--text3);margin-top:2px">기사 관리에서 승인 처리</div></div>
       <div style="font-size:22px;font-weight:900;color:var(--red)">${pendingApprovals}<span style="font-size:11px;font-weight:600">명</span></div>
     </div>`:''}
     ${unverified>0?`<div style="flex:1;min-width:200px;padding:10px 14px;background:var(--amber-l);border:1.5px solid var(--amber);border-radius:10px;display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="SP('drivers',null)">
-      <div><div style="font-size:12px;color:#E68000;font-weight:700">🔐 본인확인 미완료 기사</div><div style="font-size:10px;color:var(--text3);margin-top:2px">기사 관리 페이지에서 확인</div></div>
+      <div><div style="font-size:12px;color:#E68000;font-weight:700">🔐 개인 PIN 미설정 기사</div><div style="font-size:10px;color:var(--text3);margin-top:2px">기사 관리 페이지에서 확인</div></div>
       <div style="font-size:22px;font-weight:900;color:#E68000">${unverified}<span style="font-size:11px;font-weight:600">명</span></div>
     </div>`:''}
     ${todayMemos>0?`<div style="flex:1;min-width:200px;padding:10px 14px;background:var(--blue-l);border:1.5px solid var(--blue);border-radius:10px;display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="SP('memo_log',null)">
@@ -2303,7 +2320,9 @@ function exportMemoLogXLSX(){
   var rows=[['일자','시간','기사','송장번호','사유','사진URL']];
   memos.sort(function(a,b){return (b.date+(b.time||'')).localeCompare(a.date+(a.time||''));});
   memos.forEach(function(m){
-    rows.push([m.date||'',m.time||'',m.driver||'',m.waybill||'',m.reason||'',m.photoUrl||'']);
+    // ★ 사진 URL을 클릭 가능한 하이퍼링크로 변환 (Excel에서 클릭 시 사진 열림)
+    var photoCell=m.photoUrl&&m.photoUrl.startsWith('http')?'=HYPERLINK("'+m.photoUrl+'","📷 사진보기")':'';
+    rows.push([m.date||'',m.time||'',m.driver||'',m.waybill||'',m.reason||'',photoCell]);
   });
   // CSV로 내보내기 (간단)
   var csv=rows.map(function(r){return r.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"';}).join(',');}).join('\n');
@@ -2747,15 +2766,18 @@ function appSettle(i){
     window.scrollTo(0,scrollY);
   },30);
   
-  // 2단계: 세금계산서가 아직 전달되지 않았으면 자동으로 생성 + 전달
+  // 2단계: 승인 시 명세서 + 세금계산서 함께 자동 전달
   if(!alreadySent){
-    toast('✅ 승인 완료 — 세금계산서 자동 전달 중...');
-    // 세금계산서 자동 생성 + 전달 (백그라운드 처리)
+    toast('✅ 승인 완료 — 명세서 + 세금계산서 자동 전달 중...');
     setTimeout(function(){
-      autoSendTaxOnApprove(driverNm, monthStr);
+      // 명세서 먼저 전달
+      var sIdx=ls('settlements').findIndex(function(x){return x.driver===driverNm&&x.month===monthStr;});
+      if(sIdx>=0)sendStmtToDriver(sIdx);
+      // 세금계산서 전달 (약간 딜레이)
+      setTimeout(function(){autoSendTaxOnApprove(driverNm, monthStr);}, 1500);
     }, 300);
   } else {
-    toast('✅ 정산 승인됨 ('+driverNm+') — 세금계산서는 이미 전달됨');
+    toast('✅ 정산 승인됨 ('+driverNm+') — 명세서/세금계산서 전달 완료');
   }
 }
 
@@ -3008,7 +3030,11 @@ function _setIncSetting(driver,route,on,rate){
 function loadIncSettingsFromFB(){
   if(!FB||!_db)return;
   _db.collection('settings').doc('incSettings').get().then(function(doc){
-    if(!doc.exists)return;
+    if(!doc.exists){
+      // ★ 문서 없으면 자동 생성 (첫 실행 시)
+      _db.collection('settings').doc('incSettings').set({_created:new Date().toISOString()},{merge:true}).catch(function(){});
+      return;
+    }
     var data=doc.data();
     Object.keys(data).forEach(function(k){
       if(k.startsWith('inc_'))localStorage.setItem(k,JSON.stringify(data[k]));
@@ -3779,7 +3805,7 @@ function rDrivers(){
       var dispDisplay=(dispCamp||dispRoute)?(dispCamp+(dispCamp&&dispRoute?' ':'')+dispRoute):'';
       var fbId=d.fbId||d.id||'';
       return `<tr>
-      <td><strong>${d.name}</strong>${d.verifiedAt?'<span title="본인확인 완료 ('+new Date(d.verifiedAt).toLocaleDateString('ko-KR')+')" style="display:inline-block;margin-left:4px;background:var(--teal);color:#fff;font-size:9px;padding:1px 5px;border-radius:999px;font-weight:700">✓ 인증</span>':'<span title="본인확인 미완료" style="display:inline-block;margin-left:4px;background:var(--amber-l);color:var(--amber);font-size:9px;padding:1px 5px;border-radius:999px;font-weight:700;border:1px solid var(--amber)">미인증</span>'}<br><span style="font-size:10px;color:var(--blue)">${d.userId||d.phone}</span></td>
+      <td><strong>${d.name}</strong>${d.verifiedAt?'<span title="개인 PIN 설정 ('+new Date(d.verifiedAt).toLocaleDateString('ko-KR')+')" style="display:inline-block;margin-left:4px;background:var(--teal);color:#fff;font-size:9px;padding:1px 5px;border-radius:999px;font-weight:700">✓ 인증</span>':'<span title="개인 PIN 미설정" style="display:inline-block;margin-left:4px;background:var(--amber-l);color:var(--amber);font-size:9px;padding:1px 5px;border-radius:999px;font-weight:700;border:1px solid var(--amber)">미인증</span>'}<br><span style="font-size:10px;color:var(--blue)">${d.userId||d.phone}</span></td>
       <td style="font-size:11px">${d.plate}<br><span class="badge b-done" style="font-size:9px">${d.ton||''}</span></td>
       <td><span class="badge ${d.jobtype==='택배'?'b-coral':'b-blue'}" style="font-size:10px">${d.jobtype||'택배'}</span><br><select onchange="setDrvJobsub('${fbId}',this.value)" title="업무 유형 변경" style="font-size:10px;padding:2px 3px;margin-top:2px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text2);cursor:pointer">${['쿠팡','컬리','CJ','용차','MBTI본사'].map(v=>`<option value="${v}" ${(d.jobsub||'')===v?'selected':''}>${v}</option>`).join('')}</select></td>
       <td><span class="badge b-done" style="font-size:10px">${d.employ||'지입'}</span></td>
@@ -4270,8 +4296,8 @@ function openEditDriver(fbIdOrId){
           +'<div style="grid-column:1/3"><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:3px">노선</label><input id="ed-route" value="'+(d.route||'')+'" placeholder="예: 부산1캠프 215C" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px"></div>'
           +'<div style="grid-column:1/3;background:var(--teal-l);border:1.5px solid var(--teal);border-radius:8px;padding:10px"><label style="font-size:11px;color:var(--teal);display:block;margin-bottom:4px;font-weight:700">💰 기사 배송 단가 (₩/건) — 미입력 시 라우트 단가 자동 적용</label><input id="ed-customUnitPrice" type="number" min="0" value="'+(d.customUnitPrice||'')+'" placeholder="예: 850 (라우트 단가 사용 시 비워두기)" style="width:100%;padding:9px;border:1.5px solid var(--teal);border-radius:6px;font-size:14px;font-weight:700;color:var(--teal);background:var(--bg)"></div>'
           +'<div style="grid-column:1/3;background:'+(d.verifiedAt?'var(--teal-l)':'var(--amber-l)')+';border:1.5px solid '+(d.verifiedAt?'var(--teal)':'var(--amber)')+';border-radius:8px;padding:10px;display:flex;align-items:center;justify-content:space-between;gap:10px">'
-            +'<div style="flex:1"><div style="font-size:11px;color:'+(d.verifiedAt?'var(--teal)':'var(--amber)')+';font-weight:700;margin-bottom:2px">🔐 본인확인 PIN</div>'
-            +'<div style="font-size:12px;color:var(--text2)">'+(d.verifiedAt?'✅ 인증완료 — '+new Date(d.verifiedAt).toLocaleDateString("ko-KR"):'⚠️ 미인증 — 기사가 내정보에서 PIN 설정 필요')+'</div></div>'
+            +'<div style="flex:1"><div style="font-size:11px;color:'+(d.verifiedAt?'var(--teal)':'var(--amber)')+';font-weight:700;margin-bottom:2px">🔐 개인 PIN</div>'
+            +'<div style="font-size:12px;color:var(--text2)">'+(d.verifiedAt?'✅ PIN 설정 — '+new Date(d.verifiedAt).toLocaleDateString("ko-KR"):'⚠️ 미설정 — 내정보에서 PIN 설정 필요')+'</div></div>'
             +(d.verifiedAt?'<button type="button" onclick="resetDriverVerify(\''+(d.fbId||d.id)+'\')" style="padding:7px 14px;background:var(--red-l);border:1px solid var(--red);border-radius:6px;font-size:11px;color:var(--red);cursor:pointer;font-weight:700;white-space:nowrap">🔄 PIN 리셋</button>':'')
           +'</div>'
         +'</div>'
@@ -4828,8 +4854,6 @@ function rMypage(){
       html+='<div style="font-size:10px;color:var(--text2);margin-bottom:6px;line-height:1.5">'+notiStatus+'</div>';
       if(notiPerm!=='granted'){
         html+='<button onclick="requestNotiPermission(false).then(function(){SP(\'mypage\',null);})" style="padding:7px 14px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">🔔 알림 받기 활성화</button>';
-      }else{
-        html+='<button onclick="sendLocalNoti({title:\'🔔 테스트 알림\',body:\''+S.curDriver+' 기사님 — 알림이 정상 작동합니다\'});toast(\'테스트 알림 발사!\')" style="padding:7px 14px;background:var(--teal);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">🔔 테스트 알림 보내기</button>';
       }
       html+='<div style="margin-top:6px;font-size:9px;color:var(--text3);line-height:1.5">💡 <strong>홈 화면에 앱 설치</strong> 시 잠금화면에서도 알림 수신 가능 (안드로이드: Chrome 메뉴 > 앱 설치 / iOS: 공유 > 홈 화면에 추가)</div>';
       html+='</div>';
@@ -4851,29 +4875,29 @@ function rMypage(){
       // ★ v9.5: 본인확인 (한 번만 인증, 수정 가능)
       var verifiedAt=d.verifiedAt||'';
       var hasVerified=!!verifiedAt;
-      html+='<div class="sec-lbl" style="margin-top:18px">🔐 본인확인 인증</div>';
+      html+='<div class="sec-lbl" style="margin-top:18px">🔐 개인 PIN 설정</div>';
       html+='<div style="background:'+(hasVerified?'var(--teal-l)':'var(--amber-l)')+';border:1.5px solid '+(hasVerified?'var(--teal)':'var(--amber)')+';border-radius:12px;padding:14px;margin-bottom:12px">';
       if(hasVerified){
         var vDate=new Date(verifiedAt).toLocaleDateString('ko-KR');
         html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">';
-        html+='<div style="font-weight:700;color:var(--teal);font-size:13px">✅ 본인확인 완료</div>';
+        html+='<div style="font-weight:700;color:var(--teal);font-size:13px">✅ 개인 PIN 설정 완료</div>';
         html+='<div style="font-size:10px;color:var(--text3)">'+vDate+' 인증</div>';
         html+='</div>';
         html+='<div style="font-size:11px;color:var(--text2);line-height:1.5;margin-bottom:10px">한 번만 인증하면 됩니다. PIN 변경 시 아래에서 새 PIN을 설정하세요.</div>';
         html+='<details style="cursor:pointer">';
-        html+='<summary style="font-size:11px;color:var(--blue);padding:4px 0">🔄 본인확인 PIN 변경</summary>';
+        html+='<summary style="font-size:11px;color:var(--blue);padding:4px 0">🔄 개인 PIN 변경</summary>';
         html+='<div style="margin-top:8px;display:flex;flex-direction:column;gap:6px">';
         html+='<input id="mp-verify-cur" type="password" inputmode="numeric" maxlength="6" placeholder="현재 PIN (6자리)" style="padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;letter-spacing:3px;text-align:center;background:var(--bg);color:var(--text)">';
         html+='<input id="mp-verify-new" type="password" inputmode="numeric" maxlength="6" placeholder="새 PIN (6자리)" style="padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;letter-spacing:3px;text-align:center;background:var(--bg);color:var(--text)">';
         html+='<button onclick="changeVerifyPin()" style="padding:9px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">PIN 변경</button>';
         html+='</div></details>';
       } else {
-        html+='<div style="font-weight:700;color:var(--amber);font-size:13px;margin-bottom:6px">⚠️ 본인확인 미완료</div>';
-        html+='<div style="font-size:11px;color:var(--text2);line-height:1.5;margin-bottom:10px">6자리 PIN을 설정하면 본인확인이 완료됩니다. 한 번만 설정하면 되며, 이후 변경 가능합니다.</div>';
+        html+='<div style="font-weight:700;color:var(--amber);font-size:13px;margin-bottom:6px">⚠️ 개인 PIN 미설정</div>';
+        html+='<div style="font-size:11px;color:var(--text2);line-height:1.5;margin-bottom:10px">개인 PIN을 설정하면 앱 보안이 강화됩니다. 한 번만 설정하면 되며, 이후 변경 가능합니다.</div>';
         html+='<div style="display:flex;flex-direction:column;gap:6px">';
         html+='<input id="mp-verify-set" type="password" inputmode="numeric" maxlength="6" placeholder="6자리 PIN 설정" style="padding:9px;border:1.5px solid var(--amber);border-radius:6px;font-size:14px;letter-spacing:4px;text-align:center;background:var(--bg);color:var(--text);font-weight:700">';
         html+='<input id="mp-verify-set2" type="password" inputmode="numeric" maxlength="6" placeholder="PIN 확인" style="padding:9px;border:1.5px solid var(--amber);border-radius:6px;font-size:14px;letter-spacing:4px;text-align:center;background:var(--bg);color:var(--text);font-weight:700">';
-        html+='<button onclick="setVerifyPin()" style="padding:10px;background:var(--amber);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">✅ 본인확인 완료하기</button>';
+        html+='<button onclick="setVerifyPin()" style="padding:10px;background:var(--amber);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">✅ 개인 PIN 설정 완료하기</button>';
         html+='</div>';
       }
       html+='</div>';
@@ -5135,9 +5159,9 @@ function requestWithdrawal(){
   }
 }
 
-// ★ v9.5: 관리자 — 기사 본인확인 PIN 리셋 (PIN 분실 시)
+// ★ v9.5: 관리자 — 기사 개인 PIN 리셋
 function resetDriverVerify(fbIdOrId){
-  if(!confirm('이 기사의 본인확인 PIN을 리셋하시겠습니까?\n\n기사가 내정보 페이지에서 새 PIN을 설정해야 합니다.'))return;
+  if(!confirm('이 기사의 개인 PIN을 초기화하시겠습니까?\n\n기사가 내정보에서 새 PIN을 설정하면 됩니다.'))return;
   var drs=ls('drivers');
   var idx=drs.findIndex(function(x){return (x.fbId||x.id)===fbIdOrId;});
   if(idx<0){toast('❌ 기사를 찾을 수 없습니다');return;}
@@ -5166,7 +5190,7 @@ function resetDriverVerify(fbIdOrId){
   setTimeout(function(){SP('drivers',null);},200);
 }
 
-// ★ v9.5: 본인확인 PIN 설정 (한 번만)
+// ★ v9.5: 개인 PIN 설정
 async function setVerifyPin(){
   var pin1=(document.getElementById('mp-verify-set')?.value||'').trim();
   var pin2=(document.getElementById('mp-verify-set2')?.value||'').trim();
@@ -5192,7 +5216,7 @@ async function setVerifyPin(){
     }).catch(function(e){console.warn('verify pin save:',e);});
   }
   addAct('verify',S.curDriver+' 본인확인 완료',S.curDriver);
-  toast('✅ 본인확인 완료');
+  toast('✅ 개인 PIN 설정 완료');
   setTimeout(function(){SP('mypage',null);DT('mypage',document.getElementById('pni6'));},500);
 }
 
@@ -6925,6 +6949,8 @@ function checkDriverNotifications(){
         try{notified=JSON.parse(localStorage.getItem(notifiedKey)||'{}');}catch(e){}
         items.forEach(function(it){
           if(notified[it._id])return;
+          // ★ 이미 읽은 항목(readAt/readStatus) 알림 제외
+          if(it.readAt||it.readStatus==='read')return;
           // 1주일 이내 sentAt만 푸시 (오래된 항목 무시)
           var sentAt=it.sentAt?new Date(it.sentAt).getTime():0;
           if(Date.now()-sentAt>7*24*60*60*1000)return;
@@ -7584,18 +7610,40 @@ async function submitCampSupport(){
     document.getElementById('camp-sup-mo')?.remove();
     var card=document.getElementById('drv-campsupport-card');
     if(card)card.innerHTML=_buildCampSupportCard();
-    toast('📣 '+myCampFull+' 기사님들에게 전송되었습니다');
+    // ★ 같은 캠프 기사들에게 긴급 FCM 알림 발송
+    var _FCM_URL='https://us-central1-mbti-logistics.cloudfunctions.net/sendPush';
+    var campDrvs=ls('drivers').filter(function(d){return (d.camp===myCamp||d.camp===myCampFull)&&d.name!==S.curDriver&&d.is_active!==false&&d.fcmToken;});
+    campDrvs.forEach(function(d){
+      fetch(_FCM_URL,{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({token:d.fcmToken,title:'🚨 긴급! '+myCampFull+' 배송 지원 요청',body:S.curDriver+': '+(msg.slice(0,60)),pinned:true})
+      }).catch(function(){});
+    });
+    toast('📣 '+myCampFull+' '+campDrvs.length+'명에게 긴급 알림 전송됨!');
   }catch(e){toast('❌ 전송 실패: '+(e.message||e));}
 }
 async function respondCampSupport(fbId){
   if(!fbId){toast('❌ ID 없음');return;}
   var me=ls('drivers').find(function(x){return x.name===S.curDriver;});
+  // 사유 입력
+  var reason=prompt('콜!! 응원 메시지 (선택사항)','');
+  if(reason===null)return; // 취소
   if(FB&&_db){
     try{
       await _db.collection('campSupports').doc(fbId).update({
-        responders:firebase.firestore.FieldValue.arrayUnion({driver:S.curDriver,phone:(me&&me.phone)||'',ts:new Date().toISOString()})
+        responders:firebase.firestore.FieldValue.arrayUnion({driver:S.curDriver,phone:(me&&me.phone)||'',reason:reason,ts:new Date().toISOString()})
       });
-      toast('✋ 지원 의사 전달 완료');
+      // 요청자에게 FCM 알림 발송
+      var supDoc=window._campSupports&&window._campSupports.find(function(x){return x.fbId===fbId;});
+      if(supDoc&&supDoc.driver){
+        var reqDrv=ls('drivers').find(function(d){return d.name===supDoc.driver;});
+        if(reqDrv&&reqDrv.fcmToken){
+          var _FCM_URL='https://us-central1-mbti-logistics.cloudfunctions.net/sendPush';
+          fetch(_FCM_URL,{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({token:reqDrv.fcmToken,title:'🙌 콜!! '+S.curDriver+' 기사님이 도움을 드립니다',body:reason||'곧 도착합니다!',pinned:true})
+          }).catch(function(){});
+        }
+      }
+      toast('✋ 콜!! 지원 의사 전달 완료');
       _loadCampSupports();
     }catch(e){toast('❌ 응답 실패: '+e.message);}
   }
@@ -7606,7 +7654,17 @@ async function resolveCampSupport(fbId){
   if(FB&&_db){
     try{
       await _db.collection('campSupports').doc(fbId).update({status:'해결',resolvedAt:new Date().toISOString()});
-      toast('✓ 해결 완료');
+      // 같은 캠프 전체에 해결 알림 발송
+      var supDoc=window._campSupports&&window._campSupports.find(function(x){return x.fbId===fbId;});
+      var myCamp=(supDoc&&supDoc.camp)||'';
+      var me=ls('drivers').find(function(x){return x.name===S.curDriver;})||{};
+      var _FCM_URL='https://us-central1-mbti-logistics.cloudfunctions.net/sendPush';
+      ls('drivers').filter(function(d){return (d.camp===myCamp||(d.camp&&myCamp&&myCamp.indexOf(d.camp)>=0))&&d.is_active!==false&&d.fcmToken;}).forEach(function(d){
+        fetch(_FCM_URL,{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({token:d.fcmToken,title:'✅ 해결됨! '+myCamp+' 배송 지원',body:S.curDriver+' 기사님 지원 요청이 해결되었습니다',pinned:false})
+        }).catch(function(){});
+      });
+      toast('✓ 해결 완료 — 캠프 전체에 알림 발송');
       _loadCampSupports();
     }catch(e){toast('❌ 처리 실패: '+e.message);}
   }
@@ -7695,36 +7753,56 @@ function _formatRelTime(isoStr){
 // ── 기사 공지 목록 Firebase에서 로드 (본인 대상)
 function _loadDrvNotices(){
   if(!FB||!_db||!S.curDriver)return;
-  // 1) 본인에게 온 notifications에서 공지 type만
-  _db.collection('driver_notifications')
+  // ★ 실시간 반영: onSnapshot으로 변경 (삭제/추가 즉시 반영)
+  // ★ v9.13: 리스너 재등록 시 반드시 false로 리셋 (재호출 시 기존 공지 토스트 오탐 방지)
+  window._drvNoticeReady=false;
+  if(window._drvNoticeUnsub)window._drvNoticeUnsub();
+  window._drvNoticeUnsub=_db.collection('driver_notifications')
     .where('driver','==',S.curDriver)
     .where('type','==','notice')
-    .get()
-    .then(function(snap){
+    .onSnapshot(function(snap){
       var list=[];
       var readSet={};
       try{
         readSet=JSON.parse(localStorage.getItem('drv_notice_read_'+S.curDriver)||'{}');
       }catch(e){}
+
+      // ★ Fix1: 새 공지 in-app 알림 (added 감지)
+      snap.docChanges().forEach(function(change){
+        if(change.type==='added' && window._drvNoticeReady){
+          var nd=change.doc.data();
+          var isUrgent=(nd.category==='긴급');
+          if(isUrgent){
+            // 긴급은 팝업 모달
+            setTimeout(function(){_viewDrvNotice(change.doc.id);},400);
+          }
+          toast((isUrgent?'🚨':'📢')+' 새 공지: '+(nd.title||'공지사항'));
+        }
+        // ★ Fix3: 삭제된 공지 즉시 제거
+        if(change.type==='removed'){
+          window._drvNoticeList=(window._drvNoticeList||[]).filter(function(n){return n._id!==change.doc.id;});
+          var card2=document.getElementById('drv-notice-card');
+          if(card2)card2.innerHTML=_buildDrvNoticeCard();
+        }
+      });
+
       snap.forEach(function(doc){
         var d=doc.data();
         d._id=doc.id;
-        // ★ Firebase의 readAt 또는 로컬 읽음 기록 둘 중 하나라도 있으면 읽음 처리
         d._read = !!(d.readAt || d.readStatus==='read' || readSet[doc.id]);
         list.push(d);
       });
-      // 정렬: 안 읽은 것 우선 + 고정 우선 + 최신
       list.sort(function(a,b){
         if(a._read!==b._read)return a._read?1:-1;
         if(!!a.pinned!==!!b.pinned)return a.pinned?-1:1;
         return (b.sentAt||'').localeCompare(a.sentAt||'');
       });
       window._drvNoticeList=list;
-      // 홈 카드 업데이트
       var card=document.getElementById('drv-notice-card');
       if(card)card.innerHTML=_buildDrvNoticeCard();
-    })
-    .catch(function(e){console.warn('공지 로드 오류:',e&&e.message);});
+      // ★ 초기 로드 완료 플래그 (added 오탐 방지)
+      setTimeout(function(){window._drvNoticeReady=true;},1500);
+    }, function(e){console.warn('공지 리스너 오류:',e&&e.message);});
 }
 
 // ── 공지 상세 보기 (읽음 처리)
@@ -8040,6 +8118,7 @@ function dHome(){
   ${calHTML}
   <!-- 사고접수 + 사진 모아보기 버튼 -->
   <button class="bbtn bb-red" onclick="DT('accident',document.getElementById('pni4'))" style="padding:11px;font-size:13px;margin:0 10px 6px">🚨 사고 접수</button>
+  <button onclick="openComplaintModal()" style="width:calc(100% - 20px);margin:0 10px 6px;padding:11px;background:var(--amber,#d97706);color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer">📝 불편함 접수 → 관리자 전달</button>
   <button onclick="drvPhotoGallery()" style="width:calc(100% - 20px);margin:0 10px 10px;padding:11px;background:var(--purple-l);color:var(--purple);border:1.5px solid var(--purple);border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer">📸 사진 모아보기 (60일)</button>
   </div>`;
 }
@@ -8742,17 +8821,7 @@ function submitLinehaul(){
 }
 
 function dTemp(){
-  // 상온 기사: 온도 기록 불필요 (쿠팡, CJ, 생수)
-  var isNoTemp=['쿠팡','CJ','생수'].includes(S.curJobsub)||['쿠팡','CJ','생수'].includes(S.curJobtype);
-  if(isNoTemp){
-    return `<div class="dh"><h2>온도 기록</h2><p>${S.curJobsub||S.curJobtype} 기사</p></div>
-    <div class="dc" style="text-align:center;padding:28px 16px">
-      <div style="font-size:40px;margin-bottom:10px">🌡</div>
-      <div style="font-size:15px;font-weight:700;margin-bottom:6px">${S.curJobsub||S.curJobtype}는 온도 기록 불필요</div>
-      <div style="font-size:12px;color:var(--text2)">상온 배송 기사는 온도 기록이 필요 없습니다.<br>냉동·냉장 기사(컬리·간선)만 온도를 기록합니다.</div>
-    </div>
-    <div style="height:10px"></div>`;
-  }
+  // ★ 쿠팡 연동 제거 — 모든 기사 온도 기록 가능
   var logs=ls('tempLogs').filter(l=>l.driver===S.curDriver&&l.date===today());
   var ph=[['log','온도기록지'],['dev','온도계화면']].map(([k,lbl])=>{
     return makeCamBtn(k,'temp',lbl,'ct');
@@ -8865,9 +8934,24 @@ async function submitAccident(){
   var a=ls('accidents');a.push({id:nid('acc'),...data});lss('accidents',a);
   await fbW('accidents',data).catch(()=>{});
   addAct('acc','🚨 '+S.curDriver+' 사고접수 — '+S.accType,S.curDriver);
+  // ★ 같은 캠프 기사들에게 긴급 FCM 알림 발송
+  var me=ls('drivers').find(function(x){return x.name===S.curDriver;})||{};
+  var myCamp=me.camp||'';
+  if(myCamp&&FB&&_db){
+    var campDrvs=ls('drivers').filter(function(d){return d.camp===myCamp&&d.name!==S.curDriver&&d.is_active!==false&&d.fcmToken;});
+    var _FCM_URL='https://us-central1-mbti-logistics.cloudfunctions.net/sendPush';
+    campDrvs.forEach(function(d){
+      fetch(_FCM_URL,{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({token:d.fcmToken,title:'🚨 긴급! '+myCamp+' 사고 발생',body:S.curDriver+' — '+S.accType+': '+desc.slice(0,50),pinned:true})
+      }).catch(function(){});
+    });
+    if(campDrvs.length>0)toast('🚨 사고 접수 완료! '+campDrvs.length+'명 캠프 동료에게 긴급 알림 전송됨');
+    else toast('사고 접수 완료! 관리자에게 즉시 전달됩니다');
+  } else {
+    toast('사고 접수 완료! 관리자에게 즉시 전달됩니다');
+  }
   S.photos.accident={};S.accType=null;
   DT('accident',document.getElementById('pni4'));updBadge();
-  toast('사고 접수 완료! 관리자에게 즉시 전달됩니다');
 }
 
 
@@ -10307,13 +10391,21 @@ function archRender(rows,result){
     else if(col==='accidents')detail=(r.type||'')+(r.description?' — '+r.description.slice(0,30):'');
     else if(col==='tempLogs')detail=(r.temp||'')+'°C '+(r.location||'');
     else if(col==='settlements')detail='지급 ₩'+(r.net?Number(r.net).toLocaleString():'-')+' / '+(r.status||'');
-    var photos=r.photos?Object.values(r.photos).filter(Boolean).length:0;
+    // 사진 썸네일 수집 (photoUrl + photos 객체 모두)
+    var photoUrls=[];
+    if(r.photoUrl&&r.photoUrl.startsWith('http'))photoUrls.push(r.photoUrl);
+    if(r.photos&&typeof r.photos==='object'){Object.values(r.photos).forEach(function(v){if(v&&v.startsWith&&v.startsWith('http'))photoUrls.push(v);});}
+    var photoCell=photoUrls.length>0
+      ? '<div style="display:flex;gap:3px;flex-wrap:wrap;">'+photoUrls.slice(0,3).map(function(url){
+          return '<img src="'+url+'" onclick="openIV(\''+url+'\',\'사진\')" style="width:36px;height:36px;object-fit:cover;border-radius:4px;cursor:pointer;border:1px solid var(--border)">';
+        }).join('')+(photoUrls.length>3?'<span style="font-size:9px;color:var(--text3);align-self:center">+'+( photoUrls.length-3)+'</span>':'')+'</div>'
+      : '';
     return '<tr>'+
       '<td style="color:var(--text3);font-size:10px">'+date.slice(5)+'</td>'+
       '<td><span style="font-size:11px;background:var(--bg3);padding:2px 6px;border-radius:4px">'+(colIcon[col]||'')+(colName[col]||col)+'</span></td>'+
       '<td style="font-weight:600;font-size:12px">'+driver+'</td>'+
       '<td style="font-size:11px;color:var(--text2)">'+detail+'</td>'+
-      (photos?'<td style="text-align:center"><span style="font-size:10px;color:var(--blue)">📷'+photos+'</span></td>':'<td></td>')+
+      '<td>'+photoCell+'</td>'+
       '<td style="text-align:center"><button onclick="archDetail(\''+i+'\')" style="font-size:10px;padding:2px 7px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;cursor:pointer">상세</button></td>'+
     '</tr>';
   }).join('');
@@ -10536,10 +10628,6 @@ function autoCleanupFirebase(){
 
 var _listenersInitDone=false;
 function startListeners(){
-  // ★ v9.3: 페이지 세션당 1회만 실행 (Target ID already exists 완전 방지)
-  //   _setupFbListeners()는 이제 status 리스너만 담당
-  //   entries/deliveries/drivers는 여기서만 등록 → 중복 불가
-  //   → 영구 락으로 재진입 완전 차단. 재연결은 페이지 새로고침으로 처리.
   if(_listenersInitDone){
     console.log('[startListeners] 이미 초기화 완료 - 재진입 차단');
     return;
@@ -10547,11 +10635,15 @@ function startListeners(){
   _listenersInitDone=true;
   _initialLoad=true;
   if(!FB||!_db){_listenersInitDone=false;return;}
-  // ★ 기존 리스너 먼저 모두 해제 (혹시 남아있을 수 있는 status 리스너 등)
   _unsubAll();
-  // status 리스너는 다시 등록 필요
   _listenersReady=false;
-  _setupFbListeners();
+  // ★ v9.13: Firestore 네트워크 리셋 → Target ID 충돌 완전 방지
+  //   이전 세션 리스너의 Target ID가 남아있을 때 새 리스너 등록 충돌 발생
+  //   disableNetwork → enableNetwork 사이클로 내부 상태 초기화 후 등록
+  firebase.firestore().disableNetwork().then(function(){
+    return firebase.firestore().enableNetwork();
+  }).catch(function(){}).then(function(){
+    _setupFbListeners();
   // ── 전체 기사 데이터 초기 1회 로드
   _db.collection('drivers').get().then(function(snap){
     var all=[];
@@ -10772,6 +10864,7 @@ function startListeners(){
   firebase.firestore().enableNetwork().then(function(){
     flushPendingWrites();
   }).catch(function(){});
+  }); // ── disableNetwork→enableNetwork .then() 닫음
 } // ── startListeners 종료
 
 // ── INIT
@@ -10883,14 +10976,11 @@ function rNoticePanel(){
   html+='<div style="display:flex;gap:6px;margin-top:8px">';
   html+='<label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer">';
   html+='<input type="checkbox" id="nt-pinned"> 📌 상단 고정</label>';
-  html+='<label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--red);cursor:pointer;font-weight:700">';
-  html+='<input type="checkbox" id="nt-sms"> 📱 SMS 동시 발송</label>';
-  html+='<label style="display:flex;align-items:center;gap:4px;font-size:11px;color:#FAE100;cursor:pointer;font-weight:700;background:#3C1E1E;padding:2px 6px;border-radius:4px">';
-  html+='<input type="checkbox" id="nt-kakao"> 💬 카톡 복사</label>';
+
   html+='<div style="flex:1"></div>';
   html+='<button onclick="sendNotice()" style="padding:8px 20px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">📤 공지 전송</button>';
   html+='</div>';
-  html+='<div style="font-size:10px;color:var(--text3);margin-top:6px;padding:6px;background:var(--bg3);border-radius:5px;line-height:1.5">💡 <strong>SMS 동시 발송</strong>: SMS 동의한 기사에게 문자앱 자동 열림 (전송은 직접 클릭)<br>💡 <strong>카톡 복사</strong>: 공지 내용을 카톡 ID 목록과 함께 클립보드에 복사 → 카카오톡에서 붙여넣기 발송</div>';
+
   html+='</div>';
   
   // ── 발송 이력
@@ -10909,7 +10999,9 @@ function rNoticePanel(){
 
 function _loadNoticeList(){
   if(!FB||!_db)return;
-  _db.collection('notices').orderBy('sentAt','desc').limit(30).get().then(function(snap){
+  // ★ Fix4: onSnapshot으로 실시간 반영
+  if(window._noticeListUnsub)window._noticeListUnsub();
+  window._noticeListUnsub=_db.collection('notices').orderBy('sentAt','desc').limit(30).onSnapshot(function(snap){
     var box=document.getElementById('nt-list');
     if(!box)return;
     if(snap.empty){
@@ -10942,7 +11034,7 @@ function _loadNoticeList(){
       html+='</div>';
     });
     box.innerHTML=html;
-  }).catch(function(e){
+  }, function(e){
     var box=document.getElementById('nt-list');
     if(box)box.innerHTML='<div style="padding:10px;color:var(--red);font-size:11px">로드 실패: '+(e&&e.message||'')+'</div>';
   });
@@ -11075,6 +11167,158 @@ function deleteNotice(id){
 // ══════════════════════════════════════════════════════
 // 📍 출퇴근 조회 (관리자)
 // ══════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════
+// 🤝 기사 지원요청 관리자 패널
+// ═══════════════════════════════════════════════════════════
+function rSupportAdmin(){
+  var html='<div class="dh"><h2>🤝 기사 지원요청</h2><p>캠프별 배송 지원요청 현황</p></div>';
+  html+='<div class="card"><div class="ch"><span class="ct">전체 지원요청 현황</span>'
+    +'<button onclick="loadAllSupports()" style="padding:4px 12px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer">🔄 새로고침</button></div>';
+  html+='<div id="support-admin-list"><div style="text-align:center;padding:20px;color:var(--text3)">로딩 중...</div></div></div>';
+  setTimeout(loadAllSupports, 100);
+  return html;
+}
+function loadAllSupports(){
+  if(!FB||!_db)return;
+  var since=new Date(Date.now()-24*3600000).toISOString(); // 24시간
+  _db.collection('campSupports').where('createdAt','>',since)
+    .get().then(function(snap){
+      var items=[];
+      snap.forEach(function(doc){var d=doc.data();d.fbId=doc.id;items.push(d);});
+      items.sort(function(a,b){return new Date(b.createdAt)-new Date(a.createdAt);});
+      var el=document.getElementById('support-admin-list');
+      if(!el)return;
+      if(!items.length){el.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">24시간 내 지원요청이 없습니다</div>';return;}
+      var html='';
+      items.forEach(function(x){
+        var ago=_timeAgo(x.createdAt);
+        var isSolved=x.status==='해결';
+        var respCount=(x.responders||[]).length;
+        html+='<div style="padding:10px;margin-bottom:8px;background:'+(isSolved?'var(--bg3)':'var(--blue-l)')+';border:1.5px solid '+(isSolved?'var(--border)':'var(--blue)')+';border-radius:8px">';
+        html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">';
+        html+='<div style="font-size:12px;font-weight:700;color:var(--blue)">'+x.camp+' — '+x.driver+'</div>';
+        html+='<div style="display:flex;align-items:center;gap:6px">';
+        html+='<span style="font-size:10px;color:var(--text3)">'+ago+'</span>';
+        html+='<span style="font-size:10px;padding:2px 7px;border-radius:99px;background:'+(isSolved?'var(--teal)':'var(--red)')+';color:#fff;font-weight:700">'+(isSolved?'해결':'진행중')+'</span>';
+        html+='</div></div>';
+        html+='<div style="font-size:12px;color:var(--text);margin-bottom:4px">'+(x.message||'')+'</div>';
+        if(x.route)html+='<div style="font-size:10px;color:var(--text3)">📍 라우트: '+x.route+'</div>';
+        if(respCount>0){
+          html+='<div style="font-size:10px;color:var(--teal);margin-top:4px">✋ 응답 '+respCount+'명: ';
+          html+=(x.responders||[]).map(function(r){return r.driver+(r.reason?' ('+r.reason+')':'');}).join(', ')+'</div>';
+        }
+        if(!isSolved){
+          html+='<div style="margin-top:6px">';
+          html+='<button onclick="adminResolveSupport(\''+x.fbId+'\')" style="padding:5px 12px;background:var(--teal);color:#fff;border:none;border-radius:5px;font-size:10px;font-weight:700;cursor:pointer">✅ 해결 처리</button>';
+          html+='</div>';
+        }
+        html+='</div>';
+      });
+      el.innerHTML=html;
+    }).catch(function(e){
+      var el=document.getElementById('support-admin-list');
+      if(el)el.innerHTML='<div style="color:var(--red);padding:10px">오류: '+e.message+'</div>';
+    });
+}
+
+// ═══════════════════════════════════════════════════════════
+// 📝 기사 → 관리자 불편함 접수
+// ═══════════════════════════════════════════════════════════
+function openComplaintModal(){
+  document.getElementById('complaint-mo')?.remove();
+  var html='<div style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:600;display:flex;align-items:center;justify-content:center;padding:14px" id="complaint-mo" onclick="if(event.target===this)this.remove()">'
+    +'<div onclick="event.stopPropagation()" style="width:420px;max-width:95vw;background:var(--bg);border-radius:14px;padding:16px">'
+    +'<div style="font-size:15px;font-weight:800;margin-bottom:10px">📝 불편함 접수</div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-bottom:10px">관리자에게 즉시 전달됩니다.</div>'
+    +'<div style="margin-bottom:10px"><label style="font-size:11px;color:var(--text2);font-weight:600;display:block;margin-bottom:4px">구분</label>'
+    +'<select id="cmp-cat" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;background:var(--bg);color:var(--text)">'
+    +'<option>업무환경</option><option>차량/장비</option><option>배송구역</option><option>정산/급여</option><option>동료관계</option><option>기타</option>'
+    +'</select></div>'
+    +'<div style="margin-bottom:14px"><label style="font-size:11px;color:var(--text2);font-weight:600;display:block;margin-bottom:4px">내용 *</label>'
+    +'<textarea id="cmp-msg" placeholder="불편하신 사항을 자세히 적어주세요" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;background:var(--bg);color:var(--text);height:100px;resize:none"></textarea></div>'
+    +'<div style="display:flex;gap:8px;justify-content:flex-end">'
+    +'<button onclick="document.getElementById(\'complaint-mo\').remove()" style="padding:9px 16px;background:var(--bg2);border:1px solid var(--border);border-radius:7px;font-size:12px;cursor:pointer">취소</button>'
+    +'<button onclick="submitComplaint()" style="padding:9px 18px;background:var(--amber,#d97706);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📤 접수</button>'
+    +'</div></div></div>';
+  document.body.insertAdjacentHTML('beforeend',html);
+}
+async function submitComplaint(){
+  var msg=document.getElementById('cmp-msg')?.value.trim();
+  var cat=document.getElementById('cmp-cat')?.value||'기타';
+  if(!msg){toast('❌ 내용을 입력해 주세요');return;}
+  var data={type:'complaint',driver:S.curDriver,category:cat,message:msg,status:'미처리',createdAt:new Date().toISOString()};
+  try{
+    if(FB&&_db)await _db.collection('complaints').add(data);
+    document.getElementById('complaint-mo')?.remove();
+    toast('✅ 불편함 접수 완료! 관리자에게 전달되었습니다');
+  }catch(e){toast('❌ 접수 실패: '+(e.message||e));}
+}
+
+// 관리자 불편함 접수 패널
+function rComplaintAdmin(){
+  var html='<div class="dh"><h2>📝 불편함 접수</h2><p>기사 불편사항 처리 현황</p></div>';
+  html+='<div class="card"><div class="ch"><span class="ct">접수 목록</span>'
+    +'<button onclick="loadComplaints()" style="padding:4px 12px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer">🔄 새로고침</button></div>';
+  html+='<div id="complaint-admin-list"><div style="text-align:center;padding:20px;color:var(--text3)">로딩 중...</div></div></div>';
+  setTimeout(loadComplaints,100);
+  return html;
+}
+function loadComplaints(){
+  if(!FB||!_db){document.getElementById('complaint-admin-list').innerHTML='<div style="color:var(--red);padding:10px">Firebase 연결 필요</div>';return;}
+  _db.collection('complaints').get().then(function(snap){
+    var items=[];
+    snap.forEach(function(doc){var d=doc.data();d.fbId=doc.id;items.push(d);});
+    items.sort(function(a,b){return (b.createdAt||'').localeCompare(a.createdAt||'');});
+    var el=document.getElementById('complaint-admin-list');
+    if(!el)return;
+    if(!items.length){el.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">접수된 불편사항이 없습니다</div>';return;}
+    var html='';
+    items.forEach(function(x){
+      var isDone=x.status==='처리완료';
+      html+='<div style="padding:10px;margin-bottom:8px;background:'+(isDone?'var(--bg3)':'var(--bg2)')+';border:1.5px solid '+(isDone?'var(--border)':'var(--amber,#d97706)')+';border-radius:8px">';
+      html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">';
+      html+='<div style="font-size:12px;font-weight:700">'+x.driver+' <span style="color:var(--text3);font-weight:500;font-size:10px">['+x.category+']</span></div>';
+      html+='<span style="font-size:10px;padding:2px 7px;border-radius:99px;background:'+(isDone?'var(--teal)':'var(--amber,#d97706)')+';color:#fff;font-weight:700">'+(isDone?'처리완료':'미처리')+'</span>';
+      html+='</div>';
+      html+='<div style="font-size:12px;color:var(--text);margin-bottom:6px;line-height:1.5">'+(x.message||'')+'</div>';
+      html+='<div style="font-size:9px;color:var(--text3);margin-bottom:6px">'+(x.createdAt?new Date(x.createdAt).toLocaleString('ko-KR'):'')+'</div>';
+      if(x.reply)html+='<div style="font-size:11px;color:var(--teal);background:var(--teal-l);padding:5px 8px;border-radius:5px;margin-bottom:6px">💬 답변: '+x.reply+'</div>';
+      if(!isDone){
+        html+='<div style="display:flex;gap:5px">';
+        html+='<button onclick="replyComplaint(\''+x.fbId+'\')" style="flex:1;padding:5px;background:var(--blue);color:#fff;border:none;border-radius:5px;font-size:10px;cursor:pointer">💬 답변</button>';
+        html+='<button onclick="resolveComplaint(\''+x.fbId+'\')" style="flex:1;padding:5px;background:var(--teal);color:#fff;border:none;border-radius:5px;font-size:10px;cursor:pointer">✅ 처리완료</button>';
+        html+='</div>';
+      }
+      html+='</div>';
+    });
+    el.innerHTML=html;
+  }).catch(function(e){
+    var el=document.getElementById('complaint-admin-list');
+    if(el)el.innerHTML='<div style="color:var(--red);padding:10px">오류: '+e.message+'</div>';
+  });
+}
+async function replyComplaint(fbId){
+  var reply=prompt('답변 내용 입력:','');
+  if(!reply)return;
+  await _db.collection('complaints').doc(fbId).update({reply:reply,status:'처리완료',repliedAt:new Date().toISOString()});
+  toast('💬 답변 저장 완료');
+  loadComplaints();
+}
+async function resolveComplaint(fbId){
+  if(!confirm('처리완료로 표시할까요?'))return;
+  await _db.collection('complaints').doc(fbId).update({status:'처리완료',resolvedAt:new Date().toISOString()});
+  toast('✅ 처리완료');
+  loadComplaints();
+}
+async function adminResolveSupport(fbId){
+  if(!fbId||!FB||!_db)return;
+  if(!confirm('해결 처리하시겠습니까?'))return;
+  await _db.collection('campSupports').doc(fbId).update({status:'해결',resolvedAt:new Date().toISOString()});
+  toast('✅ 해결 처리 완료');
+  loadAllSupports();
+}
+
 function rAttendPanel(){
   var dateStr=localStorage.getItem('attend_query_date')||today();
   
@@ -12304,35 +12548,48 @@ function schedFilterDrv(val){
 }
 
 // ══════════════════════════════════════════════════════
-// [신규] 2개월 메모 달력 패널 (관리자)
+// [신규] 메모 달력 패널 (관리자) - 1개월 + 이전/다음달 네비게이션
 // ══════════════════════════════════════════════════════
-function rMemoCalendar(){
-  var now=new Date();
-  var months=[{y:now.getFullYear(),m:now.getMonth()},{y:now.getFullYear()+(now.getMonth()===11?1:0),m:(now.getMonth()+1)%12}];
+if(typeof window._memoCalY==='undefined'){var _n=new Date();window._memoCalY=_n.getFullYear();window._memoCalM=_n.getMonth();}
+function memoCalMove(dir){
+  window._memoCalM+=dir;
+  if(window._memoCalM>11){window._memoCalM=0;window._memoCalY++;}
+  if(window._memoCalM<0){window._memoCalM=11;window._memoCalY--;}
+  var el=document.getElementById('memo-cal-wrap');
+  if(el)el.innerHTML=_buildMemoCalInner();
+}
+function _buildMemoCalInner(){
+  var yr=window._memoCalY, mo=window._memoCalM;
   var KEY='mbti_memos'; var memos=JSON.parse(localStorage.getItem(KEY)||'{}');
   var DN=['일','월','화','수','목','금','토'];
-  function mkMon(yr,mo){
-    var first=new Date(yr,mo,1).getDay(), last=new Date(yr,mo+1,0).getDate();
-    var h='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:10px">';
-    h+='<div style="font-size:13px;font-weight:700;color:var(--teal);margin-bottom:8px">'+(mo+1)+'월 '+yr+'년</div>';
-    h+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px">';
-    DN.forEach(function(d,i){h+='<div style="text-align:center;font-size:10px;font-weight:700;color:'+(i===0?'#EF4444':i===6?'#3B82F6':'var(--text3)')+'">'+d+'</div>';});
-    h+='</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px">';
-    for(var i=0;i<first;i++)h+='<div></div>';
-    for(var day=1;day<=last;day++){
-      var ds=yr+'-'+String(mo+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
-      var memo=(memos[ds]||'').trim(), hasMemo=memo.length>0;
-      var isT=(ds===today()), wd=new Date(yr,mo,day).getDay();
-      h+='<div onclick="editMemo(\''+ds+'\')" style="padding:4px 2px;border-radius:5px;cursor:pointer;min-height:40px;background:'+(isT?'var(--teal)':hasMemo?'rgba(59,130,246,.1)':'var(--bg3)')+';border:1px solid '+(isT?'var(--teal)':hasMemo?'var(--blue)':'var(--border)')+';">';
-      h+='<div style="font-size:11px;font-weight:700;text-align:center;color:'+(isT?'#fff':wd===0?'#EF4444':wd===6?'#3B82F6':'var(--text)')+'">'+day+'</div>';
-      if(hasMemo)h+='<div style="font-size:9px;color:'+(isT?'rgba(255,255,255,.85)':'var(--blue)')+';overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 2px">'+memo+'</div>';
-      h+='</div>';
-    }
-    h+='</div></div>'; return h;
+  var now=new Date(), isNowMonth=(yr===now.getFullYear()&&mo===now.getMonth());
+  var first=new Date(yr,mo,1).getDay(), last=new Date(yr,mo+1,0).getDate();
+  var h='<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 4px;margin-bottom:8px">';
+  h+='<button onclick="memoCalMove(-1)" style="width:32px;height:32px;background:var(--bg3);border:1.5px solid var(--blue);border-radius:7px;color:var(--blue);font-size:16px;font-weight:700;cursor:pointer">◀</button>';
+  h+='<span style="font-size:14px;font-weight:800;color:var(--teal)">'+(mo+1)+'월 '+yr+'년'+(isNowMonth?' (이번달)':'')+'</span>';
+  h+='<button onclick="memoCalMove(1)" style="width:32px;height:32px;background:var(--bg3);border:1.5px solid var(--blue);border-radius:7px;color:var(--blue);font-size:16px;font-weight:700;cursor:pointer">▶</button>';
+  h+='</div>';
+  h+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px">';
+  h+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px">';
+  DN.forEach(function(d,i){h+='<div style="text-align:center;font-size:10px;font-weight:700;color:'+(i===0?'#EF4444':i===6?'#3B82F6':'var(--text3)')+'">'+d+'</div>';});
+  h+='</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px">';
+  for(var i=0;i<first;i++)h+='<div></div>';
+  for(var day=1;day<=last;day++){
+    var ds=yr+'-'+String(mo+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+    var memo=(memos[ds]||'').trim(), hasMemo=memo.length>0;
+    var isT=(ds===today()), wd=new Date(yr,mo,day).getDay();
+    h+='<div onclick="editMemo(\''+ds+'\')" style="padding:4px 2px;border-radius:5px;cursor:pointer;min-height:40px;background:'+(isT?'var(--teal)':hasMemo?'rgba(59,130,246,.1)':'var(--bg3)')+';border:1px solid '+(isT?'var(--teal)':hasMemo?'var(--blue)':'var(--border)')+';">';
+    h+='<div style="font-size:11px;font-weight:700;text-align:center;color:'+(isT?'#fff':wd===0?'#EF4444':wd===6?'#3B82F6':'var(--text)')+'">'+day+'</div>';
+    if(hasMemo)h+='<div style="font-size:9px;color:'+(isT?'rgba(255,255,255,.85)':'var(--blue)')+';overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 2px">'+memo+'</div>';
+    h+='</div>';
   }
-  var html='<div class="card"><div class="ch"><span class="ct">📝 2개월 메모 달력</span></div>';
-  months.forEach(function(mm){html+=mkMon(mm.y,mm.m);});
-  html+='<div style="font-size:11px;color:var(--text2)">날짜를 탭하여 메모를 입력하세요</div></div>';
+  h+='</div></div>';
+  return h;
+}
+function rMemoCalendar(){
+  var html='<div class="card"><div class="ch"><span class="ct">📝 메모 달력</span></div>';
+  html+='<div id="memo-cal-wrap">'+_buildMemoCalInner()+'</div>';
+  html+='<div style="font-size:11px;color:var(--text2);margin-top:6px">날짜를 탭하여 메모를 입력하세요</div></div>';
   return html;
 }
 
