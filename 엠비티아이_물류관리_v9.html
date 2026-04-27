@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<!-- ★ v9.23: SyntaxError수정 + sendLocalNoti소리진동강화 + sendPush에러로깅 + 진동패턴강화 -->
+<!-- ★ v9.25: sendLocalNoti SW.ready강화 + 진동최대화 + FCM notification필드 + SyntaxError수정 -->
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -7771,7 +7771,7 @@ async function submitCampSupport(){
     var campDrvs=ls('drivers').filter(function(d){return (d.camp===myCamp||d.camp===myCampFull)&&d.name!==S.curDriver&&d.is_active!==false&&d.fcmToken;});
     campDrvs.forEach(function(d){
       fetch(_FCM_URL,{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({token:d.fcmToken,title:'🚨 긴급! '+myCampFull+' 배송 지원 요청',body:S.curDriver+': '+(msg.slice(0,60)),pinned:true})
+        body:JSON.stringify({token:d.fcmToken,title:'🚨 긴급! '+myCampFull+' 배송 지원 요청',body:S.curDriver+': '+(msg.slice(0,60)),pinned:true,urgent:true,notification:{title:'🚨 긴급 배송 지원 요청',body:S.curDriver+': '+(msg.slice(0,40))}})
       }).catch(function(){});
     });
     toast('📣 '+myCampFull+' '+campDrvs.length+'명에게 긴급 알림 전송됨!');
@@ -7795,7 +7795,7 @@ async function respondCampSupport(fbId){
         if(reqDrv&&reqDrv.fcmToken){
           var _FCM_URL='https://us-central1-mbti-logistics.cloudfunctions.net/sendPush';
           fetch(_FCM_URL,{method:'POST',headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({token:reqDrv.fcmToken,title:'🙌 콜!! '+S.curDriver+' 기사님이 도움을 드립니다',body:reason||'곧 도착합니다!',pinned:true})
+            body:JSON.stringify({token:reqDrv.fcmToken,title:'🙌 콜!! '+S.curDriver+' 기사님이 도움을 드립니다',body:reason||'곧 도착합니다!',pinned:true,notification:{title:'🙌 콜!!',body:S.curDriver+' 기사님 도착 예정'}})
           }).catch(function(){});
         }
       }
@@ -7817,7 +7817,7 @@ async function resolveCampSupport(fbId){
       var _FCM_URL='https://us-central1-mbti-logistics.cloudfunctions.net/sendPush';
       ls('drivers').filter(function(d){return (d.camp===myCamp||(d.camp&&myCamp&&myCamp.indexOf(d.camp)>=0))&&d.is_active!==false&&d.fcmToken;}).forEach(function(d){
         fetch(_FCM_URL,{method:'POST',headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({token:d.fcmToken,title:'✅ 해결됨! '+myCamp+' 배송 지원',body:S.curDriver+' 기사님 지원 요청이 해결되었습니다',pinned:false})
+          body:JSON.stringify({token:d.fcmToken,title:'✅ 해결됨! '+myCamp+' 배송 지원',body:S.curDriver+' 기사님 지원 요청이 해결되었습니다',pinned:false,notification:{title:'✅ 해결됨! '+myCamp,body:S.curDriver+' 기사님 지원 완료'}})
         }).catch(function(){});
       });
       toast('✓ 해결 완료 — 캠프 전체에 알림 발송');
@@ -9227,7 +9227,7 @@ async function submitAccident(){
     var _FCM_URL='https://us-central1-mbti-logistics.cloudfunctions.net/sendPush';
     campDrvs.forEach(function(d){
       fetch(_FCM_URL,{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({token:d.fcmToken,title:'🚨 긴급! '+myCamp+' 사고 발생',body:S.curDriver+' — '+S.accType+': '+desc.slice(0,50),pinned:true})
+        body:JSON.stringify({token:d.fcmToken,title:'🚨 긴급! '+myCamp+' 사고 발생',body:S.curDriver+' — '+S.accType+': '+desc.slice(0,50),pinned:true,urgent:true,notification:{title:'🚨 긴급! 사고 발생',body:S.curDriver}})
       }).catch(function(){});
     });
     if(campDrvs.length>0)toast('🚨 사고 접수 완료! '+campDrvs.length+'명 캠프 동료에게 긴급 알림 전송됨');
@@ -11413,7 +11413,7 @@ function _doSendNotice(allDrs,target,category,title,content,pinned,smsOpt,kakaoO
     function _sendFcmPush(token){
       if(!token||typeof token!=='string'||token.length<20){console.warn('[FCM push] 토큰 무효');return;}
       fetch(_FCM_URL,{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({token:token,title:title,body:content,pinned:!!pinned})
+        body:JSON.stringify({token:token,title:title,body:content,pinned:!!pinned,notification:{title:title,body:content}})
       }).then(function(r){
         if(r.ok) console.log('[FCM push] ✅ 전송 성공 → 토큰:',token.substring(0,20)+'...');
         else r.text().then(function(t){console.error('[FCM push] ❌ 전송 실패 HTTP'+r.status,t);});
@@ -13305,7 +13305,7 @@ window._notiPermAsked=false;
     "    self.registration.showNotification(d.title||'알림',{",
     "      body:d.body||'', icon:d.icon||'', badge:d.icon||'',",
     "      tag:d.tag||'mbti_'+Date.now(), renotify:true,",
-    "      vibrate:[200,100,200,100,200], requireInteraction:!!d.urgent,",
+    "      vibrate:d.urgent?[700,120,700,120,700,120,1200,120,700]:[500,100,500,100,500], requireInteraction:!!d.urgent,",
     "      data:{url:d.url||'/', cat:d.cat||''}",
     "    });",
     "  }",
@@ -13358,30 +13358,47 @@ async function requestNotiPermission(silent){
 
 // 로컬 알림 표시 (SW 우선, fallback Notification)
 function sendLocalNoti(opts){
-  if(!('Notification' in window)||Notification.permission!=='granted')return;
+  if(!('Notification' in window)||Notification.permission!=='granted'){
+    console.warn('[Noti] 권한 없음:', Notification.permission);
+    return;
+  }
   opts=opts||{};
   var urgent=!!opts.urgent;
-  // ★ v9.22: 소리+진동 항상 먼저 (SW 여부 무관)
+  // ★ v9.25: 소리+진동 항상 먼저 (앱이 포그라운드일 때)
   try{
     if(navigator.vibrate){
-      if(urgent) navigator.vibrate([500,100,500,100,500,100,800]);
-      else        navigator.vibrate([300,100,300]);
+      if(urgent) navigator.vibrate([700,120,700,120,700,120,1200,120,700]);
+      else        navigator.vibrate([500,100,500,100,500]);
     }
   }catch(e){}
   try{if(typeof _playAlertSound==='function')_playAlertSound(urgent);}catch(e){}
-  // SW가 있으면 SW로 표시 (백그라운드에서도 표시됨)
-  if(window._swRegistration&&window._swRegistration.active){
-    try{
-      window._swRegistration.active.postMessage({type:'SHOW_NOTI',data:opts});
-      return;
-    }catch(e){}
+
+  // ★ v9.25: navigator.serviceWorker.ready 방식 — SW 상태 무관하게 확실히 표시
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.ready.then(function(reg){
+      reg.showNotification(opts.title||'📢 MBTI 물류',{
+        body:opts.body||'',
+        tag:opts.tag||('mbti-'+Date.now()),
+        renotify:true,
+        requireInteraction:!!opts.urgent,
+        vibrate:opts.urgent?[700,120,700,120,700,120,1200,120,700]:[500,100,500,100,500],
+        icon:opts.icon||'',
+        badge:opts.badge||'',
+        data:{url:'/',cat:opts.cat||''}
+      });
+      console.log('[Noti] SW showNotification 성공:', opts.title);
+    }).catch(function(e){
+      // SW ready 실패 시 직접 Notification
+      console.warn('[Noti] SW ready 실패, fallback:', e);
+      try{new Notification(opts.title||'MBTI 물류',{body:opts.body||'',tag:opts.tag||'mbti_'+Date.now()});}catch(ne){}
+    });
+    return;
   }
-  // Fallback: 페이지 알림 (포그라운드에서만 동작)
+  // SW 없는 환경 fallback
   try{
     new Notification(opts.title||'MBTI 물류',{
       body:opts.body||'',
       tag:opts.tag||'mbti_'+Date.now(),
-      icon:opts.icon||''
     });
   }catch(e){console.warn('[Noti]',e);}
 }
@@ -13975,8 +13992,12 @@ function _playBeepSound(urgent){
       window._mbtiAudioCtx=new Ctx();
     }
     var ctx=window._mbtiAudioCtx;
-    if(ctx.state==='suspended')ctx.resume();
+    if(ctx.state==='suspended')ctx.resume().catch(function(){});
     var now=ctx.currentTime;
+    // ★ v9.25: 볼륨 마스터 최대화
+    var masterGain=ctx.createGain();
+    masterGain.gain.value=1.5; // 클리핑 허용 (최대화)
+    masterGain.connect(ctx.destination);
     function _tone(freq,t,dur,vol,type){
       var osc=ctx.createOscillator();
       var gain=ctx.createGain();

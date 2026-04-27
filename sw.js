@@ -1,4 +1,4 @@
-// ★ MBTI 물류관리 v9.22 — Service Worker (FCM 백그라운드 완전 지원 + 중복방지)
+// ★ MBTI 물류관리 v9.25 — Service Worker (FCM 백그라운드 완전 지원 + 진동최대화 + urgent지원)
 // GitHub Pages: kimdh4790-cpu.github.io/mbti-logistics/sw.js
 
 // ── Firebase 스크립트 임포트 (FCM 백그라운드 처리 필수)
@@ -24,18 +24,18 @@ const ICON  = ORIGIN + '/icon-192.png';
 const BADGE = ORIGIN + '/icon-192.png';
 
 // ── 캐시 버전
-const CACHE = 'mbti-v9-22';
+const CACHE = 'mbti-v9-25';
 
 // ──────────────────────────────────────────
 // 설치 / 활성화
 // ──────────────────────────────────────────
 self.addEventListener('install', e => {
-  console.log('[SW] install v9.22');
+  console.log('[SW] install v9.25');
   self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
-  console.log('[SW] activate v9.22');
+  console.log('[SW] activate v9.25');
   e.waitUntil(
     caches.keys()
       .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
@@ -51,7 +51,7 @@ self.addEventListener('activate', e => {
 const _seenTags = new Map();
 function _isDuplicate(tag) {
   const now = Date.now();
-  if (_seenTags.has(tag) && (now - _seenTags.get(tag)) < 3 * 60 * 1000) return true;
+  if (_seenTags.has(tag) && (now - _seenTags.get(tag)) < 5 * 60 * 1000) return true;
   _seenTags.set(tag, now);
   return false;
 }
@@ -83,8 +83,8 @@ messaging.onBackgroundMessage(function(payload) {
     badge:             BADGE,
     tag:               tag,
     renotify:          true,
-    vibrate:           isUrgent ? [600,150,600,150,600,150,1000] : [400,100,400],
-    requireInteraction:isUrgent,
+    vibrate:           isUrgent ? [700,120,700,120,700,120,700,120,1300] : [600,120,600,120,600],
+    requireInteraction:true,
     actions:           actions,
     data: {
       url:   d.url  || '/',
@@ -111,7 +111,7 @@ self.addEventListener('message', function(e) {
       badge:             BADGE,
       tag:               d.tag || 'mbti-' + Date.now(),
       renotify:          true,
-      vibrate:           isUrgent ? [600,150,600,150,600,150,1000] : [400,100,400],
+      vibrate:           isUrgent ? [700,120,700,120,700,120,700,120,1300] : [600,120,600,120,600],
       requireInteraction:isUrgent,
       data:              { url: '/', cat: d.cat || '', ...d }
     });
