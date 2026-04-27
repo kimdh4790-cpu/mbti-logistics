@@ -1,4 +1,4 @@
-// ★ MBTI 물류관리 v9.19 — Service Worker (FCM 백그라운드 완전 지원)
+// ★ MBTI 물류관리 v9.22 — Service Worker (FCM 백그라운드 완전 지원 + 중복방지)
 // GitHub Pages: kimdh4790-cpu.github.io/mbti-logistics/sw.js
 
 // ── Firebase 스크립트 임포트 (FCM 백그라운드 처리 필수)
@@ -19,21 +19,23 @@ const messaging = firebase.messaging();
 
 // ── 아이콘 경로
 // 아이콘: 상대경로 우선, 없으면 빈 문자열 (chrome-extension 404 방지)
-const ICON = '/icon-192.png';
+const ORIGIN = self.location.origin || 'https://mbti-logistics.kimdh4790.workers.dev';
+const ICON  = ORIGIN + '/icon-192.png';
+const BADGE = ORIGIN + '/icon-192.png';
 
 // ── 캐시 버전
-const CACHE = 'mbti-v9-19';
+const CACHE = 'mbti-v9-22';
 
 // ──────────────────────────────────────────
 // 설치 / 활성화
 // ──────────────────────────────────────────
 self.addEventListener('install', e => {
-  console.log('[SW] install v9.19');
+  console.log('[SW] install v9.22');
   self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
-  console.log('[SW] activate v9.19');
+  console.log('[SW] activate v9.22');
   e.waitUntil(
     caches.keys()
       .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
@@ -45,6 +47,15 @@ self.addEventListener('activate', e => {
 // ★ FCM 백그라운드 메시지 처리
 //    앱이 닫혀있거나 백그라운드일 때도 알림 표시
 // ──────────────────────────────────────────
+// ★ v9.22: 백그라운드 중복 알림 방지 (3분 TTL)
+const _seenTags = new Map();
+function _isDuplicate(tag) {
+  const now = Date.now();
+  if (_seenTags.has(tag) && (now - _seenTags.get(tag)) < 3 * 60 * 1000) return true;
+  _seenTags.set(tag, now);
+  return false;
+}
+
 messaging.onBackgroundMessage(function(payload) {
   console.log('[FCM SW] 백그라운드 수신:', payload);
 
@@ -56,14 +67,25 @@ messaging.onBackgroundMessage(function(payload) {
   const isUrgent = d.urgent === 'true' || d.pinned === 'true';
   const tag      = d.tag   || 'mbti-' + Date.now();
 
+  // 중복 수신 방지
+  if (_isDuplicate(tag + title)) {
+    console.log('[FCM SW] 중복 알림 무시:', tag);
+    return;
+  }
+
+  const actions = isUrgent
+    ? [{ action: 'open', title: '✅ 확인하기' }, { action: 'close', title: '닫기' }]
+    : [];
+
   return self.registration.showNotification(title, {
     body:              body,
     icon:              ICON,
-    badge:             ICON,
+    badge:             BADGE,
     tag:               tag,
     renotify:          true,
     vibrate:           isUrgent ? [300,100,300,100,300,100,300] : [200,100,200],
     requireInteraction:isUrgent,
+    actions:           actions,
     data: {
       url:   d.url  || '/',
       type:  d.type || '',
@@ -86,7 +108,7 @@ self.addEventListener('message', function(e) {
     self.registration.showNotification(d.title || '📢 MBTI 물류', {
       body:              d.body  || '',
       icon:              ICON,
-      badge:             ICON,
+      badge:             BADGE,
       tag:               d.tag || 'mbti-' + Date.now(),
       renotify:          true,
       vibrate:           isUrgent ? [300,100,300,100,300] : [200,100,200],
