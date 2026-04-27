@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<!-- ★ v9.22: officeTel 수정(070-5001-3103) + 알림 강화(device_tokens+포그라운드독립) + 캠프네비 주소방식+앱스킴 -->
+<!-- ★ v9.23: SyntaxError수정 + sendLocalNoti소리진동강화 + sendPush에러로깅 + 진동패턴강화 -->
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.22</title>
+<title>엠비티아이 물류관리 v9.23</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -316,7 +316,7 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.22 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.23 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -1298,10 +1298,10 @@ function updBadge(){
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
 function updFbUI(){
-  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.22 · 🔥 실시간':'v9.22 · 데모';
+  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.23 · 🔥 실시간':'v9.23 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.14 · Firebase 실시간':'v9.22 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.14 · Firebase 실시간':'v9.23 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -4172,11 +4172,10 @@ function openCampGpsAdmin(){
   Object.keys(gps).forEach(function(k){if(allCamps.indexOf(k)<0)allCamps.push(k);});
   var rows=allCamps.map(function(name){
     var g=gps[name]||{lat:'',lng:'',addr:''};
-    return '<div style="display:grid;grid-template-columns:90px 1fr 1fr 1fr;gap:6px;align-items:center;margin-bottom:8px">'
+    return '<div style="display:grid;grid-template-columns:90px 1fr auto;gap:6px;align-items:center;margin-bottom:8px">'
       +'<div style="font-size:12px;font-weight:700;color:var(--amber)">🏕 '+name+'</div>'
-      +'<input id="cg-lat-'+name+'" value="'+(g.lat||'')+'" placeholder="위도" style="padding:6px 8px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--bg);color:var(--text)">'
-      +'<input id="cg-lng-'+name+'" value="'+(g.lng||'')+'" placeholder="경도" style="padding:6px 8px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--bg);color:var(--text)">'
-      +'<input id="cg-addr-'+name+'" value="'+(g.addr||'')+'" placeholder="주소" style="padding:6px 8px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--bg);color:var(--text)">'
+      +'<input id="cg-addr-'+name+'" value="'+(g.addr||'')+'" placeholder="주소 (예: 부산 사하구 장림로 123)" style="padding:6px 8px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--bg);color:var(--text)" oninput="_previewGeocode(this,\''+name+'\')" onkeydown="if(event.key===\'Enter\')_saveOneAddr(\''+name+'\')">'
+      +'<span id="cg-state-'+name+'" style="font-size:10px;color:'+(g.lat?'var(--teal)':'var(--text3)')+'">'+( g.lat?'📍확인':'📍미설정')+'</span>'
       +'</div>';
   }).join('');
   var html='<div style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:600;display:flex;align-items:center;justify-content:center;padding:14px" id="camp-gps-mo" onclick="if(event.target===this)this.remove()">'
@@ -4186,8 +4185,8 @@ function openCampGpsAdmin(){
     +'<button onclick="document.getElementById(\'camp-gps-mo\').remove()" style="padding:5px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;cursor:pointer">✕</button>'
     +'</div>'
     +'<div style="padding:16px 18px">'
-    +'<div style="display:grid;grid-template-columns:90px 1fr 1fr 1fr;gap:6px;font-size:10px;color:var(--text3);font-weight:700;margin-bottom:6px;padding:0 2px">'
-    +'<div>캠프</div><div>위도 (lat)</div><div>경도 (lng)</div><div>주소</div></div>'
+    +'<div style="display:grid;grid-template-columns:90px 1fr auto;gap:6px;font-size:10px;color:var(--text3);font-weight:700;margin-bottom:6px;padding:0 2px">'
+    +'<div>캠프</div><div>주소 (저장 시 좌표 자동 계산)</div><div>상태</div></div>'
     +rows
     +'<div style="background:var(--blue-l);border:1.5px solid var(--blue);border-radius:8px;padding:10px;margin-top:14px;font-size:11px;color:var(--blue);line-height:1.6">'
     +'💡 <strong>좌표 찾는 방법</strong><br>'
@@ -4202,20 +4201,34 @@ function openCampGpsAdmin(){
     +'</div></div></div></div>';
   document.body.insertAdjacentHTML('beforeend',html);
 }
-function saveCampGps(){
+async function saveCampGps(){
   var gps=getCampGps();
   var allCamps=Object.keys(CAMP_GPS_DEFAULT);
   Object.keys(gps).forEach(function(k){if(allCamps.indexOf(k)<0)allCamps.push(k);});
   var saved={};
-  allCamps.forEach(function(name){
-    var lat=parseFloat(document.getElementById('cg-lat-'+name)?.value||'');
-    var lng=parseFloat(document.getElementById('cg-lng-'+name)?.value||'');
-    var addr=document.getElementById('cg-addr-'+name)?.value||'';
-    if(!isNaN(lat)&&!isNaN(lng))saved[name]={lat:lat,lng:lng,addr:addr};
-  });
+  toast('🔄 주소 → 좌표 변환 중...');
+  // ★ v9.22: 주소로 Geocoding (Nominatim) → 좌표 자동 계산
+  for(var i=0;i<allCamps.length;i++){
+    var name=allCamps[i];
+    var addr=(document.getElementById('cg-addr-'+name)?.value||'').trim();
+    if(!addr)continue;
+    // 기존 좌표 유지 (주소 변경된 경우만 재계산)
+    var prevGps=gps[name]||{};
+    var lat=prevGps.lat||0, lng=prevGps.lng||0;
+    if(addr !== (prevGps.addr||'') || !lat || !lng){
+      // 주소가 바뀌었거나 좌표 없으면 Geocoding
+      try{
+        var resp=await fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(addr)+'&format=json&limit=1&accept-language=ko',{headers:{'User-Agent':'mbti-logistics/1.0'}});
+        var json=await resp.json();
+        if(json&&json[0]){lat=parseFloat(json[0].lat);lng=parseFloat(json[0].lon);}
+        else{toast('⚠️ '+name+' 주소 좌표 변환 실패 — 주소를 더 자세히 입력해 주세요');lat=prevGps.lat||0;lng=prevGps.lng||0;}
+      }catch(e){lat=prevGps.lat||0;lng=prevGps.lng||0;}
+    }
+    if(addr)saved[name]={lat:lat,lng:lng,addr:addr};
+  }
   localStorage.setItem('campGps',JSON.stringify(saved));
   if(FB&&_db){_db.collection('settings').doc('campGps').set(saved,{merge:true}).catch(function(){});}
-  toast('✅ 캠프 GPS 좌표 저장 완료');
+  toast('✅ 캠프 주소 저장 완료 (좌표 자동 계산됨)');
   document.getElementById('camp-gps-mo')?.remove();
 }
 async function autoFillCampGps(){
@@ -4229,9 +4242,15 @@ async function autoFillCampGps(){
   if(!name||!name.trim())return;
   name=name.trim();
   if(name.indexOf('캠프')<0)name=name+'캠프';
-  var lat=document.getElementById('cg-lat-'+name);
-  var lng=document.getElementById('cg-lng-'+name);
-  if(lat&&lng){lat.value=pos.lat.toFixed(6);lng.value=pos.lng.toFixed(6);toast('✅ '+name+'에 현재 위치 입력됨');}
+  var lat_el=document.getElementById('cg-addr-'+name);
+  if(lat_el){
+    fetch('https://nominatim.openstreetmap.org/reverse?lat='+pos.lat+'&lon='+pos.lng+'&format=json&accept-language=ko&zoom=18',{headers:{'User-Agent':'mbti-logistics/1.0'}})
+      .then(function(r){return r.json();})
+      .then(function(j){
+        if(j&&j.display_name)lat_el.value=j.display_name;
+        toast('✅ '+name+' 현재 위치 주소 자동 입력됨');
+      }).catch(function(){toast('⚠️ 주소 변환 실패 — 직접 입력해 주세요');});
+  }
   else {
     // 신규 캠프로 추가
     var saved=JSON.parse(localStorage.getItem('campGps')||'{}');
@@ -11392,10 +11411,13 @@ function _doSendNotice(allDrs,target,category,title,content,pinned,smsOpt,kakaoO
     var _FCM_URL='https://us-central1-mbti-logistics.cloudfunctions.net/sendPush';
     var _targetNames=targets.map(function(d){return d.name;});
     function _sendFcmPush(token){
-      if(!token||typeof token!=='string'||token.length<20)return;
+      if(!token||typeof token!=='string'||token.length<20){console.warn('[FCM push] 토큰 무효');return;}
       fetch(_FCM_URL,{method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({token:token,title:title,body:content,pinned:!!pinned})
-      }).catch(function(){});
+      }).then(function(r){
+        if(r.ok) console.log('[FCM push] ✅ 전송 성공 → 토큰:',token.substring(0,20)+'...');
+        else r.text().then(function(t){console.error('[FCM push] ❌ 전송 실패 HTTP'+r.status,t);});
+      }).catch(function(e){console.error('[FCM push] ❌ 네트워크 오류:',e.message);});
     }
     // ★ v9.22: drivers 컬렉션 + device_tokens 컬렉션 둘 다 조회 → 빠짐없이 푸시
     var _sentTokens=new Set(); // 중복 방지
@@ -11556,17 +11578,14 @@ function loadAllSupports(){
           html+='<div style="font-size:10px;color:var(--teal);margin-top:4px">✋ 응답 '+respCount+'명: ';
           html+=(x.responders||[]).map(function(r){return r.driver+(r.reason?' ('+r.reason+')':'');}).join(', ')+'</div>';
         }
+        html+='<div style="margin-top:6px;display:flex;gap:6px">';
         if(!isSolved){
-          html+='<div style="margin-top:6px">';
           html+='<button onclick="adminResolveSupport(\''+x.fbId+'\')" style="padding:5px 12px;background:var(--teal);color:#fff;border:none;border-radius:5px;font-size:10px;font-weight:700;cursor:pointer">✅ 해결 처리</button>';
-          html+='</div>';
         }
+        html+='<button onclick="adminDeleteSupport(\''+x.fbId+'\')" style="padding:5px 10px;background:var(--red-l);color:var(--red);border:1px solid var(--red);border-radius:5px;font-size:10px;font-weight:700;cursor:pointer">🗑 삭제</button>';
         html+='</div>';
       });
-      el.innerHTML=html;
-    }).catch(function(e){
-      var el=document.getElementById('support-admin-list');
-      if(el)el.innerHTML='<div style="color:var(--red);padding:10px">오류: '+e.message+'</div>';
+      el.innerHTML = html;
     });
 }
 
@@ -11666,6 +11685,16 @@ async function adminResolveSupport(fbId){
   toast('✅ 해결 처리 완료');
   loadAllSupports();
 }
+async function adminDeleteSupport(fbId){
+  if(!fbId||!FB||!_db)return;
+  if(!confirm('이 지원 요청을 삭제할까요? 복구할 수 없습니다.'))return;
+  try{
+    await _db.collection('campSupports').doc(fbId).delete();
+    toast('🗑 삭제 완료');
+    loadAllSupports();
+  }catch(e){toast('❌ 삭제 실패: '+e.message);}
+}
+
 
 function rAttendPanel(){
   var dateStr=localStorage.getItem('attend_query_date')||today();
@@ -13331,6 +13360,15 @@ async function requestNotiPermission(silent){
 function sendLocalNoti(opts){
   if(!('Notification' in window)||Notification.permission!=='granted')return;
   opts=opts||{};
+  var urgent=!!opts.urgent;
+  // ★ v9.22: 소리+진동 항상 먼저 (SW 여부 무관)
+  try{
+    if(navigator.vibrate){
+      if(urgent) navigator.vibrate([500,100,500,100,500,100,800]);
+      else        navigator.vibrate([300,100,300]);
+    }
+  }catch(e){}
+  try{if(typeof _playAlertSound==='function')_playAlertSound(urgent);}catch(e){}
   // SW가 있으면 SW로 표시 (백그라운드에서도 표시됨)
   if(window._swRegistration&&window._swRegistration.active){
     try{
@@ -13343,8 +13381,7 @@ function sendLocalNoti(opts){
     new Notification(opts.title||'MBTI 물류',{
       body:opts.body||'',
       tag:opts.tag||'mbti_'+Date.now(),
-      icon:opts.icon||'',
-      vibrate:[200,100,200,100,200]
+      icon:opts.icon||''
     });
   }catch(e){console.warn('[Noti]',e);}
 }
@@ -13514,13 +13551,22 @@ function _scheduleNotiInit(){
       _setDeviceOwner(S.curDriver, me&&me.fbId);
     }
     
+    // ★ v9.22: 권한 상태 진단 로그
+    var perm=(typeof Notification!=='undefined')?Notification.permission:'unsupported';
+    console.log('[Noti] 알림 권한 상태:', perm, '/ 로그인:', loggedIn);
+    if(perm==='denied'){
+      console.warn('[Noti] ⚠️ 알림 권한 차단됨 — 브라우저 설정에서 허용해야 FCM 작동');
+      if(loggedIn) toast('⚠️ 알림이 차단되어 있습니다. 브라우저 주소창 🔒 → 알림 허용으로 변경해 주세요');
+    }
     // 권한 1회만 자동 요청 (현재 로그인 중인 경우만)
-    if(loggedIn && !window._notiPermAsked && Notification.permission==='default'){
+    if(loggedIn && !window._notiPermAsked && perm==='default'){
       window._notiPermAsked=true;
       requestNotiPermission(true).then(function(granted){
+        console.log('[Noti] 권한 요청 결과:', granted);
         if(granted) _registerFCMToken();
       });
-    } else if(Notification.permission==='granted'){
+    } else if(perm==='granted'){
+      console.log('[Noti] 권한 이미 허용 → _registerFCMToken 호출');
       _registerFCMToken();
     }
     if(loggedIn) startNotiListeners();
@@ -13557,18 +13603,21 @@ function _initFCMForeground(){
 setTimeout(_initFCMForeground, 2000);
 
 async function _registerFCMToken(){
-  if(window._fcmTokenRegistered)return;
-  if(window._fcmFailed)return; // ★ 이전에 실패했으면 재시도 안 함
-  if(!FB||!_db)return;
-  if(typeof firebase.messaging!=='function')return;
+  console.log('[FCM] _registerFCMToken 시작 — registered:'+window._fcmTokenRegistered+' failed:'+window._fcmFailed);
+  if(window._fcmTokenRegistered){console.log('[FCM] 이미 등록됨 — skip');return;}
+  if(window._fcmFailed){console.warn('[FCM] 이전 실패 플래그 — skip');return;}
+  if(!FB||!_db){console.warn('[FCM] Firebase 미연결');return;}
+  if(typeof firebase.messaging!=='function'){console.warn('[FCM] messaging 함수 없음');return;}
   // SW 등록 대기 (최대 10초)
   var swWait=0;
   while(!window._swRegistration&&swWait<20){await new Promise(function(r){setTimeout(r,500);});swWait++;}
   if(!window._swRegistration){console.warn('[FCM] SW 미등록 — 토큰 발급 생략');return;}
+  console.log('[FCM] SW 확인 완료, 인증 대기...');
   // Firebase 익명 인증 완료 대기 (최대 10초)
   var authWait=0;
   while(!firebase.auth().currentUser&&authWait<20){await new Promise(function(r){setTimeout(r,500);});authWait++;}
   if(!firebase.auth().currentUser){console.warn('[FCM] 인증 미완료 — 토큰 발급 생략');return;}
+  console.log('[FCM] 인증 완료, 토큰 발급 시도...');
   
   // ★ v9.21: 토큰 저장 대상 결정 - 현재 로그인 중인 기사 우선, 없으면 마지막 기기 소유자
   var targetDriverName=null, targetFbId=null;
@@ -13824,8 +13873,8 @@ function _showInstantAlert(opts){
   // 1) 진동 (모바일)
   try{
     if(navigator.vibrate){
-      if(urgent)navigator.vibrate([300,100,300,100,300,100,500]);
-      else navigator.vibrate([200,80,200]);
+      if(urgent)navigator.vibrate([600,150,600,150,600,150,1000]);
+      else navigator.vibrate([400,100,400]);
     }
   }catch(e){}
   

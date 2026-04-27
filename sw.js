@@ -83,7 +83,7 @@ messaging.onBackgroundMessage(function(payload) {
     badge:             BADGE,
     tag:               tag,
     renotify:          true,
-    vibrate:           isUrgent ? [300,100,300,100,300,100,300] : [200,100,200],
+    vibrate:           isUrgent ? [600,150,600,150,600,150,1000] : [400,100,400],
     requireInteraction:isUrgent,
     actions:           actions,
     data: {
@@ -111,7 +111,7 @@ self.addEventListener('message', function(e) {
       badge:             BADGE,
       tag:               d.tag || 'mbti-' + Date.now(),
       renotify:          true,
-      vibrate:           isUrgent ? [300,100,300,100,300] : [200,100,200],
+      vibrate:           isUrgent ? [600,150,600,150,600,150,1000] : [400,100,400],
       requireInteraction:isUrgent,
       data:              { url: '/', cat: d.cat || '', ...d }
     });
