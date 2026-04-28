@@ -7963,6 +7963,11 @@ function _startDrvNoticeListener(){
       snap.docChanges().forEach(function(change){
         if(change.type==='added'&&window._drvNoticeReady){
           var nd=change.doc.data();
+          // ★ v9.25 fix: 삭제된 공지 알림 차단
+          if(nd.noticeId&&window._masterNoticeIds&&Object.keys(window._masterNoticeIds).length>0&&!window._masterNoticeIds[nd.noticeId]){
+            console.log('[Noti] 삭제된 공지 알림 차단(drvNotice):', nd.noticeId);
+            return;
+          }
           var alertKey='notice_'+change.doc.id;
           if(window._notiSeen&&window._notiSeen[alertKey])return;
           if(window._notiSeen){window._notiSeen[alertKey]=Date.now();}
@@ -13902,9 +13907,20 @@ async function _registerFCMToken(){
   
   try{
     var msg=firebase.messaging();
+    // ★ v9.25 fix: firebase-messaging-sw.js를 FCM 전용 SW로 등록
+    // sw.js로 등록 시 백그라운드 알림이 작동 안 함 → firebase-messaging-sw.js로 변경
+    var fcmSwReg = null;
+    try{
+      fcmSwReg = await navigator.serviceWorker.register('./firebase-messaging-sw.js', {scope:'./'});
+      await fcmSwReg.update();
+      console.log('[FCM] firebase-messaging-sw.js 등록 완료');
+    }catch(swErr){
+      console.warn('[FCM] firebase-messaging-sw.js 등록 실패, sw.js로 폴백:', swErr.message);
+      fcmSwReg = window._swRegistration;
+    }
     var token=await msg.getToken({
       vapidKey:'BAcfjIAqO1zwJtkKBv5dI8SlSjHci1BDbb5dVENG-KVlI8qzBVa646bt2lSoUhzmZGN08s8AxAALFhFr8Jkwdjs',
-      serviceWorkerRegistration:window._swRegistration
+      serviceWorkerRegistration: fcmSwReg || window._swRegistration
     });
     if(!token){console.warn('[FCM] 토큰 발급 실패');return;}
     window._fcmTokenRegistered=true;
