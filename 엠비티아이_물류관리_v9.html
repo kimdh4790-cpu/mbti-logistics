@@ -316,7 +316,7 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.23 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.25 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -1309,10 +1309,10 @@ function updBadge(){
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
 function updFbUI(){
-  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.23 · 🔥 실시간':'v9.23 · 데모';
+  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.25 · 🔥 실시간':'v9.25 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.14 · Firebase 실시간':'v9.23 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.25 · Firebase 실시간':'v9.25 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -12340,6 +12340,7 @@ function rScheduleAdmin(){
   return '<div class="card"><div class="ch"><span class="ct">📅 기사별 '+(viewMode==='week'?'주간':'월간')+' 근무표</span>'
     +'<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
     +'<label style="padding:5px 12px;background:var(--teal);color:#fff;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">📂 엑셀 업로드<input type="file" accept=".xlsx,.xls" style="display:none" onchange="parseScheduleExcel(this)"></label>'
+    +(S.schedLastFile?'<span onclick="navigator.clipboard.writeText(S.schedLastFile);toast(\'✅ 파일명 복사됨\')" title="클릭하면 파일명 복사" style="font-size:11px;font-weight:600;color:var(--teal);background:var(--teal-l);padding:3px 8px;border-radius:4px;cursor:pointer;border:1px solid var(--teal);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block">📋 '+S.schedLastFile+'</span>':'')
     +'<button onclick="downloadScheduleExcel()" style="padding:5px 12px;background:#0ea5e9;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer" title="현재 월의 근무표를 쿠팡 엑셀 양식으로 다운로드">📥 엑셀 다운로드</button>'
     +'<button onclick="resetSchedule()" style="padding:5px 12px;background:#ef4444;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">🗑 초기화</button>'
     +'<button class="btn btn-sm btn-teal" onclick="reloadScheduleAdmin()">🔄 새로고침</button>'
@@ -12590,6 +12591,7 @@ function resetSchedule(){
 }
 function parseScheduleExcel(inp){
   var file=inp.files[0]; if(!file)return;
+  S.schedLastFile=file.name; // ★ v9.25: 파일명 저장 (UI 표시용)
   if(typeof XLSX==='undefined'){
     toast('⚠️ XLSX 라이브러리 로딩 중... 3초 후 다시 시도');
     setTimeout(function(){inp.click();},3000);
@@ -12673,6 +12675,8 @@ function parseScheduleExcel(inp){
       });
       
       if(validRows.length===0){toast('❌ 유효한 데이터 없음');return;}
+      // ★ v9.25: 날짜순 정렬 (날짜 → 기사명 순) — 날짜별로 인원 묶어서 처리
+      validRows.sort(function(a,b){return a.ds.localeCompare(b.ds)||a.name.localeCompare(b.name);});
       if(validRows[0]) firstDs=validRows[0].ds;
       
       // ★ 2단계: 각 기사별 해당 기간의 기존 Firebase 데이터 삭제
