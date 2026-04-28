@@ -1344,7 +1344,7 @@ var S={
   bankUrl:'',
   regDocs:{bank:null,license:null,cargo_cert:null,car_reg:null,biz_reg:null},
   regDocUrls:{bank:'',license:'',cargo_cert:'',car_reg:'',biz_reg:''},
-  excelRoutes:[], excelDailyDetail:[], curMode:'driver',
+  excelRoutes:[], excelDailyDetail:[], curMode:'driver', schedEditMode:'주',
   yongPrice:{del:900,ret:900},
   dFilter:'all', eFilter:'all', tFilter:'all',
   termList:[...TERMINALS],
@@ -12310,8 +12310,9 @@ function rScheduleAdmin(){
         var route=typeof sc_val==='object'?(sc_val.route||''):'';
         var isToday=(dt.d===now.getDate()&&dt.m===now.getMonth()&&dt.y===now.getFullYear());
         var cellKey='schedule_'+drv.name+'_month_'+dt.y+'_'+dt.m;
-        rows+='<div style="position:relative;text-align:center;padding:2px 1px;border-radius:4px;cursor:pointer;min-height:30px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:'+(isToday?'rgba(15,110,86,.15)':(stColors[st]||'var(--bg2)'))+';border:1px solid '+(isToday?'var(--teal)':'var(--border)')+'">'
-          +'<div onclick="adminSetSchedule(\''+cellKey+'\',\''+ds+'\',\''+drv.name+'\')" style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center">'
+        var cellId='sc-'+drv.name.replace(/[^a-zA-Z0-9가-힣]/g,'')+'-'+ds;
+        rows+='<div id="'+cellId+'" style="position:relative;text-align:center;padding:2px 1px;border-radius:4px;cursor:pointer;min-height:30px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:'+(isToday?'rgba(15,110,86,.15)':(stColors[st]||'var(--bg2)'))+';border:1px solid '+(isToday?'var(--teal)':'var(--border)')+'">'
+          +'<div onclick="adminSetSchedule(\''+cellKey+'\',\''+ds+'\',\''+drv.name+'\',\''+cellId+'\')" style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center">'
             +'<div style="font-size:10px;font-weight:700;color:'+(stTxt[st]||'var(--text3)')+'">'+(st||'·')+'</div>'
             +(route?'<div style="font-size:9px;color:var(--blue);line-height:1.1;font-weight:600">'+route+'</div>':'')
           +'</div>'
@@ -12369,13 +12370,16 @@ function rScheduleAdmin(){
       +'<select onchange="schedFilterShift(this.value)" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:12px">'+shiftFilterOpts+'</select>'
       +'<span style="font-size:11px;color:var(--text2);font-weight:600;margin-left:6px">👤 기사</span>'
       +'<select onchange="schedFilterDrv(this.value)" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:12px">'+drvOpts+'</select>'
-      +'<span style="font-size:11px;color:var(--text3);margin-left:auto">셀 탭: 상태순환 · ✏ 클릭: 상세수정</span>'
+      +'<span style="font-size:11px;color:var(--text3);margin-left:auto">버튼 선택 후 셀 탭으로 즉시 적용 · ✏ 상세수정</span>'
     +'</div>'
-    +'<div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">'
-    +'<span style="font-size:10px;background:rgba(59,130,246,.18);padding:2px 8px;border-radius:4px;color:#3B82F6;font-weight:700">주간</span>'
-    +'<span style="font-size:10px;background:rgba(139,92,246,.18);padding:2px 8px;border-radius:4px;color:#8B5CF6;font-weight:700">야간</span>'
-    +'<span style="font-size:10px;background:rgba(107,114,128,.15);padding:2px 8px;border-radius:4px;color:#9CA3AF;font-weight:700">휴무</span>'
-    +'<span style="font-size:10px;background:rgba(239,68,68,.15);padding:2px 8px;border-radius:4px;color:#EF4444;font-weight:700">병가</span></div>'
+    +'<div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;align-items:center">'
+    +'<span style="font-size:10px;color:var(--text3);font-weight:600">✏ 입력모드:</span>'
+    +'<button onclick="_schedSetMode(\'주\')" id="smode-주" style="font-size:11px;padding:4px 12px;border-radius:6px;border:2px solid #3B82F6;background:'+(S.schedEditMode==='주'?'#3B82F6':'rgba(59,130,246,.15)')+';color:'+(S.schedEditMode==='주'?'#fff':'#3B82F6')+';font-weight:700;cursor:pointer">☀ 주간</button>'
+    +'<button onclick="_schedSetMode(\'야\')" id="smode-야" style="font-size:11px;padding:4px 12px;border-radius:6px;border:2px solid #8B5CF6;background:'+(S.schedEditMode==='야'?'#8B5CF6':'rgba(139,92,246,.15)')+';color:'+(S.schedEditMode==='야'?'#fff':'#8B5CF6')+';font-weight:700;cursor:pointer">🌙 야간</button>'
+    +'<button onclick="_schedSetMode(\'휴무\')" id="smode-휴무" style="font-size:11px;padding:4px 12px;border-radius:6px;border:2px solid #9CA3AF;background:'+(S.schedEditMode==='휴무'?'#9CA3AF':'rgba(107,114,128,.15)')+';color:'+(S.schedEditMode==='휴무'?'#fff':'#9CA3AF')+';font-weight:700;cursor:pointer">휴무</button>'
+    +'<button onclick="_schedSetMode(\'병가\')" id="smode-병가" style="font-size:11px;padding:4px 12px;border-radius:6px;border:2px solid #EF4444;background:'+(S.schedEditMode==='병가'?'#EF4444':'rgba(239,68,68,.15)')+';color:'+(S.schedEditMode==='병가'?'#fff':'#EF4444')+';font-weight:700;cursor:pointer">병가</button>'
+    +'<button onclick="_schedSetMode(\'\')" id="smode-" style="font-size:11px;padding:4px 12px;border-radius:6px;border:2px solid #6B7280;background:'+(S.schedEditMode===''?'#6B7280':'var(--bg3)')+';color:'+(S.schedEditMode===''?'#fff':'#6B7280')+';font-weight:700;cursor:pointer">삭제</button>'
+    +'</div>'
     +'<div style="overflow-x:auto"><div style="min-width:'+(90+colCount*50)+'px">'+header+rows+'</div></div></div>';
 }
 
@@ -12424,6 +12428,53 @@ function schedFilterShift(v){
 }
 
 // 근무 셀 상세 수정 모달 (상태/라우트/회전 한번에)
+// ★ v9.25: 캠프별 라우트 프리셋 관리
+function getCampRoutePresets(camp){
+  var defaults={
+    '부산1':['101C','101D','215A','215B','215C','215D'],
+    '부산2':['812A','812B','812C','812D'],
+    '부산3':['508B'],
+    '대구2':['109A','109B','109C','109D','213A','213B','213C','213D'],
+    '진주M':['608B','608C','608D','612A','612B','612C','612D','613A','613B','613C','613D','614A','614B','614C','614D','619A','619B','619C','619D']
+  };
+  var saved={};
+  try{saved=JSON.parse(localStorage.getItem('mbti_camp_routes')||'{}');}catch(e){}
+  var merged=Object.assign({},defaults,saved);
+  return merged[camp]||[];
+}
+function saveCampRoutePresets(camp, routes){
+  var saved={};
+  try{saved=JSON.parse(localStorage.getItem('mbti_camp_routes')||'{}');}catch(e){}
+  saved[camp]=routes;
+  localStorage.setItem('mbti_camp_routes',JSON.stringify(saved));
+}
+function _pickSchedRoute(r){
+  var el=document.getElementById('ed-sch-route');
+  if(!el)return;
+  var v=el.value.trim();
+  el.value=v?v+','+r:r;
+  el.style.borderColor='var(--blue)';
+}
+function _updateSchedRouteChips(camp){
+  var box=document.getElementById('sched-route-chips');
+  if(!box)return;
+  var routes=getCampRoutePresets(camp);
+  if(!routes.length){box.innerHTML='<span style="font-size:11px;color:var(--text3)">등록된 라우트 없음 — ⚙️ 버튼으로 추가</span>';return;}
+  box.innerHTML=routes.map(function(r){
+    return '<button type="button" onclick="_pickSchedRoute(\''+r+'\')" style="padding:4px 10px;background:var(--bg3);border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;color:var(--text)">'+r+'</button>';
+  }).join('');
+}
+function _editCampRoutes(camp){
+  if(!camp){toast('⚠️ 캠프를 먼저 선택하세요');return;}
+  var routes=getCampRoutePresets(camp);
+  var val=prompt(camp+' 라우트 번호 목록 (쉼표로 구분):', routes.join(','));
+  if(val===null)return;
+  var newRoutes=val.split(',').map(function(r){return r.trim().toUpperCase();}).filter(Boolean);
+  saveCampRoutePresets(camp,newRoutes);
+  _updateSchedRouteChips(camp);
+  toast('✅ '+camp+' 라우트 '+newRoutes.length+'개 저장됨');
+}
+
 function editScheduleCell(drvName, ds){
   var ymd=ds.split('-');
   var y=parseInt(ymd[0]), m=parseInt(ymd[1])-1;
@@ -12479,7 +12530,9 @@ function editScheduleCell(drvName, ds){
         +'<label style="font-size:11px;color:var(--text2);display:block;margin-bottom:6px;font-weight:600">📌 근무 상태</label>'
         +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">'+statusBtns+'</div>'
         +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">'
-          +'<div><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:3px;font-weight:600">🚚 업무 라우트</label><input id="ed-sch-route" value="'+(cur.route||'')+'" placeholder="예: 215C, 215C,215D" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px"></div>'
+          +'<div><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:3px;font-weight:600">🚚 업무 라우트</label><input id="ed-sch-route" value="'+(cur.route||'')+'" placeholder="예: 215C, 215C,215D" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px">'
+          +'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:5px;min-height:26px" id="sched-route-chips"></div>'
+          +'</div>'
           +'<div><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:3px;font-weight:600">🔁 회전 <small style="color:var(--text3);font-weight:400">상태 선택 시 자동</small></label>'
             +rotDatalist
             +'<div style="display:flex;gap:4px;margin-bottom:4px">'
@@ -12487,7 +12540,11 @@ function editScheduleCell(drvName, ds){
               +'<button type="button" onclick="document.getElementById(\'ed-sch-rotation\').value=\'D1,D2,D3\';" style="flex:1;padding:4px 6px;background:rgba(139,92,246,.15);color:#8B5CF6;border:1px solid #8B5CF6;border-radius:5px;font-size:10px;font-weight:700;cursor:pointer">🌙 D1,D2,D3</button>'
             +'</div>'
             +'<input id="ed-sch-rotation" list="ed-sch-rot-list" value="'+(cur.rotation||'')+'" placeholder="자동입력 또는 직접 입력" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px"></div>'
-          +'<div><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:3px;font-weight:600">🏕 캠프명</label><select id="ed-sch-camp" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px">'+campSelect+'</select></div>'
+          +'<div><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:3px;font-weight:600">🏕 캠프명</label>'
+          +'<div style="display:flex;gap:4px;align-items:center">'
+          +'<select id="ed-sch-camp" onchange="_updateSchedRouteChips(this.value)" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px">'+campSelect+'</select>'
+          +'<button type="button" onclick="_editCampRoutes(document.getElementById(\'ed-sch-camp\').value)" title="캠프 라우트 번호 관리" style="padding:7px 9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:6px;font-size:13px;cursor:pointer">&#9881;</button>'
+          +'</div></div>'
           +'<div><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:3px;font-weight:600">🌊 웨이브</label><select id="ed-sch-wave" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px">'+waveSelect+'</select></div>'
         +'</div>'
         +'<div style="display:flex;gap:8px;justify-content:space-between;padding-top:10px;border-top:1px solid var(--border)">'
@@ -12501,6 +12558,8 @@ function editScheduleCell(drvName, ds){
     +'</div>'
   +'</div>';
   document.body.insertAdjacentHTML('beforeend', html);
+  // ★ v9.25: 모달 열리면 현재 캠프 기준 라우트 칩 즉시 표시
+  setTimeout(function(){_updateSchedRouteChips(cur.camp||'');},0);
 }
 
 function saveScheduleCell(drvName, ds){
@@ -12974,20 +13033,43 @@ function downloadScheduleExcel(){
   }
 }
 
-function adminSetSchedule(wkKey,ds,drvName){
+// ★ v9.25: 입력 모드 전환 (전체 재렌더 없이 버튼만 업데이트)
+function _schedSetMode(mode){
+  S.schedEditMode=mode;
+  var modeInfo={'주':{bg:'#3B82F6',off:'rgba(59,130,246,.15)',c:'#3B82F6'},'야':{bg:'#8B5CF6',off:'rgba(139,92,246,.15)',c:'#8B5CF6'},'휴무':{bg:'#9CA3AF',off:'rgba(107,114,128,.15)',c:'#9CA3AF'},'병가':{bg:'#EF4444',off:'rgba(239,68,68,.15)',c:'#EF4444'},'':{bg:'#6B7280',off:'var(--bg3)',c:'#6B7280'}};
+  ['주','야','휴무','병가',''].forEach(function(m){
+    var btn=document.getElementById('smode-'+m);
+    if(!btn)return;
+    var info=modeInfo[m];
+    btn.style.background=(mode===m)?info.bg:info.off;
+    btn.style.color=(mode===m)?'#fff':info.c;
+  });
+}
+function adminSetSchedule(wkKey,ds,drvName,cellId){
   var sc=JSON.parse(localStorage.getItem(wkKey)||'{}');
-  var order=['','주','야','휴무','병가'];
   var cur=sc[ds]||'';
   var curStatus=typeof cur==='object'?(cur.status||''):cur;
-  var next=order[(order.indexOf(curStatus)+1)%order.length];
-  // 객체면 status만 업데이트, 문자열이면 그냥 저장
-  if(next){
-    if(typeof cur==='object'){cur.status=next;sc[ds]=cur;}
-    else{sc[ds]=next;}
-  } else {delete sc[ds];}
+  var next;
+  if(typeof S!=='undefined'&&S.schedEditMode!==undefined){
+    next=S.schedEditMode; // 모드 버튼 선택값 직접 적용
+  } else {
+    var order=['','주','야','휴무','병가'];
+    next=order[(order.indexOf(curStatus)+1)%order.length];
+  }
+  if(next){if(typeof cur==='object'){cur.status=next;sc[ds]=cur;}else{sc[ds]=next;}}
+  else{delete sc[ds];}
   localStorage.setItem(wkKey,JSON.stringify(sc));
   if(FB&&_db){var drv=ls('drivers').find(function(d){return d.name===drvName;});if(drv&&drv.fbId){_db.collection('schedules').doc(drv.fbId+'_'+ds).set({driver:drvName,date:ds,status:next||'',updAt:new Date().toISOString()},{merge:true}).catch(function(){});}}
-  SP('schedule_admin',null);
+  // ★ 셀만 즉시 DOM 업데이트 (전체 재렌더 없음)
+  var stC={'주':'rgba(59,130,246,.18)','야':'rgba(139,92,246,.18)','휴무':'rgba(107,114,128,.15)','병가':'rgba(239,68,68,.15)'};
+  var stT={'주':'#3B82F6','야':'#8B5CF6','휴무':'#9CA3AF','병가':'#EF4444'};
+  var cellEl=cellId?document.getElementById(cellId):null;
+  if(cellEl){
+    cellEl.style.background=stC[next]||'var(--bg2)';
+    var txt=cellEl.querySelector('[data-st]');
+    if(!txt){txt=cellEl.querySelector('div div div');}
+    if(txt){txt.style.color=stT[next]||'var(--text3)';txt.textContent=next||'·';}
+  } else {SP('schedule_admin',null);}
 }
 
 // ★ v9.25: Firestore 재로드 후 렌더
