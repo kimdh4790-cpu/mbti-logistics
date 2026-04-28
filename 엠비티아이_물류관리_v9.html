@@ -964,9 +964,9 @@ var COMPANY_INFO={
   estDate   : '2022-12-01',
   capital   : 38000000,
   addr      : '부산광역시 수영구 수영로 668, 607호',
-  officeTel : '051-711-3103',  // 회사 사무실 전화
+  officeTel : '070-5001-3103',  // 회사 사무실 전화
   fax       : '070-7507-3102', // 팩스번호
-  ceoTel    : '010-4790-3103', // 대표(이사) 직통
+  ceoTel    : '',              // 대표 개인번호 비공개 (v9.25)
   homepage  : 'mbti-logistics.kimdh4790.workers.dev',
   kakaoChannel: 'MBTI Co. LOGISTICS'
 };
@@ -9656,6 +9656,8 @@ function _unsubAll(){
   if(!_fbUnsubs.length)return;
   _fbUnsubs.forEach(function(u){try{if(typeof u==='function')u();}catch(e){}});
   _fbUnsubs=[];
+  // ★ v9.25: schedules get 중복 방지 플래그 리셋 (재로그인 시 재실행 보장)
+  window._schedulesGetDone=false;
 }
 
 // ★ 쿠팡 정산 엑셀 업로드 → 기사별 자동 정산 등록
@@ -10976,7 +10978,10 @@ function startListeners(){
         });
         if(S.page==='schedule_admin'||S.page==='dash')SP(S.page,null);
         console.log('[Firebase] schedules 로드:',snap.size,'건');
-      }).catch(function(e){window._schedulesGetDone=false;console.warn('schedules get:',e&&e.message);});
+      }).catch(function(e){
+        if(e&&e.code==='already-exists'){console.log('[Firestore] schedules 중복 무시(자동 복구 중)');return;}
+        window._schedulesGetDone=false;console.warn('schedules get:',e&&e.message);
+      });
     }
   
     // ── 메모 Firebase→localStorage 동기화 (메모 사라짐 방지)
@@ -11030,7 +11035,10 @@ function startListeners(){
             }
           }
         });
-      },function(e){console.warn('photo_logs listener 오류:', e.code);}));
+      },function(e){
+        if(e.code==='already-exists'){console.log('[Firestore] photo_logs 중복 무시(자동 복구 중)');return;}
+        console.warn('photo_logs listener 오류:', e.code);
+      }));
   
     // ── photo_logs: Firestore → localStorage → UI 직접 반영 (1초 이내)
     // ── drivers: Firestore → localStorage → UI 직접 반영 (1초 이내)
@@ -11073,6 +11081,7 @@ function startListeners(){
         updBadge();
         if(S.page==='drivers'||S.page==='dash') SP(S.page, null);
       }, err=>{
+        if(err.code==='already-exists'){console.log('[Firestore] drivers 중복 무시(자동 복구 중)');return;}
         console.error('drivers onSnapshot 오류:', err.code, err.message);
         // 오류 시 1회성 fetch로 보완
         _db.collection('drivers').get().then(snap=>{
@@ -11104,7 +11113,10 @@ function startListeners(){
             }
           });
           if(S.page==='dash'||S.page===colPageMap[col]) SP(S.page, null);
-        }, err=>console.warn(col+' listener 오류:', err.code)));
+        }, err=>{
+          if(err.code==='already-exists'){console.log('[Firestore] '+col+' 중복 무시(자동 복구 중)');return;}
+          console.warn(col+' listener 오류:', err.code);
+        }));
     });
   
     // ★ v9.5: 운행 메모(delivery_memos) 실시간 동기화 (관리자용 뱃지/페이지 자동 갱신)
@@ -11132,7 +11144,10 @@ function startListeners(){
           }
         }catch(e){}
         if(S.page==='memo_log') SP('memo_log',null);
-      }, err=>console.warn('delivery_memos listener 오류:', err.code)));
+      }, err=>{
+        if(err.code==='already-exists'){console.log('[Firestore] delivery_memos 중복 무시(자동 복구 중)');return;}
+        console.warn('delivery_memos listener 오류:', err.code);
+      }));
   
     // ★ Firebase 재연결 시 pending 큐 재전송
     firebase.firestore().enableNetwork().then(function(){
@@ -11394,7 +11409,7 @@ function _doSendNotice(allDrs,target,category,title,content,pinned,smsOpt,kakaoO
       });
     });
     return batch.commit().then(function(){return ref;});
-  }).then(function(){
+  }).then(function(ref){  // ★ v9.25 fix: ref 파라미터 복구 (전송 실패: ref is not defined 수정)
     toast('✅ '+targets.length+'명에게 공지 전송 완료!');
     // ★ v9.19: FCM 푸시 — Firebase에서 최신 fcmToken 직접 조회
     var _FCM_URL='https://us-central1-mbti-logistics.cloudfunctions.net/sendPush';
@@ -13472,6 +13487,18 @@ window._installPromptEvent=null;
     if(e.data&&e.data.type==='FLUSH_PENDING_WRITES'){
       if(typeof flushPendingWrites==='function')flushPendingWrites();
     }
+    // ★ v9.25: SW 업데이트 감지 → FCM 토큰 강제 재발급 (백그라운드 알림 복구)
+    if(e.data&&e.data.type==='SW_UPDATED'){
+      console.log('[FCM] SW 업데이트 감지 — FCM 토큰 강제 재발급');
+      window._fcmTokenRegistered=false;
+      window._fcmFailed=false;
+      setTimeout(function(){if(typeof _registerFCMToken==='function')_registerFCMToken();},1500);
+    }
+    // ★ 알림 클릭 → 딥링크 처리
+    if(e.data&&e.data.type==='NOTIFICATION_CLICK'){
+      var d=e.data.data||{};
+      if(d.type==='notice'&&typeof SP==='function')SP('notice',null);
+    }
   });
 })();
 
@@ -13516,12 +13543,11 @@ window._notiPermAsked=false;
   setTimeout(function(){
     if(window._swRegistration && window._swRegistration.active){
       window._notiSwReg=window._swRegistration;
-      console.log('[Noti] 메인 SW 사용');
-      return;
+      return; // ★ v9.25: 정상 — 로그 생략
     }
-    // 메인 SW 미등록 — 페이지 자체로 알림 표시 (showNotification 폴백)
-    console.log('[Noti] SW 없음 — Notification 직접 사용');
-  },3000);
+    // 메인 SW 미등록 — navigator.serviceWorker.ready 폴백으로 처리
+    // console 노출 제거 (정상 동작, 혼동 방지)
+  },6000);
 })();
 
 // 알림 권한 요청
@@ -13582,19 +13608,19 @@ function sendLocalNoti(opts){
         renotify:true,
         requireInteraction:!!opts.urgent,
         vibrate:opts.urgent?[700,120,700,120,700,500,700,120,700,120,700]:[500,150,500,400,500,150,500],
-        icon:opts.icon||'/icon-192.png',
-        badge:opts.badge||'/icon-192.png',
+        icon:opts.icon||'',
+        badge:opts.badge||'',
         data:{url:'/',cat:opts.cat||''}
       });
       console.log('[Noti] SW showNotification 성공:', opts.title);
     }).catch(function(e){
       console.warn('[Noti] SW ready 실패, fallback:', e);
-      try{new Notification(opts.title||'MBTI 물류',{body:opts.body||'',tag:notiTag,icon:'/icon-192.png'});}catch(ne){}
+      try{new Notification(opts.title||'MBTI 물류',{body:opts.body||'',tag:notiTag});}catch(ne){}
     });
     return;
   }
   try{
-    new Notification(opts.title||'MBTI 물류',{body:opts.body||'',tag:notiTag,icon:'/icon-192.png'});
+    new Notification(opts.title||'MBTI 물류',{body:opts.body||'',tag:notiTag});
   }catch(e){console.warn('[Noti]',e);}
 }
 

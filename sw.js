@@ -1,4 +1,4 @@
-// ★ MBTI 물류관리 v9.25 — Service Worker (FCM 백그라운드 완전 지원 + 진동최대화 + urgent지원)
+// ★ MBTI 물류관리 v9.26 — Service Worker (FCM 백그라운드 완전 지원 + 진동최대화 + urgent지원)
 // GitHub Pages: kimdh4790-cpu.github.io/mbti-logistics/sw.js
 
 // ── Firebase 스크립트 임포트 (FCM 백그라운드 처리 필수)
@@ -18,28 +18,37 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 // ── 아이콘 경로
-// 아이콘: 상대경로 우선, 없으면 빈 문자열 (chrome-extension 404 방지)
-const ORIGIN = self.location.origin || 'https://mbti-logistics.kimdh4790.workers.dev';
-const ICON  = ORIGIN + '/icon-192.png';
-const BADGE = ORIGIN + '/icon-192.png';
+// ★ v9.26: icon-192.png 서버에 없으면 빈 문자열 → 404 에러 방지
+const ORIGIN = (self.location && self.location.origin) ? self.location.origin : 'https://mbti-logistics.kimdh4790.workers.dev';
+const ICON  = '';   // icon-192.png 없으면 빈 문자열 유지 (404 방지). 아이콘 파일 배포 시 ORIGIN+'/icon-192.png' 로 변경
+const BADGE = '';
 
 // ── 캐시 버전
-const CACHE = 'mbti-v9-25';
+const CACHE = 'mbti-v9-26';
 
 // ──────────────────────────────────────────
 // 설치 / 활성화
 // ──────────────────────────────────────────
 self.addEventListener('install', e => {
-  console.log('[SW] install v9.25');
+  console.log('[SW] install v9.26');
   self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
-  console.log('[SW] activate v9.25');
+  console.log('[SW] activate v9.26');
   e.waitUntil(
     caches.keys()
       .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
+      .then(() => {
+        // ★ v9.26: SW 업데이트 감지 → 앱에 알려서 FCM 토큰 강제 재발급
+        return self.clients.matchAll({type:'window', includeUncontrolled:true})
+          .then(function(clients){
+            clients.forEach(function(c){
+              c.postMessage({type:'SW_UPDATED', version:'v9.26'});
+            });
+          });
+      })
   );
 });
 
