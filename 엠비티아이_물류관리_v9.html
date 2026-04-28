@@ -12850,8 +12850,9 @@ function downloadScheduleExcel(){
   
   var totalCount = 0;
   
-  allDrivers.forEach(function(drv){
-    dates.forEach(function(ds){
+  // ★ v9.25: 날짜 → 기사 순서로 정렬 (쿠팡 업로드 형식)
+  dates.forEach(function(ds){
+    allDrivers.forEach(function(drv){
       var dp=ds.split('-');
       var dy=parseInt(dp[0]), dm=parseInt(dp[1])-1;
       var wkKey='schedule_'+drv.name+'_month_'+dy+'_'+dm;
