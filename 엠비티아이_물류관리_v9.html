@@ -10312,7 +10312,7 @@ function filterInq(f){
 
 function loadInquiries(){
   if(!FB||!_db){
-    document.getElementById('inq-result').innerHTML='<div style="text-align:center;padding:30px;color:var(--red)">❌ Firebase 연결 필요</div>';
+    var _irA=document.getElementById('inq-result');if(_irA)_irA.innerHTML='<div style="text-align:center;padding:30px;color:var(--red)">❌ Firebase 연결 필요</div>';
     return;
   }
   _db.collection('inquiries').orderBy('createdAt','desc').limit(200).get()
@@ -10329,7 +10329,7 @@ function loadInquiries(){
     })
     .catch(function(e){
       console.warn('문의함 로드 실패:',e);
-      document.getElementById('inq-result').innerHTML='<div style="text-align:center;padding:30px;color:var(--red)">❌ 로드 실패: '+(e.message||'')+'</div>';
+      var _ir2=document.getElementById('inq-result');if(_ir2)_ir2.innerHTML='<div style="text-align:center;padding:30px;color:var(--red)">❌ 로드 실패: '+(e.message||'')+'</div>';
     });
 }
 
@@ -10345,7 +10345,7 @@ function renderInqList(){
   if(cntEl)cntEl.textContent=list.length+'건';
   
   if(list.length===0){
-    document.getElementById('inq-result').innerHTML='<div style="text-align:center;padding:40px;color:var(--text3);font-size:13px">📭 문의 내역이 없습니다</div>';
+    var _ir3=document.getElementById('inq-result');if(_ir3)_ir3.innerHTML='<div style="text-align:center;padding:40px;color:var(--text3);font-size:13px">📭 문의 내역이 없습니다</div>';
     return;
   }
   
@@ -10383,7 +10383,9 @@ function renderInqList(){
     +'</div>';
   }).join('');
   
-  document.getElementById('inq-result').innerHTML=html;
+  var el=document.getElementById('inq-result');
+  if(!el)return; // ★ v9.25 fix: 페이지 미활성화 시 null 방지
+  el.innerHTML=html;
 }
 
 function markInqDone(id){
