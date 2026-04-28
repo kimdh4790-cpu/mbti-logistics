@@ -964,7 +964,7 @@ var COMPANY_INFO={
   estDate   : '2022-12-01',
   capital   : 38000000,
   addr      : '부산광역시 수영구 수영로 668, 607호',
-  officeTel : '070-5001-3103',  // 회사 사무실 전화
+  officeTel : '051-711-3103',  // 회사 사무실 전화
   fax       : '070-7507-3102', // 팩스번호
   ceoTel    : '',              // 대표 개인번호 비공개 (v9.25)
   homepage  : 'mbti-logistics.kimdh4790.workers.dev',
@@ -10312,7 +10312,7 @@ function filterInq(f){
 
 function loadInquiries(){
   if(!FB||!_db){
-    document.getElementById('inq-result').innerHTML='<div style="text-align:center;padding:30px;color:var(--red)">❌ Firebase 연결 필요</div>';
+    var _irA=document.getElementById('inq-result');if(_irA)_irA.innerHTML='<div style="text-align:center;padding:30px;color:var(--red)">❌ Firebase 연결 필요</div>';
     return;
   }
   _db.collection('inquiries').orderBy('createdAt','desc').limit(200).get()
@@ -10329,7 +10329,7 @@ function loadInquiries(){
     })
     .catch(function(e){
       console.warn('문의함 로드 실패:',e);
-      document.getElementById('inq-result').innerHTML='<div style="text-align:center;padding:30px;color:var(--red)">❌ 로드 실패: '+(e.message||'')+'</div>';
+      var _ir2=document.getElementById('inq-result');if(_ir2)_ir2.innerHTML='<div style="text-align:center;padding:30px;color:var(--red)">❌ 로드 실패: '+(e.message||'')+'</div>';
     });
 }
 
@@ -10345,7 +10345,7 @@ function renderInqList(){
   if(cntEl)cntEl.textContent=list.length+'건';
   
   if(list.length===0){
-    document.getElementById('inq-result').innerHTML='<div style="text-align:center;padding:40px;color:var(--text3);font-size:13px">📭 문의 내역이 없습니다</div>';
+    var _ir3=document.getElementById('inq-result');if(_ir3)_ir3.innerHTML='<div style="text-align:center;padding:40px;color:var(--text3);font-size:13px">📭 문의 내역이 없습니다</div>';
     return;
   }
   
@@ -10383,7 +10383,9 @@ function renderInqList(){
     +'</div>';
   }).join('');
   
-  document.getElementById('inq-result').innerHTML=html;
+  var el=document.getElementById('inq-result');
+  if(!el)return; // ★ v9.25 fix: 페이지 미활성화 시 null 방지
+  el.innerHTML=html;
 }
 
 function markInqDone(id){
@@ -11409,7 +11411,7 @@ function _doSendNotice(allDrs,target,category,title,content,pinned,smsOpt,kakaoO
       });
     });
     return batch.commit().then(function(){return ref;});
-  }).then(function(){
+  }).then(function(ref){  // ★ v9.25 fix: ref 파라미터 복구 (전송 실패: ref is not defined 수정)
     toast('✅ '+targets.length+'명에게 공지 전송 완료!');
     // ★ v9.19: FCM 푸시 — Firebase에서 최신 fcmToken 직접 조회
     var _FCM_URL='https://us-central1-mbti-logistics.cloudfunctions.net/sendPush';
@@ -11419,8 +11421,7 @@ function _doSendNotice(allDrs,target,category,title,content,pinned,smsOpt,kakaoO
       if(!token||typeof token!=='string'||token.length<20){console.warn('[FCM push] 토큰 무효');return;}
       fetch(_FCM_URL,{method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({token:token,title:title,body:content,pinned:!!pinned,
-          data:{type:'notice',noticeId:_noticeId},
-          notification:{title:title,body:content}})
+          data:{type:'notice',noticeId:_noticeId,title:title,body:content,urgent:pinned?'true':'false'}})
       }).then(function(r){
         if(r.ok){console.log('[FCM push] ✅ 전송 성공 → 토큰:',token.substring(0,20)+'...');return;}
         r.text().then(function(t){
@@ -13487,6 +13488,18 @@ window._installPromptEvent=null;
     if(e.data&&e.data.type==='FLUSH_PENDING_WRITES'){
       if(typeof flushPendingWrites==='function')flushPendingWrites();
     }
+    // ★ v9.25: SW 업데이트 감지 → FCM 토큰 강제 재발급 (백그라운드 알림 복구)
+    if(e.data&&e.data.type==='SW_UPDATED'){
+      console.log('[FCM] SW 업데이트 감지 — FCM 토큰 강제 재발급');
+      window._fcmTokenRegistered=false;
+      window._fcmFailed=false;
+      setTimeout(function(){if(typeof _registerFCMToken==='function')_registerFCMToken();},1500);
+    }
+    // ★ 알림 클릭 → 딥링크 처리
+    if(e.data&&e.data.type==='NOTIFICATION_CLICK'){
+      var d=e.data.data||{};
+      if(d.type==='notice'&&typeof SP==='function')SP('notice',null);
+    }
   });
 })();
 
@@ -13649,6 +13662,13 @@ function startNotiListeners(){
         if(window._notiSeen[key])return;
         window._notiSeen[key]=Date.now();
         if(window._notiSeenSave)window._notiSeenSave();
+        // ★ v9.25: 삭제된 공지 알림 차단 — notices 마스터에 없으면 skip
+        if(d.type==='notice'&&d.noticeId&&window._masterNoticeIds&&Object.keys(window._masterNoticeIds).length>0){
+          if(!window._masterNoticeIds[d.noticeId]){
+            console.log('[Noti] 삭제된 공지 알림 차단:', d.noticeId);
+            return;
+          }
+        }
         // 알림 발사
         var titleMap={notice:'📢 새 공지',tax_invoice:'🧾 세금계산서 도착',settlement:'📋 정산서 도착'};
         var title=titleMap[d.type]||'📢 새 알림';
