@@ -11435,10 +11435,13 @@ function _doSendNotice(allDrs,target,category,title,content,pinned,smsOpt,kakaoO
     // ★ v9.19: FCM 푸시 — Firebase에서 최신 fcmToken 직접 조회
     var _FCM_URL='https://us-central1-mbti-logistics.cloudfunctions.net/sendPush';
     var _targetNames=targets.map(function(d){return d.name;});
+    var _noticeId=ref.id; // ★ v9.25: noticeId 포함하여 삭제된 공지 필터링 가능
     function _sendFcmPush(token){
       if(!token||typeof token!=='string'||token.length<20){console.warn('[FCM push] 토큰 무효');return;}
       fetch(_FCM_URL,{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({token:token,title:title,body:content,pinned:!!pinned,notification:{title:title,body:content}})
+        body:JSON.stringify({token:token,title:title,body:content,pinned:!!pinned,
+          data:{type:'notice',noticeId:_noticeId},
+          notification:{title:title,body:content}})
       }).then(function(r){
         if(r.ok){console.log('[FCM push] ✅ 전송 성공 → 토큰:',token.substring(0,20)+'...');return;}
         r.text().then(function(t){
@@ -13818,6 +13821,11 @@ function _initFCMForeground(){
       var d=payload.data||{};
       var title=n.title||d.title||'📬 새 알림';
       var body=n.body||d.body||'관리자 알림이 도착했습니다';
+      // ★ v9.25: 삭제된 공지 알림 차단 — noticeId가 있는데 _masterNoticeIds에 없으면 skip
+      if(d.type==='notice'&&d.noticeId&&window._masterNoticeIds&&!window._masterNoticeIds[d.noticeId]){
+        console.log('[FCM] 삭제된 공지 알림 무시:', d.noticeId);
+        return;
+      }
       sendLocalNoti({title:title,body:body,tag:d.tag||('fcm-'+Date.now()),urgent:d.urgent==='true',cat:d.type||''});
       if(d.type==='tax_invoice'||d.type==='settlement'){
         if(typeof checkDriverNotifications==='function')setTimeout(checkDriverNotifications,1000);
