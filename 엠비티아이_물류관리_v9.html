@@ -11440,8 +11440,24 @@ function _doSendNotice(allDrs,target,category,title,content,pinned,smsOpt,kakaoO
       fetch(_FCM_URL,{method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({token:token,title:title,body:content,pinned:!!pinned,notification:{title:title,body:content}})
       }).then(function(r){
-        if(r.ok) console.log('[FCM push] ✅ 전송 성공 → 토큰:',token.substring(0,20)+'...');
-        else r.text().then(function(t){console.error('[FCM push] ❌ 전송 실패 HTTP'+r.status,t);});
+        if(r.ok){console.log('[FCM push] ✅ 전송 성공 → 토큰:',token.substring(0,20)+'...');return;}
+        r.text().then(function(t){
+          console.error('[FCM push] ❌ 전송 실패 HTTP'+r.status,t);
+          // ★ v9.25: 만료/무효 토큰 자동 삭제 (Device unregistered / NotRegistered)
+          if(t&&(t.indexOf('unregistered')>=0||t.indexOf('NotRegistered')>=0||t.indexOf('invalid')>=0)){
+            console.warn('[FCM] 만료 토큰 삭제 시작:', token.substring(0,20)+'...');
+            if(FB&&_db){
+              // device_tokens 컬렉션에서 삭제
+              _db.collection('device_tokens').where('token','==',token).get().then(function(snap){
+                snap.forEach(function(doc){doc.ref.delete();console.log('[FCM] device_tokens 만료 토큰 삭제됨');});
+              }).catch(function(){});
+              // drivers 컬렉션에서 fcmToken 필드 삭제
+              _db.collection('drivers').where('fcmToken','==',token).get().then(function(snap){
+                snap.forEach(function(doc){doc.ref.update({fcmToken:firebase.firestore.FieldValue.delete()});console.log('[FCM] drivers 만료 토큰 삭제됨');});
+              }).catch(function(){});
+            }
+          }
+        });
       }).catch(function(e){console.error('[FCM push] ❌ 네트워크 오류:',e.message);});
     }
     // ★ v9.22: drivers 컬렉션 + device_tokens 컬렉션 둘 다 조회 → 빠짐없이 푸시
@@ -13554,44 +13570,46 @@ function sendLocalNoti(opts){
   }
   opts=opts||{};
   var urgent=!!opts.urgent;
-  // ★ v9.25: 소리+진동 항상 먼저 (앱이 포그라운드일 때)
+  // ★ v9.25: 중복 방지 — FCM 서버 푸시가 이미 처리할 경우 로컬 알림 억제
+  // (앱이 백그라운드/닫혔을 때는 firebase-messaging-sw.js가 처리, 포그라운드만 sendLocalNoti)
+  var isForeground=!document.hidden;
+  if(!isForeground){
+    console.log('[Noti] 백그라운드 — FCM SW가 처리, 로컬 알림 생략');
+    return;
+  }
+  // 소리+진동 (포그라운드)
   try{
     if(navigator.vibrate){
-      if(urgent)
-        navigator.vibrate([700,120,700,120,700,500,700,120,700,120,700]);
-      else
-        navigator.vibrate([500,150,500,400,500,150,500]);
+      if(urgent) navigator.vibrate([700,120,700,120,700,500,700,120,700,120,700]);
+      else navigator.vibrate([500,150,500,400,500,150,500]);
     }
   }catch(e){}
   try{if(typeof _playAlertSound==='function')_playAlertSound(urgent);}catch(e){}
 
-  // ★ v9.25: navigator.serviceWorker.ready 방식 — SW 상태 무관하게 확실히 표시
+  // ★ v9.25: 일관된 tag → 중복 알림 덮어쓰기 (tag 없으면 제목 기반 고정 tag)
+  var notiTag=opts.tag||(('mbti-'+(opts.title||'noti')).replace(/\s/g,'-').substring(0,40));
+
   if('serviceWorker' in navigator){
     navigator.serviceWorker.ready.then(function(reg){
       reg.showNotification(opts.title||'📢 MBTI 물류',{
         body:opts.body||'',
-        tag:opts.tag||('mbti-'+Date.now()),
+        tag:notiTag,
         renotify:true,
         requireInteraction:!!opts.urgent,
         vibrate:opts.urgent?[700,120,700,120,700,500,700,120,700,120,700]:[500,150,500,400,500,150,500],
-        icon:opts.icon||'',
-        badge:opts.badge||'',
+        icon:opts.icon||'/icon-192.png',
+        badge:opts.badge||'/icon-192.png',
         data:{url:'/',cat:opts.cat||''}
       });
       console.log('[Noti] SW showNotification 성공:', opts.title);
     }).catch(function(e){
-      // SW ready 실패 시 직접 Notification
       console.warn('[Noti] SW ready 실패, fallback:', e);
-      try{new Notification(opts.title||'MBTI 물류',{body:opts.body||'',tag:opts.tag||'mbti_'+Date.now()});}catch(ne){}
+      try{new Notification(opts.title||'MBTI 물류',{body:opts.body||'',tag:notiTag,icon:'/icon-192.png'});}catch(ne){}
     });
     return;
   }
-  // SW 없는 환경 fallback
   try{
-    new Notification(opts.title||'MBTI 물류',{
-      body:opts.body||'',
-      tag:opts.tag||'mbti_'+Date.now(),
-    });
+    new Notification(opts.title||'MBTI 물류',{body:opts.body||'',tag:notiTag,icon:'/icon-192.png'});
   }catch(e){console.warn('[Noti]',e);}
 }
 
