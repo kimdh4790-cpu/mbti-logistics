@@ -964,7 +964,7 @@ var COMPANY_INFO={
   estDate   : '2022-12-01',
   capital   : 38000000,
   addr      : '부산광역시 수영구 수영로 668, 607호',
-  officeTel : '070-5001-3103',  // 회사 사무실 전화
+  officeTel : '051-711-3103',  // 회사 사무실 전화
   fax       : '070-7507-3102', // 팩스번호
   ceoTel    : '',              // 대표 개인번호 비공개 (v9.25)
   homepage  : 'mbti-logistics.kimdh4790.workers.dev',
@@ -8320,7 +8320,7 @@ function dHome(){
     <div style="font-size:11px;opacity:.92;font-weight:700;margin-bottom:6px">🏢 ${COMPANY_INFO.name} 본사 연락처</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
       <a href="tel:${COMPANY_INFO.officeTel.replace(/-/g,'')}" style="padding:8px 10px;background:rgba(255,255,255,.18);color:#fff;border-radius:7px;font-size:11px;text-decoration:none;font-weight:700;text-align:center">📞 사무실<br><span style="font-size:13px">${COMPANY_INFO.officeTel}</span></a>
-      <a href="tel:${COMPANY_INFO.ceoTel.replace(/-/g,'')}" style="padding:8px 10px;background:rgba(255,255,255,.18);color:#fff;border-radius:7px;font-size:11px;text-decoration:none;font-weight:700;text-align:center">📱 대표<br><span style="font-size:13px">${COMPANY_INFO.ceoTel}</span></a>
+      ${COMPANY_INFO.ceoTel?'<a href="tel:'+COMPANY_INFO.ceoTel.replace(/-/g,'')+'" style="padding:8px 10px;background:rgba(255,255,255,.18);color:#fff;border-radius:7px;font-size:11px;text-decoration:none;font-weight:700;text-align:center">📱 대표<br><span style="font-size:13px">'+COMPANY_INFO.ceoTel+'</span></a>':''}
     </div>
     <div style="margin-top:6px;font-size:9px;opacity:.85;text-align:center">📠 팩스: ${COMPANY_INFO.fax}</div>
   </div>
@@ -9205,7 +9205,7 @@ function dAccident(){
     +'<div style="font-size:11px;opacity:.9;font-weight:700;margin-bottom:5px">🏢 '+COMPANY_INFO.name+' 사무실 연락처</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">'
     +'<a href="tel:'+COMPANY_INFO.officeTel.replace(/-/g,'')+'" style="padding:8px 10px;background:rgba(255,255,255,.18);color:#fff;border-radius:7px;font-size:11px;text-decoration:none;font-weight:700;text-align:center">📞 사무실<br><span style="font-size:13px">'+COMPANY_INFO.officeTel+'</span></a>'
-    +'<a href="tel:'+COMPANY_INFO.ceoTel.replace(/-/g,'')+'" style="padding:8px 10px;background:rgba(255,255,255,.18);color:#fff;border-radius:7px;font-size:11px;text-decoration:none;font-weight:700;text-align:center">📱 대표<br><span style="font-size:13px">'+COMPANY_INFO.ceoTel+'</span></a>'
+    +(COMPANY_INFO.ceoTel?'<a href="tel:'+COMPANY_INFO.ceoTel.replace(/-/g,'')+'" style="padding:8px 10px;background:rgba(255,255,255,.18);color:#fff;border-radius:7px;font-size:11px;text-decoration:none;font-weight:700;text-align:center">📱 대표<br><span style="font-size:13px">'+COMPANY_INFO.ceoTel+'</span></a>':'')
     +'</div>'
     +'<div style="margin-top:6px;font-size:10px;opacity:.85;text-align:center">📠 팩스: '+COMPANY_INFO.fax+'</div>'
     +'</div>';
@@ -11421,8 +11421,7 @@ function _doSendNotice(allDrs,target,category,title,content,pinned,smsOpt,kakaoO
       if(!token||typeof token!=='string'||token.length<20){console.warn('[FCM push] 토큰 무효');return;}
       fetch(_FCM_URL,{method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({token:token,title:title,body:content,pinned:!!pinned,
-          data:{type:'notice',noticeId:_noticeId},
-          notification:{title:title,body:content}})
+          data:{type:'notice',noticeId:_noticeId,title:title,body:content,urgent:pinned?'true':'false'}})
       }).then(function(r){
         if(r.ok){console.log('[FCM push] ✅ 전송 성공 → 토큰:',token.substring(0,20)+'...');return;}
         r.text().then(function(t){
@@ -13663,6 +13662,13 @@ function startNotiListeners(){
         if(window._notiSeen[key])return;
         window._notiSeen[key]=Date.now();
         if(window._notiSeenSave)window._notiSeenSave();
+        // ★ v9.25: 삭제된 공지 알림 차단 — notices 마스터에 없으면 skip
+        if(d.type==='notice'&&d.noticeId&&window._masterNoticeIds&&Object.keys(window._masterNoticeIds).length>0){
+          if(!window._masterNoticeIds[d.noticeId]){
+            console.log('[Noti] 삭제된 공지 알림 차단:', d.noticeId);
+            return;
+          }
+        }
         // 알림 발사
         var titleMap={notice:'📢 새 공지',tax_invoice:'🧾 세금계산서 도착',settlement:'📋 정산서 도착'};
         var title=titleMap[d.type]||'📢 새 알림';

@@ -82,10 +82,28 @@ messaging.onBackgroundMessage(function(payload) {
     return;
   }
 
-  const actions = isUrgent
-    ? [{ action: 'open', title: '✅ 확인하기' }, { action: 'close', title: '닫기' }]
-    : [];
+  // ★ v9.26: 삭제된 공지 차단 — noticeId 있으면 Firestore에서 존재 확인 후 표시
+  if (d.type === 'notice' && d.noticeId) {
+    return fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/notices/' + d.noticeId)
+      .then(function(res) {
+        if (!res.ok) {
+          console.log('[FCM SW] 삭제된 공지 알림 차단:', d.noticeId);
+          return; // 공지 없음 → 알림 표시 안 함
+        }
+        return _showBgNotification(title, body, isUrgent, tag, d, []);
+      })
+      .catch(function() {
+        // 네트워크 오류 시 일단 표시
+        return _showBgNotification(title, body, isUrgent, tag, d, []);
+      });
+  }
 
+  return _showBgNotification(title, body, isUrgent, tag, d,
+    isUrgent ? [{ action: 'open', title: '✅ 확인하기' }, { action: 'close', title: '닫기' }] : []
+  );
+});
+
+function _showBgNotification(title, body, isUrgent, tag, d, actions) {
   return self.registration.showNotification(title, {
     body:              body,
     icon:              ICON,
@@ -102,7 +120,7 @@ messaging.onBackgroundMessage(function(payload) {
       ...d
     }
   });
-});
+}
 
 // ──────────────────────────────────────────
 // ★ 인앱 → SW 수동 알림 표시
@@ -181,7 +199,7 @@ self.addEventListener('fetch', function(e) {
           const ct = res.headers.get('content-type') || '';
           if (ct.includes('html') || ct.includes('javascript') || ct.includes('css')) {
             const clone = res.clone();
-            caches.open(CACHE).then(c => c.put(e.request, clone));
+            caches.open(CACHE).then(c => c.put(e.request, clone).catch(()=>{})); // ★ v9.26: put 에러 무시
           }
         }
         return res;
