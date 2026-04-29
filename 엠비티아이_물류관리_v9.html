@@ -7049,12 +7049,15 @@ function DT(tab,el){
             if(idx>=0)Object.assign(all[idx],sd);else all.push(sd);
           });
           lss('settlements',all);
-          // ★ 현재도 정산탭일 때만 갱신 (다른 탭 이동 중이면 무시)
           if(S.dtab==='settle'){
             document.getElementById('dpc').innerHTML=dSettle();
           }
         }).catch(function(){});
     }
+  }
+  // ★ 홈 탭 진입 시 GPS 감시 시작
+  if(tab==='home'){
+    setTimeout(_startGeoWatch, 300);
   }
 }
 
@@ -7335,7 +7338,23 @@ function _viewNotice(id){
   mo.onclick=function(e){if(e.target===mo)_closeUrgentNoticeModal();};
   
   var contentHtml=(item.content||'').replace(/</g,'&lt;').replace(/\n/g,'<br>');
-  
+
+  // 첨부파일 HTML
+  var attachHtml='';
+  if(item.attachments&&item.attachments.length>0){
+    attachHtml='<div style="padding:0 16px 12px;display:flex;gap:6px;flex-wrap:wrap">';
+    item.attachments.forEach(function(att){
+      var isImg=att.type&&att.type.startsWith('image/');
+      if(isImg){
+        attachHtml+='<a href="'+att.url+'" target="_blank"><img src="'+att.url+'" style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer"></a>';
+      } else {
+        var ico=att.name.endsWith('.pdf')?'📄':att.name.endsWith('.xlsx')||att.name.endsWith('.xls')?'📊':'📎';
+        attachHtml+='<a href="'+att.url+'" target="_blank" download="'+att.name+'" style="display:inline-flex;align-items:center;gap:5px;padding:6px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:7px;font-size:12px;color:var(--text);text-decoration:none">'+ico+' '+att.name.slice(0,15)+(att.name.length>15?'…':'')+'</a>';
+      }
+    });
+    attachHtml+='</div>';
+  }
+
   mo.innerHTML='<div onclick="event.stopPropagation()" style="background:var(--bg);border:'+(isUrgent?'2px solid var(--red)':'1px solid var(--border)')+';border-radius:12px;max-width:90vw;width:400px;max-height:85vh;overflow-y:auto;display:flex;flex-direction:column">'
     +'<div style="padding:14px;background:'+(isUrgent?'var(--red)':'var(--blue)')+';color:#fff;border-radius:10px 10px 0 0;flex-shrink:0">'
     +'<div style="font-size:11px;font-weight:700;opacity:.9;margin-bottom:4px">'+ico+' '+(item.category||'공지')+(item.pinned?' · 📌 고정':'')+'</div>'
@@ -7343,6 +7362,7 @@ function _viewNotice(id){
     +'<div style="font-size:10px;opacity:.85;margin-top:6px">'+new Date(item.sentAt).toLocaleString('ko-KR')+' · '+(item.sentBy||'관리자')+'</div>'
     +'</div>'
     +'<div style="padding:16px;font-size:13px;line-height:1.6;color:var(--text);white-space:pre-wrap;word-break:break-word;flex:1;overflow-y:auto">'+contentHtml+'</div>'
+    +attachHtml
     +'<div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0">'
     +'<button id="urgent-notice-confirm-btn" style="flex:1;padding:10px;background:var(--teal);color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer">✓ 확인 (읽음 처리)</button>'
     +'<button id="urgent-notice-close-btn" style="padding:10px 16px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:7px;font-size:13px;cursor:pointer">닫기</button>'
@@ -7776,6 +7796,105 @@ var _DL_ALARMS={
   주간:[{h:17,m:0},{h:18,m:0},{h:19,m:0},{h:19,m:30},{h:19,m:50}],
   야간:[{h:4,m:0},{h:5,m:0},{h:6,m:0},{h:6,m:30},{h:6,m:50}]
 };
+// ★ v9.25: GPS 자동 입차 감지 (앱 켜진 상태에서 캠프 반경 진입 시 자동 입차)
+function _startGeoWatch(){
+  if(!navigator.geolocation)return;
+  if(window._geoWatchId)return; // 이미 실행 중
+
+  var me=ls('drivers').find(function(d){return d.name===S.curDriver;});
+  var myCamp=me&&me.camp||'';
+  if(!myCamp)return;
+
+  window._geoWatchId=navigator.geolocation.watchPosition(
+    function(pos){
+      try{
+        // 이미 오늘 입차했으면 중단
+        var ents=ls('entries').filter(function(e){return e.driver===S.curDriver&&e.date===today();});
+        if(ents.length>0){
+          navigator.geolocation.clearWatch(window._geoWatchId);
+          window._geoWatchId=null;
+          return;
+        }
+
+        var gps={lat:pos.coords.latitude,lng:pos.coords.longitude};
+        var allGps=getCampGps();
+        var myCampFull=myCamp.indexOf('캠프')<0?myCamp+'캠프':myCamp;
+        var campGps=allGps[myCampFull];
+        if(!campGps||!campGps.lat)return;
+
+        // 대구2 두 거점 모두 체크
+        var isDaegu=(myCampFull==='대구2캠프'||myCampFull==='대구2B캠프');
+        var dist;
+        if(isDaegu){
+          var dA=Math.round(gpsDistance(gps.lat,gps.lng,allGps['대구2캠프'].lat,allGps['대구2캠프'].lng));
+          var dB=Math.round(gpsDistance(gps.lat,gps.lng,allGps['대구2B캠프'].lat,allGps['대구2B캠프'].lng));
+          dist=Math.min(dA,dB);
+        } else {
+          dist=Math.round(gpsDistance(gps.lat,gps.lng,campGps.lat,campGps.lng));
+        }
+
+        if(dist<=CAMP_GPS_RADIUS){
+          // 캠프 반경 진입! → 자동 입차
+          if(window._geoAutoCheckinDone)return;
+          window._geoAutoCheckinDone=true;
+          navigator.geolocation.clearWatch(window._geoWatchId);
+          window._geoWatchId=null;
+          _doAutoCheckIn(gps);
+        }
+      }catch(e){console.warn('[GeoWatch]',e);}
+    },
+    function(err){console.warn('[GeoWatch] 위치 오류:',err.message);},
+    {enableHighAccuracy:false,timeout:10000,maximumAge:30000}
+  );
+}
+
+async function _doAutoCheckIn(gps){
+  if(!S.curDriver)return;
+  // 이미 입차했는지 재확인
+  var ents=ls('entries').filter(function(e){return e.driver===S.curDriver&&e.date===today();});
+  if(ents.length>0)return;
+
+  var me=ls('drivers').find(function(d){return d.name===S.curDriver;})||{};
+  var jsub=me.jobsub||'쿠팡';
+  var myCamp=me.camp||'';
+  var now=new Date().toISOString();
+  var nowT=now.slice(11,16);
+
+  // 기본 온도 (상온)
+  var entry={
+    id:nid('entry'),driver:S.curDriver,date:today(),time:nowT,
+    type:jsub,temp:'상온',camp:myCamp,
+    gps:gps,autoCheckin:true,createdAt:now
+  };
+  var elist=ls('entries');
+  elist.push(entry);
+  lss('entries',elist);
+
+  // Firebase 저장
+  if(FB&&_db){
+    _db.collection('entries').doc(entry.id).set(entry).catch(function(){});
+    // attendance 출근 기록
+    var a=_getAttend();
+    if(!a.checkIn){
+      a.checkIn=now; a.checkInGps=gps;
+      _saveAttend(a);
+      var docId=S.curDriver+'_'+today();
+      _db.collection('attendance').doc(docId).set({checkIn:now,checkInGps:gps,checkInLat:gps.lat,checkInLng:gps.lng,updatedAt:now},{merge:true}).catch(function(){});
+    }
+  }
+
+  // 알림 + 토스트
+  toast('✅ 캠프 도착 감지! 자동 입차 등록됐습니다 🚛');
+  if(typeof sendLocalNoti==='function'){
+    sendLocalNoti({title:'🚛 자동 입차 완료',body:myCamp+' 캠프 도착 감지 — '+nowT+' 입차 등록됐습니다',tag:'auto-checkin-'+today()});
+  }
+  // 홈 화면 갱신
+  if(S.dtab==='home'&&document.getElementById('dpc')){
+    document.getElementById('dpc').innerHTML=dHome();
+  }
+  window._geoAutoCheckinDone=false; // 내일 초기화용
+}
+
 function _startDeadlineTick(){
   if(window._dlTickTimer)clearInterval(window._dlTickTimer);
   window._dlTickTimer=setInterval(function(){
@@ -8200,7 +8319,23 @@ function _viewDrvNotice(id){
   mo.onclick=function(e){if(e.target===mo)_closeDrvNoticeModal();};
   
   var contentHtml=(item.content||'').replace(/</g,'&lt;').replace(/\n/g,'<br>');
-  
+
+  // 첨부파일 HTML
+  var attachHtml='';
+  if(item.attachments&&item.attachments.length>0){
+    attachHtml='<div style="padding:0 16px 12px;display:flex;gap:6px;flex-wrap:wrap">';
+    item.attachments.forEach(function(att){
+      var isImg=att.type&&att.type.startsWith('image/');
+      if(isImg){
+        attachHtml+='<a href="'+att.url+'" target="_blank"><img src="'+att.url+'" style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer"></a>';
+      } else {
+        var ico=att.name.endsWith('.pdf')?'📄':att.name.endsWith('.xlsx')||att.name.endsWith('.xls')?'📊':'📎';
+        attachHtml+='<a href="'+att.url+'" target="_blank" download="'+att.name+'" style="display:inline-flex;align-items:center;gap:5px;padding:6px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:7px;font-size:12px;color:var(--text);text-decoration:none">'+ico+' '+att.name.slice(0,15)+(att.name.length>15?'…':'')+'</a>';
+      }
+    });
+    attachHtml+='</div>';
+  }
+
   mo.innerHTML='<div onclick="event.stopPropagation()" style="background:var(--bg);border:'+(isUrgent?'2px solid var(--red)':'1px solid var(--border)')+';border-radius:12px;max-width:90vw;width:420px;max-height:85vh;overflow-y:auto;display:flex;flex-direction:column">'
     +'<div style="padding:14px;background:'+(isUrgent?'var(--red)':'var(--blue)')+';color:#fff;border-radius:10px 10px 0 0;flex-shrink:0">'
     +'<div style="font-size:11px;font-weight:700;opacity:.9;margin-bottom:4px">'+ico+' '+(item.category||'공지')+(item.pinned?' · 📌 고정':'')+'</div>'
@@ -8208,6 +8343,7 @@ function _viewDrvNotice(id){
     +'<div style="font-size:10px;opacity:.85;margin-top:6px">'+new Date(item.sentAt).toLocaleString('ko-KR')+' · '+(item.sentBy||'관리자')+'</div>'
     +'</div>'
     +'<div style="padding:16px;font-size:13px;line-height:1.6;color:var(--text);white-space:pre-wrap;word-break:break-word;flex:1;overflow-y:auto">'+contentHtml+'</div>'
+    +attachHtml
     +'<div style="padding:10px 14px;border-top:1px solid var(--border);flex-shrink:0;display:flex;gap:6px">'
     +'<button id="drv-notice-confirm-btn" style="flex:1;padding:12px;background:var(--teal);color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer">✓ 확인 했습니다</button>'
     +'<button id="drv-notice-close-btn" style="padding:12px 16px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:7px;font-size:13px;cursor:pointer">닫기</button>'
@@ -8372,7 +8508,7 @@ function dHome(){
   // ★ 공지사항 로드 트리거 (비동기)
   if(FB&&_db&&S.curDriver){setTimeout(_loadDrvNotices,100);}
   // ★ v9.12: 마감 카운트다운 타이머 + 캠프 지원 알림 로드
-  setTimeout(function(){_startDeadlineTick();_loadCampSupports();},150);
+  setTimeout(function(){_startDeadlineTick();_loadCampSupports();_startGeoWatch();},150);
   // ★ v9.12: 알림 권한 요청 (1회) + 백그라운드 리스너 시작
   if(typeof _scheduleNotiInit==='function')_scheduleNotiInit();
 
@@ -11778,10 +11914,16 @@ function rNoticePanel(){
   html+='</div>';
   html+='<input type="text" id="nt-title" placeholder="공지 제목 (필수)" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;margin-bottom:6px;box-sizing:border-box">';
   html+='<textarea id="nt-content" placeholder="공지 내용 (줄바꿈 가능)" rows="4" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:12px;box-sizing:border-box;resize:vertical;font-family:inherit"></textarea>';
+  // ★ v9.25: 파일/사진 첨부
+  html+='<div style="margin-top:8px">';
+  html+='<label style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;color:var(--text2)">';
+  html+='📎 사진/파일 첨부<input type="file" id="nt-files" multiple accept="image/*,.pdf,.xlsx,.xls,.docx,.hwp,.txt" style="display:none" onchange="ntPreviewFiles(this)">';
+  html+='</label>';
+  html+='<div id="nt-file-preview" style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap"></div>';
+  html+='</div>';
   html+='<div style="display:flex;gap:6px;margin-top:8px">';
   html+='<label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer">';
   html+='<input type="checkbox" id="nt-pinned"> 📌 상단 고정</label>';
-
   html+='<div style="flex:1"></div>';
   html+='<button onclick="sendNotice()" style="padding:8px 20px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">📤 공지 전송</button>';
   html+='</div>';
@@ -11840,6 +11982,20 @@ function _loadNoticeList(){
       // 접히는 본문
       html+='<div id="'+nid+'" style="display:none;padding:0 10px 10px">';
       if(d.content)html+='<div style="font-size:11px;color:var(--text2);line-height:1.6;white-space:pre-wrap;margin-bottom:8px;padding:8px;background:var(--bg2);border-radius:6px">'+d.content.replace(/</g,'&lt;')+'</div>';
+      // 첨부파일 표시
+      if(d.attachments&&d.attachments.length>0){
+        html+='<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px">';
+        d.attachments.forEach(function(att){
+          var isImg=att.type&&att.type.startsWith('image/');
+          if(isImg){
+            html+='<a href="'+att.url+'" target="_blank" style="display:block"><img src="'+att.url+'" style="width:52px;height:52px;object-fit:cover;border-radius:5px;border:1px solid var(--border);cursor:pointer"></a>';
+          } else {
+            var ico=att.name.endsWith('.pdf')?'📄':att.name.endsWith('.xlsx')||att.name.endsWith('.xls')?'📊':'📎';
+            html+='<a href="'+att.url+'" target="_blank" download="'+att.name+'" style="display:inline-flex;align-items:center;gap:4px;padding:4px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;font-size:11px;color:var(--text);text-decoration:none">'+ico+' '+att.name.slice(0,12)+(att.name.length>12?'…':'')+'</a>';
+          }
+        });
+        html+='</div>';
+      }
       html+='<div style="display:flex;align-items:center;gap:6px;padding-top:6px;border-top:1px dashed var(--border)">';
       html+='<span style="font-size:10px;color:var(--teal);font-weight:700">✓ 읽음 '+readCnt+(totalCnt?'/'+totalCnt:'')+'</span>';
       html+='<span style="flex:1"></span>';
@@ -11934,6 +12090,65 @@ function sendNotiRequest(){
   }).catch(function(e){toast('❌ 전송 실패: '+(e.message||''));});
 }
 
+// ★ v9.25: 공지 파일 첨부 미리보기
+function ntPreviewFiles(inp){
+  var preview=document.getElementById('nt-file-preview');
+  if(!preview)return;
+  preview.innerHTML='';
+  Array.from(inp.files).forEach(function(f,i){
+    var isImg=f.type.startsWith('image/');
+    var div=document.createElement('div');
+    div.style.cssText='position:relative;display:inline-flex;align-items:center;gap:4px;padding:4px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;font-size:11px;max-width:120px';
+    if(isImg){
+      var img=document.createElement('img');
+      img.style.cssText='width:32px;height:32px;object-fit:cover;border-radius:3px;flex-shrink:0';
+      var reader=new FileReader();
+      reader.onload=function(e){img.src=e.target.result;};
+      reader.readAsDataURL(f);
+      div.appendChild(img);
+    } else {
+      var ico=document.createElement('span');
+      ico.textContent=f.name.endsWith('.pdf')?'📄':f.name.endsWith('.xlsx')||f.name.endsWith('.xls')?'📊':'📎';
+      ico.style.fontSize='18px';
+      div.appendChild(ico);
+    }
+    var name=document.createElement('span');
+    name.textContent=f.name.length>10?f.name.slice(0,9)+'…':f.name;
+    name.style.cssText='overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)';
+    div.appendChild(name);
+    // 삭제 버튼
+    var del=document.createElement('span');
+    del.textContent='✕';
+    del.style.cssText='position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;border-radius:50%;width:14px;height:14px;font-size:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;line-height:1';
+    del.onclick=function(){
+      // 파일 목록에서 제거 (DataTransfer 이용)
+      var dt=new DataTransfer();
+      Array.from(inp.files).forEach(function(ff,j){if(j!==i)dt.items.add(ff);});
+      inp.files=dt.files;
+      ntPreviewFiles(inp);
+    };
+    div.appendChild(del);
+    preview.appendChild(div);
+  });
+}
+
+// ★ v9.25: Firebase Storage에 파일 업로드 → URL 배열 반환
+async function _uploadNoticeFiles(files){
+  if(!files||files.length===0)return [];
+  var urls=[];
+  for(var i=0;i<files.length;i++){
+    var f=files[i];
+    try{
+      var path='notices/'+Date.now()+'_'+f.name.replace(/[^a-zA-Z0-9가-힣._-]/g,'_');
+      var ref=firebase.storage().ref(path);
+      await ref.put(f);
+      var url=await ref.getDownloadURL();
+      urls.push({name:f.name,url:url,type:f.type,size:f.size});
+    }catch(e){console.warn('[공지 파일 업로드 실패]',f.name,e.message);}
+  }
+  return urls;
+}
+
 function sendNotice(){
   if(!FB||!_db){toast('❌ Firebase 연결 필요');return;}
   var category=document.getElementById('nt-category').value;
@@ -11943,30 +12158,41 @@ function sendNotice(){
   var pinned=document.getElementById('nt-pinned').checked;
   var smsOpt=document.getElementById('nt-sms')&&document.getElementById('nt-sms').checked;
   var kakaoOpt=document.getElementById('nt-kakao')&&document.getElementById('nt-kakao').checked;
+  var fileInp=document.getElementById('nt-files');
+  var files=fileInp&&fileInp.files?Array.from(fileInp.files):[];
   if(!title){toast('❌ 제목을 입력해주세요');return;}
   if(!content){toast('❌ 내용을 입력해주세요');return;}
-  // ★ v9.19: localStorage 우선, 비면 Firebase 직접 조회
   function _filterActive(list){
     return list.filter(function(d){
       return d.is_active===true&&d.isNew!==true&&d.status!=='pending'&&d.status!=='거부'&&d.status!=='탈퇴';
     });
   }
   var localDrs=_filterActive(ls('drivers'));
-  if(localDrs.length>0){
-    _doSendNotice(localDrs,target,category,title,content,pinned,smsOpt,kakaoOpt);
-  } else {
-    toast('⏳ 기사 목록 로딩 중...');
-    _db.collection('drivers').get().then(function(snap){
-      var all=[];
-      snap.forEach(function(doc){var d=doc.data();d.fbId=doc.id;all.push(d);});
-      lss('drivers',all);
-      var fresh=_filterActive(all);
-      if(!fresh.length){toast('❌ 대상 기사가 없습니다 (Firebase 확인 필요)');return;}
-      _doSendNotice(fresh,target,category,title,content,pinned,smsOpt,kakaoOpt);
-    }).catch(function(e){toast('❌ Firebase 조회 실패: '+e.message);});
+  async function _run(drs){
+    // 파일 업로드 먼저
+    var attachments=[];
+    if(files.length>0){
+      toast('📎 파일 업로드 중... ('+files.length+'개)');
+      attachments=await _uploadNoticeFiles(files);
+    }
+    if(drs.length>0){
+      _doSendNotice(drs,target,category,title,content,pinned,smsOpt,kakaoOpt,attachments);
+    } else {
+      toast('⏳ 기사 목록 로딩 중...');
+      _db.collection('drivers').get().then(function(snap){
+        var all=[];
+        snap.forEach(function(doc){var d=doc.data();d.fbId=doc.id;all.push(d);});
+        lss('drivers',all);
+        var fresh=_filterActive(all);
+        if(!fresh.length){toast('❌ 대상 기사가 없습니다');return;}
+        _doSendNotice(fresh,target,category,title,content,pinned,smsOpt,kakaoOpt,attachments);
+      }).catch(function(e){toast('❌ Firebase 조회 실패: '+e.message);});
+    }
   }
+  _run(localDrs);
 }
-function _doSendNotice(allDrs,target,category,title,content,pinned,smsOpt,kakaoOpt){
+
+function _doSendNotice(allDrs,target,category,title,content,pinned,smsOpt,kakaoOpt,attachments){
   var targets=(target==='전체')?allDrs:allDrs.filter(function(d){return d.camp===target;});
   if(targets.length===0){toast('❌ 대상 캠프에 기사가 없습니다');return;}
   // SMS/카톡 정보 카운트
@@ -11987,7 +12213,8 @@ function _doSendNotice(allDrs,target,category,title,content,pinned,smsOpt,kakaoO
     sentAt:sentAt,
     sentBy:S.curAdmin||'관리자',
     targetCount:targets.length,
-    readBy:{}
+    readBy:{},
+    attachments:attachments||[]
   };
   
   toast('📤 공지 전송 중...');
