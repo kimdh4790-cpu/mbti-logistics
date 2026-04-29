@@ -5469,9 +5469,11 @@ function calcNet(x){
   var nocont = +x.nocont || 0;  // ★ 미계약건 (+수익)
   var etcPlus  = +x.etcPlus  || 0;  // ★ 기타(+)
   var etcMinus = +x.etcMinus || 0;  // ★ 기타(-)
-  var income=damt+ramt+fresh+finc+inc+nocont+etcPlus-etcMinus;
-  // ★ 세금계산서 기준 금액 = 배송+반품+롤백+인센+기타 (고용산재 계산 기준)
-  var totalAmt = income;  // 세금계산서 합계가 곧 공급대가 기준
+  // ★ v9.25: 기타(+)만 세금계산서(income)에 포함 → 고용·산재 기준
+  //           기타(-)는 세금계산서 제외, 실지급에서만 차감 (공제 항목)
+  var income=damt+ramt+fresh+finc+inc+nocont+etcPlus;
+  // 세금계산서 기준 금액 = etcPlus 포함, etcMinus 제외
+  var totalAmt = income;
   var supplyAmt = Math.round(totalAmt / 1.1);
   var expenseAmt = Math.round(supplyAmt * 0.346);
   var monthlyWage = supplyAmt - expenseAmt;
@@ -5479,14 +5481,13 @@ function calcNet(x){
   var workCalc = Math.floor(monthlyWage * 0.0088 / 10) * 10;
   var TAX_RATE = +x.taxRate || 0.033;
   var tax  = +x.tax  || (x.taxFixed ? +x.taxFixed : Math.round(income * TAX_RATE));
-  // ★ emp: 저장값이 명시적으로 설정됐을 때만 사용 (0은 재계산)
   var emp  = (x.emp !== undefined && x.emp !== null && x.emp !== '' && +x.emp > 0) ? +x.emp : empCalc;
   var work = (x.work !== undefined && x.work !== null && x.work !== '' && +x.work > 0) ? +x.work : workCalc;
   var eq   = +x.eq  || 0;
   var dmg  = +x.dmg || +x.damage || 0;
   var adv  = +x.adv || +x.advance || 0;
-  var deduct = emp + work + eq + dmg + adv;
-  // 실지급 = 공급대가 - 전체공제 (공급대가 기준)
+  // ★ 기타(-) → 공제 항목으로 실지급에서 차감
+  var deduct = emp + work + eq + dmg + adv + etcMinus;
   var net = totalAmt - deduct;
   return{damt,ramt,fresh,finc,inc,nocont,etcPlus,etcMinus,income,totalAmt,supplyAmt,monthlyWage,tax,emp,work,eq,dmg,adv,deduct,net,isYong,isCoupang,yDel,yRet};
 }
@@ -5514,7 +5515,8 @@ function updSettle(){
   var nocont=+document.getElementById('se-nocont')?.value||0;  // ★ 미계약건
   var etcPlus=+document.getElementById('se-etc-plus')?.value||0;   // ★ 기타(+)
   var etcMinus=+document.getElementById('se-etc-minus')?.value||0; // ★ 기타(-)
-  var income=damt+ramt+fresh+finc+inc+nocont+etcPlus-etcMinus;
+  // ★ v9.25: 기타(+)만 income(세금계산서)에 포함, 기타(-)는 공제로 처리
+  var income=damt+ramt+fresh+finc+inc+nocont+etcPlus;
   var tax=Math.round(income*0.033); var emp=Math.round(income*0.008);
   var te=document.getElementById('se-tax');if(te)te.value=tax;
   var ee=document.getElementById('se-emp');if(ee)ee.value=emp;
@@ -5616,7 +5618,8 @@ function saveSettle(){
     status:'정산예정',sharedAt:today()
   };
   // 세금 자동 계산
-  var income=data.damt+data.ramt+data.fresh+data.finc+data.inc+data.nocont+(data.etcPlus||0)-(data.etcMinus||0);
+  // ★ v9.25: 기타(+)만 income에 포함, 기타(-)는 공제 처리
+  var income=data.damt+data.ramt+data.fresh+data.finc+data.inc+data.nocont+(data.etcPlus||0);
   data.tax=Math.round(income*0.033); data.emp=Math.round(income*0.008);
   if(idx>=0)s[idx]=Object.assign(s[idx],data);else{data.id=nid('settle');s.push(data);}
   lss('settlements',s);fbW('settlements',data).catch(()=>{});
@@ -5807,13 +5810,13 @@ function viewStmt(i){
         <div class="tax-row"><span>산재보험 0.88%</span><span id="st-work-disp" style="color:var(--red);font-weight:600">-₩${(r.work||0).toLocaleString()}</span></div>
         ${r.eq>0?`<div class="tax-row"><span>장비임대료</span><span style="color:var(--red)">-₩${r.eq.toLocaleString()}</span></div>`:''}
         ${r.adv>0?`<div class="tax-row"><span>가불금</span><span style="color:var(--red)">-₩${r.adv.toLocaleString()}</span></div>`:''}
-        <div class="tax-total"><span>공제 합계</span><span>-₩${r.deduct.toLocaleString()}</span></div>
+        <div class="tax-total"><span>공제 합계</span><span id="st-deduct-disp">-₩${(r.deduct-r.etcMinus).toLocaleString()}</span></div>
       </div>
     </div>
     <div class="stmt-fin">
       <div>
         <div style="font-size:12px;font-weight:700">실 지급액</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:2px">세금계산서 ₩${taxBase.toLocaleString()} − 고용·산재 ₩${(r.emp+(r.work||0)).toLocaleString()}${dmgVal>0?' − 분실/파손 ₩'+dmgVal.toLocaleString():''}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">세금계산서 ₩${taxBase.toLocaleString()} − 공제 ₩${(r.deduct-r.etcMinus).toLocaleString()}${r.etcMinus>0?' − 기타(-) ₩'+r.etcMinus.toLocaleString():''}</div>
       </div>
       <strong id="st-net-disp" style="font-size:22px;color:var(--purple)">₩${realPay.toLocaleString()}</strong>
     </div>
@@ -5847,8 +5850,10 @@ function stUpdCalc(i){
   var tb=document.getElementById('st-taxbase-disp'); if(tb)tb.textContent='₩'+r2.income.toLocaleString();
   var nd=document.getElementById('st-net-disp');     if(nd)nd.textContent='₩'+r2.net.toLocaleString();
   // 고용·산재 업데이트 표시
-  var empD=document.getElementById('st-emp-disp');  if(empD)empD.textContent='-₩'+r2.emp.toLocaleString();
-  var workD=document.getElementById('st-work-disp');if(workD)workD.textContent='-₩'+(r2.work||0).toLocaleString();
+  var empD=document.getElementById('st-emp-disp');   if(empD)empD.textContent='-₩'+r2.emp.toLocaleString();
+  var workD=document.getElementById('st-work-disp'); if(workD)workD.textContent='-₩'+(r2.work||0).toLocaleString();
+  var emD=document.getElementById('st-etcminus-disp');if(emD)emD.textContent='-₩'+r2.etcMinus.toLocaleString();
+  var ddD=document.getElementById('st-deduct-disp'); if(ddD)ddD.textContent='-₩'+r2.deduct.toLocaleString();
 }
 
 // 명세서 수정 저장
