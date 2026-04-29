@@ -1709,6 +1709,8 @@ function doLogin(){
         if(typeof _setDeviceOwner==='function')_setDeviceOwner(found.name||id, found.fbId);
         window._fcmTokenRegistered=false;
         if(typeof _scheduleNotiInit==='function')setTimeout(_scheduleNotiInit, 1500);
+        // ★ v9.25: 급여일 알림 체크
+        setTimeout(_checkPaydayNoti, 4000);
         // ★ v9.25: 로그인 시 PWA 설치 여부 감지 (기존 설치자도 자동 기록)
         setTimeout(function(){
           var isStandalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;
@@ -2053,7 +2055,31 @@ function rDash(){
       +'</label>';
   }).join('');
 
-  return `<div class="kpi-row">
+  // ★ v9.25: 캠프별 일일 현황
+  var campList=['부산1','부산2','부산3','대구2','진주M'];
+  var campColors={'부산1':'#3B82F6','부산2':'#8B5CF6','부산3':'#10B981','대구2':'#F59E0B','진주M':'#EF4444'};
+  var todayStr=today();
+  var campCards=campList.map(function(camp){
+    var campDrvs=allDrv.filter(function(d){return d.camp===camp||(d.camp&&(d.camp+'캠프')===(camp+'캠프'));});
+    var checkedIn=campDrvs.filter(function(d){
+      return e.some(function(en){return en.driver===d.name&&en.date===todayStr;});
+    }).length;
+    var color=campColors[camp]||'#6B7280';
+    var pct=campDrvs.length>0?Math.round(checkedIn/campDrvs.length*100):0;
+    return '<div style="flex:1;min-width:80px;padding:8px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;border-top:3px solid '+color+'">'
+      +'<div style="font-size:10px;font-weight:700;color:'+color+';margin-bottom:4px">'+camp+'</div>'
+      +'<div style="font-size:16px;font-weight:800;color:var(--text)">'+checkedIn+'<span style="font-size:10px;font-weight:400;color:var(--text3)">/'+campDrvs.length+'</span></div>'
+      +'<div style="margin-top:4px;height:4px;background:var(--bg3);border-radius:2px">'
+        +'<div style="width:'+pct+'%;height:100%;background:'+color+';border-radius:2px"></div>'
+      +'</div>'
+      +'</div>';
+  }).join('');
+
+  return `<div style="margin-bottom:10px">
+    <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">🏕 오늘 캠프별 입차 현황</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">${campCards}</div>
+  </div>
+  <div class="kpi-row">
     <div class="kc"><div class="kl">오늘 입차</div><div class="kv">${e.filter(x=>x.date===today()).length}</div><div class="ks" style="color:var(--teal)">실시간</div></div>
     <div class="kc"><div class="kl">온도 이상</div><div class="kv" style="color:${w?'var(--red)':'var(--teal)'}">${w}</div><div class="ks" style="color:${w?'var(--red)':'var(--teal)'}">${w?'확인필요':'정상'}</div></div>
     <div class="kc"><div class="kl">미처리 사고</div><div class="kv" style="color:${oa?'var(--red)':'var(--teal)'}">${oa}</div><div class="ks" style="color:${oa?'var(--red)':'var(--teal)'}">${oa?'처리필요':'없음'}</div></div>
@@ -2758,6 +2784,7 @@ function rSettle(){
       <button onclick="openTaxStore()" style="padding:8px 14px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗂 기사별 세금계산서 보관함</button>
       <button id="jinju-inc-btn" onclick="openIncPanel()" style="padding:8px 14px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⚙️ 기사별 인센 설정</button>
       <button onclick="openCoupangStatsPanel()" style="padding:8px 14px;background:#f97316;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📊 쿠팡 건수 통계</button>
+      <button onclick="openSettleCompare()" style="padding:8px 14px;background:#6366f1;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📊 기사별 실적 비교</button>
       <button onclick="checkDuplicateSettlements()" style="padding:8px 14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔍 중복 검사</button>
       <button onclick="syncFirebaseSettlements()" style="padding:8px 14px;background:#0d9488;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔄 Firebase 동기화</button>
     </div>
@@ -2995,6 +3022,75 @@ async function syncFirebaseSettlements(){
 
 // ── 관리자: 정산서 중복(driver+month) 검사 및 자동 정리
 // 최신 createdAt 건을 유지하고 나머지 중복을 삭제
+// ★ v9.25: 기사별 월별 실적 비교
+function openSettleCompare(){
+  var s=ls('settlements');
+  if(!s.length){toast('정산 데이터 없음');return;}
+
+  // 월 목록 (최근 6개월)
+  var months=[...new Set(s.map(function(x){return x.month;}).filter(Boolean))].sort().reverse().slice(0,6);
+  // 기사 목록
+  var drivers=[...new Set(s.map(function(x){return x.driver;}).filter(Boolean))].sort();
+
+  // 선택 월 (기본: 최신)
+  var selMonth=months[0]||'';
+
+  function buildTable(mo){
+    var rows=s.filter(function(x){return x.month===mo;});
+    if(!rows.length)return '<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px">해당 월 데이터 없음</div>';
+    rows.sort(function(a,b){return calcNet(b).net-calcNet(a).net;});
+    var maxNet=Math.max.apply(null,rows.map(function(x){return calcNet(x).net;}));
+    return '<table style="width:100%;border-collapse:collapse;font-size:12px">'
+      +'<thead><tr style="background:var(--bg3)">'
+      +'<th style="padding:7px 8px;text-align:left">기사</th>'
+      +'<th style="padding:7px 8px;text-align:right">총수익</th>'
+      +'<th style="padding:7px 8px;text-align:right">실지급</th>'
+      +'<th style="padding:7px 8px;text-align:right">배송</th>'
+      +'<th style="padding:7px 8px;min-width:80px">비율</th>'
+      +'</tr></thead><tbody>'
+      +rows.map(function(x,i){
+        var r=calcNet(x);
+        var pct=maxNet>0?Math.round(r.net/maxNet*100):0;
+        var medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+        return '<tr style="border-bottom:1px solid var(--border)">'
+          +'<td style="padding:7px 8px;font-weight:600">'+medal+' '+x.driver+'</td>'
+          +'<td style="padding:7px 8px;text-align:right;color:var(--green)">₩'+r.income.toLocaleString()+'</td>'
+          +'<td style="padding:7px 8px;text-align:right;color:var(--purple);font-weight:700">₩'+r.net.toLocaleString()+'</td>'
+          +'<td style="padding:7px 8px;text-align:right;color:var(--text2)">'+(+x.dcnt||0).toLocaleString()+'건</td>'
+          +'<td style="padding:7px 8px">'
+            +'<div style="height:6px;background:var(--bg3);border-radius:3px">'
+              +'<div style="width:'+pct+'%;height:100%;background:var(--purple);border-radius:3px"></div>'
+            +'</div>'
+          +'</td>'
+        +'</tr>';
+      }).join('')
+      +'</tbody></table>';
+  }
+
+  var mo=document.createElement('div');
+  mo.id='settle-compare-mo';
+  mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:700;display:flex;align-items:flex-start;justify-content:center;padding:14px;overflow-y:auto';
+  mo.innerHTML='<div style="width:100%;max-width:600px;background:var(--bg);border-radius:12px;padding:16px;margin-top:20px">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
+      +'<div style="font-size:15px;font-weight:800">📊 기사별 실적 비교</div>'
+      +'<button onclick="document.getElementById(\'settle-compare-mo\').remove()" style="padding:5px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;cursor:pointer">✕</button>'
+    +'</div>'
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">'
+    +months.map(function(m){
+      var active=(m===selMonth);
+      return '<button onclick="document.getElementById(\'sc-table\').innerHTML=buildSettleCompareTable(\''+m+'\');document.querySelectorAll(\'.sc-btn\').forEach(function(b){b.style.background=\'var(--bg2)\';b.style.color=\'var(--text)\';b.style.borderColor=\'var(--border)\';});this.style.background=\'var(--purple)\';this.style.color=\'#fff\';" '
+        +'class="sc-btn" style="padding:5px 12px;border:1.5px solid '+(active?'var(--purple)':'var(--border)')+';background:'+(active?'var(--purple)':'var(--bg2)')+';color:'+(active?'#fff':'var(--text)')+';border-radius:20px;font-size:12px;cursor:pointer">'
+        +m.replace('-','년 ')+'월</button>';
+    }).join('')
+    +'</div>'
+    +'<div id="sc-table" style="overflow-x:auto">'+buildTable(selMonth)+'</div>'
+    +'</div>';
+
+  // buildTable을 전역에서 접근 가능하게
+  window.buildSettleCompareTable=buildTable;
+  document.body.appendChild(mo);
+}
+
 function checkDuplicateSettlements(){
   var s=ls('settlements');
   if(!s.length){alert('정산서가 없습니다.');return;}
@@ -7569,11 +7665,20 @@ async function doCheckOut(){
   
   var ms=new Date(now)-new Date(a.checkIn);
   if(ms<0){
-    // ★ 퇴근이 출근보다 이르면 경고
     toast('⚠️ 퇴근 완료 (출근 시간보다 이른 기록 — 관리자 확인 필요)');
   }else{
     var hr=Math.floor(ms/3600000), mn=Math.floor((ms%3600000)/60000);
     toast('✅ 퇴근 완료! 근무 '+hr+'시간 '+mn+'분');
+  }
+  // ★ v9.25: 오늘 배송 현황 요약 알림
+  var todayDels=ls('deliveries').filter(function(d){return d.driver===S.curDriver&&d.date===today();});
+  var totalDcnt=todayDels.reduce(function(s,d){return s+(+d.dcnt||0);},0);
+  var totalRcnt=todayDels.reduce(function(s,d){return s+(+d.rcnt||0);},0);
+  if(totalDcnt>0){
+    var notiMsg='🚛 오늘 수고하셨습니다!\n배송 '+totalDcnt+'건'+(totalRcnt>0?' · 반품 '+totalRcnt+'건':'');
+    if(typeof sendLocalNoti==='function'){
+      sendLocalNoti({title:'✅ 배송 완료',body:notiMsg,tag:'delivery-done-'+today()});
+    }
   }
   var card=document.getElementById('attend-card');
   if(card)card.innerHTML=_buildAttendCard();
@@ -8271,7 +8376,34 @@ function dHome(){
   // ★ v9.12: 알림 권한 요청 (1회) + 백그라운드 리스너 시작
   if(typeof _scheduleNotiInit==='function')_scheduleNotiInit();
 
-  // ★ Firebase에서 기사 본인 스케줄 로드 (항상 최신 동기화)
+  // ★ v9.25: 날씨 비동기 로드
+  setTimeout(function(){
+    var el=document.getElementById('drv-weather');
+    if(!el)return;
+    // 캐시 (10분)
+    var cache=JSON.parse(localStorage.getItem('weather_cache')||'null');
+    if(cache&&Date.now()-cache.ts<600000){el.innerHTML=cache.html;return;}
+    // GPS로 현재 위치 → wttr.in API
+    if(navigator.geolocation){
+      navigator.geolocation.getCurrentPosition(function(pos){
+        var lat=pos.coords.latitude.toFixed(2),lng=pos.coords.longitude.toFixed(2);
+        fetch('https://wttr.in/'+lat+','+lng+'?format=j1&lang=ko')
+          .then(function(r){return r.json();})
+          .then(function(d){
+            var cur=d.current_condition[0];
+            var temp=cur.temp_C;
+            var desc=cur.lang_ko?cur.lang_ko[0].value:cur.weatherDesc[0].value;
+            var code=+cur.weatherCode;
+            var ico=code>=200&&code<300?'⛈':code>=300&&code<400?'🌧':code>=500&&code<600?'🌧':code>=600&&code<700?'❄️':code===800?'☀️':code>800?'☁️':'🌤';
+            var wind=cur.windspeedKmph;
+            var html=ico+' <strong>'+temp+'°C</strong> '+desc.slice(0,5)+(wind>20?' 💨'+wind+'km':'');
+            if(el)el.innerHTML=html;
+            localStorage.setItem('weather_cache',JSON.stringify({html:html,ts:Date.now()}));
+          }).catch(function(){if(el)el.innerHTML='';});
+      },function(){if(el)el.innerHTML='';},{timeout:5000});
+    } else {if(el)el.innerHTML='';}
+  },500);
+  // ★ 날씨 끝
   if(FB&&_db&&S.curDriver){
     var monthStr=curY+'-'+String(curM+1).padStart(2,'0');
     var _loadSched=function(snap){
@@ -8350,6 +8482,8 @@ function dHome(){
         <div style="font-size:12px;color:rgba(255,255,255,.75);margin-top:3px">${new Date().toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'})} · ${S.curJobtype} ${S.curJobsub}</div>
       </div>
       <div style="text-align:right">
+        <!-- 날씨 -->
+        <div id="drv-weather" style="font-size:11px;color:rgba(255,255,255,.8);margin-bottom:4px">⏳</div>
         <div style="font-size:18px;font-weight:800;color:#fff">${totD}<span style="font-size:11px;font-weight:500;opacity:.75">건</span></div>
         <div style="font-size:10px;color:rgba(255,255,255,.6)">오늘 배송</div>
       </div>
@@ -14135,6 +14269,34 @@ window._firestoreListeners=window._firestoreListeners||[];
   window._notiSeen=raw;
   window._notiSeenSave=function(){try{localStorage.setItem(KEY,JSON.stringify(window._notiSeen));}catch(e){}};
 })();
+
+// ★ v9.25: 급여일 알림 (매월 20일, 주말이면 다음 영업일)
+function _checkPaydayNoti(){
+  if(!S.curDriver)return;
+  var today_str=today();
+  var lastKey='payday_noti_'+today_str;
+  if(localStorage.getItem(lastKey))return; // 오늘 이미 보냄
+
+  var now=new Date();
+  var yr=now.getFullYear(), mo=now.getMonth();
+  // 20일 계산 → 주말이면 다음 영업일
+  var payday=new Date(yr,mo,20);
+  while(payday.getDay()===0||payday.getDay()===6) payday.setDate(payday.getDate()+1);
+  var paydayStr=payday.toISOString().slice(0,10);
+
+  var diff=Math.round((payday-new Date(today_str))/(1000*60*60*24));
+  var title='', body='';
+  if(diff===3){title='💰 급여일 D-3';body='급여일이 3일 후('+paydayStr+')입니다.';}
+  else if(diff===1){title='💰 급여일 내일!';body='내일('+paydayStr+') 급여가 지급됩니다.';}
+  else if(diff===0){title='🎉 오늘 급여일!';body='오늘 급여가 지급됩니다. 수고하셨습니다!';}
+
+  if(title){
+    localStorage.setItem(lastKey,'1');
+    setTimeout(function(){
+      if(typeof sendLocalNoti==='function') sendLocalNoti({title:title,body:body,tag:'payday-'+today_str});
+    },3000);
+  }
+}
 
 function startNotiListeners(){
   if(!FB||!_db||!S.curDriver)return;
