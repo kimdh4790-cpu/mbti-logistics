@@ -914,25 +914,26 @@ var CAMP_NAMES={
   '101':'부산1캠프','215':'부산1캠프',
   '812':'부산2캠프',
   '508':'부산3캠프',
-  '109':'대구2캠프','213':'대구2캠프',
+  '109':'대구2캠프','213':'대구2B캠프',
   '608':'진주M캠프','612':'진주M캠프','613':'진주M캠프',
   '614':'진주M캠프','619':'진주M캠프'
 };
 // 캠프 표시 순서
-var CAMP_ORDER=['부산1캠프','부산2캠프','부산3캠프','대구2캠프','진주M캠프'];
+var CAMP_ORDER=['부산1캠프','부산2캠프','부산3캠프','대구2캠프','대구2B캠프','진주M캠프'];
 // 캠프 색상
 var CAMP_COLOR={
   '부산1캠프':'#3B82F6','부산2캠프':'#8B5CF6','부산3캠프':'#10B981',
-  '대구2캠프':'#F59E0B','진주M캠프':'#EF4444'
+  '대구2캠프':'#F59E0B','대구2B캠프':'#FB923C','진주M캠프':'#EF4444'
 };
 // ★ v9.12: 캠프 GPS 좌표 (출근 체크인 300m 거리 검증용)
 //    관리자가 [기사관리 > 캠프 GPS 등록] 메뉴에서 수정 가능 → localStorage 'campGps'
 var CAMP_GPS_DEFAULT={
-  '부산1캠프':{lat:35.2052,lng:129.0822,addr:'부산광역시 해운대구 반여로 20'},
-  '부산2캠프':{lat:35.1538,lng:128.9906,addr:'부산광역시 사상구 강변대로456번길 15-36'},
-  '부산3캠프':{lat:35.0878,lng:128.9772,addr:'부산광역시 서구 원양로 203'},
-  '대구2캠프':{lat:35.7573,lng:128.5302,addr:'대구광역시 달성군 삼성현로 156'},
-  '진주M캠프':{lat:35.2098,lng:128.1020,addr:'경남 진주시 정촌면 화개천로 12'}
+  '부산1캠프':{lat:35.1941,lng:129.1198,addr:'부산광역시 해운대구 반여로 20'},
+  '부산2캠프':{lat:35.1252,lng:128.9641,addr:'부산광역시 사상구 강변대로456번길 15-36'},
+  '부산3캠프':{lat:35.0659,lng:129.0100,addr:'부산광역시 서구 원양로 203'},
+  '대구2캠프':{lat:35.8183,lng:128.7203,addr:'경상북도 경산시 삼성현로 156'},          // 109노선
+  '대구2B캠프':{lat:35.8762,lng:128.6794,addr:'대구광역시 동구 동촌로 374'},            // 213노선
+  '진주M캠프':{lat:35.1190,lng:128.0989,addr:'경남 진주시 정촌면 화개천로 12'}
 };
 function getCampGps(){
   try{var saved=JSON.parse(localStorage.getItem('campGps')||'{}');
@@ -2635,8 +2636,8 @@ function rSettle(){
   var filterMonth=window._adm_settle_month||'all';
   var filterCamp=window._adm_settle_camp||'all';
   // ★ 캠프 목록 (근무표관리와 동일한 형식: 접미사 '캠프' 없음)
-  var CAMP_LIST_S=['부산1','부산2','부산3','대구2','진주M'];
-  var CAMP_COL_S={'부산1':'#3B82F6','부산2':'#8B5CF6','부산3':'#10B981','대구2':'#F59E0B','진주M':'#EF4444'};
+  var CAMP_LIST_S=['부산1','부산2','부산3','대구2','대구2B','진주M'];
+  var CAMP_COL_S={'부산1':'#3B82F6','부산2':'#8B5CF6','부산3':'#10B981','대구2':'#F59E0B','대구2B':'#FB923C','진주M':'#EF4444'};
   // ★ settlement의 캠프 판별 (drivers 기반 - 근무표관리와 동일 로직)
   var _drvMap_S={};
   ls('drivers').forEach(function(d){ if(d&&d.name) _drvMap_S[d.name]=d; });
@@ -2656,7 +2657,7 @@ function rSettle(){
       for(var j=0;j<CAMP_LIST_S.length;j++){
         if(r.indexOf(CAMP_LIST_S[j])>=0) return CAMP_LIST_S[j];
       }
-      if(r.indexOf('대구')>=0) return '대구2';
+      if(r==='213') return '대구2B'; if(r.indexOf('대구')>=0) return '대구2';
       if(r.indexOf('진주')>=0) return '진주M';
     }
     // 3순위: routeDetails의 라우트 prefix 매칭 (기존 로직)
@@ -3717,7 +3718,7 @@ function rDrivers(){
     for(var i=0;i<ORDER.length;i++){
       if(r.indexOf(ORDER[i])>=0) return ORDER[i];
     }
-    if(r.indexOf('대구')>=0) return '대구2';
+    if(r==='213') return '대구2B'; if(r.indexOf('대구')>=0) return '대구2';
     if(r.indexOf('진주')>=0) return '진주M';
     return '';
   }
@@ -4316,7 +4317,7 @@ function openEditDriver(fbIdOrId){
   var insuranceOpts=[''].concat(INSURANCE_COMPANIES.map(function(c){return c.name;})).map(function(t){
     return '<option value="'+t+'" '+((d.insurance||'')===t?'selected':'')+'>'+(t||'(미등록)')+'</option>';
   }).join('');
-  var campOpts=['','부산1','부산2','부산3','대구2','진주M','기타'].map(function(t){
+  var campOpts=['','부산1','부산2','부산3','대구2','진주M','기타'].map(function(t){  // 대구2=삼성현로+동촌로 둘 다 인식
     return '<option value="'+t+'" '+((d.camp||'')===t?'selected':'')+'>'+(t||'(미지정)')+'</option>';
   }).join('');
   var shiftOpts=['','주간','야간','주야간'].map(function(t){
@@ -7439,7 +7440,6 @@ async function doCheckIn(){
   // ★ v9.12: 캠프 300m 거리 검증
   var me=ls('drivers').find(function(x){return x.name===S.curDriver;});
   var myCamp=me&&me.camp||'';
-  // 캠프명 매핑 (기사 d.camp가 '부산1' 형태일 수도 있어서 전체명으로 변환)
   var myCampFull=myCamp;
   if(myCamp&&myCamp.indexOf('캠프')<0)myCampFull=myCamp+'캠프';
   var campGps=getCampGps()[myCampFull];
@@ -7450,6 +7450,14 @@ async function doCheckIn(){
       return;
     }
     var dist=Math.round(gpsDistance(gps.lat,gps.lng,campGps.lat,campGps.lng));
+    // ★ v9.25: 대구2캠프/대구2B캠프 기사는 두 거점 중 하나라도 반경 내면 OK
+    var isDaegu=(myCampFull==='대구2캠프'||myCampFull==='대구2B캠프');
+    if(isDaegu){
+      var allGps=getCampGps();
+      var distA=Math.round(gpsDistance(gps.lat,gps.lng,allGps['대구2캠프'].lat,allGps['대구2캠프'].lng));
+      var distB=Math.round(gpsDistance(gps.lat,gps.lng,allGps['대구2B캠프'].lat,allGps['대구2B캠프'].lng));
+      dist=Math.min(distA,distB);
+    }
     if(dist>CAMP_GPS_RADIUS){
       var distTxt=dist>=1000?(dist/1000).toFixed(1)+'km':dist+'m';
       toast('❌ 캠프 반경 '+CAMP_GPS_RADIUS+'m 밖에서는 출근 체크인 불가\n현재 위치: '+myCampFull+'에서 '+distTxt+' 거리');
@@ -9376,6 +9384,40 @@ function dSettle(){
     html+='<div style="padding:24px;text-align:center;font-size:12px"><div style="color:var(--text3);margin-bottom:12px">정산서 없음 — 관리자 작성 후 표시됩니다</div><button onclick="forceLoadSettle()" style="padding:9px 18px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔄 정산서 불러오기</button></div>';
     return html;
   }
+
+  // ★ v9.25: 월별 수입 그래프 (최근 6개월, 카드 1개 크기)
+  if(months.length>1){
+    var graphMonths=months.slice().reverse().slice(-6); // 오래된 순 최대 6개월
+    var graphNets=graphMonths.map(function(m){
+      var found=s.filter(function(x){return x.month===m;});
+      return found.reduce(function(sum,x){return sum+calcNet(x).net;},0);
+    });
+    var maxNet=Math.max.apply(null,graphNets)||1;
+    var barW=Math.floor(100/graphMonths.length)-2;
+
+    html+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;margin-bottom:10px">';
+    html+='<div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px">📊 월별 실지급 추이</div>';
+    html+='<div style="display:flex;align-items:flex-end;gap:3px;height:70px;padding-bottom:20px;position:relative">';
+    graphMonths.forEach(function(m,i){
+      var net=graphNets[i];
+      var pct=Math.round(net/maxNet*100);
+      var isActive=(m===curM);
+      var barColor=isActive?'var(--blue)':'var(--bg3)';
+      var textColor=isActive?'var(--blue)':'var(--text3)';
+      html+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0;height:100%">';
+      // 금액 라벨 (활성 월만)
+      html+='<div style="font-size:9px;color:'+textColor+';font-weight:'+(isActive?'700':'400')+';margin-bottom:2px;white-space:nowrap">'+(isActive?'₩'+(net/10000).toFixed(0)+'만':'')+'</div>';
+      // 막대
+      html+='<div style="width:100%;flex:1;display:flex;align-items:flex-end">';
+      html+='<div onclick="window._dSettleMonth=\''+m+'\';DT(\'settle\',document.getElementById(\'pni5\'))" style="width:100%;height:'+pct+'%;background:'+barColor+';border-radius:3px 3px 0 0;cursor:pointer;transition:.2s;min-height:3px"></div>';
+      html+='</div>';
+      // 월 라벨
+      html+='<div style="font-size:9px;color:'+textColor+';font-weight:'+(isActive?'700':'400')+';margin-top:3px">'+m.slice(5)+'월</div>';
+      html+='</div>';
+    });
+    html+='</div>';
+    html+='</div>';
+  }
   // 선택된 월만 필터
   var filtered=s.filter(function(x){return x.month===curM;});
   filtered.forEach(function(x){
@@ -11300,7 +11342,7 @@ window._noticeCache=window._noticeCache||[];
 function rNoticePanel(){
   if(!FB||!_db){return '<div style="padding:20px;text-align:center;color:var(--red)">⚠️ Firebase 연결 필요</div>';}
   var drs=ls('drivers').filter(function(d){return d.is_active!==false&&!d.isNew&&d.status!=='pending';});
-  var camps=['전체','부산1','부산2','부산3','대구2','진주M'];
+  var camps=['전체','부산1','부산2','부산3','대구2','대구2B','진주M'];
 
   // ── 알림 허용 현황 계산
   var allowed=drs.filter(function(d){return d.fcmToken&&d.fcmToken.length>10;});
