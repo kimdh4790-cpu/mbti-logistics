@@ -8539,9 +8539,11 @@ function dHome(){
   setTimeout(function(){
     var el=document.getElementById('drv-weather');
     if(!el)return;
+    // ★ 이미 날씨 표시 중이면 스킵 (깜박임 방지)
+    if(el.dataset.loaded==='1')return;
     // 캐시 (10분)
     var cache=JSON.parse(localStorage.getItem('weather_cache')||'null');
-    if(cache&&Date.now()-cache.ts<600000){el.innerHTML=cache.html;return;}
+    if(cache&&Date.now()-cache.ts<600000){el.innerHTML=cache.html;el.dataset.loaded='1';return;}
     // GPS로 현재 위치 → wttr.in API
     if(navigator.geolocation){
       navigator.geolocation.getCurrentPosition(function(pos){
@@ -8556,7 +8558,7 @@ function dHome(){
             var ico=code>=200&&code<300?'⛈':code>=300&&code<400?'🌧':code>=500&&code<600?'🌧':code>=600&&code<700?'❄️':code===800?'☀️':code>800?'☁️':'🌤';
             var wind=cur.windspeedKmph;
             var html=ico+' <strong>'+temp+'°C</strong> '+desc.slice(0,5)+(wind>20?' 💨'+wind+'km':'');
-            if(el)el.innerHTML=html;
+            if(el){el.innerHTML=html;el.dataset.loaded='1';}
             localStorage.setItem('weather_cache',JSON.stringify({html:html,ts:Date.now()}));
           }).catch(function(){if(el)el.innerHTML='';});
       },function(){if(el)el.innerHTML='';},{timeout:5000});
@@ -8837,11 +8839,11 @@ function _loadShiftSwapList(){
   if(!box||!FB||!_db)return;
   _db.collection('shift_swap_requests')
     .where('from','==',S.curDriver)
-    .orderBy('createdAt','desc').limit(5).get()
+    .limit(10).get()
     .then(function(snap1){
       return _db.collection('shift_swap_requests')
         .where('to','==',S.curDriver)
-        .orderBy('createdAt','desc').limit(5).get()
+        .limit(10).get()
         .then(function(snap2){
           var items=[];
           snap1.forEach(function(d){items.push({...d.data(),_id:d.id,_dir:'sent'});});

@@ -180,6 +180,8 @@ self.addEventListener('notificationclick', function(e) {
 self.addEventListener('fetch', function(e) {
   // chrome-extension / blob / 비GET 요청은 무시 (캐시 에러 방지)
   const url = e.request.url;
+  // ★ undefined URL 방어
+  if (!url || url.includes('/undefined') || url.endsWith('undefined')) return;
   if (url.startsWith('chrome-extension://') ||
       url.startsWith('chrome://') ||
       url.startsWith('blob:') ||
