@@ -8649,7 +8649,7 @@ function dHome(){
       </div>
       <div style="text-align:right">
         <!-- 날씨 -->
-        <div id="drv-weather" style="font-size:11px;color:rgba(255,255,255,.8);margin-bottom:4px">${window._weatherHtml||''}</div>
+        <div id="drv-weather" style="font-size:11px;color:rgba(255,255,255,.8);margin-bottom:4px">${(function(){var w=window._weatherHtml;if(w)return w;try{var c=JSON.parse(localStorage.getItem('weather_cache')||'null');if(c&&Date.now()-c.ts<600000){window._weatherHtml=c.html;return c.html;}}catch(e){}return '';})()}</div>
         <div style="font-size:18px;font-weight:800;color:#fff">${totD}<span style="font-size:11px;font-weight:500;opacity:.75">건</span></div>
         <div style="font-size:10px;color:rgba(255,255,255,.6)">오늘 배송</div>
       </div>
