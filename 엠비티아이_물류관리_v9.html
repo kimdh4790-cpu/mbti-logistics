@@ -11898,6 +11898,7 @@ function rNoticePanel(){
   html+='<span style="font-size:11px;color:var(--text3);align-self:center">📋 템플릿:</span>';
   html+='<button onclick="ntFill(\'알림\')" style="padding:3px 10px;background:var(--amber-l);color:var(--amber);border:1px solid var(--amber);border-radius:12px;font-size:11px;font-weight:700;cursor:pointer">🔔 알림 허용 안내</button>';
   html+='<button onclick="ntFill(\'설치\')" style="padding:3px 10px;background:var(--blue-l);color:var(--blue);border:1px solid var(--blue);border-radius:12px;font-size:11px;font-weight:700;cursor:pointer">📱 앱 설치 안내</button>';
+  html+='<button onclick="ntFill(\'업데이트\')" style="padding:3px 10px;background:rgba(99,102,241,.12);color:#6366f1;border:1px solid #6366f1;border-radius:12px;font-size:11px;font-weight:700;cursor:pointer">🆕 업데이트 안내</button>';
   html+='<button onclick="ntFill(\'초기화\')" style="padding:3px 10px;background:var(--bg3);color:var(--text3);border:1px solid var(--border);border-radius:12px;font-size:11px;cursor:pointer">✕ 초기화</button>';
   html+='</div>';
   html+='<div style="display:flex;gap:6px;margin-bottom:8px">';
@@ -12022,8 +12023,11 @@ function ntFill(type){
     t.value='🔔 앱 알림 허용 요청 — 꼭 확인해 주세요';
     c.value='관리자 공지 및 긴급 알림을 받으시려면\n아래 4가지를 모두 확인해 주세요!\n\n【 ① 크롬 앱 알림 허용 】\n앱 접속 → 주소창 왼쪽 🔒 아이콘 클릭\n→ 사이트 설정 → 알림 → 허용\n\n【 ② 내정보 탭 알림 등록 】\n앱 하단 내정보 탭 접속\n→ "알림 등록" 또는 "알림 허용" 버튼 클릭\n→ "허용" 선택\n\n【 ③ 휴대폰 설정 — 크롬 알림 허용 】\n설정 → 앱 → Chrome\n→ 알림 → 알림 허용 ON\n\n【 ④ 배터리 최적화 해제 (중요!) 】\n설정 → 배터리 → 앱별 배터리 관리\n→ Chrome 선택 → 제한 없음 설정\n※ 이 설정을 안 하면 앱이 꺼진 상태에서\n   알림이 도착하지 않습니다!\n\n4가지 완료 후 앱을 완전히 껐다가\n다시 실행해 주세요. 감사합니다 🙏';
   }
+  if(type==='업데이트'){
+    t.value='🆕 앱 업데이트 안내 — 새 기능 추가됐어요!';
+    c.value='안녕하세요 기사님들 😊\n오늘 앱에 편의기능이 추가됐습니다!\n\n【 새 기능 】\n📍 GPS 자동 입차\n앱 켜둔 채로 캠프 도착하면 자동으로 입차 등록됩니다!\n\n🔄 휴무 변경 요청\n홈 화면에서 같은 캠프 기사님께 직접 요청 가능합니다. 수락하면 관리자 자동 알림!\n\n👥 캠프 동료 연락처\n홈 화면에서 이름 클릭하면 바로 전화 연결 (번호 비공개)\n\n🌤 날씨 / 📊 정산서 월별 보기 추가\n🏁 퇴근 시 배송 완료 알림 자동 발송\n💰 급여일 D-3, D-1, 당일 자동 알림\n\n🔔 알림 미설정 시 공지 못 받습니다!\n내정보 탭에서 꼭 알림 등록 해주세요 😊';
+  }
   if(type==='설치'){
-    t.value='📱 MBTI 물류 앱 홈 화면 설치 요청';
     c.value='알림을 더 잘 받으려면 앱을 홈 화면에\n설치해서 사용해 주세요!\n\n【 설치 방법 (안드로이드) 】\n① 크롬 브라우저로 앱 접속\n② 오른쪽 상단 ⋮ 메뉴 클릭\n③ "홈 화면에 추가" 또는 "앱 설치" 선택\n④ 확인 후 홈 화면 아이콘으로 실행\n\n【 설치 방법 (아이폰) 】\n① 사파리로 앱 접속\n② 하단 공유 버튼 클릭\n③ "홈 화면에 추가" 선택\n\n설치 완료 후 알림이 훨씬 안정적으로 옵니다!';
   }
 }
