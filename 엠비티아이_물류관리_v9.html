@@ -8537,13 +8537,16 @@ function dHome(){
 
   // ★ v9.25: 날씨 비동기 로드
   setTimeout(function(){
-    var el=document.getElementById('drv-weather');
-    if(!el)return;
-    // ★ 이미 날씨 표시 중이면 스킵 (깜박임 방지)
-    if(el.dataset.loaded==='1')return;
+    // ★ v9.25: window._weatherHtml 있으면 스킵 (이미 로드됨)
+    if(window._weatherHtml)return;
     // 캐시 (10분)
     var cache=JSON.parse(localStorage.getItem('weather_cache')||'null');
-    if(cache&&Date.now()-cache.ts<600000){el.innerHTML=cache.html;el.dataset.loaded='1';return;}
+    if(cache&&Date.now()-cache.ts<600000){
+      window._weatherHtml=cache.html;
+      var el=document.getElementById('drv-weather');
+      if(el)el.innerHTML=cache.html;
+      return;
+    }
     // GPS로 현재 위치 → wttr.in API
     if(navigator.geolocation){
       navigator.geolocation.getCurrentPosition(function(pos){
@@ -8558,7 +8561,9 @@ function dHome(){
             var ico=code>=200&&code<300?'⛈':code>=300&&code<400?'🌧':code>=500&&code<600?'🌧':code>=600&&code<700?'❄️':code===800?'☀️':code>800?'☁️':'🌤';
             var wind=cur.windspeedKmph;
             var html=ico+' <strong>'+temp+'°C</strong> '+desc.slice(0,5)+(wind>20?' 💨'+wind+'km':'');
-            if(el){el.innerHTML=html;el.dataset.loaded='1';}
+            window._weatherHtml=html;
+            var el=document.getElementById('drv-weather');
+            if(el)el.innerHTML=html;
             localStorage.setItem('weather_cache',JSON.stringify({html:html,ts:Date.now()}));
           }).catch(function(){if(el)el.innerHTML='';});
       },function(){if(el)el.innerHTML='';},{timeout:5000});
@@ -8644,7 +8649,7 @@ function dHome(){
       </div>
       <div style="text-align:right">
         <!-- 날씨 -->
-        <div id="drv-weather" style="font-size:11px;color:rgba(255,255,255,.8);margin-bottom:4px">⏳</div>
+        <div id="drv-weather" style="font-size:11px;color:rgba(255,255,255,.8);margin-bottom:4px">${window._weatherHtml||''}</div>
         <div style="font-size:18px;font-weight:800;color:#fff">${totD}<span style="font-size:11px;font-weight:500;opacity:.75">건</span></div>
         <div style="font-size:10px;color:rgba(255,255,255,.6)">오늘 배송</div>
       </div>
