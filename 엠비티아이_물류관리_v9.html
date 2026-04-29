@@ -7718,11 +7718,9 @@ function _buildCampContacts(){
   if(!myCamp)return '';
   var myCampFull=myCamp.indexOf('캠프')<0?myCamp+'캠프':myCamp;
 
-  // 같은 캠프 기사 (본인 제외, 활성)
   var campDrvs=ls('drivers').filter(function(d){
     return d.is_active!==false&&d.name!==S.curDriver&&
       (d.camp===myCamp||d.camp===myCampFull||(d.camp&&(d.camp+'캠프')===myCampFull)||
-       // 대구2/대구2B 상호 인식
        ((myCamp==='대구2'||myCamp==='대구2B')&&(d.camp==='대구2'||d.camp==='대구2B')));
   });
 
@@ -7731,14 +7729,25 @@ function _buildCampContacts(){
   var btns=campDrvs.map(function(d){
     var tel=(d.phone||'').replace(/[^0-9]/g,'');
     if(!tel)return '<span style="display:inline-flex;align-items:center;padding:5px 10px;background:var(--bg3);border-radius:20px;font-size:12px;font-weight:600;color:var(--text2)">'+d.name+'</span>';
-    return '<a href="tel:'+tel+'" style="display:inline-flex;align-items:center;gap:4px;padding:5px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;font-size:12px;font-weight:700;color:var(--text);text-decoration:none;cursor:pointer">'
+    return '<a href="tel:'+tel+'" style="display:inline-flex;align-items:center;gap:4px;padding:5px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;font-size:12px;font-weight:700;color:var(--text);text-decoration:none">'
       +'<span style="font-size:13px">📞</span>'+d.name+'</a>';
   }).join('');
 
-  return '<div style="padding:10px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r)">'
-    +'<div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px">👥 '+myCampFull+' 동료 <span style="font-size:10px;font-weight:400;color:var(--text3)">(이름 클릭 → 전화)</span></div>'
-    +'<div style="display:flex;flex-wrap:wrap;gap:6px">'+btns+'</div>'
-    +'</div>';
+  // ★ 5명 이상이면 접기/펼치기
+  var isManyDrvs = campDrvs.length >= 5;
+  var listId = 'camp-contacts-list';
+
+  var html = '<div style="padding:10px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r)">';
+  // 헤더 — 인원 많으면 클릭 토글
+  html += '<div onclick="'+(isManyDrvs?'var b=document.getElementById(\''+listId+'\');var a=document.getElementById(\''+listId+'_arr\');b.style.display=b.style.display===\'none\'?\'flex\':\'none\';a.textContent=b.style.display===\'none\'?\'▼\':\'▲\';':'')
+    +'" style="display:flex;align-items:center;justify-content:space-between;'+(isManyDrvs?'cursor:pointer;':'')+'">';
+  html += '<div style="font-size:11px;font-weight:700;color:var(--text2)">👥 '+myCampFull+' 동료 <span style="font-size:10px;font-weight:400;color:var(--text3)">'+(isManyDrvs?campDrvs.length+'명 · 클릭하여 펼치기':'이름 클릭 → 전화')+'</span></div>';
+  if(isManyDrvs) html += '<span id="'+listId+'_arr" style="font-size:11px;color:var(--text3)">▼</span>';
+  html += '</div>';
+  // 버튼 목록
+  html += '<div id="'+listId+'" style="display:'+(isManyDrvs?'none':'flex')+';flex-wrap:wrap;gap:6px;margin-top:8px">'+btns+'</div>';
+  html += '</div>';
+  return html;
 }
 
 function _buildCampSupportCard(){
