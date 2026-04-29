@@ -11430,23 +11430,32 @@ function _loadNoticeList(){
       var readCnt=d.readBy?Object.keys(d.readBy).length:0;
       var totalCnt=d.targetCount||0;
       var isDone=totalCnt>0&&readCnt>=totalCnt;
-      html+='<div style="border:1px solid '+(isDone?'var(--green)':'var(--border)')+';border-radius:8px;padding:10px;margin-bottom:6px;background:'+(isDone?'rgba(22,163,74,.05)':'var(--bg)')+'">';
-      html+='<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">';
+      var nid='nt_'+doc.id.replace(/[^a-z0-9]/gi,'_');
+      // ★ v9.25: 접었다 폈다 토글
+      html+='<div style="border:1px solid '+(isDone?'var(--green)':'var(--border)')+';border-radius:8px;margin-bottom:6px;background:'+(isDone?'rgba(22,163,74,.05)':'var(--bg)')+';">';
+      // 헤더 — 클릭 시 토글
+      html+='<div onclick="var b=document.getElementById(\''+nid+'\');var a=document.getElementById(\''+nid+'_arr\');if(b){b.style.display=b.style.display===\'none\'?\'block\':\'none\';a.textContent=b.style.display===\'none\'?\'▼\':\'▲\';}" style="padding:10px;cursor:pointer;display:flex;align-items:center;gap:6px;flex-wrap:wrap">';
       html+='<span style="background:var(--blue-l);color:var(--blue);padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700">'+(cIco[d.category]||'📣')+' '+(d.category||'일반')+'</span>';
       if(d.pinned)html+='<span style="background:var(--amber-l);color:var(--amber);padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700">📌 고정</span>';
+      if(isDone)html+='<span style="font-size:10px;padding:1px 7px;background:var(--green);color:#fff;border-radius:8px;font-weight:700">✅ 완료</span>';
       html+='<span style="font-size:10px;color:var(--text3)">→ '+(d.target||'전체')+'</span>';
       html+='<span style="flex:1"></span>';
-      html+='<span style="font-size:10px;color:var(--text3)">'+timeStr+'</span>';
+      html+='<span style="font-size:10px;color:var(--text3);margin-right:4px">'+timeStr+'</span>';
+      html+='<span id="'+nid+'_arr" style="font-size:10px;color:var(--text3)">▼</span>';
       html+='</div>';
-      html+='<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:3px">'+(d.title||'-')+'</div>';
-      if(d.content)html+='<div style="font-size:11px;color:var(--text2);line-height:1.4;white-space:pre-wrap;max-height:60px;overflow:hidden">'+d.content.replace(/</g,'&lt;').slice(0,200)+(d.content.length>200?'...':'')+'</div>';
-      html+='<div style="display:flex;align-items:center;gap:6px;margin-top:6px;padding-top:6px;border-top:1px dashed var(--border)">';
+      // 제목 (항상 표시)
+      html+='<div style="padding:0 10px 8px;font-size:13px;font-weight:700;color:var(--text)">'+(d.title||'-')+'</div>';
+      // 접히는 본문
+      html+='<div id="'+nid+'" style="display:none;padding:0 10px 10px">';
+      if(d.content)html+='<div style="font-size:11px;color:var(--text2);line-height:1.6;white-space:pre-wrap;margin-bottom:8px;padding:8px;background:var(--bg2);border-radius:6px">'+d.content.replace(/</g,'&lt;')+'</div>';
+      html+='<div style="display:flex;align-items:center;gap:6px;padding-top:6px;border-top:1px dashed var(--border)">';
       html+='<span style="font-size:10px;color:var(--teal);font-weight:700">✓ 읽음 '+readCnt+(totalCnt?'/'+totalCnt:'')+'</span>';
-      if(isDone)html+='<span style="font-size:10px;padding:1px 7px;background:var(--green);color:#fff;border-radius:8px;font-weight:700">✅ 완료</span>';
       html+='<span style="flex:1"></span>';
-      html+='<button onclick="deleteNotice(\''+doc.id+'\')" style="padding:4px 10px;background:'+(isDone?'var(--red)':'var(--red-l)')+';color:'+(isDone?'#fff':'var(--red)')+';border:1px solid var(--red);border-radius:4px;font-size:10px;font-weight:700;cursor:pointer">🗑 삭제</button>';
+      html+='<button onclick="event.stopPropagation();deleteNotice(\''+doc.id+'\');" style="padding:4px 10px;background:'+(isDone?'var(--red)':'var(--red-l)')+';color:'+(isDone?'#fff':'var(--red)')+';border:1px solid var(--red);border-radius:4px;font-size:10px;font-weight:700;cursor:pointer">🗑 삭제</button>';
       html+='</div>';
       html+='</div>';
+      html+='</div>';
+
     });
     box.innerHTML=html;
   }, function(e){
