@@ -5705,8 +5705,8 @@ function viewStmt(i){
     </div>
     <div class="stmt-totals">
       <div class="stbox"><div class="stlbl">세금계산서 금액</div><div class="stval inc">₩${taxBase.toLocaleString()}</div></div>
-      <div class="stbox"><div class="stlbl">공제(고용+산재${dmgVal>0?'+분실':''})</div><div class="stval ded">-₩${(r.emp+(r.work||0)+dmgVal).toLocaleString()}</div></div>
-      <div class="stbox hl"><div class="stlbl">실 지급액</div><div class="stval" style="color:#fff;font-size:17px;font-weight:700">₩${realPay.toLocaleString()}</div></div>
+      <div class="stbox"><div class="stlbl">공제 합계</div><div class="stval ded">-₩${r.deduct.toLocaleString()}</div></div>
+      <div class="stbox hl"><div class="stlbl">실 지급액</div><div class="stval" style="color:#fff;font-size:17px;font-weight:700">₩${r.net.toLocaleString()}</div></div>
     </div>
     <div class="stmt-sec">
       <div style="font-size:13px;font-weight:600;padding-left:8px;border-left:3px solid var(--purple);margin-bottom:10px">📋 세금계산서 작성금액</div>
@@ -9435,8 +9435,8 @@ function dSettle(){
     // ── 상단 3칸 요약
     '<div class="stmt-totals">'+
       '<div class="stbox"><div class="stlbl">세금계산서 금액</div><div class="stval" style="font-size:15px;font-weight:700;color:var(--green)">₩'+taxBase.toLocaleString()+'</div></div>'+
-      '<div class="stbox"><div class="stlbl">공제(고용+산재'+(dmgVal>0?'+분실':'')+')</div><div class="stval" style="font-size:15px;font-weight:700;color:var(--red)">-₩'+(r.emp+(r.work||0)+dmgVal).toLocaleString()+'</div></div>'+
-      '<div class="stbox hl"><div class="stlbl">실 지급액</div><div class="stval" style="color:#fff;font-size:17px;font-weight:700">₩'+realPay.toLocaleString()+'</div></div>'+
+      '<div class="stbox"><div class="stlbl">공제 합계</div><div class="stval" style="font-size:15px;font-weight:700;color:var(--red)">-₩'+r.deduct.toLocaleString()+'</div></div>'+
+      '<div class="stbox hl"><div class="stlbl">실 지급액</div><div class="stval" style="color:#fff;font-size:17px;font-weight:700">₩'+r.net.toLocaleString()+'</div></div>'+
     '</div>'+
     // ── 수익 항목
     '<div class="stmt-sec">'+
@@ -9471,9 +9471,9 @@ function dSettle(){
     '<div class="stmt-fin">'+
       '<div>'+
         '<div style="font-size:12px;font-weight:700">실 지급액</div>'+
-        '<div style="font-size:10px;opacity:.7;margin-top:2px">세금계산서 ₩'+taxBase.toLocaleString()+' − 고용·산재 ₩'+(r.emp+(r.work||0)).toLocaleString()+(dmgVal>0?' − 분실/파손 ₩'+dmgVal.toLocaleString():'')+'</div>'+
+        '<div style="font-size:10px;opacity:.7;margin-top:2px">세금계산서 ₩'+taxBase.toLocaleString()+' − 공제 ₩'+r.deduct.toLocaleString()+'</div>'+
       '</div>'+
-      '<strong style="font-size:22px;color:#fff">₩'+realPay.toLocaleString()+'</strong>'+
+      '<strong style="font-size:22px;color:#fff">₩'+r.net.toLocaleString()+'</strong>'+
     '</div>'+
     '<div style="padding:7px 20px;font-size:11px;color:var(--text3)">'+(x.sharedAt?'공유일: '+x.sharedAt:'')+'</div>'+
     // ★ 명세서 이미지 저장 + 세금계산서 보기
