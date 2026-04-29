@@ -5803,8 +5803,8 @@ function viewStmt(i){
     <div class="stmt-sec" style="border-top:1px solid #e0dfd8">
       <div style="font-size:13px;font-weight:600;padding-left:8px;border-left:3px solid #D85A30;margin-bottom:8px">공제 항목</div>
       <div class="tax-box">
-        <div style="font-size:11px;color:var(--text3);padding:3px 0 5px">📌 월보수액 ₩${(r.monthlyWage||0).toLocaleString()} (공급가액 ₩${(r.supplyAmt||0).toLocaleString()} × 65.4%)</div><div class="tax-row"><span>고용보험 0.8% <small style="color:var(--text3)">(월보수액기준, 80만↑)</small></span><span style="color:var(--red);font-weight:600">-₩${r.emp.toLocaleString()}</span></div>
-        <div class="tax-row"><span>산재보험 0.88%</span><span style="color:var(--red);font-weight:600">-₩${(r.work||0).toLocaleString()}</span></div>
+        <div style="font-size:11px;color:var(--text3);padding:3px 0 5px">📌 월보수액 ₩${(r.monthlyWage||0).toLocaleString()} (공급가액 ₩${(r.supplyAmt||0).toLocaleString()} × 65.4%)</div><div class="tax-row"><span>고용보험 0.8% <small style="color:var(--text3)">(월보수액기준, 80만↑)</small></span><span id="st-emp-disp" style="color:var(--red);font-weight:600">-₩${r.emp.toLocaleString()}</span></div>
+        <div class="tax-row"><span>산재보험 0.88%</span><span id="st-work-disp" style="color:var(--red);font-weight:600">-₩${(r.work||0).toLocaleString()}</span></div>
         ${r.eq>0?`<div class="tax-row"><span>장비임대료</span><span style="color:var(--red)">-₩${r.eq.toLocaleString()}</span></div>`:''}
         ${r.adv>0?`<div class="tax-row"><span>가불금</span><span style="color:var(--red)">-₩${r.adv.toLocaleString()}</span></div>`:''}
         <div class="tax-total"><span>공제 합계</span><span>-₩${r.deduct.toLocaleString()}</span></div>
@@ -5832,17 +5832,23 @@ function viewStmt(i){
 
 // 명세서 수정 실시간 합계 업데이트
 function stUpdCalc(i){
-  var x=ls('settlements')[i], r=calcNet(x);
+  var x=ls('settlements')[i];
   var fresh=+document.getElementById('st-fresh-inp')?.value||0;
   var finc=+document.getElementById('st-finc-inp')?.value||0;
-  var nocont=+document.getElementById('st-nocont-inp')?.value||(x.nocont||0);  // ★ 미계약건
+  var nocont=+document.getElementById('st-nocont-inp')?.value||(x.nocont||0);
   var dmg=+document.getElementById('st-dmg-inp')?.value||0;
-  var etcPlus=+document.getElementById('st-etcplus-inp')?.value||0;   // ★ 기타(+)
-  var etcMinus=+document.getElementById('st-etcminus-inp')?.value||0; // ★ 기타(-)
-  var newBase = r.damt + r.ramt + fresh + finc + nocont + etcPlus - etcMinus;  // ★ 기타+/- 반영
-  var newNet = newBase - r.emp - (r.work||0) - dmg;
-  var tb=document.getElementById('st-taxbase-disp'); if(tb)tb.textContent='₩'+newBase.toLocaleString();
-  var nd=document.getElementById('st-net-disp'); if(nd)nd.textContent='₩'+newNet.toLocaleString();
+  var etcPlus=+document.getElementById('st-etcplus-inp')?.value||0;
+  var etcMinus=+document.getElementById('st-etcminus-inp')?.value||0;
+  // ★ v9.25 fix: 변경된 값 기준으로 완전 재계산 (기존 x 값 아닌 화면 입력값 사용)
+  var r2=calcNet(Object.assign({},x,{fresh,finc,nocont,dmg,etcPlus,etcMinus,
+    emp:0,  // emp 강제 0 → calcNet 내부에서 새 income 기준으로 재계산
+    tax:0   // tax도 재계산
+  }));
+  var tb=document.getElementById('st-taxbase-disp'); if(tb)tb.textContent='₩'+r2.income.toLocaleString();
+  var nd=document.getElementById('st-net-disp');     if(nd)nd.textContent='₩'+r2.net.toLocaleString();
+  // 고용·산재 업데이트 표시
+  var empD=document.getElementById('st-emp-disp');  if(empD)empD.textContent='-₩'+r2.emp.toLocaleString();
+  var workD=document.getElementById('st-work-disp');if(workD)workD.textContent='-₩'+(r2.work||0).toLocaleString();
 }
 
 // 명세서 수정 저장
@@ -5850,19 +5856,23 @@ function stSaveEdit(i){
   var s=ls('settlements');
   s[i].fresh=+document.getElementById('st-fresh-inp')?.value||0;
   s[i].finc=+document.getElementById('st-finc-inp')?.value||0;
-  s[i].nocont=+document.getElementById('st-nocont-inp')?.value||(s[i].nocont||0);  // ★ 미계약건 저장
+  s[i].nocont=+document.getElementById('st-nocont-inp')?.value||(s[i].nocont||0);
   s[i].dmg=+document.getElementById('st-dmg-inp')?.value||0;
-  s[i].inc=0; // 추가인센 강제 0
-  // ★ 기타(+) 저장
+  s[i].inc=0;
   var etcPlusInp=document.getElementById('st-etcplus-inp');
   var etcPlusReason=document.getElementById('st-etcplus-reason');
   if(etcPlusInp) s[i].etcPlus=+etcPlusInp.value||0;
   if(etcPlusReason) s[i].etcPlusReason=etcPlusReason.value||'';
-  // ★ 기타(-) 저장
   var etcMinusInp=document.getElementById('st-etcminus-inp');
   var etcMinusReason=document.getElementById('st-etcminus-reason');
   if(etcMinusInp) s[i].etcMinus=+etcMinusInp.value||0;
   if(etcMinusReason) s[i].etcMinusReason=etcMinusReason.value||'';
+  // ★ v9.25 fix: 수정된 값 기준으로 income/emp/tax 완전 재계산 후 저장
+  var r2=calcNet(Object.assign({},s[i],{emp:0,tax:0}));
+  s[i].income = r2.income;
+  s[i].emp    = r2.emp;
+  s[i].tax    = r2.tax;
+  s[i].net    = r2.net;
   lss('settlements',s);
   if(FB&&_db){_db.collection('settlements').doc(s[i].fbId||s[i].driver+'_'+s[i].month).set(s[i],{merge:true}).catch(function(){});}
   toast('✅ 명세서 수정 저장 완료');
