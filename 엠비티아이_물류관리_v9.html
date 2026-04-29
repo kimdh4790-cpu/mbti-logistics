@@ -2191,11 +2191,12 @@ function rEntry(){
       <td><strong>${x.driver}</strong></td>
       <td><span class="badge ${x.type==='쿠팡'?'b-coral':x.type==='컬리'?'b-purple':x.type==='간선'?'b-blue':'b-wait'}">${x.type}</span></td>
       <td style="font-weight:700;color:var(--teal)">${x.routeNo||'—'}</td>
+      <td style="font-size:11px;color:var(--purple);font-weight:600">${x.shift||'—'}</td>
       <td>${x.time}</td>
       <td style="font-weight:600;color:${x.temp==='상온'?'var(--amber)':parseFloat(x.temp)<=-18?'var(--teal)':'var(--red)'}">${x.temp}${x.temp==='상온'?'':' °C'}</td>
       <td class="thumb-row">${Object.entries(x.photos||{}).filter(([k,v])=>v&&v.length>5).map(([k,v])=>`<img class="thumb" src="${v}" onclick="openIV('${v}','입차사진')" title="${k}">`).join('')||'—'}</td>
     </tr>`).join('');
-    return _admDateGroup(g.date,g.rows.length,`<table class="tbl"><thead><tr><th style="width:30px"><input type="checkbox" onchange="toggleAllChk(this,'entries')" style="width:15px;height:15px;cursor:pointer"></th><th>기사</th><th>유형</th><th>라우트</th><th>시각</th><th>온도</th><th>사진</th></tr></thead><tbody>${rows}</tbody></table>`);
+    return _admDateGroup(g.date,g.rows.length,`<table class="tbl"><thead><tr><th style="width:30px"><input type="checkbox" onchange="toggleAllChk(this,'entries')" style="width:15px;height:15px;cursor:pointer"></th><th>기사</th><th>유형</th><th>라우트</th><th>회차</th><th>시각</th><th>온도</th><th>사진</th></tr></thead><tbody>${rows}</tbody></table>`);
   }).join(''):'<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">해당 기간 입차 없음</div>';
   return `<div class="card"><div class="ch"><span class="ct">입차 기록 (${e.length}건)</span>
     <button onclick="deleteSelected('entries','입차')" style="padding:4px 10px;background:var(--red-l);border:1px solid var(--red);border-radius:6px;font-size:11px;color:var(--red);cursor:pointer;font-weight:600">🗑 선택삭제</button>
@@ -7627,11 +7628,22 @@ async function doCheckIn(){
     var ents=ls('entries');
     var alreadyEntered=ents.some(function(e){return e.driver===S.curDriver&&e.date===today();});
     if(!alreadyEntered){
+      // ★ v9.25: 회차 정보 (근무표 기반)
+      var entryShift=(function(){
+        try{
+          var nt=new Date(); var tk=today();
+          var sk='schedule_'+S.curDriver+'_month_'+nt.getFullYear()+'_'+nt.getMonth();
+          var sd=JSON.parse(localStorage.getItem(sk)||'{}');
+          var ts=sd[tk]; if(!ts)return '';
+          return typeof ts==='object'?(ts.rotation||ts.status||''):(ts||'');
+        }catch(e){return '';}
+      })();
       var entryData={
         driver:S.curDriver, type:jsub, company:jsub,
         routeFrom:'', routeTo:'', ton:S.jobTon||'',
         routeNo:routeNo,  // ★ 라우트 번호 (관리자 단가 측정용)
         camp:assignedCamp,  // ★ v9.7: 관리자 배정 캠프
+        shift:entryShift,   // ★ v9.25: 회차 (D1,D2,F3,1회전,2회전 등)
         time:nowT(), temp:'상온', photos:{},
         gps:gps||null,
         date:today(), ts:new Date().toISOString()
@@ -7861,9 +7873,20 @@ async function _doAutoCheckIn(gps){
   var nowT=now.slice(11,16);
 
   // 기본 온도 (상온)
+  // ★ v9.25: 회차 정보
+  var autoShift=(function(){
+    try{
+      var nt=new Date(); var tk=today();
+      var sk='schedule_'+S.curDriver+'_month_'+nt.getFullYear()+'_'+nt.getMonth();
+      var sd=JSON.parse(localStorage.getItem(sk)||'{}');
+      var ts=sd[tk]; if(!ts)return '';
+      return typeof ts==='object'?(ts.rotation||ts.status||''):(ts||'');
+    }catch(e){return '';}
+  })();
   var entry={
     id:nid('entry'),driver:S.curDriver,date:today(),time:nowT,
     type:jsub,temp:'상온',camp:myCamp,
+    shift:autoShift,
     gps:gps,autoCheckin:true,createdAt:now
   };
   var elist=ls('entries');
@@ -9190,6 +9213,17 @@ function dEntry(){
     <input id="entry-route-no" placeholder="예: 215A" value="${defaultRoute}" oninput="this.value=this.value.toUpperCase();localStorage.setItem('drv_lastRoute_'+S.curDriver,this.value)" style="width:100%;padding:9px;border:1.5px solid ${defaultRoute?'var(--blue)':'var(--border)'};border-radius:var(--r);font-size:14px;font-weight:700;text-align:center;background:var(--bg);color:var(--text);text-transform:uppercase">
     <div style="font-size:10px;color:var(--text3);margin-top:4px">${defaultRoute?'자동 입력됨 — 기사·관리자 모두 수정 가능':'출근 전에 라우트 번호를 입력하세요. 관리자가 단가 적용에 사용합니다.'}</div>
   </div>
+  <!-- ★ v9.25: GPS 자동 입차 안내 -->
+  ${(function(){
+    if(!navigator.geolocation)return '';
+    var ents=ls('entries').filter(function(e){return e.driver===S.curDriver&&e.date===today();});
+    if(ents.length>0)return ''; // 이미 입차했으면 숨김
+    return '<div style="margin:6px 10px;padding:9px 12px;background:rgba(20,184,166,.08);border:1.5px solid var(--teal);border-radius:var(--r);font-size:11px">'
+      +'<div style="font-weight:700;color:var(--teal);margin-bottom:3px">📍 GPS 자동 입차 활성화됨</div>'
+      +'<div style="color:var(--text2)">앱을 켜둔 채로 캠프에 도착하면 자동으로 입차 등록됩니다.<br>'
+      +'<strong style="color:var(--text)">위치 권한을 허용</strong>해야 작동합니다. (주소창 🔒 → 위치 → 허용)</div>'
+      +'</div>';
+  })()}
   <!-- 출퇴근 체크인 (출근 버튼 = 입차 등록) -->
   <div id="attend-card" style="margin:6px 10px">${_buildAttendCard()}</div>
   <!-- 현재 위치 지도 -->
