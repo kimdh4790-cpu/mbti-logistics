@@ -8560,7 +8560,7 @@ function dHome(){
             var code=+cur.weatherCode;
             var ico=code>=200&&code<300?'⛈':code>=300&&code<400?'🌧':code>=500&&code<600?'🌧':code>=600&&code<700?'❄️':code===800?'☀️':code>800?'☁️':'🌤';
             var wind=cur.windspeedKmph;
-            var html=ico+' <strong>'+temp+'°C</strong> '+desc.slice(0,5)+(wind>20?' 💨'+wind+'km':'');
+            var html=ico+' <strong>'+temp+'°C</strong> '+desc+(wind>20?' 💨'+wind+'km':'');
             window._weatherHtml=html;
             var el=document.getElementById('drv-weather');
             if(el)el.innerHTML=html;
