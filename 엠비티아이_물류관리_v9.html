@@ -7711,6 +7711,36 @@ function _startDeadlineTick(){
 
 // ★ v9.12: 캠프 내 배송 지원 알림 (Firebase 실시간)
 // ════════════════════════════════════════════
+// ★ v9.25: 캠프 동료 연락처 (이름 클릭 → 전화, 번호 비공개)
+function _buildCampContacts(){
+  var me=ls('drivers').find(function(d){return d.name===S.curDriver;});
+  var myCamp=me&&me.camp||'';
+  if(!myCamp)return '';
+  var myCampFull=myCamp.indexOf('캠프')<0?myCamp+'캠프':myCamp;
+
+  // 같은 캠프 기사 (본인 제외, 활성)
+  var campDrvs=ls('drivers').filter(function(d){
+    return d.is_active!==false&&d.name!==S.curDriver&&
+      (d.camp===myCamp||d.camp===myCampFull||(d.camp&&(d.camp+'캠프')===myCampFull)||
+       // 대구2/대구2B 상호 인식
+       ((myCamp==='대구2'||myCamp==='대구2B')&&(d.camp==='대구2'||d.camp==='대구2B')));
+  });
+
+  if(!campDrvs.length) return '';
+
+  var btns=campDrvs.map(function(d){
+    var tel=(d.phone||'').replace(/[^0-9]/g,'');
+    if(!tel)return '<span style="display:inline-flex;align-items:center;padding:5px 10px;background:var(--bg3);border-radius:20px;font-size:12px;font-weight:600;color:var(--text2)">'+d.name+'</span>';
+    return '<a href="tel:'+tel+'" style="display:inline-flex;align-items:center;gap:4px;padding:5px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;font-size:12px;font-weight:700;color:var(--text);text-decoration:none;cursor:pointer">'
+      +'<span style="font-size:13px">📞</span>'+d.name+'</a>';
+  }).join('');
+
+  return '<div style="padding:10px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r)">'
+    +'<div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px">👥 '+myCampFull+' 동료 <span style="font-size:10px;font-weight:400;color:var(--text3)">(이름 클릭 → 전화)</span></div>'
+    +'<div style="display:flex;flex-wrap:wrap;gap:6px">'+btns+'</div>'
+    +'</div>';
+}
+
 function _buildCampSupportCard(){
   var me=ls('drivers').find(function(x){return x.name===S.curDriver;});
   var myCamp=me&&me.camp||'';
@@ -8341,6 +8371,8 @@ function dHome(){
   <!-- 출퇴근 체크인은 입차 탭으로 이동 -->
   <!-- 공지사항 카드 -->
   <div id="drv-notice-card" style="margin:4px 10px 6px">${_buildDrvNoticeCard()}</div>
+  <!-- ★ v9.25: 캠프 동료 연락처 -->
+  <div id="drv-camp-contacts" style="margin:4px 10px 6px">${_buildCampContacts()}</div>
   <!-- ★ v9.12: 배송 마감 카운트다운 -->
   <div id="drv-deadline-card" style="margin:4px 10px 6px">${_buildDeadlineCard()}</div>
   <!-- ★ v9.12: 캠프 지원 알림 -->
@@ -8349,22 +8381,230 @@ function dHome(){
   ${me?`<div class="dc" style="margin:4px 10px"><div class="dct">오늘 입차</div><div style="display:flex;gap:8px;align-items:center;font-size:12px"><span class="badge ${me.type==='쿠팡'?'b-coral':me.type==='컬리'?'b-purple':'b-blue'}">${me.type}</span><span>${me.time}</span><span style="font-weight:600;color:${me.temp==='상온'?'var(--amber)':parseFloat(me.temp)<=-18?'var(--teal)':'var(--red)'}">${me.temp}${me.temp==='상온'?'':' °C'}</span></div></div>`:`<div style="margin:4px 10px 6px;padding:9px;background:var(--amber-l);border-radius:var(--r);font-size:12px;color:var(--amber)">아직 입차하지 않았습니다. 입차 탭에서 등록해 주세요.</div>`}
   <!-- 한달 근무표 -->
   ${calHTML}
-  <!-- ★ v9.21: 회사 사무실 긴급 연락 카드 -->
-  <div style="margin:6px 10px 6px;padding:11px 13px;background:linear-gradient(135deg,#1e5fad 0%,#185FA5 100%);color:#fff;border-radius:var(--r);box-shadow:0 2px 8px rgba(24,95,165,.25)">
-    <div style="font-size:11px;opacity:.92;font-weight:700;margin-bottom:6px">🏢 ${COMPANY_INFO.name} 본사 연락처</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-      <a href="tel:${COMPANY_INFO.officeTel.replace(/-/g,'')}" style="padding:8px 10px;background:rgba(255,255,255,.18);color:#fff;border-radius:7px;font-size:11px;text-decoration:none;font-weight:700;text-align:center">📞 사무실<br><span style="font-size:13px">${COMPANY_INFO.officeTel}</span></a>
-      ${COMPANY_INFO.ceoTel?'<a href="tel:'+COMPANY_INFO.ceoTel.replace(/-/g,'')+'" style="padding:8px 10px;background:rgba(255,255,255,.18);color:#fff;border-radius:7px;font-size:11px;text-decoration:none;font-weight:700;text-align:center">📱 대표<br><span style="font-size:13px">'+COMPANY_INFO.ceoTel+'</span></a>':''}
+    <!-- ★ v9.25: 회사 연락처 카드 개선 -->
+  <div style="margin:6px 10px 6px;padding:12px 14px;background:linear-gradient(135deg,#1e5fad 0%,#185FA5 100%);color:#fff;border-radius:var(--r);box-shadow:0 2px 8px rgba(24,95,165,.25)">
+    <div style="font-size:11px;opacity:.85;font-weight:700;margin-bottom:10px;letter-spacing:.3px">🏢 ${COMPANY_INFO.name} 본사 연락처</div>
+    <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px;padding:7px 10px;background:rgba(255,255,255,.12);border-radius:7px;font-size:11px">
+      <span style="font-size:14px">📍</span>
+      <span style="opacity:.9;line-height:1.4">${COMPANY_INFO.addr}</span>
     </div>
-    <div style="margin-top:6px;font-size:9px;opacity:.85;text-align:center">📠 팩스: ${COMPANY_INFO.fax}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+      <a href="tel:${COMPANY_INFO.officeTel.replace(/-/g,'')}" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:9px 6px;background:rgba(255,255,255,.18);color:#fff;border-radius:8px;text-decoration:none;gap:3px">
+        <span style="font-size:18px">☎</span>
+        <span style="font-size:9px;opacity:.8;font-weight:600">사무실</span>
+        <span style="font-size:12px;font-weight:700">${COMPANY_INFO.officeTel}</span>
+      </a>
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:9px 6px;background:rgba(255,255,255,.1);border-radius:8px;gap:3px">
+        <span style="font-size:18px">📠</span>
+        <span style="font-size:9px;opacity:.8;font-weight:600">팩스</span>
+        <span style="font-size:12px;font-weight:700">${COMPANY_INFO.fax}</span>
+      </div>
+    </div>
   </div>
-  <!-- 사고접수 + 사진 모아보기 버튼 -->
+    <!-- 사고접수 + 사진 모아보기 버튼 -->
   <button class="bbtn bb-red" onclick="DT('accident',document.getElementById('pni4'))" style="padding:11px;font-size:13px;margin:0 10px 6px">🚨 사고 접수</button>
+  <button onclick="openShiftSwapModal()" style="width:calc(100% - 20px);margin:0 10px 6px;padding:11px;background:var(--teal);color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer">🔄 휴무 변경 요청</button>
   <button onclick="openComplaintModal()" style="width:calc(100% - 20px);margin:0 10px 6px;padding:11px;background:var(--amber,#d97706);color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer">📝 불편함 접수 → 관리자 전달</button>
   <button onclick="drvPhotoGallery()" style="width:calc(100% - 20px);margin:0 10px 10px;padding:11px;background:var(--purple-l);color:var(--purple);border:1.5px solid var(--purple);border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer">📸 사진 모아보기 (60일)</button>
   </div>`;
 }
 // ── 기사 홈 근무표: 월 이동 (-1 이전달, +1 다음달)
+// ★ v9.25: 휴무 변경 요청
+function openShiftSwapModal(){
+  if(!FB||!_db){toast('⚠️ Firebase 연결 필요');return;}
+  var me=ls('drivers').find(function(d){return d.name===S.curDriver;});
+  var myCamp=me&&(me.camp||'');
+  var myCampFull=myCamp&&myCamp.indexOf('캠프')<0?myCamp+'캠프':myCamp;
+
+  // 같은 캠프 기사 목록 (본인 제외)
+  var campDrvs=ls('drivers').filter(function(d){
+    return d.is_active!==false&&d.name!==S.curDriver&&
+      (d.camp===myCamp||d.camp===myCampFull||(d.camp+'캠프')===myCampFull);
+  });
+
+  // 오늘부터 30일 날짜 옵션
+  var dateOpts='';
+  for(var i=0;i<30;i++){
+    var d=new Date(); d.setDate(d.getDate()+i);
+    var ds=d.toISOString().slice(0,10);
+    var dn=['일','월','화','수','목','금','토'][d.getDay()];
+    dateOpts+='<option value="'+ds+'">'+(i===0?'오늘 ':i===1?'내일 ':'')+ds.slice(5).replace('-','/')+' ('+dn+')</option>';
+  }
+
+  var drvOpts=campDrvs.map(function(d){
+    return '<option value="'+d.name+'">'+d.name+'</option>';
+  }).join('');
+
+  var mo=document.createElement('div');
+  mo.id='shift-swap-mo';
+  mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:700;display:flex;align-items:flex-end;justify-content:center';
+  mo.innerHTML=`
+    <div style="width:100%;max-width:480px;background:var(--bg);border-radius:16px 16px 0 0;padding:20px;max-height:85vh;overflow-y:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div style="font-size:16px;font-weight:800">🔄 휴무 변경 요청</div>
+        <button onclick="document.getElementById('shift-swap-mo').remove()" style="padding:5px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;cursor:pointer">✕</button>
+      </div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:14px">같은 캠프 기사에게 휴무 변경을 요청합니다. 상대방이 수락하면 관리자에게 자동 알림이 전송됩니다.</div>
+
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div>
+          <label style="font-size:12px;font-weight:700;color:var(--text2);display:block;margin-bottom:4px">📅 내 휴무 날짜 (변경 원하는 날)</label>
+          <select id="ss-my-date" style="width:100%;padding:9px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg)">${dateOpts}</select>
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:700;color:var(--text2);display:block;margin-bottom:4px">👤 요청 대상 기사</label>
+          ${drvOpts?`<select id="ss-target" style="width:100%;padding:9px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg)">
+            <option value="">-- 선택 --</option>${drvOpts}</select>`
+          :'<div style="padding:10px;background:var(--bg2);border-radius:8px;font-size:12px;color:var(--text3)">같은 캠프 기사가 없습니다</div>'}
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:700;color:var(--text2);display:block;margin-bottom:4px">📅 상대방 원하는 날짜 (선택)</label>
+          <select id="ss-their-date" style="width:100%;padding:9px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg)">
+            <option value="">미정 (협의 필요)</option>${dateOpts}</select>
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:700;color:var(--text2);display:block;margin-bottom:4px">💬 요청 메시지 (선택)</label>
+          <textarea id="ss-msg" placeholder="예: 개인 사정으로 변경 부탁드립니다" rows="2"
+            style="width:100%;padding:9px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);box-sizing:border-box;resize:none;font-family:inherit"></textarea>
+        </div>
+      </div>
+
+      <button onclick="submitShiftSwap()" style="width:100%;margin-top:14px;padding:13px;background:var(--teal);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">📤 변경 요청 전송</button>
+
+      <!-- 기존 요청 현황 -->
+      <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
+        <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">📋 진행 중인 요청</div>
+        <div id="ss-list" style="font-size:12px;color:var(--text3)">로딩 중...</div>
+      </div>
+    </div>`;
+  document.body.appendChild(mo);
+  _loadShiftSwapList();
+}
+
+function submitShiftSwap(){
+  var myDate=document.getElementById('ss-my-date')?.value;
+  var target=document.getElementById('ss-target')?.value;
+  var theirDate=document.getElementById('ss-their-date')?.value||'';
+  var msg=document.getElementById('ss-msg')?.value||'';
+  if(!myDate){toast('날짜를 선택해 주세요');return;}
+  if(!target){toast('요청 대상 기사를 선택해 주세요');return;}
+
+  var reqData={
+    from: S.curDriver,
+    to: target,
+    myDate: myDate,
+    theirDate: theirDate,
+    msg: msg,
+    status: '대기',  // 대기/수락/거절
+    createdAt: new Date().toISOString(),
+    camp: (ls('drivers').find(function(d){return d.name===S.curDriver;})||{}).camp||''
+  };
+
+  _db.collection('shift_swap_requests').add(reqData).then(function(ref){
+    // 대상 기사에게 push + driver_notifications
+    var targetDrv=ls('drivers').find(function(d){return d.name===target;});
+    var title='🔄 휴무 변경 요청';
+    var body=S.curDriver+' 기사님이 '+myDate+' 휴무 변경을 요청했습니다'+(theirDate?' (희망일: '+theirDate+')':'');
+
+    // driver_notifications 저장
+    _db.collection('driver_notifications').add({
+      driver: target, title: title, body: body,
+      category: '업무', noticeId: ref.id,
+      sentAt: new Date().toISOString(), read: false, pinned: false,
+      type: 'shift_swap', swapId: ref.id
+    });
+
+    // FCM 푸시
+    var _FCM_URL='https://us-central1-mbti-logistics.cloudfunctions.net/sendPush';
+    if(targetDrv&&targetDrv.fcmToken){
+      fetch(_FCM_URL,{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({token:targetDrv.fcmToken,title:title,
+          data:{type:'shift_swap',swapId:ref.id,title:title,body:body}})
+      }).catch(function(){});
+    }
+    toast('✅ '+target+' 기사님께 휴무 변경 요청 전송 완료');
+    document.getElementById('ss-my-date').value='';
+    document.getElementById('ss-target').value='';
+    document.getElementById('ss-msg').value='';
+    _loadShiftSwapList();
+  }).catch(function(e){toast('❌ 전송 실패: '+(e.message||''));});
+}
+
+function _loadShiftSwapList(){
+  var box=document.getElementById('ss-list');
+  if(!box||!FB||!_db)return;
+  _db.collection('shift_swap_requests')
+    .where('from','==',S.curDriver)
+    .orderBy('createdAt','desc').limit(5).get()
+    .then(function(snap1){
+      return _db.collection('shift_swap_requests')
+        .where('to','==',S.curDriver)
+        .orderBy('createdAt','desc').limit(5).get()
+        .then(function(snap2){
+          var items=[];
+          snap1.forEach(function(d){items.push({...d.data(),_id:d.id,_dir:'sent'});});
+          snap2.forEach(function(d){items.push({...d.data(),_id:d.id,_dir:'received'});});
+          items.sort(function(a,b){return b.createdAt.localeCompare(a.createdAt);});
+          if(!items.length){box.innerHTML='<div style="text-align:center;padding:10px;color:var(--text3)">진행 중인 요청 없음</div>';return;}
+          var statusColor={'대기':'var(--amber)','수락':'var(--green)','거절':'var(--red)'};
+          box.innerHTML=items.slice(0,5).map(function(x){
+            var isSent=x._dir==='sent';
+            return '<div style="padding:8px;background:var(--bg2);border-radius:8px;margin-bottom:6px;border:1px solid var(--border)">'
+              +'<div style="display:flex;justify-content:space-between;margin-bottom:3px">'
+              +'<span style="font-size:11px;font-weight:700;color:'+(isSent?'var(--blue)':'var(--teal)')+'">'+( isSent?'📤 보낸 요청':'📥 받은 요청')+'</span>'
+              +'<span style="font-size:10px;padding:1px 7px;background:'+statusColor[x.status]+';color:#fff;border-radius:8px;font-weight:700">'+x.status+'</span>'
+              +'</div>'
+              +'<div style="font-size:11px;color:var(--text)">'+(isSent?x.to:x.from)+' | '+x.myDate+(x.theirDate?' ↔ '+x.theirDate:'')+'</div>'
+              +(x.msg?'<div style="font-size:10px;color:var(--text3);margin-top:2px">'+x.msg+'</div>':'')
+              +(!isSent&&x.status==='대기'
+                ?'<div style="display:flex;gap:6px;margin-top:6px">'
+                  +'<button onclick="replyShiftSwap(\''+x._id+'\',\'수락\',\''+x.from+'\')" style="flex:1;padding:5px;background:var(--green);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">✅ 수락</button>'
+                  +'<button onclick="replyShiftSwap(\''+x._id+'\',\'거절\',\''+x.from+'\')" style="flex:1;padding:5px;background:var(--red-l);color:var(--red);border:1px solid var(--red);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">❌ 거절</button>'
+                  +'</div>':''
+              )
+              +'</div>';
+          }).join('');
+        });
+    }).catch(function(){box.innerHTML='<div style="color:var(--red);font-size:11px">로드 실패</div>';});
+}
+
+function replyShiftSwap(swapId, status, fromName){
+  if(!FB||!_db)return;
+  _db.collection('shift_swap_requests').doc(swapId).update({status:status,repliedAt:new Date().toISOString()})
+    .then(function(){
+      toast((status==='수락'?'✅ 수락':'❌ 거절')+'했습니다');
+      // 요청자에게 알림
+      var title='🔄 휴무 변경 요청 '+(status==='수락'?'수락됨':'거절됨');
+      var body=S.curDriver+' 기사님이 휴무 변경 요청을 '+status+'했습니다';
+      _db.collection('driver_notifications').add({
+        driver:fromName, title:title, body:body,
+        category:'업무', sentAt:new Date().toISOString(), read:false, pinned:false
+      });
+      // 수락 시 관리자에게도 알림
+      if(status==='수락'){
+        _db.collection('shift_swap_requests').doc(swapId).get().then(function(doc){
+          var x=doc.data();
+          _db.collection('admin_notifications').add({
+            title:'🔄 휴무 변경 수락',
+            body:x.from+' ↔ '+x.to+' | '+x.myDate+(x.theirDate?' ↔ '+x.theirDate:''),
+            type:'shift_swap', swapId:swapId,
+            createdAt:new Date().toISOString(), read:false
+          });
+        });
+      }
+      // 요청자 FCM 푸시
+      var fromDrv=ls('drivers').find(function(d){return d.name===fromName;});
+      if(fromDrv&&fromDrv.fcmToken){
+        var _FCM_URL='https://us-central1-mbti-logistics.cloudfunctions.net/sendPush';
+        fetch(_FCM_URL,{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({token:fromDrv.fcmToken,title:title,
+            data:{type:'shift_swap_reply',title:title,body:body}})
+        }).catch(function(){});
+      }
+      _loadShiftSwapList();
+    }).catch(function(e){toast('❌ 실패: '+(e.message||''));});
+}
+
 function dSchedMove(delta){
   var now=new Date();
   if(!S.drvSchedMonth)S.drvSchedMonth={y:now.getFullYear(),m:now.getMonth()};
@@ -9385,39 +9625,6 @@ function dSettle(){
     return html;
   }
 
-  // ★ v9.25: 월별 수입 그래프 (최근 6개월, 카드 1개 크기)
-  if(months.length>1){
-    var graphMonths=months.slice().reverse().slice(-6); // 오래된 순 최대 6개월
-    var graphNets=graphMonths.map(function(m){
-      var found=s.filter(function(x){return x.month===m;});
-      return found.reduce(function(sum,x){return sum+calcNet(x).net;},0);
-    });
-    var maxNet=Math.max.apply(null,graphNets)||1;
-    var barW=Math.floor(100/graphMonths.length)-2;
-
-    html+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;margin-bottom:10px">';
-    html+='<div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px">📊 월별 실지급 추이</div>';
-    html+='<div style="display:flex;align-items:flex-end;gap:3px;height:70px;padding-bottom:20px;position:relative">';
-    graphMonths.forEach(function(m,i){
-      var net=graphNets[i];
-      var pct=Math.round(net/maxNet*100);
-      var isActive=(m===curM);
-      var barColor=isActive?'var(--blue)':'var(--bg3)';
-      var textColor=isActive?'var(--blue)':'var(--text3)';
-      html+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0;height:100%">';
-      // 금액 라벨 (활성 월만)
-      html+='<div style="font-size:9px;color:'+textColor+';font-weight:'+(isActive?'700':'400')+';margin-bottom:2px;white-space:nowrap">'+(isActive?'₩'+(net/10000).toFixed(0)+'만':'')+'</div>';
-      // 막대
-      html+='<div style="width:100%;flex:1;display:flex;align-items:flex-end">';
-      html+='<div onclick="window._dSettleMonth=\''+m+'\';DT(\'settle\',document.getElementById(\'pni5\'))" style="width:100%;height:'+pct+'%;background:'+barColor+';border-radius:3px 3px 0 0;cursor:pointer;transition:.2s;min-height:3px"></div>';
-      html+='</div>';
-      // 월 라벨
-      html+='<div style="font-size:9px;color:'+textColor+';font-weight:'+(isActive?'700':'400')+';margin-top:3px">'+m.slice(5)+'월</div>';
-      html+='</div>';
-    });
-    html+='</div>';
-    html+='</div>';
-  }
   // 선택된 월만 필터
   var filtered=s.filter(function(x){return x.month===curM;});
   filtered.forEach(function(x){
@@ -11835,9 +12042,39 @@ function rSupportAdmin(){
   html+='<div class="card"><div class="ch"><span class="ct">전체 지원요청 현황</span>'
     +'<button onclick="loadAllSupports()" style="padding:4px 12px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer">🔄 새로고침</button></div>';
   html+='<div id="support-admin-list"><div style="text-align:center;padding:20px;color:var(--text3)">로딩 중...</div></div></div>';
+  // ── 휴무 변경 요청 현황
+  html+='<div class="card" style="margin-top:10px"><div class="ch"><span class="ct">🔄 휴무 변경 요청 현황</span>'
+    +'<button onclick="loadShiftSwapAdmin()" style="padding:4px 12px;background:var(--teal);color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer">🔄 새로고침</button></div>';
+  html+='<div id="shift-swap-admin-list"><div style="text-align:center;padding:20px;color:var(--text3)">로딩 중...</div></div></div>';
   setTimeout(loadAllSupports, 100);
+  setTimeout(loadShiftSwapAdmin, 150);
   return html;
 }
+function loadShiftSwapAdmin(){
+  var box=document.getElementById('shift-swap-admin-list');
+  if(!box||!FB||!_db)return;
+  _db.collection('shift_swap_requests')
+    .orderBy('createdAt','desc').limit(20).get()
+    .then(function(snap){
+      if(snap.empty){box.innerHTML='<div style="text-align:center;padding:16px;color:var(--text3);font-size:12px">휴무 변경 요청 없음</div>';return;}
+      var statusColor={'대기':'var(--amber)','수락':'var(--green)','거절':'var(--red)'};
+      var html='';
+      snap.forEach(function(doc){
+        var x=doc.data();
+        var dt=x.createdAt?new Date(x.createdAt).toLocaleDateString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+        html+='<div style="padding:9px 10px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:4px;align-items:center">'
+          +'<span style="font-size:12px;font-weight:700">'+x.from+' → '+x.to+'</span>'
+          +'<span style="font-size:11px;color:var(--text2)">'+x.myDate+(x.theirDate?' ↔ '+x.theirDate:'')+'</span>'
+          +'<span style="flex:1"></span>'
+          +'<span style="font-size:10px;padding:1px 7px;background:'+statusColor[x.status||'대기']+';color:#fff;border-radius:8px;font-weight:700">'+(x.status||'대기')+'</span>'
+          +'<span style="font-size:10px;color:var(--text3)">'+dt+'</span>'
+          +(x.msg?'<div style="width:100%;font-size:10px;color:var(--text3)">💬 '+x.msg+'</div>':'')
+          +'</div>';
+      });
+      box.innerHTML='<div style="font-size:11px">'+html+'</div>';
+    }).catch(function(e){box.innerHTML='<div style="color:var(--red);font-size:11px;padding:10px">로드 실패: '+(e.message||'')+'</div>';});
+}
+
 function loadAllSupports(){
   if(!FB||!_db)return;
   var since=new Date(Date.now()-24*3600000).toISOString(); // 24시간
