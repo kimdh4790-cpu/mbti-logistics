@@ -1995,6 +1995,11 @@ function SP(pg,el){
       if(ca)ca.innerHTML=rDrivers();
     }).catch(function(e){console.warn('drivers SP get:',e);});
   }
+  // ★ v9.25: notice 페이지 벗어날 때 실시간 리스너 해제
+  if(S.page !== 'notice' && window._noticePanelListener){
+    window._noticePanelListener();
+    window._noticePanelListener = null;
+  }
   document.getElementById('ptitle').textContent=PT[pg]||pg;
   if(el){document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));el.classList.add('on');}
   // ★ 보안: 관리자 전용 페이지 권한 체크
@@ -11868,6 +11873,25 @@ window._noticeCache=window._noticeCache||[];
 
 function rNoticePanel(){
   if(!FB||!_db){return '<div style="padding:20px;text-align:center;color:var(--red)">⚠️ Firebase 연결 필요</div>';}
+
+  // ★ v9.25: 실시간 리스너 — drivers 컬렉션 변경 시 자동 갱신
+  if(!window._noticePanelListener){
+    window._noticePanelListener = _db.collection('drivers').onSnapshot(function(snap){
+      var all = ls('drivers');
+      snap.forEach(function(doc){
+        var d=doc.data(); d.fbId=doc.id;
+        var idx=all.findIndex(function(x){return x.fbId===doc.id||x.name===d.name;});
+        if(idx>=0) Object.assign(all[idx],d); else all.push(d);
+      });
+      lss('drivers',all);
+      // 공지 게시판이 현재 열려있으면 자동 갱신
+      if(S.page==='notice'){
+        var ca=document.getElementById('ca');
+        if(ca) ca.innerHTML=rNoticePanel();
+      }
+    },function(err){console.warn('[rNoticePanel] 리스너 오류:',err);});
+  }
+
   var drs=ls('drivers').filter(function(d){return d.is_active!==false&&!d.isNew&&d.status!=='pending';});
   var camps=['전체','부산1','부산2','부산3','대구2','대구2B','진주M'];
 
