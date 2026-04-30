@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<!-- ★ v9.25: sendLocalNoti SW.ready강화 + 진동최대화 + FCM notification필드 + SyntaxError수정 -->
+<!-- ★ v9.26: 세금계산서 1·2차 발행 시 최신본만 표시 (forEach 캐시 덮어쓰기 + find 첫 번째 매칭 버그 수정) -->
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -6306,9 +6306,10 @@ function sendStmtToDriver(i){
         var idx2=st[x.driver].findIndex(function(it){return it.month===x.month;});
         if(idx2>=0)st[x.driver][idx2]=note; else st[x.driver].push(note);
         localStorage.setItem('mbti_stmt_store',JSON.stringify(st));}catch(e){}
-      // ② Firebase 전송
+      // ② Firebase 전송 — docKey set 방식으로 같은 월 재전송 시 자동 덮어쓰기
       if(FB&&_db){
-        _db.collection('driver_notifications').add(note)
+        var stmtKey=(x.driver+'_stmt_'+x.month).replace(/\s/g,'_').replace(/[\/\\'"]/g,'');
+        _db.collection('driver_notifications').doc(stmtKey).set(note)
         .then(function(){toast('📤 '+x.driver+' 기사님께 정산 명세서 전달 완료! 기사 앱에서 확인 가능');})
         .catch(function(e){toast('📤 '+x.driver+' 명세서 보관함에 저장됨 (FB 실패: '+(e&&e.message||'')+')');});
       } else {
@@ -7068,54 +7069,63 @@ function DT(tab,el){
 }
 
 // ★ 기사 앱 — 세금계산서 이미지 보기 (Firebase Storage URL 또는 base64)
+// ★ v9.26: 같은 월에 1·2차 발행 시 항상 가장 최신(sentAt) 세금계산서만 표시
 function dViewTax(month, driver, btn){
   var drv=driver||S.curDriver;
   if(btn){btn.textContent='🔍 불러오는 중...';btn.disabled=true;setTimeout(function(){btn.textContent='🧾 세금계산서 이미지 보기';btn.disabled=false;},4000);}
-  // ① 기사 기기 localStorage (가장 빠름)
-  try{
-    var tk=JSON.parse(localStorage.getItem('mbti_drv_tax')||'{}');
-    var tkKey=(drv||'')+'_'+month;
-    if(tk[tkKey]){_showTaxImg(tk[tkKey],month);return;}
-  }catch(e){}
-  // ② 메모리(onSnapshot으로 받은 미삭제 알림)
-  if(window._drvNotes){
-    var found=Object.values(window._drvNotes).find(function(it){
-      return it.type==='tax_invoice'&&it.month===month;
-    });
-    if(found&&found.img){_showTaxImg(found.img,month);return;}
-  }
-  // ③ Firebase — 고정 키 직접 조회 (가장 확실한 방법)
+  var tkKey=(drv||'')+'_'+month;
+
+  // ★ Firebase 우선 — 가장 최신 세금계산서를 강제로 가져옴
   if(FB&&_db){
-    var docKey=(drv+'_'+month).replace(/\s/g,'_').replace(/[\/\\'"]/g,'');
-    toast('🔍 조회키: '+docKey);
+    var docKey=tkKey.replace(/\s/g,'_').replace(/[\/\\'"]/g,'');
     _db.collection('driver_notifications').doc(docKey).get()
     .then(function(doc){
+      var fbItem=null;
       if(doc.exists){
         var d=doc.data();
-        if(d.img){
-          try{var tk2=JSON.parse(localStorage.getItem('mbti_drv_tax')||'{}');
-            tk2[(drv||'')+'_'+month]=d.img;
-            localStorage.setItem('mbti_drv_tax',JSON.stringify(tk2));}catch(e){}
-          _showTaxImg(d.img,month);
-        } else {
-          toast('❌ 이미지 데이터 없음 — 관리자에게 재전달 요청');
-        }
-      } else {
-        // 혹시 구버전 add()로 저장된 경우 쿼리 fallback
-        _db.collection('driver_notifications').where('driver','==',drv).get()
-        .then(function(snap){
-          var matched=null;
-          snap.forEach(function(d2){var dd=d2.data();if(dd.type==='tax_invoice'&&dd.month===month&&dd.img)matched=dd;});
-          if(matched){_showTaxImg(matched.img,month);}
-          else{toast('❌ 세금계산서가 아직 전달되지 않았습니다\n관리자에게 요청해 주세요');}
-        }).catch(function(){toast('❌ 세금계산서 미전달 — 관리자에게 요청해 주세요');});
+        if(d&&d.img&&d.type==='tax_invoice'&&d.month===month) fbItem=d;
       }
+      // 항상 fallback 쿼리도 같이 돌려서 sentAt 가장 최신 선택 (구버전 add() 데이터 포함)
+      _db.collection('driver_notifications').where('driver','==',drv).get()
+      .then(function(snap){
+        var latest=fbItem;
+        snap.forEach(function(d2){
+          var dd=d2.data();
+          if(dd.type!=='tax_invoice'||dd.month!==month||!dd.img) return;
+          if(!latest||(dd.sentAt||'').localeCompare(latest.sentAt||'')>0) latest=dd;
+        });
+        if(latest&&latest.img){
+          // localStorage 캐시 갱신
+          try{var tk2=JSON.parse(localStorage.getItem('mbti_drv_tax')||'{}');
+            tk2[tkKey]=latest.img;
+            localStorage.setItem('mbti_drv_tax',JSON.stringify(tk2));}catch(e){}
+          _showTaxImg(latest.img,month);
+        } else {
+          toast('❌ 세금계산서가 아직 전달되지 않았습니다\n관리자에게 요청해 주세요');
+        }
+      }).catch(function(){
+        // fallback 쿼리 실패해도 docKey 결과로 진행
+        if(fbItem&&fbItem.img) _showTaxImg(fbItem.img,month);
+        else toast('❌ 세금계산서 미전달 — 관리자에게 요청해 주세요');
+      });
     }).catch(function(e){
       toast('❌ 조회 오류: '+e.message);
     });
-  } else {
-    toast('❌ Firebase 미연결 — 앱을 새로고침 해주세요');
+    return;
   }
+
+  // ★ Firebase 미연결 시 (오프라인) — 메모리/캐시 폴백
+  if(window._drvNotes){
+    var memList=Object.values(window._drvNotes).filter(function(it){
+      return it.type==='tax_invoice'&&it.month===month&&it.img;
+    }).sort(function(a,b){return (b.sentAt||'').localeCompare(a.sentAt||'');});
+    if(memList[0]){_showTaxImg(memList[0].img,month);return;}
+  }
+  try{
+    var tk=JSON.parse(localStorage.getItem('mbti_drv_tax')||'{}');
+    if(tk[tkKey]){_showTaxImg(tk[tkKey],month);return;}
+  }catch(e){}
+  toast('❌ 오프라인 — 인터넷 연결 후 다시 시도해주세요');
 }
 function _showTaxImg(imgUrl, month){
   var mo=document.createElement('div');
@@ -7191,8 +7201,16 @@ function checkDriverNotifications(){
         if(it.type==='tax_invoice'&&it.img&&it.month){
           try{
             var tk=JSON.parse(localStorage.getItem('mbti_drv_tax')||'{}');
-            tk[(it.driver||S.curDriver||'')+'_'+it.month]=it.img;
-            localStorage.setItem('mbti_drv_tax',JSON.stringify(tk));
+            var k=(it.driver||S.curDriver||'')+'_'+it.month;
+            // ★ v9.26: 같은 키에 더 최신(sentAt) 데이터가 이미 있으면 덮어쓰지 않음
+            //         (1·2차 발행 시 forEach 순서로 인한 오래된 데이터 덮어쓰기 버그 차단)
+            var prev=tk[k+'__sentAt']||'';
+            var cur=it.sentAt||'';
+            if(!tk[k] || cur.localeCompare(prev)>=0){
+              tk[k]=it.img;
+              tk[k+'__sentAt']=cur;
+              localStorage.setItem('mbti_drv_tax',JSON.stringify(tk));
+            }
           }catch(e){}
         }
       });
@@ -7239,6 +7257,21 @@ function checkDriverNotifications(){
         if(sentMs && (Date.now()-sentMs > 7*24*3600000))return false;
         return true;
       });
+      // ★ v9.25: 같은 (type+month) 조합은 가장 최신(sentAt) 1건만 표시
+      //   → 관리자 수정·재전송 시 기존 알림이 1차/2차로 누적되어 보이는 문제 차단
+      //   → 정산명세서 add() 누적분 + 세금계산서 1·2차 모두 자동으로 최신만 노출
+      var bestByKey={};
+      unseenItems.forEach(function(it){
+        if(it.type!=='tax_invoice'&&it.type!=='settlement'){
+          bestByKey['_other_'+it._id]=it; return;
+        }
+        var k=it.type+'|'+(it.month||'');
+        if(!bestByKey[k] || (it.sentAt||'').localeCompare(bestByKey[k].sentAt||'')>0){
+          bestByKey[k]=it;
+        }
+      });
+      unseenItems=Object.values(bestByKey)
+        .sort(function(a,b){return (b.sentAt||'').localeCompare(a.sentAt||'');});
       if(unseenItems.length===0){
         // ★ v10.0: unseen이 0개이면 기존 박스 제거 (자꾸 뜨는 문제 해결)
         var existing0b=document.getElementById('drv-notification-box');
