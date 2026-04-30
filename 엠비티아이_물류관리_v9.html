@@ -10552,15 +10552,12 @@ function parseCoupangExcel(inp){
           // ★ v9.25: 기존 정산 완료/승인된 항목 재업로드 시 상태 보호
           //   → 금액·라우트 데이터만 갱신, status·taxSent·paidAt 등 보존
           var prev=settlements[existing];
-          var protectedFields={
-            status:    prev.status,      // 완료/정산예정 — 절대 덮어쓰지 않음
-            taxSent:   prev.taxSent,     // 세금계산서 전달 여부
-            taxSentAt: prev.taxSentAt,   // 세금계산서 전달 일시
-            paidAt:    prev.paidAt,      // 지급 완료 일시
-            fbId:      prev.fbId,        // Firebase 문서 ID
-            createdAt: prev.createdAt,   // 최초 생성 일시
-            sharedAt:  prev.sharedAt,    // 공유 일시
-          };
+          // ★ v9.25: undefined인 필드는 protectedFields에 포함 안 함
+          //   (sharedAt 등 없는 기존 데이터 → Firebase undefined 오류 차단)
+          var protectedFields={};
+          ['status','taxSent','taxSentAt','paidAt','fbId','createdAt','sharedAt'].forEach(function(k){
+            if(prev[k]!==undefined) protectedFields[k]=prev[k];
+          });
           // 금액·라우트 데이터 갱신 (entry에서 status 제거 후 병합)
           var updateData=Object.assign({},entry);
           delete updateData.status;
@@ -10573,13 +10570,23 @@ function parseCoupangExcel(inp){
       });
       lss('settlements',settlements);
       // ★ Firebase에도 자동 저장 (다른 기기 동기화용)
+      // ★ v9.25: undefined 필드 제거 후 저장 (sharedAt 등 없는 필드 Firebase 오류 차단)
+      function _cleanUndef(obj){
+        var clean={};
+        Object.keys(obj).forEach(function(k){
+          if(obj[k]!==undefined&&obj[k]!==null||k==='taxSent') clean[k]=obj[k]===undefined?false:obj[k];
+          else if(obj[k]!==undefined) clean[k]=obj[k];
+        });
+        return clean;
+      }
       var fbOk=0,fbFail=0;
       if(FB&&_db){
         var promises=[];
         settlements.forEach(function(x){
           if(x.month!==month)return; // 이번 업로드 월만
           var docId=x.fbId||x.driver+'_'+x.month;
-          promises.push(_db.collection('settlements').doc(docId).set(x,{merge:true})
+          var cleanX=_cleanUndef(x);
+          promises.push(_db.collection('settlements').doc(docId).set(cleanX,{merge:true})
             .then(function(){fbOk++;x.fbId=docId;})
             .catch(function(e){fbFail++;console.warn('FB 저장 실패:',x.driver,e.message);}));
         });
