@@ -10549,9 +10549,24 @@ function parseCoupangExcel(inp){
           createdAt:new Date().toISOString()
         };
         if(existing>=0){
-          // ★ finc는 항상 새 값으로 덮어쓰기 (진주 OFF 설정 반영)
-          settlements[existing]=Object.assign(settlements[existing],entry);
-          settlements[existing].finc=entry.finc;
+          // ★ v9.25: 기존 정산 완료/승인된 항목 재업로드 시 상태 보호
+          //   → 금액·라우트 데이터만 갱신, status·taxSent·paidAt 등 보존
+          var prev=settlements[existing];
+          var protectedFields={
+            status:    prev.status,      // 완료/정산예정 — 절대 덮어쓰지 않음
+            taxSent:   prev.taxSent,     // 세금계산서 전달 여부
+            taxSentAt: prev.taxSentAt,   // 세금계산서 전달 일시
+            paidAt:    prev.paidAt,      // 지급 완료 일시
+            fbId:      prev.fbId,        // Firebase 문서 ID
+            createdAt: prev.createdAt,   // 최초 생성 일시
+            sharedAt:  prev.sharedAt,    // 공유 일시
+          };
+          // 금액·라우트 데이터 갱신 (entry에서 status 제거 후 병합)
+          var updateData=Object.assign({},entry);
+          delete updateData.status;
+          delete updateData.createdAt;
+          settlements[existing]=Object.assign(prev, updateData, protectedFields);
+          settlements[existing].finc=entry.finc; // ★ 인센티브 항상 최신값
           updated++;
         }
         else{settlements.push(entry); added++;}
@@ -10583,8 +10598,13 @@ function parseCoupangExcel(inp){
           ncDrivers++;
         }
       });
+      // ★ 완료 상태 보호된 건수 집계
+      var protectedCount=0;
+      settlements.forEach(function(x){if(x.month===month&&x.status==='완료')protectedCount++;});
       var ncMsg=ncDrivers?('\n💡 미계약: '+ncDrivers+'명 / '+ncTotalCnt+'건 / ₩'+ncTotalAmt.toLocaleString()):'';
-      var skipMsg=skippedIds.length?('\n⚠️ 미매칭: '+skippedIds.slice(0,5).join(', ')+(skippedIds.length>5?'... 외'+(skippedIds.length-5)+'명':'')):'';      toast('✅ 쿠팡 엑셀 정산 완료: '+added+'건 등록 / '+updated+'건 갱신 / '+skipped+'건 미매칭'+ncMsg+skipMsg);
+      var skipMsg=skippedIds.length?('\n⚠️ 미매칭: '+skippedIds.slice(0,5).join(', ')+(skippedIds.length>5?'... 외'+(skippedIds.length-5)+'명':'')):'';
+      var protMsg=protectedCount?('\n🔒 완료 보호: '+protectedCount+'건 (상태 유지)'):'';
+      toast('✅ 쿠팡 엑셀 정산 완료: '+added+'건 등록 / '+updated+'건 갱신 / '+skipped+'건 미매칭'+protMsg+ncMsg+skipMsg);
       SP('settle',null);
     }catch(err){console.error(err);toast('❌ 파싱 오류: '+err.message);}
   };
