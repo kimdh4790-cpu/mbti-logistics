@@ -10600,6 +10600,7 @@ function parseCoupangExcel(inp){
         console.log('[쿠팡총매출] 저장 완료:',ctKey,'→ VAT포함 ₩'+ctData.vat_incl.toLocaleString());
       }catch(e){console.warn('[쿠팡총매출] 저장 실패:',e);}
       var added=0,skipped=0,updated=0,skippedIds=[];
+      var ncDrivers=0,ncTotalCnt=0,ncTotalAmt=0;  // ★ 미계약건 집계 (v9.25 fix)
 
       Object.keys(drvMap).forEach(function(userId){
         var cleanId=userId.replace(/@df$/i,'').replace(/@.*$/,'').trim();
@@ -10618,6 +10619,7 @@ function parseCoupangExcel(inp){
         // ★ 미계약건: 엑셀 총금액 그대로 사용
         var nocontAmt=dm.nocontAmt||0;
         var nocontCnt=dm.nocontCnt||0;
+        if(nocontAmt>0||nocontCnt>0){ncDrivers++;ncTotalCnt+=nocontCnt;ncTotalAmt+=nocontAmt;}  // ★ v9.25 fix
 
         // ★ 인센티브: 기사별 설정 기준 (Firebase에서 로드된 설정 사용)
         var fincVal=0;
