@@ -3038,7 +3038,7 @@ async function syncFirebaseSettlements(){
   try{
     toast('🔄 Firebase 동기화 검사 중...');
     var local=ls('settlements');
-    var snap=await _db.collection('settlements').get();
+    var snap=await _db.collection('settlements').orderBy('month','desc').limit(500).get();
     var fbMap={},fbArr=[];
     snap.forEach(function(d){
       var x=d.data();x.fbId=d.id;
