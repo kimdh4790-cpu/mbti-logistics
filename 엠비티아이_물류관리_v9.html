@@ -2854,6 +2854,7 @@ function rSettle(){
         <input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="parseInsExcelSettle(this)">
       </label>
       <button onclick="openEmergencyAdmin()" style="padding:8px 14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🚨 긴급 배송기록 조회</button>
+      <button onclick="openLiveMap()" style="padding:8px 14px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗺️ 실시간 지도</button>
       <button onclick="exportAllSettlements()" style="padding:8px 14px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⬇️ 전체 정산 다운로드</button>
       <button onclick="openTaxStore()" style="padding:8px 14px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗂 기사별 세금계산서 보관함</button>
       <button id="jinju-inc-btn" onclick="openIncPanel()" style="padding:8px 14px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⚙️ 기사별 인센 설정</button>
@@ -3274,7 +3275,151 @@ async function bulkSendSettlements(camp, month){
   alert('✅ 일괄 전달 완료\n\n성공: '+( done-failed)+'건\n실패: '+failed+'건\n\n실패 건은 개별 명세서에서 수동 전달해주세요.');
 }
 
-// ★ v9.25: 관리자 긴급 배송기록 조회
+// ★ v9.25: 기사 실시간 위치 Firebase 전송 (30초마다)
+function _startDriverLocTracking(){
+  if(S.curMode==='admin') return;
+  if(window._drvLocInterval) return;
+  if(!navigator.geolocation) return;
+  var me = ls('drivers').find(function(d){return d.name===S.curDriver;}) || {};
+  if(!me.name) return;
+
+  function sendLoc(){
+    navigator.geolocation.getCurrentPosition(function(pos){
+      if(!FB || !_db) return;
+      var data = {
+        name: me.name,
+        camp: me.camp||'',
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        updatedAt: new Date().toISOString(),
+        date: today()
+      };
+      _db.collection('driver_locations').doc(me.name).set(data).catch(function(){});
+    }, function(){}, {enableHighAccuracy:true, timeout:8000, maximumAge:20000});
+  }
+  sendLoc();
+  window._drvLocInterval = setInterval(sendLoc, 30000);
+}
+
+// ★ v9.25: 관리자 실시간 지도 (기사 위치 + 긴급배송 핀)
+async function openLiveMap(){
+  document.getElementById('live-map-mo')?.remove();
+
+  // Google Vision API 키로 Maps도 사용
+  var apiKey = '';
+  if(FB && _db){
+    try{
+      var doc = await _db.collection('settings').doc('claude_config').get();
+      if(doc.exists) apiKey = doc.data().googleApiKey || '';
+    }catch(e){}
+  }
+  if(!apiKey) apiKey = localStorage.getItem('mbti_google_api_key')||'';
+
+  // 기사 위치 + 긴급배송 로드
+  var driverLocs = [], emerLocs = [];
+  if(FB && _db){
+    try{
+      var snap1 = await _db.collection('driver_locations').where('date','==',today()).get();
+      snap1.forEach(function(d){ driverLocs.push(d.data()); });
+    }catch(e){}
+    try{
+      var snap2 = await _db.collection('emergency_deliveries').orderBy('savedAt','desc').limit(100).get();
+      snap2.forEach(function(d){ var x=d.data(); if(x.gps&&x.gps.lat) emerLocs.push(x); });
+    }catch(e){}
+  }
+
+  var center = driverLocs.length ? driverLocs[0] : {lat:35.1796,lng:129.0756}; // 부산 기본값
+
+  document.body.insertAdjacentHTML('beforeend',`
+  <div id="live-map-mo" style="position:fixed;inset:0;background:#000;z-index:9999;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(0,0,0,.8);color:#fff">
+      <span style="font-size:15px;font-weight:700">🗺️ 실시간 지도 — 기사 ${driverLocs.length}명 활동 중</span>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span style="font-size:11px;color:#aaa">🔴 기사 위치 &nbsp; 🔵 긴급배송</span>
+        <button onclick="document.getElementById('live-map-mo').remove()" style="padding:6px 14px;background:#dc2626;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">✕ 닫기</button>
+      </div>
+    </div>
+    <div id="live-map-canvas" style="flex:1"></div>
+    <div style="padding:8px 12px;background:rgba(0,0,0,.7);display:flex;gap:6px;overflow-x:auto" id="live-map-legend"></div>
+  </div>`);
+
+  // Google Maps 로드
+  if(!window.google || !window.google.maps){
+    var sc = document.createElement('script');
+    sc.src = 'https://maps.googleapis.com/maps/api/js?key='+apiKey+'&language=ko';
+    sc.onload = function(){ _renderLiveMap(center, driverLocs, emerLocs); };
+    document.head.appendChild(sc);
+  } else {
+    _renderLiveMap(center, driverLocs, emerLocs);
+  }
+}
+
+function _renderLiveMap(center, driverLocs, emerLocs){
+  var mapDiv = document.getElementById('live-map-canvas');
+  if(!mapDiv) return;
+  var map = new google.maps.Map(mapDiv, {
+    center: {lat: center.lat, lng: center.lng},
+    zoom: 13,
+    mapTypeId: 'roadmap',
+    disableDefaultUI: false
+  });
+
+  var infoWin = new google.maps.InfoWindow();
+  var legend = document.getElementById('live-map-legend');
+
+  // 기사 위치 핀 (빨간색)
+  driverLocs.forEach(function(d){
+    if(!d.lat || !d.lng) return;
+    var marker = new google.maps.Marker({
+      position: {lat: d.lat, lng: d.lng},
+      map: map,
+      title: d.name,
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 10,
+        fillColor: '#dc2626',
+        fillOpacity: 1,
+        strokeColor: '#fff',
+        strokeWeight: 2
+      },
+      label: {text: d.name.slice(0,1), color: '#fff', fontSize: '11px', fontWeight: 'bold'}
+    });
+    marker.addListener('click', function(){
+      var updated = d.updatedAt ? d.updatedAt.slice(11,16) : '';
+      infoWin.setContent('<div style="padding:6px;font-size:13px"><b>🚗 '+d.name+'</b><br>캠프: '+(d.camp||'-')+'<br>최근 위치: '+updated+'</div>');
+      infoWin.open(map, marker);
+    });
+    if(legend) legend.innerHTML += '<span style="color:#fff;font-size:11px;white-space:nowrap;background:rgba(220,38,38,.8);padding:3px 8px;border-radius:12px">🔴 '+d.name+'</span> ';
+  });
+
+  // 긴급배송 핀 (파란색)
+  emerLocs.forEach(function(e){
+    if(!e.gps || !e.gps.lat) return;
+    var marker = new google.maps.Marker({
+      position: {lat: e.gps.lat, lng: e.gps.lng},
+      map: map,
+      title: e.recipient||'배송',
+      icon: {
+        path: google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
+        scale: 6,
+        fillColor: '#2563eb',
+        fillOpacity: 1,
+        strokeColor: '#fff',
+        strokeWeight: 2
+      }
+    });
+    marker.addListener('click', function(){
+      infoWin.setContent('<div style="padding:6px;font-size:12px"><b>📦 긴급배송</b><br>'+(e.recipient||'')+'<br>'+(e.address||'')+'<br>기사: '+(e.driver||'-')+'<br>'+(e.savedAt||'').slice(0,16)+'</div>');
+      infoWin.open(map, marker);
+    });
+  });
+
+  // 핀 없으면 부산 전체 보기
+  if(!driverLocs.length && !emerLocs.length){
+    map.setCenter({lat:35.1796, lng:129.0756});
+    map.setZoom(11);
+  }
+}
 async function openEmergencyAdmin(){
   var records=[];
   // Firebase에서 최신 50건 조회
@@ -9001,7 +9146,7 @@ function dHome(){
   // ★ 공지사항 로드 트리거 (비동기)
   if(FB&&_db&&S.curDriver){setTimeout(_loadDrvNotices,100);}
   // ★ v9.12: 마감 카운트다운 타이머 + 캠프 지원 알림 로드
-  setTimeout(function(){_startDeadlineTick();_loadCampSupports();_startGeoWatch();},150);
+  setTimeout(function(){_startDeadlineTick();_loadCampSupports();_startGeoWatch();_startDriverLocTracking();},150);
   // ★ v9.12: 알림 권한 요청 (1회) + 백그라운드 리스너 시작
   if(typeof _scheduleNotiInit==='function')_scheduleNotiInit();
 
@@ -9422,7 +9567,7 @@ async function emerOcrScan(file){
       var addr = lines[idx];
       if(idx+1 < lines.length) {
         var next = lines[idx+1];
-        if(next.match(/\d+호|아파트|오피스텔|빌라|동\s*\d+/)) addr += ' ' + next;
+        if(next && !next.match(/^[\d][\d\.\,]{8,}/)) addr += ' ' + next;
       }
       if(idx+2 < lines.length) {
         var next2 = lines[idx+2];
