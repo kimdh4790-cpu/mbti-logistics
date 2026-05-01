@@ -9388,13 +9388,16 @@ async function emerOcrScan(file){
 
     // 쿠팡 운송장에서 정보 파싱
     var lines = ocrText.split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
+    var fullText = ocrText.replace(/\s+/g,' ');
 
-    // 주문번호: 7.XXXX.XXXX.XXXX 패턴
-    var orderMatch = ocrText.match(/\d+\.\d{4}\.\d{4}\.\d{4}/);
-    // 운송장번호: 10.XXXX.XXXX.XXXX 패턴
-    var trackingMatch = ocrText.match(/1[0-9]\.\d{4}\.\d{4}\.\d{4}/);
+    // 주문번호: 7.XXXX.XXXX.XXXX 또는 7XXXXXXXXXXXXXX (구분자 유연하게)
+    var orderMatch = fullText.match(/7[\.\-\s]?\d{3,4}[\.\-\s]\d{4}[\.\-\s]\d{4}/)
+                  || fullText.match(/7\d{12,13}/);
+    // 운송장번호: 10.XXXX.XXXX.XXXX 또는 10XXXXXXXXXXXXXX
+    var trackingMatch = fullText.match(/1[0-9][\.\-\s]?\d{4}[\.\-\s]\d{4}[\.\-\s]\d{4}/)
+                     || fullText.match(/1[0-9]\d{12,13}/);
     // 수령인: 김*우 패턴
-    var recipientMatch = ocrText.match(/[가-힣]+\*[가-힣]+/);
+    var recipientMatch = fullText.match(/[가-힣]+\*[가-힣]+/);
     // 주소: 구/동/로/길/아파트 포함 라인
     var addrLine = lines.find(function(l){ return l.match(/구|동|로|길|아파트|오피스텔|빌라/); });
     // 배송메모: 문 앞, 경비실 등
