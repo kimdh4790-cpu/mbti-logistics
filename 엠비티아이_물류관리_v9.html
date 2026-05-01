@@ -2795,7 +2795,8 @@ function rSettle(){
         </td>
       </tr>`;}).join('');
     var totIncome=gRows.reduce(function(s,x){return s+calcNet(x).income;},0);
-    var totCoupang=gRows.reduce(function(s,x){return s+(+x.coupangTotal||calcNet(x).damt+calcNet(x).ramt+calcNet(x).fresh+calcNet(x).finc);},0); // ★ 엑셀 정산총괄 금액(총합계) 기준
+    var totCoupang=gRows.reduce(function(s,x){var r=calcNet(x);return s+r.damt+r.ramt+r.fresh+r.finc+r.inc-r.dmg;},0); // VAT 별도
+    var totCoupangVat=Math.round(totCoupang*1.1); // ★ 부가세 포함 표시용
     var totSupply=gRows.reduce(function(s,x){return s+calcNet(x).supplyAmt;},0);
     var totTax=gRows.reduce(function(s,x){return s+calcNet(x).tax;},0);
     var totEmp=gRows.reduce(function(s,x){return s+calcNet(x).emp;},0);
@@ -2804,7 +2805,7 @@ function rSettle(){
     var totIncomeVat=Math.round(totIncome*1.1); // ★ 기사 세금계산서 부가세 포함액
     var summary='<div style="display:flex;flex-wrap:wrap;gap:6px;padding:6px 0 8px;font-size:11px">'
       +'<span style="padding:4px 10px;background:rgba(16,185,129,.1);border-radius:20px;color:var(--green)">👥 '+gRows.length+'명</span>'
-      +'<span style="padding:4px 10px;background:rgba(59,130,246,.1);border-radius:20px;color:#3b82f6">📦 쿠팡 총매출 <strong>₩'+totCoupang.toLocaleString()+'</strong></span>'
+      +'<span style="padding:4px 10px;background:rgba(59,130,246,.1);border-radius:20px;color:#3b82f6">📦 쿠팡 총매출(VAT포함) <strong>₩'+totCoupangVat.toLocaleString()+'</strong></span>'
       +'<span style="padding:4px 10px;background:rgba(5,150,105,.1);border-radius:20px;color:#059669">🧾 기사 세금계산서 <strong>₩'+totIncomeVat.toLocaleString()+'</strong> <small style="font-size:9px;opacity:.7">VAT포함</small></span>'
       +'<span style="padding:4px 10px;background:rgba(245,158,11,.1);border-radius:20px;color:#d97706">🏥 고용보험 <strong>₩'+totEmp.toLocaleString()+'</strong></span>'
       +'<span style="padding:4px 10px;background:rgba(239,68,68,.1);border-radius:20px;color:#dc2626">⛑ 산재보험 <strong>₩'+totWork.toLocaleString()+'</strong></span>'
@@ -2821,7 +2822,7 @@ function rSettle(){
       +'<span style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;color:var(--text3)">'+gRows.length+'명</span><span id="'+gid+'_a" style="font-size:11px;color:var(--text3)">'+arrow+'</span></span>'
       +'</div>'
       +'<div style="display:flex;flex-wrap:wrap;gap:5px;font-size:10px">'
-      +'<span style="padding:2px 8px;background:rgba(59,130,246,.12);border-radius:12px;color:#3b82f6">📦 쿠팡 총매출 ₩'+totCoupang.toLocaleString()+'</span>'
+      +'<span style="padding:2px 8px;background:rgba(59,130,246,.12);border-radius:12px;color:#3b82f6">📦 쿠팡 총매출(VAT포함) ₩'+totCoupangVat.toLocaleString()+'</span>'
       +'<span style="padding:2px 8px;background:rgba(5,150,105,.12);border-radius:12px;color:#059669">🧾 기사 세금계산서 ₩'+totIncomeVat.toLocaleString()+' <small style="font-size:8px">VAT포함</small></span>'
       +'<span style="padding:2px 8px;background:rgba(245,158,11,.12);border-radius:12px;color:#d97706">🏥 고용+산재 ₩'+(totEmp+totWork).toLocaleString()+'</span>'
       +(totDmg>0?'<span style="padding:2px 8px;background:rgba(239,68,68,.15);border-radius:12px;color:#b91c1c">⚠️ 분실·파손 -₩'+totDmg.toLocaleString()+'</span>':'')
