@@ -9390,6 +9390,11 @@ async function emerOcrScan(file){
     var lines = ocrText.split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
     var fullText = ocrText.replace(/\s+/g,' ');
 
+    // 디버그: OCR 텍스트 앞 200자 표시
+    if(status) status.innerHTML = '<span style="color:var(--blue);font-size:10px">OCR: '+fullText.slice(0,200)+'</span>';
+    await new Promise(function(r){setTimeout(r,3000);});
+    if(status) status.innerHTML = '<span style="color:var(--blue)">🤖 파싱 중...</span>';
+
     // 주문번호: 7.XXXX.XXXX.XXXX 또는 7XXXXXXXXXXXXXX (구분자 유연하게)
     var orderMatch = fullText.match(/7[\.\-\s]?\d{3,4}[\.\-\s]\d{4}[\.\-\s]\d{4}/)
                   || fullText.match(/7\d{12,13}/);
