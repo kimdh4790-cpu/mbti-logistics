@@ -5646,8 +5646,8 @@ function calcNet(x){
   //          엑셀의 회사 단가/저장된 x.damt 흔적 차단 → routeDetails 우선
   //          정책: 엑셀 단가 = 회사 단가(매출), 기사 단가 = 앱 관리자 RPRICE
   var _rdList = x.routeDetails || [];
-  var _damtRP = _rdList.reduce(function(s,rd){return s+(rd.cnt||0)*(RPRICE[rd.route]||rd.unitPrice||0);},0);
-  var _ramtRP = _rdList.reduce(function(s,rd){return s+(rd.ret||0)*(RPRICE[rd.route]||rd.unitPrice||0);},0);
+  var _damtRP = _rdList.reduce(function(s,rd){return s+(rd.cnt||0)*((rd.unitPrice&&rd.unitPrice>0?rd.unitPrice:0)||RPRICE[rd.route]||0);},0);
+  var _ramtRP = _rdList.reduce(function(s,rd){return s+(rd.ret||0)*((rd.unitPrice&&rd.unitPrice>0?rd.unitPrice:0)||RPRICE[rd.route]||0);},0);
   var damt=isYong ? dcnt*yDel : (_rdList.length ? _damtRP : (+x.damt||+x.delivAmt||+x.base||0));
   var ramt=isYong ? rcnt*yRet : (_rdList.length ? _ramtRP : (+x.ramt||+x.retAmt||0));
   var fresh=+x.fresh||+x.freshAmt||0;
@@ -5866,7 +5866,7 @@ function viewStmt(i){
       <table class="route-tbl" style="margin-top:0">
         <thead><tr><th>라우트</th><th style="text-align:right">배송건</th><th style="text-align:right;color:var(--amber)">반품건</th><th style="text-align:right">단가</th><th style="text-align:right">배송금액</th><th style="text-align:right;color:var(--amber)">반품금액</th><th style="text-align:right;color:var(--green)">소계</th></tr></thead>
         <tbody>
-        ${rdList.map(function(rd,ri){var up=RPRICE[rd.route]||rd.unitPrice||0;var da=(rd.cnt||0)*up;var ra=rd.retAmt!=null?rd.retAmt:(rd.ret||0)*up;
+        ${rdList.map(function(rd,ri){var up=rd.unitPrice||RPRICE[rd.route]||0;var da=(rd.cnt||0)*up;var ra=rd.retAmt!=null?rd.retAmt:(rd.ret||0)*up;
         var routeCell=_isAdmin
           ?`<td><button onclick="stEditRoute(${i},${ri})" style="padding:2px 7px;font-size:12px;background:transparent;border:1px dashed var(--blue);border-radius:4px;color:var(--blue);cursor:pointer;font-weight:700;white-space:nowrap" title="라우트 수정">${rd.route} ✏️</button></td>`
           :`<td><strong>${rd.route}</strong></td>`;
@@ -5890,9 +5890,9 @@ function viewStmt(i){
           <td style="text-align:right">${rdList.reduce(function(s,rd){return s+(rd.cnt||0);},0).toLocaleString()}</td>
           <td style="text-align:right;color:var(--amber)">${(function(){var t=rdList.reduce(function(s,rd){return s+(rd.ret||0);},0);return t>0?t.toLocaleString():'—';})()}</td>
           <td>—</td>
-          <td style="text-align:right">₩${rdList.reduce(function(s,rd){var up=RPRICE[rd.route]||rd.unitPrice||0;return s+(rd.cnt||0)*up;},0).toLocaleString()}</td>
-          <td style="text-align:right;color:var(--amber)">${(function(){var t=rdList.reduce(function(s,rd){var up=RPRICE[rd.route]||rd.unitPrice||0;return s+(rd.ret||0)*up;},0);return t>0?'₩'+t.toLocaleString():'—';})()}</td>
-          <td style="text-align:right;color:var(--green)">₩${rdList.reduce(function(s,rd){var up=RPRICE[rd.route]||rd.unitPrice||0;return s+(rd.cnt||0)*up+(rd.retAmt!=null?rd.retAmt:(rd.ret||0)*up);},0).toLocaleString()}</td>
+          <td style="text-align:right">₩${rdList.reduce(function(s,rd){var up=rd.unitPrice||RPRICE[rd.route]||0;return s+(rd.cnt||0)*up;},0).toLocaleString()}</td>
+          <td style="text-align:right;color:var(--amber)">${(function(){var t=rdList.reduce(function(s,rd){var up=rd.unitPrice||RPRICE[rd.route]||0;return s+(rd.ret||0)*up;},0);return t>0?'₩'+t.toLocaleString():'—';})()}</td>
+          <td style="text-align:right;color:var(--green)">₩${rdList.reduce(function(s,rd){var up=rd.unitPrice||RPRICE[rd.route]||0;return s+(rd.cnt||0)*up+(rd.retAmt!=null?rd.retAmt:(rd.ret||0)*up);},0).toLocaleString()}</td>
         </tr>
         </tbody>
       </table>
