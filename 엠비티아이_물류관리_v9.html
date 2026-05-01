@@ -9324,18 +9324,20 @@ async function emerOcrScan(file){
   if(!file) return;
   var status = document.getElementById('emer-ocr-status');
 
-  // API 키 — localStorage 캐시 우선, 없으면 Firebase에서 로드
-  var apiKey = localStorage.getItem('mbti_claude_api_key')||'';
-  if(!apiKey && FB && _db){
+  // API 키 — 항상 Firebase에서 최신값 로드 (캐시 사용 안 함)
+  var apiKey = '';
+  if(FB && _db){
     try{
       if(status) status.innerHTML = '<span style="color:var(--blue)">🔑 설정 불러오는 중...</span>';
       var doc = await _db.collection('settings').doc('claude_config').get();
       if(doc.exists && doc.data().apiKey){
-        apiKey = doc.data().apiKey;
-        localStorage.setItem('mbti_claude_api_key', apiKey);
+        apiKey = doc.data().apiKey.trim();
       }
     }catch(e){ console.warn('Firebase 키 로드 실패:', e); }
   }
+  // Firebase 실패 시 localStorage 폴백
+  if(!apiKey) apiKey = localStorage.getItem('mbti_claude_api_key')||'';
+
   if(!apiKey){
     if(status) status.innerHTML = '<span style="color:var(--red)">❌ API 키 없음 — 관리자에게 문의하세요</span>';
     return;
