@@ -2749,25 +2749,51 @@ function rSettle(){
         <td><span class="badge ${jobBadge}" style="font-size:10px">${x.jobsub||'쿠팡'}</span></td>
         <td>${x.month}</td>
         <td style="color:var(--green)">₩${r.income.toLocaleString()}</td>
+        <td style="color:#059669;font-size:11px">₩${r.supplyAmt.toLocaleString()}</td>
         <td style="color:var(--red);font-size:11px">₩${r.emp.toLocaleString()}</td>
+        <td style="color:#dc2626;font-size:11px">₩${r.work.toLocaleString()}</td>
         <td style="font-weight:700;color:var(--purple)">₩${r.net.toLocaleString()}</td>
         <td><span class="badge ${x.status==='완료'?'b-green':'b-wait'}">${x.status}</span></td>
         <td style="display:flex;gap:3px;flex-wrap:wrap">
           <button class="btn btn-sm" onclick="viewStmt(${i})">명세서</button>
           ${x.status==='정산예정'?`<button class="btn btn-sm btn-teal" onclick="appSettle(${i})">승인</button>`:''}
           <button class="btn btn-sm" style="background:#16a34a;color:#fff;border:none" onclick="openTaxInvoice(${i})">🧾 세금계산서${x.taxSent?'<span style="font-size:9px;margin-left:2px">✅</span>':'<span style="font-size:9px;margin-left:2px;color:#fbbf24">⬜</span>'}</button>
+          <button class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:1px solid #fca5a5" onclick="delSettle(${i})">🗑</button>
         </td>
       </tr>`;}).join('');
-    var summary='<div style="font-size:11px;color:var(--text2);padding:4px 0 6px">'+gRows.length+'명 · 실지급 합계 <strong style="color:var(--purple)">₩'+totNet.toLocaleString()+'</strong></div>';
+    var totIncome=gRows.reduce(function(s,x){return s+calcNet(x).income;},0);
+    var totSupply=gRows.reduce(function(s,x){return s+calcNet(x).supplyAmt;},0);
+    var totTax=gRows.reduce(function(s,x){return s+calcNet(x).tax;},0);
+    var totEmp=gRows.reduce(function(s,x){return s+calcNet(x).emp;},0);
+    var totWork=gRows.reduce(function(s,x){return s+calcNet(x).work;},0);
+    var totDmg=gRows.reduce(function(s,x){return s+(+x.dmg||+x.damage||0);},0);
+    var summary='<div style="display:flex;flex-wrap:wrap;gap:6px;padding:6px 0 8px;font-size:11px">'
+      +'<span style="padding:4px 10px;background:rgba(16,185,129,.1);border-radius:20px;color:var(--green)">👥 '+gRows.length+'명</span>'
+      +'<span style="padding:4px 10px;background:rgba(59,130,246,.1);border-radius:20px;color:#3b82f6">📦 총수익 <strong>₩'+totIncome.toLocaleString()+'</strong></span>'
+      +'<span style="padding:4px 10px;background:rgba(5,150,105,.1);border-radius:20px;color:#059669">🧾 세금계산서(공급가) <strong>₩'+totSupply.toLocaleString()+'</strong></span>'
+      +'<span style="padding:4px 10px;background:rgba(245,158,11,.1);border-radius:20px;color:#d97706">🏥 고용보험 <strong>₩'+totEmp.toLocaleString()+'</strong></span>'
+      +'<span style="padding:4px 10px;background:rgba(239,68,68,.1);border-radius:20px;color:#dc2626">⛑ 산재보험 <strong>₩'+totWork.toLocaleString()+'</strong></span>'
+      +(totDmg>0?'<span style="padding:4px 10px;background:rgba(239,68,68,.15);border-radius:20px;color:#b91c1c;border:1px solid rgba(239,68,68,.3)">⚠️ 분실·파손 공제 <strong>-₩'+totDmg.toLocaleString()+'</strong></span>':'')
+      +'<span style="padding:4px 10px;background:rgba(124,58,237,.1);border-radius:20px;color:var(--purple)">💰 실지급 합계 <strong>₩'+totNet.toLocaleString()+'</strong></span>'
+      +'</div>';
     // ★ 필터 상태에 따라 펼침/접힘 결정
     var openStyle=autoOpen?'block':'none';
     var arrow=autoOpen?'▲':'▼';
     return '<div style="margin-bottom:8px">'
-      +'<div onclick="var b=document.getElementById(\''+gid+'\');var a=document.getElementById(\''+gid+'_a\');if(b){b.style.display=b.style.display===\'none\'?\'block\':\'none\';a.textContent=b.style.display===\'none\'?\'▼\':\'▲\'}" style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--bg3);border-radius:var(--r);cursor:pointer;border:1px solid var(--border)">'
+      +'<div onclick="var b=document.getElementById(\''+gid+'\');var a=document.getElementById(\''+gid+'_a\');if(b){b.style.display=b.style.display===\'none\'?\'block\':\'none\';a.textContent=b.style.display===\'none\'?\'▼\':\'▲\'}" style="display:flex;flex-direction:column;gap:6px;padding:10px 12px;background:var(--bg3);border-radius:var(--r);cursor:pointer;border:1px solid var(--border)">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center">'
       +'<span style="font-size:13px;font-weight:700;color:var(--purple)">'+mo+'</span>'
       +'<span style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;color:var(--text3)">'+gRows.length+'명</span><span id="'+gid+'_a" style="font-size:11px;color:var(--text3)">'+arrow+'</span></span>'
       +'</div>'
-      +'<div id="'+gid+'" style="display:'+openStyle+'">'+summary+'<table class="tbl"><thead><tr><th>기사</th><th>화주사</th><th>월</th><th>총수익</th><th>고용보험</th><th>실지급</th><th>상태</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:5px;font-size:10px">'
+      +'<span style="padding:2px 8px;background:rgba(59,130,246,.12);border-radius:12px;color:#3b82f6">📦 총수익 ₩'+totIncome.toLocaleString()+'</span>'
+      +'<span style="padding:2px 8px;background:rgba(5,150,105,.12);border-radius:12px;color:#059669">🧾 세금계산서 ₩'+totSupply.toLocaleString()+'</span>'
+      +'<span style="padding:2px 8px;background:rgba(245,158,11,.12);border-radius:12px;color:#d97706">🏥 고용+산재 ₩'+(totEmp+totWork).toLocaleString()+'</span>'
+      +(totDmg>0?'<span style="padding:2px 8px;background:rgba(239,68,68,.15);border-radius:12px;color:#b91c1c">⚠️ 분실·파손 -₩'+totDmg.toLocaleString()+'</span>':'')
+      +'<span style="padding:2px 8px;background:rgba(124,58,237,.15);border-radius:12px;color:var(--purple);font-weight:700">💰 실지급 ₩'+totNet.toLocaleString()+'</span>'
+      +'</div>'
+      +'</div>'
+      +'<div id="'+gid+'" style="display:'+openStyle+'">'+summary+'<table class="tbl"><thead><tr><th>기사</th><th>화주사</th><th>월</th><th>총수익</th><th>세금계산서<br><span style="font-size:9px;font-weight:400">(공급가액)</span></th><th>고용보험</th><th>산재보험</th><th>실지급</th><th>상태</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>'
       +'</div>';
   }).join('')||'<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">데이터 없음</div>';
 
@@ -2800,6 +2826,22 @@ function rSettle(){
   ${monthTabs}${campTabs}${tableBody}</div>`;
   setTimeout(_updJinjuBtn, 50);
   return _settleHTML;
+}
+// ★ v9.25: 정산 단건 삭제 (행 🗑 버튼)
+function delSettle(i){
+  var s=ls('settlements');
+  if(!s[i]){toast('❌ 데이터 없음');return;}
+  var x=s[i];
+  if(!confirm('['+x.driver+'] '+x.month+' 정산서를 삭제하시겠습니까?\n(완료된 정산서도 삭제됩니다)'))return;
+  // Firebase 삭제
+  if(FB&&_db&&x.fbId){
+    _db.collection('settlements').doc(x.fbId).delete().catch(function(){});
+  }
+  s.splice(i,1);
+  lss('settlements',s);
+  addAct('settle','정산서 삭제: '+x.driver+' '+x.month,null);
+  toast('🗑 ['+x.driver+'] '+x.month+' 정산서 삭제 완료');
+  SP('settle',null);
 }
 function appSettle(i){
   var s=ls('settlements');
