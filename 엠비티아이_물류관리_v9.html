@@ -9190,14 +9190,25 @@ function dHome(){
 }
 // ── 기사 홈 근무표: 월 이동 (-1 이전달, +1 다음달)
 // ★ v9.25: 휴무 변경 요청
-// ★ v9.25: Claude API 키 저장
-function saveClaudeKey(){
+// ★ v9.25: Claude API 키 저장 (Firebase + localStorage)
+async function saveClaudeKey(){
   var key = (document.getElementById('mp-claude-key')?.value||'').trim();
   if(!key){ toast('❌ API 키를 입력해주세요'); return; }
   if(!key.startsWith('sk-ant-')){ toast('⚠️ 올바른 Anthropic API 키 형식이 아닙니다 (sk-ant-로 시작)'); return; }
+  // 로컬 저장
   localStorage.setItem('mbti_claude_api_key', key);
-  toast('✅ Claude API 키 저장됨');
-  SP('mypage', null);  // 화면 갱신
+  // Firebase 저장 (모든 기기에서 사용 가능)
+  if(FB && _db){
+    try{
+      await _db.collection('settings').doc('claude_config').set({apiKey: key, updatedAt: new Date().toISOString()}, {merge: true});
+      toast('✅ Claude API 키 저장됨 (모든 기기 적용)');
+    }catch(e){
+      toast('✅ 로컬 저장됨 (Firebase 실패: '+(e.message||'')+')');
+    }
+  } else {
+    toast('✅ Claude API 키 저장됨');
+  }
+  SP('mypage', null);
 }
 
 // ★ v9.25: OCR: 운송장 사진 → Claude Vision → 자동 입력
@@ -9313,10 +9324,21 @@ async function emerOcrScan(file){
   if(!file) return;
   var status = document.getElementById('emer-ocr-status');
 
-  // API 키 확인
+  // API 키 확인 — localStorage 우선, 없으면 Firebase에서 가져오기
   var apiKey = localStorage.getItem('mbti_claude_api_key')||'';
+  if(!apiKey && FB && _db){
+    try{
+      if(status) status.innerHTML = '<span style="color:var(--blue)">🔑 API 키 불러오는 중...</span>';
+      var doc = await _db.collection('settings').doc('claude_config').get();
+      if(doc.exists && doc.data().apiKey){
+        apiKey = doc.data().apiKey;
+        localStorage.setItem('mbti_claude_api_key', apiKey);  // 캐시
+      }
+    }catch(e){}
+  }
+
   if(!apiKey){
-    if(status) status.innerHTML = '<span style="color:var(--red)">❌ Claude API 키 미설정 — 내정보 탭에서 API 키를 등록해주세요</span>';
+    if(status) status.innerHTML = '<span style="color:var(--red)">❌ Claude API 키 미설정 — 관리자에게 문의하세요</span>';
     return;
   }
 
