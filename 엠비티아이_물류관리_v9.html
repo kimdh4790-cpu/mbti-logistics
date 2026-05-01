@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<!-- ★ v9.25: 기사 정산 단가 정책 강화 — 엑셀 회사 단가 무시, RPRICE × 건수로 강제 재계산 (저장된 x.damt 흔적 차단) -->
+<!-- ★ v9.26: Google Maps 에러 핸들링 강화 — gm_authFailure + onerror + 타임아웃 + 한글 에러 화면 -->
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.25</title>
+<title>엠비티아이 물류관리 v9.26</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -317,7 +317,7 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.25 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.26 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -1311,10 +1311,10 @@ function updBadge(){
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
 function updFbUI(){
-  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.25 · 🔥 실시간':'v9.25 · 데모';
+  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.26 · 🔥 실시간':'v9.26 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.25 · Firebase 실시간':'v9.25 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.26 · Firebase 실시간':'v9.26 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -2558,7 +2558,11 @@ function rTodaySettle(){
 
   return '<div class="card">'
     +'<div class="ch"><span class="ct">📊 오늘 정산 ('+td+')</span>'
+    +'<div style="display:flex;gap:6px;align-items:center">'
+    +'<button onclick="openLiveMap()" style="padding:4px 10px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">🗺️ 실시간 지도</button>'
+    +'<button onclick="openEmergencyAdmin()" style="padding:4px 10px;background:#dc2626;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">🚨 긴급배송 조회</button>'
     +'<button onclick="exportTodaySettleCSV()" style="padding:4px 10px;background:var(--green-l);border:1px solid var(--green);border-radius:6px;font-size:11px;color:var(--green);cursor:pointer;font-weight:600">📥 엑셀 내보내기</button>'
+    +'</div>'
     +'</div>'
     +kpiHTML
     +'<div style="overflow-x:auto"><table class="tbl">'
@@ -3409,8 +3413,20 @@ function _renderDriverMap(myLoc, emerLocs, apiKey){
   }
 
   if(!window.google || !window.google.maps){
+    // ★ v9.26: 키 검증 + 에러 핸들러
+    if(!apiKey){
+      mapDiv.innerHTML = '<div style="height:100%;display:flex;align-items:center;justify-content:center;background:#1f2937;color:#fbbf24;padding:20px;text-align:center;font-size:14px">🚫 Google Maps API 키 미설정<br><span style="color:#9ca3af;font-size:12px;margin-top:8px;display:block">관리자에게 문의하세요</span></div>';
+      return;
+    }
+    window.gm_authFailure = function(){
+      mapDiv.innerHTML = '<div style="height:100%;display:flex;align-items:center;justify-content:center;background:#1f2937;color:#fbbf24;padding:20px;text-align:center;font-size:14px">🚫 구글 인증 실패<br><span style="color:#9ca3af;font-size:12px;margin-top:8px;display:block">Maps JavaScript API 활성화 필요<br>관리자에게 문의하세요</span></div>';
+    };
     var sc = document.createElement('script');
-    sc.src = 'https://maps.googleapis.com/maps/api/js?key='+apiKey+'&language=ko';
+    sc.src = 'https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(apiKey)+'&language=ko&region=KR';
+    sc.async = true; sc.defer = true;
+    sc.onerror = function(){
+      mapDiv.innerHTML = '<div style="height:100%;display:flex;align-items:center;justify-content:center;background:#1f2937;color:#fbbf24;padding:20px;text-align:center;font-size:14px">🚫 스크립트 로드 실패<br><span style="color:#9ca3af;font-size:12px;margin-top:8px;display:block">네트워크/광고차단 확인</span></div>';
+    };
     sc.onload = doRender;
     document.head.appendChild(sc);
   } else {
@@ -3418,6 +3434,20 @@ function _renderDriverMap(myLoc, emerLocs, apiKey){
   }
 }
 
+
+// ★ v9.26: 지도 영역에 한국어 에러 표시 (회색박스 + 콘솔만 보던 문제 해결)
+function _showMapError(title, detail, action){
+  var mapDiv = document.getElementById('live-map-canvas');
+  if(!mapDiv) return;
+  mapDiv.innerHTML =
+    '<div style="height:100%;display:flex;align-items:center;justify-content:center;background:#1f2937;color:#fff;padding:24px">'
+    +'<div style="max-width:520px;text-align:center">'
+    +'<div style="font-size:48px;margin-bottom:12px">🚫</div>'
+    +'<div style="font-size:18px;font-weight:700;margin-bottom:10px;color:#fbbf24">'+title+'</div>'
+    +'<div style="font-size:13px;line-height:1.6;color:#d1d5db;margin-bottom:16px;text-align:left;background:rgba(0,0,0,.3);padding:12px;border-radius:8px">'+detail+'</div>'
+    +(action?'<div style="font-size:12px;color:#10b981;background:rgba(16,185,129,.1);padding:10px;border-radius:8px;text-align:left;line-height:1.7">'+action+'</div>':'')
+    +'</div></div>';
+}
 
 async function openLiveMap(){
   document.getElementById('live-map-mo')?.remove();
@@ -3456,15 +3486,88 @@ async function openLiveMap(){
         <button onclick="document.getElementById('live-map-mo').remove()" style="padding:6px 14px;background:#dc2626;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">✕ 닫기</button>
       </div>
     </div>
-    <div id="live-map-canvas" style="flex:1"></div>
+    <div id="live-map-canvas" style="flex:1;background:#1f2937;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:13px">⏳ 지도 로딩 중...</div>
     <div style="padding:8px 12px;background:rgba(0,0,0,.7);display:flex;gap:6px;overflow-x:auto" id="live-map-legend"></div>
   </div>`);
+
+  // ★ v9.26: API 키 사전 검증
+  if(!apiKey){
+    _showMapError(
+      'Google Maps API 키 미설정',
+      '관리자 설정 → Google API 키 등록이 필요합니다.<br>현재 Firebase와 localStorage 어느 곳에도 키가 저장되어 있지 않습니다.',
+      '✅ <b>해결 방법</b><br>'
+      +'1. Google Cloud Console 접속<br>'
+      +'2. API 키 생성 (Maps JavaScript API 활성화 필수)<br>'
+      +'3. 결제 계정 등록 (월 200달러 무료 크레딧 자동 적용)<br>'
+      +'4. 관리자 설정 화면에서 키 입력 후 저장'
+    );
+    return;
+  }
+
+  // ★ v9.26: Google Maps 인증 실패 콜백 (공식 핸들러)
+  window.gm_authFailure = function(){
+    _showMapError(
+      '구글 인증 실패',
+      'API 키가 거부되었습니다. 다음 중 하나가 원인입니다:<br><br>'
+      +'• <b>Maps JavaScript API 미활성</b> (가장 흔한 원인)<br>'
+      +'• 키에 도메인 제한이 걸려 현재 사이트 차단<br>'
+      +'• 결제 계정 미등록<br>'
+      +'• 일일 할당량 초과',
+      '✅ <b>해결 방법</b><br>'
+      +'1. <a href="https://console.cloud.google.com/apis/library/maps-backend.googleapis.com" target="_blank" style="color:#60a5fa;text-decoration:underline">Google Cloud Console → API 라이브러리</a><br>'
+      +'2. "Maps JavaScript API" 검색 → <b>사용 설정</b> 버튼 클릭<br>'
+      +'3. API 키 → 편집 → HTTP 리퍼러에 현재 도메인 추가<br>'
+      +'4. 결제 → 결제 계정 활성 상태 확인'
+    );
+  };
 
   // Google Maps 로드
   if(!window.google || !window.google.maps){
     var sc = document.createElement('script');
-    sc.src = 'https://maps.googleapis.com/maps/api/js?key='+apiKey+'&language=ko';
-    sc.onload = function(){ _renderLiveMap(center, driverLocs, emerLocs); };
+    sc.src = 'https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(apiKey)+'&language=ko&region=KR';
+    sc.async = true;
+    sc.defer = true;
+
+    // ★ v9.26: 스크립트 로드 실패 핸들러 (네트워크 오류 등)
+    sc.onerror = function(){
+      _showMapError(
+        '스크립트 로드 실패',
+        'Google Maps 스크립트를 다운로드할 수 없습니다.<br>네트워크 차단, 광고 차단 확장프로그램, 또는 회사 방화벽이 원인일 수 있습니다.',
+        '✅ <b>확인 사항</b><br>'
+        +'• 인터넷 연결 상태<br>'
+        +'• 광고 차단 확장프로그램 일시 해제<br>'
+        +'• maps.googleapis.com 도메인 접근 가능 여부'
+      );
+    };
+
+    sc.onload = function(){
+      // ★ v9.26: onload는 떴는데 google.maps가 없으면 인증 실패
+      if(!window.google || !window.google.maps){
+        // gm_authFailure가 이미 처리할 것이므로 여기선 폴백만
+        setTimeout(function(){
+          if(!window.google || !window.google.maps){
+            _showMapError('지도 초기화 실패','Google Maps 객체를 찾을 수 없습니다. 키 권한을 다시 확인해주세요.','');
+          }
+        }, 1500);
+        return;
+      }
+      _renderLiveMap(center, driverLocs, emerLocs);
+    };
+
+    // ★ v9.26: 10초 타임아웃 — 로딩이 너무 오래 걸리면 안내
+    setTimeout(function(){
+      if(!window.google || !window.google.maps){
+        var canvas = document.getElementById('live-map-canvas');
+        if(canvas && canvas.innerHTML.indexOf('지도 로딩 중')>-1){
+          _showMapError(
+            '응답 시간 초과 (10초)',
+            '지도 서버에서 응답이 없습니다. API 키 인증 단계에서 멈춘 것으로 보입니다.',
+            '✅ 콘솔(F12)에서 빨간색 에러 메시지 확인 → 정확한 원인 파악 가능<br>예: <b>ApiNotActivatedMapError</b> = Maps JavaScript API 활성화 필요'
+          );
+        }
+      }
+    }, 10000);
+
     document.head.appendChild(sc);
   } else {
     _renderLiveMap(center, driverLocs, emerLocs);
