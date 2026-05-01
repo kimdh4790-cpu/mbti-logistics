@@ -3131,12 +3131,14 @@ async function openDriverMap(){
   var apiKey = '';
   if(FB && _db){
     try{
-      var doc = await _db.collection('settings').doc('claude_config').get();
-      if(doc.exists) apiKey = doc.data().googleApiKey || '';
+      var docP = _db.collection('settings').doc('claude_config').get();
+      var timeoutP = new Promise(function(res){ setTimeout(function(){ res(null); }, 3000); });
+      var doc = await Promise.race([docP, timeoutP]);
+      if(doc && doc.exists) apiKey = doc.data().googleApiKey || '';
     }catch(e){}
   }
   if(!apiKey) apiKey = localStorage.getItem('mbti_google_api_key')||'';
-  if(!apiKey){ toast('❌ Google API 키 없음 — 관리자에게 문의'); return; }
+  if(!apiKey){ toast('❌ Google API 키 미설정 — 관리자 설정에서 Google Cloud API 키를 등록해주세요'); return; }
 
   // 내 긴급배송 기록 (오늘) — fbId 포함
   var emerLocs = [];
@@ -7722,7 +7724,12 @@ function DT(tab,el){
   if(el)el.classList.add('on');
   var m={home:dHome,entry:dEntry,temp:dTemp,accident:dAccident,settle:dSettle,mypage:dMypageDriver,emergency_log:rEmergencyLog};
   try{
-    document.getElementById('dpc').innerHTML=(m[tab]||dHome)();
+    var _res=(m[tab]||dHome)();
+    if(_res&&typeof _res.then==='function'){
+      _res.then(function(html){ document.getElementById('dpc').innerHTML=html||''; });
+    } else {
+      document.getElementById('dpc').innerHTML=_res||'';
+    }
   }catch(e){
     console.error('DT 렌더링 오류('+tab+'):',e);
     document.getElementById('dpc').innerHTML='<div style="padding:30px;text-align:center;color:var(--red)">⚠️ 화면 로딩 오류<br><small>'+e.message+'</small></div>';
@@ -9312,7 +9319,7 @@ function dEntry(){
   <div style="height:10px"></div>`;
 }
 
-async function dAccident(){
+function dAccident(){
   var me=ls('accidents').filter(a=>a.driver===S.curDriver);
   var ph=['front','side','damage','scene'].map((k,i)=>{
     var lbl=['전면','측면','파손부위','현장전체'][i];
@@ -9376,7 +9383,7 @@ async function dAccident(){
   <div style="height:12px"></div>`;
 }
 
-async function dTemp(){
+function dTemp(){
   // ★ 쿠팡 연동 제거 — 모든 기사 온도 기록 가능
   var logs=ls('tempLogs').filter(l=>l.driver===S.curDriver&&l.date===today());
   var ph=[['log','온도기록지'],['dev','온도계화면']].map(([k,lbl])=>{
