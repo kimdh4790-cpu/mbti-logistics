@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<!-- ★ v9.26: 세금계산서 1·2차 발행 시 최신본만 표시 (forEach 캐시 덮어쓰기 + find 첫 번째 매칭 버그 수정) -->
+<!-- ★ v9.25: 기사 정산 단가 정책 강화 — 엑셀 회사 단가 무시, RPRICE × 건수로 강제 재계산 (저장된 x.damt 흔적 차단) -->
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -2795,8 +2795,14 @@ function rSettle(){
         </td>
       </tr>`;}).join('');
     var totIncome=gRows.reduce(function(s,x){return s+calcNet(x).income;},0);
-    var totCoupang=gRows.reduce(function(s,x){var r=calcNet(x);return s+r.damt+r.ramt+r.fresh+r.finc+r.inc-r.dmg;},0); // VAT 별도
-    var totCoupangVat=Math.round(totCoupang*1.1); // ★ 부가세 포함 표시용
+    var totCoupang=gRows.reduce(function(s,x){var r=calcNet(x);return s+r.damt+r.ramt+r.fresh+r.finc+r.inc-r.dmg;},0);
+    // ★ v9.25: 엑셀 업로드 시 저장한 전체 총합계 우선 사용 (기사 매칭 무관)
+    var ctKey='coupang_total_'+(mo||'').replace('-','_');
+    try{var ctStore=JSON.parse(localStorage.getItem('mbti_coupang_totals')||'{}');
+      if(ctStore[ctKey]&&ctStore[ctKey].vat_incl) totCoupang=ctStore[ctKey].vat_incl;
+      else totCoupang=Math.round(totCoupang*1.1);
+    }catch(e){totCoupang=Math.round(totCoupang*1.1);}
+    var totCoupangVat=totCoupang;
     var totSupply=gRows.reduce(function(s,x){return s+calcNet(x).supplyAmt;},0);
     var totTax=gRows.reduce(function(s,x){return s+calcNet(x).tax;},0);
     var totEmp=gRows.reduce(function(s,x){return s+calcNet(x).emp;},0);
@@ -2805,9 +2811,8 @@ function rSettle(){
     var totIncomeVat=Math.round(totIncome*1.1); // ★ 기사 세금계산서 부가세 포함액
     var summary='<div style="display:flex;flex-wrap:wrap;gap:6px;padding:6px 0 8px;font-size:11px">'
       +'<span style="padding:4px 10px;background:rgba(16,185,129,.1);border-radius:20px;color:var(--green)">👥 '+gRows.length+'명</span>'
+      
       +'<span style="padding:4px 10px;background:rgba(59,130,246,.1);border-radius:20px;color:#3b82f6">📦 쿠팡 총매출(VAT포함) <strong>₩'+totCoupangVat.toLocaleString()+'</strong></span>'
-      +'<span style="padding:4px 10px;background:rgba(5,150,105,.1);border-radius:20px;color:#059669">🧾 기사 세금계산서 <strong>₩'+totIncomeVat.toLocaleString()+'</strong> <small style="font-size:9px;opacity:.7">VAT포함</small></span>'
-      +'<span style="padding:4px 10px;background:rgba(245,158,11,.1);border-radius:20px;color:#d97706">🏥 고용보험 <strong>₩'+totEmp.toLocaleString()+'</strong></span>'
       +'<span style="padding:4px 10px;background:rgba(239,68,68,.1);border-radius:20px;color:#dc2626">⛑ 산재보험 <strong>₩'+totWork.toLocaleString()+'</strong></span>'
       +(totDmg>0?'<span style="padding:4px 10px;background:rgba(239,68,68,.15);border-radius:20px;color:#b91c1c;border:1px solid rgba(239,68,68,.3)">⚠️ 분실·파손 공제 <strong>-₩'+totDmg.toLocaleString()+'</strong></span>':'')
       +'<span style="padding:4px 10px;background:rgba(124,58,237,.1);border-radius:20px;color:var(--purple)">💰 실지급 합계 <strong>₩'+totNet.toLocaleString()+'</strong></span>'
@@ -2823,13 +2828,12 @@ function rSettle(){
       +'</div>'
       +'<div style="display:flex;flex-wrap:wrap;gap:5px;font-size:10px">'
       +'<span style="padding:2px 8px;background:rgba(59,130,246,.12);border-radius:12px;color:#3b82f6">📦 쿠팡 총매출(VAT포함) ₩'+totCoupangVat.toLocaleString()+'</span>'
-      +'<span style="padding:2px 8px;background:rgba(5,150,105,.12);border-radius:12px;color:#059669">🧾 기사 세금계산서 ₩'+totIncomeVat.toLocaleString()+' <small style="font-size:8px">VAT포함</small></span>'
       +'<span style="padding:2px 8px;background:rgba(245,158,11,.12);border-radius:12px;color:#d97706">🏥 고용+산재 ₩'+(totEmp+totWork).toLocaleString()+'</span>'
       +(totDmg>0?'<span style="padding:2px 8px;background:rgba(239,68,68,.15);border-radius:12px;color:#b91c1c">⚠️ 분실·파손 -₩'+totDmg.toLocaleString()+'</span>':'')
       +'<span style="padding:2px 8px;background:rgba(124,58,237,.15);border-radius:12px;color:var(--purple);font-weight:700">💰 실지급 ₩'+totNet.toLocaleString()+'</span>'
       +'</div>'
       +'</div>'
-      +'<div id="'+gid+'" style="display:'+openStyle+'">'+summary+'<table class="tbl"><thead><tr><th>기사</th><th>화주사</th><th>월</th><th>총수익</th><th>고용보험</th><th>산재보험</th><th>실지급</th><th>상태</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+      +'<div id="'+gid+'" style="display:'+openStyle+'"><table class="tbl"><thead><tr><th>기사</th><th>화주사</th><th>월</th><th>총수익</th><th>고용보험</th><th>산재보험</th><th>실지급</th><th>상태</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>'
       +'</div>';
   }).join('')||'<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">데이터 없음</div>';
 
@@ -5635,11 +5639,17 @@ function exportInsCsv(){
 function calcNet(x){
   var dcnt=+x.dcnt||+x.delivCount||0;
   var rcnt=+x.rcnt||+x.retCount||0;
-  // 용차: 건수×단가, 쿠팡 등: 엑셀에서 온 금액 직접 사용
+  // 용차: 건수×단가, 쿠팡: 라우트별 RPRICE × 건수로 강제 재계산 (v9.25)
   var isYong=(x.jobsub==='용차'||x.client==='용차'||x.category==='용차');
   var yDel=+x.yongDel||(G_PRICES.yong_del||900); var yRet=+x.yongRet||(G_PRICES.yong_ret||900);
-  var damt=isYong ? dcnt*yDel : (+x.damt||+x.delivAmt||+x.base||0);
-  var ramt=isYong ? rcnt*yRet : (+x.ramt||+x.retAmt||0);
+  // ★ v9.25: 쿠팡 기사 정산은 무조건 RPRICE × 건수로 재계산
+  //          엑셀의 회사 단가/저장된 x.damt 흔적 차단 → routeDetails 우선
+  //          정책: 엑셀 단가 = 회사 단가(매출), 기사 단가 = 앱 관리자 RPRICE
+  var _rdList = x.routeDetails || [];
+  var _damtRP = _rdList.reduce(function(s,rd){return s+(rd.cnt||0)*((rd.unitPrice&&rd.unitPrice>0?rd.unitPrice:0)||RPRICE[rd.route]||0);},0);
+  var _ramtRP = _rdList.reduce(function(s,rd){return s+(rd.ret||0)*((rd.unitPrice&&rd.unitPrice>0?rd.unitPrice:0)||RPRICE[rd.route]||0);},0);
+  var damt=isYong ? dcnt*yDel : (_rdList.length ? _damtRP : (+x.damt||+x.delivAmt||+x.base||0));
+  var ramt=isYong ? rcnt*yRet : (_rdList.length ? _ramtRP : (+x.ramt||+x.retAmt||0));
   var fresh=+x.fresh||+x.freshAmt||0;
   // ★ 프레시백 인센 계산 (v9.1 방어 로직)
   // 1순위: 저장된 x.finc 값이 있으면 jobsub과 무관하게 그대로 사용 (데이터 정합성 우선)
@@ -5666,7 +5676,9 @@ function calcNet(x){
   var TAX_RATE = +x.taxRate || 0.033;
   var tax  = +x.tax  || (x.taxFixed ? +x.taxFixed : Math.round(income * TAX_RATE));
   var emp  = (x.emp !== undefined && x.emp !== null && x.emp !== '' && +x.emp > 0) ? +x.emp : empCalc;
-  var work = (x.work !== undefined && x.work !== null && x.work !== '' && +x.work > 0) ? +x.work : workCalc;
+  // ★ v9.25: 산재 저장값이 계산값의 50% 미만이면 비정상 → 자동 재계산
+  var workStored = (x.work !== undefined && x.work !== null && x.work !== '' && +x.work > 0) ? +x.work : 0;
+  var work = (workStored && workCalc > 0 && workStored >= workCalc * 0.5) ? workStored : workCalc;
   var eq   = +x.eq  || 0;
   var dmg  = +x.dmg || +x.damage || 0;
   var adv  = +x.adv || +x.advance || 0;
@@ -5699,13 +5711,25 @@ function updSettle(){
   var nocont=+document.getElementById('se-nocont')?.value||0;  // ★ 미계약건
   var etcPlus=+document.getElementById('se-etc-plus')?.value||0;   // ★ 기타(+)
   var etcMinus=+document.getElementById('se-etc-minus')?.value||0; // ★ 기타(-)
-  // ★ v9.25: 기타(+)만 income(세금계산서)에 포함, 기타(-)는 공제로 처리
-  var income=damt+ramt+fresh+finc+inc+nocont+etcPlus;
-  var tax=Math.round(income*0.033); var emp=Math.round(income*0.008);
+  var income=damt+ramt+fresh+finc+inc+nocont+etcPlus; // ★ 기타(+)만 포함, 기타(-)는 공제
+  // ★ v9.25: 고용·산재 = calcNet 방식으로 정확히 재계산
+  var supplyAmt2=Math.round(income/1.1);
+  var expenseAmt2=Math.round(supplyAmt2*0.346);
+  var monthlyWage2=supplyAmt2-expenseAmt2;
+  var empCalc2=monthlyWage2>=800000?Math.floor(monthlyWage2*0.008/10)*10:0;
+  var workCalc2=Math.floor(monthlyWage2*0.0088/10)*10;
+  var tax=Math.round(income*0.033);
+  var emp=empCalc2;
+  var workEl=document.getElementById('se-work');
+  // work는 수동 입력 우선, 없으면 자동 계산
+  var workManual=workEl&&workEl.dataset.manual?+workEl.value:0;
+  var work=workManual||workCalc2;
   var te=document.getElementById('se-tax');if(te)te.value=tax;
   var ee=document.getElementById('se-emp');if(ee)ee.value=emp;
-  // ★ 실지급 계산: 원천세(3.3%) 및 산재 고정(14000) 제외 → 고용보험(0.8%,80만↑)만 공제
-  var r=calcNet({damt,ramt,fresh,finc,inc,nocont,etcPlus,etcMinus,tax:0,emp,work:0,eq:+document.getElementById('se-eq')?.value||0,dmg:+document.getElementById('se-dmg')?.value||0,adv:+document.getElementById('se-adv')?.value||0});
+  if(workEl&&!workEl.dataset.manual)workEl.value=workCalc2;
+  // ★ 명세서 공제항목 미리보기 업데이트
+  var mw=document.getElementById('st-mw');if(mw)mw.textContent='₩'+monthlyWage2.toLocaleString();
+  var r=calcNet({damt,ramt,fresh,finc,inc,nocont,etcPlus,etcMinus,tax:0,emp,work,eq:+document.getElementById('se-eq')?.value||0,dmg:+document.getElementById('se-dmg')?.value||0,adv:+document.getElementById('se-adv')?.value||0});
   var p=document.getElementById('se-net');if(p)p.textContent='₩'+r.net.toLocaleString();
   var i=document.getElementById('se-income');if(i)i.textContent='₩'+r.income.toLocaleString();
   var d=document.getElementById('se-deduct');if(d)d.textContent='₩'+r.deduct.toLocaleString();
@@ -5721,7 +5745,7 @@ function openSE(name){
   document.getElementById('se-driver').value=name;
   document.getElementById('se-month').value=new Date().toISOString().slice(0,7);
   ['se-dcnt','se-damt','se-rcnt','se-ramt','se-fresh','se-finc','se-inc','se-nocont','se-nocont-cnt','se-tax','se-emp','se-eq','se-dmg','se-adv','se-etc-plus','se-etc-minus'].forEach(id=>{var el=document.getElementById(id);if(el)el.value='';});
-  var sw=document.getElementById('se-work');if(sw)sw.value=14000;
+  var sw=document.getElementById('se-work');if(sw){sw.value=0;delete sw.dataset.manual;}
   var sr=document.getElementById('se-dmg-reason');if(sr)sr.value='';
   var sep=document.getElementById('se-etc-plus-reason');if(sep)sep.value='';
   var sem=document.getElementById('se-etc-minus-reason');if(sem)sem.value='';
@@ -5801,10 +5825,16 @@ function saveSettle(){
     routeDetails:S.excelRoutes||[],
     status:'정산예정',sharedAt:today()
   };
-  // 세금 자동 계산
-  // ★ v9.25: 기타(+)만 income에 포함, 기타(-)는 공제 처리
+  // ★ v9.25: 고용·산재 calcNet 방식으로 정확히 재계산 후 저장
   var income=data.damt+data.ramt+data.fresh+data.finc+data.inc+data.nocont+(data.etcPlus||0);
-  data.tax=Math.round(income*0.033); data.emp=Math.round(income*0.008);
+  var supplyAmtSave=Math.round(income/1.1);
+  var monthlyWageSave=Math.round(supplyAmtSave*(1-0.346));
+  data.tax=Math.round(income*0.033);
+  data.emp=monthlyWageSave>=800000?Math.floor(monthlyWageSave*0.008/10)*10:0;
+  // work: 수동 입력값이 계산값의 50% 이상이면 유지, 아니면 재계산
+  var workSaved=+data.work||0;
+  var workCalcSave=Math.floor(monthlyWageSave*0.0088/10)*10;
+  data.work=(workSaved&&workCalcSave>0&&workSaved>=workCalcSave*0.5)?workSaved:workCalcSave;
   if(idx>=0)s[idx]=Object.assign(s[idx],data);else{data.id=nid('settle');s.push(data);}
   lss('settlements',s);fbW('settlements',data).catch(()=>{});
   var r=calcNet(data);addAct('settle',driver+' 정산 공유 ₩'+r.net.toLocaleString(),driver);
@@ -5822,19 +5852,16 @@ function viewStmt(i){
   var ss=ls('settlements');
   // ramt 보정: 저장값 없으면 routeDetails에서 계산
   if((!x.ramt||x.ramt===0)&&retAmtFromRoutes>0){ss[i].ramt=retAmtFromRoutes;needsUpdate=true;}
-  // ★ v9.26: damt 보정 — 라우트별 테이블 합계와 저장된 damt가 다르면 라우트 기준으로 교정
-  var delAmtFromRoutes=rdList.reduce(function(s,rd){var up=RPRICE[rd.route]||rd.unitPrice||0;return s+(rd.cnt||0)*up;},0);
-  if(delAmtFromRoutes>0&&Math.abs((+x.damt||0)-delAmtFromRoutes)>100){ss[i].damt=delAmtFromRoutes;needsUpdate=true;}
   // inc 강제 0 (추가인센 표시 안함)
   if(ss[i].inc>0){ss[i].inc=0;needsUpdate=true;}
   if(needsUpdate){lss('settlements',ss);x=ls('settlements')[i];}
-  var r=calcNet(x);
+  var r=calcNet(Object.assign({},x,{emp:0,work:0}));  // ★ v9.25 fix: 단가·금액 변경 후 고용·산재 항상 재계산
 
   // 라우트별 테이블
   var _isAdmin = (S.curMode==='admin');
   var routeRows=rdList.length?`
     <div style="margin-bottom:12px">
-      <div style="font-size:11px;font-weight:700;color:var(--teal);margin-bottom:5px">📊 라우트별 실적 [라우트 / 배송건 / 반품건 / 단가 / 배송금액 / 반품금액 / 소계]${_isAdmin?' <span style="color:var(--amber);font-weight:600">· ✏️ 클릭하여 수정</span>':''}</div>
+      <div style="font-size:11px;font-weight:700;color:var(--teal);margin-bottom:5px">📊 라우트별 실적 <span style="color:var(--text3);font-weight:400">(건수 참고용 · 배송금액은 아래 ① 항목 기준)</span>${_isAdmin?' <span style="color:var(--amber);font-weight:600">· ✏️ 클릭하여 수정</span>':''}</div>
       <div style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:6px">
       <table class="route-tbl" style="margin-top:0">
         <thead><tr><th>라우트</th><th style="text-align:right">배송건</th><th style="text-align:right;color:var(--amber)">반품건</th><th style="text-align:right">단가</th><th style="text-align:right">배송금액</th><th style="text-align:right;color:var(--amber)">반품금액</th><th style="text-align:right;color:var(--green)">소계</th></tr></thead>
@@ -6032,8 +6059,9 @@ function stUpdCalc(i){
   var etcMinus=+document.getElementById('st-etcminus-inp')?.value||0;
   // ★ v9.25 fix: 변경된 값 기준으로 완전 재계산 (기존 x 값 아닌 화면 입력값 사용)
   var r2=calcNet(Object.assign({},x,{fresh,finc,nocont,dmg,etcPlus,etcMinus,
-    emp:0,  // emp 강제 0 → calcNet 내부에서 새 income 기준으로 재계산
-    tax:0   // tax도 재계산
+    emp:0,   // emp 강제 0 → calcNet 내부에서 새 income 기준으로 재계산
+    work:0,  // ★ v9.25 fix: work도 강제 0 → 산재 재계산
+    tax:0    // tax도 재계산
   }));
   var tb=document.getElementById('st-taxbase-disp'); if(tb)tb.textContent='₩'+r2.income.toLocaleString();
   var nd=document.getElementById('st-net-disp');     if(nd)nd.textContent='₩'+r2.net.toLocaleString();
@@ -6062,9 +6090,10 @@ function stSaveEdit(i){
   if(etcMinusInp) s[i].etcMinus=+etcMinusInp.value||0;
   if(etcMinusReason) s[i].etcMinusReason=etcMinusReason.value||'';
   // ★ v9.25 fix: 수정된 값 기준으로 income/emp/tax 완전 재계산 후 저장
-  var r2=calcNet(Object.assign({},s[i],{emp:0,tax:0}));
+  var r2=calcNet(Object.assign({},s[i],{emp:0,work:0,tax:0}));  // ★ v9.25 fix: work도 재계산
   s[i].income = r2.income;
   s[i].emp    = r2.emp;
+  s[i].work   = r2.work;  // ★ v9.25 fix: 산재 저장 누락 수정
   s[i].tax    = r2.tax;
   s[i].net    = r2.net;
   lss('settlements',s);
@@ -6111,6 +6140,9 @@ function stEditUnitPrice(i, routeIdx){
   }, 0);
   s[i].damt = newDamt;
   s[i].ramt = newRamt;
+  // ★ v9.25 fix: 단가·건수 변경 후 고용·산재 즉시 재계산 저장
+  var _r2=calcNet(Object.assign({},s[i],{emp:0,work:0,tax:0}));
+  s[i].income=_r2.income;s[i].emp=_r2.emp;s[i].work=_r2.work;s[i].tax=_r2.tax;s[i].net=_r2.net;
 
   lss('settlements', s);
   if(FB && _db){
@@ -6174,6 +6206,9 @@ function stEditRoute(i, routeIdx){
   }, 0);
   s[i].damt = newDamt;
   s[i].ramt = newRamt;
+  // ★ v9.25 fix: 단가·건수 변경 후 고용·산재 즉시 재계산 저장
+  var _r2=calcNet(Object.assign({},s[i],{emp:0,work:0,tax:0}));
+  s[i].income=_r2.income;s[i].emp=_r2.emp;s[i].work=_r2.work;s[i].tax=_r2.tax;s[i].net=_r2.net;
 
   lss('settlements', s);
   if(FB && _db){
@@ -6222,6 +6257,9 @@ function stEditDeliveryCnt(i, routeIdx){
   }, 0);
   s[i].damt = newDamt;
   s[i].ramt = newRamt;
+  // ★ v9.25 fix: 단가·건수 변경 후 고용·산재 즉시 재계산 저장
+  var _r2=calcNet(Object.assign({},s[i],{emp:0,work:0,tax:0}));
+  s[i].income=_r2.income;s[i].emp=_r2.emp;s[i].work=_r2.work;s[i].tax=_r2.tax;s[i].net=_r2.net;
 
   lss('settlements', s);
   if(FB && _db){
@@ -6271,6 +6309,9 @@ function stEditReturnCnt(i, routeIdx){
   }, 0);
   s[i].damt = newDamt;
   s[i].ramt = newRamt;
+  // ★ v9.25 fix: 단가·건수 변경 후 고용·산재 즉시 재계산 저장
+  var _r2=calcNet(Object.assign({},s[i],{emp:0,work:0,tax:0}));
+  s[i].income=_r2.income;s[i].emp=_r2.emp;s[i].work=_r2.work;s[i].tax=_r2.tax;s[i].net=_r2.net;
 
   lss('settlements', s);
   if(FB && _db){
@@ -6422,7 +6463,7 @@ function sendStmtToDriver(i){
 
 // ══ 세금계산서 기능
 function openTaxInvoice(i){
-  var x=ls('settlements')[i], r=calcNet(x);
+  var x=ls('settlements')[i], r=calcNet(Object.assign({},x,{emp:0,work:0}));  // ★ v9.25 fix: 항상 최신 계산값 사용
   var d=ls('drivers').find(function(dr){return dr.name===x.driver;})||{};
   var ym=x.month||''; var yr=ym.slice(0,4), mo=ym.slice(5,7);
   var issueDate=today();
@@ -6945,11 +6986,12 @@ function parseExcel(inp){
         if(cat==='배송'||cat==='수기반영'){
           var route=row[2]?String(row[2]).trim():'기타';
           var del=+row[7]||0, ret=+row[8]||0;
-          // 라우트 단가표(RPRICE) 기준 계산
-          // 관리자 단가표(RPRICE) 100% 기준 — 엑셀 금액 무시
+          // ★ v9.25 정책 — 엑셀 단가/금액 = 회사 단가(쿠팡→회사 매출), 기사 단가는 무관
+          //                기사 정산은 무조건 RPRICE × 건수 (앱 관리자 모드 쿠팡 라우트 단가)
+          //                엑셀 금액 컬럼(row[10],[14])은 절대 사용하지 않음
           var unitPrice = RPRICE[route] || 0;
-          var delAmt = del * unitPrice;   // 배송금액 = 배송건수 × RPRICE
-          var retAmt = ret * unitPrice;   // 반품금액 = 반품건수 × RPRICE
+          var delAmt = del * unitPrice;   // 배송금액 = 배송건수 × RPRICE (기사 단가)
+          var retAmt = ret * unitPrice;   // 반품금액 = 반품건수 × RPRICE (기사 단가)
           // 날짜 파싱
           var dateRaw=row[3];
           var dateStr='';
@@ -10067,7 +10109,7 @@ function dSettle(){
   // 선택된 월만 필터
   var filtered=s.filter(function(x){return x.month===curM;});
   filtered.forEach(function(x){
-    var r=calcNet(x);
+    var r=calcNet(Object.assign({},x,{emp:0,work:0}));  // ★ v9.25 fix
     var rdList=x.routeDetails||[];
     // ★ 세금계산서 금액 = 공급대가 (고용·산재 빼기 전)
     var taxBase = r.income;  // 배송+반품+롤백+인센+기타(+)
@@ -10469,10 +10511,13 @@ function parseCoupangExcel(inp){
           continue;
         }
 
-        // ★ 단가: 회사 RPRICE 기준 (고정 계약단가)
-        var unitPrc=(route&&RPRICE[route])||Number(row[rColUnit])||0;
+        // ★ v9.25: 배송금액 = 엑셀 총금액 컬럼 직접 사용 (RPRICE 계산 아님)
+        //   쿠팡 실제 지급액 기준 → 라우트 테이블 합계 = 배송수익 일치
+        var rowTotal=Number(row[rColTotal])||0;  // 총금액 컬럼
+        var unitPrc=(route&&RPRICE[route])||Number(row[rColUnit])||0; // 단가 표시용
         var freshInc=Number(row[rColFresh])||0;
-        var delAmt=dcnt*unitPrc;
+        // 배송금액: 총금액 컬럼 우선, 없으면 dcnt×단가
+        var delAmt=rowTotal>0?rowTotal:(dcnt*unitPrc);
         var retAmt=rcnt*unitPrc;
 
         drvMap[userId].dcnt+=dcnt;
@@ -10537,9 +10582,12 @@ function parseCoupangExcel(inp){
         }
       }
 
+      // ★ v9.25: 엑셀 전체 총합계 계산 (기사 매칭 무관, 쿠팡 총매출 표시용)
+      var excelGrandTotal=Object.values(totalMap).reduce(function(s,v){return s+(v.totalAmt||0);},0);
+      var excelGrandFresh=Object.values(totalMap).reduce(function(s,v){return s+(v.freshAmt||0);},0);
+      var excelGrandDmg=Object.values(totalMap).reduce(function(s,v){return s+(v.dmgAmt||0);},0);
       var drivers=ls('drivers');
       var settlements=ls('settlements');
-      // ★ 정산월 선택: 기본값 = 전월 (쿠팡 관행: 전월 배송분을 익월에 정산)
       var _now=new Date();
       var _prev=new Date(_now.getFullYear(),_now.getMonth()-1,1);
       var _defaultMonth=_prev.getFullYear()+'-'+String(_prev.getMonth()+1).padStart(2,'0');
@@ -10556,7 +10604,17 @@ function parseCoupangExcel(inp){
         toast('❌ 형식 오류 (YYYY-MM 예: 2026-03): '+inputMonth);return;
       }
       var month=inputMonth;
+      // ★ v9.25: inputMonth 확정 후 저장 (이전엔 undefined로 저장되는 버그 있었음)
+      try{
+        var ctKey='coupang_total_'+month.replace('-','_');
+        var ctData={vat_excl:excelGrandTotal,fresh:excelGrandFresh,dmg:excelGrandDmg,vat_incl:Math.round(excelGrandTotal*1.1),updatedAt:new Date().toISOString()};
+        var ctStore=JSON.parse(localStorage.getItem('mbti_coupang_totals')||'{}');
+        ctStore[ctKey]=ctData;
+        localStorage.setItem('mbti_coupang_totals',JSON.stringify(ctStore));
+        console.log('[쿠팡총매출] 저장 완료:',ctKey,'→ VAT포함 ₩'+ctData.vat_incl.toLocaleString());
+      }catch(e){console.warn('[쿠팡총매출] 저장 실패:',e);}
       var added=0,skipped=0,updated=0,skippedIds=[];
+      var ncDrivers=0,ncTotalCnt=0,ncTotalAmt=0;  // ★ 미계약건 집계 (v9.25 fix)
 
       Object.keys(drvMap).forEach(function(userId){
         var cleanId=userId.replace(/@df$/i,'').replace(/@.*$/,'').trim();
@@ -10570,12 +10628,12 @@ function parseCoupangExcel(inp){
         var tm=totalMap[userId]||totalMap[cleanId]||{};
         var freshAmt=tm.freshAmt||dm.freshAmt||0;
         var dmgAmt=tm.dmgAmt||0;
-        // ★ 배송/반품은 RPRICE 기준으로 계산 (총괄 소계 사용 안 함)
         var damt=dm.delAmt||0;
         var ramt=dm.retAmt||0;
         // ★ 미계약건: 엑셀 총금액 그대로 사용
         var nocontAmt=dm.nocontAmt||0;
         var nocontCnt=dm.nocontCnt||0;
+        if(nocontAmt>0||nocontCnt>0){ncDrivers++;ncTotalCnt+=nocontCnt;ncTotalAmt+=nocontAmt;}  // ★ v9.25 fix
 
         // ★ 인센티브: 기사별 설정 기준 (Firebase에서 로드된 설정 사용)
         var fincVal=0;
@@ -10585,8 +10643,9 @@ function parseCoupangExcel(inp){
           if(s.on && s.rate>0) fincVal+=rv.cnt*s.rate;
         });
 
-        // ★ 세금계산서 기준 금액 = 배송+반품 + 프레시백회수 + 프레시백인센 + 미계약
-        var taxBase=damt+ramt+freshAmt+fincVal+nocontAmt;
+        // ★ 세금계산서 기준 금액 = 배송+반품 + 프레시백회수 + 프레시백인센 + 미계약 + 추가인센
+        var incAmt=tm.incAmt||0; // ★ 추가인센티브(가중요인) — 엑셀 총괄에서 파싱
+        var taxBase=damt+ramt+freshAmt+fincVal+nocontAmt+incAmt;
         var totalAmt=taxBase;
         var income=taxBase;
         // ★ 고용·산재 계산 (세금계산서 방식)
@@ -10615,7 +10674,7 @@ function parseCoupangExcel(inp){
           ramt:ramt,
           fresh:freshAmt,
           finc:fincVal,               // ★ 프레시백 인센티브
-          inc:0,                      // ★ 가중요인은 damt에 포함됨
+          inc:incAmt,                 // ★ 추가인센티브(가중요인) — 엑셀 총괄 파싱값
           nocont:nocontAmt,           // ★ 미계약건 금액 (엑셀 자동)
           nocontCnt:nocontCnt,        // ★ 미계약 건수
           coupangTotal:tm.totalAmt||0, // ★ v9.25: 엑셀 정산총괄 금액(총합계) — 쿠팡 실제 지급액
@@ -10628,6 +10687,7 @@ function parseCoupangExcel(inp){
           eq:0, dmg:dmgAmt, adv:0,
           status:'정산예정',
           routeDetails:routeDetails,
+          updatedAt:new Date().toISOString(),
           createdAt:new Date().toISOString()
         };
         if(existing>=0){
@@ -10644,6 +10704,7 @@ function parseCoupangExcel(inp){
           var updateData=Object.assign({},entry);
           delete updateData.status;
           delete updateData.createdAt;
+          updateData.updatedAt=new Date().toISOString(); // ★ 최신 업로드 시각
           settlements[existing]=Object.assign(prev, updateData, protectedFields);
           settlements[existing].finc=entry.finc; // ★ 인센티브 항상 최신값
           updated++;
@@ -10662,39 +10723,34 @@ function parseCoupangExcel(inp){
         return clean;
       }
       var fbOk=0,fbFail=0;
+      // ★ v9.25: lss → Firebase 완료 후 저장 (onSnapshot 경쟁 방지)
+      function _finalize(){
+        lss('settlements',settlements);
+        var protectedCount=0;
+        settlements.forEach(function(x){if(x.month===month&&x.status==='완료')protectedCount++;});
+        var ncMsg=ncDrivers?('\n💡 미계약: '+ncDrivers+'명 / '+ncTotalCnt+'건 / ₩'+ncTotalAmt.toLocaleString()):'';
+        var skipMsg=skippedIds.length?('\n⚠️ 미매칭: '+skippedIds.slice(0,5).join(', ')+(skippedIds.length>5?'... 외'+(skippedIds.length-5)+'명':'')):'';
+        var protMsg=protectedCount?('\n🔒 완료 보호: '+protectedCount+'건 (상태 유지)'):'';
+        toast('✅ 쿠팡 엑셀 정산 완료: '+added+'건 등록 / '+updated+'건 갱신 / '+skipped+'건 미매칭'+protMsg+ncMsg+skipMsg);
+        SP('settle',null);
+      }
       if(FB&&_db){
         var promises=[];
         settlements.forEach(function(x){
-          if(x.month!==month)return; // 이번 업로드 월만
+          if(x.month!==month)return;
           var docId=x.fbId||x.driver+'_'+x.month;
           var cleanX=_cleanUndef(x);
-          promises.push(_db.collection('settlements').doc(docId).set(cleanX,{merge:true})
+          promises.push(_db.collection('settlements').doc(docId).set(cleanX)
             .then(function(){fbOk++;x.fbId=docId;})
             .catch(function(e){fbFail++;console.warn('FB 저장 실패:',x.driver,e.message);}));
         });
         Promise.all(promises).then(function(){
-          lss('settlements',settlements); // fbId 저장을 위해 다시 저장
           if(fbFail>0)toast('⚠️ Firebase '+fbFail+'건 저장 실패 (로컬은 정상)');
-        });
+          _finalize();
+        }).catch(function(){_finalize();});
+      } else {
+        _finalize();
       }
-      // ★ 미계약 집계 요약
-      var ncTotalCnt=0,ncTotalAmt=0,ncDrivers=0;
-      Object.keys(drvMap).forEach(function(uid){
-        var dm=drvMap[uid];
-        if((dm.nocontCnt||0)>0||(dm.nocontAmt||0)>0){
-          ncTotalCnt+=dm.nocontCnt||0;
-          ncTotalAmt+=dm.nocontAmt||0;
-          ncDrivers++;
-        }
-      });
-      // ★ 완료 상태 보호된 건수 집계
-      var protectedCount=0;
-      settlements.forEach(function(x){if(x.month===month&&x.status==='완료')protectedCount++;});
-      var ncMsg=ncDrivers?('\n💡 미계약: '+ncDrivers+'명 / '+ncTotalCnt+'건 / ₩'+ncTotalAmt.toLocaleString()):'';
-      var skipMsg=skippedIds.length?('\n⚠️ 미매칭: '+skippedIds.slice(0,5).join(', ')+(skippedIds.length>5?'... 외'+(skippedIds.length-5)+'명':'')):'';
-      var protMsg=protectedCount?('\n🔒 완료 보호: '+protectedCount+'건 (상태 유지)'):'';
-      toast('✅ 쿠팡 엑셀 정산 완료: '+added+'건 등록 / '+updated+'건 갱신 / '+skipped+'건 미매칭'+protMsg+ncMsg+skipMsg);
-      SP('settle',null);
     }catch(err){console.error(err);toast('❌ 파싱 오류: '+err.message);}
   };
   reader.readAsArrayBuffer(file);
@@ -10793,7 +10849,7 @@ function _exportAllTaxInvoices_csv_unused(){
   function next(){
     if(idx>=s.length)return;
     var x=s[idx++];
-    var r=calcNet(x);
+    var r=calcNet(Object.assign({},x,{emp:0,work:0}));  // ★ v9.25 fix
     // 기사 상세 정보 조회 (사업자번호, 차량번호)
     var drvInfo=ls('drivers').find(function(d){return d.name===x.driver||(d.userId&&(d.userId===x.userId||(d.userId+'@df')===x.userId));});
     var bizNum=(drvInfo&&drvInfo.bizNum)||'';
@@ -11888,7 +11944,20 @@ function startListeners(){
               var d=ch.doc.data(); d.id=ch.doc.id; d.fbId=ch.doc.id;
               var a=ls(col);
               var i=a.findIndex(x=>x.fbId===d.fbId||x.id===d.id);
-              if(i>=0) a[i]=Object.assign({},a[i],d);
+              if(i>=0){
+                // ★ v9.25: 로컬 updatedAt이 Firebase보다 최신이면 금액 필드 보호
+                var localNewer=(a[i].updatedAt||a[i].createdAt||'')>(d.updatedAt||d.createdAt||'');
+                if(localNewer){
+                  // 상태/알림 관련만 Firebase에서 업데이트, 금액 필드는 로컬 유지
+                  var merged=Object.assign({},d);
+                  ['damt','ramt','fresh','finc','inc','nocont','totalAmt','supplyAmt','emp','work','routeDetails'].forEach(function(k){
+                    if(a[i][k]!==undefined) merged[k]=a[i][k];
+                  });
+                  a[i]=merged;
+                } else {
+                  a[i]=Object.assign({},a[i],d);
+                }
+              }
               else a.unshift(d);
               if(a.length>300)a=a.slice(0,300);
               lss(col,a);
