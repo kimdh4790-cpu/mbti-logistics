@@ -9680,8 +9680,9 @@ async function saveClaudeKey(){ return saveGoogleApiKey(); }
 function openEmergencyDelivery(){
   document.getElementById('emer-del-mo')?.remove();
   window._emerPhotos = [];
-  window._emerTrackings = [];  // 운송장 번호 배열 (묶음 배송)
+  window._emerTrackings = [];
   window._emerGps = null;
+  window._emerAutoData = {}; // OCR 자동입력 숨김 데이터 저장
 
   document.body.insertAdjacentHTML('beforeend',`
   <div id="emer-del-mo" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:700;display:flex;align-items:flex-end;justify-content:center" onclick="if(event.target===this)this.remove()">
@@ -9693,7 +9694,7 @@ function openEmergencyDelivery(){
         <div style="font-size:16px;font-weight:800;color:var(--red)">긴급 배송기록</div>
         <div style="margin-left:auto;font-size:10px;background:#dc2626;color:#fff;padding:2px 8px;border-radius:999px;font-weight:700">쿠팡앱 에러 대응</div>
       </div>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:14px">운송장 사진 찍으면 정보가 자동 입력됩니다.</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:14px">운송장 사진 찍으면 자동입력 → 지도에 핀 표시됩니다.</div>
 
       <!-- ★ OCR 자동입력 버튼 -->
       <div style="margin-bottom:14px">
@@ -9704,18 +9705,12 @@ function openEmergencyDelivery(){
         <div id="emer-ocr-status" style="font-size:11px;color:var(--text3);text-align:center;margin-top:5px;min-height:16px"></div>
       </div>
 
-      <div style="text-align:center;font-size:11px;color:var(--text3);margin-bottom:14px">— 또는 직접 입력 —</div>
+      <!-- OCR 자동입력 결과 요약 (입력 후 표시) -->
+      <div id="emer-ocr-summary" style="display:none;background:var(--teal-l);border:1.5px solid var(--teal);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;line-height:1.8;color:var(--text)"></div>
 
-      <!-- 주문번호 -->
-      <div style="margin-bottom:10px">
-        <div style="font-size:12px;font-weight:700;margin-bottom:4px">🛒 주문번호 <span style="font-size:10px;font-weight:400;color:var(--text3)">(선택 — 묶음배송 시 1개로 묶임)</span></div>
-        <input id="emer-orderid" type="text" inputmode="numeric" placeholder="예: 7.1001.8247.4983"
-          style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text);box-sizing:border-box">
-      </div>
-
-      <!-- 운송장 번호 (복수) -->
-      <div style="margin-bottom:10px">
-        <div style="font-size:12px;font-weight:700;margin-bottom:6px">📦 운송장 번호 <span style="color:var(--red)">*</span> <span style="font-size:10px;font-weight:400;color:var(--text3)">(박스 여러 개면 추가 가능)</span></div>
+      <!-- 운송장 번호 (필수) -->
+      <div style="margin-bottom:12px">
+        <div style="font-size:12px;font-weight:700;margin-bottom:6px">📦 운송장 번호 <span style="color:var(--red)">*</span> <span style="font-size:10px;font-weight:400;color:var(--text3)">(묶음배송이면 추가)</span></div>
         <div id="emer-tracking-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px"></div>
         <div style="display:flex;gap:6px">
           <input id="emer-tracking-inp" type="text" inputmode="numeric" placeholder="운송장 번호 입력 후 추가" maxlength="30"
@@ -9726,26 +9721,15 @@ function openEmergencyDelivery(){
         </div>
       </div>
 
-      <!-- 수령인 & 주소 -->
-      <div style="margin-bottom:10px">
-        <div style="font-size:12px;font-weight:700;margin-bottom:4px">👤 수령인 <span style="font-size:10px;font-weight:400;color:var(--text3)">(선택)</span></div>
-        <input id="emer-recipient" type="text" placeholder="예: 김*우"
-          style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text);box-sizing:border-box">
-      </div>
-      <div style="margin-bottom:10px">
-        <div style="font-size:12px;font-weight:700;margin-bottom:4px">📍 배송 주소 <span style="font-size:10px;font-weight:400;color:var(--text3)">(선택)</span></div>
-        <input id="emer-addr" type="text" placeholder="예: 수영구 수영로 668 화목오피스텔 607호"
-          style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text);box-sizing:border-box">
-      </div>
-      <div style="margin-bottom:10px">
-        <div style="font-size:12px;font-weight:700;margin-bottom:4px">🚪 배송 메모 <span style="font-size:10px;font-weight:400;color:var(--text3)">(선택)</span></div>
-        <input id="emer-delivmemo" type="text" placeholder="예: 문 앞 자율출입가능"
-          style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text);box-sizing:border-box">
-      </div>
+      <!-- 숨김 필드 (OCR 자동입력 저장용 — 지도 핀에 사용) -->
+      <input id="emer-orderid"   type="hidden" value="">
+      <input id="emer-recipient" type="hidden" value="">
+      <input id="emer-addr"      type="hidden" value="">
+      <input id="emer-delivmemo" type="hidden" value="">
 
-      <!-- 배송 사진 -->
+      <!-- 배송 사진 (필수) -->
       <div style="margin-bottom:12px">
-        <div style="font-size:12px;font-weight:700;margin-bottom:6px">🖼 배송 완료 사진 <span style="color:var(--red)">*</span> <span style="font-size:10px;font-weight:400;color:var(--text3)">(최대 5장)</span></div>
+        <div style="font-size:12px;font-weight:700;margin-bottom:6px">🖼 배송완료 사진 <span style="color:var(--red)">*</span> <span style="font-size:10px;font-weight:400;color:var(--text3)">(최대 5장)</span></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap" id="emer-photo-wrap">
           <label style="width:80px;height:80px;border:2px dashed var(--border);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;background:var(--bg3);flex-shrink:0">
             <span style="font-size:22px">📷</span>
@@ -9753,13 +9737,6 @@ function openEmergencyDelivery(){
             <input type="file" accept="image/*" capture="environment" multiple style="display:none" onchange="emerAddPhotos(this.files)">
           </label>
         </div>
-      </div>
-
-      <!-- 메모 -->
-      <div style="margin-bottom:12px">
-        <div style="font-size:12px;font-weight:700;margin-bottom:4px">📝 에러 메모 <span style="font-size:10px;font-weight:400;color:var(--text3)">(선택)</span></div>
-        <textarea id="emer-memo" placeholder="예: 쿠팡앱 사진 업로드 실패, 앱 강제종료됨 등" rows="2"
-          style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text);box-sizing:border-box;resize:none"></textarea>
       </div>
 
       <div id="emer-gps-status" style="font-size:11px;color:var(--text3);margin-bottom:12px;padding:8px 10px;background:var(--bg3);border-radius:8px">📍 GPS 위치 확인 중...</div>
@@ -9907,10 +9884,10 @@ async function emerOcrScan(file){
       delivery_memo: memoLine || ''
     };
 
-    // 자동 입력
-    if(p.order_id)    { var oi=document.getElementById('emer-orderid');   if(oi) oi.value=p.order_id; }
-    if(p.recipient)   { var re=document.getElementById('emer-recipient'); if(re) re.value=p.recipient; }
-    if(p.address)     { var ad=document.getElementById('emer-addr');      if(ad) ad.value=p.address; }
+    // 자동 입력 — hidden 필드에 저장 (지도 핀용)
+    if(p.order_id)     { var oi=document.getElementById('emer-orderid');   if(oi) oi.value=p.order_id; }
+    if(p.recipient)    { var re=document.getElementById('emer-recipient'); if(re) re.value=p.recipient; }
+    if(p.address)      { var ad=document.getElementById('emer-addr');      if(ad) ad.value=p.address; }
     if(p.delivery_memo){ var dm=document.getElementById('emer-delivmemo'); if(dm) dm.value=p.delivery_memo; }
 
     if(p.tracking_no){
@@ -9920,14 +9897,26 @@ async function emerOcrScan(file){
       emerAddTracking();
     }
 
-    if(status) status.innerHTML = '<span style="color:var(--teal)">✅ 자동 입력 완료 — 내용 확인 후 저장하세요</span>';
-
-    var addPhoto = confirm('운송장 사진을 배송 사진으로도 추가하시겠습니까?');
-    if(addPhoto){
-      var reader = new FileReader();
-      reader.onload = function(e){ window._emerPhotos.push(e.target.result); emerRefreshPhotoWrap(); };
-      reader.readAsDataURL(file);
+    // ★ OCR 결과 요약 카드 표시
+    var summary = document.getElementById('emer-ocr-summary');
+    if(summary){
+      var lines2 = [];
+      if(p.tracking_no) lines2.push('🔢 운송장: '+p.tracking_no);
+      if(p.order_id)    lines2.push('📋 주문번호: '+p.order_id);
+      if(p.recipient)   lines2.push('👤 수령인: '+p.recipient);
+      if(p.address)     lines2.push('📍 주소: '+p.address);
+      if(p.delivery_memo) lines2.push('🚪 '+p.delivery_memo);
+      if(lines2.length){
+        summary.innerHTML = '<div style="font-size:11px;font-weight:700;color:var(--teal);margin-bottom:4px">✅ OCR 자동입력 완료</div>'+lines2.join('<br>');
+        summary.style.display='block';
+      }
     }
+    if(status) status.innerHTML = '';
+
+    // 운송장 사진 배송 사진으로 자동 추가
+    var reader = new FileReader();
+    reader.onload = function(e){ window._emerPhotos.push(e.target.result); emerRefreshPhotoWrap(); };
+    reader.readAsDataURL(file);
 
   }catch(e){
     if(status) status.innerHTML = '<span style="color:var(--red)">❌ OCR 실패: '+e.message+' — 직접 입력해주세요</span>';
@@ -10077,17 +10066,23 @@ async function emerSave(){
   var memo      = (document.getElementById('emer-memo')?.value||'').trim();
   var now = new Date();
 
+  // ★ v9.25: GPS 정제 (undefined 값 차단 — Firestore invalid-argument 방지)
+  var gpsClean = null;
+  if(window._emerGps && typeof window._emerGps.lat==='number' && typeof window._emerGps.lng==='number'){
+    gpsClean = { lat: window._emerGps.lat, lng: window._emerGps.lng, acc: window._emerGps.acc||0 };
+  }
+
   var record = {
     type: 'emergency_delivery',
-    driver: S.curDriver,
-    order_id: orderId,
-    trackings: window._emerTrackings.slice(),  // 운송장 번호 배열
-    tracking: window._emerTrackings[0],         // 하위호환
-    recipient: recipient,
-    addr: addr,
-    delivery_memo: delivMemo,
-    memo: memo,
-    gps: window._emerGps||null,
+    driver: S.curDriver||'',
+    order_id: orderId||'',
+    trackings: window._emerTrackings.slice(),
+    tracking: window._emerTrackings[0]||'',
+    recipient: recipient||'',
+    addr: addr||'',
+    delivery_memo: delivMemo||'',
+    memo: memo||'',
+    gps: gpsClean,
     photos: [],
     savedAt: now.toISOString(),
     date: today(),
