@@ -9342,7 +9342,7 @@ async function emerOcrScan(file){
     if(status) status.innerHTML = '<span style="color:var(--red)">❌ API 키 없음 — 관리자에게 문의하세요</span>';
     return;
   }
-  if(status) status.innerHTML = '<span style="color:var(--blue)">🤖 AI 분석 중...</span>';
+  if(status) status.innerHTML = '<span style="color:var(--blue)">🤖 AI 분석 중... (키: '+apiKey.slice(0,15)+'...)</span>';
 
   // 이미지 리사이즈 (API 전송 최적화)
   var b64 = await new Promise(function(resolve){
