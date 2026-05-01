@@ -8324,7 +8324,7 @@ function _loadDrvNotices(){
     var ids={};
     msnap.forEach(function(d){ids[d.id]=true;});
     window._masterNoticeIds=ids;
-    window._masterNoticeUnsub=_db.collection('notices').onSnapshot(function(ms){
+    window._masterNoticeUnsub=_db.collection('notices').orderBy('sentAt','desc').limit(50).onSnapshot(function(ms){
       var newIds={};
       ms.forEach(function(d){newIds[d.id]=true;});
       window._masterNoticeIds=newIds;
@@ -11780,7 +11780,7 @@ function startListeners(){
   
     // ── photo_logs: Firestore → localStorage → UI 직접 반영 (1초 이내)
     // ── drivers: Firestore → localStorage → UI 직접 반영 (1초 이내)
-    _fbUnsubs.push(_db.collection('drivers').limit(500)
+    _fbUnsubs.push(_db.collection('drivers').limit(100)
       .onSnapshot({includeMetadataChanges:false}, snap=>{
         // ① Firestore 전체 데이터 배열화
         var fbDrivers=[];
@@ -11830,13 +11830,15 @@ function startListeners(){
       }));
   
     // ── 운행 데이터 리스너 (entries/deliveries/temp_logs/accidents/settlements)
+    // ★ v9.25: 읽기 비용 절감 — limit 축소 + docChanges만 처리
     var colPageMap={
       entries:'entry', deliveries:'delivery', temp_logs:'temp',
       accidents:'accident', settlements:'settle'
     };
+    var colLimits={entries:200, deliveries:200, temp_logs:100, accidents:50, settlements:100};
     Object.keys(colPageMap).forEach(col=>{
-      _fbUnsubs.push(_db.collection(col).limit(300)
-        .onSnapshot(snap=>{
+      _fbUnsubs.push(_db.collection(col).limit(colLimits[col]||100)
+        .onSnapshot({includeMetadataChanges:false}, snap=>{
           snap.docChanges().forEach(ch=>{
             if(ch.type==='added'||ch.type==='modified'){
               var d=ch.doc.data(); d.id=ch.doc.id; d.fbId=ch.doc.id;
@@ -11858,7 +11860,7 @@ function startListeners(){
     });
   
     // ★ v9.5: 운행 메모(delivery_memos) 실시간 동기화 (관리자용 뱃지/페이지 자동 갱신)
-    _fbUnsubs.push(_db.collection('delivery_memos').limit(500)
+    _fbUnsubs.push(_db.collection('delivery_memos').limit(200)
       .onSnapshot(snap=>{
         var arr=ls('deliveryMemos');
         var newCount=0;
@@ -11977,9 +11979,9 @@ window._noticeCache=window._noticeCache||[];
 function rNoticePanel(){
   if(!FB||!_db){return '<div style="padding:20px;text-align:center;color:var(--red)">⚠️ Firebase 연결 필요</div>';}
 
-  // ★ v9.25: 실시간 리스너 — drivers 컬렉션 변경 시 자동 갱신
+  // ★ v9.25: drivers 리스너 — limit(100)으로 읽기 비용 절감
   if(!window._noticePanelListener){
-    window._noticePanelListener = _db.collection('drivers').onSnapshot(function(snap){
+    window._noticePanelListener = _db.collection('drivers').limit(100).onSnapshot(function(snap){
       var all = ls('drivers');
       snap.forEach(function(doc){
         var d=doc.data(); d.fbId=doc.id;
