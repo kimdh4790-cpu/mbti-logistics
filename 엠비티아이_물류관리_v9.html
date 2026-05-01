@@ -9408,8 +9408,12 @@ async function emerOcrScan(file){
     var trackingNo= fmtNum(trackingRaw,'10');
     // 수령인: 김*우 패턴
     var recipientMatch = fullText.match(/[가-힣]+\*[가-힣]+/);
-    // 주소: 구/동/로/길/아파트 포함 라인
-    var addrLine = lines.find(function(l){ return l.match(/구|동|로|길|아파트|오피스텔|빌라/); });
+    // 주소: 시/구 + 로/길/동 조합 (단순히 "동" 포함이 아닌 실제 주소 구조)
+    var addrLine = lines.find(function(l){
+      return l.match(/(시|구)\s*.*(로|길|동|아파트|오피스텔|빌라)/) ||
+             l.match(/(로|길)\s*\d+/) ||
+             l.match(/\d+호/) ;
+    });
     // 배송메모: 문 앞, 경비실 등
     var memoLine = lines.find(function(l){ return l.match(/문\s*앞|경비실|자율출입|직접|부재|택배함/); });
 
