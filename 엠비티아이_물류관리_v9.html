@@ -9409,11 +9409,27 @@ async function emerOcrScan(file){
     // 수령인: 김*우 패턴
     var recipientMatch = fullText.match(/[가-힣]+\*[가-힣]+/);
     // 주소: 시/구 + 로/길/동 조합 (단순히 "동" 포함이 아닌 실제 주소 구조)
-    var addrLine = lines.find(function(l){
-      return l.match(/(시|구)\s*.*(로|길|동|아파트|오피스텔|빌라)/) ||
-             l.match(/(로|길)\s*\d+/) ||
-             l.match(/\d+호/) ;
-    });
+    var addrLine = (function(){
+      var idx = lines.findIndex(function(l){
+        if(l.replace(/[\d\.,\s]/g,'').length < 3) return false;
+        if(l.match(/^[\d][\d\.,]{8,}/)) return false;
+        return l.match(/(시|구)\s*.*(로|길|동|아파트|오피스텔|빌라)/) ||
+               l.match(/(로|길)\s*\d+/) ||
+               l.match(/\d+호/) ;
+      });
+      if(idx < 0) return '';
+      // 다음 줄이 호수/동/건물명이면 합치기
+      var addr = lines[idx];
+      if(idx+1 < lines.length) {
+        var next = lines[idx+1];
+        if(next.match(/\d+호|아파트|오피스텔|빌라|동\s*\d+/)) addr += ' ' + next;
+      }
+      if(idx+2 < lines.length) {
+        var next2 = lines[idx+2];
+        if(next2.match(/\d+호|아파트|오피스텔/)) addr += ' ' + next2;
+      }
+      return addr.trim();
+    })();
     // 배송메모: 문 앞, 경비실 등
     var memoLine = lines.find(function(l){ return l.match(/문\s*앞|경비실|자율출입|직접|부재|택배함/); });
 
