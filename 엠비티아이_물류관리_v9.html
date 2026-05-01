@@ -2859,6 +2859,7 @@ function rSettle(){
       <button onclick="openSettleCompare()" style="padding:8px 14px;background:#6366f1;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📊 기사별 실적 비교</button>
       <button onclick="checkDuplicateSettlements()" style="padding:8px 14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔍 중복 검사</button>
       <button onclick="syncFirebaseSettlements()" style="padding:8px 14px;background:#0d9488;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔄 Firebase 동기화</button>
+      <button onclick="recalcAllSettlements()" style="padding:8px 14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⚡ 전체 정산 재계산 저장</button>
     </div>
     <div style="font-size:10px;color:var(--text3);margin-top:8px">💡 쿠팡 엑셀(정산Raw/정산총괄 포함) 업로드 → 기사 자동 매칭 → 고용·산재·원천세 자동 계산</div>
   </div>
@@ -3037,6 +3038,60 @@ function autoSendTaxOnApprove(driverName, month){
 
 // ── 관리자: Firebase ↔ localStorage 양방향 동기화
 // 로컬에만 있으면 Firebase로 업로드, Firebase에만 있으면 로컬에 다운로드
+// ★ v9.25: 전체 정산 일괄 재계산 저장
+// damt(RPRICE×건수), income, emp, work, tax, net 7개 필드 모두 최신값으로 덮어쓰기
+async function recalcAllSettlements(){
+  var s=ls('settlements');
+  if(!s||!s.length){toast('정산 데이터 없음');return;}
+  var msg='⚡ 전체 정산 재계산\n\n총 '+s.length+'건의 정산서를 RPRICE 기준으로 재계산하고 저장합니다.\n\n'
+        +'• damt: RPRICE × 라우트별 건수로 재계산\n'
+        +'• income, emp(고용), work(산재), tax, net 전체 갱신\n\n'
+        +'※ 되돌릴 수 없습니다. 계속하시겠습니까?';
+  if(!confirm(msg))return;
+  var changed=0,skipped=0;
+  s.forEach(function(x,idx){
+    if(!x||!x.driver)return;
+    var r=calcNet(Object.assign({},x,{emp:0,work:0,tax:0}));
+    // damt: routeDetails 있으면 RPRICE×건수, 없으면 기존값 유지
+    var rdList=x.routeDetails||[];
+    var newDamt=rdList.length
+      ? rdList.reduce(function(sum,rd){return sum+(rd.cnt||0)*(rd.unitPrice&&rd.unitPrice>0?rd.unitPrice:(RPRICE[rd.route]||0));},0)
+      : x.damt||0;
+    var newRamt=rdList.length
+      ? rdList.reduce(function(sum,rd){return sum+(rd.ret||0)*(rd.unitPrice&&rd.unitPrice>0?rd.unitPrice:(RPRICE[rd.route]||0));},0)
+      : x.ramt||0;
+    s[idx].damt   = newDamt;
+    s[idx].ramt   = newRamt;
+    s[idx].income = r.income;
+    s[idx].emp    = r.emp;
+    s[idx].work   = r.work;
+    s[idx].tax    = r.tax;
+    s[idx].net    = r.net;
+    changed++;
+  });
+  lss('settlements',s);
+  toast('💾 로컬 재계산 완료 ('+changed+'건) — Firebase 동기화 중...');
+  // Firebase 일괄 저장
+  if(FB&&_db){
+    var fbOk=0,fbFail=0;
+    for(var i=0;i<s.length;i++){
+      var x=s[i];if(!x||!x.driver)continue;
+      var docId=x.fbId||x.driver+'_'+x.month;
+      try{
+        await _db.collection('settlements').doc(docId).set({
+          damt:x.damt,ramt:x.ramt,income:x.income,emp:x.emp,work:x.work,tax:x.tax,net:x.net,
+          updatedAt:new Date().toISOString()
+        },{merge:true});
+        fbOk++;
+      }catch(e){fbFail++;console.warn('재계산 FB 저장 실패:',x.driver,e.message);}
+    }
+    alert('✅ 전체 정산 재계산 완료\n\n재계산: '+changed+'건\nFirebase 저장: '+fbOk+'건'+(fbFail?'\n실패: '+fbFail+'건':''));
+  } else {
+    alert('✅ 전체 정산 재계산 완료\n\n재계산: '+changed+'건 (로컬 저장)\n※ Firebase 미연결 — 배포 환경에서 재실행 권장');
+  }
+  SP('settle',null);
+}
+
 async function syncFirebaseSettlements(){
   if(!FB||!_db){alert('❌ Firebase 연결이 안 되어 있습니다.');return;}
   try{
