@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<!-- ★ v9.26: 세금계산서 1·2차 발행 시 최신본만 표시 (forEach 캐시 덮어쓰기 + find 첫 번째 매칭 버그 수정) -->
+<!-- ★ v9.25: 기사 정산 단가 정책 강화 — 엑셀 회사 단가 무시, RPRICE × 건수로 강제 재계산 (저장된 x.damt 흔적 차단) -->
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -5639,11 +5639,17 @@ function exportInsCsv(){
 function calcNet(x){
   var dcnt=+x.dcnt||+x.delivCount||0;
   var rcnt=+x.rcnt||+x.retCount||0;
-  // 용차: 건수×단가, 쿠팡 등: 엑셀에서 온 금액 직접 사용
+  // 용차: 건수×단가, 쿠팡: 라우트별 RPRICE × 건수로 강제 재계산 (v9.25)
   var isYong=(x.jobsub==='용차'||x.client==='용차'||x.category==='용차');
   var yDel=+x.yongDel||(G_PRICES.yong_del||900); var yRet=+x.yongRet||(G_PRICES.yong_ret||900);
-  var damt=isYong ? dcnt*yDel : (+x.damt||+x.delivAmt||+x.base||0);
-  var ramt=isYong ? rcnt*yRet : (+x.ramt||+x.retAmt||0);
+  // ★ v9.25: 쿠팡 기사 정산은 무조건 RPRICE × 건수로 재계산
+  //          엑셀의 회사 단가/저장된 x.damt 흔적 차단 → routeDetails 우선
+  //          정책: 엑셀 단가 = 회사 단가(매출), 기사 단가 = 앱 관리자 RPRICE
+  var _rdList = x.routeDetails || [];
+  var _damtRP = _rdList.reduce(function(s,rd){return s+(rd.cnt||0)*(RPRICE[rd.route]||rd.unitPrice||0);},0);
+  var _ramtRP = _rdList.reduce(function(s,rd){return s+(rd.ret||0)*(RPRICE[rd.route]||rd.unitPrice||0);},0);
+  var damt=isYong ? dcnt*yDel : (_rdList.length ? _damtRP : (+x.damt||+x.delivAmt||+x.base||0));
+  var ramt=isYong ? rcnt*yRet : (_rdList.length ? _ramtRP : (+x.ramt||+x.retAmt||0));
   var fresh=+x.fresh||+x.freshAmt||0;
   // ★ 프레시백 인센 계산 (v9.1 방어 로직)
   // 1순위: 저장된 x.finc 값이 있으면 jobsub과 무관하게 그대로 사용 (데이터 정합성 우선)
@@ -5860,7 +5866,7 @@ function viewStmt(i){
       <table class="route-tbl" style="margin-top:0">
         <thead><tr><th>라우트</th><th style="text-align:right">배송건</th><th style="text-align:right;color:var(--amber)">반품건</th><th style="text-align:right">단가</th><th style="text-align:right">배송금액</th><th style="text-align:right;color:var(--amber)">반품금액</th><th style="text-align:right;color:var(--green)">소계</th></tr></thead>
         <tbody>
-        ${rdList.map(function(rd,ri){var up=rd.unitPrice||RPRICE[rd.route]||0;var da=(rd.cnt||0)*up;var ra=rd.retAmt!=null?rd.retAmt:(rd.ret||0)*up;
+        ${rdList.map(function(rd,ri){var up=RPRICE[rd.route]||rd.unitPrice||0;var da=(rd.cnt||0)*up;var ra=rd.retAmt!=null?rd.retAmt:(rd.ret||0)*up;
         var routeCell=_isAdmin
           ?`<td><button onclick="stEditRoute(${i},${ri})" style="padding:2px 7px;font-size:12px;background:transparent;border:1px dashed var(--blue);border-radius:4px;color:var(--blue);cursor:pointer;font-weight:700;white-space:nowrap" title="라우트 수정">${rd.route} ✏️</button></td>`
           :`<td><strong>${rd.route}</strong></td>`;
@@ -5884,9 +5890,9 @@ function viewStmt(i){
           <td style="text-align:right">${rdList.reduce(function(s,rd){return s+(rd.cnt||0);},0).toLocaleString()}</td>
           <td style="text-align:right;color:var(--amber)">${(function(){var t=rdList.reduce(function(s,rd){return s+(rd.ret||0);},0);return t>0?t.toLocaleString():'—';})()}</td>
           <td>—</td>
-          <td style="text-align:right">₩${rdList.reduce(function(s,rd){var up=rd.unitPrice||RPRICE[rd.route]||0;return s+(rd.cnt||0)*up;},0).toLocaleString()}</td>
-          <td style="text-align:right;color:var(--amber)">${(function(){var t=rdList.reduce(function(s,rd){var up=rd.unitPrice||RPRICE[rd.route]||0;return s+(rd.ret||0)*up;},0);return t>0?'₩'+t.toLocaleString():'—';})()}</td>
-          <td style="text-align:right;color:var(--green)">₩${rdList.reduce(function(s,rd){var up=rd.unitPrice||RPRICE[rd.route]||0;return s+(rd.cnt||0)*up+(rd.retAmt!=null?rd.retAmt:(rd.ret||0)*up);},0).toLocaleString()}</td>
+          <td style="text-align:right">₩${rdList.reduce(function(s,rd){var up=RPRICE[rd.route]||rd.unitPrice||0;return s+(rd.cnt||0)*up;},0).toLocaleString()}</td>
+          <td style="text-align:right;color:var(--amber)">${(function(){var t=rdList.reduce(function(s,rd){var up=RPRICE[rd.route]||rd.unitPrice||0;return s+(rd.ret||0)*up;},0);return t>0?'₩'+t.toLocaleString():'—';})()}</td>
+          <td style="text-align:right;color:var(--green)">₩${rdList.reduce(function(s,rd){var up=RPRICE[rd.route]||rd.unitPrice||0;return s+(rd.cnt||0)*up+(rd.retAmt!=null?rd.retAmt:(rd.ret||0)*up);},0).toLocaleString()}</td>
         </tr>
         </tbody>
       </table>
@@ -6965,11 +6971,12 @@ function parseExcel(inp){
         if(cat==='배송'||cat==='수기반영'){
           var route=row[2]?String(row[2]).trim():'기타';
           var del=+row[7]||0, ret=+row[8]||0;
-          // 라우트 단가표(RPRICE) 기준 계산
-          // 관리자 단가표(RPRICE) 100% 기준 — 엑셀 금액 무시
+          // ★ v9.25 정책 — 엑셀 단가/금액 = 회사 단가(쿠팡→회사 매출), 기사 단가는 무관
+          //                기사 정산은 무조건 RPRICE × 건수 (앱 관리자 모드 쿠팡 라우트 단가)
+          //                엑셀 금액 컬럼(row[10],[14])은 절대 사용하지 않음
           var unitPrice = RPRICE[route] || 0;
-          var delAmt = del * unitPrice;   // 배송금액 = 배송건수 × RPRICE
-          var retAmt = ret * unitPrice;   // 반품금액 = 반품건수 × RPRICE
+          var delAmt = del * unitPrice;   // 배송금액 = 배송건수 × RPRICE (기사 단가)
+          var retAmt = ret * unitPrice;   // 반품금액 = 반품건수 × RPRICE (기사 단가)
           // 날짜 파싱
           var dateRaw=row[3];
           var dateStr='';
