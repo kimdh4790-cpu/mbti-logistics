@@ -5670,7 +5670,9 @@ function calcNet(x){
   var TAX_RATE = +x.taxRate || 0.033;
   var tax  = +x.tax  || (x.taxFixed ? +x.taxFixed : Math.round(income * TAX_RATE));
   var emp  = (x.emp !== undefined && x.emp !== null && x.emp !== '' && +x.emp > 0) ? +x.emp : empCalc;
-  var work = (x.work !== undefined && x.work !== null && x.work !== '' && +x.work > 0) ? +x.work : workCalc;
+  // ★ v9.25: 산재 저장값이 계산값의 50% 미만이면 비정상 → 자동 재계산
+  var workStored = (x.work !== undefined && x.work !== null && x.work !== '' && +x.work > 0) ? +x.work : 0;
+  var work = (workStored && workCalc > 0 && workStored >= workCalc * 0.5) ? workStored : workCalc;
   var eq   = +x.eq  || 0;
   var dmg  = +x.dmg || +x.damage || 0;
   var adv  = +x.adv || +x.advance || 0;
@@ -5737,7 +5739,7 @@ function openSE(name){
   document.getElementById('se-driver').value=name;
   document.getElementById('se-month').value=new Date().toISOString().slice(0,7);
   ['se-dcnt','se-damt','se-rcnt','se-ramt','se-fresh','se-finc','se-inc','se-nocont','se-nocont-cnt','se-tax','se-emp','se-eq','se-dmg','se-adv','se-etc-plus','se-etc-minus'].forEach(id=>{var el=document.getElementById(id);if(el)el.value='';});
-  var sw=document.getElementById('se-work');if(sw)sw.value=14000;
+  var sw=document.getElementById('se-work');if(sw){sw.value=0;delete sw.dataset.manual;}
   var sr=document.getElementById('se-dmg-reason');if(sr)sr.value='';
   var sep=document.getElementById('se-etc-plus-reason');if(sep)sep.value='';
   var sem=document.getElementById('se-etc-minus-reason');if(sem)sem.value='';
@@ -5817,10 +5819,16 @@ function saveSettle(){
     routeDetails:S.excelRoutes||[],
     status:'정산예정',sharedAt:today()
   };
-  // 세금 자동 계산
-  // ★ v9.25: 기타(+)만 income에 포함, 기타(-)는 공제 처리
+  // ★ v9.25: 고용·산재 calcNet 방식으로 정확히 재계산 후 저장
   var income=data.damt+data.ramt+data.fresh+data.finc+data.inc+data.nocont+(data.etcPlus||0);
-  data.tax=Math.round(income*0.033); data.emp=Math.round(income*0.008);
+  var supplyAmtSave=Math.round(income/1.1);
+  var monthlyWageSave=Math.round(supplyAmtSave*(1-0.346));
+  data.tax=Math.round(income*0.033);
+  data.emp=monthlyWageSave>=800000?Math.floor(monthlyWageSave*0.008/10)*10:0;
+  // work: 수동 입력값이 계산값의 50% 이상이면 유지, 아니면 재계산
+  var workSaved=+data.work||0;
+  var workCalcSave=Math.floor(monthlyWageSave*0.0088/10)*10;
+  data.work=(workSaved&&workCalcSave>0&&workSaved>=workCalcSave*0.5)?workSaved:workCalcSave;
   if(idx>=0)s[idx]=Object.assign(s[idx],data);else{data.id=nid('settle');s.push(data);}
   lss('settlements',s);fbW('settlements',data).catch(()=>{});
   var r=calcNet(data);addAct('settle',driver+' 정산 공유 ₩'+r.net.toLocaleString(),driver);
