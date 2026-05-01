@@ -3165,7 +3165,7 @@ async function openDriverMap(){
           <span id="driver-map-done" style="font-size:11px;background:rgba(22,163,74,.7);padding:2px 8px;border-radius:999px;font-weight:700">✅ 완료 ${emerLocs.filter(function(x){return x.status==='완료';}).length}건</span>
         </div>
       </div>
-      <button onclick="window._activeDriverMap=null;window._activeDriverMapAddPin=null;document.getElementById('driver-map-mo').remove()" style="padding:6px 14px;background:#dc2626;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">✕ 닫기</button>
+      <button onclick="if(window._driverMapWatchId){navigator.geolocation.clearWatch(window._driverMapWatchId);window._driverMapWatchId=null;}window._activeDriverMap=null;window._activeDriverMapAddPin=null;document.getElementById('driver-map-mo').remove()" style="padding:6px 14px;background:#dc2626;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">✕ 닫기</button>
     </div>
     <div id="driver-map-canvas" style="flex:1;min-height:0;height:0"></div>
   </div>`);
@@ -3194,8 +3194,8 @@ function _renderDriverMap(myLoc, emerLocs, apiKey){
     });
     var infoWin = new google.maps.InfoWindow();
 
-    // 내 현재 위치 (파란 핀)
-    new google.maps.Marker({
+    // 내 현재 위치 (파란 핀) — 실시간 추적
+    var myMarker = new google.maps.Marker({
       position: myLoc,
       map: map,
       title: '내 위치',
@@ -3206,8 +3206,16 @@ function _renderDriverMap(myLoc, emerLocs, apiKey){
         fillOpacity: 1,
         strokeColor: '#fff',
         strokeWeight: 2
-      }
+      },
+      zIndex: 999
     });
+
+    // ★ 실시간 위치 업데이트 (watchPosition)
+    if(window._driverMapWatchId) navigator.geolocation.clearWatch(window._driverMapWatchId);
+    window._driverMapWatchId = navigator.geolocation.watchPosition(function(pos){
+      var newLoc = {lat: pos.coords.latitude, lng: pos.coords.longitude};
+      myMarker.setPosition(newLoc);
+    }, null, {enableHighAccuracy: true, maximumAge: 5000, timeout: 10000});
 
     // 긴급배송 핀 (상태별 색상: 완료=초록, 미완료=빨강)
     window._driverMapMarkers = window._driverMapMarkers||{};
