@@ -10582,8 +10582,9 @@ function parseCoupangExcel(inp){
           if(s.on && s.rate>0) fincVal+=rv.cnt*s.rate;
         });
 
-        // ★ 세금계산서 기준 금액 = 배송+반품 + 프레시백회수 + 프레시백인센 + 미계약
-        var taxBase=damt+ramt+freshAmt+fincVal+nocontAmt;
+        // ★ 세금계산서 기준 금액 = 배송+반품 + 프레시백회수 + 프레시백인센 + 미계약 + 추가인센
+        var incAmt=tm.incAmt||0; // ★ 추가인센티브(가중요인) — 엑셀 총괄에서 파싱
+        var taxBase=damt+ramt+freshAmt+fincVal+nocontAmt+incAmt;
         var totalAmt=taxBase;
         var income=taxBase;
         // ★ 고용·산재 계산 (세금계산서 방식)
@@ -10612,7 +10613,7 @@ function parseCoupangExcel(inp){
           ramt:ramt,
           fresh:freshAmt,
           finc:fincVal,               // ★ 프레시백 인센티브
-          inc:0,                      // ★ 가중요인은 damt에 포함됨
+          inc:incAmt,                 // ★ 추가인센티브(가중요인) — 엑셀 총괄 파싱값
           nocont:nocontAmt,           // ★ 미계약건 금액 (엑셀 자동)
           nocontCnt:nocontCnt,        // ★ 미계약 건수
           coupangTotal:tm.totalAmt||0, // ★ v9.25: 엑셀 정산총괄 금액(총합계) — 쿠팡 실제 지급액
@@ -12143,13 +12144,14 @@ function rNoticePanel(){
 
 function _loadNoticeList(){
   if(!FB||!_db)return;
-  // ★ v9.25: notices 리스너 중복 제거 — _masterNoticeUnsub 데이터 재사용
-  //   기존 _noticeListUnsub 별도 구독 제거 → reads 절감
   var box=document.getElementById('nt-list');
   if(!box)return;
-  // 이미 _masterNoticeUnsub이 notices를 구독 중이므로 .get() 1회만 사용
+  // ★ v9.25: onSnapshot → get() 1회 조회로 교체
+  // _masterNoticeUnsub이 이미 notices 전체 구독 중 → 중복 리스너 불필요
+  // 공지 추가/삭제 후에는 _loadNoticeList() 직접 호출로 갱신
   if(window._noticeListUnsub){window._noticeListUnsub();window._noticeListUnsub=null;}
-  window._noticeListUnsub=_db.collection('notices').orderBy('sentAt','desc').limit(30).onSnapshot(function(snap){
+  _db.collection('notices').orderBy('sentAt','desc').limit(30).get()
+  .then(function(snap){
     var box2=document.getElementById('nt-list');
     if(!box2)return;
     if(snap.empty){
@@ -12166,9 +12168,7 @@ function _loadNoticeList(){
       var totalCnt=d.targetCount||0;
       var isDone=totalCnt>0&&readCnt>=totalCnt;
       var nid='nt_'+doc.id.replace(/[^a-z0-9]/gi,'_');
-      // ★ v9.25: 접었다 폈다 토글
       html+='<div style="border:1px solid '+(isDone?'var(--green)':'var(--border)')+';border-radius:8px;margin-bottom:6px;background:'+(isDone?'rgba(22,163,74,.05)':'var(--bg)')+';">';
-      // 헤더 — 클릭 시 토글
       html+='<div onclick="var b=document.getElementById(\''+nid+'\');var a=document.getElementById(\''+nid+'_arr\');if(b){b.style.display=b.style.display===\'none\'?\'block\':\'none\';a.textContent=b.style.display===\'none\'?\'▼\':\'▲\';}" style="padding:10px;cursor:pointer;display:flex;align-items:center;gap:6px;flex-wrap:wrap">';
       html+='<span style="background:var(--blue-l);color:var(--blue);padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700">'+(cIco[d.category]||'📣')+' '+(d.category||'일반')+'</span>';
       if(d.pinned)html+='<span style="background:var(--amber-l);color:var(--amber);padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700">📌 고정</span>';
@@ -12178,12 +12178,9 @@ function _loadNoticeList(){
       html+='<span style="font-size:10px;color:var(--text3);margin-right:4px">'+timeStr+'</span>';
       html+='<span id="'+nid+'_arr" style="font-size:10px;color:var(--text3)">▼</span>';
       html+='</div>';
-      // 제목 (항상 표시)
       html+='<div style="padding:0 10px 8px;font-size:13px;font-weight:700;color:var(--text)">'+(d.title||'-')+'</div>';
-      // 접히는 본문
       html+='<div id="'+nid+'" style="display:none;padding:0 10px 10px">';
       if(d.content)html+='<div style="font-size:11px;color:var(--text2);line-height:1.6;white-space:pre-wrap;margin-bottom:8px;padding:8px;background:var(--bg2);border-radius:6px">'+d.content.replace(/</g,'&lt;')+'</div>';
-      // 첨부파일 표시
       if(d.attachments&&d.attachments.length>0){
         html+='<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px">';
         d.attachments.forEach(function(att){
@@ -12204,10 +12201,9 @@ function _loadNoticeList(){
       html+='</div>';
       html+='</div>';
       html+='</div>';
-
     });
     box2.innerHTML=html;
-  }, function(e){
+  }).catch(function(e){
     var box2b=document.getElementById('nt-list');
     if(box2b)box2b.innerHTML='<div style="padding:10px;color:var(--red);font-size:11px">로드 실패: '+(e&&e.message||'')+'</div>';
   });
