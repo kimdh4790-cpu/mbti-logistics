@@ -5924,12 +5924,12 @@ function viewStmt(i){
         <div class="sitem">
           <div class="sitem-ico">📦</div>
           <div class="sitem-lbl"><strong>① 배송 수익</strong><small>${(+x.dcnt||0).toLocaleString()}건 × 라우트별 단가</small></div>
-          <div class="sitem-amt plus">+₩${r.damt.toLocaleString()}</div>
+          <div class="sitem-amt plus">+₩${rdList.reduce(function(s,rd){return s+(rd.amt||rd.cnt*(RPRICE[rd.route]||rd.unitPrice||0));},0).toLocaleString()}</div>
         </div>
         <div class="sitem">
           <div class="sitem-ico">↩</div>
           <div class="sitem-lbl"><strong>② 반품 수익</strong><small>${(+x.rcnt||0).toLocaleString()}건 × 라우트별 단가</small></div>
-          <div class="sitem-amt plus">+₩${r.ramt.toLocaleString()}</div>
+          <div class="sitem-amt plus">+₩${rdList.reduce(function(s,rd){return s+(rd.retAmt||rd.ret*(RPRICE[rd.route]||rd.unitPrice||0)||0);},0).toLocaleString()}</div>
         </div>
         <div class="sitem" id="st-fresh-row">
           <div class="sitem-ico">🎒</div>
@@ -10603,10 +10603,8 @@ function parseCoupangExcel(inp){
         var tm=totalMap[userId]||totalMap[cleanId]||{};
         var freshAmt=tm.freshAmt||dm.freshAmt||0;
         var dmgAmt=tm.dmgAmt||0;
-        // ★ v9.25: damt = 엑셀 금액(소계) 직접 사용 (프로모션·소급분 포함)
-        //          단가×건수 계산 방식보다 실제 쿠팡 지급액에 정확
-        var damt=tm.subAmt||dm.delAmt||0;
-        var ramt=0; // ★ 반품은 금액소계에 포함돼 있으므로 별도 가산 안 함
+        var damt=dm.delAmt||0;
+        var ramt=dm.retAmt||0;
         // ★ 미계약건: 엑셀 총금액 그대로 사용
         var nocontAmt=dm.nocontAmt||0;
         var nocontCnt=dm.nocontCnt||0;
