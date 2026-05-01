@@ -5413,6 +5413,21 @@ function rMypage(){
       html+='</div></div>';
     }
 
+    // ★ v9.25: Claude API 키 (관리자 전용 — OCR 기능용)
+    if(isAdmin){
+      var savedClaudeKey = localStorage.getItem('mbti_claude_api_key')||'';
+      var maskedKey = savedClaudeKey ? (savedClaudeKey.slice(0,10)+'...'+savedClaudeKey.slice(-4)) : '';
+      html+='<div style="margin-top:14px;padding:12px;background:var(--bg3);border-radius:10px;border:1.5px solid var(--border)">';
+      html+='<div style="font-size:12px;font-weight:700;margin-bottom:6px">🤖 Claude API 키 <span style="font-size:10px;font-weight:400;color:var(--text3)">(긴급배송 OCR 기능)</span></div>';
+      html+='<div style="display:flex;gap:6px;align-items:center">';
+      html+='<input id="mp-claude-key" type="password" placeholder="sk-ant-api..." value="'+savedClaudeKey+'" style="flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;background:var(--bg);color:var(--text)">';
+      html+='<button onclick="saveClaudeKey()" style="padding:8px 12px;background:var(--blue);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">저장</button>';
+      html+='</div>';
+      if(maskedKey) html+='<div style="font-size:10px;color:var(--teal);margin-top:4px">✅ 저장됨: '+maskedKey+'</div>';
+      html+='<div style="font-size:10px;color:var(--text3);margin-top:4px">Anthropic Console → API Keys에서 발급. 이 기기에만 저장됩니다.</div>';
+      html+='</div>';
+    }
+
     html+='<button class="btn btn-blue" style="width:100%;padding:13px;font-size:14px;margin-top:8px" onclick="saveMypage()">💾 정보 저장</button>';
     if(!isAdmin){
       // ★ v9.5: 본인확인 (한 번만 인증, 수정 가능)
@@ -9175,7 +9190,17 @@ function dHome(){
 }
 // ── 기사 홈 근무표: 월 이동 (-1 이전달, +1 다음달)
 // ★ v9.25: 휴무 변경 요청
-// ★ v9.25: 긴급 배송기록 — 쿠팡앱 에러 시 대체 증거 수집
+// ★ v9.25: Claude API 키 저장
+function saveClaudeKey(){
+  var key = (document.getElementById('mp-claude-key')?.value||'').trim();
+  if(!key){ toast('❌ API 키를 입력해주세요'); return; }
+  if(!key.startsWith('sk-ant-')){ toast('⚠️ 올바른 Anthropic API 키 형식이 아닙니다 (sk-ant-로 시작)'); return; }
+  localStorage.setItem('mbti_claude_api_key', key);
+  toast('✅ Claude API 키 저장됨');
+  SP('mypage', null);  // 화면 갱신
+}
+
+// ★ v9.25: OCR: 운송장 사진 → Claude Vision → 자동 입력
 function openEmergencyDelivery(){
   document.getElementById('emer-del-mo')?.remove();
   window._emerPhotos = [];
@@ -9283,10 +9308,18 @@ function openEmergencyDelivery(){
   }
 }
 
-// ★ OCR: 운송장 사진 → Claude Vision → 자동 입력
+// ★ v9.25: OCR: 운송장 사진 → Claude Vision → 자동 입력
 async function emerOcrScan(file){
   if(!file) return;
   var status = document.getElementById('emer-ocr-status');
+
+  // API 키 확인
+  var apiKey = localStorage.getItem('mbti_claude_api_key')||'';
+  if(!apiKey){
+    if(status) status.innerHTML = '<span style="color:var(--red)">❌ Claude API 키 미설정 — 내정보 탭에서 API 키를 등록해주세요</span>';
+    return;
+  }
+
   if(status) status.innerHTML = '<span style="color:var(--blue)">🤖 AI 분석 중...</span>';
 
   // 이미지 리사이즈 (API 전송 최적화)
@@ -9314,6 +9347,8 @@ async function emerOcrScan(file){
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
         'anthropic-dangerous-direct-browser-access': 'true'
       },
       body: JSON.stringify({
