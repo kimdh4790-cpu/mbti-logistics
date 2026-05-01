@@ -9717,7 +9717,7 @@ function openEmergencyDelivery(){
             style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text)"
             onkeydown="if(event.key==='Enter')emerAddTracking()">
           <button onclick="emerAddTracking()" style="padding:10px 14px;background:var(--teal);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">추가</button>
-          <button onclick="emerScanBarcode()" style="padding:10px 12px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;font-size:18px;cursor:pointer" title="바코드 스캔">📷</button>
+          <button onclick="emerOpenMap()" style="padding:10px 12px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:18px;cursor:pointer" title="지도에서 현재 배송 핀 확인">🗺️</button>
         </div>
       </div>
 
@@ -9913,6 +9913,28 @@ async function emerOcrScan(file){
     }
     if(status) status.innerHTML = '';
 
+    // ★ v9.25: OCR 완료 즉시 지도 핀 생성 (GPS + 데이터 있으면)
+    var gpsNow = window._emerGps;
+    if(gpsNow && gpsNow.lat && window._activeDriverMapAddPin){
+      var previewRecord = {
+        fbId: '_preview_'+Date.now(),
+        driver: S.curDriver||'',
+        trackings: window._emerTrackings.slice(),
+        tracking: window._emerTrackings[0]||'',
+        order_id: p.order_id||'',
+        recipient: p.recipient||'',
+        addr: p.address||'',
+        gps: {lat:gpsNow.lat, lng:gpsNow.lng},
+        time: new Date().toTimeString().slice(0,5),
+        status: '저장대기'
+      };
+      window._activeDriverMapAddPin(previewRecord);
+      // 카운터 업데이트
+      var ce=document.getElementById('driver-map-count');
+      if(ce){ var cn=parseInt(ce.textContent)||0; ce.textContent='오늘 긴급배송 '+(cn+1)+'건 핀 표시'; }
+      window._activeDriverMap&&window._activeDriverMap.panTo({lat:gpsNow.lat,lng:gpsNow.lng});
+    }
+
     // 운송장 사진 배송 사진으로 자동 추가
     var reader = new FileReader();
     reader.onload = function(e){ window._emerPhotos.push(e.target.result); emerRefreshPhotoWrap(); };
@@ -9923,6 +9945,24 @@ async function emerOcrScan(file){
   }
 }
 // 운송장 번호 추가
+// ★ v9.25: 긴급배송 폼에서 지도 버튼 클릭 시
+function emerOpenMap(){
+  if(!window._activeDriverMap){
+    // 지도 아직 안 열린 상태면 openDriverMap 호출
+    openDriverMap();
+    toast('🗺️ 지도 열기 중...');
+  } else {
+    // 이미 열린 지도로 포커스 이동
+    var gps = window._emerGps;
+    if(gps && gps.lat) window._activeDriverMap.panTo({lat:gps.lat, lng:gps.lng});
+    document.getElementById('driver-map-mo')?.scrollIntoView();
+    // 지도를 앞으로 가져오기
+    var mo = document.getElementById('driver-map-mo');
+    if(mo) mo.style.zIndex='10001';
+    document.getElementById('emer-del-mo')?.remove();
+  }
+}
+
 function emerAddTracking(){
   var inp = document.getElementById('emer-tracking-inp');
   if(!inp) return;
@@ -10109,26 +10149,40 @@ async function emerSave(){
         await ref.put(blob);
         var url=await ref.getDownloadURL();
         uploaded.push(url);
-      }catch(e){ uploaded.push(dataUrl); }
-    } else { uploaded.push(dataUrl); }
+      }catch(e){
+        // ★ v9.25: base64 Firestore 저장 차단 (1MB 한도 초과 → invalid-argument 원인)
+        // Storage 실패 시 URL 없이 건너뜀 (나중에 재업로드 가능)
+        console.warn('Storage 업로드 실패 (사진 '+i+'):', e.code||e.message);
+      }
+    } else {
+      // Firebase Storage 없으면 로컬에만 base64 보관 (Firestore엔 저장 안 함)
+    }
   }
-  record.photos = uploaded;
+  record.photos = uploaded; // URL만 저장 (base64 절대 포함 안 됨)
 
-  // 로컬 저장
+  // 로컬에는 base64 포함하여 저장 (기기 내 표시용)
+  var recordLocal = Object.assign({}, record, { photosLocal: window._emerPhotos.slice() });
   try{
     var emerList = JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]');
-    emerList.push(record);
+    emerList.push(recordLocal);
     localStorage.setItem('mbti_emergency_del', JSON.stringify(emerList));
-  }catch(e){}
+  }catch(e){ console.warn('로컬 저장 실패:', e); }
 
-  // Firebase 저장 + 관리자 알림
+  // Firebase 저장 + 관리자 알림 — .add() 사용 (docId 문제 완전 회피)
   var docId = null;
   if(FB&&_db){
-    docId = (S.curDriver+'_'+(window._emerTrackings[0]||'x')+'_'+now.getTime())
-      .replace(/\s/g,'_').replace(/[\/\\'\"\.]/g,'_');
-    record._fbId = docId; // 로컬 저장본에도 docId 기록
     try{
-      await _db.collection('emergency_deliveries').doc(docId).set(record);
+      // ★ v9.25: undefined 완전 제거 후 저장
+      var fbRecord = JSON.parse(JSON.stringify(record)); // undefined 키 자동 제거
+      var docRef = await _db.collection('emergency_deliveries').add(fbRecord);
+      docId = docRef.id;
+      record._fbId = docId;
+      // 로컬 마지막 항목에도 fbId 기록
+      try{
+        var el2 = JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]');
+        if(el2.length>0) el2[el2.length-1]._fbId = docId;
+        localStorage.setItem('mbti_emergency_del', JSON.stringify(el2));
+      }catch(e){}
       var adminFcm = JSON.parse(localStorage.getItem('mbti_admin_fcm')||'""');
       if(adminFcm){
         var trackingStr = window._emerTrackings.length>1
