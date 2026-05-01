@@ -5418,7 +5418,7 @@ function rMypage(){
       var savedClaudeKey = localStorage.getItem('mbti_claude_api_key')||'';
       var maskedKey = savedClaudeKey ? (savedClaudeKey.slice(0,10)+'...'+savedClaudeKey.slice(-4)) : '';
       html+='<div style="margin-top:14px;padding:12px;background:var(--bg3);border-radius:10px;border:1.5px solid var(--border)">';
-      html+='<div style="font-size:12px;font-weight:700;margin-bottom:6px">🤖 Claude API 키 <span style="font-size:10px;font-weight:400;color:var(--text3)">(긴급배송 OCR 기능)</span></div>';
+      html+='<div style="font-size:12px;font-weight:700;margin-bottom:6px">🤖 Google Vision API 키 <span style="font-size:10px;font-weight:400;color:var(--text3)">(긴급배송 OCR 기능 · 무료)</span></div>';
       html+='<div style="display:flex;gap:6px;align-items:center">';
       html+='<input id="mp-claude-key" type="password" placeholder="sk-ant-api..." value="'+savedClaudeKey+'" style="flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;background:var(--bg);color:var(--text)">';
       html+='<button onclick="saveClaudeKey()" style="padding:8px 12px;background:var(--blue);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">저장</button>';
@@ -9194,19 +9194,18 @@ function dHome(){
 async function saveClaudeKey(){
   var key = (document.getElementById('mp-claude-key')?.value||'').trim();
   if(!key){ toast('❌ API 키를 입력해주세요'); return; }
-  if(!key.startsWith('sk-ant-')){ toast('⚠️ 올바른 Anthropic API 키 형식이 아닙니다 (sk-ant-로 시작)'); return; }
   // 로컬 저장
-  localStorage.setItem('mbti_claude_api_key', key);
-  // Firebase 저장 (모든 기기에서 사용 가능)
+  localStorage.setItem('mbti_google_api_key', key);
+  // Firebase 저장
   if(FB && _db){
     try{
-      await _db.collection('settings').doc('claude_config').set({apiKey: key, updatedAt: new Date().toISOString()}, {merge: true});
-      toast('✅ Claude API 키 저장됨 (모든 기기 적용)');
+      await _db.collection('settings').doc('claude_config').set({googleApiKey: key, updatedAt: new Date().toISOString()}, {merge: true});
+      toast('✅ Google Vision API 키 저장됨 (모든 기기 적용)');
     }catch(e){
-      toast('✅ 로컬 저장됨 (Firebase 실패: '+(e.message||'')+')');
+      toast('✅ 로컬 저장됨');
     }
   } else {
-    toast('✅ Claude API 키 저장됨');
+    toast('✅ Google Vision API 키 저장됨');
   }
   SP('mypage', null);
 }
@@ -9324,27 +9323,26 @@ async function emerOcrScan(file){
   if(!file) return;
   var status = document.getElementById('emer-ocr-status');
 
-  // API 키 — 항상 Firebase에서 최신값 로드 (캐시 사용 안 함)
+  // Google Vision API 키 — Firebase에서 로드
   var apiKey = '';
   if(FB && _db){
     try{
       if(status) status.innerHTML = '<span style="color:var(--blue)">🔑 설정 불러오는 중...</span>';
       var doc = await _db.collection('settings').doc('claude_config').get();
-      if(doc.exists && doc.data().apiKey){
-        apiKey = doc.data().apiKey.trim();
+      if(doc.exists && doc.data().googleApiKey){
+        apiKey = doc.data().googleApiKey.trim();
       }
     }catch(e){ console.warn('Firebase 키 로드 실패:', e); }
   }
-  // Firebase 실패 시 localStorage 폴백
-  if(!apiKey) apiKey = localStorage.getItem('mbti_claude_api_key')||'';
+  if(!apiKey) apiKey = localStorage.getItem('mbti_google_api_key')||'';
 
   if(!apiKey){
     if(status) status.innerHTML = '<span style="color:var(--red)">❌ API 키 없음 — 관리자에게 문의하세요</span>';
     return;
   }
-  if(status) status.innerHTML = '<span style="color:var(--blue)">🤖 AI 분석 중... (키: '+apiKey.slice(0,15)+'...)</span>';
+  if(status) status.innerHTML = '<span style="color:var(--blue)">🤖 AI 분석 중...</span>';
 
-  // 이미지 리사이즈 (API 전송 최적화)
+  // 이미지 리사이즈
   var b64 = await new Promise(function(resolve){
     var img = new Image();
     var url = URL.createObjectURL(file);
@@ -9365,48 +9363,57 @@ async function emerOcrScan(file){
   });
 
   try{
-    var res = await fetch('https://api.anthropic.com/v1/messages', {
+    // Google Cloud Vision API 호출
+    var res = await fetch('https://vision.googleapis.com/v1/images:annotate?key='+apiKey, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
+      headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 600,
-        messages: [{
-          role: 'user',
-          content: [
-            {type:'image', source:{type:'base64', media_type:'image/jpeg', data: b64}},
-            {type:'text', text:'이 쿠팡 운송장 이미지에서 정보를 추출해서 JSON만 반환하세요. 다른 텍스트 없이:\n{"order_id":"주문번호(점포함원본)","tracking_no":"운송장번호(점포함원본)","recipient":"수령인","address":"배송주소전체","delivery_memo":"배송메모","camp":"캠프구역"}'}
-          ]
+        requests: [{
+          image: {content: b64},
+          features: [{type: 'TEXT_DETECTION', maxResults: 1}]
         }]
       })
     });
 
-    // 응답 텍스트 먼저 확인
     var rawText = await res.text();
-    if(!rawText || rawText.trim()===''){
-      throw new Error('빈 응답 (HTTP '+res.status+')');
-    }
+    if(!rawText || rawText.trim()==='') throw new Error('빈 응답 (HTTP '+res.status+')');
     var d;
     try{ d = JSON.parse(rawText); }
     catch(e){ throw new Error('파싱 실패: '+rawText.slice(0,100)); }
     if(d.error) throw new Error(d.error.message);
-    var txt = (d.content||[]).find(function(c){return c.type==='text';})?.text||'';
-    var p;
-    try{ p = JSON.parse(txt.replace(/```json|```/g,'').trim()); }
-    catch(e){ throw new Error('파싱실패: '+txt.slice(0,80)); }
+
+    // OCR 텍스트 추출
+    var ocrText = d.responses?.[0]?.textAnnotations?.[0]?.description || '';
+    if(!ocrText) throw new Error('텍스트 인식 실패 — 사진을 다시 찍어주세요');
+
+    // 쿠팡 운송장에서 정보 파싱
+    var lines = ocrText.split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
+
+    // 주문번호: 7.XXXX.XXXX.XXXX 패턴
+    var orderMatch = ocrText.match(/\d+\.\d{4}\.\d{4}\.\d{4}/);
+    // 운송장번호: 10.XXXX.XXXX.XXXX 패턴
+    var trackingMatch = ocrText.match(/1[0-9]\.\d{4}\.\d{4}\.\d{4}/);
+    // 수령인: 김*우 패턴
+    var recipientMatch = ocrText.match(/[가-힣]+\*[가-힣]+/);
+    // 주소: 구/동/로/길/아파트 포함 라인
+    var addrLine = lines.find(function(l){ return l.match(/구|동|로|길|아파트|오피스텔|빌라/); });
+    // 배송메모: 문 앞, 경비실 등
+    var memoLine = lines.find(function(l){ return l.match(/문\s*앞|경비실|자율출입|직접|부재|택배함/); });
+
+    var p = {
+      order_id: orderMatch ? orderMatch[0] : '',
+      tracking_no: trackingMatch ? trackingMatch[0] : '',
+      recipient: recipientMatch ? recipientMatch[0] : '',
+      address: addrLine || '',
+      delivery_memo: memoLine || ''
+    };
 
     // 자동 입력
-    if(p.order_id)   { var oi=document.getElementById('emer-orderid');   if(oi) oi.value=p.order_id; }
-    if(p.recipient)  { var re=document.getElementById('emer-recipient'); if(re) re.value=p.recipient; }
-    if(p.address)    { var ad=document.getElementById('emer-addr');      if(ad) ad.value=p.address; }
+    if(p.order_id)    { var oi=document.getElementById('emer-orderid');   if(oi) oi.value=p.order_id; }
+    if(p.recipient)   { var re=document.getElementById('emer-recipient'); if(re) re.value=p.recipient; }
+    if(p.address)     { var ad=document.getElementById('emer-addr');      if(ad) ad.value=p.address; }
     if(p.delivery_memo){ var dm=document.getElementById('emer-delivmemo'); if(dm) dm.value=p.delivery_memo; }
 
-    // 운송장번호 자동 추가
     if(p.tracking_no){
       var clean = p.tracking_no.replace(/[\.\-\s]/g,'');
       var inp = document.getElementById('emer-tracking-inp');
@@ -9416,7 +9423,6 @@ async function emerOcrScan(file){
 
     if(status) status.innerHTML = '<span style="color:var(--teal)">✅ 자동 입력 완료 — 내용 확인 후 저장하세요</span>';
 
-    // OCR 사진도 배송 사진에 추가 여부 묻기
     var addPhoto = confirm('운송장 사진을 배송 사진으로도 추가하시겠습니까?');
     if(addPhoto){
       var reader = new FileReader();
@@ -9428,7 +9434,6 @@ async function emerOcrScan(file){
     if(status) status.innerHTML = '<span style="color:var(--red)">❌ OCR 실패: '+e.message+' — 직접 입력해주세요</span>';
   }
 }
-
 // 운송장 번호 추가
 function emerAddTracking(){
   var inp = document.getElementById('emer-tracking-inp');
@@ -10650,7 +10655,7 @@ function submitLinehaul(){
   DT('delivery',document.getElementById('pni2'));toast('간선 등록 완료');
 }
 
-function dTemp(){
+async function dTemp(){
   // ★ 쿠팡 연동 제거 — 모든 기사 온도 기록 가능
   var logs=ls('tempLogs').filter(l=>l.driver===S.curDriver&&l.date===today());
   var ph=[['log','온도기록지'],['dev','온도계화면']].map(([k,lbl])=>{
@@ -10701,7 +10706,7 @@ async function submitTemp(){
   toast('온도 '+t+'°C 등록'+(t>-18?' ⚠ 이상!':''));
 }
 
-function dAccident(){
+async function dAccident(){
   var me=ls('accidents').filter(a=>a.driver===S.curDriver);
   var ph=['front','side','damage','scene'].map((k,i)=>{
     var lbl=['전면','측면','파손부위','현장전체'][i];
