@@ -625,6 +625,7 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
           <div class="ni" onclick="SP('delivery_line',this)">🚚 간선 현황</div>
           <div class="ni" onclick="SP('memo_log',this)">📝 운행 메모 <span id="memo-badge" style="display:none;background:var(--amber);color:#fff;font-size:9px;padding:1px 5px;border-radius:999px;margin-left:2px">N</span></div>
           <div class="ni" onclick="SP('accident',this)">🚨 사고 접수 <span id="acc-badge" style="display:none;background:var(--red);color:#fff;font-size:9px;padding:1px 5px;border-radius:999px;margin-left:2px">!</span></div>
+          <div class="ni" onclick="SP('emergency_log',this)">🚨 긴급배송 기록 (60일)</div>
           <div class="ni" onclick="SP('temp',this)">🌡 온도 기록</div>
         </div>
         <!-- 재무 그룹 -->
@@ -1981,7 +1982,7 @@ async function submitReg(){
 }
 
 // ══ 관리자 페이지
-var PT={archive:'📋 3개월 기록 보관소',audit:'🔒 보안 감사 로그',dash:'대시보드',schedule_admin:'📅 근무표 관리',memo:'📝 메모 달력',sync:'기사 연동',entry:'입차 현황',delivery_taxi:'📦 운행 현황',delivery_line:'🚚 간선 현황',delivery:'운송현황',accident:'사고 접수',temp:'온도 기록',settle:'정산서 관리',drivers:'기사 관리',insurance:'쿠팡 라우트 단가표',mypage:'내 정보 수정',inquiries:'📩 홈페이지 문의함',notice:'📢 공지사항 게시판',attend:'📍 출퇴근 조회',memo_log:'📝 운행 메모 (60일)',support_admin:'🤝 기사 지원요청',complaint_admin:'📝 불편함 접수'};
+var PT={archive:'📋 3개월 기록 보관소',audit:'🔒 보안 감사 로그',dash:'대시보드',schedule_admin:'📅 근무표 관리',memo:'📝 메모 달력',sync:'기사 연동',entry:'입차 현황',delivery_taxi:'📦 운행 현황',delivery_line:'🚚 간선 현황',delivery:'운송현황',accident:'사고 접수',temp:'온도 기록',settle:'정산서 관리',drivers:'기사 관리',insurance:'쿠팡 라우트 단가표',mypage:'내 정보 수정',inquiries:'📩 홈페이지 문의함',notice:'📢 공지사항 게시판',attend:'📍 출퇴근 조회',memo_log:'📝 운행 메모 (60일)',support_admin:'🤝 기사 지원요청',complaint_admin:'📝 불편함 접수',emergency_log:'🚨 긴급배송 기록 (60일)'};
 function SP(pg,el){
   S.page=pg;
   // 기사 관리 페이지 진입 시 Firebase 최신 데이터 즉시 로드
@@ -2010,7 +2011,7 @@ function SP(pg,el){
     if(typeof addAct==='function')addAct('security','관리자 페이지 무단 접근 시도: '+pg,null);
     return;
   }
-  var m={archive:rArchive,audit:rAuditLog,dash:rDash,sync:rSync,schedule_admin:rScheduleAdmin,memo:rMemoCalendar,entry:rEntry,delivery_taxi:rDeliveryTaxi,delivery_line:rDeliveryLine,delivery:rDelivery,accident:rAcc,temp:rTemp,settle:rSettle,drivers:rDrivers,insurance:rInsurance,mypage:rMypage,inquiries:rInquiries,notice:rNoticePanel,attend:rAttendPanel,memo_log:rMemoLog,support_admin:rSupportAdmin,complaint_admin:rComplaintAdmin};
+  var m={archive:rArchive,audit:rAuditLog,dash:rDash,sync:rSync,schedule_admin:rScheduleAdmin,memo:rMemoCalendar,entry:rEntry,delivery_taxi:rDeliveryTaxi,delivery_line:rDeliveryLine,delivery:rDelivery,accident:rAcc,temp:rTemp,settle:rSettle,drivers:rDrivers,insurance:rInsurance,mypage:rMypage,inquiries:rInquiries,notice:rNoticePanel,attend:rAttendPanel,memo_log:rMemoLog,support_admin:rSupportAdmin,complaint_admin:rComplaintAdmin,emergency_log:rEmergencyLog};
   try{
     document.getElementById('ca').innerHTML=(m[pg]||rDash)();
   }catch(e){
@@ -9723,6 +9724,7 @@ function dHome(){
   </div>
   <div style="display:flex;gap:6px;margin:0 10px 6px">
     <button onclick="openEmergencyDelivery()" style="flex:1;padding:11px;background:#dc2626;color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:800;cursor:pointer;letter-spacing:.02em">📸 쿠팡앱 에러 시 긴급 배송기록</button>
+    <button onclick="SP('emergency_log',null)" style="padding:11px 14px;background:var(--bg3);border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer;color:var(--text)">📋 기록</button>
   </div>
   <!-- 사고접수 + 사진 모아보기 버튼 -->
   <button class="bbtn bb-red" onclick="DT('accident',document.getElementById('pni4'))" style="padding:11px;font-size:13px;margin:0 10px 6px">🚨 사고 접수</button>
@@ -10509,6 +10511,112 @@ async function saveDelivComplete(){
   window._delivCompletePhotos = [];
   if(fbOk) toast('✅ 배송완료 기록 저장됨');
   setTimeout(function(){ document.getElementById('deliv-complete-mo')?.remove(); }, 800);
+}
+
+// ★ v9.25: 긴급배송 기록 (60일) — 기사/관리자 공용
+async function rEmergencyLog(){
+  var isAdmin = S.curMode==='admin';
+  var cut = _drv60Cut();
+  var records = [];
+
+  // Firebase 조회
+  if(FB&&_db){
+    try{
+      var q = _db.collection('emergency_deliveries').orderBy('savedAt','desc').limit(200);
+      if(!isAdmin) q = q.where('driver','==',S.curDriver);
+      var snap = await q.get();
+      snap.forEach(function(d){ var x=d.data(); x.fbId=d.id; records.push(x); });
+    }catch(e){ console.warn('emergency_log Firebase:', e.code); }
+  }
+
+  // 로컬 병합
+  try{
+    var local = JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]');
+    local.forEach(function(lx){
+      if(!isAdmin && lx.driver!==S.curDriver) return;
+      var dup = lx._fbId && records.some(function(r){return r.fbId===lx._fbId;});
+      if(!dup) records.push(lx);
+    });
+  }catch(e){}
+
+  // 60일 필터 + 정렬
+  records = records.filter(function(x){ return (x.date||x.savedAt||'')>=cut; })
+    .sort(function(a,b){ return (b.savedAt||'').localeCompare(a.savedAt||''); });
+
+  // 날짜별 그룹
+  var byDate = {};
+  records.forEach(function(x){
+    var d = x.date||(x.savedAt||'').slice(0,10);
+    if(!byDate[d]) byDate[d]=[];
+    byDate[d].push(x);
+  });
+
+  var html = '<div style="padding:12px 10px">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
+    +'<div>'
+    +'<div style="font-size:16px;font-weight:800">🚨 긴급배송 기록</div>'
+    +'<div style="font-size:11px;color:var(--text3)">최근 60일 · 총 '+records.length+'건'+(isAdmin?' (전체 기사)':' (내 기록)')+'</div>'
+    +'</div>'
+    +'<button onclick="SP(\'home\',null)" style="padding:6px 14px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer">← 홈</button>'
+    +'</div>';
+
+  if(!records.length){
+    html += '<div style="text-align:center;padding:40px 20px;color:var(--text3)">'
+      +'<div style="font-size:40px;margin-bottom:12px">📭</div>'
+      +'<div style="font-size:14px;font-weight:600;margin-bottom:6px">긴급배송 기록 없음</div>'
+      +'<div style="font-size:12px">최근 60일간 기록이 없습니다</div>'
+      +'</div>';
+  } else {
+    Object.keys(byDate).sort(function(a,b){return b.localeCompare(a);}).forEach(function(date){
+      var rows = byDate[date];
+      var doneCnt = rows.filter(function(x){return x.status==='완료';}).length;
+      html += '<div style="margin-bottom:12px">'
+        +'<div style="font-size:12px;font-weight:700;color:var(--text2);padding:6px 0;border-bottom:2px solid var(--border);margin-bottom:6px;display:flex;justify-content:space-between">'
+        +'<span>'+date+'</span>'
+        +'<span style="font-size:11px;color:var(--text3)">'+rows.length+'건 / 완료 '+doneCnt+'건</span>'
+        +'</div>';
+
+      rows.forEach(function(x){
+        var isDone = x.status==='완료';
+        var trackStr = (x.trackings&&x.trackings.length>1)
+          ? x.trackings.join(', ')
+          : (x.trackings&&x.trackings[0])||x.tracking||'—';
+
+        // 배송 사진 (최대 3장)
+        var photos = (x.photos||[]).filter(function(u){return u&&u.startsWith('http');});
+        var completePhotos = (x.completePhotos||[]).filter(function(u){return u&&u.startsWith('http');});
+        var allPhotos = photos.concat(completePhotos).slice(0,4);
+        var phHTML = allPhotos.length
+          ? '<div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap">'
+            +allPhotos.map(function(u){
+              return '<img src="'+u+'" onclick="openIV(\''+u+'\',\'긴급배송사진\')" style="width:56px;height:56px;object-fit:cover;border-radius:6px;cursor:pointer;border:2px solid '+(isDone?'var(--teal)':'var(--border)')+'">'; 
+            }).join('')+'</div>' : '';
+
+        html += '<div style="padding:10px;background:var(--bg3);border-radius:10px;margin-bottom:8px;border-left:3px solid '+(isDone?'#16a34a':'#dc2626')+'">'
+          +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">'
+          +'<div style="font-size:13px;font-weight:700">'+(x.recipient||'수령인미상')+'</div>'
+          +'<div style="display:flex;gap:4px;align-items:center">'
+          +(isAdmin?'<span style="font-size:10px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:1px 6px">'+( x.driver||'')+'</span>':'')
+          +'<span style="font-size:10px;padding:2px 7px;border-radius:999px;font-weight:700;background:'+(isDone?'#dcfce7':'#fee2e2')+';color:'+(isDone?'#16a34a':'#dc2626')+'">'+(isDone?'✅ 완료':'⏳ 미완료')+'</span>'
+          +'</div>'
+          +'</div>'
+          +'<div style="font-size:11px;color:var(--text2);line-height:1.8">'
+          +(x.addr?'📍 '+x.addr+'<br>':'')
+          +'📦 운송장: '+trackStr+'<br>'
+          +(x.order_id?'📋 주문번호: '+x.order_id+'<br>':'')
+          +'⏰ '+( x.time||x.savedAt&&x.savedAt.slice(11,16)||'')
+          +(isDone&&x.completedAt?' → 완료 '+x.completedAt.slice(11,16):'')
+          +'</div>'
+          +phHTML
+          +(isDone&&x.completeMemo?'<div style="font-size:11px;color:var(--text3);margin-top:4px">📝 '+x.completeMemo+'</div>':'')
+          +'</div>';
+      });
+      html += '</div>';
+    });
+  }
+
+  html += '</div>';
+  return html;
 }
 
 function openShiftSwapModal(){
