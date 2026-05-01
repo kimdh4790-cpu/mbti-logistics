@@ -9627,8 +9627,10 @@ function dHome(){
   </div>
   <!-- 사고접수 + 사진 모아보기 버튼 -->
   <button class="bbtn bb-red" onclick="DT('accident',document.getElementById('pni4'))" style="padding:11px;font-size:13px;margin:0 10px 6px">🚨 사고 접수</button>
-  <button onclick="openShiftSwapModal()" style="width:calc(100% - 20px);margin:0 10px 6px;padding:11px;background:var(--teal);color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer">🔄 휴무 변경 요청</button>
-  <button onclick="openComplaintModal()" style="width:calc(100% - 20px);margin:0 10px 6px;padding:11px;background:var(--amber,#d97706);color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer">📝 불편함 접수 → 관리자 전달</button>
+  <div style="display:flex;gap:6px;margin:0 10px 6px">
+    <button onclick="openShiftSwapModal()" style="flex:1;padding:11px;background:var(--teal);color:#fff;border:none;border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer">🔄 휴무변경</button>
+    <button onclick="openComplaintModal()" style="flex:1;padding:11px;background:var(--amber,#d97706);color:#fff;border:none;border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer">📝 지원요청</button>
+  </div>
   <button onclick="drvPhotoGallery()" style="width:calc(100% - 20px);margin:0 10px 10px;padding:11px;background:var(--purple-l);color:var(--purple);border:1.5px solid var(--purple);border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer">📸 사진 모아보기 (60일)</button>
   </div>`;
 }
