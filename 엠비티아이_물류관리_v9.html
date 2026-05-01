@@ -1563,8 +1563,6 @@ function doLogin(){
         SP('dash',null); updBadge(); updFbUI(); initGrps();
         document.getElementById('tbdate').textContent=new Date().toLocaleDateString('ko-KR');
         startListeners();
-        setTimeout(archiveAndPurge,5000); // 로그인 5초 후 자동 아카이빙
-        setTimeout(autoCleanupFirebase,8000); // 로그인 8초 후 Firebase 자동 정리
         setTimeout(initInqListener,3000); // 로그인 3초 후 문의함 실시간 감시 시작
       };
       if(info.otpEnabled && info.otpSecret){
@@ -13027,7 +13025,6 @@ function startListeners(){
         SP('dash',null); updBadge(); updFbUI(); initGrps();
         document.getElementById('tbdate').textContent=new Date().toLocaleDateString('ko-KR');
         startListeners();
-        setTimeout(autoCleanupFirebase,8000); // 자동 로그인 시에도 Firebase 정리
         toast('👋 '+( sess.name||'관리자')+'님 자동 로그인');
       } else if(sess.mode==='driver'){
         // 기사 세션 복원 — Firebase/로컬에서 계정 유효 확인
