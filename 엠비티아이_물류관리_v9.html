@@ -2852,6 +2852,7 @@ function rSettle(){
         📂 고용·산재 엑셀 첨부
         <input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="parseInsExcelSettle(this)">
       </label>
+      <button onclick="openEmergencyAdmin()" style="padding:8px 14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🚨 긴급 배송기록 조회</button>
       <button onclick="exportAllSettlements()" style="padding:8px 14px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⬇️ 전체 정산 다운로드</button>
       <button onclick="openTaxStore()" style="padding:8px 14px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗂 기사별 세금계산서 보관함</button>
       <button id="jinju-inc-btn" onclick="openIncPanel()" style="padding:8px 14px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⚙️ 기사별 인센 설정</button>
@@ -2860,6 +2861,7 @@ function rSettle(){
       <button onclick="checkDuplicateSettlements()" style="padding:8px 14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔍 중복 검사</button>
       <button onclick="syncFirebaseSettlements()" style="padding:8px 14px;background:#0d9488;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔄 Firebase 동기화</button>
       <button onclick="recalcAllSettlements()" style="padding:8px 14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⚡ 전체 정산 재계산 저장</button>
+      <button onclick="openBulkSendPanel()" style="padding:8px 14px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📤 정산 일괄 전달</button>
     </div>
     <div style="font-size:10px;color:var(--text3);margin-top:8px">💡 쿠팡 엑셀(정산Raw/정산총괄 포함) 업로드 → 기사 자동 매칭 → 고용·산재·원천세 자동 계산</div>
   </div>
@@ -2921,15 +2923,94 @@ function appSettle(i){
   if(!alreadySent){
     toast('✅ 승인 완료 — 명세서 + 세금계산서 자동 전달 중...');
     setTimeout(function(){
-      // 명세서 먼저 전달
-      var sIdx=ls('settlements').findIndex(function(x){return x.driver===driverNm&&x.month===monthStr;});
-      if(sIdx>=0)sendStmtToDriver(sIdx);
-      // 세금계산서 전달 (약간 딜레이)
-      setTimeout(function(){autoSendTaxOnApprove(driverNm, monthStr);}, 1500);
+      // 명세서 자동 전달 (모달 없이도 동작)
+      autoSendStmtOnApprove(driverNm, monthStr, function(){
+        // 명세서 전달 완료 후 세금계산서 전달
+        setTimeout(function(){ autoSendTaxOnApprove(driverNm, monthStr); }, 800);
+      });
     }, 300);
   } else {
-    toast('✅ 정산 승인됨 ('+driverNm+') — 명세서/세금계산서 전달 완료');
+    toast('✅ 정산 승인됨 ('+driverNm+') — 명세서/세금계산서 이미 전달됨');
   }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 승인 시 자동 명세서 전달 (모달 자동 생성 → 캡처 → 전달 → 닫기)
+// ★ v9.25: sendStmtToDriver는 모달이 열려있어야만 동작 → 이 함수로 대체
+// ═══════════════════════════════════════════════════════════
+function autoSendStmtOnApprove(driverName, month, onDone){
+  var s=ls('settlements');
+  var idx=s.findIndex(function(x){return x.driver===driverName&&x.month===month;});
+  if(idx<0){toast('⚠️ 명세서 자동 전달 실패 - 정산 데이터를 찾을 수 없음');if(onDone)onDone();return;}
+  if(typeof html2canvas==='undefined'){toast('⚠️ 이미지 라이브러리 로딩 중... 수동 전달 필요');if(onDone)onDone();return;}
+
+  // 기존 stmt-mo 제거 후 새로 열기
+  document.getElementById('stmt-mo')?.remove();
+  viewStmt(idx);
+
+  setTimeout(function(){
+    var wrap=document.querySelector('.stmt');
+    if(!wrap){toast('⚠️ 명세서 자동 생성 실패 - 수동 전달 필요');if(onDone)onDone();return;}
+    var wrapW=wrap.scrollWidth, wrapH=wrap.scrollHeight;
+    html2canvas(wrap,{scale:2.5,useCORS:true,backgroundColor:'#ffffff',logging:false,
+      width:wrapW,height:wrapH,windowWidth:wrapW,windowHeight:wrapH})
+    .then(function(canvas){
+      var dataUrl=canvas.toDataURL('image/jpeg',0.95);
+      var fallbackUrl=dataUrl;
+      if(fallbackUrl.length>900000) fallbackUrl=canvas.toDataURL('image/jpeg',0.85);
+      if(fallbackUrl.length>900000) fallbackUrl=canvas.toDataURL('image/jpeg',0.75);
+      if(fallbackUrl.length>900000){
+        var c2=document.createElement('canvas');
+        c2.width=canvas.width*0.7;c2.height=canvas.height*0.7;
+        c2.getContext('2d').drawImage(canvas,0,0,c2.width,c2.height);
+        fallbackUrl=c2.toDataURL('image/jpeg',0.85);
+      }
+      var x=ls('settlements')[idx];
+      var r=calcNet(Object.assign({},x,{emp:0,work:0}));
+      var saveStmt=function(imgUrl){
+        var note={type:'settlement',driver:driverName,month:month,
+          income:r.income,net:r.net,img:imgUrl,
+          sentAt:new Date().toISOString(),status:'전달완료',sentBy:'관리자(자동)',autoSent:true};
+        // 보관함 저장
+        try{var st=JSON.parse(localStorage.getItem('mbti_stmt_store')||'{}');
+          if(!st[driverName])st[driverName]=[];
+          var idx2=st[driverName].findIndex(function(it){return it.month===month;});
+          if(idx2>=0)st[driverName][idx2]=note; else st[driverName].push(note);
+          localStorage.setItem('mbti_stmt_store',JSON.stringify(st));}catch(e){}
+        if(FB&&_db){
+          var stmtKey=(driverName+'_stmt_'+month).replace(/\s/g,'_').replace(/[\/\\'\"]/g,'');
+          _db.collection('driver_notifications').doc(stmtKey).set(note)
+          .then(function(){toast('📄 '+driverName+' 명세서 자동 전달 완료');})
+          .catch(function(e){toast('📄 명세서 보관함 저장됨 (FB 실패)');});
+        } else {
+          toast('📄 '+driverName+' 명세서 보관함 저장됨');
+        }
+        // 모달 닫기
+        document.getElementById('stmt-mo')?.remove();
+        if(onDone)onDone();
+      };
+      if(FB&&_st){
+        var byteStr=atob(dataUrl.split(',')[1]);
+        var ab=new ArrayBuffer(byteStr.length);
+        var ia=new Uint8Array(ab);
+        for(var i2=0;i2<byteStr.length;i2++)ia[i2]=byteStr.charCodeAt(i2);
+        var blob=new Blob([ab],{type:'image/jpeg'});
+        var storePath='settlements/'+driverName+'/'+month+'_auto_'+Date.now()+'.jpg';
+        var ref=_st.ref(storePath);
+        var done=false;
+        var timer=setTimeout(function(){if(!done){done=true;saveStmt(fallbackUrl);}},10000);
+        ref.put(blob).then(function(){return ref.getDownloadURL();})
+        .then(function(url){if(!done){done=true;clearTimeout(timer);saveStmt(url);}})
+        .catch(function(e){if(!done){done=true;clearTimeout(timer);saveStmt(fallbackUrl);}});
+      } else {
+        saveStmt(fallbackUrl);
+      }
+    }).catch(function(e){
+      toast('⚠️ 명세서 이미지 생성 오류: '+(e&&e.message||'')+ ' - 수동 전달 필요');
+      document.getElementById('stmt-mo')?.remove();
+      if(onDone)onDone();
+    });
+  }, 700); // 모달 렌더링 대기
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -3090,6 +3171,158 @@ async function recalcAllSettlements(){
     alert('✅ 전체 정산 재계산 완료\n\n재계산: '+changed+'건 (로컬 저장)\n※ Firebase 미연결 — 배포 환경에서 재실행 권장');
   }
   SP('settle',null);
+}
+
+// ★ v9.25: 정산 일괄 전달 패널
+function openBulkSendPanel(){
+  var s=ls('settlements');
+  if(!s||!s.length){toast('정산 데이터 없음');return;}
+  // 캠프 목록 수집 (정산서 기준)
+  var drv=ls('drivers');
+  var campMap={};
+  s.forEach(function(x){
+    var d=drv.find(function(dr){return dr.name===x.driver;})||{};
+    var c=d.camp||x.camp||'기타';
+    if(!campMap[c])campMap[c]=0;
+    campMap[c]++;
+  });
+  var camps=Object.keys(campMap).sort();
+  // 현재 정산 화면의 필터 월
+  var curMonth=window._adm_settle_month||'';
+  var monthSuffix=curMonth?' ('+curMonth+'월)':'';
+
+  var campBtns=camps.map(function(c){
+    return '<button onclick="bulkSendSettlements(\''+c+'\',\''+curMonth+'\')" '
+      +'style="padding:10px 18px;background:var(--bg3);border:1.5px solid var(--border);'
+      +'border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;color:var(--text)">📍 '+c+' ('+campMap[c]+'명)</button>';
+  }).join('');
+
+  document.body.insertAdjacentHTML('beforeend',`
+  <div id="bulk-send-mo" style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:600;display:flex;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)this.remove()">
+    <div onclick="event.stopPropagation()" style="background:var(--bg);border-radius:14px;padding:24px;width:480px;max-width:95vw;max-height:85vh;overflow-y:auto">
+      <div style="font-size:16px;font-weight:800;margin-bottom:6px">📤 정산 일괄 전달${monthSuffix}</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:20px">명세서 + 세금계산서 이미지를 기사 앱으로 자동 전달합니다.<br>미전달(taxSent=false) 건만 전달하며, 이미 전달된 건은 건너뜁니다.</div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
+        <button onclick="bulkSendSettlements('all','${curMonth}')" style="padding:12px;background:var(--purple);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer">👥 전체 일괄 전달 (${s.length}건)</button>
+        <div style="font-size:11px;color:var(--text3);text-align:center;margin:-4px 0">— 또는 캠프별 선택 —</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">${campBtns}</div>
+      </div>
+      <button onclick="document.getElementById('bulk-send-mo').remove()" style="width:100%;padding:10px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">닫기</button>
+    </div>
+  </div>`);
+}
+
+// 일괄 전달 실행 — camp='all' 이면 전체, 특정 캠프명이면 해당 캠프만
+// month 지정 시 해당 월만, '' 이면 전체 월
+async function bulkSendSettlements(camp, month){
+  document.getElementById('bulk-send-mo')?.remove();
+  var s=ls('settlements');
+  var drv=ls('drivers');
+  // 대상 필터링
+  var targets=s.filter(function(x,idx){
+    if(!x||!x.driver)return false;
+    if(x.taxSent===true)return false;  // 이미 전달됨
+    if(x.status!=='완료')return false;  // 승인 완료된 것만
+    if(month&&x.month!==month)return false;
+    if(camp!=='all'){
+      var d=drv.find(function(dr){return dr.name===x.driver;})||{};
+      var c=d.camp||x.camp||'기타';
+      if(c!==camp)return false;
+    }
+    x._origIdx=idx;
+    return true;
+  });
+  if(!targets.length){
+    alert('📭 전달 대상 없음\n\n미전달 + 승인완료 건이 없습니다.\n(이미 전달됐거나 아직 미승인)');
+    return;
+  }
+  var campLabel=camp==='all'?'전체':camp+' 캠프';
+  var monthLabel=month?month+'월 ':'';
+  if(!confirm('📤 '+campLabel+' '+monthLabel+'일괄 전달\n\n대상: '+targets.length+'명\n\n명세서 + 세금계산서를 순차 전달합니다.\n(건당 약 3~5초 소요)\n\n시작하시겠습니까?'))return;
+
+  var total=targets.length, done=0, failed=0;
+  toast('📤 일괄 전달 시작 (0/'+total+')...');
+
+  // 순차 처리 (동시 처리 시 html2canvas 충돌 방지)
+  for(var i=0;i<targets.length;i++){
+    var t=targets[i];
+    var driverNm=t.driver, monthStr=t.month;
+    toast('📤 전달 중... ('+( done+1)+'/'+total+') — '+driverNm+' '+monthStr);
+    try{
+      await new Promise(function(resolve){
+        // 명세서 전달
+        autoSendStmtOnApprove(driverNm, monthStr, function(){
+          // 세금계산서 전달
+          setTimeout(function(){
+            // autoSendTaxOnApprove는 내부적으로 taxSent=true 저장
+            var origFn=autoSendTaxOnApprove;
+            autoSendTaxOnApprove(driverNm, monthStr);
+            setTimeout(resolve, 3000); // 캡처+업로드 대기
+          }, 800);
+        });
+      });
+      done++;
+    }catch(e){
+      console.warn('일괄전달 실패:',driverNm, e);
+      failed++;
+      done++;
+    }
+    await new Promise(function(r){setTimeout(r,500);}); // 다음 건 전 인터벌
+  }
+  SP('settle',null);
+  alert('✅ 일괄 전달 완료\n\n성공: '+( done-failed)+'건\n실패: '+failed+'건\n\n실패 건은 개별 명세서에서 수동 전달해주세요.');
+}
+
+// ★ v9.25: 관리자 긴급 배송기록 조회
+async function openEmergencyAdmin(){
+  var records=[];
+  // Firebase에서 최신 50건 조회
+  if(FB&&_db){
+    toast('🔍 긴급 배송기록 불러오는 중...');
+    try{
+      var snap=await _db.collection('emergency_deliveries').orderBy('savedAt','desc').limit(50).get();
+      snap.forEach(function(d){records.push(Object.assign({id:d.id},d.data()));});
+    }catch(e){
+      records=JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]');
+    }
+  } else {
+    records=JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]');
+  }
+
+  var rows=records.length ? records.map(function(r){
+    var photos=(r.photos||[]).map(function(url){
+      return '<img src="'+url+'" onclick="window.open(\''+url+'\',\'_blank\')" style="width:60px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer;border:1px solid var(--border)">';
+    }).join('');
+    var gpsLink=r.gps?'<a href="https://maps.google.com/?q='+r.gps.lat+','+r.gps.lng+'" target="_blank" style="color:var(--blue);font-size:10px">📍지도</a>':'<span style="color:var(--text3);font-size:10px">GPS없음</span>';
+    return '<tr>'
+      +'<td style="white-space:nowrap">'+( r.date||'')+' '+( r.time||'')+'</td>'
+      +'<td style="font-weight:700">'+( r.driver||'')+'</td>'
+      +'<td style="font-family:monospace;font-size:12px">'+( r.tracking||'')+'</td>'
+      +'<td>'+( r.addr||'—')+'</td>'
+      +'<td>'+photos+'</td>'
+      +'<td>'+gpsLink+'</td>'
+      +'<td style="font-size:11px;color:var(--text3)">'+( r.memo||'—')+'</td>'
+      +'</tr>';
+  }).join('') : '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text3)">긴급 배송기록 없음</td></tr>';
+
+  document.getElementById('emer-admin-mo')?.remove();
+  document.body.insertAdjacentHTML('beforeend',`
+  <div id="emer-admin-mo" style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:600;display:flex;align-items:center;justify-content:center;padding:12px" onclick="if(event.target===this)this.remove()">
+    <div onclick="event.stopPropagation()" style="background:var(--bg);border-radius:14px;padding:20px;width:900px;max-width:98vw;max-height:88vh;overflow-y:auto">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+        <span style="font-size:18px">🚨</span>
+        <div style="font-size:16px;font-weight:800">긴급 배송기록 조회</div>
+        <div style="font-size:11px;color:var(--text3);margin-left:4px">최근 ${records.length}건</div>
+        <button onclick="document.getElementById('emer-admin-mo').remove()" style="margin-left:auto;padding:5px 12px;background:var(--bg3);border:1.5px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px">닫기</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="tbl" style="min-width:700px">
+          <thead><tr><th>일시</th><th>기사</th><th>운송장</th><th>배송장소</th><th>사진</th><th>GPS</th><th>메모</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>
+  </div>`);
 }
 
 async function syncFirebaseSettlements(){
@@ -5907,6 +6140,9 @@ function viewStmt(i){
   var ss=ls('settlements');
   // ramt 보정: 저장값 없으면 routeDetails에서 계산
   if((!x.ramt||x.ramt===0)&&retAmtFromRoutes>0){ss[i].ramt=retAmtFromRoutes;needsUpdate=true;}
+  // ★ v9.25: damt 보정 — 라우트별 테이블 합계와 저장된 damt가 다르면 라우트 기준으로 교정
+  var delAmtFromRoutes=rdList.reduce(function(s,rd){var up=RPRICE[rd.route]||rd.unitPrice||0;return s+(rd.cnt||0)*up;},0);
+  if(delAmtFromRoutes>0&&Math.abs((+x.damt||0)-delAmtFromRoutes)>100){ss[i].damt=delAmtFromRoutes;needsUpdate=true;}
   // inc 강제 0 (추가인센 표시 안함)
   if(ss[i].inc>0){ss[i].inc=0;needsUpdate=true;}
   if(needsUpdate){lss('settlements',ss);x=ls('settlements')[i];}
@@ -8926,7 +9162,8 @@ function dHome(){
       </div>
     </div>
   </div>
-    <!-- 사고접수 + 사진 모아보기 버튼 -->
+  <button onclick="openEmergencyDelivery()" style="width:calc(100% - 20px);margin:0 10px 6px;padding:11px;background:#dc2626;color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:800;cursor:pointer;letter-spacing:.02em">📸 쿠팡앱 에러 시 긴급 배송기록</button>
+  <!-- 사고접수 + 사진 모아보기 버튼 -->
   <button class="bbtn bb-red" onclick="DT('accident',document.getElementById('pni4'))" style="padding:11px;font-size:13px;margin:0 10px 6px">🚨 사고 접수</button>
   <button onclick="openShiftSwapModal()" style="width:calc(100% - 20px);margin:0 10px 6px;padding:11px;background:var(--teal);color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer">🔄 휴무 변경 요청</button>
   <button onclick="openComplaintModal()" style="width:calc(100% - 20px);margin:0 10px 6px;padding:11px;background:var(--amber,#d97706);color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer">📝 불편함 접수 → 관리자 전달</button>
@@ -8935,6 +9172,241 @@ function dHome(){
 }
 // ── 기사 홈 근무표: 월 이동 (-1 이전달, +1 다음달)
 // ★ v9.25: 휴무 변경 요청
+// ★ v9.25: 긴급 배송기록 — 쿠팡앱 에러 시 대체 증거 수집
+function openEmergencyDelivery(){
+  document.getElementById('emer-del-mo')?.remove();
+  document.body.insertAdjacentHTML('beforeend',`
+  <div id="emer-del-mo" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:700;display:flex;align-items:flex-end;justify-content:center" onclick="if(event.target===this)this.remove()">
+    <div onclick="event.stopPropagation()" style="background:var(--bg);border-radius:16px 16px 0 0;padding:20px 16px 32px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto">
+      <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px"></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <span style="font-size:20px">📸</span>
+        <div style="font-size:16px;font-weight:800;color:var(--red)">긴급 배송기록</div>
+        <div style="margin-left:auto;font-size:10px;background:#dc2626;color:#fff;padding:2px 8px;border-radius:999px;font-weight:700">쿠팡앱 에러 대응</div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:16px">운송장 번호 + 사진 + GPS를 기록합니다. 쿠팡 CS 제출 자료로 활용됩니다.</div>
+
+      <!-- 운송장 번호 -->
+      <div style="margin-bottom:12px">
+        <div style="font-size:12px;font-weight:700;margin-bottom:4px">📦 운송장 번호 <span style="color:var(--red)">*</span></div>
+        <div style="display:flex;gap:6px">
+          <input id="emer-tracking" type="text" inputmode="numeric" placeholder="운송장 번호 입력 (숫자만)" maxlength="30"
+            style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;background:var(--bg);color:var(--text)">
+          <button onclick="emerScanBarcode()" style="padding:10px 12px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;font-size:18px;cursor:pointer" title="바코드 스캔">📷</button>
+        </div>
+      </div>
+
+      <!-- 수령인 정보 (선택) -->
+      <div style="margin-bottom:12px">
+        <div style="font-size:12px;font-weight:700;margin-bottom:4px">📍 배송 장소 <span style="font-size:10px;font-weight:400;color:var(--text3)">(선택)</span></div>
+        <input id="emer-addr" type="text" placeholder="예: 현관 앞, 경비실 전달 등"
+          style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text);box-sizing:border-box">
+      </div>
+
+      <!-- 배송 사진 -->
+      <div style="margin-bottom:12px">
+        <div style="font-size:12px;font-weight:700;margin-bottom:8px">🖼 배송 사진 <span style="color:var(--red)">*</span> <span style="font-size:10px;font-weight:400;color:var(--text3)">(최대 3장)</span></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap" id="emer-photo-wrap">
+          <label style="width:90px;height:90px;border:2px dashed var(--border);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;background:var(--bg3)">
+            <span style="font-size:24px">📷</span>
+            <span style="font-size:10px;color:var(--text3);margin-top:4px">사진 추가</span>
+            <input type="file" accept="image/*" capture="environment" multiple style="display:none" onchange="emerAddPhotos(this.files)">
+          </label>
+        </div>
+      </div>
+
+      <!-- 메모 -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:12px;font-weight:700;margin-bottom:4px">📝 메모 <span style="font-size:10px;font-weight:400;color:var(--text3)">(선택 — 에러 내용, 특이사항)</span></div>
+        <textarea id="emer-memo" placeholder="예: 쿠팡앱 사진 업로드 실패, 앱 강제종료됨 등" rows="2"
+          style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text);box-sizing:border-box;resize:none"></textarea>
+      </div>
+
+      <!-- GPS 상태 -->
+      <div id="emer-gps-status" style="font-size:11px;color:var(--text3);margin-bottom:14px;padding:8px 10px;background:var(--bg3);border-radius:8px">📍 GPS 위치 확인 중...</div>
+
+      <!-- 저장 버튼 -->
+      <button onclick="emerSave()" style="width:100%;padding:13px;background:#dc2626;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px">
+        💾 긴급 배송기록 저장 + 관리자 알림
+      </button>
+      <button onclick="document.getElementById('emer-del-mo').remove()" style="width:100%;padding:10px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">취소</button>
+    </div>
+  </div>`);
+
+  // GPS 자동 수집
+  window._emerGps = null;
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(function(pos){
+      window._emerGps = {lat: pos.coords.latitude, lng: pos.coords.longitude, acc: Math.round(pos.coords.accuracy)};
+      var el=document.getElementById('emer-gps-status');
+      if(el) el.innerHTML='📍 GPS 확인 완료 — 정확도 '+window._emerGps.acc+'m <span style="color:var(--teal)">✅</span>';
+    }, function(){
+      var el=document.getElementById('emer-gps-status');
+      if(el) el.innerHTML='📍 GPS 수집 실패 — 위치 없이 저장됩니다 <span style="color:var(--amber)">⚠️</span>';
+    }, {timeout:8000, enableHighAccuracy:true});
+  }
+
+  // 사진 배열 초기화
+  window._emerPhotos = [];
+}
+
+// 사진 추가 처리
+function emerAddPhotos(files){
+  if(!files||!files.length) return;
+  var wrap = document.getElementById('emer-photo-wrap');
+  if(!wrap) return;
+  Array.from(files).slice(0, 3 - window._emerPhotos.length).forEach(function(file){
+    if(window._emerPhotos.length >= 3){ toast('사진은 최대 3장입니다'); return; }
+    var reader = new FileReader();
+    reader.onload = function(e){
+      var dataUrl = e.target.result;
+      window._emerPhotos.push(dataUrl);
+      // 미리보기 추가
+      var idx = window._emerPhotos.length - 1;
+      var thumb = document.createElement('div');
+      thumb.style.cssText = 'position:relative;width:90px;height:90px';
+      thumb.innerHTML = '<img src="'+dataUrl+'" style="width:90px;height:90px;object-fit:cover;border-radius:10px;border:1.5px solid var(--border)">'
+        +'<button onclick="emerRemovePhoto('+idx+')" style="position:absolute;top:-4px;right:-4px;width:20px;height:20px;background:#dc2626;color:#fff;border:none;border-radius:50%;font-size:11px;cursor:pointer;line-height:1">✕</button>';
+      // 추가 버튼 앞에 삽입
+      var addBtn = wrap.querySelector('label');
+      wrap.insertBefore(thumb, addBtn);
+      if(window._emerPhotos.length >= 3){
+        var lb = wrap.querySelector('label'); if(lb) lb.style.display='none';
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function emerRemovePhoto(idx){
+  window._emerPhotos.splice(idx, 1);
+  // 패널 재렌더 (간단하게 모달 재오픈)
+  var tracking = document.getElementById('emer-tracking')?.value||'';
+  var addr = document.getElementById('emer-addr')?.value||'';
+  var memo = document.getElementById('emer-memo')?.value||'';
+  document.getElementById('emer-del-mo')?.remove();
+  openEmergencyDelivery();
+  setTimeout(function(){
+    if(document.getElementById('emer-tracking')) document.getElementById('emer-tracking').value=tracking;
+    if(document.getElementById('emer-addr')) document.getElementById('emer-addr').value=addr;
+    if(document.getElementById('emer-memo')) document.getElementById('emer-memo').value=memo;
+  },100);
+}
+
+// 바코드 스캔 (BarcodeDetector API)
+async function emerScanBarcode(){
+  if(!('BarcodeDetector' in window)){
+    toast('⚠️ 이 기기는 바코드 스캔 미지원 — 직접 입력해주세요');
+    return;
+  }
+  try{
+    var stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+    var video = document.createElement('video');
+    video.srcObject = stream; video.setAttribute('playsinline','true'); video.play();
+    var detector = new BarcodeDetector({formats:['code_128','code_39','ean_13','ean_8','qr_code']});
+    var found = false;
+    var scan = setInterval(async function(){
+      if(found) return;
+      try{
+        var codes = await detector.detect(video);
+        if(codes.length){
+          found = true;
+          clearInterval(scan);
+          stream.getTracks().forEach(function(t){t.stop();});
+          var inp = document.getElementById('emer-tracking');
+          if(inp){ inp.value = codes[0].rawValue; toast('📷 스캔 완료: '+codes[0].rawValue); }
+        }
+      }catch(e){}
+    }, 300);
+    setTimeout(function(){
+      if(!found){ clearInterval(scan); stream.getTracks().forEach(function(t){t.stop();}); toast('스캔 시간 초과 — 직접 입력해주세요'); }
+    }, 15000);
+  }catch(e){ toast('카메라 접근 실패: '+(e.message||'')); }
+}
+
+// 저장 실행
+async function emerSave(){
+  var tracking = (document.getElementById('emer-tracking')?.value||'').trim();
+  if(!tracking){ toast('❌ 운송장 번호를 입력해주세요'); return; }
+  if(!window._emerPhotos||!window._emerPhotos.length){ toast('❌ 사진을 1장 이상 추가해주세요'); return; }
+
+  var addr = document.getElementById('emer-addr')?.value||'';
+  var memo = document.getElementById('emer-memo')?.value||'';
+  var now = new Date();
+  var record = {
+    type: 'emergency_delivery',
+    driver: S.curDriver,
+    tracking: tracking,
+    addr: addr,
+    memo: memo,
+    gps: window._emerGps||null,
+    photos: [],         // Storage URL or base64
+    savedAt: now.toISOString(),
+    date: today(),
+    time: now.toTimeString().slice(0,5)
+  };
+
+  toast('💾 저장 중...');
+  document.querySelector('#emer-del-mo button[onclick="emerSave()"]').disabled = true;
+
+  // 사진 업로드 (Storage 우선, base64 fallback)
+  var uploaded = [];
+  for(var i=0; i<window._emerPhotos.length; i++){
+    var dataUrl = window._emerPhotos[i];
+    if(FB&&_st){
+      try{
+        var byteStr=atob(dataUrl.split(',')[1]);
+        var ab=new ArrayBuffer(byteStr.length);
+        var ia=new Uint8Array(ab);
+        for(var j=0;j<byteStr.length;j++) ia[j]=byteStr.charCodeAt(j);
+        var blob=new Blob([ab],{type:'image/jpeg'});
+        var path='emergency/'+S.curDriver+'/'+now.getTime()+'_'+i+'.jpg';
+        var ref=_st.ref(path);
+        await ref.put(blob);
+        var url=await ref.getDownloadURL();
+        uploaded.push(url);
+      }catch(e){ uploaded.push(dataUrl); }
+    } else {
+      uploaded.push(dataUrl);
+    }
+  }
+  record.photos = uploaded;
+
+  // IndexedDB 오프라인 저장 (네트워크 불안정 대비)
+  try{
+    var emerList = JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]');
+    emerList.push(record);
+    localStorage.setItem('mbti_emergency_del', JSON.stringify(emerList));
+  }catch(e){}
+
+  // Firebase 저장 + 관리자 알림
+  if(FB&&_db){
+    var docId = (S.curDriver+'_'+tracking+'_'+now.getTime()).replace(/\s/g,'_').replace(/[\/\\'\"]/g,'');
+    try{
+      await _db.collection('emergency_deliveries').doc(docId).set(record);
+      // 관리자 FCM 알림
+      var adminFcm = JSON.parse(localStorage.getItem('mbti_admin_fcm')||'""');
+      if(adminFcm){
+        fetch('https://mbti-logistics.kimdh4790.workers.dev/send-fcm',{
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({token:adminFcm,
+            title:'🚨 긴급 배송기록 — '+S.curDriver,
+            body:'운송장: '+tracking+(addr?' / '+addr:'')+(memo?' | '+memo.slice(0,30):''),
+            data:{type:'emergency_delivery',driver:S.curDriver,tracking:tracking}})
+        }).catch(function(){});
+      }
+      toast('✅ 저장 완료 — 관리자에게 알림 전송됨');
+    }catch(e){
+      toast('✅ 로컬 저장 완료 (네트워크 불안정 — 연결 시 자동 동기화)');
+    }
+  } else {
+    toast('✅ 로컬 저장 완료 (Firebase 미연결)');
+  }
+
+  window._emerPhotos = [];
+  setTimeout(function(){ document.getElementById('emer-del-mo')?.remove(); }, 1200);
+}
+
 function openShiftSwapModal(){
   if(!FB||!_db){toast('⚠️ Firebase 연결 필요');return;}
   var me=ls('drivers').find(function(d){return d.name===S.curDriver;});
@@ -10749,19 +11221,29 @@ function parseCoupangExcel(inp){
           // ★ v9.25: 기존 정산 완료/승인된 항목 재업로드 시 상태 보호
           //   → 금액·라우트 데이터만 갱신, status·taxSent·paidAt 등 보존
           var prev=settlements[existing];
-          // ★ v9.25: undefined인 필드는 protectedFields에 포함 안 함
-          //   (sharedAt 등 없는 기존 데이터 → Firebase undefined 오류 차단)
           var protectedFields={};
           ['status','taxSent','taxSentAt','paidAt','fbId','createdAt','sharedAt'].forEach(function(k){
             if(prev[k]!==undefined) protectedFields[k]=prev[k];
           });
-          // 금액·라우트 데이터 갱신 (entry에서 status 제거 후 병합)
-          var updateData=Object.assign({},entry);
+          // ★ v9.25 smart merge: 수기 입력 필드 보호 (재업로드 시 초기화 방지)
+          //   fresh(프레시백), dmg(분실/파손), adv(선지급), eq, etcPlus, etcMinus
+          ['fresh','dmg','adv','eq','etcPlus','etcMinus'].forEach(function(k){
+            if(prev[k]!==undefined && prev[k]!==0 && prev[k]!=='') protectedFields[k]=prev[k];
+          });
+          // ★ routeDetails: 건수/반품은 엑셀 최신값, unitPrice는 수동 편집값 보존
+          var mergedRoutes=entry.routeDetails.map(function(newRd){
+            var oldRd=(prev.routeDetails||[]).find(function(r){return r.route===newRd.route;});
+            if(oldRd && oldRd.unitPrice && oldRd.unitPrice>0){
+              return Object.assign({},newRd,{unitPrice:oldRd.unitPrice});
+            }
+            return newRd;
+          });
+          var updateData=Object.assign({},entry,{routeDetails:mergedRoutes});
           delete updateData.status;
           delete updateData.createdAt;
-          updateData.updatedAt=new Date().toISOString(); // ★ 최신 업로드 시각
+          updateData.updatedAt=new Date().toISOString();
           settlements[existing]=Object.assign(prev, updateData, protectedFields);
-          settlements[existing].finc=entry.finc; // ★ 인센티브 항상 최신값
+          settlements[existing].finc=entry.finc;
           updated++;
         }
         else{settlements.push(entry); added++;}
@@ -10836,8 +11318,7 @@ function exportAllSettlements(){
   var rows=[header];
 
   s.forEach(function(x){
-    var r=calcNet(x);
-    // 라우트별 건수 맵
+    var r=calcNet(Object.assign({},x,{emp:0,work:0}));  // ★ v9.25 fix: 다운로드도 최신 계산값
     var rdMap={};
     if(x.routeDetails&&x.routeDetails.length){
       x.routeDetails.forEach(function(rd){rdMap[rd.route]={cnt:rd.cnt||0,ret:rd.ret||0};});
