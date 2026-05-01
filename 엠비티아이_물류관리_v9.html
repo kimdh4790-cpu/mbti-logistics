@@ -2749,7 +2749,6 @@ function rSettle(){
         <td><span class="badge ${jobBadge}" style="font-size:10px">${x.jobsub||'쿠팡'}</span></td>
         <td>${x.month}</td>
         <td style="color:var(--green)">₩${r.income.toLocaleString()}</td>
-        <td style="color:#059669;font-size:11px">₩${r.supplyAmt.toLocaleString()}</td>
         <td style="color:var(--red);font-size:11px">₩${r.emp.toLocaleString()}</td>
         <td style="color:#dc2626;font-size:11px">₩${r.work.toLocaleString()}</td>
         <td style="font-weight:700;color:var(--purple)">₩${r.net.toLocaleString()}</td>
@@ -2771,7 +2770,7 @@ function rSettle(){
     var summary='<div style="display:flex;flex-wrap:wrap;gap:6px;padding:6px 0 8px;font-size:11px">'
       +'<span style="padding:4px 10px;background:rgba(16,185,129,.1);border-radius:20px;color:var(--green)">👥 '+gRows.length+'명</span>'
       +'<span style="padding:4px 10px;background:rgba(59,130,246,.1);border-radius:20px;color:#3b82f6">📦 쿠팡 총매출 <strong>₩'+totCoupang.toLocaleString()+'</strong></span>'
-      +'<span style="padding:4px 10px;background:rgba(5,150,105,.1);border-radius:20px;color:#059669">🧾 세금계산서(공급가) <strong>₩'+totSupply.toLocaleString()+'</strong></span>'
+      +'<span style="padding:4px 10px;background:rgba(5,150,105,.1);border-radius:20px;color:#059669">🧾 기사 세금계산서 <strong>₩'+totIncome.toLocaleString()+'</strong></span>'
       +'<span style="padding:4px 10px;background:rgba(245,158,11,.1);border-radius:20px;color:#d97706">🏥 고용보험 <strong>₩'+totEmp.toLocaleString()+'</strong></span>'
       +'<span style="padding:4px 10px;background:rgba(239,68,68,.1);border-radius:20px;color:#dc2626">⛑ 산재보험 <strong>₩'+totWork.toLocaleString()+'</strong></span>'
       +(totDmg>0?'<span style="padding:4px 10px;background:rgba(239,68,68,.15);border-radius:20px;color:#b91c1c;border:1px solid rgba(239,68,68,.3)">⚠️ 분실·파손 공제 <strong>-₩'+totDmg.toLocaleString()+'</strong></span>':'')
@@ -2788,13 +2787,13 @@ function rSettle(){
       +'</div>'
       +'<div style="display:flex;flex-wrap:wrap;gap:5px;font-size:10px">'
       +'<span style="padding:2px 8px;background:rgba(59,130,246,.12);border-radius:12px;color:#3b82f6">📦 쿠팡 총매출 ₩'+totCoupang.toLocaleString()+'</span>'
-      +'<span style="padding:2px 8px;background:rgba(5,150,105,.12);border-radius:12px;color:#059669">🧾 세금계산서 ₩'+totSupply.toLocaleString()+'</span>'
+      +'<span style="padding:2px 8px;background:rgba(5,150,105,.12);border-radius:12px;color:#059669">🧾 기사 세금계산서 ₩'+totIncome.toLocaleString()+'</span>'
       +'<span style="padding:2px 8px;background:rgba(245,158,11,.12);border-radius:12px;color:#d97706">🏥 고용+산재 ₩'+(totEmp+totWork).toLocaleString()+'</span>'
       +(totDmg>0?'<span style="padding:2px 8px;background:rgba(239,68,68,.15);border-radius:12px;color:#b91c1c">⚠️ 분실·파손 -₩'+totDmg.toLocaleString()+'</span>':'')
       +'<span style="padding:2px 8px;background:rgba(124,58,237,.15);border-radius:12px;color:var(--purple);font-weight:700">💰 실지급 ₩'+totNet.toLocaleString()+'</span>'
       +'</div>'
       +'</div>'
-      +'<div id="'+gid+'" style="display:'+openStyle+'">'+summary+'<table class="tbl"><thead><tr><th>기사</th><th>화주사</th><th>월</th><th>총수익</th><th>세금계산서<br><span style="font-size:9px;font-weight:400">(공급가액)</span></th><th>고용보험</th><th>산재보험</th><th>실지급</th><th>상태</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+      +'<div id="'+gid+'" style="display:'+openStyle+'">'+summary+'<table class="tbl"><thead><tr><th>기사</th><th>화주사</th><th>월</th><th>총수익</th><th>고용보험</th><th>산재보험</th><th>실지급</th><th>상태</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>'
       +'</div>';
   }).join('')||'<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">데이터 없음</div>';
 
