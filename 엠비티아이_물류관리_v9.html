@@ -5855,7 +5855,7 @@ function viewStmt(i){
   var _isAdmin = (S.curMode==='admin');
   var routeRows=rdList.length?`
     <div style="margin-bottom:12px">
-      <div style="font-size:11px;font-weight:700;color:var(--teal);margin-bottom:5px">📊 라우트별 실적 [라우트 / 배송건 / 반품건 / 단가 / 배송금액 / 반품금액 / 소계]${_isAdmin?' <span style="color:var(--amber);font-weight:600">· ✏️ 클릭하여 수정</span>':''}</div>
+      <div style="font-size:11px;font-weight:700;color:var(--teal);margin-bottom:5px">📊 라우트별 실적 <span style="color:var(--text3);font-weight:400">(건수 참고용 · 배송금액은 아래 ① 항목 기준)</span>${_isAdmin?' <span style="color:var(--amber);font-weight:600">· ✏️ 클릭하여 수정</span>':''}</div>
       <div style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:6px">
       <table class="route-tbl" style="margin-top:0">
         <thead><tr><th>라우트</th><th style="text-align:right">배송건</th><th style="text-align:right;color:var(--amber)">반품건</th><th style="text-align:right">단가</th><th style="text-align:right">배송금액</th><th style="text-align:right;color:var(--amber)">반품금액</th><th style="text-align:right;color:var(--green)">소계</th></tr></thead>
@@ -5924,13 +5924,12 @@ function viewStmt(i){
         <div class="sitem">
           <div class="sitem-ico">📦</div>
           <div class="sitem-lbl"><strong>① 배송 수익</strong><small>${(+x.dcnt||0).toLocaleString()}건 × 라우트별 단가</small></div>
-          <div class="sitem-amt plus">+₩${rdList.reduce(function(s,rd){return s+(rd.amt||rd.cnt*(RPRICE[rd.route]||rd.unitPrice||0));},0).toLocaleString()}</div>
+          <div class="sitem-amt plus">+₩${r.damt.toLocaleString()}</div>
         </div>
         <div class="sitem">
           <div class="sitem-ico">↩</div>
           <div class="sitem-lbl"><strong>② 반품 수익</strong><small>${(+x.rcnt||0).toLocaleString()}건 × 라우트별 단가</small></div>
-          <div class="sitem-amt plus">+₩${rdList.reduce(function(s,rd){return s+(rd.retAmt||rd.ret*(RPRICE[rd.route]||rd.unitPrice||0)||0);},0).toLocaleString()}</div>
-        </div>
+          <div class="sitem-amt plus">+₩${r.ramt.toLocaleString()}</div>
         <div class="sitem" id="st-fresh-row">
           <div class="sitem-ico">🎒</div>
           <div class="sitem-lbl"><strong>③ 프레시백 회수금액</strong></div>
@@ -10490,10 +10489,13 @@ function parseCoupangExcel(inp){
           continue;
         }
 
-        // ★ 단가: 회사 RPRICE 기준 (고정 계약단가)
-        var unitPrc=(route&&RPRICE[route])||Number(row[rColUnit])||0;
+        // ★ v9.25: 배송금액 = 엑셀 총금액 컬럼 직접 사용 (RPRICE 계산 아님)
+        //   쿠팡 실제 지급액 기준 → 라우트 테이블 합계 = 배송수익 일치
+        var rowTotal=Number(row[rColTotal])||0;  // 총금액 컬럼
+        var unitPrc=(route&&RPRICE[route])||Number(row[rColUnit])||0; // 단가 표시용
         var freshInc=Number(row[rColFresh])||0;
-        var delAmt=dcnt*unitPrc;
+        // 배송금액: 총금액 컬럼 우선, 없으면 dcnt×단가
+        var delAmt=rowTotal>0?rowTotal:(dcnt*unitPrc);
         var retAmt=rcnt*unitPrc;
 
         drvMap[userId].dcnt+=dcnt;
