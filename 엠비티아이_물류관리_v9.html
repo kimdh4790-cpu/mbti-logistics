@@ -9378,12 +9378,20 @@ async function emerOcrScan(file){
           role: 'user',
           content: [
             {type:'image', source:{type:'base64', media_type:'image/jpeg', data: b64}},
-            {type:'text', text:'이 쿠팡 운송장 이미지에서 정보를 추출해서 JSON만 반환하세요. 다른 텍스트 없이:\n{"order_id":"주문번호(점포함원본)","tracking_no":"운송장번호(점포함원본)","recipient":"수령인","address":"배송주소전체","delivery_memo":"배송메모(문앞자율출입등)","camp":"캠프구역(예:부산4,310C01)"}'}
+            {type:'text', text:'이 쿠팡 운송장 이미지에서 정보를 추출해서 JSON만 반환하세요. 다른 텍스트 없이:\n{"order_id":"주문번호(점포함원본)","tracking_no":"운송장번호(점포함원본)","recipient":"수령인","address":"배송주소전체","delivery_memo":"배송메모","camp":"캠프구역"}'}
           ]
         }]
       })
     });
-    var d = await res.json();
+
+    // 응답 텍스트 먼저 확인
+    var rawText = await res.text();
+    if(!rawText || rawText.trim()===''){
+      throw new Error('빈 응답 (HTTP '+res.status+') — API 키를 확인해주세요');
+    }
+    var d;
+    try{ d = JSON.parse(rawText); }
+    catch(e){ throw new Error('응답 파싱 실패: '+rawText.slice(0,100)); }
     if(d.error) throw new Error(d.error.message);
     var txt = (d.content||[]).find(function(c){return c.type==='text';})?.text||'';
     var p;
