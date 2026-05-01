@@ -9390,16 +9390,22 @@ async function emerOcrScan(file){
     var lines = ocrText.split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
     var fullText = ocrText.replace(/\s+/g,' ');
 
-    // 주문번호: "주문번호" 키워드 뒤 숫자+점/쉼표 조합 (OCR이 점을 쉼표로 읽는 경우 포함)
-    var orderMatch = fullText.match(/주문번호\s*([\d\.,]{8,20})/);
-    // 운송장번호: "운송장번호" 키워드 뒤 숫자+점/쉼표 조합
-    var trackingMatch = fullText.match(/운송장번호\s*([\d\.,]{8,20})/);
-    // 폴백: 7 또는 10으로 시작하는 긴 숫자+점/쉼표 패턴
-    if(!orderMatch)   orderMatch   = fullText.match(/\b7[\d\.,]{10,18}/);
-    if(!trackingMatch) trackingMatch = fullText.match(/\b1[0-9][\d\.,]{10,18}/);
-    // 매칭 그룹에서 번호 추출 + 쉼표를 점으로 정규화
-    var orderId   = orderMatch   ? (orderMatch[1]  ||orderMatch[0]  ).trim().replace(/,/g,'.').replace(/\.+$/,'') : '';
-    var trackingNo= trackingMatch? (trackingMatch[1]||trackingMatch[0]).trim().replace(/,/g,'.').replace(/\.+$/,'') : '';
+    // 주문번호/운송장번호: 키워드 뒤 숫자+구분자 전체 추출 후 숫자만 남김
+    var orderRaw   = (fullText.match(/주문번호\s*([\d\s\.,\-]{8,25})/) || fullText.match(/7[\d\s\.,\-]{10,22}/) || [null,''])[1] || '';
+    var trackingRaw= (fullText.match(/운송장번호\s*([\d\s\.,\-]{8,25})/) || fullText.match(/1[0-9][\d\s\.,\-]{10,22}/) || [null,''])[1] || '';
+
+    // 숫자만 추출 (점으로 구분된 형식으로 복원)
+    function fmtNum(raw, prefix) {
+      var digits = raw.replace(/[^\d]/g,'');
+      if(!digits || digits.length < 8) return '';
+      // 7로 시작 → 7.XXXX.XXXX.XXXX (13자리)
+      // 10으로 시작 → 10.XXXX.XXXX.XXXX (14자리)
+      if(prefix==='7' && digits.length>=13) return digits[0]+'.'+digits.slice(1,5)+'.'+digits.slice(5,9)+'.'+digits.slice(9,13);
+      if(prefix==='10' && digits.length>=14) return digits.slice(0,2)+'.'+digits.slice(2,6)+'.'+digits.slice(6,10)+'.'+digits.slice(10,14);
+      return digits;
+    }
+    var orderId   = fmtNum(orderRaw,   '7');
+    var trackingNo= fmtNum(trackingRaw,'10');
     // 수령인: 김*우 패턴
     var recipientMatch = fullText.match(/[가-힣]+\*[가-힣]+/);
     // 주소: 구/동/로/길/아파트 포함 라인
