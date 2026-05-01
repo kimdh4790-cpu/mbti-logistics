@@ -3421,7 +3421,7 @@ function _renderDriverMap(myLoc, emerLocs, apiKey){
           +'<div style="font-size:11px;color:#555;line-height:1.7">'
           +'📦 총 '+((x.trackings&&x.trackings.length)||1)+'건<br>'
           +'🔢 운송장: '+trackStr+'<br>'
-          +(x.order_id?'📋 주문: '+x.order_id+'<br>':'')
+          +(x.order_id?'📋 주문번호: '+x.order_id+'<br>':'')
           +'⏰ '+( x.time||'')
           +'</div>'
           +btnHtml
@@ -9629,7 +9629,6 @@ function dHome(){
   </div>
   <div style="display:flex;gap:6px;margin:0 10px 6px">
     <button onclick="openEmergencyDelivery()" style="flex:1;padding:11px;background:#dc2626;color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:800;cursor:pointer;letter-spacing:.02em">📸 쿠팡앱 에러 시 긴급 배송기록</button>
-    <button onclick="openDriverMap()" style="padding:11px 14px;background:#16a34a;color:#fff;border:none;border-radius:var(--r);font-size:18px;cursor:pointer">🗺️</button>
   </div>
   <!-- 사고접수 + 사진 모아보기 버튼 -->
   <button class="bbtn bb-red" onclick="DT('accident',document.getElementById('pni4'))" style="padding:11px;font-size:13px;margin:0 10px 6px">🚨 사고 접수</button>
@@ -9727,22 +9726,13 @@ function openEmergencyDelivery(){
       <input id="emer-addr"      type="hidden" value="">
       <input id="emer-delivmemo" type="hidden" value="">
 
-      <!-- 배송 사진 (필수) -->
-      <div style="margin-bottom:12px">
-        <div style="font-size:12px;font-weight:700;margin-bottom:6px">🖼 배송완료 사진 <span style="color:var(--red)">*</span> <span style="font-size:10px;font-weight:400;color:var(--text3)">(최대 5장)</span></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap" id="emer-photo-wrap">
-          <label style="width:80px;height:80px;border:2px dashed var(--border);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;background:var(--bg3);flex-shrink:0">
-            <span style="font-size:22px">📷</span>
-            <span style="font-size:9px;color:var(--text3);margin-top:3px">사진 추가</span>
-            <input type="file" accept="image/*" capture="environment" multiple style="display:none" onchange="emerAddPhotos(this.files)">
-          </label>
-        </div>
-      </div>
-
       <div id="emer-gps-status" style="font-size:11px;color:var(--text3);margin-bottom:12px;padding:8px 10px;background:var(--bg3);border-radius:8px">📍 GPS 위치 확인 중...</div>
 
       <button onclick="emerSave()" style="width:100%;padding:13px;background:#dc2626;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px">
-        💾 긴급 배송기록 저장 + 관리자 알림
+        🗺️ 지도에 배송핀 생성 + 저장
+      </button>
+      <button onclick="emerSendAdminAlert()" id="emer-alert-btn" style="width:100%;padding:11px;background:#f97316;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px;display:none">
+        🔔 관리자 알림 전송
       </button>
       <button onclick="document.getElementById('emer-del-mo').remove()" style="width:100%;padding:10px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">취소</button>
     </div>
@@ -10097,7 +10087,7 @@ async function emerSave(){
     if(inp){ window._emerTrackings=[inp]; emerRefreshTrackingList(); }
     else { toast('❌ 운송장 번호를 1개 이상 추가해주세요'); return; }
   }
-  if(!window._emerPhotos||!window._emerPhotos.length){ toast('❌ 사진을 1장 이상 추가해주세요'); return; }
+  // ★ v9.25: 사진 필수 조건 제거 (배송완료 사진은 지도 핀에서 처리)
 
   var orderId   = (document.getElementById('emer-orderid')?.value||'').trim();
   var recipient = (document.getElementById('emer-recipient')?.value||'').trim();
@@ -10196,14 +10186,11 @@ async function emerSave(){
             data:{type:'emergency_delivery',driver:S.curDriver}})
         }).catch(function(){});
       }
-      toast('✅ 저장 완료 — 관리자에게 알림 전송됨');
+      // toast는 아래 통합 처리
     }catch(e){
-      // ★ v9.25: 실제 에러 표시 (은폐 금지)
       console.error('긴급배송 Firebase 저장 실패:', e);
-      toast('⚠️ Firebase 저장 실패 ('+( e.code||e.message||'오류')+') — 로컬만 저장됨\n관리자에게 문의하세요');
+      toast('⚠️ Firebase 저장 실패 ('+( e.code||e.message||'오류')+') — 로컬만 저장됨');
     }
-  } else {
-    toast('✅ 로컬 저장 완료 (Firebase 미연결)');
   }
 
   // ★ v9.25: 로컬 저장 — docId 포함하여 재저장 (위에서 _fbId 업데이트됐으므로)
@@ -10218,23 +10205,53 @@ async function emerSave(){
   window._emerPhotos = [];
   window._emerTrackings = [];
 
-  // ★ v9.25: 지도가 열려있으면 저장된 핀 즉시 추가
-  if(window._activeDriverMapAddPin && record.gps && record.gps.lat){
-    record.fbId = docId||'local_'+Date.now();
-    window._activeDriverMapAddPin(record);
-    // 건수 카운터 업데이트
-    var countEl = document.getElementById('driver-map-count');
-    if(countEl){
-      var cur = parseInt(countEl.textContent)||0;
-      countEl.textContent = '오늘 긴급배송 '+(cur+1)+'건 핀 표시';
-    }
-    // 새 핀 위치로 지도 이동
-    if(window._activeDriverMap && record.gps){
+  // ★ v9.25: 저장 완료 후 지도 자동 오픈 + 핀 추가
+  record.fbId = docId||'local_'+Date.now();
+
+  if(record.gps && record.gps.lat){
+    if(!window._activeDriverMap){
+      // 지도 아직 안 열렸으면 열기
+      setTimeout(function(){ openDriverMap(); }, 400);
+    } else {
+      // 이미 열려있으면 핀 즉시 추가
+      if(window._activeDriverMapAddPin) window._activeDriverMapAddPin(record);
+      var countEl = document.getElementById('driver-map-count');
+      if(countEl){ var cur=parseInt(countEl.textContent)||0; countEl.textContent='오늘 긴급배송 '+(cur+1)+'건 핀 표시'; }
       window._activeDriverMap.panTo({lat:record.gps.lat, lng:record.gps.lng});
     }
   }
 
-  setTimeout(function(){ document.getElementById('emer-del-mo')?.remove(); }, 1200);
+  // 관리자 알림 버튼 활성화 (저장 완료 후)
+  window._lastEmerRecord = record;
+  var alertBtn = document.getElementById('emer-alert-btn');
+  if(alertBtn) alertBtn.style.display='block';
+
+  toast('✅ 저장 완료 — 지도에 배송핀 생성됨');
+  setTimeout(function(){ document.getElementById('emer-del-mo')?.remove(); }, 2000);
+}
+
+// ★ v9.25: 관리자 알림 별도 전송
+async function emerSendAdminAlert(){
+  var record = window._lastEmerRecord;
+  if(!record){ toast('❌ 먼저 저장해주세요'); return; }
+  var adminFcm = JSON.parse(localStorage.getItem('mbti_admin_fcm')||'""');
+  if(!adminFcm){ toast('⚠️ 관리자 FCM 토큰 없음 — 알림 불가'); return; }
+  var trackingStr = (record.trackings&&record.trackings.length>1)
+    ? record.trackings[0]+' 외 '+(record.trackings.length-1)+'건'
+    : (record.trackings&&record.trackings[0])||record.tracking||'—';
+  try{
+    await fetch('https://mbti-logistics.kimdh4790.workers.dev/send-fcm',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({token:adminFcm,
+        title:'🚨 긴급 배송기록 — '+record.driver,
+        body:'운송장: '+trackingStr+(record.addr?' / '+record.addr:''),
+        data:{type:'emergency_delivery',driver:record.driver}})
+    });
+    toast('✅ 관리자 알림 전송 완료');
+    document.getElementById('emer-del-mo')?.remove();
+  }catch(e){
+    toast('❌ 알림 전송 실패: '+(e.message||'네트워크 오류'));
+  }
 }
 
 // ★ v9.25: 배송완료 처리 모달 (지도 핀 클릭 → 완료사진 + Firebase 상태 업데이트)
