@@ -2829,7 +2829,7 @@ function rSettle(){
       +'<span style="padding:2px 8px;background:rgba(124,58,237,.15);border-radius:12px;color:var(--purple);font-weight:700">💰 실지급 ₩'+totNet.toLocaleString()+'</span>'
       +'</div>'
       +'</div>'
-      +'<div id="'+gid+'" style="display:'+openStyle+'">'+summary+'<table class="tbl"><thead><tr><th>기사</th><th>화주사</th><th>월</th><th>총수익</th><th>고용보험</th><th>산재보험</th><th>실지급</th><th>상태</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+      +'<div id="'+gid+'" style="display:'+openStyle+'"><table class="tbl"><thead><tr><th>기사</th><th>화주사</th><th>월</th><th>총수익</th><th>고용보험</th><th>산재보험</th><th>실지급</th><th>상태</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>'
       +'</div>';
   }).join('')||'<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">데이터 없음</div>';
 
@@ -10567,9 +10567,10 @@ function parseCoupangExcel(inp){
         var tm=totalMap[userId]||totalMap[cleanId]||{};
         var freshAmt=tm.freshAmt||dm.freshAmt||0;
         var dmgAmt=tm.dmgAmt||0;
-        // ★ 배송/반품은 RPRICE 기준으로 계산 (총괄 소계 사용 안 함)
-        var damt=dm.delAmt||0;
-        var ramt=dm.retAmt||0;
+        // ★ v9.25: damt = 엑셀 금액(소계) 직접 사용 (프로모션·소급분 포함)
+        //          단가×건수 계산 방식보다 실제 쿠팡 지급액에 정확
+        var damt=tm.subAmt||dm.delAmt||0;
+        var ramt=0; // ★ 반품은 금액소계에 포함돼 있으므로 별도 가산 안 함
         // ★ 미계약건: 엑셀 총금액 그대로 사용
         var nocontAmt=dm.nocontAmt||0;
         var nocontCnt=dm.nocontCnt||0;
