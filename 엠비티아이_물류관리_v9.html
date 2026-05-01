@@ -8730,7 +8730,7 @@ function _buildCampSupportCard(){
   var html='<div style="background:var(--bg2);border:1.5px solid var(--blue);border-radius:var(--r);padding:10px 12px">';
   html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px">';
   html+='<div style="font-size:12px;font-weight:800;color:var(--blue)">🤝 '+myCampFull+' 배송 지원</div>';
-  html+='<button onclick="openCampSupportModal()" style="padding:4px 10px;background:var(--blue);color:#fff;border:none;border-radius:99px;font-size:10px;font-weight:700;cursor:pointer">+ 지원 요청</button>';
+  // 지원요청 버튼 제거 (기사 홈에 있음)
   html+='</div>';
   if(!list.length){
     html+='<div style="font-size:11px;color:var(--text3);padding:5px 0">현재 활성 지원 요청이 없습니다.</div>';
@@ -9937,15 +9937,14 @@ async function emerOcrScan(file){
 // ★ v9.25: 긴급배송 폼에서 지도 버튼 클릭 시
 function emerOpenMap(){
   if(!window._activeDriverMap){
-    // 지도 아직 안 열린 상태면 openDriverMap 호출
+    // 모달 닫고 지도 열기
+    document.getElementById('emer-del-mo')?.remove();
     openDriverMap();
     toast('🗺️ 지도 열기 중...');
   } else {
     // 이미 열린 지도로 포커스 이동
     var gps = window._emerGps;
     if(gps && gps.lat) window._activeDriverMap.panTo({lat:gps.lat, lng:gps.lng});
-    document.getElementById('driver-map-mo')?.scrollIntoView();
-    // 지도를 앞으로 가져오기
     var mo = document.getElementById('driver-map-mo');
     if(mo) mo.style.zIndex='10001';
     document.getElementById('emer-del-mo')?.remove();
@@ -10142,15 +10141,19 @@ async function emerSave(){
   record.fbId = docId||'local_'+Date.now();
 
   if(record.gps && record.gps.lat){
-    if(!window._activeDriverMap){
-      setTimeout(function(){ openDriverMap(); }, 400);
-    } else {
+    if(window._activeDriverMap){
       if(window._activeDriverMapEmerLocs) window._activeDriverMapEmerLocs.push(record);
       if(window._activeDriverMapAddPin) window._activeDriverMapAddPin(record);
       if(window._updateMapCounter) window._updateMapCounter();
       window._activeDriverMap.panTo({lat:record.gps.lat, lng:record.gps.lng});
     }
   }
+
+  // 모달 닫고 지도 오픈
+  document.getElementById('emer-del-mo')?.remove();
+  setTimeout(function(){
+    if(!window._activeDriverMap) openDriverMap();
+  }, 300);
 
   // ★ 긴급배송 기록 페이지 열려있으면 실시간 갱신
   if(S.page==='emergency_log') setTimeout(function(){ SP('emergency_log',null); }, 500);
@@ -10161,7 +10164,6 @@ async function emerSave(){
   if(alertBtn) alertBtn.style.display='block';
 
   toast('✅ 저장 완료 — 지도에 배송핀 생성됨');
-  setTimeout(function(){ document.getElementById('emer-del-mo')?.remove(); }, 2000);
 }
 
 // ★ v9.25: 관리자 알림 별도 전송
