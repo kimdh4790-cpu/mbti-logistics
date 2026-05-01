@@ -2766,6 +2766,7 @@ function rSettle(){
     var totTax=gRows.reduce(function(s,x){return s+calcNet(x).tax;},0);
     var totEmp=gRows.reduce(function(s,x){return s+calcNet(x).emp;},0);
     var totWork=gRows.reduce(function(s,x){return s+calcNet(x).work;},0);
+    var totDmg=gRows.reduce(function(s,x){return s+(+x.dmg||+x.damage||0);},0); // ★ 분실파손 합계
     var totIncomeVat=Math.round(totIncome*1.1); // ★ 기사 세금계산서 부가세 포함액
     var summary='<div style="display:flex;flex-wrap:wrap;gap:6px;padding:6px 0 8px;font-size:11px">'
       +'<span style="padding:4px 10px;background:rgba(16,185,129,.1);border-radius:20px;color:var(--green)">👥 '+gRows.length+'명</span>'
@@ -11836,8 +11837,13 @@ function startListeners(){
       accidents:'accident', settlements:'settle'
     };
     var colLimits={entries:200, deliveries:200, temp_logs:100, accidents:50, settlements:100};
+    // ★ v9.25: entries/deliveries는 오늘 날짜만 실시간 구독 (reads 대폭 절감)
+    var todayStr=today();
+    var colDateFilter={entries:'date', deliveries:'date'};
     Object.keys(colPageMap).forEach(col=>{
-      _fbUnsubs.push(_db.collection(col).limit(colLimits[col]||100)
+      var q=_db.collection(col);
+      if(colDateFilter[col]) q=q.where(colDateFilter[col],'==',todayStr);
+      _fbUnsubs.push(q.limit(colLimits[col]||100)
         .onSnapshot({includeMetadataChanges:false}, snap=>{
           snap.docChanges().forEach(ch=>{
             if(ch.type==='added'||ch.type==='modified'){
@@ -12117,13 +12123,17 @@ function rNoticePanel(){
 
 function _loadNoticeList(){
   if(!FB||!_db)return;
-  // ★ Fix4: onSnapshot으로 실시간 반영
-  if(window._noticeListUnsub)window._noticeListUnsub();
+  // ★ v9.25: notices 리스너 중복 제거 — _masterNoticeUnsub 데이터 재사용
+  //   기존 _noticeListUnsub 별도 구독 제거 → reads 절감
+  var box=document.getElementById('nt-list');
+  if(!box)return;
+  // 이미 _masterNoticeUnsub이 notices를 구독 중이므로 .get() 1회만 사용
+  if(window._noticeListUnsub){window._noticeListUnsub();window._noticeListUnsub=null;}
   window._noticeListUnsub=_db.collection('notices').orderBy('sentAt','desc').limit(30).onSnapshot(function(snap){
-    var box=document.getElementById('nt-list');
-    if(!box)return;
+    var box2=document.getElementById('nt-list');
+    if(!box2)return;
     if(snap.empty){
-      box.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3);font-size:12px">아직 등록된 공지가 없습니다</div>';
+      box2.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3);font-size:12px">아직 등록된 공지가 없습니다</div>';
       return;
     }
     var html='';
@@ -12176,10 +12186,10 @@ function _loadNoticeList(){
       html+='</div>';
 
     });
-    box.innerHTML=html;
+    box2.innerHTML=html;
   }, function(e){
-    var box=document.getElementById('nt-list');
-    if(box)box.innerHTML='<div style="padding:10px;color:var(--red);font-size:11px">로드 실패: '+(e&&e.message||'')+'</div>';
+    var box2b=document.getElementById('nt-list');
+    if(box2b)box2b.innerHTML='<div style="padding:10px;color:var(--red);font-size:11px">로드 실패: '+(e&&e.message||'')+'</div>';
   });
 }
 
