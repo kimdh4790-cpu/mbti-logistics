@@ -3307,6 +3307,21 @@ function _startDriverLocTracking(){
 }
 
 // ★ v9.25: 기사용 실시간 지도 (내 위치 + 내 긴급배송 핀)
+// ★ v9.25: 지도 상단 카운터 실시간 갱신
+function _updateMapCounter(){
+  var markers = window._driverMapMarkers||{};
+  var total = Object.keys(markers).length;
+  // 완료 핀 수 — 초록색 핀
+  var done = 0;
+  Object.values(markers).forEach(function(mk){
+    try{ if(mk.getIcon&&mk.getIcon()&&mk.getIcon().fillColor==='#16a34a') done++; }catch(e){}
+  });
+  var tEl = document.getElementById('driver-map-total');
+  var dEl = document.getElementById('driver-map-done');
+  if(tEl) tEl.textContent = '📦 전체 '+total+'건';
+  if(dEl) dEl.textContent = '✅ 완료 '+done+'건';
+}
+
 async function openDriverMap(){
   document.getElementById('driver-map-mo')?.remove();
 
@@ -3337,14 +3352,17 @@ async function openDriverMap(){
 
   document.body.insertAdjacentHTML('beforeend',`
   <div id="driver-map-mo" style="position:fixed;inset:0;background:#000;z-index:9999;display:flex;flex-direction:column">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(0,0,0,.85);color:#fff">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:rgba(0,0,0,.85);color:#fff">
       <div>
         <div style="font-size:15px;font-weight:700">🗺️ 내 배송 지도</div>
-        <div style="font-size:11px;color:#aaa" id="driver-map-count">오늘 긴급배송 ${emerLocs.length}건 핀 표시</div>
+        <div style="display:flex;gap:8px;margin-top:3px">
+          <span id="driver-map-total" style="font-size:11px;background:rgba(220,38,38,.7);padding:2px 8px;border-radius:999px;font-weight:700">📦 전체 ${emerLocs.length}건</span>
+          <span id="driver-map-done" style="font-size:11px;background:rgba(22,163,74,.7);padding:2px 8px;border-radius:999px;font-weight:700">✅ 완료 ${emerLocs.filter(function(x){return x.status==='완료';}).length}건</span>
+        </div>
       </div>
       <button onclick="window._activeDriverMap=null;window._activeDriverMapAddPin=null;document.getElementById('driver-map-mo').remove()" style="padding:6px 14px;background:#dc2626;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">✕ 닫기</button>
     </div>
-    <div id="driver-map-canvas" style="flex:1"></div>
+    <div id="driver-map-canvas" style="flex:1;min-height:0;height:0"></div>
   </div>`);
 
   // 내 현재 위치 가져오기
@@ -3366,7 +3384,8 @@ function _renderDriverMap(myLoc, emerLocs, apiKey){
     var map = new google.maps.Map(mapDiv, {
       center: myLoc,
       zoom: 14,
-      mapTypeId: 'roadmap'
+      mapTypeId: 'roadmap',
+      gestureHandling: 'greedy'  // ★ 한 손가락 터치로 지도 이동
     });
     var infoWin = new google.maps.InfoWindow();
 
@@ -3528,11 +3547,25 @@ function _renderDriverMap(myLoc, emerLocs, apiKey){
     });
     noOrderLocs.forEach(addEmerPin);
 
-    // ★ 지도 전역 참조 저장 (emerSave 후 핀 실시간 추가용)
-    window._activeDriverMap = map;
-    window._activeDriverMapAddPin = addEmerPin;
-    window._activeDriverMapInfoWin = infoWin;
-  }
+  }  // ← doRender() 종료
+
+  // ★ 지도 전역 참조 저장 (emerSave 후 핀 실시간 추가용)
+  window._activeDriverMap = map;
+  window._activeDriverMapAddPin = addEmerPin;
+  window._activeDriverMapAddGroupPin = addGroupPin;
+  window._activeDriverMapInfoWin = infoWin;
+  window._activeDriverMapEmerLocs = emerLocs; // 전체 데이터 참조
+
+  // 카운터 업데이트 함수
+  window._updateMapCounter = function(){
+    var locs = window._activeDriverMapEmerLocs||[];
+    var total = locs.length;
+    var done = locs.filter(function(x){return x.status==='완료';}).length;
+    var te=document.getElementById('driver-map-total');
+    var de=document.getElementById('driver-map-done');
+    if(te) te.textContent='📦 전체 '+total+'건';
+    if(de) de.textContent='✅ 완료 '+done+'건';
+  };
 
   if(!window.google || !window.google.maps){
     // ★ v9.26: 키 검증 + 에러 핸들러
@@ -3717,7 +3750,8 @@ function _renderLiveMap(center, driverLocs, emerLocs){
     center: {lat: center.lat, lng: center.lng},
     zoom: 13,
     mapTypeId: 'roadmap',
-    disableDefaultUI: false
+    disableDefaultUI: false,
+    gestureHandling: 'greedy'  // ★ 한 손가락 터치로 지도 이동
   });
 
   var infoWin = new google.maps.InfoWindow();
@@ -10308,16 +10342,17 @@ async function emerSave(){
 
   if(record.gps && record.gps.lat){
     if(!window._activeDriverMap){
-      // 지도 아직 안 열렸으면 열기
       setTimeout(function(){ openDriverMap(); }, 400);
     } else {
-      // 이미 열려있으면 핀 즉시 추가
+      if(window._activeDriverMapEmerLocs) window._activeDriverMapEmerLocs.push(record);
       if(window._activeDriverMapAddPin) window._activeDriverMapAddPin(record);
-      var countEl = document.getElementById('driver-map-count');
-      if(countEl){ var cur=parseInt(countEl.textContent)||0; countEl.textContent='오늘 긴급배송 '+(cur+1)+'건 핀 표시'; }
+      if(window._updateMapCounter) window._updateMapCounter();
       window._activeDriverMap.panTo({lat:record.gps.lat, lng:record.gps.lng});
     }
   }
+
+  // ★ 긴급배송 기록 페이지 열려있으면 실시간 갱신
+  if(S.page==='emergency_log') setTimeout(function(){ SP('emergency_log',null); }, 500);
 
   // 관리자 알림 버튼 활성화 (저장 완료 후)
   window._lastEmerRecord = record;
@@ -10507,116 +10542,155 @@ async function saveDelivComplete(){
     mk.setIcon({ path:google.maps.SymbolPath.CIRCLE, scale:10, fillColor:'#16a34a', fillOpacity:1, strokeColor:'#fff', strokeWeight:2 });
     mk.setLabel({text:'✓',color:'#fff',fontSize:'11px',fontWeight:'bold'});
   }
+  // ★ 지도 카운터 갱신 (완료건 +1)
+  if(window._activeDriverMapEmerLocs){
+    var loc = window._activeDriverMapEmerLocs.find(function(x){ return (x.fbId||x._fbId)===fbId; });
+    if(loc) loc.status='완료';
+  }
+  if(window._updateMapCounter) window._updateMapCounter();
+
+  // ★ 기록 페이지 실시간 갱신
+  if(S.page==='emergency_log') setTimeout(function(){ SP('emergency_log',null); }, 500);
 
   window._delivCompletePhotos = [];
   if(fbOk) toast('✅ 배송완료 기록 저장됨');
+  _updateMapCounter(); // ★ 카운터 즉시 갱신
   setTimeout(function(){ document.getElementById('deliv-complete-mo')?.remove(); }, 800);
 }
 
-// ★ v9.25: 긴급배송 기록 (60일) — 기사/관리자 공용
-async function rEmergencyLog(){
+// ★ v9.25: 긴급배송 기록 (60일) — 기사/관리자 공용 / 실시간 onSnapshot / 완료·미완료 분리
+function rEmergencyLog(){
   var isAdmin = S.curMode==='admin';
   var cut = _drv60Cut();
-  var records = [];
 
-  // Firebase 조회
+  // 이전 리스너 해제
+  if(window._emerLogUnsub){ try{window._emerLogUnsub();}catch(e){} window._emerLogUnsub=null; }
+
+  function _dedup(records){
+    var seen={}, out=[];
+    records.forEach(function(x){
+      var k=x.fbId||x._fbId||x.id||('_'+( x.trackings&&x.trackings[0]||x.tracking||'')+x.savedAt);
+      if(!seen[k]){seen[k]=true;out.push(x);}
+    });
+    return out;
+  }
+
+  function _renderContent(fbRecs){
+    // 로컬 병합
+    var all = fbRecs.slice();
+    try{
+      var local2=JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]');
+      if(!isAdmin) local2=local2.filter(function(x){return x.driver===S.curDriver;});
+      local2.forEach(function(lx){
+        var dup=lx._fbId&&fbRecs.some(function(r){return r.fbId===lx._fbId;});
+        if(!dup) all.push(lx);
+      });
+    }catch(e){}
+
+    var records = _dedup(all)
+      .filter(function(x){return (x.date||(x.savedAt||'').slice(0,10)||'')>=cut;})
+      .sort(function(a,b){return (b.savedAt||'').localeCompare(a.savedAt||'');});
+
+    var pending = records.filter(function(x){return x.status!=='완료';});
+    var done    = records.filter(function(x){return x.status==='완료';});
+
+    function rowHTML(x){
+      var isDone=x.status==='완료';
+      var fbId=x.fbId||x._fbId||x.id||'';
+      var trackStr=(x.trackings&&x.trackings.length>1)?x.trackings.join(', '):(x.trackings&&x.trackings[0])||x.tracking||'—';
+      var photos=(x.photos||[]).filter(function(u){return u&&u.startsWith('http');});
+      var cPhotos=(x.completePhotos||[]).filter(function(u){return u&&u.startsWith('http');});
+      var allPh=(isDone?photos.concat(cPhotos):photos).slice(0,4);
+      var phHTML=allPh.length?'<div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap">'+allPh.map(function(u){
+        return '<img src="'+u+'" onclick="openIV(\''+u+'\',\'긴급배송\')" style="width:56px;height:56px;object-fit:cover;border-radius:6px;cursor:pointer;border:2px solid '+(isDone?'#16a34a':'#e5e7eb')+'">';
+      }).join('')+'</div>':'';
+      return '<div style="padding:10px;background:var(--bg);border-radius:10px;margin-bottom:8px;border-left:3px solid '+(isDone?'#16a34a':'#dc2626')+';box-shadow:0 1px 4px rgba(0,0,0,.06)">'
+        +'<div style="display:flex;align-items:flex-start;gap:8px">'
+        +'<input type="checkbox" class="emer-log-chk" data-fbid="'+fbId+'" style="margin-top:4px;transform:scale(1.3);flex-shrink:0;cursor:pointer">'
+        +'<div style="flex:1;min-width:0">'
+        +'<div style="display:flex;justify-content:space-between;align-items:flex-start">'
+        +'<div style="font-size:13px;font-weight:700;margin-bottom:2px">'+(x.recipient||'수령인미상')+'</div>'
+        +'<div style="display:flex;gap:4px;flex-shrink:0;margin-left:4px">'
+        +(isAdmin?'<span style="font-size:10px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:1px 5px">'+( x.driver||'')+'</span>':'')
+        +'<span style="font-size:10px;padding:2px 7px;border-radius:999px;font-weight:700;background:'+(isDone?'#dcfce7':'#fee2e2')+';color:'+(isDone?'#16a34a':'#dc2626')+'">'+(isDone?'✅완료':'⏳미완료')+'</span>'
+        +'</div></div>'
+        +'<div style="font-size:11px;color:var(--text2);line-height:1.9">'
+        +(x.addr?'📍 '+x.addr+'<br>':'')
+        +'🔢 '+trackStr+(x.order_id?' &nbsp;📋 '+x.order_id:'')+'<br>'
+        +'⏰ '+(x.date||'')+' '+(x.time||'')
+        +(isDone&&x.completedAt?' → ✅ '+x.completedAt.slice(11,16):'')
+        +'</div>'
+        +phHTML
+        +(isDone&&x.completeMemo?'<div style="font-size:11px;color:var(--text3);margin-top:4px">📝 '+x.completeMemo+'</div>':'')
+        +'</div></div></div>';
+    }
+
+    var el=document.getElementById('emer-log-content');
+    if(!el) return;
+
+    var pendingHTML='<div style="margin-bottom:16px">'
+      +'<div style="font-size:13px;font-weight:700;color:#dc2626;padding:8px 0 6px;border-bottom:2px solid #dc2626;margin-bottom:8px">⏳ 미완료 — '+pending.length+'건</div>'
+      +(pending.length?pending.map(rowHTML).join(''):'<div style="text-align:center;padding:14px;font-size:12px;color:var(--text3)">없음</div>')
+      +'</div>';
+
+    var doneHTML='<div style="margin-bottom:16px">'
+      +'<div style="font-size:13px;font-weight:700;color:#16a34a;padding:8px 0 6px;border-bottom:2px solid #16a34a;margin-bottom:8px">✅ 완료 — '+done.length+'건</div>'
+      +(done.length?done.map(rowHTML).join(''):'<div style="text-align:center;padding:14px;font-size:12px;color:var(--text3)">없음</div>')
+      +'</div>';
+
+    el.innerHTML = pendingHTML + doneHTML;
+  }
+
+  // Firebase onSnapshot 실시간 구독
   if(FB&&_db){
     try{
-      var q = _db.collection('emergency_deliveries').orderBy('savedAt','desc').limit(200);
-      if(!isAdmin) q = q.where('driver','==',S.curDriver);
-      var snap = await q.get();
-      snap.forEach(function(d){ var x=d.data(); x.fbId=d.id; records.push(x); });
-    }catch(e){ console.warn('emergency_log Firebase:', e.code); }
-  }
-
-  // 로컬 병합
-  try{
-    var local = JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]');
-    local.forEach(function(lx){
-      if(!isAdmin && lx.driver!==S.curDriver) return;
-      var dup = lx._fbId && records.some(function(r){return r.fbId===lx._fbId;});
-      if(!dup) records.push(lx);
-    });
-  }catch(e){}
-
-  // 60일 필터 + 정렬
-  records = records.filter(function(x){ return (x.date||x.savedAt||'')>=cut; })
-    .sort(function(a,b){ return (b.savedAt||'').localeCompare(a.savedAt||''); });
-
-  // 날짜별 그룹
-  var byDate = {};
-  records.forEach(function(x){
-    var d = x.date||(x.savedAt||'').slice(0,10);
-    if(!byDate[d]) byDate[d]=[];
-    byDate[d].push(x);
-  });
-
-  var html = '<div style="padding:12px 10px">'
-    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
-    +'<div>'
-    +'<div style="font-size:16px;font-weight:800">🚨 긴급배송 기록</div>'
-    +'<div style="font-size:11px;color:var(--text3)">최근 60일 · 총 '+records.length+'건'+(isAdmin?' (전체 기사)':' (내 기록)')+'</div>'
-    +'</div>'
-    +'<button onclick="SP(\'home\',null)" style="padding:6px 14px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer">← 홈</button>'
-    +'</div>';
-
-  if(!records.length){
-    html += '<div style="text-align:center;padding:40px 20px;color:var(--text3)">'
-      +'<div style="font-size:40px;margin-bottom:12px">📭</div>'
-      +'<div style="font-size:14px;font-weight:600;margin-bottom:6px">긴급배송 기록 없음</div>'
-      +'<div style="font-size:12px">최근 60일간 기록이 없습니다</div>'
-      +'</div>';
-  } else {
-    Object.keys(byDate).sort(function(a,b){return b.localeCompare(a);}).forEach(function(date){
-      var rows = byDate[date];
-      var doneCnt = rows.filter(function(x){return x.status==='완료';}).length;
-      html += '<div style="margin-bottom:12px">'
-        +'<div style="font-size:12px;font-weight:700;color:var(--text2);padding:6px 0;border-bottom:2px solid var(--border);margin-bottom:6px;display:flex;justify-content:space-between">'
-        +'<span>'+date+'</span>'
-        +'<span style="font-size:11px;color:var(--text3)">'+rows.length+'건 / 완료 '+doneCnt+'건</span>'
-        +'</div>';
-
-      rows.forEach(function(x){
-        var isDone = x.status==='완료';
-        var trackStr = (x.trackings&&x.trackings.length>1)
-          ? x.trackings.join(', ')
-          : (x.trackings&&x.trackings[0])||x.tracking||'—';
-
-        // 배송 사진 (최대 3장)
-        var photos = (x.photos||[]).filter(function(u){return u&&u.startsWith('http');});
-        var completePhotos = (x.completePhotos||[]).filter(function(u){return u&&u.startsWith('http');});
-        var allPhotos = photos.concat(completePhotos).slice(0,4);
-        var phHTML = allPhotos.length
-          ? '<div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap">'
-            +allPhotos.map(function(u){
-              return '<img src="'+u+'" onclick="openIV(\''+u+'\',\'긴급배송사진\')" style="width:56px;height:56px;object-fit:cover;border-radius:6px;cursor:pointer;border:2px solid '+(isDone?'var(--teal)':'var(--border)')+'">'; 
-            }).join('')+'</div>' : '';
-
-        html += '<div style="padding:10px;background:var(--bg3);border-radius:10px;margin-bottom:8px;border-left:3px solid '+(isDone?'#16a34a':'#dc2626')+'">'
-          +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">'
-          +'<div style="font-size:13px;font-weight:700">'+(x.recipient||'수령인미상')+'</div>'
-          +'<div style="display:flex;gap:4px;align-items:center">'
-          +(isAdmin?'<span style="font-size:10px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:1px 6px">'+( x.driver||'')+'</span>':'')
-          +'<span style="font-size:10px;padding:2px 7px;border-radius:999px;font-weight:700;background:'+(isDone?'#dcfce7':'#fee2e2')+';color:'+(isDone?'#16a34a':'#dc2626')+'">'+(isDone?'✅ 완료':'⏳ 미완료')+'</span>'
-          +'</div>'
-          +'</div>'
-          +'<div style="font-size:11px;color:var(--text2);line-height:1.8">'
-          +(x.addr?'📍 '+x.addr+'<br>':'')
-          +'📦 운송장: '+trackStr+'<br>'
-          +(x.order_id?'📋 주문번호: '+x.order_id+'<br>':'')
-          +'⏰ '+( x.time||x.savedAt&&x.savedAt.slice(11,16)||'')
-          +(isDone&&x.completedAt?' → 완료 '+x.completedAt.slice(11,16):'')
-          +'</div>'
-          +phHTML
-          +(isDone&&x.completeMemo?'<div style="font-size:11px;color:var(--text3);margin-top:4px">📝 '+x.completeMemo+'</div>':'')
-          +'</div>';
+      var q=_db.collection('emergency_deliveries').orderBy('savedAt','desc').limit(200);
+      if(!isAdmin) q=q.where('driver','==',S.curDriver);
+      window._emerLogUnsub=q.onSnapshot(function(snap){
+        var fbRecs=[];
+        snap.forEach(function(d){var x=d.data();x.fbId=d.id;fbRecs.push(x);});
+        _renderContent(fbRecs);
+      },function(e){
+        console.warn('emerLog snapshot:',e.code);
+        _renderContent([]);
       });
-      html += '</div>';
-    });
+    }catch(e){ _renderContent([]); }
+  } else {
+    setTimeout(function(){ _renderContent([]); }, 50);
   }
 
-  html += '</div>';
-  return html;
+  var totalLabel=isAdmin?'전체 기사':'내 기록';
+  return '<div style="padding:12px 10px">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
+    +'<div><div style="font-size:16px;font-weight:800">🚨 긴급배송 기록</div>'
+    +'<div style="font-size:11px;color:var(--text3)">최근 60일 · '+totalLabel+' · 🔴실시간</div></div>'
+    +'<div style="display:flex;gap:6px">'
+    +'<button onclick="emerLogSelectDelete()" style="padding:5px 10px;background:var(--amber-l,#fef3c7);border:1px solid var(--amber,#d97706);border-radius:6px;font-size:11px;color:var(--amber,#d97706);font-weight:700;cursor:pointer">☑ 선택삭제</button>'
+    +'<button onclick="if(window._emerLogUnsub){try{window._emerLogUnsub();}catch(e){}}SP(\'home\',null)" style="padding:5px 10px;background:var(--bg3);border:1.5px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer">← 홈</button>'
+    +'</div></div>'
+    +'<div id="emer-log-content"><div style="text-align:center;padding:30px;color:var(--text3);font-size:12px">🔄 로드 중...</div></div>'
+    +'</div>';
+}
+
+// ★ v9.25: 긴급배송 기록 선택삭제
+async function emerLogSelectDelete(){
+  var checked=document.querySelectorAll('.emer-log-chk:checked');
+  if(!checked.length){toast('⚠️ 삭제할 항목을 선택하세요');return;}
+  if(!confirm(checked.length+'건을 삭제하시겠습니까?\n(되돌릴 수 없습니다)'))return;
+  var fbIds=[];
+  checked.forEach(function(c){if(c.dataset.fbid)fbIds.push(c.dataset.fbid);});
+  if(FB&&_db&&fbIds.length){
+    var batch=_db.batch();
+    fbIds.forEach(function(id){try{batch.delete(_db.collection('emergency_deliveries').doc(id));}catch(e){}});
+    try{await batch.commit();}catch(e){console.warn('emerDel:',e.code);}
+  }
+  try{
+    var list=JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]');
+    list=list.filter(function(x){return fbIds.indexOf(x.fbId||x._fbId||x.id||'')<0;});
+    localStorage.setItem('mbti_emergency_del',JSON.stringify(list));
+  }catch(e){}
+  toast('✅ '+fbIds.length+'건 삭제 완료');
+  // onSnapshot이 자동으로 화면 갱신함
 }
 
 function openShiftSwapModal(){
