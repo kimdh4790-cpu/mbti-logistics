@@ -2795,8 +2795,14 @@ function rSettle(){
         </td>
       </tr>`;}).join('');
     var totIncome=gRows.reduce(function(s,x){return s+calcNet(x).income;},0);
-    var totCoupang=gRows.reduce(function(s,x){var r=calcNet(x);return s+r.damt+r.ramt+r.fresh+r.finc+r.inc-r.dmg;},0); // VAT 별도
-    var totCoupangVat=Math.round(totCoupang*1.1); // ★ 부가세 포함 표시용
+    var totCoupang=gRows.reduce(function(s,x){var r=calcNet(x);return s+r.damt+r.ramt+r.fresh+r.finc+r.inc-r.dmg;},0);
+    // ★ v9.25: 엑셀 업로드 시 저장한 전체 총합계 우선 사용 (기사 매칭 무관)
+    var ctKey='coupang_total_'+(mo||'').replace('-','_');
+    try{var ctStore=JSON.parse(localStorage.getItem('mbti_coupang_totals')||'{}');
+      if(ctStore[ctKey]&&ctStore[ctKey].vat_incl) totCoupang=ctStore[ctKey].vat_incl;
+      else totCoupang=Math.round(totCoupang*1.1);
+    }catch(e){totCoupang=Math.round(totCoupang*1.1);}
+    var totCoupangVat=totCoupang;
     var totSupply=gRows.reduce(function(s,x){return s+calcNet(x).supplyAmt;},0);
     var totTax=gRows.reduce(function(s,x){return s+calcNet(x).tax;},0);
     var totEmp=gRows.reduce(function(s,x){return s+calcNet(x).emp;},0);
@@ -2806,7 +2812,6 @@ function rSettle(){
     var summary='<div style="display:flex;flex-wrap:wrap;gap:6px;padding:6px 0 8px;font-size:11px">'
       +'<span style="padding:4px 10px;background:rgba(16,185,129,.1);border-radius:20px;color:var(--green)">👥 '+gRows.length+'명</span>'
       +'<span style="padding:4px 10px;background:rgba(59,130,246,.1);border-radius:20px;color:#3b82f6">📦 쿠팡 총매출(VAT포함) <strong>₩'+totCoupangVat.toLocaleString()+'</strong></span>'
-      +'<span style="padding:4px 10px;background:rgba(5,150,105,.1);border-radius:20px;color:#059669">🧾 기사 세금계산서 <strong>₩'+totIncomeVat.toLocaleString()+'</strong> <small style="font-size:9px;opacity:.7">VAT포함</small></span>'
       +'<span style="padding:4px 10px;background:rgba(245,158,11,.1);border-radius:20px;color:#d97706">🏥 고용보험 <strong>₩'+totEmp.toLocaleString()+'</strong></span>'
       +'<span style="padding:4px 10px;background:rgba(239,68,68,.1);border-radius:20px;color:#dc2626">⛑ 산재보험 <strong>₩'+totWork.toLocaleString()+'</strong></span>'
       +(totDmg>0?'<span style="padding:4px 10px;background:rgba(239,68,68,.15);border-radius:20px;color:#b91c1c;border:1px solid rgba(239,68,68,.3)">⚠️ 분실·파손 공제 <strong>-₩'+totDmg.toLocaleString()+'</strong></span>':'')
@@ -2823,7 +2828,6 @@ function rSettle(){
       +'</div>'
       +'<div style="display:flex;flex-wrap:wrap;gap:5px;font-size:10px">'
       +'<span style="padding:2px 8px;background:rgba(59,130,246,.12);border-radius:12px;color:#3b82f6">📦 쿠팡 총매출(VAT포함) ₩'+totCoupangVat.toLocaleString()+'</span>'
-      +'<span style="padding:2px 8px;background:rgba(5,150,105,.12);border-radius:12px;color:#059669">🧾 기사 세금계산서 ₩'+totIncomeVat.toLocaleString()+' <small style="font-size:8px">VAT포함</small></span>'
       +'<span style="padding:2px 8px;background:rgba(245,158,11,.12);border-radius:12px;color:#d97706">🏥 고용+산재 ₩'+(totEmp+totWork).toLocaleString()+'</span>'
       +(totDmg>0?'<span style="padding:2px 8px;background:rgba(239,68,68,.15);border-radius:12px;color:#b91c1c">⚠️ 분실·파손 -₩'+totDmg.toLocaleString()+'</span>':'')
       +'<span style="padding:2px 8px;background:rgba(124,58,237,.15);border-radius:12px;color:var(--purple);font-weight:700">💰 실지급 ₩'+totNet.toLocaleString()+'</span>'
@@ -5699,13 +5703,25 @@ function updSettle(){
   var nocont=+document.getElementById('se-nocont')?.value||0;  // ★ 미계약건
   var etcPlus=+document.getElementById('se-etc-plus')?.value||0;   // ★ 기타(+)
   var etcMinus=+document.getElementById('se-etc-minus')?.value||0; // ★ 기타(-)
-  // ★ v9.25: 기타(+)만 income(세금계산서)에 포함, 기타(-)는 공제로 처리
-  var income=damt+ramt+fresh+finc+inc+nocont+etcPlus;
-  var tax=Math.round(income*0.033); var emp=Math.round(income*0.008);
+  var income=damt+ramt+fresh+finc+inc+nocont+etcPlus; // ★ 기타(+)만 포함, 기타(-)는 공제
+  // ★ v9.25: 고용·산재 = calcNet 방식으로 정확히 재계산
+  var supplyAmt2=Math.round(income/1.1);
+  var expenseAmt2=Math.round(supplyAmt2*0.346);
+  var monthlyWage2=supplyAmt2-expenseAmt2;
+  var empCalc2=monthlyWage2>=800000?Math.floor(monthlyWage2*0.008/10)*10:0;
+  var workCalc2=Math.floor(monthlyWage2*0.0088/10)*10;
+  var tax=Math.round(income*0.033);
+  var emp=empCalc2;
+  var workEl=document.getElementById('se-work');
+  // work는 수동 입력 우선, 없으면 자동 계산
+  var workManual=workEl&&workEl.dataset.manual?+workEl.value:0;
+  var work=workManual||workCalc2;
   var te=document.getElementById('se-tax');if(te)te.value=tax;
   var ee=document.getElementById('se-emp');if(ee)ee.value=emp;
-  // ★ 실지급 계산: 원천세(3.3%) 및 산재 고정(14000) 제외 → 고용보험(0.8%,80만↑)만 공제
-  var r=calcNet({damt,ramt,fresh,finc,inc,nocont,etcPlus,etcMinus,tax:0,emp,work:0,eq:+document.getElementById('se-eq')?.value||0,dmg:+document.getElementById('se-dmg')?.value||0,adv:+document.getElementById('se-adv')?.value||0});
+  if(workEl&&!workEl.dataset.manual)workEl.value=workCalc2;
+  // ★ 명세서 공제항목 미리보기 업데이트
+  var mw=document.getElementById('st-mw');if(mw)mw.textContent='₩'+monthlyWage2.toLocaleString();
+  var r=calcNet({damt,ramt,fresh,finc,inc,nocont,etcPlus,etcMinus,tax:0,emp,work,eq:+document.getElementById('se-eq')?.value||0,dmg:+document.getElementById('se-dmg')?.value||0,adv:+document.getElementById('se-adv')?.value||0});
   var p=document.getElementById('se-net');if(p)p.textContent='₩'+r.net.toLocaleString();
   var i=document.getElementById('se-income');if(i)i.textContent='₩'+r.income.toLocaleString();
   var d=document.getElementById('se-deduct');if(d)d.textContent='₩'+r.deduct.toLocaleString();
@@ -10534,7 +10550,18 @@ function parseCoupangExcel(inp){
         }
       }
 
-      var drivers=ls('drivers');
+      // ★ v9.25: 엑셀 전체 총합계 저장 (기사 매칭 무관, 쿠팡 총매출 표시용)
+      var excelGrandTotal=Object.values(totalMap).reduce(function(s,v){return s+(v.totalAmt||0);},0);
+      var excelGrandFresh=Object.values(totalMap).reduce(function(s,v){return s+(v.freshAmt||0);},0);
+      var excelGrandDmg=Object.values(totalMap).reduce(function(s,v){return s+(v.dmgAmt||0);},0);
+      // 월별 저장
+      try{
+        var ctKey='coupang_total_'+((inputMonth||'').replace('-','_'));
+        var ctData={vat_excl:excelGrandTotal, fresh:excelGrandFresh, dmg:excelGrandDmg, vat_incl:Math.round(excelGrandTotal*1.1), updatedAt:new Date().toISOString()};
+        var ctStore=JSON.parse(localStorage.getItem('mbti_coupang_totals')||'{}');
+        ctStore[ctKey]=ctData;
+        localStorage.setItem('mbti_coupang_totals',JSON.stringify(ctStore));
+      }catch(e){}
       var settlements=ls('settlements');
       // ★ 정산월 선택: 기본값 = 전월 (쿠팡 관행: 전월 배송분을 익월에 정산)
       var _now=new Date();
