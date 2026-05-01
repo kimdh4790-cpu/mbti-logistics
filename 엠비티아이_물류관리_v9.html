@@ -9365,9 +9365,14 @@ async function emerOcrScan(file){
   });
 
   try{
-    var res = await fetch('/claude-ocr', {
+    var res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 600,
@@ -9384,11 +9389,11 @@ async function emerOcrScan(file){
     // 응답 텍스트 먼저 확인
     var rawText = await res.text();
     if(!rawText || rawText.trim()===''){
-      throw new Error('빈 응답 (HTTP '+res.status+') — API 키를 확인해주세요');
+      throw new Error('빈 응답 (HTTP '+res.status+')');
     }
     var d;
     try{ d = JSON.parse(rawText); }
-    catch(e){ throw new Error('응답 파싱 실패: '+rawText.slice(0,100)); }
+    catch(e){ throw new Error('파싱 실패: '+rawText.slice(0,100)); }
     if(d.error) throw new Error(d.error.message);
     var txt = (d.content||[]).find(function(c){return c.type==='text';})?.text||'';
     var p;
