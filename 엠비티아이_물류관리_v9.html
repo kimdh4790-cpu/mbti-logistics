@@ -9390,17 +9390,17 @@ async function emerOcrScan(file){
     var lines = ocrText.split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
     var fullText = ocrText.replace(/\s+/g,' ');
 
-    // 디버그: OCR 텍스트 앞 200자 표시
-    if(status) status.innerHTML = '<span style="color:var(--blue);font-size:10px">OCR: '+fullText.slice(0,200)+'</span>';
-    await new Promise(function(r){setTimeout(r,3000);});
-    if(status) status.innerHTML = '<span style="color:var(--blue)">🤖 파싱 중...</span>';
-
-    // 주문번호: 7.XXXX.XXXX.XXXX 또는 7XXXXXXXXXXXXXX (구분자 유연하게)
-    var orderMatch = fullText.match(/7[\.\-\s]?\d{3,4}[\.\-\s]\d{4}[\.\-\s]\d{4}/)
+    // 주문번호: "주문번호 7.1001.8247.4583" 키워드 기반 또는 숫자 패턴
+    var orderMatch = fullText.match(/주문번호\s*([\d\.\-]{10,20})/)
+                  || fullText.match(/7[\.-]\d{3,4}[\.-]\d{4}[\.-]\d{4}/)
                   || fullText.match(/7\d{12,13}/);
-    // 운송장번호: 10.XXXX.XXXX.XXXX 또는 10XXXXXXXXXXXXXX
-    var trackingMatch = fullText.match(/1[0-9][\.\-\s]?\d{4}[\.\-\s]\d{4}[\.\-\s]\d{4}/)
+    // 운송장번호: "운송장번호 10.3159.0491.3926" 키워드 기반 또는 숫자 패턴
+    var trackingMatch = fullText.match(/운송장번호\s*([\d\.\-]{10,20})/)
+                     || fullText.match(/1[0-9][\.-]\d{3,4}[\.-]\d{4}[\.-]\d{4}/)
                      || fullText.match(/1[0-9]\d{12,13}/);
+    // 매칭 그룹에서 번호 추출
+    var orderId   = orderMatch   ? (orderMatch[1]  ||orderMatch[0]  ).trim() : '';
+    var trackingNo= trackingMatch? (trackingMatch[1]||trackingMatch[0]).trim() : '';
     // 수령인: 김*우 패턴
     var recipientMatch = fullText.match(/[가-힣]+\*[가-힣]+/);
     // 주소: 구/동/로/길/아파트 포함 라인
@@ -9409,8 +9409,8 @@ async function emerOcrScan(file){
     var memoLine = lines.find(function(l){ return l.match(/문\s*앞|경비실|자율출입|직접|부재|택배함/); });
 
     var p = {
-      order_id: orderMatch ? orderMatch[0] : '',
-      tracking_no: trackingMatch ? trackingMatch[0] : '',
+      order_id: orderId,
+      tracking_no: trackingNo,
       recipient: recipientMatch ? recipientMatch[0] : '',
       address: addrLine || '',
       delivery_memo: memoLine || ''
