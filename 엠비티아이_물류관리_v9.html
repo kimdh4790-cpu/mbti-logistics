@@ -26,6 +26,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/browser-image-compression/2.0.2/browser-image-compression.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js"></script>
 <style>
 :root{
   --blue:#185FA5;--blue-l:#E6F1FB;--blue-d:#0C447C;
@@ -3291,19 +3292,21 @@ async function openEmergencyAdmin(){
 
   var rows=records.length ? records.map(function(r){
     var photos=(r.photos||[]).map(function(url){
-      return '<img src="'+url+'" onclick="window.open(\''+url+'\',\'_blank\')" style="width:60px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer;border:1px solid var(--border)">';
+      return '<img src="'+url+'" onclick="window.open(\''+url+'\',\'_blank\')" style="width:55px;height:55px;object-fit:cover;border-radius:6px;cursor:pointer;border:1px solid var(--border)">';
     }).join('');
     var gpsLink=r.gps?'<a href="https://maps.google.com/?q='+r.gps.lat+','+r.gps.lng+'" target="_blank" style="color:var(--blue);font-size:10px">📍지도</a>':'<span style="color:var(--text3);font-size:10px">GPS없음</span>';
+    var trackings = r.trackings ? r.trackings.join('<br>') : (r.tracking||'');
     return '<tr>'
       +'<td style="white-space:nowrap">'+( r.date||'')+' '+( r.time||'')+'</td>'
       +'<td style="font-weight:700">'+( r.driver||'')+'</td>'
-      +'<td style="font-family:monospace;font-size:12px">'+( r.tracking||'')+'</td>'
-      +'<td>'+( r.addr||'—')+'</td>'
+      +'<td style="font-size:10px;color:var(--text3)">'+( r.order_id||'—')+'</td>'
+      +'<td style="font-family:monospace;font-size:11px">'+trackings+'</td>'
+      +'<td style="font-size:11px">'+( r.recipient||'—')+'</td>'
+      +'<td style="font-size:11px">'+( r.addr||'—')+'</td>'
       +'<td>'+photos+'</td>'
       +'<td>'+gpsLink+'</td>'
-      +'<td style="font-size:11px;color:var(--text3)">'+( r.memo||'—')+'</td>'
       +'</tr>';
-  }).join('') : '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text3)">긴급 배송기록 없음</td></tr>';
+  }).join('') : '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text3)">긴급 배송기록 없음</td></tr>';
 
   document.getElementById('emer-admin-mo')?.remove();
   document.body.insertAdjacentHTML('beforeend',`
@@ -3316,8 +3319,8 @@ async function openEmergencyAdmin(){
         <button onclick="document.getElementById('emer-admin-mo').remove()" style="margin-left:auto;padding:5px 12px;background:var(--bg3);border:1.5px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px">닫기</button>
       </div>
       <div style="overflow-x:auto">
-        <table class="tbl" style="min-width:700px">
-          <thead><tr><th>일시</th><th>기사</th><th>운송장</th><th>배송장소</th><th>사진</th><th>GPS</th><th>메모</th></tr></thead>
+        <table class="tbl" style="min-width:800px">
+          <thead><tr><th>일시</th><th>기사</th><th>주문번호</th><th>운송장</th><th>수령인</th><th>주소</th><th>사진</th><th>GPS</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
@@ -9175,57 +9178,91 @@ function dHome(){
 // ★ v9.25: 긴급 배송기록 — 쿠팡앱 에러 시 대체 증거 수집
 function openEmergencyDelivery(){
   document.getElementById('emer-del-mo')?.remove();
+  window._emerPhotos = [];
+  window._emerTrackings = [];  // 운송장 번호 배열 (묶음 배송)
+  window._emerGps = null;
+
   document.body.insertAdjacentHTML('beforeend',`
   <div id="emer-del-mo" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:700;display:flex;align-items:flex-end;justify-content:center" onclick="if(event.target===this)this.remove()">
-    <div onclick="event.stopPropagation()" style="background:var(--bg);border-radius:16px 16px 0 0;padding:20px 16px 32px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto">
-      <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px"></div>
+    <div onclick="event.stopPropagation()" style="background:var(--bg);border-radius:16px 16px 0 0;padding:20px 16px 32px;width:100%;max-width:520px;max-height:92vh;overflow-y:auto">
+      <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 14px"></div>
+
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
         <span style="font-size:20px">📸</span>
         <div style="font-size:16px;font-weight:800;color:var(--red)">긴급 배송기록</div>
         <div style="margin-left:auto;font-size:10px;background:#dc2626;color:#fff;padding:2px 8px;border-radius:999px;font-weight:700">쿠팡앱 에러 대응</div>
       </div>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:16px">운송장 번호 + 사진 + GPS를 기록합니다. 쿠팡 CS 제출 자료로 활용됩니다.</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:14px">운송장 사진 찍으면 정보가 자동 입력됩니다.</div>
 
-      <!-- 운송장 번호 -->
-      <div style="margin-bottom:12px">
-        <div style="font-size:12px;font-weight:700;margin-bottom:4px">📦 운송장 번호 <span style="color:var(--red)">*</span></div>
+      <!-- ★ OCR 자동입력 버튼 -->
+      <div style="margin-bottom:14px">
+        <label style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;background:linear-gradient(135deg,#1d4ed8,#2563eb);color:#fff;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:.01em">
+          <span style="font-size:18px">🤖</span> 운송장 사진 찍어서 자동 입력
+          <input type="file" accept="image/*" capture="environment" style="display:none" onchange="emerOcrScan(this.files[0])">
+        </label>
+        <div id="emer-ocr-status" style="font-size:11px;color:var(--text3);text-align:center;margin-top:5px;min-height:16px"></div>
+      </div>
+
+      <div style="text-align:center;font-size:11px;color:var(--text3);margin-bottom:14px">— 또는 직접 입력 —</div>
+
+      <!-- 주문번호 -->
+      <div style="margin-bottom:10px">
+        <div style="font-size:12px;font-weight:700;margin-bottom:4px">🛒 주문번호 <span style="font-size:10px;font-weight:400;color:var(--text3)">(선택 — 묶음배송 시 1개로 묶임)</span></div>
+        <input id="emer-orderid" type="text" inputmode="numeric" placeholder="예: 7.1001.8247.4983"
+          style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text);box-sizing:border-box">
+      </div>
+
+      <!-- 운송장 번호 (복수) -->
+      <div style="margin-bottom:10px">
+        <div style="font-size:12px;font-weight:700;margin-bottom:6px">📦 운송장 번호 <span style="color:var(--red)">*</span> <span style="font-size:10px;font-weight:400;color:var(--text3)">(박스 여러 개면 추가 가능)</span></div>
+        <div id="emer-tracking-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px"></div>
         <div style="display:flex;gap:6px">
-          <input id="emer-tracking" type="text" inputmode="numeric" placeholder="운송장 번호 입력 (숫자만)" maxlength="30"
-            style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;background:var(--bg);color:var(--text)">
+          <input id="emer-tracking-inp" type="text" inputmode="numeric" placeholder="운송장 번호 입력 후 추가" maxlength="30"
+            style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text)"
+            onkeydown="if(event.key==='Enter')emerAddTracking()">
+          <button onclick="emerAddTracking()" style="padding:10px 14px;background:var(--teal);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">추가</button>
           <button onclick="emerScanBarcode()" style="padding:10px 12px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;font-size:18px;cursor:pointer" title="바코드 스캔">📷</button>
         </div>
       </div>
 
-      <!-- 수령인 정보 (선택) -->
-      <div style="margin-bottom:12px">
-        <div style="font-size:12px;font-weight:700;margin-bottom:4px">📍 배송 장소 <span style="font-size:10px;font-weight:400;color:var(--text3)">(선택)</span></div>
-        <input id="emer-addr" type="text" placeholder="예: 현관 앞, 경비실 전달 등"
+      <!-- 수령인 & 주소 -->
+      <div style="margin-bottom:10px">
+        <div style="font-size:12px;font-weight:700;margin-bottom:4px">👤 수령인 <span style="font-size:10px;font-weight:400;color:var(--text3)">(선택)</span></div>
+        <input id="emer-recipient" type="text" placeholder="예: 김*우"
+          style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text);box-sizing:border-box">
+      </div>
+      <div style="margin-bottom:10px">
+        <div style="font-size:12px;font-weight:700;margin-bottom:4px">📍 배송 주소 <span style="font-size:10px;font-weight:400;color:var(--text3)">(선택)</span></div>
+        <input id="emer-addr" type="text" placeholder="예: 수영구 수영로 668 화목오피스텔 607호"
+          style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text);box-sizing:border-box">
+      </div>
+      <div style="margin-bottom:10px">
+        <div style="font-size:12px;font-weight:700;margin-bottom:4px">🚪 배송 메모 <span style="font-size:10px;font-weight:400;color:var(--text3)">(선택)</span></div>
+        <input id="emer-delivmemo" type="text" placeholder="예: 문 앞 자율출입가능"
           style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text);box-sizing:border-box">
       </div>
 
       <!-- 배송 사진 -->
       <div style="margin-bottom:12px">
-        <div style="font-size:12px;font-weight:700;margin-bottom:8px">🖼 배송 사진 <span style="color:var(--red)">*</span> <span style="font-size:10px;font-weight:400;color:var(--text3)">(최대 3장)</span></div>
+        <div style="font-size:12px;font-weight:700;margin-bottom:6px">🖼 배송 완료 사진 <span style="color:var(--red)">*</span> <span style="font-size:10px;font-weight:400;color:var(--text3)">(최대 5장)</span></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap" id="emer-photo-wrap">
-          <label style="width:90px;height:90px;border:2px dashed var(--border);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;background:var(--bg3)">
-            <span style="font-size:24px">📷</span>
-            <span style="font-size:10px;color:var(--text3);margin-top:4px">사진 추가</span>
+          <label style="width:80px;height:80px;border:2px dashed var(--border);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;background:var(--bg3);flex-shrink:0">
+            <span style="font-size:22px">📷</span>
+            <span style="font-size:9px;color:var(--text3);margin-top:3px">사진 추가</span>
             <input type="file" accept="image/*" capture="environment" multiple style="display:none" onchange="emerAddPhotos(this.files)">
           </label>
         </div>
       </div>
 
       <!-- 메모 -->
-      <div style="margin-bottom:16px">
-        <div style="font-size:12px;font-weight:700;margin-bottom:4px">📝 메모 <span style="font-size:10px;font-weight:400;color:var(--text3)">(선택 — 에러 내용, 특이사항)</span></div>
+      <div style="margin-bottom:12px">
+        <div style="font-size:12px;font-weight:700;margin-bottom:4px">📝 에러 메모 <span style="font-size:10px;font-weight:400;color:var(--text3)">(선택)</span></div>
         <textarea id="emer-memo" placeholder="예: 쿠팡앱 사진 업로드 실패, 앱 강제종료됨 등" rows="2"
           style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text);box-sizing:border-box;resize:none"></textarea>
       </div>
 
-      <!-- GPS 상태 -->
-      <div id="emer-gps-status" style="font-size:11px;color:var(--text3);margin-bottom:14px;padding:8px 10px;background:var(--bg3);border-radius:8px">📍 GPS 위치 확인 중...</div>
+      <div id="emer-gps-status" style="font-size:11px;color:var(--text3);margin-bottom:12px;padding:8px 10px;background:var(--bg3);border-radius:8px">📍 GPS 위치 확인 중...</div>
 
-      <!-- 저장 버튼 -->
       <button onclick="emerSave()" style="width:100%;padding:13px;background:#dc2626;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px">
         💾 긴급 배송기록 저장 + 관리자 알림
       </button>
@@ -9234,7 +9271,6 @@ function openEmergencyDelivery(){
   </div>`);
 
   // GPS 자동 수집
-  window._emerGps = null;
   if(navigator.geolocation){
     navigator.geolocation.getCurrentPosition(function(pos){
       window._emerGps = {lat: pos.coords.latitude, lng: pos.coords.longitude, acc: Math.round(pos.coords.accuracy)};
@@ -9245,111 +9281,252 @@ function openEmergencyDelivery(){
       if(el) el.innerHTML='📍 GPS 수집 실패 — 위치 없이 저장됩니다 <span style="color:var(--amber)">⚠️</span>';
     }, {timeout:8000, enableHighAccuracy:true});
   }
+}
 
-  // 사진 배열 초기화
-  window._emerPhotos = [];
+// ★ OCR: 운송장 사진 → Claude Vision → 자동 입력
+async function emerOcrScan(file){
+  if(!file) return;
+  var status = document.getElementById('emer-ocr-status');
+  if(status) status.innerHTML = '<span style="color:var(--blue)">🤖 AI 분석 중...</span>';
+
+  // 이미지 리사이즈 (API 전송 최적화)
+  var b64 = await new Promise(function(resolve){
+    var img = new Image();
+    var url = URL.createObjectURL(file);
+    img.onload = function(){
+      var canvas = document.createElement('canvas');
+      var max = 1000;
+      var w = img.width, h = img.height;
+      if(w > max || h > max){
+        if(w > h){ h = Math.round(h * max / w); w = max; }
+        else { w = Math.round(w * max / h); h = max; }
+      }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/jpeg', 0.85).split(',')[1]);
+    };
+    img.src = url;
+  });
+
+  try{
+    var res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 600,
+        messages: [{
+          role: 'user',
+          content: [
+            {type:'image', source:{type:'base64', media_type:'image/jpeg', data: b64}},
+            {type:'text', text:'이 쿠팡 운송장 이미지에서 정보를 추출해서 JSON만 반환하세요. 다른 텍스트 없이:\n{"order_id":"주문번호(점포함원본)","tracking_no":"운송장번호(점포함원본)","recipient":"수령인","address":"배송주소전체","delivery_memo":"배송메모(문앞자율출입등)","camp":"캠프구역(예:부산4,310C01)"}'}
+          ]
+        }]
+      })
+    });
+    var d = await res.json();
+    if(d.error) throw new Error(d.error.message);
+    var txt = (d.content||[]).find(function(c){return c.type==='text';})?.text||'';
+    var p;
+    try{ p = JSON.parse(txt.replace(/```json|```/g,'').trim()); }
+    catch(e){ throw new Error('파싱실패: '+txt.slice(0,80)); }
+
+    // 자동 입력
+    if(p.order_id)   { var oi=document.getElementById('emer-orderid');   if(oi) oi.value=p.order_id; }
+    if(p.recipient)  { var re=document.getElementById('emer-recipient'); if(re) re.value=p.recipient; }
+    if(p.address)    { var ad=document.getElementById('emer-addr');      if(ad) ad.value=p.address; }
+    if(p.delivery_memo){ var dm=document.getElementById('emer-delivmemo'); if(dm) dm.value=p.delivery_memo; }
+
+    // 운송장번호 자동 추가
+    if(p.tracking_no){
+      var clean = p.tracking_no.replace(/[\.\-\s]/g,'');
+      var inp = document.getElementById('emer-tracking-inp');
+      if(inp) inp.value = clean;
+      emerAddTracking();
+    }
+
+    if(status) status.innerHTML = '<span style="color:var(--teal)">✅ 자동 입력 완료 — 내용 확인 후 저장하세요</span>';
+
+    // OCR 사진도 배송 사진에 추가 여부 묻기
+    var addPhoto = confirm('운송장 사진을 배송 사진으로도 추가하시겠습니까?');
+    if(addPhoto){
+      var reader = new FileReader();
+      reader.onload = function(e){ window._emerPhotos.push(e.target.result); emerRefreshPhotoWrap(); };
+      reader.readAsDataURL(file);
+    }
+
+  }catch(e){
+    if(status) status.innerHTML = '<span style="color:var(--red)">❌ OCR 실패: '+e.message+' — 직접 입력해주세요</span>';
+  }
+}
+
+// 운송장 번호 추가
+function emerAddTracking(){
+  var inp = document.getElementById('emer-tracking-inp');
+  if(!inp) return;
+  var val = inp.value.replace(/[\.\-\s]/g,'').trim();
+  if(!val){ toast('운송장 번호를 입력하세요'); return; }
+  if(window._emerTrackings.indexOf(val)>=0){ toast('이미 추가된 번호입니다'); inp.value=''; return; }
+  window._emerTrackings.push(val);
+  inp.value = '';
+  emerRefreshTrackingList();
+}
+
+function emerRefreshTrackingList(){
+  var list = document.getElementById('emer-tracking-list');
+  if(!list) return;
+  list.innerHTML = window._emerTrackings.map(function(t, i){
+    return '<div style="display:flex;align-items:center;gap:6px;padding:8px 10px;background:var(--bg3);border-radius:8px">'
+      +'<span style="font-size:12px">📦</span>'
+      +'<span style="flex:1;font-size:13px;font-family:monospace">'+t+'</span>'
+      +'<button onclick="window._emerTrackings.splice('+i+',1);emerRefreshTrackingList()" '
+      +'style="padding:2px 8px;background:var(--red-l,#fee2e2);color:var(--red);border:none;border-radius:4px;font-size:11px;cursor:pointer">삭제</button>'
+      +'</div>';
+  }).join('');
 }
 
 // 사진 추가 처리
 function emerAddPhotos(files){
   if(!files||!files.length) return;
-  var wrap = document.getElementById('emer-photo-wrap');
-  if(!wrap) return;
-  Array.from(files).slice(0, 3 - window._emerPhotos.length).forEach(function(file){
-    if(window._emerPhotos.length >= 3){ toast('사진은 최대 3장입니다'); return; }
+  Array.from(files).forEach(function(file){
+    if(window._emerPhotos.length >= 5){ toast('사진은 최대 5장입니다'); return; }
     var reader = new FileReader();
-    reader.onload = function(e){
-      var dataUrl = e.target.result;
-      window._emerPhotos.push(dataUrl);
-      // 미리보기 추가
-      var idx = window._emerPhotos.length - 1;
-      var thumb = document.createElement('div');
-      thumb.style.cssText = 'position:relative;width:90px;height:90px';
-      thumb.innerHTML = '<img src="'+dataUrl+'" style="width:90px;height:90px;object-fit:cover;border-radius:10px;border:1.5px solid var(--border)">'
-        +'<button onclick="emerRemovePhoto('+idx+')" style="position:absolute;top:-4px;right:-4px;width:20px;height:20px;background:#dc2626;color:#fff;border:none;border-radius:50%;font-size:11px;cursor:pointer;line-height:1">✕</button>';
-      // 추가 버튼 앞에 삽입
-      var addBtn = wrap.querySelector('label');
-      wrap.insertBefore(thumb, addBtn);
-      if(window._emerPhotos.length >= 3){
-        var lb = wrap.querySelector('label'); if(lb) lb.style.display='none';
-      }
-    };
+    reader.onload = function(e){ window._emerPhotos.push(e.target.result); emerRefreshPhotoWrap(); };
     reader.readAsDataURL(file);
   });
 }
 
-function emerRemovePhoto(idx){
-  window._emerPhotos.splice(idx, 1);
-  // 패널 재렌더 (간단하게 모달 재오픈)
-  var tracking = document.getElementById('emer-tracking')?.value||'';
-  var addr = document.getElementById('emer-addr')?.value||'';
-  var memo = document.getElementById('emer-memo')?.value||'';
-  document.getElementById('emer-del-mo')?.remove();
-  openEmergencyDelivery();
-  setTimeout(function(){
-    if(document.getElementById('emer-tracking')) document.getElementById('emer-tracking').value=tracking;
-    if(document.getElementById('emer-addr')) document.getElementById('emer-addr').value=addr;
-    if(document.getElementById('emer-memo')) document.getElementById('emer-memo').value=memo;
-  },100);
+function emerRefreshPhotoWrap(){
+  var wrap = document.getElementById('emer-photo-wrap');
+  if(!wrap) return;
+  var addBtn = window._emerPhotos.length < 5
+    ? '<label style="width:80px;height:80px;border:2px dashed var(--border);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;background:var(--bg3);flex-shrink:0">'
+      +'<span style="font-size:22px">📷</span><span style="font-size:9px;color:var(--text3);margin-top:3px">사진 추가</span>'
+      +'<input type="file" accept="image/*" capture="environment" multiple style="display:none" onchange="emerAddPhotos(this.files)"></label>'
+    : '';
+  wrap.innerHTML = window._emerPhotos.map(function(url, i){
+    return '<div style="position:relative;width:80px;height:80px;flex-shrink:0">'
+      +'<img src="'+url+'" style="width:80px;height:80px;object-fit:cover;border-radius:10px;border:1.5px solid var(--border)">'
+      +'<button onclick="window._emerPhotos.splice('+i+',1);emerRefreshPhotoWrap()" style="position:absolute;top:-4px;right:-4px;width:20px;height:20px;background:#dc2626;color:#fff;border:none;border-radius:50%;font-size:11px;cursor:pointer;line-height:1">✕</button>'
+      +'</div>';
+  }).join('') + addBtn;
 }
 
-// 바코드 스캔 (BarcodeDetector API)
+// 바코드 스캔 — ZXing (iOS Safari + Android Chrome 모두 지원)
 async function emerScanBarcode(){
-  if(!('BarcodeDetector' in window)){
-    toast('⚠️ 이 기기는 바코드 스캔 미지원 — 직접 입력해주세요');
+  // 스캔 모달 생성
+  document.getElementById('zxing-scan-mo')?.remove();
+  document.body.insertAdjacentHTML('beforeend',`
+  <div id="zxing-scan-mo" style="position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:900;display:flex;flex-direction:column;align-items:center;justify-content:center">
+    <div style="position:relative;width:min(320px,90vw)">
+      <video id="zxing-video" style="width:100%;border-radius:12px" autoplay muted playsinline></video>
+      <!-- 스캔 가이드라인 -->
+      <div style="position:absolute;inset:0;pointer-events:none">
+        <div style="position:absolute;top:25%;left:10%;right:10%;bottom:25%;border:2px solid #22c55e;border-radius:8px;box-shadow:0 0 0 9999px rgba(0,0,0,.5)"></div>
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#22c55e;font-size:11px;font-weight:700;white-space:nowrap;margin-top:60px">운송장 바코드를 박스 안에 맞춰주세요</div>
+      </div>
+    </div>
+    <div id="zxing-status" style="color:#fff;font-size:13px;margin-top:16px;font-weight:600">📷 카메라 시작 중...</div>
+    <button onclick="zxingStop()" style="margin-top:20px;padding:10px 28px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">취소</button>
+  </div>`);
+
+  // ZXing 로드 확인
+  if(typeof ZXing === 'undefined'){
+    document.getElementById('zxing-status').textContent = '⚠️ 바코드 라이브러리 로딩 중...';
+    await new Promise(function(res){ setTimeout(res, 1500); });
+  }
+  if(typeof ZXing === 'undefined'){
+    document.getElementById('zxing-scan-mo')?.remove();
+    toast('⚠️ 바코드 스캔 미지원 기기 — 직접 입력해주세요');
     return;
   }
+
+  var video = document.getElementById('zxing-video');
+  var hints = new Map();
+  hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+    ZXing.BarcodeFormat.CODE_128,
+    ZXing.BarcodeFormat.CODE_39,
+    ZXing.BarcodeFormat.EAN_13,
+    ZXing.BarcodeFormat.QR_CODE
+  ]);
+  var reader = new ZXing.BrowserMultiFormatReader(hints);
+  window._zxingReader = reader;
+
   try{
-    var stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
-    var video = document.createElement('video');
-    video.srcObject = stream; video.setAttribute('playsinline','true'); video.play();
-    var detector = new BarcodeDetector({formats:['code_128','code_39','ean_13','ean_8','qr_code']});
-    var found = false;
-    var scan = setInterval(async function(){
-      if(found) return;
-      try{
-        var codes = await detector.detect(video);
-        if(codes.length){
-          found = true;
-          clearInterval(scan);
-          stream.getTracks().forEach(function(t){t.stop();});
-          var inp = document.getElementById('emer-tracking');
-          if(inp){ inp.value = codes[0].rawValue; toast('📷 스캔 완료: '+codes[0].rawValue); }
-        }
-      }catch(e){}
-    }, 300);
-    setTimeout(function(){
-      if(!found){ clearInterval(scan); stream.getTracks().forEach(function(t){t.stop();}); toast('스캔 시간 초과 — 직접 입력해주세요'); }
-    }, 15000);
-  }catch(e){ toast('카메라 접근 실패: '+(e.message||'')); }
+    var devices = await ZXing.BrowserCodeReader.listVideoInputDevices();
+    // 후면 카메라 우선
+    var backCam = devices.find(function(d){ return /back|rear|환경|후면/i.test(d.label); }) || devices[devices.length-1];
+    var deviceId = backCam ? backCam.deviceId : undefined;
+
+    document.getElementById('zxing-status').textContent = '📷 바코드를 향해 카메라를 대주세요';
+
+    await reader.decodeFromVideoDevice(deviceId, video, function(result, err){
+      if(result){
+        var code = result.getText();
+        zxingStop();
+        // 운송장 번호 하이픈 제거 후 입력
+        var clean = code.replace(/[^0-9A-Za-z]/g,'');
+        var inp = document.getElementById('emer-tracking');
+        if(inp){ inp.value = clean; }
+        toast('✅ 스캔 완료: ' + clean);
+      }
+      if(err && !(err instanceof ZXing.NotFoundException)){
+        console.warn('ZXing:', err);
+      }
+    });
+  }catch(e){
+    document.getElementById('zxing-scan-mo')?.remove();
+    toast('카메라 접근 실패 — 직접 입력해주세요 ('+(e.message||'')+')');
+  }
+}
+
+function zxingStop(){
+  if(window._zxingReader){
+    try{ window._zxingReader.reset(); }catch(e){}
+    window._zxingReader = null;
+  }
+  document.getElementById('zxing-scan-mo')?.remove();
 }
 
 // 저장 실행
 async function emerSave(){
-  var tracking = (document.getElementById('emer-tracking')?.value||'').trim();
-  if(!tracking){ toast('❌ 운송장 번호를 입력해주세요'); return; }
+  if(!window._emerTrackings||!window._emerTrackings.length){
+    var inp = document.getElementById('emer-tracking-inp')?.value.replace(/[\.\-\s]/g,'').trim();
+    if(inp){ window._emerTrackings=[inp]; emerRefreshTrackingList(); }
+    else { toast('❌ 운송장 번호를 1개 이상 추가해주세요'); return; }
+  }
   if(!window._emerPhotos||!window._emerPhotos.length){ toast('❌ 사진을 1장 이상 추가해주세요'); return; }
 
-  var addr = document.getElementById('emer-addr')?.value||'';
-  var memo = document.getElementById('emer-memo')?.value||'';
+  var orderId   = (document.getElementById('emer-orderid')?.value||'').trim();
+  var recipient = (document.getElementById('emer-recipient')?.value||'').trim();
+  var addr      = (document.getElementById('emer-addr')?.value||'').trim();
+  var delivMemo = (document.getElementById('emer-delivmemo')?.value||'').trim();
+  var memo      = (document.getElementById('emer-memo')?.value||'').trim();
   var now = new Date();
+
   var record = {
     type: 'emergency_delivery',
     driver: S.curDriver,
-    tracking: tracking,
+    order_id: orderId,
+    trackings: window._emerTrackings.slice(),  // 운송장 번호 배열
+    tracking: window._emerTrackings[0],         // 하위호환
+    recipient: recipient,
     addr: addr,
+    delivery_memo: delivMemo,
     memo: memo,
     gps: window._emerGps||null,
-    photos: [],         // Storage URL or base64
+    photos: [],
     savedAt: now.toISOString(),
     date: today(),
     time: now.toTimeString().slice(0,5)
   };
 
   toast('💾 저장 중...');
-  document.querySelector('#emer-del-mo button[onclick="emerSave()"]').disabled = true;
+  var saveBtn = document.querySelector('#emer-del-mo button[onclick="emerSave()"]');
+  if(saveBtn) saveBtn.disabled = true;
 
-  // 사진 업로드 (Storage 우선, base64 fallback)
+  // 사진 업로드
   var uploaded = [];
   for(var i=0; i<window._emerPhotos.length; i++){
     var dataUrl = window._emerPhotos[i];
@@ -9366,13 +9543,11 @@ async function emerSave(){
         var url=await ref.getDownloadURL();
         uploaded.push(url);
       }catch(e){ uploaded.push(dataUrl); }
-    } else {
-      uploaded.push(dataUrl);
-    }
+    } else { uploaded.push(dataUrl); }
   }
   record.photos = uploaded;
 
-  // IndexedDB 오프라인 저장 (네트워크 불안정 대비)
+  // 로컬 저장
   try{
     var emerList = JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]');
     emerList.push(record);
@@ -9381,29 +9556,32 @@ async function emerSave(){
 
   // Firebase 저장 + 관리자 알림
   if(FB&&_db){
-    var docId = (S.curDriver+'_'+tracking+'_'+now.getTime()).replace(/\s/g,'_').replace(/[\/\\'\"]/g,'');
+    var docId = (S.curDriver+'_'+window._emerTrackings[0]+'_'+now.getTime()).replace(/\s/g,'_').replace(/[\/\\'\"]/g,'');
     try{
       await _db.collection('emergency_deliveries').doc(docId).set(record);
-      // 관리자 FCM 알림
       var adminFcm = JSON.parse(localStorage.getItem('mbti_admin_fcm')||'""');
       if(adminFcm){
+        var trackingStr = window._emerTrackings.length>1
+          ? window._emerTrackings[0]+' 외 '+(window._emerTrackings.length-1)+'건'
+          : window._emerTrackings[0];
         fetch('https://mbti-logistics.kimdh4790.workers.dev/send-fcm',{
           method:'POST', headers:{'Content-Type':'application/json'},
           body:JSON.stringify({token:adminFcm,
             title:'🚨 긴급 배송기록 — '+S.curDriver,
-            body:'운송장: '+tracking+(addr?' / '+addr:'')+(memo?' | '+memo.slice(0,30):''),
-            data:{type:'emergency_delivery',driver:S.curDriver,tracking:tracking}})
+            body:'운송장: '+trackingStr+(addr?' / '+addr:'')+(memo?' | '+memo.slice(0,30):''),
+            data:{type:'emergency_delivery',driver:S.curDriver}})
         }).catch(function(){});
       }
       toast('✅ 저장 완료 — 관리자에게 알림 전송됨');
     }catch(e){
-      toast('✅ 로컬 저장 완료 (네트워크 불안정 — 연결 시 자동 동기화)');
+      toast('✅ 로컬 저장 완료 (네트워크 불안정)');
     }
   } else {
     toast('✅ 로컬 저장 완료 (Firebase 미연결)');
   }
 
   window._emerPhotos = [];
+  window._emerTrackings = [];
   setTimeout(function(){ document.getElementById('emer-del-mo')?.remove(); }, 1200);
 }
 
