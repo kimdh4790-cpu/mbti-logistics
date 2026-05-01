@@ -3167,7 +3167,7 @@ async function openDriverMap(){
       </div>
       <button onclick="if(window._driverMapWatchId){navigator.geolocation.clearWatch(window._driverMapWatchId);window._driverMapWatchId=null;}window._activeDriverMap=null;window._activeDriverMapAddPin=null;document.getElementById('driver-map-mo').remove()" style="padding:6px 14px;background:#dc2626;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">✕ 닫기</button>
     </div>
-    <div id="driver-map-canvas" style="flex:1;min-height:0;height:0"></div>
+    <div id="driver-map-canvas" style="flex:1;min-height:0;height:calc(100vh - 60px);position:relative;"></div>
   </div>`);
 
   // 내 현재 위치 가져오기
@@ -3215,170 +3215,154 @@ function _renderDriverMap(myLoc, emerLocs, apiKey){
     window._driverMapWatchId = navigator.geolocation.watchPosition(function(pos){
       var newLoc = {lat: pos.coords.latitude, lng: pos.coords.longitude};
       myMarker.setPosition(newLoc);
+      window._driverMapCurrentLoc = newLoc;
     }, null, {enableHighAccuracy: true, maximumAge: 5000, timeout: 10000});
 
-    // 긴급배송 핀 (상태별 색상: 완료=초록, 미완료=빨강)
-    window._driverMapMarkers = window._driverMapMarkers||{};
-
-    // ★ v9.25: order_id 기준 그룹핑 (같은 주문 = 같은 가구)
-    var orderGroups = {};   // order_id → [records]
-    var noOrderLocs = [];   // order_id 없는 건
-    emerLocs.forEach(function(x){
-      if(x.order_id){
-        if(!orderGroups[x.order_id]) orderGroups[x.order_id]=[];
-        orderGroups[x.order_id].push(x);
-      } else { noOrderLocs.push(x); }
-    });
-
-    // 그룹 핀 생성 (여러 건 묶음)
-    function addGroupPin(items){
-      // GPS: 첫 번째 유효 위치 사용
-      var anchor = items.find(function(x){return x.gps&&x.gps.lat;});
-      if(!anchor) return;
-      var isDone = items.every(function(x){return x.status==='완료';});
-      var partDone = !isDone && items.some(function(x){return x.status==='완료';});
-      var cnt = items.length;
-      var orderId = items[0].order_id;
-      var fbIds = items.map(function(x){return x.fbId||x._fbId||'';}).filter(Boolean);
-      var allTrackings = items.reduce(function(a,x){return a.concat(x.trackings||[x.tracking||'']);}, []);
-
-      var color = isDone ? '#16a34a' : (partDone ? '#f59e0b' : '#dc2626');
-      var labelText = isDone ? '✓' : (cnt+'건');
-
-      var marker = new google.maps.Marker({
-        position: {lat: anchor.gps.lat, lng: anchor.gps.lng},
-        map: map,
-        title: orderId+' ('+cnt+'건)',
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: cnt>1 ? 14 : 10,
-          fillColor: color,
-          fillOpacity: 1,
-          strokeColor: '#fff',
-          strokeWeight: 2
-        },
-        label: {text: labelText, color:'#fff', fontSize:'11px', fontWeight:'bold'}
-      });
-      fbIds.forEach(function(id){ window._driverMapMarkers[id]=marker; });
-
-      marker.addListener('click', function(){
-        var photosHtml = '';
-        items.forEach(function(x){
-          var p = (x.completePhotos||[]).concat(x.completePhotosLocal||[]);
-          p.slice(0,2).forEach(function(url){
-            if(url && url.length>10)
-              photosHtml += '<img src="'+url+'" style="width:52px;height:52px;object-fit:cover;border-radius:6px;border:2px solid var(--teal,#14b8a6)">';
-          });
-        });
-        var trackList = allTrackings.filter(Boolean).map(function(t){return '🔢 '+t;}).join('<br>');
-        var doneCount = items.filter(function(x){return x.status==='완료';}).length;
-
-        var btnHtml = isDone
-          ? '<div style="color:#16a34a;font-size:11px;font-weight:700;margin-top:6px">✅ 전체 배송완료</div>'
-          : items.map(function(x){
-              var xId = x.fbId||x._fbId||'';
-              var xDone = x.status==='완료';
-              if(xDone) return '<div style="font-size:11px;color:#16a34a;margin-top:4px">✅ '+(x.trackings&&x.trackings[0]||x.tracking||'건')+'</div>';
-              return '<button onclick="openDelivComplete(\''+xId+'\',\''+encodeURIComponent(JSON.stringify({trackings:x.trackings||[],tracking:x.tracking,order_id:x.order_id,addr:x.addr,recipient:x.recipient,time:x.time}))+'\');document.querySelectorAll(\'.gm-ui-hover-effect\')[0]&&document.querySelectorAll(\'.gm-ui-hover-effect\')[0].click()" style="margin-top:4px;width:100%;padding:6px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">✅ 완료처리: '+(x.trackings&&x.trackings[0]||x.tracking||'건')+'</button>';
-            }).join('');
-
-        infoWin.setContent(
-          '<div style="font-size:13px;padding:6px;min-width:210px">'
-          +'<div style="font-weight:800;font-size:14px;margin-bottom:2px">'+(items[0].recipient||'수령인미상')+'</div>'
-          +'<div style="color:#1d4ed8;font-size:11px;line-height:1.5;margin-bottom:6px">'+(anchor.addr||'주소없음')+'</div>'
-          +'<div style="background:#f3f4f6;border-radius:6px;padding:6px 8px;margin-bottom:6px;font-size:11px;line-height:1.8">'
-          +'📦 <b>'+cnt+'건</b> (완료 '+doneCount+'/'+cnt+'건)<br>'
-          +'📋 주문번호: '+orderId+'<br>'
-          +trackList
-          +'</div>'
-          +(photosHtml?'<div style="display:flex;gap:4px;margin-bottom:6px">'+photosHtml+'</div>':'')
-          +btnHtml
-          +'</div>'
-        );
-        infoWin.open(map, marker);
-      });
-    }
-
-    function addEmerPin(x){
-      if(!x.gps||!x.gps.lat) return;
-      var isDone = x.status==='완료';
-      var fbId = x.fbId||x._fbId||'';
-      var trackStr = (x.trackings&&x.trackings.length>1)
-        ? x.trackings[0]+' 외 '+(x.trackings.length-1)+'건'
-        : (x.trackings&&x.trackings[0])||x.tracking||'—';
-      var marker = new google.maps.Marker({
-        position: {lat: x.gps.lat, lng: x.gps.lng},
-        map: map,
-        title: x.recipient||x.addr||'배송',
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 10,
-          fillColor: isDone ? '#16a34a' : '#dc2626',
-          fillOpacity: 1,
-          strokeColor: '#fff',
-          strokeWeight: 2
-        },
-        label: {text: isDone?'✓':'1건', color:'#fff', fontSize:'10px', fontWeight:'bold'}
-      });
-      if(fbId) window._driverMapMarkers[fbId] = marker;
-
-      marker.addListener('click', function(){
-        var photos = (x.completePhotos||[]).concat(x.completePhotosLocal||[]);
-        var photosHtml = photos.slice(0,3).filter(function(u){return u&&u.length>10;}).map(function(url){
-          return '<img src="'+url+'" style="width:52px;height:52px;object-fit:cover;border-radius:6px;border:2px solid '+(isDone?'#16a34a':'#dc2626')+'">';
-        }).join('');
-
-        var btnHtml = isDone
-          ? '<div style="color:#16a34a;font-size:11px;font-weight:700;margin-top:6px">✅ 배송완료</div>'
-          : '<button onclick="openDelivComplete(\''+fbId+'\',\''+encodeURIComponent(JSON.stringify({trackings:x.trackings||[],tracking:x.tracking,order_id:x.order_id,addr:x.addr,recipient:x.recipient,time:x.time}))+'\');document.querySelectorAll(\'.gm-ui-hover-effect\')[0]&&document.querySelectorAll(\'.gm-ui-hover-effect\')[0].click()" style="margin-top:8px;width:100%;padding:7px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">✅ 배송완료 처리</button>';
-
-        infoWin.setContent(
-          '<div style="font-size:13px;padding:6px;min-width:200px">'
-          +'<div style="font-weight:800;font-size:14px;margin-bottom:4px">'+(x.recipient||'수령인미상')+'</div>'
-          +'<div style="color:#1d4ed8;font-size:12px;line-height:1.5;margin-bottom:4px">'+(x.addr||'주소없음')+'</div>'
-          +'<div style="font-size:11px;color:#555;line-height:1.7">'
-          +(x.order_id?'📋 주문번호: '+x.order_id+'<br>':'')
-          +'🔢 운송장: '+trackStr+'<br>'
-          +'⏰ '+(x.time||'')
-          +'</div>'
-          +(photosHtml?'<div style="display:flex;gap:4px;margin-top:6px">'+photosHtml+'</div>':'')
-          +btnHtml
-          +'</div>'
-        );
-        infoWin.open(map, marker);
-      });
-    }
-
-    // order_id 그룹 핀 먼저, 개별 핀 나중
-    Object.keys(orderGroups).forEach(function(orderId){
-      var items = orderGroups[orderId];
-      if(items.length>1){
-        addGroupPin(items);
-      } else {
-        addEmerPin(items[0]);
+    // ★ 최근접 이웃 정렬 (Nearest Neighbor)
+    function nearestNeighborSort(pins, startLoc){
+      var sorted = [];
+      var remaining = pins.filter(function(x){ return x.gps&&x.gps.lat; });
+      var cur = startLoc;
+      while(remaining.length){
+        var best=0, bestD=Infinity;
+        for(var i=0;i<remaining.length;i++){
+          var d=Math.pow(remaining[i].gps.lat-cur.lat,2)+Math.pow(remaining[i].gps.lng-cur.lng,2);
+          if(d<bestD){bestD=d;best=i;}
+        }
+        sorted.push(remaining[best]);
+        cur={lat:remaining[best].gps.lat,lng:remaining[best].gps.lng};
+        remaining.splice(best,1);
       }
-    });
-    noOrderLocs.forEach(addEmerPin);
+      return sorted;
+    }
+
+    // 전체 핀 순번 렌더링 함수
+    function renderRoutePins(startLoc){
+      // 기존 핀 제거
+      if(window._driverMapPinMarkers){
+        window._driverMapPinMarkers.forEach(function(m){ m.setMap(null); });
+      }
+      window._driverMapPinMarkers = [];
+      window._driverMapMarkers = {};
+
+      var allPins = emerLocs.filter(function(x){ return x.gps&&x.gps.lat; });
+      // ★ 미완료만 번호 부여 (완료 핀은 번호 슬롯 차지 안 함)
+      var pendingPins = allPins.filter(function(x){ return x.status!=='완료'; });
+      var donePins    = allPins.filter(function(x){ return x.status==='완료'; });
+
+      // ★ 번호 최초 1회 고정 — 완료해도 2번은 계속 2번
+      var hasSeqNo = pendingPins.some(function(x){ return x._seqNo; })
+                  || donePins.some(function(x){ return x._seqNo; });
+      if(!hasSeqNo){
+        var sortedForSeq = nearestNeighborSort(pendingPins, startLoc);
+        sortedForSeq.forEach(function(x, idx){ x._seqNo = idx+1; });
+      }
+
+      var sortedPending = pendingPins.slice().sort(function(a,b){ return (a._seqNo||999)-(b._seqNo||999); });
+      var sortedDone    = donePins;
+
+      function buildPin(x, routeNum, isDone){
+        var fbId = x.fbId||x._fbId||'';
+        var trackStr = (x.trackings&&x.trackings.length>1)
+          ? x.trackings[0]+' 외 '+(x.trackings.length-1)+'건'
+          : (x.trackings&&x.trackings[0])||x.tracking||'—';
+
+        var marker = new google.maps.Marker({
+          position: {lat:x.gps.lat, lng:x.gps.lng},
+          map: map,
+          title: (isDone?'✓':routeNum+'번: ')+(x.addr||x.recipient||''),
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 14,
+            fillColor: isDone ? '#16a34a' : '#dc2626',
+            fillOpacity: isDone ? 0.6 : 1,
+            strokeColor: '#fff',
+            strokeWeight: 2.5
+          },
+          label: {text: isDone?(routeNum?String(routeNum):'✓'):(routeNum?String(routeNum):'?'), color:'#fff', fontSize:'11px', fontWeight:'bold'},
+          zIndex: isDone ? 10 : 200-routeNum
+        });
+
+        if(fbId) window._driverMapMarkers[fbId] = marker;
+        window._driverMapPinMarkers.push(marker);
+
+        marker.addListener('click', function(){
+          var photos = (x.completePhotos||[]).concat(x.completePhotosLocal||[]);
+          var photosHtml = photos.slice(0,3).filter(function(u){return u&&u.length>10;}).map(function(url){
+            return '<img src="'+url+'" style="width:50px;height:50px;object-fit:cover;border-radius:6px;border:2px solid '+(isDone?'#16a34a':'#dc2626')+'">';
+          }).join('');
+
+          var startBtn = (!isDone && pendingPins.length>1)
+            ? '<button onclick="window._driverMapStartLoc={lat:'+x.gps.lat+',lng:'+x.gps.lng+'};window._rerenderRoutePins&&window._rerenderRoutePins({lat:'+x.gps.lat+',lng:'+x.gps.lng+'});document.querySelectorAll(\'.gm-ui-hover-effect\')[0]&&document.querySelectorAll(\'.gm-ui-hover-effect\')[0].click()" style="margin-top:5px;width:100%;padding:7px;background:#7c3aed;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">🚩 여기서 1번으로 시작</button>'
+            : '';
+
+          var completeBtn = isDone
+            ? '<div style="color:#16a34a;font-size:11px;font-weight:700;margin-top:6px">✅ 배송완료</div>'
+            : '<button onclick="openDelivComplete(\''+fbId+'\',\''+encodeURIComponent(JSON.stringify({trackings:x.trackings||[],tracking:x.tracking,order_id:x.order_id,addr:x.addr,recipient:x.recipient,time:x.time}))+'\');document.querySelectorAll(\'.gm-ui-hover-effect\')[0]&&document.querySelectorAll(\'.gm-ui-hover-effect\')[0].click()" style="margin-top:5px;width:100%;padding:7px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">✅ 배송완료 처리</button>';
+
+          infoWin.setContent(
+            '<div style="font-size:13px;padding:6px;min-width:200px">'
+            +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'
+            +'<span style="background:'+(isDone?'#16a34a':'#dc2626')+';color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0">'+(isDone?'✓':routeNum)+'</span>'
+            +'<span style="font-weight:800;font-size:14px">'+(x.recipient||'수령인미상')+'</span>'
+            +'</div>'
+            +'<div style="color:#1d4ed8;font-size:12px;line-height:1.5;margin-bottom:4px">'+(x.addr||'주소없음')+'</div>'
+            +'<div style="font-size:11px;color:#555;line-height:1.7">'
+            +(x.order_id?'📋 주문번호: '+x.order_id+'<br>':'')
+            +'🔢 운송장: '+trackStr+'<br>'
+            +'⏰ '+(x.time||'')
+            +'</div>'
+            +(photosHtml?'<div style="display:flex;gap:4px;margin-top:6px">'+photosHtml+'</div>':'')
+            +startBtn+completeBtn
+            +'</div>'
+          );
+          infoWin.open(map, marker);
+        });
+      }
+
+      // 미완료 핀: 1, 2, 3...
+      sortedPending.forEach(function(x){ buildPin(x, x._seqNo||0, false); });
+      // 완료 핀: 원래 번호 + 연한 색 (어느 박스인지 확인 가능)
+      sortedDone.forEach(function(x){ buildPin(x, x._seqNo||0, true); });
+    }
+
+    // 전역으로 rerenderRoutePins 저장 (외부 호출용)
+    window._rerenderRoutePins = renderRoutePins;
+
+    // 최초 렌더링
+    var startLoc = window._driverMapStartLoc || myLoc;
+    window._driverMapStartLoc = null; // 다음 오픈 시 초기화
+    renderRoutePins(startLoc);
+
+    // ★ 지도 전역 참조 저장 (emerSave 후 핀 실시간 추가용) — doRender 안에 있어야 map 변수 유효
+    window._activeDriverMap = map;
+    window._activeDriverMapAddPin = function(rec){
+      emerLocs.push(rec);
+      if(window._rerenderRoutePins){
+        var cur = window._driverMapCurrentLoc || myLoc;
+        window._rerenderRoutePins(cur);
+      }
+    };
+    window._activeDriverMapEmerLocs = emerLocs;
+
+    // 카운터 업데이트 함수
+    window._updateMapCounter = function(){
+      var locs = window._activeDriverMapEmerLocs||[];
+      var total = locs.length;
+      var done = locs.filter(function(x){return x.status==='완료';}).length;
+      var te=document.getElementById('driver-map-total');
+      var de=document.getElementById('driver-map-done');
+      if(te) te.textContent='📦 전체 '+total+'건';
+      if(de) de.textContent='✅ 완료 '+done+'건';
+    };
+
+    // ★ 지도 크기 강제 갱신 (flex 레이아웃에서 가끔 지도가 0px로 인식되는 문제 방지)
+    setTimeout(function(){
+      google.maps.event.trigger(map, 'resize');
+      map.setCenter(myLoc);
+    }, 200);
 
   }  // ← doRender() 종료
-
-  // ★ 지도 전역 참조 저장 (emerSave 후 핀 실시간 추가용)
-  window._activeDriverMap = map;
-  window._activeDriverMapAddPin = addEmerPin;
-  window._activeDriverMapAddGroupPin = addGroupPin;
-  window._activeDriverMapInfoWin = infoWin;
-  window._activeDriverMapEmerLocs = emerLocs; // 전체 데이터 참조
-
-  // 카운터 업데이트 함수
-  window._updateMapCounter = function(){
-    var locs = window._activeDriverMapEmerLocs||[];
-    var total = locs.length;
-    var done = locs.filter(function(x){return x.status==='완료';}).length;
-    var te=document.getElementById('driver-map-total');
-    var de=document.getElementById('driver-map-done');
-    if(te) te.textContent='📦 전체 '+total+'건';
-    if(de) de.textContent='✅ 완료 '+done+'건';
-  };
 
   if(!window.google || !window.google.maps){
     // ★ v9.26: 키 검증 + 에러 핸들러
@@ -10354,16 +10338,16 @@ async function saveDelivComplete(){
     localStorage.setItem('mbti_emergency_del', JSON.stringify(list));
   }catch(e){}
 
-  // 지도 핀 색상 초록으로 갱신
-  if(window._driverMapMarkers&&window._driverMapMarkers[fbId]){
-    var mk = window._driverMapMarkers[fbId];
-    mk.setIcon({ path:google.maps.SymbolPath.CIRCLE, scale:10, fillColor:'#16a34a', fillOpacity:1, strokeColor:'#fff', strokeWeight:2 });
-    mk.setLabel({text:'✓',color:'#fff',fontSize:'11px',fontWeight:'bold'});
-  }
+  // 지도 핀 색상 초록으로 갱신 — 이후 _rerenderRoutePins가 전체 재정렬하므로 직접 조작 불필요
   // ★ 지도 카운터 갱신 (완료건 +1)
   if(window._activeDriverMapEmerLocs){
     var loc = window._activeDriverMapEmerLocs.find(function(x){ return (x.fbId||x._fbId)===fbId; });
     if(loc) loc.status='완료';
+  }
+  // ★ 완료 후 번호 재정렬 (1번 완료 → 기존 2번이 새 1번이 됨)
+  if(window._rerenderRoutePins){
+    var curLoc = window._driverMapCurrentLoc || {lat:35.1796, lng:129.0756};
+    window._rerenderRoutePins(curLoc);
   }
   if(window._updateMapCounter) window._updateMapCounter();
 
