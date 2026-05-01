@@ -99,12 +99,6 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
 .job-card-name{font-size:11px;font-weight:700;display:block}
 .job-card-sub{font-size:9px;opacity:.8;display:block;margin-top:2px}
 .job-card.coupang{border-color:rgba(255,180,80,.6);background:rgba(255,255,255,.18)}
-.job-card.kurly{border-color:rgba(180,100,255,.6);background:rgba(255,255,255,.18)}
-.job-card.cj{border-color:rgba(80,150,255,.6);background:rgba(255,255,255,.18)}
-.job-card.water{border-color:rgba(0,180,220,.6);background:rgba(255,255,255,.18)}
-.job-card.yong{border-color:rgba(200,200,200,.5);background:rgba(255,255,255,.15)}
-.job-card.linehaul{border-color:rgba(180,160,255,.6);background:rgba(255,255,255,.18)}
-.job-card.mbti{border-color:rgba(255,200,100,.6);background:rgba(255,255,255,.18)}
 /* ── 마이페이지 */
 .mypage-box{max-width:500px;margin:0 auto 20px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:24px}
 /* ── 서류 슬롯 (5종 필수) */
@@ -618,7 +612,6 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
           <div class="ni" onclick="SP('memo_log',this)">📝 운행 메모 <span id="memo-badge" style="display:none;background:var(--amber);color:#fff;font-size:9px;padding:1px 5px;border-radius:999px;margin-left:2px">N</span></div>
           <div class="ni" onclick="SP('accident',this)">🚨 사고 접수 <span id="acc-badge" style="display:none;background:var(--red);color:#fff;font-size:9px;padding:1px 5px;border-radius:999px;margin-left:2px">!</span></div>
           <div class="ni" onclick="SP('emergency_log',this)">🚨 긴급배송 기록 (60일)</div>
-          <div class="ni" onclick="SP('temp',this)">🌡 온도 기록</div>
         </div>
         <!-- 재무 그룹 -->
         <div class="ns-grp" onclick="toggleGrp('grp-fin')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none">
@@ -1937,7 +1930,7 @@ async function submitReg(){
 }
 
 // ══ 관리자 페이지
-var PT={archive:'📋 3개월 기록 보관소',audit:'🔒 보안 감사 로그',dash:'대시보드',schedule_admin:'📅 근무표 관리',memo:'📝 메모 달력',entry:'입차 현황',delivery:'운송현황',accident:'사고 접수',temp:'온도 기록',settle:'정산서 관리',drivers:'기사 관리',insurance:'쿠팡 라우트 단가표',mypage:'내 정보 수정',inquiries:'📩 홈페이지 문의함',notice:'📢 공지사항 게시판',attend:'📍 출퇴근 조회',memo_log:'📝 운행 메모 (60일)',support_admin:'🤝 기사 지원요청',complaint_admin:'📝 불편함 접수',emergency_log:'🚨 긴급배송 기록 (60일)'};
+var PT={archive:'📋 3개월 기록 보관소',audit:'🔒 보안 감사 로그',dash:'대시보드',schedule_admin:'📅 근무표 관리',memo:'📝 메모 달력',entry:'입차 현황',accident:'사고 접수',settle:'정산서 관리',drivers:'기사 관리',insurance:'쿠팡 라우트 단가표',mypage:'내 정보 수정',inquiries:'📩 홈페이지 문의함',notice:'📢 공지사항 게시판',attend:'📍 출퇴근 조회',memo_log:'📝 운행 메모 (60일)',support_admin:'🤝 기사 지원요청',complaint_admin:'📝 불편함 접수',emergency_log:'🚨 긴급배송 기록 (60일)'};
 function SP(pg,el){
   S.page=pg;
   // 기사 관리 페이지 진입 시 Firebase 최신 데이터 즉시 로드
@@ -1960,13 +1953,13 @@ function SP(pg,el){
   document.getElementById('ptitle').textContent=PT[pg]||pg;
   if(el){document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));el.classList.add('on');}
   // ★ 보안: 관리자 전용 페이지 권한 체크
-  var adminOnlyPages=['drivers','settle','audit','archive','inquiries','insurance','schedule_admin','memo','accident','temp','entry','delivery','notice','attend','support_admin','complaint_admin'];
+  var adminOnlyPages=['drivers','settle','audit','archive','inquiries','insurance','schedule_admin','memo','accident','entry','notice','attend','support_admin','complaint_admin'];
   if(adminOnlyPages.indexOf(pg)>=0 && S.curMode!=='admin'){
     document.getElementById('ca').innerHTML='<div class="card" style="padding:40px;text-align:center"><div style="font-size:48px;margin-bottom:12px">🔒</div><div style="font-size:18px;font-weight:700;color:var(--red);margin-bottom:8px">접근 권한이 없습니다</div><div style="font-size:13px;color:var(--text2);margin-bottom:20px">이 페이지는 관리자 전용입니다</div><button onclick="SP(\'dash\',null)" class="btn btn-blue">대시보드로 이동</button></div>';
     if(typeof addAct==='function')addAct('security','관리자 페이지 무단 접근 시도: '+pg,null);
     return;
   }
-  var m={archive:rArchive,audit:rAuditLog,dash:rDash,schedule_admin:rScheduleAdmin,memo:rMemoCalendar,entry:rEntry,delivery:rDelivery,accident:rAcc,temp:rTemp,settle:rSettle,drivers:rDrivers,insurance:rInsurance,mypage:rMypage,inquiries:rInquiries,notice:rNoticePanel,attend:rAttendPanel,memo_log:rMemoLog,support_admin:rSupportAdmin,complaint_admin:rComplaintAdmin,emergency_log:rEmergencyLog};
+  var m={archive:rArchive,audit:rAuditLog,dash:rDash,schedule_admin:rScheduleAdmin,memo:rMemoCalendar,entry:rEntry,accident:rAcc,settle:rSettle,drivers:rDrivers,insurance:rInsurance,mypage:rMypage,inquiries:rInquiries,notice:rNoticePanel,attend:rAttendPanel,memo_log:rMemoLog,support_admin:rSupportAdmin,complaint_admin:rComplaintAdmin,emergency_log:rEmergencyLog};
   try{
     document.getElementById('ca').innerHTML=(m[pg]||rDash)();
   }catch(e){
@@ -2168,79 +2161,6 @@ function rEntry(){
   return `<div class="card"><div class="ch"><span class="ct">입차 기록 (${e.length}건)</span>
     <button onclick="deleteSelected('entries','입차')" style="padding:4px 10px;background:var(--red-l);border:1px solid var(--red);border-radius:6px;font-size:11px;color:var(--red);cursor:pointer;font-weight:600">🗑 선택삭제</button>
   </div>${tabHTML}${bodyHTML}</div>`;
-}
-
-function rDeliveryTaxi(){
-  var period=window._adm_deliv_period||'today';
-  var cut=_admCut(period);
-  var d=ls('deliveries').filter(x=>x.category!=='간선'&&(period==='today'?x.date===today():x.date>=cut));
-  var tabHTML=_admDateTabs('deliv',period);
-  var grouped=_admGroupByDate(d);
-  var bodyHTML=grouped.length?grouped.map(function(g){
-    var rows=g.rows.map(x=>`<tr>
-      <td><input type="checkbox" class="row-chk" data-col="deliveries" data-id="${x.id||x.fbId||''}" style="width:15px;height:15px;cursor:pointer"></td>
-      <td><strong>${x.driver}</strong></td>
-      <td><span class="badge ${x.client==='쿠팡'?'b-coral':x.client==='컬리'?'b-purple':'b-wait'}">${x.client||x.category}</span></td>
-      <td style="font-weight:700;color:var(--teal)">${x.dcnt||0}</td>
-      <td>${x.rcnt||0}</td>
-      <td style="color:var(--purple)">${x.fresh||0}</td>
-      <td style="color:var(--blue)">${x.jeon||0}</td>
-      <td style="color:var(--red);font-weight:${(x.dmg||0)>0?'700':'400'}">${x.dmg||0}</td>
-      <td style="color:var(--gray)">${x.pick||0}</td>
-      <td>${x.completedAt||'—'}</td>
-      <td class="thumb-row">${Object.values(x.photos||{}).filter(v=>v&&v.length>5).map(v=>`<img class="thumb" src="${v}" onclick="openIV('${v}','배송완료사진')">`).join('')||'—'}</td>
-    </tr>`).join('');
-    var totD=g.rows.reduce(function(s,x){return s+(x.dcnt||0);},0);
-    var totR=g.rows.reduce(function(s,x){return s+(x.rcnt||0);},0);
-    var totJ=g.rows.reduce(function(s,x){return s+(x.jeon||0);},0);
-    var totDmg=g.rows.reduce(function(s,x){return s+(x.dmg||0);},0);
-    var totP=g.rows.reduce(function(s,x){return s+(x.pick||0);},0);
-    var summary='<div style="font-size:11px;color:var(--text2);padding:4px 0 6px">배송 <strong style="color:var(--teal)">'+totD+'</strong> · 반품 <strong>'+totR+'</strong> · 전취 <strong style="color:var(--blue)">'+totJ+'</strong> · 파손 <strong style="color:var(--red)">'+totDmg+'</strong> · 채번 <strong>'+totP+'</strong></div>';
-    return _admDateGroup(g.date,g.rows.length,summary+'<table class="tbl"><thead><tr><th style="width:30px"><input type="checkbox" onchange="toggleAllChk(this,\'deliveries\')" style="width:15px;height:15px;cursor:pointer"></th><th>기사</th><th>화주사</th><th>배송</th><th>반품</th><th>프레쉬</th><th>전취</th><th>파손</th><th>채번</th><th>완료</th><th>사진</th></tr></thead><tbody>'+rows+'</tbody></table>');
-  }).join(''):'<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">해당 기간 데이터 없음</div>';
-  return `<div class="card"><div class="ch"><span class="ct">📦 운행 현황 (${d.length}건)</span><button onclick="deleteSelected('deliveries','운행')" style="padding:4px 10px;background:var(--red-l);border:1px solid var(--red);border-radius:6px;font-size:11px;color:var(--red);cursor:pointer;font-weight:600">🗑 선택삭제</button></div>${tabHTML}${bodyHTML}</div>`;
-}
-function rDeliveryLine(){
-  var period=window._adm_deliv_period||'today';
-  var cut=_admCut(period);
-  var d=ls('deliveries').filter(x=>x.category==='간선'&&(period==='today'?x.date===today():x.date>=cut));
-  var grouped=_admGroupByDate(d);
-  var bodyHTML=grouped.length?grouped.map(function(g){
-    var rows=g.rows.map(x=>`<tr>
-      <td><strong>${x.driver}</strong></td>
-      <td style="font-size:11px;font-weight:600">${x.route||'—'}</td>
-      <td style="font-size:11px">${x.departTime||x.completedAt||'—'}</td>
-      <td>${x.completedAt||'—'}</td>
-    </tr>`).join('');
-    return _admDateGroup(g.date,g.rows.length,'<table class="tbl"><thead><tr><th>기사</th><th>구간</th><th>출발</th><th>완료</th></tr></thead><tbody>'+rows+'</tbody></table>');
-  }).join(''):'<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">해당 기간 간선 데이터 없음</div>';
-  return `<div class="card"><div class="ch"><span class="ct">🚚 간선 현황 (${d.length}건)</span></div>${bodyHTML}</div>`;
-}
-function rDelivery(){
-  var period=window._adm_deliv_period||'today';
-  var cut=_admCut(period);
-  var d=ls('deliveries').filter(x=>(period==='today'?x.date===today():x.date>=cut));
-  var tabHTML=_admDateTabs('deliv',period);
-  var grouped=_admGroupByDate(d);
-  var bodyHTML=grouped.length?grouped.map(function(g){
-    var rows=g.rows.map(x=>`<tr>
-      <td><strong>${x.driver}</strong></td>
-      <td><span class="badge ${x.client==='쿠팡'?'b-coral':x.client==='컬리'?'b-purple':x.client==='간선'?'b-blue':'b-wait'}">${x.client||x.category}</span></td>
-      <td style="font-weight:700;color:var(--teal)">${x.dcnt||0}</td>
-      <td>${x.rcnt||0}</td>
-      <td style="color:var(--purple)">${x.fresh||0}</td>
-      <td style="color:var(--blue)">${x.jeon||0}</td>
-      <td style="color:var(--red);font-weight:${(x.dmg||0)>0?'700':'400'}">${x.dmg||0}</td>
-      <td style="color:var(--gray)">${x.pick||0}</td>
-      <td>${x.completedAt||'—'}</td>
-      <td class="thumb-row">${Object.values(x.photos||{}).filter(v=>v&&v.length>5).map(v=>`<img class="thumb" src="${v}" onclick="openIV('${v}','배송완료사진')">`).join('')||'—'}</td>
-    </tr>`).join('');
-    var totD=g.rows.reduce(function(s,x){return s+(x.dcnt||0);},0);
-    var totR=g.rows.reduce(function(s,x){return s+(x.rcnt||0);},0);
-    var summary='<div style="font-size:11px;color:var(--text2);padding:4px 0 6px">배송 합계 <strong style="color:var(--teal)">'+totD+'건</strong> · 반품 <strong>'+totR+'건</strong></div>';
-    return _admDateGroup(g.date,g.rows.length,summary+'<table class="tbl"><thead><tr><th>기사</th><th>화주사</th><th>배송</th><th>반품</th><th>프레쉬</th><th>전취</th><th>파손</th><th>채번</th><th>완료</th><th>사진</th></tr></thead><tbody>'+rows+'</tbody></table>');
-  }).join(''):'<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">해당 기간 데이터 없음</div>';
-  return `<div class="card"><div class="ch"><span class="ct">배송·간선 현황 (${d.length}건)</span></div>${tabHTML}${bodyHTML}</div>`;
 }
 
 // ★ v9.5: 운행 메모 (관리자용 60일 조회) — 송장번호·사유·사진
@@ -2591,30 +2511,6 @@ function rAcc(){
     return _admDateGroup(g.date,g.rows.length,'<table class="tbl"><thead><tr><th style="width:30px"><input type="checkbox" onchange="toggleAllChk(this,\'accidents\')" style="width:15px;height:15px;cursor:pointer"></th><th>기사</th><th>유형</th><th>내용</th><th>사진</th><th>상태</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>');
   }).join(''):'<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">해당 기간 사고 없음</div>';
   return `<div class="card"><div class="ch"><span class="ct">사고 접수 (${a.length}건)</span><button onclick="deleteSelected('accidents','사고')" style="padding:4px 10px;background:var(--red-l);border:1px solid var(--red);border-radius:6px;font-size:11px;color:var(--red);cursor:pointer;font-weight:600">🗑 선택삭제</button></div>${tabHTML}${bodyHTML}</div>`;
-}
-
-function rTemp(){
-  var period=window._adm_temp_period||'today';
-  var cut=_admCut(period);
-  var l=ls('tempLogs').filter(x=>period==='today'?x.date===today():x.date>=cut);
-  var w=l.filter(x=>x.temp!=='상온'&&parseFloat(x.temp)>-18);
-  var tabHTML=_admDateTabs('temp',period);
-  var grouped=_admGroupByDate(l);
-  var bodyHTML=grouped.length?grouped.map(function(g){
-    var warnCnt=g.rows.filter(x=>x.temp!=='상온'&&parseFloat(x.temp)>-18).length;
-    var rows=g.rows.map(x=>`<tr>
-      <td><input type="checkbox" class="row-chk" data-col="tempLogs" data-id="${x.id||x.fbId||''}" style="width:15px;height:15px;cursor:pointer"></td>
-      <td><strong>${x.driver}</strong></td><td>${x.time}</td>
-      <td style="font-weight:700;color:${x.temp==='상온'?'var(--amber)':parseFloat(x.temp)<=-18?'var(--teal)':'var(--red)'}">${x.temp}${x.temp==='상온'?'':' °C'}</td>
-      <td>${x.location}</td>
-      <td>${x.photoUrl&&x.photoUrl.length>5?`<img class="thumb" src="${x.photoUrl}" onclick="openIV('${x.photoUrl}','온도기록')">`:'—'}</td>
-      <td style="font-size:11px;color:var(--text2)">${x.note||'—'}</td>
-    </tr>`).join('');
-    var warn=warnCnt>0?'<div style="font-size:11px;color:var(--red);padding:3px 0 5px">⚠ 이상온도 '+warnCnt+'건</div>':'';
-    return _admDateGroup(g.date,g.rows.length,warn+'<table class="tbl"><thead><tr><th style="width:30px"><input type="checkbox" onchange="toggleAllChk(this,\'tempLogs\')" style="width:15px;height:15px;cursor:pointer"></th><th>기사</th><th>시각</th><th>온도</th><th>위치</th><th>사진</th><th>메모</th></tr></thead><tbody>'+rows+'</tbody></table>');
-  }).join(''):'<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">해당 기간 온도 기록 없음</div>';
-  return `${w.length?`<div style="background:var(--red-l);border:1px solid var(--red);border-radius:var(--r);padding:9px 13px;margin-bottom:10px;font-size:13px;color:var(--red)">⚠ 이상온도 ${w.length}건 (기준 미달: -18°C 초과)</div>`:''}
-  <div class="card"><div class="ch"><span class="ct">온도 기록 (${l.length}건)</span><button onclick="deleteSelected('tempLogs','온도')" style="padding:4px 10px;background:var(--red-l);border:1px solid var(--red);border-radius:6px;font-size:11px;color:var(--red);cursor:pointer;font-weight:600">🗑 선택삭제</button></div>${tabHTML}${bodyHTML}</div>`;
 }
 
 function rSettle(){
@@ -11058,7 +10954,7 @@ function dTaxi(){
   // 사진: 쿠팡=1장, 나머지=3장
   var phKeys=[['p1','배송완료사진']];
   var ph=phKeys.map(function(arr){
-    return makeCamBtn(arr[0],'delivery',arr[1],'cd');
+    return makeCamBtn(arr[0],arr[1],'cd');
   }).join('');
   // 화주사 선택 버튼 (쿠팡 기사면 숨김, 그 외는 본인 회사만)
   var clientBtns='';
