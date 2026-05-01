@@ -10663,6 +10663,7 @@ function parseCoupangExcel(inp){
           eq:0, dmg:dmgAmt, adv:0,
           status:'정산예정',
           routeDetails:routeDetails,
+          updatedAt:new Date().toISOString(),
           createdAt:new Date().toISOString()
         };
         if(existing>=0){
@@ -10679,6 +10680,7 @@ function parseCoupangExcel(inp){
           var updateData=Object.assign({},entry);
           delete updateData.status;
           delete updateData.createdAt;
+          updateData.updatedAt=new Date().toISOString(); // ★ 최신 업로드 시각
           settlements[existing]=Object.assign(prev, updateData, protectedFields);
           settlements[existing].finc=entry.finc; // ★ 인센티브 항상 최신값
           updated++;
@@ -11923,7 +11925,20 @@ function startListeners(){
               var d=ch.doc.data(); d.id=ch.doc.id; d.fbId=ch.doc.id;
               var a=ls(col);
               var i=a.findIndex(x=>x.fbId===d.fbId||x.id===d.id);
-              if(i>=0) a[i]=Object.assign({},a[i],d);
+              if(i>=0){
+                // ★ v9.25: 로컬 updatedAt이 Firebase보다 최신이면 금액 필드 보호
+                var localNewer=(a[i].updatedAt||a[i].createdAt||'')>(d.updatedAt||d.createdAt||'');
+                if(localNewer){
+                  // 상태/알림 관련만 Firebase에서 업데이트, 금액 필드는 로컬 유지
+                  var merged=Object.assign({},d);
+                  ['damt','ramt','fresh','finc','inc','nocont','totalAmt','supplyAmt','emp','work','routeDetails'].forEach(function(k){
+                    if(a[i][k]!==undefined) merged[k]=a[i][k];
+                  });
+                  a[i]=merged;
+                } else {
+                  a[i]=Object.assign({},a[i],d);
+                }
+              }
               else a.unshift(d);
               if(a.length>300)a=a.slice(0,300);
               lss(col,a);
