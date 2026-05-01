@@ -9324,24 +9324,8 @@ async function emerOcrScan(file){
   if(!file) return;
   var status = document.getElementById('emer-ocr-status');
 
-  // API 키 확인 — localStorage 우선, 없으면 Firebase에서 가져오기
-  var apiKey = localStorage.getItem('mbti_claude_api_key')||'';
-  if(!apiKey && FB && _db){
-    try{
-      if(status) status.innerHTML = '<span style="color:var(--blue)">🔑 API 키 불러오는 중...</span>';
-      var doc = await _db.collection('settings').doc('claude_config').get();
-      if(doc.exists && doc.data().apiKey){
-        apiKey = doc.data().apiKey;
-        localStorage.setItem('mbti_claude_api_key', apiKey);  // 캐시
-      }
-    }catch(e){}
-  }
-
-  if(!apiKey){
-    if(status) status.innerHTML = '<span style="color:var(--red)">❌ Claude API 키 미설정 — 관리자에게 문의하세요</span>';
-    return;
-  }
-
+  // API 키 확인 — Worker 프록시가 처리하므로 로컬 키 불필요
+  // (기존 로컬/Firebase 키는 폴백으로만 유지)
   if(status) status.innerHTML = '<span style="color:var(--blue)">🤖 AI 분석 중...</span>';
 
   // 이미지 리사이즈 (API 전송 최적화)
@@ -9365,14 +9349,9 @@ async function emerOcrScan(file){
   });
 
   try{
-    var res = await fetch('https://api.anthropic.com/v1/messages', {
+    var res = await fetch('https://mbti-logistics.kimdh4790.workers.dev/claude-ocr', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
+      headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 600,
