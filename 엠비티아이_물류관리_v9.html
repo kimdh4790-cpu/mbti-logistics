@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.26</title>
+<title>엠비티아이 물류관리 v9.25</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -317,7 +317,7 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.26 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.25 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -1311,10 +1311,10 @@ function updBadge(){
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
 function updFbUI(){
-  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.26 · 🔥 실시간':'v9.26 · 데모';
+  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.25 · 🔥 실시간':'v9.25 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.26 · Firebase 실시간':'v9.26 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.25 · Firebase 실시간':'v9.25 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -3490,7 +3490,7 @@ async function openLiveMap(){
     <div style="padding:8px 12px;background:rgba(0,0,0,.7);display:flex;gap:6px;overflow-x:auto" id="live-map-legend"></div>
   </div>`);
 
-  // ★ v9.26: API 키 사전 검증
+  // ★ v9.25: API 키 사전 검증
   if(!apiKey){
     _showMapError(
       'Google Maps API 키 미설정',
@@ -3500,6 +3500,20 @@ async function openLiveMap(){
       +'2. API 키 생성 (Maps JavaScript API 활성화 필수)<br>'
       +'3. 결제 계정 등록 (월 200달러 무료 크레딧 자동 적용)<br>'
       +'4. 관리자 설정 화면에서 키 입력 후 저장'
+    );
+    return;
+  }
+
+  // ★ v9.25: 잘못된 키 감지 (Anthropic 키)
+  if(apiKey.indexOf('sk-ant-')===0){
+    _showMapError(
+      '잘못된 API 키 — Anthropic Claude 키입니다',
+      '현재 저장된 키가 <b>Anthropic Claude API 키</b>(sk-ant-...)이지만, Google Maps는 <b>Google Cloud API 키</b>(AIza...)가 필요합니다.<br><br>관리자 설정에서 Google API 키로 교체해주세요.',
+      '✅ <b>해결 방법</b><br>'
+      +'1. <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color:#60a5fa;text-decoration:underline">Google Cloud Console → 사용자 인증 정보</a><br>'
+      +'2. <b>+ 사용자 인증 정보 만들기</b> → API 키<br>'
+      +'3. 발급된 <b>AIza</b>로 시작하는 키 복사<br>'
+      +'4. 관리자 → 내 정보 → 🔑 Google Cloud API 키 항목에 붙여넣기'
     );
     return;
   }
@@ -5778,18 +5792,32 @@ function rMypage(){
       html+='</div></div>';
     }
 
-    // ★ v9.25: Claude API 키 (관리자 전용 — OCR 기능용)
+    // ★ v9.25: Google Cloud API 키 (관리자 전용 — Maps + Vision OCR 공용)
     if(isAdmin){
-      var savedClaudeKey = localStorage.getItem('mbti_claude_api_key')||'';
-      var maskedKey = savedClaudeKey ? (savedClaudeKey.slice(0,10)+'...'+savedClaudeKey.slice(-4)) : '';
-      html+='<div style="margin-top:14px;padding:12px;background:var(--bg3);border-radius:10px;border:1.5px solid var(--border)">';
-      html+='<div style="font-size:12px;font-weight:700;margin-bottom:6px">🤖 Google Vision API 키 <span style="font-size:10px;font-weight:400;color:var(--text3)">(긴급배송 OCR 기능 · 무료)</span></div>';
+      var savedGoogleKey = (localStorage.getItem('mbti_google_api_key')||'').trim();
+
+      // ★ 잘못된 키 감지 (sk-ant-로 시작 = Anthropic 키)
+      var isWrongKey = savedGoogleKey && savedGoogleKey.indexOf('sk-ant-')===0;
+      var isValidKey = savedGoogleKey && savedGoogleKey.indexOf('AIza')===0;
+      var maskedKey = savedGoogleKey ? (savedGoogleKey.slice(0,8)+'...'+savedGoogleKey.slice(-4)) : '';
+
+      html+='<div style="margin-top:14px;padding:12px;background:var(--bg3);border-radius:10px;border:1.5px solid '+(isWrongKey?'#dc2626':'var(--border)')+'">';
+      html+='<div style="font-size:12px;font-weight:700;margin-bottom:6px">🔑 Google Cloud API 키 <span style="font-size:10px;font-weight:400;color:var(--text3)">(Maps + Vision OCR 공용)</span></div>';
+      if(isWrongKey){
+        html+='<div style="background:#fee2e2;border:1px solid #dc2626;border-radius:6px;padding:8px;margin-bottom:8px;font-size:11px;color:#991b1b;line-height:1.5">';
+        html+='⚠️ <b>잘못된 키 감지</b><br>현재 저장된 키가 <b>Anthropic Claude 키</b>(sk-ant-...)입니다.<br>Google Cloud Console에서 발급한 <b>AIza...로 시작하는 키</b>를 입력해주세요.';
+        html+='</div>';
+      }
       html+='<div style="display:flex;gap:6px;align-items:center">';
-      html+='<input id="mp-claude-key" type="password" placeholder="sk-ant-api..." value="'+savedClaudeKey+'" style="flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;background:var(--bg);color:var(--text)">';
-      html+='<button onclick="saveClaudeKey()" style="padding:8px 12px;background:var(--blue);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">저장</button>';
+      html+='<input id="mp-google-key" type="password" placeholder="AIzaSy..." value="'+savedGoogleKey+'" style="flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;background:var(--bg);color:var(--text)">';
+      html+='<button onclick="saveGoogleApiKey()" style="padding:8px 12px;background:var(--blue);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">저장</button>';
       html+='</div>';
-      if(maskedKey) html+='<div style="font-size:10px;color:var(--teal);margin-top:4px">✅ 저장됨: '+maskedKey+'</div>';
-      html+='<div style="font-size:10px;color:var(--text3);margin-top:4px">Anthropic Console → API Keys에서 발급. 이 기기에만 저장됩니다.</div>';
+      if(maskedKey){
+        if(isValidKey) html+='<div style="font-size:10px;color:var(--teal);margin-top:4px">✅ 저장됨: '+maskedKey+' (Google Cloud)</div>';
+        else if(isWrongKey) html+='<div style="font-size:10px;color:#dc2626;margin-top:4px">❌ 저장됨: '+maskedKey+' (Anthropic — 잘못됨)</div>';
+        else html+='<div style="font-size:10px;color:var(--amber);margin-top:4px">⚠️ 저장됨: '+maskedKey+' (형식 미확인)</div>';
+      }
+      html+='<div style="font-size:10px;color:var(--text3);margin-top:4px;line-height:1.5">Google Cloud Console → 사용자 인증 정보 → API 키 발급<br>필요 API: Maps JavaScript API + Cloud Vision API</div>';
       html+='</div>';
     }
 
@@ -9559,24 +9587,40 @@ function dHome(){
 // ── 기사 홈 근무표: 월 이동 (-1 이전달, +1 다음달)
 // ★ v9.25: 휴무 변경 요청
 // ★ v9.25: Claude API 키 저장 (Firebase + localStorage)
-async function saveClaudeKey(){
-  var key = (document.getElementById('mp-claude-key')?.value||'').trim();
+// ★ v9.25: Google Cloud API 키 저장 (Maps + Vision OCR 공용) — 검증 추가
+async function saveGoogleApiKey(){
+  var key = (document.getElementById('mp-google-key')?.value||'').trim();
   if(!key){ toast('❌ API 키를 입력해주세요'); return; }
+
+  // ★ 검증: Anthropic 키 차단
+  if(key.indexOf('sk-ant-')===0){
+    toast('❌ Anthropic Claude 키입니다. Google Cloud Console에서 AIza로 시작하는 키를 발급받아 입력해주세요.');
+    return;
+  }
+  // ★ 검증: Google 키 형식 (AIza...)
+  if(key.indexOf('AIza')!==0){
+    var ok = confirm('⚠️ 입력한 키가 일반적인 Google API 키 형식(AIza...)이 아닙니다.\n\n그래도 저장하시겠습니까?');
+    if(!ok) return;
+  }
+
   // 로컬 저장
   localStorage.setItem('mbti_google_api_key', key);
   // Firebase 저장
   if(FB && _db){
     try{
       await _db.collection('settings').doc('claude_config').set({googleApiKey: key, updatedAt: new Date().toISOString()}, {merge: true});
-      toast('✅ Google Vision API 키 저장됨 (모든 기기 적용)');
+      toast('✅ Google Cloud API 키 저장됨 (모든 기기 적용)');
     }catch(e){
-      toast('✅ 로컬 저장됨');
+      toast('✅ 로컬 저장됨 (Firebase 저장 실패: '+e.code+')');
     }
   } else {
-    toast('✅ Google Vision API 키 저장됨');
+    toast('✅ Google Cloud API 키 저장됨 (이 기기만)');
   }
   SP('mypage', null);
 }
+
+// ★ v9.25 호환성: 옛 saveClaudeKey 호출도 새 함수로 리다이렉트
+async function saveClaudeKey(){ return saveGoogleApiKey(); }
 
 // ★ v9.25: OCR: 운송장 사진 → Claude Vision → 자동 입력
 function openEmergencyDelivery(){
