@@ -2150,6 +2150,34 @@ function _admCut(period){
   if(period==='month'){d.setDate(d.getDate()-29);return d.toISOString().slice(0,10);}
   return today(); // today
 }
+
+// ★ v9.25: 7일/30일 탭 클릭 시 과거 데이터 1회 get() 조회 (onSnapshot 비용 없음)
+// entries/deliveries 모두 지원. 이미 로드된 기간은 재조회 안 함.
+var _historyLoaded={};
+function loadEntriesHistory(period, col){
+  col=col||'entries';
+  if(period==='today') return; // 오늘은 onSnapshot이 처리
+  var cut=_admCut(period);
+  var cacheKey=col+'_'+period+'_'+cut;
+  if(_historyLoaded[cacheKey]) return; // 이미 로드됨 → 재조회 안 함
+  if(!FB||!_db) return;
+  _historyLoaded[cacheKey]=true;
+  _db.collection(col)
+    .where('date','>=',cut)
+    .where('date','<',today()) // 오늘 제외 (onSnapshot이 담당)
+    .limit(500)
+    .get()
+    .then(function(snap){
+      var a=ls(col);
+      snap.forEach(function(doc){
+        var d=doc.data(); d.id=doc.id; d.fbId=doc.id;
+        if(!a.find(function(x){return x.fbId===d.fbId||x.id===d.id;})) a.push(d);
+      });
+      lss(col,a);
+      SP(S.page,null); // UI 갱신
+    })
+    .catch(function(e){ console.warn('[loadEntriesHistory] 오류:',e); _historyLoaded[cacheKey]=false; });
+}
 function _admDateTabs(key, active){
   var tabs=[
     {v:'today',l:'오늘'},
@@ -2160,7 +2188,7 @@ function _admDateTabs(key, active){
   return '<div style="display:flex;gap:5px;padding:8px 0 6px;flex-wrap:wrap">'
     +tabs.map(function(t){
       var on=t.v===active;
-      return '<button onclick="window._adm_'+key+'_period=\''+t.v+'\';SP(S.page,null)" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(on?'var(--blue)':'var(--border)')+';background:'+(on?'var(--blue)':'var(--bg)')+';color:'+(on?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">'+t.l+'</button>';
+      return '<button onclick="window._adm_'+key+'_period=\''+t.v+'\';loadEntriesHistory(\''+t.v+'\',\''+key+'\');SP(S.page,null)" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(on?'var(--blue)':'var(--border)')+';background:'+(on?'var(--blue)':'var(--bg)')+';color:'+(on?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">'+t.l+'</button>';
     }).join('')
     +'</div>';
 }
@@ -2301,11 +2329,17 @@ function rDeliveryLine(){
 
 // ★ v9.5: 운행 메모 (관리자용 60일 조회) — 송장번호·사유·사진
 function rMemoLog(){
-  // Firebase에서 최신 메모 로드 (백그라운드)
-  if(FB&&_db){
-    _db.collection('delivery_memos').limit(500).get().then(function(snap){
-      var arr=[];
-      snap.forEach(function(doc){var d=doc.data();d.fbId=doc.id;arr.push(d);});
+  // ★ v9.25: 매 페이지 진입마다 500개 읽기 → localStorage 캐시 우선
+  // startListeners()의 delivery_memos onSnapshot이 실시간 동기화 담당
+  // 첫 방문 시에만 Firebase 조회 (이후는 캐시 사용)
+  if(FB&&_db&&!window._memoLogLoaded){
+    window._memoLogLoaded=true;
+    _db.collection('delivery_memos').orderBy('date','desc').limit(200).get().then(function(snap){
+      var arr=ls('deliveryMemos');
+      snap.forEach(function(doc){
+        var d=doc.data();d.fbId=doc.id;
+        if(!arr.find(function(x){return x.fbId===d.fbId;})) arr.push(d);
+      });
       lss('deliveryMemos',arr);
       if(S.page==='memo_log'){SP('memo_log',null);}
     }).catch(function(){});
@@ -11831,18 +11865,18 @@ function startListeners(){
       }));
   
     // ── 운행 데이터 리스너 (entries/deliveries/temp_logs/accidents/settlements)
-    // ★ v9.25: 읽기 비용 절감 — limit 축소 + docChanges만 처리
+    // ★ v9.25: entries/deliveries는 오늘만 onSnapshot (reads 절감)
+    //          7일/30일 과거 데이터는 탭 클릭 시 get()으로 1회 조회 (loadEntriesHistory)
     var colPageMap={
       entries:'entry', deliveries:'delivery', temp_logs:'temp',
       accidents:'accident', settlements:'settle'
     };
     var colLimits={entries:200, deliveries:200, temp_logs:100, accidents:50, settlements:100};
-    // ★ v9.25: entries/deliveries는 오늘 날짜만 실시간 구독 (reads 대폭 절감)
     var todayStr=today();
-    var colDateFilter={entries:'date', deliveries:'date'};
     Object.keys(colPageMap).forEach(col=>{
       var q=_db.collection(col);
-      if(colDateFilter[col]) q=q.where(colDateFilter[col],'==',todayStr);
+      // entries/deliveries: 오늘만 실시간 구독
+      if(col==='entries'||col==='deliveries') q=q.where('date','==',todayStr);
       _fbUnsubs.push(q.limit(colLimits[col]||100)
         .onSnapshot({includeMetadataChanges:false}, snap=>{
           snap.docChanges().forEach(ch=>{
@@ -11985,23 +12019,8 @@ window._noticeCache=window._noticeCache||[];
 function rNoticePanel(){
   if(!FB||!_db){return '<div style="padding:20px;text-align:center;color:var(--red)">⚠️ Firebase 연결 필요</div>';}
 
-  // ★ v9.25: drivers 리스너 — limit(100)으로 읽기 비용 절감
-  if(!window._noticePanelListener){
-    window._noticePanelListener = _db.collection('drivers').limit(100).onSnapshot(function(snap){
-      var all = ls('drivers');
-      snap.forEach(function(doc){
-        var d=doc.data(); d.fbId=doc.id;
-        var idx=all.findIndex(function(x){return x.fbId===doc.id||x.name===d.name;});
-        if(idx>=0) Object.assign(all[idx],d); else all.push(d);
-      });
-      lss('drivers',all);
-      // 공지 게시판이 현재 열려있으면 자동 갱신
-      if(S.page==='notice'){
-        var ca=document.getElementById('ca');
-        if(ca) ca.innerHTML=rNoticePanel();
-      }
-    },function(err){console.warn('[rNoticePanel] 리스너 오류:',err);});
-  }
+  // ★ v9.25: _noticePanelListener 제거 — startListeners()의 drivers 리스너로 통합
+  // (중복 구독으로 읽기 비용 2배 발생하던 문제 해결)
 
   var drs=ls('drivers').filter(function(d){return d.is_active!==false&&!d.isNew&&d.status!=='pending';});
   var camps=['전체','부산1','부산2','부산3','대구2','대구2B','진주M'];
