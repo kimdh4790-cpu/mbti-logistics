@@ -10070,10 +10070,19 @@ async function emerSave(){
         await ref.put(blob);
         var url=await ref.getDownloadURL();
         uploaded.push(url);
-      }catch(e){
-        // ★ v9.25: base64 Firestore 저장 차단 (1MB 한도 초과 → invalid-argument 원인)
-        // Storage 실패 시 URL 없이 건너뜀 (나중에 재업로드 가능)
+    }catch(e){
+        // ★ Storage 실패 → base64 직접 Firestore 저장 (소형 압축 데이터)
         console.warn('Storage 업로드 실패 (사진 '+i+'):', e.code||e.message);
+        // 소형 canvas 리사이즈로 Firestore 한도(1MB) 이하로 압축 시도
+        try{
+          var img2=new Image(); img2.src=dataUrl;
+          await new Promise(function(r){img2.onload=r;img2.onerror=r;});
+          var cvs=document.createElement('canvas');
+          var max=400; var ratio=Math.min(max/img2.width,max/img2.height,1);
+          cvs.width=Math.round(img2.width*ratio); cvs.height=Math.round(img2.height*ratio);
+          cvs.getContext('2d').drawImage(img2,0,0,cvs.width,cvs.height);
+          uploaded.push(cvs.toDataURL('image/jpeg',0.5));
+        }catch(e2){ console.warn('사진 압축 실패:', e2.message); }
       }
     } else {
       // Firebase Storage 없으면 로컬에만 base64 보관 (Firestore엔 저장 안 함)
@@ -10303,7 +10312,16 @@ async function saveDelivComplete(){
         await ref.put(blob); uploaded.push(await ref.getDownloadURL());
       }catch(e){
         console.warn('완료사진 Storage 업로드 실패:',e.code);
-        // base64는 Firestore에 넣지 않음 — 로컬에만 보관
+        // Storage 실패 → 소형 압축 base64로 폴백
+        try{
+          var img3=new Image(); img3.src=dataUrl;
+          await new Promise(function(r){img3.onload=r;img3.onerror=r;});
+          var cvs2=document.createElement('canvas');
+          var max2=400; var ratio2=Math.min(max2/img3.width,max2/img3.height,1);
+          cvs2.width=Math.round(img3.width*ratio2); cvs2.height=Math.round(img3.height*ratio2);
+          cvs2.getContext('2d').drawImage(img3,0,0,cvs2.width,cvs2.height);
+          uploaded.push(cvs2.toDataURL('image/jpeg',0.5));
+        }catch(e2){ console.warn('완료사진 압축 실패:', e2.message); }
       }
     }
   }
@@ -10410,7 +10428,6 @@ function rEmergencyLog(){
 
       var phHTML = allPh.length
         ? '<div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap">'+allPh.map(function(u){
-            var safeU = u.startsWith('http') ? u : '';
             return '<img src="'+u+'" onclick="openIV(this.src,\'긴급배송\')" style="width:60px;height:60px;object-fit:cover;border-radius:8px;cursor:pointer;border:2px solid '+(isDone?'#16a34a':'#e5e7eb')+'" onerror="this.style.display=\'none\'">';
           }).join('')+'</div>' : '<div style="font-size:11px;color:var(--text3);margin-top:4px">📷 사진 없음</div>';
       return '<div style="padding:10px;background:var(--bg);border-radius:10px;margin-bottom:8px;border-left:3px solid '+(isDone?'#16a34a':'#dc2626')+';box-shadow:0 1px 4px rgba(0,0,0,.06)">'
@@ -10453,8 +10470,13 @@ function rEmergencyLog(){
   // Firebase onSnapshot 실시간 구독
   if(FB&&_db){
     try{
-      var q=_db.collection('emergency_deliveries').orderBy('savedAt','desc').limit(200);
-      if(!isAdmin) q=q.where('driver','==',S.curDriver);
+      // ★ 기사 모드: where+orderBy 복합 인덱스 없이도 동작하도록 orderBy 제거 → 클라이언트 정렬
+      var q;
+      if(isAdmin){
+        q=_db.collection('emergency_deliveries').orderBy('savedAt','desc').limit(200);
+      } else {
+        q=_db.collection('emergency_deliveries').where('driver','==',S.curDriver).limit(200);
+      }
       window._emerLogUnsub=q.onSnapshot(function(snap){
         var fbRecs=[];
         snap.forEach(function(d){var x=d.data();x.fbId=d.id;fbRecs.push(x);});
