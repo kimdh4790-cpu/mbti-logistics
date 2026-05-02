@@ -3110,19 +3110,21 @@ function _startDriverLocTracking(){
 }
 
 // ★ v9.25: 기사용 실시간 지도 (내 위치 + 내 긴급배송 핀)
-// ★ v9.25: 지도 상단 카운터 실시간 갱신
+// ★ v9.25: 지도 상단 카운터 실시간 갱신 (전체/미완료/완료)
 function _updateMapCounter(){
   var markers = window._driverMapMarkers||{};
   var total = Object.keys(markers).length;
-  // 완료 핀 수 — 초록색 핀
   var done = 0;
   Object.values(markers).forEach(function(mk){
     try{ if(mk.getIcon&&mk.getIcon()&&mk.getIcon().fillColor==='#16a34a') done++; }catch(e){}
   });
+  var pending = total - done;
   var tEl = document.getElementById('driver-map-total');
+  var pEl = document.getElementById('driver-map-pending');
   var dEl = document.getElementById('driver-map-done');
-  if(tEl) tEl.textContent = '📦 전체 '+total+'건';
-  if(dEl) dEl.textContent = '✅ 완료 '+done+'건';
+  if(tEl) tEl.textContent = '📦 전체 '+total;
+  if(pEl) pEl.textContent = '⏳ 미완료 '+pending;
+  if(dEl) dEl.textContent = '✅ 완료 '+done;
 }
 
 
@@ -3200,12 +3202,13 @@ async function openDriverMap(){
     <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:rgba(0,0,0,.85);color:#fff">
       <div>
         <div style="font-size:15px;font-weight:700">🗺️ 내 배송 지도</div>
-        <div style="display:flex;gap:8px;margin-top:3px">
-          <span id="driver-map-total" style="font-size:11px;background:rgba(220,38,38,.7);padding:2px 8px;border-radius:999px;font-weight:700">📦 로딩중...</span>
-          <span id="driver-map-done" style="font-size:11px;background:rgba(22,163,74,.7);padding:2px 8px;border-radius:999px;font-weight:700">✅ 완료 -건</span>
+        <div style="display:flex;gap:5px;margin-top:3px;flex-wrap:wrap">
+          <span id="driver-map-total" onclick="window._driverMapSetFilter&&window._driverMapSetFilter('all')" style="font-size:11px;background:rgba(59,130,246,.85);padding:3px 9px;border-radius:999px;font-weight:700;cursor:pointer;border:2px solid #fff;touch-action:manipulation">📦 전체 -</span>
+          <span id="driver-map-pending" onclick="window._driverMapSetFilter&&window._driverMapSetFilter('pending')" style="font-size:11px;background:rgba(220,38,38,.55);padding:3px 9px;border-radius:999px;font-weight:700;cursor:pointer;border:2px solid transparent;touch-action:manipulation">⏳ 미완료 -</span>
+          <span id="driver-map-done" onclick="window._driverMapSetFilter&&window._driverMapSetFilter('done')" style="font-size:11px;background:rgba(22,163,74,.55);padding:3px 9px;border-radius:999px;font-weight:700;cursor:pointer;border:2px solid transparent;touch-action:manipulation">✅ 완료 -</span>
         </div>
       </div>
-      <button onclick="if(window._driverMapWatchId){navigator.geolocation.clearWatch(window._driverMapWatchId);window._driverMapWatchId=null;}window._activeDriverMap=null;window._activeDriverMapAddPin=null;document.getElementById('driver-map-mo').remove()" style="padding:6px 14px;background:#dc2626;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">✕ 닫기</button>
+      <button onclick="if(window._driverMapWatchId){navigator.geolocation.clearWatch(window._driverMapWatchId);window._driverMapWatchId=null;}window._activeDriverMap=null;window._activeDriverMapAddPin=null;window._driverMapFilter='all';window._driverMapSetFilter=null;document.getElementById('driver-map-mo').remove()" style="padding:6px 14px;background:#dc2626;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">✕ 닫기</button>
     </div>
     <div id="driver-map-canvas" style="flex:1;min-height:0;height:calc(100vh - 60px);position:relative;background:#1f2937;display:flex;align-items:center;justify-content:center">
       <div style="color:#fff;font-size:14px;text-align:center"><div style="font-size:32px;margin-bottom:10px">🗺️</div>지도 불러오는 중...<br><span style="font-size:11px;color:#9ca3af">GPS·지도·배송데이터 동시 로딩</span></div>
@@ -3289,9 +3292,11 @@ function _renderDriverMap(myLoc, emerLocs){
   }
   function updateCounter(){
     var total=emerLocs.length,done=emerLocs.filter(function(x){return x.status==='완료';}).length;
-    var te=document.getElementById('driver-map-total'),de=document.getElementById('driver-map-done');
-    if(te) te.textContent='📦 전체 '+total+'건';
-    if(de) de.textContent='✅ 완료 '+done+'건';
+    var pending=total-done;
+    var te=document.getElementById('driver-map-total'),pe=document.getElementById('driver-map-pending'),de=document.getElementById('driver-map-done');
+    if(te) te.textContent='📦 전체 '+total;
+    if(pe) pe.textContent='⏳ 미완료 '+pending;
+    if(de) de.textContent='✅ 완료 '+done;
   }
   window._driverMapPinMarkers=[]; window._driverMapMarkers={};
   function renderRoutePins(){
@@ -3308,6 +3313,10 @@ function _renderDriverMap(myLoc, emerLocs){
         zIndex:isDone?10:300-(x._seqNo||0)
       });
       if(fbId) window._driverMapMarkers[fbId]=marker;
+      marker._mbtiStatus = isDone ? 'done' : 'pending';
+      // 현재 필터 적용
+      var _f = window._driverMapFilter || 'all';
+      if(_f!=='all' && _f!==marker._mbtiStatus) marker.setMap(null);
       window._driverMapPinMarkers.push(marker);
       marker.addListener('click',function(){
         var photos=(x.completePhotos||[]).concat(x.completePhotosLocal||[]);
@@ -3345,6 +3354,29 @@ function _renderDriverMap(myLoc, emerLocs){
 
   window._activeDriverMap=map;
   window._activeDriverMapEmerLocs=emerLocs;
+  // ★ v9.25: 핀 필터 (전체/미완료/완료)
+  if(!window._driverMapFilter) window._driverMapFilter='all';
+  window._driverMapSetFilter=function(f){
+    window._driverMapFilter=f;
+    // 박스 시각 갱신
+    var ids=[['driver-map-total','all'],['driver-map-pending','pending'],['driver-map-done','done']];
+    ids.forEach(function(p){
+      var el=document.getElementById(p[0]);
+      if(!el) return;
+      var active=(p[1]===f);
+      el.style.border=active?'2px solid #fff':'2px solid transparent';
+      // 활성 시 진한 배경, 비활성 시 흐리게
+      if(p[1]==='all')      el.style.background='rgba(59,130,246,'+(active?'.85':'.4')+')';
+      else if(p[1]==='pending') el.style.background='rgba(220,38,38,'+(active?'.85':'.4')+')';
+      else                  el.style.background='rgba(22,163,74,'+(active?'.85':'.4')+')';
+    });
+    // 마커 표시 토글
+    (window._driverMapPinMarkers||[]).forEach(function(m){
+      if(!m._mbtiStatus) { m.setMap(window._activeDriverMap); return; } // 보라색 ? 마커 등 예외
+      var show=(f==='all')||(f===m._mbtiStatus);
+      m.setMap(show?window._activeDriverMap:null);
+    });
+  };
   window._rerenderRoutePins=function(){
     if(emerLocs.filter(function(x){return x.gps&&x.gps.lat&&!x._seqNo;}).length) assignSeqNos(null);
     renderRoutePins();
