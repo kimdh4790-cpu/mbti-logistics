@@ -7983,10 +7983,13 @@ function checkDriverNotifications(){
           +'<div style="font-size:10px;color:var(--text3)">'+new Date(it.sentAt).toLocaleDateString('ko-KR')+' 전달</div>'
           +'</div>';
       }).join('');
-      // ★ '다시 보지 않기' 버튼 — 모든 현재 항목을 dismissed 처리
+      // ★ v9.25 '다시 보지 않기' 버튼 — localStorage + _notiSeen + Firebase readAt 영구 저장
       var dismissAllJS='var k="'+seenMapKey+'";var m={};try{m=JSON.parse(localStorage.getItem(k)||"{}");}catch(e){}'
         +unseenItems.map(function(it){return 'm["'+it._id+'"]=Date.now();';}).join('')
-        +'localStorage.setItem(k,JSON.stringify(m));window._drvNotifBoxSig=null;document.getElementById("drv-notification-box")?.remove();';
+        +'localStorage.setItem(k,JSON.stringify(m));'
+        +'try{if(window._notiSeen){'+unseenItems.map(function(it){return 'window._notiSeen["dn_'+it._id+'"]=Date.now();';}).join('')+'if(window._notiSeenSave)window._notiSeenSave();}}catch(e){}'
+        +'try{if(typeof FB!=="undefined"&&FB&&_db){'+unseenItems.map(function(it){return '_db.collection("driver_notifications").doc("'+it._id+'").update({readAt:new Date().toISOString(),readStatus:"read"}).catch(function(){});';}).join('')+'}}catch(e){}'
+        +'window._drvNotifBoxSig=null;document.getElementById("drv-notification-box")?.remove();';
       box.innerHTML='<div style="background:var(--bg2);border:2px solid var(--blue);border-radius:12px;padding:14px;box-shadow:0 4px 20px rgba(0,0,0,.2)">'
         +'<div style="font-size:12px;font-weight:700;color:var(--blue);margin-bottom:8px">📬 관리자 전달 내역 ('+unseenItems.length+'건)</div>'
         +listHtml
@@ -8005,7 +8008,7 @@ function _vdn(id){
   // 📢 공지사항이면 전용 뷰어로 분기
   if(item.type==='notice'){_viewNotice(id);return;}
   if(!item.img)return;
-  // ★ v9.9: 한번 본 알림은 자동으로 dismiss 처리 (재팝업 방지)
+  // ★ v9.25: 한번 본 알림은 자동으로 dismiss 처리 (재팝업 방지)
   // 세금계산서/명세서는 보관함에서 재열람 가능하므로 알림박스에서만 숨김
   try{
     var seenMapKey='notif_dismissed_'+S.curDriver;
@@ -8013,6 +8016,20 @@ function _vdn(id){
     seenMap[id]=Date.now();
     localStorage.setItem(seenMapKey,JSON.stringify(seenMap));
   }catch(e){}
+  // ★ v9.25: _notiSeen에도 영구 기록 (push 알림 차단용 — 키 통일: dn_<docId>)
+  try{
+    if(window._notiSeen){
+      window._notiSeen['dn_'+id]=Date.now();
+      if(window._notiSeenSave)window._notiSeenSave();
+    }
+  }catch(e){}
+  // ★ v9.25: Firebase readAt 영구 저장 (다른 기기/브라우저/재로그인 시에도 차단)
+  if(FB&&_db&&id){
+    _db.collection('driver_notifications').doc(id).update({
+      readAt:new Date().toISOString(),
+      readStatus:'read'
+    }).catch(function(e){console.warn('[notif readAt vdn]:',e&&e.message);});
+  }
   var mo=document.createElement('div');
   mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:800;display:flex;align-items:center;justify-content:center;padding:14px';
   mo.onclick=function(){mo.remove();};
@@ -8991,6 +9008,8 @@ function _loadDrvNotices(){
 }
 function _startDrvNoticeListener(){
   if(!FB||!_db||!S.curDriver)return;
+  // ★ v9.25: 페이지 로드 시점 기록 (이전 공지는 알림 발사 X)
+  if(!window._noticeListenStartTime) window._noticeListenStartTime=new Date().toISOString();
   window._drvNoticeUnsub=_db.collection('driver_notifications')
     .where('driver','==',S.curDriver)
     .where('type','==','notice')
@@ -9005,9 +9024,16 @@ function _startDrvNoticeListener(){
             console.log('[Noti] 삭제된 공지 알림 차단(drvNotice):', nd.noticeId);
             return;
           }
+          // ★ v9.25: 이미 읽은 공지 + 페이지 로드 이전 sentAt 차단 (재로그인 시 폭주 방지)
+          if(nd.readAt||nd.readStatus==='read'||readSet[change.doc.id])return;
+          if(nd.sentAt && window._noticeListenStartTime && nd.sentAt < window._noticeListenStartTime)return;
           var alertKey='notice_'+change.doc.id;
           if(window._notiSeen&&window._notiSeen[alertKey])return;
-          if(window._notiSeen){window._notiSeen[alertKey]=Date.now();}
+          // ★ v9.25: 키 통일을 위해 dn_<id>도 같이 마크 (A 리스너와 동기화)
+          if(window._notiSeen){
+            window._notiSeen[alertKey]=Date.now();
+            window._notiSeen['dn_'+change.doc.id]=Date.now();
+          }
           if(window._notiSeenSave)window._notiSeenSave();
           var isUrgent=(nd.category==='긴급');
           if(isUrgent)setTimeout(function(){_viewDrvNotice(change.doc.id);},400);
@@ -15983,6 +16009,12 @@ function startNotiListeners(){
         var d=change.doc.data();
         var key='dn_'+change.doc.id;
         if(window._notiSeen[key])return;
+        // ★ v9.25: 이미 읽음 처리된 알림은 OS 푸시 + 인앱 배너 차단 (재로그인/새로고침 후 재팝업 방지)
+        if(d.readAt||d.readStatus==='read'){
+          window._notiSeen[key]=Date.now();
+          if(window._notiSeenSave)window._notiSeenSave();
+          return;
+        }
         window._notiSeen[key]=Date.now();
         if(window._notiSeenSave)window._notiSeenSave();
         // ★ v9.25: 삭제된 공지 알림 차단 — notices 마스터에 없으면 skip
