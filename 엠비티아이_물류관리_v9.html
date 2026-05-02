@@ -10078,10 +10078,10 @@ async function emerSave(){
           var img2=new Image(); img2.src=dataUrl;
           await new Promise(function(r){img2.onload=r;img2.onerror=r;});
           var cvs=document.createElement('canvas');
-          var max=400; var ratio=Math.min(max/img2.width,max/img2.height,1);
+          var max=300; var ratio=Math.min(max/img2.width,max/img2.height,1);
           cvs.width=Math.round(img2.width*ratio); cvs.height=Math.round(img2.height*ratio);
           cvs.getContext('2d').drawImage(img2,0,0,cvs.width,cvs.height);
-          uploaded.push(cvs.toDataURL('image/jpeg',0.5));
+          uploaded.push(cvs.toDataURL('image/jpeg',0.4));
         }catch(e2){ console.warn('사진 압축 실패:', e2.message); }
       }
     } else {
@@ -10317,10 +10317,10 @@ async function saveDelivComplete(){
           var img3=new Image(); img3.src=dataUrl;
           await new Promise(function(r){img3.onload=r;img3.onerror=r;});
           var cvs2=document.createElement('canvas');
-          var max2=400; var ratio2=Math.min(max2/img3.width,max2/img3.height,1);
+          var max2=300; var ratio2=Math.min(max2/img3.width,max2/img3.height,1);
           cvs2.width=Math.round(img3.width*ratio2); cvs2.height=Math.round(img3.height*ratio2);
           cvs2.getContext('2d').drawImage(img3,0,0,cvs2.width,cvs2.height);
-          uploaded.push(cvs2.toDataURL('image/jpeg',0.5));
+          uploaded.push(cvs2.toDataURL('image/jpeg',0.4));
         }catch(e2){ console.warn('완료사진 압축 실패:', e2.message); }
       }
     }
@@ -10417,9 +10417,24 @@ function rEmergencyLog(){
     function rowHTML(x){
       var isDone=x.status==='완료';
       var fbId=x.fbId||x._fbId||x.id||'';
-      var trackStr=(x.trackings&&x.trackings.length>1)?x.trackings.join(', '):(x.trackings&&x.trackings[0])||x.tracking||'—';
+      var trackingsArr=(x.trackings&&x.trackings.length)?x.trackings:[x.tracking||''];
+      var trackStr=trackingsArr.filter(Boolean).join(', ')||'—';
 
-      // ★ 사진: URL 우선, 없으면 base64 로컬 사진
+      // ★ 운송장 복사 버튼
+      var trackCopy='';
+      var copyVal=trackingsArr.filter(Boolean).join('\n');
+      if(copyVal&&copyVal!=='—'){
+        trackCopy='<button onclick="var t=\''+copyVal.replace(/'/g,"\\'").replace(/\n/g,'\\n')+'\';navigator.clipboard?navigator.clipboard.writeText(t).then(function(){toast(\'✅ 운송장 복사됨\')}).catch(function(){prompt(\'복사:\',t);}):(prompt(\'복사:\',t));event.stopPropagation()" '
+          +'style="padding:1px 6px;font-size:9px;background:var(--blue-l);color:var(--blue);border:1px solid var(--blue);border-radius:4px;cursor:pointer;font-weight:700;flex-shrink:0">📋</button>';
+      }
+      // ★ 주문번호 복사 버튼
+      var orderCopy='';
+      if(x.order_id){
+        orderCopy='<button onclick="var t=\''+String(x.order_id).replace(/'/g,"\\'")+'\';navigator.clipboard?navigator.clipboard.writeText(t).then(function(){toast(\'✅ 주문번호 복사됨\')}).catch(function(){prompt(\'복사:\',t);}):(prompt(\'복사:\',t));event.stopPropagation()" '
+          +'style="padding:1px 6px;font-size:9px;background:var(--bg3);color:var(--text2);border:1px solid var(--border);border-radius:4px;cursor:pointer;font-weight:700;flex-shrink:0">📋</button>';
+      }
+
+      // ★ 사진: URL·base64 모두 표시, 완료 사진도 포함
       var photos = (x.photos||[]).filter(Boolean);
       if(!photos.length) photos = (x.photosLocal||[]).filter(Boolean).slice(0,3);
       var cPhotos = (x.completePhotos||[]).filter(Boolean);
@@ -10427,9 +10442,14 @@ function rEmergencyLog(){
       var allPh = (isDone ? photos.concat(cPhotos) : photos).slice(0,5);
 
       var phHTML = allPh.length
-        ? '<div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap">'+allPh.map(function(u){
-            return '<img src="'+u+'" onclick="openIV(this.src,\'긴급배송\')" style="width:60px;height:60px;object-fit:cover;border-radius:8px;cursor:pointer;border:2px solid '+(isDone?'#16a34a':'#e5e7eb')+'" onerror="this.style.display=\'none\'">';
-          }).join('')+'</div>' : '<div style="font-size:11px;color:var(--text3);margin-top:4px">📷 사진 없음</div>';
+        ? '<div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap">'+allPh.map(function(u,pi){
+            var label = (isDone&&pi>=photos.length) ? '<div style="font-size:8px;color:#16a34a;text-align:center;margin-top:2px">완료</div>' : '';
+            return '<div style="text-align:center">'
+              +'<img src="'+u+'" onclick="openIV(this.src,\'긴급배송\')" style="width:60px;height:60px;object-fit:cover;border-radius:8px;cursor:pointer;border:2px solid '+(isDone&&pi>=photos.length?'#16a34a':'#e5e7eb')+'" onerror="this.parentElement.style.display=\'none\'">'
+              +label+'</div>';
+          }).join('')+'</div>'
+        : '<div style="font-size:11px;color:var(--text3);margin-top:4px">📷 사진 없음</div>';
+
       return '<div style="padding:10px;background:var(--bg);border-radius:10px;margin-bottom:8px;border-left:3px solid '+(isDone?'#16a34a':'#dc2626')+';box-shadow:0 1px 4px rgba(0,0,0,.06)">'
         +'<div style="display:flex;align-items:flex-start;gap:8px">'
         +'<input type="checkbox" class="emer-log-chk" data-fbid="'+fbId+'" style="margin-top:4px;transform:scale(1.3);flex-shrink:0;cursor:pointer">'
@@ -10440,10 +10460,16 @@ function rEmergencyLog(){
         +(isAdmin?'<span style="font-size:10px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:1px 5px">'+( x.driver||'')+'</span>':'')
         +'<span style="font-size:10px;padding:2px 7px;border-radius:999px;font-weight:700;background:'+(isDone?'#dcfce7':'#fee2e2')+';color:'+(isDone?'#16a34a':'#dc2626')+'">'+(isDone?'✅완료':'⏳미완료')+'</span>'
         +'</div></div>'
-        +'<div style="font-size:11px;color:var(--text2);line-height:1.9">'
-        +(x.addr?'📍 '+x.addr+'<br>':'')
-        +'🔢 '+trackStr+(x.order_id?' &nbsp;📋 '+x.order_id:'')+'<br>'
-        +'⏰ '+(x.date||'')+' '+(x.time||'')
+        +(x.addr?'<div style="font-size:11px;color:var(--text2);margin-bottom:3px">📍 '+x.addr+'</div>':'')
+        +'<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:2px">'
+        +'<span style="font-size:11px;color:var(--text2)">🔢 '+trackStr+'</span>'
+        +trackCopy
+        +'</div>'
+        +(x.order_id?'<div style="display:flex;align-items:center;gap:5px;margin-bottom:2px">'
+          +'<span style="font-size:11px;color:var(--text2)">📋 '+x.order_id+'</span>'
+          +orderCopy
+          +'</div>':'')
+        +'<div style="font-size:11px;color:var(--text3)">⏰ '+(x.date||'')+' '+(x.time||'')
         +(isDone&&x.completedAt?' → ✅ '+x.completedAt.slice(11,16):'')
         +'</div>'
         +phHTML
