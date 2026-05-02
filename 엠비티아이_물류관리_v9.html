@@ -1346,7 +1346,8 @@ function loadMyInfo(userId){
           },function(){});
       });
     }
-    _db.collection('drivers').where('userId','==',userId).onSnapshot(snap=>{
+    // ★ v9.25: 본인 drivers 리스너를 _fbUnsubs에 등록 → startListeners 진입 시 자동 정리되어 read 2배 차단
+    var _myDrvUnsub=_db.collection('drivers').where('userId','==',userId).onSnapshot(snap=>{
       if(!snap.empty){
         var myData=snap.docs[0].data();
         S.curDriver=myData.name||userId;
@@ -1386,6 +1387,8 @@ function loadMyInfo(userId){
         if(S.dtab==='home')DT('home',document.getElementById('pni0'));
       }
     });
+    // ★ v9.25: 로그아웃/재로그인 시 자동 정리 보장 (drivers 컬렉션 read 2배 발생 차단)
+    if(window._fbUnsubs)window._fbUnsubs.push(_myDrvUnsub);
   }
 }
 
@@ -13097,7 +13100,7 @@ function startListeners(){
         if(S.page==='schedule_admin'||S.page==='dash')SP(S.page,null);
         console.log('[Firebase] schedules 로드:',snap.size,'건');
       }).catch(function(e){
-        if(e&&e.code==='already-exists'){console.log('[Firestore] schedules 중복 무시(자동 복구 중)');return;}
+        if(e&&e.code==='already-exists'){return;} // ★ v9.25: silent — 자동 복구되어 read 발생 안 함
         window._schedulesGetDone=false;console.warn('schedules get:',e&&e.message);
       });
     }
@@ -13154,7 +13157,7 @@ function startListeners(){
           }
         });
       },function(e){
-        if(e.code==='already-exists'){console.log('[Firestore] photo_logs 중복 무시(자동 복구 중)');return;}
+        if(e.code==='already-exists'){return;} // ★ v9.25: silent
         console.warn('photo_logs listener 오류:', e.code);
       }));
   
@@ -13199,7 +13202,7 @@ function startListeners(){
         updBadge();
         if(S.page==='drivers'||S.page==='dash') SP(S.page, null);
       }, err=>{
-        if(err.code==='already-exists'){console.log('[Firestore] drivers 중복 무시(자동 복구 중)');return;}
+        if(err.code==='already-exists'){return;} // ★ v9.25: silent
         console.error('drivers onSnapshot 오류:', err.code, err.message);
         // 오류 시 1회성 fetch로 보완
         _db.collection('drivers').get().then(snap=>{
@@ -13252,7 +13255,7 @@ function startListeners(){
           });
           if(S.page==='dash'||S.page===colPageMap[col]) SP(S.page, null);
         }, err=>{
-          if(err.code==='already-exists'){console.log('[Firestore] '+col+' 중복 무시(자동 복구 중)');return;}
+          if(err.code==='already-exists'){return;} // ★ v9.25: silent
           console.warn(col+' listener 오류:', err.code);
         }));
     });
@@ -13283,7 +13286,7 @@ function startListeners(){
         }catch(e){}
         if(S.page==='memo_log') SP('memo_log',null);
       }, err=>{
-        if(err.code==='already-exists'){console.log('[Firestore] delivery_memos 중복 무시(자동 복구 중)');return;}
+        if(err.code==='already-exists'){return;} // ★ v9.25: silent
         console.warn('delivery_memos listener 오류:', err.code);
       }));
   
