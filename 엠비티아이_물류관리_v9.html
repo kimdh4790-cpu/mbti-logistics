@@ -1492,6 +1492,24 @@ function selectJobAndReg(jobType){
   if(yb)yb.style.display=(jobType==='용차'?'block':'none');
 }
 function goLogout(){
+  // ★ v9.25: 모든 Firestore 리스너 명시적 정리 (비용·메모리 누수 차단)
+  try{
+    if(typeof stopNotiListeners==='function')stopNotiListeners();
+    ['_notifUnsub','_drvNoticeUnsub','_masterNoticeUnsub','_emerLogUnsub','_noticeListUnsub','_driverMapWatchId'].forEach(function(k){
+      try{
+        if(k==='_driverMapWatchId'){
+          if(window[k])navigator.geolocation.clearWatch(window[k]);
+        } else if(typeof window[k]==='function'){
+          window[k]();
+        }
+      }catch(e){}
+      window[k]=null;
+    });
+    (window._fbUnsubs||[]).forEach(function(u){try{u();}catch(e){}});
+    window._fbUnsubs=[];
+    (window._firestoreListeners||[]).forEach(function(u){try{u();}catch(e){}});
+    window._firestoreListeners=[];
+  }catch(e){console.warn('[logout cleanup]',e);}
   if(typeof firebase!=='undefined'&&firebase.auth&&firebase.auth()){try{firebase.auth().signOut();}catch(e){}}
   localStorage.removeItem('mbti_session');
   S.curMode=''; S.curDriver=''; S.curJobtype=''; S.curJobsub=''; S.curPlate='';
@@ -7847,8 +7865,11 @@ function checkDriverNotifications(){
   }
   window._notifAuthRetry=0;
   if(window._notifUnsub)window._notifUnsub();
+  // ★ v9.25: 비용 절감 — orderBy(sentAt desc) + limit(50). 누적된 오래된 알림 read 방지
   window._notifUnsub = _db.collection('driver_notifications')
     .where('driver','==',S.curDriver)
+    .orderBy('sentAt','desc')
+    .limit(50)
     .onSnapshot(function(snap){
       if(snap.empty)return;
       var items=[]; var nids=[];
@@ -9010,9 +9031,11 @@ function _startDrvNoticeListener(){
   if(!FB||!_db||!S.curDriver)return;
   // ★ v9.25: 페이지 로드 시점 기록 (이전 공지는 알림 발사 X)
   if(!window._noticeListenStartTime) window._noticeListenStartTime=new Date().toISOString();
+  // ★ v9.25: 비용 절감 — limit(50). 30일 정책으로 50개면 충분
   window._drvNoticeUnsub=_db.collection('driver_notifications')
     .where('driver','==',S.curDriver)
     .where('type','==','notice')
+    .limit(50)
     .onSnapshot(function(snap){
       var list=[],readSet={};
       try{readSet=JSON.parse(localStorage.getItem('drv_notice_read_'+S.curDriver)||'{}');}catch(e){}
