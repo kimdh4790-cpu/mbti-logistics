@@ -4911,6 +4911,27 @@ function appDriver(id){
       '• 상단 [📦 전체 / ⏳ 미완료 / ✅ 완료] 박스 탭\n'+
       '   → 해당 상태 핀만 표시\n\n'+
       '━━━━━━━━━━━━━━━━━━━━\n'+
+      '🚨 3. 긴급배송 대응 (오배송·미수령)\n'+
+      '━━━━━━━━━━━━━━━━━━━━\n\n'+
+      '쿠팡 본사·고객센터에서 "재배송" 또는\n'+
+      '"오배송 회수" 요청이 들어오면 즉시 대응해야\n'+
+      '합니다. 앱에서 다음 절차로 처리하세요.\n\n'+
+      '【 등록 방법 】\n'+
+      '① 홈 → "🚨 긴급배송 등록" 버튼\n'+
+      '② 운송장 / 주문번호 / 주소 / 수령인 입력\n'+
+      '③ "📍 주소 → GPS 자동변환" 버튼 탭\n'+
+      '④ 사진 첨부 (선택)\n'+
+      '⑤ "✅ 등록" 누르면 배송지도에 빨간 핀 추가\n\n'+
+      '【 완료 처리 】\n'+
+      '① 배송지도 → 빨간 핀 탭\n'+
+      '② "✅ 배송완료 처리" 버튼\n'+
+      '③ 완료 사진 1~2장 첨부 (필수)\n'+
+      '④ 메모 입력 (선택, 예: "현관 앞 배치")\n'+
+      '⑤ 저장 → 핀이 초록색으로 변경\n\n'+
+      '※ 미완료 건은 60일간 자동 보관됩니다.\n'+
+      '※ 완료 사진은 분쟁 발생 시 증빙 자료로\n'+
+      '   사용되니 반드시 찍어서 첨부해 주세요.\n\n'+
+      '━━━━━━━━━━━━━━━━━━━━\n'+
       '📞 문의처\n'+
       '━━━━━━━━━━━━━━━━━━━━\n\n'+
       '사무실: 051-711-3103\n'+
@@ -13551,6 +13572,7 @@ function rNoticePanel(){
   html+='<button onclick="ntFill(\'알림\')" style="padding:3px 10px;background:var(--amber-l);color:var(--amber);border:1px solid var(--amber);border-radius:12px;font-size:11px;font-weight:700;cursor:pointer">🔔 알림 허용 안내</button>';
   html+='<button onclick="ntFill(\'설치\')" style="padding:3px 10px;background:var(--blue-l);color:var(--blue);border:1px solid var(--blue);border-radius:12px;font-size:11px;font-weight:700;cursor:pointer">📱 앱 설치 안내</button>';
   html+='<button onclick="ntFill(\'업데이트\')" style="padding:3px 10px;background:rgba(99,102,241,.12);color:#6366f1;border:1px solid #6366f1;border-radius:12px;font-size:11px;font-weight:700;cursor:pointer">🆕 업데이트 안내</button>';
+  html+='<button onclick="ntFill(\'긴급배송\')" style="padding:3px 10px;background:rgba(220,38,38,.12);color:#dc2626;border:1px solid #dc2626;border-radius:12px;font-size:11px;font-weight:700;cursor:pointer">🚨 긴급배송 안내</button>';
   html+='<button onclick="ntFill(\'초기화\')" style="padding:3px 10px;background:var(--bg3);color:var(--text3);border:1px solid var(--border);border-radius:12px;font-size:11px;cursor:pointer">✕ 초기화</button>';
   html+='</div>';
   html+='<div style="display:flex;gap:6px;margin-bottom:8px">';
@@ -13680,6 +13702,10 @@ function ntFill(type){
   }
   if(type==='설치'){
     c.value='알림을 더 잘 받으려면 앱을 홈 화면에\n설치해서 사용해 주세요!\n\n【 설치 방법 (안드로이드) 】\n① 크롬 브라우저로 앱 접속\n② 오른쪽 상단 ⋮ 메뉴 클릭\n③ "홈 화면에 추가" 또는 "앱 설치" 선택\n④ 확인 후 홈 화면 아이콘으로 실행\n\n【 설치 방법 (아이폰) 】\n① 사파리로 앱 접속\n② 하단 공유 버튼 클릭\n③ "홈 화면에 추가" 선택\n\n설치 완료 후 알림이 훨씬 안정적으로 옵니다!';
+  }
+  if(type==='긴급배송'){
+    t.value='🚨 긴급배송(재배송·회수) 대응 절차 안내';
+    c.value='안녕하세요 기사님들 😊\n쿠팡 본사·고객센터에서 재배송 또는 오배송 회수 요청이 내려오면 아래 절차대로 즉시 대응해 주세요.\n\n━━━━━━━━━━━━━━━━━━━━\n📌 긴급배송 등록 (관리자/기사 모두 가능)\n━━━━━━━━━━━━━━━━━━━━\n\n① 홈 → "🚨 긴급배송 등록" 버튼\n② 운송장번호 / 주문번호 입력\n③ 수령인 / 주소 입력\n④ "📍 주소 → GPS 자동변환" 버튼 탭\n   → 배송지도에 자동 핀 표시\n⑤ 메모·사진 첨부 (선택)\n⑥ "✅ 등록" 클릭\n\n━━━━━━━━━━━━━━━━━━━━\n📌 배송 완료 처리\n━━━━━━━━━━━━━━━━━━━━\n\n① 홈 → "🗺️ 내 배송 지도" 진입\n② 빨간 핀 탭 → 배송 정보 확인\n③ "✅ 배송완료 처리" 버튼 클릭\n④ 완료 사진 1~2장 첨부 (필수!)\n⑤ 메모 입력 (예: "현관 앞 배치")\n⑥ 저장 → 핀이 초록색으로 변경\n\n━━━━━━━━━━━━━━━━━━━━\n⚠️ 주의사항\n━━━━━━━━━━━━━━━━━━━━\n\n• 완료 사진은 분쟁 발생 시 증빙 자료입니다.\n  반드시 첨부해 주세요!\n• 미완료 건은 60일간 자동 보관됩니다.\n• 등록 즉시 관리자에게도 알림이 갑니다.\n• 우선순위가 높은 건은 "긴급" 카테고리로\n  알림이 강조됩니다.\n\n━━━━━━━━━━━━━━━━━━━━\n📞 문의\n━━━━━━━━━━━━━━━━━━━━\n\n사무실: 051-711-3103\n팩스: 070-7507-3102\n\n빠른 대응 부탁드립니다.\n엠비티아이(유) 드림 🚛';
   }
 }
 
