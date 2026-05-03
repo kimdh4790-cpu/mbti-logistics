@@ -3369,7 +3369,7 @@ function driverMapPinNav(dir){
   // ★ 마커 클릭 이벤트 강제 발생 (인포윈도우 열기)
   var markers = window._driverMapMarkers || {};
   var clicked = false;
-  var fid = target._fbId || target.id || '';
+  var fid = target.fbId || target._fbId || target.id || '';
   if(fid && markers[fid]){
     google.maps.event.trigger(markers[fid], 'click');
     clicked = true;
@@ -10670,71 +10670,67 @@ async function emerOcrScan(file){
 
     // OCR 텍스트 추출
     var ocrText = d.responses?.[0]?.textAnnotations?.[0]?.description || '';
+    // ★ 디버그: 콘솔에 OCR 원문 출력 (F12 → Console에서 확인)
+    console.log('[OCR 원문]\n' + ocrText);
     if(!ocrText) throw new Error('텍스트 인식 실패 — 사진을 다시 찍어주세요');
 
     // 쿠팡 운송장에서 정보 파싱
     var lines = ocrText.split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
     var fullText = ocrText.replace(/\s+/g,' ');
 
-    // ★ v9.25: 운송장/주문번호 — 줄별 엄격 매칭 (자릿수 정확히 일치, 폴백 없음)
+    // ★ v9.25: 운송장/주문번호 — OCR 원문 기반 정밀 파싱
+    // 쿠팡 실제 형식: 주문번호 27,1001,8522,3613 / 운송장 10,31728391,0430 (쉼표 구분)
     var orderDigits = '', trackingDigits = '';
 
-    // 1단계: '주문번호' 키워드가 있는 줄 우선
+    // 공통: 줄에서 숫자+구분자(쉼표/점/공백) 연속열 추출
+    function extractNumSeq(line){
+      // 쉼표/점/공백으로 구분된 숫자 그룹을 하나로 합침
+      var m = line.match(/[\d][\d,\.\s]{6,}[\d]/);
+      return m ? m[0].replace(/[^\d]/g,'') : line.replace(/[^\d]/g,'');
+    }
+
+    // 주문번호: '주문번호' 키워드 포함 줄에서 추출
     var _orderKeyLine = lines.find(function(l){ return l.indexOf('주문번호')>=0; });
     if(_orderKeyLine){
-      var _kd = _orderKeyLine.replace(/[^\d]/g,'');
-      // 주문번호 줄 숫자에서 7로 시작하는 연속 13자리 찾기
-      var _km = _kd.match(/7\d{12}/);
-      if(_km) orderDigits = _km[0];
+      orderDigits = extractNumSeq(_orderKeyLine);
     }
-    // 2단계: 줄별 탐색 (정확히 13자리이고 7로 시작)
-    if(!orderDigits){
+    // 폴백: 줄별 탐색 (13~14자리, 7 또는 27 시작)
+    if(!orderDigits || orderDigits.length < 8){
       for(var _li=0; _li<lines.length; _li++){
-        var _digs = lines[_li].replace(/[^\d]/g,'');
-        if(_digs.length===13 && _digs[0]==='7'){ orderDigits=_digs; break; }
-      }
-    }
-    // 3단계: 14자리도 허용 (앞에 불필요 숫자 1개 포함된 경우) — 7로 시작하는 13자리 추출
-    if(!orderDigits){
-      for(var _li2=0; _li2<lines.length; _li2++){
-        var _digs2 = lines[_li2].replace(/[^\d]/g,'');
-        if(_digs2.length===14){
-          var _m7 = _digs2.match(/7\d{12}/);
-          if(_m7){ orderDigits=_m7[0]; break; }
-        }
+        var _d = extractNumSeq(lines[_li]);
+        if(_d.length===13 && _d[0]==='7'){ orderDigits=_d; break; }
+        if(_d.length===14 && _d.slice(0,2)==='27'){ orderDigits=_d; break; }
       }
     }
 
-    // 운송장: 정확히 14자리, 10으로 시작
-    var _trackKeyLine = lines.find(function(l){ return l.indexOf('운송장')>=0; });
+    // 운송장: '운송장' 키워드 포함 줄 우선 또는 10으로 시작 14자리
+    var _trackKeyLine = lines.find(function(l){ return l.indexOf('운송장')>=0 && l.replace(/[^\d]/g,'').length>=10; });
     if(_trackKeyLine){
-      var _td = _trackKeyLine.replace(/[^\d]/g,'');
-      var _tm = _td.match(/10\d{12}/);
-      if(_tm) trackingDigits = _tm[0];
+      var _td = extractNumSeq(_trackKeyLine);
+      if(_td.length>=14 && _td.slice(0,2)==='10') trackingDigits=_td.slice(0,14);
     }
     if(!trackingDigits){
       for(var _li3=0; _li3<lines.length; _li3++){
-        var _digs3 = lines[_li3].replace(/[^\d]/g,'');
-        if(_digs3.length===14 && _digs3.slice(0,2)==='10'){ trackingDigits=_digs3; break; }
-        // 15자리도 허용 (앞 1자리 오탐)
-        if(_digs3.length===15){
-          var _m10 = _digs3.match(/10\d{12}/);
-          if(_m10){ trackingDigits=_m10[0]; break; }
-        }
+        var _d3 = extractNumSeq(lines[_li3]);
+        if(_d3.length===14 && _d3.slice(0,2)==='10'){ trackingDigits=_d3; break; }
+        if(_d3.length>=14 && _d3.length<=16){ var _m10=_d3.match(/10\d{12}/); if(_m10){ trackingDigits=_m10[0]; break; } }
       }
     }
 
     // 점 구분 형식으로 복원
-    function fmtNum(digits, prefix) {
+    function fmtNum(digits) {
       if(!digits || digits.length < 8) return '';
-      if(prefix==='7' && digits[0]==='7' && digits.length>=13)
-        return digits[0]+'.'+digits.slice(1,5)+'.'+digits.slice(5,9)+'.'+digits.slice(9,13);
-      if(prefix==='10' && digits.slice(0,2)==='10' && digits.length>=14)
-        return digits.slice(0,2)+'.'+digits.slice(2,6)+'.'+digits.slice(6,10)+'.'+digits.slice(10,14);
-      return digits;
+      var d = digits.slice(0, 16); // 최대 16자리
+      if(d.slice(0,2)==='10' && d.length>=14)
+        return d.slice(0,2)+'.'+d.slice(2,6)+'.'+d.slice(6,10)+'.'+d.slice(10,14);
+      if(d.slice(0,2)==='27' && d.length>=14)
+        return d.slice(0,2)+'.'+d.slice(2,6)+'.'+d.slice(6,10)+'.'+d.slice(10,14);
+      if(d[0]==='7' && d.length>=13)
+        return d[0]+'.'+d.slice(1,5)+'.'+d.slice(5,9)+'.'+d.slice(9,13);
+      return d;
     }
-    var orderId    = fmtNum(orderDigits,   '7');
-    var trackingNo = fmtNum(trackingDigits,'10');
+    var orderId    = fmtNum(orderDigits);
+    var trackingNo = fmtNum(trackingDigits);
 
     // 수령인: 김*우 패턴
     var recipientMatch = fullText.match(/[가-힣]+\*[가-힣]+/);
@@ -10768,8 +10764,11 @@ async function emerOcrScan(file){
       if(startIdx < 0) return '';
 
       // 첫 주소 라인부터 쓰레기 건너뛰며 유효 주소 라인 수집 (최대 5줄 탐색)
-      var addrParts = [lines[startIdx]];
-      var done = lines[startIdx].match(/\d+호/); // 이미 호수 있으면 종료
+      // 첫 주소 줄에서 번지 뒤 날짜잡텍스트(일 년 월 일) 제거
+      var _firstAddr = lines[startIdx].replace(/\s+(?:일|년|월)(?:\s+(?:일|년|월|일))*.*$/, '').trim();
+      _firstAddr = _firstAddr.replace(/\s+(인수자|서명|coupa[^\s]*).*$/i, '').trim();
+      var addrParts = [_firstAddr];
+      var done = _firstAddr.match(/\d+호/); // 이미 호수 있으면 종료
       for(var j=startIdx+1; j < Math.min(startIdx+6, lines.length) && !done; j++){
         var ln = lines[j];
         if(!ln) continue;
@@ -11486,8 +11485,9 @@ async function emerSave(){
     gpsClean = { lat: window._emerGps.lat, lng: window._emerGps.lng, acc: window._emerGps.acc||0, src: window._emerGps.src||'device' };
   }
 
-  // ★ v9.25: 저장 직전 — GPS 현위치인 경우만 Geocoding (캐시 키 사용, 3초 타임아웃)
-  if(addr && (!gpsClean || gpsClean.src === 'device')){
+  // ★ v9.25: 저장 직전 — 주소 있으면 항상 Geocoding (최종 주소 기준으로 핀 확정)
+  // QR GPS 있어도 사용자가 주소 수정했을 수 있으므로 주소 우선
+  if(addr){
     var apiKey2 = window._cachedGoogleApiKey || localStorage.getItem('mbti_google_api_key') || '';
     if(apiKey2){
       try{
