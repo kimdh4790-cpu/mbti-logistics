@@ -10587,17 +10587,17 @@ function openEmergencyDelivery(){
   // ★ v9.26: GPS 자동 수집 — QR GPS 있으면 기기 GPS로 덮어쓰지 않음
   if(navigator.geolocation){
     navigator.geolocation.getCurrentPosition(function(pos){
-      // QR에서 이미 배송지 GPS 받았으면 현위치로 덮어쓰지 않음
-      if(window._emerGps && window._emerGps.src === 'QR'){
+      // QR/Geocoding에서 이미 배송지 GPS 받았으면 현위치로 덮어쓰지 않음
+      if(window._emerGps && (window._emerGps.src === 'QR' || window._emerGps.src === 'geocode')){
         var el=document.getElementById('emer-gps-status');
-        if(el) el.innerHTML='📍 QR GPS 사용 중 (배송지 좌표) <span style="color:var(--teal)">✅</span>';
+        if(el) el.innerHTML='📍 배송지 GPS 사용 중 ('+(window._emerGps.src==='QR'?'QR':'주소변환')+') <span style="color:var(--teal)">✅</span>';
         return;
       }
       window._emerGps = {lat: pos.coords.latitude, lng: pos.coords.longitude, acc: Math.round(pos.coords.accuracy), src:'device'};
       var el=document.getElementById('emer-gps-status');
       if(el) el.innerHTML='📍 현위치 GPS 확인 완료 — 정확도 '+window._emerGps.acc+'m <span style="color:var(--teal)">✅</span>';
     }, function(){
-      if(window._emerGps && window._emerGps.src === 'QR') return; // QR GPS 있으면 오류 무시
+      if(window._emerGps && (window._emerGps.src === 'QR' || window._emerGps.src === 'geocode')) return; // 배송지 GPS 있으면 오류 무시
       var el=document.getElementById('emer-gps-status');
       if(el) el.innerHTML='📍 GPS 수집 실패 — 위치 없이 저장됩니다 <span style="color:var(--amber)">⚠️</span>';
     }, {timeout:8000, enableHighAccuracy:true});
@@ -10759,8 +10759,35 @@ async function emerOcrScan(file){
     // ★ OCR 성공 → 운송장 입력란 숨김
     var tw = document.getElementById('emer-tracking-wrap');
     if(tw && window._emerTrackings.length>0) tw.style.display='none';
-    var gpsNow = window._emerGps;
-    if(gpsNow && gpsNow.lat && window._activeDriverMapAddPin){
+
+    // ★ v9.25: OCR 추출 주소 → Geocoding API로 배송지 좌표 변환 (배송핀 = 배송지 위치)
+    var pinGps = null;
+    if(p.address){
+      if(status) status.innerHTML = '<span style="color:var(--blue)">📍 배송지 좌표 변환 중...</span>';
+      try{
+        var gcRes = await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(p.address)+'&language=ko&region=kr&key='+apiKey);
+        var gcData = await gcRes.json();
+        if(gcData.status==='OK' && gcData.results && gcData.results[0]){
+          var loc = gcData.results[0].geometry.location;
+          if(typeof loc.lat==='number' && typeof loc.lng==='number'){
+            pinGps = {lat:loc.lat, lng:loc.lng, src:'geocode', addr:p.address};
+            // 배송지 좌표를 _emerGps로 저장 (저장 시 사용)
+            window._emerGps = {lat:loc.lat, lng:loc.lng, acc:0, src:'geocode', addr:p.address};
+            if(status) status.innerHTML = '<span style="color:var(--teal)">✅ 배송지 좌표 변환 완료</span>';
+          }
+        } else if(gcData.status==='REQUEST_DENIED'){
+          console.warn('Geocoding API 비활성화:', gcData.error_message);
+          if(status) status.innerHTML = '<span style="color:#f59e0b">⚠️ Geocoding API 비활성 — 현위치 사용</span>';
+        }
+      }catch(geoErr){ console.warn('Geocoding 실패:', geoErr); }
+    }
+
+    // 폴백: Geocoding 실패 시 현위치 사용 (기존 _emerGps 유지)
+    if(!pinGps && window._emerGps && window._emerGps.lat){
+      pinGps = {lat:window._emerGps.lat, lng:window._emerGps.lng, src:window._emerGps.src||'device'};
+    }
+
+    if(pinGps && window._activeDriverMapAddPin){
       var previewRecord = {
         fbId: '_preview_'+Date.now(),
         driver: S.curDriver||'',
@@ -10769,15 +10796,16 @@ async function emerOcrScan(file){
         order_id: p.order_id||'',
         recipient: p.recipient||'',
         addr: p.address||'',
-        gps: {lat:gpsNow.lat, lng:gpsNow.lng},
+        gps: {lat:pinGps.lat, lng:pinGps.lng},
         time: new Date().toTimeString().slice(0,5),
-        status: '저장대기'
+        status: '저장대기',
+        pinSrc: pinGps.src // 'geocode' / 'QR' / 'device'
       };
       window._activeDriverMapAddPin(previewRecord);
       // 카운터 업데이트
       var ce=document.getElementById('driver-map-count');
       if(ce){ var cn=parseInt(ce.textContent)||0; ce.textContent='오늘 긴급배송 '+(cn+1)+'건 핀 표시'; }
-      window._activeDriverMap&&window._activeDriverMap.panTo({lat:gpsNow.lat,lng:gpsNow.lng});
+      window._activeDriverMap&&window._activeDriverMap.panTo({lat:pinGps.lat,lng:pinGps.lng});
     }
 
     // 운송장 사진 배송 사진으로 자동 추가
@@ -11317,7 +11345,30 @@ async function emerSave(){
   // ★ v9.25: GPS 정제 (undefined 값 차단 — Firestore invalid-argument 방지)
   var gpsClean = null;
   if(window._emerGps && typeof window._emerGps.lat==='number' && typeof window._emerGps.lng==='number'){
-    gpsClean = { lat: window._emerGps.lat, lng: window._emerGps.lng, acc: window._emerGps.acc||0 };
+    gpsClean = { lat: window._emerGps.lat, lng: window._emerGps.lng, acc: window._emerGps.acc||0, src: window._emerGps.src||'device' };
+  }
+
+  // ★ v9.25: 저장 직전 — 주소 있는데 GPS가 현위치이면 Geocoding으로 배송지 좌표 변환
+  if(addr && (!gpsClean || gpsClean.src === 'device')){
+    try{
+      var apiKey2 = '';
+      try{
+        var doc2 = await _db.collection('settings').doc('claude_config').get();
+        if(doc2.exists && doc2.data().googleApiKey) apiKey2 = doc2.data().googleApiKey.trim();
+      }catch(e){}
+      if(!apiKey2) apiKey2 = localStorage.getItem('mbti_google_api_key')||'';
+      if(apiKey2){
+        var gcRes2 = await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr)+'&language=ko&region=kr&key='+apiKey2);
+        var gcData2 = await gcRes2.json();
+        if(gcData2.status==='OK' && gcData2.results && gcData2.results[0]){
+          var loc2 = gcData2.results[0].geometry.location;
+          if(typeof loc2.lat==='number' && typeof loc2.lng==='number'){
+            gpsClean = { lat: loc2.lat, lng: loc2.lng, acc: 0, src: 'geocode' };
+            console.log('[emerSave] 저장 직전 Geocoding 성공 → 배송지 좌표 사용');
+          }
+        }
+      }
+    }catch(e){ console.warn('[emerSave] Geocoding 폴백 실패:', e); }
   }
 
   // ★ v9.25: 등록방식 판정 (자동인식 / 바코드 / 수기)
