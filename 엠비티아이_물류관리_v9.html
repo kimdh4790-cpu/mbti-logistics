@@ -21441,76 +21441,97 @@ var _emerScanReader = null;
 // ★ v9.48: 폰 네이티브 카메라로 QR 촬영 후 디코딩
 function emerNativeCamQR(input){
   var statusEl = document.getElementById('emer-native-status');
-  if(!input.files || !input.files[0]){ return; }
+  if(!input.files || !input.files[0]) return;
   var file = input.files[0];
-  input.value = ''; // 같은 파일 재선택 허용
+  input.value = '';
   if(statusEl) statusEl.textContent = '🔍 QR 분석 중...';
 
   var url = URL.createObjectURL(file);
   var img = new Image();
   img.onload = function(){
-    // ① BarcodeDetector (Android Chrome — 가장 빠름)
+    URL.revokeObjectURL(url);
+    var iw = img.naturalWidth, ih = img.naturalHeight;
+    // 최대 2000px 리사이즈
+    var scale = Math.min(1, 2000 / Math.max(iw, ih));
+    var cw = Math.round(iw * scale), ch = Math.round(ih * scale);
+    var cv = document.createElement('canvas');
+    cv.width = cw; cv.height = ch;
+    var ctx = cv.getContext('2d');
+    ctx.drawImage(img, 0, 0, cw, ch);
+
+    // ① BarcodeDetector — canvas 직접 전달 (ImageBitmap 제거, 호환성 향상)
     if('BarcodeDetector' in window){
       var bd;
       try{ bd = new BarcodeDetector({formats:['qr_code','data_matrix','aztec']}); }
       catch(e){ try{ bd = new BarcodeDetector({formats:['qr_code']}); }catch(e2){} }
       if(bd){
-        createImageBitmap(file).then(function(bmp){
-          bd.detect(bmp).then(function(codes){
-            bmp.close(); URL.revokeObjectURL(url);
-            if(codes && codes.length > 0 && codes[0].rawValue){
+        bd.detect(cv).then(function(codes){
+          if(codes && codes.length){
+            var big = codes.filter(function(code){
+              if(!code.cornerPoints) return true;
+              var pts = code.cornerPoints;
+              var qw = Math.abs(pts[1].x - pts[0].x);
+              var qh = Math.abs(pts[2].y - pts[1].y);
+              return qw >= cw * 0.08 && qh >= ch * 0.08;
+            });
+            if(big.length){
               if(statusEl) statusEl.textContent = '✅ QR 인식!';
-              _emerHandleScan(codes[0].rawValue, statusEl);
-            } else {
-              // BD 실패 → jsQR 폴백
-              _nativeCamJsQR(img, statusEl, url);
+              _emerHandleScan(big[0].rawValue, statusEl); return;
             }
-          }).catch(function(){ _nativeCamJsQR(img, statusEl, url); });
-        }).catch(function(){ _nativeCamJsQR(img, statusEl, url); });
+          }
+          _nativeCamJsQR(cv, cw, ch, statusEl);
+        }).catch(function(){ _nativeCamJsQR(cv, cw, ch, statusEl); });
         return;
       }
     }
-    // ② jsQR 폴백
-    _nativeCamJsQR(img, statusEl, url);
+    _nativeCamJsQR(cv, cw, ch, statusEl);
   };
-  img.onerror = function(){
-    URL.revokeObjectURL(url);
-    if(statusEl) statusEl.textContent = '❌ 이미지 로드 실패';
-  };
+  img.onerror = function(){ URL.revokeObjectURL(url); if(statusEl) statusEl.textContent = '❌ 이미지 로드 실패'; };
   img.src = url;
 }
 
-function _nativeCamJsQR(img, statusEl, url){
-  if(!window.jsQR){ if(statusEl) statusEl.textContent = '❌ jsQR 미로드'; URL.revokeObjectURL(url); return; }
-  var cv = document.createElement('canvas');
-  var ctx = cv.getContext('2d');
-  // 최대 1600px로 리사이즈 (jsQR 성능)
-  var maxW = 1600, scale = Math.min(1, maxW / img.naturalWidth);
-  cv.width = Math.round(img.naturalWidth * scale);
-  cv.height = Math.round(img.naturalHeight * scale);
-  ctx.drawImage(img, 0, 0, cv.width, cv.height);
-  URL.revokeObjectURL(url);
+function _nativeCamJsQR(cv, cw, ch, statusEl){
+  if(!window.jsQR){ if(statusEl) statusEl.textContent = '❌ jsQR 미로드'; return; }
+  var cv2 = document.createElement('canvas'), ctx2 = cv2.getContext('2d');
 
-  function tryDecode(enhance){
-    var d = ctx.getImageData(0, 0, cv.width, cv.height);
-    if(enhance){
-      // 그레이스케일 + 대비 강화
-      var px=d.data, len=px.length;
-      for(var i=0;i<len;i+=4){ var g=Math.round(px[i]*.299+px[i+1]*.587+px[i+2]*.114); px[i]=px[i+1]=px[i+2]=g; }
-      var mn=255,mx=0;
-      for(var j=0;j<len;j+=4){ if(px[j]<mn)mn=px[j]; if(px[j]>mx)mx=px[j]; }
-      var rng=mx-mn||1;
-      for(var k=0;k<len;k+=4){ var v=Math.round((px[k]-mn)/rng*255); px[k]=px[k+1]=px[k+2]=v; }
-    }
-    return window.jsQR(d.data, d.width, d.height, {inversionAttempts:'attemptBoth'});
+  function enhance(imgData){
+    var d=imgData.data, len=d.length;
+    for(var i=0;i<len;i+=4){ var g=Math.round(d[i]*.299+d[i+1]*.587+d[i+2]*.114); d[i]=d[i+1]=d[i+2]=g; }
+    var mn=255,mx=0;
+    for(var j=0;j<len;j+=4){ if(d[j]<mn)mn=d[j]; if(d[j]>mx)mx=d[j]; }
+    var rng=mx-mn||1;
+    for(var k=0;k<len;k+=4){ var v=Math.round((d[k]-mn)/rng*255); d[k]=d[k+1]=d[k+2]=v; }
+    return imgData;
   }
 
-  var r = tryDecode(false) || tryDecode(true);
+  function scan(sx,sy,sw,sh,enh){
+    cv2.width=sw; cv2.height=sh;
+    ctx2.drawImage(cv, sx,sy,sw,sh, 0,0,sw,sh);
+    var d=ctx2.getImageData(0,0,sw,sh);
+    if(enh) enhance(d);
+    var r=window.jsQR(d.data,sw,sh,{inversionAttempts:'attemptBoth'});
+    if(!r||!r.data) return null;
+    var loc=r.location;
+    var qw=Math.abs(loc.topRightCorner.x-loc.topLeftCorner.x);
+    var qh=Math.abs(loc.bottomLeftCorner.y-loc.topLeftCorner.y);
+    if(qw<sw*0.07||qh<sh*0.07) return null; // 너무 작으면 제외
+    return r;
+  }
+
+  // 원본 → 대비강화 순서 / 전체 → 우측절반 → 중앙 크롭
+  var rx=Math.floor(cw/2), cy2=Math.floor(ch*.12), cw2=Math.floor(cw*.72), ch2=Math.floor(ch*.76);
+  var r = scan(0,0,cw,ch,false)
+       || scan(rx,0,cw-rx,ch,false)
+       || scan(Math.floor(cw*.14),cy2,cw2,ch2,false)
+       || scan(0,0,cw,ch,true)
+       || scan(rx,0,cw-rx,ch,true)
+       || scan(Math.floor(cw*.14),cy2,cw2,ch2,true);
+
   if(r && r.data){
     if(statusEl) statusEl.textContent = '✅ QR 인식!';
     _emerHandleScan(r.data, statusEl);
   } else {
-    if(statusEl) statusEl.textContent = '❌ QR 인식 실패 — 라이브 스캔 또는 붙여넣기 시도';
+    if(statusEl) statusEl.innerHTML = '❌ 인식 실패 — QR만 화면 가득 채워 다시 촬영해주세요';
   }
 }
 
