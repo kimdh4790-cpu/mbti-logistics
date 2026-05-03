@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.34</title>
+<title>엠비티아이 물류관리 v9.35</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10421,7 +10421,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.34 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.35 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -11400,7 +11400,7 @@ function updFbUI(){
   var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.33 · 🔥 실시간':'v9.25 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.34 · Firebase 실시간':'v9.34 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.35 · Firebase 실시간':'v9.35 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -20822,49 +20822,57 @@ async function emerOcrScan(file){
   }
   if(status) status.innerHTML = '<span style="color:var(--blue)">🤖 AI 분석 중...</span>';
 
-  // ★ v9.27: 이미지 리사이즈 1280px (OCR 정확도 우선 — 쿠팡 송장 세밀 텍스트 인식)
-  var b64 = await new Promise(function(resolve){
+  // ★ v9.35: 이미지 두 가지 준비
+  //   b64Raw  — 전처리 없음, QR BARCODE_DETECTION용 (전처리가 QR 픽셀 손상함)
+  //   b64Ocr  — 파란 제거+대비 강화, 텍스트 OCR용
+  var b64Raw, b64Ocr;
+  await new Promise(function(resolve){
     var img = new Image();
     var url = URL.createObjectURL(file);
     img.onload = function(){
-      var canvas = document.createElement('canvas');
+      URL.revokeObjectURL(url);
       var max = 1280;
       var w = img.width, h = img.height;
       if(w > max || h > max){
         if(w > h){ h = Math.round(h * max / w); w = max; }
         else { w = Math.round(w * max / h); h = max; }
       }
-      canvas.width = w; canvas.height = h;
-      var ctx2d = canvas.getContext('2d');
-      ctx2d.drawImage(img, 0, 0, w, h);
 
-      // ★ v9.27: 고대비 필터 — 파란 배경 워터마크 억제, 검은 텍스트 강화
-      // 파란/하늘색 픽셀(쿠팡 워터마크)을 흰색으로 변환
-      var imgData = ctx2d.getImageData(0, 0, w, h);
+      // ① 원본 캔버스 (전처리 없음) → QR 디코딩용
+      var cvRaw = document.createElement('canvas');
+      cvRaw.width = w; cvRaw.height = h;
+      cvRaw.getContext('2d').drawImage(img, 0, 0, w, h);
+      b64Raw = cvRaw.toDataURL('image/jpeg', 0.92).split(',')[1];
+
+      // ② 파란 제거 + 대비 강화 → OCR 텍스트용
+      var cvOcr = document.createElement('canvas');
+      cvOcr.width = w; cvOcr.height = h;
+      var cx = cvOcr.getContext('2d');
+      cx.drawImage(img, 0, 0, w, h);
+      var imgData = cx.getImageData(0, 0, w, h);
       var pix = imgData.data;
       for(var i=0; i<pix.length; i+=4){
         var r=pix[i], g=pix[i+1], b=pix[i+2];
-        // 파란 계열(배경/워터마크): R<160 & B>R+30 & B>G+10 → 흰색
-        var isBlueWatermark = (r < 160 && b > r+30 && b > g+10);
-        // 하늘색(파란 송장 배경): R>100 & G>100 & B>R & B>G+20 → 흰색
-        var isSkyBlue = (r>100 && g>100 && b>r && b>g+20 && b>150);
-        if(isBlueWatermark || isSkyBlue){
+        var isBlue = (r < 160 && b > r+30 && b > g+10);
+        var isSky  = (r>100 && g>100 && b>r && b>g+20 && b>150);
+        if(isBlue || isSky){
           pix[i]=255; pix[i+1]=255; pix[i+2]=255;
         } else {
-          // 나머지: 대비 강화 (어두우면 더 어둡게, 밝으면 더 밝게)
           var gray = 0.299*r + 0.587*g + 0.114*b;
           if(gray < 128){
             pix[i]=Math.max(0,r-40); pix[i+1]=Math.max(0,g-40); pix[i+2]=Math.max(0,b-40);
           }
         }
       }
-      ctx2d.putImageData(imgData, 0, 0);
+      cx.putImageData(imgData, 0, 0);
+      b64Ocr = cvOcr.toDataURL('image/jpeg', 0.88).split(',')[1];
 
-      URL.revokeObjectURL(url);
-      resolve(canvas.toDataURL('image/jpeg', 0.88).split(',')[1]);
+      resolve();
     };
+    img.onerror = function(){ URL.revokeObjectURL(url); resolve(); };
     img.src = url;
   });
+  var b64 = b64Ocr; // 기존 코드 호환용
 
   try{
     // Google Cloud Vision API 호출
@@ -20872,10 +20880,18 @@ async function emerOcrScan(file){
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
-        requests: [{
-          image: {content: b64},
-          features: [{type: 'DOCUMENT_TEXT_DETECTION', maxResults: 1}, {type: 'BARCODE_DETECTION', maxResults: 5}]
-        }]
+        requests: [
+          {
+            // QR/바코드: 원본 이미지 (전처리 없음 — 전처리가 QR 픽셀 손상)
+            image: {content: b64Raw || b64},
+            features: [{type: 'BARCODE_DETECTION', maxResults: 5}]
+          },
+          {
+            // OCR 텍스트: 전처리 이미지 (파란 제거로 텍스트 인식 향상)
+            image: {content: b64Ocr || b64},
+            features: [{type: 'DOCUMENT_TEXT_DETECTION', maxResults: 1}]
+          }
+        ]
       })
     });
 
@@ -20886,14 +20902,14 @@ async function emerOcrScan(file){
     catch(e){ throw new Error('파싱 실패: '+rawText.slice(0,100)); }
     if(d.error) throw new Error(d.error.message);
 
-    // ★ v9.34: QR 코드 데이터 우선 처리 (BARCODE_DETECTION)
-    // Google Vision API 응답 키 두 가지 모두 대응 (barcodeAnnotations / barcodes)
+    // ★ v9.35: responses[0]=바코드, responses[1]=OCR 텍스트
     var barcodeAnnotations = d.responses?.[0]?.barcodeAnnotations
                            || d.responses?.[0]?.barcodes || [];
-    console.log('[Vision BARCODE]', barcodeAnnotations.length+'개 감지', JSON.stringify(barcodeAnnotations).slice(0,200));
+    console.log('[Vision BARCODE]', barcodeAnnotations.length+'개 감지',
+      barcodeAnnotations.map(function(b){return (b.format||'?')+':'+((b.rawValue||'').slice(0,50));}).join(' | '));
     var qrBarcode = barcodeAnnotations.find(function(b){
       return b.format==='QR_CODE' || b.valueFormat==='TEXT' ||
-             (b.rawValue && b.rawValue.indexOf('|')>=0);
+             (b.rawValue && (b.rawValue.indexOf('|')>=0 || b.rawValue.indexOf('V1')===0));
     });
     if(qrBarcode && qrBarcode.rawValue){
       console.log('[QR 직접인식]', qrBarcode.rawValue);
@@ -20945,8 +20961,10 @@ async function emerOcrScan(file){
       }
     }
 
-    // OCR 텍스트 추출 (DOCUMENT_TEXT_DETECTION 또는 TEXT_DETECTION 모두 대응)
-    var ocrText = d.responses?.[0]?.fullTextAnnotation?.text
+    // OCR 텍스트 추출 — responses[1] (OCR 전용) 또는 responses[0] 폴백
+    var ocrText = d.responses?.[1]?.fullTextAnnotation?.text
+                || d.responses?.[1]?.textAnnotations?.[0]?.description
+                || d.responses?.[0]?.fullTextAnnotation?.text
                 || d.responses?.[0]?.textAnnotations?.[0]?.description || '';
     // ★ v9.34: 바코드 디버그 표시 (개발자도구 또는 디버그 버튼)
     var _barcodeDbg = barcodeAnnotations.length > 0
