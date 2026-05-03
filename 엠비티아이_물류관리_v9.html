@@ -10584,13 +10584,20 @@ function openEmergencyDelivery(){
     </div>
   </div>`);
 
-  // GPS 자동 수집
+  // ★ v9.26: GPS 자동 수집 — QR GPS 있으면 기기 GPS로 덮어쓰지 않음
   if(navigator.geolocation){
     navigator.geolocation.getCurrentPosition(function(pos){
-      window._emerGps = {lat: pos.coords.latitude, lng: pos.coords.longitude, acc: Math.round(pos.coords.accuracy)};
+      // QR에서 이미 배송지 GPS 받았으면 현위치로 덮어쓰지 않음
+      if(window._emerGps && window._emerGps.src === 'QR'){
+        var el=document.getElementById('emer-gps-status');
+        if(el) el.innerHTML='📍 QR GPS 사용 중 (배송지 좌표) <span style="color:var(--teal)">✅</span>';
+        return;
+      }
+      window._emerGps = {lat: pos.coords.latitude, lng: pos.coords.longitude, acc: Math.round(pos.coords.accuracy), src:'device'};
       var el=document.getElementById('emer-gps-status');
-      if(el) el.innerHTML='📍 GPS 확인 완료 — 정확도 '+window._emerGps.acc+'m <span style="color:var(--teal)">✅</span>';
+      if(el) el.innerHTML='📍 현위치 GPS 확인 완료 — 정확도 '+window._emerGps.acc+'m <span style="color:var(--teal)">✅</span>';
     }, function(){
+      if(window._emerGps && window._emerGps.src === 'QR') return; // QR GPS 있으면 오류 무시
       var el=document.getElementById('emer-gps-status');
       if(el) el.innerHTML='📍 GPS 수집 실패 — 위치 없이 저장됩니다 <span style="color:var(--amber)">⚠️</span>';
     }, {timeout:8000, enableHighAccuracy:true});
