@@ -20718,22 +20718,46 @@ function openEmergencyDelivery(){
 
 // ★ v9.25: QR 텍스트 붙여넣기 — 모달 textarea 방식 (클립보드 권한 불필요)
 function emerPasteQR(){
-  // 기존 모달 있으면 제거
+  // ★ v9.54: 버튼 1탭 → 클립보드 자동 읽기 시도 (user gesture로 권한 해결)
+  var statusEl = document.getElementById('emer-native-status');
+  if(navigator.clipboard && navigator.clipboard.readText){
+    navigator.clipboard.readText().then(function(text){
+      if(text && text.length > 10){
+        var v1 = text.match(/V1[|][\s\S]{20,}/);
+        if(v1){
+          if(statusEl) statusEl.innerHTML = '<span style="color:var(--teal)">📋 클립보드 자동입력!</span>';
+          _emerHandleScan(v1[0], statusEl);
+          // 성공 피드백
+          try{ navigator.vibrate&&navigator.vibrate([60,30,120]); }catch(e){}
+          return;
+        }
+      }
+      // 클립보드에 QR 없음 → 텍스트박스 표시
+      _emerShowPasteBox();
+    }).catch(function(){
+      // 권한 거부 또는 iOS → 텍스트박스 표시
+      _emerShowPasteBox();
+    });
+  } else {
+    _emerShowPasteBox();
+  }
+}
+
+function _emerShowPasteBox(){
   var old = document.getElementById('qr-paste-mo');
   if(old) old.remove();
-
   document.body.insertAdjacentHTML('beforeend', `
     <div id="qr-paste-mo" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;display:flex;align-items:flex-end">
       <div style="width:100%;background:var(--bg);border-radius:20px 20px 0 0;padding:20px 16px calc(env(safe-area-inset-bottom,0px)+20px)">
-        <div style="font-size:14px;font-weight:800;margin-bottom:6px">📋 QR 텍스트 붙여넣기</div>
-        <div style="font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.5">
-          폰 카메라로 QR 스캔 → 텍스트 <b>복사</b> → 아래 칸 길게 눌러 <b>붙여넣기</b>
+        <div style="font-size:14px;font-weight:800;margin-bottom:4px">📋 QR 텍스트 붙여넣기</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:10px">
+          아래 칸 길게 눌러서 <b>붙여넣기</b>
         </div>
         <textarea id="qr-paste-inp" rows="3" placeholder="V1|운송장번호|주소|상세주소|수령인|..." 
           style="width:100%;padding:10px;border:2px solid var(--blue);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text);box-sizing:border-box;resize:none"
           oninput="emerPasteQRParse(this.value)"></textarea>
         <div id="qr-paste-result" style="font-size:11px;color:var(--teal);margin-top:6px;min-height:14px"></div>
-        <div style="display:flex;gap:8px;margin-top:12px">
+        <div style="display:flex;gap:8px;margin-top:10px">
           <button onclick="document.getElementById('qr-paste-mo').remove()" 
             style="flex:1;padding:11px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">취소</button>
           <button onclick="emerPasteQRApply()" 
@@ -20742,7 +20766,6 @@ function emerPasteQR(){
       </div>
     </div>
   `);
-  // 자동 포커스 (붙여넣기 바로 할 수 있도록)
   setTimeout(function(){ var el=document.getElementById('qr-paste-inp'); if(el) el.focus(); }, 100);
 }
 
@@ -21725,93 +21748,67 @@ function emerStartScan(){
       function _startScanLoop(){
         var _active = true;
 
-        // Android Chrome: BarcodeDetector (가장 빠름, cornerPoints로 추적)
+        // ★ v9.55: BarcodeDetector 단순화 — 필터 제거, 감지 즉시 처리
         if('BarcodeDetector' in window){
           var bd;
-          try{ bd = new BarcodeDetector({formats:['qr_code','data_matrix','aztec','code_128','code_39']}); }
-          catch(e){ try{ bd = new BarcodeDetector({formats:['qr_code','code_128']}); }catch(e2){ try{bd=new BarcodeDetector({formats:['qr_code']});}catch(e3){} } }  // ★ v9.52: 바코드 재추가
+          try{ bd = new BarcodeDetector({formats:['qr_code','code_128','data_matrix','aztec','code_39']}); }
+          catch(e){ try{ bd = new BarcodeDetector({formats:['qr_code','code_128']}); }
+          catch(e2){ try{ bd = new BarcodeDetector({formats:['qr_code']}); }catch(e3){} } }
 
           if(bd){
-            var _lastPts = null, _trackCount = 0;
             function bdTick(){
               if(!_active) return;
               if(video.readyState < 2){ requestAnimationFrame(bdTick); return; }
               bd.detect(video)
                 .then(function(codes){
                   if(!_active) return;
-                  if(codes && codes.length > 0 && codes[0].rawValue){
-                    // ★ v9.52: 포맷별 필터 — QR(정사각형) vs 바코드(직사각형) 분리
-                    var _code = codes[0];
-                    var _fmt = _code.format || '';
-                    var _isBarcode = (_fmt==='code_128'||_fmt==='code_39'||_fmt==='ean_13'||_fmt==='ean_8');
-                    var _bigEnough = true;
-                    if(_code.cornerPoints && video.videoWidth){
-                      var _pts = _code.cornerPoints;
-                      var _qw = Math.abs(_pts[1].x - _pts[0].x);
-                      var _qh = Math.abs(_pts[2].y - _pts[1].y);
-                      var _ratio = _qh > 0 ? _qw / _qh : 0;
-                      if(_isBarcode){
-                        // 바코드: 가로로 길어야 함 (ratio > 2), 최소 너비 25%
-                        _bigEnough = (_qw >= video.videoWidth * 0.25) && (_ratio > 2.0);
-                      } else {
-                        // QR: 정사각형, 최소 10%
-                        _bigEnough = (_qw >= video.videoWidth * 0.10) &&
-                                     (_qh >= video.videoHeight * 0.10) &&
-                                     (_ratio >= 0.4 && _ratio <= 2.5);
-                      }
+                  if(codes && codes.length > 0){
+                    // 가장 큰 코드 선택 (작은 것 무시)
+                    var best = codes.reduce(function(a,b){
+                      if(!a.cornerPoints) return b;
+                      if(!b.cornerPoints) return a;
+                      var aw = Math.abs(a.cornerPoints[1].x - a.cornerPoints[0].x);
+                      var bw = Math.abs(b.cornerPoints[1].x - b.cornerPoints[0].x);
+                      return bw > aw ? b : a;
+                    });
+                    if(!best.rawValue){ requestAnimationFrame(bdTick); return; }
+                    // 최소 크기만 체크 (화면의 6% 이상)
+                    if(best.cornerPoints && video.videoWidth){
+                      var pw = Math.abs(best.cornerPoints[1].x - best.cornerPoints[0].x);
+                      if(pw < video.videoWidth * 0.06){ requestAnimationFrame(bdTick); return; }
                     }
-                    if(!_bigEnough){ _trackCount=0; requestAnimationFrame(bdTick); return; }
+                    _active = false;
                     _stopScanline();
-                    if(_code.cornerPoints && video.videoWidth){
-                      drawQrBox(_code.cornerPoints, video.videoWidth, video.videoHeight);
-                    }
-                    _trackCount++;
-                    if(_trackCount >= 2){
-                      _active = false;
-                      if(_isBarcode){
-                        // ★ v9.53: 바코드도 _parseQrText 먼저 시도 (전체 데이터 있을 수도)
-                        var _bRaw = _code.rawValue;
-                        var _bParsed = _parseQrText(_bRaw);
-                        if(_bParsed.tracking_no || _bParsed.address){
-                          // 전체 데이터 있음 → QR처럼 처리
-                          _active = false;
-                          statusEl.textContent = '✅ 바코드 전체인식!';
-                          _emerHandleScan(_bRaw, statusEl);
-                        } else {
-                          // 운송장번호만 있는 일반 바코드
-                          var _bNum = _bRaw.replace(/[^\d]/g,'');
-                          statusEl.textContent = '✅ 바코드: ' + _bNum.slice(0,6)+'…  (QR로 주소 추가)';
-                          window._emerTrackings = window._emerTrackings||[];
-                          if(window._emerTrackings.indexOf(_bNum)<0){
-                            window._emerTrackings.push(_bNum);
-                            emerRefreshTrackingList&&emerRefreshTrackingList();
-                          }
-                          var _inp=document.getElementById('emer-tracking-inp'); if(_inp)_inp.value=_bNum;
-                          window._emerEntryMode='barcode';
-                          try{navigator.vibrate&&navigator.vibrate([60,30,120]);}catch(e){}
-                          // 카메라 계속 켜둠 → QR도 이어서 스캔
-                          _active = true; _trackCount = 0;
-                          requestAnimationFrame(bdTick);
-                        }
+                    if(best.cornerPoints && video.videoWidth) drawQrBox(best.cornerPoints, video.videoWidth, video.videoHeight);
+                    var _fmt = best.format||'';
+                    var _isBC = (_fmt==='code_128'||_fmt==='code_39');
+                    if(_isBC){
+                      var _bParsed = _parseQrText(best.rawValue);
+                      if(_bParsed.tracking_no || _bParsed.address){
+                        statusEl.textContent = '✅ 바코드 인식!';
+                        _emerHandleScan(best.rawValue, statusEl);
                       } else {
-                        // QR → 전체 처리
-                        _active = false;
-                        statusEl.textContent = '✅ QR 인식!';
-                        _emerHandleScan(_code.rawValue, statusEl);
+                        var _bNum = best.rawValue.replace(/[^\d]/g,'');
+                        statusEl.textContent = '✅ 운송장: ' + _bNum;
+                        window._emerTrackings=[_bNum]; emerRefreshTrackingList&&emerRefreshTrackingList();
+                        var _i=document.getElementById('emer-tracking-inp'); if(_i)_i.value=_bNum;
+                        window._emerEntryMode='barcode';
+                        try{navigator.vibrate&&navigator.vibrate([80,40,80]);}catch(e){}
+                        _active=true; requestAnimationFrame(bdTick);
                       }
                     } else {
-                      requestAnimationFrame(bdTick);
+                      statusEl.textContent = '✅ QR 인식!';
+                      _emerHandleScan(best.rawValue, statusEl);
                     }
                     return;
                   }
-                  _trackCount = 0;
                   requestAnimationFrame(bdTick);
                 })
                 .catch(function(){ requestAnimationFrame(bdTick); });
             }
             video.addEventListener('loadedmetadata', function(){ requestAnimationFrame(bdTick); }, {once:true});
             if(video.readyState >= 2) requestAnimationFrame(bdTick);
-            window._emerBdStop = function(){ _active = false; _stopScanline(); };
+            window._emerBdStop = function(){ _active=false; _stopScanline(); };
             return;
           }
         }
