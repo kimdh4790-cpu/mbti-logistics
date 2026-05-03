@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.33</title>
+<title>엠비티아이 물류관리 v9.34</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10421,7 +10421,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.33 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.34 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -11400,7 +11400,7 @@ function updFbUI(){
   var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.33 · 🔥 실시간':'v9.25 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.33 · Firebase 실시간':'v9.33 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.34 · Firebase 실시간':'v9.34 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -20886,9 +20886,15 @@ async function emerOcrScan(file){
     catch(e){ throw new Error('파싱 실패: '+rawText.slice(0,100)); }
     if(d.error) throw new Error(d.error.message);
 
-    // ★ v9.25: QR 코드 데이터 우선 처리 (BARCODE_DETECTION)
-    var barcodeAnnotations = d.responses?.[0]?.barcodeAnnotations || [];
-    var qrBarcode = barcodeAnnotations.find(function(b){ return b.format==='QR_CODE' || (b.rawValue&&b.rawValue.indexOf('|')>=0); });
+    // ★ v9.34: QR 코드 데이터 우선 처리 (BARCODE_DETECTION)
+    // Google Vision API 응답 키 두 가지 모두 대응 (barcodeAnnotations / barcodes)
+    var barcodeAnnotations = d.responses?.[0]?.barcodeAnnotations
+                           || d.responses?.[0]?.barcodes || [];
+    console.log('[Vision BARCODE]', barcodeAnnotations.length+'개 감지', JSON.stringify(barcodeAnnotations).slice(0,200));
+    var qrBarcode = barcodeAnnotations.find(function(b){
+      return b.format==='QR_CODE' || b.valueFormat==='TEXT' ||
+             (b.rawValue && b.rawValue.indexOf('|')>=0);
+    });
     if(qrBarcode && qrBarcode.rawValue){
       console.log('[QR 직접인식]', qrBarcode.rawValue);
       var _qpDirect = _parseQrText(qrBarcode.rawValue);
@@ -20942,7 +20948,14 @@ async function emerOcrScan(file){
     // OCR 텍스트 추출 (DOCUMENT_TEXT_DETECTION 또는 TEXT_DETECTION 모두 대응)
     var ocrText = d.responses?.[0]?.fullTextAnnotation?.text
                 || d.responses?.[0]?.textAnnotations?.[0]?.description || '';
-    console.log('[OCR 원문]\n' + ocrText);
+    // ★ v9.34: 바코드 디버그 표시 (개발자도구 또는 디버그 버튼)
+    var _barcodeDbg = barcodeAnnotations.length > 0
+      ? '\n[바코드감지] ' + barcodeAnnotations.map(function(b){ return (b.format||'?')+': '+(b.rawValue||'').slice(0,60); }).join(' | ')
+      : '\n[바코드감지] 없음 (QR 미인식)';
+    console.log('[OCR 원문]\n' + ocrText + _barcodeDbg);
+    // 디버그 모달에도 표시
+    var _dbgBtn = document.querySelector('[onclick*="ocr-debug"]');
+    if(window._emerOcrDebugText !== undefined) window._emerOcrDebugText = ocrText + _barcodeDbg;
     if(!ocrText) throw new Error('텍스트 인식 실패 — 사진을 다시 찍어주세요');
 
     // 쿠팡 운송장에서 정보 파싱
@@ -21221,13 +21234,16 @@ function _parseQrText(text){
       if(parts[4] && parts[4].match(/[가-힣]+\*[가-힣]/)){
         result.recipient = parts[4];
       }
-      // GPS 좌표 (위도/경도)
-      if(parts[6] && parts[7]){
-        var lat = parseFloat(parts[6]);
-        var lng = parseFloat(parts[7]);
-        if(!isNaN(lat) && !isNaN(lng) && lat > 30 && lat < 40 && lng > 120 && lng < 135){
-          result.lat = lat;
-          result.lng = lng;
+      // GPS 좌표 — 전체 파트 스캔 (고정 인덱스 아님 — 쿠팡 포맷 변경 대응)
+      // 한국 좌표: lat 33~38, lng 126~130
+      for(var gi=2; gi<parts.length-1; gi++){
+        var pLat = parseFloat(parts[gi]);
+        var pLng = parseFloat(parts[gi+1]);
+        if(!isNaN(pLat) && !isNaN(pLng) &&
+           pLat > 33 && pLat < 38 && pLng > 126 && pLng < 130){
+          result.lat = pLat;
+          result.lng = pLng;
+          break;
         }
       }
       return result;
