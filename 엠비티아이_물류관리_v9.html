@@ -3286,7 +3286,63 @@ function _startDriverLocTracking(){
 }
 
 // ★ v9.25: 기사용 실시간 지도 (내 위치 + 내 긴급배송 핀)
-// ★ v9.25: 지도 상단 카운터 실시간 갱신 (전체/미완료/완료)
+// ★ v9.26: 지도 핀 순차 이동 (◀ ▶ 버튼)
+window._mapPinNavIdx = 0;
+function driverMapPinNav(dir){
+  var map = window._activeDriverMap;
+  var markers = window._driverMapMarkers;
+  var filter = window._driverMapFilter || 'all';
+  if(!map || !markers) return;
+
+  // 현재 필터에 맞는 핀 목록 수집
+  var locs = window._emerLocs || [];
+  var filtered = locs.filter(function(loc){
+    if(!loc.gps || !loc.gps.lat) return false;
+    if(filter === 'pending') return loc.status !== '완료';
+    if(filter === 'done') return loc.status === '완료';
+    return true;
+  });
+
+  if(!filtered.length){
+    toast('📍 이동할 핀이 없습니다');
+    return;
+  }
+
+  // 인덱스 이동
+  window._mapPinNavIdx = (window._mapPinNavIdx + dir + filtered.length) % filtered.length;
+  var target = filtered[window._mapPinNavIdx];
+
+  // 카운터 업데이트
+  var idxEl = document.getElementById('driver-map-pin-idx');
+  if(idxEl) idxEl.textContent = (window._mapPinNavIdx + 1) + '/' + filtered.length;
+
+  if(!target.gps) return;
+
+  // 지도 이동 + 줌
+  var pos = {lat: target.gps.lat, lng: target.gps.lng};
+  map.panTo(pos);
+  if(map.getZoom() < 17) map.setZoom(17);
+
+  // 해당 마커의 인포윈도우 자동 오픈
+  var marker = markers[target._fbId || target.id];
+  if(marker && window._infoWindow){
+    google.maps.event.trigger(marker, 'click');
+  } else {
+    // 마커 찾아서 클릭 이벤트 강제 발생
+    Object.keys(markers).forEach(function(k){
+      var mk = markers[k];
+      try{
+        var mp = mk.getPosition();
+        if(Math.abs(mp.lat()-pos.lat)<0.0001 && Math.abs(mp.lng()-pos.lng)<0.0001){
+          google.maps.event.trigger(mk, 'click');
+        }
+      }catch(e){}
+    });
+  }
+
+  toast((window._mapPinNavIdx+1)+'/'+filtered.length+' — '+(target.recipient||target.addr||'배송지'));
+}
+
 function _updateMapCounter(){
   var markers = window._driverMapMarkers||{};
   var total = Object.keys(markers).length;
@@ -3414,10 +3470,16 @@ async function openDriverMap(){
     <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:rgba(0,0,0,.85);color:#fff">
       <div>
         <div style="font-size:15px;font-weight:700">🗺️ 내 배송 지도</div>
-        <div style="display:flex;gap:5px;margin-top:3px;flex-wrap:wrap">
+        <div style="display:flex;gap:5px;margin-top:3px;flex-wrap:wrap;align-items:center">
           <span id="driver-map-total" onclick="window._driverMapSetFilter&&window._driverMapSetFilter('all')" style="font-size:11px;background:rgba(59,130,246,.85);padding:3px 9px;border-radius:999px;font-weight:700;cursor:pointer;border:2px solid #fff;touch-action:manipulation">📦 전체 -</span>
           <span id="driver-map-pending" onclick="window._driverMapSetFilter&&window._driverMapSetFilter('pending')" style="font-size:11px;background:rgba(220,38,38,.55);padding:3px 9px;border-radius:999px;font-weight:700;cursor:pointer;border:2px solid transparent;touch-action:manipulation">⏳ 미완료 -</span>
           <span id="driver-map-done" onclick="window._driverMapSetFilter&&window._driverMapSetFilter('done')" style="font-size:11px;background:rgba(22,163,74,.55);padding:3px 9px;border-radius:999px;font-weight:700;cursor:pointer;border:2px solid transparent;touch-action:manipulation">✅ 완료 -</span>
+          <!-- ★ v9.26: 핀 순차 이동 버튼 -->
+          <div style="display:flex;gap:3px;margin-left:2px">
+            <button onclick="driverMapPinNav(-1)" style="width:28px;height:28px;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.4);border-radius:6px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center">◀</button>
+            <span id="driver-map-pin-idx" style="font-size:10px;color:rgba(255,255,255,.7);align-self:center;min-width:28px;text-align:center"></span>
+            <button onclick="driverMapPinNav(1)" style="width:28px;height:28px;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.4);border-radius:6px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center">▶</button>
+          </div>
         </div>
       </div>
       <button onclick="if(window._driverMapWatchId){navigator.geolocation.clearWatch(window._driverMapWatchId);window._driverMapWatchId=null;}window._activeDriverMap=null;window._activeDriverMapAddPin=null;window._driverMapFilter='all';window._driverMapSetFilter=null;document.getElementById('driver-map-mo').remove()" style="padding:6px 14px;background:#dc2626;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">✕ 닫기</button>
@@ -11579,31 +11641,31 @@ async function saveDelivComplete(){
   if(saveBtn) saveBtn.disabled = true;
   toast('💾 완료 처리 중...');
 
-  // 사진 업로드 — base64 Firestore 저장 차단
+  // ★ v9.26: 사진 병렬 업로드 (순차 → 동시)
   var uploaded = [];
   var now = new Date();
-  for(var i=0;i<window._delivCompletePhotos.length;i++){
-    var dataUrl = window._delivCompletePhotos[i];
-    if(FB&&_st){
-      var path = 'emergency/complete/'+S.curDriver+'/'+now.getTime()+'_'+i+'.jpg';
-      try{
-        // ★ v9.25: 자동 재시도 (최대 3회) — Storage 폴백 발생률 ↓↓
-        var url = await _emerStorageUpload(dataUrl, path, 3);
-        uploaded.push(url);
-      }catch(e){
-        console.warn('완료사진 Storage 최종 실패 (3회 재시도 후):', e.code||e.message);
-        // ★ Storage 최종 실패 시 폴백 — 800px / 품질 0.75 (분쟁 증빙 가독성 확보)
-        try{
-          var img3=new Image(); img3.src=dataUrl;
-          await new Promise(function(r){img3.onload=r;img3.onerror=r;});
-          var cvs2=document.createElement('canvas');
-          var max2=800; var ratio2=Math.min(max2/img3.width,max2/img3.height,1);
-          cvs2.width=Math.round(img3.width*ratio2); cvs2.height=Math.round(img3.height*ratio2);
-          cvs2.getContext('2d').drawImage(img3,0,0,cvs2.width,cvs2.height);
-          uploaded.push(cvs2.toDataURL('image/jpeg',0.75));
-        }catch(e2){ console.warn('완료사진 압축 실패:', e2.message); }
-      }
-    }
+  if(FB && _st && window._delivCompletePhotos.length > 0){
+    toast('📸 사진 '+window._delivCompletePhotos.length+'장 업로드 중...');
+    try{
+      var uploadTasks = window._delivCompletePhotos.map(function(dataUrl, i){
+        var path = 'emergency/complete/'+S.curDriver+'/'+now.getTime()+'_'+i+'.jpg';
+        return _emerStorageUpload(dataUrl, path, 3).catch(function(e){
+          console.warn('완료사진 Storage 실패:', e.code||e.message);
+          return new Promise(function(res){
+            var img3=new Image(); img3.src=dataUrl;
+            img3.onload=function(){
+              var cvs2=document.createElement('canvas');
+              var max2=800, ratio2=Math.min(max2/img3.width,max2/img3.height,1);
+              cvs2.width=Math.round(img3.width*ratio2); cvs2.height=Math.round(img3.height*ratio2);
+              cvs2.getContext('2d').drawImage(img3,0,0,cvs2.width,cvs2.height);
+              res(cvs2.toDataURL('image/jpeg',0.75));
+            };
+            img3.onerror=function(){ res(null); };
+          });
+        });
+      });
+      uploaded = (await Promise.all(uploadTasks)).filter(Boolean);
+    }catch(e){ console.warn('병렬 업로드 오류:', e); }
   }
 
   // ★ v9.25: 체크된(=완료된) 운송장 목록 수집
