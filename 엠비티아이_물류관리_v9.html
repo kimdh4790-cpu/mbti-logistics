@@ -21115,9 +21115,21 @@ async function emerOcrScan(file){
         // 이미지도 배송사진으로 추가
         var _reader2=new FileReader(); _reader2.onload=function(e){window._emerPhotos.push(e.target.result);emerRefreshPhotoWrap();}; _reader2.readAsDataURL(file);
         window._emerEntryMode='ocr';
-        // GPS 있으면 바로 핀 생성
-        if(_qpDirect.lat&&_qpDirect.lng&&window._activeDriverMapAddPin){
-          var _pr={fbId:'_preview_'+Date.now(),driver:S.curDriver||'',trackings:window._emerTrackings.slice(),tracking:window._emerTrackings[0]||'',order_id:_qpDirect.order_id||'',recipient:_qpDirect.recipient||'',addr:_qpDirect.address||'',gps:{lat:_qpDirect.lat,lng:_qpDirect.lng},time:new Date().toTimeString().slice(0,5),status:'저장대기'};
+        // ★ v9.59: GPS 있으면 자동저장 (버튼 불필요)
+        if(_qpDirect.lat && _qpDirect.lng && _qpDirect.tracking_no){
+          var _toast2 = document.createElement('div');
+          _toast2.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(5,150,105,.95);color:#fff;padding:18px 28px;border-radius:14px;font-size:15px;font-weight:800;z-index:9999;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.3)';
+          _toast2.innerHTML = '✅ QR 인식 완료<br><span style="font-size:12px;opacity:.85;font-weight:500">' + (_qpDirect.tracking_no||'') + '<br>' + (_qpDirect.address||'').slice(0,20) + '</span><br><span style="font-size:11px;opacity:.7">자동 저장 중...</span>';
+          document.body.appendChild(_toast2);
+          setTimeout(function(){
+            _toast2.style.transition='opacity .4s'; _toast2.style.opacity='0';
+            setTimeout(function(){ _toast2.remove(); }, 400);
+            if(typeof emerSave === 'function') emerSave();
+          }, 800);
+          return;
+        }
+        // GPS 없으면 핀만 생성 (수동 저장 필요)
+        if(_qpDirect.lat&&_qpDirect.lng&&window._activeDriverMapAddPin){\n          var _pr={fbId:'_preview_'+Date.now(),driver:S.curDriver||'',trackings:window._emerTrackings.slice(),tracking:window._emerTrackings[0]||'',order_id:_qpDirect.order_id||'',recipient:_qpDirect.recipient||'',addr:_qpDirect.address||'',gps:{lat:_qpDirect.lat,lng:_qpDirect.lng},time:new Date().toTimeString().slice(0,5),status:'저장대기'};
           window._activeDriverMapAddPin(_pr);
           window._activeDriverMap&&window._activeDriverMap.panTo({lat:_qpDirect.lat,lng:_qpDirect.lng});
         }
