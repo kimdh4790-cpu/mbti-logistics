@@ -108,9 +108,9 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
 .doc-slot.required-err{border-color:var(--red);animation:shake .3s ease}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
 @keyframes slideUp{from{opacity:0;transform:translate(-50%,30px)}to{opacity:1;transform:translate(-50%,0)}}
-
+@keyframes scanLine{0%{top:90px;opacity:1}50%{top:190px;opacity:1}100%{top:90px;opacity:1}}
 @keyframes qrPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.97)}}
-
+@keyframes qrCorner{0%,100%{border-color:#22c55e}50%{border-color:#4ade80}}
 @keyframes notiPop{0%{transform:scale(.95);opacity:.7}60%{transform:scale(1.02)}100%{transform:scale(1);opacity:1}}
 .doc-slot input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;z-index:2}
 .doc-slot-lbl{position:absolute;bottom:0;left:0;right:0;text-align:center;font-size:9px;font-weight:700;color:#fff;background:rgba(0,0,0,.6);padding:3px 0}
@@ -20610,18 +20610,28 @@ function openEmergencyDelivery(){
       </div>
 
       <!-- 실시간 스캐너 모달 -->
-      <div id="emer-scan-mo" style="display:none;position:fixed;inset:0;background:#000;z-index:900;flex-direction:column;align-items:stretch;justify-content:stretch">
-        <!-- 카메라 전체화면 -->
-        <video id="emer-scan-video" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" playsinline muted autoplay></video>
-        <!-- 상단 상태바 -->
-        <div style="position:absolute;top:0;left:0;right:0;padding:env(safe-area-inset-top,16px) 16px 12px;background:linear-gradient(to bottom,rgba(0,0,0,.6),transparent);display:flex;align-items:center;justify-content:space-between;z-index:10">
-          <div style="color:#fff;font-size:13px;font-weight:700">📷 바코드 / QR 스캔</div>
-          <button onclick="emerStopScan()" style="background:rgba(255,255,255,.2);border:none;color:#fff;font-size:18px;width:34px;height:34px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)">✕</button>
+      <div id="emer-scan-mo" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:900;flex-direction:column;align-items:center;justify-content:center">
+        <div style="color:#fff;font-size:15px;font-weight:800;margin-bottom:6px;letter-spacing:-.3px">📷 QR 코드 스캔</div>
+        <div style="color:rgba(255,255,255,.6);font-size:11px;margin-bottom:16px;text-align:center">송장 오른쪽 위 <b style="color:#4ade80">정사각형 QR</b>을 네모 안에 맞춰주세요</div>
+        <!-- 카메라 뷰 + QR 가이드 -->
+        <div style="position:relative;width:280px;height:280px;border-radius:16px;overflow:hidden;background:#111">
+          <video id="emer-scan-video" style="width:100%;height:100%;object-fit:cover" playsinline muted autoplay></video>
+          <!-- 어두운 오버레이 (가이드박스 바깥) -->
+          <div style="position:absolute;inset:0;pointer-events:none">
+            <!-- 가이드 박스 (정사각형 QR용) -->
+            <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:190px;height:190px;animation:qrPulse 2s ease-in-out infinite">
+              <!-- 코너 마커 4개 -->
+              <div style="position:absolute;top:0;left:0;width:28px;height:28px;border-top:4px solid #22c55e;border-left:4px solid #22c55e;border-radius:3px 0 0 0;animation:qrCorner 2s ease-in-out infinite"></div>
+              <div style="position:absolute;top:0;right:0;width:28px;height:28px;border-top:4px solid #22c55e;border-right:4px solid #22c55e;border-radius:0 3px 0 0;animation:qrCorner 2s ease-in-out infinite .3s"></div>
+              <div style="position:absolute;bottom:0;left:0;width:28px;height:28px;border-bottom:4px solid #22c55e;border-left:4px solid #22c55e;border-radius:0 0 0 3px;animation:qrCorner 2s ease-in-out infinite .6s"></div>
+              <div style="position:absolute;bottom:0;right:0;width:28px;height:28px;border-bottom:4px solid #22c55e;border-right:4px solid #22c55e;border-radius:0 0 3px 0;animation:qrCorner 2s ease-in-out infinite .9s"></div>
+              <!-- 중앙 점 -->
+              <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:8px;height:8px;border-radius:50%;background:#22c55e;opacity:.7"></div>
+            </div>
+          </div>
         </div>
-        <!-- 하단 상태 -->
-        <div style="position:absolute;bottom:0;left:0;right:0;padding:16px 16px calc(env(safe-area-inset-bottom,0px) + 24px);background:linear-gradient(to top,rgba(0,0,0,.7),transparent);z-index:10;text-align:center">
-          <div id="emer-scan-status" style="color:#fff;font-size:13px;min-height:18px">카메라 준비 중...</div>
-        </div>
+        <div id="emer-scan-status" style="color:#aaa;font-size:12px;margin-top:14px;min-height:18px;text-align:center">카메라 준비 중...</div>
+        <button onclick="emerStopScan()" style="margin-top:14px;padding:11px 36px;background:#ef4444;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">✕ 닫기</button>
       </div>
 
       <!-- ★ OCR 자동입력 버튼 (QR 훼손 시 대체) -->
@@ -21137,91 +21147,87 @@ function emerStartScan(){
   statusEl.textContent = '카메라 시작 중...';
   var video = document.getElementById('emer-scan-video');
 
-  // ★ v9.26: 고화질 후면 카메라 + 자동초점
-  var constraints = {
-    video:{
-      facingMode:{ideal:'environment'},
-      width:{ideal:1920,min:1280},
-      height:{ideal:1080,min:720},
-      frameRate:{ideal:30,min:15}
-    }
-  };
-  navigator.mediaDevices.getUserMedia(constraints)
-    .catch(function(){
-      return navigator.mediaDevices.getUserMedia({
-        video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}
+  navigator.mediaDevices.getUserMedia({
+    video:{ facingMode:{ideal:'environment'}, width:{ideal:1280}, height:{ideal:720} }
+  })
+  .catch(function(){
+    return navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+  })
+  .then(function(stream){
+    window._emerCamStream = stream;
+    video.srcObject = stream;
+    video.play();
+
+    // ★ v9.30: BarcodeDetector (안드로이드 크롬 네이티브 엔진 — 폰 카메라 QR과 동일)
+    if('BarcodeDetector' in window){
+      statusEl.textContent = '인식 중... 바코드/QR에 갖다 대세요';
+      var detector = new BarcodeDetector({
+        formats: ['qr_code','code_128','ean_13','ean_8','code_39','pdf417','data_matrix','itf']
       });
-    })
-    .catch(function(){
-      return navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
-    })
-    .then(function(stream){
-      window._emerCamStream = stream;
-      video.srcObject = stream;
-      video.play();
-      statusEl.textContent = '인식 중... QR에 갖다 대세요 📦';
+      var _active = true;
+      window._emerBdStop = function(){ _active = false; };
 
-      // ★ v9.25: jsQR 기반 QR 인식 (모든 기기 호환, BarcodeDetector 대체)
-      function _startJsQrLoop(){
-        var canvas = document.createElement('canvas');
-        var ctx = canvas.getContext('2d');
-        var _active = true;
-        var _frameCount = 0;
-        function tick(){
-          if(!_active) return;
-          if(video.readyState < 2){ requestAnimationFrame(tick); return; }
-          _frameCount++;
-          // 2프레임마다 분석 (성능 최적화)
-          if(_frameCount % 2 !== 0){ requestAnimationFrame(tick); return; }
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          try{
-            var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            var code = window.jsQR(imageData.data, imageData.width, imageData.height, {
-              inversionAttempts: 'attemptBoth'
-            });
+      function detect(){
+        if(!_active) return;
+        if(video.readyState < 2){ setTimeout(detect, 100); return; }
+        detector.detect(video)
+          .then(function(codes){
             if(!_active) return;
-            if(code && code.data){
-              _active = false;
-              statusEl.textContent = '✅ QR 인식 성공!';
-              _emerHandleScan(code.data, statusEl);
-              return;
+            if(codes && codes.length > 0){
+              var raw = codes[0].rawValue;
+              if(raw && !window._emerScanLock){
+                statusEl.textContent = '✅ 인식!';
+                try{ navigator.vibrate && navigator.vibrate([60,30,60]); }catch(e){}
+                _emerHandleScan(raw, statusEl);
+                return;
+              }
             }
-          }catch(e){}
-          requestAnimationFrame(tick);
-        }
-        if(video.readyState >= 2){ requestAnimationFrame(tick); }
-        else { video.addEventListener('loadedmetadata', function(){ requestAnimationFrame(tick); }, {once:true}); }
-        window._emerBdStop = function(){ _active = false; };
+            requestAnimationFrame(detect);
+          })
+          .catch(function(){ requestAnimationFrame(detect); });
       }
+      video.addEventListener('loadedmetadata', function(){ requestAnimationFrame(detect); }, {once:true});
+      if(video.readyState >= 2) requestAnimationFrame(detect);
 
-      // jsQR 인라인 포함됨 — 바로 시작
-      _startJsQrLoop();
+    } else {
+      // ★ iOS 폴백: jsQR (640px 다운스케일 — 1920px 분석보다 4배 빠름)
+      statusEl.textContent = '인식 중... QR에 갖다 대세요';
+      var canvas = document.createElement('canvas');
+      var ctx = canvas.getContext('2d');
+      var _active = true;
+      var _fc = 0;
+      window._emerBdStop = function(){ _active = false; };
 
-      if(false){ // ZXing 폴백 (레거시 — jsQR 실패 시만)
-        if(typeof ZXing !== 'undefined' && ZXing.BrowserMultiFormatReader){
-        var hints = new Map();
-        hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-        if(ZXing.DecodeHintType.POSSIBLE_FORMATS)
-          hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.QR_CODE]);
-        _emerScanReader = new ZXing.BrowserMultiFormatReader(hints, 200);
-        _emerScanReader.decodeFromStream(stream, video, function(result, err){
-          if(result){
-            var raw = result.getText ? result.getText() : String(result);
-            _emerHandleScan(raw, statusEl);
+      function tick(){
+        if(!_active) return;
+        if(video.readyState < 2){ requestAnimationFrame(tick); return; }
+        if(++_fc % 2 !== 0){ requestAnimationFrame(tick); return; }
+        // 640px 다운스케일
+        var scale = Math.min(1, 640 / video.videoWidth);
+        canvas.width  = Math.round(video.videoWidth  * scale);
+        canvas.height = Math.round(video.videoHeight * scale);
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        try{
+          var img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          var code = window.jsQR(img.data, img.width, img.height, {inversionAttempts:'attemptBoth'});
+          if(code && code.data && !window._emerScanLock){
+            _active = false;
+            statusEl.textContent = '✅ QR 인식!';
+            try{ navigator.vibrate && navigator.vibrate([60,30,60]); }catch(e){}
+            _emerHandleScan(code.data, statusEl);
+            return;
           }
-          if(err && !(err.constructor && err.constructor.name==='NotFoundException'))
-            console.warn('[ZXing]', err&&err.message);
-        });
-      }} else {
-        statusEl.textContent = '❌ 스캐너 미지원 — OCR 버튼을 사용해주세요';
+        }catch(e){}
+        requestAnimationFrame(tick);
       }
-    })
-    .catch(function(e){
-      statusEl.textContent = '❌ 카메라 권한 필요 — 주소창 🔒 → 카메라 허용';
-      console.warn('[cam]', e);
-    });
+      video.readyState >= 2 ? requestAnimationFrame(tick)
+        : video.addEventListener('loadedmetadata', function(){ requestAnimationFrame(tick); }, {once:true});
+    }
+  })
+  .catch(function(e){
+    statusEl.textContent = '❌ 카메라 권한 필요 — 주소창 🔒 → 카메라 허용';
+    console.warn('[cam]', e);
+  });
 }
 
 // ★ v9.26: 스캔 결과 통합 처리
