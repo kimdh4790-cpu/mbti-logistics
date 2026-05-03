@@ -10656,7 +10656,7 @@ async function emerOcrScan(file){
       body: JSON.stringify({
         requests: [{
           image: {content: b64},
-          features: [{type: 'TEXT_DETECTION', maxResults: 1}]
+          features: [{type: 'TEXT_DETECTION', maxResults: 1}, {type: 'BARCODE_DETECTION', maxResults: 5}]
         }]
       })
     });
@@ -10668,9 +10668,61 @@ async function emerOcrScan(file){
     catch(e){ throw new Error('파싱 실패: '+rawText.slice(0,100)); }
     if(d.error) throw new Error(d.error.message);
 
+    // ★ v9.25: QR 코드 데이터 우선 처리 (BARCODE_DETECTION)
+    var barcodeAnnotations = d.responses?.[0]?.barcodeAnnotations || [];
+    var qrBarcode = barcodeAnnotations.find(function(b){ return b.format==='QR_CODE' || (b.rawValue&&b.rawValue.indexOf('|')>=0); });
+    if(qrBarcode && qrBarcode.rawValue){
+      console.log('[QR 직접인식]', qrBarcode.rawValue);
+      var _qpDirect = _parseQrText(qrBarcode.rawValue);
+      if(_qpDirect.tracking_no || _qpDirect.address){
+        // QR 데이터로 직접 입력
+        if(_qpDirect.tracking_no){
+          window._emerTrackings=[_qpDirect.tracking_no]; emerRefreshTrackingList();
+          var _inp=document.getElementById('emer-tracking-inp'); if(_inp) _inp.value=_qpDirect.tracking_no;
+        }
+        if(_qpDirect.order_id){ var _oi=document.getElementById('emer-orderid'); if(_oi) _oi.value=_qpDirect.order_id; }
+        if(_qpDirect.recipient){ var _ri=document.getElementById('emer-recipient'); if(_ri) _ri.value=_qpDirect.recipient; }
+        if(_qpDirect.address){ var _ai=document.getElementById('emer-addr'); if(_ai) _ai.value=_qpDirect.address; }
+        if(_qpDirect.lat&&_qpDirect.lng){
+          window._emerGps={lat:_qpDirect.lat,lng:_qpDirect.lng,src:'QR'};
+          var _ge=document.getElementById('emer-gps-status');
+          if(_ge) _ge.innerHTML='<span style="color:var(--teal)">📍 QR GPS 직접수신: '+_qpDirect.lat.toFixed(5)+', '+_qpDirect.lng.toFixed(5)+' ✅</span>';
+        }
+        // 요약 카드
+        var _sumEl=document.getElementById('emer-ocr-summary');
+        if(_sumEl){
+          var _fs='width:100%;padding:5px 7px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--bg);color:var(--text);margin-top:2px';
+          var _rows='<div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:6px">📷 QR 코드 직접 인식 성공!</div>';
+          _rows+='<div style="margin-bottom:5px"><label style="font-size:11px;color:var(--text2)">🔢 운송장번호</label><input id="ocr-edit-track" style="'+_fs+'" value="'+(_qpDirect.tracking_no||'')+'" oninput="_emerOcrApply()"></div>';
+          _rows+='<div style="margin-bottom:5px"><label style="font-size:11px;color:var(--text2)">📋 주문번호</label><input id="ocr-edit-order" style="'+_fs+'" value="'+(_qpDirect.order_id||'')+'" oninput="_emerOcrApply()"></div>';
+          _rows+='<div style="margin-bottom:5px"><label style="font-size:11px;color:var(--text2)">👤 수령인</label><input id="ocr-edit-recip" style="'+_fs+'" value="'+(_qpDirect.recipient||'')+'" oninput="_emerOcrApply()"></div>';
+          _rows+='<div style="margin-bottom:5px"><label style="font-size:11px;color:var(--text2)">📍 주소</label><input id="ocr-edit-addr" style="'+_fs+'" value="'+(_qpDirect.address||'')+'" oninput="_emerOcrApply()"></div>';
+          _sumEl.innerHTML=_rows; _sumEl.style.display='block';
+        }
+        window._emerOcrApply=function(){
+          var t=document.getElementById('ocr-edit-track'),o=document.getElementById('ocr-edit-order'),r=document.getElementById('ocr-edit-recip'),a=document.getElementById('ocr-edit-addr');
+          if(t&&t.value){var cl=t.value.replace(/[\.\-\s]/g,'').trim();window._emerTrackings=[cl];emerRefreshTrackingList();}
+          if(o){var oi=document.getElementById('emer-orderid');if(oi)oi.value=o.value;}
+          if(r){var re=document.getElementById('emer-recipient');if(re)re.value=r.value;}
+          if(a){var ad=document.getElementById('emer-addr');if(ad)ad.value=a.value;}
+        };
+        window._emerOcrApply();
+        if(status) status.innerHTML='<span style="color:#7c3aed">✅ QR 코드 직접 인식 완료</span>';
+        // 이미지도 배송사진으로 추가
+        var _reader2=new FileReader(); _reader2.onload=function(e){window._emerPhotos.push(e.target.result);emerRefreshPhotoWrap();}; _reader2.readAsDataURL(file);
+        window._emerEntryMode='ocr';
+        // GPS 있으면 바로 핀 생성
+        if(_qpDirect.lat&&_qpDirect.lng&&window._activeDriverMapAddPin){
+          var _pr={fbId:'_preview_'+Date.now(),driver:S.curDriver||'',trackings:window._emerTrackings.slice(),tracking:window._emerTrackings[0]||'',order_id:_qpDirect.order_id||'',recipient:_qpDirect.recipient||'',addr:_qpDirect.address||'',gps:{lat:_qpDirect.lat,lng:_qpDirect.lng},time:new Date().toTimeString().slice(0,5),status:'저장대기'};
+          window._activeDriverMapAddPin(_pr);
+          window._activeDriverMap&&window._activeDriverMap.panTo({lat:_qpDirect.lat,lng:_qpDirect.lng});
+        }
+        return; // QR 인식 성공 → OCR 파싱 불필요
+      }
+    }
+
     // OCR 텍스트 추출
     var ocrText = d.responses?.[0]?.textAnnotations?.[0]?.description || '';
-    // ★ 디버그: 콘솔에 OCR 원문 출력 (F12 → Console에서 확인)
     console.log('[OCR 원문]\n' + ocrText);
     if(!ocrText) throw new Error('텍스트 인식 실패 — 사진을 다시 찍어주세요');
 
@@ -10764,18 +10816,22 @@ async function emerOcrScan(file){
       if(startIdx < 0) return '';
 
       // 첫 주소 라인부터 쓰레기 건너뛰며 유효 주소 라인 수집 (최대 5줄 탐색)
-      // 첫 주소 줄에서 번지 뒤 날짜잡텍스트(일 년 월 일) 제거
-      var _firstAddr = lines[startIdx].replace(/\s+(?:일|년|월)(?:\s+(?:일|년|월|일))*.*$/, '').trim();
+      // 첫 주소 줄에서 번지 뒤 잡텍스트 제거 (수열/년/월/일/인수자/영어 등)
+      var _firstAddr = lines[startIdx];
+      // 번지 숫자(도로명+숫자) 이후 한글 잡텍스트 제거
+      // 예: "사상구 모라로110번길 121 수열 년 월 일" → "사상구 모라로110번길 121"
+      var _addrClean = _firstAddr.match(/^(.+?(?:로|길|번길|번지)\s*\d+(?:-\d+)?)(?:\s+[가-힣]{1,4}(?:\s+[가-힣]{1,4})*)?$/);
+      if(_addrClean) _firstAddr = _addrClean[1].trim();
       _firstAddr = _firstAddr.replace(/\s+(인수자|서명|coupa[^\s]*).*$/i, '').trim();
       var addrParts = [_firstAddr];
-      var done = _firstAddr.match(/\d+호/); // 이미 호수 있으면 종료
+      var done = _firstAddr.match(/\d+호|\d{3,4}-\d+/); // 이미 호수 있으면 종료
       for(var j=startIdx+1; j < Math.min(startIdx+6, lines.length) && !done; j++){
         var ln = lines[j];
         if(!ln) continue;
         if(isJunkLine(ln)) continue; // 쓰레기는 건너뜀
         if(isAddrLine(ln)){
           addrParts.push(ln);
-          if(ln.match(/\d+호/)) done = true; // 호수 발견 → 종료
+          if(ln.match(/\d+호|\d{3,4}-\d+/)) done = true; // 호수 발견 → 종료
         } else {
           // 배송메모(문앞/자율출입) 만나면 종료
           if(ln.match(/문\s*앞|경비실|자율출입|부재|택배함/)) break;
