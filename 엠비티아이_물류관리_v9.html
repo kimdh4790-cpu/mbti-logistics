@@ -20603,10 +20603,19 @@ function openEmergencyDelivery(){
       </div>
       <div style="font-size:11px;color:var(--text3);margin-bottom:14px">QR 스캔하면 운송장+주소+GPS 자동입력 → 지도에 핀 표시됩니다.</div>
 
-      <!-- ★ v9.25: 바코드/QR 실시간 스캐너 버튼 (주력) -->
+      <!-- ★ v9.48: 폰 네이티브 카메라 QR 촬영 (최우선) + 웹 라이브 스캔 -->
+      <!-- 네이티브 카메라 input (숨김) -->
+      <input type="file" id="emer-native-cam" accept="image/*" capture="environment" style="display:none" onchange="emerNativeCamQR(this)">
+      <div style="margin-bottom:8px">
+        <button onclick="document.getElementById('emer-native-cam').click()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#0ea5e9,#0284c7);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:900;cursor:pointer">
+          <span style="font-size:20px">📸</span> 폰 카메라로 QR 촬영 <span style="font-size:11px;opacity:.85;font-weight:600">(빠름)</span>
+        </button>
+        <div id="emer-native-status" style="font-size:11px;color:var(--teal);text-align:center;margin-top:4px;min-height:15px"></div>
+      </div>
+      <!-- 라이브 스캔 (보조) -->
       <div style="margin-bottom:10px">
-        <button onclick="emerStartScan()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">
-          <span style="font-size:18px">📷</span> QR 코드 실시간 스캔
+        <button onclick="emerStartScan()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px;background:rgba(124,58,237,.15);color:var(--purple);border:1.5px solid var(--purple);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">
+          <span style="font-size:16px">📷</span> 웹 라이브 스캔
         </button>
         <div id="emer-barcode-status" style="font-size:11px;color:var(--text3);text-align:center;margin-top:5px;min-height:16px"></div>
       </div>
@@ -21428,6 +21437,82 @@ function _parseQrText(text){
 
 // ★ v9.25: 실시간 바코드/QR 스캐너
 var _emerScanReader = null;
+
+// ★ v9.48: 폰 네이티브 카메라로 QR 촬영 후 디코딩
+function emerNativeCamQR(input){
+  var statusEl = document.getElementById('emer-native-status');
+  if(!input.files || !input.files[0]){ return; }
+  var file = input.files[0];
+  input.value = ''; // 같은 파일 재선택 허용
+  if(statusEl) statusEl.textContent = '🔍 QR 분석 중...';
+
+  var url = URL.createObjectURL(file);
+  var img = new Image();
+  img.onload = function(){
+    // ① BarcodeDetector (Android Chrome — 가장 빠름)
+    if('BarcodeDetector' in window){
+      var bd;
+      try{ bd = new BarcodeDetector({formats:['qr_code','data_matrix','aztec']}); }
+      catch(e){ try{ bd = new BarcodeDetector({formats:['qr_code']}); }catch(e2){} }
+      if(bd){
+        createImageBitmap(file).then(function(bmp){
+          bd.detect(bmp).then(function(codes){
+            bmp.close(); URL.revokeObjectURL(url);
+            if(codes && codes.length > 0 && codes[0].rawValue){
+              if(statusEl) statusEl.textContent = '✅ QR 인식!';
+              _emerHandleScan(codes[0].rawValue, statusEl);
+            } else {
+              // BD 실패 → jsQR 폴백
+              _nativeCamJsQR(img, statusEl, url);
+            }
+          }).catch(function(){ _nativeCamJsQR(img, statusEl, url); });
+        }).catch(function(){ _nativeCamJsQR(img, statusEl, url); });
+        return;
+      }
+    }
+    // ② jsQR 폴백
+    _nativeCamJsQR(img, statusEl, url);
+  };
+  img.onerror = function(){
+    URL.revokeObjectURL(url);
+    if(statusEl) statusEl.textContent = '❌ 이미지 로드 실패';
+  };
+  img.src = url;
+}
+
+function _nativeCamJsQR(img, statusEl, url){
+  if(!window.jsQR){ if(statusEl) statusEl.textContent = '❌ jsQR 미로드'; URL.revokeObjectURL(url); return; }
+  var cv = document.createElement('canvas');
+  var ctx = cv.getContext('2d');
+  // 최대 1600px로 리사이즈 (jsQR 성능)
+  var maxW = 1600, scale = Math.min(1, maxW / img.naturalWidth);
+  cv.width = Math.round(img.naturalWidth * scale);
+  cv.height = Math.round(img.naturalHeight * scale);
+  ctx.drawImage(img, 0, 0, cv.width, cv.height);
+  URL.revokeObjectURL(url);
+
+  function tryDecode(enhance){
+    var d = ctx.getImageData(0, 0, cv.width, cv.height);
+    if(enhance){
+      // 그레이스케일 + 대비 강화
+      var px=d.data, len=px.length;
+      for(var i=0;i<len;i+=4){ var g=Math.round(px[i]*.299+px[i+1]*.587+px[i+2]*.114); px[i]=px[i+1]=px[i+2]=g; }
+      var mn=255,mx=0;
+      for(var j=0;j<len;j+=4){ if(px[j]<mn)mn=px[j]; if(px[j]>mx)mx=px[j]; }
+      var rng=mx-mn||1;
+      for(var k=0;k<len;k+=4){ var v=Math.round((px[k]-mn)/rng*255); px[k]=px[k+1]=px[k+2]=v; }
+    }
+    return window.jsQR(d.data, d.width, d.height, {inversionAttempts:'attemptBoth'});
+  }
+
+  var r = tryDecode(false) || tryDecode(true);
+  if(r && r.data){
+    if(statusEl) statusEl.textContent = '✅ QR 인식!';
+    _emerHandleScan(r.data, statusEl);
+  } else {
+    if(statusEl) statusEl.textContent = '❌ QR 인식 실패 — 라이브 스캔 또는 붙여넣기 시도';
+  }
+}
 
 function emerStartScan(){
   var mo = document.getElementById('emer-scan-mo');
