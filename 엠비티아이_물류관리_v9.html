@@ -20619,7 +20619,7 @@ function openEmergencyDelivery(){
         <button onclick="emerStartScan()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px;background:rgba(124,58,237,.15);color:var(--purple);border:1.5px solid var(--purple);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">
           <span style="font-size:16px">📷</span> 웹 라이브 스캔
         </button>
-        <div id="emer-barcode-status" style="font-size:11px;color:var(--text3);text-align:center;margin-top:5px;min-height:16px"></div>
+        <div id="emer-barcode-status" style="font-size:11px;color:var(--text3);text-align:center;margin-top:5px;min-height:16px">QR 코드에 <b>바짝</b> 가까이 대면 자동 인식 📦</div>
       </div>
 
       <!-- 실시간 스캐너 모달 -->
@@ -21660,7 +21660,7 @@ function emerStartScan(){
     octx.fillStyle='rgba(0,0,0,0.7)';
     octx.fillRect(cw/2-140, y+bh+6, 280, 28);
     octx.fillStyle='#FFD600';
-    octx.fillText('QR 코드만 화면에 꽉 채우세요', cw/2, y+bh+24);
+    octx.fillText('QR 코드를 노란 박스에 꽉 채우세요  📦', cw/2, y+bh+24);
     octx.textAlign='start';
   }
   function drawQrBox(pts, vw, vh){
@@ -21727,7 +21727,7 @@ function emerStartScan(){
       window._emerCamStream = stream;
       video.srcObject = stream;
       video.play();
-      statusEl.textContent = '📦 QR만 화면 가득 — 가까이 대세요';
+      statusEl.innerHTML = '📦 QR 코드에 <b style="color:#FFD600">바짝</b> 가까이 — 화면 가득 채우세요';
 
       // ★ v9.25: getCapabilities() 체크 후 지원 기기만 autofocus 적용
       try{
@@ -21759,7 +21759,10 @@ function emerStartScan(){
             function bdTick(){
               if(!_active) return;
               if(video.readyState < 2){ requestAnimationFrame(bdTick); return; }
-              bd.detect(video)
+              // ★ v9.57: live video 대신 스냅샷 방식 (BarcodeDetector 정확도 향상)
+              createImageBitmap(video).then(function(bmp){
+                return bd.detect(bmp).then(function(codes){ bmp.close(); return codes; });
+              }).catch(function(){ return bd.detect(video); })
                 .then(function(codes){
                   if(!_active) return;
                   if(codes && codes.length > 0){
