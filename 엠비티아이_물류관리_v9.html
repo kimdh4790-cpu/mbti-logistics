@@ -3973,27 +3973,43 @@ function _renderLiveMap(center, driverLocs, emerLocs){
   mapDiv.style.position = 'relative';
   mapDiv.appendChild(zoomDiv);
   window._liveMap = map;
+  window._liveMapMarkers = {}; // ★ 기사명 → 마커 참조 (실시간 업데이트용)
 
   var infoWin = new google.maps.InfoWindow();
   var legend = document.getElementById('live-map-legend');
-  var geocoder = new google.maps.Geocoder();
 
-  // ★ v9.26: 좌표→도로명 주소 변환 함수
-  function getAddress(lat, lng, callback){
-    geocoder.geocode({location:{lat:lat,lng:lng},language:'ko'}, function(results, status){
-      if(status === 'OK' && results[0]){
-        // 도로명 주소 우선, 없으면 첫 번째 결과
-        var roadAddr = results.find(function(r){
-          return r.types.indexOf('premise')>=0 || r.types.indexOf('street_address')>=0 || r.types.indexOf('route')>=0;
-        });
-        callback((roadAddr||results[0]).formatted_address.replace('대한민국 ',''));
-      } else {
-        callback(lat.toFixed(5)+', '+lng.toFixed(5));
-      }
-    });
+  // ★ v9.26: 도로명 주소 변환 — Geocoding API 없으면 저장된 주소 사용
+  function getAddress(lat, lng, storedAddr, callback){
+    // 저장된 주소 있으면 바로 사용 (Geocoding API 불필요)
+    if(storedAddr && storedAddr.length > 5 && !storedAddr.match(/^\d+\.\d+/)){
+      callback(storedAddr); return;
+    }
+    // Geocoding API 시도
+    if(window._geocoderFailed){
+      callback(lat.toFixed(5)+', '+lng.toFixed(5)+'<br><span style="font-size:10px;color:#f59e0b">⚠️ Geocoding API 미활성 — Cloud Console에서 활성화 필요</span>');
+      return;
+    }
+    try{
+      var gc = new google.maps.Geocoder();
+      gc.geocode({location:{lat:lat,lng:lng},language:'ko'}, function(results, status){
+        if(status === 'OK' && results[0]){
+          var roadAddr = results.find(function(r){
+            return r.types.indexOf('street_address')>=0 || r.types.indexOf('premise')>=0;
+          });
+          callback((roadAddr||results[0]).formatted_address.replace('대한민국 ',''));
+        } else if(status === 'REQUEST_DENIED'){
+          window._geocoderFailed = true;
+          callback(lat.toFixed(5)+', '+lng.toFixed(5)+'<br><span style="font-size:10px;color:#f59e0b">⚠️ Geocoding API 비활성화 상태</span>');
+        } else {
+          callback(storedAddr || lat.toFixed(5)+', '+lng.toFixed(5));
+        }
+      });
+    }catch(e){
+      callback(storedAddr || lat.toFixed(5)+', '+lng.toFixed(5));
+    }
   }
 
-  // 기사 위치 핀 (빨간색)
+  // 기사 위치 핀 (빨간색) — 실시간 업데이트
   driverLocs.forEach(function(d){
     if(!d.lat || !d.lng) return;
     var marker = new google.maps.Marker({
@@ -4010,14 +4026,23 @@ function _renderLiveMap(center, driverLocs, emerLocs){
       },
       label: {text: d.name.slice(0,1), color: '#fff', fontSize: '11px', fontWeight: 'bold'}
     });
+    marker._data = d;
+    window._liveMapMarkers[d.name] = marker;
     marker.addListener('click', function(){
       var updated = d.updatedAt ? d.updatedAt.slice(11,16) : '';
-      infoWin.setContent('<div style="padding:8px;font-size:13px;min-width:180px"><b>🚗 '+d.name+'</b><br><span style="color:#888;font-size:11px">캠프: '+(d.camp||'-')+' · '+updated+'</span><br><div id="addr-'+d.name.replace(/\s/g,'')+'" style="color:#2563eb;font-size:12px;margin-top:4px">📍 주소 불러오는 중...</div></div>');
+      var addrId = 'addr-'+d.name.replace(/\s/g,'');
+      infoWin.setContent(
+        '<div style="padding:8px;font-size:13px;min-width:190px">'
+        +'<b>🚗 '+d.name+'</b><br>'
+        +'<span style="color:#888;font-size:11px">캠프: '+(d.camp||'-')+' · 최근: '+updated+'</span><br>'
+        +'<div id="'+addrId+'" style="color:#1d4ed8;font-size:12px;margin-top:5px;line-height:1.4">📍 주소 불러오는 중...</div>'
+        +'</div>'
+      );
       infoWin.open(map, marker);
-      // 도로명 주소 비동기 로드
-      getAddress(d.lat, d.lng, function(addr){
-        var el = document.getElementById('addr-'+d.name.replace(/\s/g,''));
-        if(el) el.textContent = '📍 ' + addr;
+      // ★ 저장된 주소 우선 → Geocoding 폴백
+      getAddress(d.lat, d.lng, d.address||d.addr||'', function(addr){
+        var el = document.getElementById(addrId);
+        if(el) el.innerHTML = '📍 ' + addr;
       });
     });
 
@@ -4061,6 +4086,32 @@ function _renderLiveMap(center, driverLocs, emerLocs){
   if(!driverLocs.length && !emerLocs.length){
     map.setCenter({lat:35.1796, lng:129.0756});
     map.setZoom(11);
+  }
+
+  // ★ v9.26: Firebase 실시간 리스너 — 기사 위치 자동 업데이트
+  if(FB && _db){
+    var liveUnsub = _db.collection('driver_locations')
+      .where('date','==',today())
+      .onSnapshot(function(snap){
+        snap.docChanges().forEach(function(change){
+          if(change.type === 'removed') return;
+          var d = change.doc.data();
+          if(!d.lat || !d.lng) return;
+          // 기존 마커 위치 업데이트
+          var mk = window._liveMapMarkers && window._liveMapMarkers[d.name];
+          if(mk){
+            mk.setPosition({lat:d.lat, lng:d.lng});
+            mk._data = d; // 최신 데이터 갱신
+          }
+        });
+      }, function(e){ console.warn('[LiveMap] 실시간 오류:', e.message); });
+
+    // 지도 닫을 때 리스너 해제
+    var closeBtn = document.querySelector('#live-map-mo button[onclick*="remove"]');
+    if(closeBtn){
+      var orig = closeBtn.onclick;
+      closeBtn.onclick = function(){ liveUnsub(); if(orig) orig.call(this); };
+    }
   }
 }
 async function openEmergencyAdmin(){
