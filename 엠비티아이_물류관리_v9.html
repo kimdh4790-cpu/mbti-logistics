@@ -21129,7 +21129,8 @@ async function emerOcrScan(file){
           return;
         }
         // GPS 없으면 핀만 생성 (수동 저장 필요)
-        if(_qpDirect.lat&&_qpDirect.lng&&window._activeDriverMapAddPin){\n          var _pr={fbId:'_preview_'+Date.now(),driver:S.curDriver||'',trackings:window._emerTrackings.slice(),tracking:window._emerTrackings[0]||'',order_id:_qpDirect.order_id||'',recipient:_qpDirect.recipient||'',addr:_qpDirect.address||'',gps:{lat:_qpDirect.lat,lng:_qpDirect.lng},time:new Date().toTimeString().slice(0,5),status:'저장대기'};
+        if(_qpDirect.lat&&_qpDirect.lng&&window._activeDriverMapAddPin){
+          var _pr={fbId:'_preview_'+Date.now(),driver:S.curDriver||'',trackings:window._emerTrackings.slice(),tracking:window._emerTrackings[0]||'',order_id:_qpDirect.order_id||'',recipient:_qpDirect.recipient||'',addr:_qpDirect.address||'',gps:{lat:_qpDirect.lat,lng:_qpDirect.lng},time:new Date().toTimeString().slice(0,5),status:'저장대기'};
           window._activeDriverMapAddPin(_pr);
           window._activeDriverMap&&window._activeDriverMap.panTo({lat:_qpDirect.lat,lng:_qpDirect.lng});
         }
