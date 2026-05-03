@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.39</title>
+<title>엠비티아이 물류관리 v9.40</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10421,7 +10421,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.39 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.40 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -11400,7 +11400,7 @@ function updFbUI(){
   var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.33 · 🔥 실시간':'v9.25 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.39 · Firebase 실시간':'v9.39 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.40 · Firebase 실시간':'v9.40 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -20704,92 +20704,108 @@ function openEmergencyDelivery(){
 
 // ★ v9.25: OCR: 운송장 사진 → Claude Vision → 자동 입력
 
-// ★ v9.39: QR 텍스트 붙여넣기 — 폰 카메라로 읽은 V1|... 텍스트를 클립보드에서 파싱
-async function emerPasteQR(){
-  var status = document.getElementById('emer-ocr-status');
-  try{
-    var text = '';
-    // 클립보드 읽기 시도
-    if(navigator.clipboard && navigator.clipboard.readText){
-      text = (await navigator.clipboard.readText()).trim();
-    }
-    // 클립보드 권한 없으면 수동 입력 팝업
-    if(!text){
-      text = (prompt('QR 텍스트를 붙여넣으세요\n(폰 카메라로 QR 스캔 → 복사 → 여기에 붙여넣기)') || '').trim();
-    }
-    if(!text){ return; }
+// ★ v9.40: QR 텍스트 붙여넣기 — 모달 textarea 방식 (클립보드 권한 불필요)
+function emerPasteQR(){
+  // 기존 모달 있으면 제거
+  var old = document.getElementById('qr-paste-mo');
+  if(old) old.remove();
 
-    // V1| 형식 파싱
-    var parsed = _parseQrText(text);
-    if(!parsed.tracking_no && !parsed.address){
-      // 혹시 앞에 다른 텍스트 붙은 경우 V1 부분만 추출
-      var v1match = text.match(/V1\|.+/);
-      if(v1match) parsed = _parseQrText(v1match[0]);
+  document.body.insertAdjacentHTML('beforeend', `
+    <div id="qr-paste-mo" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;display:flex;align-items:flex-end">
+      <div style="width:100%;background:var(--bg);border-radius:20px 20px 0 0;padding:20px 16px calc(env(safe-area-inset-bottom,0px)+20px)">
+        <div style="font-size:14px;font-weight:800;margin-bottom:6px">📋 QR 텍스트 붙여넣기</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.5">
+          폰 카메라로 QR 스캔 → 텍스트 <b>복사</b> → 아래 칸 길게 눌러 <b>붙여넣기</b>
+        </div>
+        <textarea id="qr-paste-inp" rows="3" placeholder="V1|운송장번호|주소|상세주소|수령인|..." 
+          style="width:100%;padding:10px;border:2px solid var(--blue);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text);box-sizing:border-box;resize:none"
+          oninput="emerPasteQRParse(this.value)"></textarea>
+        <div id="qr-paste-result" style="font-size:11px;color:var(--teal);margin-top:6px;min-height:14px"></div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button onclick="document.getElementById('qr-paste-mo').remove()" 
+            style="flex:1;padding:11px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">취소</button>
+          <button onclick="emerPasteQRApply()" 
+            style="flex:2;padding:11px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer">✅ 입력 적용</button>
+        </div>
+      </div>
+    </div>
+  `);
+  // 자동 포커스 (붙여넣기 바로 할 수 있도록)
+  setTimeout(function(){ var el=document.getElementById('qr-paste-inp'); if(el) el.focus(); }, 100);
+}
+
+function emerPasteQRParse(text){
+  if(!text) return;
+  var v1 = text.match(/V1\|.+/);
+  if(v1){
+    var p = _parseQrText(v1[0]);
+    var res = document.getElementById('qr-paste-result');
+    if(res){
+      var msg = [];
+      if(p.tracking_no) msg.push('운송장 '+p.tracking_no);
+      if(p.address) msg.push('주소 ✅');
+      if(p.lat) msg.push('GPS ✅');
+      res.innerHTML = msg.length ? '인식됨: '+msg.join(' / ') : '주소/운송장 인식 중...';
     }
-
-    if(!parsed.tracking_no && !parsed.address){
-      if(status) status.innerHTML = '<span style="color:var(--red)">❌ QR 형식이 아닙니다. 쿠팡 QR 텍스트를 복사해주세요</span>';
-      return;
-    }
-
-    // 운송장
-    if(parsed.tracking_no){
-      window._emerTrackings = window._emerTrackings || [];
-      if(window._emerTrackings.indexOf(parsed.tracking_no) < 0){
-        window._emerTrackings.push(parsed.tracking_no);
-        emerRefreshTrackingList && emerRefreshTrackingList();
-      }
-    }
-    // 주소
-    if(parsed.address){ var ae=document.getElementById('emer-addr'); if(ae) ae.value=parsed.address; }
-    // 수령인
-    if(parsed.recipient){ var re=document.getElementById('emer-recipient'); if(re) re.value=parsed.recipient; }
-    // 주문번호
-    if(parsed.order_id){ var oe=document.getElementById('emer-orderid'); if(oe) oe.value=parsed.order_id; }
-    // 배송메모
-    if(parsed.memo){ var me=document.getElementById('emer-delivmemo'); if(me) me.value=parsed.memo; }
-
-    // GPS — QR에 좌표 있으면 즉시, 없으면 Geocoding
-    if(parsed.lat && parsed.lng){
-      window._emerGps = {lat:parsed.lat, lng:parsed.lng, src:'QR'};
-      var gEl=document.getElementById('emer-gps-status');
-      if(gEl) gEl.innerHTML='<span style="color:var(--teal)">📍 QR GPS: '+parsed.lat.toFixed(5)+', '+parsed.lng.toFixed(5)+' ✅</span>';
-      // 지도 핀 즉시 생성
-      if(window._activeDriverMapAddPin){
-        var pr={fbId:'_preview_paste_'+Date.now(),driver:S.curDriver||'',trackings:(window._emerTrackings||[]).slice(),tracking:(window._emerTrackings||[])[0]||'',recipient:parsed.recipient||'',addr:parsed.address||'',gps:{lat:parsed.lat,lng:parsed.lng},time:new Date().toTimeString().slice(0,5),status:'저장대기'};
-        window._activeDriverMapAddPin(pr);
-        window._activeDriverMap && window._activeDriverMap.panTo({lat:parsed.lat,lng:parsed.lng});
-      }
-    } else if(parsed.address){
-      // 주소로 Geocoding
-      var gKey = window._cachedGoogleApiKey || localStorage.getItem('mbti_google_api_key') || '';
-      if(gKey){
-        var gEl2=document.getElementById('emer-gps-status');
-        if(gEl2) gEl2.innerHTML='<span style="color:var(--blue)">📍 GPS 변환 중...</span>';
-        fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(parsed.address)+'&language=ko&region=kr&key='+gKey)
-          .then(function(r){return r.json();})
-          .then(function(d){
-            if(d.status==='OK'&&d.results&&d.results[0]){
-              var lc=d.results[0].geometry.location;
-              window._emerGps={lat:lc.lat,lng:lc.lng,src:'geocode',addr:parsed.address};
-              var gEl3=document.getElementById('emer-gps-status');
-              if(gEl3) gEl3.innerHTML='<span style="color:var(--teal)">📍 배송지 GPS 변환 완료 ✅</span>';
-            }
-          }).catch(function(){});
-      }
-    }
-
-    window._emerEntryMode = 'barcode';
-    var filled = [parsed.tracking_no&&'운송장', parsed.address&&'주소', parsed.recipient&&'수령인', (parsed.lat||parsed.address)&&'GPS'].filter(Boolean);
-    if(status) status.innerHTML='<span style="color:var(--teal)">✅ QR 입력 완료: '+filled.join(' / ')+'</span>';
-    var sumEl=document.getElementById('emer-ocr-summary');
-    if(sumEl){sumEl.style.display='block';sumEl.innerHTML='<b>📋 QR 붙여넣기 완료</b><br>'+(parsed.tracking_no?'📦 운송장: '+parsed.tracking_no+'<br>':'')+(parsed.address?'📍 주소: '+parsed.address+'<br>':'')+(parsed.recipient?'👤 수령인: '+parsed.recipient+'<br>':'')+(parsed.lat?'🗺️ GPS: 정확한 배송지 좌표<br>':'');}
-
-  }catch(e){
-    // 클립보드 권한 거부 등
-    var text2 = (prompt('QR 텍스트를 붙여넣으세요\n(V1|운송장|주소|... 형식)') || '').trim();
-    if(text2) emerPasteQR._retry && emerPasteQR._retry(text2);
   }
+}
+
+function emerPasteQRApply(){
+  var inp = document.getElementById('qr-paste-inp');
+  if(!inp || !inp.value.trim()){
+    alert('QR 텍스트를 붙여넣어 주세요');
+    return;
+  }
+  var text = inp.value.trim();
+  var v1match = text.match(/V1\|.+/);
+  if(!v1match){ alert('쿠팡 QR 형식(V1|...)이 아닙니다'); return; }
+
+  var parsed = _parseQrText(v1match[0]);
+  document.getElementById('qr-paste-mo').remove();
+
+  if(parsed.tracking_no){
+    window._emerTrackings = window._emerTrackings || [];
+    if(window._emerTrackings.indexOf(parsed.tracking_no) < 0){
+      window._emerTrackings.push(parsed.tracking_no);
+      emerRefreshTrackingList && emerRefreshTrackingList();
+    }
+  }
+  if(parsed.address){ var ae=document.getElementById('emer-addr'); if(ae) ae.value=parsed.address; }
+  if(parsed.recipient){ var re=document.getElementById('emer-recipient'); if(re) re.value=parsed.recipient; }
+  if(parsed.order_id){ var oe=document.getElementById('emer-orderid'); if(oe) oe.value=parsed.order_id; }
+  if(parsed.memo){ var me=document.getElementById('emer-delivmemo'); if(me) me.value=parsed.memo; }
+
+  if(parsed.lat && parsed.lng){
+    window._emerGps={lat:parsed.lat,lng:parsed.lng,src:'QR'};
+    var gEl=document.getElementById('emer-gps-status');
+    if(gEl) gEl.innerHTML='<span style="color:var(--teal)">📍 QR GPS ✅ ('+parsed.lat.toFixed(4)+', '+parsed.lng.toFixed(4)+')</span>';
+    if(window._activeDriverMapAddPin){
+      var pr={fbId:'_preview_paste_'+Date.now(),driver:S.curDriver||'',trackings:(window._emerTrackings||[]).slice(),tracking:(window._emerTrackings||[])[0]||'',recipient:parsed.recipient||'',addr:parsed.address||'',gps:{lat:parsed.lat,lng:parsed.lng},time:new Date().toTimeString().slice(0,5),status:'저장대기'};
+      window._activeDriverMapAddPin(pr);
+      window._activeDriverMap&&window._activeDriverMap.panTo({lat:parsed.lat,lng:parsed.lng});
+    }
+  } else if(parsed.address){
+    var gKey=window._cachedGoogleApiKey||localStorage.getItem('mbti_google_api_key')||'';
+    if(gKey){
+      var gEl2=document.getElementById('emer-gps-status');
+      if(gEl2) gEl2.innerHTML='<span style="color:var(--blue)">📍 GPS 변환 중...</span>';
+      fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(parsed.address)+'&language=ko&region=kr&key='+gKey)
+        .then(function(r){return r.json();}).then(function(d){
+          if(d.status==='OK'&&d.results&&d.results[0]){
+            var lc=d.results[0].geometry.location;
+            window._emerGps={lat:lc.lat,lng:lc.lng,src:'geocode',addr:parsed.address};
+            var gEl3=document.getElementById('emer-gps-status');
+            if(gEl3) gEl3.innerHTML='<span style="color:var(--teal)">📍 배송지 GPS ✅</span>';
+          }
+        }).catch(function(){});
+    }
+  }
+
+  window._emerEntryMode='barcode';
+  var st=document.getElementById('emer-ocr-status');
+  if(st) st.innerHTML='<span style="color:var(--teal)">✅ QR 입력 완료!</span>';
+  var sumEl=document.getElementById('emer-ocr-summary');
+  if(sumEl){sumEl.style.display='block';sumEl.innerHTML='<b>📋 QR 붙여넣기 완료</b><br>'+(parsed.tracking_no?'📦 운송장: '+parsed.tracking_no+'<br>':'')+(parsed.address?'📍 주소: '+parsed.address+'<br>':'')+(parsed.recipient?'👤 수령인: '+parsed.recipient+'<br>':'')+(parsed.lat?'🗺️ GPS: 정확 ✅':'');}
 }
 
 async function emerOcrScan(file){
