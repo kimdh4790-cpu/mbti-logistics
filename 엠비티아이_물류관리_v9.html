@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.43</title>
+<title>엠비티아이 물류관리 v9.46</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10421,7 +10421,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.43 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.46 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -11397,10 +11397,10 @@ function updBadge(){
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
 function updFbUI(){
-  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.33 · 🔥 실시간':'v9.25 · 데모';
+  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.46 · 🔥 실시간':'v9.46 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.43 · Firebase 실시간':'v9.43 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.46 · Firebase 실시간':'v9.46 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -20836,7 +20836,7 @@ async function emerOcrScan(file){
         // ★ v9.38: ① BarcodeDetector — 파일에서 직접 ImageBitmap 생성 (가장 정확)
         if('BarcodeDetector' in window){
           try{
-            var bd = new BarcodeDetector({formats:['qr_code','aztec','data_matrix','code_128','pdf417']});
+            var bd = new BarcodeDetector({formats:['qr_code','aztec','data_matrix']}); // ★ v9.46: 바코드포맷제거
             // 원본 파일로 직접 ImageBitmap 생성 (canvas 경유 없이 = 품질 손실 없음)
             var bmp = await createImageBitmap(file);
             var bdCodes = await bd.detect(bmp);
@@ -21455,22 +21455,34 @@ function emerStartScan(){
     syncOv();
     var cw=ov.width, ch=ov.height;
     octx.clearRect(0,0,cw,ch);
-    // 가이드 박스 (중앙 스캔 영역)
-    var bw=Math.min(cw,ch)*0.62, x=(cw-bw)/2, y=(ch-bw)/2;
-    octx.fillStyle='rgba(0,0,0,0.45)';
+    // ★ v9.44: QR만 꽉 채우도록 큰 가이드 박스 (화면의 80%)
+    var pad=Math.min(cw,ch)*0.08;
+    var bw=cw-pad*2, bh=bw; // 정사각형
+    if(bh > ch-pad*2) bh = ch-pad*2;
+    var x=pad, y=(ch-bh)/2;
+    // 사방 어둡게
+    octx.fillStyle='rgba(0,0,0,0.5)';
     octx.fillRect(0,0,cw,y);
-    octx.fillRect(0,y+bw,cw,ch-y-bw);
-    octx.fillRect(0,y,x,bw);
-    octx.fillRect(x+bw,y,cw-x-bw,bw);
-    // 모서리 코너 마커
-    var cl=24, lw=3;
-    octx.strokeStyle='#ffffff'; octx.lineWidth=lw;
-    [[x,y,1,1],[x+bw,y,-1,1],[x,y+bw,1,-1],[x+bw,y+bw,-1,-1]].forEach(function(p){
+    octx.fillRect(0,y+bh,cw,ch-y-bh);
+    octx.fillRect(0,y,x,bh);
+    octx.fillRect(x+bw,y,cw-x-bw,bh);
+    // 모서리 코너 (노란색 — 눈에 잘 띔)
+    var cl=28, lw=4;
+    octx.strokeStyle='#FFD600'; octx.lineWidth=lw;
+    [[x,y,1,1],[x+bw,y,-1,1],[x,y+bh,1,-1],[x+bw,y+bh,-1,-1]].forEach(function(p){
       octx.beginPath();
       octx.moveTo(p[0],p[1]); octx.lineTo(p[0]+p[2]*cl,p[1]);
       octx.moveTo(p[0],p[1]); octx.lineTo(p[0],p[1]+p[3]*cl);
       octx.stroke();
     });
+    // 안내 텍스트
+    octx.font='bold 15px sans-serif';
+    octx.textAlign='center';
+    octx.fillStyle='rgba(0,0,0,0.7)';
+    octx.fillRect(cw/2-140, y+bh+6, 280, 28);
+    octx.fillStyle='#FFD600';
+    octx.fillText('QR 코드만 화면에 꽉 채우세요', cw/2, y+bh+24);
+    octx.textAlign='start';
   }
   function drawQrBox(pts, vw, vh){
     syncOv();
@@ -21494,8 +21506,10 @@ function emerStartScan(){
   // ★ v9.43: 스캔라인 애니메이션
   var _scanLineY = 0, _scanDir = 1, _scanAni = null;
   function _startScanline(){
-    var bw=Math.min(ov.width,ov.height)*0.62;
-    var y0=(ov.height-bw)/2, x0=(ov.width-bw)/2;
+    var pad=Math.min(ov.width,ov.height)*0.08;
+    var bw=ov.width-pad*2, bh=bw;
+    if(bh > ov.height-pad*2) bh = ov.height-pad*2;
+    var x0=pad, y0=(ov.height-bh)/2; bw=bw; // x0,y0,bw 재정의
     if(_scanAni) cancelAnimationFrame(_scanAni);
     function aniTick(){
       drawGuide();
@@ -21534,7 +21548,7 @@ function emerStartScan(){
       window._emerCamStream = stream;
       video.srcObject = stream;
       video.play();
-      statusEl.textContent = '인식 중... QR에 갖다 대세요 📦';
+      statusEl.textContent = '📦 QR만 화면 가득 — 가까이 대세요';
 
       // ★ v9.43: getCapabilities() 체크 후 지원 기기만 autofocus 적용
       try{
@@ -21558,8 +21572,8 @@ function emerStartScan(){
         // Android Chrome: BarcodeDetector (가장 빠름, cornerPoints로 추적)
         if('BarcodeDetector' in window){
           var bd;
-          try{ bd = new BarcodeDetector({formats:['qr_code','data_matrix','aztec','code_128','pdf417']}); }
-          catch(e){ try{ bd = new BarcodeDetector({formats:['qr_code']}); }catch(e2){} }
+          try{ bd = new BarcodeDetector({formats:['qr_code','data_matrix','aztec']}); }
+          catch(e){ try{ bd = new BarcodeDetector({formats:['qr_code']}); }catch(e2){} }  // ★ v9.46: 바코드포맷 제거(QR/2D전용)
 
           if(bd){
             var _lastPts = null, _trackCount = 0;
@@ -21570,12 +21584,24 @@ function emerStartScan(){
                 .then(function(codes){
                   if(!_active) return;
                   if(codes && codes.length > 0 && codes[0].rawValue){
+                    // ★ v9.46: 크기+비율 필터 — 작은QR·바코드 차단, 정사각형만 통과
+                    var _bigEnough = true;
+                    if(codes[0].cornerPoints && video.videoWidth){
+                      var _pts = codes[0].cornerPoints;
+                      var _qw = Math.abs(_pts[1].x - _pts[0].x);
+                      var _qh = Math.abs(_pts[2].y - _pts[1].y);
+                      var _ratio = _qh > 0 ? _qw / _qh : 0;
+                      // 크기: 프레임 10% 이상 / 비율: 0.4~2.5(정사각형±여유)
+                      _bigEnough = (_qw >= video.videoWidth * 0.10) &&
+                                   (_qh >= video.videoHeight * 0.10) &&
+                                   (_ratio >= 0.4 && _ratio <= 2.5);
+                    }
+                    if(!_bigEnough){ _trackCount=0; requestAnimationFrame(bdTick); return; }
                     _stopScanline();
                     if(codes[0].cornerPoints && video.videoWidth){
                       drawQrBox(codes[0].cornerPoints, video.videoWidth, video.videoHeight);
                     }
                     _trackCount++;
-                    // 2프레임 연속 감지 시 확정 처리 (오인식 방지)
                     if(_trackCount >= 2){
                       _active = false;
                       statusEl.textContent = '✅ QR 인식!';
@@ -21597,26 +21623,57 @@ function emerStartScan(){
           }
         }
 
-        // iOS Safari 폴백: jsQR + location으로 추적
+        // iOS Safari 폴백: jsQR + 중앙 크롭 + 크기 필터
         var canvas2 = document.createElement('canvas');
         var ctx2 = canvas2.getContext('2d');
         var _trackCount2 = 0;
+
+        // ★ v9.46: QR 크기+비율 필터 — 작은QR/바코드 차단, 정사각형만 통과
+        function _isQrBigEnough(loc, sw, sh){
+          if(!loc) return true;
+          var w = Math.abs(loc.topRightCorner.x - loc.topLeftCorner.x);
+          var h = Math.abs(loc.bottomLeftCorner.y - loc.topLeftCorner.y);
+          var ratio = h > 0 ? w / h : 0;
+          return (w >= sw * 0.12) && (h >= sh * 0.12) && (ratio >= 0.4 && ratio <= 2.5);
+        }
+
+        function _jsqrScan(sx,sy,sw,sh,vw,vh){
+          if(!window.jsQR) return null;
+          canvas2.width=sw; canvas2.height=sh;
+          ctx2.drawImage(video,sx,sy,sw,sh,0,0,sw,sh);
+          var d=ctx2.getImageData(0,0,sw,sh);
+          var r=window.jsQR(d.data,d.width,d.height,{inversionAttempts:'attemptBoth'});
+          if(r && r.data){
+            // 크기 필터: 작은 QR / 바코드 차단
+            if(!_isQrBigEnough(r.location, sw, sh)) return null;
+            if(r.location){
+              var loc=r.location;
+              function adj(p){ return {x:p.x+sx, y:p.y+sy}; }
+              r._pts=[adj(loc.topLeftCorner),adj(loc.topRightCorner),adj(loc.bottomRightCorner),adj(loc.bottomLeftCorner)];
+              r._vw=vw; r._vh=vh;
+            }
+            return r;
+          }
+          return null;
+        }
+
         function jsqrTick(){
           if(!_active) return;
           if(video.readyState < 2){ requestAnimationFrame(jsqrTick); return; }
           var vw=video.videoWidth, vh=video.videoHeight;
           if(!vw){ requestAnimationFrame(jsqrTick); return; }
-          canvas2.width=vw; canvas2.height=vh;
-          ctx2.drawImage(video,0,0);
           try{
-            var d=ctx2.getImageData(0,0,vw,vh);
-            var r=window.jsQR(d.data,d.width,d.height,{inversionAttempts:'attemptBoth'});
+            // ★ v9.45 크롭 전략: 중앙 집중 (사이드 바코드·우상단 작은QR 영역 제외)
+            // 중앙 60%x70% → 중앙 80%x85% → 전체
+            var cx=Math.floor(vw*0.20), cy=Math.floor(vh*0.15);
+            var cw2=Math.floor(vw*0.60), ch2=Math.floor(vh*0.70);
+            var r = _jsqrScan(cx, cy, cw2, ch2, vw, vh)                        // ①중앙 60×70%
+                 || _jsqrScan(Math.floor(vw*0.10), Math.floor(vh*0.08),
+                              Math.floor(vw*0.80), Math.floor(vh*0.84), vw, vh) // ②중앙 80×84%
+                 || _jsqrScan(0, 0, vw, vh, vw, vh);                           // ③전체 (크기필터 적용)
             if(r && r.data && _active){
               _stopScanline();
-              if(r.location){
-                var loc=r.location;
-                drawQrBox([loc.topLeftCorner,loc.topRightCorner,loc.bottomRightCorner,loc.bottomLeftCorner], vw, vh);
-              }
+              if(r._pts) drawQrBox(r._pts, r._vw, r._vh);
               _trackCount2++;
               if(_trackCount2 >= 2){
                 _active=false;
@@ -21653,7 +21710,29 @@ function _emerHandleScan(raw, statusEl){
   setTimeout(function(){ window._emerScanLock = false; }, 1200);
 
   if(statusEl) statusEl.textContent = '✅ 인식: ' + raw.slice(0,40);
-  try{ navigator.vibrate && navigator.vibrate([80,40,80]); }catch(e){}
+  try{ navigator.vibrate && navigator.vibrate([60,30,120]); }catch(e){}
+  // ★ v9.43: 비프음 (Web Audio API)
+  try{
+    var _ac = new (window.AudioContext||window.webkitAudioContext)();
+    var _osc = _ac.createOscillator();
+    var _g = _ac.createGain();
+    _osc.connect(_g); _g.connect(_ac.destination);
+    _osc.type = 'square';
+    _osc.frequency.setValueAtTime(1480, _ac.currentTime);
+    _osc.frequency.setValueAtTime(1760, _ac.currentTime + 0.07);
+    _g.gain.setValueAtTime(0.18, _ac.currentTime);
+    _g.gain.exponentialRampToValueAtTime(0.001, _ac.currentTime + 0.18);
+    _osc.start(_ac.currentTime);
+    _osc.stop(_ac.currentTime + 0.18);
+    setTimeout(function(){ try{_ac.close();}catch(e){} }, 400);
+  }catch(e){}
+  // ★ v9.43: 화면 초록 플래시
+  try{
+    var _fl = document.createElement('div');
+    _fl.style.cssText = 'position:fixed;inset:0;background:rgba(0,255,136,0.28);z-index:9999;pointer-events:none;transition:opacity 0.4s';
+    document.body.appendChild(_fl);
+    setTimeout(function(){ _fl.style.opacity='0'; setTimeout(function(){ _fl.remove(); },400); },120);
+  }catch(e){}
 
   var code = raw.replace(/[.\-\s]/g,'').trim();
   var isTrack = /^[0-9]{8,25}$/.test(code);
