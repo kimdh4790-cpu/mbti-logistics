@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.27</title>
+<title>엠비티아이 물류관리 v9.30</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10421,7 +10421,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.25 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.30 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -11400,7 +11400,7 @@ function updFbUI(){
   var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.25 · 🔥 실시간':'v9.25 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.25 · Firebase 실시간':'v9.25 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.30 · Firebase 실시간':'v9.30 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -20611,20 +20611,47 @@ function openEmergencyDelivery(){
         <div id="emer-barcode-status" style="font-size:11px;color:var(--text3);text-align:center;margin-top:5px;min-height:16px"></div>
       </div>
 
-      <!-- 실시간 스캐너 모달 -->
+      <!-- 실시간 스캐너 모달 ★ v9.30: 가이드박스 + 손전등 -->
       <div id="emer-scan-mo" style="display:none;position:fixed;inset:0;background:#000;z-index:900;flex-direction:column;align-items:stretch;justify-content:stretch">
         <!-- 카메라 전체화면 -->
         <video id="emer-scan-video" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" playsinline muted autoplay></video>
+        <!-- 어두운 오버레이 + 스캔 가이드 박스 -->
+        <div style="position:absolute;inset:0;z-index:5;pointer-events:none">
+          <!-- 상하좌우 어두운 부분 (박스 제외) -->
+          <svg width="100%" height="100%" style="position:absolute;inset:0">
+            <defs><mask id="scan-mask"><rect width="100%" height="100%" fill="white"/><rect id="scan-guide-rect" x="10%" y="25%" width="80%" height="50%" rx="12" fill="black"/></mask></defs>
+            <rect width="100%" height="100%" fill="rgba(0,0,0,0.5)" mask="url(#scan-mask)"/>
+          </svg>
+          <!-- 가이드 박스 테두리 (4귀퉁이 강조) -->
+          <div id="emer-scan-guide" style="position:absolute;left:10%;top:25%;width:80%;height:50%;border-radius:12px;box-shadow:0 0 0 2px rgba(255,255,255,0.5)">
+            <!-- 귀퉁이 -->
+            <div style="position:absolute;top:-2px;left:-2px;width:24px;height:24px;border-top:3px solid #00e0ff;border-left:3px solid #00e0ff;border-radius:10px 0 0 0"></div>
+            <div style="position:absolute;top:-2px;right:-2px;width:24px;height:24px;border-top:3px solid #00e0ff;border-right:3px solid #00e0ff;border-radius:0 10px 0 0"></div>
+            <div style="position:absolute;bottom:-2px;left:-2px;width:24px;height:24px;border-bottom:3px solid #00e0ff;border-left:3px solid #00e0ff;border-radius:0 0 0 10px"></div>
+            <div style="position:absolute;bottom:-2px;right:-2px;width:24px;height:24px;border-bottom:3px solid #00e0ff;border-right:3px solid #00e0ff;border-radius:0 0 10px 0"></div>
+            <!-- 스캔 라인 애니메이션 -->
+            <div id="emer-scan-line" style="position:absolute;left:4px;right:4px;height:2px;background:linear-gradient(to right,transparent,#00e0ff,transparent);animation:scanLine 2s linear infinite;top:50%"></div>
+          </div>
+          <!-- 안내 텍스트 -->
+          <div style="position:absolute;left:0;right:0;top:calc(25% - 28px);text-align:center;color:#fff;font-size:12px;font-weight:700;text-shadow:0 1px 3px #000">
+            QR 코드를 박스 안에 맞춰주세요
+          </div>
+        </div>
         <!-- 상단 상태바 -->
-        <div style="position:absolute;top:0;left:0;right:0;padding:env(safe-area-inset-top,16px) 16px 12px;background:linear-gradient(to bottom,rgba(0,0,0,.6),transparent);display:flex;align-items:center;justify-content:space-between;z-index:10">
-          <div style="color:#fff;font-size:13px;font-weight:700">📷 바코드 / QR 스캔</div>
-          <button onclick="emerStopScan()" style="background:rgba(255,255,255,.2);border:none;color:#fff;font-size:18px;width:34px;height:34px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)">✕</button>
+        <div style="position:absolute;top:0;left:0;right:0;padding:env(safe-area-inset-top,16px) 12px 12px;background:linear-gradient(to bottom,rgba(0,0,0,.6),transparent);display:flex;align-items:center;justify-content:space-between;z-index:10">
+          <div style="color:#fff;font-size:13px;font-weight:700">📷 QR / 바코드 스캔</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button id="emer-torch-btn" onclick="emerToggleTorch()" style="background:rgba(255,255,255,.2);border:none;color:#fff;font-size:16px;width:34px;height:34px;border-radius:50%;cursor:pointer;display:none;align-items:center;justify-content:center">🔦</button>
+            <button onclick="emerStopScan()" style="background:rgba(255,255,255,.2);border:none;color:#fff;font-size:18px;width:34px;height:34px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+          </div>
         </div>
         <!-- 하단 상태 -->
-        <div style="position:absolute;bottom:0;left:0;right:0;padding:16px 16px calc(env(safe-area-inset-bottom,0px) + 24px);background:linear-gradient(to top,rgba(0,0,0,.7),transparent);z-index:10;text-align:center">
-          <div id="emer-scan-status" style="color:#fff;font-size:13px;min-height:18px">카메라 준비 중...</div>
+        <div style="position:absolute;bottom:0;left:0;right:0;padding:12px 16px calc(env(safe-area-inset-bottom,0px) + 20px);background:linear-gradient(to top,rgba(0,0,0,.7),transparent);z-index:10;text-align:center">
+          <div id="emer-scan-status" style="color:#fff;font-size:13px;min-height:18px;font-weight:600">카메라 준비 중...</div>
+          <div id="emer-scan-mode" style="color:rgba(255,255,255,.6);font-size:10px;margin-top:3px"></div>
         </div>
       </div>
+      <style>@keyframes scanLine{0%{top:5%}50%{top:90%}100%{top:5%}}</style>
 
       <!-- ★ OCR 자동입력 버튼 (QR 훼손 시 대체) -->
       <div style="margin-bottom:10px">
@@ -21203,101 +21230,145 @@ function emerStartScan(){
       video.play();
       statusEl.textContent = '인식 중... QR에 갖다 대세요 📦';
 
-      // ★ v9.27: jsQR + BarcodeDetector 병렬 QR 인식 (쿠팡 워터마크 대응)
+      // ★ v9.30: 멀티포맷 + 5방향 크롭 스캔 엔진
       function _startJsQrLoop(){
         var canvas = document.createElement('canvas');
         var ctx = canvas.getContext('2d');
         var _active = true;
         var _frameCount = 0;
 
-        // BarcodeDetector 지원 시 병렬 실행 (Android Chrome 지원)
+        // ★ 손전등 버튼 표시 (지원 여부 확인)
+        try{
+          var tBtn = document.getElementById('emer-torch-btn');
+          var vTracks = stream.getVideoTracks();
+          if(tBtn && vTracks.length && vTracks[0].getCapabilities && vTracks[0].getCapabilities().torch){
+            tBtn.style.display = 'flex';
+            window._emerTorchTrack = vTracks[0];
+            window._emerTorchOn = false;
+          }
+        }catch(e){}
+
+        // ★ BarcodeDetector: 모든 포맷 시도 (QR, DataMatrix, Code128, Aztec 등)
         var _bdDetector = null;
         if('BarcodeDetector' in window){
-          try{ _bdDetector = new BarcodeDetector({formats:['qr_code','code_128','ean_13','ean_8','code_39']}); }catch(e){}
+          var allFormats = ['qr_code','aztec','data_matrix','code_128','code_39','code_93','codabar','ean_13','ean_8','pdf417','upc_a','upc_e','itf'];
+          try{
+            _bdDetector = new BarcodeDetector({formats: allFormats});
+          }catch(e){
+            try{ _bdDetector = new BarcodeDetector({formats:['qr_code','code_128','data_matrix','aztec']}); }catch(e2){}
+          }
+        }
+
+        // ★ 전처리 함수: 파란 워터마크 제거 + 대비 강화
+        function preprocessCanvas(cx, w, h){
+          try{
+            var imgD = cx.getImageData(0,0,w,h);
+            var d = imgD.data;
+            for(var i=0;i<d.length;i+=4){
+              var r=d[i],g=d[i+1],b=d[i+2];
+              // 파란/하늘 계열 → 흰색 (쿠팡 워터마크)
+              if(b>r+20 && b>g+10 && r<190){
+                d[i]=255; d[i+1]=255; d[i+2]=255;
+              } else {
+                var gr=0.299*r+0.587*g+0.114*b;
+                if(gr<90){ d[i]=0; d[i+1]=0; d[i+2]=0; }
+                else if(gr>185){ d[i]=255; d[i+1]=255; d[i+2]=255; }
+              }
+            }
+            cx.putImageData(imgD,0,0);
+          }catch(e){}
+        }
+
+        // ★ 5방향 크롭 전략
+        // 0: 전체 640px (기본)
+        // 1: 우상단 1/2 (쿠팡 스타일1 — QR이 우상단에 있음)
+        // 2: 중앙 70% (일반적인 스캔 위치)
+        // 3: 좌상단 1/2 (쿠팡 스타일2 — QR이 좌상단에 있음)
+        // 4: 전체 고해상도 (느리지만 정확)
+        var modeNames = ['전체화면','우상단↗','중앙','좌상단↖','고화질'];
+        var modeEl = document.getElementById('emer-scan-mode');
+
+        function getCrop(mode, vw, vh){
+          if(mode===1){ // 우상단
+            return {sx:Math.round(vw/2),sy:0,sw:Math.round(vw/2),sh:Math.round(vh/2)};
+          } else if(mode===2){ // 중앙 70%
+            var sw=Math.round(vw*0.7), sh=Math.round(vh*0.7);
+            return {sx:Math.round(vw*0.15),sy:Math.round(vh*0.15),sw:sw,sh:sh};
+          } else if(mode===3){ // 좌상단
+            return {sx:0,sy:0,sw:Math.round(vw/2),sh:Math.round(vh/2)};
+          } else if(mode===4){ // 고화질 전체
+            var sw=Math.min(vw,1280);
+            return {sx:0,sy:0,sw:sw,sh:Math.round(vh*sw/vw)};
+          } else { // 전체 640px
+            var sw=Math.min(vw,640);
+            return {sx:0,sy:0,sw:sw,sh:Math.round(vh*sw/vw)};
+          }
         }
 
         function tick(){
           if(!_active) return;
           if(video.readyState < 2){ requestAnimationFrame(tick); return; }
           _frameCount++;
-          // 2프레임마다 분석 (성능 최적화)
           if(_frameCount % 2 !== 0){ requestAnimationFrame(tick); return; }
 
-          // ★ v9.27: 640px로 리사이즈 후 분석 (jsQR은 작을수록 QR 탐지 빠름)
-          var scanW = Math.min(video.videoWidth, 640);
-          var scanH = Math.round(video.videoHeight * scanW / video.videoWidth);
-          canvas.width = scanW;
-          canvas.height = scanH;
-          ctx.drawImage(video, 0, 0, scanW, scanH);
+          var vw=video.videoWidth, vh=video.videoHeight;
+          if(!vw||!vh){ requestAnimationFrame(tick); return; }
 
-          // ★ v9.27: 고대비 전처리 — 파란 워터마크/배경 제거 후 jsQR 처리
-          try{
-            var imageData = ctx.getImageData(0, 0, scanW, scanH);
-            var pix = imageData.data;
-            for(var pi=0; pi<pix.length; pi+=4){
-              var pr=pix[pi], pg=pix[pi+1], pb=pix[pi+2];
-              // 파란 계열 워터마크 → 흰색
-              if(pb > pr+25 && pb > pg+10 && pr<180){
-                pix[pi]=255; pix[pi+1]=255; pix[pi+2]=255;
-              } else {
-                // 어두운 픽셀 강화 (QR 검은 모듈 더 진하게)
-                var gr = 0.299*pr+0.587*pg+0.114*pb;
-                if(gr < 100){ pix[pi]=0; pix[pi+1]=0; pix[pi+2]=0; }
-                else if(gr > 200){ pix[pi]=255; pix[pi+1]=255; pix[pi+2]=255; }
-              }
-            }
-            ctx.putImageData(imageData, 0, 0);
-            var procData = ctx.getImageData(0, 0, scanW, scanH);
-            var code = window.jsQR(procData.data, procData.width, procData.height, {
-              inversionAttempts: 'attemptBoth'
-            });
-            if(!_active) return;
-            if(code && code.data){
-              _active = false;
-              statusEl.textContent = '✅ QR 인식 성공!';
-              _emerHandleScan(code.data, statusEl);
-              return;
-            }
-          }catch(e){}
+          // 스캔 모드 순환 (4프레임마다 변경)
+          var mode = Math.floor(_frameCount/4) % 5;
+          var crop = getCrop(mode, vw, vh);
 
-          // BarcodeDetector 병렬 시도 (jsQR 실패 시)
+          canvas.width = crop.sw;
+          canvas.height = crop.sh;
+          ctx.drawImage(video, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, crop.sw, crop.sh);
+
+          // 모드 표시
+          if(modeEl) modeEl.textContent = '검색 방향: ' + modeNames[mode];
+
+          // ★ 1순위: BarcodeDetector (네이티브, 다중포맷, 가장 정확)
           if(_bdDetector && _active){
-            _bdDetector.detect(canvas).then(function(codes){
-              if(!_active) return;
-              if(codes && codes.length>0 && codes[0].rawValue){
+            (function(cnv, fr){
+              _bdDetector.detect(cnv).then(function(codes){
+                if(!_active||fr!==_frameCount) return;
+                if(codes&&codes.length>0&&codes[0].rawValue){
+                  _active = false;
+                  var fmt = codes[0].format ? ' ['+codes[0].format+']' : '';
+                  statusEl.textContent = '✅ 인식 성공!' + fmt;
+                  if(modeEl) modeEl.textContent = '';
+                  _emerHandleScan(codes[0].rawValue, statusEl);
+                }
+              }).catch(function(){});
+            })(canvas, _frameCount);
+          }
+
+          // ★ 2순위: jsQR (전처리 강화 — 파란 워터마크 제거)
+          if(_active){
+            preprocessCanvas(ctx, crop.sw, crop.sh);
+            try{
+              var proc = ctx.getImageData(0,0,crop.sw,crop.sh);
+              var code = window.jsQR(proc.data, proc.width, proc.height, {inversionAttempts:'attemptBoth'});
+              if(code&&code.data&&_active){
                 _active = false;
                 statusEl.textContent = '✅ QR 인식 성공!';
-                _emerHandleScan(codes[0].rawValue, statusEl);
+                if(modeEl) modeEl.textContent = '';
+                _emerHandleScan(code.data, statusEl);
+                return;
               }
-            }).catch(function(){});
+            }catch(e){}
           }
 
           requestAnimationFrame(tick);
         }
+
         if(video.readyState >= 2){ requestAnimationFrame(tick); }
         else { video.addEventListener('loadedmetadata', function(){ requestAnimationFrame(tick); }, {once:true}); }
         window._emerBdStop = function(){ _active = false; };
       }
 
-      // jsQR 인라인 포함됨 — 바로 시작
+      // 스캔 엔진 시작
       _startJsQrLoop();
 
-      if(false){ // ZXing 폴백 (레거시 — jsQR 실패 시만)
-        if(typeof ZXing !== 'undefined' && ZXing.BrowserMultiFormatReader){
-        var hints = new Map();
-        hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-        if(ZXing.DecodeHintType.POSSIBLE_FORMATS)
-          hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.QR_CODE]);
-        _emerScanReader = new ZXing.BrowserMultiFormatReader(hints, 200);
-        _emerScanReader.decodeFromStream(stream, video, function(result, err){
-          if(result){
-            var raw = result.getText ? result.getText() : String(result);
-            _emerHandleScan(raw, statusEl);
-          }
-          if(err && !(err.constructor && err.constructor.name==='NotFoundException'))
-            console.warn('[ZXing]', err&&err.message);
-        });
-      }} else {
+      if(false){ // 레거시 ZXing (비활성)
         statusEl.textContent = '❌ 스캐너 미지원 — OCR 버튼을 사용해주세요';
       }
     })
@@ -21418,6 +21489,18 @@ function _emerHandleScan(raw, statusEl){
     setTimeout(function(){ window._emerScanLock = false; }, 800);
   }
 }
+// ★ v9.30: 손전등 토글
+function emerToggleTorch(){
+  var track = window._emerTorchTrack;
+  if(!track) return;
+  var on = !window._emerTorchOn;
+  track.applyConstraints({advanced:[{torch:on}]}).then(function(){
+    window._emerTorchOn = on;
+    var btn = document.getElementById('emer-torch-btn');
+    if(btn) btn.style.background = on ? 'rgba(255,200,0,.5)' : 'rgba(255,255,255,.2)';
+  }).catch(function(){});
+}
+
 function emerStopScan(){
   window._emerScanLock = false; // ★ v9.25: 락 초기화 (다음 스캔 세션 대비)
   // ★ v9.26: BarcodeDetector 루프 정지
@@ -21425,6 +21508,11 @@ function emerStopScan(){
   // ZXing 정지
   try{ if(_emerScanReader){_emerScanReader.reset();_emerScanReader=null;} }catch(e){}
   // ★ 카메라 스트림 정지 (배터리 절약)
+  // 손전등 끄기
+  try{ if(window._emerTorchTrack&&window._emerTorchOn){ window._emerTorchTrack.applyConstraints({advanced:[{torch:false}]}); window._emerTorchOn=false; } }catch(e){}
+  var tBtn=document.getElementById('emer-torch-btn');
+  if(tBtn){ tBtn.style.display='none'; tBtn.style.background='rgba(255,255,255,.2)'; }
+  window._emerTorchTrack=null;
   try{
     if(window._emerCamStream){
       window._emerCamStream.getTracks().forEach(function(t){t.stop();});
