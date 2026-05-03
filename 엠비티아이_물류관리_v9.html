@@ -2895,6 +2895,13 @@ function autoSendTaxOnApprove(driverName, month){
       }
       
       var saveNote=function(imgUrl){
+        // ★ v9.25: 진단 로그 — 저장 형식 추적
+        var imgType = !imgUrl ? '❌ 빈값' : (imgUrl.indexOf('data:image')===0 ? '📦 base64('+(imgUrl.length/1024).toFixed(1)+'KB)' : '🌐 Storage URL');
+        console.log('[세금계산서 저장]', driverName, month, imgType);
+        if(!imgUrl){
+          toast('⚠️ '+driverName+' 세금계산서 이미지 생성 실패 — 수동 재전달 필요');
+          return;
+        }
         var note={type:'tax_invoice',driver:driverName,month:month,img:imgUrl,
           sentAt:new Date().toISOString(),status:'전달완료',sentBy:'관리자(자동)',autoSent:true};
         try{var st=JSON.parse(localStorage.getItem('mbti_tax_store')||'{}');
@@ -8202,7 +8209,27 @@ function _vdn(id){
   if(!item)return;
   // 📢 공지사항이면 전용 뷰어로 분기
   if(item.type==='notice'){_viewNotice(id);return;}
-  if(!item.img)return;
+  // ★ v9.25: 이미지 누락 진단 — 사용자에게 명확한 안내
+  if(!item.img){
+    var label = item.type==='tax_invoice' ? '세금계산서' : '명세서';
+    var moNoImg = document.createElement('div');
+    moNoImg.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:800;display:flex;align-items:center;justify-content:center;padding:14px';
+    moNoImg.onclick = function(){moNoImg.remove();};
+    moNoImg.innerHTML = '<div onclick="event.stopPropagation()" style="background:var(--bg);border-radius:12px;padding:24px;max-width:90vw;text-align:center">'
+      +'<div style="font-size:36px;margin-bottom:8px">⚠️</div>'
+      +'<div style="font-size:16px;font-weight:800;color:var(--red);margin-bottom:6px">'+label+' 이미지를 불러올 수 없습니다</div>'
+      +'<div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:14px">관리자가 전달했지만 저장 과정에서 이미지가 누락되었습니다.<br>관리자에게 재전달을 요청해주세요.</div>'
+      +'<div style="background:var(--bg3);border-radius:8px;padding:10px;margin-bottom:14px;font-size:11px;color:var(--text3);text-align:left;line-height:1.7">'
+      +'<b>📞 문의:</b> '+(window.COMPANY_INFO?COMPANY_INFO.officeTel:'051-711-3103')+'<br>'
+      +'<b>📅 월:</b> '+(item.month||'-')+'<br>'
+      +'<b>🆔 알림 ID:</b> '+id.slice(0,12)+'...'
+      +'</div>'
+      +'<button onclick="this.parentElement.parentElement.remove()" style="padding:10px 24px;background:var(--teal);color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer">확인</button>'
+      +'</div>';
+    document.body.appendChild(moNoImg);
+    console.warn('[세금계산서/명세서 이미지 누락]', {id, type:item.type, month:item.month, hasImg:!!item.img});
+    return;
+  }
   // ★ v9.25: 한번 본 알림은 자동으로 dismiss 처리 (재팝업 방지)
   // 세금계산서/명세서는 보관함에서 재열람 가능하므로 알림박스에서만 숨김
   try{
@@ -8228,8 +8255,13 @@ function _vdn(id){
   var mo=document.createElement('div');
   mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:800;display:flex;align-items:center;justify-content:center;padding:14px';
   mo.onclick=function(){mo.remove();};
+  // ★ v9.25: onload/onerror 추가 (이미지 로드 실패 시 안내)
+  var imgLabel = item.type==='tax_invoice'?'세금계산서':'명세서';
   mo.innerHTML='<div onclick="event.stopPropagation()" style="max-width:95vw;max-height:90vh;overflow-y:auto;text-align:center">'
-    +'<img src="'+item.img+'" style="max-width:100%;border-radius:8px">'
+    +'<div id="vdn-img-loading-'+id+'" style="padding:40px;color:#fff;font-size:14px">⏳ 이미지 로드 중...</div>'
+    +'<img src="'+item.img+'" style="max-width:100%;border-radius:8px;display:none" '
+    +'onload="this.style.display=\'block\';document.getElementById(\'vdn-img-loading-'+id+'\')?.remove()" '
+    +'onerror="this.style.display=\'none\';var l=document.getElementById(\'vdn-img-loading-'+id+'\');if(l){l.innerHTML=\'<div style=&quot;padding:40px;background:rgba(220,38,38,.9);border-radius:10px;color:#fff;line-height:1.6&quot;>⚠️ '+imgLabel+' 이미지 로드 실패<br><span style=&quot;font-size:11px;opacity:.85&quot;>네트워크 또는 권한 오류입니다.<br>관리자에게 재전달을 요청하세요.</span></div>\';}">'
     +'<div style="margin-top:10px;display:flex;gap:8px;justify-content:center">'
     +'<a href="'+item.img+'" download="'+(item.type==='tax_invoice'?'세금계산서':'명세서')+'_'+item.month+'.png" style="padding:9px 20px;background:#7c3aed;color:#fff;border-radius:7px;font-size:12px;font-weight:700;text-decoration:none">⬇ 저장</a>'
     +'<button onclick="this.parentElement.parentElement.parentElement.remove()" style="padding:9px 20px;background:#6b7280;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">확인</button>'
@@ -8245,12 +8277,24 @@ function _vdn(id){
   }, 1500);
 }
 function viewDriverNotification(el,item){
+  if(!item || !item.img){
+    // ★ v9.25: 이미지 누락 안내
+    var label = (item&&item.type==='tax_invoice')?'세금계산서':'명세서';
+    toast('⚠️ '+label+' 이미지를 불러올 수 없습니다 — 관리자에게 재전달 요청');
+    console.warn('[보관함 이미지 누락]', item);
+    return;
+  }
   if(item.img){
     var mo=document.createElement('div');
     mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:800;display:flex;align-items:center;justify-content:center;padding:14px';
     mo.onclick=function(){mo.remove();};
+    var imgUid = 'vdn2-'+Date.now();
+    var imgLabel2 = item.type==='tax_invoice'?'세금계산서':'명세서';
     mo.innerHTML='<div onclick="event.stopPropagation()" style="max-width:95vw;max-height:90vh;overflow-y:auto;text-align:center">'
-      +'<img src="'+item.img+'" style="max-width:100%;border-radius:8px">'
+      +'<div id="'+imgUid+'-loading" style="padding:40px;color:#fff;font-size:14px">⏳ 이미지 로드 중...</div>'
+      +'<img src="'+item.img+'" style="max-width:100%;border-radius:8px;display:none" '
+      +'onload="this.style.display=\'block\';document.getElementById(\''+imgUid+'-loading\')?.remove()" '
+      +'onerror="this.style.display=\'none\';var l=document.getElementById(\''+imgUid+'-loading\');if(l){l.innerHTML=\'<div style=&quot;padding:40px;background:rgba(220,38,38,.9);border-radius:10px;color:#fff;line-height:1.6&quot;>⚠️ '+imgLabel2+' 이미지 로드 실패<br><span style=&quot;font-size:11px;opacity:.85&quot;>네트워크 또는 권한 오류입니다.<br>관리자에게 재전달을 요청하세요.</span></div>\';}">'
       +'<div style="margin-top:10px;display:flex;gap:8px;justify-content:center">'
       +'<a href="'+item.img+'" download="'+(item.type==='tax_invoice'?'세금계산서':'명세서')+'_'+item.month+'.png" style="padding:9px 20px;background:#7c3aed;color:#fff;border-radius:7px;font-size:12px;font-weight:700;text-decoration:none">⬇ 저장</a>'
       +'<button onclick="this.parentElement.parentElement.parentElement.remove()" style="padding:9px 20px;background:#6b7280;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">닫기</button>'
