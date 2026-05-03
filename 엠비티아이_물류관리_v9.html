@@ -21115,8 +21115,8 @@ async function emerOcrScan(file){
         // 이미지도 배송사진으로 추가
         var _reader2=new FileReader(); _reader2.onload=function(e){window._emerPhotos.push(e.target.result);emerRefreshPhotoWrap();}; _reader2.readAsDataURL(file);
         window._emerEntryMode='ocr';
-        // ★ v9.59: GPS 있으면 자동저장 (버튼 불필요)
-        if(_qpDirect.lat && _qpDirect.lng && _qpDirect.tracking_no){
+        // ★ v9.59: 운송장+주소 있으면 자동저장 (GPS 없어도)
+        if(_qpDirect.tracking_no && (_qpDirect.address || _qpDirect.lat)){
           var _toast2 = document.createElement('div');
           _toast2.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(5,150,105,.95);color:#fff;padding:18px 28px;border-radius:14px;font-size:15px;font-weight:800;z-index:9999;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.3)';
           _toast2.innerHTML = '✅ QR 인식 완료<br><span style="font-size:12px;opacity:.85;font-weight:500">' + (_qpDirect.tracking_no||'') + '<br>' + (_qpDirect.address||'').slice(0,20) + '</span><br><span style="font-size:11px;opacity:.7">자동 저장 중...</span>';
@@ -22021,8 +22021,8 @@ function _emerHandleScan(raw, statusEl){
     }
   }
 
-  // ★ v9.58: QR에 GPS 직접 포함된 경우 → 자동저장 (버튼 불필요)
-  if(qp.lat && qp.lng && qp.tracking_no){
+  // ★ v9.58: QR 인식 후 자동저장 — 운송장+주소 있으면 즉시 (GPS 없어도)
+  if(qp.tracking_no && (qp.address || qp.lat)){
     var _autoSaveDelay = 800; // 화면에 결과 잠깐 보여주고 저장
     // 스캔 모달 닫기
     var _scanMo = document.getElementById('emer-scan-mo');
