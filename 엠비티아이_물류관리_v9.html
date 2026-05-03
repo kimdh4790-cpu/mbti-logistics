@@ -15640,7 +15640,7 @@ function rScheduleAdmin(){
   return '<div class="card"><div class="ch"><span class="ct">📅 기사별 '+(viewMode==='week'?'주간':'월간')+' 근무표</span>'
     +'<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
     +'<label style="padding:5px 12px;background:var(--teal);color:#fff;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">📂 엑셀 업로드<input type="file" accept=".xlsx,.xls" style="display:none" onchange="parseScheduleExcel(this)"></label>'
-    +'<label style="padding:5px 12px;background:#7c3aed;color:#fff;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer" title="쿠팡 화면 캡처/사진 업로드 → AI 자동 인식">📷 사진 업로드<input type="file" accept="image/*" style="display:none" onchange="parseScheduleImage(this)"></label>'
+    +'<label style="display:none;padding:5px 12px;background:#7c3aed;color:#fff;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer" title="쿠팡 화면 캡처/사진 업로드 → AI 자동 인식 (현재 비활성)">📷 사진 업로드<input type="file" accept="image/*" style="display:none" onchange="parseScheduleImage(this)"></label>'
     +(S.schedLastFile?'<span onclick="navigator.clipboard.writeText(S.schedLastFile);toast(\'✅ 파일명 복사됨\')" title="클릭하면 파일명 복사" style="font-size:11px;font-weight:600;color:var(--teal);background:var(--teal-l);padding:3px 8px;border-radius:4px;cursor:pointer;border:1px solid var(--teal);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block">📋 '+S.schedLastFile+'</span>':'')
     +'<button onclick="downloadScheduleExcel()" style="padding:5px 12px;background:#0ea5e9;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer" title="현재 월의 근무표를 쿠팡 엑셀 양식으로 다운로드">📥 엑셀 다운로드</button>'
     +'<button onclick="resetSchedule()" style="padding:5px 12px;background:#ef4444;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">🗑 초기화</button>'
@@ -16025,8 +16025,13 @@ async function parseScheduleImage(inp){
     +"- 캠프명(M_진주1, 진주M, 부산1 등)과 웨이브(WAVE1, 야간 등) 정보가 있으면 함께 추출\n\n"
     +"# 시스템 등록 기사 목록 (매칭 우선)\n"
     +"["+driverList.map(function(n){return '\"'+n+'\"';}).join(', ')+"]\n"
-    +"인식한 기사 이름이 위 목록과 1글자 차이만 나면 동일인으로 판단해 'matchedName'에 정확한 이름을 넣으세요. "
-    +"매칭 실패 시 'matchedName'은 null.\n\n"
+    +"인식한 기사 이름이 위 목록에 있으면 'matchedName'에 정확한 이름을 넣으세요. "
+    +"⚠️ 중요: 한국 이름 매칭 규칙\n"
+    +"- 완전히 일치하면 → matchedName에 입력\n"
+    +"- 1글자만 다르고 나머지 2~3글자가 같으면 (예: '하헌호'↔'하헌오') → 같은 사람으로 판단해 matchedName에 정확한 이름 입력\n"
+    +"- 단, '강원삼'을 '김형우'처럼 글자가 거의 다 다르면 절대 매칭하지 마세요 → matchedName: null\n"
+    +"- 첫 글자(성)가 다르면 다른 사람으로 판단 (예: '강원삼' vs '김형우' 다른 사람)\n"
+    +"- 의심스러우면 무조건 null (잘못 매칭하는 것보다 미매칭이 안전)\n\n"
     +"# JSON 형식 (반드시 이 구조로)\n"
     +"{\n"
     +"  \"camp\": \"진주M\" 또는 \"부산1\" 등 (정규화: M_진주1→진주M, M_부산1→부산1, M_부산2→부산2, M_부산3→부산3, M_대구2→대구2),\n"
@@ -16210,9 +16215,20 @@ function _showScheduleImagePreview(data, fileName){
 
   driverList.forEach(function(name){
     var info = byDriver[name];
-    var displayName = info.matched
-      ? '<span style="color:var(--teal);font-weight:700">'+info.matched+'</span>'
-      : '<span style="color:#dc2626;font-weight:700" title="시스템에 없는 기사명">⚠️ '+name+'</span>';
+    // ★ v9.25: 매칭 신뢰도 검증 — 원본 이름과 매칭 이름의 첫 글자(성)가 다르면 의심
+    var displayName;
+    if(info.matched){
+      var origFirst = name.charAt(0);
+      var matchedFirst = info.matched.charAt(0);
+      var suspicious = (origFirst !== matchedFirst); // 성이 다르면 의심
+      if(suspicious){
+        displayName = '<span style="color:#f97316;font-weight:700" title="원본: '+name+' / 매칭: '+info.matched+' — 성이 달라 의심됩니다. 정확한지 확인하세요!">⚠️ '+info.matched+' (?'+name+')</span>';
+      } else {
+        displayName = '<span style="color:var(--teal);font-weight:700">'+info.matched+'</span>';
+      }
+    } else {
+      displayName = '<span style="color:#dc2626;font-weight:700" title="시스템에 없는 기사명">⚠️ '+name+'</span>';
+    }
 
     tableHTML += '<tr><td style="border:1px solid var(--border);padding:5px 8px;background:var(--bg);position:sticky;left:0;z-index:1">'+displayName+'</td>';
 
@@ -16283,7 +16299,15 @@ async function _applyScheduleFromImage(){
   toast('💾 근무표 저장 중...');
 
   // 매칭된 기사 데이터만 필터
-  var validRecords = data.records.filter(function(r){ return r.matchedName; });
+  // ★ v9.25: 의심 매칭 자동 차단 — 매칭된 이름의 첫 글자(성)가 원본과 다르면 제외
+  var validRecords = data.records.filter(function(r){
+    if(!r.matchedName) return false;
+    if(r.name.charAt(0) !== r.matchedName.charAt(0)){
+      console.warn('[근무표 매칭 차단] 성이 다름:', r.name, '↔', r.matchedName);
+      return false;
+    }
+    return true;
+  });
   if(!validRecords.length){
     toast('❌ 매칭된 기사가 없어 저장 불가');
     if(btn) btn.disabled = false;
