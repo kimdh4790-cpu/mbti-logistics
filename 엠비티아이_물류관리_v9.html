@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.40</title>
+<title>엠비티아이 물류관리 v9.42</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10421,7 +10421,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.40 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.42 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -11400,7 +11400,7 @@ function updFbUI(){
   var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.33 · 🔥 실시간':'v9.25 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.40 · Firebase 실시간':'v9.40 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.42 · Firebase 실시간':'v9.42 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -20614,7 +20614,7 @@ function openEmergencyDelivery(){
       <!-- 실시간 스캐너 모달 -->
       <div id="emer-scan-mo" style="display:none;position:fixed;inset:0;background:#000;z-index:900;flex-direction:column;align-items:stretch;justify-content:stretch">
         <!-- 카메라 전체화면 -->
-        <video id="emer-scan-video" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" playsinline muted autoplay></video>
+        <video id="emer-scan-video" style="width:100%;height:100%;object-fit:contain;position:absolute;inset:0;background:#000" playsinline muted autoplay></video>
         <!-- 상단 상태바 -->
         <div style="position:absolute;top:0;left:0;right:0;padding:env(safe-area-inset-top,16px) 16px 12px;background:linear-gradient(to bottom,rgba(0,0,0,.6),transparent);display:flex;align-items:center;justify-content:space-between;z-index:10">
           <div style="color:#fff;font-size:13px;font-weight:700">📷 바코드 / QR 스캔</div>
@@ -21437,17 +21437,20 @@ function emerStartScan(){
   statusEl.textContent = '카메라 시작 중...';
   var video = document.getElementById('emer-scan-video');
 
-  // ★ v9.26: 고화질 후면 카메라 + 자동초점
+  // ★ v9.42: QR 스캔 최적화 — 자동초점 + 적정 해상도
   var constraints = {
     video:{
       facingMode:{ideal:'environment'},
-      width:{ideal:1920,min:1280},
-      height:{ideal:1080,min:720},
-      frameRate:{ideal:30,min:15}
+      width:{ideal:1280},
+      height:{ideal:720},
+      frameRate:{ideal:30},
+      focusMode:{ideal:'continuous'},       // 연속 자동초점
+      advanced:[{focusMode:'continuous'}]   // 구형 API 대응
     }
   };
   navigator.mediaDevices.getUserMedia(constraints)
     .catch(function(){
+      // 자동초점 제약 없이 재시도
       return navigator.mediaDevices.getUserMedia({
         video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}
       });
@@ -21461,108 +21464,85 @@ function emerStartScan(){
       video.play();
       statusEl.textContent = '인식 중... QR에 갖다 대세요 📦';
 
-      // ★ v9.31: QR 스캔 엔진 — 원본픽셀 우선, 전처리 없이 jsQR 실행
+      // ★ v9.42: 트랙에 직접 자동초점 + 화이트밸런스 적용 (화질 개선)
+      try{
+        var vTrack = stream.getVideoTracks()[0];
+        if(vTrack && vTrack.applyConstraints){
+          vTrack.applyConstraints({
+            advanced:[{
+              focusMode:'continuous',
+              whiteBalanceMode:'continuous',
+              exposureMode:'continuous'
+            }]
+          }).catch(function(){});
+        }
+      }catch(e){}
+
+      // ★ v9.41: 라이브 QR 스캔 — video 직접 전달 (캔버스 변환 없음)
       function _startJsQrLoop(){
-        var canvas  = document.createElement('canvas');
-        var canvas2 = document.createElement('canvas'); // 우측 크롭용
-        var ctx  = canvas.getContext('2d');
-        var ctx2 = canvas2.getContext('2d');
         var _active = true;
-        var _frameCount = 0;
 
-        // BarcodeDetector — QR 관련 포맷만 (가볍게)
-        var _bdDetector = null;
+        // Android Chrome: BarcodeDetector를 video에 직접 걸기 (가장 빠름)
         if('BarcodeDetector' in window){
+          var bd;
           try{
-            _bdDetector = new BarcodeDetector({
-              formats:['qr_code','data_matrix','aztec','pdf417','code_128']
-            });
+            bd = new BarcodeDetector({formats:['qr_code','data_matrix','aztec','code_128','pdf417']});
           }catch(e){
-            try{ _bdDetector = new BarcodeDetector({formats:['qr_code']}); }catch(e2){}
+            try{ bd = new BarcodeDetector({formats:['qr_code']}); }catch(e2){}
+          }
+
+          if(bd){
+            function bdTick(){
+              if(!_active) return;
+              if(video.readyState < 2){ requestAnimationFrame(bdTick); return; }
+              bd.detect(video)  // ← video 직접 전달 (캔버스 불필요)
+                .then(function(codes){
+                  if(!_active) return;
+                  if(codes && codes.length > 0 && codes[0].rawValue){
+                    _active = false;
+                    statusEl.textContent = '✅ QR 인식!';
+                    _emerHandleScan(codes[0].rawValue, statusEl);
+                    return;
+                  }
+                  requestAnimationFrame(bdTick);
+                })
+                .catch(function(){ requestAnimationFrame(bdTick); });
+            }
+            video.addEventListener('loadedmetadata', function(){ requestAnimationFrame(bdTick); }, {once:true});
+            if(video.readyState >= 2) requestAnimationFrame(bdTick);
+            window._emerBdStop = function(){ _active = false; };
+            return; // BarcodeDetector 사용 → jsQR 불필요
           }
         }
 
-        function tryJsQR(imageData){
-          try{
-            return window.jsQR(imageData.data, imageData.width, imageData.height,
-              {inversionAttempts:'attemptBoth'});
-          }catch(e){ return null; }
-        }
-
-        function handleResult(raw, label){
-          if(!raw || !_active) return false;
-          _active = false;
-          statusEl.textContent = '✅ QR 인식! ' + label;
-          _emerHandleScan(raw, statusEl);
-          return true;
-        }
-
-        function tick(){
+        // iOS Safari 폴백 — jsQR (캔버스 경유)
+        var canvas = document.createElement('canvas');
+        var ctx = canvas.getContext('2d');
+        function jsqrTick(){
           if(!_active) return;
-          if(video.readyState < 2){ requestAnimationFrame(tick); return; }
-          _frameCount++;
-          if(_frameCount % 2 !== 0){ requestAnimationFrame(tick); return; }
-
-          var vw = video.videoWidth, vh = video.videoHeight;
-          if(!vw || !vh){ requestAnimationFrame(tick); return; }
-
-          // ★ 1280px 고해상도 (QR 밀도 대응 — 640은 너무 작음)
-          var scanW = Math.min(vw, 1280);
-          var scanH = Math.round(vh * scanW / vw);
-          canvas.width = scanW; canvas.height = scanH;
-          ctx.drawImage(video, 0, 0, scanW, scanH);
-
-          // ① BarcodeDetector — 원본 캔버스 (가장 정확)
-          if(_bdDetector && _active){
-            (function(fc){
-              _bdDetector.detect(canvas).then(function(codes){
-                if(!_active || fc !== _frameCount) return;
-                if(codes && codes.length > 0 && codes[0].rawValue)
-                  handleResult(codes[0].rawValue, '[BD]');
-              }).catch(function(){});
-            })(_frameCount);
-          }
-
-          // ② jsQR — 원본 픽셀 (전처리 없이 그대로)
-          if(_active){
-            var raw = tryJsQR(ctx.getImageData(0, 0, scanW, scanH));
-            if(raw && raw.data){ handleResult(raw.data, '[QR전체]'); return; }
-          }
-
-          // ③ jsQR — 우측 절반 크롭 (쿠팡: QR이 송장 우측에 있음)
-          if(_active){
-            var hw = Math.round(scanW / 2);
-            canvas2.width = hw; canvas2.height = scanH;
-            ctx2.drawImage(video, Math.round(vw/2), 0, Math.round(vw/2), vh, 0, 0, hw, scanH);
-            var raw2 = tryJsQR(ctx2.getImageData(0, 0, hw, scanH));
-            if(raw2 && raw2.data){ handleResult(raw2.data, '[QR우측]'); return; }
-          }
-
-          // ④ BarcodeDetector — 우측 절반 크롭
-          if(_bdDetector && _active){
-            (function(fc){
-              _bdDetector.detect(canvas2).then(function(codes){
-                if(!_active || fc !== _frameCount) return;
-                if(codes && codes.length > 0 && codes[0].rawValue)
-                  handleResult(codes[0].rawValue, '[BD우측]');
-              }).catch(function(){});
-            })(_frameCount);
-          }
-
-          requestAnimationFrame(tick);
+          if(video.readyState < 2){ requestAnimationFrame(jsqrTick); return; }
+          var vw=video.videoWidth, vh=video.videoHeight;
+          if(!vw){ requestAnimationFrame(jsqrTick); return; }
+          canvas.width=vw; canvas.height=vh;
+          ctx.drawImage(video, 0, 0);
+          try{
+            var d=ctx.getImageData(0,0,vw,vh);
+            var r=window.jsQR(d.data,d.width,d.height,{inversionAttempts:'attemptBoth'});
+            if(r&&r.data&&_active){
+              _active=false;
+              statusEl.textContent='✅ QR 인식!';
+              _emerHandleScan(r.data,statusEl);
+              return;
+            }
+          }catch(e){}
+          requestAnimationFrame(jsqrTick);
         }
-
-        if(video.readyState >= 2){ requestAnimationFrame(tick); }
-        else { video.addEventListener('loadedmetadata', function(){ requestAnimationFrame(tick); }, {once:true}); }
+        video.addEventListener('loadedmetadata', function(){ requestAnimationFrame(jsqrTick); }, {once:true});
+        if(video.readyState >= 2) requestAnimationFrame(jsqrTick);
         window._emerBdStop = function(){ _active = false; };
       }
 
-      // 스캔 시작
       _startJsQrLoop();
-
-      if(false){ // 레거시 ZXing (비활성)
-        statusEl.textContent = '❌ 스캐너 미지원 — OCR 버튼을 사용해주세요';
-      }
     })
     .catch(function(e){
       statusEl.textContent = '❌ 카메라 권한 필요 — 주소창 🔒 → 카메라 허용';
