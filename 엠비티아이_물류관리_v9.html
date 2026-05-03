@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.36</title>
+<title>엠비티아이 물류관리 v9.37</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10421,7 +10421,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.36 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.37 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -11400,7 +11400,7 @@ function updFbUI(){
   var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.33 · 🔥 실시간':'v9.25 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.36 · Firebase 실시간':'v9.36 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.37 · Firebase 실시간':'v9.37 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -20704,7 +20704,7 @@ async function emerOcrScan(file){
     var qrResult = await new Promise(function(resolve){
       var img = new Image();
       var url = URL.createObjectURL(file);
-      img.onload = function(){
+      img.onload = async function(){
         URL.revokeObjectURL(url);
         // 최대 1600px (QR 밀도 대응, 너무 크면 jsQR 느려짐)
         var max = 1600;
@@ -20718,13 +20718,33 @@ async function emerOcrScan(file){
         var cx = cv.getContext('2d');
         cx.drawImage(img, 0, 0, w, h);
 
-        // ① 원본 픽셀로 jsQR 시도
+        // ★ v9.37: ① BarcodeDetector — 폰 카메라와 동일한 하드웨어 QR 디코더
+        //   Android Chrome 지원, iOS Safari 미지원(jsQR 폴백)
+        if('BarcodeDetector' in window){
+          try{
+            var bd = new BarcodeDetector({formats:['qr_code','aztec','data_matrix','code_128','pdf417']});
+            var bdCodes = await bd.detect(cv);
+            if(bdCodes && bdCodes.length > 0 && bdCodes[0].rawValue){
+              resolve(bdCodes[0].rawValue); return;
+            }
+            // 우측 절반도 시도 (쿠팡 QR 위치)
+            var cvBd2 = document.createElement('canvas');
+            cvBd2.width = Math.round(w/2); cvBd2.height = h;
+            cvBd2.getContext('2d').drawImage(img, Math.round(img.width/2), 0, Math.round(img.width/2), img.height, 0, 0, Math.round(w/2), h);
+            var bdCodes2 = await bd.detect(cvBd2);
+            if(bdCodes2 && bdCodes2.length > 0 && bdCodes2[0].rawValue){
+              resolve(bdCodes2[0].rawValue); return;
+            }
+          }catch(e){ console.warn('[BarcodeDetector]', e); }
+        }
+
+        // ② jsQR — 원본 픽셀 (iOS Safari 폴백)
         var raw = cx.getImageData(0, 0, w, h);
         var code = null;
         if(window.jsQR) code = window.jsQR(raw.data, raw.width, raw.height, {inversionAttempts:'attemptBoth'});
         if(code && code.data){ resolve(code.data); return; }
 
-        // ② 우측 절반 크롭 (쿠팡: QR이 송장 우측에 위치)
+        // ③ jsQR — 우측 절반 크롭
         var hw = Math.round(w / 2);
         var cv2 = document.createElement('canvas');
         cv2.width = hw; cv2.height = h;
@@ -20735,7 +20755,7 @@ async function emerOcrScan(file){
           if(code2 && code2.data){ resolve(code2.data); return; }
         }
 
-        // ③ 좌측 절반 크롭 (다른 스타일 대응)
+        // ④ jsQR — 좌측 절반 크롭
         var cv3 = document.createElement('canvas');
         cv3.width = hw; cv3.height = h;
         cv3.getContext('2d').drawImage(img, 0, 0, Math.round(img.width/2), img.height, 0, 0, hw, h);
