@@ -357,7 +357,7 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
       <input class="fi" id="lpw" type="password" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doLogin()">
       <button class="btn-login" id="lbtn" onclick="doLogin()">로그인</button>
       <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
-        <button id="help-toggle-btn" style="width:100%;padding:9px;background:transparent;border:1.5px dashed var(--border);border-radius:10px;color:var(--text2);font-size:12px;cursor:pointer;font-weight:600">
+        <button id="help-toggle-btn" onclick="var b=document.getElementById('login-help-box');if(b){b.style.display=b.style.display==='none'||!b.style.display?'block':'none';}" style="width:100%;padding:9px;background:transparent;border:1.5px dashed var(--border);border-radius:10px;color:var(--text2);font-size:12px;cursor:pointer;font-weight:600">
           🔑 아이디 / 비밀번호를 모르시나요?
         </button>
         <div id="login-help-box" style="display:none;margin-top:10px;background:var(--bg3);border-radius:12px;padding:14px">
@@ -18887,16 +18887,16 @@ window.addEventListener('message',function(e){
     // 로그인 화면 + 도움말 펼치기
     goLogin('driver');
     setTimeout(function(){
-      var h=documen
-// ── 보안: 민감 정보 마스킹
-function maskPhone(p){if(!p)return '';return String(p).replace(/(\d{3})\d{4}(\d{4})/,'$1-****-$2');}
-t.getElementById('login-help-box');
+      var h=document.getElementById('login-help-box');
       if(h)h.style.display='block';
     },300);
   } else if(act==='closeAppIframe'){
     try{window.parent.postMessage({action:'closeAppIframe'},'*');}catch(err){}
   }
 });
+
+// ── 보안: 민감 정보 마스킹
+function maskPhone(p){if(!p)return '';return String(p).replace(/(\d{3})\d{4}(\d{4})/,'$1-****-$2');}
 
 // ── 보안: 입력값 XSS 방지
 function sanitize(str){
