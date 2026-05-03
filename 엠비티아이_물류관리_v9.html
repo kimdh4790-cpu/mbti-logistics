@@ -20588,8 +20588,10 @@ function openEmergencyDelivery(){
   window._emerPhotos = [];
   window._emerTrackings = [];
   window._emerGps = null;
-  window._emerAutoData = {}; // OCR 자동입력 숨김 데이터 저장
-  window._emerEntryMode = null; // ★ v9.25: 등록방식 추적 (ocr/barcode/manual)
+  window._emerAutoData = {};
+  window._emerEntryMode = null;
+  // ★ v9.51: 폼 열리자마자 클립보드 자동 감지 (폰 카메라 스캔 후 복사만 하면 자동입력)
+  setTimeout(_emerAutoClipboard, 400);
 
   document.body.insertAdjacentHTML('beforeend',`
   <div id="emer-del-mo" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:700;display:flex;align-items:flex-end;justify-content:center" onclick="if(event.target===this)this.remove()">
@@ -20637,12 +20639,13 @@ function openEmergencyDelivery(){
 
       <!-- ★ v9.25: QR 붙여넣기 (1순위) + OCR 사진 (폴백) -->
 
-      <!-- ① 붙여넣기 — 폰 카메라로 QR 읽은 후 복사 → 붙여넣기 -->
-      <button onclick="emerPasteQR()" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px;background:linear-gradient(135deg,#059669,#10b981);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:900;cursor:pointer;margin-bottom:8px;letter-spacing:.01em">
-        <span style="font-size:22px">📋</span> QR 텍스트 붙여넣기
+      <!-- ① 붙여넣기 — 폰 기본카메라 QR 스캔 → 복사 → 붙여넣기 (가장 확실) -->
+      <button onclick="emerPasteQR()" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:16px;background:linear-gradient(135deg,#059669,#10b981);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:900;cursor:pointer;margin-bottom:6px;letter-spacing:.01em;box-shadow:0 2px 8px rgba(5,150,105,.35)">
+        <span style="font-size:24px">📋</span> QR 텍스트 붙여넣기 <span style="font-size:12px;opacity:.85;background:rgba(255,255,255,.2);padding:2px 7px;border-radius:99px;font-weight:700">추천</span>
       </button>
-      <div style="font-size:11px;color:var(--text3);text-align:center;margin-bottom:10px;line-height:1.5">
-        폰 카메라로 QR 스캔 → 텍스트 <b>복사</b> → 여기서 <b>붙여넣기</b><br>운송장·주소·GPS 즉시 입력 (API 없음, 빠름)
+      <div style="font-size:12px;color:var(--text2);background:var(--bg3);border-radius:8px;padding:8px 10px;margin-bottom:10px;line-height:1.7">
+        폰 카메라로 QR 스캔 → 텍스트 <b>복사</b> → 앱으로 오면 <b>자동입력</b> 🎯<br>
+        <span style="font-size:11px;color:var(--text3)">안 되면 위 버튼으로 붙여넣기</span>
       </div>
 
       <!-- ② OCR 사진 — QR 없거나 붙여넣기 불편할 때 -->
@@ -21326,9 +21329,20 @@ async function emerOcrScan(file){
       }catch(geoErr){ console.warn('Geocoding 실패:', geoErr); }
     }
 
-    // 폴백: Geocoding 실패 시 현위치 사용 (기존 _emerGps 유지)
-    if(!pinGps && window._emerGps && window._emerGps.lat){
-      pinGps = {lat:window._emerGps.lat, lng:window._emerGps.lng, src:window._emerGps.src||'device'};
+    // ★ v9.50: 폴백 — Geocoding 실패 시 현위치 강제 사용
+    if(!pinGps){
+      if(window._emerGps && window._emerGps.lat){
+        pinGps = {lat:window._emerGps.lat, lng:window._emerGps.lng, src:'device'};
+        if(status) status.innerHTML='<span style="color:#f59e0b">⚠️ Geocoding 실패 — 현위치로 핀 생성</span>';
+      } else {
+        // 현위치도 없으면 GPS 새로 받기
+        if(navigator.geolocation){
+          try{
+            var pos = await new Promise(function(res,rej){navigator.geolocation.getCurrentPosition(res,rej,{timeout:4000,enableHighAccuracy:true});});
+            pinGps = {lat:pos.coords.latitude, lng:pos.coords.longitude, src:'device_fallback'};
+          }catch(e){}
+        }
+      }
     }
 
     if(pinGps && window._activeDriverMapAddPin){
@@ -21534,6 +21548,42 @@ function _nativeCamJsQR(cv, cw, ch, statusEl){
     if(statusEl) statusEl.innerHTML = '❌ 인식 실패 — QR만 화면 가득 채워 다시 촬영해주세요';
   }
 }
+
+// ★ v9.51: 클립보드 자동 감지 — 폰 카메라로 QR 스캔 후 복사만 하면 자동입력
+function _emerAutoClipboard(){
+  if(!navigator.clipboard || !navigator.clipboard.readText) return;
+  // 이미 입력된 경우 무시
+  if(window._emerTrackings && window._emerTrackings.length > 0) return;
+  navigator.clipboard.readText().then(function(text){
+    if(!text || text.length < 10) return;
+    // V1| 형식 QR인지 확인
+    var v1 = text.match(/V1[|][\s\S]{20,}/);
+    if(!v1) return;
+    var parsed = _parseQrText(v1[1]);
+    if(!parsed.tracking_no && !parsed.address) return;
+    // 자동입력
+    var statusEl = document.getElementById('emer-native-status');
+    if(statusEl) statusEl.innerHTML = '<span style="color:var(--teal)">📋 클립보드에서 QR 자동 감지!</span>';
+    _emerHandleScan(v1[1], statusEl);
+    // 시각 피드백
+    try{
+      var _fl=document.createElement('div');
+      _fl.style.cssText='position:fixed;inset:0;background:rgba(0,255,136,.22);z-index:9999;pointer-events:none;transition:opacity .4s';
+      document.body.appendChild(_fl);
+      setTimeout(function(){_fl.style.opacity='0';setTimeout(function(){_fl.remove();},400);},200);
+    }catch(e){}
+  }).catch(function(){});
+}
+
+// 앱으로 돌아올 때도 자동 감지 (폰 카메라 스캔 후 앱으로 전환)
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState === 'visible'){
+    // 긴급배송 폼이 열려있을 때만
+    if(document.getElementById('emer-del-mo')){
+      setTimeout(_emerAutoClipboard, 300);
+    }
+  }
+});
 
 function emerStartScan(){
   var mo = document.getElementById('emer-scan-mo');
