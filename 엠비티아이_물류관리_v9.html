@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.25</title>
+<title>엠비티아이 물류관리 v9.28</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10419,7 +10419,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.25 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.28 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -11395,10 +11395,10 @@ function updBadge(){
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
 function updFbUI(){
-  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.25 · 🔥 실시간':'v9.25 · 데모';
+  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.28 · 🔥 실시간':'v9.25 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.25 · Firebase 실시간':'v9.25 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.28 · Firebase 실시간':'v9.28 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -19057,26 +19057,27 @@ function _buildAttendCard(){
   return html;
 }
 
-// ── GPS 좌표 수집 (최대 5초)
+// ── GPS 좌표 수집 (★ v9.28: watchPosition 샘플링 — 최대 9초, 15m 이하면 즉시 확정)
 function _getGPS(){
   return new Promise(function(res){
     if(!navigator.geolocation){res(null);return;}
-    var done=false;
-    var timer=setTimeout(function(){if(!done){done=true;res(null);}},5000);
-    navigator.geolocation.getCurrentPosition(
-      function(pos){
-        if(done)return;
-        done=true; clearTimeout(timer);
-        res({
-          lat:pos.coords.latitude,
-          lng:pos.coords.longitude,
-          accuracy:Math.round(pos.coords.accuracy||0),
-          ts:new Date().toISOString()
-        });
-      },
-      function(err){if(done)return; done=true; clearTimeout(timer); res(null);},
-      {enableHighAccuracy:true,timeout:4500,maximumAge:30000}
-    );
+    var best=null, watchId=null, done=false;
+    var TIMEOUT=9000, TARGET_ACC=15;
+    function finish(val){ if(done)return; done=true; if(watchId!=null){try{navigator.geolocation.clearWatch(watchId);}catch(e){}} res(val); }
+    var timer=setTimeout(function(){ finish(best); }, TIMEOUT);
+    try{
+      watchId=navigator.geolocation.watchPosition(
+        function(pos){
+          var acc=pos.coords.accuracy||999;
+          if(!best||acc<best.accuracy){
+            best={lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:Math.round(acc),ts:new Date().toISOString()};
+          }
+          if(acc<=TARGET_ACC){ clearTimeout(timer); finish(best); }
+        },
+        function(){ finish(best); },
+        {enableHighAccuracy:true, timeout:TIMEOUT, maximumAge:0}
+      );
+    }catch(e){ finish(null); }
   });
 }
 
@@ -20694,23 +20695,36 @@ function openEmergencyDelivery(){
     </div>
   </div>`);
 
-  // ★ v9.26: GPS 자동 수집 — QR GPS 있으면 기기 GPS로 덮어쓰지 않음
+  // ★ v9.28: GPS 자동 수집 — watchPosition 샘플링 (10초/15m 기준)
   if(navigator.geolocation){
-    navigator.geolocation.getCurrentPosition(function(pos){
-      // QR/Geocoding에서 이미 배송지 GPS 받았으면 현위치로 덮어쓰지 않음
-      if(window._emerGps && (window._emerGps.src === 'QR' || window._emerGps.src === 'geocode')){
-        var el=document.getElementById('emer-gps-status');
-        if(el) el.innerHTML='📍 배송지 GPS 사용 중 ('+(window._emerGps.src==='QR'?'QR':'주소변환')+') <span style="color:var(--teal)">✅</span>';
-        return;
+    var _eg_best=null, _eg_watchId=null, _eg_done=false;
+    var _eg_el=document.getElementById('emer-gps-status');
+    function _eg_finish(val){
+      if(_eg_done)return; _eg_done=true;
+      if(_eg_watchId!=null){try{navigator.geolocation.clearWatch(_eg_watchId);}catch(e){}}
+      if(val){
+        if(window._emerGps&&(window._emerGps.src==='QR'||window._emerGps.src==='geocode')){
+          if(_eg_el) _eg_el.innerHTML='📍 배송지 GPS 사용 중 ('+(window._emerGps.src==='QR'?'QR':'주소변환')+') <span style="color:var(--teal)">✅</span>';
+          return;
+        }
+        window._emerGps={lat:val.lat,lng:val.lng,acc:val.accuracy,src:'device'};
+        if(_eg_el) _eg_el.innerHTML='📍 현위치 GPS — 정확도 '+val.accuracy+'m <span style="color:var(--teal)">✅</span>';
+      } else {
+        if(window._emerGps&&window._emerGps.src!=='device'){return;}
+        if(_eg_el) _eg_el.innerHTML='📍 GPS 수집 실패 — 위치 없이 저장됩니다 <span style="color:var(--amber)">⚠️</span>';
       }
-      window._emerGps = {lat: pos.coords.latitude, lng: pos.coords.longitude, acc: Math.round(pos.coords.accuracy), src:'device'};
-      var el=document.getElementById('emer-gps-status');
-      if(el) el.innerHTML='📍 현위치 GPS 확인 완료 — 정확도 '+window._emerGps.acc+'m <span style="color:var(--teal)">✅</span>';
-    }, function(){
-      if(window._emerGps && (window._emerGps.src === 'QR' || window._emerGps.src === 'geocode')) return; // 배송지 GPS 있으면 오류 무시
-      var el=document.getElementById('emer-gps-status');
-      if(el) el.innerHTML='📍 GPS 수집 실패 — 위치 없이 저장됩니다 <span style="color:var(--amber)">⚠️</span>';
-    }, {timeout:8000, enableHighAccuracy:true});
+    }
+    var _eg_timer=setTimeout(function(){ _eg_finish(_eg_best); }, 10000);
+    try{
+      _eg_watchId=navigator.geolocation.watchPosition(function(pos){
+        var acc=pos.coords.accuracy||999;
+        if(!_eg_best||acc<_eg_best.accuracy){
+          _eg_best={lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:Math.round(acc)};
+          if(_eg_el&&!_eg_done) _eg_el.innerHTML='📍 GPS 수집 중... 정확도 '+Math.round(acc)+'m';
+        }
+        if(acc<=15){ clearTimeout(_eg_timer); _eg_finish(_eg_best); }
+      }, function(){ _eg_finish(null); }, {enableHighAccuracy:true,timeout:10000,maximumAge:0});
+    }catch(e){ _eg_finish(null); }
   }
 }
 
@@ -21147,52 +21161,70 @@ function emerStartScan(){
   statusEl.textContent = '카메라 시작 중...';
   var video = document.getElementById('emer-scan-video');
 
-  // ★ v9.26: 고화질 후면 카메라 + 자동초점
+  // ★ v9.28: 후면 카메라 + 자동초점 (1080p 우선)
   var constraints = {
     video:{
       facingMode:{ideal:'environment'},
-      width:{ideal:1920,min:1280},
-      height:{ideal:1080,min:720},
+      width:{ideal:1920,min:640},
+      height:{ideal:1080,min:480},
       frameRate:{ideal:30,min:15}
     }
   };
   navigator.mediaDevices.getUserMedia(constraints)
     .catch(function(){
-      return navigator.mediaDevices.getUserMedia({
-        video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}
-      });
-    })
-    .catch(function(){
-      return navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+      return navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}});
     })
     .then(function(stream){
       window._emerCamStream = stream;
       video.srcObject = stream;
       video.play();
-      statusEl.textContent = '인식 중... QR에 갖다 대세요 📦';
+      statusEl.textContent = '인식 중... 바코드/QR에 갖다 대세요 📦';
 
-      // ★ v9.25: jsQR 기반 QR 인식 (모든 기기 호환, BarcodeDetector 대체)
-      function _startJsQrLoop(){
+      // ★ v9.28: ZXing 기반 멀티포맷 스캐너 (Code128 + QR + EAN + PDF417)
+      if(typeof ZXing !== 'undefined' && ZXing.BrowserMultiFormatReader){
+        var hints = new Map();
+        hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+        hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+          ZXing.BarcodeFormat.CODE_128,
+          ZXing.BarcodeFormat.QR_CODE,
+          ZXing.BarcodeFormat.EAN_13,
+          ZXing.BarcodeFormat.EAN_8,
+          ZXing.BarcodeFormat.CODE_39,
+          ZXing.BarcodeFormat.PDF_417,
+          ZXing.BarcodeFormat.DATA_MATRIX,
+          ZXing.BarcodeFormat.ITF
+        ]);
+        _emerScanReader = new ZXing.BrowserMultiFormatReader(hints, 150);
+        _emerScanReader.decodeFromStream(stream, video, function(result, err){
+          if(result && result.getText){
+            var raw = result.getText();
+            if(!window._emerScanLock){
+              statusEl.textContent = '✅ 인식 성공!';
+              _emerHandleScan(raw, statusEl);
+            }
+          }
+          if(err && err.constructor && err.constructor.name !== 'NotFoundException' && err.constructor.name !== 'ChecksumException')
+            console.warn('[ZXing]', err&&err.message);
+        });
+        window._emerBdStop = function(){ try{_emerScanReader&&_emerScanReader.reset();}catch(e){} };
+      } else {
+        // ★ 폴백: jsQR (ZXing 로드 실패 시 — QR만 인식)
         var canvas = document.createElement('canvas');
         var ctx = canvas.getContext('2d');
         var _active = true;
-        var _frameCount = 0;
+        var _fc = 0;
         function tick(){
           if(!_active) return;
           if(video.readyState < 2){ requestAnimationFrame(tick); return; }
-          _frameCount++;
-          // 2프레임마다 분석 (성능 최적화)
-          if(_frameCount % 2 !== 0){ requestAnimationFrame(tick); return; }
+          _fc++;
+          if(_fc % 2 !== 0){ requestAnimationFrame(tick); return; }
           canvas.width = video.videoWidth;
           canvas.height = video.videoHeight;
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
           try{
-            var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            var code = window.jsQR(imageData.data, imageData.width, imageData.height, {
-              inversionAttempts: 'attemptBoth'
-            });
-            if(!_active) return;
-            if(code && code.data){
+            var img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            var code = window.jsQR(img.data, img.width, img.height, {inversionAttempts:'attemptBoth'});
+            if(code && code.data && !window._emerScanLock){
               _active = false;
               statusEl.textContent = '✅ QR 인식 성공!';
               _emerHandleScan(code.data, statusEl);
@@ -21204,28 +21236,6 @@ function emerStartScan(){
         if(video.readyState >= 2){ requestAnimationFrame(tick); }
         else { video.addEventListener('loadedmetadata', function(){ requestAnimationFrame(tick); }, {once:true}); }
         window._emerBdStop = function(){ _active = false; };
-      }
-
-      // jsQR 인라인 포함됨 — 바로 시작
-      _startJsQrLoop();
-
-      if(false){ // ZXing 폴백 (레거시 — jsQR 실패 시만)
-        if(typeof ZXing !== 'undefined' && ZXing.BrowserMultiFormatReader){
-        var hints = new Map();
-        hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-        if(ZXing.DecodeHintType.POSSIBLE_FORMATS)
-          hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.QR_CODE]);
-        _emerScanReader = new ZXing.BrowserMultiFormatReader(hints, 200);
-        _emerScanReader.decodeFromStream(stream, video, function(result, err){
-          if(result){
-            var raw = result.getText ? result.getText() : String(result);
-            _emerHandleScan(raw, statusEl);
-          }
-          if(err && !(err.constructor && err.constructor.name==='NotFoundException'))
-            console.warn('[ZXing]', err&&err.message);
-        });
-      }} else {
-        statusEl.textContent = '❌ 스캐너 미지원 — OCR 버튼을 사용해주세요';
       }
     })
     .catch(function(e){
