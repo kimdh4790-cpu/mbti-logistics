@@ -10403,6 +10403,8 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
 
 /***/ })
 /******/ ])["default"];
+// ★ v9.26: window 전역 등록 (메인 스크립트에서 window.jsQR() 호출 가능하도록)
+if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = jsQR;
 });
 </script>
 </head>
@@ -21095,7 +21097,19 @@ async function emerOcrScan(file){
     window._emerEntryMode = 'ocr';
 
   }catch(e){
-    if(status) status.innerHTML = '<span style="color:var(--red)">❌ OCR 실패: '+e.message+' — 직접 입력해주세요</span>';
+    var errMsg = e.message || String(e);
+    var hint = '';
+    if(errMsg.indexOf('API key')>=0 || errMsg.indexOf('API_KEY')>=0 || errMsg.indexOf('403')>=0){
+      hint = '— Google Vision API 키를 확인해주세요';
+    } else if(errMsg.indexOf('quota')>=0 || errMsg.indexOf('QUOTA')>=0 || errMsg.indexOf('429')>=0){
+      hint = '— API 할당량 초과 (내일 다시 시도)';
+    } else if(errMsg.indexOf('빈 응답')>=0 || errMsg.indexOf('파싱 실패')>=0){
+      hint = '— 네트워크 확인 후 재시도';
+    } else if(errMsg.indexOf('텍스트 인식 실패')>=0){
+      hint = '— 밝은 곳에서 라벨 전체가 보이게 다시 찍어주세요';
+    }
+    if(status) status.innerHTML = '<span style="color:var(--red)">❌ OCR 실패: '+errMsg+' '+hint+'</span>';
+    console.error('[OCR]', errMsg);
   }
 }
 
