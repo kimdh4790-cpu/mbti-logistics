@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.46</title>
+<title>엠비티아이 물류관리 v9.25</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10403,7 +10403,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
 
 /***/ })
 /******/ ])["default"];
-// ★ v9.26: window 전역 등록 (메인 스크립트에서 window.jsQR() 호출 가능하도록)
+// ★ v9.25: window 전역 등록 (메인 스크립트에서 window.jsQR() 호출 가능하도록)
 if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = jsQR;
 });
 </script>
@@ -10421,7 +10421,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.46 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.25 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -10494,7 +10494,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
               </div>
               <div id="find-id-result" style="margin-top:8px;font-size:11px"></div>
             </div>
-            <!-- ★ v9.26: 비밀번호 셀프 초기화 -->
+            <!-- ★ v9.25: 비밀번호 셀프 초기화 -->
             <div style="border-top:1px solid var(--border);padding-top:8px;margin-top:8px">
               <div style="font-size:11px;font-weight:700;color:var(--red);margin-bottom:6px">🔐 비밀번호 초기화</div>
               <div style="font-size:10px;color:var(--text3);margin-bottom:8px;line-height:1.5">아이디 + 이름 + 전화번호 뒤 4자리를 입력하면<br>본인 확인 후 새 비밀번호로 변경할 수 있어요.</div>
@@ -11036,7 +11036,7 @@ var CAMP_COLOR={
   '부산1캠프':'#3B82F6','부산2캠프':'#8B5CF6','부산3캠프':'#10B981',
   '대구2캠프':'#F59E0B','대구2B캠프':'#FB923C','진주M캠프':'#EF4444'
 };
-// ★ v9.12: 캠프 GPS 좌표 (출근 체크인 300m 거리 검증용)
+// ★ v9.25: 캠프 GPS 좌표 (출근 체크인 300m 거리 검증용)
 //    관리자가 [기사관리 > 캠프 GPS 등록] 메뉴에서 수정 가능 → localStorage 'campGps'
 var CAMP_GPS_DEFAULT={
   '부산1캠프':{lat:35.1941,lng:129.1198,addr:'부산광역시 해운대구 반여로 20'},
@@ -11065,9 +11065,9 @@ function getCampGps(){
     return merged;
   }catch(e){return CAMP_GPS_DEFAULT;}
 }
-// ★ v9.12: 출근 인증 반경 (m) — 300m 기본
+// ★ v9.25: 출근 인증 반경 (m) — 300m 기본
 var CAMP_GPS_RADIUS=300;
-// ★ v9.21: 회사 정보 (사무실 전화/팩스/대표번호)
+// ★ v9.25: 회사 정보 (사무실 전화/팩스/대표번호)
 var COMPANY_INFO={
   name      : '엠비티아이 유한회사',
   nameEng   : 'MBTI Co., Ltd.',
@@ -11082,7 +11082,7 @@ var COMPANY_INFO={
   homepage  : 'mbti-logistics.kimdh4790.workers.dev',
   kakaoChannel: 'MBTI Co. LOGISTICS'
 };
-// ★ v9.12: 보험사 직통번호 (사고 접수 직통)
+// ★ v9.25: 보험사 직통번호 (사고 접수 직통)
 var INSURANCE_COMPANIES=[
   {name:'DB손해보험',tel:'1588-0100'},
   {name:'현대해상',tel:'1588-5656'},
@@ -11096,7 +11096,7 @@ function getInsuranceTel(name){
   var hit=INSURANCE_COMPANIES.find(function(c){return c.name===name||name.indexOf(c.name)>=0||c.name.indexOf(name)>=0;});
   return hit?hit.tel:'';
 }
-// ★ v9.12: 배송 마감 시간 (주간/야간)
+// ★ v9.25: 배송 마감 시간 (주간/야간)
 var DELIVERY_DEADLINE={
   day  :{hour:20,minute:0,label:'🥬 신선 배송 마감'},   // 주간 20:00
   night:{hour: 7,minute:0,label:'🌙 새벽 배송 마감'}   // 야간 07:00
@@ -11120,7 +11120,7 @@ var _db=null,_st=null,FB=false;
     if(FB_CFG.projectId&&FB_CFG.projectId.length>3){
       firebase.initializeApp(FB_CFG);
       _db=firebase.firestore(); _st=firebase.storage();
-      // ★ v9.4 수정: synchronizeTabs 제거 → Target ID already exists 에러 근본 해결
+      // ★ v9.25 수정: synchronizeTabs 제거 → Target ID already exists 에러 근본 해결
       //   (다중 탭 지속성이 내정보 탭에서 리스너 재등록 시 Target ID 충돌을 일으켰음)
       //   enablePersistence() 자체를 끔 - 실시간 리스너(onSnapshot)는 영향 없음
       //   Firebase v10+에서 deprecated 될 API이기도 함
@@ -11147,7 +11147,7 @@ function _setupFbListeners(){
   if(_listenersReady||!FB||!_db)return;
   _listenersReady=true;
 
-  // ★ Firebase 연결 상태 감시만 담당 (v9.3 Target ID 충돌 완전 방지)
+  // ★ Firebase 연결 상태 감시만 담당 (v9.25 Target ID 충돌 완전 방지)
   //   entries/deliveries/drivers 등은 startListeners()에서만 등록
   _fbUnsubs.push(_db.collection('settings').doc('status').onSnapshot(function(){
     document.querySelectorAll('.fb-status').forEach(function(el){
@@ -11160,7 +11160,7 @@ function _setupFbListeners(){
   }));
 
   // ★ 기사 목록/entries/deliveries onSnapshot은 startListeners()에서 중앙 관리
-  //   (이전 v9.2까지는 여기서도 entries/deliveries를 등록해 Target ID 충돌 발생)
+  //   (이전 v9.25까지는 여기서도 entries/deliveries를 등록해 Target ID 충돌 발생)
 }
 
 function ls(k){return JSON.parse(localStorage.getItem('mb60_'+k)||'[]');}
@@ -11377,7 +11377,7 @@ function cleanActLog(){
 function updBadge(){
   var oa=ls('accidents').filter(a=>a.status==='접수중'||a.status==='처리중').length;
   var ab=document.getElementById('acc-badge');if(ab)ab.style.display=oa?'':'none';
-  // ★ v9.9: 데이터 자동 정리 — 거부/탈퇴된 기사의 stale isNew=true 제거
+  // ★ v9.25: 데이터 자동 정리 — 거부/탈퇴된 기사의 stale isNew=true 제거
   try{
     var allD=ls('drivers');
     var fixed=false;
@@ -11389,7 +11389,7 @@ function updBadge(){
     });
     if(fixed)lss('drivers',allD);
   }catch(e){}
-  // ★ v9.9: 거부/탈퇴는 제외 — 실제 승인 대기 중인 기사만 카운트
+  // ★ v9.25: 거부/탈퇴는 제외 — 실제 승인 대기 중인 기사만 카운트
   var pnd=ls('drivers').filter(d=>{
     return (d.isNew===true || d.status==='pending') && d.is_active!==true
       && d.status!=='거부' && d.status!=='탈퇴' && d.status!=='reject' && d.status!=='withdrawal';
@@ -11397,10 +11397,10 @@ function updBadge(){
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
 function updFbUI(){
-  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.46 · 🔥 실시간':'v9.46 · 데모';
+  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.25 · 🔥 실시간':'v9.25 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.46 · Firebase 실시간':'v9.46 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.25 · Firebase 실시간':'v9.25 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -11533,10 +11533,10 @@ function goSplash(){
   hide(['login-screen','reg-screen','app','dv']);
   show('splash');
   showJobSelect(false);
-  // ★ v9.5: 마지막 가입 회사만 표시 (한 회사로 가입했으면 다른 카드는 숨김)
+  // ★ v9.25: 마지막 가입 회사만 표시 (한 회사로 가입했으면 다른 카드는 숨김)
   setTimeout(_filterSplashByLastJob, 50);
 }
-// ★ v9.5: 가입한 회사 카드만 표시
+// ★ v9.25: 가입한 회사 카드만 표시
 function _filterSplashByLastJob(){
   try{
     var lastJob=localStorage.getItem('mbti_lastJobsub');
@@ -11665,7 +11665,7 @@ function setMode(m){
   if(m==='driver'){hide(['app']);show('dv');DT('home',document.getElementById('pni0'));}
   else{hide(['dv']);show('app');SP(S.page,null);}
 }
-// ★ v9.26: 이름으로 아이디 찾기
+// ★ v9.25: 이름으로 아이디 찾기
 function findDriverIdByName(){
   var name = (document.getElementById('find-id-name')||{}).value||'';
   var result = document.getElementById('find-id-result');
@@ -11716,7 +11716,7 @@ function findDriverIdByName(){
   }).join('');
 }
 
-// ★ v9.26: 기사 셀프 비밀번호 초기화 — 본인 확인
+// ★ v9.25: 기사 셀프 비밀번호 초기화 — 본인 확인
 var _selfResetTarget = null;
 
 async function selfResetPwVerify(){
@@ -11970,7 +11970,7 @@ function doLogin(){
         S.curPlate=found.plate||'';
         S.curJobtype=found.jobtype||'택배';
         S.curJobsub=found.jobsub||'쿠팡';
-        // ★ v9.5: 로그인 성공 시 가입 회사 기억
+        // ★ v9.25: 로그인 성공 시 가입 회사 기억
         try{localStorage.setItem('mbti_lastJobsub',found.jobsub||'쿠팡');}catch(e){}
         // ★ 세션 24시간 만료 (기존 무기한 → 만료 시간 추가)
         localStorage.setItem('mbti_session',JSON.stringify({
@@ -12240,7 +12240,7 @@ async function submitReg(){
     if(idx>=0&&d.fbId)a[idx].fbId=d.fbId;lss('drivers',a);
   }).catch(()=>{});
   addAct('reg',name+'('+userId+') 가입 — '+jobtype+(d.jobsub?'/'+d.jobsub:''),name);
-  // ★ v9.5: 가입한 회사 기억 (다음 스플래시에서 해당 회사만 표시)
+  // ★ v9.25: 가입한 회사 기억 (다음 스플래시에서 해당 회사만 표시)
   if(d.jobsub)try{localStorage.setItem('mbti_lastJobsub',d.jobsub);}catch(e){}
   S.bankUrl='';
   DOCS={};
@@ -12292,17 +12292,17 @@ function rDash(){
   var e=ls('entries'),a=ls('accidents'),ac=ls('activity');
   var w=ls('tempLogs').filter(l=>l.temp!=='상온'&&l.temp>-18).length;
   var oa=a.filter(x=>x.status==='접수중'||x.status==='처리중').length;
-  // ★ v9.5: 개인 PIN 미설정 기사 수 / 오늘 운행 메모 수 / 가입 승인 대기 수
+  // ★ v9.25: 개인 PIN 미설정 기사 수 / 오늘 운행 메모 수 / 가입 승인 대기 수
   var allDrv=ls('drivers').filter(function(d){return d.is_active!==false&&d.status!=='탈퇴'&&!d.isNew;});
   var unverified=allDrv.filter(function(d){return !d.verifiedAt;}).length;
   var todayMemos=ls('deliveryMemos').filter(function(m){return m.date===today();}).length;
   var pendingApprovals=ls('drivers').filter(function(d){
-    // ★ v9.9: 거부/탈퇴 제외 + is_active 체크 — updBadge와 동일 필터
+    // ★ v9.25: 거부/탈퇴 제외 + is_active 체크 — updBadge와 동일 필터
     return (d.isNew||d.status==='pending') && d.is_active!==true
       && d.status!=='거부' && d.status!=='탈퇴' && d.status!=='reject' && d.status!=='withdrawal';
   }).length;
 
-  // ★ v9.13: 주간/야간 배송 카운터 — 오늘 출근(입차)한 기사만 집계
+  // ★ v9.25: 주간/야간 배송 카운터 — 오늘 출근(입차)한 기사만 집계
   var todayEntryDrivers=new Set(e.filter(function(x){return x.date===today();}).map(function(x){return x.driver;}));
   var todayDels=ls('deliveries').filter(function(d){return d.date===today();});
   // 주간 출근기사 (shift=주간 또는 주야간) 중 오늘 입차한 기사
@@ -12482,7 +12482,7 @@ function rEntry(){
   </div>${tabHTML}${bodyHTML}</div>`;
 }
 
-// ★ v9.5: 운행 메모 (관리자용 60일 조회) — 송장번호·사유·사진
+// ★ v9.25: 운행 메모 (관리자용 60일 조회) — 송장번호·사유·사진
 function rMemoLog(){
   // ★ v9.25: 매 페이지 진입마다 500개 읽기 → localStorage 캐시 우선
   // startListeners()의 delivery_memos onSnapshot이 실시간 동기화 담당
@@ -12589,7 +12589,7 @@ function exportMemoLogXLSX(){
   toast('✅ 메모 '+memos.length+'건 내보내기 완료');
 }
 
-// ★ v9.6: 오늘 정산 (실시간) — 기사별 당일 라우트·단가·합계
+// ★ v9.25: 오늘 정산 (실시간) — 기사별 당일 라우트·단가·합계
 function rTodaySettle(){
   var td=today();
   var todayEntries=ls('entries').filter(function(e){return e.date===td;});
@@ -12615,7 +12615,7 @@ function rTodaySettle(){
     var info=driversToday[name];
     var drv=allDrivers.find(function(x){return x.name===name||x.userId===name;})||{};
     var routeNo=info.routeNo||'';
-    // ★ v9.7: 캠프 정보 (entries.camp 또는 todayDispatch.camp)
+    // ★ v9.25: 캠프 정보 (entries.camp 또는 todayDispatch.camp)
     var camp='';
     if(info.entries&&info.entries.length){
       var firstE=info.entries[0];
@@ -12742,7 +12742,7 @@ function rTodaySettle(){
     +'</div>';
 }
 
-// ★ v9.6: 오늘 정산 — 기사 단가 즉시 수정
+// ★ v9.25: 오늘 정산 — 기사 단가 즉시 수정
 function editTodayPrice(fbId, driverName, currentPrice){
   if(!fbId){
     // 로컬에서 fbId 못 찾은 경우 — 이름으로 재조회
@@ -12768,7 +12768,7 @@ function editTodayPrice(fbId, driverName, currentPrice){
   SP('today_settle',null);
 }
 
-// ★ v9.6: 오늘 정산 CSV 내보내기
+// ★ v9.25: 오늘 정산 CSV 내보내기
 function exportTodaySettleCSV(){
   var td=today();
   var todayEntries=ls('entries').filter(function(e){return e.date===td;});
@@ -13167,7 +13167,7 @@ function autoSendTaxOnApprove(driverName, month){
       toast('⚠️ 세금계산서 자동 생성 실패 - 수동으로 전달해주세요');
       return;
     }
-    // ★ v9.7: 고화질 캡처 (scale 2.5 + 품질 0.95, 잘림 방지 width/height 명시)
+    // ★ v9.25: 고화질 캡처 (scale 2.5 + 품질 0.95, 잘림 방지 width/height 명시)
     var wrapW=wrap.scrollWidth, wrapH=wrap.scrollHeight;
     html2canvas(wrap,{
       scale:2.5,
@@ -13445,7 +13445,7 @@ function _startDriverLocTracking(){
 }
 
 // ★ v9.25: 기사용 실시간 지도 (내 위치 + 내 긴급배송 핀)
-// ★ v9.26: 지도 핀 순차 이동 (◀ ▶ 버튼)
+// ★ v9.25: 지도 핀 순차 이동 (◀ ▶ 버튼)
 window._mapPinNavIdx = 0;
 function driverMapPinNav(dir){
   var map = window._activeDriverMap;
@@ -13643,7 +13643,7 @@ function _loadMapsScript(apiKey){
   });
 }
 
-// ★ v9.26: 지도 닫기 (닫기 버튼 + 뒤로가기 공통)
+// ★ v9.25: 지도 닫기 (닫기 버튼 + 뒤로가기 공통)
 function _closeDriverMap(){
   if(window._driverMapWatchId){ navigator.geolocation.clearWatch(window._driverMapWatchId); window._driverMapWatchId=null; }
   window._activeDriverMap=null; window._activeDriverMapAddPin=null;
@@ -13660,7 +13660,7 @@ function _closeDriverMap(){
 
 async function openDriverMap(){
   document.getElementById('driver-map-mo')?.remove();
-  // ★ v9.26: 뒤로가기 인터셉트 (브라우저 back → 지도 닫기)
+  // ★ v9.25: 뒤로가기 인터셉트 (브라우저 back → 지도 닫기)
   history.pushState({map:'driver'}, '');
   window._driverMapHistoryPushed = true;
   if(!window._driverMapPopstateSet){
@@ -13680,7 +13680,7 @@ async function openDriverMap(){
           <span id="driver-map-total" onclick="window._driverMapSetFilter&&window._driverMapSetFilter('all')" style="font-size:11px;background:rgba(59,130,246,.85);padding:3px 9px;border-radius:999px;font-weight:700;cursor:pointer;border:2px solid #fff;touch-action:manipulation">📦 전체 -</span>
           <span id="driver-map-pending" onclick="window._driverMapSetFilter&&window._driverMapSetFilter('pending')" style="font-size:11px;background:rgba(220,38,38,.55);padding:3px 9px;border-radius:999px;font-weight:700;cursor:pointer;border:2px solid transparent;touch-action:manipulation">⏳ 미완료 -</span>
           <span id="driver-map-done" onclick="window._driverMapSetFilter&&window._driverMapSetFilter('done')" style="font-size:11px;background:rgba(22,163,74,.55);padding:3px 9px;border-radius:999px;font-weight:700;cursor:pointer;border:2px solid transparent;touch-action:manipulation">✅ 완료 -</span>
-          <!-- ★ v9.26: 핀 순차 이동 버튼 -->
+          <!-- ★ v9.25: 핀 순차 이동 버튼 -->
           <div style="display:flex;gap:3px;margin-left:2px">
             <button onclick="driverMapPinNav(-1)" style="width:28px;height:28px;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.4);border-radius:6px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center">◀</button>
             <span id="driver-map-pin-idx" style="font-size:10px;color:rgba(255,255,255,.7);align-self:center;min-width:28px;text-align:center"></span>
@@ -13736,7 +13736,7 @@ async function openDriverMap(){
 function _renderDriverMap(myLoc, emerLocs){
   var mapDiv=document.getElementById('driver-map-canvas');
   if(!mapDiv) return;
-  // ★ v9.26: 전역에 저장 (핀 순차 이동용)
+  // ★ v9.25: 전역에 저장 (핀 순차 이동용)
   window._emerLocs = emerLocs;
   var map=new google.maps.Map(mapDiv,{center:myLoc,zoom:14,mapTypeId:'roadmap',gestureHandling:'greedy'});
   var infoWin=new google.maps.InfoWindow();
@@ -14072,7 +14072,7 @@ function _renderLiveMap(center, driverLocs, emerLocs){
     gestureHandling: 'greedy'
   });
 
-  // ★ v9.26: 커스텀 줌 버튼 (+/-)
+  // ★ v9.25: 커스텀 줌 버튼 (+/-)
   var zoomDiv = document.createElement('div');
   zoomDiv.style.cssText = 'position:absolute;right:12px;top:12px;display:flex;flex-direction:column;gap:4px;z-index:10';
   zoomDiv.innerHTML =
@@ -14086,7 +14086,7 @@ function _renderLiveMap(center, driverLocs, emerLocs){
   var infoWin = new google.maps.InfoWindow();
   var legend = document.getElementById('live-map-legend');
 
-  // ★ v9.26: 도로명 주소 변환 — Geocoding API 없으면 저장된 주소 사용
+  // ★ v9.25: 도로명 주소 변환 — Geocoding API 없으면 저장된 주소 사용
   function getAddress(lat, lng, storedAddr, callback){
     // 저장된 주소 있으면 바로 사용 (Geocoding API 불필요)
     if(storedAddr && storedAddr.length > 5 && !storedAddr.match(/^\d+\.\d+/)){
@@ -14154,7 +14154,7 @@ function _renderLiveMap(center, driverLocs, emerLocs){
       });
     });
 
-    // ★ v9.26: legend 기사 버튼 — 탭하면 해당 기사 위치로 이동 + 인포윈도우
+    // ★ v9.25: legend 기사 버튼 — 탭하면 해당 기사 위치로 이동 + 인포윈도우
     if(legend){
       var btn = document.createElement('button');
       btn.style.cssText = 'color:#fff;font-size:11px;white-space:nowrap;background:rgba(220,38,38,.85);padding:5px 10px;border-radius:12px;border:none;cursor:pointer;font-weight:700;touch-action:manipulation;flex-shrink:0';
@@ -14196,7 +14196,7 @@ function _renderLiveMap(center, driverLocs, emerLocs){
     map.setZoom(11);
   }
 
-  // ★ v9.26: Firebase 실시간 리스너 — 기사 위치 자동 업데이트
+  // ★ v9.25: Firebase 실시간 리스너 — 기사 위치 자동 업데이트
   if(FB && _db){
     var liveUnsub = _db.collection('driver_locations')
       .where('date','==',today())
@@ -15306,7 +15306,7 @@ function rDrivers(){
   </div>
   `; // 탈퇴·거부 인원 비표시 (수정7)
 }
-// ★ v9.7: 기사 단가 인라인 수정 (기사 관리 페이지)
+// ★ v9.25: 기사 단가 인라인 수정 (기사 관리 페이지)
 function editDrvUnitPrice(fbId, name, currentPrice){
   if(!fbId){
     var d=ls('drivers').find(function(x){return x.name===name;});
@@ -15329,7 +15329,7 @@ function editDrvUnitPrice(fbId, name, currentPrice){
   SP('drivers',null);
 }
 
-// ★ v9.7: 당일 배차 인라인 수정 (캠프 + 라우트번호) — 기사앱 실시간 연동
+// ★ v9.25: 당일 배차 인라인 수정 (캠프 + 라우트번호) — 기사앱 실시간 연동
 function editDrvTodayDispatch(fbId, name){
   if(!fbId){
     var d2=ls('drivers').find(function(x){return x.name===name;});
@@ -15389,7 +15389,7 @@ function editDrvTodayDispatch(fbId, name){
   lss('drivers',drs);
   if(FB&&_db&&drv.fbId){
     _db.collection('drivers').doc(drv.fbId).update({todayDispatch:dispatch}).catch(function(){});
-    // ★ v9.8: 기사에게 즉시 알림 푸시 (driver_notifications 컬렉션 활용)
+    // ★ v9.25: 기사에게 즉시 알림 푸시 (driver_notifications 컬렉션 활용)
     try{
       var notifBody=(camp?camp+' ':'')+(routeNo||'배차 정보');
       _db.collection('driver_notifications').doc('dispatch_'+drv.fbId+'_'+today()).set({
@@ -15514,7 +15514,7 @@ function rejDriver(id){
   var d=ls('drivers');
   var f=d.find(x=>x.fbId===id)||d.find(x=>String(x.id)===String(id));
   if(!f){toast('❌ 기사 정보 없음. 새로고침 후 재시도');return;}
-  f.status='거부';f.is_active=false;f.isNew=false;  // ★ v9.9: isNew도 false로 (대기 알림 방지)
+  f.status='거부';f.is_active=false;f.isNew=false;  // ★ v9.25: isNew도 false로 (대기 알림 방지)
   lss('drivers',d);
   if(FB&&_db&&f.fbId)_db.collection('drivers').doc(f.fbId).update({status:'거부',is_active:false,isNew:false}).catch(()=>{});
   SP(S.page,null);updBadge();toast(f.name+' 거부');
@@ -15529,7 +15529,7 @@ function showWithdrawalList(){
   var all=ls('drivers');
   var list=all.filter(function(d){return d.withdrawalRequest && d.withdrawalRequest.status==='pending';});
   
-  // ★ v9.9: 모달 ID로 직접 참조 (selector 매칭 실패 방지)
+  // ★ v9.25: 모달 ID로 직접 참조 (selector 매칭 실패 방지)
   var moId='withdraw-list-modal-'+Date.now();
   var mo=document.createElement('div');
   mo.id=moId;
@@ -15700,7 +15700,7 @@ function rejectWithdrawal(fbId, driverName){
 
 // ═══════════════════════════════════════════════════════════
 // ════════════════════════════════════════════
-// ★ v9.12: 관리자 — 캠프 GPS 좌표 등록 (출근 인증 300m)
+// ★ v9.25: 관리자 — 캠프 GPS 좌표 등록 (출근 인증 300m)
 // ════════════════════════════════════════════
 function openCampGpsAdmin(){
   if(S.curMode!=='admin'){toast('❌ 관리자 전용');return;}
@@ -15746,7 +15746,7 @@ async function saveCampGps(){
   Object.keys(gps).forEach(function(k){if(allCamps.indexOf(k)<0)allCamps.push(k);});
   var saved={};
   toast('🔄 주소 → 좌표 변환 중...');
-  // ★ v9.22: 주소로 Geocoding (Nominatim) → 좌표 자동 계산
+  // ★ v9.25: 주소로 Geocoding (Nominatim) → 좌표 자동 계산
   for(var i=0;i<allCamps.length;i++){
     var name=allCamps[i];
     var addr=(document.getElementById('cg-addr-'+name)?.value||'').trim();
@@ -15926,7 +15926,7 @@ function saveEditDriver(fbIdOrId){
   var newBizName=getVal('ed-bizName').trim();
   var newBizAddr=getVal('ed-bizAddr').trim();
   var newCustomUP=getVal('ed-customUnitPrice').trim();
-  // ★ v9.12: 보험·연락 정보
+  // ★ v9.25: 보험·연락 정보
   var newInsurance=getVal('ed-insurance').trim();
   var newInsuranceNo=getVal('ed-insuranceNo').trim();
   var newKakaoId=getVal('ed-kakaoId').trim();
@@ -15957,7 +15957,7 @@ function saveEditDriver(fbIdOrId){
   d.bizName=newBizName;
   d.bizAddr=newBizAddr;
   d.customUnitPrice=newCustomUP?+newCustomUP:0;
-  // ★ v9.12: 보험·연락
+  // ★ v9.25: 보험·연락
   d.insurance=newInsurance;
   d.insuranceNo=newInsuranceNo;
   d.kakaoId=newKakaoId;
@@ -16313,7 +16313,7 @@ function rMypage(){
   try{
     var isAdmin=(S.curMode==='admin');
     var adminInfo=JSON.parse(localStorage.getItem('mbti_admin_info')||'{}');
-    // ★ v9.4 방어 강화: 기사 데이터가 아직 로드 안 됐으면 재시도 UI
+    // ★ v9.25 방어 강화: 기사 데이터가 아직 로드 안 됐으면 재시도 UI
     if(!isAdmin){
       var allDrv=ls('drivers');
       if(!allDrv.length && FB && _db){
@@ -16424,7 +16424,7 @@ function rMypage(){
       });
       html+='</div>';
 
-      // ★ v9.12: 보험 · 알림 정보 (기사 본인 등록)
+      // ★ v9.25: 보험 · 알림 정보 (기사 본인 등록)
       var insOpts2=[''].concat(INSURANCE_COMPANIES.map(function(c){return c.name;})).map(function(t){
         return '<option value="'+t+'" '+((d.insurance||'')===t?'selected':'')+'>'+(t||'(미등록)')+'</option>';
       }).join('');
@@ -16436,7 +16436,7 @@ function rMypage(){
       html+='<div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">💬 카카오톡 ID</div><input id="mp-kakaoId" value="'+(d.kakaoId||'')+'" placeholder="카카오톡 ID" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--text)"></div>';
       html+='<div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">📱 SMS 수신</div><select id="mp-smsOk" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--text)"><option value="Y" '+((d.smsOk||'Y')==='Y'?'selected':'')+'>동의</option><option value="N" '+(d.smsOk==='N'?'selected':'')+'>거부</option></select></div>';
       html+='</div></div>';
-      // ★ v9.12: 푸시 알림 권한 토글
+      // ★ v9.25: 푸시 알림 권한 토글
       var notiPerm=(window.Notification&&Notification.permission)||'default';
       var notiStatus=notiPerm==='granted'?'✅ 활성화됨 (백그라운드 알림 가능)':notiPerm==='denied'?'🚫 차단됨 (브라우저 설정 변경 필요)':'⚠️ 미설정 (아래 버튼으로 활성화)';
       var notiColor=notiPerm==='granted'?'var(--teal)':notiPerm==='denied'?'var(--red)':'var(--amber)';
@@ -16446,7 +16446,7 @@ function rMypage(){
       if(notiPerm!=='granted'){
         html+='<button onclick="requestNotiPermission(false).then(function(){SP(\'mypage\',null);})" style="padding:7px 14px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">🔔 알림 받기 활성화</button>';
       }
-      // ★ v9.21: 디바이스 소유자(영구 매핑) 정보 표시
+      // ★ v9.25: 디바이스 소유자(영구 매핑) 정보 표시
       var _dvOwner = (typeof _getDeviceOwner==='function')?_getDeviceOwner():null;
       if(notiPerm==='granted' && _dvOwner && _dvOwner.driver){
         html+='<div style="margin-top:8px;padding:7px 9px;background:var(--teal-l);border-radius:6px;border:1px dashed var(--teal)">';
@@ -16526,7 +16526,7 @@ function rMypage(){
 
     html+='<button class="btn btn-blue" style="width:100%;padding:13px;font-size:14px;margin-top:8px" onclick="saveMypage()">💾 정보 저장</button>';
     if(!isAdmin){
-      // ★ v9.5: 본인확인 (한 번만 인증, 수정 가능)
+      // ★ v9.25: 본인확인 (한 번만 인증, 수정 가능)
       var verifiedAt=d.verifiedAt||'';
       var hasVerified=!!verifiedAt;
       html+='<div class="sec-lbl" style="margin-top:18px">🔐 개인 PIN 설정</div>';
@@ -16556,7 +16556,7 @@ function rMypage(){
       }
       html+='</div>';
 
-      // ★ v9.8: 앱 설정 (PWA 설치, 알림 권한)
+      // ★ v9.25: 앱 설정 (PWA 설치, 알림 권한)
       html+='<div class="sec-lbl" style="margin-top:18px">📱 앱 설정</div>';
       html+='<div style="background:var(--bg3);border-radius:12px;padding:14px;margin-bottom:12px">';
       // 앱 설치 상태
@@ -16773,7 +16773,7 @@ function requestWithdrawal(){
   }
 }
 
-// ★ v9.5: 관리자 — 기사 개인 PIN 리셋
+// ★ v9.25: 관리자 — 기사 개인 PIN 리셋
 function resetDriverVerify(fbIdOrId){
   if(!confirm('이 기사의 개인 PIN을 초기화하시겠습니까?\n\n기사가 내정보에서 새 PIN을 설정하면 됩니다.'))return;
   var drs=ls('drivers');
@@ -16804,7 +16804,7 @@ function resetDriverVerify(fbIdOrId){
   setTimeout(function(){SP('drivers',null);},200);
 }
 
-// ★ v9.5: 개인 PIN 설정
+// ★ v9.25: 개인 PIN 설정
 async function setVerifyPin(){
   var pin1=(document.getElementById('mp-verify-set')?.value||'').trim();
   var pin2=(document.getElementById('mp-verify-set2')?.value||'').trim();
@@ -16834,7 +16834,7 @@ async function setVerifyPin(){
   setTimeout(function(){SP('mypage',null);DT('mypage',document.getElementById('pni6'));},500);
 }
 
-// ★ v9.5: 본인확인 PIN 변경
+// ★ v9.25: 본인확인 PIN 변경
 async function changeVerifyPin(){
   var cur=(document.getElementById('mp-verify-cur')?.value||'').trim();
   var newPin=(document.getElementById('mp-verify-new')?.value||'').trim();
@@ -16971,7 +16971,7 @@ async function saveMypage(){
     if(document.getElementById('mp-bizitem')) me2.bizItem=document.getElementById('mp-bizitem').value.trim();
     me2.email=document.getElementById('mp-email')?.value||me2.email;
     me2.addr=document.getElementById('mp-addr')?.value||me2.addr;
-    // ★ v9.12: 보험·카카오·SMS
+    // ★ v9.25: 보험·카카오·SMS
     if(document.getElementById('mp-insurance')) me2.insurance=document.getElementById('mp-insurance').value.trim();
     if(document.getElementById('mp-insuranceNo')) me2.insuranceNo=document.getElementById('mp-insuranceNo').value.trim();
     if(document.getElementById('mp-kakaoId')) me2.kakaoId=document.getElementById('mp-kakaoId').value.trim();
@@ -16998,7 +16998,7 @@ function calcNet(x){
   var damt=isYong ? dcnt*yDel : (_rdList.length ? _damtRP : (+x.damt||+x.delivAmt||+x.base||0));
   var ramt=isYong ? rcnt*yRet : (_rdList.length ? _ramtRP : (+x.ramt||+x.retAmt||0));
   var fresh=+x.fresh||+x.freshAmt||0;
-  // ★ 프레시백 인센 계산 (v9.1 방어 로직)
+  // ★ 프레시백 인센 계산 (v9.25 방어 로직)
   // 1순위: 저장된 x.finc 값이 있으면 jobsub과 무관하게 그대로 사용 (데이터 정합성 우선)
   // 2순위: x.finc 없으면 쿠팡은 건수×25원, 그 외(용차/컬리/CJ)는 0
   var isCoupang=(x.jobsub==='쿠팡'||x.client==='쿠팡');
@@ -17048,7 +17048,7 @@ function updSettle(){
     var rAmt=document.getElementById('se-ramt');if(rAmt&&!rAmt.dataset.manual)rAmt.value=rcnt*yRet;
   }
   // 프레시백 인센: 쿠팡만
-        // ── v9.0: 쿠팡 프레시백 인센티브 고정: 확정건수 × 25원
+        // ── v9.25: 쿠팡 프레시백 인센티브 고정: 확정건수 × 25원
       var finc=isCoupang?Math.round(dcnt*25):0;
   var fi=document.getElementById('se-finc');if(fi)fi.value=finc;
   var damt=+document.getElementById('se-damt')?.value||0;
@@ -17742,7 +17742,7 @@ function sendStmtToDriver(i){
     x=s[i]; // 업데이트된 값 반영
   }catch(e){/* 저장 실패해도 이미지 생성 계속 */}
   toast('📸 명세서 이미지 생성 중...');
-  // ★ v9.9: 고화질 캡처 + Storage 사용 (기사 화질 동일하게 유지)
+  // ★ v9.25: 고화질 캡처 + Storage 사용 (기사 화질 동일하게 유지)
   var wrapW=wrap.scrollWidth, wrapH=wrap.scrollHeight;
   html2canvas(wrap,{
     scale:2.5,
@@ -18001,7 +18001,7 @@ function saveTaxInvoiceImage(i){
   if(typeof html2canvas==='undefined'){toast('⚠️ 이미지 라이브러리 로딩 중... 잠시 후 다시 시도해주세요');return;}
   var x=ls('settlements')[i]||{};
   toast('📸 이미지 생성 중...');
-  // ★ v9.9: 고화질 캡처 (PNG 무압축이라 화질 보존)
+  // ★ v9.25: 고화질 캡처 (PNG 무압축이라 화질 보존)
   var tW=target.scrollWidth, tH=target.scrollHeight;
   html2canvas(target,{scale:2.5,useCORS:true,backgroundColor:'#ffffff',logging:false,width:tW,height:tH,windowWidth:tW,windowHeight:tH})
   .then(function(canvas){
@@ -18584,7 +18584,7 @@ function checkDriverNotifications(){
       if(items.length>10)items=items.slice(0,10);
       // ★ DT 호출 제거 - 무한루프 원인
       window._drvNotes={}; items.forEach(function(it){window._drvNotes[it._id]=it;});
-      // ★ v9.8: 새 알림 도착 시 실제 OS 푸시 알림 발송 (Notification API)
+      // ★ v9.25: 새 알림 도착 시 실제 OS 푸시 알림 발송 (Notification API)
       try{
         var notifiedKey='mbti_pushed_notifs_'+S.curDriver;
         var notified={};
@@ -18637,13 +18637,13 @@ function checkDriverNotifications(){
         if(it.readAt || it.readStatus==='read')return false;
         try{
           var readSet=JSON.parse(localStorage.getItem('drv_notice_read_'+S.curDriver)||'{}');
-          // ★ v9.26: notifId OR noticeId 둘 중 하나라도 읽음 처리됐으면 제외
+          // ★ v9.25: notifId OR noticeId 둘 중 하나라도 읽음 처리됐으면 제외
           if(readSet[it._id]) return false;
           if(it.noticeId && readSet['nc_'+it.noticeId]) return false;
           return true;
         }catch(e){return true;}
       });
-      // ★ v9.26: noticeId 기준 중복 제거 (같은 공지 여러 번 전달해도 1번만 팝업)
+      // ★ v9.25: noticeId 기준 중복 제거 (같은 공지 여러 번 전달해도 1번만 팝업)
       var urgentByNoticeId={};
       urgentNotices.forEach(function(it){
         var k = it.noticeId || it._id;
@@ -18652,7 +18652,7 @@ function checkDriverNotifications(){
       urgentNotices = Object.values(urgentByNoticeId);
 
       if(urgentNotices.length>0){
-        // ★ v9.26: sessionStorage → localStorage (로그인해도 유지)
+        // ★ v9.25: sessionStorage → localStorage (로그인해도 유지)
         var urgentSeenKey='urgent_notice_seen_'+S.curDriver+'_'+(urgentNotices[0].noticeId||urgentNotices[0]._id);
         var alreadyOpen=document.getElementById('urgent-notice-modal');
         if(!localStorage.getItem(urgentSeenKey) && !alreadyOpen){
@@ -18670,7 +18670,7 @@ function checkDriverNotifications(){
         if(existing0)existing0.remove();
         return;
       }
-      // ★ v9.5: 항목별 dismiss 영구 추적 (localStorage) — 한번 닫으면 다시 안 뜸
+      // ★ v9.25: 항목별 dismiss 영구 추적 (localStorage) — 한번 닫으면 다시 안 뜸
       var seenMapKey='notif_dismissed_'+S.curDriver;
       var seenMap={};
       try{seenMap=JSON.parse(localStorage.getItem(seenMapKey)||'{}');}catch(e){}
@@ -18926,12 +18926,12 @@ function _markNoticeRead(notifId,noticeId){
   try{
     var readSet=JSON.parse(localStorage.getItem('drv_notice_read_'+S.curDriver)||'{}');
     readSet[notifId]=new Date().toISOString();
-    // ★ v9.26: noticeId 기준으로도 저장 (같은 공지 여러 doc 중복 방지)
+    // ★ v9.25: noticeId 기준으로도 저장 (같은 공지 여러 doc 중복 방지)
     if(noticeId) readSet['nc_'+noticeId]=new Date().toISOString();
     localStorage.setItem('drv_notice_read_'+S.curDriver,JSON.stringify(readSet));
   }catch(e){}
 
-  // ★ v9.26: sessionStorage → localStorage (로그인해도 유지)
+  // ★ v9.25: sessionStorage → localStorage (로그인해도 유지)
   try{
     var seenKey='urgent_notice_seen_'+S.curDriver+'_'+(noticeId||notifId);
     localStorage.setItem(seenKey,'1');
@@ -18947,7 +18947,7 @@ function _markNoticeRead(notifId,noticeId){
     }).catch(function(e){console.warn('notif readAt:',e&&e.message);});
   }
 
-  // ★ v9.26: 같은 noticeId를 가진 다른 driver_notifications doc도 일괄 읽음 처리
+  // ★ v9.25: 같은 noticeId를 가진 다른 driver_notifications doc도 일괄 읽음 처리
   if(FB&&_db&&noticeId&&S.curDriver){
     _db.collection('driver_notifications')
       .where('driver','==',S.curDriver)
@@ -19021,7 +19021,7 @@ function _buildAttendCard(){
   html+='<div style="font-size:12px;font-weight:800;color:var(--text)">📍 오늘 출퇴근'+workDur+'</div>';
   html+='<div style="font-size:9px;color:var(--text3)">GPS 자동 기록</div>';
   html+='</div>';
-  // ★ v9.12: 소속 캠프 + 거리 검증 안내
+  // ★ v9.25: 소속 캠프 + 거리 검증 안내
   var _me=ls('drivers').find(function(x){return x.name===S.curDriver;});
   var _myCamp=_me&&_me.camp||'';
   if(_myCamp){
@@ -19090,7 +19090,7 @@ async function doCheckIn(){
   
   var gps=await _getGPS();
 
-  // ★ v9.12: 캠프 300m 거리 검증
+  // ★ v9.25: 캠프 300m 거리 검증
   var me=ls('drivers').find(function(x){return x.name===S.curDriver;});
   var myCamp=me&&me.camp||'';
   var myCampFull=myCamp;
@@ -19151,13 +19151,13 @@ async function doCheckIn(){
   var card=document.getElementById('attend-card');
   if(card)card.innerHTML=_buildAttendCard();
 
-  // ★ v9.4: 출근 체크인 = 입차 등록 (오늘 첫 체크인 시 자동 entries 생성)
+  // ★ v9.25: 출근 체크인 = 입차 등록 (오늘 첫 체크인 시 자동 entries 생성)
   try{
     var jsub=S.curJobsub||S.curJobtype||'쿠팡';
-    // ★ v9.5: 라우트 번호 입력값 캡처 (입차 페이지에서 입력한 값)
+    // ★ v9.25: 라우트 번호 입력값 캡처 (입차 페이지에서 입력한 값)
     var routeNo=(document.getElementById('entry-route-no')?.value||'').trim().toUpperCase();
     if(!routeNo){routeNo=localStorage.getItem('drv_lastRoute_'+S.curDriver)||'';}
-    // ★ v9.7: 관리자 당일 배차 캠프 정보 가져오기
+    // ★ v9.25: 관리자 당일 배차 캠프 정보 가져오기
     var meDrvE=ls('drivers').find(function(x){return x.name===S.curDriver||x.userId===S.curDriver;})||{};
     var dispE=meDrvE.todayDispatch||{};
     var assignedCamp=(dispE.date===today())?(dispE.camp||''):'';
@@ -19178,7 +19178,7 @@ async function doCheckIn(){
         driver:S.curDriver, type:jsub, company:jsub,
         routeFrom:'', routeTo:'', ton:S.jobTon||'',
         routeNo:routeNo,  // ★ 라우트 번호 (관리자 단가 측정용)
-        camp:assignedCamp,  // ★ v9.7: 관리자 배정 캠프
+        camp:assignedCamp,  // ★ v9.25: 관리자 배정 캠프
         shift:entryShift,   // ★ v9.25: 회차 (D1,D2,F3,1회전,2회전 등)
         time:nowT(), temp:'상온', photos:{},
         gps:gps||null,
@@ -19254,7 +19254,7 @@ async function doCheckOut(){
 
 // ════════════════════════════════════════════
 // ════════════════════════════════════════════
-// ★ v9.19: 배송 마감 카운트다운 (근무표 연동 + 합의사항 전체 적용)
+// ★ v9.25: 배송 마감 카운트다운 (근무표 연동 + 합의사항 전체 적용)
 // ════════════════════════════════════════════
 // 오늘 근무표 일별 상태 ('주','야','휴무','병가','')
 function _getTodaySchedShift(){
@@ -19460,7 +19460,7 @@ function _startDeadlineTick(){
     var card=document.getElementById('drv-deadline-card');
     if(!card){clearInterval(window._dlTickTimer);window._dlTickTimer=null;return;}
     if(S.curMode!=='driver'){clearInterval(window._dlTickTimer);window._dlTickTimer=null;return;}
-    // ★ v9.26: 미출근 감지 → 즉시 카드 숨김 + 알림 차단
+    // ★ v9.25: 미출근 감지 → 즉시 카드 숨김 + 알림 차단
     var att=_getAttend();
     if(!att||!att.checkIn){card.innerHTML='';return;}
     // 퇴근 감지 → 즉시 종료
@@ -19494,7 +19494,7 @@ function _startDeadlineTick(){
   },1000);
 }
 
-// ★ v9.12: 캠프 내 배송 지원 알림 (Firebase 실시간)
+// ★ v9.25: 캠프 내 배송 지원 알림 (Firebase 실시간)
 // ════════════════════════════════════════════
 // ★ v9.25: 캠프 동료 연락처 (이름 클릭 → 전화, 번호 비공개)
 function _buildCampContacts(){
@@ -19536,7 +19536,7 @@ function _buildCampContacts(){
 }
 
 function _buildCampSupportCard(){
-  // ★ v9.26: 미출근 / 퇴근 / 휴무 시 카드 표시 안 함
+  // ★ v9.25: 미출근 / 퇴근 / 휴무 시 카드 표시 안 함
   var att=_getAttend();
   if(!att||!att.checkIn||att.checkOut) return '';
   var sc=_getTodaySchedShift();
@@ -19697,7 +19697,7 @@ async function resolveCampSupport(fbId){
 }
 function _loadCampSupports(){
   if(!FB||!_db)return;
-  // ★ v9.26: 미출근 / 퇴근 / 휴무 시 배송지원 알림 표시 안 함
+  // ★ v9.25: 미출근 / 퇴근 / 휴무 시 배송지원 알림 표시 안 함
   var att=_getAttend();
   if(!att||!att.checkIn||att.checkOut){
     var card=document.getElementById('drv-campsupport-card');
@@ -19796,7 +19796,7 @@ function _loadDrvNotices(){
   if(window._drvNoticeUnsub){window._drvNoticeUnsub();window._drvNoticeUnsub=null;}
   if(window._masterNoticeUnsub){window._masterNoticeUnsub();window._masterNoticeUnsub=null;}
   window._masterNoticeIds={};
-  // ★ v9.19: notices.get()으로 마스터 먼저 확정 로드 → driver_notifications 리스너 시작
+  // ★ v9.25: notices.get()으로 마스터 먼저 확정 로드 → driver_notifications 리스너 시작
   _db.collection('notices').get().then(function(msnap){
     var ids={};
     msnap.forEach(function(d){ids[d.id]=true;});
@@ -19982,12 +19982,12 @@ function _markDrvNoticeRead(notifId,noticeId){
   try{
     var readSet=JSON.parse(localStorage.getItem('drv_notice_read_'+S.curDriver)||'{}');
     readSet[notifId]=new Date().toISOString();
-    // ★ v9.26: noticeId 기준으로도 저장
+    // ★ v9.25: noticeId 기준으로도 저장
     if(noticeId) readSet['nc_'+noticeId]=new Date().toISOString();
     localStorage.setItem('drv_notice_read_'+S.curDriver,JSON.stringify(readSet));
   }catch(e){}
 
-  // 2) ★ v9.26: sessionStorage → localStorage (로그인해도 유지)
+  // 2) ★ v9.25: sessionStorage → localStorage (로그인해도 유지)
   try{
     localStorage.setItem('urgent_notice_seen_'+S.curDriver+'_'+(noticeId||notifId),'1');
     localStorage.setItem('urgent_notice_seen_'+S.curDriver+'_'+notifId,'1');
@@ -20078,13 +20078,13 @@ function _closeDrvNoticeListModal(){
 function dEntry(){
   var jsub=S.curJobsub||S.curJobtype||'쿠팡';
   var badgeColor={'쿠팡':'#FFA500','CJ':'#0066CC','컬리':'#7C3AED','간선':'#059669','MBTI본사':'#DC2626','본사':'#DC2626'}[jsub]||'#6B7280';
-  // ★ v9.7: 관리자 당일 배차 확인 (기사정보의 todayDispatch 필드)
+  // ★ v9.25: 관리자 당일 배차 확인 (기사정보의 todayDispatch 필드)
   var meDrv=ls('drivers').find(function(x){return x.name===S.curDriver||x.userId===S.curDriver;})||{};
   var disp=meDrv.todayDispatch||{};
   var isDispatchToday=(disp.date===today());
   var assignedCamp=isDispatchToday?(disp.camp||''):'';
   var assignedRoute=isDispatchToday?(disp.routeNo||''):'';
-  // ★ v9.9: 근무표(schedule)에서 오늘 라우트 자동 조회
+  // ★ v9.25: 근무표(schedule)에서 오늘 라우트 자동 조회
   var scheduleRoute='';
   var scheduleStatus='';
   try{
@@ -20155,7 +20155,7 @@ function dEntry(){
   <div id="attend-card" style="margin:6px 10px">${_buildAttendCard()}</div>
   <!-- 현재 위치 지도 -->
   <div id="entry-map-card" style="margin:6px 10px">${_buildLocMap()}</div>
-  <!-- ★ v9.19: 캠프 네비게이션 -->
+  <!-- ★ v9.25: 캠프 네비게이션 -->
   <div style="margin:6px 10px">${_buildCampNavCard(meDrv)}</div>
   ${_drvHistEntry()}
   ${_drvMemoCard()}
@@ -20169,7 +20169,7 @@ function dAccident(){
     var lbl=['전면','측면','파손부위','현장전체'][i];
     return makeCamBtn(k,'accident',lbl,'ca');
   }).join('');
-  // ★ v9.12: 기사 등록된 보험사 직통 전화
+  // ★ v9.25: 기사 등록된 보험사 직통 전화
   var myDrv=ls('drivers').find(function(x){return x.name===S.curDriver;});
   var myInsurance=myDrv&&myDrv.insurance||'';
   var myInsuranceTel=getInsuranceTel(myInsurance);
@@ -20191,7 +20191,7 @@ function dAccident(){
     +INSURANCE_COMPANIES.map(function(c){
       return '<a href="tel:'+c.tel.replace(/-/g,'')+'" style="padding:7px 9px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;font-size:11px;text-decoration:none;color:var(--text);display:flex;justify-content:space-between"><span style="font-weight:700">'+c.name+'</span><span style="color:var(--blue)">'+c.tel+'</span></a>';
     }).join('')+'</div></details>';
-  // ★ v9.21: 회사 사무실 + 팩스 정보 카드
+  // ★ v9.25: 회사 사무실 + 팩스 정보 카드
   var companyCard = '<div style="margin:0 0 10px;padding:11px 13px;background:linear-gradient(135deg,#1e5fad 0%,#185FA5 100%);color:#fff;border-radius:var(--r);box-shadow:0 3px 10px rgba(24,95,165,.3)">'
     +'<div style="font-size:11px;opacity:.9;font-weight:700;margin-bottom:5px">🏢 '+COMPANY_INFO.name+' 사무실 연락처</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">'
@@ -20292,7 +20292,7 @@ function dHome(){
 
   // ★ 공지사항 로드 트리거 (비동기)
   if(FB&&_db&&S.curDriver){setTimeout(_loadDrvNotices,100);}
-  // ★ v9.26: 출근 기록 Firebase 동기화 후 마감/배송지원 알림 시작
+  // ★ v9.25: 출근 기록 Firebase 동기화 후 마감/배송지원 알림 시작
   // 캐시 삭제 후 재로그인 시 localStorage 비어있어도 Firebase에서 오늘 기록 복원
   setTimeout(function(){
     _startGeoWatch(); _startDriverLocTracking();
@@ -20322,7 +20322,7 @@ function dHome(){
       _startDeadlineTick(); _loadCampSupports();
     }
   },300);
-  // ★ v9.12: 알림 권한 요청 (1회) + 백그라운드 리스너 시작
+  // ★ v9.25: 알림 권한 요청 (1회) + 백그라운드 리스너 시작
   if(typeof _scheduleNotiInit==='function')_scheduleNotiInit();
 
   // ★ v9.25: 날씨 비동기 로드
@@ -20472,9 +20472,9 @@ function dHome(){
   <div id="drv-notice-card" style="margin:4px 10px 6px">${_buildDrvNoticeCard()}</div>
   <!-- ★ v9.25: 캠프 동료 연락처 -->
   <div id="drv-camp-contacts" style="margin:4px 10px 6px">${_buildCampContacts()}</div>
-  <!-- ★ v9.12: 배송 마감 카운트다운 -->
+  <!-- ★ v9.25: 배송 마감 카운트다운 -->
   <div id="drv-deadline-card" style="margin:4px 10px 6px">${_buildDeadlineCard()}</div>
-  <!-- ★ v9.12: 캠프 지원 알림 -->
+  <!-- ★ v9.25: 캠프 지원 알림 -->
   <div id="drv-campsupport-card" style="margin:4px 10px 6px">${_buildCampSupportCard()}</div>
   <!-- 입차 정보 -->
   ${me?`<div class="dc" style="margin:4px 10px"><div class="dct">오늘 입차</div><div style="display:flex;gap:8px;align-items:center;font-size:12px"><span class="badge ${me.type==='쿠팡'?'b-coral':me.type==='컬리'?'b-purple':'b-blue'}">${me.type}</span><span>${me.time}</span><span style="font-weight:600;color:${me.temp==='상온'?'var(--amber)':parseFloat(me.temp)<=-18?'var(--teal)':'var(--red)'}">${me.temp}${me.temp==='상온'?'':' °C'}</span></div></div>`:`<div style="margin:4px 10px 6px;padding:9px;background:var(--amber-l);border-radius:var(--r);font-size:12px;color:var(--amber)">아직 입차하지 않았습니다. 입차 탭에서 등록해 주세요.</div>`}
@@ -20603,7 +20603,7 @@ function openEmergencyDelivery(){
       </div>
       <div style="font-size:11px;color:var(--text3);margin-bottom:14px">QR 스캔하면 운송장+주소+GPS 자동입력 → 지도에 핀 표시됩니다.</div>
 
-      <!-- ★ v9.26: 바코드/QR 실시간 스캐너 버튼 (주력) -->
+      <!-- ★ v9.25: 바코드/QR 실시간 스캐너 버튼 (주력) -->
       <div style="margin-bottom:10px">
         <button onclick="emerStartScan()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">
           <span style="font-size:18px">📷</span> QR 코드 실시간 스캔
@@ -20626,7 +20626,7 @@ function openEmergencyDelivery(){
         </div>
       </div>
 
-      <!-- ★ v9.39: QR 붙여넣기 (1순위) + OCR 사진 (폴백) -->
+      <!-- ★ v9.25: QR 붙여넣기 (1순위) + OCR 사진 (폴백) -->
 
       <!-- ① 붙여넣기 — 폰 카메라로 QR 읽은 후 복사 → 붙여넣기 -->
       <button onclick="emerPasteQR()" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px;background:linear-gradient(135deg,#059669,#10b981);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:900;cursor:pointer;margin-bottom:8px;letter-spacing:.01em">
@@ -20658,12 +20658,12 @@ function openEmergencyDelivery(){
 
       <!-- 운송장 번호 (OCR 실패 시 표시) -->
       <div id="emer-tracking-wrap" style="margin-bottom:12px">
-        <!-- ★ v9.26: 스캔 카운터 + 오프라인 상태 표시 -->
+        <!-- ★ v9.25: 스캔 카운터 + 오프라인 상태 표시 -->
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
           <div style="font-size:12px;font-weight:700">📦 운송장 번호 <span style="color:var(--red)">*</span> <span style="font-size:10px;font-weight:400;color:var(--text3)">(묶음배송이면 추가)</span></div>
           <div id="emer-scan-counter" style="display:none;font-size:11px;font-weight:700;color:var(--teal);background:var(--bg3);padding:2px 10px;border-radius:999px;border:1px solid var(--teal)">0건 스캔됨</div>
         </div>
-        <!-- ★ v9.26: 오프라인 경고 -->
+        <!-- ★ v9.25: 오프라인 경고 -->
         <div id="emer-offline-warn" style="display:none;background:#2a1a00;border:1px solid var(--amber);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:11px;color:#fbbf24;line-height:1.5">
           ⚠️ <b>오프라인 상태</b><br>QR 스캔/입력은 가능하나 저장은 인터넷 연결 후 완료됩니다.
         </div>
@@ -20696,7 +20696,7 @@ function openEmergencyDelivery(){
     </div>
   </div>`);
 
-  // ★ v9.33: 기기 GPS 자동수집 제거 — 배송 핀은 반드시 주소변환 GPS만 사용
+  // ★ v9.25: 기기 GPS 자동수집 제거 — 배송 핀은 반드시 주소변환 GPS만 사용
   // (현위치로 잘못 저장되는 문제 근본 해결)
   var _gpsStatusEl = document.getElementById('emer-gps-status');
   if(_gpsStatusEl) _gpsStatusEl.innerHTML='📍 QR 또는 사진 스캔 시 자동입력됩니다';
@@ -20704,7 +20704,7 @@ function openEmergencyDelivery(){
 
 // ★ v9.25: OCR: 운송장 사진 → Claude Vision → 자동 입력
 
-// ★ v9.40: QR 텍스트 붙여넣기 — 모달 textarea 방식 (클립보드 권한 불필요)
+// ★ v9.25: QR 텍스트 붙여넣기 — 모달 textarea 방식 (클립보드 권한 불필요)
 function emerPasteQR(){
   // 기존 모달 있으면 제거
   var old = document.getElementById('qr-paste-mo');
@@ -20812,7 +20812,7 @@ async function emerOcrScan(file){
   if(!file) return;
   var status = document.getElementById('emer-ocr-status');
 
-  // ★ v9.32: 1단계 — jsQR로 QR 코드 먼저 해독 (API 비용 0, 빠름)
+  // ★ v9.25: 1단계 — jsQR로 QR 코드 먼저 해독 (API 비용 0, 빠름)
   // 사진을 네이티브 카메라로 찍으면 고해상도+자동초점 → jsQR 인식률 대폭 향상
   if(status) status.innerHTML = '<span style="color:var(--blue)">📷 QR 코드 분석 중...</span>';
   try{
@@ -20833,10 +20833,10 @@ async function emerOcrScan(file){
         var cx = cv.getContext('2d');
         cx.drawImage(img, 0, 0, w, h);
 
-        // ★ v9.38: ① BarcodeDetector — 파일에서 직접 ImageBitmap 생성 (가장 정확)
+        // ★ v9.25: ① BarcodeDetector — 파일에서 직접 ImageBitmap 생성 (가장 정확)
         if('BarcodeDetector' in window){
           try{
-            var bd = new BarcodeDetector({formats:['qr_code','aztec','data_matrix']}); // ★ v9.46: 바코드포맷제거
+            var bd = new BarcodeDetector({formats:['qr_code','aztec','data_matrix']}); // ★ v9.25: 바코드포맷제거
             // 원본 파일로 직접 ImageBitmap 생성 (canvas 경유 없이 = 품질 손실 없음)
             var bmp = await createImageBitmap(file);
             var bdCodes = await bd.detect(bmp);
@@ -20951,7 +20951,7 @@ async function emerOcrScan(file){
   }
   if(status) status.innerHTML = '<span style="color:var(--blue)">🤖 AI 분석 중...</span>';
 
-  // ★ v9.35: 이미지 두 가지 준비
+  // ★ v9.25: 이미지 두 가지 준비
   //   b64Raw  — 전처리 없음, QR BARCODE_DETECTION용 (전처리가 QR 픽셀 손상함)
   //   b64Ocr  — 파란 제거+대비 강화, 텍스트 OCR용
   var b64Raw, b64Ocr;
@@ -21031,7 +21031,7 @@ async function emerOcrScan(file){
     catch(e){ throw new Error('파싱 실패: '+rawText.slice(0,100)); }
     if(d.error) throw new Error(d.error.message);
 
-    // ★ v9.35: responses[0]=바코드, responses[1]=OCR 텍스트
+    // ★ v9.25: responses[0]=바코드, responses[1]=OCR 텍스트
     var barcodeAnnotations = d.responses?.[0]?.barcodeAnnotations
                            || d.responses?.[0]?.barcodes || [];
     console.log('[Vision BARCODE]', barcodeAnnotations.length+'개 감지',
@@ -21095,7 +21095,7 @@ async function emerOcrScan(file){
                 || d.responses?.[1]?.textAnnotations?.[0]?.description
                 || d.responses?.[0]?.fullTextAnnotation?.text
                 || d.responses?.[0]?.textAnnotations?.[0]?.description || '';
-    // ★ v9.34: 바코드 디버그 표시 (개발자도구 또는 디버그 버튼)
+    // ★ v9.25: 바코드 디버그 표시 (개발자도구 또는 디버그 버튼)
     var _barcodeDbg = barcodeAnnotations.length > 0
       ? '\n[바코드감지] ' + barcodeAnnotations.map(function(b){ return (b.format||'?')+': '+(b.rawValue||'').slice(0,60); }).join(' | ')
       : '\n[바코드감지] 없음 (QR 미인식)';
@@ -21166,7 +21166,7 @@ async function emerOcrScan(file){
     // 수령인: 김*우 패턴
     var recipientMatch = fullText.match(/[가-힣]+\*[가-힣]+/);
 
-    // ★ v9.33: 주소 파싱 — 전체 줄 스캔 후 주소 조각 모두 수집 (From./잡텍스트 건너뜀)
+    // ★ v9.25: 주소 파싱 — 전체 줄 스캔 후 주소 조각 모두 수집 (From./잡텍스트 건너뜀)
     var addrLine = (function(){
       function isAddrLine(l){
         if(!l || l.replace(/[\d\.,\s]/g,'').length < 2) return false;
@@ -21369,7 +21369,7 @@ async function emerOcrScan(file){
 }
 
 // ★ v9.25: 바코드/QR 인식 (운송장 훼손 시 보조 수단)
-// ★ v9.26: QR/바코드 텍스트에서 주소/수령인/주문번호/GPS 파싱
+// ★ v9.25: QR/바코드 텍스트에서 주소/수령인/주문번호/GPS 파싱
 // 쿠팡 QR 형식: |V1|운송장|주소|상세주소|수령인|해시|위도|경도|타입|타임스탬프|
 function _parseQrText(text){
   if(!text) return {};
@@ -21426,7 +21426,7 @@ function _parseQrText(text){
   return result;
 }
 
-// ★ v9.26: 실시간 바코드/QR 스캐너
+// ★ v9.25: 실시간 바코드/QR 스캐너
 var _emerScanReader = null;
 
 function emerStartScan(){
@@ -21437,7 +21437,7 @@ function emerStartScan(){
   statusEl.textContent = '카메라 시작 중...';
   var video = document.getElementById('emer-scan-video');
 
-  // ★ v9.43: QR 트래킹 오버레이 캔버스 (네이티브 카메라처럼 QR 따라다니는 박스)
+  // ★ v9.25: QR 트래킹 오버레이 캔버스 (네이티브 카메라처럼 QR 따라다니는 박스)
   var ov = document.getElementById('emer-scan-overlay');
   if(!ov){
     ov = document.createElement('canvas');
@@ -21455,7 +21455,7 @@ function emerStartScan(){
     syncOv();
     var cw=ov.width, ch=ov.height;
     octx.clearRect(0,0,cw,ch);
-    // ★ v9.44: QR만 꽉 채우도록 큰 가이드 박스 (화면의 80%)
+    // ★ v9.25: QR만 꽉 채우도록 큰 가이드 박스 (화면의 80%)
     var pad=Math.min(cw,ch)*0.08;
     var bw=cw-pad*2, bh=bw; // 정사각형
     if(bh > ch-pad*2) bh = ch-pad*2;
@@ -21503,7 +21503,7 @@ function emerStartScan(){
     octx.restore();
   }
 
-  // ★ v9.43: 스캔라인 애니메이션
+  // ★ v9.25: 스캔라인 애니메이션
   var _scanLineY = 0, _scanDir = 1, _scanAni = null;
   function _startScanline(){
     var pad=Math.min(ov.width,ov.height)*0.08;
@@ -21550,7 +21550,7 @@ function emerStartScan(){
       video.play();
       statusEl.textContent = '📦 QR만 화면 가득 — 가까이 대세요';
 
-      // ★ v9.43: getCapabilities() 체크 후 지원 기기만 autofocus 적용
+      // ★ v9.25: getCapabilities() 체크 후 지원 기기만 autofocus 적용
       try{
         var vTrack = stream.getVideoTracks()[0];
         var caps = vTrack.getCapabilities ? vTrack.getCapabilities() : {};
@@ -21573,7 +21573,7 @@ function emerStartScan(){
         if('BarcodeDetector' in window){
           var bd;
           try{ bd = new BarcodeDetector({formats:['qr_code','data_matrix','aztec']}); }
-          catch(e){ try{ bd = new BarcodeDetector({formats:['qr_code']}); }catch(e2){} }  // ★ v9.46: 바코드포맷 제거(QR/2D전용)
+          catch(e){ try{ bd = new BarcodeDetector({formats:['qr_code']}); }catch(e2){} }  // ★ v9.25: 바코드포맷 제거(QR/2D전용)
 
           if(bd){
             var _lastPts = null, _trackCount = 0;
@@ -21584,7 +21584,7 @@ function emerStartScan(){
                 .then(function(codes){
                   if(!_active) return;
                   if(codes && codes.length > 0 && codes[0].rawValue){
-                    // ★ v9.46: 크기+비율 필터 — 작은QR·바코드 차단, 정사각형만 통과
+                    // ★ v9.25: 크기+비율 필터 — 작은QR·바코드 차단, 정사각형만 통과
                     var _bigEnough = true;
                     if(codes[0].cornerPoints && video.videoWidth){
                       var _pts = codes[0].cornerPoints;
@@ -21628,7 +21628,7 @@ function emerStartScan(){
         var ctx2 = canvas2.getContext('2d');
         var _trackCount2 = 0;
 
-        // ★ v9.46: QR 크기+비율 필터 — 작은QR/바코드 차단, 정사각형만 통과
+        // ★ v9.25: QR 크기+비율 필터 — 작은QR/바코드 차단, 정사각형만 통과
         function _isQrBigEnough(loc, sw, sh){
           if(!loc) return true;
           var w = Math.abs(loc.topRightCorner.x - loc.topLeftCorner.x);
@@ -21637,11 +21637,31 @@ function emerStartScan(){
           return (w >= sw * 0.12) && (h >= sh * 0.12) && (ratio >= 0.4 && ratio <= 2.5);
         }
 
-        function _jsqrScan(sx,sy,sw,sh,vw,vh){
+        // ★ v9.47: 이미지 전처리 — 그레이스케일 + 대비 강화 (파란 송장 대응)
+        function _enhanceContrast(imgData){
+          var d=imgData.data, len=d.length;
+          // 1. 그레이스케일 변환
+          for(var i=0;i<len;i+=4){
+            var g = Math.round(d[i]*0.299 + d[i+1]*0.587 + d[i+2]*0.114);
+            d[i]=d[i+1]=d[i+2]=g;
+          }
+          // 2. 히스토그램 기반 대비 스트레칭 (min~max → 0~255)
+          var mn=255, mx=0;
+          for(var j=0;j<len;j+=4){ if(d[j]<mn)mn=d[j]; if(d[j]>mx)mx=d[j]; }
+          var range=mx-mn||1;
+          for(var k=0;k<len;k+=4){
+            var v=Math.round((d[k]-mn)/range*255);
+            d[k]=d[k+1]=d[k+2]=v;
+          }
+          return imgData;
+        }
+
+        function _jsqrScan(sx,sy,sw,sh,vw,vh,enhance){
           if(!window.jsQR) return null;
           canvas2.width=sw; canvas2.height=sh;
           ctx2.drawImage(video,sx,sy,sw,sh,0,0,sw,sh);
           var d=ctx2.getImageData(0,0,sw,sh);
+          if(enhance) _enhanceContrast(d);
           var r=window.jsQR(d.data,d.width,d.height,{inversionAttempts:'attemptBoth'});
           if(r && r.data){
             // 크기 필터: 작은 QR / 바코드 차단
@@ -21663,14 +21683,19 @@ function emerStartScan(){
           var vw=video.videoWidth, vh=video.videoHeight;
           if(!vw){ requestAnimationFrame(jsqrTick); return; }
           try{
-            // ★ v9.45 크롭 전략: 중앙 집중 (사이드 바코드·우상단 작은QR 영역 제외)
+            // ★ v9.25 크롭 전략: 중앙 집중 (사이드 바코드·우상단 작은QR 영역 제외)
             // 중앙 60%x70% → 중앙 80%x85% → 전체
             var cx=Math.floor(vw*0.20), cy=Math.floor(vh*0.15);
             var cw2=Math.floor(vw*0.60), ch2=Math.floor(vh*0.70);
-            var r = _jsqrScan(cx, cy, cw2, ch2, vw, vh)                        // ①중앙 60×70%
+            // ★ v9.47: 원본 시도 → 전처리(대비강화) 재시도 (파란송장 대응)
+            var r = _jsqrScan(cx, cy, cw2, ch2, vw, vh, false)                 // ①중앙 원본
                  || _jsqrScan(Math.floor(vw*0.10), Math.floor(vh*0.08),
-                              Math.floor(vw*0.80), Math.floor(vh*0.84), vw, vh) // ②중앙 80×84%
-                 || _jsqrScan(0, 0, vw, vh, vw, vh);                           // ③전체 (크기필터 적용)
+                              Math.floor(vw*0.80), Math.floor(vh*0.84), vw, vh, false) // ②중앙 원본
+                 || _jsqrScan(0, 0, vw, vh, vw, vh, false)                     // ③전체 원본
+                 || _jsqrScan(cx, cy, cw2, ch2, vw, vh, true)                  // ④중앙 대비강화
+                 || _jsqrScan(Math.floor(vw*0.10), Math.floor(vh*0.08),
+                              Math.floor(vw*0.80), Math.floor(vh*0.84), vw, vh, true)  // ⑤중앙 대비강화
+                 || _jsqrScan(0, 0, vw, vh, vw, vh, true);                     // ⑥전체 대비강화
             if(r && r.data && _active){
               _stopScanline();
               if(r._pts) drawQrBox(r._pts, r._vw, r._vh);
@@ -21701,7 +21726,7 @@ function emerStartScan(){
     });
 }
 
-// ★ v9.26: 스캔 결과 통합 처리
+// ★ v9.25: 스캔 결과 통합 처리
 function _emerHandleScan(raw, statusEl){
   if(!raw) return;
   // ★ v9.25: 중복 처리 방지 락 (잘못 인식 시 카메라 먹통 방지)
@@ -21711,7 +21736,7 @@ function _emerHandleScan(raw, statusEl){
 
   if(statusEl) statusEl.textContent = '✅ 인식: ' + raw.slice(0,40);
   try{ navigator.vibrate && navigator.vibrate([60,30,120]); }catch(e){}
-  // ★ v9.43: 비프음 (Web Audio API)
+  // ★ v9.25: 비프음 (Web Audio API)
   try{
     var _ac = new (window.AudioContext||window.webkitAudioContext)();
     var _osc = _ac.createOscillator();
@@ -21726,7 +21751,7 @@ function _emerHandleScan(raw, statusEl){
     _osc.stop(_ac.currentTime + 0.18);
     setTimeout(function(){ try{_ac.close();}catch(e){} }, 400);
   }catch(e){}
-  // ★ v9.43: 화면 초록 플래시
+  // ★ v9.25: 화면 초록 플래시
   try{
     var _fl = document.createElement('div');
     _fl.style.cssText = 'position:fixed;inset:0;background:rgba(0,255,136,0.28);z-index:9999;pointer-events:none;transition:opacity 0.4s';
@@ -21836,7 +21861,7 @@ function _emerHandleScan(raw, statusEl){
 }
 function emerStopScan(){
   window._emerScanLock = false; // ★ v9.25: 락 초기화 (다음 스캔 세션 대비)
-  // ★ v9.26: BarcodeDetector 루프 정지
+  // ★ v9.25: BarcodeDetector 루프 정지
   if(window._emerBdStop){ try{window._emerBdStop();}catch(e){} window._emerBdStop=null; }
   // ZXing 정지
   try{ if(_emerScanReader){_emerScanReader.reset();_emerScanReader=null;} }catch(e){}
@@ -22057,7 +22082,7 @@ function emerRefreshTrackingList(){
 
   var cnt = window._emerTrackings.length;
 
-  // ★ v9.26: 스캔 카운터 업데이트
+  // ★ v9.25: 스캔 카운터 업데이트
   var counter = document.getElementById('emer-scan-counter');
   if(counter){
     if(cnt > 0){
@@ -22071,7 +22096,7 @@ function emerRefreshTrackingList(){
     }
   }
 
-  // ★ v9.26: 오프라인 감지 표시
+  // ★ v9.25: 오프라인 감지 표시
   var offWarn = document.getElementById('emer-offline-warn');
   if(offWarn) offWarn.style.display = !navigator.onLine ? 'block' : 'none';
 
@@ -22093,7 +22118,7 @@ function emerRefreshTrackingList(){
   }).join('');
 }
 
-// ★ v9.26: 스캔 시각 기록
+// ★ v9.25: 스캔 시각 기록
 window._emerTrackingTimes = window._emerTrackingTimes || {};
 
 // 사진 추가 처리
@@ -22159,7 +22184,7 @@ async function emerSave(){
     gpsClean = { lat: window._emerGps.lat, lng: window._emerGps.lng, acc: window._emerGps.acc||0, src: window._emerGps.src||'device' };
   }
 
-  // ★ v9.33: 저장 직전 GPS 처리 — QR/OCR 때 이미 Geocoding 완료된 경우 재실행 안 함 (속도 개선)
+  // ★ v9.25: 저장 직전 GPS 처리 — QR/OCR 때 이미 Geocoding 완료된 경우 재실행 안 함 (속도 개선)
   if(window._emerGps && (window._emerGps.src==='geocode'||window._emerGps.src==='QR')){
     // 이미 배송지 좌표 확보됨 → 그대로 사용
     gpsClean = {lat:window._emerGps.lat, lng:window._emerGps.lng, acc:0, src:window._emerGps.src};
@@ -22214,7 +22239,7 @@ async function emerSave(){
   if(saveBtn){ saveBtn.disabled=true; saveBtn.textContent='⏳ 저장 중... 잠시만요'; }
   toast('💾 저장 중...');
 
-  // ★ v9.26: 로컬 선저장 (즉시) — Firebase 저장 전에 먼저 로컬에 기록
+  // ★ v9.25: 로컬 선저장 (즉시) — Firebase 저장 전에 먼저 로컬에 기록
   var localId = 'emer_'+now.getTime();
   var recordLocal = Object.assign({}, record, {
     photosLocal: window._emerPhotos.slice(),
@@ -22227,7 +22252,7 @@ async function emerSave(){
     localStorage.setItem('mbti_emergency_del', JSON.stringify(emerList));
   }catch(e){ console.warn('로컬 저장 실패:', e); }
 
-  // ★ v9.26: 사진 병렬 업로드 (순차→동시 → 3장이면 3~5초에 완료)
+  // ★ v9.25: 사진 병렬 업로드 (순차→동시 → 3장이면 3~5초에 완료)
   var uploaded = [];
   var isOnline = navigator.onLine;
 
@@ -22741,7 +22766,7 @@ async function saveDelivComplete(){
   if(saveBtn) saveBtn.disabled = true;
   toast('💾 완료 처리 중...');
 
-  // ★ v9.26: 사진 병렬 업로드 (순차 → 동시)
+  // ★ v9.25: 사진 병렬 업로드 (순차 → 동시)
   var uploaded = [];
   var now = new Date();
   if(FB && _st && window._delivCompletePhotos.length > 0){
@@ -23697,7 +23722,7 @@ function drvPhotoGallery(){
   document.body.appendChild(mo);
 }
 
-// ★ v9.19: 캠프 네비게이션 카드
+// ★ v9.25: 캠프 네비게이션 카드
 function _buildCampNavCard(meDrv){
   meDrv=meDrv||ls('drivers').find(function(x){return x.name===S.curDriver;})||{};
   var gpsMap=getCampGps();
@@ -23731,7 +23756,7 @@ function _buildCampNavCard(meDrv){
   html+='</div></div>';
   return html;
 }
-// ★ v9.22: 앱 스킴 네비 헬퍼 (전역 — onclick에서 호출)
+// ★ v9.25: 앱 스킴 네비 헬퍼 (전역 — onclick에서 호출)
 function _openNavScheme(appUrl, webUrl){
   window.location.href = appUrl;
   setTimeout(function(){ window.open(webUrl, '_blank'); }, 2000);
@@ -25055,7 +25080,7 @@ function sendTaxToDriver(driverOrIdx, month){
   if(!wrap){toast('세금계산서 창이 열려있지 않습니다');return;}
   if(typeof html2canvas==='undefined'){toast('⚠️ 이미지 라이브러리 로딩 중...');return;}
   toast('📸 이미지 생성 후 전달 중...');
-  // ★ v9.7: 고화질 캡처
+  // ★ v9.25: 고화질 캡처
   var wrapW=wrap.scrollWidth, wrapH=wrap.scrollHeight;
   html2canvas(wrap,{
     scale:2.5,
@@ -25925,7 +25950,7 @@ function startListeners(){
         }));
     });
   
-    // ★ v9.5: 운행 메모(delivery_memos) 실시간 동기화 (관리자용 뱃지/페이지 자동 갱신)
+    // ★ v9.25: 운행 메모(delivery_memos) 실시간 동기화 (관리자용 뱃지/페이지 자동 갱신)
     _fbUnsubs.push(_db.collection('delivery_memos').limit(200)
       .onSnapshot(snap=>{
         var arr=ls('deliveryMemos');
@@ -26025,7 +26050,7 @@ function startListeners(){
           DT('home',document.getElementById('pni0')); updFbUI();
           loadMyInfo(sess.id);
           toast('👋 '+S.curDriver+'님 자동 로그인');
-          // ★ v9.21: 세션 복원 시 디바이스 소유자 갱신
+          // ★ v9.25: 세션 복원 시 디바이스 소유자 갱신
           if(typeof _setDeviceOwner==='function')_setDeviceOwner(found.name||sess.id, found.fbId);
         };
         checkAndRestore();
@@ -26141,7 +26166,7 @@ function rNoticePanel(){
   html+='<label style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;color:var(--text2)">';
   html+='📎 사진/파일 첨부<input type="file" id="nt-files" multiple accept="image/*,.pdf,.xlsx,.xls,.docx,.hwp,.txt" style="display:none" onchange="ntPreviewFiles(this)">';
   html+='</label>';
-  // ★ v9.26: 튜토리얼 파일 다운로드 버튼
+  // ★ v9.25: 튜토리얼 파일 다운로드 버튼
   html+='<button onclick="ntDownloadTutorial()" style="padding:6px 12px;background:rgba(220,38,38,.12);color:#dc2626;border:1px solid #dc2626;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;margin-left:6px">📥 긴급배송 튜토리얼 다운로드</button>';
   html+='<div id="nt-file-preview" style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap"></div>';
   html+='</div>';
@@ -26235,7 +26260,7 @@ function _loadNoticeList(){
   });
 }
 
-// ★ v9.26: 긴급배송 튜토리얼 HTML 다운로드
+// ★ v9.25: 긴급배송 튜토리얼 HTML 다운로드
 function ntDownloadTutorial(){
   var html = `<!DOCTYPE html>
 <html lang="ko">
@@ -26315,7 +26340,7 @@ function ntDownloadTutorial(){
 <div class="header">
   <div class="badge">📸 MBTI 물류 — 사용 가이드</div>
   <h1>긴급배송<br>사용법</h1>
-  <p>쿠팡어플 오류 이슈 대응 방법 <span style=\"background:#334155;color:#94a3b8;font-size:10px;padding:1px 8px;border-radius:999px;margin-left:4px\">v9.26</span></p>
+  <p>쿠팡어플 오류 이슈 대응 방법 <span style=\"background:#334155;color:#94a3b8;font-size:10px;padding:1px 8px;border-radius:999px;margin-left:4px\">v9.25</span></p>
 </div>
 <div class="progress-bar"><div class="progress-fill" id="progress" style="width:14%"></div></div>
 <div class="step-nav" id="stepNav"></div>
@@ -26706,7 +26731,7 @@ function _doSendNotice(allDrs,target,category,title,content,pinned,smsOpt,kakaoO
     return batch.commit().then(function(){return ref;});
   }).then(function(ref){  // ★ v9.25 fix: ref 파라미터 복구 (전송 실패: ref is not defined 수정)
     toast('✅ '+targets.length+'명에게 공지 전송 완료!');
-    // ★ v9.19: FCM 푸시 — Firebase에서 최신 fcmToken 직접 조회
+    // ★ v9.25: FCM 푸시 — Firebase에서 최신 fcmToken 직접 조회
     var _FCM_URL='https://us-central1-mbti-logistics.cloudfunctions.net/sendPush';
     var _targetNames=targets.map(function(d){return d.name;});
     var _noticeId=ref.id; // ★ v9.25: noticeId 포함하여 삭제된 공지 필터링 가능
@@ -26736,7 +26761,7 @@ function _doSendNotice(allDrs,target,category,title,content,pinned,smsOpt,kakaoO
         });
       }).catch(function(e){console.error('[FCM push] ❌ 네트워크 오류:',e.message);});
     }
-    // ★ v9.22: drivers 컬렉션 + device_tokens 컬렉션 둘 다 조회 → 빠짐없이 푸시
+    // ★ v9.25: drivers 컬렉션 + device_tokens 컬렉션 둘 다 조회 → 빠짐없이 푸시
     var _sentTokens=new Set(); // 중복 방지
     function _sendFcmPushOnce(token){
       if(!token||_sentTokens.has(token))return;
@@ -26766,7 +26791,7 @@ function _doSendNotice(allDrs,target,category,title,content,pinned,smsOpt,kakaoO
     }).catch(function(){
       targets.forEach(function(d){if(d.fcmToken)_sendFcmPushOnce(d.fcmToken);});
     });
-    // ★ v9.12: SMS 발송 (sms: 링크)
+    // ★ v9.25: SMS 발송 (sms: 링크)
     if(smsOpt && smsList.length){
       var smsMsg='[MBTI물류] '+title+'\n\n'+content;
       // iOS는 ;, Android는 , 구분 (둘 다 시도)
@@ -26777,7 +26802,7 @@ function _doSendNotice(allDrs,target,category,title,content,pinned,smsOpt,kakaoO
       setTimeout(function(){window.location.href=smsHref;},500);
       toast('📱 SMS 앱으로 이동... ('+smsList.length+'명) 전송 버튼을 눌러주세요');
     }
-    // ★ v9.12: 카카오톡 ID 복사
+    // ★ v9.25: 카카오톡 ID 복사
     if(kakaoOpt && kakaoList.length){
       var kakaoText='[MBTI물류 공지]\n'+title+'\n\n'+content+'\n\n=== 발송 대상 카카오톡 ID ('+kakaoList.length+'명) ===\n'+kakaoList.map(function(d){return d.name+': '+d.kakaoId;}).join('\n');
       try{
@@ -27280,7 +27305,7 @@ function _viewAttendMap(driverName,date){
     var inLat=a.checkInLat, inLng=a.checkInLng;
     var outLat=a.checkOutLat, outLng=a.checkOutLng;
     
-    // ★ v9.9: 모달 ID로 직접 참조 (selector 매칭 실패 방지)
+    // ★ v9.25: 모달 ID로 직접 참조 (selector 매칭 실패 방지)
     var moId='attend-map-modal-'+Date.now();
     var mo=document.createElement('div');
     mo.id=moId;
@@ -29184,7 +29209,7 @@ function setPwaIcons(logoDataUrl){
 })();
 
 // ════════════════════════════════════════════════════════════
-// 🔄 v9.8: PWA 강화 — Service Worker, 설치 프롬프트, 오프라인 모드
+// 🔄 v9.25: PWA 강화 — Service Worker, 설치 프롬프트, 오프라인 모드
 // ════════════════════════════════════════════════════════════
 window._swRegistration=null;
 window._installPromptEvent=null;
@@ -29194,7 +29219,7 @@ window._installPromptEvent=null;
   if(!('serviceWorker' in navigator))return;
   // file:// 환경에서는 등록 불가 (https / localhost / GitHub Pages 만 가능)
   if(location.protocol==='file:'){console.warn('[SW] file:// 환경 — SW 등록 생략');return;}
-  // ★ v9.9: 샌드박스/미리보기/Cloudflare Workers 환경 감지 (sw.js 미배치 호스트)
+  // ★ v9.25: 샌드박스/미리보기/Cloudflare Workers 환경 감지 (sw.js 미배치 호스트)
   var host=location.hostname||'';
   var skipHosts=['claudeusercontent','codepen','jsfiddle','codesandbox'];
   var shouldSkip=skipHosts.some(function(h){return host.indexOf(h)>=0;});
@@ -29212,11 +29237,11 @@ window._installPromptEvent=null;
       navigator.serviceWorker.register('./sw.js',{scope:'./'})
         .then(function(reg){
           console.log('[SW] 등록 완료, scope:', reg.scope);
-          // ★ v9.13: SW active 확인 후 저장 (FCM 토큰 발급 타이밍 보장)
+          // ★ v9.25: SW active 확인 후 저장 (FCM 토큰 발급 타이밍 보장)
           function _setReg(){
             window._swRegistration=reg;
             console.log('[SW] active 확인 — FCM 토큰 발급 준비 완료');
-            // ★ v9.21: SW 활성화되면 디바이스 소유자가 있는 경우 즉시 알림 초기화
+            // ★ v9.25: SW 활성화되면 디바이스 소유자가 있는 경우 즉시 알림 초기화
             //   (로그인하지 않아도 마지막 사용자용 알림 수신 시작)
             setTimeout(function(){
               if(typeof _scheduleNotiInit==='function')_scheduleNotiInit();
@@ -29264,7 +29289,7 @@ window._installPromptEvent=null;
 })();
 
 // ════════════════════════════════════════════════════════════
-// 🔔 v9.12: 백그라운드 푸시 알림 (인라인 SW + Firestore 리스너)
+// 🔔 v9.25: 백그라운드 푸시 알림 (인라인 SW + Firestore 리스너)
 // 카톡처럼 앱 백그라운드/잠금 상태에서도 알림 표시
 // ════════════════════════════════════════════════════════════
 window._notiSwReg=null;
@@ -29387,7 +29412,7 @@ function sendLocalNoti(opts){
 
 // Firestore 실시간 리스너 (공지/캠프지원/긴급 알림)
 window._firestoreListeners=window._firestoreListeners||[];
-// ★ v9.19: _notiSeen → localStorage 영속화
+// ★ v9.25: _notiSeen → localStorage 영속화
 (function(){
   var KEY='mbti_notiSeen';
   var raw={};
@@ -29443,7 +29468,7 @@ function startNotiListeners(){
         var body=d.title||(d.type==='tax_invoice'?'세금계산서가 도착했습니다':'새 알림이 있습니다');
         var urgent=(d.category==='긴급');
         sendLocalNoti({title:title+(d.category==='긴급'?' (긴급)':''),body:body,tag:key,urgent:urgent,cat:d.type});
-        // ★ v9.19: notice는 _loadDrvNotices 전담 → 비notice만 인앱 배너
+        // ★ v9.25: notice는 _loadDrvNotices 전담 → 비notice만 인앱 배너
         if(d.type!=='notice'&&typeof _showInstantAlert==='function'){
           _showInstantAlert({title:title,body:body,urgent:urgent});
         }
@@ -29461,7 +29486,7 @@ function startNotiListeners(){
           if(change.type!=='added')return;
           var d=change.doc.data();
           if(d.driver===S.curDriver)return; // 본인 요청은 알림 안 함
-          // ★ v9.26: 미출근/퇴근/휴무 시 배송지원 푸시 알림 차단
+          // ★ v9.25: 미출근/퇴근/휴무 시 배송지원 푸시 알림 차단
           var att=_getAttend();
           if(!att||!att.checkIn||att.checkOut)return;
           var sc=_getTodaySchedShift();
@@ -29498,7 +29523,7 @@ function startNotiListeners(){
           if(change.type!=='added')return;
           var d=change.doc.data();
           if(d.driver===S.curDriver)return; // 본인 사고는 알림 안 함
-          // ★ v9.26: 미출근/퇴근/휴무 시 사고 알림 차단 (출근 중인 기사만)
+          // ★ v9.25: 미출근/퇴근/휴무 시 사고 알림 차단 (출근 중인 기사만)
           var att2=_getAttend();
           if(!att2||!att2.checkIn||att2.checkOut)return;
           var sc2=_getTodaySchedShift();
@@ -29540,7 +29565,7 @@ if(window.speechSynthesis){
     window.speechSynthesis.getVoices();
   });
 }
-// ★ v9.21: 로그아웃 상태에서도 푸시 알림을 받기 위한 핵심 로직
+// ★ v9.25: 로그아웃 상태에서도 푸시 알림을 받기 위한 핵심 로직
 //   - 기기-기사 영구 매핑을 localStorage에 저장 (mbti_device_owner)
 //   - 로그아웃해도 토큰은 유지되고 새로고침/앱재시작 시 자동 재등록
 //   - 마지막 로그인 기사의 알림은 로그아웃 후에도 계속 수신
@@ -29563,7 +29588,7 @@ function _setDeviceOwner(driverName,fbId){
 function _scheduleNotiInit(){
   clearTimeout(window._notiInitTimer);
   window._notiInitTimer=setTimeout(function(){
-    // ★ v9.21: 현재 로그인 상태이거나 마지막 디바이스 소유자 정보가 있으면 토큰 등록
+    // ★ v9.25: 현재 로그인 상태이거나 마지막 디바이스 소유자 정보가 있으면 토큰 등록
     var loggedIn = (S.curMode==='driver' && S.curDriver);
     var deviceOwner = _getDeviceOwner();
     var shouldInitNoti = loggedIn || (deviceOwner && deviceOwner.driver);
@@ -29575,7 +29600,7 @@ function _scheduleNotiInit(){
       _setDeviceOwner(S.curDriver, me&&me.fbId);
     }
     
-    // ★ v9.22: 권한 상태 진단 로그
+    // ★ v9.25: 권한 상태 진단 로그
     var perm=(typeof Notification!=='undefined')?Notification.permission:'unsupported';
     console.log('[Noti] 알림 권한 상태:', perm, '/ 로그인:', loggedIn);
     if(perm==='denied'){
@@ -29599,10 +29624,10 @@ function _scheduleNotiInit(){
 
 // ── FCM 토큰 발급 및 Firestore 저장 ──
 window._fcmTokenRegistered=false;
-window._fcmFailed=false; // ★ v9.10: 401 반복 방지 플래그
-window._fcmOnMessageBound=false; // ★ v9.22: 포그라운드 핸들러 중복 방지
+window._fcmFailed=false; // ★ v9.25: 401 반복 방지 플래그
+window._fcmOnMessageBound=false; // ★ v9.25: 포그라운드 핸들러 중복 방지
 
-// ★ v9.22: 포그라운드 핸들러 독립 초기화 (토큰 등록 성공과 무관)
+// ★ v9.25: 포그라운드 핸들러 독립 초기화 (토큰 등록 성공과 무관)
 // 앱 시작 2초 후 자동 초기화 (로그인 여부 무관)
 
 async function _registerFCMToken(){
@@ -29622,7 +29647,7 @@ async function _registerFCMToken(){
   if(!firebase.auth().currentUser){console.warn('[FCM] 인증 미완료 — 토큰 발급 생략');return;}
   console.log('[FCM] 인증 완료, 토큰 발급 시도...');
   
-  // ★ v9.21: 토큰 저장 대상 결정 - 현재 로그인 중인 기사 우선, 없으면 마지막 기기 소유자
+  // ★ v9.25: 토큰 저장 대상 결정 - 현재 로그인 중인 기사 우선, 없으면 마지막 기기 소유자
   var targetDriverName=null, targetFbId=null;
   if(S.curMode==='driver' && S.curDriver){
     targetDriverName = S.curDriver;
@@ -29673,7 +29698,7 @@ async function _registerFCMToken(){
     window._fcmTokenRegistered=true;
     console.log('[FCM] 토큰 발급 완료 → 대상:', targetDriverName);
     
-    // ★ v9.21: 두 군데에 저장
+    // ★ v9.25: 두 군데에 저장
     //   ① drivers/{fbId}.fcmToken (기존 로직 유지 — 호환성)
     //   ② device_tokens/{token} (기기-기사 매핑 영구 저장 — 로그아웃 후에도 유지)
     var deviceTokenDoc = {
@@ -29713,7 +29738,7 @@ async function _registerFCMToken(){
       .then(function(){console.log('[FCM] device_tokens 저장 완료 (영구 매핑)');})
       .catch(function(e){console.warn('[FCM] device_tokens 저장 실패:', e.message);});
     
-    // ★ v9.22: 포그라운드 핸들러를 등록 (중복 방지)
+    // ★ v9.25: 포그라운드 핸들러를 등록 (중복 방지)
     if(!window._fcmOnMessageBound){
       window._fcmOnMessageBound=true;
       msg.onMessage(function(payload){
@@ -29729,7 +29754,7 @@ async function _registerFCMToken(){
       });
     }
   }catch(e){
-    // ★ v9.13: VAPID/인증 오류만 영구 차단, 그 외는 5분 후 재시도 허용
+    // ★ v9.25: VAPID/인증 오류만 영구 차단, 그 외는 5분 후 재시도 허용
     var isAuthErr=e.message&&(e.message.indexOf('401')>=0||e.message.indexOf('auth')>=0||e.message.indexOf('messaging/token-subscribe-failed')>=0);
     if(isAuthErr){
       window._fcmFailed=true;
