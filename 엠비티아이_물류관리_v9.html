@@ -108,6 +108,8 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
 .doc-slot.required-err{border-color:var(--red);animation:shake .3s ease}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
 @keyframes slideUp{from{opacity:0;transform:translate(-50%,30px)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes scanLine{0%{top:90px;opacity:1}50%{top:190px;opacity:1}100%{top:90px;opacity:1}}
+@keyframes notiPop{0%{transform:scale(.95);opacity:.7}60%{transform:scale(1.02)}100%{transform:scale(1);opacity:1}}
 .doc-slot input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;z-index:2}
 .doc-slot-lbl{position:absolute;bottom:0;left:0;right:0;text-align:center;font-size:9px;font-weight:700;color:#fff;background:rgba(0,0,0,.6);padding:3px 0}
 .doc-slot-req{font-size:9px;color:var(--red);margin-top:2px}
@@ -383,6 +385,23 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
                 <button id="btn-find" style="padding:7px 12px;background:var(--teal);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">찾기</button>
               </div>
               <div id="find-id-result" style="margin-top:8px;font-size:11px"></div>
+            </div>
+            <!-- ★ v9.26: 비밀번호 셀프 초기화 -->
+            <div style="border-top:1px solid var(--border);padding-top:8px;margin-top:8px">
+              <div style="font-size:11px;font-weight:700;color:var(--red);margin-bottom:6px">🔐 비밀번호 초기화</div>
+              <div style="font-size:10px;color:var(--text3);margin-bottom:8px;line-height:1.5">아이디 + 이름 + 전화번호 뒤 4자리를 입력하면<br>본인 확인 후 새 비밀번호로 변경할 수 있어요.</div>
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <input id="reset-userid" placeholder="아이디" style="padding:7px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text)">
+                <input id="reset-name" placeholder="이름" style="padding:7px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text)">
+                <input id="reset-phone4" placeholder="전화번호 뒤 4자리" maxlength="4" inputmode="numeric" style="padding:7px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text)">
+                <div id="reset-pw-wrap" style="display:none;flex-direction:column;gap:6px">
+                  <input id="reset-newpw" type="password" placeholder="새 비밀번호 (4자 이상)" style="padding:7px;border:1.5px solid var(--teal);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text)">
+                  <input id="reset-newpw2" type="password" placeholder="새 비밀번호 확인" style="padding:7px;border:1.5px solid var(--teal);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text)">
+                  <button onclick="selfResetPwSave()" style="padding:8px;background:var(--teal);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">✅ 비밀번호 변경</button>
+                </div>
+                <button onclick="selfResetPwVerify()" id="reset-verify-btn" style="padding:8px;background:var(--red-l,#fee2e2);color:var(--red);border:1px solid var(--red);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔐 본인 확인</button>
+              </div>
+              <div id="reset-status" style="margin-top:6px;font-size:11px;min-height:14px"></div>
             </div>
           </div>
         </div>
@@ -1538,6 +1557,128 @@ function setMode(m){
   if(m==='driver'){hide(['app']);show('dv');DT('home',document.getElementById('pni0'));}
   else{hide(['dv']);show('app');SP(S.page,null);}
 }
+// ★ v9.26: 기사 셀프 비밀번호 초기화 — 본인 확인
+var _selfResetTarget = null;
+
+async function selfResetPwVerify(){
+  var userId = (document.getElementById('reset-userid')||{}).value.trim();
+  var name   = (document.getElementById('reset-name')||{}).value.trim();
+  var phone4 = (document.getElementById('reset-phone4')||{}).value.trim();
+  var status = document.getElementById('reset-status');
+
+  if(!userId || !name || !phone4){
+    status.innerHTML = '<span style="color:var(--red)">❌ 아이디, 이름, 전화번호 뒤 4자리 모두 입력해주세요</span>';
+    return;
+  }
+  if(!/^\d{4}$/.test(phone4)){
+    status.innerHTML = '<span style="color:var(--red)">❌ 전화번호 뒤 4자리는 숫자 4자리만 입력해주세요</span>';
+    return;
+  }
+
+  status.innerHTML = '<span style="color:var(--blue)">🔍 확인 중...</span>';
+
+  // 기사 목록에서 검색
+  var drivers = ls('drivers')||[];
+  var found = null;
+
+  // 로컬스토리지 먼저
+  found = drivers.find(function(d){
+    if(!d || d.is_active===false) return false;
+    var idOk = d.userId === userId || d.phone === userId;
+    var nameOk = d.name === name;
+    var phoneOk = d.phone && d.phone.replace(/[^0-9]/g,'').slice(-4) === phone4;
+    // 2개 이상 일치해야 통과
+    return idOk && nameOk && phoneOk;
+  });
+
+  // Firebase에서도 확인 (최신 데이터)
+  if(!found && FB && _db){
+    try{
+      var snap = await _db.collection('drivers')
+        .where('userId','==',userId).limit(3).get();
+      if(snap.empty){
+        snap = await _db.collection('drivers')
+          .where('phone','==',userId).limit(3).get();
+      }
+      snap.forEach(function(doc){
+        var d = doc.data();
+        var nameOk = d.name === name;
+        var phoneOk = d.phone && d.phone.replace(/[^0-9]/g,'').slice(-4) === phone4;
+        if(nameOk && phoneOk){
+          found = Object.assign({}, d, {fbId: doc.id});
+        }
+      });
+    }catch(e){ console.warn('셀프 초기화 FB 조회:', e); }
+  }
+
+  if(!found){
+    status.innerHTML = '<span style="color:var(--red)">❌ 정보가 일치하지 않습니다<br><span style="font-size:10px">아이디, 이름, 전화번호 뒤 4자리를 다시 확인해주세요</span></span>';
+    return;
+  }
+
+  // 본인 확인 성공
+  _selfResetTarget = found;
+  status.innerHTML = '<span style="color:var(--teal)">✅ '+found.name+'님 확인됐습니다. 새 비밀번호를 입력해주세요.</span>';
+  var wrap = document.getElementById('reset-pw-wrap');
+  if(wrap) wrap.style.display = 'flex';
+  var verBtn = document.getElementById('reset-verify-btn');
+  if(verBtn) verBtn.style.display = 'none';
+}
+
+async function selfResetPwSave(){
+  if(!_selfResetTarget){ toast('❌ 본인 확인이 필요합니다'); return; }
+  var newPw  = (document.getElementById('reset-newpw')||{}).value;
+  var newPw2 = (document.getElementById('reset-newpw2')||{}).value;
+  var status = document.getElementById('reset-status');
+
+  if(!newPw || newPw.length < 4){
+    status.innerHTML = '<span style="color:var(--red)">❌ 비밀번호는 4자 이상이어야 합니다</span>';
+    return;
+  }
+  if(newPw !== newPw2){
+    status.innerHTML = '<span style="color:var(--red)">❌ 비밀번호가 일치하지 않습니다</span>';
+    return;
+  }
+
+  // SHA-256 해시 변환 후 저장
+  var hashed = await hashPw(newPw);
+  var d = _selfResetTarget;
+
+  // 로컬스토리지 업데이트
+  var drivers = ls('drivers')||[];
+  var idx = drivers.findIndex(function(x){
+    return x.fbId===d.fbId || x.userId===d.userId;
+  });
+  if(idx >= 0){
+    drivers[idx].password = hashed;
+    lss('drivers', drivers);
+  }
+
+  // Firebase 업데이트
+  if(FB && _db && d.fbId){
+    try{
+      await _db.collection('drivers').doc(d.fbId).update({
+        password: hashed,
+        pwResetAt: new Date().toISOString(),
+        pwResetBy: 'self'
+      });
+    }catch(e){ console.warn('셀프 초기화 FB 저장:', e); }
+  }
+
+  status.innerHTML = '<span style="color:var(--teal)">✅ 비밀번호가 변경됐습니다! 새 비밀번호로 로그인해주세요.</span>';
+  document.getElementById('reset-pw-wrap').style.display = 'none';
+
+  // 2초 후 아이디 자동 입력
+  var userId = d.userId || d.phone || '';
+  setTimeout(function(){
+    var lidEl = document.getElementById('lid');
+    if(lidEl){ lidEl.value = userId; }
+    document.getElementById('login-help-box').style.display = 'none';
+    toast('✅ 비밀번호 변경 완료 — 새 비밀번호로 로그인해주세요');
+    _selfResetTarget = null;
+  }, 2000);
+}
+
 function doLogin(){
   // ── 보안: 로그인 실패 횟수 제한
   var lockKey='mbti_lock';
@@ -3045,21 +3186,27 @@ function openBulkSendPanel(){
         <div style="font-size:11px;color:var(--text3);text-align:center;margin:-4px 0">— 또는 캠프별 선택 —</div>
         <div style="display:flex;flex-wrap:wrap;gap:8px">${campBtns}</div>
       </div>
-      <button onclick="document.getElementById('bulk-send-mo').remove()" style="width:100%;padding:10px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">닫기</button>
+      <!-- ★ v9.25: 강제 재전달 (이미 전달된 건도 다시) -->
+      <div style="margin-top:14px;padding:12px;background:#fef3c7;border:1.5px dashed #d97706;border-radius:10px">
+        <div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:4px">⚠️ 강제 재전달 (이미지 안 보일 때)</div>
+        <div style="font-size:11px;color:#92400e;margin-bottom:8px;line-height:1.5">기사들이 "세금계산서가 안 보인다"고 할 때 사용하세요.<br>이미 전달된 건도 모두 다시 발송합니다.</div>
+        <button onclick="bulkSendSettlements('all','${curMonth}',true)" style="width:100%;padding:11px;background:#d97706;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer">🔄 ${curMonth} 강제 재전달 (전체)</button>
+      </div>
+      <button onclick="document.getElementById('bulk-send-mo').remove()" style="width:100%;padding:10px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;margin-top:14px">닫기</button>
     </div>
   </div>`);
 }
 
 // 일괄 전달 실행 — camp='all' 이면 전체, 특정 캠프명이면 해당 캠프만
 // month 지정 시 해당 월만, '' 이면 전체 월
-async function bulkSendSettlements(camp, month){
+async function bulkSendSettlements(camp, month, force){
   document.getElementById('bulk-send-mo')?.remove();
   var s=ls('settlements');
   var drv=ls('drivers');
   // 대상 필터링
   var targets=s.filter(function(x,idx){
     if(!x||!x.driver)return false;
-    if(x.taxSent===true)return false;  // 이미 전달됨
+    if(!force && x.taxSent===true)return false;  // ★ v9.25: force 모드에선 이미 전달된 것도 포함
     if(x.status!=='완료')return false;  // 승인 완료된 것만
     if(month&&x.month!==month)return false;
     if(camp!=='all'){
@@ -3071,12 +3218,13 @@ async function bulkSendSettlements(camp, month){
     return true;
   });
   if(!targets.length){
-    alert('📭 전달 대상 없음\n\n미전달 + 승인완료 건이 없습니다.\n(이미 전달됐거나 아직 미승인)');
+    alert('📭 전달 대상 없음\n\n'+(force?'승인완료된 정산 건이 없습니다.':'미전달 + 승인완료 건이 없습니다.\n(이미 전달됐거나 아직 미승인)'));
     return;
   }
   var campLabel=camp==='all'?'전체':camp+' 캠프';
   var monthLabel=month?month+'월 ':'';
-  if(!confirm('📤 '+campLabel+' '+monthLabel+'일괄 전달\n\n대상: '+targets.length+'명\n\n명세서 + 세금계산서를 순차 전달합니다.\n(건당 약 3~5초 소요)\n\n시작하시겠습니까?'))return;
+  var modeLabel = force ? '🔄 강제 재전달' : '📤 일괄 전달';
+  if(!confirm(modeLabel+' — '+campLabel+' '+monthLabel+'\n\n대상: '+targets.length+'명\n\n'+(force?'⚠️ 이미 전달된 건도 포함하여 다시 발송합니다.\n명세서 + 세금계산서를 모두 재발송합니다.':'명세서 + 세금계산서를 순차 전달합니다.')+'\n(건당 약 3~5초 소요)\n\n시작하시겠습니까?'))return;
 
   var total=targets.length, done=0, failed=0;
   toast('📤 일괄 전달 시작 (0/'+total+')...');
@@ -5455,28 +5603,41 @@ function saveEditDriver(fbIdOrId){
   
   all[idx]=d;
   lss('drivers',all);
-  
-  // Firebase 동기화
-  if(FB&&_db&&d.fbId){
-    _db.collection('drivers').doc(d.fbId).update({
-      name:d.name, userId:d.userId, phone:d.phone,
-      password:d.password||'', plate:d.plate, ton:d.ton,
-      jobtype:d.jobtype, jobsub:d.jobsub, employ:d.employ, route:d.route,
-      camp:d.camp||'', shift:d.shift||'',
-      bizNum:d.bizNum, bizName:d.bizName, bizAddr:d.bizAddr,
-      customUnitPrice:d.customUnitPrice||0,
-      insurance:d.insurance||'', insuranceNo:d.insuranceNo||'',
-      kakaoId:d.kakaoId||'', smsOk:d.smsOk||'Y',
-      updatedAt:d.updatedAt, updatedBy:d.updatedBy
-    }).then(function(){
-      // 성명 변경 시 관련 컬렉션도 동기화 (settlements, schedules, entries 등)
-      if(oldName && oldName !== newName){
-        syncDriverNameChange(oldName, newName);
-      }
-    }).catch(function(err){
-      console.warn('기사 수정 FB 저장 실패:', err&&err.message);
-      toast('⚠️ 저장 완료 (FB 동기화 일부 실패: '+((err&&err.message)||'')+')');
+
+  // ★ v9.25: 비밀번호가 변경된 경우 해시 변환 후 Firebase 저장
+  async function _doSave(pwToSave){
+    if(FB&&_db&&d.fbId){
+      _db.collection('drivers').doc(d.fbId).update({
+        name:d.name, userId:d.userId, phone:d.phone,
+        password:pwToSave||d.password||'', plate:d.plate, ton:d.ton,
+        jobtype:d.jobtype, jobsub:d.jobsub, employ:d.employ, route:d.route,
+        camp:d.camp||'', shift:d.shift||'',
+        bizNum:d.bizNum, bizName:d.bizName, bizAddr:d.bizAddr,
+        customUnitPrice:d.customUnitPrice||0,
+        insurance:d.insurance||'', insuranceNo:d.insuranceNo||'',
+        kakaoId:d.kakaoId||'', smsOk:d.smsOk||'Y',
+        updatedAt:d.updatedAt, updatedBy:d.updatedBy
+      }).then(function(){
+        if(oldName && oldName !== newName){
+          syncDriverNameChange(oldName, newName);
+        }
+      }).catch(function(err){
+        console.warn('기사 수정 FB 저장 실패:', err&&err.message);
+        toast('⚠️ 저장 완료 (FB 동기화 일부 실패: '+((err&&err.message)||'')+')');
+      });
+    }
+  }
+
+  if(newPw){
+    // 새 비밀번호 → SHA-256 해시 변환 후 저장
+    hashPw(newPw).then(function(hashed){
+      d.password = hashed;
+      all[idx] = d;
+      lss('drivers', all);
+      _doSave(hashed);
     });
+  } else {
+    _doSave(d.password||'');
   }
   
   // 활동 로그
@@ -8104,7 +8265,7 @@ function checkDriverNotifications(){
           }catch(e){}
         }
       });
-      // ⚠️ 긴급 공지 체크 (읽지 않은 긴급만 팝업, 세션당 1회)
+      // ⚠️ 긴급 공지 체크 (읽지 않은 긴급만 팝업)
       var urgentNotices=items.filter(function(it){
         if(it.type!=='notice')return false;
         if(it.category!=='긴급')return false;
@@ -8112,15 +8273,26 @@ function checkDriverNotifications(){
         if(it.readAt || it.readStatus==='read')return false;
         try{
           var readSet=JSON.parse(localStorage.getItem('drv_notice_read_'+S.curDriver)||'{}');
-          return !readSet[it._id];
+          // ★ v9.26: notifId OR noticeId 둘 중 하나라도 읽음 처리됐으면 제외
+          if(readSet[it._id]) return false;
+          if(it.noticeId && readSet['nc_'+it.noticeId]) return false;
+          return true;
         }catch(e){return true;}
       });
+      // ★ v9.26: noticeId 기준 중복 제거 (같은 공지 여러 번 전달해도 1번만 팝업)
+      var urgentByNoticeId={};
+      urgentNotices.forEach(function(it){
+        var k = it.noticeId || it._id;
+        if(!urgentByNoticeId[k]) urgentByNoticeId[k]=it;
+      });
+      urgentNotices = Object.values(urgentByNoticeId);
+
       if(urgentNotices.length>0){
-        // ★ 긴급 공지는 세션당 1번만 자동 팝업 (탭 이동 시 반복 방지)
-        var urgentSeenKey='urgent_notice_seen_'+S.curDriver+'_'+urgentNotices[0]._id;
+        // ★ v9.26: sessionStorage → localStorage (로그인해도 유지)
+        var urgentSeenKey='urgent_notice_seen_'+S.curDriver+'_'+(urgentNotices[0].noticeId||urgentNotices[0]._id);
         var alreadyOpen=document.getElementById('urgent-notice-modal');
-        if(!sessionStorage.getItem(urgentSeenKey) && !alreadyOpen){
-          sessionStorage.setItem(urgentSeenKey,'1');
+        if(!localStorage.getItem(urgentSeenKey) && !alreadyOpen){
+          localStorage.setItem(urgentSeenKey,'1');
           var first=urgentNotices[0];
           window._drvNotes[first._id]=first;
           setTimeout(function(){_viewNotice(first._id);},200);
@@ -8386,24 +8558,46 @@ function _closeUrgentNoticeModal(){
 
 // 공지사항 읽음 처리 (긴급 팝업용)
 function _markNoticeRead(notifId,noticeId){
-  // 로컬 읽음 기록 (Firebase 삭제 X — 홈 카드에 계속 보여야 함)
+  // 로컬 읽음 기록 (notifId + noticeId 둘 다 저장)
   try{
     var readSet=JSON.parse(localStorage.getItem('drv_notice_read_'+S.curDriver)||'{}');
     readSet[notifId]=new Date().toISOString();
+    // ★ v9.26: noticeId 기준으로도 저장 (같은 공지 여러 doc 중복 방지)
+    if(noticeId) readSet['nc_'+noticeId]=new Date().toISOString();
     localStorage.setItem('drv_notice_read_'+S.curDriver,JSON.stringify(readSet));
   }catch(e){}
-  
-  // ★ 긴급 공지 세션 플래그도 설정 (이번 세션 내 재팝업 방지)
+
+  // ★ v9.26: sessionStorage → localStorage (로그인해도 유지)
   try{
-    sessionStorage.setItem('urgent_notice_seen_'+S.curDriver+'_'+notifId,'1');
+    var seenKey='urgent_notice_seen_'+S.curDriver+'_'+(noticeId||notifId);
+    localStorage.setItem(seenKey,'1');
+    // 구버전 notifId 기준 키도 같이 저장
+    localStorage.setItem('urgent_notice_seen_'+S.curDriver+'_'+notifId,'1');
   }catch(e){}
-  
-  // ★ Firebase driver_notifications 문서에 readAt 저장 (확실한 재팝업 방지)
+
+  // ★ Firebase driver_notifications 문서에 readAt 저장
   if(FB&&_db&&notifId){
     _db.collection('driver_notifications').doc(notifId).update({
       readAt:new Date().toISOString(),
       readStatus:'read'
     }).catch(function(e){console.warn('notif readAt:',e&&e.message);});
+  }
+
+  // ★ v9.26: 같은 noticeId를 가진 다른 driver_notifications doc도 일괄 읽음 처리
+  if(FB&&_db&&noticeId&&S.curDriver){
+    _db.collection('driver_notifications')
+      .where('driver','==',S.curDriver)
+      .where('noticeId','==',noticeId)
+      .get().then(function(snap){
+        snap.forEach(function(doc){
+          if(doc.id===notifId)return; // 이미 처리한 것 제외
+          if(doc.data().readAt)return; // 이미 읽음 처리된 것 제외
+          doc.ref.update({
+            readAt:new Date().toISOString(),
+            readStatus:'read'
+          }).catch(function(){});
+        });
+      }).catch(function(){});
   }
   
   // Firebase: 마스터 공지의 readBy에 기록 (관리자 통계용)
@@ -8902,9 +9096,11 @@ function _startDeadlineTick(){
     var card=document.getElementById('drv-deadline-card');
     if(!card){clearInterval(window._dlTickTimer);window._dlTickTimer=null;return;}
     if(S.curMode!=='driver'){clearInterval(window._dlTickTimer);window._dlTickTimer=null;return;}
-    // 퇴근 감지 → 즉시 종료
+    // ★ v9.26: 미출근 감지 → 즉시 카드 숨김 + 알림 차단
     var att=_getAttend();
-    if(att&&att.checkOut){card.innerHTML='';clearInterval(window._dlTickTimer);window._dlTickTimer=null;return;}
+    if(!att||!att.checkIn){card.innerHTML='';return;}
+    // 퇴근 감지 → 즉시 종료
+    if(att.checkOut){card.innerHTML='';clearInterval(window._dlTickTimer);window._dlTickTimer=null;return;}
     // 근무표 휴무/병가 감지
     var sc=_getTodaySchedShift();
     if(sc==='휴무'||sc==='병가'){card.innerHTML='';clearInterval(window._dlTickTimer);window._dlTickTimer=null;return;}
@@ -8976,6 +9172,12 @@ function _buildCampContacts(){
 }
 
 function _buildCampSupportCard(){
+  // ★ v9.26: 미출근 / 퇴근 / 휴무 시 카드 표시 안 함
+  var att=_getAttend();
+  if(!att||!att.checkIn||att.checkOut) return '';
+  var sc=_getTodaySchedShift();
+  if(sc==='휴무'||sc==='병가') return '';
+
   var me=ls('drivers').find(function(x){return x.name===S.curDriver;});
   var myCamp=me&&me.camp||'';
   if(!myCamp)return '';
@@ -9131,6 +9333,19 @@ async function resolveCampSupport(fbId){
 }
 function _loadCampSupports(){
   if(!FB||!_db)return;
+  // ★ v9.26: 미출근 / 퇴근 / 휴무 시 배송지원 알림 표시 안 함
+  var att=_getAttend();
+  if(!att||!att.checkIn||att.checkOut){
+    var card=document.getElementById('drv-campsupport-card');
+    if(card)card.innerHTML='';
+    return;
+  }
+  var sc=_getTodaySchedShift();
+  if(sc==='휴무'||sc==='병가'){
+    var card2=document.getElementById('drv-campsupport-card');
+    if(card2)card2.innerHTML='';
+    return;
+  }
   var since=new Date(Date.now()-6*3600000).toISOString();
   _db.collection('campSupports').where('createdAt','>',since).get().then(function(snap){
     var arr=[];
@@ -9403,12 +9618,15 @@ function _markDrvNoticeRead(notifId,noticeId){
   try{
     var readSet=JSON.parse(localStorage.getItem('drv_notice_read_'+S.curDriver)||'{}');
     readSet[notifId]=new Date().toISOString();
+    // ★ v9.26: noticeId 기준으로도 저장
+    if(noticeId) readSet['nc_'+noticeId]=new Date().toISOString();
     localStorage.setItem('drv_notice_read_'+S.curDriver,JSON.stringify(readSet));
   }catch(e){}
-  
-  // 2) 긴급 공지 재팝업 방지 플래그
+
+  // 2) ★ v9.26: sessionStorage → localStorage (로그인해도 유지)
   try{
-    sessionStorage.setItem('urgent_notice_seen_'+S.curDriver+'_'+notifId,'1');
+    localStorage.setItem('urgent_notice_seen_'+S.curDriver+'_'+(noticeId||notifId),'1');
+    localStorage.setItem('urgent_notice_seen_'+S.curDriver+'_'+notifId,'1');
   }catch(e){}
   
   // 3) 메모리 리스트 즉시 업데이트
@@ -9991,24 +10209,44 @@ function openEmergencyDelivery(){
         <div style="font-size:16px;font-weight:800;color:var(--red)">긴급 배송기록</div>
         <div style="margin-left:auto;font-size:10px;background:#dc2626;color:#fff;padding:2px 8px;border-radius:999px;font-weight:700">쿠팡앱 에러 대응</div>
       </div>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:14px">운송장 사진 찍으면 자동입력 → 지도에 핀 표시됩니다.</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:14px">QR 스캔하면 운송장+주소+GPS 자동입력 → 지도에 핀 표시됩니다.</div>
 
-      <!-- ★ OCR 자동입력 버튼 -->
+      <!-- ★ v9.26: 바코드/QR 실시간 스캐너 버튼 (주력) -->
       <div style="margin-bottom:10px">
-        <label style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;background:linear-gradient(135deg,#1d4ed8,#2563eb);color:#fff;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:.01em">
-          <span style="font-size:18px">🤖</span> 운송장 사진 찍어서 자동 입력
+        <button onclick="emerStartScan()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">
+          <span style="font-size:18px">📊</span> QR / 바코드 실시간 스캔
+        </button>
+        <div id="emer-barcode-status" style="font-size:11px;color:var(--text3);text-align:center;margin-top:5px;min-height:16px"></div>
+      </div>
+
+      <!-- 실시간 스캐너 모달 -->
+      <div id="emer-scan-mo" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:900;flex-direction:column;align-items:center;justify-content:center">
+        <div style="color:#fff;font-size:14px;font-weight:700;margin-bottom:12px">📊 바코드 / QR 코드에 카메라를 갖다 대세요</div>
+        <div style="position:relative;width:300px;height:300px;border-radius:12px;overflow:hidden;background:#000">
+          <video id="emer-scan-video" style="width:100%;height:100%;object-fit:cover" playsinline muted autoplay></video>
+          <!-- 스캔 가이드 박스 -->
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
+            <div style="width:200px;height:120px;border:2.5px solid #22c55e;border-radius:8px;box-shadow:0 0 0 9999px rgba(0,0,0,.45)">
+              <div style="position:absolute;top:-2px;left:-2px;width:20px;height:20px;border-top:4px solid #22c55e;border-left:4px solid #22c55e;border-radius:2px 0 0 0"></div>
+              <div style="position:absolute;top:-2px;right:-2px;width:20px;height:20px;border-top:4px solid #22c55e;border-right:4px solid #22c55e;border-radius:0 2px 0 0"></div>
+              <div style="position:absolute;bottom:-2px;left:-2px;width:20px;height:20px;border-bottom:4px solid #22c55e;border-left:4px solid #22c55e;border-radius:0 0 0 2px"></div>
+              <div style="position:absolute;bottom:-2px;right:-2px;width:20px;height:20px;border-bottom:4px solid #22c55e;border-right:4px solid #22c55e;border-radius:0 0 2px 0"></div>
+            </div>
+          </div>
+          <!-- 스캔 라인 애니메이션 -->
+          <div id="emer-scan-line" style="position:absolute;left:50px;right:50px;height:2px;background:linear-gradient(90deg,transparent,#22c55e,transparent);top:90px;animation:scanLine 1.8s ease-in-out infinite"></div>
+        </div>
+        <div id="emer-scan-status" style="color:#aaa;font-size:12px;margin-top:12px">인식 중...</div>
+        <button onclick="emerStopScan()" style="margin-top:16px;padding:11px 32px;background:#ef4444;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">✕ 닫기</button>
+      </div>
+
+      <!-- ★ OCR 자동입력 버튼 (QR 훼손 시 대체) -->
+      <div style="margin-bottom:10px">
+        <label style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px;background:linear-gradient(135deg,#1d4ed8,#2563eb);color:#fff;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;letter-spacing:.01em">
+          <span style="font-size:16px">🤖</span> OCR 자동 입력 (QR 훼손 시)
           <input type="file" accept="image/*" capture="environment" style="display:none" onchange="emerOcrScan(this.files[0])">
         </label>
         <div id="emer-ocr-status" style="font-size:11px;color:var(--text3);text-align:center;margin-top:5px;min-height:16px"></div>
-      </div>
-
-      <!-- ★ v9.25: 바코드/QR 인식 버튼 (운송장 훼손 시 보조 수단) -->
-      <div style="margin-bottom:10px">
-        <label style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer">
-          <span style="font-size:16px">📊</span> 바코드 / QR 인식 (훼손 시 대체)
-          <input type="file" accept="image/*" capture="environment" style="display:none" onchange="emerBarcodeScan(this.files[0])">
-        </label>
-        <div id="emer-barcode-status" style="font-size:11px;color:var(--text3);text-align:center;margin-top:5px;min-height:16px"></div>
       </div>
 
       <!-- ★ v9.25: 수기 입력 모드 안내 -->
@@ -10024,7 +10262,16 @@ function openEmergencyDelivery(){
 
       <!-- 운송장 번호 (OCR 실패 시 표시) -->
       <div id="emer-tracking-wrap" style="margin-bottom:12px">
-        <div style="font-size:12px;font-weight:700;margin-bottom:6px">📦 운송장 번호 <span style="color:var(--red)">*</span> <span style="font-size:10px;font-weight:400;color:var(--text3)">(묶음배송이면 추가)</span></div>
+        <!-- ★ v9.26: 스캔 카운터 + 오프라인 상태 표시 -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="font-size:12px;font-weight:700">📦 운송장 번호 <span style="color:var(--red)">*</span> <span style="font-size:10px;font-weight:400;color:var(--text3)">(묶음배송이면 추가)</span></div>
+          <div id="emer-scan-counter" style="display:none;font-size:11px;font-weight:700;color:var(--teal);background:var(--bg3);padding:2px 10px;border-radius:999px;border:1px solid var(--teal)">0건 스캔됨</div>
+        </div>
+        <!-- ★ v9.26: 오프라인 경고 -->
+        <div id="emer-offline-warn" style="display:none;background:#2a1a00;border:1px solid var(--amber);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:11px;color:#fbbf24;line-height:1.5">
+          ⚠️ <b>오프라인 상태</b><br>QR 스캔/입력은 가능하나 저장은 인터넷 연결 후 완료됩니다.
+        </div>
+        <!-- 실시간 스캔 목록 -->
         <div id="emer-tracking-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px"></div>
         <div style="display:flex;gap:6px">
           <input id="emer-tracking-inp" type="text" inputmode="numeric" placeholder="운송장 번호 입력 후 추가" maxlength="30"
@@ -10256,6 +10503,212 @@ async function emerOcrScan(file){
 }
 
 // ★ v9.25: 바코드/QR 인식 (운송장 훼손 시 보조 수단)
+// ★ v9.26: QR/바코드 텍스트에서 주소/수령인/주문번호/GPS 파싱
+// 쿠팡 QR 형식: |V1|운송장|주소|상세주소|수령인|해시|위도|경도|타입|타임스탬프|
+function _parseQrText(text){
+  if(!text) return {};
+  var result = {};
+
+  // ★ 쿠팡 QR 파이프 구분 형식 우선 파싱
+  if(text.indexOf('|') >= 0){
+    var parts = text.split('|').map(function(p){ return p.trim(); }).filter(Boolean);
+    // |V1|운송장|주소|상세주소|수령인|해시|위도|경도|타입|타임스탬프|
+    // parts[0]=V1, [1]=운송장, [2]=주소, [3]=상세주소, [4]=수령인, [5]=해시, [6]=위도, [7]=경도
+    if(parts[0] === 'V1' && parts.length >= 5){
+      // 운송장 번호
+      if(parts[1] && /^\d{10,20}$/.test(parts[1])){
+        result.tracking_no = parts[1];
+      }
+      // 주소 (주소 + 상세주소 합치기)
+      var addr = parts[2] || '';
+      var addrDetail = parts[3] || '';
+      if(addr) result.address = addrDetail ? addr + ' ' + addrDetail : addr;
+      // 수령인 (김*우 패턴)
+      if(parts[4] && parts[4].match(/[가-힣]+\*[가-힣]/)){
+        result.recipient = parts[4];
+      }
+      // GPS 좌표 (위도/경도)
+      if(parts[6] && parts[7]){
+        var lat = parseFloat(parts[6]);
+        var lng = parseFloat(parts[7]);
+        if(!isNaN(lat) && !isNaN(lng) && lat > 30 && lat < 40 && lng > 120 && lng < 135){
+          result.lat = lat;
+          result.lng = lng;
+        }
+      }
+      return result;
+    }
+  }
+
+  // 일반 텍스트 폴백 파싱 (비쿠팡 형식)
+  var lines = text.split(/[\n\r,]/).map(function(l){ return l.trim(); }).filter(Boolean);
+  var full = text.replace(/\s+/g,' ');
+  var recMatch = full.match(/[가-힣]{2,4}\*[가-힣]/) || full.match(/수령인[:\s]*([가-힣]{2,4})/);
+  if(recMatch) result.recipient = recMatch[1]||recMatch[0];
+  lines.forEach(function(l){
+    if(!result.address && (l.match(/(시|구)\s*.*(로|길|동)/) || l.match(/(로|길)\s*\d+/) || l.match(/\d+동\s*\d+호/))){
+      result.address = l;
+    }
+  });
+  var ordMatch = full.match(/7[\d\.\-]{12,16}/);
+  if(ordMatch) result.order_id = ordMatch[0].replace(/[^\d]/g,'');
+  var memoMatch = full.match(/문\s*앞|경비실|자율출입|택배함|부재/);
+  if(memoMatch) result.memo = memoMatch[0];
+  return result;
+}
+
+// ★ v9.26: 실시간 바코드/QR 스캐너
+var _emerScanReader = null;
+
+function emerStartScan(){
+  var mo = document.getElementById('emer-scan-mo');
+  if(!mo) return;
+  mo.style.display = 'flex';
+  document.getElementById('emer-scan-status').textContent = '카메라 시작 중...';
+
+  // ZXing 실시간 스캔
+  try{
+    if(typeof ZXing === 'undefined' || !ZXing.BrowserMultiFormatReader){
+      toast('❌ 스캐너 라이브러리 로드 실패 — 사진 촬영 방식을 이용해주세요');
+      mo.style.display = 'none';
+      return;
+    }
+    _emerScanReader = new ZXing.BrowserMultiFormatReader();
+    var video = document.getElementById('emer-scan-video');
+    var statusEl = document.getElementById('emer-scan-status');
+
+    _emerScanReader.decodeFromVideoDevice(null, video, function(result, err){
+      if(result){
+        var raw = result.getText ? result.getText() : (result.text || String(result));
+        statusEl.textContent = '✅ 인식됨: ' + raw.slice(0,30);
+
+        // 운송장 번호 파싱
+        var code = raw.replace(/[\.\-\s]/g,'').trim();
+        var isTrack = /^[0-9]{8,25}$/.test(code);
+
+        if(isTrack){
+          window._emerTrackings = window._emerTrackings||[];
+          if(window._emerTrackings.indexOf(code)<0){
+            window._emerTrackings.push(code);
+            // ★ v9.26: 스캔 시각 기록
+            window._emerTrackingTimes = window._emerTrackingTimes||{};
+            var now2=new Date();
+            window._emerTrackingTimes[code]=now2.getHours()+':'+String(now2.getMinutes()).padStart(2,'0')+':'+String(now2.getSeconds()).padStart(2,'0');
+            emerRefreshTrackingList();
+          }
+          window._emerEntryMode = 'barcode';
+        }
+
+        // QR 텍스트에서 주소/수령인/GPS 파싱
+        var qp = _parseQrText(raw);
+        var fld = [];
+        if(qp.tracking_no && (!window._emerTrackings || window._emerTrackings.indexOf(qp.tracking_no)<0)){
+          window._emerTrackings = window._emerTrackings||[];
+          window._emerTrackings.push(qp.tracking_no);
+          emerRefreshTrackingList();
+          window._emerEntryMode = 'barcode';
+        }
+        if(qp.address){ var ae=document.getElementById('emer-addr'); if(ae&&!ae.value){ae.value=qp.address;fld.push('주소');} }
+        if(qp.recipient){ var re=document.getElementById('emer-recipient'); if(re&&!re.value){re.value=qp.recipient;fld.push('수령인');} }
+        if(qp.order_id){ var oe=document.getElementById('emer-orderid'); if(oe&&!oe.value){oe.value=qp.order_id;fld.push('주문번호');} }
+        if(qp.memo){ var dm=document.getElementById('emer-delivmemo'); if(dm&&!dm.value){dm.value=qp.memo;} }
+        // ★ QR GPS 좌표 자동 적용 (기기 GPS보다 우선)
+        if(qp.lat && qp.lng){
+          window._emerGps = {lat:qp.lat, lng:qp.lng, src:'QR'};
+          fld.push('GPS');
+          var gpsEl = document.getElementById('emer-gps-status');
+          if(gpsEl) gpsEl.innerHTML = '<span style="color:var(--teal)">📍 QR GPS: '+qp.lat.toFixed(6)+', '+qp.lng.toFixed(6)+'</span>';
+        }
+
+        // ★ v9.26: 묶음 감지 — 2개 이상 일치 시만 같은 집으로 판단
+        var curAddr = (document.getElementById('emer-addr')||{}).value||'';
+        var curRecip = (document.getElementById('emer-recipient')||{}).value||'';
+        var curTracks = window._emerTrackings||[];
+        var newTrack = qp.tracking_no || (isTrack ? code : null);
+
+        if(curTracks.length > 0 && newTrack && (curAddr || curRecip)){
+          var matchCount = 0, matchReasons = [];
+          // ① 주소 일치
+          if(curAddr && qp.address){
+            var a1=curAddr.replace(/\s/g,''), a2=qp.address.replace(/\s/g,'');
+            if(a1===a2||a1.indexOf(a2)>=0||a2.indexOf(a1)>=0){ matchCount++; matchReasons.push('주소'); }
+          }
+          // ② 수령인 일치
+          if(curRecip && qp.recipient && curRecip===qp.recipient){ matchCount++; matchReasons.push('수령인'); }
+          // ③ GPS 50m 이내
+          if(window._emerGps && qp.lat && qp.lng){
+            var R=6371000, dLat=(qp.lat-window._emerGps.lat)*Math.PI/180, dLng=(qp.lng-window._emerGps.lng)*Math.PI/180;
+            var a2=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(window._emerGps.lat*Math.PI/180)*Math.cos(qp.lat*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
+            var dist=R*2*Math.atan2(Math.sqrt(a2),Math.sqrt(1-a2));
+            if(dist<=50){ matchCount++; matchReasons.push('GPS('+Math.round(dist)+'m)'); }
+          }
+
+          if(matchCount >= 2 && window._emerTrackings.indexOf(newTrack) < 0){
+            emerStopScan();
+            var bundleMsg = '📦 같은 집으로 감지됐습니다!\n\n'
+              +'✅ 일치 항목 ('+matchCount+'/3): '+matchReasons.join(' + ')+'\n\n'
+              +'주소: '+(qp.address||curAddr)+'\n'
+              +'수령인: '+(qp.recipient||curRecip)+'\n\n'
+              +'운송장 '+newTrack+' 을 추가할까요?\n'
+              +'(주소/사진은 공유됩니다)';
+            if(confirm(bundleMsg)){
+              window._emerTrackings.push(newTrack);
+              emerRefreshTrackingList();
+              document.getElementById('emer-barcode-status').innerHTML =
+                '<span style="color:var(--teal)">✅ 묶음 추가: '+newTrack+' ('+matchReasons.join('+')+' 일치)</span>';
+            }
+            return;
+          }
+        }
+
+        // 진동 + 소리 피드백
+        try{ navigator.vibrate && navigator.vibrate([100,50,100]); }catch(e){}
+
+        // 결과 표시 후 자동 닫힘
+        var msg = isTrack
+          ? '✅ 운송장: '+code+(fld.length?' + '+fld.join('/'):'')
+          : (fld.length ? '✅ '+fld.join('/')+' 자동 입력됨' : '⚠️ 인식됨 (운송장 형식 아님)');
+        document.getElementById('emer-barcode-status').innerHTML = '<span style="color:var(--teal)">'+msg+'</span>';
+
+        // OCR 요약 표시
+        if(fld.length){
+          var sumEl=document.getElementById('emer-ocr-summary');
+          if(sumEl){
+            sumEl.style.display='block';
+            sumEl.innerHTML='<b>📊 스캔 결과</b><br>'
+              +(isTrack?'📦 운송장: '+code+'<br>':'')
+              +(qp.address?'📍 주소: '+qp.address+'<br>':'')
+              +(qp.recipient?'👤 수령인: '+qp.recipient+'<br>':'')
+              +(qp.order_id?'📋 주문번호: '+qp.order_id+'<br>':'');
+          }
+        }
+
+        emerStopScan();
+      }
+      if(err && !(err instanceof ZXing.NotFoundException)){
+        console.warn('스캔 오류:', err);
+      }
+    });
+
+    statusEl.textContent = '인식 중... (바코드/QR에 카메라를 갖다 대세요)';
+
+  }catch(e){
+    toast('❌ 스캐너 오류: '+e.message);
+    mo.style.display = 'none';
+  }
+}
+
+function emerStopScan(){
+  try{
+    if(_emerScanReader){
+      _emerScanReader.reset();
+      _emerScanReader = null;
+    }
+  }catch(e){}
+  var mo = document.getElementById('emer-scan-mo');
+  if(mo) mo.style.display = 'none';
+}
+
 async function emerBarcodeScan(file){
   if(!file) return;
   var status = document.getElementById('emer-barcode-status');
@@ -10274,16 +10727,31 @@ async function emerBarcodeScan(file){
           var result = await reader.decodeFromImageElement(img);
           URL.revokeObjectURL(imgUrl);
           if(result && result.text){
-            var code = result.text.replace(/[\.\-\s]/g,'').trim();
-            // 운송장번호 형태인지 검증 (숫자 8~25자리)
+            var raw = result.text;
+            var code = raw.replace(/[\.\-\s]/g,'').trim();
             if(/^[0-9]{8,25}$/.test(code)){
               window._emerTrackings = window._emerTrackings||[];
               if(window._emerTrackings.indexOf(code)<0) window._emerTrackings.push(code);
               emerRefreshTrackingList();
               window._emerEntryMode = 'barcode';
-              if(status) status.innerHTML = '<span style="color:var(--teal)">✅ 바코드 인식 성공: '+code+'</span>';
+              // ★ v9.25: QR 텍스트에서 주소/수령인 추가 파싱
+              var qp = _parseQrText(raw);
+              var fld = [];
+              if(qp.address){ var ae=document.getElementById('emer-addr'); if(ae&&!ae.value){ae.value=qp.address;fld.push('주소');} }
+              if(qp.recipient){ var re=document.getElementById('emer-recipient'); if(re&&!re.value){re.value=qp.recipient;fld.push('수령인');} }
+              if(qp.order_id){ var oe=document.getElementById('emer-orderid'); if(oe&&!oe.value){oe.value=qp.order_id;fld.push('주문번호');} }
+              if(status) status.innerHTML = '<span style="color:var(--teal)">✅ 바코드 인식 성공: '+code+(fld.length?' ('+fld.join('/')+'자동입력)':'')+'</span>';
             } else {
-              if(status) status.innerHTML = '<span style="color:var(--amber)">⚠️ 인식됨: '+result.text+' (운송장 형식 아님 — 직접 입력 필요)</span>';
+              // 숫자 아닌 QR → 주소/수령인 파싱 시도
+              var qp2 = _parseQrText(raw);
+              var fld2 = [];
+              if(qp2.address){ var ae2=document.getElementById('emer-addr'); if(ae2&&!ae2.value){ae2.value=qp2.address;fld2.push('주소');} }
+              if(qp2.recipient){ var re2=document.getElementById('emer-recipient'); if(re2&&!re2.value){re2.value=qp2.recipient;fld2.push('수령인');} }
+              if(fld2.length){
+                if(status) status.innerHTML = '<span style="color:var(--teal)">✅ QR에서 '+fld2.join('/')+'자동 입력됨 (운송장은 직접 입력)</span>';
+              } else {
+                if(status) status.innerHTML = '<span style="color:var(--amber)">⚠️ 인식됨: '+raw.slice(0,30)+' (운송장 형식 아님 — 직접 입력 필요)</span>';
+              }
             }
             // 사진도 자동 첨부
             var fr = new FileReader();
@@ -10324,18 +10792,78 @@ async function emerBarcodeScan(file){
       else { foundOther.push(barcodes[i].rawValue); }
     }
 
+    // ★ v9.25: QR 텍스트에서 주소/수령인/주문번호 파싱 시도
     if(foundTrack){
       window._emerTrackings = window._emerTrackings||[];
       if(window._emerTrackings.indexOf(foundTrack)<0) window._emerTrackings.push(foundTrack);
       emerRefreshTrackingList();
       window._emerEntryMode = 'barcode';
-      var extra = foundOther.length ? ' (+ '+foundOther.length+'개 추가 인식됨)' : '';
-      if(status) status.innerHTML = '<span style="color:var(--teal)">✅ 바코드 인식 성공: '+foundTrack+extra+'</span>';
+
+      // ★ QR에서 추가 정보 파싱 (주소, 수령인, 주문번호)
+      var qrExtra = {};
+      if(foundOther.length){
+        foundOther.forEach(function(t){ var p=_parseQrText(t); Object.assign(qrExtra, p); });
+      }
+      // 운송장 번호 자체에도 텍스트 붙어있을 수 있음
+      var allRaw = barcodes.map(function(b){return b.rawValue||'';}).join('\n');
+      var mainParsed = _parseQrText(allRaw);
+      Object.assign(qrExtra, mainParsed);
+
+      // 파싱된 정보 자동 입력
+      var filled = [];
+      if(qrExtra.address){
+        var adEl=document.getElementById('emer-addr'); if(adEl&&!adEl.value){adEl.value=qrExtra.address; filled.push('주소');}
+      }
+      if(qrExtra.recipient){
+        var reEl=document.getElementById('emer-recipient'); if(reEl&&!reEl.value){reEl.value=qrExtra.recipient; filled.push('수령인');}
+      }
+      if(qrExtra.order_id){
+        var oiEl=document.getElementById('emer-orderid'); if(oiEl&&!oiEl.value){oiEl.value=qrExtra.order_id; filled.push('주문번호');}
+      }
+      if(qrExtra.memo){
+        var dmEl=document.getElementById('emer-delivmemo'); if(dmEl&&!dmEl.value){dmEl.value=qrExtra.memo;}
+      }
+
+      var extra = filled.length ? ' + '+filled.join('/') : '';
+      if(status) status.innerHTML = '<span style="color:var(--teal)">✅ 인식 성공: '+foundTrack+(extra?' ('+extra+' 자동입력)':'')+'</span>';
+
+      // OCR 요약 표시 (주소/수령인 있으면)
+      if(filled.length){
+        var sumEl=document.getElementById('emer-ocr-summary');
+        if(sumEl){
+          sumEl.style.display='block';
+          sumEl.innerHTML='<b>📊 QR 인식 결과</b><br>'
+            +(qrExtra.address?'📍 주소: '+qrExtra.address+'<br>':'')
+            +(qrExtra.recipient?'👤 수령인: '+qrExtra.recipient+'<br>':'')
+            +(qrExtra.order_id?'📋 주문번호: '+qrExtra.order_id+'<br>':'')
+            +(qrExtra.memo?'💬 메모: '+qrExtra.memo+'<br>':'');
+        }
+      }
+
     } else if(foundOther.length){
-      if(status) status.innerHTML = '<span style="color:var(--amber)">⚠️ 인식됨: '+foundOther[0]+' — 운송장 형식 아님, 직접 입력 필요</span>';
-      // QR/바코드 텍스트를 메모란에 자동 입력
-      var memoEl = document.getElementById('emer-memo');
-      if(memoEl && !memoEl.value) memoEl.value = '[바코드 인식] '+foundOther.join(' / ');
+      // 숫자 형태는 아니지만 텍스트 QR → 주소/수령인 파싱 시도
+      var qrText = foundOther.join('\n');
+      var parsed = _parseQrText(qrText);
+      var filled2 = [];
+      if(parsed.address){ var ae=document.getElementById('emer-addr'); if(ae&&!ae.value){ae.value=parsed.address; filled2.push('주소');} }
+      if(parsed.recipient){ var re=document.getElementById('emer-recipient'); if(re&&!re.value){re.value=parsed.recipient; filled2.push('수령인');} }
+      if(parsed.order_id){ var oe=document.getElementById('emer-orderid'); if(oe&&!oe.value){oe.value=parsed.order_id; filled2.push('주문번호');} }
+
+      if(filled2.length){
+        if(status) status.innerHTML = '<span style="color:var(--teal)">✅ QR에서 '+filled2.join('/')+'자동 입력됨 (운송장은 직접 입력)</span>';
+        var sumEl2=document.getElementById('emer-ocr-summary');
+        if(sumEl2){
+          sumEl2.style.display='block';
+          sumEl2.innerHTML='<b>📊 QR 인식 결과</b><br>'
+            +(parsed.address?'📍 주소: '+parsed.address+'<br>':'')
+            +(parsed.recipient?'👤 수령인: '+parsed.recipient+'<br>':'')
+            +(parsed.order_id?'📋 주문번호: '+parsed.order_id+'<br>':'');
+        }
+      } else {
+        if(status) status.innerHTML = '<span style="color:var(--amber)">⚠️ 인식됨: '+foundOther[0].slice(0,30)+' — 운송장 형식 아님, 직접 입력 필요</span>';
+        var memoEl = document.getElementById('emer-memo');
+        if(memoEl && !memoEl.value) memoEl.value = '[바코드 인식] '+foundOther.join(' / ');
+      }
     } else {
       if(status) status.innerHTML = '<span style="color:var(--red)">❌ 인식된 바코드가 비어있음 — 직접 입력해주세요</span>';
     }
@@ -10382,15 +10910,47 @@ function emerAddTracking(){
 function emerRefreshTrackingList(){
   var list = document.getElementById('emer-tracking-list');
   if(!list) return;
+
+  var cnt = window._emerTrackings.length;
+
+  // ★ v9.26: 스캔 카운터 업데이트
+  var counter = document.getElementById('emer-scan-counter');
+  if(counter){
+    if(cnt > 0){
+      counter.style.display = 'block';
+      counter.textContent = cnt+'건 스캔됨';
+      counter.style.animation = 'none';
+      counter.offsetHeight; // reflow
+      counter.style.animation = 'notiPop .3s ease';
+    } else {
+      counter.style.display = 'none';
+    }
+  }
+
+  // ★ v9.26: 오프라인 감지 표시
+  var offWarn = document.getElementById('emer-offline-warn');
+  if(offWarn) offWarn.style.display = !navigator.onLine ? 'block' : 'none';
+
+  // 스캔 목록 렌더 (최신 추가분 팝인 애니메이션)
   list.innerHTML = window._emerTrackings.map(function(t, i){
-    return '<div style="display:flex;align-items:center;gap:6px;padding:8px 10px;background:var(--bg3);border-radius:8px">'
-      +'<span style="font-size:12px">📦</span>'
-      +'<span style="flex:1;font-size:13px;font-family:monospace">'+t+'</span>'
+    var isNew = (i === cnt-1 && cnt > 0);
+    var timeStr = window._emerTrackingTimes && window._emerTrackingTimes[t]
+      ? window._emerTrackingTimes[t] : '';
+    return '<div style="display:flex;align-items:center;gap:6px;padding:8px 10px;background:var(--bg3);border-radius:8px;border:1px solid var(--border);'+(isNew?'animation:notiPop .3s ease;border-color:var(--teal)':'')+'">'
+      +'<span style="font-size:14px;flex-shrink:0">'+(i===0&&cnt===1?'📦':'📦')+'</span>'
+      +'<div style="flex:1;min-width:0">'
+      +'<div style="font-size:13px;font-family:monospace;font-weight:700;color:'+(isNew?'var(--teal)':'var(--text)')+'">'+t+'</div>'
+      +(timeStr?'<div style="font-size:10px;color:var(--text3)">'+timeStr+' 스캔</div>':'')
+      +'</div>'
+      +'<span style="font-size:10px;color:var(--teal);font-weight:700;margin-right:4px">✓</span>'
       +'<button onclick="window._emerTrackings.splice('+i+',1);emerRefreshTrackingList()" '
-      +'style="padding:2px 8px;background:var(--red-l,#fee2e2);color:var(--red);border:none;border-radius:4px;font-size:11px;cursor:pointer">삭제</button>'
+      +'style="padding:2px 8px;background:var(--red-l,#fee2e2);color:var(--red);border:none;border-radius:4px;font-size:11px;cursor:pointer">✕</button>'
       +'</div>';
   }).join('');
 }
+
+// ★ v9.26: 스캔 시각 기록
+window._emerTrackingTimes = window._emerTrackingTimes || {};
 
 // 사진 추가 처리
 function emerAddPhotos(files){
@@ -10478,42 +11038,56 @@ async function emerSave(){
   var saveBtn = document.querySelector('#emer-del-mo button[onclick="emerSave()"]');
   if(saveBtn) saveBtn.disabled = true;
 
-  // 사진 업로드
-  var uploaded = [];
-  for(var i=0; i<window._emerPhotos.length; i++){
-    var dataUrl = window._emerPhotos[i];
-    if(FB&&_st){
-      var path = 'emergency/'+S.curDriver+'/'+now.getTime()+'_'+i+'.jpg';
-      try{
-        // ★ v9.25: 자동 재시도 (최대 3회)
-        var url = await _emerStorageUpload(dataUrl, path, 3);
-        uploaded.push(url);
-      }catch(e){
-        // ★ Storage 최종 실패 → 800px / 품질 0.75 폴백 (분쟁 증빙 가독성 확보)
-        console.warn('Storage 업로드 최종 실패 (사진 '+i+', 3회 재시도 후):', e.code||e.message);
-        try{
-          var img2=new Image(); img2.src=dataUrl;
-          await new Promise(function(r){img2.onload=r;img2.onerror=r;});
-          var cvs=document.createElement('canvas');
-          var max=800; var ratio=Math.min(max/img2.width,max/img2.height,1);
-          cvs.width=Math.round(img2.width*ratio); cvs.height=Math.round(img2.height*ratio);
-          cvs.getContext('2d').drawImage(img2,0,0,cvs.width,cvs.height);
-          uploaded.push(cvs.toDataURL('image/jpeg',0.75));
-        }catch(e2){ console.warn('사진 압축 실패:', e2.message); }
-      }
-    } else {
-      // Firebase Storage 없으면 로컬에만 base64 보관 (Firestore엔 저장 안 함)
-    }
-  }
-  record.photos = uploaded; // URL만 저장 (base64 절대 포함 안 됨)
-
-  // 로컬에는 base64 포함하여 저장 (기기 내 표시용)
-  var recordLocal = Object.assign({}, record, { photosLocal: window._emerPhotos.slice() });
+  // ★ v9.26: 로컬 선저장 (즉시) — Firebase 저장 전에 먼저 로컬에 기록
+  var localId = 'emer_'+now.getTime();
+  var recordLocal = Object.assign({}, record, {
+    photosLocal: window._emerPhotos.slice(),
+    _localId: localId,
+    _syncStatus: 'pending'
+  });
   try{
     var emerList = JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]');
     emerList.push(recordLocal);
     localStorage.setItem('mbti_emergency_del', JSON.stringify(emerList));
   }catch(e){ console.warn('로컬 저장 실패:', e); }
+
+  // ★ v9.26: 사진 병렬 업로드 (순차→동시 → 3장이면 3~5초에 완료)
+  var uploaded = [];
+  var isOnline = navigator.onLine;
+
+  if(!isOnline){
+    toast('⚠️ 오프라인 상태 — 로컬 저장됨. 인터넷 연결 후 재전송 가능');
+    record.photos = [];
+    record._syncStatus = 'offline';
+  } else if(FB && _st && window._emerPhotos.length > 0){
+    try{
+      // ★ 모든 사진 동시 업로드 (Promise.all)
+      toast('📸 사진 '+ window._emerPhotos.length +'장 동시 업로드 중...');
+      var uploadTasks = window._emerPhotos.map(function(dataUrl, i){
+        var path = 'emergency/'+S.curDriver+'/'+now.getTime()+'_'+i+'.jpg';
+        return _emerStorageUpload(dataUrl, path, 3)
+          .catch(function(e){
+            console.warn('사진 '+i+' 업로드 실패:', e.code||e.message);
+            // 실패 시 폴백: 800px base64
+            return new Promise(function(res){
+              var img2=new Image(); img2.src=dataUrl;
+              img2.onload=function(){
+                var cvs=document.createElement('canvas');
+                var max=800; var ratio=Math.min(max/img2.width,max/img2.height,1);
+                cvs.width=Math.round(img2.width*ratio); cvs.height=Math.round(img2.height*ratio);
+                cvs.getContext('2d').drawImage(img2,0,0,cvs.width,cvs.height);
+                res(cvs.toDataURL('image/jpeg',0.75));
+              };
+              img2.onerror=function(){ res(null); };
+            });
+          });
+      });
+      uploaded = (await Promise.all(uploadTasks)).filter(Boolean);
+    }catch(e){
+      console.warn('병렬 업로드 오류:', e);
+    }
+  }
+  record.photos = uploaded;
 
   // Firebase 저장 + 관리자 알림 — .add() 사용 (docId 문제 완전 회피)
   var docId = null;
@@ -10755,7 +11329,7 @@ async function openDelivComplete(fbId, dataEncoded){
           <div id="dc-photo-count" style="font-size:11px;font-weight:700"><span style="color:var(--red)">⚠️ 1장 이상 필수</span></div>
         </div>
         <div id="dc-photo-preview" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
-        <label onclick="this.querySelector('input').click()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;background:linear-gradient(135deg,#0F6E56,#16a34a);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:800;box-shadow:0 2px 8px rgba(15,110,86,.3)">
+        <label style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;background:linear-gradient(135deg,#0F6E56,#16a34a);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:800;box-shadow:0 2px 8px rgba(15,110,86,.3)">
           <span style="font-size:22px">📸</span> 카메라로 사진 찍기
           <input type="file" accept="image/*" capture="environment" style="display:none" onchange="dcAddPhoto(this.files[0])">
         </label>
@@ -14387,6 +14961,8 @@ function rNoticePanel(){
   html+='<label style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;color:var(--text2)">';
   html+='📎 사진/파일 첨부<input type="file" id="nt-files" multiple accept="image/*,.pdf,.xlsx,.xls,.docx,.hwp,.txt" style="display:none" onchange="ntPreviewFiles(this)">';
   html+='</label>';
+  // ★ v9.26: 튜토리얼 파일 다운로드 버튼
+  html+='<button onclick="ntDownloadTutorial()" style="padding:6px 12px;background:rgba(220,38,38,.12);color:#dc2626;border:1px solid #dc2626;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;margin-left:6px">📥 긴급배송 튜토리얼 다운로드</button>';
   html+='<div id="nt-file-preview" style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap"></div>';
   html+='</div>';
   html+='<div style="display:flex;gap:6px;margin-top:8px">';
@@ -14479,6 +15055,241 @@ function _loadNoticeList(){
   });
 }
 
+// ★ v9.26: 긴급배송 튜토리얼 HTML 다운로드
+function ntDownloadTutorial(){
+  var html = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>긴급배송 사용법 — MBTI 물류</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box;}
+  :root{--red:#ef4444;--teal:#0d9488;--purple:#7c3aed;--blue:#2563eb;--dark:#0f172a;--card:#1e293b;--border:#334155;--text:#f1f5f9;--text2:#94a3b8;--green:#16a34a;--amber:#d97706;}
+  body{font-family:'Noto Sans KR',sans-serif;background:var(--dark);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:20px 16px 40px;}
+  .header{text-align:center;margin-bottom:32px;}
+  .badge{display:inline-block;background:var(--red);color:#fff;font-size:11px;font-weight:700;padding:3px 12px;border-radius:999px;letter-spacing:.05em;margin-bottom:10px;}
+  .header h1{font-size:24px;font-weight:900;line-height:1.2;}
+  .header p{font-size:13px;color:var(--text2);margin-top:6px;}
+  .step-nav{display:flex;gap:6px;margin-bottom:24px;flex-wrap:wrap;justify-content:center;}
+  .step-dot{width:10px;height:10px;border-radius:50%;background:var(--border);transition:all .3s;cursor:pointer;}
+  .step-dot.active{background:var(--red);transform:scale(1.3);}
+  .step-dot.done{background:var(--teal);}
+  .phone-wrap{display:flex;justify-content:center;margin-bottom:20px;}
+  .phone{width:280px;background:#0b1120;border-radius:40px;border:3px solid #334155;padding:14px;box-shadow:0 25px 60px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.05);position:relative;}
+  .phone::before{content:'';display:block;width:80px;height:6px;background:#334155;border-radius:999px;margin:0 auto 12px;}
+  .screen{background:#0f172a;border-radius:24px;min-height:460px;overflow:hidden;position:relative;}
+  .app-bar{background:#161d2e;padding:12px 14px 10px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #1e293b;}
+  .app-logo{width:24px;height:24px;background:var(--red);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:#fff;flex-shrink:0;}
+  .app-title{font-size:13px;font-weight:700;}
+  .app-driver{font-size:11px;color:var(--text2);margin-left:auto;}
+  .screens{display:flex;transition:transform .5s cubic-bezier(.4,0,.2,1);width:calc(252px * 7);}
+  .slide{width:252px;min-height:424px;flex-shrink:0;padding:14px;position:relative;}
+  .ui-btn{width:100%;padding:12px;border-radius:12px;font-size:13px;font-weight:700;text-align:center;margin-bottom:8px;}
+  .btn-red{background:linear-gradient(135deg,#dc2626,#ef4444);color:#fff;}
+  .btn-purple{background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;}
+  .btn-blue{background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;}
+  .btn-green{background:linear-gradient(135deg,#059669,#10b981);color:#fff;}
+  .card{background:#1e293b;border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:12px;}
+  .scan-box{background:#000;border-radius:12px;height:160px;position:relative;overflow:hidden;margin-bottom:10px;}
+  .scan-frame{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:120px;height:80px;border:2px solid var(--green);border-radius:6px;}
+  .scan-line{position:absolute;left:10px;right:10px;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);top:30px;animation:scanMove 1.8s ease-in-out infinite;}
+  @keyframes scanMove{0%{top:30px}50%{top:100px}100%{top:30px}}
+  .map-area{background:linear-gradient(135deg,#1a2535,#0f1b2a);border-radius:10px;height:140px;position:relative;overflow:hidden;margin-bottom:10px;border:1px solid var(--border);}
+  .map-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(51,65,85,.3) 1px,transparent 1px),linear-gradient(90deg,rgba(51,65,85,.3) 1px,transparent 1px);background-size:20px 20px;}
+  .map-pin{position:absolute;width:24px;height:24px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.5);}
+  .map-pin span{transform:rotate(45deg);font-size:10px;}
+  .pin-red{background:var(--red);}
+  .pin-green{background:var(--green);}
+  .success-circle{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#14b8a6);display:flex;align-items:center;justify-content:center;font-size:28px;margin:20px auto 12px;animation:popIn .5s cubic-bezier(.175,.885,.32,1.275);box-shadow:0 0 30px rgba(13,148,136,.4);}
+  @keyframes popIn{0%{transform:scale(0);opacity:0}100%{transform:scale(1);opacity:1}}
+  .desc-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;max-width:340px;width:100%;}
+  .step-num{font-size:11px;font-weight:700;color:var(--red);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;}
+  .step-title{font-size:18px;font-weight:900;line-height:1.2;margin-bottom:8px;}
+  .step-desc{font-size:13px;color:var(--text2);line-height:1.6;}
+  .tip{display:flex;gap:8px;align-items:flex-start;background:#0f1f0f;border:1px solid #1a4a1a;border-radius:8px;padding:10px 12px;margin-top:10px;font-size:12px;color:#4ade80;line-height:1.5;}
+  .controls{display:flex;gap:12px;align-items:center;max-width:340px;width:100%;margin-top:4px;}
+  .ctrl-btn{flex:1;padding:14px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;border:none;transition:all .2s;}
+  .ctrl-prev{background:#1e293b;color:var(--text2);border:1px solid var(--border);}
+  .ctrl-next{background:var(--red);color:#fff;}
+  .ctrl-next:disabled{background:#374151;color:#6b7280;cursor:default;}
+  .step-counter{font-size:12px;color:var(--text2);text-align:center;min-width:50px;}
+  .home-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:8px;}
+  .home-tile{background:#1e293b;border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;font-size:10px;color:var(--text2);}
+  .home-tile .icon{font-size:20px;display:block;margin-bottom:4px;}
+  .photo-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;}
+  .photo-cell{aspect-ratio:1;background:#1e293b;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;border:1.5px dashed var(--border);}
+  .photo-cell.filled{background:linear-gradient(135deg,#0f2a1a,#1a3a2a);border:1.5px solid var(--teal);}
+  .result-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;}
+  .result-row:last-child{border:none;}
+  .result-key{color:var(--text2);}
+  .result-val{font-weight:700;}
+  .progress-bar{height:3px;background:var(--border);border-radius:999px;margin-bottom:20px;max-width:340px;width:100%;overflow:hidden;}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--red),#f97316);border-radius:999px;transition:width .5s ease;}
+  .toast-noti{background:#1e3a5f;border:1px solid #3b82f6;border-radius:10px;padding:8px 12px;font-size:11px;display:flex;gap:8px;align-items:center;margin-bottom:8px;}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.4)}50%{box-shadow:0 0 0 8px rgba(239,68,68,0)}}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="badge">📸 MBTI 물류 — 사용 가이드</div>
+  <h1>긴급배송<br>사용법</h1>
+  <p>쿠팡어플 오류 이슈 대응 방법</p>
+</div>
+<div class="progress-bar"><div class="progress-fill" id="progress" style="width:14%"></div></div>
+<div class="step-nav" id="stepNav"></div>
+<div class="phone-wrap">
+  <div class="phone">
+    <div class="app-bar">
+      <div class="app-logo">M</div>
+      <div class="app-title">MBTI 물류관리</div>
+      <div class="app-driver">천승진 기사</div>
+    </div>
+    <div class="screen">
+      <div class="screens" id="screens">
+        <div class="slide">
+          <div style="font-size:11px;color:var(--text2);margin-bottom:10px;font-weight:700">🏠 기사 홈 화면</div>
+          <div class="home-grid">
+            <div class="home-tile"><span class="icon">🗺️</span>내 배송 지도</div>
+            <div class="home-tile"><span class="icon">📅</span>근무표</div>
+            <div class="home-tile"><span class="icon">📷</span>출퇴근</div>
+            <div class="home-tile"><span class="icon">📋</span>정산서</div>
+          </div>
+          <div class="ui-btn btn-red" style="animation:pulse 2s infinite">🚨 긴급배송 등록</div>
+          <div class="card" style="border-color:#1e3a5f"><div style="font-size:11px;color:var(--text2)">📢 쿠팡어플 오류 이슈 대응 공지 참고</div></div>
+        </div>
+        <div class="slide">
+          <div style="font-size:11px;color:var(--text2);margin-bottom:8px;font-weight:700">📸 긴급 배송기록 입력</div>
+          <div style="font-size:10px;color:var(--text2);margin-bottom:12px;line-height:1.5">QR 스캔하면 운송장+주소+GPS<br>자동 입력 → 지도 핀 표시</div>
+          <div class="ui-btn btn-purple">📊 QR / 바코드 실시간 스캔</div>
+          <div class="ui-btn btn-blue" style="font-size:12px;padding:9px">🤖 OCR 자동 입력 (QR 훼손 시)</div>
+          <div style="background:#1e1a00;border:1px dashed var(--amber);border-radius:8px;padding:8px 10px;font-size:10px;color:#fbbf24;line-height:1.5">💡 <b>훼손됐나요?</b> 아래 직접 입력하세요</div>
+        </div>
+        <div class="slide">
+          <div style="font-size:11px;color:var(--text2);margin-bottom:8px;font-weight:700">📊 QR 실시간 스캔</div>
+          <div class="scan-box"><div class="scan-frame"><div class="scan-line"></div></div></div>
+          <div style="text-align:center;font-size:11px;color:#64748b;margin-bottom:10px">📦 운송장에 갖다 대세요</div>
+          <div class="toast-noti"><span>✅</span><div><div style="font-weight:700;color:#60a5fa">인식 성공!</div><div style="color:var(--text2);font-size:10px">운송장+주소+GPS 자동입력</div></div></div>
+          <div class="card" style="border-color:var(--teal)">
+            <div class="result-row"><span class="result-key">📦 운송장</span><span class="result-val" style="color:var(--teal);font-size:11px">10318007213721</span></div>
+            <div class="result-row"><span class="result-key">📍 주소</span><span class="result-val" style="font-size:10px">수영구 무학로21번길</span></div>
+            <div class="result-row"><span class="result-key">👤 수령인</span><span class="result-val">김*우</span></div>
+            <div class="result-row"><span class="result-key">🗺️ GPS</span><span class="result-val" style="color:var(--teal);font-size:10px">자동 수집됨</span></div>
+          </div>
+        </div>
+        <div class="slide">
+          <div style="font-size:11px;color:var(--text2);margin-bottom:8px;font-weight:700">📷 배송완료 사진 (1장 이상)</div>
+          <div class="photo-grid">
+            <div class="photo-cell filled">📸</div>
+            <div class="photo-cell"><span style="font-size:11px;color:var(--text2)">+추가</span></div>
+            <div class="photo-cell"><span style="font-size:11px;color:var(--text2)">+추가</span></div>
+          </div>
+          <div style="font-size:10px;color:var(--teal);text-align:center;margin-bottom:10px">✅ 1장 추가됨 (최대 5장)</div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:6px;font-weight:700">배송 메모 (선택)</div>
+          <div style="background:#1e293b;border:1.5px solid var(--teal);border-radius:9px;padding:10px 12px;font-size:12px;margin-bottom:10px;color:var(--text)">현관 앞 배치</div>
+          <div class="ui-btn btn-green">🗺️ 지도에 배송핀 생성 + 저장</div>
+        </div>
+        <div class="slide">
+          <div style="font-size:11px;color:var(--text2);margin-bottom:8px;font-weight:700">🗺️ 지도에 핀 자동 표시</div>
+          <div class="map-area">
+            <div class="map-grid"></div>
+            <div class="map-pin pin-red" style="bottom:40px;left:60px"><span>1</span></div>
+            <div class="map-pin pin-red" style="bottom:80px;right:50px"><span>2</span></div>
+            <div class="map-pin pin-red" style="top:60px;right:60px"><span>3</span></div>
+          </div>
+          <div class="card" style="border-color:var(--red)">
+            <div style="display:flex;gap:8px;align-items:center">
+              <span style="font-size:18px">📍</span>
+              <div><div style="font-size:12px;font-weight:700">새 긴급배송 핀 추가됨</div><div style="font-size:10px;color:var(--text2)">수영구 무학로21번길 · 김*우</div></div>
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--text2);line-height:1.5">핀을 탭 → 배송완료 처리</div>
+        </div>
+        <div class="slide">
+          <div style="font-size:11px;color:var(--text2);margin-bottom:8px;font-weight:700">✅ 배송완료 처리</div>
+          <div style="background:#051a05;border:1.5px solid var(--green);border-radius:10px;padding:10px 12px;margin-bottom:10px">
+            <div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:6px">📦 운송장 체크</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+              <div style="width:16px;height:16px;background:var(--green);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0">✓</div>
+              <div style="font-size:11px;font-family:monospace;color:var(--text)">10318007213721</div>
+            </div>
+          </div>
+          <div class="photo-grid"><div class="photo-cell filled">📸</div><div class="photo-cell">+</div><div class="photo-cell">+</div></div>
+          <div class="ui-btn btn-green">✅ 전체 완료 저장 (1건)</div>
+        </div>
+        <div class="slide" style="text-align:center">
+          <div class="success-circle">✓</div>
+          <div style="font-size:16px;font-weight:900;margin-bottom:6px">등록 완료!</div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:12px;line-height:1.6">배송기록이 저장됐습니다<br>관리자에게 알림이 전송됐습니다</div>
+          <div class="card" style="text-align:left">
+            <div class="result-row"><span class="result-key">운송장</span><span class="result-val" style="font-size:11px;color:var(--teal)">10318007213721</span></div>
+            <div class="result-row"><span class="result-key">주소</span><span class="result-val" style="font-size:11px">수영구 무학로21번길</span></div>
+            <div class="result-row"><span class="result-key">사진</span><span class="result-val">1장 첨부</span></div>
+            <div class="result-row"><span class="result-key">GPS</span><span class="result-val" style="color:var(--teal)">✅ 기록됨</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="desc-card" id="descCard">
+  <div class="step-num" id="stepNum">STEP 1 / 7</div>
+  <div class="step-title" id="stepTitle">홈 화면에서 시작</div>
+  <div class="step-desc" id="stepDesc">기사 앱 홈 화면에서 빨간색 <b>"🚨 긴급배송 등록"</b> 버튼을 탭합니다.</div>
+  <div class="tip"><span>💡</span><span id="stepTip">쿠팡앱 오류 시 이 버튼 하나로 모든 배송기록을 남길 수 있어요!</span></div>
+</div>
+<div class="controls">
+  <button class="ctrl-btn ctrl-prev" id="prevBtn" onclick="goStep(-1)" disabled>← 이전</button>
+  <div class="step-counter" id="counter">1 / 7</div>
+  <button class="ctrl-btn ctrl-next" id="nextBtn" onclick="goStep(1)">다음 →</button>
+</div>
+<script>
+var steps=[
+  {title:'홈 화면에서 시작',desc:'기사 앱 홈 화면에서 빨간색 <b>"🚨 긴급배송 등록"</b> 버튼을 탭합니다.',tip:'쿠팡앱 오류 시 이 버튼 하나로 모든 배송기록을 남길 수 있어요!'},
+  {title:'입력 방법 선택',desc:'3가지 방법 중 선택합니다.<br><b>① QR/바코드 스캔</b> (가장 빠름)<br><b>② OCR 사진 촬영</b> (QR 훼손 시)<br><b>③ 직접 입력</b>',tip:'QR 스캔이 가장 빠르고 정확해요. 운송장+주소+GPS가 한 번에!'},
+  {title:'QR 코드 스캔',desc:'카메라 화면이 열리면 <b>운송장 QR 코드</b>에 갖다 대면 자동 인식됩니다.<br>진동 피드백 후 화면이 자동 닫힙니다.',tip:'쿠팡 QR에는 운송장+주소+수령인+GPS가 담겨있어요!'},
+  {title:'완료 사진 촬영',desc:'<b>현관 앞</b> 또는 <b>배송 완료 상황</b>을 사진으로 찍습니다.<br>최소 1장 필수 / 최대 5장 가능.',tip:'CS 이의제기 시 사진+GPS+시각이 증빙 자료가 됩니다. 호수 표지판도 같이 찍으세요!'},
+  {title:'지도에 핀 자동 표시',desc:'등록 후 <b>내 배송 지도</b>에 빨간 핀이 찍힙니다.<br>핀을 탭하면 배송완료 처리를 할 수 있습니다.',tip:'WiFi 없어도 기가(데이터)만 있으면 됩니다!'},
+  {title:'배송완료 처리',desc:'지도 핀 탭 → <b>"✅ 배송완료 처리"</b> 버튼 탭.<br>운송장 체크 + 사진 1장 이상이면 저장 버튼 활성화됩니다.',tip:'여러 박스는 운송장 체크박스를 따로 관리할 수 있어요.'},
+  {title:'등록 완료!',desc:'모든 기록이 저장됐습니다.<br><b>운송장 · 주소 · 사진 · GPS · 시각</b>이 기록되며 관리자에게 알림이 자동 전송됩니다.',tip:'60일간 보관됩니다. 쿠팡 CS 이의제기 시 관리자에게 요청하세요.'}
+];
+var current=0;
+var nav=document.getElementById('stepNav');
+steps.forEach(function(_,i){var d=document.createElement('div');d.className='step-dot'+(i===0?' active':'');d.onclick=function(){current=i;render();};nav.appendChild(d);});
+function goStep(dir){current=Math.max(0,Math.min(steps.length-1,current+dir));render();}
+function render(){
+  var s=steps[current];
+  document.getElementById('screens').style.transform='translateX(-'+current*252+'px)';
+  document.getElementById('stepNum').textContent='STEP '+(current+1)+' / '+steps.length;
+  document.getElementById('stepTitle').textContent=s.title;
+  document.getElementById('stepDesc').innerHTML=s.desc;
+  document.getElementById('stepTip').textContent=s.tip;
+  document.getElementById('counter').textContent=(current+1)+' / '+steps.length;
+  document.getElementById('progress').style.width=(((current+1)/steps.length)*100)+'%';
+  document.getElementById('prevBtn').disabled=(current===0);
+  var nb=document.getElementById('nextBtn');
+  if(current===steps.length-1){nb.textContent='처음으로 ↺';nb.onclick=function(){current=0;render();};}
+  else{nb.textContent='다음 →';nb.onclick=function(){goStep(1);};}
+  document.querySelectorAll('.step-dot').forEach(function(d,i){d.className='step-dot'+(i===current?' active':i<current?' done':'');});
+}
+var ts=document.querySelector('.phone');
+var tx=0;
+ts.addEventListener('touchstart',function(e){tx=e.touches[0].clientX;});
+ts.addEventListener('touchend',function(e){var d=tx-e.changedTouches[0].clientX;if(Math.abs(d)>50)goStep(d>0?1:-1);});
+<\/script>
+</body>
+</html>`;
+  var blob = new Blob([html], {type:'text/html;charset=utf-8'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = '긴급배송_사용법_튜토리얼.html';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('✅ 튜토리얼 파일 다운로드됨 (기사들에게 공유하세요)');
+}
+
 // ★ v9.25: 공지 템플릿 자동입력
 function ntFill(type){
   var t=document.getElementById('nt-title');
@@ -14497,8 +15308,8 @@ function ntFill(type){
     c.value='알림을 더 잘 받으려면 앱을 홈 화면에\n설치해서 사용해 주세요!\n\n【 설치 방법 (안드로이드) 】\n① 크롬 브라우저로 앱 접속\n② 오른쪽 상단 ⋮ 메뉴 클릭\n③ "홈 화면에 추가" 또는 "앱 설치" 선택\n④ 확인 후 홈 화면 아이콘으로 실행\n\n【 설치 방법 (아이폰) 】\n① 사파리로 앱 접속\n② 하단 공유 버튼 클릭\n③ "홈 화면에 추가" 선택\n\n설치 완료 후 알림이 훨씬 안정적으로 옵니다!';
   }
   if(type==='긴급배송'){
-    t.value='🚨 긴급배송(재배송·회수) 대응 절차 안내';
-    c.value='안녕하세요 기사님들 😊\n쿠팡 본사·고객센터에서 재배송 또는 오배송 회수 요청이 내려오면 아래 절차대로 즉시 대응해 주세요.\n\n━━━━━━━━━━━━━━━━━━━━\n📌 긴급배송 등록 (관리자/기사 모두 가능)\n━━━━━━━━━━━━━━━━━━━━\n\n① 홈 → "🚨 긴급배송 등록" 버튼\n② 운송장번호 / 주문번호 입력\n③ 수령인 / 주소 입력\n④ "📍 주소 → GPS 자동변환" 버튼 탭\n   → 배송지도에 자동 핀 표시\n⑤ 메모·사진 첨부 (선택)\n⑥ "✅ 등록" 클릭\n\n━━━━━━━━━━━━━━━━━━━━\n📌 배송 완료 처리\n━━━━━━━━━━━━━━━━━━━━\n\n① 홈 → "🗺️ 내 배송 지도" 진입\n② 빨간 핀 탭 → 배송 정보 확인\n③ "✅ 배송완료 처리" 버튼 클릭\n④ 완료 사진 1장 이상 첨부 (필수)\n⑤ 메모 입력 (예: "현관 앞 배치")\n⑥ 저장 → 핀이 초록색으로 변경\n\n━━━━━━━━━━━━━━━━━━━━\n⚠️ 주의사항\n━━━━━━━━━━━━━━━━━━━━\n\n• 완료 사진은 분쟁 발생 시 증빙 자료입니다.\n  반드시 첨부해 주세요!\n• 미완료 건은 60일간 자동 보관됩니다.\n• 등록 즉시 관리자에게도 알림이 갑니다.\n• 우선순위가 높은 건은 "긴급" 카테고리로\n  알림이 강조됩니다.\n\n━━━━━━━━━━━━━━━━━━━━\n📞 문의\n━━━━━━━━━━━━━━━━━━━━\n\n사무실: 051-711-3103\n팩스: 070-7507-3102\n\n빠른 대응 부탁드립니다.\n엠비티아이(유) 드림 🚛';
+    t.value='🚨 쿠팡어플 오류 이슈 대응 — 긴급배송 등록 안내';
+    c.value='안녕하세요 기사님들 😊\n\n현재 쿠팡 어플 오류 이슈로 인해 배송 처리가 정상적으로 되지 않는 상황이 발생하고 있습니다.\n아래 절차대로 긴급배송 기록을 남겨주시면 추후 CS 이의제기에 활용됩니다.\n\n━━━━━━━━━━━━━━━━━━━━\n📸 긴급배송 등록 방법\n━━━━━━━━━━━━━━━━━━━━\n\n① 홈 화면 → 🚨 긴급배송 등록 버튼 탭\n② 운송장 QR 코드에 카메라 갖다 대기\n   → 운송장번호 + 주소 + GPS 자동 입력됩니다!\n③ 완료 사진 1장 이상 촬영 (현관 앞 필수)\n④ 🗺️ 지도에 배송핀 생성 + 저장 버튼 탭\n⑤ 빨간 핀 탭 → 배송완료 처리\n\n━━━━━━━━━━━━━━━━━━━━\n⚠️ 주의사항\n━━━━━━━━━━━━━━━━━━━━\n\n• 사진 + GPS + 시각이 자동 기록됩니다\n• 쿠팡앱 정상화 후 이의제기 자료로 사용\n• 미완료 건은 60일간 자동 보관\n• 데이터(기가)만 있으면 WiFi 없어도 됩니다\n\n━━━━━━━━━━━━━━━━━━━━\n📞 문의\n━━━━━━━━━━━━━━━━━━━━\n\n사무실: 051-711-3103\n팩스: 070-7507-3102\n\n빠른 대응 부탁드립니다.\n엠비티아이(유) 드림 🚛\n\n📋 자세한 사용법은 공지 첨부 튜토리얼 파일을 참고해 주세요!';
   }
 }
 
@@ -17470,10 +18281,15 @@ function startNotiListeners(){
           if(change.type!=='added')return;
           var d=change.doc.data();
           if(d.driver===S.curDriver)return; // 본인 요청은 알림 안 함
+          // ★ v9.26: 미출근/퇴근/휴무 시 배송지원 푸시 알림 차단
+          var att=_getAttend();
+          if(!att||!att.checkIn||att.checkOut)return;
+          var sc=_getTodaySchedShift();
+          if(sc==='휴무'||sc==='병가')return;
           var key='cs_'+change.doc.id;
           if(window._notiSeen[key])return;
           window._notiSeen[key]=Date.now();
-        if(window._notiSeenSave)window._notiSeenSave();
+          if(window._notiSeenSave)window._notiSeenSave();
           sendLocalNoti({
             title:'🤝 '+myCampFull+' 배송 지원 요청',
             body:(d.driver||'기사')+': '+(d.message||'').substring(0,80),
@@ -17502,6 +18318,11 @@ function startNotiListeners(){
           if(change.type!=='added')return;
           var d=change.doc.data();
           if(d.driver===S.curDriver)return; // 본인 사고는 알림 안 함
+          // ★ v9.26: 미출근/퇴근/휴무 시 사고 알림 차단 (출근 중인 기사만)
+          var att2=_getAttend();
+          if(!att2||!att2.checkIn||att2.checkOut)return;
+          var sc2=_getTodaySchedShift();
+          if(sc2==='휴무'||sc2==='병가')return;
           var key='ac_'+change.doc.id;
           if(window._notiSeen[key])return;
           window._notiSeen[key]=Date.now();
