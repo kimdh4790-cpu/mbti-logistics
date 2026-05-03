@@ -10564,147 +10564,165 @@ function emerStartScan(){
   var mo = document.getElementById('emer-scan-mo');
   if(!mo) return;
   mo.style.display = 'flex';
-  document.getElementById('emer-scan-status').textContent = '카메라 시작 중...';
+  var statusEl = document.getElementById('emer-scan-status');
+  statusEl.textContent = '카메라 시작 중...';
+  var video = document.getElementById('emer-scan-video');
 
-  // ZXing 실시간 스캔
-  try{
-    if(typeof ZXing === 'undefined' || !ZXing.BrowserMultiFormatReader){
-      toast('❌ 스캐너 라이브러리 로드 실패 — 사진 촬영 방식을 이용해주세요');
-      mo.style.display = 'none';
-      return;
+  // ★ v9.26: 고화질 후면 카메라 + 자동초점
+  var constraints = {
+    video:{
+      facingMode:{ideal:'environment'},
+      width:{ideal:1920,min:1280},
+      height:{ideal:1080,min:720},
+      frameRate:{ideal:30,min:15}
     }
-    _emerScanReader = new ZXing.BrowserMultiFormatReader();
-    var video = document.getElementById('emer-scan-video');
-    var statusEl = document.getElementById('emer-scan-status');
+  };
+  navigator.mediaDevices.getUserMedia(constraints)
+    .catch(function(){
+      return navigator.mediaDevices.getUserMedia({
+        video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}
+      });
+    })
+    .catch(function(){
+      return navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+    })
+    .then(function(stream){
+      window._emerCamStream = stream;
+      video.srcObject = stream;
+      video.play();
+      statusEl.textContent = '인식 중... QR에 갖다 대세요 📦';
 
-    _emerScanReader.decodeFromVideoDevice(null, video, function(result, err){
-      if(result){
-        var raw = result.getText ? result.getText() : (result.text || String(result));
-        statusEl.textContent = '✅ 인식됨: ' + raw.slice(0,30);
-
-        // 운송장 번호 파싱
-        var code = raw.replace(/[\.\-\s]/g,'').trim();
-        var isTrack = /^[0-9]{8,25}$/.test(code);
-
-        if(isTrack){
-          window._emerTrackings = window._emerTrackings||[];
-          if(window._emerTrackings.indexOf(code)<0){
-            window._emerTrackings.push(code);
-            // ★ v9.26: 스캔 시각 기록
-            window._emerTrackingTimes = window._emerTrackingTimes||{};
-            var now2=new Date();
-            window._emerTrackingTimes[code]=now2.getHours()+':'+String(now2.getMinutes()).padStart(2,'0')+':'+String(now2.getSeconds()).padStart(2,'0');
-            emerRefreshTrackingList();
-          }
-          window._emerEntryMode = 'barcode';
+      // ★ BarcodeDetector 우선 (안드로이드 크롬 — 가장 빠름)
+      if('BarcodeDetector' in window){
+        var detector = new BarcodeDetector({
+          formats:['qr_code','code_128','code_39','ean_13','ean_8','itf','pdf417','data_matrix','upc_a']
+        });
+        var _active = true;
+        function tick(){
+          if(!_active) return;
+          if(video.readyState < 2){ requestAnimationFrame(tick); return; }
+          detector.detect(video).then(function(codes){
+            if(!_active) return;
+            if(codes && codes.length){
+              _active = false;
+              _emerHandleScan(codes[0].rawValue, statusEl);
+            } else { requestAnimationFrame(tick); }
+          }).catch(function(){ if(_active) requestAnimationFrame(tick); });
         }
+        video.addEventListener('loadedmetadata', function(){ requestAnimationFrame(tick); }, {once:true});
+        window._emerBdStop = function(){ _active = false; };
 
-        // QR 텍스트에서 주소/수령인/GPS 파싱
-        var qp = _parseQrText(raw);
-        var fld = [];
-        if(qp.tracking_no && (!window._emerTrackings || window._emerTrackings.indexOf(qp.tracking_no)<0)){
-          window._emerTrackings = window._emerTrackings||[];
-          window._emerTrackings.push(qp.tracking_no);
-          emerRefreshTrackingList();
-          window._emerEntryMode = 'barcode';
-        }
-        if(qp.address){ var ae=document.getElementById('emer-addr'); if(ae&&!ae.value){ae.value=qp.address;fld.push('주소');} }
-        if(qp.recipient){ var re=document.getElementById('emer-recipient'); if(re&&!re.value){re.value=qp.recipient;fld.push('수령인');} }
-        if(qp.order_id){ var oe=document.getElementById('emer-orderid'); if(oe&&!oe.value){oe.value=qp.order_id;fld.push('주문번호');} }
-        if(qp.memo){ var dm=document.getElementById('emer-delivmemo'); if(dm&&!dm.value){dm.value=qp.memo;} }
-        // ★ QR GPS 좌표 자동 적용 (기기 GPS보다 우선)
-        if(qp.lat && qp.lng){
-          window._emerGps = {lat:qp.lat, lng:qp.lng, src:'QR'};
-          fld.push('GPS');
-          var gpsEl = document.getElementById('emer-gps-status');
-          if(gpsEl) gpsEl.innerHTML = '<span style="color:var(--teal)">📍 QR GPS: '+qp.lat.toFixed(6)+', '+qp.lng.toFixed(6)+'</span>';
-        }
-
-        // ★ v9.26: 묶음 감지 — 2개 이상 일치 시만 같은 집으로 판단
-        var curAddr = (document.getElementById('emer-addr')||{}).value||'';
-        var curRecip = (document.getElementById('emer-recipient')||{}).value||'';
-        var curTracks = window._emerTrackings||[];
-        var newTrack = qp.tracking_no || (isTrack ? code : null);
-
-        if(curTracks.length > 0 && newTrack && (curAddr || curRecip)){
-          var matchCount = 0, matchReasons = [];
-          // ① 주소 일치
-          if(curAddr && qp.address){
-            var a1=curAddr.replace(/\s/g,''), a2=qp.address.replace(/\s/g,'');
-            if(a1===a2||a1.indexOf(a2)>=0||a2.indexOf(a1)>=0){ matchCount++; matchReasons.push('주소'); }
+      } else if(typeof ZXing !== 'undefined' && ZXing.BrowserMultiFormatReader){
+        // ZXing 폴백 (iOS Safari)
+        var hints = new Map();
+        hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+        _emerScanReader = new ZXing.BrowserMultiFormatReader(hints, 200);
+        _emerScanReader.decodeFromStream(stream, video, function(result, err){
+          if(result){
+            var raw = result.getText ? result.getText() : String(result);
+            _emerHandleScan(raw, statusEl);
           }
-          // ② 수령인 일치
-          if(curRecip && qp.recipient && curRecip===qp.recipient){ matchCount++; matchReasons.push('수령인'); }
-          // ③ GPS 50m 이내
-          if(window._emerGps && qp.lat && qp.lng){
-            var R=6371000, dLat=(qp.lat-window._emerGps.lat)*Math.PI/180, dLng=(qp.lng-window._emerGps.lng)*Math.PI/180;
-            var a2=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(window._emerGps.lat*Math.PI/180)*Math.cos(qp.lat*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
-            var dist=R*2*Math.atan2(Math.sqrt(a2),Math.sqrt(1-a2));
-            if(dist<=50){ matchCount++; matchReasons.push('GPS('+Math.round(dist)+'m)'); }
-          }
-
-          if(matchCount >= 2 && window._emerTrackings.indexOf(newTrack) < 0){
-            emerStopScan();
-            var bundleMsg = '📦 같은 집으로 감지됐습니다!\n\n'
-              +'✅ 일치 항목 ('+matchCount+'/3): '+matchReasons.join(' + ')+'\n\n'
-              +'주소: '+(qp.address||curAddr)+'\n'
-              +'수령인: '+(qp.recipient||curRecip)+'\n\n'
-              +'운송장 '+newTrack+' 을 추가할까요?\n'
-              +'(주소/사진은 공유됩니다)';
-            if(confirm(bundleMsg)){
-              window._emerTrackings.push(newTrack);
-              emerRefreshTrackingList();
-              document.getElementById('emer-barcode-status').innerHTML =
-                '<span style="color:var(--teal)">✅ 묶음 추가: '+newTrack+' ('+matchReasons.join('+')+' 일치)</span>';
-            }
-            return;
-          }
-        }
-
-        // 진동 + 소리 피드백
-        try{ navigator.vibrate && navigator.vibrate([100,50,100]); }catch(e){}
-
-        // 결과 표시 후 자동 닫힘
-        var msg = isTrack
-          ? '✅ 운송장: '+code+(fld.length?' + '+fld.join('/'):'')
-          : (fld.length ? '✅ '+fld.join('/')+' 자동 입력됨' : '⚠️ 인식됨 (운송장 형식 아님)');
-        document.getElementById('emer-barcode-status').innerHTML = '<span style="color:var(--teal)">'+msg+'</span>';
-
-        // OCR 요약 표시
-        if(fld.length){
-          var sumEl=document.getElementById('emer-ocr-summary');
-          if(sumEl){
-            sumEl.style.display='block';
-            sumEl.innerHTML='<b>📊 스캔 결과</b><br>'
-              +(isTrack?'📦 운송장: '+code+'<br>':'')
-              +(qp.address?'📍 주소: '+qp.address+'<br>':'')
-              +(qp.recipient?'👤 수령인: '+qp.recipient+'<br>':'')
-              +(qp.order_id?'📋 주문번호: '+qp.order_id+'<br>':'');
-          }
-        }
-
-        emerStopScan();
+          if(err && !(err.constructor && err.constructor.name==='NotFoundException'))
+            console.warn('[ZXing]', err&&err.message);
+        });
+      } else {
+        statusEl.textContent = '❌ 스캐너 미지원 — OCR 버튼을 사용해주세요';
       }
-      if(err && !(err instanceof ZXing.NotFoundException)){
-        console.warn('스캔 오류:', err);
-      }
+    })
+    .catch(function(e){
+      statusEl.textContent = '❌ 카메라 권한 필요 — 주소창 🔒 → 카메라 허용';
+      console.warn('[cam]', e);
     });
-
-    statusEl.textContent = '인식 중... (바코드/QR에 카메라를 갖다 대세요)';
-
-  }catch(e){
-    toast('❌ 스캐너 오류: '+e.message);
-    mo.style.display = 'none';
-  }
 }
 
+// ★ v9.26: 스캔 결과 통합 처리
+function _emerHandleScan(raw, statusEl){
+  if(!raw) return;
+  if(statusEl) statusEl.textContent = '✅ 인식: ' + raw.slice(0,40);
+  try{ navigator.vibrate && navigator.vibrate([80,40,80]); }catch(e){}
+
+  var code = raw.replace(/[.\-\s]/g,'').trim();
+  var isTrack = /^[0-9]{8,25}$/.test(code);
+  var qp = _parseQrText(raw);
+  var fld = [];
+
+  // 운송장 추가
+  var trackToAdd = qp.tracking_no || (isTrack ? code : null);
+  if(trackToAdd){
+    window._emerTrackings = window._emerTrackings||[];
+    if(window._emerTrackings.indexOf(trackToAdd)<0){
+      window._emerTrackings.push(trackToAdd);
+      window._emerTrackingTimes = window._emerTrackingTimes||{};
+      var n=new Date();
+      window._emerTrackingTimes[trackToAdd]=n.getHours()+':'+String(n.getMinutes()).padStart(2,'0')+':'+String(n.getSeconds()).padStart(2,'0');
+      emerRefreshTrackingList();
+      window._emerEntryMode='barcode';
+    }
+  }
+
+  // 주소/수령인/GPS
+  if(qp.address){var ae=document.getElementById('emer-addr');if(ae&&!ae.value){ae.value=qp.address;fld.push('주소');}}
+  if(qp.recipient){var re=document.getElementById('emer-recipient');if(re&&!re.value){re.value=qp.recipient;fld.push('수령인');}}
+  if(qp.order_id){var oe=document.getElementById('emer-orderid');if(oe&&!oe.value){oe.value=qp.order_id;fld.push('주문번호');}}
+  if(qp.memo){var dm=document.getElementById('emer-delivmemo');if(dm&&!dm.value)dm.value=qp.memo;}
+  if(qp.lat&&qp.lng){
+    window._emerGps={lat:qp.lat,lng:qp.lng,src:'QR'};fld.push('GPS');
+    var gpsEl=document.getElementById('emer-gps-status');
+    if(gpsEl)gpsEl.innerHTML='<span style="color:var(--teal)">📍 QR GPS: '+qp.lat.toFixed(6)+', '+qp.lng.toFixed(6)+'</span>';
+  }
+
+  // 묶음 감지
+  var curAddr=(document.getElementById('emer-addr')||{}).value||'';
+  var curRecip=(document.getElementById('emer-recipient')||{}).value||'';
+  var curTracks=window._emerTrackings||[];
+  if(curTracks.length>1 && trackToAdd && (curAddr||curRecip)){
+    var mc=0,mr=[];
+    if(curAddr&&qp.address){var a1=curAddr.replace(/\s/g,''),a2=qp.address.replace(/\s/g,'');if(a1===a2||a1.indexOf(a2)>=0||a2.indexOf(a1)>=0){mc++;mr.push('주소');}}
+    if(curRecip&&qp.recipient&&curRecip===qp.recipient){mc++;mr.push('수령인');}
+    if(window._emerGps&&qp.lat&&qp.lng){
+      var R=6371000,dLat=(qp.lat-window._emerGps.lat)*Math.PI/180,dLng=(qp.lng-window._emerGps.lng)*Math.PI/180;
+      var ab=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(window._emerGps.lat*Math.PI/180)*Math.cos(qp.lat*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
+      var dist=R*2*Math.atan2(Math.sqrt(ab),Math.sqrt(1-ab));
+      if(dist<=50){mc++;mr.push('GPS('+Math.round(dist)+'m)');}
+    }
+    if(mc>=2&&curTracks.indexOf(trackToAdd)<0){
+      emerStopScan();
+      if(confirm('📦 같은 집 감지! ('+mr.join('+')+')\n운송장 '+trackToAdd+' 추가할까요?')){
+        window._emerTrackings.push(trackToAdd);emerRefreshTrackingList();
+      }
+      return;
+    }
+  }
+
+  // 결과 표시
+  var msg = trackToAdd
+    ? '✅ 운송장: '+trackToAdd+(fld.length?' ('+fld.join('/')+'자동입력)':'')
+    : (fld.length?'✅ '+fld.join('/')+' 입력됨':'⚠️ 운송장 형식 아님 — 직접 입력');
+  var bSt=document.getElementById('emer-barcode-status');
+  if(bSt)bSt.innerHTML='<span style="color:var(--teal)">'+msg+'</span>';
+
+  // 요약 박스
+  if(fld.length||trackToAdd){
+    var sumEl=document.getElementById('emer-ocr-summary');
+    if(sumEl){sumEl.style.display='block';sumEl.innerHTML='<b>📊 스캔 결과</b><br>'+(trackToAdd?'📦 운송장: '+trackToAdd+'<br>':'')+(qp.address?'📍 주소: '+qp.address+'<br>':'')+(qp.recipient?'👤 수령인: '+qp.recipient+'<br>':'')+(qp.lat?'🗺️ GPS: 자동수집<br>':'');}
+  }
+
+  if(trackToAdd||fld.length) emerStopScan();
+}
 function emerStopScan(){
+  // ★ v9.26: BarcodeDetector 루프 정지
+  if(window._emerBdStop){ try{window._emerBdStop();}catch(e){} window._emerBdStop=null; }
+  // ZXing 정지
+  try{ if(_emerScanReader){_emerScanReader.reset();_emerScanReader=null;} }catch(e){}
+  // ★ 카메라 스트림 정지 (배터리 절약)
   try{
-    if(_emerScanReader){
-      _emerScanReader.reset();
-      _emerScanReader = null;
+    if(window._emerCamStream){
+      window._emerCamStream.getTracks().forEach(function(t){t.stop();});
+      window._emerCamStream = null;
     }
   }catch(e){}
+  var video = document.getElementById('emer-scan-video');
+  if(video){ video.srcObject = null; }
   var mo = document.getElementById('emer-scan-mo');
   if(mo) mo.style.display = 'none';
 }
