@@ -21134,6 +21134,19 @@ async function emerOcrScan(file){
           window._activeDriverMapAddPin(_pr);
           window._activeDriverMap&&window._activeDriverMap.panTo({lat:_qpDirect.lat,lng:_qpDirect.lng});
         }
+        // ★ v9.60: QR에 없는 주문번호를 OCR 텍스트에서 추가 추출
+        if(!_qpDirect.order_id){
+          var _ocrForOrder = d.responses?.[1]?.fullTextAnnotation?.text || d.responses?.[0]?.fullTextAnnotation?.text || '';
+          var _orderLine = _ocrForOrder.split('\n').find(function(l){ return l.indexOf('주문번호')>=0; });
+          if(_orderLine){
+            var _od = _orderLine.replace(/[^\d]/g,'');
+            if(_od.length >= 10){
+              _qpDirect.order_id = _od;
+              var _oi2 = document.getElementById('emer-orderid'); if(_oi2) _oi2.value = _od;
+              var _oe2 = document.getElementById('ocr-edit-order'); if(_oe2) _oe2.value = _od;
+            }
+          }
+        }
         return; // QR 인식 성공 → OCR 파싱 불필요
       }
     }
