@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MBTI 물류 앱 가이드 — 기사 필독</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --red:#ef4444;--teal:#0d9488;--purple:#7c3aed;
+  --blue:#2563eb;--dark:#0f172a;--card:#1e293b;
+  --border:#334155;--text:#f1f5f9;--text2:#94a3b8;
+  --green:#16a34a;--amber:#d97706;
+}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--dark);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:16px 16px 40px;}
+
+/* 탭 메뉴 */
+.tabs{display:flex;gap:0;max-width:380px;width:100%;margin-bottom:20px;background:#1e293b;border-radius:12px;padding:4px;}
+.tab{flex:1;padding:10px 6px;text-align:center;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;color:var(--text2);}
+.tab.active{background:var(--red);color:#fff;box-shadow:0 2px 8px rgba(239,68,68,.4);}
+
+/* 헤더 */
+.section-header{text-align:center;margin-bottom:20px;}
+.badge{display:inline-block;font-size:11px;font-weight:700;padding:3px 12px;border-radius:999px;margin-bottom:8px;}
+.badge-red{background:var(--red);color:#fff;}
+.badge-blue{background:var(--blue);color:#fff;}
+.badge-green{background:var(--green);color:#fff;}
+h2{font-size:22px;font-weight:900;line-height:1.2;}
+.sub{font-size:12px;color:var(--text2);margin-top:5px;}
+
+/* 진행바 & 닷 */
+.progress-bar{height:3px;background:var(--border);border-radius:999px;margin-bottom:16px;max-width:340px;width:100%;overflow:hidden;}
+.progress-fill{height:100%;border-radius:999px;transition:width .5s ease;}
+.fill-red{background:linear-gradient(90deg,var(--red),#f97316);}
+.fill-blue{background:linear-gradient(90deg,var(--blue),#60a5fa);}
+.fill-green{background:linear-gradient(90deg,var(--green),#4ade80);}
+.step-nav{display:flex;gap:5px;margin-bottom:16px;flex-wrap:wrap;justify-content:center;}
+.step-dot{width:9px;height:9px;border-radius:50%;background:var(--border);transition:all .3s;cursor:pointer;}
+.step-dot.active-red{background:var(--red);transform:scale(1.3);}
+.step-dot.active-blue{background:var(--blue);transform:scale(1.3);}
+.step-dot.active-green{background:var(--green);transform:scale(1.3);}
+.step-dot.done{background:#475569;}
+
+/* 폰 프레임 */
+.phone-wrap{display:flex;justify-content:center;margin-bottom:16px;}
+.phone{width:280px;background:#0b1120;border-radius:38px;border:3px solid #334155;padding:13px;box-shadow:0 20px 50px rgba(0,0,0,.6);}
+.phone::before{content:'';display:block;width:75px;height:5px;background:#334155;border-radius:999px;margin:0 auto 11px;}
+.screen{background:#0f172a;border-radius:22px;min-height:440px;overflow:hidden;}
+.app-bar{background:#161d2e;padding:11px 13px 9px;display:flex;align-items:center;gap:9px;border-bottom:1px solid #1e293b;}
+.app-logo{width:22px;height:22px;background:var(--red);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#fff;flex-shrink:0;}
+.app-title{font-size:12px;font-weight:700;}
+.app-sub{font-size:10px;color:var(--text2);margin-left:auto;}
+.slides-wrap{overflow:hidden;}
+.slides{display:flex;transition:transform .5s cubic-bezier(.4,0,.2,1);}
+.slide{flex-shrink:0;padding:13px;}
+
+/* UI 컴포넌트 */
+.btn{width:100%;padding:10px;border-radius:10px;font-size:12px;font-weight:700;text-align:center;margin-bottom:7px;}
+.btn-red{background:linear-gradient(135deg,#dc2626,#ef4444);color:#fff;}
+.btn-purple{background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;}
+.btn-blue{background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;font-size:11px;padding:8px;}
+.btn-green{background:linear-gradient(135deg,#059669,#10b981);color:#fff;}
+.btn-gray{background:#334155;color:var(--text2);}
+.card{background:#1e293b;border:1px solid var(--border);border-radius:9px;padding:9px 11px;margin-bottom:7px;font-size:11px;}
+.row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:10px;}
+.row:last-child{border:none;}
+.lbl{color:var(--text2);}
+.val{font-weight:700;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:7px;}
+.tile{background:#1e293b;border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center;font-size:9px;color:var(--text2);}
+.tile .ico{font-size:17px;display:block;margin-bottom:3px;}
+.toast{background:#1e3a5f;border:1px solid #3b82f6;border-radius:7px;padding:6px 9px;font-size:10px;display:flex;gap:6px;align-items:center;margin-bottom:7px;}
+.ok-circle{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;margin:14px auto 9px;animation:pop .5s cubic-bezier(.175,.885,.32,1.275);}
+.ok-red{background:linear-gradient(135deg,var(--red),#f97316);box-shadow:0 0 20px rgba(239,68,68,.4);}
+.ok-blue{background:linear-gradient(135deg,var(--blue),#60a5fa);box-shadow:0 0 20px rgba(37,99,235,.4);}
+.ok-green{background:linear-gradient(135deg,var(--green),#4ade80);box-shadow:0 0 20px rgba(22,163,74,.4);}
+@keyframes pop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+
+/* 스캔 */
+.scan-box{background:#000;border-radius:11px;height:145px;position:relative;overflow:hidden;margin-bottom:7px;}
+.scan-frame{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:110px;height:75px;border:2px solid var(--green);border-radius:5px;}
+.corner{position:absolute;width:14px;height:14px;}
+.tl{top:-2px;left:-2px;border-top:3px solid var(--green);border-left:3px solid var(--green);border-radius:3px 0 0 0;}
+.tr{top:-2px;right:-2px;border-top:3px solid var(--green);border-right:3px solid var(--green);border-radius:0 3px 0 0;}
+.bl{bottom:-2px;left:-2px;border-bottom:3px solid var(--green);border-left:3px solid var(--green);border-radius:0 0 0 3px;}
+.br{bottom:-2px;right:-2px;border-bottom:3px solid var(--green);border-right:3px solid var(--green);border-radius:0 0 3px 0;}
+.scan-line{position:absolute;left:8px;right:8px;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);top:25px;animation:sl 1.8s ease-in-out infinite;}
+@keyframes sl{0%{top:25px}50%{top:95px}100%{top:25px}}
+
+/* 단계별 설명 카드 */
+.desc-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:15px;max-width:340px;width:100%;}
+.step-num{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px;}
+.step-num-red{color:var(--red);}
+.step-num-blue{color:var(--blue);}
+.step-num-green{color:var(--green);}
+.step-title{font-size:17px;font-weight:900;line-height:1.2;margin-bottom:7px;}
+.step-desc{font-size:12px;color:var(--text2);line-height:1.7;}
+.tip{display:flex;gap:7px;background:#0f1f0f;border:1px solid #1a4a1a;border-radius:7px;padding:9px 11px;margin-top:9px;font-size:11px;color:#4ade80;line-height:1.5;}
+.tip-blue{background:#0f1825;border-color:#1a3a5f;color:#93c5fd;}
+.tip-amber{background:#1a1200;border-color:#3a2800;color:#fcd34d;}
+
+/* 컨트롤 */
+.controls{display:flex;gap:10px;align-items:center;max-width:340px;width:100%;margin-top:5px;}
+.cbtn{flex:1;padding:13px;border-radius:11px;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:all .2s;}
+.cprev{background:#1e293b;color:var(--text2);border:1px solid var(--border);}
+.cnext-red{background:var(--red);color:#fff;}
+.cnext-blue{background:var(--blue);color:#fff;}
+.cnext-green{background:var(--green);color:#fff;}
+.ccount{font-size:11px;color:var(--text2);text-align:center;min-width:40px;}
+
+/* 설정 단계 UI */
+.setting-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#1e293b;border-radius:9px;margin-bottom:6px;border:1px solid var(--border);}
+.setting-ico{font-size:22px;flex-shrink:0;}
+.setting-label{font-size:11px;font-weight:700;color:var(--text);}
+.setting-sub{font-size:10px;color:var(--text2);}
+.setting-arrow{margin-left:auto;font-size:16px;color:#475569;}
+.toggle-on{width:36px;height:20px;background:var(--green);border-radius:999px;position:relative;flex-shrink:0;margin-left:auto;}
+.toggle-on::after{content:'';position:absolute;width:16px;height:16px;background:#fff;border-radius:50%;top:2px;right:2px;box-shadow:0 1px 3px rgba(0,0,0,.3);}
+.toggle-off{width:36px;height:20px;background:#475569;border-radius:999px;position:relative;flex-shrink:0;margin-left:auto;}
+.toggle-off::after{content:'';position:absolute;width:16px;height:16px;background:#fff;border-radius:50%;top:2px;left:2px;box-shadow:0 1px 3px rgba(0,0,0,.3);}
+.badge-allow{background:#052e16;color:#4ade80;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;margin-left:auto;border:1px solid #166534;}
+.badge-block{background:#450a0a;color:#f87171;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;margin-left:auto;border:1px solid #7f1d1d;}
+.step-circle{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;}
+.circle-blue{background:var(--blue);}
+.circle-green{background:var(--green);}
+.circle-red{background:var(--red);}
+.addr-bar{background:#1e293b;border:1.5px solid #3b82f6;border-radius:8px;padding:8px 10px;font-size:10px;display:flex;align-items:center;gap:6px;margin-bottom:6px;}
+.lock-icon{font-size:14px;}
+.url-text{color:#60a5fa;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.permission-popup{background:#fff;border-radius:12px;padding:12px;margin-bottom:7px;}
+.pp-title{font-size:11px;font-weight:700;color:#111;margin-bottom:4px;}
+.pp-sub{font-size:10px;color:#666;margin-bottom:8px;line-height:1.4;}
+.pp-btns{display:flex;gap:6px;}
+.pp-deny{flex:1;padding:7px;background:#f1f5f9;border-radius:7px;font-size:11px;font-weight:700;color:#374151;text-align:center;}
+.pp-allow{flex:1;padding:7px;background:#2563eb;border-radius:7px;font-size:11px;font-weight:700;color:#fff;text-align:center;}
+.gps-popup{background:#fff;border-radius:12px;padding:12px;margin-bottom:7px;}
+
+/* 섹션 숨김 */
+.section{display:none;width:100%;flex-direction:column;align-items:center;}
+.section.active{display:flex;}
+
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.4)}50%{box-shadow:0 0 0 8px rgba(239,68,68,0)}}
+</style>
+</head>
+<body>
+
+<!-- 헤더 -->
+<div style="text-align:center;margin-bottom:20px">
+  <div style="display:inline-block;background:var(--red);color:#fff;font-size:11px;font-weight:700;padding:3px 12px;border-radius:999px;margin-bottom:8px">📱 MBTI 물류 — 기사 필독 가이드</div>
+  <h1 style="font-size:22px;font-weight:900">앱 사용 설정 가이드</h1>
+  <p style="font-size:12px;color:var(--text2);margin-top:5px">긴급배송 · 알림 허용 · GPS 허용</p>
+</div>
+
+<!-- 탭 메뉴 -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab(0)">📸 긴급배송</div>
+  <div class="tab" onclick="switchTab(1)">🔔 알림 허용</div>
+  <div class="tab" onclick="switchTab(2)">📍 GPS 허용</div>
+</div>
+
+<!-- ═══════════════ 섹션 1: 긴급배송 ═══════════════ -->
+<div class="section active" id="sec-0">
+  <div class="section-header">
+    <div class="badge badge-red">쿠팡어플 오류 이슈 대응</div>
+    <h2>긴급배송 사용법</h2>
+    <p class="sub">QR 스캔 → 사진 → 저장 완료!</p>
+  </div>
+  <div class="progress-bar"><div class="progress-fill fill-red" id="p0" style="width:12.5%"></div></div>
+  <div class="step-nav" id="n0"></div>
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="app-bar"><div class="app-logo">M</div><div class="app-title">MBTI 물류관리</div><div class="app-sub">천승진 기사</div></div>
+      <div class="screen"><div class="slides-wrap"><div class="slides" id="s0" style="width:calc(254px * 8)">
+
+        <!-- 1: 홈 -->
+        <div class="slide" style="width:254px">
+          <div style="font-size:9px;color:var(--text2);margin-bottom:8px;font-weight:700">🏠 기사 홈 화면</div>
+          <div class="grid2"><div class="tile"><span class="ico">🗺️</span>내 배송 지도</div><div class="tile"><span class="ico">📅</span>근무표</div><div class="tile"><span class="ico">📷</span>출퇴근</div><div class="tile"><span class="ico">📋</span>정산서</div></div>
+          <div class="btn btn-red" style="animation:pulse 2s infinite;font-size:13px">🚨 긴급배송 등록</div>
+          <div class="card" style="border-color:#1e3a5f;font-size:10px;color:#60a5fa">📢 쿠팡어플 오류 이슈 대응 공지 참고</div>
+        </div>
+
+        <!-- 2: 입력방법 -->
+        <div class="slide" style="width:254px">
+          <div style="font-size:9px;color:var(--text2);margin-bottom:7px;font-weight:700">📸 긴급 배송기록 입력</div>
+          <div style="font-size:9px;color:var(--text2);margin-bottom:9px;line-height:1.5">QR 스캔 → 운송장+주소+GPS 자동입력</div>
+          <div class="btn btn-purple">📊 QR / 바코드 실시간 스캔 ⭐</div>
+          <div class="btn btn-blue">🤖 OCR 자동입력 (QR 훼손 시)</div>
+          <div style="background:#1e1a00;border:1px dashed var(--amber);border-radius:7px;padding:7px 9px;font-size:9px;color:#fbbf24;line-height:1.5">💡 모두 안 되면 아래 칸에 직접 입력</div>
+        </div>
+
+        <!-- 3: QR 스캔 -->
+        <div class="slide" style="width:254px">
+          <div style="font-size:9px;color:var(--text2);margin-bottom:7px;font-weight:700">📊 QR 실시간 스캔</div>
+          <div class="scan-box"><div class="scan-frame"><div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div><div class="scan-line"></div></div></div>
+          <div style="text-align:center;font-size:9px;color:#64748b;margin-bottom:7px">📦 운송장에 갖다 대세요</div>
+          <div style="display:inline-block;font-size:10px;font-weight:700;color:var(--teal);background:#0f2a2a;padding:2px 9px;border-radius:999px;border:1px solid var(--teal);margin-bottom:5px">2건 스캔됨 ✓</div>
+          <div style="display:flex;align-items:center;gap:5px;padding:6px 8px;background:#1e293b;border-radius:7px;border:1px solid var(--teal);margin-bottom:4px">
+            <span style="font-size:10px">📦</span>
+            <div style="flex:1"><div style="font-size:10px;font-family:monospace;font-weight:700;color:var(--teal)">10318007213721</div><div style="font-size:9px;color:var(--text2)">09:23:15 스캔</div></div>
+            <span style="font-size:9px;color:var(--teal)">✓</span>
+          </div>
+        </div>
+
+        <!-- 4: 자동입력 결과 -->
+        <div class="slide" style="width:254px">
+          <div style="font-size:9px;color:var(--text2);margin-bottom:7px;font-weight:700">✅ QR 인식 결과</div>
+          <div class="toast"><span>✅</span><div><div style="font-weight:700;color:#60a5fa;font-size:10px">인식 성공!</div><div style="color:var(--text2);font-size:9px">주소+수령인+GPS 자동입력</div></div></div>
+          <div class="card" style="border-color:var(--teal)">
+            <div class="row"><span class="lbl">📦 운송장</span><span class="val" style="color:var(--teal);font-size:9px">10318007213721</span></div>
+            <div class="row"><span class="lbl">📍 주소</span><span class="val" style="font-size:9px">수영구 무학로21번길 16</span></div>
+            <div class="row"><span class="lbl">👤 수령인</span><span class="val">김*우</span></div>
+            <div class="row"><span class="lbl">🗺️ GPS</span><span class="val" style="color:var(--teal);font-size:9px">QR 좌표 자동수집 ✓</span></div>
+          </div>
+          <div style="font-size:9px;color:var(--text2)">📶 WiFi 없어도 기가(데이터)만 있으면 OK!</div>
+        </div>
+
+        <!-- 5: 사진 -->
+        <div class="slide" style="width:254px">
+          <div style="font-size:9px;color:var(--text2);margin-bottom:7px;font-weight:700">📷 배송완료 사진 (1장 이상)</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:7px">
+            <div style="aspect-ratio:1;background:linear-gradient(135deg,#0f2a1a,#1a3a2a);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:15px;border:1.5px solid var(--teal)">📸</div>
+            <div style="aspect-ratio:1;background:#1e293b;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text2);border:1.5px dashed var(--border)">+추가</div>
+            <div style="aspect-ratio:1;background:#1e293b;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text2);border:1.5px dashed var(--border)">+추가</div>
+          </div>
+          <div style="font-size:9px;color:var(--teal);text-align:center;margin-bottom:7px">✅ 1장 추가됨 (최대 5장)</div>
+          <div class="btn btn-green" style="font-size:11px">🗺️ 지도에 배송핀 생성 + 저장</div>
+        </div>
+
+        <!-- 6: 지도 핀 -->
+        <div class="slide" style="width:254px">
+          <div style="font-size:9px;color:var(--text2);margin-bottom:6px;font-weight:700">🗺️ 지도 핀 + ◀▶ 이동</div>
+          <div style="background:linear-gradient(135deg,#1a2535,#0f1b2a);border-radius:9px;height:120px;position:relative;overflow:hidden;margin-bottom:7px;border:1px solid var(--border)">
+            <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(51,65,85,.3) 1px,transparent 1px),linear-gradient(90deg,rgba(51,65,85,.3) 1px,transparent 1px);background-size:18px 18px"></div>
+            <div style="position:absolute;bottom:35px;left:50px;width:20px;height:20px;background:var(--red);border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center"><span style="transform:rotate(45deg);font-size:9px;font-weight:700;color:#fff">1</span></div>
+            <div style="position:absolute;top:40px;right:50px;width:20px;height:20px;background:#f97316;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center"><span style="transform:rotate(45deg);font-size:9px;font-weight:700;color:#fff">2</span></div>
+            <div style="position:absolute;bottom:20px;right:30px;width:14px;height:14px;background:var(--blue);border-radius:50%;border:2.5px solid #fff"></div>
+            <div style="position:absolute;bottom:5px;right:5px;display:flex;gap:3px">
+              <div style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);border-radius:4px;color:#fff;font-size:11px;font-weight:700;padding:1px 6px">◀</div>
+              <div style="font-size:9px;color:rgba(255,255,255,.7);align-self:center">1/4</div>
+              <div style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);border-radius:4px;color:#fff;font-size:11px;font-weight:700;padding:1px 6px">▶</div>
+            </div>
+          </div>
+          <div class="card" style="padding:7px 9px;font-size:10px;border-color:#dc2626">
+            <div style="font-weight:700;margin-bottom:2px">1번: 김*우 <span style="background:#dc2626;color:#fff;padding:1px 5px;border-radius:999px;font-size:8px">⏳ 미완료</span></div>
+            <div style="color:#60a5fa;font-size:9px">수영구 무학로21번길 16</div>
+          </div>
+        </div>
+
+        <!-- 7: 배송완료 -->
+        <div class="slide" style="width:254px">
+          <div style="font-size:9px;color:var(--text2);margin-bottom:6px;font-weight:700">✅ 배송완료 처리</div>
+          <div style="background:#051a05;border:1.5px solid var(--green);border-radius:8px;padding:8px 10px;margin-bottom:7px">
+            <div style="font-size:9px;font-weight:700;color:var(--green);margin-bottom:4px">📦 완료할 운송장 선택</div>
+            <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px">
+              <div style="width:14px;height:14px;background:var(--green);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0">✓</div>
+              <div style="font-size:9px;font-family:monospace">10318007213721</div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:7px">
+            <div style="aspect-ratio:1;background:linear-gradient(135deg,#0f2a1a,#1a3a2a);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:15px;border:1.5px solid var(--teal)">📸</div>
+            <div style="aspect-ratio:1;background:#1e293b;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:10px;border:1.5px dashed var(--border)">+</div>
+            <div style="aspect-ratio:1;background:#1e293b;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:10px;border:1.5px dashed var(--border)">+</div>
+          </div>
+          <div class="btn btn-green" style="font-size:11px;padding:9px">✅ 전체 완료 저장 (1건)</div>
+        </div>
+
+        <!-- 8: 완료 -->
+        <div class="slide" style="width:254px;text-align:center">
+          <div class="ok-circle ok-red">✓</div>
+          <div style="font-size:14px;font-weight:900;margin-bottom:5px">등록 완료!</div>
+          <div style="font-size:10px;color:var(--text2);margin-bottom:9px;line-height:1.6">기록 저장 + 관리자 알림 전송 완료</div>
+          <div class="card" style="text-align:left">
+            <div class="row"><span class="lbl">운송장</span><span class="val" style="color:var(--teal);font-size:9px">10318007213721</span></div>
+            <div class="row"><span class="lbl">사진</span><span class="val">1장</span></div>
+            <div class="row"><span class="lbl">GPS</span><span class="val" style="color:var(--teal)">✅ 자동수집</span></div>
+            <div class="row"><span class="lbl">보관</span><span class="val">60일</span></div>
+          </div>
+        </div>
+
+      </div></div></div>
+    </div>
+  </div>
+  <div class="desc-card">
+    <div class="step-num step-num-red" id="sn0">STEP 1 / 8</div>
+    <div class="step-title" id="st0">홈에서 시작</div>
+    <div class="step-desc" id="sd0">기사 앱 홈 화면에서 빨간색 <b>"🚨 긴급배송 등록"</b> 버튼을 탭합니다.</div>
+    <div class="tip" id="tp0"><span>💡</span><span id="tt0">쿠팡앱 오류 시 이 버튼으로 배송기록을 남겨두세요!</span></div>
+  </div>
+  <div class="controls">
+    <button class="cbtn cprev" id="pb0" onclick="go(0,-1)" disabled>← 이전</button>
+    <div class="ccount" id="cc0">1/8</div>
+    <button class="cbtn cnext-red" id="nb0" onclick="go(0,1)">다음 →</button>
+  </div>
+</div>
+
+<!-- ═══════════════ 섹션 2: 알림 허용 ═══════════════ -->
+<div class="section" id="sec-1">
+  <div class="section-header">
+    <div class="badge badge-blue">공지·세금계산서·긴급알림 수신</div>
+    <h2>앱 알림 허용 방법</h2>
+    <p class="sub">4단계만 설정하면 모든 알림이 옵니다</p>
+  </div>
+  <div class="progress-bar"><div class="progress-fill fill-blue" id="p1" style="width:25%"></div></div>
+  <div class="step-nav" id="n1"></div>
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="app-bar"><div class="app-logo">M</div><div class="app-title">MBTI 물류관리</div><div class="app-sub">알림 설정</div></div>
+      <div class="screen"><div class="slides-wrap"><div class="slides" id="s1" style="width:calc(254px * 4)">
+
+        <!-- 1: 주소창 자물쇠 -->
+        <div class="slide" style="width:254px">
+          <div style="font-size:9px;color:var(--text2);margin-bottom:8px;font-weight:700">① 크롬 브라우저 — 주소창 탭</div>
+          <div class="addr-bar"><span class="lock-icon">🔒</span><span class="url-text">mbti-logistics.kimdh...workers.dev</span></div>
+          <div style="background:#1e293b;border-radius:10px;padding:10px;margin-bottom:7px">
+            <div style="font-size:10px;font-weight:700;color:#fff;margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:6px">이 사이트의 권한</div>
+            <div class="setting-row" style="background:#0f1825;border-color:#1d4ed8">
+              <span class="setting-ico">🔔</span>
+              <div><div class="setting-label">알림</div><div class="setting-sub">알림을 보낼 수 있음</div></div>
+              <div class="badge-allow">허용</div>
+            </div>
+            <div class="setting-row" style="opacity:.6">
+              <span class="setting-ico">📷</span>
+              <div><div class="setting-label">카메라</div></div>
+              <div class="badge-allow">허용</div>
+            </div>
+            <div class="setting-row" style="opacity:.6">
+              <span class="setting-ico">📍</span>
+              <div><div class="setting-label">위치</div></div>
+              <div class="badge-allow">허용</div>
+            </div>
+          </div>
+          <div style="font-size:9px;color:var(--text2)">🔒 자물쇠 탭 → <b>알림 → 허용</b>으로 변경</div>
+        </div>
+
+        <!-- 2: 앱 내 알림 등록 -->
+        <div class="slide" style="width:254px">
+          <div style="font-size:9px;color:var(--text2);margin-bottom:8px;font-weight:700">② 내정보 탭 → 알림 등록</div>
+          <div style="background:#161d2e;padding:8px 10px;border-bottom:1px solid #1e293b;font-size:10px;font-weight:700;color:#fff">내 정보</div>
+          <div style="padding:10px">
+            <div class="setting-row" style="margin-bottom:5px">
+              <span class="setting-ico">👤</span>
+              <div><div class="setting-label">천승진</div><div class="setting-sub">진주M · 야간</div></div>
+            </div>
+            <div style="background:linear-gradient(135deg,#1d4ed8,#3b82f6);border-radius:9px;padding:11px;text-align:center;color:#fff;margin-bottom:5px">
+              <div style="font-size:13px;font-weight:800;margin-bottom:2px">🔔 알림 등록</div>
+              <div style="font-size:9px;opacity:.85">탭하면 알림 허용 팝업이 뜹니다</div>
+            </div>
+            <div style="background:#052e16;border:1px solid #166534;border-radius:8px;padding:8px;text-align:center">
+              <div style="font-size:10px;font-weight:700;color:#4ade80">✅ 알림 등록됨</div>
+              <div style="font-size:9px;color:#86efac;margin-top:2px">공지·세금계산서·긴급알림 수신</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3: 폰 설정 — 크롬 알림 -->
+        <div class="slide" style="width:254px">
+          <div style="font-size:9px;color:var(--text2);margin-bottom:7px;font-weight:700">③ 폰 설정 → Chrome → 알림</div>
+          <div style="background:#1c1c1e;border-radius:10px;overflow:hidden;margin-bottom:7px">
+            <div style="padding:9px 12px;border-bottom:1px solid #2c2c2e">
+              <div style="font-size:11px;font-weight:700;color:#fff">Chrome</div>
+              <div style="font-size:9px;color:#8e8e93;margin-top:1px">앱 정보</div>
+            </div>
+            <div style="padding:9px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #2c2c2e">
+              <div>
+                <div style="font-size:11px;color:#fff">알림</div>
+                <div style="font-size:9px;color:#8e8e93">잠금화면, 배너 포함</div>
+              </div>
+              <div class="toggle-on"></div>
+            </div>
+            <div style="padding:9px 12px;display:flex;align-items:center;justify-content:space-between">
+              <div style="font-size:11px;color:#fff">알림 허용</div>
+              <div class="toggle-on"></div>
+            </div>
+          </div>
+          <div style="font-size:9px;color:var(--text2)">설정 → 앱 → Chrome → 알림 → <b>ON</b></div>
+        </div>
+
+        <!-- 4: 배터리 최적화 해제 -->
+        <div class="slide" style="width:254px">
+          <div style="font-size:9px;color:var(--text2);margin-bottom:7px;font-weight:700">④ 배터리 최적화 해제 (중요!)</div>
+          <div style="background:#1c1c1e;border-radius:10px;overflow:hidden;margin-bottom:6px">
+            <div style="padding:9px 12px;border-bottom:1px solid #2c2c2e;font-size:10px;font-weight:700;color:#fff">배터리</div>
+            <div style="padding:9px 12px;border-bottom:1px solid #2c2c2e">
+              <div style="font-size:11px;color:#fff;margin-bottom:1px">앱별 배터리 관리</div>
+            </div>
+            <div style="padding:9px 12px;display:flex;align-items:center;justify-content:space-between">
+              <div>
+                <div style="font-size:11px;color:#fff">Chrome</div>
+                <div style="font-size:9px;color:#30d158">제한 없음 ✓</div>
+              </div>
+              <div style="font-size:10px;color:#30d158;font-weight:700">설정완료</div>
+            </div>
+          </div>
+          <div style="background:#1a0000;border:1px solid #7f1d1d;border-radius:7px;padding:7px 9px;font-size:9px;color:#f87171;line-height:1.5">
+            ⚠️ <b>이 설정이 없으면</b> 앱이 꺼진 상태에서 알림이 오지 않습니다!
+          </div>
+        </div>
+
+      </div></div></div>
+    </div>
+  </div>
+  <div class="desc-card">
+    <div class="step-num step-num-blue" id="sn1">STEP 1 / 4</div>
+    <div class="step-title" id="st1">주소창 자물쇠 탭</div>
+    <div class="step-desc" id="sd1">크롬 브라우저 앱 상단 주소창의 <b>🔒 자물쇠 아이콘</b>을 탭합니다.<br>사이트 설정 → <b>알림 → 허용</b>으로 변경하세요.</div>
+    <div class="tip tip-blue" id="tp1"><span>💡</span><span id="tt1">주소창이 작아서 안 보이면 주소창을 한 번 탭하면 자물쇠가 보여요!</span></div>
+  </div>
+  <div class="controls">
+    <button class="cbtn cprev" id="pb1" onclick="go(1,-1)" disabled>← 이전</button>
+    <div class="ccount" id="cc1">1/4</div>
+    <button class="cbtn cnext-blue" id="nb1" onclick="go(1,1)">다음 →</button>
+  </div>
+</div>
+
+<!-- ═══════════════ 섹션 3: GPS 허용 ═══════════════ -->
+<div class="section" id="sec-2">
+  <div class="section-header">
+    <div class="badge badge-green">입차확인 · 지도 핀 · 출퇴근 기록</div>
+    <h2>GPS 허용 방법</h2>
+    <p class="sub">GPS가 있어야 입차·배송완료 처리가 됩니다</p>
+  </div>
+  <div class="progress-bar"><div class="progress-fill fill-green" id="p2" style="width:33%"></div></div>
+  <div class="step-nav" id="n2"></div>
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="app-bar"><div class="app-logo">M</div><div class="app-title">MBTI 물류관리</div><div class="app-sub">GPS 설정</div></div>
+      <div class="screen"><div class="slides-wrap"><div class="slides" id="s2" style="width:calc(254px * 3)">
+
+        <!-- 1: 주소창에서 위치 허용 -->
+        <div class="slide" style="width:254px">
+          <div style="font-size:9px;color:var(--text2);margin-bottom:8px;font-weight:700">① 주소창 🔒 → 위치 허용</div>
+          <div class="addr-bar"><span class="lock-icon">🔒</span><span class="url-text">mbti-logistics.kimdh...workers.dev</span></div>
+          <div style="background:#1e293b;border-radius:10px;padding:10px;margin-bottom:7px">
+            <div style="font-size:10px;font-weight:700;color:#fff;margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:6px">이 사이트의 권한</div>
+            <div class="setting-row" style="opacity:.6;margin-bottom:5px">
+              <span class="setting-ico">🔔</span>
+              <div><div class="setting-label">알림</div></div>
+              <div class="badge-allow">허용</div>
+            </div>
+            <div class="setting-row" style="background:#0f2a1a;border-color:var(--green)">
+              <span class="setting-ico">📍</span>
+              <div><div class="setting-label">위치</div><div class="setting-sub">앱 사용 중에 허용</div></div>
+              <div class="badge-allow">허용</div>
+            </div>
+          </div>
+          <div style="font-size:9px;color:var(--text2)">🔒 자물쇠 탭 → <b>위치 → 허용</b>으로 변경</div>
+        </div>
+
+        <!-- 2: 앱 첫 실행 팝업 -->
+        <div class="slide" style="width:254px">
+          <div style="font-size:9px;color:var(--text2);margin-bottom:8px;font-weight:700">② 위치 권한 팝업 → 허용 탭</div>
+          <div style="padding:6px 0">
+            <div class="gps-popup">
+              <div style="font-size:12px;font-weight:700;color:#111;margin-bottom:4px">📍 위치 사용 허용</div>
+              <div style="font-size:10px;color:#555;margin-bottom:8px;line-height:1.4">"mbti-logistics.workers.dev"에서 내 위치를 사용하려고 합니다.</div>
+              <div style="display:flex;gap:6px">
+                <div style="flex:1;padding:8px;background:#f1f5f9;border-radius:8px;font-size:11px;font-weight:700;color:#374151;text-align:center">차단</div>
+                <div style="flex:1;padding:8px;background:#16a34a;border-radius:8px;font-size:11px;font-weight:700;color:#fff;text-align:center">허용 ←</div>
+              </div>
+            </div>
+            <div style="background:#052e16;border:1px solid #166534;border-radius:8px;padding:8px;text-align:center">
+              <div style="font-size:11px;font-weight:700;color:#4ade80">✅ 위치 권한 허용됨</div>
+              <div style="font-size:9px;color:#86efac;margin-top:2px">입차 · 배송완료 · 지도 정상 작동</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3: 폰 설정에서 직접 허용 -->
+        <div class="slide" style="width:254px">
+          <div style="font-size:9px;color:var(--text2);margin-bottom:7px;font-weight:700">③ 폰 설정에서 직접 허용 (안 되면)</div>
+          <div style="background:#1c1c1e;border-radius:10px;overflow:hidden;margin-bottom:6px">
+            <div style="padding:9px 12px;border-bottom:1px solid #2c2c2e;font-size:10px;font-weight:700;color:#fff">설정 → 앱 → Chrome</div>
+            <div style="padding:9px 12px;border-bottom:1px solid #2c2c2e;display:flex;align-items:center;justify-content:space-between">
+              <div>
+                <div style="font-size:11px;color:#fff">위치</div>
+                <div style="font-size:9px;color:#30d158">앱 사용 중에 허용 ✓</div>
+              </div>
+              <div style="font-size:10px;color:#30d158;font-weight:700">설정완료</div>
+            </div>
+            <div style="padding:9px 12px;border-bottom:1px solid #2c2c2e;display:flex;align-items:center;justify-content:space-between">
+              <div style="font-size:11px;color:#fff">정밀 위치</div>
+              <div class="toggle-on"></div>
+            </div>
+            <div style="padding:9px 12px;font-size:9px;color:#8e8e93">📱 안드로이드: 설정→앱→Chrome→권한→위치<br>🍎 아이폰: 설정→Chrome→위치→허용</div>
+          </div>
+          <div style="background:#0f2a1a;border:1px solid #166534;border-radius:7px;padding:7px 9px;font-size:9px;color:#4ade80;line-height:1.5">
+            ✅ 설정 완료 후 앱을 완전히 껐다가 다시 켜주세요!
+          </div>
+        </div>
+
+      </div></div></div>
+    </div>
+  </div>
+  <div class="desc-card">
+    <div class="step-num step-num-green" id="sn2">STEP 1 / 3</div>
+    <div class="step-title" id="st2">주소창 자물쇠 탭</div>
+    <div class="step-desc" id="sd2">크롬 주소창의 <b>🔒 자물쇠</b>를 탭 → <b>위치 → 허용</b>으로 변경합니다.<br>이 설정이 있어야 입차·배송완료 처리가 됩니다.</div>
+    <div class="tip tip-amber" id="tp2"><span>⚠️</span><span id="tt2">GPS가 차단되면 입차 버튼이 눌리지 않고 지도 핀도 정확하지 않아요!</span></div>
+  </div>
+  <div class="controls">
+    <button class="cbtn cprev" id="pb2" onclick="go(2,-1)" disabled>← 이전</button>
+    <div class="ccount" id="cc2">1/3</div>
+    <button class="cbtn cnext-green" id="nb2" onclick="go(2,1)">다음 →</button>
+  </div>
+</div>
+
+<script>
+var TABS = [
+  {
+    steps:[
+      {t:'홈에서 시작',d:'기사 앱 홈 화면에서 빨간색 <b>"🚨 긴급배송 등록"</b> 버튼을 탭합니다.',tip:'쿠팡앱 오류 시 이 버튼으로 배송기록을 남겨두세요!',tc:'tip'},
+      {t:'입력 방법 선택',d:'① <b>QR/바코드 스캔</b> ⭐ 가장 빠름<br>② <b>OCR 자동입력</b> QR 훼손 시<br>③ <b>직접 입력</b> 위 두 개 실패 시',tip:'QR 스캔이 최고! 운송장+주소+수령인+GPS가 한 번에!',tc:'tip'},
+      {t:'QR 실시간 스캔',d:'카메라가 열리면 운송장 <b>QR 코드</b>에 갖다 대세요. 자동 인식 후 진동이 울립니다. 여러 박스는 <b>연속 스캔</b>하세요.',tip:'쿠팡 QR에는 운송장+주소+수령인+GPS 좌표가 다 담겨있어요!',tc:'tip'},
+      {t:'자동입력 확인',d:'스캔 후 <b>주소·수령인·GPS</b>가 자동 입력됩니다. 목록에 스캔 시각과 함께 표시됩니다.',tip:'WiFi 없어도 기가(LTE/5G)만 있으면 됩니다!',tc:'tip'},
+      {t:'완료 사진 촬영',d:'<b>현관 앞</b> 배치 사진을 찍으세요. 최소 <b>1장 필수</b>, 최대 5장. 호수 표지판도 같이 찍으면 좋아요.',tip:'사진+GPS+시각이 CS 이의제기 증빙 자료가 됩니다!',tc:'tip'},
+      {t:'◀▶로 핀 이동',d:'배송 지도 상단의 <b>◀▶ 버튼</b>으로 핀을 순서대로 이동합니다. 파란 GPS 핀에 가려도 고객정보를 확인할 수 있어요.',tip:'폰 뒤로가기 탭해도 이제 홈피로 빠지지 않아요!',tc:'tip'},
+      {t:'배송완료 처리',d:'핀 탭 → 배송완료 처리 버튼. <b>운송장별 체크박스</b>로 일부만 완료 처리(부분완료)도 가능합니다.',tip:'박스 일부 빠뜨렸으면 그 운송장만 체크 해제 → 나중에 별도 처리!',tc:'tip'},
+      {t:'등록 완료!',d:'모든 기록 저장 완료. <b>운송장·주소·사진·GPS·시각</b>이 기록되며 관리자에게 자동 알림이 전송됩니다.',tip:'60일 보관. CS 이의제기 시 관리자에게 요청하세요!',tc:'tip'}
+    ],
+    color:'red'
+  },
+  {
+    steps:[
+      {t:'주소창 자물쇠 탭',d:'크롬 주소창의 <b>🔒 자물쇠 아이콘</b>을 탭합니다.<br>사이트 설정 → <b>알림 → 허용</b>으로 변경하세요.',tip:'주소창이 작으면 탭해서 늘린 후 자물쇠를 누르세요!',tc:'tip-blue'},
+      {t:'앱 내 알림 등록',d:'앱 하단 <b>내정보 탭</b> 접속 → <b>"🔔 알림 등록"</b> 버튼 클릭 → 팝업에서 <b>"허용"</b>을 선택하세요.',tip:'이 단계를 완료해야 공지·세금계산서·긴급알림을 받을 수 있어요!',tc:'tip-blue'},
+      {t:'폰 설정 — Chrome 알림',d:'<b>폰 설정 → 앱 → Chrome → 알림 → ON</b><br>이 설정이 없으면 앱이 꺼진 상태에서 알림이 오지 않아요.',tip:'삼성: 설정→앱→Chrome→알림→허용 | 아이폰: 설정→Chrome→알림→허용',tc:'tip-blue'},
+      {t:'배터리 최적화 해제',d:'<b>설정 → 배터리 → 앱별 배터리 관리 → Chrome → 제한 없음</b><br>이 설정을 안 하면 폰 꺼진 상태에서 알림이 오지 않습니다!',tip:'삼성: 설정→배터리→앱별배터리관리 | 샤오미: 설정→배터리→절전→앱 제외',tc:'tip-blue'}
+    ],
+    color:'blue'
+  },
+  {
+    steps:[
+      {t:'주소창 자물쇠 탭',d:'크롬 주소창의 <b>🔒 자물쇠</b>를 탭 → <b>위치 → 허용</b>으로 변경합니다.<br>이 설정이 있어야 입차·배송완료 처리가 됩니다.',tip:'GPS가 차단되면 입차 버튼이 눌리지 않아요!',tc:'tip-amber'},
+      {t:'위치 권한 팝업',d:'앱 사용 중 <b>"위치 사용 허용"</b> 팝업이 뜨면 반드시 <b>"허용"</b>을 탭하세요. "차단"을 누르면 입차·지도가 안 됩니다.',tip:'한 번 차단하면 다시 설정 메뉴에서 직접 바꿔야 해요!',tc:'tip-amber'},
+      {t:'폰 설정에서 직접 허용',d:'이미 차단했다면: <b>설정 → 앱 → Chrome → 권한 → 위치 → 앱 사용 중에 허용</b><br>🍎 아이폰: 설정 → Chrome → 위치 → 허용',tip:'설정 완료 후 앱을 완전히 껐다가 다시 켜주세요!',tc:'tip-amber'}
+    ],
+    color:'green'
+  }
+];
+
+var cursors = [0, 0, 0];
+var activeTab = 0;
+
+// 닷 생성
+TABS.forEach(function(tab, ti){
+  var nav = document.getElementById('n'+ti);
+  tab.steps.forEach(function(_,i){
+    var d = document.createElement('div');
+    d.className = 'step-dot';
+    d.onclick = (function(t,idx){return function(){cursors[t]=idx;render(t);};})(ti,i);
+    nav.appendChild(d);
+  });
+});
+
+function switchTab(ti){
+  activeTab = ti;
+  document.querySelectorAll('.tab').forEach(function(t,i){ t.className = 'tab'+(i===ti?' active':''); });
+  document.querySelectorAll('.section').forEach(function(s,i){ s.className = 'section'+(i===ti?' active':''); });
+}
+
+function go(ti, dir){
+  var len = TABS[ti].steps.length;
+  cursors[ti] = Math.max(0, Math.min(len-1, cursors[ti]+dir));
+  render(ti);
+}
+
+function render(ti){
+  var tab = TABS[ti];
+  var cur = cursors[ti];
+  var s = tab.steps[cur];
+  var col = tab.color;
+  var len = tab.steps.length;
+  var sw = 254;
+
+  // 슬라이드 이동
+  document.getElementById('s'+ti).style.transform = 'translateX(-'+cur*sw+'px)';
+
+  // 진행바
+  document.getElementById('p'+ti).style.width = (((cur+1)/len)*100)+'%';
+
+  // 텍스트
+  document.getElementById('sn'+ti).textContent = 'STEP '+(cur+1)+' / '+len;
+  document.getElementById('st'+ti).textContent = s.t;
+  document.getElementById('sd'+ti).innerHTML = s.d;
+  document.getElementById('tp'+ti).className = 'tip '+(s.tc||'');
+  document.getElementById('tt'+ti).textContent = s.tip;
+  document.getElementById('cc'+ti).textContent = (cur+1)+'/'+len;
+
+  // 버튼
+  document.getElementById('pb'+ti).disabled = (cur===0);
+  var nb = document.getElementById('nb'+ti);
+  if(cur===len-1){
+    nb.textContent='처음으로 ↺';
+    nb.onclick=(function(t){return function(){cursors[t]=0;render(t);};})(ti);
+  } else {
+    nb.textContent='다음 →';
+    nb.onclick=(function(t){return function(){go(t,1);};})(ti);
+  }
+
+  // 닷
+  document.querySelectorAll('#n'+ti+' .step-dot').forEach(function(d,i){
+    var ac = 'active-'+col;
+    d.className = 'step-dot'+(i===cur?' '+ac:i<cur?' done':'');
+  });
+}
+
+// 초기 렌더
+[0,1,2].forEach(function(ti){ render(ti); });
+
+// 스와이프
+document.querySelectorAll('.phone').forEach(function(ph, ti){
+  var tx=0;
+  ph.addEventListener('touchstart',function(e){tx=e.touches[0].clientX;},{passive:true});
+  ph.addEventListener('touchend',function(e){var d=tx-e.changedTouches[0].clientX;if(Math.abs(d)>50)go(ti,d>0?1:-1);});
+});
+</script>
+</body>
+</html>

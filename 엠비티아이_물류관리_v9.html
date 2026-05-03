@@ -3341,57 +3341,78 @@ function _startDriverLocTracking(){
 window._mapPinNavIdx = 0;
 function driverMapPinNav(dir){
   var map = window._activeDriverMap;
-  var markers = window._driverMapMarkers;
   var filter = window._driverMapFilter || 'all';
-  if(!map || !markers) return;
+  if(!map){ toast('지도를 먼저 열어주세요'); return; }
 
-  // 현재 필터에 맞는 핀 목록 수집
   var locs = window._emerLocs || [];
   var filtered = locs.filter(function(loc){
     if(!loc.gps || !loc.gps.lat) return false;
     if(filter === 'pending') return loc.status !== '완료';
     if(filter === 'done') return loc.status === '완료';
     return true;
-  });
+  }).sort(function(a,b){ return (a._seqNo||999)-(b._seqNo||999); });
 
-  if(!filtered.length){
-    toast('📍 이동할 핀이 없습니다');
-    return;
-  }
+  if(!filtered.length){ toast('📍 표시된 핀이 없습니다'); return; }
 
-  // 인덱스 이동
-  window._mapPinNavIdx = (window._mapPinNavIdx + dir + filtered.length) % filtered.length;
+  window._mapPinNavIdx = ((window._mapPinNavIdx||0) + dir + filtered.length) % filtered.length;
   var target = filtered[window._mapPinNavIdx];
 
-  // 카운터 업데이트
+  // 인덱스 표시 업데이트
   var idxEl = document.getElementById('driver-map-pin-idx');
-  if(idxEl) idxEl.textContent = (window._mapPinNavIdx + 1) + '/' + filtered.length;
+  if(idxEl) idxEl.textContent = (window._mapPinNavIdx+1)+'/'+filtered.length;
 
-  if(!target.gps) return;
-
-  // 지도 이동 + 줌
+  // 지도 이동
   var pos = {lat: target.gps.lat, lng: target.gps.lng};
   map.panTo(pos);
   if(map.getZoom() < 17) map.setZoom(17);
 
-  // 해당 마커의 인포윈도우 자동 오픈
-  var marker = markers[target._fbId || target.id];
-  if(marker && window._infoWindow){
-    google.maps.event.trigger(marker, 'click');
-  } else {
-    // 마커 찾아서 클릭 이벤트 강제 발생
-    Object.keys(markers).forEach(function(k){
-      var mk = markers[k];
+  // ★ 마커 클릭 이벤트 강제 발생 (인포윈도우 열기)
+  var markers = window._driverMapMarkers || {};
+  var clicked = false;
+  var fid = target._fbId || target.id || '';
+  if(fid && markers[fid]){
+    google.maps.event.trigger(markers[fid], 'click');
+    clicked = true;
+  }
+  if(!clicked){
+    // fbId 없으면 좌표로 매칭
+    Object.values(markers).forEach(function(mk){
       try{
         var mp = mk.getPosition();
-        if(Math.abs(mp.lat()-pos.lat)<0.0001 && Math.abs(mp.lng()-pos.lng)<0.0001){
+        if(Math.abs(mp.lat()-pos.lat)<0.00015 && Math.abs(mp.lng()-pos.lng)<0.00015){
           google.maps.event.trigger(mk, 'click');
+          clicked = true;
         }
       }catch(e){}
     });
   }
 
-  toast((window._mapPinNavIdx+1)+'/'+filtered.length+' — '+(target.recipient||target.addr||'배송지'));
+  // 마커 클릭이 안 됐으면 직접 인포윈도우 표시
+  if(!clicked){
+    var tStatus = target.trackingStatus||{};
+    var trackings = target.trackings||[target.tracking||''];
+    var doneCnt = trackings.filter(function(t){return tStatus[t]&&tStatus[t].status==='완료';}).length;
+    var statusBadge = target.status==='완료'
+      ? '<span style="background:#16a34a;color:#fff;padding:1px 6px;border-radius:999px;font-size:10px">✅ 완료</span>'
+      : target.status==='부분완료'
+      ? '<span style="background:#f97316;color:#fff;padding:1px 6px;border-radius:999px;font-size:10px">🟠 부분완료</span>'
+      : '<span style="background:#dc2626;color:#fff;padding:1px 6px;border-radius:999px;font-size:10px">⏳ 미완료</span>';
+    var info = window._infoWindowRef || new google.maps.InfoWindow();
+    window._infoWindowRef = info;
+    info.setContent(
+      '<div style="font-size:13px;padding:6px;min-width:200px">'
+      +'<div style="font-weight:800;font-size:14px;margin-bottom:4px">'+(target._seqNo||'?')+'번: '+(target.recipient||'수령인미상')+' '+statusBadge+'</div>'
+      +'<div style="color:#1d4ed8;font-size:12px;margin-bottom:4px">'+(target.addr||'주소없음')+'</div>'
+      +'<div style="font-size:11px;color:#555">'
+      +(target.order_id?'📋 주문번호: '+target.order_id+'<br>':'')
+      +'📦 운송장: '+trackings.length+'건'+(doneCnt?' ('+doneCnt+'건 완료)':'')+'<br>'
+      +'⏰ '+(target.time||'')
+      +'</div>'
+      +'</div>'
+    );
+    info.setPosition(pos);
+    info.open(map);
+  }
 }
 
 function _updateMapCounter(){
@@ -3514,8 +3535,34 @@ function _loadMapsScript(apiKey){
   });
 }
 
+// ★ v9.26: 지도 닫기 (닫기 버튼 + 뒤로가기 공통)
+function _closeDriverMap(){
+  if(window._driverMapWatchId){ navigator.geolocation.clearWatch(window._driverMapWatchId); window._driverMapWatchId=null; }
+  window._activeDriverMap=null; window._activeDriverMapAddPin=null;
+  window._driverMapFilter='all'; window._driverMapSetFilter=null;
+  window._mapPinNavIdx=0;
+  if(window._infoWindowRef){ try{window._infoWindowRef.close();}catch(e){} window._infoWindowRef=null; }
+  document.getElementById('driver-map-mo')?.remove();
+  // history 정리 (닫기 버튼으로 닫은 경우 pushState 복원)
+  if(window._driverMapHistoryPushed){
+    window._driverMapHistoryPushed=false;
+    try{ history.back(); }catch(e){}
+  }
+}
+
 async function openDriverMap(){
   document.getElementById('driver-map-mo')?.remove();
+  // ★ v9.26: 뒤로가기 인터셉트 (브라우저 back → 지도 닫기)
+  history.pushState({map:'driver'}, '');
+  window._driverMapHistoryPushed = true;
+  if(!window._driverMapPopstateSet){
+    window._driverMapPopstateSet = true;
+    window.addEventListener('popstate', function(e){
+      if(document.getElementById('driver-map-mo')){
+        _closeDriverMap();
+      }
+    });
+  }
   document.body.insertAdjacentHTML('beforeend',`
   <div id="driver-map-mo" style="position:fixed;inset:0;background:#000;z-index:9999;display:flex;flex-direction:column">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:rgba(0,0,0,.85);color:#fff">
@@ -3533,7 +3580,7 @@ async function openDriverMap(){
           </div>
         </div>
       </div>
-      <button onclick="if(window._driverMapWatchId){navigator.geolocation.clearWatch(window._driverMapWatchId);window._driverMapWatchId=null;}window._activeDriverMap=null;window._activeDriverMapAddPin=null;window._driverMapFilter='all';window._driverMapSetFilter=null;document.getElementById('driver-map-mo').remove()" style="padding:6px 14px;background:#dc2626;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">✕ 닫기</button>
+      <button onclick="_closeDriverMap()" style="padding:6px 14px;background:#dc2626;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">✕ 닫기</button>
     </div>
     <div id="driver-map-canvas" style="flex:1;min-height:0;height:calc(100vh - 60px);position:relative;background:#1f2937;display:flex;align-items:center;justify-content:center">
       <div style="color:#fff;font-size:14px;text-align:center"><div style="font-size:32px;margin-bottom:10px">🗺️</div>지도 불러오는 중...<br><span style="font-size:11px;color:#9ca3af">GPS·지도·배송데이터 동시 로딩</span></div>
@@ -3581,6 +3628,8 @@ async function openDriverMap(){
 function _renderDriverMap(myLoc, emerLocs){
   var mapDiv=document.getElementById('driver-map-canvas');
   if(!mapDiv) return;
+  // ★ v9.26: 전역에 저장 (핀 순차 이동용)
+  window._emerLocs = emerLocs;
   var map=new google.maps.Map(mapDiv,{center:myLoc,zoom:14,mapTypeId:'roadmap',gestureHandling:'greedy'});
   var infoWin=new google.maps.InfoWindow();
   // ★ 내 위치 마커 (실시간)
@@ -3911,12 +3960,38 @@ function _renderLiveMap(center, driverLocs, emerLocs){
     center: {lat: center.lat, lng: center.lng},
     zoom: 13,
     mapTypeId: 'roadmap',
-    disableDefaultUI: false,
-    gestureHandling: 'greedy'  // ★ 한 손가락 터치로 지도 이동
+    disableDefaultUI: true,   // ★ 기본 UI 숨기고 커스텀 줌 버튼 사용
+    gestureHandling: 'greedy'
   });
+
+  // ★ v9.26: 커스텀 줌 버튼 (+/-)
+  var zoomDiv = document.createElement('div');
+  zoomDiv.style.cssText = 'position:absolute;right:12px;top:12px;display:flex;flex-direction:column;gap:4px;z-index:10';
+  zoomDiv.innerHTML =
+    '<button onclick="window._liveMap&&window._liveMap.setZoom(window._liveMap.getZoom()+1)" style="width:36px;height:36px;background:#fff;border:none;border-radius:8px;font-size:20px;font-weight:700;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center">+</button>'
+    +'<button onclick="window._liveMap&&window._liveMap.setZoom(window._liveMap.getZoom()-1)" style="width:36px;height:36px;background:#fff;border:none;border-radius:8px;font-size:20px;font-weight:700;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center">−</button>';
+  mapDiv.style.position = 'relative';
+  mapDiv.appendChild(zoomDiv);
+  window._liveMap = map;
 
   var infoWin = new google.maps.InfoWindow();
   var legend = document.getElementById('live-map-legend');
+  var geocoder = new google.maps.Geocoder();
+
+  // ★ v9.26: 좌표→도로명 주소 변환 함수
+  function getAddress(lat, lng, callback){
+    geocoder.geocode({location:{lat:lat,lng:lng},language:'ko'}, function(results, status){
+      if(status === 'OK' && results[0]){
+        // 도로명 주소 우선, 없으면 첫 번째 결과
+        var roadAddr = results.find(function(r){
+          return r.types.indexOf('premise')>=0 || r.types.indexOf('street_address')>=0 || r.types.indexOf('route')>=0;
+        });
+        callback((roadAddr||results[0]).formatted_address.replace('대한민국 ',''));
+      } else {
+        callback(lat.toFixed(5)+', '+lng.toFixed(5));
+      }
+    });
+  }
 
   // 기사 위치 핀 (빨간색)
   driverLocs.forEach(function(d){
@@ -3937,10 +4012,27 @@ function _renderLiveMap(center, driverLocs, emerLocs){
     });
     marker.addListener('click', function(){
       var updated = d.updatedAt ? d.updatedAt.slice(11,16) : '';
-      infoWin.setContent('<div style="padding:6px;font-size:13px"><b>🚗 '+d.name+'</b><br>캠프: '+(d.camp||'-')+'<br>최근 위치: '+updated+'</div>');
+      infoWin.setContent('<div style="padding:8px;font-size:13px;min-width:180px"><b>🚗 '+d.name+'</b><br><span style="color:#888;font-size:11px">캠프: '+(d.camp||'-')+' · '+updated+'</span><br><div id="addr-'+d.name.replace(/\s/g,'')+'" style="color:#2563eb;font-size:12px;margin-top:4px">📍 주소 불러오는 중...</div></div>');
       infoWin.open(map, marker);
+      // 도로명 주소 비동기 로드
+      getAddress(d.lat, d.lng, function(addr){
+        var el = document.getElementById('addr-'+d.name.replace(/\s/g,''));
+        if(el) el.textContent = '📍 ' + addr;
+      });
     });
-    if(legend) legend.innerHTML += '<span style="color:#fff;font-size:11px;white-space:nowrap;background:rgba(220,38,38,.8);padding:3px 8px;border-radius:12px">🔴 '+d.name+'</span> ';
+
+    // ★ v9.26: legend 기사 버튼 — 탭하면 해당 기사 위치로 이동 + 인포윈도우
+    if(legend){
+      var btn = document.createElement('button');
+      btn.style.cssText = 'color:#fff;font-size:11px;white-space:nowrap;background:rgba(220,38,38,.85);padding:5px 10px;border-radius:12px;border:none;cursor:pointer;font-weight:700;touch-action:manipulation;flex-shrink:0';
+      btn.textContent = '🔴 ' + d.name;
+      btn.onclick = function(){
+        map.panTo({lat: d.lat, lng: d.lng});
+        map.setZoom(16);
+        google.maps.event.trigger(marker, 'click');
+      };
+      legend.appendChild(btn);
+    }
   });
 
   // 긴급배송 핀 (파란색)
@@ -3960,7 +4052,7 @@ function _renderLiveMap(center, driverLocs, emerLocs){
       }
     });
     marker.addListener('click', function(){
-      infoWin.setContent('<div style="padding:6px;font-size:12px"><b>📦 긴급배송</b><br>'+(e.recipient||'')+'<br>'+(e.address||'')+'<br>기사: '+(e.driver||'-')+'<br>'+(e.savedAt||'').slice(0,16)+'</div>');
+      infoWin.setContent('<div style="padding:6px;font-size:12px"><b>📦 긴급배송</b><br>'+(e.recipient||'')+'<br>'+(e.address||e.addr||'')+'<br>기사: '+(e.driver||'-')+'<br>'+(e.savedAt||'').slice(0,16)+'</div>');
       infoWin.open(map, marker);
     });
   });
@@ -10041,8 +10133,36 @@ function dHome(){
 
   // ★ 공지사항 로드 트리거 (비동기)
   if(FB&&_db&&S.curDriver){setTimeout(_loadDrvNotices,100);}
-  // ★ v9.12: 마감 카운트다운 타이머 + 캠프 지원 알림 로드
-  setTimeout(function(){_startDeadlineTick();_loadCampSupports();_startGeoWatch();_startDriverLocTracking();},150);
+  // ★ v9.26: 출근 기록 Firebase 동기화 후 마감/배송지원 알림 시작
+  // 캐시 삭제 후 재로그인 시 localStorage 비어있어도 Firebase에서 오늘 기록 복원
+  setTimeout(function(){
+    _startGeoWatch(); _startDriverLocTracking();
+    if(FB&&_db&&S.curDriver){
+      var todayStr=today();
+      _db.collection('entries')
+        .where('driver','==',S.curDriver)
+        .where('date','==',todayStr)
+        .orderBy('checkIn','desc').limit(1).get()
+        .then(function(snap){
+          if(!snap.empty){
+            var d=snap.docs[0].data();
+            // localStorage 복원
+            var existAtt=_getAttend();
+            if(!existAtt.checkIn && d.checkIn){
+              _saveAttend({checkIn:d.checkIn,checkOut:d.checkOut||null,gps:d.gps||null});
+              console.log('[출근기록 복원]',d.checkIn);
+            }
+          }
+          // 복원 완료 후 알림 시작
+          _startDeadlineTick(); _loadCampSupports();
+        }).catch(function(){
+          // Firebase 실패해도 알림은 시작 (기존 localStorage 기준)
+          _startDeadlineTick(); _loadCampSupports();
+        });
+    } else {
+      _startDeadlineTick(); _loadCampSupports();
+    }
+  },300);
   // ★ v9.12: 알림 권한 요청 (1회) + 백그라운드 리스너 시작
   if(typeof _scheduleNotiInit==='function')_scheduleNotiInit();
 
@@ -10450,13 +10570,13 @@ async function emerOcrScan(file){
   }
   if(status) status.innerHTML = '<span style="color:var(--blue)">🤖 AI 분석 중...</span>';
 
-  // 이미지 리사이즈
+  // ★ v9.26: 이미지 리사이즈 1000→640px (전송 속도 2배 향상, 텍스트 인식 충분)
   var b64 = await new Promise(function(resolve){
     var img = new Image();
     var url = URL.createObjectURL(file);
     img.onload = function(){
       var canvas = document.createElement('canvas');
-      var max = 1000;
+      var max = 640;
       var w = img.width, h = img.height;
       if(w > max || h > max){
         if(w > h){ h = Math.round(h * max / w); w = max; }
@@ -10465,7 +10585,7 @@ async function emerOcrScan(file){
       canvas.width = w; canvas.height = h;
       canvas.getContext('2d').drawImage(img, 0, 0, w, h);
       URL.revokeObjectURL(url);
-      resolve(canvas.toDataURL('image/jpeg', 0.85).split(',')[1]);
+      resolve(canvas.toDataURL('image/jpeg', 0.75).split(',')[1]);
     };
     img.src = url;
   });
@@ -15266,7 +15386,7 @@ function ntDownloadTutorial(){
 <div class="header">
   <div class="badge">📸 MBTI 물류 — 사용 가이드</div>
   <h1>긴급배송<br>사용법</h1>
-  <p>쿠팡어플 오류 이슈 대응 방법</p>
+  <p>쿠팡어플 오류 이슈 대응 방법 <span style=\"background:#334155;color:#94a3b8;font-size:10px;padding:1px 8px;border-radius:999px;margin-left:4px\">v9.26</span></p>
 </div>
 <div class="progress-bar"><div class="progress-fill" id="progress" style="width:14%"></div></div>
 <div class="step-nav" id="stepNav"></div>
