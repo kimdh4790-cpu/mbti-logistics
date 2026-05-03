@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.42</title>
+<title>엠비티아이 물류관리 v9.43</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10421,7 +10421,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.42 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.43 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -11400,7 +11400,7 @@ function updFbUI(){
   var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.33 · 🔥 실시간':'v9.25 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.42 · Firebase 실시간':'v9.42 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.43 · Firebase 실시간':'v9.43 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -21437,26 +21437,98 @@ function emerStartScan(){
   statusEl.textContent = '카메라 시작 중...';
   var video = document.getElementById('emer-scan-video');
 
-  // ★ v9.42: QR 스캔 최적화 — 자동초점 + 적정 해상도
+  // ★ v9.43: QR 트래킹 오버레이 캔버스 (네이티브 카메라처럼 QR 따라다니는 박스)
+  var ov = document.getElementById('emer-scan-overlay');
+  if(!ov){
+    ov = document.createElement('canvas');
+    ov.id = 'emer-scan-overlay';
+    ov.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3';
+    video.parentNode.insertBefore(ov, video.nextSibling);
+  }
+  var octx = ov.getContext('2d');
+
+  function syncOv(){
+    ov.width = video.offsetWidth || 320;
+    ov.height = video.offsetHeight || 480;
+  }
+  function drawGuide(){
+    syncOv();
+    var cw=ov.width, ch=ov.height;
+    octx.clearRect(0,0,cw,ch);
+    // 가이드 박스 (중앙 스캔 영역)
+    var bw=Math.min(cw,ch)*0.62, x=(cw-bw)/2, y=(ch-bw)/2;
+    octx.fillStyle='rgba(0,0,0,0.45)';
+    octx.fillRect(0,0,cw,y);
+    octx.fillRect(0,y+bw,cw,ch-y-bw);
+    octx.fillRect(0,y,x,bw);
+    octx.fillRect(x+bw,y,cw-x-bw,bw);
+    // 모서리 코너 마커
+    var cl=24, lw=3;
+    octx.strokeStyle='#ffffff'; octx.lineWidth=lw;
+    [[x,y,1,1],[x+bw,y,-1,1],[x,y+bw,1,-1],[x+bw,y+bw,-1,-1]].forEach(function(p){
+      octx.beginPath();
+      octx.moveTo(p[0],p[1]); octx.lineTo(p[0]+p[2]*cl,p[1]);
+      octx.moveTo(p[0],p[1]); octx.lineTo(p[0],p[1]+p[3]*cl);
+      octx.stroke();
+    });
+  }
+  function drawQrBox(pts, vw, vh){
+    syncOv();
+    var cw=ov.width, ch=ov.height, sx=cw/vw, sy=ch/vh;
+    octx.clearRect(0,0,cw,ch);
+    // QR 위치에 초록 추적 박스
+    octx.save();
+    octx.beginPath();
+    octx.moveTo(pts[0].x*sx, pts[0].y*sy);
+    for(var i=1;i<pts.length;i++) octx.lineTo(pts[i].x*sx, pts[i].y*sy);
+    octx.closePath();
+    // 반투명 채우기
+    octx.fillStyle='rgba(0,255,136,0.18)'; octx.fill();
+    // 테두리
+    octx.strokeStyle='#00ff88'; octx.lineWidth=3;
+    octx.shadowColor='#00ff88'; octx.shadowBlur=10;
+    octx.stroke();
+    octx.restore();
+  }
+
+  // ★ v9.43: 스캔라인 애니메이션
+  var _scanLineY = 0, _scanDir = 1, _scanAni = null;
+  function _startScanline(){
+    var bw=Math.min(ov.width,ov.height)*0.62;
+    var y0=(ov.height-bw)/2, x0=(ov.width-bw)/2;
+    if(_scanAni) cancelAnimationFrame(_scanAni);
+    function aniTick(){
+      drawGuide();
+      _scanLineY += _scanDir * 2.5;
+      if(_scanLineY > bw-4){ _scanDir=-1; _scanLineY=bw-4; }
+      if(_scanLineY < 4){ _scanDir=1; _scanLineY=4; }
+      var grad=octx.createLinearGradient(0, y0+_scanLineY-8, 0, y0+_scanLineY+8);
+      grad.addColorStop(0,'rgba(0,255,136,0)');
+      grad.addColorStop(0.5,'rgba(0,255,136,0.8)');
+      grad.addColorStop(1,'rgba(0,255,136,0)');
+      octx.fillStyle=grad;
+      octx.fillRect(x0, y0+_scanLineY-8, bw, 16);
+      _scanAni=requestAnimationFrame(aniTick);
+    }
+    _scanAni=requestAnimationFrame(aniTick);
+  }
+  function _stopScanline(){ if(_scanAni){ cancelAnimationFrame(_scanAni); _scanAni=null; } }
+
   var constraints = {
     video:{
       facingMode:{ideal:'environment'},
-      width:{ideal:1280},
-      height:{ideal:720},
-      frameRate:{ideal:30},
-      focusMode:{ideal:'continuous'},       // 연속 자동초점
-      advanced:[{focusMode:'continuous'}]   // 구형 API 대응
+      width:{ideal:1280, min:640},
+      height:{ideal:720, min:480},
+      frameRate:{ideal:30}
     }
   };
+
   navigator.mediaDevices.getUserMedia(constraints)
     .catch(function(){
-      // 자동초점 제약 없이 재시도
-      return navigator.mediaDevices.getUserMedia({
-        video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}
-      });
+      return navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}});
     })
     .catch(function(){
-      return navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+      return navigator.mediaDevices.getUserMedia({video:true});
     })
     .then(function(stream){
       window._emerCamStream = stream;
@@ -21464,85 +21536,107 @@ function emerStartScan(){
       video.play();
       statusEl.textContent = '인식 중... QR에 갖다 대세요 📦';
 
-      // ★ v9.42: 트랙에 직접 자동초점 + 화이트밸런스 적용 (화질 개선)
+      // ★ v9.43: getCapabilities() 체크 후 지원 기기만 autofocus 적용
       try{
         var vTrack = stream.getVideoTracks()[0];
-        if(vTrack && vTrack.applyConstraints){
-          vTrack.applyConstraints({
-            advanced:[{
-              focusMode:'continuous',
-              whiteBalanceMode:'continuous',
-              exposureMode:'continuous'
-            }]
-          }).catch(function(){});
-        }
+        var caps = vTrack.getCapabilities ? vTrack.getCapabilities() : {};
+        var adv = {};
+        if(caps.focusMode && caps.focusMode.indexOf('continuous') >= 0) adv.focusMode = 'continuous';
+        if(caps.whiteBalanceMode && caps.whiteBalanceMode.indexOf('continuous') >= 0) adv.whiteBalanceMode = 'continuous';
+        if(caps.exposureMode && caps.exposureMode.indexOf('continuous') >= 0) adv.exposureMode = 'continuous';
+        if(Object.keys(adv).length > 0) vTrack.applyConstraints({advanced:[adv]}).catch(function(){});
       }catch(e){}
 
-      // ★ v9.41: 라이브 QR 스캔 — video 직접 전달 (캔버스 변환 없음)
-      function _startJsQrLoop(){
+      video.addEventListener('loadedmetadata', function(){
+        syncOv(); _startScanline();
+      }, {once:true});
+      setTimeout(function(){ syncOv(); _startScanline(); }, 600);
+
+      function _startScanLoop(){
         var _active = true;
 
-        // Android Chrome: BarcodeDetector를 video에 직접 걸기 (가장 빠름)
+        // Android Chrome: BarcodeDetector (가장 빠름, cornerPoints로 추적)
         if('BarcodeDetector' in window){
           var bd;
-          try{
-            bd = new BarcodeDetector({formats:['qr_code','data_matrix','aztec','code_128','pdf417']});
-          }catch(e){
-            try{ bd = new BarcodeDetector({formats:['qr_code']}); }catch(e2){}
-          }
+          try{ bd = new BarcodeDetector({formats:['qr_code','data_matrix','aztec','code_128','pdf417']}); }
+          catch(e){ try{ bd = new BarcodeDetector({formats:['qr_code']}); }catch(e2){} }
 
           if(bd){
+            var _lastPts = null, _trackCount = 0;
             function bdTick(){
               if(!_active) return;
               if(video.readyState < 2){ requestAnimationFrame(bdTick); return; }
-              bd.detect(video)  // ← video 직접 전달 (캔버스 불필요)
+              bd.detect(video)
                 .then(function(codes){
                   if(!_active) return;
                   if(codes && codes.length > 0 && codes[0].rawValue){
-                    _active = false;
-                    statusEl.textContent = '✅ QR 인식!';
-                    _emerHandleScan(codes[0].rawValue, statusEl);
+                    _stopScanline();
+                    if(codes[0].cornerPoints && video.videoWidth){
+                      drawQrBox(codes[0].cornerPoints, video.videoWidth, video.videoHeight);
+                    }
+                    _trackCount++;
+                    // 2프레임 연속 감지 시 확정 처리 (오인식 방지)
+                    if(_trackCount >= 2){
+                      _active = false;
+                      statusEl.textContent = '✅ QR 인식!';
+                      _emerHandleScan(codes[0].rawValue, statusEl);
+                    } else {
+                      requestAnimationFrame(bdTick);
+                    }
                     return;
                   }
+                  _trackCount = 0;
                   requestAnimationFrame(bdTick);
                 })
                 .catch(function(){ requestAnimationFrame(bdTick); });
             }
             video.addEventListener('loadedmetadata', function(){ requestAnimationFrame(bdTick); }, {once:true});
             if(video.readyState >= 2) requestAnimationFrame(bdTick);
-            window._emerBdStop = function(){ _active = false; };
-            return; // BarcodeDetector 사용 → jsQR 불필요
+            window._emerBdStop = function(){ _active = false; _stopScanline(); };
+            return;
           }
         }
 
-        // iOS Safari 폴백 — jsQR (캔버스 경유)
-        var canvas = document.createElement('canvas');
-        var ctx = canvas.getContext('2d');
+        // iOS Safari 폴백: jsQR + location으로 추적
+        var canvas2 = document.createElement('canvas');
+        var ctx2 = canvas2.getContext('2d');
+        var _trackCount2 = 0;
         function jsqrTick(){
           if(!_active) return;
           if(video.readyState < 2){ requestAnimationFrame(jsqrTick); return; }
           var vw=video.videoWidth, vh=video.videoHeight;
           if(!vw){ requestAnimationFrame(jsqrTick); return; }
-          canvas.width=vw; canvas.height=vh;
-          ctx.drawImage(video, 0, 0);
+          canvas2.width=vw; canvas2.height=vh;
+          ctx2.drawImage(video,0,0);
           try{
-            var d=ctx.getImageData(0,0,vw,vh);
+            var d=ctx2.getImageData(0,0,vw,vh);
             var r=window.jsQR(d.data,d.width,d.height,{inversionAttempts:'attemptBoth'});
-            if(r&&r.data&&_active){
-              _active=false;
-              statusEl.textContent='✅ QR 인식!';
-              _emerHandleScan(r.data,statusEl);
+            if(r && r.data && _active){
+              _stopScanline();
+              if(r.location){
+                var loc=r.location;
+                drawQrBox([loc.topLeftCorner,loc.topRightCorner,loc.bottomRightCorner,loc.bottomLeftCorner], vw, vh);
+              }
+              _trackCount2++;
+              if(_trackCount2 >= 2){
+                _active=false;
+                statusEl.textContent='✅ QR 인식!';
+                _emerHandleScan(r.data, statusEl);
+              } else {
+                requestAnimationFrame(jsqrTick);
+              }
               return;
             }
+            _trackCount2 = 0;
           }catch(e){}
           requestAnimationFrame(jsqrTick);
         }
         video.addEventListener('loadedmetadata', function(){ requestAnimationFrame(jsqrTick); }, {once:true});
         if(video.readyState >= 2) requestAnimationFrame(jsqrTick);
-        window._emerBdStop = function(){ _active = false; };
+        window._emerBdStop = function(){ _active=false; _stopScanline(); };
       }
 
-      _startJsQrLoop();
+      _startScanLoop();
     })
     .catch(function(e){
       statusEl.textContent = '❌ 카메라 권한 필요 — 주소창 🔒 → 카메라 허용';
