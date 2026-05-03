@@ -21728,8 +21728,8 @@ function emerStartScan(){
         // Android Chrome: BarcodeDetector (가장 빠름, cornerPoints로 추적)
         if('BarcodeDetector' in window){
           var bd;
-          try{ bd = new BarcodeDetector({formats:['qr_code','data_matrix','aztec']}); }
-          catch(e){ try{ bd = new BarcodeDetector({formats:['qr_code']}); }catch(e2){} }  // ★ v9.25: 바코드포맷 제거(QR/2D전용)
+          try{ bd = new BarcodeDetector({formats:['qr_code','data_matrix','aztec','code_128','code_39']}); }
+          catch(e){ try{ bd = new BarcodeDetector({formats:['qr_code','code_128']}); }catch(e2){ try{bd=new BarcodeDetector({formats:['qr_code']});}catch(e3){} } }  // ★ v9.52: 바코드 재추가
 
           if(bd){
             var _lastPts = null, _trackCount = 0;
@@ -21740,28 +21740,65 @@ function emerStartScan(){
                 .then(function(codes){
                   if(!_active) return;
                   if(codes && codes.length > 0 && codes[0].rawValue){
-                    // ★ v9.25: 크기+비율 필터 — 작은QR·바코드 차단, 정사각형만 통과
+                    // ★ v9.52: 포맷별 필터 — QR(정사각형) vs 바코드(직사각형) 분리
+                    var _code = codes[0];
+                    var _fmt = _code.format || '';
+                    var _isBarcode = (_fmt==='code_128'||_fmt==='code_39'||_fmt==='ean_13'||_fmt==='ean_8');
                     var _bigEnough = true;
-                    if(codes[0].cornerPoints && video.videoWidth){
-                      var _pts = codes[0].cornerPoints;
+                    if(_code.cornerPoints && video.videoWidth){
+                      var _pts = _code.cornerPoints;
                       var _qw = Math.abs(_pts[1].x - _pts[0].x);
                       var _qh = Math.abs(_pts[2].y - _pts[1].y);
                       var _ratio = _qh > 0 ? _qw / _qh : 0;
-                      // 크기: 프레임 10% 이상 / 비율: 0.4~2.5(정사각형±여유)
-                      _bigEnough = (_qw >= video.videoWidth * 0.10) &&
-                                   (_qh >= video.videoHeight * 0.10) &&
-                                   (_ratio >= 0.4 && _ratio <= 2.5);
+                      if(_isBarcode){
+                        // 바코드: 가로로 길어야 함 (ratio > 2), 최소 너비 25%
+                        _bigEnough = (_qw >= video.videoWidth * 0.25) && (_ratio > 2.0);
+                      } else {
+                        // QR: 정사각형, 최소 10%
+                        _bigEnough = (_qw >= video.videoWidth * 0.10) &&
+                                     (_qh >= video.videoHeight * 0.10) &&
+                                     (_ratio >= 0.4 && _ratio <= 2.5);
+                      }
                     }
                     if(!_bigEnough){ _trackCount=0; requestAnimationFrame(bdTick); return; }
                     _stopScanline();
-                    if(codes[0].cornerPoints && video.videoWidth){
-                      drawQrBox(codes[0].cornerPoints, video.videoWidth, video.videoHeight);
+                    if(_code.cornerPoints && video.videoWidth){
+                      drawQrBox(_code.cornerPoints, video.videoWidth, video.videoHeight);
                     }
                     _trackCount++;
                     if(_trackCount >= 2){
                       _active = false;
-                      statusEl.textContent = '✅ QR 인식!';
-                      _emerHandleScan(codes[0].rawValue, statusEl);
+                      if(_isBarcode){
+                        // ★ v9.53: 바코드도 _parseQrText 먼저 시도 (전체 데이터 있을 수도)
+                        var _bRaw = _code.rawValue;
+                        var _bParsed = _parseQrText(_bRaw);
+                        if(_bParsed.tracking_no || _bParsed.address){
+                          // 전체 데이터 있음 → QR처럼 처리
+                          _active = false;
+                          statusEl.textContent = '✅ 바코드 전체인식!';
+                          _emerHandleScan(_bRaw, statusEl);
+                        } else {
+                          // 운송장번호만 있는 일반 바코드
+                          var _bNum = _bRaw.replace(/[^\d]/g,'');
+                          statusEl.textContent = '✅ 바코드: ' + _bNum.slice(0,6)+'…  (QR로 주소 추가)';
+                          window._emerTrackings = window._emerTrackings||[];
+                          if(window._emerTrackings.indexOf(_bNum)<0){
+                            window._emerTrackings.push(_bNum);
+                            emerRefreshTrackingList&&emerRefreshTrackingList();
+                          }
+                          var _inp=document.getElementById('emer-tracking-inp'); if(_inp)_inp.value=_bNum;
+                          window._emerEntryMode='barcode';
+                          try{navigator.vibrate&&navigator.vibrate([60,30,120]);}catch(e){}
+                          // 카메라 계속 켜둠 → QR도 이어서 스캔
+                          _active = true; _trackCount = 0;
+                          requestAnimationFrame(bdTick);
+                        }
+                      } else {
+                        // QR → 전체 처리
+                        _active = false;
+                        statusEl.textContent = '✅ QR 인식!';
+                        _emerHandleScan(_code.rawValue, statusEl);
+                      }
                     } else {
                       requestAnimationFrame(bdTick);
                     }
