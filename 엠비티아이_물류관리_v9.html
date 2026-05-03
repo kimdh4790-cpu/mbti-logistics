@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.32</title>
+<title>엠비티아이 물류관리 v9.33</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10421,7 +10421,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.32 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.33 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -11397,10 +11397,10 @@ function updBadge(){
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
 function updFbUI(){
-  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.32 · 🔥 실시간':'v9.25 · 데모';
+  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.33 · 🔥 실시간':'v9.25 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.32 · Firebase 실시간':'v9.32 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.33 · Firebase 실시간':'v9.33 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -20686,24 +20686,10 @@ function openEmergencyDelivery(){
     </div>
   </div>`);
 
-  // ★ v9.26: GPS 자동 수집 — QR GPS 있으면 기기 GPS로 덮어쓰지 않음
-  if(navigator.geolocation){
-    navigator.geolocation.getCurrentPosition(function(pos){
-      // QR/Geocoding에서 이미 배송지 GPS 받았으면 현위치로 덮어쓰지 않음
-      if(window._emerGps && (window._emerGps.src === 'QR' || window._emerGps.src === 'geocode')){
-        var el=document.getElementById('emer-gps-status');
-        if(el) el.innerHTML='📍 배송지 GPS 사용 중 ('+(window._emerGps.src==='QR'?'QR':'주소변환')+') <span style="color:var(--teal)">✅</span>';
-        return;
-      }
-      window._emerGps = {lat: pos.coords.latitude, lng: pos.coords.longitude, acc: Math.round(pos.coords.accuracy), src:'device'};
-      var el=document.getElementById('emer-gps-status');
-      if(el) el.innerHTML='📍 현위치 GPS 확인 완료 — 정확도 '+window._emerGps.acc+'m <span style="color:var(--teal)">✅</span>';
-    }, function(){
-      if(window._emerGps && (window._emerGps.src === 'QR' || window._emerGps.src === 'geocode')) return; // 배송지 GPS 있으면 오류 무시
-      var el=document.getElementById('emer-gps-status');
-      if(el) el.innerHTML='📍 GPS 수집 실패 — 위치 없이 저장됩니다 <span style="color:var(--amber)">⚠️</span>';
-    }, {timeout:8000, enableHighAccuracy:true});
-  }
+  // ★ v9.33: 기기 GPS 자동수집 제거 — 배송 핀은 반드시 주소변환 GPS만 사용
+  // (현위치로 잘못 저장되는 문제 근본 해결)
+  var _gpsStatusEl = document.getElementById('emer-gps-status');
+  if(_gpsStatusEl) _gpsStatusEl.innerHTML='📍 QR 또는 사진 스캔 시 자동입력됩니다';
 }
 
 // ★ v9.25: OCR: 운송장 사진 → Claude Vision → 자동 입력
@@ -21020,64 +21006,55 @@ async function emerOcrScan(file){
     // 수령인: 김*우 패턴
     var recipientMatch = fullText.match(/[가-힣]+\*[가-힣]+/);
 
-    // ★ v9.25: 주소 파싱 — 쓰레기 줄 건너뛰고 유효 주소 라인 모두 수집
+    // ★ v9.33: 주소 파싱 — 전체 줄 스캔 후 주소 조각 모두 수집 (From./잡텍스트 건너뜀)
     var addrLine = (function(){
-      // 주소 라인 판별
       function isAddrLine(l){
         if(!l || l.replace(/[\d\.,\s]/g,'').length < 2) return false;
-        if(l.replace(/[^\d]/g,'').length > l.length * 0.7) return false; // 숫자 70%↑ 제외
-        return l.match(/(시|구)\s*.*(로|길|동|아파트|오피스텔|빌라)/) ||
+        if(l.replace(/[^\d]/g,'').length > l.length * 0.75) return false;
+        return l.match(/(시|구)\s*.*(로|길|동|아파트|오피스텔|빌라|임대|주공|현대|삼성|롯데)/) ||
                l.match(/(로|길)\s*\d+/) ||
                l.match(/\d+동\s*\d+호/) ||
-               l.match(/\d+호/) ||
-               l.match(/아파트|오피스텔|빌라/);
+               l.match(/\d+호$/) ||
+               l.match(/아파트|오피스텔|빌라|임대아파트|주공/);
       }
-      // 쓰레기 라인 판별 (서명/영어/날짜 잡텍스트) — ★ v9.27: 쿠팡 워터마크 강화 필터
       function isJunkLine(l){
-        if(l.match(/^[\d][\d\.,]{8,}/)) return true; // 번호 라인
-        if(l.match(/서명|인수자/)) return true;
-        if(l.match(/[a-zA-Z]{4,}/)) return true; // 영어 4자↑ (coupang 등)
-        if(l.match(/^(RPB|D\d빨|오전|오후)/)) return true;
-        if(l.match(/^\d+\.\d+\.\d+/)) return true; // 날짜 형식
-        if(l.match(/coupang/i)) return true; // 쿠팡 워터마크
-        if(l.match(/1577[-\s]*7011/)) return true; // 쿠팡 전화번호
-        if(l.match(/보내는이|개인정보.*폐기|위탁|택배사/)) return true; // 안내문구
+        if(l.match(/서명|인수자|보내는이|택배사|위탁|개인정보/)) return true;
+        if(l.match(/[a-zA-Z]{5,}/)) return true; // 영어 5자↑
+        if(l.match(/^(RPB|D\d|오전|오후|DATE|From|To\.)/i)) return true;
+        if(l.match(/coupang|gls\.com/i)) return true;
+        if(l.match(/1577[-\s]*7011|1544[-\s]*9898/)) return true;
+        if(l.match(/^\d{2,4}[\/\.]\d{2}/)) return true; // 날짜
+        if(l.match(/^[\d,\.]{10,}/)) return true; // 숫자열
         return false;
       }
-      // 첫 번째 주소 라인 찾기
-      var startIdx = -1;
-      for(var i=0; i<lines.length; i++){
-        if(isAddrLine(lines[i]) && !isJunkLine(lines[i])){ startIdx=i; break; }
-      }
-      if(startIdx < 0) return '';
 
-      // 첫 주소 라인부터 쓰레기 건너뛰며 유효 주소 라인 수집 (최대 5줄 탐색)
-      // 첫 주소 줄에서 번지 뒤 잡텍스트 제거
-      var _firstAddr = lines[startIdx];
-      // ① 번지 숫자 바로 뒤 한글 제거 (예: 1214장 → 1214, 121수열 → 121)
-      _firstAddr = _firstAddr.replace(/(번길|번지|로|길)\s*(\d+)[가-힣]{1,3}(\s|$)/g, '$1 $2$3');
-      // ② 번지 뒤 공백+한글 잡텍스트 제거 (수열/년/월/일 등)
-      //    패턴: 로/길/번길 + 숫자 이후 나오는 한글 단어열
-      _firstAddr = _firstAddr.replace(/((?:로|길|번길)\s*\d+(?:-\d+)?)\s+[가-힣].*/g, '$1').trim();
-      // ③ 인수자/서명/영어 제거
-      _firstAddr = _firstAddr.replace(/\s+(인수자|서명|coupa[^\s]*).*$/i, '').trim();
-      var addrParts = [_firstAddr];
-      var done = _firstAddr.match(/\d+호|\d{3,4}-\d+/); // 이미 호수 있으면 종료
-      for(var j=startIdx+1; j < Math.min(startIdx+6, lines.length) && !done; j++){
-        var ln = lines[j];
-        if(!ln) continue;
-        if(isJunkLine(ln)) continue; // 쓰레기는 건너뜀
-        if(isAddrLine(ln)){
-          addrParts.push(ln);
-          if(ln.match(/\d+호|\d{3,4}-\d+/)) done = true; // 호수 발견 → 종료
-        } else {
-          // 배송메모(문앞/자율출입) 만나면 종료
-          if(ln.match(/문\s*앞|경비실|자율출입|부재|택배함/)) break;
-          // 주소 관련 아닌 줄이 2번 연속이면 종료
-          break;
-        }
+      // ① 주소 파트 전체 수집 (줄 순서 유지, 쓰레기 건너뜀)
+      var streetPart = ''; // 도로명 (로/길 포함)
+      var detailPart = ''; // 상세주소 (동/호 포함)
+
+      for(var i=0; i<lines.length; i++){
+        var l = lines[i].trim();
+        if(!l || isJunkLine(l)) continue;
+        if(!isAddrLine(l)) continue;
+
+        // 영어 잡텍스트 잘라내기 (예: "121 cou" → "121")
+        l = l.replace(/\s+[a-zA-Z][a-zA-Z\s].*$/,'').trim();
+        // 번지 뒤 한글 잡텍스트 제거
+        l = l.replace(/((?:로|길|번길)\s*\d+(?:-\d+)?)\s+[가-힣][가-힣]*$/,'$1').trim();
+
+        var hasStreet = l.match(/(시|구)\s*.*(로|길)/) || l.match(/(로|길)\s*\d+/);
+        var hasDetail = l.match(/\d+동\s*\d+호/) || l.match(/\d+호$/) || l.match(/아파트|오피스텔|빌라|임대|주공/);
+
+        if(hasStreet && !streetPart) streetPart = l;
+        else if(hasDetail && !detailPart) detailPart = l;
+
+        // 한 줄에 둘 다 있으면 끝
+        if(streetPart && detailPart) break;
       }
-      return addrParts.join(' ').trim();
+
+      // ② 조합
+      if(streetPart && detailPart) return (streetPart + ' ' + detailPart).trim();
+      return (streetPart || detailPart || '').trim();
     })();
 
     // 배송메모: 문 앞, 경비실 등
@@ -21854,14 +21831,18 @@ async function emerSave(){
     gpsClean = { lat: window._emerGps.lat, lng: window._emerGps.lng, acc: window._emerGps.acc||0, src: window._emerGps.src||'device' };
   }
 
-  // ★ v9.25: 저장 직전 — 주소 있으면 항상 Geocoding (최종 주소 기준으로 핀 확정)
-  // QR GPS 있어도 사용자가 주소 수정했을 수 있으므로 주소 우선
-  if(addr){
+  // ★ v9.33: 저장 직전 GPS 처리 — QR/OCR 때 이미 Geocoding 완료된 경우 재실행 안 함 (속도 개선)
+  if(window._emerGps && (window._emerGps.src==='geocode'||window._emerGps.src==='QR')){
+    // 이미 배송지 좌표 확보됨 → 그대로 사용
+    gpsClean = {lat:window._emerGps.lat, lng:window._emerGps.lng, acc:0, src:window._emerGps.src};
+    console.log('[emerSave] 기존 배송지 GPS 사용:', window._emerGps.src);
+  } else if(addr){
+    // GPS 없거나 device GPS인 경우에만 geocoding 시도 (1.5초 타임아웃)
     var apiKey2 = window._cachedGoogleApiKey || localStorage.getItem('mbti_google_api_key') || '';
     if(apiKey2){
       try{
         var gcCtrl = new AbortController();
-        var gcTimer = setTimeout(function(){ gcCtrl.abort(); }, 3000); // 3초 타임아웃
+        var gcTimer = setTimeout(function(){ gcCtrl.abort(); }, 1500);
         var gcRes2 = await fetch(
           'https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr)+'&language=ko&region=kr&key='+apiKey2,
           { signal: gcCtrl.signal }
@@ -21872,10 +21853,9 @@ async function emerSave(){
           var loc2 = gcData2.results[0].geometry.location;
           if(typeof loc2.lat==='number' && typeof loc2.lng==='number'){
             gpsClean = { lat: loc2.lat, lng: loc2.lng, acc: 0, src: 'geocode' };
-            console.log('[emerSave] Geocoding 성공 → 배송지 좌표 사용');
           }
         }
-      }catch(e){ console.warn('[emerSave] Geocoding 실패(타임아웃 또는 오류):', e.message||e); }
+      }catch(e){ console.warn('[emerSave] Geocoding 폴백 실패:', e.message||e); }
     }
   }
 
