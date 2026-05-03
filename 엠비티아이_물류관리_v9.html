@@ -109,6 +109,8 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
 @keyframes slideUp{from{opacity:0;transform:translate(-50%,30px)}to{opacity:1;transform:translate(-50%,0)}}
 @keyframes scanLine{0%{top:90px;opacity:1}50%{top:190px;opacity:1}100%{top:90px;opacity:1}}
+@keyframes qrPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.97)}}
+@keyframes qrCorner{0%,100%{border-color:#22c55e}50%{border-color:#4ade80}}
 @keyframes notiPop{0%{transform:scale(.95);opacity:.7}60%{transform:scale(1.02)}100%{transform:scale(1);opacity:1}}
 .doc-slot input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;z-index:2}
 .doc-slot-lbl{position:absolute;bottom:0;left:0;right:0;text-align:center;font-size:9px;font-weight:700;color:#fff;background:rgba(0,0,0,.6);padding:3px 0}
@@ -10504,24 +10506,28 @@ function openEmergencyDelivery(){
       </div>
 
       <!-- 실시간 스캐너 모달 -->
-      <div id="emer-scan-mo" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:900;flex-direction:column;align-items:center;justify-content:center">
-        <div style="color:#fff;font-size:14px;font-weight:700;margin-bottom:12px">📷 QR 코드에 카메라를 갖다 대세요<br><span style="font-size:11px;font-weight:400;color:rgba(255,255,255,.7)">송장 오른쪽 위 작은 정사각형 QR</span></div>
-        <div style="position:relative;width:300px;height:300px;border-radius:12px;overflow:hidden;background:#000">
+      <div id="emer-scan-mo" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:900;flex-direction:column;align-items:center;justify-content:center">
+        <div style="color:#fff;font-size:15px;font-weight:800;margin-bottom:6px;letter-spacing:-.3px">📷 QR 코드 스캔</div>
+        <div style="color:rgba(255,255,255,.6);font-size:11px;margin-bottom:16px;text-align:center">송장 오른쪽 위 <b style="color:#4ade80">정사각형 QR</b>을 네모 안에 맞춰주세요</div>
+        <!-- 카메라 뷰 + QR 가이드 -->
+        <div style="position:relative;width:280px;height:280px;border-radius:16px;overflow:hidden;background:#111">
           <video id="emer-scan-video" style="width:100%;height:100%;object-fit:cover" playsinline muted autoplay></video>
-          <!-- 스캔 가이드 박스 -->
-          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
-            <div style="width:200px;height:120px;border:2.5px solid #22c55e;border-radius:8px;box-shadow:0 0 0 9999px rgba(0,0,0,.45)">
-              <div style="position:absolute;top:-2px;left:-2px;width:20px;height:20px;border-top:4px solid #22c55e;border-left:4px solid #22c55e;border-radius:2px 0 0 0"></div>
-              <div style="position:absolute;top:-2px;right:-2px;width:20px;height:20px;border-top:4px solid #22c55e;border-right:4px solid #22c55e;border-radius:0 2px 0 0"></div>
-              <div style="position:absolute;bottom:-2px;left:-2px;width:20px;height:20px;border-bottom:4px solid #22c55e;border-left:4px solid #22c55e;border-radius:0 0 0 2px"></div>
-              <div style="position:absolute;bottom:-2px;right:-2px;width:20px;height:20px;border-bottom:4px solid #22c55e;border-right:4px solid #22c55e;border-radius:0 0 2px 0"></div>
+          <!-- 어두운 오버레이 (가이드박스 바깥) -->
+          <div style="position:absolute;inset:0;pointer-events:none">
+            <!-- 가이드 박스 (정사각형 QR용) -->
+            <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:190px;height:190px;animation:qrPulse 2s ease-in-out infinite">
+              <!-- 코너 마커 4개 -->
+              <div style="position:absolute;top:0;left:0;width:28px;height:28px;border-top:4px solid #22c55e;border-left:4px solid #22c55e;border-radius:3px 0 0 0;animation:qrCorner 2s ease-in-out infinite"></div>
+              <div style="position:absolute;top:0;right:0;width:28px;height:28px;border-top:4px solid #22c55e;border-right:4px solid #22c55e;border-radius:0 3px 0 0;animation:qrCorner 2s ease-in-out infinite .3s"></div>
+              <div style="position:absolute;bottom:0;left:0;width:28px;height:28px;border-bottom:4px solid #22c55e;border-left:4px solid #22c55e;border-radius:0 0 0 3px;animation:qrCorner 2s ease-in-out infinite .6s"></div>
+              <div style="position:absolute;bottom:0;right:0;width:28px;height:28px;border-bottom:4px solid #22c55e;border-right:4px solid #22c55e;border-radius:0 0 3px 0;animation:qrCorner 2s ease-in-out infinite .9s"></div>
+              <!-- 중앙 점 -->
+              <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:8px;height:8px;border-radius:50%;background:#22c55e;opacity:.7"></div>
             </div>
           </div>
-          <!-- 스캔 라인 애니메이션 -->
-          <div id="emer-scan-line" style="position:absolute;left:50px;right:50px;height:2px;background:linear-gradient(90deg,transparent,#22c55e,transparent);top:90px;animation:scanLine 1.8s ease-in-out infinite"></div>
         </div>
-        <div id="emer-scan-status" style="color:#aaa;font-size:12px;margin-top:12px">인식 중...</div>
-        <button onclick="emerStopScan()" style="margin-top:16px;padding:11px 32px;background:#ef4444;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">✕ 닫기</button>
+        <div id="emer-scan-status" style="color:#aaa;font-size:12px;margin-top:14px;min-height:18px;text-align:center">카메라 준비 중...</div>
+        <button onclick="emerStopScan()" style="margin-top:14px;padding:11px 36px;background:#ef4444;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">✕ 닫기</button>
       </div>
 
       <!-- ★ OCR 자동입력 버튼 (QR 훼손 시 대체) -->
@@ -10816,12 +10822,14 @@ async function emerOcrScan(file){
       if(startIdx < 0) return '';
 
       // 첫 주소 라인부터 쓰레기 건너뛰며 유효 주소 라인 수집 (최대 5줄 탐색)
-      // 첫 주소 줄에서 번지 뒤 잡텍스트 제거 (수열/년/월/일/인수자/영어 등)
+      // 첫 주소 줄에서 번지 뒤 잡텍스트 제거
       var _firstAddr = lines[startIdx];
-      // 번지 숫자(도로명+숫자) 이후 한글 잡텍스트 제거
-      // 예: "사상구 모라로110번길 121 수열 년 월 일" → "사상구 모라로110번길 121"
-      var _addrClean = _firstAddr.match(/^(.+?(?:로|길|번길|번지)\s*\d+(?:-\d+)?)(?:\s+[가-힣]{1,4}(?:\s+[가-힣]{1,4})*)?$/);
-      if(_addrClean) _firstAddr = _addrClean[1].trim();
+      // ① 번지 숫자 바로 뒤 한글 제거 (예: 1214장 → 1214, 121수열 → 121)
+      _firstAddr = _firstAddr.replace(/(번길|번지|로|길)\s*(\d+)[가-힣]{1,3}(\s|$)/g, '$1 $2$3');
+      // ② 번지 뒤 공백+한글 잡텍스트 제거 (수열/년/월/일 등)
+      //    패턴: 로/길/번길 + 숫자 이후 나오는 한글 단어열
+      _firstAddr = _firstAddr.replace(/((?:로|길|번길)\s*\d+(?:-\d+)?)\s+[가-힣].*/g, '$1').trim();
+      // ③ 인수자/서명/영어 제거
       _firstAddr = _firstAddr.replace(/\s+(인수자|서명|coupa[^\s]*).*$/i, '').trim();
       var addrParts = [_firstAddr];
       var done = _firstAddr.match(/\d+호|\d{3,4}-\d+/); // 이미 호수 있으면 종료
