@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.37</title>
+<title>엠비티아이 물류관리 v9.38</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10421,7 +10421,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.37 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.38 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -11400,7 +11400,7 @@ function updFbUI(){
   var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.33 · 🔥 실시간':'v9.25 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.37 · Firebase 실시간':'v9.37 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.38 · Firebase 실시간':'v9.38 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -20718,24 +20718,18 @@ async function emerOcrScan(file){
         var cx = cv.getContext('2d');
         cx.drawImage(img, 0, 0, w, h);
 
-        // ★ v9.37: ① BarcodeDetector — 폰 카메라와 동일한 하드웨어 QR 디코더
-        //   Android Chrome 지원, iOS Safari 미지원(jsQR 폴백)
+        // ★ v9.38: ① BarcodeDetector — 파일에서 직접 ImageBitmap 생성 (가장 정확)
         if('BarcodeDetector' in window){
           try{
             var bd = new BarcodeDetector({formats:['qr_code','aztec','data_matrix','code_128','pdf417']});
-            var bdCodes = await bd.detect(cv);
+            // 원본 파일로 직접 ImageBitmap 생성 (canvas 경유 없이 = 품질 손실 없음)
+            var bmp = await createImageBitmap(file);
+            var bdCodes = await bd.detect(bmp);
+            bmp.close && bmp.close();
             if(bdCodes && bdCodes.length > 0 && bdCodes[0].rawValue){
               resolve(bdCodes[0].rawValue); return;
             }
-            // 우측 절반도 시도 (쿠팡 QR 위치)
-            var cvBd2 = document.createElement('canvas');
-            cvBd2.width = Math.round(w/2); cvBd2.height = h;
-            cvBd2.getContext('2d').drawImage(img, Math.round(img.width/2), 0, Math.round(img.width/2), img.height, 0, 0, Math.round(w/2), h);
-            var bdCodes2 = await bd.detect(cvBd2);
-            if(bdCodes2 && bdCodes2.length > 0 && bdCodes2[0].rawValue){
-              resolve(bdCodes2[0].rawValue); return;
-            }
-          }catch(e){ console.warn('[BarcodeDetector]', e); }
+          }catch(e){ console.warn('[BarcodeDetector 파일직접]', e.message||e); }
         }
 
         // ② jsQR — 원본 픽셀 (iOS Safari 폴백)
