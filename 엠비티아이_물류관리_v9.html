@@ -21849,7 +21849,8 @@ function _emerHandleScan(raw, statusEl){
       var n=new Date();
       window._emerTrackingTimes[trackToAdd]=n.getHours()+':'+String(n.getMinutes()).padStart(2,'0')+':'+String(n.getSeconds()).padStart(2,'0');
       emerRefreshTrackingList();
-      window._emerEntryMode='barcode';
+      // ★ QR(주소/GPS 포함)이면 entryMode 덮어쓰지 않음
+      if(!qp.address && !qp.lat) window._emerEntryMode='barcode';
     }
   }
 
@@ -21890,8 +21891,8 @@ function _emerHandleScan(raw, statusEl){
     }
   }
 
-  // ★ v9.58: QR 인식 후 자동저장
-  if(qp.tracking_no && (qp.address || qp.lat)){
+  // ★ v9.58: QR/바코드 인식 후 자동저장 — 운송장만 있어도 저장
+  if(qp.tracking_no || (window._emerTrackings && window._emerTrackings.length > 0)){
     var _scanMo = document.getElementById('emer-scan-mo');
     if(_scanMo){ _scanMo.style.display='none'; emerStopScan&&emerStopScan(); }
     if(statusEl) statusEl.innerHTML = '<span style="color:var(--teal)">📸 스캔 ✅ → 💾 저장 중...</span>';
