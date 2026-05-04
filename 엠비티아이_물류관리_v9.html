@@ -20590,8 +20590,15 @@ function openEmergencyDelivery(){
   window._emerGps = null;
   window._emerAutoData = {};
   window._emerEntryMode = null;
-  // ★ v9.51: 폼 열리자마자 클립보드 자동 감지 (폰 카메라 스캔 후 복사만 하면 자동입력)
+  // ★ v9.51: 폼 열리자마자 클립보드 자동 감지
   setTimeout(_emerAutoClipboard, 400);
+  // ★ v9.61: 카운터 현재값 표시 (폼 재오픈 시에도 누적 유지)
+  setTimeout(function(){
+    var cs=document.getElementById('emer-cnt-scan');
+    var cv=document.getElementById('emer-cnt-save');
+    if(cs) cs.textContent = window._emerScanCount||0;
+    if(cv) cv.textContent = window._emerSaveCount||0;
+  }, 50);
 
   document.body.insertAdjacentHTML('beforeend',`
   <div id="emer-del-mo" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:700;display:flex;align-items:flex-end;justify-content:center" onclick="if(event.target===this)this.remove()">
@@ -20926,51 +20933,9 @@ async function emerOcrScan(file){
     });
 
     if(qrResult){
-      // QR 해독 성공 — _emerHandleScan으로 처리 (운송장/주소/GPS 자동입력)
-      var qparsed = _parseQrText(qrResult);
-      var filled = [];
-      if(qparsed.tracking_no){
-        window._emerTrackings = window._emerTrackings||[];
-        if(window._emerTrackings.indexOf(qparsed.tracking_no)<0){
-          window._emerTrackings.push(qparsed.tracking_no);
-          emerRefreshTrackingList&&emerRefreshTrackingList();
-          filled.push('운송장 '+qparsed.tracking_no);
-        }
-      }
-      if(qparsed.address){ var ae=document.getElementById('emer-addr'); if(ae&&!ae.value){ae.value=qparsed.address; filled.push('주소');} }
-      if(qparsed.recipient){ var re=document.getElementById('emer-recipient'); if(re&&!re.value){re.value=qparsed.recipient; filled.push('수령인');} }
-      if(qparsed.order_id){ var oe=document.getElementById('emer-orderid'); if(oe&&!oe.value){oe.value=qparsed.order_id; filled.push('주문번호');} }
-      if(qparsed.memo){ var me=document.getElementById('emer-delivmemo'); if(me&&!me.value) me.value=qparsed.memo; }
-
-      // GPS 처리 (QR에 좌표 있으면 직접, 없으면 주소로 Geocoding)
-      if(qparsed.lat && qparsed.lng){
-        window._emerGps={lat:qparsed.lat,lng:qparsed.lng,src:'QR'};
-        filled.push('GPS');
-      } else if(qparsed.address){
-        // Geocoding은 아래 기존 로직과 동일하게 동작
-        var _gcKey = window._cachedGoogleApiKey || localStorage.getItem('mbti_google_api_key') || '';
-        if(_gcKey){
-          var _gAddr = qparsed.address;
-          fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(_gAddr)+'&language=ko&region=kr&key='+_gcKey)
-            .then(function(r){return r.json();})
-            .then(function(d){
-              if(d.status==='OK'&&d.results&&d.results[0]){
-                var lc=d.results[0].geometry.location;
-                if(typeof lc.lat==='number'&&typeof lc.lng==='number'){
-                  window._emerGps={lat:lc.lat,lng:lc.lng,src:'geocode',addr:_gAddr};
-                  var gEl=document.getElementById('emer-gps-status');
-                  if(gEl) gEl.innerHTML='<span style="color:var(--teal)">📍 배송지 GPS 변환 완료 ✅</span>';
-                }
-              }
-            }).catch(function(){});
-        }
-      }
-
-      window._emerEntryMode = 'barcode';
-      var sumEl = document.getElementById('emer-ocr-summary');
-      if(sumEl){ sumEl.style.display='block'; sumEl.innerHTML='<b>📷 QR 인식 성공!</b><br>'+(qparsed.tracking_no?'📦 운송장: '+qparsed.tracking_no+'<br>':'')+(qparsed.address?'📍 주소: '+qparsed.address+'<br>':'')+(qparsed.recipient?'👤 수령인: '+qparsed.recipient+'<br>':''); }
-      if(status) status.innerHTML='<span style="color:var(--teal)">✅ QR 인식 완료: '+filled.join(' / ')+'</span>';
-      return; // OCR 불필요 — 종료
+      // ★ v9.61: _emerHandleScan에 위임 — TTS/자동저장/카운터 모두 처리
+      _emerHandleScan(qrResult, status);
+      return;
     }
   }catch(e){ console.warn('[QR decode]', e); }
 
@@ -21136,11 +21101,14 @@ async function emerOcrScan(file){
                       || d.responses?.[1]?.textAnnotations?.[0]?.description
                       || d.responses?.[0]?.fullTextAnnotation?.text
                       || d.responses?.[0]?.textAnnotations?.[0]?.description || '';
+          // 주문번호: '주문번호' 키워드 줄 OR 27로 시작 14자리
           var _oLine = _ocrRaw.split('\n').find(function(l){ return l.indexOf('주문번호') >= 0; });
+          if(!_oLine) _oLine = _ocrRaw.split('\n').find(function(l){ return /27[\d\.\,]{10,}/.test(l); });
           if(_oLine){
             var _oNum = _oLine.replace(/[^\d]/g,'');
             if(_oNum.length >= 10){
               _qpDirect.order_id = _oNum;
+              window._pendingOrderId = _oNum; // ★ emerSave에서 꽂을 예비값
               var _oel = document.getElementById('emer-orderid'); if(_oel) _oel.value = _oNum;
             }
           }
@@ -21312,7 +21280,7 @@ async function emerOcrScan(file){
     };
 
     // 자동 입력 — hidden 필드에 저장 (지도 핀용)
-    if(p.order_id)     { var oi=document.getElementById('emer-orderid');   if(oi) oi.value=p.order_id; }
+    if(p.order_id){ var oi=document.getElementById('emer-orderid'); if(oi) oi.value=p.order_id; window._pendingOrderId=p.order_id; }
     if(p.recipient)    { var re=document.getElementById('emer-recipient'); if(re) re.value=p.recipient; }
     if(p.address)      { var ad=document.getElementById('emer-addr');      if(ad) ad.value=p.address; }
     if(p.delivery_memo){ var dm=document.getElementById('emer-delivmemo'); if(dm) dm.value=p.delivery_memo; }
@@ -22456,6 +22424,7 @@ async function emerSave(){
   // ★ v9.25: 사진 필수 조건 제거 (배송완료 사진은 지도 핀에서 처리)
 
   var orderId   = (document.getElementById('emer-orderid')?.value||'').trim();
+  if(!orderId && window._pendingOrderId) orderId = window._pendingOrderId; // ★ OCR 경로 보완
   var recipient = (document.getElementById('emer-recipient')?.value||'').trim();
   var addr      = (document.getElementById('emer-addr')?.value||'').trim();
   var delivMemo = (document.getElementById('emer-delivmemo')?.value||'').trim();
@@ -22707,6 +22676,7 @@ async function emerSave(){
   if(alertBtn) alertBtn.style.display='block';
 
   window._emerSaving = false;
+  window._pendingOrderId = null; // 초기화
   // ★ v9.60: 저장 완료음 — 스캔음(높은음)과 다른 낮은음 두 번
   try{
     var _ac2 = new (window.AudioContext||window.webkitAudioContext)();
