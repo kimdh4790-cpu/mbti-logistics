@@ -21111,43 +21111,38 @@ async function emerOcrScan(file){
           if(a){var ad=document.getElementById('emer-addr');if(ad)ad.value=a.value;}
         };
         window._emerOcrApply();
-        if(status) status.innerHTML='<span style="color:#7c3aed">✅ QR 코드 직접 인식 완료</span>';
-        // 이미지도 배송사진으로 추가
+        window._emerEntryMode = 'ocr';
         var _reader2=new FileReader(); _reader2.onload=function(e){window._emerPhotos.push(e.target.result);emerRefreshPhotoWrap();}; _reader2.readAsDataURL(file);
-        window._emerEntryMode='ocr';
-        // ★ v9.59: 운송장+주소 있으면 자동저장 (GPS 없어도)
-        if(_qpDirect.tracking_no && (_qpDirect.address || _qpDirect.lat)){
-          var _toast2 = document.createElement('div');
-          _toast2.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(5,150,105,.95);color:#fff;padding:18px 28px;border-radius:14px;font-size:15px;font-weight:800;z-index:9999;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.3)';
-          _toast2.innerHTML = '✅ QR 인식 완료<br><span style="font-size:12px;opacity:.85;font-weight:500">' + (_qpDirect.tracking_no||'') + '<br>' + (_qpDirect.address||'').slice(0,20) + '</span><br><span style="font-size:11px;opacity:.7">자동 저장 중...</span>';
-          document.body.appendChild(_toast2);
-          setTimeout(function(){
-            _toast2.style.transition='opacity .4s'; _toast2.style.opacity='0';
-            setTimeout(function(){ _toast2.remove(); }, 400);
-            if(typeof emerSave === 'function') emerSave();
-          }, 800);
-          return;
+
+        // ① GPS 설정
+        if(_qpDirect.lat && _qpDirect.lng){
+          window._emerGps = {lat:_qpDirect.lat, lng:_qpDirect.lng, src:'QR'};
         }
-        // GPS 없으면 핀만 생성 (수동 저장 필요)
-        if(_qpDirect.lat&&_qpDirect.lng&&window._activeDriverMapAddPin){
-          var _pr={fbId:'_preview_'+Date.now(),driver:S.curDriver||'',trackings:window._emerTrackings.slice(),tracking:window._emerTrackings[0]||'',order_id:_qpDirect.order_id||'',recipient:_qpDirect.recipient||'',addr:_qpDirect.address||'',gps:{lat:_qpDirect.lat,lng:_qpDirect.lng},time:new Date().toTimeString().slice(0,5),status:'저장대기'};
-          window._activeDriverMapAddPin(_pr);
-          window._activeDriverMap&&window._activeDriverMap.panTo({lat:_qpDirect.lat,lng:_qpDirect.lng});
-        }
-        // ★ v9.60: QR에 없는 주문번호를 OCR 텍스트에서 추가 추출
+
+        // ② 주문번호 — OCR 텍스트에서 보완
         if(!_qpDirect.order_id){
-          var _ocrForOrder = d.responses?.[1]?.fullTextAnnotation?.text || d.responses?.[0]?.fullTextAnnotation?.text || '';
-          var _orderLine = _ocrForOrder.split('\n').find(function(l){ return l.indexOf('주문번호')>=0; });
-          if(_orderLine){
-            var _od = _orderLine.replace(/[^\d]/g,'');
-            if(_od.length >= 10){
-              _qpDirect.order_id = _od;
-              var _oi2 = document.getElementById('emer-orderid'); if(_oi2) _oi2.value = _od;
-              var _oe2 = document.getElementById('ocr-edit-order'); if(_oe2) _oe2.value = _od;
+          var _ocrRaw = (d.responses?.[1]?.fullTextAnnotation?.text || d.responses?.[0]?.fullTextAnnotation?.text || '');
+          var _oLine = _ocrRaw.split('\n').find(function(l){ return l.indexOf('주문번호') >= 0; });
+          if(_oLine){
+            var _oNum = _oLine.replace(/[^\d]/g,'');
+            if(_oNum.length >= 10){
+              _qpDirect.order_id = _oNum;
+              var _oel = document.getElementById('emer-orderid'); if(_oel) _oel.value = _oNum;
             }
           }
         }
-        return; // QR 인식 성공 → OCR 파싱 불필요
+
+        // ③ 상태 표시 + 자동저장
+        if(status) status.innerHTML = '<span style="color:var(--teal)">📸 스캔 ✅ &nbsp;→&nbsp; 💾 저장 중...</span>';
+        window._emerSaving = false; // 락 초기화
+        setTimeout(function(){
+          if(typeof emerSave === 'function'){
+            emerSave().then(function(){
+              // emerSave 내부에서 toast + 폼 닫힘 처리됨
+            }).catch(function(e){ console.warn('[자동저장 실패]', e); });
+          }
+        }, 600);
+        return;
       }
     }
 
@@ -21955,6 +21950,7 @@ function _emerHandleScan(raw, statusEl){
 
   if(statusEl) statusEl.textContent = '✅ 인식: ' + raw.slice(0,40);
   try{ navigator.vibrate && navigator.vibrate([60,30,120]); }catch(e){}
+  _tts('스캔');
   // ★ v9.25: 비프음 (Web Audio API)
   try{
     var _ac = new (window.AudioContext||window.webkitAudioContext)();
@@ -22034,25 +22030,14 @@ function _emerHandleScan(raw, statusEl){
     }
   }
 
-  // ★ v9.58: QR 인식 후 자동저장 — 운송장+주소 있으면 즉시 (GPS 없어도)
+  // ★ v9.58: QR 인식 후 자동저장
   if(qp.tracking_no && (qp.address || qp.lat)){
-    var _autoSaveDelay = 800; // 화면에 결과 잠깐 보여주고 저장
-    // 스캔 모달 닫기
     var _scanMo = document.getElementById('emer-scan-mo');
-    if(_scanMo) { _scanMo.style.display='none'; emerStopScan&&emerStopScan(); }
-    // 자동저장 알림 토스트
-    var _toast = document.createElement('div');
-    _toast.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(5,150,105,.95);color:#fff;padding:18px 28px;border-radius:14px;font-size:15px;font-weight:800;z-index:9999;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.3)';
-    _toast.innerHTML = '✅ QR 인식 완료<br><span style="font-size:12px;opacity:.85;font-weight:500">' + (qp.tracking_no||'') + '<br>' + (qp.address||'').slice(0,20) + '</span><br><span style="font-size:11px;opacity:.7">자동 저장 중...</span>';
-    document.body.appendChild(_toast);
-    setTimeout(function(){
-      _toast.style.transition='opacity .4s';
-      _toast.style.opacity='0';
-      setTimeout(function(){ _toast.remove(); }, 400);
-      // 자동저장 실행
-      if(typeof emerSave === 'function') emerSave();
-    }, _autoSaveDelay);
-    return; // 아래 묶음 감지 등 불필요
+    if(_scanMo){ _scanMo.style.display='none'; emerStopScan&&emerStopScan(); }
+    if(statusEl) statusEl.innerHTML = '<span style="color:var(--teal)">📸 스캔 ✅ → 💾 저장 중...</span>';
+    window._emerSaving = false;
+    setTimeout(function(){ if(typeof emerSave==='function') emerSave(); }, 600);
+    return;
   }
 
   // 묶음 감지
@@ -22399,6 +22384,20 @@ function zxingStop(){
 }
 
 // 저장 실행
+// ★ v9.61: TTS 음성 안내
+function _tts(text){
+  try{
+    if(!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance(text);
+    u.lang = 'ko-KR';
+    u.rate = 1.1;
+    u.pitch = 1.0;
+    u.volume = 1.0;
+    window.speechSynthesis.speak(u);
+  }catch(e){}
+}
+
 async function emerSave(){
   // ★ v9.25: 저장 중 연타 방지
   if(window._emerSaving){ toast('⏳ 저장 중입니다...'); return; }
@@ -22665,6 +22664,20 @@ async function emerSave(){
   if(alertBtn) alertBtn.style.display='block';
 
   window._emerSaving = false;
+  // ★ v9.60: 저장 완료음 — 스캔음(높은음)과 다른 낮은음 두 번
+  try{
+    var _ac2 = new (window.AudioContext||window.webkitAudioContext)();
+    [0, 0.18].forEach(function(t){
+      var o=_ac2.createOscillator(), g=_ac2.createGain();
+      o.connect(g); g.connect(_ac2.destination);
+      o.type='sine'; o.frequency.value=880;
+      g.gain.setValueAtTime(0.22, _ac2.currentTime+t);
+      g.gain.exponentialRampToValueAtTime(0.001, _ac2.currentTime+t+0.15);
+      o.start(_ac2.currentTime+t); o.stop(_ac2.currentTime+t+0.15);
+    });
+    setTimeout(function(){ try{_ac2.close();}catch(e){} }, 600);
+    navigator.vibrate&&navigator.vibrate([40,30,40]); _tts('저장');
+  }catch(e){}
   toast('✅ 저장 완료 — 지도에 배송핀 생성됨');
 }
 
