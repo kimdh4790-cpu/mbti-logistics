@@ -21292,7 +21292,27 @@ function emerUnifiedScan(input){
   if(!input.files || !input.files[0]) return;
   var file = input.files[0];
   input.value = '';
-  if(statusEl) statusEl.innerHTML = '🔍 QR 분석 중...';
+  if(statusEl) statusEl.innerHTML = '🔍 분석 중...';
+
+  // OCR 폴백 — emer-ocr-status를 숨겨둔 채로 OCR 직접 호출
+  // emerOcrScan 내부에서 emer-ocr-status 엘리먼트를 찾으므로
+  // 통합 상태창을 임시로 emer-ocr-status로 연결
+  function fallbackOCR(){
+    if(statusEl) statusEl.innerHTML = '🔍 OCR 분석 중...';
+    var hiddenOcr = document.getElementById('emer-ocr-status');
+    var origId = statusEl ? statusEl.id : null;
+    if(statusEl && origId) statusEl.id = 'emer-ocr-status';
+    if(hiddenOcr) hiddenOcr.id = 'emer-ocr-status-hidden';
+    // OCR 완료 후 id 복원
+    var _restore = function(){
+      var el = document.getElementById('emer-ocr-status');
+      if(el && origId) el.id = origId;
+      var h = document.getElementById('emer-ocr-status-hidden');
+      if(h) h.id = 'emer-ocr-status';
+    };
+    setTimeout(_restore, 8000); // 최대 8초 후 복원
+    emerOcrScan(file);
+  }
 
   var url = URL.createObjectURL(file);
   var img = new Image();
@@ -21303,31 +21323,26 @@ function emerUnifiedScan(input){
     var cv=document.createElement('canvas'); cv.width=cw; cv.height=ch;
     cv.getContext('2d').drawImage(img,0,0,cw,ch);
 
-    function fallbackOCR(){
-      // emer-unified-status → emer-ocr-status로 id 교체해서 OCR 결과 표시
-      var unifiedSt = document.getElementById('emer-unified-status');
-      if(unifiedSt) unifiedSt.id = 'emer-ocr-status';
-      emerOcrScan(file);
-    }
-
-    // ① BarcodeDetector — QR 전용
+    // ① BarcodeDetector — QR 전용 (code_128 바코드 제외)
     if('BarcodeDetector' in window){
-      var bd; try{bd=new BarcodeDetector({formats:['qr_code','data_matrix','aztec']});}catch(e){try{bd=new BarcodeDetector({formats:['qr_code']});}catch(e2){}}
-      if(bd){ bd.detect(cv).then(function(codes){
-        if(codes&&codes.length&&codes[0].rawValue){
-          var raw = codes[0].rawValue;
-          // V1| QR 포맷이 아니면 OCR로 (바코드 오감지 방지)
-          if(raw.indexOf('V1|')===0 || raw.indexOf('V1\t')===0){
-            if(statusEl) statusEl.textContent='✅ QR 인식!';
-            _emerHandleScan(raw, statusEl);
-          } else {
-            fallbackOCR();
-          }
-        } else { fallbackOCR(); }
-      }).catch(function(){ fallbackOCR(); }); return; }
+      var bd;
+      try{bd=new BarcodeDetector({formats:['qr_code','data_matrix','aztec']});}
+      catch(e){try{bd=new BarcodeDetector({formats:['qr_code']});}catch(e2){}}
+      if(bd){
+        bd.detect(cv).then(function(codes){
+          if(codes&&codes.length&&codes[0].rawValue){
+            var raw=codes[0].rawValue;
+            if(raw.indexOf('V1|')===0){
+              if(statusEl) statusEl.textContent='✅ QR 인식!';
+              _emerHandleScan(raw, statusEl);
+            } else { fallbackOCR(); }
+          } else { fallbackOCR(); }
+        }).catch(function(){ fallbackOCR(); });
+        return;
+      }
     }
-    // ② jsQR 폴백
-    _nativeCamJsQR(cv,cw,ch,statusEl,fallbackOCR);
+    // ② jsQR → 실패 시 OCR
+    _nativeCamJsQR(cv, cw, ch, statusEl, fallbackOCR);
   };
   img.onerror = function(){ URL.revokeObjectURL(url); if(statusEl) statusEl.textContent='❌ 이미지 로드 실패'; };
   img.src = url;
@@ -21796,8 +21811,7 @@ function _emerHandleScan(raw, statusEl){
 
   if(statusEl) statusEl.textContent = '✅ 인식: ' + raw.slice(0,40);
   try{ navigator.vibrate && navigator.vibrate([60,30,120]); }catch(e){}
-  _tts('스캔');
-  // ★ v9.25: 비프음 (Web Audio API)
+  _tts('스캔'); _emerIncScan();
   try{
     var _ac = new (window.AudioContext||window.webkitAudioContext)();
     var _osc = _ac.createOscillator();
