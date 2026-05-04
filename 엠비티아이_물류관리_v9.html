@@ -20623,40 +20623,23 @@ function openEmergencyDelivery(){
         </div>
       </div>
 
-      <!-- 폰 카메라 QR 촬영 (네이티브) -->
-      <input type="file" id="emer-native-cam" accept="image/*" capture="environment" style="display:none" onchange="emerNativeCamQR(this)">
-      <div style="margin-bottom:8px">
-        <button onclick="document.getElementById('emer-native-cam').click()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#0ea5e9,#0284c7);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:900;cursor:pointer">
-          <span style="font-size:20px">📸</span> 폰 카메라로 QR 촬영
-        </button>
-        <div id="emer-native-status" style="font-size:11px;color:var(--teal);text-align:center;margin-top:4px;min-height:15px"></div>
-      </div>
-      <!-- 웹 라이브 스캔 -->
+      <!-- ★ v9.61: 통합 송장 촬영 버튼 -->
+      <input type="file" id="emer-unified-cam" accept="image/*" capture="environment" style="display:none" onchange="emerUnifiedScan(this)">
       <div style="margin-bottom:10px">
-        <button onclick="emerStartScan()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px;background:rgba(124,58,237,.15);color:var(--purple);border:1.5px solid var(--purple);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">
-          <span style="font-size:16px">📷</span> 웹 라이브 스캔
+        <button onclick="document.getElementById('emer-unified-cam').click()" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:18px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;border-radius:12px;font-size:17px;font-weight:900;cursor:pointer;box-shadow:0 3px 12px rgba(124,58,237,.4)">
+          <span style="font-size:24px">📸</span> 송장 촬영
         </button>
-        <div id="emer-barcode-status" style="font-size:11px;color:var(--text3);text-align:center;margin-top:5px;min-height:16px">QR 코드에 <b>바짝</b> 가까이 대면 자동 인식 📦</div>
+        <div id="emer-unified-status" style="font-size:12px;color:var(--teal);text-align:center;margin-top:6px;min-height:16px"></div>
       </div>
-
-      <!-- 실시간 스캐너 모달 -->
-      <div id="emer-scan-mo" style="display:none;position:fixed;inset:0;background:#000;z-index:900;flex-direction:column;align-items:stretch;justify-content:stretch">
-        <!-- 카메라 전체화면 -->
-        <video id="emer-scan-video" style="width:100%;height:100%;object-fit:contain;position:absolute;inset:0;background:#000" playsinline muted autoplay></video>
-        <!-- 상단 상태바 -->
-        <div style="position:absolute;top:0;left:0;right:0;padding:env(safe-area-inset-top,16px) 16px 12px;background:linear-gradient(to bottom,rgba(0,0,0,.6),transparent);display:flex;align-items:center;justify-content:space-between;z-index:10">
-          <div style="color:#fff;font-size:13px;font-weight:700">📷 바코드 / QR 스캔</div>
-          <button onclick="emerStopScan()" style="background:rgba(255,255,255,.2);border:none;color:#fff;font-size:18px;width:34px;height:34px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)">✕</button>
-        </div>
-        <!-- 하단 상태 -->
-        <div style="position:absolute;bottom:0;left:0;right:0;padding:16px 16px calc(env(safe-area-inset-bottom,0px) + 24px);background:linear-gradient(to top,rgba(0,0,0,.7),transparent);z-index:10;text-align:center">
-          <div id="emer-scan-status" style="color:#fff;font-size:13px;min-height:18px">카메라 준비 중...</div>
-        </div>
+      <!-- 라이브 스캔 (보조) -->
+      <div style="margin-bottom:10px">
+        <button onclick="emerStartScan()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:10px;background:var(--bg3);color:var(--text2);border:1.5px solid var(--border);border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">
+          <span style="font-size:14px">🎥</span> 라이브 스캔
+        </button>
+        <div id="emer-barcode-status" style="font-size:11px;color:var(--text3);text-align:center;margin-top:3px;min-height:14px"></div>
       </div>
-
-      <!-- ★ v9.25: QR 붙여넣기 (1순위) + OCR 사진 (폴백) -->
-
-      
+      <div id="emer-native-status" style="display:none"></div>
+      <div id="emer-ocr-status" style="display:none"></div>
   `);
   setTimeout(function(){ var el=document.getElementById('qr-paste-inp'); if(el) el.focus(); }, 100);
 }
@@ -21302,6 +21285,50 @@ var _emerScanReader = null;
 
 // ★ v9.51: 클립보드 자동 감지 — 폰 카메라로 QR 스캔 후 복사만 하면 자동입력
 
+// ★ v9.61: 통합 송장 촬영 — QR 먼저, 실패 시 OCR 자동
+function emerUnifiedScan(input){
+  var statusEl = document.getElementById('emer-unified-status');
+  if(!input.files || !input.files[0]) return;
+  var file = input.files[0];
+  input.value = '';
+  if(statusEl) statusEl.innerHTML = '🔍 QR 분석 중...';
+
+  var url = URL.createObjectURL(file);
+  var img = new Image();
+  img.onload = function(){
+    URL.revokeObjectURL(url);
+    var scale = Math.min(1, 2000/Math.max(img.naturalWidth, img.naturalHeight));
+    var cw=Math.round(img.naturalWidth*scale), ch=Math.round(img.naturalHeight*scale);
+    var cv=document.createElement('canvas'); cv.width=cw; cv.height=ch;
+    cv.getContext('2d').drawImage(img,0,0,cw,ch);
+
+    function fallbackOCR(){
+      if(statusEl) statusEl.innerHTML = '🔍 QR 미감지 → OCR 분석 중...';
+      // emer-ocr-status를 unified-status로 임시 교체 (OCR 결과가 통합 상태창에 표시)
+      var ocrSt = document.getElementById('emer-ocr-status');
+      if(ocrSt && statusEl){ ocrSt.style.display='none'; }
+      // emerOcrScan 내부에서 emer-ocr-status를 찾으므로 unified로 id 교체
+      if(statusEl) statusEl.id = 'emer-ocr-status';
+      emerOcrScan(file);
+    }
+
+    // ① BarcodeDetector
+    if('BarcodeDetector' in window){
+      var bd; try{bd=new BarcodeDetector({formats:['qr_code','data_matrix','aztec','code_128']});}catch(e){try{bd=new BarcodeDetector({formats:['qr_code']});}catch(e2){}}
+      if(bd){ bd.detect(cv).then(function(codes){
+        if(codes&&codes.length&&codes[0].rawValue){
+          if(statusEl) statusEl.textContent='✅ QR 인식!';
+          _emerHandleScan(codes[0].rawValue, statusEl);
+        } else { _nativeCamJsQR(cv,cw,ch,statusEl,fallbackOCR); }
+      }).catch(function(){ _nativeCamJsQR(cv,cw,ch,statusEl,fallbackOCR); }); return; }
+    }
+    // ② jsQR
+    _nativeCamJsQR(cv,cw,ch,statusEl,fallbackOCR);
+  };
+  img.onerror = function(){ URL.revokeObjectURL(url); if(statusEl) statusEl.textContent='❌ 이미지 로드 실패'; };
+  img.src = url;
+}
+
 function emerNativeCamQR(input){
   var statusEl = document.getElementById('emer-native-status');
   if(!input.files || !input.files[0]) return;
@@ -21332,15 +21359,16 @@ function emerNativeCamQR(input){
   img.onerror = function(){ URL.revokeObjectURL(url); if(statusEl) statusEl.textContent='❌ 이미지 로드 실패'; };
   img.src = url;
 }
-function _nativeCamJsQR(cv, cw, ch, statusEl){
-  if(!window.jsQR){ if(statusEl) statusEl.textContent='❌ jsQR 미로드'; return; }
+function _nativeCamJsQR(cv, cw, ch, statusEl, fallback){
+  if(!window.jsQR){ if(statusEl) statusEl.textContent='❌ jsQR 미로드'; if(fallback) fallback(); return; }
   var cv2=document.createElement('canvas'), ctx2=cv2.getContext('2d');
-  function enhance(d){ var px=d.data,len=px.length,mn=255,mx=0; for(var i=0;i<len;i+=4){var g=Math.round(px[i]*.299+px[i+1]*.587+px[i+2]*.114);px[i]=px[i+1]=px[i+2]=g;} for(var j=0;j<len;j+=4){if(px[j]<mn)mn=px[j];if(px[j]>mx)mx=px[j];} var rng=mx-mn||1; for(var k=0;k<len;k+=4){var v=Math.round((px[k]-mn)/rng*255);pk[k]=pk[k+1]=pk[k+2]=v;} return d; }
+  function enhance(d){ var px=d.data,len=px.length,mn=255,mx=0; for(var i=0;i<len;i+=4){var g=Math.round(px[i]*.299+px[i+1]*.587+px[i+2]*.114);px[i]=px[i+1]=px[i+2]=g;} for(var j=0;j<len;j+=4){if(px[j]<mn)mn=px[j];if(px[j]>mx)mx=px[j];} var rng=mx-mn||1; for(var k=0;k<len;k+=4){var v=Math.round((px[k]-mn)/rng*255);px[k]=px[k+1]=px[k+2]=v;} return d; }
   function scan(sx,sy,sw,sh,enh){ cv2.width=sw;cv2.height=sh; ctx2.drawImage(cv,sx,sy,sw,sh,0,0,sw,sh); var d=ctx2.getImageData(0,0,sw,sh); if(enh)enhance(d); return window.jsQR(d.data,sw,sh,{inversionAttempts:'attemptBoth'}); }
   var rx=Math.floor(cw/2), cy2=Math.floor(ch*.12), cw2=Math.floor(cw*.72), ch2=Math.floor(ch*.76);
   var r=scan(0,0,cw,ch,false)||scan(rx,0,cw-rx,ch,false)||scan(Math.floor(cw*.14),cy2,cw2,ch2,false)||scan(0,0,cw,ch,true);
   if(r&&r.data){ if(statusEl) statusEl.textContent='✅ QR 인식!'; _emerHandleScan(r.data,statusEl); }
-  else { if(statusEl) statusEl.innerHTML='❌ 인식 실패 — QR 부분만 가까이 찍어 다시 시도'; }
+  else if(fallback){ fallback(); }
+  else { if(statusEl) statusEl.innerHTML='❌ 인식 실패 — 다시 찍어주세요'; }
 }
 
 function emerStartScan(){
