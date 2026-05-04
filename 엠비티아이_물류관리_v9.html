@@ -21293,59 +21293,14 @@ function emerUnifiedScan(input){
   var file = input.files[0];
   input.value = '';
   if(statusEl) statusEl.innerHTML = '🔍 분석 중...';
-
-  // OCR 폴백 — emer-ocr-status를 숨겨둔 채로 OCR 직접 호출
-  // emerOcrScan 내부에서 emer-ocr-status 엘리먼트를 찾으므로
-  // 통합 상태창을 임시로 emer-ocr-status로 연결
-  function fallbackOCR(){
-    if(statusEl) statusEl.innerHTML = '🔍 OCR 분석 중...';
-    var hiddenOcr = document.getElementById('emer-ocr-status');
-    var origId = statusEl ? statusEl.id : null;
-    if(statusEl && origId) statusEl.id = 'emer-ocr-status';
-    if(hiddenOcr) hiddenOcr.id = 'emer-ocr-status-hidden';
-    // OCR 완료 후 id 복원
-    var _restore = function(){
-      var el = document.getElementById('emer-ocr-status');
-      if(el && origId) el.id = origId;
-      var h = document.getElementById('emer-ocr-status-hidden');
-      if(h) h.id = 'emer-ocr-status';
-    };
-    setTimeout(_restore, 8000); // 최대 8초 후 복원
-    emerOcrScan(file);
-  }
-
-  var url = URL.createObjectURL(file);
-  var img = new Image();
-  img.onload = function(){
-    URL.revokeObjectURL(url);
-    var scale = Math.min(1, 2000/Math.max(img.naturalWidth, img.naturalHeight));
-    var cw=Math.round(img.naturalWidth*scale), ch=Math.round(img.naturalHeight*scale);
-    var cv=document.createElement('canvas'); cv.width=cw; cv.height=ch;
-    cv.getContext('2d').drawImage(img,0,0,cw,ch);
-
-    // ① BarcodeDetector — QR 전용 (code_128 바코드 제외)
-    if('BarcodeDetector' in window){
-      var bd;
-      try{bd=new BarcodeDetector({formats:['qr_code','data_matrix','aztec']});}
-      catch(e){try{bd=new BarcodeDetector({formats:['qr_code']});}catch(e2){}}
-      if(bd){
-        bd.detect(cv).then(function(codes){
-          if(codes&&codes.length&&codes[0].rawValue){
-            var raw=codes[0].rawValue;
-            if(raw.indexOf('V1|')===0){
-              if(statusEl) statusEl.textContent='✅ QR 인식!';
-              _emerHandleScan(raw, statusEl);
-            } else { fallbackOCR(); }
-          } else { fallbackOCR(); }
-        }).catch(function(){ fallbackOCR(); });
-        return;
-      }
-    }
-    // ② jsQR → 실패 시 OCR
-    _nativeCamJsQR(cv, cw, ch, statusEl, fallbackOCR);
-  };
-  img.onerror = function(){ URL.revokeObjectURL(url); if(statusEl) statusEl.textContent='❌ 이미지 로드 실패'; };
-  img.src = url;
+  // ★ v9.61: 바로 Vision API OCR (QR/바코드 시도 없음 — OCR이 가장 확실)
+  var unifiedSt = document.getElementById('emer-unified-status');
+  if(unifiedSt) unifiedSt.id = 'emer-ocr-status';
+  setTimeout(function(){
+    var el = document.getElementById('emer-ocr-status');
+    if(el) el.id = 'emer-unified-status';
+  }, 10000);
+  emerOcrScan(file);
 }
 
 function emerNativeCamQR(input){
