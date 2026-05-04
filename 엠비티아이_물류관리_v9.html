@@ -18629,15 +18629,17 @@ function checkDriverNotifications(){
           }catch(e){}
         }
       });
-      // ⚠️ 긴급 공지 체크 (읽지 않은 긴급만 팝업)
+      // ⚠️ 긴급 공지 체크 (읽지 않은 긴급 + 24시간 이내만 팝업)
+      var _now = Date.now();
       var urgentNotices=items.filter(function(it){
         if(it.type!=='notice')return false;
         if(it.category!=='긴급')return false;
-        // ★ Firebase readAt 또는 로컬 읽음 기록 둘 중 하나라도 있으면 이미 읽음
         if(it.readAt || it.readStatus==='read')return false;
+        // ★ v9.61: 24시간 지난 공지는 팝업 안 뜸 (캐시 삭제해도 재표시 방지)
+        var sentMs = it.sentAt ? new Date(it.sentAt).getTime() : 0;
+        if(sentMs && (_now - sentMs) > 24*60*60*1000) return false;
         try{
           var readSet=JSON.parse(localStorage.getItem('drv_notice_read_'+S.curDriver)||'{}');
-          // ★ v9.25: notifId OR noticeId 둘 중 하나라도 읽음 처리됐으면 제외
           if(readSet[it._id]) return false;
           if(it.noticeId && readSet['nc_'+it.noticeId]) return false;
           return true;
@@ -19847,6 +19849,8 @@ function _startDrvNoticeListener(){
           // ★ v9.25: 이미 읽은 공지 + 페이지 로드 이전 sentAt 차단 (재로그인 시 폭주 방지)
           if(nd.readAt||nd.readStatus==='read'||readSet[change.doc.id])return;
           if(nd.sentAt && window._noticeListenStartTime && nd.sentAt < window._noticeListenStartTime)return;
+          // ★ v9.61: 24시간 지난 공지 팝업 차단 (캐시 삭제 후 재표시 방지)
+          if(nd.sentAt && (Date.now() - new Date(nd.sentAt).getTime()) > 24*60*60*1000) return;
           var alertKey='notice_'+change.doc.id;
           if(window._notiSeen&&window._notiSeen[alertKey])return;
           // ★ v9.25: 키 통일을 위해 dn_<id>도 같이 마크 (A 리스너와 동기화)
