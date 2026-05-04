@@ -20641,6 +20641,61 @@ function openEmergencyDelivery(){
       </div>
       <div id="emer-native-status" style="display:none"></div>
       <div id="emer-ocr-status" style="display:none"></div>
+
+      <!-- OCR 결과 요약 -->
+      <div id="emer-ocr-summary" style="display:none;margin-bottom:10px;padding:10px;background:var(--bg3);border-radius:10px;border:1.5px solid var(--teal);font-size:12px;line-height:1.7"></div>
+
+      <!-- 운송장 입력 -->
+      <div style="margin-bottom:10px">
+        <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:4px">📦 운송장 번호 <span style="color:var(--red)">*</span></div>
+        <div id="emer-tracking-list" style="margin-bottom:4px"></div>
+        <div style="display:flex;gap:6px">
+          <input id="emer-tracking-inp" type="number" inputmode="numeric" placeholder="운송장 번호 직접 입력" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text)">
+          <button onclick="emerAddTrackingManual()" style="padding:8px 12px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">추가</button>
+          <button onclick="if(window._emerTrackings&&window._emerTrackings.length){toast('✅ '+window._emerTrackings.length+'건 스캔됨');}" style="padding:8px 10px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer">📋</button>
+        </div>
+        <div style="font-size:10px;color:var(--text3);margin-top:3px">* QR 스캔 시 자동입력됩니다</div>
+      </div>
+
+      <!-- 주소 -->
+      <div style="margin-bottom:8px">
+        <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:4px">📍 배송 주소</div>
+        <input id="emer-addr" type="text" placeholder="주소 (QR 스캔 시 자동입력)" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text);box-sizing:border-box">
+      </div>
+
+      <!-- 수령인 -->
+      <div style="margin-bottom:8px">
+        <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:4px">👤 수령인</div>
+        <input id="emer-recipient" type="text" placeholder="수령인 (QR 스캔 시 자동입력)" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text);box-sizing:border-box">
+      </div>
+
+      <!-- 주문번호 -->
+      <div style="margin-bottom:8px">
+        <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:4px">🔢 주문번호</div>
+        <input id="emer-orderid" type="text" placeholder="주문번호 (OCR 자동입력)" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text);box-sizing:border-box">
+      </div>
+
+      <!-- GPS 상태 -->
+      <div id="emer-gps-status" style="font-size:11px;color:var(--text3);margin-bottom:10px;min-height:14px"></div>
+
+      <!-- 배송 사진 -->
+      <div style="margin-bottom:10px">
+        <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">📷 배송 완료 사진 <span style="font-size:10px;color:var(--text3)">(선택)</span></div>
+        <div id="emer-photo-wrap" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px"></div>
+        <label style="display:inline-flex;align-items:center;gap:5px;padding:7px 12px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;color:var(--text2)">
+          📷 사진 추가
+          <input type="file" accept="image/*" capture="environment" multiple style="display:none" onchange="emerAddPhotos(this.files)">
+        </label>
+      </div>
+
+      <!-- 배송 메모 -->
+      <div style="margin-bottom:12px">
+        <input id="emer-delivmemo" type="text" placeholder="배송 메모 (선택사항, 예: 문 앞에 배치)" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text);box-sizing:border-box">
+      </div>
+
+      <!-- 저장 버튼 -->
+      <button onclick="emerSave()" style="width:100%;padding:14px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:900;cursor:pointer;margin-bottom:8px">🗺️ 지도에 배송핀 생성 + 저장</button>
+      <button onclick="document.getElementById('emer-del-mo')?.remove()" style="width:100%;padding:11px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;color:var(--text2)">취소</button>
   `);
   setTimeout(function(){ var el=document.getElementById('qr-paste-inp'); if(el) el.focus(); }, 100);
 }
