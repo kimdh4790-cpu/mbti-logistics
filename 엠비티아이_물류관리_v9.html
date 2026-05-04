@@ -11119,11 +11119,10 @@ var _db=null,_st=null,FB=false;
     if(FB_CFG.projectId&&FB_CFG.projectId.length>3){
       firebase.initializeApp(FB_CFG);
       _db=firebase.firestore(); _st=firebase.storage();
-      // ★ v9.25 수정: synchronizeTabs 제거 → Target ID already exists 에러 근본 해결
-      //   (다중 탭 지속성이 내정보 탭에서 리스너 재등록 시 Target ID 충돌을 일으켰음)
-      //   enablePersistence() 자체를 끔 - 실시간 리스너(onSnapshot)는 영향 없음
-      //   Firebase v10+에서 deprecated 될 API이기도 함
-      // _db.enablePersistence({synchronizeTabs:true}).catch(e=>console.warn(e.code));
+      // ★ v9.61: 오프라인 캐시 활성화 (reads 대폭 절감 — 캐시된 데이터는 재읽기 없음)
+      _db.enablePersistence({synchronizeTabs:false}).catch(function(e){
+        console.warn('[Persist]', e.code); // failed-precondition(멀티탭) 또는 unimplemented(Safari) 시 무시
+      });
       FB=true;
 
       // ★ 인증 완료 후 리스너 설정 (타이밍 오류 방지)
@@ -19793,16 +19792,20 @@ function _formatRelTime(isoStr){
 // ── 기사 공지 목록 Firebase에서 로드 (본인 대상)
 function _loadDrvNotices(){
   if(!FB||!_db||!S.curDriver)return;
+  // ★ v9.61: 중복 호출 방지 (동시 호출 시 기존 것 유지)
+  if(window._drvNoticeLoading) return;
+  window._drvNoticeLoading = true;
+  setTimeout(function(){ window._drvNoticeLoading=false; }, 5000); // 5초 쿨다운
   window._drvNoticeReady=false;
   if(window._drvNoticeUnsub){window._drvNoticeUnsub();window._drvNoticeUnsub=null;}
   if(window._masterNoticeUnsub){window._masterNoticeUnsub();window._masterNoticeUnsub=null;}
   window._masterNoticeIds={};
   // ★ v9.25: notices.get()으로 마스터 먼저 확정 로드 → driver_notifications 리스너 시작
-  _db.collection('notices').get().then(function(msnap){
+  _db.collection('notices').orderBy('sentAt','desc').limit(20).get().then(function(msnap){
     var ids={};
     msnap.forEach(function(d){ids[d.id]=true;});
     window._masterNoticeIds=ids;
-    window._masterNoticeUnsub=_db.collection('notices').orderBy('sentAt','desc').limit(50).onSnapshot(function(ms){
+    window._masterNoticeUnsub=_db.collection('notices').orderBy('sentAt','desc').limit(20).onSnapshot(function(ms){
       var newIds={};
       ms.forEach(function(d){newIds[d.id]=true;});
       window._masterNoticeIds=newIds;
@@ -19833,7 +19836,7 @@ function _startDrvNoticeListener(){
   window._drvNoticeUnsub=_db.collection('driver_notifications')
     .where('driver','==',S.curDriver)
     .where('type','==','notice')
-    .limit(50)
+    .limit(20) // ★ v9.61: reads 절감
     .onSnapshot(function(snap){
       var list=[],readSet={};
       try{readSet=JSON.parse(localStorage.getItem('drv_notice_read_'+S.curDriver)||'{}');}catch(e){}
@@ -21298,9 +21301,48 @@ function emerUnifiedScan(input){
   if(!input.files || !input.files[0]) return;
   var file = input.files[0];
   input.value = '';
-  if(statusEl) statusEl.innerHTML = '🔍 분석 중...';
-  // ★ v9.61: 바로 Vision API OCR, statusEl 직접 전달
-  emerOcrScan(file, statusEl);
+  if(statusEl) statusEl.innerHTML = '🔍 QR 분석 중...';
+
+  var url = URL.createObjectURL(file);
+  var img = new Image();
+  img.onload = function(){
+    URL.revokeObjectURL(url);
+    var scale = Math.min(1, 2000/Math.max(img.naturalWidth, img.naturalHeight));
+    var cw=Math.round(img.naturalWidth*scale), ch=Math.round(img.naturalHeight*scale);
+    var cv=document.createElement('canvas'); cv.width=cw; cv.height=ch;
+    cv.getContext('2d').drawImage(img,0,0,cw,ch);
+
+    function goOCR(){
+      // QR 실패 → Vision API OCR (파란 송장 등)
+      if(statusEl) statusEl.innerHTML = '🔍 OCR 분석 중...';
+      statusEl.id = 'emer-ocr-status';
+      setTimeout(function(){ var el=document.getElementById('emer-ocr-status'); if(el) el.id='emer-unified-status'; }, 10000);
+      emerOcrScan(file, document.getElementById('emer-ocr-status'));
+    }
+
+    // ① BarcodeDetector — QR 전용 (로컬, API 비용 0)
+    if('BarcodeDetector' in window){
+      var bd;
+      try{ bd=new BarcodeDetector({formats:['qr_code','data_matrix','aztec']}); }
+      catch(e){ try{ bd=new BarcodeDetector({formats:['qr_code']}); }catch(e2){} }
+      if(bd){
+        bd.detect(cv).then(function(codes){
+          if(codes&&codes.length&&codes[0].rawValue){
+            var raw=codes[0].rawValue;
+            if(raw.indexOf('V1|')===0){
+              if(statusEl) statusEl.textContent='✅ QR 인식!';
+              _emerHandleScan(raw, statusEl);
+            } else { goOCR(); }
+          } else { _nativeCamJsQR(cv,cw,ch,statusEl,goOCR); }
+        }).catch(function(){ _nativeCamJsQR(cv,cw,ch,statusEl,goOCR); });
+        return;
+      }
+    }
+    // ② jsQR (로컬, API 비용 0)
+    _nativeCamJsQR(cv, cw, ch, statusEl, goOCR);
+  };
+  img.onerror = function(){ URL.revokeObjectURL(url); if(statusEl) statusEl.textContent='❌ 이미지 로드 실패'; };
+  img.src = url;
 }
 
 function emerNativeCamQR(input){
@@ -23084,9 +23126,9 @@ function rEmergencyLog(){
       // ★ 기사 모드: where+orderBy 복합 인덱스 없이도 동작하도록 orderBy 제거 → 클라이언트 정렬
       var q;
       if(isAdmin){
-        q=_db.collection('emergency_deliveries').orderBy('savedAt','desc').limit(200);
+        q=_db.collection('emergency_deliveries').orderBy('savedAt','desc').limit(60); // ★ v9.61: reads 절감
       } else {
-        q=_db.collection('emergency_deliveries').where('driver','==',S.curDriver).limit(200);
+        q=_db.collection('emergency_deliveries').where('driver','==',S.curDriver).orderBy('savedAt','desc').limit(60); // ★ v9.61
       }
       window._emerLogUnsub=q.onSnapshot(function(snap){
         var fbRecs=[];
@@ -25857,7 +25899,7 @@ function startListeners(){
     var yesterday=new Date();yesterday.setDate(yesterday.getDate()-1);
     var yesterdayStr=yesterday.toISOString().slice(0,10);
     _fbUnsubs.push(_db.collection('photo_logs')
-      .where('date','>=',yesterdayStr)
+      .where('date','>=',todayStr) // ★ v9.61: 오늘만 (reads 절감)
       .onSnapshot(function(snap){
         snap.docChanges().forEach(function(change){
           if(change.type==='added'){
@@ -25939,7 +25981,7 @@ function startListeners(){
       entries:'entry', deliveries:'delivery', temp_logs:'temp',
       accidents:'accident', settlements:'settle'
     };
-    var colLimits={entries:200, deliveries:200, temp_logs:100, accidents:50, settlements:100};
+    var colLimits={entries:50, deliveries:50, temp_logs:30, accidents:30, settlements:50}; // ★ v9.61: reads 절감
     var todayStr=today();
     Object.keys(colPageMap).forEach(col=>{
       var q=_db.collection(col);
@@ -25981,7 +26023,7 @@ function startListeners(){
     });
   
     // ★ v9.25: 운행 메모(delivery_memos) 실시간 동기화 (관리자용 뱃지/페이지 자동 갱신)
-    _fbUnsubs.push(_db.collection('delivery_memos').limit(200)
+    _fbUnsubs.push(_db.collection('delivery_memos').limit(50) // ★ v9.61: reads 절감
       .onSnapshot(snap=>{
         var arr=ls('deliveryMemos');
         var newCount=0;
