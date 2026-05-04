@@ -21304,12 +21304,9 @@ function emerUnifiedScan(input){
     cv.getContext('2d').drawImage(img,0,0,cw,ch);
 
     function fallbackOCR(){
-      if(statusEl) statusEl.innerHTML = '🔍 QR 미감지 → OCR 분석 중...';
-      // emer-ocr-status를 unified-status로 임시 교체 (OCR 결과가 통합 상태창에 표시)
-      var ocrSt = document.getElementById('emer-ocr-status');
-      if(ocrSt && statusEl){ ocrSt.style.display='none'; }
-      // emerOcrScan 내부에서 emer-ocr-status를 찾으므로 unified로 id 교체
-      if(statusEl) statusEl.id = 'emer-ocr-status';
+      // emer-unified-status → emer-ocr-status로 id 교체해서 OCR 결과 표시
+      var unifiedSt = document.getElementById('emer-unified-status');
+      if(unifiedSt) unifiedSt.id = 'emer-ocr-status';
       emerOcrScan(file);
     }
 
