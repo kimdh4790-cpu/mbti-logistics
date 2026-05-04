@@ -11119,10 +11119,8 @@ var _db=null,_st=null,FB=false;
     if(FB_CFG.projectId&&FB_CFG.projectId.length>3){
       firebase.initializeApp(FB_CFG);
       _db=firebase.firestore(); _st=firebase.storage();
-      // ★ v9.61: 오프라인 캐시 활성화 (reads 대폭 절감 — 캐시된 데이터는 재읽기 없음)
-      _db.enablePersistence({synchronizeTabs:false}).catch(function(e){
-        console.warn('[Persist]', e.code); // failed-precondition(멀티탭) 또는 unimplemented(Safari) 시 무시
-      });
+      // ★ v9.61: 오프라인 캐시 활성화
+      try{ _db.enablePersistence({synchronizeTabs:false}); }catch(e){ console.warn('[Persist]',e.code); }
       FB=true;
 
       // ★ 인증 완료 후 리스너 설정 (타이밍 오류 방지)
@@ -19834,7 +19832,7 @@ function _startDrvNoticeListener(){
   if(!window._noticeListenStartTime) window._noticeListenStartTime=new Date().toISOString();
   // ★ v9.25: 비용 절감 — limit(50). 30일 정책으로 50개면 충분
   window._drvNoticeUnsub=_db.collection('driver_notifications')
-    .where('driver','==',S.curDriver)
+    .where('driver','==',S.curDriver||'')
     .where('type','==','notice')
     .limit(20) // ★ v9.61: reads 절감
     .onSnapshot(function(snap){
@@ -23128,7 +23126,7 @@ function rEmergencyLog(){
       if(isAdmin){
         q=_db.collection('emergency_deliveries').orderBy('savedAt','desc').limit(60); // ★ v9.61: reads 절감
       } else {
-        q=_db.collection('emergency_deliveries').where('driver','==',S.curDriver).orderBy('savedAt','desc').limit(60); // ★ v9.61
+        q=_db.collection('emergency_deliveries').where('driver','==',S.curDriver||'').limit(60); // ★ v9.61
       }
       window._emerLogUnsub=q.onSnapshot(function(snap){
         var fbRecs=[];
@@ -25898,8 +25896,9 @@ function startListeners(){
     // ★ 오늘+어제 날짜 모두 감시 (자정 전후 사진 누락 방지)
     var yesterday=new Date();yesterday.setDate(yesterday.getDate()-1);
     var yesterdayStr=yesterday.toISOString().slice(0,10);
+    var _photoTodayStr=today(); // ★ v9.61: 오늘 날짜 직접 정의
     _fbUnsubs.push(_db.collection('photo_logs')
-      .where('date','>=',todayStr) // ★ v9.61: 오늘만 (reads 절감)
+      .where('date','>=',_photoTodayStr) // ★ v9.61: 오늘만 (reads 절감)
       .onSnapshot(function(snap){
         snap.docChanges().forEach(function(change){
           if(change.type==='added'){
