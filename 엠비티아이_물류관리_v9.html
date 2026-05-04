@@ -26,7 +26,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/browser-image-compression/2.0.2/browser-image-compression.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js"></script>
 <style>
 :root{
   --blue:#185FA5;--blue-l:#E6F1FB;--blue-d:#0C447C;
@@ -20594,8 +20593,6 @@ function openEmergencyDelivery(){
   window._emerGps = null;
   window._emerAutoData = {};
   window._emerEntryMode = null;
-  // ★ v9.51: 폼 열리자마자 클립보드 자동 감지
-  setTimeout(_emerAutoClipboard, 400);
   // ★ v9.61: 카운터 현재값 표시 (폼 재오픈 시에도 누적 유지)
   setTimeout(function(){
     var cs=document.getElementById('emer-cnt-scan');
@@ -20626,16 +20623,15 @@ function openEmergencyDelivery(){
         </div>
       </div>
 
-      <!-- ★ v9.48: 폰 네이티브 카메라 QR 촬영 (최우선) + 웹 라이브 스캔 -->
-      <!-- 네이티브 카메라 input (숨김) -->
+      <!-- 폰 카메라 QR 촬영 (네이티브) -->
       <input type="file" id="emer-native-cam" accept="image/*" capture="environment" style="display:none" onchange="emerNativeCamQR(this)">
       <div style="margin-bottom:8px">
         <button onclick="document.getElementById('emer-native-cam').click()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#0ea5e9,#0284c7);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:900;cursor:pointer">
-          <span style="font-size:20px">📸</span> 폰 카메라로 QR 촬영 <span style="font-size:11px;opacity:.85;font-weight:600">(빠름)</span>
+          <span style="font-size:20px">📸</span> 폰 카메라로 QR 촬영
         </button>
         <div id="emer-native-status" style="font-size:11px;color:var(--teal);text-align:center;margin-top:4px;min-height:15px"></div>
       </div>
-      <!-- 라이브 스캔 (보조) -->
+      <!-- 웹 라이브 스캔 -->
       <div style="margin-bottom:10px">
         <button onclick="emerStartScan()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px;background:rgba(124,58,237,.15);color:var(--purple);border:1.5px solid var(--purple);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">
           <span style="font-size:16px">📷</span> 웹 라이브 스캔
@@ -20660,209 +20656,12 @@ function openEmergencyDelivery(){
 
       <!-- ★ v9.25: QR 붙여넣기 (1순위) + OCR 사진 (폴백) -->
 
-      <!-- ① 붙여넣기 — 폰 기본카메라 QR 스캔 → 복사 → 붙여넣기 (가장 확실) -->
-      <button onclick="emerPasteQR()" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:16px;background:linear-gradient(135deg,#059669,#10b981);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:900;cursor:pointer;margin-bottom:6px;letter-spacing:.01em;box-shadow:0 2px 8px rgba(5,150,105,.35)">
-        <span style="font-size:24px">📋</span> QR 텍스트 붙여넣기 <span style="font-size:12px;opacity:.85;background:rgba(255,255,255,.2);padding:2px 7px;border-radius:99px;font-weight:700">추천</span>
-      </button>
-      <div style="font-size:12px;color:var(--text2);background:var(--bg3);border-radius:8px;padding:8px 10px;margin-bottom:10px;line-height:1.7">
-        폰 카메라로 QR 스캔 → 텍스트 <b>복사</b> → 앱으로 오면 <b>자동입력</b> 🎯<br>
-        <span style="font-size:11px;color:var(--text3)">안 되면 위 버튼으로 붙여넣기</span>
-      </div>
-
-      <!-- ② OCR 사진 — QR 없거나 붙여넣기 불편할 때 -->
-      <div style="margin-bottom:10px">
-        <label style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:10px;background:var(--bg3);border:1.5px solid var(--border);color:var(--text2);border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">
-          <span style="font-size:15px">📷</span> 사진 OCR (QR 없을 때)
-          <input type="file" accept="image/*" capture="environment" style="display:none" onchange="emerOcrScan(this.files[0])">
-        </label>
-        <div id="emer-ocr-status" style="font-size:11px;color:var(--text3);text-align:center;margin-top:5px;min-height:16px"></div>
-      </div>
-
-      <!-- ★ v9.25: 수기 입력 모드 안내 -->
-      <div style="background:var(--amber-l);border:1px dashed var(--amber);border-radius:8px;padding:8px 10px;margin-bottom:14px;font-size:11px;color:var(--text2);line-height:1.6">
-        💡 <b>운송장이 훼손됐나요?</b><br>
-        ① 위 두 버튼 모두 실패 시 → 아래 칸에 <b>직접 입력</b>하세요<br>
-        ② QR이 안 잡힐 때는 OCR(자동입력) 버튼으로 시도<br>
-        ③ 보조 사진 첨부 시 분쟁 대응 자료가 됩니다</div>
-
-
-      <!-- OCR 자동입력 결과 요약 (입력 후 표시) -->
-      <div id="emer-ocr-summary" style="display:none;background:var(--teal-l);border:1.5px solid var(--teal);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;line-height:1.8;color:var(--text)"></div>
-
-      <!-- 운송장 번호 (OCR 실패 시 표시) -->
-      <div id="emer-tracking-wrap" style="margin-bottom:12px">
-        <!-- ★ v9.25: 스캔 카운터 + 오프라인 상태 표시 -->
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-          <div style="font-size:12px;font-weight:700">📦 운송장 번호 <span style="color:var(--red)">*</span> <span style="font-size:10px;font-weight:400;color:var(--text3)">(묶음배송이면 추가)</span></div>
-          <div id="emer-scan-counter" style="display:none;font-size:11px;font-weight:700;color:var(--teal);background:var(--bg3);padding:2px 10px;border-radius:999px;border:1px solid var(--teal)">0건 스캔됨</div>
-        </div>
-        <!-- ★ v9.25: 오프라인 경고 -->
-        <div id="emer-offline-warn" style="display:none;background:#2a1a00;border:1px solid var(--amber);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:11px;color:#fbbf24;line-height:1.5">
-          ⚠️ <b>오프라인 상태</b><br>QR 스캔/입력은 가능하나 저장은 인터넷 연결 후 완료됩니다.
-        </div>
-        <!-- 실시간 스캔 목록 -->
-        <div id="emer-tracking-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px"></div>
-        <div style="display:flex;gap:6px">
-          <input id="emer-tracking-inp" type="text" inputmode="numeric" placeholder="운송장 번호 입력 후 추가" maxlength="30"
-            style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text)"
-            onkeydown="if(event.key==='Enter')emerAddTracking()">
-          <button onclick="emerAddTracking()" style="padding:10px 14px;background:var(--teal);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">추가</button>
-          <button onclick="emerOpenMap()" style="padding:10px 12px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:18px;cursor:pointer" title="지도에서 현재 배송 핀 확인">🗺️</button>
-        </div>
-      </div>
-
-      <!-- 숨김 필드 (OCR 자동입력 저장용 — 지도 핀에 사용) -->
-      <input id="emer-orderid"   type="hidden" value="">
-      <input id="emer-recipient" type="hidden" value="">
-      <input id="emer-addr"      type="hidden" value="">
-      <input id="emer-delivmemo" type="hidden" value="">
-
-      <div id="emer-gps-status" style="font-size:11px;color:var(--text3);margin-bottom:12px;padding:8px 10px;background:var(--bg3);border-radius:8px">📍 GPS 위치 확인 중...</div>
-
-      <button onclick="emerSave()" style="width:100%;padding:13px;background:#dc2626;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px">
-        🗺️ 지도에 배송핀 생성 + 저장
-      </button>
-      <button onclick="emerSendAdminAlert()" id="emer-alert-btn" style="width:100%;padding:11px;background:#f97316;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px;display:none">
-        🔔 관리자 알림 전송
-      </button>
-      <button onclick="document.getElementById('emer-del-mo').remove()" style="width:100%;padding:10px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">취소</button>
-    </div>
-  </div>`);
-
-  // ★ v9.25: 기기 GPS 자동수집 제거 — 배송 핀은 반드시 주소변환 GPS만 사용
-  // (현위치로 잘못 저장되는 문제 근본 해결)
-  var _gpsStatusEl = document.getElementById('emer-gps-status');
-  if(_gpsStatusEl) _gpsStatusEl.innerHTML='📍 QR 또는 사진 스캔 시 자동입력됩니다';
-}
-
-// ★ v9.25: OCR: 운송장 사진 → Claude Vision → 자동 입력
-
-// ★ v9.25: QR 텍스트 붙여넣기 — 모달 textarea 방식 (클립보드 권한 불필요)
-function emerPasteQR(){
-  // ★ v9.54: 버튼 1탭 → 클립보드 자동 읽기 시도 (user gesture로 권한 해결)
-  var statusEl = document.getElementById('emer-native-status');
-  if(navigator.clipboard && navigator.clipboard.readText){
-    navigator.clipboard.readText().then(function(text){
-      if(text && text.length > 10){
-        var v1 = text.match(/V1[|][\s\S]{20,}/);
-        if(v1){
-          if(statusEl) statusEl.innerHTML = '<span style="color:var(--teal)">📋 클립보드 자동입력!</span>';
-          _emerHandleScan(v1[0], statusEl);
-          // 성공 피드백
-          try{ navigator.vibrate&&navigator.vibrate([60,30,120]); }catch(e){}
-          return;
-        }
-      }
-      // 클립보드에 QR 없음 → 텍스트박스 표시
-      _emerShowPasteBox();
-    }).catch(function(){
-      // 권한 거부 또는 iOS → 텍스트박스 표시
-      _emerShowPasteBox();
-    });
-  } else {
-    _emerShowPasteBox();
-  }
-}
-
-function _emerShowPasteBox(){
-  var old = document.getElementById('qr-paste-mo');
-  if(old) old.remove();
-  document.body.insertAdjacentHTML('beforeend', `
-    <div id="qr-paste-mo" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;display:flex;align-items:flex-end">
-      <div style="width:100%;background:var(--bg);border-radius:20px 20px 0 0;padding:20px 16px calc(env(safe-area-inset-bottom,0px)+20px)">
-        <div style="font-size:14px;font-weight:800;margin-bottom:4px">📋 QR 텍스트 붙여넣기</div>
-        <div style="font-size:11px;color:var(--text3);margin-bottom:10px">
-          아래 칸 길게 눌러서 <b>붙여넣기</b>
-        </div>
-        <textarea id="qr-paste-inp" rows="3" placeholder="V1|운송장번호|주소|상세주소|수령인|..." 
-          style="width:100%;padding:10px;border:2px solid var(--blue);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text);box-sizing:border-box;resize:none"
-          oninput="emerPasteQRParse(this.value)"></textarea>
-        <div id="qr-paste-result" style="font-size:11px;color:var(--teal);margin-top:6px;min-height:14px"></div>
-        <div style="display:flex;gap:8px;margin-top:10px">
-          <button onclick="document.getElementById('qr-paste-mo').remove()" 
-            style="flex:1;padding:11px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">취소</button>
-          <button onclick="emerPasteQRApply()" 
-            style="flex:2;padding:11px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer">✅ 입력 적용</button>
-        </div>
-      </div>
-    </div>
+      
   `);
   setTimeout(function(){ var el=document.getElementById('qr-paste-inp'); if(el) el.focus(); }, 100);
 }
 
-function emerPasteQRParse(text){
-  if(!text) return;
-  var v1 = text.match(/V1\|.+/);
-  if(v1){
-    var p = _parseQrText(v1[0]);
-    var res = document.getElementById('qr-paste-result');
-    if(res){
-      var msg = [];
-      if(p.tracking_no) msg.push('운송장 '+p.tracking_no);
-      if(p.address) msg.push('주소 ✅');
-      if(p.lat) msg.push('GPS ✅');
-      res.innerHTML = msg.length ? '인식됨: '+msg.join(' / ') : '주소/운송장 인식 중...';
-    }
-  }
-}
 
-function emerPasteQRApply(){
-  var inp = document.getElementById('qr-paste-inp');
-  if(!inp || !inp.value.trim()){
-    alert('QR 텍스트를 붙여넣어 주세요');
-    return;
-  }
-  var text = inp.value.trim();
-  var v1match = text.match(/V1\|.+/);
-  if(!v1match){ alert('쿠팡 QR 형식(V1|...)이 아닙니다'); return; }
-
-  var parsed = _parseQrText(v1match[0]);
-  document.getElementById('qr-paste-mo').remove();
-
-  if(parsed.tracking_no){
-    window._emerTrackings = window._emerTrackings || [];
-    if(window._emerTrackings.indexOf(parsed.tracking_no) < 0){
-      window._emerTrackings.push(parsed.tracking_no);
-      emerRefreshTrackingList && emerRefreshTrackingList();
-    }
-  }
-  if(parsed.address){ var ae=document.getElementById('emer-addr'); if(ae) ae.value=parsed.address; }
-  if(parsed.recipient){ var re=document.getElementById('emer-recipient'); if(re) re.value=parsed.recipient; }
-  if(parsed.order_id){ var oe=document.getElementById('emer-orderid'); if(oe) oe.value=parsed.order_id; }
-  if(parsed.memo){ var me=document.getElementById('emer-delivmemo'); if(me) me.value=parsed.memo; }
-
-  if(parsed.lat && parsed.lng){
-    window._emerGps={lat:parsed.lat,lng:parsed.lng,src:'QR'};
-    var gEl=document.getElementById('emer-gps-status');
-    if(gEl) gEl.innerHTML='<span style="color:var(--teal)">📍 QR GPS ✅ ('+parsed.lat.toFixed(4)+', '+parsed.lng.toFixed(4)+')</span>';
-    if(window._activeDriverMapAddPin){
-      var pr={fbId:'_preview_paste_'+Date.now(),driver:S.curDriver||'',trackings:(window._emerTrackings||[]).slice(),tracking:(window._emerTrackings||[])[0]||'',recipient:parsed.recipient||'',addr:parsed.address||'',gps:{lat:parsed.lat,lng:parsed.lng},time:new Date().toTimeString().slice(0,5),status:'저장대기'};
-      window._activeDriverMapAddPin(pr);
-      window._activeDriverMap&&window._activeDriverMap.panTo({lat:parsed.lat,lng:parsed.lng});
-    }
-  } else if(parsed.address){
-    var gKey=window._cachedGoogleApiKey||localStorage.getItem('mbti_google_api_key')||'';
-    if(gKey){
-      var gEl2=document.getElementById('emer-gps-status');
-      if(gEl2) gEl2.innerHTML='<span style="color:var(--blue)">📍 GPS 변환 중...</span>';
-      fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(parsed.address)+'&language=ko&region=kr&key='+gKey)
-        .then(function(r){return r.json();}).then(function(d){
-          if(d.status==='OK'&&d.results&&d.results[0]){
-            var lc=d.results[0].geometry.location;
-            window._emerGps={lat:lc.lat,lng:lc.lng,src:'geocode',addr:parsed.address};
-            var gEl3=document.getElementById('emer-gps-status');
-            if(gEl3) gEl3.innerHTML='<span style="color:var(--teal)">📍 배송지 GPS ✅</span>';
-          }
-        }).catch(function(){});
-    }
-  }
-
-  window._emerEntryMode='barcode';
-  var st=document.getElementById('emer-ocr-status');
-  if(st) st.innerHTML='<span style="color:var(--teal)">✅ QR 입력 완료!</span>';
-  var sumEl=document.getElementById('emer-ocr-summary');
-  if(sumEl){sumEl.style.display='block';sumEl.innerHTML='<b>📋 QR 붙여넣기 완료</b><br>'+(parsed.tracking_no?'📦 운송장: '+parsed.tracking_no+'<br>':'')+(parsed.address?'📍 주소: '+parsed.address+'<br>':'')+(parsed.recipient?'👤 수령인: '+parsed.recipient+'<br>':'')+(parsed.lat?'🗺️ GPS: 정확 ✅':'');}
-}
 
 async function emerOcrScan(file){
   if(!file) return;
@@ -21500,137 +21299,49 @@ function _parseQrText(text){
 var _emerScanReader = null;
 
 // ★ v9.48: 폰 네이티브 카메라로 QR 촬영 후 디코딩
+
+// ★ v9.51: 클립보드 자동 감지 — 폰 카메라로 QR 스캔 후 복사만 하면 자동입력
+
 function emerNativeCamQR(input){
   var statusEl = document.getElementById('emer-native-status');
   if(!input.files || !input.files[0]) return;
   var file = input.files[0];
   input.value = '';
   if(statusEl) statusEl.textContent = '🔍 QR 분석 중...';
-
   var url = URL.createObjectURL(file);
   var img = new Image();
   img.onload = function(){
     URL.revokeObjectURL(url);
-    var iw = img.naturalWidth, ih = img.naturalHeight;
-    // 최대 2000px 리사이즈
-    var scale = Math.min(1, 2000 / Math.max(iw, ih));
-    var cw = Math.round(iw * scale), ch = Math.round(ih * scale);
-    var cv = document.createElement('canvas');
-    cv.width = cw; cv.height = ch;
-    var ctx = cv.getContext('2d');
-    ctx.drawImage(img, 0, 0, cw, ch);
-
-    // ① BarcodeDetector — canvas 직접 전달 (ImageBitmap 제거, 호환성 향상)
+    var scale = Math.min(1, 2000/Math.max(img.naturalWidth, img.naturalHeight));
+    var cw=Math.round(img.naturalWidth*scale), ch=Math.round(img.naturalHeight*scale);
+    var cv=document.createElement('canvas'); cv.width=cw; cv.height=ch;
+    cv.getContext('2d').drawImage(img,0,0,cw,ch);
+    // BarcodeDetector 시도
     if('BarcodeDetector' in window){
-      var bd;
-      try{ bd = new BarcodeDetector({formats:['qr_code','data_matrix','aztec']}); }
-      catch(e){ try{ bd = new BarcodeDetector({formats:['qr_code']}); }catch(e2){} }
-      if(bd){
-        bd.detect(cv).then(function(codes){
-          if(codes && codes.length){
-            var big = codes.filter(function(code){
-              if(!code.cornerPoints) return true;
-              var pts = code.cornerPoints;
-              var qw = Math.abs(pts[1].x - pts[0].x);
-              var qh = Math.abs(pts[2].y - pts[1].y);
-              return qw >= cw * 0.08 && qh >= ch * 0.08;
-            });
-            if(big.length){
-              if(statusEl) statusEl.textContent = '✅ QR 인식!';
-              _emerHandleScan(big[0].rawValue, statusEl); return;
-            }
-          }
-          _nativeCamJsQR(cv, cw, ch, statusEl);
-        }).catch(function(){ _nativeCamJsQR(cv, cw, ch, statusEl); });
-        return;
-      }
+      var bd; try{ bd=new BarcodeDetector({formats:['qr_code','data_matrix','aztec','code_128']}); }catch(e){ try{bd=new BarcodeDetector({formats:['qr_code']});}catch(e2){} }
+      if(bd){ bd.detect(cv).then(function(codes){
+        if(codes&&codes.length&&codes[0].rawValue){
+          if(statusEl) statusEl.textContent='✅ QR 인식!';
+          _emerHandleScan(codes[0].rawValue, statusEl); return;
+        }
+        _nativeCamJsQR(cv, cw, ch, statusEl);
+      }).catch(function(){ _nativeCamJsQR(cv, cw, ch, statusEl); }); return; }
     }
     _nativeCamJsQR(cv, cw, ch, statusEl);
   };
-  img.onerror = function(){ URL.revokeObjectURL(url); if(statusEl) statusEl.textContent = '❌ 이미지 로드 실패'; };
+  img.onerror = function(){ URL.revokeObjectURL(url); if(statusEl) statusEl.textContent='❌ 이미지 로드 실패'; };
   img.src = url;
 }
-
 function _nativeCamJsQR(cv, cw, ch, statusEl){
-  if(!window.jsQR){ if(statusEl) statusEl.textContent = '❌ jsQR 미로드'; return; }
-  var cv2 = document.createElement('canvas'), ctx2 = cv2.getContext('2d');
-
-  function enhance(imgData){
-    var d=imgData.data, len=d.length;
-    for(var i=0;i<len;i+=4){ var g=Math.round(d[i]*.299+d[i+1]*.587+d[i+2]*.114); d[i]=d[i+1]=d[i+2]=g; }
-    var mn=255,mx=0;
-    for(var j=0;j<len;j+=4){ if(d[j]<mn)mn=d[j]; if(d[j]>mx)mx=d[j]; }
-    var rng=mx-mn||1;
-    for(var k=0;k<len;k+=4){ var v=Math.round((d[k]-mn)/rng*255); d[k]=d[k+1]=d[k+2]=v; }
-    return imgData;
-  }
-
-  function scan(sx,sy,sw,sh,enh){
-    cv2.width=sw; cv2.height=sh;
-    ctx2.drawImage(cv, sx,sy,sw,sh, 0,0,sw,sh);
-    var d=ctx2.getImageData(0,0,sw,sh);
-    if(enh) enhance(d);
-    var r=window.jsQR(d.data,sw,sh,{inversionAttempts:'attemptBoth'});
-    if(!r||!r.data) return null;
-    var loc=r.location;
-    var qw=Math.abs(loc.topRightCorner.x-loc.topLeftCorner.x);
-    var qh=Math.abs(loc.bottomLeftCorner.y-loc.topLeftCorner.y);
-    if(qw<sw*0.07||qh<sh*0.07) return null; // 너무 작으면 제외
-    return r;
-  }
-
-  // 원본 → 대비강화 순서 / 전체 → 우측절반 → 중앙 크롭
+  if(!window.jsQR){ if(statusEl) statusEl.textContent='❌ jsQR 미로드'; return; }
+  var cv2=document.createElement('canvas'), ctx2=cv2.getContext('2d');
+  function enhance(d){ var px=d.data,len=px.length,mn=255,mx=0; for(var i=0;i<len;i+=4){var g=Math.round(px[i]*.299+px[i+1]*.587+px[i+2]*.114);px[i]=px[i+1]=px[i+2]=g;} for(var j=0;j<len;j+=4){if(px[j]<mn)mn=px[j];if(px[j]>mx)mx=px[j];} var rng=mx-mn||1; for(var k=0;k<len;k+=4){var v=Math.round((px[k]-mn)/rng*255);pk[k]=pk[k+1]=pk[k+2]=v;} return d; }
+  function scan(sx,sy,sw,sh,enh){ cv2.width=sw;cv2.height=sh; ctx2.drawImage(cv,sx,sy,sw,sh,0,0,sw,sh); var d=ctx2.getImageData(0,0,sw,sh); if(enh)enhance(d); return window.jsQR(d.data,sw,sh,{inversionAttempts:'attemptBoth'}); }
   var rx=Math.floor(cw/2), cy2=Math.floor(ch*.12), cw2=Math.floor(cw*.72), ch2=Math.floor(ch*.76);
-  var r = scan(0,0,cw,ch,false)
-       || scan(rx,0,cw-rx,ch,false)
-       || scan(Math.floor(cw*.14),cy2,cw2,ch2,false)
-       || scan(0,0,cw,ch,true)
-       || scan(rx,0,cw-rx,ch,true)
-       || scan(Math.floor(cw*.14),cy2,cw2,ch2,true);
-
-  if(r && r.data){
-    if(statusEl) statusEl.textContent = '✅ QR 인식!';
-    _emerHandleScan(r.data, statusEl);
-  } else {
-    if(statusEl) statusEl.innerHTML = '❌ 인식 실패 — QR만 화면 가득 채워 다시 촬영해주세요';
-  }
+  var r=scan(0,0,cw,ch,false)||scan(rx,0,cw-rx,ch,false)||scan(Math.floor(cw*.14),cy2,cw2,ch2,false)||scan(0,0,cw,ch,true);
+  if(r&&r.data){ if(statusEl) statusEl.textContent='✅ QR 인식!'; _emerHandleScan(r.data,statusEl); }
+  else { if(statusEl) statusEl.innerHTML='❌ 인식 실패 — QR 부분만 가까이 찍어 다시 시도'; }
 }
-
-// ★ v9.51: 클립보드 자동 감지 — 폰 카메라로 QR 스캔 후 복사만 하면 자동입력
-function _emerAutoClipboard(){
-  if(!navigator.clipboard || !navigator.clipboard.readText) return;
-  // 이미 입력된 경우 무시
-  if(window._emerTrackings && window._emerTrackings.length > 0) return;
-  navigator.clipboard.readText().then(function(text){
-    if(!text || text.length < 10) return;
-    // V1| 형식 QR인지 확인
-    var v1 = text.match(/V1[|][\s\S]{20,}/);
-    if(!v1) return;
-    var parsed = _parseQrText(v1[1]);
-    if(!parsed.tracking_no && !parsed.address) return;
-    // 자동입력
-    var statusEl = document.getElementById('emer-native-status');
-    if(statusEl) statusEl.innerHTML = '<span style="color:var(--teal)">📋 클립보드에서 QR 자동 감지!</span>';
-    _emerHandleScan(v1[1], statusEl);
-    // 시각 피드백
-    try{
-      var _fl=document.createElement('div');
-      _fl.style.cssText='position:fixed;inset:0;background:rgba(0,255,136,.22);z-index:9999;pointer-events:none;transition:opacity .4s';
-      document.body.appendChild(_fl);
-      setTimeout(function(){_fl.style.opacity='0';setTimeout(function(){_fl.remove();},400);},200);
-    }catch(e){}
-  }).catch(function(){});
-}
-
-// 앱으로 돌아올 때도 자동 감지 (폰 카메라 스캔 후 앱으로 전환)
-document.addEventListener('visibilitychange', function(){
-  if(document.visibilityState === 'visible'){
-    // 긴급배송 폼이 열려있을 때만
-    if(document.getElementById('emer-del-mo')){
-      setTimeout(_emerAutoClipboard, 300);
-    }
-  }
-});
 
 function emerStartScan(){
   var mo = document.getElementById('emer-scan-mo');
