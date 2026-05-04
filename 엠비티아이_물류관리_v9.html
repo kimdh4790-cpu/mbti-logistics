@@ -20603,7 +20603,17 @@ function openEmergencyDelivery(){
         <div style="font-size:16px;font-weight:800;color:var(--red)">긴급 배송기록</div>
         <div style="margin-left:auto;font-size:10px;background:#dc2626;color:#fff;padding:2px 8px;border-radius:999px;font-weight:700">쿠팡앱 에러 대응</div>
       </div>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:14px">QR 스캔하면 운송장+주소+GPS 자동입력 → 지도에 핀 표시됩니다.</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:10px">QR 스캔하면 운송장+주소+GPS 자동입력 → 자동저장됩니다.</div>
+      <div id="emer-scan-counter" style="display:flex;gap:8px;margin-bottom:12px">
+        <div style="flex:1;background:var(--bg3);border-radius:8px;padding:8px;text-align:center;border:1.5px solid var(--border)">
+          <div style="font-size:18px;font-weight:900;color:var(--blue)" id="emer-cnt-scan">0</div>
+          <div style="font-size:10px;color:var(--text3);font-weight:600">스캔</div>
+        </div>
+        <div style="flex:1;background:var(--bg3);border-radius:8px;padding:8px;text-align:center;border:1.5px solid var(--border)">
+          <div style="font-size:18px;font-weight:900;color:var(--teal)" id="emer-cnt-save">0</div>
+          <div style="font-size:10px;color:var(--text3);font-weight:600">저장</div>
+        </div>
+      </div>
 
       <!-- ★ v9.48: 폰 네이티브 카메라 QR 촬영 (최우선) + 웹 라이브 스캔 -->
       <!-- 네이티브 카메라 input (숨김) -->
@@ -21112,7 +21122,7 @@ async function emerOcrScan(file){
         };
         window._emerOcrApply();
         window._emerEntryMode = 'ocr';
-        _tts('스캔'); // ★ v9.61: OCR QR 인식 성공 음성
+        _tts('스캔'); _emerIncScan(); // ★ v9.61: OCR QR 인식 성공 음성
         var _reader2=new FileReader(); _reader2.onload=function(e){window._emerPhotos.push(e.target.result);emerRefreshPhotoWrap();}; _reader2.readAsDataURL(file);
 
         // ① GPS 설정
@@ -21122,7 +21132,10 @@ async function emerOcrScan(file){
 
         // ② 주문번호 — OCR 텍스트에서 보완
         if(!_qpDirect.order_id){
-          var _ocrRaw = (d.responses?.[1]?.fullTextAnnotation?.text || d.responses?.[0]?.fullTextAnnotation?.text || '');
+          var _ocrRaw = d.responses?.[1]?.fullTextAnnotation?.text
+                      || d.responses?.[1]?.textAnnotations?.[0]?.description
+                      || d.responses?.[0]?.fullTextAnnotation?.text
+                      || d.responses?.[0]?.textAnnotations?.[0]?.description || '';
           var _oLine = _ocrRaw.split('\n').find(function(l){ return l.indexOf('주문번호') >= 0; });
           if(_oLine){
             var _oNum = _oLine.replace(/[^\d]/g,'');
@@ -21135,13 +21148,14 @@ async function emerOcrScan(file){
 
         // ③ 상태 표시 + 자동저장
         if(status) status.innerHTML = '<span style="color:var(--teal)">📸 스캔 ✅ &nbsp;→&nbsp; 💾 저장 중...</span>';
-        window._emerSaving = false; // 락 초기화
+        window._emerSaving = false;
         setTimeout(function(){
-          if(typeof emerSave === 'function'){
-            emerSave().then(function(){
-              // emerSave 내부에서 toast + 폼 닫힘 처리됨
-            }).catch(function(e){ console.warn('[자동저장 실패]', e); });
+          // 저장 직전 order_id 재확인
+          if(_qpDirect.order_id){
+            var _oe=document.getElementById('emer-orderid');
+            if(_oe && !_oe.value) _oe.value = _qpDirect.order_id;
           }
+          if(typeof emerSave === 'function') emerSave();
         }, 600);
         return;
       }
@@ -21418,6 +21432,22 @@ async function emerOcrScan(file){
 
     // ★ v9.25: 등록방식 = OCR 자동인식
     window._emerEntryMode = 'ocr';
+
+    // ★ v9.61: OCR 텍스트 경로도 자동저장 (운송장 있으면)
+    var _ocrTrk = window._emerTrackings && window._emerTrackings[0];
+    if(_ocrTrk){
+      if(status) status.innerHTML = '<span style="color:var(--teal)">📸 스캔 ✅ &nbsp;→&nbsp; 💾 저장 중...</span>';
+      _tts('스캔'); _emerIncScan();
+      window._emerSaving = false;
+      setTimeout(function(){
+        // 저장 직전 order_id 재확인
+        if(p.order_id){
+          var _oe2=document.getElementById('emer-orderid');
+          if(_oe2 && !_oe2.value) _oe2.value = p.order_id;
+        }
+        if(typeof emerSave==='function') emerSave();
+      }, 600);
+    }
 
   }catch(e){
     var errMsg = e.message || String(e);
@@ -22385,6 +22415,20 @@ function zxingStop(){
 }
 
 // 저장 실행
+// ★ v9.61: 스캔/저장 카운터
+window._emerScanCount = window._emerScanCount || 0;
+window._emerSaveCount = window._emerSaveCount || 0;
+function _emerIncScan(){
+  window._emerScanCount++;
+  var el = document.getElementById('emer-cnt-scan');
+  if(el) el.textContent = window._emerScanCount;
+}
+function _emerIncSave(){
+  window._emerSaveCount++;
+  var el = document.getElementById('emer-cnt-save');
+  if(el) el.textContent = window._emerSaveCount;
+}
+
 // ★ v9.61: TTS 음성 안내
 function _tts(text){
   try{
@@ -22675,7 +22719,7 @@ async function emerSave(){
       o.start(_ac2.currentTime+t); o.stop(_ac2.currentTime+t+0.15);
     });
     setTimeout(function(){ try{_ac2.close();}catch(e){} }, 600);
-    navigator.vibrate&&navigator.vibrate([40,30,40]); _tts('저장');
+    navigator.vibrate&&navigator.vibrate([40,30,40]); _tts('저장'); _emerIncSave();
   }catch(e){}
   toast('✅ 저장 완료 — 지도에 배송핀 생성됨');
 }
