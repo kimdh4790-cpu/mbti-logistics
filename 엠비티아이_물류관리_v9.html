@@ -20624,87 +20624,38 @@ function openEmergencyDelivery(){
         </div>
       </div>
 
-      <!-- ★ v9.61: 통합 송장 촬영 버튼 -->
+      <!-- 통합 송장 촬영 -->
       <input type="file" id="emer-unified-cam" accept="image/*" capture="environment" style="display:none" onchange="emerUnifiedScan(this)">
-      <div style="margin-bottom:10px">
-        <button onclick="document.getElementById('emer-unified-cam').click()" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:18px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;border-radius:12px;font-size:17px;font-weight:900;cursor:pointer;box-shadow:0 3px 12px rgba(124,58,237,.4)">
-          <span style="font-size:24px">📸</span> 송장 촬영
-        </button>
-        <div id="emer-unified-status" style="font-size:12px;color:var(--teal);text-align:center;margin-top:6px;min-height:16px"></div>
-      </div>
+      <button onclick="document.getElementById('emer-unified-cam').click()" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:20px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;border-radius:14px;font-size:18px;font-weight:900;cursor:pointer;box-shadow:0 3px 14px rgba(124,58,237,.4);margin-bottom:8px">
+        <span style="font-size:26px">📸</span> 송장 촬영
+      </button>
+      <div id="emer-unified-status" style="font-size:13px;color:var(--teal);text-align:center;margin-bottom:10px;min-height:18px"></div>
+
       <!-- 라이브 스캔 (보조) -->
-      <div style="margin-bottom:10px">
-        <button onclick="emerStartScan()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:10px;background:var(--bg3);color:var(--text2);border:1.5px solid var(--border);border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">
-          <span style="font-size:14px">🎥</span> 라이브 스캔
-        </button>
-        <div id="emer-barcode-status" style="font-size:11px;color:var(--text3);text-align:center;margin-top:3px;min-height:14px"></div>
-      </div>
-      <div id="emer-native-status" style="display:none"></div>
-      <div id="emer-ocr-status" style="display:none"></div>
+      <button onclick="emerStartScan()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px;background:var(--bg3);color:var(--text2);border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:14px">
+        <span style="font-size:15px">🎥</span> 라이브 스캔
+      </button>
 
-      <!-- OCR 결과 요약 -->
-      <div id="emer-ocr-summary" style="display:none;margin-bottom:10px;padding:10px;background:var(--bg3);border-radius:10px;border:1.5px solid var(--teal);font-size:12px;line-height:1.7"></div>
-
-      <!-- 운송장 입력 -->
-      <div style="margin-bottom:10px">
-        <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:4px">📦 운송장 번호 <span style="color:var(--red)">*</span></div>
-        <div id="emer-tracking-list" style="margin-bottom:4px"></div>
-        <div style="display:flex;gap:6px">
-          <input id="emer-tracking-inp" type="number" inputmode="numeric" placeholder="운송장 번호 직접 입력" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text)">
-          <button onclick="emerAddTrackingManual()" style="padding:8px 12px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">추가</button>
-          <button onclick="if(window._emerTrackings&&window._emerTrackings.length){toast('✅ '+window._emerTrackings.length+'건 스캔됨');}" style="padding:8px 10px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer">📋</button>
-        </div>
-        <div style="font-size:10px;color:var(--text3);margin-top:3px">* QR 스캔 시 자동입력됩니다</div>
+      <!-- 숨김 필드들 (JS에서 사용) -->
+      <div style="display:none">
+        <input id="emer-tracking-inp"><div id="emer-tracking-list"></div>
+        <input id="emer-addr"><input id="emer-recipient">
+        <input id="emer-orderid"><input id="emer-delivmemo">
+        <div id="emer-gps-status"></div><div id="emer-ocr-status"></div>
+        <div id="emer-native-status"></div><div id="emer-barcode-status"></div>
+        <div id="emer-ocr-summary"></div><div id="emer-photo-wrap"></div>
       </div>
 
-      <!-- 주소 -->
-      <div style="margin-bottom:8px">
-        <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:4px">📍 배송 주소</div>
-        <input id="emer-addr" type="text" placeholder="주소 (QR 스캔 시 자동입력)" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text);box-sizing:border-box">
-      </div>
-
-      <!-- 수령인 -->
-      <div style="margin-bottom:8px">
-        <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:4px">👤 수령인</div>
-        <input id="emer-recipient" type="text" placeholder="수령인 (QR 스캔 시 자동입력)" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text);box-sizing:border-box">
-      </div>
-
-      <!-- 주문번호 -->
-      <div style="margin-bottom:8px">
-        <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:4px">🔢 주문번호</div>
-        <input id="emer-orderid" type="text" placeholder="주문번호 (OCR 자동입력)" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text);box-sizing:border-box">
-      </div>
-
-      <!-- GPS 상태 -->
-      <div id="emer-gps-status" style="font-size:11px;color:var(--text3);margin-bottom:10px;min-height:14px"></div>
-
-      <!-- 배송 사진 -->
-      <div style="margin-bottom:10px">
-        <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">📷 배송 완료 사진 <span style="font-size:10px;color:var(--text3)">(선택)</span></div>
-        <div id="emer-photo-wrap" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px"></div>
-        <label style="display:inline-flex;align-items:center;gap:5px;padding:7px 12px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;color:var(--text2)">
-          📷 사진 추가
-          <input type="file" accept="image/*" capture="environment" multiple style="display:none" onchange="emerAddPhotos(this.files)">
-        </label>
-      </div>
-
-      <!-- 배송 메모 -->
-      <div style="margin-bottom:12px">
-        <input id="emer-delivmemo" type="text" placeholder="배송 메모 (선택사항, 예: 문 앞에 배치)" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text);box-sizing:border-box">
-      </div>
-
-      <!-- 저장 버튼 -->
-      <button onclick="emerSave()" style="width:100%;padding:14px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:900;cursor:pointer;margin-bottom:8px">🗺️ 지도에 배송핀 생성 + 저장</button>
-      <button onclick="document.getElementById('emer-del-mo')?.remove()" style="width:100%;padding:11px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;color:var(--text2)">취소</button>
+      <button onclick="document.getElementById('emer-del-mo')?.remove()" style="width:100%;padding:11px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;color:var(--text2)">닫기</button>
   `);
   setTimeout(function(){ var el=document.getElementById('qr-paste-inp'); if(el) el.focus(); }, 100);
 }
 
 
 
-async function emerOcrScan(file){
+async function emerOcrScan(file, _statusOverride){
   if(!file) return;
-  var status = document.getElementById('emer-ocr-status');
+  var status = _statusOverride || document.getElementById('emer-ocr-status');
 
   // ★ v9.25: 1단계 — jsQR로 QR 코드 먼저 해독 (API 비용 0, 빠름)
   // 사진을 네이티브 카메라로 찍으면 고해상도+자동초점 → jsQR 인식률 대폭 향상
@@ -21348,14 +21299,8 @@ function emerUnifiedScan(input){
   var file = input.files[0];
   input.value = '';
   if(statusEl) statusEl.innerHTML = '🔍 분석 중...';
-  // ★ v9.61: 바로 Vision API OCR (QR/바코드 시도 없음 — OCR이 가장 확실)
-  var unifiedSt = document.getElementById('emer-unified-status');
-  if(unifiedSt) unifiedSt.id = 'emer-ocr-status';
-  setTimeout(function(){
-    var el = document.getElementById('emer-ocr-status');
-    if(el) el.id = 'emer-unified-status';
-  }, 10000);
-  emerOcrScan(file);
+  // ★ v9.61: 바로 Vision API OCR, statusEl 직접 전달
+  emerOcrScan(file, statusEl);
 }
 
 function emerNativeCamQR(input){
@@ -21859,8 +21804,9 @@ function _emerHandleScan(raw, statusEl){
       var n=new Date();
       window._emerTrackingTimes[trackToAdd]=n.getHours()+':'+String(n.getMinutes()).padStart(2,'0')+':'+String(n.getSeconds()).padStart(2,'0');
       emerRefreshTrackingList();
-      // ★ QR(주소/GPS 포함)이면 entryMode 덮어쓰지 않음
-      if(!qp.address && !qp.lat) window._emerEntryMode='barcode';
+      // QR(주소/GPS)이면 ocr, 순수 바코드면 barcode
+      if(qp.address || qp.lat){ window._emerEntryMode = 'ocr'; }
+      else if(!window._emerEntryMode){ window._emerEntryMode = 'barcode'; }
     }
   }
 
@@ -22335,6 +22281,16 @@ async function emerSave(){
         }
       }catch(e){ console.warn('[emerSave] Geocoding 폴백 실패:', e.message||e); }
     }
+  }
+
+  // GPS 없으면 현위치로 폴백
+  if(!gpsClean && navigator.geolocation){
+    try{
+      var _pos = await new Promise(function(res,rej){
+        navigator.geolocation.getCurrentPosition(res,rej,{timeout:3000,enableHighAccuracy:true,maximumAge:10000});
+      });
+      gpsClean = {lat:_pos.coords.latitude, lng:_pos.coords.longitude, acc:_pos.coords.accuracy, src:'device_fallback'};
+    }catch(e){}
   }
 
   // ★ v9.25: 등록방식 판정 (자동인식 / 바코드 / 수기)
