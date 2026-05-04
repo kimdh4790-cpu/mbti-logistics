@@ -22847,148 +22847,84 @@ async function saveDelivComplete(){
   if(!window._delivCompletePhotos||!window._delivCompletePhotos.length){
     toast('❌ 완료 사진을 1장 이상 찍어주세요'); return;
   }
-  // ★ v9.25: 체크된 운송장만 완료 처리 (부분완료 지원)
-  var totalChecks = document.querySelectorAll('.dc-track-chk').length;
-  var doneChecks = document.querySelectorAll('.dc-track-chk:checked').length;
-  if(totalChecks > 0 && doneChecks === 0){
-    toast('❌ 완료할 운송장을 1개 이상 체크해주세요');
-    return;
-  }
-  var fbId = window._delivCompleteFbId;
-  var memo = document.getElementById('dc-memo')?.value.trim()||'';
-  var saveBtn = document.getElementById('dc-save-btn') || document.querySelector('#deliv-complete-mo button[onclick="saveDelivComplete()"]');
-  if(saveBtn) saveBtn.disabled = true;
-  toast('💾 완료 처리 중...');
+  var totalChecks=document.querySelectorAll('.dc-track-chk').length;
+  var doneChecks=document.querySelectorAll('.dc-track-chk:checked').length;
+  if(totalChecks>0&&doneChecks===0){ toast('❌ 완료할 운송장을 1개 이상 체크해주세요'); return; }
 
-  // ★ v9.25: 사진 병렬 업로드 (순차 → 동시)
-  var uploaded = [];
-  var now = new Date();
-  if(FB && _st && window._delivCompletePhotos.length > 0){
-    toast('📸 사진 '+window._delivCompletePhotos.length+'장 업로드 중...');
-    try{
-      var uploadTasks = window._delivCompletePhotos.map(function(dataUrl, i){
-        var path = 'emergency/complete/'+S.curDriver+'/'+now.getTime()+'_'+i+'.jpg';
-        return _emerStorageUpload(dataUrl, path, 3).catch(function(e){
-          console.warn('완료사진 Storage 실패:', e.code||e.message);
-          return new Promise(function(res){
-            var img3=new Image(); img3.src=dataUrl;
-            img3.onload=function(){
-              var cvs2=document.createElement('canvas');
-              var max2=800, ratio2=Math.min(max2/img3.width,max2/img3.height,1);
-              cvs2.width=Math.round(img3.width*ratio2); cvs2.height=Math.round(img3.height*ratio2);
-              cvs2.getContext('2d').drawImage(img3,0,0,cvs2.width,cvs2.height);
-              res(cvs2.toDataURL('image/jpeg',0.75));
-            };
-            img3.onerror=function(){ res(null); };
-          });
-        });
+  var fbId=window._delivCompleteFbId;
+  var memo=document.getElementById('dc-memo')?.value.trim()||'';
+  var checkedTrackings=[];
+  document.querySelectorAll('.dc-track-chk:checked').forEach(function(c){ if(c.dataset.track) checkedTrackings.push(c.dataset.track); });
+  var photosCopy=window._delivCompletePhotos.slice();
+
+  // ★ v9.61: 즉시 UI 닫기 (백그라운드 저장)
+  try{ navigator.vibrate&&navigator.vibrate([60,30,120]); }catch(e){}
+  document.getElementById('deliv-complete-mo')?.remove();
+  toast('✅ 배송완료!');
+
+  // 백그라운드 처리
+  (async function(){
+    var now=new Date(), nowIso=now.toISOString();
+
+    // 사진 압축 (600px, 0.6품질 — 빠름)
+    async function compress(dataUrl){
+      return new Promise(function(res){
+        var img=new Image(); img.src=dataUrl;
+        img.onload=function(){
+          var max=600,r=Math.min(max/img.width,max/img.height,1);
+          var cv=document.createElement('canvas');
+          cv.width=Math.round(img.width*r); cv.height=Math.round(img.height*r);
+          cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+          res(cv.toDataURL('image/jpeg',0.6));
+        };
+        img.onerror=function(){res(dataUrl);};
       });
-      uploaded = (await Promise.all(uploadTasks)).filter(Boolean);
-    }catch(e){ console.warn('병렬 업로드 오류:', e); }
-  }
-
-  // ★ v9.25: 체크된(=완료된) 운송장 목록 수집
-  var checkedTrackings = [];
-  document.querySelectorAll('.dc-track-chk:checked').forEach(function(c){
-    if(c.dataset.track) checkedTrackings.push(c.dataset.track);
-  });
-
-  // ★ v9.25: 부분완료 시스템 — trackingStatus 객체 업데이트
-  var allTrackings = window._delivCompleteAllTrackings || [];
-  var existingStatus = window._delivCompleteExistingStatus || {};
-  var newStatus = Object.assign({}, existingStatus);
-  var nowIso = now.toISOString();
-
-  // 체크된 운송장에 완료 정보 기록
-  checkedTrackings.forEach(function(t){
-    newStatus[t] = {
-      status: '완료',
-      completedAt: nowIso,
-      completePhotos: uploaded.slice(),
-      completeMemo: memo||'',
-      completedBy: S.curDriver||''
-    };
-  });
-
-  // 전체 상태 계산: 모두 완료 → '완료', 일부 → '부분완료', 모두 미완료 → '미완료'
-  var allDone = allTrackings.length > 0 && allTrackings.every(function(t){
-    return newStatus[t] && newStatus[t].status === '완료';
-  });
-  var anyDone = allTrackings.some(function(t){
-    return newStatus[t] && newStatus[t].status === '완료';
-  });
-  var overallStatus = allDone ? '완료' : (anyDone ? '부분완료' : '미완료');
-
-  var update = {
-    status: overallStatus,
-    trackingStatus: newStatus, // ★ v9.25: 운송장별 상태 (부분완료 핵심)
-    lastCompletedAt: nowIso,
-    matchedTrackings: checkedTrackings // 호환성: 이번에 처리된 운송장
-  };
-
-  // 호환성: 모두 완료 시 기존 필드도 채움 (옛날 화면 호환)
-  if(allDone){
-    update.completedAt = nowIso;
-    update.completePhotos = uploaded;
-    update.completeMemo = memo||'';
-  } else {
-    // 부분완료라도 첫 번째 완료 사진은 대표로 채워둠 (지도 핀 미리보기용)
-    if(!existingStatus || Object.keys(existingStatus).length === 0){
-      update.completePhotos = uploaded;
-      update.completeMemo = memo||'';
     }
-  }
+    var compressed=await Promise.all(photosCopy.map(compress));
 
-  // Firebase 업데이트
-  var fbOk = false;
-  if(FB&&_db&&fbId){
-    try{
-      await _db.collection('emergency_deliveries').doc(fbId).update(update);
-      fbOk = true;
-    }catch(e){
-      console.error('배송완료 Firebase 저장 실패:', e.code, e.message);
-      toast('⚠️ Firebase 저장 실패 ('+( e.code||'오류')+') — 로컬만 저장됨');
+    // 병렬 업로드
+    var uploaded=compressed;
+    if(FB&&_st){
+      try{
+        var tasks=compressed.map(function(d,i){
+          return _emerStorageUpload(d,'emergency/complete/'+S.curDriver+'/'+now.getTime()+'_'+i+'.jpg',2).catch(function(){return d;});
+        });
+        uploaded=(await Promise.all(tasks)).filter(Boolean);
+      }catch(e){}
     }
-  }
 
-  // 로컬 업데이트 — base64 사진도 로컬엔 보관
-  var updateLocal = Object.assign({}, update, { completePhotosLocal: window._delivCompletePhotos.slice() });
-  try{
-    var list = JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]');
-    var idx = list.findIndex(function(x){
-      return (x.fbId&&x.fbId===fbId)||(x._fbId&&x._fbId===fbId)||(x.id&&x.id===fbId);
+    var allTrackings=window._delivCompleteAllTrackings||[];
+    var existingStatus=window._delivCompleteExistingStatus||{};
+    var newStatus=Object.assign({},existingStatus);
+    checkedTrackings.forEach(function(t){
+      newStatus[t]={status:'완료',completedAt:nowIso,completePhotos:uploaded.slice(),completeMemo:memo,completedBy:S.curDriver||''};
     });
-    if(idx>-1) Object.assign(list[idx], updateLocal);
-    localStorage.setItem('mbti_emergency_del', JSON.stringify(list));
-  }catch(e){}
+    var allDone=allTrackings.length>0&&allTrackings.every(function(t){return newStatus[t]&&newStatus[t].status==='완료';});
+    var anyDone=allTrackings.some(function(t){return newStatus[t]&&newStatus[t].status==='완료';});
+    var overallStatus=allDone?'완료':(anyDone?'부분완료':'미완료');
+    var update={status:overallStatus,trackingStatus:newStatus,lastCompletedAt:nowIso,matchedTrackings:checkedTrackings};
+    if(allDone){update.completedAt=nowIso;update.completePhotos=uploaded;update.completeMemo=memo||'';}
+    else if(!existingStatus||!Object.keys(existingStatus).length){update.completePhotos=uploaded;update.completeMemo=memo||'';}
 
-  // 지도 핀 색상 갱신 — 이후 _rerenderRoutePins가 전체 재정렬하므로 직접 조작 불필요
-  if(window._activeDriverMapEmerLocs){
-    var loc = window._activeDriverMapEmerLocs.find(function(x){ return (x.fbId||x._fbId)===fbId; });
-    if(loc){
-      loc.status = overallStatus;
-      loc.trackingStatus = newStatus;
+    if(FB&&_db&&fbId){
+      try{ await _db.collection('emergency_deliveries').doc(fbId).update(update); }
+      catch(e){ console.warn('배송완료 저장 실패:',e.message); }
     }
-  }
-  // ★ 완료 후 번호 재정렬
-  if(window._rerenderRoutePins){
-    var curLoc = window._driverMapCurrentLoc || {lat:35.1796, lng:129.0756};
-    window._rerenderRoutePins(curLoc);
-  }
-  if(window._updateMapCounter) window._updateMapCounter();
 
-  // ★ 기록 페이지 실시간 갱신
-  if(S.page==='emergency_log') setTimeout(function(){ SP('emergency_log',null); }, 500);
+    // 로컬 업데이트
+    var updateLocal=Object.assign({},update,{completePhotosLocal:compressed});
+    try{
+      var list=JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]');
+      var idx=list.findIndex(function(x){ return (x.fbId&&x.fbId===fbId)||(x._fbId&&x._fbId===fbId); });
+      if(idx>=0){ Object.assign(list[idx],updateLocal); }
+      localStorage.setItem('mbti_emergency_del',JSON.stringify(list));
+    }catch(e){}
 
-  window._delivCompletePhotos = [];
-  if(fbOk){
-    var msg = allDone
-      ? '✅ 전체 완료 처리됨 ('+checkedTrackings.length+'건)'
-      : '🟠 부분완료 — '+checkedTrackings.length+'건 완료 / '+(allTrackings.length-Object.keys(newStatus).filter(function(t){return newStatus[t].status==='완료';}).length)+'건 미완료';
-    toast(msg);
-  }
-  if(typeof _updateMapCounter==='function') _updateMapCounter();
-  setTimeout(function(){ document.getElementById('deliv-complete-mo')?.remove(); }, 1000);
+    // 지도 핀 업데이트
+    if(window._activeDriverMapUpdatePin) window._activeDriverMapUpdatePin(fbId,update);
+    if(window._updateMapCounter) window._updateMapCounter();
+    if(S.page==='emergency_log') setTimeout(function(){SP('emergency_log',null);},300);
+  })();
 }
 
 // ★ v9.25: 긴급배송 기록 (60일) — 기사/관리자 공용 / 실시간 onSnapshot / 완료·미완료 분리
