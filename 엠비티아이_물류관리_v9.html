@@ -21112,6 +21112,7 @@ async function emerOcrScan(file){
         };
         window._emerOcrApply();
         window._emerEntryMode = 'ocr';
+        _tts('스캔'); // ★ v9.61: OCR QR 인식 성공 음성
         var _reader2=new FileReader(); _reader2.onload=function(e){window._emerPhotos.push(e.target.result);emerRefreshPhotoWrap();}; _reader2.readAsDataURL(file);
 
         // ① GPS 설정
@@ -22649,11 +22650,9 @@ async function emerSave(){
     }
   }
 
-  // 모달 닫고 지도 오픈
+  // 모달 닫고 → 바로 다음 스캔 폼 오픈 (연속 스캔)
   document.getElementById('emer-del-mo')?.remove();
-  setTimeout(function(){
-    if(!window._activeDriverMap) openDriverMap();
-  }, 300);
+  setTimeout(function(){ openEmergencyDelivery(); }, 400);
 
   // ★ 긴급배송 기록 페이지 열려있으면 실시간 갱신
   if(S.page==='emergency_log') setTimeout(function(){ SP('emergency_log',null); }, 500);
