@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.25</title>
+<title>엠비티아이 물류관리 v9.27</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10420,7 +10420,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.25 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.27 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -11393,10 +11393,10 @@ function updBadge(){
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
 function updFbUI(){
-  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.25 · 🔥 실시간':'v9.25 · 데모';
+  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.27 · 🔥 실시간':'v9.27 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.25 · Firebase 실시간':'v9.25 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.27 · Firebase 실시간':'v9.27 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -11805,14 +11805,20 @@ async function selfResetPwSave(){
     return x.fbId===d.fbId || x.userId===d.userId;
   });
   if(idx >= 0){
+    // ★ v9.27 fix: pw + password 양쪽 모두 업데이트 (doLogin이 pw 우선 검증)
+    drivers[idx].pw = hashed;
     drivers[idx].password = hashed;
+    drivers[idx].pwResetAt = new Date().toISOString();
+    drivers[idx].pwResetBy = 'self';
     lss('drivers', drivers);
   }
 
   // Firebase 업데이트
   if(FB && _db && d.fbId){
     try{
+      // ★ v9.27 fix: pw + password 양쪽 모두 업데이트
       await _db.collection('drivers').doc(d.fbId).update({
+        pw: hashed,
         password: hashed,
         pwResetAt: new Date().toISOString(),
         pwResetBy: 'self'
@@ -15965,11 +15971,13 @@ function saveEditDriver(fbIdOrId){
   lss('drivers',all);
 
   // ★ v9.25: 비밀번호가 변경된 경우 해시 변환 후 Firebase 저장
+  // ★ v9.27 fix: pw + password 양쪽 모두 동시 업데이트
   async function _doSave(pwToSave){
     if(FB&&_db&&d.fbId){
       _db.collection('drivers').doc(d.fbId).update({
         name:d.name, userId:d.userId, phone:d.phone,
-        password:pwToSave||d.password||'', plate:d.plate, ton:d.ton,
+        pw:pwToSave||d.pw||d.password||'',
+        password:pwToSave||d.password||d.pw||'', plate:d.plate, ton:d.ton,
         jobtype:d.jobtype, jobsub:d.jobsub, employ:d.employ, route:d.route,
         camp:d.camp||'', shift:d.shift||'',
         bizNum:d.bizNum, bizName:d.bizName, bizAddr:d.bizAddr,
@@ -15990,14 +15998,16 @@ function saveEditDriver(fbIdOrId){
 
   if(newPw){
     // 새 비밀번호 → SHA-256 해시 변환 후 저장
+    // ★ v9.27 fix: pw + password 양쪽 모두 업데이트 (doLogin이 pw 우선 검증)
     hashPw(newPw).then(function(hashed){
+      d.pw = hashed;
       d.password = hashed;
       all[idx] = d;
       lss('drivers', all);
       _doSave(hashed);
     });
   } else {
-    _doSave(d.password||'');
+    _doSave(d.pw||d.password||'');
   }
   
   // 활동 로그
@@ -18478,8 +18488,16 @@ function DT(tab,el){
 
 // ★ 기사 앱 — 세금계산서 이미지 보기 (Firebase Storage URL 또는 base64)
 // ★ v9.25: 같은 월에 1·2차 발행 시 항상 가장 최신(sentAt) 세금계산서만 표시
+// ★ v9.27: 본인 검증 강화 — 다른 기사 세금계산서 노출 차단
 function dViewTax(month, driver, btn){
   var drv=driver||S.curDriver;
+
+  // ★ v9.27 보안: 본인이 아닌 기사의 세금계산서 조회 차단 (관리자 모드 제외)
+  if(S.curMode==='driver' && S.curDriver && drv && drv!==S.curDriver){
+    console.warn('[보안] 다른 기사 세금계산서 조회 차단:', drv, '!=', S.curDriver);
+    drv = S.curDriver;  // 본인 것으로 강제 교체
+  }
+
   if(btn){btn.textContent='🔍 불러오는 중...';btn.disabled=true;setTimeout(function(){btn.textContent='🧾 세금계산서 이미지 보기';btn.disabled=false;},4000);}
   var tkKey=(drv||'')+'_'+month;
 
@@ -18491,7 +18509,8 @@ function dViewTax(month, driver, btn){
       var fbItem=null;
       if(doc.exists){
         var d=doc.data();
-        if(d&&d.img&&d.type==='tax_invoice'&&d.month===month) fbItem=d;
+        // ★ v9.27: 문서의 driver 필드도 검증 — 잘못된 docKey 방지
+        if(d&&d.img&&d.type==='tax_invoice'&&d.month===month&&d.driver===drv) fbItem=d;
       }
       // 항상 fallback 쿼리도 같이 돌려서 sentAt 가장 최신 선택 (구버전 add() 데이터 포함)
       _db.collection('driver_notifications').where('driver','==',drv).get()
@@ -18500,6 +18519,8 @@ function dViewTax(month, driver, btn){
         snap.forEach(function(d2){
           var dd=d2.data();
           if(dd.type!=='tax_invoice'||dd.month!==month||!dd.img) return;
+          // ★ v9.27: driver 필드 추가 검증
+          if(dd.driver!==drv) return;
           if(!latest||(dd.sentAt||'').localeCompare(latest.sentAt||'')>0) latest=dd;
         });
         if(latest&&latest.img){
@@ -18522,10 +18543,10 @@ function dViewTax(month, driver, btn){
     return;
   }
 
-  // ★ Firebase 미연결 시 (오프라인) — 메모리/캐시 폴백
+  // ★ Firebase 미연결 시 (오프라인) — 메모리/캐시 폴백 (본인 데이터만)
   if(window._drvNotes){
     var memList=Object.values(window._drvNotes).filter(function(it){
-      return it.type==='tax_invoice'&&it.month===month&&it.img;
+      return it.type==='tax_invoice'&&it.month===month&&it.img&&it.driver===drv;  // ★ v9.27: driver 필드 검증
     }).sort(function(a,b){return (b.sentAt||'').localeCompare(a.sentAt||'');});
     if(memList[0]){_showTaxImg(memList[0].img,month);return;}
   }
@@ -18575,11 +18596,34 @@ function checkDriverNotifications(){
     .onSnapshot(function(snap){
       if(snap.empty)return;
       var items=[]; var nids=[];
-      snap.forEach(function(doc){var d=doc.data();d._id=doc.id;items.push(d);nids.push(doc.id);});
+      // ★ v9.27: driver 필드 추가 검증 — 잘못 저장된 다른 기사 항목 차단
+      snap.forEach(function(doc){
+        var d=doc.data();
+        if(d.driver !== S.curDriver) return;  // 본인 것만 통과
+        d._id=doc.id;
+        items.push(d);
+        nids.push(doc.id);
+      });
       items.sort(function(a,b){return (b.sentAt||'').localeCompare(a.sentAt||'');});
       if(items.length>10)items=items.slice(0,10);
       // ★ DT 호출 제거 - 무한루프 원인
       window._drvNotes={}; items.forEach(function(it){window._drvNotes[it._id]=it;});
+
+      // ★ v9.27: 다른 기사의 세금계산서 캐시 자동 정리 (한 폰에서 여러 기사 사용한 흔적 제거)
+      try{
+        var tk=JSON.parse(localStorage.getItem('mbti_drv_tax')||'{}');
+        var myPrefix=(S.curDriver||'')+'_';
+        var changed=false;
+        Object.keys(tk).forEach(function(k){
+          // 본인 키가 아니면 제거 (앞부분이 본인 이름이 아닌 항목)
+          if(k.indexOf(myPrefix)!==0 && k.indexOf('__sentAt')===-1){
+            delete tk[k];
+            delete tk[k+'__sentAt'];
+            changed=true;
+          }
+        });
+        if(changed) localStorage.setItem('mbti_drv_tax',JSON.stringify(tk));
+      }catch(e){}
       // ★ v9.25: 새 알림 도착 시 실제 OS 푸시 알림 발송 (Notification API)
       try{
         var notifiedKey='mbti_pushed_notifs_'+S.curDriver;
