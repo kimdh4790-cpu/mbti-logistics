@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.28</title>
+<title>엠비티아이 물류관리 v9.29</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10420,7 +10420,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.28 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.29 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -11393,10 +11393,10 @@ function updBadge(){
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
 function updFbUI(){
-  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.28 · 🔥 실시간':'v9.28 · 데모';
+  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.29 · 🔥 실시간':'v9.29 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.28 · Firebase 실시간':'v9.28 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.29 · Firebase 실시간':'v9.29 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -19682,11 +19682,27 @@ async function submitCampSupport(){
 async function respondCampSupport(fbId){
   if(!fbId){toast('❌ ID 없음');return;}
   var me=ls('drivers').find(function(x){return x.name===S.curDriver;});
-  // 사유 입력
-  var reason=prompt('콜!! 응원 메시지 (선택사항)','');
-  if(reason===null)return; // 취소
   if(FB&&_db){
     try{
+      // ★ v9.28: 응답 전 최신 상태 재확인 (race condition 차단)
+      var freshDoc = await _db.collection('campSupports').doc(fbId).get();
+      if(!freshDoc.exists){toast('❌ 지원 요청을 찾을 수 없습니다');return;}
+      var freshData = freshDoc.data();
+      if(freshData.status==='해결'){
+        toast('✅ 이미 해결된 요청입니다');
+        _loadCampSupports(); // 카드 새로고침
+        return;
+      }
+      // ★ v9.28: 본인이 이미 응답했는지 체크 (중복 응답 방지)
+      var responders = freshData.responders||[];
+      var alreadyResponded = responders.some(function(r){return r.driver===S.curDriver;});
+      if(alreadyResponded){
+        toast('ℹ️ 이미 콜!! 응답하셨습니다');
+        return;
+      }
+      // 사유 입력
+      var reason=prompt('콜!! 응원 메시지 (선택사항)','');
+      if(reason===null)return; // 취소
       await _db.collection('campSupports').doc(fbId).update({
         responders:firebase.firestore.FieldValue.arrayUnion({driver:S.curDriver,phone:(me&&me.phone)||'',reason:reason,ts:new Date().toISOString()})
       });
@@ -29664,7 +29680,7 @@ function startNotiListeners(){
           var key='ac_'+change.doc.id;
           if(window._notiSeen[key])return;
           window._notiSeen[key]=Date.now();
-        if(window._notiSeenSave)window._notiSeenSave();
+          if(window._notiSeenSave)window._notiSeenSave();
           sendLocalNoti({
             title:'🚨 '+myCampFull+' 사고 발생',
             body:(d.driver||'기사')+': '+(d.kind||d.summary||'사고가 접수되었습니다'),
@@ -30162,7 +30178,7 @@ function _playBeepSound(urgent){
     var ctx=window._mbtiAudioCtx;
     if(ctx.state==='suspended')ctx.resume().catch(function(){});
     var now=ctx.currentTime;
-    // ★ v9.25: 볼륨 마스터 최대화
+    // ★ v9.28 fix: masterGain을 destination에 연결 + 각 톤이 masterGain으로 라우팅되어야 1.5배 부스트가 실제 적용됨
     var masterGain=ctx.createGain();
     masterGain.gain.value=1.5; // 클리핑 허용 (최대화)
     masterGain.connect(ctx.destination);
@@ -30175,7 +30191,7 @@ function _playBeepSound(urgent){
       gain.gain.linearRampToValueAtTime(vol||0.3,now+t+0.015);
       gain.gain.exponentialRampToValueAtTime(0.001,now+t+dur);
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(masterGain); // ★ v9.28 fix: destination이 아닌 masterGain으로 연결 → 부스트 적용
       osc.start(now+t);
       osc.stop(now+t+dur+0.05);
     }
