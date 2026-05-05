@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.40</title>
+<title>엠비티아이 물류관리 v9.43</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10420,7 +10420,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.40 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.43 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -11393,10 +11393,10 @@ function updBadge(){
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
 function updFbUI(){
-  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.40 · 🔥 실시간':'v9.40 · 데모';
+  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.43 · 🔥 실시간':'v9.43 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.40 · Firebase 실시간':'v9.40 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.43 · Firebase 실시간':'v9.43 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -12254,18 +12254,9 @@ async function submitReg(){
 var PT={archive:'📋 3개월 기록 보관소',audit:'🔒 보안 감사 로그',dash:'대시보드',schedule_admin:'📅 근무표 관리',memo:'📝 메모 달력',entry:'입차 현황',accident:'사고 접수',settle:'정산서 관리',drivers:'기사 관리',insurance:'쿠팡 라우트 단가표',mypage:'내 정보 수정',inquiries:'📩 홈페이지 문의함',notice:'📢 공지사항 게시판',attend:'📍 출퇴근 조회',memo_log:'📝 운행 메모 (60일)',support_admin:'🤝 기사 지원요청',complaint_admin:'📝 불편함 접수',emergency_log:'🚨 긴급배송 기록 (60일)'};
 function SP(pg,el){
   S.page=pg;
-  // 기사 관리 페이지 진입 시 Firebase 최신 데이터 즉시 로드
-  if(pg==='drivers'&&FB&&_db){
-    _db.collection('drivers').get().then(function(snap){
-      var all=[];
-      snap.forEach(function(doc){var d=doc.data();d.fbId=doc.id;all.push(d);});
-      lss('drivers',all);
-      updBadge();
-      // 데이터 로드 후 화면 즉시 갱신
-      var ca=document.getElementById('ca');
-      if(ca)ca.innerHTML=rDrivers();
-    }).catch(function(e){console.warn('drivers SP get:',e);});
-  }
+  // ★ v9.40 fix: drivers 페이지 진입 시 .get() 제거
+  // → 관리자 메인 onSnapshot(L26395)이 이미 실시간으로 localStorage 동기화 중
+  // → 페이지 진입마다 31명 전체 read 발생하던 문제 차단 (가장 큰 read 절감)
   // ★ v9.25: notice 페이지 벗어날 때 실시간 리스너 해제
   if(S.page !== 'notice' && window._noticePanelListener){
     window._noticePanelListener();
@@ -21444,53 +21435,10 @@ async function emerOcrScan(file, _statusOverride){
             // 배송지 좌표를 _emerGps로 저장 (저장 시 사용)
             window._emerGps = {lat:loc.lat, lng:loc.lng, acc:0, src:'geocode', addr:p.address};
             if(status) status.innerHTML = '<span style="color:var(--teal)">✅ 배송지 좌표 변환 완료</span>';
-            // ★ v9.38: OCR 직후 거리 미리 체크 (가는 길에 미리 인지)
-            //   주소 타입별 임계값(아파트 30m / 주택 10m)
-            try{
-              if(navigator.geolocation){
-                var _addrTypePre = (function(_a){
-                  if(!_a) return {type:'unknown', threshold:10, label:'주소'};
-                  // ① 빌라/맨션/연립/오피스텔/레지던스 → 10m (옆 건물도 잡힘)
-                  if(/빌라|맨션|연립|다세대|오피스텔|레지던스/i.test(_a))
-                    return {type:'small_complex', threshold:10, label:'빌라/오피'};
-                  // 타워는 큰 브랜드 아파트가 아닐 때만 10m
-                  if(/타워/.test(_a) && !/롯데캐슬|힐스테이트|푸르지오|자이|래미안/i.test(_a))
-                    return {type:'small_complex', threshold:10, label:'타워'};
-                  // ② 대단지 아파트만 30m: "아파트" 키워드 + 동 번호
-                  if((/아파트/i.test(_a) || /자이|래미안|푸르지오|롯데캐슬|힐스테이트|hillstate/i.test(_a))
-                     && /\d+동/.test(_a))
-                    return {type:'large_apt', threshold:30, label:'대단지 아파트'};
-                  // ③ 그 외
-                  return {type:'house', threshold:10, label:'주택/지번'};
-                })(p.address||'');
-                navigator.geolocation.getCurrentPosition(function(pos){
-                  var R=6371000;
-                  var dLat=(loc.lat-pos.coords.latitude)*Math.PI/180;
-                  var dLng=(loc.lng-pos.coords.longitude)*Math.PI/180;
-                  var _x = Math.sin(dLat/2)*Math.sin(dLat/2)
-                        + Math.cos(pos.coords.latitude*Math.PI/180)*Math.cos(loc.lat*Math.PI/180)
-                        * Math.sin(dLng/2)*Math.sin(dLng/2);
-                  var _distM = Math.round(R*2*Math.atan2(Math.sqrt(_x),Math.sqrt(1-_x)));
-                  // OCR 결과 화면에 거리 인디케이터 추가
-                  setTimeout(function(){
-                    var _sum=document.getElementById('emer-ocr-summary');
-                    if(!_sum) return;
-                    var _isOver = _distM > _addrTypePre.threshold;
-                    var _bg = _isOver ? 'rgba(220,38,38,.15)' : (_distM > _addrTypePre.threshold * 0.6 ? 'rgba(245,158,11,.15)' : 'rgba(16,185,129,.15)');
-                    var _bd = _isOver ? '#dc2626' : (_distM > _addrTypePre.threshold * 0.6 ? '#f59e0b' : '#10b981');
-                    var _ico = _isOver ? '🚨' : (_distM > _addrTypePre.threshold * 0.6 ? '⚠️' : '✅');
-                    var _msg = _isOver ? '주소-위치 거리 초과! 동/지번 확인 필요' : (_distM > _addrTypePre.threshold * 0.6 ? '주소 근처 — 도착 시 다시 확인' : '주소-위치 일치');
-                    var _existing = document.getElementById('emer-dist-pre');
-                    if(_existing) _existing.remove();
-                    var _div = document.createElement('div');
-                    _div.id = 'emer-dist-pre';
-                    _div.style.cssText = 'background:'+_bg+';border:1.5px solid '+_bd+';border-radius:8px;padding:8px 10px;margin-top:6px;font-size:11px;font-weight:700;color:'+_bd;
-                    _div.innerHTML = _ico+' '+_msg+' (현 위치까지 '+_distM+'m, '+_addrTypePre.label+' 임계값 '+_addrTypePre.threshold+'m)';
-                    _sum.appendChild(_div);
-                  }, 100);
-                }, function(){}, {timeout:3000, enableHighAccuracy:true, maximumAge:10000});
-              }
-            }catch(e){ console.warn('[OCR 거리 미리체크 실패]', e&&e.message); }
+            // ★ v9.43: OCR 시점 거리 검증 비활성화
+            // 이유: 캠프(물류센터)에서 송장 일괄 스캔 → 배송지와 수 km 떨어짐
+            //       OCR 시점에 검증하면 모든 송장에서 false positive 발생
+            //       → 배송완료 처리 시점(saveDelivComplete)에서 검증하도록 이동
           }
         } else if(gcData.status==='REQUEST_DENIED'){
           console.warn('Geocoding API 비활성화:', gcData.error_message);
@@ -22717,69 +22665,10 @@ async function emerSave(){
     }catch(e){}
   }
 
-  // ★ v9.36: 주소 오류 감지 — 주소 geocoding 좌표 vs 기사 device GPS 비교
-  // ★ v9.37: 임계값 30m로 강화 — 같은 단지 내 옆 동(예: 105동 vs 106동) 오류 감지
-  // ★ v9.38: 주소 타입별 임계값 분리 — 아파트(30m) / 지번 주택(10m)
-  // ★ v9.38: 주소 타입 판별 — 빌라/오피스텔/타워는 옆 건물도 잡혀야 하므로 10m
-  //          대단지 아파트만 30m (옆 동 거리 30~80m)
-  var _addrType = (function(_a){
-    if(!_a) return {type:'unknown', threshold:10, label:'주소'};
-    // ① 빌라/맨션/연립/오피스텔/타워/레지던스 — 옆 건물 거리 짧음 → 10m (먼저 체크!)
-    if(/빌라|맨션|연립|다세대|오피스텔|레지던스/i.test(_a))
-      return {type:'small_complex', threshold:10, label:'빌라/오피'};
-    // 타워는 단독으로 안 쓰일 때만 (예: "롯데타워" 등 큰 아파트 브랜드 제외)
-    if(/타워/.test(_a) && !/롯데캐슬|힐스테이트|푸르지오|자이|래미안/i.test(_a))
-      return {type:'small_complex', threshold:10, label:'타워'};
-    // ② 대단지 아파트만 30m: "아파트" 키워드 + 동 번호 동시 존재
-    if((/아파트/i.test(_a) || /자이|래미안|푸르지오|롯데캐슬|힐스테이트|hillstate/i.test(_a))
-       && /\d+동/.test(_a))
-      return {type:'large_apt', threshold:30, label:'대단지 아파트'};
-    // ③ 그 외 (지번/도로명 단독주택) — 옆집이 5~10m
-    return {type:'house', threshold:10, label:'주택/지번'};
-  })(addr);
-  var addressGpsMismatch = null;
-  try{
-    if(addr && gpsClean && gpsClean.src!=='device_fallback' && navigator.geolocation){
-      // 기사 현위치를 가져와서 주소 좌표(gpsClean)와 비교
-      var _devicePos = await new Promise(function(res){
-        navigator.geolocation.getCurrentPosition(
-          function(p){res({lat:p.coords.latitude, lng:p.coords.longitude, acc:p.coords.accuracy});},
-          function(){res(null);},
-          {timeout:2500, enableHighAccuracy:true, maximumAge:30000}
-        );
-      });
-      if(_devicePos){
-        var R=6371000;
-        var dLat=(gpsClean.lat-_devicePos.lat)*Math.PI/180;
-        var dLng=(gpsClean.lng-_devicePos.lng)*Math.PI/180;
-        var _x = Math.sin(dLat/2)*Math.sin(dLat/2)
-              + Math.cos(_devicePos.lat*Math.PI/180)*Math.cos(gpsClean.lat*Math.PI/180)
-              * Math.sin(dLng/2)*Math.sin(dLng/2);
-        var distM = Math.round(R*2*Math.atan2(Math.sqrt(_x),Math.sqrt(1-_x)));
-        // ★ v9.38: 주소 타입별 임계값 적용 (아파트 30m / 주택 10m)
-        // GPS 정확도 조건: 주택은 더 엄격하게 (실내 부정확 케이스 제외)
-        var _accLimit = _addrType.type==='house' ? 15 : 20;
-        if(_devicePos.acc < _accLimit && distM > _addrType.threshold){
-          addressGpsMismatch = distM;
-          console.warn('[주소-GPS 불일치]', distM+'m 차이 ('+_addrType.label+', 임계값 '+_addrType.threshold+'m, 정확도 '+Math.round(_devicePos.acc)+'m)');
-          // 비동기 강한 경고 (저장은 진행)
-          setTimeout(function(){
-            var alertEl=document.createElement('div');
-            alertEl.style.cssText='position:fixed;top:80px;left:50%;transform:translateX(-50%);background:#dc2626;color:#fff;padding:14px 22px;border-radius:12px;font-size:14px;font-weight:800;z-index:10000;box-shadow:0 4px 16px rgba(220,38,38,.4);text-align:center;max-width:320px;animation:slideDownBanner .3s ease-out';
-            var hint = _addrType.type==='large_apt'
-              ? '동 번호 잘못 적혔을 수 있음<br>(예: 105동 → 5동)'
-              : _addrType.type==='small_complex'
-              ? '옆 건물/세대 가능성<br>호수/건물명 확인 필요'
-              : '옆집/이웃 주소 가능성<br>지번 확인 필요';
-            alertEl.innerHTML='⚠️ 주소-위치 '+distM+'m 차이!<br><span style="font-size:11px;font-weight:500;opacity:.95">'+hint+'</span>';
-            document.body.appendChild(alertEl);
-            setTimeout(function(){alertEl.style.transition='all .4s';alertEl.style.opacity='0';setTimeout(function(){alertEl.remove();},400);}, 5000);
-            try{ navigator.vibrate && navigator.vibrate([300,100,300]); }catch(e){}
-          }, 500);
-        }
-      }
-    }
-  }catch(e){ console.warn('[주소-GPS 검증 실패]', e&&e.message); }
+  // ★ v9.43: emerSave 시점 거리 검증 비활성화
+  // 이유: 캠프(물류센터)에서 송장 일괄 스캔 → 모든 송장에서 false positive 발생
+  //       검증은 saveDelivComplete (배송완료 처리 시점)으로 이동
+  var addressGpsMismatch = null; // 배송완료 시점에 채워짐
 
   // ★ v9.25: 등록방식 판정 (자동인식 / 바코드 / 수기)
   var entryMode = 'manual'; // 기본: 수기
@@ -23079,6 +22968,11 @@ async function openDelivComplete(fbId, dataEncoded){
   window._delivCompleteFbId = fbId;
   window._delivCompleteAllTrackings = allTrackings; // ★ v9.25
   window._delivCompleteExistingStatus = existingStatus; // ★ v9.25
+  // ★ v9.43: 배송완료 시점 거리 검증용 — 등록 시 저장된 배송지 좌표/주소
+  window._delivCompletePinData = {
+    gps: info.gps || null,
+    addr: info.addr || ''
+  };
 
   document.body.insertAdjacentHTML('beforeend',`
   <div id="deliv-complete-mo" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:10000;display:flex;align-items:flex-end;justify-content:center" onclick="if(event.target===this)this.remove()">
@@ -23345,6 +23239,77 @@ async function saveDelivComplete(){
   var totalChecks=document.querySelectorAll('.dc-track-chk').length;
   var doneChecks=document.querySelectorAll('.dc-track-chk:checked').length;
   if(totalChecks>0&&doneChecks===0){ toast('❌ 완료할 운송장을 1개 이상 체크해주세요'); return; }
+
+  // ★ v9.43: 배송완료 시점 주소-GPS 거리 검증 (진짜 오배송 감지!)
+  // 이유: OCR/등록은 캠프에서 이루어지므로 그때는 검증 불가
+  //       실제 배송지 도착 후 [완료] 버튼 누를 때가 진짜 검증 시점
+  var _delivMismatch = null;
+  try{
+    var _pinData = window._delivCompletePinData || {};
+    var _pinGps = _pinData.gps; // 등록 시 저장된 배송지 좌표
+    var _pinAddr = _pinData.addr || '';
+    if(_pinGps && _pinGps.lat && navigator.geolocation){
+      // 주소 타입 판별 (아파트 30m / 빌라/주택 10m)
+      var _addrType2 = (function(_a){
+        if(!_a) return {type:'unknown', threshold:10, label:'주소'};
+        if(/빌라|맨션|연립|다세대|오피스텔|레지던스/i.test(_a)) return {type:'small_complex', threshold:10, label:'빌라/오피'};
+        if(/타워/.test(_a) && !/롯데캐슬|힐스테이트|푸르지오|자이|래미안/i.test(_a)) return {type:'small_complex', threshold:10, label:'타워'};
+        if((/아파트/i.test(_a) || /자이|래미안|푸르지오|롯데캐슬|힐스테이트|hillstate/i.test(_a)) && /\d+동/.test(_a)) return {type:'large_apt', threshold:30, label:'대단지 아파트'};
+        return {type:'house', threshold:10, label:'주택/지번'};
+      })(_pinAddr);
+      var _devPos = await new Promise(function(res){
+        navigator.geolocation.getCurrentPosition(
+          function(p){res({lat:p.coords.latitude, lng:p.coords.longitude, acc:p.coords.accuracy});},
+          function(){res(null);},
+          {timeout:3000, enableHighAccuracy:true, maximumAge:10000}
+        );
+      });
+      if(_devPos){
+        var R=6371000;
+        var dLat=(_pinGps.lat-_devPos.lat)*Math.PI/180;
+        var dLng=(_pinGps.lng-_devPos.lng)*Math.PI/180;
+        var _x = Math.sin(dLat/2)*Math.sin(dLat/2)
+              + Math.cos(_devPos.lat*Math.PI/180)*Math.cos(_pinGps.lat*Math.PI/180)
+              * Math.sin(dLng/2)*Math.sin(dLng/2);
+        var _dM = Math.round(R*2*Math.atan2(Math.sqrt(_x),Math.sqrt(1-_x)));
+        var _accLim = _addrType2.type==='house' ? 15 : 20;
+        if(_devPos.acc < _accLim && _dM > _addrType2.threshold){
+          _delivMismatch = _dM;
+          // 🚨 오배송 알림 — TTS + beep + 진동
+          try{ if(typeof _tts==='function') _tts('오배송 오배송'); }catch(e){}
+          try{
+            var Ctx3=window.AudioContext||window.webkitAudioContext;
+            if(Ctx3){
+              var _bc3=window._mbtiAudioCtx||new Ctx3();
+              window._mbtiAudioCtx=_bc3;
+              if(_bc3.state==='suspended')_bc3.resume().catch(function(){});
+              var _n3=_bc3.currentTime;
+              var _mg3=_bc3.createGain(); _mg3.gain.value=1.5; _mg3.connect(_bc3.destination);
+              [0, 0.22, 0.44].forEach(function(t){
+                var osc=_bc3.createOscillator(),gain=_bc3.createGain();
+                osc.type='square'; osc.frequency.value=880;
+                gain.gain.setValueAtTime(0, _n3+t);
+                gain.gain.linearRampToValueAtTime(0.45, _n3+t+0.02);
+                gain.gain.exponentialRampToValueAtTime(0.001, _n3+t+0.18);
+                osc.connect(gain); gain.connect(_mg3);
+                osc.start(_n3+t); osc.stop(_n3+t+0.2);
+              });
+            }
+          }catch(e){}
+          try{ navigator.vibrate && navigator.vibrate([400,150,400,150,400]); }catch(e){}
+          // confirm — 사용자 인지 후 진행 여부 결정
+          var _hint = _addrType2.type==='large_apt'
+            ? '\n• 동 번호 확인 (예: 105동 vs 5동)'
+            : _addrType2.type==='small_complex'
+            ? '\n• 옆 건물/호수 확인'
+            : '\n• 지번/이웃집 확인';
+          if(!confirm('🚨 오배송 가능성 감지!\n\n주소-위치 차이: '+_dM+'m\n('+_addrType2.label+', 임계값 '+_addrType2.threshold+'m)\n'+_hint+'\n\n그래도 배송완료 처리하시겠습니까?\n\n[확인] = 진행 / [취소] = 위치 다시 확인')){
+            return; // 사용자가 취소 → 처리 중단, 위치 재확인하라는 의미
+          }
+        }
+      }
+    }
+  }catch(e){ console.warn('[배송완료 거리 검증 실패]', e&&e.message); }
 
   var fbId=window._delivCompleteFbId;
   var memo=document.getElementById('dc-memo')?.value.trim()||'';
@@ -26440,16 +26405,31 @@ function startListeners(){
     // ── 운행 데이터 리스너 (entries/deliveries/temp_logs/accidents/settlements)
     // ★ v9.25: entries/deliveries는 오늘만 onSnapshot (reads 절감)
     //          7일/30일 과거 데이터는 탭 클릭 시 get()으로 1회 조회 (loadEntriesHistory)
+    // ★ v9.40: settlements/temp_logs/accidents도 날짜 필터 추가 (read 폭증 차단)
     var colPageMap={
       entries:'entry', deliveries:'delivery', temp_logs:'temp',
       accidents:'accident', settlements:'settle'
     };
-    var colLimits={entries:50, deliveries:50, temp_logs:30, accidents:30, settlements:50}; // ★ v9.61: reads 절감
+    var colLimits={entries:50, deliveries:50, temp_logs:30, accidents:30, settlements:50};
     var todayStr=today();
+    // ★ v9.40: 날짜 필터 계산 — 최근 3개월(settlements), 7일(temp_logs), 30일(accidents)
+    var _now40=new Date();
+    var _3monthsAgo=new Date(_now40.getFullYear(),_now40.getMonth()-2,1);
+    var _7daysAgo=new Date(_now40.getTime()-7*24*3600000);
+    var _30daysAgo=new Date(_now40.getTime()-30*24*3600000);
+    var _3moStr=_3monthsAgo.getFullYear()+'-'+String(_3monthsAgo.getMonth()+1).padStart(2,'0');
+    var _7dStr=_7daysAgo.toISOString().slice(0,10);
+    var _30dStr=_30daysAgo.toISOString().slice(0,10);
     Object.keys(colPageMap).forEach(col=>{
       var q=_db.collection(col);
       // entries/deliveries: 오늘만 실시간 구독
       if(col==='entries'||col==='deliveries') q=q.where('date','==',todayStr);
+      // ★ v9.40: settlements는 최근 3개월만 (이전월+현재월+다음월 윈도우)
+      else if(col==='settlements') q=q.where('month','>=',_3moStr);
+      // ★ v9.40: temp_logs는 최근 7일만 (실시간 모니터링용)
+      else if(col==='temp_logs') q=q.where('date','>=',_7dStr);
+      // ★ v9.40: accidents는 최근 30일만
+      else if(col==='accidents') q=q.where('date','>=',_30dStr);
       _fbUnsubs.push(q.limit(colLimits[col]||100)
         .onSnapshot({includeMetadataChanges:false}, snap=>{
           snap.docChanges().forEach(ch=>{
@@ -27331,15 +27311,14 @@ function _doSendNotice(allDrs,target,category,title,content,pinned,smsOpt,kakaoO
       _sentTokens.add(token);
       _sendFcmPush(token);
     }
-    _db.collection('drivers').get().then(function(snap){
-      snap.forEach(function(doc){
-        var d=doc.data();
+    // ★ v9.40 fix: drivers.get() 제거 → localStorage 사용 (onSnapshot이 이미 동기화 중)
+    // FCM 발송 시마다 31명 전체 read 발생하던 문제 차단
+    (function(){
+      var localDrs=ls('drivers');
+      localDrs.forEach(function(d){
         if(!d.fcmToken)return;
         if(_targetNames.indexOf(d.name)<0)return;
         _sendFcmPushOnce(d.fcmToken);
-        var drs=ls('drivers');
-        var idx=drs.findIndex(function(x){return x.name===d.name;});
-        if(idx>=0&&drs[idx].fcmToken!==d.fcmToken){drs[idx].fcmToken=d.fcmToken;lss('drivers',drs);}
       });
       // ★ device_tokens 컬렉션도 조회 (로그아웃 상태 기기 포함)
       _db.collection('device_tokens').get().then(function(dtSnap){
@@ -27351,9 +27330,7 @@ function _doSendNotice(allDrs,target,category,title,content,pinned,smsOpt,kakaoO
           console.log('[FCM] device_tokens 경로 발송:', dt.driver);
         });
       }).catch(function(){});
-    }).catch(function(){
-      targets.forEach(function(d){if(d.fcmToken)_sendFcmPushOnce(d.fcmToken);});
-    });
+    })();
     // ★ v9.25: SMS 발송 (sms: 링크)
     if(smsOpt && smsList.length){
       var smsMsg='[MBTI물류] '+title+'\n\n'+content;
