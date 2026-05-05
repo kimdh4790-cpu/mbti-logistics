@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.32</title>
+<title>엠비티아이 물류관리 v9.34</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10420,7 +10420,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.32 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.34 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -11393,10 +11393,10 @@ function updBadge(){
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
 function updFbUI(){
-  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.32 · 🔥 실시간':'v9.32 · 데모';
+  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.34 · 🔥 실시간':'v9.34 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.32 · Firebase 실시간':'v9.32 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.34 · Firebase 실시간':'v9.34 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -12836,6 +12836,30 @@ function rAcc(){
 
 function rSettle(){
   var s=ls('settlements');
+  // ★ v9.33: 작성 중이던 draft 있으면 페이지 상단에 알림
+  var _draftNoticeHTML = '';
+  try{
+    var _draftRaw = localStorage.getItem('mbti_se_draft');
+    if(_draftRaw){
+      var _draft = JSON.parse(_draftRaw);
+      if(_draft._savedAt && (Date.now() - _draft._savedAt) <= 24*3600000){
+        var _drvD = _draft['se-driver'] || '(미지정)';
+        var _moD = _draft['se-month'] || '';
+        var _ageMin = Math.round((Date.now() - _draft._savedAt)/60000);
+        var _ageStr = _ageMin < 1 ? '방금 전' : _ageMin < 60 ? _ageMin+'분 전' : Math.round(_ageMin/60)+'시간 전';
+        _draftNoticeHTML = '<div style="background:linear-gradient(135deg,#fef3c7,#fde68a);border:2px solid #f59e0b;border-radius:10px;padding:12px 14px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:10px">'
+          +'<div><div style="font-size:13px;font-weight:800;color:#92400e">📝 작성 중이던 정산서가 있습니다</div>'
+          +'<div style="font-size:11px;color:#78350f;margin-top:2px">'+_drvD+(_moD?' · '+_moD:'')+' · '+_ageStr+' 자동 저장</div></div>'
+          +'<div style="display:flex;gap:6px">'
+          +'<button onclick="openSE(\''+_drvD.replace(/\\\'/g,"\\'")+'\');" style="padding:7px 14px;background:#f59e0b;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">📂 이어서 작성</button>'
+          +'<button onclick="if(confirm(\'작성 중인 데이터를 삭제하시겠습니까?\')){_seClearDraft();SP(\'settle\',null);}" style="padding:7px 12px;background:#fff;border:1.5px solid #f59e0b;color:#92400e;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">🗑 버리기</button>'
+          +'</div></div>';
+      } else {
+        // 24시간 지난 draft 자동 정리
+        localStorage.removeItem('mbti_se_draft');
+      }
+    }
+  }catch(e){}
   var filterMonth=window._adm_settle_month||'all';
   var filterCamp=window._adm_settle_camp||'all';
   // ★ 캠프 목록 (근무표관리와 동일한 형식: 접미사 '캠프' 없음)
@@ -12978,26 +13002,36 @@ function rSettle(){
   <div class="ch"><span class="ct">정산서 관리</span>
     <button class="btn btn-sm btn-purple" onclick="openSE('')">+ 정산서 작성</button>
   </div>
+  ${_draftNoticeHTML}
   <div style="background:linear-gradient(135deg,rgba(249,115,22,.08),rgba(234,88,12,.04));border:1.5px solid rgba(249,115,22,.25);border-radius:12px;padding:14px;margin-bottom:10px">
-    <div style="font-size:12px;font-weight:700;color:#ea580c;margin-bottom:10px">📦 정산 자동화</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="font-size:12px;font-weight:700;color:#ea580c">📦 정산 자동화</div>
+      <button onclick="document.getElementById('settle-more-btns').style.display=document.getElementById('settle-more-btns').style.display==='none'?'flex':'none';this.textContent=this.textContent.indexOf('▼')>=0?'더보기 ▲':'더보기 ▼';" style="padding:3px 9px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;color:var(--text2)">더보기 ▼</button>
+    </div>
+    <!-- ★ v9.32: 핵심 4개 (자주 쓰는 워크플로우: 업로드 → 재계산 → 일괄전달 → 보관함 조회) -->
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#f97316;color:#fff;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">
         📤 쿠팡 엑셀 업로드 → 자동정산
         <input type="file" accept=".xlsx,.xls" style="display:none" onchange="parseCoupangExcel(this)">
       </label>
+      <button onclick="recalcAllSettlements()" style="padding:8px 14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⚡ 전체 정산 재계산 저장</button>
+      <button onclick="openBulkSendPanel()" style="padding:8px 14px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📤 정산 일괄 전달</button>
+      <button onclick="openTaxStore()" style="padding:8px 14px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗂 기사별 세금계산서 보관함</button>
+    </div>
+    <!-- ★ v9.32: 더보기 — 가끔 쓰는 7개 (기본 숨김) -->
+    <div id="settle-more-btns" style="display:none;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;padding-top:8px;border-top:1px dashed rgba(249,115,22,.3)">
       <label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#0ea5e9;color:#fff;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">
         📂 고용·산재 엑셀 첨부
         <input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="parseInsExcelSettle(this)">
-      </label>      <button onclick="openLiveMap()" style="padding:8px 14px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗺️ 실시간 지도</button>      <button onclick="openTaxStore()" style="padding:8px 14px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗂 기사별 세금계산서 보관함</button>
+      </label>
+      <button onclick="openLiveMap()" style="padding:8px 14px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗺️ 실시간 지도</button>
       <button id="jinju-inc-btn" onclick="openIncPanel()" style="padding:8px 14px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⚙️ 기사별 인센 설정</button>
       <button onclick="openCoupangStatsPanel()" style="padding:8px 14px;background:#f97316;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📊 쿠팡 건수 통계</button>
       <button onclick="openSettleCompare()" style="padding:8px 14px;background:#6366f1;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📊 기사별 실적 비교</button>
       <button onclick="checkDuplicateSettlements()" style="padding:8px 14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔍 중복 검사</button>
       <button onclick="syncFirebaseSettlements()" style="padding:8px 14px;background:#0d9488;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔄 Firebase 동기화</button>
-      <button onclick="recalcAllSettlements()" style="padding:8px 14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⚡ 전체 정산 재계산 저장</button>
-      <button onclick="openBulkSendPanel()" style="padding:8px 14px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📤 정산 일괄 전달</button>
     </div>
-    <div style="font-size:10px;color:var(--text3);margin-top:8px">💡 쿠팡 엑셀(정산Raw/정산총괄 포함) 업로드 → 기사 자동 매칭 → 고용·산재·원천세 자동 계산</div>
+    <div style="font-size:10px;color:var(--text3);margin-top:8px">💡 핵심 4단계: 업로드 → 재계산 → 일괄전달 → 보관함 조회. 그 외 기능은 [더보기]에서.</div>
   </div>
   <div style="font-size:11px;color:var(--text2);margin-bottom:8px;padding:6px 8px;background:var(--blue-l);border-radius:var(--r)">💡 기사별 [정산] 버튼으로 직접 작성, 또는 엑셀 업로드로 자동 계산 가능합니다.</div>
   ${monthTabs}${campTabs}${tableBody}</div>`;
@@ -15261,23 +15295,36 @@ function rDrivers(){
       </div>
     </div>
     <div style="margin-bottom:10px">
-      <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px">고용 형태</div>
-      <div class="filter-tabs">
-        <span class="ftab ${S.eFilter==='all'?'on':''}" onclick="S.eFilter='all';SP('drivers',null)">전체</span>
-        <span class="ftab ${S.eFilter==='지입'?'on':''}" onclick="S.eFilter='지입';SP('drivers',null)">지입 기사</span>
-        <span class="ftab ${S.eFilter==='직영'?'on':''}" onclick="S.eFilter='직영';SP('drivers',null)">직영 직원</span>
-      </div>
-      <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px;margin-top:8px">업무 유형</div>
-      <div class="filter-tabs">
-        <span class="ftab ${S.dFilter==='all'?'on':''}" onclick="S.dFilter='all';SP('drivers',null)">전체</span>
-        <span class="ftab ${S.dFilter==='택배'?'on':''}" onclick="S.dFilter='택배';SP('drivers',null)">📦 택배</span>
-        <span class="ftab ${S.dFilter==='간선'?'on':''}" onclick="S.dFilter='간선';SP('drivers',null)">🚚 간선</span>
-      </div>
-      <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px;margin-top:8px">톤수별</div>
-      <div class="filter-tabs">
-        <span class="ftab ${S.tFilter==='all'?'on':''}" onclick="S.tFilter='all';SP('drivers',null)">전체</span>
-        ${tons.map(t=>`<span class="ftab ${S.tFilter===t?'on':''}" onclick="S.tFilter='${t}';SP('drivers',null)">${t}</span>`).join('')}
-      </div>
+      <!-- ★ v9.32: 쿠팡 단독 운영 시 미사용 옵션 자동 숨김 (직영 직원/간선/톤수 1종) -->
+      ${(function(){
+        // 실제 데이터 분석 — 사용 중인 값만 옵션으로 표시
+        var hasJikyoung = act.some(function(d){return d.employ==='직영';});
+        var hasGanseon = act.some(function(d){return d.jobtype==='간선';});
+        var usedTons = Array.from(new Set(act.map(function(d){return d.ton;}).filter(Boolean)));
+        var multiTon = usedTons.length > 1;
+        return `
+        ${(hasJikyoung) ? `
+        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px">고용 형태</div>
+        <div class="filter-tabs">
+          <span class="ftab ${S.eFilter==='all'?'on':''}" onclick="S.eFilter='all';SP('drivers',null)">전체</span>
+          <span class="ftab ${S.eFilter==='지입'?'on':''}" onclick="S.eFilter='지입';SP('drivers',null)">지입 기사</span>
+          <span class="ftab ${S.eFilter==='직영'?'on':''}" onclick="S.eFilter='직영';SP('drivers',null)">직영 직원</span>
+        </div>` : ''}
+        ${(hasGanseon) ? `
+        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px;margin-top:8px">업무 유형</div>
+        <div class="filter-tabs">
+          <span class="ftab ${S.dFilter==='all'?'on':''}" onclick="S.dFilter='all';SP('drivers',null)">전체</span>
+          <span class="ftab ${S.dFilter==='택배'?'on':''}" onclick="S.dFilter='택배';SP('drivers',null)">📦 택배</span>
+          <span class="ftab ${S.dFilter==='간선'?'on':''}" onclick="S.dFilter='간선';SP('drivers',null)">🚚 간선</span>
+        </div>` : ''}
+        ${(multiTon) ? `
+        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px;margin-top:8px">톤수별</div>
+        <div class="filter-tabs">
+          <span class="ftab ${S.tFilter==='all'?'on':''}" onclick="S.tFilter='all';SP('drivers',null)">전체</span>
+          ${tons.map(t=>`<span class="ftab ${S.tFilter===t?'on':''}" onclick="S.tFilter='${t}';SP('drivers',null)">${t}</span>`).join('')}
+        </div>` : ''}
+        `;
+      })()}
       <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px;margin-top:8px">🏕️ 캠프</div>
       <div class="filter-tabs">
         <span class="ftab ${S.cFilter==='all'?'on':''}" onclick="S.cFilter='all';SP('drivers',null)">전체 (${act.length})</span>
@@ -17125,6 +17172,9 @@ function openSE(name){
     var yr=document.getElementById('se-yong-ret');if(yr)yr.value=d.yongRet||900;
   }
   resetExcel();updSettle();OM('m-settle');
+  // ★ v9.33: 자동 저장 셋업 + 작성 중이던 draft 복원
+  _seSetupAutoSave();
+  setTimeout(_seRestoreDraft, 100);
 }
 function openSEi(i){
   var x=ls('settlements')[i];
@@ -17150,6 +17200,9 @@ function openSEi(i){
     var yr=document.getElementById('se-yong-ret');if(yr)yr.value=x.yongRet||d?.yongRet||900;
   }
   resetExcel();updSettle();OM('m-settle');
+  // ★ v9.33: 자동 저장 셋업 + 작성 중이던 draft 복원
+  _seSetupAutoSave();
+  setTimeout(_seRestoreDraft, 100);
 }
 function saveSettle(){
   var driver=document.getElementById('se-driver').value;if(!driver){toast('기사를 입력해 주세요');return;}
@@ -17198,7 +17251,101 @@ function saveSettle(){
   lss('settlements',s);fbW('settlements',data).catch(()=>{});
   var r=calcNet(data);addAct('settle',driver+' 정산 공유 ₩'+r.net.toLocaleString(),driver);
   S.excelRoutes=[];
+  _seClearDraft();  // ★ v9.33: 저장 완료 → 자동 저장 draft 삭제
   CM('m-settle');SP(S.page,null);toast(driver+' 정산서 저장·기사 공유 완료');
+}
+
+// ════════════════════════════════════════════
+// ★ v9.33: 정산서 자동 저장(Auto-save) 시스템
+// 강력 새로고침/캐시 삭제 후에도 입력값 복원 → 재작성 번거로움 해소
+// ════════════════════════════════════════════
+var _SE_DRAFT_KEY = 'mbti_se_draft';
+var _SE_INPUT_IDS = ['se-driver-id','se-driver','se-month','se-dcnt','se-damt','se-rcnt','se-ramt',
+  'se-fresh','se-finc','se-inc','se-nocont','se-nocont-cnt','se-tax','se-emp','se-work',
+  'se-eq','se-dmg','se-adv','se-etc-plus','se-etc-minus','se-dmg-reason',
+  'se-etc-plus-reason','se-etc-minus-reason','se-jobsub','se-yong-del','se-yong-ret'];
+var _seAutoSaveTimer = null;
+
+// ★ 자동 저장 (debounced 800ms)
+function _seAutoSave(){
+  clearTimeout(_seAutoSaveTimer);
+  _seAutoSaveTimer = setTimeout(function(){
+    try{
+      var draft = {};
+      var hasValue = false;
+      _SE_INPUT_IDS.forEach(function(id){
+        var el = document.getElementById(id);
+        if(el && el.value !== '' && el.value != null){
+          draft[id] = el.value;
+          if(id !== 'se-month' && id !== 'se-jobsub') hasValue = true; // 기본값 외 실제 입력 있을 때만
+        }
+      });
+      // routeDetails도 보존 (엑셀 업로드 후 분리 데이터)
+      if(window.S && S.excelRoutes && S.excelRoutes.length){
+        draft._excelRoutes = S.excelRoutes;
+        hasValue = true;
+      }
+      if(!hasValue){
+        localStorage.removeItem(_SE_DRAFT_KEY);
+        return;
+      }
+      draft._savedAt = Date.now();
+      localStorage.setItem(_SE_DRAFT_KEY, JSON.stringify(draft));
+    }catch(e){}
+  }, 800);
+}
+
+// ★ 복원 (모달 열 때 호출)
+function _seRestoreDraft(){
+  try{
+    var raw = localStorage.getItem(_SE_DRAFT_KEY);
+    if(!raw) return false;
+    var draft = JSON.parse(raw);
+    if(!draft._savedAt || (Date.now() - draft._savedAt) > 24*3600000){
+      localStorage.removeItem(_SE_DRAFT_KEY); // 24시간 지난 draft 자동 정리
+      return false;
+    }
+    var driverInDraft = draft['se-driver'] || '';
+    var monthInDraft = draft['se-month'] || '';
+    var driverInModal = (document.getElementById('se-driver')||{}).value || '';
+    var monthInModal = (document.getElementById('se-month')||{}).value || '';
+    // driver+month가 일치해야 복원 (다른 정산서 작성 중이면 무시)
+    if(driverInDraft && driverInModal && driverInDraft !== driverInModal) return false;
+    if(monthInDraft && monthInModal && monthInDraft !== monthInModal) return false;
+    // 복원
+    Object.keys(draft).forEach(function(id){
+      if(id.indexOf('_') === 0) return; // 내부 메타키 skip
+      var el = document.getElementById(id);
+      if(el) el.value = draft[id];
+    });
+    if(draft._excelRoutes && window.S){
+      S.excelRoutes = draft._excelRoutes;
+    }
+    if(typeof updSettle === 'function') updSettle();
+    var ageMin = Math.round((Date.now() - draft._savedAt)/60000);
+    var ageStr = ageMin < 1 ? '방금 전' : ageMin < 60 ? ageMin+'분 전' : Math.round(ageMin/60)+'시간 전';
+    if(typeof toast === 'function') toast('📝 작성 중이던 데이터 자동 복원 ('+ageStr+')');
+    return true;
+  }catch(e){
+    console.warn('[seRestoreDraft]', e);
+    return false;
+  }
+}
+
+// ★ 삭제 (저장 완료 시 호출)
+function _seClearDraft(){
+  try{ localStorage.removeItem(_SE_DRAFT_KEY); }catch(e){}
+  clearTimeout(_seAutoSaveTimer);
+}
+
+// ★ 모달 단위 이벤트 위임 — 한 번만 등록
+function _seSetupAutoSave(){
+  if(window._seAutoSaveSetup) return;
+  var modal = document.getElementById('m-settle');
+  if(!modal) return;
+  modal.addEventListener('input', _seAutoSave);
+  modal.addEventListener('change', _seAutoSave);
+  window._seAutoSaveSetup = true;
 }
 
 // 정산서 상세
@@ -19392,7 +19539,18 @@ function _buildDeadlineCard(){
 // ★ 마감 카운트다운 1초마다 갱신 + A안 알람
 // 주간: 17:00/18:00/19:00/19:30/19:50 | 야간: 04:00/05:00/06:00/06:30/06:50
 window._dlTickTimer=window._dlTickTimer||null;
-window._dlNotifiedAt=window._dlNotifiedAt||{};
+// ★ v9.32 fix: localStorage 동기화 — 캐시 삭제 후 같은 시각 중복 알림 차단
+try{ window._dlNotifiedAt = JSON.parse(localStorage.getItem('mbti_dl_notified')||'{}'); }catch(e){ window._dlNotifiedAt = {}; }
+// 어제 이전 키는 정리 (오늘 알림은 보존)
+(function(){
+  var todayPrefix = today();
+  var cleaned = {};
+  Object.keys(window._dlNotifiedAt).forEach(function(k){
+    if(k.indexOf(todayPrefix)===0) cleaned[k] = window._dlNotifiedAt[k];
+  });
+  window._dlNotifiedAt = cleaned;
+  try{ localStorage.setItem('mbti_dl_notified', JSON.stringify(cleaned)); }catch(e){}
+})();
 var _DL_ALARMS={
   주간:[{h:17,m:0},{h:18,m:0},{h:19,m:0},{h:19,m:30},{h:19,m:50}],
   야간:[{h:4,m:0},{h:5,m:0},{h:6,m:0},{h:6,m:30},{h:6,m:50}]
@@ -19533,6 +19691,8 @@ function _startDeadlineTick(){
       var key=today()+'_alarm_'+alarm.h+'_'+alarm.m;
       if(hh2===alarm.h&&mm2===alarm.m&&!window._dlNotifiedAt[key]){
         window._dlNotifiedAt[key]=true;
+        // ★ v9.32 fix: localStorage에도 즉시 저장 — 캐시 삭제/새로고침 후에도 같은 시각 알림 안 옴
+        try{ localStorage.setItem('mbti_dl_notified', JSON.stringify(window._dlNotifiedAt)); }catch(e){}
         var remain=(dl.hour*60+dl.minute)-(alarm.h*60+alarm.m);
         var msg='⏰ '+dl.label+' '+remain+'분 전!';
         toast(msg);
@@ -29666,6 +29826,14 @@ function startNotiListeners(){
           if(change.type!=='added')return;
           var d=change.doc.data();
           if(d.driver===S.curDriver)return; // 본인 요청은 알림 안 함
+          // ★ v9.32 fix: 30분 이상 지난 요청은 알림 발송 안 함 (캐시 삭제 후 옛 요청 재알림 차단)
+          var createdMs = d.createdAt ? new Date(d.createdAt).getTime() : 0;
+          if(createdMs && (Date.now() - createdMs) > 30*60*1000){
+            console.log('[Noti] 30분 지난 배송지원 알림 무시:', change.doc.id);
+            return;
+          }
+          // 해결됨 상태도 알림 무시
+          if(d.status==='해결')return;
           // ★ v9.25: 미출근/퇴근/휴무 시 배송지원 푸시 알림 차단
           var att=_getAttend();
           if(!att||!att.checkIn||att.checkOut)return;
