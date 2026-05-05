@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.27</title>
+<title>엠비티아이 물류관리 v9.28</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10420,7 +10420,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.27 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.28 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -11393,10 +11393,10 @@ function updBadge(){
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
 function updFbUI(){
-  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.27 · 🔥 실시간':'v9.27 · 데모';
+  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.28 · 🔥 실시간':'v9.28 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.27 · Firebase 실시간':'v9.27 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.28 · Firebase 실시간':'v9.28 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -13557,21 +13557,27 @@ function _getGoogleApiKey(){
     timeout
   ]);
 }
+// ★ v9.27: _getGPS 통합 — 19105 중복 정의 제거 + 양쪽 호출자(_denied 체크/accuracy 사용) 모두 만족
 function _getGPS(){
   return new Promise(function(res){
-    if(!navigator.geolocation){ res({lat:35.1796,lng:129.0756,_denied:true,_reason:'unsupported'}); return; }
+    if(!navigator.geolocation){ res({lat:35.1796,lng:129.0756,_denied:true,_reason:'unsupported',ts:new Date().toISOString()}); return; }
     var done=false;
-    var t=setTimeout(function(){ if(!done){done=true;res({lat:35.1796,lng:129.0756,_denied:true,_reason:'timeout'});} },5000);
+    var t=setTimeout(function(){ if(!done){done=true;res({lat:35.1796,lng:129.0756,_denied:true,_reason:'timeout',ts:new Date().toISOString()});} },5000);
     navigator.geolocation.getCurrentPosition(function(pos){
       if(done) return; done=true; clearTimeout(t);
-      res({lat:pos.coords.latitude,lng:pos.coords.longitude});
+      res({
+        lat:pos.coords.latitude,
+        lng:pos.coords.longitude,
+        accuracy:Math.round(pos.coords.accuracy||0),
+        ts:new Date().toISOString()
+      });
     },function(err){
       if(done) return; done=true; clearTimeout(t);
-      // ★ v9.25: PERMISSION_DENIED(1), POSITION_UNAVAILABLE(2), TIMEOUT(3)
+      // PERMISSION_DENIED(1), POSITION_UNAVAILABLE(2), TIMEOUT(3)
       var reason = err&&err.code===1 ? 'denied' : err&&err.code===2 ? 'unavailable' : 'timeout';
-      res({lat:35.1796,lng:129.0756,_denied:true,_reason:reason});
+      res({lat:35.1796,lng:129.0756,_denied:true,_reason:reason,ts:new Date().toISOString()});
     },
-    {enableHighAccuracy:true,timeout:5000});
+    {enableHighAccuracy:true,timeout:5000,maximumAge:30000});
   });
 }
 // ★ v9.25: GPS 권한 차단 시 친절한 안내 모달
@@ -19102,27 +19108,8 @@ function _buildAttendCard(){
 }
 
 // ── GPS 좌표 수집 (최대 5초)
-function _getGPS(){
-  return new Promise(function(res){
-    if(!navigator.geolocation){res(null);return;}
-    var done=false;
-    var timer=setTimeout(function(){if(!done){done=true;res(null);}},5000);
-    navigator.geolocation.getCurrentPosition(
-      function(pos){
-        if(done)return;
-        done=true; clearTimeout(timer);
-        res({
-          lat:pos.coords.latitude,
-          lng:pos.coords.longitude,
-          accuracy:Math.round(pos.coords.accuracy||0),
-          ts:new Date().toISOString()
-        });
-      },
-      function(err){if(done)return; done=true; clearTimeout(timer); res(null);},
-      {enableHighAccuracy:true,timeout:4500,maximumAge:30000}
-    );
-  });
-}
+// ★ v9.27: 두 번째 _getGPS 정의 제거 (13560 통합 버전으로 단일화)
+// 호출자(doCheckIn / doCheckOut)는 gps._denied 또는 !gps.lat 체크하면 GPS 거부 감지 가능
 
 // ── 출근 체크인
 async function doCheckIn(){
@@ -19139,7 +19126,8 @@ async function doCheckIn(){
   if(myCamp&&myCamp.indexOf('캠프')<0)myCampFull=myCamp+'캠프';
   var campGps=getCampGps()[myCampFull];
   if(myCamp && campGps && campGps.lat){
-    if(!gps || !gps.lat){
+    // ★ v9.27: GPS 거부/실패 시 캠프 검증 차단 (부산 폴백 좌표가 거리 계산에 잘못 쓰이는 것 방지)
+    if(!gps || !gps.lat || gps._denied){
       toast('⚠️ GPS 위치를 확인할 수 없습니다. 위치 권한을 허용해 주세요.');
       if(btn){btn.innerHTML='<span style="font-size:18px">🚪</span><span>출근 체크인</span>';btn.disabled=false;}
       return;
@@ -19257,18 +19245,20 @@ async function doCheckOut(){
   if(btn){btn.innerHTML='<span style="font-size:14px">⏳</span><span>위치 확인중...</span>';btn.disabled=true;}
   
   var gps=await _getGPS();
+  // ★ v9.27: GPS 거부 시 부산 폴백 좌표가 attendance DB에 기록되지 않도록 정리
+  var gpsForRecord = (gps && !gps._denied && gps.lat) ? gps : null;
   var now=new Date().toISOString();
   a.checkOut=now;
-  a.checkOutGps=gps;
+  a.checkOutGps=gpsForRecord;
   _saveAttend(a);
   
   if(FB&&_db){
     var docId=S.curDriver+'_'+today();
     _db.collection('attendance').doc(docId).set({
       checkOut:now,
-      checkOutGps:gps,
-      checkOutLat:gps?gps.lat:null,
-      checkOutLng:gps?gps.lng:null,
+      checkOutGps:gpsForRecord,
+      checkOutLat:gpsForRecord?gpsForRecord.lat:null,
+      checkOutLng:gpsForRecord?gpsForRecord.lng:null,
       updatedAt:new Date().toISOString()
     },{merge:true}).catch(function(e){console.warn('attendance save:',e);});
   }
