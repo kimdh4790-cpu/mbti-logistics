@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.43</title>
+<title>엠비티아이 물류관리 v9.44</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10420,7 +10420,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.43 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.44 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -11393,10 +11393,10 @@ function updBadge(){
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
 function updFbUI(){
-  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.43 · 🔥 실시간':'v9.43 · 데모';
+  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.44 · 🔥 실시간':'v9.44 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.43 · Firebase 실시간':'v9.43 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.44 · Firebase 실시간':'v9.44 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -11886,7 +11886,10 @@ function doLogin(){
         SP('dash',null); updBadge(); updFbUI(); initGrps();
         document.getElementById('tbdate').textContent=new Date().toLocaleDateString('ko-KR');
         startListeners();
-        setTimeout(initInqListener,3000); // 로그인 3초 후 문의함 실시간 감시 시작
+        // ★ v9.43 fix: initInqListener 호출 안전화 (legacy 함수 — 정의 없으면 skip)
+        setTimeout(function(){
+          if(typeof initInqListener==='function') initInqListener();
+        }, 3000);
       };
       if(info.otpEnabled && info.otpSecret){
         // OTP 단계로 전환
@@ -12823,6 +12826,31 @@ function rAcc(){
     return _admDateGroup(g.date,g.rows.length,'<table class="tbl"><thead><tr><th style="width:30px"><input type="checkbox" onchange="toggleAllChk(this,\'accidents\')" style="width:15px;height:15px;cursor:pointer"></th><th>기사</th><th>유형</th><th>내용</th><th>사진</th><th>상태</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>');
   }).join(''):'<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">해당 기간 사고 없음</div>';
   return `<div class="card"><div class="ch"><span class="ct">사고 접수 (${a.length}건)</span><button onclick="deleteSelected('accidents','사고')" style="padding:4px 10px;background:var(--red-l);border:1px solid var(--red);border-radius:6px;font-size:11px;color:var(--red);cursor:pointer;font-weight:600">🗑 선택삭제</button></div>${tabHTML}${bodyHTML}</div>`;
+}
+
+// ★ v9.43 fix: 사고 상태 변경 (접수중 → 처리중 → 완료 → 접수중 순환)
+// 호출되어 있으나 정의 없던 legacy 함수 — 본래 기능 복원
+function nextAccSt(idx){
+  var arr = ls('accidents');
+  if(!arr[idx]){ toast('❌ 사고 데이터를 찾을 수 없습니다'); return; }
+  var cur = arr[idx].status || '접수중';
+  var next = cur==='접수중' ? '처리중' : (cur==='처리중' ? '완료' : '접수중');
+  if(!confirm('사고 상태를 ['+cur+'] → ['+next+']로 변경하시겠습니까?')) return;
+  arr[idx].status = next;
+  arr[idx].statusUpdatedAt = new Date().toISOString();
+  lss('accidents', arr);
+  // Firebase 동기화
+  if(FB && _db && arr[idx].fbId){
+    _db.collection('accidents').doc(arr[idx].fbId)
+      .update({status:next, statusUpdatedAt:arr[idx].statusUpdatedAt})
+      .catch(function(e){ console.warn('사고 상태 Firebase 업데이트 실패:', e.message); });
+  }
+  toast('✅ 사고 상태: '+next);
+  // UI 갱신
+  if(S.page==='accident'){
+    var ca = document.getElementById('ca');
+    if(ca) ca.innerHTML = rAcc();
+  }
 }
 
 function rSettle(){
