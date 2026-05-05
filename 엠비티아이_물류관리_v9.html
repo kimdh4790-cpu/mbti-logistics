@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.44</title>
+<title>엠비티아이 물류관리 v9.45</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10420,7 +10420,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.44 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.45 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -11393,10 +11393,10 @@ function updBadge(){
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
 function updFbUI(){
-  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.44 · 🔥 실시간':'v9.44 · 데모';
+  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.45 · 🔥 실시간':'v9.45 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.44 · Firebase 실시간':'v9.44 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.45 · Firebase 실시간':'v9.45 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -17981,7 +17981,18 @@ function sendStmtToDriver(i){
       },10000);
       ref.put(blob).then(function(){return ref.getDownloadURL();})
       .then(function(url){if(!done){done=true;clearTimeout(timer);saveStmt(url);}})
-      .catch(function(e){if(!done){done=true;clearTimeout(timer);console.warn('Storage 실패:',e);saveStmt(fallbackUrl);}});
+      .catch(function(e){
+        if(!done){
+          done=true; clearTimeout(timer);
+          // ★ v9.43: 권한 에러는 조용히 base64 폴백 (Storage Rules 미설정 환경 대응)
+          if(e&&(e.code==='storage/unauthorized'||String(e.message||'').indexOf('permission')>=0)){
+            console.info('[세금계산서] Storage 권한 없음 → base64 폴백 (정상 저장됨)');
+          } else {
+            console.warn('[세금계산서] Storage 실패:',e.message||e,'→ base64 폴백');
+          }
+          saveStmt(fallbackUrl);
+        }
+      });
     } else {
       saveStmt(fallbackUrl);
     }
