@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.29</title>
+<title>엠비티아이 물류관리 v9.30</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10420,7 +10420,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.29 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.30 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -11393,10 +11393,10 @@ function updBadge(){
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
 function updFbUI(){
-  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.29 · 🔥 실시간':'v9.29 · 데모';
+  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.30 · 🔥 실시간':'v9.30 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.29 · Firebase 실시간':'v9.29 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.30 · Firebase 실시간':'v9.30 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -20432,7 +20432,8 @@ function dHome(){
         if(S.dtab==='home'){document.getElementById('dpc').innerHTML=dHome();}
       }
     };
-    _db.collection('schedules').where('driver','==',S.curDriver).get()
+    _db.collection('schedules').where('driver','==',S.curDriver)
+      .where('date','>=',monthStr+'-01').where('date','<=',monthStr+'-31').get()  // ★ v9.29: 보는 월만 필터
     .then(function(snap){
       if(!snap.empty){_loadSched(snap);return;}
       // 이름으로 못 찾으면 fbId 기반 키로 재시도
@@ -25887,9 +25888,18 @@ function startListeners(){
     // ★ v9.25: drivers.get() 제거 — onSnapshot이 초기 데이터 전달 (중복 Target ID 충돌 원인)
     // ★ v9.25: settlements.get() 제거 — colPageMap onSnapshot이 처리
     // ── 근무표(schedules) Firebase에서 초기 로드 (onSnapshot 없으므로 유지)
+    // ★ v9.29: 3개월 윈도우 필터 (이전월 + 현재월 + 다음월) — 누적 read 폭증 차단
     if(!window._schedulesGetDone){
       window._schedulesGetDone=true;
-      _db.collection('schedules').get().then(function(snap){
+      var _schedNow=new Date();
+      var _schedPrevMonth=new Date(_schedNow.getFullYear(),_schedNow.getMonth()-1,1);
+      var _schedNextMonth=new Date(_schedNow.getFullYear(),_schedNow.getMonth()+2,0); // 다음달 마지막일
+      var _schedFromStr=_schedPrevMonth.getFullYear()+'-'+String(_schedPrevMonth.getMonth()+1).padStart(2,'0')+'-01';
+      var _schedToStr=_schedNextMonth.getFullYear()+'-'+String(_schedNextMonth.getMonth()+1).padStart(2,'0')+'-31';
+      _db.collection('schedules')
+        .where('date','>=',_schedFromStr)
+        .where('date','<=',_schedToStr)
+        .get().then(function(snap){
         var grouped={};
         snap.forEach(function(doc){
           var x=doc.data();
@@ -25908,7 +25918,7 @@ function startListeners(){
           localStorage.setItem(key,JSON.stringify(Object.assign({},existing,grouped[key])));
         });
         if(S.page==='schedule_admin'||S.page==='dash')SP(S.page,null);
-        console.log('[Firebase] schedules 로드:',snap.size,'건');
+        console.log('[Firebase] schedules 로드 (3개월 윈도우):',snap.size,'건');
       }).catch(function(e){
         if(e&&e.code==='already-exists'){return;} // ★ v9.25: silent — 자동 복구되어 read 발생 안 함
         window._schedulesGetDone=false;console.warn('schedules get:',e&&e.message);
