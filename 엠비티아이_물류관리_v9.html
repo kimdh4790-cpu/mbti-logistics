@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.46</title>
+<title>엠비티아이 물류관리 v9.49</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10420,7 +10420,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.46 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.49 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -11393,10 +11393,10 @@ function updBadge(){
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
 function updFbUI(){
-  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.46 · 🔥 실시간':'v9.46 · 데모';
+  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.49 · 🔥 실시간':'v9.49 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.46 · Firebase 실시간':'v9.46 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.49 · Firebase 실시간':'v9.49 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -20915,11 +20915,19 @@ function openEmergencyDelivery(){
         </div>
       </div>
 
-      <!-- 통합 송장 촬영 -->
+      <!-- 통합 송장 촬영 — 카메라 -->
       <input type="file" id="emer-unified-cam" accept="image/*" capture="environment" style="display:none" onchange="emerUnifiedScan(this)">
-      <button onclick="document.getElementById('emer-unified-cam').click()" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:20px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;border-radius:14px;font-size:18px;font-weight:900;cursor:pointer;box-shadow:0 3px 14px rgba(124,58,237,.4);margin-bottom:8px">
-        <span style="font-size:26px">📸</span> 송장 촬영
-      </button>
+      <!-- 갤러리 선택 -->
+      <input type="file" id="emer-gallery-inp" accept="image/*" style="display:none" onchange="emerUnifiedScan(this)">
+
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <button onclick="document.getElementById('emer-unified-cam').click()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:18px 10px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:900;cursor:pointer;box-shadow:0 3px 14px rgba(124,58,237,.4)">
+          <span style="font-size:22px">📸</span> 촬영
+        </button>
+        <button onclick="document.getElementById('emer-gallery-inp').click()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:18px 10px;background:linear-gradient(135deg,#0ea5e9,#38bdf8);color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:900;cursor:pointer;box-shadow:0 3px 14px rgba(14,165,233,.4)">
+          <span style="font-size:22px">🖼️</span> 갤러리
+        </button>
+      </div>
       <div id="emer-unified-status" style="font-size:13px;color:var(--teal);text-align:center;margin-bottom:10px;min-height:18px"></div>
 
       <!-- 라이브 스캔 (보조) -->
@@ -22042,7 +22050,8 @@ function _emerHandleScan(raw, statusEl){
   if(!raw) return;
   if(window._emerScanLock) return;
   window._emerScanLock = true;
-  setTimeout(function(){ window._emerScanLock = false; }, 1200);
+  // ★ v9.46: 1.2초 자동 해제 제거 → emerSave 완료 시점에 해제
+  // (자동 저장 1.5초 타이머 > 락 해제 1.2초 → 저장 전 스캔 가능했던 버그 수정)
 
   // ★ v9.61: 중복 운송장 체크
   var _qpCheck = _parseQrText(raw);
@@ -22648,7 +22657,12 @@ async function emerSave(){
   if(!window._emerTrackings||!window._emerTrackings.length){
     var inp = document.getElementById('emer-tracking-inp')?.value.replace(/[\.\-\s]/g,'').trim();
     if(inp){ window._emerTrackings=[inp]; emerRefreshTrackingList(); }
-    else { window._emerSaving=false; toast('❌ 운송장 번호를 1개 이상 추가해주세요'); return; }
+    else {
+      window._emerSaving=false;
+      window._emerScanLock=false; // ★ v9.46: 실패 시 락 해제
+      toast('❌ 운송장 번호를 1개 이상 추가해주세요');
+      return;
+    }
   }
   // ★ v9.25: 사진 필수 조건 제거 (배송완료 사진은 지도 핀에서 처리)
 
@@ -22928,6 +22942,7 @@ async function emerSave(){
 
   window._emerSaving = false;
   window._pendingOrderId = null; // 초기화
+  window._emerScanLock = false; // ★ v9.46: 저장 완료 후 다음 스캔 허용
   // ★ v9.60: 저장 완료음 — 스캔음(높은음)과 다른 낮은음 두 번
   try{
     var _ac2 = new (window.AudioContext||window.webkitAudioContext)();
@@ -23271,6 +23286,56 @@ function dcUpdatePhotoCount(){
 }
 
 // 배송완료 저장
+// ★ v9.48: 배송완료 사진으로 호수 자동 감지 (Claude Vision)
+// 사진에서 문 호수 번호판 읽기 → 운송장 주소 호수와 비교
+async function _checkDelivPhotoHo(photoBase64, expectedHo){
+  // API 키 로드
+  var apiKey = '';
+  if(FB && _db){
+    try{
+      var doc = await _db.collection('settings').doc('claude_config').get();
+      if(doc.exists && doc.data().anthropicApiKey) apiKey = doc.data().anthropicApiKey.trim();
+    }catch(e){}
+  }
+  if(!apiKey) apiKey = (localStorage.getItem('mbti_anthropic_api_key')||'').trim();
+  if(!apiKey || apiKey.indexOf('sk-ant-')!==0) return null; // API 키 없으면 skip (정상 처리)
+
+  try{
+    var b64 = photoBase64.split(',')[1]; // data:image/jpeg;base64, 제거
+    if(!b64) return null;
+
+    var resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 100,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } },
+            { type: 'text', text: '이 사진에서 문 호수 번호(예: 1209호, 301호)를 찾아주세요.\n숫자+호 형태만 찾으세요.\n있으면 "1209호" 형식으로만 답하세요.\n없으면 "없음"이라고만 답하세요.\n다른 설명은 하지 마세요.' }
+          ]
+        }]
+      })
+    });
+    var data = await resp.json();
+    if(data.error) return null;
+    var text = (data.content||[]).map(function(c){return c.text||'';}).join('').trim();
+    if(!text || text==='없음' || text.indexOf('없음')>=0) return null;
+    var m = text.match(/(\d+)\s*호/);
+    return m ? m[1]+'호' : null;
+  }catch(e){
+    console.warn('[배송사진 OCR 실패]', e&&e.message);
+    return null;
+  }
+}
+
 async function saveDelivComplete(){
   if(!window._delivCompletePhotos||!window._delivCompletePhotos.length){
     toast('❌ 완료 사진을 1장 이상 찍어주세요'); return;
@@ -23349,6 +23414,82 @@ async function saveDelivComplete(){
       }
     }
   }catch(e){ console.warn('[배송완료 거리 검증 실패]', e&&e.message); }
+
+  // ★ v9.48: 호수 오류 감지 — 배송완료 사진 OCR 우선 + 팝업 폴백
+  var _pinAddr2 = (window._delivCompletePinData||{}).addr||'';
+  var _hoMatch = _pinAddr2.match(/(\d+)\s*호/);
+  if(_hoMatch){
+    var _expectedHo = _hoMatch[1]+'호';
+    var _photos = window._delivCompletePhotos||[];
+    var _detectedHo = null;
+
+    // ① 배송완료 사진 OCR로 호수 자동 감지
+    if(_photos.length > 0){
+      toast('🔍 사진에서 호수 확인 중...');
+      _detectedHo = await _checkDelivPhotoHo(_photos[0], _expectedHo);
+    }
+
+    var _hoConfirmed = true; // 기본값: 정상
+    if(_detectedHo){
+      // OCR 성공 — 자동 비교
+      if(_detectedHo !== _expectedHo){
+        // 호수 불일치! 자동 감지
+        _hoConfirmed = false;
+        console.warn('[호수 불일치] 운송장:', _expectedHo, '/ 사진:', _detectedHo);
+      } else {
+        // 호수 일치 — 팝업 없이 통과
+        toast('✅ 호수 확인: '+_detectedHo+' 일치');
+        _hoConfirmed = true;
+      }
+    } else {
+      // ② OCR 실패 (사진에 호수 안 보임) → 팝업으로 확인
+      _hoConfirmed = await new Promise(function(res){
+        var _mo = document.createElement('div');
+        _mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px';
+        _mo.innerHTML=`
+          <div style="background:var(--bg);border-radius:16px;padding:22px;max-width:320px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.3)">
+            <div style="font-size:18px;font-weight:800;margin-bottom:6px;text-align:center">🚪 호수 확인</div>
+            <div style="font-size:13px;color:var(--text2);text-align:center;margin-bottom:18px">
+              운송장 주소: <b style="color:var(--purple);font-size:15px">${_expectedHo}</b><br>
+              <span style="font-size:12px">실제 배달한 호수가 맞나요?</span>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button id="_ho-yes" style="flex:1;padding:13px;background:var(--green);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer">✅ 맞아요</button>
+              <button id="_ho-no" style="flex:1;padding:13px;background:#dc2626;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer">❌ 달라요</button>
+            </div>
+          </div>`;
+        document.body.appendChild(_mo);
+        document.getElementById('_ho-yes').onclick=function(){ _mo.remove(); res(true); };
+        document.getElementById('_ho-no').onclick=function(){ _mo.remove(); res(false); };
+      });
+    }
+
+    if(!_hoConfirmed){
+      // 호수 오류 — TTS + beep + 강한 진동
+      var _alertMsg = _detectedHo
+        ? '🚨 호수 오류!\n\n운송장: '+_expectedHo+'\n사진 인식: '+_detectedHo+'\n\n정확한 호수에 배달 후 다시 시도해주세요.\n\n그래도 완료 처리할까요?\n[취소] = 다시 확인 / [확인] = 강제 진행'
+        : '🚨 호수 오류!\n\n운송장: '+_expectedHo+'\n\n정확한 호수에 배달 후 다시 시도해주세요.\n\n그래도 완료 처리할까요?\n[취소] = 다시 확인 / [확인] = 강제 진행';
+      try{ if(typeof _tts==='function') _tts('오배송 오배송'); }catch(e){}
+      try{
+        var _bctxHo=window._mbtiAudioCtx||new (window.AudioContext||window.webkitAudioContext)();
+        window._mbtiAudioCtx=_bctxHo;
+        if(_bctxHo.state==='suspended')_bctxHo.resume();
+        var _nHo=_bctxHo.currentTime;
+        var _mgHo=_bctxHo.createGain(); _mgHo.gain.value=1.5; _mgHo.connect(_bctxHo.destination);
+        [0,0.22,0.44].forEach(function(t){
+          var o=_bctxHo.createOscillator(),g=_bctxHo.createGain();
+          o.type='square'; o.frequency.value=880;
+          g.gain.setValueAtTime(0,_nHo+t);
+          g.gain.linearRampToValueAtTime(0.45,_nHo+t+0.02);
+          g.gain.exponentialRampToValueAtTime(0.001,_nHo+t+0.18);
+          o.connect(g); g.connect(_mgHo);
+          o.start(_nHo+t); o.stop(_nHo+t+0.2);
+        });
+      }catch(e){}
+      try{ navigator.vibrate&&navigator.vibrate([400,150,400,150,400]); }catch(e){}
+      if(!confirm(_alertMsg)) return;
+    }
+  }
 
   var fbId=window._delivCompleteFbId;
   var memo=document.getElementById('dc-memo')?.value.trim()||'';
@@ -23821,7 +23962,14 @@ async function emerLogSelectDelete(){
     localStorage.setItem('mbti_emergency_del',JSON.stringify(list));
   }catch(e){}
   toast('✅ '+fbIds.length+'건 삭제 완료');
-  // onSnapshot이 자동으로 화면 갱신함
+  // ★ v9.46: 삭제 후 즉시 UI 갱신 (onSnapshot 대기 X — 실시간 반영)
+  setTimeout(function(){
+    var ca = document.getElementById('ca');
+    if(ca && typeof rEmergencyLog==='function') ca.innerHTML = rEmergencyLog();
+    // 기사 앱 긴급배송 기록
+    var dca = document.getElementById('dca');
+    if(dca && typeof rEmergencyLog==='function') dca.innerHTML = rEmergencyLog();
+  }, 300);
 }
 
 function openShiftSwapModal(){
