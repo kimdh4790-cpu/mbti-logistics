@@ -1,4 +1,4 @@
-// ★ MBTI 물류관리 v9.29 — Service Worker (FCM 백그라운드 완전 지원 + 진동최대화 + urgent지원)
+// ★ MBTI 물류관리 v9.64 — Service Worker (FCM 백그라운드 완전 지원 + 진동최대화 + urgent지원)
 // GitHub Pages: kimdh4790-cpu.github.io/mbti-logistics/sw.js
 
 // ── Firebase 스크립트 임포트 (FCM 백그라운드 처리 필수)
@@ -18,34 +18,34 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 // ── 아이콘 경로
-// ★ v9.29: icon-192.png 서버에 없으면 빈 문자열 → 404 에러 방지
+// ★ v9.64: icon-192.png 서버에 없으면 빈 문자열 → 404 에러 방지
 const ORIGIN = (self.location && self.location.origin) ? self.location.origin : 'https://mbti-logistics.kimdh4790.workers.dev';
 const ICON  = '';   // icon-192.png 없으면 빈 문자열 유지 (404 방지). 아이콘 파일 배포 시 ORIGIN+'/icon-192.png' 로 변경
 const BADGE = '';
 
 // ── 캐시 버전
-const CACHE = 'mbti-v9-29';
+const CACHE = 'mbti-v9-64';
 
 // ──────────────────────────────────────────
 // 설치 / 활성화
 // ──────────────────────────────────────────
 self.addEventListener('install', e => {
-  console.log('[SW] install v9.29');
+  console.log('[SW] install v9.64');
   self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
-  console.log('[SW] activate v9.29');
+  console.log('[SW] activate v9.64');
   e.waitUntil(
     caches.keys()
       .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
       .then(() => {
-        // ★ v9.29: SW 업데이트 감지 → 앱에 알려서 FCM 토큰 강제 재발급
+        // ★ v9.64: SW 업데이트 감지 → 앱에 알려서 FCM 토큰 강제 재발급
         return self.clients.matchAll({type:'window', includeUncontrolled:true})
           .then(function(clients){
             clients.forEach(function(c){
-              c.postMessage({type:'SW_UPDATED', version:'v9.29'});
+              c.postMessage({type:'SW_UPDATED', version:'v9.64'});
             });
           });
       })
@@ -82,7 +82,7 @@ messaging.onBackgroundMessage(function(payload) {
     return;
   }
 
-  // ★ v9.29: 삭제된 공지 차단 — noticeId 있으면 Firestore에서 존재 확인 후 표시
+  // ★ v9.64: 삭제된 공지 차단 — noticeId 있으면 Firestore에서 존재 확인 후 표시
   if (d.type === 'notice' && d.noticeId) {
     return fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/notices/' + d.noticeId)
       .then(function(res) {
@@ -201,7 +201,7 @@ self.addEventListener('fetch', function(e) {
           const ct = res.headers.get('content-type') || '';
           if (ct.includes('html') || ct.includes('javascript') || ct.includes('css')) {
             const clone = res.clone();
-            caches.open(CACHE).then(c => c.put(e.request, clone).catch(()=>{})); // ★ v9.29: put 에러 무시
+            caches.open(CACHE).then(c => c.put(e.request, clone).catch(()=>{})); // ★ v9.64: put 에러 무시
           }
         }
         return res;
