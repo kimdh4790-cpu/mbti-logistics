@@ -21637,23 +21637,41 @@ async function _emerVisionScan(b64, statusEl){
     }catch(e){}
   }
   if(clovaUrl && clovaSecret){
-    if(statusEl) statusEl.innerHTML='<span style="color:var(--blue)">📝 Clova OCR 분석 중...</span>';
+    if(statusEl) statusEl.innerHTML='<span style="color:var(--blue)">\uD83D\uDCDD Clova OCR \uBD84\uC11D \uC911...</span>';
     var clovaLines = await _clovaOCR(b64, 'image/jpeg');
     if(clovaLines && clovaLines.length > 3){
       var parsed = _parseClovaLines(clovaLines);
+      console.log('[Clova OCR] \uD30C\uC2F1 \uACB0\uACFC:', parsed);
       if(parsed.address || parsed.tracking_no){
-        if(statusEl) statusEl.innerHTML='<span style="color:var(--teal)">✅ Clova OCR 완료</span>';
-        console.log('[Clova OCR] 파싱 결과:', parsed);
-        return {
-          tracking_no: parsed.tracking_no||'',
-          address: parsed.address||'',
-          recipient: parsed.recipient||'',
-          route_code: parsed.route_code||'',
-          rawLines: clovaLines
-        };
+        // ★ v9.82: Clova 성공 → 폼 필드 직접 채움 (기존엔 return만 해서 적용 안 됐음)
+        var tEl2=document.getElementById('emer-tracking-inp');
+        var aEl2=document.getElementById('emer-addr');
+        var nEl2=document.getElementById('emer-recipient');
+        var oEl2=document.getElementById('emer-orderid');
+        if(tEl2 && parsed.tracking_no){ tEl2.value=parsed.tracking_no; tEl2.dispatchEvent(new Event('input')); }
+        if(aEl2 && parsed.address){ aEl2.value=parsed.address; aEl2.dispatchEvent(new Event('input')); }
+        if(nEl2 && parsed.recipient){ nEl2.value=parsed.recipient; }
+        if(oEl2 && parsed.order_id){ oEl2.value=parsed.order_id; }
+        // ★ v9.82: 주소 → 카카오 지오코딩 → GPS 핀
+        if(parsed.address && (!window._emerGps || window._emerGps.src==='device_fallback')){
+          _kakaoGeocode(parsed.address).then(function(gps){
+            if(gps){ window._emerGps={lat:gps.lat,lng:gps.lng,src:'kakao'}; }
+          }).catch(function(){});
+        }
+        if(statusEl) statusEl.innerHTML='<span style="color:var(--teal)">\u2705 Clova OCR \uC644\uB8CC</span>';
+        try{ if(typeof _emerIncScan==='function') _emerIncScan(); }catch(e){}
+        try{ if(typeof _tts==='function') _tts('\uC2A4\uCE94'); }catch(e){}
+        if(parsed.tracking_no && parsed.address){
+          if(window._emerAutoSaveTimer) clearTimeout(window._emerAutoSaveTimer);
+          window._emerAutoSaveTimer = setTimeout(function(){
+            window._emerAutoSaveTimer=null;
+            if(typeof emerSave==='function') emerSave();
+          }, 1500);
+        }
+        return;
       }
     }
-    if(statusEl) statusEl.innerHTML='<span style="color:var(--amber)">Clova 불충분 → Claude Vision 시도...</span>';
+    if(statusEl) statusEl.innerHTML='<span style="color:var(--amber)">Clova \uBD88\uCDA9\uBD84 \u2192 Claude Vision \uC2DC\uB3C4...</span>';
   }
   // API 키 로드
   var apiKey = '';
