@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.80</title>
+<title>엠비티아이 물류관리 v9.82</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10425,7 +10425,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.80 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.82 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -11402,10 +11402,10 @@ function updBadge(){
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
 function updFbUI(){
-  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.78 · 🔥 실시간':'v9.75 · 데모';
+  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.82 · 🔥 실시간':'v9.82 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.78 · Firebase 실시간':'v9.80 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.82 · Firebase 실시간':'v9.82 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -15063,13 +15063,7 @@ function _renderCpsStats(){
     {name:'대구2캠프',prefixes:['109','213'],color:'#F59E0B'},
     {name:'진주M캠프',prefixes:['608','612','613','614','619'],color:'#EF4444'}
   ];
-  function getCampForRoute(route){
-    for(var ci=0;ci<CAMP_DEFS.length;ci++){
-      if(CAMP_DEFS[ci].prefixes.some(function(p){return route.startsWith(p);}))
-        return CAMP_DEFS[ci].name;
-    }
-    return '기타';
-  }
+  
 
   var settlements=ls('settlements');
   var coupang=settlements.filter(function(s){
@@ -21279,6 +21273,19 @@ function _parseClovaLines(lines){
     }
   }
 
+  // ★ v9.82: 주문번호 — 27로 시작 14자리 OR 7로 시작 13자리
+  var _orderLine = lines.find(function(l){ return l.indexOf('주문번호') >= 0; });
+  if(_orderLine){
+    var _od = _orderLine.replace(/[^0-9]/g,'');
+    if((_od.slice(0,2)==='27' && _od.length===14) || (_od[0]==='7' && _od.length===13))
+      result.order_id = _od;
+  }
+  if(!result.order_id){
+    var _ofull = fullText.replace(/[,.\s]/g,'');
+    var _om = _ofull.match(/27\d{12}/) || _ofull.match(/7\d{12}/);
+    if(_om) result.order_id = _om[0];
+  }
+
   // 수령인: 김*우 패턴
   var recM = fullText.match(/[가-힣]+\*[가-힣]+/);
   if(recM) result.recipient = recM[0];
@@ -21509,600 +21516,18 @@ function openEmergencyDelivery(){
 
 
 
-async function emerOcrScan(file, _statusOverride){
-  if(!file) return;
-  var status = _statusOverride || document.getElementById('emer-ocr-status');
 
-  // ★ v9.25: 1단계 — jsQR로 QR 코드 먼저 해독 (API 비용 0, 빠름)
-  // 사진을 네이티브 카메라로 찍으면 고해상도+자동초점 → jsQR 인식률 대폭 향상
-  if(status) status.innerHTML = '<span style="color:var(--blue)">📷 QR 코드 분석 중...</span>';
-  try{
-    var qrResult = await new Promise(function(resolve){
-      var img = new Image();
-      var url = URL.createObjectURL(file);
-      img.onload = async function(){
-        URL.revokeObjectURL(url);
-        // 최대 1600px (QR 밀도 대응, 너무 크면 jsQR 느려짐)
-        var max = 1600;
-        var w = img.width, h = img.height;
-        if(w > max || h > max){
-          if(w > h){ h = Math.round(h * max / w); w = max; }
-          else { w = Math.round(w * max / h); h = max; }
-        }
-        var cv = document.createElement('canvas');
-        cv.width = w; cv.height = h;
-        var cx = cv.getContext('2d');
-        cx.drawImage(img, 0, 0, w, h);
+// ★ v9.25: 실시간 바코드/QR 스캐너
+var _emerScanReader = null;
 
-        // ★ v9.25: ① BarcodeDetector — 파일에서 직접 ImageBitmap 생성 (가장 정확)
-        if('BarcodeDetector' in window){
-          try{
-            var bd = new BarcodeDetector({formats:['qr_code','aztec','data_matrix']}); // ★ v9.25: 바코드포맷제거
-            // 원본 파일로 직접 ImageBitmap 생성 (canvas 경유 없이 = 품질 손실 없음)
-            var bmp = await createImageBitmap(file);
-            var bdCodes = await bd.detect(bmp);
-            bmp.close && bmp.close();
-            if(bdCodes && bdCodes.length > 0 && bdCodes[0].rawValue){
-              resolve(bdCodes[0].rawValue); return;
-            }
-          }catch(e){ console.warn('[BarcodeDetector 파일직접]', e.message||e); }
-        }
+// ★ v9.48: 폰 네이티브 카메라로 QR 촬영 후 디코딩
 
-        // ② jsQR — 원본 픽셀 (iOS Safari 폴백)
-        var raw = cx.getImageData(0, 0, w, h);
-        var code = null;
-        if(window.jsQR) code = window.jsQR(raw.data, raw.width, raw.height, {inversionAttempts:'attemptBoth'});
-        if(code && code.data){ resolve(code.data); return; }
+// ★ v9.51: 클립보드 자동 감지 — 폰 카메라로 QR 스캔 후 복사만 하면 자동입력
 
-        // ③ jsQR — 우측 절반 크롭
-        var hw = Math.round(w / 2);
-        var cv2 = document.createElement('canvas');
-        cv2.width = hw; cv2.height = h;
-        cv2.getContext('2d').drawImage(img, Math.round(img.width/2), 0, Math.round(img.width/2), img.height, 0, 0, hw, h);
-        if(window.jsQR){
-          var raw2 = cv2.getContext('2d').getImageData(0, 0, hw, h);
-          var code2 = window.jsQR(raw2.data, raw2.width, raw2.height, {inversionAttempts:'attemptBoth'});
-          if(code2 && code2.data){ resolve(code2.data); return; }
-        }
-
-        // ④ jsQR — 좌측 절반 크롭
-        var cv3 = document.createElement('canvas');
-        cv3.width = hw; cv3.height = h;
-        cv3.getContext('2d').drawImage(img, 0, 0, Math.round(img.width/2), img.height, 0, 0, hw, h);
-        if(window.jsQR){
-          var raw3 = cv3.getContext('2d').getImageData(0, 0, hw, h);
-          var code3 = window.jsQR(raw3.data, raw3.width, raw3.height, {inversionAttempts:'attemptBoth'});
-          if(code3 && code3.data){ resolve(code3.data); return; }
-        }
-
-        resolve(null); // QR 없음 → Vision OCR로 폴백
-      };
-      img.onerror = function(){ URL.revokeObjectURL(url); resolve(null); };
-      img.src = url;
-    });
-
-    if(qrResult){
-      // ★ v9.61: _emerHandleScan에 위임 — TTS/자동저장/카운터 모두 처리
-      _emerHandleScan(qrResult, status);
-      return;
-    }
-  }catch(e){ console.warn('[QR decode]', e); }
-
-  // QR 해독 실패 → Google Vision OCR 폴백
-  if(status) status.innerHTML = '<span style="color:var(--blue)">🤖 QR 미인식 → AI OCR 시도 중...</span>';
-
-  // Google Vision API 키 — 전역 캐시 우선 (매번 Firebase 재로드 방지)
-  var apiKey = window._cachedGoogleApiKey || localStorage.getItem('mbti_google_api_key') || '';
-  if(!apiKey && FB && _db){
-    try{
-      if(status) status.innerHTML = '<span style="color:var(--blue)">🔑 설정 불러오는 중...</span>';
-      var doc = await _db.collection('settings').doc('claude_config').get();
-      if(doc.exists && doc.data().googleApiKey){
-        apiKey = doc.data().googleApiKey.trim();
-      }
-    }catch(e){ console.warn('Firebase 키 로드 실패:', e); }
-  }
-  if(apiKey) window._cachedGoogleApiKey = apiKey; // ★ v9.25: 전역 캐시 저장
-
-  if(!apiKey){
-    if(status) status.innerHTML = '<span style="color:var(--red)">❌ API 키 없음 — 관리자에게 문의하세요</span>';
-    return;
-  }
-  if(status) status.innerHTML = '<span style="color:var(--blue)">🤖 AI 분석 중...</span>';
-
-  // ★ v9.25: 이미지 두 가지 준비
-  //   b64Raw  — 전처리 없음, QR BARCODE_DETECTION용 (전처리가 QR 픽셀 손상함)
-  //   b64Ocr  — 파란 제거+대비 강화, 텍스트 OCR용
-  var b64Raw, b64Ocr;
-  await new Promise(function(resolve){
-    var img = new Image();
-    var url = URL.createObjectURL(file);
-    img.onload = function(){
-      URL.revokeObjectURL(url);
-      var max = 1280;
-      var w = img.width, h = img.height;
-      if(w > max || h > max){
-        if(w > h){ h = Math.round(h * max / w); w = max; }
-        else { w = Math.round(w * max / h); h = max; }
-      }
-
-      // ① 원본 캔버스 (전처리 없음) → QR 디코딩용
-      var cvRaw = document.createElement('canvas');
-      cvRaw.width = w; cvRaw.height = h;
-      cvRaw.getContext('2d').drawImage(img, 0, 0, w, h);
-      b64Raw = cvRaw.toDataURL('image/jpeg', 0.92).split(',')[1];
-
-      // ② 파란 제거 + 대비 강화 → OCR 텍스트용
-      var cvOcr = document.createElement('canvas');
-      cvOcr.width = w; cvOcr.height = h;
-      var cx = cvOcr.getContext('2d');
-      cx.drawImage(img, 0, 0, w, h);
-      var imgData = cx.getImageData(0, 0, w, h);
-      var pix = imgData.data;
-      for(var i=0; i<pix.length; i+=4){
-        var r=pix[i], g=pix[i+1], b=pix[i+2];
-        var isBlue = (r < 160 && b > r+30 && b > g+10);
-        var isSky  = (r>100 && g>100 && b>r && b>g+20 && b>150);
-        if(isBlue || isSky){
-          pix[i]=255; pix[i+1]=255; pix[i+2]=255;
-        } else {
-          var gray = 0.299*r + 0.587*g + 0.114*b;
-          if(gray < 128){
-            pix[i]=Math.max(0,r-40); pix[i+1]=Math.max(0,g-40); pix[i+2]=Math.max(0,b-40);
-          }
-        }
-      }
-      cx.putImageData(imgData, 0, 0);
-      b64Ocr = cvOcr.toDataURL('image/jpeg', 0.88).split(',')[1];
-
-      resolve();
-    };
-    img.onerror = function(){ URL.revokeObjectURL(url); resolve(); };
-    img.src = url;
-  });
-  var b64 = b64Ocr; // 기존 코드 호환용
-
-  try{
-    // Google Cloud Vision API 호출
-    var res = await fetch('https://vision.googleapis.com/v1/images:annotate?key='+apiKey, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        requests: [
-          {
-            // QR/바코드: 원본 이미지 (전처리 없음 — 전처리가 QR 픽셀 손상)
-            image: {content: b64Raw || b64},
-            features: [{type: 'BARCODE_DETECTION', maxResults: 5}]
-          },
-          {
-            // OCR 텍스트: 전처리 이미지 (파란 제거로 텍스트 인식 향상)
-            image: {content: b64Ocr || b64},
-            features: [{type: 'DOCUMENT_TEXT_DETECTION', maxResults: 1}]
-          }
-        ]
-      })
-    });
-
-    var rawText = await res.text();
-    if(!rawText || rawText.trim()==='') throw new Error('빈 응답 (HTTP '+res.status+')');
-    var d;
-    try{ d = JSON.parse(rawText); }
-    catch(e){ throw new Error('파싱 실패: '+rawText.slice(0,100)); }
-    if(d.error) throw new Error(d.error.message);
-
-    // ★ v9.25: responses[0]=바코드, responses[1]=OCR 텍스트
-    var barcodeAnnotations = d.responses?.[0]?.barcodeAnnotations
-                           || d.responses?.[0]?.barcodes || [];
-    console.log('[Vision BARCODE]', barcodeAnnotations.length+'개 감지',
-      barcodeAnnotations.map(function(b){return (b.format||'?')+':'+((b.rawValue||'').slice(0,50));}).join(' | '));
-    var qrBarcode = barcodeAnnotations.find(function(b){
-      return b.format==='QR_CODE' || b.valueFormat==='TEXT' ||
-             (b.rawValue && (b.rawValue.indexOf('|')>=0 || b.rawValue.indexOf('V1')===0));
-    });
-    if(qrBarcode && qrBarcode.rawValue){
-      console.log('[QR 직접인식]', qrBarcode.rawValue);
-      var _qpDirect = _parseQrText(qrBarcode.rawValue);
-      if(_qpDirect.tracking_no || _qpDirect.address){
-        // QR 데이터로 직접 입력
-        if(_qpDirect.tracking_no){
-          window._emerTrackings=[_qpDirect.tracking_no]; emerRefreshTrackingList();
-          var _inp=document.getElementById('emer-tracking-inp'); if(_inp) _inp.value=_qpDirect.tracking_no;
-        }
-        if(_qpDirect.order_id){ var _oi=document.getElementById('emer-orderid'); if(_oi) _oi.value=_qpDirect.order_id; }
-        if(_qpDirect.recipient){ var _ri=document.getElementById('emer-recipient'); if(_ri) _ri.value=_qpDirect.recipient; }
-        if(_qpDirect.address){ var _ai=document.getElementById('emer-addr'); if(_ai) _ai.value=_qpDirect.address; }
-        if(_qpDirect.lat&&_qpDirect.lng){
-          window._emerGps={lat:_qpDirect.lat,lng:_qpDirect.lng,src:'QR'};
-          var _ge=document.getElementById('emer-gps-status');
-          if(_ge) _ge.innerHTML='<span style="color:var(--teal)">📍 QR GPS 직접수신: '+_qpDirect.lat.toFixed(5)+', '+_qpDirect.lng.toFixed(5)+' ✅</span>';
-        }
-        // 요약 카드
-        var _sumEl=document.getElementById('emer-ocr-summary');
-        if(_sumEl){
-          var _fs='width:100%;padding:5px 7px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--bg);color:var(--text);margin-top:2px';
-          var _rows='<div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:6px">📷 QR 코드 직접 인식 성공!</div>';
-          _rows+='<div style="margin-bottom:5px"><label style="font-size:11px;color:var(--text2)">🔢 운송장번호</label><input id="ocr-edit-track" style="'+_fs+'" value="'+(_qpDirect.tracking_no||'')+'" oninput="_emerOcrApply()"></div>';
-          _rows+='<div style="margin-bottom:5px"><label style="font-size:11px;color:var(--text2)">📋 주문번호</label><input id="ocr-edit-order" style="'+_fs+'" value="'+(_qpDirect.order_id||'')+'" oninput="_emerOcrApply()"></div>';
-          _rows+='<div style="margin-bottom:5px"><label style="font-size:11px;color:var(--text2)">👤 수령인</label><input id="ocr-edit-recip" style="'+_fs+'" value="'+(_qpDirect.recipient||'')+'" oninput="_emerOcrApply()"></div>';
-          _rows+='<div style="margin-bottom:5px"><label style="font-size:11px;color:var(--text2)">📍 주소</label><input id="ocr-edit-addr" style="'+_fs+'" value="'+(_qpDirect.address||'')+'" oninput="_emerOcrApply()"></div>';
-          _sumEl.innerHTML=_rows; _sumEl.style.display='block';
-        }
-        window._emerOcrApply=function(){
-          var t=document.getElementById('ocr-edit-track'),o=document.getElementById('ocr-edit-order'),r=document.getElementById('ocr-edit-recip'),a=document.getElementById('ocr-edit-addr');
-          if(t&&t.value){var cl=t.value.replace(/[\.\-\s]/g,'').trim();window._emerTrackings=[cl];emerRefreshTrackingList();}
-          if(o){var oi=document.getElementById('emer-orderid');if(oi)oi.value=o.value;}
-          if(r){var re=document.getElementById('emer-recipient');if(re)re.value=r.value;}
-          if(a){var ad=document.getElementById('emer-addr');if(ad)ad.value=a.value;}
-        };
-        window._emerOcrApply();
-        window._emerEntryMode = 'ocr';
-        _tts('스캔'); // ★ v9.61: OCR QR 인식 성공 음성
-        var _reader2=new FileReader(); _reader2.onload=function(e){window._emerPhotos.push(e.target.result);emerRefreshPhotoWrap();}; _reader2.readAsDataURL(file);
-
-        // ① GPS 설정
-        if(_qpDirect.lat && _qpDirect.lng){
-          window._emerGps = {lat:_qpDirect.lat, lng:_qpDirect.lng, src:'QR'};
-        }
-
-        // ② 주문번호 — OCR 텍스트에서 보완
-        if(!_qpDirect.order_id){
-          var _ocrRaw = d.responses?.[1]?.fullTextAnnotation?.text
-                      || d.responses?.[1]?.textAnnotations?.[0]?.description
-                      || d.responses?.[0]?.fullTextAnnotation?.text
-                      || d.responses?.[0]?.textAnnotations?.[0]?.description || '';
-          // 주문번호: '주문번호' 키워드 줄 OR 27로 시작 14자리
-          var _oLine = _ocrRaw.split('\n').find(function(l){ return l.indexOf('주문번호') >= 0; });
-          if(!_oLine) _oLine = _ocrRaw.split('\n').find(function(l){ return /27[\d\.\,]{10,}/.test(l); });
-          if(_oLine){
-            var _oNum = _oLine.replace(/[^\d]/g,'');
-            if(_oNum.length >= 10){
-              _qpDirect.order_id = _oNum;
-              window._pendingOrderId = _oNum; // ★ emerSave에서 꽂을 예비값
-              var _oel = document.getElementById('emer-orderid'); if(_oel) _oel.value = _oNum;
-            }
-          }
-        }
-
-        // ③ 상태 표시 + 자동저장
-        if(status) status.innerHTML = '<span style="color:var(--teal)">📸 스캔 ✅ &nbsp;→&nbsp; 💾 저장 중...</span>';
-        window._emerSaving = false;
-        setTimeout(function(){
-          // 저장 직전 order_id 재확인
-          if(_qpDirect.order_id){
-            var _oe=document.getElementById('emer-orderid');
-            if(_oe && !_oe.value) _oe.value = _qpDirect.order_id;
-          }
-          if(typeof emerSave === 'function') emerSave();
-        }, 600);
-        return;
-      }
-    }
-
-    // OCR 텍스트 추출 — responses[1] (OCR 전용) 또는 responses[0] 폴백
-    var ocrText = d.responses?.[1]?.fullTextAnnotation?.text
-                || d.responses?.[1]?.textAnnotations?.[0]?.description
-                || d.responses?.[0]?.fullTextAnnotation?.text
-                || d.responses?.[0]?.textAnnotations?.[0]?.description || '';
-    // ★ v9.25: 바코드 디버그 표시 (개발자도구 또는 디버그 버튼)
-    var _barcodeDbg = barcodeAnnotations.length > 0
-      ? '\n[바코드감지] ' + barcodeAnnotations.map(function(b){ return (b.format||'?')+': '+(b.rawValue||'').slice(0,60); }).join(' | ')
-      : '\n[바코드감지] 없음 (QR 미인식)';
-    console.log('[OCR 원문]\n' + ocrText + _barcodeDbg);
-    // 디버그 모달에도 표시
-    var _dbgBtn = document.querySelector('[onclick*="ocr-debug"]');
-    if(window._emerOcrDebugText !== undefined) window._emerOcrDebugText = ocrText + _barcodeDbg;
-    if(!ocrText) throw new Error('텍스트 인식 실패 — 사진을 다시 찍어주세요');
-
-    // 쿠팡 운송장에서 정보 파싱
-    var lines = ocrText.split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
-    var fullText = ocrText.replace(/\s+/g,' ');
-
-    // ★ v9.25: 운송장/주문번호 — OCR 원문 기반 정밀 파싱
-    // 쿠팡 실제 형식: 주문번호 27,1001,8522,3613 / 운송장 10,31728391,0430 (쉼표 구분)
-    var orderDigits = '', trackingDigits = '';
-
-    // 공통: 줄에서 숫자+구분자(쉼표/점/공백) 연속열 추출
-    function extractNumSeq(line){
-      // 쉼표/점/공백으로 구분된 숫자 그룹을 하나로 합침
-      var m = line.match(/[\d][\d,\.\s]{6,}[\d]/);
-      return m ? m[0].replace(/[^\d]/g,'') : line.replace(/[^\d]/g,'');
-    }
-
-    // 주문번호: '주문번호' 키워드 포함 줄에서 추출
-    var _orderKeyLine = lines.find(function(l){ return l.indexOf('주문번호')>=0; });
-    if(_orderKeyLine){
-      orderDigits = extractNumSeq(_orderKeyLine);
-    }
-    // 폴백: 줄별 탐색 (13~14자리, 7 또는 27 시작)
-    if(!orderDigits || orderDigits.length < 8){
-      for(var _li=0; _li<lines.length; _li++){
-        var _d = extractNumSeq(lines[_li]);
-        if(_d.length===13 && _d[0]==='7'){ orderDigits=_d; break; }
-        if(_d.length===14 && _d.slice(0,2)==='27'){ orderDigits=_d; break; }
-      }
-    }
-
-    // 운송장: '운송장' 키워드 포함 줄 우선 또는 10으로 시작 14자리
-    var _trackKeyLine = lines.find(function(l){ return l.indexOf('운송장')>=0 && l.replace(/[^\d]/g,'').length>=10; });
-    if(_trackKeyLine){
-      var _td = extractNumSeq(_trackKeyLine);
-      if(_td.length>=14 && _td.slice(0,2)==='10') trackingDigits=_td.slice(0,14);
-    }
-    if(!trackingDigits){
-      for(var _li3=0; _li3<lines.length; _li3++){
-        var _d3 = extractNumSeq(lines[_li3]);
-        if(_d3.length===14 && _d3.slice(0,2)==='10'){ trackingDigits=_d3; break; }
-        if(_d3.length>=14 && _d3.length<=16){ var _m10=_d3.match(/10\d{12}/); if(_m10){ trackingDigits=_m10[0]; break; } }
-      }
-    }
-
-    // 점 구분 형식으로 복원
-    function fmtNum(digits) {
-      if(!digits || digits.length < 8) return '';
-      var d = digits.slice(0, 16); // 최대 16자리
-      if(d.slice(0,2)==='10' && d.length>=14)
-        return d.slice(0,2)+'.'+d.slice(2,6)+'.'+d.slice(6,10)+'.'+d.slice(10,14);
-      if(d.slice(0,2)==='27' && d.length>=14)
-        return d.slice(0,2)+'.'+d.slice(2,6)+'.'+d.slice(6,10)+'.'+d.slice(10,14);
-      if(d[0]==='7' && d.length>=13)
-        return d[0]+'.'+d.slice(1,5)+'.'+d.slice(5,9)+'.'+d.slice(9,13);
-      return d;
-    }
-    var orderId    = fmtNum(orderDigits);
-    var trackingNo = fmtNum(trackingDigits);
-
-    // 수령인: 김*우 패턴
-    var recipientMatch = fullText.match(/[가-힣]+\*[가-힣]+/);
-
-    // ★ v9.25: 주소 파싱 — 전체 줄 스캔 후 주소 조각 모두 수집 (From./잡텍스트 건너뜀)
-    var addrLine = (function(){
-      function isAddrLine(l){
-        if(!l || l.replace(/[\d\.,\s]/g,'').length < 2) return false;
-        if(l.replace(/[^\d]/g,'').length > l.length * 0.75) return false;
-        return l.match(/(시|구)\s*.*(로|길|동|아파트|오피스텔|빌라|임대|주공|현대|삼성|롯데)/) ||
-               l.match(/(로|길)\s*\d+/) ||
-               l.match(/\d+동\s*\d+호/) ||
-               l.match(/\d+호$/) ||
-               l.match(/아파트|오피스텔|빌라|임대아파트|주공/);
-      }
-      function isJunkLine(l){
-        if(l.match(/서명|인수자|보내는이|택배사|위탁|개인정보/)) return true;
-        if(l.match(/[a-zA-Z]{5,}/)) return true; // 영어 5자↑
-        if(l.match(/^(RPB|D\d|오전|오후|DATE|From|To\.)/i)) return true;
-        if(l.match(/coupang|gls\.com/i)) return true;
-        if(l.match(/1577[-\s]*7011|1544[-\s]*9898/)) return true;
-        if(l.match(/^\d{2,4}[\/\.]\d{2}/)) return true; // 날짜
-        if(l.match(/^[\d,\.]{10,}/)) return true; // 숫자열
-        return false;
-      }
-
-      // ① 주소 파트 전체 수집 (줄 순서 유지, 쓰레기 건너뜀)
-      var streetPart = ''; // 도로명 (로/길 포함)
-      var detailParts = []; // 상세주소 파트 (동, 호 각각 수집)
-
-      for(var i=0; i<lines.length; i++){
-        var l = lines[i].trim();
-        if(!l || isJunkLine(l)) continue;
-
-        // 영어 잡텍스트 잘라내기
-        l = l.replace(/\s+[a-zA-Z][a-zA-Z\s]{1,}.*$/,'').trim();
-        // 번지 뒤 한글 잡텍스트 제거
-        l = l.replace(/((?:로|길|번길)\s*\d+(?:-\d+)?)\s+[가-힣]{1,3}$/,'$1').trim();
-        if(!l) continue;
-
-        var hasStreet = l.match(/(시|구).*(로|길)/) || l.match(/(로|길)\s*\d+/);
-        var hasDong   = l.match(/\d+동/) || l.match(/아파트|오피스텔|빌라|임대|주공/);
-        var hasHo     = l.match(/\d+호/);
-
-        if(hasStreet && !streetPart){
-          streetPart = l;
-        } else if(hasDong && !detailParts.some(function(x){ return x.match(/아파트|오피스텔|동/); })){
-          detailParts.push(l);
-          // 같은 줄에 호수도 있으면 종료
-          if(hasHo) break;
-        } else if(hasHo && detailParts.length > 0 && !detailParts[detailParts.length-1].match(/\d+호/)){
-          // 동 다음 줄에 호수만 있는 경우 (쿠팡 스타일) — 앞 줄에 붙임
-          detailParts[detailParts.length-1] += ' ' + l;
-          break;
-        } else if(hasHo && detailParts.length === 0 && streetPart){
-          // 도로명 바로 다음에 호수만 있는 경우
-          detailParts.push(l);
-          break;
-        }
-      }
-
-      // ② 조합
-      var detailPart = detailParts.join(' ').trim();
-      if(streetPart && detailPart) return (streetPart + ' ' + detailPart).trim();
-      return (streetPart || detailPart || '').trim();
-    })();
-
-    // 배송메모: 문 앞, 경비실 등
-    var memoLine = lines.find(function(l){ return l.match(/문\s*앞|경비실|자율출입|직접|부재|택배함/); });
-
-    // ★ v9.34: 라우트 코드 자동 추출 (예: "310 C01", "215C", "320A05")
-    // 패턴: 3자리 숫자 + 알파벳 1자 + 0~2자리 숫자 (공백 허용)
-    var routeMatch = fullText.match(/\b(\d{3})\s?([A-Z])(\d{0,2})\b/);
-    var routeCode = routeMatch ? (routeMatch[1] + routeMatch[2] + (routeMatch[3]||'')) : '';
-
-    // ★ v9.34: 배송일 자동 추출 (예: "02/12 목", "12/25 수")
-    // 패턴: M/D 또는 MM/DD + 한글 요일
-    var dateMatch = fullText.match(/(\d{1,2})\/(\d{1,2})\s*([월화수목금토일])/);
-    var deliveryDate = dateMatch
-      ? String(dateMatch[1]).padStart(2,'0')+'/'+String(dateMatch[2]).padStart(2,'0')+' '+dateMatch[3]
-      : '';
-
-    // ★ v9.37: 박스 규격 자동 추출 (예: "RPB2.4", "RPB 1.5", "RPB3")
-    // 박스 크기/종류 파악용 (R = Reusable Package Box?)
-    var boxMatch = fullText.match(/\bRPB\s*([\d\.]+)\b/i);
-    var boxCode = boxMatch ? ('RPB'+boxMatch[1]) : '';
-
-    var p = {
-      order_id: orderId,
-      tracking_no: trackingNo,
-      recipient: recipientMatch ? recipientMatch[0] : '',
-      address: addrLine || '',
-      delivery_memo: memoLine || '',
-      route_code: routeCode,           // ★ v9.34
-      delivery_date: deliveryDate,     // ★ v9.34
-      box_code: boxCode                // ★ v9.37: 박스 규격
-    };
-
-    // 자동 입력 — hidden 필드에 저장 (지도 핀용)
-    if(p.order_id){ var oi=document.getElementById('emer-orderid'); if(oi) oi.value=p.order_id; window._pendingOrderId=p.order_id; }
-    if(p.recipient)    { var re=document.getElementById('emer-recipient'); if(re) re.value=p.recipient; }
-    if(p.address)      { var ad=document.getElementById('emer-addr');      if(ad) ad.value=p.address; }
-    if(p.delivery_memo){ var dm=document.getElementById('emer-delivmemo'); if(dm) dm.value=p.delivery_memo; }
-
-    // ★ v9.81: OCR 운송장 없으면 QR 백업 사용
-    var _useTrack = p.tracking_no || (window._qrTrackBackup||'');
-    if(_useTrack){
-      var clean = _useTrack.replace(/[.\-\s]/g,'');
-      var inp = document.getElementById('emer-tracking-inp');
-      if(inp) inp.value = clean;
-      emerAddTracking();
-    }
-
-    // ★ v9.25: OCR 결과 → 수정 가능한 입력창으로 표시
-    var summary = document.getElementById('emer-ocr-summary');
-    if(summary){
-      var fs = 'width:100%;padding:5px 7px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--bg);color:var(--text);margin-top:2px';
-      var rows = '';
-      rows += '<div style="font-size:11px;font-weight:700;color:var(--teal);margin-bottom:6px">✅ OCR 완료 — 틀린 부분 수정 후 저장</div>';
-      // 운송장
-      rows += '<div style="margin-bottom:5px"><label style="font-size:11px;color:var(--text2)">🔢 운송장번호</label><input id="ocr-edit-track" style="'+fs+'" value="'+(p.tracking_no||'')+'" oninput="_emerOcrApply()"></div>';
-      // 주문번호
-      rows += '<div style="margin-bottom:5px"><label style="font-size:11px;color:var(--text2)">📋 주문번호</label><input id="ocr-edit-order" style="'+fs+'" value="'+(p.order_id||'')+'" oninput="_emerOcrApply()"></div>';
-      // 수령인
-      rows += '<div style="margin-bottom:5px"><label style="font-size:11px;color:var(--text2)">👤 수령인</label><input id="ocr-edit-recip" style="'+fs+'" value="'+(p.recipient||'')+'" oninput="_emerOcrApply()"></div>';
-      // 주소
-      rows += '<div style="margin-bottom:5px"><label style="font-size:11px;color:var(--text2)">📍 주소 <span style="color:#f59e0b;font-size:10px">(틀리면 직접 수정)</span></label><input id="ocr-edit-addr" style="'+fs+'" value="'+(p.address||'')+'" oninput="_emerOcrApply()"></div>';
-      // ★ v9.34: 라우트 코드 + 배송일 (자동 추출)
-      if(p.route_code || p.delivery_date || p.box_code){
-        rows += '<div style="display:flex;gap:6px;margin-bottom:5px;flex-wrap:wrap">';
-        if(p.route_code){
-          rows += '<div style="flex:1;min-width:90px"><label style="font-size:11px;color:var(--text2)">🚛 라우트</label><input id="ocr-edit-route" style="'+fs+'" value="'+p.route_code+'" oninput="_emerOcrApply()"></div>';
-        }
-        if(p.delivery_date){
-          rows += '<div style="flex:1;min-width:90px"><label style="font-size:11px;color:var(--text2)">📅 배송일</label><input id="ocr-edit-date" style="'+fs+'" value="'+p.delivery_date+'" oninput="_emerOcrApply()"></div>';
-        }
-        if(p.box_code){
-          rows += '<div style="flex:1;min-width:90px"><label style="font-size:11px;color:var(--text2)">📦 박스</label><input id="ocr-edit-box" style="'+fs+'" value="'+p.box_code+'" oninput="_emerOcrApply()"></div>';
-        }
-        rows += '</div>';
-      }
-      // 원문 보기 토글
-      rows += '<details style="margin-top:4px"><summary style="font-size:10px;color:var(--text3);cursor:pointer">🔍 OCR 원문 보기 (디버그)</summary><pre style="font-size:9px;color:var(--text3);white-space:pre-wrap;max-height:120px;overflow-y:auto;background:var(--bg2);padding:6px;border-radius:4px;margin-top:4px">'+ocrText.replace(/</g,'&lt;').slice(0,600)+'</pre></details>';
-      summary.innerHTML = rows;
-      summary.style.display='block';
-    }
-    if(status) status.innerHTML = '';
-
-    // 수정된 OCR 값을 hidden 필드에 실시간 반영
-    window._emerOcrApply = function(){
-      var t=document.getElementById('ocr-edit-track'),
-          o=document.getElementById('ocr-edit-order'),
-          r=document.getElementById('ocr-edit-recip'),
-          a=document.getElementById('ocr-edit-addr'),
-          rt=document.getElementById('ocr-edit-route'),  // ★ v9.34
-          dt=document.getElementById('ocr-edit-date'),   // ★ v9.34
-          bx=document.getElementById('ocr-edit-box');    // ★ v9.37
-      if(t&&t.value){
-        var cl=t.value.replace(/[.\-\s]/g,'').trim();
-        window._emerTrackings=[cl]; emerRefreshTrackingList();
-        var inp=document.getElementById('emer-tracking-inp'); if(inp) inp.value=cl;
-      }
-      if(o){ var oi=document.getElementById('emer-orderid'); if(oi) oi.value=o.value; }
-      if(r){ var re=document.getElementById('emer-recipient'); if(re) re.value=r.value; }
-      if(a){ var ad=document.getElementById('emer-addr'); if(ad) ad.value=a.value; }
-      // ★ v9.34: 라우트/배송일 → window 변수에 보존 (emerSave에서 Firebase에 포함)
-      window._emerRouteCode = rt ? rt.value.trim() : (p.route_code||'');
-      window._emerDeliveryDate = dt ? dt.value.trim() : (p.delivery_date||'');
-      // ★ v9.37: 박스 규격 보존
-      window._emerBoxCode = bx ? bx.value.trim() : (p.box_code||'');
-    };
-    window._emerOcrApply();
-
-    // ★ OCR 성공 → 운송장 입력란 숨김
-    var tw = document.getElementById('emer-tracking-wrap');
-    if(tw && window._emerTrackings.length>0) tw.style.display='none';
-
-    // ★ v9.58: OCR 주소 → Kakao Geocoding (Google Maps 대체)
-    var pinGps = null;
-    if(p.address){
-      if(status) status.innerHTML = '<span style="color:var(--blue)">📍 배송지 좌표 변환 중...</span>';
-      try{
-        var kgps2 = await _kakaoGeocode(p.address);
-        if(kgps2){
-          pinGps = {lat:kgps2.lat, lng:kgps2.lng, src:'kakao', addr:p.address};
-          // ★ v9.81: QR GPS 백업 있으면 우선 사용 (OCR 지오코딩보다 QR GPS가 정확)
-          if(window._qrGpsBackup && window._qrGpsBackup.lat){
-            window._emerGps = window._qrGpsBackup;
-          } else {
-            window._emerGps = {lat:kgps2.lat, lng:kgps2.lng, acc:0, src:'kakao', addr:p.address};
-          }
-          if(status) status.innerHTML = '<span style="color:var(--teal)">✅ 배송지 좌표 변환 완료</span>';
-        } else {
-          if(status) status.innerHTML = '<span style="color:#f59e0b">⚠️ 좌표 변환 실패 — 현위치 사용</span>';
-        }
-      }catch(geoErr){ console.warn('Geocoding 실패:', geoErr); }
-    }
-
-    // ★ v9.50: 폴백 — Geocoding 실패 시 현위치 강제 사용
-    if(!pinGps){
-      if(window._emerGps && window._emerGps.lat){
-        pinGps = {lat:window._emerGps.lat, lng:window._emerGps.lng, src:'device'};
-        if(status) status.innerHTML='<span style="color:#f59e0b">⚠️ Geocoding 실패 — 현위치로 핀 생성</span>';
-      }
-    }
-
-    // ★ v9.75: 미리보기 핀 제거 — emerSave 완료 후에만 진짜 핀 생성
-    if(pinGps){ window._emerGps = window._emerGps || pinGps; }
-
-    // 운송장 사진 배송 사진으로 자동 추가
-    var reader = new FileReader();
-    reader.onload = function(e){ window._emerPhotos.push(e.target.result); emerRefreshPhotoWrap(); };
-    reader.readAsDataURL(file);
-
-    // ★ v9.25: 등록방식 = OCR 자동인식
-    window._emerEntryMode = 'ocr';
-
-    // ★ v9.61: OCR 텍스트 경로도 자동저장 (운송장 있으면)
-    var _ocrTrk = window._emerTrackings && window._emerTrackings[0];
-    if(_ocrTrk){
-      if(status) status.innerHTML = '<span style="color:var(--teal)">📸 스캔 ✅ &nbsp;→&nbsp; 💾 저장 중...</span>';
-      _tts('스캔');
-      window._emerSaving = false;
-      setTimeout(function(){
-        // 저장 직전 order_id 재확인
-        if(p.order_id){
-          var _oe2=document.getElementById('emer-orderid');
-          if(_oe2 && !_oe2.value) _oe2.value = p.order_id;
-        }
-        if(typeof emerSave==='function') emerSave();
-      }, 600);
-    }
-
-  }catch(e){
-    var errMsg = e.message || String(e);
-    var hint = '';
-    if(errMsg.indexOf('API key')>=0 || errMsg.indexOf('API_KEY')>=0 || errMsg.indexOf('403')>=0){
-      hint = '— Google Vision API 키를 확인해주세요';
-    } else if(errMsg.indexOf('quota')>=0 || errMsg.indexOf('QUOTA')>=0 || errMsg.indexOf('429')>=0){
-      hint = '— API 할당량 초과 (내일 다시 시도)';
-    } else if(errMsg.indexOf('빈 응답')>=0 || errMsg.indexOf('파싱 실패')>=0){
-      hint = '— 네트워크 확인 후 재시도';
-    } else if(errMsg.indexOf('텍스트 인식 실패')>=0){
-      hint = '— 밝은 곳에서 라벨 전체가 보이게 다시 찍어주세요';
-    }
-    if(status) status.innerHTML = '<span style="color:var(--red)">❌ OCR 실패: '+errMsg+' '+hint+'</span>';
-    console.error('[OCR]', errMsg);
-  }
-}
-
-// ★ v9.25: 바코드/QR 인식 (운송장 훼손 시 보조 수단)
-// ★ v9.25: QR/바코드 텍스트에서 주소/수령인/주문번호/GPS 파싱
-// 쿠팡 QR 형식: |V1|운송장|주소|상세주소|수령인|해시|위도|경도|타입|타임스탬프|
+// ★ v9.61: 통합 송장 촬영 — QR 먼저, 실패 시 OCR 자동
+// ★ v9.57: Claude Vision으로 송장 자동 인식 (파란/흰 송장 모두)
+// ★ v9.62: 주소 잘림 복구 — Vision OCR이 "모라영구임대아파/트 106동" 줄바꿈을
+//          "모라영구임대아파트 트 106동"으로 합쳐 응답하는 문제 정리
 function _parseQrText(text){
   if(!text) return {};
   var result = {};
@@ -22158,17 +21583,7 @@ function _parseQrText(text){
   return result;
 }
 
-// ★ v9.25: 실시간 바코드/QR 스캐너
-var _emerScanReader = null;
 
-// ★ v9.48: 폰 네이티브 카메라로 QR 촬영 후 디코딩
-
-// ★ v9.51: 클립보드 자동 감지 — 폰 카메라로 QR 스캔 후 복사만 하면 자동입력
-
-// ★ v9.61: 통합 송장 촬영 — QR 먼저, 실패 시 OCR 자동
-// ★ v9.57: Claude Vision으로 송장 자동 인식 (파란/흰 송장 모두)
-// ★ v9.62: 주소 잘림 복구 — Vision OCR이 "모라영구임대아파/트 106동" 줄바꿈을
-//          "모라영구임대아파트 트 106동"으로 합쳐 응답하는 문제 정리
 function _cleanupAddrV62(addr){
   if(!addr) return addr;
   return addr
@@ -22247,7 +21662,7 @@ async function _emerVisionScan(b64, statusEl){
           role:'user',
           content:[
             {type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},
-            {type:'text',text:'쿠팡 택배 송장 이미지입니다. 이미지에 실제로 적힌 텍스트만 읽어 JSON으로 응답하세요(설명 없이).\n절대 금지: 이미지에 없는 글자 추가, 시/도 이름 추측, 주소 앞에 내용 임의 삽입.\n{"tracking":"운송장번호(숫자만,하이픈제외)","address":"배송지주소(이미지에 보이는 글자 그대로만,앞에 아무것도 추가하지말것)","name":"수령인이름","route":"라우트코드(예:812B01,없으면null)"}\n없는 항목은 null.'}
+            {type:'text',text:'쿠팡 택배 송장 이미지입니다. 이미지에 보이는 텍스트만 읽어 JSON 한 줄로만 응답(설명/마크다운 금지).\n규칙: ①없는 글자 추가금지 ②주소 앞에 임의 시/도명 추가금지 ③숫자는 이미지 그대로\n{"tracking":"운송장번호(10으로시작14자리,숫자만,예:10318007213721)","order":"주문번호(27로시작14자리 OR 7로시작13자리,숫자만,없으면null)","address":"배송지주소(도로명+건물번호+동호수전부,예:수영구무학로21번길16 101호)","name":"수령인(김*우형태)","route":"라우트코드(예:812B01,없으면null)"}\n없는항목=null'}
           ]
         }]
       })
@@ -22260,20 +21675,34 @@ async function _emerVisionScan(b64, statusEl){
     if(!m) throw new Error('JSON 없음');
     var parsed = JSON.parse(m[0]);
     var track = (parsed.tracking||'').replace(/\D/g,'');
-    var addr  = _cleanupAddrV62((parsed.address||'').trim()); // ★ v9.62: 주소 잘림 복구
+    var orderId = (parsed.order||'').replace(/\D/g,''); // ★ v9.82: 주문번호 추가
+    var addr  = _cleanupAddrV62((parsed.address||'').trim());
     var name  = (parsed.name||'').trim();
     var route = (parsed.route||'').trim();
     if(!track && !addr){
       if(statusEl) statusEl.innerHTML = '⚠️ 송장 정보를 찾을 수 없습니다';
       return;
     }
+    // ★ v9.82: 운송장 형식 검증 (10으로 시작 14자리)
+    if(track && !(track.startsWith('10') && track.length === 14)){
+      // 10으로 시작 14자리가 아니면 원본 그대로 (짧거나 다른 형식도 허용)
+      track = track.slice(0, 16); // 최대 16자리
+    }
+    // ★ v9.82: 주문번호 검증 (27로 시작 14자리 OR 7로 시작 13자리)
+    if(orderId){
+      if(!((orderId.startsWith('27') && orderId.length === 14) || (orderId.startsWith('7') && orderId.length === 13))){
+        orderId = ''; // 형식 불일치 → 비움
+      }
+    }
     // 필드에 자동 채움
     var tEl = document.getElementById('emer-tracking-inp');
     var aEl = document.getElementById('emer-addr');
     var nEl = document.getElementById('emer-recipient');
+    var oEl = document.getElementById('emer-orderid'); // ★ v9.82: 주문번호
     if(tEl && track){ tEl.value = track; tEl.dispatchEvent(new Event('input')); }
     if(aEl && addr){  aEl.value = addr;  aEl.dispatchEvent(new Event('input')); }
     if(nEl && name){  nEl.value = name; }
+    if(oEl && orderId){ oEl.value = orderId; } // ★ v9.82
     // 라우트 코드 자동 적용
     if(route){
       var rEl = document.getElementById('emer-route-inp');
@@ -22286,6 +21715,7 @@ async function _emerVisionScan(b64, statusEl){
     if(track && addr){
       var qp2 = {}; try{ qp2 = window._emerLastQP||{}; }catch(e){}
       qp2.tracking_no = track; qp2.address = addr;
+      if(orderId) qp2.order_id = orderId; // ★ v9.82: 주문번호 저장
       window._emerLastQP = qp2;
       if(window._emerAutoSaveTimer) clearTimeout(window._emerAutoSaveTimer);
       var _autoStatusEl2 = document.getElementById('emer-auto-status');
@@ -23073,177 +22503,7 @@ function emerStopScan(){
   if(mo) mo.style.display = 'none';
 }
 
-async function emerBarcodeScan(file){
-  if(!file) return;
-  var status = document.getElementById('emer-barcode-status');
-  if(status) status.innerHTML = '<span style="color:var(--blue)">📊 바코드 분석 중...</span>';
 
-  try{
-    // BarcodeDetector API 지원 여부 확인 (안드로이드 크롬 / 데스크톱 크롬 지원, iOS 미지원)
-    if(!('BarcodeDetector' in window)){
-      // iOS Safari 등 미지원 → ZXing 폴백 (이미 로드되어있을 가능성 높음)
-      if(typeof ZXing !== 'undefined' && ZXing.BrowserMultiFormatReader){
-        var reader = new ZXing.BrowserMultiFormatReader();
-        var imgUrl = URL.createObjectURL(file);
-        var img = new Image();
-        await new Promise(function(r){ img.onload=r; img.onerror=r; img.src=imgUrl; });
-        try{
-          var result = await reader.decodeFromImageElement(img);
-          URL.revokeObjectURL(imgUrl);
-          if(result && result.text){
-            var raw = result.text;
-            var code = raw.replace(/[\.\-\s]/g,'').trim();
-            if(/^[0-9]{8,25}$/.test(code)){
-              window._emerTrackings = window._emerTrackings||[];
-              if(window._emerTrackings.indexOf(code)<0) window._emerTrackings.push(code);
-              emerRefreshTrackingList();
-              window._emerEntryMode = 'barcode';
-              // ★ v9.25: QR 텍스트에서 주소/수령인 추가 파싱
-              var qp = _parseQrText(raw);
-              var fld = [];
-              if(qp.address){ var ae=document.getElementById('emer-addr'); if(ae&&!ae.value){ae.value=qp.address;fld.push('주소');} }
-              if(qp.recipient){ var re=document.getElementById('emer-recipient'); if(re&&!re.value){re.value=qp.recipient;fld.push('수령인');} }
-              if(qp.order_id){ var oe=document.getElementById('emer-orderid'); if(oe&&!oe.value){oe.value=qp.order_id;fld.push('주문번호');} }
-              if(status) status.innerHTML = '<span style="color:var(--teal)">✅ 바코드 인식 성공: '+code+(fld.length?' ('+fld.join('/')+'자동입력)':'')+'</span>';
-            } else {
-              // 숫자 아닌 QR → 주소/수령인 파싱 시도
-              var qp2 = _parseQrText(raw);
-              var fld2 = [];
-              if(qp2.address){ var ae2=document.getElementById('emer-addr'); if(ae2&&!ae2.value){ae2.value=qp2.address;fld2.push('주소');} }
-              if(qp2.recipient){ var re2=document.getElementById('emer-recipient'); if(re2&&!re2.value){re2.value=qp2.recipient;fld2.push('수령인');} }
-              if(fld2.length){
-                if(status) status.innerHTML = '<span style="color:var(--teal)">✅ QR에서 '+fld2.join('/')+'자동 입력됨 (운송장은 직접 입력)</span>';
-              } else {
-                if(status) status.innerHTML = '<span style="color:var(--amber)">⚠️ 인식됨: '+raw.slice(0,30)+' (운송장 형식 아님 — 직접 입력 필요)</span>';
-              }
-            }
-            // 사진도 자동 첨부
-            var fr = new FileReader();
-            fr.onload = function(e){ window._emerPhotos.push(e.target.result); emerRefreshPhotoWrap(); };
-            fr.readAsDataURL(file);
-            return;
-          }
-        }catch(e){
-          URL.revokeObjectURL(imgUrl);
-          if(status) status.innerHTML = '<span style="color:var(--red)">❌ 바코드 인식 실패 — 직접 입력해주세요</span>';
-          return;
-        }
-      } else {
-        if(status) status.innerHTML = '<span style="color:var(--amber)">⚠️ 이 기기는 바코드 인식 미지원 — 직접 입력해주세요</span>';
-        return;
-      }
-    }
-
-    // BarcodeDetector API 사용 (안드로이드 크롬 / 데스크톱 크롬)
-    var detector = new BarcodeDetector({
-      formats: ['qr_code','code_128','code_39','ean_13'] // 운송장 바코드 스캐너는 바코드 유지
-    });
-
-    var imgBitmap = await createImageBitmap(file);
-    var barcodes = await detector.detect(imgBitmap);
-
-    if(!barcodes || !barcodes.length){
-      if(status) status.innerHTML = '<span style="color:var(--red)">❌ 바코드를 찾지 못했습니다 — 직접 입력해주세요</span>';
-      return;
-    }
-
-    // 바코드 1개 이상 인식 → 운송장 형태(숫자 8~25자리)에 가까운 것 우선
-    var foundTrack = null, foundOther = [];
-    for(var i=0; i<barcodes.length; i++){
-      var raw = (barcodes[i].rawValue||'').replace(/[\.\-\s]/g,'').trim();
-      if(!raw) continue;
-      if(/^[0-9]{8,25}$/.test(raw) && !foundTrack){ foundTrack = raw; }
-      else { foundOther.push(barcodes[i].rawValue); }
-    }
-
-    // ★ v9.25: QR 텍스트에서 주소/수령인/주문번호 파싱 시도
-    if(foundTrack){
-      window._emerTrackings = window._emerTrackings||[];
-      if(window._emerTrackings.indexOf(foundTrack)<0) window._emerTrackings.push(foundTrack);
-      emerRefreshTrackingList();
-      window._emerEntryMode = 'barcode';
-
-      // ★ QR에서 추가 정보 파싱 (주소, 수령인, 주문번호)
-      var qrExtra = {};
-      if(foundOther.length){
-        foundOther.forEach(function(t){ var p=_parseQrText(t); Object.assign(qrExtra, p); });
-      }
-      // 운송장 번호 자체에도 텍스트 붙어있을 수 있음
-      var allRaw = barcodes.map(function(b){return b.rawValue||'';}).join('\n');
-      var mainParsed = _parseQrText(allRaw);
-      Object.assign(qrExtra, mainParsed);
-
-      // 파싱된 정보 자동 입력
-      var filled = [];
-      if(qrExtra.address){
-        var adEl=document.getElementById('emer-addr'); if(adEl&&!adEl.value){adEl.value=qrExtra.address; filled.push('주소');}
-      }
-      if(qrExtra.recipient){
-        var reEl=document.getElementById('emer-recipient'); if(reEl&&!reEl.value){reEl.value=qrExtra.recipient; filled.push('수령인');}
-      }
-      if(qrExtra.order_id){
-        var oiEl=document.getElementById('emer-orderid'); if(oiEl&&!oiEl.value){oiEl.value=qrExtra.order_id; filled.push('주문번호');}
-      }
-      if(qrExtra.memo){
-        var dmEl=document.getElementById('emer-delivmemo'); if(dmEl&&!dmEl.value){dmEl.value=qrExtra.memo;}
-      }
-
-      var extra = filled.length ? ' + '+filled.join('/') : '';
-      if(status) status.innerHTML = '<span style="color:var(--teal)">✅ 인식 성공: '+foundTrack+(extra?' ('+extra+' 자동입력)':'')+'</span>';
-
-      // OCR 요약 표시 (주소/수령인 있으면)
-      if(filled.length){
-        var sumEl=document.getElementById('emer-ocr-summary');
-        if(sumEl){
-          sumEl.style.display='block';
-          sumEl.innerHTML='<b>📊 QR 인식 결과</b><br>'
-            +(qrExtra.address?'📍 주소: '+qrExtra.address+'<br>':'')
-            +(qrExtra.recipient?'👤 수령인: '+qrExtra.recipient+'<br>':'')
-            +(qrExtra.order_id?'📋 주문번호: '+qrExtra.order_id+'<br>':'')
-            +(qrExtra.memo?'💬 메모: '+qrExtra.memo+'<br>':'');
-        }
-      }
-
-    } else if(foundOther.length){
-      // 숫자 형태는 아니지만 텍스트 QR → 주소/수령인 파싱 시도
-      var qrText = foundOther.join('\n');
-      var parsed = _parseQrText(qrText);
-      var filled2 = [];
-      if(parsed.address){ var ae=document.getElementById('emer-addr'); if(ae&&!ae.value){ae.value=_cleanupAddrV62(parsed.address); filled2.push('주소');} }
-      if(parsed.recipient){ var re=document.getElementById('emer-recipient'); if(re&&!re.value){re.value=parsed.recipient; filled2.push('수령인');} }
-      if(parsed.order_id){ var oe=document.getElementById('emer-orderid'); if(oe&&!oe.value){oe.value=parsed.order_id; filled2.push('주문번호');} }
-
-      if(filled2.length){
-        if(status) status.innerHTML = '<span style="color:var(--teal)">✅ QR에서 '+filled2.join('/')+'자동 입력됨 (운송장은 직접 입력)</span>';
-        var sumEl2=document.getElementById('emer-ocr-summary');
-        if(sumEl2){
-          sumEl2.style.display='block';
-          sumEl2.innerHTML='<b>📊 QR 인식 결과</b><br>'
-            +(parsed.address?'📍 주소: '+parsed.address+'<br>':'')
-            +(parsed.recipient?'👤 수령인: '+parsed.recipient+'<br>':'')
-            +(parsed.order_id?'📋 주문번호: '+parsed.order_id+'<br>':'');
-        }
-      } else {
-        if(status) status.innerHTML = '<span style="color:var(--amber)">⚠️ 인식됨: '+foundOther[0].slice(0,30)+' — 운송장 형식 아님, 직접 입력 필요</span>';
-        var memoEl = document.getElementById('emer-memo');
-        if(memoEl && !memoEl.value) memoEl.value = '[바코드 인식] '+foundOther.join(' / ');
-      }
-    } else {
-      if(status) status.innerHTML = '<span style="color:var(--red)">❌ 인식된 바코드가 비어있음 — 직접 입력해주세요</span>';
-    }
-
-    // 사진도 자동 첨부 (분쟁 대응)
-    var fr2 = new FileReader();
-    fr2.onload = function(e){ window._emerPhotos.push(e.target.result); emerRefreshPhotoWrap(); };
-    fr2.readAsDataURL(file);
-
-  }catch(e){
-    console.warn('바코드 스캔 오류:', e);
-    if(status) status.innerHTML = '<span style="color:var(--red)">❌ 바코드 인식 실패: '+(e.message||'알 수 없음')+' — 직접 입력해주세요</span>';
-  }
-}
-// 운송장 번호 추가
-// ★ v9.25: 긴급배송 폼에서 지도 버튼 클릭 시
 function emerOpenMap(){
   if(!window._activeDriverMap){
     // 모달 닫고 지도 열기
@@ -24410,6 +23670,7 @@ function rEmergencyLog(){
 
   // 이전 리스너 해제
   if(window._emerLogUnsub){ try{window._emerLogUnsub();}catch(e){} window._emerLogUnsub=null; }
+  window._emerLogCacheInited = false; // ★ v9.82: 재구독 시 전체 재로드
 
   function _dedup(records){
     var seen={}, out=[];
@@ -24565,10 +23826,26 @@ function rEmergencyLog(){
         q=_db.collection('emergency_deliveries').where('driver','==',S.curDriver||'').limit(60); // ★ v9.61
       }
       window._emerLogUnsub=q.onSnapshot(function(snap){
-        var fbRecs=[];
-        snap.forEach(function(d){var x=d.data();x.fbId=d.id;fbRecs.push(x);});
-        window._emerLogCache = fbRecs; // ★ v9.25: 엑셀 다운로드용 캐시
-        _renderContent(fbRecs);
+        // ★ v9.82: 초기 로드 후 docChanges로 변경된 문서만 처리 (reads 절감)
+        var arr = window._emerLogCache ? window._emerLogCache.slice() : [];
+        if(!window._emerLogCacheInited){
+          // 최초 1회: 전체 로드
+          arr = [];
+          snap.forEach(function(d){var x=d.data();x.fbId=d.id;arr.push(x);});
+          window._emerLogCacheInited = true;
+        } else {
+          snap.docChanges().forEach(function(ch){
+            var x=ch.doc.data(); x.fbId=ch.doc.id;
+            if(ch.type==='removed'){
+              arr=arr.filter(function(r){return r.fbId!==x.fbId;});
+            } else {
+              var idx=arr.findIndex(function(r){return r.fbId===x.fbId;});
+              if(idx>=0) arr[idx]=x; else arr.unshift(x);
+            }
+          });
+        }
+        window._emerLogCache = arr; // ★ v9.25: 엑셀 다운로드용 캐시
+        _renderContent(arr);
       },function(e){
         console.warn('emerLog snapshot:',e.code);
         _renderContent([]);
@@ -27362,8 +26639,8 @@ function startListeners(){
     var yesterdayStr=yesterday.toISOString().slice(0,10);
     var _photoTodayStr=today(); // ★ v9.61: 오늘 날짜 직접 정의
     _fbUnsubs.push(_db.collection('photo_logs')
-      .where('date','>=',_photoTodayStr) // ★ v9.61: 오늘만 (reads 절감)
-      .limit(100).onSnapshot({includeMetadataChanges:false},function(snap){
+      .where('date','==',_photoTodayStr) // ★ v9.82: 오늘만 정확히 (reads 절감)
+      .limit(50).onSnapshot({includeMetadataChanges:false},function(snap){
         snap.docChanges().forEach(function(change){
           if(change.type==='added'){
             var d=change.doc.data();
@@ -27482,20 +26759,24 @@ function startListeners(){
       }
   
     // ★ v9.25: 운행 메모(delivery_memos) 실시간 동기화 (관리자용 뱃지/페이지 자동 갱신)
-    _fbUnsubs.push(_db.collection('delivery_memos').limit(50) // ★ v9.61: reads 절감
-      .onSnapshot(snap=>{
+    // ★ v9.82: delivery_memos → onSnapshot 제거, 3분 TTL get()으로 교체 (reads 절감)
+    (function _loadDeliveryMemos(){
+      var _CACHE_KEY = '_dMemoTs';
+      var _now = Date.now();
+      var _last = parseInt(localStorage.getItem(_CACHE_KEY)||'0');
+      if(_now - _last < 3*60*1000 && ls('deliveryMemos').length > 0) return; // 3분 캐시 유효
+      _db.collection('delivery_memos').orderBy('date','desc').limit(50).get().then(function(snap){
         var arr=ls('deliveryMemos');
         var newCount=0;
-        snap.docChanges().forEach(ch=>{
-          if(ch.type==='added'||ch.type==='modified'){
-            var d=ch.doc.data(); d.id=ch.doc.id; d.fbId=ch.doc.id;
-            var i=arr.findIndex(x=>x.fbId===d.fbId||x.id===d.id);
-            if(i>=0) arr[i]=Object.assign({},arr[i],d);
-            else { arr.unshift(d); if(ch.type==='added') newCount++; }
-          }
+        snap.forEach(function(doc){
+          var d=doc.data(); d.id=doc.id; d.fbId=doc.id;
+          var i=arr.findIndex(function(x){return x.fbId===d.fbId||x.id===d.id;});
+          if(i>=0) arr[i]=Object.assign({},arr[i],d);
+          else { arr.unshift(d); newCount++; }
         });
         if(arr.length>500)arr=arr.slice(0,500);
         lss('deliveryMemos',arr);
+        localStorage.setItem(_CACHE_KEY, String(Date.now()));
         // 메모 뱃지: 오늘 등록된 메모 수
         try{
           var todayMemos=arr.filter(function(m){return m.date===today();}).length;
@@ -27506,10 +26787,11 @@ function startListeners(){
           }
         }catch(e){}
         if(S.page==='memo_log') SP('memo_log',null);
-      }, err=>{
-        if(err.code==='already-exists'){return;} // ★ v9.25: silent
-        console.warn('delivery_memos listener 오류:', err.code);
-      }));
+      }).catch(function(err){
+        if(err&&err.code==='already-exists'){return;}
+        console.warn('delivery_memos get 오류:', err&&err.code);
+      });
+    })(); // IIFE 즉시 실행
   
     // ★ Firebase 재연결 시 pending 큐 재전송
     firebase.firestore().enableNetwork().then(function(){
@@ -27873,7 +27155,7 @@ function ntDownloadTutorial(){
 <div class="header">
   <div class="badge">📸 MBTI 물류 — 사용 가이드</div>
   <h1>긴급배송<br>사용법</h1>
-  <p>쿠팡어플 오류 이슈 대응 방법 <span style=\"background:#334155;color:#94a3b8;font-size:10px;padding:1px 8px;border-radius:999px;margin-left:4px\">v9.25</span></p>
+  <p>쿠팡어플 오류 이슈 대응 방법 <span style=\"background:#334155;color:#94a3b8;font-size:10px;padding:1px 8px;border-radius:999px;margin-left:4px\">v9.82</span></p>
 </div>
 <div class="progress-bar"><div class="progress-fill" id="progress" style="width:14%"></div></div>
 <div class="step-nav" id="stepNav"></div>

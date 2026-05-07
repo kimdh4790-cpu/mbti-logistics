@@ -1004,7 +1004,7 @@ body.app-mode{background:#0a0e1a;}
 <div class="fb-status-bar hidden" id="fbStatusBar">
   <span class="fb-dot"></span>
   <span id="fbStatusTxt">Firebase 연결 중...</span>
-  <span id="fb-visitor-wrap" style="display:none;margin-left:10px;padding-left:10px;border-left:1px solid rgba(255,255,255,0.5);font-size:0.8rem;font-weight:700;letter-spacing:0.5px;background:rgba(0,0,0,0.25);padding:3px 10px;border-radius:20px;border:none">👁 오늘 <span id="visitor-count-nav" style="font-size:1rem;font-weight:900;color:#ffdd57">-</span>명</span>
+
 </div>
 
 <!-- ★ PWA 앱 설치 배너 -->
@@ -2794,36 +2794,7 @@ Promise.all([fsPromise, emailPromise]).then(function(results){
           }
           /* ══════════════════════════════════════════════════════════════ */
 
-          /* ── 오늘 방문자 수 집계 ── */
-          (function() {
-            var today = new Date().toISOString().slice(0,10); // YYYY-MM-DD
-            var visitorRef = db.collection('visitors').doc(today);
-
-            // 세션당 1회만 카운트 (같은 사람이 F5 눌러도 중복 안됨)
-            if (!sessionStorage.getItem('mbti_visited_' + today)) {
-              sessionStorage.setItem('mbti_visited_' + today, '1');
-              // 인증 완료 후 원자적 increment (Phase 1 보안)
-              window._mbtiAuthPromise.then(function(){
-                visitorRef.set(
-                  { count: firebase.firestore.FieldValue.increment(1), date: today },
-                  { merge: true }
-                ).catch(function(){});
-              });
-            }
-
-            // ★ 읽기 절감: onSnapshot → .get() 1회 읽기 (봇 트래픽 reads 폭증 방지)
-            visitorRef.get().then(function(doc) {
-              var el = document.getElementById('visitor-count-nav');
-              if (!el) return;
-              var cnt = doc.exists ? (doc.data().count || 0) : 0;
-              el.textContent = cnt;
-              var wrap = document.getElementById('fb-visitor-wrap');
-              if (wrap) wrap.style.display = 'inline';
-              showFbStatus('connected', '🟢 연결됨 · 오늘 ' + cnt + '명 방문');
-              var bar = document.getElementById('fbStatusBar');
-              if (bar) { bar.classList.remove('hidden'); }
-            }).catch(function() {});
-          })();
+          /* ── 방문자 수 집계 제거 (v9.82) ── */
 
           /* ── onSnapshot: 연결 감시 ── */
           db.enableNetwork().then(function() {
