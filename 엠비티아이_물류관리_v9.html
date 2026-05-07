@@ -25391,7 +25391,7 @@ function _setCamBtn(btn,url,label){
 
 // ── 이미지 뷰어
 function openIV(url,title){
-  if(!url||url.length<5){toast('이미지 없음');return;}
+  if(!url||url.length<5||url==='undefined'||url==='null'){toast('이미지 없음');return;}
   document.getElementById('iv-img').src=url;
   document.getElementById('iv-title').textContent=(title||'사진')+' — 클릭/핀치 확대 가능';
   document.getElementById('img-viewer').classList.add('show');
@@ -30136,7 +30136,7 @@ window._installPromptEvent=null;
       }
       navigator.serviceWorker.register('./sw.js',{scope:'./'})
         .then(function(reg){
-          console.log('[SW] 등록 완료, scope:', reg.scope);
+          console.debug('[SW] 등록 완료, scope:', reg.scope);
           // ★ v9.25: SW active 확인 후 저장 (FCM 토큰 발급 타이밍 보장)
           function _setReg(){
             window._swRegistration=reg;
@@ -30175,7 +30175,7 @@ window._installPromptEvent=null;
     }
     // ★ v9.25: SW 업데이트 감지 → FCM 토큰 강제 재발급 (백그라운드 알림 복구)
     if(e.data&&e.data.type==='SW_UPDATED'){
-      console.log('[FCM] SW 업데이트 감지 — FCM 토큰 강제 재발급');
+      console.debug('[FCM] SW 업데이트 감지 — FCM 토큰 강제 재발급');
       window._fcmTokenRegistered=false;
       window._fcmFailed=false;
       setTimeout(function(){if(typeof _registerFCMToken==='function')_registerFCMToken();},1500);
@@ -30331,7 +30331,7 @@ function startNotiListeners(){
   if(S.curMode!=='driver')return;
   // ★ v9.81: 이미 리스너 활성화 중이면 skip (반복 호출 방지)
   if(window._notiListenersActive){
-    console.log('[Noti] 리스너 이미 활성 — skip');
+    console.debug('[Noti] 리스너 이미 활성 — skip');
     return;
   }
   window._notiListenersActive = true;
@@ -30461,7 +30461,7 @@ function startNotiListeners(){
     window._firestoreListeners.push(unsub3);
   }
   
-  console.log('[Noti] 리스너 활성화 — 기사:',S.curDriver,'캠프:',myCampFull);
+  console.debug('[Noti] 리스너 활성화 — 기사:',S.curDriver,'캠프:',myCampFull);
 }
 function stopNotiListeners(){
   window._notiListenersActive = false;
@@ -30515,7 +30515,7 @@ function _scheduleNotiInit(){
     
     // ★ v9.25: 권한 상태 진단 로그
     var perm=(typeof Notification!=='undefined')?Notification.permission:'unsupported';
-    console.log('[Noti] 알림 권한 상태:', perm, '/ 로그인:', loggedIn);
+    console.debug('[Noti] 알림 권한 상태:', perm, '/ 로그인:', loggedIn);
     if(perm==='denied'){
       console.warn('[Noti] ⚠️ 알림 권한 차단됨 — 브라우저 설정에서 허용해야 FCM 작동');
       if(loggedIn) toast('⚠️ 알림이 차단되어 있습니다. 브라우저 주소창 🔒 → 알림 허용으로 변경해 주세요');
@@ -30524,11 +30524,11 @@ function _scheduleNotiInit(){
     if(loggedIn && !window._notiPermAsked && perm==='default'){
       window._notiPermAsked=true;
       requestNotiPermission(true).then(function(granted){
-        console.log('[Noti] 권한 요청 결과:', granted);
+        console.debug('[Noti] 권한 요청 결과:', granted);
         if(granted) _registerFCMToken();
       });
     } else if(perm==='granted'){
-      console.log('[Noti] 권한 이미 허용 → _registerFCMToken 호출');
+      console.debug('[Noti] 권한 이미 허용 → _registerFCMToken 호출');
       _registerFCMToken();
     }
     if(loggedIn) startNotiListeners();
@@ -30544,11 +30544,11 @@ window._fcmOnMessageBound=false; // ★ v9.25: 포그라운드 핸들러 중복 
 // 앱 시작 2초 후 자동 초기화 (로그인 여부 무관)
 
 async function _registerFCMToken(){
-  console.log('[FCM] _registerFCMToken 시작 — registered:'+window._fcmTokenRegistered+' failed:'+window._fcmFailed);
-  if(window._fcmTokenRegistered){console.log('[FCM] 이미 등록됨 — skip');return;}
+  console.debug('[FCM] _registerFCMToken 시작 — registered:'+window._fcmTokenRegistered+' failed:'+window._fcmFailed);
+  if(window._fcmTokenRegistered){console.debug('[FCM] 이미 등록됨 — skip');return;}
   if(window._fcmFailed){console.warn('[FCM] 이전 실패 플래그 — skip');return;}
   // ★ v9.80: 동시 호출 방지 뮤텍스 (race condition → 중복 저장 방지)
-  if(window._fcmRegistering){console.log('[FCM] 등록 진행 중 — skip');return;}
+  if(window._fcmRegistering){console.debug('[FCM] 등록 진행 중 — skip');return;}
   window._fcmRegistering=true;
   if(!FB||!_db){console.warn('[FCM] Firebase 미연결');return;}
   if(typeof firebase.messaging!=='function'){console.warn('[FCM] messaging 함수 없음');return;}
@@ -30556,12 +30556,12 @@ async function _registerFCMToken(){
   var swWait=0;
   while(!window._swRegistration&&swWait<20){await new Promise(function(r){setTimeout(r,500);});swWait++;}
   if(!window._swRegistration){console.warn('[FCM] SW 미등록 — 토큰 발급 생략');return;}
-  console.log('[FCM] SW 확인 완료, 인증 대기...');
+  console.debug('[FCM] SW 확인 완료, 인증 대기...');
   // Firebase 익명 인증 완료 대기 (최대 10초)
   var authWait=0;
   while(!firebase.auth().currentUser&&authWait<20){await new Promise(function(r){setTimeout(r,500);});authWait++;}
   if(!firebase.auth().currentUser){console.warn('[FCM] 인증 미완료 — 토큰 발급 생략');return;}
-  console.log('[FCM] 인증 완료, 토큰 발급 시도...');
+  console.debug('[FCM] 인증 완료, 토큰 발급 시도...');
   
   // ★ v9.25: 토큰 저장 대상 결정 - 현재 로그인 중인 기사 우선, 없으면 마지막 기기 소유자
   var targetDriverName=null, targetFbId=null;
@@ -30590,7 +30590,7 @@ async function _registerFCMToken(){
     }
     targetDriverName = owner.driver;
     targetFbId = owner.fbId;
-    console.log('[FCM] 로그아웃 상태 — 디바이스 소유자(' + targetDriverName + ') 기준으로 토큰 등록');
+    console.debug('[FCM] 로그아웃 상태 — 디바이스 소유자(' + targetDriverName + ') 기준으로 토큰 등록');
   }
   
   try{

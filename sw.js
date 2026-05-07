@@ -115,7 +115,9 @@ self.addEventListener('notificationclick', function(e) {
 
 self.addEventListener('fetch', function(e) {
   const url = e.request.url;
-  if (!url || url.includes('/undefined') || url.endsWith('undefined')) return;
+  if (!url || url.includes('/undefined') || url.endsWith('undefined')) {
+    e.respondWith(new Response('', {status:204})); return;
+  }
   if (url.startsWith('chrome-extension://') || url.startsWith('chrome://') ||
       url.startsWith('blob:') || url.includes('firestore.googleapis.com') ||
       url.includes('firebase') || url.includes('googleapis.com') ||
