@@ -11108,8 +11108,38 @@ var DELIVERY_DEADLINE={
 // ★ 두 좌표 거리 계산 (Haversine, 미터)
 // ★ v9.58: Kakao Geocoding — 주소 → 위경도 (Nominatim/Google 대체)
 // 국내 도로명/지번/아파트 동호수까지 정확 인식, 일 30만회 무료
-// ★ v9.61: _kakaoGeocode 통합 버전은 아래(20877번 근처)에 정의됨 — 여기는 placeholder
-// function _kakaoGeocode is defined later in the file
+async function _kakaoGeocode(addr){
+  if(!addr||!addr.trim()) return null;
+  // API 키 로드 (캐시 우선)
+  var key = window._cachedKakaoApiKey || '';
+  if(!key && FB && _db){
+    try{
+      var doc = await _db.collection('settings').doc('claude_config').get();
+      if(doc.exists && doc.data().kakaoApiKey){
+        key = doc.data().kakaoApiKey.trim();
+        window._cachedKakaoApiKey = key;
+      }
+    }catch(e){}
+  }
+  if(!key) return null; // 키 없으면 null 반환
+  try{
+    var resp = await fetch(
+      'https://dapi.kakao.com/v2/local/search/address.json?query='+encodeURIComponent(addr),
+      { headers:{ 'Authorization':'KakaoAK '+key } }
+    );
+    var data = await resp.json();
+    if(data.documents && data.documents.length > 0){
+      var d = data.documents[0];
+      var lat = parseFloat(d.y); // y = 위도
+      var lng = parseFloat(d.x); // x = 경도
+      if(lat && lng) return {lat:lat, lng:lng};
+    }
+    return null;
+  }catch(e){
+    console.warn('[Kakao Geocoding 실패]', e&&e.message);
+    return null;
+  }
+}
 
 function gpsDistance(lat1,lng1,lat2,lng2){
   if(lat1==null||lng1==null||lat2==null||lng2==null)return Infinity;
@@ -12417,7 +12447,7 @@ function loadEntriesHistory(period, col){
   _db.collection(col)
     .where('date','>=',cut)
     .where('date','<',today()) // 오늘 제외 (onSnapshot이 담당)
-    .limit(50)
+    .limit(500)
     .get()
     .then(function(snap){
       var a=ls(col);
@@ -12495,7 +12525,7 @@ function rMemoLog(){
   // 첫 방문 시에만 Firebase 조회 (이후는 캐시 사용)
   if(FB&&_db&&!window._memoLogLoaded){
     window._memoLogLoaded=true;
-    _db.collection('delivery_memos').orderBy('date','desc').limit(30).get().then(function(snap){
+    _db.collection('delivery_memos').orderBy('date','desc').limit(200).get().then(function(snap){
       var arr=ls('deliveryMemos');
       snap.forEach(function(doc){
         var d=doc.data();d.fbId=doc.id;
@@ -13643,10 +13673,10 @@ function _getEmerLocs(){
   try{ local = JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]'); }catch(e){}
   var driverLocs = (S.curMode==='admin')
     ? local.filter(function(x){ return x.gps&&x.gps.lat; })
-    : local.filter(function(x){ return x.driver===S.curDriver && (x.gps&&x.gps.lat || x.addr); }); // ★ v9.61: 주소 있으면 포함
+    : local.filter(function(x){ return x.driver===S.curDriver && x.gps&&x.gps.lat; });
   if(FB&&_db){
     var q = (S.curMode==='admin')
-      ? _db.collection('emergency_deliveries').orderBy('savedAt','desc').limit(30)
+      ? _db.collection('emergency_deliveries').orderBy('savedAt','desc').limit(60)
       : _db.collection('emergency_deliveries').where('driver','==',S.curDriver||'').limit(60);
     q.get().then(function(snap){
       var fbLocs=[];
@@ -13668,7 +13698,12 @@ function _getEmerLocs(){
       }
     }).catch(function(){});
   }
-  return Promise.resolve(driverLocs);
+  var _seen={},_deduped=[];
+  driverLocs.forEach(function(x){
+    var k=x.fbId||x._fbId||(x.tracking+'_'+(x.savedAt||''));
+    if(!_seen[k]){_seen[k]=true;_deduped.push(x);}
+  });
+  return Promise.resolve(_deduped);
 }
 function _loadMapsScript(apiKey){
   return new Promise(function(res, rej){
@@ -13822,10 +13857,8 @@ function _renderDriverMap(myLoc, emerLocs){
   function makePin(color, label, size, opacity, clickKey){
     size=size||28; opacity=opacity===undefined?1:opacity;
     var k = clickKey||'';
-    var tapAttr = k ? ' onclick="event.stopPropagation();if(window._mbtiPinClick)window._mbtiPinClick(this.getAttribute(\'data-k\'))" ontouchstart="event.stopPropagation()" ontouchend="event.stopPropagation();event.preventDefault();if(window._mbtiPinClick)window._mbtiPinClick(this.getAttribute(\'data-k\'))" data-k="'+k+'"' : '';
-    // ★ v9.61: 핀 탭 강화 — 외부 div wrapper로 감싸서 터치 영역 확보
-    var inner = '<div style="width:'+size+'px;height:'+size+'px;background:'+color+';border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:'+(size>=30?'13px':'11px')+';font-weight:bold;box-shadow:0 2px 8px rgba(0,0,0,.6);opacity:'+opacity+'">'+label+'</div>';
-    return '<div style="width:'+(size+12)+'px;height:'+(size+12)+'px;display:flex;align-items:center;justify-content:center;cursor:pointer;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent;position:relative;z-index:999"'+tapAttr+'>'+inner+'</div>';
+    var tapAttr = k ? ' onclick="if(window._mbtiPinClick)window._mbtiPinClick(this.getAttribute(\'data-k\'))" ontouchend="event.stopPropagation();event.preventDefault();if(window._mbtiPinClick)window._mbtiPinClick(this.getAttribute(\'data-k\'))" data-k="'+k+'"' : '';
+    return '<div style="width:'+size+'px;height:'+size+'px;background:'+color+';border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:'+(size>=30?'13px':'11px')+';font-weight:bold;box-shadow:0 2px 6px rgba(0,0,0,.5);opacity:'+opacity+';cursor:pointer;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent"'+tapAttr+'>'+label+'</div>';
   }
   function _attachPinClick(overlay, key){
     // v9.74: 이벤트 위임으로 처리 — 이 함수는 폴백용으로만 유지
@@ -13851,7 +13884,7 @@ function _renderDriverMap(myLoc, emerLocs){
   var myOverlay = new kakao.maps.CustomOverlay({
     position:new kakao.maps.LatLng(myLoc.lat,myLoc.lng),
     content:makePin('#2563eb','📍',32,1,''),
-    yAnchor:0.5, xAnchor:0.5, zIndex:999
+    yAnchor:0.5, xAnchor:0.5, zIndex:50
   });
   myOverlay.setMap(map);
   window._driverMapCurrentLoc=myLoc;
@@ -13918,15 +13951,6 @@ function _renderDriverMap(myLoc, emerLocs){
     (window._driverMapPinMarkers||[]).forEach(function(o){try{o.setMap(null);}catch(e){}});
     window._driverMapPinMarkers=[];window._driverMapMarkers={};_pinDataMap={};
     var _f=window._driverMapFilter||'all';
-    // ★ v9.61: GPS 없고 주소 있는 건 → 백그라운드 Geocoding 후 재렌더
-    emerLocs.filter(function(x){return x.addr&&!(x.gps&&x.gps.lat);}).forEach(function(x){
-      _kakaoGeocode(x.addr).then(function(pos){
-        if(pos){
-          x.gps={lat:pos.lat,lng:pos.lng,src:'kakao_map'};
-          renderRoutePins(); // 재렌더
-        }
-      }).catch(function(){});
-    });
     emerLocs.filter(function(x){return x.gps&&x.gps.lat;}).forEach(function(x){
       var fbId=x.fbId||x._fbId||'';
       var isDone=x.status==='완료',isPartial=x.status==='부분완료';
@@ -13946,7 +13970,7 @@ function _renderDriverMap(myLoc, emerLocs){
         content:makePin(pinColor,label,28,pinOpacity,pinKey),
         yAnchor:0.5,xAnchor:0.5,
         clickable:true,
-        zIndex:isDone?10:(isPartial?200:(300-(x._seqNo||0)))
+        zIndex:isDone?80:(isPartial?150:(400-(x._seqNo||0)))
       });
       overlay.setMap(map);
       (function(key){ kakao.maps.event.addListener(overlay,'click',function(){ if(window._mbtiPinClick)window._mbtiPinClick(key); }); })(pinKey); // ★ v9.74: 카카오 공식 이벤트
@@ -14005,11 +14029,6 @@ function _renderDriverMap(myLoc, emerLocs){
   };
   window._rerenderRoutePins=function(){if(emerLocs.filter(function(x){return x.gps&&x.gps.lat&&!x._seqNo;}).length)assignSeqNos(null);renderRoutePins();};
   window._activeDriverMapAddPin=function(rec){emerLocs.push(rec);assignSeqNos(null);renderRoutePins();};
-  // ★ v9.61: 지도 열리기 전에 저장된 핀들 자동 추가
-  if(window._pendingMapPins && window._pendingMapPins.length){
-    window._pendingMapPins.forEach(function(p){ try{window._activeDriverMapAddPin(p);}catch(e){} });
-    window._pendingMapPins = [];
-  }
   window._updateMapCounter=updateCounter;
   setTimeout(function(){try{map.relayout();map.setCenter(new kakao.maps.LatLng(myLoc.lat,myLoc.lng));}catch(e){}},200);
 }
@@ -14042,7 +14061,7 @@ async function openLiveMap(){
       snap1.forEach(function(d){ driverLocs.push(d.data()); });
     }catch(e){ console.warn('[LiveMap] driver_locations:', e.message); }
     try{
-      var snap2 = await _db.collection('emergency_deliveries').orderBy('savedAt','desc').limit(30).get();
+      var snap2 = await _db.collection('emergency_deliveries').orderBy('savedAt','desc').limit(100).get();
       snap2.forEach(function(d){ var x=d.data(); if(x.gps&&x.gps.lat) emerLocs.push(x); });
     }catch(e){ console.warn('[LiveMap] emergency:', e.message); }
   }
@@ -14231,7 +14250,7 @@ async function openEmergencyAdmin(){
   if(FB&&_db){
     toast('🔍 긴급 배송기록 불러오는 중...');
     try{
-      var snap=await _db.collection('emergency_deliveries').orderBy('savedAt','desc').limit(30).get();
+      var snap=await _db.collection('emergency_deliveries').orderBy('savedAt','desc').limit(50).get();
       snap.forEach(function(d){records.push(Object.assign({id:d.id},d.data()));});
       fbOk = true;
     }catch(e){
@@ -14309,7 +14328,7 @@ async function syncFirebaseSettlements(){
   try{
     toast('🔄 Firebase 동기화 검사 중...');
     var local=ls('settlements');
-    var snap=await _db.collection('settlements').orderBy('month','desc').limit(50).get();
+    var snap=await _db.collection('settlements').orderBy('month','desc').limit(500).get();
     var fbMap={},fbArr=[];
     snap.forEach(function(d){
       var x=d.data();x.fbId=d.id;
@@ -20036,7 +20055,7 @@ function _loadDrvNotices(){
   // ★ v9.61: 중복 호출 방지 (동시 호출 시 기존 것 유지)
   if(window._drvNoticeLoading) return;
   window._drvNoticeLoading = true;
-  setTimeout(function(){ window._drvNoticeLoading=false; }, 30000); // ★ v9.61: 30초 쿨다운
+  setTimeout(function(){ window._drvNoticeLoading=false; }, 5000); // 5초 쿨다운
   window._drvNoticeReady=false;
   if(window._drvNoticeUnsub){window._drvNoticeUnsub();window._drvNoticeUnsub=null;}
   if(window._masterNoticeUnsub){window._masterNoticeUnsub();window._masterNoticeUnsub=null;}
@@ -20861,38 +20880,29 @@ async function _loadKakaoMapSDK(){
 
 // ★ v9.58: 카카오 Geocoding — 주소 → 위경도 변환
 async function _kakaoGeocode(address){
-  if(!address||!address.trim()) return null;
-  // ★ v9.61: API 키 캐시 (매 호출마다 Firebase 재읽기 방지 → reads 절감 + 속도 향상)
-  var apiKey = window._cachedKakaoApiKey || '';
-  if(!apiKey){
-    if(FB && _db){
-      try{
-        var doc = await _db.collection('settings').doc('claude_config').get();
-        if(doc.exists && doc.data().kakaoApiKey){
-          apiKey = doc.data().kakaoApiKey.trim();
-          window._cachedKakaoApiKey = apiKey; // 캐시
-        }
-      }catch(e){}
-    }
-    if(!apiKey) apiKey = (localStorage.getItem('mbti_kakao_api_key')||'').trim();
-    if(apiKey) window._cachedKakaoApiKey = apiKey;
+  var apiKey = '';
+  // Firebase에서 로드
+  if(FB && _db){
+    try{
+      var doc = await _db.collection('settings').doc('claude_config').get();
+      if(doc.exists && doc.data().kakaoApiKey) apiKey = doc.data().kakaoApiKey.trim();
+    }catch(e){}
   }
-  if(!apiKey){ console.warn('[Geocoding] 카카오 API 키 없음'); return null; }
+  if(!apiKey) apiKey = (localStorage.getItem('mbti_kakao_api_key')||'').trim();
+  if(!apiKey) return null;
 
   try{
     var url = 'https://dapi.kakao.com/v2/local/search/address.json?query='+encodeURIComponent(address);
-    var resp = await fetch(url, { headers: { 'Authorization': 'KakaoAK '+apiKey } });
+    var resp = await fetch(url, {
+      headers: { 'Authorization': 'KakaoAK '+apiKey }
+    });
     var data = await resp.json();
     if(data.documents && data.documents.length > 0){
       var d = data.documents[0];
       var lat = parseFloat(d.y || (d.address && d.address.y) || (d.road_address && d.road_address.y));
       var lng = parseFloat(d.x || (d.address && d.address.x) || (d.road_address && d.road_address.x));
-      if(lat && lng){
-        console.log('[Geocoding] ✅', address, '->', lat, lng);
-        return { lat, lng, address };
-      }
+      if(lat && lng) return { lat, lng, address };
     }
-    console.warn('[Geocoding] 결과 없음:', address);
     return null;
   }catch(e){
     console.warn('[카카오 Geocoding 실패]', e&&e.message);
@@ -21578,34 +21588,12 @@ async function emerOcrScan(file, _statusOverride){
     var tw = document.getElementById('emer-tracking-wrap');
     if(tw && window._emerTrackings.length>0) tw.style.display='none';
 
-    // ★ v9.61: OCR 주소 → Kakao Geocoding + 부산/경남 외 지역 경고
+    // ★ v9.58: OCR 주소 → Kakao Geocoding (Google Maps 대체)
     var pinGps = null;
     if(p.address){
-      // ★ v9.61: OCR이 "서울시 강남구 수영로..." 처럼 잘못된 시/구를 앞에 붙이는 패턴 수정
-      // 부산 구 이름이 포함돼 있으면 앞의 잘못된 시/구 접두사를 잘라냄
-      var _busanDistrict = /(수영구|사상구|해운대구|부산진구|동래구|남구|연제구|금정구|강서구|기장군|중구|서구|동구|영도구|북구)/;
-      var _bdMatch = p.address.match(_busanDistrict);
-      if(_bdMatch){
-        // 부산 구 이름이 있으면 그 앞 잘못된 접두사(서울시 강남구 등) 제거
-        var _bdIdx = p.address.indexOf(_bdMatch[0]);
-        var _corrected = (_bdIdx > 0) ? p.address.slice(_bdIdx) : p.address;
-        if(_corrected !== p.address){
-          console.log('[OCR] 주소 접두사 수정:', p.address, '→', _corrected);
-          p.address = _corrected;
-          var ad=document.getElementById('emer-addr'); if(ad) ad.value=_corrected;
-        }
-      } else {
-        // 부산 구 이름도 없는 타지역 주소 → 무효화
-        var _suspectAddr = /^서울|^경기|^인천|^대전|^광주|^대구|^울산시/.test(p.address);
-        if(_suspectAddr){
-          if(status) status.innerHTML = '<span style="color:#ef4444">⚠️ 주소 오인식: '+p.address.slice(0,15)+'... (현위치 사용)</span>';
-          p.address = '';
-          var ad2=document.getElementById('emer-addr'); if(ad2) ad2.value='';
-        }
-      }
-      if(p.address && status) status.innerHTML = '<span style="color:var(--blue)">📍 배송지 좌표 변환 중...</span>';
+      if(status) status.innerHTML = '<span style="color:var(--blue)">📍 배송지 좌표 변환 중...</span>';
       try{
-        var kgps2 = p.address ? await _kakaoGeocode(p.address) : null;
+        var kgps2 = await _kakaoGeocode(p.address);
         if(kgps2){
           pinGps = {lat:kgps2.lat, lng:kgps2.lng, src:'kakao', addr:p.address};
           window._emerGps = {lat:kgps2.lat, lng:kgps2.lng, acc:0, src:'kakao', addr:p.address};
@@ -22449,23 +22437,11 @@ function _emerHandleScan(raw, statusEl){
     }).catch(function(){});
   }
 
-  // ★ v9.61: 자동저장 — 운송장 + (주소 OR GPS) 둘 다 있어야 저장 (원래 조건 복원)
-  var _hasTrk = qp.tracking_no || (window._emerTrackings && window._emerTrackings.length > 0);
-  var _hasAddr = qp.address || (document.getElementById('emer-addr')?.value||'').trim();
-  var _hasGps  = (qp.lat && qp.lng) || (window._emerGps && window._emerGps.lat);
-  if(_hasTrk && (_hasAddr || _hasGps)){
+  // ★ v9.58: QR/바코드 인식 후 자동저장 — 운송장만 있어도 저장
+  if(qp.tracking_no || (window._emerTrackings && window._emerTrackings.length > 0)){
     var _scanMo = document.getElementById('emer-scan-mo');
     if(_scanMo){ _scanMo.style.display='none'; emerStopScan&&emerStopScan(); }
     if(statusEl) statusEl.innerHTML = '<span style="color:var(--teal)">📸 스캔 ✅ → 💾 저장 중...</span>';
-    window._emerSaving = false;
-    setTimeout(function(){ if(typeof emerSave==='function') emerSave(); }, 600);
-    return;
-  }
-  // 운송장은 있는데 주소/GPS 없음 → 현위치 GPS로 저장
-  if(_hasTrk && !_hasAddr && !_hasGps){
-    var _scanMo2 = document.getElementById('emer-scan-mo');
-    if(_scanMo2){ _scanMo2.style.display='none'; emerStopScan&&emerStopScan(); }
-    if(statusEl) statusEl.innerHTML = '<span style="color:#f59e0b">⚠️ 주소 없음 → 현위치로 저장</span>';
     window._emerSaving = false;
     setTimeout(function(){ if(typeof emerSave==='function') emerSave(); }, 600);
     return;
@@ -23182,11 +23158,6 @@ async function emerSave(){
       if(window._activeDriverMapAddPin) window._activeDriverMapAddPin(record);
       if(window._updateMapCounter) window._updateMapCounter();
       window._activeDriverMap.panTo({lat:record.gps.lat, lng:record.gps.lng});
-    } else {
-      // ★ v9.61: 지도가 안 열려있어도 데이터 저장해두고 열릴 때 자동 표시
-      // ★ v9.61: 지도 안 열린 상태 핀 → 배열로 누적
-      window._pendingMapPins = window._pendingMapPins || [];
-      window._pendingMapPins.push(record);
     }
   }
 
@@ -23850,38 +23821,6 @@ function rEmergencyLog(){
     return out;
   }
 
-  // ★ v9.61: 저장된 기록 중 잘못된 주소(서울시 강남구 + 부산구) 자동 보정
-  function _fixSavedAddr(records){
-    var busanRe=/(수영구|사상구|해운대구|부산진구|동래구|남구|연제구|금정구|강서구|기장군|중구|서구|동구|영도구|북구)/;
-    records.forEach(function(x){
-      if(!x.addr) return;
-      var m=x.addr.match(busanRe);
-      if(!m) return;
-      var idx=x.addr.indexOf(m[0]);
-      if(idx<=0) return;
-      var fixed=x.addr.slice(idx);
-      console.log('[주소보정]',x.addr,'→',fixed);
-      x.addr=fixed;
-      // GPS 없으면 Geocoding 재시도
-      if(!(x.gps&&x.gps.lat) && window._cachedKakaoApiKey){
-        _kakaoGeocode(fixed).then(function(pos){
-          if(!pos) return;
-          x.gps={lat:pos.lat,lng:pos.lng,src:'kakao_fix'};
-          // Firebase 업데이트
-          if(x.fbId&&FB&&_db){
-            _db.collection('emergency_deliveries').doc(x.fbId).update({addr:fixed,gps:x.gps}).catch(function(){});
-          }
-          // localStorage 업데이트
-          try{
-            var st=JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]');
-            var si=st.findIndex(function(s){return s.fbId===x.fbId;});
-            if(si>=0){st[si].addr=fixed;st[si].gps=x.gps;localStorage.setItem('mbti_emergency_del',JSON.stringify(st));}
-          }catch(e){}
-        }).catch(function(){});
-      }
-    });
-  }
-
   function _renderContent(fbRecs){
     // 로컬 병합
     var all = fbRecs.slice();
@@ -23897,7 +23836,6 @@ function rEmergencyLog(){
     var records = _dedup(all)
       .filter(function(x){return (x.date||(x.savedAt||'').slice(0,10)||'')>=cut;})
       .sort(function(a,b){return (b.savedAt||'').localeCompare(a.savedAt||'');});
-    _fixSavedAddr(records); // ★ v9.61: 잘못된 주소 자동 보정
 
     var pending = records.filter(function(x){return x.status!=='완료'&&x.status!=='부분완료';});
     var partial = records.filter(function(x){return x.status==='부분완료';});
@@ -24023,7 +23961,7 @@ function rEmergencyLog(){
       // ★ 기사 모드: where+orderBy 복합 인덱스 없이도 동작하도록 orderBy 제거 → 클라이언트 정렬
       var q;
       if(isAdmin){
-        q=_db.collection('emergency_deliveries').orderBy('savedAt','desc').limit(30); // ★ v9.61: reads 절감
+        q=_db.collection('emergency_deliveries').orderBy('savedAt','desc').limit(60); // ★ v9.61: reads 절감
       } else {
         q=_db.collection('emergency_deliveries').where('driver','==',S.curDriver||'').limit(60); // ★ v9.61
       }
@@ -25881,7 +25819,7 @@ function parseCoupangExcel(inp){
           if(x.month!==month)return;
           var docId=x.fbId||x.driver+'_'+x.month;
           var cleanX=_cleanUndef(x);
-          promises.push(_db.collection('settlements').doc(docId).set(cleanX,{merge:true})
+          promises.push(_db.collection('settlements').doc(docId).set(cleanX)
             .then(function(){fbOk++;x.fbId=docId;})
             .catch(function(e){fbFail++;console.warn('FB 저장 실패:',x.driver,e.message);}));
         });
@@ -26183,7 +26121,7 @@ function loadInquiries(){
     var _irA=document.getElementById('inq-result');if(_irA)_irA.innerHTML='<div style="text-align:center;padding:30px;color:var(--red)">❌ Firebase 연결 필요</div>';
     return;
   }
-  _db.collection('inquiries').orderBy('createdAt','desc').limit(30).get()
+  _db.collection('inquiries').orderBy('createdAt','desc').limit(200).get()
     .then(function(snap){
       var data=[];
       snap.forEach(function(doc){
@@ -26733,16 +26671,14 @@ function startListeners(){
     return;
   }
   _listenersInitDone=true;
-  // ★ v9.61: 앱 시작 시 카카오 API 키 미리 캐시 (Geocoding 속도 향상)
+  _initialLoad=true;
+  // ★ v9.61: 카카오 API 키 사전 캐시
   if(!window._cachedKakaoApiKey && FB && _db){
     _db.collection('settings').doc('claude_config').get().then(function(doc){
-      if(doc.exists && doc.data().kakaoApiKey){
+      if(doc.exists && doc.data().kakaoApiKey)
         window._cachedKakaoApiKey = doc.data().kakaoApiKey.trim();
-        console.log('[Kakao] API 키 사전 캐시 완료');
-      }
     }).catch(function(){});
   }
-  _initialLoad=true;
   if(!FB||!_db){_listenersInitDone=false;return;}
   // ★ v9.25: 기존 리스너 해제 후 300ms 대기 → Firebase 내부 정리 완료 보장
   // disableNetwork/enableNetwork 제거 (오히려 Target ID 충돌 유발)
@@ -26853,7 +26789,7 @@ function startListeners(){
   
     // ── photo_logs: Firestore → localStorage → UI 직접 반영 (1초 이내)
     // ── drivers: Firestore → localStorage → UI 직접 반영 (1초 이내)
-    _fbUnsubs.push(_db.collection('drivers').limit(50)
+    _fbUnsubs.push(_db.collection('drivers').limit(100)
       .onSnapshot({includeMetadataChanges:false}, snap=>{
         // ① Firestore 전체 데이터 배열화
         var fbDrivers=[];
@@ -26910,7 +26846,7 @@ function startListeners(){
       entries:'entry', deliveries:'delivery', temp_logs:'temp',
       accidents:'accident', settlements:'settle'
     };
-    var colLimits={entries:30, deliveries:30, temp_logs:20, accidents:20, settlements:30}; // ★ v9.61: reads절감
+    var colLimits={entries:50, deliveries:50, temp_logs:30, accidents:30, settlements:50};
     var todayStr=today();
     // ★ v9.40: 날짜 필터 계산 — 최근 3개월(settlements), 7일(temp_logs), 30일(accidents)
     var _now40=new Date();
@@ -26947,7 +26883,7 @@ function startListeners(){
       }
   
     // ★ v9.25: 운행 메모(delivery_memos) 실시간 동기화 (관리자용 뱃지/페이지 자동 갱신)
-    _fbUnsubs.push(_db.collection('delivery_memos').where('date','>=',todayStr).limit(30) // ★ v9.61: reads 절감
+    _fbUnsubs.push(_db.collection('delivery_memos').limit(50) // ★ v9.61: reads 절감
       .onSnapshot(snap=>{
         var arr=ls('deliveryMemos');
         var newCount=0;
@@ -27199,7 +27135,7 @@ function _loadNoticeList(){
   // _masterNoticeUnsub이 이미 notices 전체 구독 중 → 중복 리스너 불필요
   // 공지 추가/삭제 후에는 _loadNoticeList() 직접 호출로 갱신
   if(window._noticeListUnsub){window._noticeListUnsub();window._noticeListUnsub=null;}
-  _db.collection('notices').orderBy('sentAt','desc').limit(20).get()
+  _db.collection('notices').orderBy('sentAt','desc').limit(30).get()
   .then(function(snap){
     var box2=document.getElementById('nt-list');
     if(!box2)return;
@@ -30721,7 +30657,7 @@ async function _registerFCMToken(){
       fcmSwReg = window._swRegistration;
     }
     var _swReg = fcmSwReg || window._swRegistration;
-    if(!_swReg){ console.warn('[FCM] SW 등록 없음 — 토큰 발급 생략'); return; } // ★ v9.61: /undefined 방지
+    if(!_swReg){ console.warn('[FCM] SW 없음 — 토큰 생략'); return; }
     var token=await msg.getToken({
       vapidKey:'BAcfjIAqO1zwJtkKBv5dI8SlSjHci1BDbb5dVENG-KVlI8qzBVa646bt2lSoUhzmZGN08s8AxAALFhFr8Jkwdjs',
       serviceWorkerRegistration: _swReg
