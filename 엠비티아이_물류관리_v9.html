@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.80</title>
+<title>엠비티아이 물류관리 v9.82</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10425,7 +10425,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.80 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.82 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -11405,7 +11405,7 @@ function updFbUI(){
   var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.78 · 🔥 실시간':'v9.75 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.78 · Firebase 실시간':'v9.80 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.78 · Firebase 실시간':'v9.82 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -13906,7 +13906,7 @@ function _closeDriverMap(){
 }
 
 
-// ★ v9.80: 잘못된 운송장 + GPS 자동 정리 (1회 실행)
+// ★ v9.82: 잘못된 운송장 + GPS 자동 정리 (1회 실행)
 async function _fixWrongTrackings(){
   var doneKey = 'mbti_track_fixed_v3'; // ★ v9.81: 재실행
   if(localStorage.getItem(doneKey)) return;
@@ -13937,7 +13937,7 @@ async function _fixWrongTrackings(){
         upd.trackings = u.clean;
         upd.tracking = u.clean[0] || '';
       }
-      // ★ v9.80: GPS 재지오코딩 제거
+      // ★ v9.82: GPS 재지오코딩 제거
       // QR에 정확한 GPS 있음 → 재스캔으로만 복구 가능
       // 카카오/구글 지오코딩은 아파트 동 단위 부정확
       if(Object.keys(upd).length > 0){
@@ -13958,7 +13958,7 @@ async function _fixWrongTrackings(){
 
 async function openDriverMap(){
   document.getElementById('driver-map-mo')?.remove();
-  // ★ v9.80: 잘못된 운송장 자동 정리 (백그라운드)
+  // ★ v9.82: 잘못된 운송장 자동 정리 (백그라운드)
   setTimeout(_fixWrongTrackings, 3000);
   // ★ v9.25: 뒤로가기 인터셉트 (브라우저 back → 지도 닫기)
   history.pushState({map:'driver'}, '');
@@ -14079,28 +14079,51 @@ async function openDriverMap(){
 
 // ★ v9.60: Leaflet 기반 배송 지도 (Google Maps 완전 대체 — API 키 불필요)
 
-// ★ v9.82: 배송핀 클릭 전역 핸들러
+// ★ v9.82: 배송핀 클릭 — 동적 패널 생성 (절대 안 망가짐)
 window._mbtiPinClick = function(key){
   var x = window._mbtiPinDataMap && window._mbtiPinDataMap[key];
-  if(!x) return;
-  var panel = document.getElementById('map-pin-panel');
-  if(!panel) return;
+  if(!x){ console.warn('[PIN] 데이터없음 key=',key,'map=',window._mbtiPinDataMap); return; }
+  // 기존 패널 제거 후 새로 생성 (DOM 충돌 방지)
+  var old = document.getElementById('mbti-pin-sheet'); if(old) old.remove();
   var trackings = (x.trackings&&x.trackings.length)?x.trackings:(x.tracking?[x.tracking]:[]);
   var tStatus = x.trackingStatus||{};
   var isDone = x.status==='완료', isPartial = x.status==='부분완료';
   var pinColor = isDone?'#16a34a':(isPartial?'#f97316':'#dc2626');
-  var hEl = document.getElementById('mpp-header');
-  if(hEl) hEl.innerHTML = '<span style="background:'+pinColor+';color:#fff;border-radius:50%;min-width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-weight:900">'+(x._seqNo||'?')+'</span><div style="flex:1;margin-left:10px"><div style="font-size:16px;font-weight:900;color:#f9fafb">'+(x.recipient||'수령인 미상')+'</div>'+(x.time?'<div style="font-size:11px;color:#9ca3af">'+x.time+'</div>':'')+'</div>';
-  var aEl = document.getElementById('mpp-addr'); if(aEl) aEl.textContent = x.addr||'주소 없음';
-  var tEl = document.getElementById('mpp-tracks');
-  if(tEl) tEl.innerHTML = trackings.length ? '<div style="background:rgba(255,255,255,.05);border-radius:8px;padding:8px 10px">'+trackings.map(function(t){var d=tStatus[t]&&tStatus[t].status==='완료';return '<div style="font-size:11px;color:'+(d?'#6b7280':'#d1d5db')+';padding:2px 0">'+(d?'완료 ':'대기 ')+t+'</div>';}).join('')+'</div>' : '';
-  var btn = document.getElementById('mpp-complete-btn');
-  if(btn){ if(isDone){btn.textContent='완료';btn.disabled=true;btn.style.opacity='.5';btn.style.background='#374151';}else{btn.textContent=isPartial?'나머지 완료처리':'✅ 배송완료 처리';btn.disabled=false;btn.style.opacity='1';btn.style.background='#16a34a';} }
-  var navBtn = document.getElementById('mpp-navi-btn');
-  if(navBtn&&x.gps) navBtn.href='kakaomap://route?ep='+x.gps.lat+','+x.gps.lng+'&by=CAR';
-  window._pinSheetFbId = x.fbId||x._fbId||'';
-  window._pinSheetData = JSON.stringify({trackings:trackings,tracking:x.tracking||'',order_id:x.order_id||'',addr:x.addr||''});
-  panel.style.display='flex'; panel.style.flexDirection='column';
+  var trackHtml = trackings.length ? '<div style="background:rgba(255,255,255,.08);border-radius:8px;padding:10px;margin-bottom:14px">'+trackings.map(function(t){var d=tStatus[t]&&tStatus[t].status==='완료';return '<div style="font-size:12px;font-family:monospace;color:'+(d?'#6b7280':'#e5e7eb')+';padding:3px 0">'+(d?'✅ ':'📦 ')+t+'</div>';}).join('')+'</div>' : '';
+  var btnHtml = isDone
+    ? '<button disabled style="width:100%;padding:14px;background:#374151;color:#9ca3af;border:none;border-radius:10px;font-size:15px;font-weight:800">✓ 전체 배송완료</button>'
+    : '<button id="mbti-pin-complete" style="width:100%;padding:14px;background:#16a34a;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer">'+(isPartial?'⏱ 나머지 완료처리':'✅ 배송완료 처리')+'</button>';
+  var naviHtml = (x.gps&&x.gps.lat) ? '<a href="kakaomap://route?ep='+x.gps.lat+','+x.gps.lng+'&by=CAR" style="display:flex;align-items:center;justify-content:center;width:100%;padding:12px;margin-top:8px;background:#fbbf24;color:#000;text-decoration:none;border-radius:10px;font-size:14px;font-weight:700">🗺️ 카카오맵 길안내</a>' : '';
+  var sheet = document.createElement('div');
+  sheet.id = 'mbti-pin-sheet';
+  sheet.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:99999;background:#1f2937;border-radius:18px 18px 0 0;padding:20px 16px 24px;box-shadow:0 -8px 32px rgba(0,0,0,.5);max-height:70vh;overflow-y:auto;animation:mbtiSlideUp .25s ease-out';
+  sheet.innerHTML = '<div style="width:40px;height:4px;background:rgba(255,255,255,.2);border-radius:2px;margin:0 auto 16px"></div>'
+    + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">'
+    + '<span style="background:'+pinColor+';color:#fff;border-radius:50%;min-width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px">'+(x._seqNo||'?')+'</span>'
+    + '<div style="flex:1"><div style="font-size:17px;font-weight:900;color:#f9fafb">'+(x.recipient||'수령인 미상')+'</div>'
+    + (x.time?'<div style="font-size:12px;color:#9ca3af;margin-top:2px">⏰ '+x.time+'</div>':'') + '</div>'
+    + '<button onclick="document.getElementById(\'mbti-pin-sheet\').remove()" style="background:rgba(255,255,255,.1);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer">×</button>'
+    + '</div>'
+    + '<div style="background:rgba(255,255,255,.08);border-radius:10px;padding:12px;margin-bottom:14px;font-size:13px;color:#e5e7eb;line-height:1.5">'
+    + '📍 ' + (x.addr || '주소 없음') + '</div>'
+    + trackHtml + btnHtml + naviHtml;
+  document.body.appendChild(sheet);
+  // 슬라이드업 애니메이션
+  if(!document.getElementById('mbti-pin-anim')){
+    var st = document.createElement('style');
+    st.id = 'mbti-pin-anim';
+    st.textContent = '@keyframes mbtiSlideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}';
+    document.head.appendChild(st);
+  }
+  // 완료 버튼 핸들러
+  var btn = document.getElementById('mbti-pin-complete');
+  if(btn) btn.onclick = function(){
+    window._pinSheetFbId = x.fbId||x._fbId||'';
+    window._pinSheetData = JSON.stringify({trackings:trackings,tracking:x.tracking||'',order_id:x.order_id||'',addr:x.addr||''});
+    document.getElementById('mbti-pin-sheet').remove();
+    if(typeof _doDelivComplete === 'function') _doDelivComplete();
+  };
+  console.log('[PIN] 패널 표시:', x.recipient, x.addr);
 };
 window._mbtiShowPanel = window._mbtiPinClick;
 
@@ -19111,7 +19134,7 @@ function checkDriverNotifications(){
         try{notified=JSON.parse(localStorage.getItem(notifiedKey)||'{}');}catch(e){}
         items.forEach(function(it){
           if(notified[it._id])return;
-          // ★ v9.80: Firebase pushedAt 체크 — 캐시 삭제 후 재로그인 재발송 차단
+          // ★ v9.82: Firebase pushedAt 체크 — 캐시 삭제 후 재로그인 재발송 차단
           if(it.pushedAt)return;
           // ★ 이미 읽은 항목(readAt/readStatus) 알림 제외
           if(it.readAt||it.readStatus==='read')return;
@@ -19125,7 +19148,7 @@ function checkDriverNotifications(){
             localNotify(title,body,{tag:'mbti-'+it._id,urgent:(it.category==='긴급')});
           }
           notified[it._id]=Date.now();
-          // ★ v9.80: Firebase에 pushedAt 기록 — 캐시 삭제 후 재로그인해도 재발송 차단
+          // ★ v9.82: Firebase에 pushedAt 기록 — 캐시 삭제 후 재로그인해도 재발송 차단
           try{
             if(FB&&_db&&it._id){
               _db.collection('driver_notifications').doc(it._id)
@@ -23752,7 +23775,7 @@ async function emerSendAdminAlert(){
 }
 
 // ★ v9.25: 배송완료 처리 모달 (지도 핀 클릭 → 완료사진 + Firebase 상태 업데이트)
-// ★ v9.80: 핀시트 배송완료 버튼 전용 래퍼 (인라인 onclick 단순화)
+// ★ v9.82: 핀시트 배송완료 버튼 전용 래퍼 (인라인 onclick 단순화)
 function _doDelivComplete(){
   console.log('[DC] 배송완료 버튼 탭됨 fbId='+window._pinSheetFbId);
   var fbId = window._pinSheetFbId || '';
@@ -23785,7 +23808,7 @@ function openDelivComplete(fbId, dataEncoded){
     return existingStatus[t] && existingStatus[t].status === '완료';
   });
 
-  // ★ v9.80: 이미 전체 완료된 경우만 토스트
+  // ★ v9.82: 이미 전체 완료된 경우만 토스트
   if(!pendingTrackings.length && allTrackings.length > 0){
     toast('✅ 모든 운송장이 이미 완료 처리되었습니다'); return;
   }
@@ -23797,7 +23820,7 @@ function openDelivComplete(fbId, dataEncoded){
   window._delivCompleteExistingStatus  = existingStatus;
   window._delivCompletePinData = { gps: info.gps||null, addr: info.addr||'' };
 
-  // ★ v9.80: body 직접 삽입 + z-index:50000 (stacking context 충돌 완전 해결)
+  // ★ v9.82: body 직접 삽입 + z-index:50000 (stacking context 충돌 완전 해결)
   var _html = '<div id="deliv-complete-mo" style="position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:50000;display:flex;align-items:flex-end;justify-content:center" ontouchend="if(event.target===this)this.remove()" onclick="if(event.target===this)this.remove()">'
     +'<div ontouchend="event.stopPropagation()" onclick="event.stopPropagation()" style="background:var(--bg);border-radius:16px 16px 0 0;padding:20px 16px 36px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto">'
     +'<div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px"></div>'
@@ -23894,7 +23917,7 @@ function dcToggleAllTrack(){
 function dcRenderTrackingChecks(trackings){
   var el = document.getElementById('dc-tracking-checks');
   if(!el || !trackings || !trackings.length) return;
-  // ★ v9.80: 운송장 없는 레코드 → 안내만 표시하고 진행 (사진만으로 완료 가능)
+  // ★ v9.82: 운송장 없는 레코드 → 안내만 표시하고 진행 (사진만으로 완료 가능)
   if(trackings.length===0 || (trackings.length===1 && trackings[0]==='')){
     el.innerHTML='<div style="padding:6px 10px;background:var(--amber-l);border:1px dashed var(--amber);border-radius:8px;font-size:11px;color:#92400e">운송장 없이 저장된 건 — 사진 첨부 후 완료 처리 가능합니다</div>';
     dcUpdateTrackCount(); dcUpdateSaveBtn(); return;
@@ -31218,7 +31241,7 @@ async function _registerFCMToken(){
   console.log('[FCM] _registerFCMToken 시작 — registered:'+window._fcmTokenRegistered+' failed:'+window._fcmFailed);
   if(window._fcmTokenRegistered){console.log('[FCM] 이미 등록됨 — skip');return;}
   if(window._fcmFailed){console.warn('[FCM] 이전 실패 플래그 — skip');return;}
-  // ★ v9.80: 동시 호출 방지 뮤텍스 (race condition → 중복 저장 방지)
+  // ★ v9.82: 동시 호출 방지 뮤텍스 (race condition → 중복 저장 방지)
   if(window._fcmRegistering){console.log('[FCM] 등록 진행 중 — skip');return;}
   window._fcmRegistering=true;
   if(!FB||!_db){console.warn('[FCM] Firebase 미연결');return;}
