@@ -13643,11 +13643,11 @@ function _getEmerLocs(){
   try{ local = JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]'); }catch(e){}
   var driverLocs = (S.curMode==='admin')
     ? local.filter(function(x){ return x.gps&&x.gps.lat; })
-    : local.filter(function(x){ return x.driver===S.curDriver && x.gps&&x.gps.lat; });
+    : local.filter(function(x){ return x.driver===S.curDriver && (x.gps&&x.gps.lat || x.addr); }); // ★ v9.61: 주소 있으면 포함
   if(FB&&_db){
     var q = (S.curMode==='admin')
       ? _db.collection('emergency_deliveries').orderBy('savedAt','desc').limit(30)
-      : _db.collection('emergency_deliveries').where('driver','==',S.curDriver).orderBy('savedAt','desc').limit(60);
+      : _db.collection('emergency_deliveries').where('driver','==',S.curDriver||'').limit(60);
     q.get().then(function(snap){
       var fbLocs=[];
       snap.forEach(function(d){ var x=d.data(); x.fbId=d.id; if(x.gps&&x.gps.lat) fbLocs.push(x); });
@@ -13916,6 +13916,15 @@ function _renderDriverMap(myLoc, emerLocs){
     (window._driverMapPinMarkers||[]).forEach(function(o){try{o.setMap(null);}catch(e){}});
     window._driverMapPinMarkers=[];window._driverMapMarkers={};_pinDataMap={};
     var _f=window._driverMapFilter||'all';
+    // ★ v9.61: GPS 없고 주소 있는 건 → 백그라운드 Geocoding 후 재렌더
+    emerLocs.filter(function(x){return x.addr&&!(x.gps&&x.gps.lat);}).forEach(function(x){
+      _kakaoGeocode(x.addr).then(function(pos){
+        if(pos){
+          x.gps={lat:pos.lat,lng:pos.lng,src:'kakao_map'};
+          renderRoutePins(); // 재렌더
+        }
+      }).catch(function(){});
+    });
     emerLocs.filter(function(x){return x.gps&&x.gps.lat;}).forEach(function(x){
       var fbId=x.fbId||x._fbId||'';
       var isDone=x.status==='완료',isPartial=x.status==='부분완료';
@@ -13994,10 +14003,10 @@ function _renderDriverMap(myLoc, emerLocs){
   };
   window._rerenderRoutePins=function(){if(emerLocs.filter(function(x){return x.gps&&x.gps.lat&&!x._seqNo;}).length)assignSeqNos(null);renderRoutePins();};
   window._activeDriverMapAddPin=function(rec){emerLocs.push(rec);assignSeqNos(null);renderRoutePins();};
-  // ★ v9.61: 지도 열리기 전에 저장된 핀 자동 추가
-  if(window._pendingMapPin){
-    try{ window._activeDriverMapAddPin(window._pendingMapPin); }catch(e){}
-    window._pendingMapPin = null;
+  // ★ v9.61: 지도 열리기 전에 저장된 핀들 자동 추가
+  if(window._pendingMapPins && window._pendingMapPins.length){
+    window._pendingMapPins.forEach(function(p){ try{window._activeDriverMapAddPin(p);}catch(e){} });
+    window._pendingMapPins = [];
   }
   window._updateMapCounter=updateCounter;
   setTimeout(function(){try{map.relayout();map.setCenter(new kakao.maps.LatLng(myLoc.lat,myLoc.lng));}catch(e){}},200);
@@ -21567,12 +21576,19 @@ async function emerOcrScan(file, _statusOverride){
     var tw = document.getElementById('emer-tracking-wrap');
     if(tw && window._emerTrackings.length>0) tw.style.display='none';
 
-    // ★ v9.58: OCR 주소 → Kakao Geocoding (Google Maps 대체)
+    // ★ v9.61: OCR 주소 → Kakao Geocoding + 부산/경남 외 지역 경고
     var pinGps = null;
     if(p.address){
-      if(status) status.innerHTML = '<span style="color:var(--blue)">📍 배송지 좌표 변환 중...</span>';
+      // ★ OCR 오인식 검증: 서울/경기 등 타지역 주소면 신뢰도 낮음
+      var _suspectAddr = /^서울|^경기|^인천|^대전|^광주|^대구|^울산시/.test(p.address);
+      if(_suspectAddr){
+        if(status) status.innerHTML = '<span style="color:#ef4444">⚠️ 주소 확인 필요: '+p.address.slice(0,20)+'...</span>';
+        // 타지역 주소는 Geocoding 안 하고 현위치 GPS 사용
+        p.address = ''; // 의심 주소 무효화
+        var ad=document.getElementById('emer-addr'); if(ad) ad.value='';
+      } else if(status) status.innerHTML = '<span style="color:var(--blue)">📍 배송지 좌표 변환 중...</span>';
       try{
-        var kgps2 = await _kakaoGeocode(p.address);
+        var kgps2 = p.address ? await _kakaoGeocode(p.address) : null;
         if(kgps2){
           pinGps = {lat:kgps2.lat, lng:kgps2.lng, src:'kakao', addr:p.address};
           window._emerGps = {lat:kgps2.lat, lng:kgps2.lng, acc:0, src:'kakao', addr:p.address};
@@ -22416,11 +22432,23 @@ function _emerHandleScan(raw, statusEl){
     }).catch(function(){});
   }
 
-  // ★ v9.58: QR/바코드 인식 후 자동저장 — 운송장만 있어도 저장
-  if(qp.tracking_no || (window._emerTrackings && window._emerTrackings.length > 0)){
+  // ★ v9.61: 자동저장 — 운송장 + (주소 OR GPS) 둘 다 있어야 저장 (원래 조건 복원)
+  var _hasTrk = qp.tracking_no || (window._emerTrackings && window._emerTrackings.length > 0);
+  var _hasAddr = qp.address || (document.getElementById('emer-addr')?.value||'').trim();
+  var _hasGps  = (qp.lat && qp.lng) || (window._emerGps && window._emerGps.lat);
+  if(_hasTrk && (_hasAddr || _hasGps)){
     var _scanMo = document.getElementById('emer-scan-mo');
     if(_scanMo){ _scanMo.style.display='none'; emerStopScan&&emerStopScan(); }
     if(statusEl) statusEl.innerHTML = '<span style="color:var(--teal)">📸 스캔 ✅ → 💾 저장 중...</span>';
+    window._emerSaving = false;
+    setTimeout(function(){ if(typeof emerSave==='function') emerSave(); }, 600);
+    return;
+  }
+  // 운송장은 있는데 주소/GPS 없음 → 현위치 GPS로 저장
+  if(_hasTrk && !_hasAddr && !_hasGps){
+    var _scanMo2 = document.getElementById('emer-scan-mo');
+    if(_scanMo2){ _scanMo2.style.display='none'; emerStopScan&&emerStopScan(); }
+    if(statusEl) statusEl.innerHTML = '<span style="color:#f59e0b">⚠️ 주소 없음 → 현위치로 저장</span>';
     window._emerSaving = false;
     setTimeout(function(){ if(typeof emerSave==='function') emerSave(); }, 600);
     return;
@@ -23139,7 +23167,9 @@ async function emerSave(){
       window._activeDriverMap.panTo({lat:record.gps.lat, lng:record.gps.lng});
     } else {
       // ★ v9.61: 지도가 안 열려있어도 데이터 저장해두고 열릴 때 자동 표시
-      window._pendingMapPin = record;
+      // ★ v9.61: 지도 안 열린 상태 핀 → 배열로 누적
+      window._pendingMapPins = window._pendingMapPins || [];
+      window._pendingMapPins.push(record);
     }
   }
 
