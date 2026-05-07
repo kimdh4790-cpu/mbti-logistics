@@ -13994,7 +13994,7 @@ async function openDriverMap(){
       <div style="color:#fff;font-size:14px;text-align:center"><div style="font-size:32px;margin-bottom:10px">🗺️</div>지도 불러오는 중...<br><span style="font-size:11px;color:#9ca3af">GPS·지도·배송데이터 동시 로딩</span></div>
     
   <!-- ★ v9.81: 핀 정보 패널 -->
-  <div id="map-pin-panel" style="display:none;position:absolute;bottom:0;left:0;right:0;z-index:500;background:#1f2937;border-radius:16px 16px 0 0;padding:16px 16px 32px;box-shadow:0 -4px 24px rgba(0,0,0,.6);max-height:70vh;overflow-y:auto">
+  <div id="map-pin-panel" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:10000;background:#1f2937;border-radius:16px 16px 0 0;padding:16px 16px 32px;box-shadow:0 -4px 24px rgba(0,0,0,.6);max-height:70vh;overflow-y:auto">
     <div style="width:36px;height:4px;background:rgba(255,255,255,.15);border-radius:2px;margin:0 auto 14px"></div>
     <div id="mpp-header" style="display:flex;align-items:center;gap:10px;margin-bottom:10px"></div>
     <div id="mpp-addr" style="background:rgba(255,255,255,.07);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:13px;color:#d1d5db;line-height:1.6"></div>
@@ -14005,7 +14005,7 @@ async function openDriverMap(){
   </div>
 
   <!-- ★ v9.81: 배송완료 처리 패널 -->
-  <div id="map-deliv-complete" style="display:none;position:absolute;inset:0;z-index:600;overflow-y:auto">
+  <div id="map-deliv-complete" style="display:none;position:fixed;inset:0;z-index:10001;overflow-y:auto">
     <div style="position:absolute;bottom:0;left:0;right:0;background:#111827;border-radius:16px 16px 0 0;padding:20px 16px 40px">
       <div style="width:36px;height:4px;background:rgba(255,255,255,.15);border-radius:2px;margin:0 auto 16px"></div>
       <div id="mdc-header" style="margin-bottom:14px"></div>
@@ -21685,7 +21685,7 @@ async function _emerVisionScan(b64, statusEl){
           role:'user',
           content:[
             {type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},
-            {type:'text',text:'쿠팡 택배 송장입니다(파란/흰 배경 모두 가능). 이미지에 실제로 적힌 텍스트만 읽어 JSON 한 줄로만 응답(설명 없이).\n규칙: ①없는 글자 추가 금지 ②시/도 임의추가 금지 ③숫자 그대로\n배송지 주소 찾는 법: 구/동/로/길 포함된 줄 + 아파트명 + 동호수를 이어붙이기\n{"tracking":"운송장(10으로시작14자리숫자만)","order":"주문번호(27시작14자리 OR 7시작13자리,없으면null)","address":"도로명주소+아파트+동+호수 전부(예:사상구모라로110번길421 모라영구임대아파트106동1209호)","name":"수령인이름(김*식형태)","route":"★별표뒤 라우트코드(예:812B01)"}\n없는항목=null'}
+            {type:'text',text:'이것은 쿠팡 택배 송장 사진입니다. 파란색 또는 흰색 배경일 수 있습니다. 보이는 텍스트를 정확히 읽어 아래 JSON 형식으로만 응답하세요(다른 설명 없이).\n\n{"tracking":"10으로시작하는14자리운송장번호(숫자만)","order":"27로시작14자리 또는 7로시작13자리 주문번호(없으면null)","address":"구/동/로/길이 포함된 도로명주소+아파트이름+동번호+호수를 공백없이 이어쓰기(예:사상구모라로110번길421모라영구임대아파트106동1209호)","name":"수령인이름(마스킹포함,예:김*식)","route":"★기호 뒤에 나오는 숫자와 알파벳 조합(예:812B01,없으면null)"}\n\n없는항목=null. 반드시 JSON만 응답.'}
           ]
         }]
       })
@@ -21779,9 +21779,17 @@ function emerUnifiedScan(input){
 
     function goOCR(){
       if(statusEl) statusEl.innerHTML = '🤖 AI 송장 인식 중...';
-      // ★ v9.82: OCR엔 원본 고품질 이미지 전송 (파란송장 포함)
-      var b64 = cv.toDataURL('image/jpeg', 0.92).split(',')[1];
-      _emerVisionScan(b64, statusEl);
+      // ★ v9.82: 원본 파일 직접 base64 변환 (파란/흰 송장 모두 원본 그대로)
+      var fr = new FileReader();
+      fr.onload = function(e){
+        var b64 = e.target.result.split(',')[1];
+        _emerVisionScan(b64, statusEl);
+      };
+      fr.onerror = function(){
+        // 폴백: 캔버스 기반
+        _emerVisionScan(cv.toDataURL('image/jpeg', 0.92).split(',')[1], statusEl);
+      };
+      fr.readAsDataURL(file);
     }
 
     function tryBarcodeDetector(){
