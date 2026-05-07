@@ -14293,9 +14293,26 @@ function _renderDriverMap(myLoc, emerLocs){
   }
 
   function _showPinInfoDirect(x){
-    // ★ v9.82: window._mbtiPinClick 대신 저장된 원본 핸들러 직접 호출 (무한루프 방지)
-    var k=x._pinKey||x.fbId||'';
-    if(_panelClickHandler) _panelClickHandler(k);
+    if(!x) return;
+    var panel=document.getElementById('map-pin-panel');
+    if(!panel) return;
+    var trackings=(x.trackings&&x.trackings.length)?x.trackings:(x.tracking?[x.tracking]:[]);
+    var tStatus=x.trackingStatus||{};
+    var isDone=x.status==='\uc644\ub8cc', isPartial=x.status==='\ubd80\ubd84\uc644\ub8cc';
+    var pinColor=isDone?'#16a34a':(isPartial?'#f97316':'#dc2626');
+    var hEl=document.getElementById('mpp-header');
+    if(hEl) hEl.innerHTML='<span style="background:'+pinColor+';color:#fff;border-radius:50%;min-width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px">'+(x._seqNo||'?')+'</span><div style="flex:1"><div style="font-size:16px;font-weight:900;color:#f9fafb">'+(x.recipient||'\uc218\ub839\uc778 \ubbf8\uc0c1')+'</div>'+(x.time?'<div style="font-size:11px;color:#9ca3af">&#9201; '+x.time+'</div>':'')+'</div>';
+    var aEl2=document.getElementById('mpp-addr');
+    if(aEl2) aEl2.textContent=(x.addr||'\uc8fc\uc18c \uc5c6\uc74c');
+    var tEl2=document.getElementById('mpp-tracks');
+    if(tEl2 && trackings.length) tEl2.innerHTML='<div style="background:rgba(255,255,255,.05);border-radius:8px;padding:8px 10px">'+trackings.map(function(t){var done=tStatus[t]&&tStatus[t].status==='\uc644\ub8cc';return '<div style="font-family:monospace;font-size:11px;color:'+(done?'#6b7280':'#d1d5db')+';padding:2px 0">'+(done?'\u2705 ':'\uD83D\uDCE6 ')+t+'</div>';}).join('')+'</div>';
+    var btn=document.getElementById('mpp-complete-btn');
+    if(btn){ if(isDone){btn.textContent='\u2713 \uc804\uccb4 \ubc30\uc1a1\uc644\ub8cc';btn.disabled=true;btn.style.opacity='.5';btn.style.background='#374151';}else{btn.textContent=isPartial?'\u23f1 \ub098\uba38\uc9c0 \uc644\ub8cc\uCC98\ub9ac':'\u2705 \ubc30\uc1a1\uc644\ub8cc \uCC98\ub9ac';btn.disabled=false;btn.style.opacity='1';btn.style.background='#16a34a';} }
+    var navBtn=document.getElementById('mpp-navi-btn');
+    if(navBtn&&x.gps) navBtn.href='kakaomap://route?ep='+x.gps.lat+','+x.gps.lng+'&by=CAR';
+    window._pinSheetFbId=x.fbId||x._fbId||'';
+    window._pinSheetData=JSON.stringify({trackings:x.trackings||[],tracking:x.tracking||'',order_id:x.order_id||'',addr:x.addr||''});
+    panel.style.display='flex'; panel.style.flexDirection='column';
   }
 
   window._activeDriverMap=map;window._activeDriverMapEmerLocs=emerLocs;
@@ -21666,7 +21683,7 @@ async function _emerVisionScan(b64, statusEl){
           window._emerAutoSaveTimer = setTimeout(function(){
             window._emerAutoSaveTimer=null;
             if(typeof emerSave==='function') emerSave();
-          }, 1500);
+          }, 200);
         }
         return;
       }
@@ -21770,7 +21787,7 @@ async function _emerVisionScan(b64, statusEl){
       window._emerAutoSaveTimer = setTimeout(function(){
         window._emerAutoSaveTimer = null;
         if(typeof emerSave==='function') emerSave();
-      }, 1500);
+      }, 200);
     }
   }catch(e){
     console.warn('[Vision 송장 인식 실패]', e&&e.message);
@@ -21891,7 +21908,11 @@ function emerNativeCamQR(input){
 function _nativeCamJsQR(cv, cw, ch, statusEl, fallback){
   if(!window.jsQR){ if(statusEl) statusEl.textContent='❌ jsQR 미로드'; if(fallback) fallback(); return; }
   var cv2=document.createElement('canvas'), ctx2=cv2.getContext('2d');
+  // ★ v9.82: 일반 대비강화 (그레이스케일+정규화)
   function enhance(d){ var px=d.data,len=px.length,mn=255,mx=0; for(var i=0;i<len;i+=4){var g=Math.round(px[i]*.299+px[i+1]*.587+px[i+2]*.114);px[i]=px[i+1]=px[i+2]=g;} for(var j=0;j<len;j+=4){if(px[j]<mn)mn=px[j];if(px[j]>mx)mx=px[j];} var rng=mx-mn||1; for(var k=0;k<len;k+=4){var v=Math.round((px[k]-mn)/rng*255);px[k]=px[k+1]=px[k+2]=v;} return d; }
+  // ★ v9.82: 이진화 (Threshold) — QR 격자 뚜렷하게 (제미나이 제안)
+  function threshold(d){ var px=d.data,len=px.length; for(var i=0;i<len;i+=4){var g=Math.round(px[i]*.299+px[i+1]*.587+px[i+2]*.114); var v=g>128?255:0; px[i]=px[i+1]=px[i+2]=v;} return d; }
+  function scanBin(sx,sy,sw,sh){ cv2.width=sw;cv2.height=sh; ctx2.drawImage(cv,sx,sy,sw,sh,0,0,sw,sh); var d=ctx2.getImageData(0,0,sw,sh); threshold(d); ctx2.putImageData(d,0,0); return window.jsQR(d.data,sw,sh,{inversionAttempts:'attemptBoth'}); }
   function scan(sx,sy,sw,sh,enh){ cv2.width=sw;cv2.height=sh; ctx2.drawImage(cv,sx,sy,sw,sh,0,0,sw,sh); var d=ctx2.getImageData(0,0,sw,sh); if(enh)enhance(d); return window.jsQR(d.data,sw,sh,{inversionAttempts:'attemptBoth'}); }
   // ★ v9.82: 쿠팡 큰 QR은 하단부에 위치 → 하단 크롭 우선 전략
   var rx=Math.floor(cw/2), ry=Math.floor(ch*.5);
@@ -21905,7 +21926,9 @@ function _nativeCamJsQR(cv, cw, ch, statusEl, fallback){
     ||scan(rx,0,cw-rx,ch,false)                           // ⑤ 오른쪽 절반
     ||scan(Math.floor(cw*.14),cy2,cw2,ch2,false)          // ⑥ 중앙크롭
     ||scan(0,0,cw,ch,true)                                // ⑦ 전체+대비강화
-    ||scan(0,ry,cw,bh,true);                              // ⑧ 하단+대비강화
+    ||scan(0,ry,cw,bh,true)                               // ⑧ 하단+대비강화
+    ||scanBin(0,0,cw,ch)                                 // ⑨ 전체+이진화
+    ||scanBin(0,ry,cw,bh);                               // ⑩ 하단+이진화
   if(r&&r.data){
     var _rd = r.data;
     if(_rd.indexOf('V1|')===0 || _rd.indexOf('V1	')===0){
@@ -22032,7 +22055,11 @@ function emerStartScan(){
       facingMode:{ideal:'environment'},
       width:{ideal:1280, min:640},
       height:{ideal:720, min:480},
-      frameRate:{ideal:30}
+      frameRate:{ideal:30},
+      // ★ v9.82: 연속 초점 — QR 인식률 향상 (제미나이 제안)
+      focusMode:{ideal:'continuous'},
+      exposureMode:{ideal:'continuous'},
+      whiteBalanceMode:{ideal:'continuous'}
     }
   };
 
@@ -22048,6 +22075,23 @@ function emerStartScan(){
       video.srcObject = stream;
       video.play();
       statusEl.innerHTML = '📦 QR 코드에 <b style="color:#FFD600">바짝</b> 가까이 — 화면 가득 채우세요';
+      // ★ v9.82: 3초 QR 실패 → Clova OCR 자동 전환 (제미나이 제안)
+      window._emerQrTimeout = setTimeout(function(){
+        if(!_active) return; // 이미 스캔 성공
+        statusEl.innerHTML = '<span style="color:#f59e0b">⏱ QR 인식 안됨 → 송장 전체 OCR로 전환 중...</span>';
+        // 현재 비디오 프레임 캡처
+        var capCv = document.createElement('canvas');
+        capCv.width = video.videoWidth || 1280;
+        capCv.height = video.videoHeight || 720;
+        capCv.getContext('2d').drawImage(video, 0, 0, capCv.width, capCv.height);
+        _active = false;
+        _stopScanline();
+        if(typeof emerStopScan === 'function') emerStopScan();
+        // 캡처 이미지 → Clova OCR
+        var b64 = capCv.toDataURL('image/jpeg', 0.92).split(',')[1];
+        statusEl.innerHTML = '<span style="color:var(--blue)">📝 Clova OCR 송장 인식 중...</span>';
+        _emerVisionScan(b64, statusEl);
+      }, 3000);
 
       // ★ v9.25: getCapabilities() 체크 후 지원 기기만 autofocus 적용
       try{
@@ -22115,6 +22159,7 @@ function emerStartScan(){
                     }
                     _active = false;
                     _stopScanline();
+                    if(window._emerQrTimeout){ clearTimeout(window._emerQrTimeout); window._emerQrTimeout=null; } // ★ v9.82: 타이머 취소
                     if(best.cornerPoints && video.videoWidth) drawQrBox(best.cornerPoints, video.videoWidth, video.videoHeight);
                     var _fmt = best.format||'';
                     var _isBC = (_fmt==='code_128'||_fmt==='code_39');
@@ -22493,7 +22538,7 @@ function _emerHandleScan(raw, statusEl){
     }
     if(statusEl) statusEl.innerHTML = '<span style="color:var(--teal)">📸 스캔 ✅ → 💾 저장 중...</span>';
     window._emerSaving = false;
-    setTimeout(function(){ if(typeof emerSave==='function') emerSave(); }, 300);
+    setTimeout(function(){ if(typeof emerSave==='function') emerSave(); }, 100);
     return;
   }
 
@@ -22550,7 +22595,7 @@ function _emerHandleScan(raw, statusEl){
         if(document.getElementById('emer-del-mo') && !window._emerSaving && typeof emerSave==='function'){
           emerSave();
         }
-      }, 1500);
+      }, 200);
       // 입력 필드 클릭/포커스 시 자동 저장 취소 (사용자가 수정하려는 의도)
       var _cancelAutoSave = function(){
         if(window._emerAutoSaveTimer){
