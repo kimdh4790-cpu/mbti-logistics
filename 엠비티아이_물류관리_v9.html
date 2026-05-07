@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.77</title>
+<title>엠비티아이 물류관리 v9.78</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10425,7 +10425,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.77 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.78 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -11402,10 +11402,10 @@ function updBadge(){
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
 function updFbUI(){
-  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.77 · 🔥 실시간':'v9.75 · 데모';
+  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.78 · 🔥 실시간':'v9.75 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.77 · Firebase 실시간':'v9.77 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.78 · Firebase 실시간':'v9.78 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -13942,9 +13942,8 @@ function _renderDriverMap(myLoc, emerLocs){
       .map(function(url){return '<img src="'+url+'" style="width:58px;height:58px;object-fit:cover;border-radius:8px;border:2px solid '+pinColor+'">';}).join('');
     var closeFn="var _s=document.getElementById('pin-info-sheet');if(_s)_s.remove();";
     // ★ v9.75: 탭 즉시 로딩 오버레이 (Firebase fetch 대기 중 지도 위로)
-    var loadFn="var _ld=document.createElement('div');_ld.id='_dc-loading';_ld.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:11000;display:flex;align-items:center;justify-content:center';_ld.innerHTML='<div style=\'background:var(--bg);border-radius:12px;padding:20px 28px;font-size:14px;font-weight:700\'>⏳ 불러오는 중...</div>';document.body.appendChild(_ld);";
-    var openFn=loadFn+"openDelivComplete(window._pinSheetFbId,encodeURIComponent(window._pinSheetData));"+closeFn;
-    var actionBtn=isDone
+        // ★ v9.78: loadFn 제거 — openDelivComplete 즉시 표시
+    var openFn="openDelivComplete(window._pinSheetFbId,encodeURIComponent(window._pinSheetData));"+closeFn;    var actionBtn=isDone
       ?'<div style="text-align:center;padding:12px;color:#16a34a;font-weight:800;font-size:14px;background:#f0fdf4;border-radius:10px;margin-bottom:8px">✅ 전체 배송완료</div>'
       :'<button ontouchend="event.stopPropagation();event.preventDefault();'+openFn+'" onclick="'+openFn+'" style="width:100%;padding:14px;background:'+(isPartial?'#f97316':'#16a34a')+';color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px;display:block;touch-action:manipulation">'
         +(isPartial?'🟠 나머지 '+pendCnt+'건 완료처리':'✅ 배송완료 처리')+'</button>';
@@ -23300,22 +23299,15 @@ async function emerSendAdminAlert(){
 }
 
 // ★ v9.25: 배송완료 처리 모달 (지도 핀 클릭 → 완료사진 + Firebase 상태 업데이트)
-async function openDelivComplete(fbId, dataEncoded){
+function openDelivComplete(fbId, dataEncoded){
+  // ★ v9.78: async/await 완전 제거 — 즉시 모달 표시 (Firebase 대기 없음)
   document.getElementById('deliv-complete-mo')?.remove();
-  var _ldEl=document.getElementById('_dc-loading');if(_ldEl)_ldEl.remove(); // ★ v9.75: 로딩 오버레이 제거
+  document.getElementById('_dc-loading')?.remove();
+  document.getElementById('pin-info-sheet')?.remove();
 
   var info = {};
   try{ info = JSON.parse(decodeURIComponent(dataEncoded||'{}')); }catch(e){}
 
-  // Firebase에서 최신 데이터 로드
-  if(FB && _db && fbId){
-    try{
-      var doc = await _db.collection('emergency_deliveries').doc(fbId).get();
-      if(doc.exists) info = Object.assign({}, doc.data(), info);
-    }catch(e){}
-  }
-
-  // ★ v9.25: 운송장 + 기존 trackingStatus 분리 (부분완료 지원)
   var allTrackings = (info.trackings && info.trackings.length) ? info.trackings : (info.tracking ? [info.tracking] : []);
   var existingStatus = info.trackingStatus || {};
   var pendingTrackings = allTrackings.filter(function(t){
@@ -23326,93 +23318,81 @@ async function openDelivComplete(fbId, dataEncoded){
   });
 
   if(!pendingTrackings.length){
-    toast('✅ 모든 운송장이 이미 완료 처리되었습니다');
-    return;
+    toast('✅ 모든 운송장이 이미 완료 처리되었습니다'); return;
   }
 
-  var trackStr = (allTrackings.length>1)
-    ? allTrackings[0]+' 외 '+(allTrackings.length-1)+'건'
-    : (allTrackings[0]||'—');
+  window._delivCompletePhotos  = [];
+  window._delivCompleteFbId    = fbId;
+  window._delivCompleteAllTrackings    = allTrackings;
+  window._delivCompleteExistingStatus  = existingStatus;
+  window._delivCompletePinData = { gps: info.gps||null, addr: info.addr||'' };
 
-  window._delivCompletePhotos = [];
-  window._delivCompleteFbId = fbId;
-  window._delivCompleteAllTrackings = allTrackings; // ★ v9.25
-  window._delivCompleteExistingStatus = existingStatus; // ★ v9.25
-  // ★ v9.43: 배송완료 시점 거리 검증용 — 등록 시 저장된 배송지 좌표/주소
-  window._delivCompletePinData = {
-    gps: info.gps || null,
-    addr: info.addr || ''
-  };
+  // ★ v9.78: driver-map-mo 내부 삽입 OR body (position 동적 설정)
+  var _mapMo   = document.getElementById('driver-map-mo');
+  var _target  = _mapMo || document.body;
+  var _pos     = _mapMo ? 'absolute' : 'fixed';
 
-  // ★ v9.77: driver-map-mo 내부에 삽입 (z-index 우회) — 지도 위에 확실히 표시
-  var _mapMo = document.getElementById('driver-map-mo');
-  var _dcTarget = _mapMo || document.body;
-  var _dcPos = _mapMo ? 'absolute' : 'fixed';
-  _dcTarget.insertAdjacentHTML('beforeend',`
-  <div id="deliv-complete-mo" style="position:${_dcPos};inset:0;background:rgba(0,0,0,.75);z-index:20000;display:flex;align-items:flex-end;justify-content:center" onclick="if(event.target===this)this.remove()">
-    <div onclick="event.stopPropagation()" style="background:var(--bg);border-radius:16px 16px 0 0;padding:20px 16px 36px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto">
-      <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px"></div>
+  var _html = '<div id="deliv-complete-mo" style="position:'+_pos+';inset:0;background:rgba(0,0,0,.78);z-index:20000;display:flex;align-items:flex-end;justify-content:center" ontouchend="if(event.target===this)this.remove()" onclick="if(event.target===this)this.remove()">'
+    +'<div ontouchend="event.stopPropagation()" onclick="event.stopPropagation()" style="background:var(--bg);border-radius:16px 16px 0 0;padding:20px 16px 36px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto">'
+    +'<div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px"></div>'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">'
+      +'<span style="font-size:22px">✅</span>'
+      +'<div style="flex:1">'
+        +'<div style="font-size:16px;font-weight:800;color:var(--teal)">'+(info.recipient||'수령인미상')+' <span style="color:var(--red);">('+pendingTrackings.length+'건'+(doneTrackings.length?' / 완료 '+doneTrackings.length:'')+')</span></div>'
+        +'<div style="font-size:11px;color:var(--text3)">완료할 운송장 체크 → 사진 첨부 → 저장</div>'
+      +'</div>'
+      +'<button ontouchend="event.stopPropagation();event.preventDefault();(document.getElementById(\'deliv-complete-mo\')||{remove:function(){}}).remove()" onclick="(document.getElementById(\'deliv-complete-mo\')||{remove:function(){}}).remove()" style="background:var(--bg3);border:1px solid var(--border);border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:14px;touch-action:manipulation">✕</button>'
+    +'</div>'
+    +'<div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:14px;border:1px solid var(--border)">'
+      +'<div style="font-size:12px;color:var(--text2);line-height:1.8">📍 '+(info.addr||'주소없음')+'<br>📦 전체 '+allTrackings.length+'건'+(doneTrackings.length?' (이미 '+doneTrackings.length+'건 완료)':'')+'&nbsp;&nbsp;⏰ '+(info.time||'')+'</div>'
+    +'</div>'
+    +'<div style="margin-bottom:14px">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
+        +'<div style="font-size:13px;font-weight:700">📦 완료할 운송장 <span style="color:var(--red)">*</span></div>'
+        +'<button ontouchend="event.stopPropagation();dcToggleAllTrack()" onclick="dcToggleAllTrack()" style="padding:3px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;font-size:10px;font-weight:700;cursor:pointer;touch-action:manipulation">☑ 전체선택</button>'
+      +'</div>'
+      +'<div id="dc-tracking-checks" style="display:flex;flex-direction:column;gap:5px"></div>'
+      +'<div id="dc-track-count" style="font-size:11px;font-weight:700;text-align:center;margin-top:6px"></div>'
+    +'</div>'
+    +'<div style="margin-bottom:14px">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
+        +'<div style="font-size:13px;font-weight:700">📷 배송완료 사진 <span style="color:var(--red)">*</span></div>'
+        +'<div id="dc-photo-count" style="font-size:11px;font-weight:700"><span style="color:var(--red)">⚠️ 1장 필수</span></div>'
+      +'</div>'
+      +'<div id="dc-photo-preview" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>'
+      +'<label style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;background:linear-gradient(135deg,#0F6E56,#16a34a);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:800;touch-action:manipulation">'
+        +'<span style="font-size:22px">📸</span> 카메라로 사진 찍기'
+        +'<input type="file" accept="image/*" capture="environment" style="display:none" onchange="dcAddPhoto(this.files[0])">'
+      +'</label>'
+    +'</div>'
+    +'<textarea id="dc-memo" placeholder="배송 메모 (선택, 예: 현관 앞)" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text);resize:none;height:56px;box-sizing:border-box;margin-bottom:14px"></textarea>'
+    +'<button id="dc-save-btn" ontouchend="event.stopPropagation();event.preventDefault();saveDelivComplete()" onclick="saveDelivComplete()" disabled style="width:100%;padding:14px;background:var(--bg3);color:var(--text2);border:none;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer;opacity:.5;touch-action:manipulation">⏳ 운송장 체크 + 사진 필요</button>'
+    +'</div></div>';
 
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
-        <span style="font-size:22px">✅</span>
-        <div style="flex:1">
-          <div style="font-size:16px;font-weight:800;color:var(--teal)">${(info.recipient||'수령인미상')} <span style="color:var(--red)">(${pendingTrackings.length}건${doneTrackings.length?' / 완료 '+doneTrackings.length:''})</span></div>
-          <div style="font-size:11px;color:var(--text3)">완료한 운송장만 체크 → 사진 첨부 → 저장</div>
-        </div>
-      </div>
-
-      <!-- 배송 정보 요약 -->
-      <div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:14px;border:1px solid var(--border)">
-        <div style="font-size:12px;color:var(--text2);line-height:1.8">
-          📍 ${info.addr||'주소없음'}<br>
-          📦 전체 ${allTrackings.length}건${doneTrackings.length?' (이미 '+doneTrackings.length+'건 완료)':''}&nbsp;&nbsp;⏰ ${info.time||''}<br>
-          ${info.order_id?'📋 주문번호: '+info.order_id:''}
-        </div>
-      </div>
-
-      <!-- ★ v9.25: 운송장 체크박스 (체크된 것만 완료) -->
-      <div style="margin-bottom:14px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-          <div style="font-size:13px;font-weight:700">📦 완료할 운송장 선택 <span style="color:var(--red)">*</span></div>
-          <button onclick="dcToggleAllTrack()" style="padding:3px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;font-size:10px;font-weight:700;cursor:pointer;color:var(--text2)">☑ 전체 토글</button>
-        </div>
-        <div style="font-size:11px;color:var(--text3);background:var(--amber-l);border:1px dashed var(--amber);border-radius:6px;padding:7px 10px;margin-bottom:8px;line-height:1.5">
-          💡 박스를 빠뜨렸다면 해당 운송장만 <b>체크 해제</b>하세요.<br>
-          체크 해제된 건은 미완료로 남아 다음에 별도 완료 처리할 수 있습니다.
-        </div>
-        <div id="dc-tracking-checks" style="display:flex;flex-direction:column;gap:5px"></div>
-        <div id="dc-track-count" style="font-size:11px;font-weight:700;text-align:center;margin-top:6px"></div>
-      </div>
-
-      <!-- 완료 사진 -->
-      <div style="margin-bottom:14px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <div style="font-size:13px;font-weight:700">📷 배송완료 사진 <span style="color:var(--red)">*</span></div>
-          <div id="dc-photo-count" style="font-size:11px;font-weight:700"><span style="color:var(--red)">⚠️ 1장 이상 필수</span></div>
-        </div>
-        <div id="dc-photo-preview" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
-        <label style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;background:linear-gradient(135deg,#0F6E56,#16a34a);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:800;box-shadow:0 2px 8px rgba(15,110,86,.3)">
-          <span style="font-size:22px">📸</span> 카메라로 사진 찍기
-          <input type="file" accept="image/*" capture="environment" style="display:none" onchange="dcAddPhoto(this.files[0])">
-        </label>
-        <div style="font-size:10px;color:var(--text3);text-align:center;margin-top:5px">사진 1장은 필수, 추가는 위 버튼을 다시 누르세요 (최대 3장)</div>
-      </div>
-
-      <!-- 메모 -->
-      <textarea id="dc-memo" placeholder="배송 메모 (선택사항, 예: '현관 앞 배치')" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text);resize:none;height:64px;box-sizing:border-box;margin-bottom:14px"></textarea>
-
-      <!-- 저장 버튼 -->
-      <button id="dc-save-btn" onclick="saveDelivComplete()" disabled style="width:100%;padding:14px;background:var(--bg3);color:var(--text2);border:none;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer;opacity:.5">
-        ⏳ 운송장 체크 + 사진 첨부 필요
-      </button>
-    </div>
-  </div>`);
-
-  // ★ v9.25: 미완료 운송장 체크박스 렌더 (기본 모두 체크된 상태)
+  _target.insertAdjacentHTML('beforeend', _html);
   dcRenderTrackingChecks(pendingTrackings);
-}
 
-// ★ v9.25: 전체 체크/해제 토글
+  // ★ v9.78: Firebase 백그라운드 업데이트 (trackingStatus 보정)
+  if(FB && _db && fbId && fbId.indexOf('_preview')<0){
+    _db.collection('emergency_deliveries').doc(fbId).get().then(function(doc){
+      if(!doc.exists) return;
+      var fbData = doc.data();
+      // 완료 상태 업데이트
+      if(fbData.trackingStatus && Object.keys(fbData.trackingStatus).length){
+        window._delivCompleteExistingStatus = fbData.trackingStatus;
+        var newPending = (fbData.trackings||allTrackings).filter(function(t){
+          return !(fbData.trackingStatus[t] && fbData.trackingStatus[t].status==='완료');
+        });
+        if(newPending.length !== pendingTrackings.length){
+          dcRenderTrackingChecks(newPending);
+        }
+      }
+      // GPS/주소 업데이트
+      if(fbData.gps) window._delivCompletePinData.gps = fbData.gps;
+      if(fbData.addr) window._delivCompletePinData.addr = fbData.addr;
+    }).catch(function(){});
+  }
+}
 function dcToggleAllTrack(){
   var chks = document.querySelectorAll('.dc-track-chk');
   if(!chks.length) return;
