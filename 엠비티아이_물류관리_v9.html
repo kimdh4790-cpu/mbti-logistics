@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.72</title>
+<title>엠비티아이 물류관리 v9.74</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10425,7 +10425,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.72 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.74 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -11433,10 +11433,10 @@ function updBadge(){
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
 function updFbUI(){
-  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.72 · 🔥 실시간':'v9.72 · 데모';
+  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.74 · 🔥 실시간':'v9.74 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.72 · Firebase 실시간':'v9.72 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.74 · Firebase 실시간':'v9.74 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -13668,7 +13668,7 @@ function _showGpsHelpModal(reason, onProceed){
   document.getElementById('gps-help-skip').onclick=function(){ mo.remove(); if(typeof onProceed==='function') onProceed(); };
 }
 function _getEmerLocs(){
-  // ★ v9.72: localStorage 우선 (reads 절감) + Firebase 백그라운드 GPS 동기화
+  // ★ v9.74: localStorage 우선 (reads 절감) + Firebase 백그라운드 GPS 동기화
   var local = [];
   try{ local = JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]'); }catch(e){}
   var driverLocs = (S.curMode==='admin')
@@ -13825,7 +13825,7 @@ function _renderDriverMap(myLoc, emerLocs){
 
   var map = new kakao.maps.Map(mapDiv, {center:new kakao.maps.LatLng(myLoc.lat,myLoc.lng), level:4});
 
-  // ★ v9.72: 이벤트 위임 — data-pinkey 속성으로 핀 탭 감지 (카카오맵 element 복사 문제 해결)
+  // ★ v9.74: 이벤트 위임 — data-pinkey 속성으로 핀 탭 감지 (카카오맵 element 복사 문제 해결)
   mapDiv.addEventListener('touchend', function(e){
     var t=e.target; while(t&&t!==mapDiv){
       if(t.getAttribute&&t.getAttribute('data-pinkey')){
@@ -13848,17 +13848,15 @@ function _renderDriverMap(myLoc, emerLocs){
   });
   map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
 
-  // ★ v9.72: HTML 문자열 사용 (DOM element → b.v 에러 방지)
+  // ★ v9.74: HTML 문자열 사용 (DOM element → b.v 에러 방지)
   function makePin(color, label, size, opacity, clickKey){
     size=size||28; opacity=opacity===undefined?1:opacity;
-    var el=document.createElement('div');
-    el.style.cssText='width:'+size+'px;height:'+size+'px;background:'+color+';border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:'+(size>=30?'13px':'11px')+';font-weight:bold;box-shadow:0 2px 6px rgba(0,0,0,.5);opacity:'+opacity+';cursor:pointer;user-select:none;-webkit-user-select:none;';
-    el.innerHTML=String(label);
-    if(clickKey) el.setAttribute('data-pinkey', clickKey);
-    return el;
+    var k = clickKey||'';
+    var tapAttr = k ? ' onclick="if(window._mbtiPinClick)window._mbtiPinClick(this.getAttribute(\'data-k\'))" ontouchend="event.stopPropagation();event.preventDefault();if(window._mbtiPinClick)window._mbtiPinClick(this.getAttribute(\'data-k\'))" data-k="'+k+'"' : '';
+    return '<div style="width:'+size+'px;height:'+size+'px;background:'+color+';border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:'+(size>=30?'13px':'11px')+';font-weight:bold;box-shadow:0 2px 6px rgba(0,0,0,.5);opacity:'+opacity+';cursor:pointer;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent"'+tapAttr+'>'+label+'</div>';
   }
   function _attachPinClick(overlay, key){
-    // v9.72: 이벤트 위임으로 처리 — 이 함수는 폴백용으로만 유지
+    // v9.74: 이벤트 위임으로 처리 — 이 함수는 폴백용으로만 유지
     if(!key) return;
     setTimeout(function(){
       var mapDiv=document.getElementById('driver-map-canvas');
@@ -13970,7 +13968,7 @@ function _renderDriverMap(myLoc, emerLocs){
         zIndex:isDone?10:(isPartial?200:(300-(x._seqNo||0)))
       });
       overlay.setMap(map);
-      (function(key){ kakao.maps.event.addListener(overlay,'click',function(){ if(window._mbtiPinClick)window._mbtiPinClick(key); }); })(pinKey); // ★ v9.72: 카카오 공식 이벤트
+      (function(key){ kakao.maps.event.addListener(overlay,'click',function(){ if(window._mbtiPinClick)window._mbtiPinClick(key); }); })(pinKey); // ★ v9.74: 카카오 공식 이벤트
       overlay._mbtiStatus=statusStr;overlay._mbtiId=fbId;
       if(fbId)window._driverMapMarkers[fbId]=overlay;
       window._driverMapPinMarkers.push(overlay);
@@ -14116,7 +14114,7 @@ function _renderLiveMap(center, driverLocs, emerLocs){
   var legend = document.getElementById('live-map-legend');
   var infoOpen = null;
 
-  // ★ v9.72: HTML 문자열 사용 (b.v 에러 방지)
+  // ★ v9.74: HTML 문자열 사용 (b.v 에러 방지)
   function makeLivePin(initial, color){
     var el=document.createElement('div');
     el.style.cssText='width:34px;height:34px;background:'+color+';border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:bold;box-shadow:0 2px 6px rgba(0,0,0,.5);cursor:pointer;user-select:none;';
@@ -26680,7 +26678,7 @@ function startListeners(){
     // ★ v9.25: settlements.get() 제거 — colPageMap onSnapshot이 처리
     // ── 근무표(schedules) Firebase에서 초기 로드 (onSnapshot 없으므로 유지)
     // ★ v9.29: 3개월 윈도우 필터 (이전월 + 현재월 + 다음월) — 누적 read 폭증 차단
-    // ★ v9.72: schedules — 오늘 날짜 기준 하루 1회만 읽기 (대량 reads 차단)
+    // ★ v9.74: schedules — 오늘 날짜 기준 하루 1회만 읽기 (대량 reads 차단)
     var _schedTodayKey='mbti_schedGetDate';
     var _schedLastDate=localStorage.getItem(_schedTodayKey)||'';
     if(!window._schedulesGetDone && _schedLastDate!==today()){
@@ -26850,46 +26848,27 @@ function startListeners(){
       var q=_db.collection(col);
       // entries/deliveries: 오늘만 실시간 구독
       if(col==='entries'||col==='deliveries') q=q.where('date','==',todayStr);
-      // ★ v9.40: settlements는 최근 3개월만 (이전월+현재월+다음월 윈도우)
+      // ★ v9.74: settlements는 최근 3개월만
       else if(col==='settlements') q=q.where('month','>=',_3moStr);
-      // ★ v9.40: temp_logs는 최근 7일만 (실시간 모니터링용)
+      // ★ v9.40: temp_logs는 최근 7일만
       else if(col==='temp_logs') q=q.where('date','>=',_7dStr);
       // ★ v9.40: accidents는 최근 30일만
       else if(col==='accidents') q=q.where('date','>=',_30dStr);
-      _fbUnsubs.push(q.limit(colLimits[col]||100)
-        .onSnapshot({includeMetadataChanges:false}, snap=>{
-          snap.docChanges().forEach(ch=>{
-            if(ch.type==='added'||ch.type==='modified'){
-              var d=ch.doc.data(); d.id=ch.doc.id; d.fbId=ch.doc.id;
-              var a=ls(col);
-              var i=a.findIndex(x=>x.fbId===d.fbId||x.id===d.id);
-              if(i>=0){
-                // ★ v9.25: 로컬 updatedAt이 Firebase보다 최신이면 금액 필드 보호
-                var localNewer=(a[i].updatedAt||a[i].createdAt||'')>(d.updatedAt||d.createdAt||'');
-                if(localNewer){
-                  // 상태/알림 관련만 Firebase에서 업데이트, 금액 필드는 로컬 유지
-                  var merged=Object.assign({},d);
-                  ['damt','ramt','fresh','finc','inc','nocont','totalAmt','supplyAmt','emp','work','routeDetails'].forEach(function(k){
-                    if(a[i][k]!==undefined) merged[k]=a[i][k];
-                  });
-                  a[i]=merged;
-                } else {
-                  a[i]=Object.assign({},a[i],d);
-                }
-              }
-              else a.unshift(d);
-              if(a.length>300)a=a.slice(0,300);
-              lss(col,a);
-              if(col==='accidents'&&ch.type==='added')
-                addAct('acc','🚨 사고접수: '+(d.driver||''),d.driver||'');
-            }
+      // ★ v9.74: settlements/temp_logs/accidents → onSnapshot 대신 get() (reads 폭증 방지)
+      if(col==='settlements'||col==='temp_logs'||col==='accidents'){
+        q.limit(colLimits[col]||100).get().then(snap=>{
+          var arr=ls(col)||[];
+          snap.forEach(function(doc){
+            var d=doc.data(); d.id=doc.id; d.fbId=doc.id;
+            var idx=arr.findIndex(function(x){return x.fbId===d.fbId||x.id===d.id;});
+            if(idx>=0) arr[idx]=Object.assign({},arr[idx],d);
+            else arr.unshift(d);
           });
-          if(S.page==='dash'||S.page===colPageMap[col]) SP(S.page, null);
-        }, err=>{
-          if(err.code==='already-exists'){return;} // ★ v9.25: silent
-          console.warn(col+' listener 오류:', err.code);
-        }));
-    });
+          lss(col,arr.slice(0,300));
+          if(S.page==='dash'||S.page===colPageMap[col]) SP(S.page,null);
+        }).catch(function(err){console.warn(col+' get 오류:',err.code);});
+        return;
+      }
   
     // ★ v9.25: 운행 메모(delivery_memos) 실시간 동기화 (관리자용 뱃지/페이지 자동 갱신)
     _fbUnsubs.push(_db.collection('delivery_memos').limit(50) // ★ v9.61: reads 절감
@@ -26926,6 +26905,7 @@ function startListeners(){
       flushPendingWrites();
     }).catch(function(){});
   }, 300); // ★ v9.25: 300ms 딜레이 후 리스너 등록 (이전 리스너 완전 정리 보장)
+    });
 } // ── startListeners 종료
 
 // ── INIT
