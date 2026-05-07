@@ -21754,19 +21754,30 @@ function emerUnifiedScan(input){
       _emerVisionScan(b64, statusEl);
     }
 
-    // ① BarcodeDetector — QR 전용 (로컬, API 비용 0)
+    // ① BarcodeDetector — 전체 코드 순회, V1| 큰QR 우선 (★ v9.82)
     if('BarcodeDetector' in window){
       var bd;
-      try{ bd=new BarcodeDetector({formats:['qr_code','data_matrix','aztec']}); }
-      catch(e){ try{ bd=new BarcodeDetector({formats:['qr_code']}); }catch(e2){} }
+      try{ bd=new BarcodeDetector({formats:['qr_code','data_matrix','aztec','pdf417','code_128']}); }
+      catch(e){ try{ bd=new BarcodeDetector({formats:['qr_code','pdf417']}); }catch(e2){
+        try{ bd=new BarcodeDetector({formats:['qr_code']}); }catch(e3){} } }
       if(bd){
         bd.detect(cv).then(function(codes){
-          if(codes&&codes.length&&codes[0].rawValue){
-            var raw=codes[0].rawValue;
-            if(raw.indexOf('V1|')===0){
+          if(codes && codes.length){
+            // ★ v9.82: 전체 코드 중 V1| (쿠팡 큰 QR) 우선 탐색
+            var v1=null, pipeQr=null, anyQr=null;
+            for(var ci=0; ci<codes.length; ci++){
+              var rv=codes[ci].rawValue||'';
+              if(rv.indexOf('V1|')===0){ v1=rv; break; }
+              if(!pipeQr && rv.indexOf('|')>=2 && codes[ci].format==='qr_code') pipeQr=rv;
+              if(!anyQr && rv.length>20 && codes[ci].format==='qr_code') anyQr=rv;
+            }
+            var best=v1||pipeQr||anyQr;
+            if(best){
               if(statusEl) statusEl.textContent='✅ QR 인식!';
-              _emerHandleScan(raw, statusEl);
-            } else { goOCR(); }
+              _emerHandleScan(best, statusEl);
+            } else {
+              _nativeCamJsQR(cv,cw,ch,statusEl,goOCR);
+            }
           } else { _nativeCamJsQR(cv,cw,ch,statusEl,goOCR); }
         }).catch(function(){ _nativeCamJsQR(cv,cw,ch,statusEl,goOCR); });
         return;
@@ -21814,13 +21825,36 @@ function _nativeCamJsQR(cv, cw, ch, statusEl, fallback){
   var cv2=document.createElement('canvas'), ctx2=cv2.getContext('2d');
   function enhance(d){ var px=d.data,len=px.length,mn=255,mx=0; for(var i=0;i<len;i+=4){var g=Math.round(px[i]*.299+px[i+1]*.587+px[i+2]*.114);px[i]=px[i+1]=px[i+2]=g;} for(var j=0;j<len;j+=4){if(px[j]<mn)mn=px[j];if(px[j]>mx)mx=px[j];} var rng=mx-mn||1; for(var k=0;k<len;k+=4){var v=Math.round((px[k]-mn)/rng*255);px[k]=px[k+1]=px[k+2]=v;} return d; }
   function scan(sx,sy,sw,sh,enh){ cv2.width=sw;cv2.height=sh; ctx2.drawImage(cv,sx,sy,sw,sh,0,0,sw,sh); var d=ctx2.getImageData(0,0,sw,sh); if(enh)enhance(d); return window.jsQR(d.data,sw,sh,{inversionAttempts:'attemptBoth'}); }
-  var rx=Math.floor(cw/2), cy2=Math.floor(ch*.12), cw2=Math.floor(cw*.72), ch2=Math.floor(ch*.76);
-  var r=scan(0,0,cw,ch,false)||scan(rx,0,cw-rx,ch,false)||scan(Math.floor(cw*.14),cy2,cw2,ch2,false)||scan(0,0,cw,ch,true);
+  // ★ v9.82: 쿠팡 큰 QR은 하단부에 위치 → 하단 크롭 우선 전략
+  var rx=Math.floor(cw/2), ry=Math.floor(ch*.5);
+  var cy2=Math.floor(ch*.12), cw2=Math.floor(cw*.72), ch2=Math.floor(ch*.76);
+  var bh=Math.floor(ch*.55); // 하단 55%
+  var r=
+    scan(0,0,cw,ch,false)                                 // ① 전체
+    ||scan(0,ry,cw,bh,false)                              // ② 하단 절반 (큰QR 주로 여기)
+    ||scan(0,ry,rx,bh,false)                              // ③ 하단-왼쪽
+    ||scan(rx,ry,cw-rx,bh,false)                          // ④ 하단-오른쪽
+    ||scan(rx,0,cw-rx,ch,false)                           // ⑤ 오른쪽 절반
+    ||scan(Math.floor(cw*.14),cy2,cw2,ch2,false)          // ⑥ 중앙크롭
+    ||scan(0,0,cw,ch,true)                                // ⑦ 전체+대비강화
+    ||scan(0,ry,cw,bh,true);                              // ⑧ 하단+대비강화
   if(r&&r.data){
-    if(r.data.indexOf('V1|')===0 || r.data.indexOf('V1\t')===0){
-      if(statusEl) statusEl.textContent='✅ QR 인식!'; _emerHandleScan(r.data,statusEl);
+    var _rd = r.data;
+    if(_rd.indexOf('V1|')===0 || _rd.indexOf('V1	')===0){
+      // ★ 쿠팡 V1 파이프 포맷 — 완전한 정보
+      if(statusEl) statusEl.textContent='✅ QR 인식!';
+      _emerHandleScan(_rd, statusEl);
+    } else if(_rd.indexOf('|')>=2 && _rd.length>30){
+      // ★ v9.82: 파이프 구분 QR (V1 아니지만 정보 포함 가능) → 시도
+      if(statusEl) statusEl.textContent='✅ QR 인식!';
+      _emerHandleScan(_rd, statusEl);
+    } else if(/^\d{10,}$/.test(_rd.replace(/[.\-\s]/g,''))){
+      // ★ v9.82: 숫자만 = 바코드(운송장번호) → OCR로 추가정보 획득
+      window._emerBarcodePrefill = _rd.replace(/[.\-\s]/g,'');
+      if(fallback){ fallback(); }
+      else { if(statusEl) statusEl.textContent='✅ QR 인식!'; _emerHandleScan(_rd,statusEl); }
     } else if(fallback){ fallback(); }
-    else { if(statusEl) statusEl.textContent='✅ QR 인식!'; _emerHandleScan(r.data,statusEl); }
+    else { if(statusEl) statusEl.textContent='✅ QR 인식!'; _emerHandleScan(_rd,statusEl); }
   }
   else if(fallback){ fallback(); }
   else { if(statusEl) statusEl.innerHTML='❌ 인식 실패 — 다시 찍어주세요'; }
@@ -21984,14 +22018,27 @@ function emerStartScan(){
                 .then(function(codes){
                   if(!_active) return;
                   if(codes && codes.length > 0){
-                    // 가장 큰 코드 선택 (작은 것 무시)
-                    var best = codes.reduce(function(a,b){
-                      if(!a.cornerPoints) return b;
-                      if(!b.cornerPoints) return a;
-                      var aw = Math.abs(a.cornerPoints[1].x - a.cornerPoints[0].x);
-                      var bw = Math.abs(b.cornerPoints[1].x - b.cornerPoints[0].x);
-                      return bw > aw ? b : a;
-                    });
+                    // ★ v9.82: V1| 큰QR 우선 → 없으면 가장 큰 QR → 그 다음 큰 코드
+                    var best = null;
+                    // 1순위: V1| 파이프 포맷 (쿠팡 큰 QR)
+                    for(var _ci=0;_ci<codes.length;_ci++){
+                      if(codes[_ci].rawValue && codes[_ci].rawValue.indexOf('V1|')===0){ best=codes[_ci]; break; }
+                    }
+                    // 2순위: 파이프 포함 QR
+                    if(!best){ for(var _ci2=0;_ci2<codes.length;_ci2++){
+                      if(codes[_ci2].rawValue && codes[_ci2].rawValue.indexOf('|')>=2 && codes[_ci2].format==='qr_code'){ best=codes[_ci2]; break; }
+                    }}
+                    // 3순위: QR 코드 중 가장 큰 것 (정사각형 면적 기준)
+                    if(!best){
+                      var qrCodes = codes.filter(function(cd){ return cd.format==='qr_code'||cd.format==='data_matrix'||cd.format==='aztec'; });
+                      best = (qrCodes.length>0 ? qrCodes : codes).reduce(function(a,b){
+                        if(!a||!a.cornerPoints) return b;
+                        if(!b||!b.cornerPoints) return a;
+                        var aw=Math.abs(a.cornerPoints[1].x-a.cornerPoints[0].x)*Math.abs(a.cornerPoints[2].y-a.cornerPoints[1].y);
+                        var bw=Math.abs(b.cornerPoints[1].x-b.cornerPoints[0].x)*Math.abs(b.cornerPoints[2].y-b.cornerPoints[1].y);
+                        return bw>aw ? b : a;
+                      }, codes[0]);
+                    }
                     if(!best.rawValue){ requestAnimationFrame(bdTick); return; }
                     // 최소 크기만 체크 (화면의 6% 이상)
                     if(best.cornerPoints && video.videoWidth){
@@ -26722,11 +26769,11 @@ function startListeners(){
       entries:'entry', deliveries:'delivery', temp_logs:'temp',
       accidents:'accident', settlements:'settle'
     };
-    var colLimits={entries:50, deliveries:50, temp_logs:30, accidents:30, settlements:50};
+    var colLimits={entries:50, deliveries:50, temp_logs:30, accidents:30, settlements:200}; // ★ v9.82: settlements 200건
     var todayStr=today();
     // ★ v9.40: 날짜 필터 계산 — 최근 3개월(settlements), 7일(temp_logs), 30일(accidents)
     var _now40=new Date();
-    var _3monthsAgo=new Date(_now40.getFullYear(),_now40.getMonth()-2,1);
+    var _3monthsAgo=new Date(_now40.getFullYear(),_now40.getMonth()-11,1); // ★ v9.82: 3개월→12개월 (정산 유실 방지)
     var _7daysAgo=new Date(_now40.getTime()-7*24*3600000);
     var _30daysAgo=new Date(_now40.getTime()-30*24*3600000);
     var _3moStr=_3monthsAgo.getFullYear()+'-'+String(_3monthsAgo.getMonth()+1).padStart(2,'0');
@@ -26753,6 +26800,20 @@ function startListeners(){
             else arr.unshift(d);
           });
           lss(col,arr.slice(0,300));
+          // ★ v9.82: 정산서 로드 후 여전히 비어있으면 전체 동기화 (월 필터 범위 밖 데이터 복구)
+          if(col==='settlements' && arr.length===0){
+            console.log('[settle] 12개월 필터 결과 없음 → 전체 동기화 시도');
+            setTimeout(function(){
+              if(typeof syncFirebaseSettlements==='function' && FB && _db){
+                _db.collection('settlements').orderBy('month','desc').limit(200).get()
+                  .then(function(snap2){
+                    var all=[];
+                    snap2.forEach(function(d){var x=d.data();x.fbId=d.id;all.push(x);});
+                    if(all.length>0){lss('settlements',all);if(S.page==='settle'||S.page==='dash')SP(S.page,null);}
+                  }).catch(function(){});
+              }
+            }, 2000);
+          }
           if(S.page==='dash'||S.page===colPageMap[col]) SP(S.page,null);
         }).catch(function(err){if(err&&err.code==='already-exists')return;console.warn(col+' get 오류:',err.code);});
         return;
