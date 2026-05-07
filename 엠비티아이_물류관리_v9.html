@@ -13943,7 +13943,7 @@ function _renderDriverMap(myLoc, emerLocs){
     var closeFn="var _s=document.getElementById('pin-info-sheet');if(_s)_s.remove();";
     // ★ v9.75: 탭 즉시 로딩 오버레이 (Firebase fetch 대기 중 지도 위로)
         // ★ v9.78: loadFn 제거 — openDelivComplete 즉시 표시
-    var openFn="openDelivComplete(window._pinSheetFbId,encodeURIComponent(window._pinSheetData));"+closeFn;    var actionBtn=isDone
+    var openFn="_doDelivComplete();";    var actionBtn=isDone
       ?'<div style="text-align:center;padding:12px;color:#16a34a;font-weight:800;font-size:14px;background:#f0fdf4;border-radius:10px;margin-bottom:8px">✅ 전체 배송완료</div>'
       :'<button ontouchend="event.stopPropagation();event.preventDefault();'+openFn+'" onclick="'+openFn+'" style="width:100%;padding:14px;background:'+(isPartial?'#f97316':'#16a34a')+';color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px;display:block;touch-action:manipulation">'
         +(isPartial?'🟠 나머지 '+pendCnt+'건 완료처리':'✅ 배송완료 처리')+'</button>';
@@ -23292,6 +23292,21 @@ async function emerSendAdminAlert(){
 }
 
 // ★ v9.25: 배송완료 처리 모달 (지도 핀 클릭 → 완료사진 + Firebase 상태 업데이트)
+// ★ v9.80: 핀시트 배송완료 버튼 전용 래퍼 (인라인 onclick 단순화)
+function _doDelivComplete(){
+  console.log('[DC] 배송완료 버튼 탭됨 fbId='+window._pinSheetFbId);
+  var fbId = window._pinSheetFbId || '';
+  var data = window._pinSheetData || '{}';
+  document.getElementById('pin-info-sheet')?.remove();
+  // ★ DOM 정리 후 모달 생성 (50ms 딜레이로 충돌 방지)
+  setTimeout(function(){
+    console.log('[DC] openDelivComplete 호출');
+    openDelivComplete(fbId, encodeURIComponent(data));
+    var modal = document.getElementById('deliv-complete-mo');
+    console.log('[DC] 모달 생성 결과:', modal ? '성공 z='+modal.style.zIndex : '실패!');
+  }, 50);
+}
+
 function openDelivComplete(fbId, dataEncoded){
   // ★ v9.78: async/await 완전 제거 — 즉시 모달 표시 (Firebase 대기 없음)
   document.getElementById('deliv-complete-mo')?.remove();
