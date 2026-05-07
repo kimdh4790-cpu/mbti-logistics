@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.64</title>
+<title>엠비티아이 물류관리 v9.65</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10425,7 +10425,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.64 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.65 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -11433,10 +11433,10 @@ function updBadge(){
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
 function updFbUI(){
-  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.64 · 🔥 실시간':'v9.64 · 데모';
+  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.65 · 🔥 실시간':'v9.65 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.63 · Firebase 실시간':'v9.64 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.63 · Firebase 실시간':'v9.65 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -13670,7 +13670,7 @@ function _showGpsHelpModal(reason, onProceed){
 function _getEmerLocs(){
   var local = [];
   try{ local = JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]'); }catch(e){}
-  // ★ v9.64: date 조건 제거 — 최근 60건 전체 표시 (날짜 무관)
+  // ★ v9.65: date 조건 제거 — 최근 60건 전체 표시 (날짜 무관)
   var driverLocs = local.filter(function(x){ return x.driver===S.curDriver && x.gps&&x.gps.lat; });
   if(FB&&_db){
     // admin이면 전체, 기사면 본인 건
@@ -13815,7 +13815,7 @@ function _renderDriverMap(myLoc, emerLocs){
   var map = new kakao.maps.Map(mapDiv, {center:new kakao.maps.LatLng(myLoc.lat,myLoc.lng), level:4});
   map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
 
-  // ★ v9.64: HTML 문자열 사용 (DOM element → b.v 에러 방지)
+  // ★ v9.65: HTML 문자열 사용 (DOM element → b.v 에러 방지)
   function makePin(color, label, size, opacity, clickKey){
     size=size||28; opacity=opacity===undefined?1:opacity;
     var onclick = clickKey ? ' onclick="if(window._mbtiPinClick)window._mbtiPinClick(\''+clickKey+'\')"' : '';
@@ -13911,6 +13911,7 @@ function _renderDriverMap(myLoc, emerLocs){
         position:new kakao.maps.LatLng(x.gps.lat,x.gps.lng),
         content:makePin(pinColor,label,28,pinOpacity,pinKey),
         yAnchor:0.5,xAnchor:0.5,
+        clickable:true,
         zIndex:isDone?10:(isPartial?200:(300-(x._seqNo||0)))
       });
       overlay.setMap(map);
@@ -13935,7 +13936,7 @@ function _renderDriverMap(myLoc, emerLocs){
     emerLocs.filter(function(x){return x.gps&&x.gps.lat;}).forEach(function(x){
       var tmpKey='sel_'+Math.random().toString(36).slice(2);
       _pinDataMap[tmpKey]=x;
-      var ovl=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(x.gps.lat,x.gps.lng),content:makePin('#7c3aed','?',28,1,tmpKey),yAnchor:0.5,xAnchor:0.5});
+      var ovl=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(x.gps.lat,x.gps.lng),content:makePin('#7c3aed','?',28,1,tmpKey),yAnchor:0.5,xAnchor:0.5,clickable:true});
       ovl.setMap(map);window._driverMapPinMarkers.push(ovl);
     });
     window._mbtiPinClick=function(key){
@@ -14057,7 +14058,7 @@ function _renderLiveMap(center, driverLocs, emerLocs){
   var legend = document.getElementById('live-map-legend');
   var infoOpen = null;
 
-  // ★ v9.64: HTML 문자열 사용 (b.v 에러 방지)
+  // ★ v9.65: HTML 문자열 사용 (b.v 에러 방지)
   function makeLivePin(initial, color){
     return '<div style="width:34px;height:34px;background:'+color+';border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:bold;box-shadow:0 2px 6px rgba(0,0,0,.5);cursor:pointer">'+initial+'</div>';
   }
@@ -14086,7 +14087,7 @@ function _renderLiveMap(center, driverLocs, emerLocs){
     var overlay = new kakao.maps.CustomOverlay({
       position: new kakao.maps.LatLng(d.lat, d.lng),
       content: makeLivePin((d.name||'?').slice(0,1), '#dc2626'),
-      yAnchor: 0.5, xAnchor: 0.5
+      yAnchor: 0.5, xAnchor: 0.5, clickable: true
     });
     overlay.setMap(map);
     window._liveMapMarkers[d.name] = overlay;
@@ -14128,7 +14129,7 @@ function _renderLiveMap(center, driverLocs, emerLocs){
     var diamond = '<div style="width:22px;height:22px;background:#2563eb;border:2px solid #fff;transform:rotate(45deg);box-shadow:0 2px 5px rgba(0,0,0,.5);cursor:pointer" onclick="window._mbtiLiveEmerClick(\''+eid+'\')"></div>';
     var overlay = new kakao.maps.CustomOverlay({
       position: new kakao.maps.LatLng(e.gps.lat, e.gps.lng),
-      content: diamond, yAnchor:0.5, xAnchor:0.5
+      content: diamond, yAnchor:0.5, xAnchor:0.5, clickable:true
     });
     overlay.setMap(map);
   });
@@ -14156,7 +14157,7 @@ function _renderLiveMap(center, driverLocs, emerLocs){
             var newOv = new kakao.maps.CustomOverlay({
               position:new kakao.maps.LatLng(d.lat,d.lng),
               content:makeLivePin((d.name||'?').slice(0,1),'#dc2626'),
-              yAnchor:0.5,xAnchor:0.5
+              yAnchor:0.5,xAnchor:0.5,clickable:true
             });
             newOv.setMap(map);
             window._liveMapMarkers[d.name] = newOv;
