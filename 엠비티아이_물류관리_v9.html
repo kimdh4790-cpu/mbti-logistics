@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.57</title>
+<title>엠비티아이 물류관리 v9.58</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10420,7 +10420,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.57 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.58 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -11393,10 +11393,10 @@ function updBadge(){
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
 function updFbUI(){
-  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.57 · 🔥 실시간':'v9.57 · 데모';
+  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.58 · 🔥 실시간':'v9.58 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.57 · Firebase 실시간':'v9.57 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.58 · Firebase 실시간':'v9.58 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -16600,6 +16600,23 @@ function rMypage(){
       }
       html+='<div style="font-size:10px;color:var(--text3);margin-top:4px;line-height:1.6">📋 발급 절차:<br>① <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--blue);text-decoration:underline">console.anthropic.com</a> 접속 → 가입<br>② Settings → API Keys → "Create Key" 클릭<br>③ <b>Settings → Plans & billing</b>에서 결제카드 등록 ($5 충전 권장)<br>④ <b>Settings → Limits</b>에서 월 한도 설정 (예: $5/월 = ₩7,000)<br>⑤ 키 복사하여 위에 붙여넣기 → 저장</div>';
       html+='</div>';
+
+      // ★ v9.58: 카카오 REST API 키 (Geocoding — 주소→위경도 변환)
+      var savedKakaoKey = (localStorage.getItem('mbti_kakao_api_key')||'').trim();
+      var isKakaoValid = savedKakaoKey && savedKakaoKey.length === 32;
+      var maskedKakao = savedKakaoKey ? (savedKakaoKey.slice(0,6)+'...'+savedKakaoKey.slice(-4)) : '';
+      html+='<div style="margin-top:10px;padding:12px;background:var(--bg3);border-radius:10px;border:1.5px solid var(--border)">';
+      html+='<div style="font-size:12px;font-weight:700;margin-bottom:6px">🗺️ 카카오 REST API 키 <span style="font-size:10px;font-weight:400;color:var(--text3)">(주소→위경도 변환 · 무료)</span></div>';
+      html+='<div style="display:flex;gap:6px;align-items:center">';
+      html+='<input id="mp-kakao-key" type="password" placeholder="32자리 REST API 키" value="'+savedKakaoKey+'" style="flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;background:var(--bg);color:var(--text)">';
+      html+='<button onclick="saveKakaoApiKey()" style="padding:8px 12px;background:#FFCD00;color:#3C1E1E;border:none;border-radius:7px;font-size:12px;font-weight:800;cursor:pointer">저장</button>';
+      html+='</div>';
+      if(maskedKakao){
+        if(isKakaoValid) html+='<div style="font-size:10px;color:var(--teal);margin-top:4px">✅ 저장됨: '+maskedKakao+' (카카오 Geocoding 활성)</div>';
+        else html+='<div style="font-size:10px;color:var(--amber);margin-top:4px">⚠️ 저장됨: '+maskedKakao+' (32자리인지 확인)</div>';
+      }
+      html+='<div style="font-size:10px;color:var(--text3);margin-top:4px;line-height:1.6">📋 발급: <a href="https://developers.kakao.com" target="_blank" style="color:var(--blue);text-decoration:underline">developers.kakao.com</a><br>→ 내 애플리케이션 → MBTI 물류관리 → 앱 키 → REST API 키</div>';
+      html+='</div>';
     }
 
     html+='<button class="btn btn-blue" style="width:100%;padding:13px;font-size:14px;margin-top:8px" onclick="saveMypage()">💾 정보 저장</button>';
@@ -20783,6 +20800,59 @@ function dHome(){
 }
 // ── 기사 홈 근무표: 월 이동 (-1 이전달, +1 다음달)
 // ★ v9.25: 휴무 변경 요청
+// ★ v9.58: 카카오 REST API 키 저장
+async function saveKakaoApiKey(){
+  var key = (document.getElementById('mp-kakao-key')||{}).value||'';
+  key = key.trim();
+  if(!key){ toast('❌ 카카오 REST API 키를 입력해주세요'); return; }
+  if(key.length !== 32){ toast('⚠️ 카카오 REST API 키는 32자리입니다 (현재 '+key.length+'자리)'); return; }
+  localStorage.setItem('mbti_kakao_api_key', key);
+  // Firebase 저장
+  if(FB && _db){
+    try{
+      await _db.collection('settings').doc('claude_config').set({ kakaoApiKey: key }, { merge: true });
+      toast('✅ 카카오 API 키 저장됨 (모든 기기 적용)');
+    }catch(e){
+      toast('✅ 카카오 API 키 저장됨 (이 기기만)');
+    }
+  } else {
+    toast('✅ 카카오 API 키 저장됨 (이 기기만)');
+  }
+  rMypage();
+}
+
+// ★ v9.58: 카카오 Geocoding — 주소 → 위경도 변환
+async function _kakaoGeocode(address){
+  var apiKey = '';
+  // Firebase에서 로드
+  if(FB && _db){
+    try{
+      var doc = await _db.collection('settings').doc('claude_config').get();
+      if(doc.exists && doc.data().kakaoApiKey) apiKey = doc.data().kakaoApiKey.trim();
+    }catch(e){}
+  }
+  if(!apiKey) apiKey = (localStorage.getItem('mbti_kakao_api_key')||'').trim();
+  if(!apiKey) return null;
+
+  try{
+    var url = 'https://dapi.kakao.com/v2/local/search/address.json?query='+encodeURIComponent(address);
+    var resp = await fetch(url, {
+      headers: { 'Authorization': 'KakaoAK '+apiKey }
+    });
+    var data = await resp.json();
+    if(data.documents && data.documents.length > 0){
+      var d = data.documents[0];
+      var lat = parseFloat(d.y || (d.address && d.address.y) || (d.road_address && d.road_address.y));
+      var lng = parseFloat(d.x || (d.address && d.address.x) || (d.road_address && d.road_address.x));
+      if(lat && lng) return { lat, lng, address };
+    }
+    return null;
+  }catch(e){
+    console.warn('[카카오 Geocoding 실패]', e&&e.message);
+    return null;
+  }
+}
+
 // ★ v9.25: Claude API 키 저장 (Firebase + localStorage)
 // ★ v9.25: Google Cloud API 키 저장 (Maps + Vision OCR 공용) — 검증 추가
 async function saveGoogleApiKey(){
