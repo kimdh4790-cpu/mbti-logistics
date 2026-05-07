@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.55</title>
+<title>엠비티아이 물류관리 v9.57</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10420,7 +10420,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.55 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.57 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -11393,10 +11393,10 @@ function updBadge(){
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
 function updFbUI(){
-  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.55 · 🔥 실시간':'v9.55 · 데모';
+  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.57 · 🔥 실시간':'v9.57 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.55 · Firebase 실시간':'v9.55 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.57 · Firebase 실시간':'v9.57 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -20921,6 +20921,10 @@ function openEmergencyDelivery(){
       <button onclick="document.getElementById('emer-unified-cam').click()" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:20px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;border-radius:14px;font-size:18px;font-weight:900;cursor:pointer;box-shadow:0 3px 14px rgba(124,58,237,.4);margin-bottom:8px">
         <span style="font-size:26px">📸</span> 촬영
       </button>
+      <!-- ★ v9.56: 직접입력 버튼 (카메라 인식 안 될 때) -->
+      <button onclick="_emerManualInput()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;background:var(--bg3);border:1.5px solid var(--border);border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:8px;color:var(--text)">
+        <span style="font-size:18px">⌨️</span> 운송장 직접 입력
+      </button>
       <div id="emer-unified-status" style="font-size:13px;color:var(--teal);text-align:center;margin-bottom:10px;min-height:18px"></div>
 
       <!-- 라이브 스캔 (보조) -->
@@ -21631,6 +21635,92 @@ var _emerScanReader = null;
 // ★ v9.51: 클립보드 자동 감지 — 폰 카메라로 QR 스캔 후 복사만 하면 자동입력
 
 // ★ v9.61: 통합 송장 촬영 — QR 먼저, 실패 시 OCR 자동
+// ★ v9.57: Claude Vision으로 송장 자동 인식 (파란/흰 송장 모두)
+async function _emerVisionScan(b64, statusEl){
+  // API 키 로드
+  var apiKey = '';
+  if(FB && _db){
+    try{
+      var doc = await _db.collection('settings').doc('claude_config').get();
+      if(doc.exists && doc.data().anthropicApiKey) apiKey = doc.data().anthropicApiKey.trim();
+    }catch(e){}
+  }
+  if(!apiKey) apiKey = (localStorage.getItem('mbti_anthropic_api_key')||'').trim();
+  if(!apiKey || apiKey.indexOf('sk-ant-')!==0){
+    if(statusEl) statusEl.innerHTML = '⚠️ API 키 없음 — 직접 입력 필요';
+    return;
+  }
+  try{
+    if(statusEl) statusEl.innerHTML = '🤖 AI 분석 중... (2~3초)';
+    var resp = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key':apiKey,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body: JSON.stringify({
+        model:'claude-haiku-4-5-20251001',
+        max_tokens:300,
+        messages:[{
+          role:'user',
+          content:[
+            {type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},
+            {type:'text',text:'쿠팡 택배 송장 이미지입니다. 다음 정보를 추출해서 JSON만 응답하세요(설명 없이):\n{"tracking":"운송장번호(숫자만,하이픈제외)","address":"배송지전체주소(동호수포함)","name":"수령인이름","route":"라우트코드(예:812B01,없으면null)"}\n없는 항목은 null.'}
+          ]
+        }]
+      })
+    });
+    var data = await resp.json();
+    if(data.error){ throw new Error(data.error.message); }
+    var text = (data.content||[]).map(function(c){return c.text||'';}).join('').trim();
+    // JSON 파싱
+    var m = text.match(/\{[\s\S]*\}/);
+    if(!m) throw new Error('JSON 없음');
+    var parsed = JSON.parse(m[0]);
+    var track = (parsed.tracking||'').replace(/\D/g,'');
+    var addr  = (parsed.address||'').trim();
+    var name  = (parsed.name||'').trim();
+    var route = (parsed.route||'').trim();
+    if(!track && !addr){
+      if(statusEl) statusEl.innerHTML = '⚠️ 송장 정보를 찾을 수 없습니다';
+      return;
+    }
+    // 필드에 자동 채움
+    var tEl = document.getElementById('emer-tracking-inp');
+    var aEl = document.getElementById('emer-addr');
+    var nEl = document.getElementById('emer-recipient');
+    if(tEl && track){ tEl.value = track; tEl.dispatchEvent(new Event('input')); }
+    if(aEl && addr){  aEl.value = addr;  aEl.dispatchEvent(new Event('input')); }
+    if(nEl && name){  nEl.value = name; }
+    // 라우트 코드 자동 적용
+    if(route){
+      var rEl = document.getElementById('emer-route-inp');
+      if(rEl){ rEl.value = route; rEl.dispatchEvent(new Event('input')); }
+    }
+    _emerIncScan();
+    if(statusEl) statusEl.innerHTML = '✅ AI 인식 완료 — 확인 후 저장하세요';
+    try{ if(typeof _tts==='function') _tts('스캔'); }catch(e){}
+    // 자동 저장 트리거
+    if(track && addr){
+      var qp2 = {}; try{ qp2 = window._emerLastQP||{}; }catch(e){}
+      qp2.tracking_no = track; qp2.address = addr;
+      window._emerLastQP = qp2;
+      if(window._emerAutoSaveTimer) clearTimeout(window._emerAutoSaveTimer);
+      var _autoStatusEl2 = document.getElementById('emer-auto-status');
+      if(_autoStatusEl2) _autoStatusEl2.innerHTML = '<span style="color:var(--green);font-weight:800">⏳ 자동 저장: 1.5초…</span>';
+      window._emerAutoSaveTimer = setTimeout(function(){
+        window._emerAutoSaveTimer = null;
+        if(typeof emerSave==='function') emerSave();
+      }, 1500);
+    }
+  }catch(e){
+    console.warn('[Vision 송장 인식 실패]', e&&e.message);
+    if(statusEl) statusEl.innerHTML = '❌ AI 인식 실패 — 직접 입력해주세요';
+  }
+}
+
 function emerUnifiedScan(input){
   var statusEl = document.getElementById('emer-unified-status');
   if(!input.files || !input.files[0]) return;
@@ -21648,11 +21738,10 @@ function emerUnifiedScan(input){
     cv.getContext('2d').drawImage(img,0,0,cw,ch);
 
     function goOCR(){
-      // QR 실패 → Vision API OCR (파란 송장 등)
-      if(statusEl) statusEl.innerHTML = '🔍 OCR 분석 중...';
-      statusEl.id = 'emer-ocr-status';
-      setTimeout(function(){ var el=document.getElementById('emer-ocr-status'); if(el) el.id='emer-unified-status'; }, 10000);
-      emerOcrScan(file, document.getElementById('emer-ocr-status'));
+      // ★ v9.57: QR 실패 → Claude Vision으로 송장 전체 분석 (파란 송장 포함)
+      if(statusEl) statusEl.innerHTML = '🤖 AI 송장 인식 중...';
+      var b64 = cv.toDataURL('image/jpeg', 0.85).split(',')[1];
+      _emerVisionScan(b64, statusEl);
     }
 
     // ① BarcodeDetector — QR 전용 (로컬, API 비용 0)
@@ -22315,6 +22404,54 @@ function _emerHandleScan(raw, statusEl){
     setTimeout(function(){ window._emerScanLock = false; }, 800);
   }
 }
+// ★ v9.56: 운송장 직접 입력 (카메라 인식 안 될 때)
+function _emerManualInput(){
+  var mo = document.createElement('div');
+  mo.id = '_emer-manual-mo';
+  mo.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:800;display:flex;align-items:center;justify-content:center;padding:20px';
+  mo.innerHTML = `
+    <div style="background:var(--bg);border-radius:16px;padding:22px;max-width:360px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.3)">
+      <div style="font-size:16px;font-weight:800;margin-bottom:14px">⌨️ 직접 입력</div>
+      <div style="margin-bottom:10px">
+        <label style="font-size:12px;color:var(--text2);font-weight:700">운송장번호 *</label>
+        <input id="_man-track" type="tel" placeholder="운송장번호 입력" style="width:100%;padding:11px;border:1.5px solid var(--border);border-radius:8px;font-size:15px;margin-top:4px;background:var(--bg2);color:var(--text);box-sizing:border-box">
+      </div>
+      <div style="margin-bottom:10px">
+        <label style="font-size:12px;color:var(--text2);font-weight:700">주소 *</label>
+        <input id="_man-addr" type="text" placeholder="배송지 주소 입력" style="width:100%;padding:11px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;margin-top:4px;background:var(--bg2);color:var(--text);box-sizing:border-box">
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="font-size:12px;color:var(--text2);font-weight:700">수령인</label>
+        <input id="_man-name" type="text" placeholder="수령인 이름 (선택)" style="width:100%;padding:11px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;margin-top:4px;background:var(--bg2);color:var(--text);box-sizing:border-box">
+      </div>
+      <div style="display:flex;gap:8px">
+        <button ontouchstart="" onclick="document.getElementById('_emer-manual-mo').remove()" style="-webkit-tap-highlight-color:transparent;flex:1;padding:13px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;color:var(--text)">취소</button>
+        <button ontouchstart="" onclick="_emerManualSave()" style="-webkit-tap-highlight-color:transparent;flex:2;padding:13px;background:var(--purple);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer">✅ 저장</button>
+      </div>
+    </div>`;
+  document.body.appendChild(mo);
+  setTimeout(function(){ document.getElementById('_man-track')&&document.getElementById('_man-track').focus(); }, 300);
+}
+async function _emerManualSave(){
+  var track = (document.getElementById('_man-track')||{}).value||'';
+  var addr  = (document.getElementById('_man-addr')||{}).value||'';
+  var name  = (document.getElementById('_man-name')||{}).value||'';
+  track = track.replace(/[\.\-\s]/g,'').trim();
+  addr  = addr.trim();
+  if(!track){ toast('⚠️ 운송장번호를 입력해주세요'); return; }
+  if(!addr){  toast('⚠️ 주소를 입력해주세요'); return; }
+  document.getElementById('_emer-manual-mo').remove();
+  // 긴급배송 입력 필드에 직접 반영
+  var tEl = document.getElementById('emer-tracking-inp');
+  var aEl = document.getElementById('emer-addr');
+  var nEl = document.getElementById('emer-recipient');
+  if(tEl){ tEl.value = track; tEl.dispatchEvent(new Event('input')); }
+  if(aEl){ aEl.value = addr;  aEl.dispatchEvent(new Event('input')); }
+  if(nEl && name){ nEl.value = name; }
+  _emerIncScan();
+  toast('✅ 직접 입력 완료 — 저장 버튼을 눌러주세요');
+}
+
 function emerStopScan(){
   window._emerScanLock = false; // ★ v9.25: 락 초기화 (다음 스캔 세션 대비)
   // ★ v9.25: BarcodeDetector 루프 정지
@@ -23409,60 +23546,64 @@ async function saveDelivComplete(){
     }
   }catch(e){ console.warn('[배송완료 거리 검증 실패]', e&&e.message); }
 
-  // ★ v9.48: 호수 오류 감지 — 배송완료 사진 OCR 우선 + 팝업 폴백
+  // ★ v9.48: 호수 오류 감지 — 팝업 먼저(즉시), OCR은 백그라운드 (저장 느림 해결)
   var _pinAddr2 = (window._delivCompletePinData||{}).addr||'';
   var _hoMatch = _pinAddr2.match(/(\d+)\s*호/);
   if(_hoMatch){
     var _expectedHo = _hoMatch[1]+'호';
     var _photos = window._delivCompletePhotos||[];
-    var _detectedHo = null;
 
-    // ① 배송완료 사진 OCR로 호수 자동 감지
-    if(_photos.length > 0){
-      toast('🔍 사진에서 호수 확인 중...');
-      _detectedHo = await _checkDelivPhotoHo(_photos[0], _expectedHo);
-    }
+    // ★ v9.56: 팝업 먼저 띄워서 사용자 확인 → OCR은 백그라운드에서 병렬 처리
+    var _hoConfirmed = true;
+    var _ocrPromise = (_photos.length > 0)
+      ? _checkDelivPhotoHo(_photos[0], _expectedHo)  // 백그라운드 시작
+      : Promise.resolve(null);
 
-    var _hoConfirmed = true; // 기본값: 정상
-    if(_detectedHo){
-      // OCR 성공 — 자동 비교
-      if(_detectedHo !== _expectedHo){
-        // 호수 불일치! 자동 감지
-        _hoConfirmed = false;
-        console.warn('[호수 불일치] 운송장:', _expectedHo, '/ 사진:', _detectedHo);
-      } else {
-        // 호수 일치 — 팝업 없이 통과
-        toast('✅ 호수 확인: '+_detectedHo+' 일치');
-        _hoConfirmed = true;
-      }
-    } else {
-      // ② OCR 실패 (사진에 호수 안 보임) → 팝업으로 확인
-      _hoConfirmed = await new Promise(function(res){
-        var _mo = document.createElement('div');
-        _mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px';
-        _mo.innerHTML=`
-          <div style="background:var(--bg);border-radius:16px;padding:22px;max-width:320px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.3)">
-            <div style="font-size:18px;font-weight:800;margin-bottom:6px;text-align:center">🚪 호수 확인</div>
-            <div style="font-size:13px;color:var(--text2);text-align:center;margin-bottom:18px">
-              운송장 주소: <b style="color:var(--purple);font-size:15px">${_expectedHo}</b><br>
-              <span style="font-size:12px">실제 배달한 호수가 맞나요?</span>
-            </div>
-            <div style="display:flex;gap:8px">
-              <button id="_ho-yes" style="flex:1;padding:13px;background:var(--green);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer">✅ 맞아요</button>
-              <button id="_ho-no" style="flex:1;padding:13px;background:#dc2626;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer">❌ 달라요</button>
-            </div>
-          </div>`;
-        document.body.appendChild(_mo);
-        document.getElementById('_ho-yes').onclick=function(){ _mo.remove(); res(true); };
-        document.getElementById('_ho-no').onclick=function(){ _mo.remove(); res(false); };
-      });
-    }
-
+    // 팝업으로 먼저 확인 (즉시 뜸, OCR 기다리지 않음)
+    _hoConfirmed = await new Promise(function(res){
+      var _mo = document.createElement('div');
+      _mo.id = '_ho-modal';
+      _mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+      _mo.innerHTML=`
+        <div style="background:var(--bg);border-radius:16px;padding:22px;max-width:320px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.3)">
+          <div style="font-size:18px;font-weight:800;margin-bottom:6px;text-align:center">🚪 호수 확인</div>
+          <div style="font-size:13px;color:var(--text2);text-align:center;margin-bottom:18px">
+            운송장 주소: <b style="color:var(--purple);font-size:15px">${_expectedHo}</b><br>
+            <span style="font-size:12px">실제 배달한 호수가 맞나요?</span>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button ontouchstart="" onclick="window._hoResolve(true)" style="-webkit-tap-highlight-color:transparent;flex:1;padding:16px;background:var(--green);color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:800;cursor:pointer">✅ 맞아요</button>
+            <button ontouchstart="" onclick="window._hoResolve(false)" style="-webkit-tap-highlight-color:transparent;flex:1;padding:16px;background:#dc2626;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:800;cursor:pointer">❌ 달라요</button>
+          </div>
+        </div>`;
+      window._hoResolve = function(val){
+        var el = document.getElementById('_ho-modal');
+        if(el) el.remove();
+        delete window._hoResolve;
+        window.removeEventListener('popstate', window._hoPop);
+        res(val);
+      };
+      // 백그라운드 OCR 완료 시 팝업 자동 닫기 (일치하면)
+      _ocrPromise.then(function(_det){
+        if(!document.getElementById('_ho-modal')) return; // 이미 닫힘
+        if(_det && _det === _expectedHo){
+          toast('✅ 호수 자동 확인: '+_det);
+          window._hoResolve(true);
+        } else if(_det && _det !== _expectedHo){
+          // 불일치 감지 시 팝업 내용 업데이트
+          var info = document.getElementById('_ho-modal');
+          if(info) info.querySelector('span').textContent = '⚠️ 사진 인식: '+_det+' — 맞나요?';
+        }
+      }).catch(function(){});
+      // 뒤로가기 방지
+      window._hoPop = function(){ history.pushState(null,'',location.href); };
+      history.pushState(null,'',location.href);
+      window.addEventListener('popstate', window._hoPop);
+      document.body.appendChild(_mo);
+    });
     if(!_hoConfirmed){
       // 호수 오류 — TTS + beep + 강한 진동
-      var _alertMsg = _detectedHo
-        ? '🚨 호수 오류!\n\n운송장: '+_expectedHo+'\n사진 인식: '+_detectedHo+'\n\n정확한 호수에 배달 후 다시 시도해주세요.\n\n그래도 완료 처리할까요?\n[취소] = 다시 확인 / [확인] = 강제 진행'
-        : '🚨 호수 오류!\n\n운송장: '+_expectedHo+'\n\n정확한 호수에 배달 후 다시 시도해주세요.\n\n그래도 완료 처리할까요?\n[취소] = 다시 확인 / [확인] = 강제 진행';
+      var _alertMsg = '🚨 호수 오류!\n\n운송장: '+_expectedHo+'\n\n정확한 호수에 배달 후 다시 시도해주세요.\n\n그래도 완료 처리할까요?\n[취소] = 다시 확인 / [확인] = 강제 진행';
       try{ if(typeof _tts==='function') _tts('오배송 오배송'); }catch(e){}
       try{
         var _bctxHo=window._mbtiAudioCtx||new (window.AudioContext||window.webkitAudioContext)();
