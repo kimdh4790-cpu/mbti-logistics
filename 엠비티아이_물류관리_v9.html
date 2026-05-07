@@ -13822,8 +13822,10 @@ function _renderDriverMap(myLoc, emerLocs){
   function makePin(color, label, size, opacity, clickKey){
     size=size||28; opacity=opacity===undefined?1:opacity;
     var k = clickKey||'';
-    var tapAttr = k ? ' onclick="if(window._mbtiPinClick)window._mbtiPinClick(this.getAttribute(\'data-k\'))" ontouchend="event.stopPropagation();event.preventDefault();if(window._mbtiPinClick)window._mbtiPinClick(this.getAttribute(\'data-k\'))" data-k="'+k+'"' : '';
-    return '<div style="width:'+size+'px;height:'+size+'px;background:'+color+';border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:'+(size>=30?'13px':'11px')+';font-weight:bold;box-shadow:0 2px 6px rgba(0,0,0,.5);opacity:'+opacity+';cursor:pointer;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent"'+tapAttr+'>'+label+'</div>';
+    var tapAttr = k ? ' onclick="event.stopPropagation();if(window._mbtiPinClick)window._mbtiPinClick(this.getAttribute(\'data-k\'))" ontouchstart="event.stopPropagation()" ontouchend="event.stopPropagation();event.preventDefault();if(window._mbtiPinClick)window._mbtiPinClick(this.getAttribute(\'data-k\'))" data-k="'+k+'"' : '';
+    // ★ v9.61: 핀 탭 강화 — 외부 div wrapper로 감싸서 터치 영역 확보
+    var inner = '<div style="width:'+size+'px;height:'+size+'px;background:'+color+';border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:'+(size>=30?'13px':'11px')+';font-weight:bold;box-shadow:0 2px 8px rgba(0,0,0,.6);opacity:'+opacity+'">'+label+'</div>';
+    return '<div style="width:'+(size+12)+'px;height:'+(size+12)+'px;display:flex;align-items:center;justify-content:center;cursor:pointer;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent;position:relative;z-index:999"'+tapAttr+'>'+inner+'</div>';
   }
   function _attachPinClick(overlay, key){
     // v9.74: 이벤트 위임으로 처리 — 이 함수는 폴백용으로만 유지
@@ -25831,7 +25833,7 @@ function parseCoupangExcel(inp){
           if(x.month!==month)return;
           var docId=x.fbId||x.driver+'_'+x.month;
           var cleanX=_cleanUndef(x);
-          promises.push(_db.collection('settlements').doc(docId).set(cleanX)
+          promises.push(_db.collection('settlements').doc(docId).set(cleanX,{merge:true})
             .then(function(){fbOk++;x.fbId=docId;})
             .catch(function(e){fbFail++;console.warn('FB 저장 실패:',x.driver,e.message);}));
         });
@@ -26683,6 +26685,15 @@ function startListeners(){
     return;
   }
   _listenersInitDone=true;
+  // ★ v9.61: 앱 시작 시 카카오 API 키 미리 캐시 (Geocoding 속도 향상)
+  if(!window._cachedKakaoApiKey && FB && _db){
+    _db.collection('settings').doc('claude_config').get().then(function(doc){
+      if(doc.exists && doc.data().kakaoApiKey){
+        window._cachedKakaoApiKey = doc.data().kakaoApiKey.trim();
+        console.log('[Kakao] API 키 사전 캐시 완료');
+      }
+    }).catch(function(){});
+  }
   _initialLoad=true;
   if(!FB||!_db){_listenersInitDone=false;return;}
   // ★ v9.25: 기존 리스너 해제 후 300ms 대기 → Firebase 내부 정리 완료 보장
@@ -26883,7 +26894,7 @@ function startListeners(){
           });
           lss(col,arr.slice(0,300));
           if(S.page==='dash'||S.page===colPageMap[col]) SP(S.page,null);
-        }).catch(function(err){console.warn(col+' get 오류:',err.code);});
+        }).catch(function(err){if(err&&err.code==='already-exists')return;console.warn(col+' get 오류:',err.code);});
         return;
       }
   
@@ -30661,9 +30672,11 @@ async function _registerFCMToken(){
       console.warn('[FCM] firebase-messaging-sw.js 등록 실패, sw.js로 폴백:', swErr.message);
       fcmSwReg = window._swRegistration;
     }
+    var _swReg = fcmSwReg || window._swRegistration;
+    if(!_swReg){ console.warn('[FCM] SW 등록 없음 — 토큰 발급 생략'); return; } // ★ v9.61: /undefined 방지
     var token=await msg.getToken({
       vapidKey:'BAcfjIAqO1zwJtkKBv5dI8SlSjHci1BDbb5dVENG-KVlI8qzBVa646bt2lSoUhzmZGN08s8AxAALFhFr8Jkwdjs',
-      serviceWorkerRegistration: fcmSwReg || window._swRegistration
+      serviceWorkerRegistration: _swReg
     });
     if(!token){console.warn('[FCM] 토큰 발급 실패');return;}
     window._fcmTokenRegistered=true;
