@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.58</title>
+<title>엠비티아이 물류관리 v9.59</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10420,7 +10420,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.58 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.59 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -11101,6 +11101,41 @@ var DELIVERY_DEADLINE={
   night:{hour: 7,minute:0,label:'🌙 새벽 배송 마감'}   // 야간 07:00
 };
 // ★ 두 좌표 거리 계산 (Haversine, 미터)
+// ★ v9.58: Kakao Geocoding — 주소 → 위경도 (Nominatim/Google 대체)
+// 국내 도로명/지번/아파트 동호수까지 정확 인식, 일 30만회 무료
+async function _kakaoGeocode(addr){
+  if(!addr||!addr.trim()) return null;
+  // API 키 로드 (캐시 우선)
+  var key = window._cachedKakaoApiKey || '';
+  if(!key && FB && _db){
+    try{
+      var doc = await _db.collection('settings').doc('claude_config').get();
+      if(doc.exists && doc.data().kakaoApiKey){
+        key = doc.data().kakaoApiKey.trim();
+        window._cachedKakaoApiKey = key;
+      }
+    }catch(e){}
+  }
+  if(!key) return null; // 키 없으면 null 반환
+  try{
+    var resp = await fetch(
+      'https://dapi.kakao.com/v2/local/search/address.json?query='+encodeURIComponent(addr),
+      { headers:{ 'Authorization':'KakaoAK '+key } }
+    );
+    var data = await resp.json();
+    if(data.documents && data.documents.length > 0){
+      var d = data.documents[0];
+      var lat = parseFloat(d.y); // y = 위도
+      var lng = parseFloat(d.x); // x = 경도
+      if(lat && lng) return {lat:lat, lng:lng};
+    }
+    return null;
+  }catch(e){
+    console.warn('[Kakao Geocoding 실패]', e&&e.message);
+    return null;
+  }
+}
+
 function gpsDistance(lat1,lng1,lat2,lng2){
   if(lat1==null||lng1==null||lat2==null||lng2==null)return Infinity;
   var R=6371000, toRad=function(d){return d*Math.PI/180;};
@@ -11393,10 +11428,10 @@ function updBadge(){
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
 function updFbUI(){
-  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.58 · 🔥 실시간':'v9.58 · 데모';
+  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.59 · 🔥 실시간':'v9.59 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.58 · Firebase 실시간':'v9.58 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.59 · Firebase 실시간':'v9.59 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -15830,11 +15865,17 @@ async function saveCampGps(){
     var lat=prevGps.lat||0, lng=prevGps.lng||0;
     if(addr !== (prevGps.addr||'') || !lat || !lng){
       // 주소가 바뀌었거나 좌표 없으면 Geocoding
+      // ★ v9.58: Kakao Geocoding (Nominatim 대체 — 국내 주소 정확도 향상)
       try{
-        var resp=await fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(addr)+'&format=json&limit=1&accept-language=ko',{headers:{'User-Agent':'mbti-logistics/1.0'}});
-        var json=await resp.json();
-        if(json&&json[0]){lat=parseFloat(json[0].lat);lng=parseFloat(json[0].lon);}
-        else{toast('⚠️ '+name+' 주소 좌표 변환 실패 — 주소를 더 자세히 입력해 주세요');lat=prevGps.lat||0;lng=prevGps.lng||0;}
+        var kgps = await _kakaoGeocode(addr);
+        if(kgps){ lat=kgps.lat; lng=kgps.lng; }
+        else{
+          // 카카오 실패 시 Nominatim 폴백
+          var resp=await fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(addr)+'&format=json&limit=1&accept-language=ko',{headers:{'User-Agent':'mbti-logistics/1.0'}});
+          var json=await resp.json();
+          if(json&&json[0]){lat=parseFloat(json[0].lat);lng=parseFloat(json[0].lon);}
+          else{toast('⚠️ '+name+' 주소 좌표 변환 실패 — 주소를 더 자세히 입력해 주세요');lat=prevGps.lat||0;lng=prevGps.lng||0;}
+        }
       }catch(e){lat=prevGps.lat||0;lng=prevGps.lng||0;}
     }
     if(addr)saved[name]={lat:lat,lng:lng,addr:addr};
@@ -20991,10 +21032,6 @@ function openEmergencyDelivery(){
       <button onclick="document.getElementById('emer-unified-cam').click()" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:20px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;border-radius:14px;font-size:18px;font-weight:900;cursor:pointer;box-shadow:0 3px 14px rgba(124,58,237,.4);margin-bottom:8px">
         <span style="font-size:26px">📸</span> 촬영
       </button>
-      <!-- ★ v9.56: 직접입력 버튼 (카메라 인식 안 될 때) -->
-      <button onclick="_emerManualInput()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;background:var(--bg3);border:1.5px solid var(--border);border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:8px;color:var(--text)">
-        <span style="font-size:18px">⌨️</span> 운송장 직접 입력
-      </button>
       <div id="emer-unified-status" style="font-size:13px;color:var(--teal);text-align:center;margin-bottom:10px;min-height:18px"></div>
 
       <!-- 라이브 스캔 (보조) -->
@@ -21535,28 +21572,18 @@ async function emerOcrScan(file, _statusOverride){
     var tw = document.getElementById('emer-tracking-wrap');
     if(tw && window._emerTrackings.length>0) tw.style.display='none';
 
-    // ★ v9.25: OCR 추출 주소 → Geocoding API로 배송지 좌표 변환 (배송핀 = 배송지 위치)
+    // ★ v9.58: OCR 주소 → Kakao Geocoding (Google Maps 대체)
     var pinGps = null;
     if(p.address){
       if(status) status.innerHTML = '<span style="color:var(--blue)">📍 배송지 좌표 변환 중...</span>';
       try{
-        var gcRes = await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(p.address)+'&language=ko&region=kr&key='+apiKey);
-        var gcData = await gcRes.json();
-        if(gcData.status==='OK' && gcData.results && gcData.results[0]){
-          var loc = gcData.results[0].geometry.location;
-          if(typeof loc.lat==='number' && typeof loc.lng==='number'){
-            pinGps = {lat:loc.lat, lng:loc.lng, src:'geocode', addr:p.address};
-            // 배송지 좌표를 _emerGps로 저장 (저장 시 사용)
-            window._emerGps = {lat:loc.lat, lng:loc.lng, acc:0, src:'geocode', addr:p.address};
-            if(status) status.innerHTML = '<span style="color:var(--teal)">✅ 배송지 좌표 변환 완료</span>';
-            // ★ v9.43: OCR 시점 거리 검증 비활성화
-            // 이유: 캠프(물류센터)에서 송장 일괄 스캔 → 배송지와 수 km 떨어짐
-            //       OCR 시점에 검증하면 모든 송장에서 false positive 발생
-            //       → 배송완료 처리 시점(saveDelivComplete)에서 검증하도록 이동
-          }
-        } else if(gcData.status==='REQUEST_DENIED'){
-          console.warn('Geocoding API 비활성화:', gcData.error_message);
-          if(status) status.innerHTML = '<span style="color:#f59e0b">⚠️ Geocoding API 비활성 — 현위치 사용</span>';
+        var kgps2 = await _kakaoGeocode(p.address);
+        if(kgps2){
+          pinGps = {lat:kgps2.lat, lng:kgps2.lng, src:'kakao', addr:p.address};
+          window._emerGps = {lat:kgps2.lat, lng:kgps2.lng, acc:0, src:'kakao', addr:p.address};
+          if(status) status.innerHTML = '<span style="color:var(--teal)">✅ 배송지 좌표 변환 완료</span>';
+        } else {
+          if(status) status.innerHTML = '<span style="color:#f59e0b">⚠️ 좌표 변환 실패 — 현위치 사용</span>';
         }
       }catch(geoErr){ console.warn('Geocoding 실패:', geoErr); }
     }
@@ -21566,14 +21593,6 @@ async function emerOcrScan(file, _statusOverride){
       if(window._emerGps && window._emerGps.lat){
         pinGps = {lat:window._emerGps.lat, lng:window._emerGps.lng, src:'device'};
         if(status) status.innerHTML='<span style="color:#f59e0b">⚠️ Geocoding 실패 — 현위치로 핀 생성</span>';
-      } else {
-        // 현위치도 없으면 GPS 새로 받기
-        if(navigator.geolocation){
-          try{
-            var pos = await new Promise(function(res,rej){navigator.geolocation.getCurrentPosition(res,rej,{timeout:4000,enableHighAccuracy:true});});
-            pinGps = {lat:pos.coords.latitude, lng:pos.coords.longitude, src:'device_fallback'};
-          }catch(e){}
-        }
       }
     }
 
@@ -22363,31 +22382,22 @@ function _emerHandleScan(raw, statusEl){
     var gpsEl=document.getElementById('emer-gps-status');
     if(gpsEl)gpsEl.innerHTML='<span style="color:var(--teal)">📍 QR GPS: '+qp.lat.toFixed(6)+', '+qp.lng.toFixed(6)+'</span>';
   } else if(qp.address) {
-    // ★ v9.25: QR에 GPS 없을 때 주소로 Geocoding (비동기 — 저장 전까지 완료됨)
-    var _gcApiKey = window._cachedGoogleApiKey || localStorage.getItem('mbti_google_api_key') || '';
-    if(_gcApiKey){
-      var gpsEl2=document.getElementById('emer-gps-status');
-      if(gpsEl2) gpsEl2.innerHTML='<span style="color:var(--blue)">📍 배송지 좌표 변환 중...</span>';
-      var _gcAddr = qp.address;
-      fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(_gcAddr)+'&language=ko&region=kr&key='+_gcApiKey)
-        .then(function(r){ return r.json(); })
-        .then(function(d){
-          if(d.status==='OK'&&d.results&&d.results[0]){
-            var lc=d.results[0].geometry.location;
-            if(typeof lc.lat==='number'&&typeof lc.lng==='number'){
-              window._emerGps={lat:lc.lat,lng:lc.lng,src:'geocode',addr:_gcAddr};
-              var gEl=document.getElementById('emer-gps-status');
-              if(gEl) gEl.innerHTML='<span style="color:var(--teal)">📍 배송지 GPS 사용 중 (주소변환) ✅</span>';
-              // 지도 핀 생성
-              if(window._activeDriverMapAddPin){
-                var pr={fbId:'_preview_qr_'+Date.now(),driver:S.curDriver||'',trackings:window._emerTrackings.slice(),tracking:window._emerTrackings[0]||'',order_id:(document.getElementById('emer-orderid')||{}).value||'',recipient:qp.recipient||'',addr:_gcAddr,gps:{lat:lc.lat,lng:lc.lng},time:new Date().toTimeString().slice(0,5),status:'저장대기'};
-                window._activeDriverMapAddPin(pr);
-                window._activeDriverMap&&window._activeDriverMap.panTo({lat:lc.lat,lng:lc.lng});
-              }
-            }
-          }
-        }).catch(function(){});
-    }
+    // ★ v9.58: Kakao Geocoding (Google Maps 대체)
+    var _gcAddr = qp.address;
+    var gpsEl2 = document.getElementById('emer-gps-status');
+    if(gpsEl2) gpsEl2.innerHTML='<span style="color:var(--blue)">📍 배송지 좌표 변환 중...</span>';
+    _kakaoGeocode(_gcAddr).then(function(kpos){
+      if(!kpos) return;
+      window._emerGps = {lat:kpos.lat, lng:kpos.lng, src:'kakao', addr:_gcAddr};
+      var gEl = document.getElementById('emer-gps-status');
+      if(gEl) gEl.innerHTML='<span style="color:var(--teal)">📍 배송지 GPS 확인 ✅</span>';
+      // 지도 핀 생성
+      if(window._activeDriverMapAddPin){
+        var pr={fbId:'_preview_qr_'+Date.now(),driver:S.curDriver||'',trackings:window._emerTrackings.slice(),tracking:window._emerTrackings[0]||'',order_id:(document.getElementById('emer-orderid')||{}).value||'',recipient:qp.recipient||'',addr:_gcAddr,gps:{lat:kpos.lat,lng:kpos.lng},time:new Date().toTimeString().slice(0,5),status:'저장대기'};
+        window._activeDriverMapAddPin(pr);
+        window._activeDriverMap&&window._activeDriverMap.panTo({lat:kpos.lat,lng:kpos.lng});
+      }
+    }).catch(function(){});
   }
 
   // ★ v9.58: QR/바코드 인식 후 자동저장 — 운송장만 있어도 저장
@@ -22887,26 +22897,11 @@ async function emerSave(){
     gpsClean = {lat:window._emerGps.lat, lng:window._emerGps.lng, acc:0, src:window._emerGps.src};
     console.log('[emerSave] 기존 배송지 GPS 사용:', window._emerGps.src);
   } else if(addr){
-    // GPS 없거나 device GPS인 경우에만 geocoding 시도 (1.5초 타임아웃)
-    var apiKey2 = window._cachedGoogleApiKey || localStorage.getItem('mbti_google_api_key') || '';
-    if(apiKey2){
-      try{
-        var gcCtrl = new AbortController();
-        var gcTimer = setTimeout(function(){ gcCtrl.abort(); }, 1500);
-        var gcRes2 = await fetch(
-          'https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr)+'&language=ko&region=kr&key='+apiKey2,
-          { signal: gcCtrl.signal }
-        );
-        clearTimeout(gcTimer);
-        var gcData2 = await gcRes2.json();
-        if(gcData2.status==='OK' && gcData2.results && gcData2.results[0]){
-          var loc2 = gcData2.results[0].geometry.location;
-          if(typeof loc2.lat==='number' && typeof loc2.lng==='number'){
-            gpsClean = { lat: loc2.lat, lng: loc2.lng, acc: 0, src: 'geocode' };
-          }
-        }
-      }catch(e){ console.warn('[emerSave] Geocoding 폴백 실패:', e.message||e); }
-    }
+    // ★ v9.58: Kakao Geocoding (Google Maps 대체)
+    try{
+      var kgps3 = await _kakaoGeocode(addr);
+      if(kgps3) gpsClean = { lat:kgps3.lat, lng:kgps3.lng, acc:0, src:'kakao' };
+    }catch(e){ console.warn('[emerSave] Kakao Geocoding 실패:', e.message||e); }
   }
 
   // GPS 없으면 현위치로 폴백
