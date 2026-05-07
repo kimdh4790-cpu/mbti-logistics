@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.74</title>
+<title>엠비티아이 물류관리 v9.75</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10425,7 +10425,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.74 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.75 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -11108,38 +11108,7 @@ var DELIVERY_DEADLINE={
 // ★ 두 좌표 거리 계산 (Haversine, 미터)
 // ★ v9.58: Kakao Geocoding — 주소 → 위경도 (Nominatim/Google 대체)
 // 국내 도로명/지번/아파트 동호수까지 정확 인식, 일 30만회 무료
-async function _kakaoGeocode(addr){
-  if(!addr||!addr.trim()) return null;
-  // API 키 로드 (캐시 우선)
-  var key = window._cachedKakaoApiKey || '';
-  if(!key && FB && _db){
-    try{
-      var doc = await _db.collection('settings').doc('claude_config').get();
-      if(doc.exists && doc.data().kakaoApiKey){
-        key = doc.data().kakaoApiKey.trim();
-        window._cachedKakaoApiKey = key;
-      }
-    }catch(e){}
-  }
-  if(!key) return null; // 키 없으면 null 반환
-  try{
-    var resp = await fetch(
-      'https://dapi.kakao.com/v2/local/search/address.json?query='+encodeURIComponent(addr),
-      { headers:{ 'Authorization':'KakaoAK '+key } }
-    );
-    var data = await resp.json();
-    if(data.documents && data.documents.length > 0){
-      var d = data.documents[0];
-      var lat = parseFloat(d.y); // y = 위도
-      var lng = parseFloat(d.x); // x = 경도
-      if(lat && lng) return {lat:lat, lng:lng};
-    }
-    return null;
-  }catch(e){
-    console.warn('[Kakao Geocoding 실패]', e&&e.message);
-    return null;
-  }
-}
+// ★ v9.75: 중복 _kakaoGeocode 제거 (v9.61 통합버전 사용 — 20900줄)
 
 function gpsDistance(lat1,lng1,lat2,lng2){
   if(lat1==null||lng1==null||lat2==null||lng2==null)return Infinity;
@@ -11433,10 +11402,10 @@ function updBadge(){
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
 function updFbUI(){
-  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.74 · 🔥 실시간':'v9.74 · 데모';
+  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.75 · 🔥 실시간':'v9.75 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.74 · Firebase 실시간':'v9.74 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.75 · Firebase 실시간':'v9.75 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -13668,13 +13637,19 @@ function _showGpsHelpModal(reason, onProceed){
   document.getElementById('gps-help-skip').onclick=function(){ mo.remove(); if(typeof onProceed==='function') onProceed(); };
 }
 function _getEmerLocs(){
-  // ★ v9.74: localStorage 우선 (reads 절감) + Firebase 백그라운드 GPS 동기화
+  // ★ v9.75: localStorage 우선 + Firebase 60초 캐시 (Firestore reads 절감)
   var local = [];
   try{ local = JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]'); }catch(e){}
   var driverLocs = (S.curMode==='admin')
     ? local.filter(function(x){ return x.gps&&x.gps.lat; })
     : local.filter(function(x){ return x.driver===S.curDriver && x.gps&&x.gps.lat; });
-  if(FB&&_db){
+  // ★ v9.75: 60초 내 재조회 차단 (Firestore reads 폭증 방지)
+  var _now=Date.now();
+  var _cacheKey='_emerLocsFetchedAt_'+(S.curMode==='admin'?'admin':S.curDriver);
+  var _lastFetch=window[_cacheKey]||0;
+  var _skipFetch=(_now-_lastFetch)<60000;
+  if(FB&&_db&&!_skipFetch){
+    window[_cacheKey]=_now;
     var q = (S.curMode==='admin')
       ? _db.collection('emergency_deliveries').orderBy('savedAt','desc').limit(60)
       : _db.collection('emergency_deliveries').where('driver','==',S.curDriver||'').limit(60);
@@ -13847,27 +13822,7 @@ function _renderDriverMap(myLoc, emerLocs){
 
   var map = new kakao.maps.Map(mapDiv, {center:new kakao.maps.LatLng(myLoc.lat,myLoc.lng), level:4});
 
-  // ★ v9.74: 이벤트 위임 — data-pinkey 속성으로 핀 탭 감지 (카카오맵 element 복사 문제 해결)
-  mapDiv.addEventListener('touchend', function(e){
-    var t=e.target; while(t&&t!==mapDiv){
-      if(t.getAttribute&&t.getAttribute('data-pinkey')){
-        e.preventDefault();e.stopPropagation();
-        if(window._mbtiPinClick)window._mbtiPinClick(t.getAttribute('data-pinkey'));
-        return;
-      }
-      t=t.parentNode;
-    }
-  }, {passive:false});
-  mapDiv.addEventListener('click', function(e){
-    var t=e.target; while(t&&t!==mapDiv){
-      if(t.getAttribute&&t.getAttribute('data-pinkey')){
-        e.stopPropagation();
-        if(window._mbtiPinClick)window._mbtiPinClick(t.getAttribute('data-pinkey'));
-        return;
-      }
-      t=t.parentNode;
-    }
-  });
+  // ★ v9.75: mapDiv 이벤트 위임 제거 — HTML onclick 단일 경로로 통일
   map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
 
   // ★ v9.74: HTML 문자열 사용 (DOM element → b.v 에러 방지)
@@ -13940,9 +13895,10 @@ function _renderDriverMap(myLoc, emerLocs){
   var _pinDataMap={};
   var _infoOpen=null;
 
+  // ★ v9.75: InfoWindow 완전 교체 → 커스텀 바텀시트 (이벤트 충돌 근본 제거)
   window._mbtiPinClick=function(key){
     var x=_pinDataMap[key];if(!x)return;
-    if(_infoOpen){try{_infoOpen.close();}catch(e){}}
+    var old=document.getElementById('pin-info-sheet');if(old)old.remove();
     var trackings=(x.trackings&&x.trackings.length)?x.trackings:(x.tracking?[x.tracking]:[]);
     var tStatus=x.trackingStatus||{};
     var doneCnt=trackings.filter(function(t){return tStatus[t]&&tStatus[t].status==='완료';}).length;
@@ -13950,20 +13906,59 @@ function _renderDriverMap(myLoc, emerLocs){
     var isDone=x.status==='완료',isPartial=x.status==='부분완료';
     var pinColor=isDone?'#16a34a':(isPartial?'#f97316':'#dc2626');
     var label=isPartial?(doneCnt+'/'+trackings.length):String(x._seqNo||'?');
-    var statusBadge=isDone?'<span style="background:#16a34a;color:#fff;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:700;margin-left:4px">전체완료</span>':isPartial?'<span style="background:#f97316;color:#fff;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:700;margin-left:4px">'+doneCnt+'/'+trackings.length+'</span>':'';
-    var trackHtml='';if(trackings.length){trackHtml='<div style="margin-top:6px;padding:6px 8px;background:rgba(0,0,0,.04);border-radius:6px;font-size:10px;line-height:1.7">'+trackings.map(function(t){var s=tStatus[t]&&tStatus[t].status==='완료';return '<div style="display:flex;align-items:center;gap:6px"><span style="color:'+(s?'#16a34a':'#dc2626')+';font-weight:700">'+(s?'✓':'✗')+'</span><span style="color:'+(s?'#16a34a':'#1e293b')+';'+(s?'text-decoration:line-through;':'')+'">'+t+'</span></div>';}).join('')+'</div>';}
+    var statusBadge=isDone
+      ?'<span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700">완료</span>'
+      :isPartial?'<span style="background:#f97316;color:#fff;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700">'+doneCnt+'/'+trackings.length+'</span>':'';
+    var trackHtml='';
+    if(trackings.length){
+      trackHtml='<div style="background:var(--bg3);border-radius:8px;padding:8px 10px;margin-top:8px;border:1px solid var(--border)">'
+        +trackings.map(function(t){
+          var s=tStatus[t]&&tStatus[t].status==='완료';
+          return '<div style="display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid var(--border)">'
+            +'<span style="color:'+(s?'#16a34a':'#dc2626')+';font-weight:900;font-size:14px">'+( s?'✓':'·')+'</span>'
+            +'<span style="font-family:monospace;font-size:11px;color:'+(s?'var(--text3)':'var(--text)')+';'+(s?'text-decoration:line-through':'')+'">'+t+'</span>'
+            +'</div>';
+        }).join('')
+        +'</div>';
+    }
     var fbId=x.fbId||x._fbId||'';
-    var dataPayload=encodeURIComponent(JSON.stringify({trackings:x.trackings||[],tracking:x.tracking,order_id:x.order_id,addr:x.addr,recipient:x.recipient,time:x.time}));
-    var actionBtn=isDone?'<div style="color:#16a34a;font-size:11px;font-weight:700;margin-top:6px;text-align:center">✅ 전체 배송완료</div>':isPartial?'<button onclick="openDelivComplete(\''+fbId+'\',\''+dataPayload+'\')" style="margin-top:5px;width:100%;padding:7px;background:#f97316;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">🟠 나머지 '+pendCnt+'건 완료</button>':'<button onclick="openDelivComplete(\''+fbId+'\',\''+dataPayload+'\')" style="margin-top:5px;width:100%;padding:7px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">✅ 배송완료 처리</button>';
+    window._pinSheetFbId=fbId;
+    window._pinSheetData=JSON.stringify({trackings:x.trackings||[],tracking:x.tracking||'',order_id:x.order_id||'',addr:x.addr||'',recipient:x.recipient||'',time:x.time||''});
     var navLink='kakaomap://route?ep='+x.gps.lat+','+x.gps.lng+'&by=CAR';
     var photos=(x.completePhotos||[]).concat(x.completePhotosLocal||[]);
-    var ph=photos.slice(0,3).filter(function(u){return u&&u.length>10;}).map(function(url){return '<img src="'+url+'" style="width:50px;height:50px;object-fit:cover;border-radius:6px;border:2px solid '+pinColor+'">';}).join('');
-    var popHtml='<div style="font-size:13px;min-width:210px;max-width:260px;padding:4px"><div style="display:flex;align-items:center;gap:4px;margin-bottom:4px;flex-wrap:wrap"><span style="background:'+pinColor+';color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800">'+label+'</span><span style="font-weight:800;font-size:14px">'+(x.recipient||'수령인미상')+'</span>'+statusBadge+'</div><div style="color:#1d4ed8;font-size:12px;line-height:1.5;margin-bottom:4px">'+(x.addr||'주소없음')+'</div><div style="font-size:11px;color:#555">⏰ '+(x.time||'')+'</div>'+trackHtml+(ph?'<div style="display:flex;gap:4px;margin-top:6px">'+ph+'</div>':'')+actionBtn+'<a href="'+navLink+'" style="display:inline-block;margin-top:5px;padding:6px 10px;background:#FFCD00;color:#3C1E1E;text-decoration:none;border-radius:6px;font-size:11px;font-weight:700">🚗 카카오내비</a></div>';
-    var info=new kakao.maps.InfoWindow({content:popHtml,removable:true});
-    info.open(map,new kakao.maps.LatLng(x.gps.lat,x.gps.lng));
-    _infoOpen=info;
+    var ph=photos.slice(0,3).filter(function(u){return u&&u.length>10;})
+      .map(function(url){return '<img src="'+url+'" style="width:58px;height:58px;object-fit:cover;border-radius:8px;border:2px solid '+pinColor+'">';}).join('');
+    var closeFn="var _s=document.getElementById('pin-info-sheet');if(_s)_s.remove();";
+    var openFn="openDelivComplete(window._pinSheetFbId,encodeURIComponent(window._pinSheetData));"+closeFn;
+    var actionBtn=isDone
+      ?'<div style="text-align:center;padding:12px;color:#16a34a;font-weight:800;font-size:14px;background:#f0fdf4;border-radius:10px;margin-bottom:8px">✅ 전체 배송완료</div>'
+      :'<button ontouchend="event.stopPropagation();event.preventDefault();'+openFn+'" onclick="'+openFn+'" style="width:100%;padding:14px;background:'+(isPartial?'#f97316':'#16a34a')+';color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px;display:block;touch-action:manipulation">'
+        +(isPartial?'🟠 나머지 '+pendCnt+'건 완료처리':'✅ 배송완료 처리')+'</button>';
+    document.body.insertAdjacentHTML('beforeend',
+      '<div id="pin-info-sheet" style="position:fixed;inset:0;z-index:2000;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.45)" ontouchend="if(event.target===this)this.remove()" onclick="if(event.target===this)this.remove()">'
+      +'<div ontouchend="event.stopPropagation()" onclick="event.stopPropagation()" style="background:var(--bg);border-radius:16px 16px 0 0;padding:20px 16px 36px;width:100%;max-width:480px;max-height:78vh;overflow-y:auto;box-shadow:0 -4px 24px rgba(0,0,0,.25)">'
+      +'<div style="width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px"></div>'
+      +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">'
+        +'<span style="background:'+pinColor+';color:#fff;border-radius:50%;min-width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;flex-shrink:0">'+label+'</span>'
+        +'<div style="flex:1;min-width:0">'
+          +'<div style="font-size:16px;font-weight:900">'+(x.recipient||'수령인 미상')+' '+statusBadge+'</div>'
+          +(x.order_id?'<div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:monospace">주문번호 '+x.order_id+'</div>':'')
+        +'</div>'
+        +'<button ontouchend="event.stopPropagation();event.preventDefault();'+closeFn+'" onclick="'+closeFn+'" style="background:var(--bg3);border:1px solid var(--border);border-radius:50%;width:30px;height:30px;cursor:pointer;flex-shrink:0;font-size:14px;touch-action:manipulation">✕</button>'
+      +'</div>'
+      +'<div style="background:var(--bg3);border-radius:10px;padding:10px 12px;margin-bottom:10px;border:1px solid var(--border)">'
+        +'<div style="font-size:13px;color:var(--blue);font-weight:600;line-height:1.6;word-break:keep-all">'+(x.addr||'주소 없음')+'</div>'
+        +(x.time?'<div style="font-size:11px;color:var(--text3);margin-top:3px">⏰ '+x.time+'</div>':'')
+      +'</div>'
+      +trackHtml
+      +(ph?'<div style="display:flex;gap:6px;margin:10px 0;flex-wrap:wrap">'+ph+'</div>':'')
+      +'<div style="margin-top:14px">'
+        +actionBtn
+        +'<a href="'+navLink+'" ontouchend="event.stopPropagation()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;background:#FFCD00;color:#3C1E1E;text-decoration:none;border-radius:10px;font-size:13px;font-weight:800;touch-action:manipulation">🚗 카카오내비로 안내</a>'
+      +'</div>'
+      +'</div></div>'
+    );
   };
-
   function renderRoutePins(){
     (window._driverMapPinMarkers||[]).forEach(function(o){try{o.setMap(null);}catch(e){}});
     window._driverMapPinMarkers=[];window._driverMapMarkers={};_pinDataMap={};
@@ -13990,7 +13985,7 @@ function _renderDriverMap(myLoc, emerLocs){
         zIndex:isDone?80:(isPartial?150:(400-(x._seqNo||0)))
       });
       overlay.setMap(map);
-      (function(key){ kakao.maps.event.addListener(overlay,'click',function(){ if(window._mbtiPinClick)window._mbtiPinClick(key); }); })(pinKey); // ★ v9.74: 카카오 공식 이벤트
+      // ★ v9.75: kakao event.addListener 제거 — HTML onclick 단일 경로
       overlay._mbtiStatus=statusStr;overlay._mbtiId=fbId;
       if(fbId)window._driverMapMarkers[fbId]=overlay;
       window._driverMapPinMarkers.push(overlay);
@@ -21658,26 +21653,8 @@ async function emerOcrScan(file, _statusOverride){
       }
     }
 
-    if(pinGps && window._activeDriverMapAddPin){
-      var previewRecord = {
-        fbId: '_preview_'+Date.now(),
-        driver: S.curDriver||'',
-        trackings: window._emerTrackings.slice(),
-        tracking: window._emerTrackings[0]||'',
-        order_id: p.order_id||'',
-        recipient: p.recipient||'',
-        addr: p.address||'',
-        gps: {lat:pinGps.lat, lng:pinGps.lng},
-        time: new Date().toTimeString().slice(0,5),
-        status: '저장대기',
-        pinSrc: pinGps.src // 'geocode' / 'QR' / 'device'
-      };
-      window._activeDriverMapAddPin(previewRecord);
-      // 카운터 업데이트
-      var ce=document.getElementById('driver-map-count');
-      if(ce){ var cn=parseInt(ce.textContent)||0; ce.textContent='오늘 긴급배송 '+(cn+1)+'건 핀 표시'; }
-      window._activeDriverMap&&window._activeDriverMap.panTo({lat:pinGps.lat,lng:pinGps.lng});
-    }
+    // ★ v9.75: 미리보기 핀 제거 — emerSave 완료 후에만 진짜 핀 생성
+    if(pinGps){ window._emerGps = window._emerGps || pinGps; }
 
     // 운송장 사진 배송 사진으로 자동 추가
     var reader = new FileReader();
@@ -22474,12 +22451,7 @@ function _emerHandleScan(raw, statusEl){
       window._emerGps = {lat:kpos.lat, lng:kpos.lng, src:'kakao', addr:_gcAddr};
       var gEl = document.getElementById('emer-gps-status');
       if(gEl) gEl.innerHTML='<span style="color:var(--teal)">📍 배송지 GPS 확인 ✅</span>';
-      // 지도 핀 생성
-      if(window._activeDriverMapAddPin){
-        var pr={fbId:'_preview_qr_'+Date.now(),driver:S.curDriver||'',trackings:window._emerTrackings.slice(),tracking:window._emerTrackings[0]||'',order_id:(document.getElementById('emer-orderid')||{}).value||'',recipient:qp.recipient||'',addr:_gcAddr,gps:{lat:kpos.lat,lng:kpos.lng},time:new Date().toTimeString().slice(0,5),status:'저장대기'};
-        window._activeDriverMapAddPin(pr);
-        window._activeDriverMap&&window._activeDriverMap.panTo({lat:kpos.lat,lng:kpos.lng});
-      }
+      // ★ v9.75: 미리보기 핀 제거 — emerSave 완료 후에만 진짜 핀 생성
     }).catch(function(){});
   }
 
@@ -23195,12 +23167,23 @@ async function emerSave(){
   window._emerPhotos = [];
   window._emerTrackings = [];
 
-  // ★ v9.25: 저장 완료 후 지도 자동 오픈 + 핀 추가
+  // ★ v9.75: 저장 완료 후 지도 핀 추가 (미리보기 핀 제거 후 진짜 핀만)
   record.fbId = docId||'local_'+Date.now();
 
   if(record.gps && record.gps.lat){
     if(window._activeDriverMap){
-      if(window._activeDriverMapEmerLocs) window._activeDriverMapEmerLocs.push(record);
+      // ★ v9.75: 미리보기 핀(_preview_) 전체 제거 후 진짜 핀 추가
+      if(window._activeDriverMapEmerLocs){
+        // 미리보기 핀 제거
+        for(var _pi=window._activeDriverMapEmerLocs.length-1;_pi>=0;_pi--){
+          var _pf=window._activeDriverMapEmerLocs[_pi].fbId||'';
+          if(_pf.indexOf('_preview')===0) window._activeDriverMapEmerLocs.splice(_pi,1);
+        }
+        window._activeDriverMapEmerLocs.push(record);
+      }
+      // ★ v9.75: Firebase 캐시 초기화 → 다음 지도 열기 시 최신 데이터 로드
+      var _ck='_emerLocsFetchedAt_'+(S.curMode==='admin'?'admin':S.curDriver||'');
+      window[_ck]=0;
       if(window._activeDriverMapAddPin) window._activeDriverMapAddPin(record);
       if(window._updateMapCounter) window._updateMapCounter();
       window._activeDriverMap.panTo({lat:record.gps.lat, lng:record.gps.lng});
