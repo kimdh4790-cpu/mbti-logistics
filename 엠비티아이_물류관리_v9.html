@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.68</title>
+<title>엠비티아이 물류관리 v9.69</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10425,7 +10425,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.68 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.69 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -11433,10 +11433,10 @@ function updBadge(){
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
 function updFbUI(){
-  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.68 · 🔥 실시간':'v9.68 · 데모';
+  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.69 · 🔥 실시간':'v9.69 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.63 · Firebase 실시간':'v9.68 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.63 · Firebase 실시간':'v9.69 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -13668,26 +13668,37 @@ function _showGpsHelpModal(reason, onProceed){
   document.getElementById('gps-help-skip').onclick=function(){ mo.remove(); if(typeof onProceed==='function') onProceed(); };
 }
 function _getEmerLocs(){
-  // ★ v9.68: Firebase 데이터를 먼저 기다렸다가 렌더링 (localStorage GPS 불일치 문제 수정)
+  // ★ v9.69: localStorage 우선 (reads 절감) + Firebase 백그라운드 GPS 동기화
+  var local = [];
+  try{ local = JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]'); }catch(e){}
+  var driverLocs = (S.curMode==='admin')
+    ? local.filter(function(x){ return x.gps&&x.gps.lat; })
+    : local.filter(function(x){ return x.driver===S.curDriver && x.gps&&x.gps.lat; });
   if(FB&&_db){
     var q = (S.curMode==='admin')
       ? _db.collection('emergency_deliveries').orderBy('savedAt','desc').limit(60)
       : _db.collection('emergency_deliveries').where('driver','==',S.curDriver).orderBy('savedAt','desc').limit(60);
-    return q.get().then(function(snap){
+    q.get().then(function(snap){
       var fbLocs=[];
       snap.forEach(function(d){ var x=d.data(); x.fbId=d.id; if(x.gps&&x.gps.lat) fbLocs.push(x); });
-      return fbLocs;
-    }).catch(function(){
-      // Firebase 실패 시 localStorage 폴백
-      var local = [];
-      try{ local = JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]'); }catch(e){}
-      return local.filter(function(x){ return x.driver===S.curDriver && x.gps&&x.gps.lat; });
-    });
+      // ★ localStorage GPS 동기화 (관리자/기사 핀 불일치 수정)
+      try{
+        var stored=JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]');
+        fbLocs.forEach(function(fb){
+          var idx=stored.findIndex(function(s){return s.fbId===fb.fbId;});
+          if(idx>=0) stored[idx]=Object.assign({},stored[idx],{gps:fb.gps,status:fb.status});
+          else stored.unshift(fb);
+        });
+        localStorage.setItem('mbti_emergency_del',JSON.stringify(stored.slice(0,200)));
+      }catch(e){}
+      if(window._activeDriverMapEmerLocs){
+        window._activeDriverMapEmerLocs.length=0;
+        fbLocs.forEach(function(x){window._activeDriverMapEmerLocs.push(x);});
+        if(window._rerenderRoutePins)window._rerenderRoutePins();
+      }
+    }).catch(function(){});
   }
-  // 오프라인: localStorage 폴백
-  var local = [];
-  try{ local = JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]'); }catch(e){}
-  return Promise.resolve(local.filter(function(x){ return x.driver===S.curDriver && x.gps&&x.gps.lat; }));
+  return Promise.resolve(driverLocs);
 }
 function _loadMapsScript(apiKey){
   return new Promise(function(res, rej){
@@ -13815,7 +13826,7 @@ function _renderDriverMap(myLoc, emerLocs){
   var map = new kakao.maps.Map(mapDiv, {center:new kakao.maps.LatLng(myLoc.lat,myLoc.lng), level:4});
   map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
 
-  // ★ v9.68: HTML 문자열 사용 (DOM element → b.v 에러 방지)
+  // ★ v9.69: HTML 문자열 사용 (DOM element → b.v 에러 방지)
   function makePin(color, label, size, opacity, clickKey){
     size=size||28; opacity=opacity===undefined?1:opacity;
     var el=document.createElement('div');
@@ -14074,7 +14085,7 @@ function _renderLiveMap(center, driverLocs, emerLocs){
   var legend = document.getElementById('live-map-legend');
   var infoOpen = null;
 
-  // ★ v9.68: HTML 문자열 사용 (b.v 에러 방지)
+  // ★ v9.69: HTML 문자열 사용 (b.v 에러 방지)
   function makeLivePin(initial, color){
     var el=document.createElement('div');
     el.style.cssText='width:34px;height:34px;background:'+color+';border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:bold;box-shadow:0 2px 6px rgba(0,0,0,.5);cursor:pointer;user-select:none;';
@@ -26638,7 +26649,10 @@ function startListeners(){
     // ★ v9.25: settlements.get() 제거 — colPageMap onSnapshot이 처리
     // ── 근무표(schedules) Firebase에서 초기 로드 (onSnapshot 없으므로 유지)
     // ★ v9.29: 3개월 윈도우 필터 (이전월 + 현재월 + 다음월) — 누적 read 폭증 차단
-    if(!window._schedulesGetDone){
+    // ★ v9.69: schedules — 오늘 날짜 기준 하루 1회만 읽기 (대량 reads 차단)
+    var _schedTodayKey='mbti_schedGetDate';
+    var _schedLastDate=localStorage.getItem(_schedTodayKey)||'';
+    if(!window._schedulesGetDone && _schedLastDate!==today()){
       window._schedulesGetDone=true;
       var _schedNow=new Date();
       var _schedPrevMonth=new Date(_schedNow.getFullYear(),_schedNow.getMonth()-1,1);
@@ -26667,6 +26681,7 @@ function startListeners(){
           localStorage.setItem(key,JSON.stringify(Object.assign({},existing,grouped[key])));
         });
         if(S.page==='schedule_admin'||S.page==='dash')SP(S.page,null);
+        localStorage.setItem('mbti_schedGetDate',today());
         console.log('[Firebase] schedules 로드 (3개월 윈도우):',snap.size,'건');
       }).catch(function(e){
         if(e&&e.code==='already-exists'){return;} // ★ v9.25: silent — 자동 복구되어 read 발생 안 함
