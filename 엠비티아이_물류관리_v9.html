@@ -13733,8 +13733,56 @@ function _closeDriverMap(){
   }
 }
 
+
+// ★ v9.80: 잘못된 운송장 + GPS 자동 정리 (1회 실행)
+async function _fixWrongTrackings(){
+  var doneKey = 'mbti_track_fixed_v2';
+  if(localStorage.getItem(doneKey)) return;
+  if(!FB || !_db) return;
+  try{
+    var snap = await _db.collection('emergency_deliveries')
+      .where('driver','==', S.curDriver||'')
+      .limit(100).get();
+    var updates = [];
+    snap.forEach(function(doc){
+      var d = doc.data();
+      // 운송장 정리
+      var tracks = d.trackings || (d.tracking ? [d.tracking] : []);
+      var clean = tracks.filter(function(t){ return /^10\d{12}$/.test(t); });
+      var trackChanged = (JSON.stringify(clean) !== JSON.stringify(tracks));
+      // GPS 정리 대상: device_fallback이거나 src 없는 것
+      var gpsBad = !d.gps || !d.gps.lat || d.gps.src === 'device_fallback' || d.gps.src === 'device';
+      if(trackChanged || gpsBad){
+        updates.push({ref: doc.ref, data: d, clean: clean, gpsBad: gpsBad});
+      }
+    });
+    if(!updates.length){ localStorage.setItem(doneKey,'1'); return; }
+    // GPS 재지오코딩 (주소 있는 것만)
+    for(var i=0; i<updates.length; i++){
+      var u = updates[i];
+      var upd = {};
+      if(JSON.stringify(u.clean) !== JSON.stringify(u.data.trackings||[])){
+        upd.trackings = u.clean;
+        upd.tracking = u.clean[0] || '';
+      }
+      // ★ v9.80: GPS 재지오코딩 제거
+      // QR에 정확한 GPS 있음 → 재스캔으로만 복구 가능
+      // 카카오/구글 지오코딩은 아파트 동 단위 부정확
+      if(Object.keys(upd).length > 0){
+        await u.ref.update(upd);
+      }
+    }
+    localStorage.setItem(doneKey,'1');
+    console.log('[FIX] 운송장+GPS 자동 정리 완료:', updates.length, '건');
+    // 지도 핀 새로고침
+    if(window._rerenderRoutePins) window._rerenderRoutePins();
+  }catch(e){ console.warn('[FIX] 자동 정리 실패:', e); }
+}
+
 async function openDriverMap(){
   document.getElementById('driver-map-mo')?.remove();
+  // ★ v9.80: 잘못된 운송장 자동 정리 (백그라운드)
+  setTimeout(_fixWrongTrackings, 3000);
   // ★ v9.25: 뒤로가기 인터셉트 (브라우저 back → 지도 닫기)
   history.pushState({map:'driver'}, '');
   window._driverMapHistoryPushed = true;
@@ -13947,8 +13995,10 @@ function _renderDriverMap(myLoc, emerLocs){
       ?'<div style="text-align:center;padding:12px;color:#16a34a;font-weight:800;font-size:14px;background:#f0fdf4;border-radius:10px;margin-bottom:8px">✅ 전체 배송완료</div>'
       :'<button ontouchend="event.stopPropagation();event.preventDefault();'+openFn+'" onclick="'+openFn+'" style="width:100%;padding:14px;background:'+(isPartial?'#f97316':'#16a34a')+';color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px;display:block;touch-action:manipulation">'
         +(isPartial?'🟠 나머지 '+pendCnt+'건 완료처리':'✅ 배송완료 처리')+'</button>';
-    document.body.insertAdjacentHTML('beforeend',
-      '<div id="pin-info-sheet" style="position:fixed;inset:0;z-index:2000;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.45)" ontouchend="if(event.target===this)this.remove()" onclick="if(event.target===this)this.remove()">'
+    var _mapContainer = document.getElementById('driver-map-mo') || document.body;
+    var _sheetPos = document.getElementById('driver-map-mo') ? 'absolute' : 'fixed';
+    _mapContainer.insertAdjacentHTML('beforeend',
+      '<div id="pin-info-sheet" style="position:'+_sheetPos+';inset:0;z-index:10000;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.45)" ontouchend="if(event.target===this)this.remove()" onclick="if(event.target===this)this.remove()">'
       +'<div ontouchend="event.stopPropagation()" onclick="event.stopPropagation()" style="background:var(--bg);border-radius:16px 16px 0 0;padding:20px 16px 36px;width:100%;max-width:480px;max-height:78vh;overflow-y:auto;box-shadow:0 -4px 24px rgba(0,0,0,.25)">'
       +'<div style="width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px"></div>'
       +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">'
@@ -18823,7 +18873,6 @@ function checkDriverNotifications(){
   // ★ v9.25: 비용 절감 — orderBy(sentAt desc) + limit(50). 누적된 오래된 알림 read 방지
   window._notifUnsub = _db.collection('driver_notifications')
     .where('driver','==',S.curDriver)
-    .orderBy('sentAt','desc')
     .limit(50)
     .onSnapshot(function(snap){
       if(snap.empty)return;
@@ -30636,7 +30685,6 @@ function startNotiListeners(){
     // ★ v10.0: 3. 같은 캠프 사고 접수 실시간 감지
     var unsub3=_db.collection('accidents')
       .where('camp','==',myCampFull)
-      .where('createdAt','>',startTime)
       .limit(50).onSnapshot({includeMetadataChanges:false},function(snap){
         snap.docChanges().forEach(function(change){
           if(change.type!=='added')return;
