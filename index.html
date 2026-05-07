@@ -2811,22 +2811,18 @@ Promise.all([fsPromise, emailPromise]).then(function(results){
               });
             }
 
-            // 실시간으로 오늘 방문자 수 표시
-            visitorRef.onSnapshot(function(doc) {
+            // ★ 읽기 절감: onSnapshot → .get() 1회 읽기 (봇 트래픽 reads 폭증 방지)
+            visitorRef.get().then(function(doc) {
               var el = document.getElementById('visitor-count-nav');
               if (!el) return;
               var cnt = doc.exists ? (doc.data().count || 0) : 0;
               el.textContent = cnt;
-              // fb-visitor-wrap도 표시
               var wrap = document.getElementById('fb-visitor-wrap');
               if (wrap) wrap.style.display = 'inline';
-              // ★ 방문자 카운팅 성공 = Firebase 연결 확인
-              showFbStatus('connected', '🟢 실시간 연결됨 · 오늘 ' + cnt + '명 방문');
+              showFbStatus('connected', '🟢 연결됨 · 오늘 ' + cnt + '명 방문');
               var bar = document.getElementById('fbStatusBar');
               if (bar) { bar.classList.remove('hidden'); }
-            }, function() {
-              // Firestore 오류시 조용히 무시
-            });
+            }).catch(function() {});
           })();
 
           /* ── onSnapshot: 연결 감시 ── */
@@ -3213,17 +3209,16 @@ async function doAuthLogin() {
 
   try {
     var pwHash = await hashPw(pw);
-    // 1단계: 해시로 매칭 시도 (신규 방식)
-    var snap = await window._mbtiDb.collection('drivers').where('id','==',id).where('pw','==',pwHash).get();
-
-    // 2단계: 해시 매칭 실패 → 평문으로 매칭 (구버전) + 자동 변환
-    if (snap.empty) {
-      var plainSnap = await window._mbtiDb.collection('drivers').where('id','==',id).where('pw','==',pw).get();
-      if (plainSnap.empty) { msg.textContent='아이디 또는 비밀번호가 틀렸습니다.'; return; }
-      // 자동 해시 업그레이드
-      var docRef = plainSnap.docs[0].ref;
-      try { await docRef.update({ pw: pwHash, pwMigratedAt: new Date().toISOString() }); } catch(e){}
-      snap = plainSnap;
+    // ★ 읽기 절감: id만으로 1회 조회 후 JS에서 비밀번호 검증 (2회 → 1회)
+    var snap = await window._mbtiDb.collection('drivers').where('id','==',id).limit(1).get();
+    if (snap.empty) { msg.textContent='아이디 또는 비밀번호가 틀렸습니다.'; return; }
+    var dData = snap.docs[0].data();
+    // 해시 또는 평문 비밀번호 검증
+    var pwMatch = (dData.pw === pwHash) || (dData.pw === pw);
+    if (!pwMatch) { msg.textContent='아이디 또는 비밀번호가 틀렸습니다.'; return; }
+    // 평문 비밀번호였으면 해시로 자동 업그레이드
+    if (dData.pw === pw && dData.pw !== pwHash) {
+      try { await snap.docs[0].ref.update({ pw: pwHash, pwMigratedAt: new Date().toISOString() }); } catch(e){}
     }
 
     var d = snap.docs[0].data();
@@ -3276,11 +3271,19 @@ function afterMbtiLogin() {
   // v9.2: 이전 settlements 구독 해제 후 재구독 (Target ID 충돌 방지)
   if (window._mbtiSettlementsUnsub) { try { window._mbtiSettlementsUnsub(); } catch(e){} }
   if (_mbtiUser && _mbtiUser.role === 'driver' && window._mbtiDb) {
+    // ★ 읽기 절감: onSnapshot의 snap 데이터를 직접 사용 (loadSettlement .get() 이중 읽기 제거)
     window._mbtiSettlementsUnsub = window._mbtiDb.collection('settlements')
       .where('driverId','==',_mbtiUser.id)
       .orderBy('date','desc').limit(5)
       .onSnapshot(function(snap) {
-        loadSettlement(); // 최신 정산 자동 갱신
+        var el = document.getElementById('settlement-content');
+        if (!el || !_mbtiUser) return;
+        if (snap.empty) {
+          el.innerHTML='<div style="text-align:center;padding:20px;color:#888;">정산 내역이 없습니다.</div>';
+          return;
+        }
+        var rows = snap.docs.map(function(doc){ return doc.data(); });
+        renderSettlementData(el, rows);
       }, function(){});
   }
 
