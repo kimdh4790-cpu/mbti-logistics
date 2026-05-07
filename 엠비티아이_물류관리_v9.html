@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.75</title>
+<title>엠비티아이 물류관리 v9.76</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10425,7 +10425,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.75 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.76 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -11402,10 +11402,10 @@ function updBadge(){
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
 function updFbUI(){
-  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.75 · 🔥 실시간':'v9.75 · 데모';
+  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.76 · 🔥 실시간':'v9.75 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.75 · Firebase 실시간':'v9.75 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.76 · Firebase 실시간':'v9.76 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -13916,7 +13916,7 @@ function _renderDriverMap(myLoc, emerLocs){
           var s=tStatus[t]&&tStatus[t].status==='완료';
           return '<div style="display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid var(--border)">'
             +'<span style="color:'+(s?'#16a34a':'#dc2626')+';font-weight:900;font-size:14px">'+( s?'✓':'·')+'</span>'
-            +'<span style="font-family:monospace;font-size:11px;color:'+(s?'var(--text3)':'var(--text)')+';'+(s?'text-decoration:line-through':'')+'">'+t+'</span>'
+            +'<span style="font-family:monospace;font-size:11px;color:'+(s?'var(--text3)':'var(--text)')+';word-break:break-all;'+(s?'text-decoration:line-through':'')+'">'+t+'</span>'
             +'</div>';
         }).join('')
         +'</div>';
@@ -13929,7 +13929,9 @@ function _renderDriverMap(myLoc, emerLocs){
     var ph=photos.slice(0,3).filter(function(u){return u&&u.length>10;})
       .map(function(url){return '<img src="'+url+'" style="width:58px;height:58px;object-fit:cover;border-radius:8px;border:2px solid '+pinColor+'">';}).join('');
     var closeFn="var _s=document.getElementById('pin-info-sheet');if(_s)_s.remove();";
-    var openFn="openDelivComplete(window._pinSheetFbId,encodeURIComponent(window._pinSheetData));"+closeFn;
+    // ★ v9.75: 탭 즉시 로딩 오버레이 (Firebase fetch 대기 중 지도 위로)
+    var loadFn="var _ld=document.createElement('div');_ld.id='_dc-loading';_ld.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:11000;display:flex;align-items:center;justify-content:center';_ld.innerHTML='<div style=\'background:var(--bg);border-radius:12px;padding:20px 28px;font-size:14px;font-weight:700\'>⏳ 불러오는 중...</div>';document.body.appendChild(_ld);";
+    var openFn=loadFn+"openDelivComplete(window._pinSheetFbId,encodeURIComponent(window._pinSheetData));"+closeFn;
     var actionBtn=isDone
       ?'<div style="text-align:center;padding:12px;color:#16a34a;font-weight:800;font-size:14px;background:#f0fdf4;border-radius:10px;margin-bottom:8px">✅ 전체 배송완료</div>'
       :'<button ontouchend="event.stopPropagation();event.preventDefault();'+openFn+'" onclick="'+openFn+'" style="width:100%;padding:14px;background:'+(isPartial?'#f97316':'#16a34a')+';color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px;display:block;touch-action:manipulation">'
@@ -22438,11 +22440,25 @@ function _emerHandleScan(raw, statusEl){
   if(qp.order_id){var oe=document.getElementById('emer-orderid');if(oe&&!oe.value){oe.value=qp.order_id;fld.push('주문번호');}}
   if(qp.memo){var dm=document.getElementById('emer-delivmemo');if(dm&&!dm.value)dm.value=qp.memo;}
   if(qp.lat&&qp.lng){
+    // ★ v9.75: QR GPS 기본 세팅, 동번호 있으면 카카오 지오코딩으로 정밀화
     window._emerGps={lat:qp.lat,lng:qp.lng,src:'QR'};fld.push('GPS');
     var gpsEl=document.getElementById('emer-gps-status');
-    if(gpsEl)gpsEl.innerHTML='<span style="color:var(--teal)">📍 QR GPS: '+qp.lat.toFixed(6)+', '+qp.lng.toFixed(6)+'</span>';
+    if(gpsEl)gpsEl.innerHTML='<span style="color:var(--blue)">📍 좌표 정밀화 중...</span>';
+    // 아파트 동 번호 있으면 카카오로 해당 동 정확히 찍기
+    if(qp.address && /\d+동/.test(qp.address)){
+      _kakaoGeocode(qp.address).then(function(kpos){
+        if(!kpos) return;
+        window._emerGps = {lat:kpos.lat, lng:kpos.lng, src:'kakao', addr:qp.address};
+        var gEl=document.getElementById('emer-gps-status');
+        if(gEl) gEl.innerHTML='<span style="color:var(--teal)">📍 동 위치 정밀화 ✅</span>';
+      }).catch(function(){
+        var gEl=document.getElementById('emer-gps-status');
+        if(gEl) gEl.innerHTML='<span style="color:var(--teal)">📍 QR GPS 사용</span>';
+      });
+    } else {
+      if(gpsEl) gpsEl.innerHTML='<span style="color:var(--teal)">📍 QR GPS ✅</span>';
+    }
   } else if(qp.address) {
-    // ★ v9.58: Kakao Geocoding (Google Maps 대체)
     var _gcAddr = qp.address;
     var gpsEl2 = document.getElementById('emer-gps-status');
     if(gpsEl2) gpsEl2.innerHTML='<span style="color:var(--blue)">📍 배송지 좌표 변환 중...</span>';
@@ -22451,7 +22467,6 @@ function _emerHandleScan(raw, statusEl){
       window._emerGps = {lat:kpos.lat, lng:kpos.lng, src:'kakao', addr:_gcAddr};
       var gEl = document.getElementById('emer-gps-status');
       if(gEl) gEl.innerHTML='<span style="color:var(--teal)">📍 배송지 GPS 확인 ✅</span>';
-      // ★ v9.75: 미리보기 핀 제거 — emerSave 완료 후에만 진짜 핀 생성
     }).catch(function(){});
   }
 
@@ -22461,7 +22476,7 @@ function _emerHandleScan(raw, statusEl){
     if(_scanMo){ _scanMo.style.display='none'; emerStopScan&&emerStopScan(); }
     if(statusEl) statusEl.innerHTML = '<span style="color:var(--teal)">📸 스캔 ✅ → 💾 저장 중...</span>';
     window._emerSaving = false;
-    setTimeout(function(){ if(typeof emerSave==='function') emerSave(); }, 600);
+    setTimeout(function(){ if(typeof emerSave==='function') emerSave(); }, 300); // ★ v9.75: 빠른 저장
     return;
   }
 
@@ -22947,7 +22962,7 @@ async function emerSave(){
   }
 
   // ★ v9.25: 저장 직전 GPS 처리 — QR/OCR 때 이미 Geocoding 완료된 경우 재실행 안 함 (속도 개선)
-  if(window._emerGps && (window._emerGps.src==='geocode'||window._emerGps.src==='QR')){
+  if(window._emerGps && (window._emerGps.src==='geocode'||window._emerGps.src==='QR'||window._emerGps.src==='kakao')){
     // 이미 배송지 좌표 확보됨 → 그대로 사용
     gpsClean = {lat:window._emerGps.lat, lng:window._emerGps.lng, acc:0, src:window._emerGps.src};
     console.log('[emerSave] 기존 배송지 GPS 사용:', window._emerGps.src);
@@ -22963,7 +22978,7 @@ async function emerSave(){
   if(!gpsClean && navigator.geolocation){
     try{
       var _pos = await new Promise(function(res,rej){
-        navigator.geolocation.getCurrentPosition(res,rej,{timeout:3000,enableHighAccuracy:true,maximumAge:10000});
+        navigator.geolocation.getCurrentPosition(res,rej,{timeout:1500,enableHighAccuracy:true,maximumAge:30000}); // ★ v9.75
       });
       gpsClean = {lat:_pos.coords.latitude, lng:_pos.coords.longitude, acc:_pos.coords.accuracy, src:'device_fallback'};
     }catch(e){}
@@ -23249,6 +23264,7 @@ async function emerSendAdminAlert(){
 // ★ v9.25: 배송완료 처리 모달 (지도 핀 클릭 → 완료사진 + Firebase 상태 업데이트)
 async function openDelivComplete(fbId, dataEncoded){
   document.getElementById('deliv-complete-mo')?.remove();
+  var _ldEl=document.getElementById('_dc-loading');if(_ldEl)_ldEl.remove(); // ★ v9.75: 로딩 오버레이 제거
 
   var info = {};
   try{ info = JSON.parse(decodeURIComponent(dataEncoded||'{}')); }catch(e){}
@@ -23527,6 +23543,59 @@ async function dcAddPhoto(file){
     }
     dcUpdatePhotoCount();
     toast('✅ 사진 '+window._delivCompletePhotos.length+'장 추가됨');
+    // ★ v9.75: 첫 번째 사진 추가 즉시 호수확인 팝업 (저장 전에 인지)
+    if(window._delivCompletePhotos.length === 1){
+      var _pinAddr3 = (window._delivCompletePinData||{}).addr||'';
+      var _hoMatch3 = _pinAddr3.match(/(\d+)\s*호/);
+      if(_hoMatch3){
+        var _expectedHo3 = _hoMatch3[1]+'호';
+        // 백그라운드 OCR 시작 (사진 저장 직후)
+        var _ocrP3 = _checkDelivPhotoHo(dataUrl, _expectedHo3);
+        // 즉시 팝업
+        var _mo3 = document.createElement('div');
+        _mo3.id = '_ho-modal';
+        _mo3.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:11000;display:flex;align-items:center;justify-content:center;padding:20px';
+        _mo3.innerHTML='<div style="background:var(--bg);border-radius:16px;padding:22px;max-width:320px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.3)">'
+          +'<div style="font-size:18px;font-weight:800;margin-bottom:6px;text-align:center">🚪 호수 확인</div>'
+          +'<div style="font-size:13px;color:var(--text2);text-align:center;margin-bottom:18px">'
+            +'운송장 주소: <b style="color:var(--purple);font-size:16px">'+_expectedHo3+'</b><br>'
+            +'<span id="_ho-ocr-status" style="font-size:12px">실제 배달한 호수가 맞나요?</span>'
+          +'</div>'
+          +'<div style="display:flex;gap:8px">'
+            +'<button ontouchstart="" onclick="window._hoResolveDc&&window._hoResolveDc(true)" style="-webkit-tap-highlight-color:transparent;flex:1;padding:16px;background:var(--green);color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:800;cursor:pointer">✅ 맞아요</button>'
+            +'<button ontouchstart="" onclick="window._hoResolveDc&&window._hoResolveDc(false)" style="-webkit-tap-highlight-color:transparent;flex:1;padding:16px;background:#dc2626;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:800;cursor:pointer">❌ 달라요</button>'
+          +'</div>'
+          +'</div>';
+        window._hoResolveDc = function(ok){
+          var el=document.getElementById('_ho-modal');if(el)el.remove();
+          delete window._hoResolveDc;
+          if(!ok){
+            // 오배송 경고
+            try{if(typeof _tts==='function')_tts('오배송 오배송');}catch(e){}
+            try{navigator.vibrate&&navigator.vibrate([400,150,400,150,400]);}catch(e){}
+            toast('🚨 호수 오류! 정확한 호수에 배달 후 다시 사진을 찍어주세요');
+            // 사진 제거 (오배송이면 다시 찍어야 함)
+            window._delivCompletePhotos.pop();
+            var prev=document.getElementById('dc-photo-preview');
+            if(prev&&prev.lastElementChild)prev.lastElementChild.remove();
+            dcUpdatePhotoCount();
+          }
+        };
+        // OCR 완료 시 자동 처리
+        _ocrP3.then(function(_det){
+          if(!document.getElementById('_ho-modal')) return;
+          var sp=document.getElementById('_ho-ocr-status');
+          if(_det && _det === _expectedHo3){
+            if(sp) sp.textContent='📷 '+_det+' 자동 확인 ✅';
+            setTimeout(function(){ if(window._hoResolveDc) window._hoResolveDc(true); }, 800);
+          } else if(_det && _det !== _expectedHo3){
+            if(sp) sp.innerHTML='<b style="color:#dc2626">📷 인식: '+_det+'</b> — 다른 호수!';
+          }
+        }).catch(function(){});
+        document.body.appendChild(_mo3);
+        window._dcHoChecked = true; // 이미 확인했으니 saveDelivComplete에서 skip
+      }
+    }
   }catch(e){
     console.warn('사진 압축 실패:', e.message);
     toast('❌ 사진 추가 실패: '+e.message);
@@ -23627,7 +23696,7 @@ async function saveDelivComplete(){
         navigator.geolocation.getCurrentPosition(
           function(p){res({lat:p.coords.latitude, lng:p.coords.longitude, acc:p.coords.accuracy});},
           function(){res(null);},
-          {timeout:3000, enableHighAccuracy:true, maximumAge:10000}
+          {timeout:1500, enableHighAccuracy:true, maximumAge:30000} // ★ v9.75: 캐시 30s, timeout 1.5s
         );
       });
       if(_devPos){
@@ -23677,10 +23746,11 @@ async function saveDelivComplete(){
     }
   }catch(e){ console.warn('[배송완료 거리 검증 실패]', e&&e.message); }
 
-  // ★ v9.48: 호수 오류 감지 — 팝업 먼저(즉시), OCR은 백그라운드 (저장 느림 해결)
+  // ★ v9.75: dcAddPhoto에서 이미 호수 확인 완료 → skip
+  window._dcHoChecked = false; // 다음 번을 위해 초기화
   var _pinAddr2 = (window._delivCompletePinData||{}).addr||'';
   var _hoMatch = _pinAddr2.match(/(\d+)\s*호/);
-  if(_hoMatch){
+  if(_hoMatch && false){ // ★ v9.75: dcAddPhoto에서 처리하므로 비활성화
     var _expectedHo = _hoMatch[1]+'호';
     var _photos = window._delivCompletePhotos||[];
 
