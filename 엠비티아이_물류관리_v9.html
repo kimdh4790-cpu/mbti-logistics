@@ -14219,6 +14219,8 @@ function _renderDriverMap(myLoc, emerLocs){
     panel.style.display='flex';
     panel.style.flexDirection='column';
   };
+  // ★ v9.82: 패널 표시 핸들러 참조 저장 (무한루프 방지)
+  var _panelClickHandler = window._mbtiPinClick;
   function renderRoutePins(){
     (window._driverMapPinMarkers||[]).forEach(function(o){try{o.setMap(null);}catch(e){}});
     window._driverMapPinMarkers=[];window._driverMapMarkers={};_pinDataMap={};
@@ -14291,7 +14293,9 @@ function _renderDriverMap(myLoc, emerLocs){
   }
 
   function _showPinInfoDirect(x){
-    var k=x._pinKey||x.fbId||'';window._mbtiPinClick&&window._mbtiPinClick(k);
+    // ★ v9.82: window._mbtiPinClick 대신 저장된 원본 핸들러 직접 호출 (무한루프 방지)
+    var k=x._pinKey||x.fbId||'';
+    if(_panelClickHandler) _panelClickHandler(k);
   }
 
   window._activeDriverMap=map;window._activeDriverMapEmerLocs=emerLocs;
@@ -21532,6 +21536,25 @@ function _parseQrText(text){
   if(!text) return {};
   var result = {};
 
+  // ★ v9.82: 쿠팡 URL QR 파싱 (파란 송장: coupangls.com/coupang.com URL 형식)
+  if(text.indexOf('http')===0 || text.indexOf('coupang')>=0){
+    // 운송장번호: trackingId 또는 shipmentId 파라미터
+    var tMatch = text.match(/[?&](?:trackingId|trackingNumber|trackId|shipmentSid|track)=([0-9]{8,20})/i)
+                 || text.match(/\/tracking\?.*?id=([0-9]{8,20})/i)
+                 || text.match(/([0-9]{14})(?:[^0-9]|$)/);
+    if(tMatch) result.tracking_no = tMatch[1];
+    // 주문번호: orderId 파라미터
+    var oMatch = text.match(/[?&](?:orderId|order_id|oid)=([0-9]{10,16})/i);
+    if(oMatch) result.order_id = oMatch[1];
+    // 주소: URL에 한글 주소가 인코딩된 경우
+    try{
+      var dec = decodeURIComponent(text);
+      var aMatch = dec.match(/[가-힣]{2,}(?:시|구|동|로|길)[^&\s]{3,50}/);
+      if(aMatch) result.address = aMatch[0];
+    }catch(e){}
+    if(result.tracking_no) return result; // URL에서 운송장 추출 성공
+  }
+
   // ★ 쿠팡 QR 파이프 구분 형식 우선 파싱
   if(text.indexOf('|') >= 0){
     var parts = text.split('|').map(function(p){ return p.trim(); }).filter(Boolean);
@@ -21662,7 +21685,7 @@ async function _emerVisionScan(b64, statusEl){
           role:'user',
           content:[
             {type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},
-            {type:'text',text:'쿠팡 택배 송장 이미지입니다. 이미지에 보이는 텍스트만 읽어 JSON 한 줄로만 응답(설명/마크다운 금지).\n규칙: ①없는 글자 추가금지 ②주소 앞에 임의 시/도명 추가금지 ③숫자는 이미지 그대로\n{"tracking":"운송장번호(10으로시작14자리,숫자만,예:10318007213721)","order":"주문번호(27로시작14자리 OR 7로시작13자리,숫자만,없으면null)","address":"배송지주소(도로명+건물번호+동호수전부,예:수영구무학로21번길16 101호)","name":"수령인(김*우형태)","route":"라우트코드(예:812B01,없으면null)"}\n없는항목=null'}
+            {type:'text',text:'쿠팡 택배 송장입니다(파란/흰 배경 모두 가능). 이미지에 실제로 적힌 텍스트만 읽어 JSON 한 줄로만 응답(설명 없이).\n규칙: ①없는 글자 추가 금지 ②시/도 임의추가 금지 ③숫자 그대로\n배송지 주소 찾는 법: 구/동/로/길 포함된 줄 + 아파트명 + 동호수를 이어붙이기\n{"tracking":"운송장(10으로시작14자리숫자만)","order":"주문번호(27시작14자리 OR 7시작13자리,없으면null)","address":"도로명주소+아파트+동+호수 전부(예:사상구모라로110번길421 모라영구임대아파트106동1209호)","name":"수령인이름(김*식형태)","route":"★별표뒤 라우트코드(예:812B01)"}\n없는항목=null'}
           ]
         }]
       })
@@ -21682,6 +21705,12 @@ async function _emerVisionScan(b64, statusEl){
     if(!track && !addr){
       if(statusEl) statusEl.innerHTML = '⚠️ 송장 정보를 찾을 수 없습니다';
       return;
+    }
+    // ★ v9.82: 주소 → 카카오 지오코딩으로 GPS 핀 자동 생성
+    if(addr && (!window._emerGps || window._emerGps.src==='device_fallback')){
+      _kakaoGeocode(addr).then(function(gps){
+        if(gps){ window._emerGps={lat:gps.lat,lng:gps.lng,src:'kakao'}; }
+      }).catch(function(){});
     }
     // ★ v9.82: 운송장 형식 검증 (10으로 시작 14자리)
     if(track && !(track.startsWith('10') && track.length === 14)){
@@ -21738,53 +21767,66 @@ function emerUnifiedScan(input){
   input.value = '';
   if(statusEl) statusEl.innerHTML = '🔍 QR 분석 중...';
 
+  // ★ v9.82: 원본 파일을 고해상도로 캔버스에 그림 (3000px — QR 품질 보존)
   var url = URL.createObjectURL(file);
   var img = new Image();
   img.onload = function(){
     URL.revokeObjectURL(url);
-    var scale = Math.min(1, 2000/Math.max(img.naturalWidth, img.naturalHeight));
+    var scale = Math.min(1, 3000/Math.max(img.naturalWidth, img.naturalHeight)); // 2000→3000
     var cw=Math.round(img.naturalWidth*scale), ch=Math.round(img.naturalHeight*scale);
     var cv=document.createElement('canvas'); cv.width=cw; cv.height=ch;
     cv.getContext('2d').drawImage(img,0,0,cw,ch);
 
     function goOCR(){
-      // ★ v9.57: QR 실패 → Claude Vision으로 송장 전체 분석 (파란 송장 포함)
       if(statusEl) statusEl.innerHTML = '🤖 AI 송장 인식 중...';
-      var b64 = cv.toDataURL('image/jpeg', 0.85).split(',')[1];
+      // ★ v9.82: OCR엔 원본 고품질 이미지 전송 (파란송장 포함)
+      var b64 = cv.toDataURL('image/jpeg', 0.92).split(',')[1];
       _emerVisionScan(b64, statusEl);
     }
 
-    // ① BarcodeDetector — 전체 코드 순회, V1| 큰QR 우선 (★ v9.82)
-    if('BarcodeDetector' in window){
+    function tryBarcodeDetector(){
+      if(!('BarcodeDetector' in window)){ _nativeCamJsQR(cv,cw,ch,statusEl,goOCR); return; }
       var bd;
       try{ bd=new BarcodeDetector({formats:['qr_code','data_matrix','aztec','pdf417','code_128']}); }
       catch(e){ try{ bd=new BarcodeDetector({formats:['qr_code','pdf417']}); }catch(e2){
         try{ bd=new BarcodeDetector({formats:['qr_code']}); }catch(e3){} } }
-      if(bd){
-        bd.detect(cv).then(function(codes){
-          if(codes && codes.length){
-            // ★ v9.82: 전체 코드 중 V1| (쿠팡 큰 QR) 우선 탐색
-            var v1=null, pipeQr=null, anyQr=null;
-            for(var ci=0; ci<codes.length; ci++){
-              var rv=codes[ci].rawValue||'';
-              if(rv.indexOf('V1|')===0){ v1=rv; break; }
-              if(!pipeQr && rv.indexOf('|')>=2 && codes[ci].format==='qr_code') pipeQr=rv;
-              if(!anyQr && rv.length>20 && codes[ci].format==='qr_code') anyQr=rv;
-            }
-            var best=v1||pipeQr||anyQr;
-            if(best){
-              if(statusEl) statusEl.textContent='✅ QR 인식!';
-              _emerHandleScan(best, statusEl);
-            } else {
-              _nativeCamJsQR(cv,cw,ch,statusEl,goOCR);
-            }
-          } else { _nativeCamJsQR(cv,cw,ch,statusEl,goOCR); }
-        }).catch(function(){ _nativeCamJsQR(cv,cw,ch,statusEl,goOCR); });
-        return;
+      if(!bd){ _nativeCamJsQR(cv,cw,ch,statusEl,goOCR); return; }
+
+      function findBest(codes){
+        if(!codes||!codes.length) return null;
+        var v1=null, pipeQr=null, anyQr=null;
+        for(var ci=0; ci<codes.length; ci++){
+          var rv=codes[ci].rawValue||'';
+          if(rv.indexOf('V1|')===0){ v1=rv; break; }
+          if(!pipeQr && rv.indexOf('|')>=2 && codes[ci].format==='qr_code') pipeQr=rv;
+          if(!anyQr && rv.length>20 && codes[ci].format==='qr_code') anyQr=rv;
+        }
+        return v1||pipeQr||anyQr;
       }
+
+      // ★ v9.82: 1순위 — 원본 파일 직접 (화질 손실 없음)
+      createImageBitmap(file).then(function(bmp){
+        return bd.detect(bmp).then(function(codes){
+          bmp.close&&bmp.close();
+          var best=findBest(codes);
+          if(best){ if(statusEl) statusEl.textContent='✅ QR 인식!'; _emerHandleScan(best,statusEl); return; }
+          // 2순위 — 캔버스 (스케일된 이미지)
+          return bd.detect(cv).then(function(codes2){
+            var best2=findBest(codes2);
+            if(best2){ if(statusEl) statusEl.textContent='✅ QR 인식!'; _emerHandleScan(best2,statusEl); return; }
+            _nativeCamJsQR(cv,cw,ch,statusEl,goOCR);
+          });
+        });
+      }).catch(function(){
+        bd.detect(cv).then(function(codes){
+          var best=findBest(codes);
+          if(best){ if(statusEl) statusEl.textContent='✅ QR 인식!'; _emerHandleScan(best,statusEl); return; }
+          _nativeCamJsQR(cv,cw,ch,statusEl,goOCR);
+        }).catch(function(){ _nativeCamJsQR(cv,cw,ch,statusEl,goOCR); });
+      });
     }
-    // ② jsQR (로컬, API 비용 0)
-    _nativeCamJsQR(cv, cw, ch, statusEl, goOCR);
+
+    tryBarcodeDetector();
   };
   img.onerror = function(){ URL.revokeObjectURL(url); if(statusEl) statusEl.textContent='❌ 이미지 로드 실패'; };
   img.src = url;
@@ -22265,7 +22307,27 @@ function _emerHandleScan(raw, statusEl){
       return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
     }
     if(_qpCheck.address){
-      var _newGps = _qpCheck.lat ? {lat:_qpCheck.lat,lng:_qpCheck.lng} : (window._emerGps||null);
+      // ★ v9.82: QR에 GPS 없으면 카카오 지오코딩으로 주소→좌표 변환 (파란 송장 대응)
+      var _newGps = _qpCheck.lat ? {lat:_qpCheck.lat,lng:_qpCheck.lng,src:'QR'} : (window._emerGps||null);
+      if(!_qpCheck.lat && _qpCheck.address && window._cachedKakaoApiKey){
+        (function(_addr, _qp){
+          var _gurl = 'https://dapi.kakao.com/v2/local/search/address.json?query='+encodeURIComponent(_addr);
+          fetch(_gurl,{headers:{'Authorization':'KakaoAK '+window._cachedKakaoApiKey}})
+            .then(function(r){return r.json();})
+            .then(function(d){
+              if(d.documents&&d.documents[0]){
+                var _g={lat:parseFloat(d.documents[0].y),lng:parseFloat(d.documents[0].x),src:'kakao_addr',acc:50};
+                _qp.lat=_g.lat; _qp.lng=_g.lng;
+                window._emerGps=_g;
+                // 핀이 이미 생성됐으면 위치 업데이트
+                if(window._activeDriverMapEmerLocs){
+                  var _rec=window._activeDriverMapEmerLocs.find(function(r){return r.tracking===(_qp.tracking_no||'');});
+                  if(_rec){_rec.gps=_g; if(window._rerenderRoutePins)window._rerenderRoutePins();}
+                }
+              }
+            }).catch(function(){});
+        })(_qpCheck.address, _qpCheck);
+      }
       var _newUnit = _extractUnit(_qpCheck.address);
       var _newName = (_qpCheck.recipient||'').replace(/\*/g,'');
       var _bundle = _todayLocs.find(function(x){
