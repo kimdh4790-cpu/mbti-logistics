@@ -13691,6 +13691,23 @@ function _getEmerLocs(){
         });
         localStorage.setItem('mbti_emergency_del',JSON.stringify(stored.slice(0,200)));
       }catch(e){}
+      // ★ v9.61: GPS 없는 저장 기록 → 주소 보정 + Geocoding → Firebase 업데이트
+      fbLocs.forEach(function(x){
+        if(x.gps&&x.gps.lat) return; // GPS 있으면 skip
+        if(!x.addr) return;
+        _kakaoGeocode(x.addr).then(function(pos){
+          if(!pos) return;
+          var gpsData={lat:pos.lat,lng:pos.lng,src:'kakao_fix'};
+          var addrFixed=pos.address||x.addr;
+          x.gps=gpsData; x.addr=addrFixed;
+          // Firebase 업데이트
+          if(x.fbId&&FB&&_db){
+            _db.collection('emergency_deliveries').doc(x.fbId)
+              .update({gps:gpsData,addr:addrFixed}).catch(function(){});
+          }
+          if(window._rerenderRoutePins)window._rerenderRoutePins();
+        }).catch(function(){});
+      });
       if(window._activeDriverMapEmerLocs){
         window._activeDriverMapEmerLocs.length=0;
         fbLocs.forEach(function(x){window._activeDriverMapEmerLocs.push(x);});
@@ -13857,7 +13874,7 @@ function _renderDriverMap(myLoc, emerLocs){
   function makePin(color, label, size, opacity, clickKey){
     size=size||28; opacity=opacity===undefined?1:opacity;
     var k = clickKey||'';
-    var tapAttr = k ? ' onclick="if(window._mbtiPinClick)window._mbtiPinClick(this.getAttribute(\'data-k\'))" ontouchend="event.stopPropagation();event.preventDefault();if(window._mbtiPinClick)window._mbtiPinClick(this.getAttribute(\'data-k\'))" data-k="'+k+'"' : '';
+    var tapAttr = k ? ' onclick="if(window._mbtiPinClick)window._mbtiPinClick(this.getAttribute(\'data-pinkey\'))" ontouchend="event.stopPropagation();event.preventDefault();if(window._mbtiPinClick)window._mbtiPinClick(this.getAttribute(\'data-pinkey\'))" data-pinkey="'+k+'"' : '';
     return '<div style="width:'+size+'px;height:'+size+'px;background:'+color+';border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:'+(size>=30?'13px':'11px')+';font-weight:bold;box-shadow:0 2px 6px rgba(0,0,0,.5);opacity:'+opacity+';cursor:pointer;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent"'+tapAttr+'>'+label+'</div>';
   }
   function _attachPinClick(overlay, key){
@@ -20918,13 +20935,17 @@ async function _kakaoGeocode(address){
 
     // ★ v9.61: 2차 — 부산 구 이름이 있으면 앞의 잘못된 시/구 접두사 제거 후 재시도
     // OCR이 "서울시 강남구 수영로..." 처럼 읽을 때 "수영구 수영로..."로 수정
-    var busanMatch = address.match(/(수영구|사상구|해운대구|부산진구|동래구|남구|연제구|금정구|강서구|기장군|북구|중구|서구|동구|영도구)/);
+    // ★ v9.61: 부산 구/동/로 이름 + OCR 오인식 패턴 포함
+    var busanMatch = address.match(/(수영구|사상구|사향구|해운대구|부산진구|동래구|남구|연제구|금정구|강서구|기장군|북구|중구|서구|동구|영도구|광안동|광안1동|광안2동|광안3동|모라동|화명동|덕포동|엄궁동|감전동|주례동|학장동|개금동)/);
     if(busanMatch){
       var fixedAddr = address.slice(address.indexOf(busanMatch[0]));
       if(fixedAddr !== address){
         console.log('[Geocoding] 주소 보정:', address.slice(0,15),'→', fixedAddr.slice(0,15));
         result = await _kakaoQuery(fixedAddr);
-        if(result) return { lat:result.lat, lng:result.lng, address:fixedAddr };
+        if(result){
+          // 보정된 주소를 원본에 반영 (저장 시 올바른 주소로)
+          return { lat:result.lat, lng:result.lng, address:fixedAddr, _corrected:true };
+        }
       }
     }
     console.warn('[Geocoding] 결과 없음:', address.slice(0,20));
@@ -21818,7 +21839,7 @@ async function _emerVisionScan(b64, statusEl){
           role:'user',
           content:[
             {type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},
-            {type:'text',text:'쿠팡 택배 송장 이미지입니다. 다음 정보를 추출해서 JSON만 응답하세요(설명 없이):\n{"tracking":"운송장번호(숫자만,하이픈제외)","address":"배송지전체주소(동호수포함)","name":"수령인이름","route":"라우트코드(예:812B01,없으면null)"}\n없는 항목은 null.'}
+            {type:'text',text:'쿠팡 택배 송장 이미지입니다. 이미지에 실제로 적힌 텍스트만 읽어 JSON으로 응답하세요(설명 없이).\n절대 금지: 이미지에 없는 글자 추가, 시/도 이름 추측, 주소 앞에 내용 임의 삽입.\n{"tracking":"운송장번호(숫자만,하이픈제외)","address":"배송지주소(이미지에 보이는 글자 그대로만,앞에 아무것도 추가하지말것)","name":"수령인이름","route":"라우트코드(예:812B01,없으면null)"}\n없는 항목은 null.'}
           ]
         }]
       })
