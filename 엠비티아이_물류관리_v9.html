@@ -21581,14 +21581,29 @@ async function emerOcrScan(file, _statusOverride){
     // ★ v9.61: OCR 주소 → Kakao Geocoding + 부산/경남 외 지역 경고
     var pinGps = null;
     if(p.address){
-      // ★ OCR 오인식 검증: 서울/경기 등 타지역 주소면 신뢰도 낮음
-      var _suspectAddr = /^서울|^경기|^인천|^대전|^광주|^대구|^울산시/.test(p.address);
-      if(_suspectAddr){
-        if(status) status.innerHTML = '<span style="color:#ef4444">⚠️ 주소 확인 필요: '+p.address.slice(0,20)+'...</span>';
-        // 타지역 주소는 Geocoding 안 하고 현위치 GPS 사용
-        p.address = ''; // 의심 주소 무효화
-        var ad=document.getElementById('emer-addr'); if(ad) ad.value='';
-      } else if(status) status.innerHTML = '<span style="color:var(--blue)">📍 배송지 좌표 변환 중...</span>';
+      // ★ v9.61: OCR이 "서울시 강남구 수영로..." 처럼 잘못된 시/구를 앞에 붙이는 패턴 수정
+      // 부산 구 이름이 포함돼 있으면 앞의 잘못된 시/구 접두사를 잘라냄
+      var _busanDistrict = /(수영구|사상구|해운대구|부산진구|동래구|남구|연제구|금정구|강서구|기장군|중구|서구|동구|영도구|북구)/;
+      var _bdMatch = p.address.match(_busanDistrict);
+      if(_bdMatch){
+        // 부산 구 이름이 있으면 그 앞 잘못된 접두사(서울시 강남구 등) 제거
+        var _bdIdx = p.address.indexOf(_bdMatch[0]);
+        var _corrected = (_bdIdx > 0) ? p.address.slice(_bdIdx) : p.address;
+        if(_corrected !== p.address){
+          console.log('[OCR] 주소 접두사 수정:', p.address, '→', _corrected);
+          p.address = _corrected;
+          var ad=document.getElementById('emer-addr'); if(ad) ad.value=_corrected;
+        }
+      } else {
+        // 부산 구 이름도 없는 타지역 주소 → 무효화
+        var _suspectAddr = /^서울|^경기|^인천|^대전|^광주|^대구|^울산시/.test(p.address);
+        if(_suspectAddr){
+          if(status) status.innerHTML = '<span style="color:#ef4444">⚠️ 주소 오인식: '+p.address.slice(0,15)+'... (현위치 사용)</span>';
+          p.address = '';
+          var ad2=document.getElementById('emer-addr'); if(ad2) ad2.value='';
+        }
+      }
+      if(p.address && status) status.innerHTML = '<span style="color:var(--blue)">📍 배송지 좌표 변환 중...</span>';
       try{
         var kgps2 = p.address ? await _kakaoGeocode(p.address) : null;
         if(kgps2){
@@ -23835,6 +23850,38 @@ function rEmergencyLog(){
     return out;
   }
 
+  // ★ v9.61: 저장된 기록 중 잘못된 주소(서울시 강남구 + 부산구) 자동 보정
+  function _fixSavedAddr(records){
+    var busanRe=/(수영구|사상구|해운대구|부산진구|동래구|남구|연제구|금정구|강서구|기장군|중구|서구|동구|영도구|북구)/;
+    records.forEach(function(x){
+      if(!x.addr) return;
+      var m=x.addr.match(busanRe);
+      if(!m) return;
+      var idx=x.addr.indexOf(m[0]);
+      if(idx<=0) return;
+      var fixed=x.addr.slice(idx);
+      console.log('[주소보정]',x.addr,'→',fixed);
+      x.addr=fixed;
+      // GPS 없으면 Geocoding 재시도
+      if(!(x.gps&&x.gps.lat) && window._cachedKakaoApiKey){
+        _kakaoGeocode(fixed).then(function(pos){
+          if(!pos) return;
+          x.gps={lat:pos.lat,lng:pos.lng,src:'kakao_fix'};
+          // Firebase 업데이트
+          if(x.fbId&&FB&&_db){
+            _db.collection('emergency_deliveries').doc(x.fbId).update({addr:fixed,gps:x.gps}).catch(function(){});
+          }
+          // localStorage 업데이트
+          try{
+            var st=JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]');
+            var si=st.findIndex(function(s){return s.fbId===x.fbId;});
+            if(si>=0){st[si].addr=fixed;st[si].gps=x.gps;localStorage.setItem('mbti_emergency_del',JSON.stringify(st));}
+          }catch(e){}
+        }).catch(function(){});
+      }
+    });
+  }
+
   function _renderContent(fbRecs){
     // 로컬 병합
     var all = fbRecs.slice();
@@ -23850,6 +23897,7 @@ function rEmergencyLog(){
     var records = _dedup(all)
       .filter(function(x){return (x.date||(x.savedAt||'').slice(0,10)||'')>=cut;})
       .sort(function(a,b){return (b.savedAt||'').localeCompare(a.savedAt||'');});
+    _fixSavedAddr(records); // ★ v9.61: 잘못된 주소 자동 보정
 
     var pending = records.filter(function(x){return x.status!=='완료'&&x.status!=='부분완료';});
     var partial = records.filter(function(x){return x.status==='부분완료';});
