@@ -13718,6 +13718,178 @@ function _loadMapsScript(apiKey){
   });
 }
 
+
+// ★ v9.81: 지도 내 배송완료 패널 함수들
+function _mapShowDelivComplete(){
+  var panel = document.getElementById('map-pin-panel');
+  var dc = document.getElementById('map-deliv-complete');
+  if(!dc) return;
+  if(panel) panel.style.display='none';
+  // 데이터 채우기
+  var info={};
+  try{ info=JSON.parse(window._pinSheetData||'{}'); }catch(e){}
+  var allT=(info.trackings&&info.trackings.length)?info.trackings:(info.tracking?[info.tracking]:[]);
+  var existing=info.trackingStatus||{};
+  var pending=allT.filter(function(t){return !(existing[t]&&existing[t].status==='완료');});
+  window._mdcPhotos=[];
+  window._mdcFbId=window._pinSheetFbId||'';
+  window._mdcAllTrackings=allT;
+  // 헤더
+  var hEl=document.getElementById('mdc-header');
+  if(hEl)hEl.innerHTML='<div style="font-size:16px;font-weight:800;color:#f9fafb">&#10003; '+(info.recipient||'수령인 미상')+'<span style="font-size:12px;font-weight:400;color:#9ca3af;margin-left:8px">'+pending.length+'건 완료처리</span></div>';
+  // 주소
+  var aEl=document.getElementById('mdc-addr');
+  if(aEl)aEl.textContent=info.addr||'주소없음';
+  // 운송장 체크박스
+  var tEl=document.getElementById('mdc-tracks');
+  if(tEl){
+    if(pending.length){
+      tEl.innerHTML=pending.map(function(t,i){
+        return '<label style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(22,163,74,.15);border:1px solid #16a34a;border-radius:8px;margin-bottom:4px;color:#f9fafb;cursor:pointer">'
+          +'<input type="checkbox" class="mdc-track-chk" data-track="'+t+'" checked style="width:18px;height:18px;accent-color:#16a34a" onchange="_mdcUpdateSaveBtn()">'
+          +'<span style="font-family:monospace;font-size:11px">'+t+'</span></label>';
+      }).join('');
+    } else {
+      tEl.innerHTML='<div style="font-size:11px;color:#f59e0b;padding:6px 0">운송장 없이 저장된 건 — 사진만으로 완료 가능</div>';
+    }
+  }
+  // 사진 초기화
+  var prev=document.getElementById('mdc-photo-preview');
+  if(prev)prev.innerHTML='';
+  var memo=document.getElementById('mdc-memo');
+  if(memo)memo.value='';
+  var cnt=document.getElementById('mdc-photo-count');
+  if(cnt)cnt.innerHTML='<span style="color:#ef4444">1장 필수</span>';
+  _mdcUpdateSaveBtn();
+  dc.style.display='block';
+}
+function _mdcUpdateSaveBtn(){
+  var btn=document.getElementById('mdc-save-btn');
+  if(!btn)return;
+  var photos=(window._mdcPhotos||[]).length;
+  var chks=document.querySelectorAll('.mdc-track-chk');
+  var checked=document.querySelectorAll('.mdc-track-chk:checked');
+  var trackOk=chks.length===0||checked.length>=1;
+  if(photos>=1&&trackOk){
+    btn.disabled=false; btn.style.opacity='1';
+    btn.style.background='#16a34a'; btn.style.color='#fff';
+    btn.textContent='&#10003; 저장 ('+photos+'장 첨부)';
+  } else {
+    btn.disabled=true; btn.style.opacity='.5';
+    btn.style.background='rgba(255,255,255,.1)'; btn.style.color='#9ca3af';
+    btn.textContent='&#9203; 사진 첨부 후 저장 가능';
+  }
+}
+function _mdcAddPhoto(file){
+  if(!file)return;
+  if((window._mdcPhotos||[]).length>=3){toast('사진은 최대 3장');return;}
+  var reader=new FileReader();
+  reader.onload=function(e){
+    window._mdcPhotos=window._mdcPhotos||[];
+    window._mdcPhotos.push(e.target.result);
+    var prev=document.getElementById('mdc-photo-preview');
+    if(prev){
+      var img=document.createElement('img');
+      img.src=e.target.result;
+      img.style.cssText='width:64px;height:64px;object-fit:cover;border-radius:8px;border:2px solid #16a34a';
+      prev.appendChild(img);
+    }
+    var cnt=document.getElementById('mdc-photo-count');
+    if(cnt){cnt.style.color='#16a34a';cnt.textContent=window._mdcPhotos.length+'장 첨부됨';}
+    _mdcUpdateSaveBtn();
+    // ★ v9.81: 첫 사진 첨부 시 호수 확인 팝업 (오배송 감지)
+    if(window._mdcPhotos.length===1){
+      var pinData=window._delivCompletePinData||{};
+      var addr=pinData.addr||'';
+      var hoMatch=addr.match(/(\d+)\s*호/);
+      if(hoMatch){
+        var hoStr=hoMatch[1]+'호';
+        setTimeout(function(){
+          var ok=confirm('🏠 호수 확인\n\n운송장 주소: '+hoStr+'\n\n실제 배달한 호수가 맞나요?\n\n✅ 맞아요 → 확인 / ❌ 달라요 → 취소');
+          if(!ok){
+            window._mdcPhotos.pop();
+            if(prev)prev.removeChild(prev.lastChild);
+            if(cnt){cnt.innerHTML='<span style="color:#ef4444">호수 다시 확인 후 사진 첨부</span>';}
+            _mdcUpdateSaveBtn();
+            toast('⚠️ 호수 확인 후 다시 사진을 찍어주세요');
+          }
+        },300);
+      }
+    }
+  };
+  reader.readAsDataURL(file);
+}
+async function _mdcSave(){
+  var btn=document.getElementById('mdc-save-btn');
+  if(btn){btn.disabled=true;btn.textContent='&#9203; 저장 중...';}
+  try{
+    var fbId=window._mdcFbId||'';
+    var checkedTracks=Array.from(document.querySelectorAll('.mdc-track-chk:checked')).map(function(c){return c.dataset.track;});
+    var memo=(document.getElementById('mdc-memo')||{}).value||'';
+    var photos=window._mdcPhotos||[];
+    var now=new Date();
+    // ★ v9.81: 오배송 감지 — 주소타입별 임계값 (아파트30m / 빌라·지번 10m)
+    var pinData = window._delivCompletePinData || {gps:null, addr:''};
+    if(pinData.gps && pinData.gps.lat && navigator.geolocation){
+      try{
+        var _addr = pinData.addr||'';
+        // 주소 타입 판별 (이전 채팅 기준)
+        var _threshold = 10; // 기본: 빌라/지번/주택 10m
+        var _addrLabel = '주택/지번';
+        if(/빌라|맨션|연립|다세대|오피스텔|레지던스/i.test(_addr)){
+          _threshold=10; _addrLabel='빌라/오피스텔';
+        } else if(/타워/.test(_addr) && !/롯데캐슬|힐스테이트|푸르지오|자이|래미안/i.test(_addr)){
+          _threshold=10; _addrLabel='타워';
+        } else if((/아파트/i.test(_addr)||/자이|래미안|푸르지오|롯데캐슬|힐스테이트/i.test(_addr)) && /\d+동/.test(_addr)){
+          _threshold=30; _addrLabel='대단지 아파트';
+        } else if(/\d+동.*\d+호/.test(_addr)){
+          _threshold=30; _addrLabel='아파트';
+        }
+        var curPos = await new Promise(function(res){
+          navigator.geolocation.getCurrentPosition(res,function(){res(null)},{timeout:3000,maximumAge:30000,enableHighAccuracy:true});
+        });
+        if(curPos){
+          var R=6371000,dLat=(curPos.coords.latitude-pinData.gps.lat)*Math.PI/180,dLng=(curPos.coords.longitude-pinData.gps.lng)*Math.PI/180;
+          var a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(pinData.gps.lat*Math.PI/180)*Math.cos(curPos.coords.latitude*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
+          var dist=Math.round(R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)));
+          if(dist>_threshold){
+            var hint = _threshold===30
+              ? '동 번호 확인 (예: 105동→106동 오배송)'
+              : '옆 건물/세대 가능성 — 호수/건물명 확인';
+            var goAhead=confirm('⚠️ 오배송 의심 ('+_addrLabel+' '+_threshold+'m 초과)\n\n현재 위치: 배송지에서 '+dist+'m\n'+hint+'\n\n계속 저장하시겠습니까?');
+            if(!goAhead){ if(btn){btn.disabled=false;btn.textContent='다시 시도';} return; }
+          }
+        }
+      }catch(e){}
+    }
+    // Firebase 업데이트
+    if(FB&&_db&&fbId){
+      var upd={status:'완료',completedAt:now.toISOString()};
+      if(checkedTracks.length){
+        var newStatus=Object.assign({},window._delivCompleteExistingStatus||{});
+        checkedTracks.forEach(function(t){newStatus[t]={status:'완료',completedAt:now.toISOString()};});
+        upd.trackingStatus=newStatus;
+        var allT=window._mdcAllTrackings||[];
+        var allDone=allT.length>0&&allT.every(function(t){return newStatus[t]&&newStatus[t].status==='완료';});
+        if(!allDone&&allT.length>0)upd.status='부분완료';
+      }
+      if(memo)upd.completeMemo=memo;
+      if(photos.length)upd.completePhotos=photos;
+      await _db.collection('emergency_deliveries').doc(fbId).update(upd);
+    }
+    // UI 업데이트
+    document.getElementById('map-deliv-complete').style.display='none';
+    document.getElementById('map-pin-panel').style.display='none';
+    if(window._rerenderRoutePins)window._rerenderRoutePins();
+    if(window._updateMapCounter)window._updateMapCounter();
+    toast('✅ 배송완료 저장됨');
+  }catch(e){
+    console.error('[MDC] 저장 실패:',e);
+    toast('저장 실패: '+e.message);
+    if(btn){btn.disabled=false;btn.textContent='다시 시도';}
+  }
+}
+
 // ★ v9.25: 지도 닫기 (닫기 버튼 + 뒤로가기 공통)
 function _closeDriverMap(){
   if(window._driverMapWatchId){ navigator.geolocation.clearWatch(window._driverMapWatchId); window._driverMapWatchId=null; }
@@ -13774,7 +13946,12 @@ async function _fixWrongTrackings(){
     }
     localStorage.setItem(doneKey,'1');
     console.log('[FIX] 운송장+GPS 자동 정리 완료:', updates.length, '건');
-    // 지도 핀 새로고침
+    // 메모리(emerLocs) 즉시 갱신 → 지도 핀 바로 반영
+    var liveEmers = window._activeDriverMapEmerLocs || window._emerLocs || [];
+    updates.forEach(function(u){
+      var loc = liveEmers.find(function(e){ return e.fbId===u.ref.id; });
+      if(loc){ loc.trackings=[]; loc.tracking=''; }
+    });
     if(window._rerenderRoutePins) window._rerenderRoutePins();
   }catch(e){ console.warn('[FIX] 자동 정리 실패:', e); }
 }
@@ -13815,7 +13992,42 @@ async function openDriverMap(){
     </div>
     <div id="driver-map-canvas" style="flex:1;min-height:0;height:calc(100vh - 60px);position:relative;background:#1f2937;display:flex;align-items:center;justify-content:center">
       <div style="color:#fff;font-size:14px;text-align:center"><div style="font-size:32px;margin-bottom:10px">🗺️</div>지도 불러오는 중...<br><span style="font-size:11px;color:#9ca3af">GPS·지도·배송데이터 동시 로딩</span></div>
+    
+  <!-- ★ v9.81: 핀 정보 패널 -->
+  <div id="map-pin-panel" style="display:none;position:absolute;bottom:0;left:0;right:0;z-index:500;background:#1f2937;border-radius:16px 16px 0 0;padding:16px 16px 32px;box-shadow:0 -4px 24px rgba(0,0,0,.6);max-height:70vh;overflow-y:auto">
+    <div style="width:36px;height:4px;background:rgba(255,255,255,.15);border-radius:2px;margin:0 auto 14px"></div>
+    <div id="mpp-header" style="display:flex;align-items:center;gap:10px;margin-bottom:10px"></div>
+    <div id="mpp-addr" style="background:rgba(255,255,255,.07);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:13px;color:#d1d5db;line-height:1.6"></div>
+    <div id="mpp-tracks" style="margin-bottom:12px"></div>
+    <button id="mpp-complete-btn" ontouchend="event.stopPropagation();event.preventDefault();_mapShowDelivComplete()" onclick="_mapShowDelivComplete()" style="width:100%;padding:14px;background:#16a34a;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer;touch-action:manipulation;margin-bottom:8px">&#10003; 배송완료 처리</button>
+    <a id="mpp-navi-btn" href="#" ontouchend="event.stopPropagation()" style="display:flex;align-items:center;justify-content:center;padding:13px;background:#FFCD00;color:#3C1E1E;text-decoration:none;border-radius:10px;font-size:13px;font-weight:800">&#128663; 카카오내비로 안내</a>
+    <button ontouchend="event.stopPropagation();event.preventDefault();document.getElementById('map-pin-panel').style.display='none'" onclick="document.getElementById('map-pin-panel').style.display='none'" style="position:absolute;top:14px;right:14px;background:rgba(255,255,255,.12);border:none;border-radius:50%;width:28px;height:28px;color:#fff;font-size:14px;cursor:pointer;touch-action:manipulation">X</button>
+  </div>
+
+  <!-- ★ v9.81: 배송완료 처리 패널 -->
+  <div id="map-deliv-complete" style="display:none;position:absolute;inset:0;z-index:600;overflow-y:auto">
+    <div style="position:absolute;bottom:0;left:0;right:0;background:#111827;border-radius:16px 16px 0 0;padding:20px 16px 40px">
+      <div style="width:36px;height:4px;background:rgba(255,255,255,.15);border-radius:2px;margin:0 auto 16px"></div>
+      <div id="mdc-header" style="margin-bottom:14px"></div>
+      <div id="mdc-addr" style="background:rgba(255,255,255,.07);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:#9ca3af;line-height:1.6"></div>
+      <div id="mdc-tracks" style="margin-bottom:14px"></div>
+      <div style="margin-bottom:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-size:13px;font-weight:700;color:#f9fafb">&#128247; 배송완료 사진 <span style="color:#ef4444">*</span></div>
+          <div id="mdc-photo-count" style="font-size:11px;font-weight:700;color:#ef4444">1장 필수</div>
+        </div>
+        <div id="mdc-photo-preview" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
+        <label style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;background:linear-gradient(135deg,#0F6E56,#16a34a);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:800;touch-action:manipulation">
+          <span style="font-size:20px">&#128248;</span> 카메라로 사진 찍기
+          <input type="file" accept="image/*" capture="environment" style="display:none" onchange="_mdcAddPhoto(this.files[0])">
+        </label>
+      </div>
+      <textarea id="mdc-memo" placeholder="배송 메모 (선택)" style="width:100%;padding:10px;border:1.5px solid rgba(255,255,255,.15);border-radius:8px;font-size:13px;background:rgba(255,255,255,.05);color:#f9fafb;resize:none;height:56px;box-sizing:border-box;margin-bottom:14px"></textarea>
+      <button id="mdc-save-btn" ontouchend="event.stopPropagation();event.preventDefault();_mdcSave()" onclick="_mdcSave()" disabled style="width:100%;padding:14px;background:rgba(255,255,255,.1);color:#9ca3af;border:none;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer;opacity:.5;touch-action:manipulation">&#9203; 사진 첨부 후 저장 가능</button>
     </div>
+    <button ontouchend="event.stopPropagation();event.preventDefault();document.getElementById('map-deliv-complete').style.display='none';document.getElementById('map-pin-panel').style.display='flex'" onclick="document.getElementById('map-deliv-complete').style.display='none';document.getElementById('map-pin-panel').style.display='flex'" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,.15);border:none;border-radius:50%;width:32px;height:32px;color:#fff;font-size:16px;cursor:pointer;touch-action:manipulation">X</button>
+  </div>
+</div>
   </div>`);
   try{
     // ★ v9.62: 카카오맵 사용 (Leaflet 대체 — 한국 주소 정확도 향상)
@@ -13958,69 +14170,54 @@ function _renderDriverMap(myLoc, emerLocs){
   // ★ v9.75: InfoWindow 완전 교체 → 커스텀 바텀시트 (이벤트 충돌 근본 제거)
   window._mbtiPinClick=function(key){
     var x=_pinDataMap[key];if(!x)return;
-    var old=document.getElementById('pin-info-sheet');if(old)old.remove();
+    // ★ v9.81: 동적 삽입 제거 → 기존 패널에 데이터 채워서 show
+    var panel=document.getElementById('map-pin-panel');
+    if(!panel)return;
     var trackings=(x.trackings&&x.trackings.length)?x.trackings:(x.tracking?[x.tracking]:[]);
     var tStatus=x.trackingStatus||{};
     var doneCnt=trackings.filter(function(t){return tStatus[t]&&tStatus[t].status==='완료';}).length;
-    var pendCnt=trackings.length-doneCnt;
     var isDone=x.status==='완료',isPartial=x.status==='부분완료';
     var pinColor=isDone?'#16a34a':(isPartial?'#f97316':'#dc2626');
-    var label=isPartial?(doneCnt+'/'+trackings.length):String(x._seqNo||'?');
-    var statusBadge=isDone
-      ?'<span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700">완료</span>'
-      :isPartial?'<span style="background:#f97316;color:#fff;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700">'+doneCnt+'/'+trackings.length+'</span>':'';
-    var trackHtml='';
-    if(trackings.length){
-      trackHtml='<div style="background:var(--bg3);border-radius:8px;padding:8px 10px;margin-top:8px;border:1px solid var(--border)">'
-        +trackings.map(function(t){
-          var s=tStatus[t]&&tStatus[t].status==='완료';
-          return '<div style="display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid var(--border)">'
-            +'<span style="color:'+(s?'#16a34a':'#dc2626')+';font-weight:900;font-size:14px">'+( s?'✓':'·')+'</span>'
-            +'<span style="font-family:monospace;font-size:11px;color:'+(s?'var(--text3)':'var(--text)')+';word-break:break-all;'+(s?'text-decoration:line-through':'')+'">'+t+'</span>'
-            +'</div>';
-        }).join('')
-        +'</div>';
+    var label=String(x._seqNo||'?');
+    // 헤더
+    var hEl=document.getElementById('mpp-header');
+    if(hEl)hEl.innerHTML='<span style="background:'+pinColor+';color:#fff;border-radius:50%;min-width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">'+label+'</span>'
+      +'<div style="flex:1"><div style="font-size:16px;font-weight:900;color:#f9fafb">'+(x.recipient||'수령인 미상')+'</div>'
+      +(x.time?'<div style="font-size:11px;color:#9ca3af">&#9201; '+x.time+'</div>':'')+'</div>';
+    // 주소
+    var aEl=document.getElementById('mpp-addr');
+    if(aEl)aEl.textContent=(x.addr||'주소 없음');
+    // 운송장
+    var tEl=document.getElementById('mpp-tracks');
+    if(tEl){
+      if(trackings.length){
+        tEl.innerHTML='<div style="background:rgba(255,255,255,.05);border-radius:8px;padding:8px 10px">'+
+          trackings.map(function(t){
+            var done=tStatus[t]&&tStatus[t].status==='완료';
+            return '<div style="font-family:monospace;font-size:11px;color:'+(done?'#6b7280':'#d1d5db')+';padding:2px 0;'+(done?'text-decoration:line-through':'')+'">'+(done?'&#10003; ':'&#183; ')+t+'</div>';
+          }).join('')+'</div>';
+      } else { tEl.innerHTML=''; }
     }
-    var fbId=x.fbId||x._fbId||'';
-    window._pinSheetFbId=fbId;
+    // 완료버튼
+    var btn=document.getElementById('mpp-complete-btn');
+    if(btn){
+      if(isDone){
+        btn.textContent='&#10003; 전체 배송완료';
+        btn.disabled=true; btn.style.opacity='.5'; btn.style.background='#374151';
+      } else {
+        btn.textContent=isPartial?'&#9203; 나머지 완료처리':'&#10003; 배송완료 처리';
+        btn.disabled=false; btn.style.opacity='1'; btn.style.background='#16a34a';
+      }
+    }
+    // 내비
+    var navBtn=document.getElementById('mpp-navi-btn');
+    if(navBtn&&x.gps)navBtn.href='kakaomap://route?ep='+x.gps.lat+','+x.gps.lng+'&by=CAR';
+    // 전역 저장
+    window._pinSheetFbId=x.fbId||x._fbId||'';
     window._pinSheetData=JSON.stringify({trackings:x.trackings||[],tracking:x.tracking||'',order_id:x.order_id||'',addr:x.addr||'',recipient:x.recipient||'',time:x.time||''});
-    var navLink='kakaomap://route?ep='+x.gps.lat+','+x.gps.lng+'&by=CAR';
-    var photos=(x.completePhotos||[]).concat(x.completePhotosLocal||[]);
-    var ph=photos.slice(0,3).filter(function(u){return u&&u.length>10;})
-      .map(function(url){return '<img src="'+url+'" style="width:58px;height:58px;object-fit:cover;border-radius:8px;border:2px solid '+pinColor+'">';}).join('');
-    var closeFn="var _s=document.getElementById('pin-info-sheet');if(_s)_s.remove();";
-    // ★ v9.75: 탭 즉시 로딩 오버레이 (Firebase fetch 대기 중 지도 위로)
-        // ★ v9.78: loadFn 제거 — openDelivComplete 즉시 표시
-    var openFn="_doDelivComplete();";    var actionBtn=isDone
-      ?'<div style="text-align:center;padding:12px;color:#16a34a;font-weight:800;font-size:14px;background:#f0fdf4;border-radius:10px;margin-bottom:8px">✅ 전체 배송완료</div>'
-      :'<button ontouchend="event.stopPropagation();event.preventDefault();'+openFn+'" onclick="'+openFn+'" style="width:100%;padding:14px;background:'+(isPartial?'#f97316':'#16a34a')+';color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px;display:block;touch-action:manipulation">'
-        +(isPartial?'🟠 나머지 '+pendCnt+'건 완료처리':'✅ 배송완료 처리')+'</button>';
-    var _mapContainer = document.getElementById('driver-map-mo') || document.body;
-    var _sheetPos = document.getElementById('driver-map-mo') ? 'absolute' : 'fixed';
-    _mapContainer.insertAdjacentHTML('beforeend',
-      '<div id="pin-info-sheet" style="position:'+_sheetPos+';inset:0;z-index:10000;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.45)" ontouchend="if(event.target===this)this.remove()" onclick="if(event.target===this)this.remove()">'
-      +'<div ontouchend="event.stopPropagation()" onclick="event.stopPropagation()" style="background:var(--bg);border-radius:16px 16px 0 0;padding:20px 16px 36px;width:100%;max-width:480px;max-height:78vh;overflow-y:auto;box-shadow:0 -4px 24px rgba(0,0,0,.25)">'
-      +'<div style="width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px"></div>'
-      +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">'
-        +'<span style="background:'+pinColor+';color:#fff;border-radius:50%;min-width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;flex-shrink:0">'+label+'</span>'
-        +'<div style="flex:1;min-width:0">'
-          +'<div style="font-size:16px;font-weight:900">'+(x.recipient||'수령인 미상')+' '+statusBadge+'</div>'
-          // ★ v9.77: 주문번호 제거 — 운송장만 표시
-        +'</div>'
-        +'<button ontouchend="event.stopPropagation();event.preventDefault();'+closeFn+'" onclick="'+closeFn+'" style="background:var(--bg3);border:1px solid var(--border);border-radius:50%;width:30px;height:30px;cursor:pointer;flex-shrink:0;font-size:14px;touch-action:manipulation">✕</button>'
-      +'</div>'
-      +'<div style="background:var(--bg3);border-radius:10px;padding:10px 12px;margin-bottom:10px;border:1px solid var(--border)">'
-        +'<div style="font-size:13px;color:var(--blue);font-weight:600;line-height:1.6;word-break:keep-all">'+(x.addr||'주소 없음')+'</div>'
-        +(x.time?'<div style="font-size:11px;color:var(--text3);margin-top:3px">⏰ '+x.time+'</div>':'')
-      +'</div>'
-      +trackHtml
-      +(ph?'<div style="display:flex;gap:6px;margin:10px 0;flex-wrap:wrap">'+ph+'</div>':'')
-      +'<div style="margin-top:14px">'
-        +actionBtn
-        +'<a href="'+navLink+'" ontouchend="event.stopPropagation()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;background:#FFCD00;color:#3C1E1E;text-decoration:none;border-radius:10px;font-size:13px;font-weight:800;touch-action:manipulation">🚗 카카오내비로 안내</a>'
-      +'</div>'
-      +'</div></div>'
-    );
+    // 패널 표시
+    panel.style.display='flex';
+    panel.style.flexDirection='column';
   };
   function renderRoutePins(){
     (window._driverMapPinMarkers||[]).forEach(function(o){try{o.setMap(null);}catch(e){}});
@@ -21786,7 +21983,7 @@ function _parseQrText(text){
         result.tracking_no = parts[1];
       }
       // 주소 (주소 + 상세주소 합치기)
-      var addr = parts[2] || '';
+      var addr = (parts[2] || '').replace(/^서울시\s*/,'').replace(/^서울\s+/,'').trim();
       var addrDetail = parts[3] || '';
       if(addr) result.address = addrDetail ? addr + ' ' + addrDetail : addr;
       // 수령인 (김*우 패턴)
