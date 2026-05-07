@@ -16868,6 +16868,14 @@ function rMypage(){
       html+='<input id="mp-kakaojs-key" type="password" placeholder="32자리 JavaScript 키" value="'+savedKakaoJsKey+'" style="flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;background:var(--bg);color:var(--text)">';
       html+='<button onclick="saveKakaoJsKey()" style="padding:8px 12px;background:#FFCD00;color:#3C1E1E;border:none;border-radius:7px;font-size:12px;font-weight:800;cursor:pointer">저장</button>';
       html+='</div>';
+
+      html+='<div style="margin-top:10px;background:rgba(6,182,212,.08);border-radius:10px;padding:14px;border:1px solid rgba(6,182,212,.3)">';
+      html+='<div style="font-size:13px;font-weight:700;margin-bottom:4px;color:var(--teal)">📝 Naver Clova OCR</div>';
+      html+='<div style="font-size:10px;color:var(--text3);margin-bottom:8px">한글 송장 인식 전용 (선택사항)</div>';
+      html+='<input id="mp-clova-url" type="text" placeholder="API Gateway URL" style="width:100%;padding:7px;border:1.5px solid var(--border);border-radius:6px;font-size:11px;background:var(--bg);color:var(--text);margin-bottom:5px;box-sizing:border-box">';
+      html+='<input id="mp-clova-secret" type="text" placeholder="Secret Key" style="width:100%;padding:7px;border:1.5px solid var(--border);border-radius:6px;font-size:11px;background:var(--bg);color:var(--text);margin-bottom:7px;box-sizing:border-box">';
+      html+='<button onclick="saveClovaOcrKey()" style="padding:7px 14px;background:var(--teal);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">저장</button>';
+      html+='</div>';
       if(maskedKakaoJs){
         if(isKakaoJsValid) html+='<div style="font-size:10px;color:var(--teal);margin-top:4px">✅ 저장됨: '+maskedKakaoJs+' (카카오맵 활성)</div>';
         else html+='<div style="font-size:10px;color:var(--amber);margin-top:4px">⚠️ 저장됨: '+maskedKakaoJs+' (32자리인지 확인)</div>';
@@ -21087,6 +21095,24 @@ async function saveKakaoApiKey(){
   rMypage();
 }
 
+
+// ★ v9.81: Naver Clova OCR 키 저장
+async function saveClovaOcrKey(){
+  var url = (document.getElementById('mp-clova-url')||{}).value||'';
+  var secret = (document.getElementById('mp-clova-secret')||{}).value||'';
+  url = url.trim(); secret = secret.trim();
+  if(!url || !secret){ toast('❌ URL과 Secret Key 모두 입력해주세요'); return; }
+  window._clovaOcrUrl = url;
+  window._clovaOcrSecret = secret;
+  if(FB && _db){
+    try{
+      await _db.collection('settings').doc('claude_config').set({ clovaOcrUrl:url, clovaOcrSecret:secret }, {merge:true});
+      toast('✅ Clova OCR 키 저장됨 (모든 기기 적용)');
+    }catch(e){ toast('✅ Clova OCR 키 저장됨 (이 기기만)'); }
+  }
+  rMypage();
+}
+
 // ★ v9.62: 카카오맵 JavaScript 키 저장 (지도 표시용)
 async function saveKakaoJsKey(){
   var key = (document.getElementById('mp-kakaojs-key')||{}).value||'';
@@ -21162,6 +21188,108 @@ async function _loadKakaoMapSDK(){
 }
 
 // ★ v9.58: 카카오 Geocoding — 주소 → 위경도 변환
+
+// ★ v9.81: Naver Clova OCR — 한글 배송 라벨 전용 (Claude Vision 대체/보완)
+async function _clovaOCR(imageBase64, mimeType){
+  // API 설정값을 Firebase에서 로드
+  var apiUrl = window._clovaOcrUrl;
+  var secretKey = window._clovaOcrSecret;
+  if(!apiUrl || !secretKey){
+    try{
+      var cfg = await _db.collection('settings').doc('claude_config').get();
+      if(cfg.exists){
+        apiUrl = cfg.data().clovaOcrUrl || '';
+        secretKey = cfg.data().clovaOcrSecret || '';
+        window._clovaOcrUrl = apiUrl;
+        window._clovaOcrSecret = secretKey;
+      }
+    }catch(e){}
+  }
+  if(!apiUrl || !secretKey) return null;
+
+  try{
+    var payload = {
+      version: 'V2',
+      requestId: 'mbti_' + Date.now(),
+      timestamp: Date.now(),
+      images: [{
+        format: mimeType.replace('image/',''),
+        name: 'label',
+        data: imageBase64
+      }]
+    };
+    var resp = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-OCR-SECRET': secretKey
+      },
+      body: JSON.stringify(payload)
+    });
+    if(!resp.ok) throw new Error('Clova OCR HTTP ' + resp.status);
+    var result = await resp.json();
+
+    // 텍스트 추출
+    var lines = [];
+    if(result.images && result.images[0] && result.images[0].fields){
+      var fields = result.images[0].fields;
+      // 같은 y좌표 그룹으로 줄 구성
+      var lineMap = {};
+      fields.forEach(function(f){
+        var y = Math.round((f.boundingPoly.vertices[0].y || 0) / 15); // 15px 단위로 그룹
+        if(!lineMap[y]) lineMap[y] = [];
+        lineMap[y].push({x: f.boundingPoly.vertices[0].x||0, text: f.inferText||''});
+      });
+      Object.keys(lineMap).sort(function(a,b){return a-b;}).forEach(function(y){
+        var words = lineMap[y].sort(function(a,b){return a.x-b.x;});
+        lines.push(words.map(function(w){return w.text;}).join(' ').trim());
+      });
+    }
+    console.log('[Clova OCR] 인식 줄 수:', lines.length);
+    return lines.filter(Boolean);
+  }catch(e){
+    console.warn('[Clova OCR] 실패:', e.message);
+    return null;
+  }
+}
+
+// ★ v9.81: Clova OCR 결과에서 배송 정보 파싱
+function _parseClovaLines(lines){
+  if(!lines || !lines.length) return {};
+  var fullText = lines.join(' ');
+  var result = {};
+
+  // 운송장 번호: 10으로 시작 14자리
+  for(var i=0;i<lines.length;i++){
+    var nums = lines[i].replace(/[^0-9]/g,'');
+    if(/^10\d{12}$/.test(nums)){ result.tracking_no = nums; break; }
+    // 부분 추출
+    var m = lines[i].match(/10\d{12}/);
+    if(m){ result.tracking_no = m[0]; break; }
+  }
+
+  // 주소: 구/동/로/길 포함 줄
+  for(var j=0;j<lines.length;j++){
+    var l = lines[j];
+    if(l.match(/(시|구)\s*.*(로|길|동)/) || l.match(/(로|길)\s*\d+/)){
+      if(!result.address) result.address = l;
+      else if(l.match(/\d+동|\d+호/) && !result.address.match(/\d+동|\d+호/)){
+        result.address = result.address + ' ' + l;
+      }
+    }
+  }
+
+  // 수령인: 김*우 패턴
+  var recM = fullText.match(/[가-힣]+\*[가-힣]+/);
+  if(recM) result.recipient = recM[0];
+
+  // 라우트 코드: 310 C01 패턴
+  var routeM = fullText.match(/\b(\d{3})\s*([A-Z])(\d{0,2})\b/);
+  if(routeM) result.route_code = routeM[1]+routeM[2]+(routeM[3]||'');
+
+  return result;
+}
+
 async function _kakaoGeocode(address){
   if(!address||!address.trim()) return null;
   // ★ v9.61: API 키 캐시 우선
@@ -21826,8 +21954,10 @@ async function emerOcrScan(file, _statusOverride){
     if(p.address)      { var ad=document.getElementById('emer-addr');      if(ad) ad.value=p.address; }
     if(p.delivery_memo){ var dm=document.getElementById('emer-delivmemo'); if(dm) dm.value=p.delivery_memo; }
 
-    if(p.tracking_no){
-      var clean = p.tracking_no.replace(/[\.\-\s]/g,'');
+    // ★ v9.81: OCR 운송장 없으면 QR 백업 사용
+    var _useTrack = p.tracking_no || (window._qrTrackBackup||'');
+    if(_useTrack){
+      var clean = _useTrack.replace(/[.\-\s]/g,'');
       var inp = document.getElementById('emer-tracking-inp');
       if(inp) inp.value = clean;
       emerAddTracking();
@@ -21905,7 +22035,12 @@ async function emerOcrScan(file, _statusOverride){
         var kgps2 = await _kakaoGeocode(p.address);
         if(kgps2){
           pinGps = {lat:kgps2.lat, lng:kgps2.lng, src:'kakao', addr:p.address};
-          window._emerGps = {lat:kgps2.lat, lng:kgps2.lng, acc:0, src:'kakao', addr:p.address};
+          // ★ v9.81: QR GPS 백업 있으면 우선 사용 (OCR 지오코딩보다 QR GPS가 정확)
+          if(window._qrGpsBackup && window._qrGpsBackup.lat){
+            window._emerGps = window._qrGpsBackup;
+          } else {
+            window._emerGps = {lat:kgps2.lat, lng:kgps2.lng, acc:0, src:'kakao', addr:p.address};
+          }
           if(status) status.innerHTML = '<span style="color:var(--teal)">✅ 배송지 좌표 변환 완료</span>';
         } else {
           if(status) status.innerHTML = '<span style="color:#f59e0b">⚠️ 좌표 변환 실패 — 현위치 사용</span>';
@@ -22054,6 +22189,34 @@ function _cleanupAddrV62(addr){
 }
 
 async function _emerVisionScan(b64, statusEl){
+  // ★ v9.81: Clova OCR 우선 시도 (더 빠르고 한글 정확)
+  var clovaUrl = window._clovaOcrUrl;
+  var clovaSecret = window._clovaOcrSecret;
+  if(!clovaUrl){
+    try{
+      var cfg = await _db.collection('settings').doc('claude_config').get();
+      if(cfg.exists){ clovaUrl=cfg.data().clovaOcrUrl||''; clovaSecret=cfg.data().clovaOcrSecret||''; window._clovaOcrUrl=clovaUrl; window._clovaOcrSecret=clovaSecret; }
+    }catch(e){}
+  }
+  if(clovaUrl && clovaSecret){
+    if(statusEl) statusEl.innerHTML='<span style="color:var(--blue)">📝 Clova OCR 분석 중...</span>';
+    var clovaLines = await _clovaOCR(b64, 'image/jpeg');
+    if(clovaLines && clovaLines.length > 3){
+      var parsed = _parseClovaLines(clovaLines);
+      if(parsed.address || parsed.tracking_no){
+        if(statusEl) statusEl.innerHTML='<span style="color:var(--teal)">✅ Clova OCR 완료</span>';
+        console.log('[Clova OCR] 파싱 결과:', parsed);
+        return {
+          tracking_no: parsed.tracking_no||'',
+          address: parsed.address||'',
+          recipient: parsed.recipient||'',
+          route_code: parsed.route_code||'',
+          rawLines: clovaLines
+        };
+      }
+    }
+    if(statusEl) statusEl.innerHTML='<span style="color:var(--amber)">Clova 불충분 → Claude Vision 시도...</span>';
+  }
   // API 키 로드
   var apiKey = '';
   if(FB && _db){
@@ -22562,7 +22725,28 @@ function _emerHandleScan(raw, statusEl){
       return (x.trackings||[]).indexOf(_tnCheck)>=0 || x.tracking===_tnCheck;
     });
     if(_dup){
-      // 중복 경고
+      // ★ v9.81: 데이터 품질 검사 → 불량이면 자동 업데이트
+      var _dupAddr=_dup.addr||'';
+      var _dupTrack=(_dup.trackings&&_dup.trackings[0])||_dup.tracking||'';
+      var _trackBad=!_dupTrack||!/^10\d{12}$/.test(_dupTrack);
+      var _addrBad=_qpCheck.address&&_qpCheck.address.length>(_dupAddr.length+3)&&!_dupAddr.match(/\d+동|\d+호/);
+      var _gpsBad=!_dup.gps||!_dup.gps.lat||_dup.gps.src==='device_fallback';
+      if((_trackBad||_addrBad||_gpsBad)&&(_qpCheck.address||_qpCheck.lat)){
+        var _upd={};
+        if(_qpCheck.tracking_no){_upd.tracking=_qpCheck.tracking_no;_upd.trackings=[_qpCheck.tracking_no];}
+        if(_qpCheck.address&&_qpCheck.address.length>_dupAddr.length){_upd.addr=_qpCheck.address;}
+        if(_qpCheck.lat){_upd.gps={lat:_qpCheck.lat,lng:_qpCheck.lng,src:'QR',acc:0};}
+        if(_qpCheck.recipient){_upd.recipient=_qpCheck.recipient;}
+        if(Object.keys(_upd).length&&FB&&_db&&_dup.fbId){
+          _db.collection('emergency_deliveries').doc(_dup.fbId).update(_upd).catch(function(){});
+          Object.assign(_dup,_upd);
+          if(window._rerenderRoutePins)window._rerenderRoutePins();
+          toast('\u2705 운송장/주소 자동 보정 완료');
+          console.log('[FIX] 기존 레코드 업데이트:',_dup.fbId,_upd);
+        }
+        window._emerScanLock=false; return;
+      }
+      // 정상 중복 경고
       try{
         var _ac=new(window.AudioContext||window.webkitAudioContext)();
         var _o=_ac.createOscillator(),_g=_ac.createGain();
@@ -22575,10 +22759,9 @@ function _emerHandleScan(raw, statusEl){
         navigator.vibrate&&navigator.vibrate([200,100,200,100,200]);
       }catch(e){}
       _tts('중복');
-      // 중복 토스트
       var _dt=document.createElement('div');
       _dt.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(220,38,38,.95);color:#fff;padding:16px 24px;border-radius:12px;font-size:16px;font-weight:900;z-index:9999;text-align:center';
-      _dt.innerHTML='⚠️ 중복 운송장!<br><span style="font-size:12px;font-weight:500">'+_tnCheck+'<br>이미 저장된 건입니다</span>';
+      _dt.innerHTML='\u26a0\ufe0f 중복 운송장!<br><span style="font-size:12px;font-weight:500">'+_tnCheck+'<br>이미 저장된 건입니다</span>';
       document.body.appendChild(_dt);
       setTimeout(function(){_dt.style.opacity='0';_dt.style.transition='opacity .3s';setTimeout(function(){_dt.remove();},300);},2000);
       window._emerScanLock=false;
@@ -22726,9 +22909,26 @@ function _emerHandleScan(raw, statusEl){
   if(qp.tracking_no || (window._emerTrackings && window._emerTrackings.length > 0)){
     var _scanMo = document.getElementById('emer-scan-mo');
     if(_scanMo){ _scanMo.style.display='none'; emerStopScan&&emerStopScan(); }
+    // ★ v9.81: QR 주소에 동/호 없으면 OCR 자동 트리거 (QR GPS + OCR 주소 합치기)
+    var _qrAddr = qp.address||'';
+    var _needOCR = _qrAddr && !_qrAddr.match(/\d+동/) && !_qrAddr.match(/\d+호/);
+    if(_needOCR && qp.lat){
+      // GPS/운송장은 QR에서 확보됨 → OCR로 상세주소만 보완
+      if(statusEl) statusEl.innerHTML = '<span style="color:var(--blue)">📸 QR ✅ → 📷 주소 보완 중...</span>';
+      window._qrGpsBackup = {lat:qp.lat, lng:qp.lng, src:'QR'};
+      window._qrTrackBackup = qp.tracking_no;
+      // OCR 촬영 UI 표시 (주소 보완용)
+      setTimeout(function(){
+        var _ocrBtn = document.querySelector('[onclick*="_emerTakePhoto"]') || document.querySelector('[onclick*="emerTakePhoto"]');
+        toast('📷 주소 보완을 위해 송장 사진을 찍어주세요 (QR GPS는 저장됨)');
+        // 기존 주소 필드 초기화 유지하지 않음 - 저장 먼저
+        if(typeof emerSave==='function') emerSave();
+      }, 500);
+      return;
+    }
     if(statusEl) statusEl.innerHTML = '<span style="color:var(--teal)">📸 스캔 ✅ → 💾 저장 중...</span>';
     window._emerSaving = false;
-    setTimeout(function(){ if(typeof emerSave==='function') emerSave(); }, 300); // ★ v9.75: 빠른 저장
+    setTimeout(function(){ if(typeof emerSave==='function') emerSave(); }, 300);
     return;
   }
 
@@ -30785,8 +30985,13 @@ window._firestoreListeners=window._firestoreListeners||[];
 
 function startNotiListeners(){
   if(!FB||!_db||!S.curDriver)return;
-  if(S.curMode!=='driver')return; // 기사만
-  // 중복 방지
+  if(S.curMode!=='driver')return;
+  // ★ v9.81: 이미 리스너 활성화 중이면 skip (반복 호출 방지)
+  if(window._notiListenersActive){
+    console.log('[Noti] 리스너 이미 활성 — skip');
+    return;
+  }
+  window._notiListenersActive = true;
   stopNotiListeners();
   
   var me=ls('drivers').find(function(x){return x.name===S.curDriver;});
@@ -30916,6 +31121,7 @@ function startNotiListeners(){
   console.log('[Noti] 리스너 활성화 — 기사:',S.curDriver,'캠프:',myCampFull);
 }
 function stopNotiListeners(){
+  window._notiListenersActive = false;
   (window._firestoreListeners||[]).forEach(function(unsub){try{unsub();}catch(e){}});
   window._firestoreListeners=[];
 }
