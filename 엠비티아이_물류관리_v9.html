@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.63</title>
+<title>엠비티아이 물류관리 v9.64</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10425,7 +10425,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.63 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.64 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -11433,10 +11433,10 @@ function updBadge(){
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
 function updFbUI(){
-  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.63 · 🔥 실시간':'v9.63 · 데모';
+  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.64 · 🔥 실시간':'v9.64 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.63 · Firebase 실시간':'v9.63 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.63 · Firebase 실시간':'v9.64 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -13670,21 +13670,24 @@ function _showGpsHelpModal(reason, onProceed){
 function _getEmerLocs(){
   var local = [];
   try{ local = JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]'); }catch(e){}
-  var todayLocs = local.filter(function(x){ return x.driver===S.curDriver && x.date===today() && x.gps&&x.gps.lat; });
+  // ★ v9.64: date 조건 제거 — 최근 60건 전체 표시 (날짜 무관)
+  var driverLocs = local.filter(function(x){ return x.driver===S.curDriver && x.gps&&x.gps.lat; });
   if(FB&&_db){
-    _db.collection('emergency_deliveries')
-      .where('driver','==',S.curDriver).where('date','==',today()).get()
-      .then(function(snap){
+    // admin이면 전체, 기사면 본인 건
+    var q = (S.curMode==='admin')
+      ? _db.collection('emergency_deliveries').orderBy('savedAt','desc').limit(60)
+      : _db.collection('emergency_deliveries').where('driver','==',S.curDriver).orderBy('savedAt','desc').limit(60);
+    q.get().then(function(snap){
         var fbLocs=[];
         snap.forEach(function(d){ var x=d.data(); x.fbId=d.id; if(x.gps&&x.gps.lat) fbLocs.push(x); });
-        if(window._activeDriverMapEmerLocs && fbLocs.length > window._activeDriverMapEmerLocs.length){
+        if(window._activeDriverMapEmerLocs){
           window._activeDriverMapEmerLocs.length = 0;
           fbLocs.forEach(function(x){ window._activeDriverMapEmerLocs.push(x); });
           if(window._rerenderRoutePins) window._rerenderRoutePins();
         }
       }).catch(function(){});
   }
-  return Promise.resolve(todayLocs);
+  return Promise.resolve(driverLocs);
 }
 function _loadMapsScript(apiKey){
   return new Promise(function(res, rej){
@@ -13806,56 +13809,41 @@ async function openDriverMap(){
 function _renderDriverMap(myLoc, emerLocs){
   var mapDiv=document.getElementById('driver-map-canvas');
   if(!mapDiv) return;
-  mapDiv.innerHTML='';
-  mapDiv.style.background='';
-  mapDiv.style.display='block';
+  mapDiv.innerHTML=''; mapDiv.style.background=''; mapDiv.style.display='block';
   window._emerLocs = emerLocs;
 
-  // ★ v9.62: 카카오맵 사용
-  var map = new kakao.maps.Map(mapDiv, {
-    center: new kakao.maps.LatLng(myLoc.lat, myLoc.lng),
-    level: 4
-  });
+  var map = new kakao.maps.Map(mapDiv, {center:new kakao.maps.LatLng(myLoc.lat,myLoc.lng), level:4});
   map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
 
-  function makeOverlayContent(color, label, size, opacity){
-    size = size || 28; opacity = (opacity===undefined?1:opacity);
-    var div = document.createElement('div');
-    div.className = 'mbti-pin';
-    div.style.cssText = 'width:'+size+'px;height:'+size+'px;background:'+color+';border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:'+(size>=30?'13px':'11px')+';font-weight:bold;box-shadow:0 2px 6px rgba(0,0,0,.5);opacity:'+opacity+';cursor:pointer';
-    div.innerHTML = label;
-    return div;
+  // ★ v9.64: HTML 문자열 사용 (DOM element → b.v 에러 방지)
+  function makePin(color, label, size, opacity, clickKey){
+    size=size||28; opacity=opacity===undefined?1:opacity;
+    var onclick = clickKey ? ' onclick="if(window._mbtiPinClick)window._mbtiPinClick(\''+clickKey+'\')"' : '';
+    return '<div style="width:'+size+'px;height:'+size+'px;background:'+color+';border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:'+(size>=30?'13px':'11px')+';font-weight:bold;box-shadow:0 2px 6px rgba(0,0,0,.5);opacity:'+opacity+';cursor:pointer"'+onclick+'>'+label+'</div>';
   }
 
   // 내 위치 마커 (파란 원)
-  var myContent = makeOverlayContent('#2563eb', '📍', 32);
   var myOverlay = new kakao.maps.CustomOverlay({
-    position: new kakao.maps.LatLng(myLoc.lat, myLoc.lng),
-    content: myContent,
-    yAnchor: 0.5, xAnchor: 0.5,
-    zIndex: 999
+    position:new kakao.maps.LatLng(myLoc.lat,myLoc.lng),
+    content:makePin('#2563eb','📍',32,1,''),
+    yAnchor:0.5, xAnchor:0.5, zIndex:999
   });
   myOverlay.setMap(map);
-  window._driverMapCurrentLoc = myLoc;
+  window._driverMapCurrentLoc=myLoc;
   if(window._driverMapWatchId) navigator.geolocation.clearWatch(window._driverMapWatchId);
-  window._driverMapWatchId = navigator.geolocation.watchPosition(function(pos){
-    var nl = {lat:pos.coords.latitude, lng:pos.coords.longitude};
-    myOverlay.setPosition(new kakao.maps.LatLng(nl.lat, nl.lng));
-    window._driverMapCurrentLoc = nl;
-  }, null, {enableHighAccuracy:true, maximumAge:3000, timeout:10000});
+  window._driverMapWatchId=navigator.geolocation.watchPosition(function(pos){
+    var nl={lat:pos.coords.latitude,lng:pos.coords.longitude};
+    myOverlay.setPosition(new kakao.maps.LatLng(nl.lat,nl.lng));
+    window._driverMapCurrentLoc=nl;
+  },null,{enableHighAccuracy:true,maximumAge:3000,timeout:10000});
 
-  function nearestNeighborSort(pins, startLoc){
-    var sorted=[], remaining=pins.filter(function(x){return x.gps&&x.gps.lat;});
+  function nearestNeighborSort(pins,startLoc){
+    var sorted=[],remaining=pins.filter(function(x){return x.gps&&x.gps.lat;});
     var cur=startLoc;
     while(remaining.length){
-      var best=0, bestD=Infinity;
-      for(var i=0;i<remaining.length;i++){
-        var d=Math.pow(remaining[i].gps.lat-cur.lat,2)+Math.pow(remaining[i].gps.lng-cur.lng,2);
-        if(d<bestD){bestD=d; best=i;}
-      }
-      sorted.push(remaining[best]);
-      cur={lat:remaining[best].gps.lat, lng:remaining[best].gps.lng};
-      remaining.splice(best,1);
+      var best=0,bestD=Infinity;
+      for(var i=0;i<remaining.length;i++){var d=Math.pow(remaining[i].gps.lat-cur.lat,2)+Math.pow(remaining[i].gps.lng-cur.lng,2);if(d<bestD){bestD=d;best=i;}}
+      sorted.push(remaining[best]);cur={lat:remaining[best].gps.lat,lng:remaining[best].gps.lng};remaining.splice(best,1);
     }
     return sorted;
   }
@@ -13863,114 +13851,72 @@ function _renderDriverMap(myLoc, emerLocs){
     var allPins=emerLocs.filter(function(x){return x.gps&&x.gps.lat;});
     var unassigned=allPins.filter(function(x){return !x._seqNo;});
     if(!unassigned.length) return;
-    var maxNo=allPins.reduce(function(m,x){return Math.max(m, x._seqNo||0);}, 0);
-    var pendingU=unassigned.filter(function(x){return x.status!=='완료';});
-    var doneU=unassigned.filter(function(x){return x.status==='완료';});
-    if(startPin && maxNo===0){
-      startPin._seqNo=1;
-      var rest=pendingU.filter(function(x){return x!==startPin;});
-      nearestNeighborSort(rest, {lat:startPin.gps.lat, lng:startPin.gps.lng}).forEach(function(x,i){x._seqNo=i+2;});
-      var nxt=pendingU.length+1; doneU.forEach(function(x){x._seqNo=nxt++;});
-    } else {
-      nearestNeighborSort(pendingU, window._driverMapCurrentLoc||myLoc).forEach(function(x){x._seqNo=++maxNo;});
-      doneU.forEach(function(x){x._seqNo=++maxNo;});
-    }
+    var maxNo=allPins.reduce(function(m,x){return Math.max(m,x._seqNo||0);},0);
+    var pendingU=unassigned.filter(function(x){return x.status!=='완료';}),doneU=unassigned.filter(function(x){return x.status==='완료';});
+    if(startPin&&maxNo===0){startPin._seqNo=1;var rest=pendingU.filter(function(x){return x!==startPin;});nearestNeighborSort(rest,{lat:startPin.gps.lat,lng:startPin.gps.lng}).forEach(function(x,i){x._seqNo=i+2;});var nxt=pendingU.length+1;doneU.forEach(function(x){x._seqNo=nxt++;});}
+    else{nearestNeighborSort(pendingU,window._driverMapCurrentLoc||myLoc).forEach(function(x){x._seqNo=++maxNo;});doneU.forEach(function(x){x._seqNo=++maxNo;});}
   }
   function updateCounter(){
-    var total=emerLocs.length;
-    var done=emerLocs.filter(function(x){return x.status==='완료';}).length;
-    var pending=total-done;
-    var te=document.getElementById('driver-map-total');
-    var pe=document.getElementById('driver-map-pending');
-    var de=document.getElementById('driver-map-done');
-    if(te) te.textContent='📦 전체 '+total;
-    if(pe) pe.textContent='⏳ 미완료 '+pending;
-    if(de) de.textContent='✅ 완료 '+done;
+    var total=emerLocs.length,done=emerLocs.filter(function(x){return x.status==='완료';}).length;
+    var te=document.getElementById('driver-map-total'),pe=document.getElementById('driver-map-pending'),de=document.getElementById('driver-map-done');
+    if(te)te.textContent='📦 전체 '+total;if(pe)pe.textContent='⏳ 미완료 '+(total-done);if(de)de.textContent='✅ 완료 '+done;
   }
-  window._driverMapPinMarkers=[];
-  window._driverMapMarkers={};
-  var openInfo = null;
+  window._driverMapPinMarkers=[];window._driverMapMarkers={};
+  var _pinDataMap={};
+  var _infoOpen=null;
 
-  function _showPinInfo(x, fbId, popHtml){
-    if(openInfo){ try{ openInfo.close(); }catch(e){} }
-    var info = new kakao.maps.InfoWindow({content: popHtml, removable: true});
-    info.open(map, new kakao.maps.LatLng(x.gps.lat, x.gps.lng));
-    openInfo = info;
-  }
+  window._mbtiPinClick=function(key){
+    var x=_pinDataMap[key];if(!x)return;
+    if(_infoOpen){try{_infoOpen.close();}catch(e){}}
+    var trackings=(x.trackings&&x.trackings.length)?x.trackings:(x.tracking?[x.tracking]:[]);
+    var tStatus=x.trackingStatus||{};
+    var doneCnt=trackings.filter(function(t){return tStatus[t]&&tStatus[t].status==='완료';}).length;
+    var pendCnt=trackings.length-doneCnt;
+    var isDone=x.status==='완료',isPartial=x.status==='부분완료';
+    var pinColor=isDone?'#16a34a':(isPartial?'#f97316':'#dc2626');
+    var label=isPartial?(doneCnt+'/'+trackings.length):String(x._seqNo||'?');
+    var statusBadge=isDone?'<span style="background:#16a34a;color:#fff;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:700;margin-left:4px">전체완료</span>':isPartial?'<span style="background:#f97316;color:#fff;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:700;margin-left:4px">'+doneCnt+'/'+trackings.length+'</span>':'';
+    var trackHtml='';if(trackings.length){trackHtml='<div style="margin-top:6px;padding:6px 8px;background:rgba(0,0,0,.04);border-radius:6px;font-size:10px;line-height:1.7">'+trackings.map(function(t){var s=tStatus[t]&&tStatus[t].status==='완료';return '<div style="display:flex;align-items:center;gap:6px"><span style="color:'+(s?'#16a34a':'#dc2626')+';font-weight:700">'+(s?'✓':'✗')+'</span><span style="color:'+(s?'#16a34a':'#1e293b')+';'+(s?'text-decoration:line-through;':'')+'">'+t+'</span></div>';}).join('')+'</div>';}
+    var fbId=x.fbId||x._fbId||'';
+    var dataPayload=encodeURIComponent(JSON.stringify({trackings:x.trackings||[],tracking:x.tracking,order_id:x.order_id,addr:x.addr,recipient:x.recipient,time:x.time}));
+    var actionBtn=isDone?'<div style="color:#16a34a;font-size:11px;font-weight:700;margin-top:6px;text-align:center">✅ 전체 배송완료</div>':isPartial?'<button onclick="openDelivComplete(\''+fbId+'\',\''+dataPayload+'\')" style="margin-top:5px;width:100%;padding:7px;background:#f97316;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">🟠 나머지 '+pendCnt+'건 완료</button>':'<button onclick="openDelivComplete(\''+fbId+'\',\''+dataPayload+'\')" style="margin-top:5px;width:100%;padding:7px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">✅ 배송완료 처리</button>';
+    var navLink='kakaomap://route?ep='+x.gps.lat+','+x.gps.lng+'&by=CAR';
+    var photos=(x.completePhotos||[]).concat(x.completePhotosLocal||[]);
+    var ph=photos.slice(0,3).filter(function(u){return u&&u.length>10;}).map(function(url){return '<img src="'+url+'" style="width:50px;height:50px;object-fit:cover;border-radius:6px;border:2px solid '+pinColor+'">';}).join('');
+    var popHtml='<div style="font-size:13px;min-width:210px;max-width:260px;padding:4px"><div style="display:flex;align-items:center;gap:4px;margin-bottom:4px;flex-wrap:wrap"><span style="background:'+pinColor+';color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800">'+label+'</span><span style="font-weight:800;font-size:14px">'+(x.recipient||'수령인미상')+'</span>'+statusBadge+'</div><div style="color:#1d4ed8;font-size:12px;line-height:1.5;margin-bottom:4px">'+(x.addr||'주소없음')+'</div><div style="font-size:11px;color:#555">⏰ '+(x.time||'')+'</div>'+trackHtml+(ph?'<div style="display:flex;gap:4px;margin-top:6px">'+ph+'</div>':'')+actionBtn+'<a href="'+navLink+'" style="display:inline-block;margin-top:5px;padding:6px 10px;background:#FFCD00;color:#3C1E1E;text-decoration:none;border-radius:6px;font-size:11px;font-weight:700">🚗 카카오내비</a></div>';
+    var info=new kakao.maps.InfoWindow({content:popHtml,removable:true});
+    info.open(map,new kakao.maps.LatLng(x.gps.lat,x.gps.lng));
+    _infoOpen=info;
+  };
 
   function renderRoutePins(){
-    (window._driverMapPinMarkers||[]).forEach(function(o){ try{ o.setMap(null); }catch(e){} });
-    window._driverMapPinMarkers=[];
-    window._driverMapMarkers={};
-    var _f = window._driverMapFilter || 'all';
+    (window._driverMapPinMarkers||[]).forEach(function(o){try{o.setMap(null);}catch(e){}});
+    window._driverMapPinMarkers=[];window._driverMapMarkers={};_pinDataMap={};
+    var _f=window._driverMapFilter||'all';
     emerLocs.filter(function(x){return x.gps&&x.gps.lat;}).forEach(function(x){
       var fbId=x.fbId||x._fbId||'';
-      var isDone=x.status==='완료';
-      var isPartial=x.status==='부분완료';
-      var seqNo=x._seqNo||'?';
+      var isDone=x.status==='완료',isPartial=x.status==='부분완료';
+      var pinColor=isDone?'#16a34a':(isPartial?'#f97316':'#dc2626');
+      var pinOpacity=isDone?0.5:1;
       var trackings=(x.trackings&&x.trackings.length)?x.trackings:(x.tracking?[x.tracking]:[]);
       var tStatus=x.trackingStatus||{};
       var doneCnt=trackings.filter(function(t){return tStatus[t]&&tStatus[t].status==='완료';}).length;
-      var pendCnt=trackings.length-doneCnt;
-      var pinColor=isDone?'#16a34a':(isPartial?'#f97316':'#dc2626');
-      var pinOpacity=isDone?0.5:1;
-      var label=isPartial?(doneCnt+'/'+trackings.length):String(seqNo);
+      var label=isPartial?(doneCnt+'/'+trackings.length):String(x._seqNo||'?');
       var statusStr=isDone?'done':(isPartial?'partial':'pending');
-      if(_f!=='all' && _f!==statusStr && !(_f==='pending' && statusStr==='partial')) return;
-
-      var content = makeOverlayContent(pinColor, label, 28, pinOpacity);
-      var overlay = new kakao.maps.CustomOverlay({
-        position: new kakao.maps.LatLng(x.gps.lat, x.gps.lng),
-        content: content,
-        yAnchor: 0.5, xAnchor: 0.5,
-        zIndex: isDone?10:(isPartial?200:(300-(x._seqNo||0)))
+      if(_f!=='all'&&_f!==statusStr&&!(_f==='pending'&&statusStr==='partial'))return;
+      var pinKey=fbId||('pin_'+Math.random().toString(36).slice(2));
+      _pinDataMap[pinKey]=x;
+      if(fbId)x._pinKey=pinKey;
+      var overlay=new kakao.maps.CustomOverlay({
+        position:new kakao.maps.LatLng(x.gps.lat,x.gps.lng),
+        content:makePin(pinColor,label,28,pinOpacity,pinKey),
+        yAnchor:0.5,xAnchor:0.5,
+        zIndex:isDone?10:(isPartial?200:(300-(x._seqNo||0)))
       });
       overlay.setMap(map);
-      overlay._mbtiStatus=statusStr; overlay._mbtiId=fbId;
-      if(fbId) window._driverMapMarkers[fbId]=overlay;
+      overlay._mbtiStatus=statusStr;overlay._mbtiId=fbId;
+      if(fbId)window._driverMapMarkers[fbId]=overlay;
       window._driverMapPinMarkers.push(overlay);
-
-      // 팝업 HTML
-      var trackListHtml='';
-      if(trackings.length){
-        trackListHtml='<div style="margin-top:6px;padding:6px 8px;background:rgba(0,0,0,.04);border-radius:6px;font-size:10px;line-height:1.7">'
-          +trackings.map(function(t){
-            var s=tStatus[t]&&tStatus[t].status==='완료';
-            return '<div style="display:flex;align-items:center;gap:6px"><span style="color:'+(s?'#16a34a':'#dc2626')+';font-weight:700">'+(s?'✓':'✗')+'</span>'
-              +'<span style="color:'+(s?'#16a34a':'#1e293b')+';'+(s?'text-decoration:line-through;':'')+'">'+t+'</span></div>';
-          }).join('')+'</div>';
-      }
-      var photos=(x.completePhotos||[]).concat(x.completePhotosLocal||[]);
-      var ph=photos.slice(0,3).filter(function(u){return u&&u.length>10;}).map(function(url){
-        return '<img src="'+url+'" style="width:50px;height:50px;object-fit:cover;border-radius:6px;border:2px solid '+pinColor+'">';
-      }).join('');
-      var dataPayload = encodeURIComponent(JSON.stringify({
-        trackings:x.trackings||[], tracking:x.tracking, order_id:x.order_id,
-        addr:x.addr, recipient:x.recipient, time:x.time
-      }));
-      var actionBtn = isDone
-        ? '<div style="color:#16a34a;font-size:11px;font-weight:700;margin-top:6px;text-align:center">✅ 전체 배송완료</div>'
-        : isPartial
-          ? '<button onclick="openDelivComplete(\''+fbId+'\',\''+dataPayload+'\');" style="margin-top:5px;width:100%;padding:7px;background:#f97316;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">🟠 나머지 '+pendCnt+'건 완료</button>'
-          : '<button onclick="openDelivComplete(\''+fbId+'\',\''+dataPayload+'\');" style="margin-top:5px;width:100%;padding:7px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">✅ 배송완료 처리</button>';
-      var navLink = 'kakaomap://route?ep='+x.gps.lat+','+x.gps.lng+'&by=CAR';
-      var navBtn = '<a href="'+navLink+'" style="display:inline-block;margin-top:5px;padding:6px 10px;background:#FFCD00;color:#3C1E1E;text-decoration:none;border-radius:6px;font-size:11px;font-weight:700">🚗 카카오내비</a>';
-      var statusBadge=isDone
-        ?'<span style="background:#16a34a;color:#fff;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:700;margin-left:4px">전체완료</span>'
-        :isPartial?'<span style="background:#f97316;color:#fff;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:700;margin-left:4px">'+doneCnt+'/'+trackings.length+'</span>':'';
-      var popHtml='<div style="font-size:13px;min-width:210px;max-width:260px;padding:4px">'
-        +'<div style="display:flex;align-items:center;gap:4px;margin-bottom:4px;flex-wrap:wrap">'
-        +'<span style="background:'+pinColor+';color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800">'+label+'</span>'
-        +'<span style="font-weight:800;font-size:14px">'+(x.recipient||'수령인미상')+'</span>'+statusBadge+'</div>'
-        +'<div style="color:#1d4ed8;font-size:12px;line-height:1.5;margin-bottom:4px">'+(x.addr||'주소없음')+'</div>'
-        +'<div style="font-size:11px;color:#555">⏰ '+(x.time||'')+'</div>'
-        +trackListHtml
-        +(ph?'<div style="display:flex;gap:4px;margin-top:6px">'+ph+'</div>':'')
-        +actionBtn+navBtn
-        +'</div>';
-
-      // 클릭 핸들러
-      content.onclick = function(){ _showPinInfo(x, fbId, popHtml); };
     });
     updateCounter();
   }
@@ -13980,66 +13926,51 @@ function _renderDriverMap(myLoc, emerLocs){
   var hasUnassigned=emerLocs.filter(function(x){return x.gps&&x.gps.lat&&!x._seqNo;}).length>0;
   var hasAny=emerLocs.filter(function(x){return x.gps&&x.gps.lat;}).length>0;
   var isFirstTime=hasAny&&hasUnassigned&&emerLocs.filter(function(x){return x._seqNo;}).length===0;
-  if(isFirstTime && userSelectsFirst){
+  if(isFirstTime&&userSelectsFirst){
     var banner=document.createElement('div');
     banner.id='map-select-banner';
     banner.style.cssText='position:absolute;top:0;left:0;right:0;z-index:10;background:rgba(124,58,237,.92);color:#fff;text-align:center;padding:10px 16px;font-size:13px;font-weight:700;line-height:1.5';
     banner.innerHTML='🏠 1번으로 지정할 집을 탭하세요<br><span style="font-size:11px;font-weight:400">나머지는 가까운 순으로 자동 정렬됩니다</span>';
-    mapDiv.style.position='relative';
-    mapDiv.appendChild(banner);
+    mapDiv.style.position='relative';mapDiv.appendChild(banner);
     emerLocs.filter(function(x){return x.gps&&x.gps.lat;}).forEach(function(x){
-      var c = makeOverlayContent('#7c3aed', '?', 28);
-      var ovl = new kakao.maps.CustomOverlay({
-        position: new kakao.maps.LatLng(x.gps.lat, x.gps.lng),
-        content: c, yAnchor:0.5, xAnchor:0.5
-      });
-      ovl.setMap(map);
-      c.onclick = function(){
-        assignSeqNos(x);
-        var b=document.getElementById('map-select-banner'); if(b) b.remove();
-        // 임시 핀들 제거
-        window._driverMapPinMarkers.forEach(function(o){ try{ o.setMap(null); }catch(e){} });
-        window._driverMapPinMarkers = [];
-        renderRoutePins();
-        map.setCenter(new kakao.maps.LatLng(x.gps.lat, x.gps.lng));
-      };
-      window._driverMapPinMarkers.push(ovl);
+      var tmpKey='sel_'+Math.random().toString(36).slice(2);
+      _pinDataMap[tmpKey]=x;
+      var ovl=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(x.gps.lat,x.gps.lng),content:makePin('#7c3aed','?',28,1,tmpKey),yAnchor:0.5,xAnchor:0.5});
+      ovl.setMap(map);window._driverMapPinMarkers.push(ovl);
     });
+    window._mbtiPinClick=function(key){
+      var x=_pinDataMap[key];if(!x)return;
+      assignSeqNos(x);
+      var b=document.getElementById('map-select-banner');if(b)b.remove();
+      window._driverMapPinMarkers.forEach(function(o){try{o.setMap(null);}catch(e){}});
+      window._driverMapPinMarkers=[];
+      // 클릭 핸들러 정상화
+      window._mbtiPinClick=function(k){var d=_pinDataMap[k];if(d)_showPinInfoDirect(d);};
+      renderRoutePins();
+      map.setCenter(new kakao.maps.LatLng(x.gps.lat,x.gps.lng));
+    };
   } else {
-    if(hasUnassigned) assignSeqNos(null);
+    if(hasUnassigned)assignSeqNos(null);
     renderRoutePins();
   }
 
-  window._activeDriverMap=map;
-  window._activeDriverMapEmerLocs=emerLocs;
-  if(!window._driverMapFilter) window._driverMapFilter='all';
+  function _showPinInfoDirect(x){
+    var k=x._pinKey||x.fbId||'';window._mbtiPinClick&&window._mbtiPinClick(k);
+  }
+
+  window._activeDriverMap=map;window._activeDriverMapEmerLocs=emerLocs;
+  if(!window._driverMapFilter)window._driverMapFilter='all';
   window._driverMapSetFilter=function(f){
     window._driverMapFilter=f;
     var ids=[['driver-map-total','all'],['driver-map-pending','pending'],['driver-map-done','done']];
-    ids.forEach(function(p){
-      var el=document.getElementById(p[0]); if(!el) return;
-      var active=(p[1]===f);
-      el.style.border = active?'2px solid #fff':'2px solid transparent';
-      if(p[1]==='all')          el.style.background='rgba(59,130,246,'+(active?'.85':'.4')+')';
-      else if(p[1]==='pending') el.style.background='rgba(220,38,38,'+(active?'.85':'.4')+')';
-      else                      el.style.background='rgba(22,163,74,'+(active?'.85':'.4')+')';
-    });
-    renderRoutePins();
+    ids.forEach(function(p){var el=document.getElementById(p[0]);if(!el)return;var active=(p[1]===f);el.style.border=active?'2px solid #fff':'2px solid transparent';if(p[1]==='all')el.style.background='rgba(59,130,246,'+(active?'.85':'.4')+')';else if(p[1]==='pending')el.style.background='rgba(220,38,38,'+(active?'.85':'.4')+')';else el.style.background='rgba(22,163,74,'+(active?'.85':'.4')+')';}); renderRoutePins();
   };
-  window._rerenderRoutePins=function(){
-    if(emerLocs.filter(function(x){return x.gps&&x.gps.lat&&!x._seqNo;}).length) assignSeqNos(null);
-    renderRoutePins();
-  };
-  window._activeDriverMapAddPin=function(rec){
-    emerLocs.push(rec); assignSeqNos(null); renderRoutePins();
-  };
+  window._rerenderRoutePins=function(){if(emerLocs.filter(function(x){return x.gps&&x.gps.lat&&!x._seqNo;}).length)assignSeqNos(null);renderRoutePins();};
+  window._activeDriverMapAddPin=function(rec){emerLocs.push(rec);assignSeqNos(null);renderRoutePins();};
   window._updateMapCounter=updateCounter;
-
-  // 카카오맵 relayout (모달 안에 있을 때 크기 재계산)
-  setTimeout(function(){
-    try{ map.relayout(); map.setCenter(new kakao.maps.LatLng(myLoc.lat, myLoc.lng)); }catch(e){}
-  }, 200);
+  setTimeout(function(){try{map.relayout();map.setCenter(new kakao.maps.LatLng(myLoc.lat,myLoc.lng));}catch(e){}},200);
 }
+
 
 
 
@@ -14113,143 +14044,122 @@ async function openLiveMap(){
 function _renderLiveMap(center, driverLocs, emerLocs){
   var mapDiv = document.getElementById('live-map-canvas');
   if(!mapDiv) return;
-  // 기존 로딩 메시지 제거
-  mapDiv.innerHTML = '';
-  mapDiv.style.display = 'block';
-  mapDiv.style.background = '#fff';
+  mapDiv.innerHTML = ''; mapDiv.style.display = 'block'; mapDiv.style.background = '#fff';
 
-  // 카카오맵 생성
   var map = new kakao.maps.Map(mapDiv, {
-    center: new kakao.maps.LatLng(center.lat, center.lng),
-    level: 5  // 줌 레벨 (1~14, 작을수록 확대)
+    center: new kakao.maps.LatLng(center.lat, center.lng), level: 5
   });
-  // +/- 줌 컨트롤
   map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
-  // 일반/스카이뷰 전환
   map.addControl(new kakao.maps.MapTypeControl(), kakao.maps.ControlPosition.TOPRIGHT);
-
   window._liveMap = map;
   window._liveMapMarkers = {};
 
   var legend = document.getElementById('live-map-legend');
-  var infoOpen = null; // 현재 열린 InfoWindow 추적
+  var infoOpen = null;
 
-  function _makeDriverOverlay(d){
-    var initial = (d.name||'?').slice(0,1);
-    var content = document.createElement('div');
-    content.style.cssText = 'width:34px;height:34px;background:#dc2626;border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:bold;box-shadow:0 2px 6px rgba(0,0,0,.5);cursor:pointer';
-    content.textContent = initial;
-    return new kakao.maps.CustomOverlay({
-      position: new kakao.maps.LatLng(d.lat, d.lng),
-      content: content,
-      yAnchor: 0.5,
-      xAnchor: 0.5
-    });
+  // ★ v9.64: HTML 문자열 사용 (b.v 에러 방지)
+  function makeLivePin(initial, color){
+    return '<div style="width:34px;height:34px;background:'+color+';border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:bold;box-shadow:0 2px 6px rgba(0,0,0,.5);cursor:pointer">'+initial+'</div>';
   }
 
-  function _openDriverInfo(map, d){
-    if(infoOpen){ try{ infoOpen.close(); }catch(e){} }
+  var _liveDriverData = {};
+  window._mbtiLiveDriverClick = function(name){
+    var d = _liveDriverData[name]; if(!d) return;
+    if(infoOpen){try{infoOpen.close();}catch(e){}}
     var updated = d.updatedAt ? d.updatedAt.slice(11,16) : '-';
     var addrText = d.address || d.addr || (d.lat.toFixed(5)+', '+d.lng.toFixed(5));
     var navLink = 'kakaomap://route?ep='+d.lat+','+d.lng+'&by=CAR';
-    var content =
-      '<div style="padding:8px 10px;font-size:13px;min-width:200px;line-height:1.5">'
+    var content = '<div style="padding:8px 10px;font-size:13px;min-width:200px;line-height:1.5">'
       +'<div style="font-weight:700;font-size:14px;margin-bottom:4px">🚗 '+(d.name||'-')+'</div>'
       +'<div style="color:#888;font-size:11px;margin-bottom:4px">캠프: '+(d.camp||'-')+' · 최근: '+updated+'</div>'
       +'<div style="color:#1d4ed8;font-size:12px;margin-bottom:6px">📍 '+addrText+'</div>'
       +'<a href="'+navLink+'" style="display:inline-block;padding:5px 10px;background:#FFCD00;color:#3C1E1E;text-decoration:none;border-radius:6px;font-size:11px;font-weight:700">🚗 카카오내비</a>'
       +'</div>';
-    var info = new kakao.maps.InfoWindow({ content: content, removable: true });
+    var info = new kakao.maps.InfoWindow({content:content, removable:true});
     info.open(map, new kakao.maps.LatLng(d.lat, d.lng));
     infoOpen = info;
-  }
+  };
 
-  // 기사 위치 핀 (빨간 원)
   driverLocs.forEach(function(d){
     if(!d.lat || !d.lng) return;
-    var overlay = _makeDriverOverlay(d);
+    _liveDriverData[d.name] = d;
+    var overlay = new kakao.maps.CustomOverlay({
+      position: new kakao.maps.LatLng(d.lat, d.lng),
+      content: makeLivePin((d.name||'?').slice(0,1), '#dc2626'),
+      yAnchor: 0.5, xAnchor: 0.5
+    });
     overlay.setMap(map);
-    overlay._data = d;
-    // 클릭 핸들러 (CustomOverlay는 content DOM에 직접)
-    overlay.getContent().onclick = function(){ _openDriverInfo(map, d); };
     window._liveMapMarkers[d.name] = overlay;
 
     if(legend){
       var btn = document.createElement('button');
       btn.style.cssText = 'color:#fff;font-size:11px;white-space:nowrap;background:rgba(220,38,38,.85);padding:5px 10px;border-radius:12px;border:none;cursor:pointer;font-weight:700;flex-shrink:0';
-      btn.textContent = '🔴 ' + (d.name||'?');
+      btn.textContent = '🔴 '+(d.name||'?');
       btn.onclick = function(){
-        map.setCenter(new kakao.maps.LatLng(d.lat, d.lng));
-        map.setLevel(3);
-        _openDriverInfo(map, d);
+        map.setCenter(new kakao.maps.LatLng(d.lat, d.lng)); map.setLevel(3);
+        window._mbtiLiveDriverClick(d.name);
       };
       legend.appendChild(btn);
     }
   });
 
-  // 긴급배송 핀 (파란 다이아몬드)
+  var _liveEmerData = {};
+  window._mbtiLiveEmerClick = function(eid){
+    var e = _liveEmerData[eid]; if(!e) return;
+    if(infoOpen){try{infoOpen.close();}catch(e2){}}
+    var navLink = 'kakaomap://route?ep='+e.gps.lat+','+e.gps.lng+'&by=CAR';
+    var content = '<div style="padding:8px;font-size:12px;min-width:200px;line-height:1.5">'
+      +'<div style="font-weight:700;margin-bottom:4px">📦 긴급배송</div>'
+      +(e.recipient?'<div style="margin-bottom:4px">'+e.recipient+'</div>':'')
+      +'<div style="color:#1d4ed8;margin-bottom:4px">'+(e.address||e.addr||'')+'</div>'
+      +'<div style="color:#888;font-size:10px;margin-bottom:6px">기사: '+(e.driver||'-')+' · '+(e.savedAt||'').slice(0,16)+'</div>'
+      +'<a href="'+navLink+'" style="display:inline-block;padding:4px 8px;background:#FFCD00;color:#3C1E1E;text-decoration:none;border-radius:5px;font-size:11px;font-weight:700">🚗 카카오내비</a>'
+      +'</div>';
+    var info = new kakao.maps.InfoWindow({content:content, removable:true});
+    info.open(map, new kakao.maps.LatLng(e.gps.lat, e.gps.lng));
+    infoOpen = info;
+  };
+
+  var emerIdx = 0;
   emerLocs.forEach(function(e){
     if(!e.gps || !e.gps.lat) return;
-    var diamond = document.createElement('div');
-    diamond.style.cssText = 'width:22px;height:22px;background:#2563eb;border:2px solid #fff;transform:rotate(45deg);box-shadow:0 2px 5px rgba(0,0,0,.5);cursor:pointer';
+    var eid = e.fbId || e.id || ('e'+emerIdx++);
+    _liveEmerData[eid] = e;
+    var diamond = '<div style="width:22px;height:22px;background:#2563eb;border:2px solid #fff;transform:rotate(45deg);box-shadow:0 2px 5px rgba(0,0,0,.5);cursor:pointer" onclick="window._mbtiLiveEmerClick(\''+eid+'\')"></div>';
     var overlay = new kakao.maps.CustomOverlay({
       position: new kakao.maps.LatLng(e.gps.lat, e.gps.lng),
-      content: diamond,
-      yAnchor: 0.5,
-      xAnchor: 0.5
+      content: diamond, yAnchor:0.5, xAnchor:0.5
     });
     overlay.setMap(map);
-    diamond.onclick = function(){
-      if(infoOpen){ try{ infoOpen.close(); }catch(err){} }
-      var navLink = 'kakaomap://route?ep='+e.gps.lat+','+e.gps.lng+'&by=CAR';
-      var content =
-        '<div style="padding:8px;font-size:12px;min-width:200px;line-height:1.5">'
-        +'<div style="font-weight:700;margin-bottom:4px">📦 긴급배송</div>'
-        +(e.recipient?'<div style="margin-bottom:4px">'+e.recipient+'</div>':'')
-        +'<div style="color:#1d4ed8;margin-bottom:4px">'+(e.address||e.addr||'')+'</div>'
-        +'<div style="color:#888;font-size:10px;margin-bottom:6px">기사: '+(e.driver||'-')+' · '+(e.savedAt||'').slice(0,16)+'</div>'
-        +'<a href="'+navLink+'" style="display:inline-block;padding:4px 8px;background:#FFCD00;color:#3C1E1E;text-decoration:none;border-radius:5px;font-size:11px;font-weight:700">🚗 카카오내비</a>'
-        +'</div>';
-      var info = new kakao.maps.InfoWindow({ content: content, removable: true });
-      info.open(map, new kakao.maps.LatLng(e.gps.lat, e.gps.lng));
-      infoOpen = info;
-    };
   });
 
-  // 카메라 위치 결정
   if(!driverLocs.length && !emerLocs.length){
-    map.setCenter(new kakao.maps.LatLng(35.1796, 129.0756));
-    map.setLevel(8);
+    map.setCenter(new kakao.maps.LatLng(35.1796, 129.0756)); map.setLevel(8);
   } else {
-    var bounds = new kakao.maps.LatLngBounds();
-    var addedAny = false;
-    driverLocs.forEach(function(d){ if(d.lat&&d.lng){ bounds.extend(new kakao.maps.LatLng(d.lat,d.lng)); addedAny=true; } });
-    emerLocs.forEach(function(e){ if(e.gps&&e.gps.lat){ bounds.extend(new kakao.maps.LatLng(e.gps.lat,e.gps.lng)); addedAny=true; } });
-    if(addedAny){
-      try{ map.setBounds(bounds); }catch(err){}
-    }
+    var bounds = new kakao.maps.LatLngBounds(); var addedAny = false;
+    driverLocs.forEach(function(d){if(d.lat&&d.lng){bounds.extend(new kakao.maps.LatLng(d.lat,d.lng));addedAny=true;}});
+    emerLocs.forEach(function(e){if(e.gps&&e.gps.lat){bounds.extend(new kakao.maps.LatLng(e.gps.lat,e.gps.lng));addedAny=true;}});
+    if(addedAny){ try{map.setBounds(bounds);}catch(err){} }
   }
 
-  // ★ Firebase 실시간 리스너 — 기사 위치 자동 업데이트
   if(FB && _db){
-    window._liveMapUnsub = _db.collection('driver_locations')
-      .where('date','==',today())
+    window._liveMapUnsub = _db.collection('driver_locations').where('date','==',today())
       .onSnapshot(function(snap){
         snap.docChanges().forEach(function(change){
-          if(change.type === 'removed') return;
+          if(change.type==='removed') return;
           var d = change.doc.data();
-          if(!d.lat || !d.lng) return;
+          if(!d.lat||!d.lng) return;
+          _liveDriverData[d.name] = d;
           var existing = window._liveMapMarkers && window._liveMapMarkers[d.name];
-          if(existing){
-            existing.setPosition(new kakao.maps.LatLng(d.lat, d.lng));
-            existing._data = d;
-          } else {
-            // 새로 접속한 기사 → 핀 추가
-            var overlay = _makeDriverOverlay(d);
-            overlay.setMap(map);
-            overlay._data = d;
-            overlay.getContent().onclick = function(){ _openDriverInfo(map, overlay._data); };
-            window._liveMapMarkers[d.name] = overlay;
+          if(existing){ existing.setPosition(new kakao.maps.LatLng(d.lat,d.lng)); }
+          else {
+            var newOv = new kakao.maps.CustomOverlay({
+              position:new kakao.maps.LatLng(d.lat,d.lng),
+              content:makeLivePin((d.name||'?').slice(0,1),'#dc2626'),
+              yAnchor:0.5,xAnchor:0.5
+            });
+            newOv.setMap(map);
+            window._liveMapMarkers[d.name] = newOv;
           }
         });
       }, function(e){ console.warn('[LiveMap] 실시간 오류:', e.message); });
