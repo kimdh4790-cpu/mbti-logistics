@@ -20880,29 +20880,54 @@ async function _loadKakaoMapSDK(){
 
 // ★ v9.58: 카카오 Geocoding — 주소 → 위경도 변환
 async function _kakaoGeocode(address){
-  var apiKey = '';
-  // Firebase에서 로드
-  if(FB && _db){
-    try{
-      var doc = await _db.collection('settings').doc('claude_config').get();
-      if(doc.exists && doc.data().kakaoApiKey) apiKey = doc.data().kakaoApiKey.trim();
-    }catch(e){}
+  if(!address||!address.trim()) return null;
+  // ★ v9.61: API 키 캐시 우선
+  var apiKey = window._cachedKakaoApiKey || '';
+  if(!apiKey){
+    if(FB && _db){
+      try{
+        var doc = await _db.collection('settings').doc('claude_config').get();
+        if(doc.exists && doc.data().kakaoApiKey){
+          apiKey = doc.data().kakaoApiKey.trim();
+          window._cachedKakaoApiKey = apiKey;
+        }
+      }catch(e){}
+    }
+    if(!apiKey) apiKey = (localStorage.getItem('mbti_kakao_api_key')||'').trim();
+    if(apiKey) window._cachedKakaoApiKey = apiKey;
   }
-  if(!apiKey) apiKey = (localStorage.getItem('mbti_kakao_api_key')||'').trim();
   if(!apiKey) return null;
 
-  try{
-    var url = 'https://dapi.kakao.com/v2/local/search/address.json?query='+encodeURIComponent(address);
-    var resp = await fetch(url, {
-      headers: { 'Authorization': 'KakaoAK '+apiKey }
-    });
+  async function _kakaoQuery(addr){
+    var url = 'https://dapi.kakao.com/v2/local/search/address.json?query='+encodeURIComponent(addr);
+    var resp = await fetch(url, { headers: { 'Authorization': 'KakaoAK '+apiKey } });
     var data = await resp.json();
     if(data.documents && data.documents.length > 0){
       var d = data.documents[0];
       var lat = parseFloat(d.y || (d.address && d.address.y) || (d.road_address && d.road_address.y));
       var lng = parseFloat(d.x || (d.address && d.address.x) || (d.road_address && d.road_address.x));
-      if(lat && lng) return { lat, lng, address };
+      if(lat && lng) return { lat, lng, address: addr };
     }
+    return null;
+  }
+
+  try{
+    // 1차: 원본 주소로 시도
+    var result = await _kakaoQuery(address);
+    if(result){ console.log('[Geocoding] ✅', address.slice(0,20)); return result; }
+
+    // ★ v9.61: 2차 — 부산 구 이름이 있으면 앞의 잘못된 시/구 접두사 제거 후 재시도
+    // OCR이 "서울시 강남구 수영로..." 처럼 읽을 때 "수영구 수영로..."로 수정
+    var busanMatch = address.match(/(수영구|사상구|해운대구|부산진구|동래구|남구|연제구|금정구|강서구|기장군|북구|중구|서구|동구|영도구)/);
+    if(busanMatch){
+      var fixedAddr = address.slice(address.indexOf(busanMatch[0]));
+      if(fixedAddr !== address){
+        console.log('[Geocoding] 주소 보정:', address.slice(0,15),'→', fixedAddr.slice(0,15));
+        result = await _kakaoQuery(fixedAddr);
+        if(result) return { lat:result.lat, lng:result.lng, address:fixedAddr };
+      }
+    }
+    console.warn('[Geocoding] 결과 없음:', address.slice(0,20));
     return null;
   }catch(e){
     console.warn('[카카오 Geocoding 실패]', e&&e.message);
