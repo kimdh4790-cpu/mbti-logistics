@@ -13908,7 +13908,7 @@ function _closeDriverMap(){
 
 // ★ v9.80: 잘못된 운송장 + GPS 자동 정리 (1회 실행)
 async function _fixWrongTrackings(){
-  var doneKey = 'mbti_track_fixed_v2';
+  var doneKey = 'mbti_track_fixed_v3'; // ★ v9.81: 재실행
   if(localStorage.getItem(doneKey)) return;
   if(!FB || !_db) return;
   try{
@@ -13999,7 +13999,7 @@ async function openDriverMap(){
     <div id="mpp-header" style="display:flex;align-items:center;gap:10px;margin-bottom:10px"></div>
     <div id="mpp-addr" style="background:rgba(255,255,255,.07);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:13px;color:#d1d5db;line-height:1.6"></div>
     <div id="mpp-tracks" style="margin-bottom:12px"></div>
-    <button id="mpp-complete-btn" ontouchend="event.stopPropagation();event.preventDefault();_mapShowDelivComplete()" onclick="_mapShowDelivComplete()" style="width:100%;padding:14px;background:#16a34a;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer;touch-action:manipulation;margin-bottom:8px">&#10003; 배송완료 처리</button>
+    <button id="mpp-complete-btn" ontouchend="event.stopPropagation();event.preventDefault();_doDelivComplete()" onclick="_doDelivComplete()" style="width:100%;padding:14px;background:#16a34a;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer;touch-action:manipulation;margin-bottom:8px">&#10003; 배송완료 처리</button>
     <a id="mpp-navi-btn" href="#" ontouchend="event.stopPropagation()" style="display:flex;align-items:center;justify-content:center;padding:13px;background:#FFCD00;color:#3C1E1E;text-decoration:none;border-radius:10px;font-size:13px;font-weight:800">&#128663; 카카오내비로 안내</a>
     <button ontouchend="event.stopPropagation();event.preventDefault();document.getElementById('map-pin-panel').style.display='none'" onclick="document.getElementById('map-pin-panel').style.display='none'" style="position:absolute;top:14px;right:14px;background:rgba(255,255,255,.12);border:none;border-radius:50%;width:28px;height:28px;color:#fff;font-size:14px;cursor:pointer;touch-action:manipulation">X</button>
   </div>
@@ -22889,7 +22889,7 @@ function _emerHandleScan(raw, statusEl){
   if(qp.order_id){var oe=document.getElementById('emer-orderid');if(oe&&!oe.value){oe.value=qp.order_id;fld.push('주문번호');}}
   if(qp.memo){var dm=document.getElementById('emer-delivmemo');if(dm&&!dm.value)dm.value=qp.memo;}
   if(qp.lat&&qp.lng){
-    // ★ v9.80: QR GPS 최우선 사용 (카카오 지오코딩보다 QR 내 GPS가 더 정확)
+    // ★ v9.81: QR GPS 직접 사용 (쿠팡 좌표가 건물 정확 위치)
     window._emerGps={lat:qp.lat,lng:qp.lng,src:'QR'};fld.push('GPS');
     var gpsEl=document.getElementById('emer-gps-status');
     if(gpsEl)gpsEl.innerHTML='<span style="color:var(--teal)">📍 QR GPS ✅</span>';
