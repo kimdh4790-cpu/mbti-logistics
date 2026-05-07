@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.59</title>
+<title>엠비티아이 물류관리 v9.60</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10406,6 +10406,15 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
 if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = jsQR;
 });
 </script>
+<!-- ★ v9.60: Leaflet (Google Maps 대체 — 무료, API 키 불필요) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+.leaflet-container{font-family:inherit}
+.leaflet-popup-content{margin:10px 14px;font-size:13px}
+.leaflet-popup-content-wrapper{border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.2)}
+.mbti-pin{display:flex;align-items:center;justify-content:center;border-radius:50%;border:2.5px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35);font-weight:800;color:#fff;font-size:11px;cursor:pointer}
+</style>
 </head>
 <body onload="setPwaIcons('')">
 
@@ -10420,7 +10429,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.59 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.60 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -11428,10 +11437,10 @@ function updBadge(){
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
 function updFbUI(){
-  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.59 · 🔥 실시간':'v9.59 · 데모';
+  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.60 · 🔥 실시간':'v9.60 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.59 · Firebase 실시간':'v9.59 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.60 · Firebase 실시간':'v9.60 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -13561,55 +13570,24 @@ function driverMapPinNav(dir){
 
   // 지도 이동
   var pos = {lat: target.gps.lat, lng: target.gps.lng};
-  map.panTo(pos);
+  map.panTo([pos.lat, pos.lng]);
   if(map.getZoom() < 17) map.setZoom(17);
 
-  // ★ 마커 클릭 이벤트 강제 발생 (인포윈도우 열기)
+  // 마커 팝업 열기 (Leaflet)
   var markers = window._driverMapMarkers || {};
-  var clicked = false;
   var fid = target.fbId || target._fbId || target.id || '';
   if(fid && markers[fid]){
-    google.maps.event.trigger(markers[fid], 'click');
-    clicked = true;
-  }
-  if(!clicked){
+    markers[fid].openPopup();
+  } else {
     // fbId 없으면 좌표로 매칭
     Object.values(markers).forEach(function(mk){
       try{
-        var mp = mk.getPosition();
-        if(Math.abs(mp.lat()-pos.lat)<0.00015 && Math.abs(mp.lng()-pos.lng)<0.00015){
-          google.maps.event.trigger(mk, 'click');
-          clicked = true;
+        var ll = mk.getLatLng();
+        if(Math.abs(ll.lat-pos.lat)<0.00015 && Math.abs(ll.lng-pos.lng)<0.00015){
+          mk.openPopup();
         }
       }catch(e){}
     });
-  }
-
-  // 마커 클릭이 안 됐으면 직접 인포윈도우 표시
-  if(!clicked){
-    var tStatus = target.trackingStatus||{};
-    var trackings = target.trackings||[target.tracking||''];
-    var doneCnt = trackings.filter(function(t){return tStatus[t]&&tStatus[t].status==='완료';}).length;
-    var statusBadge = target.status==='완료'
-      ? '<span style="background:#16a34a;color:#fff;padding:1px 6px;border-radius:999px;font-size:10px">✅ 완료</span>'
-      : target.status==='부분완료'
-      ? '<span style="background:#f97316;color:#fff;padding:1px 6px;border-radius:999px;font-size:10px">🟠 부분완료</span>'
-      : '<span style="background:#dc2626;color:#fff;padding:1px 6px;border-radius:999px;font-size:10px">⏳ 미완료</span>';
-    var info = window._infoWindowRef || new google.maps.InfoWindow();
-    window._infoWindowRef = info;
-    info.setContent(
-      '<div style="font-size:13px;padding:6px;min-width:200px">'
-      +'<div style="font-weight:800;font-size:14px;margin-bottom:4px">'+(target._seqNo||'?')+'번: '+(target.recipient||'수령인미상')+' '+statusBadge+'</div>'
-      +'<div style="color:#1d4ed8;font-size:12px;margin-bottom:4px">'+(target.addr||'주소없음')+'</div>'
-      +'<div style="font-size:11px;color:#555">'
-      +(target.order_id?'📋 주문번호: '+target.order_id+'<br>':'')
-      +'📦 운송장: '+trackings.length+'건'+(doneCnt?' ('+doneCnt+'건 완료)':'')+'<br>'
-      +'⏰ '+(target.time||'')
-      +'</div>'
-      +'</div>'
-    );
-    info.setPosition(pos);
-    info.open(map);
   }
 }
 
@@ -13791,18 +13769,12 @@ async function openDriverMap(){
     </div>
   </div>`);
   try{
-    var results = await Promise.all([_getGoogleApiKey(), _getGPS(), _getEmerLocs()]);
-    var apiKey=results[0], myLoc=results[1], emerLocs=results[2];
-    // ★ v9.25: GPS 거부/오류 감지 시 친절한 안내 모달 (지도는 그대로 보여줌)
+    // ★ v9.60: Google API 키 불필요 — Leaflet 사용
+    var results = await Promise.all([_getGPS(), _getEmerLocs()]);
+    var myLoc=results[0], emerLocs=results[1];
     if(myLoc&&myLoc._denied){
       _showGpsHelpModal(myLoc._reason||'denied', null);
     }
-    if(!apiKey){
-      var mapDiv=document.getElementById('driver-map-canvas');
-      if(mapDiv) mapDiv.innerHTML='<div style="color:#fbbf24;font-size:14px;text-align:center;padding:20px">🚫 Google API 키 미설정</div>';
-      return;
-    }
-    await _loadMapsScript(apiKey);
     var hasUnassigned=emerLocs.filter(function(x){return x.gps&&x.gps.lat&&!x._seqNo;}).length>0;
     var hasAny=emerLocs.filter(function(x){return x.gps&&x.gps.lat;}).length>0;
     var needsDialog=hasAny&&hasUnassigned&&emerLocs.filter(function(x){return x._seqNo;}).length===0;
@@ -13829,20 +13801,30 @@ async function openDriverMap(){
   }
 }
 
+// ★ v9.60: Leaflet 기반 배송 지도 (Google Maps 완전 대체 — API 키 불필요)
 function _renderDriverMap(myLoc, emerLocs){
   var mapDiv=document.getElementById('driver-map-canvas');
   if(!mapDiv) return;
-  // ★ v9.25: 전역에 저장 (핀 순차 이동용)
+  mapDiv.innerHTML='';
+  mapDiv.style.background='';
   window._emerLocs = emerLocs;
-  var map=new google.maps.Map(mapDiv,{center:myLoc,zoom:14,mapTypeId:'roadmap',gestureHandling:'greedy'});
-  var infoWin=new google.maps.InfoWindow();
-  // ★ 내 위치 마커 (실시간)
-  var myMarker=new google.maps.Marker({position:myLoc,map:map,title:'내 위치',icon:{path:google.maps.SymbolPath.CIRCLE,scale:12,fillColor:'#2563eb',fillOpacity:1,strokeColor:'#fff',strokeWeight:2.5},zIndex:999});
+
+  // Leaflet 지도 초기화
+  var map=L.map(mapDiv,{zoomControl:true,attributionControl:false}).setView([myLoc.lat,myLoc.lng],15);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
+
+  // 내 위치 마커 (파란 원)
+  function makeIcon(color,label,size,opacity){
+    size=size||28;opacity=opacity===undefined?1:opacity;
+    return L.divIcon({className:'',iconSize:[size,size],iconAnchor:[size/2,size/2],popupAnchor:[0,-size/2],
+      html:'<div class="mbti-pin" style="width:'+size+'px;height:'+size+'px;background:'+color+';opacity:'+opacity+'">'+label+'</div>'});
+  }
+  var myMarker=L.marker([myLoc.lat,myLoc.lng],{icon:makeIcon('#2563eb','📍',32),zIndexOffset:999}).addTo(map);
   window._driverMapCurrentLoc=myLoc;
   if(window._driverMapWatchId) navigator.geolocation.clearWatch(window._driverMapWatchId);
   window._driverMapWatchId=navigator.geolocation.watchPosition(function(pos){
     var nl={lat:pos.coords.latitude,lng:pos.coords.longitude};
-    myMarker.setPosition(nl); window._driverMapCurrentLoc=nl;
+    myMarker.setLatLng([nl.lat,nl.lng]); window._driverMapCurrentLoc=nl;
   },null,{enableHighAccuracy:true,maximumAge:3000,timeout:10000});
 
   function nearestNeighborSort(pins,startLoc){
@@ -13873,8 +13855,7 @@ function _renderDriverMap(myLoc, emerLocs){
     }
   }
   function updateCounter(){
-    var total=emerLocs.length,done=emerLocs.filter(function(x){return x.status==='완료';}).length;
-    var pending=total-done;
+    var total=emerLocs.length,done=emerLocs.filter(function(x){return x.status==='완료';}).length,pending=total-done;
     var te=document.getElementById('driver-map-total'),pe=document.getElementById('driver-map-pending'),de=document.getElementById('driver-map-done');
     if(te) te.textContent='📦 전체 '+total;
     if(pe) pe.textContent='⏳ 미완료 '+pending;
@@ -13882,64 +13863,53 @@ function _renderDriverMap(myLoc, emerLocs){
   }
   window._driverMapPinMarkers=[]; window._driverMapMarkers={};
   function renderRoutePins(){
-    (window._driverMapPinMarkers||[]).forEach(function(m){m.setMap(null);});
+    (window._driverMapPinMarkers||[]).forEach(function(m){map.removeLayer(m);});
     window._driverMapPinMarkers=[]; window._driverMapMarkers={};
+    var _f=window._driverMapFilter||'all';
     emerLocs.filter(function(x){return x.gps&&x.gps.lat;}).forEach(function(x){
-      var fbId=x.fbId||x._fbId||'',isDone=x.status==='완료',seqNo=x._seqNo||'?';
-      // ★ v9.25: 부분완료 상태 판정
-      var isPartial = x.status==='부분완료';
-      var trackings = (x.trackings && x.trackings.length) ? x.trackings : (x.tracking?[x.tracking]:[]);
-      var tStatus = x.trackingStatus || {};
-      var doneCnt = trackings.filter(function(t){ return tStatus[t]&&tStatus[t].status==='완료'; }).length;
-      var pendCnt = trackings.length - doneCnt;
-      // 색상 결정
-      var pinColor = isDone ? '#16a34a' : (isPartial ? '#f97316' : '#dc2626');
-      var pinOpacity = isDone ? 0.5 : 1;
-
-      var trackStr=(trackings.length>1)?trackings[0]+' 외 '+(trackings.length-1)+'건':(trackings[0]||'—');
-      var marker=new google.maps.Marker({
-        position:{lat:x.gps.lat,lng:x.gps.lng},map:map,
-        title:(isDone?'✓':(isPartial?'🟠 '+doneCnt+'/'+trackings.length+' ':seqNo+'번: '))+(x.addr||x.recipient||''),
-        icon:{path:google.maps.SymbolPath.CIRCLE,scale:14,fillColor:pinColor,fillOpacity:pinOpacity,strokeColor:'#fff',strokeWeight:2.5},
-        label:{text:isPartial?(doneCnt+'/'+trackings.length):String(seqNo),color:'#fff',fontSize:isPartial?'10px':'11px',fontWeight:'bold'},
-        zIndex:isDone?10:(isPartial?200:300-(x._seqNo||0))
-      });
+      var fbId=x.fbId||x._fbId||'',isDone=x.status==='완료',isPartial=x.status==='부분완료';
+      var seqNo=x._seqNo||'?';
+      var trackings=(x.trackings&&x.trackings.length)?x.trackings:(x.tracking?[x.tracking]:[]);
+      var tStatus=x.trackingStatus||{};
+      var doneCnt=trackings.filter(function(t){return tStatus[t]&&tStatus[t].status==='완료';}).length;
+      var pendCnt=trackings.length-doneCnt;
+      var pinColor=isDone?'#16a34a':(isPartial?'#f97316':'#dc2626');
+      var pinOpacity=isDone?0.5:1;
+      var label=isPartial?(doneCnt+'/'+trackings.length):String(seqNo);
+      var statusStr=isDone?'done':(isPartial?'partial':'pending');
+      if(_f!=='all' && _f!==statusStr && !(_f==='pending'&&statusStr==='partial')) return;
+      var marker=L.marker([x.gps.lat,x.gps.lng],{
+        icon:makeIcon(pinColor,label,28,pinOpacity),
+        zIndexOffset:isDone?10:(isPartial?200:(300-(x._seqNo||0)))
+      }).addTo(map);
+      marker._mbtiStatus=statusStr; marker._mbtiId=fbId;
       if(fbId) window._driverMapMarkers[fbId]=marker;
-      marker._mbtiStatus = isDone ? 'done' : (isPartial ? 'partial' : 'pending');
-      // 현재 필터 적용
-      var _f = window._driverMapFilter || 'all';
-      if(_f!=='all' && _f!==marker._mbtiStatus && !(_f==='pending'&&marker._mbtiStatus==='partial')) marker.setMap(null);
       window._driverMapPinMarkers.push(marker);
-      marker.addListener('click',function(){
-        // ★ v9.25: 운송장별 상태 표시
-        var trackListHtml = '';
-        if(trackings.length){
-          trackListHtml = '<div style="margin-top:6px;padding:6px 8px;background:rgba(0,0,0,.04);border-radius:6px;font-size:10px;line-height:1.7">'
-            + trackings.map(function(t){
-                var s = tStatus[t]&&tStatus[t].status==='완료';
-                return '<div style="display:flex;align-items:center;gap:6px;font-family:monospace">'
-                  + '<span style="color:'+(s?'#16a34a':'#dc2626')+';font-weight:700;width:14px">'+(s?'✓':'✗')+'</span>'
-                  + '<span style="color:'+(s?'#16a34a':'#1e293b')+';'+(s?'text-decoration:line-through;':'')+'">'+t+'</span>'
-                  + '</div>';
-              }).join('')
-            + '</div>';
-        }
-        var photos=(x.completePhotos||[]).concat(x.completePhotosLocal||[]);
-        var ph=photos.slice(0,3).filter(function(u){return u&&u.length>10;}).map(function(url){return '<img src="'+url+'" style="width:50px;height:50px;object-fit:cover;border-radius:6px;border:2px solid '+pinColor+'">'}).join('');
-        var actionBtn;
-        if(isDone){
-          actionBtn = '<div style="color:#16a34a;font-size:11px;font-weight:700;margin-top:6px;text-align:center">✅ 전체 배송완료</div>';
-        } else if(isPartial){
-          actionBtn = '<button onclick="openDelivComplete(\''+fbId+'\',\''+encodeURIComponent(JSON.stringify({trackings:x.trackings||[],tracking:x.tracking,order_id:x.order_id,addr:x.addr,recipient:x.recipient,time:x.time}))+'\');document.querySelectorAll(\'.gm-ui-hover-effect\')[0]&&document.querySelectorAll(\'.gm-ui-hover-effect\')[0].click()" style="margin-top:5px;width:100%;padding:7px;background:#f97316;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">🟠 나머지 '+pendCnt+'건 완료 처리</button>';
-        } else {
-          actionBtn = '<button onclick="openDelivComplete(\''+fbId+'\',\''+encodeURIComponent(JSON.stringify({trackings:x.trackings||[],tracking:x.tracking,order_id:x.order_id,addr:x.addr,recipient:x.recipient,time:x.time}))+'\');document.querySelectorAll(\'.gm-ui-hover-effect\')[0]&&document.querySelectorAll(\'.gm-ui-hover-effect\')[0].click()" style="margin-top:5px;width:100%;padding:7px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">✅ 배송완료 처리</button>';
-        }
-        var statusBadge = isDone?'<span style="background:#16a34a;color:#fff;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:700;margin-left:6px">전체완료</span>'
-                        : isPartial?'<span style="background:#f97316;color:#fff;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:700;margin-left:6px">부분완료 '+doneCnt+'/'+trackings.length+'</span>'
-                        :'';
-        infoWin.setContent('<div style="font-size:13px;padding:6px;min-width:200px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap"><span style="background:'+pinColor+';color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0">'+(isPartial?(doneCnt+'/'+trackings.length):seqNo)+'</span><span style="font-weight:800;font-size:14px">'+(x.recipient||'수령인미상')+'</span>'+statusBadge+'</div><div style="color:#1d4ed8;font-size:12px;line-height:1.5;margin-bottom:4px">'+(x.addr||'주소없음')+'</div><div style="font-size:11px;color:#555;line-height:1.7">'+(x.order_id?'📋 주문번호: '+x.order_id+'<br>':'')+'⏰ '+(x.time||'')+'</div>'+trackListHtml+(ph?'<div style="display:flex;gap:4px;margin-top:6px">'+ph+'</div>':'')+actionBtn+'</div>');
-        infoWin.open(map,marker);
-      });
+      // 팝업 내용
+      var trackListHtml='';
+      if(trackings.length){
+        trackListHtml='<div style="margin-top:6px;padding:6px 8px;background:rgba(0,0,0,.04);border-radius:6px;font-size:10px;line-height:1.7">'
+          +trackings.map(function(t){var s=tStatus[t]&&tStatus[t].status==='완료';
+            return '<div style="display:flex;align-items:center;gap:6px"><span style="color:'+(s?'#16a34a':'#dc2626')+';font-weight:700">'+(s?'✓':'✗')+'</span>'
+              +'<span style="color:'+(s?'#16a34a':'#1e293b')+';'+(s?'text-decoration:line-through;':'')+'">'+t+'</span></div>';}).join('')+'</div>';
+      }
+      var photos=(x.completePhotos||[]).concat(x.completePhotosLocal||[]);
+      var ph=photos.slice(0,3).filter(function(u){return u&&u.length>10;}).map(function(url){return '<img src="'+url+'" style="width:50px;height:50px;object-fit:cover;border-radius:6px;border:2px solid '+pinColor+'">';}).join('');
+      var actionBtn=isDone
+        ?'<div style="color:#16a34a;font-size:11px;font-weight:700;margin-top:6px;text-align:center">✅ 전체 배송완료</div>'
+        :isPartial
+          ?'<button onclick="openDelivComplete(\''+fbId+'\',\''+encodeURIComponent(JSON.stringify({trackings:x.trackings||[],tracking:x.tracking,order_id:x.order_id,addr:x.addr,recipient:x.recipient,time:x.time}))+'\');" style="margin-top:5px;width:100%;padding:7px;background:#f97316;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">🟠 나머지 '+pendCnt+'건 완료</button>'
+          :'<button onclick="openDelivComplete(\''+fbId+'\',\''+encodeURIComponent(JSON.stringify({trackings:x.trackings||[],tracking:x.tracking,order_id:x.order_id,addr:x.addr,recipient:x.recipient,time:x.time}))+'\');" style="margin-top:5px;width:100%;padding:7px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">✅ 배송완료 처리</button>';
+      var statusBadge=isDone?'<span style="background:#16a34a;color:#fff;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:700;margin-left:4px">전체완료</span>'
+        :isPartial?'<span style="background:#f97316;color:#fff;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:700;margin-left:4px">'+doneCnt+'/'+trackings.length+'</span>':'';
+      var popHtml='<div style="font-size:13px;min-width:200px">'
+        +'<div style="display:flex;align-items:center;gap:4px;margin-bottom:4px;flex-wrap:wrap">'
+        +'<span style="background:'+pinColor+';color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800">'+label+'</span>'
+        +'<span style="font-weight:800;font-size:14px">'+(x.recipient||'수령인미상')+'</span>'+statusBadge+'</div>'
+        +'<div style="color:#1d4ed8;font-size:12px;line-height:1.5;margin-bottom:4px">'+(x.addr||'주소없음')+'</div>'
+        +'<div style="font-size:11px;color:#555">⏰ '+(x.time||'')+'</div>'
+        +trackListHtml+(ph?'<div style="display:flex;gap:4px;margin-top:6px">'+ph+'</div>':'')+actionBtn+'</div>';
+      marker.bindPopup(popHtml,{maxWidth:260});
     });
     updateCounter();
   }
@@ -13949,7 +13919,6 @@ function _renderDriverMap(myLoc, emerLocs){
   var hasUnassigned=emerLocs.filter(function(x){return x.gps&&x.gps.lat&&!x._seqNo;}).length>0;
   var hasAny=emerLocs.filter(function(x){return x.gps&&x.gps.lat;}).length>0;
   var isFirstTime=hasAny&&hasUnassigned&&emerLocs.filter(function(x){return x._seqNo;}).length===0;
-
   if(isFirstTime&&userSelectsFirst){
     var banner=document.createElement('div');
     banner.id='map-select-banner';
@@ -13958,39 +13927,29 @@ function _renderDriverMap(myLoc, emerLocs){
     mapDiv.style.position='relative';
     mapDiv.appendChild(banner);
     emerLocs.filter(function(x){return x.gps&&x.gps.lat;}).forEach(function(x){
-      var tm=new google.maps.Marker({position:{lat:x.gps.lat,lng:x.gps.lng},map:map,icon:{path:google.maps.SymbolPath.CIRCLE,scale:14,fillColor:'#7c3aed',fillOpacity:1,strokeColor:'#fff',strokeWeight:2.5},label:{text:'?',color:'#fff',fontSize:'11px',fontWeight:'bold'},zIndex:100});
-      tm.addListener('click',function(){assignSeqNos(x);document.getElementById('map-select-banner')?.remove();renderRoutePins();map.panTo({lat:x.gps.lat,lng:x.gps.lng});infoWin.close();});
+      var tm=L.marker([x.gps.lat,x.gps.lng],{icon:makeIcon('#7c3aed','?',28)}).addTo(map);
+      tm.on('click',function(){assignSeqNos(x);document.getElementById('map-select-banner')?.remove();renderRoutePins();map.panTo([x.gps.lat,x.gps.lng]);});
       window._driverMapPinMarkers.push(tm);
     });
   } else {
     if(hasUnassigned) assignSeqNos(null);
     renderRoutePins();
   }
-
   window._activeDriverMap=map;
   window._activeDriverMapEmerLocs=emerLocs;
-  // ★ v9.25: 핀 필터 (전체/미완료/완료)
   if(!window._driverMapFilter) window._driverMapFilter='all';
   window._driverMapSetFilter=function(f){
     window._driverMapFilter=f;
-    // 박스 시각 갱신
     var ids=[['driver-map-total','all'],['driver-map-pending','pending'],['driver-map-done','done']];
     ids.forEach(function(p){
-      var el=document.getElementById(p[0]);
-      if(!el) return;
+      var el=document.getElementById(p[0]); if(!el) return;
       var active=(p[1]===f);
       el.style.border=active?'2px solid #fff':'2px solid transparent';
-      // 활성 시 진한 배경, 비활성 시 흐리게
       if(p[1]==='all')      el.style.background='rgba(59,130,246,'+(active?'.85':'.4')+')';
       else if(p[1]==='pending') el.style.background='rgba(220,38,38,'+(active?'.85':'.4')+')';
       else                  el.style.background='rgba(22,163,74,'+(active?'.85':'.4')+')';
     });
-    // 마커 표시 토글
-    (window._driverMapPinMarkers||[]).forEach(function(m){
-      if(!m._mbtiStatus) { m.setMap(window._activeDriverMap); return; } // 보라색 ? 마커 등 예외
-      var show=(f==='all')||(f===m._mbtiStatus);
-      m.setMap(show?window._activeDriverMap:null);
-    });
+    renderRoutePins();
   };
   window._rerenderRoutePins=function(){
     if(emerLocs.filter(function(x){return x.gps&&x.gps.lat&&!x._seqNo;}).length) assignSeqNos(null);
@@ -14000,7 +13959,7 @@ function _renderDriverMap(myLoc, emerLocs){
     emerLocs.push(rec); assignSeqNos(null); renderRoutePins();
   };
   window._updateMapCounter=updateCounter;
-  setTimeout(function(){google.maps.event.trigger(map,'resize');map.setCenter(myLoc);},200);
+  setTimeout(function(){ map.invalidateSize(); map.panTo([myLoc.lat,myLoc.lng]); },200);
 }
 
 
