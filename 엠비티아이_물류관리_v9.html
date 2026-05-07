@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.76</title>
+<title>엠비티아이 물류관리 v9.77</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10425,7 +10425,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.76 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.77 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -11402,10 +11402,10 @@ function updBadge(){
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
 function updFbUI(){
-  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.76 · 🔥 실시간':'v9.75 · 데모';
+  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.77 · 🔥 실시간':'v9.75 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.76 · Firebase 실시간':'v9.76 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.77 · Firebase 실시간':'v9.77 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -13877,6 +13877,17 @@ function _renderDriverMap(myLoc, emerLocs){
     }
     return sorted;
   }
+  // ★ v9.77: _seqNo localStorage 저장 (지도 재오픈 시 복원)
+  var _seqCache = {};
+  try{ _seqCache = JSON.parse(localStorage.getItem('mbti_emer_seqno')||'{}'); }catch(e){}
+  // 저장된 seqNo 복원
+  emerLocs.forEach(function(x){ if(x.fbId && _seqCache[x.fbId]) x._seqNo = _seqCache[x.fbId]; });
+  function _saveSeqNos(){
+    var m={};
+    emerLocs.forEach(function(x){ if(x.fbId&&x._seqNo) m[x.fbId]=x._seqNo; });
+    try{ localStorage.setItem('mbti_emer_seqno', JSON.stringify(m)); }catch(e){}
+  }
+
   function assignSeqNos(startPin){
     var allPins=emerLocs.filter(function(x){return x.gps&&x.gps.lat;});
     var unassigned=allPins.filter(function(x){return !x._seqNo;});
@@ -13885,6 +13896,7 @@ function _renderDriverMap(myLoc, emerLocs){
     var pendingU=unassigned.filter(function(x){return x.status!=='완료';}),doneU=unassigned.filter(function(x){return x.status==='완료';});
     if(startPin&&maxNo===0){startPin._seqNo=1;var rest=pendingU.filter(function(x){return x!==startPin;});nearestNeighborSort(rest,{lat:startPin.gps.lat,lng:startPin.gps.lng}).forEach(function(x,i){x._seqNo=i+2;});var nxt=pendingU.length+1;doneU.forEach(function(x){x._seqNo=nxt++;});}
     else{nearestNeighborSort(pendingU,window._driverMapCurrentLoc||myLoc).forEach(function(x){x._seqNo=++maxNo;});doneU.forEach(function(x){x._seqNo=++maxNo;});}
+    _saveSeqNos(); // ★ v9.77: 저장
   }
   function updateCounter(){
     var total=emerLocs.length,done=emerLocs.filter(function(x){return x.status==='완료';}).length;
@@ -13944,7 +13956,7 @@ function _renderDriverMap(myLoc, emerLocs){
         +'<span style="background:'+pinColor+';color:#fff;border-radius:50%;min-width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;flex-shrink:0">'+label+'</span>'
         +'<div style="flex:1;min-width:0">'
           +'<div style="font-size:16px;font-weight:900">'+(x.recipient||'수령인 미상')+' '+statusBadge+'</div>'
-          +(x.order_id?'<div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:monospace">주문번호 '+x.order_id+'</div>':'')
+          // ★ v9.77: 주문번호 제거 — 운송장만 표시
         +'</div>'
         +'<button ontouchend="event.stopPropagation();event.preventDefault();'+closeFn+'" onclick="'+closeFn+'" style="background:var(--bg3);border:1px solid var(--border);border-radius:50%;width:30px;height:30px;cursor:pointer;flex-shrink:0;font-size:14px;touch-action:manipulation">✕</button>'
       +'</div>'
@@ -13999,6 +14011,7 @@ function _renderDriverMap(myLoc, emerLocs){
   window._driverMapUserSelectFirst=false;
   var hasUnassigned=emerLocs.filter(function(x){return x.gps&&x.gps.lat&&!x._seqNo;}).length>0;
   var hasAny=emerLocs.filter(function(x){return x.gps&&x.gps.lat;}).length>0;
+  // ★ v9.77: localStorage 복원 후 seqNo 있으면 firstTime 건너뜀
   var isFirstTime=hasAny&&hasUnassigned&&emerLocs.filter(function(x){return x._seqNo;}).length===0;
   if(isFirstTime&&userSelectsFirst){
     var banner=document.createElement('div');
@@ -14022,6 +14035,7 @@ function _renderDriverMap(myLoc, emerLocs){
       window._driverMapPinMarkers=[];
       // 클릭 핸들러 정상화
       window._mbtiPinClick=function(k){var d=_pinDataMap[k];if(d)_showPinInfoDirect(d);};
+      _saveSeqNos(); // ★ v9.77: 첫집 선택 직후 저장
       renderRoutePins();
       map.setCenter(new kakao.maps.LatLng(x.gps.lat,x.gps.lng));
     };
@@ -22974,14 +22988,38 @@ async function emerSave(){
     }catch(e){ console.warn('[emerSave] Kakao Geocoding 실패:', e.message||e); }
   }
 
-  // GPS 없으면 현위치로 폴백
-  if(!gpsClean && navigator.geolocation){
-    try{
-      var _pos = await new Promise(function(res,rej){
-        navigator.geolocation.getCurrentPosition(res,rej,{timeout:1500,enableHighAccuracy:true,maximumAge:30000}); // ★ v9.75
-      });
-      gpsClean = {lat:_pos.coords.latitude, lng:_pos.coords.longitude, acc:_pos.coords.accuracy, src:'device_fallback'};
-    }catch(e){}
+  // ★ v9.77: GPS 없으면 → 현위치 폴백 대신 주소 재입력 요구 (잘못된 핀 방지)
+  if(!gpsClean){
+    // 주소 있으면 한번 더 시도 (OCR 오인식 대비 — 구/로 앞부분 제거 재시도)
+    var _addrRetry = addr;
+    if(_addrRetry){
+      // "자상구" → "사상구" 등 OCR 오인식 교정 (첫 글자 유사 패턴)
+      _addrRetry = _addrRetry
+        .replace(/^자상구/,'사상구').replace(/^해운대구/,'해운대구')
+        .replace(/모라토/g,'모라로').replace(/모라또/g,'모라로')
+        .replace(/^[가-힣]{2,3}시\s/,'').replace(/^부산광역시\s/,'');
+      if(_addrRetry !== addr){
+        try{ var _rg = await _kakaoGeocode(_addrRetry); if(_rg) gpsClean={lat:_rg.lat,lng:_rg.lng,acc:0,src:'kakao_retry'}; }catch(e){}
+      }
+    }
+    // 여전히 GPS 없으면 → 현위치 폴백 (핀은 생성하되 주소불확실 표시)
+    if(!gpsClean && navigator.geolocation){
+      try{
+        var _pos = await new Promise(function(res,rej){
+          navigator.geolocation.getCurrentPosition(res,rej,{timeout:1500,enableHighAccuracy:true,maximumAge:30000});
+        });
+        gpsClean = {lat:_pos.coords.latitude, lng:_pos.coords.longitude, acc:_pos.coords.accuracy, src:'device_fallback'};
+      }catch(e){}
+    }
+  }
+  // ★ v9.77: 주소 GPS 검증 — device_fallback이면 주소 확실하지 않음 경고
+  if(gpsClean && gpsClean.src === 'device_fallback' && addr){
+    var _confirmSave = confirm('⚠️ 배송지 주소 확인 불가\n\n주소: '+addr.slice(0,40)+'\n\nGPS 좌표를 찾지 못했습니다.\n현 위치로 핀이 찍힙니다.\n\n계속 저장하시겠습니까?\n(취소 → 주소 직접 수정)');
+    if(!_confirmSave){
+      window._emerSaving=false; window._emerScanLock=false;
+      toast('⚠️ 주소를 직접 수정 후 저장해주세요');
+      return;
+    }
   }
 
   // ★ v9.43: emerSave 시점 거리 검증 비활성화
@@ -23306,8 +23344,12 @@ async function openDelivComplete(fbId, dataEncoded){
     addr: info.addr || ''
   };
 
-  document.body.insertAdjacentHTML('beforeend',`
-  <div id="deliv-complete-mo" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:10000;display:flex;align-items:flex-end;justify-content:center" onclick="if(event.target===this)this.remove()">
+  // ★ v9.77: driver-map-mo 내부에 삽입 (z-index 우회) — 지도 위에 확실히 표시
+  var _mapMo = document.getElementById('driver-map-mo');
+  var _dcTarget = _mapMo || document.body;
+  var _dcPos = _mapMo ? 'absolute' : 'fixed';
+  _dcTarget.insertAdjacentHTML('beforeend',`
+  <div id="deliv-complete-mo" style="position:${_dcPos};inset:0;background:rgba(0,0,0,.75);z-index:20000;display:flex;align-items:flex-end;justify-content:center" onclick="if(event.target===this)this.remove()">
     <div onclick="event.stopPropagation()" style="background:var(--bg);border-radius:16px 16px 0 0;padding:20px 16px 36px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto">
       <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px"></div>
 
