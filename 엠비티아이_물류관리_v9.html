@@ -26449,8 +26449,11 @@ function startListeners(){
     // ★ v9.25: settlements.get() 제거 — colPageMap onSnapshot이 처리
     // ── 근무표(schedules) Firebase에서 초기 로드 (onSnapshot 없으므로 유지)
     // ★ v9.29: 3개월 윈도우 필터 (이전월 + 현재월 + 다음월) — 누적 read 폭증 차단
-    if(!window._schedulesGetDone){
+    // ★ v9.56: schedules TTL 1시간 — 매 열기마다 1295건 읽기 방지
+    var _schedTTL = window._schedulesLoadedAt && (Date.now()-window._schedulesLoadedAt < 60*60*1000);
+    if(!window._schedulesGetDone || !_schedTTL){
       window._schedulesGetDone=true;
+      window._schedulesLoadedAt=Date.now();
       var _schedNow=new Date();
       var _schedPrevMonth=new Date(_schedNow.getFullYear(),_schedNow.getMonth()-1,1);
       var _schedNextMonth=new Date(_schedNow.getFullYear(),_schedNow.getMonth()+2,0); // 다음달 마지막일
