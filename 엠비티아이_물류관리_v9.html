@@ -11393,10 +11393,10 @@ function updBadge(){
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
 function updFbUI(){
-  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.56 · 🔥 실시간':'v9.56 · 데모';
+  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.56 · 🔥 실시간':'v9.55 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.56 · Firebase 실시간':'v9.56 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.55 · Firebase 실시간':'v9.55 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -20870,11 +20870,10 @@ function _emerCloseWithCheck(){
 }
 
 
-// ★ v9.56: 주소에 시/도 없으면 부산 자동 추가 (서울 오발 방지)
 function _addBusanPrefix(addr){
   if(!addr) return addr;
   if(/^(서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주)/.test(addr.trim())) return addr;
-  if(/구|동|로|길|번길/.test(addr)) return '부산 ' + addr.trim();
+  if(/구|동|로|길|번길/.test(addr)) return '부산 '+addr.trim();
   return addr;
 }
 
@@ -22300,22 +22299,14 @@ function _emerHandleScan(raw, statusEl){
       window._emerAutoSaveTimer = setTimeout(function(){
         window._emerAutoSaveTimer = null;
         // 모달이 아직 열려있고 저장 중이 아닐 때만 실행
-        // ★ v9.56: 운송장+주소+수령인 3개 있어야 자동저장 (하나라도 없으면 수동 확인)
-        var _chkTrack = (window._emerTrackings&&window._emerTrackings.length>0) || (document.getElementById('emer-tracking-inp')&&document.getElementById('emer-tracking-inp').value.trim().length>5);
-        var _chkAddr  = document.getElementById('emer-addr')&&document.getElementById('emer-addr').value.trim().length>5;
-        var _chkRecip = document.getElementById('emer-recipient')&&document.getElementById('emer-recipient').value.trim().length>1;
-        if(document.getElementById('emer-del-mo') && !window._emerSaving && typeof emerSave==='function'){
-          if(_chkTrack && _chkAddr && _chkRecip){
-            emerSave();
-          } else {
-            // 부족한 항목 표시
-            var _missing=[];
-            if(!_chkTrack) _missing.push('운송장번호');
-            if(!_chkAddr)  _missing.push('주소');
-            if(!_chkRecip) _missing.push('수령인');
-            var _st=document.getElementById('emer-unified-status');
-            if(_st) _st.innerHTML='<span style="color:#f59e0b">⚠️ '+_missing.join(', ')+' 확인 후 저장하세요</span>';
-          }
+        var _t=(window._emerTrackings&&window._emerTrackings.length>0)||(document.getElementById('emer-tracking-inp')&&document.getElementById('emer-tracking-inp').value.trim().length>5);
+        var _a=document.getElementById('emer-addr')&&document.getElementById('emer-addr').value.trim().length>5;
+        var _r=document.getElementById('emer-recipient')&&document.getElementById('emer-recipient').value.trim().length>1;
+        if(document.getElementById('emer-del-mo')&&!window._emerSaving&&typeof emerSave==='function'){
+          if(_t&&_a&&_r){ emerSave(); }
+          else{ var _ms=[]; if(!_t)_ms.push('운송장번호'); if(!_a)_ms.push('주소'); if(!_r)_ms.push('수령인');
+            var _st2=document.getElementById('emer-unified-status');
+            if(_st2)_st2.innerHTML='<span style="color:#f59e0b">⚠️ '+_ms.join(', ')+' 확인 후 저장하세요</span>';}
         }
       }, 1500);
       // 입력 필드 클릭/포커스 시 자동 저장 취소 (사용자가 수정하려는 의도)
@@ -26463,7 +26454,6 @@ function startListeners(){
     // ★ v9.25: settlements.get() 제거 — colPageMap onSnapshot이 처리
     // ── 근무표(schedules) Firebase에서 초기 로드 (onSnapshot 없으므로 유지)
     // ★ v9.29: 3개월 윈도우 필터 (이전월 + 현재월 + 다음월) — 누적 read 폭증 차단
-    // ★ v9.56: schedules TTL 1시간 — 매 열기마다 1295건 읽기 방지
     var _schedTTL = window._schedulesLoadedAt && (Date.now()-window._schedulesLoadedAt < 60*60*1000);
     if(!window._schedulesGetDone || !_schedTTL){
       window._schedulesGetDone=true;
@@ -29984,11 +29974,11 @@ window._installPromptEvent=null;
       }
       navigator.serviceWorker.register('./sw.js',{scope:'./'})
         .then(function(reg){
-          console.debug('[SW] 등록 완료, scope:', reg.scope);
+          console.log('[SW] 등록 완료, scope:', reg.scope);
           // ★ v9.25: SW active 확인 후 저장 (FCM 토큰 발급 타이밍 보장)
           function _setReg(){
             window._swRegistration=reg;
-            console.debug('[SW] active 확인 — FCM 토큰 발급 준비 완료');
+            console.log('[SW] active 확인 — FCM 토큰 발급 준비 완료');
             // ★ v9.25: SW 활성화되면 디바이스 소유자가 있는 경우 즉시 알림 초기화
             //   (로그인하지 않아도 마지막 사용자용 알림 수신 시작)
             setTimeout(function(){
@@ -30023,7 +30013,7 @@ window._installPromptEvent=null;
     }
     // ★ v9.25: SW 업데이트 감지 → FCM 토큰 강제 재발급 (백그라운드 알림 복구)
     if(e.data&&e.data.type==='SW_UPDATED'){
-      console.debug('[FCM] SW 업데이트 감지 — FCM 토큰 강제 재발급');
+      console.log('[FCM] SW 업데이트 감지 — FCM 토큰 강제 재발급');
       window._fcmTokenRegistered=false;
       window._fcmFailed=false;
       setTimeout(function(){if(typeof _registerFCMToken==='function')_registerFCMToken();},1500);
@@ -30305,7 +30295,7 @@ function startNotiListeners(){
     window._firestoreListeners.push(unsub3);
   }
   
-  console.debug('[Noti] 리스너 활성화 — 기사:',S.curDriver,'캠프:',myCampFull);
+  console.log('[Noti] 리스너 활성화 — 기사:',S.curDriver,'캠프:',myCampFull);
 }
 function stopNotiListeners(){
   (window._firestoreListeners||[]).forEach(function(unsub){try{unsub();}catch(e){}});
@@ -30358,7 +30348,7 @@ function _scheduleNotiInit(){
     
     // ★ v9.25: 권한 상태 진단 로그
     var perm=(typeof Notification!=='undefined')?Notification.permission:'unsupported';
-    console.debug('[Noti] 알림 권한 상태:', perm, '/ 로그인:', loggedIn);
+    console.log('[Noti] 알림 권한 상태:', perm, '/ 로그인:', loggedIn);
     if(perm==='denied'){
       console.warn('[Noti] ⚠️ 알림 권한 차단됨 — 브라우저 설정에서 허용해야 FCM 작동');
       if(loggedIn) toast('⚠️ 알림이 차단되어 있습니다. 브라우저 주소창 🔒 → 알림 허용으로 변경해 주세요');
@@ -30367,12 +30357,12 @@ function _scheduleNotiInit(){
     if(loggedIn && !window._notiPermAsked && perm==='default'){
       window._notiPermAsked=true;
       requestNotiPermission(true).then(function(granted){
-        console.debug('[Noti] 권한 요청 결과:', granted);
+        console.log('[Noti] 권한 요청 결과:', granted);
         if(granted) _registerFCMToken();
       });
     } else if(perm==='granted'){
-      // ★ v9.56: 이미 등록 완료면 재호출 안 함
-      if(!window._fcmTokenRegistered) _registerFCMToken();
+      console.log('[Noti] 권한 이미 허용 → _registerFCMToken 호출');
+      _registerFCMToken();
     }
     if(loggedIn) startNotiListeners();
   },2000);
@@ -30387,8 +30377,8 @@ window._fcmOnMessageBound=false; // ★ v9.25: 포그라운드 핸들러 중복 
 // 앱 시작 2초 후 자동 초기화 (로그인 여부 무관)
 
 async function _registerFCMToken(){
-  console.debug('[FCM] _registerFCMToken 시작 — registered:'+window._fcmTokenRegistered+' failed:'+window._fcmFailed);
-  if(window._fcmTokenRegistered){console.debug('[FCM] 이미 등록됨 — skip');return;}
+  console.log('[FCM] _registerFCMToken 시작 — registered:'+window._fcmTokenRegistered+' failed:'+window._fcmFailed);
+  if(window._fcmTokenRegistered){console.log('[FCM] 이미 등록됨 — skip');return;}
   if(window._fcmFailed){console.warn('[FCM] 이전 실패 플래그 — skip');return;}
   if(!FB||!_db){console.warn('[FCM] Firebase 미연결');return;}
   if(typeof firebase.messaging!=='function'){console.warn('[FCM] messaging 함수 없음');return;}
@@ -30396,12 +30386,12 @@ async function _registerFCMToken(){
   var swWait=0;
   while(!window._swRegistration&&swWait<20){await new Promise(function(r){setTimeout(r,500);});swWait++;}
   if(!window._swRegistration){console.warn('[FCM] SW 미등록 — 토큰 발급 생략');return;}
-  console.debug('[FCM] SW 확인 완료, 인증 대기...');
+  console.log('[FCM] SW 확인 완료, 인증 대기...');
   // Firebase 익명 인증 완료 대기 (최대 10초)
   var authWait=0;
   while(!firebase.auth().currentUser&&authWait<20){await new Promise(function(r){setTimeout(r,500);});authWait++;}
   if(!firebase.auth().currentUser){console.warn('[FCM] 인증 미완료 — 토큰 발급 생략');return;}
-  console.debug('[FCM] 인증 완료, 토큰 발급 시도...');
+  console.log('[FCM] 인증 완료, 토큰 발급 시도...');
   
   // ★ v9.25: 토큰 저장 대상 결정 - 현재 로그인 중인 기사 우선, 없으면 마지막 기기 소유자
   var targetDriverName=null, targetFbId=null;
@@ -30430,7 +30420,7 @@ async function _registerFCMToken(){
     }
     targetDriverName = owner.driver;
     targetFbId = owner.fbId;
-    console.debug('[FCM] 로그아웃 상태 — 디바이스 소유자(' + targetDriverName + ') 기준으로 토큰 등록');
+    console.log('[FCM] 로그아웃 상태 — 디바이스 소유자(' + targetDriverName + ') 기준으로 토큰 등록');
   }
   
   try{
@@ -30452,8 +30442,10 @@ async function _registerFCMToken(){
     });
     if(!token){console.warn('[FCM] 토큰 발급 실패');return;}
     window._fcmTokenRegistered=true;
-    console.debug('[FCM] 토큰 발급 완료 → 대상:', targetDriverName);
+    console.log('[FCM] 토큰 발급 완료 → 대상:', targetDriverName);
     
+    if(window._fcmLastSavedToken===token){window._fcmTokenRegistered=true;window._fcmRegistering=false;return;}
+    window._fcmLastSavedToken=token;
     // ★ v9.25: 두 군데에 저장
     //   ① drivers/{fbId}.fcmToken (기존 로직 유지 — 호환성)
     //   ② device_tokens/{token} (기기-기사 매핑 영구 저장 — 로그아웃 후에도 유지)
@@ -30469,7 +30461,7 @@ async function _registerFCMToken(){
     // ① drivers 컬렉션 저장
     if(targetFbId){
       _db.collection('drivers').doc(targetFbId).update({fcmToken:token})
-        .then(function(){console.log('[FCM] drivers.fcmToken 저장 완료 (fbId)');})
+        .then(function(){console.debug('[FCM] drivers.fcmToken 저장 완료 (fbId)');})
         .catch(function(){});
     } else if(targetDriverName) {
       _db.collection('drivers').where('name','==',targetDriverName).limit(1).get()
