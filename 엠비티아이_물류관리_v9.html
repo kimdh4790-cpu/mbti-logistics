@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.56</title>
+<title>엠비티아이 물류관리 v9.57</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -11393,10 +11393,10 @@ function updBadge(){
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
 function updFbUI(){
-  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.56 · 🔥 실시간':'v9.55 · 데모';
+  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.57 · 🔥 실시간':'v9.57 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.55 · Firebase 실시간':'v9.55 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.57 · Firebase 실시간':'v9.57 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -20877,6 +20877,37 @@ function _addBusanPrefix(addr){
   return addr;
 }
 
+async function _kakaoGeocode(address){
+  if(!address) return null;
+  var key = window._cachedKakaoApiKey||'';
+  if(!key && FB && _db){
+    try{
+      var d2 = await _db.collection('settings').doc('claude_config').get();
+      if(d2.exists && d2.data().kakaoApiKey){ key=d2.data().kakaoApiKey.trim(); window._cachedKakaoApiKey=key; }
+    }catch(e){}
+  }
+  if(!key) key=(localStorage.getItem('mbti_kakao_api_key')||'').trim();
+  if(!key) return null;
+  var addr=_addBusanPrefix(address);
+  try{
+    var resp=await fetch('https://dapi.kakao.com/v2/local/search/address.json?query='+encodeURIComponent(addr),{headers:{'Authorization':'KakaoAK '+key}});
+    var data=await resp.json();
+    if(data.documents&&data.documents.length>0){
+      return {lat:parseFloat(data.documents[0].y),lng:parseFloat(data.documents[0].x),src:'kakao'};
+    }
+    // 아파트면 키워드로 재시도
+    var am=address.match(/([가-힣]+(?:아파트|오피스텔|빌라|맨션))/);
+    if(am){
+      var r2=await fetch('https://dapi.kakao.com/v2/local/search/keyword.json?query='+encodeURIComponent('부산 '+am[1]),{headers:{'Authorization':'KakaoAK '+key}});
+      var d3=await r2.json();
+      if(d3.documents&&d3.documents.length>0){
+        return {lat:parseFloat(d3.documents[0].y),lng:parseFloat(d3.documents[0].x),src:'kakao_kw'};
+      }
+    }
+  }catch(e){ console.debug('[Kakao]',e.message); }
+  return null;
+}
+
 function openEmergencyDelivery(){
   // ★ v9.34: 모달 중복 열림 방지 (빠른 더블탭/이벤트 충돌 차단)
   if(window._emerOpening){
@@ -21181,7 +21212,7 @@ async function emerOcrScan(file, _statusOverride){
         window._emerOcrApply();
         window._emerEntryMode = 'ocr';
         _tts('스캔'); _emerIncScan(); // ★ v9.61: OCR QR 인식 성공 음성
-        var _reader2=new FileReader(); _reader2.onload=function(e){window._emerPhotos.push(e.target.result);emerRefreshPhotoWrap();}; _reader2.readAsDataURL(file);
+        var _reader2=new FileReader(); _reader2.onload=function(e){if(!window._scanPhotoAdded){window._scanPhotoAdded=true;window._emerPhotos.push(e.target.result);emerRefreshPhotoWrap();}}; _reader2.readAsDataURL(file);
 
         // ① GPS 설정
         if(_qpDirect.lat && _qpDirect.lng){
@@ -21474,23 +21505,25 @@ async function emerOcrScan(file, _statusOverride){
     if(p.address){
       if(status) status.innerHTML = '<span style="color:var(--blue)">📍 배송지 좌표 변환 중...</span>';
       try{
-        var gcRes = await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(_addBusanPrefix(p.address))+'&language=ko&region=kr&key='+apiKey);
-        var gcData = await gcRes.json();
-        if(gcData.status==='OK' && gcData.results && gcData.results[0]){
-          var loc = gcData.results[0].geometry.location;
-          if(typeof loc.lat==='number' && typeof loc.lng==='number'){
-            pinGps = {lat:loc.lat, lng:loc.lng, src:'geocode', addr:p.address};
-            // 배송지 좌표를 _emerGps로 저장 (저장 시 사용)
-            window._emerGps = {lat:loc.lat, lng:loc.lng, acc:0, src:'geocode', addr:p.address};
-            if(status) status.innerHTML = '<span style="color:var(--teal)">✅ 배송지 좌표 변환 완료</span>';
-            // ★ v9.43: OCR 시점 거리 검증 비활성화
-            // 이유: 캠프(물류센터)에서 송장 일괄 스캔 → 배송지와 수 km 떨어짐
-            //       OCR 시점에 검증하면 모든 송장에서 false positive 발생
-            //       → 배송완료 처리 시점(saveDelivComplete)에서 검증하도록 이동
+        // ★ v9.57: 카카오 우선(아파트 정확도↑) → 실패 시 Google
+        var _kkr = await _kakaoGeocode(p.address);
+        if(_kkr){
+          pinGps={lat:_kkr.lat,lng:_kkr.lng,src:'kakao',addr:p.address};
+          window._emerGps={lat:_kkr.lat,lng:_kkr.lng,acc:0,src:'kakao',addr:p.address};
+          if(status) status.innerHTML='<span style="color:var(--teal)">✅ 배송지 좌표 변환 완료</span>';
+        } else {
+          var gcRes = await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(_addBusanPrefix(p.address))+'&language=ko&region=kr&key='+apiKey);
+          var gcData = await gcRes.json();
+          if(gcData.status==='OK' && gcData.results && gcData.results[0]){
+            var loc = gcData.results[0].geometry.location;
+            if(typeof loc.lat==='number' && typeof loc.lng==='number'){
+              pinGps={lat:loc.lat,lng:loc.lng,src:'geocode',addr:p.address};
+              window._emerGps={lat:loc.lat,lng:loc.lng,acc:0,src:'geocode',addr:p.address};
+              if(status) status.innerHTML='<span style="color:var(--teal)">✅ 배송지 좌표 변환 완료</span>';
+            }
+          } else if(gcData.status==='REQUEST_DENIED'){
+            if(status) status.innerHTML='<span style="color:#f59e0b">⚠️ Geocoding API 비활성 — 현위치 사용</span>';
           }
-        } else if(gcData.status==='REQUEST_DENIED'){
-          console.warn('Geocoding API 비활성화:', gcData.error_message);
-          if(status) status.innerHTML = '<span style="color:#f59e0b">⚠️ Geocoding API 비활성 — 현위치 사용</span>';
         }
       }catch(geoErr){ console.warn('Geocoding 실패:', geoErr); }
     }
@@ -21644,6 +21677,7 @@ function emerUnifiedScan(input){
   if(!input.files || !input.files[0]) return;
   var file = input.files[0];
   input.value = '';
+  window._scanPhotoAdded=false;
   if(statusEl) statusEl.innerHTML = '🔍 QR 분석 중...';
 
   var url = URL.createObjectURL(file);
@@ -22304,9 +22338,9 @@ function _emerHandleScan(raw, statusEl){
         var _r=document.getElementById('emer-recipient')&&document.getElementById('emer-recipient').value.trim().length>1;
         if(document.getElementById('emer-del-mo')&&!window._emerSaving&&typeof emerSave==='function'){
           if(_t&&_a&&_r){ emerSave(); }
-          else{ var _ms=[]; if(!_t)_ms.push('운송장번호'); if(!_a)_ms.push('주소'); if(!_r)_ms.push('수령인');
+          else{ var _ms=[]; if(!_t)_ms.push('운송장'); if(!_a)_ms.push('주소'); if(!_r)_ms.push('수령인');
             var _st2=document.getElementById('emer-unified-status');
-            if(_st2)_st2.innerHTML='<span style="color:#f59e0b">⚠️ '+_ms.join(', ')+' 확인 후 저장하세요</span>';}
+            if(_st2)_st2.innerHTML='<span style="color:#f59e0b">⚠️ '+_ms.join('+')+' 확인 후 저장</span>'; }
         }
       }, 1500);
       // 입력 필드 클릭/포커스 시 자동 저장 취소 (사용자가 수정하려는 의도)
@@ -22701,7 +22735,7 @@ async function emerSave(){
         var gcCtrl = new AbortController();
         var gcTimer = setTimeout(function(){ gcCtrl.abort(); }, 1500);
         var gcRes2 = await fetch(
-          'https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(_addBusanPrefix(addr))+'&language=ko&region=kr&key='+apiKey2,
+          'https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr)+'&language=ko&region=kr&key='+apiKey2,
           { signal: gcCtrl.signal }
         );
         clearTimeout(gcTimer);
@@ -26454,10 +26488,9 @@ function startListeners(){
     // ★ v9.25: settlements.get() 제거 — colPageMap onSnapshot이 처리
     // ── 근무표(schedules) Firebase에서 초기 로드 (onSnapshot 없으므로 유지)
     // ★ v9.29: 3개월 윈도우 필터 (이전월 + 현재월 + 다음월) — 누적 read 폭증 차단
-    var _schedTTL = window._schedulesLoadedAt && (Date.now()-window._schedulesLoadedAt < 60*60*1000);
-    if(!window._schedulesGetDone || !_schedTTL){
-      window._schedulesGetDone=true;
-      window._schedulesLoadedAt=Date.now();
+    var _sTTL=window._schedulesAt&&(Date.now()-window._schedulesAt<3600000);
+    if(!window._schedulesGetDone||!_sTTL){
+      window._schedulesGetDone=true;window._schedulesAt=Date.now();
       var _schedNow=new Date();
       var _schedPrevMonth=new Date(_schedNow.getFullYear(),_schedNow.getMonth()-1,1);
       var _schedNextMonth=new Date(_schedNow.getFullYear(),_schedNow.getMonth()+2,0); // 다음달 마지막일
@@ -30378,7 +30411,7 @@ window._fcmOnMessageBound=false; // ★ v9.25: 포그라운드 핸들러 중복 
 
 async function _registerFCMToken(){
   console.log('[FCM] _registerFCMToken 시작 — registered:'+window._fcmTokenRegistered+' failed:'+window._fcmFailed);
-  if(window._fcmTokenRegistered){console.log('[FCM] 이미 등록됨 — skip');return;}
+  if(window._fcmTokenRegistered){console.debug('[FCM] 이미 등록됨 — skip');return;}
   if(window._fcmFailed){console.warn('[FCM] 이전 실패 플래그 — skip');return;}
   if(!FB||!_db){console.warn('[FCM] Firebase 미연결');return;}
   if(typeof firebase.messaging!=='function'){console.warn('[FCM] messaging 함수 없음');return;}
@@ -30444,8 +30477,8 @@ async function _registerFCMToken(){
     window._fcmTokenRegistered=true;
     console.log('[FCM] 토큰 발급 완료 → 대상:', targetDriverName);
     
-    if(window._fcmLastSavedToken===token){window._fcmTokenRegistered=true;window._fcmRegistering=false;return;}
-    window._fcmLastSavedToken=token;
+    if(window._fcmLastToken===token){window._fcmTokenRegistered=true;window._fcmRegistering=false;return;}
+    window._fcmLastToken=token;
     // ★ v9.25: 두 군데에 저장
     //   ① drivers/{fbId}.fcmToken (기존 로직 유지 — 호환성)
     //   ② device_tokens/{token} (기기-기사 매핑 영구 저장 — 로그아웃 후에도 유지)
