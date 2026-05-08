@@ -16602,6 +16602,21 @@ function rMypage(){
       html+='</div>';
     }
 
+    // ★ v9.57: 카카오 REST API 키 (주소→좌표 변환, 아파트 핀 정확도)
+    if(isAdmin){
+      var savedKakaoKey = window._cachedKakaoApiKey || (localStorage.getItem('mbti_kakao_api_key')||'').trim();
+      var maskedKakao = savedKakaoKey ? (savedKakaoKey.slice(0,8)+'...'+savedKakaoKey.slice(-4)) : '';
+      html+='<div style="margin-top:10px;padding:12px;background:var(--bg3);border-radius:10px;border:1.5px solid var(--border)">';
+      html+='<div style="font-size:12px;font-weight:700;margin-bottom:6px">🗺️ 카카오 REST API 키 <span style="font-size:10px;font-weight:400;color:var(--text3)">(주소→좌표 변환 전용, 아파트 핀 정확도↑)</span></div>';
+      html+='<div style="display:flex;gap:6px;align-items:center">';
+      html+='<input id="mp-kakao-rest-key" type="password" placeholder="카카오 REST API 키" value="'+savedKakaoKey+'" style="flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;background:var(--bg);color:var(--text)">';
+      html+='<button onclick="saveKakaoRestKey()" style="padding:8px 12px;background:#FEE500;color:#3A1D1D;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">저장</button>';
+      html+='</div>';
+      if(maskedKakao) html+='<div style="font-size:10px;color:var(--teal);margin-top:4px">✅ 저장됨: '+maskedKakao+'</div>';
+      html+='<div style="font-size:10px;color:var(--text3);margin-top:4px">카카오 Developers → 앱 → 앱 키 → REST API 키</div>';
+      html+='</div>';
+    }
+
     html+='<button class="btn btn-blue" style="width:100%;padding:13px;font-size:14px;margin-top:8px" onclick="saveMypage()">💾 정보 저장</button>';
     if(!isAdmin){
       // ★ v9.25: 본인확인 (한 번만 인증, 수정 가능)
@@ -20784,6 +20799,22 @@ function dHome(){
 // ── 기사 홈 근무표: 월 이동 (-1 이전달, +1 다음달)
 // ★ v9.25: 휴무 변경 요청
 // ★ v9.25: Claude API 키 저장 (Firebase + localStorage)
+
+// ★ v9.57: 카카오 REST API 키 저장
+async function saveKakaoRestKey(){
+  var key = (document.getElementById('mp-kakao-rest-key')?.value||'').trim();
+  if(!key){ toast('❌ 키를 입력해주세요'); return; }
+  window._cachedKakaoApiKey = key;
+  localStorage.setItem('mbti_kakao_api_key', key);
+  if(FB && _db){
+    try{
+      await _db.collection('settings').doc('claude_config').set({kakaoApiKey:key},{merge:true});
+      toast('✅ 카카오 REST API 키 저장됨 (모든 기기 적용)');
+    }catch(e){ toast('✅ 카카오 REST API 키 저장됨 (이 기기만)'); }
+  } else { toast('✅ 카카오 REST API 키 저장됨 (이 기기만)'); }
+  if(typeof rMypage==='function') rMypage();
+}
+
 // ★ v9.25: Google Cloud API 키 저장 (Maps + Vision OCR 공용) — 검증 추가
 async function saveGoogleApiKey(){
   var key = (document.getElementById('mp-google-key')?.value||'').trim();
