@@ -22300,8 +22300,22 @@ function _emerHandleScan(raw, statusEl){
       window._emerAutoSaveTimer = setTimeout(function(){
         window._emerAutoSaveTimer = null;
         // 모달이 아직 열려있고 저장 중이 아닐 때만 실행
+        // ★ v9.56: 운송장+주소+수령인 3개 있어야 자동저장 (하나라도 없으면 수동 확인)
+        var _chkTrack = (window._emerTrackings&&window._emerTrackings.length>0) || (document.getElementById('emer-tracking-inp')&&document.getElementById('emer-tracking-inp').value.trim().length>5);
+        var _chkAddr  = document.getElementById('emer-addr')&&document.getElementById('emer-addr').value.trim().length>5;
+        var _chkRecip = document.getElementById('emer-recipient')&&document.getElementById('emer-recipient').value.trim().length>1;
         if(document.getElementById('emer-del-mo') && !window._emerSaving && typeof emerSave==='function'){
-          emerSave();
+          if(_chkTrack && _chkAddr && _chkRecip){
+            emerSave();
+          } else {
+            // 부족한 항목 표시
+            var _missing=[];
+            if(!_chkTrack) _missing.push('운송장번호');
+            if(!_chkAddr)  _missing.push('주소');
+            if(!_chkRecip) _missing.push('수령인');
+            var _st=document.getElementById('emer-unified-status');
+            if(_st) _st.innerHTML='<span style="color:#f59e0b">⚠️ '+_missing.join(', ')+' 확인 후 저장하세요</span>';
+          }
         }
       }, 1500);
       // 입력 필드 클릭/포커스 시 자동 저장 취소 (사용자가 수정하려는 의도)
