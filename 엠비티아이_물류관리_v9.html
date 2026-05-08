@@ -21718,7 +21718,26 @@ function emerUnifiedScan(input){
     var scale = Math.min(1, 2000/Math.max(img.naturalWidth, img.naturalHeight));
     var cw=Math.round(img.naturalWidth*scale), ch=Math.round(img.naturalHeight*scale);
     var cv=document.createElement('canvas'); cv.width=cw; cv.height=ch;
-    cv.getContext('2d').drawImage(img,0,0,cw,ch);
+    var ctx=cv.getContext('2d'); ctx.drawImage(img,0,0,cw,ch);
+
+    // ★ v9.57: 파란 송장 감지 → 전처리 캔버스 추가
+    var _smp=document.createElement('canvas'); _smp.width=100; _smp.height=100;
+    _smp.getContext('2d').drawImage(img,0,0,cw,ch,0,0,100,100);
+    var _sd=_smp.getContext('2d').getImageData(0,0,100,100);
+    var _bl=0; for(var _i=0;_i<_sd.data.length;_i+=16){if(_sd.data[_i+2]>_sd.data[_i]+40&&_sd.data[_i+2]>80)_bl++;}
+    var _isBlueLabel=(_bl/625)>0.15;
+    var cvBlue=null;
+    if(_isBlueLabel){
+      cvBlue=document.createElement('canvas'); cvBlue.width=cw; cvBlue.height=ch;
+      var ctxB=cvBlue.getContext('2d'); ctxB.drawImage(img,0,0,cw,ch);
+      var dB=ctxB.getImageData(0,0,cw,ch);
+      for(var _j=0;_j<dB.data.length;_j+=4){
+        var _r=dB.data[_j],_g=dB.data[_j+1],_b=dB.data[_j+2];
+        if(_b>_r+30&&_b>_g+20&&_b>80){ dB.data[_j]=dB.data[_j+1]=dB.data[_j+2]=255; }
+        else{ var _gr=Math.round(_r*.299+_g*.587+_b*.114); dB.data[_j]=dB.data[_j+1]=dB.data[_j+2]=(_gr<140?0:255); }
+      }
+      ctxB.putImageData(dB,0,0);
+    }
 
     function goOCR(){
       // QR 실패 → Vision API OCR (파란 송장 등)
@@ -21734,20 +21753,30 @@ function emerUnifiedScan(input){
       try{ bd=new BarcodeDetector({formats:['qr_code','data_matrix','aztec']}); }
       catch(e){ try{ bd=new BarcodeDetector({formats:['qr_code']}); }catch(e2){} }
       if(bd){
-        bd.detect(cv).then(function(codes){
+        // ★ v9.57: 파란 송장이면 전처리 캔버스도 시도
+        var _detectTarget = (_isBlueLabel && cvBlue) ? cvBlue : cv;
+        bd.detect(_detectTarget).then(function(codes){
           if(codes&&codes.length&&codes[0].rawValue){
             var raw=codes[0].rawValue;
             if(raw.indexOf('V1|')===0){
               if(statusEl) statusEl.textContent='✅ QR 인식!';
               _emerHandleScan(raw, statusEl);
+            } else if(_isBlueLabel && cvBlue){
+              // 파란 전처리 실패 → 원본으로 재시도
+              bd.detect(cv).then(function(c2){
+                if(c2&&c2.length&&c2[0].rawValue&&c2[0].rawValue.indexOf('V1|')===0){
+                  if(statusEl) statusEl.textContent='✅ QR 인식!';
+                  _emerHandleScan(c2[0].rawValue,statusEl);
+                } else { _nativeCamJsQR(_isBlueLabel&&cvBlue?cvBlue:cv,cw,ch,statusEl,goOCR); }
+              }).catch(function(){ _nativeCamJsQR(cv,cw,ch,statusEl,goOCR); });
             } else { goOCR(); }
-          } else { _nativeCamJsQR(cv,cw,ch,statusEl,goOCR); }
+          } else { _nativeCamJsQR(_isBlueLabel&&cvBlue?cvBlue:cv,cw,ch,statusEl,goOCR); }
         }).catch(function(){ _nativeCamJsQR(cv,cw,ch,statusEl,goOCR); });
         return;
       }
     }
     // ② jsQR (로컬, API 비용 0)
-    _nativeCamJsQR(cv, cw, ch, statusEl, goOCR);
+    _nativeCamJsQR(_isBlueLabel&&cvBlue?cvBlue:cv, cw, ch, statusEl, goOCR);
   };
   img.onerror = function(){ URL.revokeObjectURL(url); if(statusEl) statusEl.textContent='❌ 이미지 로드 실패'; };
   img.src = url;
@@ -21786,10 +21815,46 @@ function emerNativeCamQR(input){
 function _nativeCamJsQR(cv, cw, ch, statusEl, fallback){
   if(!window.jsQR){ if(statusEl) statusEl.textContent='❌ jsQR 미로드'; if(fallback) fallback(); return; }
   var cv2=document.createElement('canvas'), ctx2=cv2.getContext('2d');
+
+  // ★ v9.57: 파란 쿠팡 송장 감지 — 파란 배경 제거 후 흑백 변환
+  function isBlueLabel(d){
+    var px=d.data, blue=0, total=px.length/4;
+    for(var i=0;i<px.length;i+=16){ // 4픽셀 샘플링
+      if(px[i+2]>px[i]+40 && px[i+2]>px[i+1]+30 && px[i+2]>100) blue++;
+    }
+    return (blue/(total/4)) > 0.15; // 15% 이상 파란 픽셀이면 파란 송장
+  }
+  function removeBlue(d){
+    var px=d.data;
+    for(var i=0;i<px.length;i+=4){
+      var r=px[i],g=px[i+1],b=px[i+2];
+      if(b>r+30 && b>g+20 && b>80){
+        px[i]=px[i+1]=px[i+2]=255; // 파란 배경 → 흰색
+      } else {
+        var gray=Math.round(r*.299+g*.587+b*.114);
+        px[i]=px[i+1]=px[i+2]=(gray<128?0:255); // 나머지 → 이진화
+      }
+    }
+    return d;
+  }
   function enhance(d){ var px=d.data,len=px.length,mn=255,mx=0; for(var i=0;i<len;i+=4){var g=Math.round(px[i]*.299+px[i+1]*.587+px[i+2]*.114);px[i]=px[i+1]=px[i+2]=g;} for(var j=0;j<len;j+=4){if(px[j]<mn)mn=px[j];if(px[j]>mx)mx=px[j];} var rng=mx-mn||1; for(var k=0;k<len;k+=4){var v=Math.round((px[k]-mn)/rng*255);px[k]=px[k+1]=px[k+2]=v;} return d; }
-  function scan(sx,sy,sw,sh,enh){ cv2.width=sw;cv2.height=sh; ctx2.drawImage(cv,sx,sy,sw,sh,0,0,sw,sh); var d=ctx2.getImageData(0,0,sw,sh); if(enh)enhance(d); return window.jsQR(d.data,sw,sh,{inversionAttempts:'attemptBoth'}); }
+  function scan(sx,sy,sw,sh,enh){ cv2.width=sw;cv2.height=sh; ctx2.drawImage(cv,sx,sy,sw,sh,0,0,sw,sh); var d=ctx2.getImageData(0,0,sw,sh); if(enh)enhance(d); ctx2.putImageData(d,0,0); return window.jsQR(d.data,sw,sh,{inversionAttempts:'attemptBoth'}); }
+  function scanBlue(sx,sy,sw,sh){ cv2.width=sw;cv2.height=sh; ctx2.drawImage(cv,sx,sy,sw,sh,0,0,sw,sh); var d=ctx2.getImageData(0,0,sw,sh); removeBlue(d); ctx2.putImageData(d,0,0); return window.jsQR(d.data,sw,sh,{inversionAttempts:'attemptBoth'}); }
+
+  // 파란 송장 여부 사전 감지
+  cv2.width=Math.min(cw,200); cv2.height=Math.min(ch,200);
+  ctx2.drawImage(cv,0,0,cw,ch,0,0,cv2.width,cv2.height);
+  var _sampleData=ctx2.getImageData(0,0,cv2.width,cv2.height);
+  var _isBlue=isBlueLabel(_sampleData);
+
   var rx=Math.floor(cw/2), cy2=Math.floor(ch*.12), cw2=Math.floor(cw*.72), ch2=Math.floor(ch*.76);
-  var r=scan(0,0,cw,ch,false)||scan(rx,0,cw-rx,ch,false)||scan(Math.floor(cw*.14),cy2,cw2,ch2,false)||scan(0,0,cw,ch,true);
+  var r;
+  if(_isBlue){
+    // 파란 송장: 파란 배경 제거 버전 우선
+    r=scanBlue(0,0,cw,ch)||scanBlue(rx,0,cw-rx,ch)||scan(0,0,cw,ch,true)||scan(Math.floor(cw*.14),cy2,cw2,ch2,false);
+  } else {
+    r=scan(0,0,cw,ch,false)||scan(rx,0,cw-rx,ch,false)||scan(Math.floor(cw*.14),cy2,cw2,ch2,false)||scan(0,0,cw,ch,true);
+  }
   if(r&&r.data){
     if(r.data.indexOf('V1|')===0 || r.data.indexOf('V1\t')===0){
       if(statusEl) statusEl.textContent='✅ QR 인식!'; _emerHandleScan(r.data,statusEl);
