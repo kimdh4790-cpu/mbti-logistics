@@ -20931,8 +20931,11 @@ async function _kakaoGeocode(address){
   if(!key) return null;
 
   var addr = _addBusanPrefix(address);
-  var aptMatch = address.match(/([가-힣A-Za-z]+(?:아파트|오피스텔|빌라|맨션|타워|파크|힐스|뷰|캐슬|자이|래미안|푸르지오|아이파크|임대|주공))/);
-  var dongMatch = address.match(/([가-힣A-Za-z]?\d+)\s*동(?![아네은])/);
+  // ★ v9.57: 아파트명 패턴 강화 (임대아파트, 주공 등 포함)
+  var aptMatch = address.match(/([가-힣A-Za-z\d]+(?:아파트|임대아파트|오피스텔|빌라|맨션|타워|파크|힐스|뷰|캐슬|자이|래미안|푸르지오|아이파크|주공|LH|SH))/);
+  // 폴백: "XXX아파트" 전체 단어 (2글자 이상 + 아파트)
+  if(!aptMatch) aptMatch = address.match(/([가-힣]{2,}아파트)/);
+  var dongMatch = address.match(/([A-Za-z가-힣]?\d+)\s*동(?![아네은])/);
   console.log('[KAKAO_GEO]', addr, 'apt:', aptMatch&&aptMatch[1], 'dong:', dongMatch&&dongMatch[1]);
 
   // ★ v9.57: 아파트면 키워드검색 우선 (동 단위 정확도) → 실패 시 주소검색
@@ -21406,6 +21409,16 @@ async function emerOcrScan(file, _statusOverride){
         if(_d3.length>=14 && _d3.length<=16){ var _m10=_d3.match(/10\d{12}/); if(_m10){ trackingDigits=_m10[0]; break; } }
       }
     }
+    // ★ v9.57: 전체 텍스트 공백 제거 후 재탐색
+    if(!trackingDigits){
+      var _compact = fullText.replace(/[\s,\.]/g,'');
+      var _tm = _compact.match(/10\d{12}/);
+      if(_tm) trackingDigits = _tm[0];
+    }
+    if(!trackingDigits){
+      var _tm2 = fullText.replace(/[\s,\.]/g,'').match(/80\d{12}/);
+      if(_tm2) trackingDigits = _tm2[0];
+    }
 
     // 점 구분 형식으로 복원
     function fmtNum(digits) {
@@ -21457,8 +21470,11 @@ async function emerOcrScan(file, _statusOverride){
 
         // 영어 잡텍스트 잘라내기
         l = l.replace(/\s+[a-zA-Z][a-zA-Z\s]{1,}.*$/,'').trim();
-        // 번지 뒤 한글 잡텍스트 제거
-        l = l.replace(/((?:로|길|번길)\s*\d+(?:-\d+)?)\s+[가-힣]{1,3}$/,'$1').trim();
+        // ★ v9.57: 번지 뒤 잡문자 제거 (아파트명은 보존)
+        // 번지수 뒤에 붙은 OCR 아티팩트 (~, 숫자 등) 제거
+        l = l.replace(/((?:로|길|번길)\s*\d{1,4})([~\-]\d+|\d{1,2}(?=[\s\D]))/, '$1').trim();
+        // 2글자 이하 한글 잡텍스트만 제거 (아파트명 3글자↑ 보존)
+        l = l.replace(/((?:로|길|번길)\s*\d+(?:-\d+)?)\s+[가-힣]{1,2}$/, '$1').trim();
         if(!l) continue;
 
         var hasStreet = l.match(/(시|구).*(로|길)/) || l.match(/(로|길)\s*\d+/);
