@@ -22919,7 +22919,7 @@ function _tts(text){
 }
 
 async function emerSave(){
-  // ★ v9.25: 저장 중 연타 방지
+  toast('💾GPS:'+(window._emerGps?window._emerGps.src:'null'), 3000);
   if(window._emerSaving){ toast('⏳ 저장 중입니다...'); return; }
   window._emerSaving = true;
 
