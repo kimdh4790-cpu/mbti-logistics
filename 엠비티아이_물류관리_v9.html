@@ -22848,11 +22848,18 @@ async function emerSave(){
   if(!window._emerTrackings||!window._emerTrackings.length){
     var inp = document.getElementById('emer-tracking-inp')?.value.replace(/[\.\-\s]/g,'').trim();
     if(inp){ window._emerTrackings=[inp]; emerRefreshTrackingList(); }
+    // ★ v9.57: 운송장 없어도 주소 있으면 저장 허용 (파란송장 등 OCR 부분 인식)
     else {
-      window._emerSaving=false;
-      window._emerScanLock=false; // ★ v9.46: 실패 시 락 해제
-      toast('❌ 운송장 번호를 1개 이상 추가해주세요');
-      return;
+      var _addrCheck = (document.getElementById('emer-addr')?.value||'').trim();
+      if(!_addrCheck){
+        window._emerSaving=false;
+        window._emerScanLock=false;
+        toast('❌ 운송장 또는 주소를 입력해주세요');
+        return;
+      }
+      // 주소만 있을 경우 임시 운송장 생성 (나중에 수정 가능)
+      window._emerTrackings=['미확인-'+Date.now().toString().slice(-6)];
+      emerRefreshTrackingList();
     }
   }
   // ★ v9.25: 사진 필수 조건 제거 (배송완료 사진은 지도 핀에서 처리)
@@ -22872,10 +22879,13 @@ async function emerSave(){
   }
 
   // ★ v9.25: 저장 직전 GPS 처리 — QR/OCR 때 이미 Geocoding 완료된 경우 재실행 안 함 (속도 개선)
-  if(window._emerGps && (window._emerGps.src==='geocode'||window._emerGps.src==='QR')){
-    // 이미 배송지 좌표 확보됨 → 그대로 사용
+  if(window._emerGps && window._emerGps.lat && 
+     (window._emerGps.src==='geocode'||window._emerGps.src==='QR'||
+      window._emerGps.src==='kakao'||window._emerGps.src==='kakao_addr'||
+      window._emerGps.src==='kakao_kw'||window._emerGps.src==='kakao_kw2')){
+    // ★ v9.57: 카카오/QR/Geocode 좌표 모두 재사용 (중복 geocoding 방지)
     gpsClean = {lat:window._emerGps.lat, lng:window._emerGps.lng, acc:0, src:window._emerGps.src};
-    console.log('[emerSave] 기존 배송지 GPS 사용:', window._emerGps.src);
+    console.debug('[emerSave] 기존 GPS 사용:', window._emerGps.src);
   } else if(addr){
     // GPS 없거나 device GPS인 경우에만 geocoding 시도 (1.5초 타임아웃)
     var apiKey2 = window._cachedGoogleApiKey || localStorage.getItem('mbti_google_api_key') || '';
@@ -22965,43 +22975,22 @@ async function emerSave(){
   var uploaded = [];
   var isOnline = navigator.onLine;
 
+  // ★ v9.57: 사진은 백그라운드 업로드 — 저장 먼저, 사진은 나중에 붙임
+  record.photos = []; // 일단 빈 배열로 저장
   if(!isOnline){
-    toast('⚠️ 오프라인 상태 — 로컬 저장됨. 인터넷 연결 후 재전송 가능');
-    record.photos = [];
     record._syncStatus = 'offline';
   } else if(FB && _st && window._emerPhotos.length > 0){
-    try{
-      // ★ 모든 사진 동시 업로드 (Promise.all)
-      toast('📸 사진 '+ window._emerPhotos.length +'장 동시 업로드 중...');
-      var uploadTasks = window._emerPhotos.map(function(dataUrl, i){
-        var path = 'emergency/'+S.curDriver+'/'+now.getTime()+'_'+i+'.jpg';
-        return _emerStorageUpload(dataUrl, path, 3)
-          .catch(function(e){
-            console.warn('사진 '+i+' 업로드 실패:', e.code||e.message);
-            // 실패 시 폴백: 800px base64
-            return new Promise(function(res){
-              var img2=new Image(); img2.src=dataUrl;
-              img2.onload=function(){
-                var cvs=document.createElement('canvas');
-                var max=800; var ratio=Math.min(max/img2.width,max/img2.height,1);
-                cvs.width=Math.round(img2.width*ratio); cvs.height=Math.round(img2.height*ratio);
-                cvs.getContext('2d').drawImage(img2,0,0,cvs.width,cvs.height);
-                res(cvs.toDataURL('image/jpeg',0.75));
-              };
-              img2.onerror=function(){ res(null); };
-            });
-          });
-      });
-      uploaded = (await Promise.all(uploadTasks)).filter(Boolean);
-    }catch(e){
-      console.warn('병렬 업로드 오류:', e);
-    }
+    // 백그라운드 업로드 예약 (저장 블로킹 없음)
+    var _bgPhotos = window._emerPhotos.slice(0,1); // 1장만
+    var _bgTime = now.getTime();
+    var _bgDriver = S.curDriver||'';
+    window._pendingPhotoUpload = {photos:_bgPhotos, time:_bgTime, driver:_bgDriver};
   }
   record.photos = uploaded;
 
   // Firebase 저장 + 관리자 알림 — .add() 사용 (docId 문제 완전 회피)
   var docId = null;
-  var mergedTo = null; // ★ v9.25: 자동 묶음 시 기존 핀 ID 저장
+  var mergedTo = null;
   if(FB&&_db){
     try{
       // ★ v9.25: 자동 묶음 — 같은 기사 + 같은 주문번호 + 미완료 핀이 있으면 운송장만 추가
@@ -23062,6 +23051,17 @@ async function emerSave(){
         // ★ v9.25: undefined 완전 제거 후 저장
         var fbRecord = JSON.parse(JSON.stringify(record)); // undefined 키 자동 제거
         var docRef = await _db.collection('emergency_deliveries').add(fbRecord);
+      // ★ v9.57: 저장 완료 즉시 백그라운드 사진 업로드
+      if(window._pendingPhotoUpload && FB && _st){
+        var _pp=window._pendingPhotoUpload; window._pendingPhotoUpload=null;
+        var _did=docRef.id;
+        (async function(){
+          try{
+            var _pu=await _emerStorageUpload(_pp.photos[0],'emergency/'+_pp.driver+'/'+_pp.time+'_0.jpg',2);
+            if(_pu) await _db.collection('emergency_deliveries').doc(_did).update({photos:[_pu]});
+          }catch(e){ console.debug('[BG사진]',e.message); }
+        })();
+      }
         docId = docRef.id;
         record._fbId = docId;
       }
