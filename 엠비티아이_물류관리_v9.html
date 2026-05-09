@@ -21054,7 +21054,7 @@ function openEmergencyDelivery(){
 
       <!-- 통합 송장 촬영 -->
       <input type="file" id="emer-unified-cam" accept="image/*" capture="environment" style="display:none" onchange="emerUnifiedScan(this)">
-      <button onclick="toast('버튼클릭');document.getElementById('emer-unified-cam').click()" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:20px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;border-radius:14px;font-size:18px;font-weight:900;cursor:pointer;box-shadow:0 3px 14px rgba(124,58,237,.4);margin-bottom:8px">
+      <button onclick="document.getElementById('emer-unified-cam').click()" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:20px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;border-radius:14px;font-size:18px;font-weight:900;cursor:pointer;box-shadow:0 3px 14px rgba(124,58,237,.4);margin-bottom:8px">
         <span style="font-size:26px">📸</span> 촬영
       </button>
       <div id="emer-unified-status" style="font-size:13px;color:var(--teal);text-align:center;margin-bottom:10px;min-height:18px"></div>
@@ -21083,7 +21083,6 @@ function openEmergencyDelivery(){
 
 async function emerOcrScan(file, _statusOverride){
   if(!file) return;
-  toast('🔬 OCR시작', 2000); // ★ 디버그
   var status = _statusOverride || document.getElementById('emer-ocr-status');
   if(!window._emerGps || window._emerGps.src==='device_fallback') window._emerGps=null;
 
@@ -21156,7 +21155,6 @@ async function emerOcrScan(file, _statusOverride){
     });
 
     if(qrResult){
-      toast('📱 QR인식:'+qrResult.slice(0,20), 2000); // ★ 디버그
       _emerHandleScan(qrResult, status);
       return;
     }
@@ -21641,14 +21639,10 @@ async function emerOcrScan(file, _statusOverride){
     }
 
     // ★ v9.57: OCR 파싱 결과 무조건 toast (디버그)
-    toast('[OCR] 주소:'+(p.address||'없음')+' / 운송장:'+(p.tracking_no||'없음'), 5000);
-    console.log('[OCR_RESULT]', JSON.stringify(p));
-
     // ★ v9.25: OCR 추출 주소 → Geocoding API로 배송지 좌표 변환 (배송핀 = 배송지 위치)
     var pinGps = null;
     if(p.address){
       if(status) status.innerHTML = '<span style="color:var(--blue)">📍 배송지 좌표 변환 중...</span>';
-      toast('📍 주소: '+(p.address||'없음').slice(0,20)+'...', 3000); // ★ 디버그용 toast
       try{
         // ★ v9.57: 카카오 우선(아파트 정확도↑) → 실패 시 Google
         var _kkr = await _kakaoGeocode(p.address);
@@ -21658,7 +21652,6 @@ async function emerOcrScan(file, _statusOverride){
           if(status) status.innerHTML='<span style="color:var(--teal)">✅ 카카오 좌표 변환 완료 ('+_kkr.src+')</span>';
           toast('✅ 카카오 좌표: '+_kkr.lat.toFixed(4)+','+_kkr.lng.toFixed(4), 3000);
         } else {
-          toast('❌ 카카오 실패 → Google 시도', 3000);
           console.warn('[KAKAO_GEO_FAIL] 카카오 실패 → Google 시도');
           var gcRes = await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(_addBusanPrefix(p.address))+'&language=ko&region=kr&key='+apiKey);
           var gcData = await gcRes.json();
@@ -22919,7 +22912,6 @@ function _tts(text){
 }
 
 async function emerSave(){
-  toast('💾GPS:'+(window._emerGps?window._emerGps.src:'null'), 3000);
   if(window._emerSaving){ toast('⏳ 저장 중입니다...'); return; }
   window._emerSaving = true;
 
@@ -23226,7 +23218,7 @@ async function emerSave(){
     setTimeout(function(){ try{_ac2.close();}catch(e){} }, 600);
     navigator.vibrate&&navigator.vibrate([40,30,40]); _tts('저장'); _emerIncSave();
   }catch(e){}
-  toast('✅ 저장 완료 — 지도에 배송핀 생성됨');
+  toast('✅ 저장완료 GPS:'+(gpsClean?gpsClean.src:'없음'));
 }
 
 // ★ v9.25: 관리자 알림 별도 전송
