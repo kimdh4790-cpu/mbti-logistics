@@ -21083,8 +21083,8 @@ function openEmergencyDelivery(){
 
 async function emerOcrScan(file, _statusOverride){
   if(!file) return;
+  toast('🔬 OCR시작', 2000); // ★ 디버그
   var status = _statusOverride || document.getElementById('emer-ocr-status');
-  // ★ v9.57: 새 OCR 스캔 시작 시 GPS 초기화
   if(!window._emerGps || window._emerGps.src==='device_fallback') window._emerGps=null;
 
   // ★ v9.25: 1단계 — jsQR로 QR 코드 먼저 해독 (API 비용 0, 빠름)
@@ -21156,7 +21156,7 @@ async function emerOcrScan(file, _statusOverride){
     });
 
     if(qrResult){
-      // ★ v9.61: _emerHandleScan에 위임 — TTS/자동저장/카운터 모두 처리
+      toast('📱 QR인식:'+qrResult.slice(0,20), 2000); // ★ 디버그
       _emerHandleScan(qrResult, status);
       return;
     }
@@ -21867,7 +21867,7 @@ function emerUnifiedScan(input){
     }
 
     function goOCR(){
-      // QR 실패 → Vision API OCR (파란 송장 등)
+      toast('📷 goOCR호출', 2000); // ★ 디버그
       if(statusEl) statusEl.innerHTML = '🔍 OCR 분석 중...';
       statusEl.id = 'emer-ocr-status';
       setTimeout(function(){ var el=document.getElementById('emer-ocr-status'); if(el) el.id='emer-unified-status'; }, 10000);
