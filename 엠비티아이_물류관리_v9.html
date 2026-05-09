@@ -22286,9 +22286,11 @@ function _emerHandleScan(raw, statusEl){
         // ① GPS 15m 이내
         var dist = _gpsDist(_newGps, x.gps);
         if(dist > 15) return false;
-        // ② 수령인 일치
+        // ② 수령인 일치 (★ v9.57: 수령인 미상이면 동호수만으로 판단)
         var xName = (x.recipient||'').replace(/\*/g,'');
-        if(_newName && xName && _newName !== xName) return false;
+        var _nameUnknown = !_newName || _newName==='수령인미상' || _newName==='수령인 미상';
+        var _xUnknown = !xName || xName==='수령인미상' || xName==='수령인 미상';
+        if(!_nameUnknown && !_xUnknown && _newName !== xName) return false;
         // ③ 동호수 일치 (아파트/오피스텔), 없으면 GPS 8m 이내
         var xUnit = _extractUnit(x.addr);
         var hasUnit = _newUnit.ho || xUnit.ho;
@@ -22472,10 +22474,12 @@ function _emerHandleScan(raw, statusEl){
         // 모달이 아직 열려있고 저장 중이 아닐 때만 실행
         var _t=(window._emerTrackings&&window._emerTrackings.length>0)||(document.getElementById('emer-tracking-inp')&&document.getElementById('emer-tracking-inp').value.trim().length>5);
         var _a=document.getElementById('emer-addr')&&document.getElementById('emer-addr').value.trim().length>5;
-        var _r=document.getElementById('emer-recipient')&&document.getElementById('emer-recipient').value.trim().length>1;
+        // ★ v9.57: 수령인 없으면 "수령인 미상" 자동 입력 후 저장
+        var _rEl=document.getElementById('emer-recipient');
+        if(_rEl && !_rEl.value.trim()){ _rEl.value='수령인 미상'; }
         if(document.getElementById('emer-del-mo')&&!window._emerSaving&&typeof emerSave==='function'){
-          if(_t&&_a&&_r){ emerSave(); }
-          else{ var _ms=[]; if(!_t)_ms.push('운송장'); if(!_a)_ms.push('주소'); if(!_r)_ms.push('수령인');
+          if(_t&&_a){ emerSave(); }
+          else{ var _ms=[]; if(!_t)_ms.push('운송장'); if(!_a)_ms.push('주소');
             var _st2=document.getElementById('emer-unified-status');
             if(_st2)_st2.innerHTML='<span style="color:#f59e0b">⚠️ '+_ms.join('+')+' 확인 후 저장</span>'; }
         }
@@ -22847,7 +22851,7 @@ async function emerSave(){
 
   var orderId   = (document.getElementById('emer-orderid')?.value||'').trim();
   if(!orderId && window._pendingOrderId) orderId = window._pendingOrderId; // ★ OCR 경로 보완
-  var recipient = (document.getElementById('emer-recipient')?.value||'').trim();
+  var recipient = (document.getElementById('emer-recipient')?.value||'').trim(); if(!recipient) recipient='수령인 미상'; // ★ v9.57
   var addr      = (document.getElementById('emer-addr')?.value||'').trim();
   var delivMemo = (document.getElementById('emer-delivmemo')?.value||'').trim();
   var memo      = (document.getElementById('emer-memo')?.value||'').trim();
