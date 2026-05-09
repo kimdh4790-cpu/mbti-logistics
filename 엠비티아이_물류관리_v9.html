@@ -21068,6 +21068,8 @@ function openEmergencyDelivery(){
 async function emerOcrScan(file, _statusOverride){
   if(!file) return;
   var status = _statusOverride || document.getElementById('emer-ocr-status');
+  // ★ v9.57: 새 OCR 스캔 시작 시 GPS 초기화
+  if(!window._emerGps || window._emerGps.src==='device_fallback') window._emerGps=null;
 
   // ★ v9.25: 1단계 — jsQR로 QR 코드 먼저 해독 (API 비용 0, 빠름)
   // 사진을 네이티브 카메라로 찍으면 고해상도+자동초점 → jsQR 인식률 대폭 향상
@@ -21767,6 +21769,8 @@ function emerUnifiedScan(input){
   var file = input.files[0];
   input.value = '';
   window._scanPhotoAdded=false;
+  window._emerGps=null;           // ★ v9.57: GPS 초기화
+  window._pendingPhotoUpload=null; // ★ v9.57: 이전 사진 취소
   if(statusEl) statusEl.innerHTML = '🔍 QR 분석 중...';
 
   var url = URL.createObjectURL(file);
