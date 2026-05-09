@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.57</title>
+<title>엠비티아이 물류관리 v9.57.0716</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -21628,8 +21628,10 @@ async function emerOcrScan(file, _statusOverride){
         if(_kkr){
           pinGps={lat:_kkr.lat,lng:_kkr.lng,src:'kakao',addr:p.address};
           window._emerGps={lat:_kkr.lat,lng:_kkr.lng,acc:0,src:'kakao',addr:p.address};
-          if(status) status.innerHTML='<span style="color:var(--teal)">✅ 배송지 좌표 변환 완료</span>';
+          if(status) status.innerHTML='<span style="color:var(--teal)">✅ 카카오 좌표 변환 완료 ('+_kkr.src+')</span>';
+          console.log('[KAKAO_GEO_OK]', _kkr);
         } else {
+          console.warn('[KAKAO_GEO_FAIL] 카카오 실패 → Google 시도');
           var gcRes = await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(_addBusanPrefix(p.address))+'&language=ko&region=kr&key='+apiKey);
           var gcData = await gcRes.json();
           if(gcData.status==='OK' && gcData.results && gcData.results[0]){
