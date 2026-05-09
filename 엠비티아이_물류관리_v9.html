@@ -20924,6 +20924,7 @@ async function _kakaoGeocode(address){
   var addr = _addBusanPrefix(address);
   var aptMatch = address.match(/([가-힣A-Za-z]+(?:아파트|오피스텔|빌라|맨션|타워|파크|힐스|뷰|캐슬|자이|래미안|푸르지오|아이파크|임대|주공))/);
   var dongMatch = address.match(/([가-힣A-Za-z]?\d+)\s*동(?![아네은])/);
+  console.log('[Kakao지오코딩] 주소:',addr,'apt:',aptMatch&&aptMatch[1],'dong:',dongMatch&&dongMatch[1]);
 
   // ★ v9.57: 아파트면 키워드검색 우선 (동 단위 정확도) → 실패 시 주소검색
   if(aptMatch){
@@ -20933,6 +20934,7 @@ async function _kakaoGeocode(address){
       var r1 = await fetch('https://dapi.kakao.com/v2/local/search/keyword.json?query='+encodeURIComponent(kwQuery)+'&size=3',
         {headers:{'Authorization':'KakaoAK '+key}});
       var d1 = await r1.json();
+      console.log('[Kakao1 키워드]', kwQuery, '→', d1.documents&&d1.documents.length+'건', d1.meta);
       if(d1.documents && d1.documents.length > 0){
         // 동 번호 일치 결과 우선
         var best = null;
@@ -20964,10 +20966,12 @@ async function _kakaoGeocode(address){
     var r3 = await fetch('https://dapi.kakao.com/v2/local/search/address.json?query='+encodeURIComponent(addr),
       {headers:{'Authorization':'KakaoAK '+key}});
     var d3 = await r3.json();
+    console.log('[Kakao3 주소검색]', addr, '→', d3.documents&&d3.documents.length+'건', d3.error_type||'');
     if(d3.documents && d3.documents.length > 0){
       return {lat:parseFloat(d3.documents[0].y), lng:parseFloat(d3.documents[0].x), src:'kakao_addr'};
     }
-  }catch(e){ console.debug('[Kakao3]',e.message); }
+  }catch(e){ console.warn('[Kakao3 실패]',e.message); }
+  console.warn('[Kakao지오코딩] 모든 단계 실패 → Google 폴백');
 
   // ── 3단계: Google Geocoding 폴백 ──
   try{
