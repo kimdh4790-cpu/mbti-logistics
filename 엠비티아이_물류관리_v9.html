@@ -21165,18 +21165,24 @@ async function emerOcrScan(file, _statusOverride){
   // QR 해독 실패 → Google Vision OCR 폴백
   if(status) status.innerHTML = '<span style="color:var(--blue)">🤖 QR 미인식 → AI OCR 시도 중...</span>';
 
-  // Google Vision API 키 — 전역 캐시 우선 (매번 Firebase 재로드 방지)
-  var apiKey = window._cachedGoogleApiKey || localStorage.getItem('mbti_google_api_key') || '';
+  // ★ v9.57: Google Vision API 키 — localStorage 우선 (Firestore 타임아웃 방지)
+  var apiKey = window._cachedGoogleApiKey
+            || localStorage.getItem('mbti_google_api_key')
+            || localStorage.getItem('mbti_google_key') || '';
+  if(apiKey) window._cachedGoogleApiKey = apiKey;
+  // Firestore는 키 없을 때만, 2초 타임아웃
   if(!apiKey && FB && _db){
     try{
-      if(status) status.innerHTML = '<span style="color:var(--blue)">🔑 설정 불러오는 중...</span>';
-      var doc = await _db.collection('settings').doc('claude_config').get();
+      var _gkPromise = _db.collection('settings').doc('claude_config').get();
+      var _gkTimeout = new Promise(function(_,rej){ setTimeout(function(){ rej(new Error('timeout')); }, 2000); });
+      var doc = await Promise.race([_gkPromise, _gkTimeout]);
       if(doc.exists && doc.data().googleApiKey){
         apiKey = doc.data().googleApiKey.trim();
+        localStorage.setItem('mbti_google_api_key', apiKey);
+        window._cachedGoogleApiKey = apiKey;
       }
-    }catch(e){ console.warn('Firebase 키 로드 실패:', e); }
+    }catch(e){ console.debug('[GoogleKey]', e.message); }
   }
-  if(apiKey) window._cachedGoogleApiKey = apiKey; // ★ v9.25: 전역 캐시 저장
 
   if(!apiKey){
     if(status) status.innerHTML = '<span style="color:var(--red)">❌ API 키 없음 — 관리자에게 문의하세요</span>';
@@ -21638,6 +21644,7 @@ async function emerOcrScan(file, _statusOverride){
     var pinGps = null;
     if(p.address){
       if(status) status.innerHTML = '<span style="color:var(--blue)">📍 배송지 좌표 변환 중...</span>';
+      toast('📍 주소: '+(p.address||'없음').slice(0,20)+'...', 3000); // ★ 디버그용 toast
       try{
         // ★ v9.57: 카카오 우선(아파트 정확도↑) → 실패 시 Google
         var _kkr = await _kakaoGeocode(p.address);
@@ -21645,8 +21652,9 @@ async function emerOcrScan(file, _statusOverride){
           pinGps={lat:_kkr.lat,lng:_kkr.lng,src:'kakao',addr:p.address};
           window._emerGps={lat:_kkr.lat,lng:_kkr.lng,acc:0,src:'kakao',addr:p.address};
           if(status) status.innerHTML='<span style="color:var(--teal)">✅ 카카오 좌표 변환 완료 ('+_kkr.src+')</span>';
-          console.log('[KAKAO_GEO_OK]', _kkr);
+          toast('✅ 카카오 좌표: '+_kkr.lat.toFixed(4)+','+_kkr.lng.toFixed(4), 3000);
         } else {
+          toast('❌ 카카오 실패 → Google 시도', 3000);
           console.warn('[KAKAO_GEO_FAIL] 카카오 실패 → Google 시도');
           var gcRes = await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(_addBusanPrefix(p.address))+'&language=ko&region=kr&key='+apiKey);
           var gcData = await gcRes.json();
