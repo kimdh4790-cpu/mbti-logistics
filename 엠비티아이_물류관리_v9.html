@@ -21640,6 +21640,10 @@ async function emerOcrScan(file, _statusOverride){
       }
     }
 
+    // ★ v9.57: OCR 파싱 결과 무조건 toast (디버그)
+    toast('[OCR] 주소:'+(p.address||'없음')+' / 운송장:'+(p.tracking_no||'없음'), 5000);
+    console.log('[OCR_RESULT]', JSON.stringify(p));
+
     // ★ v9.25: OCR 추출 주소 → Geocoding API로 배송지 좌표 변환 (배송핀 = 배송지 위치)
     var pinGps = null;
     if(p.address){
