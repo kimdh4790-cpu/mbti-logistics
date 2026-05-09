@@ -21638,21 +21638,29 @@ async function emerOcrScan(file, _statusOverride){
     }
 
     // 운송장 사진 배송 사진으로 자동 추가
-    var reader = new FileReader();
-    reader.onload = function(e){ window._emerPhotos.push(e.target.result); emerRefreshPhotoWrap(); };
-    reader.readAsDataURL(file);
+    // ★ v9.57: 스캔 사진 1장만 (플래그 가드)
+    if(!window._scanPhotoAdded){
+      window._scanPhotoAdded = true;
+      var reader = new FileReader();
+      reader.onload = function(e){ window._emerPhotos.push(e.target.result); emerRefreshPhotoWrap(); };
+      reader.readAsDataURL(file);
+    }
 
     // ★ v9.25: 등록방식 = OCR 자동인식
     window._emerEntryMode = 'ocr';
 
-    // ★ v9.61: OCR 텍스트 경로도 자동저장 (운송장 있으면)
+    // ★ v9.57: 운송장 OR 주소 있으면 저장 (수령인 없으면 미상 처리)
     var _ocrTrk = window._emerTrackings && window._emerTrackings[0];
-    if(_ocrTrk){
+    var _ocrAddr = p.address || (document.getElementById('emer-addr')&&document.getElementById('emer-addr').value.trim());
+    if(!document.getElementById('emer-recipient')?.value?.trim()){
+      var _rr = document.getElementById('emer-recipient');
+      if(_rr) _rr.value = '수령인 미상';
+    }
+    if(_ocrTrk || _ocrAddr){
       if(status) status.innerHTML = '<span style="color:var(--teal)">📸 스캔 ✅ &nbsp;→&nbsp; 💾 저장 중...</span>';
       _tts('스캔'); _emerIncScan();
       window._emerSaving = false;
       setTimeout(function(){
-        // 저장 직전 order_id 재확인
         if(p.order_id){
           var _oe2=document.getElementById('emer-orderid');
           if(_oe2 && !_oe2.value) _oe2.value = p.order_id;
