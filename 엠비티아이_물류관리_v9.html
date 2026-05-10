@@ -23220,10 +23220,8 @@ async function emerSave(){
     navigator.vibrate&&navigator.vibrate([40,30,40]); _tts('저장'); _emerIncSave();
   }catch(e){}
   var _gpsMsg = gpsClean ? gpsClean.src+' '+gpsClean.lat.toFixed(4)+','+gpsClean.lng.toFixed(4) : '없음';
+  console.log('[GPS_SAVED]', _gpsMsg, 'addr:', record && record.addr);
   toast('✅ 저장완료');
-  // ★ 좌표 status 영역에 5초 표시
-  var _stEl = document.getElementById('emer-unified-status');
-  if(_stEl){ _stEl.innerHTML='<span style="color:#10b981;font-size:11px">GPS:'+_gpsMsg+'</span>'; setTimeout(function(){ if(_stEl) _stEl.textContent=''; }, 8000); }
 }
 
 // ★ v9.25: 관리자 알림 별도 전송
