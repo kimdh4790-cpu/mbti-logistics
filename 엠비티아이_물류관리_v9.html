@@ -20942,6 +20942,7 @@ async function _kakaoGeocode(address){
   if(aptMatch){
     // ── 1단계: 아파트명+동 키워드검색 ──
     var kwQuery = '부산 ' + aptMatch[1] + (dongMatch ? ' '+dongMatch[1]+'동' : '');
+    console.log('[카카오쿼리]', kwQuery);
     try{
       var r1 = await fetch('https://dapi.kakao.com/v2/local/search/keyword.json?query='+encodeURIComponent(kwQuery)+'&size=3',
         {headers:{'Authorization':'KakaoAK '+key}});
@@ -23218,7 +23219,11 @@ async function emerSave(){
     setTimeout(function(){ try{_ac2.close();}catch(e){} }, 600);
     navigator.vibrate&&navigator.vibrate([40,30,40]); _tts('저장'); _emerIncSave();
   }catch(e){}
-  toast('✅ 저장완료 GPS:'+(gpsClean?gpsClean.src:'없음'));
+  var _gpsMsg = gpsClean ? gpsClean.src+' '+gpsClean.lat.toFixed(4)+','+gpsClean.lng.toFixed(4) : '없음';
+  toast('✅ 저장완료');
+  // ★ 좌표 status 영역에 5초 표시
+  var _stEl = document.getElementById('emer-unified-status');
+  if(_stEl){ _stEl.innerHTML='<span style="color:#10b981;font-size:11px">GPS:'+_gpsMsg+'</span>'; setTimeout(function(){ if(_stEl) _stEl.textContent=''; }, 8000); }
 }
 
 // ★ v9.25: 관리자 알림 별도 전송
