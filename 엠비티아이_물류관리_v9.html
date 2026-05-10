@@ -20932,9 +20932,10 @@ async function _kakaoGeocode(address){
 
   var addr = _addBusanPrefix(address);
   // ★ v9.57: 아파트명 패턴 강화 (임대아파트, 주공 등 포함)
-  var aptMatch = address.match(/([가-힣A-Za-z\d]+(?:아파트|임대아파트|오피스텔|빌라|맨션|타워|파크|힐스|뷰|캐슬|자이|래미안|푸르지오|아이파크|주공|LH|SH))/);
-  // 폴백: "XXX아파트" 전체 단어 (2글자 이상 + 아파트)
+  // ★ v9.57: 아파트명 추출 — 긴 패턴 우선 (임대아파트 > 임대)
+  var aptMatch = address.match(/([가-힣A-Za-z\d]+(?:임대아파트|공공아파트|영구임대|아파트|오피스텔|빌라|맨션|타워|파크|힐스|뷰|캐슬|자이|래미안|푸르지오|아이파크|주공|LH|SH))/);
   if(!aptMatch) aptMatch = address.match(/([가-힣]{2,}아파트)/);
+  if(!aptMatch) aptMatch = address.match(/([가-힣]{3,}(?:임대|주공))/);
   var dongMatch = address.match(/([A-Za-z가-힣]?\d+)\s*동(?![아네은])/);
   console.log('[KAKAO_GEO]', addr, 'apt:', aptMatch&&aptMatch[1], 'dong:', dongMatch&&dongMatch[1]);
 
@@ -20974,16 +20975,20 @@ async function _kakaoGeocode(address){
     }
   }
 
-  // ── 3단계: 카카오 주소검색 (비아파트 or 키워드 실패) ──
-  try{
-    var r3 = await fetch('https://dapi.kakao.com/v2/local/search/address.json?query='+encodeURIComponent(addr),
-      {headers:{'Authorization':'KakaoAK '+key}});
-    var d3 = await r3.json();
-    console.log('[KAKAO_ADDR3]', addr, d3.documents&&d3.documents.length+'건', d3.error_type||'');
-    if(d3.documents && d3.documents.length > 0){
-      return {lat:parseFloat(d3.documents[0].y), lng:parseFloat(d3.documents[0].x), src:'kakao_addr'};
-    }
-  }catch(e){ console.warn('[Kakao3 실패]',e.message); }
+  // ── 3단계: 카카오 주소검색 + OCR 번지수 보정 (예: 11번길→110번길) ──
+  var _v = [addr, addr.replace(/([로길] *)(\d{2})(번길)/, '$1$' + '20$3')];
+  for(var _i=0;_i<_v.length;_i++){
+    if(_v[_i]===addr && _i>0) break;
+    try{
+      var r3 = await fetch('https://dapi.kakao.com/v2/local/search/address.json?query='+encodeURIComponent(_v[_i]),
+        {headers:{'Authorization':'KakaoAK '+key}});
+      var d3 = await r3.json();
+      console.log('[KAKAO_ADDR3]', _v[_i], d3.documents&&d3.documents.length+'건');
+      if(d3.documents && d3.documents.length > 0){
+        return {lat:parseFloat(d3.documents[0].y), lng:parseFloat(d3.documents[0].x), src:'kakao_addr'};
+      }
+    }catch(e){ console.warn('[Kakao3]',e.message); }
+  }
   console.warn('[KAKAO_ALL_FAIL] 모든 단계 실패 → Google 폴백');
 
   // ── 3단계: Google Geocoding 폴백 ──
