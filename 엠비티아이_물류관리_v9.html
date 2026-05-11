@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<!-- ★ v9.65: OCR 주소 텍스트 자동 교정 (Firestore에 카카오 도로명 저장) -->
+<!-- ★ v9.65: 카카오 매칭 도로명을 matchedAddr로 반환 → emer-addr 입력란 자동 재구성 -->
+<!-- ★ v9.65: emerSave에서 카카오 매칭이 있으면 addr 변수 강제 덮어쓰기 -->
+<!-- ★ v9.65: 화면 핀 팝업 + Firestore 저장 모두 정확한 주소 보장 -->
 <!-- ★ v9.64: 단지명 우선 매칭 (OCR 도로명 완전 오인식 극복) -->
 <!-- ★ v9.64: 단지명+동 후보를 ①번으로 (도로명보다 먼저 검색) -->
 <!-- ★ v9.64: 단지명 매칭 +40, 단지명 미포함 결과는 -50 패널티 -->
@@ -28,7 +32,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.64.0511</title>
+<title>엠비티아이 물류관리 v9.65.0511</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10441,7 +10445,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.64 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.65 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -21002,7 +21006,7 @@ window._geoCacheMem = window._geoCacheMem || {};
 (function(){
   try{
     var ver = localStorage.getItem('mbti_geo_cache_ver');
-    if(ver !== 'v964'){
+    if(ver !== 'v965'){
       var removed = 0;
       var keys = Object.keys(localStorage);
       for(var i=0;i<keys.length;i++){
@@ -21010,8 +21014,8 @@ window._geoCacheMem = window._geoCacheMem || {};
           localStorage.removeItem(keys[i]); removed++;
         }
       }
-      localStorage.setItem('mbti_geo_cache_ver', 'v964');
-      if(removed > 0) console.log('[v9.64 CACHE_FLUSH]', removed, '개 항목 자동 무효화 (v9.62 이전 캐시)');
+      localStorage.setItem('mbti_geo_cache_ver', 'v965');
+      if(removed > 0) console.log('[v9.65 CACHE_FLUSH]', removed, '개 항목 자동 무효화 (v9.62 이전 캐시)');
     }
   }catch(e){ console.debug('cache flush skip:', e); }
 })();
@@ -21287,28 +21291,33 @@ async function _kakaoGeocode(address){
     if(bestDoc && bestScore >= 50){
       // 동 번호 매칭된 결과 → 동 단위 정확도 확보
       _geoResultBanner('📍 카카오키워드(동매칭'+bestScore+'점) ✅ | '+bestDoc.y+', '+bestDoc.x+'\n   "'+bestQuery+'" → '+bestDoc.place_name);
-      var _gpsKW = {lat:parseFloat(bestDoc.y), lng:parseFloat(bestDoc.x), src:'kakao_kw_dong'};
+      // ★ v9.65: 카카오 매칭 도로명을 반환값에 포함 (주소 텍스트 자동 갱신용)
+      var matchedRoad = bestDoc.road_address_name || bestDoc.address_name || '';
+      var matchedName = bestDoc.place_name || '';
+      var _gpsKW = {lat:parseFloat(bestDoc.y), lng:parseFloat(bestDoc.x), src:'kakao_kw_dong', matchedAddr:matchedRoad, matchedName:matchedName};
       _geoCacheSet(address, _gpsKW);
-      console.log('[KAKAO_KW_BEST v9.62]', bestQuery, '→', bestDoc.place_name, 'score:', bestScore);
-      // ★ v9.62: 매칭 성공한 도로명을 emer-addr 입력란에 자동 교정 (OCR 오인식 보정)
+      console.log('[KAKAO_KW_BEST v9.65]', bestQuery, '→', matchedName, '|', matchedRoad, 'score:', bestScore);
+      // ★ v9.65: 카카오 매칭 도로명으로 emer-addr 입력란 강제 재구성
       try{
-        var correctedRoad = bestDoc.road_address_name || '';
         var emerAddrEl = document.getElementById('emer-addr');
-        if(emerAddrEl && correctedRoad && bestQuery && roadStr){
-          // 도로명이 원본과 다르면(OCR 교정됨) 입력란 갱신
-          var origNoSpace = roadStr.replace(/\s/g,'');
-          if(correctedRoad.replace(/\s/g,'').indexOf(origNoSpace) < 0){
-            var curVal = emerAddrEl.value;
-            // 원본 도로명을 교정된 도로명으로 치환
-            var newVal = curVal.replace(roadStr, correctedRoad.replace(/^.*?(\S+로\s*\d+번길\s*\d+).*/,'$1')||correctedRoad);
-            if(newVal !== curVal){
-              emerAddrEl.value = newVal;
-              console.log('[OCR_AUTO_CORRECT]', roadStr, '→', correctedRoad);
-              _geoResultBanner('🔧 OCR 자동교정: '+roadStr+' → '+correctedRoad);
-            }
+        if(emerAddrEl && matchedRoad){
+          var curVal = emerAddrEl.value || '';
+          // 호수 추출 (예: "1209호")
+          var hoMatch = curVal.match(/(\d+호)/);
+          var hoStr = hoMatch ? hoMatch[1] : '';
+          // 새 주소 재구성: "{카카오도로명} {단지명} {동번호} {호수}"
+          var rebuilt = matchedRoad;
+          if(matchedName) rebuilt += ' ' + matchedName.replace(matchedRoad,'').trim();
+          if(dongStr && rebuilt.indexOf(dongStr)<0) rebuilt += ' ' + dongStr;
+          if(hoStr && rebuilt.indexOf(hoStr)<0) rebuilt += ' ' + hoStr;
+          rebuilt = rebuilt.replace(/\s+/g,' ').trim();
+          if(rebuilt !== curVal && rebuilt.length > 10){
+            emerAddrEl.value = rebuilt;
+            console.log('[ADDR_AUTO_REBUILD v9.65]', curVal, '→', rebuilt);
+            _geoResultBanner('🔧 주소 자동교정 ✅\n   원본: '+curVal.slice(0,50)+'\n   교정: '+rebuilt);
           }
         }
-      }catch(autoCorrErr){ console.debug('auto-correct skip:', autoCorrErr); }
+      }catch(autoCorrErr){ console.debug('addr rebuild skip:', autoCorrErr); }
       return _gpsKW;
     }
     if(bestDoc && bestScore >= 20){
@@ -23445,6 +23454,25 @@ async function emerSave(){
   if(!orderId && window._pendingOrderId) orderId = window._pendingOrderId; // ★ OCR 경로 보완
   var recipient = (document.getElementById('emer-recipient')?.value||'').trim(); if(!recipient) recipient='수령인 미상'; // ★ v9.59
   var addr      = (document.getElementById('emer-addr')?.value||'').trim();
+  // ★ v9.65: 카카오 매칭 도로명이 있으면 addr 강제 보정 (OCR 텍스트 오류 무력화)
+  if(window._emerGps && window._emerGps.matchedAddr && window._emerGps.src && window._emerGps.src.indexOf('kakao')>=0){
+    var mAddr = window._emerGps.matchedAddr;
+    var mName = window._emerGps.matchedName || '';
+    // addr이 카카오 도로명을 포함하지 않으면 → OCR 오인식이므로 강제 재구성
+    if(addr && mAddr && addr.replace(/\s/g,'').indexOf(mAddr.replace(/\s/g,'').slice(0,8)) < 0){
+      var hoM = addr.match(/(\d+호)/);
+      var dongM2 = addr.match(/(\d+동)(?![아네은])/);
+      var rebuilt2 = mAddr;
+      if(mName && mName.indexOf(mAddr) < 0) rebuilt2 += ' ' + mName;
+      if(dongM2 && rebuilt2.indexOf(dongM2[1])<0) rebuilt2 += ' ' + dongM2[1];
+      if(hoM && rebuilt2.indexOf(hoM[1])<0) rebuilt2 += ' ' + hoM[1];
+      rebuilt2 = rebuilt2.replace(/\s+/g,' ').trim();
+      console.log('[emerSave ADDR_OVERRIDE v9.65]', addr, '→', rebuilt2);
+      addr = rebuilt2;
+      var emerAddrEl2 = document.getElementById('emer-addr');
+      if(emerAddrEl2) emerAddrEl2.value = addr;
+    }
+  }
   var delivMemo = (document.getElementById('emer-delivmemo')?.value||'').trim();
   var memo      = (document.getElementById('emer-memo')?.value||'').trim();
   var now = new Date();
