@@ -17,15 +17,15 @@ const messaging = firebase.messaging();
 const ICON = '';
 const BADGE = '';
 // ★ 타임스탬프 기반 캐시 — GitHub 업로드마다 자동으로 SW 업데이트됨
-const CACHE = 'mbti-v9-' + '202605110945';
+const CACHE = 'mbti-v9-' + '202605111020';
 
 self.addEventListener('install', e => {
-  console.log('[SW] install v9.65');
+  console.log('[SW] install v9.66');
   self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
-  console.log('[SW] activate v9.65');
+  console.log('[SW] activate v9.66');
   e.waitUntil(
     caches.keys()
       .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
@@ -34,7 +34,7 @@ self.addEventListener('activate', e => {
         return self.clients.matchAll({type:'window', includeUncontrolled:true})
           .then(function(clients){
             clients.forEach(function(c){
-              c.postMessage({type:'SW_UPDATED', version:'v9.65'});
+              c.postMessage({type:'SW_UPDATED', version:'v9.66'});
             });
           });
       })
