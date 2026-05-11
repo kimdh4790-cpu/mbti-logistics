@@ -10967,20 +10967,20 @@ function loadUnitPrices() {
   if(!FB||!_db) return;
   // 업무별 기본 단가
   _fsGetCached('settings/unitPrices', 30).then(function(snap) {
-    if (snap.exists) {
-      G_PRICES = Object.assign({}, DEFAULT_UNIT_PRICES, snap.data());
-      if (snap.data().routePrices) {
+    if (snap) {
+      G_PRICES = Object.assign({}, DEFAULT_UNIT_PRICES, snap);
+      if (snap.routePrices) {
         // Firestore 저장 단가표로 RPRICE 완전 교체
         Object.keys(RPRICE).forEach(function(k){delete RPRICE[k];});
-        Object.assign(RPRICE, snap.data().routePrices);
+        Object.assign(RPRICE, snap.routePrices);
       }
     }
   }).catch(function(){});
   // 라우트 단가 별도 문서로도 저장 가능
   _fsGetCached('settings/routePrices', 30).then(function(snap) {
-    if (snap.exists && snap.data()) {
+    if (snap) {
       Object.keys(RPRICE).forEach(function(k){delete RPRICE[k];});
-      Object.assign(RPRICE, snap.data());
+      Object.assign(RPRICE, snap);
     }
   }).catch(function(){});
 }
@@ -11939,7 +11939,7 @@ function doLogin(){
     if(FB&&_db){
       _fsGetCached('settings/adminInfo', 60).then(function(doc){
         var info=JSON.parse(localStorage.getItem('mbti_admin_info')||'{}');
-        if(doc.exists)Object.assign(info,doc.data());
+        if(doc) Object.assign(info, doc);
         _doAdminCheck(info);
       }).catch(function(){_doAdminCheck(JSON.parse(localStorage.getItem('mbti_admin_info')||'{}'));});
     } else {_doAdminCheck(JSON.parse(localStorage.getItem('mbti_admin_info')||'{}'));}
@@ -13641,7 +13641,7 @@ function _getGoogleApiKey(){
   var timeout = new Promise(function(res){ setTimeout(function(){ res(''); }, 3000); });
   return Promise.race([
     _fsGetCached('settings/claude_config', 20).then(function(doc){
-      var key = doc.exists ? (doc.data().googleApiKey||'') : '';
+      var key = doc ? (doc.googleApiKey||'') : '';
       if(key) localStorage.setItem('mbti_google_api_key', key);
       return key;
     }).catch(function(){ return ''; }),
@@ -14029,7 +14029,7 @@ async function openLiveMap(){
   if(FB && _db){
     try{
       var doc = await _fsGetCached('settings/claude_config', 20);
-      if(doc.exists) apiKey = doc.data().googleApiKey || '';
+      if(doc) apiKey = doc.googleApiKey || '';
     }catch(e){}
   }
   if(!apiKey) apiKey = localStorage.getItem('mbti_google_api_key')||'';
@@ -14618,12 +14618,12 @@ function _setIncSetting(driver,route,on,rate){
 function loadIncSettingsFromFB(){
   if(!FB||!_db)return;
   _fsGetCached('settings/incSettings', 15).then(function(doc){
-    if(!doc.exists){
+    if(!doc){
       // ★ 문서 없으면 자동 생성 (첫 실행 시)
       _db.collection('settings').doc('incSettings').set({_created:new Date().toISOString()},{merge:true}).catch(function(){});
       return;
     }
-    var data=doc.data();
+    var data=doc;
     Object.keys(data).forEach(function(k){
       if(k.startsWith('inc_'))localStorage.setItem(k,JSON.stringify(data[k]));
     });
@@ -18770,7 +18770,8 @@ function dViewTax(month, driver, btn){
     _db.collection('driver_notifications').doc(docKey).get()
     .then(function(doc){
       var fbItem=null;
-      if(doc.exists){
+      if(doc){
+
         var d=doc.data();
         // ★ v9.27: 문서의 driver 필드도 검증 — 잘못된 docKey 방지
         if(d&&d.img&&d.type==='tax_invoice'&&d.month===month&&d.driver===drv) fbItem=d;
@@ -21223,8 +21224,8 @@ async function emerOcrScan(file, _statusOverride){
       var _gkPromise = _fsGetCached('settings/claude_config', 20);
       var _gkTimeout = new Promise(function(_,rej){ setTimeout(function(){ rej(new Error('timeout')); }, 2000); });
       var doc = await Promise.race([_gkPromise, _gkTimeout]);
-      if(doc.exists && doc.data().googleApiKey){
-        apiKey = doc.data().googleApiKey.trim();
+      if(doc && doc.googleApiKey){
+        apiKey = doc.googleApiKey.trim();
         localStorage.setItem('mbti_google_api_key', apiKey);
         window._cachedGoogleApiKey = apiKey;
       }
@@ -23606,7 +23607,7 @@ async function _checkDelivPhotoHo(photoBase64, expectedHo){
   if(FB && _db){
     try{
       var doc = await _fsGetCached('settings/claude_config', 20);
-      if(doc.exists && doc.data().anthropicApiKey) apiKey = doc.data().anthropicApiKey.trim();
+      if(doc && doc.anthropicApiKey) apiKey = doc.anthropicApiKey.trim();
     }catch(e){}
   }
   if(!apiKey) apiKey = (localStorage.getItem('mbti_anthropic_api_key')||'').trim();
@@ -26810,11 +26811,10 @@ function startListeners(){
   
     // ── 관리자 정보 Firebase에서 로드
     _fsGetCached('settings/adminInfo', 60).then(function(doc){
-      if(doc.exists){
-        var data=doc.data();
+      if(doc){
         var local=JSON.parse(localStorage.getItem('mbti_admin_info')||'{}');
         // Firebase가 더 최신이면 덮어쓰기
-        Object.assign(local,data);
+        Object.assign(local, doc);
         localStorage.setItem('mbti_admin_info',JSON.stringify(local));
       }
     }).catch(function(){});
@@ -28341,7 +28341,7 @@ function _viewAttendMap(driverName,date){
   if(!FB||!_db){toast('❌ Firebase 연결 필요');return;}
   var docId=driverName+'_'+date;
   _db.collection('attendance').doc(docId).get().then(function(doc){
-    if(!doc.exists){toast('데이터 없음');return;}
+    if(!doc){toast('데이터 없음');return;}
     var a=doc.data();
     var inLat=a.checkInLat, inLng=a.checkInLng;
     var outLat=a.checkOutLat, outLng=a.checkOutLng;
@@ -28432,7 +28432,7 @@ function _editAttend(driverName,date){
   var docId=driverName+'_'+date;
   
   _db.collection('attendance').doc(docId).get().then(function(doc){
-    if(!doc.exists){toast('❌ 데이터 없음');return;}
+    if(!doc){toast('❌ 데이터 없음');return;}
     var a=doc.data();
     
     // 기존 모달 제거
@@ -29064,8 +29064,8 @@ async function parseScheduleImage(inp){
   if(FB && _db){
     try{
       var doc = await _fsGetCached('settings/claude_config', 20);
-      if(doc.exists && doc.data().anthropicApiKey){
-        apiKey = doc.data().anthropicApiKey.trim();
+      if(doc && doc.anthropicApiKey){
+        apiKey = doc.anthropicApiKey.trim();
       }
     }catch(e){ console.warn('Firebase 키 로드 실패:', e); }
   }
