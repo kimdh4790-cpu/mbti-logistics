@@ -21018,15 +21018,30 @@ async function _kakaoGeocode(address){
     }
   }
 
-  // ── 3단계: 카카오 주소검색 + OCR 번지수 보정 (예: 11번길→110번길) ──
-  var _v = [addr, addr.replace(/([로길] *)(\d{2})(번길)/, '$1$' + '20$3')];
-  for(var _i=0;_i<_v.length;_i++){
-    if(_v[_i]===addr && _i>0) break;
+  // ── 3단계: 카카오 주소검색 — 도로명+번지 단계적 추출 ──
+  (function(){
+    // 도로명+번지만 추출 (아파트명/동/호 제거)
+    var _roadOnly = addr
+      .replace(/([가-힣]+(?:로|길|대로)\s*\d+(?:번길)?\s*\d*)\s+[가-힣A-Za-z\d]+(아파트|오피스텔|빌라|맨션|타워|주공|임대).*/,'$1')
+      .replace(/\s+\d+동.*$/,'')
+      .replace(/\s+\d+호.*$/,'').trim();
+    var _candidates = [addr, _roadOnly];
+    // OCR 번지수 보정 버전 (19번길→190번길 등)
+    var _ocr1 = addr.replace(/([로길] *)(\d{1,2})(번길)/, function(_,a,b,c){ return a+(parseInt(b)*10)+c; });
+    var _ocr2 = _roadOnly.replace(/([로길] *)(\d{1,2})(번길)/, function(_,a,b,c){ return a+(parseInt(b)*10)+c; });
+    if(_ocr1!==addr) _candidates.push(_ocr1);
+    if(_ocr2!==_roadOnly) _candidates.push(_ocr2);
+    // 중복 제거
+    _candidates = _candidates.filter(function(v,i,a){ return a.indexOf(v)===i; });
+    window._addrCandidates = _candidates;
+    console.log('[KAKAO_ADDR_CANDIDATES]', _candidates);
+  })();
+  for(var _i=0;_i<window._addrCandidates.length;_i++){
     try{
-      var r3 = await fetch('https://dapi.kakao.com/v2/local/search/address.json?query='+encodeURIComponent(_v[_i]),
+      var r3 = await fetch('https://dapi.kakao.com/v2/local/search/address.json?query='+encodeURIComponent(window._addrCandidates[_i])+'&size=1',
         {headers:{'Authorization':'KakaoAK '+key}});
       var d3 = await r3.json();
-      console.log('[KAKAO_ADDR3]', _v[_i], d3.documents&&d3.documents.length+'건');
+      console.log('[KAKAO_ADDR3]', window._addrCandidates[_i], d3.documents&&d3.documents.length+'건');
       if(d3.documents && d3.documents.length > 0){
         return {lat:parseFloat(d3.documents[0].y), lng:parseFloat(d3.documents[0].x), src:'kakao_addr'};
       }
@@ -21039,7 +21054,7 @@ async function _kakaoGeocode(address){
     var gKey = window._googleApiKey || localStorage.getItem('mbti_google_api_key') || '';
     if(!gKey && FB && _db){
       var gDoc = await _fsGetCached('settings/claude_config', 20);
-      if(gDoc.exists) gKey=(gDoc.data().googleApiKey||gDoc.data().googleMapsApiKey||'').trim();
+      if(gDoc) gKey=(gDoc.googleApiKey||gDoc.googleMapsApiKey||'').trim();
     }
     if(gKey){
       var gr = await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr)+'&language=ko&region=kr&key='+gKey);
