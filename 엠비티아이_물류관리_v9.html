@@ -20944,6 +20944,17 @@ function _emerCloseWithCheck(){
 }
 
 
+
+// ★ v9.59: 주소 정제 — OCR/파싱 아티팩트 제거
+function _cleanAddr(addr){
+  if(!addr || typeof addr !== 'string') return '';
+  return addr
+    .replace(/["']\s*\(string\)/g, '')   // " (string) 제거
+    .replace(/^["']+|["']+$/g, '')           // 앞뒤 따옴표 제거
+    .replace(/\\n|\\t|\\r/g, ' ')       // 이스케이프 개행 제거
+    .replace(/\s{2,}/g, ' ')                 // 연속 공백 단일화
+    .trim();
+}
 function _addBusanPrefix(addr){
   if(!addr) return addr;
   if(/^(서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주)/.test(addr.trim())) return addr;
@@ -20952,30 +20963,29 @@ function _addBusanPrefix(addr){
 }
 
 async function _kakaoGeocode(address){
+  address = _cleanAddr(address);
   if(!address) return null;
 
-  // ── API 키 로드 (localStorage → Firestore) ──
-  var kakaoKey = window._cachedKakaoApiKey || (localStorage.getItem('mbti_kakao_api_key')||'').trim();
+  // ── API 키 로드 ──
   var googleKey = window._googleApiKey || (localStorage.getItem('mbti_google_api_key')||'').trim();
+  var kakaoKey  = window._cachedKakaoApiKey || (localStorage.getItem('mbti_kakao_api_key')||'').trim();
 
-  if((!kakaoKey || !googleKey) && FB && _db){
+  if(!googleKey || !kakaoKey){
     try{
-      var _cfg = await _fsGetCached('settings/claude_config', 20);
-      if(!_cfg){
-        // 캐시 미스 시 직접 읽기
-        var _snap = await _db.collection('settings').doc('claude_config').get();
-        _cfg = _snap.exists ? _snap.data() : null;
-        if(_cfg && window._fsCacheStore) window._fsCacheStore['settings/claude_config']={ts:Date.now(),data:_cfg};
-      }
-      if(_cfg){
-        if(!kakaoKey){ kakaoKey=(_cfg.kakaoApiKey||'').trim(); if(kakaoKey){window._cachedKakaoApiKey=kakaoKey;localStorage.setItem('mbti_kakao_api_key',kakaoKey);} }
+      // 캐시 무시 직접 읽기
+      var _snap = await _db.collection('settings').doc('claude_config').get();
+      if(_snap.exists){
+        var _cfg = _snap.data();
+        if(window._fsCacheStore) window._fsCacheStore['settings/claude_config']={ts:Date.now(),data:_cfg};
         if(!googleKey){ googleKey=(_cfg.googleApiKey||_cfg.googleMapsApiKey||'').trim(); if(googleKey){window._googleApiKey=googleKey;localStorage.setItem('mbti_google_api_key',googleKey);} }
+        if(!kakaoKey){  kakaoKey=(_cfg.kakaoApiKey||'').trim();  if(kakaoKey){window._cachedKakaoApiKey=kakaoKey;localStorage.setItem('mbti_kakao_api_key',kakaoKey);} }
+        console.log('[GEO_KEY] Google:'+(!!googleKey)+' Kakao:'+(!!kakaoKey));
       }
     }catch(e){ console.debug('[GeoKey]',e.message); }
   }
 
-  var addrFull  = _addBusanPrefix(address);  // 부산 prefix 붙인 전체 주소
-  var aptMatch  = address.match(/([가-힣A-Za-z\d]+(?:임대아파트|공공아파트|영구임대|아파트|오피스텔|빌라|맨션|타워|파크|힐스|뷰|캐슬|자이|래미안|푸르지오|아이파크|주공|LH|SH))/);
+  var addrFull = _addBusanPrefix(address);  // "부산 사상구 모라로19번길 50 백양푸른숲아파트 408동 505"
+  var aptMatch = address.match(/([가-힣A-Za-z\d]+(?:임대아파트|공공아파트|영구임대|아파트|오피스텔|빌라|맨션|타워|파크|힐스|뷰|캐슬|자이|래미안|푸르지오|아이파크|주공|LH|SH))/);
   if(!aptMatch) aptMatch = address.match(/([가-힣]{2,}아파트)/);
   if(!aptMatch) aptMatch = address.match(/([가-힣]{3,}(?:임대|주공))/);
   var dongMatch = address.match(/([A-Za-z가-힣]?\d+)\s*동(?![아네은])/);
@@ -20983,8 +20993,28 @@ async function _kakaoGeocode(address){
   var guStr     = guMatch ? guMatch[1]+' ' : '';
 
   // ══════════════════════════════════════════
-  // STEP 1: 카카오 키워드 검색 — 아파트 단지 좌표 확인
-  // (도로명 주소보다 아파트 POI가 더 정확)
+  // STEP 1: Google Geocoding — 동 단위 정밀 핀 (최우선)
+  // ══════════════════════════════════════════
+  if(googleKey){
+    console.log('[GOOGLE_GEO] 시도:', addrFull);
+    var gResult = await _googleGeocodePin(addrFull, googleKey);
+    if(gResult){
+      console.log('[GOOGLE_GEO] ✅ 성공:', gResult.lat, gResult.lng);
+      return gResult;
+    }
+    // 호수 제거 버전 재시도
+    var addrNoHo = addrFull.replace(/\s*\d+호\s*$/, '').trim();
+    if(addrNoHo !== addrFull){
+      gResult = await _googleGeocodePin(addrNoHo, googleKey);
+      if(gResult){ console.log('[GOOGLE_GEO2] ✅:', gResult.lat, gResult.lng); return gResult; }
+    }
+    console.warn('[GOOGLE_GEO] 실패 → 카카오 폴백');
+  } else {
+    console.warn('[GOOGLE_GEO] 키 없음 → 카카오');
+  }
+
+  // ══════════════════════════════════════════
+  // STEP 2: 카카오 키워드 — 동 번호 포함 검색
   // ══════════════════════════════════════════
   if(kakaoKey && aptMatch){
     var kwList = [
@@ -21000,14 +21030,9 @@ async function _kakaoGeocode(address){
         var kd = await kr.json();
         console.log('[KAKAO_KW]', kwList[ki], kd.documents&&kd.documents.length+'건');
         if(kd.documents && kd.documents.length > 0){
-          // 동 번호 일치 우선 → 없으면 첫 번째
           var best = (dongMatch && kd.documents.find(function(d){ return d.place_name&&d.place_name.indexOf(dongMatch[1]+'동')>=0; }))
                    || kd.documents[0];
-          console.log('[KAKAO_KW] 선택:', best.place_name, best.y, best.x);
-          // 카카오로 아파트 단지 좌표 확인됨 → Google로 정밀 핀
-          if(googleKey){
-            return await _googleGeocodePin(addrFull, googleKey) || {lat:parseFloat(best.y), lng:parseFloat(best.x), src:'kakao_kw'};
-          }
+          console.log('[KAKAO_KW] 선택:', best.place_name, '→', best.y, best.x);
           return {lat:parseFloat(best.y), lng:parseFloat(best.x), src:'kakao_kw'};
         }
       }catch(e){ console.debug('[KW'+ki+']',e.message); }
@@ -21015,15 +21040,7 @@ async function _kakaoGeocode(address){
   }
 
   // ══════════════════════════════════════════
-  // STEP 2: Google Geocoding — 도로명 주소 정밀 핀
-  // ══════════════════════════════════════════
-  if(googleKey){
-    var gResult = await _googleGeocodePin(addrFull, googleKey);
-    if(gResult) return gResult;
-  }
-
-  // ══════════════════════════════════════════
-  // STEP 3: 카카오 주소 검색 — 도로명+번지 (건물번호 있는 경우만)
+  // STEP 3: 카카오 주소 검색 — 도로명+번지
   // ══════════════════════════════════════════
   if(kakaoKey){
     var roadAddr = addrFull
@@ -21038,8 +21055,10 @@ async function _kakaoGeocode(address){
         if(ad.documents && ad.documents.length > 0){
           var adoc = ad.documents[0];
           var hasBuildNo = adoc.road_address && adoc.road_address.main_building_no;
-          console.log('[KAKAO_ADDR]', addrCands[ai], hasBuildNo?'건물번호OK':'건물번호없음');
-          if(hasBuildNo) return {lat:parseFloat(adoc.y), lng:parseFloat(adoc.x), src:'kakao_addr'};
+          if(hasBuildNo){
+            console.log('[KAKAO_ADDR] ✅:', addrCands[ai]);
+            return {lat:parseFloat(adoc.y), lng:parseFloat(adoc.x), src:'kakao_addr'};
+          }
         }
       }catch(e){ console.debug('[ADDR'+ai+']',e.message); }
     }
@@ -21049,7 +21068,7 @@ async function _kakaoGeocode(address){
   return null;
 }
 
-// ── Google Geocoding 전용 함수 ──
+
 async function _googleGeocodePin(addrFull, gKey){
   var queries = [addrFull];
   // 호수 제거 버전도 시도
@@ -21569,8 +21588,8 @@ async function emerOcrScan(file, _statusOverride){
 
       // ② 조합
       var detailPart = detailParts.join(' ').trim();
-      if(streetPart && detailPart) return (streetPart + ' ' + detailPart).trim();
-      return (streetPart || detailPart || '').trim();
+      if(streetPart && detailPart) return _cleanAddr(streetPart + ' ' + detailPart);
+      return _cleanAddr(streetPart || detailPart || '');
     })();
 
     // 배송메모: 문 앞, 경비실 등
@@ -21684,7 +21703,7 @@ async function emerOcrScan(file, _statusOverride){
     // ★ v9.59: OCR 결과 디버그
     console.log('[OCR_RESULT]', JSON.stringify({
       tracking: p.tracking_no,
-      addr: p.address,
+      addr: _cleanAddr(p.address),
       recipient: p.recipient,
       ocrLen: (ocrText||'').length
     }));
@@ -21712,8 +21731,8 @@ async function emerOcrScan(file, _statusOverride){
         // ★ v9.59: 카카오 우선(아파트 정확도↑) → 실패 시 Google
         var _kkr = await _kakaoGeocode(p.address);
         if(_kkr){
-          pinGps={lat:_kkr.lat,lng:_kkr.lng,src:'kakao',addr:p.address};
-          window._emerGps={lat:_kkr.lat,lng:_kkr.lng,acc:0,src:'kakao',addr:p.address};
+          pinGps={lat:_kkr.lat,lng:_kkr.lng,src:'kakao',addr:_cleanAddr(p.address)};
+          window._emerGps={lat:_kkr.lat,lng:_kkr.lng,acc:0,src:'kakao',addr:_cleanAddr(p.address)};
           if(status) status.innerHTML='<span style="color:var(--teal)">✅ 카카오 좌표 변환 완료 ('+_kkr.src+')</span>';
           toast('✅ 카카오 좌표: '+_kkr.lat.toFixed(4)+','+_kkr.lng.toFixed(4), 3000);
         } else {
@@ -21723,8 +21742,8 @@ async function emerOcrScan(file, _statusOverride){
           if(gcData.status==='OK' && gcData.results && gcData.results[0]){
             var loc = gcData.results[0].geometry.location;
             if(typeof loc.lat==='number' && typeof loc.lng==='number'){
-              pinGps={lat:loc.lat,lng:loc.lng,src:'geocode',addr:p.address};
-              window._emerGps={lat:loc.lat,lng:loc.lng,acc:0,src:'geocode',addr:p.address};
+              pinGps={lat:loc.lat,lng:loc.lng,src:'geocode',addr:_cleanAddr(p.address)};
+              window._emerGps={lat:loc.lat,lng:loc.lng,acc:0,src:'geocode',addr:_cleanAddr(p.address)};
               if(status) status.innerHTML='<span style="color:var(--teal)">✅ 배송지 좌표 변환 완료</span>';
             }
           } else if(gcData.status==='REQUEST_DENIED'){
