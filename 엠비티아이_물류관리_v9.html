@@ -20979,7 +20979,7 @@ async function _kakaoGeocode(address){
   address = _cleanAddr(address);
   if(!address) return null;
 
-  // ── 키 로드 ──
+  // ── API 키 로드 ──
   var kKey = window._cachedKakaoApiKey || (localStorage.getItem('mbti_kakao_api_key')||'').trim();
   var gKey = window._googleApiKey      || (localStorage.getItem('mbti_google_api_key')||'').trim();
   if(!kKey || !gKey){
@@ -20993,7 +20993,6 @@ async function _kakaoGeocode(address){
       }
     }catch(e){}
   }
-  console.warn('[GEO] Kakao:'+(!!kKey)+' Google:'+(!!gKey)+' | '+address);
 
   var addrFull = _addBusanPrefix(address);
   var aptM  = address.match(/([가-힣A-Za-z\d]+(?:임대아파트|공공아파트|영구임대|아파트|오피스텔|빌라|맨션|주공|LH|SH))/);
@@ -21003,43 +21002,36 @@ async function _kakaoGeocode(address){
   var guM   = address.match(/([가-힣]+구)/);
   var guStr = guM ? guM[1]+' ' : '';
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // STEP 1: Google — 아파트명+동번호 포함 전체 주소
-  //  Google은 한국 주거단지 동번호까지 인식
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  if(gKey){
-    var gq = addrFull.replace(/\s*\d+호\s*$/,'').trim();
-    try{
-      var gr = await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(gq)+'&language=ko&region=kr&key='+gKey);
-      var gd = await gr.json();
-      var fmt = gd.results&&gd.results[0]&&gd.results[0].formatted_address||'';
-      console.warn('[GOOGLE]', gd.status, '|', fmt);
-      if(gd.status==='OK' && gd.results && gd.results[0]){
-        var gl = gd.results[0].geometry.location;
-        _geoResultBanner('🌐 Google | '+gl.lat.toFixed(5)+', '+gl.lng.toFixed(5));
-        return {lat:gl.lat, lng:gl.lng, src:'google'};
-      }
-      if(gd.status==='REQUEST_DENIED'){
-        _geoResultBanner('❌ Google Geocoding API 미활성! Cloud Console에서 Geocoding API 켜야함');
-        console.error('[GOOGLE] ❌ API키 권한 없음 — Geocoding API 활성화 필요');
-      } else if(gd.status==='ZERO_RESULTS'){
-        _geoResultBanner('⚠️ Google ZERO_RESULTS → 카카오 시도');
-      }
-    }catch(e){ console.warn('[GOOGLE_ERR]',e.message); }
-  } else {
-    console.error('[GOOGLE] ❌ 키 없음 — Firestore claude_config.googleApiKey 확인');
-  }
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // STEP 2: 카카오 주소검색 — 도로명+번지+동번호
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // STEP 1: 카카오 주소검색 — OCR 번길 오인식 자동교정
+  //  2자리 번길(예:19번길)이면 ×10, +1, +2 변형도 시도
+  //  건물번호(main_building_no) 있는 결과만 채택 → 틀린 도로는 자동 탈락
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   if(kKey){
-    var roadPart = addrFull
+    // 도로명+번지 추출 (아파트명 제거, 동번호 유지)
+    var roadBase = addrFull
       .replace(/\s*[가-힣A-Za-z]{2,}(?:아파트|오피스텔|빌라|맨션|주공|임대)[가-힣A-Za-z\d\s]*/g,'')
       .replace(/\s*\d+호\s*$/,'').trim();
     var dongStr = dongM ? ' '+dongM[1]+'동' : '';
-    var addrCands = [(roadPart+dongStr).trim(), roadPart]
-      .filter(function(v,i,a){ return v && v.length>5 && a.indexOf(v)===i; });
+
+    // 쿼리 후보 생성: 원본 + 2자리 번길이면 × 10, +1, +2 교정 추가
+    function makeAddrCandidates(base){
+      var cands = [(base+dongStr).trim(), base.replace(/\s*\d+동\s*$/, '').trim()];
+      var twoDigit = base.match(/(로\s*)(\d{2})(번길)/);
+      if(twoDigit){
+        var n = parseInt(twoDigit[2], 10);
+        [0, 2, 1, 3, 4, 5].forEach(function(d){
+          var v = base.replace(/(로\s*)(\d{2})(번길)/, '$1'+(n*10+d)+'$3');
+          cands.push((v+dongStr).trim());
+          cands.push(v.replace(/\s*\d+동\s*$/,'').trim());
+        });
+      }
+      return cands.filter(function(v,i,a){ return v && v.length>5 && a.indexOf(v)===i; });
+    }
+
+    var addrCands = makeAddrCandidates(roadBase);
+    console.log('[KAKAO_CANDS]', addrCands.slice(0,4));
+
     for(var ai=0; ai<addrCands.length; ai++){
       try{
         var ar = await fetch('https://dapi.kakao.com/v2/local/search/address.json?query='+encodeURIComponent(addrCands[ai])+'&size=1',
@@ -21047,35 +21039,72 @@ async function _kakaoGeocode(address){
         var ad = await ar.json();
         if(ad.documents && ad.documents.length > 0){
           var adoc = ad.documents[0];
-          var bno = adoc.road_address && adoc.road_address.main_building_no;
-          console.warn('[KAKAO_ADDR]', addrCands[ai].slice(-25), '| buildNo:', bno||'없음');
-          if(bno) return {lat:parseFloat(adoc.y), lng:parseFloat(adoc.x), src:'kakao_addr'};
+          var bno  = adoc.road_address && adoc.road_address.main_building_no;
+          console.log('[KAKAO_ADDR]', addrCands[ai].slice(-30), '→ 건물번호:', bno||'없음');
+          if(bno){
+            // 건물번호 있는 결과 → 정확한 도로+번지 확인됨
+            _geoResultBanner('📍 카카오주소 | '+adoc.y+', '+adoc.x);
+            return {lat:parseFloat(adoc.y), lng:parseFloat(adoc.x), src:'kakao_addr'};
+          }
         }
       }catch(e){ console.debug('[A'+ai+']',e.message); }
     }
   }
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // STEP 3: 카카오 키워드 — 최후 수단
-  //  (POI 데이터 부정확할 수 있음 — 경고 표시)
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // STEP 2: Google — 원본 주소 + 번길 교정 변형
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  if(gKey){
+    var baseG = addrFull.replace(/\s*\d+호\s*$/,'').trim();
+    var googleCands = [baseG];
+    var twoG = addrFull.match(/(로\s*)(\d{2})(번길)/);
+    if(twoG){
+      var ng = parseInt(twoG[2],10);
+      [0,2,1,3].forEach(function(d){
+        var v = addrFull.replace(/(로\s*)(\d{2})(번길)/, '$1'+(ng*10+d)+'$3').replace(/\s*\d+호\s*$/,'');
+        googleCands.push(v.trim());
+      });
+    }
+    googleCands = googleCands.filter(function(v,i,a){ return v && a.indexOf(v)===i; });
+
+    for(var gi=0; gi<googleCands.length; gi++){
+      try{
+        var gr = await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(googleCands[gi])+'&language=ko&region=kr&key='+gKey);
+        var gd = await gr.json();
+        var fmt = gd.results&&gd.results[0]&&gd.results[0].formatted_address||'';
+        console.log('[GOOGLE]', googleCands[gi].slice(-30), '→', gd.status, fmt.slice(-25));
+        if(gd.status==='OK' && gd.results && gd.results[0]){
+          var gl = gd.results[0].geometry.location;
+          _geoResultBanner('🌐 Google | '+gl.lat.toFixed(5)+', '+gl.lng.toFixed(5));
+          return {lat:gl.lat, lng:gl.lng, src:'google'};
+        }
+        if(gd.status==='REQUEST_DENIED'){
+          _geoResultBanner('❌ Google Geocoding API 미활성 — Cloud Console 확인');
+          break;
+        }
+      }catch(e){ console.debug('[G'+gi+']',e.message); }
+    }
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // STEP 3: 카카오 키워드 — 아파트명+동 (최후)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   if(kKey && aptM){
     var kwQ = '부산 '+guStr+aptM[1]+(dongM?' '+dongM[1]+'동':'');
     try{
       var kr = await fetch('https://dapi.kakao.com/v2/local/search/keyword.json?query='+encodeURIComponent(kwQ)+'&size=3',
         {headers:{'Authorization':'KakaoAK '+kKey}});
       var kd = await kr.json();
-      console.warn('[KAKAO_KW] (최후수단)', kwQ, kd.documents&&kd.documents.length+'건');
       if(kd.documents && kd.documents.length > 0){
         var best = (dongM && kd.documents.find(function(d){return d.place_name&&d.place_name.indexOf(dongM[1]+'동')>=0;}))
                  || kd.documents[0];
-        console.warn('[KAKAO_KW] 선택:', best.place_name, best.y, best.x, '⚠️ 부정확할 수 있음');
+        _geoResultBanner('📍 카카오키워드⚠️ | '+best.y+', '+best.x);
         return {lat:parseFloat(best.y), lng:parseFloat(best.x), src:'kakao_kw'};
       }
-    }catch(e){ console.debug('[KK]',e.message); }
+    }catch(e){}
   }
 
-  console.error('[GEO_FAIL]', address);
+  _geoResultBanner('❌ 좌표 변환 실패 — 주소를 확인하세요');
   return null;
 }
 
@@ -21635,6 +21664,22 @@ async function emerOcrScan(file, _statusOverride){
       return _cleanAddr(streetPart || detailPart || '');
     })();
 
+    // ★ 2자리 번길 감지 → 오인식 경고 (192번길을 19번길로 읽을 수 있음)
+    if(addrLine && /로\s*\d{2}번길/.test(addrLine)){
+      var _addrWarnEl = document.getElementById('emer-addr-warn');
+      if(!_addrWarnEl){
+        _addrWarnEl = document.createElement('div');
+        _addrWarnEl.id = 'emer-addr-warn';
+        var _addrInput = document.getElementById('emer-addr');
+        if(_addrInput && _addrInput.parentNode){
+          _addrInput.parentNode.insertBefore(_addrWarnEl, _addrInput.nextSibling);
+        }
+      }
+      _addrWarnEl.style.cssText = 'font-size:11px;color:#b45309;background:#fef3c7;border:1px solid #f59e0b;border-radius:5px;padding:4px 8px;margin-top:3px';
+      _addrWarnEl.innerHTML = '⚠️ 번길 숫자 확인 필요 (예: 19번길→192번길). 틀리면 직접 수정 후 저장하세요.';
+      console.warn('[ADDR_WARN] 2자리 번길 감지:', addrLine);
+    }
+
     // 배송메모: 문 앞, 경비실 등
     var memoLine = lines.find(function(l){ return l.match(/문\s*앞|경비실|자율출입|직접|부재|택배함/); });
 
@@ -21765,17 +21810,23 @@ async function emerOcrScan(file, _statusOverride){
       }
     }
 
-    // ★ v9.59: OCR 파싱 결과 무조건 toast (디버그)
-    // ★ v9.25: OCR 추출 주소 → Geocoding API로 배송지 좌표 변환 (배송핀 = 배송지 위치)
+    // ★ v9.59: QR GPS 우선 사용 — QR에 좌표가 있으면 재지오코딩 불필요
     var pinGps = null;
-    if(p.address){
+    var _qrGps = window._emerGps;
+    if(_qrGps && _qrGps.src === 'QR' && _qrGps.lat && _qrGps.lng){
+      // QR 좌표 직접 사용 (쿠팡 배송시스템 좌표 = 가장 정확)
+      pinGps = {lat:_qrGps.lat, lng:_qrGps.lng, src:'QR', addr:_cleanAddr(p.address)};
+      if(status) status.innerHTML='<span style="color:var(--teal)">✅ QR GPS 사용 (쿠팡 좌표)</span>';
+      _geoResultBanner('📍 QR | '+_qrGps.lat.toFixed(5)+', '+_qrGps.lng.toFixed(5));
+      console.log('[GPS] QR 좌표 사용:', _qrGps.lat, _qrGps.lng);
+    } else if(p.address){
       if(status) status.innerHTML = '<span style="color:var(--blue)">📍 배송지 좌표 변환 중...</span>';
       try{
-        // ★ v9.59: 카카오 우선(아파트 정확도↑) → 실패 시 Google
+        // QR 없거나 OCR만 인식된 경우 → 지오코딩
         var _kkr = await _kakaoGeocode(p.address);
         if(_kkr){
-          pinGps={lat:_kkr.lat,lng:_kkr.lng,src:'kakao',addr:_cleanAddr(p.address)};
-          window._emerGps={lat:_kkr.lat,lng:_kkr.lng,acc:0,src:'kakao',addr:_cleanAddr(p.address)};
+          pinGps={lat:_kkr.lat,lng:_kkr.lng,src:(_kkr.src||'kakao'),addr:_cleanAddr(p.address)};
+          window._emerGps={lat:_kkr.lat,lng:_kkr.lng,acc:0,src:(_kkr.src||'kakao'),addr:_cleanAddr(p.address)};
           var _srcLabel = {google:'Google',kakao_addr:'카카오주소',kakao_kw:'카카오키워드⚠️',kakao:'카카오'}[_kkr.src]||_kkr.src;
           if(status) status.innerHTML='<span style="color:var(--teal)">✅ '+_srcLabel+' 좌표 변환 완료</span>';
           _geoResultBanner('📍 '+_srcLabel+' | '+_kkr.lat.toFixed(5)+', '+_kkr.lng.toFixed(5));
@@ -21795,7 +21846,7 @@ async function emerOcrScan(file, _statusOverride){
           }
         }
       }catch(geoErr){ console.warn('Geocoding 실패:', geoErr); }
-    }
+    } // end if(p.address)
 
     // ★ v9.50: 폴백 — Geocoding 실패 시 현위치 강제 사용
     if(!pinGps){
