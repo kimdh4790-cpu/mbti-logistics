@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<!-- ★ v9.63: 좌표 일관성 통합 — OCR 직후 Google 직접호출 폐기, _kakaoGeocode 단일 경로 -->
+<!-- ★ v9.63: 부팅 시 1회 자동 캐시 무효화 (v9.62 이전 잘못된 캐시 제거) -->
 <!-- ★ v9.62: OCR 번길 자리 누락 자동 보정 (19→192, 23→234 등) -->
 <!-- ★ v9.62: 검색 결과 정확매칭 +30 가산점 (단지명+동번호 정확 일치) -->
 <!-- ★ v9.62: 매칭 성공한 도로명을 emer-addr 입력란에 자동 교정 반영 -->
@@ -21,7 +23,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>엠비티아이 물류관리 v9.62.0511</title>
+<title>엠비티아이 물류관리 v9.63.0511</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10434,7 +10436,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   <span style="font-size:13px;font-weight:700"><span style="color:#E8302B">(</span><span style="color:#F5A623">C</span><span style="color:#57AC45">o</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">,</span> <span style="color:#E8302B">L</span><span style="color:#F5A623">t</span><span style="color:#57AC45">d</span><span style="color:#1D6EC5">.</span><span style="color:#9B59B6">)</span></span><br>
   <span style="color:#9B59B6">L</span><span style="color:#E8302B">O</span><span style="color:#F5A623">G</span><span style="color:#57AC45">I</span><span style="color:#1D6EC5">S</span><span style="color:#E8302B">T</span><span style="color:#F5A623">I</span><span style="color:#9B59B6">C</span><span style="color:#57AC45">S</span>
 </div><div class="splash-sub">냉동·냉장·상온 물류 관리 시스템</div>
-    <div class="splash-ver" id="fb-ver">v9.62 · MBTI 물류관리</div>
+    <div class="splash-ver" id="fb-ver">v9.63 · MBTI 물류관리</div>
 
     <!-- 7개 로고 버튼 -->
     <div id="splash-main-btns">
@@ -20991,6 +20993,23 @@ function _addBusanPrefix(addr){
 
 // ★ v9.60: 동별 GPS 캐시 (localStorage 90일 + 메모리)
 window._geoCacheMem = window._geoCacheMem || {};
+// ★ v9.63: 부팅 시 1회 자동 캐시 무효화 (v9.62 이전 잘못된 캐시 제거)
+(function(){
+  try{
+    var ver = localStorage.getItem('mbti_geo_cache_ver');
+    if(ver !== 'v963'){
+      var removed = 0;
+      var keys = Object.keys(localStorage);
+      for(var i=0;i<keys.length;i++){
+        if(keys[i].indexOf('mbti_geo_cache_') === 0 && keys[i] !== 'mbti_geo_cache_ver'){
+          localStorage.removeItem(keys[i]); removed++;
+        }
+      }
+      localStorage.setItem('mbti_geo_cache_ver', 'v963');
+      if(removed > 0) console.log('[v9.63 CACHE_FLUSH]', removed, '개 항목 자동 무효화 (v9.62 이전 캐시)');
+    }
+  }catch(e){ console.debug('cache flush skip:', e); }
+})();
 function _geoCacheKey(address){
   if(!address) return '';
   var s = String(address).replace(/\s+/g,'').toLowerCase();
@@ -22921,30 +22940,30 @@ function _emerHandleScan(raw, statusEl){
     var gpsEl=document.getElementById('emer-gps-status');
     if(gpsEl)gpsEl.innerHTML='<span style="color:var(--teal)">📍 QR GPS: '+qp.lat.toFixed(6)+', '+qp.lng.toFixed(6)+'</span>';
   } else if(qp.address) {
-    // ★ v9.25: QR에 GPS 없을 때 주소로 Geocoding (비동기 — 저장 전까지 완료됨)
-    var _gcApiKey = window._cachedGoogleApiKey || localStorage.getItem('mbti_google_api_key') || '';
-    if(_gcApiKey){
-      var gpsEl2=document.getElementById('emer-gps-status');
-      if(gpsEl2) gpsEl2.innerHTML='<span style="color:var(--blue)">📍 배송지 좌표 변환 중...</span>';
-      var _gcAddr = qp.address;
-      fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(_addBusanPrefix(_gcAddr))+'&language=ko&region=kr&key='+_gcApiKey)
-        .then(function(r){ return r.json(); })
-        .then(function(d){
-          if(d.status==='OK'&&d.results&&d.results[0]){
-            var lc=d.results[0].geometry.location;
-            if(typeof lc.lat==='number'&&typeof lc.lng==='number'){
-              window._emerGps={lat:lc.lat,lng:lc.lng,src:'geocode',addr:_gcAddr};
-              var gEl=document.getElementById('emer-gps-status');
-              if(gEl) gEl.innerHTML='<span style="color:var(--teal)">📍 배송지 GPS 사용 중 (주소변환) ✅</span>';
-              // 지도 핀 생성
-              if(window._activeDriverMapAddPin){
-                var pr={fbId:'_preview_qr_'+Date.now(),driver:S.curDriver||'',trackings:window._emerTrackings.slice(),tracking:window._emerTrackings[0]||'',order_id:(document.getElementById('emer-orderid')||{}).value||'',recipient:qp.recipient||'',addr:_gcAddr,gps:{lat:lc.lat,lng:lc.lng},time:new Date().toTimeString().slice(0,5),status:'저장대기'};
-                window._activeDriverMapAddPin(pr);
-                window._activeDriverMap&&window._activeDriverMap.panTo({lat:lc.lat,lng:lc.lng});
-              }
-            }
+    // ★ v9.63: QR에 GPS 없을 때 → _kakaoGeocode 통합 호출 (Google 직접 호출 폐기)
+    // 이전: Google만 → 'geocode' src로 저장 → 동 단위 부정확
+    // 변경: _kakaoGeocode → 캐시 → 카카오키워드(번길 OCR 교정 포함) → 카카오주소 → Google
+    var gpsEl2=document.getElementById('emer-gps-status');
+    if(gpsEl2) gpsEl2.innerHTML='<span style="color:var(--blue)">📍 배송지 좌표 변환 중 (카카오 우선)...</span>';
+    var _gcAddr = qp.address;
+    if(typeof _kakaoGeocode === 'function'){
+      _kakaoGeocode(_gcAddr).then(function(_kr){
+        if(_kr && _kr.lat && _kr.lng){
+          window._emerGps={lat:_kr.lat,lng:_kr.lng,src:(_kr.src||'kakao'),addr:_gcAddr};
+          var gEl=document.getElementById('emer-gps-status');
+          var _srcL = {kakao_kw_dong:'카카오키워드(동)',kakao_kw_apt:'카카오키워드(단지)',kakao_addr:'카카오주소',google:'Google',cache:'캐시',stored_reuse:'재사용',QR:'QR'}[_kr.src]||_kr.src;
+          if(gEl) gEl.innerHTML='<span style="color:var(--teal)">📍 '+_srcL+' GPS ✅</span>';
+          // 지도 핀 생성
+          if(window._activeDriverMapAddPin){
+            var pr={fbId:'_preview_qr_'+Date.now(),driver:S.curDriver||'',trackings:window._emerTrackings.slice(),tracking:window._emerTrackings[0]||'',order_id:(document.getElementById('emer-orderid')||{}).value||'',recipient:qp.recipient||'',addr:_gcAddr,gps:{lat:_kr.lat,lng:_kr.lng},time:new Date().toTimeString().slice(0,5),status:'저장대기'};
+            window._activeDriverMapAddPin(pr);
+            window._activeDriverMap&&window._activeDriverMap.panTo({lat:_kr.lat,lng:_kr.lng});
           }
-        }).catch(function(){});
+        } else {
+          var gEl2=document.getElementById('emer-gps-status');
+          if(gEl2) gEl2.innerHTML='<span style="color:#f59e0b">⚠️ 좌표 변환 실패 — 저장 시 재시도</span>';
+        }
+      }).catch(function(e){ console.warn('[_emerHandleScan _kakaoGeocode]', e); });
     }
   }
 
