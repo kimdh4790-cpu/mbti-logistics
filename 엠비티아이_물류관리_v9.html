@@ -20946,6 +20946,19 @@ function _emerCloseWithCheck(){
 
 
 // ★ v9.59: 주소 정제 — OCR/파싱 아티팩트 제거
+
+// ★ 지오코딩 결과 배너 (폰에서 확인용 — 30초 유지)
+function _geoResultBanner(msg){
+  var existing = document.getElementById('geo-result-banner');
+  if(existing) existing.remove();
+  var el = document.createElement('div');
+  el.id = 'geo-result-banner';
+  el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#1e293b;color:#fff;font-size:13px;font-weight:700;padding:10px 14px;text-align:center;word-break:break-all;box-shadow:0 2px 8px rgba(0,0,0,.4)';
+  el.textContent = msg;
+  el.onclick = function(){ el.remove(); };
+  document.body.appendChild(el);
+  setTimeout(function(){ if(el.parentNode) el.remove(); }, 30000);
+}
 function _cleanAddr(addr){
   if(!addr || typeof addr !== 'string') return '';
   return addr
@@ -20980,7 +20993,7 @@ async function _kakaoGeocode(address){
       }
     }catch(e){}
   }
-  console.log('[GEO] Kakao:'+(!!kKey)+' Google:'+(!!gKey)+' | '+address);
+  console.warn('[GEO] Kakao:'+(!!kKey)+' Google:'+(!!gKey)+' | '+address);
 
   var addrFull = _addBusanPrefix(address);
   var aptM  = address.match(/([가-힣A-Za-z\d]+(?:임대아파트|공공아파트|영구임대|아파트|오피스텔|빌라|맨션|주공|LH|SH))/);
@@ -20990,54 +21003,36 @@ async function _kakaoGeocode(address){
   var guM   = address.match(/([가-힣]+구)/);
   var guStr = guM ? guM[1]+' ' : '';
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // STEP 1: 카카오 키워드 — 아파트명+동번호 (1순위)
-  //  도로명 오인식과 무관하게 POI로 찾음
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  if(kKey && aptM){
-    var kwList = [
-      '부산 '+guStr+aptM[1]+(dongM?' '+dongM[1]+'동':''),  // "백양푸른숲아파트 408동"
-      '부산 '+guStr+aptM[1],                                // "백양푸른숲아파트"
-    ].filter(function(v,i,a){ return v.trim().length>5 && a.indexOf(v)===i; });
-    for(var ki=0; ki<kwList.length; ki++){
-      try{
-        var kr = await fetch('https://dapi.kakao.com/v2/local/search/keyword.json?query='+encodeURIComponent(kwList[ki])+'&size=5',
-          {headers:{'Authorization':'KakaoAK '+kKey}});
-        var kd = await kr.json();
-        console.log('[KW]', kwList[ki].slice(-20), kd.documents&&kd.documents.length+'건');
-        if(kd.documents && kd.documents.length > 0){
-          // 동번호 일치 결과 우선 선택
-          var best = (dongM && kd.documents.find(function(d){
-            return d.place_name && d.place_name.indexOf(dongM[1]+'동')>=0;
-          })) || kd.documents[0];
-          console.log('[KW] 선택:', best.place_name, best.y, best.x);
-          return {lat:parseFloat(best.y), lng:parseFloat(best.x), src:'kakao_kw'};
-        }
-      }catch(e){ console.debug('[KK'+ki+']',e.message); }
-    }
-  }
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // STEP 2: Google — 전체 주소 (아파트명+동번호 포함)
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // STEP 1: Google — 아파트명+동번호 포함 전체 주소
+  //  Google은 한국 주거단지 동번호까지 인식
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   if(gKey){
     var gq = addrFull.replace(/\s*\d+호\s*$/,'').trim();
     try{
       var gr = await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(gq)+'&language=ko&region=kr&key='+gKey);
       var gd = await gr.json();
       var fmt = gd.results&&gd.results[0]&&gd.results[0].formatted_address||'';
-      console.log('[GOOGLE]', gd.status, fmt.slice(-30));
+      console.warn('[GOOGLE]', gd.status, '|', fmt);
       if(gd.status==='OK' && gd.results && gd.results[0]){
         var gl = gd.results[0].geometry.location;
+        _geoResultBanner('🌐 Google | '+gl.lat.toFixed(5)+', '+gl.lng.toFixed(5));
         return {lat:gl.lat, lng:gl.lng, src:'google'};
       }
-    }catch(e){ console.debug('[G]',e.message); }
+      if(gd.status==='REQUEST_DENIED'){
+        _geoResultBanner('❌ Google Geocoding API 미활성! Cloud Console에서 Geocoding API 켜야함');
+        console.error('[GOOGLE] ❌ API키 권한 없음 — Geocoding API 활성화 필요');
+      } else if(gd.status==='ZERO_RESULTS'){
+        _geoResultBanner('⚠️ Google ZERO_RESULTS → 카카오 시도');
+      }
+    }catch(e){ console.warn('[GOOGLE_ERR]',e.message); }
+  } else {
+    console.error('[GOOGLE] ❌ 키 없음 — Firestore claude_config.googleApiKey 확인');
   }
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // STEP 3: 카카오 주소검색 — 도로명+번지+동번호
-  //  (도로명이 정확할 때만 유효 — 3순위로 이동)
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // STEP 2: 카카오 주소검색 — 도로명+번지+동번호
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   if(kKey){
     var roadPart = addrFull
       .replace(/\s*[가-힣A-Za-z]{2,}(?:아파트|오피스텔|빌라|맨션|주공|임대)[가-힣A-Za-z\d\s]*/g,'')
@@ -21053,11 +21048,31 @@ async function _kakaoGeocode(address){
         if(ad.documents && ad.documents.length > 0){
           var adoc = ad.documents[0];
           var bno = adoc.road_address && adoc.road_address.main_building_no;
-          console.log('[ADDR]', addrCands[ai].slice(-20), 'buildNo:', bno||'없음');
+          console.warn('[KAKAO_ADDR]', addrCands[ai].slice(-25), '| buildNo:', bno||'없음');
           if(bno) return {lat:parseFloat(adoc.y), lng:parseFloat(adoc.x), src:'kakao_addr'};
         }
       }catch(e){ console.debug('[A'+ai+']',e.message); }
     }
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // STEP 3: 카카오 키워드 — 최후 수단
+  //  (POI 데이터 부정확할 수 있음 — 경고 표시)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  if(kKey && aptM){
+    var kwQ = '부산 '+guStr+aptM[1]+(dongM?' '+dongM[1]+'동':'');
+    try{
+      var kr = await fetch('https://dapi.kakao.com/v2/local/search/keyword.json?query='+encodeURIComponent(kwQ)+'&size=3',
+        {headers:{'Authorization':'KakaoAK '+kKey}});
+      var kd = await kr.json();
+      console.warn('[KAKAO_KW] (최후수단)', kwQ, kd.documents&&kd.documents.length+'건');
+      if(kd.documents && kd.documents.length > 0){
+        var best = (dongM && kd.documents.find(function(d){return d.place_name&&d.place_name.indexOf(dongM[1]+'동')>=0;}))
+                 || kd.documents[0];
+        console.warn('[KAKAO_KW] 선택:', best.place_name, best.y, best.x, '⚠️ 부정확할 수 있음');
+        return {lat:parseFloat(best.y), lng:parseFloat(best.x), src:'kakao_kw'};
+      }
+    }catch(e){ console.debug('[KK]',e.message); }
   }
 
   console.error('[GEO_FAIL]', address);
@@ -21761,8 +21776,9 @@ async function emerOcrScan(file, _statusOverride){
         if(_kkr){
           pinGps={lat:_kkr.lat,lng:_kkr.lng,src:'kakao',addr:_cleanAddr(p.address)};
           window._emerGps={lat:_kkr.lat,lng:_kkr.lng,acc:0,src:'kakao',addr:_cleanAddr(p.address)};
-          if(status) status.innerHTML='<span style="color:var(--teal)">✅ 카카오 좌표 변환 완료 ('+_kkr.src+')</span>';
-          toast('✅ 카카오 좌표: '+_kkr.lat.toFixed(4)+','+_kkr.lng.toFixed(4), 3000);
+          var _srcLabel = {google:'Google',kakao_addr:'카카오주소',kakao_kw:'카카오키워드⚠️',kakao:'카카오'}[_kkr.src]||_kkr.src;
+          if(status) status.innerHTML='<span style="color:var(--teal)">✅ '+_srcLabel+' 좌표 변환 완료</span>';
+          _geoResultBanner('📍 '+_srcLabel+' | '+_kkr.lat.toFixed(5)+', '+_kkr.lng.toFixed(5));
         } else {
           console.warn('[KAKAO_GEO_FAIL] 카카오 실패 → Google 시도');
           var gcRes = await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(_addBusanPrefix(p.address))+'&language=ko&region=kr&key='+apiKey);
