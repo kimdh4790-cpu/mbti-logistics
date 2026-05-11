@@ -11140,12 +11140,13 @@ var _db=null,_st=null,FB=false;
 
 var _listenersReady=false;
 function _setupFbListeners(){
+  if(!Array.isArray(window._fbUnsubs)) window._fbUnsubs=[];
   if(_listenersReady||!FB||!_db)return;
   _listenersReady=true;
 
   // ★ Firebase 연결 상태 감시만 담당 (v9.25 Target ID 충돌 완전 방지)
   //   entries/deliveries/drivers 등은 startListeners()에서만 등록
-  _fbUnsubs.push(_db.collection('settings').doc('status').onSnapshot(function(){
+  if(!Array.isArray(window._fbUnsubs))window._fbUnsubs=[];window._fbUnsubs.push(_db.collection('settings').doc('status').onSnapshot(function(){
     document.querySelectorAll('.fb-status').forEach(function(el){
       el.textContent='🔥 Firebase 실시간';el.style.color='#4CAF50';
     });
@@ -11511,7 +11512,7 @@ function loadMyInfo(userId){
       }
     });
     // ★ v9.25: 로그아웃/재로그인 시 자동 정리 보장 (drivers 컬렉션 read 2배 발생 차단)
-    if(window._fbUnsubs)window._fbUnsubs.push(_myDrvUnsub);
+    if(!Array.isArray(window._fbUnsubs))window._fbUnsubs=[];window._fbUnsubs.push(_myDrvUnsub);
   }
 }
 
@@ -11572,10 +11573,8 @@ function _filterSplashByLastJob(){
   }catch(e){console.warn('splash filter:',e);}
 }
 // ── v6.1 비밀번호 SHA-256 해시 (Web Crypto API)
-async 
 // ★ v9.59: Firestore 읽기 절감 — 설정 전역 캐시 (TTL 20분)
 window._fsCacheStore = {};
-async 
 // ★ 드라이버 목록 메모리 캐시 (5분)
 window._driversCache = null;
 window._driversCacheTs = 0;
@@ -26827,7 +26826,7 @@ function startListeners(){
     var yesterday=new Date();yesterday.setDate(yesterday.getDate()-1);
     var yesterdayStr=yesterday.toISOString().slice(0,10);
     var _photoTodayStr=today(); // ★ v9.61: 오늘 날짜 직접 정의
-    _fbUnsubs.push(_db.collection('photo_logs')
+    if(!Array.isArray(window._fbUnsubs))window._fbUnsubs=[];window._fbUnsubs.push(_db.collection('photo_logs')
       .where('date','>=',_photoTodayStr) // ★ v9.61: 오늘만 (reads 절감)
       .onSnapshot(function(snap){
         snap.docChanges().forEach(function(change){
@@ -26854,7 +26853,7 @@ function startListeners(){
   
     // ── photo_logs: Firestore → localStorage → UI 직접 반영 (1초 이내)
     // ── drivers: Firestore → localStorage → UI 직접 반영 (1초 이내)
-    _fbUnsubs.push(_db.collection('drivers').limit(100)
+    if(!Array.isArray(window._fbUnsubs))window._fbUnsubs=[];window._fbUnsubs.push(_db.collection('drivers').limit(100)
       .onSnapshot({includeMetadataChanges:false}, snap=>{
         // ① Firestore 전체 데이터 배열화
         var fbDrivers=[];
@@ -26931,7 +26930,7 @@ function startListeners(){
       else if(col==='temp_logs') q=q.where('date','>=',_7dStr);
       // ★ v9.40: accidents는 최근 30일만
       else if(col==='accidents') q=q.where('date','>=',_30dStr);
-      _fbUnsubs.push(q.limit(colLimits[col]||100)
+      if(!Array.isArray(window._fbUnsubs))window._fbUnsubs=[];window._fbUnsubs.push(q.limit(colLimits[col]||100)
         .onSnapshot({includeMetadataChanges:false}, snap=>{
           snap.docChanges().forEach(ch=>{
             if(ch.type==='added'||ch.type==='modified'){
@@ -26967,7 +26966,7 @@ function startListeners(){
     });
   
     // ★ v9.25: 운행 메모(delivery_memos) 실시간 동기화 (관리자용 뱃지/페이지 자동 갱신)
-    _fbUnsubs.push(_db.collection('delivery_memos').limit(50) // ★ v9.61: reads 절감
+    if(!Array.isArray(window._fbUnsubs))window._fbUnsubs=[];window._fbUnsubs.push(_db.collection('delivery_memos').limit(50) // ★ v9.61: reads 절감
       .onSnapshot(snap=>{
         var arr=ls('deliveryMemos');
         var newCount=0;
