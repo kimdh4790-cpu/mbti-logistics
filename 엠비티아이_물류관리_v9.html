@@ -21040,13 +21040,24 @@ async function _kakaoGeocode(address){
   }
 
   // ══════════════════════════════════════════
-  // STEP 3: 카카오 주소 검색 — 도로명+번지
+  // STEP 3: 카카오 주소 검색 — 도로명+번지+동번호 (건물 단위 정밀)
+  // 사용자 확인: "모라로192번길50 408동" → 정확한 핀
   // ══════════════════════════════════════════
   if(kakaoKey){
-    var roadAddr = addrFull
-      .replace(/([가-힣]+(?:로|길|대로)\s*\d+(?:번길)?\s*\d*)\s+[가-힣A-Za-z\d]{2,}(아파트|오피스텔|빌라|맨션|주공|임대).*/,'$1')
-      .replace(/\s+\d+동.*$/,'').replace(/\s+\d+호.*$/,'').trim();
-    var addrCands = [addrFull, roadAddr].filter(function(v,i,a){ return v&&a.indexOf(v)===i; });
+    // ① 도로명+번지만 추출 (아파트명·호수 제거, 동번호는 유지)
+    var _base = addrFull
+      .replace(/\s+[가-힣A-Za-z]{2,}(?:아파트|오피스텔|빌라|맨션|주공|임대)[^동]*/g, '')
+      .replace(/\s+\d+호\s*$/,'').trim();
+    // ② 동번호만 추출
+    var _dongNum = dongMatch ? dongMatch[1]+'동' : '';
+    // ③ 도로명+번지+동번호 조합 (카카오가 인식하는 형식)
+    var _roadDong = _base + (_dongNum ? ' '+_dongNum : '');
+    // ④ 도로명+번지만 (동 없이)
+    var _roadOnly = _base.replace(/\s+\d+동\s*$/,'').trim();
+    // 검색 후보: 도로+동 → 전체주소 → 도로만
+    var addrCands = [_roadDong, addrFull, _roadOnly]
+      .filter(function(v,i,a){ return v && v.length > 5 && a.indexOf(v) === i; });
+    console.log('[KAKAO_ADDR_CANDS]', addrCands);
     for(var ai=0; ai<addrCands.length; ai++){
       try{
         var ar = await fetch('https://dapi.kakao.com/v2/local/search/address.json?query='+encodeURIComponent(addrCands[ai])+'&size=1',
@@ -21055,8 +21066,8 @@ async function _kakaoGeocode(address){
         if(ad.documents && ad.documents.length > 0){
           var adoc = ad.documents[0];
           var hasBuildNo = adoc.road_address && adoc.road_address.main_building_no;
+          console.log('[KAKAO_ADDR]', addrCands[ai], hasBuildNo?'✅ 건물번호OK':'⚠️ 건물번호없음');
           if(hasBuildNo){
-            console.log('[KAKAO_ADDR] ✅:', addrCands[ai]);
             return {lat:parseFloat(adoc.y), lng:parseFloat(adoc.x), src:'kakao_addr'};
           }
         }
@@ -21071,9 +21082,20 @@ async function _kakaoGeocode(address){
 
 async function _googleGeocodePin(addrFull, gKey){
   var queries = [addrFull];
-  // 호수 제거 버전도 시도
+  // 호수 제거 버전
   var noHo = addrFull.replace(/\s*\d+호\s*$/, '').trim();
   if(noHo !== addrFull) queries.push(noHo);
+  // 번길 앞 1~2자리 숫자가 실제로 3자리인 경우 보정 (모라로19번길 → 모라로190/191/192번길)
+  // 가장 흔한 패턴: 19번길→190번길, 11번길→110번길 등
+  var fixedRoad = addrFull.replace(/([로]\s*)(\d{2})(번길)/g, function(_, a, b, c){
+    return a + (parseInt(b,10)*10) + c;  // 19번길 → 190번길
+  });
+  if(fixedRoad !== addrFull) queries.push(fixedRoad.replace(/\s*\d+호\s*$/, '').trim());
+  // +1, +2 변형도 추가 (191, 192)
+  var fixedRoad2 = addrFull.replace(/([로]\s*)(\d{2})(번길)/g, function(_, a, b, c){
+    return a + (parseInt(b,10)*10+2) + c;  // 19번길 → 192번길
+  });
+  if(fixedRoad2 !== addrFull && fixedRoad2 !== fixedRoad) queries.push(fixedRoad2.replace(/\s*\d+호\s*$/, '').trim());
   for(var gi=0; gi<queries.length; gi++){
     try{
       var gr = await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(queries[gi])+'&language=ko&region=kr&key='+gKey);
@@ -21552,6 +21574,36 @@ async function emerOcrScan(file, _statusOverride){
       var streetPart = ''; // 도로명 (로/길 포함)
       var detailParts = []; // 상세주소 파트 (동, 호 각각 수집)
 
+      // ★ 전처리: OCR 줄 분리 보정 (번길/번지 숫자가 잘린 경우 합치기)
+      // "모라로19" + "2번길 50" → "모라로192번길 50"
+      // "408동 505" + "호" → "408동 505호"
+      var mergedLines = [];
+      for(var mi=0; mi<lines.length; mi++){
+        var ml = (lines[mi]||'').trim();
+        if(!ml) continue;
+        var prev = mergedLines.length > 0 ? mergedLines[mergedLines.length-1] : '';
+        // 이전 줄이 도로명 끝 숫자로 끝나고, 현재 줄이 번길/번지로 시작하면 합치기
+        if(prev.match(/(로|길)\s*\d+$/) && ml.match(/^\d*번길/)){
+          mergedLines[mergedLines.length-1] = prev + ml;
+        }
+        // 이전 줄이 숫자(동/호 없이)로 끝나고 현재 줄이 번길로 시작하면 합치기
+        else if(prev.match(/\d+$/) && ml.match(/^번길\s*\d/)){
+          mergedLines[mergedLines.length-1] = prev + ml;
+        }
+        // "505" + "호" → "505호"
+        else if(prev.match(/\d+$/) && ml === '호'){
+          mergedLines[mergedLines.length-1] = prev + '호';
+        }
+        // 현재 줄이 숫자만 (번지)이고 이전 줄이 도로명이면 합치기
+        else if(prev.match(/(로|길|번길)\s*$/) && ml.match(/^\d+$/)){
+          mergedLines[mergedLines.length-1] = prev + ml;
+        }
+        else {
+          mergedLines.push(ml);
+        }
+      }
+      lines = mergedLines;
+
       for(var i=0; i<lines.length; i++){
         var l = lines[i].trim();
         if(!l || isJunkLine(l)) continue;
@@ -21571,6 +21623,12 @@ async function emerOcrScan(file, _statusOverride){
 
         if(hasStreet && !streetPart){
           streetPart = l;
+          // ★ 다음 줄이 번길 숫자 보정인지 확인 (예: "2번길 50")
+          var nextL = lines[i+1] ? lines[i+1].trim() : '';
+          if(nextL.match(/^\d{1,2}번길\s*\d/) && streetPart.match(/(로|길)\d+$/)){
+            streetPart = streetPart + nextL;
+            i++; // 다음 줄 건너뜀
+          }
         } else if(hasDong && !detailParts.some(function(x){ return x.match(/아파트|오피스텔|동/); })){
           detailParts.push(l);
           // 같은 줄에 호수도 있으면 종료
