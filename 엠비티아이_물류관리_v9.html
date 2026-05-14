@@ -23675,7 +23675,9 @@ async function emerSave(){
   if(window._emerGps && window._emerGps.lat && 
      (window._emerGps.src==='geocode'||window._emerGps.src==='QR'||
       window._emerGps.src==='kakao'||window._emerGps.src==='kakao_addr'||
-      window._emerGps.src==='kakao_kw'||window._emerGps.src==='kakao_kw2')){
+      window._emerGps.src==='kakao_kw'||window._emerGps.src==='kakao_kw2'||
+      window._emerGps.src==='kakao_kw_dong'||window._emerGps.src==='kakao_kw_apt'||
+      window._emerGps.src==='cache')){
     // ★ v9.59: 카카오/QR/Geocode 좌표 모두 재사용 (중복 geocoding 방지)
     gpsClean = {lat:window._emerGps.lat, lng:window._emerGps.lng, acc:0, src:window._emerGps.src};
     console.debug('[emerSave] 기존 GPS 사용:', window._emerGps.src);
