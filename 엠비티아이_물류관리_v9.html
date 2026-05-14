@@ -21002,12 +21002,21 @@ function _geoResultBanner(msg){
 }
 function _cleanAddr(addr){
   if(!addr || typeof addr !== 'string') return '';
-  return addr
-    .replace(/["']\s*\(string\)/g, '')   // " (string) 제거
-    .replace(/^["']+|["']+$/g, '')           // 앞뒤 따옴표 제거
-    .replace(/\\n|\\t|\\r/g, ' ')       // 이스케이프 개행 제거
-    .replace(/\s{2,}/g, ' ')                 // 연속 공백 단일화
+  var a = addr
+    .replace(/["']\s*\(string\)/g, '')
+    .replace(/^["']+|["']+$/g, '')
+    .replace(/\\n|\\t|\\r/g, ' ')
+    .replace(/\s{2,}/g, ' ')
     .trim();
+  // ★ v9.69: OCR "로" 누락 자동 보정
+  // "모라19번길" → "모라로19번길" (숫자 앞 "로" 빠진 패턴)
+  // 단, 이미 "로\d+번길" 형태면 패스
+  if(!/로\d/.test(a)){
+    a = a.replace(/([가-힣]{2,})((\d{2,3})번길)/, function(m,p1,p2){
+      return p1+'로'+p2;
+    });
+  }
+  return a;
 }
 function _addBusanPrefix(addr){
   if(!addr) return addr;
@@ -21296,6 +21305,11 @@ async function _kakaoGeocode(address){
     function _roadVariants(road){
       if(!road) return [road];
       var v = [road];
+      // ★ v9.69: "모라19번길" → "모라로19번길" ("로" 누락 보정)
+      if(!/로\s*\d/.test(road)){
+        var roFix = road.replace(/([가-힣]{2,})(\d{2,3}번길)/, function(m,p1,p2){return p1+'로'+p2;});
+        if(roFix !== road) v.push(roFix);
+      }
       // 2자리 번길 → 3자리 변형 (×10 + 0~9)
       var m2 = road.match(/(.*로\s*)(\d{2})(번길.*)/);
       if(m2){
@@ -22348,12 +22362,19 @@ async function emerOcrScan(file, _statusOverride){
           // Claude 동번호가 OCR과 다르면 → 카카오 재매칭
           var ocrDongM = (p.address||'').match(/(\d+동)/);
           var ocrDong = ocrDongM ? ocrDongM[1] : '';
-          if(_cv.dong !== ocrDong){
-            console.log('[v9.68 DONG_CORRECT]', ocrDong, '→', _cv.dong);
-            _geoResultBanner('🔧 Claude 동번호 교정: '+ocrDong+' → '+_cv.dong);
-            // 주소 재구성 후 카카오 재검색
+          // ★ v9.69: 동번호 불일치 OR geocode 폴백(도로명 오인식) 시 재매칭
+          var _needRemap = (_cv.dong !== ocrDong) ||
+            (!!(pinGps && pinGps.src === 'geocode') && !!(_cv.address));
+          if(_needRemap){
+            var _reason = (_cv.dong !== ocrDong)
+              ? '동번호 교정: '+ocrDong+' → '+_cv.dong
+              : '도로명 오인식 → Claude 주소로 재매칭';
+            console.log('[v9.69]', _reason);
+            _geoResultBanner('🔧 '+_reason);
+            // 주소 재구성: Claude 주소 우선 사용
             var newAddr = (_cv.address || p.address || '').trim();
-            if(newAddr.indexOf(_cv.dong) < 0) newAddr += ' ' + _cv.dong;
+            var useDong = _cv.dong || ocrDong;
+            if(useDong && newAddr.indexOf(useDong) < 0) newAddr += ' ' + useDong;
             if(_cv.ho && newAddr.indexOf(_cv.ho) < 0) newAddr += ' ' + _cv.ho;
             // emer-addr 입력란 갱신
             var _ae = document.getElementById('emer-addr');
@@ -22363,11 +22384,11 @@ async function emerOcrScan(file, _statusOverride){
             try{
               var _kkr2 = await _kakaoGeocode(newAddr);
               if(_kkr2 && _kkr2.lat){
-                pinGps = {lat:_kkr2.lat, lng:_kkr2.lng, src:(_kkr2.src||'kakao_v68'), addr:_cleanAddr(newAddr), matchedAddr:_kkr2.matchedAddr, matchedName:_kkr2.matchedName};
-                window._emerGps = {lat:_kkr2.lat, lng:_kkr2.lng, acc:0, src:(_kkr2.src||'kakao_v68'), addr:_cleanAddr(newAddr), matchedAddr:_kkr2.matchedAddr, matchedName:_kkr2.matchedName};
-                if(status) status.innerHTML = '<span style="color:var(--teal)">✅ Claude 검증 + 카카오 재매칭 완료</span>';
+                pinGps = {lat:_kkr2.lat, lng:_kkr2.lng, src:(_kkr2.src||'kakao_v69'), addr:_cleanAddr(newAddr), matchedAddr:_kkr2.matchedAddr, matchedName:_kkr2.matchedName};
+                window._emerGps = {lat:_kkr2.lat, lng:_kkr2.lng, acc:0, src:(_kkr2.src||'kakao_v69'), addr:_cleanAddr(newAddr), matchedAddr:_kkr2.matchedAddr, matchedName:_kkr2.matchedName};
+                if(status) status.innerHTML = '<span style="color:var(--teal)">✅ Claude 재매칭 완료 ('+_reason+')</span>';
               }
-            }catch(reErr){ console.warn('[v9.68 재매칭 실패]', reErr); }
+            }catch(reErr){ console.warn('[v9.69 재매칭 실패]', reErr); }
           }
         }
       }catch(cvErr){ console.warn('[v9.68 Claude 검증 실패]', cvErr); }
@@ -23675,9 +23696,7 @@ async function emerSave(){
   if(window._emerGps && window._emerGps.lat && 
      (window._emerGps.src==='geocode'||window._emerGps.src==='QR'||
       window._emerGps.src==='kakao'||window._emerGps.src==='kakao_addr'||
-      window._emerGps.src==='kakao_kw'||window._emerGps.src==='kakao_kw2'||
-      window._emerGps.src==='kakao_kw_dong'||window._emerGps.src==='kakao_kw_apt'||
-      window._emerGps.src==='cache')){
+      window._emerGps.src==='kakao_kw'||window._emerGps.src==='kakao_kw2')){
     // ★ v9.59: 카카오/QR/Geocode 좌표 모두 재사용 (중복 geocoding 방지)
     gpsClean = {lat:window._emerGps.lat, lng:window._emerGps.lng, acc:0, src:window._emerGps.src};
     console.debug('[emerSave] 기존 GPS 사용:', window._emerGps.src);
