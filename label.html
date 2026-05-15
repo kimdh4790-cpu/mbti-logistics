@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#185FA5">
+<title>쿠팡 영문 라벨 출력</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,'Malgun Gothic',sans-serif;-webkit-tap-highlight-color:transparent}
+body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
+.app{max-width:480px;margin:0 auto;padding:12px}
+.topbar{background:#185FA5;color:#fff;padding:14px 16px;border-radius:12px;margin-bottom:12px}
+.topbar-title{font-size:16px;font-weight:700}
+.topbar-sub{font-size:11px;opacity:.8;margin-top:2px}
+.card{background:#fff;border-radius:12px;padding:16px;margin-bottom:10px;border:1px solid rgba(0,0,0,.08)}
+.card h2{font-size:13px;font-weight:700;color:#444;margin-bottom:12px}
+.btn{padding:11px 16px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;border:none;width:100%;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn:active{transform:scale(.97)}
+.btn-blue{background:#185FA5;color:#fff}
+.btn-green{background:#0F6E56;color:#fff}
+.btn-gray{background:#f0f4f8;color:#444;border:1px solid #dde3ed}
+.btn-sm{padding:8px 16px;font-size:12px;width:auto;border-radius:8px}
+.field{margin-bottom:10px}
+.field label{font-size:11px;font-weight:600;color:#888;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em}
+.field .val{font-size:14px;color:#1a1a18;padding:9px 11px;background:#f8f9fc;border-radius:8px;border:1px solid #e8ecf0}
+.field input,.field textarea{width:100%;padding:9px 11px;border:1.5px solid #dde3ed;border-radius:8px;font-size:13px;color:#1a1a18;outline:none;resize:vertical}
+.field input:focus,.field textarea:focus{border-color:#185FA5}
+.eng-card{background:#e6f1fb;border:1.5px solid #185FA5;border-radius:12px;padding:14px;margin-bottom:12px}
+.eng-lbl{font-size:10px;font-weight:700;color:#185FA5;letter-spacing:.08em;margin-bottom:6px}
+.eng-name{font-size:20px;font-weight:900;color:#0c447c;margin-bottom:4px}
+.eng-addr{font-size:13px;color:#1a4a7a;line-height:1.7}
+.eng-track{font-size:11px;color:#185FA5;font-family:monospace;margin-top:8px;padding-top:8px;border-top:1px solid #b5d4f4}
+.print-label{background:#fff;border:2px solid #1a1a18;border-radius:4px;padding:18px;font-family:'Arial',sans-serif}
+.pl-from{font-size:10px;color:#888;margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em}
+.pl-to-lbl{font-size:10px;font-weight:700;color:#888;letter-spacing:.05em;margin-bottom:4px;text-transform:uppercase}
+.pl-name{font-size:22px;font-weight:900;color:#1a1a18;margin-bottom:6px;letter-spacing:.5px}
+.pl-addr{font-size:13px;color:#333;line-height:1.7;margin-bottom:10px;white-space:pre-line}
+.pl-div{border:none;border-top:1px dashed #ccc;margin:10px 0}
+.pl-meta{display:flex;justify-content:space-between;align-items:flex-end;gap:8px}
+.pl-track{font-family:monospace;font-size:11px;color:#185FA5;letter-spacing:1px}
+.pl-date{font-size:11px;color:#888}
+.banner{padding:10px 12px;border-radius:8px;font-size:12px;margin-bottom:10px;display:flex;align-items:flex-start;gap:8px}
+.banner-warn{background:#fff8e1;border:1px solid #fde68a;color:#854f0b}
+.banner-info{background:#e6f1fb;border:1px solid #b5d4f4;color:#185FA5}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{width:24px;height:24px;border:3px solid rgba(24,95,165,.25);border-top-color:#185FA5;border-radius:50%;animation:spin .7s linear infinite;margin:0 auto}
+.method-badge{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600}
+.mb-api{background:#e1f5ee;color:#0f6e56}
+.mb-local{background:#e6f1fb;color:#185FA5}
+@media print{
+  body{background:#fff}
+  .no-print{display:none!important}
+  .print-label{border:2px solid #000}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="topbar no-print">
+  <div class="topbar-title">📦 쿠팡 영문 라벨 출력</div>
+  <div class="topbar-sub">QR 스캔 → 자동 번역 → 즉시 출력</div>
+</div>
+
+<div class="banner banner-warn no-print" id="cam-notice" style="display:none">
+  <span>⚠️</span>
+  <div>카메라는 HTTPS 환경에서만 사용 가능합니다.<br>지금은 QR 텍스트를 직접 입력해 테스트하세요.</div>
+</div>
+
+<div class="no-print" style="display:flex;gap:6px;margin-bottom:10px" id="tabs">
+  <button id="tab-cam" onclick="switchTab('cam')" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid #dde3ed;background:#f8f9fc;font-size:13px;font-weight:700;cursor:pointer;color:#888">📷 QR 스캔</button>
+  <button id="tab-manual" onclick="switchTab('manual')" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid #185FA5;background:#185FA5;font-size:13px;font-weight:700;cursor:pointer;color:#fff">✏️ 직접 입력</button>
+</div>
+
+<!-- 카메라 영역 -->
+<div class="card no-print" id="cam-card" style="display:none">
+  <h2>📷 QR 스캔</h2>
+  <div id="cam-wrap" style="position:relative;width:100%;aspect-ratio:1;border-radius:10px;overflow:hidden;background:#000;margin-bottom:10px">
+    <video id="cam-video" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover"></video>
+    <canvas id="cam-canvas" style="display:none"></canvas>
+    <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+      <div style="width:180px;height:180px;border:3px solid #fff;border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.45)"></div>
+    </div>
+    <div id="scan-msg" style="position:absolute;bottom:12px;left:0;right:0;text-align:center;color:#fff;font-size:12px;font-weight:700;text-shadow:0 1px 4px rgba(0,0,0,.8)">QR 코드를 박스 안에 맞춰주세요</div>
+  </div>
+  <button class="btn btn-gray" onclick="stopCam()">■ 카메라 중지</button>
+</div>
+
+<div class="card no-print" id="input-card">
+  <h2>📋 QR 데이터 입력</h2>
+  <div class="field">
+    <label>QR 스캔 결과 텍스트</label>
+    <textarea id="qr-input" rows="4" placeholder="|V1|10311712219421|수영구 수영로 668|화목오피스텔 607호|김*우|..." style="font-family:monospace;font-size:12px"></textarea>
+  </div>
+  <button class="btn btn-blue" onclick="parseQR()">🔍 분석하기</button>
+</div>
+
+<div class="card no-print" id="parsed-card" style="display:none">
+  <h2>📋 추출된 정보</h2>
+  <div class="field"><label>수령인</label><div class="val" id="f-name">—</div></div>
+  <div class="field"><label>주소 1</label><div class="val" id="f-addr1">—</div></div>
+  <div class="field"><label>주소 2</label><div class="val" id="f-addr2">—</div></div>
+  <div class="field"><label>송장번호</label><div class="val" id="f-track" style="font-family:monospace;font-size:12px">—</div></div>
+  <div class="field"><label>박스 규격 (선택)</label><input id="f-size" placeholder="예: 30×20×15cm"></div>
+  <div style="display:flex;gap:8px;margin-top:4px">
+    <button class="btn btn-green" onclick="translateToEng()" style="flex:2">🌐 영어로 번역하기</button>
+    <button class="btn btn-gray btn-sm" onclick="resetInput()" style="flex:1">다시</button>
+  </div>
+</div>
+
+<div class="card no-print" id="loading-card" style="display:none;text-align:center;padding:28px 16px">
+  <div class="spinner" style="margin-bottom:12px"></div>
+  <div style="font-size:13px;font-weight:700;color:#185FA5">번역 중...</div>
+  <div style="font-size:11px;color:#888;margin-top:4px">한국 주소를 영문으로 변환하고 있습니다</div>
+</div>
+
+<div id="result-section" style="display:none">
+  <div class="card no-print">
+    <h2>✅ 영문 번역 완료 <span class="method-badge" id="method-badge"></span></h2>
+    <div class="eng-card">
+      <div class="eng-lbl">RECIPIENT</div>
+      <div class="eng-name" id="e-name">—</div>
+      <div class="eng-addr" id="e-addr">—</div>
+      <div class="eng-track">Tracking No: <span id="e-track">—</span></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-blue btn-sm" onclick="window.print()" style="flex:2">🖨️ 인쇄 / 출력</button>
+      <button class="btn btn-gray btn-sm" onclick="resetAll()" style="flex:1">🔄 처음으로</button>
+    </div>
+  </div>
+
+  <div class="print-label" id="print-label">
+    <div class="pl-from">FROM: Coupang Co., Ltd. · Republic of Korea</div>
+    <div class="pl-div"></div>
+    <div class="pl-to-lbl">TO:</div>
+    <div class="pl-name" id="lbl-name">—</div>
+    <div class="pl-addr" id="lbl-addr">—</div>
+    <div class="pl-div"></div>
+    <div class="pl-meta">
+      <div>
+        <div class="pl-track" id="lbl-track">—</div>
+        <div id="lbl-size" style="font-size:11px;color:#888;margin-top:3px"></div>
+      </div>
+      <div class="pl-date" id="lbl-date">—</div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+var _parsed = null;
+
+// ══════════════════════════════════════════
+//  한국어 로마자 변환 (개정 로마자 표기법)
+// ══════════════════════════════════════════
+var _CHO=['g','kk','n','d','tt','r','m','b','pp','s','ss','','j','jj','ch','k','t','p','h'];
+var _JUNG=['a','ae','ya','yae','eo','e','yeo','ye','o','wa','wae','oe','yo','u','wo','we','wi','yu','eu','ui','i'];
+var _JONG_EOL=['','k','kk','k','n','n','n','t','l','k','m','p','k','t','p','t','m','p','p','t','t','ng','t','t','k','t','p','t'];
+var _JONG_LNK=['','g','kk','gs','n','nj','nh','d','r','lg','lm','lb','ls','lt','lp','lh','m','b','bs','s','ss','ng','j','ch','k','t','p','h'];
+
+function koreanToRoman(str){
+  if(!str) return '';
+  var syls=[];
+  for(var i=0;i<str.length;i++){
+    var code=str.charCodeAt(i)-0xAC00;
+    if(code>=0&&code<=11171){
+      syls.push({cho:Math.floor(code/21/28),jung:Math.floor((code%(21*28))/28),jong:code%28,isKor:true});
+    } else {
+      syls.push({raw:str[i],isKor:false});
+    }
+  }
+  var res='';
+  for(var i=0;i<syls.length;i++){
+    var s=syls[i];
+    if(!s.isKor){res+=s.raw;continue;}
+    var next=i+1<syls.length?syls[i+1]:null;
+    var jong='';
+    if(s.jong>0){
+      if(next&&next.isKor&&next.cho===11){
+        jong='';
+        next.cho=_JONG_LNK[s.jong].charCodeAt(0);
+        next._linkedCho=_JONG_LNK[s.jong];
+      } else {
+        jong=_JONG_EOL[s.jong];
+      }
+    }
+    var choStr=s._linkedCho||_CHO[s.cho];
+    res+=choStr+_JUNG[s.jung]+jong;
+  }
+  return res;
+}
+
+// 주소 구성요소 영문화
+var ADDR_DICT = {
+  '서울특별시':'Seoul','부산광역시':'Busan','대구광역시':'Daegu',
+  '인천광역시':'Incheon','광주광역시':'Gwangju','대전광역시':'Daejeon',
+  '울산광역시':'Ulsan','세종특별자치시':'Sejong','경기도':'Gyeonggi-do',
+  '강원도':'Gangwon-do','충청북도':'Chungcheongbuk-do','충청남도':'Chungcheongnam-do',
+  '전라북도':'Jeollabuk-do','전라남도':'Jeollanam-do','경상북도':'Gyeongsangbuk-do',
+  '경상남도':'Gyeongsangnam-do','제주특별자치도':'Jeju-do',
+  '오피스텔':'Officetel','아파트':'Apt','빌라':'Villa','타워':'Tower',
+  '스카이':'Sky','파크':'Park','힐':'Hill','가든':'Garden',
+  '플라자':'Plaza','시티':'City','뷰':'View','리버':'River'
+};
+
+function translateAddr(addr){
+  if(!addr) return '';
+  // 딕셔너리 먼저 적용
+  var result = addr;
+  Object.keys(ADDR_DICT).forEach(function(k){
+    result = result.replace(new RegExp(k,'g'), ADDR_DICT[k]);
+  });
+
+  // 행정구역 접미사 처리 (앞 음절 로마자 + 접미사 영문)
+  result = result.replace(/([가-힣]+)특별시/g, function(m,p1){ return koreanToRoman(p1).replace(/^./,function(c){return c.toUpperCase()}); });
+  result = result.replace(/([가-힣]+)광역시/g, function(m,p1){ return koreanToRoman(p1).replace(/^./,function(c){return c.toUpperCase()}); });
+  result = result.replace(/([가-힣]+)시/g,   function(m,p1){ return koreanToRoman(p1).replace(/^./,function(c){return c.toUpperCase()})+'-si'; });
+  result = result.replace(/([가-힣]+)구/g,   function(m,p1){ return koreanToRoman(p1).replace(/^./,function(c){return c.toUpperCase()})+'-gu'; });
+  result = result.replace(/([가-힣]+)군/g,   function(m,p1){ return koreanToRoman(p1).replace(/^./,function(c){return c.toUpperCase()})+'-gun'; });
+  result = result.replace(/([가-힣]+)읍/g,   function(m,p1){ return koreanToRoman(p1).replace(/^./,function(c){return c.toUpperCase()})+'-eup'; });
+  result = result.replace(/([가-힣]+)면/g,   function(m,p1){ return koreanToRoman(p1).replace(/^./,function(c){return c.toUpperCase()})+'-myeon'; });
+  result = result.replace(/([가-힣]+)동/g,   function(m,p1){ return koreanToRoman(p1).replace(/^./,function(c){return c.toUpperCase()})+'-dong'; });
+  result = result.replace(/([가-힣]+)로/g,   function(m,p1){ return koreanToRoman(p1).replace(/^./,function(c){return c.toUpperCase()})+'-ro'; });
+  result = result.replace(/([가-힣]+)(Officetel|Apt|Villa|Tower|Park|Hill)/g, function(m,p1,p2){
+    return koreanToRoman(p1).replace(/^./,function(c){return c.toUpperCase()})+p2;
+  });
+  result = result.replace(/([가-힣]+)번길/g, function(m,p1){ return koreanToRoman(p1).replace(/^./,function(c){return c.toUpperCase()})+'-beon-gil'; });
+  result = result.replace(/([가-힣]+)길/g,   function(m,p1){ return koreanToRoman(p1).replace(/^./,function(c){return c.toUpperCase()})+'-gil'; });
+  // 남은 한글 로마자화
+  result = result.replace(/[가-힣]+/g, function(m){
+    var r = koreanToRoman(m);
+    return r.replace(/^./,function(c){return c.toUpperCase()});
+  });
+  // 호수 정리
+  result = result.replace(/(\d+)호/g, '$1Ho');
+  result = result.replace(/(\d+)층/g, '$1F');
+  return result.replace(/\s{2,}/g,' ').trim();
+}
+
+function translateName(name){
+  if(!name) return '';
+  // 마스킹된 이름 처리 (김*우 → Kim *-u)
+  var parts = name.split('');
+  var result = '';
+  var inMask = false;
+  for(var i=0;i<parts.length;i++){
+    var code = parts[i].charCodeAt(0);
+    if(code >= 0xAC00 && code <= 0xD7A3){
+      var r = koreanToRoman(parts[i]);
+      result += r.replace(/^./,function(c){return c.toUpperCase()});
+    } else {
+      result += parts[i];
+    }
+  }
+  // 성 뒤에 공백 추가 (성+이름 분리, 보통 첫 글자가 성)
+  result = result.replace(/^([A-Z][a-z]+)([A-Z])/, '$1 $2');
+  return result;
+}
+
+// ══════════════════════════════════════════
+//  QR 파싱
+// ══════════════════════════════════════════
+function parseQR(){
+  var raw = document.getElementById('qr-input').value.trim();
+  if(!raw){ alert('QR 데이터를 입력해 주세요'); return; }
+  if(raw.indexOf('|V1|') < 0){ alert('쿠팡 QR 형식이 아닙니다\n형식: |V1|송장번호|주소1|주소2|이름|...'); return; }
+  var parts = raw.split('|').filter(function(s){ return s !== ''; });
+  _parsed = {
+    tracking: parts[1]||'', addr1: parts[2]||'',
+    addr2: parts[3]||'', name: parts[4]||''
+  };
+  document.getElementById('f-name').textContent  = _parsed.name    ||'—';
+  document.getElementById('f-addr1').textContent = _parsed.addr1   ||'—';
+  document.getElementById('f-addr2').textContent = _parsed.addr2   ||'—';
+  document.getElementById('f-track').textContent = _parsed.tracking||'—';
+  document.getElementById('input-card').style.display  = 'none';
+  document.getElementById('parsed-card').style.display = 'block';
+}
+
+// ══════════════════════════════════════════
+//  번역 (API 우선, 실패 시 로컬)
+// ══════════════════════════════════════════
+async function translateToEng(){
+  if(!_parsed) return;
+  var size = document.getElementById('f-size').value.trim();
+  document.getElementById('parsed-card').style.display   = 'none';
+  document.getElementById('loading-card').style.display  = 'block';
+  document.getElementById('result-section').style.display= 'none';
+
+  var eng; var method = 'local';
+  try{
+    var prompt = '다음 한국 배송 정보를 영문으로 변환해줘. JSON만 반환.\n\n'
+      +'수령인: '+_parsed.name+'\n주소1: '+_parsed.addr1+'\n주소2: '+_parsed.addr2+'\n\n'
+      +'{"recipientEng":"영문이름","addr1Eng":"영문주소1 (Revised Romanization)","addr2Eng":"영문주소2","fullAddr":"addr2, addr1, South Korea"}';
+    var res = await fetch('/claude-ocr',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:400,messages:[{role:'user',content:prompt}]})
+    });
+    var data = await res.json();
+    var text = (data.content&&data.content[0]&&data.content[0].text)||'';
+    var m = text.match(/\{[\s\S]*\}/);
+    if(m){ eng = JSON.parse(m[0]); method = 'AI'; }
+  }catch(e){}
+
+  if(!eng){
+    // 로컬 로마자 변환
+    var engName  = translateName(_parsed.name);
+    var engAddr1 = translateAddr(_parsed.addr1);
+    var engAddr2 = translateAddr(_parsed.addr2);
+    eng = {
+      recipientEng: engName,
+      addr1Eng: engAddr1,
+      addr2Eng: engAddr2,
+      fullAddr: (engAddr2?engAddr2+', ':'')+engAddr1+', South Korea'
+    };
+  }
+
+  document.getElementById('loading-card').style.display = 'none';
+  showLabel(eng, size, method);
+}
+
+function showLabel(eng, size, method){
+  var today = new Date();
+  var dateStr = (today.getMonth()+1)+'/'+today.getDate()+'/'+today.getFullYear();
+  var addrBlock = '';
+  if(eng.addr2Eng) addrBlock += eng.addr2Eng+'\n';
+  addrBlock += eng.addr1Eng+'\nSouth Korea';
+
+  document.getElementById('method-badge').className = 'method-badge '+(method==='AI'?'mb-api':'mb-local');
+  document.getElementById('method-badge').textContent = method==='AI'?'AI 번역':'로마자 변환';
+  document.getElementById('e-name').textContent = eng.recipientEng||_parsed.name;
+  document.getElementById('e-addr').textContent = eng.fullAddr||addrBlock;
+  document.getElementById('e-track').textContent= _parsed.tracking;
+
+  document.getElementById('lbl-name').textContent = (eng.recipientEng||_parsed.name).toUpperCase();
+  document.getElementById('lbl-addr').textContent = addrBlock;
+  document.getElementById('lbl-track').textContent= 'Tracking: '+_parsed.tracking;
+  document.getElementById('lbl-size').textContent = size?'Box: '+size:'';
+  document.getElementById('lbl-date').textContent = dateStr;
+
+  document.getElementById('result-section').style.display='block';
+  document.getElementById('result-section').scrollIntoView({behavior:'smooth'});
+}
+
+function resetInput(){
+  document.getElementById('parsed-card').style.display='none';
+  document.getElementById('input-card').style.display='block';
+}
+function switchTab(tab){
+  var isCam = (tab==='cam');
+  document.getElementById('tab-cam').style.cssText    = isCam ? 'flex:1;padding:10px;border-radius:10px;border:1.5px solid #185FA5;background:#185FA5;font-size:13px;font-weight:700;cursor:pointer;color:#fff' : 'flex:1;padding:10px;border-radius:10px;border:1.5px solid #dde3ed;background:#f8f9fc;font-size:13px;font-weight:700;cursor:pointer;color:#888';
+  document.getElementById('tab-manual').style.cssText = isCam ? 'flex:1;padding:10px;border-radius:10px;border:1.5px solid #dde3ed;background:#f8f9fc;font-size:13px;font-weight:700;cursor:pointer;color:#888' : 'flex:1;padding:10px;border-radius:10px;border:1.5px solid #185FA5;background:#185FA5;font-size:13px;font-weight:700;cursor:pointer;color:#fff';
+  document.getElementById('cam-card').style.display   = isCam ? 'block' : 'none';
+  document.getElementById('input-card').style.display = isCam ? 'none'  : 'block';
+  if(isCam) startCam(); else stopCam();
+}
+
+var _stream=null; var _scanTimer=null;
+function startCam(){
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}})
+    .then(function(s){
+      _stream=s;
+      var v=document.getElementById('cam-video');
+      v.srcObject=s; v.play();
+      v.onloadedmetadata=function(){
+        _scanTimer=setInterval(function(){ scanFrame(); },300);
+      };
+    }).catch(function(e){
+      alert('카메라 접근 실패\n직접 입력 탭을 사용해 주세요');
+      switchTab('manual');
+    });
+}
+function stopCam(){
+  if(_scanTimer){clearInterval(_scanTimer);_scanTimer=null;}
+  if(_stream){_stream.getTracks().forEach(function(t){t.stop();});_stream=null;}
+}
+function scanFrame(){
+  var v=document.getElementById('cam-video');
+  var c=document.getElementById('cam-canvas');
+  if(!v.videoWidth) return;
+  c.width=v.videoWidth; c.height=v.videoHeight;
+  var ctx=c.getContext('2d'); ctx.drawImage(v,0,0);
+  var img=ctx.getImageData(0,0,c.width,c.height);
+  if(typeof jsQR==='undefined') return;
+  var code=jsQR(img.data,img.width,img.height);
+  if(code&&code.data&&code.data.indexOf('|V1|')>=0){
+    document.getElementById('scan-msg').textContent='✅ QR 인식!';
+    stopCam();
+    document.getElementById('qr-input').value=code.data;
+    switchTab('manual');
+    parseQR();
+  }
+}
+
+// HTTPS 체크 (카메라 탭 활성화)
+(function(){
+  if(location.protocol==='https:'){
+    document.getElementById('cam-notice').style.display='none';
+  } else {
+    var camTab=document.getElementById('tab-cam');
+    if(camTab) camTab.style.opacity='.4';
+  }
+})();
+
+function resetAll(){
+  _parsed=null;
+  document.getElementById('result-section').style.display='none';
+  document.getElementById('input-card').style.display='block';
+  document.getElementById('qr-input').value='';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+</script>
+</body>
+</html>
