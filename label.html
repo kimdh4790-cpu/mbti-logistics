@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#185FA5">
 <title>쿠팡 영문 라벨 출력</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,'Malgun Gothic',sans-serif;-webkit-tap-highlight-color:transparent}
 body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
@@ -80,6 +82,12 @@ body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
 .label-item .li-addr{font-size:11px;color:#333;line-height:1.6;margin-bottom:8px}
 .label-item .li-track{font-family:monospace;font-size:9px;color:#185FA5;letter-spacing:1px;border-top:1px dashed #ccc;padding-top:6px;margin-top:6px}
 .label-item .li-date{font-size:9px;color:#888;margin-top:2px}
+.label-logo-img{max-height:36px;max-width:120px;object-fit:contain}
+.label-qr-wrap{display:flex;gap:10px;align-items:flex-end;margin-top:6px}
+.label-qr-wrap canvas,.label-qr-wrap img{border:1px solid #ddd}
+@media print{
+  .label-qr-wrap canvas,.label-qr-wrap img{border:1px solid #000}
+}
 </style>
 
 </head>
@@ -158,6 +166,21 @@ body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
   </div>
 
   <!-- STEP 3: 출력 -->
+  <div class="card no-print" id="logo-card">
+    <h2>🏢 회사 로고 설정 <span style="font-size:10px;font-weight:400;color:var(--text3)">(선택사항)</span></h2>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <div id="logo-preview" style="width:120px;height:40px;border:1.5px dashed #dde3ed;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#aaa">로고 없음</div>
+      <div style="flex:1">
+        <label style="display:flex;align-items:center;gap:6px;padding:8px 12px;border:1.5px solid #dde3ed;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600">
+          📁 로고 이미지 선택
+          <input type="file" accept="image/*" id="logo-file" style="display:none" onchange="loadLogo(this)">
+        </label>
+        <div style="font-size:10px;color:#aaa;margin-top:4px">PNG/JPG 권장 · 가로형 로고</div>
+      </div>
+      <button class="btn btn-gray btn-sm" onclick="clearLogo()">삭제</button>
+    </div>
+  </div>
+
   <div class="card no-print">
     <h2>🖨️ STEP 3 &nbsp; 출력 설정</h2>
     <div class="size-tabs">
@@ -254,18 +277,7 @@ async function runOCR(){
     img.src=_capturedImg;
   });
 
-  var prompt='이 쿠팡 송장 이미지에서 배송 정보를 추출하고 영문으로 변환해줘.\n\n'
-    +'반드시 JSON만 반환 (다른 텍스트 없이):\n'
-    +'{\n'
-    +'"recipientKor": "수령인 한국어 이름",\n'
-    +'"recipientEng": "수령인 영문 이름 (Revised Romanization)",\n'
-    +'"addr1Kor": "주소1 한국어",\n'
-    +'"addr1Eng": "주소1 영문 (Revised Romanization)",\n'
-    +'"addr2Kor": "주소2/상세주소 한국어",\n'
-    +'"addr2Eng": "주소2 영문",\n'
-    +'"tracking": "송장번호 (숫자만)",\n'
-    +'"city": "도시명 영문 (예: Busan, Seoul)"\n'
-    +'}';
+  var prompt="이 쿠팡 송장 이미지의 배송 정보를 정확히 추출해줘.\n주의: 도로명 주소는 번길+번지까지 전부 읽어(예: 모라로110번길 121에서 121까지).\n아파트/건물명+동+호수 전체 포함. JSON만 반환.\n{\"recipientKor\":\"수령인\",\"recipientEng\":\"영문이름\",\"addr1Kor\":\"도로명+번지 전체\",\"addr1Eng\":\"영문 도로명\",\"addr2Kor\":\"건물명+동+호수\",\"addr2Eng\":\"영문 상세주소\",\"tracking\":\"송장번호\",\"city\":\"도시영문\"}"
 
   try{
     document.getElementById('loading-msg').textContent='AI 번역 중...';
@@ -287,7 +299,7 @@ async function runOCR(){
         'anthropic-dangerous-direct-browser-access':'true'
       },
       body:JSON.stringify({
-        model:'claude-haiku-4-5-20251001',
+        model:'claude-sonnet-4-5-20251001',
         max_tokens:600,
         messages:[{
           role:'user',
@@ -367,39 +379,49 @@ function renderLabel(){
   var addrBlock=(d.addr2?d.addr2+'\n':'')+d.addr1+'\n'+(d.city||'South Korea')+', South Korea';
   var today=new Date();
   var dateStr=(today.getMonth()+1)+'/'+today.getDate()+'/'+today.getFullYear();
+  var logoHtml=_logoData
+    ?'<img src="'+_logoData+'" class="label-logo-img">'
+    :'<div style="font-size:16px;font-weight:900;letter-spacing:1px;color:#e8303a">cou<span style="color:#1a1a18">pang</span></div>';
   var html='';
 
   if(_printSize===1){
     html='<div class="label-a4-1">'
       +'<div class="lbl-header">'
-      +'<div class="lbl-logo">cou<span>pang</span></div>'
+      +'<div class="lbl-logo">'+logoHtml+'</div>'
       +'<div class="lbl-type"><div style="font-size:18px;font-weight:900">DELIVERY LABEL</div><div>International Shipping</div></div>'
       +'</div>'
-      +'<div class="lbl-from">FROM: Coupang Co., Ltd. · Republic of Korea</div>'
+      +'<div class="lbl-from">FROM: Republic of Korea</div>'
       +'<div class="lbl-to-lbl">SHIP TO:</div>'
       +'<div class="lbl-name">'+escH(d.name)+'</div>'
       +'<div class="lbl-addr">'+escH(addrBlock).replace(/\n/g,'<br>')+'</div>'
       +'<hr class="lbl-divider">'
-      +'<div class="lbl-meta">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-end">'
       +'<div>'
       +'<div class="lbl-track">Tracking No.</div>'
-      +'<div class="lbl-barnum">'+escH(d.track)+'</div>'
-      +'</div>'
+      +'<div class="lbl-barnum" id="lbl-track-num">'+escH(d.track)+'</div>'
       +'<div class="lbl-date">Date: '+dateStr+'</div>'
+      +'</div>'
+      +'<div style="display:flex;flex-direction:column;align-items:center;gap:6px">'
+      +'<div id="lbl-qr" style="width:72px;height:72px"></div>'
+      +'<svg id="lbl-barcode" style="max-width:150px;height:36px"></svg>'
+      +'</div>'
       +'</div>'
       +'</div>';
   } else {
     var item='<div class="label-item">'
-      +'<div class="li-logo">cou<span>pang</span></div>'
+      +'<div class="li-logo">'+logoHtml+'</div>'
       +'<div class="li-to">SHIP TO:</div>'
       +'<div class="li-name">'+escH(d.name)+'</div>'
       +'<div class="li-addr">'+escH(addrBlock).replace(/\n/g,'<br>')+'</div>'
       +'<div class="li-track">Tracking: '+escH(d.track)+'</div>'
       +'<div class="li-date">'+dateStr+'</div>'
+      +'<div id="lbl-qr" style="width:52px;height:52px;margin-top:4px"></div>'
       +'</div>';
     html='<div class="label-a4-2">'+item+item+'</div>';
   }
   document.getElementById('print-area').innerHTML=html;
+  // QR + 바코드 생성
+  setTimeout(function(){ generateQRBarcode(d); },50);
 }
 
 function escH(s){
@@ -437,6 +459,68 @@ function saveApiKey(){
   if(card) card.remove();
   runOCR();
 }
+
+
+// ── 로고 관리 ──
+var _logoData = localStorage.getItem('mbti_label_logo')||'';
+function loadLogo(input){
+  var f=input.files[0]; if(!f) return;
+  var rd=new FileReader();
+  rd.onload=function(e){
+    _logoData=e.target.result;
+    localStorage.setItem('mbti_label_logo',_logoData);
+    applyLogo();
+    updatePreview();
+  };
+  rd.readAsDataURL(f);
+}
+function applyLogo(){
+  var area=document.getElementById('lbl-logo-area');
+  var prev=document.getElementById('logo-preview');
+  if(_logoData){
+    if(area) area.innerHTML='<img src="'+_logoData+'" class="label-logo-img">';
+    if(prev) prev.innerHTML='<img src="'+_logoData+'" style="max-height:36px;max-width:116px;object-fit:contain">';
+  } else {
+    if(area) area.innerHTML='<div style="font-size:16px;font-weight:900;letter-spacing:1px;color:#e8303a">cou<span style="color:#1a1a18">pang</span></div>';
+    if(prev) prev.innerHTML='<span style="font-size:11px;color:#aaa">로고 없음</span>';
+  }
+}
+function clearLogo(){
+  _logoData=''; localStorage.removeItem('mbti_label_logo');
+  applyLogo(); updatePreview();
+}
+
+// ── QR + 바코드 생성 ──
+function generateQRBarcode(data){
+  // QR: 긴급배송 앱 호환 형식 |V1|송장번호|주소1|주소2|이름|hash|lat|lng|...|
+  var qrEl=document.getElementById('lbl-qr');
+  if(qrEl){
+    qrEl.innerHTML='';
+    var qrData='|V1|'+data.track+'|'+data.addr1+'|'+data.addr2+'|'+data.name+'|0|0|0||'+Date.now()+'|';
+    try{
+      new QRCode(qrEl,{
+        text:qrData, width:64, height:64,
+        colorDark:'#000000', colorLight:'#ffffff',
+        correctLevel:QRCode.CorrectLevel.M
+      });
+    }catch(e){ qrEl.innerHTML='<div style="font-size:9px;color:#888">QR 오류</div>'; }
+  }
+  // 바코드
+  var bcEl=document.getElementById('lbl-barcode');
+  if(bcEl&&data.track){
+    try{
+      JsBarcode(bcEl, data.track, {
+        format:'CODE128', width:1.5, height:35,
+        displayValue:true, fontSize:9, margin:2
+      });
+    }catch(e){}
+  }
+}
+
+window.addEventListener('DOMContentLoaded',function(){
+  _logoData=localStorage.getItem('mbti_label_logo')||'';
+  applyLogo();
+});
 
 function resetAll(){
   _capturedImg=null; _data={name:'',addr1:'',addr2:'',track:'',date:''};
