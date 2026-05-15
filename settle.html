@@ -538,7 +538,7 @@ import{initializeApp}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-ap
 import{getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged,createUserWithEmailAndPassword}
   from'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import{getFirestore,doc,getDoc,setDoc,addDoc,updateDoc,deleteDoc,collection,
-  query,where,getDocs,orderBy,limit,serverTimestamp,writeBatch,onSnapshot}
+  query,where,getDocs,orderBy,limit,serverTimestamp,writeBatch,onSnapshot,getDocFromServer}
   from'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 // ══ FIREBASE CONFIG ══
@@ -634,7 +634,10 @@ onAuthStateChanged(auth,async user=>{
     CU=null;return;
   }
   try{
-    const uSnap=await getDoc(doc(db,'users',user.uid));
+    // ★ 캐시 우회 — 서버에서 직접 읽어서 최신 role 보장
+    let uSnap;
+    try{ uSnap=await getDocFromServer(doc(db,'users',user.uid)); }
+    catch(e){ uSnap=await getDoc(doc(db,'users',user.uid)); } // 오프라인 fallback
     if(!uSnap.exists()){
       const isAdmin=user.email==='admin@mbti.kr'||user.email==='admin@loginet.kr';
       await setDoc(doc(db,'users',user.uid),{
