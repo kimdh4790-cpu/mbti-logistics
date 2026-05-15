@@ -132,7 +132,7 @@ body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
     <h2>🔍 촬영된 송장</h2>
     <img id="preview-img" style="width:100%;border-radius:8px;margin-bottom:10px">
     <div style="display:flex;gap:8px">
-      <button class="btn btn-green" onclick="runOCR()" style="flex:2">🌐 OCR + 번역 시작</button>
+      <div style="flex:2;padding:10px 12px;background:var(--blue-l,#e6f1fb);border-radius:8px;font-size:12px;font-weight:600;color:#185FA5;text-align:center">⏳ 자동 번역 중...</div>
       <button class="btn btn-gray btn-sm" onclick="retake()" style="flex:1">다시 촬영</button>
     </div>
   </div>
@@ -231,11 +231,18 @@ function capturePhoto(){
   _capturedImg=c.toDataURL('image/jpeg',0.92);
   stopCam();
   showPreview(_capturedImg);
+  // ★ 촬영 즉시 자동 번역 시작
+  setTimeout(function(){ runOCR(); }, 300);
 }
 function onFileSelect(input){
   var f=input.files[0]; if(!f) return;
   var rd=new FileReader();
-  rd.onload=function(e){ _capturedImg=e.target.result; showPreview(_capturedImg); };
+  rd.onload=function(e){
+    _capturedImg=e.target.result;
+    showPreview(_capturedImg);
+    // ★ 선택 즉시 자동 번역 시작
+    setTimeout(function(){ runOCR(); }, 300);
+  };
   rd.readAsDataURL(f);
 }
 function showPreview(src){
@@ -299,7 +306,7 @@ async function runOCR(){
         'anthropic-dangerous-direct-browser-access':'true'
       },
       body:JSON.stringify({
-        model:'claude-sonnet-4-5-20251001',
+        model:'claude-haiku-4-5-20251001',
         max_tokens:600,
         messages:[{
           role:'user',
