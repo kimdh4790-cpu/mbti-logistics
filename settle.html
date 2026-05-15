@@ -490,33 +490,44 @@ service cloud.firestore {
 <!-- ══ ES MODULE 브릿지 — 모듈 로드 전 onclick 오류 방지 ══ -->
 <script>
 (function(){
-  // 모듈이 로드되기 전 클릭 시 재시도 (최대 3초)
+  var _pending={};
   function bridge(name){
     window[name]=function(){
       var real=window['_m_'+name];
-      if(real){real.apply(this,arguments);}
-      else{
-        var args=arguments;
-        var tries=0;
-        var t=setInterval(function(){
-          tries++;
-          var fn=window['_m_'+name];
-          if(fn){clearInterval(t);fn.apply(window,args);}
-          else if(tries>30){clearInterval(t);console.warn('[LogiNet] '+name+' 로드 실패');}
-        },100);
-      }
+      if(real){real.apply(this,arguments);return;}
+      // 이미 대기 중인 타이머가 있으면 인자만 업데이트
+      if(_pending[name]){_pending[name].args=arguments;return;}
+      var args=arguments;
+      var tries=0;
+      var t=setInterval(function(){
+        tries++;
+        var fn=window['_m_'+name];
+        if(fn){
+          clearInterval(t);delete _pending[name];
+          fn.apply(window,_pending[name]?.args||args);
+        }else if(tries>150){ // 15초 대기
+          clearInterval(t);delete _pending[name];
+          console.warn('[LogiNet] '+name+' 로드 지연 — 페이지를 새로고침해주세요');
+          if(typeof toast==='function')toast('⚠️ 로딩이 지연되고 있습니다. 잠시 후 다시 시도해주세요.');
+          else alert('로딩 중입니다. 잠시 후 다시 시도해주세요.');
+        }
+      },100);
+      _pending[name]={t,args};
     };
   }
   ['doLogin','doLogout','openSb','closeSb','toggleDark','closeModal','goPage',
-   'openAddDealer','addDealer','editDealer','saveDealer',
-   'openAddDriver','addDriver','delDriver','editDriver','saveDriver',
-   'openNewSettle','saveSettle','viewSettle','approveSettle','delSettle',
+   'openAddDealer','addDealer','addDealerV2','editDealer','saveDealer',
+   'openAddDriver','addDriver','delDriver','editDriver','saveDriver','quickSettle',
+   'openNewSettle','saveSettle','updateSettle','viewSettle','approveSettle','delSettle','editSettle',
    'viewDriverSettle','adminViewSettle','filterSettles',
    'onDriverInput','onJobsubChange','handleExcelUpload','calcSettlePreview',
    'addRoutePrice','delRoutePrice','saveAllRoutePrices','saveOneRoutePrice','saveUnitPrices',
    'addDealerRoute','updateDealerPrice','deleteDealerPrice',
    'copyStmtLink','shareKakao','showStmtModal',
-   'saveProfile','createAdmin'
+   'saveProfile','createAdmin','saveModusignKey',
+   'extendSub','changePlan','suspendSub','genAllInvoices',
+   'viewInvoice','markInvoicePaid','copyInvoiceLink','shareInvoiceKakao',
+   'resendContract','markContractDone','acceptTerms'
   ].forEach(bridge);
 })();
 </script>
@@ -906,7 +917,11 @@ function initApp(){
   if(CU.role==='admin')goPage('admin-dashboard');
   else if(CU.role==='dealer')goPage('dealer-dashboard');
   else goPage('driver-home');
-  setTimeout(checkHashView,500);
+  setTimeout(()=>{
+    checkHashView();
+    checkInvoiceHash?.();
+    if(CU.role!=='admin')checkTermsAgreement?.();
+  },500);
 }
 
 // ══ NAV ══
@@ -919,6 +934,11 @@ const MENUS={
       {ic:'📋',l:'전체 정산',p:'admin-settlements'},
       {ic:'📌',l:'라우트 단가표',p:'admin-prices'},
     ]},
+    {s:'상용화',items:[
+      {ic:'💳',l:'구독 관리',p:'admin-subscriptions'},
+      {ic:'📄',l:'청구서 관리',p:'admin-invoices'},
+      {ic:'✍️',l:'계약서 관리',p:'admin-contracts'},
+    ]},
     {s:'시스템',items:[{ic:'⚙️',l:'설정',p:'admin-settings'}]}
   ],
   dealer:[
@@ -930,6 +950,10 @@ const MENUS={
     {s:'단가',items:[
       {ic:'📌',l:'라우트 단가표',p:'dealer-prices'},
       {ic:'📈',l:'통계',p:'dealer-stats'},
+    ]},
+    {s:'구독',items:[
+      {ic:'💳',l:'내 구독 현황',p:'dealer-subscription'},
+      {ic:'📄',l:'청구서 조회',p:'dealer-invoices'},
     ]}
   ],
   driver:[
@@ -1085,11 +1109,76 @@ function buildDealerModal(){
       </div>
     </div>`);
 }
+// ★ 업그레이드된 대리점 모달 (사업자정보 + 구독 + 모두싸인)
+function buildDealerModalV2(){
+  if(document.getElementById('mo-dealer-v2'))return;
+  document.getElementById('modals').insertAdjacentHTML('beforeend',`
+    <div class="mo" id="mo-dealer-v2">
+      <div class="md" style="max-width:540px">
+        <div class="mdt">🏢 대리점 추가 <button class="close-btn" onclick="closeModal('mo-dealer-v2')">✕</button></div>
+        <div class="mdb">
+          <div class="section-label">📋 기본 정보</div>
+          <div class="field"><label>대리점명 *</label><input id="d2-name" placeholder="예: 부산물류서비스"></div>
+          <div class="fg">
+            <div class="field"><label>관리자 이메일 *</label><input id="d2-email" type="email" placeholder="manager@email.com"></div>
+            <div class="field"><label>초기 비밀번호 *</label><input id="d2-pw" type="text" value="settle1234"></div>
+          </div>
+          <div class="fg">
+            <div class="field"><label>담당자명</label><input id="d2-mgr" placeholder="홍길동"></div>
+            <div class="field"><label>연락처</label><input id="d2-tel" placeholder="051-000-0000"></div>
+          </div>
+          <div class="divider"></div>
+          <div class="section-label">🏛️ 사업자 정보 (법인)</div>
+          <div class="fg">
+            <div class="field"><label>사업자등록번호 *</label><input id="d2-brn" placeholder="000-00-00000"></div>
+            <div class="field"><label>대표자명</label><input id="d2-ceo" placeholder="홍길동"></div>
+          </div>
+          <div class="fg">
+            <div class="field"><label>법인명(정식)</label><input id="d2-corp" placeholder="주식회사 ○○물류"></div>
+            <div class="field"><label>업태/종목</label><input id="d2-biz" placeholder="운수업/화물운송"></div>
+          </div>
+          <div class="field"><label>사업장 주소</label><input id="d2-addr" placeholder="부산광역시 ○○구 ○○로"></div>
+          <div class="divider"></div>
+          <div class="section-label">💳 구독 플랜</div>
+          <div class="fg">
+            <div class="field"><label>플랜</label>
+              <select id="d2-plan">
+                <option value="starter">스타터 (~10명 / 월 20,000원)</option>
+                <option value="standard" selected>스탠다드 (11~30명 / 월 40,000원)</option>
+                <option value="pro">프로 (31~60명 / 월 70,000원)</option>
+                <option value="enterprise">엔터프라이즈 (61명+ / 월 100,000원)</option>
+              </select>
+            </div>
+            <div class="field"><label>무료 체험</label>
+              <select id="d2-trial">
+                <option value="30">30일 무료</option>
+                <option value="14">14일 무료</option>
+                <option value="0">체험 없음</option>
+              </select>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div class="section-label">✍️ 전자계약 (모두싸인)</div>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:8px 0">
+            <input type="checkbox" id="d2-contract" checked style="width:16px;height:16px">
+            서비스이용계약서 자동 발송
+          </label>
+          <div class="info-box" style="font-size:11px;margin-top:4px">
+            📌 설정 → 모두싸인 API 키가 등록되어 있어야 발송됩니다
+          </div>
+        </div>
+        <div class="mdf">
+          <button class="btn btn-gray" onclick="closeModal('mo-dealer-v2')">취소</button>
+          <button class="btn btn-blue" onclick="addDealerV2()">✅ 대리점 추가</button>
+        </div>
+      </div>
+    </div>`);
+}
 window.openAddDealer=function(){
-  buildDealerModal();
-  ['d-name','d-email','d-tel','d-mgr'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  const pw=document.getElementById('d-pw');if(pw)pw.value='settle1234';
-  openModal('mo-dealer');
+  buildDealerModalV2();
+  ['d2-name','d2-email','d2-tel','d2-mgr','d2-brn','d2-ceo','d2-corp','d2-biz','d2-addr'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const pw=document.getElementById('d2-pw');if(pw)pw.value='settle1234';
+  openModal('mo-dealer-v2');
 };
 window.addDealer=async function(){
   const name=document.getElementById('d-name')?.value?.trim();
@@ -1112,6 +1201,76 @@ window.addDealer=async function(){
     PAGES['admin-dealers']();
   }catch(e){toast('❌ '+(e.code==='auth/email-already-in-use'?'이미 사용 중인 이메일':e.message))}
 };
+// ★ 업그레이드된 대리점 추가 (사업자정보 + 구독 + 모두싸인)
+window.addDealerV2=async function(){
+  const name=document.getElementById('d2-name')?.value?.trim();
+  const email=document.getElementById('d2-email')?.value?.trim();
+  const pw=document.getElementById('d2-pw')?.value?.trim();
+  const brn=document.getElementById('d2-brn')?.value?.trim();
+  if(!name||!email||!pw){toast('❌ 대리점명, 이메일, 비밀번호는 필수입니다');return;}
+  const plan=document.getElementById('d2-plan')?.value||'standard';
+  const trialDays=+(document.getElementById('d2-trial')?.value||30);
+  const PLAN_FEE={starter:20000,standard:40000,pro:70000,enterprise:100000};
+  const fee=PLAN_FEE[plan]||40000;
+  // 만료일 계산
+  const expDate=new Date();expDate.setDate(expDate.getDate()+trialDays+(trialDays>0?0:30));
+  try{
+    const uc=await createUserWithEmailAndPassword(auth,email,pw);
+    const uid=uc.user.uid;
+    const mgr=document.getElementById('d2-mgr')?.value||'';
+    // 대리점 문서
+    const dealerRef=await addDoc(collection(db,'dealers'),{
+      name,email,contact:document.getElementById('d2-tel')?.value||'',
+      managerName:mgr,
+      brn:brn||'',ceoName:document.getElementById('d2-ceo')?.value||'',
+      corpName:document.getElementById('d2-corp')?.value||name,
+      bizType:document.getElementById('d2-biz')?.value||'',
+      address:document.getElementById('d2-addr')?.value||'',
+      adminUid:uid,active:true,driverCount:0,
+      plan,monthlyFee:fee,
+      contractStatus:'pending',
+      createdAt:serverTimestamp()
+    });
+    // 사용자 역할
+    await setDoc(doc(db,'users',uid),{
+      email,name:mgr||name,role:'dealer',
+      dealerId:dealerRef.id,dealerName:name,createdAt:serverTimestamp()
+    });
+    // 구독 문서 자동 생성
+    await setDoc(doc(db,'subscriptions',dealerRef.id),{
+      dealerId:dealerRef.id,dealerName:name,plan,monthlyFee:fee,
+      status:'active',
+      trialDays,
+      startDate:new Date(),
+      expireDate:expDate,
+      createdAt:serverTimestamp()
+    });
+    // 첫 청구서 생성 (체험 기간 이후)
+    const invoiceMonth=new Date();invoiceMonth.setDate(1);
+    if(trialDays>0)invoiceMonth.setMonth(invoiceMonth.getMonth()+1);
+    await addDoc(collection(db,'invoices'),{
+      dealerId:dealerRef.id,dealerName:name,
+      month:invoiceMonth.toISOString().slice(0,7),
+      amount:fee,status:'pending',
+      brn:brn||'',corpName:document.getElementById('d2-corp')?.value||name,
+      ceoName:document.getElementById('d2-ceo')?.value||'',
+      createdAt:serverTimestamp()
+    });
+    closeModal('mo-dealer-v2');
+    toast(`✅ ${name} 대리점 추가 + 구독 생성 완료`);
+    // 모두싸인 계약서 발송
+    const sendContract=document.getElementById('d2-contract')?.checked;
+    if(sendContract){
+      await sendModusignContract({
+        dealerId:dealerRef.id,name,email,mgr,brn,plan,fee,
+        corp:document.getElementById('d2-corp')?.value||name,
+        ceo:document.getElementById('d2-ceo')?.value||''
+      });
+    }
+    PAGES['admin-dealers']();
+  }catch(e){toast('❌ '+(e.code==='auth/email-already-in-use'?'이미 사용 중인 이메일':e.message))}
+};
+window._m_addDealerV2=window.addDealerV2;
 window.editDealer=async function(dealerId){
   const snap=await getDoc(doc(db,'dealers',dealerId));
   if(!snap.exists())return;
@@ -2274,6 +2433,550 @@ window.viewDriverSettle=async function(id){
 
 // ── module loaded ──
 console.log('[LogiNet v2] 모듈 로드 완료');
+
+// ════════════════════════════════════════
+// ██ 모두싸인 API 연동 ██
+// ════════════════════════════════════════
+const MODUSIGN_API='https://api.modusign.co.kr';
+
+async function getModusignKey(){
+  try{
+    const snap=await getDoc(doc(db,'settings','modusign'));
+    return snap.exists()?snap.data().apiKey||'':'';
+  }catch(e){return '';}
+}
+
+async function sendModusignContract(dealer){
+  const apiKey=await getModusignKey();
+  if(!apiKey){
+    toast('⚠️ 모두싸인 API 키 미설정 — 설정 페이지에서 등록해주세요');
+    return;
+  }
+  try{
+    const templateSnap=await getDoc(doc(db,'settings','modusign'));
+    const templateId=templateSnap.exists()?templateSnap.data().templateId||'':'';
+    const PLAN_KO={starter:'스타터',standard:'스탠다드',pro:'프로',enterprise:'엔터프라이즈'};
+    const body={
+      document:{
+        title:`[로지넷] ${dealer.name} 서비스이용계약서`,
+        participantMappings:[{
+          name:dealer.mgr||dealer.name,
+          email:dealer.email,
+          signingMethod:{type:'EMAIL'}
+        }]
+      }
+    };
+    if(templateId)body.templateId=templateId;
+    const res=await fetch(`${MODUSIGN_API}/documents${templateId?'/embedded/from-template':''}`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},
+      body:JSON.stringify(body)
+    });
+    if(res.ok){
+      const data=await res.json();
+      // 계약서 ID를 Firestore에 저장
+      await updateDoc(doc(db,'dealers',dealer.dealerId),{
+        contractDocId:data.id||'',contractStatus:'sent',contractSentAt:serverTimestamp()
+      });
+      toast(`✍️ ${dealer.name} 계약서 발송 완료 (모두싸인)`);
+    }else{
+      const err=await res.json().catch(()=>({}));
+      console.warn('[Modusign]',err);
+      toast(`⚠️ 계약서 발송 실패: ${err.message||res.status} — 모두싸인에서 수동 발송해주세요`);
+    }
+  }catch(e){
+    console.warn('[Modusign CORS]',e.message);
+    toast('⚠️ 계약서는 모두싸인 대시보드에서 수동 발송해주세요 (CORS 제한)');
+  }
+}
+
+// ════════════════════════════════════════
+// ██ 이용약관 시스템 ██
+// ════════════════════════════════════════
+async function checkTermsAgreement(){
+  if(!CU||CU.role==='admin')return; // admin은 패스
+  try{
+    const uSnap=await getDoc(doc(db,'users',CU.uid));
+    if(uSnap.exists()&&uSnap.data().termsAccepted)return;
+    showTermsModal();
+  }catch(e){}
+}
+function showTermsModal(){
+  document.getElementById('mo-terms')?.remove();
+  document.getElementById('modals').insertAdjacentHTML('beforeend',`
+    <div class="mo show" id="mo-terms" style="z-index:300">
+      <div class="md" style="max-width:560px">
+        <div class="mdt">📋 서비스 이용약관 동의</div>
+        <div class="mdb" style="max-height:50vh;overflow-y:auto">
+          <div style="font-size:13px;font-weight:800;margin-bottom:12px">로지넷(LogiNet) 서비스 이용약관</div>
+          <div style="font-size:12px;line-height:1.8;color:var(--text2)">
+            <strong>제1조 (목적)</strong><br>
+            본 약관은 엠비티아이 유한회사(이하 "회사")가 제공하는 로지넷(LogiNet) 물류 정산관리 서비스(이하 "서비스")의 이용에 관한 조건 및 절차를 규정합니다.<br><br>
+            <strong>제2조 (서비스 내용)</strong><br>
+            회사는 물류 대리점의 기사 정산 관리, 엑셀 자동 업로드, 라우트별 단가 관리, 명세서 발행 등의 SaaS 서비스를 제공합니다.<br><br>
+            <strong>제3조 (이용요금)</strong><br>
+            서비스 이용요금은 플랜에 따라 월 20,000원~100,000원이며, 매월 1일 기준으로 청구됩니다. 이용요금은 하나은행 270-910019-24204 (예금주: 엠비티아이)로 계좌이체 후 입금 확인 시 서비스가 연장됩니다.<br><br>
+            <strong>제4조 (개인정보 처리)</strong><br>
+            회사는 서비스 제공을 위해 대리점 및 기사의 개인정보를 수집·이용하며, 관련 법령에 따라 안전하게 관리합니다. 수집된 개인정보는 서비스 제공 목적 외로 사용되지 않습니다.<br><br>
+            <strong>제5조 (서비스 중단)</strong><br>
+            이용요금 미납 시 서비스 접근이 제한될 수 있으며, 이 경우 회사는 사전에 고지합니다.<br><br>
+            <strong>제6조 (지적재산권)</strong><br>
+            본 서비스의 소프트웨어, 디자인, 콘텐츠에 대한 모든 지적재산권은 엠비티아이 유한회사에 귀속됩니다.<br><br>
+            <strong>제7조 (분쟁해결)</strong><br>
+            본 약관과 관련된 분쟁은 부산지방법원을 관할 법원으로 합니다.<br><br>
+            사업자: 엠비티아이 유한회사 | 사업자등록번호: 373-86-02536<br>
+            주소: 부산광역시 수영구 수영로 668, 607호<br>
+            대표: 김형우 | 전화: 051-711-3103
+          </div>
+        </div>
+        <div style="padding:12px 20px;border-top:1px solid var(--border)">
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+            <input type="checkbox" id="terms-check" style="width:16px;height:16px">
+            위 이용약관 및 개인정보처리방침에 동의합니다
+          </label>
+        </div>
+        <div class="mdf">
+          <button class="btn btn-gray" onclick="doLogout()">거부 (로그아웃)</button>
+          <button class="btn btn-blue" onclick="acceptTerms()">✅ 동의하고 시작하기</button>
+        </div>
+      </div>
+    </div>`);
+}
+window.acceptTerms=async function(){
+  if(!document.getElementById('terms-check')?.checked){toast('약관에 동의해주세요');return;}
+  try{
+    await updateDoc(doc(db,'users',CU.uid),{termsAccepted:true,termsAcceptedAt:serverTimestamp()});
+    document.getElementById('mo-terms')?.remove();
+    toast('✅ 서비스 이용을 시작합니다');
+  }catch(e){toast('❌ '+e.message)}
+};
+
+// ════════════════════════════════════════
+// ██ 구독 관리 페이지 (admin) ██
+// ════════════════════════════════════════
+const PLAN_LABEL={starter:'스타터',standard:'스탠다드',pro:'프로',enterprise:'엔터프라이즈'};
+const PLAN_FEE={starter:20000,standard:40000,pro:70000,enterprise:100000};
+
+PAGES['admin-subscriptions']=async function(){
+  document.getElementById('page-title').textContent='구독 관리';
+  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-blue btn-sm" onclick="genAllInvoices()">📄 이번달 청구서 일괄 생성</button>`;
+  const c=document.getElementById('content');
+  c.innerHTML='<div class="loading">로딩 중...</div>';
+  try{
+    const [dSnap,sSnap]=await Promise.all([getDocs(collection(db,'dealers')),getDocs(collection(db,'subscriptions'))]);
+    const subMap={};sSnap.forEach(d=>subMap[d.id]=d.data());
+    const now=new Date();
+    const rows=dSnap.docs.map(d=>{
+      const dd=d.data();
+      const sub=subMap[d.id]||{};
+      const exp=sub.expireDate?.toDate?.()||null;
+      const isActive=sub.status==='active'&&exp&&exp>now;
+      const daysLeft=exp?Math.ceil((exp-now)/86400000):0;
+      return`<tr>
+        <td><strong>${esc(dd.name)}</strong><br><span style="font-size:10px;color:var(--text3)">${esc(dd.brn||'')}</span></td>
+        <td><span class="badge b-blue">${PLAN_LABEL[sub.plan||'standard']||'—'}</span></td>
+        <td style="font-weight:700">₩${fmt(sub.monthlyFee||PLAN_FEE[sub.plan]||0)}</td>
+        <td><span class="badge ${isActive?'b-green':'b-red'}">${isActive?'활성':'만료'}</span></td>
+        <td style="font-size:12px">${exp?exp.toLocaleDateString('ko-KR'):'—'}<br><span style="font-size:10px;color:${daysLeft<7?'var(--red)':'var(--text3)'}">${daysLeft>0?`D-${daysLeft}`:'만료됨'}</span></td>
+        <td style="display:flex;gap:4px;flex-wrap:wrap">
+          <button class="btn btn-green btn-xs" onclick="extendSub('${d.id}',30)">+30일</button>
+          <button class="btn btn-blue btn-xs" onclick="extendSub('${d.id}',365)">+1년</button>
+          <button class="btn btn-amber btn-xs" onclick="changePlan('${d.id}')">플랜변경</button>
+          <button class="btn btn-gray btn-xs" onclick="suspendSub('${d.id}','${esc(dd.name)}')">정지</button>
+        </td>
+      </tr>`;
+    }).join('');
+    c.innerHTML=`<div class="card"><div class="card-header"><div class="card-title">💳 구독 현황 (${dSnap.size}개 대리점)</div></div><div class="card-body"><div class="tbl-wrap"><table><thead><tr><th>대리점</th><th>플랜</th><th>월정액</th><th>상태</th><th>만료일</th><th>관리</th></tr></thead><tbody>${rows}</tbody></table></div></div></div>`;
+  }catch(e){c.innerHTML=`<div class="empty">⚠️ ${e.message}</div>`}
+};
+window.extendSub=async function(dealerId,days){
+  try{
+    const snap=await getDoc(doc(db,'subscriptions',dealerId));
+    const sub=snap.exists()?snap.data():{};
+    const now=new Date();
+    const base=sub.expireDate?.toDate?.()>now?sub.expireDate.toDate():now;
+    const newExp=new Date(base);newExp.setDate(newExp.getDate()+days);
+    await setDoc(doc(db,'subscriptions',dealerId),{status:'active',expireDate:newExp,updatedAt:serverTimestamp()},{merge:true});
+    toast(`✅ ${days}일 연장 완료 → ${newExp.toLocaleDateString('ko-KR')}`);
+    PAGES['admin-subscriptions']();
+  }catch(e){toast('❌ '+e.message)}
+};
+window._m_extendSub=window.extendSub;
+window.changePlan=async function(dealerId){
+  const plan=prompt('새 플랜 입력\nstarter(2만) / standard(4만) / pro(7만) / enterprise(10만):','standard');
+  if(!plan||!PLAN_FEE[plan]){toast('❌ 올바른 플랜을 입력해주세요');return;}
+  await setDoc(doc(db,'subscriptions',dealerId),{plan,monthlyFee:PLAN_FEE[plan],updatedAt:serverTimestamp()},{merge:true});
+  await updateDoc(doc(db,'dealers',dealerId),{plan,monthlyFee:PLAN_FEE[plan]});
+  toast(`✅ 플랜 변경: ${PLAN_LABEL[plan]}`);PAGES['admin-subscriptions']();
+};
+window._m_changePlan=window.changePlan;
+window.suspendSub=async function(dealerId,name){
+  if(!confirm(`${name} 구독을 정지하시겠습니까?\n(대리점 접근이 차단됩니다)`))return;
+  await setDoc(doc(db,'subscriptions',dealerId),{status:'suspended',updatedAt:serverTimestamp()},{merge:true});
+  toast(`🚫 ${name} 구독 정지`);PAGES['admin-subscriptions']();
+};
+window._m_suspendSub=window.suspendSub;
+
+// ════════════════════════════════════════
+// ██ 청구서 시스템 ██
+// ════════════════════════════════════════
+const BANK_INFO={bank:'하나은행',account:'270-910019-24204',holder:'엠비티아이',corp:'엠비티아이 유한회사',brn:'373-86-02536',ceo:'김형우',addr:'부산광역시 수영구 수영로 668, 607호',tel:'051-711-3103'};
+
+function buildInvoiceHTML(inv,dealer){
+  const issueDate=inv.createdAt?.toDate?.()||new Date();
+  const dueDate=new Date(issueDate);dueDate.setDate(25);
+  return`<div class="stmt-wrap" id="invoice-print-area">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+      <div>
+        <div class="stmt-brand">LogiNet · 로지넷 물류 정산관리</div>
+        <div class="stmt-title" style="font-size:22px">서비스 이용 청구서</div>
+        <div class="stmt-meta">청구월: ${inv.month||''} · 발행일: ${issueDate.toLocaleDateString('ko-KR')}</div>
+      </div>
+      <div style="text-align:right;font-size:11px;color:#888">
+        <div style="font-weight:800;font-size:13px;color:#1A5FA8">${BANK_INFO.corp}</div>
+        <div>사업자: ${BANK_INFO.brn}</div>
+        <div>대표: ${BANK_INFO.ceo}</div>
+        <div>${BANK_INFO.addr}</div>
+        <div>${BANK_INFO.tel}</div>
+      </div>
+    </div>
+    <hr class="stmt-divider">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;font-size:12px">
+      <div style="background:#f5f3ed;padding:12px;border-radius:8px">
+        <div style="font-weight:800;margin-bottom:6px;color:#1A5FA8">공급받는자 (청구대상)</div>
+        <div><strong>${esc(dealer?.corpName||dealer?.name||inv.dealerName||'')}</strong></div>
+        <div>사업자번호: ${esc(dealer?.brn||inv.brn||'—')}</div>
+        <div>대표자: ${esc(dealer?.ceoName||inv.ceoName||'—')}</div>
+        <div>담당자: ${esc(dealer?.managerName||'—')}</div>
+        <div>연락처: ${esc(dealer?.contact||'—')}</div>
+      </div>
+      <div style="background:#e8f1fb;padding:12px;border-radius:8px">
+        <div style="font-weight:800;margin-bottom:6px;color:#1A5FA8">입금 계좌</div>
+        <div style="font-size:16px;font-weight:900;color:#0C3F74">${BANK_INFO.bank}</div>
+        <div style="font-size:18px;font-weight:900;color:#1A5FA8;letter-spacing:1px">${BANK_INFO.account}</div>
+        <div style="font-weight:700">예금주: ${BANK_INFO.holder}</div>
+        <div style="color:#C0202A;font-weight:700;margin-top:4px">납부기한: ${dueDate.toLocaleDateString('ko-KR')}</div>
+      </div>
+    </div>
+    <div class="stmt-section-title">서비스 내역</div>
+    <div class="stmt-row"><span>📦 로지넷 물류정산관리 서비스 (${PLAN_LABEL[inv.plan||'standard']||'스탠다드'} 플랜)</span><span class="amt-plus">₩${fmt(inv.amount||0)}</span></div>
+    <div class="stmt-row"><span>청구 기간</span><span style="font-size:12px;color:#888">${inv.month||''}</span></div>
+    <div class="stmt-row total"><span>청구 금액 (VAT 포함)</span><span>₩${fmt(inv.amount||0)}</span></div>
+    <div style="margin-top:16px;padding:12px;background:#fff8e1;border-radius:8px;font-size:11px;border:1px solid #ffe082">
+      ⚠️ 입금 시 반드시 대리점명을 입금자명으로 기재해주세요.<br>
+      입금 확인 후 세금계산서가 발행됩니다. 문의: ${BANK_INFO.tel}
+    </div>
+    <div style="text-align:right;font-size:10px;color:#aaa;margin-top:12px">
+      ${BANK_INFO.corp} · 사업자번호 ${BANK_INFO.brn} · LogiNet v2.0
+    </div>
+  </div>`;
+}
+
+PAGES['admin-invoices']=async function(){
+  document.getElementById('page-title').textContent='청구서 관리';
+  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-blue btn-sm" onclick="genAllInvoices()">+ 이번달 청구서 생성</button>`;
+  const c=document.getElementById('content');
+  c.innerHTML='<div class="loading">로딩 중...</div>';
+  try{
+    const [iSnap,dSnap]=await Promise.all([getDocs(collection(db,'invoices')),getDocs(collection(db,'dealers'))]);
+    const dMap={};dSnap.forEach(d=>dMap[d.id]=d.data());
+    const invoices=iSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.month||'').localeCompare(a.month||''));
+    const thisM=curMonth();
+    const thisMonthTotal=invoices.filter(i=>i.month===thisM).reduce((a,i)=>a+(i.amount||0),0);
+    const paidTotal=invoices.filter(i=>i.status==='paid').reduce((a,i)=>a+(i.amount||0),0);
+    if(invoices.length===0){c.innerHTML='<div class="empty"><div class="empty-icon">📄</div><div>청구서가 없습니다</div></div>';return;}
+    const rows=invoices.map(i=>`<tr>
+      <td><strong>${esc(dMap[i.dealerId]?.name||i.dealerName||'')}</strong></td>
+      <td>${esc(i.month||'')}</td>
+      <td style="font-weight:700">₩${fmt(i.amount||0)}</td>
+      <td><span class="badge ${i.status==='paid'?'b-green':i.status==='overdue'?'b-red':'b-amber'}">${i.status==='paid'?'납부완료':i.status==='overdue'?'연체':'납부대기'}</span></td>
+      <td style="display:flex;gap:4px;flex-wrap:wrap">
+        <button class="btn btn-outline btn-xs" onclick="viewInvoice('${i.id}')">청구서</button>
+        ${i.status!=='paid'?`<button class="btn btn-green btn-xs" onclick="markInvoicePaid('${i.id}','${esc(dMap[i.dealerId]?.name||i.dealerName||'')}')">✅납부확인</button>`:''}
+        <button class="btn btn-kakao btn-xs" onclick="shareInvoiceKakao('${i.id}')">💬카톡</button>
+      </td>
+    </tr>`).join('');
+    c.innerHTML=`
+      <div class="stat-grid" style="grid-template-columns:repeat(3,1fr)">
+        <div class="stat-card"><div class="stat-val">${invoices.filter(i=>i.month===thisM).length}</div><div class="stat-lbl">📄 이번달 청구서</div></div>
+        <div class="stat-card"><div class="stat-val">₩${fmt(thisMonthTotal)}</div><div class="stat-lbl">💰 이번달 청구액</div></div>
+        <div class="stat-card"><div class="stat-val green">₩${fmt(paidTotal)}</div><div class="stat-lbl">✅ 누적 수납액</div></div>
+      </div>
+      <div class="card"><div class="card-header"><div class="card-title">📄 청구서 목록 (${invoices.length}건)</div></div><div class="card-body"><div class="tbl-wrap"><table><thead><tr><th>대리점</th><th>청구월</th><th>금액</th><th>상태</th><th>처리</th></tr></thead><tbody>${rows}</tbody></table></div></div></div>`;
+  }catch(e){c.innerHTML=`<div class="empty">⚠️ ${e.message}</div>`}
+};
+window.genAllInvoices=async function(){
+  if(!confirm(`${curMonth()} 청구서를 전체 대리점에 생성하시겠습니까?`))return;
+  try{
+    const [dSnap,sSnap,iSnap]=await Promise.all([getDocs(collection(db,'dealers')),getDocs(collection(db,'subscriptions')),getDocs(query(collection(db,'invoices'),where('month','==',curMonth())))]);
+    const existingDealer=new Set(iSnap.docs.map(d=>d.data().dealerId));
+    const subMap={};sSnap.forEach(d=>subMap[d.id]=d.data());
+    let cnt=0;
+    for(const d of dSnap.docs){
+      if(existingDealer.has(d.id))continue;
+      const dd=d.data();const sub=subMap[d.id]||{};
+      const fee=sub.monthlyFee||PLAN_FEE[sub.plan||'standard']||40000;
+      await addDoc(collection(db,'invoices'),{
+        dealerId:d.id,dealerName:dd.name,month:curMonth(),
+        amount:fee,plan:sub.plan||'standard',
+        status:'pending',brn:dd.brn||'',corpName:dd.corpName||dd.name,
+        ceoName:dd.ceoName||'',createdAt:serverTimestamp()
+      });cnt++;
+    }
+    toast(`✅ ${cnt}건 청구서 생성 완료`);PAGES['admin-invoices']();
+  }catch(e){toast('❌ '+e.message)}
+};
+window._m_genAllInvoices=window.genAllInvoices;
+window.viewInvoice=async function(id){
+  try{
+    const snap=await getDoc(doc(db,'invoices',id));
+    if(!snap.exists())return;
+    const inv={id,...snap.data()};
+    const dSnap=await getDoc(doc(db,'dealers',inv.dealerId));
+    const dealer=dSnap.exists()?dSnap.data():null;
+    const html=buildInvoiceHTML(inv,dealer);
+    document.getElementById('modals').insertAdjacentHTML('beforeend',`
+      <div class="mo show" id="mo-invoice-view">
+        <div class="md" style="max-width:600px">
+          <div class="mdt">📄 청구서 <button class="close-btn" onclick="document.getElementById('mo-invoice-view').remove()">✕</button></div>
+          <div class="mdb">${html}</div>
+          <div class="mdf no-print">
+            <button class="btn btn-gray btn-sm" onclick="document.getElementById('mo-invoice-view').remove()">닫기</button>
+            <button class="btn btn-blue btn-sm" onclick="copyInvoiceLink('${id}')">🔗 링크 복사</button>
+            <button class="btn btn-kakao btn-sm" onclick="shareInvoiceKakao('${id}')">💬 카카오톡</button>
+            <button class="btn btn-green btn-sm" onclick="window.print()">🖨️ 인쇄/PDF</button>
+          </div>
+        </div>
+      </div>`);
+  }catch(e){toast('❌ '+e.message)}
+};
+window._m_viewInvoice=window.viewInvoice;
+window.markInvoicePaid=async function(id,name){
+  if(!confirm(`${name} 납부 확인 처리하시겠습니까?\n구독이 1개월 연장됩니다.`))return;
+  try{
+    const snap=await getDoc(doc(db,'invoices',id));
+    if(!snap.exists())return;
+    const inv=snap.data();
+    await updateDoc(doc(db,'invoices',id),{status:'paid',paidAt:serverTimestamp()});
+    // 구독 1개월 연장
+    const sSnap=await getDoc(doc(db,'subscriptions',inv.dealerId));
+    if(sSnap.exists()){
+      const sub=sSnap.data();
+      const now=new Date();
+      const base=sub.expireDate?.toDate?.()>now?sub.expireDate.toDate():now;
+      const newExp=new Date(base);newExp.setMonth(newExp.getMonth()+1);
+      await updateDoc(doc(db,'subscriptions',inv.dealerId),{status:'active',expireDate:newExp,updatedAt:serverTimestamp()});
+    }
+    toast(`✅ ${name} 납부 확인 + 구독 1개월 연장`);PAGES['admin-invoices']();
+  }catch(e){toast('❌ '+e.message)}
+};
+window._m_markInvoicePaid=window.markInvoicePaid;
+window.copyInvoiceLink=async function(id){
+  const url=`${location.origin}${location.pathname}#invoice:${id}`;
+  try{await navigator.clipboard.writeText(url);}catch(e){prompt('링크:',url);return;}
+  toast('🔗 청구서 링크 복사됨');
+};
+window._m_copyInvoiceLink=window.copyInvoiceLink;
+window.shareInvoiceKakao=async function(id){
+  const url=`${location.origin}${location.pathname}#invoice:${id}`;
+  const msg=`[로지넷 청구서]\n서비스 이용료 청구서가 발행되었습니다.\n입금계좌: 하나은행 ${BANK_INFO.account} (${BANK_INFO.holder})\n\n청구서 확인: ${url}`;
+  if(navigator.share){navigator.share({title:'로지넷 청구서',text:msg,url}).catch(()=>{});}
+  else{
+    navigator.clipboard.writeText(msg).then(()=>toast('💬 카카오톡에 붙여넣기 후 발송해주세요')).catch(()=>prompt('복사 후 카카오톡 전송:',msg));
+  }
+};
+window._m_shareInvoiceKakao=window.shareInvoiceKakao;
+
+// ── 청구서 URL 해시 처리
+async function checkInvoiceHash(){
+  const hash=location.hash;
+  if(!hash.startsWith('#invoice:'))return;
+  const id=hash.replace('#invoice:','');
+  if(!id)return;
+  try{
+    const snap=await getDoc(doc(db,'invoices',id));
+    if(!snap.exists()){toast('청구서를 찾을 수 없습니다');return;}
+    const inv={id,...snap.data()};
+    const dSnap=await getDoc(doc(db,'dealers',inv.dealerId));
+    const dealer=dSnap.exists()?dSnap.data():null;
+    const html=buildInvoiceHTML(inv,dealer);
+    document.getElementById('modals').insertAdjacentHTML('beforeend',`
+      <div class="mo show" id="mo-invoice-hash" style="background:linear-gradient(135deg,var(--brand-d),var(--brand))">
+        <div class="md" style="max-width:600px">
+          <div class="mdt">📄 청구서</div>
+          <div class="mdb">${html}</div>
+          <div class="mdf"><button class="btn btn-green btn-sm" onclick="window.print()">🖨️ 인쇄/저장</button></div>
+        </div>
+      </div>`);
+    history.replaceState(null,'',location.pathname);
+  }catch(e){console.warn(e)}
+}
+
+// ════════════════════════════════════════
+// ██ 계약서 관리 페이지 ██
+// ════════════════════════════════════════
+PAGES['admin-contracts']=async function(){
+  document.getElementById('page-title').textContent='계약서 관리';
+  document.getElementById('topbar-actions').innerHTML='';
+  const c=document.getElementById('content');
+  c.innerHTML='<div class="loading">로딩 중...</div>';
+  try{
+    const dSnap=await getDocs(collection(db,'dealers'));
+    const rows=dSnap.docs.map(d=>{
+      const dd=d.data();
+      const status=dd.contractStatus||'none';
+      const statusBadge={sent:'b-blue',completed:'b-green',none:'b-gray'}[status]||'b-gray';
+      const statusLabel={sent:'발송완료',completed:'서명완료',none:'미발송'}[status]||'미발송';
+      return`<tr>
+        <td><strong>${esc(dd.name)}</strong></td>
+        <td style="font-size:11px;color:var(--text3)">${esc(dd.email||'—')}</td>
+        <td>${esc(dd.brn||'—')}</td>
+        <td><span class="badge ${statusBadge}">${statusLabel}</span></td>
+        <td style="display:flex;gap:4px;flex-wrap:wrap">
+          <button class="btn btn-blue btn-xs" onclick="resendContract('${d.id}','${esc(dd.name)}','${esc(dd.email)}','${esc(dd.managerName||'')}')">✍️발송</button>
+          ${status==='sent'?`<button class="btn btn-green btn-xs" onclick="markContractDone('${d.id}','${esc(dd.name)}')">✅서명완료</button>`:''}
+        </td>
+      </tr>`;
+    }).join('');
+    c.innerHTML=`
+      <div class="card">
+        <div class="card-header"><div class="card-title">✍️ 계약서 현황</div></div>
+        <div class="card-body">
+          <div class="info-box">💡 모두싸인 계약서를 발송합니다. API 키는 설정 페이지에서 등록하세요.</div>
+          <div class="tbl-wrap"><table><thead><tr><th>대리점</th><th>이메일</th><th>사업자번호</th><th>계약상태</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+        </div>
+      </div>`;
+  }catch(e){c.innerHTML=`<div class="empty">⚠️ ${e.message}</div>`}
+};
+window.resendContract=async function(dealerId,name,email,mgr){
+  if(!confirm(`${name}에게 서비스이용계약서를 발송하시겠습니까?`))return;
+  await sendModusignContract({dealerId,name,email,mgr});
+  await updateDoc(doc(db,'dealers',dealerId),{contractStatus:'sent',contractSentAt:serverTimestamp()});
+  toast(`✍️ ${name} 계약서 발송 처리`);PAGES['admin-contracts']();
+};
+window._m_resendContract=window.resendContract;
+window.markContractDone=async function(dealerId,name){
+  await updateDoc(doc(db,'dealers',dealerId),{contractStatus:'completed',contractCompletedAt:serverTimestamp()});
+  toast(`✅ ${name} 서명 완료 처리`);PAGES['admin-contracts']();
+};
+window._m_markContractDone=window.markContractDone;
+
+// ════════════════════════════════════════
+// ██ 대리점 구독 조회 페이지 ██
+// ════════════════════════════════════════
+PAGES['dealer-subscription']=async function(){
+  document.getElementById('page-title').textContent='내 구독 현황';
+  const c=document.getElementById('content');
+  c.innerHTML='<div class="loading">로딩 중...</div>';
+  try{
+    const snap=await getDoc(doc(db,'subscriptions',CU.dealerId));
+    if(!snap.exists()){c.innerHTML='<div class="empty"><div class="empty-icon">💳</div><div>구독 정보가 없습니다. 관리자에게 문의해주세요.</div></div>';return;}
+    const sub=snap.data();
+    const exp=sub.expireDate?.toDate?.()||null;
+    const now=new Date();
+    const isActive=sub.status==='active'&&exp&&exp>now;
+    const daysLeft=exp?Math.ceil((exp-now)/86400000):0;
+    c.innerHTML=`
+      <div class="card">
+        <div class="card-header"><div class="card-title">💳 구독 현황</div></div>
+        <div class="card-body">
+          <div class="stat-grid" style="grid-template-columns:repeat(3,1fr)">
+            <div class="stat-card"><div class="stat-val">${PLAN_LABEL[sub.plan||'standard']||'—'}</div><div class="stat-lbl">현재 플랜</div></div>
+            <div class="stat-card"><div class="stat-val">₩${fmt(sub.monthlyFee||0)}</div><div class="stat-lbl">월 이용료</div></div>
+            <div class="stat-card"><div class="stat-val ${daysLeft<7?'amber':''}">${daysLeft>0?`D-${daysLeft}`:'만료'}</div><div class="stat-lbl">남은 기간</div></div>
+          </div>
+          <div style="background:${isActive?'var(--green-l)':'var(--red-l)'};border:1.5px solid ${isActive?'var(--green)':'var(--red)'};border-radius:var(--r);padding:14px 16px;margin-top:12px">
+            <div style="font-size:16px;font-weight:900;color:${isActive?'var(--green)':'var(--red)'}">${isActive?'✅ 서비스 이용 중':'❌ 구독 만료'}</div>
+            <div style="font-size:12px;margin-top:4px">만료일: ${exp?exp.toLocaleDateString('ko-KR'):'—'}</div>
+          </div>
+          ${!isActive?`<div class="info-box" style="margin-top:12px">
+            💳 이용료 납부 후 관리자에게 연락해주세요<br>
+            <strong>하나은행 ${BANK_INFO.account} (${BANK_INFO.holder})</strong><br>
+            문의: ${BANK_INFO.tel}
+          </div>`:''}
+        </div>
+      </div>`;
+  }catch(e){c.innerHTML=`<div class="empty">⚠️ ${e.message}</div>`}
+};
+
+PAGES['dealer-invoices']=async function(){
+  document.getElementById('page-title').textContent='청구서 조회';
+  const c=document.getElementById('content');
+  c.innerHTML='<div class="loading">로딩 중...</div>';
+  try{
+    const snap=await getDocs(query(collection(db,'invoices'),where('dealerId','==',CU.dealerId)));
+    const invoices=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.month||'').localeCompare(a.month||''));
+    if(invoices.length===0){c.innerHTML='<div class="empty"><div class="empty-icon">📄</div><div>청구서가 없습니다</div></div>';return;}
+    const rows=invoices.map(i=>`<tr>
+      <td>${esc(i.month||'')}</td>
+      <td style="font-weight:700">₩${fmt(i.amount||0)}</td>
+      <td><span class="badge ${i.status==='paid'?'b-green':'b-amber'}">${i.status==='paid'?'납부완료':'납부대기'}</span></td>
+      <td><button class="btn btn-outline btn-xs" onclick="viewInvoice('${i.id}')">청구서 보기</button></td>
+    </tr>`).join('');
+    c.innerHTML=`
+      <div class="info-box">💳 납부 계좌: 하나은행 ${BANK_INFO.account} (예금주: ${BANK_INFO.holder})<br>입금 후 담당자(${BANK_INFO.tel})에게 연락 주시면 확인해드립니다.</div>
+      <div class="card"><div class="card-header"><div class="card-title">📄 청구서 목록</div></div><div class="card-body"><div class="tbl-wrap"><table><thead><tr><th>청구월</th><th>금액</th><th>상태</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div></div>`;
+  }catch(e){c.innerHTML=`<div class="empty">⚠️ ${e.message}</div>`}
+};
+
+// ════════════════════════════════════════
+// ██ SETTINGS 업그레이드 (모두싸인 키 포함) ██
+// ════════════════════════════════════════
+const _origAdminSettings=PAGES['admin-settings'];
+PAGES['admin-settings']=function(){
+  document.getElementById('page-title').textContent='시스템 설정';
+  document.getElementById('topbar-actions').innerHTML='';
+  const c=document.getElementById('content');
+  c.innerHTML=`
+    <div class="card">
+      <div class="card-header"><div class="card-title">⚙️ 관리자 계정</div></div>
+      <div class="card-body">
+        <div class="field"><label>현재 이메일</label><input value="${esc(CU.email||'')}" readonly></div>
+        <div class="field"><label>표시 이름</label><input id="set-name" value="${esc(CU.name||'')}"></div>
+        <button class="btn btn-blue" onclick="saveProfile()">저장</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">✍️ 모두싸인 API 설정</div></div>
+      <div class="card-body">
+        <div class="info-box">모두싸인 → 통합 설정 → API Key에서 발급받은 키를 입력하세요.</div>
+        <div class="field"><label>API Key</label><input id="ms-key" type="password" placeholder="모두싸인 API 키 입력"></div>
+        <div class="field"><label>서비스이용계약서 템플릿 ID (선택)</label><input id="ms-tmpl" placeholder="모두싸인 템플릿 ID"></div>
+        <button class="btn btn-blue" onclick="saveModusignKey()">💾 API 키 저장</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">🔑 관리자 계정 생성</div></div>
+      <div class="card-body">
+        <div class="fg">
+          <div class="field"><label>이메일 *</label><input id="adm-email" placeholder="admin@loginet.kr"></div>
+          <div class="field"><label>비밀번호 *</label><input id="adm-pw" type="password" placeholder="강력한 비밀번호"></div>
+        </div>
+        <div class="field"><label>표시 이름</label><input id="adm-name" placeholder="관리자"></div>
+        <button class="btn btn-blue" onclick="createAdmin()">관리자 계정 생성</button>
+      </div>
+    </div>`;
+  // 기존 모두싸인 키 불러오기
+  getDoc(doc(db,'settings','modusign')).then(s=>{
+    if(s.exists()){
+      const ms=document.getElementById('ms-key');if(ms)ms.value=s.data().apiKey?'●'.repeat(20):'';
+      const mt=document.getElementById('ms-tmpl');if(mt)mt.value=s.data().templateId||'';
+    }
+  }).catch(()=>{});
+};
+window.saveModusignKey=async function(){
+  const key=document.getElementById('ms-key')?.value;
+  const tmpl=document.getElementById('ms-tmpl')?.value||'';
+  if(!key||key.includes('●')){toast('새 API 키를 입력해주세요');return;}
+  try{
+    await setDoc(doc(db,'settings','modusign'),{apiKey:key,templateId:tmpl,updatedAt:serverTimestamp()},{merge:true});
+    toast('✅ 모두싸인 API 키 저장 완료');
+  }catch(e){toast('❌ '+e.message)}
+};
+window._m_saveModusignKey=window.saveModusignKey;
+
+// ── initApp에 이용약관 + 청구서해시 체크 추가
+
 
 </script>
 </body>
