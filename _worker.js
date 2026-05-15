@@ -1,56 +1,58 @@
+// MBTI 물류관리 Cloudflare Worker
+// ★ /label 경로 추가됨
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    const path = url.pathname;
 
-    // /claude-ocr 엔드포인트 — Claude API 프록시
-    if (url.pathname === '/claude-ocr') {
-      // CORS preflight
-      if (request.method === 'OPTIONS') {
-        return new Response(null, {
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type',
-          }
-        });
-      }
-
-      if (request.method !== 'POST') {
-        return new Response('Method not allowed', { status: 405 });
-      }
-
+    // ── /claude-ocr : Claude API 프록시 ──
+    if (path === '/claude-ocr' && request.method === 'POST') {
       try {
         const body = await request.json();
-        const res = await fetch('https://api.anthropic.com/v1/messages', {
+        const resp = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-api-key': env.CLAUDE_API_KEY,
+            'x-api-key': env.ANTHROPIC_API_KEY,
             'anthropic-version': '2023-06-01'
           },
           body: JSON.stringify(body)
         });
-
-        const data = await res.text();
-        return new Response(data, {
-          status: res.status,
+        const data = await resp.json();
+        return new Response(JSON.stringify(data), {
           headers: {
             'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*'
           }
         });
       } catch (e) {
-        return new Response(JSON.stringify({ error: { message: e.message } }), {
-          status: 500,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-          }
-        });
+        return new Response(JSON.stringify({ error: e.message }), { status: 500 });
       }
     }
 
-    // 나머지 요청은 정적 파일로 처리
+    // ── OPTIONS (CORS preflight) ──
+    if (request.method === 'OPTIONS') {
+      return new Response(null, {
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type'
+        }
+      });
+    }
+
+    // ★ ── /label : 영문 라벨 출력 앱 ──
+    if (path === '/label' || path === '/label/') {
+      const labelHtml = await env.ASSETS.fetch(
+        new Request('https://fake-host/쿠팡_영문라벨_스캔출력.html', request)
+      );
+      return new Response(await labelHtml.text(), {
+        headers: { 'Content-Type': 'text/html; charset=utf-8' }
+      });
+    }
+
+    // ── 기본: ASSETS 파일 서빙 ──
     return env.ASSETS.fetch(request);
   }
 };
