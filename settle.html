@@ -528,7 +528,9 @@ service cloud.firestore {
    'saveProfile','createAdmin','saveModusignKey',
    'extendSub','changePlan','suspendSub','genAllInvoices',
    'viewInvoice','markInvoicePaid','copyInvoiceLink','shareInvoiceKakao',
-   'resendContract','markContractDone','acceptTerms'
+   'resendContract','markContractDone','acceptTerms',
+   'openExcelDriverImport','parseDriversFromExcel','bulkSaveDrivers',
+   'addJobsub','removeJobsub'
   ].forEach(bridge);
 })();
 </script>
@@ -666,6 +668,7 @@ onAuthStateChanged(auth,async user=>{
     if(localStorage.getItem('ln_dark')==='1')document.body.classList.add('dark');
     // RPRICE Firebase 로드
     await loadRPRICE();
+    await loadJobsubs();
     initApp();
   }catch(e){toast('⚠️ 사용자 정보 로드 실패: '+e.message)}
 });
@@ -1637,10 +1640,21 @@ PAGES['dealer-dashboard']=async function(){
 // 👤 DEALER DRIVERS
 // ──────────────────────────────────────
 const CAMPS=['부산1','부산2','부산3','대구1','대구2','대구2B','진주M','창원','울산','기타'];
-const JOBSUBS=['쿠팡','컬리','CJ','용차'];
+// ★ 화주사 목록 (Firebase에서 로드, 기본값 포함)
+let JOBSUBS=['쿠팡','컬리','CJ','용차'];
+async function loadJobsubs(){
+  try{
+    const snap=await getDoc(doc(db,'settings','jobsubs'));
+    if(snap.exists()&&snap.data().list?.length){
+      JOBSUBS=snap.data().list;
+    }
+  }catch(e){}
+}
 PAGES['dealer-drivers']=async function(){
   document.getElementById('page-title').textContent='기사 관리';
-  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-blue btn-sm" onclick="openAddDriver()">+ 기사 추가</button>`;
+  document.getElementById('topbar-actions').innerHTML=`
+    <button class="btn btn-gray btn-sm" onclick="openExcelDriverImport()">📂 엑셀에서 일괄 추가</button>
+    <button class="btn btn-blue btn-sm" onclick="openAddDriver()">+ 기사 추가</button>`;
   const c=document.getElementById('content');
   c.innerHTML='<div class="loading">로딩 중...</div>';
   try{
@@ -1665,7 +1679,7 @@ PAGES['dealer-drivers']=async function(){
         </td>
       </tr>`;
     }).join('');
-    c.innerHTML=`<div class="card"><div class="card-header"><div class="card-title">👤 기사 목록 (${snap.size}명)</div></div><div class="card-body"><div class="tbl-wrap"><table><thead><tr><th>성함</th><th>아이디</th><th>캠프</th><th>분류</th><th>연락처</th><th>상태</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div></div>`;
+    c.innerHTML=`<div class="card"><div class="card-header"><div class="card-title">👤 기사 목록 (${snap.size}명)</div></div><div class="card-body"><div class="tbl-wrap"><table><thead><tr><th>성함</th><th>쿠팡 ID</th><th>캠프</th><th>분류</th><th>연락처</th><th>상태</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div></div>`;
     buildDriverModal();
   }catch(e){c.innerHTML=`<div class="empty">⚠️ ${e.message}</div>`}
 };
@@ -1678,20 +1692,25 @@ function buildDriverModal(){
         <div class="mdb">
           <div class="fg">
             <div class="field"><label>성함 *</label><input id="dr-name" placeholder="홍길동"></div>
-            <div class="field"><label>아이디 *</label><input id="dr-uid" placeholder="hong123"></div>
+            <div class="field"><label>쿠팡 ID *</label><input id="dr-uid" placeholder="hong123@df"></div>
           </div>
           <div class="fg">
             <div class="field"><label>캠프</label><select id="dr-camp">${CAMPS.map(c=>`<option>${c}</option>`).join('')}</select></div>
-            <div class="field"><label>분류</label><select id="dr-job">${JOBSUBS.map(j=>`<option>${j}</option>`).join('')}</select></div>
+            <div class="field"><label>화주사</label><select id="dr-job">${JOBSUBS.map(j=>`<option>${j}</option>`).join('')}</select></div>
           </div>
           <div class="fg">
             <div class="field"><label>연락처</label><input id="dr-phone" placeholder="010-0000-0000"></div>
-            <div class="field"><label>차량번호</label><input id="dr-car" placeholder="12가 3456"></div>
+            <div class="field"><label>계좌번호</label><input id="dr-acct" placeholder="은행명 계좌번호"></div>
           </div>
-          <div class="field"><label>계좌번호</label><input id="dr-acct" placeholder="은행명 계좌번호"></div>
-          <div class="field"><label>용차 배송단가 (용차 분류 시)</label><input id="dr-yong-del" type="number" placeholder="900" value="900"></div>
-          <div class="field"><label>기사 앱 로그인 이메일 (선택)</label><input id="dr-email" type="email" placeholder="기사가 앱으로 조회할 경우 입력"></div>
-          <div class="field"><label>기사 앱 비밀번호</label><input id="dr-pw" type="text" value="driver1234"></div>
+          <details style="margin-top:8px">
+            <summary style="font-size:12px;color:var(--text3);cursor:pointer;padding:4px 0">⚙️ 앱 로그인 설정 (선택)</summary>
+            <div style="margin-top:8px">
+              <div class="fg">
+                <div class="field"><label>앱 이메일</label><input id="dr-email" type="email" placeholder="기사 앱 조회용"></div>
+                <div class="field"><label>앱 비밀번호</label><input id="dr-pw" type="text" value="driver1234"></div>
+              </div>
+            </div>
+          </details>
         </div>
         <div class="mdf">
           <button class="btn btn-gray" onclick="closeModal('mo-driver')">취소</button>
@@ -1702,10 +1721,129 @@ function buildDriverModal(){
 }
 window.openAddDriver=function(){
   buildDriverModal();
-  ['dr-name','dr-uid','dr-phone','dr-car','dr-acct','dr-email'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['dr-name','dr-uid','dr-phone','dr-acct','dr-email'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const pw=document.getElementById('dr-pw');if(pw)pw.value='driver1234';
   openModal('mo-driver');
 };
+// ★ 엑셀에서 기사 일괄 추가
+window.openExcelDriverImport=function(){
+  document.getElementById('mo-driver-excel')?.remove();
+  document.getElementById('modals').insertAdjacentHTML('beforeend',`
+    <div class="mo show" id="mo-driver-excel">
+      <div class="md" style="max-width:600px">
+        <div class="mdt">📂 쿠팡 엑셀에서 기사 일괄 추가
+          <button class="close-btn" onclick="document.getElementById('mo-driver-excel').remove()">✕</button>
+        </div>
+        <div class="mdb">
+          <div class="info-box">쿠팡 정산서 엑셀을 업로드하면 기사 ID가 자동 추출됩니다. 성함만 입력 후 일괄 등록!</div>
+          <div class="excel-drop" id="de-drop">
+            <input type="file" accept=".xlsx,.xls" onchange="parseDriversFromExcel(this)">
+            <div style="font-size:22px;margin-bottom:4px">📂</div>
+            <div style="font-size:12px;font-weight:700;color:var(--brand)">쿠팡 정산서 엑셀 업로드</div>
+          </div>
+          <div id="de-result"></div>
+        </div>
+        <div class="mdf">
+          <button class="btn btn-gray" onclick="document.getElementById('mo-driver-excel').remove()">닫기</button>
+          <button class="btn btn-blue" id="de-save-btn" style="display:none" onclick="bulkSaveDrivers()">✅ 일괄 등록</button>
+        </div>
+      </div>
+    </div>`);
+};
+window._m_openExcelDriverImport=window.openExcelDriverImport;
+window.parseDriversFromExcel=function(inp){
+  const file=inp.files[0];if(!file)return;
+  toast('📊 기사 ID 추출 중...');
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      let ws=null;
+      for(const name of wb.SheetNames){
+        const candidate=wb.Sheets[name];
+        const sample=XLSX.utils.sheet_to_json(candidate,{header:1,defval:null,range:0});
+        if(sample.length>0&&sample[0]&&sample[0][0]==='구분'){ws=candidate;break;}
+      }
+      if(!ws){toast('❌ 정산Raw 시트를 찾을 수 없습니다');return;}
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+      const hIdx=rows.findIndex(r=>r&&r[0]==='구분');
+      if(hIdx<0){toast('❌ 구분 헤더를 찾을 수 없습니다');return;}
+      const driverMap={};
+      rows.slice(hIdx+1).forEach(row=>{
+        if(!row||row[0]!=='배송'||!row[1]||!row[2])return;
+        const id=String(row[1]).trim();
+        const camp=row[4]?String(row[4]).trim():'';
+        if(!driverMap[id])driverMap[id]={id,camp};
+      });
+      window._driverImportList=Object.values(driverMap);
+      getDocs(query(collection(db,'drivers'),where('dealerId','==',CU.dealerId))).then(snap=>{
+        const existMap={};
+        snap.docs.forEach(d=>existMap[d.data().userId]=d.data().name);
+        const list=window._driverImportList;
+        const campMap={'부산1':'부산1','부산2':'부산2','부산3':'부산3','M_진주1':'진주M','대구2':'대구2','대구2B':'대구2B'};
+        const res=document.getElementById('de-result');
+        if(!res)return;
+        res.innerHTML=`
+          <div class="section-label" style="margin-top:12px">추출된 기사 (${list.length}명)</div>
+          <div style="max-height:360px;overflow-y:auto">
+          <table style="width:100%;font-size:12px;border-collapse:collapse">
+            <thead style="background:var(--bg3);position:sticky;top:0"><tr>
+              <th style="padding:6px 8px;text-align:left">쿠팡 ID</th>
+              <th style="padding:6px 8px;text-align:left">캠프</th>
+              <th style="padding:6px 8px;text-align:left">성함 *</th>
+              <th style="padding:6px 8px;text-align:left">화주사</th>
+              <th style="padding:6px 8px;text-align:left">상태</th>
+            </tr></thead>
+            <tbody>
+            ${list.map((d,i)=>{
+              const mapped=campMap[d.camp]||d.camp||'기타';
+              const existing=existMap[d.id];
+              return`<tr style="border-bottom:1px solid var(--border)">
+                <td style="padding:5px 8px;font-size:11px;font-family:monospace">${esc(d.id)}</td>
+                <td style="padding:5px 8px;font-size:11px">${esc(mapped)}</td>
+                <td style="padding:5px 8px"><input id="di-name-${i}" value="${esc(existing||'')}" placeholder="성함" style="width:80px;padding:3px 6px;border:1.5px solid var(--border);border-radius:5px;font-size:12px"></td>
+                <td style="padding:5px 8px"><select id="di-job-${i}" style="padding:3px 6px;border:1.5px solid var(--border);border-radius:5px;font-size:12px">${JOBSUBS.map(j=>`<option>${j}</option>`).join('')}</select></td>
+                <td style="padding:5px 8px"><span class="badge ${existing?'b-green':'b-gray'}">${existing?'등록됨 (수정가능)':'신규'}</span></td>
+              </tr>`;
+            }).join('')}
+            </tbody>
+          </table></div>`;
+        const btn=document.getElementById('de-save-btn');
+        if(btn)btn.style.display='inline-flex';
+        toast(`✅ ${list.length}명 추출 — 성함 입력 후 일괄 등록`);
+      });
+    }catch(e){toast('❌ 엑셀 분석 오류: '+e.message);}
+  };
+  reader.readAsArrayBuffer(file);
+};
+window._m_parseDriversFromExcel=window.parseDriversFromExcel;
+window.bulkSaveDrivers=async function(){
+  const list=window._driverImportList||[];
+  const campMap={'부산1':'부산1','부산2':'부산2','부산3':'부산3','M_진주1':'진주M','대구2':'대구2','대구2B':'대구2B'};
+  let saved=0,updated=0,skipped=0;
+  for(let i=0;i<list.length;i++){
+    const name=(document.getElementById(`di-name-${i}`)?.value||'').trim();
+    if(!name){skipped++;continue;}
+    const jobsub=document.getElementById(`di-job-${i}`)?.value||'쿠팡';
+    const d=list[i];
+    const camp=campMap[d.camp]||d.camp||'기타';
+    const existing=await getDocs(query(collection(db,'drivers'),where('userId','==',d.id),where('dealerId','==',CU.dealerId)));
+    if(!existing.empty){
+      await updateDoc(doc(db,'drivers',existing.docs[0].id),{name,jobsub,camp,updatedAt:serverTimestamp()});
+      updated++;
+    }else{
+      await addDoc(collection(db,'drivers'),{
+        name,userId:d.id,dealerId:CU.dealerId,
+        camp,jobsub,is_active:true,status:'재직',createdAt:serverTimestamp()
+      });
+      saved++;
+    }
+  }
+  toast(`✅ 신규 ${saved}명 등록, ${updated}명 수정${skipped>0?' ('+skipped+'명 건너뜀)':''}`);
+  document.getElementById('mo-driver-excel')?.remove();
+  PAGES['dealer-drivers']();
+};
+window._m_bulkSaveDrivers=window.bulkSaveDrivers;
 // ★ 기사 행에서 바로 정산 입력
 window.quickSettle=async function(driverName,jobsub){
   buildSettleModal();
@@ -2140,44 +2278,66 @@ window.onJobsubChange=function(){
 };
 window.handleExcelUpload=function(inp){
   const file=inp.files[0];if(!file)return;
-  parseExcelData(file,function(result){
+  parseExcelData(file,async function(result){
     _excelRoutes=result.routes;
-    const g=id=>{const el=document.getElementById(id);if(el)el.value=0;};
-    const s=function(id,v){const el=document.getElementById(id);if(el)el.value=v;};
-    s('se-dcnt',result.totalDel);
-    s('se-damt',result.totalAmt);
-    s('se-rcnt',result.totalRet);
-    s('se-ramt',result.totalRetAmt);
-    s('se-fresh',result.totalFresh);
-    s('se-finc',result.finc);
-    s('se-nocont',result.totalNocont);
-    s('se-nocont-cnt',result.totalNocontCnt);
+    const sv=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v;};
+    sv('se-dcnt',result.totalDel);sv('se-damt',result.totalAmt);
+    sv('se-rcnt',result.totalRet);sv('se-ramt',result.totalRetAmt);
+    sv('se-fresh',result.totalFresh);sv('se-finc',result.finc);
+    sv('se-nocont',result.totalNocont);sv('se-nocont-cnt',result.totalNocontCnt);
+    // ★ 기사 자동 매칭
+    if(result.driverIdFromExcel){
+      try{
+        const drSnap=await getDocs(query(collection(db,'drivers'),
+          where('userId','==',result.driverIdFromExcel),where('dealerId','==',CU.dealerId)));
+        if(!drSnap.empty){
+          const dr=drSnap.docs[0].data();
+          const dEl=document.getElementById('se-driver');
+          if(dEl&&!dEl.value){dEl.value=dr.name;}
+          const jEl=document.getElementById('se-jobsub');
+          if(jEl&&dr.jobsub)jEl.value=dr.jobsub;
+          onJobsubChange();
+          toast(`👤 기사 자동 매칭: ${dr.name}`);
+        }
+      }catch(e){}
+    }
     calcSettlePreview();
     const drop=document.getElementById('se-excel-drop');
     if(drop)drop.className='excel-drop done';
+    // ★ 캠프별 라우트 분류
+    const cmap={'101':'부산1캠프','215':'부산1캠프','812':'부산2캠프','508':'부산3캠프',
+      '109':'대구2캠프','213':'대구2B캠프','608':'진주M캠프','612':'진주M캠프',
+      '613':'진주M캠프','614':'진주M캠프','619':'진주M캠프'};
+    const ccol={'부산1캠프':'#3B82F6','부산2캠프':'#8B5CF6','부산3캠프':'#10B981',
+      '대구2캠프':'#F59E0B','대구2B캠프':'#FB923C','진주M캠프':'#EF4444','기타':'#6B7280','미계약':'#F59E0B'};
+    const campRoutes={};
+    result.routes.forEach(r=>{
+      const prefix=r.route.replace(/[A-D]$/,'');
+      const camp=r.route==='미계약'?'미계약':(cmap[prefix]||'기타');
+      campRoutes[camp]=campRoutes[camp]||[];campRoutes[camp].push(r);
+    });
+    const campOrder=['부산1캠프','부산2캠프','부산3캠프','대구2캠프','대구2B캠프','진주M캠프','기타','미계약'];
+    const campHTML=campOrder.filter(camp=>campRoutes[camp]?.length).map(camp=>{
+      const rs=campRoutes[camp];
+      const tot=rs.reduce((s,r)=>s+r.amt+(r.retAmt||0),0);
+      return`<div style="margin-bottom:8px">
+        <div style="font-size:11px;font-weight:700;color:${ccol[camp]||'#666'};padding:3px 0;border-bottom:1px solid var(--border)">
+          🏕 ${camp} — ${rs.reduce((s,r)=>s+(r.cnt||0),0).toLocaleString()}건 · ₩${fmt(tot)}
+        </div>
+        <table class="route-tbl" style="margin-top:0"><thead><tr><th>라우트</th><th>배송</th><th>반품</th><th>단가</th><th>소계</th></tr></thead><tbody>
+        ${rs.map(r=>`<tr><td><strong>${esc(r.route)}</strong></td><td>${fmt(r.cnt)}</td><td style="color:var(--amber)">${r.ret>0?fmt(r.ret):'—'}</td><td>${r.unitPrice?fmt(r.unitPrice)+'원':'—'}</td><td style="color:var(--green)">₩${fmt(r.amt+(r.retAmt||0))}</td></tr>`).join('')}
+        </tbody></table></div>`;
+    }).join('');
     const res=document.getElementById('se-excel-result');
     if(res){
       res.style.display='block';
       res.innerHTML=`
-        <div class="section-label" style="margin-top:8px">📊 라우트별 실적 (${result.routes.length}개)</div>
-        <div style="max-height:140px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r);margin-bottom:8px">
-          <table class="route-tbl">
-            <thead><tr><th>라우트</th><th>배송건</th><th>반품건</th><th>단가</th><th>배송금액</th><th>소계</th></tr></thead>
-            <tbody>
-              ${result.routes.map(r=>`<tr>
-                <td><strong>${esc(r.route)}</strong></td>
-                <td>${fmt(r.cnt)}</td>
-                <td style="color:var(--amber)">${r.ret>0?fmt(r.ret):'—'}</td>
-                <td>${r.unitPrice?fmt(r.unitPrice)+'원':'—'}</td>
-                <td>₩${fmt(r.amt)}</td>
-                <td style="font-weight:600;color:var(--green)">₩${fmt(r.amt+(r.retAmt||0))}</td>
-              </tr>`).join('')}
-            </tbody>
-          </table>
-        </div>
-        <div style="display:flex;gap:8px;font-size:12px;font-weight:700;flex-wrap:wrap">
+        <div class="section-label" style="margin-top:8px">📊 캠프별 라우트 (${result.routes.length}개)</div>
+        <div style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r);padding:6px;margin-bottom:8px">${campHTML}</div>
+        <div style="display:flex;gap:8px;font-size:12px;font-weight:700;flex-wrap:wrap;padding:6px;background:var(--brand-l);border-radius:var(--r)">
           <span style="color:var(--green)">📦 배송: ₩${fmt(result.totalAmt)}</span>
           <span style="color:var(--teal)">⭐ 인센: ₩${fmt(result.finc)}</span>
+          ${result.totalFresh>0?`<span style="color:var(--blue)">🎒 프레시백: ₩${fmt(result.totalFresh)}</span>`:''}
           ${result.totalNocont>0?`<span style="color:var(--amber)">📌 미계약: ₩${fmt(result.totalNocont)}</span>`:''}
         </div>`;
     }
@@ -3049,6 +3209,22 @@ PAGES['admin-settings']=function(){
       </div>
     </div>
     <div class="card">
+      <div class="card-header"><div class="card-title">🚛 화주사 관리</div></div>
+      <div class="card-body">
+        <div class="info-box">기사 분류 및 정산서에 표시되는 화주사 목록을 관리합니다.</div>
+        <div id="jobsub-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+          ${JOBSUBS.map(j=>`<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:var(--brand-l);border:1px solid var(--brand);border-radius:20px;font-size:13px;font-weight:600">
+            ${esc(j)}
+            ${['쿠팡','컬리','CJ','용차'].includes(j)?'':'<button onclick="removeJobsub(\''+esc(j)+'\')" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:14px;line-height:1;padding:0">✕</button>'}
+          </span>`).join('')}
+        </div>
+        <div class="fg" style="max-width:300px">
+          <div class="field"><label>화주사 추가</label><input id="new-jobsub" placeholder="예: 롯데글로벌로지스" onkeydown="if(event.key==='Enter')addJobsub()"></div>
+        </div>
+        <button class="btn btn-blue btn-sm" onclick="addJobsub()">+ 추가</button>
+      </div>
+    </div>
+    <div class="card">
       <div class="card-header"><div class="card-title">✍️ 모두싸인 API 설정</div></div>
       <div class="card-body">
         <div class="info-box">모두싸인 → 통합 설정 → API Key에서 발급받은 키를 입력하세요.</div>
@@ -3068,7 +3244,6 @@ PAGES['admin-settings']=function(){
         <button class="btn btn-blue" onclick="createAdmin()">관리자 계정 생성</button>
       </div>
     </div>`;
-  // 기존 모두싸인 키 불러오기
   getDoc(doc(db,'settings','modusign')).then(s=>{
     if(s.exists()){
       const ms=document.getElementById('ms-key');if(ms)ms.value=s.data().apiKey?'●'.repeat(20):'';
@@ -3076,6 +3251,25 @@ PAGES['admin-settings']=function(){
     }
   }).catch(()=>{});
 };
+window.addJobsub=async function(){
+  const val=(document.getElementById('new-jobsub')?.value||'').trim();
+  if(!val){toast('화주사명을 입력해주세요');return;}
+  if(JOBSUBS.includes(val)){toast('이미 있는 화주사입니다');return;}
+  JOBSUBS.push(val);
+  await setDoc(doc(db,'settings','jobsubs'),{list:JOBSUBS},{merge:false});
+  document.getElementById('new-jobsub').value='';
+  toast(`✅ "${val}" 추가 완료`);
+  PAGES['admin-settings']();
+};
+window._m_addJobsub=window.addJobsub;
+window.removeJobsub=async function(name){
+  if(!confirm(`"${name}" 화주사를 삭제하시겠습니까?`))return;
+  JOBSUBS=JOBSUBS.filter(j=>j!==name);
+  await setDoc(doc(db,'settings','jobsubs'),{list:JOBSUBS},{merge:false});
+  toast(`🗑 "${name}" 삭제 완료`);
+  PAGES['admin-settings']();
+};
+window._m_removeJobsub=window.removeJobsub;
 window.saveModusignKey=async function(){
   const key=document.getElementById('ms-key')?.value;
   const tmpl=document.getElementById('ms-tmpl')?.value||'';
