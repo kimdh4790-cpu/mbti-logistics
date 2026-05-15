@@ -534,11 +534,11 @@ service cloud.firestore {
 
 <!-- ══ FIREBASE + APP LOGIC ══ -->
 <script type="module">
-import{initializeApp}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import{initializeApp,deleteApp}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import{getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged,createUserWithEmailAndPassword}
   from'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import{getFirestore,doc,getDoc,setDoc,addDoc,updateDoc,deleteDoc,collection,
-  query,where,getDocs,orderBy,limit,serverTimestamp,writeBatch,onSnapshot,getDocFromServer}
+  query,where,getDocs,orderBy,limit,serverTimestamp,writeBatch,onSnapshot}
   from'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 // ══ FIREBASE CONFIG ══
@@ -554,6 +554,19 @@ const FB_CFG={
 const fb=initializeApp(FB_CFG);
 const auth=getAuth(fb);
 const db=getFirestore(fb);
+
+// ★ 관리자 세션 유지하면서 새 계정 생성 (Secondary App 방식)
+async function createUserKeepSession(email, pw){
+  const secondaryApp=initializeApp(FB_CFG,'secondary_'+Date.now());
+  try{
+    const secondaryAuth=getAuth(secondaryApp);
+    const uc=await createUserWithEmailAndPassword(secondaryAuth,email,pw);
+    await signOut(secondaryAuth);
+    return uc.user;
+  }finally{
+    await deleteApp(secondaryApp);
+  }
+}
 
 // ══ RPRICE (쿠팡 라우트 단가표) — v9 완전 이식 ══
 let RPRICE={
@@ -634,10 +647,7 @@ onAuthStateChanged(auth,async user=>{
     CU=null;return;
   }
   try{
-    // ★ 캐시 우회 — 서버에서 직접 읽어서 최신 role 보장
-    let uSnap;
-    try{ uSnap=await getDocFromServer(doc(db,'users',user.uid)); }
-    catch(e){ uSnap=await getDoc(doc(db,'users',user.uid)); } // 오프라인 fallback
+    const uSnap=await getDoc(doc(db,'users',user.uid));
     if(!uSnap.exists()){
       const isAdmin=user.email==='admin@mbti.kr'||user.email==='admin@loginet.kr';
       await setDoc(doc(db,'users',user.uid),{
@@ -1189,7 +1199,7 @@ window.addDealer=async function(){
   const pw=document.getElementById('d-pw')?.value?.trim();
   if(!name||!email||!pw){toast('❌ 필수 항목을 입력해주세요');return;}
   try{
-    const uc=await createUserWithEmailAndPassword(auth,email,pw);
+    const uc=await createUserKeepSession(email,pw);
     const uid=uc.user.uid;
     const dealerRef=await addDoc(collection(db,'dealers'),{
       name,email,contact:document.getElementById('d-tel')?.value||'',
@@ -1218,8 +1228,8 @@ window.addDealerV2=async function(){
   // 만료일 계산
   const expDate=new Date();expDate.setDate(expDate.getDate()+trialDays+(trialDays>0?0:30));
   try{
-    const uc=await createUserWithEmailAndPassword(auth,email,pw);
-    const uid=uc.user.uid;
+    const uc=await createUserKeepSession(email,pw);
+    const uid=uc.uid;
     const mgr=document.getElementById('d2-mgr')?.value||'';
     // 대리점 문서
     const dealerRef=await addDoc(collection(db,'dealers'),{
@@ -1700,9 +1710,9 @@ window.addDriver=async function(){
     const pw=document.getElementById('dr-pw').value.trim();
     if(email&&pw){
       try{
-        const uc=await createUserWithEmailAndPassword(auth,email,pw);
-        driverData.authUid=uc.user.uid;
-        await setDoc(doc(db,'users',uc.user.uid),{
+        const uc=await createUserKeepSession(email,pw);
+        driverData.authUid=uc.uid;
+        await setDoc(doc(db,'users',uc.uid),{
           email,name,role:'driver',dealerId:CU.dealerId,driverUserId:userId,createdAt:serverTimestamp()
         });
       }catch(ae){if(ae.code!=='auth/email-already-in-use')throw ae;}
@@ -2379,15 +2389,25 @@ PAGES['driver-home']=async function(){
   const c=document.getElementById('content');
   c.innerHTML='<div class="loading">로딩 중...</div>';
   try{
+    // 기사 정보 로드
     const driverSnap=await getDocs(query(collection(db,'drivers'),where('authUid','==',CU.uid)));
     let driver=driverSnap.empty?null:driverSnap.docs[0].data();
     const dname=driver?.name||CU.name||'';
 
-    const sSnap=await getDocs(query(collection(db,'settlements'),where('dealerId','==',CU.dealerId||'')));
-    const mySettles=sSnap.docs
-      .filter(d=>(d.data().driverName===dname||d.data().driver===dname))
-      .map(d=>({id:d.id,...d.data()}))
-      .sort((a,b)=>(b.month||'').localeCompare(a.month||''));
+    // ★ 기사 이름 기반으로 정산 조회 (보안 규칙 통과)
+    let mySettles=[];
+    try{
+      const sSnap=await getDocs(query(collection(db,'settlements'),where('driver','==',dname)));
+      mySettles=sSnap.docs.map(d=>({id:d.id,...d.data()}))
+        .sort((a,b)=>(b.month||'').localeCompare(a.month||''));
+    }catch(e){
+      // driverName 필드로 재시도
+      try{
+        const sSnap2=await getDocs(query(collection(db,'settlements'),where('driverName','==',dname)));
+        mySettles=sSnap2.docs.map(d=>({id:d.id,...d.data()}))
+          .sort((a,b)=>(b.month||'').localeCompare(a.month||''));
+      }catch(e2){console.warn('settlement query:',e2.message);}
+    }
 
     if(mySettles.length===0){
       c.innerHTML=`
@@ -2425,7 +2445,6 @@ PAGES['driver-home']=async function(){
 };
 window.viewDriverSettle=async function(id){
   try{
-    const snap=await getDoc(doc(db,'settlements',id));
     if(!snap.exists())return;
     const sd={id,...snap.data()};
     let dn='';
