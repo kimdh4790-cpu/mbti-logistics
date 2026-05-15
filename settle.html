@@ -2149,20 +2149,32 @@ function buildSettleModal(){
           <button class="close-btn" onclick="closeModal('mo-settle')">✕</button>
         </div>
         <div class="mdb">
+
+          <!-- ★ 엑셀 업로드 최상단 (업로드하면 기사·건수 자동입력) -->
+          <div id="se-excel-section">
+            <div class="section-label">📂 쿠팡 정산 엑셀 업로드 <span style="font-size:10px;font-weight:400;color:var(--text3)">(업로드 시 기사·건수·금액 자동 입력)</span></div>
+            <div class="excel-drop" id="se-excel-drop">
+              <input type="file" accept=".xlsx,.xls,.csv" onchange="handleExcelUpload(this)">
+              <div style="font-size:22px;margin-bottom:4px">📂</div>
+              <div style="font-size:12px;font-weight:700;color:var(--brand)">엑셀 파일 업로드</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:3px">업로드하면 기사명·라우트 자동 매칭</div>
+            </div>
+            <div id="se-excel-result" style="display:none"></div>
+          </div>
+
+          <div class="divider"></div>
+
           <!-- 기본 정보 -->
           <div class="fg">
-            <div class="field"><label>기사 *</label>
-              <input id="se-driver" list="driver-list" placeholder="기사명 입력" oninput="onDriverInput()">
+            <div class="field"><label>기사 <span style="font-size:10px;color:var(--text3)">(엑셀 업로드 시 자동입력)</span></label>
+              <input id="se-driver" list="driver-list" placeholder="기사명 입력 또는 엑셀 업로드">
               <datalist id="driver-list"></datalist>
             </div>
             <div class="field"><label>정산월 *</label><input id="se-month" type="month"></div>
           </div>
           <div class="field"><label>화주사 (업무 분류)</label>
             <select id="se-jobsub" onchange="onJobsubChange()">
-              <option value="쿠팡">쿠팡</option>
-              <option value="컬리">마켓컬리</option>
-              <option value="CJ">CJ대한통운</option>
-              <option value="용차">용차</option>
+              ${JOBSUBS.map(j=>`<option value="${esc(j)}">${esc(j)}</option>`).join('')}
             </select>
           </div>
 
@@ -2174,22 +2186,6 @@ function buildSettleModal(){
               <div class="field"><label>반품 단가 (원/건)</label><input id="se-yong-ret" type="number" value="900" oninput="calcSettlePreview()"></div>
             </div>
           </div>
-
-          <!-- 엑셀 업로드 (쿠팡/컬리/CJ) -->
-          <div id="se-excel-section">
-            <div class="section-label">📂 쿠팡 정산 엑셀 업로드</div>
-            <div class="excel-drop" id="se-excel-drop">
-              <input type="file" accept=".xlsx,.xls,.csv" onchange="handleExcelUpload(this)">
-              <div style="font-size:22px;margin-bottom:4px">📂</div>
-              <div style="font-size:12px;font-weight:700;color:var(--brand)">엑셀 파일 업로드</div>
-              <div style="font-size:10px;color:var(--text3);margin-top:3px">구분/날짜/라우트/배송건/반품건</div>
-            </div>
-            <div id="se-excel-result" style="display:none"></div>
-          </div>
-
-          <div class="divider"></div>
-
-          <!-- 건수/금액 -->
           <div class="section-label">📦 배송 실적</div>
           <div class="fg3">
             <div class="field"><label>배송건수</label><input id="se-dcnt" type="number" min="0" oninput="calcSettlePreview()"></div>
@@ -2287,6 +2283,7 @@ window.handleExcelUpload=function(inp){
     sv('se-nocont',result.totalNocont);sv('se-nocont-cnt',result.totalNocontCnt);
     // ★ 기사 자동 매칭
     if(result.driverIdFromExcel){
+      window._lastDriverId=result.driverIdFromExcel;
       try{
         const drSnap=await getDocs(query(collection(db,'drivers'),
           where('userId','==',result.driverIdFromExcel),where('dealerId','==',CU.dealerId)));
@@ -2389,8 +2386,13 @@ window.openNewSettle=async function(){
   openModal('mo-settle');
 };
 window.saveSettle=async function(){
-  const driver=document.getElementById('se-driver').value.trim();
-  if(!driver){toast('❌ 기사를 입력해주세요');return;}
+  let driver=document.getElementById('se-driver').value.trim();
+  // 엑셀 업로드 시 driverIdFromExcel로 대체 가능
+  if(!driver&&_excelRoutes?.length){
+    driver=window._lastDriverId||'미지정';
+    const dEl=document.getElementById('se-driver');if(dEl)dEl.value=driver;
+  }
+  if(!driver){toast('❌ 기사명을 입력하거나 엑셀을 업로드해주세요');return;}
   const month=document.getElementById('se-month').value;
   if(!month){toast('❌ 정산월을 선택해주세요');return;}
   const g=id=>+(document.getElementById(id)||{value:0}).value||0;
