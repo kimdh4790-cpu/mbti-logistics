@@ -17,7 +17,7 @@ export default {
       });
     }
 
-    // ── /claude-ocr : POST 요청을 ASSETS보다 먼저 가로채기 ──
+    // ── /claude-ocr (기존 앱용) ──
     if (path === '/claude-ocr' && method === 'POST') {
       try {
         const body = await request.json();
@@ -32,18 +32,37 @@ export default {
         });
         const data = await resp.json();
         return new Response(JSON.stringify(data), {
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-          }
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
         });
       } catch (e) {
         return new Response(JSON.stringify({ error: e.message }), {
           status: 500,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        });
+      }
+    }
+
+    // ── /label-ocr (라벨 앱 전용 - functions 충돌 없이 독립) ──
+    if (path === '/label-ocr' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const resp = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-          }
+            'x-api-key': env.ANTHROPIC_API_KEY,
+            'anthropic-version': '2023-06-01'
+          },
+          body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        return new Response(JSON.stringify(data), {
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
         });
       }
     }
@@ -58,13 +77,6 @@ export default {
       return new Response(resp.body, {
         status: resp.status,
         headers: { 'Content-Type': 'text/html; charset=utf-8' }
-      });
-    }
-
-    // ── GET /claude-ocr 테스트용 ──
-    if (path === '/claude-ocr' && method === 'GET') {
-      return new Response(JSON.stringify({ status: 'worker OK', path: path }), {
-        headers: { 'Content-Type': 'application/json' }
       });
     }
 

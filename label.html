@@ -268,7 +268,7 @@ async function runOCR(){
 
   try{
     document.getElementById('loading-msg').textContent='AI 번역 중...';
-    var res=await fetch('/claude-ocr',{
+    var res=await fetch('/label-ocr',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
