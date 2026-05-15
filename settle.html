@@ -487,6 +487,40 @@ service cloud.firestore {
 <div id="toast"></div>
 <div id="modals"></div>
 
+<!-- ══ ES MODULE 브릿지 — 모듈 로드 전 onclick 오류 방지 ══ -->
+<script>
+(function(){
+  // 모듈이 로드되기 전 클릭 시 재시도 (최대 3초)
+  function bridge(name){
+    window[name]=function(){
+      var real=window['_m_'+name];
+      if(real){real.apply(this,arguments);}
+      else{
+        var args=arguments;
+        var tries=0;
+        var t=setInterval(function(){
+          tries++;
+          var fn=window['_m_'+name];
+          if(fn){clearInterval(t);fn.apply(window,args);}
+          else if(tries>30){clearInterval(t);console.warn('[LogiNet] '+name+' 로드 실패');}
+        },100);
+      }
+    };
+  }
+  ['doLogin','doLogout','openSb','closeSb','toggleDark','closeModal','goPage',
+   'openAddDealer','addDealer','editDealer','saveDealer',
+   'openAddDriver','addDriver','delDriver','editDriver','saveDriver',
+   'openNewSettle','saveSettle','viewSettle','approveSettle','delSettle',
+   'viewDriverSettle','adminViewSettle','filterSettles',
+   'onDriverInput','onJobsubChange','handleExcelUpload','calcSettlePreview',
+   'addRoutePrice','delRoutePrice','saveAllRoutePrices','saveOneRoutePrice','saveUnitPrices',
+   'addDealerRoute','updateDealerPrice','deleteDealerPrice',
+   'copyStmtLink','shareKakao','showStmtModal',
+   'saveProfile','createAdmin'
+  ].forEach(bridge);
+})();
+</script>
+
 <!-- ══ FIREBASE + APP LOGIC ══ -->
 <script type="module">
 import{initializeApp}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -558,10 +592,13 @@ function toggleDark(){
 }
 function openModal(id){const m=document.getElementById(id);if(m)m.classList.add('show')}
 function closeModal(id){const m=document.getElementById(id);if(m)m.classList.remove('show')}
-window.openSb=openSb;window.closeSb=closeSb;window.toggleDark=toggleDark;window.closeModal=closeModal;
+window.openSb=window._m_openSb=openSb;
+window.closeSb=window._m_closeSb=closeSb;
+window.toggleDark=window._m_toggleDark=toggleDark;
+window.closeModal=window._m_closeModal=closeModal;
 
 // ══ LOGIN ══
-window.doLogin=async function(){
+window._m_doLogin=window.doLogin=async function(){
   const email=document.getElementById('l-email').value.trim();
   const pw=document.getElementById('l-pw').value;
   const err=document.getElementById('l-err');
@@ -573,7 +610,7 @@ window.doLogin=async function(){
     document.getElementById('l-pw').value='';
   }
 };
-window.doLogout=async function(){
+window._m_doLogout=window.doLogout=async function(){
   if(!confirm('로그아웃 하시겠습니까?'))return;
   await signOut(auth);
 };
@@ -885,7 +922,7 @@ function goPage(page,el){
   closeSb();
   PAGES[page]?.();
 }
-window.goPage=goPage;
+window.goPage=window._m_goPage=goPage;
 
 // ════════════════════════════════════════
 // ██ PAGES ██
@@ -2094,9 +2131,8 @@ window.viewDriverSettle=async function(id){
   }catch(e){toast('❌ '+e.message)}
 };
 
-// ── 전역 함수 export ──
-window.doLogin=window.doLogin;
-window.doLogout=window.doLogout;
+// ── module loaded ──
+console.log('[LogiNet v2] 모듈 로드 완료');
 
 </script>
 </body>
