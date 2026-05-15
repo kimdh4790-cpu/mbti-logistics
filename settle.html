@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>정산관리 시스템</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --blue:#1A5FA8;--blue-d:#0C3F74;--blue-l:#E8F1FB;
+  --green:#0D6B45;--green-l:#E4F5EE;
+  --red:#B02020;--red-l:#FBEAEA;
+  --amber:#7A4500;--amber-l:#FDF0DE;
+  --purple:#4A3DB0;--purple-l:#EEECFC;
+  --teal:#0A6860;--teal-l:#E2F4F2;
+  --gray:#52504C;--gray-l:#F2F0EA;--gray-m:#D0CEC6;
+  --bg:#F5F4EF;--bg2:#FFFFFF;--bg3:#ECEAE3;
+  --text:#1E1E1C;--text2:#52504C;--text3:#8A887E;
+  --border:rgba(0,0,0,.09);--r:10px;--rl:14px;
+  --shadow:0 2px 12px rgba(0,0,0,.08);
+}
+body.dark{
+  --bg:#111110;--bg2:#1C1C1A;--bg3:#242422;
+  --text:#E8E6DF;--text2:#A0A09A;--text3:#66655F;
+  --border:rgba(255,255,255,.1);--gray-l:#242422;
+  --blue-l:#0A2540;--green-l:#042A1C;--red-l:#2A0A0A;
+  --amber-l:#2A1800;--purple-l:#180F3A;--teal-l:#041E1B;
+}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Malgun Gothic',-apple-system,sans-serif;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
+
+/* ── 로그인 ── */
+#login-wrap{
+  position:fixed;inset:0;z-index:9999;
+  background:linear-gradient(145deg,var(--blue-d) 0%,var(--blue) 60%,#2B7FCC 100%);
+  display:flex;align-items:center;justify-content:center;
+}
+.login-box{
+  background:var(--bg2);border-radius:20px;
+  padding:44px 40px;width:360px;max-width:94vw;
+  box-shadow:0 24px 60px rgba(0,0,0,.3);
+}
+.login-logo{font-size:32px;text-align:center;margin-bottom:6px}
+.login-title{font-size:22px;font-weight:900;color:var(--blue);text-align:center;margin-bottom:2px}
+.login-sub{font-size:11px;color:var(--text3);text-align:center;margin-bottom:28px}
+.login-input{
+  width:100%;padding:12px 14px;margin-bottom:10px;
+  border:1.5px solid var(--border);border-radius:10px;
+  font-size:14px;outline:none;background:var(--bg);color:var(--text);
+  transition:border-color .15s;
+}
+.login-input:focus{border-color:var(--blue)}
+.login-btn{
+  width:100%;padding:13px;background:var(--blue);color:#fff;
+  border:none;border-radius:10px;font-size:15px;font-weight:700;
+  cursor:pointer;transition:background .15s;
+}
+.login-btn:hover{background:var(--blue-d)}
+.login-err{color:var(--red);font-size:12px;text-align:center;margin-top:10px;display:none}
+
+/* ── 레이아웃 ── */
+#app{display:none}
+.layout{display:flex;min-height:100vh}
+
+/* ── 사이드바 ── */
+.sidebar{
+  width:220px;min-height:100vh;
+  background:var(--blue-d);
+  display:flex;flex-direction:column;
+  position:fixed;left:0;top:0;bottom:0;
+  z-index:100;transition:transform .25s;
+}
+.sb-logo{
+  padding:20px 16px 16px;
+  border-bottom:1px solid rgba(255,255,255,.1);
+}
+.sb-logo-icon{font-size:22px;font-weight:900;color:#fff}
+.sb-logo-sub{font-size:10px;color:rgba(255,255,255,.5);margin-top:2px}
+.sb-user{
+  padding:12px 16px;
+  border-bottom:1px solid rgba(255,255,255,.1);
+}
+.sb-user-name{font-size:13px;font-weight:700;color:#fff}
+.sb-user-role{font-size:10px;color:rgba(255,255,255,.55);margin-top:2px}
+.sb-user-dealer{font-size:10px;color:rgba(255,255,255,.4);margin-top:1px}
+.snav{flex:1;padding:10px 0;overflow-y:auto}
+.ns{font-size:9px;font-weight:700;color:rgba(255,255,255,.35);padding:10px 16px 4px;letter-spacing:.08em;text-transform:uppercase}
+.ni{
+  padding:9px 16px;cursor:pointer;
+  font-size:13px;color:rgba(255,255,255,.7);
+  border-radius:8px;margin:1px 8px;
+  transition:all .15s;
+}
+.ni:hover{background:rgba(255,255,255,.1);color:#fff}
+.ni.on{background:rgba(255,255,255,.18);color:#fff;font-weight:700}
+.sb-bot{padding:12px 16px;border-top:1px solid rgba(255,255,255,.1)}
+.sb-bot-btn{
+  width:100%;padding:8px;background:transparent;
+  border:1px solid rgba(255,255,255,.25);border-radius:8px;
+  color:rgba(255,255,255,.6);font-size:11px;cursor:pointer;
+  margin-bottom:6px;transition:all .15s;
+}
+.sb-bot-btn:hover{background:rgba(255,255,255,.12);color:#fff}
+
+/* ── 메인 ── */
+.main{margin-left:220px;flex:1;display:flex;flex-direction:column}
+.topbar{
+  height:52px;background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;position:sticky;top:0;z-index:50;
+}
+.topbar-title{font-size:15px;font-weight:800}
+.content{padding:20px;flex:1}
+
+/* ── 카드 ── */
+.card{background:var(--bg2);border-radius:var(--rl);border:1px solid var(--border);margin-bottom:14px;overflow:hidden}
+.card-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:14px;font-weight:800}
+.card-body{padding:16px}
+
+/* ── 통계 카드 ── */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:16px}
+.stat-card{
+  background:var(--bg2);border-radius:var(--rl);
+  border:1px solid var(--border);padding:16px;
+}
+.stat-val{font-size:24px;font-weight:900;color:var(--blue)}
+.stat-lbl{font-size:11px;color:var(--text3);margin-top:3px}
+
+/* ── 버튼 ── */
+.btn{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:7px 14px;border-radius:8px;font-size:13px;
+  font-weight:600;cursor:pointer;border:none;
+  transition:all .15s;white-space:nowrap;
+}
+.btn-blue{background:var(--blue);color:#fff}
+.btn-blue:hover{background:var(--blue-d)}
+.btn-green{background:var(--green);color:#fff}
+.btn-green:hover{background:#095234}
+.btn-red{background:var(--red);color:#fff}
+.btn-red:hover{background:#8A1818}
+.btn-gray{background:var(--gray-l);color:var(--text2);border:1px solid var(--border)}
+.btn-gray:hover{background:var(--gray-m)}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-outline{background:transparent;border:1.5px solid var(--blue);color:var(--blue)}
+.btn-outline:hover{background:var(--blue-l)}
+
+/* ── 폼 ── */
+.field{margin-bottom:12px}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px}
+.field input,.field select,.field textarea{
+  width:100%;padding:9px 12px;
+  border:1.5px solid var(--border);border-radius:8px;
+  font-size:13px;background:var(--bg);color:var(--text);outline:none;
+  transition:border-color .15s;
+}
+.field input:focus,.field select:focus{border-color:var(--blue)}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+
+/* ── 테이블 ── */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead tr{background:var(--bg3)}
+th{padding:9px 12px;text-align:left;font-weight:700;font-size:12px;color:var(--text2)}
+td{padding:9px 12px;border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg3)}
+
+/* ── 배지 ── */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700}
+.b-blue{background:var(--blue-l);color:var(--blue)}
+.b-green{background:var(--green-l);color:var(--green)}
+.b-red{background:var(--red-l);color:var(--red)}
+.b-amber{background:var(--amber-l);color:var(--amber)}
+.b-purple{background:var(--purple-l);color:var(--purple)}
+.b-gray{background:var(--gray-l);color:var(--gray)}
+
+/* ── 모달 ── */
+.mo{
+  position:fixed;inset:0;z-index:200;
+  background:rgba(0,0,0,.5);backdrop-filter:blur(3px);
+  display:none;align-items:center;justify-content:center;padding:16px;
+}
+.mo.show{display:flex}
+.md{
+  background:var(--bg2);border-radius:var(--rl);
+  width:100%;max-width:480px;max-height:90vh;overflow-y:auto;
+  box-shadow:0 20px 60px rgba(0,0,0,.3);
+}
+.mdt{padding:16px 20px;border-bottom:1px solid var(--border);font-size:15px;font-weight:800;display:flex;align-items:center;justify-content:space-between}
+.mdb{padding:20px}
+.mdf{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+.close-btn{background:none;border:none;cursor:pointer;color:var(--text3);font-size:18px;padding:2px}
+
+/* ── 토스트 ── */
+#toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:#1E1E1C;color:#fff;padding:10px 20px;border-radius:100px;
+  font-size:13px;font-weight:600;opacity:0;pointer-events:none;z-index:9999;
+  transition:all .25s;white-space:nowrap;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── 정산 명세서 ── */
+.stmt-wrap{background:#fff;color:#1a1a18;padding:24px;border-radius:12px;max-width:600px;margin:0 auto}
+.stmt-header{border-bottom:2px solid #1a1a18;padding-bottom:12px;margin-bottom:16px}
+.stmt-company{font-size:11px;color:#888;font-weight:700;letter-spacing:.1em}
+.stmt-title{font-size:22px;font-weight:900}
+.stmt-driver{font-size:14px;color:#444;margin-top:4px}
+.stmt-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #f0ede5;font-size:13px}
+.stmt-row:last-child{border:none}
+.stmt-row.total{background:#f8f6f0;margin:0 -24px;padding:12px 24px;font-weight:800;font-size:15px;border-bottom:none}
+.stmt-row.deduct{color:#B02020}
+.stmt-row.net{background:#1A5FA8;color:#fff;margin:0 -24px;padding:14px 24px;border-radius:0 0 12px 12px;font-weight:900;font-size:16px}
+.amt-plus{color:#0D6B45;font-weight:700}
+.amt-minus{color:#B02020;font-weight:700}
+
+/* ── 기사 뷰 ── */
+.driver-hero{
+  background:linear-gradient(135deg,var(--blue-d),var(--blue));
+  border-radius:var(--rl);padding:20px;color:#fff;margin-bottom:14px;
+}
+.driver-hero-name{font-size:20px;font-weight:900}
+.driver-hero-info{font-size:12px;opacity:.7;margin-top:4px}
+.settle-card{
+  background:var(--bg2);border-radius:var(--rl);
+  border:1px solid var(--border);padding:16px;margin-bottom:10px;
+  cursor:pointer;transition:all .15s;
+}
+.settle-card:hover{border-color:var(--blue);transform:translateY(-1px);box-shadow:var(--shadow)}
+.settle-card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.settle-card-month{font-size:14px;font-weight:800}
+.settle-card-net{font-size:18px;font-weight:900;color:var(--blue)}
+
+/* ── 반응형 ── */
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .main{margin-left:0}
+  .topbar{padding:0 12px}
+  .content{padding:12px}
+  .ham{display:block!important}
+  .stat-grid{grid-template-columns:1fr 1fr}
+  .fg,.fg3{grid-template-columns:1fr}
+}
+.ham{display:none;cursor:pointer;font-size:20px;padding:4px}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99;display:none}
+.overlay.show{display:block}
+
+/* ── 로딩 ── */
+.loading{text-align:center;padding:40px;color:var(--text3)}
+.empty{text-align:center;padding:40px 20px;color:var(--text3)}
+.empty-icon{font-size:40px;margin-bottom:10px}
+</style>
+</head>
+<body>
+
+<!-- 로그인 화면 -->
+<div id="login-wrap">
+  <div class="login-box">
+    <div class="login-logo">💰</div>
+    <div class="login-title">정산관리 시스템</div>
+    <div class="login-sub">Logistics Settlement Manager</div>
+    <input class="login-input" id="l-email" type="email" placeholder="이메일" autocomplete="email"
+      onkeydown="if(event.key==='Enter')document.getElementById('l-pw').focus()">
+    <input class="login-input" id="l-pw" type="password" placeholder="비밀번호" autocomplete="current-password"
+      onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">로그인</button>
+    <div class="login-err" id="l-err">이메일 또는 비밀번호를 확인해주세요</div>
+  </div>
+</div>
+
+<!-- 메인 앱 -->
+<div id="app">
+  <div class="overlay" id="overlay" onclick="closeSb()"></div>
+  <div class="layout">
+    <!-- 사이드바 -->
+    <div class="sidebar" id="sidebar">
+      <div class="sb-logo">
+        <div class="sb-logo-icon">💰 정산관리</div>
+        <div class="sb-logo-sub">Settlement Manager v1.0</div>
+      </div>
+      <div class="sb-user">
+        <div class="sb-user-name" id="sb-name">—</div>
+        <div class="sb-user-role" id="sb-role">—</div>
+        <div class="sb-user-dealer" id="sb-dealer"></div>
+      </div>
+      <nav class="snav" id="snav"></nav>
+      <div class="sb-bot">
+        <button class="sb-bot-btn" onclick="toggleDark()">🌙 다크모드</button>
+        <button class="sb-bot-btn" onclick="doLogout()">🚪 로그아웃</button>
+      </div>
+    </div>
+
+    <!-- 메인 -->
+    <div class="main">
+      <div class="topbar">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="ham" onclick="openSb()">☰</div>
+          <div class="topbar-title" id="page-title">대시보드</div>
+        </div>
+        <div style="display:flex;gap:8px" id="topbar-actions"></div>
+      </div>
+      <div class="content" id="content">
+        <div class="loading">⏳ 로딩 중...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, collection, query, where, getDocs, orderBy, serverTimestamp, writeBatch } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCTywAQNHg8IEYmbU64aYAhjqXMHWbJhjo",
+  authDomain: "mbti-logistics-bfcd3.firebaseapp.com",
+  databaseURL: "https://mbti-logistics-bfcd3-default-rtdb.firebaseio.com",
+  projectId: "mbti-logistics-bfcd3",
+  storageBucket: "mbti-logistics-bfcd3.firebasestorage.app",
+  messagingSenderId: "780709870161",
+  appId: "1:780709870161:web:4325a56d089bfa18855670",
+  measurementId: "G-6BV3H169QZ"
+};
+
+const fb = initializeApp(firebaseConfig);
+const auth = getAuth(fb);
+const db = getFirestore(fb);
+
+// ── 전역 상태 ──
+let CU = null; // current user data
+
+// ── 유틸 ──
+function fmt(n){return Math.round(n||0).toLocaleString('ko-KR')}
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2800);
+}
+function escH(s){if(!s)return'';return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function today(){return new Date().toISOString().slice(0,10)}
+function openSb(){document.getElementById('sidebar').classList.add('open');document.getElementById('overlay').classList.add('show')}
+function closeSb(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show')}
+function toggleDark(){document.body.classList.toggle('dark')}
+window.openSb=openSb; window.closeSb=closeSb; window.toggleDark=toggleDark;
+
+// ── 모달 ──
+function openModal(id){document.getElementById(id).classList.add('show')}
+function closeModal(id){document.getElementById(id).classList.remove('show')}
+window.closeModal=closeModal;
+
+// ── 로그인 ──
+window.doLogin=async function(){
+  const email=document.getElementById('l-email').value.trim();
+  const pw=document.getElementById('l-pw').value;
+  const err=document.getElementById('l-err');
+  try{
+    err.style.display='none';
+    await signInWithEmailAndPassword(auth,email,pw);
+  }catch(e){
+    err.style.display='block';
+    document.getElementById('l-pw').value='';
+  }
+};
+
+window.doLogout=async function(){
+  if(!confirm('로그아웃 하시겠습니까?'))return;
+  await signOut(auth);
+};
+
+// ── Auth 상태 감지 ──
+onAuthStateChanged(auth, async user=>{
+  if(!user){
+    document.getElementById('login-wrap').style.display='flex';
+    document.getElementById('app').style.display='none';
+    CU=null;
+    return;
+  }
+  // 사용자 정보 로드
+  try{
+    const uSnap=await getDoc(doc(db,'users',user.uid));
+    if(!uSnap.exists()){
+      // 최초 어드민 자동 생성
+      const isAdmin=user.email==='admin@mbti.kr';
+      await setDoc(doc(db,'users',user.uid),{
+        email:user.email,name:isAdmin?'관리자':'사용자',
+        role:isAdmin?'admin':'driver',dealerId:'',createdAt:serverTimestamp()
+      });
+      CU={uid:user.uid,email:user.email,name:isAdmin?'관리자':'사용자',role:isAdmin?'admin':'driver',dealerId:''};
+    }else{
+      CU={uid:user.uid,...uSnap.data()};
+    }
+    document.getElementById('login-wrap').style.display='none';
+    document.getElementById('app').style.display='block';
+    initApp();
+  }catch(e){
+    toast('사용자 정보 로드 실패: '+e.message);
+  }
+});
+
+// ── 앱 초기화 ──
+function initApp(){
+  // 사이드바 사용자 정보
+  document.getElementById('sb-name').textContent=CU.name||CU.email;
+  const roleLabel={admin:'슈퍼 관리자',dealer:'대리점 관리자',driver:'기사'}[CU.role]||CU.role;
+  document.getElementById('sb-role').textContent=roleLabel;
+  if(CU.dealerName) document.getElementById('sb-dealer').textContent=CU.dealerName;
+
+  // 다크모드 복원
+  if(localStorage.getItem('dark_mode')==='1') document.body.classList.add('dark');
+
+  // 메뉴 구성
+  buildNav();
+  // 첫 페이지
+  if(CU.role==='admin') goPage('admin-dashboard');
+  else if(CU.role==='dealer') goPage('dealer-dashboard');
+  else goPage('driver-home');
+}
+
+// ── 메뉴 ──
+const MENUS={
+  admin:[
+    {section:'대시보드',items:[{icon:'📊',label:'전체 현황',page:'admin-dashboard'}]},
+    {section:'관리',items:[
+      {icon:'🏢',label:'대리점 관리',page:'admin-dealers'},
+      {icon:'👥',label:'전체 기사',page:'admin-drivers'},
+      {icon:'📋',label:'전체 정산',page:'admin-settlements'},
+    ]},
+    {section:'계정',items:[{icon:'⚙️',label:'시스템 설정',page:'admin-settings'}]}
+  ],
+  dealer:[
+    {section:'대시보드',items:[{icon:'📊',label:'현황',page:'dealer-dashboard'}]},
+    {section:'운영',items:[
+      {icon:'👤',label:'기사 관리',page:'dealer-drivers'},
+      {icon:'📋',label:'정산 관리',page:'dealer-settlements'},
+    ]},
+    {section:'단가',items:[{icon:'📌',label:'라우트 단가표',page:'dealer-prices'}]}
+  ],
+  driver:[
+    {section:'내 정산',items:[
+      {icon:'📋',label:'명세서 조회',page:'driver-home'},
+    ]}
+  ]
+};
+
+function buildNav(){
+  const nav=document.getElementById('snav');
+  const menus=MENUS[CU.role]||[];
+  nav.innerHTML=menus.map(g=>`
+    <div class="ns">${g.section}</div>
+    ${g.items.map(m=>`<div class="ni" onclick="goPage('${m.page}',this)">${m.icon} ${m.label}</div>`).join('')}
+  `).join('');
+}
+
+function goPage(page, el){
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
+  if(el) el.classList.add('on');
+  else{
+    document.querySelectorAll('.ni').forEach(n=>{
+      if(n.getAttribute('onclick')?.includes(page)) n.classList.add('on');
+    });
+  }
+  closeSb();
+  PAGES[page]?.();
+}
+window.goPage=goPage;
+
+// ── 페이지 렌더러 ──
+const PAGES={};
+
+// ────────────────────────────────────────
+// 관리자 페이지
+// ────────────────────────────────────────
+
+PAGES['admin-dashboard']=async function(){
+  document.getElementById('page-title').textContent='전체 현황';
+  document.getElementById('topbar-actions').innerHTML='';
+  const c=document.getElementById('content');
+  c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
+  try{
+    const [dealersSnap,driversSnap,settleSnap]=await Promise.all([
+      getDocs(collection(db,'dealers')),
+      getDocs(collection(db,'drivers')),
+      getDocs(collection(db,'settlements'))
+    ]);
+    const dealers=dealersSnap.size, drivers=driversSnap.size;
+    const settles=settleSnap.docs.map(d=>d.data());
+    const approved=settles.filter(s=>s.status==='approved').length;
+    const totalNet=settles.filter(s=>s.status==='approved').reduce((a,s)=>a+(s.net||0),0);
+
+    c.innerHTML=`
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-val">${dealers}</div><div class="stat-lbl">🏢 등록 대리점</div></div>
+        <div class="stat-card"><div class="stat-val">${drivers}</div><div class="stat-lbl">👤 전체 기사</div></div>
+        <div class="stat-card"><div class="stat-val">${approved}</div><div class="stat-lbl">✅ 승인된 정산</div></div>
+        <div class="stat-card"><div class="stat-val">₩${fmt(totalNet)}</div><div class="stat-lbl">💰 총 지급액</div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">🏢 대리점 현황</div><button class="btn btn-blue btn-sm" onclick="goPage('admin-dealers')">대리점 관리</button></div>
+        <div class="card-body" id="dealer-list-mini">
+          <div class="loading">로딩 중...</div>
+        </div>
+      </div>`;
+    // 대리점 목록
+    const dealerMini=document.getElementById('dealer-list-mini');
+    if(dealers===0){
+      dealerMini.innerHTML='<div class="empty"><div class="empty-icon">🏢</div><div>등록된 대리점이 없습니다</div><button class="btn btn-blue btn-sm" style="margin-top:12px" onclick="goPage(\'admin-dealers\')">첫 대리점 추가</button></div>';
+    }else{
+      const rows=dealersSnap.docs.map(d=>{
+        const dd=d.data();
+        return`<tr><td><strong>${escH(dd.name)}</strong></td><td>${escH(dd.contact||'—')}</td><td><span class="badge b-blue">${dd.driverCount||0}명</span></td><td><span class="badge ${dd.active?'b-green':'b-gray'}">${dd.active?'운영중':'비활성'}</span></td></tr>`;
+      }).join('');
+      dealerMini.innerHTML=`<div class="tbl-wrap"><table><thead><tr><th>대리점명</th><th>연락처</th><th>기사수</th><th>상태</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    }
+  }catch(e){c.innerHTML=`<div class="empty">오류: ${e.message}</div>`}
+};
+
+PAGES['admin-dealers']=async function(){
+  document.getElementById('page-title').textContent='대리점 관리';
+  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-blue btn-sm" onclick="openAddDealer()">+ 대리점 추가</button>`;
+  const c=document.getElementById('content');
+  c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
+  try{
+    const snap=await getDocs(collection(db,'dealers'));
+    if(snap.empty){
+      c.innerHTML=`<div class="empty"><div class="empty-icon">🏢</div><div style="font-size:15px;font-weight:700;margin-bottom:6px">등록된 대리점이 없습니다</div><div style="font-size:12px;color:var(--text3);margin-bottom:16px">첫 번째 대리점을 추가해보세요</div><button class="btn btn-blue" onclick="openAddDealer()">+ 대리점 추가</button></div>`;
+      addDealerModal();
+      return;
+    }
+    const rows=snap.docs.map(d=>{
+      const dd=d.data();
+      return`<tr>
+        <td><strong>${escH(dd.name)}</strong></td>
+        <td style="font-size:11px;color:var(--text3)">${escH(dd.email||'—')}</td>
+        <td>${escH(dd.contact||'—')}</td>
+        <td><span class="badge b-blue">${dd.driverCount||0}명</span></td>
+        <td><span class="badge ${dd.active!==false?'b-green':'b-gray'}">${dd.active!==false?'운영중':'비활성'}</span></td>
+        <td><button class="btn btn-gray btn-sm" onclick="editDealer('${d.id}')">수정</button></td>
+      </tr>`;
+    }).join('');
+    c.innerHTML=`<div class="card"><div class="card-header"><div class="card-title">🏢 대리점 목록 (${snap.size}개)</div></div><div class="card-body"><div class="tbl-wrap"><table><thead><tr><th>대리점명</th><th>관리자 이메일</th><th>연락처</th><th>기사수</th><th>상태</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div></div>`;
+    addDealerModal();
+  }catch(e){c.innerHTML=`<div class="empty">오류: ${e.message}</div>`}
+};
+
+function addDealerModal(){
+  if(document.getElementById('mo-dealer')) return;
+  document.body.insertAdjacentHTML('beforeend',`
+    <div class="mo" id="mo-dealer">
+      <div class="md">
+        <div class="mdt">🏢 대리점 추가 <button class="close-btn" onclick="closeModal('mo-dealer')">✕</button></div>
+        <div class="mdb">
+          <div class="field"><label>대리점명 *</label><input id="d-name" placeholder="예: 부산물류서비스"></div>
+          <div class="fg">
+            <div class="field"><label>관리자 이메일 *</label><input id="d-email" type="email" placeholder="manager@email.com"></div>
+            <div class="field"><label>초기 비밀번호 *</label><input id="d-pw" type="text" placeholder="초기 비밀번호" value="settle1234"></div>
+          </div>
+          <div class="fg">
+            <div class="field"><label>연락처</label><input id="d-tel" placeholder="051-000-0000"></div>
+            <div class="field"><label>담당자명</label><input id="d-mgr" placeholder="홍길동"></div>
+          </div>
+          <div class="field"><label>주소</label><input id="d-addr" placeholder="시/도 구/군 주소"></div>
+        </div>
+        <div class="mdf">
+          <button class="btn btn-gray" onclick="closeModal('mo-dealer')">취소</button>
+          <button class="btn btn-blue" onclick="addDealer()">✅ 추가</button>
+        </div>
+      </div>
+    </div>`);
+}
+
+window.openAddDealer=function(){
+  addDealerModal();
+  ['d-name','d-email','d-tel','d-mgr','d-addr'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  const pw=document.getElementById('d-pw'); if(pw) pw.value='settle1234';
+  openModal('mo-dealer');
+};
+
+window.addDealer=async function(){
+  const name=(document.getElementById('d-name')||{}).value?.trim();
+  const email=(document.getElementById('d-email')||{}).value?.trim();
+  const pw=(document.getElementById('d-pw')||{}).value?.trim();
+  if(!name||!email||!pw){toast('❌ 필수 항목을 입력해주세요');return;}
+  try{
+    // Firebase Auth 계정 생성
+    const uc=await createUserWithEmailAndPassword(auth,email,pw);
+    const uid=uc.user.uid;
+    // Firestore에 대리점 정보 저장
+    const dealerRef=await addDoc(collection(db,'dealers'),{
+      name,email,contact:(document.getElementById('d-tel')||{}).value||'',
+      managerName:(document.getElementById('d-mgr')||{}).value||'',
+      addr:(document.getElementById('d-addr')||{}).value||'',
+      adminUid:uid,active:true,driverCount:0,
+      createdAt:serverTimestamp()
+    });
+    // 사용자 역할 저장
+    await setDoc(doc(db,'users',uid),{
+      email,name:(document.getElementById('d-mgr')||{}).value||name,
+      role:'dealer',dealerId:dealerRef.id,dealerName:name,
+      createdAt:serverTimestamp()
+    });
+    closeModal('mo-dealer');
+    toast('✅ 대리점 추가 완료');
+    PAGES['admin-dealers']();
+  }catch(e){toast('❌ 오류: '+(e.code==='auth/email-already-in-use'?'이미 사용 중인 이메일입니다':e.message))}
+};
+
+window.editDealer=async function(dealerId){
+  const snap=await getDoc(doc(db,'dealers',dealerId));
+  if(!snap.exists()) return;
+  const dd=snap.data();
+  document.body.insertAdjacentHTML('beforeend',`
+    <div class="mo show" id="mo-edit-dealer">
+      <div class="md">
+        <div class="mdt">✏️ 대리점 수정 <button class="close-btn" onclick="closeModal('mo-edit-dealer');document.getElementById('mo-edit-dealer').remove()">✕</button></div>
+        <div class="mdb">
+          <div class="field"><label>대리점명</label><input id="ed-name" value="${escH(dd.name)}"></div>
+          <div class="fg">
+            <div class="field"><label>연락처</label><input id="ed-tel" value="${escH(dd.contact||'')}"></div>
+            <div class="field"><label>담당자명</label><input id="ed-mgr" value="${escH(dd.managerName||'')}"></div>
+          </div>
+          <div class="field"><label>상태</label>
+            <select id="ed-active"><option value="true" ${dd.active!==false?'selected':''}>운영중</option><option value="false" ${dd.active===false?'selected':''}>비활성</option></select>
+          </div>
+        </div>
+        <div class="mdf">
+          <button class="btn btn-gray" onclick="closeModal('mo-edit-dealer');document.getElementById('mo-edit-dealer').remove()">취소</button>
+          <button class="btn btn-blue" onclick="saveDealer('${dealerId}')">저장</button>
+        </div>
+      </div>
+    </div>`);
+};
+
+window.saveDealer=async function(dealerId){
+  try{
+    await updateDoc(doc(db,'dealers',dealerId),{
+      name:document.getElementById('ed-name').value.trim(),
+      contact:document.getElementById('ed-tel').value.trim(),
+      managerName:document.getElementById('ed-mgr').value.trim(),
+      active:document.getElementById('ed-active').value==='true'
+    });
+    document.getElementById('mo-edit-dealer').remove();
+    toast('✅ 저장 완료');
+    PAGES['admin-dealers']();
+  }catch(e){toast('❌ '+e.message)}
+};
+
+PAGES['admin-drivers']=async function(){
+  document.getElementById('page-title').textContent='전체 기사';
+  document.getElementById('topbar-actions').innerHTML='';
+  const c=document.getElementById('content');
+  c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
+  try{
+    const [driversSnap,dealersSnap]=await Promise.all([
+      getDocs(query(collection(db,'drivers'),orderBy('name'))),
+      getDocs(collection(db,'dealers'))
+    ]);
+    const dealerMap={};
+    dealersSnap.forEach(d=>dealerMap[d.id]=d.data().name);
+    if(driversSnap.empty){
+      c.innerHTML='<div class="empty"><div class="empty-icon">👤</div><div>등록된 기사가 없습니다</div></div>';
+      return;
+    }
+    const rows=driversSnap.docs.map(d=>{
+      const dd=d.data();
+      return`<tr><td><strong>${escH(dd.name)}</strong></td><td style="font-size:11px;color:var(--text3)">${escH(dd.userId||'—')}</td><td>${escH(dealerMap[dd.dealerId]||dd.dealerId||'—')}</td><td>${escH(dd.camp||'—')}</td><td>${escH(dd.phone||'—')}</td><td><span class="badge ${dd.is_active?'b-green':'b-gray'}">${dd.is_active?'재직':'퇴직'}</span></td></tr>`;
+    }).join('');
+    c.innerHTML=`<div class="card"><div class="card-header"><div class="card-title">👤 전체 기사 (${driversSnap.size}명)</div></div><div class="card-body"><div class="tbl-wrap"><table><thead><tr><th>성함</th><th>아이디</th><th>대리점</th><th>캠프</th><th>연락처</th><th>상태</th></tr></thead><tbody>${rows}</tbody></table></div></div></div>`;
+  }catch(e){c.innerHTML=`<div class="empty">오류: ${e.message}</div>`}
+};
+
+PAGES['admin-settlements']=async function(){
+  document.getElementById('page-title').textContent='전체 정산';
+  document.getElementById('topbar-actions').innerHTML='';
+  const c=document.getElementById('content');
+  c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
+  try{
+    const [settleSnap,dealersSnap]=await Promise.all([
+      getDocs(query(collection(db,'settlements'),orderBy('createdAt','desc'))),
+      getDocs(collection(db,'dealers'))
+    ]);
+    const dealerMap={};
+    dealersSnap.forEach(d=>dealerMap[d.id]=d.data().name);
+    if(settleSnap.empty){
+      c.innerHTML='<div class="empty"><div class="empty-icon">📋</div><div>정산 데이터가 없습니다</div></div>';
+      return;
+    }
+    const rows=settleSnap.docs.map(d=>{
+      const sd=d.data();
+      const net=sd.net||calcNet(sd);
+      return`<tr>
+        <td>${escH(dealerMap[sd.dealerId]||'—')}</td>
+        <td><strong>${escH(sd.driverName||sd.driver||'—')}</strong></td>
+        <td>${escH(sd.month||'—')}</td>
+        <td style="color:var(--green);font-weight:700">₩${fmt(sd.income||sd.totalAmt||0)}</td>
+        <td style="font-weight:800;color:var(--blue)">₩${fmt(net)}</td>
+        <td><span class="badge ${sd.status==='approved'?'b-green':sd.status==='pending'?'b-amber':'b-gray'}">${sd.status==='approved'?'승인완료':sd.status==='pending'?'정산예정':'—'}</span></td>
+      </tr>`;
+    }).join('');
+    c.innerHTML=`<div class="card"><div class="card-header"><div class="card-title">📋 전체 정산 (${settleSnap.size}건)</div></div><div class="card-body"><div class="tbl-wrap"><table><thead><tr><th>대리점</th><th>기사</th><th>정산월</th><th>수익합계</th><th>실지급</th><th>상태</th></tr></thead><tbody>${rows}</tbody></table></div></div></div>`;
+  }catch(e){c.innerHTML=`<div class="empty">오류: ${e.message}</div>`}
+};
+
+PAGES['admin-settings']=async function(){
+  document.getElementById('page-title').textContent='시스템 설정';
+  document.getElementById('topbar-actions').innerHTML='';
+  const c=document.getElementById('content');
+  c.innerHTML=`
+    <div class="card">
+      <div class="card-header"><div class="card-title">⚙️ 관리자 계정</div></div>
+      <div class="card-body">
+        <div class="field"><label>현재 이메일</label><input value="${escH(CU.email||'')}" disabled style="background:var(--bg3)"></div>
+        <div class="field"><label>표시 이름</label><input id="set-name" value="${escH(CU.name||'')}"></div>
+        <button class="btn btn-blue" onclick="saveProfile()">저장</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">🔑 첫 관리자 계정 만들기</div></div>
+      <div class="card-body">
+        <div style="font-size:12px;color:var(--text3);margin-bottom:12px">처음 사용 시 관리자 계정을 Firebase에 등록하려면 이메일/비밀번호로 회원가입이 필요합니다.</div>
+        <div class="fg">
+          <div class="field"><label>관리자 이메일</label><input id="adm-email" placeholder="admin@mbti.kr"></div>
+          <div class="field"><label>비밀번호</label><input id="adm-pw" type="password" placeholder="강력한 비밀번호"></div>
+        </div>
+        <div class="field"><label>표시 이름</label><input id="adm-name" placeholder="홍길동"></div>
+        <button class="btn btn-blue" onclick="createAdmin()">관리자 계정 생성</button>
+      </div>
+    </div>`;
+};
+
+window.saveProfile=async function(){
+  const name=document.getElementById('set-name').value.trim();
+  if(!name){toast('이름을 입력해주세요');return;}
+  await updateDoc(doc(db,'users',CU.uid),{name});
+  CU.name=name;
+  document.getElementById('sb-name').textContent=name;
+  toast('✅ 저장 완료');
+};
+
+window.createAdmin=async function(){
+  const email=document.getElementById('adm-email').value.trim();
+  const pw=document.getElementById('adm-pw').value;
+  const name=document.getElementById('adm-name').value.trim();
+  if(!email||!pw||!name){toast('모든 항목을 입력해주세요');return;}
+  try{
+    const uc=await createUserWithEmailAndPassword(auth,email,pw);
+    await setDoc(doc(db,'users',uc.user.uid),{
+      email,name,role:'admin',dealerId:'',createdAt:serverTimestamp()
+    });
+    toast('✅ 관리자 계정 생성 완료');
+  }catch(e){toast('❌ '+(e.code==='auth/email-already-in-use'?'이미 사용 중인 이메일':e.message))}
+};
+
+// ────────────────────────────────────────
+// 대리점 페이지
+// ────────────────────────────────────────
+
+PAGES['dealer-dashboard']=async function(){
+  document.getElementById('page-title').textContent='대리점 현황';
+  document.getElementById('topbar-actions').innerHTML='';
+  const c=document.getElementById('content');
+  c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
+  try{
+    const [driversSnap,settleSnap]=await Promise.all([
+      getDocs(query(collection(db,'drivers'),where('dealerId','==',CU.dealerId))),
+      getDocs(query(collection(db,'settlements'),where('dealerId','==',CU.dealerId)))
+    ]);
+    const settles=settleSnap.docs.map(d=>d.data());
+    const thisMonth=new Date().toISOString().slice(0,7);
+    const thisMonthSettles=settles.filter(s=>s.month===thisMonth);
+    const approved=settles.filter(s=>s.status==='approved').length;
+    const totalNet=settles.filter(s=>s.status==='approved').reduce((a,s)=>a+(s.net||0),0);
+
+    c.innerHTML=`
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-val">${driversSnap.size}</div><div class="stat-lbl">👤 소속 기사</div></div>
+        <div class="stat-card"><div class="stat-val">${thisMonthSettles.length}</div><div class="stat-lbl">📋 이번달 정산</div></div>
+        <div class="stat-card"><div class="stat-val">${approved}</div><div class="stat-lbl">✅ 승인 완료</div></div>
+        <div class="stat-card"><div class="stat-val">₩${fmt(totalNet)}</div><div class="stat-lbl">💰 총 지급액</div></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">📋 최근 정산</div>
+          <button class="btn btn-blue btn-sm" onclick="goPage('dealer-settlements')">전체 보기</button>
+        </div>
+        <div class="card-body" id="recent-settles">
+          ${settles.length===0?'<div class="empty"><div class="empty-icon">📋</div><div>정산 데이터가 없습니다</div></div>':
+            '<div class="tbl-wrap"><table><thead><tr><th>기사</th><th>월</th><th>수익</th><th>실지급</th><th>상태</th></tr></thead><tbody>'+
+            settles.slice(0,10).map(s=>`<tr><td><strong>${escH(s.driverName||s.driver||'')}</strong></td><td>${escH(s.month||'')}</td><td>₩${fmt(s.income||s.totalAmt||0)}</td><td style="font-weight:800;color:var(--blue)">₩${fmt(s.net||0)}</td><td><span class="badge ${s.status==='approved'?'b-green':'b-amber'}">${s.status==='approved'?'승인완료':'정산예정'}</span></td></tr>`).join('')+
+            '</tbody></table></div>'
+          }
+        </div>
+      </div>`;
+  }catch(e){c.innerHTML=`<div class="empty">오류: ${e.message}</div>`}
+};
+
+PAGES['dealer-drivers']=async function(){
+  document.getElementById('page-title').textContent='기사 관리';
+  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-blue btn-sm" onclick="openAddDriver()">+ 기사 추가</button>`;
+  const c=document.getElementById('content');
+  c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
+  try{
+    const snap=await getDocs(query(collection(db,'drivers'),where('dealerId','==',CU.dealerId),orderBy('name')));
+    if(snap.empty){
+      c.innerHTML=`<div class="empty"><div class="empty-icon">👤</div><div style="font-size:15px;font-weight:700;margin-bottom:6px">등록된 기사가 없습니다</div><button class="btn btn-blue" onclick="openAddDriver()" style="margin-top:12px">+ 첫 기사 추가</button></div>`;
+      addDriverModal();
+      return;
+    }
+    const rows=snap.docs.map(d=>{
+      const dd=d.data();
+      return`<tr>
+        <td><strong>${escH(dd.name)}</strong></td>
+        <td style="font-size:11px;color:var(--text3)">${escH(dd.userId||'—')}</td>
+        <td>${escH(dd.camp||'—')}</td>
+        <td>${escH(dd.jobsub||'쿠팡')}</td>
+        <td>${escH(dd.phone||'—')}</td>
+        <td><span class="badge ${dd.is_active!==false?'b-green':'b-gray'}">${dd.is_active!==false?'재직':'퇴직'}</span></td>
+        <td>
+          <button class="btn btn-gray btn-sm" onclick="editDriver('${d.id}')">수정</button>
+          <button class="btn btn-red btn-sm" onclick="delDriver('${d.id}','${escH(dd.name)}')">삭제</button>
+        </td>
+      </tr>`;
+    }).join('');
+    c.innerHTML=`<div class="card"><div class="card-header"><div class="card-title">👤 기사 목록 (${snap.size}명)</div></div><div class="card-body"><div class="tbl-wrap"><table><thead><tr><th>성함</th><th>아이디</th><th>캠프</th><th>분류</th><th>연락처</th><th>상태</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div></div>`;
+    addDriverModal();
+  }catch(e){c.innerHTML=`<div class="empty">오류: ${e.message}</div>`}
+};
+
+function addDriverModal(){
+  if(document.getElementById('mo-driver'))return;
+  const camps=['부산1','부산2','부산3','대구1','대구2','진주M','창원','울산','광주','기타'];
+  document.body.insertAdjacentHTML('beforeend',`
+    <div class="mo" id="mo-driver">
+      <div class="md">
+        <div class="mdt">👤 기사 추가 <button class="close-btn" onclick="closeModal('mo-driver')">✕</button></div>
+        <div class="mdb">
+          <div class="fg"><div class="field"><label>성함 *</label><input id="dr-name" placeholder="홍길동"></div>
+          <div class="field"><label>아이디 *</label><input id="dr-uid" placeholder="hong123"></div></div>
+          <div class="fg">
+            <div class="field"><label>캠프</label><select id="dr-camp">${camps.map(c=>`<option>${c}</option>`).join('')}</select></div>
+            <div class="field"><label>분류</label><select id="dr-job"><option>쿠팡</option><option>컬리</option><option>CJ</option><option>용차</option></select></div>
+          </div>
+          <div class="fg">
+            <div class="field"><label>연락처</label><input id="dr-phone" placeholder="010-0000-0000"></div>
+            <div class="field"><label>차량번호</label><input id="dr-car" placeholder="12가 3456"></div>
+          </div>
+          <div class="field"><label>계좌번호</label><input id="dr-acct" placeholder="은행명 계좌번호"></div>
+          <div class="field"><label>기사 앱 로그인 이메일 (선택)</label><input id="dr-email" type="email" placeholder="기사가 앱으로 조회할 경우"></div>
+          <div class="field"><label>기사 앱 비밀번호</label><input id="dr-pw" type="text" placeholder="초기 비밀번호" value="driver1234"></div>
+        </div>
+        <div class="mdf">
+          <button class="btn btn-gray" onclick="closeModal('mo-driver')">취소</button>
+          <button class="btn btn-blue" onclick="addDriver()">✅ 추가</button>
+        </div>
+      </div>
+    </div>`);
+}
+
+window.openAddDriver=function(){
+  addDriverModal();
+  ['dr-name','dr-uid','dr-phone','dr-car','dr-acct','dr-email'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
+  const pw=document.getElementById('dr-pw');if(pw)pw.value='driver1234';
+  openModal('mo-driver');
+};
+
+window.addDriver=async function(){
+  const name=document.getElementById('dr-name').value.trim();
+  const userId=document.getElementById('dr-uid').value.trim();
+  if(!name||!userId){toast('❌ 성함과 아이디는 필수입니다');return;}
+  try{
+    const driverData={
+      name,userId,dealerId:CU.dealerId,
+      camp:document.getElementById('dr-camp').value,
+      jobsub:document.getElementById('dr-job').value,
+      phone:document.getElementById('dr-phone').value.trim(),
+      car:document.getElementById('dr-car').value.trim(),
+      account:document.getElementById('dr-acct').value.trim(),
+      is_active:true,status:'재직',createdAt:serverTimestamp()
+    };
+    // 드라이버 앱 계정 생성 (이메일 있는 경우)
+    const email=document.getElementById('dr-email').value.trim();
+    const pw=document.getElementById('dr-pw').value.trim();
+    if(email&&pw){
+      try{
+        const uc=await createUserWithEmailAndPassword(auth,email,pw);
+        driverData.authUid=uc.user.uid;
+        await setDoc(doc(db,'users',uc.user.uid),{
+          email,name,role:'driver',dealerId:CU.dealerId,driverUserId:userId,createdAt:serverTimestamp()
+        });
+      }catch(ae){
+        if(ae.code!=='auth/email-already-in-use') throw ae;
+      }
+    }
+    await addDoc(collection(db,'drivers'),driverData);
+    // 대리점 기사 수 업데이트
+    const dealerSnap=await getDocs(query(collection(db,'drivers'),where('dealerId','==',CU.dealerId)));
+    await updateDoc(doc(db,'dealers',CU.dealerId),{driverCount:dealerSnap.size+1});
+    closeModal('mo-driver');
+    toast(`✅ ${name} 기사 등록 완료`);
+    PAGES['dealer-drivers']();
+  }catch(e){toast('❌ '+e.message)}
+};
+
+window.delDriver=async function(driverId,name){
+  if(!confirm(`${name} 기사를 삭제하시겠습니까?`))return;
+  await deleteDoc(doc(db,'drivers',driverId));
+  toast(`🗑 ${name} 삭제 완료`);
+  PAGES['dealer-drivers']();
+};
+
+window.editDriver=async function(driverId){
+  const snap=await getDoc(doc(db,'drivers',driverId));
+  if(!snap.exists())return;
+  const dd=snap.data();
+  const camps=['부산1','부산2','부산3','대구1','대구2','진주M','창원','울산','광주','기타'];
+  document.body.insertAdjacentHTML('beforeend',`
+    <div class="mo show" id="mo-edit-driver">
+      <div class="md">
+        <div class="mdt">✏️ 기사 수정 <button class="close-btn" onclick="document.getElementById('mo-edit-driver').remove()">✕</button></div>
+        <div class="mdb">
+          <div class="fg"><div class="field"><label>성함</label><input id="edr-name" value="${escH(dd.name)}"></div>
+          <div class="field"><label>아이디</label><input id="edr-uid" value="${escH(dd.userId||'')}"></div></div>
+          <div class="fg">
+            <div class="field"><label>캠프</label><select id="edr-camp">${camps.map(c=>`<option ${dd.camp===c?'selected':''}>${c}</option>`).join('')}</select></div>
+            <div class="field"><label>분류</label><select id="edr-job">
+              ${['쿠팡','컬리','CJ','용차'].map(j=>`<option ${dd.jobsub===j?'selected':''}>${j}</option>`).join('')}
+            </select></div>
+          </div>
+          <div class="fg">
+            <div class="field"><label>연락처</label><input id="edr-phone" value="${escH(dd.phone||'')}"></div>
+            <div class="field"><label>상태</label><select id="edr-active">
+              <option value="true" ${dd.is_active!==false?'selected':''}>재직</option>
+              <option value="false" ${dd.is_active===false?'selected':''}>퇴직</option>
+            </select></div>
+          </div>
+        </div>
+        <div class="mdf">
+          <button class="btn btn-gray" onclick="document.getElementById('mo-edit-driver').remove()">취소</button>
+          <button class="btn btn-blue" onclick="saveDriver('${driverId}')">저장</button>
+        </div>
+      </div>
+    </div>`);
+};
+
+window.saveDriver=async function(driverId){
+  await updateDoc(doc(db,'drivers',driverId),{
+    name:document.getElementById('edr-name').value.trim(),
+    userId:document.getElementById('edr-uid').value.trim(),
+    camp:document.getElementById('edr-camp').value,
+    jobsub:document.getElementById('edr-job').value,
+    phone:document.getElementById('edr-phone').value.trim(),
+    is_active:document.getElementById('edr-active').value==='true'
+  });
+  document.getElementById('mo-edit-driver').remove();
+  toast('✅ 저장 완료');
+  PAGES['dealer-drivers']();
+};
+
+// ── 정산 관리 ──
+PAGES['dealer-settlements']=async function(){
+  document.getElementById('page-title').textContent='정산 관리';
+  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-blue btn-sm" onclick="openNewSettle()">+ 정산 입력</button>`;
+  const c=document.getElementById('content');
+  c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
+  try{
+    const snap=await getDocs(query(collection(db,'settlements'),where('dealerId','==',CU.dealerId),orderBy('createdAt','desc')));
+    if(snap.empty){
+      c.innerHTML=`<div class="empty"><div class="empty-icon">📋</div><div style="font-size:15px;font-weight:700;margin-bottom:6px">정산 데이터가 없습니다</div><button class="btn btn-blue" onclick="openNewSettle()" style="margin-top:12px">+ 첫 정산 입력</button></div>`;
+      addSettleModal();
+      return;
+    }
+    const rows=snap.docs.map(d=>{
+      const sd=d.data();
+      const net=sd.net||calcNet(sd);
+      return`<tr>
+        <td><strong>${escH(sd.driverName||sd.driver||'')}</strong></td>
+        <td>${escH(sd.month||'')}</td>
+        <td style="color:var(--teal)">${fmt(sd.dcnt||0)}건</td>
+        <td style="color:var(--green);font-weight:700">₩${fmt(sd.income||sd.totalAmt||0)}</td>
+        <td style="font-weight:800;color:var(--blue)">₩${fmt(net)}</td>
+        <td><span class="badge ${sd.status==='approved'?'b-green':'b-amber'}">${sd.status==='approved'?'승인완료':'정산예정'}</span></td>
+        <td style="display:flex;gap:4px">
+          <button class="btn btn-outline btn-sm" onclick="viewSettle('${d.id}')">명세서</button>
+          ${sd.status!=='approved'?`<button class="btn btn-green btn-sm" onclick="approveSettle('${d.id}')">승인</button>`:''}
+          <button class="btn btn-red btn-sm" onclick="delSettle('${d.id}')">삭제</button>
+        </td>
+      </tr>`;
+    }).join('');
+    c.innerHTML=`<div class="card"><div class="card-header"><div class="card-title">📋 정산 목록 (${snap.size}건)</div></div><div class="card-body"><div class="tbl-wrap"><table><thead><tr><th>기사</th><th>정산월</th><th>배송건</th><th>수익합계</th><th>실지급</th><th>상태</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div></div>`;
+    addSettleModal();
+  }catch(e){c.innerHTML=`<div class="empty">오류: ${e.message}</div>`}
+};
+
+function addSettleModal(){
+  if(document.getElementById('mo-settle'))return;
+  document.body.insertAdjacentHTML('beforeend',`
+    <div class="mo" id="mo-settle">
+      <div class="md" style="max-width:540px">
+        <div class="mdt">📋 정산 입력 <button class="close-btn" onclick="closeModal('mo-settle')">✕</button></div>
+        <div class="mdb">
+          <div class="fg">
+            <div class="field"><label>기사 선택 *</label>
+              <select id="se-driver-sel"><option value="">— 기사 선택 —</option></select>
+            </div>
+            <div class="field"><label>정산월 *</label><input id="se-month" type="month"></div>
+          </div>
+          <div class="fg3">
+            <div class="field"><label>배송건수</label><input id="se-dcnt" type="number" min="0" oninput="calcPreview()"></div>
+            <div class="field"><label>배송금액(원)</label><input id="se-damt" type="number" min="0" oninput="calcPreview()"></div>
+            <div class="field"><label>반품건수</label><input id="se-rcnt" type="number" min="0" oninput="calcPreview()"></div>
+          </div>
+          <div class="fg3">
+            <div class="field"><label>반품금액(원)</label><input id="se-ramt" type="number" min="0" oninput="calcPreview()"></div>
+            <div class="field"><label>프레시백(원)</label><input id="se-fresh" type="number" min="0" oninput="calcPreview()"></div>
+            <div class="field"><label>기타(+)</label><input id="se-etc" type="number" min="0" oninput="calcPreview()"></div>
+          </div>
+          <div class="fg3">
+            <div class="field"><label>손해공제</label><input id="se-dmg" type="number" min="0" oninput="calcPreview()"></div>
+            <div class="field"><label>가불금</label><input id="se-adv" type="number" min="0" oninput="calcPreview()"></div>
+            <div class="field"><label>기타(-)</label><input id="se-etc-m" type="number" min="0" oninput="calcPreview()"></div>
+          </div>
+          <div style="background:var(--blue-l);border-radius:10px;padding:12px;margin-top:4px">
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+              <span>수익합계</span><span id="prev-income" style="font-weight:700">₩0</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+              <span>공제합계</span><span id="prev-deduct" style="font-weight:700;color:var(--red)">₩0</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:900;color:var(--blue)">
+              <span>실지급액</span><span id="prev-net">₩0</span>
+            </div>
+          </div>
+        </div>
+        <div class="mdf">
+          <button class="btn btn-gray" onclick="closeModal('mo-settle')">취소</button>
+          <button class="btn btn-blue" onclick="saveSettle()">💾 저장</button>
+        </div>
+      </div>
+    </div>`);
+}
+
+window.calcPreview=function(){
+  const g=id=>+(document.getElementById(id)||{}).value||0;
+  const income=g('se-damt')+g('se-ramt')+g('se-fresh')+g('se-etc');
+  const supplyAmt=Math.round(income/1.1);
+  const monthlyWage=Math.round(supplyAmt*0.654);
+  const emp=monthlyWage>=800000?Math.floor(monthlyWage*0.008/10)*10:0;
+  const work=Math.floor(monthlyWage*0.0088/10)*10;
+  const deduct=emp+work+g('se-dmg')+g('se-adv')+g('se-etc-m');
+  const net=income-deduct;
+  document.getElementById('prev-income').textContent='₩'+fmt(income);
+  document.getElementById('prev-deduct').textContent='-₩'+fmt(deduct);
+  document.getElementById('prev-net').textContent='₩'+fmt(net);
+};
+
+window.openNewSettle=async function(){
+  addSettleModal();
+  // 기사 목록 로드
+  const sel=document.getElementById('se-driver-sel');
+  sel.innerHTML='<option value="">— 기사 선택 —</option>';
+  try{
+    const snap=await getDocs(query(collection(db,'drivers'),where('dealerId','==',CU.dealerId),where('is_active','!=',false)));
+    snap.forEach(d=>{
+      const dd=d.data();
+      sel.innerHTML+=`<option value="${d.id}" data-name="${escH(dd.name)}">${escH(dd.name)} (${escH(dd.camp||'')})</option>`;
+    });
+  }catch(e){}
+  // 이번달 기본값
+  document.getElementById('se-month').value=new Date().toISOString().slice(0,7);
+  ['se-dcnt','se-damt','se-rcnt','se-ramt','se-fresh','se-etc','se-dmg','se-adv','se-etc-m'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
+  calcPreview();
+  openModal('mo-settle');
+};
+
+window.saveSettle=async function(){
+  const sel=document.getElementById('se-driver-sel');
+  const driverId=sel.value;
+  const driverName=sel.options[sel.selectedIndex]?.dataset?.name||sel.options[sel.selectedIndex]?.text||'';
+  const month=document.getElementById('se-month').value;
+  if(!driverId||!month){toast('❌ 기사와 정산월을 선택해주세요');return;}
+  const g=id=>+(document.getElementById(id)||{}).value||0;
+  const income=g('se-damt')+g('se-ramt')+g('se-fresh')+g('se-etc');
+  const supplyAmt=Math.round(income/1.1);
+  const monthlyWage=Math.round(supplyAmt*0.654);
+  const emp=monthlyWage>=800000?Math.floor(monthlyWage*0.008/10)*10:0;
+  const work=Math.floor(monthlyWage*0.0088/10)*10;
+  const deduct=emp+work+g('se-dmg')+g('se-adv')+g('se-etc-m');
+  const net=income-deduct;
+  try{
+    await addDoc(collection(db,'settlements'),{
+      dealerId:CU.dealerId,driverId,driverName,month,
+      dcnt:g('se-dcnt'),damt:g('se-damt'),
+      rcnt:g('se-rcnt'),ramt:g('se-ramt'),
+      fresh:g('se-fresh'),etcPlus:g('se-etc'),
+      dmg:g('se-dmg'),adv:g('se-adv'),etcMinus:g('se-etc-m'),
+      income,supplyAmt,monthlyWage,emp,work,
+      deduct,net,status:'pending',
+      createdAt:serverTimestamp()
+    });
+    closeModal('mo-settle');
+    toast('✅ 정산 저장 완료');
+    PAGES['dealer-settlements']();
+  }catch(e){toast('❌ '+e.message)}
+};
+
+window.approveSettle=async function(id){
+  await updateDoc(doc(db,'settlements',id),{status:'approved',approvedAt:serverTimestamp()});
+  toast('✅ 정산 승인 완료');
+  PAGES['dealer-settlements']();
+};
+
+window.delSettle=async function(id){
+  if(!confirm('정산을 삭제하시겠습니까?'))return;
+  await deleteDoc(doc(db,'settlements',id));
+  toast('🗑 삭제 완료');
+  PAGES['dealer-settlements']();
+};
+
+window.viewSettle=async function(id){
+  const snap=await getDoc(doc(db,'settlements',id));
+  if(!snap.exists())return;
+  const sd=snap.data();
+  const dealerSnap=await getDoc(doc(db,'dealers',sd.dealerId));
+  const dealer=dealerSnap.data()||{};
+  const html=renderStmt(sd,dealer);
+  document.body.insertAdjacentHTML('beforeend',`
+    <div class="mo show" id="mo-view-stmt">
+      <div class="md" style="max-width:560px">
+        <div class="mdt">📋 정산 명세서 <button class="close-btn" onclick="document.getElementById('mo-view-stmt').remove()">✕</button></div>
+        <div class="mdb">${html}</div>
+        <div class="mdf">
+          <button class="btn btn-gray btn-sm" onclick="document.getElementById('mo-view-stmt').remove()">닫기</button>
+          <button class="btn btn-blue btn-sm" onclick="copySettleLink('${id}')">🔗 링크 복사</button>
+          <button class="btn btn-green btn-sm" onclick="window.print()">🖨 인쇄</button>
+        </div>
+      </div>
+    </div>`);
+};
+
+function renderStmt(sd,dealer){
+  const net=sd.net||calcNet(sd);
+  return`<div class="stmt-wrap">
+    <div class="stmt-header">
+      <div class="stmt-company">${escH(dealer.name||'')}</div>
+      <div class="stmt-title">${escH(sd.month||'')} 정산 명세서</div>
+      <div class="stmt-driver">${escH(sd.driverName||sd.driver||'')} 기사</div>
+    </div>
+    <div class="stmt-row"><span>📦 배송수익 (${fmt(sd.dcnt||0)}건)</span><span class="amt-plus">+₩${fmt(sd.damt||0)}</span></div>
+    <div class="stmt-row"><span>↩ 반품수익 (${fmt(sd.rcnt||0)}건)</span><span class="amt-plus">+₩${fmt(sd.ramt||0)}</span></div>
+    ${(sd.fresh||0)>0?`<div class="stmt-row"><span>🍱 프레시백</span><span class="amt-plus">+₩${fmt(sd.fresh)}</span></div>`:''}
+    ${(sd.etcPlus||0)>0?`<div class="stmt-row"><span>➕ 기타(+)</span><span class="amt-plus">+₩${fmt(sd.etcPlus)}</span></div>`:''}
+    <div class="stmt-row total"><span>세금계산서 작성금액</span><span>₩${fmt(sd.income||0)}</span></div>
+    <div class="stmt-row deduct"><span>📌 고용보험</span><span class="amt-minus">-₩${fmt(sd.emp||0)}</span></div>
+    <div class="stmt-row deduct"><span>📌 산재보험</span><span class="amt-minus">-₩${fmt(sd.work||0)}</span></div>
+    ${(sd.dmg||0)>0?`<div class="stmt-row deduct"><span>⚠️ 분실/파손</span><span class="amt-minus">-₩${fmt(sd.dmg)}</span></div>`:''}
+    ${(sd.adv||0)>0?`<div class="stmt-row deduct"><span>💸 가불금</span><span class="amt-minus">-₩${fmt(sd.adv)}</span></div>`:''}
+    ${(sd.etcMinus||0)>0?`<div class="stmt-row deduct"><span>➖ 기타(-)</span><span class="amt-minus">-₩${fmt(sd.etcMinus)}</span></div>`:''}
+    <div class="stmt-row net"><span>💰 실 지급액</span><span>₩${fmt(net)}</span></div>
+    <div style="text-align:right;font-size:11px;color:#888;margin-top:12px">${today()} 발행</div>
+  </div>`;
+}
+
+window.copySettleLink=async function(id){
+  const url=`${location.href.split('#')[0]}#view:${id}`;
+  try{await navigator.clipboard.writeText(url);}catch(e){prompt('링크 복사:',url);return;}
+  toast('🔗 링크가 복사되었습니다');
+};
+
+PAGES['dealer-prices']=function(){
+  document.getElementById('page-title').textContent='라우트 단가표';
+  document.getElementById('topbar-actions').innerHTML='';
+  const c=document.getElementById('content');
+  c.innerHTML=`<div class="card"><div class="card-header"><div class="card-title">📌 라우트 단가표</div><button class="btn btn-blue btn-sm" onclick="addRoute()">+ 라우트 추가</button></div><div class="card-body" id="price-body"><div class="loading">로딩 중...</div></div></div>`;
+  loadPrices();
+};
+
+async function loadPrices(){
+  const body=document.getElementById('price-body');
+  if(!body)return;
+  try{
+    const snap=await getDocs(query(collection(db,'prices'),where('dealerId','==',CU.dealerId),orderBy('route')));
+    if(snap.empty){body.innerHTML='<div class="empty"><div class="empty-icon">📌</div><div>등록된 단가가 없습니다</div></div>';return;}
+    const rows=snap.docs.map(d=>{
+      const pd=d.data();
+      return`<tr><td><strong>${escH(pd.route)}</strong></td><td><input type="number" value="${pd.price||0}" style="width:100px;padding:4px 8px;border:1px solid var(--border);border-radius:6px" onchange="updatePrice('${d.id}',this.value)"></td><td>원/건</td><td><button class="btn btn-red btn-sm" onclick="deletePrice('${d.id}')">삭제</button></td></tr>`;
+    }).join('');
+    body.innerHTML=`<div class="tbl-wrap"><table><thead><tr><th>라우트</th><th>단가</th><th></th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }catch(e){body.innerHTML=`<div class="empty">오류: ${e.message}</div>`}
+}
+
+window.addRoute=async function(){
+  const route=prompt('라우트명 입력 (예: BSN1A):','');
+  if(!route)return;
+  const price=prompt('단가 입력 (원):','0');
+  await addDoc(collection(db,'prices'),{dealerId:CU.dealerId,route:route.toUpperCase().trim(),price:+price||0,createdAt:serverTimestamp()});
+  toast('✅ 추가 완료');loadPrices();
+};
+window.updatePrice=async function(id,val){
+  await updateDoc(doc(db,'prices',id),{price:+val||0});toast('✅ 단가 저장');
+};
+window.deletePrice=async function(id){
+  if(!confirm('삭제하시겠습니까?'))return;
+  await deleteDoc(doc(db,'prices',id));toast('🗑 삭제');loadPrices();
+};
+
+// ────────────────────────────────────────
+// 기사 페이지
+// ────────────────────────────────────────
+
+PAGES['driver-home']=async function(){
+  document.getElementById('page-title').textContent='내 정산 명세서';
+  document.getElementById('topbar-actions').innerHTML='';
+  const c=document.getElementById('content');
+  c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
+  try{
+    // 기사 정보 로드
+    const driverSnap=await getDocs(query(collection(db,'drivers'),where('authUid','==',CU.uid)));
+    let driver=null;
+    if(!driverSnap.empty) driver=driverSnap.docs[0].data();
+
+    // 정산 목록 (driverName or driverId로 검색)
+    let settleSnap;
+    if(CU.driverUserId){
+      settleSnap=await getDocs(query(collection(db,'settlements'),where('dealerId','==',CU.dealerId),orderBy('month','desc')));
+      const myId=CU.driverUserId;
+      // 본인 것만 필터
+      const mySettles=settleSnap.docs.filter(d=>{
+        const sd=d.data();
+        return sd.driverName===CU.name||sd.driverId===driverSnap.docs[0]?.id;
+      });
+      renderDriverSettles(mySettles,driver||{name:CU.name},c);
+    }else{
+      settleSnap=await getDocs(query(collection(db,'settlements'),where('dealerId','==',CU.dealerId),orderBy('month','desc')));
+      const mySettles=settleSnap.docs.filter(d=>d.data().driverName===CU.name);
+      renderDriverSettles(mySettles,driver||{name:CU.name},c);
+    }
+  }catch(e){c.innerHTML=`<div class="empty">오류: ${e.message}</div>`}
+};
+
+async function renderDriverSettles(settles,driver,c){
+  if(settles.length===0){
+    c.innerHTML=`<div class="driver-hero"><div class="driver-hero-name">👋 ${escH(driver.name||CU.name)}</div><div class="driver-hero-info">${escH(driver.camp||'')} · ${escH(driver.jobsub||'쿠팡')}</div></div><div class="empty"><div class="empty-icon">📋</div><div>정산 명세서가 없습니다</div><div style="font-size:12px;color:var(--text3);margin-top:6px">관리자가 정산을 입력하면 여기에 표시됩니다</div></div>`;
+    return;
+  }
+  const latestNet=settles[0]?.data()?.net||0;
+  const totalNet=settles.reduce((a,d)=>a+(d.data().net||0),0);
+  const cards=settles.map(d=>{
+    const sd=d.data();
+    const net=sd.net||calcNet(sd);
+    return`<div class="settle-card" onclick="viewDriverSettle('${d.id}')">
+      <div class="settle-card-top">
+        <div class="settle-card-month">📅 ${escH(sd.month||'')} 정산</div>
+        <span class="badge ${sd.status==='approved'?'b-green':'b-amber'}">${sd.status==='approved'?'승인완료':'정산예정'}</span>
+      </div>
+      <div class="settle-card-net">₩${fmt(net)}</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:4px">배송 ${fmt(sd.dcnt||0)}건 · 수익 ₩${fmt(sd.income||0)}</div>
+    </div>`;
+  }).join('');
+  c.innerHTML=`
+    <div class="driver-hero">
+      <div class="driver-hero-name">👋 ${escH(driver.name||CU.name)}</div>
+      <div class="driver-hero-info">${escH(driver.camp||'')} · ${escH(driver.jobsub||'쿠팡')}</div>
+      <div style="display:flex;gap:16px;margin-top:12px">
+        <div><div style="font-size:20px;font-weight:900">₩${fmt(latestNet)}</div><div style="font-size:11px;opacity:.7">이번달 실지급</div></div>
+        <div><div style="font-size:20px;font-weight:900">₩${fmt(totalNet)}</div><div style="font-size:11px;opacity:.7">누적 지급액</div></div>
+      </div>
+    </div>
+    ${cards}`;
+}
+
+window.viewDriverSettle=async function(id){
+  const snap=await getDoc(doc(db,'settlements',id));
+  if(!snap.exists())return;
+  const sd=snap.data();
+  const dealerSnap=await getDoc(doc(db,'dealers',sd.dealerId));
+  const dealer=dealerSnap.data()||{};
+  const html=renderStmt(sd,dealer);
+  document.body.insertAdjacentHTML('beforeend',`
+    <div class="mo show" id="mo-driver-stmt">
+      <div class="md" style="max-width:560px">
+        <div class="mdt">📋 정산 명세서 <button class="close-btn" onclick="document.getElementById('mo-driver-stmt').remove()">✕</button></div>
+        <div class="mdb">${html}</div>
+        <div class="mdf">
+          <button class="btn btn-gray" onclick="document.getElementById('mo-driver-stmt').remove()">닫기</button>
+          <button class="btn btn-blue btn-sm" onclick="window.print()">🖨 인쇄</button>
+        </div>
+      </div>
+    </div>`);
+};
+
+// ── 정산 계산 유틸 ──
+function calcNet(sd){
+  const income=(sd.damt||0)+(sd.ramt||0)+(sd.fresh||0)+(sd.finc||0)+(sd.inc||0)+(sd.etcPlus||0);
+  const supplyAmt=Math.round(income/1.1);
+  const monthlyWage=Math.round(supplyAmt*0.654);
+  const emp=monthlyWage>=800000?Math.floor(monthlyWage*0.008/10)*10:0;
+  const work=Math.floor(monthlyWage*0.0088/10)*10;
+  const deduct=emp+work+(sd.dmg||0)+(sd.adv||0)+(sd.etcMinus||0);
+  return income-deduct;
+}
+
+// ── URL 해시로 명세서 직접 열기 (링크 공유) ──
+async function checkHashView(){
+  const hash=location.hash;
+  if(!hash.startsWith('#view:'))return;
+  const id=hash.replace('#view:','');
+  if(!id)return;
+  try{
+    const snap=await getDoc(doc(db,'settlements',id));
+    if(!snap.exists()){toast('명세서를 찾을 수 없습니다');return;}
+    const sd=snap.data();
+    const dealerSnap=await getDoc(doc(db,'dealers',sd.dealerId));
+    const dealer=dealerSnap.data()||{};
+    const html=renderStmt(sd,dealer);
+    document.body.insertAdjacentHTML('beforeend',`
+      <div class="mo show" id="mo-hash-stmt" style="background:linear-gradient(135deg,var(--blue-d),var(--blue))">
+        <div class="md" style="max-width:560px">
+          <div class="mdt">📋 정산 명세서</div>
+          <div class="mdb">${html}</div>
+          <div class="mdf">
+            <button class="btn btn-blue btn-sm" onclick="window.print()">🖨 인쇄</button>
+          </div>
+        </div>
+      </div>`);
+    history.replaceState(null,'',location.pathname);
+  }catch(e){console.warn(e)}
+}
+
+// 앱 초기화 완료 후 해시 체크
+const _origInitApp=initApp;
+window.addEventListener('load',()=>{
+  // 다크모드 복원
+  if(localStorage.getItem('settle_dark')==='1') document.body.classList.add('dark');
+  checkHashView();
+});
+
+const _origToggleDark=window.toggleDark;
+window.toggleDark=function(){
+  document.body.classList.toggle('dark');
+  localStorage.setItem('settle_dark',document.body.classList.contains('dark')?'1':'0');
+};
+
+</script>
+</body>
+</html>
