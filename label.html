@@ -271,7 +271,7 @@ async function runOCR(){
     document.getElementById('loading-msg').textContent='AI 번역 중...';
     // localStorage에서 API 키 읽기 (메인 앱과 공유)
     var apiKey = (localStorage.getItem('mbti_anthropic_api_key')||'').trim();
-    if(!apiKey || apiKey.indexOf('sk-ant-')!==0){
+    if(!apiKey || apiKey.trim().length<20){
       document.getElementById('loading-card').style.display='none';
       document.getElementById('preview-card').style.display='block';
       showApiKeyInput();
@@ -284,10 +284,10 @@ async function runOCR(){
         'Content-Type':'application/json',
         'x-api-key': apiKey,
         'anthropic-version':'2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
+        'anthropic-dangerous-direct-browser-access':'true'
       },
       body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
+        model:'claude-sonnet-4-5-20251001',
         max_tokens:600,
         messages:[{
           role:'user',
@@ -298,7 +298,12 @@ async function runOCR(){
         }]
       })
     });
-    if(!res.ok) throw new Error('Anthropic API 오류: '+res.status);
+    if(!res.ok){
+      var errText=await res.text();
+      var errMsg='API 오류 '+res.status;
+      try{ var errJson=JSON.parse(errText); errMsg=errJson.error&&errJson.error.message?errJson.error.message:errMsg; }catch(e){}
+      throw new Error(errMsg);
+    }
     var rawText=await res.text();
     var data;
     try{ data=JSON.parse(rawText); }
