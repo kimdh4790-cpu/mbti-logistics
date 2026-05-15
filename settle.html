@@ -810,6 +810,10 @@ function parseExcelData(file,onResult){
       // ★ 전체 기사 ID + 캠프 추출 (자동 등록용)
       const allDriversMap={};
       const routeCampsMap={};
+      // ★ 기사별 정산 데이터 (일괄 자동 정산용)
+      const driverSettleMap={};
+      let excelMonth='';
+
       rows.slice(hIdx+1).forEach(row=>{
         if(!row||!row[0])return;
         const cat=String(row[0]).trim();
@@ -817,16 +821,55 @@ function parseExcelData(file,onResult){
           const did=String(row[1]).trim();
           const route=String(row[2]).trim();
           const camp=row[4]?String(row[4]).trim():'';
+          const del=+row[7]||0,ret=+row[8]||0;
+          const unitPrice=RPRICE[route]||0;
+          const delAmt=del*unitPrice,retAmt=ret*unitPrice;
+          // 날짜 추출 (정산월)
+          let dateStr='';
+          if(row[3] instanceof Date)dateStr=row[3].toISOString().slice(0,7);
+          else if(row[3])dateStr=String(row[3]).slice(0,7);
+          if(dateStr&&!excelMonth)excelMonth=dateStr;
           if(did&&!allDriversMap[did])allDriversMap[did]={id:did,camp};
           if(route&&route!=='미계약'&&!routeCampsMap[route])routeCampsMap[route]=camp;
+          // 기사별 집계
+          if(!driverSettleMap[did])driverSettleMap[did]={
+            userId:did,camp,month:dateStr||excelMonth,
+            routeMap:{},totalDel:0,totalRet:0,totalAmt:0,totalRetAmt:0,
+            totalFresh:0,totalNocont:0,totalNocontCnt:0
+          };
+          const ds=driverSettleMap[did];
+          if(!ds.month&&dateStr)ds.month=dateStr;
+          ds.totalDel+=del;ds.totalRet+=ret;ds.totalAmt+=delAmt;ds.totalRetAmt+=retAmt;
+          if(!ds.routeMap[route])ds.routeMap[route]={cnt:0,ret:0,amt:0,retAmt:0,unitPrice};
+          ds.routeMap[route].cnt+=del;ds.routeMap[route].ret+=ret;
+          ds.routeMap[route].amt+=delAmt;ds.routeMap[route].retAmt+=retAmt;
+        }else if(cat.includes('프레쉬백')||cat.includes('프레시백')||cat.includes('에코백')){
+          if(row[1]){const did=String(row[1]).trim();if(driverSettleMap[did])driverSettleMap[did].totalFresh+=(+row[14]||0);}
+        }else if(cat==='미계약 라우트'||cat==='미계약건'||cat==='미계약'){
+          if(row[1]){
+            const did=String(row[1]).trim();
+            if(driverSettleMap[did]){
+              driverSettleMap[did].totalNocont+=(+row[13]||+row[14]||0);
+              driverSettleMap[did].totalNocontCnt+=(+row[8]||+row[7]||0);
+            }
+          }
         }
       });
+
+      // 기사별 정산 배열로 변환
+      const allDriverSettlements=Object.values(driverSettleMap).map(ds=>({
+        ...ds,
+        routes:Object.entries(ds.routeMap).map(([r,v])=>({route:r,...v})).sort((a,b)=>b.amt-a.amt),
+        finc:Math.round(ds.totalDel*(G_PRICES.freshbag_inc||25))
+      }));
 
       onResult({
         routes,dailyRows,totalAmt,totalFresh,totalDel,totalRet,totalRetAmt,
         totalNocont,totalNocontCnt,finc,driverIdFromExcel:driverId,
         allDrivers:Object.values(allDriversMap),
-        routeCamps:routeCampsMap
+        routeCamps:routeCampsMap,
+        allDriverSettlements,
+        excelMonth:excelMonth||curMonth()
       });
     }catch(e){toast('❌ 엑셀 분석 오류: '+e.message);console.error(e);}
   };
@@ -1671,7 +1714,7 @@ async function loadJobsubs(){
     }
   }catch(e){}
 }
-PAGES['dealer-drivers']=async function(){
+PAGES['dealer-drivers']=async function(filterCamp){
   document.getElementById('page-title').textContent='기사 관리';
   document.getElementById('topbar-actions').innerHTML=`
     <button class="btn btn-gray btn-sm" onclick="openExcelDriverImport()">📂 엑셀에서 일괄 추가</button>
@@ -1684,23 +1727,50 @@ PAGES['dealer-drivers']=async function(){
       c.innerHTML=`<div class="empty"><div class="empty-icon">👤</div><div style="font-size:15px;font-weight:700;margin-bottom:6px">등록된 기사가 없습니다</div><button class="btn btn-blue" onclick="openAddDriver()" style="margin-top:12px">+ 첫 기사 추가</button></div>`;
       buildDriverModal();return;
     }
-    const rows=[...snap.docs].sort((a,b)=>(a.data().name||'').localeCompare(b.data().name||'','ko')).map(d=>{
-      const dd=d.data();
-      return`<tr>
-        <td><strong>${esc(dd.name)}</strong></td>
-        <td style="font-size:11px;color:var(--text3)">${esc(dd.userId||'—')}</td>
-        <td>${esc(dd.camp||'—')}</td>
-        <td><span class="badge b-blue">${esc(dd.jobsub||'쿠팡')}</span></td>
-        <td>${esc(dd.phone||'—')}</td>
-        <td><span class="badge ${dd.is_active!==false?'b-green':'b-gray'}">${dd.is_active!==false?'재직':'퇴직'}</span></td>
+    const allDrivers=[...snap.docs].map(d=>({id:d.id,...d.data()}));
+    // 캠프 카운트
+    const campCount={};
+    allDrivers.forEach(d=>{const k=d.camp||'기타';campCount[k]=(campCount[k]||0)+1;});
+    const campList=['전체',...Object.keys(CAMP_NAMES).map(k=>CAMP_NAMES[k]).filter((v,i,a)=>a.indexOf(v)===i)];
+    const activeFilter=filterCamp||'전체';
+    const filteredDrivers=activeFilter==='전체'?allDrivers:allDrivers.filter(d=>d.camp===activeFilter);
+    const noNameCount=filteredDrivers.filter(d=>!d.name).length;
+
+    // 캠프 필터 탭
+    const campTabs=campList.map(camp=>{
+      const cnt=camp==='전체'?allDrivers.length:(campCount[camp]||0);
+      return`<button class="camp-tab${activeFilter===camp?' active':''}" onclick="PAGES['dealer-drivers']('${camp}')" style="padding:4px 12px;border-radius:20px;border:1.5px solid ${activeFilter===camp?'var(--brand)':'var(--border)'};background:${activeFilter===camp?'var(--brand)':'var(--bg)'};color:${activeFilter===camp?'#fff':'var(--text2)'};font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">
+        ${camp} <span style="opacity:.7">(${cnt})</span>
+      </button>`;
+    }).join('');
+
+    const rows=filteredDrivers.sort((a,b)=>(a.name||'').localeCompare(b.name||'','ko')).map(d=>{
+      const noName=!d.name;
+      return`<tr${noName?' style="background:var(--amber-l)"':''}>
+        <td>
+          ${noName?`<span style="color:var(--amber);font-weight:700">⚠️ 미입력</span>`:
+            `<strong>${esc(d.name)}</strong>`}
+        </td>
+        <td style="font-size:11px;color:var(--text3)">${esc(d.userId||'—')}</td>
+        <td><span class="badge b-blue" style="font-size:10px">${esc(d.camp||'—')}</span></td>
+        <td><span class="badge b-gray" style="font-size:10px">${esc(d.jobsub||'쿠팡')}</span></td>
+        <td style="font-size:11px">${esc(d.phone||'—')}</td>
+        <td><span class="badge ${d.is_active!==false?'b-green':'b-gray'}">${d.is_active!==false?'재직':'퇴직'}</span></td>
         <td style="display:flex;gap:4px;flex-wrap:wrap">
-          <button class="btn btn-blue btn-xs" onclick="quickSettle('${esc(dd.name)}','${esc(dd.jobsub||'쿠팡')}')">📋정산</button>
+          <button class="btn btn-blue btn-xs" onclick="quickSettle('${esc(d.name||d.userId)}','${esc(d.jobsub||'쿠팡')}')">📋정산</button>
           <button class="btn btn-gray btn-xs" onclick="editDriver('${d.id}')">수정</button>
-          <button class="btn btn-red btn-xs" onclick="delDriver('${d.id}','${esc(dd.name)}')">삭제</button>
+          <button class="btn btn-red btn-xs" onclick="delDriver('${d.id}','${esc(d.name||d.userId)}')">삭제</button>
         </td>
       </tr>`;
     }).join('');
-    c.innerHTML=`<div class="card"><div class="card-header"><div class="card-title">👤 기사 목록 (${snap.size}명)</div></div><div class="card-body"><div class="tbl-wrap"><table><thead><tr><th>성함</th><th>쿠팡 ID</th><th>캠프</th><th>분류</th><th>연락처</th><th>상태</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div></div>`;
+
+    c.innerHTML=`
+      ${noNameCount>0?`<div class="info-box" style="border-color:var(--amber);background:var(--amber-l)">⚠️ 성함 미입력 기사 ${noNameCount}명 — 수정 버튼을 눌러 성함을 입력해주세요</div>`:''}
+      <div style="display:flex;gap:6px;flex-wrap:wrap;padding:8px 0 12px">
+        ${campTabs}
+      </div>
+      <div class="card"><div class="card-header"><div class="card-title">👤 기사 목록 (${filteredDrivers.length}명${activeFilter!=='전체'?' · '+activeFilter:''})</div></div>
+      <div class="card-body"><div class="tbl-wrap"><table><thead><tr><th>성함</th><th>쿠팡 ID</th><th>캠프</th><th>분류</th><th>연락처</th><th>상태</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div></div>`;
     buildDriverModal();
   }catch(e){c.innerHTML=`<div class="empty">⚠️ ${e.message}</div>`}
 };
@@ -2324,7 +2394,48 @@ window.handleExcelUpload=function(inp){
     const drop=document.getElementById('se-excel-drop');
     if(drop)drop.className='excel-drop done';
 
-    // ★ 기사 자동 등록 (미등록 기사만)
+    // ★ 전체 기사 일괄 자동 정산
+    if(result.allDriverSettlements?.length&&CU.dealerId){
+      try{
+        const drSnap=await getDocs(query(collection(db,'drivers'),where('dealerId','==',CU.dealerId)));
+        const drMap={};
+        drSnap.docs.forEach(d=>{ const dd=d.data(); if(dd.userId)drMap[dd.userId]=dd; });
+        const month=result.excelMonth||curMonth();
+        // 이미 있는 정산 확인
+        const exSnap=await getDocs(query(collection(db,'settlements'),
+          where('dealerId','==',CU.dealerId),where('month','==',month)));
+        const existSet=new Set(exSnap.docs.map(d=>d.data().driverUserId||''));
+        let autoCount=0;
+        for(const ds of result.allDriverSettlements){
+          if(existSet.has(ds.userId))continue;
+          const drInfo=drMap[ds.userId]||{};
+          const driverName=drInfo.name||ds.userId;
+          const income=ds.totalAmt+ds.totalRetAmt+ds.totalFresh+ds.finc+ds.totalNocont;
+          const supplyAmt=Math.round(income/1.1);
+          const wage=Math.round(supplyAmt*(1-0.346));
+          const empCalc=wage>=800000?Math.floor(wage*0.008/10)*10:0;
+          const workCalc=Math.floor(wage*0.0088/10)*10;
+          await addDoc(collection(db,'settlements'),{
+            dealerId:CU.dealerId,dealerName:CU.dealerName||'',
+            driver:driverName,driverName,driverUserId:ds.userId,
+            month,jobsub:drInfo.jobsub||'쿠팡',
+            dcnt:ds.totalDel,damt:ds.totalAmt,
+            rcnt:ds.totalRet,ramt:ds.totalRetAmt,
+            fresh:ds.totalFresh,finc:ds.finc,
+            nocont:ds.totalNocont,nocontCnt:ds.totalNocontCnt,
+            emp:empCalc,work:workCalc,
+            routeDetails:ds.routes,
+            status:'정산예정',createdAt:serverTimestamp()
+          });
+          autoCount++;
+        }
+        if(autoCount>0){
+          toast(`✅ ${autoCount}명 정산 자동 완료 (${month})`);
+          // 정산 목록 새로고침
+          setTimeout(()=>PAGES['dealer-settlements']?.(),800);
+        }
+      }catch(e){console.warn('auto settle:',e.message);}
+    }
     if(result.allDrivers?.length&&CU.dealerId){
       try{
         const exSnap=await getDocs(query(collection(db,'drivers'),where('dealerId','==',CU.dealerId)));
@@ -2503,41 +2614,85 @@ window.saveSettle=async function(){
 // ──────────────────────────────────────
 // 📌 DEALER PRICES
 // ──────────────────────────────────────
-PAGES['dealer-prices']=async function(){
+PAGES['dealer-prices']=async function(filterCamp){
   document.getElementById('page-title').textContent='라우트 단가표';
-  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-blue btn-sm" onclick="addDealerRoute()">+ 라우트 추가</button>`;
+  document.getElementById('topbar-actions').innerHTML=`
+    <button class="btn btn-amber btn-sm" onclick="recalcAllSettlements()">🔄 전체 재계산</button>
+    <button class="btn btn-blue btn-sm" onclick="addDealerRoute()">+ 라우트 추가</button>`;
   const c=document.getElementById('content');
   c.innerHTML='<div class="loading">로딩 중...</div>';
   try{
     const snap=await getDocs(query(collection(db,'prices'),where('dealerId','==',CU.dealerId)));
     const customRoutes=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.route.localeCompare(b.route));
-    const customRowsHTML=customRoutes.map(r=>`
-      <tr>
+    const campCount={};
+    customRoutes.forEach(r=>{const k=r.camp||CAMP_NAMES[r.route.replace(/[A-D]$/,'')]||'기타';campCount[k]=(campCount[k]||0)+1;});
+    const campList=['전체',...Object.values(CAMP_NAMES).filter((v,i,a)=>a.indexOf(v)===i)];
+    const activeFilter=filterCamp||'전체';
+    const filtered=activeFilter==='전체'?customRoutes:customRoutes.filter(r=>{
+      const camp=r.camp||CAMP_NAMES[r.route.replace(/[A-D]$/,'')]||'기타';
+      return camp===activeFilter;
+    });
+    const campTabs=campList.map(camp=>{
+      const cnt=camp==='전체'?customRoutes.length:(campCount[camp]||0);
+      return`<button onclick="PAGES['dealer-prices']('${camp}')" style="padding:4px 12px;border-radius:20px;border:1.5px solid ${activeFilter===camp?'var(--brand)':'var(--border)'};background:${activeFilter===camp?'var(--brand)':'var(--bg)'};color:${activeFilter===camp?'#fff':'var(--text2)'};font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">
+        ${camp} <span style="opacity:.7">(${cnt})</span>
+      </button>`;
+    }).join('');
+    const customRowsHTML=filtered.map(r=>{
+      const camp=r.camp||CAMP_NAMES[r.route.replace(/[A-D]$/,'')]||'—';
+      return`<tr>
         <td><strong>${esc(r.route)}</strong></td>
-        <td style="font-size:11px;color:var(--text3)">${esc(CAMP_NAMES[r.route.replace(/[A-D]$/,'')]||'—')}</td>
+        <td><span class="badge b-blue" style="font-size:10px">${esc(camp)}</span></td>
         <td><input type="number" value="${r.price||0}" style="width:90px;padding:4px 8px;border:1.5px solid var(--border);border-radius:7px;font-size:13px" onchange="updateDealerPrice('${r.id}',this.value)"></td>
-        <td>
-          <button class="btn btn-red btn-xs" onclick="deleteDealerPrice('${r.id}')">삭제</button>
-        </td>
-      </tr>`).join('');
+        <td><button class="btn btn-red btn-xs" onclick="deleteDealerPrice('${r.id}')">삭제</button></td>
+      </tr>`;
+    }).join('');
     c.innerHTML=`
-      <div class="info-box">
-        💡 이 대리점만의 라우트별 단가를 설정합니다. 정산 시 여기 설정된 단가가 우선 적용됩니다.
-      </div>
+      <div class="info-box">💡 여기 설정된 단가가 <strong>기사 정산에 사용</strong>됩니다. 쿠팡 엑셀의 단가는 쿠팡→회사 매출용이며 기사 정산과 별개입니다.<br>단가 수정 후 <strong>🔄 전체 재계산</strong>으로 기존 정산을 새 단가로 업데이트하세요.</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;padding:8px 0 12px">${campTabs}</div>
       <div class="card">
-        <div class="card-header"><div class="card-title">📌 전용 단가표 (${customRoutes.length}개)</div></div>
+        <div class="card-header"><div class="card-title">📌 전용 단가표 (${filtered.length}개${activeFilter!=='전체'?' · '+activeFilter:''})</div></div>
         <div class="card-body">
-          ${customRoutes.length===0?
-            `<div class="empty" style="padding:20px 0">
-              <div class="empty-icon">📌</div>
-              <div>등록된 단가가 없습니다</div>
-              <div style="font-size:12px;color:var(--text3);margin-top:6px">+ 라우트 추가 버튼으로 단가를 등록하세요</div>
-            </div>`:
-            `<div class="tbl-wrap"><table><thead><tr><th>라우트</th><th>캠프</th><th>단가 (원/건)</th><th></th></tr></thead><tbody>${customRowsHTML}</tbody></table></div>`}
+          ${customRoutes.length===0?`<div class="empty" style="padding:20px 0"><div class="empty-icon">📌</div><div>등록된 단가가 없습니다</div><div style="font-size:12px;color:var(--text3);margin-top:6px">쿠팡 엑셀 업로드 시 자동 등록됩니다</div></div>`:
+            `<div class="tbl-wrap"><table><thead><tr><th>라우트</th><th>캠프</th><th>기사 단가 (원/건)</th><th></th></tr></thead><tbody>${customRowsHTML}</tbody></table></div>`}
         </div>
       </div>`;
   }catch(e){c.innerHTML=`<div class="empty">⚠️ ${e.message}</div>`}
 };
+window.recalcAllSettlements=async function(){
+  if(!confirm('현재 단가표로 모든 정산을 재계산하시겠습니까?\n(승인된 정산은 제외됩니다)'))return;
+  try{
+    toast('🔄 재계산 중...');
+    const prSnap=await getDocs(query(collection(db,'prices'),where('dealerId','==',CU.dealerId)));
+    const dealerPrices={};
+    prSnap.docs.forEach(d=>{const dd=d.data();dealerPrices[dd.route]=dd.price||0;});
+    const sSnap=await getDocs(query(collection(db,'settlements'),
+      where('dealerId','==',CU.dealerId),where('status','!=','approved')));
+    let cnt=0;
+    for(const sd of sSnap.docs){
+      const data=sd.data();
+      const rdList=data.routeDetails||[];
+      if(!rdList.length)continue;
+      const newRoutes=rdList.map(rd=>{
+        const price=dealerPrices[rd.route]||RPRICE[rd.route]||rd.unitPrice||0;
+        return{...rd,unitPrice:price,amt:(rd.cnt||0)*price,retAmt:(rd.ret||0)*price};
+      });
+      const newDamt=newRoutes.reduce((s,rd)=>s+rd.amt,0);
+      const newRamt=newRoutes.reduce((s,rd)=>s+rd.retAmt,0);
+      const income=newDamt+newRamt+(data.fresh||0)+(data.finc||0)+(data.nocont||0);
+      const wage=Math.round(Math.round(income/1.1)*(1-0.346));
+      await updateDoc(doc(db,'settlements',sd.id),{
+        damt:newDamt,ramt:newRamt,routeDetails:newRoutes,
+        emp:wage>=800000?Math.floor(wage*0.008/10)*10:0,
+        work:Math.floor(wage*0.0088/10)*10,
+        updatedAt:serverTimestamp()
+      });
+      cnt++;
+    }
+    toast(`✅ ${cnt}건 재계산 완료`);
+  }catch(e){toast('❌ '+e.message);}
+};
+window._m_recalcAllSettlements=window.recalcAllSettlements;
 window.addDealerRoute=async function(){
   const route=prompt('라우트 코드:','');if(!route)return;
   const price=+prompt('단가 (원/건):','0')||0;
