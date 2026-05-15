@@ -268,7 +268,7 @@ async function runOCR(){
     img.src=_capturedImg;
   });
 
-  var prompt='쿠팡 배송 송장 이미지다. 수령인이름/주소/송장번호를 추출해 반드시 JSON만 반환. 규칙: ①recipientEng=한국이름 로마자변환(예:임수지→Im Suji, 김철수→Kim Cheolsu) ②addr1Eng=도로명+번지 영문로마자 ③addr2Eng=건물명+동+호수 영문로마자 ④tracking=숫자+영문코드 ⑤모르면 빈문자열\n{"recipientKor":"한국이름","recipientEng":"로마자이름(반드시영문)","addr1Kor":"도로명+번지","addr1Eng":"romanized road address","addr2Kor":"건물명+동+호수","addr2Eng":"romanized building+unit","tracking":"송장번호","city":"도시영문"}'
+  var prompt='쿠팡 배송 송장 이미지다. 수령인이름/주소/송장번호를 추출해 반드시 JSON만 반환.\n규칙:\n①recipientEng=한국이름 로마자(예:임수지→Im Suji)\n②addr1Kor=도로명주소 전체 — 구/군+도로명+번지숫자까지 전부 (예:"사상구 모라로 110번길 50" 처럼 번길/번지 뒤 숫자 절대 누락 금지)\n③addr1Eng=②의 로마자\n④addr2Kor=건물명+동+호수 (예:"모라영구임대아파트 106동 1209호")\n⑤addr2Eng=④의 로마자\n⑥tracking=숫자+영문 조합 송장번호\n⑦모르면 빈문자열\n{"recipientKor":"한국이름","recipientEng":"로마자이름","addr1Kor":"구+도로명+번지끝숫자포함","addr1Eng":"romanized full road+number","addr2Kor":"건물명+동+호수","addr2Eng":"romanized building+unit","tracking":"송장번호","city":"도시영문"}'
 
   try{
     document.getElementById('loading-msg').textContent='AI 번역 중...';
