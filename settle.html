@@ -806,7 +806,28 @@ function parseExcelData(file,onResult){
         .sort((a,b)=>b.amt-a.amt);
       const finc=Math.round(totalDel*(G_PRICES.freshbag_inc||25));
       const driverId=rows[hIdx+1]&&rows[hIdx+1][1]?String(rows[hIdx+1][1]).trim():'';
-      onResult({routes,dailyRows,totalAmt,totalFresh,totalDel,totalRet,totalRetAmt,totalNocont,totalNocontCnt,finc,driverIdFromExcel:driverId});
+
+      // ★ 전체 기사 ID + 캠프 추출 (자동 등록용)
+      const allDriversMap={};
+      const routeCampsMap={};
+      rows.slice(hIdx+1).forEach(row=>{
+        if(!row||!row[0])return;
+        const cat=String(row[0]).trim();
+        if((cat==='배송'||cat==='수기반영')&&row[1]&&row[2]){
+          const did=String(row[1]).trim();
+          const route=String(row[2]).trim();
+          const camp=row[4]?String(row[4]).trim():'';
+          if(did&&!allDriversMap[did])allDriversMap[did]={id:did,camp};
+          if(route&&route!=='미계약'&&!routeCampsMap[route])routeCampsMap[route]=camp;
+        }
+      });
+
+      onResult({
+        routes,dailyRows,totalAmt,totalFresh,totalDel,totalRet,totalRetAmt,
+        totalNocont,totalNocontCnt,finc,driverIdFromExcel:driverId,
+        allDrivers:Object.values(allDriversMap),
+        routeCamps:routeCampsMap
+      });
     }catch(e){toast('❌ 엑셀 분석 오류: '+e.message);console.error(e);}
   };
   reader.readAsArrayBuffer(file);
@@ -2281,7 +2302,8 @@ window.handleExcelUpload=function(inp){
     sv('se-rcnt',result.totalRet);sv('se-ramt',result.totalRetAmt);
     sv('se-fresh',result.totalFresh);sv('se-finc',result.finc);
     sv('se-nocont',result.totalNocont);sv('se-nocont-cnt',result.totalNocontCnt);
-    // ★ 기사 자동 매칭
+
+    // ★ 기사 자동 매칭 (단일 기사)
     if(result.driverIdFromExcel){
       window._lastDriverId=result.driverIdFromExcel;
       try{
@@ -2301,6 +2323,49 @@ window.handleExcelUpload=function(inp){
     calcSettlePreview();
     const drop=document.getElementById('se-excel-drop');
     if(drop)drop.className='excel-drop done';
+
+    // ★ 기사 자동 등록 (미등록 기사만)
+    if(result.allDrivers?.length&&CU.dealerId){
+      try{
+        const exSnap=await getDocs(query(collection(db,'drivers'),where('dealerId','==',CU.dealerId)));
+        const existIds=new Set(exSnap.docs.map(d=>d.data().userId));
+        const campMap={'부산1':'부산1','부산2':'부산2','부산3':'부산3','M_진주1':'진주M','대구2':'대구2','대구2B':'대구2B'};
+        let newCount=0;
+        for(const drv of result.allDrivers){
+          if(existIds.has(drv.id))continue;
+          const camp=campMap[drv.camp]||drv.camp||'기타';
+          await addDoc(collection(db,'drivers'),{
+            name:'',userId:drv.id,dealerId:CU.dealerId,
+            camp,jobsub:'쿠팡',is_active:true,status:'재직',
+            createdAt:serverTimestamp()
+          });
+          newCount++;
+        }
+        if(newCount>0)toast(`👥 ${newCount}명 신규 기사 자동 등록 — 기사 관리에서 성함 입력해주세요`);
+      }catch(e){console.warn('auto driver reg:',e.message);}
+    }
+
+    // ★ 라우트 단가 자동 등록 (미등록 라우트만)
+    if(result.routeCamps&&CU.dealerId){
+      try{
+        const prSnap=await getDocs(query(collection(db,'prices'),where('dealerId','==',CU.dealerId)));
+        const existRoutes=new Set(prSnap.docs.map(d=>d.data().route));
+        const campMap={'부산1':'부산1캠프','부산2':'부산2캠프','부산3':'부산3캠프',
+          'M_진주1':'진주M캠프','대구2':'대구2캠프','대구2B':'대구2B캠프'};
+        let routeCount=0;
+        for(const [route,rawCamp] of Object.entries(result.routeCamps)){
+          if(existRoutes.has(route)||route==='미계약')continue;
+          const camp=campMap[rawCamp]||rawCamp||CAMP_NAMES[route.replace(/[A-D]$/,'')]||'기타';
+          const price=RPRICE[route]||0;
+          await addDoc(collection(db,'prices'),{
+            dealerId:CU.dealerId,route,camp,price,createdAt:serverTimestamp()
+          });
+          routeCount++;
+        }
+        if(routeCount>0)toast(`📌 ${routeCount}개 라우트 자동 등록됨`);
+      }catch(e){console.warn('auto route reg:',e.message);}
+    }
+
     // ★ 캠프별 라우트 분류
     const cmap={'101':'부산1캠프','215':'부산1캠프','812':'부산2캠프','508':'부산3캠프',
       '109':'대구2캠프','213':'대구2B캠프','608':'진주M캠프','612':'진주M캠프',
