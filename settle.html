@@ -661,7 +661,7 @@ PAGES['admin-drivers']=async function(){
   c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
   try{
     const [driversSnap,dealersSnap]=await Promise.all([
-      getDocs(query(collection(db,'drivers'),orderBy('name'))),
+      getDocs(collection(db,'drivers')),
       getDocs(collection(db,'dealers'))
     ]);
     const dealerMap={};
@@ -685,7 +685,7 @@ PAGES['admin-settlements']=async function(){
   c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
   try{
     const [settleSnap,dealersSnap]=await Promise.all([
-      getDocs(query(collection(db,'settlements'),orderBy('createdAt','desc'))),
+      getDocs(collection(db,'settlements')),
       getDocs(collection(db,'dealers'))
     ]);
     const dealerMap={};
@@ -809,13 +809,14 @@ PAGES['dealer-drivers']=async function(){
   const c=document.getElementById('content');
   c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
   try{
-    const snap=await getDocs(query(collection(db,'drivers'),where('dealerId','==',CU.dealerId),orderBy('name')));
+    const snap=await getDocs(query(collection(db,'drivers'),where('dealerId','==',CU.dealerId)));
     if(snap.empty){
       c.innerHTML=`<div class="empty"><div class="empty-icon">👤</div><div style="font-size:15px;font-weight:700;margin-bottom:6px">등록된 기사가 없습니다</div><button class="btn btn-blue" onclick="openAddDriver()" style="margin-top:12px">+ 첫 기사 추가</button></div>`;
       addDriverModal();
       return;
     }
-    const rows=snap.docs.map(d=>{
+    const sortedDocs=[...snap.docs].sort((a,b)=>a.data().name?.localeCompare(b.data().name,'ko'));
+    const rows=sortedDocs.map(d=>{
       const dd=d.data();
       return`<tr>
         <td><strong>${escH(dd.name)}</strong></td>
@@ -974,7 +975,7 @@ PAGES['dealer-settlements']=async function(){
   const c=document.getElementById('content');
   c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
   try{
-    const snap=await getDocs(query(collection(db,'settlements'),where('dealerId','==',CU.dealerId),orderBy('createdAt','desc')));
+    const snap=await getDocs(query(collection(db,'settlements'),where('dealerId','==',CU.dealerId)));
     if(snap.empty){
       c.innerHTML=`<div class="empty"><div class="empty-icon">📋</div><div style="font-size:15px;font-weight:700;margin-bottom:6px">정산 데이터가 없습니다</div><button class="btn btn-blue" onclick="openNewSettle()" style="margin-top:12px">+ 첫 정산 입력</button></div>`;
       addSettleModal();
@@ -1191,7 +1192,7 @@ async function loadPrices(){
   const body=document.getElementById('price-body');
   if(!body)return;
   try{
-    const snap=await getDocs(query(collection(db,'prices'),where('dealerId','==',CU.dealerId),orderBy('route')));
+    const snap=await getDocs(query(collection(db,'prices'),where('dealerId','==',CU.dealerId)));
     if(snap.empty){body.innerHTML='<div class="empty"><div class="empty-icon">📌</div><div>등록된 단가가 없습니다</div></div>';return;}
     const rows=snap.docs.map(d=>{
       const pd=d.data();
@@ -1234,7 +1235,7 @@ PAGES['driver-home']=async function(){
     // 정산 목록 (driverName or driverId로 검색)
     let settleSnap;
     if(CU.driverUserId){
-      settleSnap=await getDocs(query(collection(db,'settlements'),where('dealerId','==',CU.dealerId),orderBy('month','desc')));
+      settleSnap=await getDocs(query(collection(db,'settlements'),where('dealerId','==',CU.dealerId)));
       const myId=CU.driverUserId;
       // 본인 것만 필터
       const mySettles=settleSnap.docs.filter(d=>{
@@ -1243,7 +1244,7 @@ PAGES['driver-home']=async function(){
       });
       renderDriverSettles(mySettles,driver||{name:CU.name},c);
     }else{
-      settleSnap=await getDocs(query(collection(db,'settlements'),where('dealerId','==',CU.dealerId),orderBy('month','desc')));
+      settleSnap=await getDocs(query(collection(db,'settlements'),where('dealerId','==',CU.dealerId)));
       const mySettles=settleSnap.docs.filter(d=>d.data().driverName===CU.name);
       renderDriverSettles(mySettles,driver||{name:CU.name},c);
     }
