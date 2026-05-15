@@ -82,6 +82,7 @@ body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
 .label-item .li-date{font-size:9px;color:#888;margin-top:2px}
 </style>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 <div class="app">
@@ -351,6 +352,11 @@ function setSize(n,el){
   document.querySelectorAll('.size-tab').forEach(function(t){t.classList.remove('on');});
   el.classList.add('on');
   renderLabel();
+  var qd={track:_data.track,name:_data.name,addr1:_data.addr1,addr2:_data.addr2};
+  setTimeout(function(){
+    if(n===1){generateQR('qr-1',qd);}
+    else{generateQR('qr-2a',qd);generateQR('qr-2b',qd);}
+  },150);
 }
 
 function renderLabel(){
@@ -358,39 +364,48 @@ function renderLabel(){
   var addrBlock=(d.addr2?d.addr2+'\n':'')+d.addr1+'\n'+(d.city||'South Korea')+', South Korea';
   var today=new Date();
   var dateStr=(today.getMonth()+1)+'/'+today.getDate()+'/'+today.getFullYear();
+  var logoHtml=_logoData?'<img src="'+_logoData+'" style="max-height:32px;max-width:110px;object-fit:contain">':'<div style="font-size:16px;font-weight:900;color:#e8303a">cou<span style="color:#1a1a18">pang</span></div>';
   var html='';
 
   if(_printSize===1){
     html='<div class="label-a4-1">'
       +'<div class="lbl-header">'
-      +'<div class="lbl-logo">cou<span>pang</span></div>'
+      +'<div class="lbl-logo">'+logoHtml+'</div>'
       +'<div class="lbl-type"><div style="font-size:18px;font-weight:900">DELIVERY LABEL</div><div>International Shipping</div></div>'
       +'</div>'
-      +'<div class="lbl-from">FROM: Coupang Co., Ltd. · Republic of Korea</div>'
+      +'<div class="lbl-from">FROM: Republic of Korea</div>'
       +'<div class="lbl-to-lbl">SHIP TO:</div>'
       +'<div class="lbl-name">'+escH(d.name)+'</div>'
       +'<div class="lbl-addr">'+escH(addrBlock).replace(/\n/g,'<br>')+'</div>'
       +'<hr class="lbl-divider">'
-      +'<div class="lbl-meta">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-end">'
       +'<div>'
       +'<div class="lbl-track">Tracking No.</div>'
       +'<div class="lbl-barnum">'+escH(d.track)+'</div>'
-      +'</div>'
       +'<div class="lbl-date">Date: '+dateStr+'</div>'
+      +'</div>'
+      +'<div id="qr-1" style="width:80px;height:80px"></div>'
       +'</div>'
       +'</div>';
   } else {
-    var item='<div class="label-item">'
-      +'<div class="li-logo">cou<span>pang</span></div>'
+    var mkItem=function(qrId){return '<div class="label-item">'
+      +'<div class="li-logo">'+logoHtml+'</div>'
       +'<div class="li-to">SHIP TO:</div>'
       +'<div class="li-name">'+escH(d.name)+'</div>'
       +'<div class="li-addr">'+escH(addrBlock).replace(/\n/g,'<br>')+'</div>'
-      +'<div class="li-track">Tracking: '+escH(d.track)+'</div>'
-      +'<div class="li-date">'+dateStr+'</div>'
-      +'</div>';
-    html='<div class="label-a4-2">'+item+item+'</div>';
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:6px">'
+      +'<div><div class="li-track">'+escH(d.track)+'</div><div class="li-date">'+dateStr+'</div></div>'
+      +'<div id="'+qrId+'" style="width:60px;height:60px"></div>'
+      +'</div></div>';};
+    html='<div class="label-a4-2">'+mkItem('qr-2a')+mkItem('qr-2b')+'</div>';
   }
   document.getElementById('print-area').innerHTML=html;
+  setTimeout(function(){
+    applyLogo();
+    var qd={track:_data.track,name:_data.name,addr1:_data.addr1,addr2:_data.addr2};
+    if(_printSize===1){ generateQR('qr-1',qd); }
+    else { generateQR('qr-2a',qd); generateQR('qr-2b',qd); }
+  },150);
 }
 
 function escH(s){
@@ -429,6 +444,21 @@ function saveApiKey(){
   runOCR();
 }
 
+
+// ── QR 코드 생성 (긴급배송 앱 스캔 호환) ──
+function generateQR(containerId, data){
+  var el=document.getElementById(containerId);
+  if(!el) return;
+  el.innerHTML='';
+  var qrData='|V1|'+data.track+'|'+data.addr1+'|'+data.addr2+'|'+data.name+'|||';
+  try{
+    new QRCode(el,{
+      text:qrData, width:80, height:80,
+      colorDark:'#000000', colorLight:'#ffffff',
+      correctLevel:QRCode.CorrectLevel.M
+    });
+  }catch(e){ el.innerHTML='<div style="font-size:8px;color:#888;text-align:center">QR</div>'; }
+}
 function resetAll(){
   _capturedImg=null; _data={name:'',addr1:'',addr2:'',track:'',date:''};
   document.getElementById('step-result').style.display='none';
@@ -440,3 +470,4 @@ function resetAll(){
 </script>
 </body>
 </html>
+  setTimeout(function(){ applyLogo(); var qd={track:_data.track,name:_data.name,addr1:_data.addr1,addr2:_data.addr2}; if(_printSize===1){generateQR('qr-1',qd);}else{generateQR('qr-2a',qd);generateQR('qr-2b',qd);} },200);
