@@ -2440,41 +2440,35 @@ window.saveSettle=async function(){
 // ──────────────────────────────────────
 PAGES['dealer-prices']=async function(){
   document.getElementById('page-title').textContent='라우트 단가표';
-  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-blue btn-sm" onclick="addDealerRoute()">+ 추가</button>`;
+  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-blue btn-sm" onclick="addDealerRoute()">+ 라우트 추가</button>`;
   const c=document.getElementById('content');
   c.innerHTML='<div class="loading">로딩 중...</div>';
   try{
     const snap=await getDocs(query(collection(db,'prices'),where('dealerId','==',CU.dealerId)));
-    const customRoutes=snap.docs.map(d=>({id:d.id,...d.data()}));
-    const globalRows=Object.entries(RPRICE).sort((a,b)=>a[0].localeCompare(b[0])).map(([r,p])=>`
-      <tr>
-        <td><strong>${esc(r)}</strong></td>
-        <td style="font-size:11px;color:var(--text3)">${esc(CAMP_NAMES[r.replace(/[A-D]$/,'')]||'전역')}</td>
-        <td>₩${fmt(p)}</td>
-        <td><span class="badge b-blue" style="font-size:10px">전역 설정</span></td>
-      </tr>`).join('');
+    const customRoutes=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.route.localeCompare(b.route));
     const customRowsHTML=customRoutes.map(r=>`
       <tr>
         <td><strong>${esc(r.route)}</strong></td>
-        <td>—</td>
+        <td style="font-size:11px;color:var(--text3)">${esc(CAMP_NAMES[r.route.replace(/[A-D]$/,'')]||'—')}</td>
         <td><input type="number" value="${r.price||0}" style="width:90px;padding:4px 8px;border:1.5px solid var(--border);border-radius:7px;font-size:13px" onchange="updateDealerPrice('${r.id}',this.value)"></td>
         <td>
-          <span class="badge b-green" style="font-size:10px">대리점 설정</span>
-          <button class="btn btn-red btn-xs" style="margin-left:4px" onclick="deleteDealerPrice('${r.id}')">삭제</button>
+          <button class="btn btn-red btn-xs" onclick="deleteDealerPrice('${r.id}')">삭제</button>
         </td>
       </tr>`).join('');
     c.innerHTML=`
-      <div class="card">
-        <div class="card-header"><div class="card-title">📌 대리점 전용 단가 (${customRoutes.length}개)</div></div>
-        <div class="card-body">
-          ${customRoutes.length===0?'<div class="empty" style="padding:16px 0">추가된 단가가 없습니다</div>':
-            `<div class="tbl-wrap"><table><thead><tr><th>라우트</th><th>캠프</th><th>단가</th><th></th></tr></thead><tbody>${customRowsHTML}</tbody></table></div>`}
-        </div>
+      <div class="info-box">
+        💡 이 대리점만의 라우트별 단가를 설정합니다. 정산 시 여기 설정된 단가가 우선 적용됩니다.
       </div>
       <div class="card">
-        <div class="card-header"><div class="card-title">📋 전역 RPRICE 단가표 (관리자 설정)</div></div>
+        <div class="card-header"><div class="card-title">📌 전용 단가표 (${customRoutes.length}개)</div></div>
         <div class="card-body">
-          <div class="tbl-wrap"><table><thead><tr><th>라우트</th><th>캠프</th><th>단가</th><th></th></tr></thead><tbody>${globalRows}</tbody></table></div>
+          ${customRoutes.length===0?
+            `<div class="empty" style="padding:20px 0">
+              <div class="empty-icon">📌</div>
+              <div>등록된 단가가 없습니다</div>
+              <div style="font-size:12px;color:var(--text3);margin-top:6px">+ 라우트 추가 버튼으로 단가를 등록하세요</div>
+            </div>`:
+            `<div class="tbl-wrap"><table><thead><tr><th>라우트</th><th>캠프</th><th>단가 (원/건)</th><th></th></tr></thead><tbody>${customRowsHTML}</tbody></table></div>`}
         </div>
       </div>`;
   }catch(e){c.innerHTML=`<div class="empty">⚠️ ${e.message}</div>`}
