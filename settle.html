@@ -1731,9 +1731,11 @@ PAGES['dealer-drivers']=async function(filterCamp){
     // 캠프 카운트
     const campCount={};
     allDrivers.forEach(d=>{const k=d.camp||'기타';campCount[k]=(campCount[k]||0)+1;});
-    const campList=['전체',...Object.keys(CAMP_NAMES).map(k=>CAMP_NAMES[k]).filter((v,i,a)=>a.indexOf(v)===i)];
+    // ★ 실제 데이터 기반 캠프 목록 (저장된 값 그대로 사용)
+    const uniqueCamps=[...new Set(allDrivers.map(d=>d.camp||'기타').filter(Boolean))].sort();
+    const campList=['전체',...uniqueCamps];
     const activeFilter=filterCamp||'전체';
-    const filteredDrivers=activeFilter==='전체'?allDrivers:allDrivers.filter(d=>d.camp===activeFilter);
+    const filteredDrivers=activeFilter==='전체'?allDrivers:allDrivers.filter(d=>(d.camp||'기타')===activeFilter);
     const noNameCount=filteredDrivers.filter(d=>!d.name).length;
 
     // 캠프 필터 탭
@@ -2087,6 +2089,8 @@ PAGES['dealer-settlements']=async function(){
     <select id="filter-month" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text)" onchange="filterSettles()">
       <option value="">전체 월</option>
     </select>
+    <button class="btn btn-red btn-sm" onclick="deleteMonthSettles()">🗑 해당월 삭제</button>
+    <button class="btn btn-gray btn-sm" onclick="resetAllSettles()">⚠️ 전체 초기화</button>
     <button class="btn btn-blue btn-sm" onclick="openNewSettle()">+ 정산 입력</button>`;
   const c=document.getElementById('content');
   c.innerHTML='<div class="loading">로딩 중...</div>';
@@ -3027,6 +3031,163 @@ window.recalcAllSettlements=async function(){
   }catch(e){toast('❌ '+e.message);}
 };
 window._m_recalcAllSettlements=window.recalcAllSettlements;
+
+// ★ 해당월 정산 삭제
+window.deleteMonthSettles=async function(){
+  const m=(document.getElementById('filter-month')||{}).value||'';
+  if(!m){toast('❌ 먼저 삭제할 월을 선택해주세요');return;}
+  const settles=window._allSettles||[];
+  const targets=settles.filter(s=>s.month===m);
+  if(!targets.length){toast('해당 월에 정산이 없습니다');return;}
+  if(!confirm(`⚠️ ${m} 정산 ${targets.length}건을 전부 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`))return;
+  try{
+    for(const s of targets)await deleteDoc(doc(db,'settlements',s.id));
+    toast(`🗑 ${m} 정산 ${targets.length}건 삭제 완료`);
+    PAGES['dealer-settlements']();
+  }catch(e){toast('❌ '+e.message)}
+};
+window._m_deleteMonthSettles=window.deleteMonthSettles;
+
+// ★ 전체 초기화
+window.resetAllSettles=async function(){
+  const settles=window._allSettles||[];
+  if(!settles.length){toast('정산 데이터가 없습니다');return;}
+  if(!confirm(`⚠️⚠️ 전체 정산 ${settles.length}건을 모두 삭제하시겠습니까?\n\n이 작업은 절대 되돌릴 수 없습니다!\n정말 삭제하려면 확인을 누르세요.`))return;
+  if(!confirm(`마지막 확인: 전체 정산 ${settles.length}건 삭제합니다.`))return;
+  try{
+    toast('🗑 삭제 중...');
+    for(const s of settles)await deleteDoc(doc(db,'settlements',s.id));
+    toast(`✅ 전체 정산 초기화 완료`);
+    PAGES['dealer-settlements']();
+  }catch(e){toast('❌ '+e.message)}
+};
+window._m_resetAllSettles=window.resetAllSettles;
+
+// ════════════════════════════════════
+// ★ 세금계산서 이미지 생성 (기사 사업자 정보 기반)
+// ════════════════════════════════════
+function buildTaxInvoiceHTML(settle,driver,dealer){
+  const r=calcNet(Object.assign({},settle,{emp:0,work:0}));
+  const supplyAmt=r.supplyAmt||Math.round(r.income/1.1);
+  const taxAmt=Math.round(supplyAmt*0.1);
+  const totalAmt=supplyAmt+taxAmt;
+  const today=new Date();
+  const [yr,mo,dy]=(settle.month||today.toISOString().slice(0,7)).split('-');
+  const issueNo=`20${yr.slice(-2)}${mo}-${String(Math.floor(Math.random()*9000)+1000)}`;
+  return`<div id="tax-invoice-body" style="font-family:'맑은 고딕',Arial,sans-serif;font-size:11px;border:2px solid #000;padding:0;width:700px;max-width:98vw">
+    <!-- 제목 -->
+    <div style="text-align:center;font-size:18px;font-weight:900;padding:8px 0;border-bottom:2px solid #000;letter-spacing:4px">세 금 계 산 서</div>
+    <div style="display:grid;grid-template-columns:1fr auto 1fr;border-bottom:1px solid #000">
+      <div style="padding:4px 8px;font-size:10px;color:#666">(공급받는자 보관용)</div>
+      <div style="padding:4px 12px;border-left:1px solid #000;border-right:1px solid #000;font-size:10px">
+        책 번 호: _______ 권 _______ 호<br>일련번호: ${issueNo}
+      </div>
+      <div style="padding:4px 8px;text-align:right;font-size:10px;color:#666">별지 제11호 서식</div>
+    </div>
+    <!-- 공급자 / 공급받는자 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid #000">
+      <!-- 공급자 -->
+      <div style="border-right:1px solid #000">
+        <div style="background:#f0f0f0;text-align:center;padding:4px;font-weight:700;font-size:11px;border-bottom:1px solid #000">자 급 공</div>
+        <table style="width:100%;border-collapse:collapse;font-size:11px">
+          <tr><td style="padding:3px 6px;border-bottom:1px solid #ddd;width:70px;color:#555">등 록 번 호</td><td style="padding:3px 6px;border-bottom:1px solid #ddd;font-weight:700;letter-spacing:1px">${esc(driver?.brn||'000-00-00000')}</td></tr>
+          <tr><td style="padding:3px 6px;border-bottom:1px solid #ddd;color:#555">상 호</td><td style="padding:3px 6px;border-bottom:1px solid #ddd"><strong>${esc(driver?.corpName||driver?.name||'')}</strong></td></tr>
+          <tr><td style="padding:3px 6px;border-bottom:1px solid #ddd;color:#555">성 명</td><td style="padding:3px 6px;border-bottom:1px solid #ddd">${esc(driver?.name||'')} ㊞</td></tr>
+          <tr><td style="padding:3px 6px;border-bottom:1px solid #ddd;color:#555">사업장<br>주 소</td><td style="padding:3px 6px;border-bottom:1px solid #ddd;font-size:10px">${esc(driver?.address||'')}</td></tr>
+          <tr><td style="padding:3px 6px;color:#555">업 태</td><td style="padding:3px 6px">${esc(driver?.bizType||'서비스')} / 종목: ${esc(driver?.bizItem||'기타물품운반')}</td></tr>
+        </table>
+      </div>
+      <!-- 공급받는자 -->
+      <div>
+        <div style="background:#f0f0f0;text-align:center;padding:4px;font-weight:700;font-size:11px;border-bottom:1px solid #000">자 는 받 공 급</div>
+        <table style="width:100%;border-collapse:collapse;font-size:11px">
+          <tr><td style="padding:3px 6px;border-bottom:1px solid #ddd;width:70px;color:#555">등 록 번 호</td><td style="padding:3px 6px;border-bottom:1px solid #ddd;font-weight:700;letter-spacing:1px">${esc(dealer?.brn||'373-86-02536')}</td></tr>
+          <tr><td style="padding:3px 6px;border-bottom:1px solid #ddd;color:#555">상 호</td><td style="padding:3px 6px;border-bottom:1px solid #ddd"><strong>${esc(dealer?.corpName||dealer?.name||'엠비티아이유한회사')}</strong></td></tr>
+          <tr><td style="padding:3px 6px;border-bottom:1px solid #ddd;color:#555">성 명</td><td style="padding:3px 6px;border-bottom:1px solid #ddd">관리자 ㊞</td></tr>
+          <tr><td style="padding:3px 6px;border-bottom:1px solid #ddd;color:#555">사업장<br>주 소</td><td style="padding:3px 6px;border-bottom:1px solid #ddd;font-size:10px">${esc(dealer?.address||'부산광역시 수영구 수영로 668, 607호')}</td></tr>
+          <tr><td style="padding:3px 6px;color:#555">업 태</td><td style="padding:3px 6px">${esc(dealer?.bizType||'서비스업')} / 종목: ${esc(dealer?.bizItem||'택배')}</td></tr>
+        </table>
+      </div>
+    </div>
+    <!-- 작성일 / 공급가액 / 세액 -->
+    <table style="width:100%;border-collapse:collapse;font-size:11px;border-bottom:1px solid #000">
+      <tr style="background:#f0f0f0"><th style="padding:4px 8px;border:1px solid #ccc">작 성</th><th style="padding:4px 8px;border:1px solid #ccc">공 급 가 액</th><th style="padding:4px 8px;border:1px solid #ccc">세 액</th><th style="padding:4px 8px;border:1px solid #ccc">비 고</th></tr>
+      <tr><td style="padding:5px 8px;border:1px solid #ccc;text-align:center">${yr}년 ${mo}월 ${dy||'15'}일</td>
+      <td style="padding:5px 8px;border:1px solid #ccc;text-align:right;font-weight:700;font-size:13px">${supplyAmt.toLocaleString('ko-KR')}</td>
+      <td style="padding:5px 8px;border:1px solid #ccc;text-align:right;font-size:12px">${taxAmt.toLocaleString('ko-KR')}</td>
+      <td style="padding:5px 8px;border:1px solid #ccc"></td></tr>
+    </table>
+    <!-- 품목 -->
+    <table style="width:100%;border-collapse:collapse;font-size:10px">
+      <tr style="background:#f0f0f0"><th style="padding:3px 6px;border:1px solid #ccc">월</th><th style="padding:3px 6px;border:1px solid #ccc">일</th><th style="padding:3px 6px;border:1px solid #ccc">품 목</th><th style="padding:3px 6px;border:1px solid #ccc">규격</th><th style="padding:3px 6px;border:1px solid #ccc">수량</th><th style="padding:3px 6px;border:1px solid #ccc">단 가</th><th style="padding:3px 6px;border:1px solid #ccc">공급가액</th><th style="padding:3px 6px;border:1px solid #ccc">세 액</th><th style="padding:3px 6px;border:1px solid #ccc">비 고</th></tr>
+      <tr><td style="padding:3px 6px;border:1px solid #ccc;text-align:center">${mo}</td><td style="padding:3px 6px;border:1px solid #ccc;text-align:center">${dy||'15'}</td>
+        <td style="padding:3px 6px;border:1px solid #ccc">${settle.month||''}월 수수료정산</td>
+        <td style="padding:3px 6px;border:1px solid #ccc"></td>
+        <td style="padding:3px 6px;border:1px solid #ccc;text-align:right"></td>
+        <td style="padding:3px 6px;border:1px solid #ccc;text-align:right"></td>
+        <td style="padding:3px 6px;border:1px solid #ccc;text-align:right">${supplyAmt.toLocaleString()}</td>
+        <td style="padding:3px 6px;border:1px solid #ccc;text-align:right">${taxAmt.toLocaleString()}</td>
+        <td style="padding:3px 6px;border:1px solid #ccc"></td>
+      </tr>
+      <tr><td colspan="9" style="padding:8px;border:1px solid #ccc"></td></tr>
+      <tr><td colspan="9" style="padding:8px;border:1px solid #ccc"></td></tr>
+    </table>
+    <!-- 합계 -->
+    <table style="width:100%;border-collapse:collapse;font-size:11px;border-top:1px solid #000">
+      <tr><td style="padding:5px 8px;border:1px solid #ccc;background:#f0f0f0;font-weight:700">합계금액</td>
+        <td style="padding:5px 8px;border:1px solid #ccc;background:#f0f0f0">현 금</td>
+        <td style="padding:5px 8px;border:1px solid #ccc;background:#f0f0f0">수 표</td>
+        <td style="padding:5px 8px;border:1px solid #ccc;background:#f0f0f0">어 음</td>
+        <td style="padding:5px 8px;border:1px solid #ccc;background:#f0f0f0">외상미수금</td>
+        <td style="padding:5px 8px;border:1px solid #ccc;font-weight:700;text-align:center" colspan="2">이 금액을 <strong>영 수</strong> 함</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 8px;border:1px solid #ccc;font-weight:700;font-size:14px">${totalAmt.toLocaleString()}</td>
+        <td style="padding:6px 8px;border:1px solid #ccc;font-weight:700">${totalAmt.toLocaleString()}</td>
+        <td style="padding:6px 8px;border:1px solid #ccc"></td>
+        <td style="padding:6px 8px;border:1px solid #ccc"></td>
+        <td style="padding:6px 8px;border:1px solid #ccc"></td>
+        <td style="padding:6px 8px;border:1px solid #ccc;font-size:10px" colspan="2">공급가 ${supplyAmt.toLocaleString()} + 세액 ${taxAmt.toLocaleString()}</td>
+      </tr>
+    </table>
+    <div style="padding:5px 8px;font-size:10px;color:#666;border-top:1px solid #ccc">
+      ※ 정산 공제: 고용보험(0.9%/80만 ↑) ₩${(calcNet(settle).emp||0).toLocaleString()} · 산재(0.88%) ₩${(calcNet(settle).work||0).toLocaleString()} → <strong>실지급액 ₩${calcNet(settle).net.toLocaleString()}</strong>
+    </div>
+  </div>`;
+}
+
+// 명세서에서 세금계산서 보기 버튼 연결
+window.viewTaxInvoice=async function(settleId){
+  try{
+    const snap=await getDoc(doc(db,'settlements',settleId));
+    if(!snap.exists())return;
+    const settle={id:settleId,...snap.data()};
+    // 기사 정보 로드
+    const drSnap=await getDocs(query(collection(db,'drivers'),
+      where('dealerId','==',CU.dealerId),
+      where('userId','==',settle.driverUserId||'')));
+    const driver=drSnap.empty?null:drSnap.docs[0].data();
+    // 대리점 정보 로드
+    const dealerSnap=await getDoc(doc(db,'dealers',settle.dealerId||CU.dealerId));
+    const dealer=dealerSnap.exists()?dealerSnap.data():null;
+    const html=buildTaxInvoiceHTML(settle,driver,dealer);
+    document.getElementById('mo-taxinv')?.remove();
+    document.getElementById('modals').insertAdjacentHTML('beforeend',`
+      <div class="mo show" id="mo-taxinv">
+        <div class="md" style="max-width:740px">
+          <div class="mdt">🧾 세금계산서
+            <button class="close-btn" onclick="document.getElementById('mo-taxinv').remove()">✕</button>
+          </div>
+          <div class="mdb" style="padding:0">${html}</div>
+          <div class="mdf no-print">
+            <button class="btn btn-gray btn-sm" onclick="document.getElementById('mo-taxinv').remove()">닫기</button>
+            <button class="btn btn-blue btn-sm" onclick="window.print()">🖨️ 인쇄/PDF</button>
+          </div>
+        </div>
+      </div>`);
+  }catch(e){toast('❌ '+e.message)}
+};
+window._m_viewTaxInvoice=window.viewTaxInvoice;
 window.addDealerRoute=async function(){
   const route=prompt('라우트 코드:','');if(!route)return;
   const price=+prompt('단가 (원/건):','0')||0;
