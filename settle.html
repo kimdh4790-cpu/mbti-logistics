@@ -1757,7 +1757,6 @@ PAGES['dealer-drivers']=async function(filterCamp){
         <td style="font-size:11px">${esc(d.phone||'—')}</td>
         <td><span class="badge ${d.is_active!==false?'b-green':'b-gray'}">${d.is_active!==false?'재직':'퇴직'}</span></td>
         <td style="display:flex;gap:4px;flex-wrap:wrap">
-          <button class="btn btn-blue btn-xs" onclick="quickSettle('${esc(d.name||d.userId)}','${esc(d.jobsub||'쿠팡')}')">📋정산</button>
           <button class="btn btn-gray btn-xs" onclick="editDriver('${d.id}')">수정</button>
           <button class="btn btn-red btn-xs" onclick="delDriver('${d.id}','${esc(d.name||d.userId)}')">삭제</button>
         </td>
@@ -1993,20 +1992,21 @@ window.editDriver=async function(driverId){
   document.getElementById(eid)?.remove();
   document.getElementById('modals').insertAdjacentHTML('beforeend',`
     <div class="mo show" id="${eid}">
-      <div class="md">
-        <div class="mdt">✏️ 기사 수정 <button class="close-btn" onclick="document.getElementById('${eid}').remove()">✕</button></div>
+      <div class="md" style="max-width:480px">
+        <div class="mdt">✏️ 기사 정보 수정 <button class="close-btn" onclick="document.getElementById('${eid}').remove()">✕</button></div>
         <div class="mdb">
+          <div class="section-label">👤 기본 정보</div>
           <div class="fg">
-            <div class="field"><label>성함</label><input id="edr-name" value="${esc(dd.name)}"></div>
-            <div class="field"><label>아이디</label><input id="edr-uid" value="${esc(dd.userId||'')}"></div>
+            <div class="field"><label>성함 *</label><input id="edr-name" value="${esc(dd.name)}"></div>
+            <div class="field"><label>쿠팡 ID</label><input id="edr-uid" value="${esc(dd.userId||'')}"></div>
           </div>
           <div class="fg">
             <div class="field"><label>캠프</label><select id="edr-camp">${CAMPS.map(cv=>`<option ${dd.camp===cv?'selected':''}>${cv}</option>`).join('')}</select></div>
-            <div class="field"><label>분류</label><select id="edr-job">${JOBSUBS.map(j=>`<option ${dd.jobsub===j?'selected':''}>${j}</option>`).join('')}</select></div>
+            <div class="field"><label>화주사</label><select id="edr-job">${JOBSUBS.map(j=>`<option ${dd.jobsub===j?'selected':''}>${j}</option>`).join('')}</select></div>
           </div>
           <div class="fg">
             <div class="field"><label>연락처</label><input id="edr-phone" value="${esc(dd.phone||'')}"></div>
-            <div class="field"><label>용차 단가</label><input id="edr-yong" type="number" value="${dd.yongDel||900}"></div>
+            <div class="field"><label>계좌번호</label><input id="edr-acct" value="${esc(dd.account||'')}"></div>
           </div>
           <div class="field"><label>상태</label>
             <select id="edr-active">
@@ -2014,25 +2014,68 @@ window.editDriver=async function(driverId){
               <option value="false" ${dd.is_active===false?'selected':''}>퇴직</option>
             </select>
           </div>
+          <div class="divider"></div>
+          <div class="section-label">💰 정산 설정</div>
+          <div class="fg">
+            <div class="field"><label>프레시백 인센 (원/건)</label>
+              <input id="edr-finc" type="number" value="${dd.freshbagInc!==undefined?dd.freshbagInc:25}" placeholder="기본 25원">
+            </div>
+            <div class="field"><label>용차 배송단가</label>
+              <input id="edr-yong" type="number" value="${dd.yongDel||900}">
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div class="section-label">🏛️ 사업자 정보 (세금계산서용)</div>
+          <div class="fg">
+            <div class="field"><label>사업자등록번호</label><input id="edr-brn" value="${esc(dd.brn||'')}" placeholder="000-00-00000"></div>
+            <div class="field"><label>상호(법인명)</label><input id="edr-corp" value="${esc(dd.corpName||dd.name||'')}" placeholder="개인사업자명"></div>
+          </div>
+          <div class="fg">
+            <div class="field"><label>업태</label><input id="edr-biztype" value="${esc(dd.bizType||'')}" placeholder="운수업"></div>
+            <div class="field"><label>종목</label><input id="edr-bizitem" value="${esc(dd.bizItem||'')}" placeholder="화물운송"></div>
+          </div>
+          <div class="field"><label>사업장 주소</label><input id="edr-addr" value="${esc(dd.address||'')}" placeholder="사업장 주소"></div>
         </div>
         <div class="mdf">
           <button class="btn btn-gray" onclick="document.getElementById('${eid}').remove()">취소</button>
-          <button class="btn btn-blue" onclick="saveDriver('${driverId}','${eid}')">저장</button>
+          <button class="btn btn-blue" onclick="saveDriver('${driverId}','${eid}')">💾 저장</button>
         </div>
       </div>
     </div>`);
 };
 window.saveDriver=async function(driverId,eid){
-  await updateDoc(doc(db,'drivers',driverId),{
-    name:document.getElementById('edr-name').value.trim(),
+  const name=document.getElementById('edr-name').value.trim();
+  if(!name){toast('❌ 성함을 입력해주세요');return;}
+  const updateData={
+    name,
     userId:document.getElementById('edr-uid').value.trim(),
     camp:document.getElementById('edr-camp').value,
     jobsub:document.getElementById('edr-job').value,
     phone:document.getElementById('edr-phone').value.trim(),
+    account:document.getElementById('edr-acct')?.value.trim()||'',
     yongDel:+document.getElementById('edr-yong').value||900,
+    freshbagInc:+document.getElementById('edr-finc')?.value??25,
+    brn:document.getElementById('edr-brn')?.value.trim()||'',
+    corpName:document.getElementById('edr-corp')?.value.trim()||name,
+    bizType:document.getElementById('edr-biztype')?.value.trim()||'',
+    bizItem:document.getElementById('edr-bizitem')?.value.trim()||'',
+    address:document.getElementById('edr-addr')?.value.trim()||'',
     is_active:document.getElementById('edr-active').value==='true'
-  });
-  document.getElementById(eid)?.remove();toast('✅ 저장 완료');PAGES['dealer-drivers']();
+  };
+  await updateDoc(doc(db,'drivers',driverId),updateData);
+  // ★ 이름 변경 시 정산 기사명도 업데이트
+  const userId=updateData.userId;
+  if(userId&&name){
+    const sSnap=await getDocs(query(collection(db,'settlements'),
+      where('dealerId','==',CU.dealerId),where('driverUserId','==',userId)));
+    for(const sd of sSnap.docs){
+      await updateDoc(doc(db,'settlements',sd.id),{driver:name,driverName:name});
+    }
+    if(window._driverNameCache)window._driverNameCache[userId]=name;
+  }
+  document.getElementById(eid)?.remove();
+  toast(`✅ ${name} 저장 완료`);
+  PAGES['dealer-drivers']();
 };
 
 // ──────────────────────────────────────
@@ -2055,6 +2098,12 @@ PAGES['dealer-settlements']=async function(){
     }
     let settles=snap.docs.map(d=>({id:d.id,...d.data()}));
     settles.sort((a,b)=>(b.month||'').localeCompare(a.month||''));
+    // ★ 기사 이름 캐시 (ID→이름)
+    try{
+      const drSnap=await getDocs(query(collection(db,'drivers'),where('dealerId','==',CU.dealerId)));
+      window._driverNameCache={};
+      drSnap.docs.forEach(d=>{const dd=d.data();if(dd.userId&&dd.name)window._driverNameCache[dd.userId]=dd.name;});
+    }catch(e){}
 
     // 월 필터 채우기
     const months=[...new Set(settles.map(s=>s.month||''))].sort().reverse();
@@ -2068,6 +2117,26 @@ PAGES['dealer-settlements']=async function(){
     };
     renderSettleTable(settles);
     buildSettleModal();
+    // ★ 자동화 버튼 바 삽입
+    const autoBar=document.createElement('div');
+    autoBar.id='settle-auto-bar';
+    autoBar.innerHTML=`
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:800;color:var(--text3);margin-bottom:8px">📋 정산 자동화</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <button class="btn btn-sm" style="background:#FF6B35;color:#fff" onclick="openNewSettle()">🚚 쿠팡 엑셀 업로드 → 자동정산</button>
+          <button class="btn btn-sm" style="background:#E74C3C;color:#fff" onclick="recalcAllSettlements()">⚡ 전체 정산 재계산</button>
+          <button class="btn btn-sm" style="background:#3498DB;color:#fff" onclick="bulkShareSettlements()">📤 정산 일괄 전달</button>
+          <button class="btn btn-sm" style="background:#27AE60;color:#fff" onclick="openTaxArchive()">🧾 기사별 세금계산서 보관함</button>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
+          <button class="btn btn-sm" style="background:#9B59B6;color:#fff" onclick="openIncentiveSettings()">⚙️ 기사별 인센 설정</button>
+          <button class="btn btn-sm" style="background:#F39C12;color:#fff" onclick="openDriverStats()">📊 기사별 실적 통계</button>
+          <button class="btn btn-sm" style="background:#E74C3C;color:#fff" onclick="checkDuplicateSettles()">🔍 중복 검사</button>
+        </div>
+      </div>`;
+    const contentEl=document.getElementById('content');
+    contentEl.insertBefore(autoBar,contentEl.firstChild);
   }catch(e){c.innerHTML=`<div class="empty">⚠️ ${e.message}</div>`}
 };
 
@@ -2100,8 +2169,12 @@ function renderSettleTable(settles){
 }
 function buildSettleRow(s){
   const r=calcNet(s);
+  // ★ 기사명이 쿠팡 ID(@ 포함)이면 등록된 이름으로 대체
+  const _dname=(s.driverName||s.driver||'');
+  const _nameDisp=_dname&&_dname.includes('@')&&window._driverNameCache?
+    (window._driverNameCache[_dname]||_dname):_dname;
   return`<tr>
-    <td><strong>${esc(s.driverName||s.driver||'')}</strong></td>
+    <td><strong>${esc(_nameDisp)}</strong>${_nameDisp.includes('@')?`<br><span style="font-size:10px;color:var(--text3)">${esc(_dname)}</span>`:''}</td>
     <td>${esc(s.month||'')}</td>
     <td><span class="badge b-blue" style="font-size:10px">${esc(s.jobsub||'쿠팡')}</span></td>
     <td style="color:var(--teal)">${fmt(s.dcnt||0)}건</td>
@@ -2626,7 +2699,9 @@ PAGES['dealer-prices']=async function(filterCamp){
     const customRoutes=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.route.localeCompare(b.route));
     const campCount={};
     customRoutes.forEach(r=>{const k=r.camp||CAMP_NAMES[r.route.replace(/[A-D]$/,'')]||'기타';campCount[k]=(campCount[k]||0)+1;});
-    const campList=['전체',...Object.values(CAMP_NAMES).filter((v,i,a)=>a.indexOf(v)===i)];
+    // ★ 실제 데이터 기반 캠프 목록
+    const uniqueCamps=[...new Set(customRoutes.map(r=>r.camp||CAMP_NAMES[r.route.replace(/[A-D]$/,'')]||'기타'))].sort();
+    const campList=['전체',...uniqueCamps];
     const activeFilter=filterCamp||'전체';
     const filtered=activeFilter==='전체'?customRoutes:customRoutes.filter(r=>{
       const camp=r.camp||CAMP_NAMES[r.route.replace(/[A-D]$/,'')]||'기타';
@@ -2659,6 +2734,265 @@ PAGES['dealer-prices']=async function(filterCamp){
       </div>`;
   }catch(e){c.innerHTML=`<div class="empty">⚠️ ${e.message}</div>`}
 };
+// ════════════════════════════════════
+// ★ 중복 검사
+// ════════════════════════════════════
+window.checkDuplicateSettles=async function(){
+  const settles=window._allSettles||[];
+  const map={};
+  settles.forEach(s=>{
+    const key=`${s.driverUserId||s.driver}_${s.month}`;
+    map[key]=map[key]||[];map[key].push(s);
+  });
+  const dupes=Object.values(map).filter(arr=>arr.length>1);
+  if(!dupes.length){toast('✅ 중복 정산 없음');return;}
+  const rows=dupes.map(arr=>arr.map(s=>`
+    <tr style="background:var(--red-l)">
+      <td><strong>${esc(s.driverName||s.driver||'')}</strong></td>
+      <td>${esc(s.month||'')}</td>
+      <td>${fmt(s.dcnt||0)}건</td>
+      <td>₩${fmt(calcNet(s).net)}</td>
+      <td><button class="btn btn-red btn-xs" onclick="delSettle('${s.id}','${esc(s.driverName||s.driver||'')}');document.getElementById('mo-dupe').remove();checkDuplicateSettles()">삭제</button></td>
+    </tr>`).join('')).flat().join('');
+  document.getElementById('mo-dupe')?.remove();
+  document.getElementById('modals').insertAdjacentHTML('beforeend',`
+    <div class="mo show" id="mo-dupe">
+      <div class="md" style="max-width:600px">
+        <div class="mdt">🔍 중복 정산 검사 <button class="close-btn" onclick="document.getElementById('mo-dupe').remove()">✕</button></div>
+        <div class="mdb">
+          <div class="info-box" style="border-color:var(--red)">⚠️ ${dupes.length}건 중복 발견 — 삭제할 항목을 선택하세요</div>
+          <div class="tbl-wrap"><table><thead><tr><th>기사</th><th>정산월</th><th>배송건</th><th>실지급</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+        </div>
+        <div class="mdf"><button class="btn btn-gray" onclick="document.getElementById('mo-dupe').remove()">닫기</button></div>
+      </div>
+    </div>`);
+};
+window._m_checkDuplicateSettles=window.checkDuplicateSettles;
+
+// ════════════════════════════════════
+// ★ 기사별 인센 설정 (v9 스타일)
+// ════════════════════════════════════
+window.openIncentiveSettings=async function(){
+  document.getElementById('mo-incen')?.remove();
+  toast('⚙️ 인센 설정 로드 중...');
+  try{
+    // 기사 목록 + 정산 데이터에서 라우트 추출
+    const [drSnap,sSnap,prSnap]=await Promise.all([
+      getDocs(query(collection(db,'drivers'),where('dealerId','==',CU.dealerId))),
+      getDocs(query(collection(db,'settlements'),where('dealerId','==',CU.dealerId))),
+      getDocs(doc(db,'settings','incentives_'+CU.dealerId)).catch(()=>null)
+    ]);
+    const drivers=drSnap.docs.map(d=>({id:d.id,...d.data()})).filter(d=>d.name);
+    // 기존 인센 설정 로드
+    const incSnap=await getDoc(doc(db,'settings','incentives_'+CU.dealerId)).catch(()=>null);
+    const incConfig=incSnap?.exists?.()?incSnap.data():{};
+    // 라우트 목록 추출 (정산 데이터에서)
+    const routeSet=new Set();
+    sSnap.docs.forEach(d=>{
+      const rd=d.data().routeDetails||[];
+      rd.forEach(r=>{if(r.route&&r.route!=='미계약')routeSet.add(r.route);});
+    });
+    const routes=[...routeSet].sort();
+    // 캠프별 분류
+    const CAMP_CMAP={'101':'부산1캠프','215':'부산1캠프','812':'부산2캠프','508':'부산3캠프',
+      '109':'대구2캠프','213':'대구2B캠프','608':'진주M캠프','612':'진주M캠프',
+      '613':'진주M캠프','614':'진주M캠프','619':'진주M캠프'};
+    const getRouteCamp=r=>CAMP_CMAP[r.replace(/[A-D]$/,'')]||'기타';
+    const campList=[...new Set(routes.map(getRouteCamp))].sort();
+    // 캠프별 일괄 ON/OFF 버튼
+    const campBulk=campList.map(camp=>`
+      <span style="display:inline-flex;align-items:center;gap:4px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700">
+        ${camp}
+        <button onclick="incenBulkSet('${camp}',true)" style="padding:2px 8px;background:var(--green);color:#fff;border:none;border-radius:10px;font-size:11px;cursor:pointer">ON</button>
+        <button onclick="incenBulkSet('${camp}',false)" style="padding:2px 8px;background:var(--red);color:#fff;border:none;border-radius:10px;font-size:11px;cursor:pointer">OFF</button>
+      </span>`).join('');
+    // 현재 필터
+    const filterRows=(filterCamp)=>{
+      return routes.filter(r=>filterCamp==='전체'||getRouteCamp(r)===filterCamp).map(route=>{
+        return drivers.map(d=>{
+          const key=`${d.userId||d.id}_${route}`;
+          const cfg=incConfig[key]||{on:false,rate:25};
+          return`<tr id="incrow_${key}">
+            <td style="font-size:12px;font-weight:700;color:var(--brand)">${esc(d.name)}</td>
+            <td style="font-weight:700">${route}</td>
+            <td style="font-size:10px;color:var(--text3)">${getRouteCamp(route)}</td>
+            <td>
+              <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer">
+                <input type="checkbox" id="inc_on_${key}" ${cfg.on?'checked':''} onchange="incenUpdateRow('${key}')">
+                <span id="inc_lbl_${key}" style="font-size:11px;font-weight:700;color:${cfg.on?'var(--green)':'var(--red)'}">${cfg.on?'ON':'OFF'}</span>
+              </label>
+            </td>
+            <td>
+              <div style="display:flex;gap:3px;align-items:center">
+                ${[10,15,25].map(r=>`<button onclick="incenSetRate('${key}',${r})" style="padding:2px 6px;font-size:11px;font-weight:700;border:1.5px solid ${cfg.rate===r?'var(--brand)':'var(--border)'};border-radius:6px;background:${cfg.rate===r?'var(--brand)':'var(--bg)'};color:${cfg.rate===r?'#fff':'var(--text)'};cursor:pointer">×${r}</button>`).join('')}
+                <span style="font-size:11px">직접</span>
+                <input type="number" id="inc_rate_${key}" value="${cfg.rate||25}" style="width:55px;padding:2px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:12px" onchange="incenUpdateRow('${key}')">
+                <span style="font-size:11px">원</span>
+              </div>
+            </td>
+          </tr>`;
+        }).join('');
+      }).join('');
+    };
+    const allCamps=['전체',...campList];
+    const campFilterTabs=(activeCamp)=>allCamps.map(c=>`
+      <button onclick="incenFilterCamp('${c}')" id="incen_tab_${c.replace(/[^a-z0-9]/gi,'')}" style="padding:4px 12px;border-radius:20px;border:1.5px solid ${c===activeCamp?'var(--brand)':'var(--border)'};background:${c===activeCamp?'var(--brand)':'var(--bg)'};color:${c===activeCamp?'#fff':'var(--text2)'};font-size:12px;font-weight:600;cursor:pointer">
+        ${c}
+      </button>`).join('');
+    // 전역 인센 데이터
+    window._incenConfig={...incConfig};
+    window._incenDrivers=drivers;
+    window._incenRoutes=routes;
+    window._incenGetCamp=getRouteCamp;
+    window.incenFilterCamp=function(camp){
+      document.getElementById('incen-tbody').innerHTML=filterRows(camp);
+      // 탭 스타일 업데이트
+      allCamps.forEach(c=>{
+        const btn=document.getElementById('incen_tab_'+c.replace(/[^a-z0-9]/gi,''));
+        if(btn){btn.style.background=c===camp?'var(--brand)':'var(--bg)';btn.style.color=c===camp?'#fff':'var(--text2)';btn.style.borderColor=c===camp?'var(--brand)':'var(--border)';}
+      });
+    };
+    window.incenSetRate=function(key,rate){
+      if(!window._incenConfig[key])window._incenConfig[key]={on:false,rate:25};
+      window._incenConfig[key].rate=rate;
+      const inp=document.getElementById('inc_rate_'+key);if(inp)inp.value=rate;
+      [10,15,25].forEach(r=>{
+        const btn=document.querySelector(`button[onclick="incenSetRate('${key}',${r})"]`);
+        if(btn){btn.style.background=r===rate?'var(--brand)':'var(--bg)';btn.style.color=r===rate?'#fff':'var(--text)';btn.style.borderColor=r===rate?'var(--brand)':'var(--border)';}
+      });
+    };
+    window.incenUpdateRow=function(key){
+      if(!window._incenConfig[key])window._incenConfig[key]={on:false,rate:25};
+      const on=document.getElementById('inc_on_'+key)?.checked||false;
+      const rate=+document.getElementById('inc_rate_'+key)?.value||25;
+      window._incenConfig[key]={on,rate};
+      const lbl=document.getElementById('inc_lbl_'+key);
+      if(lbl){lbl.textContent=on?'ON':'OFF';lbl.style.color=on?'var(--green)':'var(--red)';}
+    };
+    window.incenBulkSet=function(camp,on){
+      (window._incenRoutes||[]).filter(r=>window._incenGetCamp(r)===camp).forEach(route=>{
+        (window._incenDrivers||[]).forEach(d=>{
+          const key=`${d.userId||d.id}_${route}`;
+          if(!window._incenConfig[key])window._incenConfig[key]={on:false,rate:25};
+          window._incenConfig[key].on=on;
+          const cb=document.getElementById('inc_on_'+key);if(cb)cb.checked=on;
+          const lbl=document.getElementById('inc_lbl_'+key);
+          if(lbl){lbl.textContent=on?'ON':'OFF';lbl.style.color=on?'var(--green)':'var(--red)';}
+        });
+      });
+    };
+    window.saveIncentiveConfig=async function(){
+      await setDoc(doc(db,'settings','incentives_'+CU.dealerId),window._incenConfig||{});
+      toast('✅ 인센 설정 저장 완료');
+      document.getElementById('mo-incen')?.remove();
+    };
+    document.getElementById('modals').insertAdjacentHTML('beforeend',`
+      <div class="mo show" id="mo-incen">
+        <div class="md" style="max-width:700px">
+          <div class="mdt">⚙️ 기사별 라우트 인센티브 설정
+            <button class="close-btn" onclick="document.getElementById('mo-incen').remove()">✕</button>
+          </div>
+          <div class="mdb">
+            <div class="section-label">캠프별 일괄 설정</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">${campBulk}</div>
+            <div class="info-box">💡 설정 후 엑셀 업로드하면 자동 반영. ON이면 건수 × 설정단가로 인센 계산</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;padding:8px 0" id="incen-tabs">${campFilterTabs('전체')}</div>
+            <div style="max-height:360px;overflow-y:auto">
+              <table style="width:100%;border-collapse:collapse;font-size:12px">
+                <thead style="background:var(--bg3);position:sticky;top:0">
+                  <tr><th style="padding:6px 8px;text-align:left">기사</th><th style="padding:6px 8px">라우트</th><th style="padding:6px 8px">캠프</th><th style="padding:6px 8px">ON/OFF</th><th style="padding:6px 8px;text-align:left">단가 선택</th></tr>
+                </thead>
+                <tbody id="incen-tbody">${filterRows('전체')}</tbody>
+              </table>
+            </div>
+          </div>
+          <div class="mdf">
+            <button class="btn btn-gray" onclick="document.getElementById('mo-incen').remove()">취소</button>
+            <button class="btn btn-blue" onclick="saveIncentiveConfig()">💾 저장</button>
+          </div>
+        </div>
+      </div>`);
+  }catch(e){toast('❌ '+e.message);}
+};
+window._m_openIncentiveSettings=window.openIncentiveSettings;
+
+// ════════════════════════════════════
+// ★ 기사별 실적 통계 + 근무일수
+// ════════════════════════════════════
+window.openDriverStats=async function(){
+  document.getElementById('mo-drstats')?.remove();
+  toast('📊 통계 로드 중...');
+  try{
+    const [sSnap,drSnap]=await Promise.all([
+      getDocs(query(collection(db,'settlements'),where('dealerId','==',CU.dealerId))),
+      getDocs(query(collection(db,'drivers'),where('dealerId','==',CU.dealerId)))
+    ]);
+    const drMap={};drSnap.docs.forEach(d=>{const dd=d.data();drMap[dd.userId||d.id]=dd;});
+    const driverStats={};
+    sSnap.docs.forEach(sd=>{
+      const s=sd.data();
+      const r=calcNet(s);
+      const uid=s.driverUserId||s.driver||'';
+      const name=s.driverName||s.driver||uid;
+      if(!driverStats[uid])driverStats[uid]={
+        name,camp:drMap[uid]?.camp||'',
+        months:new Set(),totalDel:0,totalNet:0,settleCount:0,workDays:new Set()
+      };
+      const ds=driverStats[uid];
+      if(s.month)ds.months.add(s.month);
+      ds.totalDel+=s.dcnt||0;
+      ds.totalNet+=r.net||0;
+      ds.settleCount++;
+      // 근무일수 (dailyRows에서 추출)
+      if(s.dailyRows?.length){
+        s.dailyRows.forEach(row=>{if(row.date)ds.workDays.add(row.date);});
+      } else if(s.routeDetails?.length&&s.month){
+        // dailyRows 없으면 월 기준 추정
+        ds.workDays.add(s.month);
+      }
+    });
+    const stats=Object.entries(driverStats).sort((a,b)=>b[1].totalNet-a[1].totalNet);
+    const rows=stats.map(([uid,d],i)=>`<tr>
+      <td style="font-size:11px">${i+1}</td>
+      <td><strong>${esc(d.name)}</strong></td>
+      <td><span class="badge b-blue" style="font-size:10px">${esc(d.camp||'—')}</span></td>
+      <td style="font-weight:700;color:var(--teal)">${fmt(d.totalDel)}건</td>
+      <td style="font-weight:700;color:var(--green)">₩${fmt(d.totalNet)}</td>
+      <td>${d.settleCount}회</td>
+      <td style="font-weight:700;color:var(--brand)">${d.workDays.size}일</td>
+      <td style="font-size:10px;color:var(--text3)">${[...d.months].sort().join(', ')}</td>
+    </tr>`).join('');
+    document.getElementById('modals').insertAdjacentHTML('beforeend',`
+      <div class="mo show" id="mo-drstats">
+        <div class="md" style="max-width:750px">
+          <div class="mdt">📊 기사별 실적 통계
+            <button class="close-btn" onclick="document.getElementById('mo-drstats').remove()">✕</button>
+          </div>
+          <div class="mdb">
+            <div class="stat-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:12px">
+              <div class="stat-card"><div class="stat-val">${stats.length}</div><div class="stat-lbl">👤 기사 수</div></div>
+              <div class="stat-card"><div class="stat-val">${fmt(stats.reduce((a,[,d])=>a+d.totalDel,0))}</div><div class="stat-lbl">📦 총 배송건</div></div>
+              <div class="stat-card"><div class="stat-val green">₩${fmt(stats.reduce((a,[,d])=>a+d.totalNet,0))}</div><div class="stat-lbl">💰 총 실지급</div></div>
+            </div>
+            <div style="max-height:400px;overflow-y:auto">
+              <table style="width:100%;border-collapse:collapse;font-size:12px">
+                <thead style="background:var(--bg3);position:sticky;top:0">
+                  <tr><th style="padding:6px 8px">#</th><th style="padding:6px 8px;text-align:left">기사</th><th style="padding:6px 8px">캠프</th><th style="padding:6px 8px">배송건</th><th style="padding:6px 8px">실지급합계</th><th style="padding:6px 8px">정산횟수</th><th style="padding:6px 8px">근무일수</th><th style="padding:6px 8px;text-align:left">정산월</th></tr>
+                </thead>
+                <tbody>${rows}</tbody>
+              </table>
+            </div>
+          </div>
+          <div class="mdf"><button class="btn btn-gray" onclick="document.getElementById('mo-drstats').remove()">닫기</button></div>
+        </div>
+      </div>`);
+  }catch(e){toast('❌ '+e.message);}
+};
+window._m_openDriverStats=window.openDriverStats;
+window.bulkShareSettlements=function(){toast('💬 일괄 전달은 개별 명세서 → 카카오톡 공유로 이용해주세요');};
+window.openTaxArchive=function(){toast('🧾 세금계산서 보관함은 정산 명세서 → 세금계산서 인쇄로 이용해주세요');};
+window._m_bulkShareSettlements=window.bulkShareSettlements;
+window._m_openTaxArchive=window.openTaxArchive;
 window.recalcAllSettlements=async function(){
   if(!confirm('현재 단가표로 모든 정산을 재계산하시겠습니까?\n(승인된 정산은 제외됩니다)'))return;
   try{
