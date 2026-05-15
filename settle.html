@@ -462,6 +462,7 @@ service cloud.firestore {
       </div>
       <nav class="snav" id="snav"></nav>
       <div class="sb-bot">
+        <button class="sb-bot-btn" onclick="openChangePw()">🔑 비밀번호 변경</button>
         <button class="sb-bot-btn" onclick="toggleDark()">🌙 다크모드 전환</button>
         <button class="sb-bot-btn" onclick="doLogout()">🚪 로그아웃</button>
         <div class="sb-version">LogiNet v2.0 · 엠비티아이</div>
@@ -535,7 +536,8 @@ service cloud.firestore {
 <!-- ══ FIREBASE + APP LOGIC ══ -->
 <script type="module">
 import{initializeApp,deleteApp}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import{getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged,createUserWithEmailAndPassword}
+import{getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged,createUserWithEmailAndPassword,
+  updatePassword,reauthenticateWithCredential,EmailAuthProvider}
   from'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import{getFirestore,doc,getDoc,setDoc,addDoc,updateDoc,deleteDoc,collection,
   query,where,getDocs,orderBy,limit,serverTimestamp,writeBatch,onSnapshot}
@@ -1091,7 +1093,10 @@ PAGES['admin-dealers']=async function(){
         <td>${esc(dd.contact||'—')}</td>
         <td><span class="badge b-blue">${dd.driverCount||0}명</span></td>
         <td><span class="badge ${dd.active!==false?'b-green':'b-gray'}">${dd.active!==false?'운영중':'비활성'}</span></td>
-        <td><button class="btn btn-gray btn-sm" onclick="editDealer('${d.id}')">수정</button></td>
+        <td style="display:flex;gap:4px">
+          <button class="btn btn-gray btn-sm" onclick="editDealer('${d.id}')">수정</button>
+          <button class="btn btn-red btn-sm" onclick="deleteDealer('${d.id}','${esc(dd.name)}')">삭제</button>
+        </td>
       </tr>`;
     }).join('');
     c.innerHTML=`<div class="card"><div class="card-header"><div class="card-title">🏢 대리점 목록 (${snap.size}개)</div></div><div class="card-body"><div class="tbl-wrap"><table><thead><tr><th>대리점명</th><th>이메일</th><th>연락처</th><th>기사수</th><th>상태</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div></div>`;
@@ -1318,6 +1323,32 @@ window.saveDealer=async function(dealerId,eid){
   });
   document.getElementById(eid)?.remove();toast('✅ 저장 완료');PAGES['admin-dealers']();
 };
+window.deleteDealer=async function(dealerId,name){
+  if(!confirm(`⚠️ "${name}" 대리점을 삭제하시겠습니까?\n\n• Firestore 대리점 문서 삭제\n• 구독/청구서 데이터 삭제\n• Firebase Auth 계정은 별도 삭제 필요\n\n계속하시겠습니까?`))return;
+  try{
+    // 관련 데이터 삭제
+    const batch=writeBatch(db);
+    batch.delete(doc(db,'dealers',dealerId));
+    // subscriptions 삭제
+    batch.delete(doc(db,'subscriptions',dealerId));
+    await batch.commit();
+    // invoices 삭제
+    const iSnap=await getDocs(query(collection(db,'invoices'),where('dealerId','==',dealerId)));
+    for(const d of iSnap.docs)await deleteDoc(doc(db,'invoices',d.id));
+    // drivers 삭제
+    const drSnap=await getDocs(query(collection(db,'drivers'),where('dealerId','==',dealerId)));
+    for(const d of drSnap.docs)await deleteDoc(doc(db,'drivers',d.id));
+    // settlements 삭제
+    const sSnap=await getDocs(query(collection(db,'settlements'),where('dealerId','==',dealerId)));
+    for(const d of sSnap.docs)await deleteDoc(doc(db,'settlements',d.id));
+    // users 문서 삭제
+    const uSnap=await getDocs(query(collection(db,'users'),where('dealerId','==',dealerId)));
+    for(const d of uSnap.docs)await deleteDoc(doc(db,'users',d.id));
+    toast(`🗑 ${name} 대리점 삭제 완료\n(Firebase Auth 계정은 콘솔에서 별도 삭제)`);
+    PAGES['admin-dealers']();
+  }catch(e){toast('❌ '+e.message)}
+};
+window._m_deleteDealer=window.deleteDealer;
 
 // ──────────────────────────────────────
 // 👥 ADMIN DRIVERS
@@ -2455,6 +2486,65 @@ window.viewDriverSettle=async function(id){
 
 // ── module loaded ──
 console.log('[LogiNet v2] 모듈 로드 완료');
+
+// ════════════════════════════════════════
+// ██ 비밀번호 변경 ██
+// ════════════════════════════════════════
+window.openChangePw=function(){
+  document.getElementById('mo-changepw')?.remove();
+  document.getElementById('modals').insertAdjacentHTML('beforeend',`
+    <div class="mo show" id="mo-changepw">
+      <div class="md" style="max-width:380px">
+        <div class="mdt">🔑 비밀번호 변경
+          <button class="close-btn" onclick="document.getElementById('mo-changepw').remove()">✕</button>
+        </div>
+        <div class="mdb">
+          <div class="field"><label>현재 비밀번호</label>
+            <input id="pw-cur" type="password" placeholder="현재 비밀번호 입력">
+          </div>
+          <div class="field"><label>새 비밀번호</label>
+            <input id="pw-new" type="password" placeholder="새 비밀번호 (6자 이상)">
+          </div>
+          <div class="field"><label>새 비밀번호 확인</label>
+            <input id="pw-new2" type="password" placeholder="새 비밀번호 다시 입력">
+          </div>
+        </div>
+        <div class="mdf">
+          <button class="btn btn-gray" onclick="document.getElementById('mo-changepw').remove()">취소</button>
+          <button class="btn btn-blue" onclick="doChangePw()">🔑 변경하기</button>
+        </div>
+      </div>
+    </div>`);
+};
+window._m_openChangePw=window.openChangePw;
+
+window.doChangePw=async function(){
+  const cur=document.getElementById('pw-cur')?.value;
+  const nw=document.getElementById('pw-new')?.value;
+  const nw2=document.getElementById('pw-new2')?.value;
+  if(!cur||!nw||!nw2){toast('❌ 모든 항목을 입력해주세요');return;}
+  if(nw.length<6){toast('❌ 새 비밀번호는 6자 이상이어야 합니다');return;}
+  if(nw!==nw2){toast('❌ 새 비밀번호가 일치하지 않습니다');return;}
+  try{
+    const user=auth.currentUser;
+    if(!user){toast('❌ 로그인 상태가 아닙니다');return;}
+    // 재인증 (현재 비번 확인)
+    const credential=EmailAuthProvider.credential(user.email,cur);
+    await reauthenticateWithCredential(user,credential);
+    // 비밀번호 변경
+    await updatePassword(user,nw);
+    document.getElementById('mo-changepw')?.remove();
+    toast('✅ 비밀번호가 변경되었습니다. 다음 로그인부터 새 비밀번호를 사용하세요.');
+  }catch(e){
+    const msg={
+      'auth/wrong-password':'❌ 현재 비밀번호가 틀렸습니다',
+      'auth/too-many-requests':'❌ 너무 많은 시도. 잠시 후 다시 시도해주세요',
+      'auth/weak-password':'❌ 비밀번호가 너무 약합니다'
+    }[e.code]||('❌ '+e.message);
+    toast(msg);
+  }
+};
+window._m_doChangePw=window.doChangePw;
 
 // ════════════════════════════════════════
 // ██ 모두싸인 API 연동 ██
