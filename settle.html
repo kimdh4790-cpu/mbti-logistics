@@ -949,11 +949,157 @@ function showStmtModal(sd,dealerName){
           <button class="btn btn-blue btn-sm" onclick="copyStmtLink('${esc(sd.id||'')}')">🔗 링크 복사</button>
           <button class="btn btn-kakao btn-sm" onclick="shareKakao('${esc(sd.id||'')}','${esc(sd.driverName||sd.driver||'')}','${sd.month||''}','${fmt(r.net)}')">💬 카카오톡</button>
           <button class="btn btn-green btn-sm" onclick="window.print()">🖨️ 인쇄/PDF</button>
+          <button class="btn btn-amber btn-sm" onclick="showTaxModal('${esc(sd.id||'')}','${esc(sd.driverName||sd.driver||'')}','${sd.month||''}','${esc(dealerName||'')}',${r.income},${r2.net})">🧾 세금계산서</button>
         </div>
       </div>
     </div>`);
 }
 window.showStmtModal=showStmtModal;
+
+// ── 세금계산서 모달 ──
+window.showTaxModal=async function(id,driverName,month,dealerName,income,net){
+  // 기사 정보 조회 (사업자 정보)
+  let drData={};
+  try{
+    const drSnap=await getDocs(query(collection(db,'drivers'),
+      where('userId','==',driverName),where('dealerId','==',CU.dealerId)));
+    if(drSnap.empty){
+      // driverName이 실제 이름인 경우 name으로 조회
+      const drSnap2=await getDocs(query(collection(db,'drivers'),
+        where('name','==',driverName),where('dealerId','==',CU.dealerId)));
+      if(!drSnap2.empty) drData=drSnap2.docs[0].data();
+    } else {
+      drData=drSnap.docs[0].data();
+    }
+  }catch(e){}
+
+  // 딜러 정보 조회
+  let dlData={};
+  try{
+    const dlSnap=await getDoc(doc(db,'dealers',CU.dealerId));
+    if(dlSnap.exists()) dlData=dlSnap.data();
+  }catch(e){}
+
+  const supplyAmt=Math.round(income/1.1);
+  const taxAmt=income-supplyAmt;
+  const today_=today();
+  const serial='20'+month?.replace('-','')?.slice(2)+'-0001';
+
+  const taxHTML=`
+    <div id="tax-print-area" style="font-family:'Pretendard',sans-serif;max-width:700px;margin:0 auto;border:2px solid #000;padding:0">
+      <table style="width:100%;border-collapse:collapse">
+        <tr>
+          <td colspan="8" style="text-align:center;font-size:22px;font-weight:900;padding:10px;border-bottom:2px solid #000">
+            세 금 계 산 서
+          </td>
+          <td colspan="4" style="font-size:11px;padding:8px;border-bottom:2px solid #000;border-left:1px solid #000">
+            (공급받는자 보관용)<br>
+            책 번 호 : _______ 권 _____ 호<br>
+            일련번호 : ${serial}
+          </td>
+        </tr>
+        <!-- 공급자 -->
+        <tr>
+          <td rowspan="4" style="writing-mode:vertical-rl;text-align:center;font-weight:700;padding:6px;border-right:1px solid #000;border-bottom:1px solid #000;font-size:12px">자<br>급<br>공</td>
+          <td style="font-size:11px;padding:4px 6px;border-right:1px solid #000;border-bottom:1px solid #000;background:#f5f5f5;white-space:nowrap">등록번호</td>
+          <td colspan="3" style="padding:4px 6px;border-right:1px solid #000;border-bottom:1px solid #000;font-size:12px">${esc(drData.bizNum||drData.businessNum||'')}</td>
+          <td rowspan="4" style="writing-mode:vertical-rl;text-align:center;font-weight:700;padding:6px;border-right:1px solid #000;border-left:1px solid #000;border-bottom:1px solid #000;font-size:12px">자<br>급<br>는<br>받</td>
+          <td style="font-size:11px;padding:4px 6px;border-right:1px solid #000;border-bottom:1px solid #000;background:#f5f5f5;white-space:nowrap">등록번호</td>
+          <td colspan="3" style="padding:4px 6px;border-bottom:1px solid #000;font-size:12px">${esc(dlData.bizNum||'373-86-02536')}</td>
+        </tr>
+        <tr>
+          <td style="font-size:11px;padding:4px 6px;border-right:1px solid #000;border-bottom:1px solid #000;background:#f5f5f5">상호</td>
+          <td style="padding:4px 6px;border-right:1px solid #000;border-bottom:1px solid #000;font-size:12px">${esc(drData.bizName||drData.name||driverName)}</td>
+          <td style="font-size:11px;padding:4px 6px;border-right:1px solid #000;border-bottom:1px solid #000;background:#f5f5f5">성명</td>
+          <td style="padding:4px 6px;border-right:1px solid #000;border-bottom:1px solid #000;font-size:12px">${esc(drData.name||driverName)}</td>
+          <td style="font-size:11px;padding:4px 6px;border-right:1px solid #000;border-bottom:1px solid #000;background:#f5f5f5">상호</td>
+          <td style="padding:4px 6px;border-right:1px solid #000;border-bottom:1px solid #000;font-size:12px">${esc(dlData.name||dealerName)}</td>
+          <td style="font-size:11px;padding:4px 6px;border-right:1px solid #000;border-bottom:1px solid #000;background:#f5f5f5">성명</td>
+          <td style="padding:4px 6px;border-bottom:1px solid #000;font-size:12px">${esc(dlData.manager||dlData.managerName||'관리자')}</td>
+        </tr>
+        <tr>
+          <td style="font-size:11px;padding:4px 6px;border-right:1px solid #000;border-bottom:1px solid #000;background:#f5f5f5">사업장</td>
+          <td colspan="3" style="padding:4px 6px;border-right:1px solid #000;border-bottom:1px solid #000;font-size:11px">${esc(drData.bizAddr||drData.address||'')}</td>
+          <td style="font-size:11px;padding:4px 6px;border-right:1px solid #000;border-bottom:1px solid #000;background:#f5f5f5">사업장</td>
+          <td colspan="3" style="padding:4px 6px;border-bottom:1px solid #000;font-size:11px">${esc(dlData.address||'부산시 수영로 668, 607호')}</td>
+        </tr>
+        <tr>
+          <td style="font-size:11px;padding:4px 6px;border-right:1px solid #000;background:#f5f5f5">업태</td>
+          <td style="padding:4px 6px;border-right:1px solid #000;font-size:11px">서비스</td>
+          <td style="font-size:11px;padding:4px 6px;border-right:1px solid #000;background:#f5f5f5">종목</td>
+          <td style="padding:4px 6px;border-right:1px solid #000;font-size:11px">택배</td>
+          <td style="font-size:11px;padding:4px 6px;border-right:1px solid #000;background:#f5f5f5">업태</td>
+          <td style="padding:4px 6px;border-right:1px solid #000;font-size:11px">서비스업</td>
+          <td style="font-size:11px;padding:4px 6px;border-right:1px solid #000;background:#f5f5f5">종목</td>
+          <td style="padding:4px 6px;font-size:11px">물류 택배</td>
+        </tr>
+        <!-- 작성일·금액 -->
+        <tr style="border-top:2px solid #000">
+          <td colspan="2" style="font-size:11px;padding:5px 6px;border-right:1px solid #000;border-top:2px solid #000;border-bottom:1px solid #000;background:#f5f5f5;text-align:center">작 성</td>
+          <td colspan="2" style="padding:5px 6px;border-right:1px solid #000;border-top:2px solid #000;border-bottom:1px solid #000;font-size:12px;text-align:center">${today_}</td>
+          <td colspan="2" style="font-size:11px;padding:5px 6px;border-right:1px solid #000;border-top:2px solid #000;border-bottom:1px solid #000;background:#f5f5f5;text-align:center">공급 가액</td>
+          <td colspan="2" style="padding:5px 6px;border-right:1px solid #000;border-top:2px solid #000;border-bottom:1px solid #000;font-size:13px;font-weight:700;text-align:right">${supplyAmt.toLocaleString()}</td>
+          <td colspan="2" style="font-size:11px;padding:5px 6px;border-right:1px solid #000;border-top:2px solid #000;border-bottom:1px solid #000;background:#f5f5f5;text-align:center">세 액</td>
+          <td colspan="1" style="padding:5px 6px;border-top:2px solid #000;border-bottom:1px solid #000;font-size:13px;font-weight:700;text-align:right">${taxAmt.toLocaleString()}</td>
+        </tr>
+        <!-- 품목 헤더 -->
+        <tr style="background:#f5f5f5;border-top:1px solid #000">
+          <td colspan="2" style="padding:4px 6px;border-right:1px solid #000;border-bottom:1px solid #000;font-size:11px;text-align:center">월</td>
+          <td colspan="2" style="padding:4px 6px;border-right:1px solid #000;border-bottom:1px solid #000;font-size:11px;text-align:center">일</td>
+          <td colspan="3" style="padding:4px 6px;border-right:1px solid #000;border-bottom:1px solid #000;font-size:11px;text-align:center">품 목</td>
+          <td colspan="2" style="padding:4px 6px;border-right:1px solid #000;border-bottom:1px solid #000;font-size:11px;text-align:center">공급가액</td>
+          <td colspan="2" style="padding:4px 6px;border-bottom:1px solid #000;font-size:11px;text-align:center">세 액</td>
+        </tr>
+        <!-- 품목 내용 -->
+        <tr>
+          <td colspan="2" style="padding:6px;border-right:1px solid #000;border-bottom:1px solid #000;font-size:12px;text-align:center">${month?.slice(5,7)||''}</td>
+          <td colspan="2" style="padding:6px;border-right:1px solid #000;border-bottom:1px solid #000;font-size:12px;text-align:center">말일</td>
+          <td colspan="3" style="padding:6px;border-right:1px solid #000;border-bottom:1px solid #000;font-size:12px">${month||''} 수수료정산</td>
+          <td colspan="2" style="padding:6px;border-right:1px solid #000;border-bottom:1px solid #000;font-size:12px;text-align:right">${supplyAmt.toLocaleString()}</td>
+          <td colspan="2" style="padding:6px;border-bottom:1px solid #000;font-size:12px;text-align:right">${taxAmt.toLocaleString()}</td>
+        </tr>
+        <!-- 빈 행 -->
+        <tr><td colspan="11" style="height:28px;border-bottom:1px solid #000"></td></tr>
+        <tr><td colspan="11" style="height:28px;border-bottom:1px solid #000"></td></tr>
+        <!-- 합계 -->
+        <tr style="border-top:2px solid #000">
+          <td colspan="2" style="font-size:12px;font-weight:700;padding:6px;border-right:1px solid #000;border-bottom:1px solid #000;text-align:center">합계금액</td>
+          <td colspan="2" style="font-size:12px;font-weight:700;padding:6px;border-right:1px solid #000;border-bottom:1px solid #000;text-align:center">현 금</td>
+          <td colspan="2" style="font-size:12px;font-weight:700;padding:6px;border-right:1px solid #000;border-bottom:1px solid #000;text-align:center">수 표</td>
+          <td colspan="2" style="font-size:12px;font-weight:700;padding:6px;border-right:1px solid #000;border-bottom:1px solid #000;text-align:center">어 음</td>
+          <td colspan="3" style="font-size:12px;font-weight:700;padding:6px;border-bottom:1px solid #000;text-align:center">외상미수금</td>
+        </tr>
+        <tr>
+          <td colspan="2" style="font-size:13px;font-weight:900;padding:8px 6px;border-right:1px solid #000;border-bottom:2px solid #000;text-align:right">${income.toLocaleString()}</td>
+          <td colspan="2" style="font-size:13px;font-weight:900;padding:8px 6px;border-right:1px solid #000;border-bottom:2px solid #000;text-align:right">${income.toLocaleString()}</td>
+          <td colspan="2" style="padding:8px 6px;border-right:1px solid #000;border-bottom:2px solid #000"></td>
+          <td colspan="2" style="padding:8px 6px;border-right:1px solid #000;border-bottom:2px solid #000"></td>
+          <td colspan="3" style="padding:8px 6px;border-bottom:2px solid #000"></td>
+        </tr>
+        <tr>
+          <td colspan="11" style="font-size:11px;padding:6px;color:#666;border-bottom:1px solid #ccc">
+            ※ 정산 내용: 고용보험 ${(0.8).toFixed(1)}% · 산재보험 ${(0.88).toFixed(2)}% 공제 후 실지급액 ₩${(net||0).toLocaleString()}
+          </td>
+        </tr>
+      </table>
+    </div>`;
+
+  const existing2=document.getElementById('mo-tax-view');
+  if(existing2)existing2.remove();
+  document.getElementById('modals').insertAdjacentHTML('beforeend',`
+    <div class="mo show" id="mo-tax-view">
+      <div class="md" style="max-width:760px">
+        <div class="mdt">🧾 세금계산서
+          <button class="close-btn" onclick="document.getElementById('mo-tax-view').remove()">✕</button>
+        </div>
+        <div class="mdb" style="overflow-x:auto">${taxHTML}</div>
+        <div class="mdf no-print" style="gap:8px">
+          <button class="btn btn-gray btn-sm" onclick="document.getElementById('mo-tax-view').remove()">닫기</button>
+          <button class="btn btn-green btn-sm" onclick="window.print()">🖨️ 인쇄/저장</button>
+        </div>
+      </div>
+    </div>`);
+};
 
 window.copyStmtLink=async function(id){
   const url=location.origin+location.pathname+'#view:'+id;
@@ -1094,6 +1240,8 @@ function goPage(page,el){
     showSecurityAlert('unauthorized_page',`권한 없는 페이지 접근 시도: ${page} (현재 역할: ${CU.role})`);
     return;
   }
+  // 캠프필터 영역 제거 (정산 관리 이탈 시)
+  if(page!=='dealer-settlements') document.getElementById('camp-filter-area')?.remove();
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
   const target=el||document.getElementById('nav-'+page);
   if(target)target.classList.add('on');
