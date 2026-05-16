@@ -1,0 +1,10 @@
+name = "mbti-logistics"
+main = "_worker.js"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[triggers]
+crons = ["0 0 * * *"]
+
+[assets]
+directory = "."
