@@ -446,19 +446,146 @@ function parseExcelData(file,onResult){
 
 // ★ 명세서 HTML
 function buildStmtHTML(sd,dealerName){
-  const r=calcNet(Object.assign({},sd,{emp:0,work:0}));const r2=calcNet(sd);
+  const r=calcNet(Object.assign({},sd,{emp:0,work:0}));
+  const r2=calcNet(sd);
   const rdList=sd.routeDetails||[];
-  const routeTableHTML=rdList.length?`<div class="stmt-section-title">📊 라우트별 실적</div><div class="route-preview"><table><thead><tr><th>라우트</th><th style="text-align:right">배송건</th><th style="text-align:right">반품건</th><th style="text-align:right">단가</th><th style="text-align:right">소계</th></tr></thead><tbody>${rdList.map(rd=>{const up=rd.unitPrice||RPRICE[rd.route]||0;const da=(rd.cnt||0)*up;const ra=(rd.ret||0)*up;return`<tr><td><strong>${esc(rd.route)}</strong></td><td style="text-align:right">${fmt(rd.cnt)}</td><td style="text-align:right;color:#8B5A00">${(rd.ret||0)>0?fmt(rd.ret):'—'}</td><td style="text-align:right">₩${fmt(up)}</td><td style="text-align:right;font-weight:600">₩${fmt(da+ra)}</td></tr>`;}).join('')}<tr style="font-weight:700;background:#f5f3ed"><td>합계</td><td style="text-align:right">${fmt(rdList.reduce((s,rd)=>s+(rd.cnt||0),0))}</td><td style="text-align:right;color:#8B5A00">${(function(){const t=rdList.reduce((s,rd)=>s+(rd.ret||0),0);return t>0?fmt(t):'—'})()}</td><td>—</td><td style="text-align:right;color:#0A6E48">₩${fmt(r.damt+r.ramt)}</td></tr></tbody></table></div>`:`<div class="stmt-section-title">📦 배송 실적</div>`;
-  return`<div class="stmt-wrap" id="stmt-print-area"><div class="stmt-brand">LogiNet · 로지넷 물류 정산관리</div><div class="stmt-title">${esc(sd.month)||''} 정산 명세서</div><div class="stmt-meta">${esc(sd.driverName||sd.driver||'')} 기사 · ${esc(sd.jobsub||'쿠팡')} · ${esc(dealerName||'')}</div><hr class="stmt-divider">${routeTableHTML}<div class="stmt-section-title">📋 수익 내역</div>${r.damt>0?`<div class="stmt-row"><span>📦 배송수익 (${fmt(sd.dcnt||0)}건)</span><span class="amt-plus">+₩${fmt(r.damt)}</span></div>`:''
-}${r.ramt>0?`<div class="stmt-row"><span>↩ 반품수익 (${fmt(sd.rcnt||0)}건)</span><span class="amt-plus">+₩${fmt(r.ramt)}</span></div>`:''
-}${r.fresh>0?`<div class="stmt-row"><span>🎒 프레시백 회수금액</span><span class="amt-plus">+₩${fmt(r.fresh)}</span></div>`:''
-}${r.finc>0?`<div class="stmt-row"><span>⭐ 프레시백 인센 (${fmt(sd.dcnt||0)}건×${G_PRICES.freshbag_inc||25}원)</span><span class="amt-plus">+₩${fmt(r.finc)}</span></div>`:''
-}${r.nocont>0?`<div class="stmt-row"><span>📌 미계약건 (${fmt(sd.nocontCnt||0)}건)</span><span class="amt-plus">+₩${fmt(r.nocont)}</span></div>`:''
-}${r.etcPlus>0?`<div class="stmt-row"><span>➕ 기타(+)${sd.etcPlusReason?' — '+esc(sd.etcPlusReason):''}</span><span class="amt-plus">+₩${fmt(r.etcPlus)}</span></div>`:''
-}<div class="stmt-row total"><span>세금계산서 작성금액</span><span>₩${fmt(r.income)}</span></div><div class="stmt-section-title" style="margin-top:12px">📌 공제 내역</div><div class="stmt-row deduct"><span>고용보험 (월보수액 기준)</span><span class="amt-minus">-₩${fmt(r2.emp)}</span></div><div class="stmt-row deduct"><span>산재보험 (0.88%)</span><span class="amt-minus">-₩${fmt(r2.work)}</span></div>${r2.dmg>0?`<div class="stmt-row deduct"><span>⚠️ 분실/파손</span><span class="amt-minus">-₩${fmt(r2.dmg)}</span></div>`:''
-}${r2.adv>0?`<div class="stmt-row deduct"><span>💸 가불금</span><span class="amt-minus">-₩${fmt(r2.adv)}</span></div>`:''
-}${r2.etcMinus>0?`<div class="stmt-row deduct"><span>➖ 기타(-)</span><span class="amt-minus">-₩${fmt(r2.etcMinus)}</span></div>`:''
-}<div class="stmt-row net"><span>💰 실 지급액</span><span>₩${fmt(r2.net)}</span></div><div style="text-align:right;font-size:10px;color:#aaa;margin-top:14px;padding-top:10px;border-top:1px solid #eee">발행일: ${today()} · LogiNet 로지넷 물류 정산관리<br>엠비티아이 유한회사 · ☎ 051-711-3103</div></div>`;
+  const month=sd.month||'';
+  const yr=month.slice(0,4),mo=month.slice(5,7);
+  const driver=sd.driverName||sd.driver||'';
+  const jobsub=sd.jobsub||'쿠팡';
+
+  // ─── 라우트 테이블
+  let routeRows='';
+  if(rdList.length){
+    routeRows=rdList.map(rd=>{
+      const up=rd.unitPrice||RPRICE[rd.route]||0;
+      const da=(rd.cnt||0)*up;const ra=(rd.ret||0)*up;
+      return`<tr>
+        <td style="font-weight:700;color:var(--brand)">${esc(rd.route)}</td>
+        <td style="text-align:right">${fmt(rd.cnt||0)}</td>
+        <td style="text-align:right;color:var(--amber)">${(rd.ret||0)>0?fmt(rd.ret):'—'}</td>
+        <td style="text-align:right;color:var(--teal)">₩${fmt(up)}</td>
+        <td style="text-align:right;font-weight:600">₩${fmt(da)}</td>
+        <td style="text-align:right;color:var(--amber)">${ra>0?'₩'+fmt(ra):'—'}</td>
+        <td style="text-align:right;font-weight:700;color:var(--green)">₩${fmt(da+ra)}</td>
+      </tr>`;
+    }).join('');
+    // 합계 행
+    const totalDel=rdList.reduce((s,rd)=>s+(rd.cnt||0),0);
+    const totalRet=rdList.reduce((s,rd)=>s+(rd.ret||0),0);
+    routeRows+=`<tr style="background:#f5f3ed;font-weight:800">
+      <td>합계</td>
+      <td style="text-align:right">${fmt(totalDel)}건</td>
+      <td style="text-align:right;color:var(--amber)">${totalRet>0?fmt(totalRet)+'건':'—'}</td>
+      <td>—</td>
+      <td style="text-align:right;color:var(--green)">₩${fmt(r.damt)}</td>
+      <td style="text-align:right;color:var(--amber)">${r.ramt>0?'₩'+fmt(r.ramt):'—'}</td>
+      <td style="text-align:right;color:var(--green)">₩${fmt(r.damt+r.ramt)}</td>
+    </tr>`;
+  }
+
+  // ─── 항목별 번호 리스트
+  function item(num,icon,label,sub,amt,style){
+    const color=style==='plus'?'#0A6E48':style==='minus'?'#C0202A':'#1C1C1A';
+    const sign=style==='plus'?'+':style==='minus'?'−':'';
+    return`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f0ede4">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="width:24px;height:24px;border-radius:50%;background:${color}22;color:${color};font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center">${num}</span>
+        <div><div style="font-size:13px;font-weight:600">${icon} ${label}</div>${sub?`<div style="font-size:11px;color:#888;margin-top:1px">${sub}</div>`:''}</div>
+      </div>
+      <div style="font-size:14px;font-weight:700;color:${color}">${sign}₩${fmt(amt)}</div>
+    </div>`;
+  }
+
+  const dcnt=sd.dcnt||0;const freshbagInc=G_PRICES.freshbag_inc||25;
+
+  return`<div style="font-family:'Malgun Gothic','Noto Sans KR',sans-serif;max-width:620px;margin:0 auto">
+    <!-- 헤더 -->
+    <div style="background:linear-gradient(135deg,#0C3F74,#1A5FA8);color:#fff;padding:20px 24px;border-radius:14px 14px 0 0">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.15em;opacity:.7;margin-bottom:4px">OFFICIAL STATEMENT · MBTI Co., Ltd.</div>
+      <div style="font-size:20px;font-weight:900;margin-bottom:2px">${yr}년 ${mo}월 정산 명세서</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+        <div style="font-size:13px;opacity:.85">${esc(driver)} 기사</div>
+        <span style="background:rgba(255,255,255,.2);padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700">${esc(jobsub)}</span>
+      </div>
+    </div>
+    <!-- 요약 3칸 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;background:#fff;border:1px solid #e8e4dc;border-top:none">
+      <div style="padding:14px 16px;border-right:1px solid #e8e4dc">
+        <div style="font-size:10px;font-weight:700;color:#888;letter-spacing:.05em;margin-bottom:3px">세금계산서 금액</div>
+        <div style="font-size:16px;font-weight:900;color:#1A5FA8">₩${fmt(r2.income)}</div>
+      </div>
+      <div style="padding:14px 16px;border-right:1px solid #e8e4dc">
+        <div style="font-size:10px;font-weight:700;color:#888;letter-spacing:.05em;margin-bottom:3px">공제 합계</div>
+        <div style="font-size:16px;font-weight:900;color:#C0202A">−₩${fmt(r2.deduct)}</div>
+      </div>
+      <div style="padding:14px 16px;background:#1A5FA8">
+        <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.7);letter-spacing:.05em;margin-bottom:3px">실 지급액</div>
+        <div style="font-size:18px;font-weight:900;color:#fff">₩${fmt(r2.net)}</div>
+      </div>
+    </div>
+    <!-- 본문 -->
+    <div style="background:#fff;border:1px solid #e8e4dc;border-top:none;padding:20px 20px 0;border-radius:0 0 14px 14px">
+      ${rdList.length?`
+      <!-- 라우트 테이블 -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:11px;font-weight:800;color:#1A5FA8;letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px;padding-bottom:5px;border-bottom:2px solid #e8f1fb">
+          📊 세금계산서 작성금액
+          <span style="font-weight:400;color:#888;font-size:10px;text-transform:none;margin-left:6px">라우트별 실적 (건수 참고 · 배송금액은 아래 ①항목 기준)</span>
+        </div>
+        <div style="overflow-x:auto;border-radius:8px;border:1px solid #e8e4dc">
+          <table style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead><tr style="background:#f5f3ed">
+              <th style="padding:7px 10px;text-align:left;font-size:10px;color:#666">라우트</th>
+              <th style="padding:7px 10px;text-align:right;font-size:10px;color:#666">배송건</th>
+              <th style="padding:7px 10px;text-align:right;font-size:10px;color:#666">반품건</th>
+              <th style="padding:7px 10px;text-align:right;font-size:10px;color:#666">단가</th>
+              <th style="padding:7px 10px;text-align:right;font-size:10px;color:#666">배송금액</th>
+              <th style="padding:7px 10px;text-align:right;font-size:10px;color:#666">반품금액</th>
+              <th style="padding:7px 10px;text-align:right;font-size:10px;color:#666">소계</th>
+            </tr></thead>
+            <tbody>${routeRows}</tbody>
+          </table>
+        </div>
+      </div>`:''}
+      <!-- 수익 항목 -->
+      <div style="margin-bottom:4px">
+        <div style="font-size:11px;font-weight:800;color:#1A5FA8;letter-spacing:.07em;text-transform:uppercase;margin-bottom:4px;padding-bottom:5px;border-bottom:2px solid #e8f1fb">세금계산서 작성금액</div>
+        ${item('①','📦','배송 수익',`${fmt(dcnt)}건 × 라우트별 단가`,r.damt,'plus')}
+        ${item('②','↩','반품 수익',`${fmt(sd.rcnt||0)}건 × 라우트별 단가`,r.ramt,r.ramt>0?'plus':'')}
+        ${item('③','🎒','프레시백 회수금액','',r.fresh,'plus')}
+        ${item('④','⭐','프레시백 인센티브',`${fmt(dcnt)}건 × ${freshbagInc}원`,r.finc,'plus')}
+        ${r.nocont>0?item('⑤','📌','미계약건',`${fmt(sd.nocontCnt||0)}건 · 추가 수익`,r.nocont,'plus'):''}
+        ${r.etcPlus>0?item('⑥','➕','기타 (+)',sd.etcPlusReason||'',r.etcPlus,'plus'):''}
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;margin-top:2px;border-top:2px solid #1A5FA8">
+          <span style="font-size:14px;font-weight:800">세금계산서 작성금액 합계</span>
+          <span style="font-size:16px;font-weight:900;color:#1A5FA8">₩${fmt(r2.income)}</span>
+        </div>
+      </div>
+      <!-- 공제 항목 -->
+      <div style="background:#faf8f4;border-radius:10px;padding:14px 16px;margin-bottom:16px">
+        <div style="font-size:11px;font-weight:800;color:#666;letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px">🔒 공제 항목</div>
+        <div style="font-size:12px;color:#555;margin-bottom:4px">💰 월보수액 ₩${fmt(r2.monthlyWage)} <span style="color:#999">(공급가액 ₩${fmt(r2.supplyAmt)} × 65.4%)</span></div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px"><span>고용보험 0.8% (월보수액기준, 80만↑)</span><span style="font-weight:700;color:#C0202A">−₩${fmt(r2.emp)}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px"><span>산재보험 0.88%</span><span style="font-weight:700;color:#C0202A">−₩${fmt(r2.work)}</span></div>
+        ${r2.dmg>0?`<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px"><span>⚠️ 분실/파손 공제${sd.dmgReason?' — '+esc(sd.dmgReason):''}</span><span style="font-weight:700;color:#C0202A">−₩${fmt(r2.dmg)}</span></div>`:''}
+        ${r2.adv>0?`<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px"><span>💸 가불금</span><span style="font-weight:700;color:#C0202A">−₩${fmt(r2.adv)}</span></div>`:''}
+        ${r2.etcMinus>0?`<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px"><span>➖ 기타(-)${sd.etcMinusReason?' — '+esc(sd.etcMinusReason):''}</span><span style="font-weight:700;color:#C0202A">−₩${fmt(r2.etcMinus)}</span></div>`:''}
+        <div style="display:flex;justify-content:space-between;padding:8px 0 0;margin-top:4px;border-top:1.5px solid #ddd;font-weight:800;font-size:14px">
+          <span>공제 합계</span><span style="color:#C0202A">−₩${fmt(r2.deduct)}</span>
+        </div>
+      </div>
+      <!-- 실지급 -->
+      <div style="background:#1A5FA8;color:#fff;border-radius:10px;padding:16px 20px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:11px;opacity:.7;margin-bottom:2px">고용보험 −₩${fmt(r2.emp)} · 산재보험 −₩${fmt(r2.work)} · 원천세(3.3%) −₩${fmt(Math.round(r2.income*0.033))}</div>
+          <div style="font-size:14px;font-weight:700">💰 실 지급액</div>
+        </div>
+        <div style="font-size:24px;font-weight:900">₩${fmt(r2.net)}</div>
+      </div>
+      <div style="text-align:right;font-size:10px;color:#aaa;padding-bottom:16px">발행일: ${today()} · MBTI Co., Ltd. · 엠비티아이 유한회사 · ☎ 051-711-3103</div>
+    </div>
+  </div>`;
 }
 
 function showStmtModal(sd,dealerName){
@@ -940,7 +1067,22 @@ window.resetAllSettles=async function(){const settles=window._allSettles||[];if(
 window._m_resetAllSettles=window.resetAllSettles;
 window.checkDuplicateSettles=async function(){const settles=window._allSettles||[];const map={};settles.forEach(s=>{const key=`${s.driverUserId||s.driver}_${s.month}`;map[key]=map[key]||[];map[key].push(s);});const dupes=Object.values(map).filter(arr=>arr.length>1);if(!dupes.length){toast('✅ 중복 정산 없음');return;}document.getElementById('mo-dupe')?.remove();const rows=dupes.flat().map(s=>`<tr style="background:var(--red-l)"><td><strong>${esc(s.driverName||s.driver||'')}</strong></td><td>${esc(s.month||'')}</td><td>${fmt(s.dcnt||0)}건</td><td>₩${fmt(calcNet(s).net)}</td><td><button class="btn btn-red btn-xs" onclick="delSettle('${s.id}','${esc(s.driverName||s.driver||'')}');document.getElementById('mo-dupe').remove()">삭제</button></td></tr>`).join('');document.getElementById('modals').insertAdjacentHTML('beforeend',`<div class="mo show" id="mo-dupe"><div class="md" style="max-width:600px"><div class="mdt">🔍 중복 정산 검사 <button class="close-btn" onclick="document.getElementById('mo-dupe').remove()">✕</button></div><div class="mdb"><div class="info-box" style="border-color:var(--red)">⚠️ ${dupes.length}건 중복 발견</div><div class="tbl-wrap"><table><thead><tr><th>기사</th><th>정산월</th><th>배송건</th><th>실지급</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div><div class="mdf"><button class="btn btn-gray" onclick="document.getElementById('mo-dupe').remove()">닫기</button></div></div></div>`);};
 window._m_checkDuplicateSettles=window.checkDuplicateSettles;
-window.openIncentiveSettings=function(){toast('⚙️ 기사별 인센 설정은 관리자에게 문의해주세요');};
+window.openIncentiveSettings=async function(){
+  document.getElementById('mo-incen')?.remove();
+  try{
+    const drSnap=await getDocs(query(collection(db,'drivers'),where('dealerId','==',CU.dealerId)));
+    const drivers=drSnap.docs.map(d=>({id:d.id,...d.data()})).filter(d=>d.name).sort((a,b)=>(a.name||'').localeCompare(b.name||'','ko'));
+    const incSnap=await getDoc(doc(db,'settings','incentives_'+CU.dealerId)).catch(()=>null);
+    const incConfig=incSnap?.exists?.()?incSnap.data():{};
+    window._incenConfig={...incConfig};
+    const rows=drivers.map(d=>{
+      const key=d.userId||d.id;const cfg=incConfig[key]||{on:true,rate:25};
+      return`<tr><td style="padding:8px 10px;font-weight:700">${esc(d.name)}</td><td style="padding:8px 10px;font-size:11px;color:var(--text3)">${esc(d.camp||'—')}</td><td style="padding:8px 10px;text-align:center"><label style="cursor:pointer;display:inline-flex;align-items:center;gap:5px"><input type="checkbox" data-key="${key}" class="incen-check" ${cfg.on!==false?'checked':''} style="width:15px;height:15px"><span style="font-size:11px;font-weight:700;color:${cfg.on!==false?'var(--green)':'var(--red)'}">${cfg.on!==false?'ON':'OFF'}</span></label></td><td style="padding:8px 10px"><input type="number" class="incen-rate" data-key="${key}" value="${cfg.rate||25}" style="width:65px;padding:4px 8px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;text-align:right"> 원</td></tr>`;
+    }).join('');
+    document.getElementById('modals').insertAdjacentHTML('beforeend',`<div class="mo show" id="mo-incen"><div class="md" style="max-width:500px"><div class="mdt">⚙️ 기사별 프레시백 인센 설정<button class="close-btn" onclick="document.getElementById('mo-incen').remove()">✕</button></div><div class="mdb"><div class="info-box">ON: 배송건수 × 설정단가로 자동 계산 | 기본 25원/건</div><div style="display:flex;gap:8px;margin-bottom:8px"><button class="btn btn-green btn-sm" onclick="document.querySelectorAll('.incen-check').forEach(e=>{e.checked=true;e.nextElementSibling.textContent='ON';e.nextElementSibling.style.color='var(--green)';})">전체 ON</button><button class="btn btn-red btn-sm" onclick="document.querySelectorAll('.incen-check').forEach(e=>{e.checked=false;e.nextElementSibling.textContent='OFF';e.nextElementSibling.style.color='var(--red)';})">전체 OFF</button></div><div style="max-height:380px;overflow-y:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><thead style="background:var(--bg3);position:sticky;top:0"><tr><th style="padding:8px 10px;text-align:left">기사</th><th style="padding:8px 10px;text-align:left">캠프</th><th style="padding:8px 10px">ON/OFF</th><th style="padding:8px 10px">단가</th></tr></thead><tbody>${rows}</tbody></table></div></div><div class="mdf"><button class="btn btn-gray" onclick="document.getElementById('mo-incen').remove()">취소</button><button class="btn btn-blue" onclick="(async()=>{document.querySelectorAll('.incen-check').forEach(el=>{const k=el.dataset.key;const r=document.querySelector('.incen-rate[data-key=\''+k+'\']');window._incenConfig[k]={on:el.checked,rate:+(r?.value||25)};});try{await setDoc(doc(db,'settings','incentives_'+CU.dealerId),window._incenConfig||{});toast('✅ 인센 설정 저장 완료');document.getElementById('mo-incen')?.remove();}catch(e){toast('❌ '+e.message);}})()">💾 저장</button></div></div></div>`);
+    document.querySelectorAll('.incen-check').forEach(el=>{el.addEventListener('change',function(){this.nextElementSibling.textContent=this.checked?'ON':'OFF';this.nextElementSibling.style.color=this.checked?'var(--green)':'var(--red)';});});
+  }catch(e){toast('❌ '+e.message);}
+};
 window._m_openIncentiveSettings=window.openIncentiveSettings;
 window.openDriverStats=async function(){
   document.getElementById('mo-drstats')?.remove();toast('📊 통계 로드 중...');
