@@ -89,8 +89,12 @@ body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
 <div class="app">
 
 <div class="topbar no-print">
-  <div class="topbar-title">📦 쿠팡 영문 라벨 출력</div>
-  <div class="topbar-sub">송장 촬영 → OCR 추출 → 영문 번역 → A4 출력</div>
+  <div class="topbar-title">📦 쿠팡 라벨 출력</div>
+  <div class="topbar-sub">송장 촬영 → OCR 추출 → 번역 → A4 출력</div>
+  <div style="display:flex;gap:6px;margin-top:8px">
+    <button id="btn-lang-en" onclick="setLang('en')" style="padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;border:2px solid #185FA5;background:#185FA5;color:#fff;cursor:pointer">🇺🇸 영어</button>
+    <button id="btn-lang-zh" onclick="setLang('zh')" style="padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;border:2px solid #C41E3A;background:transparent;color:#C41E3A;cursor:pointer">🇨🇳 중국어</button>
+  </div>
 </div>
 
 <!-- STEP 1: 촬영 -->
@@ -126,7 +130,7 @@ body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
     <h2>🔍 촬영된 송장</h2>
     <img id="preview-img" style="width:100%;border-radius:8px;margin-bottom:10px">
     <div style="display:flex;gap:8px">
-      <button class="btn btn-green" onclick="runOCR()" style="flex:2">🌐 OCR + 번역 시작</button>
+      <button class="btn btn-green" id="btn-ocr-start" onclick="runOCR()" style="flex:2">🌐 OCR + 영문 번역</button>
       <button class="btn btn-gray btn-sm" onclick="retake()" style="flex:1">다시 촬영</button>
     </div>
   </div>
@@ -239,6 +243,24 @@ function retake(){
   document.getElementById('preview-card').style.display='none';
 }
 
+// ── 언어 설정 ──
+var _lang = 'en'; // 기본: 영어
+function setLang(lang){
+  _lang = lang;
+  var btnEn = document.getElementById('btn-lang-en');
+  var btnZh = document.getElementById('btn-lang-zh');
+  var btnOcr = document.getElementById('btn-ocr-start');
+  if(lang === 'zh'){
+    btnEn.style.background='transparent'; btnEn.style.color='#185FA5';
+    btnZh.style.background='#C41E3A'; btnZh.style.color='#fff';
+    if(btnOcr) btnOcr.textContent='🌐 OCR + 중문 번역';
+  } else {
+    btnEn.style.background='#185FA5'; btnEn.style.color='#fff';
+    btnZh.style.background='transparent'; btnZh.style.color='#C41E3A';
+    if(btnOcr) btnOcr.textContent='🌐 OCR + 영문 번역';
+  }
+}
+
 // ── OCR + 번역 ──
 async function runOCR(){
   if(!_capturedImg){alert('사진을 먼저 촬영해 주세요');return;}
@@ -268,7 +290,9 @@ async function runOCR(){
     img.src=_capturedImg;
   });
 
-  var prompt='쿠팡 배송 송장 이미지다. 수령인이름/주소/송장번호를 추출해 반드시 JSON만 반환.\n규칙:\n①recipientEng=한국이름 로마자(예:임수지→Im Suji)\n②addr1Kor=도로명주소 전체 — 구/군+도로명+번지숫자까지 전부 (예:"사상구 모라로 110번길 50" 처럼 번길/번지 뒤 숫자 절대 누락 금지)\n③addr1Eng=②의 로마자\n④addr2Kor=건물명+동+호수 (예:"모라영구임대아파트 106동 1209호")\n⑤addr2Eng=④의 로마자\n⑥tracking=숫자+영문 조합 송장번호\n⑦모르면 빈문자열\n{"recipientKor":"한국이름","recipientEng":"로마자이름","addr1Kor":"구+도로명+번지끝숫자포함","addr1Eng":"romanized full road+number","addr2Kor":"건물명+동+호수","addr2Eng":"romanized building+unit","tracking":"송장번호","city":"도시영문"}'
+  var promptEn='쿠팡 배송 송장 이미지다. 수령인이름/주소/송장번호를 추출해 반드시 JSON만 반환.\n규칙:\n①recipientEng=한국이름 로마자(예:임수지→Im Suji)\n②addr1Kor=도로명주소 전체 — 구/군+도로명+번지숫자까지 전부 (예:"사상구 모라로 110번길 50" 처럼 번길/번지 뒤 숫자 절대 누락 금지)\n③addr1Eng=②의 로마자\n④addr2Kor=건물명+동+호수 (예:"모라영구임대아파트 106동 1209호")\n⑤addr2Eng=④의 로마자\n⑥tracking=숫자+영문 조합 송장번호\n⑦모르면 빈문자열\n{"recipientKor":"한국이름","recipientEng":"로마자이름","addr1Kor":"구+도로명+번지끝숫자포함","addr1Eng":"romanized full road+number","addr2Kor":"건물명+동+호수","addr2Eng":"romanized building+unit","tracking":"송장번호","city":"도시영문"}';
+  var promptZh='韩国快递运单图片。提取收件人姓名/地址/运单号，只返回JSON。\n规则：\n①recipientZh=韩国姓名音译中文(例:임수지→林秀芝)\n②addr1Kor=完整道路地址(韩文)\n③addr1Zh=中文音译地址(例:釜山市沙上区摩罗路110街50号)\n④addr2Kor=建筑名+洞+号(韩文)\n⑤addr2Zh=中文音译(例:摩罗永久租赁公寓106栋1209号)\n⑥tracking=快递单号\n⑦不知道留空\n{"recipientKor":"韩文名","recipientZh":"中文音译名","addr1Kor":"完整道路地址","addr1Zh":"中文地址","addr2Kor":"建筑+洞+号","addr2Zh":"中文建筑","tracking":"运单号","city":"釜山市"}';
+  var prompt=_lang==='zh'?promptZh:promptEn;
 
   try{
     document.getElementById('loading-msg').textContent='AI 번역 중...';
@@ -328,14 +352,15 @@ async function runOCR(){
 function showResult(info){
   var today=new Date();
   var dateStr=(today.getMonth()+1)+'/'+today.getDate()+'/'+today.getFullYear();
+  var isZh=(_lang==='zh');
   _data={
     name: (function(eng,kor){
       function clean(s){return s?s.replace(/\[.*?\]/g,'').replace(/（.*?）/g,'').trim():'';}
       var e=clean(eng), k=clean(kor);
       return e||k||'';
-    })(info.recipientEng,info.recipientKor),
-    addr1: info.addr1Eng||'',
-    addr2: info.addr2Eng||'',
+    })(isZh?info.recipientZh:info.recipientEng, info.recipientKor),
+    addr1: (isZh?info.addr1Zh:info.addr1Eng)||'',
+    addr2: (isZh?info.addr2Zh:info.addr2Eng)||'',
     track: info.tracking||'',
     city: info.city||'South Korea',
     date: dateStr
@@ -376,7 +401,8 @@ function setSize(n,el){
 
 function renderLabel(){
   var d=_data;
-  var addrBlock=(d.addr2?d.addr2+'\n':'')+d.addr1+'\n'+(d.city||'South Korea')+', South Korea';
+  var isZhMode=(_lang==='zh');
+  var addrBlock=(d.addr2?d.addr2+'\n':'')+d.addr1+'\n'+(d.city||(isZhMode?'韩国':'South Korea'))+(isZhMode?'':' South Korea');
   var today=new Date();
   var dateStr=(today.getMonth()+1)+'/'+today.getDate()+'/'+today.getFullYear();
   var logoHtml=_logoData?'<img src="'+_logoData+'" style="max-height:32px;max-width:110px;object-fit:contain">':'<div style="font-size:16px;font-weight:900;color:#e8303a">cou<span style="color:#1a1a18">pang</span></div>';
