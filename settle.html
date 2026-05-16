@@ -370,6 +370,22 @@ function parseExcelData(file,onResult){
   reader.onload=function(e){
     try{
       const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+      // ★ 엑셀 제목에서 정산월 추출 ("2026년 04월 정산서" 패턴)
+      let titleMonth='';
+      for(const sName of wb.SheetNames){
+        const sh=wb.Sheets[sName];
+        const rows2=XLSX.utils.sheet_to_json(sh,{header:1,defval:null,range:0});
+        for(let ri=0;ri<Math.min(rows2.length,5);ri++){
+          for(const cell of (rows2[ri]||[])){
+            if(cell&&typeof cell==='string'){
+              const m2=cell.match(/(\d{4})년\s*(\d{1,2})월\s*정산/);
+              if(m2){titleMonth=m2[1]+'-'+m2[2].padStart(2,'0');break;}
+            }
+          }
+          if(titleMonth)break;
+        }
+        if(titleMonth)break;
+      }
       let ws=null;
       for(const name of wb.SheetNames){
         const candidate=wb.Sheets[name];
@@ -409,6 +425,7 @@ function parseExcelData(file,onResult){
           else{routeMap['미계약'].cnt+=miscCnt;routeMap['미계약'].amt+=miscAmt;}
         }
       });
+      if(titleMonth)excelMonth=titleMonth; // ★ 제목 월이 있으면 최우선
       const routes=Object.entries(routeMap).map(([r,v])=>({route:r,cnt:v.cnt,ret:v.ret,amt:v.amt,retAmt:v.retAmt||0,unitPrice:v.unitPrice})).sort((a,b)=>b.amt-a.amt);
       const finc=Math.round(totalDel*(G_PRICES.freshbag_inc||25));
       const driverIdFromExcel=rows[hIdx+1]&&rows[hIdx+1][1]?String(rows[hIdx+1][1]).trim():'';
@@ -423,7 +440,7 @@ function parseExcelData(file,onResult){
           if(row[3] instanceof Date)dateStr=row[3].toISOString().slice(0,7);
           else if(typeof row[3]==='number'){const _d2=new Date((row[3]-25569)*86400000);dateStr=_d2.toISOString().slice(0,7);}
           else if(row[3])dateStr=String(row[3]).slice(0,7);
-          if(dateStr&&!excelMonth)excelMonth=dateStr;
+          if(dateStr&&(!excelMonth||dateStr>excelMonth))excelMonth=dateStr; // ★ 최신 날짜로 갱신
           if(did&&!allDriversMap[did])allDriversMap[did]={id:did,camp};
           if(route&&route!=='미계약'&&!routeCampsMap[route])routeCampsMap[route]=camp;
           if(!driverSettleMap[did])driverSettleMap[did]={userId:did,camp,month:dateStr||excelMonth,routeMap:{},totalDel:0,totalRet:0,totalAmt:0,totalRetAmt:0,totalFresh:0,totalNocont:0,totalNocontCnt:0};
@@ -438,7 +455,7 @@ function parseExcelData(file,onResult){
         }
       });
       const allDriverSettlements=Object.values(driverSettleMap).map(ds=>({...ds,routes:Object.entries(ds.routeMap).map(([r,v])=>({route:r,...v})).sort((a,b)=>b.amt-a.amt),finc:Math.round(ds.totalDel*(G_PRICES.freshbag_inc||25))}));
-      onResult({routes,dailyRows,totalAmt,totalFresh,totalDel,totalRet,totalRetAmt,totalNocont,totalNocontCnt,finc,driverIdFromExcel,allDrivers:Object.values(allDriversMap),routeCamps:routeCampsMap,allDriverSettlements,excelMonth:excelMonth||curMonth()});
+      onResult({routes,dailyRows,totalAmt,totalFresh,totalDel,totalRet,totalRetAmt,totalNocont,totalNocontCnt,finc,titleMonth,driverIdFromExcel,allDrivers:Object.values(allDriversMap),routeCamps:routeCampsMap,allDriverSettlements,excelMonth:excelMonth||curMonth()});
     }catch(e){toast('❌ 엑셀 분석 오류: '+e.message);console.error(e);}
   };
   reader.readAsArrayBuffer(file);
@@ -968,8 +985,8 @@ window.handleExcelUpload=function(inp){
     // 전체 기사 일괄 자동 정산
     if(result.allDriverSettlements?.length&&CU.dealerId){
       // ★ 정산월 확인 프롬프트
-      const _defaultM=curMonth();
-      const _confirmedM=prompt('📅 정산월을 입력해주세요 (YYYY-MM)\n\n엑셀 감지 월: '+(result.excelMonth||'불명')+'\n기본값: '+_defaultM,_defaultM);
+      const _defaultM=result.titleMonth||result.excelMonth||curMonth();
+      const _confirmedM=prompt('📅 정산월을 확인해주세요 (YYYY-MM)\n\n엑셀 제목 감지: '+(result.titleMonth||'없음')+' / 날짜 감지: '+(result.excelMonth||'없음'),_defaultM);
       if(!_confirmedM){toast('정산 업로드 취소됨');return;}
       if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(_confirmedM)){toast('❌ 월 형식 오류 (예: 2026-04)');return;}
       result.excelMonth=_confirmedM;try{const drSnap=await getDocs(query(collection(db,'drivers'),where('dealerId','==',CU.dealerId)));const drMap={};drSnap.docs.forEach(d=>{const dd=d.data();if(dd.userId)drMap[dd.userId]=dd;});const month=result.excelMonth||curMonth();const exSnap=await getDocs(query(collection(db,'settlements'),where('dealerId','==',CU.dealerId),where('month','==',month)));const existSet=new Set(exSnap.docs.map(d=>d.data().driverUserId||''));let autoCount=0;for(const ds of result.allDriverSettlements){if(existSet.has(ds.userId))continue;const drInfo=drMap[ds.userId]||{};if(!drInfo.name)continue; // ★ 미등록 기사 skip
