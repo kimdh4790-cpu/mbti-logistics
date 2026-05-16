@@ -1240,8 +1240,14 @@ function goPage(page,el){
     showSecurityAlert('unauthorized_page',`권한 없는 페이지 접근 시도: ${page} (현재 역할: ${CU.role})`);
     return;
   }
-  // 캠프필터 영역 제거 (정산 관리 이탈 시)
-  if(page!=='dealer-settlements') document.getElementById('camp-filter-area')?.remove();
+  // 정산 관련 UI 영역 제거 (페이지 이탈 시)
+  if(page!=='dealer-settlements'){
+    document.getElementById('camp-filter-area')?.remove();
+    document.getElementById('settle-btn-panel')?.remove();
+  }
+  if(page!=='dealer-drivers') document.getElementById('driver-camp-filter')?.remove();
+  if(page!=='dealer-prices') document.getElementById('price-camp-filter')?.remove();
+  if(page!=='dealer-incentives') document.getElementById('inc-camp-filter')?.remove();
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
   const target=el||document.getElementById('nav-'+page);
   if(target)target.classList.add('on');
@@ -1957,6 +1963,32 @@ PAGES['dealer-drivers']=async function(){
   try{
     const snap=await getDocs(query(collection(db,'drivers'),where('dealerId','==',CU.dealerId)));
     checkDealerDataIntegrity(snap.docs.map(d=>d.data()),CU.dealerId,'drivers');
+    // 캠프 탭 필터 생성
+    const allDrivers=snap.docs.map(d=>({id:d.id,...d.data()}));
+    const campColors={'부산1':'#3B82F6','부산2':'#8B5CF6','부산3':'#10B981','대구2':'#F59E0B','대구2B':'#FB923C','진주M':'#EF4444'};
+    const campList=['전체',...new Set(allDrivers.map(d=>d.camp||'미지정').filter(Boolean))].filter((v,i,a)=>a.indexOf(v)===i);
+    let driverCampFilter='전체';
+    const filterArea=document.createElement('div');
+    filterArea.id='driver-camp-filter';
+    filterArea.style.cssText='display:flex;gap:6px;flex-wrap:wrap;padding:8px 16px 0';
+    const renderDriverCampBtns=()=>{
+      filterArea.innerHTML=campList.map((camp,i)=>{
+        const cnt=camp==='전체'?allDrivers.length:allDrivers.filter(d=>(d.camp||'미지정')===camp).length;
+        const col=camp==='전체'?'var(--brand)':(campColors[camp.replace('캠프','')]||'#6B7280');
+        const active=driverCampFilter===camp;
+        return`<button onclick="window._driverCampFilter='${camp}';window._renderDriverTable()" style="padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:2px solid ${col};background:${active?col:'transparent'};color:${active?'#fff':col};transition:.15s">${camp==='전체'?'전체':''.replace('캠프','')||camp.replace('캠프','')} (${cnt})</button>`;
+      }).join('');
+    };
+    document.getElementById('driver-camp-filter')?.remove();
+    document.getElementById('content').before(filterArea);
+    window._driverCampFilter='전체';
+    window._renderDriverTable=function(){
+      const filtered=window._driverCampFilter==='전체'?allDrivers:allDrivers.filter(d=>(d.camp||'미지정')===window._driverCampFilter);
+      renderDriverCampBtns();
+      renderDriverRows(filtered);
+    };
+    renderDriverCampBtns();
+    function renderDriverRows(drivers){
     if(snap.empty){
       c.innerHTML=`<div class="empty"><div class="empty-icon">👤</div><div style="font-size:15px;font-weight:700;margin-bottom:6px">등록된 기사가 없습니다</div><button class="btn btn-blue" onclick="openAddDriver()" style="margin-top:12px">+ 첫 기사 추가</button></div>`;
       buildDriverModal();return;
@@ -1978,7 +2010,12 @@ PAGES['dealer-drivers']=async function(){
     }).join('');
     c.innerHTML=`<div class="card"><div class="card-header"><div class="card-title">👤 기사 목록 (${snap.size}명)</div></div><div class="card-body"><div class="tbl-wrap"><table><thead><tr><th>성함</th><th>쿠팡 ID</th><th>캠프</th><th>분류</th><th>연락처</th><th>상태</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div></div>`;
     buildDriverModal();
-  }catch(e){c.innerHTML=`<div class="empty">⚠️ ${e.message}</div>`}
+      } // renderDriverRows end
+    window._renderDriverTable();
+  }catch(e){
+    document.getElementById('driver-camp-filter')?.remove();
+    c.innerHTML=`<div class="empty">⚠️ ${e.message}</div>`;
+  }
 };
 function buildDriverModal(){
   if(document.getElementById('mo-driver'))return;
@@ -2290,6 +2327,40 @@ PAGES['dealer-settlements']=async function(){
   };
   const c=document.getElementById('content');
   c.innerHTML='<div class="loading">로딩 중...</div>';
+
+  // ── 정산 자동화 버튼 패널 ──
+  const btnPanel=document.createElement('div');
+  btnPanel.id='settle-btn-panel';
+  btnPanel.style.cssText='background:#fff;border-radius:14px;padding:14px 18px;margin-bottom:10px;box-shadow:0 2px 10px rgba(0,0,0,.07)';
+  let panelOpen=false;
+  const renderPanel=()=>{
+    btnPanel.innerHTML=`
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${panelOpen?'10px':'0'}">
+        <span style="font-size:13px;font-weight:700;color:var(--text)">📋 정산 자동화</span>
+        <button onclick="panelOpen=!panelOpen;renderPanel()" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--text3);font-family:'Pretendard',sans-serif">${panelOpen?'접기 ▲':'더보기 ▼'}</button>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <label style="position:relative;cursor:pointer">
+          <input type="file" accept=".xlsx,.xls" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%" onchange="batchExcelUpload(this)">
+          <span class="btn btn-green btn-sm">📂 쿠팡 엑셀 → 자동정산</span>
+        </label>
+        <button class="btn btn-red btn-sm" onclick="recalcAllSettle()">⚡ 전체 정산 재계산</button>
+        <button class="btn btn-blue btn-sm" onclick="bulkSendSettle()">📤 정산 일괄 전달</button>
+        <button class="btn btn-green btn-sm" onclick="openTaxArchive()">📗 세금계산서 보관함</button>
+      </div>
+      ${panelOpen?`
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+        <button class="btn btn-sm" style="background:#06B6D4;color:#fff" onclick="checkDuplicateSettle()">🔍 중복 검사</button>
+        <button class="btn btn-sm" style="background:#8B5CF6;color:#fff" onclick="showCoupangStats()">📦 쿠팡 건수 통계</button>
+        <button class="btn btn-sm" style="background:#F59E0B;color:#fff" onclick="showDriverStats()">📊 기사별 실적 비교</button>
+        <button class="btn btn-sm" style="background:#10B981;color:#fff" onclick="goPage('dealer-incentives')">⚙️ 기사 인센 설정</button>
+        <button class="btn btn-sm" style="background:#6366F1;color:#fff" onclick="syncFirebase()">🔄 Firebase 동기화</button>
+      </div>`:''}`;
+  };
+  renderPanel();
+  document.getElementById('settle-btn-panel')?.remove();
+  c.before(btnPanel);
+
   try{
     // dealerId 있으면 필터, 없으면 전체 (admin)
     const settlQuery=CU.dealerId
@@ -2355,6 +2426,10 @@ function renderSettleTable(settles){
   if(!c)return;
   const rows=settles.map(s=>buildSettleRow(s)).join('');
   c.innerHTML=`
+    <div id="bulk-delete-bar" style="display:none;background:#fff5f5;border:1.5px solid #fed7d7;border-radius:10px;padding:10px 14px;margin-bottom:10px;display:none;align-items:center;justify-content:space-between">
+      <span id="bulk-count-txt" style="font-size:13px;font-weight:700;color:#c53030">0건 선택됨</span>
+      <button onclick="bulkDeleteSettle()" style="background:#c53030;color:#fff;border:none;padding:7px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Pretendard',sans-serif">🗑 선택 삭제</button>
+    </div>
     <div class="stat-grid" style="grid-template-columns:repeat(3,1fr)">
       <div class="stat-card"><div class="stat-val">${settles.length}</div><div class="stat-lbl">📋 정산 건수</div></div>
       <div class="stat-card"><div class="stat-val">₩${fmt(totIncome)}</div><div class="stat-lbl">📊 수익 합계</div></div>
@@ -2364,13 +2439,73 @@ function renderSettleTable(settles){
       <div class="card-header"><div class="card-title">📋 정산 목록 (${settles.length}건)</div></div>
       <div class="card-body">
         <div class="tbl-wrap"><table>
-          <thead><tr><th>기사</th><th>캠프</th><th>정산월</th><th>분류</th><th>배송건</th><th>수익합계</th><th>실지급</th><th>상태</th><th></th></tr></thead>
+          <thead><tr>
+            <th><input type="checkbox" id="chk-all" onchange="toggleAllChk(this)" style="cursor:pointer"></th>
+            <th>기사</th><th>캠프</th><th>정산월</th><th>분류</th><th>배송건</th><th>수익합계</th><th>실지급</th><th>상태</th><th></th>
+          </tr></thead>
           <tbody id="settle-tbody">${rows}</tbody>
         </table></div>
       </div>
     </div>`;
   buildSettleModal();
 }
+// ── 체크박스 관련 함수 ──
+window.toggleAllChk=function(chkAll){
+  document.querySelectorAll('.settle-chk').forEach(c=>c.checked=chkAll.checked);
+  updateBulkBtn();
+};
+window.updateBulkBtn=function(){
+  const checked=document.querySelectorAll('.settle-chk:checked');
+  const bar=document.getElementById('bulk-delete-bar');
+  const txt=document.getElementById('bulk-count-txt');
+  if(bar){bar.style.display=checked.length>0?'flex':'none';}
+  if(txt)txt.textContent=checked.length+'건 선택됨';
+};
+window.bulkDeleteSettle=async function(){
+  const checked=[...document.querySelectorAll('.settle-chk:checked')];
+  if(!checked.length)return;
+  if(!confirm(`선택한 ${checked.length}건을 삭제하시겠습니까?`))return;
+  const btn=event?.target;
+  if(btn){btn.disabled=true;btn.textContent='삭제 중...';}
+  try{
+    for(const c of checked){
+      await deleteDoc(doc(db,'settlements',c.value));
+    }
+    toast(`🗑 ${checked.length}건 삭제 완료`);
+    PAGES['dealer-settlements']();
+  }catch(e){toast('❌ '+e.message);if(btn){btn.disabled=false;btn.textContent='🗑 선택 삭제';}}
+};
+
+// ── 정산 자동화 버튼 기능 ──
+window.recalcAllSettle=async function(){
+  if(!confirm('전체 정산을 재계산하여 저장할까요?'))return;
+  toast('⚡ 재계산 중...');
+  try{
+    const snap=await getDocs(query(collection(db,'settlements'),where('dealerId','==',CU.dealerId)));
+    const batch2=writeBatch(db);
+    snap.docs.forEach(d=>{
+      const sd=d.data();
+      const r=calcNet(sd);
+      batch2.update(d.ref,{income:r.income,supplyAmt:r.supplyAmt,monthlyWage:r.wage,emp:r.emp,work:r.work,deduct:r.deduct,net:r.net,updatedAt:serverTimestamp()});
+    });
+    await batch2.commit();
+    toast(`✅ ${snap.size}건 재계산 완료`);
+    PAGES['dealer-settlements']();
+  }catch(e){toast('❌ '+e.message);}
+};
+window.bulkSendSettle=function(){toast('📤 일괄 전달 기능은 준비 중입니다');};
+window.openTaxArchive=function(){toast('📗 세금계산서 보관함은 준비 중입니다');};
+window.checkDuplicateSettle=async function(){
+  const snap=await getDocs(query(collection(db,'settlements'),where('dealerId','==',CU.dealerId)));
+  const seen={};const dups=[];
+  snap.docs.forEach(d=>{const sd=d.data();const key=(sd.driver||sd.driverName)+'_'+sd.month;if(seen[key])dups.push(key);else seen[key]=true;});
+  if(dups.length)toast(`⚠️ 중복 ${dups.length}건 발견: `+dups.slice(0,3).join(', '));
+  else toast('✅ 중복 없음');
+};
+window.showCoupangStats=function(){toast('📦 쿠팡 건수 통계는 준비 중입니다');};
+window.showDriverStats=function(){toast('📊 기사별 실적 비교는 준비 중입니다');};
+window.syncFirebase=async function(){await loadRPRICE();toast('🔄 Firebase 동기화 완료');};
+
 function buildSettleRow(s){
   const r=calcNet(s);
   const dName=s.driverName||s.name||s.driver||s.userId||'';
@@ -2378,6 +2513,7 @@ function buildSettleRow(s){
   const campName=getCampByRoute(firstRoute);
   const campColor={'부산1':'#3B82F6','부산2':'#8B5CF6','부산3':'#10B981','대구2':'#F59E0B','대구2B':'#FB923C','진주M':'#EF4444'}[campName]||'#6B7280';
   return`<tr>
+    <td><input type="checkbox" class="settle-chk" value="${s.id}" onchange="updateBulkBtn()" style="cursor:pointer"></td>
     <td><strong>${esc(dName)}</strong></td>
     <td>${campName?`<span style="padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:${campColor}22;color:${campColor};border:1.5px solid ${campColor}">${campName}</span>`:''}</td>
     <td>${esc(s.month||'')}</td>
@@ -3116,6 +3252,32 @@ PAGES['dealer-prices']=async function(){
     const snap=await getDocs(query(collection(db,'prices'),where('dealerId','==',CU.dealerId)));
     checkDealerDataIntegrity(snap.docs.map(d=>d.data()),CU.dealerId,'prices');
     const customRoutes=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.route.localeCompare(b.route));
+    // 캠프 탭 필터
+    const campColors={'부산1캠프':'#3B82F6','부산2캠프':'#8B5CF6','부산3캠프':'#10B981','대구2캠프':'#F59E0B','대구2B캠프':'#FB923C','진주M캠프':'#EF4444'};
+    const priceCamps=['전체',...new Set(customRoutes.map(r=>r.camp||'기타').filter(Boolean))];
+    let priceFilter='전체';
+    const priceFilterArea=document.createElement('div');
+    priceFilterArea.id='price-camp-filter';
+    priceFilterArea.style.cssText='display:flex;gap:6px;flex-wrap:wrap;padding:8px 16px 0';
+    const renderPriceCampBtns=()=>{
+      priceFilterArea.innerHTML=priceCamps.map(camp=>{
+        const cnt=camp==='전체'?customRoutes.length:customRoutes.filter(r=>(r.camp||'기타')===camp).length;
+        const col=camp==='전체'?'var(--brand)':(campColors[camp]||'#6B7280');
+        const active=priceFilter===camp;
+        return`<button onclick="window._priceFilter='${camp}';window._renderPriceTable()" style="padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:2px solid ${col};background:${active?col:'transparent'};color:${active?'#fff':col};transition:.15s">${camp==='전체'?'전체':camp.replace('캠프','')} (${cnt})</button>`;
+      }).join('');
+    };
+    document.getElementById('price-camp-filter')?.remove();
+    c.before(priceFilterArea);
+    window._priceFilter='전체';
+    window._renderPriceTable=function(){
+      priceFilter=window._priceFilter;
+      renderPriceCampBtns();
+      const filtered=priceFilter==='전체'?customRoutes:customRoutes.filter(r=>(r.camp||'기타')===priceFilter);
+      renderPriceRows(filtered);
+    };
+    renderPriceCampBtns();
+    function renderPriceRows(routes){
     const customRowsHTML=customRoutes.map(r=>`
       <tr>
         <td><strong>${esc(r.route)}</strong></td>
@@ -3141,7 +3303,12 @@ PAGES['dealer-prices']=async function(){
             `<div class="tbl-wrap"><table><thead><tr><th>라우트</th><th>캠프</th><th>단가 (원/건)</th><th></th></tr></thead><tbody>${customRowsHTML}</tbody></table></div>`}
         </div>
       </div>`;
-  }catch(e){c.innerHTML=`<div class="empty">⚠️ ${e.message}</div>`}
+      } // renderPriceRows end
+    window._renderPriceTable();
+  }catch(e){
+    document.getElementById('price-camp-filter')?.remove();
+    c.innerHTML=`<div class="empty">⚠️ ${e.message}</div>`;
+  }
 };
 window.addDealerRoute=async function(){
   const route=prompt('라우트 코드:','');if(!route)return;
@@ -3275,38 +3442,62 @@ PAGES['dealer-incentives']=async function(){
     const globalWork=incData.accidentRate||0.88;
 
     // 캠프별 렌더
-    const campHTML=CAMPS_ORDER.filter(camp=>campGroups[camp]?.length).map(camp=>{
-      const col=campColors[camp]||'#6B7280';
-      const drivers=campGroups[camp]||[];
-      const rows=drivers.map(dr=>{
-        const di=drvInc[dr.id]||{};
-        const isOn=di.freshbagOn!==false; // 기본 ON
-        const amt=di.freshbagAmt||25;
-        return`<tr>
-          <td><strong>${esc(dr.name||dr.userId||'')}</strong></td>
-          <td style="font-size:11px;color:var(--text3)">${esc(dr.userId||'')}</td>
-          <td>
-            <button id="inc-on-${dr.id}" onclick="toggleDrvInc('${dr.id}',true)"
-              style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;border:2px solid #16a34a;background:${isOn?'#16a34a':'transparent'};color:${isOn?'#fff':'#16a34a'};cursor:pointer;margin-right:4px">ON</button>
-            <button id="inc-off-${dr.id}" onclick="toggleDrvInc('${dr.id}',false)"
-              style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;border:2px solid #dc2626;background:${!isOn?'#dc2626':'transparent'};color:${!isOn?'#fff':'#dc2626'};cursor:pointer">OFF</button>
-          </td>
-          <td>
-            ${[10,15,25].map(v=>`<button onclick="setDrvAmt('${dr.id}',${v})"
-              style="padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;border:2px solid #6366f1;background:${amt===v?'#6366f1':'transparent'};color:${amt===v?'#fff':'#6366f1'};cursor:pointer;margin-right:3px" id="inc-amt-${dr.id}-${v}">×${v}</button>`).join('')}
-            <input id="inc-custom-${dr.id}" type="number" value="${amt}" min="0" style="width:50px;padding:3px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:11px;text-align:center"
-              onchange="setDrvAmt('${dr.id}',+this.value)">원
-          </td>
-        </tr>`;
+    // 캠프 탭 렌더
+    const incCampArea=document.createElement('div');
+    incCampArea.id='inc-camp-filter';
+    incCampArea.style.cssText='display:flex;gap:6px;flex-wrap:wrap;padding:8px 0 10px';
+    const campColors_inc={'부산1캠프':'#3B82F6','부산2캠프':'#8B5CF6','부산3캠프':'#10B981','대구2캠프':'#F59E0B','대구2B캠프':'#FB923C','진주M캠프':'#EF4444'};
+    const incCampsAvail=['전체',...CAMPS_ORDER.filter(c=>campGroups[c]?.length)];
+    window._incCampFilter='전체';
+    const renderIncTabs=()=>{
+      incCampArea.innerHTML=incCampsAvail.map(camp=>{
+        const cnt=camp==='전체'?drvSnap.size:(campGroups[camp]||[]).length;
+        const col=camp==='전체'?'var(--brand)':(campColors_inc[camp]||'#6B7280');
+        const active=window._incCampFilter===camp;
+        return`<button onclick="window._incCampFilter='${camp}';renderIncTabs();renderIncCards()" style="padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:2px solid ${col};background:${active?col:'transparent'};color:${active?'#fff':col};transition:.15s">${camp==='전체'?'전체':camp.replace('캠프','')} (${cnt})</button>`;
       }).join('');
-      return`<div class="card" style="margin-bottom:12px">
-        <div class="card-header"><div class="card-title" style="color:${col}">🏕 ${camp} (${drivers.length}명)</div></div>
-        <div class="card-body" style="padding:0">
-          <table><thead><tr><th>기사</th><th>쿠팡ID</th><th>ON/OFF</th><th>프레시백 인센 (건당)</th></tr></thead>
-          <tbody>${rows}</tbody></table>
-        </div>
-      </div>`;
-    }).join('');
+    };
+    const renderIncCards=()=>{
+      const filtered=window._incCampFilter==='전체'?CAMPS_ORDER:CAMPS_ORDER.filter(c=>c===window._incCampFilter);
+      const campSection=document.getElementById('inc-camp-section');
+      if(campSection) campSection.innerHTML=filtered.filter(camp=>campGroups[camp]?.length).map(camp=>{
+        const col=campColors_inc[camp]||'#6B7280';
+        const drivers=campGroups[camp]||[];
+        const rows=drivers.map(dr=>{
+          const di=(window._drvInc||{})[dr.id]||{};
+          const isOn=di.freshbagOn!==false;
+          const amt=di.freshbagAmt||25;
+          return`<tr>
+            <td><strong>${esc(dr.name||dr.userId||'')}</strong></td>
+            <td style="font-size:11px;color:var(--text3)">${esc(dr.userId||'')}</td>
+            <td>
+              <button id="inc-on-${dr.id}" onclick="toggleDrvInc('${dr.id}',true)" style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;border:2px solid #16a34a;background:${isOn?'#16a34a':'transparent'};color:${isOn?'#fff':'#16a34a'};cursor:pointer;margin-right:4px">ON</button>
+              <button id="inc-off-${dr.id}" onclick="toggleDrvInc('${dr.id}',false)" style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;border:2px solid #dc2626;background:${!isOn?'#dc2626':'transparent'};color:${!isOn?'#fff':'#dc2626'};cursor:pointer">OFF</button>
+            </td>
+            <td>
+              ${[10,15,25].map(v=>`<button onclick="setDrvAmt('${dr.id}',${v})" id="inc-amt-${dr.id}-${v}" style="padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;border:2px solid #6366f1;background:${amt===v?'#6366f1':'transparent'};color:${amt===v?'#fff':'#6366f1'};cursor:pointer;margin-right:3px">×${v}</button>`).join('')}
+              <input id="inc-custom-${dr.id}" type="number" value="${amt}" min="0" style="width:50px;padding:3px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:11px;text-align:center" onchange="setDrvAmt('${dr.id}',+this.value)">원
+            </td>
+          </tr>`;
+        }).join('');
+        return`<div class="card" style="margin-bottom:12px">
+          <div class="card-header">
+            <div class="card-title" style="color:${col}">🏕 ${camp} (${drivers.length}명)</div>
+            <div style="display:flex;gap:6px">
+              <button onclick="toggleCampInc('${camp}',true)" style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;border:2px solid #16a34a;color:#16a34a;background:transparent;cursor:pointer">전체 ON</button>
+              <button onclick="toggleCampInc('${camp}',false)" style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;border:2px solid #dc2626;color:#dc2626;background:transparent;cursor:pointer">전체 OFF</button>
+            </div>
+          </div>
+          <div class="card-body" style="padding:0">
+            <table><thead><tr><th>기사</th><th>쿠팡ID</th><th>ON/OFF</th><th>프레시백 인센 (건당)</th></tr></thead>
+            <tbody>${rows}</tbody></table>
+          </div>
+        </div>`;
+      }).join('')||'<div class="empty">기사가 없습니다</div>';
+    };
+    document.getElementById('inc-camp-filter')?.remove();
+    cc.before(incCampArea);
+    renderIncTabs();
 
     cc.innerHTML=`
       <div class="card" style="margin-bottom:12px">
@@ -3320,12 +3511,17 @@ PAGES['dealer-incentives']=async function(){
           </div>
         </div>
       </div>
-      ${campHTML||'<div class="empty">등록된 기사가 없습니다</div>'}
+      <div id="inc-camp-section"></div>
       <button class="btn btn-blue" style="width:100%;margin-top:8px" onclick="saveAllInc()">💾 전체 저장</button>`;
+    setTimeout(()=>renderIncCards(),0);
 
     // 기사별 인센 상태 메모리
     window._drvInc=JSON.parse(JSON.stringify(drvInc));
 
+    window.toggleCampInc=function(camp,isOn){
+      const campDrivers=campGroups[camp]||[];
+      campDrivers.forEach(dr=>{toggleDrvInc(dr.id,isOn);});
+    };
     window.toggleDrvInc=function(drvId,isOn){
       if(!window._drvInc[drvId]) window._drvInc[drvId]={};
       window._drvInc[drvId].freshbagOn=isOn;
