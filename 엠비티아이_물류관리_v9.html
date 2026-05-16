@@ -22060,6 +22060,26 @@ async function emerOcrScan(file, _statusOverride){
     // 수령인: 김*우 패턴
     var recipientMatch = fullText.match(/[가-힣]+\*[가-힣]+/);
 
+    // ★ 받는분/보내는분 구분 처리 (한진 국제 송장 대응)
+    // 텍스트에서 "받는분" 이후만 사용 (보내는분 주소 오인식 방지)
+    var fullTextForAddr = fullText;
+    var recvIdx = fullText.search(/받는\s*분|수취인|SHIP\s*TO|RECIPIENT/i);
+    var sendIdx = fullText.search(/보내는\s*분|발송인|보내는이|SENDER|FROM/i);
+    if(recvIdx >= 0){
+      // 받는분 이후, 보내는분 이전만 사용
+      var endIdx = sendIdx > recvIdx ? sendIdx : fullText.length;
+      fullTextForAddr = fullText.slice(recvIdx, endIdx);
+    } else if(sendIdx >= 0){
+      // 보내는분 이전만 사용
+      fullTextForAddr = fullText.slice(0, sendIdx);
+    }
+    // 국제 송장 주소: 콤마 구분 형식 파싱 (예: 607호, 광안동 89-13 화목오피스텔, 수영구, 부산광역시)
+    var intlAddrMatch = fullTextForAddr.match(/(\d+호[^\n]*(?:구|시|동|로|길|아파트|오피스텔|빌라)[^\n,]*(?:,[^\n,]*)*?)(?:,\s*\d{5}|,\s*KR|,\s*Korea|\n)/i);
+    if(!intlAddrMatch){
+      intlAddrMatch = fullTextForAddr.match(/(\d+호[^\n,]+,[^\n]+(?:구|시)[^\n]*)/);
+    }
+    var intlAddr = intlAddrMatch ? intlAddrMatch[1].replace(/,\s*\d{5}.*$/,'').replace(/,\s*KR.*/i,'').replace(/,\s*Korea.*/i,'').trim() : ''
+
     // ★ v9.25: 주소 파싱 — 전체 줄 스캔 후 주소 조각 모두 수집 (From./잡텍스트 건너뜀)
     var addrLine = (function(){
       function isAddrLine(l){
@@ -22072,7 +22092,7 @@ async function emerOcrScan(file, _statusOverride){
                l.match(/아파트|오피스텔|빌라|임대아파트|주공/);
       }
       function isJunkLine(l){
-        if(l.match(/서명|인수자|보내는이|택배사|위탁|개인정보/)) return true;
+        if(l.match(/서명|인수자|보내는이|보내는분|발송인|택배사|위탁|개인정보|SENDER|FROM\.:/i)) return true;
         if(l.match(/[a-zA-Z]{5,}/)) return true; // 영어 5자↑
         if(l.match(/^(RPB|D\d|오전|오후|DATE|From|To\.)/i)) return true;
         if(l.match(/coupang|gls\.com/i)) return true;
@@ -22161,6 +22181,11 @@ async function emerOcrScan(file, _statusOverride){
       if(streetPart && detailPart) return _cleanAddr(streetPart + ' ' + detailPart);
       return _cleanAddr(streetPart || detailPart || '');
     })();
+
+    // ★ 국제 송장 주소가 더 정확하면 우선 사용
+    if(intlAddr && intlAddr.length > (addrLine||'').length){
+      addrLine = intlAddr;
+    }
 
     // ★ 2자리 번길 감지 → 오인식 경고 (192번길을 19번길로 읽을 수 있음)
     if(addrLine && /로\s*\d{2}번길/.test(addrLine)){
