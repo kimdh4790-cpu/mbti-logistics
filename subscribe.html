@@ -211,7 +211,7 @@ const auth=getAuth(app);
 const db=getFirestore(app);
 
 // ── 토스 클라이언트 키 (본인 키로 교체) ──
-const TOSS_CLIENT_KEY='test_ck_mBZ1gQ4YVXQwywWXyyKXrl2KPoqN';
+const TOSS_CLIENT_KEY='test_ck_여기에_클라이언트키_입력';
 
 let _plan={plan:'basic',amount:50000,label:'Basic'};
 let _user=null;
@@ -300,15 +300,25 @@ async function initPayment(){
   btn.textContent='결제 준비 중...';
   btn.style.background='#a0aec0';
 
-  // DOM 렌더링 후 위젯 초기화
-  await new Promise(r=>setTimeout(r,300));
-  _widget=PaymentWidget(TOSS_CLIENT_KEY,_user.uid);
-  await _widget.renderPaymentMethods('#payment-widget',{value:_plan.amount},{variantKey:'DEFAULT'});
-  await _widget.renderAgreement('#agreement',{variantKey:'AGREEMENT'});
+  try{
+    await new Promise(r=>setTimeout(r,200));
+    _widget=PaymentWidget(TOSS_CLIENT_KEY,PaymentWidget.ANONYMOUS);
+    const methodsWidget=await _widget.renderPaymentMethods('#payment-widget',{value:_plan.amount});
+    await _widget.renderAgreement('#agreement');
 
-  btn.disabled=false;
-  btn.textContent='지금 결제하기';
-  btn.style.background='';
+    // 위젯 ready 이벤트 대기 (최대 8초)
+    await new Promise(resolve=>{
+      try{ methodsWidget.on('ready',resolve); }catch(e){ resolve(); }
+      setTimeout(resolve,8000);
+    });
+
+    btn.disabled=false;
+    btn.textContent='지금 결제하기';
+    btn.style.background='';
+  }catch(e){
+    btn.textContent='초기화 오류: '+e.message;
+    console.error(e);
+  }
 }
 
 window.doPay=async function(){
