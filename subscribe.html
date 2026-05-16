@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>로지넷 — 구독 신청</title>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://js.tosspayments.com/v1/payment-widget"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Pretendard',sans-serif;background:#f0f4f8;color:#1a202c;min-height:100vh}
+.top-bar{background:#1A5FA8;color:#fff;padding:14px 20px;display:flex;align-items:center;gap:10px}
+.top-bar .logo{font-size:22px;font-weight:800;letter-spacing:-0.5px}
+.top-bar .sub{font-size:13px;opacity:.8;margin-top:2px}
+.container{max-width:680px;margin:0 auto;padding:24px 16px 60px}
+.step-bar{display:flex;gap:0;margin-bottom:28px;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.step-bar .step{flex:1;padding:11px 8px;text-align:center;font-size:12px;font-weight:600;background:#e2e8f0;color:#718096;transition:.2s}
+.step-bar .step.active{background:#1A5FA8;color:#fff}
+.step-bar .step.done{background:#2d8c4e;color:#fff}
+.card{background:#fff;border-radius:16px;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,.08);margin-bottom:20px}
+.card h2{font-size:17px;font-weight:700;color:#1a202c;margin-bottom:18px}
+.plans{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.plan{border:2px solid #e2e8f0;border-radius:12px;padding:16px 12px;cursor:pointer;transition:.2s;text-align:center;position:relative}
+.plan:hover{border-color:#1A5FA8;background:#f0f6ff}
+.plan.selected{border-color:#1A5FA8;background:#ebf4ff}
+.plan .badge{position:absolute;top:-1px;right:-1px;background:#1A5FA8;color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:0 10px 0 10px}
+.plan .name{font-size:14px;font-weight:700;color:#1a202c;margin-bottom:4px}
+.plan .drivers{font-size:11px;color:#718096;margin-bottom:10px}
+.plan .price{font-size:20px;font-weight:800;color:#1A5FA8}
+.plan .price span{font-size:12px;font-weight:500;color:#718096}
+.plan .features{margin-top:10px;font-size:11px;color:#4a5568;line-height:1.8;text-align:left}
+.plan .features li{list-style:none;padding-left:14px;position:relative}
+.plan .features li::before{content:'✓';position:absolute;left:0;color:#2d8c4e;font-weight:700}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:13px;font-weight:600;color:#4a5568;margin-bottom:6px}
+.form-group input{width:100%;padding:12px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;font-family:'Pretendard',sans-serif;outline:none;transition:.2s}
+.form-group input:focus{border-color:#1A5FA8;box-shadow:0 0 0 3px rgba(26,95,168,.1)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.btn{width:100%;padding:15px;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;transition:.2s;font-family:'Pretendard',sans-serif}
+.btn-primary{background:#1A5FA8;color:#fff}
+.btn-primary:hover{background:#1550a0}
+.btn-primary:disabled{background:#a0aec0;cursor:not-allowed}
+.btn-outline{background:#fff;color:#1A5FA8;border:2px solid #1A5FA8;margin-top:10px}
+.btn-outline:hover{background:#f0f6ff}
+.divider{text-align:center;color:#a0aec0;font-size:13px;margin:14px 0;position:relative}
+.divider::before,.divider::after{content:'';position:absolute;top:50%;width:42%;height:1px;background:#e2e8f0}
+.divider::before{left:0}.divider::after{right:0}
+.summary-box{background:#f0f6ff;border:1.5px solid #bee3f8;border-radius:12px;padding:16px;margin-bottom:20px}
+.summary-box .row{display:flex;justify-content:space-between;font-size:13px;color:#4a5568;margin-bottom:6px}
+.summary-box .row:last-child{font-size:15px;font-weight:700;color:#1A5FA8;margin-bottom:0;padding-top:8px;border-top:1px solid #bee3f8;margin-top:4px}
+#payment-widget{min-height:50px}
+#agreement{margin-top:16px}
+.error-msg{background:#fff5f5;border:1px solid #fed7d7;color:#c53030;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:12px;display:none}
+.screen{display:none}
+.screen.active{display:block}
+.login-toggle{text-align:center;font-size:13px;color:#718096;margin-top:12px}
+.login-toggle a{color:#1A5FA8;font-weight:600;cursor:pointer}
+.tag-trial{display:inline-block;background:#ebfaf0;color:#2d8c4e;font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;margin-left:8px}
+@media(max-width:480px){.plans{grid-template-columns:1fr}.form-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="top-bar">
+  <div>
+    <div class="logo">🚚 LogiNet</div>
+    <div class="sub">물류 정산 자동화 플랫폼</div>
+  </div>
+</div>
+
+<div class="container">
+  <!-- Step Bar -->
+  <div class="step-bar">
+    <div class="step active" id="sb1">① 플랜 선택</div>
+    <div class="step" id="sb2">② 계정 설정</div>
+    <div class="step" id="sb3">③ 결제</div>
+  </div>
+
+  <!-- SCREEN 1: 플랜 선택 -->
+  <div class="screen active" id="s1">
+    <div class="card">
+      <h2>플랜을 선택하세요 <span class="tag-trial">첫 30일 무료</span></h2>
+      <div class="plans">
+        <div class="plan" data-plan="starter" data-amount="30000" data-label="Starter" onclick="selectPlan(this)">
+          <div class="name">Starter</div>
+          <div class="drivers">기사 1~10명</div>
+          <div class="price">3만원<span>/월</span></div>
+          <ul class="features">
+            <li>정산 자동화</li>
+            <li>엑셀 업로드</li>
+            <li>카카오톡 공유</li>
+          </ul>
+        </div>
+        <div class="plan selected" data-plan="basic" data-amount="50000" data-label="Basic" onclick="selectPlan(this)">
+          <div class="badge">인기</div>
+          <div class="name">Basic</div>
+          <div class="drivers">기사 11~20명</div>
+          <div class="price">5만원<span>/월</span></div>
+          <ul class="features">
+            <li>Starter 전체</li>
+            <li>PDF 명세서</li>
+            <li>통계 대시보드</li>
+          </ul>
+        </div>
+        <div class="plan" data-plan="pro" data-amount="80000" data-label="Pro" onclick="selectPlan(this)">
+          <div class="name">Pro</div>
+          <div class="drivers">기사 21~40명</div>
+          <div class="price">8만원<span>/월</span></div>
+          <ul class="features">
+            <li>Basic 전체</li>
+            <li>모두싸인 연동</li>
+            <li>전담 지원</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="goStep2()">다음 →</button>
+  </div>
+
+  <!-- SCREEN 2: 계정 -->
+  <div class="screen" id="s2">
+    <!-- 신규 가입 -->
+    <div id="reg-form">
+      <div class="card">
+        <h2>대리점 정보 입력</h2>
+        <div class="error-msg" id="reg-err"></div>
+        <div class="form-group">
+          <label>대리점(회사)명 *</label>
+          <input id="r-company" type="text" placeholder="예) 부산물류 대리점">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>담당자명 *</label>
+            <input id="r-name" type="text" placeholder="홍길동">
+          </div>
+          <div class="form-group">
+            <label>연락처 *</label>
+            <input id="r-phone" type="tel" placeholder="010-0000-0000">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>이메일 (로그인 ID) *</label>
+          <input id="r-email" type="email" placeholder="example@email.com">
+        </div>
+        <div class="form-group">
+          <label>비밀번호 *</label>
+          <input id="r-pw" type="password" placeholder="8자리 이상">
+        </div>
+        <div class="form-group">
+          <label>기사 수</label>
+          <input id="r-drivers" type="number" placeholder="현재 기사 수 입력" min="1" max="200">
+        </div>
+        <button class="btn btn-primary" id="reg-btn" onclick="doRegister()">계속 →</button>
+      </div>
+      <div class="login-toggle">이미 계정이 있으신가요? <a onclick="toggleForm(false)">로그인</a></div>
+    </div>
+
+    <!-- 기존 로그인 -->
+    <div id="login-form" style="display:none">
+      <div class="card">
+        <h2>로그인</h2>
+        <div class="error-msg" id="login-err"></div>
+        <div class="form-group">
+          <label>이메일</label>
+          <input id="l-email" type="email" placeholder="example@email.com">
+        </div>
+        <div class="form-group">
+          <label>비밀번호</label>
+          <input id="l-pw" type="password" placeholder="비밀번호">
+        </div>
+        <button class="btn btn-primary" id="login-btn" onclick="doLogin()">로그인 →</button>
+      </div>
+      <div class="login-toggle">계정이 없으신가요? <a onclick="toggleForm(true)">회원가입</a></div>
+    </div>
+  </div>
+
+  <!-- SCREEN 3: 결제 -->
+  <div class="screen" id="s3">
+    <div class="summary-box">
+      <div class="row"><span>선택 플랜</span><span id="sum-plan">-</span></div>
+      <div class="row"><span>기사 수</span><span id="sum-drivers">-</span></div>
+      <div class="row"><span>첫 결제일</span><span id="sum-date">-</span></div>
+      <div class="row"><span>결제 금액</span><span id="sum-amount">-</span></div>
+    </div>
+    <div class="card">
+      <h2>결제 수단</h2>
+      <div id="payment-widget"></div>
+      <div id="agreement"></div>
+    </div>
+    <button class="btn btn-primary" id="pay-btn" onclick="doPay()">지금 결제하기</button>
+    <p style="text-align:center;font-size:12px;color:#a0aec0;margin-top:12px">
+      첫 30일은 무료 체험 · 언제든 해지 가능
+    </p>
+  </div>
+</div>
+
+<script type="module">
+import{initializeApp}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import{getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,onAuthStateChanged}
+  from'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import{getFirestore,doc,setDoc,getDoc,serverTimestamp}
+  from'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const FB={
+  apiKey:"AIzaSyCTywAQNHg8IEYmbU64aYAhjqXMHWbJhjo",
+  authDomain:"mbti-logistics-bfcd3.firebaseapp.com",
+  projectId:"mbti-logistics-bfcd3",
+  storageBucket:"mbti-logistics-bfcd3.firebasestorage.app"
+};
+const app=initializeApp(FB);
+const auth=getAuth(app);
+const db=getFirestore(app);
+
+// ── 토스 클라이언트 키 (본인 키로 교체) ──
+const TOSS_CLIENT_KEY='test_ck_여기에_클라이언트키_입력';
+
+let _plan={plan:'basic',amount:50000,label:'Basic'};
+let _user=null;
+let _widget=null;
+
+window.selectPlan=function(el){
+  document.querySelectorAll('.plan').forEach(p=>p.classList.remove('selected'));
+  el.classList.add('selected');
+  _plan={plan:el.dataset.plan,amount:+el.dataset.amount,label:el.dataset.label};
+};
+
+window.goStep2=function(){
+  setStep(2);
+};
+
+window.toggleForm=function(showReg){
+  document.getElementById('reg-form').style.display=showReg?'block':'none';
+  document.getElementById('login-form').style.display=showReg?'none':'block';
+};
+
+function setStep(n){
+  document.querySelectorAll('.screen').forEach((s,i)=>s.classList.toggle('active',i===n-1));
+  document.querySelectorAll('.step-bar .step').forEach((s,i)=>{
+    s.className='step'+(i<n-1?' done':i===n-1?' active':'');
+  });
+  if(n===3) initPayment();
+}
+
+window.doRegister=async function(){
+  const company=document.getElementById('r-company').value.trim();
+  const name=document.getElementById('r-name').value.trim();
+  const phone=document.getElementById('r-phone').value.trim();
+  const email=document.getElementById('r-email').value.trim();
+  const pw=document.getElementById('r-pw').value;
+  const drivers=+document.getElementById('r-drivers').value||0;
+  if(!company||!name||!phone||!email||!pw){showErr('reg-err','필수 항목을 모두 입력해주세요.');return;}
+  if(pw.length<8){showErr('reg-err','비밀번호는 8자리 이상이어야 합니다.');return;}
+  const btn=document.getElementById('reg-btn');
+  btn.disabled=true;btn.textContent='처리 중...';
+  try{
+    const cred=await createUserWithEmailAndPassword(auth,email,pw);
+    const uid=cred.user.uid;
+    await setDoc(doc(db,'users',uid),{
+      role:'dealer',dealerId:uid,companyName:company,
+      managerName:name,phone,email,driverCount:drivers,
+      plan:_plan.plan,createdAt:serverTimestamp()
+    });
+    await setDoc(doc(db,'dealers',uid),{
+      dealerId:uid,name:company,managerName:name,
+      phone,email,driverCount:drivers,createdAt:serverTimestamp()
+    });
+    _user=cred.user;
+    setStep(3);
+  }catch(e){
+    showErr('reg-err',firebaseMsg(e.code));
+    btn.disabled=false;btn.textContent='계속 →';
+  }
+};
+
+window.doLogin=async function(){
+  const email=document.getElementById('l-email').value.trim();
+  const pw=document.getElementById('l-pw').value;
+  if(!email||!pw){showErr('login-err','이메일과 비밀번호를 입력해주세요.');return;}
+  const btn=document.getElementById('login-btn');
+  btn.disabled=true;btn.textContent='로그인 중...';
+  try{
+    const cred=await signInWithEmailAndPassword(auth,email,pw);
+    _user=cred.user;
+    setStep(3);
+  }catch(e){
+    showErr('login-err',firebaseMsg(e.code));
+    btn.disabled=false;btn.textContent='로그인 →';
+  }
+};
+
+async function initPayment(){
+  if(!_user)return;
+  // 요약
+  document.getElementById('sum-plan').textContent=_plan.label+' 플랜';
+  document.getElementById('sum-drivers').textContent='기사 '+(document.getElementById('r-drivers')?.value||'?')+'명';
+  document.getElementById('sum-date').textContent='30일 무료 후 '+new Date(Date.now()+30*864e5).toLocaleDateString('ko-KR');
+  document.getElementById('sum-amount').textContent=_plan.amount.toLocaleString()+'원/월';
+
+  _widget=PaymentWidget(TOSS_CLIENT_KEY,_user.uid);
+  await _widget.renderPaymentMethods('#payment-widget',{value:_plan.amount},{variantKey:'DEFAULT'});
+  await _widget.renderAgreement('#agreement',{variantKey:'AGREEMENT'});
+}
+
+window.doPay=async function(){
+  if(!_widget||!_user){alert('결제 초기화 오류. 새로고침 후 다시 시도해주세요.');return;}
+  const btn=document.getElementById('pay-btn');
+  btn.disabled=true;btn.textContent='결제 처리 중...';
+  const orderId='LN-'+_user.uid.slice(0,8)+'-'+Date.now()+'-'+_plan.plan;
+  try{
+    await _widget.requestPayment({
+      orderId,
+      orderName:'로지넷 '+_plan.label+' 플랜 (월간)',
+      successUrl:location.origin+'/subscribe/success',
+      failUrl:location.origin+'/subscribe/fail',
+      customerEmail:_user.email,
+      customerName:document.getElementById('r-company')?.value||_user.email,
+      customerMobilePhone:(document.getElementById('r-phone')?.value||'').replace(/-/g,''),
+    });
+  }catch(e){
+    btn.disabled=false;btn.textContent='지금 결제하기';
+    if(e.code!=='USER_CANCEL') alert('결제 오류: '+e.message);
+  }
+};
+
+function showErr(id,msg){
+  const el=document.getElementById(id);
+  el.textContent=msg;el.style.display='block';
+}
+function firebaseMsg(code){
+  const m={
+    'auth/email-already-in-use':'이미 사용 중인 이메일입니다.',
+    'auth/invalid-email':'이메일 형식이 올바르지 않습니다.',
+    'auth/weak-password':'비밀번호가 너무 단순합니다.',
+    'auth/user-not-found':'존재하지 않는 계정입니다.',
+    'auth/wrong-password':'비밀번호가 틀렸습니다.',
+  };
+  return m[code]||'오류가 발생했습니다. 다시 시도해주세요.';
+}
+
+// 이미 로그인된 사용자 처리
+onAuthStateChanged(auth,u=>{
+  if(u&&document.getElementById('s2').classList.contains('active')){
+    _user=u;setStep(3);
+  }
+});
+</script>
+</body>
+</html>

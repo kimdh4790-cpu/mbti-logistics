@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>로지넷 — 구독 완료</title>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Pretendard',sans-serif;background:#f0f4f8;color:#1a202c;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+.card{background:#fff;border-radius:20px;padding:40px 32px;max-width:420px;width:100%;box-shadow:0 4px 24px rgba(0,0,0,.1);text-align:center}
+.icon{font-size:64px;margin-bottom:16px}
+.title{font-size:22px;font-weight:800;color:#1a202c;margin-bottom:8px}
+.sub{font-size:14px;color:#718096;line-height:1.6;margin-bottom:24px}
+.info-box{background:#f0f6ff;border:1.5px solid #bee3f8;border-radius:12px;padding:16px;margin-bottom:24px;text-align:left}
+.info-row{display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px;color:#4a5568}
+.info-row:last-child{margin-bottom:0;font-weight:700;color:#1A5FA8;padding-top:8px;border-top:1px solid #bee3f8;margin-top:4px}
+.btn{display:block;width:100%;padding:15px;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;text-decoration:none;text-align:center;font-family:'Pretendard',sans-serif}
+.btn-primary{background:#1A5FA8;color:#fff;margin-bottom:10px}
+.btn-outline{background:#fff;color:#1A5FA8;border:2px solid #1A5FA8}
+.loading{color:#718096;font-size:14px}
+.error{background:#fff5f5;border:1px solid #fed7d7;color:#c53030;border-radius:10px;padding:14px;font-size:13px;margin-bottom:16px;display:none}
+</style>
+</head>
+<body>
+<div class="card">
+  <div id="loading-view">
+    <div class="icon">⏳</div>
+    <div class="title">결제 확인 중...</div>
+    <div class="sub loading">잠시만 기다려주세요</div>
+  </div>
+
+  <div id="success-view" style="display:none">
+    <div class="icon">🎉</div>
+    <div class="title">구독 신청 완료!</div>
+    <div class="sub">로지넷 이용을 환영합니다.<br>카카오톡으로 확인 메시지가 발송됩니다.</div>
+    <div class="info-box">
+      <div class="info-row"><span>플랜</span><span id="r-plan">-</span></div>
+      <div class="info-row"><span>주문번호</span><span id="r-order" style="font-size:11px">-</span></div>
+      <div class="info-row"><span>무료체험 종료</span><span id="r-trial">-</span></div>
+      <div class="info-row"><span>첫 결제일</span><span id="r-next">-</span></div>
+    </div>
+    <a href="/settle" class="btn btn-primary">로지넷 시작하기 →</a>
+    <a href="/" class="btn btn-outline">홈으로</a>
+  </div>
+
+  <div id="fail-view" style="display:none">
+    <div class="icon">❌</div>
+    <div class="title">결제 확인 실패</div>
+    <div class="error" id="err-msg" style="display:block"></div>
+    <a href="/subscribe" class="btn btn-primary">다시 시도</a>
+  </div>
+</div>
+
+<script type="module">
+import{initializeApp}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import{getAuth,onAuthStateChanged}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+const FB={
+  apiKey:"AIzaSyCTywAQNHg8IEYmbU64aYAhjqXMHWbJhjo",
+  authDomain:"mbti-logistics-bfcd3.firebaseapp.com",
+  projectId:"mbti-logistics-bfcd3"
+};
+initializeApp(FB);
+const auth=getAuth();
+
+function showView(id){
+  ['loading-view','success-view','fail-view'].forEach(v=>{
+    document.getElementById(v).style.display=v===id?'block':'none';
+  });
+}
+
+async function confirm(){
+  const params=new URLSearchParams(location.search);
+  const paymentKey=params.get('paymentKey');
+  const orderId=params.get('orderId');
+  const amount=params.get('amount');
+
+  if(!paymentKey||!orderId||!amount){
+    showView('fail-view');
+    document.getElementById('err-msg').textContent='결제 정보가 누락되었습니다.';
+    return;
+  }
+
+  // orderId 형식: LN-{uid8}-{timestamp}-{plan}
+  const parts=orderId.split('-');
+  const plan=parts[parts.length-1]||'basic';
+  const planLabel={'starter':'Starter','basic':'Basic','pro':'Pro'}[plan]||plan;
+  const trialEnd=new Date(Date.now()+30*864e5);
+  const nextPay=new Date(Date.now()+30*864e5);
+
+  try{
+    const res=await fetch('/toss-confirm',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({paymentKey,orderId,amount:+amount})
+    });
+    const data=await res.json();
+    if(!res.ok||!data.success) throw new Error(data.message||'서버 오류');
+
+    // 성공
+    document.getElementById('r-plan').textContent=planLabel+' 플랜';
+    document.getElementById('r-order').textContent=orderId;
+    document.getElementById('r-trial').textContent=trialEnd.toLocaleDateString('ko-KR');
+    document.getElementById('r-next').textContent=nextPay.toLocaleDateString('ko-KR');
+    showView('success-view');
+  }catch(e){
+    showView('fail-view');
+    document.getElementById('err-msg').textContent=e.message;
+  }
+}
+
+confirm();
+</script>
+</body>
+</html>
