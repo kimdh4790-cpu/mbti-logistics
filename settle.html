@@ -10497,7 +10497,7 @@ window.lnDoLogin=async function(){
     await _waitDB();
     // 사용자 정보 로드
     var uDoc=await _db.collection('users').doc(uid).get();
-    if(uDoc.exists()){
+    if(uDoc.exists){
       var ud=uDoc.data();
       G_DEALER_ID=ud.dealerId||uid;
       G_DEALER_NAME=ud.dealerName||ud.name||email;
