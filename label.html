@@ -383,6 +383,11 @@ function showResult(info){
   document.getElementById('step-result').style.display='block';
   document.getElementById('step-result').scrollIntoView({behavior:'smooth'});
   updatePreview();
+  // 1.5초 후 자동 인쇄 → 완료 후 카메라 복귀
+  setTimeout(function(){
+    window.onafterprint=function(){ setTimeout(function(){ resetAndCam(); },500); };
+    window.print();
+  },1500);
 }
 
 function updatePreview(){
@@ -452,7 +457,7 @@ function renderLabel(){
     var qd={track:_data.track,name:_data.name,addr1:_data.addr1,addr2:_data.addr2};
     if(_printSize===1){ generateQR('qr-1',qd); }
     else { generateQR('qr-2a',qd); generateQR('qr-2b',qd); }
-  },0);
+  },300);
 }
 
 function escH(s){
@@ -500,14 +505,17 @@ function generateQR(containerId, data){
   var name=data.name||'';
   var addr1=data.addr1||'';
   var addr2=data.addr2||'';
-  var qrData='|V1|'+track+'|'+addr1+'|'+addr2+'|'+name+'|||';
-  if(qrData.length>200) qrData='|V1|'+track+'|'+addr1.slice(0,50)+'|'+addr2.slice(0,30)+'|'+name.slice(0,15)+'|||';
+  var qrText='|V1|'+track+'|'+addr1+'|'+addr2+'|'+name+'|||';
+  if(qrText.length>150) qrText='|V1|'+track+'|'+addr1.slice(0,40)+'|'+addr2.slice(0,25)+'|'+name.slice(0,12)+'|||';
   var size=containerId==='qr-1'?120:90;
-  var url='https://chart.googleapis.com/chart?cht=qr&chs='+size+'x'+size+'&chl='+encodeURIComponent(qrData)+'&choe=UTF-8';
-  var img=document.createElement('img');
-  img.src=url; img.width=size; img.height=size; img.style.display='block';
-  img.onerror=function(){ el.innerHTML='<div style="font-size:9px;color:#666;text-align:center">'+track+'</div>'; };
   el.innerHTML='';
+  var img=document.createElement('img');
+  img.width=size; img.height=size; img.style.display='block';
+  img.src='https://api.qrserver.com/v1/create-qr-code/?size='+size+'x'+size+'&data='+encodeURIComponent(qrText)+'&format=png&ecc=M';
+  img.onerror=function(){
+    this.onerror=null;
+    this.src='https://chart.googleapis.com/chart?cht=qr&chs='+size+'x'+size+'&chl='+encodeURIComponent(qrText)+'&choe=UTF-8';
+  };
   el.appendChild(img);
 }
 function resetAll(){
