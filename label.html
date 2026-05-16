@@ -384,13 +384,13 @@ function showResult(info){
   document.getElementById('step-result').style.display='block';
   document.getElementById('step-result').scrollIntoView({behavior:'smooth'});
   updatePreview();
-  // QR 렌더 완료 후 자동 인쇄 → 인쇄 후 카메라 복귀
+  // QR 렌더 완료 후 자동 인쇄 → 완료 후 카메라 복귀
   setTimeout(function(){
     window.onafterprint=function(){
       setTimeout(function(){ resetAndCam(); },500);
     };
     window.print();
-  },600);
+  },1500);
 }
 
 function updatePreview(){
@@ -440,7 +440,7 @@ function renderLabel(){
       +'<div class="lbl-barnum">'+escH(d.track)+'</div>'
       +'<div class="lbl-date">Date: '+dateStr+'</div>'
       +'</div>'
-      +'<div id="qr-1" style="width:80px;height:80px"></div>'
+      +'<div id="qr-1" style="width:120px;height:120px"></div>'
       +'</div>'
       +'</div>';
   } else {
@@ -451,7 +451,7 @@ function renderLabel(){
       +'<div class="li-addr">'+escH(addrBlock).replace(/\n/g,'<br>')+'</div>'
       +'<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:6px">'
       +'<div><div class="li-track">'+escH(d.track)+'</div><div class="li-date">'+dateStr+'</div></div>'
-      +'<div id="'+qrId+'" style="width:60px;height:60px"></div>'
+      +'<div id="'+qrId+'" style="width:90px;height:90px"></div>'
       +'</div></div>';};
     html='<div class="label-a4-2">'+mkItem('qr-2a')+mkItem('qr-2b')+'</div>';
   }
@@ -460,7 +460,7 @@ function renderLabel(){
     var qd={track:_data.track,name:_data.name,addr1:_data.addr1,addr2:_data.addr2};
     if(_printSize===1){ generateQR('qr-1',qd); }
     else { generateQR('qr-2a',qd); generateQR('qr-2b',qd); }
-  },0);
+  },300);
 }
 
 function escH(s){
@@ -503,16 +503,28 @@ function saveApiKey(){
 // ── QR 코드 생성 (긴급배송 앱 스캔 호환) ──
 function generateQR(containerId, data){
   var el=document.getElementById(containerId);
-  if(!el) return;
+  if(!el){ setTimeout(function(){ generateQR(containerId,data); },300); return; }
   el.innerHTML='';
-  var qrData='|V1|'+data.track+'|'+data.addr1+'|'+data.addr2+'|'+data.name+'|||';
-  try{
-    new QRCode(el,{
-      text:qrData, width:80, height:80,
-      colorDark:'#000000', colorLight:'#ffffff',
-      correctLevel:QRCode.CorrectLevel.M
-    });
-  }catch(e){ el.innerHTML='<div style="font-size:8px;color:#888;text-align:center">QR</div>'; }
+  var track=data.track||'';
+  var name=data.name||'';
+  var addr1=data.addr1||'';
+  var addr2=data.addr2||'';
+  var qrData='|V1|'+track+'|'+addr1+'|'+addr2+'|'+name+'|||';
+  if(qrData.length>300) qrData='|V1|'+track+'|'+addr1.slice(0,60)+'|'+addr2.slice(0,40)+'|'+name.slice(0,20)+'|||';
+  var size=containerId==='qr-1'?120:90;
+  function doQR(){
+    if(typeof QRCode==='undefined'){ setTimeout(doQR,200); return; }
+    try{
+      new QRCode(el,{text:qrData,width:size,height:size,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+    }catch(e){
+      setTimeout(function(){
+        el.innerHTML='';
+        try{ new QRCode(el,{text:qrData,width:size,height:size,colorDark:'#000',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.L}); }
+        catch(e2){ el.innerHTML='<div style="font-size:8px;color:red">QR오류</div>'; }
+      },200);
+    }
+  }
+  doQR();
 }
 function resetAll(){
   _capturedImg=null; _data={name:'',addr1:'',addr2:'',track:'',date:''};
@@ -521,10 +533,6 @@ function resetAll(){
   document.getElementById('loading-card').style.display='none';
   document.getElementById('print-area').innerHTML='';
   window.scrollTo({top:0,behavior:'smooth'});
-}
-function resetAndCam(){
-  resetAll();
-  setTimeout(function(){ startCam(); },300);
 }
 function resetAndCam(){
   resetAll();
