@@ -1065,7 +1065,35 @@ function buildNav(){
     ${g.items.map(m=>`<div class="ni" id="nav-${m.p}" onclick="goPage('${m.p}',this)"><span class="ni-ic">${m.ic}</span>${m.l}</div>`).join('')}
   `).join('');
 }
+// 페이지별 접근 가능 역할 정의
+const PAGE_ROLES={
+  'admin-dashboard':['admin'],
+  'admin-dealers':['admin'],
+  'admin-drivers':['admin'],
+  'admin-settlements':['admin'],
+  'admin-prices':['admin'],
+  'admin-subscriptions':['admin'],
+  'admin-invoices':['admin'],
+  'admin-contracts':['admin'],
+  'admin-settings':['admin'],
+  'dealer-dashboard':['dealer'],
+  'dealer-drivers':['dealer'],
+  'dealer-settlements':['dealer'],
+  'dealer-prices':['dealer'],
+  'dealer-stats':['dealer'],
+  'dealer-incentives':['dealer'],
+  'dealer-subscription':['dealer'],
+  'dealer-invoices':['dealer'],
+  'driver-home':['driver'],
+};
+
 function goPage(page,el){
+  // 역할 접근 제어
+  const allowed=PAGE_ROLES[page];
+  if(allowed&&CU&&!allowed.includes(CU.role)){
+    showSecurityAlert('unauthorized_page',`권한 없는 페이지 접근 시도: ${page} (현재 역할: ${CU.role})`);
+    return;
+  }
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
   const target=el||document.getElementById('nav-'+page);
   if(target)target.classList.add('on');
@@ -1073,6 +1101,49 @@ function goPage(page,el){
   PAGES[page]?.();
 }
 window.goPage=window._m_goPage=goPage;
+
+// ── 보안 경고 표시 및 Firestore 기록 ──
+async function showSecurityAlert(type, detail){
+  // 화면에 즉시 알림
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(197,48,48,.95);z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;color:#fff;font-family:Pretendard,sans-serif;text-align:center;padding:24px';
+  overlay.innerHTML=`
+    <div style="font-size:48px">🚨</div>
+    <div style="font-size:22px;font-weight:800">보안 경고</div>
+    <div style="font-size:14px;max-width:400px;line-height:1.6;background:rgba(0,0,0,.2);border-radius:10px;padding:16px">${detail}</div>
+    <div style="font-size:12px;opacity:.8">이 내용이 관리자에게 자동 보고됩니다.</div>
+    <button onclick="this.closest('div').remove()" style="background:#fff;color:#c53030;border:none;padding:12px 28px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:Pretendard,sans-serif">확인</button>
+  `;
+  document.body.appendChild(overlay);
+
+  // Firestore에 보안 로그 기록
+  try{
+    const{addDoc,collection,serverTimestamp}=await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    await addDoc(collection(db,'security_logs'),{
+      type,detail,
+      uid:CU?.uid||'unknown',
+      email:CU?.email||'unknown',
+      role:CU?.role||'unknown',
+      dealerId:CU?.dealerId||'',
+      at:serverTimestamp(),
+      userAgent:navigator.userAgent,
+      url:location.href
+    });
+  }catch(e){console.error('보안 로그 기록 실패:',e);}
+}
+
+// ── 딜러 데이터 오염 감지 ──
+function checkDealerDataIntegrity(docs, dealerId, collectionName){
+  if(!CU||CU.role!=='dealer'||!dealerId) return;
+  const contaminated=docs.filter(d=>d.dealerId&&d.dealerId!==dealerId);
+  if(contaminated.length>0){
+    showSecurityAlert('data_contamination',
+      `[${collectionName}] 타 대리점 데이터 ${contaminated.length}건 감지!
+즉시 관리자에게 문의하세요.
+(자동 보고 완료)`
+    );
+  }
+}
 
 // ════════════════════════════════════════
 // ██ PAGES ██
@@ -1737,6 +1808,7 @@ PAGES['dealer-drivers']=async function(){
   c.innerHTML='<div class="loading">로딩 중...</div>';
   try{
     const snap=await getDocs(query(collection(db,'drivers'),where('dealerId','==',CU.dealerId)));
+    checkDealerDataIntegrity(snap.docs.map(d=>d.data()),CU.dealerId,'drivers');
     if(snap.empty){
       c.innerHTML=`<div class="empty"><div class="empty-icon">👤</div><div style="font-size:15px;font-weight:700;margin-bottom:6px">등록된 기사가 없습니다</div><button class="btn btn-blue" onclick="openAddDriver()" style="margin-top:12px">+ 첫 기사 추가</button></div>`;
       buildDriverModal();return;
@@ -2070,6 +2142,7 @@ PAGES['dealer-settlements']=async function(){
       ? query(collection(db,'settlements'),where('dealerId','==',CU.dealerId))
       : collection(db,'settlements');
     const snap=await getDocs(settlQuery);
+    if(CU.dealerId) checkDealerDataIntegrity(snap.docs.map(d=>d.data()),CU.dealerId,'settlements');
     if(snap.empty){
       c.innerHTML=`<div class="empty"><div class="empty-icon">📋</div><div style="font-size:15px;font-weight:700;margin-bottom:6px">정산 데이터가 없습니다</div><button class="btn btn-blue" onclick="openNewSettle()" style="margin-top:12px">+ 첫 정산 입력</button></div>`;
       buildSettleModal();return;
@@ -2735,6 +2808,7 @@ PAGES['dealer-prices']=async function(){
   c.innerHTML='<div class="loading">로딩 중...</div>';
   try{
     const snap=await getDocs(query(collection(db,'prices'),where('dealerId','==',CU.dealerId)));
+    checkDealerDataIntegrity(snap.docs.map(d=>d.data()),CU.dealerId,'prices');
     const customRoutes=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.route.localeCompare(b.route));
     const customRowsHTML=customRoutes.map(r=>`
       <tr>
