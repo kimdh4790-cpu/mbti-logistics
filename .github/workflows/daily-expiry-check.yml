@@ -1,0 +1,16 @@
+name: Daily Subscription Expiry Check
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  check-expiry:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call expiry check endpoint
+        run: |
+          curl -X POST https://mbti-logistics.kimdh4790.workers.dev/cron-expire \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json"
