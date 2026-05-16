@@ -2846,6 +2846,7 @@ window.confirmBatchSave=async function(autoMonth,total){
 };
 
 window.saveBatchSettle=async function(){
+  const gv=id=>(document.getElementById(id)||{value:''}).value||'';
   const perList=window._perDriverList;
   const month=window._autoMonth;
   const nameMap=window._driverNameMap||{};
