@@ -49,6 +49,10 @@ body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
   .print-area{background:#fff;border:1px solid #ccc;border-radius:8px;overflow:hidden;margin-top:8px}
 }
 @media print{
+  @page{
+    size: 100mm 150mm;
+    margin: 0;
+  }
   body,html{background:#fff!important;margin:0!important;padding:0!important}
   .no-print{display:none!important}
   .print-area{border:none!important;margin:0!important;padding:0!important}
@@ -89,6 +93,10 @@ body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
 <div class="app">
 
 <div class="topbar no-print">
+<div style="background:#1e40af;color:#fff;font-size:11px;padding:6px 16px;display:flex;align-items:center;gap:8px">
+  💡 <strong>빠른 인쇄 팁:</strong> 크롬 주소창에 <code style="background:rgba(255,255,255,0.2);padding:1px 6px;border-radius:4px">--kiosk-printing</code> 플래그 사용 시 인쇄 팝업 없이 바로 출력
+  <span style="margin-left:auto;cursor:pointer;opacity:0.7" onclick="this.parentElement.remove()">✕</span>
+</div>
   <div class="topbar-title">📦 쿠팡 라벨 출력</div>
   <div class="topbar-sub">송장 촬영 → OCR 추출 → 번역 → A4 출력</div>
   <div style="display:flex;gap:6px;margin-top:8px">
@@ -506,6 +514,11 @@ function resetAll(){
   document.getElementById('loading-card').style.display='none';
   document.getElementById('print-area').innerHTML='';
   window.scrollTo({top:0,behavior:'smooth'});
+}
+function resetAndCam(){
+  resetAll();
+  // 카메라 자동 재시작
+  setTimeout(function(){ startCam(); }, 300);
 }
 </script>
 </body>
