@@ -593,7 +593,14 @@ const DEFAULT_UNIT_PRICES={
 };
 let G_PRICES=Object.assign({},DEFAULT_UNIT_PRICES);
 
-const CAMP_NAMES={'101':'부산1캠프','215':'부산1캠프','812':'부산2캠프','508':'부산3캠프','109':'대구2캠프','213':'대구2B캠프','608':'진주M캠프','612':'진주M캠프','613':'진주M캠프','614':'진주M캠프','619':'진주M캠프'};
+const CAMP_NAMES={
+  '101':'부산1캠프','215':'부산1캠프',
+  '812':'부산2캠프',
+  '508':'부산3캠프',
+  '109':'대구2캠프','213':'대구2B캠프',
+  '608':'진주M캠프','612':'진주M캠프','613':'진주M캠프',
+  '614':'진주M캠프','619':'진주M캠프'
+};
 const CAMP_COLOR={'부산1캠프':'#3B82F6','부산2캠프':'#8B5CF6','부산3캠프':'#10B981','대구2캠프':'#F59E0B','대구2B캠프':'#FB923C','진주M캠프':'#EF4444'};
 
 // ══ GLOBALS ══
@@ -689,6 +696,13 @@ async function loadRPRICE(){
 }
 
 // ══ calcNet — v9 완전 이식 ══
+
+function getCampByRoute(route){
+  if(!route) return '';
+  const code=route.replace(/[A-Za-z]/g,'').slice(0,3);
+  const map={'101':'부산1','215':'부산1','812':'부산2','508':'부산3','109':'대구2','213':'대구2B','608':'진주M','612':'진주M','613':'진주M','614':'진주M','619':'진주M'};
+  return map[code]||'';
+}
 function calcNet(x){
   const dcnt=+x.dcnt||+x.delivCount||0;
   const rcnt=+x.rcnt||+x.retCount||0;
@@ -1642,7 +1656,8 @@ PAGES['dealer-dashboard']=async function(){
           ${settles.length===0?'<div class="empty"><div class="empty-icon">📋</div><div>정산 데이터가 없습니다</div></div>':
             `<div class="tbl-wrap"><table><thead><tr><th>기사</th><th>월</th><th>배송건</th><th>수익합계</th><th>실지급</th><th>상태</th></tr></thead><tbody>
             ${settles.slice(0,8).map(s=>{const r=calcNet(s);return`<tr>
-              <td><strong>${esc(s.driverName||s.driver||'')}</strong></td>
+              <td><strong>${esc(s.driverName||s.driver||s.name||'')}</strong></td>
+    <td style="font-size:10px;color:var(--text3)">${esc(getCampByRoute(s.route||s.routeDetails?.[0]?.route||''))}</td>
               <td>${esc(s.month||'')}</td>
               <td>${fmt(s.dcnt||0)}건</td>
               <td>₩${fmt(r.income)}</td>
@@ -1989,6 +2004,8 @@ PAGES['dealer-settlements']=async function(){
       style="padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:2px solid ${isAll?'var(--brand)':col};background:${isAll?'var(--brand)':'transparent'};color:${isAll?'#fff':col};transition:all .15s"
       >${camp}</button>`;
   }).join('');
+  // 기존 캠프 버튼 제거 후 재삽입
+  document.getElementById('camp-filter-area')?.remove();
   document.getElementById('content').before(campBtnArea);
   window._campFilter='전체';
   window.setCampFilter=function(camp){
@@ -2060,7 +2077,7 @@ function renderSettleTable(settles){
       <div class="card-header"><div class="card-title">📋 정산 목록 (${settles.length}건)</div></div>
       <div class="card-body">
         <div class="tbl-wrap"><table>
-          <thead><tr><th>기사</th><th>정산월</th><th>분류</th><th>배송건</th><th>수익합계</th><th>실지급</th><th>상태</th><th></th></tr></thead>
+          <thead><tr><th>기사</th><th>캠프</th><th>정산월</th><th>분류</th><th>배송건</th><th>수익합계</th><th>실지급</th><th>상태</th><th></th></tr></thead>
           <tbody id="settle-tbody">${rows}</tbody>
         </table></div>
       </div>
@@ -2334,6 +2351,14 @@ window.onJobsubChange=function(){
 };
 window.handleExcelUpload=function(inp){
   const file=inp.files[0];if(!file)return;
+  // 파일명에서 월 자동 감지 (예: 쿠팡_202604.xlsx, 정산_2026-04.xlsx)
+  const fnM=file.name.match(/(20[0-9]{2})[-_./]?(0[1-9]|1[0-2])/);
+  if(fnM){
+    const autoMonth=fnM[1]+'-'+fnM[2];
+    const mEl=document.getElementById('se-month');
+    if(mEl&&!mEl.value) mEl.value=autoMonth;
+    toast('📅 정산월 자동감지: '+autoMonth);
+  }
   parseExcelData(file,async function(result){
     _excelRoutes=result.routes;
     const sv=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v;};
