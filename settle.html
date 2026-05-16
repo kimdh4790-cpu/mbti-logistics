@@ -372,6 +372,7 @@ function parseExcelData(file,onResult){
       const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
       // ★ 엑셀 제목에서 정산월 추출 ("2026년 04월 정산서" 패턴)
       let titleMonth='';
+      let excelMonth='';
       for(const sName of wb.SheetNames){
         const sh=wb.Sheets[sName];
         const rows2=XLSX.utils.sheet_to_json(sh,{header:1,defval:null,range:0});
@@ -425,11 +426,11 @@ function parseExcelData(file,onResult){
           else{routeMap['미계약'].cnt+=miscCnt;routeMap['미계약'].amt+=miscAmt;}
         }
       });
-      if(titleMonth)excelMonth=titleMonth; // ★ 제목 월이 있으면 최우선
+      if(titleMonth)excelMonth=titleMonth;
       const routes=Object.entries(routeMap).map(([r,v])=>({route:r,cnt:v.cnt,ret:v.ret,amt:v.amt,retAmt:v.retAmt||0,unitPrice:v.unitPrice})).sort((a,b)=>b.amt-a.amt);
       const finc=Math.round(totalDel*(G_PRICES.freshbag_inc||25));
       const driverIdFromExcel=rows[hIdx+1]&&rows[hIdx+1][1]?String(rows[hIdx+1][1]).trim():'';
-      const allDriversMap={};const routeCampsMap={};const driverSettleMap={};let excelMonth='';
+      const allDriversMap={};const routeCampsMap={};const driverSettleMap={};
       rows.slice(hIdx+1).forEach(row=>{
         if(!row||!row[0])return;const cat=String(row[0]).trim();
         if((cat==='배송'||cat==='수기반영')&&row[1]&&row[2]){
@@ -1087,18 +1088,133 @@ window._m_checkDuplicateSettles=window.checkDuplicateSettles;
 window.openIncentiveSettings=async function(){
   document.getElementById('mo-incen')?.remove();
   try{
-    const drSnap=await getDocs(query(collection(db,'drivers'),where('dealerId','==',CU.dealerId)));
+    // admin이면 전체, dealer면 자기 소속만
+    const drQ=CU.role==='admin'
+      ?getDocs(collection(db,'drivers'))
+      :getDocs(query(collection(db,'drivers'),where('dealerId','==',CU.dealerId)));
+    const sQ=CU.role==='admin'
+      ?getDocs(collection(db,'settlements'))
+      :getDocs(query(collection(db,'settlements'),where('dealerId','==',CU.dealerId)));
+    const [drSnap,sSnap]=await Promise.all([drQ,sQ]);
     const drivers=drSnap.docs.map(d=>({id:d.id,...d.data()})).filter(d=>d.name).sort((a,b)=>(a.name||'').localeCompare(b.name||'','ko'));
-    const incSnap=await getDoc(doc(db,'settings','incentives_'+CU.dealerId)).catch(()=>null);
-    const incConfig=incSnap?.exists?.()?incSnap.data():{};
-    window._incenConfig={...incConfig};
-    const rows=drivers.map(d=>{
-      const key=d.userId||d.id;const cfg=incConfig[key]||{on:true,rate:25};
-      return`<tr><td style="padding:8px 10px;font-weight:700">${esc(d.name)}</td><td style="padding:8px 10px;font-size:11px;color:var(--text3)">${esc(d.camp||'—')}</td><td style="padding:8px 10px;text-align:center"><label style="cursor:pointer;display:inline-flex;align-items:center;gap:5px"><input type="checkbox" data-key="${key}" class="incen-check" ${cfg.on!==false?'checked':''} style="width:15px;height:15px"><span style="font-size:11px;font-weight:700;color:${cfg.on!==false?'var(--green)':'var(--red)'}">${cfg.on!==false?'ON':'OFF'}</span></label></td><td style="padding:8px 10px"><input type="number" class="incen-rate" data-key="${key}" value="${cfg.rate||25}" style="width:65px;padding:4px 8px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;text-align:right"> 원</td></tr>`;
+    const incId='incentives_'+(CU.dealerId||'admin');
+    const incSnap=await getDoc(doc(db,'settings',incId)).catch(()=>null);
+    window._incenConfig=incSnap?.exists?.()?{...incSnap.data()}:{};
+    window._incenId=incId;
+    // 캠프 목록
+    const CAMP_ORDER=['부산1','부산2','부산3','대구2','대구2B','진주M'];
+    const CAMP_COLORS={'부산1':'#3B82F6','부산2':'#8B5CF6','부산3':'#10B981','대구2':'#F59E0B','대구2B':'#FB923C','진주M':'#EF4444'};
+    const campSet=[...new Set(drivers.map(d=>d.camp?.replace('캠프','').trim()||'기타'))];
+    const camps=CAMP_ORDER.filter(k=>campSet.includes(k));
+    // 캠프별 일괄 버튼
+    const campBulk=camps.map(camp=>{
+      const col=CAMP_COLORS[camp]||'#666';
+      return`<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;border:1.5px solid ${col};font-size:12px;font-weight:700;color:${col}">
+        ${camp}캠프
+        <button onclick="incenBulk('${camp}',true)" style="padding:1px 8px;background:var(--green);color:#fff;border:none;border-radius:10px;font-size:11px;cursor:pointer;font-weight:700">ON</button>
+        <button onclick="incenBulk('${camp}',false)" style="padding:1px 8px;background:var(--red);color:#fff;border:none;border-radius:10px;font-size:11px;cursor:pointer;font-weight:700">OFF</button>
+      </span>`;
     }).join('');
-    document.getElementById('modals').insertAdjacentHTML('beforeend',`<div class="mo show" id="mo-incen"><div class="md" style="max-width:500px"><div class="mdt">⚙️ 기사별 프레시백 인센 설정<button class="close-btn" onclick="document.getElementById('mo-incen').remove()">✕</button></div><div class="mdb"><div class="info-box">ON: 배송건수 × 설정단가로 자동 계산 | 기본 25원/건</div><div style="display:flex;gap:8px;margin-bottom:8px"><button class="btn btn-green btn-sm" onclick="document.querySelectorAll('.incen-check').forEach(e=>{e.checked=true;e.nextElementSibling.textContent='ON';e.nextElementSibling.style.color='var(--green)';})">전체 ON</button><button class="btn btn-red btn-sm" onclick="document.querySelectorAll('.incen-check').forEach(e=>{e.checked=false;e.nextElementSibling.textContent='OFF';e.nextElementSibling.style.color='var(--red)';})">전체 OFF</button></div><div style="max-height:380px;overflow-y:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><thead style="background:var(--bg3);position:sticky;top:0"><tr><th style="padding:8px 10px;text-align:left">기사</th><th style="padding:8px 10px;text-align:left">캠프</th><th style="padding:8px 10px">ON/OFF</th><th style="padding:8px 10px">단가</th></tr></thead><tbody>${rows}</tbody></table></div></div><div class="mdf"><button class="btn btn-gray" onclick="document.getElementById('mo-incen').remove()">취소</button><button class="btn btn-blue" onclick="(async()=>{document.querySelectorAll('.incen-check').forEach(el=>{const k=el.dataset.key;const r=document.querySelector('.incen-rate[data-key=\''+k+'\']');window._incenConfig[k]={on:el.checked,rate:+(r?.value||25)};});try{await setDoc(doc(db,'settings','incentives_'+CU.dealerId),window._incenConfig||{});toast('✅ 인센 설정 저장 완료');document.getElementById('mo-incen')?.remove();}catch(e){toast('❌ '+e.message);}})()">💾 저장</button></div></div></div>`);
-    document.querySelectorAll('.incen-check').forEach(el=>{el.addEventListener('change',function(){this.nextElementSibling.textContent=this.checked?'ON':'OFF';this.nextElementSibling.style.color=this.checked?'var(--green)':'var(--red)';});});
-  }catch(e){toast('❌ '+e.message);}
+    // 기사별 행
+    function makeRows(filterCamp){
+      const filtered=filterCamp==='전체'?drivers:drivers.filter(d=>(d.camp?.replace('캠프','').trim()||'기타')===filterCamp);
+      return filtered.map(d=>{
+        const key=d.userId||d.id;const cfg=window._incenConfig[key]||{on:true,rate:25};
+        const isOn=cfg.on!==false;
+        return`<tr data-camp="${d.camp?.replace('캠프','').trim()||'기타'}">
+          <td style="padding:8px 10px;font-weight:700">${esc(d.name)}</td>
+          <td style="padding:8px 10px"><span style="font-size:10px;background:${CAMP_COLORS[d.camp?.replace('캠프','').trim()]||'#666'}22;color:${CAMP_COLORS[d.camp?.replace('캠프','').trim()]||'#666'};padding:2px 8px;border-radius:20px;font-weight:700">${d.camp||'—'}</span></td>
+          <td style="padding:8px 10px;text-align:center">
+            <label style="cursor:pointer;display:inline-flex;align-items:center;gap:6px">
+              <input type="checkbox" class="incen-cb" data-key="${key}" ${isOn?'checked':''} style="width:16px;height:16px;cursor:pointer">
+              <span class="incen-lbl" style="font-size:11px;font-weight:800;color:${isOn?'var(--green)':'var(--red)'}">${isOn?'ON':'OFF'}</span>
+            </label>
+          </td>
+          <td style="padding:8px 10px">
+            <div style="display:flex;align-items:center;gap:4px">
+              ${[10,15,25].map(r=>`<button class="incen-rate-btn" data-key="${key}" data-rate="${r}" style="padding:2px 8px;font-size:11px;font-weight:700;border:1.5px solid ${cfg.rate===r?'var(--brand)':'var(--border)'};border-radius:8px;background:${cfg.rate===r?'var(--brand)':'var(--bg)'};color:${cfg.rate===r?'#fff':'var(--text)'};cursor:pointer" onclick="incenSetRate('${key}',${r})">×${r}</button>`).join('')}
+              <input type="number" class="incen-rate-input" data-key="${key}" value="${cfg.rate||25}" style="width:55px;padding:3px 6px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;text-align:right">
+              <span style="font-size:11px;color:var(--text3)">원</span>
+            </div>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+    // 탭 렌더
+    const allCamps=['전체',...camps];
+    function campTabsHTML(active){
+      return allCamps.map(k=>`<button class="camp-tab-btn incen-tab${k===active?' active':''}" onclick="incenFilterCamp('${k}')">${k==='전체'?'전체':k+'캠프'}</button>`).join('');
+    }
+    document.getElementById('modals').insertAdjacentHTML('beforeend',`
+      <div class="mo show" id="mo-incen">
+        <div class="md" style="max-width:620px">
+          <div class="mdt">⚙️ 기사별 라우트 인센티브 설정
+            <button class="close-btn" onclick="document.getElementById('mo-incen').remove()">✕</button>
+          </div>
+          <div class="mdb">
+            <div class="section-label">캠프별 일괄 설정</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">${campBulk}</div>
+            <div class="info-box">💡 설정 후 엑셀 업로드하면 자동 반영. ON이면 건수 × 설정단가로 인센 계산</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px" id="incen-tabs">${campTabsHTML('전체')}</div>
+            <div style="max-height:360px;overflow-y:auto">
+              <table style="width:100%;border-collapse:collapse;font-size:13px">
+                <thead style="background:var(--bg3);position:sticky;top:0">
+                  <tr><th style="padding:8px 10px;text-align:left">기사</th><th style="padding:8px 10px;text-align:left">캠프</th><th style="padding:8px 10px;text-align:center">ON/OFF</th><th style="padding:8px 10px;text-align:left">단가 선택</th></tr>
+                </thead>
+                <tbody id="incen-tbody">${makeRows('전체')}</tbody>
+              </table>
+            </div>
+          </div>
+          <div class="mdf">
+            <button class="btn btn-gray" onclick="document.getElementById('mo-incen').remove()">취소</button>
+            <button class="btn btn-blue" onclick="saveIncen()">💾 저장</button>
+          </div>
+        </div>
+      </div>`);
+    // 이벤트
+    document.querySelectorAll('.incen-cb').forEach(el=>{
+      el.addEventListener('change',function(){
+        const lbl=this.closest('tr').querySelector('.incen-lbl');
+        if(lbl){lbl.textContent=this.checked?'ON':'OFF';lbl.style.color=this.checked?'var(--green)':'var(--red)';}
+      });
+    });
+    window.incenSetRate=function(key,rate){
+      if(!window._incenConfig[key])window._incenConfig[key]={on:true,rate:25};
+      window._incenConfig[key].rate=rate;
+      document.querySelectorAll(`.incen-rate-btn[data-key="${key}"]`).forEach(btn=>{
+        const isActive=+btn.dataset.rate===rate;
+        btn.style.background=isActive?'var(--brand)':'var(--bg)';btn.style.color=isActive?'#fff':'var(--text)';btn.style.borderColor=isActive?'var(--brand)':'var(--border)';
+      });
+      const inp=document.querySelector(`.incen-rate-input[data-key="${key}"]`);if(inp)inp.value=rate;
+    };
+    window.incenBulk=function(camp,on){
+      drivers.filter(d=>(d.camp?.replace('캠프','').trim()||'기타')===camp).forEach(d=>{
+        const key=d.userId||d.id;
+        if(!window._incenConfig[key])window._incenConfig[key]={on,rate:25};
+        else window._incenConfig[key].on=on;
+        const cb=document.querySelector(`.incen-cb[data-key="${key}"]`);
+        if(cb){cb.checked=on;const lbl=cb.closest('tr')?.querySelector('.incen-lbl');if(lbl){lbl.textContent=on?'ON':'OFF';lbl.style.color=on?'var(--green)':'var(--red)';}}
+      });
+    };
+    window.incenFilterCamp=function(camp){
+      document.getElementById('incen-tbody').innerHTML=makeRows(camp);
+      document.querySelectorAll('.incen-tab').forEach(btn=>{btn.classList.toggle('active',btn.textContent.includes(camp==='전체'?'전체':camp));});
+      document.querySelectorAll('.incen-cb').forEach(el=>{el.addEventListener('change',function(){const lbl=this.closest('tr').querySelector('.incen-lbl');if(lbl){lbl.textContent=this.checked?'ON':'OFF';lbl.style.color=this.checked?'var(--green)':'var(--red)';}});});
+    };
+    window.saveIncen=async function(){
+      document.querySelectorAll('.incen-cb').forEach(el=>{
+        const key=el.dataset.key;
+        const inp=document.querySelector(`.incen-rate-input[data-key="${key}"]`);
+        if(!window._incenConfig[key])window._incenConfig[key]={};
+        window._incenConfig[key].on=el.checked;
+        window._incenConfig[key].rate=+(inp?.value||25);
+      });
+      try{
+        await setDoc(doc(db,'settings',window._incenId),window._incenConfig);
+        toast('✅ 인센 설정 저장 완료');document.getElementById('mo-incen')?.remove();
+      }catch(e){toast('❌ '+e.message);}
+    };
+  }catch(e){toast('❌ 인센 로드 실패: '+e.message);}
 };
 window._m_openIncentiveSettings=window.openIncentiveSettings;
 window.openDriverStats=async function(){
