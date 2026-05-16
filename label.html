@@ -241,15 +241,15 @@ function capturePhoto(){
   var c=document.getElementById('cam-canvas');
   c.width=v.videoWidth; c.height=v.videoHeight;
   c.getContext('2d').drawImage(v,0,0);
-  _capturedImg=c.toDataURL('image/jpeg',0.92);
+  _capturedImg=c.toDataURL('image/jpeg',0.70);
   stopCam();
   showPreview(_capturedImg);
-  setTimeout(function(){ runOCR(); },300);
+  runOCR();
 }
 function onFileSelect(input){
   var f=input.files[0]; if(!f) return;
   var rd=new FileReader();
-  rd.onload=function(e){ _capturedImg=e.target.result; showPreview(_capturedImg); setTimeout(function(){ runOCR(); },300); };
+  rd.onload=function(e){ _capturedImg=e.target.result; showPreview(_capturedImg); runOCR(); };
   rd.readAsDataURL(f);
 }
 function showPreview(src){
@@ -299,7 +299,7 @@ async function runOCR(){
   await new Promise(function(resolve){
     var img=new Image();
     img.onload=function(){
-      var MAX=1200;
+      var MAX=600;
       var w=img.width; var h2=img.height;
       if(w>MAX||h2>MAX){
         var ratio=Math.min(MAX/w,MAX/h2);
@@ -308,7 +308,7 @@ async function runOCR(){
       var c=document.createElement('canvas');
       c.width=w; c.height=h2;
       c.getContext('2d').drawImage(img,0,0,w,h2);
-      var compressed=c.toDataURL('image/jpeg',0.82);
+      var compressed=c.toDataURL('image/jpeg',0.65);
       b64=compressed.split(',')[1];
       resolve();
     };
@@ -346,7 +346,7 @@ async function runOCR(){
       },
       body:JSON.stringify({
         model:'claude-haiku-4-5-20251001',
-        max_tokens:600,
+        max_tokens:300,
         messages:[{
           role:'user',
           content:[
@@ -409,9 +409,9 @@ function showResult(info){
   document.getElementById('step-result').scrollIntoView({behavior:'smooth'});
   updatePreview();
   setTimeout(function(){
-    window.onafterprint=function(){ setTimeout(function(){ resetAndCam(); },500); };
+    window.onafterprint=function(){ setTimeout(function(){ resetAndCam(); },200); };
     window.print();
-  },1500);
+  },800);
 }
 
 function updatePreview(){
@@ -569,7 +569,7 @@ function resetAll(){
 function resetAndCam(){
   resetAll();
   // 카메라 자동 재시작
-  setTimeout(function(){ startCam(); }, 300);
+  setTimeout(function(){ startCam(); }, 100);
 }
 </script>
 </body>
