@@ -384,6 +384,13 @@ function showResult(info){
   document.getElementById('step-result').style.display='block';
   document.getElementById('step-result').scrollIntoView({behavior:'smooth'});
   updatePreview();
+  // QR 렌더 완료 후 자동 인쇄 → 인쇄 후 카메라 복귀
+  setTimeout(function(){
+    window.onafterprint=function(){
+      setTimeout(function(){ resetAndCam(); },500);
+    };
+    window.print();
+  },600);
 }
 
 function updatePreview(){
@@ -514,6 +521,10 @@ function resetAll(){
   document.getElementById('loading-card').style.display='none';
   document.getElementById('print-area').innerHTML='';
   window.scrollTo({top:0,behavior:'smooth'});
+}
+function resetAndCam(){
+  resetAll();
+  setTimeout(function(){ startCam(); },300);
 }
 function resetAndCam(){
   resetAll();
