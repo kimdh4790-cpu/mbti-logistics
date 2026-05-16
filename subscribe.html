@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>로지넷 — 구독 신청</title>
 <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://js.tosspayments.com/v1/payment-widget"></script>
+<script src="https://js.tosspayments.com/v1"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Pretendard',sans-serif;background:#f0f4f8;color:#1a202c;min-height:100vh}
@@ -183,8 +183,9 @@ body{font-family:'Pretendard',sans-serif;background:#f0f4f8;color:#1a202c;min-he
     </div>
     <div class="card">
       <h2>결제 수단</h2>
-      <div id="payment-widget"></div>
-      <div id="agreement"></div>
+      <div style="background:#f0f6ff;border-radius:10px;padding:16px;font-size:14px;color:#4a5568;text-align:center">
+        💳 결제하기 버튼을 누르면 토스 결제창이 열립니다
+      </div>
     </div>
     <button class="btn btn-primary" id="pay-btn" onclick="doPay()" disabled style="background:#a0aec0">결제 준비 중...</button>
     <p style="text-align:center;font-size:12px;color:#a0aec0;margin-top:12px">
@@ -289,45 +290,26 @@ window.doLogin=async function(){
 
 async function initPayment(){
   if(!_user)return;
-  // 요약
   document.getElementById('sum-plan').textContent=_plan.label+' 플랜';
   document.getElementById('sum-drivers').textContent='기사 '+(document.getElementById('r-drivers')?.value||'?')+'명';
   document.getElementById('sum-date').textContent='30일 무료 후 '+new Date(Date.now()+30*864e5).toLocaleDateString('ko-KR');
   document.getElementById('sum-amount').textContent=_plan.amount.toLocaleString()+'원/월';
-
+  // 일반 결제창 방식 — 위젯 불필요, 버튼 바로 활성화
   const btn=document.getElementById('pay-btn');
-  btn.disabled=true;
-  btn.textContent='결제 준비 중...';
-  btn.style.background='#a0aec0';
-
-  try{
-    await new Promise(r=>setTimeout(r,200));
-    _widget=PaymentWidget(TOSS_CLIENT_KEY,PaymentWidget.ANONYMOUS);
-    const methodsWidget=await _widget.renderPaymentMethods('#payment-widget',{value:_plan.amount});
-    await _widget.renderAgreement('#agreement');
-
-    // 위젯 ready 이벤트 대기 (최대 8초)
-    await new Promise(resolve=>{
-      try{ methodsWidget.on('ready',resolve); }catch(e){ resolve(); }
-      setTimeout(resolve,8000);
-    });
-
-    btn.disabled=false;
-    btn.textContent='지금 결제하기';
-    btn.style.background='';
-  }catch(e){
-    btn.textContent='초기화 오류: '+e.message;
-    console.error(e);
-  }
+  btn.disabled=false;
+  btn.textContent='지금 결제하기';
+  btn.style.background='';
 }
 
 window.doPay=async function(){
-  if(!_widget||!_user){alert('결제 초기화 오류. 새로고침 후 다시 시도해주세요.');return;}
+  if(!_user){alert('로그인이 필요합니다.');return;}
   const btn=document.getElementById('pay-btn');
-  btn.disabled=true;btn.textContent='결제 처리 중...';
+  btn.disabled=true;btn.textContent='결제창 여는 중...';
   const orderId='LN-'+_user.uid.slice(0,8)+'-'+Date.now()+'-'+_plan.plan;
   try{
-    await _widget.requestPayment({
+    const tossPayments=TossPayments(TOSS_CLIENT_KEY);
+    await tossPayments.requestPayment('카드',{
+      amount:_plan.amount,
       orderId,
       orderName:'로지넷 '+_plan.label+' 플랜 (월간)',
       successUrl:location.origin+'/subscribe/success',
