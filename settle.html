@@ -836,11 +836,52 @@ function parseExcelData(file,onResult){
         }
       });
 
+      // ★ 기사별 분리 정산 데이터 생성
+      const perDriverMap={};
+      rows.slice(hIdx+1).forEach(row=>{
+        if(!row||!row[0])return;
+        const cat=String(row[0]).trim();
+        if(cat!=='배송'&&cat!=='수기반영')return;
+        if(!row[1])return;
+        const did=String(row[1]).trim();
+        const route=row[2]?String(row[2]).trim():'기타';
+        const del=+row[7]||0,ret=+row[8]||0;
+        const unitPrice=RPRICE[route]||0;
+        const camp=row[4]?String(row[4]).trim():'';
+        if(!perDriverMap[did])perDriverMap[did]={
+          id:did,camp,routes:{},totalDel:0,totalRet:0,totalAmt:0,totalRetAmt:0
+        };
+        const pd=perDriverMap[did];
+        pd.totalDel+=del;pd.totalRet+=ret;
+        pd.totalAmt+=del*unitPrice;pd.totalRetAmt+=ret*unitPrice;
+        if(!pd.routes[route])pd.routes[route]={cnt:0,ret:0,amt:0,retAmt:0,unitPrice};
+        pd.routes[route].cnt+=del;pd.routes[route].ret+=ret;
+        pd.routes[route].amt+=del*unitPrice;pd.routes[route].retAmt+=ret*unitPrice;
+      });
+      // 프레시백도 기사별 분리
+      rows.slice(hIdx+1).forEach(row=>{
+        if(!row||!row[0])return;
+        const cat=String(row[0]).trim();
+        if(!(cat.includes('프레시백')||cat.includes('프레쉬백')||cat.includes('에코백')))return;
+        if(!row[1])return;
+        const did=String(row[1]).trim();
+        if(perDriverMap[did])perDriverMap[did].fresh=(perDriverMap[did].fresh||0)+(+row[14]||0);
+      });
+
+      const perDriverList=Object.values(perDriverMap).map(pd=>({
+        driverId:pd.id,camp:pd.camp,
+        routes:Object.entries(pd.routes).map(([r,v])=>({route:r,cnt:v.cnt,ret:v.ret,amt:v.amt,retAmt:v.retAmt,unitPrice:v.unitPrice})),
+        totalDel:pd.totalDel,totalRet:pd.totalRet,
+        totalAmt:pd.totalAmt,totalRetAmt:pd.totalRetAmt,
+        fresh:pd.fresh||0
+      }));
+
       onResult({
         routes,dailyRows,totalAmt,totalFresh,totalDel,totalRet,totalRetAmt,
         totalNocont,totalNocontCnt,finc,driverIdFromExcel:driverId,
         allDrivers:Object.values(allDriversMap),
-        routeCamps:routeCampsMap
+        routeCamps:routeCampsMap,
+        perDriverList  // ★ 기사별 개별 데이터
       });
     }catch(e){toast('❌ 엑셀 분석 오류: '+e.message);console.error(e);}
   };
@@ -2262,16 +2303,23 @@ function buildSettleModal(){
             </div>
             <div id="se-excel-result" style="display:none"></div>
           </div>
+          <!-- 자동 감지 정보 표시 -->
+          <div id="se-auto-info" style="display:none;background:var(--brand-l);border:1.5px solid var(--brand);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px">
+            <div style="font-weight:700;color:var(--brand);margin-bottom:6px">📋 엑셀 자동 감지</div>
+            <div id="se-auto-info-text" style="color:var(--text);line-height:1.7"></div>
+          </div>
+          <div style="display:none">
+          </div>
 
           <div class="divider"></div>
 
           <!-- 기본 정보 -->
           <div class="fg">
             <div class="field"><label>기사 <span style="font-size:10px;color:var(--text3)">(엑셀 업로드 시 자동입력)</span></label>
-              <input id="se-driver" list="driver-list" placeholder="기사명 입력 또는 엑셀 업로드">
+              <input id="se-driver" type="hidden">
               <datalist id="driver-list"></datalist>
             </div>
-            <div class="field"><label>정산월 *</label><input id="se-month" type="month"></div>
+          <input id="se-month" type="hidden">
           </div>
           <div class="field"><label>화주사 (업무 분류)</label>
             <select id="se-jobsub" onchange="onJobsubChange()">
@@ -2375,14 +2423,18 @@ window.onJobsubChange=function(){
 };
 window.handleExcelUpload=function(inp){
   const file=inp.files[0];if(!file)return;
-  // 파일명에서 월 자동 감지 (예: 쿠팡_202604.xlsx, 정산_2026-04.xlsx)
+  // ★ 파일명에서 월 자동 감지 (필수)
+  let autoMonth='';
   const fnM=file.name.match(/(20[0-9]{2})[-_./]?(0[1-9]|1[0-2])/);
-  if(fnM){
-    const autoMonth=fnM[1]+'-'+fnM[2];
-    const mEl=document.getElementById('se-month');
-    if(mEl&&!mEl.value) mEl.value=autoMonth;
-    toast('📅 정산월 자동감지: '+autoMonth);
+  if(fnM){ autoMonth=fnM[1]+'-'+fnM[2]; }
+  else {
+    // 파일명에서 못 찾으면 현재 월 사용
+    const now=new Date();
+    autoMonth=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
   }
+  const mEl=document.getElementById('se-month');
+  if(mEl) mEl.value=autoMonth;
+
   parseExcelData(file,async function(result){
     _excelRoutes=result.routes;
     const sv=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v;};
@@ -2411,6 +2463,35 @@ window.handleExcelUpload=function(inp){
     calcSettlePreview();
     const drop=document.getElementById('se-excel-drop');
     if(drop)drop.className='excel-drop done';
+
+    // ★ 기사별 자동 매핑 + 정보 표시
+    if(result.perDriverList?.length){
+      // drivers 컬렉션에서 userId→이름 매핑
+      let driverNameMap={};
+      try{
+        const drSnap=await getDocs(query(collection(db,'drivers'),where('dealerId','==',CU.dealerId)));
+        drSnap.docs.forEach(d=>{
+          const dd=d.data();
+          if(dd.userId) driverNameMap[dd.userId]=dd.name||dd.userId;
+        });
+      }catch(e){}
+
+      window._perDriverList=result.perDriverList;
+      window._autoMonth=autoMonth;
+      window._driverNameMap=driverNameMap;
+
+      const infoEl=document.getElementById('se-auto-info');
+      const infoTxt=document.getElementById('se-auto-info-text');
+      if(infoEl&&infoTxt){
+        infoEl.style.display='block';
+        const driverSummary=result.perDriverList.map(pd=>{
+          const name=driverNameMap[pd.driverId]||pd.driverId;
+          const camp=pd.camp||'';
+          return `<span style="display:inline-block;margin-right:8px;margin-bottom:4px;padding:2px 8px;border-radius:12px;background:var(--brand-l);border:1px solid var(--brand);font-size:11px">👤 ${name} (${fmt(pd.totalDel)}건)</span>`;
+        }).join('');
+        infoTxt.innerHTML=`📅 <strong>${autoMonth}</strong> &nbsp;|&nbsp; 👥 <strong>${result.perDriverList.length}명</strong><br>${driverSummary}<br><button class="btn btn-blue" style="margin-top:8px;width:100%" onclick="saveBatchSettle()">✅ 전체 기사 ${result.perDriverList.length}명 일괄 정산 저장</button>`;
+      }
+    }
 
     // ★ 기사 자동 등록 (미등록 기사만)
     if(result.allDrivers?.length&&CU.dealerId){
@@ -2538,6 +2619,62 @@ window.openNewSettle=async function(){
   resetSettleForm();onJobsubChange();calcSettlePreview();
   openModal('mo-settle');
 };
+// ★ 기사별 일괄 정산 저장
+window.saveBatchSettle=async function(){
+  const perList=window._perDriverList;
+  const month=window._autoMonth;
+  const nameMap=window._driverNameMap||{};
+  if(!perList?.length){toast('❌ 엑셀을 먼저 업로드해주세요');return;}
+  if(!month){toast('❌ 정산월 감지 실패');return;}
+  const j=gv('se-jobsub')||'쿠팡';
+  const isCoupang=j==='쿠팡';
+  let saved=0;
+  const btn=event?.target;
+  if(btn){btn.disabled=true;btn.textContent='저장 중...';}
+  try{
+    for(const pd of perList){
+      const driverName=nameMap[pd.driverId]||pd.driverId;
+      const dcnt=pd.totalDel,rcnt=pd.totalRet;
+      const damt=pd.totalAmt,ramt=pd.totalRetAmt;
+      const freshRaw=pd.fresh||0;
+      const finc=isCoupang?Math.round(dcnt*(G_PRICES.freshbag_inc||25)):0;
+      const nocont=g('se-nocont'),nocontCnt=g('se-nocont-cnt');
+      const etcPlus=g('se-etc-plus'),etcMinus=g('se-etc-minus');
+      const income=damt+ramt+freshRaw+finc+nocont+etcPlus;
+      const supplyAmt=Math.round(income/1.1);
+      const wage=Math.round(supplyAmt*(1-0.346));
+      const emp=wage>=800000?Math.floor(wage*0.008/10)*10:0;
+      const work=Math.floor(wage*0.0088/10)*10;
+      const deduct=emp+work;
+      const net=income-deduct;
+      const data={
+        dealerId:CU.dealerId,
+        driverName,        // ★ 실제 이름 (drivers 컬렉션 매핑)
+        driver:pd.driverId, // 쿠팡 userId
+        month,jobsub:j,
+        dcnt,damt,rcnt,ramt,
+        fresh:freshRaw,finc,inc:0,
+        nocont:0,nocontCnt:0,
+        etcPlus:0,etcMinus:0,dmg:0,adv:0,
+        income,supplyAmt,monthlyWage:wage,
+        emp,work,deduct,net,
+        routeDetails:pd.routes,
+        status:'pending',createdAt:serverTimestamp()
+      };
+      await addDoc(collection(db,'settlements'),data);
+      saved++;
+    }
+    closeModal('mo-settle');
+    resetSettleForm();
+    window._perDriverList=null;
+    toast(`✅ ${saved}명 정산서 일괄 저장 완료`);
+    PAGES['dealer-settlements']();
+  }catch(e){
+    toast('❌ '+e.message);
+    if(btn){btn.disabled=false;btn.textContent='✅ 일괄 정산 저장';}
+  }
+};
+
 window.saveSettle=async function(){
   let driver=document.getElementById('se-driver').value.trim();
   // 엑셀 업로드 시 driverIdFromExcel로 대체 가능
