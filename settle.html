@@ -2004,7 +2004,9 @@ window.quickSettle=async function(driverName,jobsub){
   resetSettleForm();onJobsubChange();calcSettlePreview();
   // 저장 버튼 원복
   const mdb=document.querySelector('#mo-settle .mdf');
-  if(mdb)mdb.innerHTML=`<button class="btn btn-gray" onclick="closeModal('mo-settle');resetSettleForm()">취소</button><button class="btn btn-blue" onclick="saveSettle()">💾 저장 &amp; 공유</button>`;
+  if(mdb)mdb.innerHTML=CU?.role==='dealer'
+    ?`<button class="btn btn-gray" onclick="closeModal('mo-settle');resetSettleForm()">닫기</button>`
+    :`<button class="btn btn-gray" onclick="closeModal('mo-settle');resetSettleForm()">취소</button><button class="btn btn-blue" onclick="saveSettle()">💾 저장 &amp; 공유</button>`;
   const mt=document.getElementById('se-modal-title');if(mt)mt.textContent=`📋 ${driverName} 정산서 작성`;
   openModal('mo-settle');
 };
@@ -2341,7 +2343,9 @@ window.updateSettle=async function(id){
     closeModal('mo-settle');resetSettleForm();_excelRoutes=[];
     // 저장 버튼 원복
     const mdb=document.querySelector('#mo-settle .mdf');
-    if(mdb)mdb.innerHTML=`<button class="btn btn-gray" onclick="closeModal('mo-settle');resetSettleForm()">취소</button><button class="btn btn-blue" onclick="saveSettle()">💾 저장 &amp; 공유</button>`;
+    if(mdb)mdb.innerHTML=CU?.role==='dealer'
+    ?`<button class="btn btn-gray" onclick="closeModal('mo-settle');resetSettleForm()">닫기</button>`
+    :`<button class="btn btn-gray" onclick="closeModal('mo-settle');resetSettleForm()">취소</button><button class="btn btn-blue" onclick="saveSettle()">💾 저장 &amp; 공유</button>`;
     toast(`✅ ${driver} ${month} 정산서 수정 완료`);
     PAGES['dealer-settlements']();
   }catch(e){toast('❌ '+e.message)}
@@ -2846,6 +2850,7 @@ window.confirmBatchSave=async function(autoMonth,total){
 };
 
 window.saveBatchSettle=async function(){
+  const g=id=>+(document.getElementById(id)||{value:0}).value||0;
   const gv=id=>(document.getElementById(id)||{value:''}).value||'';
   const perList=window._perDriverList;
   const month=window._autoMonth;
