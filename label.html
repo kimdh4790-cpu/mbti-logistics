@@ -69,7 +69,7 @@ body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
 .label-a4-1 .lbl-from{font-size:11px;color:#888;margin-bottom:20px;padding:8px 12px;background:#f8f9fc;border-radius:6px}
 .label-a4-1 .lbl-to-lbl{font-size:12px;font-weight:700;color:#888;letter-spacing:.1em;margin-bottom:6px}
 .label-a4-1 .lbl-name{font-size:42px;font-weight:900;color:#1a1a18;letter-spacing:1px;margin-bottom:8px;line-height:1.1}
-.label-a4-1 .lbl-addr{font-size:18px;color:#333;line-height:1.8;margin-bottom:20px}
+.label-a4-1 .lbl-addr{font-size:15px;color:#333;line-height:1.7;margin-bottom:14px;word-break:break-all}
 .label-a4-1 .lbl-divider{border:none;border-top:1px dashed #aaa;margin:16px 0}
 .label-a4-1 .lbl-meta{display:flex;justify-content:space-between;align-items:flex-end}
 .label-a4-1 .lbl-track{font-family:monospace;font-size:14px;color:#185FA5;letter-spacing:2px}
@@ -89,7 +89,6 @@ body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
 .label-item .li-agent{font-size:8px;color:#555;margin-top:1px;font-weight:600;letter-spacing:.3px}
 </style>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 <div class="app">
@@ -408,10 +407,16 @@ function showResult(info){
   document.getElementById('step-result').style.display='block';
   document.getElementById('step-result').scrollIntoView({behavior:'smooth'});
   updatePreview();
+  // QR 로드 완료 후 인쇄 (최대 8초 대기)
+  _qrLoaded={};
   setTimeout(function(){
-    window.onafterprint=function(){ setTimeout(function(){ resetAndCam(); },200); };
-    window.print();
-  },500);
+    waitQRandPrint();
+    // 8초 후 강제 인쇄 (QR 로드 실패해도 인쇄)
+    setTimeout(function(){
+      window.onafterprint=function(){ setTimeout(function(){ resetAndCam(); },200); };
+      window.print();
+    },8000);
+  },200);
 }
 
 function updatePreview(){
@@ -526,6 +531,9 @@ function saveApiKey(){
 
 
 // ── QR 코드 생성 (로컬 라이브러리 - 네트워크 불필요) ──
+// QR 로드 완료 추적
+var _qrLoaded={};
+
 function generateQR(containerId, data){
   var el=document.getElementById(containerId);
   if(!el){ setTimeout(function(){ generateQR(containerId,data); },100); return; }
@@ -537,30 +545,41 @@ function generateQR(containerId, data){
   if(qrText.length>150) qrText='|V1|'+track+'|'+addr1.slice(0,40)+'|'+addr2.slice(0,25)+'|'+name.slice(0,12)+'|||';
   var size=containerId==='qr-1'?120:90;
   el.innerHTML='';
-  try{
-    var qr=new QRCode(el,{
-      text:qrText,
-      width:size*2,
-      height:size*2,
-      colorDark:'#000000',
-      colorLight:'#ffffff',
-      correctLevel:QRCode.CorrectLevel.M
-    });
-    // canvas → img 변환 (인쇄 호환)
-    setTimeout(function(){
-      var cv=el.querySelector('canvas');
-      if(cv){
-        var dataUrl=cv.toDataURL('image/png');
-        el.innerHTML='';
-        var pImg=document.createElement('img');
-        pImg.src=dataUrl;
-        pImg.width=size; pImg.height=size;
-        pImg.style.cssText='display:block;width:'+size+'px;height:'+size+'px;-webkit-print-color-adjust:exact;print-color-adjust:exact';
-        el.appendChild(pImg);
-      }
-    },50);
-  }catch(e){
-    el.innerHTML='<div style="font-family:monospace;font-size:7px;word-break:break-all;border:1px solid #000;padding:2px;width:'+size+'px;height:'+size+'px;overflow:hidden;display:flex;align-items:center;justify-content:center;text-align:center">'+escH(track)+'</div>';
+  _qrLoaded[containerId]=false;
+
+  var img=new Image();
+  img.crossOrigin='anonymous';
+  img.onload=function(){
+    // canvas로 변환해서 data URL로 저장 → 인쇄 시 확실히 표시
+    var cv=document.createElement('canvas');
+    cv.width=size; cv.height=size;
+    cv.getContext('2d').drawImage(img,0,0,size,size);
+    var dataUrl=cv.toDataURL('image/png');
+    var pImg=document.createElement('img');
+    pImg.src=dataUrl;
+    pImg.width=size; pImg.height=size;
+    pImg.style.cssText='display:block;width:'+size+'px;height:'+size+'px;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;image-rendering:pixelated';
+    el.innerHTML='';
+    el.appendChild(pImg);
+    _qrLoaded[containerId]=true;
+  };
+  img.onerror=function(){
+    // 폴백: 추적번호 텍스트
+    el.innerHTML='<div style="font-size:8px;font-weight:700;word-break:break-all;border:2px solid #000;padding:3px;width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;text-align:center;box-sizing:border-box">'+escH(track)+'</div>';
+    _qrLoaded[containerId]=true;
+  };
+  img.src='https://api.qrserver.com/v1/create-qr-code/?size='+(size*2)+'x'+(size*2)+'&data='+encodeURIComponent(qrText)+'&format=png&ecc=M&margin=1';
+}
+
+function waitQRandPrint(){
+  // QR이 모두 로드될 때까지 폴링
+  var ids=Object.keys(_qrLoaded);
+  var allDone=ids.length>0 && ids.every(function(id){ return _qrLoaded[id]; });
+  if(allDone){
+    window.onafterprint=function(){ setTimeout(function(){ resetAndCam(); },200); };
+    window.print();
+  } else {
+    setTimeout(waitQRandPrint, 100);
   }
 }
 function resetAll(){
