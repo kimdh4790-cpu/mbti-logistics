@@ -49,19 +49,22 @@ body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
   .print-area{background:#fff;border:1px solid #ccc;border-radius:8px;overflow:hidden;margin-top:8px}
 }
 @media print{
-  img, canvas { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; display:block !important; }
-  #qr-1 img, #qr-2a img, #qr-2b img { display:block !important; visibility:visible !important; }
-  @page{
-    size: 100mm 150mm;
-    margin: 0;
-  }
+  @page{ size:A4 portrait; margin:10mm; }
+  img,canvas{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;display:block!important}
+  #qr-1 img,#qr-2a img,#qr-2b img{display:block!important;visibility:visible!important}
   body,html{background:#fff!important;margin:0!important;padding:0!important}
   .no-print{display:none!important}
-  .print-area{border:none!important;margin:0!important;padding:0!important}
+  /* 앱 전체는 유지하되 불필요한 카드만 숨김 */
+  .topbar{display:none!important}
+  #step-cam{display:none!important}
+  #loading-card{display:none!important}
   #step-result .card{display:none!important}
-  #step-result .print-area{display:block!important}
-  body > *:not(#step-result):not(.print-area){display:none!important}
-  @page{size:A4 portrait;margin:10mm}
+  /* 인쇄 영역만 표시 */
+  .app{background:none!important;padding:0!important;max-width:100%!important}
+  .print-area{border:none!important;margin:0!important;padding:0!important;display:block!important}
+  #step-result{display:block!important}
+  .label-a4-2{page-break-inside:avoid;break-inside:avoid}
+  .label-item{page-break-inside:avoid;break-inside:avoid}
 }
 /* 라벨 1개 (A4 전체) */
 .label-a4-1{width:100%;padding:20px;font-family:'Arial',sans-serif}
@@ -451,12 +454,7 @@ function renderLabel(){
   var shipToMap={ko:'받는 분',en:'SHIP TO:',zh:'收件人:',ja:'お届け先:',ph:'SHIP TO:'};
   var trackMap={ko:'운송장 번호',en:'Tracking No.',zh:'运单号码',ja:'追跡番号',ph:'Tracking No.'};
   var country=countryMap[_lang]||'South Korea';
-  // 이름이 없으면 addr2를 이름으로 사용
-  var _name = d.name || d.addr2 || '';
-  var _addr1 = d.addr1 || '';
-  var _addr2 = (!d.name && d.addr2) ? '' : (d.addr2 || '');
-  var addrBlock=(_addr2?_addr2+'\n':'')+_addr1+'\n'+(d.city||country);
-  if(!d.name) d = Object.assign({}, d, {name: _name});
+  var addrBlock=(d.addr2?d.addr2+'\n':'')+d.addr1+'\n'+(d.city||country);
   var today=new Date();
   var dateStr=(today.getMonth()+1)+'/'+today.getDate()+'/'+today.getFullYear();
   var logoHtml=_logoData?'<img src="'+_logoData+'" style="max-height:32px;max-width:110px;object-fit:contain">':'<div style="font-size:16px;font-weight:900;color:#e8303a">cou<span style="color:#1a1a18">pang</span></div>';
