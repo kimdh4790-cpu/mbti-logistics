@@ -327,10 +327,22 @@ async function runOCR(){
 
   try{
     document.getElementById('loading-msg').textContent='AI 번역 중...';
-    // /claude-ocr 프록시 경유 (API 키 서버 보관, 브라우저 미노출)
-    var res=await fetch('https://mbti-logistics.kimdh4790.workers.dev/claude-ocr',{
+    // API 키 확인
+    var apiKey=(localStorage.getItem('mbti_claude_api_key')||'').trim();
+    if(!apiKey||apiKey.length<20){
+      document.getElementById('loading-card').style.display='none';
+      document.getElementById('preview-card').style.display='block';
+      showApiKeyInput();
+      return;
+    }
+    var res=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key':apiKey,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
       body:JSON.stringify({
         model:'claude-haiku-4-5-20251001',
         max_tokens:300,
@@ -480,7 +492,36 @@ function escH(s){
   return String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});
 }
 
-// API 키 UI 제거됨 — /claude-ocr 프록시 사용
+function showApiKeyInput(){
+  var ex=document.getElementById('apikey-card');
+  if(ex)return;
+  var card=document.createElement('div');
+  card.id='apikey-card';
+  card.className='card no-print';
+  card.innerHTML='<h2>🔑 API 키 설정</h2>'
+    +'<div style="background:#fff8e1;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;font-size:12px;color:#854f0b;margin-bottom:12px">'
+    +'💡 한 번만 입력하면 자동 저장됩니다.'
+    +'</div>'
+    +'<div class="field"><label>Anthropic API 키</label>'
+    +'<input id="api-key-input" type="password" placeholder="sk-ant-api03-..." style="font-family:monospace;font-size:12px"></div>'
+    +'<button class="btn btn-blue" onclick="saveApiKey()">저장 후 계속</button>';
+  var stepCam=document.getElementById('step-cam');
+  if(stepCam)stepCam.insertAdjacentElement('afterend',card);
+  else document.querySelector('.app').appendChild(card);
+  document.getElementById('apikey-card').scrollIntoView({behavior:'smooth'});
+}
+
+function saveApiKey(){
+  var key=(document.getElementById('api-key-input').value||'').trim();
+  if(!key||key.indexOf('sk-ant-')!==0){
+    alert('올바른 API 키 형식이 아닙니다 (sk-ant-로 시작)');
+    return;
+  }
+  localStorage.setItem('mbti_claude_api_key',key);
+  var card=document.getElementById('apikey-card');
+  if(card)card.remove();
+  runOCR();
+}
 
 
 // ── QR 코드 생성 (긴급배송 앱 스캔 호환) ──
@@ -532,4 +573,3 @@ function resetAndCam(){
 </script>
 </body>
 </html>
- 
