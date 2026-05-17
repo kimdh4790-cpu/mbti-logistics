@@ -3178,6 +3178,12 @@ function parseCoupangRevenue(file, month, onResult){
 // ══════════════════════════════════════════════════════
 // ██ 쿠팡 엑셀 → 캠프별 취합 → 성함+단가만 입력 → 저장 ██
 // ══════════════════════════════════════════════════════
+// @df 등 쿠팡 ID 접미사 제거
+function stripCoupangSuffix(uid){
+  if(!uid)return'';
+  return uid.trim().replace(/@df$/i,'').replace(/@[a-z0-9]+$/i,'').trim();
+}
+
 window.parseSettleExcelNuri=function(inp){
   const file=inp.files[0];
   if(!file)return;
@@ -3235,7 +3241,7 @@ window.parseSettleExcelNuri=function(inp){
         if(!row||!row[0])return;
         const cat=String(row[0]).trim();
         if(cat==='배송'||cat==='수기반영'){
-          const uid=row[1]?String(row[1]).trim():'';
+          const uid=stripCoupangSuffix(row[1]?String(row[1]).trim():'');
           if(!uid)return;
           const route=row[2]?String(row[2]).trim():'기타';
           const del=+row[7]||0;
@@ -3262,7 +3268,8 @@ window.parseSettleExcelNuri=function(inp){
 
         }else if(cat.includes('프레시백')||cat.includes('프레쉬백')||cat.includes('에코백')){
           const uid=row[1]?String(row[1]).trim():'';
-          if(uid)freshMap[uid]=(freshMap[uid]||0)+(+row[14]||0);
+          const fuid=stripCoupangSuffix(row[1]?String(row[1]).trim():'');
+          if(fuid)freshMap[fuid]=(freshMap[fuid]||0)+(+row[14]||0);
         }
       });
 
@@ -3386,7 +3393,10 @@ window.showPendingCamp=function(campName){
       </div>`).join('');
 
     return`<tr id="prow-${campName}-${pd.uid.replace(/@/g,'_')}">
-      <td style="font-family:monospace;font-size:10px;color:var(--text3);white-space:nowrap">${esc(pd.uid)}</td>
+      <td style="font-family:monospace;font-size:11px;font-weight:700;color:var(--text);white-space:nowrap">
+        ${esc(stripCoupangSuffix(pd.uid))}<br>
+        <span style="font-size:9px;font-weight:400;color:var(--text3);font-family:monospace">${esc(pd.uid)}</span>
+      </td>
       <td>
         <input id="pname-${campName}-${pd.uid.replace(/@/g,'_')}"
           placeholder="성함 입력" 
@@ -3420,7 +3430,7 @@ window.showPendingCamp=function(campName){
         <table>
           <thead><tr>
             <th>쿠팡 ID</th>
-            <th>성함 <span style="font-size:9px;font-weight:400;color:var(--text3)">(필수입력)</span></th>
+            <th>성함 <span style="font-size:9px;font-weight:400;color:var(--text3)">(선택)</span></th>
             <th>라우트 (배송건)</th>
             <th style="text-align:right">총건수</th>
             <th style="text-align:right">수익합계</th>
@@ -3473,8 +3483,7 @@ window.saveSinglePendingNuri=async function(campName,idx){
   const pd=window._nuriPending?.byCamp[campName]?.[idx];
   if(!pd)return;
   const nameEl=document.getElementById(`pname-${campName}-${pd.uid.replace(/@/g,'_')}`);
-  const driverName=(nameEl?.value.trim())||pd._name||pd.uid;
-  if(!driverName){toast('성함을 입력해주세요');nameEl?.focus();return;}
+  const driverName=(nameEl?.value.trim())||pd._name||'';
   try{
     await _saveOnePendingDriver(campName,pd,driverName);
     const row=document.getElementById(`prow-${campName}-${pd.uid.replace(/@/g,'_')}`);
@@ -3491,7 +3500,7 @@ window.saveCampPendingNuri=async function(campName){
     const pd=drivers[i];
     const nameEl=document.getElementById(`pname-${campName}-${pd.uid.replace(/@/g,'_')}`);
     const driverName=(nameEl?.value.trim())||pd._name||'';
-    if(!driverName){errors.push(pd.uid);continue;}
+    // 이름 없으면 uid 사용 (명세서는 ID 기준)
     try{await _saveOnePendingDriver(campName,pd,driverName);saved++;}catch(e){errors.push(pd.uid);}
   }
   if(errors.length>0)toast(`⚠️ ${saved}명 저장, ${errors.length}명 실패 (성함 미입력)`);
@@ -3524,11 +3533,14 @@ window.cancelPendingNuri=function(){
 };
 
 async function _saveOnePendingDriver(campName,pd,driverName){
+  // 명세서 식별자는 ID(driver), 성함은 선택 입력
+  if(!driverName)driverName='';//이름 없어도 저장
   const month=window._nuriPending.month;
   // 중복 체크
+  const cleanUid=stripCoupangSuffix(pd.uid);
   const exSnap=await getDocs(query(collection(db,'settlements'),
     where('dealerId','==',CU.dealerId),
-    where('driver','==',pd.uid),
+    where('driver','==',cleanUid),
     where('month','==',month)));
   if(!exSnap.empty){
     // 기존 업데이트
@@ -3539,7 +3551,7 @@ async function _saveOnePendingDriver(campName,pd,driverName){
     const emp=wage>=800000?Math.floor(wage*0.008/10)*10:0;
     const work=Math.floor(wage*0.0088/10)*10;
     await updateDoc(ref,{
-      driverName,driver:pd.uid,camp:campName,month,
+      driverName,driver:cleanUid,camp:campName,month,
       dcnt:pd.dcnt,rcnt:pd.rcnt,damt:pd.damt,ramt:pd.ramt,
       fresh:pd.fresh,finc:pd.finc,
       income,supplyAmt,monthlyWage:wage,emp,work,
@@ -3560,7 +3572,7 @@ async function _saveOnePendingDriver(campName,pd,driverName){
   const emp=wage>=800000?Math.floor(wage*0.008/10)*10:0;
   const work=Math.floor(wage*0.0088/10)*10;
   await addDoc(collection(db,'settlements'),{
-    dealerId:CU.dealerId,driverName,driver:pd.uid,
+    dealerId:CU.dealerId,driverName,driver:cleanUid,
     camp:campName,month,jobsub:'쿠팡',
     dcnt:pd.dcnt,rcnt:pd.rcnt,damt:pd.damt,ramt:pd.ramt,
     fresh:pd.fresh,finc:pd.finc,inc:0,
@@ -3572,10 +3584,10 @@ async function _saveOnePendingDriver(campName,pd,driverName){
   });
   // 기사 등록 (없으면)
   const drSnap2=await getDocs(query(collection(db,'drivers'),
-    where('userId','==',pd.uid),where('dealerId','==',CU.dealerId)));
+    where('userId','==',cleanUid),where('dealerId','==',CU.dealerId)));
   if(drSnap2.empty){
     await addDoc(collection(db,'drivers'),{
-      name:driverName,userId:pd.uid,dealerId:CU.dealerId,
+      name:driverName,userId:cleanUid,dealerId:CU.dealerId,
       camp:campName,jobsub:'쿠팡',is_active:true,status:'재직',
       createdAt:serverTimestamp()
     });
