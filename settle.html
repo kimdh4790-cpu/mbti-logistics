@@ -1029,9 +1029,13 @@ function _renderSettlePage(settles,c){
     return;
   }
   var months=[...new Set(settles.map(function(x){return x.month;}).filter(Boolean))].sort(function(a,b){return b.localeCompare(a);});
-  var monthTabs='<div style="display:flex;gap:5px;padding:8px 0 6px;flex-wrap:wrap">'
+  var monthTabs='<div style="display:flex;gap:5px;padding:8px 0 6px;flex-wrap:wrap;align-items:center">'
     +'<button onclick="filterSettleM(\'all\')" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(filterMonth==='all'?'var(--blue)':'var(--border)')+';background:'+(filterMonth==='all'?'var(--blue)':'var(--bg)')+';color:'+(filterMonth==='all'?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">전체</button>'
-    +months.map(function(m){var on=m===filterMonth;return '<button onclick="filterSettleM(\''+m+'\')" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(on?'var(--blue)':'var(--border)')+';background:'+(on?'var(--blue)':'var(--bg)')+';color:'+(on?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">'+m+'</button>';}).join('')
+    +months.map(function(m){var on=m===filterMonth;return ''
+      +'<span style="display:inline-flex;align-items:center;gap:2px">'
+      +'<button onclick="filterSettleM(\''+m+'\')" style="padding:5px 12px;border-radius:100px 0 0 100px;border:1.5px solid '+(on?'var(--blue)':'var(--border)')+';border-right:none;background:'+(on?'var(--blue)':'var(--bg)')+';color:'+(on?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">'+m+'</button>'
+      +'<button onclick="deleteMonthSettlements(\''+m+'\')" title="'+m+' 정산서 전체 삭제" style="padding:5px 8px;border-radius:0 100px 100px 0;border:1.5px solid '+(on?'var(--blue)':'var(--border)')+';border-left:1px solid '+(on?'rgba(255,255,255,.4)':'var(--border)')+';background:'+(on?'rgba(0,0,0,.15)':'var(--bg)')+';color:'+(on?'#fff':'#dc2626')+';font-size:11px;cursor:pointer;font-weight:700">🗑</button>'
+      +'</span>';}).join('')
     +'</div>';
   var campCount={all:settles.length};
   CAMP_LIST_S.forEach(function(cc){campCount[cc]=0;});
@@ -1066,7 +1070,7 @@ function _renderSettlePage(settles,c){
       +'<div onclick="toggleSettleGroup(\''+gid+'\')" style="display:flex;flex-direction:column;gap:6px;padding:10px 12px;background:var(--bg3);border-radius:var(--r);cursor:pointer;border:1px solid var(--border)">'
       +'<div style="display:flex;justify-content:space-between;align-items:center">'
       +'<span style="font-size:13px;font-weight:700;color:var(--purple)">'+mo+'</span>'
-      +'<span style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;color:var(--text3)">'+gRows.length+'명</span><span id="'+gid+'_a" style="font-size:11px;color:var(--text3)">'+arrow+'</span></span>'
+      +'<span style="display:flex;align-items:center;gap:8px"><button onclick="event.stopPropagation();deleteMonthSettlements(\''+mo+'\')" style="padding:3px 10px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">🗑 월 삭제</button><span style="font-size:11px;color:var(--text3)">'+gRows.length+'명</span><span id="'+gid+'_a" style="font-size:11px;color:var(--text3)">'+arrow+'</span></span>'
       +'</div>'
       +'<div style="display:flex;flex-wrap:wrap;gap:5px;font-size:10px">'
       +'<span style="padding:2px 8px;background:rgba(59,130,246,.12);border-radius:12px;color:#3b82f6">📦 쿠팡 총매출(VAT포함) ₩'+fmt(totCoupangVat)+'</span>'
@@ -1197,6 +1201,19 @@ function checkDuplicateSettlements(){
   _settleCache.forEach(function(x){var k=(x.driver||'')+'__'+(x.month||'');if(seen[k])dups.push(x);else seen[k]=true;});
   if(!dups.length){toast('✅ 중복 없음 ('+_settleCache.length+'건 검사 완료)');return;}
   toast('⚠️ 중복 '+dups.length+'건: '+dups.slice(0,5).map(function(x){return x.driver+' '+x.month;}).join(', ')+(dups.length>5?'...':''));
+}
+function deleteMonthSettlements(month){
+  if(!_settleCache){toast('❌ 데이터가 로드되지 않았습니다');return;}
+  var targets=_settleCache.filter(function(x){return x.month===month;});
+  if(!targets.length){toast('❌ '+month+' 정산서가 없습니다');return;}
+  if(!confirm('🗑 '+month+' 정산서 삭제\n\n총 '+targets.length+'건을 삭제합니다.\n이 작업은 되돌릴 수 없습니다.\n\n정말 삭제하시겠습니까?'))return;
+  var promises=targets.map(function(x){
+    return _db.collection('settlements').doc(x.id).delete().catch(function(){});
+  });
+  Promise.all(promises).then(function(){
+    toast('🗑 '+month+' 정산서 '+targets.length+'건 삭제 완료');
+    _reloadSettlePage();
+  }).catch(function(e){toast('❌ '+e.message);});
 }
 function syncFirebaseSettlements(){toast('🔄 Firebase 직접 연결 중 — 항상 최신 상태');_reloadSettlePage();}
 function closeMoById(id){var el=document.getElementById(id);if(el)el.remove();}
