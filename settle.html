@@ -1163,373 +1163,233 @@ function openTaxStore(){
     +'<div class="mdf"><button class="btn" onclick="closeMoById(\'mo-tax-store\')">닫기</button></div></div>';
   document.getElementById('modals').appendChild(mo);
 }
-function openIncPanel(){toast('⚙️ 기사별 인센 설정 — 메인앱에서 이용하세요');}
-function openCoupangStatsPanel(){
-  if(!_settleCache||!_settleCache.length){toast('❌ 데이터 없음');return;}
-  var sm={};
-  _settleCache.forEach(function(x){var m=x.month||'?';if(!sm[m])sm[m]={dcnt:0,cnt:0};sm[m].dcnt+=(+x.dcnt||0);sm[m].cnt++;});
-  var rows=Object.keys(sm).sort(function(a,b){return b.localeCompare(a);}).map(function(m){
-    return '<tr><td><strong>'+m+'</strong></td><td style="text-align:right">'+sm[m].cnt+'명</td><td style="text-align:right;font-weight:700">'+fmt(sm[m].dcnt)+'건</td></tr>';
-  }).join('');
-  var mo=document.createElement('div');mo.className='mo show';mo.id='mo-stats';
-  mo.onclick=function(e){if(e.target===mo)mo.remove();};
-  mo.innerHTML='<div class="md" style="max-width:420px">'
-    +'<div class="mdt">📊 쿠팡 건수 통계<button onclick="closeMoById(\'mo-stats\')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3)">✕</button></div>'
-    +'<div style="overflow-x:auto"><table><thead><tr><th>월</th><th style="text-align:right">기사수</th><th style="text-align:right">총 배송건수</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
-    +'<div class="mdf"><button class="btn" onclick="closeMoById(\'mo-stats\')">닫기</button></div></div>';
-  document.getElementById('modals').appendChild(mo);
+// ══ 인센 설정 ══
+function _incKey(drv,route){return 'inc_'+drv.replace(/\s/g,'_')+'_'+route;}
+function _getIncSetting(drv,route){
+  var raw=localStorage.getItem(_incKey(drv,route));
+  if(!raw)return{on:true,rate:25};
+  try{return JSON.parse(raw);}catch(e){return{on:true,rate:25};}
 }
-function openSettleCompare(){
-  if(!_settleCache||!_settleCache.length){toast('❌ 데이터 없음');return;}
-  var dm={};
-  _settleCache.forEach(function(x){var n=x.driver||'?';if(!dm[n])dm[n]={dcnt:0,net:0,cnt:0};dm[n].dcnt+=(+x.dcnt||0);dm[n].net+=calcNet(x).net;dm[n].cnt++;});
-  var sorted=Object.keys(dm).sort(function(a,b){return dm[b].net-dm[a].net;});
-  var rows=sorted.map(function(n){
-    return '<tr><td><strong>'+esc(n)+'</strong></td><td style="text-align:right">'+dm[n].cnt+'건</td><td style="text-align:right">'+fmt(dm[n].dcnt)+'건</td><td style="text-align:right;font-weight:700;color:var(--purple)">₩'+fmt(dm[n].net)+'</td></tr>';
-  }).join('');
-  var mo=document.createElement('div');mo.className='mo show';mo.id='mo-compare';
-  mo.onclick=function(e){if(e.target===mo)mo.remove();};
-  mo.innerHTML='<div class="md" style="max-width:500px">'
-    +'<div class="mdt">📊 기사별 실적 비교<button onclick="closeMoById(\'mo-compare\')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3)">✕</button></div>'
-    +'<div style="overflow-x:auto"><table><thead><tr><th>기사</th><th style="text-align:right">정산수</th><th style="text-align:right">총 배송</th><th style="text-align:right">실지급 합계</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
-    +'<div class="mdf"><button class="btn" onclick="closeMoById(\'mo-compare\')">닫기</button></div></div>';
-  document.getElementById('modals').appendChild(mo);
-}
-function checkDuplicateSettlements(){
-  if(!_settleCache||!_settleCache.length){toast('❌ 데이터 없음');return;}
-  var seen={};var dups=[];
-  _settleCache.forEach(function(x){var k=(x.driver||'')+'__'+(x.month||'');if(seen[k])dups.push(x);else seen[k]=true;});
-  if(!dups.length){toast('✅ 중복 없음 ('+_settleCache.length+'건 검사 완료)');return;}
-  toast('⚠️ 중복 '+dups.length+'건: '+dups.slice(0,5).map(function(x){return x.driver+' '+x.month;}).join(', ')+(dups.length>5?'...':''));
-}
-function deleteMonthSettlements(month){
-  if(!_settleCache){toast('❌ 데이터가 로드되지 않았습니다');return;}
-  var targets=_settleCache.filter(function(x){return x.month===month;});
-  if(!targets.length){toast('❌ '+month+' 정산서가 없습니다');return;}
-  if(!confirm('🗑 '+month+' 정산서 삭제\n\n총 '+targets.length+'건을 삭제합니다.\n이 작업은 되돌릴 수 없습니다.\n\n정말 삭제하시겠습니까?'))return;
-  var promises=targets.map(function(x){
-    return _db.collection('settlements').doc(x.id).delete().catch(function(){});
-  });
-  Promise.all(promises).then(function(){
-    toast('🗑 '+month+' 정산서 '+targets.length+'건 삭제 완료');
-    _reloadSettlePage();
-  }).catch(function(e){toast('❌ '+e.message);});
-}
-function syncFirebaseSettlements(){toast('🔄 Firebase 직접 연결 중 — 항상 최신 상태');_reloadSettlePage();}
-function closeMoById(id){var el=document.getElementById(id);if(el)el.remove();}
-function _saveSECurrent(){
-  var idEl=document.getElementById('se-id');
-  _saveSE(idEl?idEl.value:'');
-}
-function toggleSettleGroup(gid){
-  var b=document.getElementById(gid);
-  var a=document.getElementById(gid+'_a');
-  if(b){b.style.display=b.style.display==='none'?'block':'none';if(a)a.textContent=b.style.display==='none'?'▼':'▲';}
-}
-function _settleRow(x){
-  var r=calcNet(x);
-  var _cp=_getSettleCamp(x);
-  var _cpCol=CAMP_COL_S[_cp]||'#94a3b8';
-  var jobBadge={'쿠팡':'b-coral','컬리':'b-purple','CJ':'b-blue','용차':'b-done'}[x.jobsub]||'b-wait';
-  var tr=document.createElement('tr');
-  var btnStmt=document.createElement('button');btnStmt.className='btn btn-sm';btnStmt.textContent='명세서';btnStmt.onclick=function(){viewStmt(x.id);};
-  var btnDel=document.createElement('button');btnDel.className='btn btn-sm';btnDel.style.cssText='background:#fee2e2;color:#dc2626;border:1px solid #fca5a5';btnDel.textContent='🗑';btnDel.onclick=function(){delSettle(x.id);};
-  var acts=[btnStmt];
-  if(x.status!=='완료'){var btnApp=document.createElement('button');btnApp.className='btn btn-sm btn-teal';btnApp.textContent='승인';btnApp.onclick=function(){appSettle(x.id);};acts.push(btnApp);}
-  acts.push(btnDel);
-  var actTd=document.createElement('td');actTd.style.cssText='display:flex;gap:3px;flex-wrap:wrap';
-  acts.forEach(function(b){actTd.appendChild(b);});
-  tr.innerHTML='<td><strong>'+esc(x.driver||x.driverName||'')+'</strong>'
-    +' <span style="display:inline-block;padding:1px 6px;margin-left:3px;border-radius:4px;font-size:9px;font-weight:700;color:#fff;background:'+_cpCol+'">'+_cp+'</span></td>'
-    +'<td><span class="badge '+jobBadge+'" style="font-size:10px">'+(x.jobsub||'쿠팡')+'</span></td>'
-    +'<td>'+esc(x.month||'')+'</td>'
-    +'<td style="color:var(--green)">₩'+fmt(r.income)+'</td>'
-    +'<td style="color:var(--red);font-size:11px">₩'+fmt(r.emp)+'</td>'
-    +'<td style="color:#dc2626;font-size:11px">₩'+fmt(r.work)+'</td>'
-    +'<td style="font-weight:700;color:var(--purple)">₩'+fmt(r.net)+'</td>'
-    +'<td><span class="badge '+(x.status==='완료'?'b-green':'b-wait')+'">'+(x.status||'정산예정')+'</span></td>';
-  tr.appendChild(actTd);
-  return tr.outerHTML;
-}
-function filterSettleM(m){_settle_month=m;var el=document.getElementById('content');if(el&&_settleCache)_renderSettlePage(_settleCache,el);}
-function filterSettleC(cc){_settle_camp=cc;var el=document.getElementById('content');if(el&&_settleCache)_renderSettlePage(_settleCache,el);}
-function goInsExcel(){toast('⚙️ 고용·산재 엑셀 기능은 메인앱(엠비티아이 물류관리)에서 이용하세요');}
-function toggleSettleMore(btn){var m=document.getElementById('settle-more-btns');if(!m)return;var shown=m.style.display==='flex';m.style.display=shown?'none':'flex';btn.textContent=shown?'더보기 ▼':'더보기 ▲';}
-function delSettle(id){
-  if(!confirm('삭제하시겠습니까?'))return;
-  _db.collection('settlements').doc(id).delete().then(function(){toast('🗑 삭제');pageSettlements();});
-}
-
-function viewStmt(id){
-  _db.collection('settlements').doc(id).get().then(function(snap){
-    if(!snap.exists)return;
-    var s=Object.assign({id:snap.id},snap.data());
-    var r=calcNet(s);
-    var rRows=(s.routeDetails||[]).map(function(rd){
-      return '<tr><td><strong>'+esc(rd.route)+'</strong></td>'
-        +'<td style="text-align:right">'+fmt(rd.cnt)+'건</td>'
-        +'<td style="text-align:right">₩'+fmt(rd.unitPrice||0)+'</td>'
-        +'<td style="text-align:right;font-weight:600">₩'+fmt((rd.cnt||0)*(rd.unitPrice||0))+'</td></tr>';
-    }).join('');
-    var mo=document.createElement('div');mo.className='mo show';mo.id='mo-stmt';
-    mo.onclick=function(e){if(e.target===mo)mo.remove();};
-    mo.innerHTML='<div class="md" style="max-width:600px">'
-      +'<div class="mdt">'+esc(s.month)+' '+esc(s.driverName||s.driver)+' 명세서'
-      +' <button onclick="document.getElementById(\'mo-stmt\').remove()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3)">✕</button></div>'
-      +(rRows?'<div style="overflow-x:auto;margin-bottom:12px"><table><thead><tr><th>라우트</th><th style="text-align:right">배송</th><th style="text-align:right">단가</th><th style="text-align:right">금액</th></tr></thead><tbody>'+rRows+'</tbody></table></div>':'')
-      +'<div style="border-top:2px solid var(--border);padding-top:10px">'
-      +'<div style="display:flex;justify-content:space-between;margin-bottom:5px"><span>배송 수익</span><span style="color:#0F6E56">₩'+fmt(r.income)+'</span></div>'
-      +'<div style="display:flex;justify-content:space-between;margin-bottom:5px"><span>공제 (고용+산재)</span><span style="color:#A32D2D">-₩'+fmt(r.deduct)+'</span></div>'
-      +'<div style="display:flex;justify-content:space-between;background:var(--brand-l);padding:10px;border-radius:var(--r);margin-top:8px">'
-      +'<strong style="font-size:15px">실지급액</strong>'
-      +'<strong style="font-size:20px;color:#185FA5">₩'+fmt(r.net)+'</strong></div></div>'
-      +'<div class="mdf"><button class="btn" onclick="document.getElementById(\'mo-stmt\').remove()">닫기</button>'
-      +'<button class="btn btn-green btn-sm" onclick="window.print()">🖨️ 인쇄</button></div>'
-      +'</div>';
-    document.getElementById('modals').appendChild(mo);
-  });
-}
-
-// ══ 기사 관리 ══
-var _drvCache=null,_drvCampFilter='all';
-function pageDrivers(){
-  document.getElementById('page-title').textContent='기사 관리';
-  var tr=document.getElementById('topbar-right');tr.innerHTML='';
-  var btn=document.createElement('button');btn.className='btn btn-blue btn-sm';btn.textContent='+ 기사 추가';btn.onclick=openAddDriver;tr.appendChild(btn);
-  var c=document.getElementById('content');
-  if(!_db){c.innerHTML='<div class="empty"><div class="empty-icon">👤</div>로그인 후 이용하세요</div>';return;}
-  c.innerHTML='<div class="loading">로딩 중...</div>';
-  if(_drvCache){_renderDrivers(_drvCache,c);return;}
-  _db.collection('drivers').where('dealerId','==',_CU.dealerId).get().then(function(snap){
-    _drvCache=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
-    _renderDrivers(_drvCache,c);
-  }).catch(function(e){c.innerHTML='<div class="empty">⚠️ '+e.message+'</div>';});
-}
-function _getDrvCamp(d){
-  if(!d)return '';
-  if(d.camp)return d.camp.replace('캠프','');
-  var r=d.route||'';
-  var ORDER=['부산1','부산2','부산3','대구2','진주M'];
-  for(var i=0;i<ORDER.length;i++){if(r.indexOf(ORDER[i])>=0)return ORDER[i];}
-  if(r==='213')return '대구2B';if(r.indexOf('대구')>=0)return '대구2';if(r.indexOf('진주')>=0)return '진주M';
-  return '';
-}
-function filterDrvCamp(cc){_drvCampFilter=cc;var el=document.getElementById('content');if(el&&_drvCache)_renderDrivers(_drvCache,el);}
-function _renderDrivers(drivers,c){
-  var CAMPS=['부산1','부산2','부산3','대구2','대구2B','진주M'];
-  var CCOL={'부산1':'#3B82F6','부산2':'#8B5CF6','부산3':'#10B981','대구2':'#F59E0B','대구2B':'#FB923C','진주M':'#EF4444'};
-  var act=drivers.filter(function(d){return d.is_active!==false&&d.status!=='탈퇴'&&d.status!=='거부';});
-  var cntMap={};CAMPS.forEach(function(cc){cntMap[cc]=0;});
-  act.forEach(function(d){var cc=_getDrvCamp(d);if(cntMap[cc]!==undefined)cntMap[cc]++;});
-  var flt=_drvCampFilter;
-  var filtered=flt==='all'?act:act.filter(function(d){return _getDrvCamp(d)===flt;});
-  // 캠프 필터 탭
-  var tabs='<div style="display:flex;gap:5px;padding:8px 0 12px;flex-wrap:wrap;align-items:center">'
-    +'<span style="font-size:10px;color:var(--text3);font-weight:700;margin-right:4px">🏕️ 캠프</span>'
-    +'<button onclick="filterDrvCamp(\'all\')" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(flt==='all'?'var(--blue)':'var(--border)')+';background:'+(flt==='all'?'var(--blue)':'var(--bg)')+';color:'+(flt==='all'?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">전체 ('+act.length+')</button>'
-    +CAMPS.map(function(cc){var on=cc===flt;var col=CCOL[cc]||'var(--blue)';var cnt=cntMap[cc]||0;
-      return '<button onclick="filterDrvCamp(\''+cc+'\')" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(on?col:'var(--border)')+';background:'+(on?col:'var(--bg)')+';color:'+(on?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">'+cc+' ('+cnt+')</button>';}).join('')
-    +'</div>';
-  if(!filtered.length){c.innerHTML=tabs+'<div class="empty"><div class="empty-icon">👤</div>해당 캠프 기사가 없습니다</div>';return;}
-  // 캠프별 그룹 테이블
-  var byCamp={};
-  filtered.forEach(function(d){var camp=_getDrvCamp(d)||'미지정';if(!byCamp[camp])byCamp[camp]=[];byCamp[camp].push(d);});
-  var campOrder=flt==='all'?[].concat(CAMPS,['미지정','기타']):[flt];
-  var html=tabs+campOrder.filter(function(cc){return byCamp[cc]&&byCamp[cc].length;}).map(function(camp){
-    var col=CCOL[camp]||'#94A3B8';
-    return '<div class="card" style="margin-bottom:10px"><div class="card-header"><div class="card-title" style="color:'+col+'">🏕 '+camp+' ('+byCamp[camp].length+'명)</div></div>'
-      +'<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>성함</th><th>쿠팡 ID</th><th>상태</th><th></th></tr></thead><tbody>'
-      +byCamp[camp].map(function(d){
-        var actBadge=d.is_active!==false?'b-green':'b-red';
-        var actTxt=d.is_active!==false?'재직':'퇴직';
-        return '<tr><td><strong>'+esc(d.name||'')+'</strong></td>'
-          +'<td style="font-family:monospace;font-size:11px;color:var(--text3)">'+esc(d.userId||'')+'</td>'
-          +'<td><span class="badge '+actBadge+'">'+actTxt+'</span></td>'
-          +'<td><button class="btn btn-sm" onclick="editDriver(\''+d.id+'\')">수정</button></td></tr>';
-      }).join('')
-      +'</tbody></table></div></div>';
-  }).join('');
-  c.innerHTML=html;
-}
-
-function openAddDriver(){
-  var mo=document.createElement('div');mo.className='mo show';mo.id='mo-add-dr';
-  mo.innerHTML='<div class="md"><div class="mdt">👤 기사 추가 <button onclick="document.getElementById(\'mo-add-dr\').remove()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3)">✕</button></div>'
-    +'<div class="gr"><div class="fg"><label>성함</label><input id="adr-name" placeholder="홍길동"></div>'
-    +'<div class="fg"><label>쿠팡 ID <small style="color:var(--text3)">(@df 자동 제거)</small></label><input id="adr-uid" placeholder="abc123" style="font-family:monospace"></div></div>'
-    +'<div class="gr"><div class="fg"><label>캠프</label><select id="adr-camp">'
-    +CAMP_ORDER.map(function(c){return '<option>'+c+'</option>';}).join('')+'</select></div>'
-    +'<div class="fg"><label>상태</label><select id="adr-active"><option value="true">재직</option><option value="false">퇴직</option></select></div></div>'
-    +'<div class="fg"><label>연락처</label><input id="adr-phone" placeholder="010-0000-0000"></div>'
-    +'<div class="mdf"><button class="btn" onclick="document.getElementById(\'mo-add-dr\').remove()">취소</button>'
-    +'<button class="btn btn-blue" onclick="saveNewDriver()">저장</button></div></div>';
-  document.getElementById('modals').appendChild(mo);
-}
-
-function saveNewDriver(){
-  var name=(document.getElementById('adr-name')||{value:''}).value.trim();
-  var uid=stripDf((document.getElementById('adr-uid')||{value:''}).value.trim());
-  if(!uid){toast('쿠팡 ID를 입력하세요');return;}
-  _db.collection('drivers').add({
-    name:name||'',userId:uid,dealerId:_CU.dealerId,
-    camp:(document.getElementById('adr-camp')||{value:''}).value||'',
-    phone:(document.getElementById('adr-phone')||{value:''}).value.trim()||'',
-    jobsub:'쿠팡',is_active:(document.getElementById('adr-active')||{value:'true'}).value!=='false',
-    status:'재직',createdAt:firebase.firestore.FieldValue.serverTimestamp()
-  }).then(function(){closeMoById('mo-add-dr');toast('✅ 기사 추가');pageDrivers();})
-  .catch(function(e){toast('❌ '+e.message);});
-}
-
-function editDriver(id){
-  _db.collection('drivers').doc(id).get().then(function(snap){
-    if(!snap.exists)return;
-    var d=snap.data();
-    var mo=document.createElement('div');mo.className='mo show';mo.id='mo-edit-dr';
-    mo.innerHTML='<div class="md"><div class="mdt">✏️ 기사 수정 <button onclick="document.getElementById(\'mo-edit-dr\').remove()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3)">✕</button></div>'
-      +'<div class="gr"><div class="fg"><label>성함</label><input id="edr-name" value="'+esc(d.name||'')+'"></div>'
-      +'<div class="fg"><label>쿠팡 ID</label><input id="edr-uid" value="'+esc(d.userId||'')+'" style="font-family:monospace"></div></div>'
-      +'<div class="gr"><div class="fg"><label>캠프</label><select id="edr-camp">'
-      +CAMP_ORDER.map(function(c){return '<option '+(d.camp===c?'selected':'')+'>'+c+'</option>';}).join('')+'</select></div>'
-      +'<div class="fg"><label>상태</label><select id="edr-active"><option value="true" '+(d.is_active!==false?'selected':'')+'>재직</option><option value="false" '+(d.is_active===false?'selected':'')+'>퇴직</option></select></div></div>'
-      +'<div class="fg"><label>연락처</label><input id="edr-phone" value="'+esc(d.phone||'')+'"></div>'
-      +'<div class="mdf"><button class="btn btn-red btn-sm" style="margin-right:auto" onclick="delDriver(\''+id+'\')">삭제</button>'
-      +'<button class="btn" onclick="document.getElementById(\'mo-edit-dr\').remove()">취소</button>'
-      +'<button class="btn btn-blue" onclick="saveDriver(\''+id+'\')">저장</button></div></div>';
-    document.getElementById('modals').appendChild(mo);
-  });
-}
-
-function saveDriver(id){
-  _db.collection('drivers').doc(id).update({
-    name:(document.getElementById('edr-name')||{value:''}).value.trim()||'',
-    userId:stripDf((document.getElementById('edr-uid')||{value:''}).value.trim()||''),
-    camp:(document.getElementById('edr-camp')||{value:''}).value||'',
-    phone:(document.getElementById('edr-phone')||{value:''}).value.trim()||'',
-    is_active:(document.getElementById('edr-active')||{value:'true'}).value!=='false'
-  }).then(function(){closeMoById('mo-edit-dr');toast('✅ 저장');pageDrivers();});
-}
-
-function delDriver(id){
-  if(!confirm('삭제하시겠습니까?'))return;
-  _db.collection('drivers').doc(id).delete().then(function(){closeMoById('mo-edit-dr');toast('🗑 삭제');pageDrivers();});
-}
-
-// ══ 단가표 ══
-function pagePrices(){
-  document.getElementById('page-title').textContent='라우트 단가표';
-  document.getElementById('topbar-right').innerHTML='<button class="btn btn-blue btn-sm" onclick="saveRprice()">💾 저장</button>';
-  var c=document.getElementById('content');
-  if(!_db){c.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
-  // Firebase에서 최신 단가 로드 후 렌더
-  c.innerHTML='<div class="loading">로딩 중...</div>';
-  _db.collection('settings').doc('routePrices').get().then(function(snap){
-    if(snap.exists){Object.assign(RPRICE,snap.data());}
-    _renderPrices(c);
-  }).catch(function(){_renderPrices(c);});
-}
-function _renderPrices(c){
-  var groups={};
-  Object.keys(RPRICE).sort().forEach(function(r){
-    var camp=getCampByRoute(r)||'기타';
-    if(!groups[camp])groups[camp]=[];
-    groups[camp].push(r);
-  });
-  var hasAny=Object.keys(RPRICE).length>0;
-  var html='<div style="background:#E6F1FB;border-radius:10px;padding:10px 12px;font-size:11px;color:#0C447C;margin-bottom:12px">💡 기사 지급 단가표. 수정 후 저장하면 다음 정산부터 반영됩니다.</div>';
-  if(!hasAny){
-    html+='<div class="empty"><div class="empty-icon">📋</div><div style="font-size:13px;font-weight:700;margin-bottom:6px">등록된 단가가 없습니다</div>'
-      +'<div style="font-size:11px;color:var(--text3)">메인앱(엠비티아이 물류관리)에서 단가를 먼저 설정해주세요</div></div>';
-    c.innerHTML=html;return;
+function _setIncSetting(drv,route,on,rate){
+  localStorage.setItem(_incKey(drv,route),JSON.stringify({on:on,rate:rate}));
+  if(_db){
+    var key=_incKey(drv,route);var obj={};obj[key]={on:on,rate:rate};
+    _db.collection('settings').doc('incSettings').set(obj,{merge:true}).catch(function(){});
   }
-  var campOrderLocal=['부산1캠프','부산2캠프','부산3캠프','대구2캠프','대구2B캠프','진주M캠프','기타'];
-  var CCOL={'부산1캠프':'#3B82F6','부산2캠프':'#8B5CF6','부산3캠프':'#10B981','대구2캠프':'#F59E0B','대구2B캠프':'#FB923C','진주M캠프':'#EF4444','기타':'#94A3B8'};
-  campOrderLocal.forEach(function(camp){
-    if(!groups[camp]||!groups[camp].length)return;
-    var col=CCOL[camp]||'#94A3B8';
-    html+='<div class="card" style="margin-bottom:10px"><div class="card-header"><div class="card-title" style="color:'+col+'">🏕 '+camp.replace('캠프','')+'</div></div>'
-      +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px">'
-      +groups[camp].map(function(r){
-        return '<div style="display:flex;flex-direction:column;align-items:center;background:var(--bg3);border-radius:8px;padding:10px 4px">'
-          +'<div style="font-size:11px;font-weight:700;color:'+col+';margin-bottom:5px">'+r+'</div>'
-          +'<input type="number" id="rp-'+r+'" value="'+(RPRICE[r]||0)+'" min="0" step="10"'
-          +' style="width:80px;padding:5px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;text-align:center;background:var(--bg);color:var(--text)">'
-          +'<div style="font-size:9px;color:var(--text3);margin-top:3px">원/건</div></div>';
-      }).join('')
-      +'</div></div>';
-  });
-  c.innerHTML=html;
 }
-
-function saveRprice(){
-  Object.keys(RPRICE).forEach(function(r){var el=document.getElementById('rp-'+r);if(el)RPRICE[r]=+el.value||0;});
-  _db.collection('settings').doc('routePrices').set(RPRICE)
-    .then(function(){toast('✅ 단가 저장 완료');}).catch(function(e){toast('❌ '+e.message);});
-}
-
-// ══ 통계 ══
-function pageStats(){
-  document.getElementById('page-title').textContent='통계';
-  document.getElementById('topbar-right').innerHTML='';
-  var c=document.getElementById('content');c.innerHTML='<div class="loading">로딩 중...</div>';
+function loadIncSettingsFromFB(){
   if(!_db)return;
-  // 캐시 재활용
-  if(_settleCache){_renderStats(_settleCache,c);return;}
-  _db.collection('settlements').where('dealerId','==',_CU.dealerId).get().then(function(snap){
-    if(snap.empty){c.innerHTML='<div class="empty"><div class="empty-icon">📈</div>데이터 없음</div>';return;}
-    _settleCache=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
-    _settleCache.sort(function(a,b){return (b.month||'').localeCompare(a.month||'');});
-    _renderStats(_settleCache,c);
-  }).catch(function(e){c.innerHTML='<div class="empty">⚠️ '+e.message+'</div>';});
+  _db.collection('settings').doc('incSettings').get().then(function(doc){
+    if(!doc.exists)return;
+    var data=doc.data();
+    Object.keys(data).forEach(function(k){
+      if(k.startsWith('inc_'))localStorage.setItem(k,JSON.stringify(data[k]));
+    });
+  }).catch(function(){});
 }
-function _renderStats(settles,c){
-  var CAMPS=['부산1','부산2','부산3','대구2','대구2B','진주M'];
-  var CCOL={'부산1':'#3B82F6','부산2':'#8B5CF6','부산3':'#10B981','대구2':'#F59E0B','대구2B':'#FB923C','진주M':'#EF4444'};
-  var byMonth={},byDriver={},byCamp={};
-  settles.forEach(function(s){
-    var m=s.month||'';var r=calcNet(s);
-    var camp=_getSettleCamp(s)||'기타';
-    if(!byMonth[m])byMonth[m]={cnt:0,income:0,net:0,dcnt:0};
-    byMonth[m].cnt++;byMonth[m].income+=r.income||0;byMonth[m].net+=r.net||0;byMonth[m].dcnt+=(+s.dcnt||0);
-    var n=s.driverName||s.driver||'';
-    if(!byDriver[n])byDriver[n]={net:0,dcnt:0,cnt:0,camp:camp};
-    byDriver[n].net+=r.net||0;byDriver[n].dcnt+=(+s.dcnt||0);byDriver[n].cnt++;
-    if(!byCamp[camp])byCamp[camp]={net:0,dcnt:0,cnt:0,income:0};
-    byCamp[camp].net+=r.net||0;byCamp[camp].dcnt+=(+s.dcnt||0);byCamp[camp].cnt++;byCamp[camp].income+=r.income||0;
+var INC_CAMPS=[
+  {name:'부산1캠프',prefixes:['101','215'],color:'#1E5FAD'},
+  {name:'부산2캠프',prefixes:['812'],color:'#8B5CF6'},
+  {name:'부산3캠프',prefixes:['508'],color:'#10B981'},
+  {name:'대구2캠프',prefixes:['109','213'],color:'#F59E0B'},
+  {name:'대구2B캠프',prefixes:['213B','214'],color:'#FB923C'},
+  {name:'진주M캠프',prefixes:['406','608','612','613','614','619'],color:'#EF4444'}
+];
+function _getCampForRoute(route){
+  for(var ci=0;ci<INC_CAMPS.length;ci++){
+    if(INC_CAMPS[ci].prefixes.some(function(p){return route.startsWith(p);}))
+      return INC_CAMPS[ci].name;
+  }
+  return '기타';
+}
+
+function openIncPanel(){
+  var settle=_settleCache||[];
+  if(!settle.length){
+    if(!_db){toast('❌ 로그인 후 이용하세요');return;}
+    toast('⏳ 정산 데이터 로딩 중...');
+    _db.collection('settlements').where('dealerId','==',_CU.dealerId).get()
+      .then(function(snap){
+        _settleCache=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
+        openIncPanel();
+      });
+    return;
+  }
+  var panelData={};
+  settle.forEach(function(s){
+    if(!s.routeDetails||!s.routeDetails.length)return;
+    if(!panelData[s.driver])panelData[s.driver]=[];
+    s.routeDetails.forEach(function(rd){
+      if(rd.route&&panelData[s.driver].indexOf(rd.route)<0)
+        panelData[s.driver].push(rd.route);
+    });
   });
-  var months=Object.keys(byMonth).sort().reverse().slice(0,12);
-  var drivers=Object.keys(byDriver).sort(function(a,b){return byDriver[b].net-byDriver[a].net;}).slice(0,20);
-  var campRows=[].concat(CAMPS,['기타']).filter(function(cc){return byCamp[cc];}).map(function(cc){
-    var col=CCOL[cc]||'#94A3B8';
-    return '<tr><td><strong style="color:'+col+'">'+cc+'</strong></td><td>'+byCamp[cc].cnt+'건</td><td>'+fmt(byCamp[cc].dcnt)+'건</td>'
-      +'<td style="color:var(--green)">₩'+fmt(byCamp[cc].income)+'</td>'
-      +'<td style="font-weight:800;color:var(--purple)">₩'+fmt(byCamp[cc].net)+'</td></tr>';
-  }).join('');
-  c.innerHTML='<div style="display:grid;gap:14px">'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">'
-    +'<div class="card"><div class="card-header"><div class="card-title">📅 월별 현황</div></div>'
-    +'<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>월</th><th>정산</th><th>배송건</th><th>수익합계</th><th>실지급</th></tr></thead><tbody>'
-    +months.map(function(m){return '<tr><td><strong>'+m+'</strong></td><td>'+byMonth[m].cnt+'건</td><td>'+fmt(byMonth[m].dcnt)+'건</td>'
-      +'<td style="color:#0F6E56">₩'+fmt(byMonth[m].income)+'</td>'
-      +'<td style="font-weight:800;color:#185FA5">₩'+fmt(byMonth[m].net)+'</td></tr>';}).join('')
-    +'</tbody></table></div></div>'
-    +'<div class="card"><div class="card-header"><div class="card-title">🏕️ 캠프별 현황</div></div>'
-    +'<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>캠프</th><th>정산수</th><th>배송건</th><th>수익합계</th><th>실지급</th></tr></thead><tbody>'
-    +campRows
-    +'</tbody></table></div></div>'
-    +'</div>'
-    +'<div class="card"><div class="card-header"><div class="card-title">🏆 기사별 순위</div></div>'
-    +'<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>#</th><th>기사</th><th>캠프</th><th>정산수</th><th>배송건</th><th>실지급 합계</th></tr></thead><tbody>'
-    +drivers.map(function(n,i){
-      var cc=byDriver[n].camp||'';var col=CCOL[cc]||'#94a3b8';
-      return '<tr><td style="font-weight:800;color:'+(i<3?'#f59e0b':'var(--text3)')+'">'+(i+1)+'</td>'
-        +'<td><strong>'+esc(n)+'</strong></td>'
-        +'<td><span style="background:'+col+'22;color:'+col+';border-radius:4px;padding:1px 7px;font-size:10px;font-weight:700">'+cc+'</span></td>'
-        +'<td>'+byDriver[n].cnt+'건</td>'
-        +'<td>'+fmt(byDriver[n].dcnt)+'건</td>'
-        +'<td style="font-weight:800;color:#185FA5">₩'+fmt(byDriver[n].net)+'</td></tr>';}).join('')
-    +'</tbody></table></div></div>'
+  var drivers=Object.keys(panelData).sort();
+  if(!drivers.length){toast('정산서에 라우트 정보가 없습니다 — 쿠팡 엑셀 업로드 후 시도하세요');return;}
+
+  function _buildIncPanel(){
+    // 행 생성 함수 (이스케이프 주의: HTML onclick 속성 내 작은따옴표)
+    function mkTogBtn(drv,route,s){
+      var id='inct_'+drv.replace(/\s/g,'_')+'_'+route;
+      var bg=s.on?'#059669':'#6b7280';
+      var txt=s.on?'🟢 ON':'🔴 OFF';
+      return '<button onclick="_incToggle2(this,\''+drv+'\',\''+route+'\')" id="'+id+'" '
+        +'style="padding:3px 10px;border-radius:100px;border:none;font-size:11px;font-weight:700;cursor:pointer;background:'+bg+';color:#fff">'+txt+'</button>';
+    }
+    function mkRateBtn(drv,route,s,r){
+      var id='incr_'+drv.replace(/\s/g,'_')+'_'+route+'_'+r;
+      var on=(s.rate===r);
+      return '<button onclick="_incRate2(\''+drv+'\',\''+route+'\','+r+')" id="'+id+'" '
+        +'style="padding:3px 8px;border-radius:6px;border:1.5px solid '+(on?'var(--blue)':'var(--border)')+';'
+        +'background:'+(on?'var(--blue)':'var(--bg)')+';color:'+(on?'#fff':'var(--text2)')+';font-size:11px;font-weight:700;cursor:pointer">×'+r+'</button>';
+    }
+
+    var rows=drivers.map(function(drv){
+      return panelData[drv].sort().map(function(route){
+        var s=_getIncSetting(drv,route);
+        var campName=_getCampForRoute(route);
+        var drvId=drv.replace(/\s/g,'_');
+        var rateOpts=[10,15,25].map(function(r){return mkRateBtn(drv,route,s,r);}).join('');
+        var customVal=([10,15,25].indexOf(s.rate)<0)?s.rate:'';
+        return '<tr class="inc-row" data-camp="'+campName+'" style="border-bottom:1px solid var(--border)">'
+          +'<td style="padding:7px 8px;font-weight:600;font-size:12px">'+esc(drv)+'</td>'
+          +'<td style="padding:7px 8px;font-size:12px;color:var(--blue);font-weight:700">'+route+'</td>'
+          +'<td style="padding:7px 8px">'+mkTogBtn(drv,route,s)+'</td>'
+          +'<td style="padding:7px 8px"><div style="display:flex;gap:4px;align-items:center">'
+            +rateOpts
+            +'<input id="incc_'+drvId+'_'+route+'" type="number" value="'+customVal+'" placeholder="직접" '
+            +'style="width:52px;padding:3px 5px;border:1.5px solid var(--border);border-radius:6px;font-size:11px;background:var(--bg);color:var(--text)" '
+            +'oninput="_incCustom2(\''+drv+'\',\''+route+'\',this.value)">'
+            +'<span style="font-size:11px;color:var(--text3)">원</span>'
+          +'</div></td>'
+          +'</tr>';
+      }).join('');
+    }).join('');
+
+    var campBulkBtns=INC_CAMPS.map(function(camp){
+      var campRoutes=[];
+      Object.keys(panelData).forEach(function(drv){
+        panelData[drv].forEach(function(route){
+          if(camp.prefixes.some(function(p){return route.startsWith(p);}))
+            campRoutes.push({drv:drv,route:route});
+        });
+      });
+      if(!campRoutes.length)return '';
+      var onCount=campRoutes.filter(function(x){return _getIncSetting(x.drv,x.route).on;}).length;
+      var total=campRoutes.length;
+      var allOn=(total>0&&onCount===total);
+      var allOff=(total>0&&onCount===0);
+      var prefixStr=JSON.stringify(camp.prefixes);
+      return '<div style="display:flex;align-items:center;gap:4px;padding:4px 8px;background:var(--bg2);border-radius:8px;border:1.5px solid '+(allOn?camp.color:'#6b7280')+'">'
+        +'<span style="font-size:11px;font-weight:700;color:'+camp.color+'">'+camp.name+'</span>'
+        +'<button onclick="_incCampAll2('+prefixStr+',true)" style="padding:2px 8px;border:none;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;background:'+(allOn?'#059669':'var(--bg3)')+';color:'+(allOn?'#fff':'var(--text3)')+'">ON</button>'
+        +'<button onclick="_incCampAll2('+prefixStr+',false)" style="padding:2px 8px;border:none;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;background:'+(allOff?'#6b7280':'var(--bg3)')+';color:'+(allOff?'#fff':'var(--text3)')+'">OFF</button>'
+        +'</div>';
+    }).join('');
+
+    var campFilterBtns=INC_CAMPS.map(function(camp){
+      return '<button onclick="_filterIncCamp2(\''+camp.name+'\')" id="incf-'+camp.name+'" '
+        +'style="padding:3px 10px;border-radius:100px;border:1.5px solid '+camp.color+';background:transparent;color:'+camp.color+';font-size:11px;font-weight:700;cursor:pointer">'+camp.name+'</button>';
+    }).join('');
+
+    var old2=document.getElementById('inc-panel-mo');if(old2)old2.remove();
+    var mo=document.createElement('div');
+    mo.id='inc-panel-mo';
+    mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:700;display:flex;align-items:center;justify-content:center;padding:14px';
+    var html='<div onclick="event.stopPropagation()" style="background:var(--bg);border-radius:14px;width:700px;max-width:95vw;max-height:88vh;overflow:hidden;display:flex;flex-direction:column">'
+      +'<div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">'
+        +'<span style="font-weight:700;font-size:14px">⚙️ 기사별 라우트 인센티브 설정</span>'
+        +'<button onclick="document.getElementById(\'inc-panel-mo\').remove()" style="padding:5px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer">닫기</button>'
+      +'</div>'
+      +'<div style="padding:10px 16px;border-bottom:1px solid var(--border);background:var(--bg3)">'
+        +'<div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px">캠프별 일괄 설정</div>'
+        +'<div style="display:flex;gap:8px;flex-wrap:wrap">'+campBulkBtns+'</div>'
+      +'</div>'
+      +'<div style="padding:8px 16px;background:#EFF6FF;font-size:11px;color:#1D4ED8;border-bottom:1px solid var(--border)">💡 설정 후 엑셀 업로드하면 자동 반영. ON이면 건수 × 설정단가로 인센 계산</div>'
+      +'<div style="overflow:auto;flex:1">'
+        +'<div style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;gap:5px;flex-wrap:wrap;background:var(--bg3)">'
+          +'<button onclick="_filterIncCamp2(\'전체\')" id="incf-전체" style="padding:3px 10px;border-radius:100px;border:1.5px solid var(--border);background:var(--blue);color:#fff;font-size:11px;font-weight:700;cursor:pointer">전체</button>'
+          +campFilterBtns
+        +'</div>'
+        +'<table style="width:100%;border-collapse:collapse;min-width:560px">'
+          +'<thead><tr style="background:var(--bg3);font-size:11px;color:var(--text3);position:sticky;top:0">'
+            +'<th style="padding:8px 12px;text-align:left">기사</th>'
+            +'<th style="padding:8px 12px;text-align:left">라우트</th>'
+            +'<th style="padding:8px 12px;text-align:left">ON/OFF</th>'
+            +'<th style="padding:8px 12px;text-align:left">단가 선택</th>'
+          +'</tr></thead>'
+          +'<tbody>'+rows+'</tbody>'
+        +'</table>'
+      +'</div>'
     +'</div>';
+    mo.innerHTML=html;
+    document.body.appendChild(mo);
+  }
+  if(_db){
+    _db.collection('settings').doc('incSettings').get().then(function(doc){
+      if(doc.exists){
+        var data=doc.data();
+        Object.keys(data).forEach(function(k){
+          if(k.startsWith('inc_'))localStorage.setItem(k,JSON.stringify(data[k]));
+        });
+      }
+      _buildIncPanel();
+    }).catch(function(){_buildIncPanel();});
+  } else {_buildIncPanel();}
 }
+
+function _filterIncCamp2(camp){
+  document.querySelectorAll('.inc-row').forEach(function(tr){
+    tr.style.display=(camp==='전체'||tr.dataset.camp===camp)?'':'none';
+  });
+  document.querySelectorAll('[id^="incf-"]').forEach(function(b){
+    var isSel=b.id==='incf-'+camp;
+    b.style.background=isSel?'var(--blue)':'transparent';
+    b.style.color=isSel?'#fff':b.style.borderColor||'var(--text2)';
+  });
+}
+function _incToggle2(btn,drv,route){
+  var s=_getIncSetting(drv,route);s.on=!s.on;
+  _setIncSetting(drv,route,s.on,s.rate);
+  btn.textContent=s.on?'🟢 ON':'🔴 OFF';
+  btn.style.background=s.on?'#059669':'#6b7280';
+}
+function _incRate2(drv,route,rate){
+  var s=_getIncSetting(drv,route);s.rate=rate;
+  _setIncSetting(drv,route,s.on,s.rate);
+  [10,15,25].forEach(function(r){
+    var b=document.getElementById('incr_'+drv.replace(/\s/g,'_')+'_'+route+'_'+r);
+    if(b){b.style.background=r===rate?'var(--blue)':'var(--bg)';b.style.color=r===rate?'#fff':'var(--text2)';b.style.borderColor=r===rate?'var(--blue)':'var(--border)';}
+  });
+  var ci=document.getElementById('incc_'+drv.replace(/\s/g,'_')+'_'+route);if(ci)ci.value='';
+}
+function _incCustom2(drv,route,val){
+  var rate=parseInt(val);
+  if(!isNaN(rate)&&rate>0){
+    _setIncSetting(drv,route,_getIncSetting(drv,route).on,rate);
+    [10,15,25].forEach(function(r){
+      var b=document.getElementById('incr_'+drv.replace(/\s/g,'_')+'_'+route+'_'+r);
+      if(b){b.style.background='var(--bg)';b.style.color='var(--text2)';b.style.borderColor='var(--border)';}
+    });
+  }
+}
+function _incCampAll2(prefixes,onVal){
+  var settle=_settleCache||[];
+  settle.forEach(function(s){
+    if(!s.routeDetails)return;
+    s.routeDetails.forEach(function(rd){
+      if(!rd.route)return;
+      if(prefixes.some(function(p){return rd.route.startsWith(p);})){
+        var cur=_getIncSetting(s.driver,rd.route);
+        _setIncSetting(s.driver,rd.route,onVal,cur.rate);
+      }
+    });
+  });
+  var mo=document.getElementById('inc-panel-mo');if(mo)mo.remove();
+  openIncPanel();
+  toast((onVal?'🟢':'🔴')+' 캠프 인센티브 '+(onVal?'ON':'OFF')+' 적용');
+}
+
 
 // ══ 초기화 ══
 document.addEventListener('click',function(e){
