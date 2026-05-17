@@ -271,18 +271,26 @@ function calcNet(x){
 }
 
 
-// ██ parseCoupangExcel (물류앱 원본) ██
-async function parseCoupangExcel(inp){
+// ██ parseCoupangExcel (물류앱 원본 + Firebase 연동) ██
+function parseCoupangExcel(inp){
   var file=inp.files[0]; if(!file)return;
   if(typeof XLSX==='undefined'){toast('⚠️ 엑셀 라이브러리 로딩 중...'); return;}
-  // Firebase 기사 미리 로드 (async)
-  var fbDrivers=[];
-  if(window._db&&window._CU){
-    try{
-      var _drSnap=await window._db.collection('drivers').where('dealerId','==',window._CU.dealerId).get();
-      _drSnap.forEach(function(d){fbDrivers.push(Object.assign({id:d.id},d.data()));});
-    }catch(e){}
-  }
+  inp.value='';
+  toast('📂 기사 목록 로딩 중...');
+  // Firebase 기사 로드 후 엑셀 파싱 (Promise 체이닝)
+  var fbPromise=(window._db&&window._CU)
+    ?window._db.collection('drivers').where('dealerId','==',window._CU.dealerId).get()
+      .then(function(snap){
+        var arr=[];
+        snap.forEach(function(d){arr.push(Object.assign({id:d.id},d.data()));});
+        return arr;
+      }).catch(function(){return[];})
+    :Promise.resolve([]);
+  fbPromise.then(function(fbDrivers){
+    _parseCoupangExcelInner(file,fbDrivers);
+  });
+}
+function _parseCoupangExcelInner(file,fbDrivers){
   var reader=new FileReader();
   reader.onload=function(e){
     try{
@@ -622,8 +630,8 @@ async function parseCoupangExcel(inp){
     }catch(err){console.error(err);toast('❌ 파싱 오류: '+err.message);}
   };
   reader.readAsArrayBuffer(file);
-  inp.value='';
 }
+// _parseCoupangExcelInner 끝
 
 
 </script>
