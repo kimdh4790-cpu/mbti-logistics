@@ -2373,8 +2373,8 @@ PAGES['dealer-settlements']=async function(){
       <option value="">전체 월</option>
     </select>
     <label style="position:relative;cursor:pointer">
-      <input type="file" accept=".xlsx,.xls" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%" onchange="batchExcelUpload(this)">
-      <span class="btn btn-green btn-sm">📂 쿠팡 엑셀 → 일괄정산</span>
+      <input type="file" accept=".xlsx,.xls" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%" onchange="parseSettleExcelNuri(this)">
+      <span class="btn btn-green btn-sm">📂 쿠팡 엑셀 → 캠프별 정렬</span>
     </label>
     <button class="btn btn-blue btn-sm" onclick="openNewSettle()">+ 수동 입력</button>`;
   // 캠프별 버튼 렌더
@@ -3175,9 +3175,419 @@ function parseCoupangRevenue(file, month, onResult){
   reader.readAsArrayBuffer(file);
 }
 
+// ══════════════════════════════════════════════════════
+// ██ 쿠팡 엑셀 → 캠프별 취합 → 성함+단가만 입력 → 저장 ██
+// ══════════════════════════════════════════════════════
+window.parseSettleExcelNuri=function(inp){
+  const file=inp.files[0];
+  if(!file)return;
+  inp.value='';
+  toast('📊 엑셀 분석 중...');
+
+  const fnMatch=file.name.match(/(\d{4})년[_\s]*(\d{2})월/);
+  const month=fnMatch?`${fnMatch[1]}-${fnMatch[2]}`:curMonth();
+
+  // 정산총괄 파싱 (매출 저장)
+  parseCoupangRevenue(file,month,async function(rev,err){
+    if(rev&&!err){
+      try{
+        await setDoc(doc(db,'coupang_revenue',CU.dealerId+'_'+month),{
+          dealerId:CU.dealerId,month,
+          delCnt:rev.delCnt||0,retCnt:rev.retCnt||0,damage:rev.damage||0,
+          fresh:rev.fresh||0,addInc:rev.addInc||0,
+          totalExVat:rev.totalExVat||0,totalIncVat:rev.totalIncVat||0,
+          updatedAt:serverTimestamp()
+        });
+      }catch(e){console.warn('매출 저장 실패',e);}
+    }
+  });
+
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+
+      // 정산Raw 시트 찾기
+      let ws=null;
+      for(const name of wb.SheetNames){
+        const c=wb.Sheets[name];
+        const s=XLSX.utils.sheet_to_json(c,{header:1,defval:null,range:0});
+        if(s.length>0&&s[0]&&s[0][0]==='구분'){ws=c;break;}
+      }
+      if(!ws){
+        for(const name of wb.SheetNames){
+          const c=wb.Sheets[name];
+          const all=XLSX.utils.sheet_to_json(c,{header:1,defval:null});
+          if(all.some(r=>r&&r[0]==='구분')){ws=c;break;}
+        }
+      }
+      if(!ws){toast('❌ 정산Raw 시트를 찾을 수 없습니다');return;}
+
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+      const hIdx=rows.findIndex(r=>r&&r[0]==='구분');
+      if(hIdx<0){toast('❌ 헤더를 찾을 수 없습니다');return;}
+
+      // 기사별 집계
+      const perDriver={};
+      const freshMap={};
+
+      rows.slice(hIdx+1).forEach(row=>{
+        if(!row||!row[0])return;
+        const cat=String(row[0]).trim();
+        if(cat==='배송'||cat==='수기반영'){
+          const uid=row[1]?String(row[1]).trim():'';
+          if(!uid)return;
+          const route=row[2]?String(row[2]).trim():'기타';
+          const del=+row[7]||0;
+          const ret=+row[8]||0;
+          const coUnit=+row[9]||0;
+          const driverUnit=RPRICE[route]||0;
+          const campRaw=row[4]?String(row[4]).trim():'';
+
+          if(!perDriver[uid]){
+            perDriver[uid]={uid,campRaw,routes:{},dcnt:0,rcnt:0,fresh:0};
+          }
+          const pd=perDriver[uid];
+          if(!pd.campRaw&&campRaw)pd.campRaw=campRaw;
+
+          pd.dcnt+=del; pd.rcnt+=ret;
+
+          if(!pd.routes[route]){
+            pd.routes[route]={route,cnt:0,ret:0,unitPrice:driverUnit,coUnit};
+          }
+          pd.routes[route].cnt+=del;
+          pd.routes[route].ret+=ret;
+          if(RPRICE[route]>0)pd.routes[route].unitPrice=RPRICE[route];
+          else if(coUnit>0&&!pd.routes[route].unitPrice)pd.routes[route].coUnit=coUnit;
+
+        }else if(cat.includes('프레시백')||cat.includes('프레쉬백')||cat.includes('에코백')){
+          const uid=row[1]?String(row[1]).trim():'';
+          if(uid)freshMap[uid]=(freshMap[uid]||0)+(+row[14]||0);
+        }
+      });
+
+      // 라우트 배열화 + 금액 계산
+      Object.values(perDriver).forEach(pd=>{
+        pd.fresh=freshMap[pd.uid]||0;
+        pd.routeList=Object.values(pd.routes).sort((a,b)=>a.route.localeCompare(b.route));
+        pd.damt=pd.routeList.reduce((s,r)=>s+r.cnt*(r.unitPrice||0),0);
+        pd.ramt=pd.routeList.reduce((s,r)=>s+r.ret*(r.unitPrice||0),0);
+        pd.finc=Math.round(pd.dcnt*25);
+        pd.total=pd.damt+pd.ramt+pd.fresh;
+      });
+
+      // 캠프별 그룹
+      const CAMP_ORDER=['부산1','부산2','부산3','대구2','대구2B','진주M'];
+      const byCamp={};
+      Object.values(perDriver).forEach(pd=>{
+        let camp='';
+        for(const r of pd.routeList){
+          const c=getCampByRoute(r.route);
+          if(c&&c!=='기타'){camp=c.replace(/캠프$/,'').trim();break;}
+        }
+        if(!camp&&pd.campRaw){
+          const cm=pd.campRaw.replace(/M_/,'').replace(/캠프$/,'').trim();
+          for(const co of CAMP_ORDER){if(cm.includes(co)){camp=co;break;}}
+        }
+        if(!camp)camp='기타';
+        if(!byCamp[camp])byCamp[camp]=[];
+        byCamp[camp].push(pd);
+      });
+
+      // 각 캠프 라우트순 정렬
+      Object.values(byCamp).forEach(arr=>arr.sort((a,b)=>(a.routeList[0]?.route||'').localeCompare(b.routeList[0]?.route||'')));
+
+      const totalDrivers=Object.keys(perDriver).length;
+      const totalAmt=Object.values(perDriver).reduce((s,p)=>s+p.total,0);
+
+      window._nuriPending={month,byCamp,totalDrivers,totalAmt,fileName:file.name};
+      renderPendingNuri();
+
+    }catch(err){toast('❌ 오류: '+err.message);console.error(err);}
+  };
+  reader.readAsArrayBuffer(file);
+};
+
+function renderPendingNuri(){
+  const pending=window._nuriPending;
+  if(!pending)return;
+  const {month,byCamp,totalDrivers,totalAmt}=pending;
+  const CAMP_COLORS={'부산1':'#3B82F6','부산2':'#8B5CF6','부산3':'#10B981','대구2':'#F59E0B','대구2B':'#FB923C','진주M':'#EF4444','기타':'#94A3B8'};
+  const CAMP_ORDER=['부산1','부산2','부산3','대구2','대구2B','진주M','기타'];
+  const camps=CAMP_ORDER.filter(c=>byCamp[c]?.length);
+
+  // 기존 정산 목록에서 중복 확인용
+  const existKey=new Set();
+
+  let html=`
+  <div style="background:linear-gradient(135deg,var(--brand),#0C447C);border-radius:14px;padding:16px 20px;margin-bottom:14px;color:#fff">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-size:16px;font-weight:800">📊 ${month} 정산 취합 완료</div>
+        <div style="font-size:12px;opacity:.85;margin-top:3px">총 ${totalDrivers}명 · 수익합계 ₩${fmt(totalAmt)}</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <label style="position:relative;cursor:pointer">
+          <input type="file" accept=".xlsx,.xls" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%" onchange="parseSettleExcelNuri(this)">
+          <span style="background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.5);color:#fff;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📂 다시 업로드</span>
+        </label>
+        <button onclick="saveAllPendingNuri()" style="background:#22c55e;border:none;color:#fff;padding:6px 18px;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer">💾 전체 저장</button>
+        <button onclick="cancelPendingNuri()" style="background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.4);color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer">✕ 취소</button>
+      </div>
+    </div>
+  </div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+    ${camps.map(camp=>{
+      const col=CAMP_COLORS[camp]||'#6B7280';
+      const cnt=(byCamp[camp]||[]).length;
+      return`<button onclick="showPendingCamp('${camp}')" id="pcamp-btn-${camp}"
+        style="padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:2px solid ${col};background:transparent;color:${col};transition:.15s">
+        ${camp} (${cnt}명)</button>`;
+    }).join('')}
+  </div>
+  <div id="pending-camp-content"></div>`;
+
+  const c=document.getElementById('content');
+  c.innerHTML=html;
+
+  // 첫 캠프 자동 선택
+  if(camps.length>0)showPendingCamp(camps[0]);
+}
+
+window.showPendingCamp=function(campName){
+  const pending=window._nuriPending;
+  if(!pending||!pending.byCamp[campName])return;
+  const CAMP_COLORS={'부산1':'#3B82F6','부산2':'#8B5CF6','부산3':'#10B981','대구2':'#F59E0B','대구2B':'#FB923C','진주M':'#EF4444','기타':'#94A3B8'};
+  const col=CAMP_COLORS[campName]||'#6B7280';
+  const drivers=pending.byCamp[campName];
+
+  // 탭 스타일 업데이트
+  document.querySelectorAll('[id^="pcamp-btn-"]').forEach(btn=>{
+    const bc=btn.id.replace('pcamp-btn-','');
+    const c2=CAMP_COLORS[bc]||'#6B7280';
+    btn.style.background='transparent';btn.style.color=c2;
+  });
+  const activeBtn=document.getElementById('pcamp-btn-'+campName);
+  if(activeBtn){activeBtn.style.background=col;activeBtn.style.color='#fff';}
+
+  const totalAmt=drivers.reduce((s,d)=>s+d.total,0);
+  const totalDcnt=drivers.reduce((s,d)=>s+d.dcnt,0);
+
+  const rows=drivers.map((pd,i)=>{
+    const routeStr=pd.routeList.map(r=>`<span style="display:inline-block;background:${col}18;color:${col};border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700;margin:1px">${r.route}<span style="font-weight:400;color:var(--text3)"> ${fmt(r.cnt)}건</span></span>`).join('');
+    const priceInputs=pd.routeList.map(r=>`
+      <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px">
+        <span style="width:52px;font-size:10px;font-weight:700;color:${col}">${r.route}</span>
+        <input type="number" id="rp-${campName}-${pd.uid.replace(/@/g,'_')}-${r.route}"
+          value="${r.unitPrice||0}" min="0" step="10"
+          onchange="updatePendingAmt('${campName}','${pd.uid}','${r.route}',+this.value)"
+          style="width:75px;padding:3px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:11px;text-align:right;background:var(--bg);color:var(--text)">
+        <span style="font-size:10px;color:var(--text3)">원</span>
+      </div>`).join('');
+
+    return`<tr id="prow-${campName}-${pd.uid.replace(/@/g,'_')}">
+      <td style="font-family:monospace;font-size:10px;color:var(--text3);white-space:nowrap">${esc(pd.uid)}</td>
+      <td>
+        <input id="pname-${campName}-${pd.uid.replace(/@/g,'_')}"
+          placeholder="성함 입력" 
+          style="width:80px;padding:5px 8px;border:1.5px solid ${col}66;border-radius:7px;font-size:12px;font-weight:700;background:var(--bg);color:var(--text)"
+          oninput="window._nuriPending.byCamp['${campName}'][${i}]._name=this.value">
+      </td>
+      <td>${routeStr}</td>
+      <td style="text-align:right;font-weight:700">${fmt(pd.dcnt)}건</td>
+      <td style="text-align:right;font-weight:700;color:var(--green)">₩${fmt(pd.total)}</td>
+      <td>
+        <div style="min-width:130px">${priceInputs}</div>
+      </td>
+      <td>
+        <button onclick="saveSinglePendingNuri('${campName}',${i})" 
+          style="background:${col};color:#fff;border:none;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">저장</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('pending-camp-content').innerHTML=`
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title" style="color:${col}">🏕 ${campName} (${drivers.length}명)</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:12px;color:var(--text3)">배송 ${fmt(totalDcnt)}건 · ₩${fmt(totalAmt)}</span>
+          <button onclick="saveCampPendingNuri('${campName}')" 
+            style="background:${col};color:#fff;border:none;padding:5px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">💾 ${campName} 저장</button>
+        </div>
+      </div>
+      <div class="card-body" style="padding:0;overflow-x:auto">
+        <table>
+          <thead><tr>
+            <th>쿠팡 ID</th>
+            <th>성함 <span style="font-size:9px;font-weight:400;color:var(--text3)">(필수입력)</span></th>
+            <th>라우트 (배송건)</th>
+            <th style="text-align:right">총건수</th>
+            <th style="text-align:right">수익합계</th>
+            <th>라우트별 단가 <span style="font-size:9px;font-weight:400;color:var(--text3)">(수정가능)</span></th>
+            <th></th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+
+  // 기등록 기사 이름 자동 매핑
+  (async()=>{
+    try{
+      const drSnap=await getDocs(query(collection(db,'drivers'),where('dealerId','==',CU.dealerId)));
+      const nameMap={};
+      drSnap.docs.forEach(d=>{const dd=d.data();if(dd.userId)nameMap[dd.userId]=dd.name||'';});
+      drivers.forEach((pd,i)=>{
+        const el=document.getElementById(`pname-${campName}-${pd.uid.replace(/@/g,'_')}`);
+        if(el&&nameMap[pd.uid]){
+          el.value=nameMap[pd.uid];
+          window._nuriPending.byCamp[campName][i]._name=nameMap[pd.uid];
+        }
+      });
+    }catch(e){}
+  })();
+};
+
+window.updatePendingAmt=function(campName,uid,route,price){
+  const pending=window._nuriPending;
+  if(!pending?.byCamp[campName])return;
+  const pd=pending.byCamp[campName].find(p=>p.uid===uid);
+  if(!pd)return;
+  const r=pd.routes[route];
+  if(r){
+    r.unitPrice=price;
+    pd.damt=pd.routeList.reduce((s,r2)=>s+r2.cnt*(r2.unitPrice||0),0);
+    pd.ramt=pd.routeList.reduce((s,r2)=>s+r2.ret*(r2.unitPrice||0),0);
+    pd.total=pd.damt+pd.ramt+pd.fresh;
+    // 금액 셀 업데이트
+    const row=document.getElementById(`prow-${campName}-${uid.replace(/@/g,'_')}`);
+    if(row){
+      const amtCell=row.cells[4];
+      if(amtCell)amtCell.innerHTML=`<span style="font-weight:700;color:var(--green)">₩${fmt(pd.total)}</span>`;
+    }
+  }
+};
+
+window.saveSinglePendingNuri=async function(campName,idx){
+  const pd=window._nuriPending?.byCamp[campName]?.[idx];
+  if(!pd)return;
+  const nameEl=document.getElementById(`pname-${campName}-${pd.uid.replace(/@/g,'_')}`);
+  const driverName=(nameEl?.value.trim())||pd._name||pd.uid;
+  if(!driverName){toast('성함을 입력해주세요');nameEl?.focus();return;}
+  try{
+    await _saveOnePendingDriver(campName,pd,driverName);
+    const row=document.getElementById(`prow-${campName}-${pd.uid.replace(/@/g,'_')}`);
+    if(row)row.style.opacity='0.4';
+    toast(`✅ ${driverName} 저장 완료`);
+  }catch(e){toast('❌ '+e.message);}
+};
+
+window.saveCampPendingNuri=async function(campName){
+  const drivers=window._nuriPending?.byCamp[campName];
+  if(!drivers?.length)return;
+  let saved=0;const errors=[];
+  for(let i=0;i<drivers.length;i++){
+    const pd=drivers[i];
+    const nameEl=document.getElementById(`pname-${campName}-${pd.uid.replace(/@/g,'_')}`);
+    const driverName=(nameEl?.value.trim())||pd._name||'';
+    if(!driverName){errors.push(pd.uid);continue;}
+    try{await _saveOnePendingDriver(campName,pd,driverName);saved++;}catch(e){errors.push(pd.uid);}
+  }
+  if(errors.length>0)toast(`⚠️ ${saved}명 저장, ${errors.length}명 실패 (성함 미입력)`);
+  else toast(`✅ ${campName} ${saved}명 저장 완료`);
+  showPendingCamp(campName);
+};
+
+window.saveAllPendingNuri=async function(){
+  const pending=window._nuriPending;
+  if(!pending)return;
+  const camps=Object.keys(pending.byCamp);
+  let total=0;let missing=0;
+  for(const camp of camps){
+    for(const pd of pending.byCamp[camp]){
+      const nameEl=document.getElementById(`pname-${camp}-${pd.uid.replace(/@/g,'_')}`);
+      const driverName=(nameEl?.value.trim())||pd._name||'';
+      if(!driverName){missing++;continue;}
+      try{await _saveOnePendingDriver(camp,pd,driverName);total++;}catch(e){missing++;}
+    }
+  }
+  if(missing>0)toast(`✅ ${total}명 저장 완료 · ${missing}명 성함 미입력 (제외)`);
+  else toast(`✅ 전체 ${total}명 저장 완료!`);
+  window._nuriPending=null;
+  PAGES['dealer-settlements']();
+};
+
+window.cancelPendingNuri=function(){
+  window._nuriPending=null;
+  PAGES['dealer-settlements']();
+};
+
+async function _saveOnePendingDriver(campName,pd,driverName){
+  const month=window._nuriPending.month;
+  // 중복 체크
+  const exSnap=await getDocs(query(collection(db,'settlements'),
+    where('dealerId','==',CU.dealerId),
+    where('driver','==',pd.uid),
+    where('month','==',month)));
+  if(!exSnap.empty){
+    // 기존 업데이트
+    const ref=exSnap.docs[0].ref;
+    const income=pd.damt+pd.ramt+pd.fresh+pd.finc;
+    const supplyAmt=Math.round(income/1.1);
+    const wage=Math.round(supplyAmt*(1-0.346));
+    const emp=wage>=800000?Math.floor(wage*0.008/10)*10:0;
+    const work=Math.floor(wage*0.0088/10)*10;
+    await updateDoc(ref,{
+      driverName,driver:pd.uid,camp:campName,month,
+      dcnt:pd.dcnt,rcnt:pd.rcnt,damt:pd.damt,ramt:pd.ramt,
+      fresh:pd.fresh,finc:pd.finc,
+      income,supplyAmt,monthlyWage:wage,emp,work,
+      deduct:emp+work,net:income-(emp+work),
+      routeDetails:pd.routeList.map(r=>({route:r.route,cnt:r.cnt,ret:r.ret||0,unitPrice:r.unitPrice||0})),
+      status:'pending',updatedAt:serverTimestamp()
+    });
+    // 기사 이름 업데이트
+    const drSnap=await getDocs(query(collection(db,'drivers'),
+      where('userId','==',pd.uid),where('dealerId','==',CU.dealerId)));
+    if(!drSnap.empty)await updateDoc(drSnap.docs[0].ref,{name:driverName});
+    return;
+  }
+  // 신규 저장
+  const income=pd.damt+pd.ramt+pd.fresh+pd.finc;
+  const supplyAmt=Math.round(income/1.1);
+  const wage=Math.round(supplyAmt*(1-0.346));
+  const emp=wage>=800000?Math.floor(wage*0.008/10)*10:0;
+  const work=Math.floor(wage*0.0088/10)*10;
+  await addDoc(collection(db,'settlements'),{
+    dealerId:CU.dealerId,driverName,driver:pd.uid,
+    camp:campName,month,jobsub:'쿠팡',
+    dcnt:pd.dcnt,rcnt:pd.rcnt,damt:pd.damt,ramt:pd.ramt,
+    fresh:pd.fresh,finc:pd.finc,inc:0,
+    nocont:0,nocontCnt:0,etcPlus:0,etcMinus:0,dmg:0,adv:0,
+    income,supplyAmt,monthlyWage:wage,emp,work,
+    deduct:emp+work,net:income-(emp+work),
+    routeDetails:pd.routeList.map(r=>({route:r.route,cnt:r.cnt,ret:r.ret||0,unitPrice:r.unitPrice||0})),
+    status:'pending',createdAt:serverTimestamp()
+  });
+  // 기사 등록 (없으면)
+  const drSnap2=await getDocs(query(collection(db,'drivers'),
+    where('userId','==',pd.uid),where('dealerId','==',CU.dealerId)));
+  if(drSnap2.empty){
+    await addDoc(collection(db,'drivers'),{
+      name:driverName,userId:pd.uid,dealerId:CU.dealerId,
+      camp:campName,jobsub:'쿠팡',is_active:true,status:'재직',
+      createdAt:serverTimestamp()
+    });
+  }else{
+    await updateDoc(drSnap2.docs[0].ref,{name:driverName});
+  }
+}
+
 window.batchExcelUpload=async function(inp){
   const file=inp.files[0];
   if(!file)return;
+
   inp.value='';
 
   // 파일명에서 월 추출: 2026년_04월 → 2026-04
