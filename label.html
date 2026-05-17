@@ -89,6 +89,7 @@ body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
 .label-item .li-agent{font-size:8px;color:#555;margin-top:1px;font-weight:600;letter-spacing:.3px}
 </style>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 <div class="app">
@@ -410,7 +411,7 @@ function showResult(info){
   setTimeout(function(){
     window.onafterprint=function(){ setTimeout(function(){ resetAndCam(); },200); };
     window.print();
-  },800);
+  },300);
 }
 
 function updatePreview(){
@@ -524,10 +525,10 @@ function saveApiKey(){
 }
 
 
-// ── QR 코드 생성 (긴급배송 앱 스캔 호환) ──
+// ── QR 코드 생성 (로컬 라이브러리 - 네트워크 불필요) ──
 function generateQR(containerId, data){
   var el=document.getElementById(containerId);
-  if(!el){ setTimeout(function(){ generateQR(containerId,data); },200); return; }
+  if(!el){ setTimeout(function(){ generateQR(containerId,data); },100); return; }
   var track=data.track||'';
   var name=data.name||'';
   var addr1=data.addr1||'';
@@ -536,26 +537,18 @@ function generateQR(containerId, data){
   if(qrText.length>150) qrText='|V1|'+track+'|'+addr1.slice(0,40)+'|'+addr2.slice(0,25)+'|'+name.slice(0,12)+'|||';
   var size=containerId==='qr-1'?120:90;
   el.innerHTML='';
-  // Canvas에 직접 그리고 data URL로 변환 → 인쇄 미리보기에서도 표시
-  var img=new Image();
-  img.crossOrigin='anonymous';
-  img.onload=function(){
-    var cv=document.createElement('canvas');
-    cv.width=size; cv.height=size;
-    cv.getContext('2d').drawImage(img,0,0,size,size);
-    var dataUrl=cv.toDataURL('image/png');
-    var pImg=document.createElement('img');
-    pImg.src=dataUrl;
-    pImg.width=size; pImg.height=size;
-    pImg.style.display='block';
-    el.innerHTML='';
-    el.appendChild(pImg);
-  };
-  img.onerror=function(){
-    // 폴백: 텍스트 바코드 스타일
+  try{
+    new QRCode(el,{
+      text:qrText,
+      width:size,
+      height:size,
+      colorDark:'#000000',
+      colorLight:'#ffffff',
+      correctLevel:QRCode.CorrectLevel.M
+    });
+  }catch(e){
     el.innerHTML='<div style="font-family:monospace;font-size:7px;word-break:break-all;border:1px solid #000;padding:2px;width:'+size+'px;height:'+size+'px;overflow:hidden;display:flex;align-items:center;justify-content:center;text-align:center">'+escH(track)+'</div>';
-  };
-  img.src='https://api.qrserver.com/v1/create-qr-code/?size='+(size*2)+'x'+(size*2)+'&data='+encodeURIComponent(qrText)+'&format=png&ecc=M';
+  }
 }
 function resetAll(){
   _capturedImg=null; _data={name:'',addr1:'',addr2:'',track:'',date:''};
