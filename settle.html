@@ -956,6 +956,30 @@ function showStmtModal(sd,dealerName){
 }
 window.showStmtModal=showStmtModal;
 
+// ── 세금계산서 이미지 저장 ──
+window.saveTaxAsImage=async function(){
+  const area=document.getElementById('tax-print-area');
+  if(!area){toast('❌ 세금계산서가 없습니다');return;}
+  toast('🖼️ 이미지 생성 중...');
+  try{
+    // html2canvas CDN 동적 로드
+    if(!window.html2canvas){
+      await new Promise(function(res,rej){
+        var s=document.createElement('script');
+        s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+        s.onload=res;s.onerror=rej;
+        document.head.appendChild(s);
+      });
+    }
+    const canvas=await html2canvas(area,{scale:2,backgroundColor:'#ffffff',useCORS:true});
+    const link=document.createElement('a');
+    link.download='세금계산서_'+new Date().toISOString().slice(0,10)+'.png';
+    link.href=canvas.toDataURL('image/png');
+    link.click();
+    toast('✅ 이미지 저장 완료');
+  }catch(e){toast('❌ 저장 실패: '+e.message);}
+};
+
 // ── 세금계산서 모달 ──
 window.showTaxModal=async function(id,driverName,month,dealerName,income,net){
   // 기사 정보 조회 (사업자 정보)
@@ -1095,6 +1119,7 @@ window.showTaxModal=async function(id,driverName,month,dealerName,income,net){
         <div class="mdb" style="overflow-x:auto">${taxHTML}</div>
         <div class="mdf no-print" style="gap:8px">
           <button class="btn btn-gray btn-sm" onclick="document.getElementById('mo-tax-view').remove()">닫기</button>
+          <button class="btn btn-blue btn-sm" onclick="saveTaxAsImage()">🖼️ 이미지 저장</button>
           <button class="btn btn-green btn-sm" onclick="window.print()">🖨️ 인쇄/저장</button>
         </div>
       </div>
@@ -2260,12 +2285,66 @@ window.editDriver=async function(driverId){
             </select>
           </div>
         </div>
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+            <div style="font-size:12px;font-weight:700;color:var(--brand);margin-bottom:8px">🧾 세금계산서용 사업자 정보</div>
+            <div class="fg">
+              <div class="field"><label>사업자등록번호</label><input id="edr-bizNum" value="${esc(dd.bizNum||'')}" placeholder="000-00-00000"></div>
+              <div class="field"><label>상호(사업자명)</label><input id="edr-bizName" value="${esc(dd.bizName||'')}" placeholder="홍길동 화물"></div>
+            </div>
+            <div class="fg">
+              <div class="field"><label>사업장 주소</label><input id="edr-bizAddr" value="${esc(dd.bizAddr||'')}" placeholder="부산시 수영구..."></div>
+              <div class="field"><label>업태/종목</label><input id="edr-bizType" value="${esc(dd.bizType||'')}" placeholder="운수/택배"></div>
+            </div>
+            <div style="margin-top:8px">
+              <label style="display:flex;align-items:center;gap:8px;background:#f0f7ff;border:1.5px solid #3b82f6;border-radius:8px;padding:8px 12px;cursor:pointer;font-size:12px;font-weight:700;color:#1d4ed8">
+                <input type="file" accept="image/*" style="display:none" onchange="ocrBizReg(this,'${driverId}')">
+                📸 사업자등록증 촬영/첨부 → 자동 인식
+              </label>
+              <div id="biz-ocr-status-${driverId}" style="font-size:11px;color:var(--text3);margin-top:4px"></div>
+            </div>
+          </div>
         <div class="mdf">
           <button class="btn btn-gray" onclick="document.getElementById('${eid}').remove()">취소</button>
           <button class="btn btn-blue" onclick="saveDriver('${driverId}','${eid}')">저장</button>
         </div>
       </div>
     </div>`);
+};
+window.ocrBizReg=async function(inp,driverId){
+  const file=inp.files[0];
+  if(!file)return;
+  const statusEl=document.getElementById('biz-ocr-status-'+driverId);
+  if(statusEl)statusEl.textContent='🔄 사업자등록증 인식 중...';
+  const apiKey=(localStorage.getItem('mbti_claude_api_key')||'').trim();
+  if(!apiKey){if(statusEl)statusEl.textContent='❌ API 키 없음';return;}
+  try{
+    const b64=await new Promise(function(res){
+      const r=new FileReader();
+      r.onload=function(e){res(e.target.result.split(',')[1]);};
+      r.readAsDataURL(file);
+    });
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({
+        model:'claude-haiku-4-5-20251001',max_tokens:400,
+        messages:[{role:'user',content:[
+          {type:'image',source:{type:'base64',media_type:file.type||'image/jpeg',data:b64}},
+          {type:'text',text:'사업자등록증 이미지에서 정보 추출. JSON만 반환.\n①bizNum=사업자등록번호(000-00-00000)\n②bizName=상호(법인명 또는 개인사업자명)\n③bizRep=대표자명\n④bizAddr=사업장 소재지 전체주소\n⑤bizType=업태\n⑥bizItem=종목\n모르면 빈문자열\n{"bizNum":"","bizName":"","bizRep":"","bizAddr":"","bizType":"","bizItem":""}'}
+        ]}]
+      })
+    });
+    const data=await resp.json();
+    const text=(data.content&&data.content[0]&&data.content[0].text)||'';
+    const m=text.match(/\{[\s\S]*\}/);
+    if(!m)throw new Error('JSON 추출 실패');
+    const info=JSON.parse(m[0]);
+    if(info.bizNum)document.getElementById('edr-bizNum').value=info.bizNum;
+    if(info.bizName)document.getElementById('edr-bizName').value=info.bizName;
+    if(info.bizAddr)document.getElementById('edr-bizAddr').value=info.bizAddr;
+    if(info.bizType||info.bizItem)document.getElementById('edr-bizType').value=(info.bizType||'')+(info.bizItem?'/'+info.bizItem:'');
+    if(statusEl)statusEl.textContent='✅ 자동 인식 완료! 확인 후 저장하세요';
+  }catch(e){if(statusEl)statusEl.textContent='❌ 인식 오류: '+e.message;}
 };
 window.saveDriver=async function(driverId,eid){
   await updateDoc(doc(db,'drivers',driverId),{
@@ -2275,7 +2354,11 @@ window.saveDriver=async function(driverId,eid){
     jobsub:document.getElementById('edr-job').value,
     phone:document.getElementById('edr-phone').value.trim(),
     yongDel:+document.getElementById('edr-yong').value||900,
-    is_active:document.getElementById('edr-active').value==='true'
+    is_active:document.getElementById('edr-active').value==='true',
+    bizNum:document.getElementById('edr-bizNum').value.trim(),
+    bizName:document.getElementById('edr-bizName').value.trim(),
+    bizAddr:document.getElementById('edr-bizAddr').value.trim(),
+    bizType:document.getElementById('edr-bizType').value.trim()
   });
   document.getElementById(eid)?.remove();toast('✅ 저장 완료');PAGES['dealer-drivers']();
 };
@@ -2362,49 +2445,60 @@ PAGES['dealer-settlements']=async function(){
   c.before(btnPanel);
 
   // ── 쿠팡 매출 현황 카드 ──
+  // 쿠팡 매출 현황 카드
   document.getElementById('coupang-rev-card')?.remove();
-  const revCard=document.createElement('div');
+  var revCard=document.createElement('div');
   revCard.id='coupang-rev-card';
   revCard.style.cssText='background:#fff;border-radius:14px;padding:14px 18px;margin-bottom:10px;box-shadow:0 2px 10px rgba(0,0,0,.07)';
-  revCard.innerHTML='<div style="font-size:13px;font-weight:700;color:var(--text3)">📦 쿠팡 매출 현황 로딩 중...</div>';
+  revCard.innerHTML='<div style="font-size:13px;color:var(--text3)">📦 쿠팡 매출 현황 로딩 중...</div>';
   c.before(revCard);
-  (async function loadRevCard(){
+  (async function(){
     try{
       const revSnap=await getDocs(query(collection(db,'coupang_revenue'),where('dealerId','==',CU.dealerId)));
       if(revSnap.empty){
-        revCard.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:13px;font-weight:700">📦 쿠팡 매출 현황</span><span style="font-size:11px;color:var(--text3)">엑셀 업로드 시 자동 저장됩니다</span></div>';
+        revCard.innerHTML='<div style="font-size:13px;font-weight:700">📦 쿠팡 매출 현황</div><div style="font-size:11px;color:var(--text3);margin-top:4px">엑셀 업로드 시 자동 저장됩니다</div>';
         return;
       }
-      const revs=revSnap.docs.map(function(d){return d.data();}).sort(function(a,b){return(b.month||'').localeCompare(a.month||'');});
-      const months=[...new Set(revs.map(function(rv){return rv.month;}))].sort().reverse();
+      var revs=revSnap.docs.map(function(d){return Object.assign({_id:d.id},d.data());}).sort(function(a,b){return(b.month||'').localeCompare(a.month||'');});
       window._coupangRevs=revs;
       window.loadRevMonth=function(month){
-        const rv=revs.find(function(rv){return rv.month===month;})||revs[0];
+        var rv=revs.find(function(r){return r.month===month;})||revs[0];
         if(!rv)return;
-        var dc=document.getElementById('rev-content');
-        if(!dc)return;
-        dc.innerHTML=
-          '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:8px">'+
-          '<div style="background:#f0f7ff;border-radius:10px;padding:10px 12px;text-align:center">'+
-          '<div style="font-size:10px;color:#3b82f6;font-weight:700;margin-bottom:3px">매출(VAT제외)</div>'+
-          '<div style="font-size:15px;font-weight:900;color:#1d4ed8">₩'+fmt(rv.totalExVat||0)+'</div></div>'+
-          '<div style="background:#f0fdf4;border-radius:10px;padding:10px 12px;text-align:center">'+
-          '<div style="font-size:10px;color:#16a34a;font-weight:700;margin-bottom:3px">매출(VAT포함)</div>'+
-          '<div style="font-size:15px;font-weight:900;color:#15803d">₩'+fmt(rv.totalIncVat||0)+'</div></div>'+
-          '<div style="background:#fafafa;border-radius:10px;padding:10px 12px;text-align:center">'+
-          '<div style="font-size:10px;color:var(--text3);font-weight:700;margin-bottom:3px">배송/반품</div>'+
-          '<div style="font-size:13px;font-weight:700">'+(rv.delCnt||0).toLocaleString()+' / '+(rv.retCnt||0).toLocaleString()+'</div></div>'+
-          '<div style="background:#fff5f5;border-radius:10px;padding:10px 12px;text-align:center">'+
-          '<div style="font-size:10px;color:#ef4444;font-weight:700;margin-bottom:3px">분실파손 차감</div>'+
-          '<div style="font-size:13px;font-weight:700;color:#dc2626">-₩'+fmt(rv.damage||0)+'</div></div></div>'+
-          '<div style="font-size:10px;color:var(--text3);text-align:right">프레시백: ₩'+fmt(rv.fresh||0)+' · 추가인센: ₩'+fmt(rv.addInc||0)+' · VAT = ×1.1 적용</div>';
+        var rc=document.getElementById('rev-content');
+        if(!rc)return;
+        rc.innerHTML=
+          '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:6px">'
+          +'<div style="background:#f0f7ff;border-radius:10px;padding:10px 12px;text-align:center"><div style="font-size:10px;color:#3b82f6;font-weight:700;margin-bottom:2px">매출(VAT제외)</div><div style="font-size:15px;font-weight:900;color:#1d4ed8">'+String.fromCharCode(8361)+fmt(rv.totalExVat||0)+'</div></div>'
+          +'<div style="background:#f0fdf4;border-radius:10px;padding:10px 12px;text-align:center"><div style="font-size:10px;color:#16a34a;font-weight:700;margin-bottom:2px">매출(VAT포함)</div><div style="font-size:15px;font-weight:900;color:#15803d">'+String.fromCharCode(8361)+fmt(rv.totalIncVat||0)+'</div></div>'
+          +'<div style="background:#fafafa;border-radius:10px;padding:10px 12px;text-align:center"><div style="font-size:10px;color:var(--text3);font-weight:700;margin-bottom:2px">배송/반품</div><div style="font-size:13px;font-weight:700">'+(rv.delCnt||0).toLocaleString()+' / '+(rv.retCnt||0).toLocaleString()+'</div></div>'
+          +'<div style="background:#fff5f5;border-radius:10px;padding:10px 12px;text-align:center"><div style="font-size:10px;color:#ef4444;font-weight:700;margin-bottom:2px">분실파손 차감</div><div style="font-size:13px;font-weight:700;color:#dc2626">-'+String.fromCharCode(8361)+fmt(rv.damage||0)+'</div></div>'
+          +'</div>'
+          +'<div style="font-size:10px;color:var(--text3)">프레시백: '+String.fromCharCode(8361)+fmt(rv.fresh||0)+' · 추가인센: '+String.fromCharCode(8361)+fmt(rv.addInc||0)+' · VAT=×1.1 적용</div>';
       };
-      var selOpts=months.map(function(m){return '<option value="'+m+'" '+(m===revs[0].month?'selected':'')+'>'+m+'</option>';}).join('');
+      window.deleteRevMonth=async function(id,month){
+        if(!confirm(month+' 매출 데이터를 삭제하시겠습니까?'))return;
+        try{
+          await deleteDoc(doc(db,'coupang_revenue',id));
+          toast('🗑 '+month+' 매출 삭제 완료');
+          PAGES['dealer-settlements']();
+        }catch(e){toast('❌ '+e.message);}
+      };
+      window.doDeleteRevMonth=function(){
+        var sel=document.getElementById('rev-month-sel');
+        if(!sel)return;
+        var month=sel.value;
+        var rev=window._coupangRevs&&window._coupangRevs.find(function(r){return r.month===month;});
+        if(rev)window.deleteRevMonth(rev._id,month);
+      };
+      var selOpts=revs.map(function(r){return '<option value="'+r.month+'" '+(r.month===revs[0].month?'selected':'')+'>'+r.month+'</option>';}).join('');
       revCard.innerHTML=
-        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
-        '<span style="font-size:13px;font-weight:700">📦 쿠팡 매출 현황</span>'+
-        '<select id="rev-month-sel" onchange="loadRevMonth(this.value)" style="padding:4px 8px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text)">'+
-        selOpts+'</select></div><div id="rev-content"></div>';
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'
+        +'<span style="font-size:13px;font-weight:700">📦 쿠팡 매출 현황</span>'
+        +'<div style="display:flex;align-items:center;gap:6px">'
+        +'<select id="rev-month-sel" onchange="loadRevMonth(this.value)" style="padding:4px 8px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text)">'+selOpts+'</select>'
+        +'<button onclick="doDeleteRevMonth()" style="background:#fee2e2;color:#dc2626;border:none;padding:4px 10px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗑 삭제</button>'
+        +'</div></div>'
+        +'<div id="rev-content"></div>';
       loadRevMonth(revs[0].month);
     }catch(e){revCard.innerHTML='<div style="font-size:12px;color:var(--text3)">📦 쿠팡 매출 현황 (엑셀 업로드 후 표시)</div>';}
   })();
@@ -3040,56 +3134,43 @@ function parseCoupangRevenue(file, month, onResult){
   reader.onload=function(e){
     try{
       const wb=XLSX.read(e.target.result,{type:'array'});
-      // 정산총괄 시트 찾기
       let ws=null;
       for(const name of wb.SheetNames){
         if(name.includes('정산총괄')||name.includes('총괄')){ws=wb.Sheets[name];break;}
       }
-      if(!ws){onResult(null,'정산총괄 시트를 찾을 수 없습니다');return;}
+      if(!ws){onResult(null,'정산총괄 시트 없음');return;}
       const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
-
-      // 헤더 행 찾기 (배송건수, 반품건수 등이 있는 행)
-      let hIdx=rows.findIndex(r=>r&&r.some&&r.some(c=>String(c||'').includes('배송건수')));
-      if(hIdx<0){onResult(null,'헤더를 찾을 수 없습니다');return;}
-
-      // 데이터 행 (헤더 다음 행 - 합계 행)
-      const dataRow=rows[hIdx+1];
-      if(!dataRow){onResult(null,'데이터가 없습니다');return;}
-
-      // 컬럼 인덱스 파악
+      const hIdx=rows.findIndex(r=>r&&r.some&&r.some(function(x){return String(x||'').includes('배송건수');}));
+      if(hIdx<0){onResult(null,'헤더 없음');return;}
       const hRow=rows[hIdx];
+      const dataRow=rows[hIdx+1];
+      if(!dataRow){onResult(null,'데이터 없음');return;}
       const colIdx={};
-      hRow.forEach((h,i)=>{
+      hRow.forEach(function(h,i){
         const hs=String(h||'').replace(/\s/g,'');
         if(hs.includes('배송건수'))colIdx.delCnt=i;
         else if(hs.includes('반품건수'))colIdx.retCnt=i;
         else if(hs.includes('분실파손')||hs.includes('차감'))colIdx.damage=i;
-        else if(hs.includes('TOTAL')||hs.includes('VAT제외')||hs.includes('총합계'))colIdx.totalExVat=i;
+        else if(hs.includes('TOTAL')||(hs.includes('VAT')&&hs.includes('제외')))colIdx.totalExVat=i;
         else if(hs.includes('프레쉬백')||hs.includes('프레시백'))colIdx.fresh=i;
         else if(hs.includes('추가인센'))colIdx.addInc=i;
-        else if(hs.includes('금액(소계)'))colIdx.subtotal=i;
       });
-
-      const getNum=(idx)=>idx!=null?(+dataRow[idx]||0):0;
+      function getNum(idx){return idx!=null?(+dataRow[idx]||0):0;}
       const delCnt=getNum(colIdx.delCnt);
       const retCnt=getNum(colIdx.retCnt);
       const damage=getNum(colIdx.damage);
       const fresh=getNum(colIdx.fresh);
       const addInc=getNum(colIdx.addInc);
-      const subtotal=getNum(colIdx.subtotal);
-      // TOTAL(VAT제외) - 마지막 숫자 컬럼에서 찾기
       let totalExVat=getNum(colIdx.totalExVat);
       if(!totalExVat){
-        // 직접 찾기: 가장 큰 숫자
         for(let i=dataRow.length-1;i>=0;i--){
           const v=+dataRow[i]||0;
           if(v>10000000){totalExVat=v;break;}
         }
       }
       const totalIncVat=Math.round(totalExVat*1.1);
-
-      onResult({month,delCnt,retCnt,damage,fresh,addInc,subtotal,totalExVat,totalIncVat},null);
-    }catch(err){onResult(null,'파싱 오류: '+err.message);}
+      onResult({month,delCnt,retCnt,damage,fresh,addInc,totalExVat,totalIncVat},null);
+    }catch(err){onResult(null,'파싱 오류:'+err.message);}
   };
   reader.readAsArrayBuffer(file);
 }
@@ -3191,7 +3272,7 @@ window.batchExcelUpload=async function(inp){
           </div>
           <div class="mdf">
             <button class="btn btn-gray" onclick="document.getElementById('${previewId}').remove()">취소</button>
-            <button class="btn btn-blue" onclick="confirmBatchSave(${JSON.stringify(autoMonth)},${result.perDriverList.length})">✅ ${result.perDriverList.filter(pd=>!existIds.has(pd.driverId)).length}명 정산 저장</button>
+            <button class="btn btn-blue" onclick="confirmBatchSave('${autoMonth}',${result.perDriverList.length})">✅ ${result.perDriverList.filter(pd=>!existIds.has(pd.driverId)).length}명 정산 저장</button>
           </div>
         </div>
       </div>`);
