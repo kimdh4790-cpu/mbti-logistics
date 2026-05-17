@@ -486,6 +486,8 @@ service cloud.firestore {
 </div>
 
 <div id="toast"></div>
+<!-- 고정 파일 입력 (동적 DOM 문제 방지) -->
+<input type="file" id="nuri-excel-inp" accept=".xlsx,.xls" style="display:none">
 <div id="modals"></div>
 
 <!-- ══ ES MODULE 브릿지 — 모듈 로드 전 onclick 오류 방지 ══ -->
@@ -2372,8 +2374,10 @@ PAGES['dealer-settlements']=async function(){
     <select id="filter-month" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text)" onchange="filterSettles()">
       <option value="">전체 월</option>
     </select>
-    <input type="file" id="nuri-excel-inp" accept=".xlsx,.xls" style="display:none" onchange="parseSettleExcelNuri(this)">
-    <button class="btn btn-green btn-sm" onclick="document.getElementById('nuri-excel-inp').click()">📂 쿠팡 엑셀 → 캠프별 정렬</button>
+    <label style="position:relative;cursor:pointer">
+      <input type="file" accept=".xlsx,.xls" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%" onchange="parseSettleExcelNuri(this)">
+      <span class="btn btn-green btn-sm">📂 쿠팡 엑셀 → 캠프별 정렬</span>
+    </label>
     <button class="btn btn-blue btn-sm" onclick="openNewSettle()">+ 수동 입력</button>`;
   // 캠프별 버튼 렌더
   const campBtnArea=document.createElement('div');
@@ -3186,9 +3190,9 @@ function stripCoupangSuffix(uid){
 // ═══════════════════════════════════════════════════════
 window.parseSettleExcelNuri=function(inp){
   const file=inp.files[0];
-  if(!file){toast('파일을 선택해주세요');return;}
+  if(!file)return;
   inp.value='';
-  toast('📊 엑셀 분석 중... '+file.name);
+  toast('📊 엑셀 분석 중...');
 
   const fnMatch=file.name.match(/(\d{4})년[_\s]*(\d{2})월/);
   const month=fnMatch?`${fnMatch[1]}-${fnMatch[2]}`:curMonth();
@@ -4798,6 +4802,12 @@ window._m_saveModusignKey=window.saveModusignKey;
 // ── initApp에 이용약관 + 청구서해시 체크 추가
 
 
+
+// 고정 파일 입력 이벤트 연결
+document.addEventListener('DOMContentLoaded',function(){
+  var inp=document.getElementById('nuri-excel-inp');
+  if(inp)inp.onchange=function(){if(typeof parseSettleExcelNuri==='function')parseSettleExcelNuri(this);};
+});
 </script>
 </body>
 </html>
