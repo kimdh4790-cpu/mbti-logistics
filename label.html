@@ -175,7 +175,7 @@ body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
       <div class="field" style="flex:1"><label>캠프</label><input id="edit-camp" placeholder="부산2" oninput="updatePreview()"></div>
       <div class="field" style="flex:1"><label>노선번호</label><input id="edit-route" placeholder="812 B01" oninput="updatePreview()"></div>
     </div>
-    <div class="field"><label>박스규격</label><input id="edit-boxSize" placeholder="RPB2.4" oninput="updatePreview()"></div>
+    <div style="display:flex;gap:8px"><div class="field" style="flex:1"><label>박스규격</label><input id="edit-boxSize" placeholder="RPB2.4" oninput="updatePreview()"></div><div class="field" style="flex:1"><label>주간/야간</label><input id="edit-deliveryTime" placeholder="D3빨/야간" oninput="updatePreview()"></div></div>
   </div>
 
   <!-- STEP 3: 출력 -->
@@ -311,11 +311,11 @@ async function runOCR(){
 
   // 5개국어 프롬프트 - 공통 규칙: 원문 언어 관계없이 지정 언어로 출력
   var PROMPTS={
-    ko: '이 쿠팡 송장 이미지에서 수령인 정보를 추출해 한국어로 반환하라. 반드시 JSON만 반환.\n규칙:\n①recipientKor=수령인 이름\n②addr1Kor=도로명주소 전체(시/구+도로명+번지+번길 모두 포함, 예:수영구 수영로668번길 14). 절대 생략하지말것\n③addr2Kor=건물명+동+호수(예:화목오피스텔 607호, 또는 베이양아파트 108동 505호)\n④tracking=운송장번호(숫자/점/영문 조합, 예:10.3172.8391.0430)\n⑤orderNo=주문번호(숫자/점 조합, 예:27.1001.8522.3613)\n⑥camp=캠프명(좌측상단큰글씨, 예:부산1,부산2)\n⑦route=노선번호(별표뒤 숫자+영문, 예:812 B01)\n⑧boxSize=박스규격(RPB뒤숫자, 예:RPB2.4)\n⑨memo=배송메모(문앞 등)\n⑤orderNo=주문번호(숫자, 주문번호 또는 ORDER라고 표시된 것)\n⑥phone=전화번호(있으면)\n⑦모르면 빈문자열\n{"recipientKor":"","addr1Kor":"","addr2Kor":"","tracking":"","orderNo":"","phone":"","city":"부산"}',
-    en: '이 쿠팡 송장 이미지에서 수령인 정보를 추출해 영어(로마자)로 반환하라. 반드시 JSON만 반환.\n규칙:\n①recipientEng=수령인 이름 로마자(예:임수지→Im Suji)\n②addr1Eng=주소1 영어 전체(번길 포함, 예:668beon-gil 14, Suyeong-ro, Suyeong-gu). 절대 생략하지말것\n③addr2Eng=건물+동+호수 영어(예:Hwamok Officetel 607, 또는 Baekyang Apt 108-505)\n④tracking=운송장번호(tracking/배송번호)\n⑤orderNo=주문번호(order number)\n⑥city=도시 영어\n⑦모르면 빈문자열\n{"recipientEng":"","addr1Eng":"","addr2Eng":"","tracking":"","orderNo":"","city":"Busan"}',
-    zh: '从这张快递单图片中提取收件人信息，用中文返回。自动识别语言（韩文/英文/日文等）。只返回JSON。\n规则：①recipientZh=收件人中文名（韩文音译，例:임수지→林秀芝）②addr1Zh=地址中文（音译，例:釜山市水营区广安洞89-13）③addr2Zh=建筑+号（例:华木办公酒店607号）④tracking=运单号⑤orderNo=订单号⑥city=城市中文⑦不知道留空\n{"recipientZh":"","addr1Zh":"","addr2Zh":"","tracking":"","orderNo":"","city":"釜山市"}',
-    ja: 'この伝票画像から受取人情報を日本語で返してください。言語自動認識（韓国語/英語/中国語等）。JSONのみ返答。\n規則：①recipientJa=受取人名（韓国語はカナ読み、例:임수지→イム・スジ）②addr1Ja=住所1（例:スヨング クァンアンドン89-13）③addr2Ja=建物+号（例:ファモクオフィステル607号）④tracking=送り状番号⑤orderNo=注文番号⑥city=都市⑦不明は空文字\n{"recipientJa":"","addr1Ja":"","addr2Ja":"","tracking":"","orderNo":"","city":"プサン"}',
-    ph: 'Extract recipient information from this shipping label and return in Filipino/English. Auto-detect language (Korean/Chinese/Japanese etc). Return JSON only.\n Rules: ①recipientPh=Recipient name in English ②addr1Ph=Address line 1 in English ③addr2Ph=Building+unit in English ④tracking=tracking number ⑤orderNo=order number ⑥city=city name ⑦unknown=empty string\n{"recipientPh":"","addr1Ph":"","addr2Ph":"","tracking":"","orderNo":"","city":"Busan"}'
+    ko: '이 쿠팡 송장에서 정보 추출. JSON만 반환.\n①name=수령인이름②addr1=도로명주소전체(번길포함,예:사상구 모라로110번길 121)③addr2=건물명+동+호수(예:모라영구임대아파트 106동 1209호)④tracking=운송장번호(예:10.3172.8391.0430)⑤orderNo=주문번호(예:27.1001.8522.3613)⑥camp=캠프명(예:부산2)⑦route=노선번호(별표뒤,예:812 B01)⑧boxSize=규격(예:RPB2.4)⑨memo=배송메모⑩deliveryTime=주간/야간⑪모르면빈문자열\n{"name":"","addr1":"","addr2":"","tracking":"","orderNo":"","camp":"","route":"","boxSize":"","memo":"","deliveryTime":"","city":"부산"}',
+    en: 'Extract from this Coupang label and return JSON only. Translate address to English.\n①name=recipient name(romanized)②addr1=full street address in English(include beon-gil,예:110beon-gil 121,Mora-ro,Sasang-gu)③addr2=building+unit in English(예:Mora Permanent Apt 106-1209)④tracking=tracking number(예:10.3172.8391.0430)⑤orderNo=order number⑥camp=camp name(예:Busan2)⑦route=route number(after star,예:812 B01)⑧boxSize=box size(예:RPB2.4)⑨memo=delivery note⑩deliveryTime=day/night\n{"name":"","addr1":"","addr2":"","tracking":"","orderNo":"","camp":"","route":"","boxSize":"","memo":"","deliveryTime":"","city":"Busan"}',
+    zh: '从快递单提取信息，地址翻译成中文，只返回JSON。\n①name=收件人②addr1=完整街道地址(中文,含胡同)③addr2=建筑+单元(中文)④tracking=运单号⑤orderNo=订单号⑥camp=站点名⑦route=路线号(星号后)⑧boxSize=箱规⑨memo=配送备注⑩deliveryTime=白天/夜间\n{"name":"","addr1":"","addr2":"","tracking":"","orderNo":"","camp":"","route":"","boxSize":"","memo":"","deliveryTime":"","city":"釜山"}',
+    ja: 'この伝票から情報抽出、住所を日本語に翻訳、JSONのみ返答。\n①name=受取人②addr1=完全な住所(日本語)③addr2=建物+部屋番号(日本語)④tracking=送り状番号⑤orderNo=注文番号⑥camp=拠点名⑦route=路線番号(★の後)⑧boxSize=箱サイズ⑨memo=配達メモ⑩deliveryTime=昼間/夜間\n{"name":"","addr1":"","addr2":"","tracking":"","orderNo":"","camp":"","route":"","boxSize":"","memo":"","deliveryTime":"","city":"釜山"}',
+    ph: 'Extract from Coupang label, translate address to English/Filipino, return JSON only.\n①name=recipient②addr1=full address in English③addr2=building+unit in English④tracking=tracking number⑤orderNo=order number⑥camp=camp name⑦route=route number(after star)⑧boxSize=box size⑨memo=delivery note⑩deliveryTime=day/night\n{"name":"","addr1":"","addr2":"","tracking":"","orderNo":"","camp":"","route":"","boxSize":"","memo":"","deliveryTime":"","city":"Busan"}'
   };
   var prompt=PROMPTS[_lang]||PROMPTS.ko;
 
@@ -377,14 +377,11 @@ function showResult(info){
   var today=new Date();
   var dateStr=(today.getMonth()+1)+'/'+today.getDate()+'/'+today.getFullYear();
   // 5개국어 필드 매핑
-  var nameMap={ko:info.recipientKor,en:info.recipientEng,zh:info.recipientZh,ja:info.recipientJa,ph:info.recipientPh};
-  var addr1Map={ko:info.addr1Kor,en:info.addr1Eng,zh:info.addr1Zh,ja:info.addr1Ja,ph:info.addr1Ph};
-  var addr2Map={ko:info.addr2Kor,en:info.addr2Eng,zh:info.addr2Zh,ja:info.addr2Ja,ph:info.addr2Ph};
   function clean(s){return s?s.replace(/\[.*?\]/g,'').replace(/（.*?）/g,'').trim():'';}
   _data={
-    name: clean(nameMap[_lang]||info.recipientKor||info.recipientEng||''),
-    addr1: clean(addr1Map[_lang]||info.addr1Kor||info.addr1Eng||''),
-    addr2: clean(addr2Map[_lang]||info.addr2Kor||info.addr2Eng||''),
+    name: clean(info.name||info.recipientKor||info.recipientEng||''),
+    addr1: clean(info.addr1||info.addr1Kor||info.addr1Eng||''),
+    addr2: clean(info.addr2||info.addr2Kor||info.addr2Eng||''),
     track: info.tracking||'',
     orderNo: info.orderNo||'',
     phone: info.phone||'',
@@ -392,6 +389,7 @@ function showResult(info){
     route: info.route||'',
     boxSize: info.boxSize||'',
     memo: info.memo||'',
+    deliveryTime: info.deliveryTime||'',
     city: info.city||(_lang==='ko'?'부산':_lang==='zh'?'釜山市':_lang==='ja'?'プサン':'Busan'),
     date: dateStr
   };
@@ -410,6 +408,8 @@ function showResult(info){
   if(rEl2) rEl2.value=_data.route||'';
   var bEl2=document.getElementById('edit-boxSize');
   if(bEl2) bEl2.value=_data.boxSize||'';
+  var dtEl2=document.getElementById('edit-deliveryTime');
+  if(dtEl2) dtEl2.value=_data.deliveryTime||'';
   document.getElementById('loading-card').style.display='none';
   document.getElementById('step-result').style.display='block';
   document.getElementById('step-result').scrollIntoView({behavior:'smooth'});
@@ -443,6 +443,8 @@ function updatePreview(){
   if(rEl) _data.route=rEl.value;
   var bEl=document.getElementById('edit-boxSize');
   if(bEl) _data.boxSize=bEl.value;
+  var dtEl=document.getElementById('edit-deliveryTime');
+  if(dtEl) _data.deliveryTime=dtEl.value;
   renderLabel();
 }
 
@@ -497,8 +499,10 @@ function renderLabel(){
     var qrSize=_printSize===4?75:90;
     // LogiNet 4분할 고정
   var campTxt=d.camp?'<span class="li-camp">'+escH(d.camp)+'</span>':'';
-  var routeBig=d.route?'<div class="li-route-big">&#9733;'+escH(d.route)+'</div>':'';
+  var routeBig='';
   var memoTxt=d.memo?'<div class="li-memo">'+escH(d.memo)+'</div>':'';
+  var dtRaw=(d.deliveryTime||'').toLowerCase();
+  var dtBadge=d.deliveryTime?'<span class="li-delivery-badge '+(dtRaw.indexOf('야간')>=0?'li-night':'li-day')+'">'+(dtRaw.indexOf('야간')>=0?'🌙 야간':'☀️ 주간')+'</span>':'';
   var boxTxt=d.boxSize?'<span class="li-box">'+escH(d.boxSize)+'</span>':'';
   var mkItem=function(qrId){
     return '<div class="label-item">'
@@ -515,6 +519,7 @@ function renderLabel(){
     +'</div>'
     +'<div class="li-footer">'
     +'<div class="li-footer-left">'
+    +(d.route?'<div style="font-size:18px;font-weight:900;letter-spacing:1px;color:#1a1a18;line-height:1.1;margin-bottom:3px">&#9733;'+escH(d.route)+dtBadge+'</div>':'')
     +'<span class="li-track-lbl">운송장</span>'
     +'<span class="li-track">'+escH(d.track)+'</span>'
     +(d.orderNo?'<div class="li-order">주문: '+escH(d.orderNo)+'</div>':'')
