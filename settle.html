@@ -2415,12 +2415,12 @@ PAGES['dealer-settlements']=async function(){
   const btnPanel=document.createElement('div');
   btnPanel.id='settle-btn-panel';
   btnPanel.style.cssText='background:#fff;border-radius:14px;padding:14px 18px;margin-bottom:10px;box-shadow:0 2px 10px rgba(0,0,0,.07)';
-  let panelOpen=false;
+  window._panelOpen=false;
   const renderPanel=()=>{
     btnPanel.innerHTML=`
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${panelOpen?'10px':'0'}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${window._panelOpen?'10px':'0'}">
         <span style="font-size:13px;font-weight:700;color:var(--text)">📋 정산 자동화</span>
-        <button onclick="panelOpen=!panelOpen;renderPanel()" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--text3);font-family:'Pretendard',sans-serif">${panelOpen?'접기 ▲':'더보기 ▼'}</button>
+        <button onclick="window._panelOpen=!window._panelOpen;renderPanel()" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--text3);font-family:'Pretendard',sans-serif">${window._panelOpen?'접기 ▲':'더보기 ▼'}</button>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <label style="position:relative;cursor:pointer">
@@ -2431,7 +2431,7 @@ PAGES['dealer-settlements']=async function(){
         <button class="btn btn-blue btn-sm" onclick="bulkSendSettle()">📤 정산 일괄 전달</button>
         <button class="btn btn-green btn-sm" onclick="openTaxArchive()">📗 세금계산서 보관함</button>
       </div>
-      ${panelOpen?`
+      ${window._panelOpen?`
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
         <button class="btn btn-sm" style="background:#06B6D4;color:#fff" onclick="checkDuplicateSettle()">🔍 중복 검사</button>
         <button class="btn btn-sm" style="background:#8B5CF6;color:#fff" onclick="showCoupangStats()">📦 쿠팡 건수 통계</button>
@@ -3192,9 +3192,9 @@ window.batchExcelUpload=async function(inp){
       try{
         await setDoc(doc(db,'coupang_revenue',CU.dealerId+'_'+autoMonth),{
           dealerId:CU.dealerId, month:autoMonth,
-          delCnt:rev.delCnt, retCnt:rev.retCnt, damage:rev.damage,
-          fresh:rev.fresh, addInc:rev.addInc, subtotal:rev.subtotal,
-          totalExVat:rev.totalExVat, totalIncVat:rev.totalIncVat,
+          delCnt:rev.delCnt||0, retCnt:rev.retCnt||0, damage:rev.damage||0,
+          fresh:rev.fresh||0, addInc:rev.addInc||0,
+          totalExVat:rev.totalExVat||0, totalIncVat:rev.totalIncVat||0,
           updatedAt:serverTimestamp()
         });
         toast('✅ 쿠팡 매출 현황 저장 완료');
