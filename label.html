@@ -52,8 +52,8 @@ body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
   img, canvas { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; display:block !important; }
   #qr-1 img, #qr-2a img, #qr-2b img { display:block !important; visibility:visible !important; }
   @page{
-    size: 100mm 150mm;
-    margin: 0;
+    size: A4 portrait;
+    margin: 10mm;
   }
   body,html{background:#fff!important;margin:0!important;padding:0!important}
   .no-print{display:none!important}
@@ -61,7 +61,8 @@ body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
   #step-result .card{display:none!important}
   #step-result .print-area{display:block!important}
   body > *:not(#step-result):not(.print-area){display:none!important}
-  @page{size:A4 portrait;margin:10mm}
+  .label-a4-2 .label-item{page-break-inside:avoid;break-inside:avoid}
+  .label-a4-2{page-break-inside:avoid;break-inside:avoid}
 }
 /* 라벨 1개 (A4 전체) */
 .label-a4-1{width:100%;padding:20px;font-family:'Arial',sans-serif}
