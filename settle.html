@@ -2361,6 +2361,54 @@ PAGES['dealer-settlements']=async function(){
   document.getElementById('settle-btn-panel')?.remove();
   c.before(btnPanel);
 
+  // ── 쿠팡 매출 현황 카드 ──
+  document.getElementById('coupang-rev-card')?.remove();
+  const revCard=document.createElement('div');
+  revCard.id='coupang-rev-card';
+  revCard.style.cssText='background:#fff;border-radius:14px;padding:14px 18px;margin-bottom:10px;box-shadow:0 2px 10px rgba(0,0,0,.07)';
+  revCard.innerHTML='<div style="font-size:13px;font-weight:700;color:var(--text3)">📦 쿠팡 매출 현황 로딩 중...</div>';
+  c.before(revCard);
+  (async function loadRevCard(){
+    try{
+      const revSnap=await getDocs(query(collection(db,'coupang_revenue'),where('dealerId','==',CU.dealerId)));
+      if(revSnap.empty){
+        revCard.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:13px;font-weight:700">📦 쿠팡 매출 현황</span><span style="font-size:11px;color:var(--text3)">엑셀 업로드 시 자동 저장됩니다</span></div>';
+        return;
+      }
+      const revs=revSnap.docs.map(function(d){return d.data();}).sort(function(a,b){return(b.month||'').localeCompare(a.month||'');});
+      const months=[...new Set(revs.map(function(rv){return rv.month;}))].sort().reverse();
+      window._coupangRevs=revs;
+      window.loadRevMonth=function(month){
+        const rv=revs.find(function(rv){return rv.month===month;})||revs[0];
+        if(!rv)return;
+        var dc=document.getElementById('rev-content');
+        if(!dc)return;
+        dc.innerHTML=
+          '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:8px">'+
+          '<div style="background:#f0f7ff;border-radius:10px;padding:10px 12px;text-align:center">'+
+          '<div style="font-size:10px;color:#3b82f6;font-weight:700;margin-bottom:3px">매출(VAT제외)</div>'+
+          '<div style="font-size:15px;font-weight:900;color:#1d4ed8">₩'+fmt(rv.totalExVat||0)+'</div></div>'+
+          '<div style="background:#f0fdf4;border-radius:10px;padding:10px 12px;text-align:center">'+
+          '<div style="font-size:10px;color:#16a34a;font-weight:700;margin-bottom:3px">매출(VAT포함)</div>'+
+          '<div style="font-size:15px;font-weight:900;color:#15803d">₩'+fmt(rv.totalIncVat||0)+'</div></div>'+
+          '<div style="background:#fafafa;border-radius:10px;padding:10px 12px;text-align:center">'+
+          '<div style="font-size:10px;color:var(--text3);font-weight:700;margin-bottom:3px">배송/반품</div>'+
+          '<div style="font-size:13px;font-weight:700">'+(rv.delCnt||0).toLocaleString()+' / '+(rv.retCnt||0).toLocaleString()+'</div></div>'+
+          '<div style="background:#fff5f5;border-radius:10px;padding:10px 12px;text-align:center">'+
+          '<div style="font-size:10px;color:#ef4444;font-weight:700;margin-bottom:3px">분실파손 차감</div>'+
+          '<div style="font-size:13px;font-weight:700;color:#dc2626">-₩'+fmt(rv.damage||0)+'</div></div></div>'+
+          '<div style="font-size:10px;color:var(--text3);text-align:right">프레시백: ₩'+fmt(rv.fresh||0)+' · 추가인센: ₩'+fmt(rv.addInc||0)+' · VAT = ×1.1 적용</div>';
+      };
+      var selOpts=months.map(function(m){return '<option value="'+m+'" '+(m===revs[0].month?'selected':'')+'>'+m+'</option>';}).join('');
+      revCard.innerHTML=
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
+        '<span style="font-size:13px;font-weight:700">📦 쿠팡 매출 현황</span>'+
+        '<select id="rev-month-sel" onchange="loadRevMonth(this.value)" style="padding:4px 8px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text)">'+
+        selOpts+'</select></div><div id="rev-content"></div>';
+      loadRevMonth(revs[0].month);
+    }catch(e){revCard.innerHTML='<div style="font-size:12px;color:var(--text3)">📦 쿠팡 매출 현황 (엑셀 업로드 후 표시)</div>';}
+  })();
+
   try{
     // dealerId 있으면 필터, 없으면 전체 (admin)
     const settlQuery=CU.dealerId
@@ -2426,7 +2474,7 @@ function renderSettleTable(settles){
   if(!c)return;
   const rows=settles.map(s=>buildSettleRow(s)).join('');
   c.innerHTML=`
-    <div id="bulk-delete-bar" style="display:none;background:#fff5f5;border:1.5px solid #fed7d7;border-radius:10px;padding:10px 14px;margin-bottom:10px;display:none;align-items:center;justify-content:space-between">
+    <div id="bulk-delete-bar" style="display:none;background:#fff5f5;border:1.5px solid #fed7d7;border-radius:10px;padding:10px 14px;margin-bottom:10px;align-items:center;justify-content:space-between">
       <span id="bulk-count-txt" style="font-size:13px;font-weight:700;color:#c53030">0건 선택됨</span>
       <button onclick="bulkDeleteSettle()" style="background:#c53030;color:#fff;border:none;padding:7px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Pretendard',sans-serif">🗑 선택 삭제</button>
     </div>
@@ -2986,6 +3034,66 @@ window.openNewSettle=async function(){
 };
 // ★ 기사별 일괄 정산 저장
 // ── 엑셀 일괄업로드 (정산 목록 페이지 상단 버튼) ──
+// ── 쿠팡 정산총괄 시트 파싱 (회사 매출 확인용) ──
+function parseCoupangRevenue(file, month, onResult){
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      // 정산총괄 시트 찾기
+      let ws=null;
+      for(const name of wb.SheetNames){
+        if(name.includes('정산총괄')||name.includes('총괄')){ws=wb.Sheets[name];break;}
+      }
+      if(!ws){onResult(null,'정산총괄 시트를 찾을 수 없습니다');return;}
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+
+      // 헤더 행 찾기 (배송건수, 반품건수 등이 있는 행)
+      let hIdx=rows.findIndex(r=>r&&r.some&&r.some(c=>String(c||'').includes('배송건수')));
+      if(hIdx<0){onResult(null,'헤더를 찾을 수 없습니다');return;}
+
+      // 데이터 행 (헤더 다음 행 - 합계 행)
+      const dataRow=rows[hIdx+1];
+      if(!dataRow){onResult(null,'데이터가 없습니다');return;}
+
+      // 컬럼 인덱스 파악
+      const hRow=rows[hIdx];
+      const colIdx={};
+      hRow.forEach((h,i)=>{
+        const hs=String(h||'').replace(/\s/g,'');
+        if(hs.includes('배송건수'))colIdx.delCnt=i;
+        else if(hs.includes('반품건수'))colIdx.retCnt=i;
+        else if(hs.includes('분실파손')||hs.includes('차감'))colIdx.damage=i;
+        else if(hs.includes('TOTAL')||hs.includes('VAT제외')||hs.includes('총합계'))colIdx.totalExVat=i;
+        else if(hs.includes('프레쉬백')||hs.includes('프레시백'))colIdx.fresh=i;
+        else if(hs.includes('추가인센'))colIdx.addInc=i;
+        else if(hs.includes('금액(소계)'))colIdx.subtotal=i;
+      });
+
+      const getNum=(idx)=>idx!=null?(+dataRow[idx]||0):0;
+      const delCnt=getNum(colIdx.delCnt);
+      const retCnt=getNum(colIdx.retCnt);
+      const damage=getNum(colIdx.damage);
+      const fresh=getNum(colIdx.fresh);
+      const addInc=getNum(colIdx.addInc);
+      const subtotal=getNum(colIdx.subtotal);
+      // TOTAL(VAT제외) - 마지막 숫자 컬럼에서 찾기
+      let totalExVat=getNum(colIdx.totalExVat);
+      if(!totalExVat){
+        // 직접 찾기: 가장 큰 숫자
+        for(let i=dataRow.length-1;i>=0;i--){
+          const v=+dataRow[i]||0;
+          if(v>10000000){totalExVat=v;break;}
+        }
+      }
+      const totalIncVat=Math.round(totalExVat*1.1);
+
+      onResult({month,delCnt,retCnt,damage,fresh,addInc,subtotal,totalExVat,totalIncVat},null);
+    }catch(err){onResult(null,'파싱 오류: '+err.message);}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
 window.batchExcelUpload=async function(inp){
   const file=inp.files[0];
   if(!file)return;
@@ -2996,6 +3104,22 @@ window.batchExcelUpload=async function(inp){
   const autoMonth=fnMatch?`${fnMatch[1]}-${fnMatch[2]}`:curMonth();
 
   toast('📊 엑셀 분석 중...');
+
+  // 쿠팡 회사 매출(정산총괄) 파싱 & Firebase 저장
+  parseCoupangRevenue(file, autoMonth, async function(rev, err){
+    if(rev && !err){
+      try{
+        await setDoc(doc(db,'coupang_revenue',CU.dealerId+'_'+autoMonth),{
+          dealerId:CU.dealerId, month:autoMonth,
+          delCnt:rev.delCnt, retCnt:rev.retCnt, damage:rev.damage,
+          fresh:rev.fresh, addInc:rev.addInc, subtotal:rev.subtotal,
+          totalExVat:rev.totalExVat, totalIncVat:rev.totalIncVat,
+          updatedAt:serverTimestamp()
+        });
+        toast('✅ 쿠팡 매출 현황 저장 완료');
+      }catch(e){console.warn('매출 저장 실패:',e);}
+    }
+  });
 
   parseExcelData(file,async function(result){
     if(!result.perDriverList?.length){toast('❌ 기사 데이터를 찾을 수 없습니다');return;}
