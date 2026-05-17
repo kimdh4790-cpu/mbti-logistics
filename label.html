@@ -171,6 +171,7 @@ body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
     <div class="field"><label>주소 2 (영문)</label><input id="edit-addr2" oninput="updatePreview()"></div>
     <div class="field"><label>운송장번호</label><input id="edit-track" oninput="updatePreview()"></div>
     <div class="field"><label>주문번호</label><input id="edit-orderNo" oninput="updatePreview()"></div>
+    <div class="field"><label>고객메시지</label><input id="edit-customerMsg" placeholder="문앞/경비실/무인택배함..." oninput="updatePreview()"></div>
     <div style="display:flex;gap:8px">
       <div class="field" style="flex:1"><label>캠프</label><input id="edit-camp" placeholder="부산2" oninput="updatePreview()"></div>
       <div class="field" style="flex:1"><label>노선번호</label><input id="edit-route" placeholder="812 B01" oninput="updatePreview()"></div>
@@ -311,11 +312,11 @@ async function runOCR(){
 
   // 5개국어 프롬프트 - 공통 규칙: 원문 언어 관계없이 지정 언어로 출력
   var PROMPTS={
-    ko: '이 쿠팡 송장에서 정보 추출. JSON만 반환.\n①name=수령인이름②addr1=도로명주소전체(번길포함,예:사상구 모라로110번길 121)③addr2=건물명+동+호수(예:모라영구임대아파트 106동 1209호)④tracking=운송장번호(예:10.3172.8391.0430)⑤orderNo=주문번호(예:27.1001.8522.3613)⑥camp=캠프명(예:부산2)⑦route=노선번호(별표뒤,예:812 B01)⑧boxSize=규격(예:RPB2.4)⑨memo=배송메모⑩deliveryTime=주간/야간⑪모르면빈문자열\n{"name":"","addr1":"","addr2":"","tracking":"","orderNo":"","camp":"","route":"","boxSize":"","memo":"","deliveryTime":"","city":"부산"}',
-    en: 'Extract from this Coupang label and return JSON only. Translate address to English.\n①name=recipient name(romanized)②addr1=full street address in English(include beon-gil,예:110beon-gil 121,Mora-ro,Sasang-gu)③addr2=building+unit in English(예:Mora Permanent Apt 106-1209)④tracking=tracking number(예:10.3172.8391.0430)⑤orderNo=order number⑥camp=camp name(예:Busan2)⑦route=route number(after star,예:812 B01)⑧boxSize=box size(예:RPB2.4)⑨memo=delivery note⑩deliveryTime=day/night\n{"name":"","addr1":"","addr2":"","tracking":"","orderNo":"","camp":"","route":"","boxSize":"","memo":"","deliveryTime":"","city":"Busan"}',
-    zh: '从快递单提取信息，地址翻译成中文，只返回JSON。\n①name=收件人②addr1=完整街道地址(中文,含胡同)③addr2=建筑+单元(中文)④tracking=运单号⑤orderNo=订单号⑥camp=站点名⑦route=路线号(星号后)⑧boxSize=箱规⑨memo=配送备注⑩deliveryTime=白天/夜间\n{"name":"","addr1":"","addr2":"","tracking":"","orderNo":"","camp":"","route":"","boxSize":"","memo":"","deliveryTime":"","city":"釜山"}',
-    ja: 'この伝票から情報抽出、住所を日本語に翻訳、JSONのみ返答。\n①name=受取人②addr1=完全な住所(日本語)③addr2=建物+部屋番号(日本語)④tracking=送り状番号⑤orderNo=注文番号⑥camp=拠点名⑦route=路線番号(★の後)⑧boxSize=箱サイズ⑨memo=配達メモ⑩deliveryTime=昼間/夜間\n{"name":"","addr1":"","addr2":"","tracking":"","orderNo":"","camp":"","route":"","boxSize":"","memo":"","deliveryTime":"","city":"釜山"}',
-    ph: 'Extract from Coupang label, translate address to English/Filipino, return JSON only.\n①name=recipient②addr1=full address in English③addr2=building+unit in English④tracking=tracking number⑤orderNo=order number⑥camp=camp name⑦route=route number(after star)⑧boxSize=box size⑨memo=delivery note⑩deliveryTime=day/night\n{"name":"","addr1":"","addr2":"","tracking":"","orderNo":"","camp":"","route":"","boxSize":"","memo":"","deliveryTime":"","city":"Busan"}'
+    ko: '쿠팡 송장 이미지에서 정보 추출. JSON만 반환. 각 필드 명확히 구분할것.\n①name=수령인이름만(성명)\n②addr1=도로명+번지+번길 전체(예:사상구 모라로110번길 121) 절대생략금지\n③addr2=건물명+동+호수만(예:모라영구임대아파트 106동 1209호)\n④tracking=바코드 운송장번호(점포함숫자, 예:10.3172.8391.0430) ★별표노선번호아님\n⑤orderNo=주문번호(점포함숫자, 예:27.1001.8522.3613) D3/빠른배송등 배송코드 절대포함금지\n⑥camp=캠프명(좌상단큰글씨만, 예:부산2)\n⑦route=노선번호(★별표뒤숫자+영문만, 예:812 B01)\n⑧boxSize=박스규격(RPB뒤숫자만, 예:RPB2.4)\n⑨customerMsg=고객배송메시지(문앞/경비실/자율출입가능 등)\n⑩deliveryTime=배송시간대코드(D3빨/야간 등, 주문번호에서 분리)\n⑪모르면빈문자열\n{"name":"","addr1":"","addr2":"","tracking":"","orderNo":"","camp":"","route":"","boxSize":"","customerMsg":"","deliveryTime":"","city":"부산"}',
+    en: 'Extract from Coupang label. JSON only. Keep fields strictly separated.\n①name=recipient name only\n②addr1=full street address translated to English(include beon-gil, ex:110beon-gil 121, Mora-ro, Sasang-gu) DO NOT abbreviate\n③addr2=building+unit in English(ex:Mora Permanent Apt 106-1209)\n④tracking=barcode tracking number with dots(ex:10.3172.8391.0430) NOT the star route code\n⑤orderNo=order number with dots(ex:27.1001.8522.3613) NEVER include D3/delivery codes\n⑥camp=camp name(ex:Busan2)\n⑦route=route code after star(ex:812 B01)\n⑧boxSize=box size(ex:RPB2.4)\n⑨customerMsg=customer delivery message(door/lobby/etc)\n⑩deliveryTime=delivery time code(D3/night etc)\n{"name":"","addr1":"","addr2":"","tracking":"","orderNo":"","camp":"","route":"","boxSize":"","customerMsg":"","deliveryTime":"","city":"Busan"}',
+    zh: '从快递单提取，JSON格式，各字段严格分开。①name=收件人姓名②addr1=完整街道地址(中文翻译,含胡同)③addr2=建筑+单元(中文)④tracking=条码运单号(含点,例:10.3172.8391.0430)非路线号⑤orderNo=订单号(含点)不含D3等配送代码⑥camp=站点名⑦route=路线号(★号后)⑧boxSize=箱规⑨customerMsg=配送留言⑩deliveryTime=配送时间代码\n{"name":"","addr1":"","addr2":"","tracking":"","orderNo":"","camp":"","route":"","boxSize":"","customerMsg":"","deliveryTime":"","city":"釜山"}',
+    ja: '伝票から抽出、JSON形式、各フィールド厳密に分離。①name=受取人名②addr1=完全住所(日本語翻訳)③addr2=建物+部屋番号④tracking=バーコード送り状番号(点含む)路線番号でない⑤orderNo=注文番号(点含む)D3等配送コード含まない⑥camp=拠点名⑦route=路線番号(★の後)⑧boxSize=箱サイズ⑨customerMsg=配達メモ⑩deliveryTime=配達時間帯\n{"name":"","addr1":"","addr2":"","tracking":"","orderNo":"","camp":"","route":"","boxSize":"","customerMsg":"","deliveryTime":"","city":"釜山"}',
+    ph: 'Extract from label JSON only, fields strictly separated.①name=recipient name②addr1=full street address English translation③addr2=building+unit English④tracking=barcode number with dots NOT star route⑤orderNo=order number with dots NO delivery codes⑥camp=camp name⑦route=route after star⑧boxSize=box size⑨customerMsg=delivery message⑩deliveryTime=delivery time code\n{"name":"","addr1":"","addr2":"","tracking":"","orderNo":"","camp":"","route":"","boxSize":"","customerMsg":"","deliveryTime":"","city":"Busan"}'
   };
   var prompt=PROMPTS[_lang]||PROMPTS.ko;
 
@@ -385,10 +386,11 @@ function showResult(info){
     track: info.tracking||'',
     orderNo: info.orderNo||'',
     phone: info.phone||'',
+    customerMsg: (info.customerMsg||info.memo)||'',
     camp: info.camp||'',
     route: info.route||'',
     boxSize: info.boxSize||'',
-    memo: info.memo||'',
+    memo: info.customerMsg||info.memo||'',
     deliveryTime: info.deliveryTime||'',
     city: info.city||(_lang==='ko'?'부산':_lang==='zh'?'釜山市':_lang==='ja'?'プサン':'Busan'),
     date: dateStr
@@ -402,6 +404,8 @@ function showResult(info){
   document.getElementById('edit-track').value=_data.track;
   var onEl=document.getElementById('edit-orderNo');
   if(onEl) onEl.value=_data.orderNo||'';
+  var cMsgEl2=document.getElementById('edit-customerMsg');
+  if(cMsgEl2) cMsgEl2.value=_data.customerMsg||'';
   var cEl2=document.getElementById('edit-camp');
   if(cEl2) cEl2.value=_data.camp||'';
   var rEl2=document.getElementById('edit-route');
@@ -437,6 +441,8 @@ function updatePreview(){
   _data.track=document.getElementById('edit-track').value;
   var onEl=document.getElementById('edit-orderNo');
   if(onEl) _data.orderNo=onEl.value;
+  var cMsgEl=document.getElementById('edit-customerMsg');
+  if(cMsgEl) _data.customerMsg=cMsgEl.value;
   var cEl=document.getElementById('edit-camp');
   if(cEl) _data.camp=cEl.value;
   var rEl=document.getElementById('edit-route');
@@ -500,15 +506,16 @@ function renderLabel(){
     // LogiNet 4분할 고정
   var campTxt=d.camp?'<span class="li-camp">'+escH(d.camp)+'</span>':'';
   var routeBig='';
-  var memoTxt=d.memo?'<div class="li-memo">'+escH(d.memo)+'</div>':'';
+  var memoTxt=(d.customerMsg||d.memo)?'<div class="li-memo">📌 '+escH(d.customerMsg||d.memo)+'</div>':'';
   var dtRaw=(d.deliveryTime||'').toLowerCase();
-  var dtBadge=d.deliveryTime?'<span class="li-delivery-badge '+(dtRaw.indexOf('야간')>=0?'li-night':'li-day')+'">'+(dtRaw.indexOf('야간')>=0?'🌙 야간':'☀️ 주간')+'</span>':'';
+  var isNight=dtRaw.indexOf('야간')>=0||dtRaw.indexOf('night')>=0;
+  var dtBadge=d.deliveryTime?'<span class="li-delivery-badge '+(isNight?'li-night':'li-day')+'">'+(isNight?'🌙 야간':'☀️ '+escH(d.deliveryTime))+'</span>':'';
   var boxTxt=d.boxSize?'<span class="li-box">'+escH(d.boxSize)+'</span>':'';
   var mkItem=function(qrId){
     return '<div class="label-item">'
     +'<div class="li-header">'
     +'<span class="li-header-logo">Logi<span>Net</span></span>'
-    +'<div class="li-header-right">'+campTxt+'<span class="li-route">쿠팡딜리버리</span></div>'
+    +'<div class="li-header-right">'+campTxt+'</div>'
     +'</div>'
     +routeBig
     +'<div class="li-to-section">'
