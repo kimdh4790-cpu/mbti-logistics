@@ -84,18 +84,7 @@ body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
 .label-item{padding:16px;border:1px solid #ddd}
 /* 라벨 4개 (A4 4분할) */
 .label-a4-4{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:0;width:100%;height:100%;font-family:'Arial',sans-serif}
-.label-a4-4 .label-item{padding:12px;border:1px solid #ddd;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between}
-.label-a4-4 .li-name{font-size:20px!important}
-.label-a4-4 .li-addr{font-size:10px!important;flex:1}
-.label-item .li-logo{font-size:16px;font-weight:900;letter-spacing:1px;color:#e8303a;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid #1a1a18}
-.label-item .li-logo span{color:#1a1a18}
-.label-item .li-to{font-size:9px;font-weight:700;color:#888;letter-spacing:.1em;margin-bottom:3px}
-.label-item .li-name{font-size:22px;font-weight:900;color:#1a1a18;margin-bottom:4px;line-height:1.1}
-.label-item .li-addr{font-size:11px;color:#333;line-height:1.6;margin-bottom:8px}
-.label-item .li-track{font-family:monospace;font-size:9px;color:#185FA5;letter-spacing:1px;border-top:1px dashed #ccc;padding-top:6px;margin-top:6px}
-.label-item .li-date{font-size:9px;color:#888;margin-top:2px}
-.label-item .li-order{font-family:monospace;font-size:9px;color:#555;margin-top:2px}
-.label-item .li-agent{font-size:8px;color:#555;margin-top:1px;font-weight:600;letter-spacing:.3px}
+
 </style>
 
 </head>
@@ -114,14 +103,6 @@ body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
       <button id="btn-lang-ja" onclick="setLang('ja')" style="padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;border:2px solid rgba(255,255,255,0.5);background:transparent;color:#fff;cursor:pointer">🇯🇵 일본어</button>
       <button id="btn-lang-ph" onclick="setLang('ph')" style="padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;border:2px solid rgba(255,255,255,0.5);background:transparent;color:#fff;cursor:pointer">🇵🇭 필리핀</button>
     </div>
-  </div>
-</div>
-<div class="topbar no-print">
-  <div class="topbar-title">📦 쿠팡 라벨 출력</div>
-  <div class="topbar-sub">송장 촬영 → OCR 추출 → 번역 → A4 출력</div>
-  <div style="display:flex;gap:6px;margin-top:8px">
-    <button id="btn-lang-en" onclick="setLang('en')" style="padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;border:2px solid #185FA5;background:#185FA5;color:#fff;cursor:pointer">🇺🇸 영어</button>
-    <button id="btn-lang-zh" onclick="setLang('zh')" style="padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;border:2px solid #C41E3A;background:transparent;color:#C41E3A;cursor:pointer">🇨🇳 중국어</button>
   </div>
 </div>
 
@@ -190,13 +171,18 @@ body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
     <div class="field"><label>주소 2 (영문)</label><input id="edit-addr2" oninput="updatePreview()"></div>
     <div class="field"><label>운송장번호</label><input id="edit-track" oninput="updatePreview()"></div>
     <div class="field"><label>주문번호</label><input id="edit-orderNo" oninput="updatePreview()"></div>
+    <div style="display:flex;gap:8px">
+      <div class="field" style="flex:1"><label>캠프</label><input id="edit-camp" placeholder="부산2" oninput="updatePreview()"></div>
+      <div class="field" style="flex:1"><label>노선번호</label><input id="edit-route" placeholder="812 B01" oninput="updatePreview()"></div>
+    </div>
+    <div class="field"><label>박스규격</label><input id="edit-boxSize" placeholder="RPB2.4" oninput="updatePreview()"></div>
   </div>
 
   <!-- STEP 3: 출력 -->
   <div class="card no-print">
     <h2>🖨️ STEP 3 &nbsp; 출력 설정</h2>
-    <!-- 고정 4분할 출력 -->
-    <button class="btn btn-blue" onclick="window.print()">🖨️ A4 인쇄 / 출력</button>
+    <div style="font-size:11px;color:#888;margin-bottom:8px">📐 A4 4분할 고정 출력</div>
+    <button class="btn btn-blue" onclick="doPrint()">🖨️ A4 인쇄 / 출력</button>
     <button class="btn btn-gray" style="margin-top:8px" onclick="resetAll()">🔄 처음으로</button>
   </div>
 
@@ -325,7 +311,7 @@ async function runOCR(){
 
   // 5개국어 프롬프트 - 공통 규칙: 원문 언어 관계없이 지정 언어로 출력
   var PROMPTS={
-    ko: '이 쿠팡 송장 이미지에서 수령인 정보를 추출해 한국어로 반환하라. 반드시 JSON만 반환.\n규칙:\n①recipientKor=수령인 이름\n②addr1Kor=도로명주소 전체(시/구+도로명+번지+번길 모두 포함, 예:수영구 수영로668번길 14). 절대 생략하지말것\n③addr2Kor=건물명+동+호수(예:화목오피스텔 607호, 또는 베이양아파트 108동 505호)\n④tracking=운송장번호(숫자/영문 조합, 송장번호, 배송번호)\n⑤orderNo=주문번호(숫자, 주문번호 또는 ORDER라고 표시된 것)\n⑥phone=전화번호(있으면)\n⑦모르면 빈문자열\n{"recipientKor":"","addr1Kor":"","addr2Kor":"","tracking":"","orderNo":"","phone":"","city":"부산"}',
+    ko: '이 쿠팡 송장 이미지에서 수령인 정보를 추출해 한국어로 반환하라. 반드시 JSON만 반환.\n규칙:\n①recipientKor=수령인 이름\n②addr1Kor=도로명주소 전체(시/구+도로명+번지+번길 모두 포함, 예:수영구 수영로668번길 14). 절대 생략하지말것\n③addr2Kor=건물명+동+호수(예:화목오피스텔 607호, 또는 베이양아파트 108동 505호)\n④tracking=운송장번호(숫자/점/영문 조합, 예:10.3172.8391.0430)\n⑤orderNo=주문번호(숫자/점 조합, 예:27.1001.8522.3613)\n⑥camp=캠프명(좌측상단큰글씨, 예:부산1,부산2)\n⑦route=노선번호(별표뒤 숫자+영문, 예:812 B01)\n⑧boxSize=박스규격(RPB뒤숫자, 예:RPB2.4)\n⑨memo=배송메모(문앞 등)\n⑤orderNo=주문번호(숫자, 주문번호 또는 ORDER라고 표시된 것)\n⑥phone=전화번호(있으면)\n⑦모르면 빈문자열\n{"recipientKor":"","addr1Kor":"","addr2Kor":"","tracking":"","orderNo":"","phone":"","city":"부산"}',
     en: '이 쿠팡 송장 이미지에서 수령인 정보를 추출해 영어(로마자)로 반환하라. 반드시 JSON만 반환.\n규칙:\n①recipientEng=수령인 이름 로마자(예:임수지→Im Suji)\n②addr1Eng=주소1 영어 전체(번길 포함, 예:668beon-gil 14, Suyeong-ro, Suyeong-gu). 절대 생략하지말것\n③addr2Eng=건물+동+호수 영어(예:Hwamok Officetel 607, 또는 Baekyang Apt 108-505)\n④tracking=운송장번호(tracking/배송번호)\n⑤orderNo=주문번호(order number)\n⑥city=도시 영어\n⑦모르면 빈문자열\n{"recipientEng":"","addr1Eng":"","addr2Eng":"","tracking":"","orderNo":"","city":"Busan"}',
     zh: '从这张快递单图片中提取收件人信息，用中文返回。自动识别语言（韩文/英文/日文等）。只返回JSON。\n规则：①recipientZh=收件人中文名（韩文音译，例:임수지→林秀芝）②addr1Zh=地址中文（音译，例:釜山市水营区广安洞89-13）③addr2Zh=建筑+号（例:华木办公酒店607号）④tracking=运单号⑤orderNo=订单号⑥city=城市中文⑦不知道留空\n{"recipientZh":"","addr1Zh":"","addr2Zh":"","tracking":"","orderNo":"","city":"釜山市"}',
     ja: 'この伝票画像から受取人情報を日本語で返してください。言語自動認識（韓国語/英語/中国語等）。JSONのみ返答。\n規則：①recipientJa=受取人名（韓国語はカナ読み、例:임수지→イム・スジ）②addr1Ja=住所1（例:スヨング クァンアンドン89-13）③addr2Ja=建物+号（例:ファモクオフィステル607号）④tracking=送り状番号⑤orderNo=注文番号⑥city=都市⑦不明は空文字\n{"recipientJa":"","addr1Ja":"","addr2Ja":"","tracking":"","orderNo":"","city":"プサン"}',
@@ -402,6 +388,10 @@ function showResult(info){
     track: info.tracking||'',
     orderNo: info.orderNo||'',
     phone: info.phone||'',
+    camp: info.camp||'',
+    route: info.route||'',
+    boxSize: info.boxSize||'',
+    memo: info.memo||'',
     city: info.city||(_lang==='ko'?'부산':_lang==='zh'?'釜山市':_lang==='ja'?'プサン':'Busan'),
     date: dateStr
   };
@@ -414,6 +404,12 @@ function showResult(info){
   document.getElementById('edit-track').value=_data.track;
   var onEl=document.getElementById('edit-orderNo');
   if(onEl) onEl.value=_data.orderNo||'';
+  var cEl2=document.getElementById('edit-camp');
+  if(cEl2) cEl2.value=_data.camp||'';
+  var rEl2=document.getElementById('edit-route');
+  if(rEl2) rEl2.value=_data.route||'';
+  var bEl2=document.getElementById('edit-boxSize');
+  if(bEl2) bEl2.value=_data.boxSize||'';
   document.getElementById('loading-card').style.display='none';
   document.getElementById('step-result').style.display='block';
   document.getElementById('step-result').scrollIntoView({behavior:'smooth'});
@@ -441,6 +437,12 @@ function updatePreview(){
   _data.track=document.getElementById('edit-track').value;
   var onEl=document.getElementById('edit-orderNo');
   if(onEl) _data.orderNo=onEl.value;
+  var cEl=document.getElementById('edit-camp');
+  if(cEl) _data.camp=cEl.value;
+  var rEl=document.getElementById('edit-route');
+  if(rEl) _data.route=rEl.value;
+  var bEl=document.getElementById('edit-boxSize');
+  if(bEl) _data.boxSize=bEl.value;
   renderLabel();
 }
 
@@ -448,12 +450,13 @@ function updatePreview(){
 function setSize(n,el){
   _printSize=n;
   document.querySelectorAll('.size-tab').forEach(function(t){t.classList.remove('on');});
-  el.classList.add('on');
+  if(el) el.classList.add('on');
   renderLabel();
   var qd={track:_data.track,name:_data.name,addr1:_data.addr1,addr2:_data.addr2};
   setTimeout(function(){
-    if(n===1){generateQR('qr-1',qd);}
-    else{generateQR('qr-2a',qd);generateQR('qr-2b',qd);}
+    if(n===1){ generateQR('qr-1',qd); }
+    else if(n===4){ generateQR('qr-4a',qd); generateQR('qr-4b',qd); generateQR('qr-4c',qd); generateQR('qr-4d',qd); }
+    else { generateQR('qr-2a',qd); generateQR('qr-2b',qd); }
   },0);
 }
 
@@ -492,26 +495,39 @@ function renderLabel(){
       +'</div>';
   } else {
     var qrSize=_printSize===4?75:90;
-    var mkItem=function(qrId){
-      var orderLine=d.orderNo?'<div class="li-order">주문번호: '+escH(d.orderNo)+'</div>':'';
-      return '<div class="label-item">'
-      +'<div class="li-logo">'+logoHtml+'</div>'
-      +'<div class="li-to">SHIP TO:</div>'
-      +'<div class="li-name">'+escH(d.name)+'</div>'
-      +'<div class="li-addr">'+escH(addrBlock).replace(/\n/g,'<br>')+'</div>'
-      +'<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:6px">'
-      +'<div>'
-      +'<div class="li-track">운송장: '+escH(d.track)+'</div>'
-      +orderLine
-      +'<div class="li-date">'+dateStr+'</div>'
-      +'</div>'
-      +'<div id="'+qrId+'" style="width:'+qrSize+'px;height:'+qrSize+'px"></div>'
-      +'</div></div>';};
-    if(_printSize===4){
-      html='<div class="label-a4-4">'+mkItem('qr-4a')+mkItem('qr-4b')+mkItem('qr-4c')+mkItem('qr-4d')+'</div>';
-    } else {
-      html='<div class="label-a4-2">'+mkItem('qr-2a')+mkItem('qr-2b')+'</div>';
-    }
+    // LogiNet 4분할 고정
+  var campTxt=d.camp?'<span class="li-camp">'+escH(d.camp)+'</span>':'';
+  var routeBig=d.route?'<div class="li-route-big">&#9733;'+escH(d.route)+'</div>':'';
+  var memoTxt=d.memo?'<div class="li-memo">'+escH(d.memo)+'</div>':'';
+  var boxTxt=d.boxSize?'<span class="li-box">'+escH(d.boxSize)+'</span>':'';
+  var mkItem=function(qrId){
+    return '<div class="label-item">'
+    +'<div class="li-header">'
+    +'<span class="li-header-logo">Logi<span>Net</span></span>'
+    +'<div class="li-header-right">'+campTxt+'<span class="li-route">쿠팡딜리버리</span></div>'
+    +'</div>'
+    +routeBig
+    +'<div class="li-to-section">'
+    +'<div class="li-to-lbl">SHIP TO</div>'
+    +'<div class="li-name">'+escH(d.name)+'</div>'
+    +memoTxt
+    +'<div class="li-addr">'+escH(addrBlock).replace(/\n/g,'<br>')+'</div>'
+    +'</div>'
+    +'<div class="li-footer">'
+    +'<div class="li-footer-left">'
+    +'<span class="li-track-lbl">운송장</span>'
+    +'<span class="li-track">'+escH(d.track)+'</span>'
+    +(d.orderNo?'<div class="li-order">주문: '+escH(d.orderNo)+'</div>':'')
+    +boxTxt
+    +'</div>'
+    +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">'
+    +'<div id="'+qrId+'" style="width:65px;height:65px"></div>'
+    +'<div class="li-date-info">'+dateStr+'</div>'
+    +'</div>'
+    +'</div>'
+    +'</div>';
+  };
+  html='<div class="label-a4-4">'+mkItem('qr-4a')+mkItem('qr-4b')+mkItem('qr-4c')+mkItem('qr-4d')+'</div>';
   }
   document.getElementById('print-area').innerHTML=html;
   setTimeout(function(){
@@ -600,6 +616,19 @@ function generateQR(containerId, data){
   img.src='https://api.qrserver.com/v1/create-qr-code/?size='+(size*2)+'x'+(size*2)+'&data='+encodeURIComponent(qrText)+'&format=png&ecc=M&margin=1';
 }
 
+function doPrint(){
+  _qrLoaded={};
+  _printDone=false;
+  renderLabel();
+  var qd={track:_data.track,name:_data.name,addr1:_data.addr1,addr2:_data.addr2};
+  setTimeout(function(){
+    if(_printSize===1){generateQR('qr-1',qd);}
+    else if(_printSize===4){generateQR('qr-4a',qd);generateQR('qr-4b',qd);generateQR('qr-4c',qd);generateQR('qr-4d',qd);}
+    else{generateQR('qr-2a',qd);generateQR('qr-2b',qd);}
+    waitQRandPrint();
+    setTimeout(function(){if(!_printDone){window.print();_printDone=true;}},5000);
+  },100);
+}
 function waitQRandPrint(){
   // QR이 모두 로드될 때까지 폴링
   var ids=Object.keys(_qrLoaded);
