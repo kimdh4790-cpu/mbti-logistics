@@ -328,7 +328,7 @@ async function runOCR(){
   try{
     document.getElementById('loading-msg').textContent='AI 번역 중...';
     // /claude-ocr 프록시 경유 (API 키 서버 보관, 브라우저 미노출)
-    var res=await fetch('/claude-ocr',{
+    var res=await fetch('https://mbti-logistics.kimdh4790.workers.dev/claude-ocr',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
