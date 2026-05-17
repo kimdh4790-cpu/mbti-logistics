@@ -164,49 +164,6 @@ var DEFAULT_UNIT_PRICES = {
 // 런타임 단가 (Firestore 로드 후 업데이트)
 var G_PRICES = Object.assign({}, DEFAULT_UNIT_PRICES);
 
-// Firestore에서 관리자 설정 단가 로드
-function loadUnitPrices() {
-  if(!FB||!_db) return;
-  // 업무별 기본 단가
-  _fsGetCached('settings/unitPrices', 30).then(function(snap) {
-    if (snap) {
-      G_PRICES = Object.assign({}, DEFAULT_UNIT_PRICES, snap);
-      if (snap.routePrices) {
-        // Firestore 저장 단가표로 RPRICE 완전 교체
-        Object.keys(RPRICE).forEach(function(k){delete RPRICE[k];});
-        Object.assign(RPRICE, snap.routePrices);
-      }
-    }
-  }).catch(function(){});
-  // 라우트 단가 별도 문서로도 저장 가능
-  _fsGetCached('settings/routePrices', 30).then(function(snap) {
-    if (snap) {
-      Object.keys(RPRICE).forEach(function(k){delete RPRICE[k];});
-      Object.assign(RPRICE, snap);
-    }
-  }).catch(function(){});
-}
-
-// 관리자 단가 저장
-async function saveUnitPrices() {
-  var fields = ['coupang_normal','coupang_fresh','coupang_return','cj_normal',
-                'kurly_normal','water_normal','freshbag_inc','yong_del','yong_ret'];
-  var data = {};
-  fields.forEach(function(k) {
-    var el = document.getElementById('up-'+k);
-    if (el) data[k] = +el.value || DEFAULT_UNIT_PRICES[k];
-  });
-  G_PRICES = Object.assign({}, DEFAULT_UNIT_PRICES, data);
-  if (FB&&_db) {
-    await _db.collection('settings').doc('unitPrices').set(data, {merge:true});
-    // 라우트 단가표도 동시 저장
-    await _db.collection('settings').doc('routePrices').set(RPRICE, {merge:false});
-    toast('✅ 단가 + 라우트 단가표 저장 완료');
-  } else {
-    localStorage.setItem('mb_prices', JSON.stringify(data));
-    toast('단가 로컬 저장 (Firebase 미연결)');
-  }
-}
 
 var RPRICE = {
   '101C':700,'101D':730,
@@ -254,13 +211,10 @@ function getCampByRoute(route){
   return (CAMP_NAMES&&CAMP_NAMES[code])||'';
 }
 
-// ██ _getIncSetting ██
-function _getIncSetting(driver,route){
-  var raw=localStorage.getItem(_incKey(driver,route));
-  if(!raw)return{on:true,rate:25};
-  try{return JSON.parse(raw);}catch(e){return{on:true,rate:25};}
-}
 
+
+// _getIncSetting 간단 대체 (settle.html용)
+function _getIncSetting(driver,route){return{on:true,rate:G_PRICES&&G_PRICES.freshbag_inc||25};}
 
 // ██ calcNet ██
 function calcNet(x){
@@ -318,9 +272,17 @@ function calcNet(x){
 
 
 // ██ parseCoupangExcel (물류앱 원본) ██
-function parseCoupangExcel(inp){
+async function parseCoupangExcel(inp){
   var file=inp.files[0]; if(!file)return;
   if(typeof XLSX==='undefined'){toast('⚠️ 엑셀 라이브러리 로딩 중...'); return;}
+  // Firebase 기사 미리 로드 (async)
+  var fbDrivers=[];
+  if(window._db&&window._CU){
+    try{
+      var _drSnap=await window._db.collection('drivers').where('dealerId','==',window._CU.dealerId).get();
+      _drSnap.forEach(function(d){fbDrivers.push(Object.assign({id:d.id},d.data()));});
+    }catch(e){}
+  }
   var reader=new FileReader();
   reader.onload=function(e){
     try{
@@ -455,7 +417,13 @@ function parseCoupangExcel(inp){
       var excelGrandTotal=Object.values(totalMap).reduce(function(s,v){return s+(v.totalAmt||0);},0);
       var excelGrandFresh=Object.values(totalMap).reduce(function(s,v){return s+(v.freshAmt||0);},0);
       var excelGrandDmg=Object.values(totalMap).reduce(function(s,v){return s+(v.dmgAmt||0);},0);
+      // localStorage 기사도 확인 (하위 호환), Firebase 기사 우선
       var drivers=ls('drivers');
+      // Firebase 기사 합치기 (userId 기준)
+      fbDrivers.forEach(function(fd){
+        var exists=drivers.find(function(d){return(d.userId||'').replace(/@[a-z0-9]+$/i,'')===fd.userId;});
+        if(!exists) drivers.push({name:fd.name||'',userId:fd.userId||'',camp:fd.camp||fd.jobsub||'',jobsub:fd.jobsub||'쿠팡'});
+      });
       var settlements=ls('settlements');
       var _now=new Date();
       var _prev=new Date(_now.getFullYear(),_now.getMonth()-1,1);
@@ -604,6 +572,26 @@ function parseCoupangExcel(inp){
       }
       var fbOk=0,fbFail=0;
       // ★ v9.25: lss → Firebase 완료 후 저장 (onSnapshot 경쟁 방지)
+      // _cpPending 세팅 (캠프별 취합 UI용)
+      var byCamp={};
+      Object.keys(drvMap).forEach(function(uid){
+        var dm=drvMap[uid];
+        var cleanId=uid.replace(/@[a-z0-9]+$/i,'').trim();
+        var matchedDrv=fbDrivers.find(function(fd){return fd.userId===cleanId;})||drivers.find(function(d){return(d.userId||'').replace(/@[a-z0-9]+$/i,'')===cleanId;});
+        var camp='기타';
+        if(matchedDrv&&matchedDrv.camp) camp=matchedDrv.camp;
+        else{
+          var firstRoute=Object.keys(dm.routes)[0]||'';
+          var c2=getCampByRoute(firstRoute);
+          if(c2) camp=c2;
+        }
+        dm.uid=cleanId;
+        dm.drvName=matchedDrv?matchedDrv.name||'':'';
+        if(!byCamp[camp])byCamp[camp]=[];
+        byCamp[camp].push(dm);
+      });
+      window._cpPending={month:month,byCamp:byCamp,total:Object.keys(drvMap).length,
+        skippedIds:skippedIds,campOrder:CAMP_ORDER};
       function _finalize(){
         lss('settlements',settlements);
         var protectedCount=0;
