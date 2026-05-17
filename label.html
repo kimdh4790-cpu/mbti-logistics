@@ -49,7 +49,7 @@ body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
   .print-area{background:#fff;border:1px solid #ccc;border-radius:8px;overflow:hidden;margin-top:8px}
 }
 @media print{
-  img { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  img, canvas { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; display:block !important; }
   #qr-1 img, #qr-2a img, #qr-2b img { display:block !important; visibility:visible !important; }
   @page{
     size: 100mm 150mm;
@@ -411,7 +411,7 @@ function showResult(info){
   setTimeout(function(){
     window.onafterprint=function(){ setTimeout(function(){ resetAndCam(); },200); };
     window.print();
-  },300);
+  },500);
 }
 
 function updatePreview(){
@@ -538,14 +538,27 @@ function generateQR(containerId, data){
   var size=containerId==='qr-1'?120:90;
   el.innerHTML='';
   try{
-    new QRCode(el,{
+    var qr=new QRCode(el,{
       text:qrText,
-      width:size,
-      height:size,
+      width:size*2,
+      height:size*2,
       colorDark:'#000000',
       colorLight:'#ffffff',
       correctLevel:QRCode.CorrectLevel.M
     });
+    // canvas → img 변환 (인쇄 호환)
+    setTimeout(function(){
+      var cv=el.querySelector('canvas');
+      if(cv){
+        var dataUrl=cv.toDataURL('image/png');
+        el.innerHTML='';
+        var pImg=document.createElement('img');
+        pImg.src=dataUrl;
+        pImg.width=size; pImg.height=size;
+        pImg.style.cssText='display:block;width:'+size+'px;height:'+size+'px;-webkit-print-color-adjust:exact;print-color-adjust:exact';
+        el.appendChild(pImg);
+      }
+    },50);
   }catch(e){
     el.innerHTML='<div style="font-family:monospace;font-size:7px;word-break:break-all;border:1px solid #000;padding:2px;width:'+size+'px;height:'+size+'px;overflow:hidden;display:flex;align-items:center;justify-content:center;text-align:center">'+escH(track)+'</div>';
   }
