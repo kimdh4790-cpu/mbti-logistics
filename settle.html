@@ -843,6 +843,15 @@ var _db=null,_auth=null,_CU=null;
 
 function initFirebase(){
   if(typeof firebase==='undefined'){setTimeout(initFirebase,300);return;}
+  // 이미 초기화된 경우 앱 재사용
+  if(firebase.apps&&firebase.apps.length>0){
+    _db=firebase.firestore(); window._db=_db;
+    _auth=firebase.auth();
+    _auth.onAuthStateChanged(function(user){
+      if(!user){document.getElementById('login-screen').style.display='flex';document.getElementById('app').style.display='none';_CU=null;window._CU=null;}
+      else{_db.doc('users/'+user.uid).get().then(function(snap){var d=snap.exists?snap.data():{};_CU={uid:user.uid,email:user.email,name:d.name||'',role:d.role||'dealer',dealerId:d.dealerId||user.uid};window._CU=_CU;_db.doc('settings/routePrices').get().then(function(rs){if(rs.exists)Object.assign(RPRICE,rs.data());}).catch(function(){});showApp();}).catch(function(){_CU={uid:user.uid,email:user.email,name:'',role:'dealer',dealerId:user.uid};window._CU=_CU;showApp();});}
+    });return;
+  }
   if(!firebase.apps.length){
     firebase.initializeApp({
       apiKey:'AIzaSyCTywAQNHg8IEYmbU64aYAhjqXMHWbJhjo',
@@ -1181,7 +1190,7 @@ function pageStats(){
       +'<div class="card"><div class="card-header"><div class="card-title">🏆 기사별 순위</div></div>'
       +'<div style="overflow-x:auto"><table><thead><tr><th>#</th><th>기사</th><th>배송건</th><th>실지급</th></tr></thead><tbody>'
       +drivers.map(function(n,i){return '<tr>'
-        +'<td style="font-weight:800;color:'+(i<3?'#f59e0b':'var(--text3)')+'">'+（i+1）+'</td>'
+        +'<td style="font-weight:800;color:'+(i<3?'#f59e0b':'var(--text3)')+'">'+(i+1)+'</td>'
         +'<td><strong>'+esc(n)+'</strong></td>'
         +'<td>'+fmt(byDriver[n].dcnt)+'건</td>'
         +'<td style="font-weight:800;color:#185FA5">₩'+fmt(byDriver[n].net)+'</td></tr>';}).join('')
