@@ -999,6 +999,14 @@ function pageSettlements(){
     }).catch(function(e){c.innerHTML='<div class="empty">⚠️ '+e.message+'</div>';});
 }
 function _reloadSettlePage(){_settleCache=null;pageSettlements();}
+function toggleSettleMore(btn){
+  var box=document.getElementById('settle-more-btns');
+  if(!box)return;
+  var open=box.style.display!=='none'&&box.style.display!=='';
+  box.style.display=open?'none':'flex';
+  btn.textContent=open?'더보기 ▼':'접기 ▲';
+}
+
 function _renderSettlePage(settles,c){
   var filterMonth=_settle_month||'all';
   var filterCamp=_settle_camp||'all';
@@ -1163,6 +1171,348 @@ function openTaxStore(){
     +'<div class="mdf"><button class="btn" onclick="closeMoById(\'mo-tax-store\')">닫기</button></div></div>';
   document.getElementById('modals').appendChild(mo);
 }
+// ══ 기사 관리 ══
+var _drvCache=null,_drvCampFilter='all';
+function pageDrivers(){
+  document.getElementById('page-title').textContent='기사 관리';
+  var tr=document.getElementById('topbar-right');tr.innerHTML='';
+  var btn=document.createElement('button');btn.className='btn btn-blue btn-sm';btn.textContent='+ 기사 추가';btn.onclick=openAddDriver;tr.appendChild(btn);
+  var c=document.getElementById('content');
+  if(!_db){c.innerHTML='<div class="empty"><div class="empty-icon">👤</div>로그인 후 이용하세요</div>';return;}
+  c.innerHTML='<div class="loading">로딩 중...</div>';
+  if(_drvCache){_renderDrivers(_drvCache,c);return;}
+  _db.collection('drivers').where('dealerId','==',_CU.dealerId).get().then(function(snap){
+    _drvCache=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
+    _renderDrivers(_drvCache,c);
+  }).catch(function(e){c.innerHTML='<div class="empty">⚠️ '+e.message+'</div>';});
+}
+function _getDrvCamp(d){
+  if(!d)return '';
+  if(d.camp)return d.camp.replace('캠프','');
+  var r=d.route||'';
+  var ORDER=['부산1','부산2','부산3','대구2','진주M'];
+  for(var i=0;i<ORDER.length;i++){if(r.indexOf(ORDER[i])>=0)return ORDER[i];}
+  if(r==='213')return '대구2B';if(r.indexOf('대구')>=0)return '대구2';if(r.indexOf('진주')>=0)return '진주M';
+  return '';
+}
+function filterDrvCamp(cc){_drvCampFilter=cc;var el=document.getElementById('content');if(el&&_drvCache)_renderDrivers(_drvCache,el);}
+function _renderDrivers(drivers,c){
+  var CAMPS=['부산1','부산2','부산3','대구2','대구2B','진주M'];
+  var CCOL={'부산1':'#3B82F6','부산2':'#8B5CF6','부산3':'#10B981','대구2':'#F59E0B','대구2B':'#FB923C','진주M':'#EF4444'};
+  var act=drivers.filter(function(d){return d.is_active!==false&&d.status!=='탈퇴'&&d.status!=='거부';});
+  var cntMap={};CAMPS.forEach(function(cc){cntMap[cc]=0;});
+  act.forEach(function(d){var cc=_getDrvCamp(d);if(cntMap[cc]!==undefined)cntMap[cc]++;});
+  var flt=_drvCampFilter;
+  var filtered=flt==='all'?act:act.filter(function(d){return _getDrvCamp(d)===flt;});
+  var tabs='<div style="display:flex;gap:5px;padding:8px 0 12px;flex-wrap:wrap;align-items:center">'
+    +'<span style="font-size:10px;color:var(--text3);font-weight:700;margin-right:4px">🏕️ 캠프</span>'
+    +'<button onclick="filterDrvCamp(\'all\')" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(flt==='all'?'var(--blue)':'var(--border)')+';background:'+(flt==='all'?'var(--blue)':'var(--bg)')+';color:'+(flt==='all'?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">전체 ('+act.length+')</button>'
+    +CAMPS.map(function(cc){var on=cc===flt;var col=CCOL[cc]||'var(--blue)';var cnt=cntMap[cc]||0;
+      return '<button onclick="filterDrvCamp(\''+cc+'\')" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(on?col:'var(--border)')+';background:'+(on?col:'var(--bg)')+';color:'+(on?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">'+cc+' ('+cnt+')</button>';}).join('')
+    +'</div>';
+  if(!filtered.length){c.innerHTML=tabs+'<div class="empty"><div class="empty-icon">👤</div>해당 캠프 기사가 없습니다</div>';return;}
+  var byCamp={};
+  filtered.forEach(function(d){var camp=_getDrvCamp(d)||'미지정';if(!byCamp[camp])byCamp[camp]=[];byCamp[camp].push(d);});
+  var campOrder=flt==='all'?[].concat(CAMPS,['미지정','기타']):[flt];
+  var html=tabs+campOrder.filter(function(cc){return byCamp[cc]&&byCamp[cc].length;}).map(function(camp){
+    var col=CCOL[camp]||'#94A3B8';
+    return '<div class="card" style="margin-bottom:10px"><div class="card-header"><div class="card-title" style="color:'+col+'">🏕 '+camp+' ('+byCamp[camp].length+'명)</div></div>'
+      +'<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>성함</th><th>쿠팡 ID</th><th>상태</th><th></th></tr></thead><tbody>'
+      +byCamp[camp].map(function(d){
+        return '<tr><td><strong>'+esc(d.name||'')+'</strong></td>'
+          +'<td style="font-family:monospace;font-size:11px;color:var(--text3)">'+esc(d.userId||'')+'</td>'
+          +'<td><span class="badge '+(d.is_active!==false?'b-green':'b-red')+'">'+(d.is_active!==false?'재직':'퇴직')+'</span></td>'
+          +'<td><button class="btn btn-sm" onclick="editDriver(\''+d.id+'\')">수정</button></td></tr>';
+      }).join('')
+      +'</tbody></table></div></div>';
+  }).join('');
+  c.innerHTML=html;
+}
+function openAddDriver(){
+  var mo=document.createElement('div');mo.className='mo show';mo.id='mo-add-dr';
+  mo.innerHTML='<div class="md"><div class="mdt">👤 기사 추가 <button onclick="closeMoById(\'mo-add-dr\')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3)">✕</button></div>'
+    +'<div class="gr"><div class="fg"><label>성함</label><input id="adr-name" placeholder="홍길동"></div>'
+    +'<div class="fg"><label>쿠팡 ID</label><input id="adr-uid" placeholder="abc123" style="font-family:monospace"></div></div>'
+    +'<div class="gr"><div class="fg"><label>캠프</label><select id="adr-camp">'
+    +CAMP_ORDER.map(function(c){return '<option>'+c+'</option>';}).join('')+'</select></div>'
+    +'<div class="fg"><label>상태</label><select id="adr-active"><option value="true">재직</option><option value="false">퇴직</option></select></div></div>'
+    +'<div class="fg"><label>연락처</label><input id="adr-phone" placeholder="010-0000-0000"></div>'
+    +'<div class="mdf"><button class="btn" onclick="closeMoById(\'mo-add-dr\')">취소</button>'
+    +'<button class="btn btn-blue" onclick="saveNewDriver()">저장</button></div></div>';
+  document.getElementById('modals').appendChild(mo);
+}
+function saveNewDriver(){
+  var name=(document.getElementById('adr-name')||{value:''}).value.trim();
+  var uid=stripDf((document.getElementById('adr-uid')||{value:''}).value.trim());
+  if(!uid){toast('쿠팡 ID를 입력하세요');return;}
+  _db.collection('drivers').add({
+    name:name||'',userId:uid,dealerId:_CU.dealerId,
+    camp:(document.getElementById('adr-camp')||{value:''}).value||'',
+    phone:(document.getElementById('adr-phone')||{value:''}).value.trim()||'',
+    jobsub:'쿠팡',is_active:(document.getElementById('adr-active')||{value:'true'}).value!=='false',
+    status:'재직',createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){closeMoById('mo-add-dr');_drvCache=null;toast('✅ 기사 추가');pageDrivers();})
+  .catch(function(e){toast('❌ '+e.message);});
+}
+function editDriver(id){
+  _db.collection('drivers').doc(id).get().then(function(snap){
+    if(!snap.exists)return;
+    var d=snap.data();
+    var mo=document.createElement('div');mo.className='mo show';mo.id='mo-edit-dr';
+    mo.innerHTML='<div class="md"><div class="mdt">✏️ 기사 수정 <button onclick="closeMoById(\'mo-edit-dr\')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3)">✕</button></div>'
+      +'<div class="gr"><div class="fg"><label>성함</label><input id="edr-name" value="'+esc(d.name||'')+'"></div>'
+      +'<div class="fg"><label>쿠팡 ID</label><input id="edr-uid" value="'+esc(d.userId||'')+'" style="font-family:monospace"></div></div>'
+      +'<div class="gr"><div class="fg"><label>캠프</label><select id="edr-camp">'
+      +CAMP_ORDER.map(function(c){return '<option '+(d.camp===c?'selected':'')+'>'+c+'</option>';}).join('')+'</select></div>'
+      +'<div class="fg"><label>상태</label><select id="edr-active"><option value="true" '+(d.is_active!==false?'selected':'')+'>재직</option><option value="false" '+(d.is_active===false?'selected':'')+'>퇴직</option></select></div></div>'
+      +'<div class="fg"><label>연락처</label><input id="edr-phone" value="'+esc(d.phone||'')+'"></div>'
+      +'<div class="mdf"><button class="btn btn-red btn-sm" style="margin-right:auto" onclick="delDriver(\''+id+'\')">삭제</button>'
+      +'<button class="btn" onclick="closeMoById(\'mo-edit-dr\')">취소</button>'
+      +'<button class="btn btn-blue" onclick="saveDriver(\''+id+'\')">저장</button></div></div>';
+    document.getElementById('modals').appendChild(mo);
+  });
+}
+function saveDriver(id){
+  _db.collection('drivers').doc(id).update({
+    name:(document.getElementById('edr-name')||{value:''}).value.trim()||'',
+    userId:stripDf((document.getElementById('edr-uid')||{value:''}).value.trim()||''),
+    camp:(document.getElementById('edr-camp')||{value:''}).value||'',
+    phone:(document.getElementById('edr-phone')||{value:''}).value.trim()||'',
+    is_active:(document.getElementById('edr-active')||{value:'true'}).value!=='false'
+  }).then(function(){closeMoById('mo-edit-dr');_drvCache=null;toast('✅ 저장');pageDrivers();});
+}
+function delDriver(id){
+  if(!confirm('삭제하시겠습니까?'))return;
+  _db.collection('drivers').doc(id).delete()
+    .then(function(){closeMoById('mo-edit-dr');_drvCache=null;toast('🗑 삭제');pageDrivers();});
+}
+
+// ══ 라우트 단가표 (메인앱 동일) ══
+var ROUTE_CAMPS=[
+  {name:'부산1캠프',label:'부산1캠프 (주간)',prefix:['101','215'],badge:'주간',color:'#3B82F6'},
+  {name:'부산2캠프',label:'부산2캠프 (야간)',prefix:['812'],badge:'야간',color:'#8B5CF6'},
+  {name:'부산3캠프',label:'부산3캠프 (주간)',prefix:['508'],badge:'주간',color:'#10B981'},
+  {name:'대구2캠프',label:'대구2캠프 (야간)',prefix:['109','213'],badge:'야간',color:'#F59E0B'},
+  {name:'대구2B캠프',label:'대구2B캠프',prefix:['213B','214'],badge:'',color:'#FB923C'},
+  {name:'진주M캠프',label:'진주M캠프',prefix:['406','608','612','613','614','619'],badge:'',color:'#EF4444'}
+];
+var _rpCampActive=null;
+function pagePrices(){
+  document.getElementById('page-title').textContent='쿠팡 라우트 단가표';
+  document.getElementById('topbar-right').innerHTML='';
+  var c=document.getElementById('content');
+  if(!_db){c.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
+  c.innerHTML='<div class="loading">로딩 중...</div>';
+  _db.collection('settings').doc('routePrices').get().then(function(snap){
+    if(snap.exists){
+      var data=snap.data();
+      Object.keys(RPRICE).forEach(function(k){delete RPRICE[k];});
+      Object.assign(RPRICE,data);
+    }
+    _renderPrices(c);
+  }).catch(function(){_renderPrices(c);});
+}
+function _getRouteCamp(route){
+  var code=route.replace(/[A-Za-z]+$/,'');
+  for(var i=0;i<ROUTE_CAMPS.length;i++){
+    var camp=ROUTE_CAMPS[i];
+    for(var j=0;j<camp.prefix.length;j++){
+      if(code===camp.prefix[j]||route.startsWith(camp.prefix[j]))return camp.name;
+    }
+  }
+  return '기타';
+}
+function _renderPrices(c){
+  var hasAny=Object.keys(RPRICE).length>0;
+  var viewHTML='<div class="card" style="margin-bottom:14px">'
+    +'<div class="ch"><span class="ct">쿠팡 라우트 단가표</span>'
+    +'<span style="font-size:11px;color:var(--text3)">캠프명 탭 눌러서 펼치기</span></div>';
+  if(!hasAny){
+    viewHTML+='<div class="empty" style="padding:24px 0"><div class="empty-icon">📋</div>'
+      +'<div style="font-size:13px;font-weight:700;margin-bottom:6px">등록된 단가가 없습니다</div>'
+      +'<div style="font-size:11px;color:var(--text3)">아래 편집 섹션에서 직접 추가하거나<br>메인앱(엠비티아이 물류관리)에서 동기화하세요</div></div>';
+    viewHTML+='</div>';
+  } else {
+    ROUTE_CAMPS.forEach(function(camp,ci){
+      var rows=Object.entries(RPRICE).filter(function(e){
+        return camp.prefix.some(function(p){return e[0].startsWith(p);});
+      }).sort(function(a,b){return a[0].localeCompare(b[0],undefined,{numeric:true});});
+      if(!rows.length)return;
+      var gid='vcg_'+ci;
+      var grid='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(75px,1fr));gap:6px;padding:10px 0">'
+        +rows.map(function(e){
+          return '<div style="display:flex;flex-direction:column;align-items:center;background:var(--bg);border-radius:8px;padding:8px 4px;border:1px solid '+camp.color+'33">'
+            +'<div style="font-size:11px;font-weight:700;color:'+camp.color+';margin-bottom:3px">'+e[0]+'</div>'
+            +'<div style="font-size:13px;font-weight:800;color:var(--text)">'+Number(e[1]).toLocaleString()+'</div>'
+            +'<div style="font-size:9px;color:var(--text3)">원/건</div>'
+            +'</div>';
+        }).join('')+'</div>';
+      viewHTML+='<div style="margin-bottom:6px">'
+        +'<div onclick="toggleRpCamp(\''+gid+'\')" style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:var(--bg3);border-radius:var(--r);cursor:pointer;border:1px solid var(--border)">'
+        +'<div style="display:flex;align-items:center;gap:6px">'
+        +'<span style="font-size:13px;font-weight:700;color:'+camp.color+'">'+camp.label+'</span>'
+        +(camp.badge?'<span style="font-size:9px;background:'+camp.color+';color:#fff;padding:1px 7px;border-radius:4px">'+camp.badge+'</span>':'')
+        +'</div>'
+        +'<span style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;color:var(--text3)">'+rows.length+'개 라우트</span><span id="'+gid+'_a" style="font-size:11px;color:var(--text3)">▼</span></span>'
+        +'</div><div id="'+gid+'" style="display:none">'+grid+'</div></div>';
+    });
+    viewHTML+='</div>';
+  }
+  var editHTML='<div class="card"><div class="ch">'
+    +'<span class="ct">📌 라우트별 단가 수정</span>'
+    +'<span style="font-size:10px;color:var(--text3)">(저장 즉시 정산 반영)</span>'
+    +'<button class="btn btn-sm btn-teal" onclick="saveRprice()" style="margin-left:auto">💾 저장</button>'
+    +'</div><div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px" id="rp-camp-tabs">';
+  ROUTE_CAMPS.forEach(function(camp){
+    editHTML+='<button id="rpctab-'+camp.name.replace(/\s/g,'_')+'" onclick="showRpCampTab(\''+camp.name+'\')"'
+      +' style="padding:5px 14px;border:2px solid '+camp.color+';border-radius:8px;background:transparent;color:'+camp.color+';font-size:11px;font-weight:700;cursor:pointer;transition:all .15s">'+camp.name+'</button>';
+  });
+  editHTML+='</div>';
+  ROUTE_CAMPS.forEach(function(camp){
+    var routes=Object.entries(RPRICE).filter(function(e){
+      return camp.prefix.some(function(p){return e[0].startsWith(p);});
+    }).sort(function(a,b){return a[0].localeCompare(b[0],undefined,{numeric:true});});
+    var cid=camp.name.replace(/\s/g,'_');
+    editHTML+='<div id="rpcpanel-'+cid+'" class="rp-camp-panel" style="display:none">'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:8px 12px;background:'+camp.color+'22;border-left:4px solid '+camp.color+';border-radius:0 8px 8px 0">'
+      +'<span style="font-size:13px;font-weight:800;color:'+camp.color+'">🏭 '+camp.label+'</span>'
+      +'<span style="font-size:10px;color:var(--text3)">'+routes.length+'개 라우트</span></div>';
+    if(routes.length){
+      editHTML+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:6px;margin-bottom:12px">';
+      routes.forEach(function(e){
+        editHTML+='<div style="display:flex;flex-direction:column;align-items:center;background:var(--bg3);border-radius:8px;padding:8px 4px;border:1px solid '+camp.color+'44">'
+          +'<div style="font-size:10px;font-weight:700;color:'+camp.color+';margin-bottom:3px">'+e[0]+'</div>'
+          +'<input id="rp-'+e[0]+'" type="number" value="'+e[1]+'"'
+          +' style="width:100%;text-align:center;padding:5px;border:1px solid var(--border);border-radius:5px;font-size:13px;font-weight:700;background:var(--bg);color:var(--teal)">'
+          +'<div style="font-size:9px;color:var(--text3);margin-top:2px">원/건</div></div>';
+      });
+      editHTML+='</div>';
+    } else {
+      editHTML+='<div style="text-align:center;padding:14px;color:var(--text3);font-size:12px">등록된 라우트가 없습니다</div>';
+    }
+    var sample=routes.length?routes[0][0].replace(/[A-Za-z]$/,'')+'E':'예: 620A';
+    editHTML+='<div style="display:flex;gap:5px;margin-bottom:4px">'
+      +'<input id="rp-nk-'+cid+'" type="text" placeholder="신규 라우트 (예: '+sample+')" maxlength="8"'
+      +' style="flex:1;padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;text-transform:uppercase;background:var(--bg);color:var(--text)" oninput="this.value=this.value.toUpperCase()">'
+      +'<input id="rp-nv-'+cid+'" type="number" placeholder="단가(원)"'
+      +' style="width:90px;padding:6px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--text)">'
+      +'<button class="btn btn-sm" style="background:'+camp.color+';color:#fff;border:none;font-size:11px;white-space:nowrap" onclick="addRpCamp(\''+cid+'\')">+ 추가</button>'
+      +'</div></div>';
+  });
+  editHTML+='</div>';
+  c.innerHTML=viewHTML+editHTML;
+  setTimeout(function(){showRpCampTab(ROUTE_CAMPS[0].name);},10);
+}
+function toggleRpCamp(gid){
+  var b=document.getElementById(gid);var a=document.getElementById(gid+'_a');
+  if(b){b.style.display=b.style.display==='none'?'block':'none';if(a)a.textContent=b.style.display==='none'?'▼':'▲';}
+}
+function showRpCampTab(campName){
+  _rpCampActive=campName;
+  document.querySelectorAll('.rp-camp-panel').forEach(function(p){p.style.display='none';});
+  document.querySelectorAll('[id^="rpctab-"]').forEach(function(b){
+    var col=b.style.borderColor;b.style.background='transparent';b.style.color=col;
+  });
+  var sid='rpcpanel-'+campName.replace(/\s/g,'_');
+  var tid='rpctab-'+campName.replace(/\s/g,'_');
+  var panel=document.getElementById(sid);var tab=document.getElementById(tid);
+  if(panel)panel.style.display='block';
+  if(tab){tab.style.background=tab.style.borderColor;tab.style.color='#fff';}
+}
+function addRpCamp(cid){
+  var campName=cid.replace(/_/g,' ');
+  var kEl=document.getElementById('rp-nk-'+cid);var vEl=document.getElementById('rp-nv-'+cid);
+  if(!kEl||!vEl)return;
+  var k=kEl.value.trim().toUpperCase(),v=parseInt(vEl.value)||0;
+  if(!k||!v){toast('라우트 코드와 단가를 입력하세요');return;}
+  RPRICE[k]=v;kEl.value='';vEl.value='';
+  var c=document.getElementById('content');
+  _renderPrices(c);
+  setTimeout(function(){showRpCampTab(campName);},30);
+  toast('✅ '+k+' ('+v.toLocaleString()+'원) 추가');
+}
+function saveRprice(){
+  if(!_db){toast('❌ Firebase 미연결');return;}
+  var newPrices={};
+  Object.keys(RPRICE).forEach(function(r){
+    var el=document.getElementById('rp-'+r);
+    var v=el?+el.value:RPRICE[r];
+    if(v>0)newPrices[r]=v;
+  });
+  Object.keys(RPRICE).forEach(function(k){delete RPRICE[k];});
+  Object.assign(RPRICE,newPrices);
+  Promise.all([
+    _db.collection('settings').doc('routePrices').set(newPrices,{merge:false}),
+    _db.collection('settings').doc('unitPrices').set({routePrices:newPrices},{merge:true})
+  ]).then(function(){
+    toast('✅ 라우트 단가 저장 완료 ('+Object.keys(newPrices).length+'개 라우트)');
+    var c=document.getElementById('content');_renderPrices(c);
+    setTimeout(function(){if(_rpCampActive)showRpCampTab(_rpCampActive);},30);
+  }).catch(function(e){toast('❌ '+e.message);});
+}
+
+// ══ 통계 ══
+function pageStats(){
+  document.getElementById('page-title').textContent='통계';
+  document.getElementById('topbar-right').innerHTML='';
+  var c=document.getElementById('content');c.innerHTML='<div class="loading">로딩 중...</div>';
+  if(!_db)return;
+  if(_settleCache){_renderStats(_settleCache,c);return;}
+  _db.collection('settlements').where('dealerId','==',_CU.dealerId).get().then(function(snap){
+    if(snap.empty){c.innerHTML='<div class="empty"><div class="empty-icon">📈</div>데이터 없음</div>';return;}
+    _settleCache=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
+    _settleCache.sort(function(a,b){return (b.month||'').localeCompare(a.month||'');});
+    _renderStats(_settleCache,c);
+  }).catch(function(e){c.innerHTML='<div class="empty">⚠️ '+e.message+'</div>';});
+}
+function _renderStats(settles,c){
+  var CAMPS=['부산1','부산2','부산3','대구2','대구2B','진주M'];
+  var CCOL={'부산1':'#3B82F6','부산2':'#8B5CF6','부산3':'#10B981','대구2':'#F59E0B','대구2B':'#FB923C','진주M':'#EF4444'};
+  var byMonth={},byDriver={},byCamp={};
+  settles.forEach(function(s){
+    var m=s.month||'';var r=calcNet(s);
+    var camp=_getSettleCamp(s)||'기타';
+    if(!byMonth[m])byMonth[m]={cnt:0,income:0,net:0,dcnt:0};
+    byMonth[m].cnt++;byMonth[m].income+=r.income||0;byMonth[m].net+=r.net||0;byMonth[m].dcnt+=(+s.dcnt||0);
+    var n=s.driverName||s.driver||'';
+    if(!byDriver[n])byDriver[n]={net:0,dcnt:0,cnt:0,camp:camp};
+    byDriver[n].net+=r.net||0;byDriver[n].dcnt+=(+s.dcnt||0);byDriver[n].cnt++;
+    if(!byCamp[camp])byCamp[camp]={net:0,dcnt:0,cnt:0,income:0};
+    byCamp[camp].net+=r.net||0;byCamp[camp].dcnt+=(+s.dcnt||0);byCamp[camp].cnt++;byCamp[camp].income+=r.income||0;
+  });
+  var months=Object.keys(byMonth).sort().reverse().slice(0,12);
+  var drivers=Object.keys(byDriver).sort(function(a,b){return byDriver[b].net-byDriver[a].net;}).slice(0,20);
+  var campRows=[].concat(CAMPS,['기타']).filter(function(cc){return byCamp[cc];}).map(function(cc){
+    var col=CCOL[cc]||'#94A3B8';
+    return '<tr><td><strong style="color:'+col+'">'+cc+'</strong></td><td>'+byCamp[cc].cnt+'건</td><td>'+fmt(byCamp[cc].dcnt)+'건</td>'
+      +'<td style="color:var(--green)">₩'+fmt(byCamp[cc].income)+'</td>'
+      +'<td style="font-weight:800;color:var(--purple)">₩'+fmt(byCamp[cc].net)+'</td></tr>';
+  }).join('');
+  c.innerHTML='<div style="display:grid;gap:14px">'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">'
+    +'<div class="card"><div class="card-header"><div class="card-title">📅 월별 현황</div></div>'
+    +'<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>월</th><th>정산</th><th>배송건</th><th>수익합계</th><th>실지급</th></tr></thead><tbody>'
+    +months.map(function(m){return '<tr><td><strong>'+m+'</strong></td><td>'+byMonth[m].cnt+'건</td><td>'+fmt(byMonth[m].dcnt)+'건</td>'
+      +'<td style="color:#0F6E56">₩'+fmt(byMonth[m].income)+'</td>'
+      +'<td style="font-weight:800;color:#185FA5">₩'+fmt(byMonth[m].net)+'</td></tr>';}).join('')
+    +'</tbody></table></div></div>'
+    +'<div class="card"><div class="card-header"><div class="card-title">🏕️ 캠프별 현황</div></div>'
+    +'<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>캠프</th><th>정산수</th><th>배송건</th><th>수익합계</th><th>실지급</th></tr></thead><tbody>'
+    +campRows+'</tbody></table></div></div>'
+    +'</div>'
+    +'<div class="card"><div class="card-header"><div class="card-title">🏆 기사별 순위</div></div>'
+    +'<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>#</th><th>기사</th><th>캠프</th><th>정산수</th><th>배송건</th><th>실지급 합계</th></tr></thead><tbody>'
+    +drivers.map(function(n,i){
+      var cc=byDriver[n].camp||'';var col=CCOL[cc]||'#94a3b8';
+      return '<tr><td style="font-weight:800;color:'+(i<3?'#f59e0b':'var(--text3)')+'\">'+(i+1)+'</td>'
+        +'<td><strong>'+esc(n)+'</strong></td>'
+        +'<td><span style="background:'+col+'22;color:'+col+';border-radius:4px;padding:1px 7px;font-size:10px;font-weight:700">'+cc+'</span></td>'
+        +'<td>'+byDriver[n].cnt+'건</td><td>'+fmt(byDriver[n].dcnt)+'건</td>'
+        +'<td style="font-weight:800;color:#185FA5">₩'+fmt(byDriver[n].net)+'</td></tr>';}).join('')
+    +'</tbody></table></div></div>'
+    +'</div>';
+}
+
 // ══ 인센 설정 ══
 function _incKey(drv,route){return 'inc_'+drv.replace(/\s/g,'_')+'_'+route;}
 function _getIncSetting(drv,route){
