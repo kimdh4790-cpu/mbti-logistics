@@ -85,10 +85,6 @@ tr:hover>td{background:var(--bg3)}
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(8px);background:#1a1a18;color:#fff;padding:10px 20px;border-radius:var(--r);font-size:13px;z-index:600;opacity:0;transition:.22s;pointer-events:none;white-space:nowrap}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
-<!-- Firebase v8 SDK -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 </head>
 <body>
 
@@ -703,6 +699,10 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
 
 </script>
 
+<!-- Firebase v8 SDK -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 <script>
 // ══ 캠프별 취합 UI (parseCoupangExcel 이후 호출) ══
 function renderCpPending(){
@@ -954,7 +954,7 @@ function showApp(){
   if(_CU&&_CU.email!=='kimdh4790@gmail.com'&&_db){
     _db.collection('subscriptions').doc(_CU.dealerId||_CU.uid).get()
       .then(function(snap){
-        if(snap.exists()){
+        if(snap.exists){
           var sub=snap.data();
           var now=new Date();
           var exp=sub.expireDate&&sub.expireDate.toDate?sub.expireDate.toDate():null;
@@ -1017,7 +1017,8 @@ function doLogout(){if(_auth)_auth.signOut();}
 var MENUS=[
   {s:'메인',items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'📋',l:'정산 관리',p:'settlements'}]},
   {s:'운영',items:[{ic:'👤',l:'기사 관리',p:'drivers'},{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'📅',l:'시즌 단가표',p:'season'}]},
-  {s:'분석',items:[{ic:'📈',l:'통계',p:'stats'}]}
+  {s:'분석',items:[{ic:'📈',l:'통계',p:'stats'}]},
+  {s:'커뮤니티',items:[{ic:'📢',l:'관리자 공지',p:'notices'}]}
 ];
 function buildNav(){
   var nav=document.getElementById('snav');
@@ -1031,7 +1032,7 @@ function goPage(page){
   var nav=document.getElementById('nav-'+page);if(nav)nav.classList.add('on');
   document.getElementById('topbar-right').innerHTML='';
   document.getElementById('sidebar').classList.remove('open');
-  var pages={settle:pageSettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason};
+  var pages={settle:pageSettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,notices:pageNotices};
   var fn=pages[page];
   if(fn)fn();
   else document.getElementById('content').innerHTML='<div class="empty"><div class="empty-icon">🚧</div>준비 중</div>';
@@ -3508,6 +3509,44 @@ function openOneQueueSend(camp){
   document.getElementById('modals').appendChild(mo);
 }
 
+// ══ 관리자 공지 ══
+function pageNotices(){
+  document.getElementById('page-title').textContent='관리자 공지';
+  document.getElementById('topbar-right').innerHTML='';
+  var c=document.getElementById('content');
+  c.innerHTML='<div class="loading">로딩 중...</div>';
+  if(!_db){c.innerHTML='<div class="empty"><div class="empty-icon">📢</div>로그인 후 이용하세요</div>';return;}
+  _db.collection('notices').orderBy('createdAt','desc').get().then(function(snap){
+    if(snap.empty){
+      c.innerHTML='<div class="empty"><div class="empty-icon">📢</div><div style="font-size:16px;font-weight:700;margin-bottom:6px">공지사항 없음</div><div style="font-size:13px;color:var(--text3)">새로운 공지가 없습니다</div></div>';
+      return;
+    }
+    var typeIcon={info:'📢',update:'🔄',warning:'⚠️',event:'🎉'};
+    var typeColor={info:'#dbeafe',update:'#d1fae5',warning:'#fef3c7',event:'#fce7f3'};
+    var typeTxtColor={info:'#1e40af',update:'#065f46',warning:'#92400e',event:'#9d174d'};
+    var html='<div style="display:flex;flex-direction:column;gap:10px">';
+    snap.forEach(function(doc){
+      var n=doc.data();
+      var dt=n.createdAt&&n.createdAt.toDate?n.createdAt.toDate().toLocaleDateString('ko-KR'):'-';
+      var ic=typeIcon[n.type]||'📢';
+      var bg=typeColor[n.type]||'#dbeafe';
+      var tc=typeTxtColor[n.type]||'#1e40af';
+      html+='<div class="card" style="border-left:4px solid '+tc+'">'
+        +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">'
+        +'<div style="display:flex;align-items:center;gap:8px">'
+        +'<span style="background:'+bg+';color:'+tc+';padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700">'+ic+' '+(n.type==='info'?'공지':n.type==='update'?'업데이트':n.type==='warning'?'점검':n.type==='event'?'이벤트':n.type)+'</span>'
+        +'<strong style="font-size:14px">'+esc(n.title||'')+'</strong></div>'
+        +'<span style="font-size:10px;color:var(--text3);white-space:nowrap">'+dt+'</span></div>'
+        +'<div style="font-size:13px;color:var(--text2);line-height:1.6;white-space:pre-wrap">'+esc(n.body||'')+'</div>'
+        +'</div>';
+    });
+    html+='</div>';
+    c.innerHTML=html;
+  }).catch(function(e){
+    c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div>'+esc(e.message)+'</div>';
+  });
+}
+
 // ══ 슈퍼 어드민 ══
 var SUPER_ADMIN_EMAIL = 'kimdh4790@gmail.com';
 function isSuperAdmin(){return _CU&&_CU.email===SUPER_ADMIN_EMAIL;}
@@ -3577,18 +3616,21 @@ function openAdminPanel(){
     body.innerHTML='';body.appendChild(tbl);
   }
 
-  // settlements에서 dealerId 수집
+  // settlements에서 dealerId 수집 후 users에서 이름 조회
   _db.collection('settlements').get().then(function(sSnap){
     var dealerMap={};
     sSnap.forEach(function(doc){
       var did=doc.data().dealerId;
       if(did)dealerMap[did]=(dealerMap[did]||0)+1;
     });
-    var items=Object.keys(dealerMap).sort().map(function(did){
-      return{id:did,name:did,cnt:dealerMap[did]};
+    var dids=Object.keys(dealerMap).sort();
+    if(!dids.length){body.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">등록된 대리점 없음</div>';return;}
+    var userProms=dids.map(function(did){
+      return _db.collection('users').doc(did).get().then(function(us){
+        return{id:did,name:us.exists?(us.data().companyName||us.data().name||did):did,cnt:dealerMap[did]};
+      }).catch(function(){return{id:did,name:did,cnt:dealerMap[did]};});
     });
-    if(!items.length){body.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">등록된 대리점 없음</div>';return;}
-    buildDealerRows(items);
+    Promise.all(userProms).then(function(items){buildDealerRows(items);});
   }).catch(function(e){body.innerHTML='<div style="color:var(--red)">❌ '+e.message+'</div>';});
 }
 

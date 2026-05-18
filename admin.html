@@ -436,6 +436,7 @@ function renderTable(list){
         <button class="btn-sm btn-ext" onclick="openExt('${d.id}','${d.name}')">🔄 연장</button>
         <button class="btn-sm btn-trial" onclick="openTrial('${d.id}','${d.name}')">🆓 체험</button>
         <button class="btn-sm btn-pw" onclick="openPw('${d.id}','${d.name}','${d.email}')">🔑 비번</button>
+        <button class="btn-sm" style="background:#e0f2fe;color:#0369a1" onclick="openContractStatus('${d.id}','${d.name}')">📝 계약서</button>
         <button class="btn-sm btn-cancel" onclick="cancelSub('${d.id}','${d.name}')">🚫 해지</button>
       </div></td>
     </tr>`;
