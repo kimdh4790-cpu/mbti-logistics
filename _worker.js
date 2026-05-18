@@ -89,6 +89,13 @@ async function fsAdd(token, collectionId, fields) {
   return res.json();
 }
 
+async function fsGet(token, collectionId, docId) {
+  const res = await fetch(`${FS_BASE}/${collectionId}/${docId}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  return res.json();
+}
+
 // ── Expire Job ────────────────────────────────────────────────────────────────
 async function runExpireJob(env) {
   const token = await getAccessToken(env);
@@ -109,7 +116,7 @@ async function runExpireJob(env) {
     if (!row.document) continue;
     const status = row.document.fields?.status?.stringValue;
     if (status !== 'active' && status !== 'trial') continue;
-    await fsPatch(token, row.document.name, {
+    await fsPatch(token, `https://firestore.googleapis.com/v1/${row.document.name}`, {
       status:    { stringValue: 'expired' },
       expiredAt: { timestampValue: now }
     });
@@ -267,10 +274,79 @@ export default {
       }
     }
 
+    // 토스페이먼츠 결제 확인 + Firestore 구독 업데이트
     if (path === '/toss-confirm' && method === 'POST') {
-      return new Response(JSON.stringify({ success: false, message: 'Coming soon' }), {
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-      });
+      try {
+        const body   = await request.json();
+        const { paymentKey, orderId, amount } = body;
+
+        // 1. 토스 결제 확인 API
+        const encoded = btoa((env.TOSS_SECRET_KEY || '') + ':');
+        const tossResp = await fetch('https://api.tosspayments.com/v1/payments/confirm', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${encoded}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ paymentKey, orderId, amount: Number(amount) })
+        });
+        const tossData = await tossResp.json();
+
+        if (tossData.status !== 'DONE') {
+          return new Response(JSON.stringify({ success: false, error: tossData.message || '결제 확인 실패' }), {
+            status: 400, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+          });
+        }
+
+        // 2. orderId 파싱: LN-{uid8}-{timestamp}-{plan}
+        const parts  = orderId.split('-');
+        const plan   = parts[parts.length - 1] || 'basic'; // 마지막 파트 = plan
+        const months = 1; // 월간 고정
+        const uid    = body.uid || ''; // subscribe-success.html에서 Firebase Auth uid 전달
+        if (!uid) throw new Error('uid 누락 — 로그인 후 다시 시도해주세요');
+
+        // 3. Firestore 구독 업데이트
+        const token  = await getAccessToken(env);
+        const now    = new Date();
+        const subDoc = await fsGet(token, 'subscriptions', uid);
+        const existingExpire = subDoc.fields?.expireDate?.timestampValue
+          ? new Date(subDoc.fields.expireDate.timestampValue) : null;
+        const base      = (existingExpire && existingExpire > now) ? existingExpire : now;
+        const newExpire = new Date(base.getTime() + months * 30 * 24 * 60 * 60 * 1000);
+        const planAmt   = { starter: 30000, basic: 50000, pro: 80000 };
+
+        await fsPatch(token, `${FS_BASE}/subscriptions/${uid}`, {
+          plan:       { stringValue: plan },
+          status:     { stringValue: 'active' },
+          expireDate: { timestampValue: newExpire.toISOString() },
+          amount:     { integerValue: String(planAmt[plan] || 50000) },
+          updatedAt:  { timestampValue: now.toISOString() }
+        });
+
+        // 4. 결제 내역 기록
+        await fsAdd(token, 'payments', {
+          dealerId:   { stringValue: uid },
+          type:       { stringValue: 'toss' },
+          plan:       { stringValue: plan },
+          months:     { integerValue: String(months) },
+          amount:     { integerValue: String(amount) },
+          paymentKey: { stringValue: paymentKey },
+          orderId:    { stringValue: orderId },
+          expireDate: { timestampValue: newExpire.toISOString() },
+          note:       { stringValue: `토스페이먼츠 ${months}개월 결제` },
+          createdAt:  { timestampValue: now.toISOString() }
+        });
+
+        return new Response(JSON.stringify({
+          success: true, plan, months,
+          expireDate: newExpire.toISOString()
+        }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+
+      } catch (e) {
+        return new Response(JSON.stringify({ success: false, error: e.message }), {
+          status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        });
+      }
     }
 
     // Cron 만료처리 — 수동 트리거
