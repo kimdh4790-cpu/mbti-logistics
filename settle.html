@@ -1073,10 +1073,9 @@ function _renderSettlePage(settles,c){
     +'<button onclick="recalcAllSettlements()" style="padding:8px 14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⚡ 전체 정산 재계산 저장</button>'
     +'<button onclick="openBulkSendPanel()" style="padding:8px 14px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📤 정산 일괄 전달</button>'
     +'<button onclick="openTaxStore()" style="padding:8px 14px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗂 기사별 세금계산서 보관함</button>'
-    +'</div>'
-    +'<div id="settle-more-btns" style="display:none;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;padding-top:8px;border-top:1px dashed rgba(249,115,22,.3)">'
-    
     +'<button onclick="openIncPanel()" style="padding:8px 14px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⚙️ 기사별 인센 설정</button>'
+    +'</div>'
+    +'<div id="settle-more-btns" style="display:none;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;padding-top:8px;border-top:1px dashed rgba(249,115,22,.3)">'  
     +'<button onclick="openCoupangStatsPanel()" style="padding:8px 14px;background:#f97316;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📊 쿠팡 건수 통계</button>'
     +'<button onclick="openSettleCompare()" style="padding:8px 14px;background:#6366f1;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📊 기사별 실적 비교</button>'
     +'<button onclick="checkDuplicateSettlements()" style="padding:8px 14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔍 중복 검사</button>'
@@ -1176,10 +1175,16 @@ function _settleRow(x){
 }
 function openSE(id){
   if(id){
-    _db.collection('settlements').doc(id).get().then(function(snap){
-      if(!snap.exists){toast('❌ 없음');return;}
-      _showSEModal(Object.assign({id:snap.id},snap.data()));
-    });
+    // 캐시에서 먼저 찾기
+    var cached=(_settleCache||[]).find(function(x){return x.id===id||x.fbId===id;});
+    if(cached){_showSEModal(cached);return;}
+    // Firebase fallback
+    if(_db){
+      _db.collection('settlements').doc(id).get().then(function(snap){
+        if(!snap.exists){toast('❌ 정산서를 찾을 수 없습니다');return;}
+        _showSEModal(Object.assign({id:snap.id},snap.data()));
+      }).catch(function(e){toast('❌ '+e.message);});
+    }
   }else{_showSEModal(null);}
 }
   var mo=document.createElement('div');mo.className='mo show';mo.id='mo-se';
@@ -1516,6 +1521,10 @@ function editDriver(id){
       +(_drvCache&&_drvCache.length?[...new Set(_drvCache.map(function(dv){return dv.camp||''}).filter(Boolean))].sort():['기타']).map(function(cc){return '<option '+(d.camp===cc?'selected':'')+'>'+cc+'</option>';}).join('')+'<option '+(d.camp==='기타'||!d.camp?'selected':'')+'>기타</option></select></div>'
       +'<div class="fg"><label>상태</label><select id="edr-active"><option value="true" '+(d.is_active!==false?'selected':'')+'>재직</option><option value="false" '+(d.is_active===false?'selected':'')+'>퇴직</option></select></div></div>'
       +'<div class="fg"><label>연락처</label><input id="edr-phone" value="'+esc(d.phone||'')+'"></div>'
+      +'<div class="gr"><div class="fg"><label>사업자번호</label><input id="edr-biznum" value="'+esc(d.bizNum||'')+'" placeholder="000-00-00000"></div>'
+      +'<div class="fg"><label>상호명</label><input id="edr-bizname" value="'+esc(d.bizName||'')+'"></div></div>'
+      +'<div class="gr"><div class="fg"><label>대표자</label><input id="edr-bizrep" value="'+esc(d.bizRep||d.name||'')+'"></div>'
+      +'<div class="fg"><label>사업장주소</label><input id="edr-bizaddr" value="'+esc(d.bizAddr||'')+'"></div></div>'
       +'<div class="mdf"><button class="btn btn-red btn-sm" style="margin-right:auto" onclick="delDriver(\''+id+'\')">삭제</button>'
       +'<button class="btn" onclick="this.closest(\'.mo\').remove()">취소</button>'
       +'<button class="btn btn-blue" onclick="saveDriver(\''+id+'\')">저장</button></div></div>';
@@ -1523,13 +1532,23 @@ function editDriver(id){
   });
 }
 function saveDriver(id){
-  _db.collection('drivers').doc(id).update({
-    name:(document.getElementById('edr-name')||{value:''}).value.trim()||'',
-    userId:stripDf((document.getElementById('edr-uid')||{value:''}).value.trim()||''),
-    camp:(document.getElementById('edr-camp')||{value:''}).value||'',
-    phone:(document.getElementById('edr-phone')||{value:''}).value.trim()||'',
-    is_active:(document.getElementById('edr-active')||{value:'true'}).value!=='false'
-  }).then(function(){closeMoById('mo-edit-dr');_drvCache=null;toast('✅ 저장');pageDrivers();});
+  function gv(eid){return (document.getElementById(eid)||{value:''}).value.trim();}
+  var payload={
+    name:gv('edr-name')||'',
+    userId:stripDf(gv('edr-uid')||''),
+    camp:gv('edr-camp')||'',
+    phone:gv('edr-phone')||'',
+    is_active:(document.getElementById('edr-active')||{value:'true'}).value!=='false',
+    bizNum:gv('edr-biznum')||'',
+    bizName:gv('edr-bizname')||'',
+    bizRep:gv('edr-bizrep')||'',
+    bizAddr:gv('edr-bizaddr')||''
+  };
+  _db.collection('drivers').doc(id).update(payload).then(function(){
+    this.closest&&this.closest('.mo').remove();
+    var mo=document.getElementById('mo-edit-dr');if(mo)mo.remove();
+    _drvCache=null;toast('✅ 저장');pageDrivers();
+  });
 }
 function delDriver(id){
   if(!confirm('삭제하시겠습니까?'))return;
@@ -1554,19 +1573,34 @@ function _buildRouteCampGroups(){
 function pagePrices(){
   document.getElementById('page-title').textContent='쿠팡 라우트 단가표';
   document.getElementById('topbar-right').innerHTML='';
-  var c=document.getElementById('content');
-  if(!_db||!_CU){c.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
-  c.innerHTML='<div class="loading">로딩 중...</div>';
-  var rpId=_CU.dealerId+'_routePrices';
-  _db.collection('settings').doc(rpId).get().then(function(snap){
-    if(snap.exists){
-      var data=snap.data();
+  var el=document.getElementById('content');
+  if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
+  el.innerHTML='<div class="loading">로딩 중...</div>';
+  var did=_CU.dealerId;
+  // 단가표 + routeCampMap 동시 로드
+  Promise.all([
+    _db.collection('settings').doc(did+'_routePrices').get().catch(function(){return null;}),
+    _db.collection('settings').doc(did+'_routeCampMap').get().catch(function(){return null;})
+  ]).then(function(results){
+    var rpSnap=results[0],rcSnap=results[1];
+    if(rpSnap&&rpSnap.exists){
+      var data=rpSnap.data();
       Object.keys(RPRICE).forEach(function(k){delete RPRICE[k];});
-      // _created 같은 메타 필드 제외
       Object.keys(data).forEach(function(k){if(typeof data[k]==='number')RPRICE[k]=data[k];});
     }
-    _renderPrices(c);
-  }).catch(function(e){console.warn('단가표 로드 오류:',e);_renderPrices(c);});
+    if(rcSnap&&rcSnap.exists){
+      Object.assign(_routeCampMap,rcSnap.data());
+    }
+    // settlements 캐시에서도 캠프 매핑 재구성
+    (_settleCache||[]).forEach(function(s){
+      var camp=s.camp||(s.driver&&_getSettleCamp(s));
+      if(!camp)return;
+      (s.routeDetails||[]).forEach(function(rd){
+        if(rd.route&&!_routeCampMap[rd.route])_routeCampMap[rd.route]=camp;
+      });
+    });
+    _renderPrices(el);
+  });
 }
 function _getRouteCamp(route){
   if(!route)return '기타';
@@ -1821,18 +1855,19 @@ function _getCampForRoute(route){
 }
 
 function openIncPanel(){
-  if(!_db||!_CU){toast('❌ 로그인 후 이용하세요');return;}
-  var settle=_settleCache||[];
-  if(!settle.length){
-    toast('⏳ 정산 데이터 로딩 중...');
-    _db.collection('settlements').where('dealerId','==',_CU.dealerId).get()
-      .then(function(snap){
-        if(!snap.size){toast('❌ 정산서가 없습니다. 먼저 엑셀 업로드 하세요.');return;}
-        _settleCache=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
-        setTimeout(openIncPanel, 100);
-      }).catch(function(e){toast('❌ '+e.message);});
-    return;
-  }
+  try{
+    if(!_db||!_CU||!_CU.dealerId){toast('❌ 로그인 후 이용하세요');return;}
+    var settle=_settleCache||[];
+    if(!settle.length){
+      toast('⏳ 정산 데이터 로딩 중...');
+      _db.collection('settlements').where('dealerId','==',_CU.dealerId).get()
+        .then(function(snap){
+          if(!snap||!snap.size){toast('정산서가 없습니다. 먼저 엑셀 업로드 하세요.');return;}
+          _settleCache=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
+          setTimeout(function(){openIncPanel();},200);
+        }).catch(function(e){toast('❌ 로드 오류: '+e.message);});
+      return;
+    }
   // ── 기사별 라우트 수집 (routeDetails → route 단일 필드 → RPRICE 폴백)
   var panelData={};
   settle.forEach(function(s){
@@ -1976,6 +2011,7 @@ function openIncPanel(){
       _buildIncPanel();
     }).catch(function(){_buildIncPanel();});
   } else {_buildIncPanel();}
+  }catch(e2){console.error('openIncPanel 오류:',e2);toast('❌ 인센 설정 오류: '+e2.message);}
 }
 
 function _filterIncCamp2(camp){
