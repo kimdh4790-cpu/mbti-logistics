@@ -938,6 +938,8 @@ function initFirebase(){
         window._CU=_CU;
         _db.doc('settings/routePrices').get().then(function(rs){if(rs.exists)Object.assign(RPRICE,rs.data());}).catch(function(){});
         _db.doc('settings/prices_'+_CU.dealerId).get().then(function(ps){if(ps.exists)Object.assign(G_PRICES,ps.data());}).catch(function(){});
+        // 관리자/대리점 모두 로지넷 접속 가능
+        // 관리자는 슈퍼어드민 모드 자동 활성
         showApp();
       }).catch(function(){
         _CU={uid:user.uid,email:user.email,name:'',role:'dealer',dealerId:user.uid};
