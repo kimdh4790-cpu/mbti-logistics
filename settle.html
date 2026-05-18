@@ -85,6 +85,10 @@ tr:hover>td{background:var(--bg3)}
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(8px);background:#1a1a18;color:#fff;padding:10px 20px;border-radius:var(--r);font-size:13px;z-index:600;opacity:0;transition:.22s;pointer-events:none;white-space:nowrap}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
+<!-- Firebase v8 SDK -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 </head>
 <body>
 
@@ -699,10 +703,6 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
 
 </script>
 
-<!-- Firebase v8 SDK -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 <script>
 // ══ 캠프별 취합 UI (parseCoupangExcel 이후 호출) ══
 function renderCpPending(){
