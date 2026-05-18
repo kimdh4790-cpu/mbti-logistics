@@ -8,214 +8,242 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Pretendard',sans-serif;background:#f0f4f8;color:#1a202c;min-height:100vh}
-.topbar{background:#1A5FA8;color:#fff;padding:14px 24px;display:flex;align-items:center;justify-content:space-between}
-.topbar .logo{font-size:20px;font-weight:800}
-.topbar .admin-badge{background:rgba(255,255,255,.2);padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600}
-.topbar .logout{background:rgba(255,255,255,.15);border:none;color:#fff;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-family:'Pretendard',sans-serif}
+.topbar{background:linear-gradient(135deg,#1A5FA8,#2563eb);color:#fff;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 12px rgba(26,95,168,.3)}
+.topbar .logo{font-size:18px;font-weight:800;display:flex;align-items:center;gap:8px}
+.admin-badge{background:rgba(255,255,255,.2);padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.logout-btn{background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.3);color:#fff;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:12px;font-family:'Pretendard',sans-serif;font-weight:600}
 .container{max-width:1100px;margin:0 auto;padding:24px 16px}
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
-.stat-card{background:#fff;border-radius:14px;padding:20px;box-shadow:0 2px 10px rgba(0,0,0,.07)}
-.stat-card .label{font-size:12px;color:#718096;font-weight:600;margin-bottom:6px}
-.stat-card .value{font-size:28px;font-weight:800;color:#1a202c}
-.stat-card .sub{font-size:12px;color:#a0aec0;margin-top:4px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.stat-card{background:#fff;border-radius:14px;padding:18px 20px;box-shadow:0 2px 10px rgba(0,0,0,.06);border-top:3px solid #e2e8f0}
+.stat-card.blue{border-top-color:#1A5FA8}
+.stat-card.green{border-top-color:#2d8c4e}
+.stat-card.orange{border-top-color:#c05621}
+.stat-card.red{border-top-color:#c53030}
+.stat-card .label{font-size:11px;color:#718096;font-weight:600;margin-bottom:6px}
+.stat-card .value{font-size:26px;font-weight:800}
 .stat-card.blue .value{color:#1A5FA8}
 .stat-card.green .value{color:#2d8c4e}
 .stat-card.orange .value{color:#c05621}
 .stat-card.red .value{color:#c53030}
-.section{background:#fff;border-radius:16px;box-shadow:0 2px 10px rgba(0,0,0,.07);margin-bottom:20px;overflow:hidden}
-.section-header{padding:18px 24px;border-bottom:1px solid #f0f4f8;display:flex;align-items:center;justify-content:space-between}
-.section-header h2{font-size:15px;font-weight:700}
-.filter-row{display:flex;gap:8px}
-.filter-btn{padding:6px 14px;border-radius:20px;border:1.5px solid #e2e8f0;background:#fff;font-size:12px;font-weight:600;cursor:pointer;color:#718096;font-family:'Pretendard',sans-serif;transition:.2s}
+.stat-card .sub{font-size:11px;color:#a0aec0;margin-top:3px}
+.section{background:#fff;border-radius:16px;box-shadow:0 2px 10px rgba(0,0,0,.06);margin-bottom:20px;overflow:hidden}
+.section-header{padding:16px 22px;border-bottom:1px solid #f0f4f8;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.section-header h2{font-size:14px;font-weight:700}
+.filter-row{display:flex;gap:6px;flex-wrap:wrap}
+.filter-btn{padding:5px 12px;border-radius:20px;border:1.5px solid #e2e8f0;background:#fff;font-size:11px;font-weight:600;cursor:pointer;color:#718096;font-family:'Pretendard',sans-serif;transition:.15s}
 .filter-btn.active{background:#1A5FA8;color:#fff;border-color:#1A5FA8}
+.btn-add{padding:7px 16px;background:#1A5FA8;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Pretendard',sans-serif;display:flex;align-items:center;gap:5px}
 table{width:100%;border-collapse:collapse}
-th{padding:12px 20px;text-align:left;font-size:12px;font-weight:700;color:#718096;background:#f8fafc;border-bottom:1px solid #e2e8f0}
-td{padding:14px 20px;font-size:13px;border-bottom:1px solid #f0f4f8;vertical-align:middle}
+th{padding:11px 18px;text-align:left;font-size:11px;font-weight:700;color:#718096;background:#f8fafc;border-bottom:1px solid #e2e8f0;white-space:nowrap}
+td{padding:13px 18px;font-size:12px;border-bottom:1px solid #f0f4f8;vertical-align:middle}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:#f8fafc}
-.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
-.badge-active{background:#ebfaf0;color:#2d8c4e}
-.badge-expired{background:#fff5f5;color:#c53030}
-.badge-trial{background:#ebf4ff;color:#1A5FA8}
-.badge-plan-starter{background:#f0f4f8;color:#4a5568}
-.badge-plan-basic{background:#ebf4ff;color:#1A5FA8}
-.badge-plan-pro{background:#faf5ff;color:#6b46c1}
-.action-btns{display:flex;gap:6px}
-.btn-sm{padding:5px 10px;border-radius:6px;border:none;font-size:11px;font-weight:700;cursor:pointer;font-family:'Pretendard',sans-serif;transition:.2s}
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap}
+.b-active{background:#ebfaf0;color:#2d8c4e}
+.b-expired{background:#fff5f5;color:#c53030}
+.b-trial{background:#ebf4ff;color:#1A5FA8}
+.b-none{background:#f0f4f8;color:#718096}
+.b-starter{background:#f0f4f8;color:#4a5568}
+.b-basic{background:#ebf4ff;color:#1A5FA8}
+.b-pro{background:#faf5ff;color:#6b46c1}
+.action-btns{display:flex;gap:5px;flex-wrap:wrap}
+.btn-sm{padding:4px 9px;border-radius:6px;border:none;font-size:11px;font-weight:700;cursor:pointer;font-family:'Pretendard',sans-serif;white-space:nowrap}
 .btn-extend{background:#ebfaf0;color:#2d8c4e}
 .btn-extend:hover{background:#2d8c4e;color:#fff}
 .btn-cancel{background:#fff5f5;color:#c53030}
 .btn-cancel:hover{background:#c53030;color:#fff}
-.btn-detail{background:#ebf4ff;color:#1A5FA8}
-.btn-detail:hover{background:#1A5FA8;color:#fff}
-.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f0f4f8}
-.login-card{background:#fff;border-radius:20px;padding:40px;width:340px;box-shadow:0 4px 24px rgba(0,0,0,.1);text-align:center}
-.login-card h1{font-size:20px;font-weight:800;margin-bottom:6px}
-.login-card p{font-size:13px;color:#718096;margin-bottom:24px}
-.form-group{margin-bottom:14px;text-align:left}
-.form-group label{display:block;font-size:12px;font-weight:600;color:#4a5568;margin-bottom:5px}
-.form-group input{width:100%;padding:11px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;font-family:'Pretendard',sans-serif;outline:none}
-.form-group input:focus{border-color:#1A5FA8}
-.btn-login{width:100%;padding:14px;background:#1A5FA8;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Pretendard',sans-serif}
-.err{background:#fff5f5;color:#c53030;border-radius:8px;padding:10px;font-size:13px;margin-bottom:12px;display:none}
-.empty{text-align:center;padding:40px;color:#a0aec0;font-size:14px}
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;display:none;align-items:center;justify-content:center}
-.modal-bg.open{display:flex}
-.modal{background:#fff;border-radius:16px;padding:28px;width:360px;max-width:90vw}
-.modal h3{font-size:16px;font-weight:700;margin-bottom:16px}
-.modal .form-group{margin-bottom:12px}
-.modal-btns{display:flex;gap:8px;margin-top:20px}
-.modal-btns button{flex:1;padding:12px;border-radius:10px;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:'Pretendard',sans-serif}
-.modal-btns .confirm{background:#1A5FA8;color:#fff}
-.modal-btns .cancel{background:#f0f4f8;color:#4a5568}
-.expire-soon{color:#c05621;font-weight:600}
-@media(max-width:768px){.stats{grid-template-columns:1fr 1fr}.filter-row{flex-wrap:wrap}th,td{padding:10px 12px;font-size:12px}}
+.btn-pw{background:#faf5ff;color:#6b46c1}
+.btn-pw:hover{background:#6b46c1;color:#fff}
+.btn-view{background:#ebf4ff;color:#1A5FA8}
+.btn-view:hover{background:#1A5FA8;color:#fff}
+.expire-soon{color:#c05621;font-weight:700}
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#f0f4f8,#e2e8f0)}
+.login-card{background:#fff;border-radius:20px;padding:40px 36px;width:340px;box-shadow:0 8px 32px rgba(0,0,0,.12);text-align:center}
+.login-card h1{font-size:19px;font-weight:800;margin-bottom:6px}
+.login-card p{font-size:12px;color:#718096;margin-bottom:24px}
+.form-group{margin-bottom:13px;text-align:left}
+.form-group label{display:block;font-size:11px;font-weight:700;color:#4a5568;margin-bottom:5px}
+.form-group input,.form-group select{width:100%;padding:10px 13px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:13px;font-family:'Pretendard',sans-serif;outline:none;background:#fff;color:#1a202c}
+.form-group input:focus,.form-group select:focus{border-color:#1A5FA8}
+.btn-primary{width:100%;padding:13px;background:#1A5FA8;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Pretendard',sans-serif}
+.btn-primary:hover{background:#1551a0}
+.err{background:#fff5f5;color:#c53030;border-radius:8px;padding:9px 12px;font-size:12px;margin-bottom:12px;display:none}
+.empty{text-align:center;padding:36px;color:#a0aec0;font-size:13px}
+/* 모달 */
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:none;align-items:center;justify-content:center;padding:12px}
+.mo.open{display:flex}
+.mo-card{background:#fff;border-radius:16px;padding:26px;width:380px;max-width:100%;max-height:90vh;overflow-y:auto}
+.mo-card h3{font-size:15px;font-weight:700;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #f0f4f8}
+.mo-btns{display:flex;gap:8px;margin-top:18px}
+.mo-btns button{flex:1;padding:11px;border-radius:9px;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:'Pretendard',sans-serif}
+.mo-btns .confirm{background:#1A5FA8;color:#fff}
+.mo-btns .confirm:hover{background:#1551a0}
+.mo-btns .cancel{background:#f0f4f8;color:#4a5568}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a202c;color:#fff;padding:10px 20px;border-radius:100px;font-size:13px;font-weight:600;z-index:999;animation:slideUp .3s ease;pointer-events:none}
+@keyframes slideUp{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+@media(max-width:768px){.stats{grid-template-columns:1fr 1fr}th,td{padding:9px 11px;font-size:11px}}
 </style>
 </head>
 <body>
 
-<!-- 로그인 화면 -->
+<!-- 로그인 -->
 <div class="login-wrap" id="login-screen">
   <div class="login-card">
-    <div style="font-size:36px;margin-bottom:12px">🚚</div>
+    <div style="font-size:40px;margin-bottom:12px">🚚</div>
     <h1>LogiNet 관리자</h1>
-    <p>관리자 계정으로 로그인하세요</p>
+    <p>총괄 관리자 전용 패널</p>
     <div class="err" id="login-err"></div>
-    <div class="form-group">
-      <label>이메일</label>
-      <input id="a-email" type="email" placeholder="admin@example.com">
-    </div>
-    <div class="form-group">
-      <label>비밀번호</label>
-      <input id="a-pw" type="password" placeholder="비밀번호">
-    </div>
-    <button class="btn-login" id="login-btn" onclick="doAdminLogin()">로그인</button>
+    <div class="form-group"><label>이메일</label><input id="a-email" type="email" placeholder="admin@example.com" onkeydown="if(event.key==='Enter')doAdminLogin()"></div>
+    <div class="form-group"><label>비밀번호</label><input id="a-pw" type="password" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doAdminLogin()"></div>
+    <button class="btn-primary" id="login-btn" onclick="doAdminLogin()">로그인</button>
   </div>
 </div>
 
 <!-- 대시보드 -->
 <div id="dashboard" style="display:none">
   <div class="topbar">
-    <div class="logo">🚚 LogiNet <span class="admin-badge">관리자</span></div>
-    <button class="logout" onclick="doLogout()">로그아웃</button>
+    <div class="logo">🚚 LogiNet <span class="admin-badge">총관리자</span></div>
+    <button class="logout-btn" onclick="doLogout()">로그아웃</button>
   </div>
-
   <div class="container">
-    <!-- 통계 -->
     <div class="stats">
-      <div class="stat-card blue">
-        <div class="label">구독 중</div>
-        <div class="value" id="stat-active">-</div>
-        <div class="sub">활성 대리점</div>
-      </div>
-      <div class="stat-card green">
-        <div class="label">월 매출</div>
-        <div class="value" id="stat-revenue">-</div>
-        <div class="sub">예상 월 구독료</div>
-      </div>
-      <div class="stat-card orange">
-        <div class="label">만료 임박</div>
-        <div class="value" id="stat-expiring">-</div>
-        <div class="sub">7일 이내 만료</div>
-      </div>
-      <div class="stat-card red">
-        <div class="label">만료됨</div>
-        <div class="value" id="stat-expired">-</div>
-        <div class="sub">갱신 필요</div>
-      </div>
+      <div class="stat-card blue"><div class="label">구독 중</div><div class="value" id="s-active">-</div><div class="sub">활성 대리점</div></div>
+      <div class="stat-card green"><div class="label">월 매출</div><div class="value" id="s-revenue">-</div><div class="sub">예상 월 구독료</div></div>
+      <div class="stat-card orange"><div class="label">만료 임박</div><div class="value" id="s-expiring">-</div><div class="sub">7일 이내 만료</div></div>
+      <div class="stat-card red"><div class="label">만료됨</div><div class="value" id="s-expired">-</div><div class="sub">갱신 필요</div></div>
     </div>
-
-    <!-- 딜러 목록 -->
     <div class="section">
       <div class="section-header">
-        <h2>딜러 구독 현황</h2>
-        <div class="filter-row">
-          <button class="filter-btn active" onclick="filterDealers('all',this)">전체</button>
-          <button class="filter-btn" onclick="filterDealers('active',this)">구독중</button>
-          <button class="filter-btn" onclick="filterDealers('trial',this)">체험중</button>
-          <button class="filter-btn" onclick="filterDealers('expired',this)">만료</button>
+        <h2>대리점 구독 현황</h2>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <div class="filter-row">
+            <button class="filter-btn active" onclick="filterD('all',this)">전체</button>
+            <button class="filter-btn" onclick="filterD('active',this)">구독중</button>
+            <button class="filter-btn" onclick="filterD('trial',this)">체험중</button>
+            <button class="filter-btn" onclick="filterD('expired',this)">만료</button>
+          </div>
+          <button class="btn-add" onclick="openAddDealer()">＋ 대리점 등록</button>
         </div>
       </div>
       <div style="overflow-x:auto">
         <table>
-          <thead>
-            <tr>
-              <th>대리점명</th>
-              <th>플랜</th>
-              <th>상태</th>
-              <th>만료일</th>
-              <th>연락처</th>
-              <th>관리</th>
-            </tr>
-          </thead>
-          <tbody id="dealer-tbody">
-            <tr><td colspan="6" class="empty">불러오는 중...</td></tr>
-          </tbody>
+          <thead><tr>
+            <th>대리점명</th><th>플랜</th><th>상태</th><th>만료일</th><th>연락처</th><th>관리</th>
+          </tr></thead>
+          <tbody id="dealer-tbody"><tr><td colspan="6" class="empty">불러오는 중...</td></tr></tbody>
         </table>
       </div>
     </div>
   </div>
 </div>
 
-<!-- 구독 연장 모달 -->
-<div class="modal-bg" id="extend-modal">
-  <div class="modal">
-    <h3>구독 연장</h3>
-    <div class="form-group">
-      <label>연장 개월 수</label>
-      <input id="extend-months" type="number" value="1" min="1" max="12">
+<!-- ① 대리점 등록 모달 -->
+<div class="mo" id="mo-add">
+  <div class="mo-card">
+    <h3>➕ 대리점 등록</h3>
+    <div class="form-group"><label>대리점명 *</label><input id="add-name" placeholder="예: 엠비티아이 유한회사"></div>
+    <div class="form-group"><label>담당자 연락처</label><input id="add-phone" placeholder="010-0000-0000"></div>
+    <div class="form-group"><label>로그인 이메일 *</label><input id="add-email" type="email" placeholder="dealer@example.com"></div>
+    <div class="form-group"><label>초기 비밀번호 *</label><input id="add-pw" type="password" placeholder="8자 이상"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-group"><label>플랜</label>
+        <select id="add-plan">
+          <option value="starter">Starter (3만원)</option>
+          <option value="basic" selected>Basic (5만원)</option>
+          <option value="pro">Pro (8만원)</option>
+        </select>
+      </div>
+      <div class="form-group"><label>구독 개월</label><input id="add-months" type="number" value="1" min="1" max="24"></div>
     </div>
-    <div class="form-group">
-      <label>플랜 변경 (선택)</label>
-      <select id="extend-plan" style="width:100%;padding:11px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;font-family:'Pretendard',sans-serif">
+    <div class="err" id="add-err"></div>
+    <div class="mo-btns">
+      <button class="cancel" onclick="closeMo('mo-add')">취소</button>
+      <button class="confirm" id="add-confirm-btn" onclick="confirmAddDealer()">등록 완료</button>
+    </div>
+  </div>
+</div>
+
+<!-- ② 구독 연장 모달 -->
+<div class="mo" id="mo-extend">
+  <div class="mo-card">
+    <h3>🔄 구독 연장</h3>
+    <div id="extend-dealer-name" style="font-size:13px;font-weight:700;margin-bottom:14px;color:#1A5FA8"></div>
+    <div class="form-group"><label>연장 개월 수</label><input id="ext-months" type="number" value="1" min="1" max="12"></div>
+    <div class="form-group"><label>플랜 변경 (선택)</label>
+      <select id="ext-plan">
         <option value="">변경 없음</option>
         <option value="starter">Starter (3만원)</option>
         <option value="basic">Basic (5만원)</option>
         <option value="pro">Pro (8만원)</option>
       </select>
     </div>
-    <div class="modal-btns">
-      <button class="cancel" onclick="closeModal()">취소</button>
+    <div id="ext-preview" style="background:#ebf4ff;border-radius:8px;padding:10px 12px;font-size:12px;color:#1A5FA8;margin-top:8px"></div>
+    <div class="mo-btns">
+      <button class="cancel" onclick="closeMo('mo-extend')">취소</button>
       <button class="confirm" onclick="confirmExtend()">연장</button>
     </div>
   </div>
 </div>
 
+<!-- ③ 비밀번호 초기화 모달 -->
+<div class="mo" id="mo-pw">
+  <div class="mo-card">
+    <h3>🔑 비밀번호 초기화</h3>
+    <div id="pw-dealer-name" style="font-size:13px;font-weight:700;margin-bottom:14px;color:#6b46c1"></div>
+    <div class="form-group"><label>새 비밀번호 *</label><input id="new-pw" type="password" placeholder="8자 이상"></div>
+    <div class="form-group"><label>확인</label><input id="new-pw2" type="password" placeholder="다시 입력"></div>
+    <div class="err" id="pw-err"></div>
+    <div class="mo-btns">
+      <button class="cancel" onclick="closeMo('mo-pw')">취소</button>
+      <button class="confirm" id="pw-confirm-btn" onclick="confirmPwReset()">변경</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
-import{initializeApp}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import{getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged}
+import{initializeApp,deleteApp}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import{getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged,createUserWithEmailAndPassword,updatePassword,sendPasswordResetEmail}
   from'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import{getFirestore,collection,getDocs,doc,getDoc,updateDoc,serverTimestamp,Timestamp}
+import{getFirestore,collection,getDocs,doc,getDoc,setDoc,updateDoc,serverTimestamp,Timestamp}
   from'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
-const FB={
+const FB_CFG={
   apiKey:"AIzaSyCTywAQNHg8IEYmbU64aYAhjqXMHWbJhjo",
   authDomain:"mbti-logistics-bfcd3.firebaseapp.com",
   projectId:"mbti-logistics-bfcd3",
   storageBucket:"mbti-logistics-bfcd3.firebasestorage.app"
 };
-const app=initializeApp(FB);
+const app=initializeApp(FB_CFG);
 const auth=getAuth(app);
 const db=getFirestore(app);
 
-let _allDealers=[];
-let _extendTarget=null;
+let _dealers=[];
+let _extTarget=null;
+let _pwTarget=null;
+
+// ── 토스트 ──
+function toast(msg){
+  const el=document.createElement('div');el.className='toast';el.textContent=msg;
+  document.body.appendChild(el);setTimeout(()=>el.remove(),2800);
+}
+
+// ── 모달 ──
+window.closeMo=id=>document.getElementById(id).classList.remove('open');
 
 // ── 로그인 ──
 window.doAdminLogin=async function(){
   const email=document.getElementById('a-email').value.trim();
   const pw=document.getElementById('a-pw').value;
+  if(!email||!pw){showErr('이메일과 비밀번호를 입력하세요.');return;}
   const btn=document.getElementById('login-btn');
   btn.disabled=true;btn.textContent='로그인 중...';
   try{
     const cred=await signInWithEmailAndPassword(auth,email,pw);
-    const uid=cred.user.uid;
-    const snap=await getDoc(doc(db,'users',uid));
+    const snap=await getDoc(doc(db,'users',cred.user.uid));
     if(!snap.exists()||snap.data().role!=='admin'){
       await signOut(auth);
-      showErr('관리자 계정이 아닙니다.');
-      btn.disabled=false;btn.textContent='로그인';
-      return;
+      showErr('관리자 권한이 없습니다.');
+      btn.disabled=false;btn.textContent='로그인';return;
     }
     showDashboard();
   }catch(e){
@@ -235,7 +263,7 @@ function showErr(msg){
   el.textContent=msg;el.style.display='block';
 }
 
-// ── 대시보드 로드 ──
+// ── 대시보드 ──
 async function showDashboard(){
   document.getElementById('login-screen').style.display='none';
   document.getElementById('dashboard').style.display='block';
@@ -248,147 +276,235 @@ async function loadDealers(){
       getDocs(collection(db,'subscriptions')),
       getDocs(collection(db,'dealers'))
     ]);
-
     const subs={};
     subSnap.forEach(d=>subs[d.id]=d.data());
-
     const dealers=[];
     dealerSnap.forEach(d=>{
-      const data=d.data();
-      const sub=subs[d.id]||{};
+      const data=d.data();const sub=subs[d.id]||{};
+      const planPrices={starter:30000,basic:50000,pro:80000};
       dealers.push({
-        id:d.id,
-        name:data.name||'-',
-        phone:data.phone||'-',
-        email:data.email||'-',
-        plan:sub.plan||'-',
-        status:sub.status||'none',
+        id:d.id,name:data.name||'-',phone:data.phone||'-',
+        email:data.email||'-',uid:data.uid||'',
+        plan:sub.plan||'-',status:sub.status||'none',
         expireDate:sub.expireDate?.toDate?.()||null,
-        trialEndDate:sub.trialEndDate?.toDate?.()||null,
-        amount:sub.amount||0
+        amount:planPrices[sub.plan]||0
       });
     });
-
-    _allDealers=dealers;
-    updateStats(dealers);
-    renderTable(dealers);
+    _dealers=dealers.sort((a,b)=>a.name.localeCompare(b.name,'ko'));
+    updateStats(_dealers);renderTable(_dealers);
   }catch(e){
     document.getElementById('dealer-tbody').innerHTML=
-      '<tr><td colspan="6" class="empty">데이터 로드 실패: '+e.message+'</td></tr>';
+      `<tr><td colspan="6" class="empty">⚠️ ${e.message}</td></tr>`;
   }
 }
 
 function updateStats(dealers){
-  const now=new Date();
-  const in7=new Date(now.getTime()+7*864e5);
+  const now=new Date();const in7=new Date(+now+7*864e5);
   const active=dealers.filter(d=>d.status==='active');
   const expired=dealers.filter(d=>d.status==='expired');
   const expiring=active.filter(d=>d.expireDate&&d.expireDate<=in7);
-  const revenue=active.reduce((s,d)=>s+(d.amount||0),0);
-
-  document.getElementById('stat-active').textContent=active.length+'곳';
-  document.getElementById('stat-revenue').textContent=(revenue/10000).toFixed(0)+'만원';
-  document.getElementById('stat-expiring').textContent=expiring.length+'곳';
-  document.getElementById('stat-expired').textContent=expired.length+'곳';
+  const revenue=active.reduce((s,d)=>s+d.amount,0);
+  document.getElementById('s-active').textContent=active.length+'곳';
+  document.getElementById('s-revenue').textContent=(revenue/10000).toFixed(0)+'만원';
+  document.getElementById('s-expiring').textContent=expiring.length+'곳';
+  document.getElementById('s-expired').textContent=expired.length+'곳';
 }
 
 function renderTable(dealers){
   const tbody=document.getElementById('dealer-tbody');
-  if(!dealers.length){
-    tbody.innerHTML='<tr><td colspan="6" class="empty">딜러가 없습니다</td></tr>';
-    return;
-  }
-  const now=new Date();
-  const in7=new Date(now.getTime()+7*864e5);
-
+  if(!dealers.length){tbody.innerHTML='<tr><td colspan="6" class="empty">등록된 대리점이 없습니다</td></tr>';return;}
+  const now=new Date();const in7=new Date(+now+7*864e5);
+  const statusBadge={
+    active:'<span class="badge b-active">구독중</span>',
+    trial:'<span class="badge b-trial">체험중</span>',
+    expired:'<span class="badge b-expired">만료</span>',
+    none:'<span class="badge b-none">미등록</span>'
+  };
   tbody.innerHTML=dealers.map(d=>{
-    const statusBadge={
-      active:'<span class="badge badge-active">구독중</span>',
-      trial:'<span class="badge badge-trial">체험중</span>',
-      expired:'<span class="badge badge-expired">만료</span>',
-      none:'<span class="badge" style="background:#f0f4f8;color:#718096">미등록</span>'
-    }[d.status]||'';
-
-    const planBadge=d.plan&&d.plan!=='-'?
-      `<span class="badge badge-plan-${d.plan}">${d.plan.toUpperCase()}</span>`:'';
-
-    const expStr=d.expireDate
+    const exp=d.expireDate
       ?`<span class="${d.expireDate<=in7&&d.status==='active'?'expire-soon':''}">${d.expireDate.toLocaleDateString('ko-KR')}</span>`
       :'-';
-
     return `<tr>
-      <td><strong>${d.name}</strong><br><span style="color:#a0aec0;font-size:11px">${d.email}</span></td>
-      <td>${planBadge}</td>
-      <td>${statusBadge}</td>
-      <td>${expStr}</td>
-      <td>${d.phone}</td>
+      <td><strong>${d.name}</strong><br><span style="color:#a0aec0;font-size:10px">${d.email}</span></td>
+      <td>${d.plan&&d.plan!=='-'?`<span class="badge b-${d.plan}">${d.plan.toUpperCase()}</span>`:'-'}</td>
+      <td>${statusBadge[d.status]||statusBadge.none}</td>
+      <td>${exp}</td>
+      <td style="font-size:11px">${d.phone}</td>
       <td><div class="action-btns">
-        <button class="btn-sm btn-extend" onclick="openExtend('${d.id}','${d.name}')">연장</button>
-        <button class="btn-sm btn-cancel" onclick="cancelSub('${d.id}','${d.name}')">해지</button>
+        <button class="btn-sm btn-extend" onclick="openExtend('${d.id}','${d.name}')">🔄 연장</button>
+        <button class="btn-sm btn-pw" onclick="openPwReset('${d.id}','${d.name}','${d.email}')">🔑 비번</button>
+        <button class="btn-sm btn-cancel" onclick="cancelSub('${d.id}','${d.name}')">🚫 해지</button>
       </div></td>
     </tr>`;
   }).join('');
 }
 
-window.filterDealers=function(status,btn){
+window.filterD=function(status,btn){
   document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  const filtered=status==='all'?_allDealers:_allDealers.filter(d=>d.status===status);
-  renderTable(filtered);
+  renderTable(status==='all'?_dealers:_dealers.filter(d=>d.status===status));
 };
 
-// ── 구독 연장 ──
-window.openExtend=function(dealerId,name){
-  _extendTarget={dealerId,name};
-  document.getElementById('extend-months').value=1;
-  document.getElementById('extend-plan').value='';
-  document.getElementById('extend-modal').classList.add('open');
+// ── ① 대리점 신규 등록 ──
+window.openAddDealer=function(){
+  ['add-name','add-phone','add-email','add-pw','add-months'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value=id==='add-months'?'1':'';
+  });
+  document.getElementById('add-plan').value='basic';
+  document.getElementById('add-err').style.display='none';
+  document.getElementById('mo-add').classList.add('open');
 };
 
-window.closeModal=function(){
-  document.getElementById('extend-modal').classList.remove('open');
+window.confirmAddDealer=async function(){
+  const name=document.getElementById('add-name').value.trim();
+  const phone=document.getElementById('add-phone').value.trim();
+  const email=document.getElementById('add-email').value.trim();
+  const pw=document.getElementById('add-pw').value;
+  const plan=document.getElementById('add-plan').value;
+  const months=+document.getElementById('add-months').value||1;
+  const errEl=document.getElementById('add-err');
+
+  if(!name||!email||!pw){errEl.textContent='대리점명, 이메일, 비밀번호는 필수입니다.';errEl.style.display='block';return;}
+  if(pw.length<8){errEl.textContent='비밀번호는 8자 이상이어야 합니다.';errEl.style.display='block';return;}
+
+  const btn=document.getElementById('add-confirm-btn');
+  btn.disabled=true;btn.textContent='등록 중...';
+
+  try{
+    // 보조 앱으로 계정 생성 (현재 관리자 세션 유지)
+    const secondaryApp=initializeApp(FB_CFG,'secondary_'+Date.now());
+    const secondaryAuth=getAuth(secondaryApp);
+    const cred=await createUserWithEmailAndPassword(secondaryAuth,email,pw);
+    const newUid=cred.user.uid;
+    await signOut(secondaryAuth);
+    await deleteApp(secondaryApp);
+
+    // 만료일 계산 (버그 수정 버전)
+    const expireDate=new Date(Date.now()+months*30*24*60*60*1000);
+
+    // dealers 컬렉션 등록
+    await setDoc(doc(db,'dealers',newUid),{
+      name,phone,email,uid:newUid,
+      createdAt:serverTimestamp()
+    });
+
+    // users 컬렉션 등록 (settle.html 로그인용)
+    await setDoc(doc(db,'users',newUid),{
+      email,name,role:'dealer',
+      dealerId:newUid,
+      createdAt:serverTimestamp()
+    });
+
+    // subscriptions 등록
+    await setDoc(doc(db,'subscriptions',newUid),{
+      plan,status:'active',
+      expireDate:Timestamp.fromDate(expireDate),
+      amount:{starter:30000,basic:50000,pro:80000}[plan]||0,
+      createdAt:serverTimestamp()
+    });
+
+    closeMo('mo-add');
+    toast(`✅ ${name} 등록 완료! 만료: ${expireDate.toLocaleDateString('ko-KR')}`);
+    await loadDealers();
+  }catch(e){
+    errEl.textContent='오류: '+e.message;
+    errEl.style.display='block';
+  }finally{
+    btn.disabled=false;btn.textContent='등록 완료';
+  }
 };
+
+// ── ② 구독 연장 ──
+window.openExtend=function(id,name){
+  _extTarget={id,name};
+  document.getElementById('ext-months').value=1;
+  document.getElementById('ext-plan').value='';
+  document.getElementById('extend-dealer-name').textContent='📌 '+name;
+  // 현재 만료일 미리보기
+  const d=_dealers.find(x=>x.id===id);
+  const curExp=d?.expireDate||new Date();
+  updateExtPreview(curExp);
+  document.getElementById('ext-months').addEventListener('input',()=>updateExtPreview(curExp));
+  document.getElementById('mo-extend').classList.add('open');
+};
+
+function updateExtPreview(curExp){
+  const months=+document.getElementById('ext-months').value||1;
+  const base=Math.max(+curExp,Date.now());
+  const newExp=new Date(base+months*30*24*60*60*1000);
+  document.getElementById('ext-preview').textContent=
+    `연장 후 만료일: ${newExp.toLocaleDateString('ko-KR')} (${months}개월 추가)`;
+}
 
 window.confirmExtend=async function(){
-  if(!_extendTarget)return;
-  const months=+document.getElementById('extend-months').value||1;
-  const newPlan=document.getElementById('extend-plan').value;
-
+  if(!_extTarget)return;
+  const months=+document.getElementById('ext-months').value||1;
+  const newPlan=document.getElementById('ext-plan').value;
   try{
-    const subRef=doc(db,'subscriptions',_extendTarget.dealerId);
+    const subRef=doc(db,'subscriptions',_extTarget.id);
     const snap=await getDoc(subRef);
     const cur=snap.exists()?snap.data():{};
-    const curExpire=cur.expireDate?.toDate?.()||new Date();
-    const newExpire=new Date(Math.max(curExpire,new Date())+months*30*864e5);
-
+    const curExp=cur.expireDate?.toDate?.()||new Date();
+    // ✅ 버그 수정: 타임스탬프끼리 연산
+    const base=Math.max(+curExp,Date.now());
+    const newExp=new Date(base+months*30*24*60*60*1000);
     const updates={
       status:'active',
-      expireDate:Timestamp.fromDate(newExpire),
+      expireDate:Timestamp.fromDate(newExp),
       updatedAt:serverTimestamp()
     };
-    if(newPlan) updates.plan=newPlan;
-
+    if(newPlan){
+      updates.plan=newPlan;
+      updates.amount={starter:30000,basic:50000,pro:80000}[newPlan]||0;
+    }
     await updateDoc(subRef,updates);
-    closeModal();
-    alert(`${_extendTarget.name} 구독이 ${months}개월 연장됐습니다.\n만료일: ${newExpire.toLocaleDateString('ko-KR')}`);
+    closeMo('mo-extend');
+    toast(`✅ ${_extTarget.name} ${months}개월 연장 → ${newExp.toLocaleDateString('ko-KR')}`);
     await loadDealers();
+  }catch(e){toast('❌ '+e.message);}
+};
+
+// ── ③ 비밀번호 초기화 ──
+window.openPwReset=function(id,name,email){
+  _pwTarget={id,name,email};
+  document.getElementById('new-pw').value='';
+  document.getElementById('new-pw2').value='';
+  document.getElementById('pw-err').style.display='none';
+  document.getElementById('pw-dealer-name').textContent='📌 '+name+' ('+email+')';
+  document.getElementById('mo-pw').classList.add('open');
+};
+
+window.confirmPwReset=async function(){
+  const pw=document.getElementById('new-pw').value;
+  const pw2=document.getElementById('new-pw2').value;
+  const errEl=document.getElementById('pw-err');
+  if(pw.length<8){errEl.textContent='비밀번호는 8자 이상이어야 합니다.';errEl.style.display='block';return;}
+  if(pw!==pw2){errEl.textContent='비밀번호가 일치하지 않습니다.';errEl.style.display='block';return;}
+  const btn=document.getElementById('pw-confirm-btn');
+  btn.disabled=true;btn.textContent='변경 중...';
+  try{
+    // 이메일로 비밀번호 재설정 메일 발송 (또는 직접 변경)
+    await sendPasswordResetEmail(auth,_pwTarget.email);
+    closeMo('mo-pw');
+    toast(`✅ ${_pwTarget.email}로 비밀번호 재설정 메일 발송`);
   }catch(e){
-    alert('오류: '+e.message);
+    errEl.textContent='오류: '+e.message;
+    errEl.style.display='block';
+  }finally{
+    btn.disabled=false;btn.textContent='변경';
   }
 };
 
-window.cancelSub=async function(dealerId,name){
-  if(!confirm(`${name} 구독을 해지하시겠습니까?`))return;
+// ── ④ 구독 해지 ──
+window.cancelSub=async function(id,name){
+  if(!confirm(`${name}\n\n구독을 해지하시겠습니까?\n해지 후 대리점은 settle.html에 접근할 수 없습니다.`))return;
   try{
-    await updateDoc(doc(db,'subscriptions',dealerId),{
-      status:'expired',
-      updatedAt:serverTimestamp()
+    await updateDoc(doc(db,'subscriptions',id),{
+      status:'expired',updatedAt:serverTimestamp()
     });
-    alert(`${name} 구독이 해지됐습니다.`);
+    toast(`✅ ${name} 구독 해지 완료`);
     await loadDealers();
-  }catch(e){
-    alert('오류: '+e.message);
-  }
+  }catch(e){toast('❌ '+e.message);}
 };
 
 // ── 인증 상태 확인 ──
