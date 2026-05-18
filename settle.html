@@ -1040,7 +1040,56 @@ function buildNav(){
       +g.items.map(function(m){return '<div class="ni" id="nav-'+m.p+'" onclick="goPage(\''+m.p+'\')">'+m.ic+' '+m.l+'</div>';}).join('');
   }).join('');
 }
+
+// ── 보안 경고 팝업 + Firestore 기록 ──
+function showSecurityAlert(type, detail){
+  var overlay=document.createElement('div');
+  overlay.id='mbti-sec-overlay';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(197,48,48,.95);z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;color:#fff;font-family:inherit;text-align:center;padding:24px';
+  overlay.innerHTML='<div style="font-size:48px">🚨</div>'
+    +'<div style="font-size:22px;font-weight:800">보안 경고</div>'
+    +'<div style="font-size:14px;max-width:400px;line-height:1.6;background:rgba(0,0,0,.2);border-radius:10px;padding:16px">'+detail+'</div>'
+    +'<div style="font-size:12px;opacity:.8">이 내용이 관리자에게 자동 보고됩니다.</div>'
+    +'<button onclick="document.getElementById(\'mbti-sec-overlay\').remove()" style="background:#fff;color:#c53030;border:none;padding:12px 28px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">확인</button>';
+  document.body.appendChild(overlay);
+  // Firestore 보안 로그 기록
+  if(_db){
+    try{
+      _db.collection('security_logs').add({
+        type:type,
+        detail:detail,
+        uid:(_CU&&_CU.uid)||'unknown',
+        email:(_CU&&_CU.email)||'unknown',
+        role:(_CU&&_CU.role)||'unknown',
+        dealerId:(_CU&&_CU.dealerId)||'',
+        at:firebase.firestore.FieldValue.serverTimestamp(),
+        userAgent:navigator.userAgent,
+        url:location.href
+      });
+    }catch(e){console.warn('보안 로그 기록 실패:',e);}
+  }
+}
+
+// ── 타 대리점 데이터 오염 감지 ──
+function checkDealerDataIntegrity(docs, dealerId, collectionName){
+  if(!_CU||_CU.role!=='dealer'||!dealerId) return;
+  var contaminated=docs.filter(function(d){return d.dealerId&&d.dealerId!==dealerId;});
+  if(contaminated.length>0){
+    showSecurityAlert('data_contamination',
+      '['+collectionName+'] 타 대리점 데이터 '+contaminated.length+'건 감지!<br>즉시 관리자에게 문의하세요.<br>(자동 보고 완료)'
+    );
+  }
+}
+
 function goPage(page){
+  // 딜러가 admin 전용 페이지 접근 시 차단
+  var adminOnlyPages=['admin','dealers','all_settlements','all_drivers','subscriptions','invoices','error_logs'];
+  if(_CU&&_CU.role==='dealer'&&adminOnlyPages.indexOf(page)>=0){
+    showSecurityAlert('unauthorized_access',
+      '권한 없는 페이지 접근 시도: '+page+'<br>(현재 역할: 대리점 관리자)'
+    );
+    return;
+  }
   document.querySelectorAll('.ni').forEach(function(n){n.classList.remove('on');});
   var nav=document.getElementById('nav-'+page);if(nav)nav.classList.add('on');
   document.getElementById('topbar-right').innerHTML='';
