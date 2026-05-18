@@ -116,6 +116,7 @@ tr:hover td{background:#f8fafc}
       <button class="tab-btn active" onclick="switchTab('dealers',this)">🏢 대리점 관리</button>
       <button class="tab-btn" onclick="switchTab('payments',this)">💳 결제 내역</button>
       <button class="tab-btn" onclick="switchTab('notices',this)">📢 공지사항</button>
+      <button class="tab-btn" onclick="switchTab('errorlogs',this)">🔴 에러 로그</button>
     </div>
 
     <!-- ① 대리점 관리 탭 -->
@@ -292,7 +293,7 @@ tr:hover td{background:#f8fafc}
 import{initializeApp,deleteApp}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import{getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged,createUserWithEmailAndPassword,sendPasswordResetEmail}
   from'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import{getFirestore,collection,getDocs,doc,getDoc,setDoc,addDoc,updateDoc,query,orderBy,serverTimestamp,Timestamp,where}
+import{getFirestore,collection,getDocs,doc,getDoc,setDoc,addDoc,updateDoc,deleteDoc,query,orderBy,serverTimestamp,Timestamp,where}
   from'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const FB={
@@ -320,6 +321,7 @@ window.switchTab=function(tab,btn){
   document.getElementById('tab-'+tab).classList.add('show');
   if(tab==='payments')loadPayments();
   if(tab==='notices')loadNotices();
+  if(tab==='errorlogs')loadErrLogs();
 };
 
 // ── 로그인 ──
@@ -855,6 +857,59 @@ window.resendContract = async function() {
     toast('❌ ' + res.error);
   }
 };
+// ── ⑨ 에러 로그 ──
+let _errAll = [];
+async function loadErrLogs(){
+  const el = document.getElementById('err-list');
+  if(!el) return;
+  el.innerHTML = '<div class="empty">불러오는 중...</div>';
+  try{
+    const snap = await getDocs(query(collection(db,'error_logs'), orderBy('createdAt','desc')));
+    _errAll = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+    // 필터 셀렉트 업데이트
+    const sel = document.getElementById('err-filter');
+    if(sel){
+      const dealers = [...new Set(_errAll.map(e => e.email).filter(Boolean))];
+      const cur = sel.value;
+      sel.innerHTML = '<option value="all">전체 대리점</option>'
+        + dealers.map(e => `<option value="${e}"${cur===e?' selected':''}>${e}</option>`).join('');
+    }
+    renderErrLogs();
+  }catch(e){ el.innerHTML = `<div class="empty">⚠️ ${e.message}</div>`; }
+}
+function renderErrLogs(){
+  const el = document.getElementById('err-list');
+  if(!el) return;
+  const filter = document.getElementById('err-filter')?.value || 'all';
+  const list = filter === 'all' ? _errAll : _errAll.filter(e => e.email === filter);
+  if(!list.length){ el.innerHTML = '<div class="empty">에러 로그가 없습니다 ✅</div>'; return; }
+  const pageColor = { '정산현황':'#fee2e2','정산관리':'#fce7f3','기사관리':'#fef3c7','라우트단가표':'#dbeafe','통계':'#f0fdf4','시즌단가표':'#ede9fe','관리자공지':'#f1f5f9' };
+  el.innerHTML = list.map(e => {
+    const dt = e.createdAt?.toDate?.()?.toLocaleString('ko-KR') || '-';
+    const bg = pageColor[e.page] || '#f8fafc';
+    return `<div class="pay-row" style="flex-direction:column;align-items:flex-start;gap:4px;border-left:3px solid #dc2626;padding-left:14px">
+      <div style="display:flex;gap:8px;align-items:center;width:100%;justify-content:space-between">
+        <div style="display:flex;gap:6px;align-items:center">
+          <span style="background:${bg};padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700">${e.page||'-'}</span>
+          <strong style="font-size:12px">${e.email||'-'}</strong>
+        </div>
+        <span style="font-size:10px;color:#94a3b8;white-space:nowrap">${dt}</span>
+      </div>
+      <div style="font-size:11px;color:#dc2626;font-family:monospace;background:#fff5f5;padding:4px 8px;border-radius:4px;width:100%;word-break:break-all">${e.message||''}</div>
+    </div>`;
+  }).join('');
+}
+async function clearErrLogs(){
+  if(!confirm('에러 로그 전체를 삭제하시겠습니까?')) return;
+  const filter = document.getElementById('err-filter')?.value || 'all';
+  const toDelete = filter === 'all' ? _errAll : _errAll.filter(e => e.email === filter);
+  try{
+    await Promise.all(toDelete.map(e => deleteDoc(doc(db,'error_logs',e.id))));
+    toast(`✅ ${toDelete.length}건 삭제 완료`);
+    loadErrLogs();
+  }catch(e){ toast('❌ '+e.message); }
+}
+
 // ── 인증 상태 ──
 onAuthStateChanged(auth,async u=>{
   if(u){
@@ -890,5 +945,28 @@ onAuthStateChanged(auth,async u=>{
     </div>
   </div>
 </div>
+
+<!-- 에러 로그 탭 HTML (dashboard div 안에 삽입) -->
+<script>
+// ── 에러 로그 탭 동적 삽입 ──
+(function(){
+  var tabBar = document.querySelector('.tab-bar');
+  var container = tabBar && tabBar.parentNode;
+  if(!container) return;
+  var div = document.createElement('div');
+  div.id = 'tab-errorlogs';
+  div.className = 'tab-content';
+  div.innerHTML = '<div class="section">'
+    + '<div class="sec-hdr"><h2>🔴 대리점 에러 로그</h2>'
+    + '<div style="display:flex;gap:6px;align-items:center">'
+    + '<select id="err-filter" style="padding:6px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;font-family:\'Pretendard\',sans-serif;outline:none" onchange="renderErrLogs()"><option value="all">전체 대리점</option></select>'
+    + '<button class="btn-add" onclick="loadErrLogs()">🔄 새로고침</button>'
+    + '<button class="btn-sm btn-cancel" onclick="clearErrLogs()" style="padding:7px 12px;font-size:12px">🗑️ 전체 삭제</button>'
+    + '</div></div>'
+    + '<div id="err-list" style="max-height:500px;overflow-y:auto"><div class="empty">탭 클릭 시 로드됩니다</div></div>'
+    + '</div>';
+  container.appendChild(div);
+})();
+</script>
 </body>
 </html>

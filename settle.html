@@ -1161,7 +1161,7 @@ function pageSettle(){
       }).join('')
       +'</tbody></table>';
     monthCard.appendChild(mtbl);c.appendChild(monthCard);
-  }).catch(function(e){c.innerHTML='<div class="empty">⚠️ '+e.message+'</div>';});
+  }).catch(function(e){logError('정산현황',e.message);c.innerHTML='<div class="empty">⚠️ '+e.message+'</div>';});
 }
 
 var _CAMP_PALETTE=['#1D4ED8','#7C3AED','#059669','#D97706','#DC2626','#0891B2','#65A30D','#BE185D','#4F46E5','#0F766E'];
@@ -1329,7 +1329,7 @@ function pageSettlements(){
       _settleCache=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
       _settleCache.sort(function(a,b){return (b.month||'').localeCompare(a.month||'');});
       _renderSettlePage(_settleCache,c);
-    }).catch(function(e){c.innerHTML='<div class="empty">⚠️ '+e.message+'</div>';});
+    }).catch(function(e){logError('정산관리',e.message);c.innerHTML='<div class="empty">⚠️ '+e.message+'</div>';});
 }
 function _reloadSettlePage(){_settleCache=null;pageSettlements();}
 function toggleSettleMore(btn){
@@ -2157,7 +2157,7 @@ function pageDrivers(){
   _db.collection('drivers').where('dealerId','==',_CU.dealerId).get().then(function(snap){
     _drvCache=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
     _renderDrivers(_drvCache,c);
-  }).catch(function(e){c.innerHTML='<div class="empty">⚠️ '+e.message+'</div>';});
+  }).catch(function(e){logError('기사관리',e.message);c.innerHTML='<div class="empty">⚠️ '+e.message+'</div>';});
 }
 function _getDrvCamp(d){
   if(!d)return '';
@@ -2404,7 +2404,7 @@ function pageSeason(){
       addBtn.innerHTML='+ 시즌 기간 추가';addBtn.onclick=function(){openAddSeasonPeriod();};
       addRow.appendChild(addBtn);el.appendChild(addRow);
       _renderSeasonSection(el);
-    }).catch(function(e){el.innerHTML='<div class="empty">❌ '+e.message+'</div>';});
+    }).catch(function(e){logError('시즌단가표',e.message);el.innerHTML='<div class="empty">❌ '+e.message+'</div>';});
 }
 
 function _renderSeasonSection(container){
@@ -2765,7 +2765,7 @@ function pageStats(){
             +'</tr>';
         }).join('')+'</tbody></table>';
       rankCard.appendChild(rtbl);el.appendChild(rankCard);
-    }).catch(function(e){el.innerHTML='<div class="empty">❌ '+e.message+'</div>';});
+    }).catch(function(e){logError('통계',e.message);el.innerHTML='<div class="empty">❌ '+e.message+'</div>';});
 }
 
 function _renderStats(settles,c){
@@ -3511,6 +3511,22 @@ function openOneQueueSend(camp){
   document.getElementById('modals').appendChild(mo);
 }
 
+// ══ 에러 로깅 ══
+function logError(page, message){
+  try{
+    if(!_db||!_CU) return;
+    if(_CU.email==='kimdh4790@gmail.com') return; // 슈퍼어드민 제외
+    _db.collection('error_logs').add({
+      dealerId: _CU.dealerId||_CU.uid,
+      email:    _CU.email||'',
+      page:     page,
+      message:  message,
+      ua:       navigator.userAgent.substring(0,200),
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+  }catch(ex){}
+}
+
 // ══ 약관 동의 ══
 var TERMS_VER = 'v2';
 var TERMS_CONTENT = {
@@ -3584,7 +3600,7 @@ function pageNotices(){
     html+='</div>';
     c.innerHTML=html;
   }).catch(function(e){
-    c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div>'+esc(e.message)+'</div>';
+    logError('관리자공지',e.message);c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div>'+esc(e.message)+'</div>';
   });
 }
 
