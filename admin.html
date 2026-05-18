@@ -3,85 +3,89 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>LogiNet 관리자</title>
+<title>LogiNet 총관리자</title>
 <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Pretendard',sans-serif;background:#f0f4f8;color:#1a202c;min-height:100vh}
-.topbar{background:linear-gradient(135deg,#1A5FA8,#2563eb);color:#fff;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 12px rgba(26,95,168,.3)}
-.topbar .logo{font-size:18px;font-weight:800;display:flex;align-items:center;gap:8px}
-.admin-badge{background:rgba(255,255,255,.2);padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
-.logout-btn{background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.3);color:#fff;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:12px;font-family:'Pretendard',sans-serif;font-weight:600}
-.container{max-width:1100px;margin:0 auto;padding:24px 16px}
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
-.stat-card{background:#fff;border-radius:14px;padding:18px 20px;box-shadow:0 2px 10px rgba(0,0,0,.06);border-top:3px solid #e2e8f0}
-.stat-card.blue{border-top-color:#1A5FA8}
-.stat-card.green{border-top-color:#2d8c4e}
-.stat-card.orange{border-top-color:#c05621}
-.stat-card.red{border-top-color:#c53030}
-.stat-card .label{font-size:11px;color:#718096;font-weight:600;margin-bottom:6px}
-.stat-card .value{font-size:26px;font-weight:800}
-.stat-card.blue .value{color:#1A5FA8}
-.stat-card.green .value{color:#2d8c4e}
-.stat-card.orange .value{color:#c05621}
-.stat-card.red .value{color:#c53030}
-.stat-card .sub{font-size:11px;color:#a0aec0;margin-top:3px}
-.section{background:#fff;border-radius:16px;box-shadow:0 2px 10px rgba(0,0,0,.06);margin-bottom:20px;overflow:hidden}
-.section-header{padding:16px 22px;border-bottom:1px solid #f0f4f8;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
-.section-header h2{font-size:14px;font-weight:700}
-.filter-row{display:flex;gap:6px;flex-wrap:wrap}
-.filter-btn{padding:5px 12px;border-radius:20px;border:1.5px solid #e2e8f0;background:#fff;font-size:11px;font-weight:600;cursor:pointer;color:#718096;font-family:'Pretendard',sans-serif;transition:.15s}
-.filter-btn.active{background:#1A5FA8;color:#fff;border-color:#1A5FA8}
-.btn-add{padding:7px 16px;background:#1A5FA8;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Pretendard',sans-serif;display:flex;align-items:center;gap:5px}
+.topbar{background:linear-gradient(135deg,#0f172a,#1e3a8a);color:#fff;padding:13px 24px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 12px rgba(15,23,42,.4)}
+.logo{font-size:17px;font-weight:800;display:flex;align-items:center;gap:8px}
+.admin-badge{background:rgba(255,255,255,.15);padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.logout-btn{background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.25);color:#fff;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:12px;font-family:'Pretendard',sans-serif;font-weight:600}
+.container{max-width:1140px;margin:0 auto;padding:22px 16px}
+/* 탭 */
+.tab-bar{display:flex;gap:4px;background:#fff;border-radius:12px;padding:5px;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:20px;width:fit-content}
+.tab-btn{padding:7px 18px;border-radius:8px;border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:'Pretendard',sans-serif;color:#718096;background:transparent;transition:.15s}
+.tab-btn.active{background:#1e3a8a;color:#fff}
+.tab-content{display:none}
+.tab-content.show{display:block}
+/* 통계 카드 */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.sc{background:#fff;border-radius:12px;padding:16px 18px;box-shadow:0 2px 8px rgba(0,0,0,.05);border-top:3px solid #e2e8f0}
+.sc.blue{border-top-color:#1e3a8a}.sc.green{border-top-color:#059669}
+.sc.orange{border-top-color:#d97706}.sc.red{border-top-color:#dc2626}
+.sc .lbl{font-size:11px;color:#718096;font-weight:600;margin-bottom:5px}
+.sc .val{font-size:24px;font-weight:800}
+.sc.blue .val{color:#1e3a8a}.sc.green .val{color:#059669}
+.sc.orange .val{color:#d97706}.sc.red .val{color:#dc2626}
+.sc .sub{font-size:10px;color:#a0aec0;margin-top:2px}
+/* 섹션 */
+.section{background:#fff;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,.05);margin-bottom:16px;overflow:hidden}
+.sec-hdr{padding:14px 20px;border-bottom:1px solid #f0f4f8;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.sec-hdr h2{font-size:14px;font-weight:700}
+.filter-row{display:flex;gap:5px;flex-wrap:wrap}
+.fb{padding:5px 11px;border-radius:20px;border:1.5px solid #e2e8f0;background:#fff;font-size:11px;font-weight:600;cursor:pointer;color:#718096;font-family:'Pretendard',sans-serif;transition:.15s}
+.fb.active{background:#1e3a8a;color:#fff;border-color:#1e3a8a}
+.btn-add{padding:7px 14px;background:#1e3a8a;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Pretendard',sans-serif}
 table{width:100%;border-collapse:collapse}
-th{padding:11px 18px;text-align:left;font-size:11px;font-weight:700;color:#718096;background:#f8fafc;border-bottom:1px solid #e2e8f0;white-space:nowrap}
-td{padding:13px 18px;font-size:12px;border-bottom:1px solid #f0f4f8;vertical-align:middle}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:#718096;background:#f8fafc;border-bottom:1px solid #e2e8f0;white-space:nowrap}
+td{padding:12px 16px;font-size:12px;border-bottom:1px solid #f0f4f8;vertical-align:middle}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:#f8fafc}
-.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap}
-.b-active{background:#ebfaf0;color:#2d8c4e}
-.b-expired{background:#fff5f5;color:#c53030}
-.b-trial{background:#ebf4ff;color:#1A5FA8}
-.b-none{background:#f0f4f8;color:#718096}
-.b-starter{background:#f0f4f8;color:#4a5568}
-.b-basic{background:#ebf4ff;color:#1A5FA8}
-.b-pro{background:#faf5ff;color:#6b46c1}
-.action-btns{display:flex;gap:5px;flex-wrap:wrap}
-.btn-sm{padding:4px 9px;border-radius:6px;border:none;font-size:11px;font-weight:700;cursor:pointer;font-family:'Pretendard',sans-serif;white-space:nowrap}
-.btn-extend{background:#ebfaf0;color:#2d8c4e}
-.btn-extend:hover{background:#2d8c4e;color:#fff}
-.btn-cancel{background:#fff5f5;color:#c53030}
-.btn-cancel:hover{background:#c53030;color:#fff}
-.btn-pw{background:#faf5ff;color:#6b46c1}
-.btn-pw:hover{background:#6b46c1;color:#fff}
-.btn-view{background:#ebf4ff;color:#1A5FA8}
-.btn-view:hover{background:#1A5FA8;color:#fff}
-.expire-soon{color:#c05621;font-weight:700}
-.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#f0f4f8,#e2e8f0)}
-.login-card{background:#fff;border-radius:20px;padding:40px 36px;width:340px;box-shadow:0 8px 32px rgba(0,0,0,.12);text-align:center}
-.login-card h1{font-size:19px;font-weight:800;margin-bottom:6px}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap}
+.b-active{background:#d1fae5;color:#065f46}.b-expired{background:#fee2e2;color:#991b1b}
+.b-trial{background:#dbeafe;color:#1e40af}.b-none{background:#f1f5f9;color:#64748b}
+.b-starter{background:#f1f5f9;color:#374151}.b-basic{background:#dbeafe;color:#1e40af}.b-pro{background:#ede9fe;color:#5b21b6}
+.action-btns{display:flex;gap:4px;flex-wrap:wrap}
+.btn-sm{padding:4px 8px;border-radius:5px;border:none;font-size:10px;font-weight:700;cursor:pointer;font-family:'Pretendard',sans-serif;white-space:nowrap}
+.btn-ext{background:#d1fae5;color:#065f46}.btn-ext:hover{background:#065f46;color:#fff}
+.btn-trial{background:#dbeafe;color:#1e40af}.btn-trial:hover{background:#1e40af;color:#fff}
+.btn-pw{background:#ede9fe;color:#5b21b6}.btn-pw:hover{background:#5b21b6;color:#fff}
+.btn-cancel{background:#fee2e2;color:#991b1b}.btn-cancel:hover{background:#991b1b;color:#fff}
+.expire-soon{color:#d97706;font-weight:700}
+/* 결제 내역 */
+.pay-row{padding:12px 20px;border-bottom:1px solid #f0f4f8;display:flex;align-items:center;justify-content:space-between;font-size:12px}
+.pay-row:last-child{border-bottom:none}
+/* 공지사항 */
+.notice-form{padding:20px}
+.notice-list{max-height:320px;overflow-y:auto}
+.notice-item{padding:12px 20px;border-bottom:1px solid #f0f4f8}
+.notice-item:last-child{border-bottom:none}
+/* 로그인 */
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#0f172a,#1e3a8a)}
+.login-card{background:#fff;border-radius:20px;padding:40px 36px;width:340px;box-shadow:0 20px 60px rgba(0,0,0,.3);text-align:center}
+.login-card h1{font-size:18px;font-weight:800;margin-bottom:4px}
 .login-card p{font-size:12px;color:#718096;margin-bottom:24px}
-.form-group{margin-bottom:13px;text-align:left}
-.form-group label{display:block;font-size:11px;font-weight:700;color:#4a5568;margin-bottom:5px}
-.form-group input,.form-group select{width:100%;padding:10px 13px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:13px;font-family:'Pretendard',sans-serif;outline:none;background:#fff;color:#1a202c}
-.form-group input:focus,.form-group select:focus{border-color:#1A5FA8}
-.btn-primary{width:100%;padding:13px;background:#1A5FA8;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Pretendard',sans-serif}
-.btn-primary:hover{background:#1551a0}
-.err{background:#fff5f5;color:#c53030;border-radius:8px;padding:9px 12px;font-size:12px;margin-bottom:12px;display:none}
-.empty{text-align:center;padding:36px;color:#a0aec0;font-size:13px}
+.fg{margin-bottom:12px;text-align:left}
+.fg label{display:block;font-size:11px;font-weight:700;color:#4a5568;margin-bottom:4px}
+.fg input,.fg select{width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:13px;font-family:'Pretendard',sans-serif;outline:none;background:#fff;color:#1a202c}
+.fg input:focus,.fg select:focus{border-color:#1e3a8a}
+.btn-primary{width:100%;padding:12px;background:#1e3a8a;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Pretendard',sans-serif}
+.btn-primary:hover{background:#1e40af}
+.err{background:#fee2e2;color:#991b1b;border-radius:8px;padding:8px 12px;font-size:12px;margin-bottom:10px;display:none}
+.empty{text-align:center;padding:32px;color:#a0aec0;font-size:13px}
 /* 모달 */
-.mo{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:none;align-items:center;justify-content:center;padding:12px}
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:none;align-items:center;justify-content:center;padding:12px}
 .mo.open{display:flex}
-.mo-card{background:#fff;border-radius:16px;padding:26px;width:380px;max-width:100%;max-height:90vh;overflow-y:auto}
-.mo-card h3{font-size:15px;font-weight:700;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #f0f4f8}
-.mo-btns{display:flex;gap:8px;margin-top:18px}
+.mo-card{background:#fff;border-radius:16px;padding:24px;width:380px;max-width:100%;max-height:90vh;overflow-y:auto}
+.mo-card h3{font-size:15px;font-weight:700;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #f0f4f8}
+.mo-btns{display:flex;gap:8px;margin-top:16px}
 .mo-btns button{flex:1;padding:11px;border-radius:9px;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:'Pretendard',sans-serif}
-.mo-btns .confirm{background:#1A5FA8;color:#fff}
-.mo-btns .confirm:hover{background:#1551a0}
-.mo-btns .cancel{background:#f0f4f8;color:#4a5568}
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a202c;color:#fff;padding:10px 20px;border-radius:100px;font-size:13px;font-weight:600;z-index:999;animation:slideUp .3s ease;pointer-events:none}
-@keyframes slideUp{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
-@media(max-width:768px){.stats{grid-template-columns:1fr 1fr}th,td{padding:9px 11px;font-size:11px}}
+.mo-btns .confirm{background:#1e3a8a;color:#fff}
+.mo-btns .cancel{background:#f1f5f9;color:#374151}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:10px 20px;border-radius:100px;font-size:13px;font-weight:600;z-index:999;animation:su .3s ease;pointer-events:none}
+@keyframes su{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+@media(max-width:768px){.stats{grid-template-columns:1fr 1fr}th,td{padding:9px 10px;font-size:11px}}
 </style>
 </head>
 <body>
@@ -90,12 +94,12 @@ tr:hover td{background:#f8fafc}
 <div class="login-wrap" id="login-screen">
   <div class="login-card">
     <div style="font-size:40px;margin-bottom:12px">🚚</div>
-    <h1>LogiNet 관리자</h1>
-    <p>총괄 관리자 전용 패널</p>
+    <h1>LogiNet 총관리자</h1>
+    <p>관리자 전용 패널</p>
     <div class="err" id="login-err"></div>
-    <div class="form-group"><label>이메일</label><input id="a-email" type="email" placeholder="admin@example.com" onkeydown="if(event.key==='Enter')doAdminLogin()"></div>
-    <div class="form-group"><label>비밀번호</label><input id="a-pw" type="password" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doAdminLogin()"></div>
-    <button class="btn-primary" id="login-btn" onclick="doAdminLogin()">로그인</button>
+    <div class="fg"><label>이메일</label><input id="a-email" type="email" placeholder="admin@example.com" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <div class="fg"><label>비밀번호</label><input id="a-pw" type="password" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <button class="btn-primary" id="login-btn" onclick="doLogin()">로그인</button>
   </div>
 </div>
 
@@ -106,233 +110,325 @@ tr:hover td{background:#f8fafc}
     <button class="logout-btn" onclick="doLogout()">로그아웃</button>
   </div>
   <div class="container">
-    <div class="stats">
-      <div class="stat-card blue"><div class="label">구독 중</div><div class="value" id="s-active">-</div><div class="sub">활성 대리점</div></div>
-      <div class="stat-card green"><div class="label">월 매출</div><div class="value" id="s-revenue">-</div><div class="sub">예상 월 구독료</div></div>
-      <div class="stat-card orange"><div class="label">만료 임박</div><div class="value" id="s-expiring">-</div><div class="sub">7일 이내 만료</div></div>
-      <div class="stat-card red"><div class="label">만료됨</div><div class="value" id="s-expired">-</div><div class="sub">갱신 필요</div></div>
+
+    <!-- 탭 -->
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('dealers',this)">🏢 대리점 관리</button>
+      <button class="tab-btn" onclick="switchTab('payments',this)">💳 결제 내역</button>
+      <button class="tab-btn" onclick="switchTab('notices',this)">📢 공지사항</button>
     </div>
-    <div class="section">
-      <div class="section-header">
-        <h2>대리점 구독 현황</h2>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <div class="filter-row">
-            <button class="filter-btn active" onclick="filterD('all',this)">전체</button>
-            <button class="filter-btn" onclick="filterD('active',this)">구독중</button>
-            <button class="filter-btn" onclick="filterD('trial',this)">체험중</button>
-            <button class="filter-btn" onclick="filterD('expired',this)">만료</button>
+
+    <!-- ① 대리점 관리 탭 -->
+    <div id="tab-dealers" class="tab-content show">
+      <div class="stats">
+        <div class="sc blue"><div class="lbl">구독 중</div><div class="val" id="s-active">-</div><div class="sub">활성 대리점</div></div>
+        <div class="sc green"><div class="lbl">월 매출</div><div class="val" id="s-revenue">-</div><div class="sub">예상 구독료</div></div>
+        <div class="sc orange"><div class="lbl">만료 임박</div><div class="val" id="s-expiring">-</div><div class="sub">7일 이내</div></div>
+        <div class="sc red"><div class="lbl">만료됨</div><div class="val" id="s-expired">-</div><div class="sub">갱신 필요</div></div>
+      </div>
+      <div class="section">
+        <div class="sec-hdr">
+          <h2>대리점 구독 현황</h2>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <div class="filter-row">
+              <button class="fb active" onclick="filterD('all',this)">전체</button>
+              <button class="fb" onclick="filterD('active',this)">구독중</button>
+              <button class="fb" onclick="filterD('trial',this)">체험중</button>
+              <button class="fb" onclick="filterD('expired',this)">만료</button>
+            </div>
+            <button class="btn-add" onclick="openAdd()">＋ 대리점 등록</button>
           </div>
-          <button class="btn-add" onclick="openAddDealer()">＋ 대리점 등록</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr>
+              <th>대리점명</th><th>플랜</th><th>상태</th><th>만료일</th><th>연락처</th><th>관리</th>
+            </tr></thead>
+            <tbody id="dealer-tbody"><tr><td colspan="6" class="empty">불러오는 중...</td></tr></tbody>
+          </table>
         </div>
       </div>
-      <div style="overflow-x:auto">
-        <table>
-          <thead><tr>
-            <th>대리점명</th><th>플랜</th><th>상태</th><th>만료일</th><th>연락처</th><th>관리</th>
-          </tr></thead>
-          <tbody id="dealer-tbody"><tr><td colspan="6" class="empty">불러오는 중...</td></tr></tbody>
-        </table>
+    </div>
+
+    <!-- ② 결제 내역 탭 -->
+    <div id="tab-payments" class="tab-content">
+      <div class="section">
+        <div class="sec-hdr"><h2>💳 결제/연장 내역</h2></div>
+        <div id="payment-list" class="notice-list"><div class="empty">불러오는 중...</div></div>
       </div>
     </div>
+
+    <!-- ③ 공지사항 탭 -->
+    <div id="tab-notices" class="tab-content">
+      <div class="section" style="margin-bottom:14px">
+        <div class="sec-hdr"><h2>📢 공지사항 작성</h2></div>
+        <div class="notice-form">
+          <div class="fg"><label>제목</label><input id="notice-title" placeholder="예: 서비스 업데이트 안내"></div>
+          <div class="fg"><label>내용</label><textarea id="notice-body" rows="4" style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:13px;font-family:'Pretendard',sans-serif;outline:none;resize:vertical" placeholder="전체 대리점에 표시될 공지 내용을 입력하세요"></textarea></div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select id="notice-type" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;font-family:'Pretendard',sans-serif;outline:none">
+              <option value="info">📢 일반 공지</option>
+              <option value="update">🔄 업데이트</option>
+              <option value="warning">⚠️ 점검 안내</option>
+              <option value="event">🎉 이벤트</option>
+            </select>
+            <button class="btn-add" onclick="postNotice()">공지 발송</button>
+          </div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="sec-hdr"><h2>발송된 공지 목록</h2></div>
+        <div id="notice-list" class="notice-list"><div class="empty">공지사항이 없습니다</div></div>
+      </div>
+    </div>
+
   </div>
 </div>
 
-<!-- ① 대리점 등록 모달 -->
+<!-- 대리점 등록 모달 -->
 <div class="mo" id="mo-add">
   <div class="mo-card">
     <h3>➕ 대리점 등록</h3>
-    <div class="form-group"><label>대리점명 *</label><input id="add-name" placeholder="예: 엠비티아이 유한회사"></div>
-    <div class="form-group"><label>담당자 연락처</label><input id="add-phone" placeholder="010-0000-0000"></div>
-    <div class="form-group"><label>로그인 이메일 *</label><input id="add-email" type="email" placeholder="dealer@example.com"></div>
-    <div class="form-group"><label>초기 비밀번호 *</label><input id="add-pw" type="password" placeholder="8자 이상"></div>
+    <div class="fg"><label>대리점명 *</label><input id="add-name" placeholder="예: 엠비티아이 유한회사"></div>
+    <div class="fg"><label>담당자명</label><input id="add-manager" placeholder="김형우"></div>
+    <div class="fg"><label>연락처</label><input id="add-phone" placeholder="010-0000-0000"></div>
+    <div class="fg"><label>로그인 이메일 *</label><input id="add-email" type="email" placeholder="dealer@example.com"></div>
+    <div class="fg"><label>초기 비밀번호 * (8자 이상)</label><input id="add-pw" type="password"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="form-group"><label>플랜</label>
+      <div class="fg"><label>플랜</label>
         <select id="add-plan">
+          <option value="trial">🆓 체험 (무료)</option>
           <option value="starter">Starter (3만원)</option>
           <option value="basic" selected>Basic (5만원)</option>
           <option value="pro">Pro (8만원)</option>
         </select>
       </div>
-      <div class="form-group"><label>구독 개월</label><input id="add-months" type="number" value="1" min="1" max="24"></div>
+      <div class="fg"><label>기간(개월)</label><input id="add-months" type="number" value="1" min="1" max="24"></div>
+    </div>
+    <!-- 개인정보 동의 -->
+    <div style="border-top:1px solid #f0f4f8;margin-top:14px;padding-top:14px">
+      <div style="font-size:11px;font-weight:700;color:#374151;margin-bottom:8px">📋 약관 동의</div>
+      <label style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;cursor:pointer">
+        <input type="checkbox" id="agree-terms" style="margin-top:2px;width:15px;height:15px;accent-color:#1e3a8a">
+        <span style="font-size:11px;color:#374151">[필수] <a href="#" onclick="showTerms(event,'terms')" style="color:#1e3a8a;text-decoration:underline">로지넷 서비스 이용약관</a>에 동의합니다</span>
+      </label>
+      <label style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;cursor:pointer">
+        <input type="checkbox" id="agree-privacy" style="margin-top:2px;width:15px;height:15px;accent-color:#1e3a8a">
+        <span style="font-size:11px;color:#374151">[필수] <a href="#" onclick="showTerms(event,'privacy')" style="color:#1e3a8a;text-decoration:underline">개인정보 처리방침</a>에 동의합니다</span>
+      </label>
+      <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
+        <input type="checkbox" id="agree-marketing" style="margin-top:2px;width:15px;height:15px;accent-color:#1e3a8a">
+        <span style="font-size:11px;color:#94a3b8">[선택] 마케팅 정보 수신에 동의합니다</span>
+      </label>
+    </div>
+    <!-- 모두싸인 계약서 발송 옵션 -->
+    <div style="background:#eff6ff;border-radius:8px;padding:10px 12px;margin-top:12px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="send-contract" checked style="width:15px;height:15px;accent-color:#1e3a8a">
+        <span style="font-size:11px;color:#1e40af;font-weight:600">📝 등록 후 서비스 이용 계약서 전자서명 요청 발송</span>
+      </label>
+      <div style="font-size:10px;color:#64748b;margin-top:4px;margin-left:23px">모두싸인으로 계약서가 이메일 발송됩니다</div>
     </div>
     <div class="err" id="add-err"></div>
     <div class="mo-btns">
       <button class="cancel" onclick="closeMo('mo-add')">취소</button>
-      <button class="confirm" id="add-confirm-btn" onclick="confirmAddDealer()">등록 완료</button>
+      <button class="confirm" id="add-btn" onclick="confirmAdd()">등록</button>
     </div>
   </div>
 </div>
 
-<!-- ② 구독 연장 모달 -->
-<div class="mo" id="mo-extend">
+<!-- 연장 모달 -->
+<div class="mo" id="mo-ext">
   <div class="mo-card">
     <h3>🔄 구독 연장</h3>
-    <div id="extend-dealer-name" style="font-size:13px;font-weight:700;margin-bottom:14px;color:#1A5FA8"></div>
-    <div class="form-group"><label>연장 개월 수</label><input id="ext-months" type="number" value="1" min="1" max="12"></div>
-    <div class="form-group"><label>플랜 변경 (선택)</label>
-      <select id="ext-plan">
+    <div id="ext-name" style="font-weight:700;color:#1e3a8a;margin-bottom:12px;font-size:13px"></div>
+    <div class="fg"><label>연장 개월</label><input id="ext-months" type="number" value="1" min="1" max="24" oninput="updateExtPreview()"></div>
+    <div class="fg"><label>플랜 변경 (선택)</label>
+      <select id="ext-plan" onchange="updateExtPreview()">
         <option value="">변경 없음</option>
         <option value="starter">Starter (3만원)</option>
         <option value="basic">Basic (5만원)</option>
         <option value="pro">Pro (8만원)</option>
       </select>
     </div>
-    <div id="ext-preview" style="background:#ebf4ff;border-radius:8px;padding:10px 12px;font-size:12px;color:#1A5FA8;margin-top:8px"></div>
+    <div id="ext-preview" style="background:#eff6ff;border-radius:8px;padding:10px 12px;font-size:12px;color:#1e40af;margin-top:4px"></div>
     <div class="mo-btns">
-      <button class="cancel" onclick="closeMo('mo-extend')">취소</button>
-      <button class="confirm" onclick="confirmExtend()">연장</button>
+      <button class="cancel" onclick="closeMo('mo-ext')">취소</button>
+      <button class="confirm" onclick="confirmExt()">연장</button>
     </div>
   </div>
 </div>
 
-<!-- ③ 비밀번호 초기화 모달 -->
+<!-- 체험판 모달 -->
+<div class="mo" id="mo-trial">
+  <div class="mo-card">
+    <h3>🆓 체험판 설정</h3>
+    <div id="trial-name" style="font-weight:700;color:#1e40af;margin-bottom:12px;font-size:13px"></div>
+    <div class="fg"><label>체험 기간 (일)</label><input id="trial-days" type="number" value="14" min="1" max="90"></div>
+    <div id="trial-preview" style="background:#eff6ff;border-radius:8px;padding:10px 12px;font-size:12px;color:#1e40af;margin-top:4px"></div>
+    <div class="mo-btns">
+      <button class="cancel" onclick="closeMo('mo-trial')">취소</button>
+      <button class="confirm" onclick="confirmTrial()">설정</button>
+    </div>
+  </div>
+</div>
+
+<!-- 비밀번호 초기화 모달 -->
 <div class="mo" id="mo-pw">
   <div class="mo-card">
     <h3>🔑 비밀번호 초기화</h3>
-    <div id="pw-dealer-name" style="font-size:13px;font-weight:700;margin-bottom:14px;color:#6b46c1"></div>
-    <div class="form-group"><label>새 비밀번호 *</label><input id="new-pw" type="password" placeholder="8자 이상"></div>
-    <div class="form-group"><label>확인</label><input id="new-pw2" type="password" placeholder="다시 입력"></div>
-    <div class="err" id="pw-err"></div>
+    <div id="pw-name" style="font-weight:700;color:#5b21b6;margin-bottom:12px;font-size:13px"></div>
+    <div style="background:#eff6ff;border-radius:8px;padding:12px;font-size:12px;color:#1e40af;margin-bottom:14px">
+      📧 해당 이메일로 비밀번호 재설정 링크를 발송합니다
+    </div>
     <div class="mo-btns">
       <button class="cancel" onclick="closeMo('mo-pw')">취소</button>
-      <button class="confirm" id="pw-confirm-btn" onclick="confirmPwReset()">변경</button>
+      <button class="confirm" onclick="confirmPw()">재설정 메일 발송</button>
     </div>
   </div>
 </div>
 
 <script type="module">
 import{initializeApp,deleteApp}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import{getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged,createUserWithEmailAndPassword,updatePassword,sendPasswordResetEmail}
+import{getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged,createUserWithEmailAndPassword,sendPasswordResetEmail}
   from'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import{getFirestore,collection,getDocs,doc,getDoc,setDoc,updateDoc,serverTimestamp,Timestamp}
+import{getFirestore,collection,getDocs,doc,getDoc,setDoc,addDoc,updateDoc,query,orderBy,serverTimestamp,Timestamp,where}
   from'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
-const FB_CFG={
+const FB={
   apiKey:"AIzaSyCTywAQNHg8IEYmbU64aYAhjqXMHWbJhjo",
   authDomain:"mbti-logistics-bfcd3.firebaseapp.com",
   projectId:"mbti-logistics-bfcd3",
   storageBucket:"mbti-logistics-bfcd3.firebasestorage.app"
 };
-const app=initializeApp(FB_CFG);
+const app=initializeApp(FB);
 const auth=getAuth(app);
 const db=getFirestore(app);
 
-let _dealers=[];
-let _extTarget=null;
-let _pwTarget=null;
+let _all=[], _extTarget=null, _trialTarget=null, _pwTarget=null;
 
-// ── 토스트 ──
+// ── 유틸 ──
 function toast(msg){
   const el=document.createElement('div');el.className='toast';el.textContent=msg;
   document.body.appendChild(el);setTimeout(()=>el.remove(),2800);
 }
-
-// ── 모달 ──
 window.closeMo=id=>document.getElementById(id).classList.remove('open');
+window.switchTab=function(tab,btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('show'));
+  btn.classList.add('active');
+  document.getElementById('tab-'+tab).classList.add('show');
+  if(tab==='payments')loadPayments();
+  if(tab==='notices')loadNotices();
+};
 
 // ── 로그인 ──
-window.doAdminLogin=async function(){
+window.doLogin=async function(){
   const email=document.getElementById('a-email').value.trim();
   const pw=document.getElementById('a-pw').value;
-  if(!email||!pw){showErr('이메일과 비밀번호를 입력하세요.');return;}
+  if(!email||!pw){showErr('이메일과 비밀번호를 입력하세요');return;}
   const btn=document.getElementById('login-btn');
   btn.disabled=true;btn.textContent='로그인 중...';
   try{
     const cred=await signInWithEmailAndPassword(auth,email,pw);
     const snap=await getDoc(doc(db,'users',cred.user.uid));
     if(!snap.exists()||snap.data().role!=='admin'){
-      await signOut(auth);
-      showErr('관리자 권한이 없습니다.');
+      await signOut(auth);showErr('관리자 권한이 없습니다.');
       btn.disabled=false;btn.textContent='로그인';return;
     }
-    showDashboard();
+    showDash();
   }catch(e){
     showErr('이메일 또는 비밀번호가 틀렸습니다.');
     btn.disabled=false;btn.textContent='로그인';
   }
 };
-
 window.doLogout=async function(){
   await signOut(auth);
   document.getElementById('dashboard').style.display='none';
   document.getElementById('login-screen').style.display='flex';
 };
-
-function showErr(msg){
-  const el=document.getElementById('login-err');
-  el.textContent=msg;el.style.display='block';
-}
+function showErr(msg){const e=document.getElementById('login-err');e.textContent=msg;e.style.display='block';}
 
 // ── 대시보드 ──
-async function showDashboard(){
+async function showDash(){
   document.getElementById('login-screen').style.display='none';
   document.getElementById('dashboard').style.display='block';
   await loadDealers();
 }
 
+// ── ① 대리점 목록 로드 (users 컬렉션 기준) ──
 async function loadDealers(){
   try{
-    const [subSnap,dealerSnap]=await Promise.all([
-      getDocs(collection(db,'subscriptions')),
-      getDocs(collection(db,'dealers'))
+    const [userSnap,subSnap]=await Promise.all([
+      getDocs(query(collection(db,'users'),where('role','==','dealer'))),
+      getDocs(collection(db,'subscriptions'))
     ]);
     const subs={};
     subSnap.forEach(d=>subs[d.id]=d.data());
-    const dealers=[];
-    dealerSnap.forEach(d=>{
-      const data=d.data();const sub=subs[d.id]||{};
-      const planPrices={starter:30000,basic:50000,pro:80000};
-      dealers.push({
-        id:d.id,name:data.name||'-',phone:data.phone||'-',
-        email:data.email||'-',uid:data.uid||'',
-        plan:sub.plan||'-',status:sub.status||'none',
+    const planAmt={starter:30000,basic:50000,pro:80000};
+    _all=[];
+    userSnap.forEach(d=>{
+      const u=d.data();const sub=subs[d.id]||{};
+      _all.push({
+        id:d.id,
+        name:u.companyName||u.name||'-',
+        manager:u.managerName||'-',
+        phone:u.phone||'-',
+        email:u.email||'-',
+        plan:sub.plan||'-',
+        status:sub.status||'none',
         expireDate:sub.expireDate?.toDate?.()||null,
-        amount:planPrices[sub.plan]||0
+        amount:planAmt[sub.plan]||0
       });
     });
-    _dealers=dealers.sort((a,b)=>a.name.localeCompare(b.name,'ko'));
-    updateStats(_dealers);renderTable(_dealers);
+    _all.sort((a,b)=>a.name.localeCompare(b.name,'ko'));
+    updateStats(_all);renderTable(_all);
   }catch(e){
     document.getElementById('dealer-tbody').innerHTML=
       `<tr><td colspan="6" class="empty">⚠️ ${e.message}</td></tr>`;
   }
 }
 
-function updateStats(dealers){
+function updateStats(list){
   const now=new Date();const in7=new Date(+now+7*864e5);
-  const active=dealers.filter(d=>d.status==='active');
-  const expired=dealers.filter(d=>d.status==='expired');
+  const active=list.filter(d=>d.status==='active');
+  const expired=list.filter(d=>d.status==='expired');
   const expiring=active.filter(d=>d.expireDate&&d.expireDate<=in7);
-  const revenue=active.reduce((s,d)=>s+d.amount,0);
+  const rev=active.reduce((s,d)=>s+d.amount,0);
   document.getElementById('s-active').textContent=active.length+'곳';
-  document.getElementById('s-revenue').textContent=(revenue/10000).toFixed(0)+'만원';
+  document.getElementById('s-revenue').textContent=(rev/10000).toFixed(0)+'만원';
   document.getElementById('s-expiring').textContent=expiring.length+'곳';
   document.getElementById('s-expired').textContent=expired.length+'곳';
 }
 
-function renderTable(dealers){
+function renderTable(list){
   const tbody=document.getElementById('dealer-tbody');
-  if(!dealers.length){tbody.innerHTML='<tr><td colspan="6" class="empty">등록된 대리점이 없습니다</td></tr>';return;}
+  if(!list.length){tbody.innerHTML='<tr><td colspan="6" class="empty">등록된 대리점이 없습니다</td></tr>';return;}
   const now=new Date();const in7=new Date(+now+7*864e5);
-  const statusBadge={
+  const sb={
     active:'<span class="badge b-active">구독중</span>',
     trial:'<span class="badge b-trial">체험중</span>',
     expired:'<span class="badge b-expired">만료</span>',
     none:'<span class="badge b-none">미등록</span>'
   };
-  tbody.innerHTML=dealers.map(d=>{
+  tbody.innerHTML=list.map(d=>{
     const exp=d.expireDate
       ?`<span class="${d.expireDate<=in7&&d.status==='active'?'expire-soon':''}">${d.expireDate.toLocaleDateString('ko-KR')}</span>`
       :'-';
-    return `<tr>
-      <td><strong>${d.name}</strong><br><span style="color:#a0aec0;font-size:10px">${d.email}</span></td>
-      <td>${d.plan&&d.plan!=='-'?`<span class="badge b-${d.plan}">${d.plan.toUpperCase()}</span>`:'-'}</td>
-      <td>${statusBadge[d.status]||statusBadge.none}</td>
+    const plan=d.plan&&d.plan!=='-'?`<span class="badge b-${d.plan}">${d.plan.toUpperCase()}</span>`:'-';
+    return`<tr>
+      <td><strong>${d.name}</strong><br>
+        <span style="color:#a0aec0;font-size:10px">${d.email}</span><br>
+        <span style="color:#94a3b8;font-size:10px">담당: ${d.manager}</span>
+      </td>
+      <td>${plan}</td>
+      <td>${sb[d.status]||sb.none}</td>
       <td>${exp}</td>
       <td style="font-size:11px">${d.phone}</td>
       <td><div class="action-btns">
-        <button class="btn-sm btn-extend" onclick="openExtend('${d.id}','${d.name}')">🔄 연장</button>
-        <button class="btn-sm btn-pw" onclick="openPwReset('${d.id}','${d.name}','${d.email}')">🔑 비번</button>
+        <button class="btn-sm btn-ext" onclick="openExt('${d.id}','${d.name}')">🔄 연장</button>
+        <button class="btn-sm btn-trial" onclick="openTrial('${d.id}','${d.name}')">🆓 체험</button>
+        <button class="btn-sm btn-pw" onclick="openPw('${d.id}','${d.name}','${d.email}')">🔑 비번</button>
         <button class="btn-sm btn-cancel" onclick="cancelSub('${d.id}','${d.name}')">🚫 해지</button>
       </div></td>
     </tr>`;
@@ -340,103 +436,122 @@ function renderTable(dealers){
 }
 
 window.filterD=function(status,btn){
-  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.fb').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  renderTable(status==='all'?_dealers:_dealers.filter(d=>d.status===status));
+  renderTable(status==='all'?_all:_all.filter(d=>d.status===status));
 };
 
-// ── ① 대리점 신규 등록 ──
-window.openAddDealer=function(){
-  ['add-name','add-phone','add-email','add-pw','add-months'].forEach(id=>{
-    const el=document.getElementById(id);if(el)el.value=id==='add-months'?'1':'';
-  });
+// ── ② 대리점 신규 등록 ──
+window.openAdd=function(){
+  ['add-name','add-manager','add-phone','add-email','add-pw'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('add-months').value=1;
   document.getElementById('add-plan').value='basic';
   document.getElementById('add-err').style.display='none';
   document.getElementById('mo-add').classList.add('open');
 };
 
-window.confirmAddDealer=async function(){
+window.confirmAdd=async function(){
   const name=document.getElementById('add-name').value.trim();
+  const manager=document.getElementById('add-manager').value.trim();
   const phone=document.getElementById('add-phone').value.trim();
   const email=document.getElementById('add-email').value.trim();
   const pw=document.getElementById('add-pw').value;
   const plan=document.getElementById('add-plan').value;
   const months=+document.getElementById('add-months').value||1;
   const errEl=document.getElementById('add-err');
-
-  if(!name||!email||!pw){errEl.textContent='대리점명, 이메일, 비밀번호는 필수입니다.';errEl.style.display='block';return;}
-  if(pw.length<8){errEl.textContent='비밀번호는 8자 이상이어야 합니다.';errEl.style.display='block';return;}
-
-  const btn=document.getElementById('add-confirm-btn');
+  if(!name||!email||!pw){errEl.textContent='대리점명, 이메일, 비밀번호 필수';errEl.style.display='block';return;}
+  if(pw.length<8){errEl.textContent='비밀번호 8자 이상';errEl.style.display='block';return;}
+  // 필수 동의 체크
+  if(!document.getElementById('agree-terms').checked){
+    errEl.textContent='서비스 이용약관에 동의해주세요.';errEl.style.display='block';return;
+  }
+  if(!document.getElementById('agree-privacy').checked){
+    errEl.textContent='개인정보 처리방침에 동의해주세요.';errEl.style.display='block';return;
+  }
+  const sendContract=document.getElementById('send-contract').checked;
+  const agreeMarketing=document.getElementById('agree-marketing').checked;
+  const btn=document.getElementById('add-btn');
   btn.disabled=true;btn.textContent='등록 중...';
-
   try{
-    // 보조 앱으로 계정 생성 (현재 관리자 세션 유지)
-    const secondaryApp=initializeApp(FB_CFG,'secondary_'+Date.now());
-    const secondaryAuth=getAuth(secondaryApp);
-    const cred=await createUserWithEmailAndPassword(secondaryAuth,email,pw);
-    const newUid=cred.user.uid;
-    await signOut(secondaryAuth);
-    await deleteApp(secondaryApp);
+    // 보조 앱으로 계정 생성 (관리자 세션 유지)
+    const secApp=initializeApp(FB,'sec_'+Date.now());
+    const secAuth=getAuth(secApp);
+    const cred=await createUserWithEmailAndPassword(secAuth,email,pw);
+    const uid=cred.user.uid;
+    await signOut(secAuth);
+    await deleteApp(secApp);
 
-    // 만료일 계산 (버그 수정 버전)
-    const expireDate=new Date(Date.now()+months*30*24*60*60*1000);
+    const isTrial=(plan==='trial');
+    const expDate=new Date(Date.now()+months*(isTrial?24*60*60*1000:30*24*60*60*1000));
+    const planPrices={starter:30000,basic:50000,pro:80000};
 
-    // dealers 컬렉션 등록
-    await setDoc(doc(db,'dealers',newUid),{
-      name,phone,email,uid:newUid,
-      createdAt:serverTimestamp()
+    await Promise.all([
+      setDoc(doc(db,'users',uid),{
+        companyName:name,managerName:manager,phone,email,
+        role:'dealer',dealerId:uid,
+        plan:isTrial?'trial':plan,
+        createdAt:serverTimestamp()
+      }),
+      setDoc(doc(db,'subscriptions',uid),{
+        plan:isTrial?'trial':plan,
+        status:isTrial?'trial':'active',
+        expireDate:Timestamp.fromDate(expDate),
+        amount:planPrices[plan]||0,
+        createdAt:serverTimestamp()
+      }),
+      // 결제 내역 기록
+      addDoc(collection(db,'payments'),{
+        dealerId:uid,dealerName:name,
+        type:isTrial?'trial':'new',
+        plan:isTrial?'trial':plan,
+        months,expireDate:Timestamp.fromDate(expDate),
+        amount:planPrices[plan]||0,
+        note:isTrial?months+'일 체험판':months+'개월 신규 등록',
+        createdAt:serverTimestamp()
+      })
+    ]);
+
+    // 동의 정보 + 마케팅 저장
+    await updateDoc(doc(db,'users',uid),{
+      agreeTerms: true,
+      agreePrivacy: true,
+      agreeMarketing: agreeMarketing,
+      agreedAt: serverTimestamp()
     });
-
-    // users 컬렉션 등록 (settle.html 로그인용)
-    await setDoc(doc(db,'users',newUid),{
-      email,name,role:'dealer',
-      dealerId:newUid,
-      createdAt:serverTimestamp()
-    });
-
-    // subscriptions 등록
-    await setDoc(doc(db,'subscriptions',newUid),{
-      plan,status:'active',
-      expireDate:Timestamp.fromDate(expireDate),
-      amount:{starter:30000,basic:50000,pro:80000}[plan]||0,
-      createdAt:serverTimestamp()
-    });
-
     closeMo('mo-add');
-    toast(`✅ ${name} 등록 완료! 만료: ${expireDate.toLocaleDateString('ko-KR')}`);
+    toast(`✅ ${name} 등록 완료 (만료: ${expDate.toLocaleDateString('ko-KR')})`);
+    // 계약서 발송
+    if(sendContract && MODUSIGN_TEMPLATE_ID !== 'YOUR_TEMPLATE_ID_HERE'){
+      const res = await sendContractRequest(uid, name, email, manager);
+      if(res.ok) toast('📝 계약서 발송 완료');
+      else toast('⚠️ 계약서 발송 실패: '+res.error);
+    } else if(sendContract) {
+      toast('⚠️ 모두싸인 템플릿 ID를 설정해주세요');
+    }
     await loadDealers();
   }catch(e){
-    errEl.textContent='오류: '+e.message;
-    errEl.style.display='block';
-  }finally{
-    btn.disabled=false;btn.textContent='등록 완료';
-  }
+    errEl.textContent='오류: '+e.message;errEl.style.display='block';
+  }finally{btn.disabled=false;btn.textContent='등록';}
 };
 
-// ── ② 구독 연장 ──
-window.openExtend=function(id,name){
+// ── ③ 구독 연장 ──
+window.openExt=function(id,name){
   _extTarget={id,name};
+  document.getElementById('ext-name').textContent='📌 '+name;
   document.getElementById('ext-months').value=1;
   document.getElementById('ext-plan').value='';
-  document.getElementById('extend-dealer-name').textContent='📌 '+name;
-  // 현재 만료일 미리보기
-  const d=_dealers.find(x=>x.id===id);
-  const curExp=d?.expireDate||new Date();
-  updateExtPreview(curExp);
-  document.getElementById('ext-months').addEventListener('input',()=>updateExtPreview(curExp));
-  document.getElementById('mo-extend').classList.add('open');
+  updateExtPreview();
+  document.getElementById('mo-ext').classList.add('open');
 };
-
-function updateExtPreview(curExp){
+window.updateExtPreview=function(){
+  const d=_all.find(x=>x.id===(_extTarget?.id));
   const months=+document.getElementById('ext-months').value||1;
-  const base=Math.max(+curExp,Date.now());
+  const base=Math.max(+(d?.expireDate||0),Date.now());
   const newExp=new Date(base+months*30*24*60*60*1000);
   document.getElementById('ext-preview').textContent=
-    `연장 후 만료일: ${newExp.toLocaleDateString('ko-KR')} (${months}개월 추가)`;
-}
-
-window.confirmExtend=async function(){
+    `연장 후 만료일: ${newExp.toLocaleDateString('ko-KR')} (+${months}개월)`;
+};
+window.confirmExt=async function(){
   if(!_extTarget)return;
   const months=+document.getElementById('ext-months').value||1;
   const newPlan=document.getElementById('ext-plan').value;
@@ -444,76 +559,321 @@ window.confirmExtend=async function(){
     const subRef=doc(db,'subscriptions',_extTarget.id);
     const snap=await getDoc(subRef);
     const cur=snap.exists()?snap.data():{};
-    const curExp=cur.expireDate?.toDate?.()||new Date();
-    // ✅ 버그 수정: 타임스탬프끼리 연산
-    const base=Math.max(+curExp,Date.now());
+    const base=Math.max(+(cur.expireDate?.toDate?.()||0),Date.now());
     const newExp=new Date(base+months*30*24*60*60*1000);
-    const updates={
-      status:'active',
-      expireDate:Timestamp.fromDate(newExp),
-      updatedAt:serverTimestamp()
-    };
-    if(newPlan){
-      updates.plan=newPlan;
-      updates.amount={starter:30000,basic:50000,pro:80000}[newPlan]||0;
-    }
+    const planPrices={starter:30000,basic:50000,pro:80000};
+    const updates={status:'active',expireDate:Timestamp.fromDate(newExp),updatedAt:serverTimestamp()};
+    if(newPlan){updates.plan=newPlan;updates.amount=planPrices[newPlan]||0;}
     await updateDoc(subRef,updates);
-    closeMo('mo-extend');
-    toast(`✅ ${_extTarget.name} ${months}개월 연장 → ${newExp.toLocaleDateString('ko-KR')}`);
+    // 결제 내역 기록
+    await addDoc(collection(db,'payments'),{
+      dealerId:_extTarget.id,dealerName:_extTarget.name,
+      type:'extend',plan:newPlan||cur.plan||'-',months,
+      expireDate:Timestamp.fromDate(newExp),
+      amount:planPrices[newPlan||cur.plan]||cur.amount||0,
+      note:months+'개월 연장',createdAt:serverTimestamp()
+    });
+    closeMo('mo-ext');
+    toast(`✅ ${_extTarget.name} ${months}개월 연장`);
     await loadDealers();
   }catch(e){toast('❌ '+e.message);}
 };
 
-// ── ③ 비밀번호 초기화 ──
-window.openPwReset=function(id,name,email){
-  _pwTarget={id,name,email};
-  document.getElementById('new-pw').value='';
-  document.getElementById('new-pw2').value='';
-  document.getElementById('pw-err').style.display='none';
-  document.getElementById('pw-dealer-name').textContent='📌 '+name+' ('+email+')';
-  document.getElementById('mo-pw').classList.add('open');
+// ── ④ 체험판 설정 ──
+window.openTrial=function(id,name){
+  _trialTarget={id,name};
+  document.getElementById('trial-name').textContent='📌 '+name;
+  document.getElementById('trial-days').value=14;
+  document.getElementById('trial-preview').textContent=
+    '체험 만료일: '+new Date(Date.now()+14*24*60*60*1000).toLocaleDateString('ko-KR');
+  document.getElementById('trial-days').oninput=function(){
+    const days=+this.value||14;
+    document.getElementById('trial-preview').textContent=
+      '체험 만료일: '+new Date(Date.now()+days*24*60*60*1000).toLocaleDateString('ko-KR');
+  };
+  document.getElementById('mo-trial').classList.add('open');
+};
+window.confirmTrial=async function(){
+  if(!_trialTarget)return;
+  const days=+document.getElementById('trial-days').value||14;
+  const expDate=new Date(Date.now()+days*24*60*60*1000);
+  try{
+    await updateDoc(doc(db,'subscriptions',_trialTarget.id),{
+      status:'trial',plan:'trial',
+      expireDate:Timestamp.fromDate(expDate),
+      updatedAt:serverTimestamp()
+    });
+    await addDoc(collection(db,'payments'),{
+      dealerId:_trialTarget.id,dealerName:_trialTarget.name,
+      type:'trial',plan:'trial',months:0,
+      expireDate:Timestamp.fromDate(expDate),amount:0,
+      note:days+'일 체험판 설정',createdAt:serverTimestamp()
+    });
+    closeMo('mo-trial');
+    toast(`✅ ${_trialTarget.name} ${days}일 체험판 설정`);
+    await loadDealers();
+  }catch(e){toast('❌ '+e.message);}
 };
 
-window.confirmPwReset=async function(){
-  const pw=document.getElementById('new-pw').value;
-  const pw2=document.getElementById('new-pw2').value;
-  const errEl=document.getElementById('pw-err');
-  if(pw.length<8){errEl.textContent='비밀번호는 8자 이상이어야 합니다.';errEl.style.display='block';return;}
-  if(pw!==pw2){errEl.textContent='비밀번호가 일치하지 않습니다.';errEl.style.display='block';return;}
-  const btn=document.getElementById('pw-confirm-btn');
-  btn.disabled=true;btn.textContent='변경 중...';
+// ── ⑤ 비밀번호 초기화 ──
+window.openPw=function(id,name,email){
+  _pwTarget={id,name,email};
+  document.getElementById('pw-name').textContent='📌 '+name+' ('+email+')';
+  document.getElementById('mo-pw').classList.add('open');
+};
+window.confirmPw=async function(){
+  if(!_pwTarget)return;
   try{
-    // 이메일로 비밀번호 재설정 메일 발송 (또는 직접 변경)
     await sendPasswordResetEmail(auth,_pwTarget.email);
     closeMo('mo-pw');
-    toast(`✅ ${_pwTarget.email}로 비밀번호 재설정 메일 발송`);
-  }catch(e){
-    errEl.textContent='오류: '+e.message;
-    errEl.style.display='block';
-  }finally{
-    btn.disabled=false;btn.textContent='변경';
+    toast(`✅ ${_pwTarget.email}로 재설정 메일 발송`);
+  }catch(e){toast('❌ '+e.message);}
+};
+
+// ── ⑥ 구독 해지 ──
+window.cancelSub=async function(id,name){
+  if(!confirm(`${name}\n\n구독을 해지하시겠습니까?\n해지 즉시 settle.html 접속이 차단됩니다.`))return;
+  try{
+    await updateDoc(doc(db,'subscriptions',id),{status:'expired',updatedAt:serverTimestamp()});
+    await addDoc(collection(db,'payments'),{
+      dealerId:id,dealerName:name,type:'cancel',plan:'-',months:0,
+      amount:0,note:'구독 해지',createdAt:serverTimestamp()
+    });
+    toast(`✅ ${name} 구독 해지`);
+    await loadDealers();
+  }catch(e){toast('❌ '+e.message);}
+};
+
+// ── ⑦ 결제 내역 로드 ──
+async function loadPayments(){
+  const el=document.getElementById('payment-list');
+  el.innerHTML='<div class="empty">불러오는 중...</div>';
+  try{
+    const snap=await getDocs(query(collection(db,'payments'),orderBy('createdAt','desc')));
+    if(snap.empty){el.innerHTML='<div class="empty">결제 내역이 없습니다</div>';return;}
+    const typeIcon={new:'🆕',extend:'🔄',trial:'🆓',cancel:'🚫'};
+    el.innerHTML=snap.docs.map(d=>{
+      const p=d.data();
+      const dt=p.createdAt?.toDate?.()?.toLocaleDateString('ko-KR')||'-';
+      const exp=p.expireDate?.toDate?.()?.toLocaleDateString('ko-KR')||'-';
+      return`<div class="pay-row">
+        <div>
+          <span style="font-size:14px">${typeIcon[p.type]||'💳'}</span>
+          <strong style="margin-left:6px">${p.dealerName||'-'}</strong>
+          <span style="margin-left:8px;color:#64748b;font-size:11px">${p.note||''}</span>
+        </div>
+        <div style="text-align:right">
+          <div style="font-weight:700;color:#1e3a8a">${p.amount?'₩'+(p.amount/10000).toFixed(0)+'만원':'무료'}</div>
+          <div style="font-size:10px;color:#94a3b8">${dt} → 만료 ${exp}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){el.innerHTML=`<div class="empty">⚠️ ${e.message}</div>`;}
+}
+
+// ── ⑧ 공지사항 ──
+window.postNotice=async function(){
+  const title=document.getElementById('notice-title').value.trim();
+  const body=document.getElementById('notice-body').value.trim();
+  const type=document.getElementById('notice-type').value;
+  if(!title||!body){toast('❌ 제목과 내용을 입력하세요');return;}
+  try{
+    await addDoc(collection(db,'notices'),{
+      title,body,type,
+      createdAt:serverTimestamp(),
+      isActive:true
+    });
+    document.getElementById('notice-title').value='';
+    document.getElementById('notice-body').value='';
+    toast('✅ 공지사항 발송 완료');
+    loadNotices();
+  }catch(e){toast('❌ '+e.message);}
+};
+
+async function loadNotices(){
+  const el=document.getElementById('notice-list');
+  el.innerHTML='<div class="empty">불러오는 중...</div>';
+  try{
+    const snap=await getDocs(query(collection(db,'notices'),orderBy('createdAt','desc')));
+    if(snap.empty){el.innerHTML='<div class="empty">공지사항이 없습니다</div>';return;}
+    const typeIcon={info:'📢',update:'🔄',warning:'⚠️',event:'🎉'};
+    el.innerHTML=snap.docs.map(d=>{
+      const n=d.data();const dt=n.createdAt?.toDate?.()?.toLocaleDateString('ko-KR')||'-';
+      return`<div class="notice-item">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
+          <strong>${typeIcon[n.type]||'📢'} ${n.title}</strong>
+          <span style="font-size:10px;color:#94a3b8;white-space:nowrap;margin-left:8px">${dt}</span>
+        </div>
+        <div style="font-size:12px;color:#64748b;line-height:1.5">${n.body}</div>
+      </div>`;
+    }).join('');
+  }catch(e){el.innerHTML=`<div class="empty">⚠️ ${e.message}</div>`;}
+}
+
+
+// ── 약관 내용 ──
+const TERMS = {
+  terms: {
+    title: '로지넷 서비스 이용약관',
+    body: `제1조 (목적)
+본 약관은 엠비티아이 유한회사(이하 "회사")가 제공하는 로지넷(LogiNet) 서비스 이용에 관한 조건 및 절차를 규정합니다.
+
+제2조 (서비스 이용)
+① 서비스는 쿠팡 딜러십 물류 대리점의 정산 자동화를 목적으로 제공됩니다.
+② 이용자는 플랜에 따른 구독료를 납부하여야 합니다.
+③ 구독 기간 만료 시 서비스 접근이 제한됩니다.
+
+제3조 (금지행위)
+① 타 대리점의 데이터에 무단 접근하는 행위
+② 서비스를 제3자에게 재판매하는 행위
+③ 시스템을 고의로 손상시키는 행위
+
+제4조 (책임 제한)
+회사는 천재지변, 서버 장애 등 불가항력으로 인한 서비스 중단에 대해 책임을 지지 않습니다.
+
+제5조 (계약 해지)
+이용자 또는 회사는 서면 또는 전자적 방법으로 계약을 해지할 수 있습니다.`
+  },
+  privacy: {
+    title: '개인정보 처리방침',
+    body: `수집하는 개인정보 항목
+• 필수: 대리점명, 이메일, 연락처, 담당자명
+• 자동 수집: 접속 로그, 이용 기록
+
+개인정보 수집 목적
+• 서비스 제공 및 계약 이행
+• 구독 관리 및 결제 처리
+• 서비스 관련 공지 발송
+
+보유 및 이용 기간
+• 계약 종료 후 5년 (전자상거래법)
+• 단, 이용자 요청 시 즉시 파기
+
+개인정보 제3자 제공
+• 원칙적으로 제공하지 않습니다
+• 법령에 의한 경우 예외
+
+문의: 051-711-3103 | 부산시 수영구 수영로 668, 607호`
   }
 };
 
-// ── ④ 구독 해지 ──
-window.cancelSub=async function(id,name){
-  if(!confirm(`${name}\n\n구독을 해지하시겠습니까?\n해지 후 대리점은 settle.html에 접근할 수 없습니다.`))return;
-  try{
-    await updateDoc(doc(db,'subscriptions',id),{
-      status:'expired',updatedAt:serverTimestamp()
-    });
-    toast(`✅ ${name} 구독 해지 완료`);
-    await loadDealers();
-  }catch(e){toast('❌ '+e.message);}
+let _termsTarget = null;
+
+window.showTerms = function(e, type) {
+  e.preventDefault();
+  _termsTarget = type;
+  const t = TERMS[type];
+  document.getElementById('terms-title').textContent = t.title;
+  document.getElementById('terms-body').innerHTML = t.body.replace(/\n/g,'<br>');
+  document.getElementById('mo-terms').classList.add('open');
 };
 
-// ── 인증 상태 확인 ──
+window.agreeFromModal = function() {
+  if(_termsTarget === 'terms') document.getElementById('agree-terms').checked = true;
+  if(_termsTarget === 'privacy') document.getElementById('agree-privacy').checked = true;
+  closeMo('mo-terms');
+};
+
+// ── 모두싸인 계약서 발송 ──
+// ⚠️ API KEY는 _worker.js 환경변수에 보관 (MODUSIGN_API_KEY)
+// ⚠️ 템플릿 ID: 모두싸인에서 계약서 템플릿 생성 후 ID 입력
+
+const MODUSIGN_TEMPLATE_ID = 'YOUR_TEMPLATE_ID_HERE'; // ← 모두싸인 템플릿 ID 입력
+let _contractTarget = null;
+
+async function sendContractRequest(dealerId, dealerName, email, managerName) {
+  try {
+    // Cloudflare Worker를 통해 API 키 숨김 처리
+    const resp = await fetch('/modusign-send', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        templateId: MODUSIGN_TEMPLATE_ID,
+        title: `[로지넷] ${dealerName} 서비스 이용계약서`,
+        signerName: managerName || dealerName,
+        signerEmail: email,
+        metadata: { dealerId, dealerName }
+      })
+    });
+    const data = await resp.json();
+    if(data.id) {
+      // Firebase에 계약서 발송 기록 저장
+      await updateDoc(doc(db,'users',dealerId), {
+        contractDocId: data.id,
+        contractStatus: 'sent',
+        contractSentAt: serverTimestamp()
+      });
+      return { ok: true, docId: data.id };
+    }
+    return { ok: false, error: data.message || '발송 실패' };
+  } catch(e) {
+    return { ok: false, error: e.message };
+  }
+}
+
+window.openContractStatus = async function(id, name) {
+  _contractTarget = { id, name };
+  document.getElementById('contract-dealer').textContent = '📌 ' + name;
+  document.getElementById('mo-contract').classList.add('open');
+  const snap = await getDoc(doc(db,'users',id));
+  const u = snap.data() || {};
+  const status = {
+    sent: '📧 발송됨 — 서명 대기 중',
+    completed: '✅ 서명 완료',
+    rejected: '❌ 서명 거부',
+    none: '📭 미발송'
+  };
+  document.getElementById('contract-status').innerHTML =
+    '<div>상태: <strong>' + (status[u.contractStatus]||status.none) + '</strong></div>'
+    + (u.contractSentAt ? '<div>발송일: ' + u.contractSentAt.toDate().toLocaleDateString('ko-KR') + '</div>' : '')
+    + (u.contractDocId ? '<div style="font-size:10px;color:#94a3b8;margin-top:4px">문서ID: ' + u.contractDocId + '</div>' : '');
+};
+
+window.resendContract = async function() {
+  if(!_contractTarget) return;
+  const d = _all.find(x => x.id === _contractTarget.id);
+  if(!d) return;
+  toast('📧 계약서 재발송 중...');
+  const res = await sendContractRequest(d.id, d.name, d.email, d.manager);
+  if(res.ok) {
+    toast('✅ 계약서 재발송 완료');
+    closeMo('mo-contract');
+  } else {
+    toast('❌ ' + res.error);
+  }
+};
+// ── 인증 상태 ──
 onAuthStateChanged(auth,async u=>{
   if(u){
     const snap=await getDoc(doc(db,'users',u.uid));
-    if(snap.exists()&&snap.data().role==='admin') showDashboard();
+    if(snap.exists()&&snap.data().role==='admin') showDash();
   }
 });
 </script>
+
+<!-- 약관 모달 -->
+<div class="mo" id="mo-terms">
+  <div class="mo-card" style="max-width:500px">
+    <h3 id="terms-title">서비스 이용약관</h3>
+    <div id="terms-body" style="font-size:12px;color:#374151;line-height:1.7;max-height:400px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;padding:12px;background:#f8fafc"></div>
+    <div class="mo-btns">
+      <button class="cancel" onclick="closeMo('mo-terms')">닫기</button>
+      <button class="confirm" onclick="agreeFromModal()">동의</button>
+    </div>
+  </div>
+</div>
+
+<!-- 계약서 발송 현황 모달 -->
+<div class="mo" id="mo-contract">
+  <div class="mo-card">
+    <h3>📝 계약서 발송 현황</h3>
+    <div id="contract-dealer" style="font-weight:700;color:#1e3a8a;margin-bottom:12px;font-size:13px"></div>
+    <div id="contract-status" style="background:#f8fafc;border-radius:8px;padding:12px;font-size:12px;line-height:1.8"></div>
+    <div class="mo-btns">
+      <button class="cancel" onclick="closeMo('mo-contract')">닫기</button>
+      <button class="confirm" id="resend-btn" onclick="resendContract()">📧 재발송</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
