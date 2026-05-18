@@ -96,9 +96,6 @@ tr:hover>td{background:var(--bg3)}
     if(e.ctrlKey&&!e.shiftKey&&e.keyCode===85){e.preventDefault();return false;}
     if(e.ctrlKey&&e.keyCode===83){e.preventDefault();return false;}
   });
-  var _dt=function(){};
-  _dt.toString=function(){document.body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh"><div style="text-align:center"><div style="font-size:48px">🔒</div><div style="font-size:18px;font-weight:700;margin-top:12px">접근이 제한되었습니다</div></div></div>';return '';};
-  setInterval(function(){console.log(_dt);if(typeof console.clear==="function")console.clear();},500);
 })();
 </script>
 
