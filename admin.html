@@ -332,8 +332,15 @@ window.doLogin=async function(){
   try{
     const cred=await signInWithEmailAndPassword(auth,email,pw);
     const snap=await getDoc(doc(db,'users',cred.user.uid));
-    if(!snap.exists()||snap.data().role!=='admin'){
-      await signOut(auth);showErr('관리자 권한이 없습니다.');
+    const role = snap.exists() ? snap.data().role : null;
+    if(role === 'dealer'){
+      // 대리점은 settle.html로 이동
+      window.location.href = '/settle';
+      return;
+    }
+    if(role !== 'admin'){
+      await signOut(auth);
+      showErr('관리자 권한이 없습니다.');
       btn.disabled=false;btn.textContent='로그인';return;
     }
     showDash();
@@ -564,7 +571,7 @@ window.confirmExt=async function(){
     const planPrices={starter:30000,basic:50000,pro:80000};
     const updates={status:'active',expireDate:Timestamp.fromDate(newExp),updatedAt:serverTimestamp()};
     if(newPlan){updates.plan=newPlan;updates.amount=planPrices[newPlan]||0;}
-    await updateDoc(subRef,updates);
+    await setDoc(subRef,updates,{merge:true});
     // 결제 내역 기록
     await addDoc(collection(db,'payments'),{
       dealerId:_extTarget.id,dealerName:_extTarget.name,
@@ -598,11 +605,11 @@ window.confirmTrial=async function(){
   const days=+document.getElementById('trial-days').value||14;
   const expDate=new Date(Date.now()+days*24*60*60*1000);
   try{
-    await updateDoc(doc(db,'subscriptions',_trialTarget.id),{
+    await setDoc(doc(db,'subscriptions',_trialTarget.id),{
       status:'trial',plan:'trial',
       expireDate:Timestamp.fromDate(expDate),
       updatedAt:serverTimestamp()
-    });
+    },{merge:true});
     await addDoc(collection(db,'payments'),{
       dealerId:_trialTarget.id,dealerName:_trialTarget.name,
       type:'trial',plan:'trial',months:0,
@@ -634,7 +641,7 @@ window.confirmPw=async function(){
 window.cancelSub=async function(id,name){
   if(!confirm(`${name}\n\n구독을 해지하시겠습니까?\n해지 즉시 settle.html 접속이 차단됩니다.`))return;
   try{
-    await updateDoc(doc(db,'subscriptions',id),{status:'expired',updatedAt:serverTimestamp()});
+    await setDoc(doc(db,'subscriptions',id),{status:'expired',updatedAt:serverTimestamp()},{merge:true});
     await addDoc(collection(db,'payments'),{
       dealerId:id,dealerName:name,type:'cancel',plan:'-',months:0,
       amount:0,note:'구독 해지',createdAt:serverTimestamp()
@@ -846,7 +853,9 @@ window.resendContract = async function() {
 onAuthStateChanged(auth,async u=>{
   if(u){
     const snap=await getDoc(doc(db,'users',u.uid));
-    if(snap.exists()&&snap.data().role==='admin') showDash();
+    const role=snap.exists()?snap.data().role:null;
+    if(role==='dealer') window.location.href='/settle';
+    else if(role==='admin') showDash();
   }
 });
 </script>
