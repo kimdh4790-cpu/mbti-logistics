@@ -115,6 +115,20 @@ body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
 
 </head>
 <body>
+<script>
+(function(){
+  document.addEventListener("contextmenu",function(e){e.preventDefault();});
+  document.addEventListener("keydown",function(e){
+    if(e.keyCode===123){e.preventDefault();return false;}
+    if(e.ctrlKey&&e.shiftKey&&(e.keyCode===73||e.keyCode===74||e.keyCode===67)){e.preventDefault();return false;}
+    if(e.ctrlKey&&!e.shiftKey&&e.keyCode===85){e.preventDefault();return false;}
+    if(e.ctrlKey&&e.keyCode===83){e.preventDefault();return false;}
+  });
+  var _dt=function(){};
+  _dt.toString=function(){document.body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh"><div style="text-align:center"><div style="font-size:48px">🔒</div><div style="font-size:18px;font-weight:700;margin-top:12px">접근이 제한되었습니다</div></div></div>';return '';};
+  setInterval(function(){console.log(_dt);if(typeof console.clear==="function")console.clear();},500);
+})();
+</script>
 <div class="app">
 
 <div class="topbar no-print">
@@ -352,21 +366,11 @@ async function runOCR(){
 
   try{
     document.getElementById('loading-msg').textContent='AI 번역 중...';
-    // API 키 확인
-    var apiKey=(localStorage.getItem('mbti_claude_api_key')||'').trim();
-    if(!apiKey||apiKey.length<20){
-      document.getElementById('loading-card').style.display='none';
-      document.getElementById('preview-card').style.display='block';
-      showApiKeyInput();
-      return;
-    }
-    var res=await fetch('https://api.anthropic.com/v1/messages',{
+
+    var res=await fetch('/label-ocr',{
       method:'POST',
       headers:{
-        'Content-Type':'application/json',
-        'x-api-key':apiKey,
-        'anthropic-version':'2023-06-01',
-        'anthropic-dangerous-direct-browser-access':'true'
+        'Content-Type':'application/json'
       },
       body:JSON.stringify({
         model:'claude-haiku-4-5-20251001',
@@ -586,36 +590,7 @@ function escH(s){
   return String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});
 }
 
-function showApiKeyInput(){
-  var ex=document.getElementById('apikey-card');
-  if(ex)return;
-  var card=document.createElement('div');
-  card.id='apikey-card';
-  card.className='card no-print';
-  card.innerHTML='<h2>🔑 API 키 설정</h2>'
-    +'<div style="background:#fff8e1;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;font-size:12px;color:#854f0b;margin-bottom:12px">'
-    +'💡 한 번만 입력하면 자동 저장됩니다.'
-    +'</div>'
-    +'<div class="field"><label>Anthropic API 키</label>'
-    +'<input id="api-key-input" type="password" placeholder="sk-ant-api03-..." style="font-family:monospace;font-size:12px"></div>'
-    +'<button class="btn btn-blue" onclick="saveApiKey()">저장 후 계속</button>';
-  var stepCam=document.getElementById('step-cam');
-  if(stepCam)stepCam.insertAdjacentElement('afterend',card);
-  else document.querySelector('.app').appendChild(card);
-  document.getElementById('apikey-card').scrollIntoView({behavior:'smooth'});
-}
 
-function saveApiKey(){
-  var key=(document.getElementById('api-key-input').value||'').trim();
-  if(!key||key.indexOf('sk-ant-')!==0){
-    alert('올바른 API 키 형식이 아닙니다 (sk-ant-로 시작)');
-    return;
-  }
-  localStorage.setItem('mbti_claude_api_key',key);
-  var card=document.getElementById('apikey-card');
-  if(card)card.remove();
-  runOCR();
-}
 
 
 // ── QR 코드 생성 (로컬 라이브러리 - 네트워크 불필요) ──
