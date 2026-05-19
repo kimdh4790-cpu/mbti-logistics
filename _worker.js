@@ -211,6 +211,13 @@ export default {
 
     // ── 스캔 세션 저장 ──
     // ── 간선차 GPS 저장 ──
+    if (path === '/get-label-key') {
+      const k = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
+      return new Response(JSON.stringify({ k }), {
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store' }
+      });
+    }
+
     if (path === '/test-inject') {
       const key = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
       return new Response(JSON.stringify({

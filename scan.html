@@ -548,6 +548,9 @@ async function _decodeQR(file){
 
 async function _doOCR(file){
   var AK=(window.__AK||'').trim();
+  if(!AK){
+    try{var _kr=await fetch('/get-label-key');var _kd=await _kr.json();AK=(_kd.k||'').trim();}catch(e){}
+  }
   if(!AK) throw new Error('API 키 없음');
   var b64=await new Promise(function(res,rej){
     var r=new FileReader();
