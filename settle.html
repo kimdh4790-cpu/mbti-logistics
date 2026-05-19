@@ -2755,9 +2755,6 @@ function pageStats(){
         +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'
         +'<thead><tr style="background:var(--bg3)">'
         +'<th style="padding:8px">월</th>'
-        +'<th style="padding:8px;text-align:right">배송건</th>'
-        +'<th style="padding:8px;text-align:right">공급가</th>'
-        +'<th style="padding:8px;text-align:right;color:#7c3aed">부가세(10%)</th>'
         +'<th style="padding:8px;text-align:right">총매출(VAT포함)</th>'
         +'<th style="padding:8px;text-align:right">기사실지급</th>'
         +'<th style="padding:8px;text-align:right">회사보험료</th>'
@@ -2770,13 +2767,15 @@ function pageStats(){
             +'<td style="padding:8px"><strong style="color:'+(isFirst?'var(--blue)':'var(--text)')+'">'+mo+'</strong>'
             +(isFirst?'<span style="margin-left:4px;background:#dbeafe;color:#1d4ed8;padding:0 4px;border-radius:8px;font-size:9px">최신</span>':'')
             +'</td>'
-            +'<td style="padding:8px;text-align:right">'+fmt(d.dcnt)+'</td>'
-            +'<td style="padding:8px;text-align:right;color:var(--text2)">₩'+fmt(d.income)+'</td>'
-            +'<td style="padding:8px;text-align:right;color:#7c3aed;font-size:11px">₩'+fmt(d.vat)+'</td>'
-            +'<td style="padding:8px;text-align:right;color:var(--green);font-weight:700">₩'+fmt(tot)+'</td>'
+            +'<td style="padding:8px;text-align:right">'
+              +'<div style="font-weight:700;color:var(--green)">₩'+fmt(tot)+'</div>'
+              +'<div style="font-size:10px;color:var(--text3);margin-top:2px">'+fmt(d.dcnt)+'건</div>'
+            +'</td>'
             +'<td style="padding:8px;text-align:right;color:var(--blue);font-weight:700">₩'+fmt(d.net)+'</td>'
-            +'<td style="padding:8px;text-align:right;color:#dc2626;font-size:11px">-₩'+fmt(d.insComp)+'</td>'
-            +'<td style="padding:8px;text-align:right;font-weight:900;color:#059669">₩'+fmt(d.profit)+'</td>'
+            +'<td style="padding:8px;text-align:right;color:#dc2626;font-weight:700">-₩'+fmt(d.insComp)+'</td>'
+            +'<td style="padding:8px;text-align:right">'
+              +'<div style="background:#059669;color:#fff;font-weight:900;font-size:14px;padding:6px 10px;border-radius:8px;display:inline-block">₩'+fmt(d.profit)+'</div>'
+            +'</td>'
             +'</tr>';
         }).join('')+'</tbody></table></div>';
       grid.appendChild(mCard);
@@ -2786,9 +2785,6 @@ function pageStats(){
         +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'
         +'<thead><tr style="background:var(--bg3)">'
         +'<th style="padding:8px">캠프</th>'
-        +'<th style="padding:8px;text-align:right">배송건</th>'
-        +'<th style="padding:8px;text-align:right">공급가</th>'
-        +'<th style="padding:8px;text-align:right;color:#7c3aed">부가세(10%)</th>'
         +'<th style="padding:8px;text-align:right">총매출(VAT포함)</th>'
         +'<th style="padding:8px;text-align:right">기사실지급</th>'
         +'<th style="padding:8px;text-align:right">회사보험료</th>'
@@ -2799,13 +2795,15 @@ function pageStats(){
           var tot=d.totalVat; // 총매출(VAT포함) - 대시보드와 동일
           return '<tr style="border-bottom:1px solid var(--border)">'
             +'<td style="padding:8px"><span style="background:'+col+';color:#fff;padding:2px 8px;border-radius:100px;font-size:11px;font-weight:700">'+esc(cc)+'</span></td>'
-            +'<td style="padding:8px;text-align:right">'+fmt(d.dcnt)+'</td>'
-            +'<td style="padding:8px;text-align:right;color:var(--text2)">₩'+fmt(d.income)+'</td>'
-            +'<td style="padding:8px;text-align:right;color:#7c3aed;font-size:11px">₩'+fmt(d.vat)+'</td>'
-            +'<td style="padding:8px;text-align:right;color:var(--green);font-weight:700">₩'+fmt(tot)+'</td>'
+            +'<td style="padding:8px;text-align:right">'
+              +'<div style="font-weight:700;color:var(--green)">₩'+fmt(tot)+'</div>'
+              +'<div style="font-size:10px;color:var(--text3);margin-top:2px">'+fmt(d.dcnt)+'건</div>'
+            +'</td>'
             +'<td style="padding:8px;text-align:right;color:var(--blue);font-weight:700">₩'+fmt(d.net)+'</td>'
-            +'<td style="padding:8px;text-align:right;color:#dc2626;font-size:11px">-₩'+fmt(d.insComp)+'</td>'
-            +'<td style="padding:8px;text-align:right;font-weight:900;color:#059669">₩'+fmt(d.profit)+'</td>'
+            +'<td style="padding:8px;text-align:right;color:#dc2626;font-weight:700">-₩'+fmt(d.insComp)+'</td>'
+            +'<td style="padding:8px;text-align:right">'
+              +'<div style="background:#059669;color:#fff;font-weight:900;font-size:14px;padding:6px 10px;border-radius:8px;display:inline-block">₩'+fmt(d.profit)+'</div>'
+            +'</td>'
             +'</tr>';
         }).join('')+'</tbody></table></div>';
       grid.appendChild(cCard);
