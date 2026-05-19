@@ -156,6 +156,16 @@ export default {
       });
     }
 
+    if (path === '/test-key') {
+      const key = env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || 'NOT_FOUND';
+      return new Response(JSON.stringify({
+        key_start: key.substring(0, 12) + '...',
+        key_length: key.length,
+        has_anthropic: !!env.ANTHROPIC_API_KEY,
+        has_claude: !!env.CLAUDE_API_KEY
+      }), { headers: { 'Content-Type': 'application/json' } });
+    }
+
     if (path === '/label-ocr') {
       if (method !== 'POST') {
         return new Response(JSON.stringify({ status: 'label-ocr ready' }), {
