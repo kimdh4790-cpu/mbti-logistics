@@ -2723,23 +2723,25 @@ function pageStats(){
       settles.forEach(function(s){
         var mo=s.month||'';var cc=_getSettleCamp(s)||'기타';
         var r=calcNet(s);
-        var supplyAmt=r.income||0;                          // 공급가(VAT제외)
-        var inc=Math.round(supplyAmt*1.1);                  // VAT포함 총매출
-        var vat=inc-supplyAmt;                              // 부가세
-        var empCo=r.emp||0;var workCo=r.work||0;           // 기사 부담분
-        // 회사부담: 고용0.9%, 산재0.88% (기사와 동일 요율)
+        // 대시보드와 동일한 방식으로 총매출 계산
+        var ct=s.coupangTotal||(((s.damt||0)+(s.ramt||0)+(s.fresh||0)+(s.inc||0)+(s.nocont||0)))||0;
+        var totalVat=ct?Math.round(ct*1.1):Math.round((r.income||0)*1.1); // 총매출(VAT포함)
+        var supplyAmt=Math.round(totalVat/1.1);             // 공급가(VAT제외)
+        var vat=totalVat-supplyAmt;                         // 부가세(10%)
+        // 회사부담 보험료 (고용0.9% + 산재0.88%)
         var mw=r.monthlyWage||0;
         var empComp=mw>=800000?Math.floor(mw*0.009/10)*10:0;
         var workComp=Math.floor(mw*0.0088/10)*10;
-        var insComp=empComp+workComp;                       // 회사부담 보험료
-        var netProfit=inc-r.net-insComp;                    // 순수익=총매출-실지급-회사부담보험
-        if(!byMonth[mo])byMonth[mo]={cnt:0,dcnt:0,income:0,vat:0,net:0,insComp:0,profit:0};
+        var insComp=empComp+workComp;
+        // 순수익 = 공급가(VAT제외) - 기사실지급 - 회사보험료 (VAT는 국가납부분 제외)
+        var netProfit=supplyAmt-(r.net||0)-insComp;
+        if(!byMonth[mo])byMonth[mo]={cnt:0,dcnt:0,income:0,vat:0,totalVat:0,net:0,insComp:0,profit:0};
         byMonth[mo].cnt++;byMonth[mo].dcnt+=(s.dcnt||0);
-        byMonth[mo].income+=supplyAmt;byMonth[mo].vat+=vat;
+        byMonth[mo].income+=supplyAmt;byMonth[mo].vat+=vat;byMonth[mo].totalVat+=totalVat;
         byMonth[mo].net+=r.net||0;byMonth[mo].insComp+=insComp;byMonth[mo].profit+=netProfit;
-        if(!byCamp[cc])byCamp[cc]={cnt:0,dcnt:0,income:0,vat:0,net:0,insComp:0,profit:0};
+        if(!byCamp[cc])byCamp[cc]={cnt:0,dcnt:0,income:0,vat:0,totalVat:0,net:0,insComp:0,profit:0};
         byCamp[cc].cnt++;byCamp[cc].dcnt+=(s.dcnt||0);
-        byCamp[cc].income+=supplyAmt;byCamp[cc].vat+=vat;
+        byCamp[cc].income+=supplyAmt;byCamp[cc].vat+=vat;byCamp[cc].totalVat+=totalVat;
         byCamp[cc].net+=r.net||0;byCamp[cc].insComp+=insComp;byCamp[cc].profit+=netProfit;
       });
       var months=Object.keys(byMonth).sort().reverse();
@@ -2763,7 +2765,7 @@ function pageStats(){
         +'</tr></thead><tbody>'
         +months.map(function(mo,i){
           var d=byMonth[mo];var isFirst=(i===0);
-          var tot=d.income+d.vat;
+          var tot=d.totalVat; // 총매출(VAT포함) - 대시보드와 동일
           return '<tr style="border-bottom:1px solid var(--border);'+(isFirst?'background:rgba(59,130,246,.06)':'')+'">'
             +'<td style="padding:8px"><strong style="color:'+(isFirst?'var(--blue)':'var(--text)')+'">'+mo+'</strong>'
             +(isFirst?'<span style="margin-left:4px;background:#dbeafe;color:#1d4ed8;padding:0 4px;border-radius:8px;font-size:9px">최신</span>':'')
@@ -2794,7 +2796,7 @@ function pageStats(){
         +'</tr></thead><tbody>'
         +camps.map(function(cc){
           var d=byCamp[cc];var col=_campColor(cc);
-          var tot=d.income+d.vat;
+          var tot=d.totalVat; // 총매출(VAT포함) - 대시보드와 동일
           return '<tr style="border-bottom:1px solid var(--border)">'
             +'<td style="padding:8px"><span style="background:'+col+';color:#fff;padding:2px 8px;border-radius:100px;font-size:11px;font-weight:700">'+esc(cc)+'</span></td>'
             +'<td style="padding:8px;text-align:right">'+fmt(d.dcnt)+'</td>'
