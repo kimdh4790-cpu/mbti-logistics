@@ -162,7 +162,7 @@ export default {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-api-key': env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY,
+            'x-api-key': (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, ''),
             'anthropic-version': '2023-06-01'
           },
           body: JSON.stringify({
@@ -216,7 +216,7 @@ export default {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-api-key': env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY,
+            'x-api-key': (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, ''),
             'anthropic-version': '2023-06-01'
           },
           body: JSON.stringify(body)
@@ -240,7 +240,7 @@ export default {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-api-key': env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY,
+            'x-api-key': (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, ''),
             'anthropic-version': '2023-06-01'
           },
           body: JSON.stringify(body)
