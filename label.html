@@ -364,10 +364,18 @@ async function runOCR(){
   try{
     document.getElementById('loading-msg').textContent='AI 번역 중...';
 
-    var res=await fetch('/label-ocr',{
+    // Worker에서 API 키 가져오기
+    var keyResp=await fetch('/get-label-key');
+    var keyData=await keyResp.json();
+    var ANTHROPIC_KEY=keyData.k||'';
+    if(!ANTHROPIC_KEY){throw new Error('키 로드 실패');}
+    var res=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{
-        'Content-Type':'application/json'
+        'Content-Type':'application/json',
+        'x-api-key':ANTHROPIC_KEY,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
       },
       body:JSON.stringify({
         model:'claude-3-5-haiku-20241022',

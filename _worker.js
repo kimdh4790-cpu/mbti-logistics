@@ -183,6 +183,17 @@ export default {
       }
     }
 
+    if (path === '/get-label-key') {
+      const k = env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '';
+      return new Response(JSON.stringify({ k }), {
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Cache-Control': 'no-store'
+        }
+      });
+    }
+
     if (path === '/test-key') {
       const key = env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || 'NOT_FOUND';
       return new Response(JSON.stringify({
