@@ -184,7 +184,7 @@ export default {
     }
 
     if (path === '/get-label-key') {
-      const k = env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '';
+      const k = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/\s+/g, '');
       return new Response(JSON.stringify({ k }), {
         headers: {
           'Content-Type': 'application/json',
