@@ -156,6 +156,33 @@ export default {
       });
     }
 
+    if (path === '/test-anthropic') {
+      try {
+        const resp = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY,
+            'anthropic-version': '2023-06-01'
+          },
+          body: JSON.stringify({
+            model: 'claude-3-5-haiku-20241022',
+            max_tokens: 10,
+            messages: [{ role: 'user', content: 'hi' }]
+          })
+        });
+        const status = resp.status;
+        const data = await resp.json();
+        return new Response(JSON.stringify({ http_status: status, response: data }), {
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
     if (path === '/test-key') {
       const key = env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || 'NOT_FOUND';
       return new Response(JSON.stringify({
