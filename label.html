@@ -309,6 +309,8 @@ function _incCounter(){
   _syncToFirebase(today, camp, rdata);
 }
 
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
 // 노선별 카드 갱신
 function refreshRouteCard(){
   var today=new Date().toISOString().slice(0,10);
