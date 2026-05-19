@@ -130,6 +130,7 @@ body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
       📷 라벨 촬영
       <input type="file" accept="image/*" capture="environment" id="r-input" style="display:none" onchange="doScan('recv',this)">
     </label>
+    <button class="btn btn-gray" style="flex:1;font-size:13px" onclick="manualScan()">✏️ 직접</button>
     <button class="btn btn-gray" style="flex:1" onclick="undo('recv')">↩ 취소</button>
   </div>
 
@@ -200,8 +201,13 @@ async function doScan(mode, input){
   var camp = ocr.camp || null;
 
   if(!route){
-    setStatus(statusId, '❌ 노선번호 미인식 — 다시 촬영해 주세요', 's-err');
-    return;
+    // OCR 실패 시 수동 입력 허용
+    var manual = window.prompt('노선번호 자동인식 실패\n직접 입력해 주세요 (예: 812 B01)');
+    if(!manual || !manual.trim()){
+      setStatus(statusId, '❌ 노선번호 미인식 — 다시 촬영해 주세요', 's-err');
+      return;
+    }
+    route = manual.trim();
   }
 
   // 데이터 추가
@@ -219,6 +225,24 @@ async function doScan(mode, input){
   if(navigator.vibrate) navigator.vibrate(60);
 
   refreshRecv(); saveRecvToFirebase();
+}
+
+function manualScan(){
+  var route = window.prompt('노선번호 입력 (예: 812 B01)');
+  if(!route || !route.trim()) return;
+  var camp = (document.getElementById('r-camp')||{value:''}).value||'';
+  var now = new Date();
+  var t = ('0'+now.getHours()).slice(-2)+':'+('0'+now.getMinutes()).slice(-2)+':'+('0'+now.getSeconds()).slice(-2);
+  var d = _data.recv;
+  var k = route.trim();
+  if(!d.routes[k]) d.routes[k]={route:k,camp:camp,count:0,scans:[]};
+  d.routes[k].count++;
+  d.routes[k].scans.push({time:t,tracking:''});
+  d.history.push({route:k,time:t});
+  setStatus('r-status','✅ '+k+' — '+d.routes[k].count+'건 추가 (수동)','s-ok');
+  if(navigator.vibrate)navigator.vibrate(60);
+  refreshRecv();
+  saveRecvToFirebase();
 }
 
 function undo(mode){

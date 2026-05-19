@@ -456,7 +456,7 @@ function retake(){
 }
 
 // ── 언어 설정 ──
-var _lang = 'ko'; // 기본: 한국어 (인바운드)
+var _lang = localStorage.getItem('mbti_label_lang') || 'ko'; // localStorage 우선
 var _LANGS = {
   ko:{id:'ko',flag:'🇰🇷',name:'한국어',bg:'#fff',color:'#185FA5'},
   en:{id:'en',flag:'🇺🇸',name:'영어',bg:'transparent',color:'#fff'},
@@ -518,7 +518,7 @@ async function runOCR(){
     ja: '伝票から抽出、JSON形式、各フィールド厳密に分離。①name=受取人名②addr1=完全住所(日本語翻訳)③addr2=建物+部屋番号④tracking=バーコード送り状番号(点含む)路線番号でない⑤orderNo=注文番号(点含む)D3等配送コード含まない⑥camp=拠点名⑦route=路線番号(★の後)⑧boxSize=箱サイズ⑨customerMsg=配達メモ⑩deliveryTime=配達時間帯\n{"name":"","addr1":"","addr2":"","tracking":"","orderNo":"","camp":"","route":"","boxSize":"","customerMsg":"","deliveryTime":"","city":"釜山"}',
     ph: 'Extract from label JSON only, fields strictly separated.①name=recipient name②addr1=full street address English translation③addr2=building+unit English④tracking=barcode number with dots NOT star route⑤orderNo=order number with dots NO delivery codes⑥camp=camp name⑦route=route after star⑧boxSize=box size⑨customerMsg=delivery message⑩deliveryTime=delivery time code\n{"name":"","addr1":"","addr2":"","tracking":"","orderNo":"","camp":"","route":"","boxSize":"","customerMsg":"","deliveryTime":"","city":"Busan"}'
   };
-  var _currentLang = _lang || localStorage.getItem('mbti_label_lang') || 'ko';
+  var _currentLang = localStorage.getItem('mbti_label_lang') || _lang || 'ko';
   var prompt=PROMPTS[_currentLang]||PROMPTS.ko;
   console.log('[OCR] 언어:', _currentLang);
 
