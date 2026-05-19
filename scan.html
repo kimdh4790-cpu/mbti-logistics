@@ -75,72 +75,14 @@ body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
       <div style="font-size:10px;font-weight:700;letter-spacing:2px;opacity:.7">LogiNet</div>
       <div style="font-size:16px;font-weight:700">🚛 간선차 스캔 시스템</div>
     </div>
-    <div id="mode-badge" style="background:rgba(255,255,255,.2);padding:4px 10px;border-radius:8px;font-size:12px;font-weight:700">물류센터</div>
+    <div style="background:rgba(255,255,255,.2);padding:4px 10px;border-radius:8px;font-size:12px;font-weight:700">🏕 캠프 수령</div>
   </div>
 </div>
 
-<!-- 모드 선택 -->
-<div class="mode-tab">
-  <button class="mode-btn on" id="m1" onclick="setMode(1)">📦 물류센터<br><span style="font-size:10px;font-weight:400">간선차 적재 집계</span></button>
-  <button class="mode-btn" id="m2" onclick="setMode(2)">🏕 캠프 수령<br><span style="font-size:10px;font-weight:400">수령 후 비교</span></button>
-</div>
+<!-- 캠프 수령 전용 -->
 
-<!-- ══════════ 물류센터 모드 ══════════ -->
-<div id="mode1">
-  <div class="card">
-    <div style="display:flex;gap:8px">
-      <div class="field" style="flex:1">
-        <label>목적 캠프</label>
-        <select id="l-camp">
-          <option>부산1</option><option>부산2</option><option>부산3</option>
-          <option>대구2</option><option>진주M</option>
-        </select>
-      </div>
-      <div class="field" style="flex:1">
-        <label>총 예상 건수</label>
-        <input type="number" id="l-expect" placeholder="150" min="0" oninput="refreshLoad()">
-      </div>
-    </div>
-  </div>
-
-  <!-- 적재 요약 -->
-  <div class="sum-bar sum-bar-load">
-    <div style="display:flex;justify-content:space-between;align-items:flex-end">
-      <div>
-        <div style="font-size:11px;opacity:.7;margin-bottom:4px">총 적재 건수</div>
-        <div class="sum-total" id="l-total">0</div>
-        <div style="font-size:12px;opacity:.8;margin-top:4px" id="l-sub">예상 건수를 입력하세요</div>
-      </div>
-      <div style="text-align:right;font-size:12px;opacity:.8" id="l-route-cnt">노선 0종</div>
-    </div>
-    <div class="prog-bar"><div class="prog-fill" id="l-prog" style="width:0%"></div></div>
-  </div>
-
-  <!-- 스캔 상태 -->
-  <div class="scan-status s-idle" id="l-status">📷 라벨을 촬영하세요</div>
-
-  <!-- 촬영 버튼 -->
-  <div style="display:flex;gap:8px;margin-bottom:10px">
-    <label style="flex:3;display:flex;align-items:center;justify-content:center;gap:8px;padding:15px;border-radius:10px;background:#185FA5;color:#fff;font-size:16px;font-weight:700;cursor:pointer">
-      📷 라벨 촬영
-      <input type="file" accept="image/*" capture="environment" id="l-input" style="display:none" onchange="doScan('load',this)">
-    </label>
-    <button class="btn btn-gray" style="flex:1" onclick="undo('load')">↩ 취소</button>
-  </div>
-
-  <!-- 노선별 -->
-  <div id="l-route-list">
-    <div style="text-align:center;padding:20px;color:#aaa;font-size:13px">아직 스캔된 항목이 없습니다</div>
-  </div>
-
-  <!-- 공유 버튼 -->
-  <div style="margin-top:8px">
-    <button class="btn btn-orange" onclick="shareLoad()">📤 캠프로 적재 정보 공유</button>
-  </div>
-</div>
-
-<!-- ══════════ 캠프 수령 모드 ══════════ -->
-<div id="mode2" style="display:none">
+<!-- ══════════ 캠프 수령 ══════════ -->
+<div id="mode2">
   <div class="card">
     <div style="display:flex;gap:8px">
       <div class="field" style="flex:1">
@@ -235,14 +177,7 @@ var _data = {
   recv: { routes:{}, history:[] }   // 캠프 수령
 };
 
-function setMode(n){
-  _cur = n;
-  [1,2].forEach(function(i){
-    document.getElementById('mode'+i).style.display = i===n?'block':'none';
-    document.getElementById('m'+i).classList.toggle('on', i===n);
-  });
-  document.getElementById('mode-badge').textContent = n===1?'물류센터':'캠프 수령';
-}
+// 캠프 수령 전용 모드
 
 // ── OCR + QR 스캔 ──
 async function doScan(mode, input){
@@ -283,28 +218,24 @@ async function doScan(mode, input){
   setStatus(statusId, '✅ '+k+' — '+d.routes[k].count+'건 추가됨', 's-ok');
   if(navigator.vibrate) navigator.vibrate(60);
 
-  if(mode==='load') refreshLoad();
-  else { refreshRecv(); saveRecvToFirebase(); }
+  refreshRecv(); saveRecvToFirebase();
 }
 
 function undo(mode){
-  var d = _data[mode];
+  var d=_data.recv;
   if(!d.history.length){alert('취소할 항목 없음');return;}
-  var last = d.history.pop();
-  var r = d.routes[last.route];
-  if(r){ r.count--; r.scans.pop(); if(r.count<=0) delete d.routes[last.route]; }
-  var sid = mode==='load'?'l-status':'r-status';
-  setStatus(sid, '↩ 취소: '+last.route, 's-idle');
-  if(mode==='load') refreshLoad(); else refreshRecv();
+  var last=d.history.pop();
+  var r=d.routes[last.route];
+  if(r){r.count--;r.scans.pop();if(r.count<=0)delete d.routes[last.route];}
+  setStatus('r-status','↩ 취소: '+last.route,'s-idle');
+  refreshRecv();
 }
 
 function resetCurrent(){
   if(!confirm('초기화하시겠습니까?'))return;
-  var mode = _cur===1?'load':'recv';
-  _data[mode]={routes:{},history:[]};
-  var sid = mode==='load'?'l-status':'r-status';
-  setStatus(sid,'📷 라벨을 촬영하세요','s-idle');
-  if(_cur===1) refreshLoad(); else refreshRecv();
+  _data.recv={routes:{},history:[]};
+  setStatus('r-status','📷 수령 박스 라벨을 촬영하세요','s-idle');
+  refreshRecv();
 }
 
 // ── 화면 갱신 ──
@@ -587,7 +518,6 @@ function _copyText(text,cb){
   else{var t=document.createElement('textarea');t.value=text;document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();cb&&cb();}
 }
 
-refreshLoad();
 refreshRecv();
 
 // 세션ID

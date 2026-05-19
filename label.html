@@ -166,6 +166,11 @@ body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
   <div id="route-summary-body"></div>
 </div>
 
+<!-- 공유 버튼 -->
+<div class="card no-print" id="share-btn-card" style="display:none">
+  <button class="btn btn-orange" onclick="shareToAll()">📤 간선차·캠프 공유</button>
+</div>
+
 <!-- STEP 1: 촬영 -->
 <div id="step-cam" class="no-print">
   <div class="card">
@@ -303,7 +308,9 @@ function refreshRouteCard(){
   var card=document.getElementById('route-summary-card');
   var body=document.getElementById('route-summary-body');
   if(!card||!body)return;
-  if(!keys.length){card.style.display='none';return;}
+  var shareCard=document.getElementById('share-btn-card');
+  if(!keys.length){card.style.display='none';if(shareCard)shareCard.style.display='none';return;}
+  if(shareCard)shareCard.style.display='block';
   card.style.display='block';
   keys.sort();
   var total=keys.reduce(function(s,k){return s+(rdata[k].count||0);},0);
@@ -323,6 +330,34 @@ function refreshRouteCard(){
     +'<td style="padding:6px;text-align:right;color:#185FA5">'+total+'건</td></tr>';
   html+='</tbody></table>';
   body.innerHTML=html;
+}
+
+// 간선차+캠프 전체 공유
+async function shareToAll(){
+  var today=new Date().toISOString().slice(0,10);
+  var rdata=JSON.parse(localStorage.getItem('mbti_label_routes_'+today)||'{}');
+  var keys=Object.keys(rdata);
+  if(!keys.length){alert('출력된 라벨이 없습니다.');return;}
+  var total=keys.reduce(function(s,k){return s+(rdata[k].count||0);},0);
+  var now=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+  var campKey=(Object.values(rdata)[0]||{camp:''}).camp||'전체';
+  // Firebase 저장 (캠프 수령용)
+  await _syncToFirebase(today,campKey,rdata);
+  // 공유 텍스트
+  var lines=['[LogiNet 간선차 출발 알림]','캠프: '+campKey,'총 송장: '+total+'건','출발시각: '+now,''];
+  lines.push('■ 노선별');
+  keys.sort().forEach(function(k){lines.push('  '+k+': '+rdata[k].count+'건');});
+  lines.push('','▶ 캠프에서 scan.html로 수령 확인해 주세요.');
+  var text=lines.join('\n');
+  if(navigator.share){
+    navigator.share({title:'LogiNet 간선차 출발',text:text}).catch(function(){});
+  } else {
+    if(navigator.clipboard){
+      navigator.clipboard.writeText(text).then(function(){
+        alert('클립보드에 복사됐습니다!\n카카오톡에 붙여넣기 해주세요.');
+      });
+    }
+  }
 }
 
 // Firebase 동기화 (Worker API 경유)
