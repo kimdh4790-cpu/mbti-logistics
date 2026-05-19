@@ -3611,11 +3611,11 @@ function agreeTerms(){
   if(!document.getElementById('ta-chk-privacy').checked){toast('개인정보 처리방침에 동의해 주세요.');return;}
   var btn=document.getElementById('ta-agree-btn');
   btn.disabled=true;btn.textContent='저장 중...';
-  _db.collection('users').doc(_CU.uid).update({
+  _db.collection('users').doc(_CU.uid).set({
     termsVersion:TERMS_VER,
     termsAgreedAt:firebase.firestore.FieldValue.serverTimestamp(),
     agreeTerms:true,agreePrivacy:true
-  }).then(function(){
+  },{merge:true}).then(function(){
     document.getElementById('mo-terms-agree').classList.remove('show');
     _CU.termsVersion=TERMS_VER;
     goPage('settle');
