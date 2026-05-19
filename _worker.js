@@ -211,6 +211,17 @@ export default {
 
     // ── 스캔 세션 저장 ──
     // ── 간선차 GPS 저장 ──
+    if (path === '/test-inject') {
+      const key = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
+      return new Response(JSON.stringify({
+        key_len: key.length,
+        key_start: key.substring(0,15)+'...',
+        has_ak: !!env.ANTHROPIC_API_KEY,
+        has_ck: !!env.CLAUDE_API_KEY,
+        inject_test: '<head><script>window.__AK='+JSON.stringify(key)+';</script>'.substring(0,60)
+      }), { headers: {'Content-Type':'application/json'}});
+    }
+
     if (path === '/truck-save' && request.method === 'POST') {
       try {
         const token = await getAccessToken(env);
