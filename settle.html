@@ -150,7 +150,7 @@ tr:hover>td{background:var(--bg3)}
 <div id="toast"></div>
 
 <!-- ★ 고정 파일 입력 (항상 존재) -->
-<input type="file" id="excel-input" accept=".xlsx,.xls" style="display:none">
+<input type="file" id="excel-input" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style="display:none">
 
 <script>
 // ██ 유틸 ██
@@ -1410,7 +1410,7 @@ function _renderSettlePage(settles,c){
     +'<button onclick="toggleSettleMore(this)" style="padding:3px 9px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;color:var(--text2)">더보기 ▼</button>'
     +'</div>'
     +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
-    +'<label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#f97316;color:#fff;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📤 쿠팡 엑셀 업로드 → 자동정산<input type="file" accept=".xlsx,.xls" style="display:none" onchange="parseCoupangExcel(this)"></label>'
+    +'<label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#f97316;color:#fff;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📤 쿠팡 엑셀 업로드 → 자동정산<input type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style="display:none" onchange="parseCoupangExcel(this)"></label>'
     +'<button onclick="recalcAllSettlements()" style="padding:8px 14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⚡ 전체 정산 재계산 저장</button>'
     +'<button onclick="openOneQueueSend(\'전체\')" style="padding:8px 14px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⚡ 원큐 전달</button>'
     +'<button onclick="openTaxStore()" style="padding:8px 14px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗂 기사별 세금계산서 보관함</button>'
