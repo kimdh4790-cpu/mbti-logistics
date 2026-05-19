@@ -49,27 +49,28 @@ body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
   .print-area{background:#fff;border:1px solid #ccc;border-radius:8px;overflow:hidden;margin-top:8px}
 }
 @media print{
-  @page{size:A4 portrait;margin:6mm}
+  @page{size:A4 portrait;margin:5mm}
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  /* 모든 요소 숨김 */
+  .no-print,
+  .topbar,.card,
+  #step-cam,#loading-card,#preview-card,
+  #truck-widget-label,#route-summary-card,#share-btn-card{display:none!important}
+  body,html{background:#fff!important;margin:0!important;padding:0!important}
+  .app{padding:0!important;margin:0!important;max-width:100%!important;background:none!important}
+  /* 결과 영역만 표시 */
+  #step-result{display:block!important}
+  #step-result>.card{display:none!important}
+  .print-area{display:block!important;width:100%!important;margin:0!important;padding:0!important;border:none!important}
+  /* 4분할 */
+  .label-a4-4{display:grid!important;grid-template-columns:1fr 1fr!important;grid-template-rows:1fr 1fr!important;width:100%!important;height:277mm!important}
+  .label-a4-4 .label-item{height:138mm!important;box-sizing:border-box!important;display:flex!important;flex-direction:column!important}
+  /* 2분할 */
+  .label-a4-2{display:grid!important;grid-template-columns:1fr 1fr!important;width:100%!important}
+  /* 1개 */
+  .label-a4-1{display:block!important;width:100%!important}
+  .label-item{page-break-inside:avoid!important;break-inside:avoid!important}
   img,canvas{display:block!important}
-  body,html{background:#fff!important;margin:0!important;padding:0!important;height:auto!important}
-  /* 인쇄 시 모든 요소 숨김 */
-  body > *,div,section{display:none!important}
-  /* 라벨만 표시 */
-  .print-area,
-  .print-area *,
-  .label-a4-4,
-  .label-a4-4 *,
-  .label-a4-2,
-  .label-a4-2 *,
-  .label-a4-1,
-  .label-a4-1 *,
-  .label-item,
-  .label-item *{display:revert!important}
-  .print-area{display:block!important;border:none!important;margin:0!important;padding:0!important;width:100%!important;position:fixed!important;top:0!important;left:0!important}
-  .label-a4-4{width:100%!important;height:277mm!important;display:grid!important}
-  .label-a4-4 .label-item{height:138mm!important;box-sizing:border-box!important;display:flex!important}
-  .label-item{page-break-inside:avoid;break-inside:avoid}
 }
 /* 라벨 1개 (A4 전체) */
 .label-a4-1{width:100%;padding:20px;font-family:'Arial',sans-serif}
@@ -463,6 +464,7 @@ var _LANGS = {
 };
 function setLang(lang){
   _lang=lang;
+  window._currentLang=lang;
   try{localStorage.setItem('mbti_label_lang',lang);}catch(e){}
   Object.keys(_LANGS).forEach(function(k){
     var btn=document.getElementById('btn-lang-'+k);
@@ -514,7 +516,9 @@ async function runOCR(){
     ja: '伝票から抽出、JSON形式、各フィールド厳密に分離。①name=受取人名②addr1=完全住所(日本語翻訳)③addr2=建物+部屋番号④tracking=バーコード送り状番号(点含む)路線番号でない⑤orderNo=注文番号(点含む)D3等配送コード含まない⑥camp=拠点名⑦route=路線番号(★の後)⑧boxSize=箱サイズ⑨customerMsg=配達メモ⑩deliveryTime=配達時間帯\n{"name":"","addr1":"","addr2":"","tracking":"","orderNo":"","camp":"","route":"","boxSize":"","customerMsg":"","deliveryTime":"","city":"釜山"}',
     ph: 'Extract from label JSON only, fields strictly separated.①name=recipient name②addr1=full street address English translation③addr2=building+unit English④tracking=barcode number with dots NOT star route⑤orderNo=order number with dots NO delivery codes⑥camp=camp name⑦route=route after star⑧boxSize=box size⑨customerMsg=delivery message⑩deliveryTime=delivery time code\n{"name":"","addr1":"","addr2":"","tracking":"","orderNo":"","camp":"","route":"","boxSize":"","customerMsg":"","deliveryTime":"","city":"Busan"}'
   };
-  var prompt=PROMPTS[_lang]||PROMPTS.ko;
+  var _currentLang = _lang || localStorage.getItem('mbti_label_lang') || 'ko';
+  var prompt=PROMPTS[_currentLang]||PROMPTS.ko;
+  console.log('[OCR] 언어:', _currentLang);
 
   try{
     document.getElementById('loading-msg').textContent='AI 번역 중...';
@@ -617,10 +621,10 @@ function showResult(info){
   document.getElementById('step-result').style.display='block';
   document.getElementById('step-result').scrollIntoView({behavior:'smooth'});
   updatePreview();
+  _incCounter(); // ★ OCR 완료 후 즉시 카운트
   // QR 로드 완료 후 인쇄 (최대 8초 대기)
   _qrLoaded={};
   _printDone=false;
-  _incCounter(); // ★ 자동인쇄 경로 카운터
   setTimeout(function(){
     waitQRandPrint();
     // 8초 후 강제 인쇄 (QR 로드 실패해도 인쇄) - 이미 인쇄했으면 스킵
