@@ -210,6 +210,62 @@ export default {
     }
 
     // ── 스캔 세션 저장 ──
+    // ── 간선차 GPS 저장 ──
+    if (path === '/truck-save' && request.method === 'POST') {
+      try {
+        const token = await getAccessToken(env);
+        const body  = await request.json();
+        const docId = body.truckId;
+        await fsPatch(token, `${FS_BASE}/truck_gps/${docId}`, {
+          lat:       { doubleValue: body.lat },
+          lng:       { doubleValue: body.lng },
+          speed:     { doubleValue: body.speed || 0 },
+          heading:   { doubleValue: body.heading || 0 },
+          camp:      { stringValue: body.camp || '' },
+          driver:    { stringValue: body.driver || '' },
+          status:    { stringValue: body.status || 'moving' },
+          updatedAt: { stringValue: new Date().toISOString() },
+        });
+        return new Response(JSON.stringify({ ok: true }), {
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), {
+          status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        });
+      }
+    }
+
+    // ── 간선차 GPS 조회 ──
+    if (path.startsWith('/truck-get/') && request.method === 'GET') {
+      try {
+        const token = await getAccessToken(env);
+        const docId = decodeURIComponent(path.replace('/truck-get/', ''));
+        const doc   = await fsGet(token, 'truck_gps', docId);
+        if (!doc || !doc.fields) {
+          return new Response(JSON.stringify({ ok: false, empty: true }), {
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+          });
+        }
+        const f = doc.fields;
+        return new Response(JSON.stringify({
+          ok:        true,
+          lat:       f.lat       ? f.lat.doubleValue       : 0,
+          lng:       f.lng       ? f.lng.doubleValue       : 0,
+          speed:     f.speed     ? f.speed.doubleValue     : 0,
+          heading:   f.heading   ? f.heading.doubleValue   : 0,
+          camp:      f.camp      ? f.camp.stringValue      : '',
+          driver:    f.driver    ? f.driver.stringValue    : '',
+          status:    f.status    ? f.status.stringValue    : '',
+          updatedAt: f.updatedAt ? f.updatedAt.stringValue : null,
+        }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      } catch (e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), {
+          status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        });
+      }
+    }
+
     if (path === '/scan-save' && request.method === 'POST') {
       try {
         const token = await getAccessToken(env);
@@ -275,6 +331,12 @@ export default {
       const key  = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
       const injected = html.replace('<head>', '<head><script>window.__AK=' + JSON.stringify(key) + ';</script>');
       return new Response(injected, { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+    }
+
+    if (path === '/truck' || path === '/truck/') {
+      const req  = new Request(new URL('/truck.html', url).toString(), { method: 'GET', headers: request.headers });
+      const resp = await env.ASSETS.fetch(req);
+      return new Response(resp.body, { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
     }
 
     if (path === '/scan' || path === '/scan/') {

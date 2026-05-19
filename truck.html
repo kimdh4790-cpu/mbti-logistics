@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#185FA5">
+<title>간선차 GPS | LogiNet</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,'Malgun Gothic',sans-serif}
+body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
+.app{max-width:400px;margin:0 auto;padding:16px}
+.topbar{background:#185FA5;color:#fff;padding:14px 16px;border-radius:12px;margin-bottom:12px;text-align:center}
+.card{background:#fff;border-radius:12px;padding:16px;margin-bottom:10px;border:1px solid rgba(0,0,0,.08)}
+.btn{padding:14px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;border:none;width:100%;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn:active{transform:scale(.97)}
+.btn-blue{background:#185FA5;color:#fff}
+.btn-green{background:#0F6E56;color:#fff}
+.btn-red{background:#dc2626;color:#fff}
+.btn-gray{background:#f0f4f8;color:#444;border:1px solid #dde3ed}
+.field label{font-size:11px;font-weight:600;color:#888;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em}
+.field select,.field input{width:100%;padding:10px 12px;border:1.5px solid #dde3ed;border-radius:8px;font-size:14px;outline:none;margin-bottom:10px}
+.field select:focus,.field input:focus{border-color:#185FA5}
+.status-card{border-radius:12px;padding:16px;text-align:center;margin-bottom:10px}
+.st-idle{background:#f0f4f8;color:#888}
+.st-on{background:#d1fae5;color:#065f46}
+.st-off{background:#fee2e2;color:#991b1b}
+.gps-info{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.gps-box{background:#f8f9fc;border-radius:8px;padding:10px;text-align:center}
+.gps-val{font-size:16px;font-weight:700;color:#185FA5;margin-top:4px}
+.gps-lbl{font-size:10px;color:#888}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.pulse{animation:pulse 1.5s infinite}
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="topbar">
+  <div style="font-size:11px;opacity:.7;letter-spacing:2px;font-weight:700">LogiNet</div>
+  <div style="font-size:18px;font-weight:700;margin-top:2px">🚛 간선차 GPS 공유</div>
+  <div style="font-size:11px;opacity:.8;margin-top:2px">출발 전 눌러주세요</div>
+</div>
+
+<div class="card">
+  <div class="field">
+    <label>목적 캠프</label>
+    <select id="sel-camp">
+      <option value="부산1">부산1</option>
+      <option value="부산2">부산2</option>
+      <option value="부산3">부산3</option>
+      <option value="대구2">대구2</option>
+      <option value="진주M">진주M</option>
+    </select>
+    <label>기사명</label>
+    <input id="inp-driver" placeholder="이름 입력" value="">
+  </div>
+</div>
+
+<!-- 상태 -->
+<div class="status-card st-idle" id="status-card">
+  <div style="font-size:28px" id="status-icon">🚛</div>
+  <div style="font-size:15px;font-weight:700;margin-top:8px" id="status-text">GPS 공유 대기 중</div>
+  <div style="font-size:12px;margin-top:4px;opacity:.8" id="status-sub">시작 버튼을 눌러주세요</div>
+</div>
+
+<!-- GPS 정보 -->
+<div class="gps-info" id="gps-info" style="display:none">
+  <div class="gps-box"><div class="gps-lbl">속도</div><div class="gps-val" id="gps-speed">—</div><div class="gps-lbl">km/h</div></div>
+  <div class="gps-box"><div class="gps-lbl">정확도</div><div class="gps-val" id="gps-acc">—</div><div class="gps-lbl">m</div></div>
+  <div class="gps-box"><div class="gps-lbl">위도</div><div class="gps-val" id="gps-lat" style="font-size:13px">—</div></div>
+  <div class="gps-box"><div class="gps-lbl">경도</div><div class="gps-val" id="gps-lng" style="font-size:13px">—</div></div>
+</div>
+
+<!-- 버튼 -->
+<div id="btn-area">
+  <button class="btn btn-green" id="btn-start" onclick="startGPS()">📍 GPS 공유 시작</button>
+</div>
+
+<div style="margin-top:12px;background:#fff8e1;border:1px solid #fde68a;border-radius:8px;padding:12px;font-size:12px;color:#854d0e">
+  💡 이 페이지를 켜둔 채로 운전하세요. 30초마다 위치가 자동 전송됩니다.
+</div>
+
+</div>
+<script>
+var _interval = null;
+var _truckId = null;
+var _watching = false;
+var _lastPos = null;
+
+function _makeTruckId(camp){
+  var today = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  return 'truck_'+today+'_'+camp.replace(/\s/g,'');
+}
+
+function setStatus(icon, text, sub, cls){
+  document.getElementById('status-card').className = 'status-card ' + cls;
+  document.getElementById('status-icon').textContent = icon;
+  document.getElementById('status-text').textContent = text;
+  document.getElementById('status-sub').textContent = sub;
+}
+
+async function sendGPS(pos){
+  if(!_truckId) return;
+  var camp = document.getElementById('sel-camp').value;
+  var driver = document.getElementById('inp-driver').value.trim();
+  var lat = pos.coords.latitude;
+  var lng = pos.coords.longitude;
+  var speed = pos.coords.speed ? Math.round(pos.coords.speed * 3.6) : 0;
+  var heading = pos.coords.heading || 0;
+  var acc = Math.round(pos.coords.accuracy);
+  _lastPos = {lat, lng, speed, heading, acc};
+  // UI 업데이트
+  document.getElementById('gps-lat').textContent = lat.toFixed(4);
+  document.getElementById('gps-lng').textContent = lng.toFixed(4);
+  document.getElementById('gps-speed').textContent = speed;
+  document.getElementById('gps-acc').textContent = acc;
+  document.getElementById('gps-info').style.display = 'grid';
+  // 서버 전송
+  try {
+    await fetch('/truck-save', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({truckId:_truckId, lat, lng, speed, heading, camp, driver, status:'moving'})
+    });
+    var now = new Date().toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+    document.getElementById('status-sub').textContent = '마지막 전송: ' + now;
+  } catch(e) {
+    document.getElementById('status-sub').textContent = '전송 실패 (재시도 중)';
+  }
+}
+
+function startGPS(){
+  var camp = document.getElementById('sel-camp').value;
+  var driver = document.getElementById('inp-driver').value.trim();
+  if(!driver){alert('기사명을 입력해주세요.');return;}
+  if(!navigator.geolocation){alert('이 기기는 GPS를 지원하지 않습니다.');return;}
+  _truckId = _makeTruckId(camp);
+  localStorage.setItem('mbti_truck_id', _truckId);
+  localStorage.setItem('mbti_truck_camp', camp);
+  setStatus('📡', 'GPS 공유 중', '위치 확인 중...', 'st-on');
+  document.getElementById('btn-area').innerHTML =
+    '<button class="btn btn-red" onclick="stopGPS()">■ GPS 공유 중지</button>';
+  document.getElementById('sel-camp').disabled = true;
+  document.getElementById('inp-driver').disabled = true;
+  // 즉시 1회 + 30초마다
+  navigator.geolocation.getCurrentPosition(sendGPS, onGpsErr, {enableHighAccuracy:true, timeout:15000});
+  _interval = setInterval(function(){
+    navigator.geolocation.getCurrentPosition(sendGPS, onGpsErr, {enableHighAccuracy:true, timeout:10000});
+  }, 30000);
+  // 도착 알림 체크 (30초마다)
+  setInterval(checkArrival, 30000);
+}
+
+function onGpsErr(e){
+  setStatus('⚠️', 'GPS 오류', e.message, 'st-off');
+}
+
+function stopGPS(){
+  if(_interval){clearInterval(_interval);_interval=null;}
+  if(_truckId){
+    var camp = document.getElementById('sel-camp').value;
+    var driver = document.getElementById('inp-driver').value.trim();
+    fetch('/truck-save',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({truckId:_truckId,lat:_lastPos?_lastPos.lat:0,lng:_lastPos?_lastPos.lng:0,speed:0,camp,driver,status:'arrived'})
+    }).catch(function(){});
+  }
+  setStatus('🏁', 'GPS 공유 종료', '도착 완료', 'st-idle');
+  document.getElementById('btn-area').innerHTML =
+    '<button class="btn btn-green" onclick="location.reload()">🔄 다시 시작</button>';
+}
+
+var CAMP_GPS = {
+  '부산1':{lat:35.1941,lng:129.1198},
+  '부산2':{lat:35.1252,lng:128.9641},
+  '부산3':{lat:35.0659,lng:129.0100},
+  '대구2':{lat:35.8183,lng:128.7203},
+  '진주M':{lat:35.1190,lng:128.0989}
+};
+
+function _dist(lat1,lng1,lat2,lng2){
+  var R=6371, dLat=(lat2-lat1)*Math.PI/180, dLng=(lng2-lng1)*Math.PI/180;
+  var a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+function checkArrival(){
+  if(!_lastPos) return;
+  var camp = document.getElementById('sel-camp').value;
+  var tgt = CAMP_GPS[camp];
+  if(!tgt) return;
+  var dist = _dist(_lastPos.lat, _lastPos.lng, tgt.lat, tgt.lng);
+  if(dist < 0.3) { // 300m 이내
+    if(navigator.vibrate) navigator.vibrate([300,100,300]);
+    stopGPS();
+    alert('🏁 '+camp+' 캠프 도착!\nGPS 공유를 자동 종료합니다.');
+  }
+}
+
+// 저장된 설정 불러오기
+var savedCamp = localStorage.getItem('mbti_truck_camp');
+if(savedCamp) document.getElementById('sel-camp').value = savedCamp;
+</script>
+</body>
+</html>

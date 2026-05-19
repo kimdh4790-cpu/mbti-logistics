@@ -154,6 +154,18 @@ body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
   </div>
 </div>
 
+<!-- GPS 위젯 -->
+<div id="truck-widget-label" style="margin-bottom:10px"></div>
+
+<!-- 노선별 출력 현황 -->
+<div class="card no-print" id="route-summary-card" style="display:none">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+    <span style="font-size:13px;font-weight:700">📊 노선별 출력 현황</span>
+    <button onclick="refreshRouteCard()" style="background:#f0f4f8;border:1px solid #dde3ed;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">🔄</button>
+  </div>
+  <div id="route-summary-body"></div>
+</div>
+
 <!-- STEP 1: 촬영 -->
 <div id="step-cam" class="no-print">
   <div class="card">
@@ -257,6 +269,7 @@ var _stream=null; var _capturedImg=null; var _printSize=4; var _printDone=false;
 document.addEventListener('DOMContentLoaded',function(){
   var savedLang=localStorage.getItem('mbti_label_lang')||'ko';
   setLang(savedLang);
+  refreshRouteCard();
   // 건수 카운터 초기화 (날짜별)
   var today=new Date().toISOString().slice(0,10);
   var saved=JSON.parse(localStorage.getItem('mbti_label_counter')||'{}');
@@ -277,8 +290,39 @@ function _incCounter(){
   if(!rdata[route])rdata[route]={count:0,camp:camp};
   rdata[route].count++;
   localStorage.setItem('mbti_label_routes_'+today,JSON.stringify(rdata));
+  refreshRouteCard();
   // Firebase에 저장 (비동기, 오류 무시)
   _syncToFirebase(today, camp, rdata);
+}
+
+// 노선별 카드 갱신
+function refreshRouteCard(){
+  var today=new Date().toISOString().slice(0,10);
+  var rdata=JSON.parse(localStorage.getItem('mbti_label_routes_'+today)||'{}');
+  var keys=Object.keys(rdata);
+  var card=document.getElementById('route-summary-card');
+  var body=document.getElementById('route-summary-body');
+  if(!card||!body)return;
+  if(!keys.length){card.style.display='none';return;}
+  card.style.display='block';
+  keys.sort();
+  var total=keys.reduce(function(s,k){return s+(rdata[k].count||0);},0);
+  var html='<table style="width:100%;border-collapse:collapse;font-size:12px">'
+    +'<thead><tr style="background:#f0f4f8"><th style="padding:6px;text-align:left">노선</th>'
+    +'<th style="padding:6px;text-align:center">캠프</th>'
+    +'<th style="padding:6px;text-align:right">출력건수</th></tr></thead><tbody>';
+  keys.forEach(function(k){
+    var r=rdata[k];
+    html+='<tr style="border-bottom:1px solid #f0f4f8">'
+      +'<td style="padding:6px;font-weight:700">'+escHtml(k)+'</td>'
+      +'<td style="padding:6px;text-align:center;color:#888">'+escHtml(r.camp||'—')+'</td>'
+      +'<td style="padding:6px;text-align:right;font-weight:700;color:#185FA5">'+r.count+'건</td>'
+      +'</tr>';
+  });
+  html+='<tr style="background:#f0f4f8;font-weight:700"><td style="padding:6px" colspan="2">합계</td>'
+    +'<td style="padding:6px;text-align:right;color:#185FA5">'+total+'건</td></tr>';
+  html+='</tbody></table>';
+  body.innerHTML=html;
 }
 
 // Firebase 동기화 (Worker API 경유)
@@ -746,6 +790,82 @@ function resetAndCam(){
   // 카메라 자동 재시작
   setTimeout(function(){ startCam(); }, 100);
 }
+
+// ── 간선차 GPS 위젯 ──
+var CAMP_COORDS={
+  '부산1':{lat:35.1941,lng:129.1198},'부산2':{lat:35.1252,lng:128.9641},
+  '부산3':{lat:35.0659,lng:129.0100},'대구2':{lat:35.8183,lng:128.7203},
+  '진주M':{lat:35.1190,lng:128.0989}
+};
+var _truckTimer=null;
+
+function _gpsDistKm(a,b,cc,d){
+  var R=6371,dL=(b-a)*Math.PI/180,dG=(d-cc)*Math.PI/180;
+  var x=Math.sin(dL/2)*Math.sin(dL/2)+Math.cos(a*Math.PI/180)*Math.cos(b*Math.PI/180)*Math.sin(dG/2)*Math.sin(dG/2);
+  return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+}
+
+async function refreshTruckGPS(camp, widgetId){
+  if(!camp)return;
+  var today=new Date().toISOString().slice(0,10).replace(/-/g,'');
+  var truckId='truck_'+today+'_'+camp.replace(/\s/g,'');
+  var el=document.getElementById(widgetId);
+  if(!el)return;
+  try{
+    var resp=await fetch('/truck-get/'+encodeURIComponent(truckId));
+    var data=await resp.json();
+    if(!data.ok||data.empty){
+      el.innerHTML='<div style="padding:10px 12px;background:#f0f4f8;border-radius:10px;font-size:12px;color:#888">🚛 간선차 GPS 미공유 상태</div>';
+      return;
+    }
+    var updAt=data.updatedAt?new Date(data.updatedAt):null;
+    var secAgo=updAt?Math.round((new Date()-updAt)/1000):9999;
+    var isStale=secAgo>120;
+    var tgt=CAMP_COORDS[camp];
+    var dist=tgt?_gpsDistKm(data.lat,data.lng,tgt.lat,tgt.lng):null;
+    var spd=data.speed||0;
+    var eta=(dist&&spd>5)?Math.round(dist/spd*60):null;
+    var distStr=dist?(dist<1?Math.round(dist*1000)+'m':dist.toFixed(1)+'km'):'—';
+    var etaStr=data.status==='arrived'?'도착완료':(eta!==null?'약 '+eta+'분':'계산불가');
+    var sColor=data.status==='arrived'?'#059669':(isStale?'#d97706':'#185FA5');
+    var sIcon=data.status==='arrived'?'🏁':(isStale?'⚠️':'📡');
+    var tStr=updAt?updAt.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):'—';
+    var tmapUrl='tmap://route?startX='+data.lng+'&startY='+data.lat+(tgt?'&goalX='+tgt.lng+'&goalY='+tgt.lat:'');
+    var naverUrl='nmap://route/car?slng='+data.lng+'&slat='+data.lat+(tgt?'&dlng='+tgt.lng+'&dlat='+tgt.lat:'')+'&appname=kr.co.mbti';
+    el.innerHTML=
+      '<div style="background:#e6f1fb;border:1.5px solid '+(isStale?'#d97706':sColor)+';border-radius:10px;padding:12px;font-size:12px">'+
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
+          '<div style="font-weight:700;color:'+sColor+'">'+sIcon+' 간선차 '+camp+'행'+(data.driver?' ('+escHtml(data.driver)+')':'')+'</div>'+
+          '<div style="font-size:10px;color:#888">'+tStr+'</div>'+
+        '</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px">'+
+          '<div style="background:#fff;border-radius:6px;padding:6px;text-align:center"><div style="font-size:10px;color:#888">거리</div><div style="font-size:14px;font-weight:700;color:#185FA5">'+distStr+'</div></div>'+
+          '<div style="background:#fff;border-radius:6px;padding:6px;text-align:center"><div style="font-size:10px;color:#888">ETA</div><div style="font-size:14px;font-weight:700;color:'+(data.status==='arrived'?'#059669':'#185FA5')+'">'+etaStr+'</div></div>'+
+          '<div style="background:#fff;border-radius:6px;padding:6px;text-align:center"><div style="font-size:10px;color:#888">속도</div><div style="font-size:14px;font-weight:700;color:#185FA5">'+Math.round(spd)+'km/h</div></div>'+
+        '</div>'+
+        '<div style="display:flex;gap:6px">'+
+          '<a href="'+tmapUrl+'" style="flex:1;display:flex;align-items:center;justify-content:center;padding:6px;background:#1c6cd7;color:#fff;border-radius:6px;font-size:11px;font-weight:700;text-decoration:none">🗺 T맵</a>'+
+          '<a href="'+naverUrl+'" style="flex:1;display:flex;align-items:center;justify-content:center;padding:6px;background:#03C75A;color:#fff;border-radius:6px;font-size:11px;font-weight:700;text-decoration:none">🗺 네이버</a>'+
+          '<button id="gps-refresh-btn-'+widgetId+'" style="flex:1;padding:6px;background:#f0f4f8;border:1px solid #dde3ed;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">🔄 갱신</button>'+
+        '</div>'+
+      '</div>';
+    document.getElementById('gps-refresh-btn-'+widgetId).onclick=function(){refreshTruckGPS(camp,widgetId);};
+  }catch(e){
+    if(el)el.innerHTML='<div style="padding:10px 12px;background:#f0f4f8;border-radius:10px;font-size:12px;color:#888">🚛 간선차 GPS 미공유 상태</div>';
+  }
+}
+
+function startTruckPolling(campSelector, widgetId){
+  function poll(){
+    var camp=campSelector.startsWith('#')?(document.getElementById(campSelector.slice(1))||{value:''}).value:campSelector;
+    if(camp)refreshTruckGPS(camp,widgetId);
+  }
+  poll();
+  if(_truckTimer)clearInterval(_truckTimer);
+  _truckTimer=setInterval(poll,30000);
+}
+// GPS 폴링 시작 (label.html 캠프는 편집-캠프 필드 기준)
+setTimeout(function(){startTruckPolling('#edit-camp','truck-widget-label');},1000);
 </script>
 </body>
 </html>

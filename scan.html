@@ -163,7 +163,8 @@ body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
   </div>
 
   <!-- 수령 요약 -->
-  <div class="sum-bar sum-bar-recv">
+  <div id="truck-widget-scan" style="margin-bottom:10px"></div>
+<div class="sum-bar sum-bar-recv">
     <div style="display:flex;justify-content:space-between;align-items:flex-end">
       <div>
         <div style="font-size:11px;opacity:.7;margin-bottom:4px">수령 스캔 건수</div>
@@ -362,37 +363,77 @@ function renderRouteList(mode, elId){
     return;
   }
   keys.sort(function(a,b){return d.routes[b].count-d.routes[a].count;});
-  // 캠프 수령모드: 적재 데이터와 비교 테이블
-  if(mode==='recv' && Object.keys(_data.load.routes).length>0){
-    var html='<div style="font-size:11px;font-weight:700;color:#888;margin-bottom:6px">노선별 비교 (적재 vs 수령)</div>'
-      +'<table class="cmp-tbl"><thead><tr><th>노선</th><th>적재</th><th>수령</th><th>차이</th></tr></thead><tbody>';
-    // 적재+수령 모든 노선 합치기
-    var allKeys = Array.from(new Set(Object.keys(_data.load.routes).concat(keys)));
-    allKeys.sort();
-    allKeys.forEach(function(k){
-      var lc = (_data.load.routes[k]||{count:0}).count;
-      var rc = (d.routes[k]||{count:0}).count;
-      var diff = rc-lc;
-      var cls = diff===0?'cmp-ok':(Math.abs(diff)<=2?'cmp-warn':'cmp-err');
-      var diffStr = diff===0?'✅':(diff>0?'+'+diff:diff);
-      html+='<tr><td style="text-align:left;font-weight:700">'+escHtml(k)+'</td>'
-        +'<td>'+lc+'</td><td>'+rc+'</td>'
-        +'<td class="'+cls+'">'+diffStr+'</td></tr>';
-    });
-    html+='</tbody></table>';
+  // 캠프 수령모드: 노선별 비교 테이블 (항상 표시)
+  if(mode==='recv'){
+    var hasLoad = Object.keys(_data.load.routes).length>0;
+    var allKeys = Array.from(new Set(
+      (hasLoad?Object.keys(_data.load.routes):[]).concat(keys)
+    )).sort();
+    var html='<div style="font-size:11px;font-weight:700;color:#888;margin-bottom:6px">'
+      +(hasLoad?'노선별 비교 (적재 vs 수령)':'수령 노선별 현황')+'</div>'
+      +'<div style="overflow-x:auto"><table class="cmp-tbl">'
+      +'<thead><tr>'
+      +'<th style="text-align:left;padding:8px">노선</th>'
+      +(hasLoad?'<th style="padding:8px">적재</th>':'')
+      +'<th style="padding:8px">수령</th>'
+      +(hasLoad?'<th style="padding:8px">차이</th>':'')
+      +'</tr></thead><tbody>';
+    if(allKeys.length===0){
+      html+='<tr><td colspan="'+(hasLoad?4:2)+'" style="padding:16px;text-align:center;color:#aaa;font-size:12px">아직 스캔된 항목이 없습니다</td></tr>';
+    } else {
+      allKeys.forEach(function(k){
+        var lc=(hasLoad&&_data.load.routes[k])?_data.load.routes[k].count:null;
+        var rc=d.routes[k]?d.routes[k].count:0;
+        var camp=d.routes[k]?d.routes[k].camp:(hasLoad&&_data.load.routes[k]?_data.load.routes[k].camp:'');
+        var diff=lc!==null?rc-lc:null;
+        var diffCls=diff===null?'':(diff===0?'cmp-ok':(Math.abs(diff)<=2?'cmp-warn':'cmp-err'));
+        var diffStr=diff===null?'—':(diff===0?'✅':(diff>0?'+'+diff:''+diff));
+        var rowBg=diff!==null&&diff!==0?'background:'+(diff>0?'#fef9c3':'#fee2e2'):'';;
+        html+='<tr style="border-bottom:1px solid #f0f4f8;'+rowBg+'">'
+          +'<td style="padding:8px;font-weight:700">'+escHtml(k)
+          +(camp?'<span style="margin-left:4px;font-size:10px;color:#888;font-weight:400">'+escHtml(camp)+'</span>':'')
+          +'</td>'
+          +(hasLoad?'<td style="padding:8px;text-align:center">'+(lc!==null?lc:'—')+'</td>':'')
+          +'<td style="padding:8px;text-align:center;font-weight:700;color:#0F6E56">'+rc+'</td>'
+          +(hasLoad?'<td style="padding:8px;text-align:center;font-weight:700" class="'+diffCls+'">'+diffStr+'</td>':'')
+          +'</tr>';
+      });
+      // 합계 행
+      var lTotal=hasLoad?Object.values(_data.load.routes).reduce(function(s,r){return s+r.count;},0):null;
+      var rTotal=Object.values(d.routes).reduce(function(s,r){return s+r.count;},0);
+      var totalDiff=lTotal!==null?rTotal-lTotal:null;
+      var totalCls=totalDiff===null?'':(totalDiff===0?'cmp-ok':(Math.abs(totalDiff)<=5?'cmp-warn':'cmp-err'));
+      html+='<tr style="background:#f0f4f8;font-weight:800">'
+        +'<td style="padding:8px">합계</td>'
+        +(hasLoad?'<td style="padding:8px;text-align:center">'+(lTotal!==null?lTotal:'—')+'</td>':'')
+        +'<td style="padding:8px;text-align:center;color:#0F6E56">'+rTotal+'</td>'
+        +(hasLoad?'<td style="padding:8px;text-align:center" class="'+totalCls+'">'+(totalDiff===null?'—':(totalDiff===0?'✅':(totalDiff>0?'+'+totalDiff:''+totalDiff)))+'</td>':'')
+        +'</tr>';
+    }
+    html+='</tbody></table></div>';
     el.innerHTML=html;
     return;
   }
   // 기본 노선 목록
-  var html='<div style="font-size:11px;font-weight:700;color:#888;margin-bottom:6px">노선별 현황</div>';
+  // 물류센터 모드 노선 테이블
+  var html='<div style="font-size:11px;font-weight:700;color:#888;margin-bottom:6px">노선별 적재 현황</div>'
+    +'<div style="overflow-x:auto"><table class="cmp-tbl">'
+    +'<thead><tr><th style="text-align:left;padding:8px">노선</th><th style="padding:8px">캠프</th><th style="padding:8px;text-align:right">적재건수</th></tr></thead><tbody>';
+  var total=0;
   keys.forEach(function(k){
     var r=d.routes[k];
-    var last=r.scans.length?r.scans[r.scans.length-1].time:'';
-    html+='<div class="route-row"><div>'
-      +'<div class="route-name">'+escHtml(r.route)+'</div>'
-      +'<div class="route-sub">'+(r.camp?escHtml(r.camp)+' · ':'')+last+'</div>'
-      +'</div><div class="route-cnt">'+r.count+'</div></div>';
+    total+=r.count;
+    html+='<tr style="border-bottom:1px solid #f0f4f8">'
+      +'<td style="padding:8px;font-weight:700">'+escHtml(r.route)+'</td>'
+      +'<td style="padding:8px;text-align:center;color:#888;font-size:11px">'+escHtml(r.camp||'—')+'</td>'
+      +'<td style="padding:8px;text-align:right;font-weight:700;color:#185FA5">'+r.count+'건</td>'
+      +'</tr>';
   });
+  html+='<tr style="background:#f0f4f8;font-weight:800">'
+    +'<td style="padding:8px" colspan="2">합계</td>'
+    +'<td style="padding:8px;text-align:right;color:#185FA5">'+total+'건</td>'
+    +'</tr>';
+  html+='</tbody></table></div>';
   el.innerHTML=html;
 }
 
@@ -579,8 +620,7 @@ async function loadFromCenter(){
     });
     refreshLoad();
     refreshRecv();
-    alert('✅ 적재 정보 불러오기 완료!
-총 '+total+'건');
+    alert('✅ 적재 정보 불러오기 완료! 총 '+total+'건');
   }catch(e){
     if(btn){btn.textContent='🔄 적재 정보 불러오기';btn.disabled=false;}
     alert('조회 실패: '+e.message);
@@ -603,6 +643,82 @@ async function saveRecvToFirebase(){
     });
   }catch(e){}
 }
+
+// ── 간선차 GPS 위젯 ──
+var CAMP_COORDS={
+  '부산1':{lat:35.1941,lng:129.1198},'부산2':{lat:35.1252,lng:128.9641},
+  '부산3':{lat:35.0659,lng:129.0100},'대구2':{lat:35.8183,lng:128.7203},
+  '진주M':{lat:35.1190,lng:128.0989}
+};
+var _truckTimer=null;
+
+function _gpsDistKm(a,b,c,d){
+  var R=6371,dL=(b-a)*Math.PI/180,dG=(d-c)*Math.PI/180;
+  var x=Math.sin(dL/2)*Math.sin(dL/2)+Math.cos(a*Math.PI/180)*Math.cos(b*Math.PI/180)*Math.sin(dG/2)*Math.sin(dG/2);
+  return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+}
+
+async function refreshTruckGPS(camp, widgetId){
+  if(!camp)return;
+  var today=new Date().toISOString().slice(0,10).replace(/-/g,'');
+  var truckId='truck_'+today+'_'+camp.replace(/\s/g,'');
+  var el=document.getElementById(widgetId);
+  if(!el)return;
+  try{
+    var resp=await fetch('/truck-get/'+encodeURIComponent(truckId));
+    var data=await resp.json();
+    if(!data.ok||data.empty){
+      el.innerHTML='<div style="padding:10px 12px;background:#f0f4f8;border-radius:10px;font-size:12px;color:#888">🚛 간선차 GPS 미공유 상태</div>';
+      return;
+    }
+    var updAt=data.updatedAt?new Date(data.updatedAt):null;
+    var secAgo=updAt?Math.round((new Date()-updAt)/1000):9999;
+    var isStale=secAgo>120;
+    var tgt=CAMP_COORDS[camp];
+    var dist=tgt?_gpsDistKm(data.lat,data.lng,tgt.lat,tgt.lng):null;
+    var spd=data.speed||0;
+    var eta=(dist&&spd>5)?Math.round(dist/spd*60):null;
+    var distStr=dist?(dist<1?Math.round(dist*1000)+'m':dist.toFixed(1)+'km'):'—';
+    var etaStr=data.status==='arrived'?'도착완료':(eta!==null?'약 '+eta+'분':'계산불가');
+    var sColor=data.status==='arrived'?'#059669':(isStale?'#d97706':'#185FA5');
+    var sIcon=data.status==='arrived'?'🏁':(isStale?'⚠️':'📡');
+    var tStr=updAt?updAt.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):'—';
+    var tmapUrl='tmap://route?startX='+data.lng+'&startY='+data.lat+(tgt?'&goalX='+tgt.lng+'&goalY='+tgt.lat:'');
+    var naverUrl='nmap://route/car?slng='+data.lng+'&slat='+data.lat+(tgt?'&dlng='+tgt.lng+'&dlat='+tgt.lat:'')+'&appname=kr.co.mbti';
+    el.innerHTML=
+      '<div style="background:#e6f1fb;border:1.5px solid '+(isStale?'#d97706':sColor)+';border-radius:10px;padding:12px;font-size:12px">'+
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
+          '<div style="font-weight:700;color:'+sColor+'">'+sIcon+' 간선차 '+camp+'행'+(data.driver?' ('+escHtml(data.driver)+')':'')+'</div>'+
+          '<div style="font-size:10px;color:#888">'+tStr+'</div>'+
+        '</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px">'+
+          '<div style="background:#fff;border-radius:6px;padding:6px;text-align:center"><div style="font-size:10px;color:#888">거리</div><div style="font-size:14px;font-weight:700;color:#185FA5">'+distStr+'</div></div>'+
+          '<div style="background:#fff;border-radius:6px;padding:6px;text-align:center"><div style="font-size:10px;color:#888">ETA</div><div style="font-size:14px;font-weight:700;color:'+(data.status==='arrived'?'#059669':'#185FA5')+'">'+etaStr+'</div></div>'+
+          '<div style="background:#fff;border-radius:6px;padding:6px;text-align:center"><div style="font-size:10px;color:#888">속도</div><div style="font-size:14px;font-weight:700;color:#185FA5">'+Math.round(spd)+'km/h</div></div>'+
+        '</div>'+
+        '<div style="display:flex;gap:6px">'+
+          '<a href="'+tmapUrl+'" style="flex:1;display:flex;align-items:center;justify-content:center;padding:6px;background:#1c6cd7;color:#fff;border-radius:6px;font-size:11px;font-weight:700;text-decoration:none">🗺 T맵</a>'+
+          '<a href="'+naverUrl+'" style="flex:1;display:flex;align-items:center;justify-content:center;padding:6px;background:#03C75A;color:#fff;border-radius:6px;font-size:11px;font-weight:700;text-decoration:none">🗺 네이버</a>'+
+          '<button id="gps-refresh-btn-'+widgetId+'" style="flex:1;padding:6px;background:#f0f4f8;border:1px solid #dde3ed;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">🔄 갱신</button>'+
+        '</div>'+
+      '</div>';
+    document.getElementById('gps-refresh-btn-'+widgetId).onclick=function(){refreshTruckGPS(camp,widgetId);};
+  }catch(e){
+    if(el) el.innerHTML='<div style="padding:10px 12px;background:#f0f4f8;border-radius:10px;font-size:12px;color:#888">🚛 간선차 GPS 미공유 상태</div>';
+  }
+}
+
+function startTruckPolling(campSelector, widgetId){
+  function poll(){
+    var camp=campSelector.startsWith('#')?(document.getElementById(campSelector.slice(1))||{value:''}).value:campSelector;
+    if(camp)refreshTruckGPS(camp,widgetId);
+  }
+  poll();
+  if(_truckTimer)clearInterval(_truckTimer);
+  _truckTimer=setInterval(poll,30000);
+}
+// GPS 폴링 (캠프 수령 모드)
+setTimeout(function(){startTruckPolling('#r-camp','truck-widget-scan');},1000);
 </script>
 </body>
 </html>
