@@ -16,16 +16,55 @@ export default {
       });
     }
 
-    if (path === '/worker-test') {
-      return new Response(JSON.stringify({ status: 'worker OK', path, method }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
+    if (path === '/worker-test' || path === '/test-anthropic') {
+      // Anthropic API 키 유효성 테스트
+      const apiKey = env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '';
+      if (!apiKey) {
+        return new Response(JSON.stringify({ ok: false, error: 'API 키 미설정 (환경변수 ANTHROPIC_API_KEY 확인)' }), {
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        });
+      }
+      try {
+        const resp = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01'
+          },
+          body: JSON.stringify({
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 10,
+            messages: [{ role: 'user', content: 'ping' }]
+          })
+        });
+        const data = await resp.json();
+        const ok = resp.ok && !data.error;
+        return new Response(JSON.stringify({
+          ok,
+          status: resp.status,
+          keyPrefix: apiKey.slice(0, 12) + '...',
+          result: ok ? '✅ API 키 정상' : ('❌ ' + (data.error?.message || JSON.stringify(data)))
+        }), {
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), {
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        });
+      }
     }
 
     if (path === '/get-label-key') {
       const apiKey = env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '';
       return new Response(JSON.stringify({ k: apiKey }), {
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store' }
+      });
+    }
+
+    if (path === '/worker-test') {
+      return new Response(JSON.stringify({ status: 'worker OK', path, method }), {
+        headers: { 'Content-Type': 'application/json' }
       });
     }
 
