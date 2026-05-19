@@ -2733,8 +2733,8 @@ function pageStats(){
         var empComp=mw>=800000?Math.floor(mw*0.009/10)*10:0;
         var workComp=Math.floor(mw*0.0088/10)*10;
         var insComp=empComp+workComp;
-        // 순수익 = 공급가(VAT제외) - 기사실지급 - 회사보험료 (VAT는 국가납부분 제외)
-        var netProfit=supplyAmt-(r.net||0)-insComp;
+        // 순수익 = 총매출(VAT포함) - 기사실지급(VAT포함) - 회사보험료
+        var netProfit=totalVat-(r.net||0)-insComp;
         if(!byMonth[mo])byMonth[mo]={cnt:0,dcnt:0,income:0,vat:0,totalVat:0,net:0,insComp:0,profit:0};
         byMonth[mo].cnt++;byMonth[mo].dcnt+=(s.dcnt||0);
         byMonth[mo].income+=supplyAmt;byMonth[mo].vat+=vat;byMonth[mo].totalVat+=totalVat;
