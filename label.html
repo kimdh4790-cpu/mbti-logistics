@@ -52,15 +52,23 @@ body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
   @page{size:A4 portrait;margin:6mm}
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
   img,canvas{display:block!important}
-  body,html{background:#fff!important;margin:0!important;padding:0!important}
-  .no-print{display:none!important}
-  .topbar,.card,#step-cam,#loading-card,#preview-card{display:none!important}
-  .app{background:none!important;padding:0!important;max-width:100%!important;margin:0!important}
-  #step-result{display:block!important}
-  #step-result .card{display:none!important}
-  .print-area{display:block!important;border:none!important;margin:0!important;padding:0!important;width:100%!important}
-  .label-a4-4{width:100%!important;height:277mm!important}
-  .label-a4-4 .label-item{height:138mm!important;box-sizing:border-box!important}
+  body,html{background:#fff!important;margin:0!important;padding:0!important;height:auto!important}
+  /* 인쇄 시 모든 요소 숨김 */
+  body > *,div,section{display:none!important}
+  /* 라벨만 표시 */
+  .print-area,
+  .print-area *,
+  .label-a4-4,
+  .label-a4-4 *,
+  .label-a4-2,
+  .label-a4-2 *,
+  .label-a4-1,
+  .label-a4-1 *,
+  .label-item,
+  .label-item *{display:revert!important}
+  .print-area{display:block!important;border:none!important;margin:0!important;padding:0!important;width:100%!important;position:fixed!important;top:0!important;left:0!important}
+  .label-a4-4{width:100%!important;height:277mm!important;display:grid!important}
+  .label-a4-4 .label-item{height:138mm!important;box-sizing:border-box!important;display:flex!important}
   .label-item{page-break-inside:avoid;break-inside:avoid}
 }
 /* 라벨 1개 (A4 전체) */
@@ -155,7 +163,7 @@ body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
 </div>
 
 <!-- GPS 위젯 -->
-<div id="truck-widget-label" style="margin-bottom:10px"></div>
+<div id="truck-widget-label" class="no-print" style="margin-bottom:10px"></div>
 
 <!-- 노선별 출력 현황 -->
 <div class="card no-print" id="route-summary-card" style="display:none">
@@ -612,6 +620,7 @@ function showResult(info){
   // QR 로드 완료 후 인쇄 (최대 8초 대기)
   _qrLoaded={};
   _printDone=false;
+  _incCounter(); // ★ 자동인쇄 경로 카운터
   setTimeout(function(){
     waitQRandPrint();
     // 8초 후 강제 인쇄 (QR 로드 실패해도 인쇄) - 이미 인쇄했으면 스킵
