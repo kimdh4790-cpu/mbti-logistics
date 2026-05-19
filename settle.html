@@ -2722,11 +2722,25 @@ function pageStats(){
       var byMonth={};var byCamp={};
       settles.forEach(function(s){
         var mo=s.month||'';var cc=_getSettleCamp(s)||'기타';
-        var r=calcNet(s);var inc=Math.round((r.income||0)*1.1);
-        if(!byMonth[mo])byMonth[mo]={cnt:0,dcnt:0,income:0,net:0};
-        byMonth[mo].cnt++;byMonth[mo].dcnt+=(s.dcnt||0);byMonth[mo].income+=inc;byMonth[mo].net+=r.net||0;
-        if(!byCamp[cc])byCamp[cc]={cnt:0,dcnt:0,income:0,net:0};
-        byCamp[cc].cnt++;byCamp[cc].dcnt+=(s.dcnt||0);byCamp[cc].income+=inc;byCamp[cc].net+=r.net||0;
+        var r=calcNet(s);
+        var supplyAmt=r.income||0;                          // 공급가(VAT제외)
+        var inc=Math.round(supplyAmt*1.1);                  // VAT포함 총매출
+        var vat=inc-supplyAmt;                              // 부가세
+        var empCo=r.emp||0;var workCo=r.work||0;           // 기사 부담분
+        // 회사부담: 고용0.9%, 산재0.88% (기사와 동일 요율)
+        var mw=r.monthlyWage||0;
+        var empComp=mw>=800000?Math.floor(mw*0.009/10)*10:0;
+        var workComp=Math.floor(mw*0.0088/10)*10;
+        var insComp=empComp+workComp;                       // 회사부담 보험료
+        var netProfit=inc-r.net-insComp;                    // 순수익=총매출-실지급-회사부담보험
+        if(!byMonth[mo])byMonth[mo]={cnt:0,dcnt:0,income:0,vat:0,net:0,insComp:0,profit:0};
+        byMonth[mo].cnt++;byMonth[mo].dcnt+=(s.dcnt||0);
+        byMonth[mo].income+=supplyAmt;byMonth[mo].vat+=vat;
+        byMonth[mo].net+=r.net||0;byMonth[mo].insComp+=insComp;byMonth[mo].profit+=netProfit;
+        if(!byCamp[cc])byCamp[cc]={cnt:0,dcnt:0,income:0,vat:0,net:0,insComp:0,profit:0};
+        byCamp[cc].cnt++;byCamp[cc].dcnt+=(s.dcnt||0);
+        byCamp[cc].income+=supplyAmt;byCamp[cc].vat+=vat;
+        byCamp[cc].net+=r.net||0;byCamp[cc].insComp+=insComp;byCamp[cc].profit+=netProfit;
       });
       var months=Object.keys(byMonth).sort().reverse();
       var camps=Object.keys(byCamp).sort();
@@ -2736,44 +2750,62 @@ function pageStats(){
       // 월별 카드
       var mCard=document.createElement('div');mCard.className='card';
       mCard.innerHTML='<div class="ch"><span class="ct">📅 월별 현황</span></div>'
-        +'<table style="width:100%;border-collapse:collapse;font-size:12px">'
+        +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'
         +'<thead><tr style="background:var(--bg3)">'
-        +'<th style="padding:8px">월</th><th style="padding:8px;text-align:right">정산</th>'
+        +'<th style="padding:8px">월</th>'
         +'<th style="padding:8px;text-align:right">배송건</th>'
-        +'<th style="padding:8px;text-align:right">수익합계</th><th style="padding:8px;text-align:right">실지급</th>'
+        +'<th style="padding:8px;text-align:right">공급가</th>'
+        +'<th style="padding:8px;text-align:right;color:#7c3aed">부가세(10%)</th>'
+        +'<th style="padding:8px;text-align:right">총매출(VAT포함)</th>'
+        +'<th style="padding:8px;text-align:right">기사실지급</th>'
+        +'<th style="padding:8px;text-align:right">회사보험료</th>'
+        +'<th style="padding:8px;text-align:right;color:#059669">🏢 순수익</th>'
         +'</tr></thead><tbody>'
         +months.map(function(mo,i){
           var d=byMonth[mo];var isFirst=(i===0);
+          var tot=d.income+d.vat;
           return '<tr style="border-bottom:1px solid var(--border);'+(isFirst?'background:rgba(59,130,246,.06)':'')+'">'
             +'<td style="padding:8px"><strong style="color:'+(isFirst?'var(--blue)':'var(--text)')+'">'+mo+'</strong>'
             +(isFirst?'<span style="margin-left:4px;background:#dbeafe;color:#1d4ed8;padding:0 4px;border-radius:8px;font-size:9px">최신</span>':'')
             +'</td>'
-            +'<td style="padding:8px;text-align:right">'+d.cnt+'건</td>'
             +'<td style="padding:8px;text-align:right">'+fmt(d.dcnt)+'</td>'
-            +'<td style="padding:8px;text-align:right;color:var(--green)">₩'+fmt(d.income)+'</td>'
-            +'<td style="padding:8px;text-align:right;font-weight:800;color:var(--blue)">₩'+fmt(d.net)+'</td>'
+            +'<td style="padding:8px;text-align:right;color:var(--text2)">₩'+fmt(d.income)+'</td>'
+            +'<td style="padding:8px;text-align:right;color:#7c3aed;font-size:11px">₩'+fmt(d.vat)+'</td>'
+            +'<td style="padding:8px;text-align:right;color:var(--green);font-weight:700">₩'+fmt(tot)+'</td>'
+            +'<td style="padding:8px;text-align:right;color:var(--blue);font-weight:700">₩'+fmt(d.net)+'</td>'
+            +'<td style="padding:8px;text-align:right;color:#dc2626;font-size:11px">-₩'+fmt(d.insComp)+'</td>'
+            +'<td style="padding:8px;text-align:right;font-weight:900;color:#059669">₩'+fmt(d.profit)+'</td>'
             +'</tr>';
-        }).join('')+'</tbody></table>';
+        }).join('')+'</tbody></table></div>';
       grid.appendChild(mCard);
       // 캠프별 카드
       var cCard=document.createElement('div');cCard.className='card';
       cCard.innerHTML='<div class="ch"><span class="ct">🏕 캠프별 현황</span></div>'
-        +'<table style="width:100%;border-collapse:collapse;font-size:12px">'
+        +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'
         +'<thead><tr style="background:var(--bg3)">'
-        +'<th style="padding:8px">캠프</th><th style="padding:8px;text-align:right">정산수</th>'
+        +'<th style="padding:8px">캠프</th>'
         +'<th style="padding:8px;text-align:right">배송건</th>'
-        +'<th style="padding:8px;text-align:right">수익합계</th><th style="padding:8px;text-align:right">실지급</th>'
+        +'<th style="padding:8px;text-align:right">공급가</th>'
+        +'<th style="padding:8px;text-align:right;color:#7c3aed">부가세(10%)</th>'
+        +'<th style="padding:8px;text-align:right">총매출(VAT포함)</th>'
+        +'<th style="padding:8px;text-align:right">기사실지급</th>'
+        +'<th style="padding:8px;text-align:right">회사보험료</th>'
+        +'<th style="padding:8px;text-align:right;color:#059669">🏢 순수익</th>'
         +'</tr></thead><tbody>'
         +camps.map(function(cc){
           var d=byCamp[cc];var col=_campColor(cc);
+          var tot=d.income+d.vat;
           return '<tr style="border-bottom:1px solid var(--border)">'
             +'<td style="padding:8px"><span style="background:'+col+';color:#fff;padding:2px 8px;border-radius:100px;font-size:11px;font-weight:700">'+esc(cc)+'</span></td>'
-            +'<td style="padding:8px;text-align:right">'+d.cnt+'건</td>'
             +'<td style="padding:8px;text-align:right">'+fmt(d.dcnt)+'</td>'
-            +'<td style="padding:8px;text-align:right;color:var(--green)">₩'+fmt(d.income)+'</td>'
-            +'<td style="padding:8px;text-align:right;font-weight:800;color:var(--blue)">₩'+fmt(d.net)+'</td>'
+            +'<td style="padding:8px;text-align:right;color:var(--text2)">₩'+fmt(d.income)+'</td>'
+            +'<td style="padding:8px;text-align:right;color:#7c3aed;font-size:11px">₩'+fmt(d.vat)+'</td>'
+            +'<td style="padding:8px;text-align:right;color:var(--green);font-weight:700">₩'+fmt(tot)+'</td>'
+            +'<td style="padding:8px;text-align:right;color:var(--blue);font-weight:700">₩'+fmt(d.net)+'</td>'
+            +'<td style="padding:8px;text-align:right;color:#dc2626;font-size:11px">-₩'+fmt(d.insComp)+'</td>'
+            +'<td style="padding:8px;text-align:right;font-weight:900;color:#059669">₩'+fmt(d.profit)+'</td>'
             +'</tr>';
-        }).join('')+'</tbody></table>';
+        }).join('')+'</tbody></table></div>';
       grid.appendChild(cCard);
       el.appendChild(grid);
       // 기사별 순위
@@ -2784,7 +2816,7 @@ function pageStats(){
         if(!by[n])by[n]={dcnt:0,net:0,cnt:0,camp:cc};
         by[n].dcnt+=(s.dcnt||0);by[n].net+=calcNet(s).net;by[n].cnt++;
       });
-      var sorted=Object.keys(by).sort(function(a,b){return by[b].net-by[a].net;});
+      var sorted=Object.keys(by).sort(function(a,b){return by[b].dcnt-by[a].dcnt;}); // 건수 기준 정렬
       var medals=['🥇','🥈','🥉'];
       // 시상대
       var podium=document.createElement('div');
@@ -2798,8 +2830,8 @@ function pageStats(){
           +'<div style="font-size:12px;font-weight:800;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(n)+'</div>'
           +'<div style="margin-bottom:5px"><span style="background:'+col+';color:#fff;padding:1px 7px;border-radius:100px;font-size:9px;font-weight:700">'+esc(bd.camp)+'</span></div>'
           +'<div style="background:'+col+';color:#fff;border-radius:8px 8px 0 0;height:'+h+'px;display:flex;align-items:center;justify-content:center;flex-direction:column;box-shadow:0 2px 8px '+col+'66">'
-            +'<div style="font-size:15px;font-weight:900">₩'+fmt(Math.round(bd.net/10000))+'만</div>'
-            +'<div style="font-size:9px;opacity:.8">'+fmt(bd.dcnt)+'건</div>'
+            +'<div style="font-size:15px;font-weight:900">'+fmt(bd.dcnt)+'건</div>'
+            +'<div style="font-size:9px;opacity:.8">₩'+fmt(Math.round(bd.net/10000))+'만</div>'
           +'</div>';
         podium.appendChild(p);
       });
