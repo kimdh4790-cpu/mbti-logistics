@@ -22,15 +22,10 @@ export default {
       });
     }
 
-    // API 키 안전하게 전달 (label.html → Worker → 브라우저)
     if (path === '/get-label-key') {
       const apiKey = env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '';
       return new Response(JSON.stringify({ k: apiKey }), {
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Cache-Control': 'no-store'
-        }
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store' }
       });
     }
 
