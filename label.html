@@ -129,8 +129,18 @@ body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
 <div class="app">
 
 <div class="topbar no-print">
-  <div class="topbar-title">📦 소분 라벨 시스템</div>
-  <div class="topbar-sub">송장 촬영 → OCR → 번역 → 자동 출력</div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+    <div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:2px;opacity:.7;margin-bottom:1px">LogiNet</div>
+      <div class="topbar-title">📦 소분 라벨 시스템</div>
+      <div class="topbar-sub">송장 촬영 → OCR → 번역 → 자동 출력</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:10px;opacity:.7;margin-bottom:2px">금일 출력</div>
+      <div style="font-size:28px;font-weight:900;line-height:1" id="print-counter">0</div>
+      <div style="font-size:9px;opacity:.7">건</div>
+    </div>
+  </div>
   <div style="margin-top:10px">
     <div style="font-size:10px;color:rgba(255,255,255,0.7);margin-bottom:5px">📤 출력 언어 선택</div>
     <div style="display:flex;gap:5px;flex-wrap:wrap">
@@ -246,7 +256,20 @@ var _stream=null; var _capturedImg=null; var _printSize=4; var _printDone=false;
 document.addEventListener('DOMContentLoaded',function(){
   var savedLang=localStorage.getItem('mbti_label_lang')||'ko';
   setLang(savedLang);
+  // 건수 카운터 초기화 (날짜별)
+  var today=new Date().toISOString().slice(0,10);
+  var saved=JSON.parse(localStorage.getItem('mbti_label_counter')||'{}');
+  if(saved.date!==today){saved={date:today,count:0};localStorage.setItem('mbti_label_counter',JSON.stringify(saved));}
+  document.getElementById('print-counter').textContent=saved.count;
 });
+function _incCounter(){
+  var today=new Date().toISOString().slice(0,10);
+  var saved=JSON.parse(localStorage.getItem('mbti_label_counter')||'{}');
+  if(saved.date!==today)saved={date:today,count:0};
+  saved.count++;
+  localStorage.setItem('mbti_label_counter',JSON.stringify(saved));
+  document.getElementById('print-counter').textContent=saved.count;
+}
 var _data={name:'',addr1:'',addr2:'',track:'',date:''};
 
 // ── 카메라 ──
@@ -365,10 +388,8 @@ async function runOCR(){
     document.getElementById('loading-msg').textContent='AI 번역 중...';
 
     // Worker에서 API 키 가져오기
-    var keyResp=await fetch('/get-label-key');
-    var keyData=await keyResp.json();
-    var ANTHROPIC_KEY=keyData.k||'';
-    if(!ANTHROPIC_KEY){throw new Error('키 로드 실패');}
+    var ANTHROPIC_KEY=(window.__AK||'').trim();
+    if(!ANTHROPIC_KEY){throw new Error('API 키 없음 - 관리자에게 문의');}
     var res=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{
@@ -642,6 +663,7 @@ function generateQR(containerId, data){
 function doPrint(){
   _qrLoaded={};
   _printDone=false;
+  _incCounter(); // 출력 건수 +1
   renderLabel();
   var qd={track:_data.track,name:_data.name,addr1:_data.addr1,addr2:_data.addr2};
   setTimeout(function(){
