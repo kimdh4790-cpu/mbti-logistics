@@ -139,6 +139,7 @@ body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
       <div style="font-size:10px;opacity:.7;margin-bottom:2px">금일 출력</div>
       <div style="font-size:28px;font-weight:900;line-height:1" id="print-counter">0</div>
       <div style="font-size:9px;opacity:.7">건</div>
+      <button onclick="checkCampStatus()" style="margin-top:5px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.5);color:#fff;border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700;cursor:pointer;width:100%">🏕 수령 확인</button>
     </div>
   </div>
   <div style="margin-top:10px">
@@ -269,6 +270,50 @@ function _incCounter(){
   saved.count++;
   localStorage.setItem('mbti_label_counter',JSON.stringify(saved));
   document.getElementById('print-counter').textContent=saved.count;
+  // 노선별 카운터도 누적
+  var route=(document.getElementById('edit-route')||{value:''}).value.trim()||'미분류';
+  var camp=(document.getElementById('edit-camp')||{value:''}).value.trim()||'';
+  var rdata=JSON.parse(localStorage.getItem('mbti_label_routes_'+today)||'{}');
+  if(!rdata[route])rdata[route]={count:0,camp:camp};
+  rdata[route].count++;
+  localStorage.setItem('mbti_label_routes_'+today,JSON.stringify(rdata));
+  // Firebase에 저장 (비동기, 오류 무시)
+  _syncToFirebase(today, camp, rdata);
+}
+
+// Firebase 동기화 (Worker API 경유)
+async function _syncToFirebase(date, camp, routes){
+  try{
+    var campKey = camp || (Object.values(routes)[0]||{camp:''}).camp || '전체';
+    var sessionId = date+'_'+campKey.replace(/\s/g,'');
+    var total = Object.values(routes).reduce(function(s,r){return s+(r.count||0);},0);
+    await fetch('/scan-save',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({sessionId:sessionId, type:'loaded', routes:routes, total:total, camp:campKey, date:date})
+    });
+  }catch(e){}
+}
+
+// 캠프 수령 현황 확인 버튼 (헤더에서 호출)
+async function checkCampStatus(){
+  var today=new Date().toISOString().slice(0,10);
+  var rdata=JSON.parse(localStorage.getItem('mbti_label_routes_'+today)||'{}');
+  if(!Object.keys(rdata).length){alert('오늘 출력 기록이 없습니다.');return;}
+  var campKey=(Object.values(rdata)[0]||{camp:''}).camp||'전체';
+  var sessionId=today+'_'+campKey.replace(/\s/g,'');
+  try{
+    var resp=await fetch('/scan-get/'+encodeURIComponent(sessionId));
+    var data=await resp.json();
+    if(!data.ok||data.empty){alert('캠프에서 아직 스캔 기록이 없습니다.');return;}
+    var loaded=data.loadedTotal||0, recv=data.receivedTotal||0;
+    var diff=recv-loaded;
+    var msg='📊 수령 현황\n\n적재: '+loaded+'건\n수령: '+recv+'건\n차이: '+(diff>=0?'+':'')+diff+'건\n\n■ 노선별 수령';
+    var rr=data.receivedRoutes||{};
+    Object.keys(rr).forEach(function(k){msg+='\n  '+k+': '+rr[k].count+'건';});
+    if(data.receivedAt) msg+='\n\n수령시각: '+new Date(data.receivedAt).toLocaleTimeString('ko-KR');
+    alert(msg);
+  }catch(e){alert('조회 실패: '+e.message);}
 }
 var _data={name:'',addr1:'',addr2:'',track:'',date:''};
 

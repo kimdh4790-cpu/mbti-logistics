@@ -209,8 +209,76 @@ export default {
       }
     }
 
+    // ── 스캔 세션 저장 ──
+    if (path === '/scan-save' && request.method === 'POST') {
+      try {
+        const token = await getAccessToken(env);
+        const body  = await request.json();
+        const docId = body.sessionId;
+        const fields = {};
+        if (body.type === 'loaded') {
+          fields['loadedRoutes'] = { stringValue: JSON.stringify(body.routes) };
+          fields['loadedTotal']  = { integerValue: String(body.total) };
+          fields['loadedAt']     = { stringValue: new Date().toISOString() };
+          fields['camp']         = { stringValue: body.camp || '' };
+          fields['date']         = { stringValue: body.date || '' };
+        } else {
+          fields['receivedRoutes'] = { stringValue: JSON.stringify(body.routes) };
+          fields['receivedTotal']  = { integerValue: String(body.total) };
+          fields['receivedAt']     = { stringValue: new Date().toISOString() };
+        }
+        await fsPatch(token, `${FS_BASE}/scan_sessions/${docId}`, fields);
+        return new Response(JSON.stringify({ ok: true }), {
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), {
+          status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        });
+      }
+    }
+
+    // ── 스캔 세션 조회 ──
+    if (path.startsWith('/scan-get/') && request.method === 'GET') {
+      try {
+        const token = await getAccessToken(env);
+        const docId = decodeURIComponent(path.replace('/scan-get/', ''));
+        const doc   = await fsGet(token, 'scan_sessions', docId);
+        if (!doc || !doc.fields) {
+          return new Response(JSON.stringify({ ok: false, empty: true }), {
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+          });
+        }
+        const f = doc.fields;
+        return new Response(JSON.stringify({
+          ok: true,
+          loadedRoutes:   f.loadedRoutes   ? JSON.parse(f.loadedRoutes.stringValue)   : {},
+          loadedTotal:    f.loadedTotal     ? parseInt(f.loadedTotal.integerValue)     : 0,
+          loadedAt:       f.loadedAt        ? f.loadedAt.stringValue                   : null,
+          receivedRoutes: f.receivedRoutes  ? JSON.parse(f.receivedRoutes.stringValue) : {},
+          receivedTotal:  f.receivedTotal   ? parseInt(f.receivedTotal.integerValue)   : 0,
+          receivedAt:     f.receivedAt      ? f.receivedAt.stringValue                 : null,
+          camp: f.camp ? f.camp.stringValue : '',
+          date: f.date ? f.date.stringValue : '',
+        }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      } catch (e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), {
+          status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        });
+      }
+    }
+
     if (path === '/label' || path === '/label/') {
       const req  = new Request(new URL('/label.html', url).toString(), { method: 'GET', headers: request.headers });
+      const resp = await env.ASSETS.fetch(req);
+      const html = await resp.text();
+      const key  = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
+      const injected = html.replace('<head>', '<head><script>window.__AK=' + JSON.stringify(key) + ';</script>');
+      return new Response(injected, { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+    }
+
+    if (path === '/scan' || path === '/scan/') {
+      const req  = new Request(new URL('/scan.html', url).toString(), { method: 'GET', headers: request.headers });
       const resp = await env.ASSETS.fetch(req);
       const html = await resp.text();
       const key  = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
