@@ -143,10 +143,9 @@ export default {
 
     // ★ donway.ai.kr 라우팅
     if (hostname === 'donway.ai.kr') {
-      // 루트 접속 → 랜딩페이지로 리다이렉트
-      if (path === '/' || path === '') {
-        return Response.redirect('https://donway.ai.kr/donway_landing.html', 302);
-      }
+      const req = new Request(new URL('/donway_landing.html', url).toString(), { method: 'GET', headers: request.headers });
+      const resp = await env.ASSETS.fetch(req);
+      return new Response(resp.body, { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
     }
 
     if (method === 'OPTIONS') {
