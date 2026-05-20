@@ -1757,33 +1757,8 @@ function _showSEModal(s){
       +'<td id="se-rd-sub-'+idx+'" style="text-align:right;font-weight:700">₩'+fmt(dAmt+rAmt)+'</td>';
     tbody.appendChild(tr);
   });
-  // ── 합계 행
-  var tfoot=document.createElement('tfoot');
-  tfoot.id='se-rd-tfoot';
-  tfoot.innerHTML='<tr style="background:var(--bg3);font-weight:800;border-top:2px solid var(--border)">'    +'<td style="font-size:11px;font-weight:800">합계</td>'    +'<td id="se-tot-dcnt" style="text-align:right;font-size:11px">0</td>'    +'<td id="se-tot-rcnt" style="text-align:right;font-size:11px">0</td>'    +'<td style="text-align:right;font-size:10px;color:var(--text3)">—</td>'    +'<td id="se-tot-damt" style="text-align:right;font-size:11px;color:var(--brand)">₩0</td>'    +'<td id="se-tot-ramt" style="text-align:right;font-size:11px;color:var(--text2)">₩0</td>'    +'<td id="se-tot-sub"  style="text-align:right;font-size:12px;color:var(--green)">₩0</td>'    +'</tr>';
-  tbl.appendChild(tfoot);
   tbl.appendChild(tbody);rdTable.appendChild(tbl);rdSec.appendChild(rdTable);
-
-  // ── ① 배송수익 / ② 반품수익 표시
-  var incSec=document.createElement('div');
-  incSec.style.cssText='margin:10px 0 2px;border-top:1px solid var(--border);padding-top:10px';
-  incSec.innerHTML=''
-    +'<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--bg3)">'      +'<div style="font-size:12px;font-weight:600;color:var(--text2)">📦 <strong>① 배송 수익</strong>'        +'<span id="se-inc-dcnt-label" style="font-size:10px;color:var(--text3);margin-left:6px"></span></div>'      +'<div><span style="font-size:14px;font-weight:800;color:#059669">+</span>&nbsp;'        +'<span id="se-inc-damt" style="font-size:13px;font-weight:700;color:var(--brand)">₩0</span></div>'    +'</div>'    +'<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--bg3)">'      +'<div style="font-size:12px;font-weight:600;color:var(--text2)">↩️ <strong>② 반품 수익</strong>'        +'<span id="se-inc-rcnt-label" style="font-size:10px;color:var(--text3);margin-left:6px"></span></div>'      +'<div><span style="font-size:14px;font-weight:800;color:#059669">+</span>&nbsp;'        +'<span id="se-inc-ramt" style="font-size:13px;font-weight:700;color:var(--text2)">₩0</span></div>'    +'</div>';
-  rdSec.appendChild(incSec);
-
-  // ── 엑셀 총금액 불일치 경고 영역
-  var mismatchBanner=document.createElement('div');
-  mismatchBanner.id='se-mismatch-banner';
-  mismatchBanner.style.cssText='display:none;margin-top:8px;padding:8px 12px;background:#fef9c3;border:1.5px solid #fbbf24;border-radius:8px;font-size:11px;font-weight:700;color:#92400e';
-  rdSec.appendChild(mismatchBanner);
-
   body.appendChild(rdSec);
-
-  // ── 쿠팡 총금액 hidden (검증용)
-  var hiddenCT=document.createElement('input');
-  hiddenCT.type='hidden';hiddenCT.id='se-coupang-total';
-  hiddenCT.value=s.coupangTotal||0;
-  body.appendChild(hiddenCT);
 
   // ── 항목별 입력
   var items=[
@@ -1882,30 +1857,13 @@ function updSECalc(){
     if(!byIdx[idx])byIdx[idx]={cnt:0,ret:0,price:0};
     byIdx[idx][field]=val;
   });
-  var totalDcnt=0,totalRcnt=0;
   Object.keys(byIdx).forEach(function(idx){
     var d=byIdx[idx];
     var dAmt=d.cnt*d.price;var rAmt=d.ret*d.price;
     totalDamt+=dAmt;totalRamt+=rAmt;
-    totalDcnt+=d.cnt;totalRcnt+=d.ret;
     var da=document.getElementById('se-rd-damt-'+idx);var ra=document.getElementById('se-rd-ramt-'+idx);var sb=document.getElementById('se-rd-sub-'+idx);
     if(da)da.textContent='₩'+fmt(dAmt);if(ra)ra.textContent='₩'+fmt(rAmt);if(sb)sb.textContent='₩'+fmt(dAmt+rAmt);
   });
-  // ── 합계 행 갱신
-  var totD=document.getElementById('se-tot-dcnt'),totR=document.getElementById('se-tot-rcnt');
-  var totDA=document.getElementById('se-tot-damt'),totRA=document.getElementById('se-tot-ramt'),totSB=document.getElementById('se-tot-sub');
-  if(totD)totD.textContent=totalDcnt.toLocaleString()+'건';
-  if(totR)totR.textContent=totalRcnt.toLocaleString()+'건';
-  if(totDA)totDA.textContent='₩'+fmt(totalDamt);
-  if(totRA)totRA.textContent='₩'+fmt(totalRamt);
-  if(totSB)totSB.textContent='₩'+fmt(totalDamt+totalRamt);
-  // ── ① 배송수익 / ② 반품수익 갱신
-  var lD=document.getElementById('se-inc-dcnt-label'),lR=document.getElementById('se-inc-rcnt-label');
-  var vD=document.getElementById('se-inc-damt'),vR=document.getElementById('se-inc-ramt');
-  if(lD)lD.textContent=totalDcnt.toLocaleString()+'건 × 라우트별 단가';
-  if(lR)lR.textContent=totalRcnt.toLocaleString()+'건 × 라우트별 단가';
-  if(vD)vD.textContent='₩'+fmt(totalDamt);
-  if(vR)vR.textContent='₩'+fmt(totalRamt);
   // 항목별 합산
   function gv(id){var el=document.getElementById(id);return el?+el.value||0:0;}
   var fresh=gv('se-fresh'),finc=gv('se-finc'),nocont=gv('se-nocont');
@@ -1913,26 +1871,6 @@ function updSECalc(){
   var taxBase=totalDamt+totalRamt+fresh+finc+nocont+etcP-etcM;
   var supplyAmt=Math.round(taxBase/1.1);
   var vatAmt=taxBase-supplyAmt;
-
-  // ── 엑셀 총금액 불일치 검증
-  var ctEl=document.getElementById('se-coupang-total');
-  var banner=document.getElementById('se-mismatch-banner');
-  if(ctEl&&banner){
-    var excelTotal=+ctEl.value||0;  // 쿠팡 정산총괄 TOTAL (VAT제외)
-    var calcSupply=supplyAmt;       // 계산된 공급가 (VAT제외)
-    var diff=calcSupply-excelTotal;
-    var absDiff=Math.abs(diff);
-    if(excelTotal>0 && absDiff>1000){
-      banner.style.display='block';
-      var sign=diff>0?'+':'';
-      banner.innerHTML='⚠️ 엑셀 총금액과 계산값 불일치 (VAT제외 기준)<br>'
-        +'<span style="font-weight:500">엑셀: ₩'+fmt(excelTotal)
-        +' / 계산: ₩'+fmt(calcSupply)
-        +' / <strong>차이: '+sign+fmt(diff)+'원</strong></span>';
-    } else {
-      banner.style.display='none';
-    }
-  }
   var monthlyWage=Math.round(supplyAmt*0.654);
   var empIns=monthlyWage>=800000?Math.floor(monthlyWage*0.008/10)*10:0;
   var workIns=Math.floor(monthlyWage*0.0088/10)*10;

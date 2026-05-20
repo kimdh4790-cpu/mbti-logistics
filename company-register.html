@@ -173,10 +173,16 @@ function renderCamps(){
 }
 
 function _genCode(name){
-  var prefix=name.replace(/[^가-힣A-Za-z0-9]/g,'').slice(0,4).toUpperCase();
-  if(!prefix||prefix.length<2) prefix='CO'+Math.random().toString(36).slice(2,4).toUpperCase();
+  // ★ 영문/숫자만 사용 (한글 회사명은 이니셜 or 랜덤)
+  var prefix=name.replace(/[^A-Za-z0-9]/g,'').slice(0,4).toUpperCase();
+  if(!prefix||prefix.length<2){
+    // 영문 없으면 랜덤 알파벳 4자
+    prefix='';
+    var chars='ABCDEFGHJKLMNPQRSTUVWXYZ';
+    for(var i=0;i<4;i++) prefix+=chars[Math.floor(Math.random()*chars.length)];
+  }
   var num=String(Math.floor(10+Math.random()*90));
-  return prefix.padEnd(4,'X').slice(0,4)+num;
+  return (prefix+'XXXX').slice(0,4)+num;
 }
 
 async function doRegister(){
