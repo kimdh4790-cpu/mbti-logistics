@@ -582,6 +582,68 @@ export default {
       }
     }
 
+    // ══ Solapi SMS/알림톡 자동발송 ══
+    if (path === '/api/send-sms' && method === 'POST') {
+      const headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json'
+      };
+      try {
+        const body = await request.json();
+        const { messages } = body; // [{to, text}]
+        if (!messages || !messages.length) {
+          return new Response(JSON.stringify({error:'messages 없음'}),{status:400,headers});
+        }
+        const apiKey = env.SOLAPI_KEY;
+        const apiSecret = env.SOLAPI_SECRET;
+        const from = '05171133103'; // 발신번호 (하이픈 제거)
+        if (!apiKey || !apiSecret) {
+          return new Response(JSON.stringify({error:'API Key 미설정'}),{status:500,headers});
+        }
+        // HMAC-SHA256 인증 생성
+        const date = new Date().toISOString();
+        const salt = Math.random().toString(36).substring(2,14);
+        const msg = date + salt;
+        const encoder = new TextEncoder();
+        const key = await crypto.subtle.importKey(
+          'raw', encoder.encode(apiSecret),
+          {name:'HMAC',hash:'SHA-256'}, false, ['sign']
+        );
+        const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(msg));
+        const sigHex = Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('');
+        const authHeader = `HMAC-SHA256 apiKey=${apiKey}, date=${date}, salt=${salt}, signature=${sigHex}`;
+        // 발송 요청
+        const payload = {
+          messages: messages.map(function(m){
+            return {
+              to: m.to.replace(/[^0-9]/g,''),
+              from: from,
+              text: m.text,
+              type: 'SMS'
+            };
+          })
+        };
+        const solapiRes = await fetch('https://api.solapi.com/messages/v4/send-many/detail',{
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': authHeader
+          },
+          body: JSON.stringify(payload)
+        });
+        const solapiData = await solapiRes.json();
+        const successCount = (solapiData.results||[]).filter(r=>r.statusCode==='2000').length;
+        return new Response(JSON.stringify({
+          success: solapiRes.ok,
+          successCount,
+          total: messages.length,
+          data: solapiData
+        }),{status:200,headers});
+      } catch(e) {
+        return new Response(JSON.stringify({error:e.message}),{status:500,headers});
+      }
+    }
+
     // Cron 만료처리 — 수동 트리거
     if (path === '/cron-expire' && method === 'POST') {
       const secret = request.headers.get('X-Cron-Secret') || '';

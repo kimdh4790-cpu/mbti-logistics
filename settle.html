@@ -1904,15 +1904,60 @@ function sendKakao(msgEnc){
 
 function sendSMS(msgEnc,phoneEnc){
   var msg=decodeURIComponent(msgEnc);
-  var phone=decodeURIComponent(phoneEnc);
+  var phone=decodeURIComponent(phoneEnc).replace(/[^0-9]/g,'');
   if(!phone){
-    navigator.clipboard.writeText(msg).then(function(){
-      toast('📋 메시지 복사됨! 문자앱에 붙여넣기 하세요');
-    });
+    toast('❌ 전화번호 없음 — 기사 정보에 추가해주세요');
     return;
   }
-  var link='sms:'+phone+'?body='+msgEnc;
-  window.open(link,'_self');
+  var btn=event&&event.target;
+  if(btn){btn.textContent='발송 중...';btn.disabled=true;}
+  fetch('/api/send-sms',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({messages:[{to:phone,text:msg}]})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.success&&d.successCount>0){
+      toast('✅ SMS 발송 완료!');
+      if(btn){btn.textContent='✅ 발송완료';btn.style.background='#059669';}
+    } else {
+      toast('❌ 발송 실패: '+(d.error||JSON.stringify(d.data)));
+      if(btn){btn.textContent='📱 재시도';btn.disabled=false;}
+    }
+  }).catch(function(e){
+    toast('❌ 오류: '+e.message);
+    if(btn){btn.textContent='📱 재시도';btn.disabled=false;}
+  });
+}
+
+// 일괄 SMS 발송 (전체 기사)
+function sendSMSAll(){
+  var unsent=(_settleCache||[]).filter(function(x){return !x.taxSent&&(x.phone||x.driverPhone);});
+  if(!unsent.length){toast('발송할 데이터 없음 (전화번호 있는 미발송 건)');return;}
+  if(!confirm(unsent.length+'명에게 SMS 자동발송 하시겠습니까?'))return;
+  var r=calcNet;
+  var messages=unsent.map(function(x){
+    var net=(calcNet(x).net||0);
+    var phone=(x.phone||x.driverPhone||'').replace(/[^0-9]/g,'');
+    var msgArr=['[DONWAY 정산명세서]','기사: '+(x.driver||x.userId||''),'정산월: '+(x.month||''),'실지급: '+fmt(net)+'원','문의: 051-711-3103'];
+    return {to:phone,text:msgArr.join('\n')};
+  });
+  toast('📤 '+messages.length+'명 발송 중...');
+  fetch('/api/send-sms',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({messages:messages})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.success){
+      toast('✅ '+d.successCount+'/'+d.total+'명 SMS 발송 완료!');
+      // 전달완료 처리
+      unsent.forEach(function(x){
+        var id=x.id||x.fbId;
+        if(id&&_db)_db.collection('settlements').doc(id).update({taxSent:true,taxSentAt:new Date().toISOString()}).then(function(){x.taxSent=true;});
+      });
+    } else {
+      toast('❌ 발송 실패: '+(d.error||''));
+    }
+  }).catch(function(e){toast('❌ '+e.message);});
 }
 
 function sendEmailMsg(emailEnc,subjectEnc,bodyEnc){
