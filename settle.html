@@ -241,7 +241,8 @@ function calcNet(x){
   var _ramtRP = _rdList.reduce(function(s,rd){return s+(rd.ret||0)*((rd.unitPrice&&rd.unitPrice>0?rd.unitPrice:0)||RPRICE[rd.route]||0);},0);
   var damt=isYong ? dcnt*yDel : (_rdList.length ? _damtRP : (+x.damt||+x.delivAmt||+x.base||0));
   var ramt=isYong ? rcnt*yRet : (_rdList.length ? _ramtRP : (+x.ramt||+x.retAmt||0));
-  var fresh=+x.fresh||+x.freshAmt||0;
+  // ★ fresh/inc: 정산총괄에서 VAT제외로 파싱됨 → income 계산 시 VAT포함 변환
+  var fresh=Math.round((+x.fresh||+x.freshAmt||0)*1.1);
   // ★ 프레시백 인센 계산 (v9.25 방어 로직)
   // 1순위: 저장된 x.finc 값이 있으면 jobsub과 무관하게 그대로 사용 (데이터 정합성 우선)
   // 2순위: x.finc 없으면 쿠팡은 건수×25원, 그 외(용차/컬리/CJ)는 0
@@ -250,7 +251,7 @@ function calcNet(x){
   var finc = hasStoredFinc
     ? +x.finc
     : (isCoupang ? Math.round(dcnt*(G_PRICES.freshbag_inc||25)) : 0);
-  var inc=+x.inc||0;
+  var inc=Math.round((+x.inc||0)*1.1); // 추가인센 VAT포함 변환
   var nocont = +x.nocont || 0;  // ★ 미계약건 (+수익)
   var etcPlus  = +x.etcPlus  || 0;  // ★ 기타(+)
   var etcMinus = +x.etcMinus || 0;  // ★ 기타(-)
@@ -466,11 +467,12 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             var tid=String(tr[tID]).replace(/@[a-z0-9@._-]+$/i,'').trim();
             if(!tid||tid==='ID')continue;
             // ★ 정산총괄 = VAT제외 기준 → ×1.1 해서 VAT포함으로 저장
+            // ★ raw값 저장 (VAT제외) — display/calcNet에서 ×1.1 처리
             totalMap[tid]={
-              freshAmt:Math.round((Number(tr[tFresh])||0)*1.1),
-              incAmt:  Math.round((Number(tr[tInc])||0)*1.1),
-              dmgAmt:  Math.round((Number(tr[tDmg])||0)*1.1),
-              totalAmt:Math.round((Number(tr[tTotal])||0)*1.1)
+              freshAmt:Number(tr[tFresh])||0,
+              incAmt:  Number(tr[tInc])||0,
+              dmgAmt:  Number(tr[tDmg])||0,
+              totalAmt:Number(tr[tTotal])||0
             };
           }
           // ★ 엑셀 자체 교차검증
@@ -488,10 +490,10 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             }
           }
           // 개별 합산 (저장값은 ×1.1 됐으므로 ÷1.1 해서 VAT제외로 비교)
-          var sumTotal  =Object.values(totalMap).reduce(function(s,v){return s+Math.round((v.totalAmt ||0)/1.1);},0);
-          var sumFresh  =Object.values(totalMap).reduce(function(s,v){return s+Math.round((v.freshAmt ||0)/1.1);},0);
-          var sumInc    =Object.values(totalMap).reduce(function(s,v){return s+Math.round((v.incAmt   ||0)/1.1);},0);
-          var sumDmg    =Object.values(totalMap).reduce(function(s,v){return s+Math.round((v.dmgAmt   ||0)/1.1);},0);
+          var sumTotal=Object.values(totalMap).reduce(function(s,v){return s+(v.totalAmt||0);},0);
+          var sumFresh=Object.values(totalMap).reduce(function(s,v){return s+(v.freshAmt||0);},0);
+          var sumInc  =Object.values(totalMap).reduce(function(s,v){return s+(v.incAmt||0);},0);
+          var sumDmg  =Object.values(totalMap).reduce(function(s,v){return s+(v.dmgAmt||0);},0);
           var rawCalcTotal=Object.values(drvMap).reduce(function(s,v){return s+(v.delAmt||0);},0);
           window._excelVerify={
             excelTotal: excelGrandTotal,  excelFresh: excelGrandFresh,
@@ -1516,10 +1518,11 @@ function _renderSettlePage(settles,c){
       +'</div>'
       +'<div style="display:flex;flex-wrap:wrap;gap:5px;font-size:10px">'
       +'<span style="padding:2px 8px;background:rgba(59,130,246,.12);border-radius:12px;color:#3b82f6">📦 쿠팡 총매출(VAT포함) ₩'+fmt(gRows.reduce(function(s,x){var ct=x.coupangTotal||(((x.damt||0)+(x.ramt||0)+(x.fresh||0)+(x.inc||0)+(x.nocont||0)))||0;return s+(ct?Math.round(ct*1.1):Math.round((calcNet(x).income||0)*1.1));},0))+'</span>'
-      +'<span style="padding:2px 8px;background:rgba(16,185,129,.12);border-radius:12px;color:#059669">🧾 프레시백 ₩'+fmt(gRows.reduce(function(s,x){return s+(+x.fresh||0);},0))+'</span>'
-      +(gRows.reduce(function(s,x){return s+(+x.inc||0);},0)>0?'<span style="padding:2px 8px;background:rgba(245,158,11,.12);border-radius:12px;color:#d97706">⭐ 추가인센 ₩'+fmt(gRows.reduce(function(s,x){return s+(+x.inc||0);},0))+'</span>':'')
+      // ★ 프레시백/추가인센/분실파손 — 모두 VAT포함으로 표시 (×1.1)
+      +'<span style="padding:2px 8px;background:rgba(16,185,129,.12);border-radius:12px;color:#059669">🧾 프레시백 ₩'+fmt(Math.round(gRows.reduce(function(s,x){return s+(+x.fresh||0);},0)*1.1))+'</span>'
+      +(gRows.reduce(function(s,x){return s+(+x.inc||0);},0)>0?'<span style="padding:2px 8px;background:rgba(245,158,11,.12);border-radius:12px;color:#d97706">⭐ 추가인센 ₩'+fmt(Math.round(gRows.reduce(function(s,x){return s+(+x.inc||0);},0)*1.1))+'</span>':'')
       +'<span style="padding:2px 8px;background:rgba(245,158,11,.12);border-radius:12px;color:#d97706">🏥 고용+산재 -₩'+fmt(totEmp+totWork)+'</span>'
-      +(totDmg>0?'<span style="padding:2px 8px;background:rgba(239,68,68,.15);border-radius:12px;color:#b91c1c">⚠️ 분실·파손 -₩'+fmt(totDmg)+'</span>':'')
+      +(totDmg>0?'<span style="padding:2px 8px;background:rgba(239,68,68,.15);border-radius:12px;color:#b91c1c">⚠️ 분실·파손 -₩'+fmt(Math.round(totDmg*1.1))+'</span>':'')
       +'<span style="padding:2px 8px;background:rgba(124,58,237,.15);border-radius:12px;color:var(--purple);font-weight:700">💰 실지급 ₩'+fmt(totNet)+'</span>'
       +'</div>'
       +'</div>'
