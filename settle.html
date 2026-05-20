@@ -398,8 +398,11 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           drvMap[cleanId].nocontAmt+=rowTotal;
           continue;
         }
-        var delAmt=rowTotal>0?rowTotal:(dcnt*unitPrc);
-        var retAmt=rcnt*unitPrc;
+        // ★ 수정: 쿠팡 엑셀 기본금액=(배송+반품)×단가, 총금액=기본금액+가중요인
+        // rowTotal(총금액) 사용 시 반품이 이미 포함 → retAmt 별도 계산 금지
+        // rowTotal 없을 때만 (dcnt+rcnt)×unitPrc로 계산
+        var delAmt=rowTotal>0?rowTotal:((dcnt+rcnt)*unitPrc);
+        var retAmt=rowTotal>0?0:(0); // rowTotal 사용 시 반품 별도 추가 금지
         drvMap[cleanId].dcnt+=dcnt;
         drvMap[cleanId].rcnt+=rcnt;
         drvMap[cleanId].delAmt+=delAmt;
@@ -416,7 +419,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           drvMap[cleanId].routes[route].cnt+=dcnt;
           drvMap[cleanId].routes[route].ret+=rcnt;
           drvMap[cleanId].routes[route].delAmt+=delAmt;
-          drvMap[cleanId].routes[route].retAmt+=retAmt;
+          drvMap[cleanId].routes[route].retAmt+=retAmt; // rowTotal 사용 시 0
           drvMap[cleanId].routes[route].addInc+=addInc;
           if(unitPrc>0)drvMap[cleanId].routes[route].unitPrc=unitPrc;
 
@@ -602,16 +605,18 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               amt:rv.delAmt||0,retAmt:rv.retAmt||0,addInc:rv.addInc||0};
           });
           // 세금계산서 작성금액 (엑셀 단가 기준 초기값)
+          // ★ 수정: damt(=rowTotal)에 반품 이미 포함 → ramt 별도 추가 금지
           var damt=dm.delAmt||0;
-          var ramt=dm.retAmt||0;
-          var taxBase=damt+ramt+freshAmt+fincVal+addIncAmt+(dm.nocontAmt||0);
+          var ramt=0; // rowTotal에 반품 포함됨 (이중계산 방지)
+          var taxBase=damt+freshAmt+fincVal+addIncAmt+(dm.nocontAmt||0);
           // 공제 계산
           var supplyAmt=Math.round(taxBase/1.1);
           var monthlyWage=Math.round(supplyAmt*0.654);
           var empIns=monthlyWage>=800000?Math.floor(monthlyWage*0.008/10)*10:0;
           var workIns=Math.floor(monthlyWage*0.0088/10)*10;
 
-          var coupangRawTotal=tm.totalAmt||(Math.round((dm.delAmt||0)+(dm.retAmt||0)+(freshAmt||0)+(addIncAmt||0)+(dm.nocontAmt||0)-(dmgAmt||0)));
+          // ★ 수정: dm.delAmt에 반품 포함 → dm.retAmt 별도 추가 금지
+          var coupangRawTotal=tm.totalAmt||(Math.round((dm.delAmt||0)+(freshAmt||0)+(addIncAmt||0)+(dm.nocontAmt||0)-(dmgAmt||0)));
           var entry={
             driver:drvName, userId:cleanId, dealerId:_CU.dealerId,
             camp:dm.camp||drvObj.camp||'',
