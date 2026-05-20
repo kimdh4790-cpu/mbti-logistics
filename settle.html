@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#185FA5">
-<title>LogiNet — 정산관리</title>
+<title>DONWAY — 자동화 정산 플랫폼</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
@@ -104,8 +104,8 @@ tr:hover>td{background:var(--bg3)}
   <div class="login-card">
     <div style="text-align:center;margin-bottom:24px">
       <div style="width:56px;height:56px;border-radius:14px;background:var(--brand);display:inline-flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:10px">💰</div>
-      <div style="font-size:22px;font-weight:900;color:var(--brand)">LogiNet</div>
-      <div style="font-size:12px;color:var(--text3);margin-top:3px">물류 정산관리 v2.0</div>
+      <div style="font-size:22px;font-weight:900;color:var(--brand)">DONWAY</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:3px">돈의 방향을 자동화합니다</div>
     </div>
     <div class="fg"><label>이메일</label><input id="l-email" type="email" placeholder="example@email.com" onkeydown="if(event.key==='Enter')doLogin()"></div>
     <div class="fg"><label>비밀번호</label><input id="l-pw" type="password" onkeydown="if(event.key==='Enter')doLogin()"></div>
@@ -120,7 +120,7 @@ tr:hover>td{background:var(--bg3)}
   <div class="sidebar" id="sidebar">
     <div class="sl">
       <div class="sl-icon">💰</div>
-      <div><div class="sl-text">LogiNet</div><span class="sl-ver">v2.0 · 엠비티아이</span></div>
+      <div><div class="sl-text">DONWAY</div><span class="sl-ver">v1.0 · 돈의 방향</span></div>
     </div>
     <div style="padding:8px 13px;display:flex;align-items:center;gap:7px;border-bottom:1px solid var(--border)">
       <div style="width:26px;height:26px;border-radius:50%;background:var(--brand-l);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--brand)" id="sb-av">관</div>
@@ -987,7 +987,7 @@ function initFirebase(){
         window._CU=_CU;
         _db.doc('settings/routePrices').get().then(function(rs){if(rs.exists)Object.assign(RPRICE,rs.data());}).catch(function(){});
         _db.doc('settings/prices_'+_CU.dealerId).get().then(function(ps){if(ps.exists)Object.assign(G_PRICES,ps.data());}).catch(function(){});
-        // 관리자/대리점 모두 로지넷 접속 가능
+        // 관리자/대리점 모두 DONWAY 접속 가능
         // 관리자는 슈퍼어드민 모드 자동 활성
         showApp();
       }).catch(function(){
@@ -1190,7 +1190,7 @@ function pageSettle(){
     var totMargin=totCoupang-totTaxBase;
     hero.innerHTML='<div style="position:absolute;top:-30px;right:-30px;width:200px;height:200px;background:rgba(255,255,255,.04);border-radius:50%"></div>'
       +'<div style="position:absolute;bottom:-40px;left:40px;width:160px;height:160px;background:rgba(255,255,255,.03);border-radius:50%"></div>'
-      +'<div style="font-size:11px;font-weight:600;letter-spacing:2px;opacity:.6;margin-bottom:14px">MBTI Co. LOGISTICS · 정산 현황</div>'
+      +'<div style="font-size:11px;font-weight:600;letter-spacing:2px;opacity:.6;margin-bottom:14px">DONWAY · MBTI Co. · 정산 현황</div>'
       +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">'
         +'<div><div style="font-size:10px;opacity:.6;margin-bottom:3px">🏢 쿠팡 수입 (VAT포함)</div>'
           +'<div style="font-size:20px;font-weight:900;color:#34d399">₩'+fmt(totCoupang)+'</div>'
@@ -3817,7 +3817,7 @@ function logError(page, message){
 // ══ 약관 동의 ══
 var TERMS_VER = 'v2';
 var TERMS_CONTENT = {
-  terms: '제1조 (목적)\n본 약관은 엠비티아이 유한회사(이하 "회사")가 제공하는 로지넷(LogiNet) 서비스 이용에 관한 조건 및 절차를 규정합니다.\n\n제2조 (서비스 이용)\n① 서비스는 쿠팡 딜러십 물류 대리점의 정산 자동화를 목적으로 제공됩니다.\n② 이용자는 플랜에 따른 구독료를 납부하여야 합니다.\n③ 구독 기간 만료 시 서비스 접근이 제한됩니다.\n④ 회사는 서비스 운영, 기술지원, 오류 수정 목적으로 이용자의 데이터에 접근할 수 있으며, 이 경우 접근 기록을 보관합니다. 수집된 데이터는 해당 목적 외에 사용하지 않습니다.\n\n제3조 (금지행위)\n① 타 대리점의 데이터에 무단 접근하는 행위\n② 서비스를 제3자에게 재판매하는 행위\n③ 시스템을 고의로 손상시키는 행위\n\n제4조 (책임 제한)\n회사는 천재지변, 서버 장애 등 불가항력으로 인한 서비스 중단에 대해 책임을 지지 않습니다.\n\n제5조 (계약 해지)\n이용자 또는 회사는 서면 또는 전자적 방법으로 계약을 해지할 수 있습니다.\n\n제6조 (약관 개정)\n회사는 약관을 개정할 경우 서비스 내 공지사항을 통해 사전 고지합니다.',
+  terms: '제1조 (목적)\n본 약관은 엠비티아이 유한회사(이하 "회사")가 제공하는 DONWAY 서비스 이용에 관한 조건 및 절차를 규정합니다.\n\n제2조 (서비스 이용)\n① 서비스는 업종에 관계없이 모든 사업자의 자동화 정산을 목적으로 제공됩니다.\n② 이용자는 플랜에 따른 구독료를 납부하여야 합니다.\n③ 구독 기간 만료 시 서비스 접근이 제한됩니다.\n④ 회사는 서비스 운영, 기술지원, 오류 수정 목적으로 이용자의 데이터에 접근할 수 있으며, 이 경우 접근 기록을 보관합니다. 수집된 데이터는 해당 목적 외에 사용하지 않습니다.\n\n제3조 (금지행위)\n① 타 대리점의 데이터에 무단 접근하는 행위\n② 서비스를 제3자에게 재판매하는 행위\n③ 시스템을 고의로 손상시키는 행위\n\n제4조 (책임 제한)\n회사는 천재지변, 서버 장애 등 불가항력으로 인한 서비스 중단에 대해 책임을 지지 않습니다.\n\n제5조 (계약 해지)\n이용자 또는 회사는 서면 또는 전자적 방법으로 계약을 해지할 수 있습니다.\n\n제6조 (약관 개정)\n회사는 약관을 개정할 경우 서비스 내 공지사항을 통해 사전 고지합니다.',
   privacy: '수집하는 개인정보 항목\n· 필수: 대리점명, 이메일, 연락처, 담당자명\n· 자동 수집: 접속 로그, 이용 기록, 오류 로그\n\n개인정보 수집 목적\n· 서비스 제공 및 계약 이행\n· 구독 관리 및 결제 처리\n· 서비스 관련 공지 발송\n· 서비스 운영 및 기술지원 (오류 수정, 데이터 복구)\n\n보유 및 이용 기간\n· 계약 종료 후 5년 (전자상거래법)\n· 단, 이용자 요청 시 즉시 파기\n\n개인정보 제3자 제공\n· 원칙적으로 제공하지 않습니다\n· 법령에 의한 경우 예외\n\n문의: 051-711-3103 | 부산시 수영구 수영로 668, 607호'
 };
 
@@ -4119,12 +4119,12 @@ function _showWelcome(){
   d.style.cssText='background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 60%,#7c3aed 100%);border-radius:20px;padding:36px 32px;text-align:center;max-width:360px;width:100%;color:#fff;position:relative;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5)';
   d.innerHTML='<div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:rgba(255,255,255,.04);border-radius:50%"></div>'
     +'<div style="font-size:48px;margin-bottom:8px;animation:bounce 1s infinite">👑</div>'
-    +'<div style="font-size:13px;opacity:.7;margin-bottom:4px;letter-spacing:1px">MBTI Co. LOGISTICS</div>'
+    +'<div style="font-size:13px;opacity:.7;margin-bottom:4px;letter-spacing:1px">DONWAY · MBTI Co.</div>'
     +'<div style="font-size:22px;font-weight:900;margin-bottom:4px">'+greeting+'</div>'
     +'<div style="font-size:16px;font-weight:700;margin-bottom:16px;color:#93c5fd">'+esc(name)+' 님 ✨</div>'
     +'<div style="background:rgba(255,255,255,.1);border-radius:12px;padding:12px;margin-bottom:20px">'
       +'<div style="font-size:13px;font-weight:600;margin-bottom:4px">🚀 오늘도 번창하세요!</div>'
-      +'<div style="font-size:11px;opacity:.75">엠비티아이 물류관리 · 로지넷</div>'
+      +'<div style="font-size:11px;opacity:.75">DONWAY · 돈의 방향을 자동화</div>'
     +'</div>'
     +'<button onclick="document.getElementById(\'mo-welcome\').remove()" '
       +'style="background:#fff;color:#1e3a8a;border:none;border-radius:100px;padding:10px 32px;font-size:14px;font-weight:800;cursor:pointer;width:100%">입장하기 →</button>';
@@ -4147,7 +4147,7 @@ window.addEventListener('load',function(){setTimeout(initFirebase,200);});
     <div style="text-align:center;padding:8px 0 18px">
       <div style="font-size:38px;margin-bottom:8px">📋</div>
       <div style="font-size:17px;font-weight:800">서비스 이용약관 안내</div>
-      <div style="font-size:12px;color:var(--text3);margin-top:5px">로지넷을 계속 이용하려면 아래 약관에 동의해 주세요</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:5px">DONWAY를 계속 이용하려면 아래 약관에 동의해 주세요</div>
     </div>
     <div style="background:var(--brand-l);border-radius:8px;padding:10px 14px;font-size:11px;color:var(--brand);margin-bottom:14px;line-height:1.6">
       ℹ️ 서비스 운영 및 기술지원 목적의 데이터 접근 관련 조항(제2조④)이 추가되었습니다.
