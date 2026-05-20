@@ -378,6 +378,77 @@ export default {
       return new Response(resp.body, { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
     }
 
+    // ── Phase 2: 신규 라우트 ──────────────────────────────────────────────
+
+    // 기사 배송앱
+    if (path === '/delivery' || path === '/delivery/') {
+      const resp = await env.ASSETS.fetch(new Request(new URL('/delivery.html', url)));
+      return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+    }
+
+    // 통합 포털
+    if (path === '/portal' || path === '/portal/') {
+      const resp = await env.ASSETS.fetch(new Request(new URL('/portal.html', url)));
+      return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+    }
+
+    // 기사 자체 가입
+    if (path === '/join' || path === '/join/') {
+      const resp = await env.ASSETS.fetch(new Request(new URL('/join.html', url)));
+      return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+    }
+
+    // 회사 신규 등록
+    if (path === '/company-register' || path === '/company-register/') {
+      const resp = await env.ASSETS.fetch(new Request(new URL('/company-register.html', url)));
+      return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+    }
+
+    // 회사 코드 검증 API (join.html 에서 호출)
+    if (path === '/company-get' && method === 'GET') {
+      try {
+        const code = url.searchParams.get('code') || '';
+        if (!code) return new Response(JSON.stringify({ ok: false, error: 'code required' }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+        // MBTI01 하드코딩 (기존 엠비티아이)
+        if (code.toUpperCase() === 'MBTI01') {
+          return new Response(JSON.stringify({
+            ok: true,
+            company: { code: 'MBTI01', name: '엠비티아이(유)', camps: ['부산1','부산2','부산3','대구2','진주M'], plan: 'pro' }
+          }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+        }
+        const token = await getAccessToken(env);
+        const fsUrl = `${FS_BASE}/companies?pageSize=1`;
+        // Firestore query via REST
+        const qBody = {
+          structuredQuery: {
+            from: [{ collectionId: 'companies' }],
+            where: { fieldFilter: { field: { fieldPath: 'code' }, op: 'EQUAL', value: { stringValue: code.toUpperCase() } } },
+            limit: 1
+          }
+        };
+        const qResp = await fetch(`https://firestore.googleapis.com/v1/${FS_BASE.replace('https://firestore.googleapis.com/v1/','')}:runQuery`, {
+          method: 'POST', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify(qBody)
+        });
+        const qData = await qResp.json();
+        if (qData && qData[0] && qData[0].document) {
+          const f = qData[0].document.fields || {};
+          const company = {
+            code: f.code?.stringValue || code,
+            name: f.name?.stringValue || '',
+            camps: f.camps ? JSON.parse(f.camps.stringValue || '[]') : [],
+            plan: f.plan?.stringValue || 'free'
+          };
+          return new Response(JSON.stringify({ ok: true, company }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+        }
+        return new Response(JSON.stringify({ ok: false, error: 'not found' }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      } catch (e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      }
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+
     if (path === '/subscribe' || path === '/subscribe/') {
       const req  = new Request(new URL('/subscribe.html', url).toString(), { method: 'GET', headers: request.headers });
       const resp = await env.ASSETS.fetch(req);

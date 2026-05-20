@@ -56,19 +56,19 @@ body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
   .topbar,.card,
   #step-cam,#loading-card,#preview-card,
   #truck-widget-label,#route-summary-card,#share-btn-card{display:none!important}
-  body,html{background:#fff!important;margin:0!important;padding:0!important}
-  .app{padding:0!important;margin:0!important;max-width:100%!important;background:none!important}
+  body,html{background:#fff!important;margin:0!important;padding:0!important;min-height:0!important;height:auto!important;overflow:hidden!important}
+  .app{padding:0!important;margin:0!important;max-width:100%!important;background:none!important;min-height:0!important;height:auto!important;overflow:hidden!important}
   /* 결과 영역만 표시 */
-  #step-result{display:block!important}
+  #step-result{display:block!important;margin:0!important;padding:0!important;height:auto!important;overflow:hidden!important}
   #step-result>.card{display:none!important}
-  .print-area{display:block!important;width:100%!important;margin:0!important;padding:0!important;border:none!important}
+  .print-area{display:block!important;width:100%!important;margin:0!important;padding:0!important;border:none!important;overflow:hidden!important}
   /* 4분할 */
-  .label-a4-4{display:grid!important;grid-template-columns:1fr 1fr!important;grid-template-rows:1fr 1fr!important;width:100%!important;height:277mm!important}
+  .label-a4-4{display:grid!important;grid-template-columns:1fr 1fr!important;grid-template-rows:1fr 1fr!important;width:100%!important;height:277mm!important;page-break-after:avoid!important;break-after:avoid!important}
   .label-a4-4 .label-item{height:138mm!important;box-sizing:border-box!important;display:flex!important;flex-direction:column!important}
   /* 2분할 */
-  .label-a4-2{display:grid!important;grid-template-columns:1fr 1fr!important;width:100%!important}
+  .label-a4-2{display:grid!important;grid-template-columns:1fr 1fr!important;width:100%!important;page-break-after:avoid!important;break-after:avoid!important}
   /* 1개 */
-  .label-a4-1{display:block!important;width:100%!important}
+  .label-a4-1{display:block!important;width:100%!important;page-break-after:avoid!important;break-after:avoid!important}
   .label-item{page-break-inside:avoid!important;break-inside:avoid!important}
   img,canvas{display:block!important}
 }
@@ -248,7 +248,13 @@ body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
     <div class="field"><label>고객메시지</label><input id="edit-customerMsg" placeholder="문앞/경비실/무인택배함..." oninput="updatePreview()"></div>
     <div style="display:flex;gap:8px">
       <div class="field" style="flex:1"><label>캠프</label><input id="edit-camp" placeholder="부산2" oninput="updatePreview()"></div>
-      <div class="field" style="flex:1"><label>노선번호</label><input id="edit-route" placeholder="812 B01" oninput="updatePreview()"></div>
+      <div class="field" style="flex:1">
+        <label style="display:flex;align-items:center;justify-content:space-between">
+          노선번호
+          <button onclick="reCountRoute()" title="미분류 → 이 노선으로 재집계" style="background:#f59e0b;border:none;border-radius:5px;padding:1px 7px;font-size:10px;font-weight:700;cursor:pointer;color:#000">🔄 재집계</button>
+        </label>
+        <input id="edit-route" placeholder="812 B01" oninput="updatePreview()">
+      </div>
     </div>
     <div style="display:flex;gap:8px"><div class="field" style="flex:1"><label>박스규격</label><input id="edit-boxSize" placeholder="RPB2.4" oninput="updatePreview()"></div><div class="field" style="flex:1"><label>주간/야간</label><input id="edit-deliveryTime" placeholder="D3빨/야간" oninput="updatePreview()"></div></div>
   </div>
@@ -297,16 +303,60 @@ function _incCounter(){
   saved.count++;
   localStorage.setItem('mbti_label_counter',JSON.stringify(saved));
   document.getElementById('print-counter').textContent=saved.count;
-  // 노선별 카운터도 누적
-  var route=(document.getElementById('edit-route')||{value:''}).value.trim()||'미분류';
+  // 노선별 카운터 누적 — 노선 없으면 '미분류' 임시 저장
+  var route=(document.getElementById('edit-route')||{value:''}).value.trim();
   var camp=(document.getElementById('edit-camp')||{value:''}).value.trim()||'';
+  // ★ 노선 없으면 토스트 경고 + 300ms 후 재시도 (OCR 채워지는 타이밍 대비)
+  if(!route){
+    setTimeout(function(){
+      var r2=(document.getElementById('edit-route')||{value:''}).value.trim()||'미분류';
+      var c2=(document.getElementById('edit-camp')||{value:''}).value.trim()||camp;
+      _saveRouteCount(r2,c2,today);
+      if(r2==='미분류'){
+        // 노선 미입력 토스트 경고
+        var warn=document.createElement('div');
+        warn.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:#f59e0b;color:#000;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:700;z-index:9999;text-align:center;box-shadow:0 3px 12px rgba(0,0,0,.3)';
+        warn.innerHTML='⚠️ 노선번호 미입력! <br><span style="font-size:11px;font-weight:500">노선번호 입력 후 &nbsp;🔄 재집계 버튼 탭하세요</span>';
+        document.body.appendChild(warn);
+        setTimeout(function(){warn.remove();},4000);
+      }
+    },300);
+    return;
+  }
+  _saveRouteCount(route,camp,today);
+}
+
+function _saveRouteCount(route,camp,today){
   var rdata=JSON.parse(localStorage.getItem('mbti_label_routes_'+today)||'{}');
   if(!rdata[route])rdata[route]={count:0,camp:camp};
   rdata[route].count++;
+  if(camp&&!rdata[route].camp)rdata[route].camp=camp;
   localStorage.setItem('mbti_label_routes_'+today,JSON.stringify(rdata));
   refreshRouteCard();
-  // Firebase에 저장 (비동기, 오류 무시)
   _syncToFirebase(today, camp, rdata);
+}
+
+// ★ 노선 수동 재집계 — 노선 수정 후 🔄 버튼 클릭 시
+function reCountRoute(){
+  var today=new Date().toISOString().slice(0,10);
+  var newRoute=(document.getElementById('edit-route')||{value:''}).value.trim();
+  var camp=(document.getElementById('edit-camp')||{value:''}).value.trim()||'';
+  if(!newRoute){alert('노선번호를 먼저 입력해 주세요');return;}
+  var rdata=JSON.parse(localStorage.getItem('mbti_label_routes_'+today)||'{}');
+  // '미분류' 건수를 새 노선으로 이동
+  if(rdata['미분류']&&rdata['미분류'].count>0){
+    var mv=rdata['미분류'].count;
+    if(!rdata[newRoute])rdata[newRoute]={count:0,camp:camp};
+    rdata[newRoute].count+=mv;
+    if(camp&&!rdata[newRoute].camp)rdata[newRoute].camp=camp;
+    delete rdata['미분류'];
+    localStorage.setItem('mbti_label_routes_'+today,JSON.stringify(rdata));
+    refreshRouteCard();
+    _syncToFirebase(today, camp, rdata);
+    alert('✅ 미분류 '+mv+'건 → '+newRoute+' 으로 이동됨');
+  } else {
+    alert('이동할 미분류 건수가 없습니다');
+  }
 }
 
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
@@ -349,12 +399,89 @@ async function shareToAll(){
   var rdata=JSON.parse(localStorage.getItem('mbti_label_routes_'+today)||'{}');
   var keys=Object.keys(rdata);
   if(!keys.length){alert('출력된 라벨이 없습니다.');return;}
+
+  var hasMiscl=rdata['미분류']&&rdata['미분류'].count>0;
+
+  // ★ 미분류 있으면 → 공유 전 검토 모달 표시
+  if(hasMiscl){
+    _showShareReviewModal(today, rdata, keys);
+    return;
+  }
+  // 정상 공유
+  await _doShare(today, rdata, keys);
+}
+
+function _showShareReviewModal(today, rdata, keys){
+  // 전역 저장 (onclick에서 today 참조 위해)
+  window._shareToday = today;
+  window._shareRdata = rdata;
+  window._shareKeys = keys;
+
+  var total=keys.reduce(function(s,k){return s+(rdata[k].count||0);},0);
+  var campKey=(Object.values(rdata)[0]||{camp:''}).camp||'전체';
+  var rowsHtml='';
+  keys.sort().forEach(function(k){
+    var isMisc=(k==='미분류');
+    var style=isMisc?'color:#f59e0b;font-weight:800':'color:#fff;font-weight:700';
+    rowsHtml+='<div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.08)">'
+      +'<div style="flex:1;font-size:13px;'+style+'">'+(isMisc?'⚠️ ':'')+(k||'미분류')+'</div>'
+      +'<div style="font-size:14px;font-weight:900;color:#3b82f6">'+rdata[k].count+'건</div>'
+      +'</div>';
+  });
+
+  var mo=document.createElement('div');
+  mo.id='share-review-mo';
+  mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
+  mo.innerHTML=''
+    +'<div style="background:#111827;border-radius:16px 16px 0 0;padding:20px 16px 32px;width:100%;max-width:500px;max-height:80vh;overflow-y:auto">'
+    +'<div style="width:36px;height:4px;background:#334155;border-radius:2px;margin:0 auto 16px"></div>'
+    +'<div style="font-size:15px;font-weight:800;margin-bottom:4px">&#128228; 공유 전 노선 확인</div>'
+    +'<div style="font-size:11px;color:#94a3b8;margin-bottom:12px">&#9888;&#65039; 노선미입력(미분류) 건수가 있습니다</div>'
+    +rowsHtml
+    +'<div style="margin-top:14px;background:#1e2d45;border-radius:10px;padding:12px">'
+    +'<div style="font-size:11px;color:#64748b;margin-bottom:6px">미분류 건수를 이 노선으로 이동</div>'
+    +'<div style="display:flex;gap:8px">'
+    +'<input id="merge-route-inp" placeholder="노선번호 (예: 812 B01)" style="flex:1;padding:10px;background:#0a0f1e;border:1.5px solid #334155;border-radius:8px;color:#fff;font-size:13px;font-weight:700;outline:none">'
+    +'<button id="btn-merge-share" style="padding:10px 12px;background:#3b82f6;border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">이동 후<br>공유</button>'
+    +'</div></div>'
+    +'<div style="display:flex;gap:8px;margin-top:10px">'
+    +'<button id="btn-cancel-share" style="flex:1;padding:12px;background:#1e2d45;border:1.5px solid #334155;border-radius:10px;color:#94a3b8;font-size:13px;font-weight:700;cursor:pointer">취소</button>'
+    +'<button id="btn-force-share" style="flex:2;padding:12px;background:#22c55e;border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;cursor:pointer">미분류 포함 그냥 공유</button>'
+    +'</div></div>';
+
+  document.body.appendChild(mo);
+
+  document.getElementById('btn-cancel-share').onclick=function(){ mo.remove(); };
+  document.getElementById('btn-force-share').onclick=function(){
+    mo.remove();
+    _doShare(window._shareToday, window._shareRdata, window._shareKeys);
+  };
+  document.getElementById('btn-merge-share').onclick=function(){ _mergeAndShare(); };
+  mo.addEventListener('click',function(e){ if(e.target===mo) mo.remove(); });
+}
+
+async function _mergeAndShare(){
+  var today=window._shareToday||new Date().toISOString().slice(0,10);
+  var newRoute=(document.getElementById('merge-route-inp')||{}).value.trim();
+  if(!newRoute){alert('노선번호를 입력해 주세요');return;}
+  var rdata=JSON.parse(localStorage.getItem('mbti_label_routes_'+today)||'{}');
+  if(rdata['미분류']&&rdata['미분류'].count>0){
+    if(!rdata[newRoute])rdata[newRoute]={count:0,camp:rdata['미분류'].camp||''};
+    rdata[newRoute].count+=rdata['미분류'].count;
+    delete rdata['미분류'];
+    localStorage.setItem('mbti_label_routes_'+today,JSON.stringify(rdata));
+    refreshRouteCard();
+  }
+  document.getElementById('share-review-mo')?.remove();
+  var keys=Object.keys(rdata);
+  await _doShare(today, rdata, keys);
+}
+
+async function _doShare(today, rdata, keys){
   var total=keys.reduce(function(s,k){return s+(rdata[k].count||0);},0);
   var now=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
   var campKey=(Object.values(rdata)[0]||{camp:''}).camp||'전체';
-  // Firebase 저장 (캠프 수령용)
   await _syncToFirebase(today,campKey,rdata);
-  // 공유 텍스트
   var lines=['[LogiNet 간선차 출발 알림]','캠프: '+campKey,'총 송장: '+total+'건','출발시각: '+now,''];
   lines.push('■ 노선별');
   keys.sort().forEach(function(k){lines.push('  '+k+': '+rdata[k].count+'건');});
@@ -362,12 +489,10 @@ async function shareToAll(){
   var text=lines.join('\n');
   if(navigator.share){
     navigator.share({title:'LogiNet 간선차 출발',text:text}).catch(function(){});
-  } else {
-    if(navigator.clipboard){
-      navigator.clipboard.writeText(text).then(function(){
-        alert('클립보드에 복사됐습니다!\n카카오톡에 붙여넣기 해주세요.');
-      });
-    }
+  } else if(navigator.clipboard){
+    navigator.clipboard.writeText(text).then(function(){
+      alert('클립보드에 복사됐습니다!\n카카오톡에 붙여넣기 해주세요.');
+    });
   }
 }
 
@@ -518,9 +643,10 @@ async function runOCR(){
     ja: '伝票から抽出、JSON形式、各フィールド厳密に分離。①name=受取人名②addr1=完全住所(日本語翻訳)③addr2=建物+部屋番号④tracking=バーコード送り状番号(点含む)路線番号でない⑤orderNo=注文番号(点含む)D3等配送コード含まない⑥camp=拠点名⑦route=路線番号(★の後)⑧boxSize=箱サイズ⑨customerMsg=配達メモ⑩deliveryTime=配達時間帯\n{"name":"","addr1":"","addr2":"","tracking":"","orderNo":"","camp":"","route":"","boxSize":"","customerMsg":"","deliveryTime":"","city":"釜山"}',
     ph: 'Extract from label JSON only, fields strictly separated.①name=recipient name②addr1=full street address English translation③addr2=building+unit English④tracking=barcode number with dots NOT star route⑤orderNo=order number with dots NO delivery codes⑥camp=camp name⑦route=route after star⑧boxSize=box size⑨customerMsg=delivery message⑩deliveryTime=delivery time code\n{"name":"","addr1":"","addr2":"","tracking":"","orderNo":"","camp":"","route":"","boxSize":"","customerMsg":"","deliveryTime":"","city":"Busan"}'
   };
-  var _currentLang = localStorage.getItem('mbti_label_lang') || _lang || 'ko';
-  var prompt=PROMPTS[_currentLang]||PROMPTS.ko;
-  console.log('[OCR] 언어:', _currentLang);
+  // ★ Fix: _lang 전역 변수를 직접 사용 (localStorage 재조회 불필요, 카메라 복귀 후에도 안전)
+  var _ocrLang = _lang || localStorage.getItem('mbti_label_lang') || 'ko';
+  var prompt=PROMPTS[_ocrLang]||PROMPTS.ko;
+  console.log('[OCR] 언어:', _ocrLang, '/ _lang:', _lang);
 
   try{
     document.getElementById('loading-msg').textContent='AI 번역 중...';
@@ -622,22 +748,10 @@ function showResult(info){
   document.getElementById('loading-card').style.display='none';
   document.getElementById('step-result').style.display='block';
   document.getElementById('step-result').scrollIntoView({behavior:'smooth'});
+  // ★ Fix: doPrint()로 통합 처리 (카운터+QR+인쇄 한 곳에서, 중복 방지)
+  // 단, updatePreview()로 _data 먼저 동기화
   updatePreview();
-  _incCounter(); // ★ OCR 완료 후 즉시 카운트
-  // QR 로드 완료 후 인쇄 (최대 8초 대기)
-  _qrLoaded={};
-  _printDone=false;
-  setTimeout(function(){
-    waitQRandPrint();
-    // 8초 후 강제 인쇄 (QR 로드 실패해도 인쇄) - 이미 인쇄했으면 스킵
-    setTimeout(function(){
-      if(!_printDone){
-        window.onafterprint=function(){ setTimeout(function(){ resetAndCam(); },200); };
-        window.print();
-        _printDone=true;
-      }
-    },8000);
-  },200);
+  doPrint();
 }
 
 function updatePreview(){
@@ -809,7 +923,7 @@ function generateQR(containerId, data){
 function doPrint(){
   _qrLoaded={};
   _printDone=false;
-  _incCounter(); // 출력 건수 +1
+  _incCounter(); // ★ 출력 건수 +1 (유일한 카운터 호출 위치)
   renderLabel();
   var qd={track:_data.track,name:_data.name,addr1:_data.addr1,addr2:_data.addr2};
   setTimeout(function(){
@@ -817,7 +931,8 @@ function doPrint(){
     else if(_printSize===4){generateQR('qr-4a',qd);generateQR('qr-4b',qd);generateQR('qr-4c',qd);generateQR('qr-4d',qd);}
     else{generateQR('qr-2a',qd);generateQR('qr-2b',qd);}
     waitQRandPrint();
-    setTimeout(function(){if(!_printDone){window.print();_printDone=true;}},5000);
+    // 8초 후 강제 인쇄 (QR 로드 실패해도 인쇄)
+    setTimeout(function(){if(!_printDone){window.onafterprint=function(){setTimeout(function(){resetAndCam();},200);};window.print();_printDone=true;}},8000);
   },100);
 }
 function waitQRandPrint(){

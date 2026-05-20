@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0a0f1e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>MBTI Î∞∞ÏÜ°????Í∏∞ÏÇ¨ ?±Î°ù</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+:root{
+  --bg:#0a0f1e;--bg2:#111827;--bg3:#1e2d45;--bg4:#1f2937;
+  --blue:#3b82f6;--teal:#14b8a6;--green:#22c55e;--red:#ef4444;--yellow:#f59e0b;
+  --text:#f0f6ff;--text2:#94a3b8;--text3:#475569;--border:#1e2d45;--border2:#2d3f5a;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,'Malgun Gothic',sans-serif;min-height:100vh;overflow-x:hidden}
+
+/* ?Ä?Ä ÏßÑÌñâ ?®Í≥Ñ ?Ä?Ä */
+.steps{display:flex;align-items:center;justify-content:center;gap:0;padding:24px 20px 0}
+.step{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1}
+.step-circle{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;border:2px solid var(--border2);color:var(--text3);background:var(--bg2);transition:all .3s;position:relative;z-index:1}
+.step-circle.active{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 0 16px rgba(59,130,246,.4)}
+.step-circle.done{background:var(--green);border-color:var(--green);color:#fff}
+.step-label{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.04em}
+.step-label.active{color:var(--blue)}
+.step-label.done{color:var(--green)}
+.step-line{flex:1;height:2px;background:var(--border2);margin:0 -1px;margin-top:-22px;z-index:0;transition:background .3s}
+.step-line.done{background:var(--green)}
+
+/* ?Ä?Ä ?îÎ©¥ ?¨Îùº?¥Îìú ?Ä?Ä */
+.screens{overflow:hidden;position:relative}
+.screen{display:none;padding:24px 20px;max-width:400px;margin:0 auto;animation:fadeIn .3s ease}
+.screen.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+/* ?Ä?Ä Î°úÍ≥† ?Ä?Ä */
+.logo-area{text-align:center;margin-bottom:28px}
+.logo-icon{font-size:48px;margin-bottom:8px}
+.logo-title{font-size:20px;font-weight:900;letter-spacing:.02em}
+.logo-sub{font-size:12px;color:var(--text3);margin-top:4px}
+
+/* ?Ä?Ä ?ÖÎ†• Í∑∏Î£π ?Ä?Ä */
+.field{margin-bottom:16px}
+.field-label{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:5px}
+.field-inp{width:100%;padding:14px 16px;background:var(--bg2);border:1.5px solid var(--border2);border-radius:12px;color:var(--text);font-size:15px;font-weight:600;outline:none;transition:border-color .2s;letter-spacing:.02em}
+.field-inp:focus{border-color:var(--blue)}
+.field-inp.valid{border-color:var(--green)}
+.field-inp.err{border-color:var(--red)}
+.field-inp::placeholder{color:var(--text3)}
+.field-hint{font-size:11px;color:var(--text3);margin-top:5px;padding-left:2px}
+.field-hint.ok{color:var(--green)}
+.field-hint.err{color:var(--red)}
+
+/* ?Ä?Ä Î≤ÑÌäº ?Ä?Ä */
+.btn-next{width:100%;padding:16px;background:linear-gradient(135deg,var(--blue),var(--teal));border:none;border-radius:12px;color:#fff;font-size:16px;font-weight:800;cursor:pointer;letter-spacing:.04em;box-shadow:0 4px 16px rgba(59,130,246,.3);transition:all .2s;margin-top:8px}
+.btn-next:disabled{background:var(--bg3);color:var(--text3);box-shadow:none}
+.btn-next:active:not(:disabled){transform:scale(.97)}
+.btn-back{width:100%;padding:13px;background:transparent;border:1.5px solid var(--border2);border-radius:12px;color:var(--text2);font-size:13px;font-weight:700;cursor:pointer;margin-top:8px;transition:all .2s}
+.btn-back:hover{border-color:var(--blue);color:var(--blue)}
+
+/* ?Ä?Ä ?åÏÇ¨ Ïπ¥Îìú ?Ä?Ä */
+.company-card{background:var(--bg2);border:1.5px solid var(--green);border-radius:14px;padding:16px;margin-bottom:16px;display:flex;align-items:center;gap:14px}
+.company-icon{width:44px;height:44px;background:linear-gradient(135deg,#064e3b,var(--green));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.company-name{font-size:15px;font-weight:800}
+.company-code{font-size:11px;color:var(--green);font-weight:700;letter-spacing:.1em;margin-top:2px}
+.company-camps{font-size:11px;color:var(--text3);margin-top:3px}
+
+/* ?Ä?Ä Ï∫†ÌîÑ ?†ÌÉù ?Ä?Ä */
+.camp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px}
+.camp-btn{padding:12px 8px;background:var(--bg2);border:1.5px solid var(--border2);border-radius:10px;color:var(--text2);font-size:13px;font-weight:700;cursor:pointer;text-align:center;transition:all .15s}
+.camp-btn.sel{background:#1e3a5f;border-color:var(--blue);color:var(--blue)}
+
+/* ?Ä?Ä ?±Í≥µ ?îÎ©¥ ?Ä?Ä */
+.success-icon{width:80px;height:80px;background:linear-gradient(135deg,#064e3b,var(--green));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto 20px;box-shadow:0 0 40px rgba(34,197,94,.3)}
+.success-title{font-size:22px;font-weight:900;text-align:center;margin-bottom:8px}
+.success-sub{font-size:13px;color:var(--text2);text-align:center;line-height:1.6;margin-bottom:24px}
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--border)}
+.info-label{font-size:12px;color:var(--text3);font-weight:600}
+.info-val{font-size:13px;font-weight:700}
+
+/* ?Ä?Ä Íµ¨Î∂Ñ???Ä?Ä */
+.divider{display:flex;align-items:center;gap:10px;margin:20px 0}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border2)}
+.divider span{font-size:11px;color:var(--text3);font-weight:600}
+
+/* ?Ä?Ä Î°úÎî© ?Ä?Ä */
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{width:18px;height:18px;border:2.5px solid rgba(59,130,246,.3);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:10px 20px;border-radius:99px;font-size:12px;font-weight:700;opacity:0;transition:all .3s;pointer-events:none;z-index:9999;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.4)}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+
+<!-- ?Ä?Ä ÏßÑÌñâ ?®Í≥Ñ ?úÏãú ?Ä?Ä -->
+<div class="steps">
+  <div class="step">
+    <div class="step-circle active" id="s1">1</div>
+    <div class="step-label active" id="sl1">?åÏÇ¨ ?ïÏù∏</div>
+  </div>
+  <div class="step-line" id="l12"></div>
+  <div class="step">
+    <div class="step-circle" id="s2">2</div>
+    <div class="step-label" id="sl2">?ïÎ≥¥ ?ÖÎ†•</div>
+  </div>
+  <div class="step-line" id="l23"></div>
+  <div class="step">
+    <div class="step-circle" id="s3">3</div>
+    <div class="step-label" id="sl3">?±Î°ù ?ÑÎ£å</div>
+  </div>
+</div>
+
+<div class="screens">
+
+  <!-- ?ê‚ïê STEP 1: ?åÏÇ¨ ÏΩîÎìú ?ê‚ïê -->
+  <div class="screen active" id="screen1">
+    <div class="logo-area">
+      <div class="logo-icon">?öõ</div>
+      <div class="logo-title">MBTI Î∞∞ÏÜ°??/div>
+      <div class="logo-sub">?åÏÇ¨ ÏΩîÎìúÎ•??ÖÎ†•???úÏûë?òÏÑ∏??/div>
+    </div>
+
+    <div class="field">
+      <div class="field-label">?îë ?åÏÇ¨ ÏΩîÎìú</div>
+      <input class="field-inp" id="inp-code" type="text" placeholder="?? MBTI01"
+        maxlength="10" autocomplete="off" spellcheck="false"
+        style="text-transform:uppercase;letter-spacing:.2em;font-size:20px;font-weight:900;text-align:center"
+        oninput="onCodeInput(this)">
+      <div class="field-hint" id="hint-code">?¥Îãπ?êÏóêÍ≤?Î∞õÏ? 6~8?êÎ¶¨ ÏΩîÎìúÎ•??ÖÎ†•?òÏÑ∏??/div>
+    </div>
+
+    <!-- ?åÏÇ¨ ?ïÏù∏ Í≤∞Í≥º -->
+    <div id="company-result" style="display:none"></div>
+
+    <button class="btn-next" id="btn-step1" disabled onclick="goStep2()">?§Ïùå ??/button>
+
+    <div class="divider"><span>?êÎäî</span></div>
+    <div style="text-align:center;font-size:12px;color:var(--text3)">
+      ?åÏÇ¨Í∞Ä ?ÑÏßÅ ?±Î°ù ???êÎÇò??<br>
+      <span onclick="goCompanyRegister()" style="color:var(--blue);font-weight:700;cursor:pointer">???åÏÇ¨ ?±Î°ù?òÍ∏∞ ??/span>
+    </div>
+  </div>
+
+  <!-- ?ê‚ïê STEP 2: Í∏∞ÏÇ¨ ?ïÎ≥¥ ?ê‚ïê -->
+  <div class="screen" id="screen2">
+    <div id="company-card-mini"></div>
+
+    <div class="field">
+      <div class="field-label">?ë§ Í∏∞ÏÇ¨ ?¥Î¶Ñ</div>
+      <input class="field-inp" id="inp-name" type="text" placeholder="?§Î™Ö ?ÖÎ†• (?? ?çÍ∏∏??"
+        oninput="checkStep2()">
+    </div>
+
+    <div class="field">
+      <div class="field-label">?ì± ?¥Î???Î≤àÌò∏</div>
+      <input class="field-inp" id="inp-phone" type="tel" placeholder="010-0000-0000"
+        oninput="formatPhone(this);checkStep2()">
+      <div class="field-hint">Î∞∞ÏÜ° ?ïÏù∏ Î∞??åÎ¶º ?òÏã†???¨Ïö©?©Îãà??/div>
+    </div>
+
+    <div class="field">
+      <div class="field-label">?èï ?åÏÜç Ï∫†ÌîÑ</div>
+      <div class="camp-grid" id="camp-grid">
+        <!-- ?åÏÇ¨ Ï∫†ÌîÑ Î™©Î°ù?ºÎ°ú Ï±ÑÏõåÏß?-->
+      </div>
+      <input type="hidden" id="inp-camp">
+    </div>
+
+    <button class="btn-next" id="btn-step2" disabled onclick="doRegister()">
+      ?±Î°ù ?ÑÎ£å
+    </button>
+    <button class="btn-back" onclick="goBack(1)">???¥Ï†Ñ</button>
+  </div>
+
+  <!-- ?ê‚ïê STEP 3: ?ÑÎ£å ?ê‚ïê -->
+  <div class="screen" id="screen3">
+    <div style="text-align:center;padding-top:8px">
+      <div class="success-icon">??/div>
+      <div class="success-title">?±Î°ù ?ÑÎ£å!</div>
+      <div class="success-sub">Î∞∞ÏÜ°?±ÏùÑ Î∞îÎ°ú ?¨Ïö©?????àÏäµ?àÎã§.<br>?§ÏùåÎ∂Ä?∞Îäî ???îÎ©¥ ?ÜÏù¥ Î∞îÎ°ú ?úÏûë?©Îãà??</div>
+    </div>
+
+    <div style="background:var(--bg2);border-radius:14px;padding:16px;border:1px solid var(--border2);margin-bottom:20px">
+      <div class="info-row">
+        <span class="info-label">?åÏÇ¨</span>
+        <span class="info-val" id="done-company">??/span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">?¥Î¶Ñ</span>
+        <span class="info-val" id="done-name">??/span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Ï∫†ÌîÑ</span>
+        <span class="info-val" id="done-camp">??/span>
+      </div>
+      <div class="info-row" style="border-bottom:none">
+        <span class="info-label">?∞ÎùΩÏ≤?/span>
+        <span class="info-val" id="done-phone">??/span>
+      </div>
+    </div>
+
+    <button class="btn-next" onclick="goDelivery()">?öõ Î∞∞ÏÜ° ?úÏûë?òÍ∏∞</button>
+    <div style="text-align:center;margin-top:12px;font-size:11px;color:var(--text3)">
+      Î∞∞ÏÜ°??Î∂ÅÎßà???Ä??Í∂åÏû•: 
+      <span style="color:var(--blue);font-weight:700" id="delivery-url-text"></span>
+    </div>
+  </div>
+
+</div><!-- /screens -->
+
+<script>
+// ?Ä?Ä Firebase ?Ä?Ä
+var _fk=['AIzaSyDQmEFf','LczgCuPQidu','nbBXqaHWgs3','9VMg0'].join('');
+var FB, _db;
+function _initFB(){
+  if(typeof firebase==='undefined'){ setTimeout(_initFB,300); return; }
+  try{
+    try{ FB=firebase.app('join'); }catch(e){
+      FB=firebase.initializeApp({
+        apiKey:_fk,authDomain:'mbti-logistics.firebaseapp.com',
+        projectId:'mbti-logistics',storageBucket:'mbti-logistics.firebasestorage.app',
+        messagingSenderId:'40761160761',appId:'1:40761160761:web:20545b610f03f534e949e8'
+      },'join');
+    }
+    _db=FB.firestore();
+  }catch(e){ console.warn('FB:',e); }
+}
+document.addEventListener('DOMContentLoaded',_initFB);
+
+function toast(m){ var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},3000); }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ?Ä?Ä ?ÅÌÉú ?Ä?Ä
+var _company=null; // ?åÏÇ¨ ?ïÎ≥¥
+var _selCamp='';
+
+// ?Ä?Ä STEP 1: ?åÏÇ¨ ÏΩîÎìú ?ïÏù∏ ?Ä?Ä
+var _codeTimer=null;
+function onCodeInput(el){
+  el.value=el.value.toUpperCase().replace(/[^A-Z0-9]/g,'');
+  clearTimeout(_codeTimer);
+  var code=el.value.trim();
+  var hint=document.getElementById('hint-code');
+  var result=document.getElementById('company-result');
+  var btn=document.getElementById('btn-step1');
+  _company=null;
+  btn.disabled=true;
+  result.style.display='none';
+  el.className='field-inp';
+  if(code.length<4){ hint.textContent='4???¥ÏÉÅ ?ÖÎ†•?òÏÑ∏??;hint.className='field-hint'; return; }
+  hint.innerHTML='<span class="spin"></span> ?ïÏù∏ Ï§?..';
+  _codeTimer=setTimeout(function(){ checkCompanyCode(code); },600);
+}
+
+async function checkCompanyCode(code){
+  var el=document.getElementById('inp-code');
+  var hint=document.getElementById('hint-code');
+  var result=document.getElementById('company-result');
+  var btn=document.getElementById('btn-step1');
+
+  // MBTI01 ?òÎìúÏΩîÎî© (Í∏∞Ï°¥ ?†ÎπÑ?∞ÏïÑ??
+  if(code==='MBTI01'){
+    _company={
+      code:'MBTI01',name:'?†ÎπÑ?∞ÏïÑ????',
+      camps:['Î∂Ä??','Î∂Ä??','Î∂Ä??','?ÄÍµ?','ÏßÑÏ£ºM'],
+      plan:'pro'
+    };
+  } else if(_db){
+    try{
+      var snap=await _db.collection('companies').where('code','==',code).limit(1).get();
+      if(!snap.empty){
+        snap.forEach(function(d){ _company=Object.assign({docId:d.id},d.data()); });
+      }
+    }catch(e){ console.warn('company check:',e); }
+  }
+
+  if(_company){
+    el.className='field-inp valid';
+    hint.className='field-hint ok';
+    hint.textContent='???åÏÇ¨ ?ïÏù∏??;
+    result.style.display='block';
+    result.innerHTML='<div class="company-card">'
+      +'<div class="company-icon">?è¢</div>'
+      +'<div><div class="company-name">'+esc(_company.name)+'</div>'
+      +'<div class="company-code">'+esc(_company.code)+'</div>'
+      +'<div class="company-camps">Ï∫†ÌîÑ: '+(_company.camps||[]).join(' ¬∑ ')+'</div>'
+      +'</div></div>';
+    btn.disabled=false;
+  } else {
+    el.className='field-inp err';
+    hint.className='field-hint err';
+    hint.textContent='???±Î°ù?òÏ? ?äÏ? ?åÏÇ¨ ÏΩîÎìú?ÖÎãà??;
+    result.style.display='none';
+  }
+}
+
+function goStep2(){
+  if(!_company) return;
+  // Ï∫†ÌîÑ Î≤ÑÌäº ?ùÏÑ±
+  var camps=_company.camps||['Î∂Ä??','Î∂Ä??','Î∂Ä??','?ÄÍµ?','ÏßÑÏ£ºM'];
+  document.getElementById('camp-grid').innerHTML=camps.map(function(c){
+    return '<button type="button" class="camp-btn" onclick="selCamp(this,\''+c+'\')">'+c+'</button>';
+  }).join('');
+  // ?åÏÇ¨ ÎØ∏Îãà Ïπ¥Îìú
+  document.getElementById('company-card-mini').innerHTML=
+    '<div style="display:flex;align-items:center;gap:10px;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:10px 14px;margin-bottom:16px">'
+    +'<span style="font-size:20px">?è¢</span>'
+    +'<div><div style="font-size:13px;font-weight:800">'+esc(_company.name)+'</div>'
+    +'<div style="font-size:10px;color:var(--green);font-weight:700">'+esc(_company.code)+'</div></div>'
+    +'<button onclick="goBack(1)" style="margin-left:auto;background:transparent;border:1px solid var(--border2);border-radius:6px;padding:4px 10px;color:var(--text3);font-size:11px;font-weight:700;cursor:pointer">Î≥ÄÍ≤?/button>'
+    +'</div>';
+  // ?¥Ï†Ñ ?Ä?•Í∞í Î≥µÏõê
+  var savedName=localStorage.getItem('mbti_delivery_driver')||'';
+  var savedPhone=localStorage.getItem('mbti_delivery_phone')||'';
+  var savedCamp=localStorage.getItem('mbti_delivery_camp')||'';
+  if(savedName) document.getElementById('inp-name').value=savedName;
+  if(savedPhone) document.getElementById('inp-phone').value=savedPhone;
+  if(savedCamp){
+    _selCamp=savedCamp;
+    document.getElementById('inp-camp').value=savedCamp;
+    setTimeout(function(){
+      document.querySelectorAll('.camp-btn').forEach(function(b){
+        if(b.textContent===savedCamp) b.classList.add('sel');
+      });
+    },50);
+  }
+  setStep(2);
+  checkStep2();
+}
+
+function selCamp(el,camp){
+  _selCamp=camp;
+  document.getElementById('inp-camp').value=camp;
+  document.querySelectorAll('.camp-btn').forEach(function(b){b.classList.remove('sel');});
+  el.classList.add('sel');
+  checkStep2();
+}
+
+function formatPhone(el){
+  var v=el.value.replace(/\D/g,'');
+  if(v.length<=3) el.value=v;
+  else if(v.length<=7) el.value=v.slice(0,3)+'-'+v.slice(3);
+  else el.value=v.slice(0,3)+'-'+v.slice(3,7)+'-'+v.slice(7,11);
+}
+
+function checkStep2(){
+  var name=document.getElementById('inp-name').value.trim();
+  var phone=document.getElementById('inp-phone').value.replace(/\D/g,'');
+  var camp=_selCamp;
+  document.getElementById('btn-step2').disabled=!(name&&phone.length>=10&&camp);
+}
+
+// ?Ä?Ä ?±Î°ù Ï≤òÎ¶¨ ?Ä?Ä
+async function doRegister(){
+  var btn=document.getElementById('btn-step2');
+  var name=document.getElementById('inp-name').value.trim();
+  var phoneRaw=document.getElementById('inp-phone').value.replace(/\D/g,'');
+  var phone='0'+phoneRaw.replace(/^0/,'');
+  var camp=_selCamp;
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span> ?±Î°ù Ï§?..';
+
+  // localStorage ?Ä??(?§ÌîÑ?ºÏù∏ ?ÄÎπ?
+  localStorage.setItem('mbti_delivery_driver', name);
+  localStorage.setItem('mbti_delivery_camp', camp);
+  localStorage.setItem('mbti_delivery_phone', document.getElementById('inp-phone').value);
+  localStorage.setItem('mbti_delivery_companyCode', _company.code);
+  localStorage.setItem('mbti_delivery_companyName', _company.name);
+
+  // Firebase ?Ä??  if(_db){
+    try{
+      // Í∏∞Ï°¥ Í∞ôÏ? ?∞Î≤à??Í∏∞ÏÇ¨ ?ïÏù∏
+      var existing=await _db.collection('drivers')
+        .where('phone','==',phoneRaw)
+        .where('companyId','==',_company.code).limit(1).get();
+      if(!existing.empty){
+        // Í∏∞Ï°¥ Í∏∞ÏÇ¨ ?ÖÎç∞?¥Ìä∏
+        existing.forEach(function(d){
+          d.ref.update({name:name,camp:camp,is_active:true,updatedAt:new Date().toISOString()});
+        });
+        toast('??Í∏∞Ï°¥ ?ïÎ≥¥ ?ÖÎç∞?¥Ìä∏??);
+      } else {
+        // ?†Í∑ú ?±Î°ù
+        await _db.collection('drivers').add({
+          companyId: _company.code,
+          name: name,
+          phone: phoneRaw,
+          camp: camp,
+          is_active: true,
+          joinedAt: new Date().toISOString(),
+          source: 'self_register'
+        });
+      }
+    }catch(e){ console.warn('drivers write:',e); /* Î°úÏª¨ ?Ä?•Îßå?ºÎ°ú???ôÏûë */ }
+  }
+
+  // ?ÑÎ£å ?îÎ©¥
+  document.getElementById('done-company').textContent=_company.name;
+  document.getElementById('done-name').textContent=name;
+  document.getElementById('done-camp').textContent=camp;
+  document.getElementById('done-phone').textContent=document.getElementById('inp-phone').value;
+  document.getElementById('delivery-url-text').textContent=location.origin+'/delivery';
+  setStep(3);
+}
+
+function goDelivery(){
+  location.href='/delivery';
+}
+function goCompanyRegister(){
+  location.href='/company-register';
+}
+function goBack(step){
+  setStep(step);
+}
+
+function setStep(n){
+  [1,2,3].forEach(function(i){
+    var screen=document.getElementById('screen'+i);
+    var circle=document.getElementById('s'+i);
+    var label=document.getElementById('sl'+i);
+    screen.classList.toggle('active',i===n);
+    if(i<n){
+      circle.className='step-circle done';circle.innerHTML='??;
+      label.className='step-label done';
+    } else if(i===n){
+      circle.className='step-circle active';circle.innerHTML=i;
+      label.className='step-label active';
+    } else {
+      circle.className='step-circle';circle.innerHTML=i;
+      label.className='step-label';
+    }
+    if(i<3){
+      var line=document.getElementById('l'+(i)+(i+1));
+      if(line) line.className='step-line'+(i<n?' done':'');
+    }
+  });
+}
+
+// ?¥Î? ?±Î°ù??Í≤ΩÏö∞ Î∞îÎ°ú Î∞∞ÏÜ°?±ÏúºÎ°?document.addEventListener('DOMContentLoaded',function(){
+  var saved=localStorage.getItem('mbti_delivery_driver');
+  var savedCode=localStorage.getItem('mbti_delivery_companyCode');
+  if(saved && savedCode){
+    // ?¨Îì±Î°??ïÏù∏ ?ÜÏù¥ Î∞îÎ°ú ?¥Îèô (?†ÌÉù)
+    // location.href='/delivery'; // ?êÌïòÎ©?Ï£ºÏÑù ?¥Ï†ú
+  }
+});
+</script>
+</body>
+</html>
+<script>
+// Worker /company-get API ?úÏö© (Firebase ?ÜÏñ¥???åÏÇ¨ ÏΩîÎìú Í≤ÄÏ¶?Í∞Ä??
+var _origCheckCompanyCode = checkCompanyCode;
+checkCompanyCode = async function(code){
+  try{
+    var resp = await fetch('/company-get?code='+encodeURIComponent(code));
+    var data = await resp.json();
+    if(data.ok && data.company){
+      _company = data.company;
+      var el=document.getElementById('inp-code');
+      var hint=document.getElementById('hint-code');
+      var result=document.getElementById('company-result');
+      var btn=document.getElementById('btn-step1');
+      el.className='field-inp valid';
+      hint.className='field-hint ok'; hint.textContent='???åÏÇ¨ ?ïÏù∏??;
+      result.style.display='block';
+      result.innerHTML='<div class="company-card">'
+        +'<div class="company-icon">?è¢</div>'
+        +'<div><div class="company-name">'+(_company.name||code)+'</div>'
+        +'<div class="company-code">'+_company.code+'</div>'
+        +'<div class="company-camps">Ï∫†ÌîÑ: '+(_company.camps||[]).join(' ¬∑ ')+'</div>'
+        +'</div></div>';
+      btn.disabled=false;
+      return;
+    }
+  }catch(e){}
+  // Worker ?§Ìå® ???êÎûò Firebase Î∞©Ïãù?ºÎ°ú ?¥Î∞±
+  _origCheckCompanyCode(code);
+};
+</script>

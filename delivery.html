@@ -1,0 +1,4018 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0f172a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>MBTI 배송앱</title>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
+<!-- jsQR -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+
+<style>
+:root{
+  --bg:#0f172a; --bg2:#1e293b; --bg3:#334155;
+  --blue:#3b82f6; --blue2:#2563eb; --green:#10b981;
+  --red:#ef4444; --red2:#dc2626; --yellow:#f59e0b;
+  --text:#f8fafc; --text2:#cbd5e1; --text3:#64748b;
+  --border:#334155; --r:14px; --r2:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;font-family:-apple-system,'Malgun Gothic',sans-serif}
+body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+
+/* ── 로그인 화면 ── */
+#login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;background:radial-gradient(ellipse at top,#1e3a5f,#0f172a 60%)}
+.login-logo{font-size:48px;margin-bottom:8px}
+.login-title{font-size:22px;font-weight:900;letter-spacing:.04em;margin-bottom:4px}
+.login-sub{font-size:13px;color:var(--text3);margin-bottom:32px}
+.login-card{background:var(--bg2);border-radius:var(--r);padding:24px;width:100%;max-width:360px;border:1px solid var(--border)}
+.login-label{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.1em;margin-bottom:8px}
+.driver-list{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;max-height:240px;overflow-y:auto}
+.driver-btn{padding:14px 16px;background:var(--bg3);border:2px solid transparent;border-radius:var(--r2);color:var(--text);font-size:14px;font-weight:700;cursor:pointer;text-align:left;display:flex;align-items:center;justify-content:space-between;transition:all .15s}
+.driver-btn:hover,.driver-btn.sel{background:#1e3a5f;border-color:var(--blue);color:var(--blue)}
+.driver-btn .camp-tag{font-size:10px;font-weight:600;background:var(--bg);padding:2px 8px;border-radius:99px;color:var(--text3)}
+.login-enter{width:100%;padding:15px;background:var(--blue);border:none;border-radius:var(--r2);color:#fff;font-size:16px;font-weight:800;cursor:pointer;transition:all .15s;letter-spacing:.04em}
+.login-enter:disabled{background:var(--bg3);color:var(--text3)}
+
+/* ── 메인 앱 ── */
+#app-screen{display:none;min-height:100vh;padding-bottom:90px}
+.topbar{background:var(--bg2);padding:14px 16px 12px;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.topbar-row{display:flex;align-items:center;justify-content:space-between}
+.driver-name{font-size:15px;font-weight:800}
+.driver-route{font-size:11px;color:var(--blue);font-weight:700;margin-top:1px;letter-spacing:.05em}
+.topbar-logout{background:transparent;border:1px solid var(--border);border-radius:8px;padding:5px 10px;color:var(--text3);font-size:11px;font-weight:700;cursor:pointer}
+
+/* ── 카운터 히어로 ── */
+.hero{padding:20px 16px;background:linear-gradient(135deg,#1e3a5f 0%,#0f172a 100%);border-bottom:1px solid var(--border)}
+.hero-counts{display:grid;grid-template-columns:1fr 1px 1fr;gap:0;background:var(--bg2);border-radius:var(--r);overflow:hidden;border:1px solid var(--border);margin-bottom:14px}
+.count-sep{background:var(--border)}
+.count-box{padding:16px;text-align:center}
+.count-label{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.1em;margin-bottom:4px}
+.count-num{font-size:44px;font-weight:900;line-height:1;letter-spacing:-1px}
+.count-num.scan{color:var(--blue)}
+.count-num.expect{color:var(--text2)}
+.count-sub{font-size:10px;color:var(--text3);margin-top:2px}
+.prog-wrap{background:var(--bg3);border-radius:99px;height:6px;overflow:hidden}
+.prog-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--blue),var(--green));transition:width .4s ease}
+.prog-label{display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-top:6px}
+
+/* ── 카드 ── */
+.card{background:var(--bg2);border-radius:var(--r);padding:16px;margin:10px 12px;border:1px solid var(--border)}
+.card-title{font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.08em;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+
+/* ── 스캔 버튼 ── */
+.scan-big{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;width:100%;padding:28px;background:linear-gradient(135deg,#7c3aed,#a855f7);border:none;border-radius:var(--r);color:#fff;font-size:20px;font-weight:900;cursor:pointer;letter-spacing:.04em;position:relative;overflow:hidden;box-shadow:0 4px 20px rgba(124,58,237,.4)}
+.scan-big:active{transform:scale(.97)}
+.scan-big::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,.1);opacity:0;transition:opacity .2s}
+.scan-big:active::after{opacity:1}
+.scan-big-sub{font-size:12px;font-weight:600;opacity:.8;letter-spacing:.04em}
+
+/* ── 상태 배지 ── */
+.status-badge{border-radius:10px;padding:12px 14px;font-size:13px;font-weight:700;text-align:center;min-height:44px;display:flex;align-items:center;justify-content:center;gap:8px;margin:0 12px 10px}
+.s-idle{background:var(--bg3);color:var(--text3)}
+.s-scan{background:#1e3a5f;color:var(--blue)}
+.s-ok{background:#064e3b;color:var(--green)}
+.s-err{background:#450a0a;color:#fca5a5}
+.s-dup{background:#451a03;color:var(--yellow)}
+
+/* ── 노선별 현황 ── */
+.route-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+.route-row:last-child{border-bottom:none}
+.route-name{font-size:13px;font-weight:700}
+.route-cnt{font-size:20px;font-weight:900;color:var(--blue)}
+
+/* ── 하단 고정 ── */
+.bottom-bar{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);padding:12px 16px;display:flex;gap:8px;max-width:520px;margin:0 auto}
+.btn-sm{flex:1;padding:11px;border-radius:var(--r2);font-size:12px;font-weight:700;cursor:pointer;border:none;display:flex;align-items:center;justify-content:center;gap:5px}
+.btn-outline{background:transparent;border:1.5px solid var(--border);color:var(--text2)}
+.btn-red{background:var(--red2);color:#fff}
+
+/* ── 토스트 ── */
+#toast{position:fixed;bottom:110px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg2);color:var(--text);padding:10px 20px;border-radius:99px;font-size:13px;font-weight:700;border:1px solid var(--border);opacity:0;transition:all .3s;pointer-events:none;z-index:9999;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.4)}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── 스피너 ── */
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{width:16px;height:16px;border:2.5px solid rgba(59,130,246,.3);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;flex-shrink:0}
+
+/* ── 팝업 애니 ── */
+@keyframes notiPop{0%{transform:scale(.8);opacity:0}60%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
+
+/* ── 공유 카드 ── */
+.share-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--r2);padding:12px;font-size:12px;color:var(--text2);white-space:pre-wrap;word-break:break-all;margin-top:8px}
+
+/* ── 모달 (긴급배송 기존 코드용) ── */
+:root{
+  --red:#ef4444; --teal:#10b981;
+  --bg:var(--bg); --bg3:var(--bg3); --border:var(--border); --text2:var(--text2); --text3:var(--text3);
+}
+</style>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<!-- ══════════════ 로그인 ══════════════ -->
+<div id="login-screen">
+  <div class="login-logo">🚛</div>
+  <div class="login-title">MBTI 배송앱</div>
+  <div class="login-sub">엠비티아이(유) 기사 전용</div>
+  <div class="login-card">
+    <div class="login-label">기사 선택</div>
+    <div class="driver-list" id="driver-list">
+      <div style="color:var(--text3);font-size:13px;padding:8px;text-align:center">
+        <span class="spin"></span> 불러오는 중...
+      </div>
+    </div>
+    <button class="login-enter" id="login-btn" disabled onclick="doLogin()">
+      ▶ 배송 시작
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════ 메인 앱 ══════════════ -->
+<div id="app-screen">
+
+  <!-- 상단바 -->
+  <div class="topbar">
+    <div class="topbar-row">
+      <div>
+        <div class="driver-name" id="tb-name">—</div>
+        <div class="driver-route" id="tb-route">노선 미배정</div>
+      </div>
+      <button class="topbar-logout" onclick="doLogout()">로그아웃</button>
+    </div>
+  </div>
+
+  <!-- 카운터 히어로 -->
+  <div class="hero">
+    <div class="hero-counts">
+      <div class="count-box">
+        <div class="count-label">✅ 완료</div>
+        <div class="count-num scan" id="cnt-done">0</div>
+        <div class="count-sub">건</div>
+      </div>
+      <div class="count-sep"></div>
+      <div class="count-box">
+        <div class="count-label">📦 예상</div>
+        <div class="count-num expect" id="cnt-expect">—</div>
+        <div class="count-sub">건</div>
+      </div>
+    </div>
+    <div class="prog-wrap">
+      <div class="prog-fill" id="prog-fill" style="width:0%"></div>
+    </div>
+    <div class="prog-label">
+      <span id="prog-pct">0%</span>
+      <span id="prog-remain">— 건 남음</span>
+    </div>
+  </div>
+
+  <!-- 스캔 상태 -->
+  <div class="status-badge s-idle" id="scan-status">📷 송장을 촬영하세요</div>
+
+  <!-- 메인 스캔 버튼 -->
+  <div style="padding:0 12px 10px">
+    <label style="display:block">
+      <div class="scan-big" onclick="document.getElementById('scan-input').click()">
+        <span style="font-size:36px">📸</span>
+        <span>촬영 → 자동 스캔</span>
+        <span class="scan-big-sub">QR + OCR 자동 인식 · 주소 · GPS 자동저장</span>
+      </div>
+      <input type="file" id="scan-input" accept="image/*" capture="environment" style="display:none" onchange="emerUnifiedScan(this)">
+    </label>
+
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn-sm btn-outline" onclick="emerStartScan()">🎥 라이브 스캔</button>
+      <button class="btn-sm btn-outline" onclick="showManualEntry()">✏️ 직접입력</button>
+    </div>
+  </div>
+
+  <!-- 예상 건수 카드 (캠프 수령 데이터) -->
+  <div class="card" id="route-info-card" style="display:none">
+    <div class="card-title">📊 내 노선 현황</div>
+    <div id="route-info-body">—</div>
+    <button onclick="loadRouteInfo()" style="width:100%;margin-top:12px;padding:9px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--text3);font-size:12px;font-weight:700;cursor:pointer">🔄 새로고침</button>
+  </div>
+
+  <!-- 오늘 배송 기록 -->
+  <div class="card">
+    <div class="card-title">📋 오늘 배송기록 <span id="today-cnt-badge" style="background:var(--blue);color:#fff;padding:1px 8px;border-radius:99px;font-size:10px;margin-left:auto">0건</span></div>
+    <div id="today-list">
+      <div style="color:var(--text3);font-size:12px;padding:8px 0;text-align:center">아직 저장된 배송이 없습니다</div>
+    </div>
+  </div>
+
+  <!-- 공유 버튼 카드 -->
+  <div class="card">
+    <div class="card-title">📤 공유</div>
+    <button class="btn-sm" style="width:100%;padding:12px;background:var(--green);color:#fff;border:none;border-radius:var(--r2);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px" onclick="shareReport()">
+      💬 배송 현황 공유
+    </button>
+  </div>
+
+</div><!-- /app-screen -->
+
+<!-- 하단 바 -->
+<div class="bottom-bar" id="bottom-bar" style="display:none">
+  <button class="btn-sm btn-outline" onclick="loadRouteInfo()">🔄 건수 갱신</button>
+  <button class="btn-sm btn-red" onclick="if(confirm('오늘 기록을 초기화하시겠습니까?'))resetDay()">🗑 초기화</button>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  MBTI 배송앱 — 앱 코어
+//  Firebase: mbti-logistics (v9 앱과 동일 프로젝트)
+// ═══════════════════════════════════════════════
+
+// ── Firebase 초기화 (DOMContentLoaded 이후 실행) ──
+var _fk=['AIzaSyDQmEFf','LczgCuPQidu','nbBXqaHWgs3','9VMg0'].join('');
+var _fp='mbti-logistics';
+var _fa='1:40761160761:web:20545b610f03f534e949e8';
+var FB, _db, _st;
+var _fbReady=false, _fbRetry=0;
+
+function _initFirebase(){
+  if(typeof firebase==='undefined'){
+    _fbRetry++;
+    if(_fbRetry<20){ setTimeout(_initFirebase,300); return; }
+    console.warn('[FB] SDK 로드 실패 — CDN 차단 또는 네트워크 오류');
+    _showFbFallback();
+    return;
+  }
+  try{
+    // 이미 초기화된 앱 재사용 (중복 오류 방지)
+    try{ FB=firebase.app('mbti-delivery'); }
+    catch(e){
+      FB=firebase.initializeApp({
+        apiKey:_fk, authDomain:_fp+'.firebaseapp.com',
+        projectId:_fp, storageBucket:_fp+'.firebasestorage.app',
+        messagingSenderId:'40761160761', appId:_fa
+      },'mbti-delivery');
+    }
+    _db=FB.firestore();
+    _st=FB.storage();
+    _fbReady=true;
+    console.log('[FB] 초기화 완료');
+  }catch(e){
+    console.warn('[FB] 초기화 오류:', e.message);
+    _showFbFallback();
+  }
+}
+
+// 로그인 UI — Firebase 없어도 항상 동작 (캠프 버튼 + 이름 입력)
+function _showFbFallback(){
+  var el=document.getElementById('driver-list');
+  if(!el) return;
+  var CAMPS=['부산1','부산2','부산3','대구2','진주M'];
+  var savedCamp=localStorage.getItem('mbti_delivery_camp')||'';
+  var savedName=localStorage.getItem('mbti_delivery_driver')||'';
+  var campBtns=CAMPS.map(function(c){
+    var isSel=c===savedCamp;
+    return '<button type="button" data-camp="'+c+'" onclick="_selCamp_btn(this,''+c+')"'
+      +' style="flex:1;padding:9px 2px;background:'+(isSel?'#1e3a5f':'var(--bg3)')+';'
+      +'border:1.5px solid '+(isSel?'var(--blue)':'var(--border2)')+';'
+      +'border-radius:8px;color:'+(isSel?'var(--blue)':'var(--text3)')+';'
+      +'font-size:12px;font-weight:700;cursor:pointer;min-width:0;transition:all .15s">'+c+'</button>';
+  }).join('');
+  el.innerHTML=
+    '<div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.1em;margin-bottom:6px">📍 캠프 선택</div>'
+    +'<div id="camp-btn-row" style="display:flex;gap:4px;margin-bottom:14px">'+campBtns+'</div>'
+    +'<div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.1em;margin-bottom:6px">👤 기사 이름</div>'
+    +'<input id="manual-name-inp" type="text" placeholder="이름 입력 (예: 홍길동)" value="'+savedName+'"'
+    +' style="width:100%;padding:13px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;'
+    +'color:var(--text);font-size:15px;font-weight:700;outline:none;letter-spacing:.02em"'
+    +' oninput="document.getElementById('login-btn').disabled=!this.value.trim()">';
+  _selDriver=savedName; _selCamp=savedCamp;
+  var btn=document.getElementById('login-btn');
+  if(btn){
+    btn.disabled=!savedName.trim();
+    btn.onclick=function(){
+      var n=(document.getElementById('manual-name-inp')||{}).value.trim();
+      if(!n){toast('❌ 이름을 입력해 주세요');return;}
+      if(!_selCamp){toast('❌ 캠프를 선택해 주세요');return;}
+      _selDriver=n;
+      doLogin();
+    };
+  }
+}
+function _selCamp_btn(el,camp){
+  _selCamp=camp;
+  (el.closest('#camp-btn-row')||document).querySelectorAll('button[data-camp]').forEach(function(b){
+    var on=b.dataset.camp===camp;
+    b.style.background=on?'#1e3a5f':'var(--bg3)';
+    b.style.borderColor=on?'var(--blue)':'var(--border2)';
+    b.style.color=on?'var(--blue)':'var(--text3)';
+  });
+}
+
+// ── 앱 상태 ──
+window._APP = {
+  driver: localStorage.getItem('mbti_delivery_driver')||'',
+  camp:   localStorage.getItem('mbti_delivery_camp')||'',
+  route:  localStorage.getItem('mbti_delivery_route')||'',
+  doneCount: 0,
+  expectCount: 0
+};
+
+// ── 유틸 ──
+function today(){ return new Date().toISOString().slice(0,10); }
+function toast(m){
+  var t=document.getElementById('toast');
+  if(!t)return;
+  t.textContent=m;t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},3500);
+}
+function escH(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── 기사 목록 로드 — 즉시 수동입력 UI, Firebase 연결 시 목록으로 업그레이드 ──
+async function loadDriverList(){
+  // 항상 즉시 수동입력 UI 표시 (Firebase 기다리지 않음)
+  _showFbFallback();
+  // Firebase 연결될 때까지 최대 3초 대기 후 목록으로 교체
+  var waited=0;
+  while(!_fbReady && waited<6){ await new Promise(function(r){setTimeout(r,500);}); waited++; }
+  if(!_db) return; // Firebase 없으면 수동입력 그대로 유지
+  try{
+    var snap = await _db.collection('drivers')
+      .where('is_active','!=',false).orderBy('is_active').orderBy('camp').orderBy('name').get();
+    var drivers = [];
+    snap.forEach(function(d){ drivers.push(Object.assign({id:d.id},d.data())); });
+    if(!drivers.length) throw new Error('기사 없음');
+    el.innerHTML = drivers.map(function(d){
+      var camp = d.camp||'미배정';
+      return '<button class="driver-btn" onclick="selectDriver(\''+escH(d.name)+'\',\''+escH(camp)+'\')">'+
+        '<span>'+escH(d.name)+'</span>'+
+        '<span class="camp-tag">'+escH(camp)+'</span>'+
+      '</button>';
+    }).join('');
+  }catch(e){
+    // Firestore 못 읽으면 v9 localStorage 폴백
+    var cached = [];
+    try{ cached = JSON.parse(localStorage.getItem('mbti_drivers_cache')||'[]'); }catch(e2){}
+    if(cached.length){
+      el.innerHTML = cached.filter(function(d){return d.is_active!==false;}).map(function(d){
+        return '<button class="driver-btn" onclick="selectDriver(\''+escH(d.name)+'\',\''+escH(d.camp||'')+'\')">'+
+          '<span>'+escH(d.name)+'</span>'+
+          '<span class="camp-tag">'+escH(d.camp||'?')+'</span>'+
+        '</button>';
+      }).join('');
+    }
+  }
+}
+
+var _selDriver='', _selCamp='';
+function selectDriver(name, camp){
+  _selDriver=name; _selCamp=camp;
+  document.querySelectorAll('.driver-btn').forEach(function(b){b.classList.remove('sel');});
+  event.currentTarget.classList.add('sel');
+  document.getElementById('login-btn').disabled=false;
+}
+
+function doLogin(){
+  if(!_selDriver) return;
+  window._APP.driver = _selDriver;
+  window._APP.camp   = _selCamp;
+  localStorage.setItem('mbti_delivery_driver', _selDriver);
+  localStorage.setItem('mbti_delivery_camp',   _selCamp);
+  // 오늘 근무표에서 노선 조회
+  loadTodayRoute();
+  showApp();
+}
+
+function doLogout(){
+  if(!confirm('로그아웃하시겠습니까?')) return;
+  window._APP.driver=''; window._APP.camp=''; window._APP.route='';
+  localStorage.removeItem('mbti_delivery_driver');
+  localStorage.removeItem('mbti_delivery_camp');
+  document.getElementById('app-screen').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+}
+
+function showApp(){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app-screen').style.display='block';
+  document.getElementById('bottom-bar').style.display='flex';
+  document.getElementById('tb-name').textContent = window._APP.driver;
+  refreshCounters();
+  loadRouteInfo();
+  loadTodayList();
+  // 기존 긴급배송 스캔 카운트 초기화
+  window._emerScanCount = window._emerScanCount||0;
+  window._emerSaveCount = window._emerSaveCount||0;
+}
+
+// ── 오늘 노선 조회 (근무표 또는 drivers.todayDispatch) ──
+async function loadTodayRoute(){
+  if(!_db) return;
+  var route = '';
+  try{
+    // 1순위: drivers.todayDispatch
+    var dSnap = await _db.collection('drivers').where('name','==',window._APP.driver).limit(1).get();
+    dSnap.forEach(function(d){
+      var data = d.data();
+      if(data.todayDispatch && data.todayDispatch.date===today()){
+        route = data.todayDispatch.routeNo||'';
+      }
+    });
+    // 2순위: schedules 컬렉션
+    if(!route){
+      var sSnap = await _db.collection('schedules')
+        .where('driver','==',window._APP.driver)
+        .where('date','==',today()).limit(1).get();
+      sSnap.forEach(function(d){ route = d.data().route||''; });
+    }
+  }catch(e){}
+  if(!route) route = localStorage.getItem('drv_lastRoute_'+window._APP.driver)||'';
+  window._APP.route = route;
+  localStorage.setItem('mbti_delivery_route', route);
+  document.getElementById('tb-route').textContent = route ? '📍 '+route : '노선 미배정';
+  loadRouteInfo();
+}
+
+// ── scan_sessions에서 예상 건수 로드 ──
+async function loadRouteInfo(){
+  var camp = window._APP.camp;
+  if(!camp){ document.getElementById('route-info-card').style.display='none'; return; }
+  var sid = today().replace(/-/g,'')+'_'+camp.replace(/\s/g,'');
+  // _worker.js /scan-get 사용
+  try{
+    var resp = await fetch('/scan-get/'+encodeURIComponent(today()+'_'+camp.replace(/\s/g,'')));
+    var data = await resp.json();
+    if(!data.ok || data.empty){
+      document.getElementById('route-info-card').style.display='block';
+      document.getElementById('route-info-body').innerHTML=
+        '<div style="color:var(--text3);font-size:12px">오늘 적재 정보 없음 — 물류센터 공유 후 확인</div>';
+      return;
+    }
+    var routes = data.receivedRoutes||data.loadedRoutes||{};
+    var myRoute = window._APP.route;
+    var myCount = myRoute && routes[myRoute] ? routes[myRoute].count : null;
+    var totalRecv = data.receivedTotal||0;
+
+    window._APP.expectCount = myCount || totalRecv;
+    refreshCounters();
+
+    var html = '';
+    if(myRoute && myCount){
+      html += '<div style="background:#1e3a5f;border-radius:10px;padding:12px;margin-bottom:10px">';
+      html += '<div style="font-size:11px;color:var(--blue);font-weight:700;margin-bottom:2px">내 노선 ('+escH(myRoute)+')</div>';
+      html += '<div style="font-size:32px;font-weight:900;color:#fff">'+myCount+'<span style="font-size:14px;color:var(--text2)">건</span></div>';
+      html += '</div>';
+    }
+    if(Object.keys(routes).length){
+      html += '<div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:700">캠프 전체 노선</div>';
+      Object.keys(routes).sort().forEach(function(k){
+        var isMe = k===myRoute;
+        html += '<div class="route-row" style="'+(isMe?'color:var(--blue)':'')+'">';
+        html += '<div class="route-name">'+(isMe?'★ ':'')+escH(k)+'</div>';
+        html += '<div class="route-cnt">'+routes[k].count+'건</div>';
+        html += '</div>';
+      });
+      if(data.receivedAt){
+        html += '<div style="font-size:10px;color:var(--text3);margin-top:8px;text-align:right">수령: '+new Date(data.receivedAt).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})+'</div>';
+      }
+    }
+    document.getElementById('route-info-card').style.display='block';
+    document.getElementById('route-info-body').innerHTML = html||'<div style="color:var(--text3);font-size:12px">데이터 없음</div>';
+  }catch(e){
+    document.getElementById('route-info-card').style.display='block';
+    document.getElementById('route-info-body').innerHTML='<div style="color:var(--text3);font-size:12px">조회 실패: '+e.message+'</div>';
+  }
+}
+
+// ── 카운터 갱신 ──
+function refreshCounters(){
+  var done = window._APP.doneCount||0;
+  var exp  = window._APP.expectCount||0;
+  document.getElementById('cnt-done').textContent = done;
+  document.getElementById('cnt-expect').textContent = exp||'—';
+  var pct = exp>0 ? Math.min(100,Math.round(done/exp*100)) : 0;
+  document.getElementById('prog-fill').style.width = pct+'%';
+  document.getElementById('prog-pct').textContent = pct+'%';
+  document.getElementById('prog-remain').textContent = exp>0 ? (exp-done)+'건 남음' : '';
+}
+
+// ── 오늘 배송기록 로드 ──
+async function loadTodayList(){
+  var el = document.getElementById('today-list');
+  var badge = document.getElementById('today-cnt-badge');
+  if(!_db){
+    el.innerHTML='<div style="color:var(--text3);font-size:12px;padding:8px 0;text-align:center">Firebase 미연결</div>';
+    return;
+  }
+  try{
+    var snap = await _db.collection('emergency_deliveries')
+      .where('driver','==',window._APP.driver)
+      .where('date','==',today())
+      .orderBy('savedAt','desc').limit(30).get();
+    var items=[];
+    snap.forEach(function(d){ items.push(Object.assign({_id:d.id},d.data())); });
+    window._APP.doneCount = items.length;
+    badge.textContent = items.length+'건';
+    refreshCounters();
+    if(!items.length){
+      el.innerHTML='<div style="color:var(--text3);font-size:12px;padding:8px 0;text-align:center">아직 저장된 배송이 없습니다</div>';
+      return;
+    }
+    el.innerHTML = items.map(function(r){
+      var tn=(r.trackings&&r.trackings.length?r.trackings[0]:r.tracking)||'운송장 미상';
+      var addr=(r.addr||'').slice(0,35);
+      var t=(r.time||r.savedAt||'').slice(0,16);
+      var isDone=r.status==='완료';
+      return '<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">'+
+        '<div style="flex-shrink:0;width:28px;height:28px;border-radius:99px;background:'+(isDone?'var(--green)':'var(--blue)')+';display:flex;align-items:center;justify-content:center;font-size:12px">'+(isDone?'✓':'📦')+'</div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:12px;font-weight:700;font-family:monospace;color:var(--text)">'+escH(tn)+'</div>'+
+          '<div style="font-size:11px;color:var(--text3);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escH(addr)+'</div>'+
+        '</div>'+
+        '<div style="font-size:10px;color:var(--text3);flex-shrink:0">'+escH(t.slice(-5))+'</div>'+
+      '</div>';
+    }).join('');
+  }catch(e){
+    el.innerHTML='<div style="color:var(--text3);font-size:12px">로드 실패: '+e.message+'</div>';
+  }
+}
+
+// ── 공유 ──
+function shareReport(){
+  var done=window._APP.doneCount, exp=window._APP.expectCount;
+  var now=new Date().toLocaleString('ko-KR');
+  var lines=[
+    '[MBTI 배송 현황]',
+    '기사: '+window._APP.driver,
+    '캠프: '+window._APP.camp,
+    (window._APP.route?'노선: '+window._APP.route:''),
+    '완료: '+done+'건'+(exp?' / 예상 '+exp+'건':''),
+    '시각: '+now
+  ].filter(Boolean).join('\n');
+  if(navigator.share){navigator.share({title:'MBTI 배송 현황',text:lines}).catch(function(){});}
+  else if(navigator.clipboard){navigator.clipboard.writeText(lines).then(function(){toast('📋 복사됨! 카톡에 붙여넣으세요');});}
+}
+
+// ── 수동 입력 ──
+function showManualEntry(){
+  var tn=prompt('운송장 번호 입력:');
+  if(!tn||!tn.trim()) return;
+  window._emerTrackings=window._emerTrackings||[];
+  window._emerTrackings.push(tn.trim().replace(/[\.\-\s]/g,''));
+  emerRefreshTrackingList();
+  setStatus('s-ok','✅ '+tn.trim()+' 입력됨 — 저장 버튼 탭하세요');
+}
+
+// ── 상태 표시 ──
+function setStatus(cls,msg){
+  var el=document.getElementById('scan-status');
+  el.className='status-badge '+cls;
+  el.innerHTML=msg;
+}
+
+// ── 리셋 ──
+function resetDay(){
+  window._APP.doneCount=0;
+  window._emerScanCount=0;
+  window._emerSaveCount=0;
+  window._emerTrackings=[];
+  window._emerPhotos=[];
+  window._emerGps=null;
+  refreshCounters();
+  loadTodayList();
+  setStatus('s-idle','📷 송장을 촬영하세요');
+}
+
+// ── 저장 후 UI 갱신 (emerSave에서 콜백) ──
+window._onEmerSaved = function(record){
+  window._APP.doneCount++;
+  refreshCounters();
+  loadTodayList();
+  setStatus('s-ok','✅ 저장완료! 다음 송장을 촬영하세요');
+};
+
+// ── 페이지 로드 ──
+document.addEventListener('DOMContentLoaded',function(){
+  _initFirebase(); // Firebase SDK 확인 후 초기화
+  loadDriverList();
+  // 이미 로그인된 경우
+  if(window._APP.driver){
+    _selDriver=window._APP.driver;
+    _selCamp=window._APP.camp;
+    showApp();
+  }
+  // 긴급배송 전역 초기화
+  window._emerScanCount=0;
+  window._emerSaveCount=0;
+  window._emerTrackings=[];
+  window._emerPhotos=[];
+  window._emerGps=null;
+  window._emerScanLock=false;
+  window._emerSaving=false;
+  window._geoCacheMem={};
+});
+
+</script>
+<script>
+// ═══ 긴급배송 핵심 함수 (v9 포팅) ═══
+
+function _emerCloseWithCheck(){
+  var mo = document.getElementById('emer-del-mo');
+  if(!mo) return;
+  // 자동 저장 타이머 진행 중이면 즉시 취소
+  if(window._emerAutoSaveTimer){
+    clearTimeout(window._emerAutoSaveTimer);
+    window._emerAutoSaveTimer = null;
+  }
+  var unsavedCnt = (window._emerTrackings||[]).length;
+  if(unsavedCnt > 0 && !window._emerSaving){
+    if(!confirm('⚠️ 저장 안 된 운송장 '+unsavedCnt+'건이 있습니다.\n\n저장하지 않고 닫으시겠습니까?\n(취소 → 모달 유지, 확인 → 닫기)')){
+      return; // 취소 → 모달 유지
+    }
+  }
+  mo.remove();
+}
+
+
+
+// ★ v9.59: 주소 정제 — OCR/파싱 아티팩트 제거
+
+// ★ 지오코딩 결과 배너 (폰에서 확인용 — 30초 유지)
+function _geoResultBanner(msg){
+  var existing = document.getElementById('geo-result-banner');
+  if(existing) existing.remove();
+  var el = document.createElement('div');
+  el.id = 'geo-result-banner';
+  el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#1e293b;color:#fff;font-size:13px;font-weight:700;padding:10px 14px;text-align:center;word-break:break-all;box-shadow:0 2px 8px rgba(0,0,0,.4)';
+  el.textContent = msg;
+  el.onclick = function(){ el.remove(); };
+  document.body.appendChild(el);
+  setTimeout(function(){ if(el.parentNode) el.remove(); }, 30000);
+}
+function _cleanAddr(addr){
+  if(!addr || typeof addr !== 'string') return '';
+  return addr
+    .replace(/["']\s*\(string\)/g, '')   // " (string) 제거
+    .replace(/^["']+|["']+$/g, '')           // 앞뒤 따옴표 제거
+    .replace(/\\n|\\t|\\r/g, ' ')       // 이스케이프 개행 제거
+    .replace(/\s{2,}/g, ' ')                 // 연속 공백 단일화
+    .trim();
+}
+function _addBusanPrefix(addr){
+  if(!addr) return addr;
+  if(/^(서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주)/.test(addr.trim())) return addr;
+  if(/구|동|로|길|번길/.test(addr)) return '부산 '+addr.trim();
+  return addr;
+}
+
+// ★ v9.60: 동별 GPS 캐시 (localStorage 90일 + 메모리)
+window._geoCacheMem = window._geoCacheMem || {};
+// ★ v9.63: 부팅 시 1회 자동 캐시 무효화 (v9.62 이전 잘못된 캐시 제거)
+(function(){
+  try{
+    var ver = localStorage.getItem('mbti_geo_cache_ver');
+    if(ver !== 'v968'){
+      var removed = 0;
+      var keys = Object.keys(localStorage);
+      for(var i=0;i<keys.length;i++){
+        if(keys[i].indexOf('mbti_geo_cache_') === 0 && keys[i] !== 'mbti_geo_cache_ver'){
+          localStorage.removeItem(keys[i]); removed++;
+        }
+      }
+      localStorage.setItem('mbti_geo_cache_ver', 'v968');
+      if(removed > 0) console.log('[v9.68 CACHE_FLUSH]', removed, '개 항목 자동 무효화 (v9.62 이전 캐시)');
+    }
+  }catch(e){ console.debug('cache flush skip:', e); }
+})();
+function _geoCacheKey(address){
+  if(!address) return '';
+  var s = String(address).replace(/\s+/g,'').toLowerCase();
+  // 아파트명+동 추출 (캐시 키 최소화)
+  var aptM = s.match(/([가-힣a-z\d]+(?:임대아파트|공공아파트|영구임대|아파트|오피스텔|빌라|맨션|주공|lh|sh))/);
+  var dongM = s.match(/([a-z가-힣]?\d+)동(?![아네은])/);
+  if(aptM && dongM) return aptM[1]+'_'+dongM[1]+'동';
+  // 도로명+번지만 있으면 그것으로
+  var roadM = s.match(/([가-힣a-z]+(?:로|길|번길)\d+(?:-\d+)?)/);
+  if(roadM) return roadM[1];
+  return s.slice(0, 30);
+}
+function _geoCacheGet(address){
+  var k = _geoCacheKey(address);
+  if(!k) return null;
+  if(window._geoCacheMem[k]) return window._geoCacheMem[k];
+  try{
+    var raw = localStorage.getItem('mbti_geo_cache_'+k);
+    if(!raw) return null;
+    var obj = JSON.parse(raw);
+    if(!obj || !obj.lat || !obj.lng) return null;
+    // 90일 만료
+    if(obj.ts && (Date.now() - obj.ts) > 90*24*3600*1000){
+      localStorage.removeItem('mbti_geo_cache_'+k); return null;
+    }
+    window._geoCacheMem[k] = obj;
+    return obj;
+  }catch(e){ return null; }
+}
+function _geoCacheSet(address, gps){
+  if(!address || !gps || !gps.lat || !gps.lng) return;
+  var k = _geoCacheKey(address);
+  if(!k) return;
+  var obj = {lat:gps.lat, lng:gps.lng, src:gps.src||'cached', ts:Date.now()};
+  window._geoCacheMem[k] = obj;
+  try{ localStorage.setItem('mbti_geo_cache_'+k, JSON.stringify(obj)); }catch(e){}
+}
+// 저장된 emergency_deliveries에서 같은 동 GPS 찾기 (즉시 메모리, Firestore 조회 안 함)
+function _geoFromStoredDeliveries(address){
+  if(!address) return null;
+  var k = _geoCacheKey(address);
+  if(!k) return null;
+  // window._emerStoredList 등에서 검색 (이미 메모리에 있는 경우만)
+  var lists = [window._emerStoredList, window._driverDeliveries, window._allDeliveries];
+  for(var i=0;i<lists.length;i++){
+    var list = lists[i];
+    if(!list || !list.length) continue;
+    for(var j=0;j<list.length;j++){
+      var r = list[j];
+      if(!r || !r.gps || !r.gps.lat) continue;
+      if(_geoCacheKey(r.addr||r.address||'') === k){
+        return {lat:r.gps.lat, lng:r.gps.lng, src:'stored_reuse'};
+      }
+    }
+  }
+  return null;
+}
+
+// ★ v9.68a: Claude Vision Haiku 검증 — Google OCR 동번호 오인식 보정
+// 1순위: Firestore의 anthropicApiKey로 직접 호출 (이미 등록된 키 활용)
+// 2순위: /claude-ocr 프록시 폴백 (Cloudflare env.CLAUDE_API_KEY)
+async function _emerVerifyWithClaude(file, googleOcrAddr){
+  if(!file) return null;
+  try{
+    // 사진을 base64로
+    var b64 = await new Promise(function(res, rej){
+      var fr = new FileReader();
+      fr.onload = function(){ res((fr.result||'').split(',')[1] || ''); };
+      fr.onerror = rej;
+      fr.readAsDataURL(file);
+    });
+    if(!b64) return null;
+
+    var prompt = '이 송장 사진에서 정확한 한국어 주소를 추출해 주세요.\n\n'
+      + 'Google OCR 결과 (오인식 가능): "' + (googleOcrAddr||'') + '"\n\n'
+      + '특히 동번호(예: 408동), 호수(예: 505호), 도로명+번지를 사진에서 직접 읽어 정확히 추출하세요.\n'
+      + '숫자 1자리 오인식 가능성 주의 (예: 408 vs 403, 408 vs 480).\n\n'
+      + '응답 형식 (JSON만, 다른 설명 없이):\n'
+      + '{"address":"정확한 도로명 주소","apt":"단지명","dong":"408동","ho":"505호","tracking":"운송장번호 12-13자리","recipient":"수령인"}\n'
+      + '읽을 수 없는 필드는 빈 문자열 "".';
+
+    var requestBody = {
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 500,
+      messages: [{
+        role:'user',
+        content:[
+          {type:'image', source:{type:'base64', media_type:'image/jpeg', data:b64}},
+          {type:'text', text: prompt}
+        ]
+      }]
+    };
+
+    // ─── 1순위: Firestore의 anthropicApiKey로 직접 호출 ───
+    var apiKey = '';
+    if(FB && _db){
+      try{
+        var doc = await _fsGetCached('settings/claude_config', 20);
+        if(doc && doc.anthropicApiKey) apiKey = doc.anthropicApiKey.trim();
+      }catch(e){}
+    }
+    if(!apiKey) apiKey = (localStorage.getItem('mbti_anthropic_api_key')||'').trim();
+
+    var resp = null, data = null;
+    if(apiKey && apiKey.indexOf('sk-ant-') === 0){
+      try{
+        console.log('[ClaudeVerify v9.68a] Firestore 키로 직접 호출');
+        resp = await fetch('https://api.anthropic.com/v1/messages', {
+          method:'POST',
+          headers:{
+            'Content-Type':'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version':'2023-06-01',
+            'anthropic-dangerous-direct-browser-access':'true'
+          },
+          body: JSON.stringify(requestBody)
+        });
+        if(resp.ok) data = await resp.json();
+        else console.warn('[ClaudeVerify direct] HTTP', resp.status);
+      }catch(e1){ console.warn('[ClaudeVerify direct] error:', e1.message); }
+    }
+
+    // ─── 2순위: /claude-ocr 프록시 폴백 ───
+    if(!data){
+      try{
+        console.log('[ClaudeVerify v9.68a] /claude-ocr 프록시 폴백');
+        resp = await fetch('/claude-ocr', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(requestBody)
+        });
+        if(resp.ok) data = await resp.json();
+        else console.warn('[ClaudeVerify proxy] HTTP', resp.status);
+      }catch(e2){ console.warn('[ClaudeVerify proxy] error:', e2.message); }
+    }
+
+    if(!data){
+      console.warn('[ClaudeVerify] 모든 경로 실패 — Claude 키 확인 필요');
+      _geoResultBanner('⚠️ Claude 키 미설정 — 마이페이지에서 등록하세요');
+      return null;
+    }
+    if(data.error){
+      console.warn('[ClaudeVerify] API error:', data.error.message);
+      return null;
+    }
+    var text = (data.content||[]).map(function(x){return x.text||'';}).join('').trim();
+    text = text.replace(/```json\s*/g,'').replace(/```\s*/g,'').trim();
+    var parsed;
+    try{ parsed = JSON.parse(text); }
+    catch(e){ console.warn('[ClaudeVerify] JSON parse fail:', text.slice(0,200)); return null; }
+    console.log('[ClaudeVerify v9.68a]', parsed);
+    return parsed;
+  }catch(e){
+    console.warn('[ClaudeVerify] error:', e.message);
+    return null;
+  }
+}
+
+async function _kakaoGeocode(address){
+  address = _cleanAddr(address);
+  if(!address) return null;
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // STEP 0a: 캐시 조회 (localStorage 90일)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  var _cached = _geoCacheGet(address);
+  if(_cached){
+    _geoResultBanner('📍 캐시 | '+_cached.lat.toFixed(5)+', '+_cached.lng.toFixed(5));
+    console.log('[GEO_CACHE_HIT]', _geoCacheKey(address), _cached);
+    return {lat:_cached.lat, lng:_cached.lng, src:'cache'};
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // STEP 0b: 저장된 같은 동 배송에서 재사용
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  var _reuse = _geoFromStoredDeliveries(address);
+  if(_reuse){
+    _geoResultBanner('📍 동일주소 재사용 | '+_reuse.lat.toFixed(5)+', '+_reuse.lng.toFixed(5));
+    _geoCacheSet(address, _reuse);
+    console.log('[GEO_REUSE]', _geoCacheKey(address), _reuse);
+    return _reuse;
+  }
+
+
+  // ── API 키 로드 ──
+  var kKey = window._cachedKakaoApiKey || (localStorage.getItem('mbti_kakao_api_key')||'').trim();
+  var gKey = window._googleApiKey      || (localStorage.getItem('mbti_google_api_key')||'').trim();
+  if(!kKey || !gKey){
+    try{
+      var _snap = await _db.collection('settings').doc('claude_config').get();
+      if(_snap.exists){
+        var _d = _snap.data();
+        if(window._fsCacheStore) window._fsCacheStore['settings/claude_config']={ts:Date.now(),data:_d};
+        if(!kKey){ kKey=(_d.kakaoApiKey||'').trim(); if(kKey){window._cachedKakaoApiKey=kKey;localStorage.setItem('mbti_kakao_api_key',kKey);} }
+        if(!gKey){ gKey=(_d.googleApiKey||_d.googleMapsApiKey||'').trim(); if(gKey){window._googleApiKey=gKey;localStorage.setItem('mbti_google_api_key',gKey);} }
+      }
+    }catch(e){}
+  }
+
+  var addrFull = _addBusanPrefix(address);
+  var aptM  = address.match(/([가-힣A-Za-z\d]+(?:임대아파트|공공아파트|영구임대|아파트|오피스텔|빌라|맨션|주공|LH|SH))/);
+  if(!aptM) aptM = address.match(/([가-힣]{2,}아파트)/);
+  if(!aptM) aptM = address.match(/([가-힣]{3,}(?:임대|주공))/);
+  var dongM = address.match(/([A-Za-z가-힣]?\d+)\s*동(?![아네은])/);
+  var guM   = address.match(/([가-힣]+구)/);
+  var guStr = guM ? guM[1]+' ' : '';
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ★ v9.61: STEP 1-PRIORITY 강화 — 다중 쿼리 + 별칭 + 동 매칭 점수
+  //   카카오맵 실측 검증: "도로명 + 동번호" 패턴이 가장 강력
+  //   예: "모라로110번길121, 106동" → 모라주공1단지 106동 정확 매칭
+  //   별칭: "영구임대" → 카카오는 "주공N단지"로 등록된 경우 많음
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  if(kKey && (aptM || dongM)){
+    // 도로명+번지 추출 (예: "모라로110번길 121")
+    var roadOnly = (addrFull||'').match(/([가-힣A-Za-z\d]+(?:로|길|번길)\s*\d+(?:-\d+)?)/);
+    var roadStr = roadOnly ? roadOnly[1].replace(/\s+/g,' ') : '';
+    var dongStr = dongM ? dongM[1]+'동' : '';
+    var aptStr  = aptM ? aptM[1] : '';
+    // ★ v9.66: 행정동 추출 (예: "모라동", "개금동") — OCR에 명시되면 검증용
+    var legalDongM = (addrFull||'').match(/([가-힣]+동\d?)(?=\s|$|[^가-힣\d])/);
+    var legalDongStr = '';
+    if(legalDongM){
+      var ld = legalDongM[1];
+      // 동번호(106동, 408동)와 행정동(모라동, 학장동) 구분 — 행정동은 보통 한글로 시작
+      if(ld.length >= 3 && !/^\d+동/.test(ld) && ld !== dongStr) legalDongStr = ld.replace(/\d$/,'');
+    }
+    var guStrTrim = guStr.trim(); // "사상구" 같은 행정구
+
+    // ★ v9.64: 별칭 변환 강화 — "영구임대" → 주공N단지/LH/임대주택 등 다양화
+    var aptAliases = [aptStr];
+    if(aptStr && /영구임대/.test(aptStr)){
+      var base = aptStr.replace(/(영구임대|임대)?(아파트)?$/,'').replace(/주공/,'');
+      if(base){
+        for(var sd=1; sd<=4; sd++){
+          aptAliases.push(base+'주공'+sd+'단지');
+          aptAliases.push(base+'주공'+sd+'단지아파트');
+          aptAliases.push(base+'주공아파트 '+sd+'단지');
+          aptAliases.push(base+'LH'+sd+'단지');
+        }
+        aptAliases.push(base+'주공');
+        aptAliases.push(base+'주공아파트');
+        aptAliases.push(base+'임대주택');
+        aptAliases.push(base);
+      }
+    }
+    if(aptStr && /임대아파트$/.test(aptStr) && !/영구임대/.test(aptStr)){
+      aptAliases.push(aptStr.replace(/임대아파트$/,'주공'));
+      aptAliases.push(aptStr.replace(/임대아파트$/,''));
+    }
+    // 중복 제거
+    aptAliases = aptAliases.filter(function(v,i,a){ return v && a.indexOf(v)===i; });
+    console.log('[KW_APT_ALIASES]', aptAliases);
+
+    // ★ v9.62: 번길 OCR 자리 누락 자동 보정 변형 생성
+    //   "19번길" → ["19번길", "192번길", "190번길", "191번길", "193번길", ...]
+    //   "23번길" → ["23번길", "234번길", "230번길", "231번길", ...]
+    //   카카오 OCR이 마지막 자리를 자주 누락 → 2자리를 3자리로 확장 시도
+    function _roadVariants(road){
+      if(!road) return [road];
+      var v = [road];
+      // ★ v9.69: "모라19번길" 같이 "로" 없는 2자리 번길 → "모라로192번길" 등 3자리 확장
+      if(!/로\s*\d/.test(road)){
+        var m3 = road.match(/([가-힣]{2,})(\d{2})(번길.*)/);
+        if(m3){
+          var n3 = parseInt(m3[2], 10);
+          [2,0,1,3,4,5,6,7,8,9].forEach(function(d){
+            v.push(m3[1]+'로'+(n3*10+d)+m3[3]);
+          });
+        }
+      }
+      // 2자리 번길 → 3자리 변형 (×10 + 0~9)
+      var m2 = road.match(/(.*로\s*)(\d{2})(번길.*)/);
+      if(m2){
+        var n = parseInt(m2[2],10);
+        [2,0,1,3,4,5,6,7,8,9].forEach(function(d){
+          v.push(m2[1]+(n*10+d)+m2[3]);
+        });
+      }
+      // 1자리 번길 → 2자리 변형 (×10 + 0~9)
+      var m1 = road.match(/(.*로\s*)(\d{1})(번길.*)/);
+      if(m1){
+        var n1 = parseInt(m1[2],10);
+        [1,2,0,3,4,5].forEach(function(d){
+          v.push(m1[1]+(n1*10+d)+m1[3]);
+        });
+      }
+      return v.filter(function(x,i,a){ return x && a.indexOf(x)===i; });
+    }
+    var roadVariants = _roadVariants(roadStr);
+
+    // ★ v9.64: 쿼리 후보 생성 — 단지명+동을 최우선 (OCR 도로명 오인식 극복)
+    var kwCands = [];
+    // ① 아파트명(별칭)+동번호 — 가장 강력한 식별자 (단지명은 오인식 적음)
+    if(aptStr && dongStr){
+      aptAliases.forEach(function(an){
+        if(!an) return;
+        kwCands.push(an+' '+dongStr);
+        kwCands.push('부산 '+guStr+an+' '+dongStr);
+        kwCands.push('부산 '+an+' '+dongStr); // guStr 없는 버전
+      });
+    }
+    // ② 도로명+동번호 (OCR 자리누락 변형 포함) — 단지명 매칭 실패 시 폴백
+    if(roadStr && dongStr){
+      roadVariants.forEach(function(rv){
+        kwCands.push(rv+', '+dongStr);
+        kwCands.push(rv+' '+dongStr);
+        kwCands.push('부산 '+guStr+rv+' '+dongStr);
+      });
+    }
+    // ③ 아파트명+도로명 (동 없을 때) — 변형 포함
+    if(roadStr && !dongStr){
+      aptAliases.forEach(function(an){
+        if(!an) return;
+        roadVariants.forEach(function(rv){
+          kwCands.push(an+' '+rv);
+        });
+      });
+    }
+    // 중복 제거 + 빈값 제거
+    kwCands = kwCands.filter(function(v,i,a){ return v && v.length>3 && a.indexOf(v)===i; });
+    console.log('[KAKAO_KW_CANDS v9.62]', kwCands.slice(0,10));
+
+    // ★ v9.66: 행정구/행정동 강제 검증 추가
+    function _scoreDoc(d){
+      var pn = (d.place_name||'')+' '+(d.address_name||'')+' '+(d.road_address_name||'');
+      var pnNS = pn.replace(/\s/g,'');
+      var pnName = (d.place_name||'').replace(/\s/g,'');
+      var addrFullPn = (d.address_name||'') + ' ' + (d.road_address_name||'');
+      var sc = 0;
+      // ★ v9.66: 행정구 검증 — OCR에 "사상구"인데 결과가 "진구"면 -100 (강력 거부)
+      if(guStrTrim && guStrTrim.length >= 2){
+        if(addrFullPn.indexOf(guStrTrim) < 0){
+          console.log('[KW_GU_MISMATCH]', d.place_name, '|', addrFullPn, '≠', guStrTrim);
+          return -100; // 행정구 불일치 = 완전 거부
+        }
+      }
+      // ★ v9.66: 행정동 검증 — OCR에 "모라동"인데 결과가 "개금동"이면 -50
+      if(legalDongStr && legalDongStr.length >= 2){
+        if(addrFullPn.indexOf(legalDongStr) >= 0) sc += 30;
+        else sc -= 50;
+      }
+      if(dongStr && pn.indexOf(dongStr) >= 0) sc += 50;
+      // 원본 도로명 + OCR 교정 변형 도로명 매칭
+      var roadMatched = false;
+      if(roadStr){
+        for(var rvi=0; rvi<roadVariants.length; rvi++){
+          if(pnNS.indexOf(roadVariants[rvi].replace(/\s/g,'')) >= 0){
+            sc += (rvi===0 ? 20 : 25);
+            roadMatched = true;
+            break;
+          }
+        }
+      }
+      // ★ v9.64: 단지명(별칭 포함) 매칭 — 강화된 점수
+      var aptMatched = false;
+      var aptKey = null;
+      if(aptStr && pnName.length > 0){
+        for(var ai=0; ai<aptAliases.length; ai++){
+          if(!aptAliases[ai]) continue;
+          var aliasKey = aptAliases[ai].slice(0,4).replace(/\s/g,'');
+          if(aliasKey.length >= 2 && pnName.indexOf(aliasKey) >= 0){
+            sc += 40; // ★ v9.64: 단지명(별칭 포함) 매칭 +40
+            aptMatched = true; aptKey = aliasKey;
+            break;
+          }
+        }
+      }
+      // 정확히 "{단지명} {동번호}" 패턴이면 추가 +30
+      if(aptMatched && dongStr && pnName.indexOf(dongStr) >= 0){
+        sc += 30;
+      }
+      // ★ v9.64: 도로명만 매칭되고 단지명 매칭 안 되면 -50 (OCR 오인식 위험)
+      if(roadMatched && !aptMatched && aptStr){
+        sc -= 50;
+        console.log('[KW_PENALTY]', d.place_name, '단지명 미포함 -50');
+      }
+      // ★ v9.67: 동별 좌표 압도적 우선 — place_name이 "N동"으로 끝나면 +100
+      //   예: "모라주공1단지아파트 106동" (동별) vs "모라주공1단지아파트" (단지중심)
+      //   동별 결과는 카카오에 동 입구 좌표로 등록되어 있어 가장 정확
+      if(dongStr && aptMatched){
+        var pnTrim = (d.place_name||'').trim();
+        var dongAtEnd = pnTrim.match(/(\d+동)\s*$/);
+        if(dongAtEnd && dongAtEnd[1] === dongStr){
+          sc += 100; // 동별 핀 강제 우선
+          console.log('[KW_DONG_EXACT]', pnTrim, '+100 (동별 좌표)');
+        }
+      }
+      if(d.category_group_code==='AT4') sc += 5;
+      if(d.category_group_code==='') sc += 3;
+      return sc;
+    }
+
+    var bestDoc = null, bestScore = 0, bestQuery = '';
+    for(var ki=0; ki<Math.min(kwCands.length, 6); ki++){
+      try{
+        var kr0 = await fetch('https://dapi.kakao.com/v2/local/search/keyword.json?query='+encodeURIComponent(kwCands[ki])+'&size=15',
+          {headers:{'Authorization':'KakaoAK '+kKey}});
+        var kd0 = await kr0.json();
+        if(kd0.documents && kd0.documents.length > 0){
+          for(var di=0; di<kd0.documents.length; di++){
+            var sc = _scoreDoc(kd0.documents[di]);
+            if(sc > bestScore){
+              bestScore = sc; bestDoc = kd0.documents[di]; bestQuery = kwCands[ki];
+            }
+          }
+          // ★ v9.67: 동별 매칭(+100점) 나올 때까지 기다리기 — 임계값 150
+          if(bestScore >= 150) break;
+        }
+      }catch(e){ console.debug('[KW'+ki+']', e.message); }
+    }
+
+    if(bestDoc && bestScore >= 50){
+      // 동 번호 매칭된 결과 → 동 단위 정확도 확보
+      var _isDongExact = (bestDoc.place_name||'').match(/(\d+동)\s*$/);
+      var _matchType = (_isDongExact && _isDongExact[1]===dongStr) ? '동별핀' : (bestScore>=100?'정확':'단지');
+      _geoResultBanner('📍 카카오키워드('+_matchType+' '+bestScore+'점) ✅ | '+bestDoc.y+', '+bestDoc.x+'\n   "'+bestQuery+'" → '+bestDoc.place_name);
+      // ★ v9.65: 카카오 매칭 도로명을 반환값에 포함 (주소 텍스트 자동 갱신용)
+      var matchedRoad = bestDoc.road_address_name || bestDoc.address_name || '';
+      var matchedName = bestDoc.place_name || '';
+      var _gpsKW = {lat:parseFloat(bestDoc.y), lng:parseFloat(bestDoc.x), src:'kakao_kw_dong', matchedAddr:matchedRoad, matchedName:matchedName};
+      _geoCacheSet(address, _gpsKW);
+      console.log('[KAKAO_KW_BEST v9.65]', bestQuery, '→', matchedName, '|', matchedRoad, 'score:', bestScore);
+      // ★ v9.65: 카카오 매칭 도로명으로 emer-addr 입력란 강제 재구성
+      try{
+        var emerAddrEl = document.getElementById('emer-addr');
+        if(emerAddrEl && matchedRoad){
+          var curVal = emerAddrEl.value || '';
+          // 호수 추출 (예: "1209호")
+          var hoMatch = curVal.match(/(\d+호)/);
+          var hoStr = hoMatch ? hoMatch[1] : '';
+          // 새 주소 재구성: "{카카오도로명} {단지명} {동번호} {호수}"
+          var rebuilt = matchedRoad;
+          if(matchedName) rebuilt += ' ' + matchedName.replace(matchedRoad,'').trim();
+          if(dongStr && rebuilt.indexOf(dongStr)<0) rebuilt += ' ' + dongStr;
+          if(hoStr && rebuilt.indexOf(hoStr)<0) rebuilt += ' ' + hoStr;
+          rebuilt = rebuilt.replace(/\s+/g,' ').trim();
+          if(rebuilt !== curVal && rebuilt.length > 10){
+            emerAddrEl.value = rebuilt;
+            console.log('[ADDR_AUTO_REBUILD v9.65]', curVal, '→', rebuilt);
+            _geoResultBanner('🔧 주소 자동교정 ✅\n   원본: '+curVal.slice(0,50)+'\n   교정: '+rebuilt);
+          }
+        }
+      }catch(autoCorrErr){ console.debug('addr rebuild skip:', autoCorrErr); }
+      return _gpsKW;
+    }
+    if(bestDoc && bestScore >= 20){
+      // 동 매칭은 못 했지만 도로명/아파트명 매칭 → 단지 단위
+      _geoResultBanner('📍 카카오키워드(단지'+bestScore+'점) ⚠️ | '+bestDoc.y+', '+bestDoc.x);
+      var _gpsKW2 = {lat:parseFloat(bestDoc.y), lng:parseFloat(bestDoc.x), src:'kakao_kw_apt'};
+      _geoCacheSet(address, _gpsKW2);
+      console.log('[KAKAO_KW_APT]', bestQuery, '→', bestDoc.place_name, 'score:', bestScore);
+      return _gpsKW2;
+    }
+    // 점수 부족 → STEP 1로 fallthrough
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // STEP 1: 카카오 주소검색 — OCR 번길 오인식 자동교정
+  //  2자리 번길(예:19번길)이면 ×10, +1, +2 변형도 시도
+  //  건물번호(main_building_no) 있는 결과만 채택 → 틀린 도로는 자동 탈락
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  if(kKey){
+    // 도로명+번지 추출 (아파트명 제거, 동번호 유지)
+    var roadBase = addrFull
+      .replace(/\s*[가-힣A-Za-z]{2,}(?:아파트|오피스텔|빌라|맨션|주공|임대)[가-힣A-Za-z\d\s]*/g,'')
+      .replace(/\s*\d+호\s*$/,'').trim();
+    var dongStr = dongM ? ' '+dongM[1]+'동' : '';
+
+    // 쿼리 후보 생성: 원본 + 2자리 번길이면 × 10, +1, +2 교정 추가
+    function makeAddrCandidates(base){
+      var cands = [(base+dongStr).trim(), base.replace(/\s*\d+동\s*$/, '').trim()];
+      var twoDigit = base.match(/(로\s*)(\d{2})(번길)/);
+      if(twoDigit){
+        var n = parseInt(twoDigit[2], 10);
+        [0, 2, 1, 3, 4, 5].forEach(function(d){
+          var v = base.replace(/(로\s*)(\d{2})(번길)/, '$1'+(n*10+d)+'$3');
+          cands.push((v+dongStr).trim());
+          cands.push(v.replace(/\s*\d+동\s*$/,'').trim());
+        });
+      }
+      return cands.filter(function(v,i,a){ return v && v.length>5 && a.indexOf(v)===i; });
+    }
+
+    var addrCands = makeAddrCandidates(roadBase);
+    console.log('[KAKAO_CANDS]', addrCands.slice(0,4));
+
+    for(var ai=0; ai<addrCands.length; ai++){
+      try{
+        var ar = await fetch('https://dapi.kakao.com/v2/local/search/address.json?query='+encodeURIComponent(addrCands[ai])+'&size=1',
+          {headers:{'Authorization':'KakaoAK '+kKey}});
+        var ad = await ar.json();
+        if(ad.documents && ad.documents.length > 0){
+          var adoc = ad.documents[0];
+          var bno  = adoc.road_address && adoc.road_address.main_building_no;
+          console.log('[KAKAO_ADDR]', addrCands[ai].slice(-30), '→ 건물번호:', bno||'없음');
+          if(bno){
+            // 건물번호 있는 결과 → 정확한 도로+번지 확인됨
+            _geoResultBanner('📍 카카오주소 | '+adoc.y+', '+adoc.x);
+            var _gpsS1 = {lat:parseFloat(adoc.y), lng:parseFloat(adoc.x), src:'kakao_addr'};
+            _geoCacheSet(address, _gpsS1);
+            return _gpsS1;
+          }
+        }
+      }catch(e){ console.debug('[A'+ai+']',e.message); }
+    }
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // STEP 2: Google — 원본 주소 + 번길 교정 변형
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  if(gKey){
+    var baseG = addrFull.replace(/\s*\d+호\s*$/,'').trim();
+    var googleCands = [baseG];
+    var twoG = addrFull.match(/(로\s*)(\d{2})(번길)/);
+    if(twoG){
+      var ng = parseInt(twoG[2],10);
+      [0,2,1,3].forEach(function(d){
+        var v = addrFull.replace(/(로\s*)(\d{2})(번길)/, '$1'+(ng*10+d)+'$3').replace(/\s*\d+호\s*$/,'');
+        googleCands.push(v.trim());
+      });
+    }
+    googleCands = googleCands.filter(function(v,i,a){ return v && a.indexOf(v)===i; });
+
+    for(var gi=0; gi<googleCands.length; gi++){
+      try{
+        var gr = await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(googleCands[gi])+'&language=ko&region=kr&key='+gKey);
+        var gd = await gr.json();
+        var fmt = gd.results&&gd.results[0]&&gd.results[0].formatted_address||'';
+        console.log('[GOOGLE]', googleCands[gi].slice(-30), '→', gd.status, fmt.slice(-25));
+        if(gd.status==='OK' && gd.results && gd.results[0]){
+          var gl = gd.results[0].geometry.location;
+          _geoResultBanner('🌐 Google | '+gl.lat.toFixed(5)+', '+gl.lng.toFixed(5));
+          var _gpsS2 = {lat:gl.lat, lng:gl.lng, src:'google'};
+          _geoCacheSet(address, _gpsS2);
+          return _gpsS2;
+        }
+        if(gd.status==='REQUEST_DENIED'){
+          _geoResultBanner('❌ Google Geocoding API 미활성 — Cloud Console 확인');
+          break;
+        }
+      }catch(e){ console.debug('[G'+gi+']',e.message); }
+    }
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // STEP 3: 카카오 키워드 — 아파트명+동 (최후)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  if(kKey && aptM){
+    var kwQ = '부산 '+guStr+aptM[1]+(dongM?' '+dongM[1]+'동':'');
+    try{
+      var kr = await fetch('https://dapi.kakao.com/v2/local/search/keyword.json?query='+encodeURIComponent(kwQ)+'&size=3',
+        {headers:{'Authorization':'KakaoAK '+kKey}});
+      var kd = await kr.json();
+      if(kd.documents && kd.documents.length > 0){
+        var best = (dongM && kd.documents.find(function(d){return d.place_name&&d.place_name.indexOf(dongM[1]+'동')>=0;}))
+                 || kd.documents[0];
+        _geoResultBanner('📍 카카오키워드⚠️ | '+best.y+', '+best.x);
+        var _gpsS3 = {lat:parseFloat(best.y), lng:parseFloat(best.x), src:'kakao_kw'};
+        _geoCacheSet(address, _gpsS3);
+        return _gpsS3;
+      }
+    }catch(e){}
+  }
+
+  _geoResultBanner('❌ 좌표 변환 실패 — 주소를 확인하세요');
+  return null;
+}
+
+
+async function _googleGeocodePin(addrFull, gKey){
+  // _kakaoGeocode 내부에서 직접 Google 호출하므로 이 함수는 호환용 래퍼
+  if(!gKey) return null;
+  try{
+    var noHo = addrFull.replace(/\s*\d+호\s*$/,'').trim();
+    var gr = await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(noHo)+'&language=ko&region=kr&key='+gKey);
+    var gd = await gr.json();
+    if(gd.status==='OK' && gd.results && gd.results[0]){
+      var gl = gd.results[0].geometry.location;
+      return {lat:gl.lat, lng:gl.lng, src:'google'};
+    }
+  }catch(e){}
+  return null;
+}
+
+
+function openEmergencyDelivery(){
+  // ★ v9.34: 모달 중복 열림 방지 (빠른 더블탭/이벤트 충돌 차단)
+  if(window._emerOpening){
+    console.log('[emer] 이미 열리는 중 — 중복 호출 차단');
+    return;
+  }
+  window._emerOpening = true;
+  setTimeout(function(){ window._emerOpening = false; }, 800);
+  document.getElementById('emer-del-mo')?.remove();
+  window._emerPhotos = [];
+  window._emerTrackings = [];
+  window._emerGps = null;
+  window._emerAutoData = {};
+  window._emerEntryMode = null;
+  window._emerRouteCode = '';      // ★ v9.34: 라우트 코드 자동 추출용
+  window._emerDeliveryDate = '';   // ★ v9.34: 배송일 자동 추출용
+  window._emerBoxCode = '';        // ★ v9.37: 박스 규격 자동 추출용
+  // ★ v9.61: 카운터 현재값 표시 (폼 재오픈 시에도 누적 유지)
+  setTimeout(function(){
+    var cs=document.getElementById('emer-cnt-scan');
+    var cv=document.getElementById('emer-cnt-save');
+    if(cs) cs.textContent = window._emerScanCount||0;
+    if(cv) cv.textContent = window._emerSaveCount||0;
+  }, 50);
+
+  document.body.insertAdjacentHTML('beforeend',`
+  <div id="emer-del-mo" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:700;display:flex;align-items:flex-end;justify-content:center" onclick="if(event.target===this)_emerCloseWithCheck()">
+    <div onclick="event.stopPropagation()" style="background:var(--bg);border-radius:16px 16px 0 0;padding:20px 16px 32px;width:100%;max-width:520px;max-height:92vh;overflow-y:auto">
+      <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 14px"></div>
+
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <span style="font-size:20px">📸</span>
+        <div style="font-size:16px;font-weight:800;color:var(--red)">긴급 배송기록</div>
+        <div style="margin-left:auto;font-size:10px;background:#dc2626;color:#fff;padding:2px 8px;border-radius:999px;font-weight:700">쿠팡앱 에러 대응</div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:10px">QR 스캔하면 운송장+주소+GPS 자동입력 → 자동저장됩니다.</div>
+      <div id="emer-scan-counter" style="display:flex;gap:8px;margin-bottom:12px">
+        <div style="flex:1;background:var(--bg3);border-radius:8px;padding:8px;text-align:center;border:1.5px solid var(--border)">
+          <div style="font-size:18px;font-weight:900;color:var(--blue)" id="emer-cnt-scan">0</div>
+          <div style="font-size:10px;color:var(--text3);font-weight:600">스캔</div>
+        </div>
+        <div style="flex:1;background:var(--bg3);border-radius:8px;padding:8px;text-align:center;border:1.5px solid var(--border)">
+          <div style="font-size:18px;font-weight:900;color:var(--teal)" id="emer-cnt-save">0</div>
+          <div style="font-size:10px;color:var(--text3);font-weight:600">저장</div>
+        </div>
+      </div>
+
+      <!-- 통합 송장 촬영 -->
+      <input type="file" id="emer-unified-cam" accept="image/*" capture="environment" style="display:none" onchange="emerUnifiedScan(this)">
+      <button onclick="document.getElementById('emer-unified-cam').click()" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:20px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;border-radius:14px;font-size:18px;font-weight:900;cursor:pointer;box-shadow:0 3px 14px rgba(124,58,237,.4);margin-bottom:8px">
+        <span style="font-size:26px">📸</span> 촬영
+      </button>
+      <div id="emer-unified-status" style="font-size:13px;color:var(--teal);text-align:center;margin-bottom:10px;min-height:18px"></div>
+
+      <!-- 라이브 스캔 (보조) -->
+      <button onclick="emerStartScan()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px;background:var(--bg3);color:var(--text2);border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:14px">
+        <span style="font-size:15px">🎥</span> 라이브 스캔
+      </button>
+
+      <!-- 숨김 필드들 (JS에서 사용) -->
+      <div style="display:none">
+        <input id="emer-tracking-inp"><div id="emer-tracking-list"></div>
+        <input id="emer-addr"><input id="emer-recipient">
+        <input id="emer-orderid"><input id="emer-delivmemo">
+        <div id="emer-gps-status"></div><div id="emer-ocr-status"></div>
+        <div id="emer-native-status"></div><div id="emer-barcode-status"></div>
+        <div id="emer-ocr-summary"></div><div id="emer-photo-wrap"></div>
+      </div>
+
+      <button onclick="_emerCloseWithCheck()" style="width:100%;padding:11px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;color:var(--text2)">닫기</button>
+  `);
+  setTimeout(function(){ var el=document.getElementById('qr-paste-inp'); if(el) el.focus(); }, 100);
+}
+
+
+
+async function emerOcrScan(file, _statusOverride){
+  if(!file) return;
+  var status = _statusOverride || document.getElementById('emer-ocr-status');
+  if(!window._emerGps || window._emerGps.src==='device_fallback') window._emerGps=null;
+
+  // ★ v9.25: 1단계 — jsQR로 QR 코드 먼저 해독 (API 비용 0, 빠름)
+  // 사진을 네이티브 카메라로 찍으면 고해상도+자동초점 → jsQR 인식률 대폭 향상
+  if(status) status.innerHTML = '<span style="color:var(--blue)">📷 QR 코드 분석 중...</span>';
+  try{
+    var qrResult = await new Promise(function(resolve){
+      var img = new Image();
+      var url = URL.createObjectURL(file);
+      img.onload = async function(){
+        URL.revokeObjectURL(url);
+        // 최대 1600px (QR 밀도 대응, 너무 크면 jsQR 느려짐)
+        var max = 1600;
+        var w = img.width, h = img.height;
+        if(w > max || h > max){
+          if(w > h){ h = Math.round(h * max / w); w = max; }
+          else { w = Math.round(w * max / h); h = max; }
+        }
+        var cv = document.createElement('canvas');
+        cv.width = w; cv.height = h;
+        var cx = cv.getContext('2d');
+        cx.drawImage(img, 0, 0, w, h);
+
+        // ★ v9.25: ① BarcodeDetector — 파일에서 직접 ImageBitmap 생성 (가장 정확)
+        if('BarcodeDetector' in window){
+          try{
+            var bd = new BarcodeDetector({formats:['qr_code','aztec','data_matrix']}); // ★ v9.25: 바코드포맷제거
+            // 원본 파일로 직접 ImageBitmap 생성 (canvas 경유 없이 = 품질 손실 없음)
+            var bmp = await createImageBitmap(file);
+            var bdCodes = await bd.detect(bmp);
+            bmp.close && bmp.close();
+            if(bdCodes && bdCodes.length > 0 && bdCodes[0].rawValue){
+              resolve(bdCodes[0].rawValue); return;
+            }
+          }catch(e){ console.warn('[BarcodeDetector 파일직접]', e.message||e); }
+        }
+
+        // ② jsQR — 원본 픽셀 (iOS Safari 폴백)
+        var raw = cx.getImageData(0, 0, w, h);
+        var code = null;
+        if(window.jsQR) code = window.jsQR(raw.data, raw.width, raw.height, {inversionAttempts:'attemptBoth'});
+        if(code && code.data){ resolve(code.data); return; }
+
+        // ③ jsQR — 우측 절반 크롭
+        var hw = Math.round(w / 2);
+        var cv2 = document.createElement('canvas');
+        cv2.width = hw; cv2.height = h;
+        cv2.getContext('2d').drawImage(img, Math.round(img.width/2), 0, Math.round(img.width/2), img.height, 0, 0, hw, h);
+        if(window.jsQR){
+          var raw2 = cv2.getContext('2d').getImageData(0, 0, hw, h);
+          var code2 = window.jsQR(raw2.data, raw2.width, raw2.height, {inversionAttempts:'attemptBoth'});
+          if(code2 && code2.data){ resolve(code2.data); return; }
+        }
+
+        // ④ jsQR — 좌측 절반 크롭
+        var cv3 = document.createElement('canvas');
+        cv3.width = hw; cv3.height = h;
+        cv3.getContext('2d').drawImage(img, 0, 0, Math.round(img.width/2), img.height, 0, 0, hw, h);
+        if(window.jsQR){
+          var raw3 = cv3.getContext('2d').getImageData(0, 0, hw, h);
+          var code3 = window.jsQR(raw3.data, raw3.width, raw3.height, {inversionAttempts:'attemptBoth'});
+          if(code3 && code3.data){ resolve(code3.data); return; }
+        }
+
+        resolve(null); // QR 없음 → Vision OCR로 폴백
+      };
+      img.onerror = function(){ URL.revokeObjectURL(url); resolve(null); };
+      img.src = url;
+    });
+
+    if(qrResult){
+      _emerHandleScan(qrResult, status);
+      return;
+    }
+  }catch(e){ console.warn('[QR decode]', e); }
+
+  // QR 해독 실패 → Google Vision OCR 폴백
+  if(status) status.innerHTML = '<span style="color:var(--blue)">🤖 QR 미인식 → AI OCR 시도 중...</span>';
+
+  // ★ v9.59: Google Vision API 키 — localStorage 우선 (Firestore 타임아웃 방지)
+  var apiKey = window._cachedGoogleApiKey
+            || localStorage.getItem('mbti_google_api_key')
+            || localStorage.getItem('mbti_google_key') || '';
+  if(apiKey) window._cachedGoogleApiKey = apiKey;
+  // Firestore는 키 없을 때만, 2초 타임아웃
+  if(!apiKey && FB && _db){
+    try{
+      var _gkPromise = _fsGetCached('settings/claude_config', 20);
+      var _gkTimeout = new Promise(function(_,rej){ setTimeout(function(){ rej(new Error('timeout')); }, 2000); });
+      var doc = await Promise.race([_gkPromise, _gkTimeout]);
+      if(doc && doc.googleApiKey){
+        apiKey = doc.googleApiKey.trim();
+        localStorage.setItem('mbti_google_api_key', apiKey);
+        window._cachedGoogleApiKey = apiKey;
+      }
+    }catch(e){ console.debug('[GoogleKey]', e.message); }
+  }
+
+  if(!apiKey){
+    if(status) status.innerHTML = '<span style="color:var(--red)">❌ API 키 없음 — 관리자에게 문의하세요</span>';
+    return;
+  }
+  if(status) status.innerHTML = '<span style="color:var(--blue)">🤖 AI 분석 중...</span>';
+  // ★ v9.68: 파일 보관 — Claude 검증 폴백용
+  window._emerLastFile = file;
+
+  // ★ v9.25: 이미지 두 가지 준비
+  //   b64Raw  — 전처리 없음, QR BARCODE_DETECTION용 (전처리가 QR 픽셀 손상함)
+  //   b64Ocr  — 파란 제거+대비 강화, 텍스트 OCR용
+  var b64Raw, b64Ocr;
+  await new Promise(function(resolve){
+    var img = new Image();
+    var url = URL.createObjectURL(file);
+    img.onload = function(){
+      URL.revokeObjectURL(url);
+      var max = 1280;
+      var w = img.width, h = img.height;
+      if(w > max || h > max){
+        if(w > h){ h = Math.round(h * max / w); w = max; }
+        else { w = Math.round(w * max / h); h = max; }
+      }
+
+      // ① 원본 캔버스 (전처리 없음) → QR 디코딩용
+      var cvRaw = document.createElement('canvas');
+      cvRaw.width = w; cvRaw.height = h;
+      cvRaw.getContext('2d').drawImage(img, 0, 0, w, h);
+      b64Raw = cvRaw.toDataURL('image/jpeg', 0.92).split(',')[1];
+
+      // ② 파란 제거 + 대비 강화 → OCR 텍스트용
+      var cvOcr = document.createElement('canvas');
+      cvOcr.width = w; cvOcr.height = h;
+      var cx = cvOcr.getContext('2d');
+      cx.drawImage(img, 0, 0, w, h);
+      var imgData = cx.getImageData(0, 0, w, h);
+      var pix = imgData.data;
+      for(var i=0; i<pix.length; i+=4){
+        var r=pix[i], g=pix[i+1], b=pix[i+2];
+        var isBlue = (r < 160 && b > r+30 && b > g+10);
+        var isSky  = (r>100 && g>100 && b>r && b>g+20 && b>150);
+        if(isBlue || isSky){
+          pix[i]=255; pix[i+1]=255; pix[i+2]=255;
+        } else {
+          var gray = 0.299*r + 0.587*g + 0.114*b;
+          if(gray < 128){
+            pix[i]=Math.max(0,r-40); pix[i+1]=Math.max(0,g-40); pix[i+2]=Math.max(0,b-40);
+          }
+        }
+      }
+      cx.putImageData(imgData, 0, 0);
+      b64Ocr = cvOcr.toDataURL('image/jpeg', 0.88).split(',')[1];
+
+      resolve();
+    };
+    img.onerror = function(){ URL.revokeObjectURL(url); resolve(); };
+    img.src = url;
+  });
+  var b64 = b64Ocr; // 기존 코드 호환용
+
+  try{
+    // Google Cloud Vision API 호출
+    var res = await fetch('https://vision.googleapis.com/v1/images:annotate?key='+apiKey, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        requests: [
+          {
+            // QR/바코드: 원본 이미지 (전처리 없음 — 전처리가 QR 픽셀 손상)
+            image: {content: b64Raw || b64},
+            features: [{type: 'BARCODE_DETECTION', maxResults: 5}]
+          },
+          {
+            // OCR 텍스트: 전처리 이미지 (파란 제거로 텍스트 인식 향상)
+            image: {content: b64Ocr || b64},
+            features: [{type: 'DOCUMENT_TEXT_DETECTION', maxResults: 1}]
+          }
+        ]
+      })
+    });
+
+    var rawText = await res.text();
+    if(!rawText || rawText.trim()==='') throw new Error('빈 응답 (HTTP '+res.status+')');
+    var d;
+    try{ d = JSON.parse(rawText); }
+    catch(e){ throw new Error('파싱 실패: '+rawText.slice(0,100)); }
+    if(d.error) throw new Error(d.error.message);
+
+    // ★ v9.25: responses[0]=바코드, responses[1]=OCR 텍스트
+    var barcodeAnnotations = d.responses?.[0]?.barcodeAnnotations
+                           || d.responses?.[0]?.barcodes || [];
+    console.log('[Vision BARCODE]', barcodeAnnotations.length+'개 감지',
+      barcodeAnnotations.map(function(b){return (b.format||'?')+':'+((b.rawValue||'').slice(0,50));}).join(' | '));
+    var qrBarcode = barcodeAnnotations.find(function(b){
+      return b.format==='QR_CODE' || b.valueFormat==='TEXT' ||
+             (b.rawValue && (b.rawValue.indexOf('|')>=0 || b.rawValue.indexOf('V1')===0));
+    });
+    if(qrBarcode && qrBarcode.rawValue){
+      console.log('[QR 직접인식]', qrBarcode.rawValue);
+      var _qpDirect = _parseQrText(qrBarcode.rawValue);
+      if(_qpDirect.tracking_no || _qpDirect.address){
+        // QR 데이터로 직접 입력
+        if(_qpDirect.tracking_no){
+          window._emerTrackings=[_qpDirect.tracking_no]; emerRefreshTrackingList();
+          var _inp=document.getElementById('emer-tracking-inp'); if(_inp) _inp.value=_qpDirect.tracking_no;
+        }
+        if(_qpDirect.order_id){ var _oi=document.getElementById('emer-orderid'); if(_oi) _oi.value=_qpDirect.order_id; }
+        if(_qpDirect.recipient){ var _ri=document.getElementById('emer-recipient'); if(_ri) _ri.value=_qpDirect.recipient; }
+        if(_qpDirect.address){ var _ai=document.getElementById('emer-addr'); if(_ai) _ai.value=_qpDirect.address; }
+        if(_qpDirect.lat&&_qpDirect.lng){
+          window._emerGps={lat:_qpDirect.lat,lng:_qpDirect.lng,src:'QR'};
+          var _ge=document.getElementById('emer-gps-status');
+          if(_ge) _ge.innerHTML='<span style="color:var(--teal)">📍 QR GPS 직접수신: '+_qpDirect.lat.toFixed(5)+', '+_qpDirect.lng.toFixed(5)+' ✅</span>';
+        }
+        // 요약 카드
+        var _sumEl=document.getElementById('emer-ocr-summary');
+        if(_sumEl){
+          var _fs='width:100%;padding:5px 7px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--bg);color:var(--text);margin-top:2px';
+          var _rows='<div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:6px">📷 QR 코드 직접 인식 성공!</div>';
+          _rows+='<div style="margin-bottom:5px"><label style="font-size:11px;color:var(--text2)">🔢 운송장번호</label><input id="ocr-edit-track" style="'+_fs+'" value="'+(_qpDirect.tracking_no||'')+'" oninput="_emerOcrApply()"></div>';
+          _rows+='<div style="margin-bottom:5px"><label style="font-size:11px;color:var(--text2)">📋 주문번호</label><input id="ocr-edit-order" style="'+_fs+'" value="'+(_qpDirect.order_id||'')+'" oninput="_emerOcrApply()"></div>';
+          _rows+='<div style="margin-bottom:5px"><label style="font-size:11px;color:var(--text2)">👤 수령인</label><input id="ocr-edit-recip" style="'+_fs+'" value="'+(_qpDirect.recipient||'')+'" oninput="_emerOcrApply()"></div>';
+          _rows+='<div style="margin-bottom:5px"><label style="font-size:11px;color:var(--text2)">📍 주소</label><input id="ocr-edit-addr" style="'+_fs+'" value="'+(_qpDirect.address||'')+'" oninput="_emerOcrApply()"></div>';
+          _sumEl.innerHTML=_rows; _sumEl.style.display='block';
+        }
+        window._emerOcrApply=function(){
+          var t=document.getElementById('ocr-edit-track'),o=document.getElementById('ocr-edit-order'),r=document.getElementById('ocr-edit-recip'),a=document.getElementById('ocr-edit-addr');
+          if(t&&t.value){var cl=t.value.replace(/[\.\-\s]/g,'').trim();window._emerTrackings=[cl];emerRefreshTrackingList();}
+          if(o){var oi=document.getElementById('emer-orderid');if(oi)oi.value=o.value;}
+          if(r){var re=document.getElementById('emer-recipient');if(re)re.value=r.value;}
+          if(a){var ad=document.getElementById('emer-addr');if(ad)ad.value=a.value;}
+        };
+        window._emerOcrApply();
+        window._emerEntryMode = 'ocr';
+        _tts('스캔'); _emerIncScan(); // ★ v9.61: OCR QR 인식 성공 음성
+        var _reader2=new FileReader(); _reader2.onload=function(e){if(!window._scanPhotoAdded){window._scanPhotoAdded=true;window._emerPhotos.push(e.target.result);emerRefreshPhotoWrap();}}; _reader2.readAsDataURL(file);
+
+        // ① GPS 설정
+        if(_qpDirect.lat && _qpDirect.lng){
+          window._emerGps = {lat:_qpDirect.lat, lng:_qpDirect.lng, src:'QR'};
+        }
+
+        // ② 주문번호 — OCR 텍스트에서 보완
+        if(!_qpDirect.order_id){
+          var _ocrRaw = d.responses?.[1]?.fullTextAnnotation?.text
+                      || d.responses?.[1]?.textAnnotations?.[0]?.description
+                      || d.responses?.[0]?.fullTextAnnotation?.text
+                      || d.responses?.[0]?.textAnnotations?.[0]?.description || '';
+          // 주문번호: '주문번호' 키워드 줄 OR 27로 시작 14자리
+          var _oLine = _ocrRaw.split('\n').find(function(l){ return l.indexOf('주문번호') >= 0; });
+          if(!_oLine) _oLine = _ocrRaw.split('\n').find(function(l){ return /27[\d\.\,]{10,}/.test(l); });
+          if(_oLine){
+            var _oNum = _oLine.replace(/[^\d]/g,'');
+            if(_oNum.length >= 10){
+              _qpDirect.order_id = _oNum;
+              window._pendingOrderId = _oNum; // ★ emerSave에서 꽂을 예비값
+              var _oel = document.getElementById('emer-orderid'); if(_oel) _oel.value = _oNum;
+            }
+          }
+        }
+
+        // ③ 상태 표시 + 자동저장
+        if(status) status.innerHTML = '<span style="color:var(--teal)">📸 스캔 ✅ &nbsp;→&nbsp; 💾 저장 중...</span>';
+        window._emerSaving = false;
+        setTimeout(function(){
+          // 저장 직전 order_id 재확인
+          if(_qpDirect.order_id){
+            var _oe=document.getElementById('emer-orderid');
+            if(_oe && !_oe.value) _oe.value = _qpDirect.order_id;
+          }
+          if(typeof emerSave === 'function') emerSave();
+        }, 600);
+        return;
+      }
+    }
+
+    // OCR 텍스트 추출 — responses[1] (OCR 전용) 또는 responses[0] 폴백
+    var ocrText = d.responses?.[1]?.fullTextAnnotation?.text
+                || d.responses?.[1]?.textAnnotations?.[0]?.description
+                || d.responses?.[0]?.fullTextAnnotation?.text
+                || d.responses?.[0]?.textAnnotations?.[0]?.description || '';
+    // ★ v9.25: 바코드 디버그 표시 (개발자도구 또는 디버그 버튼)
+    var _barcodeDbg = barcodeAnnotations.length > 0
+      ? '\n[바코드감지] ' + barcodeAnnotations.map(function(b){ return (b.format||'?')+': '+(b.rawValue||'').slice(0,60); }).join(' | ')
+      : '\n[바코드감지] 없음 (QR 미인식)';
+    console.log('[OCR 원문]\n' + ocrText + _barcodeDbg);
+    // 디버그 모달에도 표시
+    var _dbgBtn = document.querySelector('[onclick*="ocr-debug"]');
+    if(window._emerOcrDebugText !== undefined) window._emerOcrDebugText = ocrText + _barcodeDbg;
+    if(!ocrText) throw new Error('텍스트 인식 실패 — 사진을 다시 찍어주세요');
+
+    // 쿠팡 운송장에서 정보 파싱
+    var lines = ocrText.split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
+    var fullText = ocrText.replace(/\s+/g,' ');
+
+    // ★ v9.25: 운송장/주문번호 — OCR 원문 기반 정밀 파싱
+    // 쿠팡 실제 형식: 주문번호 27,1001,8522,3613 / 운송장 10,31728391,0430 (쉼표 구분)
+    var orderDigits = '', trackingDigits = '';
+
+    // 공통: 줄에서 숫자+구분자(쉼표/점/공백) 연속열 추출
+    function extractNumSeq(line){
+      // 쉼표/점/공백으로 구분된 숫자 그룹을 하나로 합침
+      var m = line.match(/[\d][\d,\.\s]{6,}[\d]/);
+      return m ? m[0].replace(/[^\d]/g,'') : line.replace(/[^\d]/g,'');
+    }
+
+    // 주문번호: '주문번호' 키워드 포함 줄에서 추출
+    var _orderKeyLine = lines.find(function(l){ return l.indexOf('주문번호')>=0; });
+    if(_orderKeyLine){
+      orderDigits = extractNumSeq(_orderKeyLine);
+    }
+    // 폴백: 줄별 탐색 (13~14자리, 7 또는 27 시작)
+    if(!orderDigits || orderDigits.length < 8){
+      for(var _li=0; _li<lines.length; _li++){
+        var _d = extractNumSeq(lines[_li]);
+        if(_d.length===13 && _d[0]==='7'){ orderDigits=_d; break; }
+        if(_d.length===14 && _d.slice(0,2)==='27'){ orderDigits=_d; break; }
+      }
+    }
+
+    // 운송장: '운송장' 키워드 포함 줄 우선 또는 10으로 시작 14자리
+    var _trackKeyLine = lines.find(function(l){ return l.indexOf('운송장')>=0 && l.replace(/[^\d]/g,'').length>=10; });
+    if(_trackKeyLine){
+      var _td = extractNumSeq(_trackKeyLine);
+      if(_td.length>=14 && _td.slice(0,2)==='10') trackingDigits=_td.slice(0,14);
+    }
+    if(!trackingDigits){
+      for(var _li3=0; _li3<lines.length; _li3++){
+        var _d3 = extractNumSeq(lines[_li3]);
+        if(_d3.length===14 && _d3.slice(0,2)==='10'){ trackingDigits=_d3; break; }
+        if(_d3.length>=14 && _d3.length<=16){ var _m10=_d3.match(/10\d{12}/); if(_m10){ trackingDigits=_m10[0]; break; } }
+      }
+    }
+    // ★ v9.59: 전체 텍스트 공백 제거 후 재탐색
+    if(!trackingDigits){
+      var _compact = fullText.replace(/[\s,\.]/g,'');
+      var _tm = _compact.match(/10\d{12}/);
+      if(_tm) trackingDigits = _tm[0];
+    }
+    if(!trackingDigits){
+      var _tm2 = fullText.replace(/[\s,\.]/g,'').match(/80\d{12}/);
+      if(_tm2) trackingDigits = _tm2[0];
+    }
+
+    // 점 구분 형식으로 복원
+    function fmtNum(digits) {
+      if(!digits || digits.length < 8) return '';
+      var d = digits.slice(0, 16); // 최대 16자리
+      if(d.slice(0,2)==='10' && d.length>=14)
+        return d.slice(0,2)+'.'+d.slice(2,6)+'.'+d.slice(6,10)+'.'+d.slice(10,14);
+      if(d.slice(0,2)==='27' && d.length>=14)
+        return d.slice(0,2)+'.'+d.slice(2,6)+'.'+d.slice(6,10)+'.'+d.slice(10,14);
+      if(d[0]==='7' && d.length>=13)
+        return d[0]+'.'+d.slice(1,5)+'.'+d.slice(5,9)+'.'+d.slice(9,13);
+      return d;
+    }
+    var orderId    = fmtNum(orderDigits);
+    var trackingNo = fmtNum(trackingDigits);
+
+    // 수령인: 김*우 패턴
+    var recipientMatch = fullText.match(/[가-힣]+\*[가-힣]+/);
+
+    // ★ 받는분/보내는분 구분 처리 (한진 국제 송장 대응)
+    // 텍스트에서 "받는분" 이후만 사용 (보내는분 주소 오인식 방지)
+    var fullTextForAddr = fullText;
+    var recvIdx = fullText.search(/받는\s*분|수취인|SHIP\s*TO|RECIPIENT/i);
+    var sendIdx = fullText.search(/보내는\s*분|발송인|보내는이|SENDER|FROM/i);
+    if(recvIdx >= 0){
+      // 받는분 이후, 보내는분 이전만 사용
+      var endIdx = sendIdx > recvIdx ? sendIdx : fullText.length;
+      fullTextForAddr = fullText.slice(recvIdx, endIdx);
+    } else if(sendIdx >= 0){
+      // 보내는분 이전만 사용
+      fullTextForAddr = fullText.slice(0, sendIdx);
+    }
+    // 국제 송장 주소: 콤마 구분 형식 파싱 (예: 607호, 광안동 89-13 화목오피스텔, 수영구, 부산광역시)
+    var intlAddrMatch = fullTextForAddr.match(/(\d+호[^\n]*(?:구|시|동|로|길|아파트|오피스텔|빌라)[^\n,]*(?:,[^\n,]*)*?)(?:,\s*\d{5}|,\s*KR|,\s*Korea|\n)/i);
+    if(!intlAddrMatch){
+      intlAddrMatch = fullTextForAddr.match(/(\d+호[^\n,]+,[^\n]+(?:구|시)[^\n]*)/);
+    }
+    var intlAddr = intlAddrMatch ? intlAddrMatch[1].replace(/,\s*\d{5}.*$/,'').replace(/,\s*KR.*/i,'').replace(/,\s*Korea.*/i,'').trim() : ''
+
+    // ★ v9.25: 주소 파싱 — 전체 줄 스캔 후 주소 조각 모두 수집 (From./잡텍스트 건너뜀)
+    var addrLine = (function(){
+      function isAddrLine(l){
+        if(!l || l.replace(/[\d\.,\s]/g,'').length < 2) return false;
+        if(l.replace(/[^\d]/g,'').length > l.length * 0.75) return false;
+        return l.match(/(시|구)\s*.*(로|길|동|아파트|오피스텔|빌라|임대|주공|현대|삼성|롯데)/) ||
+               l.match(/(로|길)\s*\d+/) ||
+               l.match(/\d+동\s*\d+호/) ||
+               l.match(/\d+호$/) ||
+               l.match(/아파트|오피스텔|빌라|임대아파트|주공/);
+      }
+      function isJunkLine(l){
+        if(l.match(/서명|인수자|보내는이|보내는분|발송인|택배사|위탁|개인정보|SENDER|FROM\.:/i)) return true;
+        if(l.match(/[a-zA-Z]{5,}/)) return true; // 영어 5자↑
+        if(l.match(/^(RPB|D\d|오전|오후|DATE|From|To\.)/i)) return true;
+        if(l.match(/coupang|gls\.com/i)) return true;
+        if(l.match(/1577[-\s]*7011|1544[-\s]*9898/)) return true;
+        if(l.match(/^\d{2,4}[\/\.]\d{2}/)) return true; // 날짜
+        if(l.match(/^[\d,\.]{10,}/)) return true; // 숫자열
+        return false;
+      }
+
+      // ① 주소 파트 전체 수집 (줄 순서 유지, 쓰레기 건너뜀)
+      var streetPart = ''; // 도로명 (로/길 포함)
+      var detailParts = []; // 상세주소 파트 (동, 호 각각 수집)
+
+      // ★ 전처리: OCR 줄 분리 보정 (번길/번지 숫자가 잘린 경우 합치기)
+      // "모라로19" + "2번길 50" → "모라로192번길 50"
+      // "408동 505" + "호" → "408동 505호"
+      var mergedLines = [];
+      for(var mi=0; mi<lines.length; mi++){
+        var ml = (lines[mi]||'').trim();
+        if(!ml) continue;
+        var prev = mergedLines.length > 0 ? mergedLines[mergedLines.length-1] : '';
+        // 이전 줄이 도로명 끝 숫자로 끝나고, 현재 줄이 번길/번지로 시작하면 합치기
+        if(prev.match(/(로|길)\s*\d+$/) && ml.match(/^\d*번길/)){
+          mergedLines[mergedLines.length-1] = prev + ml;
+        }
+        // 이전 줄이 숫자(동/호 없이)로 끝나고 현재 줄이 번길로 시작하면 합치기
+        else if(prev.match(/\d+$/) && ml.match(/^번길\s*\d/)){
+          mergedLines[mergedLines.length-1] = prev + ml;
+        }
+        // "505" + "호" → "505호"
+        else if(prev.match(/\d+$/) && ml === '호'){
+          mergedLines[mergedLines.length-1] = prev + '호';
+        }
+        // 현재 줄이 숫자만 (번지)이고 이전 줄이 도로명이면 합치기
+        else if(prev.match(/(로|길|번길)\s*$/) && ml.match(/^\d+$/)){
+          mergedLines[mergedLines.length-1] = prev + ml;
+        }
+        else {
+          mergedLines.push(ml);
+        }
+      }
+      lines = mergedLines;
+
+      for(var i=0; i<lines.length; i++){
+        var l = lines[i].trim();
+        if(!l || isJunkLine(l)) continue;
+
+        // 영어 잡텍스트 잘라내기
+        l = l.replace(/\s+[a-zA-Z][a-zA-Z\s]{1,}.*$/,'').trim();
+        // ★ v9.59: 번지 뒤 잡문자 제거 (아파트명은 보존)
+        // 번지수 뒤에 붙은 OCR 아티팩트 (~, 숫자 등) 제거
+        l = l.replace(/((?:로|길|번길)\s*\d{1,4})([~\-]\d+|\d{1,2}(?=[\s\D]))/, '$1').trim();
+        // 2글자 이하 한글 잡텍스트만 제거 (아파트명 3글자↑ 보존)
+        l = l.replace(/((?:로|길|번길)\s*\d+(?:-\d+)?)\s+[가-힣]{1,2}$/, '$1').trim();
+        if(!l) continue;
+
+        var hasStreet = l.match(/(시|구).*(로|길)/) || l.match(/(로|길)\s*\d+/);
+        var hasDong   = l.match(/\d+동/) || l.match(/아파트|오피스텔|빌라|임대|주공/);
+        var hasHo     = l.match(/\d+호/);
+
+        if(hasStreet && !streetPart){
+          streetPart = l;
+          // ★ 다음 줄이 번길 숫자 보정인지 확인 (예: "2번길 50")
+          var nextL = lines[i+1] ? lines[i+1].trim() : '';
+          if(nextL.match(/^\d{1,2}번길\s*\d/) && streetPart.match(/(로|길)\d+$/)){
+            streetPart = streetPart + nextL;
+            i++; // 다음 줄 건너뜀
+          }
+        } else if(hasDong && !detailParts.some(function(x){ return x.match(/아파트|오피스텔|동/); })){
+          detailParts.push(l);
+          // 같은 줄에 호수도 있으면 종료
+          if(hasHo) break;
+        } else if(hasHo && detailParts.length > 0 && !detailParts[detailParts.length-1].match(/\d+호/)){
+          // 동 다음 줄에 호수만 있는 경우 (쿠팡 스타일) — 앞 줄에 붙임
+          detailParts[detailParts.length-1] += ' ' + l;
+          break;
+        } else if(hasHo && detailParts.length === 0 && streetPart){
+          // 도로명 바로 다음에 호수만 있는 경우
+          detailParts.push(l);
+          break;
+        }
+      }
+
+      // ② 조합
+      var detailPart = detailParts.join(' ').trim();
+      if(streetPart && detailPart) return _cleanAddr(streetPart + ' ' + detailPart);
+      return _cleanAddr(streetPart || detailPart || '');
+    })();
+
+    // ★ 국제 송장 주소가 더 정확하면 우선 사용
+    if(intlAddr && intlAddr.length > (addrLine||'').length){
+      addrLine = intlAddr;
+    }
+
+    // ★ 2자리 번길 감지 → 오인식 경고 (192번길을 19번길로 읽을 수 있음)
+    if(addrLine && /로\s*\d{2}번길/.test(addrLine)){
+      var _addrWarnEl = document.getElementById('emer-addr-warn');
+      if(!_addrWarnEl){
+        _addrWarnEl = document.createElement('div');
+        _addrWarnEl.id = 'emer-addr-warn';
+        var _addrInput = document.getElementById('emer-addr');
+        if(_addrInput && _addrInput.parentNode){
+          _addrInput.parentNode.insertBefore(_addrWarnEl, _addrInput.nextSibling);
+        }
+      }
+      _addrWarnEl.style.cssText = 'font-size:11px;color:#b45309;background:#fef3c7;border:1px solid #f59e0b;border-radius:5px;padding:4px 8px;margin-top:3px';
+      _addrWarnEl.innerHTML = '⚠️ 번길 숫자 확인 필요 (예: 19번길→192번길). 틀리면 직접 수정 후 저장하세요.';
+      console.warn('[ADDR_WARN] 2자리 번길 감지:', addrLine);
+    }
+
+    // 배송메모: 문 앞, 경비실 등
+    var memoLine = lines.find(function(l){ return l.match(/문\s*앞|경비실|자율출입|직접|부재|택배함/); });
+
+    // ★ v9.34: 라우트 코드 자동 추출 (예: "310 C01", "215C", "320A05")
+    // 패턴: 3자리 숫자 + 알파벳 1자 + 0~2자리 숫자 (공백 허용)
+    var routeMatch = fullText.match(/\b(\d{3})\s?([A-Z])(\d{0,2})\b/);
+    var routeCode = routeMatch ? (routeMatch[1] + routeMatch[2] + (routeMatch[3]||'')) : '';
+
+    // ★ v9.34: 배송일 자동 추출 (예: "02/12 목", "12/25 수")
+    // 패턴: M/D 또는 MM/DD + 한글 요일
+    var dateMatch = fullText.match(/(\d{1,2})\/(\d{1,2})\s*([월화수목금토일])/);
+    var deliveryDate = dateMatch
+      ? String(dateMatch[1]).padStart(2,'0')+'/'+String(dateMatch[2]).padStart(2,'0')+' '+dateMatch[3]
+      : '';
+
+    // ★ v9.37: 박스 규격 자동 추출 (예: "RPB2.4", "RPB 1.5", "RPB3")
+    // 박스 크기/종류 파악용 (R = Reusable Package Box?)
+    var boxMatch = fullText.match(/\bRPB\s*([\d\.]+)\b/i);
+    var boxCode = boxMatch ? ('RPB'+boxMatch[1]) : '';
+
+    var p = {
+      order_id: orderId,
+      tracking_no: trackingNo,
+      recipient: recipientMatch ? recipientMatch[0] : '',
+      address: addrLine || '',
+      delivery_memo: memoLine || '',
+      route_code: routeCode,           // ★ v9.34
+      delivery_date: deliveryDate,     // ★ v9.34
+      box_code: boxCode                // ★ v9.37: 박스 규격
+    };
+
+    // 자동 입력 — hidden 필드에 저장 (지도 핀용)
+    if(p.order_id){ var oi=document.getElementById('emer-orderid'); if(oi) oi.value=p.order_id; window._pendingOrderId=p.order_id; }
+    if(p.recipient)    { var re=document.getElementById('emer-recipient'); if(re) re.value=p.recipient; }
+    if(p.address)      { var ad=document.getElementById('emer-addr');      if(ad) ad.value=p.address; }
+    if(p.delivery_memo){ var dm=document.getElementById('emer-delivmemo'); if(dm) dm.value=p.delivery_memo; }
+
+    if(p.tracking_no){
+      var clean = p.tracking_no.replace(/[\.\-\s]/g,'');
+      var inp = document.getElementById('emer-tracking-inp');
+      if(inp) inp.value = clean;
+      emerAddTracking();
+    }
+
+    // ★ v9.25: OCR 결과 → 수정 가능한 입력창으로 표시
+    var summary = document.getElementById('emer-ocr-summary');
+    if(summary){
+      var fs = 'width:100%;padding:5px 7px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--bg);color:var(--text);margin-top:2px';
+      var rows = '';
+      rows += '<div style="font-size:11px;font-weight:700;color:var(--teal);margin-bottom:6px">✅ OCR 완료 — 틀린 부분 수정 후 저장</div>';
+      // 운송장
+      rows += '<div style="margin-bottom:5px"><label style="font-size:11px;color:var(--text2)">🔢 운송장번호</label><input id="ocr-edit-track" style="'+fs+'" value="'+(p.tracking_no||'')+'" oninput="_emerOcrApply()"></div>';
+      // 주문번호
+      rows += '<div style="margin-bottom:5px"><label style="font-size:11px;color:var(--text2)">📋 주문번호</label><input id="ocr-edit-order" style="'+fs+'" value="'+(p.order_id||'')+'" oninput="_emerOcrApply()"></div>';
+      // 수령인
+      rows += '<div style="margin-bottom:5px"><label style="font-size:11px;color:var(--text2)">👤 수령인</label><input id="ocr-edit-recip" style="'+fs+'" value="'+(p.recipient||'')+'" oninput="_emerOcrApply()"></div>';
+      // 주소
+      rows += '<div style="margin-bottom:5px"><label style="font-size:11px;color:var(--text2)">📍 주소 <span style="color:#f59e0b;font-size:10px">(틀리면 직접 수정)</span></label><input id="ocr-edit-addr" style="'+fs+'" value="'+(p.address||'')+'" oninput="_emerOcrApply()"></div>';
+      // ★ v9.34: 라우트 코드 + 배송일 (자동 추출)
+      if(p.route_code || p.delivery_date || p.box_code){
+        rows += '<div style="display:flex;gap:6px;margin-bottom:5px;flex-wrap:wrap">';
+        if(p.route_code){
+          rows += '<div style="flex:1;min-width:90px"><label style="font-size:11px;color:var(--text2)">🚛 라우트</label><input id="ocr-edit-route" style="'+fs+'" value="'+p.route_code+'" oninput="_emerOcrApply()"></div>';
+        }
+        if(p.delivery_date){
+          rows += '<div style="flex:1;min-width:90px"><label style="font-size:11px;color:var(--text2)">📅 배송일</label><input id="ocr-edit-date" style="'+fs+'" value="'+p.delivery_date+'" oninput="_emerOcrApply()"></div>';
+        }
+        if(p.box_code){
+          rows += '<div style="flex:1;min-width:90px"><label style="font-size:11px;color:var(--text2)">📦 박스</label><input id="ocr-edit-box" style="'+fs+'" value="'+p.box_code+'" oninput="_emerOcrApply()"></div>';
+        }
+        rows += '</div>';
+      }
+      // 원문 보기 토글
+      rows += '<details style="margin-top:4px"><summary style="font-size:10px;color:var(--text3);cursor:pointer">🔍 OCR 원문 보기 (디버그)</summary><pre style="font-size:9px;color:var(--text3);white-space:pre-wrap;max-height:120px;overflow-y:auto;background:var(--bg2);padding:6px;border-radius:4px;margin-top:4px">'+ocrText.replace(/</g,'&lt;').slice(0,600)+'</pre></details>';
+      summary.innerHTML = rows;
+      summary.style.display='block';
+    }
+    if(status) status.innerHTML = '';
+
+    // 수정된 OCR 값을 hidden 필드에 실시간 반영
+    window._emerOcrApply = function(){
+      var t=document.getElementById('ocr-edit-track'),
+          o=document.getElementById('ocr-edit-order'),
+          r=document.getElementById('ocr-edit-recip'),
+          a=document.getElementById('ocr-edit-addr'),
+          rt=document.getElementById('ocr-edit-route'),  // ★ v9.34
+          dt=document.getElementById('ocr-edit-date'),   // ★ v9.34
+          bx=document.getElementById('ocr-edit-box');    // ★ v9.37
+      if(t&&t.value){
+        var cl=t.value.replace(/[.\-\s]/g,'').trim();
+        window._emerTrackings=[cl]; emerRefreshTrackingList();
+        var inp=document.getElementById('emer-tracking-inp'); if(inp) inp.value=cl;
+      }
+      if(o){ var oi=document.getElementById('emer-orderid'); if(oi) oi.value=o.value; }
+      if(r){ var re=document.getElementById('emer-recipient'); if(re) re.value=r.value; }
+      if(a){ var ad=document.getElementById('emer-addr'); if(ad) ad.value=a.value; }
+      // ★ v9.34: 라우트/배송일 → window 변수에 보존 (emerSave에서 Firebase에 포함)
+      window._emerRouteCode = rt ? rt.value.trim() : (p.route_code||'');
+      window._emerDeliveryDate = dt ? dt.value.trim() : (p.delivery_date||'');
+      // ★ v9.37: 박스 규격 보존
+      window._emerBoxCode = bx ? bx.value.trim() : (p.box_code||'');
+    };
+    window._emerOcrApply();
+
+    // ★ OCR 성공 → 운송장 입력란 숨김
+    var tw = document.getElementById('emer-tracking-wrap');
+    if(tw && window._emerTrackings.length>0) tw.style.display='none';
+
+    // ★ v9.59: OCR 결과 디버그
+    console.log('[OCR_RESULT]', JSON.stringify({
+      tracking: p.tracking_no,
+      addr: _cleanAddr(p.address),
+      recipient: p.recipient,
+      ocrLen: (ocrText||'').length
+    }));
+
+    // ★ v9.59: 주소 없으면 OCR 전체 텍스트에서 재추출 시도
+    if(!p.address && ocrText){
+      var _lines2 = ocrText.split('\n').map(function(l){return l.trim();}).filter(Boolean);
+      var _addrLine = _lines2.find(function(l){
+        return l.match(/(구|군).*(로|길|번길)/) || l.match(/(동|구).*(아파트|오피스텔|빌라)/);
+      });
+      if(_addrLine){
+        p.address = _addrLine;
+        var _adEl = document.getElementById('emer-addr');
+        if(_adEl) _adEl.value = _addrLine;
+        console.log('[OCR_ADDR_RETRY]', _addrLine);
+      }
+    }
+
+    // ★ v9.59: QR GPS 우선 사용 — QR에 좌표가 있으면 재지오코딩 불필요
+    var pinGps = null;
+    var _qrGps = window._emerGps;
+    if(_qrGps && _qrGps.src === 'QR' && _qrGps.lat && _qrGps.lng){
+      // QR 좌표 직접 사용 (쿠팡 배송시스템 좌표 = 가장 정확)
+      pinGps = {lat:_qrGps.lat, lng:_qrGps.lng, src:'QR', addr:_cleanAddr(p.address)};
+      if(status) status.innerHTML='<span style="color:var(--teal)">✅ QR GPS 사용 (쿠팡 좌표)</span>';
+      _geoResultBanner('📍 QR | '+_qrGps.lat.toFixed(5)+', '+_qrGps.lng.toFixed(5));
+      console.log('[GPS] QR 좌표 사용:', _qrGps.lat, _qrGps.lng);
+      // ★ v9.60: QR GPS도 캐시 저장 — 같은 동의 다른 송장이 QR 없어도 동일 좌표 사용
+      if(p.address) _geoCacheSet(p.address, {lat:_qrGps.lat, lng:_qrGps.lng, src:'QR'});
+    } else if(p.address){
+      if(status) status.innerHTML = '<span style="color:var(--blue)">📍 배송지 좌표 변환 중...</span>';
+      try{
+        // QR 없거나 OCR만 인식된 경우 → 지오코딩
+        var _kkr = await _kakaoGeocode(p.address);
+        if(_kkr){
+          pinGps={lat:_kkr.lat,lng:_kkr.lng,src:(_kkr.src||'kakao'),addr:_cleanAddr(p.address)};
+          window._emerGps={lat:_kkr.lat,lng:_kkr.lng,acc:0,src:(_kkr.src||'kakao'),addr:_cleanAddr(p.address)};
+          var _srcLabel = {google:'Google',kakao_addr:'카카오주소',kakao_kw:'카카오키워드⚠️',kakao:'카카오'}[_kkr.src]||_kkr.src;
+          if(status) status.innerHTML='<span style="color:var(--teal)">✅ '+_srcLabel+' 좌표 변환 완료</span>';
+          _geoResultBanner('📍 '+_srcLabel+' | '+_kkr.lat.toFixed(5)+', '+_kkr.lng.toFixed(5));
+        } else {
+          console.warn('[KAKAO_GEO_FAIL] 카카오 실패 → Google 시도');
+          var gcRes = await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(_addBusanPrefix(p.address))+'&language=ko&region=kr&key='+apiKey);
+          var gcData = await gcRes.json();
+          if(gcData.status==='OK' && gcData.results && gcData.results[0]){
+            var loc = gcData.results[0].geometry.location;
+            if(typeof loc.lat==='number' && typeof loc.lng==='number'){
+              pinGps={lat:loc.lat,lng:loc.lng,src:'geocode',addr:_cleanAddr(p.address)};
+              window._emerGps={lat:loc.lat,lng:loc.lng,acc:0,src:'geocode',addr:_cleanAddr(p.address)};
+              if(status) status.innerHTML='<span style="color:var(--teal)">✅ 배송지 좌표 변환 완료</span>';
+            }
+          } else if(gcData.status==='REQUEST_DENIED'){
+            if(status) status.innerHTML='<span style="color:#f59e0b">⚠️ Geocoding API 비활성 — 현위치 사용</span>';
+          }
+        }
+      }catch(geoErr){ console.warn('Geocoding 실패:', geoErr); }
+    } // end if(p.address)
+
+    // ★ v9.68: 카카오 매칭이 단지중심이거나 실패면 Claude Vision으로 동번호 재검증
+    if(window._emerLastFile && pinGps && pinGps.src && 
+       (pinGps.src === 'kakao_kw_apt' || pinGps.src === 'google' || pinGps.src === 'geocode')){
+      try{
+        if(status) status.innerHTML = '<span style="color:var(--blue)">🔍 Claude로 동번호 재검증 중...</span>';
+        var _cv = await _emerVerifyWithClaude(window._emerLastFile, p.address || '');
+        if(_cv && _cv.dong && _cv.apt){
+          // Claude 동번호가 OCR과 다르면 → 카카오 재매칭
+          var ocrDongM = (p.address||'').match(/(\d+동)/);
+          var ocrDong = ocrDongM ? ocrDongM[1] : '';
+          if(_cv.dong !== ocrDong){
+            console.log('[v9.68 DONG_CORRECT]', ocrDong, '→', _cv.dong);
+            _geoResultBanner('🔧 Claude 동번호 교정: '+ocrDong+' → '+_cv.dong);
+            // 주소 재구성 후 카카오 재검색
+            var newAddr = (_cv.address || p.address || '').trim();
+            if(newAddr.indexOf(_cv.dong) < 0) newAddr += ' ' + _cv.dong;
+            if(_cv.ho && newAddr.indexOf(_cv.ho) < 0) newAddr += ' ' + _cv.ho;
+            // emer-addr 입력란 갱신
+            var _ae = document.getElementById('emer-addr');
+            if(_ae) _ae.value = newAddr;
+            p.address = newAddr;
+            // 카카오 재매칭
+            try{
+              var _kkr2 = await _kakaoGeocode(newAddr);
+              if(_kkr2 && _kkr2.lat){
+                pinGps = {lat:_kkr2.lat, lng:_kkr2.lng, src:(_kkr2.src||'kakao_v68'), addr:_cleanAddr(newAddr), matchedAddr:_kkr2.matchedAddr, matchedName:_kkr2.matchedName};
+                window._emerGps = {lat:_kkr2.lat, lng:_kkr2.lng, acc:0, src:(_kkr2.src||'kakao_v68'), addr:_cleanAddr(newAddr), matchedAddr:_kkr2.matchedAddr, matchedName:_kkr2.matchedName};
+                if(status) status.innerHTML = '<span style="color:var(--teal)">✅ Claude 검증 + 카카오 재매칭 완료</span>';
+              }
+            }catch(reErr){ console.warn('[v9.68 재매칭 실패]', reErr); }
+          }
+        }
+      }catch(cvErr){ console.warn('[v9.68 Claude 검증 실패]', cvErr); }
+    }
+
+    // ★ v9.50: 폴백 — Geocoding 실패 시 현위치 강제 사용
+    if(!pinGps){
+      if(window._emerGps && window._emerGps.lat){
+        pinGps = {lat:window._emerGps.lat, lng:window._emerGps.lng, src:'device'};
+        if(status) status.innerHTML='<span style="color:#f59e0b">⚠️ Geocoding 실패 — 현위치로 핀 생성</span>';
+      } else {
+        // 현위치도 없으면 GPS 새로 받기
+        if(navigator.geolocation){
+          try{
+            var pos = await new Promise(function(res,rej){navigator.geolocation.getCurrentPosition(res,rej,{timeout:4000,enableHighAccuracy:true});});
+            pinGps = {lat:pos.coords.latitude, lng:pos.coords.longitude, src:'device_fallback'};
+          }catch(e){}
+        }
+      }
+    }
+
+    if(pinGps && window._activeDriverMapAddPin){
+      var previewRecord = {
+        fbId: '_preview_'+Date.now(),
+        driver: window._APP.driver||'',
+        trackings: window._emerTrackings.slice(),
+        tracking: window._emerTrackings[0]||'',
+        order_id: p.order_id||'',
+        recipient: p.recipient||'',
+        addr: p.address||'',
+        gps: {lat:pinGps.lat, lng:pinGps.lng},
+        time: new Date().toTimeString().slice(0,5),
+        status: '저장대기',
+        pinSrc: pinGps.src // 'geocode' / 'QR' / 'device'
+      };
+      window._activeDriverMapAddPin(previewRecord);
+      // 카운터 업데이트
+      var ce=document.getElementById('driver-map-count');
+      if(ce){ var cn=parseInt(ce.textContent)||0; ce.textContent='오늘 긴급배송 '+(cn+1)+'건 핀 표시'; }
+      window._activeDriverMap&&window._activeDriverMap.panTo({lat:pinGps.lat,lng:pinGps.lng});
+    }
+
+    // 운송장 사진 배송 사진으로 자동 추가
+    // ★ v9.59: 스캔 사진 1장만 (플래그 가드)
+    if(!window._scanPhotoAdded){
+      window._scanPhotoAdded = true;
+      var reader = new FileReader();
+      reader.onload = function(e){ window._emerPhotos.push(e.target.result); emerRefreshPhotoWrap(); };
+      reader.readAsDataURL(file);
+    }
+
+    // ★ v9.25: 등록방식 = OCR 자동인식
+    window._emerEntryMode = 'ocr';
+
+    // ★ v9.59: 운송장 OR 주소 있으면 저장 (수령인 없으면 미상 처리)
+    var _ocrTrk = window._emerTrackings && window._emerTrackings[0];
+    var _ocrAddr = p.address || (document.getElementById('emer-addr')&&document.getElementById('emer-addr').value.trim());
+    if(!document.getElementById('emer-recipient')?.value?.trim()){
+      var _rr = document.getElementById('emer-recipient');
+      if(_rr) _rr.value = '수령인 미상';
+    }
+    if(_ocrTrk || _ocrAddr){
+      if(status) status.innerHTML = '<span style="color:var(--teal)">📸 스캔 ✅ &nbsp;→&nbsp; 💾 저장 중...</span>';
+      _tts('스캔'); _emerIncScan();
+      window._emerSaving = false;
+      setTimeout(function(){
+        if(p.order_id){
+          var _oe2=document.getElementById('emer-orderid');
+          if(_oe2 && !_oe2.value) _oe2.value = p.order_id;
+        }
+        if(typeof emerSave==='function') emerSave();
+      }, 600);
+    }
+
+  }catch(e){
+    var errMsg = e.message || String(e);
+    var hint = '';
+    if(errMsg.indexOf('API key')>=0 || errMsg.indexOf('API_KEY')>=0 || errMsg.indexOf('403')>=0){
+      hint = '— Google Vision API 키를 확인해주세요';
+    } else if(errMsg.indexOf('quota')>=0 || errMsg.indexOf('QUOTA')>=0 || errMsg.indexOf('429')>=0){
+      hint = '— API 할당량 초과 (내일 다시 시도)';
+    } else if(errMsg.indexOf('빈 응답')>=0 || errMsg.indexOf('파싱 실패')>=0){
+      hint = '— 네트워크 확인 후 재시도';
+    } else if(errMsg.indexOf('텍스트 인식 실패')>=0){
+      hint = '— 밝은 곳에서 라벨 전체가 보이게 다시 찍어주세요';
+    }
+    if(status) status.innerHTML = '<span style="color:var(--red)">❌ OCR 실패: '+errMsg+' '+hint+'</span>';
+    console.error('[OCR]', errMsg);
+  }
+}
+
+// ★ v9.25: 바코드/QR 인식 (운송장 훼손 시 보조 수단)
+// ★ v9.25: QR/바코드 텍스트에서 주소/수령인/주문번호/GPS 파싱
+// 쿠팡 QR 형식: |V1|운송장|주소|상세주소|수령인|해시|위도|경도|타입|타임스탬프|
+function _parseQrText(text){
+  if(!text) return {};
+  var result = {};
+
+  // ★ 쿠팡 QR 파이프 구분 형식 우선 파싱
+  if(text.indexOf('|') >= 0){
+    var parts = text.split('|').map(function(p){ return p.trim(); }).filter(Boolean);
+    // |V1|운송장|주소|상세주소|수령인|해시|위도|경도|타입|타임스탬프|
+    // parts[0]=V1, [1]=운송장, [2]=주소, [3]=상세주소, [4]=수령인, [5]=해시, [6]=위도, [7]=경도
+    if(parts[0] === 'V1' && parts.length >= 5){
+      // 운송장 번호
+      if(parts[1] && /^\d{10,20}$/.test(parts[1])){
+        result.tracking_no = parts[1];
+      }
+      // 주소 (주소 + 상세주소 합치기)
+      var addr = parts[2] || '';
+      var addrDetail = parts[3] || '';
+      if(addr) result.address = addrDetail ? addr + ' ' + addrDetail : addr;
+      // 수령인 (김*우 패턴)
+      if(parts[4] && parts[4].match(/[가-힣]+\*[가-힣]/)){
+        result.recipient = parts[4];
+      }
+      // GPS 좌표 — 전체 파트 스캔 (고정 인덱스 아님 — 쿠팡 포맷 변경 대응)
+      // 한국 좌표: lat 33~38, lng 126~130
+      for(var gi=2; gi<parts.length-1; gi++){
+        var pLat = parseFloat(parts[gi]);
+        var pLng = parseFloat(parts[gi+1]);
+        if(!isNaN(pLat) && !isNaN(pLng) &&
+           pLat > 33 && pLat < 38 && pLng > 126 && pLng < 130){
+          result.lat = pLat;
+          result.lng = pLng;
+          break;
+        }
+      }
+      return result;
+    }
+  }
+
+  // 일반 텍스트 폴백 파싱 (비쿠팡 형식)
+  var lines = text.split(/[\n\r,]/).map(function(l){ return l.trim(); }).filter(Boolean);
+  var full = text.replace(/\s+/g,' ');
+  var recMatch = full.match(/[가-힣]{2,4}\*[가-힣]/) || full.match(/수령인[:\s]*([가-힣]{2,4})/);
+  if(recMatch) result.recipient = recMatch[1]||recMatch[0];
+  lines.forEach(function(l){
+    if(!result.address && (l.match(/(시|구)\s*.*(로|길|동)/) || l.match(/(로|길)\s*\d+/) || l.match(/\d+동\s*\d+호/))){
+      result.address = l;
+    }
+  });
+  var ordMatch = full.match(/7[\d\.\-]{12,16}/);
+  if(ordMatch) result.order_id = ordMatch[0].replace(/[^\d]/g,'');
+  var memoMatch = full.match(/문\s*앞|경비실|자율출입|택배함|부재/);
+  if(memoMatch) result.memo = memoMatch[0];
+  return result;
+}
+
+// ★ v9.25: 실시간 바코드/QR 스캐너
+var _emerScanReader = null;
+
+// ★ v9.48: 폰 네이티브 카메라로 QR 촬영 후 디코딩
+
+// ★ v9.51: 클립보드 자동 감지 — 폰 카메라로 QR 스캔 후 복사만 하면 자동입력
+
+// ★ v9.61: 통합 송장 촬영 — QR 먼저, 실패 시 OCR 자동
+function emerUnifiedScan(input){
+  var statusEl = document.getElementById('emer-unified-status');
+  if(!input.files || !input.files[0]) return;
+  var file = input.files[0];
+  input.value = '';
+  window._scanPhotoAdded=false;
+  window._emerGps=null;           // ★ v9.59: GPS 초기화
+  window._pendingPhotoUpload=null; // ★ v9.59: 이전 사진 취소
+  if(statusEl) statusEl.innerHTML = '🔍 QR 분석 중...';
+
+  var url = URL.createObjectURL(file);
+  var img = new Image();
+  img.onload = function(){
+    URL.revokeObjectURL(url);
+    var scale = Math.min(1, 2000/Math.max(img.naturalWidth, img.naturalHeight));
+    var cw=Math.round(img.naturalWidth*scale), ch=Math.round(img.naturalHeight*scale);
+    var cv=document.createElement('canvas'); cv.width=cw; cv.height=ch;
+    var ctx=cv.getContext('2d'); ctx.drawImage(img,0,0,cw,ch);
+
+    // ★ v9.59: 파란 송장 감지 → 전처리 캔버스 추가
+    var _smp=document.createElement('canvas'); _smp.width=100; _smp.height=100;
+    _smp.getContext('2d').drawImage(img,0,0,cw,ch,0,0,100,100);
+    var _sd=_smp.getContext('2d').getImageData(0,0,100,100);
+    var _bl=0; for(var _i=0;_i<_sd.data.length;_i+=16){if(_sd.data[_i+2]>_sd.data[_i]+40&&_sd.data[_i+2]>80)_bl++;}
+    var _isBlueLabel=(_bl/625)>0.15;
+    var cvBlue=null;
+    if(_isBlueLabel){
+      cvBlue=document.createElement('canvas'); cvBlue.width=cw; cvBlue.height=ch;
+      var ctxB=cvBlue.getContext('2d'); ctxB.drawImage(img,0,0,cw,ch);
+      var dB=ctxB.getImageData(0,0,cw,ch);
+      for(var _j=0;_j<dB.data.length;_j+=4){
+        var _r=dB.data[_j],_g=dB.data[_j+1],_b=dB.data[_j+2];
+        if(_b>_r+30&&_b>_g+20&&_b>80){ dB.data[_j]=dB.data[_j+1]=dB.data[_j+2]=255; }
+        else{ var _gr=Math.round(_r*.299+_g*.587+_b*.114); dB.data[_j]=dB.data[_j+1]=dB.data[_j+2]=(_gr<140?0:255); }
+      }
+      ctxB.putImageData(dB,0,0);
+    }
+
+    function goOCR(){
+      toast('📷 goOCR호출', 2000); // ★ 디버그
+      if(statusEl) statusEl.innerHTML = '🔍 OCR 분석 중...';
+      statusEl.id = 'emer-ocr-status';
+      setTimeout(function(){ var el=document.getElementById('emer-ocr-status'); if(el) el.id='emer-unified-status'; }, 10000);
+      emerOcrScan(file, document.getElementById('emer-ocr-status'));
+    }
+
+    // ① BarcodeDetector — QR 전용 (로컬, API 비용 0)
+    if('BarcodeDetector' in window){
+      var bd;
+      try{ bd=new BarcodeDetector({formats:['qr_code','data_matrix','aztec']}); }
+      catch(e){ try{ bd=new BarcodeDetector({formats:['qr_code']}); }catch(e2){} }
+      if(bd){
+        // ★ v9.59: 파란 송장이면 전처리 캔버스도 시도
+        var _detectTarget = (_isBlueLabel && cvBlue) ? cvBlue : cv;
+        bd.detect(_detectTarget).then(function(codes){
+          if(codes&&codes.length&&codes[0].rawValue){
+            var raw=codes[0].rawValue;
+            if(raw.indexOf('V1|')===0){
+              if(statusEl) statusEl.textContent='✅ QR 인식!';
+              _emerHandleScan(raw, statusEl);
+            } else if(_isBlueLabel && cvBlue){
+              // 파란 전처리 실패 → 원본으로 재시도
+              bd.detect(cv).then(function(c2){
+                if(c2&&c2.length&&c2[0].rawValue&&c2[0].rawValue.indexOf('V1|')===0){
+                  if(statusEl) statusEl.textContent='✅ QR 인식!';
+                  _emerHandleScan(c2[0].rawValue,statusEl);
+                } else { _nativeCamJsQR(_isBlueLabel&&cvBlue?cvBlue:cv,cw,ch,statusEl,goOCR); }
+              }).catch(function(){ _nativeCamJsQR(cv,cw,ch,statusEl,goOCR); });
+            } else { goOCR(); }
+          } else { _nativeCamJsQR(_isBlueLabel&&cvBlue?cvBlue:cv,cw,ch,statusEl,goOCR); }
+        }).catch(function(){ _nativeCamJsQR(cv,cw,ch,statusEl,goOCR); });
+        return;
+      }
+    }
+    // ② jsQR (로컬, API 비용 0)
+    _nativeCamJsQR(_isBlueLabel&&cvBlue?cvBlue:cv, cw, ch, statusEl, goOCR);
+  };
+  img.onerror = function(){ URL.revokeObjectURL(url); if(statusEl) statusEl.textContent='❌ 이미지 로드 실패'; };
+  img.src = url;
+}
+
+function emerNativeCamQR(input){
+  var statusEl = document.getElementById('emer-native-status');
+  if(!input.files || !input.files[0]) return;
+  var file = input.files[0];
+  input.value = '';
+  if(statusEl) statusEl.textContent = '🔍 QR 분석 중...';
+  var url = URL.createObjectURL(file);
+  var img = new Image();
+  img.onload = function(){
+    URL.revokeObjectURL(url);
+    var scale = Math.min(1, 2000/Math.max(img.naturalWidth, img.naturalHeight));
+    var cw=Math.round(img.naturalWidth*scale), ch=Math.round(img.naturalHeight*scale);
+    var cv=document.createElement('canvas'); cv.width=cw; cv.height=ch;
+    cv.getContext('2d').drawImage(img,0,0,cw,ch);
+    // BarcodeDetector 시도
+    if('BarcodeDetector' in window){
+      var bd; try{ bd=new BarcodeDetector({formats:['qr_code','data_matrix','aztec','code_128']}); }catch(e){ try{bd=new BarcodeDetector({formats:['qr_code']});}catch(e2){} }
+      if(bd){ bd.detect(cv).then(function(codes){
+        if(codes&&codes.length&&codes[0].rawValue){
+          if(statusEl) statusEl.textContent='✅ QR 인식!';
+          _emerHandleScan(codes[0].rawValue, statusEl); return;
+        }
+        _nativeCamJsQR(cv, cw, ch, statusEl);
+      }).catch(function(){ _nativeCamJsQR(cv, cw, ch, statusEl); }); return; }
+    }
+    _nativeCamJsQR(cv, cw, ch, statusEl);
+  };
+  img.onerror = function(){ URL.revokeObjectURL(url); if(statusEl) statusEl.textContent='❌ 이미지 로드 실패'; };
+  img.src = url;
+}
+function _nativeCamJsQR(cv, cw, ch, statusEl, fallback){
+  if(!window.jsQR){ if(statusEl) statusEl.textContent='❌ jsQR 미로드'; if(fallback) fallback(); return; }
+  var cv2=document.createElement('canvas'), ctx2=cv2.getContext('2d');
+
+  // ★ v9.59: 파란 쿠팡 송장 감지 — 파란 배경 제거 후 흑백 변환
+  function isBlueLabel(d){
+    var px=d.data, blue=0, total=px.length/4;
+    for(var i=0;i<px.length;i+=16){ // 4픽셀 샘플링
+      if(px[i+2]>px[i]+40 && px[i+2]>px[i+1]+30 && px[i+2]>100) blue++;
+    }
+    return (blue/(total/4)) > 0.15; // 15% 이상 파란 픽셀이면 파란 송장
+  }
+  function removeBlue(d){
+    var px=d.data;
+    for(var i=0;i<px.length;i+=4){
+      var r=px[i],g=px[i+1],b=px[i+2];
+      if(b>r+30 && b>g+20 && b>80){
+        px[i]=px[i+1]=px[i+2]=255; // 파란 배경 → 흰색
+      } else {
+        var gray=Math.round(r*.299+g*.587+b*.114);
+        px[i]=px[i+1]=px[i+2]=(gray<128?0:255); // 나머지 → 이진화
+      }
+    }
+    return d;
+  }
+  function enhance(d){ var px=d.data,len=px.length,mn=255,mx=0; for(var i=0;i<len;i+=4){var g=Math.round(px[i]*.299+px[i+1]*.587+px[i+2]*.114);px[i]=px[i+1]=px[i+2]=g;} for(var j=0;j<len;j+=4){if(px[j]<mn)mn=px[j];if(px[j]>mx)mx=px[j];} var rng=mx-mn||1; for(var k=0;k<len;k+=4){var v=Math.round((px[k]-mn)/rng*255);px[k]=px[k+1]=px[k+2]=v;} return d; }
+  function scan(sx,sy,sw,sh,enh){ cv2.width=sw;cv2.height=sh; ctx2.drawImage(cv,sx,sy,sw,sh,0,0,sw,sh); var d=ctx2.getImageData(0,0,sw,sh); if(enh)enhance(d); ctx2.putImageData(d,0,0); return window.jsQR(d.data,sw,sh,{inversionAttempts:'attemptBoth'}); }
+  function scanBlue(sx,sy,sw,sh){ cv2.width=sw;cv2.height=sh; ctx2.drawImage(cv,sx,sy,sw,sh,0,0,sw,sh); var d=ctx2.getImageData(0,0,sw,sh); removeBlue(d); ctx2.putImageData(d,0,0); return window.jsQR(d.data,sw,sh,{inversionAttempts:'attemptBoth'}); }
+
+  // 파란 송장 여부 사전 감지
+  cv2.width=Math.min(cw,200); cv2.height=Math.min(ch,200);
+  ctx2.drawImage(cv,0,0,cw,ch,0,0,cv2.width,cv2.height);
+  var _sampleData=ctx2.getImageData(0,0,cv2.width,cv2.height);
+  var _isBlue=isBlueLabel(_sampleData);
+
+  var rx=Math.floor(cw/2), cy2=Math.floor(ch*.12), cw2=Math.floor(cw*.72), ch2=Math.floor(ch*.76);
+  var r;
+  if(_isBlue){
+    // 파란 송장: 파란 배경 제거 버전 우선
+    r=scanBlue(0,0,cw,ch)||scanBlue(rx,0,cw-rx,ch)||scan(0,0,cw,ch,true)||scan(Math.floor(cw*.14),cy2,cw2,ch2,false);
+  } else {
+    r=scan(0,0,cw,ch,false)||scan(rx,0,cw-rx,ch,false)||scan(Math.floor(cw*.14),cy2,cw2,ch2,false)||scan(0,0,cw,ch,true);
+  }
+  if(r&&r.data){
+    if(r.data.indexOf('V1|')===0 || r.data.indexOf('V1\t')===0){
+      if(statusEl) statusEl.textContent='✅ QR 인식!'; _emerHandleScan(r.data,statusEl);
+    } else if(fallback){ fallback(); }
+    else { if(statusEl) statusEl.textContent='✅ QR 인식!'; _emerHandleScan(r.data,statusEl); }
+  }
+  else if(fallback){ fallback(); }
+  else { if(statusEl) statusEl.innerHTML='❌ 인식 실패 — 다시 찍어주세요'; }
+}
+
+function emerStartScan(){
+  var mo = document.getElementById('emer-scan-mo');
+  if(!mo) return;
+  mo.style.display = 'flex';
+  var statusEl = document.getElementById('emer-scan-status');
+  statusEl.textContent = '카메라 시작 중...';
+  var video = document.getElementById('emer-scan-video');
+
+  // ★ v9.25: QR 트래킹 오버레이 캔버스 (네이티브 카메라처럼 QR 따라다니는 박스)
+  var ov = document.getElementById('emer-scan-overlay');
+  if(!ov){
+    ov = document.createElement('canvas');
+    ov.id = 'emer-scan-overlay';
+    ov.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3';
+    video.parentNode.insertBefore(ov, video.nextSibling);
+  }
+  var octx = ov.getContext('2d');
+
+  function syncOv(){
+    ov.width = video.offsetWidth || 320;
+    ov.height = video.offsetHeight || 480;
+  }
+  function drawGuide(){
+    syncOv();
+    var cw=ov.width, ch=ov.height;
+    octx.clearRect(0,0,cw,ch);
+    // ★ v9.25: QR만 꽉 채우도록 큰 가이드 박스 (화면의 80%)
+    var pad=Math.min(cw,ch)*0.08;
+    var bw=cw-pad*2, bh=bw; // 정사각형
+    if(bh > ch-pad*2) bh = ch-pad*2;
+    var x=pad, y=(ch-bh)/2;
+    // 사방 어둡게
+    octx.fillStyle='rgba(0,0,0,0.5)';
+    octx.fillRect(0,0,cw,y);
+    octx.fillRect(0,y+bh,cw,ch-y-bh);
+    octx.fillRect(0,y,x,bh);
+    octx.fillRect(x+bw,y,cw-x-bw,bh);
+    // 모서리 코너 (노란색 — 눈에 잘 띔)
+    var cl=28, lw=4;
+    octx.strokeStyle='#FFD600'; octx.lineWidth=lw;
+    [[x,y,1,1],[x+bw,y,-1,1],[x,y+bh,1,-1],[x+bw,y+bh,-1,-1]].forEach(function(p){
+      octx.beginPath();
+      octx.moveTo(p[0],p[1]); octx.lineTo(p[0]+p[2]*cl,p[1]);
+      octx.moveTo(p[0],p[1]); octx.lineTo(p[0],p[1]+p[3]*cl);
+      octx.stroke();
+    });
+    // 안내 텍스트
+    octx.font='bold 15px sans-serif';
+    octx.textAlign='center';
+    octx.fillStyle='rgba(0,0,0,0.7)';
+    octx.fillRect(cw/2-140, y+bh+6, 280, 28);
+    octx.fillStyle='#FFD600';
+    octx.fillText('QR 코드를 노란 박스에 꽉 채우세요  📦', cw/2, y+bh+24);
+    octx.textAlign='start';
+  }
+  function drawQrBox(pts, vw, vh){
+    syncOv();
+    var cw=ov.width, ch=ov.height, sx=cw/vw, sy=ch/vh;
+    octx.clearRect(0,0,cw,ch);
+    // QR 위치에 초록 추적 박스
+    octx.save();
+    octx.beginPath();
+    octx.moveTo(pts[0].x*sx, pts[0].y*sy);
+    for(var i=1;i<pts.length;i++) octx.lineTo(pts[i].x*sx, pts[i].y*sy);
+    octx.closePath();
+    // 반투명 채우기
+    octx.fillStyle='rgba(0,255,136,0.18)'; octx.fill();
+    // 테두리
+    octx.strokeStyle='#00ff88'; octx.lineWidth=3;
+    octx.shadowColor='#00ff88'; octx.shadowBlur=10;
+    octx.stroke();
+    octx.restore();
+  }
+
+  // ★ v9.25: 스캔라인 애니메이션
+  var _scanLineY = 0, _scanDir = 1, _scanAni = null;
+  function _startScanline(){
+    var pad=Math.min(ov.width,ov.height)*0.08;
+    var bw=ov.width-pad*2, bh=bw;
+    if(bh > ov.height-pad*2) bh = ov.height-pad*2;
+    var x0=pad, y0=(ov.height-bh)/2; bw=bw; // x0,y0,bw 재정의
+    if(_scanAni) cancelAnimationFrame(_scanAni);
+    function aniTick(){
+      drawGuide();
+      _scanLineY += _scanDir * 2.5;
+      if(_scanLineY > bw-4){ _scanDir=-1; _scanLineY=bw-4; }
+      if(_scanLineY < 4){ _scanDir=1; _scanLineY=4; }
+      var grad=octx.createLinearGradient(0, y0+_scanLineY-8, 0, y0+_scanLineY+8);
+      grad.addColorStop(0,'rgba(0,255,136,0)');
+      grad.addColorStop(0.5,'rgba(0,255,136,0.8)');
+      grad.addColorStop(1,'rgba(0,255,136,0)');
+      octx.fillStyle=grad;
+      octx.fillRect(x0, y0+_scanLineY-8, bw, 16);
+      _scanAni=requestAnimationFrame(aniTick);
+    }
+    _scanAni=requestAnimationFrame(aniTick);
+  }
+  function _stopScanline(){ if(_scanAni){ cancelAnimationFrame(_scanAni); _scanAni=null; } }
+
+  var constraints = {
+    video:{
+      facingMode:{ideal:'environment'},
+      width:{ideal:1280, min:640},
+      height:{ideal:720, min:480},
+      frameRate:{ideal:30}
+    }
+  };
+
+  navigator.mediaDevices.getUserMedia(constraints)
+    .catch(function(){
+      return navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}});
+    })
+    .catch(function(){
+      return navigator.mediaDevices.getUserMedia({video:true});
+    })
+    .then(function(stream){
+      window._emerCamStream = stream;
+      video.srcObject = stream;
+      video.play();
+      statusEl.innerHTML = '📦 QR 코드에 <b style="color:#FFD600">바짝</b> 가까이 — 화면 가득 채우세요';
+
+      // ★ v9.25: getCapabilities() 체크 후 지원 기기만 autofocus 적용
+      try{
+        var vTrack = stream.getVideoTracks()[0];
+        var caps = vTrack.getCapabilities ? vTrack.getCapabilities() : {};
+        var adv = {};
+        if(caps.focusMode && caps.focusMode.indexOf('continuous') >= 0) adv.focusMode = 'continuous';
+        if(caps.whiteBalanceMode && caps.whiteBalanceMode.indexOf('continuous') >= 0) adv.whiteBalanceMode = 'continuous';
+        if(caps.exposureMode && caps.exposureMode.indexOf('continuous') >= 0) adv.exposureMode = 'continuous';
+        if(Object.keys(adv).length > 0) vTrack.applyConstraints({advanced:[adv]}).catch(function(){});
+      }catch(e){}
+
+      video.addEventListener('loadedmetadata', function(){
+        syncOv(); _startScanline();
+      }, {once:true});
+      setTimeout(function(){ syncOv(); _startScanline(); }, 600);
+
+      function _startScanLoop(){
+        var _active = true;
+
+        // ★ v9.55: BarcodeDetector 단순화 — 필터 제거, 감지 즉시 처리
+        if('BarcodeDetector' in window){
+          var bd;
+          try{ bd = new BarcodeDetector({formats:['qr_code','code_128','data_matrix','aztec','code_39']}); }
+          catch(e){ try{ bd = new BarcodeDetector({formats:['qr_code','code_128']}); }
+          catch(e2){ try{ bd = new BarcodeDetector({formats:['qr_code']}); }catch(e3){} } }
+
+          if(bd){
+            function bdTick(){
+              if(!_active) return;
+              if(video.readyState < 2){ requestAnimationFrame(bdTick); return; }
+              // ★ v9.59: live video 대신 스냅샷 방식 (BarcodeDetector 정확도 향상)
+              createImageBitmap(video).then(function(bmp){
+                return bd.detect(bmp).then(function(codes){ bmp.close(); return codes; });
+              }).catch(function(){ return bd.detect(video); })
+                .then(function(codes){
+                  if(!_active) return;
+                  if(codes && codes.length > 0){
+                    // 가장 큰 코드 선택 (작은 것 무시)
+                    var best = codes.reduce(function(a,b){
+                      if(!a.cornerPoints) return b;
+                      if(!b.cornerPoints) return a;
+                      var aw = Math.abs(a.cornerPoints[1].x - a.cornerPoints[0].x);
+                      var bw = Math.abs(b.cornerPoints[1].x - b.cornerPoints[0].x);
+                      return bw > aw ? b : a;
+                    });
+                    if(!best.rawValue){ requestAnimationFrame(bdTick); return; }
+                    // 최소 크기만 체크 (화면의 6% 이상)
+                    if(best.cornerPoints && video.videoWidth){
+                      var pw = Math.abs(best.cornerPoints[1].x - best.cornerPoints[0].x);
+                      if(pw < video.videoWidth * 0.06){ requestAnimationFrame(bdTick); return; }
+                    }
+                    _active = false;
+                    _stopScanline();
+                    if(best.cornerPoints && video.videoWidth) drawQrBox(best.cornerPoints, video.videoWidth, video.videoHeight);
+                    var _fmt = best.format||'';
+                    var _isBC = (_fmt==='code_128'||_fmt==='code_39');
+                    if(_isBC){
+                      var _bParsed = _parseQrText(best.rawValue);
+                      if(_bParsed.tracking_no || _bParsed.address){
+                        statusEl.textContent = '✅ 바코드 인식!';
+                        _emerHandleScan(best.rawValue, statusEl);
+                      } else {
+                        var _bNum = best.rawValue.replace(/[^\d]/g,'');
+                        statusEl.textContent = '✅ 운송장: ' + _bNum;
+                        window._emerTrackings=[_bNum]; emerRefreshTrackingList&&emerRefreshTrackingList();
+                        var _i=document.getElementById('emer-tracking-inp'); if(_i)_i.value=_bNum;
+                        window._emerEntryMode='barcode';
+                        try{navigator.vibrate&&navigator.vibrate([80,40,80]);}catch(e){}
+                        _active=true; requestAnimationFrame(bdTick);
+                      }
+                    } else {
+                      statusEl.textContent = '✅ QR 인식!';
+                      _emerHandleScan(best.rawValue, statusEl);
+                    }
+                    return;
+                  }
+                  requestAnimationFrame(bdTick);
+                })
+                .catch(function(){ requestAnimationFrame(bdTick); });
+            }
+            video.addEventListener('loadedmetadata', function(){ requestAnimationFrame(bdTick); }, {once:true});
+            if(video.readyState >= 2) requestAnimationFrame(bdTick);
+            window._emerBdStop = function(){ _active=false; _stopScanline(); };
+            return;
+          }
+        }
+
+        // iOS Safari 폴백: jsQR + 중앙 크롭 + 크기 필터
+        var canvas2 = document.createElement('canvas');
+        var ctx2 = canvas2.getContext('2d');
+        var _trackCount2 = 0;
+
+        // ★ v9.25: QR 크기+비율 필터 — 작은QR/바코드 차단, 정사각형만 통과
+        function _isQrBigEnough(loc, sw, sh){
+          if(!loc) return true;
+          var w = Math.abs(loc.topRightCorner.x - loc.topLeftCorner.x);
+          var h = Math.abs(loc.bottomLeftCorner.y - loc.topLeftCorner.y);
+          var ratio = h > 0 ? w / h : 0;
+          return (w >= sw * 0.12) && (h >= sh * 0.12) && (ratio >= 0.4 && ratio <= 2.5);
+        }
+
+        // ★ v9.47: 이미지 전처리 — 그레이스케일 + 대비 강화 (파란 송장 대응)
+        function _enhanceContrast(imgData){
+          var d=imgData.data, len=d.length;
+          // 1. 그레이스케일 변환
+          for(var i=0;i<len;i+=4){
+            var g = Math.round(d[i]*0.299 + d[i+1]*0.587 + d[i+2]*0.114);
+            d[i]=d[i+1]=d[i+2]=g;
+          }
+          // 2. 히스토그램 기반 대비 스트레칭 (min~max → 0~255)
+          var mn=255, mx=0;
+          for(var j=0;j<len;j+=4){ if(d[j]<mn)mn=d[j]; if(d[j]>mx)mx=d[j]; }
+          var range=mx-mn||1;
+          for(var k=0;k<len;k+=4){
+            var v=Math.round((d[k]-mn)/range*255);
+            d[k]=d[k+1]=d[k+2]=v;
+          }
+          return imgData;
+        }
+
+        function _jsqrScan(sx,sy,sw,sh,vw,vh,enhance){
+          if(!window.jsQR) return null;
+          canvas2.width=sw; canvas2.height=sh;
+          ctx2.drawImage(video,sx,sy,sw,sh,0,0,sw,sh);
+          var d=ctx2.getImageData(0,0,sw,sh);
+          if(enhance) _enhanceContrast(d);
+          var r=window.jsQR(d.data,d.width,d.height,{inversionAttempts:'attemptBoth'});
+          if(r && r.data){
+            // 크기 필터: 작은 QR / 바코드 차단
+            if(!_isQrBigEnough(r.location, sw, sh)) return null;
+            if(r.location){
+              var loc=r.location;
+              function adj(p){ return {x:p.x+sx, y:p.y+sy}; }
+              r._pts=[adj(loc.topLeftCorner),adj(loc.topRightCorner),adj(loc.bottomRightCorner),adj(loc.bottomLeftCorner)];
+              r._vw=vw; r._vh=vh;
+            }
+            return r;
+          }
+          return null;
+        }
+
+        function jsqrTick(){
+          if(!_active) return;
+          if(video.readyState < 2){ requestAnimationFrame(jsqrTick); return; }
+          var vw=video.videoWidth, vh=video.videoHeight;
+          if(!vw){ requestAnimationFrame(jsqrTick); return; }
+          try{
+            // ★ v9.25 크롭 전략: 중앙 집중 (사이드 바코드·우상단 작은QR 영역 제외)
+            // 중앙 60%x70% → 중앙 80%x85% → 전체
+            var cx=Math.floor(vw*0.20), cy=Math.floor(vh*0.15);
+            var cw2=Math.floor(vw*0.60), ch2=Math.floor(vh*0.70);
+            // ★ v9.47: 원본 시도 → 전처리(대비강화) 재시도 (파란송장 대응)
+            var r = _jsqrScan(cx, cy, cw2, ch2, vw, vh, false)                 // ①중앙 원본
+                 || _jsqrScan(Math.floor(vw*0.10), Math.floor(vh*0.08),
+                              Math.floor(vw*0.80), Math.floor(vh*0.84), vw, vh, false) // ②중앙 원본
+                 || _jsqrScan(0, 0, vw, vh, vw, vh, false)                     // ③전체 원본
+                 || _jsqrScan(cx, cy, cw2, ch2, vw, vh, true)                  // ④중앙 대비강화
+                 || _jsqrScan(Math.floor(vw*0.10), Math.floor(vh*0.08),
+                              Math.floor(vw*0.80), Math.floor(vh*0.84), vw, vh, true)  // ⑤중앙 대비강화
+                 || _jsqrScan(0, 0, vw, vh, vw, vh, true);                     // ⑥전체 대비강화
+            if(r && r.data && _active){
+              _stopScanline();
+              if(r._pts) drawQrBox(r._pts, r._vw, r._vh);
+              _trackCount2++;
+              if(_trackCount2 >= 2){
+                _active=false;
+                statusEl.textContent='✅ QR 인식!';
+                _emerHandleScan(r.data, statusEl);
+              } else {
+                requestAnimationFrame(jsqrTick);
+              }
+              return;
+            }
+            _trackCount2 = 0;
+          }catch(e){}
+          requestAnimationFrame(jsqrTick);
+        }
+        video.addEventListener('loadedmetadata', function(){ requestAnimationFrame(jsqrTick); }, {once:true});
+        if(video.readyState >= 2) requestAnimationFrame(jsqrTick);
+        window._emerBdStop = function(){ _active=false; _stopScanline(); };
+      }
+
+      _startScanLoop();
+    })
+    .catch(function(e){
+      statusEl.textContent = '❌ 카메라 권한 필요 — 주소창 🔒 → 카메라 허용';
+      console.warn('[cam]', e);
+    });
+}
+
+// ★ v9.25: 스캔 결과 통합 처리
+function _emerHandleScan(raw, statusEl){
+  if(!raw) return;
+  if(window._emerScanLock) return;
+  window._emerScanLock = true;
+  // ★ v9.46: 1.2초 자동 해제 제거 → emerSave 완료 시점에 해제
+  // (자동 저장 1.5초 타이머 > 락 해제 1.2초 → 저장 전 스캔 가능했던 버그 수정)
+
+  // ★ v9.61: 중복 운송장 체크
+  var _qpCheck = _parseQrText(raw);
+  var _tnCheck = _qpCheck.tracking_no || (raw.replace(/[.\-\s]/g,'').match(/^\d{10,}$/) ? raw.replace(/[.\-\s]/g,'') : null);
+  if(_tnCheck){
+    // 오늘 저장된 기록에서 중복 확인
+    var _todayLocs = window._activeDriverMapEmerLocs || window._emerLocs || [];
+    var _dup = _todayLocs.find(function(x){
+      return (x.trackings||[]).indexOf(_tnCheck)>=0 || x.tracking===_tnCheck;
+    });
+    if(_dup){
+      // 중복 경고
+      try{
+        var _ac=new(window.AudioContext||window.webkitAudioContext)();
+        var _o=_ac.createOscillator(),_g=_ac.createGain();
+        _o.connect(_g);_g.connect(_ac.destination);
+        _o.type='sawtooth';_o.frequency.value=280;
+        _g.gain.setValueAtTime(0.3,_ac.currentTime);
+        _g.gain.exponentialRampToValueAtTime(0.001,_ac.currentTime+0.4);
+        _o.start();_o.stop(_ac.currentTime+0.4);
+        setTimeout(function(){try{_ac.close();}catch(e){}},600);
+        navigator.vibrate&&navigator.vibrate([200,100,200,100,200]);
+      }catch(e){}
+      _tts('중복');
+      // 중복 토스트
+      var _dt=document.createElement('div');
+      _dt.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(220,38,38,.95);color:#fff;padding:16px 24px;border-radius:12px;font-size:16px;font-weight:900;z-index:9999;text-align:center';
+      _dt.innerHTML='⚠️ 중복 운송장!<br><span style="font-size:12px;font-weight:500">'+_tnCheck+'<br>이미 저장된 건입니다</span>';
+      document.body.appendChild(_dt);
+      setTimeout(function(){_dt.style.opacity='0';_dt.style.transition='opacity .3s';setTimeout(function(){_dt.remove();},300);},2000);
+      window._emerScanLock=false;
+      return;
+    }
+
+    // ★ v9.61: 같은 집 묶음 체크 — GPS 15m + 수령인 + 동호수 모두 일치
+    function _extractUnit(addr){
+      if(!addr) return {};
+      // ★ v9.34 보강: 알파벳 동(A동/B동) + 숫자 동 + 맨션/차(단지) 모두 인식
+      var dongMatch = addr.match(/([A-Za-z\d]+)\s*동(?![아네은])/)        // A동, 102동, 5동
+                   || addr.match(/(\d+)\s*맨션/)                          // 1맨션, 2맨션
+                   || addr.match(/(\d+)\s*차(?![량선])/)                  // 1차, 2차 (차량/차선 제외)
+                   || addr.match(/(\d+)동/);                              // 폴백
+      var hoMatch = addr.match(/(\d+)\s*호/) || addr.match(/(\d+)\s*-\s*\d+\s*호/);
+      var dong = dongMatch ? String(dongMatch[1]).toUpperCase() : null;
+      var ho = hoMatch ? hoMatch[1] : null;
+      return {dong:dong, ho:ho};
+    }
+    function _gpsDist(a,b){
+      if(!a||!b) return 9999;
+      var R=6371000, dLat=(b.lat-a.lat)*Math.PI/180, dLng=(b.lng-a.lng)*Math.PI/180;
+      var x=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
+      return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+    }
+    if(_qpCheck.address){
+      var _newGps = _qpCheck.lat ? {lat:_qpCheck.lat,lng:_qpCheck.lng} : (window._emerGps||null);
+      var _newUnit = _extractUnit(_qpCheck.address);
+      var _newName = (_qpCheck.recipient||'').replace(/\*/g,'');
+      var _bundle = _todayLocs.find(function(x){
+        if(!x.addr || x.fbId && x.fbId.indexOf('_preview')>=0) return false;
+        // ① GPS 15m 이내
+        var dist = _gpsDist(_newGps, x.gps);
+        if(dist > 15) return false;
+        // ② 수령인 일치 (★ v9.59: 수령인 미상이면 동호수만으로 판단)
+        var xName = (x.recipient||'').replace(/\*/g,'');
+        var _nameUnknown = !_newName || _newName==='수령인미상' || _newName==='수령인 미상';
+        var _xUnknown = !xName || xName==='수령인미상' || xName==='수령인 미상';
+        if(!_nameUnknown && !_xUnknown && _newName !== xName) return false;
+        // ③ 동호수 일치 (아파트/오피스텔), 없으면 GPS 8m 이내
+        var xUnit = _extractUnit(x.addr);
+        var hasUnit = _newUnit.ho || xUnit.ho;
+        if(hasUnit){
+          if(_newUnit.dong && xUnit.dong && _newUnit.dong !== xUnit.dong) return false;
+          if(_newUnit.ho && xUnit.ho && _newUnit.ho !== xUnit.ho) return false;
+        } else {
+          if(dist > 8) return false; // 주택: 8m 이내만
+        }
+        return true;
+      });
+      if(_bundle && _bundle.fbId && _bundle.fbId.indexOf('_preview')<0){
+        // 같은 집 발견 → 기존 핀에 운송장 추가
+        _tts('묶음');
+        var _bt=document.createElement('div');
+        _bt.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(245,158,11,.95);color:#fff;padding:16px 24px;border-radius:12px;font-size:15px;font-weight:900;z-index:9999;text-align:center';
+        _bt.innerHTML='📦 같은 집 묶음!<br><span style="font-size:12px;font-weight:500">'+(_bundle.recipient||'')+'<br>'+(_bundle.addr||'').slice(0,25)+'</span>';
+        document.body.appendChild(_bt);
+        setTimeout(function(){_bt.style.opacity='0';_bt.style.transition='opacity .3s';setTimeout(function(){_bt.remove();},300);},2000);
+        // Firebase에 기존 레코드에 운송장 추가
+        if(FB && _db){
+          var _newTrackings = (_bundle.trackings||[_bundle.tracking]).slice();
+          if(_newTrackings.indexOf(_tnCheck)<0) _newTrackings.push(_tnCheck);
+          _db.collection('emergency_deliveries').doc(_bundle.fbId).update({trackings:_newTrackings}).catch(function(){});
+        }
+        window._emerIncScan && window._emerIncScan();
+        window._emerIncSave && window._emerIncSave();
+        window._emerScanLock=false;
+        // 폼 닫고 다음 스캔
+        setTimeout(function(){
+          document.getElementById('emer-del-mo')?.remove();
+          setTimeout(function(){ openEmergencyDelivery(); }, 300);
+        }, 2200);
+        return;
+      }
+    }
+  }
+
+  if(statusEl) statusEl.textContent = '✅ 인식: ' + raw.slice(0,40);
+  try{ navigator.vibrate && navigator.vibrate([60,30,120]); }catch(e){}
+  _tts('스캔'); _emerIncScan();
+  try{
+    var _ac = new (window.AudioContext||window.webkitAudioContext)();
+    var _osc = _ac.createOscillator();
+    var _g = _ac.createGain();
+    _osc.connect(_g); _g.connect(_ac.destination);
+    _osc.type = 'square';
+    _osc.frequency.setValueAtTime(1480, _ac.currentTime);
+    _osc.frequency.setValueAtTime(1760, _ac.currentTime + 0.07);
+    _g.gain.setValueAtTime(0.18, _ac.currentTime);
+    _g.gain.exponentialRampToValueAtTime(0.001, _ac.currentTime + 0.18);
+    _osc.start(_ac.currentTime);
+    _osc.stop(_ac.currentTime + 0.18);
+    setTimeout(function(){ try{_ac.close();}catch(e){} }, 400);
+  }catch(e){}
+  // ★ v9.25: 화면 초록 플래시
+  try{
+    var _fl = document.createElement('div');
+    _fl.style.cssText = 'position:fixed;inset:0;background:rgba(0,255,136,0.28);z-index:9999;pointer-events:none;transition:opacity 0.4s';
+    document.body.appendChild(_fl);
+    setTimeout(function(){ _fl.style.opacity='0'; setTimeout(function(){ _fl.remove(); },400); },120);
+  }catch(e){}
+
+  var code = raw.replace(/[.\-\s]/g,'').trim();
+  var isTrack = /^[0-9]{8,25}$/.test(code);
+  var qp = _parseQrText(raw);
+  var fld = [];
+
+  // 운송장 추가
+  var trackToAdd = qp.tracking_no || (isTrack ? code : null);
+  if(trackToAdd){
+    window._emerTrackings = window._emerTrackings||[];
+    if(window._emerTrackings.indexOf(trackToAdd)<0){
+      window._emerTrackings.push(trackToAdd);
+      window._emerTrackingTimes = window._emerTrackingTimes||{};
+      var n=new Date();
+      window._emerTrackingTimes[trackToAdd]=n.getHours()+':'+String(n.getMinutes()).padStart(2,'0')+':'+String(n.getSeconds()).padStart(2,'0');
+      emerRefreshTrackingList();
+      // QR(주소/GPS)이면 ocr, 순수 바코드면 barcode
+      if(qp.address || qp.lat){ window._emerEntryMode = 'ocr'; }
+      else if(!window._emerEntryMode){ window._emerEntryMode = 'barcode'; }
+    }
+  }
+
+  // 주소/수령인/GPS
+  if(qp.address){var ae=document.getElementById('emer-addr');if(ae&&!ae.value){ae.value=qp.address;fld.push('주소');}}
+  if(qp.recipient){var re=document.getElementById('emer-recipient');if(re&&!re.value){re.value=qp.recipient;fld.push('수령인');}}
+  if(qp.order_id){var oe=document.getElementById('emer-orderid');if(oe&&!oe.value){oe.value=qp.order_id;fld.push('주문번호');}}
+  if(qp.memo){var dm=document.getElementById('emer-delivmemo');if(dm&&!dm.value)dm.value=qp.memo;}
+  if(qp.lat&&qp.lng){
+    window._emerGps={lat:qp.lat,lng:qp.lng,src:'QR'};fld.push('GPS');
+    var gpsEl=document.getElementById('emer-gps-status');
+    if(gpsEl)gpsEl.innerHTML='<span style="color:var(--teal)">📍 QR GPS: '+qp.lat.toFixed(6)+', '+qp.lng.toFixed(6)+'</span>';
+  } else if(qp.address) {
+    // ★ v9.63: QR에 GPS 없을 때 → _kakaoGeocode 통합 호출 (Google 직접 호출 폐기)
+    // 이전: Google만 → 'geocode' src로 저장 → 동 단위 부정확
+    // 변경: _kakaoGeocode → 캐시 → 카카오키워드(번길 OCR 교정 포함) → 카카오주소 → Google
+    var gpsEl2=document.getElementById('emer-gps-status');
+    if(gpsEl2) gpsEl2.innerHTML='<span style="color:var(--blue)">📍 배송지 좌표 변환 중 (카카오 우선)...</span>';
+    var _gcAddr = qp.address;
+    if(typeof _kakaoGeocode === 'function'){
+      _kakaoGeocode(_gcAddr).then(function(_kr){
+        if(_kr && _kr.lat && _kr.lng){
+          window._emerGps={lat:_kr.lat,lng:_kr.lng,src:(_kr.src||'kakao'),addr:_gcAddr};
+          var gEl=document.getElementById('emer-gps-status');
+          var _srcL = {kakao_kw_dong:'카카오키워드(동)',kakao_kw_apt:'카카오키워드(단지)',kakao_addr:'카카오주소',google:'Google',cache:'캐시',stored_reuse:'재사용',QR:'QR'}[_kr.src]||_kr.src;
+          if(gEl) gEl.innerHTML='<span style="color:var(--teal)">📍 '+_srcL+' GPS ✅</span>';
+          // 지도 핀 생성
+          if(window._activeDriverMapAddPin){
+            var pr={fbId:'_preview_qr_'+Date.now(),driver:window._APP.driver||'',trackings:window._emerTrackings.slice(),tracking:window._emerTrackings[0]||'',order_id:(document.getElementById('emer-orderid')||{}).value||'',recipient:qp.recipient||'',addr:_gcAddr,gps:{lat:_kr.lat,lng:_kr.lng},time:new Date().toTimeString().slice(0,5),status:'저장대기'};
+            window._activeDriverMapAddPin(pr);
+            window._activeDriverMap&&window._activeDriverMap.panTo({lat:_kr.lat,lng:_kr.lng});
+          }
+        } else {
+          var gEl2=document.getElementById('emer-gps-status');
+          if(gEl2) gEl2.innerHTML='<span style="color:#f59e0b">⚠️ 좌표 변환 실패 — 저장 시 재시도</span>';
+        }
+      }).catch(function(e){ console.warn('[_emerHandleScan _kakaoGeocode]', e); });
+    }
+  }
+
+  // ★ v9.59: QR/바코드 인식 후 자동저장 — 운송장만 있어도 저장
+  if(qp.tracking_no || (window._emerTrackings && window._emerTrackings.length > 0)){
+    var _scanMo = document.getElementById('emer-scan-mo');
+    if(_scanMo){ _scanMo.style.display='none'; emerStopScan&&emerStopScan(); }
+    if(statusEl) statusEl.innerHTML = '<span style="color:var(--teal)">📸 스캔 ✅ → 💾 저장 중...</span>';
+    window._emerSaving = false;
+    setTimeout(function(){ if(typeof emerSave==='function') emerSave(); }, 600);
+    return;
+  }
+
+  // 묶음 감지
+  var curAddr=(document.getElementById('emer-addr')||{}).value||'';
+  var curRecip=(document.getElementById('emer-recipient')||{}).value||'';
+  var curTracks=window._emerTrackings||[];
+  if(curTracks.length>1 && trackToAdd && (curAddr||curRecip)){
+    var mc=0,mr=[];
+    if(curAddr&&qp.address){var a1=curAddr.replace(/\s/g,''),a2=qp.address.replace(/\s/g,'');if(a1===a2||a1.indexOf(a2)>=0||a2.indexOf(a1)>=0){mc++;mr.push('주소');}}
+    if(curRecip&&qp.recipient&&curRecip===qp.recipient){mc++;mr.push('수령인');}
+    if(window._emerGps&&qp.lat&&qp.lng){
+      var R=6371000,dLat=(qp.lat-window._emerGps.lat)*Math.PI/180,dLng=(qp.lng-window._emerGps.lng)*Math.PI/180;
+      var ab=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(window._emerGps.lat*Math.PI/180)*Math.cos(qp.lat*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
+      var dist=R*2*Math.atan2(Math.sqrt(ab),Math.sqrt(1-ab));
+      if(dist<=50){mc++;mr.push('GPS('+Math.round(dist)+'m)');}
+    }
+    if(mc>=2&&curTracks.indexOf(trackToAdd)<0){
+      emerStopScan();
+      if(confirm('📦 같은 집 감지! ('+mr.join('+')+')\n운송장 '+trackToAdd+' 추가할까요?')){
+        window._emerTrackings.push(trackToAdd);emerRefreshTrackingList();
+      }
+      return;
+    }
+  }
+
+  // 결과 표시
+  var msg = trackToAdd
+    ? '✅ 운송장: '+trackToAdd+(fld.length?' ('+fld.join('/')+'자동입력)':'')
+    : (fld.length?'✅ '+fld.join('/')+' 입력됨':'⚠️ 운송장 형식 아님 — 직접 입력');
+  var bSt=document.getElementById('emer-barcode-status');
+  if(bSt)bSt.innerHTML='<span style="color:var(--teal)">'+msg+'</span>';
+
+  // 요약 박스
+  if(fld.length||trackToAdd){
+    var sumEl=document.getElementById('emer-ocr-summary');
+    if(sumEl){sumEl.style.display='block';sumEl.innerHTML='<b>📊 스캔 결과</b><br>'+(trackToAdd?'📦 운송장: '+trackToAdd+'<br>':'')+(qp.address?'📍 주소: '+qp.address+'<br>':'')+(qp.recipient?'👤 수령인: '+qp.recipient+'<br>':'')+(qp.lat?'🗺️ GPS: 자동수집<br>':'');}
+  }
+
+  if(trackToAdd||fld.length){
+    emerStopScan();
+    // ★ v9.34: 자동 저장 — 운송장 + 주소 모두 인식되면 1.5초 후 자동 저장
+    // 주소 필수: 배송 핀 위치 지정 + GPS 검증 + 호수 확인 모두 주소 기반
+    if(trackToAdd && qp.address){
+      var _autoStatusEl = document.getElementById('emer-barcode-status');
+      var _countdown = 15; // 0.1초 단위 → 1.5초
+      if(_autoStatusEl){
+        _autoStatusEl.innerHTML = '<span style="color:var(--green);font-weight:800">⏳ 자동 저장: 1.5초… (다른 항목 클릭 시 취소)</span>';
+      }
+      // 자동 저장 카운트다운 (취소 가능)
+      window._emerAutoSaveTimer = setTimeout(function(){
+        window._emerAutoSaveTimer = null;
+        // 모달이 아직 열려있고 저장 중이 아닐 때만 실행
+        var _t=(window._emerTrackings&&window._emerTrackings.length>0)||(document.getElementById('emer-tracking-inp')&&document.getElementById('emer-tracking-inp').value.trim().length>5);
+        var _a=document.getElementById('emer-addr')&&document.getElementById('emer-addr').value.trim().length>5;
+        // ★ v9.59: 수령인 없으면 "수령인 미상" 자동 입력 후 저장
+        var _rEl=document.getElementById('emer-recipient');
+        if(_rEl && !_rEl.value.trim()){ _rEl.value='수령인 미상'; }
+        if(document.getElementById('emer-del-mo')&&!window._emerSaving&&typeof emerSave==='function'){
+          if(_t&&_a){ emerSave(); }
+          else{ var _ms=[]; if(!_t)_ms.push('운송장'); if(!_a)_ms.push('주소');
+            var _st2=document.getElementById('emer-unified-status');
+            if(_st2)_st2.innerHTML='<span style="color:#f59e0b">⚠️ '+_ms.join('+')+' 확인 후 저장</span>'; }
+        }
+      }, 1500);
+      // 입력 필드 클릭/포커스 시 자동 저장 취소 (사용자가 수정하려는 의도)
+      var _cancelAutoSave = function(){
+        if(window._emerAutoSaveTimer){
+          clearTimeout(window._emerAutoSaveTimer);
+          window._emerAutoSaveTimer = null;
+          if(_autoStatusEl) _autoStatusEl.innerHTML = '<span style="color:var(--amber)">⏸ 자동 저장 취소됨 — 수동 저장 버튼을 눌러주세요</span>';
+        }
+      };
+      // ★ v9.52: click으로 변경 — focus는 OCR 자동입력 시도 발생해서 자동 저장 오취소됨
+      ['emer-addr','emer-recipient','emer-orderid','emer-memo','emer-delivmemo','emer-tracking-inp'].forEach(function(id){
+        var el=document.getElementById(id);
+        if(el) el.addEventListener('click', _cancelAutoSave, {once:true});
+      });
+    }
+  } else {
+    // ★ v9.25: 운송장/주소 모두 없는 QR → 0.8초 후 락 해제 (계속 스캔)
+    if(statusEl) statusEl.textContent = '⚠️ 미인식 — 다시 갖다 대세요';
+    setTimeout(function(){ window._emerScanLock = false; }, 800);
+  }
+}
+function emerStopScan(){
+  window._emerScanLock = false; // ★ v9.25: 락 초기화 (다음 스캔 세션 대비)
+  // ★ v9.25: BarcodeDetector 루프 정지
+  if(window._emerBdStop){ try{window._emerBdStop();}catch(e){} window._emerBdStop=null; }
+  // ZXing 정지
+  try{ if(_emerScanReader){_emerScanReader.reset();_emerScanReader=null;} }catch(e){}
+  // ★ 카메라 스트림 정지 (배터리 절약)
+  try{
+    if(window._emerCamStream){
+      window._emerCamStream.getTracks().forEach(function(t){t.stop();});
+      window._emerCamStream = null;
+    }
+  }catch(e){}
+  var video = document.getElementById('emer-scan-video');
+  if(video){ video.srcObject = null; }
+  var mo = document.getElementById('emer-scan-mo');
+  if(mo) mo.style.display = 'none';
+}
+
+async function emerBarcodeScan(file){
+  if(!file) return;
+  var status = document.getElementById('emer-barcode-status');
+  if(status) status.innerHTML = '<span style="color:var(--blue)">📊 바코드 분석 중...</span>';
+
+  try{
+    // BarcodeDetector API 지원 여부 확인 (안드로이드 크롬 / 데스크톱 크롬 지원, iOS 미지원)
+    if(!('BarcodeDetector' in window)){
+      // iOS Safari 등 미지원 → ZXing 폴백 (이미 로드되어있을 가능성 높음)
+      if(typeof ZXing !== 'undefined' && ZXing.BrowserMultiFormatReader){
+        var reader = new ZXing.BrowserMultiFormatReader();
+        var imgUrl = URL.createObjectURL(file);
+        var img = new Image();
+        await new Promise(function(r){ img.onload=r; img.onerror=r; img.src=imgUrl; });
+        try{
+          var result = await reader.decodeFromImageElement(img);
+          URL.revokeObjectURL(imgUrl);
+          if(result && result.text){
+            var raw = result.text;
+            var code = raw.replace(/[\.\-\s]/g,'').trim();
+            if(/^[0-9]{8,25}$/.test(code)){
+              window._emerTrackings = window._emerTrackings||[];
+              if(window._emerTrackings.indexOf(code)<0) window._emerTrackings.push(code);
+              emerRefreshTrackingList();
+              window._emerEntryMode = 'barcode';
+              // ★ v9.25: QR 텍스트에서 주소/수령인 추가 파싱
+              var qp = _parseQrText(raw);
+              var fld = [];
+              if(qp.address){ var ae=document.getElementById('emer-addr'); if(ae&&!ae.value){ae.value=qp.address;fld.push('주소');} }
+              if(qp.recipient){ var re=document.getElementById('emer-recipient'); if(re&&!re.value){re.value=qp.recipient;fld.push('수령인');} }
+              if(qp.order_id){ var oe=document.getElementById('emer-orderid'); if(oe&&!oe.value){oe.value=qp.order_id;fld.push('주문번호');} }
+              if(status) status.innerHTML = '<span style="color:var(--teal)">✅ 바코드 인식 성공: '+code+(fld.length?' ('+fld.join('/')+'자동입력)':'')+'</span>';
+            } else {
+              // 숫자 아닌 QR → 주소/수령인 파싱 시도
+              var qp2 = _parseQrText(raw);
+              var fld2 = [];
+              if(qp2.address){ var ae2=document.getElementById('emer-addr'); if(ae2&&!ae2.value){ae2.value=qp2.address;fld2.push('주소');} }
+              if(qp2.recipient){ var re2=document.getElementById('emer-recipient'); if(re2&&!re2.value){re2.value=qp2.recipient;fld2.push('수령인');} }
+              if(fld2.length){
+                if(status) status.innerHTML = '<span style="color:var(--teal)">✅ QR에서 '+fld2.join('/')+'자동 입력됨 (운송장은 직접 입력)</span>';
+              } else {
+                if(status) status.innerHTML = '<span style="color:var(--amber)">⚠️ 인식됨: '+raw.slice(0,30)+' (운송장 형식 아님 — 직접 입력 필요)</span>';
+              }
+            }
+            // 사진도 자동 첨부
+            var fr = new FileReader();
+            fr.onload = function(e){ window._emerPhotos.push(e.target.result); emerRefreshPhotoWrap(); };
+            fr.readAsDataURL(file);
+            return;
+          }
+        }catch(e){
+          URL.revokeObjectURL(imgUrl);
+          if(status) status.innerHTML = '<span style="color:var(--red)">❌ 바코드 인식 실패 — 직접 입력해주세요</span>';
+          return;
+        }
+      } else {
+        if(status) status.innerHTML = '<span style="color:var(--amber)">⚠️ 이 기기는 바코드 인식 미지원 — 직접 입력해주세요</span>';
+        return;
+      }
+    }
+
+    // BarcodeDetector API 사용 (안드로이드 크롬 / 데스크톱 크롬)
+    var detector = new BarcodeDetector({
+      formats: ['qr_code','code_128','code_39','ean_13'] // 운송장 바코드 스캐너는 바코드 유지
+    });
+
+    var imgBitmap = await createImageBitmap(file);
+    var barcodes = await detector.detect(imgBitmap);
+
+    if(!barcodes || !barcodes.length){
+      if(status) status.innerHTML = '<span style="color:var(--red)">❌ 바코드를 찾지 못했습니다 — 직접 입력해주세요</span>';
+      return;
+    }
+
+    // 바코드 1개 이상 인식 → 운송장 형태(숫자 8~25자리)에 가까운 것 우선
+    var foundTrack = null, foundOther = [];
+    for(var i=0; i<barcodes.length; i++){
+      var raw = (barcodes[i].rawValue||'').replace(/[\.\-\s]/g,'').trim();
+      if(!raw) continue;
+      if(/^[0-9]{8,25}$/.test(raw) && !foundTrack){ foundTrack = raw; }
+      else { foundOther.push(barcodes[i].rawValue); }
+    }
+
+    // ★ v9.25: QR 텍스트에서 주소/수령인/주문번호 파싱 시도
+    if(foundTrack){
+      window._emerTrackings = window._emerTrackings||[];
+      if(window._emerTrackings.indexOf(foundTrack)<0) window._emerTrackings.push(foundTrack);
+      emerRefreshTrackingList();
+      window._emerEntryMode = 'barcode';
+
+      // ★ QR에서 추가 정보 파싱 (주소, 수령인, 주문번호)
+      var qrExtra = {};
+      if(foundOther.length){
+        foundOther.forEach(function(t){ var p=_parseQrText(t); Object.assign(qrExtra, p); });
+      }
+      // 운송장 번호 자체에도 텍스트 붙어있을 수 있음
+      var allRaw = barcodes.map(function(b){return b.rawValue||'';}).join('\n');
+      var mainParsed = _parseQrText(allRaw);
+      Object.assign(qrExtra, mainParsed);
+
+      // 파싱된 정보 자동 입력
+      var filled = [];
+      if(qrExtra.address){
+        var adEl=document.getElementById('emer-addr'); if(adEl&&!adEl.value){adEl.value=qrExtra.address; filled.push('주소');}
+      }
+      if(qrExtra.recipient){
+        var reEl=document.getElementById('emer-recipient'); if(reEl&&!reEl.value){reEl.value=qrExtra.recipient; filled.push('수령인');}
+      }
+      if(qrExtra.order_id){
+        var oiEl=document.getElementById('emer-orderid'); if(oiEl&&!oiEl.value){oiEl.value=qrExtra.order_id; filled.push('주문번호');}
+      }
+      if(qrExtra.memo){
+        var dmEl=document.getElementById('emer-delivmemo'); if(dmEl&&!dmEl.value){dmEl.value=qrExtra.memo;}
+      }
+
+      var extra = filled.length ? ' + '+filled.join('/') : '';
+      if(status) status.innerHTML = '<span style="color:var(--teal)">✅ 인식 성공: '+foundTrack+(extra?' ('+extra+' 자동입력)':'')+'</span>';
+
+      // OCR 요약 표시 (주소/수령인 있으면)
+      if(filled.length){
+        var sumEl=document.getElementById('emer-ocr-summary');
+        if(sumEl){
+          sumEl.style.display='block';
+          sumEl.innerHTML='<b>📊 QR 인식 결과</b><br>'
+            +(qrExtra.address?'📍 주소: '+qrExtra.address+'<br>':'')
+            +(qrExtra.recipient?'👤 수령인: '+qrExtra.recipient+'<br>':'')
+            +(qrExtra.order_id?'📋 주문번호: '+qrExtra.order_id+'<br>':'')
+            +(qrExtra.memo?'💬 메모: '+qrExtra.memo+'<br>':'');
+        }
+      }
+
+    } else if(foundOther.length){
+      // 숫자 형태는 아니지만 텍스트 QR → 주소/수령인 파싱 시도
+      var qrText = foundOther.join('\n');
+      var parsed = _parseQrText(qrText);
+      var filled2 = [];
+      if(parsed.address){ var ae=document.getElementById('emer-addr'); if(ae&&!ae.value){ae.value=parsed.address; filled2.push('주소');} }
+      if(parsed.recipient){ var re=document.getElementById('emer-recipient'); if(re&&!re.value){re.value=parsed.recipient; filled2.push('수령인');} }
+      if(parsed.order_id){ var oe=document.getElementById('emer-orderid'); if(oe&&!oe.value){oe.value=parsed.order_id; filled2.push('주문번호');} }
+
+      if(filled2.length){
+        if(status) status.innerHTML = '<span style="color:var(--teal)">✅ QR에서 '+filled2.join('/')+'자동 입력됨 (운송장은 직접 입력)</span>';
+        var sumEl2=document.getElementById('emer-ocr-summary');
+        if(sumEl2){
+          sumEl2.style.display='block';
+          sumEl2.innerHTML='<b>📊 QR 인식 결과</b><br>'
+            +(parsed.address?'📍 주소: '+parsed.address+'<br>':'')
+            +(parsed.recipient?'👤 수령인: '+parsed.recipient+'<br>':'')
+            +(parsed.order_id?'📋 주문번호: '+parsed.order_id+'<br>':'');
+        }
+      } else {
+        if(status) status.innerHTML = '<span style="color:var(--amber)">⚠️ 인식됨: '+foundOther[0].slice(0,30)+' — 운송장 형식 아님, 직접 입력 필요</span>';
+        var memoEl = document.getElementById('emer-memo');
+        if(memoEl && !memoEl.value) memoEl.value = '[바코드 인식] '+foundOther.join(' / ');
+      }
+    } else {
+      if(status) status.innerHTML = '<span style="color:var(--red)">❌ 인식된 바코드가 비어있음 — 직접 입력해주세요</span>';
+    }
+
+    // 사진도 자동 첨부 (분쟁 대응)
+    var fr2 = new FileReader();
+    fr2.onload = function(e){ window._emerPhotos.push(e.target.result); emerRefreshPhotoWrap(); };
+    fr2.readAsDataURL(file);
+
+  }catch(e){
+    console.warn('바코드 스캔 오류:', e);
+    if(status) status.innerHTML = '<span style="color:var(--red)">❌ 바코드 인식 실패: '+(e.message||'알 수 없음')+' — 직접 입력해주세요</span>';
+  }
+}
+// 운송장 번호 추가
+// ★ v9.25: 긴급배송 폼에서 지도 버튼 클릭 시
+function emerOpenMap(){
+  if(!window._activeDriverMap){
+    // 모달 닫고 지도 열기
+    document.getElementById('emer-del-mo')?.remove();
+    openDriverMap();
+    toast('🗺️ 지도 열기 중...');
+  } else {
+    // 이미 열린 지도로 포커스 이동
+    var gps = window._emerGps;
+    if(gps && gps.lat) window._activeDriverMap.panTo({lat:gps.lat, lng:gps.lng});
+    var mo = document.getElementById('driver-map-mo');
+    if(mo) mo.style.zIndex='10001';
+    document.getElementById('emer-del-mo')?.remove();
+  }
+}
+
+function emerAddTracking(){
+  var inp = document.getElementById('emer-tracking-inp');
+  if(!inp) return;
+  var val = inp.value.replace(/[\.\-\s]/g,'').trim();
+  if(!val){ toast('운송장 번호를 입력하세요'); return; }
+  if(window._emerTrackings.indexOf(val)>=0){ toast('이미 추가된 번호입니다'); inp.value=''; return; }
+  window._emerTrackings.push(val);
+  inp.value = '';
+  emerRefreshTrackingList();
+}
+
+function emerRefreshTrackingList(){
+  var list = document.getElementById('emer-tracking-list');
+  if(!list) return;
+
+  var cnt = window._emerTrackings.length;
+
+  // ★ v9.25: 스캔 카운터 업데이트
+  var counter = document.getElementById('emer-scan-counter');
+  if(counter){
+    if(cnt > 0){
+      counter.style.display = 'block';
+      counter.textContent = cnt+'건 스캔됨';
+      counter.style.animation = 'none';
+      counter.offsetHeight; // reflow
+      counter.style.animation = 'notiPop .3s ease';
+    } else {
+      counter.style.display = 'none';
+    }
+  }
+
+  // ★ v9.25: 오프라인 감지 표시
+  var offWarn = document.getElementById('emer-offline-warn');
+  if(offWarn) offWarn.style.display = !navigator.onLine ? 'block' : 'none';
+
+  // 스캔 목록 렌더 (최신 추가분 팝인 애니메이션)
+  list.innerHTML = window._emerTrackings.map(function(t, i){
+    var isNew = (i === cnt-1 && cnt > 0);
+    var timeStr = window._emerTrackingTimes && window._emerTrackingTimes[t]
+      ? window._emerTrackingTimes[t] : '';
+    return '<div style="display:flex;align-items:center;gap:6px;padding:8px 10px;background:var(--bg3);border-radius:8px;border:1px solid var(--border);'+(isNew?'animation:notiPop .3s ease;border-color:var(--teal)':'')+'">'
+      +'<span style="font-size:14px;flex-shrink:0">'+(i===0&&cnt===1?'📦':'📦')+'</span>'
+      +'<div style="flex:1;min-width:0">'
+      +'<div style="font-size:13px;font-family:monospace;font-weight:700;color:'+(isNew?'var(--teal)':'var(--text)')+'">'+t+'</div>'
+      +(timeStr?'<div style="font-size:10px;color:var(--text3)">'+timeStr+' 스캔</div>':'')
+      +'</div>'
+      +'<span style="font-size:10px;color:var(--teal);font-weight:700;margin-right:4px">✓</span>'
+      +'<button onclick="window._emerTrackings.splice('+i+',1);emerRefreshTrackingList()" '
+      +'style="padding:2px 8px;background:var(--red-l,#fee2e2);color:var(--red);border:none;border-radius:4px;font-size:11px;cursor:pointer">✕</button>'
+      +'</div>';
+  }).join('');
+}
+
+// ★ v9.25: 스캔 시각 기록
+window._emerTrackingTimes = window._emerTrackingTimes || {};
+
+// 사진 추가 처리
+function emerAddPhotos(files){
+  if(!files||!files.length) return;
+  Array.from(files).forEach(function(file){
+    if(window._emerPhotos.length >= 5){ toast('사진은 최대 5장입니다'); return; }
+    var reader = new FileReader();
+    reader.onload = function(e){ window._emerPhotos.push(e.target.result); emerRefreshPhotoWrap(); };
+    reader.readAsDataURL(file);
+  });
+}
+
+function emerRefreshPhotoWrap(){
+  var wrap = document.getElementById('emer-photo-wrap');
+  if(!wrap) return;
+  var addBtn = window._emerPhotos.length < 5
+    ? '<label style="width:70px;height:70px;border:2px dashed var(--border);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;background:var(--bg3);flex-shrink:0">'
+      +'<span style="font-size:22px">📷</span><span style="font-size:9px;color:var(--text3);margin-top:3px">사진 추가</span>'
+      +'<input type="file" accept="image/*" capture="environment" multiple style="display:none" onchange="emerAddPhotos(this.files)"></label>'
+    : '';
+  wrap.innerHTML = window._emerPhotos.map(function(url, i){
+    return '<div style="position:relative;width:70px;height:70px;flex-shrink:0">'
+      +'<img src="'+url+'" style="width:70px;height:70px;object-fit:cover;border-radius:10px;border:1.5px solid var(--border)">'
+      +'<button onclick="window._emerPhotos.splice('+i+',1);emerRefreshPhotoWrap()" style="position:absolute;top:-4px;right:-4px;width:20px;height:20px;background:#dc2626;color:#fff;border:none;border-radius:50%;font-size:11px;cursor:pointer;line-height:1">✕</button>'
+      +'</div>';
+  }).join('') + addBtn;
+}
+
+// 바코드 스캔 — ZXing (iOS Safari + Android Chrome 모두 지원)
+
+function zxingStop(){
+  if(window._zxingReader){
+    try{ window._zxingReader.reset(); }catch(e){}
+    window._zxingReader = null;
+  }
+  document.getElementById('zxing-scan-mo')?.remove();
+}
+
+// 저장 실행
+// ★ v9.61: 스캔/저장 카운터
+window._emerScanCount = window._emerScanCount || 0;
+window._emerSaveCount = window._emerSaveCount || 0;
+function _emerIncScan(){
+  window._emerScanCount++;
+  var el = document.getElementById('emer-cnt-scan');
+  if(el) el.textContent = window._emerScanCount;
+}
+function _emerIncSave(){
+  window._emerSaveCount++;
+  var el = document.getElementById('emer-cnt-save');
+  if(el) el.textContent = window._emerSaveCount;
+}
+
+// ★ v9.61: TTS 음성 안내
+function _tts(text){
+  try{
+    if(!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance(text);
+    u.lang = 'ko-KR';
+    u.rate = 1.1;
+    u.pitch = 1.0;
+    u.volume = 1.0;
+    window.speechSynthesis.speak(u);
+  }catch(e){}
+}
+
+async function emerSave(){
+  if(window._emerSaving){ toast('⏳ 저장 중입니다...'); return; }
+  window._emerSaving = true;
+
+  if(!window._emerTrackings||!window._emerTrackings.length){
+    var inp = document.getElementById('emer-tracking-inp')?.value.replace(/[\.\-\s]/g,'').trim();
+    if(inp){ window._emerTrackings=[inp]; emerRefreshTrackingList(); }
+    // ★ v9.59: 운송장 없어도 주소 있으면 저장 허용 (파란송장 등 OCR 부분 인식)
+    else {
+      var _addrCheck = (document.getElementById('emer-addr')?.value||'').trim();
+      if(!_addrCheck){
+        window._emerSaving=false;
+        window._emerScanLock=false;
+        toast('❌ 운송장 또는 주소를 입력해주세요');
+        return;
+      }
+      // 주소만 있을 경우 임시 운송장 생성 (나중에 수정 가능)
+      window._emerTrackings=['미확인-'+Date.now().toString().slice(-6)];
+      emerRefreshTrackingList();
+    }
+  }
+  // ★ v9.25: 사진 필수 조건 제거 (배송완료 사진은 지도 핀에서 처리)
+
+  var orderId   = (document.getElementById('emer-orderid')?.value||'').trim();
+  if(!orderId && window._pendingOrderId) orderId = window._pendingOrderId; // ★ OCR 경로 보완
+  var recipient = (document.getElementById('emer-recipient')?.value||'').trim(); if(!recipient) recipient='수령인 미상'; // ★ v9.59
+  var addr      = (document.getElementById('emer-addr')?.value||'').trim();
+  // ★ v9.65: 카카오 매칭 도로명이 있으면 addr 강제 보정 (OCR 텍스트 오류 무력화)
+  if(window._emerGps && window._emerGps.matchedAddr && window._emerGps.src && window._emerGps.src.indexOf('kakao')>=0){
+    var mAddr = window._emerGps.matchedAddr;
+    var mName = window._emerGps.matchedName || '';
+    // addr이 카카오 도로명을 포함하지 않으면 → OCR 오인식이므로 강제 재구성
+    if(addr && mAddr && addr.replace(/\s/g,'').indexOf(mAddr.replace(/\s/g,'').slice(0,8)) < 0){
+      var hoM = addr.match(/(\d+호)/);
+      var dongM2 = addr.match(/(\d+동)(?![아네은])/);
+      var rebuilt2 = mAddr;
+      if(mName && mName.indexOf(mAddr) < 0) rebuilt2 += ' ' + mName;
+      if(dongM2 && rebuilt2.indexOf(dongM2[1])<0) rebuilt2 += ' ' + dongM2[1];
+      if(hoM && rebuilt2.indexOf(hoM[1])<0) rebuilt2 += ' ' + hoM[1];
+      rebuilt2 = rebuilt2.replace(/\s+/g,' ').trim();
+      console.log('[emerSave ADDR_OVERRIDE v9.65]', addr, '→', rebuilt2);
+      addr = rebuilt2;
+      var emerAddrEl2 = document.getElementById('emer-addr');
+      if(emerAddrEl2) emerAddrEl2.value = addr;
+    }
+  }
+  var delivMemo = (document.getElementById('emer-delivmemo')?.value||'').trim();
+  var memo      = (document.getElementById('emer-memo')?.value||'').trim();
+  var now = new Date();
+
+  // ★ v9.25: GPS 정제 (undefined 값 차단 — Firestore invalid-argument 방지)
+  var gpsClean = null;
+  if(window._emerGps && typeof window._emerGps.lat==='number' && typeof window._emerGps.lng==='number'){
+    gpsClean = { lat: window._emerGps.lat, lng: window._emerGps.lng, acc: window._emerGps.acc||0, src: window._emerGps.src||'device' };
+  }
+
+  // ★ v9.25: 저장 직전 GPS 처리 — QR/OCR 때 이미 Geocoding 완료된 경우 재실행 안 함 (속도 개선)
+  if(window._emerGps && window._emerGps.lat && 
+     (window._emerGps.src==='geocode'||window._emerGps.src==='QR'||
+      window._emerGps.src==='kakao'||window._emerGps.src==='kakao_addr'||
+      window._emerGps.src==='kakao_kw'||window._emerGps.src==='kakao_kw2'||
+      window._emerGps.src==='kakao_kw_dong'||window._emerGps.src==='kakao_kw_apt'||
+      window._emerGps.src==='cache')){
+    // ★ v9.59: 카카오/QR/Geocode 좌표 모두 재사용 (중복 geocoding 방지)
+    gpsClean = {lat:window._emerGps.lat, lng:window._emerGps.lng, acc:0, src:window._emerGps.src};
+    console.debug('[emerSave] 기존 GPS 사용:', window._emerGps.src);
+  } else if(addr){
+    // GPS 없거나 device GPS인 경우에만 geocoding 시도 (1.5초 타임아웃)
+    var apiKey2 = window._cachedGoogleApiKey || localStorage.getItem('mbti_google_api_key') || '';
+    if(apiKey2){
+      try{
+        var gcCtrl = new AbortController();
+        var gcTimer = setTimeout(function(){ gcCtrl.abort(); }, 1500);
+        var gcRes2 = await fetch(
+          'https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr)+'&language=ko&region=kr&key='+apiKey2,
+          { signal: gcCtrl.signal }
+        );
+        clearTimeout(gcTimer);
+        var gcData2 = await gcRes2.json();
+        if(gcData2.status==='OK' && gcData2.results && gcData2.results[0]){
+          var loc2 = gcData2.results[0].geometry.location;
+          if(typeof loc2.lat==='number' && typeof loc2.lng==='number'){
+            gpsClean = { lat: loc2.lat, lng: loc2.lng, acc: 0, src: 'geocode' };
+          }
+        }
+      }catch(e){ console.warn('[emerSave] Geocoding 폴백 실패:', e.message||e); }
+    }
+  }
+
+  // GPS 없으면 현위치로 폴백
+  if(!gpsClean && navigator.geolocation){
+    try{
+      var _pos = await new Promise(function(res,rej){
+        navigator.geolocation.getCurrentPosition(res,rej,{timeout:3000,enableHighAccuracy:true,maximumAge:10000});
+      });
+      gpsClean = {lat:_pos.coords.latitude, lng:_pos.coords.longitude, acc:_pos.coords.accuracy, src:'device_fallback'};
+    }catch(e){}
+  }
+
+  // ★ v9.43: emerSave 시점 거리 검증 비활성화
+  // 이유: 캠프(물류센터)에서 송장 일괄 스캔 → 모든 송장에서 false positive 발생
+  //       검증은 saveDelivComplete (배송완료 처리 시점)으로 이동
+  var addressGpsMismatch = null; // 배송완료 시점에 채워짐
+
+  // ★ v9.25: 등록방식 판정 (자동인식 / 바코드 / 수기)
+  var entryMode = 'manual'; // 기본: 수기
+  if(window._emerEntryMode === 'ocr') entryMode = 'ocr';
+  else if(window._emerEntryMode === 'barcode') entryMode = 'barcode';
+
+  var record = {
+    type: 'emergency_delivery',
+    driver: window._APP.driver||'',
+    order_id: orderId||'',
+    trackings: window._emerTrackings.slice(),
+    tracking: window._emerTrackings[0]||'',
+    recipient: recipient||'',
+    addr: addr||'',
+    delivery_memo: delivMemo||'',
+    memo: memo||'',
+    gps: gpsClean,
+    photos: [],
+    entryMode: entryMode, // ★ 등록방식: ocr / barcode / manual
+    savedAt: now.toISOString(),
+    date: today(),
+    time: now.toTimeString().slice(0,5),
+    // ★ v9.34: OCR 자동 추출 - 라우트 코드 + 배송일
+    route_code: (window._emerRouteCode||'').trim(),
+    delivery_date: (window._emerDeliveryDate||'').trim(),
+    // ★ v9.37: 박스 규격 (RPB2.4 등)
+    box_code: (window._emerBoxCode||'').trim(),
+    // ★ v9.36: 주소-GPS 불일치 감지 (100m 이상 차이 시 미터 값, 정상이면 null)
+    addressGpsMismatch: addressGpsMismatch
+  };
+
+  var saveBtn = document.querySelector('#emer-del-mo button[onclick="emerSave()"]');
+  if(saveBtn){ saveBtn.disabled=true; saveBtn.textContent='⏳ 저장 중... 잠시만요'; }
+  toast('💾 저장 중...');
+
+  // ★ v9.25: 로컬 선저장 (즉시) — Firebase 저장 전에 먼저 로컬에 기록
+  var localId = 'emer_'+now.getTime();
+  var recordLocal = Object.assign({}, record, {
+    photosLocal: window._emerPhotos.slice(),
+    _localId: localId,
+    _syncStatus: 'pending'
+  });
+  try{
+    var emerList = JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]');
+    emerList.push(recordLocal);
+    localStorage.setItem('mbti_emergency_del', JSON.stringify(emerList));
+  }catch(e){ console.warn('로컬 저장 실패:', e); }
+
+  // ★ v9.25: 사진 병렬 업로드 (순차→동시 → 3장이면 3~5초에 완료)
+  var uploaded = [];
+  var isOnline = navigator.onLine;
+
+  // ★ v9.59: 사진은 백그라운드 업로드 — 저장 먼저, 사진은 나중에 붙임
+  record.photos = []; // 일단 빈 배열로 저장
+  if(!isOnline){
+    record._syncStatus = 'offline';
+  } else if(FB && _st && window._emerPhotos.length > 0){
+    // 백그라운드 업로드 예약 (저장 블로킹 없음)
+    var _bgPhotos = window._emerPhotos.slice(0,1); // 1장만
+    var _bgTime = now.getTime();
+    var _bgDriver = window._APP.driver||'';
+    window._pendingPhotoUpload = {photos:_bgPhotos, time:_bgTime, driver:_bgDriver};
+  }
+  record.photos = uploaded;
+
+  // Firebase 저장 + 관리자 알림 — .add() 사용 (docId 문제 완전 회피)
+  var docId = null;
+  var mergedTo = null;
+  if(FB&&_db){
+    try{
+      // ★ v9.25: 자동 묶음 — 같은 기사 + 같은 주문번호 + 미완료 핀이 있으면 운송장만 추가
+      if(orderId && orderId.length >= 4){
+        try{
+          var existSnap = await _db.collection('emergency_deliveries')
+            .where('driver','==',window._APP.driver||'')
+            .where('order_id','==',orderId)
+            .limit(5).get();
+
+          var existDoc = null;
+          existSnap.forEach(function(d){
+            if(existDoc) return;
+            var data = d.data();
+            // 미완료 + 같은 주소(있으면) 만 매칭
+            if(data.status !== '완료'){
+              if(addr && data.addr && addr !== data.addr) return; // 주소 다르면 다른 핀
+              existDoc = { id: d.id, data: data };
+            }
+          });
+
+          if(existDoc){
+            // ★ 기존 핀에 운송장만 추가 (중복 제거)
+            var prevTrackings = existDoc.data.trackings || [];
+            var newTrackings = window._emerTrackings.filter(function(t){
+              return prevTrackings.indexOf(t) < 0;
+            });
+            if(newTrackings.length){
+              var merged = prevTrackings.concat(newTrackings);
+              var mergedPhotos = (existDoc.data.photos||[]).concat(uploaded);
+              await _db.collection('emergency_deliveries').doc(existDoc.id).update({
+                trackings: merged,
+                photos: mergedPhotos,
+                mergedAt: now.toISOString(),
+                memo: ((existDoc.data.memo||'')+(memo?(' | '+memo):'')).trim()
+              });
+              mergedTo = existDoc.id;
+              docId = existDoc.id;
+              record._fbId = docId;
+              record._merged = true;
+              toast('✅ 같은 주문에 합쳐짐 (총 '+merged.length+'건)');
+            } else {
+              // 새 운송장 없음 (이미 모두 등록됨)
+              mergedTo = existDoc.id;
+              docId = existDoc.id;
+              record._fbId = docId;
+              toast('ℹ️ 이미 등록된 운송장입니다 (기존 핀 '+prevTrackings.length+'건)');
+            }
+          }
+        }catch(e){
+          console.warn('자동 묶음 검색 실패:', e.code||e.message);
+          // 실패 시 그냥 새 핀 생성
+        }
+      }
+
+      // 자동 묶음이 안 되었으면 → 새 핀 생성
+      if(!mergedTo){
+        // ★ v9.25: undefined 완전 제거 후 저장
+        var fbRecord = JSON.parse(JSON.stringify(record)); // undefined 키 자동 제거
+        var docRef = await _db.collection('emergency_deliveries').add(fbRecord);
+      // ★ v9.59: 저장 완료 즉시 백그라운드 사진 업로드
+      if(window._pendingPhotoUpload && FB && _st){
+        var _pp=window._pendingPhotoUpload; window._pendingPhotoUpload=null;
+        var _did=docRef.id;
+        (async function(){
+          try{
+            var _pu=await _emerStorageUpload(_pp.photos[0],'emergency/'+_pp.driver+'/'+_pp.time+'_0.jpg',2);
+            if(_pu) await _db.collection('emergency_deliveries').doc(_did).update({photos:[_pu]});
+          }catch(e){ console.debug('[BG사진]',e.message); }
+        })();
+      }
+        docId = docRef.id;
+        record._fbId = docId;
+      }
+      // 로컬 마지막 항목에도 fbId 기록
+      try{
+        var el2 = JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]');
+        if(el2.length>0) el2[el2.length-1]._fbId = docId;
+        localStorage.setItem('mbti_emergency_del', JSON.stringify(el2));
+      }catch(e){}
+      var adminFcm = JSON.parse(localStorage.getItem('mbti_admin_fcm')||'""');
+      if(adminFcm){
+        var trackingStr = window._emerTrackings.length>1
+          ? window._emerTrackings[0]+' 외 '+(window._emerTrackings.length-1)+'건'
+          : window._emerTrackings[0];
+        var fcmTitle = mergedTo ? '🔗 긴급배송 추가 — '+window._APP.driver : '🚨 긴급 배송기록 — '+window._APP.driver;
+        fetch('https://mbti-logistics.kimdh4790.workers.dev/send-fcm',{
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({token:adminFcm,
+            title:fcmTitle,
+            body:'운송장: '+trackingStr+(addr?' / '+addr:'')+(memo?' | '+memo.slice(0,30):''),
+            data:{type:'emergency_delivery',driver:window._APP.driver}})
+        }).catch(function(){});
+      }
+      // toast는 아래 통합 처리
+    }catch(e){
+      console.error('긴급배송 Firebase 저장 실패:', e);
+      window._emerSaving = false;
+      var saveBtn2=document.querySelector('#emer-del-mo button[onclick="emerSave()"]');
+      if(saveBtn2){saveBtn2.disabled=false;saveBtn2.textContent='🗺️ 지도에 배송핀 생성 + 저장';}
+      toast('⚠️ Firebase 저장 실패 ('+( e.code||e.message||'오류')+') — 로컬만 저장됨');
+    }
+  }
+
+  // ★ v9.25: 로컬 저장 — docId 포함하여 재저장 (위에서 _fbId 업데이트됐으므로)
+  try{
+    var emerList2 = JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]');
+    // 이미 push한 항목 찾아서 fbId 업데이트
+    var lastIdx = emerList2.length-1;
+    if(lastIdx>=0 && docId) emerList2[lastIdx]._fbId = docId;
+    localStorage.setItem('mbti_emergency_del', JSON.stringify(emerList2));
+  }catch(e){}
+
+  window._emerPhotos = [];
+  window._emerTrackings = [];
+
+  // ★ v9.25: 저장 완료 후 지도 자동 오픈 + 핀 추가
+  record.fbId = docId||'local_'+Date.now();
+
+  if(record.gps && record.gps.lat){
+    if(window._activeDriverMap){
+      if(window._activeDriverMapEmerLocs) window._activeDriverMapEmerLocs.push(record);
+      if(window._activeDriverMapAddPin) window._activeDriverMapAddPin(record);
+      if(window._updateMapCounter) window._updateMapCounter();
+      window._activeDriverMap.panTo({lat:record.gps.lat, lng:record.gps.lng});
+    }
+  }
+
+  // 모달 닫고 → 바로 다음 스캔 폼 오픈 (연속 스캔)
+  document.getElementById('emer-del-mo')?.remove();
+  setTimeout(function(){ openEmergencyDelivery(); if(window._onEmerSaved && window._lastEmerRecord) window._onEmerSaved(window._lastEmerRecord); }, 400);
+
+  // ★ 긴급배송 기록 페이지 열려있으면 실시간 갱신
+  if(S.page==='emergency_log') setTimeout(function(){ SP('emergency_log',null); }, 500);
+
+  // 관리자 알림 버튼 활성화 (저장 완료 후)
+  window._lastEmerRecord = record;
+  var alertBtn = document.getElementById('emer-alert-btn');
+  if(alertBtn) alertBtn.style.display='block';
+
+  window._emerSaving = false;
+  window._pendingOrderId = null; // 초기화
+  window._emerScanLock = false; // ★ v9.46: 저장 완료 후 다음 스캔 허용
+  // ★ v9.60: 저장 완료음 — 스캔음(높은음)과 다른 낮은음 두 번
+  try{
+    var _ac2 = new (window.AudioContext||window.webkitAudioContext)();
+    [0, 0.18].forEach(function(t){
+      var o=_ac2.createOscillator(), g=_ac2.createGain();
+      o.connect(g); g.connect(_ac2.destination);
+      o.type='sine'; o.frequency.value=880;
+      g.gain.setValueAtTime(0.22, _ac2.currentTime+t);
+      g.gain.exponentialRampToValueAtTime(0.001, _ac2.currentTime+t+0.15);
+      o.start(_ac2.currentTime+t); o.stop(_ac2.currentTime+t+0.15);
+    });
+    setTimeout(function(){ try{_ac2.close();}catch(e){} }, 600);
+    navigator.vibrate&&navigator.vibrate([40,30,40]); _tts('저장'); _emerIncSave();
+  }catch(e){}
+  var _gpsMsg = gpsClean ? gpsClean.src+' '+gpsClean.lat.toFixed(4)+','+gpsClean.lng.toFixed(4) : '없음';
+  console.log('[GPS_SAVED]', _gpsMsg, 'addr:', record && record.addr);
+  toast('✅ 저장완료');
+}
+
+// ★ v9.25: 관리자 알림 별도 전송
+async function emerSendAdminAlert(){
+  var record = window._lastEmerRecord;
+  if(!record){ toast('❌ 먼저 저장해주세요'); return; }
+  var adminFcm = JSON.parse(localStorage.getItem('mbti_admin_fcm')||'""');
+  if(!adminFcm){ toast('⚠️ 관리자 FCM 토큰 없음 — 알림 불가'); return; }
+  var trackingStr = (record.trackings&&record.trackings.length>1)
+    ? record.trackings[0]+' 외 '+(record.trackings.length-1)+'건'
+    : (record.trackings&&record.trackings[0])||record.tracking||'—';
+  try{
+    await fetch('https://mbti-logistics.kimdh4790.workers.dev/send-fcm',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({token:adminFcm,
+        title:'🚨 긴급 배송기록 — '+record.driver,
+        body:'운송장: '+trackingStr+(record.addr?' / '+record.addr:''),
+        data:{type:'emergency_delivery',driver:record.driver}})
+    });
+    toast('✅ 관리자 알림 전송 완료');
+    document.getElementById('emer-del-mo')?.remove();
+  }catch(e){
+    toast('❌ 알림 전송 실패: '+(e.message||'네트워크 오류'));
+  }
+}
+
+// ★ v9.25: 배송완료 처리 모달 (지도 핀 클릭 → 완료사진 + Firebase 상태 업데이트)
+async function openDelivComplete(fbId, dataEncoded){
+  document.getElementById('deliv-complete-mo')?.remove();
+
+  var info = {};
+  try{ info = JSON.parse(decodeURIComponent(dataEncoded||'{}')); }catch(e){}
+
+  // Firebase에서 최신 데이터 로드
+  if(FB && _db && fbId){
+    try{
+      var doc = await _db.collection('emergency_deliveries').doc(fbId).get();
+      if(doc.exists) info = Object.assign({}, doc.data(), info);
+    }catch(e){}
+  }
+
+  // ★ v9.25: 운송장 + 기존 trackingStatus 분리 (부분완료 지원)
+  var allTrackings = (info.trackings && info.trackings.length) ? info.trackings : (info.tracking ? [info.tracking] : []);
+  var existingStatus = info.trackingStatus || {};
+  var pendingTrackings = allTrackings.filter(function(t){
+    return !(existingStatus[t] && existingStatus[t].status === '완료');
+  });
+  var doneTrackings = allTrackings.filter(function(t){
+    return existingStatus[t] && existingStatus[t].status === '완료';
+  });
+
+  if(!pendingTrackings.length){
+    toast('✅ 모든 운송장이 이미 완료 처리되었습니다');
+    return;
+  }
+
+  var trackStr = (allTrackings.length>1)
+    ? allTrackings[0]+' 외 '+(allTrackings.length-1)+'건'
+    : (allTrackings[0]||'—');
+
+  window._delivCompletePhotos = [];
+  window._delivCompleteFbId = fbId;
+  window._delivCompleteAllTrackings = allTrackings; // ★ v9.25
+  window._delivCompleteExistingStatus = existingStatus; // ★ v9.25
+  // ★ v9.43: 배송완료 시점 거리 검증용 — 등록 시 저장된 배송지 좌표/주소
+  window._delivCompletePinData = {
+    gps: info.gps || null,
+    addr: info.addr || ''
+  };
+
+  document.body.insertAdjacentHTML('beforeend',`
+  <div id="deliv-complete-mo" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:10000;display:flex;align-items:flex-end;justify-content:center" onclick="if(event.target===this)this.remove()">
+    <div onclick="event.stopPropagation()" style="background:var(--bg);border-radius:16px 16px 0 0;padding:20px 16px 36px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto">
+      <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px"></div>
+
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+        <span style="font-size:22px">✅</span>
+        <div style="flex:1">
+          <div style="font-size:16px;font-weight:800;color:var(--teal)">${(info.recipient||'수령인미상')} <span style="color:var(--red)">(${pendingTrackings.length}건${doneTrackings.length?' / 완료 '+doneTrackings.length:''})</span></div>
+          <div style="font-size:11px;color:var(--text3)">완료한 운송장만 체크 → 사진 첨부 → 저장</div>
+        </div>
+      </div>
+
+      <!-- 배송 정보 요약 -->
+      <div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:14px;border:1px solid var(--border)">
+        <div style="font-size:12px;color:var(--text2);line-height:1.8">
+          📍 ${info.addr||'주소없음'}<br>
+          📦 전체 ${allTrackings.length}건${doneTrackings.length?' (이미 '+doneTrackings.length+'건 완료)':''}&nbsp;&nbsp;⏰ ${info.time||''}<br>
+          ${info.order_id?'📋 주문번호: '+info.order_id:''}
+        </div>
+      </div>
+
+      <!-- ★ v9.25: 운송장 체크박스 (체크된 것만 완료) -->
+      <div style="margin-bottom:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="font-size:13px;font-weight:700">📦 완료할 운송장 선택 <span style="color:var(--red)">*</span></div>
+          <button onclick="dcToggleAllTrack()" style="padding:3px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;font-size:10px;font-weight:700;cursor:pointer;color:var(--text2)">☑ 전체 토글</button>
+        </div>
+        <div style="font-size:11px;color:var(--text3);background:var(--amber-l);border:1px dashed var(--amber);border-radius:6px;padding:7px 10px;margin-bottom:8px;line-height:1.5">
+          💡 박스를 빠뜨렸다면 해당 운송장만 <b>체크 해제</b>하세요.<br>
+          체크 해제된 건은 미완료로 남아 다음에 별도 완료 처리할 수 있습니다.
+        </div>
+        <div id="dc-tracking-checks" style="display:flex;flex-direction:column;gap:5px"></div>
+        <div id="dc-track-count" style="font-size:11px;font-weight:700;text-align:center;margin-top:6px"></div>
+      </div>
+
+      <!-- 완료 사진 -->
+      <div style="margin-bottom:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-size:13px;font-weight:700">📷 배송완료 사진 <span style="color:var(--red)">*</span></div>
+          <div id="dc-photo-count" style="font-size:11px;font-weight:700"><span style="color:var(--red)">⚠️ 1장 이상 필수</span></div>
+        </div>
+        <div id="dc-photo-preview" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
+        <label style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;background:linear-gradient(135deg,#0F6E56,#16a34a);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:800;box-shadow:0 2px 8px rgba(15,110,86,.3)">
+          <span style="font-size:22px">📸</span> 카메라로 사진 찍기
+          <input type="file" accept="image/*" capture="environment" style="display:none" onchange="dcAddPhoto(this.files[0])">
+        </label>
+        <div style="font-size:10px;color:var(--text3);text-align:center;margin-top:5px">사진 1장은 필수, 추가는 위 버튼을 다시 누르세요 (최대 3장)</div>
+      </div>
+
+      <!-- 메모 -->
+      <textarea id="dc-memo" placeholder="배송 메모 (선택사항, 예: '현관 앞 배치')" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text);resize:none;height:64px;box-sizing:border-box;margin-bottom:14px"></textarea>
+
+      <!-- 저장 버튼 -->
+      <button id="dc-save-btn" onclick="saveDelivComplete()" disabled style="width:100%;padding:14px;background:var(--bg3);color:var(--text2);border:none;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer;opacity:.5">
+        ⏳ 운송장 체크 + 사진 첨부 필요
+      </button>
+    </div>
+  </div>`);
+
+  // ★ v9.25: 미완료 운송장 체크박스 렌더 (기본 모두 체크된 상태)
+  dcRenderTrackingChecks(pendingTrackings);
+}
+
+// ★ v9.25: 전체 체크/해제 토글
+function dcToggleAllTrack(){
+  var chks = document.querySelectorAll('.dc-track-chk');
+  if(!chks.length) return;
+  var anyUnchecked = Array.prototype.some.call(chks, function(c){ return !c.checked; });
+  chks.forEach(function(c){
+    c.checked = anyUnchecked;
+    dcOnTrackChange(c);
+  });
+}
+
+// ★ v9.25: 운송장 체크박스 렌더링 (기본 모두 체크된 상태)
+function dcRenderTrackingChecks(trackings){
+  var el = document.getElementById('dc-tracking-checks');
+  if(!el || !trackings || !trackings.length) return;
+  el.innerHTML = trackings.map(function(t, i){
+    return '<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--teal-l);border:2px solid var(--teal);border-radius:8px;cursor:pointer;transition:all .15s" data-track-idx="'+i+'">'
+      +'<input type="checkbox" class="dc-track-chk" data-track="'+t+'" checked style="width:20px;height:20px;cursor:pointer;flex-shrink:0;accent-color:#16a34a" onchange="dcOnTrackChange(this)">'
+      +'<span style="flex:1;font-family:monospace;font-size:13px;font-weight:700;color:var(--text)">'+t+'</span>'
+      +'<span class="dc-chk-mark" style="font-size:14px;color:var(--teal)">✅</span>'
+      +'</label>';
+  }).join('');
+  dcUpdateTrackCount();
+  dcUpdateSaveBtn();
+}
+
+// ★ v9.25: 운송장 체크박스 변경 시 시각 효과 + 카운터 업데이트
+function dcOnTrackChange(chk){
+  var label = chk.closest('label');
+  var mark = label.querySelector('.dc-chk-mark');
+  if(chk.checked){
+    label.style.background = 'var(--teal-l)';
+    label.style.borderColor = 'var(--teal)';
+    if(mark){ mark.textContent = '✅'; mark.style.color = 'var(--teal)'; }
+  } else {
+    label.style.background = 'var(--bg3)';
+    label.style.borderColor = 'transparent';
+    if(mark){ mark.textContent = '⏳ 미완료'; mark.style.color = 'var(--red)'; mark.style.fontSize='10px'; mark.style.fontWeight='700'; }
+  }
+  dcUpdateTrackCount();
+  dcUpdateSaveBtn();
+}
+
+// ★ v9.25: 체크 카운터 업데이트 (체크된 = 완료할 운송장)
+function dcUpdateTrackCount(){
+  var checks = document.querySelectorAll('.dc-track-chk');
+  var checked = document.querySelectorAll('.dc-track-chk:checked');
+  var el = document.getElementById('dc-track-count');
+  if(!el) return;
+  var total = checks.length;
+  var done = checked.length;
+  if(total === 0){
+    el.innerHTML = '<span style="color:var(--text3)">— 운송장 없음</span>';
+  } else if(done === total){
+    el.innerHTML = '<span style="color:var(--teal)">✅ 전체 완료 처리됩니다 ('+done+'/'+total+'건)</span>';
+  } else if(done === 0){
+    el.innerHTML = '<span style="color:var(--red)">⚠️ 완료할 운송장을 1개 이상 체크하세요</span>';
+  } else {
+    el.innerHTML = '<span style="color:#f97316">🟠 부분완료 — '+done+'건 완료 / '+(total-done)+'건은 미완료로 남음</span>';
+  }
+}
+
+// ★ v9.25: 저장 버튼 활성/비활성 (체크 1개 이상 + 사진 1장 이상)
+function dcUpdateSaveBtn(){
+  var btn = document.getElementById('dc-save-btn');
+  if(!btn) return;
+  var checks = document.querySelectorAll('.dc-track-chk');
+  var checked = document.querySelectorAll('.dc-track-chk:checked');
+  var photos = (window._delivCompletePhotos||[]).length;
+  var totalChecks = checks.length;
+  var doneChecks = checked.length;
+  var trackOk = (totalChecks === 0) || (doneChecks >= 1);
+  var photosOk = photos >= 1;
+
+  if(trackOk && photosOk){
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    var allChecked = (totalChecks === 0) || (doneChecks === totalChecks);
+    btn.textContent = allChecked
+      ? '✅ 전체 완료 저장 ('+doneChecks+'건)'
+      : '🟠 부분완료 저장 — 체크한 '+doneChecks+'건만 완료';
+    btn.style.background = allChecked ? 'var(--teal)' : '#f97316';
+    btn.style.color = '#fff';
+  } else {
+    btn.disabled = true;
+    btn.style.opacity = '.5';
+    var missing = [];
+    if(!trackOk) missing.push('운송장 체크');
+    if(!photosOk) missing.push('사진 첨부');
+    btn.textContent = '⏳ '+missing.join(' + ')+' 필요';
+    btn.style.background = 'var(--bg3)';
+    btn.style.color = 'var(--text2)';
+  }
+}
+
+// ★ v9.25: 사진 공통 처리 유틸 — 1600px 자동 압축 (Storage 안정성 ↑↑)
+//   분쟁 증빙 가독성 충분 + 폰 데이터 절약 + Storage 실패율 ↓
+async function _emerCompressPhoto(file, maxSize, quality){
+  maxSize = maxSize || 1600; // 기본 1600px
+  quality = quality || 0.85; // 기본 85%
+  return new Promise(function(resolve, reject){
+    var reader = new FileReader();
+    reader.onload = function(e){
+      var img = new Image();
+      img.onload = function(){
+        var w = img.width, h = img.height;
+        if(w > maxSize || h > maxSize){
+          var ratio = Math.min(maxSize/w, maxSize/h);
+          w = Math.round(w * ratio);
+          h = Math.round(h * ratio);
+        }
+        var cvs = document.createElement('canvas');
+        cvs.width = w; cvs.height = h;
+        cvs.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(cvs.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = function(){ reject(new Error('이미지 로드 실패')); };
+      img.src = e.target.result;
+    };
+    reader.onerror = function(){ reject(new Error('파일 읽기 실패')); };
+    reader.readAsDataURL(file);
+  });
+}
+
+// ★ v9.25: Storage 업로드 + 자동 재시도 (최대 3회) — 폴백 발생률 ↓↓
+async function _emerStorageUpload(dataUrl, path, maxRetry){
+  maxRetry = maxRetry || 3;
+  var byteStr = atob(dataUrl.split(',')[1]);
+  var ab = new ArrayBuffer(byteStr.length);
+  var ia = new Uint8Array(ab);
+  for(var j=0; j<byteStr.length; j++) ia[j] = byteStr.charCodeAt(j);
+  var blob = new Blob([ab], {type:'image/jpeg'});
+
+  var lastErr = null;
+  for(var attempt=1; attempt<=maxRetry; attempt++){
+    try{
+      var ref = _st.ref(path);
+      await ref.put(blob);
+      var url = await ref.getDownloadURL();
+      if(attempt > 1) console.log('✅ Storage 업로드 성공 (재시도 '+attempt+'회차)');
+      return url;
+    }catch(e){
+      lastErr = e;
+      console.warn('Storage 업로드 실패 ('+attempt+'/'+maxRetry+') —', e.code||e.message);
+      if(attempt < maxRetry){
+        // 재시도 대기 (점진 백오프: 500ms → 1000ms → 2000ms)
+        await new Promise(function(r){ setTimeout(r, 500 * Math.pow(2, attempt-1)); });
+      }
+    }
+  }
+  throw lastErr || new Error('Storage 업로드 최종 실패');
+}
+
+// 배송완료 사진 추가
+async function dcAddPhoto(file){
+  if(!file) return;
+  if(window._delivCompletePhotos.length>=3){ toast('최대 3장까지 추가 가능'); return; }
+
+  // ★ v9.25: 사진 추가 시점에 1600px 자동 압축 (업로드 안정성 확보)
+  try{
+    var dataUrl = await _emerCompressPhoto(file, 1600, 0.85);
+    window._delivCompletePhotos.push(dataUrl);
+    var prev = document.getElementById('dc-photo-preview');
+    if(prev){
+      var idx = window._delivCompletePhotos.length-1;
+      var photoCount = window._delivCompletePhotos.length;
+      prev.innerHTML += '<div style="position:relative;display:inline-block">'
+        +'<img src="'+dataUrl+'" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:2px solid var(--teal)">'
+        +'<button onclick="window._delivCompletePhotos.splice('+idx+',1);this.parentElement.remove();dcUpdatePhotoCount()" style="position:absolute;top:-6px;right:-6px;background:#dc2626;color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:11px;cursor:pointer;line-height:1">✕</button>'
+        +'</div>';
+    }
+    dcUpdatePhotoCount();
+    toast('✅ 사진 '+window._delivCompletePhotos.length+'장 추가됨');
+  }catch(e){
+    console.warn('사진 압축 실패:', e.message);
+    toast('❌ 사진 추가 실패: '+e.message);
+  }
+}
+
+// ★ v9.25: 사진 개수 표시 업데이트
+function dcUpdatePhotoCount(){
+  var el = document.getElementById('dc-photo-count');
+  var count = (window._delivCompletePhotos||[]).length;
+  if(el){
+    if(count === 0){
+      el.innerHTML = '<span style="color:var(--red)">⚠️ 1장 이상 필수</span>';
+    } else {
+      el.innerHTML = '<span style="color:var(--teal)">✅ '+count+'장 추가됨</span>'+(count<3?' <span style="color:var(--text3)">(최대 3장)</span>':'');
+    }
+  }
+  dcUpdateSaveBtn(); // ★ v9.25: 저장 버튼 상태 동기화
+}
+
+// 배송완료 저장
+// ★ v9.48: 배송완료 사진으로 호수 자동 감지 (Claude Vision)
+// 사진에서 문 호수 번호판 읽기 → 운송장 주소 호수와 비교
+async function _checkDelivPhotoHo(photoBase64, expectedHo){
+  // API 키 로드
+  var apiKey = '';
+  if(FB && _db){
+    try{
+      var doc = await _fsGetCached('settings/claude_config', 20);
+      if(doc && doc.anthropicApiKey) apiKey = doc.anthropicApiKey.trim();
+    }catch(e){}
+  }
+  if(!apiKey) apiKey = (localStorage.getItem('mbti_anthropic_api_key')||'').trim();
+  if(!apiKey || apiKey.indexOf('sk-ant-')!==0) return null; // API 키 없으면 skip (정상 처리)
+
+  try{
+    var b64 = photoBase64.split(',')[1]; // data:image/jpeg;base64, 제거
+    if(!b64) return null;
+
+    var resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 100,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } },
+            { type: 'text', text: '이 사진에서 문 호수 번호(예: 1209호, 301호)를 찾아주세요.\n숫자+호 형태만 찾으세요.\n있으면 "1209호" 형식으로만 답하세요.\n없으면 "없음"이라고만 답하세요.\n다른 설명은 하지 마세요.' }
+          ]
+        }]
+      })
+    });
+    var data = await resp.json();
+    if(data.error) return null;
+    var text = (data.content||[]).map(function(c){return c.text||'';}).join('').trim();
+    if(!text || text==='없음' || text.indexOf('없음')>=0) return null;
+    var m = text.match(/(\d+)\s*호/);
+    return m ? m[1]+'호' : null;
+  }catch(e){
+    console.warn('[배송사진 OCR 실패]', e&&e.message);
+    return null;
+  }
+}
+
+</script>
+</body>
+</html>

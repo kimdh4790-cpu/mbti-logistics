@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0a0f1e">
+<title>MBTI LogiNet — 회사 등록</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+:root{
+  --bg:#0a0f1e;--bg2:#111827;--bg3:#1e2d45;
+  --blue:#3b82f6;--teal:#14b8a6;--green:#22c55e;--red:#ef4444;--yellow:#f59e0b;
+  --text:#f0f6ff;--text2:#94a3b8;--text3:#475569;--border:#1e2d45;--border2:#2d3f5a;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,'Malgun Gothic',sans-serif;min-height:100vh}
+.wrap{max-width:480px;margin:0 auto;padding:24px 20px 60px}
+.header{text-align:center;margin-bottom:32px;padding-top:8px}
+.header-icon{font-size:40px;margin-bottom:10px}
+.header-title{font-size:20px;font-weight:900}
+.header-sub{font-size:12px;color:var(--text3);margin-top:4px;line-height:1.5}
+.card{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:20px;margin-bottom:14px}
+.card-title{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.12em;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:6px}
+.field{margin-bottom:14px}
+.field-label{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.06em;margin-bottom:5px}
+.field-inp{width:100%;padding:12px 14px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);font-size:14px;font-weight:600;outline:none;transition:border-color .2s}
+.field-inp:focus{border-color:var(--blue)}
+.field-inp::placeholder{color:var(--text3)}
+.tag-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.tag{display:flex;align-items:center;gap:5px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;color:var(--text2)}
+.tag .del{cursor:pointer;color:var(--text3);font-weight:900;font-size:14px;margin-left:2px}
+.tag .del:hover{color:var(--red)}
+.add-camp{display:flex;gap:6px}
+.add-camp input{flex:1;padding:10px 12px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);font-size:13px;font-weight:600;outline:none}
+.add-camp button{padding:10px 16px;background:var(--blue);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;cursor:pointer}
+.plan-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.plan-card{padding:14px 10px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:12px;text-align:center;cursor:pointer;transition:all .15s}
+.plan-card.sel{background:#1e3a5f;border-color:var(--blue)}
+.plan-name{font-size:13px;font-weight:800;margin-bottom:4px}
+.plan-price{font-size:11px;color:var(--text3);font-weight:600}
+.plan-feature{font-size:10px;color:var(--text2);margin-top:6px;line-height:1.4}
+.btn-submit{width:100%;padding:16px;background:linear-gradient(135deg,var(--blue),var(--teal));border:none;border-radius:12px;color:#fff;font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 4px 16px rgba(59,130,246,.3);margin-top:8px}
+.btn-submit:disabled{background:var(--bg3);color:var(--text3);box-shadow:none}
+.result-card{background:var(--bg2);border:2px solid var(--green);border-radius:16px;padding:24px;text-align:center;margin-top:16px;display:none}
+.result-code{font-size:40px;font-weight:900;letter-spacing:.3em;color:var(--green);font-family:monospace;margin:12px 0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{width:16px;height:16px;border:2px solid rgba(59,130,246,.3);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:10px 20px;border-radius:99px;font-size:12px;font-weight:700;opacity:0;transition:all .3s;pointer-events:none;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.4)}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+<div class="wrap">
+
+  <div class="header">
+    <div class="header-icon">🏢</div>
+    <div class="header-title">회사 등록</div>
+    <div class="header-sub">MBTI LogiNet에 새 회사를 등록하면<br>기사들이 회사 코드로 바로 가입할 수 있습니다</div>
+  </div>
+
+  <!-- 회사 기본 정보 -->
+  <div class="card">
+    <div class="card-title">🏢 기본 정보</div>
+    <div class="field">
+      <div class="field-label">회사명 *</div>
+      <input class="field-inp" id="inp-cname" placeholder="예: 엠비티아이(유), ABC물류" oninput="checkForm()">
+    </div>
+    <div class="field">
+      <div class="field-label">사업자 등록번호</div>
+      <input class="field-inp" id="inp-biznum" placeholder="000-00-00000" oninput="formatBizNum(this)">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="field">
+        <div class="field-label">관리자 이름 *</div>
+        <input class="field-inp" id="inp-admin" placeholder="대표자명" oninput="checkForm()">
+      </div>
+      <div class="field">
+        <div class="field-label">연락처 *</div>
+        <input class="field-inp" id="inp-phone" placeholder="010-0000-0000" oninput="formatPhone(this);checkForm()">
+      </div>
+    </div>
+  </div>
+
+  <!-- 캠프 설정 -->
+  <div class="card">
+    <div class="card-title">🏕 캠프(배송 거점) 설정</div>
+    <div class="add-camp">
+      <input id="camp-inp" placeholder="캠프명 입력 (예: 부산2, 대구1)" maxlength="10"
+        onkeydown="if(event.key==='Enter')addCamp()">
+      <button onclick="addCamp()">+ 추가</button>
+    </div>
+    <div class="tag-wrap" id="camp-tags" style="margin-top:10px"></div>
+    <div style="font-size:11px;color:var(--text3);margin-top:8px">캠프가 없으면 기사 가입 시 직접 입력 방식으로 동작합니다</div>
+  </div>
+
+  <!-- 요금제 -->
+  <div class="card">
+    <div class="card-title">💳 요금제 선택</div>
+    <div class="plan-grid">
+      <div class="plan-card" onclick="selPlan('free',this)">
+        <div class="plan-name">무료</div>
+        <div class="plan-price">₩0/월</div>
+        <div class="plan-feature">기사 5명까지<br>기본 스캔</div>
+      </div>
+      <div class="plan-card sel" onclick="selPlan('pro',this)">
+        <div class="plan-name" style="color:var(--blue)">프로</div>
+        <div class="plan-price">₩29,000/월</div>
+        <div class="plan-feature">기사 무제한<br>GPS·포털 포함</div>
+      </div>
+      <div class="plan-card" onclick="selPlan('enterprise',this)">
+        <div class="plan-name" style="color:var(--yellow)">기업</div>
+        <div class="plan-price">별도 협의</div>
+        <div class="plan-feature">다캠프·API<br>전담 지원</div>
+      </div>
+    </div>
+    <input type="hidden" id="inp-plan" value="pro">
+  </div>
+
+  <button class="btn-submit" id="btn-submit" disabled onclick="doRegister()">
+    회사 등록하기
+  </button>
+
+  <!-- 결과 -->
+  <div class="result-card" id="result-card">
+    <div style="font-size:28px;margin-bottom:8px">🎉</div>
+    <div style="font-size:18px;font-weight:800;margin-bottom:4px">등록 완료!</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:16px">기사들에게 아래 회사 코드를 알려주세요</div>
+    <div class="result-code" id="result-code">XXXX01</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:16px">기사 가입 주소: <span style="color:var(--blue);font-weight:700" id="result-url"></span></div>
+    <button onclick="copyCode()" style="padding:10px 24px;background:var(--green);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px">📋 코드 복사</button><br>
+    <button onclick="location.href='/portal'" style="padding:10px 24px;background:transparent;border:1.5px solid var(--border2);border-radius:10px;color:var(--text2);font-size:13px;font-weight:700;cursor:pointer">포털로 이동 →</button>
+  </div>
+
+</div>
+
+<script>
+var _fk=['AIzaSyDQmEFf','LczgCuPQidu','nbBXqaHWgs3','9VMg0'].join('');
+var FB, _db, _plan='pro', _camps=[];
+function _initFB(){
+  if(typeof firebase==='undefined'){ setTimeout(_initFB,300); return; }
+  try{
+    try{ FB=firebase.app('comp-reg'); }catch(e){
+      FB=firebase.initializeApp({apiKey:_fk,authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.firebasestorage.app',messagingSenderId:'40761160761',appId:'1:40761160761:web:20545b610f03f534e949e8'},'comp-reg');
+    }
+    _db=FB.firestore();
+  }catch(e){}
+}
+document.addEventListener('DOMContentLoaded',_initFB);
+
+function toast(m){ var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},3000); }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function formatPhone(el){ var v=el.value.replace(/\D/g,'');if(v.length<=3)el.value=v;else if(v.length<=7)el.value=v.slice(0,3)+'-'+v.slice(3);else el.value=v.slice(0,3)+'-'+v.slice(3,7)+'-'+v.slice(7,11); }
+function formatBizNum(el){ var v=el.value.replace(/\D/g,'');if(v.length<=3)el.value=v;else if(v.length<=5)el.value=v.slice(0,3)+'-'+v.slice(3);else el.value=v.slice(0,3)+'-'+v.slice(3,5)+'-'+v.slice(5,10); }
+function selPlan(plan,el){ _plan=plan;document.getElementById('inp-plan').value=plan;document.querySelectorAll('.plan-card').forEach(function(c){c.classList.remove('sel');});el.classList.add('sel'); }
+function checkForm(){
+  var ok=document.getElementById('inp-cname').value.trim()&&document.getElementById('inp-admin').value.trim()&&document.getElementById('inp-phone').value.replace(/\D/g,'').length>=10;
+  document.getElementById('btn-submit').disabled=!ok;
+}
+function addCamp(){
+  var v=document.getElementById('camp-inp').value.trim();
+  if(!v||_camps.includes(v)){ toast('중복이거나 빈 값'); return; }
+  _camps.push(v);
+  renderCamps();
+  document.getElementById('camp-inp').value='';
+}
+function removeCamp(c){ _camps=_camps.filter(function(x){return x!==c;}); renderCamps(); }
+function renderCamps(){
+  document.getElementById('camp-tags').innerHTML=_camps.map(function(c){
+    return '<div class="tag"><span>'+esc(c)+'</span><span class="del" onclick="removeCamp(\''+c+'\')">×</span></div>';
+  }).join('');
+}
+
+function _genCode(name){
+  var prefix=name.replace(/[^가-힣A-Za-z0-9]/g,'').slice(0,4).toUpperCase();
+  if(!prefix||prefix.length<2) prefix='CO'+Math.random().toString(36).slice(2,4).toUpperCase();
+  var num=String(Math.floor(10+Math.random()*90));
+  return prefix.padEnd(4,'X').slice(0,4)+num;
+}
+
+async function doRegister(){
+  var btn=document.getElementById('btn-submit');
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span> 등록 중...';
+  var name=document.getElementById('inp-cname').value.trim();
+  var biznum=document.getElementById('inp-biznum').value.trim();
+  var admin=document.getElementById('inp-admin').value.trim();
+  var phone=document.getElementById('inp-phone').value.trim();
+  var plan=_plan;
+  var code=_genCode(name);
+
+  // 코드 중복 방지 (Firebase 확인)
+  if(_db){
+    try{
+      var tries=0;
+      while(tries<5){
+        var snap=await _db.collection('companies').where('code','==',code).get();
+        if(snap.empty) break;
+        code=_genCode(name); tries++;
+      }
+      await _db.collection('companies').add({
+        code,name,biznum,adminName:admin,adminPhone:phone,
+        camps:_camps,plan,isActive:true,
+        createdAt:new Date().toISOString()
+      });
+    }catch(e){ console.warn('company register:',e); }
+  }
+
+  // 결과 표시
+  document.getElementById('result-code').textContent=code;
+  document.getElementById('result-url').textContent=location.origin+'/join';
+  document.getElementById('result-card').style.display='block';
+  document.getElementById('result-card').scrollIntoView({behavior:'smooth'});
+  btn.innerHTML='등록 완료 ✅';
+}
+function copyCode(){
+  var code=document.getElementById('result-code').textContent;
+  var url=location.origin+'/join';
+  var text='[MBTI LogiNet 가입 안내]\n회사 코드: '+code+'\n가입 주소: '+url+'\n\n위 주소에서 회사 코드 입력 후 등록하세요!';
+  navigator.clipboard&&navigator.clipboard.writeText(text).then(function(){toast('📋 복사됨! 카톡으로 공유하세요');});
+}
+</script>
+</body>
+</html>

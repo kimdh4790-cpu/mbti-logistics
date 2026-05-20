@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0a0f1e">
+<meta name="mobile-web-app-capable" content="yes">
+<title>MBTI 물류 통합 포털</title>
+
+<!-- Firebase (mbti-logistics — v9/배송앱 공유) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<style>
+:root{
+  --bg:#0a0f1e; --bg2:#111827; --bg3:#1e2d45; --bg4:#1f2937;
+  --blue:#3b82f6; --blue2:#1d4ed8; --teal:#14b8a6; --green:#22c55e;
+  --yellow:#f59e0b; --red:#ef4444; --purple:#8b5cf6;
+  --text:#f0f6ff; --text2:#94a3b8; --text3:#475569;
+  --border:#1e2d45; --border2:#2d3f5a;
+  --glow:rgba(59,130,246,.18);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,'Malgun Gothic',sans-serif;min-height:100vh;overflow-x:hidden}
+
+/* ── 최상단 헤더 ── */
+.portal-header{
+  background:linear-gradient(180deg,#0d1b35 0%,var(--bg) 100%);
+  border-bottom:1px solid var(--border2);
+  padding:16px 20px 14px;
+  position:sticky;top:0;z-index:100;
+  backdrop-filter:blur(12px);
+}
+.header-row{display:flex;align-items:center;justify-content:space-between}
+.header-logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:36px;height:36px;background:linear-gradient(135deg,var(--blue),var(--teal));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.logo-text{font-size:16px;font-weight:900;letter-spacing:.02em}
+.logo-sub{font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em;margin-top:1px}
+.header-right{display:flex;align-items:center;gap:10px}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(.85)}}
+.clock{font-size:13px;font-weight:700;color:var(--text2);font-variant-numeric:tabular-nums;letter-spacing:.04em}
+.refresh-btn{background:transparent;border:1px solid var(--border2);border-radius:8px;padding:6px 10px;color:var(--text2);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;letter-spacing:.04em}
+.refresh-btn:hover{border-color:var(--blue);color:var(--blue)}
+
+/* ── 메인 레이아웃 ── */
+.main{padding:16px;max-width:1100px;margin:0 auto}
+
+/* ── 섹션 제목 ── */
+.sec-title{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.14em;text-transform:uppercase;margin:20px 0 10px;display:flex;align-items:center;gap:6px}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--border2)}
+
+/* ── 요약 카드 그리드 ── */
+.summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media(max-width:700px){.summary-grid{grid-template-columns:repeat(2,1fr)}}
+.sum-card{
+  background:var(--bg2);border:1px solid var(--border2);border-radius:14px;
+  padding:16px 14px;position:relative;overflow:hidden;
+  transition:border-color .2s;
+}
+.sum-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  border-radius:14px 14px 0 0;
+}
+.sum-card.blue::before{background:linear-gradient(90deg,var(--blue),var(--teal))}
+.sum-card.green::before{background:linear-gradient(90deg,var(--green),var(--teal))}
+.sum-card.yellow::before{background:linear-gradient(90deg,var(--yellow),#fb923c)}
+.sum-card.purple::before{background:linear-gradient(90deg,var(--purple),var(--blue))}
+.sum-card:hover{border-color:var(--border2);box-shadow:0 0 20px var(--glow)}
+.sum-icon{font-size:22px;margin-bottom:8px;display:block}
+.sum-label{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
+.sum-num{font-size:36px;font-weight:900;line-height:1;letter-spacing:-1px}
+.sum-num.blue{color:var(--blue)}
+.sum-num.green{color:var(--green)}
+.sum-num.yellow{color:var(--yellow)}
+.sum-num.purple{color:var(--purple)}
+.sum-unit{font-size:12px;color:var(--text3);margin-top:3px;font-weight:600}
+.sum-trend{position:absolute;top:14px;right:14px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px}
+.trend-up{background:rgba(34,197,94,.15);color:var(--green)}
+.trend-ok{background:rgba(59,130,246,.15);color:var(--blue)}
+.trend-warn{background:rgba(245,158,11,.15);color:var(--yellow)}
+
+/* ── 캠프 현황 ── */
+.camp-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+@media(max-width:800px){.camp-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:500px){.camp-grid{grid-template-columns:repeat(2,1fr)}}
+.camp-card{
+  background:var(--bg2);border:1px solid var(--border2);border-radius:12px;
+  padding:14px 12px;cursor:pointer;transition:all .2s;
+}
+.camp-card:hover{border-color:var(--blue);background:var(--bg3)}
+.camp-card.complete{border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.05)}
+.camp-card.partial{border-color:rgba(245,158,11,.35);background:rgba(245,158,11,.04)}
+.camp-card.pending{border-color:var(--border2)}
+.camp-name{font-size:13px;font-weight:800;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.camp-status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.camp-status-dot.ok{background:var(--green)}
+.camp-status-dot.warn{background:var(--yellow);animation:pulse 2s infinite}
+.camp-status-dot.idle{background:var(--border2)}
+.camp-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.camp-row-label{font-size:10px;color:var(--text3);font-weight:600}
+.camp-row-val{font-size:13px;font-weight:700}
+.camp-row-val.loaded{color:var(--text2)}
+.camp-row-val.recv{color:var(--teal)}
+.camp-row-val.done{color:var(--green)}
+.camp-truck{margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;color:var(--text3);display:flex;align-items:center;gap:4px}
+
+/* ── 앱 런처 ── */
+.launcher-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media(max-width:700px){.launcher-grid{grid-template-columns:repeat(2,1fr)}}
+.app-card{
+  background:var(--bg2);border:1px solid var(--border2);border-radius:14px;
+  padding:18px 14px;cursor:pointer;text-decoration:none;color:inherit;
+  transition:all .2s;display:flex;flex-direction:column;align-items:flex-start;
+  position:relative;overflow:hidden;
+}
+.app-card::after{
+  content:'↗';position:absolute;top:12px;right:12px;font-size:12px;
+  color:var(--text3);transition:color .2s;
+}
+.app-card:hover{border-color:var(--blue);background:var(--bg3)}
+.app-card:hover::after{color:var(--blue)}
+.app-icon{font-size:28px;margin-bottom:10px;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center}
+.app-name{font-size:13px;font-weight:800;margin-bottom:3px}
+.app-desc{font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.02em;line-height:1.4}
+.app-badge{position:absolute;bottom:12px;right:12px;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--bg3);color:var(--text3)}
+
+/* ── 노선별 배송현황 ── */
+.route-table{width:100%;border-collapse:collapse}
+.route-table th{background:var(--bg3);padding:10px 12px;font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;text-align:left}
+.route-table th:not(:first-child){text-align:center}
+.route-table td{padding:11px 12px;border-bottom:1px solid var(--border);font-size:12px}
+.route-table td:not(:first-child){text-align:center}
+.route-table tr:last-child td{border-bottom:none}
+.route-table tr:hover td{background:var(--bg3)}
+.route-name-cell{font-weight:700}
+.route-driver{font-size:10px;color:var(--text3);margin-top:1px}
+.done-bar{height:4px;background:var(--border2);border-radius:99px;margin-top:5px;overflow:hidden}
+.done-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--green));border-radius:99px;transition:width .5s ease}
+.pct-badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px}
+.pct-100{background:rgba(34,197,94,.15);color:var(--green)}
+.pct-half{background:rgba(59,130,246,.15);color:var(--blue)}
+.pct-low{background:rgba(71,85,105,.2);color:var(--text3)}
+
+/* ── 로딩 ── */
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{width:16px;height:16px;border:2px solid var(--border2);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+
+/* ── 토스트 ── */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:10px 20px;border-radius:99px;font-size:12px;font-weight:700;opacity:0;transition:all .3s;pointer-events:none;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.4)}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── 하단 여백 ── */
+.footer{padding:24px 0;text-align:center;font-size:11px;color:var(--text3)}
+.footer a{color:var(--blue);text-decoration:none;font-weight:700}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+
+<!-- ══════════ 헤더 ══════════ -->
+<div class="portal-header">
+  <div class="header-row">
+    <div class="header-logo">
+      <div class="logo-icon">🚛</div>
+      <div>
+        <div class="logo-text">MBTI 물류 포털</div>
+        <div class="logo-sub">엠비티아이(유) 통합 관제 시스템</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="live-dot"></div>
+      <div class="clock" id="clock">--:--:--</div>
+      <button class="refresh-btn" onclick="loadAll()">🔄 갱신</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ 메인 ══════════ -->
+<div class="main">
+
+  <!-- 요약 -->
+  <div class="sec-title">📊 오늘 현황</div>
+  <div class="summary-grid">
+    <div class="sum-card blue">
+      <span class="sum-icon">📦</span>
+      <div class="sum-label">라벨 출력</div>
+      <div class="sum-num blue" id="s-label">—</div>
+      <div class="sum-unit">건 (물류센터)</div>
+    </div>
+    <div class="sum-card green">
+      <span class="sum-icon">✅</span>
+      <div class="sum-label">캠프 수령</div>
+      <div class="sum-num green" id="s-recv">—</div>
+      <div class="sum-unit">건 (전체 캠프)</div>
+      <span class="sum-trend trend-ok" id="s-recv-camp">— 캠프</span>
+    </div>
+    <div class="sum-card yellow">
+      <span class="sum-icon">🏍</span>
+      <div class="sum-label">배송 완료</div>
+      <div class="sum-num yellow" id="s-done">—</div>
+      <div class="sum-unit">건 (전체 기사)</div>
+      <span class="sum-trend trend-up" id="s-done-badge" style="display:none">진행중</span>
+    </div>
+    <div class="sum-card purple">
+      <span class="sum-icon">📡</span>
+      <div class="sum-label">간선차</div>
+      <div class="sum-num purple" id="s-truck">—</div>
+      <div class="sum-unit">대 운행중</div>
+    </div>
+  </div>
+
+  <!-- 캠프별 현황 -->
+  <div class="sec-title">🏕 캠프별 현황</div>
+  <div class="camp-grid" id="camp-grid">
+    <div style="grid-column:1/-1;text-align:center;padding:24px;color:var(--text3);font-size:13px">
+      <span class="spinner"></span> 데이터 로딩 중...
+    </div>
+  </div>
+
+  <!-- 앱 런처 -->
+  <div class="sec-title">🚀 앱 바로가기</div>
+  <div class="launcher-grid">
+    <a class="app-card" href="/" target="_blank">
+      <div class="app-icon" style="background:linear-gradient(135deg,#1d4ed8,#3b82f6)">🗂️</div>
+      <div class="app-name">내부 물류앱 (v9)</div>
+      <div class="app-desc">기사관리 · 정산 · 긴급배송<br>출퇴근 · 근무표 · 공지사항</div>
+      <span class="app-badge">관리자/기사</span>
+    </a>
+    <a class="app-card" href="/label" target="_blank">
+      <div class="app-icon" style="background:linear-gradient(135deg,#065f46,#10b981)">🖨️</div>
+      <div class="app-name">소분 라벨 시스템</div>
+      <div class="app-desc">쿠팡 송장 OCR → 영문라벨<br>4분할 A4 자동인쇄 · 캠프공유</div>
+      <span class="app-badge" id="badge-label">물류센터</span>
+    </a>
+    <a class="app-card" href="/scan" target="_blank">
+      <div class="app-icon" style="background:linear-gradient(135deg,#1e3a5f,#3b82f6)">📷</div>
+      <div class="app-name">간선차 스캔</div>
+      <div class="app-desc">캠프 수령 스캔 · 노선별 비교<br>적재 vs 수령 대조 · 보고서</div>
+      <span class="app-badge">캠프</span>
+    </a>
+    <a class="app-card" href="/delivery" target="_blank">
+      <div class="app-icon" style="background:linear-gradient(135deg,#5b21b6,#8b5cf6)">🏍</div>
+      <div class="app-name">배송 스캔 앱</div>
+      <div class="app-desc">기사 QR스캔 → GPS → 자동저장<br>예상건수 · 완료건수 실시간</div>
+      <span class="app-badge">기사</span>
+    </a>
+    <a class="app-card" href="/truck" target="_blank">
+      <div class="app-icon" style="background:linear-gradient(135deg,#78350f,#f59e0b)">🚛</div>
+      <div class="app-name">간선차 GPS</div>
+      <div class="app-desc">간선차 실시간 위치 공유<br>ETA · 속도 · 도착완료 알림</div>
+      <span class="app-badge">간선차 기사</span>
+    </a>
+    <a class="app-card" href="/settle" target="_blank">
+      <div class="app-icon" style="background:linear-gradient(135deg,#1f2937,#374151)">📋</div>
+      <div class="app-name">LogiNet 정산</div>
+      <div class="app-desc">대리점 B2B 정산관리<br>송장 업로드 · 세금계산서</div>
+      <span class="app-badge">대리점</span>
+    </a>
+    <a class="app-card" href="/admin" target="_blank">
+      <div class="app-icon" style="background:linear-gradient(135deg,#450a0a,#ef4444)">⚙️</div>
+      <div class="app-name">LogiNet 관리자</div>
+      <div class="app-desc">정산 승인 · 대리점 관리<br>통계 · 공지사항</div>
+      <span class="app-badge">관리자 전용</span>
+    </a>
+    <div class="app-card" onclick="showQrLinks()" style="cursor:pointer">
+      <div class="app-icon" style="background:linear-gradient(135deg,#0c4a6e,#0ea5e9)">📱</div>
+      <div class="app-name">QR 링크 생성</div>
+      <div class="app-desc">각 앱 QR코드 생성<br>카카오톡 공유용</div>
+      <span class="app-badge">공유</span>
+    </div>
+  </div>
+
+  <!-- 노선별 배송 현황 -->
+  <div class="sec-title">📋 노선별 배송 현황 (오늘)</div>
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;overflow:hidden">
+    <table class="route-table">
+      <thead>
+        <tr>
+          <th>노선 / 캠프</th>
+          <th>예상</th>
+          <th>완료</th>
+          <th>진행률</th>
+          <th>기사</th>
+        </tr>
+      </thead>
+      <tbody id="route-tbody">
+        <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text3)"><span class="spinner"></span> 로딩 중...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 배송기사 실시간 현황 -->
+  <div class="sec-title">👤 기사별 오늘 배송</div>
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;overflow:hidden">
+    <table class="route-table">
+      <thead>
+        <tr>
+          <th>기사</th>
+          <th>캠프</th>
+          <th>노선</th>
+          <th>완료건수</th>
+          <th>마지막 스캔</th>
+        </tr>
+      </thead>
+      <tbody id="driver-tbody">
+        <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text3)"><span class="spinner"></span> 로딩 중...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="footer">
+    엠비티아이 유한회사 · 051-711-3103 · 사업자번호 373-86-02536<br>
+    <span style="color:var(--text3)">최종 갱신: <span id="last-update">—</span></span>
+  </div>
+</div>
+
+<!-- QR 모달 -->
+<div id="qr-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999;padding:20px;overflow-y:auto">
+  <div style="background:var(--bg2);border-radius:16px;padding:24px;max-width:480px;margin:0 auto;border:1px solid var(--border2)">
+    <div style="font-size:16px;font-weight:800;margin-bottom:16px">📱 앱 QR 링크</div>
+    <div id="qr-links-body"></div>
+    <button onclick="document.getElementById('qr-modal').style.display='none'" style="width:100%;margin-top:16px;padding:12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-size:13px;font-weight:700;cursor:pointer">닫기</button>
+  </div>
+</div>
+
+<script>
+// ── Firebase (mbti-logistics — v9 같은 프로젝트) ──
+var _fk=['AIzaSyDQmEFf','LczgCuPQidu','nbBXqaHWgs3','9VMg0'].join('');
+var FB2, _db2;
+try{
+  FB2 = firebase.initializeApp({
+    apiKey:_fk, authDomain:'mbti-logistics.firebaseapp.com',
+    projectId:'mbti-logistics', storageBucket:'mbti-logistics.firebasestorage.app',
+    messagingSenderId:'40761160761', appId:'1:40761160761:web:20545b610f03f534e949e8'
+  },'portal');
+  _db2 = FB2.firestore();
+}catch(e){ console.warn('Firebase:',e); }
+
+var CAMPS = ['부산1','부산2','부산3','대구2','진주M'];
+var CAMP_DRIVERS = {'부산1':6,'부산2':5,'부산3':2,'대구2':3,'진주M':15};
+var BASE_URL = location.origin;
+
+// ── 시계 ──
+function updateClock(){
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+setInterval(updateClock,1000); updateClock();
+
+function today(){ return new Date().toISOString().slice(0,10); }
+function today8(){ return today().replace(/-/g,''); }
+function toast(m){ var t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(function(){t.classList.remove('show');},3000); }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── 전체 데이터 로드 ──
+async function loadAll(){
+  document.getElementById('last-update').textContent='갱신 중...';
+  await Promise.allSettled([
+    loadCampData(),
+    loadDeliveryData(),
+    loadTruckData()
+  ]);
+  document.getElementById('last-update').textContent = new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  toast('✅ 갱신 완료');
+}
+
+// ── 캠프 현황 (scan_sessions via Worker) ──
+var _campData = {};
+async function loadCampData(){
+  var totalLabeled=0, totalRecv=0, recvCamps=0;
+  var campHtml='';
+  var routeMap={}; // route → {expect, done, camp}
+
+  await Promise.allSettled(CAMPS.map(async function(camp){
+    var sid = today()+'_'+camp.replace(/\s/g,'');
+    try{
+      var resp = await fetch('/scan-get/'+encodeURIComponent(sid));
+      var data = await resp.json();
+      _campData[camp] = data;
+      if(data.ok && !data.empty){
+        var loaded = data.loadedTotal||0;
+        var recv   = data.receivedTotal||0;
+        totalLabeled += loaded;
+        totalRecv    += recv;
+        if(recv>0) recvCamps++;
+        // 노선별 집계
+        var lr = data.loadedRoutes||{};
+        var rr = data.receivedRoutes||{};
+        Object.keys(lr).forEach(function(k){
+          if(!routeMap[k]) routeMap[k]={camp:camp,expect:0,done:0};
+          routeMap[k].expect += lr[k].count||0;
+        });
+        Object.keys(rr).forEach(function(k){
+          if(!routeMap[k]) routeMap[k]={camp:camp,expect:0,done:0};
+          routeMap[k].done += rr[k].count||0;
+        });
+      }
+    }catch(e){ _campData[camp]={ok:false,empty:true}; }
+  }));
+
+  document.getElementById('s-label').textContent = totalLabeled||'—';
+  document.getElementById('s-recv').textContent  = totalRecv||'—';
+  document.getElementById('s-recv-camp').textContent = recvCamps+'/'+CAMPS.length+' 캠프';
+
+  // 캠프 카드 렌더
+  campHtml = CAMPS.map(function(camp){
+    var d = _campData[camp]||{};
+    var loaded = d.loadedTotal||0;
+    var recv   = d.receivedTotal||0;
+    var diff   = recv-loaded;
+    var status = (!loaded&&!recv)?'pending':(Math.abs(diff)<=2?'complete':'partial');
+    var dot    = status==='complete'?'ok':(status==='partial'?'warn':'idle');
+    var truckInfo = _truckData[camp]||null;
+    var truckTxt = truckInfo
+      ? (truckInfo.status==='arrived'?'🏁 도착완료':'📡 '+truckInfo.eta)
+      : '🚛 미공유';
+    return '<div class="camp-card '+status+'" onclick="showCampDetail(\''+camp+'\')">'
+      +'<div class="camp-name">'+esc(camp)+'<div class="camp-status-dot '+dot+'"></div></div>'
+      +'<div class="camp-row"><div class="camp-row-label">📦 적재</div><div class="camp-row-val loaded">'+loaded+'건</div></div>'
+      +'<div class="camp-row"><div class="camp-row-label">✅ 수령</div><div class="camp-row-val recv">'+recv+'건</div></div>'
+      +'<div class="camp-row"><div class="camp-row-label">차이</div><div class="camp-row-val" style="color:'+(diff===0?'var(--green)':(Math.abs(diff)<=2?'var(--yellow)':'var(--red)'))+'">'+(diff>=0?'+':'')+diff+'</div></div>'
+      +'<div class="camp-truck">'+truckTxt+'</div>'
+      +'</div>';
+  }).join('');
+  document.getElementById('camp-grid').innerHTML = campHtml;
+
+  // 노선 테이블 렌더
+  renderRouteTable(routeMap);
+}
+
+// ── 배송 데이터 (Firebase emergency_deliveries) ──
+var _driverMap = {};
+async function loadDeliveryData(){
+  if(!_db2) return;
+  try{
+    var snap = await _db2.collection('emergency_deliveries')
+      .where('date','==',today())
+      .orderBy('savedAt','desc')
+      .limit(200).get();
+    var total=0;
+    _driverMap={};
+    snap.forEach(function(d){
+      var r=d.data();
+      total++;
+      if(!_driverMap[r.driver]) _driverMap[r.driver]={driver:r.driver,camp:r.camp||'',route:r.route_code||'',count:0,lastTime:''};
+      _driverMap[r.driver].count++;
+      if(!_driverMap[r.driver].lastTime) _driverMap[r.driver].lastTime=r.time||r.savedAt||'';
+    });
+    document.getElementById('s-done').textContent = total||'—';
+    if(total>0){
+      document.getElementById('s-done-badge').style.display='block';
+      document.getElementById('s-done-badge').textContent = Object.keys(_driverMap).length+'명 활동중';
+    }
+    renderDriverTable();
+  }catch(e){ document.getElementById('s-done').textContent='—'; }
+}
+
+// ── 간선차 GPS ──
+var _truckData={};
+async function loadTruckData(){
+  var activeCount=0;
+  await Promise.allSettled(CAMPS.map(async function(camp){
+    var truckId='truck_'+today8()+'_'+camp.replace(/\s/g,'');
+    try{
+      var resp=await fetch('/truck-get/'+encodeURIComponent(truckId));
+      var data=await resp.json();
+      if(data.ok&&!data.empty){
+        activeCount++;
+        var spd=data.speed||0;
+        var eta=spd>5?'약 ?분':'정차중';
+        _truckData[camp]={status:data.status,speed:spd,eta:eta,updatedAt:data.updatedAt};
+      } else { _truckData[camp]=null; }
+    }catch(e){ _truckData[camp]=null; }
+  }));
+  document.getElementById('s-truck').textContent = activeCount||'0';
+}
+
+// ── 노선 테이블 렌더 ──
+function renderRouteTable(routeMap){
+  var keys=Object.keys(routeMap).sort();
+  if(!keys.length){
+    document.getElementById('route-tbody').innerHTML=
+      '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text3)">오늘 적재 데이터 없음</td></tr>';
+    return;
+  }
+  document.getElementById('route-tbody').innerHTML = keys.map(function(k){
+    var r=routeMap[k];
+    var pct=r.expect>0?Math.min(100,Math.round(r.done/r.expect*100)):0;
+    var pctCls=pct>=100?'pct-100':(pct>=50?'pct-half':'pct-low');
+    // 해당 노선 기사 찾기
+    var drivers=Object.values(_driverMap).filter(function(d){return d.route===k;}).map(function(d){return d.driver;}).join(', ');
+    return '<tr>'
+      +'<td class="route-name-cell">'+esc(k)+'<div class="route-driver">'+esc(r.camp)+'</div></td>'
+      +'<td>'+r.expect+'건</td>'
+      +'<td>'+r.done+'건<div class="done-bar"><div class="done-fill" style="width:'+pct+'%"></div></div></td>'
+      +'<td><span class="pct-badge '+pctCls+'">'+pct+'%</span></td>'
+      +'<td style="font-size:11px;color:var(--text2)">'+esc(drivers||'—')+'</td>'
+      +'</tr>';
+  }).join('');
+}
+
+// ── 기사 테이블 렌더 ──
+function renderDriverTable(){
+  var drivers=Object.values(_driverMap).sort(function(a,b){return b.count-a.count;});
+  if(!drivers.length){
+    document.getElementById('driver-tbody').innerHTML=
+      '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text3)">오늘 배송기록 없음</td></tr>';
+    return;
+  }
+  document.getElementById('driver-tbody').innerHTML = drivers.map(function(d){
+    var t=(d.lastTime||'').slice(0,16).replace('T',' ').slice(-5);
+    return '<tr>'
+      +'<td style="font-weight:700">'+esc(d.driver)+'</td>'
+      +'<td style="font-size:11px;color:var(--text2)">'+esc(d.camp||'—')+'</td>'
+      +'<td style="font-size:11px;color:var(--text2)">'+esc(d.route||'—')+'</td>'
+      +'<td style="font-weight:800;color:var(--green)">'+d.count+'건</td>'
+      +'<td style="font-size:11px;color:var(--text3)">'+esc(t)+'</td>'
+      +'</tr>';
+  }).join('');
+}
+
+// ── 캠프 상세 ──
+function showCampDetail(camp){
+  var d=_campData[camp]||{};
+  var lr=d.loadedRoutes||{};
+  var rr=d.receivedRoutes||{};
+  var allKeys=Array.from(new Set(Object.keys(lr).concat(Object.keys(rr)))).sort();
+  var html='<div style="font-size:14px;font-weight:800;margin-bottom:12px">🏕 '+camp+' 상세</div>';
+  if(!allKeys.length){ html+='<div style="color:var(--text3);font-size:12px">데이터 없음</div>'; }
+  else{
+    html+='<table style="width:100%;border-collapse:collapse;font-size:12px">'
+      +'<thead><tr style="background:var(--bg3)">'
+      +'<th style="padding:8px;text-align:left;color:var(--text3)">노선</th>'
+      +'<th style="padding:8px;text-align:center;color:var(--text3)">적재</th>'
+      +'<th style="padding:8px;text-align:center;color:var(--text3)">수령</th>'
+      +'<th style="padding:8px;text-align:center;color:var(--text3)">차이</th>'
+      +'</tr></thead><tbody>';
+    allKeys.forEach(function(k){
+      var lc=(lr[k]||{count:0}).count;
+      var rc=(rr[k]||{count:0}).count;
+      var diff=rc-lc;
+      var col=diff===0?'var(--green)':(Math.abs(diff)<=2?'var(--yellow)':'var(--red)');
+      html+='<tr style="border-bottom:1px solid var(--border)">'
+        +'<td style="padding:8px;font-weight:700">'+esc(k)+'</td>'
+        +'<td style="padding:8px;text-align:center;color:var(--text2)">'+lc+'</td>'
+        +'<td style="padding:8px;text-align:center;color:var(--teal);font-weight:700">'+rc+'</td>'
+        +'<td style="padding:8px;text-align:center;font-weight:700;color:'+col+'">'+(diff>=0?'+':'')+diff+'</td>'
+        +'</tr>';
+    });
+    html+='</tbody></table>';
+  }
+  if(d.receivedAt) html+='<div style="font-size:10px;color:var(--text3);margin-top:8px">수령: '+new Date(d.receivedAt).toLocaleString('ko-KR')+'</div>';
+  var mo=document.createElement('div');
+  mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999;padding:20px;overflow-y:auto;display:flex;align-items:flex-start;justify-content:center';
+  mo.innerHTML='<div style="background:var(--bg2);border-radius:16px;padding:20px;width:100%;max-width:400px;border:1px solid var(--border2);margin-top:40px">'
+    +html
+    +'<button onclick="this.closest(\'[style*=fixed]\').remove()" style="width:100%;margin-top:12px;padding:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-size:12px;font-weight:700;cursor:pointer">닫기</button>'
+    +'</div>';
+  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  document.body.appendChild(mo);
+}
+
+// ── QR 링크 ──
+function showQrLinks(){
+  var apps=[
+    {name:'내부 물류앱',url:BASE_URL+'/'},
+    {name:'라벨 시스템',url:BASE_URL+'/label'},
+    {name:'캠프 스캔',url:BASE_URL+'/scan'},
+    {name:'배송앱',url:BASE_URL+'/delivery'},
+    {name:'간선차 GPS',url:BASE_URL+'/truck'},
+    {name:'정산관리',url:BASE_URL+'/settle'},
+  ];
+  var html=apps.map(function(a){
+    var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=120x120&data='+encodeURIComponent(a.url)+'&format=png&ecc=M';
+    return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">'
+      +'<img src="'+qrUrl+'" width="60" height="60" style="border-radius:6px;background:#fff;padding:4px">'
+      +'<div><div style="font-size:12px;font-weight:700;margin-bottom:2px">'+esc(a.name)+'</div>'
+      +'<div style="font-size:10px;color:var(--text3)">'+esc(a.url)+'</div>'
+      +'<button onclick="navigator.clipboard.writeText(\''+a.url+'\').then(function(){toast(\'📋 복사됨!\');})" style="margin-top:4px;padding:2px 8px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text3);font-size:10px;font-weight:700;cursor:pointer">복사</button>'
+      +'</div></div>';
+  }).join('');
+  document.getElementById('qr-links-body').innerHTML=html;
+  document.getElementById('qr-modal').style.display='block';
+}
+
+// ── 자동 갱신 60초 ──
+loadAll();
+setInterval(loadAll, 60000);
+</script>
+</body>
+</html>
