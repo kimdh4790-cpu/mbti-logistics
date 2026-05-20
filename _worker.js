@@ -141,11 +141,14 @@ export default {
     const method   = request.method;
     const hostname = url.hostname;
 
-    // ★ donway.ai.kr 라우팅
-    if (hostname === 'donway.ai.kr') {
-      const req = new Request(new URL('/donway_landing.html', url).toString(), { method: 'GET', headers: request.headers });
-      const resp = await env.ASSETS.fetch(req);
-      return new Response(resp.body, { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+    // ★ 루트 접속 → 랜딩페이지 리라이트 (URL 유지, workers.dev 제외)
+    if ((path === '/' || path === '') && !hostname.includes('workers.dev')) {
+      const landingUrl = new URL('/donway_landing.html', url);
+      const landingResp = await env.ASSETS.fetch(new Request(landingUrl.toString(), request));
+      return new Response(landingResp.body, {
+        status: landingResp.status,
+        headers: landingResp.headers
+      });
     }
 
     if (method === 'OPTIONS') {
