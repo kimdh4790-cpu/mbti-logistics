@@ -141,10 +141,12 @@ export default {
     const method   = request.method;
     const hostname = url.hostname;
 
-    // ★ donway.ai.kr 루트 → 랜딩페이지, /settle → 앱
-    if (hostname === 'donway.ai.kr' && (path === '/' || path === '')) {
-      const landingReq = new Request(new URL('/donway_landing.html', url).toString(), request);
-      return env.ASSETS.fetch(landingReq);
+    // ★ donway.ai.kr 라우팅
+    if (hostname === 'donway.ai.kr') {
+      // 루트 접속 → 랜딩페이지로 리다이렉트
+      if (path === '/' || path === '') {
+        return Response.redirect('https://donway.ai.kr/donway_landing.html', 302);
+      }
     }
 
     if (method === 'OPTIONS') {
