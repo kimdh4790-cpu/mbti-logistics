@@ -136,9 +136,16 @@ async function runExpireJob(env) {
 // ── Fetch Handler ─────────────────────────────────────────────────────────────
 export default {
   async fetch(request, env) {
-    const url    = new URL(request.url);
-    const path   = url.pathname;
-    const method = request.method;
+    const url      = new URL(request.url);
+    const path     = url.pathname;
+    const method   = request.method;
+    const hostname = url.hostname;
+
+    // ★ donway.ai.kr 루트 → 랜딩페이지, /settle → 앱
+    if (hostname === 'donway.ai.kr' && (path === '/' || path === '')) {
+      const landingReq = new Request(new URL('/donway_landing.html', url).toString(), request);
+      return env.ASSETS.fetch(landingReq);
+    }
 
     if (method === 'OPTIONS') {
       return new Response(null, {

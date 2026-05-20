@@ -101,17 +101,67 @@ tr:hover>td{background:var(--bg3)}
 
 <!-- 로그인 -->
 <div id="login-screen" class="login-wrap">
-  <div class="login-card">
-    <div style="text-align:center;margin-bottom:24px">
-      <div style="width:56px;height:56px;border-radius:14px;background:var(--brand);display:inline-flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:10px">💰</div>
+  <div class="login-card" style="width:400px;max-width:95vw">
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="width:52px;height:52px;border-radius:14px;background:var(--brand);display:inline-flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:8px">💰</div>
       <div style="font-size:22px;font-weight:900;color:var(--brand)">DONWAY</div>
-      <div style="font-size:12px;color:var(--text3);margin-top:3px">돈의 방향을 자동화합니다</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:2px">돈의 방향을 자동화합니다</div>
     </div>
-    <div class="fg"><label>이메일</label><input id="l-email" type="email" placeholder="example@email.com" onkeydown="if(event.key==='Enter')doLogin()"></div>
-    <div class="fg"><label>비밀번호</label><input id="l-pw" type="password" onkeydown="if(event.key==='Enter')doLogin()"></div>
-    <div id="l-err" style="color:var(--red);font-size:12px;margin-bottom:8px;display:none"></div>
-    <button class="btn btn-blue" style="width:100%;padding:11px;font-size:14px;font-weight:700" onclick="doLogin()">로그인</button>
-    <div style="text-align:center;margin-top:10px"><button class="btn btn-sm" onclick="toggleDark()">🌙 다크모드</button></div>
+
+    <!-- 탭 -->
+    <div style="display:flex;gap:4px;margin-bottom:20px;background:var(--bg3);border-radius:10px;padding:4px">
+      <button id="tab-login" onclick="switchTab('login')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:var(--brand);color:#fff;transition:.2s">로그인</button>
+      <button id="tab-register" onclick="switchTab('register')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);transition:.2s">회사 등록</button>
+      <button id="tab-join" onclick="switchTab('join')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);transition:.2s">직원 가입</button>
+    </div>
+
+    <!-- 로그인 폼 -->
+    <div id="form-login">
+      <div class="fg"><label>이메일</label><input id="l-email" type="email" placeholder="example@email.com" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div class="fg"><label>비밀번호</label><input id="l-pw" type="password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div id="l-err" style="color:var(--red);font-size:12px;margin-bottom:8px;display:none"></div>
+      <button class="btn btn-blue" style="width:100%;padding:11px;font-size:14px;font-weight:700" onclick="doLogin()">로그인</button>
+      <div style="text-align:center;margin-top:10px"><button class="btn btn-sm" onclick="toggleDark()">🌙 다크모드</button></div>
+    </div>
+
+    <!-- 회사 등록 폼 -->
+    <div id="form-register" style="display:none">
+      <div style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:8px;padding:10px 12px;margin-bottom:16px;font-size:11px;color:var(--text2)">
+        🎁 <strong>7일 무료 체험</strong> — 카드 등록 불필요 · 사업자번호 1회 한정
+      </div>
+      <div class="fg"><label>회사명</label><input id="r-company" type="text" placeholder="엠비티아이 유한회사"></div>
+      <div class="fg"><label>사업자등록번호</label>
+        <div style="display:flex;gap:8px">
+          <input id="r-biznum" type="text" placeholder="000-00-00000" style="flex:1" oninput="this.value=this.value.replace(/[^0-9-]/g,'')">
+          <button class="btn btn-sm btn-blue" onclick="checkBizNum()" style="white-space:nowrap">중복확인</button>
+        </div>
+        <div id="r-biznum-msg" style="font-size:11px;margin-top:4px;display:none"></div>
+      </div>
+      <div class="fg"><label>관리자 이메일</label><input id="r-email" type="email" placeholder="admin@company.com"></div>
+      <div class="fg"><label>비밀번호</label><input id="r-pw" type="password" placeholder="8자 이상"></div>
+      <div class="fg"><label>비밀번호 확인</label><input id="r-pw2" type="password" placeholder="비밀번호 재입력"></div>
+      <div id="r-err" style="color:var(--red);font-size:12px;margin-bottom:8px;display:none"></div>
+      <button class="btn btn-blue" style="width:100%;padding:11px;font-size:14px;font-weight:700" onclick="doRegister()">7일 무료 체험 시작</button>
+    </div>
+
+    <!-- 직원 가입 폼 -->
+    <div id="form-join" style="display:none">
+      <div style="background:rgba(212,160,23,.08);border:1px solid rgba(212,160,23,.2);border-radius:8px;padding:10px 12px;margin-bottom:16px;font-size:11px;color:var(--text2)">
+        🔑 관리자에게 <strong>회사코드</strong>를 받아 입력하세요
+      </div>
+      <div class="fg"><label>이름</label><input id="j-name" type="text" placeholder="홍길동"></div>
+      <div class="fg"><label>이메일</label><input id="j-email" type="email" placeholder="example@email.com"></div>
+      <div class="fg"><label>비밀번호</label><input id="j-pw" type="password" placeholder="8자 이상"></div>
+      <div class="fg"><label>회사코드</label>
+        <div style="display:flex;gap:8px">
+          <input id="j-code" type="text" placeholder="DNW-0000" style="flex:1;text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+          <button class="btn btn-sm btn-blue" onclick="checkCompanyCode()" style="white-space:nowrap">확인</button>
+        </div>
+        <div id="j-code-msg" style="font-size:11px;margin-top:4px;display:none"></div>
+      </div>
+      <div id="j-err" style="color:var(--red);font-size:12px;margin-bottom:8px;display:none"></div>
+      <button class="btn btn-blue" style="width:100%;padding:11px;font-size:14px;font-weight:700" onclick="doJoin()">가입하기</button>
+    </div>
   </div>
 </div>
 
@@ -1052,6 +1102,178 @@ function showApp(){
   fi.onchange=function(){if(this.files[0])parseCoupangExcel(this);};
   // 약관 동의 확인 후 진입
   checkTermsAgreement();
+}
+
+// ══ DONWAY 화이트리스트 (영구 무료 계정) ══
+var OWNER_BIZ = ['373-86-02536'];
+var OWNER_EMAIL = ['kimdh4790@gmail.com','soungkyekim@naver.com'];
+
+// ── 탭 전환 ──
+function switchTab(tab){
+  ['login','register','join'].forEach(function(t){
+    var btn=document.getElementById('tab-'+t);
+    var form=document.getElementById('form-'+t);
+    if(t===tab){
+      btn.style.background='var(--brand)';btn.style.color='#fff';
+      form.style.display='block';
+    } else {
+      btn.style.background='transparent';btn.style.color='var(--text3)';
+      form.style.display='none';
+    }
+  });
+}
+
+// ── 사업자번호 중복 확인 ──
+function checkBizNum(){
+  var biz=document.getElementById('r-biznum').value.trim();
+  var msg=document.getElementById('r-biznum-msg');
+  if(!biz){msg.style.display='block';msg.style.color='var(--red)';msg.textContent='사업자번호를 입력하세요';return;}
+  msg.style.display='block';msg.style.color='var(--text3)';msg.textContent='확인 중...';
+
+  // 화이트리스트 체크
+  if(OWNER_BIZ.includes(biz)){
+    msg.style.color='#7c3aed';msg.textContent='✅ OWNER 계정 — 영구 무료 사용 가능';
+    document.getElementById('r-biznum').dataset.verified='owner';return;
+  }
+
+  // Firestore 중복 체크
+  _db.collection('companies').where('bizNumber','==',biz).get().then(function(snap){
+    if(!snap.empty){
+      var existing=snap.docs[0].data();
+      if(existing.plan==='trial'||existing.trialUsed){
+        msg.style.color='var(--red)';
+        msg.textContent='❌ 이미 체험 이력이 있는 사업자번호입니다. 요금제를 선택해 주세요.';
+        document.getElementById('r-biznum').dataset.verified='blocked';
+      } else {
+        msg.style.color='var(--red)';
+        msg.textContent='❌ 이미 등록된 사업자번호입니다.';
+        document.getElementById('r-biznum').dataset.verified='blocked';
+      }
+    } else {
+      msg.style.color='#059669';msg.textContent='✅ 사용 가능한 사업자번호입니다';
+      document.getElementById('r-biznum').dataset.verified='ok';
+    }
+  }).catch(function(){
+    msg.style.color='#059669';msg.textContent='✅ 확인 완료';
+    document.getElementById('r-biznum').dataset.verified='ok';
+  });
+}
+
+// ── 회사코드 생성 ──
+function generateCompanyCode(){
+  var chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  var code='DNW-';
+  for(var i=0;i<6;i++) code+=chars[Math.floor(Math.random()*chars.length)];
+  return code;
+}
+
+// ── 회사 등록 ──
+function doRegister(){
+  var company=document.getElementById('r-company').value.trim();
+  var biz=document.getElementById('r-biznum').value.trim();
+  var email=document.getElementById('r-email').value.trim();
+  var pw=document.getElementById('r-pw').value;
+  var pw2=document.getElementById('r-pw2').value;
+  var err=document.getElementById('r-err');
+  err.style.display='none';
+
+  if(!company||!biz||!email||!pw){err.textContent='모든 항목을 입력하세요';err.style.display='block';return;}
+  if(pw.length<8){err.textContent='비밀번호는 8자 이상이어야 합니다';err.style.display='block';return;}
+  if(pw!==pw2){err.textContent='비밀번호가 일치하지 않습니다';err.style.display='block';return;}
+
+  var verified=document.getElementById('r-biznum').dataset.verified;
+  if(!verified){err.textContent='사업자번호 중복 확인을 먼저 해주세요';err.style.display='block';return;}
+  if(verified==='blocked'){err.textContent='사용할 수 없는 사업자번호입니다';err.style.display='block';return;}
+
+  var isOwner=OWNER_BIZ.includes(biz)||OWNER_EMAIL.includes(email);
+  var plan=isOwner?'OWNER':'trial';
+  var now=new Date();
+  var trialEnd=new Date(now.getTime()+7*24*60*60*1000);
+  var companyCode=generateCompanyCode();
+
+  err.textContent='계정 생성 중...';err.style.color='var(--text3)';err.style.display='block';
+
+  _auth.createUserWithEmailAndPassword(email,pw).then(function(cred){
+    var uid=cred.user.uid;
+    return _db.collection('companies').doc(uid).set({
+      companyName:company,
+      bizNumber:biz,
+      email:email,
+      plan:plan,
+      companyCode:companyCode,
+      trialStart:now.toISOString().slice(0,10),
+      trialEnd:isOwner?'9999-12-31':trialEnd.toISOString().slice(0,10),
+      trialUsed:true,
+      isOwner:isOwner,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+      uid:uid
+    });
+  }).then(function(){
+    toast('✅ 등록 완료! 회사코드: '+companyCode+' (직원 가입 시 공유하세요)');
+    setTimeout(function(){alert('📋 회사코드\n\n'+companyCode+'\n\n직원/기사에게 이 코드를 공유하세요.');},300);
+  }).catch(function(e){
+    err.style.color='var(--red)';
+    if(e.code==='auth/email-already-in-use') err.textContent='이미 사용 중인 이메일입니다';
+    else err.textContent='오류: '+e.message;
+    err.style.display='block';
+  });
+}
+
+// ── 회사코드 확인 ──
+function checkCompanyCode(){
+  var code=document.getElementById('j-code').value.trim().toUpperCase();
+  var msg=document.getElementById('j-code-msg');
+  if(!code){msg.style.display='block';msg.style.color='var(--red)';msg.textContent='회사코드를 입력하세요';return;}
+  msg.style.display='block';msg.style.color='var(--text3)';msg.textContent='확인 중...';
+  _db.collection('companies').where('companyCode','==',code).get().then(function(snap){
+    if(!snap.empty){
+      var co=snap.docs[0].data();
+      msg.style.color='#059669';
+      msg.textContent='✅ '+co.companyName+' — 코드 확인됨';
+      document.getElementById('j-code').dataset.companyId=snap.docs[0].id;
+      document.getElementById('j-code').dataset.companyName=co.companyName;
+    } else {
+      msg.style.color='var(--red)';msg.textContent='❌ 유효하지 않은 회사코드입니다';
+      document.getElementById('j-code').dataset.companyId='';
+    }
+  });
+}
+
+// ── 직원 가입 ──
+function doJoin(){
+  var name=document.getElementById('j-name').value.trim();
+  var email=document.getElementById('j-email').value.trim();
+  var pw=document.getElementById('j-pw').value;
+  var code=document.getElementById('j-code').value.trim();
+  var companyId=document.getElementById('j-code').dataset.companyId;
+  var companyName=document.getElementById('j-code').dataset.companyName||'';
+  var err=document.getElementById('j-err');err.style.display='none';
+
+  if(!name||!email||!pw||!code){err.textContent='모든 항목을 입력하세요';err.style.display='block';return;}
+  if(!companyId){err.textContent='회사코드 확인을 먼저 해주세요';err.style.display='block';return;}
+  if(pw.length<8){err.textContent='비밀번호는 8자 이상이어야 합니다';err.style.display='block';return;}
+
+  err.textContent='가입 중...';err.style.color='var(--text3)';err.style.display='block';
+  _auth.createUserWithEmailAndPassword(email,pw).then(function(cred){
+    return _db.collection('users').doc(cred.user.uid).set({
+      name:name,email:email,companyId:companyId,
+      companyName:companyName,role:'member',
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+  }).then(function(){
+    toast('✅ 가입 완료! 로그인해 주세요');
+    switchTab('login');
+    document.getElementById('j-name').value='';
+    document.getElementById('j-email').value='';
+    document.getElementById('j-pw').value='';
+    document.getElementById('j-code').value='';
+    err.style.display='none';
+  }).catch(function(e){
+    err.style.color='var(--red)';
+    if(e.code==='auth/email-already-in-use') err.textContent='이미 사용 중인 이메일입니다';
+    else err.textContent='오류: '+e.message;
+    err.style.display='block';
+  });
 }
 
 function doLogin(){
