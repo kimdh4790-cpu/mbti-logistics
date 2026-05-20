@@ -561,15 +561,17 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           var dinfo=drvMap[cid];
           var dmgInfo=dmgMap[cid]||{};
           var dname=dmgInfo.name||'';  // 분실파손 리스트에서 이름 추출
+          var autoName=dname||cid; // ★ 이름 없으면 userId를 임시 이름으로
           driverPromises.push(
             _db.collection('drivers').add({
-              userId:cid,name:dname,
+              userId:cid,name:autoName,
               camp:dinfo.camp||'',
               dealerId:_CU.dealerId,
               jobsub:'쿠팡',is_active:true,status:'재직',
+              autoNamed:!dname, // ★ 임시이름 여부 표시 (관리자가 수정 필요)
               createdAt:firebase.firestore.FieldValue.serverTimestamp()
             }).then(function(ref){
-              fbDrivers.push({id:ref.id,userId:cid,name:dname,camp:dinfo.camp||''});
+              fbDrivers.push({id:ref.id,userId:cid,name:autoName,camp:dinfo.camp||''});
             }).catch(function(){})
           );
         }
@@ -1637,8 +1639,8 @@ function openTaxInvoice(id){
     +'<td colspan="2" style="border:1px solid #000;padding:3px 6px">부산시 수영구 수영로 668, 607호</td>'
     +'</tr><tr>'
     +'<td style="border:1px solid #000;background:#f0f0f0;padding:3px 6px">업&nbsp;&nbsp;&nbsp;&nbsp;태</td>'
-    +'<td style="border:1px solid #000;padding:3px 6px">서비스업</td>'
-    +'<td style="border:1px solid #000;padding:3px 6px">종목 기타물품운반원</td>'
+    +'<td style="border:1px solid #000;padding:3px 6px">'+(x.bizType||'서비스업')+'</td>'
+    +'<td style="border:1px solid #000;padding:3px 6px">종목 '+(x.bizItem||'기타물품운반원')+'</td>'
     +'<td style="border:1px solid #000;background:#f0f0f0;padding:3px 6px">업&nbsp;&nbsp;&nbsp;&nbsp;태</td>'
     +'<td style="border:1px solid #000;padding:3px 6px">서비스업</td>'
     +'<td style="border:1px solid #000;padding:3px 6px">종목 택배</td>'
@@ -2057,6 +2059,9 @@ function _saveSECurrent(){
   if(bizNum)payload.bizNum=bizNum;
   if(bizName)payload.bizName=bizName;
   if(bizAddr)payload.bizAddr=bizAddr;
+  // ★ 업태/종목 — 기사 정보에서 가져와 정산서에 포함
+  if(cached&&cached.bizType)payload.bizType=cached.bizType;
+  if(cached&&cached.bizItem)payload.bizItem=cached.bizItem;
   if(rds.length)payload.routeDetails=rds;
   var btn=document.querySelector('#mo-se .btn-blue');
   if(btn){btn.textContent='저장 중...';btn.disabled=true;}
@@ -2415,16 +2420,73 @@ function editDriver(id){
       +(_drvCache&&_drvCache.length?[...new Set(_drvCache.map(function(dv){return dv.camp||''}).filter(Boolean))].sort():['기타']).map(function(cc){return '<option '+(d.camp===cc?'selected':'')+'>'+cc+'</option>';}).join('')+'<option '+(d.camp==='기타'||!d.camp?'selected':'')+'>기타</option></select></div>'
       +'<div class="fg"><label>상태</label><select id="edr-active"><option value="true" '+(d.is_active!==false?'selected':'')+'>재직</option><option value="false" '+(d.is_active===false?'selected':'')+'>퇴직</option></select></div></div>'
       +'<div class="fg"><label>연락처</label><input id="edr-phone" value="'+esc(d.phone||'')+'"></div>'
+      +'<div style="border-top:1px dashed var(--border);margin:8px 0;padding-top:8px">'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+      +'<span style="font-size:11px;font-weight:800;color:var(--text2)">📋 사업자 정보 (세금계산서용)</span>'
+      +'<label style="cursor:pointer;background:#3b82f6;color:#fff;padding:4px 10px;border-radius:6px;font-size:10px;font-weight:700">'
+      +'📷 사업자등록증 OCR<input type="file" accept="image/*" style="display:none" onchange="_ocrBizCard(this)">'
+      +'</label>'
+      +'<span id="edr-ocr-status" style="font-size:10px;color:var(--text3)"></span>'
+      +'</div>'
       +'<div class="gr"><div class="fg"><label>사업자번호</label><input id="edr-biznum" value="'+esc(d.bizNum||'')+'" placeholder="000-00-00000"></div>'
       +'<div class="fg"><label>상호명</label><input id="edr-bizname" value="'+esc(d.bizName||'')+'"></div></div>'
       +'<div class="gr"><div class="fg"><label>대표자</label><input id="edr-bizrep" value="'+esc(d.bizRep||d.name||'')+'"></div>'
       +'<div class="fg"><label>사업장주소</label><input id="edr-bizaddr" value="'+esc(d.bizAddr||'')+'"></div></div>'
+      +'<div class="gr"><div class="fg"><label>업태</label><input id="edr-biztype" value="'+esc(d.bizType||'')+'" placeholder="서비스업"></div>'
+      +'<div class="fg"><label>종목</label><input id="edr-bizitem" value="'+esc(d.bizItem||'')+'" placeholder="기타물품운반원"></div></div>'
+      +'</div>'
       +'<div class="mdf"><button class="btn btn-red btn-sm" style="margin-right:auto" onclick="delDriver(\''+id+'\')">삭제</button>'
       +'<button class="btn" onclick="this.closest(\'.mo\').remove()">취소</button>'
       +'<button class="btn btn-blue" onclick="saveDriver(\''+id+'\')">저장</button></div></div>';
     document.getElementById('modals').appendChild(mo);
   });
 }
+
+// ── 사업자등록증 OCR (Claude Vision)
+async function _ocrBizCard(inp){
+  var file=inp.files[0];
+  if(!file)return;
+  var status=document.getElementById('edr-ocr-status');
+  if(status)status.textContent='🔄 분석 중...';
+  try{
+    var b64=await new Promise(function(res,rej){
+      var r=new FileReader();
+      r.onload=function(){res(r.result.split(',')[1]);};
+      r.onerror=rej;
+      r.readAsDataURL(file);
+    });
+    var mime=file.type||'image/jpeg';
+    var resp=await fetch('/claude-ocr',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:500,
+        messages:[{role:'user',content:[
+          {type:'image',source:{type:'base64',media_type:mime,data:b64}},
+          {type:'text',text:'이 사업자등록증에서 항목을 추출해서 JSON만 출력하세요 (설명 없이 JSON만):\n{"name":"대표자성명","bizNum":"사업자등록번호(000-00-00000형식)","bizName":"상호또는법인명","bizRep":"대표자성명","bizAddr":"사업장소재지전체주소","bizType":"업태","bizItem":"종목"}'}
+        ]}]
+      })
+    });
+    var data=await resp.json();
+    var text=(data.content||[]).filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('');
+    var json=JSON.parse(text.replace(/```json|```/g,'').trim());
+    var map={name:'edr-name',bizNum:'edr-biznum',bizName:'edr-bizname',bizRep:'edr-bizrep',bizAddr:'edr-bizaddr',bizType:'edr-biztype',bizItem:'edr-bizitem'};
+    var filled=0;
+    Object.keys(map).forEach(function(k){
+      if(json[k]){
+        var el=document.getElementById(map[k]);
+        if(el){el.value=json[k];filled++;}
+      }
+    });
+    if(status)status.textContent='✅ '+filled+'개 항목 자동 입력됨';
+  }catch(e){
+    console.error('OCR 오류:',e);
+    if(status)status.textContent='❌ OCR 실패 — 수동 입력해주세요';
+  }
+  inp.value='';
+}
+
 function saveDriver(id){
   function gv(eid){return (document.getElementById(eid)||{value:''}).value.trim();}
   var payload={
@@ -2436,12 +2498,49 @@ function saveDriver(id){
     bizNum:gv('edr-biznum')||'',
     bizName:gv('edr-bizname')||'',
     bizRep:gv('edr-bizrep')||'',
-    bizAddr:gv('edr-bizaddr')||''
+    bizAddr:gv('edr-bizaddr')||'',
+    bizType:gv('edr-biztype')||'',
+    bizItem:gv('edr-bizitem')||''
   };
   _db.collection('drivers').doc(id).update(payload).then(function(){
-    this.closest&&this.closest('.mo').remove();
     var mo=document.getElementById('mo-edit-dr');if(mo)mo.remove();
-    _drvCache=null;toast('✅ 저장');pageDrivers();
+    _drvCache=null;
+
+    // ★ 기사명 저장 시 → 해당 userId의 정산서 driver 필드 자동 갱신
+    var newName=payload.name;
+    var newUserId=payload.userId||'';
+    if(newName&&_db&&_CU){
+      // 이름이 비어있던 정산서 찾아서 일괄 업데이트
+      _db.collection('settlements')
+        .where('dealerId','==',_CU.dealerId)
+        .where('userId','==',newUserId)
+        .get()
+        .then(function(snap){
+          if(snap.empty) return;
+          var batch=_db.batch();
+          var count=0;
+          snap.forEach(function(doc){
+            // driver 필드가 비어있거나 userId와 같으면 갱신
+            var d=doc.data();
+            if(!d.driver||d.driver===newUserId||d.driver===newUserId+'@df'){
+              batch.update(doc.ref,{driver:newName});
+              count++;
+            }
+          });
+          if(count>0){
+            batch.commit().then(function(){
+              toast('✅ 저장 완료 — 정산서 '+count+'건 이름 자동 갱신');
+            }).catch(function(){
+              toast('✅ 저장 (정산서 갱신 실패)');
+            });
+          } else {
+            toast('✅ 저장');
+          }
+        }).catch(function(){ toast('✅ 저장'); });
+    } else {
+      toast('✅ 저장');
+    }
+    pageDrivers();
   });
 }
 function delDriver(id){
