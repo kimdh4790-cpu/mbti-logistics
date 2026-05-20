@@ -3,527 +3,831 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DONWAY — 돈의 방향을 자동화합니다</title>
-<meta name="description" content="엑셀 업로드 하나로 세금계산서·급여명세서 자동생성, 카카오톡·이메일·문자·팩스 자동발송. 7일 무료 체험.">
-
-<!-- 카카오톡/SNS 미리보기 OG 태그 -->
-<meta property="og:type" content="website">
+<title>DONWAY — AI 자동화 정산 플랫폼</title>
+<meta name="description" content="AI가 정산을 자동화합니다. 엑셀 업로드 하나로 세금계산서·급여명세서 자동생성, 카카오톡·이메일·팩스 자동발송.">
+<meta property="og:title" content="DONWAY — AI 자동화 정산 플랫폼">
+<meta property="og:description" content="AI가 정산을 자동화합니다. 7일 무료 체험.">
 <meta property="og:url" content="https://donway.ai.kr">
-<meta property="og:title" content="DONWAY — 돈의 방향을 자동화합니다">
-<meta property="og:description" content="엑셀 업로드 하나로 정산 자동화. 세금계산서·급여명세서 자동생성 + 카카오톡·이메일·팩스 자동발송. 7일 무료 체험.">
-<meta property="og:image" content="https://donway.ai.kr/donway_og.png">
-<meta property="og:site_name" content="DONWAY">
-<meta property="og:locale" content="ko_KR">
-
-<!-- 트위터 카드 -->
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="DONWAY — 돈의 방향을 자동화합니다">
-<meta name="twitter:description" content="모든 업종 자동화 정산 플랫폼. 7일 무료 체험.">
-
-<!-- 카카오톡 전용 -->
-<meta property="kakao:title" content="DONWAY — 돈의 방향을 자동화합니다">
-<meta property="kakao:description" content="엑셀 업로드 → 세금계산서·급여명세서 자동생성 → 카카오톡 자동발송. 7일 무료 체험.">
-
-<!-- 기타 -->
-<meta name="robots" content="index, follow">
-<link rel="canonical" href="https://donway.ai.kr">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<meta property="og:type" content="website">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{--black:#080810;--white:#f0eee8;--gold:#d4a017;--gold-l:#f5d060;--gold-d:#a07800;--blue:#1a3560;--gray:#666;--border:rgba(212,160,23,.15)}
+:root{
+  --bg:#04040a;
+  --gold:#f0a500;
+  --gold2:#ffe066;
+  --white:#f5f0e8;
+  --gray:#888;
+  --border:rgba(240,165,0,.12);
+  --card:#0c0c18;
+}
 html{scroll-behavior:smooth}
-body{background:var(--black);color:var(--white);font-family:'Noto Sans KR',sans-serif;overflow-x:hidden}
+body{background:var(--bg);color:var(--white);font-family:'Noto Sans KR',sans-serif;overflow-x:hidden;cursor:none}
 
-nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:18px 48px;display:flex;justify-content:space-between;align-items:center;background:rgba(8,8,16,.92);backdrop-filter:blur(24px);border-bottom:1px solid var(--border)}
-.nav-logo{font-family:'Space Mono',monospace;font-weight:700;font-size:20px;color:var(--gold);text-decoration:none}
-.nav-menu{display:flex;gap:32px;list-style:none}
-.nav-menu a{font-size:13px;color:rgba(240,238,232,.5);text-decoration:none;letter-spacing:1px;transition:.2s}
-.nav-menu a:hover{color:var(--gold)}
-.nav-trial{padding:10px 24px;background:transparent;border:1px solid var(--gold);color:var(--gold);font-size:12px;font-weight:700;text-decoration:none;transition:.3s;letter-spacing:1px;margin-right:8px}
-.nav-trial:hover{background:rgba(212,160,23,.1)}
-.nav-btn{padding:10px 28px;background:var(--gold);color:var(--black);font-size:13px;font-weight:700;text-decoration:none;transition:.3s}
-.nav-btn:hover{background:var(--gold-l)}
+/* 커스텀 커서 */
+.cursor{position:fixed;width:20px;height:20px;border:1.5px solid var(--gold);border-radius:50%;pointer-events:none;z-index:9999;transition:transform .15s,opacity .15s;mix-blend-mode:difference}
+.cursor-dot{position:fixed;width:4px;height:4px;background:var(--gold);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%)}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:0 60px;height:72px;display:flex;align-items:center;justify-content:space-between;background:rgba(4,4,10,.8);backdrop-filter:blur(30px);border-bottom:1px solid var(--border)}
+.nav-logo{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:3px;color:var(--gold);text-decoration:none;display:flex;align-items:center;gap:8px}
+.nav-logo::before{content:'⬡';font-size:20px}
+.nav-links{display:flex;gap:40px;list-style:none}
+.nav-links a{font-size:13px;letter-spacing:1px;color:rgba(245,240,232,.5);text-decoration:none;transition:.2s;position:relative}
+.nav-links a::after{content:'';position:absolute;bottom:-4px;left:0;width:0;height:1px;background:var(--gold);transition:.3s}
+.nav-links a:hover{color:var(--gold)}
+.nav-links a:hover::after{width:100%}
+.nav-cta{padding:10px 28px;background:var(--gold);color:#000;font-size:13px;font-weight:700;text-decoration:none;transition:.3s;letter-spacing:1px;clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)}
+.nav-cta:hover{background:var(--gold2);transform:translateY(-1px)}
 
 /* HERO */
-.hero{min-height:100vh;display:flex;align-items:center;position:relative;overflow:hidden;padding:100px 48px 80px}
-.hero-particles{position:absolute;inset:0;overflow:hidden;pointer-events:none}
-.particle{position:absolute;width:2px;height:2px;background:var(--gold);border-radius:50%;opacity:0;animation:float var(--dur) var(--delay) infinite}
-@keyframes float{0%{transform:translateY(100vh) translateX(0);opacity:0}10%{opacity:.5}90%{opacity:.2}100%{transform:translateY(-20px) translateX(var(--drift));opacity:0}}
-.hero-glow{position:absolute;width:700px;height:700px;border-radius:50%;background:radial-gradient(circle,rgba(212,160,23,.1),transparent 70%);top:50%;left:35%;transform:translate(-50%,-50%);pointer-events:none}
-.hero-left{flex:1;max-width:580px;position:relative;z-index:2}
-.hero-badge{display:inline-flex;align-items:center;gap:8px;padding:8px 20px;border:1px solid var(--border);font-size:11px;letter-spacing:3px;color:var(--gold);margin-bottom:32px;animation:fadeUp .8s .2s both}
-.hero-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--gold);animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.hero-h1{font-size:clamp(48px,6vw,82px);font-weight:900;line-height:.95;letter-spacing:-2px;margin-bottom:24px;animation:fadeUp .8s .4s both}
-.hero-h1 em{font-style:normal;background:linear-gradient(135deg,var(--gold-l),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.hero-p{font-size:16px;color:rgba(240,238,232,.5);line-height:1.8;margin-bottom:48px;animation:fadeUp .8s .6s both;max-width:460px}
-.hero-actions{display:flex;gap:16px;flex-wrap:wrap;animation:fadeUp .8s .8s both}
-.btn-gold{padding:16px 40px;background:var(--gold);color:var(--black);font-weight:700;font-size:14px;text-decoration:none;border:none;cursor:pointer;transition:.3s;display:inline-flex;align-items:center;gap:8px}
-.btn-gold:hover{background:var(--gold-l);transform:translateY(-2px)}
-.btn-outline{padding:16px 40px;border:1px solid rgba(240,238,232,.2);color:var(--white);font-size:14px;text-decoration:none;transition:.3s;display:inline-flex;align-items:center;gap:8px}
-.btn-outline:hover{border-color:var(--gold);color:var(--gold)}
-.trial-note{font-size:11px;color:rgba(240,238,232,.35);margin-top:16px;animation:fadeUp .8s 1s both}
+.hero{min-height:100vh;display:grid;grid-template-columns:1fr 1fr;align-items:center;padding:100px 60px 60px;position:relative;overflow:hidden;gap:40px}
 
-.hero-right{flex:1;display:flex;justify-content:center;align-items:center;position:relative;z-index:2;animation:fadeUp .8s 1s both}
-.mockup-wrap{transform:perspective(1000px) rotateY(-8deg) rotateX(3deg);transition:.5s}
-.mockup-wrap:hover{transform:perspective(1000px) rotateY(-3deg) rotateX(1deg)}
-.mockup{background:#0f0f1a;border:1px solid rgba(255,255,255,.08);border-radius:12px;overflow:hidden;width:480px;box-shadow:0 40px 80px rgba(0,0,0,.6),0 0 0 1px rgba(212,160,23,.08)}
-.mockup-bar{background:#151525;padding:10px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(255,255,255,.05)}
-.mockup-dots{display:flex;gap:6px}
-.mockup-dots span{width:10px;height:10px;border-radius:50%}
-.mockup-dots span:nth-child(1){background:#ff5f57}
-.mockup-dots span:nth-child(2){background:#febc2e}
-.mockup-dots span:nth-child(3){background:#28c840}
-.mockup-url{flex:1;background:rgba(255,255,255,.05);border-radius:4px;padding:4px 12px;font-size:10px;color:rgba(255,255,255,.3);font-family:'Space Mono',monospace;text-align:center}
-.mockup-body{padding:16px}
-.m-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
-.m-title{font-size:13px;font-weight:700;color:var(--gold)}
-.m-badge{background:rgba(212,160,23,.15);color:var(--gold);font-size:9px;padding:3px 8px;border-radius:20px}
-.m-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px}
-.m-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:8px}
-.m-card-label{font-size:7px;color:rgba(255,255,255,.35);margin-bottom:3px}
-.m-card-val{font-size:12px;font-weight:700}.m-card-val.gold{color:var(--gold)}.m-card-val.red{color:#ff6b6b}
-.m-th-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:6px;padding:5px 6px;background:rgba(255,255,255,.04);border-radius:3px;margin-bottom:4px}
-.m-th{font-size:7px;color:rgba(255,255,255,.3);letter-spacing:1px}
-.m-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:6px;padding:7px 6px;border-bottom:1px solid rgba(255,255,255,.04);animation:slideIn .5s both}
-.m-row:nth-child(1){animation-delay:.1s}.m-row:nth-child(2){animation-delay:.2s}.m-row:nth-child(3){animation-delay:.3s}
+/* 배경 효과 */
+.hero-bg{position:absolute;inset:0;pointer-events:none}
+.orb{position:absolute;border-radius:50%;filter:blur(80px);opacity:.15}
+.orb1{width:600px;height:600px;background:radial-gradient(#f0a500,transparent);top:-100px;left:-100px;animation:orbFloat 8s ease-in-out infinite}
+.orb2{width:400px;height:400px;background:radial-gradient(#0044ff,transparent);bottom:0;right:0;animation:orbFloat 10s ease-in-out infinite reverse}
+.orb3{width:300px;height:300px;background:radial-gradient(#ff4400,transparent);top:50%;left:50%;animation:orbFloat 7s ease-in-out infinite 2s}
+@keyframes orbFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(30px,-30px)}}
+
+.grid-bg{position:absolute;inset:0;background-image:linear-gradient(rgba(240,165,0,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(240,165,0,.04) 1px,transparent 1px);background-size:80px 80px;mask-image:radial-gradient(ellipse at center,black,transparent 70%)}
+
+/* 히어로 좌측 */
+.hero-left{position:relative;z-index:2}
+.hero-tag{display:inline-flex;align-items:center;gap:10px;padding:8px 20px;border:1px solid rgba(240,165,0,.3);border-radius:100px;margin-bottom:32px;font-size:12px;letter-spacing:3px;color:var(--gold);animation:fadeUp .8s .1s both}
+.hero-tag-dot{width:6px;height:6px;border-radius:50%;background:var(--gold);animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+.hero-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(80px,9vw,140px);line-height:.9;letter-spacing:2px;margin-bottom:16px;animation:fadeUp .8s .3s both}
+.hero-title .line1{display:block;color:var(--white)}
+.hero-title .line2{display:block;-webkit-text-stroke:1px var(--gold);color:transparent;position:relative}
+.hero-title .line2::after{content:attr(data-text);position:absolute;left:2px;top:2px;-webkit-text-stroke:0;color:rgba(240,165,0,.15)}
+.hero-title .line3{display:block;color:var(--gold);font-size:.6em}
+
+.hero-sub{font-size:16px;line-height:1.9;color:rgba(245,240,232,.5);max-width:480px;margin-bottom:48px;animation:fadeUp .8s .5s both}
+.hero-sub strong{color:var(--white)}
+
+.hero-btns{display:flex;gap:16px;animation:fadeUp .8s .7s both}
+.btn-primary{padding:18px 48px;background:var(--gold);color:#000;font-weight:700;font-size:15px;text-decoration:none;border:none;cursor:pointer;transition:.3s;display:inline-flex;align-items:center;gap:10px;clip-path:polygon(10px 0,100% 0,calc(100% - 10px) 100%,0 100%)}
+.btn-primary:hover{background:var(--gold2);transform:translateY(-3px);box-shadow:0 20px 40px rgba(240,165,0,.3)}
+.btn-ghost{padding:18px 40px;border:1px solid rgba(245,240,232,.2);color:var(--white);font-size:15px;text-decoration:none;transition:.3s;display:inline-flex;align-items:center;gap:10px}
+.btn-ghost:hover{border-color:var(--gold);color:var(--gold)}
+
+.hero-stats{display:flex;gap:40px;margin-top:56px;animation:fadeUp .8s .9s both}
+.hero-stat-num{font-family:'DM Mono',monospace;font-size:36px;font-weight:500;color:var(--gold);display:block;line-height:1}
+.hero-stat-label{font-size:11px;color:var(--gray);letter-spacing:2px;margin-top:4px}
+
+/* 히어로 우측 — 메인 비주얼 */
+.hero-right{position:relative;z-index:2;animation:fadeUp .8s 1s both}
+.hero-visual{position:relative}
+
+/* 대형 앱 스크린 */
+.app-screen{background:#0a0a18;border:1px solid rgba(255,255,255,.08);border-radius:16px;overflow:hidden;box-shadow:0 40px 100px rgba(0,0,0,.8),0 0 0 1px rgba(240,165,0,.08),inset 0 1px 0 rgba(255,255,255,.04);transform:perspective(1200px) rotateY(-5deg) rotateX(2deg);transition:.6s}
+.app-screen:hover{transform:perspective(1200px) rotateY(-2deg) rotateX(0deg)}
+.app-bar{background:#111122;padding:12px 18px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(255,255,255,.05)}
+.app-dots{display:flex;gap:6px}
+.app-dots span{width:11px;height:11px;border-radius:50%}
+.app-dots span:nth-child(1){background:#ff5f57}
+.app-dots span:nth-child(2){background:#febc2e}
+.app-dots span:nth-child(3){background:#28c840}
+.app-url{flex:1;background:rgba(255,255,255,.04);border-radius:4px;padding:4px 14px;font-size:10px;color:rgba(255,255,255,.25);font-family:'DM Mono',monospace;text-align:center}
+.app-body{padding:18px}
+
+/* 대시보드 카드들 */
+.dash-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.dash-title{font-size:14px;font-weight:700;color:var(--gold);display:flex;align-items:center;gap:6px}
+.dash-month{background:rgba(240,165,0,.12);color:var(--gold);font-size:9px;padding:3px 10px;border-radius:20px;font-family:'DM Mono',monospace}
+
+.kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.kpi{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:10px}
+.kpi-l{font-size:7px;color:rgba(255,255,255,.35);letter-spacing:1px;margin-bottom:4px;text-transform:uppercase}
+.kpi-v{font-size:14px;font-weight:700;font-family:'DM Mono',monospace}
+.kpi-v.g{color:var(--gold)}
+.kpi-v.r{color:#ff6060}
+.kpi-v.w{color:var(--white)}
+
+/* AI 처리 표시 */
+.ai-badge{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,rgba(240,165,0,.15),rgba(255,100,0,.1));border:1px solid rgba(240,165,0,.2);border-radius:6px;padding:5px 10px;font-size:8px;font-weight:700;letter-spacing:1px;color:var(--gold);margin-bottom:10px}
+.ai-pulse{width:5px;height:5px;border-radius:50%;background:var(--gold);animation:pulse2 1.5s infinite}
+@keyframes pulse2{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.5}}
+
+.table-head{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:6px;padding:5px 8px;background:rgba(255,255,255,.04);border-radius:4px;margin-bottom:4px}
+.th{font-size:7px;color:rgba(255,255,255,.25);letter-spacing:1px;text-transform:uppercase}
+.tr{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:6px;padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.04);animation:slideIn .5s both}
+.tr:nth-child(1){animation-delay:.1s}.tr:nth-child(2){animation-delay:.2s}.tr:nth-child(3){animation-delay:.3s}
 @keyframes slideIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
-.m-td{font-size:9px;color:rgba(255,255,255,.55)}.m-td.name{color:var(--white);font-weight:600}.m-td.amount{color:var(--gold)}
-.m-status{display:inline-block;padding:1px 6px;border-radius:3px;font-size:7px;background:rgba(40,200,100,.12);color:#28c840}
+.td{font-size:9px;color:rgba(255,255,255,.55)}.td.n{color:var(--white);font-weight:600}.td.a{color:var(--gold)}
+.status{display:inline-block;padding:2px 7px;border-radius:3px;font-size:7px;background:rgba(40,200,100,.1);color:#28c840}
 
-.ticker{background:var(--gold);overflow:hidden;padding:10px 0;white-space:nowrap}
-.ticker-track{display:inline-flex;gap:40px;animation:tick 28s linear infinite;font-family:'Space Mono',monospace;font-size:11px;font-weight:700;color:var(--black);letter-spacing:2px}
-.ticker-track span::before{content:"◆ "}
+/* 플로팅 카드들 */
+.float-card{position:absolute;background:#0f0f22;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px 16px;box-shadow:0 20px 40px rgba(0,0,0,.5)}
+.fc1{top:-24px;right:-24px;animation:fcFloat 4s ease-in-out infinite}
+.fc2{bottom:-20px;left:-32px;animation:fcFloat 5s ease-in-out infinite 1s}
+@keyframes fcFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.fc-label{font-size:8px;color:var(--gray);margin-bottom:6px;letter-spacing:1px}
+.fc-val{font-size:18px;font-weight:700;font-family:'DM Mono',monospace;color:var(--gold)}
+.fc-sub{font-size:8px;color:#28c840;margin-top:2px}
+
+/* SECTIONS */
+.section{padding:120px 60px;max-width:1300px;margin:0 auto}
+.s-label{font-size:10px;letter-spacing:5px;color:var(--gold);margin-bottom:16px;font-family:'DM Mono',monospace}
+.s-h2{font-family:'Bebas Neue',sans-serif;font-size:clamp(48px,5vw,80px);line-height:1;margin-bottom:20px;letter-spacing:2px}
+.s-desc{font-size:15px;color:rgba(245,240,232,.45);line-height:1.9;max-width:520px}
+
+/* AI SECTION */
+.ai-section{padding:120px 60px;background:linear-gradient(180deg,var(--bg),#06060f,var(--bg));position:relative;overflow:hidden}
+.ai-inner{max-width:1300px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center}
+.ai-visual{position:relative}
+.ai-rings{position:relative;width:360px;height:360px;margin:0 auto}
+.ring{position:absolute;border-radius:50%;border:1px solid rgba(240,165,0,.15);top:50%;left:50%;transform:translate(-50%,-50%);animation:ringRotate var(--dur) linear infinite}
+.ring1{width:300px;height:300px;border-color:rgba(240,165,0,.2);--dur:20s}
+.ring2{width:220px;height:220px;border-color:rgba(240,165,0,.15);--dur:15s;animation-direction:reverse}
+.ring3{width:140px;height:140px;border-color:rgba(240,165,0,.3);--dur:10s}
+@keyframes ringRotate{from{transform:translate(-50%,-50%) rotate(0deg)}to{transform:translate(-50%,-50%) rotate(360deg)}}
+.ring::after{content:'';position:absolute;width:8px;height:8px;background:var(--gold);border-radius:50%;box-shadow:0 0 12px var(--gold);top:-4px;left:50%;transform:translateX(-50%)}
+.ai-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;z-index:2}
+.ai-icon-big{font-size:48px;display:block;margin-bottom:4px}
+.ai-center-label{font-size:10px;letter-spacing:3px;color:var(--gold);font-family:'DM Mono',monospace}
+
+.ai-features{display:flex;flex-direction:column;gap:24px}
+.ai-feat{display:flex;gap:20px;align-items:flex-start;padding:20px 24px;background:var(--card);border:1px solid var(--border);border-radius:10px;transition:.3s;cursor:default}
+.ai-feat:hover{border-color:rgba(240,165,0,.3);transform:translateX(8px)}
+.ai-feat-icon{font-size:28px;flex-shrink:0;width:52px;height:52px;background:rgba(240,165,0,.08);border-radius:10px;display:flex;align-items:center;justify-content:center}
+.ai-feat-title{font-size:15px;font-weight:700;margin-bottom:6px}
+.ai-feat-desc{font-size:12px;color:var(--gray);line-height:1.7}
+
+/* FEATURES BENTO */
+.bento{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:auto auto;gap:16px;margin-top:80px}
+.bento-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:32px;transition:.4s;overflow:hidden;position:relative}
+.bento-card::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at top left,rgba(240,165,0,.05),transparent 60%);opacity:0;transition:.3s}
+.bento-card:hover{border-color:rgba(240,165,0,.25);transform:translateY(-4px)}
+.bento-card:hover::before{opacity:1}
+.bento-card.wide{grid-column:span 2}
+.bento-num{font-family:'DM Mono',monospace;font-size:10px;color:rgba(240,165,0,.4);letter-spacing:2px;margin-bottom:20px}
+.bento-icon{font-size:36px;margin-bottom:16px}
+.bento-title{font-size:18px;font-weight:700;margin-bottom:10px}
+.bento-desc{font-size:13px;color:var(--gray);line-height:1.7}
+.bento-tag{display:inline-block;margin-top:16px;font-size:10px;padding:4px 12px;border:1px solid var(--border);border-radius:100px;color:rgba(240,165,0,.6);letter-spacing:1px}
+
+/* 채널 발송 비주얼 */
+.send-visual{margin-top:20px;display:flex;flex-direction:column;gap:8px}
+.send-item{display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid rgba(255,255,255,.05)}
+.send-icon{font-size:16px;width:28px;text-align:center}
+.send-name{font-size:10px;font-weight:700;flex:1}
+.send-bar{flex:2;height:3px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden}
+.send-fill{height:100%;border-radius:2px;animation:fillBar 2s ease-out both}
+@keyframes fillBar{from{width:0}to{width:var(--w)}}
+.send-ok{font-size:9px;color:#28c840;font-family:'DM Mono',monospace}
+
+/* TICKER */
+.ticker{padding:14px 0;background:rgba(240,165,0,.06);border-top:1px solid var(--border);border-bottom:1px solid var(--border);overflow:hidden;white-space:nowrap}
+.ticker-inner{display:inline-flex;gap:48px;animation:tick 30s linear infinite;font-family:'DM Mono',monospace;font-size:11px;color:rgba(240,165,0,.6);letter-spacing:2px}
+.ticker-inner span::before{content:'⬡ '}
 @keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 
-.sec{padding:100px 48px;max-width:1280px;margin:0 auto}
-.sec-label{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:4px;color:var(--gold);margin-bottom:16px}
-.sec-h2{font-size:clamp(30px,4vw,50px);font-weight:900;line-height:1.1;margin-bottom:16px}
-.sec-desc{font-size:15px;color:rgba(240,238,232,.45);line-height:1.8;max-width:520px}
-
-.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:rgba(255,255,255,.04);margin:60px 0}
-.stat-item{padding:44px 28px;background:var(--black);text-align:center}
-.stat-num{font-family:'Space Mono',monospace;font-size:42px;font-weight:700;color:var(--gold);display:block;margin-bottom:6px}
-.stat-label{font-size:11px;color:var(--gray);letter-spacing:1px}
-
-/* DEMOS */
-.demos{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:72px}
-.demo-card{border:1px solid rgba(255,255,255,.07);background:#0d0d18;border-radius:12px;overflow:hidden;transition:.4s}
-.demo-card:hover{border-color:rgba(212,160,23,.25);transform:translateY(-4px)}
-.demo-screen{background:#0a0a15;padding:20px;min-height:200px;border-bottom:1px solid rgba(255,255,255,.05)}
-.demo-info{padding:20px}
-.demo-num{font-family:'Space Mono',monospace;font-size:10px;color:var(--gold);margin-bottom:6px}
-.demo-title{font-size:16px;font-weight:700;margin-bottom:8px}
-.demo-desc{font-size:13px;color:rgba(240,238,232,.4);line-height:1.6}
-
-.settle-mock{background:linear-gradient(135deg,#0f0f20,#181828);border-radius:8px;padding:14px;font-size:10px}
-.sm-topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-.sm-title{font-weight:700;font-size:12px;color:var(--gold)}
-.sm-tabs{display:flex;gap:6px}
-.sm-tab{padding:3px 8px;border-radius:4px;font-size:8px;border:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.4)}
-.sm-tab.active{background:var(--gold);color:var(--black);border-color:var(--gold)}
-.sm-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:10px}
-.sm-sum-card{background:rgba(255,255,255,.05);border-radius:5px;padding:7px;text-align:center}
-.sm-sum-label{font-size:6px;color:rgba(255,255,255,.35);margin-bottom:2px}
-.sm-sum-val{font-size:10px;font-weight:700;color:var(--gold)}
-.sm-table{width:100%;border-collapse:collapse}
-.sm-table th{font-size:7px;color:rgba(255,255,255,.25);text-align:left;padding:4px;background:rgba(255,255,255,.03)}
-.sm-table td{font-size:8px;padding:5px 4px;border-bottom:1px solid rgba(255,255,255,.04);color:rgba(255,255,255,.65)}
-
-.docs-mock{display:flex;flex-direction:column;gap:6px}
-.doc-item{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:6px;padding:10px;display:flex;align-items:center;gap:10px;transition:.2s}
-.doc-item:hover{border-color:rgba(212,160,23,.3)}
-.doc-icon{font-size:18px;width:32px;text-align:center}
-.doc-info{flex:1}
-.doc-name{font-size:10px;font-weight:700;color:var(--white);margin-bottom:2px}
-.doc-desc{font-size:8px;color:rgba(255,255,255,.35)}
-.doc-status{font-size:8px;padding:2px 8px;border-radius:3px}
-.doc-status.done{background:rgba(40,200,100,.12);color:#28c840}
-.doc-status.new{background:rgba(212,160,23,.12);color:var(--gold)}
-
-.ocr-mock{display:flex;gap:12px;align-items:flex-start}
-.ocr-img{width:75px;height:105px;background:linear-gradient(135deg,#1a1a2e,#2a2a3e);border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.1);flex-shrink:0;font-size:22px;position:relative;overflow:hidden}
-.ocr-scan{position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);animation:scan 2.5s ease-in-out infinite}
-@keyframes scan{0%{top:0%}100%{top:100%}}
-.ocr-fields{flex:1;display:flex;flex-direction:column;gap:5px}
-.ocr-field{background:rgba(255,255,255,.04);border-radius:4px;padding:5px 7px}
-.ocr-field-label{font-size:6px;color:rgba(255,255,255,.3);margin-bottom:2px}
-.ocr-field-val{font-size:9px;font-weight:600;color:var(--white);display:flex;align-items:center;justify-content:space-between}
-.ocr-check{color:#28c840;font-size:8px}
-
-.qr-area{display:flex;gap:20px;align-items:center;justify-content:center}
-.qr-phone{width:110px;height:185px;background:#111;border-radius:18px;border:2px solid rgba(255,255,255,.1);overflow:hidden;display:flex;flex-direction:column}
-.qr-notch{width:55px;height:14px;background:#0a0a0a;border-radius:0 0 8px 8px;margin:0 auto}
-.qr-screen{flex:1;background:#0d1117;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px;gap:6px}
-.qr-label-sm{font-size:7px;color:rgba(255,255,255,.45);text-align:center}
-.qr-code{width:65px;height:65px;background:white;border-radius:3px;display:grid;grid-template-columns:repeat(7,1fr);gap:1px;padding:3px}
-.qr-cell{background:#000;border-radius:.5px}
-.qr-cell.w{background:white}
-.qr-timer-display{font-size:18px;font-weight:700;color:var(--gold);font-family:'Space Mono',monospace}
-.qr-gps{font-size:7px;color:#28c840;display:flex;align-items:center;gap:3px}
-.qr-gps::before{content:"";width:4px;height:4px;border-radius:50%;background:#28c840;display:inline-block;animation:pulse 2s infinite}
-.qr-security-list{font-size:10px;color:rgba(255,255,255,.4);line-height:2}
-.qr-security-list strong{color:var(--gold);display:block;margin-bottom:4px}
-
-.send-list{display:flex;flex-direction:column;gap:7px}
-.send-item{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:7px;padding:10px;display:flex;align-items:center;gap:10px}
-.send-icon{font-size:18px}
-.send-name{font-size:10px;font-weight:700;margin-bottom:2px}
-.send-sub{font-size:8px;color:rgba(255,255,255,.35)}
-.send-ok{margin-left:auto;font-size:8px;color:#28c840;font-weight:700}
-
 /* INDUSTRIES */
-.ind-section{padding:80px 48px;background:rgba(255,255,255,.01);border-top:1px solid rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.05)}
-.ind-grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:40px}
-.ind-pill{padding:13px 22px;border:1px solid rgba(255,255,255,.1);border-radius:100px;font-size:14px;font-weight:500;display:flex;align-items:center;gap:8px;transition:.3s;cursor:default}
-.ind-pill:hover{border-color:var(--gold);color:var(--gold);transform:translateY(-2px)}
+.ind-section{padding:100px 60px;border-top:1px solid var(--border)}
+.ind-inner{max-width:1300px;margin:0 auto}
+.ind-grid{display:flex;flex-wrap:wrap;gap:12px;margin-top:60px}
+.ind-item{padding:16px 28px;border:1px solid rgba(255,255,255,.08);border-radius:100px;font-size:14px;font-weight:500;display:flex;align-items:center;gap:10px;transition:.3s;cursor:default}
+.ind-item:hover{border-color:var(--gold);color:var(--gold);transform:scale(1.05)}
 
 /* PRICING */
-.trial-banner{background:rgba(212,160,23,.06);border:1px solid rgba(212,160,23,.2);border-radius:12px;padding:24px 32px;display:flex;align-items:center;justify-content:space-between;margin-top:60px;margin-bottom:32px;flex-wrap:wrap;gap:16px}
-.trial-banner-left strong{font-size:20px;font-weight:800;color:var(--gold);display:block;margin-bottom:4px}
-.trial-banner-left span{font-size:13px;color:rgba(240,238,232,.5)}
-.price-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:rgba(255,255,255,.04)}
-.price-card{background:var(--black);padding:40px 28px;position:relative}
-.price-card.hot{background:rgba(212,160,23,.03);border-top:2px solid var(--gold)}
-.price-hot-badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--gold);color:var(--black);font-size:9px;font-weight:700;padding:4px 14px;letter-spacing:2px;white-space:nowrap}
-.price-plan{font-size:9px;letter-spacing:3px;color:var(--gold);margin-bottom:12px}
-.price-amount{font-size:42px;font-weight:900;font-family:'Space Mono',monospace;margin-bottom:3px;line-height:1}
-.price-per{font-size:12px;color:var(--gray);margin-bottom:28px}
-.price-range{display:inline-block;background:rgba(212,160,23,.1);color:var(--gold);font-size:11px;padding:4px 12px;border-radius:20px;margin-bottom:24px;font-weight:700}
-.price-list{list-style:none;margin-bottom:32px}
-.price-list li{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:12px;color:rgba(240,238,232,.6);display:flex;align-items:center;gap:7px}
-.price-list li::before{content:"→";color:var(--gold);font-size:10px}
+.price-section{padding:120px 60px;max-width:1300px;margin:0 auto}
+.trial-bar{display:flex;align-items:center;justify-content:space-between;padding:24px 40px;background:linear-gradient(135deg,rgba(240,165,0,.08),rgba(255,100,0,.05));border:1px solid rgba(240,165,0,.2);border-radius:14px;margin-bottom:40px;flex-wrap:wrap;gap:16px}
+.trial-text strong{font-size:22px;color:var(--gold);display:block;margin-bottom:4px}
+.trial-text span{font-size:13px;color:var(--gray)}
+.price-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;background:var(--border)}
+.plan{background:var(--bg);padding:40px 28px;position:relative}
+.plan.hot{background:#0a0a16;border-top:2px solid var(--gold)}
+.plan-hot{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--gold);color:#000;font-size:9px;font-weight:700;padding:4px 14px;letter-spacing:2px;white-space:nowrap}
+.plan-name{font-size:9px;letter-spacing:4px;color:var(--gold);margin-bottom:14px;font-family:'DM Mono',monospace}
+.plan-price{font-family:'Bebas Neue',monospace;font-size:56px;line-height:1;color:var(--white);margin-bottom:4px}
+.plan-unit{font-size:12px;color:var(--gray);margin-bottom:20px}
+.plan-range{display:inline-block;background:rgba(240,165,0,.1);color:var(--gold);font-size:10px;padding:4px 14px;border-radius:20px;margin-bottom:28px;font-family:'DM Mono',monospace}
+.plan-list{list-style:none;margin-bottom:32px}
+.plan-list li{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:12px;color:rgba(245,240,232,.6);display:flex;align-items:center;gap:8px}
+.plan-list li::before{content:'→';color:var(--gold);font-size:10px}
 
 /* CTA */
-.cta-banner{padding:120px 48px;text-align:center;position:relative;overflow:hidden}
-.cta-bg{position:absolute;inset:0;background:radial-gradient(ellipse 60% 80% at 50% 50%,rgba(212,160,23,.06),transparent)}
-.cta-h2{font-size:clamp(38px,6vw,68px);font-weight:900;line-height:1;margin-bottom:20px;position:relative}
+.cta{padding:160px 60px;text-align:center;position:relative;overflow:hidden}
+.cta-glow{position:absolute;width:800px;height:400px;background:radial-gradient(ellipse,rgba(240,165,0,.08),transparent);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
+.cta-h2{font-family:'Bebas Neue',sans-serif;font-size:clamp(56px,8vw,120px);line-height:.95;letter-spacing:2px;position:relative;margin-bottom:24px}
+.cta-h2 span{color:var(--gold)}
+.cta-sub{font-size:15px;color:var(--gray);margin-bottom:56px;position:relative}
 
-footer{border-top:1px solid rgba(255,255,255,.06);padding:48px;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:28px;max-width:1280px;margin:0 auto}
-.footer-brand{font-family:'Space Mono',monospace;font-size:20px;font-weight:700;color:var(--gold);margin-bottom:10px}
+/* FOOTER */
+.footer-wrap{border-top:1px solid var(--border);padding:56px 60px}
+.footer{max-width:1300px;margin:0 auto;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:32px}
+.footer-brand{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:3px;color:var(--gold);margin-bottom:12px}
 .footer-info{font-size:11px;color:var(--gray);line-height:2.2}
-.footer-links{display:flex;flex-direction:column;gap:10px}
-.footer-links a{font-size:12px;color:var(--gray);text-decoration:none;transition:.2s}
+.footer-links a{display:block;font-size:12px;color:var(--gray);text-decoration:none;margin-bottom:10px;transition:.2s}
 .footer-links a:hover{color:var(--gold)}
 
-@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
-.reveal{opacity:0;transform:translateY(36px);transition:opacity .7s,transform .7s}
-.reveal.visible{opacity:1;transform:translateY(0)}
+/* 애니메이션 */
+@keyframes fadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+.reveal{opacity:0;transform:translateY(36px);transition:opacity .8s,transform .8s}
+.reveal.on{opacity:1;transform:translateY(0)}
+.reveal-l{opacity:0;transform:translateX(-36px);transition:opacity .8s,transform .8s}
+.reveal-l.on{opacity:1;transform:translateX(0)}
+.reveal-r{opacity:0;transform:translateX(36px);transition:opacity .8s,transform .8s}
+.reveal-r.on{opacity:1;transform:translateX(0)}
 
-@media(max-width:900px){
-  .hero{flex-direction:column;text-align:center;padding:100px 24px 60px}
+@media(max-width:1024px){
+  .hero{grid-template-columns:1fr;padding:100px 32px 60px;text-align:center}
   .hero-right{display:none}
-  .demos{grid-template-columns:1fr}
-  .stats-row{grid-template-columns:repeat(2,1fr)}
+  nav{padding:0 24px}
+  .nav-links{display:none}
+  .section,.ai-section,.ind-section,.price-section,.cta{padding:80px 24px}
+  .ai-inner{grid-template-columns:1fr}
+  .ai-rings{display:none}
+  .bento{grid-template-columns:1fr}
+  .bento-card.wide{grid-column:span 1}
   .price-grid{grid-template-columns:1fr 1fr}
-  nav .nav-menu{display:none}
-  .sec,.ind-section,.cta-banner{padding:80px 24px}
-  footer{padding:40px 24px;flex-direction:column}
-  .trial-banner{flex-direction:column}
-}
-@media(max-width:600px){
-  .price-grid{grid-template-columns:1fr}
+  .footer{flex-direction:column}
+  .footer-wrap{padding:40px 24px}
+  .hero-stats{justify-content:center}
 }
 </style>
 </head>
 <body>
 
+<div class="cursor" id="cursor"></div>
+<div class="cursor-dot" id="cursorDot"></div>
+
+<!-- NAV -->
 <nav>
-  <a class="nav-logo" href="/">💰 DONWAY</a>
-  <ul class="nav-menu">
+  <a class="nav-logo" href="/">DONWAY</a>
+  <ul class="nav-links">
+    <li><a href="#ai">AI 기능</a></li>
     <li><a href="#features">기능</a></li>
-    <li><a href="#demo">화면</a></li>
-    <li><a href="#industries">적용업종</a></li>
+    <li><a href="#industries">업종</a></li>
     <li><a href="#pricing">요금제</a></li>
   </ul>
-  <div style="display:flex;gap:8px;align-items:center">
-    <a class="nav-trial" href="/settle">7일 무료체험</a>
-    <a class="nav-btn" href="/settle">로그인 →</a>
-  </div>
+  <a class="nav-cta" href="/settle">7일 무료체험 →</a>
 </nav>
 
+<!-- HERO -->
 <section class="hero">
-  <div class="hero-particles" id="particles"></div>
-  <div class="hero-glow"></div>
-  <div class="hero-left">
-    <div class="hero-badge"><div class="hero-badge-dot"></div>AI 자동화 정산 플랫폼</div>
-    <h1 class="hero-h1">돈의<br><em>방향</em>을<br>자동화</h1>
-    <p class="hero-p">엑셀·카드명세서 업로드 하나로<br>세금계산서·급여명세서·견적서 자동생성,<br>카카오톡·이메일·문자·팩스 자동발송까지.</p>
-    <div class="hero-actions">
-      <a href="/settle" class="btn-gold">7일 무료 체험 →</a>
-      <a href="#demo" class="btn-outline">화면 보기 ↓</a>
-    </div>
-    <div class="trial-note">✓ 카드 등록 불필요 &nbsp;·&nbsp; ✓ 설치 없음 &nbsp;·&nbsp; ✓ 언제든 해지</div>
+  <div class="hero-bg">
+    <div class="orb orb1"></div>
+    <div class="orb orb2"></div>
+    <div class="orb orb3"></div>
+    <div class="grid-bg"></div>
   </div>
+
+  <div class="hero-left">
+    <div class="hero-tag"><span class="hero-tag-dot"></span>AI POWERED · 자동화 정산 플랫폼</div>
+    <h1 class="hero-title">
+      <span class="line1">AI가</span>
+      <span class="line2" data-text="정산한다">정산한다</span>
+      <span class="line3">DONWAY</span>
+    </h1>
+    <p class="hero-sub">
+      <strong>엑셀 업로드 하나로 끝.</strong><br>
+      AI가 읽고, 계산하고, 세금계산서·급여명세서를<br>
+      만들고, 카카오톡·이메일·팩스로 보냅니다.<br>
+      <strong>물류·배달·소상공인 모든 업종.</strong>
+    </p>
+    <div class="hero-btns">
+      <a href="/settle" class="btn-primary">🚀 7일 무료 시작</a>
+      <a href="#features" class="btn-ghost">기능 보기 ↓</a>
+    </div>
+    <div class="hero-stats">
+      <div>
+        <span class="hero-stat-num" data-target="100">0</span><span style="color:var(--gold);font-family:'DM Mono',monospace;font-size:28px">%</span>
+        <div class="hero-stat-label">자동화율</div>
+      </div>
+      <div>
+        <span class="hero-stat-num" data-target="3">0</span><span style="color:var(--gold);font-family:'DM Mono',monospace;font-size:28px">분</span>
+        <div class="hero-stat-label">정산 완료</div>
+      </div>
+      <div>
+        <span class="hero-stat-num" data-target="550">0</span><span style="color:var(--gold);font-family:'DM Mono',monospace;font-size:18px;vertical-align:middle">만</span>
+        <div class="hero-stat-label">소상공인 대상</div>
+      </div>
+    </div>
+  </div>
+
   <div class="hero-right">
-    <div class="mockup-wrap">
-      <div class="mockup">
-        <div class="mockup-bar">
-          <div class="mockup-dots"><span></span><span></span><span></span></div>
-          <div class="mockup-url">donway.ai.kr/settle</div>
+    <div class="hero-visual">
+      <div class="app-screen">
+        <div class="app-bar">
+          <div class="app-dots"><span></span><span></span><span></span></div>
+          <div class="app-url">🔒 donway.ai.kr/settle</div>
         </div>
-        <div class="mockup-body">
-          <div class="m-header"><div class="m-title">💰 DONWAY 정산관리</div><div class="m-badge">2026-04 ▼</div></div>
-          <div class="m-cards">
-            <div class="m-card"><div class="m-card-label">총매출(VAT포함)</div><div class="m-card-val gold">₩159.4M</div></div>
-            <div class="m-card"><div class="m-card-label">실지급 합계</div><div class="m-card-val">₩68.7M</div></div>
-            <div class="m-card"><div class="m-card-label">분실파손</div><div class="m-card-val red">-₩242K</div></div>
+        <div class="app-body">
+          <div class="dash-header">
+            <div class="dash-title">💰 DONWAY 정산관리</div>
+            <div class="dash-month">2026-04 ▾</div>
           </div>
-          <div class="m-th-row"><div class="m-th">임직원</div><div class="m-th">부서</div><div class="m-th">실지급</div><div class="m-th">상태</div></div>
-          <div class="m-row"><div class="m-td name">김○○</div><div class="m-td">부산1</div><div class="m-td amount">₩3.2M</div><div class="m-td"><span class="m-status">완료</span></div></div>
-          <div class="m-row"><div class="m-td name">이○○</div><div class="m-td">진주M</div><div class="m-td amount">₩2.8M</div><div class="m-td"><span class="m-status">완료</span></div></div>
-          <div class="m-row"><div class="m-td name">박○○</div><div class="m-td">대구2</div><div class="m-td amount">₩3.5M</div><div class="m-td"><span class="m-status">완료</span></div></div>
+          <div class="ai-badge"><span class="ai-pulse"></span>AI 자동 처리 완료</div>
+          <div class="kpi-row">
+            <div class="kpi"><div class="kpi-l">쿠팡 총매출</div><div class="kpi-v g">₩159.4M</div></div>
+            <div class="kpi"><div class="kpi-l">실지급 합계</div><div class="kpi-v w">₩68.7M</div></div>
+            <div class="kpi"><div class="kpi-l">분실파손</div><div class="kpi-v r">-₩242K</div></div>
+          </div>
+          <div class="table-head">
+            <div class="th">임직원</div><div class="th">캠프</div><div class="th">실지급</div><div class="th">상태</div>
+          </div>
+          <div class="tr"><div class="td n">김○○</div><div class="td">부산1</div><div class="td a">₩3.2M</div><div class="td"><span class="status">완료</span></div></div>
+          <div class="tr"><div class="td n">이○○</div><div class="td">진주M</div><div class="td a">₩2.8M</div><div class="td"><span class="status">완료</span></div></div>
+          <div class="tr"><div class="td n">박○○</div><div class="td">대구2</div><div class="td a">₩3.5M</div><div class="td"><span class="status">완료</span></div></div>
         </div>
+      </div>
+      <div class="float-card fc1">
+        <div class="fc-label">AI OCR 인식률</div>
+        <div class="fc-val">99.8<span style="font-size:14px">%</span></div>
+        <div class="fc-sub">↑ 사업자등록증 자동완성</div>
+      </div>
+      <div class="float-card fc2">
+        <div class="fc-label">월 절약 시간</div>
+        <div class="fc-val">48<span style="font-size:14px">hr</span></div>
+        <div class="fc-sub">↑ 수동 작업 대비</div>
       </div>
     </div>
   </div>
 </section>
 
+<!-- TICKER -->
 <div class="ticker">
-  <div class="ticker-track">
-    <span>자동 정산</span><span>세금계산서</span><span>급여명세서</span><span>견적서</span><span>거래명세서</span><span>발주서</span><span>OCR 자동인식</span><span>카카오톡 발송</span><span>이메일 발송</span><span>팩스 자동화</span><span>보안 QR 출퇴근</span><span>법정문서 보관</span>
-    <span>자동 정산</span><span>세금계산서</span><span>급여명세서</span><span>견적서</span><span>거래명세서</span><span>발주서</span><span>OCR 자동인식</span><span>카카오톡 발송</span><span>이메일 발송</span><span>팩스 자동화</span><span>보안 QR 출퇴근</span><span>법정문서 보관</span>
+  <div class="ticker-inner">
+    <span>AI 자동정산</span><span>세금계산서</span><span>급여명세서</span><span>견적서</span><span>OCR 자동인식</span><span>카카오톡</span><span>이메일</span><span>팩스</span><span>보안 QR 출퇴근</span><span>법정문서 보관</span><span>교차검증</span><span>멀티테넌트</span>
+    <span>AI 자동정산</span><span>세금계산서</span><span>급여명세서</span><span>견적서</span><span>OCR 자동인식</span><span>카카오톡</span><span>이메일</span><span>팩스</span><span>보안 QR 출퇴근</span><span>법정문서 보관</span><span>교차검증</span><span>멀티테넌트</span>
   </div>
 </div>
 
-<div style="max-width:1280px;margin:0 auto;padding:0 48px">
-  <div class="stats-row reveal">
-    <div class="stat-item"><span class="stat-num" data-target="100">0</span><div class="stat-label">% 자동화</div></div>
-    <div class="stat-item"><span class="stat-num" data-target="3">0</span><div class="stat-label">분 정산 완료</div></div>
-    <div class="stat-item"><span class="stat-num" data-target="550">0</span><div class="stat-label">만 소상공인 대상</div></div>
-    <div class="stat-item"><span class="stat-num" data-target="7">0</span><div class="stat-label">일 무료 체험</div></div>
-  </div>
-</div>
-
-<section class="sec" id="demo">
-  <div class="sec-label reveal">PRODUCT DEMO</div>
-  <h2 class="sec-h2 reveal">직접 만든 시스템<br>실제 화면입니다</h2>
-  <p class="sec-desc reveal">엠비티아이 유한회사가 현재 실제 사용 중인 시스템을 SaaS 플랫폼화했습니다.</p>
-
-  <div class="demos">
-    <div class="demo-card reveal">
-      <div class="demo-screen">
-        <div class="settle-mock">
-          <div class="sm-topbar"><div class="sm-title">📦 정산서 관리</div><div class="sm-tabs"><div class="sm-tab active">전체(29)</div><div class="sm-tab">부산1</div><div class="sm-tab">진주M</div></div></div>
-          <div class="sm-summary">
-            <div class="sm-sum-card"><div class="sm-sum-label">총매출(VAT포함)</div><div class="sm-sum-val">₩159,421,381</div></div>
-            <div class="sm-sum-card"><div class="sm-sum-label">프레시백(VAT포함)</div><div class="sm-sum-val">₩2,558,160</div></div>
-            <div class="sm-sum-card"><div class="sm-sum-label">실지급 합계</div><div class="sm-sum-val">₩68,722,437</div></div>
-          </div>
-          <table class="sm-table">
-            <tr><th>임직원</th><th>부서/캠프</th><th>실지급</th><th>상태</th></tr>
-            <tr><td>김○○</td><td>부산1</td><td style="color:#d4a017">₩3,241,500</td><td style="color:#28c840;font-size:7px">✓완료</td></tr>
-            <tr><td>이○○</td><td>진주M</td><td style="color:#d4a017">₩2,876,300</td><td style="color:#28c840;font-size:7px">✓완료</td></tr>
-            <tr><td>박○○</td><td>대구2</td><td style="color:#d4a017">₩3,512,800</td><td style="color:#28c840;font-size:7px">✓완료</td></tr>
-          </table>
-        </div>
-      </div>
-      <div class="demo-info">
-        <div class="demo-num">01 / 정산 자동화</div>
-        <div class="demo-title">엑셀 → 임직원별 자동계산 및 교차검증</div>
-        <div class="demo-desc">엑셀·카드명세서 업로드 한 번으로 단가×건수 계산, VAT 처리, 교차검증까지 자동 완료.</div>
-      </div>
+<!-- ANIMATED STORY VIDEO -->
+<section style="padding:120px 60px;background:#030308;position:relative;overflow:hidden">
+  <div style="position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 50%,rgba(240,165,0,.04),transparent);pointer-events:none"></div>
+  <div style="max-width:900px;margin:0 auto;position:relative">
+    <div class="reveal" style="text-align:center;margin-bottom:60px">
+      <div class="s-label" style="display:inline-block">OUR STORY</div>
+      <h2 class="s-h2" style="font-size:clamp(40px,4.5vw,72px)">DONWAY를<br>만나기 전과 후</h2>
     </div>
 
-    <div class="demo-card reveal">
-      <div class="demo-screen" style="padding:16px">
-        <div style="font-size:9px;color:rgba(255,255,255,.3);margin-bottom:10px;font-family:'Space Mono',monospace">자동 생성 문서 목록</div>
-        <div class="docs-mock">
-          <div class="doc-item"><div class="doc-icon">🧾</div><div class="doc-info"><div class="doc-name">세금계산서</div><div class="doc-desc">사업자 OCR → 자동완성 → 즉시발행</div></div><div class="doc-status done">완성</div></div>
-          <div class="doc-item"><div class="doc-icon">💼</div><div class="doc-info"><div class="doc-name">급여명세서</div><div class="doc-desc">직장인·알바 시급/월급 자동계산</div></div><div class="doc-status done">완성</div></div>
-          <div class="doc-item"><div class="doc-icon">📋</div><div class="doc-info"><div class="doc-name">견적서</div><div class="doc-desc">항목별 단가 입력 → 자동 합산</div></div><div class="doc-status new">추가예정</div></div>
-          <div class="doc-item"><div class="doc-icon">📦</div><div class="doc-info"><div class="doc-name">거래명세서</div><div class="doc-desc">납품·용역 내역 자동 정리</div></div><div class="doc-status new">추가예정</div></div>
-          <div class="doc-item"><div class="doc-icon">🔖</div><div class="doc-info"><div class="doc-name">발주서</div><div class="doc-desc">공급업체 발주 자동화</div></div><div class="doc-status new">추가예정</div></div>
-        </div>
+    <!-- 스토리 플레이어 -->
+    <div id="story-player" style="border:1px solid rgba(240,165,0,.15);border-radius:20px;overflow:hidden;background:#080810;box-shadow:0 40px 100px rgba(0,0,0,.8)">
+      
+      <!-- 플레이어 탑바 -->
+      <div style="background:#111122;padding:10px 20px;display:flex;align-items:center;gap:10px">
+        <div style="display:flex;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:#ff5f57"></span><span style="width:10px;height:10px;border-radius:50%;background:#febc2e"></span><span style="width:10px;height:10px;border-radius:50%;background:#28c840"></span></div>
+        <div style="flex:1;text-align:center;font-size:11px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace" id="story-title">DONWAY Story</div>
+        <div style="font-size:10px;color:var(--gold);font-family:'DM Mono',monospace" id="story-time">00:00</div>
       </div>
-      <div class="demo-info">
-        <div class="demo-num">02 / 다문서 자동생성</div>
-        <div class="demo-title">세금계산서·급여명세서·견적서·발주서</div>
-        <div class="demo-desc">업종과 상황에 맞는 모든 비즈니스 문서를 자동으로 생성합니다.</div>
-      </div>
-    </div>
 
-    <div class="demo-card reveal">
-      <div class="demo-screen" style="padding:16px">
-        <div class="ocr-mock">
-          <div class="ocr-img">📄<div class="ocr-scan"></div></div>
-          <div class="ocr-fields">
-            <div class="ocr-field"><div class="ocr-field-label">사업자등록번호</div><div class="ocr-field-val">373-86-02536<span class="ocr-check">✓</span></div></div>
-            <div class="ocr-field"><div class="ocr-field-label">상호명</div><div class="ocr-field-val">엠비티아이 유한회사<span class="ocr-check">✓</span></div></div>
-            <div class="ocr-field"><div class="ocr-field-label">대표자</div><div class="ocr-field-val">김형우<span class="ocr-check">✓</span></div></div>
-            <div class="ocr-field"><div class="ocr-field-label">업태 / 종목</div><div class="ocr-field-val">운수업 / 택배<span class="ocr-check">✓</span></div></div>
-            <div class="ocr-field"><div class="ocr-field-label">사업장주소</div><div class="ocr-field-val">부산광역시 수영구...<span class="ocr-check">✓</span></div></div>
-          </div>
-        </div>
-      </div>
-      <div class="demo-info">
-        <div class="demo-num">03 / OCR 자동인식</div>
-        <div class="demo-title">사업자등록증 사진 → 7개 항목 자동입력</div>
-        <div class="demo-desc">사진 한 장으로 세금계산서에 필요한 7개 항목이 자동으로 채워집니다.</div>
-      </div>
-    </div>
+      <!-- 스토리 화면 -->
+      <div style="position:relative;min-height:420px;padding:0">
 
-    <div class="demo-card reveal">
-      <div class="demo-screen" style="display:flex;align-items:center;justify-content:center;gap:24px;padding:20px">
-        <div class="qr-area">
-          <div>
-            <div class="qr-phone">
-              <div class="qr-notch"></div>
-              <div class="qr-screen">
-                <div class="qr-label-sm">DONWAY 출근인증</div>
-                <div class="qr-code" id="qrcode"></div>
-                <div class="qr-timer-display" id="qr-timer">30</div>
-                <div class="qr-gps">위치확인 (48m)</div>
+        <!-- SCENE 1: BEFORE -->
+        <div id="scene-before" class="story-scene" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px;opacity:1;transition:opacity .8s">
+          <div style="width:100%;max-width:600px">
+            <div style="text-align:center;margin-bottom:40px">
+              <div style="display:inline-block;background:rgba(255,80,80,.1);border:1px solid rgba(255,80,80,.2);border-radius:100px;padding:8px 24px;font-size:12px;letter-spacing:3px;color:#ff6060;font-family:'DM Mono',monospace;margin-bottom:16px">BEFORE DONWAY</div>
+              <div style="font-family:'Bebas Neue',sans-serif;font-size:48px;color:#ff6060;letter-spacing:2px" id="before-title"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" id="before-items">
+              <div class="before-item" style="background:rgba(255,80,80,.06);border:1px solid rgba(255,80,80,.12);border-radius:10px;padding:16px;opacity:0;transform:translateY(10px);transition:.4s">
+                <div style="font-size:24px;margin-bottom:8px">😩</div>
+                <div style="font-size:13px;font-weight:600;color:#ff8080;margin-bottom:4px">엑셀 수작업</div>
+                <div style="font-size:11px;color:rgba(255,255,255,.35);line-height:1.6">건수 세고, 단가 곱하고<br>합계 계산... 2~3시간</div>
+              </div>
+              <div class="before-item" style="background:rgba(255,80,80,.06);border:1px solid rgba(255,80,80,.12);border-radius:10px;padding:16px;opacity:0;transform:translateY(10px);transition:.4s">
+                <div style="font-size:24px;margin-bottom:8px">📝</div>
+                <div style="font-size:13px;font-weight:600;color:#ff8080;margin-bottom:4px">수동 세금계산서</div>
+                <div style="font-size:11px;color:rgba(255,255,255,.35);line-height:1.6">사업자번호 직접 입력<br>오타·오류 빈번</div>
+              </div>
+              <div class="before-item" style="background:rgba(255,80,80,.06);border:1px solid rgba(255,80,80,.12);border-radius:10px;padding:16px;opacity:0;transform:translateY(10px);transition:.4s">
+                <div style="font-size:24px;margin-bottom:8px">📱</div>
+                <div style="font-size:13px;font-weight:600;color:#ff8080;margin-bottom:4px">일일이 카톡 전송</div>
+                <div style="font-size:11px;color:rgba(255,255,255,.35);line-height:1.6">31명에게 각각 전송<br>누락 사고 발생</div>
+              </div>
+              <div class="before-item" style="background:rgba(255,80,80,.06);border:1px solid rgba(255,80,80,.12);border-radius:10px;padding:16px;opacity:0;transform:translateY(10px);transition:.4s">
+                <div style="font-size:24px;margin-bottom:8px">⏰</div>
+                <div style="font-size:13px;font-weight:600;color:#ff8080;margin-bottom:4px">월 48시간 낭비</div>
+                <div style="font-size:11px;color:rgba(255,255,255,.35);line-height:1.6">정산만으로 이틀치<br>업무시간 소모</div>
               </div>
             </div>
           </div>
-          <div class="qr-security-list">
-            <strong>4중 보안</strong>
-            ① 동적QR 30초 갱신<br>
-            ② GPS 반경 100m<br>
-            ③ 캡처 방지<br>
-            ④ 앱 로그인 인증
+        </div>
+
+        <!-- TRANSITION -->
+        <div id="scene-transition" class="story-scene" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px;opacity:0;transition:opacity .8s;pointer-events:none">
+          <div style="text-align:center">
+            <div id="logo-anim" style="font-family:'Bebas Neue',sans-serif;font-size:80px;letter-spacing:6px;color:var(--gold);opacity:0;transform:scale(.8);transition:.6s;text-shadow:0 0 60px rgba(240,165,0,.5)">DONWAY</div>
+            <div style="font-size:16px;color:rgba(240,165,0,.6);margin-top:8px;letter-spacing:4px;font-family:'DM Mono',monospace" id="logo-sub"></div>
           </div>
         </div>
-      </div>
-      <div class="demo-info">
-        <div class="demo-num">04 / 보안 QR 출퇴근</div>
-        <div class="demo-title">30초마다 바뀌는 QR + GPS로 부정 출퇴근 차단</div>
-        <div class="demo-desc">캡처해도 소용없는 동적 QR코드와 GPS 위치 검증으로 완벽한 출퇴근 관리.</div>
-      </div>
-    </div>
 
-    <div class="demo-card reveal" style="grid-column:1/-1">
-      <div class="demo-screen" style="padding:20px">
-        <div style="font-size:9px;color:rgba(255,255,255,.3);margin-bottom:12px;font-family:'Space Mono',monospace">정산 완료 → 4채널 동시 자동발송</div>
-        <div class="send-list" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
-          <div class="send-item"><div class="send-icon">💬</div><div><div class="send-name" style="color:#f7c246">카카오톡 알림톡</div><div class="send-sub">정산명세서 발송</div></div><div class="send-ok">✓</div></div>
-          <div class="send-item"><div class="send-icon">📧</div><div><div class="send-name" style="color:#28c840">이메일</div><div class="send-sub">세금계산서 첨부</div></div><div class="send-ok">✓</div></div>
-          <div class="send-item"><div class="send-icon">📱</div><div><div class="send-name" style="color:#3b82f6">문자(SMS)</div><div class="send-sub">급여 지급 안내</div></div><div class="send-ok">✓</div></div>
-          <div class="send-item"><div class="send-icon">📠</div><div><div class="send-name" style="color:#a855f7">팩스</div><div class="send-sub">발주서 자동전송</div></div><div class="send-ok">✓</div></div>
+        <!-- SCENE 2: AFTER -->
+        <div id="scene-after" class="story-scene" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px;opacity:0;transition:opacity .8s;pointer-events:none">
+          <div style="width:100%;max-width:600px">
+            <div style="text-align:center;margin-bottom:40px">
+              <div style="display:inline-block;background:rgba(40,200,100,.08);border:1px solid rgba(40,200,100,.2);border-radius:100px;padding:8px 24px;font-size:12px;letter-spacing:3px;color:#28c840;font-family:'DM Mono',monospace;margin-bottom:16px">AFTER DONWAY</div>
+              <div style="font-family:'Bebas Neue',sans-serif;font-size:48px;color:var(--gold);letter-spacing:2px" id="after-title"></div>
+            </div>
+            <!-- 프로세스 라인 -->
+            <div style="display:flex;flex-direction:column;gap:10px" id="after-steps">
+              <div class="after-step" style="display:flex;align-items:center;gap:16px;background:rgba(240,165,0,.05);border:1px solid rgba(240,165,0,.1);border-radius:10px;padding:14px 20px;opacity:0;transform:translateX(-20px);transition:.5s">
+                <div style="width:36px;height:36px;border-radius:50%;background:rgba(240,165,0,.1);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">📁</div>
+                <div style="flex:1"><div style="font-size:13px;font-weight:600">엑셀 업로드</div><div style="font-size:10px;color:var(--gray)">파일 하나 올리기</div></div>
+                <div style="font-size:20px">→</div>
+              </div>
+              <div class="after-step" style="display:flex;align-items:center;gap:16px;background:rgba(240,165,0,.05);border:1px solid rgba(240,165,0,.15);border-radius:10px;padding:14px 20px;opacity:0;transform:translateX(-20px);transition:.5s">
+                <div style="width:36px;height:36px;border-radius:50%;background:rgba(240,165,0,.15);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">🤖</div>
+                <div style="flex:1">
+                  <div style="font-size:13px;font-weight:600">AI 자동 처리 중...</div>
+                  <div style="height:4px;background:rgba(255,255,255,.05);border-radius:2px;margin-top:6px;overflow:hidden"><div id="ai-bar" style="height:100%;background:linear-gradient(90deg,var(--gold),#ff9900);border-radius:2px;width:0;transition:width 1.5s ease"></div></div>
+                </div>
+                <div style="font-size:11px;color:var(--gold);font-family:'DM Mono',monospace;white-space:nowrap" id="ai-pct">0%</div>
+              </div>
+              <div class="after-step" style="display:flex;align-items:center;gap:16px;background:rgba(40,200,100,.05);border:1px solid rgba(40,200,100,.15);border-radius:10px;padding:14px 20px;opacity:0;transform:translateX(-20px);transition:.5s">
+                <div style="width:36px;height:36px;border-radius:50%;background:rgba(40,200,100,.1);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">✅</div>
+                <div style="flex:1">
+                  <div style="font-size:13px;font-weight:600;color:#28c840">완료! 3분 만에 끝</div>
+                  <div style="font-size:10px;color:var(--gray)">세금계산서 31건 + 카카오톡 발송 완료</div>
+                </div>
+                <div style="font-size:20px">🎉</div>
+              </div>
+            </div>
+            <div style="text-align:center;margin-top:28px;opacity:0;transition:.5s" id="after-cta">
+              <div style="display:inline-flex;gap:32px">
+                <div style="text-align:center"><div style="font-family:'DM Mono',monospace;font-size:36px;font-weight:700;color:var(--gold)">48hr</div><div style="font-size:10px;color:var(--gray);margin-top:2px">→ 절약</div></div>
+                <div style="width:1px;background:var(--border)"></div>
+                <div style="text-align:center"><div style="font-family:'DM Mono',monospace;font-size:36px;font-weight:700;color:#28c840">3min</div><div style="font-size:10px;color:var(--gray);margin-top:2px">으로 단축</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 진행바 -->
+        <div style="position:absolute;bottom:0;left:0;right:0;height:3px;background:rgba(255,255,255,.05)">
+          <div id="progress-bar" style="height:100%;background:linear-gradient(90deg,var(--gold),#ff9900);width:0;transition:width .1s linear"></div>
         </div>
       </div>
-      <div class="demo-info">
-        <div class="demo-num">05 / 다채널 자동발송</div>
-        <div class="demo-title">카카오톡·이메일·문자·팩스 동시 자동발송</div>
-        <div class="demo-desc">정산 완료 즉시 수신자가 선호하는 채널로 자동 발송. 발송 확인까지 자동 추적.</div>
+
+      <!-- 컨트롤 -->
+      <div style="padding:16px 24px;background:#0a0a18;display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(255,255,255,.05)">
+        <button onclick="resetStory()" style="background:rgba(240,165,0,.1);border:1px solid rgba(240,165,0,.2);color:var(--gold);padding:8px 20px;border-radius:100px;font-size:12px;cursor:pointer;transition:.2s;font-family:'DM Mono',monospace;letter-spacing:1px">↺ 다시보기</button>
+        <div style="font-size:11px;color:var(--gray);font-family:'DM Mono',monospace" id="story-phase">BEFORE →</div>
+        <a href="/settle" style="background:var(--gold);color:#000;padding:8px 24px;border-radius:100px;font-size:12px;font-weight:700;text-decoration:none;font-family:'DM Mono',monospace;letter-spacing:1px">체험하기 →</a>
       </div>
     </div>
   </div>
 </section>
 
-<div class="ind-section" id="industries">
-  <div style="max-width:1280px;margin:0 auto">
-    <div class="sec-label reveal">INDUSTRIES</div>
-    <h2 class="sec-h2 reveal">돈이 흐르는 곳이면 어디든<br>DONWAY가 자동화합니다</h2>
-    <div class="ind-grid">
-      <div class="ind-pill reveal">🚚 물류·택배 대리점</div>
-      <div class="ind-pill reveal">🛵 배달대행</div>
-      <div class="ind-pill reveal">🍕 식당·카페·베이커리</div>
-      <div class="ind-pill reveal">🏪 편의점·소매점</div>
-      <div class="ind-pill reveal">✂️ 미용실·네일샵</div>
-      <div class="ind-pill reveal">📚 학원·교습소</div>
-      <div class="ind-pill reveal">🚗 대리운전 대행</div>
-      <div class="ind-pill reveal">🏗️ 건설·일용직</div>
-      <div class="ind-pill reveal">🏠 부동산 중개</div>
-      <div class="ind-pill reveal">💊 보험 대리점</div>
-      <div class="ind-pill reveal">🧹 청소·가사 서비스</div>
-      <div class="ind-pill reveal">💻 IT·프리랜서</div>
-      <div class="ind-pill reveal">🏢 일반 기업 급여</div>
-      <div class="ind-pill reveal">🛒 위탁판매·쇼핑몰</div>
-      <div class="ind-pill reveal">🏭 제조·납품업체</div>
+<!-- AI SECTION -->
+<section class="ai-section" id="ai">
+  <div class="ai-inner">
+    <div class="ai-visual reveal-l">
+      <div class="ai-rings">
+        <div class="ring ring1"></div>
+        <div class="ring ring2"></div>
+        <div class="ring ring3"></div>
+        <div class="ai-center">
+          <span class="ai-icon-big">🤖</span>
+          <div class="ai-center-label">AI ENGINE</div>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
-
-<section class="sec" id="pricing">
-  <div class="sec-label reveal">PRICING</div>
-  <h2 class="sec-h2 reveal">인원수에 맞는<br>합리적인 요금제</h2>
-
-  <div class="trial-banner reveal">
-    <div class="trial-banner-left">
-      <strong>🎁 7일 무료 체험</strong>
-      <span>카드 등록 불필요 · 모든 기능 제한없이 사용 · 언제든 해지 가능</span>
-    </div>
-    <a href="/settle" class="btn-gold">무료 체험 시작 →</a>
-  </div>
-
-  <div class="price-grid reveal">
-    <div class="price-card">
-      <div class="price-plan">BASIC</div>
-      <div class="price-amount">29,000</div>
-      <div class="price-per">원 / 월</div>
-      <div class="price-range">직원 10명까지</div>
-      <ul class="price-list">
-        <li>정산 자동계산</li>
-        <li>세금계산서·급여명세서</li>
-        <li>카카오톡 발송</li>
-        <li>OCR 자동인식</li>
-        <li>교차검증</li>
-      </ul>
-      <a href="/settle" class="btn-outline" style="display:block;text-align:center;font-size:13px">시작하기</a>
-    </div>
-    <div class="price-card hot">
-      <div class="price-hot-badge">인기</div>
-      <div class="price-plan">STANDARD</div>
-      <div class="price-amount">59,000</div>
-      <div class="price-per">원 / 월</div>
-      <div class="price-range">직원 30명까지</div>
-      <ul class="price-list">
-        <li>BASIC 모든 기능</li>
-        <li>견적서·거래명세서·발주서</li>
-        <li>SMS·이메일 발송</li>
-        <li>보안 QR 출퇴근</li>
-        <li>법정 문서 보관</li>
-      </ul>
-      <a href="/settle" class="btn-gold" style="display:block;text-align:center;font-size:13px">시작하기</a>
-    </div>
-    <div class="price-card">
-      <div class="price-plan">PRO</div>
-      <div class="price-amount">99,000</div>
-      <div class="price-per">원 / 월</div>
-      <div class="price-range">직원 100명까지</div>
-      <ul class="price-list">
-        <li>STANDARD 모든 기능</li>
-        <li>팩스 자동발송</li>
-        <li>멀티 대리점 관리</li>
-        <li>영수증 OCR 경비처리</li>
-        <li>AI 이상감지 알림</li>
-      </ul>
-      <a href="/settle" class="btn-outline" style="display:block;text-align:center;font-size:13px">시작하기</a>
-    </div>
-    <div class="price-card">
-      <div class="price-plan">ENTERPRISE</div>
-      <div class="price-amount">협의</div>
-      <div class="price-per">맞춤 견적</div>
-      <div class="price-range">100명 이상</div>
-      <ul class="price-list">
-        <li>PRO 모든 기능</li>
-        <li>API 연동</li>
-        <li>홈택스 세무 연동</li>
-        <li>전담 온보딩</li>
-        <li>전담 지원</li>
-      </ul>
-      <a href="tel:051-711-3103" class="btn-outline" style="display:block;text-align:center;font-size:13px">전화 문의</a>
+    <div class="reveal-r">
+      <div class="s-label">AI CORE FEATURES</div>
+      <h2 class="s-h2" style="font-size:clamp(40px,4.5vw,70px)">AI가<br>모든 것을<br>대신합니다</h2>
+      <div class="ai-features" style="margin-top:40px">
+        <div class="ai-feat">
+          <div class="ai-feat-icon">📊</div>
+          <div><div class="ai-feat-title">엑셀·카드명세서 AI 파싱</div><div class="ai-feat-desc">어떤 형식의 데이터든 AI가 자동으로 읽고 분석합니다. 컬럼 위치, 데이터 형식을 자동 감지.</div></div>
+        </div>
+        <div class="ai-feat">
+          <div class="ai-feat-icon">📷</div>
+          <div><div class="ai-feat-title">사업자등록증 OCR 자동인식</div><div class="ai-feat-desc">사진 한 장으로 사업자번호·상호·대표자·주소 7개 항목 자동 입력. 세금계산서 즉시 완성.</div></div>
+        </div>
+        <div class="ai-feat">
+          <div class="ai-feat-icon">⚡</div>
+          <div><div class="ai-feat-title">AI 교차검증·이상감지</div><div class="ai-feat-desc">원본 데이터와 계산값을 자동 비교, 오차·이상 패턴 즉시 감지 및 알림.</div></div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
 
-<div class="cta-banner">
-  <div class="cta-bg"></div>
-  <div class="sec-label" style="position:relative">GET STARTED</div>
-  <h2 class="cta-h2">7일 무료로<br><span style="background:linear-gradient(135deg,#f5d060,#d4a017);-webkit-background-clip:text;-webkit-text-fill-color:transparent">직접 경험</span>하세요</h2>
-  <p style="color:rgba(240,238,232,.4);margin-bottom:48px;position:relative;font-size:14px">카드 등록 없이 · 설치 없이 · 지금 바로</p>
-  <div style="position:relative;display:flex;gap:16px;justify-content:center;flex-wrap:wrap">
-    <a href="/settle" class="btn-gold" style="font-size:16px;padding:20px 56px">7일 무료 체험 →</a>
-    <a href="tel:051-711-3103" class="btn-outline" style="font-size:16px;padding:20px 40px">📞 051-711-3103</a>
+<!-- FEATURES BENTO -->
+<section class="section" id="features">
+  <div class="reveal"><div class="s-label">FEATURES</div>
+  <h2 class="s-h2">정산의 모든 것</h2>
+  <p class="s-desc">계산부터 발송까지, 사람이 할 일은 버튼 하나뿐입니다.</p></div>
+
+  <div class="bento">
+    <div class="bento-card reveal">
+      <div class="bento-num">01 ·</div>
+      <div class="bento-icon">🧾</div>
+      <div class="bento-title">자동 문서 생성</div>
+      <div class="bento-desc">세금계산서·급여명세서·견적서·발주서·거래명세서를 자동 생성합니다.</div>
+      <div class="bento-tag">5종 문서 자동화</div>
+    </div>
+    <div class="bento-card wide reveal">
+      <div class="bento-num">02 ·</div>
+      <div class="bento-icon">📡</div>
+      <div class="bento-title">4채널 자동발송</div>
+      <div class="bento-desc">생성된 문서를 수신자에게 자동으로 발송합니다.</div>
+      <div class="send-visual">
+        <div class="send-item"><div class="send-icon">💬</div><div class="send-name" style="color:#f7c246">카카오톡</div><div class="send-bar"><div class="send-fill" style="--w:90%;background:linear-gradient(90deg,#f7c246,#f0a500)"></div></div><div class="send-ok">✓ 발송</div></div>
+        <div class="send-item"><div class="send-icon">📧</div><div class="send-name" style="color:#28c840">이메일</div><div class="send-bar"><div class="send-fill" style="--w:85%;background:linear-gradient(90deg,#28c840,#20a030)"></div></div><div class="send-ok">✓ 발송</div></div>
+        <div class="send-item"><div class="send-icon">📱</div><div class="send-name" style="color:#3b82f6">문자(SMS)</div><div class="send-bar"><div class="send-fill" style="--w:78%;background:linear-gradient(90deg,#3b82f6,#2060d0)"></div></div><div class="send-ok">✓ 발송</div></div>
+        <div class="send-item"><div class="send-icon">📠</div><div class="send-name" style="color:#a855f7">팩스</div><div class="send-bar"><div class="send-fill" style="--w:65%;background:linear-gradient(90deg,#a855f7,#8040d0)"></div></div><div class="send-ok">✓ 발송</div></div>
+      </div>
+    </div>
+    <div class="bento-card reveal">
+      <div class="bento-num">03 ·</div>
+      <div class="bento-icon">🔐</div>
+      <div class="bento-title">보안 QR 출퇴근</div>
+      <div class="bento-desc">30초 동적 QR + GPS 지오펜싱 + 캡처방지. 4중 보안 출퇴근.</div>
+      <div class="bento-tag">부정 출퇴근 원천차단</div>
+    </div>
+    <div class="bento-card reveal">
+      <div class="bento-num">04 ·</div>
+      <div class="bento-icon">🗄️</div>
+      <div class="bento-title">법정 문서 보관</div>
+      <div class="bento-desc">5년·3년·10년 법정 보관 기간 자동 관리. 세무조사 원클릭 대응.</div>
+      <div class="bento-tag">세법 자동 준수</div>
+    </div>
+    <div class="bento-card reveal">
+      <div class="bento-num">05 ·</div>
+      <div class="bento-icon">🏢</div>
+      <div class="bento-title">멀티테넌트</div>
+      <div class="bento-desc">여러 회사·대리점이 완전히 분리된 독립 공간에서 관리됩니다.</div>
+      <div class="bento-tag">대리점 간 데이터 완전 격리</div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section style="padding:120px 60px;background:linear-gradient(180deg,var(--bg),#06060f,var(--bg));position:relative">
+<div style="max-width:1300px;margin:0 auto">
+  <div class="reveal"><div class="s-label">HOW IT WORKS</div>
+  <h2 class="s-h2">딱 3단계입니다</h2>
+  <p class="s-desc">복잡한 거 없습니다. 누구나 바로 쓸 수 있습니다.</p></div>
+
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:32px;margin-top:80px;position:relative">
+    <div style="position:absolute;top:60px;left:16%;right:16%;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.3"></div>
+
+    <div class="reveal" style="text-align:center;padding:40px 24px">
+      <div style="width:80px;height:80px;border:1px solid rgba(240,165,0,.3);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;font-size:32px;background:rgba(240,165,0,.05);position:relative;z-index:1;box-shadow:0 0 30px rgba(240,165,0,.1)">📁</div>
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--gold);letter-spacing:3px;margin-bottom:12px">STEP 01</div>
+      <div style="font-size:20px;font-weight:700;margin-bottom:12px">파일 올리기</div>
+      <div style="font-size:13px;color:var(--gray);line-height:1.8">쿠팡·배민 엑셀,<br>카드 명세서,<br>또는 직접 입력</div>
+      <div style="margin-top:24px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:left">
+        <div style="font-size:9px;color:var(--gold);margin-bottom:8px;font-family:'DM Mono',monospace">SUPPORTED</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <span style="font-size:9px;padding:3px 8px;border:1px solid var(--border);border-radius:20px;color:var(--gray)">.xlsx</span>
+          <span style="font-size:9px;padding:3px 8px;border:1px solid var(--border);border-radius:20px;color:var(--gray)">.csv</span>
+          <span style="font-size:9px;padding:3px 8px;border:1px solid var(--border);border-radius:20px;color:var(--gray)">카드명세서</span>
+          <span style="font-size:9px;padding:3px 8px;border:1px solid var(--border);border-radius:20px;color:var(--gray)">직접입력</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="reveal" style="text-align:center;padding:40px 24px">
+      <div style="width:80px;height:80px;border:1px solid rgba(240,165,0,.5);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;font-size:32px;background:rgba(240,165,0,.08);position:relative;z-index:1;box-shadow:0 0 40px rgba(240,165,0,.2)">🤖</div>
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--gold);letter-spacing:3px;margin-bottom:12px">STEP 02</div>
+      <div style="font-size:20px;font-weight:700;margin-bottom:12px">AI가 처리</div>
+      <div style="font-size:13px;color:var(--gray);line-height:1.8">3분 안에 자동 계산<br>문서 자동 생성<br>오류 자동 검증</div>
+      <div style="margin-top:24px;background:var(--card);border:1px solid rgba(240,165,0,.2);border-radius:10px;padding:16px;text-align:left">
+        <div style="font-size:9px;color:var(--gold);margin-bottom:8px;font-family:'DM Mono',monospace">AI GENERATES</div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div style="font-size:9px;color:rgba(245,240,232,.5);display:flex;align-items:center;gap:6px"><span style="color:#28c840">✓</span> 세금계산서</div>
+          <div style="font-size:9px;color:rgba(245,240,232,.5);display:flex;align-items:center;gap:6px"><span style="color:#28c840">✓</span> 급여명세서</div>
+          <div style="font-size:9px;color:rgba(245,240,232,.5);display:flex;align-items:center;gap:6px"><span style="color:#28c840">✓</span> 정산서 (인원별)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="reveal" style="text-align:center;padding:40px 24px">
+      <div style="width:80px;height:80px;border:1px solid rgba(240,165,0,.3);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;font-size:32px;background:rgba(240,165,0,.05);position:relative;z-index:1;box-shadow:0 0 30px rgba(240,165,0,.1)">📨</div>
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--gold);letter-spacing:3px;margin-bottom:12px">STEP 03</div>
+      <div style="font-size:20px;font-weight:700;margin-bottom:12px">자동 발송</div>
+      <div style="font-size:13px;color:var(--gray);line-height:1.8">카카오톡·이메일·문자<br>팩스로 자동 전송<br>수신 확인까지</div>
+      <div style="margin-top:24px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:left">
+        <div style="font-size:9px;color:var(--gold);margin-bottom:8px;font-family:'DM Mono',monospace">SENT TO</div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div style="font-size:9px;color:rgba(245,240,232,.5);display:flex;align-items:center;gap:6px"><span>💬</span> 직원·기사 카카오톡</div>
+          <div style="font-size:9px;color:rgba(245,240,232,.5);display:flex;align-items:center;gap:6px"><span>📧</span> 거래처 이메일</div>
+          <div style="font-size:9px;color:rgba(245,240,232,.5);display:flex;align-items:center;gap:6px"><span>📠</span> 협력사 팩스</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- BEFORE / AFTER -->
+<section style="padding:120px 60px;max-width:1300px;margin:0 auto">
+  <div class="reveal"><div class="s-label">BEFORE / AFTER</div>
+  <h2 class="s-h2">도입 전후 비교</h2></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:80px">
+    <div class="reveal-l" style="background:#0d0d0d;border:1px solid rgba(255,80,80,.15);border-radius:14px;padding:40px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:32px">
+        <div style="width:36px;height:36px;border-radius:50%;background:rgba(255,80,80,.1);border:1px solid rgba(255,80,80,.2);display:flex;align-items:center;justify-content:center;font-size:16px">😩</div>
+        <div style="font-size:16px;font-weight:700;color:#ff6060">DONWAY 도입 전</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:14px;background:rgba(255,80,80,.05);border-radius:8px">
+          <span style="color:#ff6060;font-size:14px;flex-shrink:0">✗</span>
+          <div><div style="font-size:13px;font-weight:600;margin-bottom:4px">엑셀 수작업 2~3시간</div><div style="font-size:11px;color:var(--gray)">건수 세고, 단가 곱하고, 합계 계산...</div></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:14px;background:rgba(255,80,80,.05);border-radius:8px">
+          <span style="color:#ff6060;font-size:14px;flex-shrink:0">✗</span>
+          <div><div style="font-size:13px;font-weight:600;margin-bottom:4px">세금계산서 수동 발행</div><div style="font-size:11px;color:var(--gray)">사업자번호 직접 입력, 오타 빈번</div></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:14px;background:rgba(255,80,80,.05);border-radius:8px">
+          <span style="color:#ff6060;font-size:14px;flex-shrink:0">✗</span>
+          <div><div style="font-size:13px;font-weight:600;margin-bottom:4px">카톡으로 일일이 전송</div><div style="font-size:11px;color:var(--gray)">31명 기사에게 각각 전송... 누락 발생</div></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:14px;background:rgba(255,80,80,.05);border-radius:8px">
+          <span style="color:#ff6060;font-size:14px;flex-shrink:0">✗</span>
+          <div><div style="font-size:13px;font-weight:600;margin-bottom:4px">계산 오류 → 재작업</div><div style="font-size:11px;color:var(--gray)">오차 발견하면 처음부터 다시</div></div>
+        </div>
+        <div style="text-align:center;padding:20px;border-top:1px solid rgba(255,80,80,.1);margin-top:8px">
+          <div style="font-family:'DM Mono',monospace;font-size:40px;font-weight:700;color:#ff6060">48hr</div>
+          <div style="font-size:11px;color:var(--gray);margin-top:4px">월 평균 소요시간</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="reveal-r" style="background:#060610;border:1px solid rgba(240,165,0,.2);border-radius:14px;padding:40px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:32px">
+        <div style="width:36px;height:36px;border-radius:50%;background:rgba(240,165,0,.1);border:1px solid rgba(240,165,0,.2);display:flex;align-items:center;justify-content:center;font-size:16px">🚀</div>
+        <div style="font-size:16px;font-weight:700;color:var(--gold)">DONWAY 도입 후</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:14px;background:rgba(240,165,0,.05);border-radius:8px;border:1px solid rgba(240,165,0,.08)">
+          <span style="color:#28c840;font-size:14px;flex-shrink:0">✓</span>
+          <div><div style="font-size:13px;font-weight:600;margin-bottom:4px">엑셀 업로드 → 3분 완료</div><div style="font-size:11px;color:var(--gray)">AI가 자동으로 파싱·계산·검증</div></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:14px;background:rgba(240,165,0,.05);border-radius:8px;border:1px solid rgba(240,165,0,.08)">
+          <span style="color:#28c840;font-size:14px;flex-shrink:0">✓</span>
+          <div><div style="font-size:13px;font-weight:600;margin-bottom:4px">사진 찍으면 자동 완성</div><div style="font-size:11px;color:var(--gray)">OCR이 7개 항목 자동 입력</div></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:14px;background:rgba(240,165,0,.05);border-radius:8px;border:1px solid rgba(240,165,0,.08)">
+          <span style="color:#28c840;font-size:14px;flex-shrink:0">✓</span>
+          <div><div style="font-size:13px;font-weight:600;margin-bottom:4px">버튼 하나로 전체 발송</div><div style="font-size:11px;color:var(--gray)">카카오톡·이메일 동시 자동 전송</div></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:14px;background:rgba(240,165,0,.05);border-radius:8px;border:1px solid rgba(240,165,0,.08)">
+          <span style="color:#28c840;font-size:14px;flex-shrink:0">✓</span>
+          <div><div style="font-size:13px;font-weight:600;margin-bottom:4px">AI 교차검증 자동</div><div style="font-size:11px;color:var(--gray)">오차 즉시 감지, 오류 제로</div></div>
+        </div>
+        <div style="text-align:center;padding:20px;border-top:1px solid rgba(240,165,0,.1);margin-top:8px">
+          <div style="font-family:'DM Mono',monospace;font-size:40px;font-weight:700;color:var(--gold)">3min</div>
+          <div style="font-size:11px;color:var(--gray);margin-top:4px">월 평균 소요시간</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section style="padding:80px 60px 120px;max-width:900px;margin:0 auto">
+  <div class="reveal"><div class="s-label">FAQ</div>
+  <h2 class="s-h2" style="font-size:clamp(40px,4vw,64px)">자주 묻는 질문</h2></div>
+  <div style="margin-top:60px;display:flex;flex-direction:column;gap:2px" id="faq">
+    <div class="faq-item reveal" onclick="toggleFaq(this)" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:24px 28px;cursor:pointer;transition:.3s">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:15px;font-weight:600">설치가 필요한가요?</div>
+        <span class="faq-arrow" style="color:var(--gold);font-size:18px;transition:.3s">+</span>
+      </div>
+      <div class="faq-body" style="display:none;margin-top:16px;font-size:13px;color:var(--gray);line-height:1.8">아니요. 브라우저만 있으면 됩니다. PC·스마트폰·태블릿 모두 동일하게 사용 가능하며 별도 앱 설치가 필요 없습니다.</div>
+    </div>
+    <div class="faq-item reveal" onclick="toggleFaq(this)" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:24px 28px;cursor:pointer;transition:.3s">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:15px;font-weight:600">물류 업종이 아니어도 쓸 수 있나요?</div>
+        <span class="faq-arrow" style="color:var(--gold);font-size:18px;transition:.3s">+</span>
+      </div>
+      <div class="faq-body" style="display:none;margin-top:16px;font-size:13px;color:var(--gray);line-height:1.8">네, 물론입니다. 배달대행·미용실·학원·편의점·건설 일용직·보험대리점 등 돈이 오가는 모든 업종에서 사용 가능합니다. 업종에 맞게 항목명만 바꾸면 됩니다.</div>
+    </div>
+    <div class="faq-item reveal" onclick="toggleFaq(this)" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:24px 28px;cursor:pointer;transition:.3s">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:15px;font-weight:600">기존 데이터는 어떻게 되나요?</div>
+        <span class="faq-arrow" style="color:var(--gold);font-size:18px;transition:.3s">+</span>
+      </div>
+      <div class="faq-body" style="display:none;margin-top:16px;font-size:13px;color:var(--gray);line-height:1.8">모든 데이터는 안전하게 클라우드에 저장됩니다. 세법상 보관 기간(5년)을 자동으로 관리하며, 언제든지 조회·다운로드 가능합니다.</div>
+    </div>
+    <div class="faq-item reveal" onclick="toggleFaq(this)" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:24px 28px;cursor:pointer;transition:.3s">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:15px;font-weight:600">7일 후 자동 결제가 되나요?</div>
+        <span class="faq-arrow" style="color:var(--gold);font-size:18px;transition:.3s">+</span>
+      </div>
+      <div class="faq-body" style="display:none;margin-top:16px;font-size:13px;color:var(--gray);line-height:1.8">아니요. 카드 등록이 없으므로 자동 결제가 되지 않습니다. 7일 후에는 유료 플랜을 직접 선택해야 계속 사용 가능합니다.</div>
+    </div>
+    <div class="faq-item reveal" onclick="toggleFaq(this)" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:24px 28px;cursor:pointer;transition:.3s">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:15px;font-weight:600">직원 수가 달마다 변동되면요?</div>
+        <span class="faq-arrow" style="color:var(--gold);font-size:18px;transition:.3s">+</span>
+      </div>
+      <div class="faq-body" style="display:none;margin-top:16px;font-size:13px;color:var(--gray);line-height:1.8">언제든지 플랜 변경이 가능합니다. 인원이 늘어나면 상위 플랜으로 업그레이드, 줄어들면 하위 플랜으로 변경하실 수 있습니다.</div>
+    </div>
+  </div>
+</section>
+
+<!-- INDUSTRIES -->
+<!-- INDUSTRIES -->
+<div class="ind-section" id="industries">
+  <div class="ind-inner">
+    <div class="reveal"><div class="s-label">INDUSTRIES</div>
+    <h2 class="s-h2" style="font-size:clamp(40px,4.5vw,72px)">돈이 흐르는<br>모든 곳에</h2></div>
+    <div class="ind-grid">
+      <div class="ind-item reveal">🚚 물류·택배</div>
+      <div class="ind-item reveal">🛵 배달대행</div>
+      <div class="ind-item reveal">🍕 식당·카페</div>
+      <div class="ind-item reveal">🏪 편의점·소매</div>
+      <div class="ind-item reveal">✂️ 미용·뷰티</div>
+      <div class="ind-item reveal">📚 학원·교육</div>
+      <div class="ind-item reveal">🚗 대리운전</div>
+      <div class="ind-item reveal">🏗️ 건설·일용직</div>
+      <div class="ind-item reveal">🏠 부동산</div>
+      <div class="ind-item reveal">💊 보험대리점</div>
+      <div class="ind-item reveal">🧹 청소서비스</div>
+      <div class="ind-item reveal">💻 IT·프리랜서</div>
+      <div class="ind-item reveal">🏢 일반기업</div>
+      <div class="ind-item reveal">🛒 위탁판매</div>
+      <div class="ind-item reveal">🏭 제조·납품</div>
+    </div>
   </div>
 </div>
 
-<div style="max-width:1280px;margin:0 auto">
-  <footer>
+<!-- PRICING -->
+<div class="price-section" id="pricing">
+  <div class="reveal"><div class="s-label">PRICING</div>
+  <h2 class="s-h2">인원수에 맞게</h2></div>
+  <div class="trial-bar reveal">
+    <div class="trial-text">
+      <strong>🎁 7일 무료 체험</strong>
+      <span>카드 등록 불필요 · 모든 기능 제한 없이 · 사업자번호 1회 한정</span>
+    </div>
+    <a href="/settle" class="btn-primary" style="white-space:nowrap">무료 체험 시작 →</a>
+  </div>
+  <div class="price-grid reveal">
+    <div class="plan">
+      <div class="plan-name">BASIC</div>
+      <div class="plan-price">29,000</div>
+      <div class="plan-unit">원 / 월</div>
+      <div class="plan-range">직원 10명까지</div>
+      <ul class="plan-list">
+        <li>자동 정산 계산</li><li>세금계산서·급여명세서</li><li>카카오톡 발송</li><li>OCR 자동인식</li>
+      </ul>
+      <a href="/settle" class="btn-ghost" style="display:block;text-align:center;font-size:13px">시작하기</a>
+    </div>
+    <div class="plan hot">
+      <div class="plan-hot">인기</div>
+      <div class="plan-name">STANDARD</div>
+      <div class="plan-price">59,000</div>
+      <div class="plan-unit">원 / 월</div>
+      <div class="plan-range">직원 30명까지</div>
+      <ul class="plan-list">
+        <li>BASIC 전체 기능</li><li>견적서·거래명세서</li><li>SMS·이메일·팩스</li><li>보안 QR 출퇴근</li><li>법정 문서 보관</li>
+      </ul>
+      <a href="/settle" class="btn-primary" style="display:block;text-align:center;font-size:13px">시작하기</a>
+    </div>
+    <div class="plan">
+      <div class="plan-name">PRO</div>
+      <div class="plan-price">99,000</div>
+      <div class="plan-unit">원 / 월</div>
+      <div class="plan-range">직원 100명까지</div>
+      <ul class="plan-list">
+        <li>STANDARD 전체</li><li>멀티 대리점 관리</li><li>영수증 OCR 경비</li><li>AI 이상감지</li>
+      </ul>
+      <a href="/settle" class="btn-ghost" style="display:block;text-align:center;font-size:13px">시작하기</a>
+    </div>
+    <div class="plan">
+      <div class="plan-name">ENTERPRISE</div>
+      <div class="plan-price" style="font-size:36px;padding-top:10px">협의</div>
+      <div class="plan-unit">맞춤 견적</div>
+      <div class="plan-range">100명 이상</div>
+      <ul class="plan-list">
+        <li>PRO 전체</li><li>API 연동</li><li>홈택스 세무</li><li>전담 온보딩</li>
+      </ul>
+      <a href="tel:051-711-3103" class="btn-ghost" style="display:block;text-align:center;font-size:13px">전화 문의</a>
+    </div>
+  </div>
+</div>
+
+<!-- CTA -->
+<section class="cta">
+  <div class="cta-glow"></div>
+  <div class="s-label reveal" style="position:relative">START NOW</div>
+  <h2 class="cta-h2 reveal"><span>AI</span>가 정산하는<br>시대가 왔습니다</h2>
+  <p class="cta-sub reveal">7일 무료 · 카드 불필요 · 언제든 해지</p>
+  <div class="reveal" style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;position:relative">
+    <a href="/settle" class="btn-primary" style="font-size:17px;padding:22px 64px">🚀 7일 무료 시작하기</a>
+    <a href="tel:051-711-3103" class="btn-ghost" style="font-size:17px;padding:22px 48px">📞 051-711-3103</a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<div class="footer-wrap">
+  <div class="footer">
     <div>
-      <div class="footer-brand">💰 DONWAY</div>
+      <div class="footer-brand">⬡ DONWAY</div>
       <div class="footer-info">
         엠비티아이 유한회사 | 사업자번호 373-86-02536<br>
         부산광역시 수영구 수영로 668, 607호<br>
@@ -537,68 +841,167 @@ footer{border-top:1px solid rgba(255,255,255,.06);padding:48px;display:flex;just
       <a href="#">→ 개인정보처리방침</a>
     </div>
     <div style="font-size:11px;color:var(--gray);align-self:flex-end">© 2026 MBTI Co., Ltd.</div>
-  </footer>
+  </div>
 </div>
 
 <script>
-// 파티클
-const pc=document.getElementById('particles');
-for(let i=0;i<25;i++){const p=document.createElement('div');p.className='particle';p.style.cssText=`left:${Math.random()*100}%;--dur:${7+Math.random()*8}s;--delay:${Math.random()*7}s;--drift:${(Math.random()-.5)*80}px`;pc.appendChild(p);}
+// ══ DONWAY 스토리 애니메이션 ══
+var storyTimer=null, progressTimer=null;
+var totalDuration=12000; // 12초
+var startTime=0;
 
-// QR 패턴 생성 함수
-function generateQR(){
-  const qr=document.getElementById('qrcode');
-  if(!qr)return;
-  qr.innerHTML='';
-  // 고정 모서리 패턴 + 랜덤 중간
-  const corners=[
-    0,0,0,1,1,1,0,
-    0,1,0,1,1,1,0,
-    0,0,0,1,0,1,0,
-    1,1,1,0,1,1,1,
-    0,1,0,1,0,0,0,
-    0,1,0,1,1,1,0,
-    0,0,0,1,1,1,0
-  ];
-  corners.forEach((v,i)=>{
-    const c=document.createElement('div');
-    const isCorner=i<7||(i%7===0&&i<28)||(i%7===6&&i<42)||(i>=42&&i<49);
-    const val=isCorner?v:Math.round(Math.random());
-    c.className='qr-cell'+(val?'':' w');
-    qr.appendChild(c);
-  });
+function typeText(el, text, speed, cb){
+  el.textContent='';
+  var i=0;
+  var t=setInterval(function(){
+    el.textContent+=text[i++];
+    if(i>=text.length){clearInterval(t);if(cb)cb();}
+  },speed);
 }
 
-// QR 타이머 (30초 카운트다운 + 패턴 갱신)
-let t=30;
-generateQR();
-setInterval(()=>{
-  t--;
-  if(t<=0){t=30;generateQR();}
-  const el=document.getElementById('qr-timer');
-  if(el){
-    el.textContent=t;
-    el.style.color=t<=10?'#ff6b6b':'#d4a017';
-  }
-},1000);
+function resetStory(){
+  clearTimeout(storyTimer);clearInterval(progressTimer);
+  document.getElementById('story-phase').textContent='BEFORE →';
+  document.getElementById('progress-bar').style.width='0';
+  document.getElementById('story-time').textContent='00:00';
+  document.getElementById('scene-before').style.opacity='1';
+  document.getElementById('scene-before').style.pointerEvents='auto';
+  document.getElementById('scene-transition').style.opacity='0';
+  document.getElementById('scene-after').style.opacity='0';
+  document.getElementById('logo-anim').style.opacity='0';
+  document.getElementById('logo-anim').style.transform='scale(.8)';
+  document.getElementById('logo-sub').textContent='';
+  document.getElementById('before-title').textContent='';
+  document.getElementById('after-title').textContent='';
+  document.getElementById('ai-bar').style.width='0';
+  document.getElementById('ai-pct').textContent='0%';
+  document.getElementById('after-cta').style.opacity='0';
+  document.querySelectorAll('.before-item').forEach(function(el){el.style.opacity='0';el.style.transform='translateY(10px)';});
+  document.querySelectorAll('.after-step').forEach(function(el){el.style.opacity='0';el.style.transform='translateX(-20px)';});
+  startTime=Date.now();
+  runStory();
+}
 
-// 숫자 카운터
-const obs=new IntersectionObserver(entries=>{
-  entries.forEach(e=>{
-    if(e.isIntersecting){
-      e.target.querySelectorAll('[data-target]').forEach(el=>{
-        const target=+el.dataset.target;let cur=0;
-        const step=Math.max(target/40,0.1);
-        const timer=setInterval(()=>{cur=Math.min(cur+step,target);el.textContent=Math.round(cur);if(cur>=target)clearInterval(timer);},30);
-      });obs.unobserve(e.target);
-    }
+function runStory(){
+  // 진행바
+  progressTimer=setInterval(function(){
+    var elapsed=Date.now()-startTime;
+    var pct=Math.min(elapsed/totalDuration*100,100);
+    document.getElementById('progress-bar').style.width=pct+'%';
+    var sec=Math.floor(elapsed/1000);
+    document.getElementById('story-time').textContent='00:'+String(sec).padStart(2,'0');
+    if(elapsed>=totalDuration){clearInterval(progressTimer);}
+  },50);
+
+  // BEFORE 타이핑
+  storyTimer=setTimeout(function(){
+    typeText(document.getElementById('before-title'),'수작업의 고통',80);
+    var items=document.querySelectorAll('.before-item');
+    items.forEach(function(el,i){
+      setTimeout(function(){el.style.opacity='1';el.style.transform='translateY(0)';},300+i*250);
+    });
+  },200);
+
+  // 트랜지션
+  storyTimer=setTimeout(function(){
+    document.getElementById('story-phase').textContent='→ DONWAY →';
+    document.getElementById('scene-before').style.opacity='0';
+    document.getElementById('scene-before').style.pointerEvents='none';
+    document.getElementById('scene-transition').style.opacity='1';
+    document.getElementById('scene-transition').style.pointerEvents='auto';
+    setTimeout(function(){
+      var logo=document.getElementById('logo-anim');
+      logo.style.opacity='1';logo.style.transform='scale(1)';
+      setTimeout(function(){
+        typeText(document.getElementById('logo-sub'),'돈의 방향을 자동화합니다',60);
+      },400);
+    },300);
+  },5000);
+
+  // AFTER
+  storyTimer=setTimeout(function(){
+    document.getElementById('story-phase').textContent='→ AFTER ✓';
+    document.getElementById('scene-transition').style.opacity='0';
+    document.getElementById('scene-transition').style.pointerEvents='none';
+    document.getElementById('scene-after').style.opacity='1';
+    document.getElementById('scene-after').style.pointerEvents='auto';
+    typeText(document.getElementById('after-title'),'3분으로 끝',80);
+    var steps=document.querySelectorAll('.after-step');
+    steps.forEach(function(el,i){
+      setTimeout(function(){el.style.opacity='1';el.style.transform='translateX(0)';},300+i*600);
+    });
+    setTimeout(function(){
+      document.getElementById('ai-bar').style.width='100%';
+      var n=0;
+      var t=setInterval(function(){
+        n=Math.min(n+4,100);
+        document.getElementById('ai-pct').textContent=n+'%';
+        if(n>=100)clearInterval(t);
+      },60);
+    },900);
+    setTimeout(function(){document.getElementById('after-cta').style.opacity='1';},2400);
+  },7500);
+
+  // 루프
+  storyTimer=setTimeout(function(){resetStory();},totalDuration+500);
+}
+
+// 자동 시작 (화면에 보일 때)
+var storyObs=new IntersectionObserver(function(entries){
+  entries.forEach(function(e){
+    if(e.isIntersecting){startTime=Date.now();runStory();storyObs.unobserve(e.target);}
   });
 },{threshold:.3});
-document.querySelectorAll('.stats-row').forEach(el=>obs.observe(el));
+var storyEl=document.getElementById('story-player');
+if(storyEl)storyObs.observe(storyEl);
+
+// FAQ 토글
+function toggleFaq(el){
+  const body=el.querySelector('.faq-body');
+  const arrow=el.querySelector('.faq-arrow');
+  const isOpen=body.style.display==='block';
+  document.querySelectorAll('.faq-body').forEach(b=>b.style.display='none');
+  document.querySelectorAll('.faq-arrow').forEach(a=>{a.textContent='+';a.style.transform='rotate(0)';});
+  if(!isOpen){body.style.display='block';arrow.textContent='×';arrow.style.transform='rotate(90deg)';}
+}
+
+// 커스텀 커서
+const cur=document.getElementById('cursor');
+const dot=document.getElementById('cursorDot');
+let mx=0,my=0,cx=0,cy=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;dot.style.left=mx+'px';dot.style.top=my+'px';});
+(function animCursor(){cx+=(mx-cx)*.15;cy+=(my-cy)*.15;cur.style.left=(cx-10)+'px';cur.style.top=(cy-10)+'px';requestAnimationFrame(animCursor);})();
+document.querySelectorAll('a,button').forEach(el=>{
+  el.addEventListener('mouseenter',()=>{cur.style.transform='scale(2)';cur.style.opacity='.5';});
+  el.addEventListener('mouseleave',()=>{cur.style.transform='scale(1)';cur.style.opacity='1';});
+});
 
 // 스크롤 reveal
-const ro=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');ro.unobserve(e.target);}});},{threshold:.12});
-document.querySelectorAll('.reveal').forEach(el=>ro.observe(el));
+const ro=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('on');ro.unobserve(e.target);}});},{threshold:.12});
+document.querySelectorAll('.reveal,.reveal-l,.reveal-r').forEach(el=>ro.observe(el));
+
+// 히어로 카운터
+const co=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){
+  e.target.querySelectorAll('[data-target]').forEach(el=>{
+    const t=+el.dataset.target;let c=0;
+    const s=Math.max(t/50,.05);
+    const ti=setInterval(()=>{c=Math.min(c+s,t);el.textContent=Math.round(c);if(c>=t)clearInterval(ti);},25);
+  });co.unobserve(e.target);
+}});},{threshold:.3});
+document.querySelector('.hero-stats')&&co.observe(document.querySelector('.hero-stats'));
+
+// 부드러운 네비 스크롤 (수정됨)
+document.querySelectorAll('a[href^="#"]').forEach(a=>{
+  a.addEventListener('click',e=>{
+    const id=a.getAttribute('href');
+    const el=document.querySelector(id);
+    if(el){e.preventDefault();el.scrollIntoView({behavior:'smooth',block:'start'});}
+  });
+});
+
+// QR 타이머 (있는 경우)
+let qrt=30;
+setInterval(()=>{qrt--;if(qrt<=0)qrt=30;const el=document.getElementById('qr-timer');if(el)el.textContent=qrt;},1000);
 </script>
 </body>
 </html>
