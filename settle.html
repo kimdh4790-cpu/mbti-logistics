@@ -1794,20 +1794,150 @@ function _settleRow(x){
     +'</td>'
     +'</tr>';
 }
+// ══ 발송 모달 ══
 function sendOne(id){
   if(!id||id==='undefined'){toast('❌ ID 없음');return;}
-  if(!_db)return;
+  var x=(_settleCache||[]).find(function(s){return s.id===id||s.fbId===id;});
+  if(!x){toast('❌ 데이터 없음');return;}
+  openSendModal(x);
+}
+
+function openSendModal(x){
+  var r=calcNet(x);
+  var net=r.net||0;
+  var emp=(r.emp||0)+(r.work||0);
+  var ct=x.coupangTotal||(((x.damt||0)+(x.ramt||0)+(x.fresh||0)+(x.inc||0)+(x.nocont||0)))||0;
+  var vatIncome=ct?Math.round(ct*1.1):Math.round((r.income||0)*1.1);
+  var name=x.driver||x.userId||'기사';
+  var month=x.month||'';
+  var phone=x.phone||x.driverPhone||'';
+  var email=x.email||x.driverEmail||'';
+  var docId=x.id||x.fbId||'';
+
+  var msgArr=['[DONWAY 정산명세서]','기사: '+name,'정산월: '+month,'총수익(VAT포함): '+fmt(vatIncome)+'원','공제합계: -'+fmt(emp)+'원','─────────────','실지급: '+fmt(net)+'원','','문의: 051-711-3103','엠비티아이 유한회사'];
+  var msg=msgArr.join('\n');
+  var msgEnc=encodeURIComponent(msg);
+  var subjectEnc=encodeURIComponent('[DONWAY] '+month+' 정산명세서 - '+name);
+
+  // 기존 모달 제거
+  var exist=document.getElementById('send-modal-ov');
+  if(exist)exist.remove();
+
+  var ov=document.createElement('div');
+  ov.id='send-modal-ov';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px';
+
+  var box=document.createElement('div');
+  box.style.cssText='background:var(--bg2);border-radius:var(--r);padding:28px;width:100%;max-width:460px;box-shadow:0 20px 60px rgba(0,0,0,.4)';
+
+  // 헤더
+  var hdr=document.createElement('div');
+  hdr.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:20px';
+  hdr.innerHTML='<div style="font-size:16px;font-weight:700">&#128228; 정산 발송</div>';
+  var closeBtn=document.createElement('button');
+  closeBtn.textContent='✕';
+  closeBtn.style.cssText='background:none;border:none;font-size:18px;cursor:pointer;color:var(--text3)';
+  closeBtn.onclick=function(){ov.remove();};
+  hdr.appendChild(closeBtn);
+  box.appendChild(hdr);
+
+  // 요약
+  var summary=document.createElement('div');
+  summary.style.cssText='background:var(--bg3);border-radius:10px;padding:16px;margin-bottom:20px';
+  summary.innerHTML='<div style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--purple)">'+esc(name)+' · '+esc(month)+'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+    +'<div><div style="font-size:10px;color:var(--text3)">총수익(VAT포함)</div><div style="font-size:14px;font-weight:700;color:var(--green)">₩'+fmt(vatIncome)+'</div></div>'
+    +'<div><div style="font-size:10px;color:var(--text3)">실지급</div><div style="font-size:14px;font-weight:700;color:var(--purple)">₩'+fmt(net)+'</div></div>'
+    +'</div>';
+  box.appendChild(summary);
+
+  // 채널 라벨
+  var lbl=document.createElement('div');
+  lbl.style.cssText='font-size:12px;font-weight:700;margin-bottom:12px;color:var(--text3)';
+  lbl.textContent='발송 방법 선택';
+  box.appendChild(lbl);
+
+  // 버튼들
+  var channels=[
+    {icon:'💬',name:'카카오톡 공유',sub:'카카오톡 앱으로 전송',bg:'#FEE500',color:'#3A1D1D',fn:function(){sendKakao(msgEnc);}},
+    {icon:'📱',name:'문자(SMS) 발송',sub:phone||'전화번호 없음 - 기사정보에 추가',bg:'var(--blue)',color:'#fff',fn:function(){sendSMS(msgEnc,encodeURIComponent(phone));}},
+    {icon:'📧',name:'이메일 발송',sub:email||'이메일 없음 - 기사정보에 추가',bg:'#059669',color:'#fff',fn:function(){sendEmailMsg(encodeURIComponent(email),subjectEnc,msgEnc);}}
+  ];
+  var btnWrap=document.createElement('div');
+  btnWrap.style.cssText='display:flex;flex-direction:column;gap:8px';
+  channels.forEach(function(ch){
+    var btn=document.createElement('button');
+    btn.style.cssText='display:flex;align-items:center;gap:12px;padding:14px 16px;background:'+ch.bg+';color:'+ch.color+';border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:700;width:100%;text-align:left';
+    btn.innerHTML='<span style="font-size:20px">'+ch.icon+'</span><div><div>'+ch.name+'</div><div style="font-size:10px;font-weight:400;opacity:.7">'+ch.sub+'</div></div>';
+    btn.onclick=ch.fn;
+    btnWrap.appendChild(btn);
+  });
+  box.appendChild(btnWrap);
+
+  // 발송완료 버튼
+  var doneBtn=document.createElement('button');
+  doneBtn.style.cssText='width:100%;margin-top:16px;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text2);font-size:13px;cursor:pointer';
+  doneBtn.textContent='✅ 발송완료로 표시하기';
+  doneBtn.onclick=function(){markSent(docId);};
+  box.appendChild(doneBtn);
+
+  ov.appendChild(box);
+  document.body.appendChild(ov);
+  ov.addEventListener('click',function(e){if(e.target===ov)ov.remove();});
+}
+
+function sendKakao(msgEnc){
+  var msg=decodeURIComponent(msgEnc);
+  if(window.Kakao&&window.Kakao.isInitialized()){
+    window.Kakao.Share.sendDefault({
+      objectType:'text',
+      text:msg,
+      link:{mobileWebUrl:'https://donway.ai.kr',webUrl:'https://donway.ai.kr'}
+    });
+  } else {
+    // 카카오 SDK 없으면 클립보드 복사
+    navigator.clipboard.writeText(msg).then(function(){
+      toast('📋 메시지 복사됨! 카카오톡에 붙여넣기 하세요');
+    }).catch(function(){toast('카카오톡을 열어 직접 붙여넣기 하세요');});
+  }
+}
+
+function sendSMS(msgEnc,phoneEnc){
+  var msg=decodeURIComponent(msgEnc);
+  var phone=decodeURIComponent(phoneEnc);
+  if(!phone){
+    navigator.clipboard.writeText(msg).then(function(){
+      toast('📋 메시지 복사됨! 문자앱에 붙여넣기 하세요');
+    });
+    return;
+  }
+  var link='sms:'+phone+'?body='+msgEnc;
+  window.open(link,'_self');
+}
+
+function sendEmailMsg(emailEnc,subjectEnc,bodyEnc){
+  var email=decodeURIComponent(emailEnc);
+  if(!email){
+    navigator.clipboard.writeText(decodeURIComponent(bodyEnc)).then(function(){
+      toast('📋 메시지 복사됨! 이메일앱에 붙여넣기 하세요');
+    });
+    return;
+  }
+  var link='mailto:'+email+'?subject='+subjectEnc+'&body='+bodyEnc;
+  window.open(link,'_self');
+}
+
+function markSent(id){
+  if(!id||!_db)return;
   _db.collection('settlements').doc(id).update({taxSent:true,taxSentAt:new Date().toISOString()})
     .then(function(){
       var x=(_settleCache||[]).find(function(s){return s.id===id||s.fbId===id;});
-      if(x){x.taxSent=true;}
-      toast('✅ 전달완료 처리');
-      // 해당 행의 상태 배지 갱신
+      if(x)x.taxSent=true;
       var tr=document.querySelector('[data-id="'+id+'"]');
-      if(tr){
-        var badge=tr.closest('tr').querySelector('.badge');
-        if(badge){badge.className='badge b-green';badge.textContent='전달완료';}
-      }
+      if(tr){var badge=tr.closest('tr').querySelector('.badge');if(badge){badge.className='badge b-green';badge.textContent='전달완료';}}
+      toast('✅ 발송완료 처리');
+      var ov=document.getElementById('send-modal-ov');
+      if(ov)ov.remove();
     }).catch(function(e){toast('❌ '+e.message);});
 }
 
