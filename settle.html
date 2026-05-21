@@ -274,7 +274,12 @@ function getCampByRoute(route){
 }
 
 // _getIncSetting 간단 대체 (settle.html용)
-function _getIncSetting(driver,route){return{on:true,rate:G_PRICES&&G_PRICES.freshbag_inc||25};}
+function _getIncSetting(driver,route){
+  var k=_incKey(driver,route);
+  var stored=localStorage.getItem(k);
+  if(stored){try{return JSON.parse(stored);}catch(e){}}
+  return{on:true,rate:G_PRICES&&G_PRICES.freshbag_inc||25};
+}
 
 
 // ██ 업종별 정산 엔진 (DONWAY Multi-Industry) ██
@@ -881,9 +886,9 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
 </script>
 
 <!-- Firebase v8 SDK -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
 // ══ 캠프별 취합 UI (parseCoupangExcel 이후 호출) ══
 function renderCpPending(){
@@ -3071,7 +3076,7 @@ function updSECalc(){
     var diff=supplyAmt-excelTotal;
     if(excelTotal>0&&Math.abs(diff)>1000){
       banner.style.display='block';
-      banner.innerHTML='⚠️ 엑셀 총금액과 계산값 불일치 (VAT제외 기준)<br>'
+      banner.innerHTML='⚠️ 엑셀 총금액과 계산값 불일치<br><span style="font-size:10px;color:#78350f">💡 엑셀은 VAT포함 총액, 계산값은 공급가액(÷1.1) 기준입니다. 고용·산재 공제 후 실지급액과는 다릅니다.</span><br>'
         +'<span style="font-weight:500">엑셀: ₩'+fmt(excelTotal)+' / 계산: ₩'+fmt(supplyAmt)+' / <strong>차이: '+(diff>=0?'+':'')+fmt(diff)+'원</strong></span>';
     } else { banner.style.display='none'; }
   }
@@ -3120,7 +3125,7 @@ function _saveSECurrent(){
   var month=(document.getElementById('se-month')||{value:''}).value.trim();
   if(!driver||!month){toast('❌ 기사명·정산월 필수');return;}
   if(!_db||!_CU){toast('❌ 로그인 필요');return;}
-  function gv(eid){var el=document.getElementById(eid);return el?+el.value||0:0;}
+  
   var fresh=gv('se-fresh'),dmg=gv('se-dmg'),inc=gv('se-inc');
   var etcPlus=gv('se-etc-plus'),etcMinus=gv('se-etc-minus');
   var dcnt=gv('se-dcnt'),rcnt=gv('se-rcnt'),finc=gv('se-finc');
@@ -3705,9 +3710,19 @@ async function _ocrAnalyze(){
         ]}]
       })
     });
+    if(!resp.ok){
+      var errData=await resp.json().catch(()=>({}));
+      throw new Error('API 오류 '+(errData.error?.message||resp.status));
+    }
     var data=await resp.json();
-    var text=(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
-    var json=JSON.parse(text.replace(/```json|```/g,'').trim());
+    if(data.error) throw new Error(data.error.message||'API 오류');
+    var text=(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('').trim();
+    if(!text) throw new Error('응답이 비어있습니다 — 이미지를 다시 업로드해주세요');
+    var cleaned=text.replace(/```json|```/g,'').trim();
+    // JSON 블록만 추출 (앞뒤 설명 있어도 처리)
+    var jsonMatch=cleaned.match(/\{[\s\S]+\}/);
+    if(!jsonMatch) throw new Error('JSON 형식 응답 없음 — 더 선명한 이미지로 시도해주세요');
+    var json=JSON.parse(jsonMatch[0]);
     var map={name:'edr-name',bizNum:'edr-biznum',bizName:'edr-bizname',bizRep:'edr-bizrep',bizAddr:'edr-bizaddr',bizType:'edr-biztype',bizItem:'edr-bizitem'};
     var filled=0;
     Object.keys(map).forEach(k=>{
@@ -3719,7 +3734,12 @@ async function _ocrAnalyze(){
     setTimeout(()=>{var mo=document.getElementById('mo-ocr-upload');if(mo)mo.remove();},1500);
   }catch(e){
     console.error('OCR 오류:',e);
-    _ocrSetStatus('❌ 분석 실패 — 선명한 이미지로 다시 시도해주세요','rgba(239,68,68,.1)','#ef4444');
+    var errMsg = e.message||'알 수 없는 오류';
+    // API 키 오류 안내
+    if(errMsg.includes('401')||errMsg.includes('Unauthorized')) errMsg='API 키 오류 — 관리자에게 문의';
+    else if(errMsg.includes('429')) errMsg='요청 한도 초과 — 잠시 후 재시도';
+    else if(errMsg.includes('500')) errMsg='서버 오류 — 잠시 후 재시도';
+    _ocrSetStatus('❌ '+errMsg,'rgba(239,68,68,.1)','#ef4444');
     if(btn){btn.disabled=false;btn.textContent='🔍 다시 시도';}
   }
 }
@@ -3743,20 +3763,20 @@ async function _ocrCompressImage(file, maxW, quality){
 
 
 function saveDriver(id){
-  function gv(eid){return (document.getElementById(eid)||{value:''}).value.trim();}
+  function gvs(eid){return (document.getElementById(eid)||{value:''}).value.trim();}
   var payload={
-    name:gv('edr-name')||'',
-    userId:stripDf(gv('edr-uid')||''),
-    camp:gv('edr-camp')||'',
-    phone:gv('edr-phone')||'',
-    email:gv('edr-email')||'',
+    name:gvs('edr-name')||'',
+    userId:stripDf(gvs('edr-uid')||''),
+    camp:gvs('edr-camp')||'',
+    phone:gvs('edr-phone')||'',
+    email:gvs('edr-email')||'',
     is_active:(document.getElementById('edr-active')||{value:'true'}).value!=='false',
-    bizNum:gv('edr-biznum')||'',
-    bizName:gv('edr-bizname')||'',
-    bizRep:gv('edr-bizrep')||'',
-    bizAddr:gv('edr-bizaddr')||'',
-    bizType:gv('edr-biztype')||'',
-    bizItem:gv('edr-bizitem')||''
+    bizNum:gvs('edr-biznum')||'',
+    bizName:gvs('edr-bizname')||'',
+    bizRep:gvs('edr-bizrep')||'',
+    bizAddr:gvs('edr-bizaddr')||'',
+    bizType:gvs('edr-biztype')||'',
+    bizItem:gvs('edr-bizitem')||''
   };
   _db.collection('drivers').doc(id).update(payload).then(function(){
     var mo=document.getElementById('mo-edit-dr');if(mo)mo.remove();
@@ -5275,7 +5295,7 @@ function _showUploadResult(month,added,updated,newDrvCnt,routeCnt,newDrivers,lef
         errLines+='<tr style="border-top:2px solid #f59e0b;background:#fef3c7">'          +'<td style="padding:4px 6px;font-weight:700">Raw 시트 계산</td>'          +'<td style="padding:4px 6px;text-align:right;font-family:monospace">₩'+fmt2(ev.excelTotal)+'</td>'          +'<td style="padding:4px 6px;text-align:right;font-family:monospace">₩'+fmt2(ev.rawCalc)+'</td>'          +'<td style="padding:4px 6px;text-align:right;font-family:monospace;font-weight:800;color:#b45309">'+rs+fmt2(ev.diffRaw)+'</td>'          +'</tr>';
       }
       errLines+='</table>';
-      errBanner.innerHTML='<div style="font-size:13px;font-weight:800;color:#92400e;margin-bottom:2px">⚠️ 엑셀 항목별 금액 불일치 감지! ('+errItems.length+'개 항목)</div>'        +'<div style="font-size:10px;color:#78350f;margin-bottom:4px">엑셀 합계행 vs 개별 합산 비교 — 쿠팡 원본 파일을 확인하세요.</div>'        +errLines;
+      errBanner.innerHTML='<div style="font-size:13px;font-weight:800;color:#92400e;margin-bottom:2px">⚠️ 엑셀 항목별 금액 불일치 감지! ('+errItems.length+'개 항목)</div>'        +'<div style="font-size:10px;color:#78350f;margin-bottom:4px">📌 왜 차이가 날까요? ① 반품/취소 건이 별도 시트에 집계 ② 날짜 범위가 두 달에 걸침 ③ 엑셀 파일 수동 수정. 정산 금액은 개별 행 기준으로 계산됩니다.</div>'        +errLines;
       d.appendChild(errBanner);
     } else {
       var okBanner=document.createElement('div');

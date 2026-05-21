@@ -142,13 +142,18 @@ export default {
     const hostname = url.hostname;
 
     // ★ 루트 접속 → 랜딩페이지 리라이트 (URL 유지, workers.dev 제외)
-    if ((path === '/' || path === '') && !hostname.includes('workers.dev')) {
+    if ((path === '/' || path === '' || path === '/donway_landing' || path === '/donway_landing/') && !hostname.includes('workers.dev')) {
       const landingUrl = new URL('/donway_landing.html', url);
       const landingResp = await env.ASSETS.fetch(new Request(landingUrl.toString(), request));
       return new Response(landingResp.body, {
         status: landingResp.status,
         headers: landingResp.headers
       });
+    }
+
+    // favicon 404/500 방지
+    if (path === '/favicon.ico' || path === '/favicon.png') {
+      return new Response('', { status: 204 });
     }
 
     if (method === 'OPTIONS') {

@@ -637,32 +637,31 @@ async function _decodeQR(file){
 }
 
 async function _doOCR(file){
-  var AK=(window.__AK||'').trim();
-  if(!AK){
-    try{var _kr=await fetch('/get-label-key');var _kd=await _kr.json();AK=(_kd.k||'').trim();}catch(e){}
-  }
-  if(!AK) throw new Error('API 키 없음');
+  // /claude-ocr 프록시 경유 (API 키 서버 보관)
   var b64=await new Promise(function(res,rej){
     var r=new FileReader();
     r.onload=function(e){res(e.target.result.split(',')[1]);};
     r.onerror=rej;
     r.readAsDataURL(file);
   });
-  var resp=await fetch('https://api.anthropic.com/v1/messages',{
+  var resp=await fetch('/claude-ocr',{
     method:'POST',
-    headers:{'Content-Type':'application/json','x-api-key':AK,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
-      model:'claude-3-5-haiku-20241022',max_tokens:150,
+      model:'claude-haiku-4-5-20251001',max_tokens:200,
       messages:[{role:'user',content:[
         {type:'image',source:{type:'base64',media_type:file.type||'image/jpeg',data:b64}},
-        {type:'text',text:'쿠팡 배송 라벨에서 ★ 뒤 노선번호(예:812 B01, 101a)와 캠프명(예:부산2)을 추출하라.\nJSON만 반환: {"route":"...","camp":"..."}\n없으면 null. 다른 텍스트 없이 JSON만.'}
+        {type:'text',text:'쿠팡 배송 라벨에서 ★ 뒤 노선번호(예:812 B01, 101a)와 캠프명(예:부산2)을 추출하라.\nJSON만 반환: {\"route\":\"...\",\"camp\":\"...\"}\n없으면 null. 다른 텍스트 없이 JSON만.'}
       ]}]
     })
   });
-  if(!resp.ok){var e=await resp.json().catch(function(){return{};});throw new Error(JSON.stringify(e));}
+  if(!resp.ok){var ed=await resp.json().catch(function(){return{};});throw new Error('OCR 서버 오류 '+(ed.error||resp.status));}
   var data=await resp.json();
-  var text=(data.content&&data.content[0]&&data.content[0].text)||'{}';
-  try{return JSON.parse(text.replace(/```json|```/g,'').trim());}catch(e){return {};}
+  if(data.error) throw new Error(data.error.message||'API 오류');
+  var text=(data.content&&data.content[0]&&data.content[0].text)||'';
+  if(!text) return {};
+  var m=text.match(/\{[\s\S]+\}/);
+  try{return m?JSON.parse(m[0]):{};}catch(e){return {};}
 }
 
 // ── 유틸 ──
@@ -893,7 +892,9 @@ function _genQRToken(camp){
   var payload=_attCompany+':'+camp+':'+windowId+':'+_attInterval;
   // 간단 해시 (HMAC 대용)
   var hash=_simpleHash(payload+_attSecret);
-  return 'DONWAY:'+btoa(payload+':'+hash).replace(/=/g,'');
+  // btoa는 Latin1만 지원 → UTF-8 safe 인코딩
+  var safeStr = encodeURIComponent(payload+':'+hash).replace(/%([0-9A-F]{2})/g,function(_,p){return String.fromCharCode(parseInt(p,16));});
+  return 'DONWAY:'+btoa(safeStr).replace(/=/g,'');
 }
 function _simpleHash(str){
   var h=0;
@@ -903,7 +904,8 @@ function _simpleHash(str){
 function _parseQRToken(token){
   if(!token||!token.startsWith('DONWAY:'))return null;
   try{
-    var decoded=atob(token.slice(7)+'==');
+    var b64 = token.slice(7)+'==';
+    var decoded = decodeURIComponent(atob(b64).split('').map(function(c){return '%'+('00'+c.charCodeAt(0).toString(16)).slice(-2);}).join(''));
     var parts=decoded.split(':');
     if(parts.length<5)return null;
     return{company:parts[0],camp:parts[1],windowId:parseInt(parts[2]),interval:parseInt(parts[3]),hash:parts[4]};
@@ -1160,7 +1162,7 @@ function loadDrvLog(name,date){
     }).catch(function(){});
 }
 
-function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
 
 // 초기 탭: 배송 스캔 숨기고 출퇴근 탭 표시
 document.addEventListener('DOMContentLoaded',function(){

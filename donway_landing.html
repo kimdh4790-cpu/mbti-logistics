@@ -84,6 +84,10 @@ section{padding:100px 24px;max-width:1200px;margin:0 auto}
 .s-title{font-size:clamp(28px,4vw,48px);font-weight:900;margin-bottom:16px;line-height:1.1;letter-spacing:-1px}
 .s-sub{font-size:16px;color:var(--gray);max-width:560px;line-height:1.8}
 .reveal{opacity:0;transform:translateY(40px);transition:opacity .7s ease,transform .7s ease}
+.reveal.active{opacity:1;transform:translateY(0)}
+.reveal.delay-1{transition-delay:.1s}
+.reveal.delay-2{transition-delay:.2s}
+.reveal.delay-3{transition-delay:.3s}
 .reveal.visible{opacity:1;transform:translateY(0)}
 .reveal-delay-1{transition-delay:.1s}
 .reveal-delay-2{transition-delay:.2s}
@@ -273,6 +277,17 @@ footer{border-top:1px solid var(--border);padding:48px 24px 32px;max-width:1200p
 
 .fc svg,.fc-wide-img svg{transition:transform .6s cubic-bezier(.23,1,.32,1);}
 .fc:hover svg,.fc:hover .fc-wide-img svg{transform:scale(1.04);}
+
+/* 네비 스크롤 효과 */
+.nav-scrolled{background:rgba(5,10,20,.95)!important;backdrop-filter:blur(20px);box-shadow:0 1px 0 rgba(255,255,255,.06)}
+/* fc hover */
+.fc{cursor:default}
+/* 모바일 히어로 */
+@media(max-width:600px){
+  .hero-title{font-size:clamp(28px,10vw,52px)}
+  .fc-grid{grid-template-columns:1fr!important}
+  .fc.wide{grid-column:span 1!important}
+}
 </style>
 </head>
 <body>
@@ -911,3 +926,166 @@ footer{border-top:1px solid var(--border);padding:48px 24px 32px;max-width:1200p
     </div>
 
 
+
+<script>
+(function(){
+'use strict';
+
+/* ── 1. 네비 스크롤 ── */
+var nav = document.getElementById('navbar');
+function onScroll(){
+  if(window.scrollY > 40) nav.classList.add('nav-scrolled');
+  else nav.classList.remove('nav-scrolled');
+}
+window.addEventListener('scroll', onScroll, {passive:true});
+
+/* ── 2. Reveal 스크롤 애니메이션 ── */
+var revealEls = document.querySelectorAll('.reveal');
+var io = new IntersectionObserver(function(entries){
+  entries.forEach(function(e){
+    if(e.isIntersecting){ e.target.classList.add('active'); io.unobserve(e.target); }
+  });
+}, {threshold:0.1, rootMargin:'0px 0px -40px 0px'});
+revealEls.forEach(function(el){ io.observe(el); });
+
+/* ── 3. Hero Canvas 파티클 ── */
+var canvas = document.getElementById('hero-canvas');
+if(canvas){
+  var ctx = canvas.getContext('2d');
+  var W, H, dots = [];
+  function resize(){
+    W = canvas.width  = canvas.offsetWidth;
+    H = canvas.height = canvas.offsetHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize, {passive:true});
+
+  // 도트 생성
+  for(var i=0;i<70;i++){
+    dots.push({
+      x: Math.random()*W, y: Math.random()*H,
+      vx:(Math.random()-.5)*.4, vy:(Math.random()-.5)*.4,
+      r: Math.random()*1.5+.5,
+      a: Math.random()*.6+.2
+    });
+  }
+
+  var mouse = {x:-9999, y:-9999};
+  canvas.parentElement.addEventListener('mousemove', function(e){
+    var rect = canvas.getBoundingClientRect();
+    mouse.x = e.clientX - rect.left;
+    mouse.y = e.clientY - rect.top;
+  }, {passive:true});
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    // 연결선
+    for(var i=0;i<dots.length;i++){
+      for(var j=i+1;j<dots.length;j++){
+        var dx=dots[i].x-dots[j].x, dy=dots[i].y-dots[j].y;
+        var dist=Math.sqrt(dx*dx+dy*dy);
+        if(dist<120){
+          ctx.beginPath();
+          ctx.strokeStyle='rgba(0,212,255,'+((.12*(1-dist/120))).toFixed(3)+')';
+          ctx.lineWidth=.5;
+          ctx.moveTo(dots[i].x,dots[i].y);
+          ctx.lineTo(dots[j].x,dots[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+    // 도트
+    dots.forEach(function(d){
+      d.x+=d.vx; d.y+=d.vy;
+      if(d.x<0||d.x>W) d.vx*=-1;
+      if(d.y<0||d.y>H) d.vy*=-1;
+      // 마우스 반발
+      var mx=d.x-mouse.x, my=d.y-mouse.y;
+      var md=Math.sqrt(mx*mx+my*my);
+      if(md<80){ d.vx+=mx/md*.08; d.vy+=my/md*.08; }
+      // 속도 제한
+      var spd=Math.sqrt(d.vx*d.vx+d.vy*d.vy);
+      if(spd>1.2){d.vx=d.vx/spd*1.2;d.vy=d.vy/spd*1.2;}
+      ctx.beginPath();
+      ctx.arc(d.x,d.y,d.r,0,Math.PI*2);
+      ctx.fillStyle='rgba(0,212,255,'+d.a+')';
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+/* ── 4. 숫자 카운팅 애니메이션 (stats) ── */
+function animCount(el){
+  var target = parseInt(el.dataset.count||el.textContent);
+  if(isNaN(target)) return;
+  var unit = el.dataset.unit||'';
+  var start = 0, duration = 1500, begin = null;
+  function step(ts){
+    if(!begin) begin = ts;
+    var prog = Math.min((ts-begin)/duration, 1);
+    var ease = 1-Math.pow(1-prog,3);
+    el.textContent = Math.round(start+(target-start)*ease) + unit;
+    if(prog<1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+var statsIO = new IntersectionObserver(function(entries){
+  entries.forEach(function(e){
+    if(e.isIntersecting){
+      e.target.querySelectorAll('[data-count]').forEach(animCount);
+      statsIO.unobserve(e.target);
+    }
+  });
+},{threshold:0.3});
+document.querySelectorAll('.stats-grid,.stat').forEach(function(el){ statsIO.observe(el); });
+
+/* ── 5. FAQ 아코디언 ── */
+document.querySelectorAll('.faq-q').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    var item = btn.closest('.faq-item');
+    var ans  = item.querySelector('.faq-a');
+    var isOpen = item.classList.contains('open');
+    // 전체 닫기
+    document.querySelectorAll('.faq-item.open').forEach(function(i){
+      i.classList.remove('open');
+      var a = i.querySelector('.faq-a');
+      if(a) a.style.maxHeight='0';
+    });
+    if(!isOpen && ans){
+      item.classList.add('open');
+      ans.style.maxHeight = ans.scrollHeight+'px';
+    }
+  });
+});
+
+/* ── 6. 모바일 네비 햄버거 ── */
+var hamburger = document.getElementById('nav-hamburger');
+var navLinks  = document.querySelector('.nav-links');
+if(hamburger && navLinks){
+  hamburger.addEventListener('click', function(){
+    navLinks.classList.toggle('open');
+  });
+}
+
+/* ── 7. 부드러운 스크롤 ── */
+document.querySelectorAll('a[href^="#"]').forEach(function(a){
+  a.addEventListener('click', function(e){
+    var id = a.getAttribute('href').slice(1);
+    var el = document.getElementById(id);
+    if(el){ e.preventDefault(); el.scrollIntoView({behavior:'smooth', block:'start'}); }
+    if(navLinks) navLinks.classList.remove('open');
+  });
+});
+
+/* ── 초기 reveal (이미 뷰포트 안에 있는 것들) ── */
+setTimeout(function(){
+  document.querySelectorAll('.reveal').forEach(function(el){
+    var rect = el.getBoundingClientRect();
+    if(rect.top < window.innerHeight * 0.95) el.classList.add('active');
+  });
+}, 100);
+
+})();
+</script>
