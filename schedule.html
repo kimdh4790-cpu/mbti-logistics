@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#030912">
+<title>DONWAY — 근무 스케줄러</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{--bg:#030912;--bg2:#060f1f;--bg3:#0a1628;--blue:#0066ff;--cyan:#00d4ff;--green:#00ff88;--red:#ef4444;--yellow:#f59e0b;--purple:#8b5cf6;--gray:#5a7299;--white:#e8f4ff;--border:rgba(0,212,255,.12);--border2:rgba(0,102,255,.18)}
+body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun Gothic',sans-serif;min-height:100vh}
+.wrap{max-width:700px;margin:0 auto;padding:0 0 90px}
+.topbar{background:rgba(3,9,18,.97);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;backdrop-filter:blur(20px)}
+.logo{font-size:14px;font-weight:900;letter-spacing:3px}.logo span{color:var(--cyan)}
+
+/* 주간 네비 */
+.week-nav{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:var(--bg2);border-bottom:1px solid var(--border)}
+.week-nav-btn{padding:8px 14px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;color:var(--cyan);font-size:13px;font-weight:700;cursor:pointer;transition:.2s}
+.week-nav-btn:hover{border-color:var(--cyan)}
+.week-title{font-size:14px;font-weight:900;text-align:center;color:var(--white)}
+.week-sub{font-size:10px;color:var(--gray);text-align:center;margin-top:2px}
+
+/* 거점 필터 탭 */
+.camp-tabs{display:flex;gap:6px;padding:10px 20px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.camp-tabs::-webkit-scrollbar{display:none}
+.camp-tab{padding:6px 14px;border-radius:20px;border:1.5px solid var(--border2);background:var(--bg2);color:var(--gray);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;transition:.2s;flex-shrink:0}
+.camp-tab.on{border-color:var(--cyan);color:var(--cyan);background:rgba(0,212,255,.08)}
+
+/* 주간 테이블 */
+.schedule-table-wrap{overflow-x:auto;margin:0 20px;border-radius:14px;border:1px solid var(--border2);-webkit-overflow-scrolling:touch}
+.schedule-table{border-collapse:collapse;min-width:620px;width:100%}
+.sch-th{background:var(--bg3);padding:10px 6px;font-size:10px;font-weight:700;color:var(--gray);text-align:center;border-right:1px solid var(--border);white-space:nowrap;letter-spacing:.5px;position:sticky;top:0}
+.sch-th.today{color:var(--cyan)}
+.sch-th-name{background:var(--bg3);padding:10px 12px;font-size:10px;font-weight:700;color:var(--gray);text-align:left;border-right:1px solid var(--border);position:sticky;left:0;z-index:2;min-width:72px}
+.sch-td-name{background:var(--bg2);padding:10px 12px;font-size:12px;font-weight:700;border-bottom:1px solid var(--border);border-right:1px solid var(--border);position:sticky;left:0;z-index:1;min-width:72px;white-space:nowrap}
+.sch-td{padding:4px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);text-align:center;vertical-align:middle;cursor:pointer;transition:.15s;min-width:72px}
+.sch-td:last-child{border-right:none}
+.sch-td:hover{background:rgba(0,212,255,.06)}
+.sch-td.today-col{background:rgba(0,212,255,.03)}
+
+/* 근무 셀 */
+.shift-cell{border-radius:6px;padding:5px 4px;font-size:10px;font-weight:700;cursor:pointer;transition:.2s;line-height:1.3;user-select:none}
+.shift-morning{background:rgba(0,255,136,.12);color:var(--green);border:1px solid rgba(0,255,136,.2)}
+.shift-afternoon{background:rgba(0,102,255,.12);color:var(--cyan);border:1px solid rgba(0,102,255,.2)}
+.shift-night{background:rgba(139,92,246,.12);color:var(--purple);border:1px solid rgba(139,92,246,.2)}
+.shift-off{background:rgba(239,68,68,.08);color:var(--red);border:1px solid rgba(239,68,68,.15)}
+.shift-empty{background:transparent;color:var(--gray);border:1px dashed rgba(90,114,153,.2);font-size:18px}
+
+/* 범례 */
+.legend{display:flex;gap:10px;padding:10px 20px;flex-wrap:wrap}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--gray)}
+.leg-dot{width:10px;height:10px;border-radius:3px}
+
+/* 모달 */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9000;display:none;align-items:flex-end;justify-content:center}
+.modal.show{display:flex}
+.mbox{background:var(--bg2);border:1px solid var(--border2);border-radius:20px 20px 0 0;padding:24px 20px;width:100%;max-width:480px;animation:slideUp .3s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.shift-pick{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.shift-option{padding:14px;border-radius:10px;border:2px solid var(--border2);background:var(--bg3);cursor:pointer;text-align:center;transition:.2s}
+.shift-option:hover{transform:scale(1.02)}
+.shift-option.sel{border-color:var(--cyan);box-shadow:0 0 12px rgba(0,212,255,.2)}
+.shift-option-icon{font-size:24px;margin-bottom:4px}
+.shift-option-name{font-size:12px;font-weight:700}
+.shift-option-time{font-size:10px;color:var(--gray);margin-top:2px}
+
+/* 통계 */
+.stats-row{display:flex;gap:8px;padding:0 20px;margin-bottom:10px;flex-wrap:wrap}
+.stat-chip{background:var(--bg2);border:1px solid var(--border2);border-radius:20px;padding:5px 12px;font-size:11px;font-weight:700}
+
+/* 하단 탭바 */
+.bottombar{position:fixed;bottom:0;left:0;right:0;max-width:700px;margin:0 auto;background:rgba(6,15,31,.97);border-top:1px solid var(--border);display:flex;padding:8px 0;z-index:100}
+.bot-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px;border:none;background:transparent;cursor:pointer;color:var(--gray);text-decoration:none}
+.bot-btn.on{color:var(--cyan)}
+.bot-icon{font-size:20px}.bot-lbl{font-size:9px;font-weight:700;letter-spacing:.5px}
+
+#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg2);border:1px solid var(--border2);color:var(--white);padding:10px 20px;border-radius:99px;font-size:12px;font-weight:700;opacity:0;transition:.3s;pointer-events:none;z-index:9999}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.ok{border-color:var(--green);color:var(--green)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{width:14px;height:14px;border:2px solid rgba(0,212,255,.2);border-top-color:var(--cyan);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:middle}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+
+<!-- 근무 배정 모달 -->
+<div class="modal" id="shift-modal">
+  <div class="mbox">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <div style="font-size:15px;font-weight:900">근무 배정</div>
+      <button onclick="closeShiftModal()" style="background:none;border:none;color:var(--gray);font-size:20px;cursor:pointer">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--gray);margin-bottom:16px" id="shift-modal-title"></div>
+    <div class="shift-pick" id="shift-pick"></div>
+    <div style="display:flex;gap:8px">
+      <button onclick="closeShiftModal()" style="flex:1;padding:12px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--gray);font-size:13px;font-weight:700;cursor:pointer">취소</button>
+      <button onclick="confirmShift()" style="flex:1;padding:12px;background:linear-gradient(135deg,var(--blue),var(--cyan));border:none;border-radius:10px;color:var(--bg);font-size:13px;font-weight:900;cursor:pointer">저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="topbar">
+  <div class="logo"><span>D</span>ONWAY 스케줄</div>
+  <div style="display:flex;gap:8px">
+    <button onclick="copyLastWeek()" style="padding:7px 12px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:8px;color:var(--cyan);font-size:11px;font-weight:700;cursor:pointer">📋 전주 복사</button>
+    <button onclick="exportScheduleCSV()" style="padding:7px 12px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:8px;color:var(--cyan);font-size:11px;font-weight:700;cursor:pointer">📊 CSV</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- 주간 네비게이션 -->
+  <div class="week-nav">
+    <button class="week-nav-btn" onclick="moveWeek(-1)">◀ 전주</button>
+    <div>
+      <div class="week-title" id="week-title">로딩 중...</div>
+      <div class="week-sub" id="week-sub"></div>
+    </div>
+    <button class="week-nav-btn" onclick="moveWeek(1)">다음주 ▶</button>
+  </div>
+
+  <!-- 거점 탭 -->
+  <div class="camp-tabs" id="camp-tabs">
+    <div class="camp-tab on" onclick="setCamp('')" id="ct-all">전체</div>
+  </div>
+
+  <!-- 주간 통계 -->
+  <div class="stats-row" id="stats-row"></div>
+
+  <!-- 근무 테이블 -->
+  <div class="schedule-table-wrap">
+    <table class="schedule-table" id="sch-table">
+      <thead><tr id="sch-head"></tr></thead>
+      <tbody id="sch-body"></tbody>
+    </table>
+  </div>
+
+  <!-- 범례 -->
+  <div class="legend">
+    <div class="leg-item"><div class="leg-dot" style="background:rgba(0,255,136,.3)"></div>오전</div>
+    <div class="leg-item"><div class="leg-dot" style="background:rgba(0,102,255,.3)"></div>오후</div>
+    <div class="leg-item"><div class="leg-dot" style="background:rgba(139,92,246,.3)"></div>야간</div>
+    <div class="leg-item"><div class="leg-dot" style="background:rgba(239,68,68,.2)"></div>휴무</div>
+    <div class="leg-item"><div class="leg-dot" style="background:transparent;border:1px dashed rgba(90,114,153,.4)"></div>미배정</div>
+  </div>
+
+</div>
+
+<div class="bottombar">
+  <button class="bot-btn on"><span class="bot-icon">📅</span><span class="bot-lbl">스케줄</span></button>
+  <a href="/drivers" class="bot-btn"><span class="bot-icon">👥</span><span class="bot-lbl">직원관리</span></a>
+  <a href="/dashboard" class="bot-btn"><span class="bot-icon">📊</span><span class="bot-lbl">대시보드</span></a>
+  <a href="/settle" class="bot-btn"><span class="bot-icon">💰</span><span class="bot-lbl">정산</span></a>
+</div>
+
+<script>
+var _db=null;
+var _drivers=[], _schedules={}, _weekOffset=0, _selCamp='';
+var _shiftTarget=null, _shiftSel='';
+
+var SHIFTS={
+  morning:{label:'오전',time:'06:00~14:00',icon:'🌅',cls:'shift-morning'},
+  afternoon:{label:'오후',time:'14:00~22:00',icon:'☀️',cls:'shift-afternoon'},
+  night:{label:'야간',time:'22:00~06:00',icon:'🌙',cls:'shift-night'},
+  off:{label:'휴무',time:'',icon:'😴',cls:'shift-off'}
+};
+var DAYS=['일','월','화','수','목','금','토'];
+
+(function init(){
+  if(typeof firebase==='undefined'){setTimeout(init,300);return;}
+  try{
+    var app;try{app=firebase.app('sch');}catch(e){
+      app=firebase.initializeApp({apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.firebasestorage.app',messagingSenderId:'40761160761',appId:'1:40761160761:web:20545b610f03f534e949e8'},'sch');
+    }
+    _db=app.firestore();
+    loadDrivers();
+  }catch(e){console.warn(e);}
+})();
+
+// ── 주간 계산 ──
+function _getWeekDates(offset){
+  var now=new Date();
+  var day=now.getDay();
+  var mon=new Date(now);
+  mon.setDate(now.getDate()-day+1+(offset*7));
+  var dates=[];
+  for(var i=0;i<7;i++){
+    var d=new Date(mon);d.setDate(mon.getDate()+i);
+    dates.push(d);
+  }
+  return dates;
+}
+function _dateStr(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function _isToday(d){return _dateStr(d)===_dateStr(new Date());}
+
+function moveWeek(delta){_weekOffset+=delta;renderTable();}
+
+// ── 데이터 로드 ──
+function loadDrivers(){
+  if(!_db)return;
+  _db.collection('drivers').where('is_active','==',true).orderBy('name').limit(200).get()
+    .then(function(s){
+      _drivers=s.docs.map(function(d){return Object.assign({docId:d.id},d.data());});
+      if(!_drivers.length){
+        _db.collection('drivers').orderBy('name').limit(200).get().then(function(s2){
+          _drivers=s2.docs.filter(function(d){return (d.data().status||'재직')!=='퇴직';}).map(function(d){return Object.assign({docId:d.id},d.data());});
+          _buildCampTabs();loadSchedules();
+        });
+        return;
+      }
+      _buildCampTabs();loadSchedules();
+    }).catch(function(e){
+      // Firebase 인덱스 없을 경우 전체 로드
+      _db.collection('drivers').orderBy('name').limit(200).get().then(function(s){
+        _drivers=s.docs.filter(function(d){return (d.data().status||'재직')!=='퇴직';}).map(function(d){return Object.assign({docId:d.id},d.data());});
+        _buildCampTabs();loadSchedules();
+      }).catch(function(){});
+    });
+}
+
+function loadSchedules(){
+  if(!_db){renderTable();return;}
+  var dates=_getWeekDates(_weekOffset);
+  var weekKey=_dateStr(dates[0])+'_'+_dateStr(dates[6]);
+  _db.collection('schedules').where('weekKey','==',weekKey).get()
+    .then(function(s){
+      _schedules={};
+      s.docs.forEach(function(d){
+        var r=d.data();
+        if(!_schedules[r.driverId])_schedules[r.driverId]={};
+        _schedules[r.driverId][r.date]=Object.assign({docId:d.id},r);
+      });
+      renderTable();
+    }).catch(function(){renderTable();});
+}
+
+function _buildCampTabs(){
+  var camps=[...new Set(_drivers.map(function(d){return d.camp||d.loc||''}))].filter(Boolean).sort();
+  var el=document.getElementById('camp-tabs');
+  el.innerHTML='<div class="camp-tab on" onclick="setCamp(\'\')" id="ct-all">전체 ('+_drivers.length+')</div>'
+    +camps.map(function(c){
+      var cnt=_drivers.filter(function(d){return (d.camp||d.loc||'')===c;}).length;
+      return '<div class="camp-tab" onclick="setCamp(\''+c.replace(/'/g,"\\'")+'\')" id="ct-'+c+'">'+esc(c)+' ('+cnt+')</div>';
+    }).join('');
+}
+
+function setCamp(camp){
+  _selCamp=camp;
+  document.querySelectorAll('.camp-tab').forEach(function(t){t.classList.remove('on');});
+  var el=document.getElementById('ct-'+(camp||'all'));
+  if(el)el.classList.add('on');
+  renderTable();
+}
+
+// ── 테이블 렌더링 ──
+function renderTable(){
+  var dates=_getWeekDates(_weekOffset);
+  var drivers=_selCamp?_drivers.filter(function(d){return (d.camp||d.loc||'')===_selCamp;}):_drivers;
+
+  // 헤더
+  var head=document.getElementById('sch-head');
+  head.innerHTML='<th class="sch-th-name">직원</th>'
+    +dates.map(function(d){
+      var isT=_isToday(d);
+      return '<th class="sch-th'+(isT?' today':'')+'">'+DAYS[d.getDay()]+'<br>'+d.getDate()+'</th>';
+    }).join('');
+
+  // 주간 타이틀
+  var wt=document.getElementById('week-title');
+  if(wt)wt.textContent=dates[0].getMonth()+1+'월 '+dates[0].getDate()+'일 ~ '+dates[6].getMonth()+1+'월 '+dates[6].getDate()+'일';
+  var ws=document.getElementById('week-sub');
+  if(ws)ws.textContent=_weekOffset===0?'이번 주':_weekOffset>0?'+'+_weekOffset+'주':_weekOffset+'주';
+
+  // 통계
+  var totalShifts=0;var totalOff=0;
+  drivers.forEach(function(d){
+    dates.forEach(function(date){
+      var sch=_schedules[d.docId]&&_schedules[d.docId][_dateStr(date)];
+      if(sch){if(sch.shift==='off')totalOff++;else totalShifts++;}
+    });
+  });
+  var sr=document.getElementById('stats-row');
+  if(sr)sr.innerHTML=
+    '<div class="stat-chip" style="color:var(--cyan)">👥 '+drivers.length+'명</div>'
+    +'<div class="stat-chip" style="color:var(--green)">근무 '+totalShifts+'건</div>'
+    +'<div class="stat-chip" style="color:var(--red)">휴무 '+totalOff+'건</div>'
+    +'<div class="stat-chip" style="color:var(--gray)">미배정 '+(drivers.length*7-totalShifts-totalOff)+'칸</div>';
+
+  // 바디
+  var body=document.getElementById('sch-body');
+  if(!drivers.length){body.innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--gray);font-size:13px">직원 없음</td></tr>';return;}
+  body.innerHTML=drivers.map(function(drv){
+    var cells=dates.map(function(date){
+      var ds=_dateStr(date);
+      var sch=_schedules[drv.docId]&&_schedules[drv.docId][ds];
+      var isT=_isToday(date);
+      var cellContent='';
+      if(sch&&sch.shift&&SHIFTS[sch.shift]){
+        var s=SHIFTS[sch.shift];
+        cellContent='<div class="shift-cell '+s.cls+'" onclick="openShift(\''+drv.docId+'\',\''+esc(drv.name||'')+'\',\''+ds+'\',\''+sch.shift+'\')">'+s.icon+'<br>'+s.label+(s.time?'<br><span style="font-size:8px">'+s.time+'</span>':'')+'</div>';
+      } else {
+        cellContent='<div class="shift-cell shift-empty" onclick="openShift(\''+drv.docId+'\',\''+esc(drv.name||'')+'\',\''+ds+'\',\'\')">+</div>';
+      }
+      return '<td class="sch-td'+(isT?' today-col':'')+'">'+cellContent+'</td>';
+    }).join('');
+    return '<tr>'
+      +'<td class="sch-td-name">'+esc((drv.name||'').slice(0,5))+'</td>'
+      +cells
+      +'</tr>';
+  }).join('');
+}
+
+// ── 근무 배정 모달 ──
+function openShift(driverId,name,date,current){
+  _shiftTarget={driverId:driverId,name:name,date:date};
+  _shiftSel=current||'';
+  var d=new Date(date);
+  document.getElementById('shift-modal-title').textContent=name+' · '+d.getMonth()+1+'월 '+d.getDate()+'일 ('+DAYS[d.getDay()]+')';
+  document.getElementById('shift-pick').innerHTML=Object.entries(SHIFTS).map(function(e){
+    var k=e[0];var s=e[1];
+    return '<div class="shift-option'+(current===k?' sel':'')+'" id="sp-'+k+'" onclick="selectShift(\''+k+'\',this)">'
+      +'<div class="shift-option-icon">'+s.icon+'</div>'
+      +'<div class="shift-option-name">'+s.label+'</div>'
+      +(s.time?'<div class="shift-option-time">'+s.time+'</div>':'')
+      +'</div>';
+  }).join('');
+  if(current){var sp=document.getElementById('sp-'+current);if(sp)sp.classList.add('sel');}
+  document.getElementById('shift-modal').classList.add('show');
+}
+
+function selectShift(k,el){
+  _shiftSel=k;
+  document.querySelectorAll('.shift-option').forEach(function(e){e.classList.remove('sel');});
+  if(el)el.classList.add('sel');
+}
+
+function closeShiftModal(){document.getElementById('shift-modal').classList.remove('show');_shiftTarget=null;_shiftSel='';}
+
+function confirmShift(){
+  if(!_shiftTarget||!_db){closeShiftModal();return;}
+  var dates=_getWeekDates(_weekOffset);
+  var weekKey=_dateStr(dates[0])+'_'+_dateStr(dates[6]);
+  var existing=_schedules[_shiftTarget.driverId]&&_schedules[_shiftTarget.driverId][_shiftTarget.date];
+
+  var data={
+    driverId:_shiftTarget.driverId,
+    name:_shiftTarget.name,
+    date:_shiftTarget.date,
+    shift:_shiftSel,
+    weekKey:weekKey,
+    updatedAt:new Date().toISOString()
+  };
+
+  var promise;
+  if(existing&&existing.docId){
+    if(!_shiftSel){
+      // 삭제
+      promise=_db.collection('schedules').doc(existing.docId).delete().then(function(){
+        if(_schedules[_shiftTarget.driverId])delete _schedules[_shiftTarget.driverId][_shiftTarget.date];
+      });
+    } else {
+      promise=_db.collection('schedules').doc(existing.docId).update(data).then(function(){
+        if(!_schedules[_shiftTarget.driverId])_schedules[_shiftTarget.driverId]={};
+        _schedules[_shiftTarget.driverId][_shiftTarget.date]=Object.assign({docId:existing.docId},data);
+      });
+    }
+  } else if(_shiftSel) {
+    promise=_db.collection('schedules').add(data).then(function(ref){
+      if(!_schedules[_shiftTarget.driverId])_schedules[_shiftTarget.driverId]={};
+      _schedules[_shiftTarget.driverId][_shiftTarget.date]=Object.assign({docId:ref.id},data);
+    });
+  } else {promise=Promise.resolve();}
+
+  promise.then(function(){
+    toast('✅ '+(SHIFTS[_shiftSel]?SHIFTS[_shiftSel].label+' 배정':'삭제'),'ok');
+    closeShiftModal();renderTable();
+  }).catch(function(e){toast('❌ '+e.message);});
+}
+
+// ── 전주 복사 ──
+function copyLastWeek(){
+  if(!_db)return;
+  var thisDates=_getWeekDates(_weekOffset);
+  var lastDates=_getWeekDates(_weekOffset-1);
+  var weekKey=_dateStr(thisDates[0])+'_'+_dateStr(thisDates[6]);
+  var lastWeekKey=_dateStr(lastDates[0])+'_'+_dateStr(lastDates[6]);
+  if(!confirm('전주 스케줄을 이번주로 복사하시겠습니까?\n기존 이번주 스케줄은 덮어써집니다.'))return;
+
+  _db.collection('schedules').where('weekKey','==',lastWeekKey).get().then(function(s){
+    if(s.empty){toast('전주 스케줄이 없습니다');return;}
+    var batch=_db.batch();
+    s.docs.forEach(function(d){
+      var r=d.data();
+      var oldDate=new Date(r.date);
+      var newDate=new Date(oldDate);newDate.setDate(oldDate.getDate()+7);
+      var newRef=_db.collection('schedules').doc();
+      batch.set(newRef,Object.assign({},r,{date:_dateStr(newDate),weekKey:weekKey,updatedAt:new Date().toISOString()}));
+    });
+    return batch.commit();
+  }).then(function(){
+    toast('✅ 전주 스케줄 복사 완료','ok');
+    loadSchedules();
+  }).catch(function(e){toast('❌ '+e.message);});
+}
+
+// ── CSV 내보내기 ──
+function exportScheduleCSV(){
+  var dates=_getWeekDates(_weekOffset);
+  var drivers=_selCamp?_drivers.filter(function(d){return (d.camp||d.loc||'')===_selCamp;}):_drivers;
+  var header=['직원명','거점'].concat(dates.map(function(d){return (d.getMonth()+1)+'/'+d.getDate()+'('+DAYS[d.getDay()]+')'}));
+  var rows=[header];
+  drivers.forEach(function(drv){
+    var row=[drv.name||'',drv.camp||drv.loc||''];
+    dates.forEach(function(date){
+      var sch=_schedules[drv.docId]&&_schedules[drv.docId][_dateStr(date)];
+      row.push(sch&&SHIFTS[sch.shift]?SHIFTS[sch.shift].label:'');
+    });
+    rows.push(row);
+  });
+  var csv='\uFEFF'+rows.map(function(r){return r.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+  var a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='스케줄_'+_dateStr(dates[0])+'.csv';
+  a.click();
+  toast('✅ CSV 다운로드');
+}
+
+function toast(msg,type){var t=document.getElementById('toast');t.textContent=msg;t.className='show'+(type?' '+type:'');clearTimeout(t._t);t._t=setTimeout(function(){t.className='';},3000);}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+</script>
+</body>
+</html>

@@ -421,6 +421,12 @@ export default {
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
+    // ★ 근무 스케줄러
+    if (path === '/schedule' || path === '/schedule/') {
+      const resp = await env.ASSETS.fetch(new Request(new URL('/schedule.html', url)));
+      return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+    }
+
     // ★ 직원 관리
     if (path === '/drivers' || path === '/drivers/') {
       const resp = await env.ASSETS.fetch(new Request(new URL('/drivers.html', url)));
