@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#030912">
+<title>DONWAY — 직원 관리</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{--bg:#030912;--bg2:#060f1f;--bg3:#0a1628;--blue:#0066ff;--cyan:#00d4ff;--green:#00ff88;--red:#ef4444;--yellow:#f59e0b;--gray:#5a7299;--white:#e8f4ff;--border:rgba(0,212,255,.12);--border2:rgba(0,102,255,.18)}
+body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun Gothic',sans-serif;min-height:100vh}
+.wrap{max-width:600px;margin:0 auto;padding:0 0 90px}
+.topbar{background:rgba(3,9,18,.97);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;backdrop-filter:blur(20px)}
+.logo{font-size:14px;font-weight:900;letter-spacing:3px}.logo span{color:var(--cyan)}
+
+/* 검색/필터 */
+.filter-bar{display:flex;gap:8px;margin:12px 20px;flex-wrap:wrap}
+.search-inp{flex:1;min-width:160px;padding:10px 14px;background:var(--bg2);border:1.5px solid var(--border2);border-radius:10px;color:var(--white);font-size:13px;outline:none;transition:.2s}
+.search-inp:focus{border-color:var(--cyan)}
+.filter-sel{padding:10px 12px;background:var(--bg2);border:1.5px solid var(--border2);border-radius:10px;color:var(--white);font-size:12px;font-weight:700;outline:none;cursor:pointer}
+.add-btn{padding:10px 16px;background:linear-gradient(135deg,var(--blue),var(--cyan));border:none;border-radius:10px;color:var(--bg);font-size:13px;font-weight:900;cursor:pointer;white-space:nowrap}
+
+/* 요약 */
+.summary{display:flex;gap:8px;margin:0 20px 12px;flex-wrap:wrap}
+.sum-chip{background:var(--bg2);border:1px solid var(--border2);border-radius:20px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;transition:.2s;white-space:nowrap}
+.sum-chip.on{border-color:var(--cyan);color:var(--cyan);background:rgba(0,212,255,.08)}
+
+/* 직원 카드 */
+.drv-card{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;margin:0 20px 8px;overflow:hidden;transition:.2s}
+.drv-card:hover{border-color:rgba(0,212,255,.25)}
+.drv-header{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer}
+.drv-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--cyan));display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:var(--bg);flex-shrink:0}
+.drv-name{font-size:15px;font-weight:800}
+.drv-meta{font-size:10px;color:var(--gray);margin-top:2px;display:flex;gap:6px;flex-wrap:wrap}
+.drv-badge{display:inline-block;padding:1px 7px;border-radius:20px;font-size:9px;font-weight:700}
+.b-active{background:rgba(0,255,136,.1);color:var(--green);border:1px solid rgba(0,255,136,.2)}
+.b-inactive{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+.b-leave{background:rgba(245,158,11,.1);color:var(--yellow);border:1px solid rgba(245,158,11,.2)}
+.drv-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.drv-body{display:none;border-top:1px solid var(--border);padding:14px 16px}
+.drv-body.open{display:block}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.fi{width:100%;padding:10px 12px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;color:var(--white);font-size:13px;font-weight:600;outline:none;transition:.2s}
+.fi:focus{border-color:var(--cyan)}
+.fl{font-size:10px;color:var(--gray);display:block;margin-bottom:4px;font-weight:700}
+.action-row{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.act-btn{flex:1;padding:10px;border-radius:8px;border:none;font-size:12px;font-weight:700;cursor:pointer;transition:.2s;white-space:nowrap}
+.act-save{background:linear-gradient(135deg,var(--blue),var(--cyan));color:var(--bg)}
+.act-camp{background:rgba(139,92,246,.15);color:#a78bfa;border:1px solid rgba(139,92,246,.2) !important}
+.act-leave{background:rgba(245,158,11,.1);color:var(--yellow);border:1px solid rgba(245,158,11,.2) !important}
+.act-del{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.2) !important}
+
+/* 모달 */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9000;display:none;align-items:flex-end;justify-content:center}
+.modal.show{display:flex}
+.mbox{background:var(--bg2);border:1px solid var(--border2);border-radius:20px 20px 0 0;padding:24px 20px;width:100%;max-width:480px;animation:slideUp .3s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+
+/* 하단 탭 */
+.bottombar{position:fixed;bottom:0;left:0;right:0;max-width:600px;margin:0 auto;background:rgba(6,15,31,.97);border-top:1px solid var(--border);display:flex;padding:8px 0;z-index:100}
+.bot-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px;border:none;background:transparent;cursor:pointer;color:var(--gray);text-decoration:none}
+.bot-btn.on{color:var(--cyan)}
+.bot-icon{font-size:20px}.bot-lbl{font-size:9px;font-weight:700;letter-spacing:.5px}
+
+#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg2);border:1px solid var(--border2);color:var(--white);padding:10px 20px;border-radius:99px;font-size:12px;font-weight:700;opacity:0;transition:.3s;pointer-events:none;z-index:9999}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.ok{border-color:var(--green);color:var(--green)}
+#toast.err{border-color:var(--red);color:var(--red)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{width:14px;height:14px;border:2px solid rgba(0,212,255,.2);border-top-color:var(--cyan);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:middle}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+
+<!-- 거점 이동 모달 -->
+<div class="modal" id="camp-modal">
+  <div class="mbox">
+    <div style="font-size:15px;font-weight:900;margin-bottom:14px">📍 거점 이동</div>
+    <div style="font-size:12px;color:var(--gray);margin-bottom:12px" id="camp-target-name"></div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px" id="camp-btns"></div>
+    <div style="display:flex;gap:8px">
+      <button onclick="closeCampModal()" style="flex:1;padding:12px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--gray);font-size:13px;font-weight:700;cursor:pointer">취소</button>
+      <button onclick="confirmCamp()" style="flex:1;padding:12px;background:linear-gradient(135deg,var(--blue),var(--cyan));border:none;border-radius:10px;color:var(--bg);font-size:13px;font-weight:900;cursor:pointer">이동 확정</button>
+    </div>
+  </div>
+</div>
+
+<div class="topbar">
+  <div class="logo"><span>D</span>ONWAY 직원 관리</div>
+  <div style="display:flex;gap:8px">
+    <button onclick="exportCSV()" style="padding:7px 12px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:8px;color:var(--cyan);font-size:11px;font-weight:700;cursor:pointer">📊 CSV</button>
+    <button onclick="location.href='/join'" style="padding:7px 12px;background:linear-gradient(135deg,var(--blue),var(--cyan));border:none;border-radius:8px;color:var(--bg);font-size:11px;font-weight:900;cursor:pointer">+ 직원 추가</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- 검색 + 필터 -->
+  <div class="filter-bar">
+    <input class="search-inp" id="search" placeholder="🔍 이름·전화·거점 검색..." oninput="renderList()">
+    <select class="filter-sel" id="filter-status" onchange="renderList()">
+      <option value="">전체 상태</option>
+      <option value="재직">재직</option>
+      <option value="휴직">휴직</option>
+      <option value="퇴직">퇴직</option>
+    </select>
+    <select class="filter-sel" id="filter-camp" onchange="renderList()">
+      <option value="">전체 거점</option>
+    </select>
+  </div>
+
+  <!-- 상태별 요약 -->
+  <div class="summary" id="summary"></div>
+
+  <!-- 직원 목록 -->
+  <div id="drv-list">
+    <div style="text-align:center;padding:40px;color:var(--gray)"><span class="spin"></span> 로딩 중...</div>
+  </div>
+
+</div>
+
+<div class="bottombar">
+  <button class="bot-btn on"><span class="bot-icon">👥</span><span class="bot-lbl">직원관리</span></button>
+  <a href="/dashboard" class="bot-btn"><span class="bot-icon">📊</span><span class="bot-lbl">대시보드</span></a>
+  <a href="/attendance-admin" class="bot-btn"><span class="bot-icon">📋</span><span class="bot-lbl">출퇴근</span></a>
+  <a href="/settle" class="bot-btn"><span class="bot-icon">💰</span><span class="bot-lbl">정산</span></a>
+</div>
+
+<script>
+var _db=null, _allDrivers=[], _campTarget=null, _campSel='';
+var _IND={coupang:'🚚 쿠팡물류',delivery:'🛵 배달대행',smallbiz:'🏪 소상공인',service:'🏗️ 용역업체',freelance:'👨‍💼 프리랜서'};
+var _CAMPS=['부산1','부산2','부산3','대구2','진주M'];
+
+(function init(){
+  if(typeof firebase==='undefined'){setTimeout(init,300);return;}
+  try{
+    var app;try{app=firebase.app('drv');}catch(e){
+      app=firebase.initializeApp({apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.firebasestorage.app',messagingSenderId:'40761160761',appId:'1:40761160761:web:20545b610f03f534e949e8'},'drv');
+    }
+    _db=app.firestore();
+    loadDrivers();
+  }catch(e){console.warn(e);}
+})();
+
+function loadDrivers(){
+  if(!_db)return;
+  var el=document.getElementById('drv-list');
+  el.innerHTML='<div style="text-align:center;padding:40px;color:var(--gray)"><span class="spin"></span></div>';
+  _db.collection('drivers').orderBy('name').limit(500).get()
+    .then(function(s){
+      _allDrivers=s.docs.map(function(d){return Object.assign({docId:d.id},d.data());});
+      _buildCampFilter();
+      renderList();
+    }).catch(function(e){el.innerHTML='<div style="text-align:center;padding:40px;color:var(--gray)">오류: '+esc(e.message)+'</div>';});
+}
+
+function _buildCampFilter(){
+  var camps=[...new Set(_allDrivers.map(function(d){return d.camp||d.loc||''}))].filter(Boolean).sort();
+  var sel=document.getElementById('filter-camp');
+  camps.forEach(function(c){var o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o);});
+}
+
+function renderList(){
+  var q=(document.getElementById('search').value||'').trim().toLowerCase();
+  var statusF=document.getElementById('filter-status').value;
+  var campF=document.getElementById('filter-camp').value;
+
+  var list=_allDrivers.filter(function(d){
+    if(statusF&&(d.status||'재직')!==statusF)return false;
+    if(campF&&(d.camp||d.loc||'')!==campF)return false;
+    if(q){
+      var hay=(d.name||'')+(d.phone||'')+(d.camp||d.loc||'')+(d.companyCode||'');
+      if(hay.toLowerCase().indexOf(q)<0)return false;
+    }
+    return true;
+  });
+
+  // 요약 칩
+  var total=_allDrivers.length;
+  var active=_allDrivers.filter(function(d){return (d.status||'재직')==='재직';}).length;
+  var leave=_allDrivers.filter(function(d){return d.status==='휴직';}).length;
+  var resign=_allDrivers.filter(function(d){return d.status==='퇴직';}).length;
+  document.getElementById('summary').innerHTML=
+    [['전체 '+total,''],['재직 '+active,'재직'],['휴직 '+leave,'휴직'],['퇴직 '+resign,'퇴직']].map(function(x){
+      var sf=document.getElementById('filter-status').value;
+      return '<div class="sum-chip'+(sf===x[1]?' on':'')+'" onclick="setStatusFilter(\''+x[1]+'\')">'+x[0]+'</div>';
+    }).join('');
+
+  if(!list.length){document.getElementById('drv-list').innerHTML='<div style="text-align:center;padding:40px;color:var(--gray);font-size:13px">📭 직원 없음</div>';return;}
+  document.getElementById('drv-list').innerHTML=list.map(function(d,i){return _drvCard(d,i);}).join('');
+}
+
+function setStatusFilter(v){
+  document.getElementById('filter-status').value=v;
+  renderList();
+}
+
+function _drvCard(d,i){
+  var status=d.status||'재직';
+  var bCls=status==='재직'?'b-active':status==='휴직'?'b-leave':'b-inactive';
+  var ind=_IND[d.industryType]||'';
+  var phone=d.phone?d.phone.replace(/(\d{3})(\d{3,4})(\d{4})/,'$1-$2-$3'):'';
+  return '<div class="drv-card" id="dc-'+i+'">'
+    +'<div class="drv-header" onclick="toggleCard('+i+')">'
+    +'<div class="drv-avatar">'+(d.name||'?').slice(0,1)+'</div>'
+    +'<div style="flex:1;min-width:0">'
+    +'<div class="drv-name">'+esc(d.name||'이름없음')+'</div>'
+    +'<div class="drv-meta">'
+    +'<span>'+esc(d.camp||d.loc||'-')+'</span>'
+    +(phone?'<span>'+esc(phone)+'</span>':'')
+    +(ind?'<span>'+esc(ind)+'</span>':'')
+    +'</div></div>'
+    +'<div class="drv-right">'
+    +'<span class="drv-badge '+bCls+'">'+esc(status)+'</span>'
+    +'<span style="color:var(--gray);font-size:18px">›</span>'
+    +'</div>'
+    +'</div>'
+    +'<div class="drv-body" id="db-'+i+'">'
+    +_drvForm(d,i)
+    +'</div>'
+    +'</div>';
+}
+
+function _drvForm(d,i){
+  var phone=d.phone||'';
+  var camps=_CAMPS;
+  return '<div class="field-row">'
+    +'<div><label class="fl">이름</label><input class="fi" id="f-name-'+i+'" value="'+esc(d.name||'')+'"></div>'
+    +'<div><label class="fl">전화번호</label><input class="fi" id="f-phone-'+i+'" value="'+esc(phone)+'" type="tel"></div>'
+    +'</div>'
+    +'<div class="field-row">'
+    +'<div><label class="fl">이메일</label><input class="fi" id="f-email-'+i+'" value="'+esc(d.email||'')+'"></div>'
+    +'<div><label class="fl">거점</label>'
+    +'<select class="fi" id="f-camp-'+i+'">'+camps.map(function(c){return '<option'+(c===(d.camp||d.loc)?'selected':'')+'>'+esc(c)+'</option>';}).join('')+'</select>'
+    +'</div></div>'
+    +'<div class="field-row">'
+    +'<div><label class="fl">상태</label>'
+    +'<select class="fi" id="f-status-'+i+'">'
+    +'<option'+((!d.status||d.status==='재직')?' selected':'')+'>재직</option>'
+    +'<option'+(d.status==='휴직'?' selected':'')+'>휴직</option>'
+    +'<option'+(d.status==='퇴직'?' selected':'')+'>퇴직</option>'
+    +'</select></div>'
+    +'<div><label class="fl">업종</label>'
+    +'<select class="fi" id="f-ind-'+i+'">'
+    +Object.entries(_IND).map(function(e){return '<option value="'+e[0]+'"'+(d.industryType===e[0]?' selected':'')+'>'+e[1]+'</option>';}).join('')
+    +'</select></div>'
+    +'</div>'
+    +'<div><label class="fl">메모</label><input class="fi" id="f-note-'+i+'" value="'+esc(d.note||'')+'" placeholder="특이사항"></div>'
+    +'<div class="action-row">'
+    +'<button class="act-btn act-save" onclick="saveDriver(\''+d.docId+'\','+i+')">💾 저장</button>'
+    +'<button class="act-btn act-camp" style="border:1px solid" onclick="openCampModal(\''+esc(d.docId)+'\',\''+esc(d.name||'')+'\',\''+esc(d.camp||d.loc||'')+'\')">📍 거점이동</button>'
+    +'<button class="act-btn act-leave" style="border:1px solid" onclick="toggleLeave(\''+d.docId+'\','+i+',\''+esc(d.status||'재직')+'\')">🔄 재직/휴직</button>'
+    +'<button class="act-btn act-del" style="border:1px solid" onclick="deleteDriver(\''+d.docId+'\',\''+esc(d.name||'')+'\','+i+')">🗑 삭제</button>'
+    +'</div>';
+}
+
+function toggleCard(i){
+  var b=document.getElementById('db-'+i);
+  if(b)b.classList.toggle('open');
+}
+
+// ── 저장 ──
+function saveDriver(docId,i){
+  if(!_db)return;
+  var get=function(id){return (document.getElementById(id)||{}).value||'';};
+  var data={
+    name:get('f-name-'+i),
+    phone:get('f-phone-'+i).replace(/[^0-9]/g,''),
+    email:get('f-email-'+i),
+    camp:get('f-camp-'+i),loc:get('f-camp-'+i),
+    status:get('f-status-'+i),
+    industryType:get('f-ind-'+i),
+    note:get('f-note-'+i),
+    updatedAt:new Date().toISOString()
+  };
+  _db.collection('drivers').doc(docId).update(data)
+    .then(function(){
+      toast('✅ '+data.name+' 저장 완료','ok');
+      var idx=_allDrivers.findIndex(function(d){return d.docId===docId;});
+      if(idx>=0)Object.assign(_allDrivers[idx],data);
+      renderList();
+    }).catch(function(e){toast('❌ '+e.message,'err');});
+}
+
+// ── 재직/휴직 토글 ──
+function toggleLeave(docId,i,current){
+  if(!_db)return;
+  var next=current==='휴직'?'재직':'휴직';
+  _db.collection('drivers').doc(docId).update({status:next,updatedAt:new Date().toISOString()})
+    .then(function(){
+      toast('✅ '+next+' 처리됨','ok');
+      var idx=_allDrivers.findIndex(function(d){return d.docId===docId;});
+      if(idx>=0)_allDrivers[idx].status=next;
+      renderList();
+    }).catch(function(e){toast('❌ '+e.message,'err');});
+}
+
+// ── 거점 이동 모달 ──
+function openCampModal(docId,name,currentCamp){
+  _campTarget={docId:docId,name:name,currentCamp:currentCamp};_campSel=currentCamp;
+  var tn=document.getElementById('camp-target-name');
+  if(tn)tn.textContent=name+' 님의 거점을 변경합니다';
+  var btns=document.getElementById('camp-btns');
+  if(btns)btns.innerHTML=_CAMPS.map(function(c){
+    return '<button onclick="selectCamp(\''+c+'\')" id="cb-'+c+'" style="padding:9px 16px;border-radius:20px;border:1.5px solid '+(c===currentCamp?'var(--cyan)':' var(--border2)')+';background:'+(c===currentCamp?'rgba(0,212,255,.1)':'var(--bg3)')+';color:'+(c===currentCamp?'var(--cyan)':'var(--gray)')+';font-size:13px;font-weight:700;cursor:pointer">'+esc(c)+'</button>';
+  }).join('');
+  document.getElementById('camp-modal').classList.add('show');
+}
+function selectCamp(camp){
+  _campSel=camp;
+  _CAMPS.forEach(function(c){
+    var btn=document.getElementById('cb-'+c);if(!btn)return;
+    btn.style.borderColor=c===camp?'var(--cyan)':'var(--border2)';
+    btn.style.background=c===camp?'rgba(0,212,255,.1)':'var(--bg3)';
+    btn.style.color=c===camp?'var(--cyan)':'var(--gray)';
+  });
+}
+function closeCampModal(){document.getElementById('camp-modal').classList.remove('show');_campTarget=null;}
+function confirmCamp(){
+  if(!_campTarget||!_campSel||!_db){closeCampModal();return;}
+  _db.collection('drivers').doc(_campTarget.docId).update({camp:_campSel,loc:_campSel,updatedAt:new Date().toISOString()})
+    .then(function(){
+      toast('✅ '+_campTarget.name+' → '+_campSel+' 이동','ok');
+      var idx=_allDrivers.findIndex(function(d){return d.docId===_campTarget.docId;});
+      if(idx>=0){_allDrivers[idx].camp=_campSel;_allDrivers[idx].loc=_campSel;}
+      closeCampModal();renderList();
+    }).catch(function(e){toast('❌ '+e.message,'err');});
+}
+
+// ── 삭제 ──
+function deleteDriver(docId,name,i){
+  if(!confirm(name+' 직원을 삭제하시겠습니까?\n(출퇴근 기록은 유지됩니다)'))return;
+  if(!_db)return;
+  _db.collection('drivers').doc(docId).delete()
+    .then(function(){
+      toast('✅ '+name+' 삭제 완료','ok');
+      _allDrivers=_allDrivers.filter(function(d){return d.docId!==docId;});
+      renderList();
+    }).catch(function(e){toast('❌ '+e.message,'err');});
+}
+
+// ── CSV 내보내기 ──
+function exportCSV(){
+  if(!_allDrivers.length){toast('직원 데이터가 없습니다');return;}
+  var rows=[['이름','전화번호','이메일','거점','상태','업종','가입일','메모']];
+  _allDrivers.forEach(function(d){
+    rows.push([d.name||'',d.phone||'',d.email||'',d.camp||d.loc||'',d.status||'재직',_IND[d.industryType]||'',d.joinedAt?d.joinedAt.slice(0,10):'',d.note||'']);
+  });
+  var csv='\uFEFF'+rows.map(function(r){return r.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+  var a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='직원목록_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  toast('✅ CSV 다운로드 완료');
+}
+
+function toast(msg,type){var t=document.getElementById('toast');t.textContent=msg;t.className='show'+(type?' '+type:'');clearTimeout(t._t);t._t=setTimeout(function(){t.className='';},3000);}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+</script>
+</body>
+</html>
