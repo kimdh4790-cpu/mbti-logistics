@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#030912">
+<title>DONWAY — 마이페이지</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{--bg:#030912;--bg2:#060f1f;--bg3:#0a1628;--blue:#0066ff;--cyan:#00d4ff;--green:#00ff88;--red:#ef4444;--yellow:#f59e0b;--gray:#5a7299;--white:#e8f4ff;--border:rgba(0,212,255,.12);--border2:rgba(0,102,255,.18)}
+body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun Gothic',sans-serif;min-height:100vh}
+.wrap{max-width:480px;margin:0 auto;padding:0 0 90px}
+.topbar{background:rgba(3,9,18,.97);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;backdrop-filter:blur(20px)}
+.logo{font-size:14px;font-weight:900;letter-spacing:3px}.logo span{color:var(--cyan)}
+.tabs{display:flex;background:rgba(6,15,31,.8);border-bottom:1px solid var(--border)}
+.tab{flex:1;padding:13px 0;border:none;background:transparent;color:var(--gray);font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;transition:.2s}
+.tab.on{color:var(--cyan);border-bottom-color:var(--cyan)}
+.profile-card{margin:14px 20px;background:linear-gradient(135deg,rgba(0,102,255,.12),rgba(0,212,255,.06));border:1.5px solid rgba(0,212,255,.2);border-radius:18px;padding:22px 20px;display:flex;align-items:center;gap:16px}
+.avatar{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--cyan));display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;flex-shrink:0;color:var(--bg)}
+.profile-name{font-size:19px;font-weight:900}
+.profile-meta{font-size:11px;color:var(--gray);margin-top:4px;line-height:1.8}
+.profile-badge{display:inline-block;padding:2px 8px;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);border-radius:20px;font-size:10px;color:var(--cyan);font-family:monospace;margin-left:4px}
+.month-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 20px 14px}
+.ms-card{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:14px 8px;text-align:center}
+.ms-num{font-size:20px;font-weight:900;line-height:1;font-family:monospace}
+.ms-lbl{font-size:9px;color:var(--gray);margin-top:4px;font-weight:700;letter-spacing:.5px}
+.card{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;margin:0 20px 12px}
+.card-title{font-size:10px;font-weight:700;color:var(--gray);letter-spacing:.15em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+.settle-row{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid rgba(0,212,255,.06);cursor:pointer;transition:.15s}
+.settle-row:last-child{border-bottom:none}
+.settle-row:hover{background:rgba(0,212,255,.04)}
+.settle-month{font-size:14px;font-weight:800}
+.settle-sub{font-size:10px;color:var(--gray);margin-top:2px}
+.settle-amt{font-size:16px;font-weight:900;font-family:monospace;color:var(--cyan);text-align:right}
+.settle-status{font-size:10px;margin-top:2px;text-align:right}
+.s-paid{color:var(--green)}.s-pending{color:var(--yellow)}.s-wait{color:var(--gray)}
+.att-row{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid rgba(0,212,255,.06)}
+.att-row:last-child{border-bottom:none}
+.att-in{font-size:12px;font-weight:700;color:var(--green);font-family:monospace}
+.att-out{font-size:12px;font-weight:700;color:var(--red);font-family:monospace;margin-top:2px}
+.att-work{font-size:10px;color:var(--gray);font-family:monospace;margin-top:2px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9000;display:none;align-items:flex-end;justify-content:center}
+.modal.show{display:flex}
+.modal-box{background:var(--bg2);border:1px solid var(--border2);border-radius:20px 20px 0 0;padding:24px 20px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;animation:slideUp .3s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.pay-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.pay-item{background:var(--bg3);border-radius:8px;padding:10px 12px}
+.pay-key{font-size:10px;color:var(--gray);margin-bottom:4px}
+.pay-val{font-size:14px;font-weight:800;font-family:monospace}
+.pay-total{background:rgba(0,212,255,.08);border:1.5px solid rgba(0,212,255,.2);border-radius:10px;padding:16px;text-align:center;margin-bottom:14px}
+.pay-total-lbl{font-size:11px;color:var(--gray);margin-bottom:4px}
+.pay-total-amt{font-size:28px;font-weight:900;color:var(--cyan);font-family:monospace}
+.month-filter{display:flex;gap:8px;margin:12px 20px;align-items:center}
+.month-inp{flex:1;padding:9px 12px;background:var(--bg2);border:1.5px solid var(--border2);border-radius:10px;color:var(--white);font-size:13px;font-weight:700;outline:none}
+.bottombar{position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;background:rgba(6,15,31,.97);border-top:1px solid var(--border);display:flex;padding:8px 0;z-index:100}
+.bot-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px;border:none;background:transparent;cursor:pointer;color:var(--gray)}
+.bot-btn.on{color:var(--cyan)}
+.bot-icon{font-size:20px}.bot-lbl{font-size:9px;font-weight:700;letter-spacing:.5px}
+#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg2);border:1px solid var(--border2);color:var(--white);padding:10px 20px;border-radius:99px;font-size:12px;font-weight:700;opacity:0;transition:.3s;pointer-events:none;z-index:9999;white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.ok{border-color:var(--green);color:var(--green)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{width:14px;height:14px;border:2px solid rgba(0,212,255,.2);border-top-color:var(--cyan);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:middle}
+.fi{width:100%;padding:11px 13px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--white);font-size:14px;font-weight:700;outline:none;margin-bottom:12px}
+.fl{font-size:11px;color:var(--gray);display:block;margin-bottom:5px}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+
+<div class="modal" id="pay-modal">
+  <div class="modal-box">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-size:16px;font-weight:900">💰 급여명세서</div>
+      <button onclick="closePay()" style="background:none;border:none;color:var(--gray);font-size:20px;cursor:pointer">✕</button>
+    </div>
+    <div id="pay-content"></div>
+  </div>
+</div>
+
+<div class="topbar">
+  <div class="logo"><span>D</span>ONWAY 마이페이지</div>
+  <button onclick="location.href='/attendance'" style="background:none;border:1px solid rgba(0,212,255,.2);border-radius:8px;color:var(--cyan);font-size:11px;font-weight:700;padding:6px 12px;cursor:pointer">📷 출퇴근</button>
+</div>
+<div class="tabs">
+  <button class="tab on" id="tab-home" onclick="switchTab('home')">🏠 홈</button>
+  <button class="tab" id="tab-settle" onclick="switchTab('settle')">💰 정산</button>
+  <button class="tab" id="tab-att" onclick="switchTab('att')">📋 출퇴근</button>
+  <button class="tab" id="tab-info" onclick="switchTab('info')">👤 내정보</button>
+</div>
+
+<div class="wrap">
+
+  <div id="tab-home-content">
+    <div class="profile-card">
+      <div class="avatar" id="av">?</div>
+      <div style="flex:1;min-width:0">
+        <div class="profile-name" id="pn">로딩 중...</div>
+        <div class="profile-meta">
+          <span id="pc"></span><span class="profile-badge" id="pp"></span><br>
+          <span id="pi"></span>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:0 20px 8px">
+      <div style="font-size:10px;font-weight:700;color:var(--gray);letter-spacing:.1em">이번달 요약</div>
+      <div style="font-size:11px;color:var(--gray)" id="ml"></div>
+    </div>
+    <div class="month-summary">
+      <div class="ms-card"><div class="ms-num" style="color:var(--cyan)" id="ms-pay">-</div><div class="ms-lbl">예상급여</div></div>
+      <div class="ms-card"><div class="ms-num" style="color:var(--green)" id="ms-att">0</div><div class="ms-lbl">출근일수</div></div>
+      <div class="ms-card"><div class="ms-num" style="color:var(--yellow)" id="ms-work">0h</div><div class="ms-lbl">총근무</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">오늘 출퇴근</div>
+      <div id="today-att"><div style="text-align:center;padding:12px;color:var(--gray);font-size:12px"><span class="spin"></span></div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">최근 정산 <button onclick="switchTab('settle')" style="font-size:10px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.15);border-radius:6px;color:var(--cyan);cursor:pointer;padding:3px 8px">전체</button></div>
+      <div id="recent-settle"><div style="text-align:center;padding:12px;color:var(--gray);font-size:12px"><span class="spin"></span></div></div>
+    </div>
+  </div>
+
+  <div id="tab-settle-content" style="display:none">
+    <div class="month-filter">
+      <input class="month-inp" type="month" id="settle-mi" onchange="loadSettle()">
+      <button onclick="loadSettle()" style="padding:9px 14px;background:var(--blue);border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">조회</button>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden"><div id="settle-list"><div style="text-align:center;padding:24px;color:var(--gray)"><span class="spin"></span></div></div></div>
+  </div>
+
+  <div id="tab-att-content" style="display:none">
+    <div class="month-filter">
+      <input class="month-inp" type="month" id="att-mi" onchange="loadAtt()">
+      <button onclick="loadAtt()" style="padding:9px 14px;background:var(--blue);border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">조회</button>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden"><div id="att-list"><div style="text-align:center;padding:24px;color:var(--gray)"><span class="spin"></span></div></div></div>
+  </div>
+
+  <div id="tab-info-content" style="display:none">
+    <div class="card">
+      <div class="card-title">내 정보 수정</div>
+      <div id="info-fields"></div>
+      <button onclick="saveInfo()" style="width:100%;padding:12px;background:linear-gradient(135deg,var(--blue),var(--cyan));border:none;border-radius:10px;color:var(--bg);font-size:14px;font-weight:700;cursor:pointer">저장</button>
+    </div>
+    <div class="card">
+      <div class="card-title">계정</div>
+      <div id="acc-info" style="font-size:12px;color:var(--gray);line-height:2"></div>
+      <button onclick="doLogout()" style="width:100%;padding:12px;background:transparent;border:1.5px solid rgba(239,68,68,.3);border-radius:10px;color:var(--red);font-size:13px;font-weight:700;cursor:pointer;margin-top:12px">로그아웃</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="bottombar">
+  <button class="bot-btn on" id="bb-home" onclick="switchTab('home')"><span class="bot-icon">🏠</span><span class="bot-lbl">홈</span></button>
+  <button class="bot-btn" id="bb-settle" onclick="switchTab('settle')"><span class="bot-icon">💰</span><span class="bot-lbl">정산</span></button>
+  <button class="bot-btn" onclick="location.href='/attendance'"><span class="bot-icon">📷</span><span class="bot-lbl">출퇴근</span></button>
+  <button class="bot-btn" id="bb-info" onclick="switchTab('info')"><span class="bot-icon">👤</span><span class="bot-lbl">내정보</span></button>
+</div>
+
+<script>
+var _db=null,_auth=null,_user=null,_drv=null;
+var _IND={coupang:'🚚 쿠팡물류',delivery:'🛵 배달대행',smallbiz:'🏪 소상공인',service:'🏗️ 용역업체',freelance:'👨‍💼 프리랜서'};
+(function init(){
+  if(typeof firebase==='undefined'){setTimeout(init,300);return;}
+  try{
+    var app;try{app=firebase.app('my');}catch(e){app=firebase.initializeApp({apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.firebasestorage.app',messagingSenderId:'40761160761',appId:'1:40761160761:web:20545b610f03f534e949e8'},'my');}
+    _db=app.firestore();_auth=app.auth();
+    _auth.onAuthStateChanged(function(u){if(u){_user=u;_loadDriver();}else{location.href='/settle';}});
+  }catch(e){}
+})();
+
+function switchTab(t){
+  ['home','settle','att','info'].forEach(function(x){
+    document.getElementById('tab-'+x+'-content').style.display=x===t?'block':'none';
+    document.getElementById('tab-'+x).classList.toggle('on',x===t);
+    var bb=document.getElementById('bb-'+x);if(bb)bb.classList.toggle('on',x===t);
+  });
+  if(t==='settle')loadSettle();
+  if(t==='att')loadAtt();
+  if(t==='info')_loadInfoFields();
+}
+
+function _loadDriver(){
+  if(!_db||!_user)return;
+  _db.collection('drivers').where('authUid','==',_user.uid).limit(1).get()
+    .then(function(s){
+      if(!s.empty){_drv=Object.assign({docId:s.docs[0].id},s.docs[0].data());_renderProfile();_loadHome();}
+      else return _db.collection('drivers').where('loginEmail','==',_user.email).limit(1).get();
+    }).then(function(s){
+      if(s&&!s.empty&&!_drv){_drv=Object.assign({docId:s.docs[0].id},s.docs[0].data());_renderProfile();_loadHome();}
+      else if(!_drv){_renderProfile();_loadHome();}
+    }).catch(function(){_renderProfile();_loadHome();});
+}
+
+function _renderProfile(){
+  var nm=(_drv&&_drv.name)||(_user&&_user.displayName)||'직원';
+  var cp=(_drv&&_drv.companyCode)||'';
+  var lc=(_drv&&(_drv.camp||_drv.loc))||'';
+  var ind=(_drv&&_IND[_drv.industryType])||'';
+  var set=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v;};
+  set('av',nm.slice(0,1));set('pn',nm);set('pc','소속: '+cp);set('pp',lc);set('pi',ind);
+}
+
+function _loadHome(){
+  var now=new Date();
+  var today=now.toISOString().slice(0,10);
+  var month=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  var e=document.getElementById('ml');if(e)e.textContent=now.getFullYear()+'년 '+(now.getMonth()+1)+'월';
+  var nm=(_drv&&_drv.name)||(_user&&_user.displayName)||'';
+  if(!_db||!nm)return;
+
+  // 오늘 출퇴근
+  _db.collection('attendance').where('date','==',today).where('name','==',nm).orderBy('timestamp','asc').get()
+    .then(function(s){
+      var rows=s.docs.map(function(d){return d.data();});
+      var ins=rows.filter(function(r){return r.type==='in';});
+      var outs=rows.filter(function(r){return r.type==='out';});
+      var el=document.getElementById('today-att');
+      if(!rows.length){el.innerHTML='<div style="text-align:center;padding:12px;color:var(--gray);font-size:12px">오늘 기록 없음 · <a href="/attendance" style="color:var(--cyan)">지금 출퇴근하기</a></div>';return;}
+      var inT=ins[0]?ins[0].time:'-';
+      var outT=outs.length?outs[outs.length-1].time:null;
+      var wMin=ins[0]&&outT?Math.round((new Date(outs[outs.length-1].timestamp)-new Date(ins[0].timestamp))/60000):null;
+      el.innerHTML='<div style="display:flex;gap:10px">'
+        +'<div style="flex:1;text-align:center;background:rgba(0,255,136,.07);border:1px solid rgba(0,255,136,.15);border-radius:10px;padding:12px">'
+        +'<div style="font-size:9px;color:var(--gray);margin-bottom:4px">🟢 출근</div><div style="font-size:20px;font-weight:900;font-family:monospace;color:var(--green)">'+inT+'</div></div>'
+        +'<div style="flex:1;text-align:center;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.15);border-radius:10px;padding:12px">'
+        +'<div style="font-size:9px;color:var(--gray);margin-bottom:4px">🔴 퇴근</div><div style="font-size:20px;font-weight:900;font-family:monospace;color:var(--red)">'+(outT||'근무중')+'</div></div></div>'
+        +(wMin!==null?'<div style="text-align:center;margin-top:8px;font-size:12px;color:var(--gray)">근무 <strong style="color:var(--cyan)">'+Math.floor(wMin/60)+'시간 '+wMin%60+'분</strong></div>':'');
+    }).catch(function(){});
+
+  // 이번달 정산
+  _db.collection('settlements').where('name','==',nm).where('month','==',month).limit(1).get()
+    .then(function(s){var e=document.getElementById('ms-pay');if(e)e.textContent=s.empty?'-':_fmt(s.docs[0].data().netPay||0);}).catch(function(){});
+
+  // 이번달 출근 일수 + 근무시간
+  var mS=month+'-01';var d2=new Date(now.getFullYear(),now.getMonth()+1,1);var mE=d2.toISOString().slice(0,10);
+  _db.collection('attendance').where('name','==',nm).where('date','>=',mS).where('date','<',mE).get()
+    .then(function(s){
+      var rows=s.docs.map(function(d){return d.data();});
+      var days=[...new Set(rows.filter(function(r){return r.type==='in';}).map(function(r){return r.date;}))];
+      var ae=document.getElementById('ms-att');if(ae)ae.textContent=days.length;
+      var dm={};rows.forEach(function(r){if(!dm[r.date])dm[r.date]=[];dm[r.date].push(r);});
+      var tot=0;Object.values(dm).forEach(function(rs){
+        var i2=rs.filter(function(r){return r.type==='in';}).sort(function(a,b){return a.timestamp<b.timestamp?-1:1;});
+        var o2=rs.filter(function(r){return r.type==='out';}).sort(function(a,b){return a.timestamp<b.timestamp?-1:1;});
+        if(i2[0]&&o2[0])tot+=Math.round((new Date(o2[o2.length-1].timestamp)-new Date(i2[0].timestamp))/60000);
+      });
+      var we=document.getElementById('ms-work');if(we)we.textContent=Math.round(tot/60)+'h';
+    }).catch(function(){});
+
+  // 최근 정산 2건
+  _db.collection('settlements').where('name','==',nm).orderBy('month','desc').limit(2).get()
+    .then(function(s){
+      var el=document.getElementById('recent-settle');
+      if(s.empty){el.innerHTML='<div style="text-align:center;padding:12px;color:var(--gray);font-size:12px">정산 내역 없음</div>';return;}
+      el.innerHTML=s.docs.map(function(d){return _sRow(Object.assign({id:d.id},d.data()));}).join('');
+    }).catch(function(){});
+}
+
+function loadSettle(){
+  var month=(document.getElementById('settle-mi')||{}).value||_thisM();
+  var nm=(_drv&&_drv.name)||'';
+  var el=document.getElementById('settle-list');
+  el.innerHTML='<div style="text-align:center;padding:20px;color:var(--gray)"><span class="spin"></span></div>';
+  if(!_db||!nm)return;
+  _db.collection('settlements').where('name','==',nm).where('month','==',month).get()
+    .then(function(s){
+      if(s.empty){el.innerHTML='<div style="text-align:center;padding:24px;color:var(--gray);font-size:13px">📭 해당 월 정산 없음</div>';return;}
+      el.innerHTML=s.docs.map(function(d){return _sRow(Object.assign({id:d.id},d.data()));}).join('');
+    }).catch(function(e){el.innerHTML='<div style="padding:16px;color:var(--gray)">오류: '+esc(e.message)+'</div>';});
+}
+
+function _sRow(r){
+  var sc=r.status==='지급완료'?'s-paid':r.status==='정산중'?'s-pending':'s-wait';
+  return '<div class="settle-row" onclick=\'openPay('+JSON.stringify(r).replace(/</g,'\\u003c')+')\' >'
+    +'<div><div class="settle-month">'+esc(r.month||'')+'</div>'
+    +'<div class="settle-sub">'+(r.camp||r.loc||'')+(r.deliveries?' · '+r.deliveries+'건':'')+'</div></div>'
+    +'<div><div class="settle-amt">'+_fmt(r.netPay||r.totalPay||0)+'원</div>'
+    +'<div class="settle-status '+sc+'">'+esc(r.status||'대기')+'</div></div></div>';
+}
+
+function loadAtt(){
+  var month=(document.getElementById('att-mi')||{}).value||_thisM();
+  var nm=(_drv&&_drv.name)||'';
+  var el=document.getElementById('att-list');
+  el.innerHTML='<div style="text-align:center;padding:20px;color:var(--gray)"><span class="spin"></span></div>';
+  if(!_db||!nm)return;
+  var mS=month+'-01';var tmp=new Date(month);tmp.setMonth(tmp.getMonth()+1);var mE=tmp.toISOString().slice(0,10);
+  _db.collection('attendance').where('name','==',nm).where('date','>=',mS).where('date','<',mE).orderBy('date','desc').get()
+    .then(function(s){
+      if(s.empty){el.innerHTML='<div style="text-align:center;padding:24px;color:var(--gray);font-size:13px">📭 출퇴근 기록 없음</div>';return;}
+      var dm={};s.docs.forEach(function(d){var r=d.data();if(!dm[r.date])dm[r.date]=[];dm[r.date].push(r);});
+      var dates=Object.keys(dm).sort().reverse();
+      el.innerHTML=dates.map(function(date){
+        var rs=dm[date];
+        var ins=rs.filter(function(r){return r.type==='in';}).sort(function(a,b){return a.timestamp<b.timestamp?-1:1;});
+        var outs=rs.filter(function(r){return r.type==='out';}).sort(function(a,b){return a.timestamp<b.timestamp?-1:1;});
+        var inT=ins[0]?ins[0].time:'-';var outT=outs.length?outs[outs.length-1].time:null;
+        var wM=ins[0]&&outT?Math.round((new Date(outs[outs.length-1].timestamp)-new Date(ins[0].timestamp))/60000):null;
+        var d3=new Date(date);var day=['일','월','화','수','목','금','토'][d3.getDay()];var iWk=d3.getDay()===0||d3.getDay()===6;
+        return '<div class="att-row"><div>'
+          +'<div style="font-size:13px;font-weight:700;'+(iWk?'color:var(--red)':'')+'">'+date.slice(5)+' ('+day+')</div>'
+          +'<div style="font-size:10px;color:var(--gray);">'+(ins[0]&&ins[0].loc||'')+'</div></div>'
+          +'<div style="text-align:right">'
+          +'<div class="att-in">🟢 '+inT+'</div>'
+          +'<div class="att-out">🔴 '+(outT||'미퇴근')+'</div>'
+          +(wM!==null?'<div class="att-work">'+Math.floor(wM/60)+'h '+wM%60+'m</div>':'')
+          +'</div></div>';
+      }).join('');
+    }).catch(function(e){el.innerHTML='<div style="padding:16px;color:var(--gray)">오류: '+esc(e.message)+'</div>';});
+}
+
+function openPay(r){
+  var c=document.getElementById('pay-content');
+  c.innerHTML='<div style="text-align:center;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border2)">'
+    +'<div style="font-size:15px;font-weight:900;letter-spacing:3px">급 여 명 세 서</div>'
+    +'<div style="font-size:11px;color:var(--gray);margin-top:5px">'+esc(r.month||'')+'월분 · '+esc(r.name||'')+'</div></div>'
+    +'<div class="pay-grid">'
+    +'<div class="pay-item"><div class="pay-key">소속 거점</div><div class="pay-val">'+esc(r.camp||r.loc||'-')+'</div></div>'
+    +'<div class="pay-item"><div class="pay-key">건수</div><div class="pay-val">'+(r.deliveries||'-')+'건</div></div>'
+    +'<div class="pay-item"><div class="pay-key">건당 단가</div><div class="pay-val">'+_fmt(r.unitPrice||0)+'</div></div>'
+    +'<div class="pay-item"><div class="pay-key">인센티브</div><div class="pay-val">'+_fmt(r.incentive||0)+'</div></div>'
+    +'<div class="pay-item"><div class="pay-key">공제합계</div><div class="pay-val" style="color:var(--red)">-'+_fmt(r.deduction||0)+'</div></div>'
+    +'<div class="pay-item"><div class="pay-key">지급상태</div><div class="pay-val" style="color:'+(r.status==='지급완료'?'var(--green)':'var(--yellow)')+'">'+esc(r.status||'대기')+'</div></div>'
+    +'</div>'
+    +'<div class="pay-total"><div class="pay-total-lbl">실 수령액</div><div class="pay-total-amt">'+_fmt(r.netPay||r.totalPay||0)+' 원</div></div>'
+    +(r.note?'<div style="background:var(--bg3);border-radius:8px;padding:10px;font-size:12px;color:var(--gray);margin-bottom:12px">'+esc(r.note)+'</div>':'')
+    +'<button onclick="printPay('+JSON.stringify(r).replace(/"/g,"'")+')" style="width:100%;padding:13px;background:linear-gradient(135deg,var(--blue),var(--cyan));border:none;border-radius:10px;color:var(--bg);font-size:14px;font-weight:900;cursor:pointer;margin-bottom:8px">🖨 인쇄 / PDF</button>'
+    +'<button onclick="closePay()" style="width:100%;padding:12px;background:transparent;border:1.5px solid var(--border2);border-radius:10px;color:var(--gray);font-size:13px;font-weight:700;cursor:pointer">닫기</button>';
+  document.getElementById('pay-modal').classList.add('show');
+}
+function closePay(){document.getElementById('pay-modal').classList.remove('show');}
+
+function printPay(r){
+  var h='<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>급여명세서</title>'
+    +'<style>*{box-sizing:border-box;margin:0;padding:0;font-family:"맑은 고딕",sans-serif}body{padding:20mm;font-size:10pt}'
+    +'.title{text-align:center;font-size:20pt;font-weight:900;letter-spacing:4px;padding-bottom:10px;border-bottom:3px solid #111;margin-bottom:20px}'
+    +'.sub{text-align:center;font-size:10pt;color:#888;margin-bottom:20px}'
+    +'.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}'
+    +'.item{border:1px solid #ddd;border-radius:4px;padding:10px}'
+    +'.k{font-size:8pt;color:#888;margin-bottom:4px}.v{font-size:12pt;font-weight:700}'
+    +'.total{text-align:center;border:2px solid #0066ff;border-radius:8px;padding:16px;margin-bottom:16px}'
+    +'.ta{font-size:22pt;font-weight:900;color:#0066ff}'
+    +'.footer{text-align:right;margin-top:20px;font-size:9pt;color:#888;border-top:1px solid #eee;padding-top:10px}'
+    +'@media print{body{padding:10mm}}</style></head><body>'
+    +'<div class="title">급 여 명 세 서</div>'
+    +'<div class="sub">'+esc(r.month||'')+'월분 · '+esc(r.name||'')+'</div>'
+    +'<div class="grid">'
+    +'<div class="item"><div class="k">성명</div><div class="v">'+esc(r.name||'')+'</div></div>'
+    +'<div class="item"><div class="k">지급월</div><div class="v">'+esc(r.month||'')+'</div></div>'
+    +'<div class="item"><div class="k">소속</div><div class="v">'+esc(r.camp||r.loc||'-')+'</div></div>'
+    +'<div class="item"><div class="k">건수</div><div class="v">'+(r.deliveries||0)+'건</div></div>'
+    +'<div class="item"><div class="k">건당 단가</div><div class="v">'+_fmt(r.unitPrice||0)+'원</div></div>'
+    +'<div class="item"><div class="k">인센티브</div><div class="v">'+_fmt(r.incentive||0)+'원</div></div>'
+    +'<div class="item"><div class="k">공제 합계</div><div class="v" style="color:red">-'+_fmt(r.deduction||0)+'원</div></div>'
+    +'<div class="item"><div class="k">지급 상태</div><div class="v">'+esc(r.status||'대기')+'</div></div>'
+    +'</div>'
+    +'<div class="total"><div style="font-size:9pt;color:#888;margin-bottom:4px">실 수령액</div>'
+    +'<div class="ta">'+_fmt(r.netPay||r.totalPay||0)+' 원</div></div>'
+    +(r.note?'<div style="border:1px solid #ddd;border-radius:4px;padding:10px;font-size:9pt;color:#555;margin-bottom:14px">비고: '+esc(r.note)+'</div>':'')
+    +'<div class="footer">엠비티아이(유) · 하나은행 270-910019-24204 · 051-711-3103 · DONWAY</div>'
+    +'</body></html>';
+  var w=window.open('','_blank','width=700,height=600');
+  if(w){w.document.write(h);w.document.close();setTimeout(function(){w.focus();w.print();},500);}
+}
+
+function _loadInfoFields(){
+  var nm=(_drv&&_drv.name)||'';var ph=(_drv&&_drv.phone)||'';var em=(_drv&&_drv.email)||(_user&&_user.email)||'';
+  document.getElementById('info-fields').innerHTML=
+    [['이름','info-nm',nm,'홍길동'],['전화번호','info-ph',ph,'010-0000-0000'],['이메일','info-em',em,'me@email.com']].map(function(x){
+      return '<label class="fl">'+x[0]+'</label><input id="'+x[1]+'" value="'+esc(x[2])+'" placeholder="'+x[3]+'" class="fi">';
+    }).join('');
+  var a=document.getElementById('acc-info');
+  if(a)a.innerHTML='로그인: <strong style="color:var(--white)">'+esc(_user&&_user.email||'')+'</strong>';
+}
+function saveInfo(){
+  if(!_db||!_drv)return;
+  var nm=(document.getElementById('info-nm')||{}).value||'';
+  var ph=(document.getElementById('info-ph')||{}).value||'';
+  var em=(document.getElementById('info-em')||{}).value||'';
+  _db.collection('drivers').doc(_drv.docId).update({name:nm,phone:ph,email:em})
+    .then(function(){_drv.name=nm;_drv.phone=ph;_drv.email=em;_renderProfile();toast('✅ 저장 완료','ok');})
+    .catch(function(e){toast('❌ '+e.message);});
+}
+function doLogout(){if(_auth)_auth.signOut().then(function(){location.href='/settle';});}
+function _thisM(){var n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');}
+function _fmt(n){return Math.round(n||0).toLocaleString('ko-KR');}
+function toast(msg,type){var t=document.getElementById('toast');t.textContent=msg;t.className='show'+(type?' '+type:'');clearTimeout(t._t);t._t=setTimeout(function(){t.className='';},3000);}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+document.addEventListener('DOMContentLoaded',function(){
+  var m=_thisM();
+  var si=document.getElementById('settle-mi');if(si)si.value=m;
+  var ai=document.getElementById('att-mi');if(ai)ai.value=m;
+});
+</script>
+</body>
+</html>

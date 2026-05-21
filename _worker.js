@@ -421,6 +421,12 @@ export default {
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
+    // ★ 직원 마이페이지
+    if (path === '/my' || path === '/my/') {
+      const resp = await env.ASSETS.fetch(new Request(new URL('/my.html', url)));
+      return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+    }
+
     // ★ 출퇴근 관리자 대시보드
     if (path === '/attendance-admin' || path === '/attendance-admin/') {
       const resp = await env.ASSETS.fetch(new Request(new URL('/attendance-admin.html', url)));
