@@ -1765,6 +1765,7 @@ function _renderSettlePage(settles,c){
     +'<button onclick="openIncPanel()" style="padding:8px 14px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⚙️ 기사별 인센 설정</button>'
     +'</div>'
     +'<div id="settle-more-btns" style="display:none;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;padding-top:8px;border-top:1px dashed rgba(249,115,22,.3)">'  
+    +'<button onclick="openDocModal()" style="padding:8px 14px;background:linear-gradient(135deg,#0f766e,#14b8a6);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📝 견적서·거래명세서</button>'
     +'<button onclick="openCoupangStatsPanel()" style="padding:8px 14px;background:#f97316;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📊 쿠팡 건수 통계</button>'
     +'<button onclick="openSettleCompare()" style="padding:8px 14px;background:#6366f1;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📊 기사별 실적 비교</button>'
     +'<button onclick="checkDuplicateSettlements()" style="padding:8px 14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔍 중복 검사</button>'
@@ -2011,6 +2012,274 @@ function sendSMS(msgEnc,phoneEnc){
     toast('❌ 오류: '+e.message);
     if(btn){btn.textContent='📱 재시도';btn.disabled=false;}
   });
+}
+
+
+// ══════════════════════════════════════════
+// ██ 견적서 · 거래명세서 생성기 ██
+// ══════════════════════════════════════════
+var _docItems=[]; // 품목 목록
+
+function openDocModal(){
+  var mo=document.createElement('div');mo.className='mo show';mo.id='mo-doc';
+  mo.innerHTML=_buildDocModalHTML();
+  document.getElementById('modals').appendChild(mo);
+  _docItems=[{name:'',qty:1,unit:'개',price:0}];
+  _renderDocItems();
+  _calcDocTotal();
+}
+
+function _buildDocModalHTML(){
+  var compName=(_CU&&_CU.name)||'엠비티아이(유)';
+  var today=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit'}).replace(/\. /g,'-').replace('.','');
+  var docNo='DOC-'+Date.now().toString().slice(-6);
+  return '<div class="md" style="max-width:580px;width:95vw;max-height:92vh;overflow-y:auto">'
+  +'<div class="mdt" style="display:flex;align-items:center;justify-content:space-between">'
+  +'<span>📝 문서 발행</span>'
+  +'<button onclick="this.closest(\'.mo\').remove()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3)">✕</button>'
+  +'</div>'
+
+  // 문서 유형 선택
+  +'<div style="display:flex;gap:8px;margin-bottom:16px">'
+  +'<button id="doc-tab-quote" onclick="setDocType(\'quote\')" style="flex:1;padding:10px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#0f766e,#14b8a6);color:#fff;border:none">📋 견적서</button>'
+  +'<button id="doc-tab-trans" onclick="setDocType(\'trans\')" style="flex:1;padding:10px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:var(--bg3);color:var(--text2);border:1px solid var(--border2)">🧾 거래명세서</button>'
+  +'<button id="doc-tab-receipt" onclick="setDocType(\'receipt\')" style="flex:1;padding:10px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:var(--bg3);color:var(--text2);border:1px solid var(--border2)">🏷️ 영수증</button>'
+  +'</div>'
+  +'<input type="hidden" id="doc-type" value="quote">'
+
+  // 기본 정보
+  +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">'
+  +'<div class="fg"><label>문서 번호</label><input id="doc-no" value="'+docNo+'" class="fi"></div>'
+  +'<div class="fg"><label>발행일</label><input id="doc-date" type="date" value="'+new Date().toISOString().slice(0,10)+'" class="fi"></div>'
+  +'</div>'
+
+  // 발행인 / 수신인
+  +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">'
+  // 발행인
+  +'<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:12px">'
+  +'<div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.1em;margin-bottom:8px">🏢 발행인 (공급자)</div>'
+  +'<div class="fg" style="margin-bottom:8px"><label>회사명</label><input id="doc-from-name" value="엠비티아이(유)" class="fi"></div>'
+  +'<div class="fg" style="margin-bottom:8px"><label>사업자번호</label><input id="doc-from-biz" value="373-86-02536" class="fi"></div>'
+  +'<div class="fg" style="margin-bottom:8px"><label>대표자</label><input id="doc-from-rep" class="fi" placeholder="김형우"></div>'
+  +'<div class="fg" style="margin-bottom:0"><label>연락처</label><input id="doc-from-tel" value="051-711-3103" class="fi"></div>'
+  +'</div>'
+  // 수신인
+  +'<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:12px">'
+  +'<div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.1em;margin-bottom:8px">📮 수신인 (공급받는자)</div>'
+  +'<div class="fg" style="margin-bottom:8px"><label>회사명</label><input id="doc-to-name" class="fi" placeholder="거래처명"></div>'
+  +'<div class="fg" style="margin-bottom:8px"><label>사업자번호</label><input id="doc-to-biz" class="fi" placeholder="000-00-00000"></div>'
+  +'<div class="fg" style="margin-bottom:8px"><label>담당자</label><input id="doc-to-rep" class="fi" placeholder="홍길동"></div>'
+  +'<div class="fg" style="margin-bottom:0"><label>연락처</label><input id="doc-to-tel" class="fi" placeholder="010-0000-0000"></div>'
+  +'</div>'
+  +'</div>'
+
+  // 품목 테이블
+  +'<div style="margin-bottom:14px">'
+  +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
+  +'<div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.1em">📦 품목</div>'
+  +'<button onclick="addDocItem()" style="padding:4px 12px;background:var(--teal);border:none;border-radius:6px;color:#fff;font-size:11px;font-weight:700;cursor:pointer">+ 품목 추가</button>'
+  +'</div>'
+  +'<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:10px;overflow:hidden">'
+  +'<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1.2fr 40px;gap:0;padding:8px 12px;background:rgba(0,0,0,.2);font-size:10px;font-weight:700;color:var(--text3)">'
+  +'<div>품목명</div><div style="text-align:center">수량</div><div style="text-align:center">단위</div><div style="text-align:right">단가</div><div></div>'
+  +'</div>'
+  +'<div id="doc-items"></div>'
+  +'</div>'
+  +'</div>'
+
+  // 합계
+  +'<div style="background:rgba(20,184,166,.08);border:1.5px solid rgba(20,184,166,.25);border-radius:12px;padding:14px 16px;margin-bottom:14px">'
+  +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;text-align:center">'
+  +'<div><div style="font-size:10px;color:var(--text3);margin-bottom:4px">공급가액</div><div style="font-size:15px;font-weight:800;color:var(--text)" id="doc-supply">₩0</div></div>'
+  +'<div><div style="font-size:10px;color:var(--text3);margin-bottom:4px">부가세 (10%)</div><div style="font-size:15px;font-weight:800;color:#f59e0b" id="doc-vat">₩0</div></div>'
+  +'<div><div style="font-size:10px;color:var(--text3);margin-bottom:4px">합계금액</div><div style="font-size:16px;font-weight:900;color:#14b8a6" id="doc-total">₩0</div></div>'
+  +'</div>'
+  +'<div style="margin-top:10px;display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text3)">'
+  +'<label style="cursor:pointer;display:flex;align-items:center;gap:5px"><input type="checkbox" id="doc-vat-yn" checked onchange="_calcDocTotal()"> 부가세 포함</label>'
+  +'<span style="margin-left:8px">유효기간:</span>'
+  +'<input id="doc-valid" type="date" class="fi" style="width:130px;padding:4px 8px;font-size:11px">'
+  +'</div>'
+  +'</div>'
+
+  // 비고
+  +'<div class="fg" style="margin-bottom:16px">'
+  +'<label>비고 / 특이사항</label>'
+  +'<textarea id="doc-note" rows="2" class="fi" style="resize:vertical" placeholder="결제 조건, 납기일 등"></textarea>'
+  +'</div>'
+
+  // 하단 버튼
+  +'<div class="mdf">'
+  +'<button class="btn" onclick="this.closest(\'.mo\').remove()">닫기</button>'
+  +'<div style="display:flex;gap:8px">'
+  +'<button class="btn" onclick="saveDocFirestore()" style="background:var(--bg3);border:1px solid var(--border2)">☁ 저장</button>'
+  +'<button class="btn btn-blue" onclick="printDoc()">🖨 인쇄 / PDF</button>'
+  +'</div>'
+  +'</div>'
+  +'</div>';
+}
+
+function setDocType(type){
+  document.getElementById('doc-type').value=type;
+  var tabs={quote:'doc-tab-quote',trans:'doc-tab-trans',receipt:'doc-tab-receipt'};
+  Object.keys(tabs).forEach(function(t){
+    var btn=document.getElementById(tabs[t]);
+    if(!btn)return;
+    if(t===type){btn.style.background='linear-gradient(135deg,#0f766e,#14b8a6)';btn.style.color='#fff';btn.style.border='none';}
+    else{btn.style.background='var(--bg3)';btn.style.color='var(--text2)';btn.style.border='1px solid var(--border2)';}
+  });
+}
+
+function addDocItem(){
+  _docItems.push({name:'',qty:1,unit:'개',price:0});
+  _renderDocItems();
+}
+function removeDocItem(idx){
+  _docItems.splice(idx,1);
+  _renderDocItems();
+}
+function _renderDocItems(){
+  var el=document.getElementById('doc-items');
+  if(!el)return;
+  el.innerHTML=_docItems.map(function(item,i){
+    return '<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1.2fr 40px;gap:4px;padding:8px 12px;border-top:1px solid var(--border2);align-items:center">'
+      +'<input class="fi" style="font-size:12px;padding:6px 8px" value="'+esc(item.name)+'" placeholder="품목명" oninput="_docItemUpdate('+i+',\'name\',this.value)">'
+      +'<input class="fi" style="font-size:12px;padding:6px 8px;text-align:center" type="number" value="'+item.qty+'" min="1" oninput="_docItemUpdate('+i+',\'qty\',+this.value)">'
+      +'<input class="fi" style="font-size:12px;padding:6px 8px;text-align:center" value="'+esc(item.unit)+'" oninput="_docItemUpdate('+i+',\'unit\',this.value)">'
+      +'<input class="fi" style="font-size:12px;padding:6px 8px;text-align:right;font-family:monospace" type="number" value="'+item.price+'" min="0" oninput="_docItemUpdate('+i+',\'price\',+this.value)">'
+      +'<button onclick="removeDocItem('+i+')" style="padding:4px;background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;font-weight:900">×</button>'
+      +'</div>';
+  }).join('');
+}
+function _docItemUpdate(i,key,val){
+  if(_docItems[i])_docItems[i][key]=val;
+  _calcDocTotal();
+}
+function _calcDocTotal(){
+  var supply=_docItems.reduce(function(s,item){return s+(item.qty||0)*(item.price||0);},0);
+  var vatYn=(document.getElementById('doc-vat-yn')||{checked:true}).checked;
+  var vat=vatYn?Math.round(supply*.1):0;
+  var total=supply+vat;
+  var el=document.getElementById('doc-supply');if(el)el.textContent='₩'+fmt(supply);
+  el=document.getElementById('doc-vat');if(el)el.textContent='₩'+fmt(vat);
+  el=document.getElementById('doc-total');if(el)el.textContent='₩'+fmt(total);
+}
+
+// Firestore 저장
+function saveDocFirestore(){
+  if(!_db){toast('Firestore 연결 안됨');return;}
+  var type=document.getElementById('doc-type').value;
+  var docNo=document.getElementById('doc-no').value;
+  var supply=_docItems.reduce(function(s,item){return s+(item.qty||0)*(item.price||0);},0);
+  var vatYn=(document.getElementById('doc-vat-yn')||{checked:true}).checked;
+  var vat=vatYn?Math.round(supply*.1):0;
+  var record={
+    type:type,docNo:docNo,
+    date:document.getElementById('doc-date').value,
+    fromName:document.getElementById('doc-from-name').value,
+    fromBiz:document.getElementById('doc-from-biz').value,
+    fromRep:document.getElementById('doc-from-rep').value,
+    fromTel:document.getElementById('doc-from-tel').value,
+    toName:document.getElementById('doc-to-name').value,
+    toBiz:document.getElementById('doc-to-biz').value,
+    toRep:document.getElementById('doc-to-rep').value,
+    toTel:document.getElementById('doc-to-tel').value,
+    items:JSON.stringify(_docItems),
+    supply:supply,vat:vat,total:supply+vat,
+    note:document.getElementById('doc-note').value,
+    dealerId:_CU&&_CU.dealerId,
+    createdAt:new Date().toISOString()
+  };
+  _db.collection('documents').add(record)
+    .then(function(){toast('✅ 저장 완료!');})
+    .catch(function(e){toast('❌ '+e.message);});
+}
+
+// 인쇄 / PDF
+function printDoc(){
+  var type=document.getElementById('doc-type').value;
+  var typeLabel={quote:'견적서',trans:'거래명세서',receipt:'영수증'}[type]||'견적서';
+  var docNo=document.getElementById('doc-no').value;
+  var docDate=document.getElementById('doc-date').value;
+  var fromName=document.getElementById('doc-from-name').value;
+  var fromBiz=document.getElementById('doc-from-biz').value;
+  var fromRep=document.getElementById('doc-from-rep').value;
+  var fromTel=document.getElementById('doc-from-tel').value;
+  var toName=document.getElementById('doc-to-name').value;
+  var toBiz=document.getElementById('doc-to-biz').value;
+  var toRep=document.getElementById('doc-to-rep').value;
+  var toTel=document.getElementById('doc-to-tel').value;
+  var note=document.getElementById('doc-note').value;
+  var vatYn=(document.getElementById('doc-vat-yn')||{checked:true}).checked;
+  var supply=_docItems.reduce(function(s,item){return s+(item.qty||0)*(item.price||0);},0);
+  var vat=vatYn?Math.round(supply*.1):0;
+  var total=supply+vat;
+
+  var itemRows=_docItems.map(function(item,i){
+    var amt=(item.qty||0)*(item.price||0);
+    return '<tr>'
+      +'<td style="text-align:center">'+(i+1)+'</td>'
+      +'<td>'+esc(item.name||'')+'</td>'
+      +'<td style="text-align:center">'+esc(item.unit||'개')+'</td>'
+      +'<td style="text-align:center">'+(item.qty||0)+'</td>'
+      +'<td style="text-align:right">'+fmt(item.price||0)+'</td>'
+      +'<td style="text-align:right">'+fmt(amt)+'</td>'
+      +'</tr>';
+  }).join('');
+
+  var html='<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">'
+    +'<title>'+typeLabel+'_'+docNo+'</title>'
+    +'<style>'
+    +'*{box-sizing:border-box;margin:0;padding:0;font-family:"맑은 고딕","Malgun Gothic",sans-serif}'
+    +'body{padding:20mm;font-size:10pt;color:#111}'
+    +'.doc-title{text-align:center;font-size:22pt;font-weight:900;letter-spacing:4px;margin-bottom:6px;border-bottom:3px solid #111;padding-bottom:10px}'
+    +'.doc-no{text-align:center;font-size:9pt;color:#555;margin-bottom:20px}'
+    +'.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}'
+    +'.info-box{border:1px solid #ccc;border-radius:4px;padding:10px}'
+    +'.info-title{font-size:8pt;font-weight:700;color:#555;letter-spacing:.1em;margin-bottom:8px;border-bottom:1px solid #eee;padding-bottom:4px}'
+    +'.info-row{display:flex;justify-content:space-between;font-size:9pt;margin-bottom:4px}'
+    +'.info-key{color:#777;width:70px;flex-shrink:0}'
+    +'.info-val{font-weight:600;text-align:right}'
+    +'table{width:100%;border-collapse:collapse;margin-bottom:16px}'
+    +'th{background:#1a1a1a;color:#fff;padding:8px;font-size:9pt;font-weight:700}'
+    +'td{padding:7px 8px;border-bottom:1px solid #eee;font-size:9pt}'
+    +'.total-box{text-align:right;margin-bottom:16px}'
+    +'.total-row{display:flex;justify-content:flex-end;gap:0;margin-bottom:6px}'
+    +'.total-lbl{width:100px;font-size:10pt;color:#555;text-align:right;padding-right:12px}'
+    +'.total-val{width:140px;font-size:10pt;font-weight:700;text-align:right}'
+    +'.grand-total .total-lbl,.grand-total .total-val{font-size:13pt;font-weight:900;color:#0066ff;border-top:2px solid #0066ff;padding-top:6px}'
+    +'.note-box{border:1px solid #ccc;border-radius:4px;padding:10px;font-size:9pt;color:#333}'
+    +'.stamp-area{text-align:right;margin-top:20px;font-size:9pt;color:#555}'
+    +'@media print{body{padding:10mm}}'
+    +'</style></head><body>'
+    +'<div class="doc-title">'+typeLabel+'</div>'
+    +'<div class="doc-no">문서번호: '+esc(docNo)+' | 발행일: '+esc(docDate)+'</div>'
+    +'<div class="info-grid">'
+    +'<div class="info-box"><div class="info-title">공급자 (발행인)</div>'
+    +'<div class="info-row"><span class="info-key">상호</span><span class="info-val">'+esc(fromName)+'</span></div>'
+    +'<div class="info-row"><span class="info-key">사업자번호</span><span class="info-val">'+esc(fromBiz)+'</span></div>'
+    +'<div class="info-row"><span class="info-key">대표자</span><span class="info-val">'+esc(fromRep)+'</span></div>'
+    +'<div class="info-row"><span class="info-key">연락처</span><span class="info-val">'+esc(fromTel)+'</span></div>'
+    +'</div>'
+    +'<div class="info-box"><div class="info-title">공급받는자 (수신인)</div>'
+    +'<div class="info-row"><span class="info-key">상호</span><span class="info-val">'+esc(toName)+'</span></div>'
+    +'<div class="info-row"><span class="info-key">사업자번호</span><span class="info-val">'+esc(toBiz)+'</span></div>'
+    +'<div class="info-row"><span class="info-key">담당자</span><span class="info-val">'+esc(toRep)+'</span></div>'
+    +'<div class="info-row"><span class="info-key">연락처</span><span class="info-val">'+esc(toTel)+'</span></div>'
+    +'</div></div>'
+    +'<table><thead><tr><th style="width:40px">No.</th><th>품목명</th><th style="width:50px">단위</th><th style="width:60px">수량</th><th style="width:90px">단가</th><th style="width:100px">금액</th></tr></thead>'
+    +'<tbody>'+itemRows+'</tbody></table>'
+    +'<div class="total-box">'
+    +'<div class="total-row"><span class="total-lbl">공급가액</span><span class="total-val">'+fmt(supply)+' 원</span></div>'
+    +(vatYn?'<div class="total-row"><span class="total-lbl">부가세 (10%)</span><span class="total-val">'+fmt(vat)+' 원</span></div>':'')
+    +'<div class="total-row grand-total"><span class="total-lbl">합계금액</span><span class="total-val">'+fmt(total)+' 원</span></div>'
+    +'</div>'
+    +(note?'<div class="note-box"><strong>비고:</strong> '+esc(note)+'</div>':'')
+    +'<div class="stamp-area">위 금액을 정히 청구합니다.<br>'+esc(fromName)+' (인)</div>'
+    +'</body></html>';
+
+  var w=window.open('','_blank','width=900,height=700');
+  if(w){w.document.write(html);w.document.close();setTimeout(function(){w.focus();w.print();},500);}
+  else{toast('팝업이 차단되었습니다. 브라우저 팝업 허용 후 다시 시도하세요');}
 }
 
 // ██ 전체 일괄발송 모달 ██
