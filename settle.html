@@ -1760,6 +1760,7 @@ function _renderSettlePage(settles,c){
     +'<label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#f97316;color:#fff;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📤 쿠팡 엑셀 업로드 → 자동정산<input type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style="display:none" onchange="parseCoupangExcel(this)"></label>'
     +'<button onclick="recalcAllSettlements()" style="padding:8px 14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⚡ 전체 정산 재계산 저장</button>'
     +'<button onclick="openOneQueueSend(\'전체\')" style="padding:8px 14px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⚡ 원큐 전달</button>'
+    +'<button onclick="openBulkSendModal()" style="padding:8px 14px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(0,102,255,.3)">📡 전체 일괄발송</button>'
     +'<button onclick="openTaxStore()" style="padding:8px 14px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗂 기사별 세금계산서 보관함</button>'
     +'<button onclick="openIncPanel()" style="padding:8px 14px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⚙️ 기사별 인센 설정</button>'
     +'</div>'
@@ -2012,36 +2013,199 @@ function sendSMS(msgEnc,phoneEnc){
   });
 }
 
-// 일괄 SMS 발송 (전체 기사)
-function sendSMSAll(){
-  var unsent=(_settleCache||[]).filter(function(x){return !x.taxSent&&(x.phone||x.driverPhone);});
-  if(!unsent.length){toast('발송할 데이터 없음 (전화번호 있는 미발송 건)');return;}
-  if(!confirm(unsent.length+'명에게 SMS 자동발송 하시겠습니까?'))return;
-  var r=calcNet;
-  var messages=unsent.map(function(x){
-    var net=(calcNet(x).net||0);
-    var phone=(x.phone||x.driverPhone||'').replace(/[^0-9]/g,'');
-    var msgArr=['[DONWAY 정산명세서]','기사: '+(x.driver||x.userId||''),'정산월: '+(x.month||''),'실지급: '+fmt(net)+'원','문의: 051-711-3103'];
-    return {to:phone,text:msgArr.join('\n')};
+// ██ 전체 일괄발송 모달 ██
+function openBulkSendModal(){
+  var all=(_settleCache||[]);
+  if(!all.length){toast('정산 데이터가 없습니다');return;}
+
+  // 드라이버 캐시와 매핑해서 전화번호 보강
+  var settled=all.map(function(x){
+    var drv=(_drvCache||[]).find(function(d){return d.userId===(x.userId||x.driver)||d.name===x.driver;});
+    var phone=(drv&&drv.phone)||x.phone||x.driverPhone||'';
+    var email=(drv&&drv.email)||x.email||x.driverEmail||'';
+    return Object.assign({},x,{_phone:phone,_email:email,_drv:drv});
   });
-  toast('📤 '+messages.length+'명 발송 중...');
+
+  var withPhone=settled.filter(function(x){return x._phone&&x._phone.replace(/[^0-9]/g,'').length>=10;});
+  var noPhone=settled.filter(function(x){return !x._phone||x._phone.replace(/[^0-9]/g,'').length<10;});
+  var month=(_settle_month&&_settle_month!=='all')?_settle_month:(settled[0]&&settled[0].month)||'';
+
+  var mo=document.createElement('div');mo.className='mo show';mo.id='mo-bulk-send';
+  mo.innerHTML='<div class="md" style="max-width:520px;width:95vw;max-height:90vh;overflow-y:auto">'
+    +'<div class="mdt" style="display:flex;align-items:center;justify-content:space-between">'
+    +'<span>📡 전체 일괄발송</span>'
+    +'<button onclick="this.closest(\'.mo\').remove()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3)">✕</button>'
+    +'</div>'
+
+    // 발송 방식 탭
+    +'<div style="display:flex;gap:6px;margin-bottom:16px">'
+    +'<button id="bs-tab-sms" onclick="bsSelTab(\'sms\')" style="flex:1;padding:9px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none">📱 SMS</button>'
+    +'<button id="bs-tab-kakao" onclick="bsSelTab(\'kakao\')" style="flex:1;padding:9px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:var(--bg3);color:var(--text3);border:1px solid var(--border2)">💬 카카오 알림톡<br><span style="font-size:9px">(승인 후 활성화)</span></button>'
+    +'</div>'
+
+    // 수신자 현황
+    +'<div style="display:flex;gap:8px;margin-bottom:14px">'
+    +'<div style="flex:1;background:rgba(0,102,255,.08);border:1px solid rgba(0,102,255,.2);border-radius:10px;padding:12px;text-align:center">'
+    +'<div style="font-size:22px;font-weight:900;color:#0066ff">'+withPhone.length+'</div>'
+    +'<div style="font-size:10px;color:var(--text2)">발송 가능<br>(전화번호 있음)</div>'
+    +'</div>'
+    +'<div style="flex:1;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);border-radius:10px;padding:12px;text-align:center">'
+    +'<div style="font-size:22px;font-weight:900;color:#ef4444">'+noPhone.length+'</div>'
+    +'<div style="font-size:10px;color:var(--text2)">번호 없음<br>(기사정보 등록 필요)</div>'
+    +'</div>'
+    +'<div style="flex:1;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.15);border-radius:10px;padding:12px;text-align:center">'
+    +'<div style="font-size:22px;font-weight:900;color:var(--cyan)">'+settled.length+'</div>'
+    +'<div style="font-size:10px;color:var(--text2)">총 정산서</div>'
+    +'</div>'
+    +'</div>'
+
+    // 메시지 템플릿
+    +'<div style="margin-bottom:14px">'
+    +'<div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">📝 메시지 템플릿 (편집 가능)</div>'
+    +'<textarea id="bs-msg-tmpl" rows="6" style="width:100%;padding:10px 12px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);font-size:12px;resize:vertical;line-height:1.7">'
+    +'[DONWAY 정산명세서]\n기사: {이름}\n정산월: '+month+'\n실지급: {금액}원\n\n문의: 051-711-3103\nKakao: MBTI Co. LOGISTICS'
+    +'</textarea>'
+    +'<div style="font-size:10px;color:var(--text3);margin-top:4px">{이름} {금액} 은 자동으로 채워집니다</div>'
+    +'</div>'
+
+    // 수신자 목록
+    +'<div style="margin-bottom:14px">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
+    +'<div style="font-size:11px;font-weight:700;color:var(--text2)">👥 수신자 목록</div>'
+    +'<div style="display:flex;gap:6px">'
+    +'<button onclick="bsSelectAll(true)" style="padding:4px 10px;font-size:10px;font-weight:700;background:var(--blue);color:#fff;border:none;border-radius:6px;cursor:pointer">전체선택</button>'
+    +'<button onclick="bsSelectAll(false)" style="padding:4px 10px;font-size:10px;font-weight:700;background:var(--bg3);color:var(--text2);border:1px solid var(--border2);border-radius:6px;cursor:pointer">전체해제</button>'
+    +'</div>'
+    +'</div>'
+    +'<div id="bs-list" style="max-height:200px;overflow-y:auto;border:1px solid var(--border2);border-radius:10px">'
+    +withPhone.map(function(x,i){
+      var net=calcNet(x).net||0;
+      var name=x.driver||x.userId||'';
+      var ph=x._phone;
+      var sent=x.taxSent;
+      return '<label style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--border);cursor:pointer;'+( sent?'opacity:.5':'')+'"">'
+        +'<input type="checkbox" class="bs-chk" data-idx="'+i+'" '+(sent?'':'checked')+' style="accent-color:#0066ff">'
+        +'<div style="flex:1;min-width:0">'
+        +'<div style="font-size:12px;font-weight:700">'+esc(name)+(sent?' <span style="font-size:9px;background:#059669;color:#fff;padding:1px 6px;border-radius:4px">발송완료</span>':'')+'</div>'
+        +'<div style="font-size:10px;color:var(--text2)">'+esc(ph)+' · ₩'+fmt(net)+'</div>'
+        +'</div>'
+        +'</label>';
+    }).join('')
+    +(noPhone.length?'<div style="padding:10px 12px;font-size:11px;color:var(--text3)">⚠ 번호 없음 ('+noPhone.length+'명) - 기사 정보에서 등록하세요</div>':'')
+    +'</div>'
+    +'</div>'
+
+    // 진행바 (숨김)
+    +'<div id="bs-progress" style="display:none;margin-bottom:14px">'
+    +'<div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px" id="bs-progress-label">발송 중...</div>'
+    +'<div style="height:8px;background:var(--bg3);border-radius:4px;overflow:hidden">'
+    +'<div id="bs-progress-bar" style="height:100%;background:linear-gradient(90deg,#0066ff,#00d4ff);border-radius:4px;transition:width .3s;width:0%"></div>'
+    +'</div>'
+    +'</div>'
+
+    // 결과
+    +'<div id="bs-result" style="display:none;padding:12px;background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.2);border-radius:10px;margin-bottom:14px;font-size:13px;font-weight:700;color:#00ff88"></div>'
+
+    // 하단 버튼
+    +'<div class="mdf">'
+    +'<button class="btn" onclick="this.closest(\'.mo\').remove()">닫기</button>'
+    +'<div style="display:flex;gap:8px">'
+    +'<button class="btn" onclick="bsPreview()" style="background:var(--bg3);border:1px solid var(--border2)">👁 미리보기</button>'
+    +'<button class="btn btn-blue" id="bs-send-btn" onclick="bsDoSend('+JSON.stringify(withPhone)+')">📡 선택 발송</button>'
+    +'</div>'
+    +'</div>'
+    +'</div>';
+
+  document.getElementById('modals').appendChild(mo);
+  window._bsData=withPhone;
+}
+
+function bsSelTab(tab){
+  var sms=document.getElementById('bs-tab-sms');
+  var kakao=document.getElementById('bs-tab-kakao');
+  if(!sms||!kakao)return;
+  if(tab==='sms'){
+    sms.style.background='linear-gradient(135deg,#0066ff,#00d4ff)';sms.style.color='#fff';sms.style.border='none';
+    kakao.style.background='var(--bg3)';kakao.style.color='var(--text3)';kakao.style.border='1px solid var(--border2)';
+  } else {
+    kakao.style.background='#FEE500';kakao.style.color='#000';kakao.style.border='none';
+    sms.style.background='var(--bg3)';sms.style.color='var(--text3)';sms.style.border='1px solid var(--border2)';
+    toast('💬 카카오 알림톡은 승인 후 활성화됩니다');
+  }
+}
+function bsSelectAll(v){
+  document.querySelectorAll('.bs-chk').forEach(function(c){c.checked=v;});
+}
+function bsPreview(){
+  var tmpl=(document.getElementById('bs-msg-tmpl')||{}).value||'';
+  var data=window._bsData||[];
+  var chks=Array.from(document.querySelectorAll('.bs-chk')).filter(function(c){return c.checked;}).map(function(c){return parseInt(c.dataset.idx);});
+  if(!chks.length){toast('수신자를 선택하세요');return;}
+  var sample=data[chks[0]];
+  if(!sample)return;
+  var net=calcNet(sample).net||0;
+  var msg=tmpl.replace('{이름}',sample.driver||sample.userId||'').replace('{금액}',fmt(net));
+  alert('[미리보기]\n수신: '+sample._phone+'\n\n'+msg);
+}
+function bsDoSend(allData){
+  var tmpl=(document.getElementById('bs-msg-tmpl')||{}).value||'';
+  var chkEls=Array.from(document.querySelectorAll('.bs-chk')).filter(function(c){return c.checked;});
+  if(!chkEls.length){toast('수신자를 선택하세요');return;}
+  var selected=chkEls.map(function(c){return allData[parseInt(c.dataset.idx)];}).filter(Boolean);
+  if(!confirm(selected.length+'명에게 SMS 발송하시겠습니까?'))return;
+
+  var btn=document.getElementById('bs-send-btn');
+  if(btn){btn.disabled=true;btn.textContent='발송 중...';}
+  var prog=document.getElementById('bs-progress');
+  var progBar=document.getElementById('bs-progress-bar');
+  var progLabel=document.getElementById('bs-progress-label');
+  var result=document.getElementById('bs-result');
+  if(prog)prog.style.display='block';
+
+  var messages=selected.map(function(x){
+    var net=calcNet(x).net||0;
+    var msg=tmpl.replace('{이름}',x.driver||x.userId||'').replace('{금액}',fmt(net));
+    return {to:(x._phone||'').replace(/[^0-9]/g,''),text:msg,_id:x.id||x.fbId,_obj:x};
+  }).filter(function(m){return m.to.length>=10;});
+
+  if(progLabel)progLabel.textContent='발송 준비 중... ('+messages.length+'건)';
+  if(progBar)progBar.style.width='10%';
+
   fetch('/api/send-sms',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({messages:messages})
+    body:JSON.stringify({messages:messages.map(function(m){return {to:m.to,text:m.text};})})
   }).then(function(r){return r.json();}).then(function(d){
-    if(d.success){
-      toast('✅ '+d.successCount+'/'+d.total+'명 SMS 발송 완료!');
-      // 전달완료 처리
-      unsent.forEach(function(x){
-        var id=x.id||x.fbId;
-        if(id&&_db)_db.collection('settlements').doc(id).update({taxSent:true,taxSentAt:new Date().toISOString()}).then(function(){x.taxSent=true;});
-      });
-    } else {
-      toast('❌ 발송 실패: '+(d.error||''));
+    if(progBar)progBar.style.width='100%';
+    var ok=d.successCount||0;
+    var total=messages.length;
+    if(progLabel)progLabel.textContent='완료: '+ok+'/'+total+'건 성공';
+    if(result){
+      result.style.display='block';
+      result.innerHTML='✅ '+ok+'명 발송 성공'+(total-ok>0?' / ❌ '+(total-ok)+'명 실패':'')+'<br><span style="font-size:11px;color:var(--text2)">발송 완료된 정산서는 자동으로 완료 표시됩니다</span>';
     }
-  }).catch(function(e){toast('❌ '+e.message);});
+    // Firestore 완료 처리
+    if(d.success||ok>0){
+      messages.forEach(function(m){
+        if(m._id&&_db){
+          _db.collection('settlements').doc(m._id).update({taxSent:true,taxSentAt:new Date().toISOString()}).then(function(){if(m._obj)m._obj.taxSent=true;}).catch(function(){});
+        }
+      });
+      toast('✅ '+ok+'/'+total+'명 SMS 발송 완료!');
+    } else {
+      toast('❌ 발송 실패: '+(d.error||JSON.stringify(d).slice(0,60)));
+    }
+    if(btn){btn.disabled=false;btn.textContent='📡 재발송';}
+  }).catch(function(e){
+    if(progBar)progBar.style.width='0%';
+    if(result){result.style.display='block';result.style.background='rgba(239,68,68,.08)';result.style.borderColor='rgba(239,68,68,.2)';result.style.color='#ef4444';result.textContent='❌ 오류: '+e.message;}
+    toast('❌ '+e.message);
+    if(btn){btn.disabled=false;btn.textContent='📡 선택 발송';}
+  });
 }
+
+// 기존 sendSMSAll (하위 호환)
+function sendSMSAll(){openBulkSendModal();}
 
 function sendEmailMsg(emailEnc,subjectEnc,bodyEnc){
   var email=decodeURIComponent(emailEnc);
