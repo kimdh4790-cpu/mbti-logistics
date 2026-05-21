@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#030912">
+<title>DONWAY — 근로계약서</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{--bg:#030912;--bg2:#060f1f;--bg3:#0a1628;--blue:#0066ff;--cyan:#00d4ff;--green:#00ff88;--red:#ef4444;--yellow:#f59e0b;--gray:#5a7299;--white:#e8f4ff;--border:rgba(0,212,255,.12);--border2:rgba(0,102,255,.18)}
+body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun Gothic',sans-serif;min-height:100vh}
+.wrap{max-width:560px;margin:0 auto;padding:0 0 90px}
+.topbar{background:rgba(3,9,18,.97);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;backdrop-filter:blur(20px)}
+.logo{font-size:14px;font-weight:900;letter-spacing:3px}.logo span{color:var(--cyan)}
+.tabs{display:flex;background:rgba(6,15,31,.8);border-bottom:1px solid var(--border)}
+.tab{flex:1;padding:12px 0;border:none;background:transparent;color:var(--gray);font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;transition:.2s}
+.tab.on{color:var(--cyan);border-bottom-color:var(--cyan)}
+.sec{padding:14px 20px 0}
+.sec-label{font-size:10px;font-weight:700;color:var(--gray);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.sec-label::before{content:'';width:14px;height:1.5px;background:var(--cyan)}
+.card{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;margin-bottom:12px}
+.fg{margin-bottom:12px}
+.fl{font-size:11px;font-weight:700;color:var(--gray);display:block;margin-bottom:5px}
+.fi{width:100%;padding:11px 13px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--white);font-size:13px;font-weight:600;outline:none;transition:.2s}
+.fi:focus{border-color:var(--cyan)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.type-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.type-chip{padding:7px 14px;border-radius:20px;border:1.5px solid var(--border2);background:var(--bg3);color:var(--gray);font-size:12px;font-weight:700;cursor:pointer;transition:.2s;white-space:nowrap}
+.type-chip.on{border-color:var(--cyan);color:var(--cyan);background:rgba(0,212,255,.08)}
+.btn-main{width:100%;padding:13px;background:linear-gradient(135deg,var(--blue),var(--cyan));border:none;border-radius:11px;color:var(--bg);font-size:14px;font-weight:900;cursor:pointer;transition:.3s;margin-top:4px}
+.btn-main:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,102,255,.3)}
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+.btn-sub{padding:12px;border-radius:10px;border:1.5px solid var(--border2);background:var(--bg3);color:var(--gray);font-size:13px;font-weight:700;cursor:pointer;transition:.2s}
+/* 계약서 목록 */
+.ctrc-card{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;margin:0 20px 8px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:.2s}
+.ctrc-card:hover{border-color:rgba(0,212,255,.25)}
+.ctrc-icon{font-size:28px;flex-shrink:0}
+.ctrc-title{font-size:14px;font-weight:800}
+.ctrc-sub{font-size:10px;color:var(--gray);margin-top:3px;line-height:1.7}
+.ctrc-badge{padding:3px 10px;border-radius:20px;font-size:9px;font-weight:700;margin-left:auto;flex-shrink:0;white-space:nowrap}
+.cb-active{background:rgba(0,255,136,.1);color:var(--green);border:1px solid rgba(0,255,136,.2)}
+.cb-end{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+.cb-temp{background:rgba(245,158,11,.1);color:var(--yellow);border:1px solid rgba(245,158,11,.2)}
+/* 하단 탭 */
+.bottombar{position:fixed;bottom:0;left:0;right:0;max-width:560px;margin:0 auto;background:rgba(6,15,31,.97);border-top:1px solid var(--border);display:flex;padding:8px 0;z-index:100}
+.bot-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px;border:none;background:transparent;cursor:pointer;color:var(--gray);text-decoration:none}
+.bot-btn.on{color:var(--cyan)}
+.bot-icon{font-size:20px}.bot-lbl{font-size:9px;font-weight:700;letter-spacing:.5px}
+#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg2);border:1px solid var(--border2);color:var(--white);padding:10px 20px;border-radius:99px;font-size:12px;font-weight:700;opacity:0;transition:.3s;pointer-events:none;z-index:9999}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.ok{border-color:var(--green);color:var(--green)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{width:14px;height:14px;border:2px solid rgba(0,212,255,.2);border-top-color:var(--cyan);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:middle}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+<div class="topbar">
+  <div class="logo"><span>D</span>ONWAY 계약서</div>
+  <button onclick="location.href='/portal'" style="padding:7px 12px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:8px;color:var(--cyan);font-size:11px;font-weight:700;cursor:pointer">🗂 문서보관함</button>
+</div>
+<div class="tabs">
+  <button class="tab on" id="t-write" onclick="switchTab('write')">✏️ 계약서 작성</button>
+  <button class="tab" id="t-list" onclick="switchTab('list')">📋 계약서 목록</button>
+</div>
+
+<div class="wrap">
+
+<!-- 작성 탭 -->
+<div id="tab-write">
+  <div class="sec">
+    <div class="sec-label">계약 유형</div>
+    <div class="type-row" id="ctype-row">
+      <div class="type-chip on" onclick="setCType('regular',this)">👔 근로계약</div>
+      <div class="type-chip" onclick="setCType('parttime',this)">⏰ 단시간 근로</div>
+      <div class="type-chip" onclick="setCType('fixed',this)">📅 기간제</div>
+      <div class="type-chip" onclick="setCType('dispatch',this)">🚚 위탁계약</div>
+    </div>
+
+    <!-- 직원 자동 불러오기 -->
+    <div class="card">
+      <div class="sec-label">직원 선택</div>
+      <div class="fg" style="margin-bottom:0">
+        <label class="fl">직원 검색</label>
+        <select class="fi" id="drv-select" onchange="fillDriver()">
+          <option value="">-- 직원 선택 (자동 입력) --</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 근로자 정보 -->
+    <div class="card">
+      <div class="sec-label">근로자 정보</div>
+      <div class="row2">
+        <div class="fg"><label class="fl">성명 *</label><input class="fi" id="c-name" placeholder="홍길동"></div>
+        <div class="fg"><label class="fl">생년월일</label><input class="fi" id="c-birth" placeholder="1990-01-01" type="date"></div>
+      </div>
+      <div class="row2">
+        <div class="fg"><label class="fl">주소</label><input class="fi" id="c-addr" placeholder="부산시 ..."></div>
+        <div class="fg"><label class="fl">전화번호</label><input class="fi" id="c-phone" placeholder="010-0000-0000" type="tel"></div>
+      </div>
+    </div>
+
+    <!-- 근로 조건 -->
+    <div class="card">
+      <div class="sec-label">근로 조건</div>
+      <div class="row2">
+        <div class="fg"><label class="fl">계약 시작일 *</label><input class="fi" id="c-start" type="date"></div>
+        <div class="fg"><label class="fl">계약 종료일</label><input class="fi" id="c-end" type="date" placeholder="미정 시 공백"></div>
+      </div>
+      <div class="row2">
+        <div class="fg"><label class="fl">근무 거점</label><input class="fi" id="c-loc" placeholder="부산1, 본사 등"></div>
+        <div class="fg"><label class="fl">담당 업무</label><input class="fi" id="c-job" placeholder="배송, 관리 등"></div>
+      </div>
+      <div class="row3">
+        <div class="fg"><label class="fl">소정 근로시간</label><input class="fi" id="c-hours" placeholder="8시간"></div>
+        <div class="fg"><label class="fl">근무 요일</label><input class="fi" id="c-days" placeholder="월~금"></div>
+        <div class="fg"><label class="fl">휴게 시간</label><input class="fi" id="c-break" value="60분"></div>
+      </div>
+    </div>
+
+    <!-- 임금 -->
+    <div class="card">
+      <div class="sec-label">임금</div>
+      <div class="row2">
+        <div class="fg"><label class="fl">임금 형태</label>
+          <select class="fi" id="c-paytype">
+            <option value="건당">건당 단가</option>
+            <option value="시급">시급</option>
+            <option value="일급">일급</option>
+            <option value="월급">월급</option>
+          </select>
+        </div>
+        <div class="fg"><label class="fl">금액 (원)</label><input class="fi" id="c-pay" placeholder="750" style="font-family:monospace"></div>
+      </div>
+      <div class="row2">
+        <div class="fg"><label class="fl">지급일</label><input class="fi" id="c-payday" placeholder="매월 25일"></div>
+        <div class="fg"><label class="fl">지급 방법</label><input class="fi" id="c-paymethod" placeholder="계좌이체"></div>
+      </div>
+      <div class="fg" style="margin-bottom:0"><label class="fl">지급 계좌 (근로자)</label><input class="fi" id="c-payaccount" placeholder="은행명 계좌번호"></div>
+    </div>
+
+    <!-- 사회보험 -->
+    <div class="card">
+      <div class="sec-label">사회보험 가입</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="ins-4" style="width:16px;height:16px"> 4대보험</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="ins-emp" checked style="width:16px;height:16px"> 고용보험</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="ins-acc" checked style="width:16px;height:16px"> 산재보험</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="ins-health" style="width:16px;height:16px"> 건강보험</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="ins-pension" style="width:16px;height:16px"> 국민연금</label>
+      </div>
+    </div>
+
+    <!-- 특약 사항 -->
+    <div class="card">
+      <div class="sec-label">특약 사항</div>
+      <textarea class="fi" id="c-special" rows="3" placeholder="예) 배달 건당 인센티브 25원 지급&#10;예) 계약기간 중 일방적 해지 시 위약금 없음" style="resize:vertical"></textarea>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-sub" onclick="saveContract()">☁ 저장</button>
+      <button class="btn-main" onclick="printContract()" style="margin-top:0">🖨 계약서 출력</button>
+    </div>
+  </div>
+</div>
+
+<!-- 목록 탭 -->
+<div id="tab-list" style="display:none">
+  <div style="padding:12px 20px 8px;display:flex;justify-content:flex-end">
+    <button onclick="loadList()" style="padding:7px 14px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:8px;color:var(--cyan);font-size:11px;font-weight:700;cursor:pointer">🔄 새로고침</button>
+  </div>
+  <div id="contract-list">
+    <div style="text-align:center;padding:32px;color:var(--gray)"><span class="spin"></span></div>
+  </div>
+</div>
+
+</div>
+
+<div class="bottombar">
+  <button class="bot-btn on"><span class="bot-icon">📝</span><span class="bot-lbl">계약서</span></button>
+  <a href="/drivers" class="bot-btn"><span class="bot-icon">👥</span><span class="bot-lbl">직원관리</span></a>
+  <a href="/portal" class="bot-btn"><span class="bot-icon">🗂</span><span class="bot-lbl">문서보관함</span></a>
+  <a href="/dashboard" class="bot-btn"><span class="bot-icon">📊</span><span class="bot-lbl">대시보드</span></a>
+</div>
+
+<script>
+var _db=null, _ctype='regular', _drivers=[];
+var CTYPE_LABEL={regular:'👔 근로계약',parttime:'⏰ 단시간 근로',fixed:'📅 기간제',dispatch:'🚚 위탁계약'};
+
+(function init(){
+  if(typeof firebase==='undefined'){setTimeout(init,300);return;}
+  try{
+    var app;try{app=firebase.app('ctrc');}catch(e){
+      app=firebase.initializeApp({apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.firebasestorage.app',messagingSenderId:'40761160761',appId:'1:40761160761:web:20545b610f03f534e949e8'},'ctrc');
+    }
+    _db=app.firestore();
+    loadDrivers();
+  }catch(e){console.warn(e);}
+})();
+
+document.addEventListener('DOMContentLoaded',function(){
+  var today=new Date().toISOString().slice(0,10);
+  var si=document.getElementById('c-start');if(si)si.value=today;
+});
+
+function switchTab(t){
+  ['write','list'].forEach(function(x){
+    document.getElementById('tab-'+x).style.display=x===t?'block':'none';
+    document.getElementById('t-'+x).classList.toggle('on',x===t);
+  });
+  if(t==='list')loadList();
+}
+
+function setCType(type,el){
+  _ctype=type;
+  document.querySelectorAll('#ctype-row .type-chip').forEach(function(c){c.classList.remove('on');});
+  if(el)el.classList.add('on');
+}
+
+// 직원 목록 로드
+function loadDrivers(){
+  if(!_db)return;
+  _db.collection('drivers').orderBy('name').limit(200).get().then(function(s){
+    _drivers=s.docs.map(function(d){return Object.assign({docId:d.id},d.data());});
+    var sel=document.getElementById('drv-select');
+    _drivers.forEach(function(d){
+      var o=document.createElement('option');
+      o.value=d.docId;
+      o.textContent=(d.name||'')+(d.camp||d.loc?' ('+( d.camp||d.loc)+')':'');
+      sel.appendChild(o);
+    });
+  }).catch(function(){});
+}
+
+function fillDriver(){
+  var id=(document.getElementById('drv-select')||{}).value;
+  if(!id)return;
+  var d=_drivers.find(function(x){return x.docId===id;});
+  if(!d)return;
+  setVal('c-name',d.name||'');
+  setVal('c-phone',(d.phone||'').replace(/(\d{3})(\d{3,4})(\d{4})/,'$1-$2-$3'));
+  setVal('c-loc',d.camp||d.loc||'');
+}
+
+function setVal(id,v){var e=document.getElementById(id);if(e&&!e.value)e.value=v||'';}
+function getVal(id){return(document.getElementById(id)||{value:''}).value||'';}
+function getCheck(id){return(document.getElementById(id)||{checked:false}).checked;}
+
+function _buildData(){
+  return{
+    ctype:_ctype,ctypeLabel:CTYPE_LABEL[_ctype]||'',
+    name:getVal('c-name'),birth:getVal('c-birth'),
+    addr:getVal('c-addr'),phone:getVal('c-phone'),
+    startDate:getVal('c-start'),endDate:getVal('c-end'),
+    loc:getVal('c-loc'),job:getVal('c-job'),
+    hours:getVal('c-hours')||'8시간',days:getVal('c-days')||'월~금',breakTime:getVal('c-break')||'60분',
+    payType:getVal('c-paytype'),pay:getVal('c-pay'),
+    payDay:getVal('c-payday'),payMethod:getVal('c-paymethod')||'계좌이체',
+    payAccount:getVal('c-payaccount'),
+    ins4:getCheck('ins-4'),insEmp:getCheck('ins-emp'),insAcc:getCheck('ins-acc'),
+    insHealth:getCheck('ins-health'),insPension:getCheck('ins-pension'),
+    special:getVal('c-special'),
+    createdAt:new Date().toISOString()
+  };
+}
+
+function saveContract(){
+  var d=_buildData();
+  if(!d.name){toast('근로자 성명을 입력하세요','err');return;}
+  if(!d.startDate){toast('계약 시작일을 입력하세요','err');return;}
+  if(!_db){toast('Firebase 연결 필요','err');return;}
+  _db.collection('contracts').add(Object.assign(d,{type:'contract',status:'유효',docNo:'C-'+Date.now().toString().slice(-6)}))
+    .then(function(){toast('✅ 계약서 저장 완료','ok');})
+    .catch(function(e){toast('❌ '+e.message,'err');});
+}
+
+function printContract(){
+  var d=_buildData();
+  if(!d.name){toast('근로자 성명을 입력하세요','err');return;}
+
+  var insItems=[];
+  if(d.ins4)insItems.push('4대보험');else{if(d.insEmp)insItems.push('고용보험');if(d.insAcc)insItems.push('산재보험');if(d.insHealth)insItems.push('건강보험');if(d.insPension)insItems.push('국민연금');}
+  var insText=insItems.length?insItems.join(', '):'해당없음';
+
+  var today=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
+  var period=d.startDate+(d.endDate?' ~ '+d.endDate:' ~ 기간 미정');
+
+  var html='<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>근로계약서</title>'
+    +'<style>'
+    +'*{box-sizing:border-box;margin:0;padding:0;font-family:"맑은 고딕","Malgun Gothic",sans-serif}'
+    +'body{padding:20mm;font-size:10pt;color:#111;line-height:1.6}'
+    +'.title{text-align:center;font-size:20pt;font-weight:900;letter-spacing:5px;border-bottom:3px double #000;padding-bottom:12px;margin-bottom:20px}'
+    +'.type-badge{text-align:center;font-size:10pt;color:#666;margin-bottom:20px}'
+    +'.section{margin-bottom:18px}'
+    +'.sec-title{font-size:11pt;font-weight:900;background:#f0f0f0;padding:6px 12px;border-left:4px solid #0066ff;margin-bottom:10px}'
+    +'.row{display:flex;border-bottom:1px solid #ddd;padding:7px 0;align-items:baseline}'
+    +'.rk{width:120px;font-size:9pt;color:#666;flex-shrink:0;font-weight:700}'
+    +'.rv{font-size:10pt;font-weight:600;flex:1}'
+    +'.terms{font-size:9pt;color:#555;line-height:1.9;background:#f9f9f9;border:1px solid #ddd;border-radius:4px;padding:12px;margin-bottom:16px}'
+    +'.special-box{background:#fffbeb;border:1px solid #fcd34d;border-radius:4px;padding:12px;font-size:9pt;margin-bottom:16px}'
+    +'.sig-area{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px}'
+    +'.sig-box{border:1px solid #ddd;border-radius:4px;padding:16px;text-align:center}'
+    +'.sig-title{font-size:9pt;color:#888;margin-bottom:8px}'
+    +'.sig-name{font-size:14pt;font-weight:900;margin-bottom:8px}'
+    +'.sig-line{border-bottom:2px solid #000;margin:16px 8px 6px;height:40px}'
+    +'.sig-hint{font-size:8pt;color:#aaa}'
+    +'.date-line{text-align:center;font-size:11pt;margin-bottom:20px}'
+    +'@media print{body{padding:10mm}}'
+    +'</style></head><body>'
+    +'<div class="title">근 로 계 약 서</div>'
+    +'<div class="type-badge">'+esc(d.ctypeLabel)+'</div>'
+
+    +'<div class="section"><div class="sec-title">제1조 근로자 정보</div>'
+    +'<div class="row"><span class="rk">성 명</span><span class="rv">'+esc(d.name)+'</span></div>'
+    +'<div class="row"><span class="rk">생년월일</span><span class="rv">'+esc(d.birth||'-')+'</span></div>'
+    +'<div class="row"><span class="rk">주 소</span><span class="rv">'+esc(d.addr||'-')+'</span></div>'
+    +'<div class="row"><span class="rk">전화번호</span><span class="rv">'+esc(d.phone||'-')+'</span></div>'
+    +'</div>'
+
+    +'<div class="section"><div class="sec-title">제2조 근로 기간 및 장소</div>'
+    +'<div class="row"><span class="rk">계약 기간</span><span class="rv">'+esc(period)+'</span></div>'
+    +'<div class="row"><span class="rk">근무 장소</span><span class="rv">'+esc(d.loc||'사업장 내')+'</span></div>'
+    +'<div class="row"><span class="rk">담당 업무</span><span class="rv">'+esc(d.job||'-')+'</span></div>'
+    +'</div>'
+
+    +'<div class="section"><div class="sec-title">제3조 근로시간 및 휴게</div>'
+    +'<div class="row"><span class="rk">소정 근로시간</span><span class="rv">'+esc(d.hours)+'</span></div>'
+    +'<div class="row"><span class="rk">근무 요일</span><span class="rv">'+esc(d.days)+'</span></div>'
+    +'<div class="row"><span class="rk">휴게 시간</span><span class="rv">'+esc(d.breakTime)+'</span></div>'
+    +'</div>'
+
+    +'<div class="section"><div class="sec-title">제4조 임금</div>'
+    +'<div class="row"><span class="rk">임금 형태</span><span class="rv">'+esc(d.payType)+'</span></div>'
+    +'<div class="row"><span class="rk">임금 금액</span><span class="rv"><strong>'+esc(d.pay?Number(d.pay).toLocaleString('ko-KR')+'원':'-')+'</strong></span></div>'
+    +'<div class="row"><span class="rk">지 급 일</span><span class="rv">'+esc(d.payDay||'-')+'</span></div>'
+    +'<div class="row"><span class="rk">지급 방법</span><span class="rv">'+esc(d.payMethod)+'</span></div>'
+    +'<div class="row"><span class="rk">입금 계좌</span><span class="rv">'+esc(d.payAccount||'-')+'</span></div>'
+    +'</div>'
+
+    +'<div class="section"><div class="sec-title">제5조 사회보험</div>'
+    +'<div class="row"><span class="rk">가입 항목</span><span class="rv">'+esc(insText)+'</span></div>'
+    +'</div>'
+
+    +'<div class="section"><div class="sec-title">제6조 일반 조항</div>'
+    +'<div class="terms">'
+    +'① 본 계약에 명시되지 않은 사항은 근로기준법 및 관계 법령에 따른다.<br>'
+    +'② 근로자는 사업주의 정당한 업무 지시에 따라야 하며, 취업규칙을 준수한다.<br>'
+    +'③ 근로계약 해지 시 일방은 30일 전에 상대방에게 통보한다.<br>'
+    +'④ 근로자의 개인정보는 근로 목적 외 사용하지 아니한다.'
+    +'</div></div>'
+
+    +(d.special?'<div class="section"><div class="sec-title">제7조 특약 사항</div><div class="special-box">'+esc(d.special).replace(/\n/g,'<br>')+'</div></div>':'')
+
+    +'<div class="date-line">계약 체결일: '+today+'</div>'
+
+    +'<div class="sig-area">'
+    +'<div class="sig-box"><div class="sig-title">사 업 주 (갑)</div>'
+    +'<div class="sig-name">엠비티아이(유)</div>'
+    +'<div class="sig-line"></div>'
+    +'<div style="font-size:9pt;color:#555">대표 김형우 (인)</div>'
+    +'<div style="font-size:8pt;color:#aaa;margin-top:4px">사업자: 373-86-02536</div>'
+    +'</div>'
+    +'<div class="sig-box"><div class="sig-title">근 로 자 (을)</div>'
+    +'<div class="sig-name">'+esc(d.name)+'</div>'
+    +'<div class="sig-line"></div>'
+    +'<div style="font-size:9pt;color:#555">서 명 란</div>'
+    +'<div class="sig-hint">위 내용을 확인하고 서명합니다</div>'
+    +'</div></div>'
+    +'</body></html>';
+
+  var w=window.open('','_blank','width=860,height=700');
+  if(w){w.document.write(html);w.document.close();setTimeout(function(){w.focus();w.print();},500);}
+  else{toast('팝업 차단됨. 허용 후 다시 시도하세요','err');}
+}
+
+// 계약서 목록
+function loadList(){
+  var el=document.getElementById('contract-list');
+  el.innerHTML='<div style="text-align:center;padding:32px;color:var(--gray)"><span class="spin"></span></div>';
+  if(!_db)return;
+  _db.collection('contracts').orderBy('createdAt','desc').limit(100).get()
+    .then(function(s){
+      if(s.empty){el.innerHTML='<div style="text-align:center;padding:32px;color:var(--gray)">📭 계약서 없음</div>';return;}
+      el.innerHTML=s.docs.map(function(d){
+        var r=Object.assign({id:d.id},d.data());
+        var status=r.status||'유효';
+        var bCls=status==='유효'?'cb-active':status==='만료'?'cb-end':'cb-temp';
+        var now=new Date();
+        var isExpired=r.endDate&&new Date(r.endDate)<now;
+        if(isExpired&&status==='유효')bCls='cb-end';
+        return '<div class="ctrc-card" onclick="reprinkContract(\''+esc(r.id)+'\')">'
+          +'<div class="ctrc-icon">'+(r.ctype==='dispatch'?'🚚':r.ctype==='fixed'?'📅':r.ctype==='parttime'?'⏰':'👔')+'</div>'
+          +'<div style="flex:1;min-width:0">'
+          +'<div class="ctrc-title">'+esc(r.name||'')+'</div>'
+          +'<div class="ctrc-sub">'
+          +esc(r.ctypeLabel||r.ctype||'')+' · '+esc(r.loc||'')+' · '+esc(r.startDate||'')
+          +(r.endDate?' ~ '+esc(r.endDate):'')
+          +'</div></div>'
+          +'<span class="ctrc-badge '+bCls+'">'+(isExpired&&status==='유효'?'만료됨':status)+'</span>'
+          +'</div>';
+      }).join('');
+    }).catch(function(e){el.innerHTML='<div style="padding:16px;color:var(--gray)">오류: '+esc(e.message)+'</div>';});
+}
+
+function reprinkContract(id){
+  if(!_db)return;
+  _db.collection('contracts').doc(id).get().then(function(d){
+    if(!d.exists)return;
+    var r=d.data();
+    // 폼 채우기
+    setCTypeById(r.ctype);
+    var fields={name:'c-name',birth:'c-birth',addr:'c-addr',phone:'c-phone',startDate:'c-start',endDate:'c-end',loc:'c-loc',job:'c-job',hours:'c-hours',days:'c-days',breakTime:'c-break',pay:'c-pay',payDay:'c-payday',payMethod:'c-paymethod',payAccount:'c-payaccount',special:'c-special'};
+    Object.keys(fields).forEach(function(k){var el=document.getElementById(fields[k]);if(el)el.value=r[k]||'';});
+    if(r.payType){var pt=document.getElementById('c-paytype');if(pt)pt.value=r.payType;}
+    var checks={ins4:'ins-4',insEmp:'ins-emp',insAcc:'ins-acc',insHealth:'ins-health',insPension:'ins-pension'};
+    Object.keys(checks).forEach(function(k){var el=document.getElementById(checks[k]);if(el)el.checked=!!r[k];});
+    switchTab('write');
+    toast('✅ 계약서 불러오기 완료. 확인 후 출력하세요.','ok');
+  });
+}
+
+function setCTypeById(type){
+  _ctype=type||'regular';
+  document.querySelectorAll('#ctype-row .type-chip').forEach(function(c,i){
+    var types=['regular','parttime','fixed','dispatch'];
+    c.classList.toggle('on',types[i]===_ctype);
+  });
+}
+
+function toast(msg,type){var t=document.getElementById('toast');t.textContent=msg;t.className='show'+(type?' '+type:'');clearTimeout(t._t);t._t=setTimeout(function(){t.className='';},3000);}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+</script>
+</body>
+</html>

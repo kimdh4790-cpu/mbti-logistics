@@ -427,6 +427,12 @@ export default {
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'public, max-age=86400' } });
     }
 
+    // ★ 근로계약서
+    if (path === '/contract' || path === '/contract/') {
+      const resp = await env.ASSETS.fetch(new Request(new URL('/contract.html', url)));
+      return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+    }
+
     // ★ 공지·알림
     if (path === '/notice' || path === '/notice/') {
       const resp = await env.ASSETS.fetch(new Request(new URL('/notice.html', url)));
