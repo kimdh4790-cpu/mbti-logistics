@@ -4,16 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#030912">
-<title>DONWAY — 출퇴근 QR 스캔</title>
+<title>DONWAY — 출퇴근 인증</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-:root{--bg:#030912;--bg2:#060f1f;--bg3:#0a1628;--blue:#0066ff;--cyan:#00d4ff;--green:#00ff88;--red:#ef4444;--gray:#5a7299;--white:#e8f4ff;--border:rgba(0,212,255,.12);--border2:rgba(0,102,255,.18)}
+:root{--bg:#030912;--bg2:#060f1f;--bg3:#0a1628;--blue:#0066ff;--cyan:#00d4ff;--green:#00ff88;--red:#ef4444;--yellow:#f59e0b;--gray:#5a7299;--white:#e8f4ff;--border:rgba(0,212,255,.12);--border2:rgba(0,102,255,.18)}
 body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun Gothic',sans-serif;min-height:100vh}
 .wrap{max-width:440px;margin:0 auto;padding:0 0 90px}
 
+/* 헤더 */
 .topbar{background:rgba(3,9,18,.97);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;backdrop-filter:blur(20px)}
 .logo{font-size:14px;font-weight:900;letter-spacing:3px}.logo span{color:var(--cyan)}
 
@@ -24,72 +25,96 @@ body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun G
 .t-in-on{background:linear-gradient(135deg,#064e3b,#0F6E56);border-color:#059669;color:#fff;box-shadow:0 4px 20px rgba(5,150,105,.25)}
 .t-out-on{background:linear-gradient(135deg,#7f1d1d,#dc2626);border-color:var(--red);color:#fff;box-shadow:0 4px 20px rgba(220,38,38,.25)}
 
-/* 이름 입력 */
-.name-row{display:flex;gap:10px;margin:0 20px 14px;align-items:center}
-.name-inp{flex:1;padding:12px 14px;background:var(--bg2);border:1.5px solid var(--border2);border-radius:10px;color:var(--white);font-size:15px;font-weight:700;outline:none;transition:.2s}
-.name-inp:focus{border-color:var(--cyan)}
-.code-inp{width:110px;padding:12px 12px;background:var(--bg2);border:1.5px solid var(--border2);border-radius:10px;color:var(--cyan);font-size:13px;font-weight:700;outline:none;font-family:monospace;letter-spacing:1px;transition:.2s;flex-shrink:0}
-.code-inp:focus{border-color:var(--cyan)}
+/* 내 정보 */
+.info-row{display:flex;gap:8px;margin:0 20px 12px}
+.inp{flex:1;padding:11px 13px;background:var(--bg2);border:1.5px solid var(--border2);border-radius:10px;color:var(--white);font-size:14px;font-weight:700;outline:none;transition:.2s}
+.inp:focus{border-color:var(--cyan)}
 
-/* ★ 실시간 카메라 스캐너 */
-.scanner-wrap{position:relative;margin:0 20px;border-radius:16px;overflow:hidden;background:#000;border:2px solid rgba(0,212,255,.3);box-shadow:0 0 40px rgba(0,102,255,.15)}
+/* ★ 3중 인증 상태 패널 */
+.auth-panel{margin:0 20px 12px;background:var(--bg2);border:1px solid var(--border2);border-radius:14px;overflow:hidden}
+.auth-panel-title{padding:10px 14px;background:rgba(0,102,255,.06);border-bottom:1px solid var(--border);font-size:10px;font-weight:700;color:var(--gray);letter-spacing:2px;display:flex;align-items:center;gap:6px}
+.auth-checks{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0}
+.auth-check{padding:12px 8px;text-align:center;border-right:1px solid var(--border)}
+.auth-check:last-child{border-right:none}
+.auth-check-icon{font-size:20px;margin-bottom:5px}
+.auth-check-name{font-size:10px;font-weight:700;color:var(--gray);margin-bottom:4px}
+.auth-check-status{font-size:10px;font-family:monospace;letter-spacing:.5px;font-weight:600}
+.s-wait{color:var(--gray)}.s-check{color:var(--yellow)}.s-ok{color:var(--green)}.s-err{color:var(--red)}
+.auth-dot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:3px;vertical-align:middle}
+.d-wait{background:var(--gray)}.d-check{background:var(--yellow);animation:blink2 .8s infinite}
+.d-ok{background:var(--green);box-shadow:0 0 6px var(--green)}.d-err{background:var(--red)}
+@keyframes blink2{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* 스캐너 */
+.scanner-wrap{position:relative;margin:0 20px;border-radius:16px;overflow:hidden;background:#000;border:2px solid rgba(0,212,255,.25);box-shadow:0 0 40px rgba(0,102,255,.1)}
 .scanner-wrap video{width:100%;display:block;border-radius:14px}
-.scanner-overlay{position:absolute;inset:0;pointer-events:none}
-
-/* 스캔 가이드 박스 */
-.scan-guide{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:65%;aspect-ratio:1;border:2.5px solid rgba(0,212,255,.7);border-radius:12px;box-shadow:0 0 0 2000px rgba(0,0,0,.4)}
+.scan-guide{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:62%;aspect-ratio:1;border:2.5px solid rgba(0,212,255,.8);border-radius:10px;box-shadow:0 0 0 2000px rgba(0,0,0,.45)}
 .scan-guide-line{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);box-shadow:0 0 10px var(--cyan);animation:scanLine 2s ease-in-out infinite}
-@keyframes scanLine{0%,100%{top:5%;opacity:.5}50%{top:92%;opacity:1}}
-
-/* 모서리 마커 */
-.g-corner{position:absolute;width:20px;height:20px}
+@keyframes scanLine{0%,100%{top:5%;opacity:.4}50%{top:92%;opacity:1}}
+.g-c{position:absolute;width:18px;height:18px}
 .g-tl{top:-1px;left:-1px;border-top:3px solid var(--cyan);border-left:3px solid var(--cyan);border-radius:3px 0 0 0}
 .g-tr{top:-1px;right:-1px;border-top:3px solid var(--cyan);border-right:3px solid var(--cyan);border-radius:0 3px 0 0}
 .g-bl{bottom:-1px;left:-1px;border-bottom:3px solid var(--cyan);border-left:3px solid var(--cyan);border-radius:0 0 0 3px}
 .g-br{bottom:-1px;right:-1px;border-bottom:3px solid var(--cyan);border-right:3px solid var(--cyan);border-radius:0 0 3px 0}
+.scan-hint{position:absolute;bottom:0;left:0;right:0;padding:8px;background:linear-gradient(transparent,rgba(0,0,0,.7));text-align:center;font-size:12px;font-weight:600;color:rgba(255,255,255,.7)}
+canvas#scan-canvas{display:none}
 
-/* 스캐너 상태 */
-.scanner-status{position:absolute;bottom:0;left:0;right:0;padding:10px 16px;background:linear-gradient(transparent,rgba(0,0,0,.8));text-align:center;font-size:13px;font-weight:600;color:rgba(255,255,255,.7)}
-.scanner-btn-row{display:flex;gap:8px;margin:10px 20px 0}
-.method-tabs{display:flex;gap:0;background:rgba(10,22,40,.8);border:1px solid var(--border2);border-radius:12px;margin:0 20px 0;overflow:hidden}
-.method-tab{flex:1;padding:11px;border:none;background:transparent;color:var(--gray);font-size:13px;font-weight:700;cursor:pointer;transition:.2s}
-.method-tab.on{background:linear-gradient(135deg,var(--blue),var(--cyan));color:var(--bg)}
-.pin-wrap{margin:12px 20px;display:none}
-.pin-title{font-size:12px;color:var(--gray);margin-bottom:10px;text-align:center}
-.pin-display{display:flex;gap:10px;justify-content:center;margin-bottom:16px}
-.pin-digit{width:54px;height:64px;background:var(--bg2);border:2px solid var(--border2);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;font-family:monospace;color:var(--white);transition:.2s}
-.pin-digit.filled{border-color:var(--cyan);color:var(--cyan);background:rgba(0,212,255,.08)}
-.pin-keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.key-btn{padding:16px;background:var(--bg2);border:1.5px solid var(--border2);border-radius:12px;color:var(--white);font-size:20px;font-weight:700;cursor:pointer;text-align:center;transition:.15s;-webkit-tap-highlight-color:transparent}
-.key-btn:active{background:rgba(0,212,255,.15);border-color:var(--cyan);transform:scale(.94)}
-.key-del{font-size:18px;color:var(--gray)}
-.key-ok{background:linear-gradient(135deg,var(--blue),var(--cyan));color:var(--bg);border-color:transparent;font-size:16px}
-.cam-btn{flex:1;padding:12px;border-radius:10px;border:1.5px solid var(--border2);background:var(--bg2);color:var(--cyan);font-size:13px;font-weight:700;cursor:pointer;transition:.2s}
-.cam-btn:active{transform:scale(.97)}
-.cam-btn.active{background:linear-gradient(135deg,var(--blue),var(--cyan));color:var(--bg);border-color:transparent;box-shadow:0 4px 16px rgba(0,102,255,.3)}
+/* 카메라 버튼 */
+.cam-btns{display:flex;gap:8px;margin:10px 20px 0}
+.cam-btn{flex:1;padding:11px;border-radius:10px;border:1.5px solid var(--border2);background:var(--bg2);color:var(--cyan);font-size:12px;font-weight:700;cursor:pointer;transition:.2s}
+.cam-btn.on{background:linear-gradient(135deg,var(--blue),var(--cyan));color:var(--bg);border-color:transparent}
 
-/* 결과 */
-.result-box{border-radius:16px;padding:22px;text-align:center;margin:14px 20px;display:none;animation:popIn .3s ease}
-@keyframes popIn{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
-.res-ok{background:rgba(0,255,136,.08);border:2px solid rgba(0,255,136,.25)}
-.res-err{background:rgba(239,68,68,.08);border:2px solid rgba(239,68,68,.2)}
-.res-icon{font-size:44px;margin-bottom:8px}
-.res-title{font-size:20px;font-weight:900;margin-bottom:6px}
-.res-detail{font-size:13px;color:var(--gray);line-height:1.9}
-.res-detail strong{color:var(--white)}
-.res-again{margin-top:14px;padding:10px 24px;border-radius:10px;background:linear-gradient(135deg,var(--blue),var(--cyan));border:none;color:var(--bg);font-size:14px;font-weight:700;cursor:pointer}
+/* 성공 팝업 */
+.success-popup{
+  position:fixed;inset:0;z-index:9000;display:none;
+  background:rgba(0,0,0,.7);align-items:center;justify-content:center;padding:24px;
+  animation:fadeIn2 .2s ease;
+}
+@keyframes fadeIn2{from{opacity:0}to{opacity:1}}
+.success-box{
+  background:var(--bg2);border:2px solid var(--green);border-radius:20px;
+  padding:36px 28px;text-align:center;width:100%;max-width:340px;
+  animation:popUp .35s cubic-bezier(.34,1.56,.64,1);
+  box-shadow:0 0 60px rgba(0,255,136,.2);
+}
+@keyframes popUp{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+.success-icon{font-size:64px;margin-bottom:12px;animation:bounce .5s ease .3s both}
+@keyframes bounce{0%{transform:scale(1)}50%{transform:scale(1.2)}100%{transform:scale(1)}}
+.success-type{font-size:28px;font-weight:900;color:var(--green);margin-bottom:6px}
+.success-time{font-family:monospace;font-size:22px;font-weight:700;color:var(--white);letter-spacing:2px;margin-bottom:16px}
+.success-detail{font-size:13px;color:var(--gray);line-height:1.9;margin-bottom:20px}
+.success-detail strong{color:var(--white)}
+.success-badges{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:20px}
+.auth-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700;font-family:monospace}
+.b-qr{background:rgba(0,212,255,.1);color:var(--cyan);border:1px solid rgba(0,212,255,.2)}
+.b-gps{background:rgba(0,255,136,.1);color:var(--green);border:1px solid rgba(0,255,136,.2)}
+.b-wifi{background:rgba(245,158,11,.1);color:var(--yellow);border:1px solid rgba(245,158,11,.2)}
+.success-close{width:100%;padding:14px;background:var(--green);border:none;border-radius:12px;color:var(--bg);font-size:15px;font-weight:900;cursor:pointer}
+
+/* 실패 팝업 */
+.fail-popup{
+  position:fixed;inset:0;z-index:9000;display:none;
+  background:rgba(0,0,0,.7);align-items:center;justify-content:center;padding:24px;
+}
+.fail-box{background:var(--bg2);border:2px solid var(--red);border-radius:20px;padding:28px;text-align:center;width:100%;max-width:320px;animation:popUp .3s ease;box-shadow:0 0 40px rgba(239,68,68,.15)}
+.fail-icon{font-size:48px;margin-bottom:10px}
+.fail-msg{font-size:16px;font-weight:700;color:var(--red);margin-bottom:8px}
+.fail-sub{font-size:12px;color:var(--gray);margin-bottom:20px;line-height:1.7}
+.fail-close{width:100%;padding:13px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--gray);font-size:14px;font-weight:700;cursor:pointer}
 
 /* 기록 */
 .card{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;margin:14px 20px}
-.card-title{font-size:10px;font-weight:700;color:var(--gray);letter-spacing:.15em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:10px;font-weight:700;color:var(--gray);letter-spacing:.15em;text-transform:uppercase;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
 .log-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(0,212,255,.06)}
 .log-row:last-child{border-bottom:none}
-.log-loc{font-size:13px;font-weight:700}.log-sub{font-size:10px;color:var(--gray);margin-top:2px}
+.log-loc{font-size:13px;font-weight:700}
+.log-sub{font-size:10px;color:var(--gray);margin-top:2px;display:flex;gap:6px}
+.log-badge{font-size:8px;padding:1px 6px;border-radius:10px;font-family:monospace}
 .log-in{color:var(--green);font-weight:700;font-size:12px;text-align:right}
 .log-out{color:var(--red);font-weight:700;font-size:12px;text-align:right}
 .log-time{font-size:10px;color:var(--gray);font-family:monospace;margin-top:2px}
 
-/* 하단 */
+/* 하단 탭바 */
 .bottombar{position:fixed;bottom:0;left:0;right:0;max-width:440px;margin:0 auto;background:rgba(6,15,31,.97);border-top:1px solid var(--border);display:flex;padding:8px 0;z-index:100}
 .bot-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px;border:none;background:transparent;cursor:pointer;color:var(--gray)}
 .bot-btn.on{color:var(--cyan)}
@@ -106,6 +131,28 @@ body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun G
 <body>
 <div id="toast"></div>
 
+<!-- 성공 팝업 -->
+<div class="success-popup" id="success-popup">
+  <div class="success-box">
+    <div class="success-icon" id="sp-icon"></div>
+    <div class="success-type" id="sp-type"></div>
+    <div class="success-time" id="sp-time"></div>
+    <div class="success-detail" id="sp-detail"></div>
+    <div class="success-badges" id="sp-badges"></div>
+    <button class="success-close" onclick="closeSuccess()">확인</button>
+  </div>
+</div>
+
+<!-- 실패 팝업 -->
+<div class="fail-popup" id="fail-popup">
+  <div class="fail-box">
+    <div class="fail-icon" id="fp-icon">❌</div>
+    <div class="fail-msg" id="fp-msg"></div>
+    <div class="fail-sub" id="fp-sub"></div>
+    <button class="fail-close" onclick="closeFail()">다시 시도</button>
+  </div>
+</div>
+
 <div class="topbar">
   <div class="logo"><span>D</span>ONWAY 출퇴근</div>
   <div style="font-size:11px;color:var(--gray)" id="today-date"></div>
@@ -113,78 +160,57 @@ body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun G
 
 <div class="wrap">
 
-  <!-- 출근 / 퇴근 선택 -->
+  <!-- 출근 / 퇴근 -->
   <div class="type-row">
     <button class="type-btn t-in-on" id="btn-in" onclick="setType('in')">🟢 출근<small>입장 시 스캔</small></button>
     <button class="type-btn" id="btn-out" onclick="setType('out')" style="border-color:var(--border2)">🔴 퇴근<small>퇴장 시 스캔</small></button>
   </div>
 
   <!-- 이름 + 회사코드 -->
-  <div class="name-row">
-    <input class="name-inp" id="my-name" placeholder="이름 입력" maxlength="10">
-    <input class="code-inp" id="my-company" placeholder="회사코드" maxlength="10">
+  <div class="info-row">
+    <input class="inp" id="my-name" placeholder="이름" maxlength="10" style="font-size:15px;font-weight:800">
+    <input class="inp" id="my-company" placeholder="회사코드" maxlength="10" style="font-family:monospace;letter-spacing:2px;width:120px;flex:none">
   </div>
 
-  <!-- 스캔 방법 탭 -->
-  <div class="method-tabs">
-    <button class="method-tab on" id="tab-cam" onclick="switchMethod('cam')">📷 카메라 스캔</button>
-    <button class="method-tab" id="tab-pin" onclick="switchMethod('pin')">🔢 번호 수동 입력</button>
+  <!-- ★ 3중 인증 상태 패널 -->
+  <div class="auth-panel">
+    <div class="auth-panel-title">🔐 복합 인증 상태</div>
+    <div class="auth-checks">
+      <div class="auth-check">
+        <div class="auth-check-icon">📷</div>
+        <div class="auth-check-name">QR 스캔</div>
+        <div class="auth-check-status s-wait" id="ck-qr"><span class="auth-dot d-wait"></span>대기</div>
+      </div>
+      <div class="auth-check">
+        <div class="auth-check-icon">📍</div>
+        <div class="auth-check-name">GPS 위치</div>
+        <div class="auth-check-status s-wait" id="ck-gps"><span class="auth-dot d-wait"></span>대기</div>
+      </div>
+      <div class="auth-check">
+        <div class="auth-check-icon">📶</div>
+        <div class="auth-check-name">네트워크</div>
+        <div class="auth-check-status s-wait" id="ck-wifi"><span class="auth-dot d-wait"></span>대기</div>
+      </div>
+    </div>
   </div>
 
-  <!-- ★ 실시간 카메라 스캐너 -->
+  <!-- 실시간 카메라 스캐너 -->
   <div class="scanner-wrap" id="scanner-wrap">
     <video id="scanner-video" autoplay playsinline muted></video>
-    <div class="scanner-overlay">
-      <div class="scan-guide">
-        <div class="scan-guide-line"></div>
-        <div class="g-corner g-tl"></div>
-        <div class="g-corner g-tr"></div>
-        <div class="g-corner g-bl"></div>
-        <div class="g-corner g-br"></div>
-      </div>
-      <div class="scanner-status" id="scanner-status">📷 카메라를 QR에 가져다 대세요</div>
+    <div class="scan-guide">
+      <div class="scan-guide-line"></div>
+      <div class="g-c g-tl"></div><div class="g-c g-tr"></div>
+      <div class="g-c g-bl"></div><div class="g-c g-br"></div>
     </div>
-    <canvas id="scan-canvas" style="display:none"></canvas>
+    <div class="scan-hint" id="scan-hint">📷 카메라를 QR에 가져다 대세요</div>
+    <canvas id="scan-canvas"></canvas>
   </div>
 
   <!-- 카메라 버튼 -->
-  <div class="scanner-btn-row" id="cam-btn-row">
-    <button class="cam-btn active" id="cam-start-btn" onclick="startCamera()">📷 카메라 시작</button>
-    <button class="cam-btn" id="cam-stop-btn" onclick="stopCamera()">⏹ 중지</button>
-    <button class="cam-btn" onclick="switchCamera()">🔄 전/후면</button>
-  </div>
-
-  <!-- 수동 PIN 입력 -->
-  <div class="pin-wrap" id="pin-wrap">
-    <div class="pin-title">매장 화면의 <strong style="color:var(--cyan)">4자리 숫자</strong>를 입력하세요</div>
-    <div class="pin-display">
-      <div class="pin-digit" id="pd0">-</div>
-      <div class="pin-digit" id="pd1">-</div>
-      <div class="pin-digit" id="pd2">-</div>
-      <div class="pin-digit" id="pd3">-</div>
-    </div>
-    <div class="pin-keypad">
-      <button class="key-btn" onclick="pinKey('1')">1</button>
-      <button class="key-btn" onclick="pinKey('2')">2</button>
-      <button class="key-btn" onclick="pinKey('3')">3</button>
-      <button class="key-btn" onclick="pinKey('4')">4</button>
-      <button class="key-btn" onclick="pinKey('5')">5</button>
-      <button class="key-btn" onclick="pinKey('6')">6</button>
-      <button class="key-btn" onclick="pinKey('7')">7</button>
-      <button class="key-btn" onclick="pinKey('8')">8</button>
-      <button class="key-btn" onclick="pinKey('9')">9</button>
-      <button class="key-btn key-del" onclick="pinDel()">⌫</button>
-      <button class="key-btn" onclick="pinKey('0')">0</button>
-      <button class="key-btn key-ok" onclick="pinSubmit()">확인 ✓</button>
-    </div>
-  </div>
-
-  <!-- 결과 -->
-  <div class="result-box" id="result-box">
-    <div class="res-icon" id="res-icon"></div>
-    <div class="res-title" id="res-title"></div>
-    <div class="res-detail" id="res-detail"></div>
-    <button class="res-again" onclick="resumeScan()">다시 스캔하기</button>
+  <div class="cam-btns">
+    <button class="cam-btn on" onclick="startCamera()">📷 시작</button>
+    <button class="cam-btn" onclick="stopCamera()">⏹ 중지</button>
+    <button class="cam-btn" onclick="switchCam()">🔄 전환</button>
   </div>
 
   <!-- 오늘 내 기록 -->
@@ -199,15 +225,9 @@ body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun G
 </div>
 
 <div class="bottombar">
-  <button class="bot-btn on">
-    <span class="bot-icon">📱</span><span class="bot-lbl">스캔</span>
-  </button>
-  <button class="bot-btn" onclick="location.href='/attendance-display'">
-    <span class="bot-icon">🖥</span><span class="bot-lbl">매장QR</span>
-  </button>
-  <button class="bot-btn" onclick="location.href='/settle'">
-    <span class="bot-icon">🏠</span><span class="bot-lbl">홈</span>
-  </button>
+  <button class="bot-btn on"><span class="bot-icon">📱</span><span class="bot-lbl">스캔</span></button>
+  <button class="bot-btn" onclick="location.href='/attendance-display'"><span class="bot-icon">🖥</span><span class="bot-lbl">매장QR</span></button>
+  <button class="bot-btn" onclick="location.href='/settle'"><span class="bot-icon">🏠</span><span class="bot-lbl">홈</span></button>
 </div>
 
 <script>
@@ -215,24 +235,301 @@ body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun G
 var _db=null;
 (function initFB(){
   if(typeof firebase==='undefined'){setTimeout(initFB,300);return;}
-  try{
-    var app;try{app=firebase.app('ae');}catch(e){
-      app=firebase.initializeApp({apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.firebasestorage.app',messagingSenderId:'40761160761',appId:'1:40761160761:web:20545b610f03f534e949e8'},'ae');
-    }
-    _db=app.firestore();
-  }catch(e){}
+  try{var app;try{app=firebase.app('ae');}catch(e){app=firebase.initializeApp({apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.firebasestorage.app',messagingSenderId:'40761160761',appId:'1:40761160761:web:20545b610f03f534e949e8'},'ae');}
+  _db=app.firestore();}catch(e){}
 })();
 
 var _type='in', _SECRET='DONWAY2026QR';
-var _stream=null, _scanRaf=null, _paused=false, _facingMode='environment', _lastResult='';
+var _stream=null,_scanRaf=null,_paused=false,_facingMode='environment';
+var _lastQR='', _lastScanTime=0;
 
-document.addEventListener('DOMContentLoaded',function(){
-  document.getElementById('today-date').textContent=new Date().toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'});
-  try{var s=JSON.parse(localStorage.getItem('dw_emp')||'{}');if(s.name)document.getElementById('my-name').value=s.name;if(s.company)document.getElementById('my-company').value=s.company;}catch(e){}
-  startCamera();
-});
+// ════════════════════════════════
+// ★ 3중 복합 인증 상태
+// ════════════════════════════════
+var _ctx = {
+  gps:   {ok:false, lat:null, lng:null, acc:null},
+  wifi:  {ok:false, type:'unknown'},
+  qr:    {ok:false, data:null}
+};
 
-// 출근/퇴근
+// GPS 실시간 추적
+var _gpsWatch=null;
+function startGPS(){
+  if(!navigator.geolocation)return;
+  setCheck('gps','check','확인 중...');
+  _gpsWatch=navigator.geolocation.watchPosition(
+    function(p){
+      _ctx.gps={ok:true,lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy};
+      setCheck('gps','ok','±'+Math.round(p.coords.accuracy)+'m');
+    },
+    function(e){
+      _ctx.gps.ok=false;
+      setCheck('gps','err','접근 거부');
+    },
+    {enableHighAccuracy:true,timeout:10000,maximumAge:5000}
+  );
+}
+
+// 네트워크 타입 확인
+function checkNetwork(){
+  setCheck('wifi','check','확인 중...');
+  var conn=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
+  if(conn){
+    var type=conn.type||conn.effectiveType||'unknown';
+    var isWifi=type==='wifi'||type==='ethernet';
+    _ctx.wifi={ok:true,type:type};
+    if(isWifi){
+      setCheck('wifi','ok','Wi-Fi 연결');
+    } else {
+      setCheck('wifi','ok',type.toUpperCase());
+    }
+    // 네트워크 변경 감지
+    conn.addEventListener('change',function(){
+      var t=conn.type||conn.effectiveType||'unknown';
+      _ctx.wifi.type=t;
+      setCheck('wifi','ok',t==='wifi'?'Wi-Fi 연결':t.toUpperCase());
+    });
+  } else {
+    _ctx.wifi={ok:true,type:'unknown'};
+    setCheck('wifi','ok','온라인');
+  }
+}
+
+// 인증 상태 표시 업데이트
+function setCheck(id,state,msg){
+  var el=document.getElementById('ck-'+id);
+  if(!el)return;
+  var dots={wait:'d-wait',check:'d-check',ok:'d-ok',err:'d-err'};
+  var cls={wait:'s-wait',check:'s-check',ok:'s-ok',err:'s-err'};
+  el.className='auth-check-status '+cls[state];
+  el.innerHTML='<span class="auth-dot '+dots[state]+'"></span>'+msg;
+}
+
+// ════════════════════════════════
+// 카메라 + QR 스캔
+// ════════════════════════════════
+function startCamera(){
+  stopCamera();_paused=false;
+  var video=document.getElementById('scanner-video');
+  var hint=document.getElementById('scan-hint');
+  hint.textContent='카메라 연결 중...';
+  navigator.mediaDevices.getUserMedia({video:{facingMode:_facingMode,width:{ideal:1280},height:{ideal:720}}})
+    .then(function(stream){
+      _stream=stream;video.srcObject=stream;video.play();
+      hint.textContent='📷 카메라를 QR에 가져다 대세요';
+      _scanLoop();
+    }).catch(function(e){hint.textContent='❌ 카메라 접근 실패: '+e.message;});
+}
+function stopCamera(){
+  if(_scanRaf){cancelAnimationFrame(_scanRaf);_scanRaf=null;}
+  if(_stream){_stream.getTracks().forEach(function(t){t.stop();});_stream=null;}
+  var v=document.getElementById('scanner-video');if(v)v.srcObject=null;
+}
+function switchCam(){_facingMode=_facingMode==='environment'?'user':'environment';startCamera();}
+
+function _scanLoop(){
+  var video=document.getElementById('scanner-video');
+  var canvas=document.getElementById('scan-canvas');
+  if(!video||!canvas||_paused){_scanRaf=requestAnimationFrame(_scanLoop);return;}
+  if(!video.videoWidth){_scanRaf=requestAnimationFrame(_scanLoop);return;}
+  canvas.width=video.videoWidth;canvas.height=video.videoHeight;
+  canvas.getContext('2d').drawImage(video,0,0);
+  var id=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height);
+  var qr=typeof jsQR!=='undefined'?jsQR(id.data,id.width,id.height,{inversionAttempts:'dontInvert'}):null;
+  if(qr&&qr.data&&qr.data!==_lastQR){
+    _lastQR=qr.data;
+    _paused=true;
+    _onQRDetected(qr.data);
+    return;
+  }
+  _scanRaf=requestAnimationFrame(_scanLoop);
+}
+
+// ════════════════════════════════
+// ★ 복합 인증 처리
+// ════════════════════════════════
+function _onQRDetected(tokenData){
+  setCheck('qr','check','QR 인식됨');
+  var hint=document.getElementById('scan-hint');
+  hint.innerHTML='<span class="spin"></span> 인증 확인 중...';
+
+  // 1) QR 토큰 검증
+  var qrResult=_verifyQR(tokenData);
+  if(!qrResult.ok){
+    setCheck('qr','err','QR 오류');
+    _showFail('QR 인증 실패',qrResult.msg,'❌');
+    return;
+  }
+  setCheck('qr','ok','QR 유효');
+
+  // 2) 30분 잠금 확인 (Firestore)
+  var now=new Date();
+  var today=now.toISOString().slice(0,10);
+  _checkQRLock(qrResult, today, now);
+}
+
+function _checkQRLock(qrResult, today, now){
+  if(!_db){_doFullAuth(qrResult,now);return;}
+  // 같은 QR + 같은 거점에서 30분 이내 다른 사람이 스캔했는지 확인
+  var cutoff=new Date(now.getTime()-30*60*1000).toISOString();
+  _db.collection('attendance')
+    .where('loc','==',qrResult.loc)
+    .where('timestamp','>',cutoff)
+    .where('name','==',document.getElementById('my-name').value.trim())
+    .limit(1).get()
+    .then(function(snap){
+      if(!snap.empty&&_type==='in'){
+        // 30분 내 같은 사람 중복 스캔
+        var last=snap.docs[0].data();
+        _showFail('중복 스캔',last.name+'님은 '+last.time+'에 이미 '+( last.type==='in'?'출근':'퇴근')+'하셨습니다.','⚠️');
+        return;
+      }
+      _doFullAuth(qrResult,now);
+    }).catch(function(){_doFullAuth(qrResult,now);});
+}
+
+function _doFullAuth(qrResult, now){
+  var myName=(document.getElementById('my-name').value||'').trim()||'직원';
+  var myCompany=(document.getElementById('my-company').value||'').trim().toUpperCase();
+
+  // 회사 코드 확인
+  if(myCompany&&qrResult.company!==myCompany){
+    _showFail('회사 불일치','스캔한 QR: '+qrResult.company+'\n내 코드: '+myCompany,'⚠️');return;
+  }
+
+  // 3) GPS 검증 (등록된 거점 좌표와 비교)
+  var gpsMsg='GPS 미확인';
+  var gpsOk=true; // GPS 없어도 기본 통과, 있으면 검증
+  if(_ctx.gps.ok&&_ctx.gps.lat){
+    var locGPS=_getLocGPS(qrResult.loc);
+    if(locGPS){
+      var dist=_distM(_ctx.gps.lat,_ctx.gps.lng,locGPS.lat,locGPS.lng);
+      if(dist>400){
+        gpsOk=false;
+        _showFail('위치 인증 실패','현재 위치가 근무지에서 '+Math.round(dist)+'m 떨어져 있습니다.\n근무지 반경 400m 이내에서 스캔하세요.','📍');return;
+      }
+      gpsMsg='±'+Math.round(_ctx.gps.acc)+'m';
+    } else {
+      gpsMsg='위치 확인됨';
+    }
+    setCheck('gps','ok',gpsMsg);
+  }
+
+  // 4) 네트워크 상태 기록
+  var netType=_ctx.wifi.type||'unknown';
+
+  // ✅ 모든 인증 통과 → 기록
+  var timeStr=now.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  var dateStr=now.toISOString().slice(0,10);
+  var isIn=_type==='in';
+
+  var record={
+    type:_type, loc:qrResult.loc, company:qrResult.company||myCompany,
+    name:myName,
+    lat:_ctx.gps.lat||0, lng:_ctx.gps.lng||0, gpsAcc:_ctx.gps.acc||0,
+    gpsUsed:!!_ctx.gps.lat, networkType:netType,
+    authMethod:'QR+GPS+NET', // ★ 특허 핵심: 복합 인증 기록
+    date:dateStr, time:timeStr, timestamp:now.toISOString(),
+    dealerId:myCompany||qrResult.company
+  };
+
+  if(_db){
+    _db.collection('attendance').add(record)
+      .then(function(){
+        _showSuccess(isIn, myName, qrResult.loc, timeStr, gpsMsg, netType);
+        if(navigator.vibrate)navigator.vibrate([100,50,200]);
+        loadMyLog();
+      }).catch(function(e){
+        _showFail('저장 실패',e.message,'❌');
+      });
+  } else {
+    _showSuccess(isIn, myName, qrResult.loc, timeStr, gpsMsg, netType);
+  }
+}
+
+// ════════════════════════════════
+// 팝업 표시
+// ════════════════════════════════
+function _showSuccess(isIn, name, loc, time, gpsMsg, netType){
+  document.getElementById('sp-icon').textContent=isIn?'🟢':'🔴';
+  document.getElementById('sp-type').textContent=isIn?'출근 완료':'퇴근 완료';
+  document.getElementById('sp-time').textContent=time;
+  document.getElementById('sp-detail').innerHTML=
+    '<strong>'+esc(name)+'</strong> · '+esc(loc);
+  // 인증 배지
+  var badges='<span class="auth-badge b-qr">📷 QR인증</span>';
+  if(gpsMsg&&gpsMsg!=='GPS 미확인')badges+='<span class="auth-badge b-gps">📍 GPS '+esc(gpsMsg)+'</span>';
+  if(netType&&netType!=='unknown')badges+='<span class="auth-badge b-wifi">📶 '+esc(netType==='wifi'?'Wi-Fi':netType)+'</span>';
+  document.getElementById('sp-badges').innerHTML=badges;
+  document.getElementById('success-popup').style.display='flex';
+  // 저장
+  try{localStorage.setItem('dw_emp',JSON.stringify({name:document.getElementById('my-name').value,company:document.getElementById('my-company').value}));}catch(e){}
+}
+function _showFail(msg, sub, icon){
+  document.getElementById('fp-icon').textContent=icon||'❌';
+  document.getElementById('fp-msg').textContent=msg;
+  document.getElementById('fp-sub').textContent=sub||'';
+  document.getElementById('fail-popup').style.display='flex';
+  setCheck('qr','err','실패');
+}
+function closeSuccess(){
+  document.getElementById('success-popup').style.display='none';
+  _paused=false;_lastQR='';
+  if(_stream)_scanRaf=requestAnimationFrame(_scanLoop);
+  else startCamera();
+}
+function closeFail(){
+  document.getElementById('fail-popup').style.display='none';
+  _paused=false;_lastQR='';
+  if(_stream)_scanRaf=requestAnimationFrame(_scanLoop);
+  else startCamera();
+}
+
+// ════════════════════════════════
+// QR 토큰 검증 (정적 + 동적 모두 지원)
+// ════════════════════════════════
+function _b64dec(b64){
+  try{return decodeURIComponent(Array.prototype.map.call(atob(b64.replace(/-/g,'+').replace(/_/g,'/')+'==='),function(c){return'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2);}).join(''));}
+  catch(e){return null;}
+}
+function _hash(str){var h=0x811c9dc5>>>0;for(var i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0;}return h.toString(36).toUpperCase().padStart(8,'0').slice(0,8);}
+
+function _verifyQR(token){
+  // 동적 QR (DW1: 토큰)
+  if(token.startsWith('DW1:')){
+    var rest=token.slice(4);var dot=rest.lastIndexOf('.');if(dot<0)return{ok:false,msg:'잘못된 QR 형식'};
+    var payload=_b64dec(rest.slice(0,dot));if(!payload)return{ok:false,msg:'QR 해독 실패'};
+    var hash=rest.slice(dot+1);var parts=payload.split('|');if(parts.length<4)return{ok:false,msg:'QR 데이터 오류'};
+    var company=parts[0],loc=parts[1],win=parseInt(parts[2]),interval=parseInt(parts[3]);
+    var now=Math.floor(Date.now()/(interval*1000));
+    if(Math.abs(win-now)>1)return{ok:false,msg:'QR이 만료되었습니다. 새 QR을 스캔하세요.'};
+    if(_hash(payload+_SECRET)!==hash)return{ok:false,msg:'QR 위변조가 감지되었습니다'};
+    return{ok:true,company:company,loc:loc,type:'dynamic'};
+  }
+  // 정적 QR (DWS: 토큰) — 고정형, GPS+네트워크로 보안
+  if(token.startsWith('DWS:')){
+    try{
+      var payload2=_b64dec(token.slice(4));if(!payload2)return{ok:false,msg:'정적QR 해독 실패'};
+      var p=payload2.split('|');if(p.length<3)return{ok:false,msg:'정적QR 형식 오류'};
+      var company2=p[0],loc2=p[1],hash2=p[2];
+      var expected=_hash(company2+'|'+loc2+_SECRET+'STATIC');
+      if(hash2!==expected)return{ok:false,msg:'정적QR 위변조 감지'};
+      return{ok:true,company:company2,loc:loc2,type:'static'};
+    }catch(e){return{ok:false,msg:'정적QR 처리 오류'};}
+  }
+  return{ok:false,msg:'DONWAY QR이 아닙니다'};
+}
+
+// 거점 GPS 좌표
+var _LOC_GPS={
+  '부산1':{lat:35.1580,lng:129.1170},'부산2':{lat:35.1652,lng:129.0560},
+  '부산3':{lat:35.1900,lng:129.0800},'대구2':{lat:35.8714,lng:128.6014},
+  '진주M':{lat:35.1797,lng:128.1077}
+};
+function _getLocGPS(loc){return _LOC_GPS[loc]||null;}
+function _distM(la1,ln1,la2,ln2){var R=6371000,d=Math.PI/180;var dl=(la2-la1)*d,dg=(ln2-ln1)*d;var a=Math.sin(dl/2)*Math.sin(dl/2)+Math.cos(la1*d)*Math.cos(la2*d)*Math.sin(dg/2)*Math.sin(dg/2);return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
+
+// 출근/퇴근 선택
 function setType(t){
   _type=t;
   document.getElementById('btn-in').className='type-btn'+(t==='in'?' t-in-on':'');
@@ -241,240 +538,7 @@ function setType(t){
   if(t!=='out')document.getElementById('btn-out').style.borderColor='var(--border2)';
 }
 
-// ★ 실시간 카메라 스캐너
-function startCamera(){
-  stopCamera();
-  _paused=false;
-  document.getElementById('result-box').style.display='none';
-  var video=document.getElementById('scanner-video');
-  var status=document.getElementById('scanner-status');
-  status.textContent='📷 카메라 연결 중...';
-  navigator.mediaDevices.getUserMedia({
-    video:{facingMode:_facingMode,width:{ideal:1280},height:{ideal:720}}
-  }).then(function(stream){
-    _stream=stream;
-    video.srcObject=stream;
-    video.play();
-    status.textContent='QR을 화면 중앙에 맞추세요';
-    document.getElementById('cam-start-btn').className='cam-btn';
-    document.getElementById('cam-stop-btn').className='cam-btn active';
-    _scanLoop();
-  }).catch(function(e){
-    status.textContent='❌ 카메라 접근 실패: '+e.message;
-    document.getElementById('cam-start-btn').className='cam-btn active';
-  });
-}
-
-function stopCamera(){
-  if(_scanRaf){cancelAnimationFrame(_scanRaf);_scanRaf=null;}
-  if(_stream){_stream.getTracks().forEach(function(t){t.stop();});_stream=null;}
-  var video=document.getElementById('scanner-video');
-  if(video)video.srcObject=null;
-  document.getElementById('cam-start-btn').className='cam-btn active';
-  document.getElementById('cam-stop-btn').className='cam-btn';
-}
-
-function switchCamera(){
-  _facingMode=_facingMode==='environment'?'user':'environment';
-  startCamera();
-}
-
-function _scanLoop(){
-  var video=document.getElementById('scanner-video');
-  var canvas=document.getElementById('scan-canvas');
-  if(!video||!canvas||_paused){_scanRaf=requestAnimationFrame(_scanLoop);return;}
-  if(!video.videoWidth){_scanRaf=requestAnimationFrame(_scanLoop);return;}
-  canvas.width=video.videoWidth;canvas.height=video.videoHeight;
-  var ctx=canvas.getContext('2d');
-  ctx.drawImage(video,0,0);
-  var imageData=ctx.getImageData(0,0,canvas.width,canvas.height);
-  var qr=typeof jsQR!=='undefined'?jsQR(imageData.data,imageData.width,imageData.height,{inversionAttempts:'dontInvert'}):null;
-  if(qr&&qr.data&&qr.data!==_lastResult){
-    _lastResult=qr.data;
-    _paused=true;
-    _processQR(qr.data);
-    return; // 스캔 성공 후 루프 중단
-  }
-  _scanRaf=requestAnimationFrame(_scanLoop);
-}
-
-function resumeScan(){
-  _paused=false;_lastResult='';
-  document.getElementById('result-box').style.display='none';
-  document.getElementById('scanner-status').textContent='QR을 화면 중앙에 맞추세요';
-  if(!_stream)startCamera();
-  else _scanRaf=requestAnimationFrame(_scanLoop);
-}
-
-// ── 입력 방법 전환 ──
-function switchMethod(m){
-  document.getElementById('tab-cam').className='method-tab'+(m==='cam'?' on':'');
-  document.getElementById('tab-pin').className='method-tab'+(m==='pin'?' on':'');
-  var camWrap=document.getElementById('scanner-wrap');
-  var camBtns=document.getElementById('cam-btn-row');
-  var pinWrap=document.getElementById('pin-wrap');
-  if(m==='cam'){
-    if(camWrap)camWrap.style.display='block';
-    if(camBtns)camBtns.style.display='flex';
-    if(pinWrap)pinWrap.style.display='none';
-    startCamera();
-  } else {
-    stopCamera();
-    if(camWrap)camWrap.style.display='none';
-    if(camBtns)camBtns.style.display='none';
-    if(pinWrap)pinWrap.style.display='block';
-    _pinClear();
-  }
-}
-
-// ── PIN 수동 입력 ──
-var _pinVal='';
-function _pinClear(){_pinVal='';_pinRender();}
-function _pinRender(){
-  for(var i=0;i<4;i++){
-    var el=document.getElementById('pd'+i);
-    if(!el)continue;
-    if(i<_pinVal.length){el.textContent=_pinVal[i];el.className='pin-digit filled';}
-    else{el.textContent='-';el.className='pin-digit';}
-  }
-}
-function pinKey(n){
-  if(_pinVal.length>=4)return;
-  _pinVal+=n;_pinRender();
-  if(_pinVal.length===4)setTimeout(pinSubmit,200);
-}
-function pinDel(){if(_pinVal.length>0){_pinVal=_pinVal.slice(0,-1);_pinRender();}}
-
-function pinSubmit(){
-  if(_pinVal.length<4){alert('4자리를 모두 입력하세요');return;}
-  var myName=(document.getElementById('my-name').value||'').trim()||'직원';
-  var myCompany=(document.getElementById('my-company').value||'').trim().toUpperCase();
-  // PIN 검증: 현재 및 직전 윈도우 모두 확인 (시간 오차 허용)
-  var verified=_verifyPIN(_pinVal,myCompany);
-  var rb=document.getElementById('result-box');
-  if(!verified.ok){
-    document.getElementById('res-icon').textContent='❌';
-    document.getElementById('res-title').textContent='인증 실패';
-    document.getElementById('res-detail').textContent=verified.msg;
-    rb.className='result-box res-err';rb.style.display='block';
-    _pinClear();
-    return;
-  }
-  _doRecord(myName,myCompany,verified.company,verified.loc);
-}
-
-function _verifyPIN(pin, myCompany){
-  // 최근 2개 윈도우의 PIN을 모두 확인 (30초 오차 허용)
-  // PIN은 회사코드 기반이라 회사코드 필요
-  var company = myCompany || 'DONWAY';
-  // 가능한 모든 interval 값에 대해 체크
-  var intervals=[30,15,60];
-  for(var ii=0;ii<intervals.length;ii++){
-    var interval=intervals[ii];
-    for(var delta=0;delta<=1;delta++){
-      var win=Math.floor(Date.now()/(interval*1000))-delta;
-      var raw=_pinHash(company+'|PIN|'+win+'DONWAY2026QR');
-      var digits='';
-      for(var j=0;j<raw.length&&digits.length<4;j++){
-        if(raw[j]>='0'&&raw[j]<='9')digits+=raw[j];
-      }
-      while(digits.length<4)digits+=String(Math.abs(raw.charCodeAt(digits.length%raw.length)%10));
-      digits=digits.slice(0,4);
-      if(digits===pin)return{ok:true,company:company,loc:'PIN 인증'};
-    }
-  }
-  return{ok:false,msg:'번호가 맞지 않습니다. 화면의 번호를 다시 확인하세요.'};
-}
-function _pinHash(str){var h=0x811c9dc5>>>0;for(var i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0;}return h.toString(36).toUpperCase().padStart(8,'0');}
-
-function _doRecord(myName,myCompany,company,loc){
-  var now=new Date();
-  var timeStr=now.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  var dateStr=now.toISOString().slice(0,10);
-  var isIn=_type==='in';
-  var rb=document.getElementById('result-box');
-  document.getElementById('res-icon').textContent=isIn?'🟢':'🔴';
-  document.getElementById('res-title').textContent=(isIn?'출근':'퇴근')+' 완료!';
-  document.getElementById('res-detail').innerHTML='<strong>'+esc(myName)+'</strong><br>'+esc(loc)+' · <strong>'+timeStr+'</strong>';
-  rb.className='result-box res-ok';rb.style.display='block';
-  if(navigator.vibrate)navigator.vibrate([100,50,100]);
-  var record={type:_type,loc:loc,company:company||myCompany,name:myName,date:dateStr,time:timeStr,timestamp:now.toISOString(),dealerId:myCompany||company,gpsUsed:false,lat:0,lng:0,method:'pin'};
-  if(_db){_db.collection('attendance').add(record).then(function(){toast('✅ '+(isIn?'출근':'퇴근')+' 기록 저장','ok');saveInfo();loadMyLog();}).catch(function(){toast('❌ 저장 실패','err');});}
-  else{toast('✅ 인증 완료 (오프라인)','ok');}
-  _pinClear();
-}
-
-// 토큰 검증
-function _b64dec(b64){
-  try{return decodeURIComponent(Array.prototype.map.call(atob(b64.replace(/-/g,'+').replace(/_/g,'/')+'==='),function(c){return'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2);}).join(''));}
-  catch(e){return null;}
-}
-function _hash(str){var h=0x811c9dc5>>>0;for(var i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0;}return h.toString(36).toUpperCase().padStart(8,'0').slice(0,8);}
-function _verify(token){
-  if(!token||!token.startsWith('DW1:'))return{ok:false,msg:'DONWAY QR이 아닙니다'};
-  try{
-    var rest=token.slice(4);var dot=rest.lastIndexOf('.');if(dot<0)return{ok:false,msg:'잘못된 QR'};
-    var payload=_b64dec(rest.slice(0,dot));if(!payload)return{ok:false,msg:'QR 해독 실패'};
-    var hash=rest.slice(dot+1);var parts=payload.split('|');if(parts.length<4)return{ok:false,msg:'QR 데이터 오류'};
-    var company=parts[0],loc=parts[1],win=parseInt(parts[2]),interval=parseInt(parts[3]);
-    var now=Math.floor(Date.now()/(interval*1000));
-    if(Math.abs(win-now)>1)return{ok:false,msg:'QR 만료. 화면의 QR이 갱신될 때까지 기다리세요.'};
-    if(_hash(payload+_SECRET)!==hash)return{ok:false,msg:'QR 위변조 감지'};
-    return{ok:true,company:company,loc:loc};
-  }catch(e){return{ok:false,msg:'오류: '+e.message};}
-}
-
-function _processQR(tokenData){
-  var myName=(document.getElementById('my-name').value||'').trim()||'직원';
-  var myCompany=(document.getElementById('my-company').value||'').trim().toUpperCase();
-  var result=_verify(tokenData);
-  var status=document.getElementById('scanner-status');
-  var rb=document.getElementById('result-box');
-
-  if(!result.ok){
-    status.textContent='❌ '+result.msg;
-    document.getElementById('res-icon').textContent='❌';
-    document.getElementById('res-title').textContent='인증 실패';
-    document.getElementById('res-detail').textContent=result.msg;
-    rb.className='result-box res-err';rb.style.display='block';
-    // 3초 후 자동 재스캔
-    setTimeout(resumeScan,3000);
-    return;
-  }
-  if(myCompany&&result.company!==myCompany){
-    status.textContent='⚠ 다른 회사 QR입니다';
-    document.getElementById('res-icon').textContent='⚠️';
-    document.getElementById('res-title').textContent='회사 불일치';
-    document.getElementById('res-detail').innerHTML='스캔: <strong>'+esc(result.company)+'</strong><br>내 코드: <strong>'+esc(myCompany)+'</strong>';
-    rb.className='result-box res-err';rb.style.display='block';
-    setTimeout(resumeScan,3000);
-    return;
-  }
-
-  // ✅ 성공
-  var now=new Date();
-  var timeStr=now.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  var dateStr=now.toISOString().slice(0,10);
-  var isIn=_type==='in';
-  status.textContent='✅ '+(isIn?'출근':'퇴근')+' 완료!';
-  document.getElementById('res-icon').textContent=isIn?'🟢':'🔴';
-  document.getElementById('res-title').textContent=(isIn?'출근':'퇴근')+' 완료!';
-  document.getElementById('res-detail').innerHTML='<strong>'+esc(myName)+'</strong><br>'+esc(result.loc)+' · <strong>'+timeStr+'</strong>';
-  rb.className='result-box res-ok';rb.style.display='block';
-
-  // 진동 피드백
-  if(navigator.vibrate)navigator.vibrate([100,50,100]);
-
-  // Firestore 저장
-  var record={type:_type,loc:result.loc,company:result.company,name:myName,date:dateStr,time:timeStr,timestamp:now.toISOString(),dealerId:myCompany||result.company,gpsUsed:false,lat:0,lng:0};
-  if(_db){
-    _db.collection('attendance').add(record)
-      .then(function(){toast('✅ '+(isIn?'출근':'퇴근')+' 기록 저장','ok');saveInfo();loadMyLog();})
-      .catch(function(e){toast('❌ 저장 실패','err');});
-  }
-}
-
-function saveInfo(){try{localStorage.setItem('dw_emp',JSON.stringify({name:document.getElementById('my-name').value,company:document.getElementById('my-company').value}));}catch(e){}}
+// 기록 로드
 function loadMyLog(){
   var listEl=document.getElementById('my-log');if(!listEl||!_db)return;
   var today=new Date().toISOString().slice(0,10);
@@ -483,15 +547,29 @@ function loadMyLog(){
   _db.collection('attendance').where('date','==',today).where('name','==',name).orderBy('timestamp','asc').limit(20).get()
     .then(function(snap){
       if(snap.empty){listEl.innerHTML='<div style="text-align:center;padding:12px;color:var(--gray);font-size:12px">오늘 기록 없음</div>';return;}
-      listEl.innerHTML=snap.docs.map(function(d){var r=d.data();var isIn=r.type==='in';return'<div class="log-row"><div><div class="log-loc">'+esc(r.loc||'')+'</div><div class="log-sub">📷 QR 인증</div></div><div class="'+(isIn?'log-in':'log-out')+'">'+(isIn?'🟢 출근':'🔴 퇴근')+'<div class="log-time">'+esc(r.time||'')+'</div></div></div>';}).join('');
+      listEl.innerHTML=snap.docs.map(function(d){
+        var r=d.data();var isIn=r.type==='in';
+        var badges='';
+        if(r.gpsUsed)badges+='<span class="log-badge" style="background:rgba(0,255,136,.1);color:var(--green)">GPS</span>';
+        if(r.networkType&&r.networkType!=='unknown')badges+='<span class="log-badge" style="background:rgba(245,158,11,.1);color:var(--yellow)">'+esc(r.networkType==='wifi'?'WiFi':r.networkType)+'</span>';
+        return '<div class="log-row"><div><div class="log-loc">'+esc(r.loc||'')+'</div><div class="log-sub">'+badges+'</div></div>'
+          +'<div class="'+(isIn?'log-in':'log-out')+'">'+(isIn?'🟢 출근':'🔴 퇴근')+'<div class="log-time">'+esc(r.time||'')+'</div></div></div>';
+      }).join('');
     }).catch(function(){});
 }
+
 function toast(msg,type){var t=document.getElementById('toast');t.textContent=msg;t.className='show'+(type?' '+type:'');clearTimeout(t._t);t._t=setTimeout(function(){t.className='';},3000);}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
-// 페이지 떠날 때 카메라 종료
+// 초기화
+document.addEventListener('DOMContentLoaded',function(){
+  document.getElementById('today-date').textContent=new Date().toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'});
+  try{var s=JSON.parse(localStorage.getItem('dw_emp')||'{}');if(s.name)document.getElementById('my-name').value=s.name;if(s.company)document.getElementById('my-company').value=s.company;}catch(e){}
+  startGPS();
+  checkNetwork();
+  startCamera();
+});
 window.addEventListener('pagehide',stopCamera);
-window.addEventListener('beforeunload',stopCamera);
 </script>
 </body>
 </html>

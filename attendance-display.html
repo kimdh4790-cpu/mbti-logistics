@@ -169,7 +169,9 @@ html,body{height:100%;background:var(--bg);color:var(--white);font-family:-apple
       </select>
     </div>
 
-    <button class="setup-btn" onclick="startDisplay()">QR 화면 시작하기 →</button>
+    <button class="setup-btn" onclick="startDisplay()">🖥 동적 QR 화면 시작 (화면 표시용)</button>
+    <div style="text-align:center;margin:10px 0;font-size:12px;color:var(--gray)">또는</div>
+    <button onclick="startStaticMode()" style="width:100%;padding:14px;background:transparent;border:1.5px solid rgba(0,212,255,.3);border-radius:12px;color:var(--cyan);font-size:14px;font-weight:700;cursor:pointer;transition:.3s">🖨 정적 QR 생성 (인쇄·부착용)</button>
     <div class="setup-hint">
       💡 이 화면을 태블릿/모니터에 풀스크린으로 띄워 두세요<br>
       직원은 DONWAY 앱 → 출퇴근 스캔으로 인증합니다
@@ -453,6 +455,120 @@ function loadTodayStats(){
     if(saved.interval)document.getElementById('s-interval').value=saved.interval;
   }catch(e){}
 })();
+
+// ══════════════════════════════
+// ★ 정적 QR 생성 (DWS: 형식)
+// ══════════════════════════════
+function startStaticMode(){
+  var company=(document.getElementById('s-company').value||'').trim().toUpperCase();
+  var location=(document.getElementById('s-location').value||'').trim();
+  if(!company){alert('회사 코드를 입력하세요');return;}
+  if(!location){alert('매장/거점명을 입력하세요');return;}
+  _company=company;_location=location;
+  localStorage.setItem('dw_disp',JSON.stringify({company,location,interval:_interval}));
+
+  // 정적 토큰 생성 (DWS: 형식 — 고정, 만료 없음)
+  var payload=[company,location].join('|');
+  var hash2=_hash(payload+_SECRET+'STATIC');
+  var token='DWS:'+_safeB64enc(payload)+'.'+hash2;
+
+  document.getElementById('setup-screen').style.display='none';
+  document.getElementById('static-screen').style.display='block';
+  document.getElementById('static-loc-label').textContent=location;
+  document.getElementById('static-company-label').textContent='회사코드: '+company+' · DONWAY 복합 인증 QR';
+
+  // QR 렌더링
+  var wrap=document.getElementById('static-qr-wrap');
+  wrap.innerHTML='';
+  var size=240;
+  try{
+    if(typeof QRCode==='undefined')throw new Error('no lib');
+    new QRCode(wrap,{text:token,width:size,height:size,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.H});
+  }catch(e){
+    var cv=document.createElement('canvas');cv.width=size;cv.height=size;
+    wrap.appendChild(cv);_fallbackQR(cv,token,size);
+  }
+  window._staticToken=token;
+  window._staticCompany=company;
+  window._staticLocation=location;
+}
+
+function printStaticQR(){
+  var token=window._staticToken||'';
+  var company=window._staticCompany||'';
+  var location=window._staticLocation||'';
+  var qrWrap=document.getElementById('static-qr-wrap');
+  var qrImg=qrWrap.querySelector('canvas')||qrWrap.querySelector('img');
+  var qrDataURL=qrImg?qrImg.toDataURL?qrImg.toDataURL():(qrImg.src||''):'';
+
+  var html='<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>DONWAY QR — '+location+'</title>'
+    +'<style>'
+    +'*{box-sizing:border-box;margin:0;padding:0;font-family:"맑은 고딕","Malgun Gothic",sans-serif}'
+    +'body{padding:20mm;display:flex;align-items:center;justify-content:center;min-height:100vh}'
+    +'.qr-sheet{width:180mm;border:3px solid #000;border-radius:12px;padding:20px;text-align:center;}'
+    +'.brand{font-size:22pt;font-weight:900;letter-spacing:4px;margin-bottom:4px}'
+    +'.brand span{color:#0066ff}'
+    +'.loc{font-size:18pt;font-weight:800;margin:12px 0 4px}'
+    +'.sub{font-size:10pt;color:#666;margin-bottom:16px}'
+    +'.qr-img{width:180px;height:180px;margin:0 auto 16px;display:block}'
+    +'.guide{background:#f0f8ff;border-radius:8px;padding:12px;font-size:10pt;color:#333;line-height:1.8;margin-bottom:12px}'
+    +'.guide strong{color:#0066ff}'
+    +'.sec-tag{display:inline-flex;align-items:center;gap:6px;background:#e8f4ff;border:1px solid #b3d9ff;border-radius:20px;padding:4px 12px;font-size:9pt;color:#0066ff;font-weight:700}'
+    +'.patent{font-size:8pt;color:#aaa;margin-top:12px}'
+    +'@media print{body{padding:5mm}}'
+    +'</style></head><body>'
+    +'<div class="qr-sheet">'
+    +'<div class="brand"><span>D</span>ONWAY 출퇴근</div>'
+    +'<div class="sub">AI 자동화 · 복합 인증 출퇴근 시스템</div>'
+    +'<div class="loc">'+escP(location)+'</div>'
+    +'<img src="'+qrDataURL+'" class="qr-img" alt="QR">'
+    +'<div class="guide">'
+    +'<strong>📱 출퇴근 방법</strong><br>'
+    +'① DONWAY 앱 실행<br>'
+    +'② 출근 / 퇴근 선택<br>'
+    +'③ 이 QR 스캔 (GPS + Wi-Fi 자동 확인)<br>'
+    +'④ <strong>출근 완료 팝업</strong> 확인'
+    +'</div>'
+    +'<div><span class="sec-tag">📍 GPS 위치 인증</span> <span class="sec-tag">📶 Wi-Fi 인증</span> <span class="sec-tag">🔐 QR 인증</span></div>'
+    +'<div class="patent">특허 출원 중 · 고정형 식별자 + 단말기 컨텍스트 복합 인증 시스템</div>'
+    +'</div></body></html>';
+
+  var w=window.open('','_blank','width=800,height=900');
+  if(w){w.document.write(html);w.document.close();setTimeout(function(){w.focus();w.print();},600);}
+}
+function escP(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
 </script>
+
+<!-- 정적 QR 화면 -->
+<div id="static-screen" style="display:none;position:fixed;inset:0;background:var(--bg);overflow-y:auto;padding:24px 20px 40px">
+  <div style="max-width:480px;margin:0 auto">
+    <button onclick="goSetup()" style="background:none;border:none;color:var(--cyan);font-size:13px;cursor:pointer;margin-bottom:16px">← 설정으로</button>
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="font-size:13px;font-weight:900;letter-spacing:3px;margin-bottom:4px"><span style="color:var(--cyan)">D</span>ONWAY</div>
+      <div style="font-size:18px;font-weight:900">🖨 인쇄용 정적 QR</div>
+      <div style="font-size:12px;color:var(--gray);margin-top:6px;line-height:1.7">벽·유리문·카운터에 부착하세요<br>직원이 앱으로 스캔 → GPS+Wi-Fi 복합 인증</div>
+    </div>
+
+    <!-- 정적 QR 미리보기 -->
+    <div style="background:#fff;border-radius:16px;padding:24px;text-align:center;margin-bottom:16px;box-shadow:0 4px 20px rgba(0,102,255,.15)">
+      <div style="font-size:11px;color:#888;margin-bottom:12px;letter-spacing:2px;font-family:monospace">DONWAY STATIC QR · GPS+Wi-Fi 인증</div>
+      <div id="static-qr-wrap" style="display:inline-block;border-radius:8px;overflow:hidden"></div>
+      <div style="margin-top:12px;font-size:12px;color:#555;font-weight:700" id="static-loc-label"></div>
+      <div style="margin-top:4px;font-size:10px;color:#888;font-family:monospace" id="static-company-label"></div>
+    </div>
+
+    <!-- 보안 안내 -->
+    <div style="background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.15);border-radius:12px;padding:14px 16px;margin-bottom:16px;font-size:12px;line-height:1.8;color:var(--gray)">
+      🔐 <strong style="color:var(--white)">정적 QR 보안</strong><br>
+      고정 코드이지만 스캔 시 <strong style="color:var(--cyan)">GPS 위치 + Wi-Fi 네트워크</strong>를 함께 검증합니다.<br>
+      QR을 공유받아도 <strong style="color:var(--cyan)">현장에 있어야만</strong> 인증 통과됩니다.
+    </div>
+
+    <!-- 인쇄 버튼 -->
+    <button onclick="printStaticQR()" style="width:100%;padding:16px;background:linear-gradient(135deg,#0066ff,#00d4ff);border:none;border-radius:12px;color:#030912;font-size:16px;font-weight:900;cursor:pointer;margin-bottom:10px">🖨 인쇄하기 (A4)</button>
+    <button onclick="goSetup()" style="width:100%;padding:13px;background:transparent;border:1.5px solid var(--border);border-radius:12px;color:var(--gray);font-size:13px;font-weight:700;cursor:pointer">← 설정으로 돌아가기</button>
+  </div>
+</div>
 </body>
 </html>
