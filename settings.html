@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#030912">
+<title>DONWAY — 시스템 설정</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{--bg:#030912;--bg2:#060f1f;--bg3:#0a1628;--blue:#0066ff;--cyan:#00d4ff;--green:#00ff88;--red:#ef4444;--yellow:#f59e0b;--gray:#5a7299;--white:#e8f4ff;--border:rgba(0,212,255,.12);--border2:rgba(0,102,255,.18)}
+body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun Gothic',sans-serif;min-height:100vh}
+.wrap{max-width:560px;margin:0 auto;padding:0 0 90px}
+.topbar{background:rgba(3,9,18,.97);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;backdrop-filter:blur(20px)}
+.logo{font-size:14px;font-weight:900;letter-spacing:3px}.logo span{color:var(--cyan)}
+.tabs{display:flex;background:rgba(6,15,31,.8);border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;padding:12px 16px;border:none;background:transparent;color:var(--gray);font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;transition:.2s;white-space:nowrap}
+.tab.on{color:var(--cyan);border-bottom-color:var(--cyan)}
+.sec{padding:16px 20px 0}
+.sec-title{font-size:10px;font-weight:700;color:var(--gray);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.sec-title::before{content:'';width:14px;height:1.5px;background:var(--cyan)}
+.card{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;margin-bottom:12px}
+.fg{margin-bottom:12px}
+.fl{font-size:11px;font-weight:700;color:var(--gray);display:block;margin-bottom:5px;letter-spacing:.05em}
+.fi{width:100%;padding:11px 13px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--white);font-size:14px;font-weight:600;outline:none;transition:.2s}
+.fi:focus{border-color:var(--cyan)}
+.fi-mono{font-family:monospace;letter-spacing:1px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.save-btn{width:100%;padding:13px;background:linear-gradient(135deg,var(--blue),var(--cyan));border:none;border-radius:11px;color:var(--bg);font-size:14px;font-weight:900;cursor:pointer;transition:.3s;margin-top:4px}
+.save-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,102,255,.3)}
+.camp-block{background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:12px 14px;margin-bottom:8px}
+.camp-block-title{font-size:12px;font-weight:800;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.del-btn{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:6px;color:var(--red);font-size:10px;font-weight:700;padding:3px 8px;cursor:pointer}
+.add-btn{width:100%;padding:10px;background:transparent;border:1.5px dashed rgba(0,212,255,.3);border-radius:10px;color:var(--cyan);font-size:13px;font-weight:700;cursor:pointer;transition:.2s;margin-top:4px}
+.add-btn:hover{background:rgba(0,212,255,.05)}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--border)}
+.toggle-row:last-child{border-bottom:none}
+.toggle-lbl{font-size:13px;font-weight:600}
+.toggle-sub{font-size:10px;color:var(--gray);margin-top:2px}
+.toggle{position:relative;width:44px;height:24px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0;position:absolute}
+.toggle-track{position:absolute;inset:0;background:rgba(90,114,153,.3);border-radius:12px;cursor:pointer;transition:.3s}
+.toggle input:checked+.toggle-track{background:var(--cyan)}
+.toggle-track::after{content:'';position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:3px;left:3px;transition:.3s;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.toggle input:checked+.toggle-track::after{left:23px}
+.ind-btn{padding:8px 14px;border-radius:20px;border:1.5px solid var(--border2);background:var(--bg3);color:var(--gray);font-size:12px;font-weight:700;cursor:pointer;transition:.2s;white-space:nowrap}
+.ind-btn.on{border-color:var(--cyan);color:var(--cyan);background:rgba(0,212,255,.08)}
+.bottombar{position:fixed;bottom:0;left:0;right:0;max-width:560px;margin:0 auto;background:rgba(6,15,31,.97);border-top:1px solid var(--border);display:flex;padding:8px 0;z-index:100}
+.bot-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px;border:none;background:transparent;cursor:pointer;color:var(--gray);text-decoration:none}
+.bot-btn.on{color:var(--cyan)}
+.bot-icon{font-size:20px}.bot-lbl{font-size:9px;font-weight:700;letter-spacing:.5px}
+#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg2);border:1px solid var(--border2);color:var(--white);padding:10px 20px;border-radius:99px;font-size:12px;font-weight:700;opacity:0;transition:.3s;pointer-events:none;z-index:9999}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.ok{border-color:var(--green);color:var(--green)}
+#toast.err{border-color:var(--red);color:var(--red)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{width:14px;height:14px;border:2px solid rgba(0,212,255,.2);border-top-color:var(--cyan);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:middle}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+<div class="topbar">
+  <div class="logo"><span>D</span>ONWAY 설정</div>
+  <button onclick="saveAll()" style="padding:8px 18px;background:linear-gradient(135deg,var(--blue),var(--cyan));border:none;border-radius:8px;color:var(--bg);font-size:13px;font-weight:900;cursor:pointer">💾 전체 저장</button>
+</div>
+<div class="tabs">
+  <button class="tab on" id="t-company" onclick="switchTab('company')">🏢 회사정보</button>
+  <button class="tab" id="t-industry" onclick="switchTab('industry')">⚙️ 업종·단가</button>
+  <button class="tab" id="t-camps" onclick="switchTab('camps')">📍 거점·GPS</button>
+  <button class="tab" id="t-notify" onclick="switchTab('notify')">🔔 알림설정</button>
+  <button class="tab" id="t-security" onclick="switchTab('security')">🔐 보안</button>
+</div>
+<div class="wrap">
+
+<!-- ① 회사 정보 -->
+<div id="tab-company">
+  <div class="sec">
+    <div class="sec-title">회사 기본 정보</div>
+    <div class="card">
+      <div class="row2">
+        <div class="fg"><label class="fl">회사명 *</label><input class="fi" id="s-name" placeholder="(유)엠비티아이"></div>
+        <div class="fg"><label class="fl">회사 코드 *</label><input class="fi fi-mono" id="s-code" placeholder="MBTI01" style="text-transform:uppercase"></div>
+      </div>
+      <div class="row2">
+        <div class="fg"><label class="fl">사업자등록번호</label><input class="fi fi-mono" id="s-biz" placeholder="373-86-02536"></div>
+        <div class="fg"><label class="fl">대표자</label><input class="fi" id="s-rep" placeholder="김형우"></div>
+      </div>
+      <div class="row2">
+        <div class="fg"><label class="fl">사무실 전화</label><input class="fi fi-mono" id="s-tel" placeholder="051-711-3103"></div>
+        <div class="fg"><label class="fl">팩스</label><input class="fi fi-mono" id="s-fax" placeholder="070-7507-3102"></div>
+      </div>
+      <div class="fg"><label class="fl">사업장 주소</label><input class="fi" id="s-addr" placeholder="부산시 수영로 668, 607호"></div>
+      <div class="fg" style="margin-bottom:0"><label class="fl">카카오채널</label><input class="fi" id="s-kakao" placeholder="MBTI Co. LOGISTICS"></div>
+    </div>
+    <div class="sec-title">입금 계좌</div>
+    <div class="card">
+      <div class="row3">
+        <div class="fg"><label class="fl">은행</label><input class="fi" id="s-bank" placeholder="하나은행"></div>
+        <div class="fg"><label class="fl">계좌번호</label><input class="fi fi-mono" id="s-account" placeholder="270-910019-24204"></div>
+        <div class="fg"><label class="fl">예금주</label><input class="fi" id="s-accountname" placeholder="(유)엠비티아이"></div>
+      </div>
+    </div>
+    <button class="save-btn" onclick="saveCompany()">💾 회사 정보 저장</button>
+  </div>
+</div>
+
+<!-- ② 업종·단가 설정 -->
+<div id="tab-industry" style="display:none">
+  <div class="sec">
+    <div class="sec-title">업종 선택</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px" id="ind-btns">
+      <button class="ind-btn on" onclick="setInd('coupang',this)">🚚 쿠팡물류</button>
+      <button class="ind-btn" onclick="setInd('delivery',this)">🛵 배달대행</button>
+      <button class="ind-btn" onclick="setInd('smallbiz',this)">🏪 소상공인</button>
+      <button class="ind-btn" onclick="setInd('service',this)">🏗️ 용역업체</button>
+      <button class="ind-btn" onclick="setInd('freelance',this)">👨‍💼 프리랜서</button>
+    </div>
+    <div id="ind-settings"></div>
+    <button class="save-btn" onclick="saveIndustry()">💾 업종·단가 저장</button>
+  </div>
+</div>
+
+<!-- ③ 거점·GPS -->
+<div id="tab-camps" style="display:none">
+  <div class="sec">
+    <div class="sec-title">거점 GPS 좌표 등록</div>
+    <div style="font-size:11px;color:var(--gray);margin-bottom:12px;line-height:1.7">
+      출퇴근 QR 스캔 시 GPS 반경 검증에 사용됩니다.<br>
+      네이버지도에서 거점 위치를 클릭 → 좌표 복사 후 입력하세요.
+    </div>
+    <div id="camp-list"></div>
+    <button class="add-btn" onclick="addCamp()">+ 거점 추가</button>
+    <button class="save-btn" onclick="saveCamps()">💾 거점 GPS 저장</button>
+  </div>
+</div>
+
+<!-- ④ 알림 설정 -->
+<div id="tab-notify" style="display:none">
+  <div class="sec">
+    <div class="sec-title">알림 채널</div>
+    <div class="card">
+      <div class="toggle-row">
+        <div><div class="toggle-lbl">카카오 알림톡</div><div class="toggle-sub">정산서 발송 시 카카오 메시지</div></div>
+        <label class="toggle"><input type="checkbox" id="n-kakao" checked><div class="toggle-track"></div></label>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-lbl">SMS 문자</div><div class="toggle-sub">카카오 불가 시 자동 대체</div></div>
+        <label class="toggle"><input type="checkbox" id="n-sms" checked><div class="toggle-track"></div></label>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-lbl">이메일</div><div class="toggle-sub">이메일 주소 등록된 직원에게 발송</div></div>
+        <label class="toggle"><input type="checkbox" id="n-email"><div class="toggle-track"></div></label>
+      </div>
+    </div>
+    <div class="sec-title">자동 알림</div>
+    <div class="card">
+      <div class="toggle-row">
+        <div><div class="toggle-lbl">출근 알림</div><div class="toggle-sub">직원 출근 시 관리자에게 알림</div></div>
+        <label class="toggle"><input type="checkbox" id="n-checkin"><div class="toggle-track"></div></label>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-lbl">미출근 알림</div><div class="toggle-sub">출근 예정 시간 30분 경과 시</div></div>
+        <label class="toggle"><input type="checkbox" id="n-absent"><div class="toggle-track"></div></label>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-lbl">법정문서 만료 알림</div><div class="toggle-sub">보존기간 만료 30일 전 자동 알림</div></div>
+        <label class="toggle"><input type="checkbox" id="n-doc" checked><div class="toggle-track"></div></label>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-lbl">급여 지급 알림</div><div class="toggle-sub">급여명세서 저장 시 직원에게 발송</div></div>
+        <label class="toggle"><input type="checkbox" id="n-pay" checked><div class="toggle-track"></div></label>
+      </div>
+    </div>
+    <div class="sec-title">관리자 알림 번호</div>
+    <div class="card">
+      <div class="fg"><label class="fl">관리자 전화번호 (내부용)</label><input class="fi fi-mono" id="n-admin-phone" placeholder="010-4790-3103"></div>
+      <div class="fg" style="margin-bottom:0"><label class="fl">관리자 이메일</label><input class="fi" id="n-admin-email" placeholder="admin@donway.kr" type="email"></div>
+    </div>
+    <button class="save-btn" onclick="saveNotify()">💾 알림 설정 저장</button>
+  </div>
+</div>
+
+<!-- ⑤ 보안 -->
+<div id="tab-security" style="display:none">
+  <div class="sec">
+    <div class="sec-title">출퇴근 QR 보안</div>
+    <div class="card">
+      <div class="fg"><label class="fl">QR 갱신 주기 (초)</label>
+        <select class="fi" id="sec-interval">
+          <option value="15">15초 — 고보안</option>
+          <option value="30" selected>30초 — 표준 (권장)</option>
+          <option value="60">60초</option>
+        </select>
+      </div>
+      <div class="fg"><label class="fl">GPS 허용 반경 (m)</label>
+        <select class="fi" id="sec-gps-radius">
+          <option value="100">100m — 엄격</option>
+          <option value="200">200m</option>
+          <option value="400" selected>400m — 표준</option>
+          <option value="1000">1000m — 여유</option>
+        </select>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-lbl">GPS 검증 필수</div><div class="toggle-sub">GPS 없으면 출퇴근 불가</div></div>
+        <label class="toggle"><input type="checkbox" id="sec-gps-req"><div class="toggle-track"></div></label>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-lbl">Wi-Fi 검증 사용</div><div class="toggle-sub">사내 Wi-Fi 연결 시 추가 인증</div></div>
+        <label class="toggle"><input type="checkbox" id="sec-wifi" checked><div class="toggle-track"></div></label>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-lbl">30분 중복 스캔 차단</div><div class="toggle-sub">같은 사람이 30분 내 중복 스캔 방지</div></div>
+        <label class="toggle"><input type="checkbox" id="sec-dup" checked><div class="toggle-track"></div></label>
+      </div>
+    </div>
+    <div class="sec-title">접근 제어</div>
+    <div class="card">
+      <div class="toggle-row">
+        <div><div class="toggle-lbl">직원 가입 허용</div><div class="toggle-sub">꺼두면 신규 가입 불가</div></div>
+        <label class="toggle"><input type="checkbox" id="sec-join" checked><div class="toggle-track"></div></label>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-lbl">재가입 방지</div><div class="toggle-sub">동일 전화번호 중복 가입 차단</div></div>
+        <label class="toggle"><input type="checkbox" id="sec-rejoin" checked><div class="toggle-track"></div></label>
+      </div>
+    </div>
+    <button class="save-btn" onclick="saveSecurity()">💾 보안 설정 저장</button>
+  </div>
+</div>
+
+</div><!-- /wrap -->
+
+<div class="bottombar">
+  <button class="bot-btn on"><span class="bot-icon">⚙️</span><span class="bot-lbl">설정</span></button>
+  <a href="/dashboard" class="bot-btn"><span class="bot-icon">📊</span><span class="bot-lbl">대시보드</span></a>
+  <a href="/drivers" class="bot-btn"><span class="bot-icon">👥</span><span class="bot-lbl">직원관리</span></a>
+  <a href="/settle" class="bot-btn"><span class="bot-icon">💰</span><span class="bot-lbl">정산</span></a>
+</div>
+
+<script>
+var _db=null, _settings={}, _selInd='coupang', _camps=[];
+
+(function init(){
+  if(typeof firebase==='undefined'){setTimeout(init,300);return;}
+  try{
+    var app;try{app=firebase.app('cfg');}catch(e){
+      app=firebase.initializeApp({apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.firebasestorage.app',messagingSenderId:'40761160761',appId:'1:40761160761:web:20545b610f03f534e949e8'},'cfg');
+    }
+    _db=app.firestore();
+    loadSettings();
+  }catch(e){console.warn(e);loadDefaults();}
+})();
+
+// ── 탭 전환 ──
+function switchTab(t){
+  ['company','industry','camps','notify','security'].forEach(function(x){
+    document.getElementById('tab-'+x).style.display=x===t?'block':'none';
+    document.getElementById('t-'+x).classList.toggle('on',x===t);
+  });
+  if(t==='industry')renderIndSettings();
+  if(t==='camps')renderCamps();
+}
+
+// ── 설정 로드 ──
+function loadSettings(){
+  if(!_db){loadDefaults();return;}
+  _db.collection('settings').doc('main').get().then(function(d){
+    if(d.exists){_settings=d.data();}
+    loadDefaults();
+  }).catch(function(){loadDefaults();});
+}
+
+function loadDefaults(){
+  // 회사 정보
+  var s=_settings;
+  setVal('s-name', s.name||'엠비티아이(유)');
+  setVal('s-code', s.code||'MBTI01');
+  setVal('s-biz',  s.bizNo||'373-86-02536');
+  setVal('s-rep',  s.rep||'김형우');
+  setVal('s-tel',  s.tel||'051-711-3103');
+  setVal('s-fax',  s.fax||'070-7507-3102');
+  setVal('s-addr', s.addr||'부산시 수영로 668, 607호');
+  setVal('s-kakao',s.kakao||'MBTI Co. LOGISTICS');
+  setVal('s-bank', s.bank||'하나은행');
+  setVal('s-account',s.account||'270-910019-24204');
+  setVal('s-accountname',s.accountName||'(유)엠비티아이');
+  // 거점
+  _camps=(s.camps&&s.camps.length)?s.camps:[
+    {name:'부산1',lat:'35.1580',lng:'129.1170',radius:'400'},
+    {name:'부산2',lat:'35.1652',lng:'129.0560',radius:'400'},
+    {name:'부산3',lat:'35.1900',lng:'129.0800',radius:'400'},
+    {name:'대구2',lat:'35.8714',lng:'128.6014',radius:'400'},
+    {name:'진주M',lat:'35.1797',lng:'128.1077',radius:'400'}
+  ];
+  // 보안
+  setVal('sec-interval', s.qrInterval||'30');
+  setVal('sec-gps-radius', s.gpsRadius||'400');
+  setCheck('sec-gps-req', s.gpsRequired||false);
+  setCheck('sec-wifi', s.wifiCheck!==false);
+  setCheck('sec-dup', s.dupBlock!==false);
+  setCheck('sec-join', s.joinEnabled!==false);
+  setCheck('sec-rejoin', s.rejoinBlock!==false);
+  // 알림
+  setCheck('n-kakao', s.notifyKakao!==false);
+  setCheck('n-sms', s.notifySms!==false);
+  setCheck('n-email', s.notifyEmail||false);
+  setCheck('n-checkin', s.notifyCheckin||false);
+  setCheck('n-absent', s.notifyAbsent||false);
+  setCheck('n-doc', s.notifyDoc!==false);
+  setCheck('n-pay', s.notifyPay!==false);
+  setVal('n-admin-phone', s.adminPhone||'010-4790-3103');
+  setVal('n-admin-email', s.adminEmail||'');
+  renderIndSettings();
+  renderCamps();
+}
+
+function setVal(id,v){var e=document.getElementById(id);if(e)e.value=v||'';}
+function setCheck(id,v){var e=document.getElementById(id);if(e)e.checked=!!v;}
+function getVal(id){return(document.getElementById(id)||{value:''}).value||'';}
+function getCheck(id){return(document.getElementById(id)||{checked:false}).checked;}
+
+// ── 업종 설정 ──
+var IND_DEFAULTS={
+  coupang:{unitPrice:750,incentive:25,insurance:3.3,label:'🚚 쿠팡물류'},
+  delivery:{unitPrice:1000,commission:3.3,program:50000,label:'🛵 배달대행'},
+  smallbiz:{cardFee:1.5,deliveryFee:3000,label:'🏪 소상공인'},
+  service:{hourly:10000,insurance4:9.4,label:'🏗️ 용역업체'},
+  freelance:{withholdingTax:3.3,label:'👨‍💼 프리랜서'}
+};
+
+function setInd(ind,btn){
+  _selInd=ind;
+  document.querySelectorAll('.ind-btn').forEach(function(b){b.classList.remove('on');});
+  if(btn)btn.classList.add('on');
+  renderIndSettings();
+}
+
+function renderIndSettings(){
+  var el=document.getElementById('ind-settings');if(!el)return;
+  var s=(_settings.industrySettings&&_settings.industrySettings[_selInd])||{};
+  var d=IND_DEFAULTS[_selInd]||{};
+  var html='<div class="card">';
+  if(_selInd==='coupang'){
+    html+='<div class="row2">'
+      +'<div class="fg"><label class="fl">건당 단가 (원)</label><input class="fi fi-mono" id="ind-unitPrice" value="'+(s.unitPrice||d.unitPrice||750)+'"></div>'
+      +'<div class="fg"><label class="fl">인센티브 단가 (원/건)</label><input class="fi fi-mono" id="ind-incentive" value="'+(s.incentive||d.incentive||25)+'"></div>'
+      +'</div>'
+      +'<div class="row2">'
+      +'<div class="fg"><label class="fl">고용보험 공제율 (%)</label><input class="fi fi-mono" id="ind-emp" value="'+(s.empInsurance||0.9)+'"></div>'
+      +'<div class="fg"><label class="fl">산재보험 공제율 (%)</label><input class="fi fi-mono" id="ind-acc" value="'+(s.accInsurance||0.7)+'"></div>'
+      +'</div>'
+      +'<div class="fg" style="margin-bottom:0"><label class="fl">인센티브 기준 건수 (이상)</label><input class="fi fi-mono" id="ind-incThresh" value="'+(s.incentiveThreshold||300)+'"></div>';
+  } else if(_selInd==='delivery'){
+    html+='<div class="row2">'
+      +'<div class="fg"><label class="fl">콜당 단가 (원)</label><input class="fi fi-mono" id="ind-unitPrice" value="'+(s.unitPrice||d.unitPrice||1000)+'"></div>'
+      +'<div class="fg"><label class="fl">원천세 공제율 (%)</label><input class="fi fi-mono" id="ind-tax" value="'+(s.tax||3.3)+'"></div>'
+      +'</div>'
+      +'<div class="fg" style="margin-bottom:0"><label class="fl">프로그램 사용료 (월, 원)</label><input class="fi fi-mono" id="ind-program" value="'+(s.programFee||d.program||50000)+'"></div>';
+  } else if(_selInd==='smallbiz'){
+    html+='<div class="row2">'
+      +'<div class="fg"><label class="fl">카드 수수료율 (%)</label><input class="fi fi-mono" id="ind-cardFee" value="'+(s.cardFee||d.cardFee||1.5)+'"></div>'
+      +'<div class="fg"><label class="fl">배달앱 수수료 (원/건)</label><input class="fi fi-mono" id="ind-delivFee" value="'+(s.deliveryFee||d.deliveryFee||3000)+'"></div>'
+      +'</div>'
+      +'<div class="fg" style="margin-bottom:0"><label class="fl">기본 공제율 (%)</label><input class="fi fi-mono" id="ind-base" value="'+(s.baseDeduction||0)+'"></div>';
+  } else if(_selInd==='service'){
+    html+='<div class="row2">'
+      +'<div class="fg"><label class="fl">시급/일급 (원)</label><input class="fi fi-mono" id="ind-hourly" value="'+(s.hourly||d.hourly||10000)+'"></div>'
+      +'<div class="fg"><label class="fl">4대보험 공제율 (%)</label><input class="fi fi-mono" id="ind-ins4" value="'+(s.insurance4||d.insurance4||9.4)+'"></div>'
+      +'</div>'
+      +'<div class="fg" style="margin-bottom:0"><label class="fl">일급 산정 기준 (시간)</label><input class="fi fi-mono" id="ind-hours" value="'+(s.dailyHours||8)+'"></div>';
+  } else if(_selInd==='freelance'){
+    html+='<div class="row2">'
+      +'<div class="fg"><label class="fl">원천세 공제율 (%)</label><input class="fi fi-mono" id="ind-wht" value="'+(s.withholdingTax||d.withholdingTax||3.3)+'"></div>'
+      +'<div class="fg"><label class="fl">고소득 원천세 (%)</label><input class="fi fi-mono" id="ind-wht2" value="'+(s.withholdingHigh||8.8)+'"></div>'
+      +'</div>'
+      +'<div class="fg" style="margin-bottom:0"><label class="fl">고소득 기준 (원, 초과 시 적용)</label><input class="fi fi-mono" id="ind-highThresh" value="'+(s.highThreshold||3000000)+'"></div>';
+  }
+  html+='</div>';
+  el.innerHTML=html;
+}
+
+// ── 거점 설정 ──
+function renderCamps(){
+  var el=document.getElementById('camp-list');if(!el)return;
+  el.innerHTML=_camps.map(function(c,i){
+    return '<div class="camp-block" id="camp-'+i+'">'
+      +'<div class="camp-block-title">'
+      +'<span>📍 거점 '+(i+1)+'</span>'
+      +'<button class="del-btn" onclick="deleteCamp('+i+')">삭제</button>'
+      +'</div>'
+      +'<div class="row2">'
+      +'<div class="fg"><label class="fl">거점명</label><input class="fi" id="c-name-'+i+'" value="'+esc(c.name||'')+'"></div>'
+      +'<div class="fg"><label class="fl">GPS 반경 (m)</label><input class="fi fi-mono" id="c-r-'+i+'" value="'+(c.radius||400)+'"></div>'
+      +'</div>'
+      +'<div class="row2">'
+      +'<div class="fg" style="margin-bottom:0"><label class="fl">위도 (Latitude)</label><input class="fi fi-mono" id="c-lat-'+i+'" value="'+esc(c.lat||'')+'"></div>'
+      +'<div class="fg" style="margin-bottom:0"><label class="fl">경도 (Longitude)</label><input class="fi fi-mono" id="c-lng-'+i+'" value="'+esc(c.lng||'')+'"></div>'
+      +'</div>'
+      +'</div>';
+  }).join('');
+}
+
+function addCamp(){
+  _camps.push({name:'',lat:'',lng:'',radius:'400'});
+  renderCamps();
+  toast('거점을 추가했습니다. 위도/경도를 입력하세요.');
+}
+function deleteCamp(i){
+  if(!confirm(_camps[i].name||'거점'+'을 삭제하시겠습니까?'))return;
+  _camps.splice(i,1);renderCamps();
+}
+
+// ── 저장 ──
+function _collectCamps(){
+  return _camps.map(function(c,i){
+    return{
+      name:getVal('c-name-'+i),
+      lat:getVal('c-lat-'+i),
+      lng:getVal('c-lng-'+i),
+      radius:getVal('c-r-'+i)||'400'
+    };
+  });
+}
+
+function saveCompany(){
+  var data={
+    name:getVal('s-name'),code:getVal('s-code').toUpperCase(),
+    bizNo:getVal('s-biz'),rep:getVal('s-rep'),
+    tel:getVal('s-tel'),fax:getVal('s-fax'),
+    addr:getVal('s-addr'),kakao:getVal('s-kakao'),
+    bank:getVal('s-bank'),account:getVal('s-account'),
+    accountName:getVal('s-accountname')
+  };
+  _save(data,'✅ 회사 정보 저장 완료');
+}
+
+function saveIndustry(){
+  var indCfg={};
+  if(_selInd==='coupang')indCfg={unitPrice:+getVal('ind-unitPrice'),incentive:+getVal('ind-incentive'),empInsurance:+getVal('ind-emp'),accInsurance:+getVal('ind-acc'),incentiveThreshold:+getVal('ind-incThresh')};
+  else if(_selInd==='delivery')indCfg={unitPrice:+getVal('ind-unitPrice'),tax:+getVal('ind-tax'),programFee:+getVal('ind-program')};
+  else if(_selInd==='smallbiz')indCfg={cardFee:+getVal('ind-cardFee'),deliveryFee:+getVal('ind-delivFee'),baseDeduction:+getVal('ind-base')};
+  else if(_selInd==='service')indCfg={hourly:+getVal('ind-hourly'),insurance4:+getVal('ind-ins4'),dailyHours:+getVal('ind-hours')};
+  else if(_selInd==='freelance')indCfg={withholdingTax:+getVal('ind-wht'),withholdingHigh:+getVal('ind-wht2'),highThreshold:+getVal('ind-highThresh')};
+  var prev=_settings.industrySettings||{};
+  prev[_selInd]=indCfg;
+  _save({industrySettings:prev},'✅ 업종·단가 저장 완료');
+}
+
+function saveCamps(){
+  var camps=_collectCamps();
+  _camps=camps;
+  _save({camps:camps},'✅ 거점 GPS 저장 완료');
+}
+
+function saveNotify(){
+  _save({
+    notifyKakao:getCheck('n-kakao'),notifySms:getCheck('n-sms'),
+    notifyEmail:getCheck('n-email'),notifyCheckin:getCheck('n-checkin'),
+    notifyAbsent:getCheck('n-absent'),notifyDoc:getCheck('n-doc'),notifyPay:getCheck('n-pay'),
+    adminPhone:getVal('n-admin-phone'),adminEmail:getVal('n-admin-email')
+  },'✅ 알림 설정 저장 완료');
+}
+
+function saveSecurity(){
+  _save({
+    qrInterval:getVal('sec-interval'),gpsRadius:getVal('sec-gps-radius'),
+    gpsRequired:getCheck('sec-gps-req'),wifiCheck:getCheck('sec-wifi'),
+    dupBlock:getCheck('sec-dup'),joinEnabled:getCheck('sec-join'),
+    rejoinBlock:getCheck('sec-rejoin')
+  },'✅ 보안 설정 저장 완료');
+}
+
+function saveAll(){saveCompany();saveIndustry();saveCamps();saveNotify();saveSecurity();}
+
+function _save(data,msg){
+  Object.assign(_settings,data);
+  if(!_db){toast(msg,'ok');return;}
+  _db.collection('settings').doc('main').set(_settings,{merge:true})
+    .then(function(){toast(msg,'ok');})
+    .catch(function(e){toast('❌ 저장 실패: '+e.message,'err');});
+}
+
+function toast(msg,type){var t=document.getElementById('toast');t.textContent=msg;t.className='show'+(type?' '+type:'');clearTimeout(t._t);t._t=setTimeout(function(){t.className='';},3000);}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+</script>
+</body>
+</html>
