@@ -17,15 +17,15 @@ const messaging = firebase.messaging();
 const ICON = '';
 const BADGE = '';
 // ★ 타임스탬프 기반 캐시 — GitHub 업로드마다 자동으로 SW 업데이트됨
-const CACHE = 'mbti-v9-' + '202605212359'; // ★ 강제 갱신
+const CACHE = 'mbti-v9-' + '202605210600'; // ★ 강제 갱신
 
 self.addEventListener('install', e => {
-  console.log('[SW] install v9.68');
+  console.log('[SW] install v9.69');
   self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
-  console.log('[SW] activate v9.68');
+  console.log('[SW] activate v9.69');
   e.waitUntil(
     caches.keys()
       .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
@@ -34,7 +34,7 @@ self.addEventListener('activate', e => {
         return self.clients.matchAll({type:'window', includeUncontrolled:true})
           .then(function(clients){
             clients.forEach(function(c){
-              c.postMessage({type:'SW_UPDATED', version:'v9.68'});
+              c.postMessage({type:'SW_UPDATED', version:'v9.69'});
             });
           });
       })
@@ -119,7 +119,9 @@ self.addEventListener('fetch', function(e) {
     e.respondWith(new Response('', {status:204})); return;
   }
   // ★ donway.ai.kr 전체 요청 SW 개입 없음 (DONWAY 랜딩페이지 정상 서빙)
+  // ★ donway.ai.kr 전체 + attendance 신규 파일 캐시 제외
   if (url.startsWith('https://donway.ai.kr/') || url.startsWith('https://www.donway.ai.kr/')) return;
+  if (url.includes('/attendance') || url.includes('/join') || url.includes('/company-register')) return;
   if (url.startsWith('chrome-extension://') || url.startsWith('chrome://') ||
       url.startsWith('blob:') || url.includes('firestore.googleapis.com') ||
       url.includes('firebase') || url.includes('googleapis.com') ||
