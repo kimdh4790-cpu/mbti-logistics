@@ -58,6 +58,26 @@ body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun G
 </head>
 <body>
 <div id="toast"></div>
+
+<!-- 프리미엄 계약서 잠금 모달 -->
+<div class="prem-modal" id="prem-modal">
+  <div class="prem-box">
+    <div class="prem-icon">🔑</div>
+    <div class="prem-title" id="prem-modal-title">프리미엄 계약서</div>
+    <div class="prem-desc" id="prem-modal-desc">이 계약서 템플릿은 <strong style="color:var(--yellow)">프리미엄 애드온</strong> 대리점 전용입니다.<br>활성화 코드를 입력하거나 추가 결제 후 이용하세요.</div>
+    <div class="prem-code-wrap">
+      <input class="prem-code-inp" id="prem-code-inp" placeholder="코드 입력" maxlength="8">
+      <button class="prem-check-btn" onclick="checkPremCode()">확인</button>
+    </div>
+    <div style="font-size:11px;color:var(--gray);margin-bottom:16px">― 또는 ―</div>
+    <button class="prem-pay-btn" onclick="goPay()">💳 지금 결제하고 바로 사용</button>
+    <div style="font-size:11px;color:var(--gray);margin-bottom:12px;line-height:1.7">
+      하나은행 <strong style="color:var(--white)">270-910019-24204</strong> (유)엠비티아이<br>
+      입금 후 카카오채널 <strong style="color:var(--white)">MBTI Co. LOGISTICS</strong> 문의
+    </div>
+    <button class="prem-cancel-btn" onclick="closePremModal()">닫기</button>
+  </div>
+</div>
 <div class="topbar">
   <div class="logo"><span>D</span>ONWAY 계약서</div>
   <button onclick="location.href='/portal'" style="padding:7px 12px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:8px;color:var(--cyan);font-size:11px;font-weight:700;cursor:pointer">🗂 문서보관함</button>
@@ -78,6 +98,8 @@ body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun G
       <div class="type-chip" onclick="setCType('parttime',this)">⏰ 단시간 근로</div>
       <div class="type-chip" onclick="setCType('fixed',this)">📅 기간제</div>
       <div class="type-chip" onclick="setCType('dispatch',this)">🚚 위탁계약</div>
+      <div class="type-chip premium" onclick="openPremiumCheck('courier',this)">🏷 영업점-택배기사 위수탁<span class="prem-lock">🔒</span></div>
+      <div class="type-chip premium" onclick="openPremiumCheck('quickflex',this)">⚡ 퀵플렉스 부속합의서<span class="prem-lock">🔒</span></div>
     </div>
 
     <!-- 직원 자동 불러오기 -->
@@ -114,6 +136,10 @@ body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun G
       <div class="row2">
         <div class="fg"><label class="fl">근무 거점</label><input class="fi" id="c-loc" placeholder="부산1, 본사 등"></div>
         <div class="fg"><label class="fl">담당 업무</label><input class="fi" id="c-job" placeholder="배송, 관리 등"></div>
+      <div class="row2" id="vehicle-row" style="display:none">
+        <div class="fg"><label class="fl">차량번호</label><input class="fi fi-mono" id="c-vehicle" placeholder="부산12가3456"></div>
+        <div class="fg"><label class="fl">차종</label><input class="fi" id="c-cartype" placeholder="1톤 트럭, 승용 등"></div>
+      </div>
       </div>
       <div class="row3">
         <div class="fg"><label class="fl">소정 근로시간</label><input class="fi" id="c-hours" placeholder="8시간"></div>
@@ -268,6 +294,180 @@ function _buildData(){
   };
 }
 
+// ── 영업점-택배기사 위수탁 표준계약서 출력 ──
+function _printCourier(){
+  var name = getVal('c-name')||'(성명)';
+  var phone = getVal('c-phone')||'';
+  var startDate = getVal('c-start')||'';
+  var endDate = getVal('c-end')||'1년';
+  var loc = getVal('c-loc')||'(담당구역)';
+  var pay = getVal('c-pay')||'___';
+  var payDay = getVal('c-payday')||'매월 25일';
+  var vehicle = getVal('c-vehicle')||'(차량번호)';
+  var special = getVal('c-special')||'';
+  var today = new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
+
+  var html2 = '<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>위수탁 표준계약서</title>'
+    +'<style>*{box-sizing:border-box;margin:0;padding:0;font-family:"맑은 고딕","Malgun Gothic",sans-serif}'
+    +'body{padding:15mm;font-size:10pt;color:#111;line-height:1.7}'
+    +'.title{text-align:center;font-size:18pt;font-weight:900;letter-spacing:5px;padding-bottom:10px;border-bottom:3px double #000;margin-bottom:16px}'
+    +'.sub-title{text-align:center;font-size:10pt;color:#555;margin-bottom:20px}'
+    +'.clause{margin-bottom:16px}'
+    +'.clause-title{font-size:11pt;font-weight:900;background:#f0f0f0;padding:5px 12px;border-left:4px solid #0066ff;margin-bottom:8px}'
+    +'.clause-body{font-size:10pt;padding:0 12px;line-height:1.9}'
+    +'.fill{border-bottom:1px solid #000;display:inline-block;min-width:80px;text-align:center;padding:0 8px}'
+    +'.table{width:100%;border-collapse:collapse;margin:10px 0}'
+    +'.table th{background:#f0f0f0;padding:7px 10px;font-size:9pt;font-weight:700;border:1px solid #ccc;text-align:center}'
+    +'.table td{padding:7px 10px;border:1px solid #ccc;font-size:10pt}'
+    +'.sig-area{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:28px}'
+    +'.sig-box{border:1px solid #ccc;border-radius:4px;padding:16px;text-align:center}'
+    +'.sig-title{font-size:9pt;color:#888;margin-bottom:6px}'
+    +'.sig-name{font-size:14pt;font-weight:900;margin-bottom:12px}'
+    +'.sig-line{border-bottom:1.5px solid #000;height:36px;margin:0 12px}'
+    +'@media print{body{padding:8mm}}</style></head><body>'
+    +'<div class="title">영업점 – 택배기사<br>위·수탁 표준계약서</div>'
+    +'<div class="sub-title">본 계약서는 쿠팡로지스틱스서비스(주) 표준계약 양식을 기반으로 작성됩니다.</div>'
+    +'<div class="clause"><div class="clause-title">제1조 계약 당사자</div>'
+    +'<div class="clause-body">'
+    +'<table class="table"><tr><th>구분</th><th>영업점 (甲)</th><th>택배기사 (乙)</th></tr>'
+    +'<tr><td>업체명/성명</td><td>엠비티아이(유)</td><td>'+esc(name)+'</td></tr>'
+    +'<tr><td>사업자/주민번호</td><td>373-86-02536</td><td>&nbsp;</td></tr>'
+    +'<tr><td>연락처</td><td>051-711-3103</td><td>'+esc(phone)+'</td></tr>'
+    +'<tr><td>주소</td><td>부산시 수영로 668, 607호</td><td>&nbsp;</td></tr>'
+    +'</table></div></div>'
+    +'<div class="clause"><div class="clause-title">제2조 계약 기간 및 담당구역</div>'
+    +'<div class="clause-body">'
+    +'① 계약 기간: '+esc(startDate)+' ~ '+esc(endDate)+'<br>'
+    +'② 담당 구역: '+esc(loc)+'<br>'
+    +'③ 구역 변경 시 양 당사자 합의하에 변경할 수 있다.</div></div>'
+    +'<div class="clause"><div class="clause-title">제3조 수수료</div>'
+    +'<div class="clause-body">'
+    +'① 1건당 <span class="fill">'+esc(pay)+'</span>원 (또는 택배사업자-영업점 간 수수료 기준 금액의 ____%)<br>'
+    +'② 단, 별도로 합의한 금액이 있는 경우 그에 따른다.<br>'
+    +'③ 지급일: '+esc(payDay)+'<br>'
+    +'④ 지급 방법: 계좌이체 (하나은행 270-910019-24204)</div></div>'
+    +'<div class="clause"><div class="clause-title">제4조 차량 및 종사자격</div>'
+    +'<div class="clause-body">'
+    +'① 차량번호: '+esc(vehicle)+'<br>'
+    +'② 乙은 화물자동차 운수사업법 등 관련 법령에서 정한 자격 요건을 유지하여야 한다.<br>'
+    +'③ 차량보험(화물배상책임 포함)은 乙이 직접 가입·유지하여야 한다.</div></div>'
+    +'<div class="clause"><div class="clause-title">제5조 의무 사항</div>'
+    +'<div class="clause-body">'
+    +'① 乙은 배송 서비스 기준(SLA)을 준수하여야 하며, 수취인 부재 시 안전하게 보관 또는 연락하여야 한다.<br>'
+    +'② 乙은 배송 물품을 분실·훼손하지 않도록 주의의무를 다하여야 한다.<br>'
+    +'③ 乙은 정당한 이유 없이 배송을 거부하거나 지연하여서는 아니 된다.<br>'
+    +'④ 甲은 乙의 업무 수행에 필요한 정보와 지원을 제공하여야 한다.</div></div>'
+    +'<div class="clause"><div class="clause-title">제6조 계약의 해지</div>'
+    +'<div class="clause-body">'
+    +'① 일방이 계약을 해지하고자 할 경우 30일 전에 서면으로 통보하여야 한다.<br>'
+    +'② 중대한 귀책사유가 있는 경우 즉시 해지할 수 있다.<br>'
+    +'③ 계약 해지 시 미지급 수수료는 해지일로부터 7영업일 내에 정산한다.</div></div>'
+    +'<div class="clause"><div class="clause-title">제7조 분쟁 해결</div>'
+    +'<div class="clause-body">'
+    +'본 계약과 관련한 분쟁은 당사자 간 협의로 해결하며, 협의가 이루어지지 않을 경우 부산지방법원을 관할법원으로 한다.</div></div>'
+    +(special?'<div class="clause"><div class="clause-title">제8조 특약 사항</div><div class="clause-body">'+esc(special).replace(/\n/g,'<br>')+'</div></div>':'')
+    +'<div style="text-align:center;margin:20px 0;font-size:11pt">계약 체결일: '+today+'</div>'
+    +'<div class="sig-area">'
+    +'<div class="sig-box"><div class="sig-title">甲 (영업점)</div>'
+    +'<div class="sig-name">엠비티아이(유)</div>'
+    +'<div class="sig-line"></div><div style="font-size:9pt;color:#555;margin-top:6px">대표 김형우 (인)</div></div>'
+    +'<div class="sig-box"><div class="sig-title">乙 (택배기사)</div>'
+    +'<div class="sig-name">'+esc(name)+'</div>'
+    +'<div class="sig-line"></div><div style="font-size:9pt;color:#555;margin-top:6px">서 명</div></div>'
+    +'</div>'
+    +'<div style="text-align:right;margin-top:16px;font-size:8pt;color:#aaa;border-top:1px solid #eee;padding-top:8px">'
+    +'엠비티아이(유) · 051-711-3103 · DONWAY 프리미엄 계약서</div>'
+    +'</body></html>';
+
+  var w=window.open('','_blank','width=900,height=700');
+  if(w){w.document.write(html2);w.document.close();setTimeout(function(){w.focus();w.print();},500);}
+  else{toast('팝업 차단됨. 허용 후 다시 시도하세요','err');}
+}
+
+// ── 퀵플렉스 부속 합의서 출력 ──
+function _printQuickflex(){
+  var name = getVal('c-name')||'(성명)';
+  var phone = getVal('c-phone')||'';
+  var startDate = getVal('c-start')||'';
+  var loc = getVal('c-loc')||'(거점)';
+  var pay = getVal('c-pay')||'___';
+  var special = getVal('c-special')||'';
+  var today = new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
+
+  var html3 = '<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>퀵플렉스 부속 합의서</title>'
+    +'<style>*{box-sizing:border-box;margin:0;padding:0;font-family:"맑은 고딕","Malgun Gothic",sans-serif}'
+    +'body{padding:15mm;font-size:10pt;color:#111;line-height:1.8}'
+    +'.title{text-align:center;font-size:17pt;font-weight:900;letter-spacing:4px;padding-bottom:10px;border-bottom:3px double #000;margin-bottom:8px}'
+    +'.sub{text-align:center;font-size:9pt;color:#555;margin-bottom:20px}'
+    +'.clause{margin-bottom:16px}'
+    +'.ch{font-size:11pt;font-weight:900;background:#f0f0f0;padding:5px 12px;border-left:4px solid #e63946;margin-bottom:8px}'
+    +'.cb{font-size:10pt;padding:0 12px;line-height:1.9}'
+    +'.table{width:100%;border-collapse:collapse;margin:10px 0}'
+    +'.table th{background:#f0f0f0;padding:7px 10px;font-size:9pt;font-weight:700;border:1px solid #ccc}'
+    +'.table td{padding:7px 10px;border:1px solid #ccc;font-size:10pt}'
+    +'.highlight{background:#fff8e1;border:1px solid #ffd54f;border-radius:4px;padding:10px 14px;margin:10px 0;font-size:9pt}'
+    +'.sig-area{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:28px}'
+    +'.sig-box{border:1px solid #ccc;padding:16px;text-align:center;border-radius:4px}'
+    +'@media print{body{padding:8mm}}</style></head><body>'
+    +'<div class="title">쿠팡 QuickFlex 부속 합의서</div>'
+    +'<div class="sub">본 합의서는 위·수탁 표준계약서의 부속 문서로서, 퀵플렉스 서비스에 관한 사항을 별도로 합의합니다.</div>'
+    +'<div class="clause"><div class="ch">제1조 당사자 확인</div>'
+    +'<div class="cb">'
+    +'<table class="table">'
+    +'<tr><th>구분</th><th>영업점 (甲)</th><th>기사 (乙)</th></tr>'
+    +'<tr><td>상호/성명</td><td>엠비티아이(유)</td><td>'+esc(name)+'</td></tr>'
+    +'<tr><td>거점</td><td>'+esc(loc)+'</td><td>동일</td></tr>'
+    +'<tr><td>연락처</td><td>051-711-3103</td><td>'+esc(phone)+'</td></tr>'
+    +'</table></div></div>'
+    +'<div class="clause"><div class="ch">제2조 퀵플렉스 서비스 기준 (SLA)</div>'
+    +'<div class="cb">'
+    +'① <strong>배송 성공률</strong>: 월 평균 95% 이상 유지<br>'
+    +'② <strong>당일 배송 완료율</strong>: 수령 당일 배송 완료 원칙<br>'
+    +'③ <strong>미배송 처리</strong>: 미배송 발생 시 즉시 영업점에 보고<br>'
+    +'④ <strong>반품 처리</strong>: 반품 물량은 지정 장소에 정리 반납<br>'
+    +'⑤ 乙은 쿠팡 앱을 통해 배송 현황을 실시간 업데이트하여야 한다.</div></div>'
+    +'<div class="clause"><div class="ch">제3조 수수료 및 인센티브</div>'
+    +'<div class="cb">'
+    +'① 기본 단가: 건당 <strong>'+esc(pay)+'</strong>원<br>'
+    +'② <strong>인센티브</strong>: 월 300건 초과 시 건당 25원 추가 지급<br>'
+    +'③ <strong>페널티</strong>: 분실·훼손 발생 시 해당 물품 손해액 공제<br>'
+    +'④ 정산일: 익월 25일 (하나은행 270-910019-24204)<br>'
+    +'<div class="highlight">※ 인센티브 지급 기준은 쿠팡 본사 정책 변경 시 갑의 통보에 따라 변경될 수 있습니다.</div></div></div>'
+    +'<div class="clause"><div class="ch">제4조 장비 및 보험</div>'
+    +'<div class="cb">'
+    +'① 乙은 배송에 필요한 차량, 스마트폰, 쿠팡 앱을 직접 준비·유지한다.<br>'
+    +'② 차량보험(화물배상책임 포함) 및 산재보험 가입 의무는 乙에게 있다.<br>'
+    +'③ 甲은 배송 과정에서 발생한 사고에 대해 직접적인 책임을 지지 않는다.</div></div>'
+    +'<div class="clause"><div class="ch">제5조 개인정보 보호</div>'
+    +'<div class="cb">'
+    +'① 乙은 배송 과정에서 취득한 수취인 개인정보(성명, 주소, 연락처)를 배송 목적 외에 사용하거나 제3자에게 제공하여서는 아니 된다.<br>'
+    +'② 위반 시 관련 법령에 따른 민·형사상 책임을 진다.</div></div>'
+    +'<div class="clause"><div class="ch">제6조 위약 및 손해배상</div>'
+    +'<div class="cb">'
+    +'① 乙이 고의 또는 중대한 과실로 물품을 분실·훼손한 경우, 해당 물품 손해액을 배상한다.<br>'
+    +'② SLA 기준 미달이 반복되는 경우(3회 이상) 甲은 계약을 해지할 수 있다.</div></div>'
+    +(special?'<div class="clause"><div class="ch">제7조 특약 사항</div><div class="cb">'+esc(special).replace(/\n/g,'<br>')+'</div></div>':'')
+    +'<div style="text-align:center;margin:20px 0;font-size:11pt">합의 체결일: '+today+'</div>'
+    +'<div style="font-size:10pt;text-align:center;color:#555;margin-bottom:16px">본 합의서는 위·수탁 표준계약서와 함께 효력을 가집니다.</div>'
+    +'<div class="sig-area">'
+    +'<div class="sig-box"><div style="font-size:9pt;color:#888;margin-bottom:6px">甲 (영업점)</div>'
+    +'<div style="font-size:14pt;font-weight:900;margin-bottom:14px">엠비티아이(유)</div>'
+    +'<div style="border-bottom:1.5px solid #000;height:36px;margin:0 12px"></div>'
+    +'<div style="font-size:9pt;color:#555;margin-top:6px">대표 김형우 (인)</div></div>'
+    +'<div class="sig-box"><div style="font-size:9pt;color:#888;margin-bottom:6px">乙 (기사)</div>'
+    +'<div style="font-size:14pt;font-weight:900;margin-bottom:14px">'+esc(name)+'</div>'
+    +'<div style="border-bottom:1.5px solid #000;height:36px;margin:0 12px"></div>'
+    +'<div style="font-size:9pt;color:#555;margin-top:6px">서 명</div></div>'
+    +'</div>'
+    +'<div style="text-align:right;margin-top:12px;font-size:8pt;color:#aaa;border-top:1px solid #eee;padding-top:8px">'
+    +'엠비티아이(유) · DONWAY 프리미엄 계약서 · 퀵플렉스 부속합의서</div>'
+    +'</body></html>';
+
+  var w=window.open('','_blank','width=900,height=700');
+  if(w){w.document.write(html3);w.document.close();setTimeout(function(){w.focus();w.print();},500);}
+  else{toast('팝업 차단됨. 허용 후 다시 시도하세요','err');}
+}
+
 function saveContract(){
   var d=_buildData();
   if(!d.name){toast('근로자 성명을 입력하세요','err');return;}
@@ -279,6 +479,8 @@ function saveContract(){
 }
 
 function printContract(){
+  if(_ctype === 'courier'){_printCourier();return;}
+  if(_ctype === 'quickflex'){_printQuickflex();return;}
   var d=_buildData();
   if(!d.name){toast('근로자 성명을 입력하세요','err');return;}
 
@@ -423,12 +625,109 @@ function reprinkContract(id){
   });
 }
 
+// ══════════════════════════════
+// ██ 프리미엄 계약서 잠금 시스템 ██
+// ══════════════════════════════
+var _premTarget = null;
+// 해금된 프리미엄 (로컬 세션 유지)
+var _unlockedPrem = JSON.parse(localStorage.getItem('dw_prem_unlock') || '[]');
+
+// 프리미엄 버튼 클릭
+function openPremiumCheck(type, el) {
+  if(_unlockedPrem.indexOf(type) >= 0) {
+    // 이미 해금됨 → 바로 적용
+    _ctype = type;
+    document.querySelectorAll('#ctype-row .type-chip').forEach(function(c){c.classList.remove('on');});
+    if(el)el.classList.add('on');
+    return;
+  }
+  _premTarget = {type:type, el:el};
+  var titles = {
+    courier: '영업점-택배기사 위·수탁 표준계약서',
+    quickflex: '퀵플렉스(QuickFlex) 부속 합의서'
+  };
+  var descs = {
+    courier: '쿠팡 영업점과 택배기사 간 <strong style="color:var(--yellow)">위·수탁 표준계약서</strong>입니다.<br>담당구역·수수료·차량·종사자격 등 법정 필수 항목 포함.',
+    quickflex: '쿠팡 <strong style="color:var(--yellow)">퀵플렉스(QuickFlex)</strong> 기사 부속 합의서입니다.<br>SLA·배송기준·인센티브·위약금 등 특약 포함.'
+  };
+  document.getElementById('prem-modal-title').innerHTML = '🔑 ' + (titles[type]||'프리미엄 계약서');
+  document.getElementById('prem-modal-desc').innerHTML = (descs[type]||'') + '<br><br>활성화 코드를 입력하거나 추가 결제 후 이용하세요.';
+  document.getElementById('prem-code-inp').value = '';
+  document.getElementById('prem-modal').classList.add('show');
+}
+
+function checkPremCode(){
+  var code = (document.getElementById('prem-code-inp').value||'').trim().toUpperCase();
+  // 관리자가 발급한 코드 확인 (Firestore)
+  if(!_db){toast('Firebase 연결 필요','err');return;}
+  _db.collection('premiumCodes').where('code','==',code).where('used','==',false).limit(1).get()
+    .then(function(s){
+      if(s.empty){
+        // 데모용: MBTI2026, COUPANG 코드 허용
+        if(code === 'MBTI2026' || code === 'COURIER1' || code === 'QFLEX001'){
+          unlockPremium(_premTarget.type, _premTarget.el, code);
+        } else {
+          toast('❌ 유효하지 않은 코드입니다','err');
+        }
+        return;
+      }
+      var doc = s.docs[0];
+      // 코드 사용 처리
+      _db.collection('premiumCodes').doc(doc.id).update({used:true, usedAt:new Date().toISOString()})
+        .then(function(){unlockPremium(_premTarget.type, _premTarget.el, code);})
+        .catch(function(){unlockPremium(_premTarget.type, _premTarget.el, code);});
+    }).catch(function(){
+      if(code === 'MBTI2026' || code === 'COURIER1' || code === 'QFLEX001'){
+        unlockPremium(_premTarget.type, _premTarget.el, code);
+      } else {
+        toast('❌ 코드 확인 실패','err');
+      }
+    });
+}
+
+function unlockPremium(type, el, code){
+  _unlockedPrem.push(type);
+  try{localStorage.setItem('dw_prem_unlock', JSON.stringify(_unlockedPrem));}catch(e){}
+  closePremModal();
+  _ctype = type;
+  document.querySelectorAll('#ctype-row .type-chip').forEach(function(c){c.classList.remove('on');});
+  if(el)el.classList.add('on');
+  // 🔒 → ✅ 변경
+  var lock = el.querySelector('.prem-lock');
+  if(lock) lock.textContent = '✅';
+  toast('✅ 프리미엄 계약서 해금!','ok');
+}
+
+function closePremModal(){document.getElementById('prem-modal').classList.remove('show');_premTarget=null;}
+
+function goPay(){
+  closePremModal();
+  // 카카오채널로 이동
+  alert('입금 후 카카오채널 "MBTI Co. LOGISTICS"으로\n[프리미엄 계약서 + 사업자번호]를 보내주세요.\n\n하나은행 270-910019-24204 (유)엠비티아이\n담당자가 활성화 코드를 발송드립니다.');
+}
+
+// 페이지 로드 시 해금 상태 복원
+document.addEventListener('DOMContentLoaded', function(){
+  _unlockedPrem.forEach(function(type){
+    var btns = document.querySelectorAll('#ctype-row .type-chip.premium');
+    btns.forEach(function(btn){
+      if(btn.getAttribute('onclick') && btn.getAttribute('onclick').indexOf("'"+type+"'") >= 0){
+        var lock = btn.querySelector('.prem-lock');
+        if(lock) lock.textContent = '✅';
+      }
+    });
+  });
+});
+
 function setCTypeById(type){
   _ctype=type||'regular';
   document.querySelectorAll('#ctype-row .type-chip').forEach(function(c,i){
     var types=['regular','parttime','fixed','dispatch'];
     c.classList.toggle('on',types[i]===_ctype);
   });
+  // 차량번호 필드 표시 (위수탁/퀵플렉스)
+  var vr=document.getElementById('vehicle-row');
+  if(vr)vr.style.display=(type==='courier'||type==='dispatch'||type==='quickflex')?'grid':'none';
 }
 
 function toast(msg,type){var t=document.getElementById('toast');t.textContent=msg;t.className='show'+(type?' '+type:'');clearTimeout(t._t);t._t=setTimeout(function(){t.className='';},3000);}
