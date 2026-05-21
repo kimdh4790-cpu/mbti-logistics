@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#030912">
+<title>DONWAY — 정산 분석</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{--bg:#030912;--bg2:#060f1f;--bg3:#0a1628;--blue:#0066ff;--cyan:#00d4ff;--green:#00ff88;--red:#ef4444;--yellow:#f59e0b;--purple:#8b5cf6;--orange:#f97316;--gray:#5a7299;--white:#e8f4ff;--border:rgba(0,212,255,.12);--border2:rgba(0,102,255,.18)}
+body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun Gothic',sans-serif;min-height:100vh}
+.wrap{max-width:600px;margin:0 auto;padding:0 0 90px}
+.topbar{background:rgba(3,9,18,.97);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;backdrop-filter:blur(20px)}
+.logo{font-size:14px;font-weight:900;letter-spacing:3px}.logo span{color:var(--cyan)}
+
+/* 기간 필터 */
+.period-bar{display:flex;gap:8px;padding:12px 20px;background:var(--bg2);border-bottom:1px solid var(--border);flex-wrap:wrap}
+.period-btn{padding:7px 14px;border-radius:20px;border:1.5px solid var(--border2);background:var(--bg3);color:var(--gray);font-size:12px;font-weight:700;cursor:pointer;transition:.2s;white-space:nowrap}
+.period-btn.on{border-color:var(--cyan);color:var(--cyan);background:rgba(0,212,255,.08)}
+.period-inp{padding:7px 12px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--white);font-size:12px;outline:none}
+.period-inp:focus{border-color:var(--cyan)}
+
+/* 섹션 */
+.sec{padding:14px 20px 0}
+.sec-label{font-size:10px;font-weight:700;color:var(--gray);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.sec-label::before{content:'';width:14px;height:1.5px;background:var(--cyan)}
+
+/* KPI 카드 */
+.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.kpi-card{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 14px}
+.kpi-num{font-size:24px;font-weight:900;font-family:monospace;margin:6px 0 4px;line-height:1}
+.kpi-lbl{font-size:10px;color:var(--gray);font-weight:700;letter-spacing:.5px}
+.kpi-change{font-size:10px;font-family:monospace;margin-top:4px}
+.up{color:var(--green)}.down{color:var(--red)}.flat{color:var(--gray)}
+
+/* 차트 공통 */
+.chart-card{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 14px;margin-bottom:12px}
+.chart-title{font-size:12px;font-weight:800;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
+
+/* 바 차트 */
+.bar-chart{display:flex;align-items:flex-end;gap:6px;height:120px;padding-bottom:24px;position:relative}
+.bar-chart::after{content:'';position:absolute;bottom:24px;left:0;right:0;border-bottom:1px solid rgba(0,212,255,.1)}
+.bc-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;position:relative}
+.bc-bar{width:100%;border-radius:4px 4px 0 0;transition:height .6s cubic-bezier(.34,1.56,.64,1);position:relative;cursor:pointer;min-height:3px}
+.bc-bar:hover::after{content:attr(data-tip);position:absolute;top:-28px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--border2);color:var(--white);font-size:10px;padding:3px 8px;border-radius:6px;white-space:nowrap;z-index:10}
+.bc-lbl{font-size:9px;color:var(--gray);font-family:monospace;text-align:center;position:absolute;bottom:0}
+
+/* 수평 바 차트 */
+.hbar-row{margin-bottom:10px}
+.hbar-header{display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px}
+.hbar-name{font-weight:700;color:var(--white)}
+.hbar-val{font-family:monospace;font-weight:700}
+.hbar-track{height:10px;background:rgba(0,212,255,.08);border-radius:5px;overflow:hidden}
+.hbar-fill{height:100%;border-radius:5px;transition:width .7s ease}
+
+/* 도넛 차트 (SVG) */
+.donut-wrap{display:flex;align-items:center;gap:16px}
+.donut-legend{flex:1}
+.legend-item{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+/* 테이블 */
+.report-table{width:100%;border-collapse:collapse;font-size:12px}
+.report-table th{background:rgba(0,0,0,.3);padding:9px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--gray);letter-spacing:.5px;border-bottom:1px solid var(--border2)}
+.report-table td{padding:10px 12px;border-bottom:1px solid rgba(0,212,255,.06)}
+.report-table tr:last-child td{border-bottom:none}
+.report-table tr:hover td{background:rgba(0,212,255,.03)}
+.amt{font-family:monospace;font-weight:700;text-align:right}
+.rank-badge{display:inline-block;width:20px;height:20px;border-radius:50%;font-size:10px;font-weight:900;text-align:center;line-height:20px;flex-shrink:0}
+.r1{background:var(--yellow);color:var(--bg)}.r2{background:var(--gray);color:var(--bg)}.r3{background:rgba(205,127,50,.8);color:var(--bg)}
+
+/* PDF 출력 버튼 */
+.print-btn{padding:8px 16px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:8px;color:var(--cyan);font-size:11px;font-weight:700;cursor:pointer}
+
+/* 하단 탭바 */
+.bottombar{position:fixed;bottom:0;left:0;right:0;max-width:600px;margin:0 auto;background:rgba(6,15,31,.97);border-top:1px solid var(--border);display:flex;padding:8px 0;z-index:100}
+.bot-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px;border:none;background:transparent;cursor:pointer;color:var(--gray);text-decoration:none}
+.bot-btn.on{color:var(--cyan)}
+.bot-icon{font-size:20px}.bot-lbl{font-size:9px;font-weight:700;letter-spacing:.5px}
+
+#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg2);border:1px solid var(--border2);color:var(--white);padding:10px 20px;border-radius:99px;font-size:12px;font-weight:700;opacity:0;transition:.3s;pointer-events:none;z-index:9999}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{width:14px;height:14px;border:2px solid rgba(0,212,255,.2);border-top-color:var(--cyan);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:middle}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+<div class="topbar">
+  <div class="logo"><span>D</span>ONWAY 분석</div>
+  <button class="print-btn" onclick="window.print()">🖨 PDF 출력</button>
+</div>
+
+<!-- 기간 필터 -->
+<div class="period-bar">
+  <button class="period-btn on" onclick="setPeriod(3,this)">3개월</button>
+  <button class="period-btn" onclick="setPeriod(6,this)">6개월</button>
+  <button class="period-btn" onclick="setPeriod(12,this)">12개월</button>
+  <button class="period-btn" onclick="setPeriod(0,this)">전체</button>
+  <input class="period-inp" type="month" id="period-from" onchange="customPeriod()">
+  <span style="color:var(--gray);font-size:12px;align-self:center">~</span>
+  <input class="period-inp" type="month" id="period-to" onchange="customPeriod()">
+</div>
+
+<div class="wrap">
+
+  <!-- KPI -->
+  <div class="sec">
+    <div class="sec-label">📊 핵심 지표 <span id="period-label" style="font-size:10px;color:var(--gray)"></span></div>
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div style="font-size:10px;color:var(--cyan)">💰 총 정산액</div>
+        <div class="kpi-num" style="color:var(--cyan)" id="kpi-total">-</div>
+        <div class="kpi-lbl">원</div>
+        <div class="kpi-change" id="kpi-total-ch"></div>
+      </div>
+      <div class="kpi-card">
+        <div style="font-size:10px;color:var(--green)">👥 정산 인원</div>
+        <div class="kpi-num" style="color:var(--green)" id="kpi-ppl">-</div>
+        <div class="kpi-lbl">명</div>
+        <div class="kpi-change" id="kpi-ppl-ch"></div>
+      </div>
+      <div class="kpi-card">
+        <div style="font-size:10px;color:var(--yellow)">📦 총 배송 건수</div>
+        <div class="kpi-num" style="color:var(--yellow)" id="kpi-del">-</div>
+        <div class="kpi-lbl">건</div>
+        <div class="kpi-change" id="kpi-del-ch"></div>
+      </div>
+      <div class="kpi-card">
+        <div style="font-size:10px;color:var(--purple)">💵 인당 평균</div>
+        <div class="kpi-num" style="color:var(--purple)" id="kpi-avg">-</div>
+        <div class="kpi-lbl">원 / 인</div>
+        <div class="kpi-change" id="kpi-avg-ch"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 월별 정산액 바 차트 -->
+  <div class="sec">
+    <div class="sec-label">📈 월별 정산액 추이</div>
+    <div class="chart-card">
+      <div class="bar-chart" id="monthly-chart">
+        <div style="text-align:center;width:100%;color:var(--gray)"><span class="spin"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 거점별 정산 -->
+  <div class="sec">
+    <div class="sec-label">📍 거점별 정산 현황</div>
+    <div class="chart-card">
+      <div id="camp-chart"><div style="text-align:center;padding:16px;color:var(--gray)"><span class="spin"></span></div></div>
+    </div>
+  </div>
+
+  <!-- TOP 10 기사 -->
+  <div class="sec">
+    <div class="sec-label">🏆 TOP 10 직원 (정산액 기준)</div>
+    <div class="chart-card" style="padding:0;overflow:hidden">
+      <table class="report-table" id="top-table">
+        <thead><tr><th>#</th><th>직원명</th><th>거점</th><th style="text-align:right">건수</th><th style="text-align:right">정산액</th></tr></thead>
+        <tbody id="top-body"><tr><td colspan="5" style="text-align:center;padding:20px;color:var(--gray)"><span class="spin"></span></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 업종별 비율 도넛 -->
+  <div class="sec">
+    <div class="sec-label">🏷 업종별 정산 비율</div>
+    <div class="chart-card">
+      <div class="donut-wrap">
+        <svg width="100" height="100" viewBox="0 0 36 36" id="donut-svg">
+          <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(0,212,255,.1)" stroke-width="3.8"/>
+        </svg>
+        <div class="donut-legend" id="donut-legend">
+          <div style="text-align:center;color:var(--gray);font-size:12px"><span class="spin"></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 월별 상세 테이블 -->
+  <div class="sec">
+    <div class="sec-label">📋 월별 상세 내역</div>
+    <div class="chart-card" style="padding:0;overflow:hidden">
+      <table class="report-table" id="month-table">
+        <thead><tr><th>월</th><th style="text-align:right">정산 인원</th><th style="text-align:right">건수</th><th style="text-align:right">정산액</th><th style="text-align:right">인당 평균</th></tr></thead>
+        <tbody id="month-body"><tr><td colspan="5" style="text-align:center;padding:20px;color:var(--gray)"><span class="spin"></span></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<div class="bottombar">
+  <button class="bot-btn on"><span class="bot-icon">📊</span><span class="bot-lbl">분석</span></button>
+  <a href="/dashboard" class="bot-btn"><span class="bot-icon">🏠</span><span class="bot-lbl">대시보드</span></a>
+  <a href="/settle" class="bot-btn"><span class="bot-icon">💰</span><span class="bot-lbl">정산</span></a>
+  <a href="/drivers" class="bot-btn"><span class="bot-icon">👥</span><span class="bot-lbl">직원관리</span></a>
+</div>
+
+<script>
+var _db=null, _allData=[], _periodMonths=3;
+
+(function init(){
+  if(typeof firebase==='undefined'){setTimeout(init,300);return;}
+  try{
+    var app;try{app=firebase.app('rpt');}catch(e){
+      app=firebase.initializeApp({apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.firebasestorage.app',messagingSenderId:'40761160761',appId:'1:40761160761:web:20545b610f03f534e949e8'},'rpt');
+    }
+    _db=app.firestore();
+    // 기간 기본값
+    var now=new Date();
+    var from=new Date(now.getFullYear(),now.getMonth()-2,1);
+    document.getElementById('period-from').value=from.getFullYear()+'-'+String(from.getMonth()+1).padStart(2,'0');
+    document.getElementById('period-to').value=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+    loadData();
+  }catch(e){console.warn(e);}
+})();
+
+// ── 기간 설정 ──
+function setPeriod(months,btn){
+  _periodMonths=months;
+  document.querySelectorAll('.period-btn').forEach(function(b){b.classList.remove('on');});
+  if(btn)btn.classList.add('on');
+  var now=new Date();
+  var to=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  var fromD=months>0?new Date(now.getFullYear(),now.getMonth()-(months-1),1):new Date(2020,0,1);
+  var from=fromD.getFullYear()+'-'+String(fromD.getMonth()+1).padStart(2,'0');
+  document.getElementById('period-from').value=from;
+  document.getElementById('period-to').value=to;
+  loadData();
+}
+function customPeriod(){_periodMonths=-1;document.querySelectorAll('.period-btn').forEach(function(b){b.classList.remove('on');});loadData();}
+
+// ── 데이터 로드 ──
+function loadData(){
+  if(!_db)return;
+  var from=(document.getElementById('period-from').value||'2024-01');
+  var to=(document.getElementById('period-to').value||new Date().toISOString().slice(0,7));
+  var pl=document.getElementById('period-label');
+  if(pl)pl.textContent=from+' ~ '+to;
+
+  _db.collection('settlements').where('month','>=',from).where('month','<=',to)
+    .orderBy('month','desc').limit(2000).get()
+    .then(function(s){
+      _allData=s.docs.map(function(d){return Object.assign({id:d.id},d.data());});
+      renderAll();
+    }).catch(function(e){toast('오류: '+e.message);});
+}
+
+function renderAll(){
+  renderKPI();
+  renderMonthlyChart();
+  renderCampChart();
+  renderTopTable();
+  renderDonut();
+  renderMonthTable();
+}
+
+// ── KPI ──
+function renderKPI(){
+  var total=_allData.reduce(function(s,r){return s+(r.netPay||r.totalPay||0);},0);
+  var ppl=[...new Set(_allData.map(function(r){return r.name;}))].length;
+  var del=_allData.reduce(function(s,r){return s+(r.deliveries||0);},0);
+  var avg=ppl>0?Math.round(total/ppl):0;
+  var set=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v;};
+  set('kpi-total',fmt(total));
+  set('kpi-ppl',ppl.toLocaleString());
+  set('kpi-del',del.toLocaleString());
+  set('kpi-avg',fmt(avg));
+}
+
+// ── 월별 바 차트 ──
+function renderMonthlyChart(){
+  var el=document.getElementById('monthly-chart');if(!el)return;
+  var byMonth={};
+  _allData.forEach(function(r){
+    var m=r.month||'';if(!m)return;
+    if(!byMonth[m])byMonth[m]={total:0,cnt:0};
+    byMonth[m].total+=(r.netPay||r.totalPay||0);
+    byMonth[m].cnt++;
+  });
+  var months=Object.keys(byMonth).sort();
+  if(!months.length){el.innerHTML='<div style="text-align:center;width:100%;color:var(--gray);font-size:12px">데이터 없음</div>';return;}
+  var max=Math.max.apply(null,months.map(function(m){return byMonth[m].total;}));
+  var now=new Date().toISOString().slice(0,7);
+  var COLORS=['var(--blue)','var(--cyan)','var(--green)','var(--yellow)','var(--purple)','var(--orange)'];
+  el.innerHTML=months.map(function(m,i){
+    var pct=max>0?Math.max(4,Math.round((byMonth[m].total/max)*90)):4;
+    var isNow=m===now;
+    var color=isNow?'linear-gradient(180deg,var(--cyan),var(--blue))':COLORS[i%COLORS.length];
+    return '<div class="bc-col">'
+      +'<div class="bc-bar" style="height:'+pct+'px;background:'+color+(isNow?';box-shadow:0 0 10px rgba(0,212,255,.3)':'')+'" data-tip="'+m+'\n'+fmt(byMonth[m].total)+'원"></div>'
+      +'<span class="bc-lbl" style="color:'+(isNow?'var(--cyan)':'')+'">'+m.slice(5)+'</span>'
+      +'</div>';
+  }).join('');
+}
+
+// ── 거점별 수평 바 ──
+function renderCampChart(){
+  var el=document.getElementById('camp-chart');if(!el)return;
+  var byCamp={};
+  _allData.forEach(function(r){
+    var c=r.camp||r.loc||'기타';
+    if(!byCamp[c])byCamp[c]={total:0,cnt:0,ppl:new Set()};
+    byCamp[c].total+=(r.netPay||r.totalPay||0);
+    byCamp[c].cnt+=(r.deliveries||0);
+    byCamp[c].ppl.add(r.name);
+  });
+  var camps=Object.keys(byCamp).sort(function(a,b){return byCamp[b].total-byCamp[a].total;});
+  if(!camps.length){el.innerHTML='<div style="text-align:center;padding:16px;color:var(--gray);font-size:12px">데이터 없음</div>';return;}
+  var max=Math.max.apply(null,camps.map(function(c){return byCamp[c].total;}));
+  var COLORS=['var(--cyan)','var(--green)','var(--yellow)','var(--purple)','var(--orange)'];
+  el.innerHTML=camps.map(function(c,i){
+    var pct=max>0?Math.round((byCamp[c].total/max)*100):0;
+    return '<div class="hbar-row">'
+      +'<div class="hbar-header">'
+      +'<span class="hbar-name">'+esc(c)+'<span style="font-size:9px;color:var(--gray);margin-left:6px">'+byCamp[c].ppl.size+'명</span></span>'
+      +'<span class="hbar-val" style="color:'+COLORS[i%COLORS.length]+'">'+fmt(byCamp[c].total)+'원</span>'
+      +'</div>'
+      +'<div class="hbar-track"><div class="hbar-fill" style="width:'+pct+'%;background:'+COLORS[i%COLORS.length]+'"></div></div>'
+      +'</div>';
+  }).join('');
+}
+
+// ── TOP 10 테이블 ──
+function renderTopTable(){
+  var byName={};
+  _allData.forEach(function(r){
+    var n=r.name||'';if(!n)return;
+    if(!byName[n])byName[n]={name:n,camp:r.camp||r.loc||'',total:0,del:0,cnt:0};
+    byName[n].total+=(r.netPay||r.totalPay||0);
+    byName[n].del+=(r.deliveries||0);
+    byName[n].cnt++;
+  });
+  var top=Object.values(byName).sort(function(a,b){return b.total-a.total;}).slice(0,10);
+  var tb=document.getElementById('top-body');if(!tb)return;
+  if(!top.length){tb.innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--gray)">데이터 없음</td></tr>';return;}
+  tb.innerHTML=top.map(function(d,i){
+    var rc=i===0?'r1':i===1?'r2':i===2?'r3':'';
+    return '<tr>'
+      +'<td><span class="rank-badge '+(rc||'')+'">'+( rc?''+(i+1):i+1)+'</span></td>'
+      +'<td style="font-weight:700">'+esc(d.name)+'</td>'
+      +'<td style="color:var(--gray)">'+esc(d.camp)+'</td>'
+      +'<td class="amt">'+d.del.toLocaleString()+'</td>'
+      +'<td class="amt" style="color:var(--cyan)">'+fmt(d.total)+'</td>'
+      +'</tr>';
+  }).join('');
+}
+
+// ── 도넛 차트 (업종별) ──
+function renderDonut(){
+  var byCtype={};
+  var CTYPE_LABEL={'coupang':'🚚 쿠팡물류','delivery':'🛵 배달대행','smallbiz':'🏪 소상공인','service':'🏗️ 용역','freelance':'👨‍💼 프리랜서'};
+  var COLORS2=['#00d4ff','#00ff88','#f59e0b','#8b5cf6','#f97316'];
+  _allData.forEach(function(r){
+    var t=r.industryType||'coupang';
+    if(!byCtype[t])byCtype[t]=0;
+    byCtype[t]+=(r.netPay||r.totalPay||0);
+  });
+  var types=Object.keys(byCtype);
+  var grandTotal=types.reduce(function(s,t){return s+byCtype[t];},0);
+  if(!grandTotal){return;}
+  // SVG 도넛
+  var svg=document.getElementById('donut-svg');if(!svg)return;
+  var r=15.9,cx=18,cy=18,c=2*Math.PI*r;
+  var offset=0;
+  var circles=types.map(function(t,i){
+    var pct=byCtype[t]/grandTotal;
+    var dash=pct*c;var gap=c-dash;
+    var seg='<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="'+COLORS2[i%COLORS2.length]+'" stroke-width="3.8" stroke-dasharray="'+dash.toFixed(2)+' '+gap.toFixed(2)+'" stroke-dashoffset="'+(-(offset*c-c/4)).toFixed(2)+'" transform="rotate(-90 18 18)"/>';
+    offset+=pct;
+    return seg;
+  }).join('');
+  svg.innerHTML='<circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(0,212,255,.08)" stroke-width="3.8"/>'+circles;
+
+  // 범례
+  var leg=document.getElementById('donut-legend');if(!leg)return;
+  leg.innerHTML=types.map(function(t,i){
+    var pct=Math.round(byCtype[t]/grandTotal*100);
+    return '<div class="legend-item">'
+      +'<div class="legend-dot" style="background:'+COLORS2[i%COLORS2.length]+'"></div>'
+      +'<div style="flex:1;font-size:11px">'+esc(CTYPE_LABEL[t]||t)+'</div>'
+      +'<div style="font-family:monospace;font-size:11px;font-weight:700">'+pct+'%</div>'
+      +'</div>';
+  }).join('');
+}
+
+// ── 월별 상세 테이블 ──
+function renderMonthTable(){
+  var byMonth={};
+  _allData.forEach(function(r){
+    var m=r.month||'';if(!m)return;
+    if(!byMonth[m])byMonth[m]={month:m,total:0,del:0,ppl:new Set()};
+    byMonth[m].total+=(r.netPay||r.totalPay||0);
+    byMonth[m].del+=(r.deliveries||0);
+    byMonth[m].ppl.add(r.name);
+  });
+  var months=Object.keys(byMonth).sort().reverse();
+  var tb=document.getElementById('month-body');if(!tb)return;
+  if(!months.length){tb.innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--gray)">데이터 없음</td></tr>';return;}
+  tb.innerHTML=months.map(function(m){
+    var d=byMonth[m];
+    var avg=d.ppl.size>0?Math.round(d.total/d.ppl.size):0;
+    return '<tr>'
+      +'<td style="font-family:monospace;font-weight:700">'+m+'</td>'
+      +'<td class="amt">'+d.ppl.size+'명</td>'
+      +'<td class="amt">'+d.del.toLocaleString()+'건</td>'
+      +'<td class="amt" style="color:var(--cyan)">'+fmt(d.total)+'</td>'
+      +'<td class="amt" style="color:var(--gray)">'+fmt(avg)+'</td>'
+      +'</tr>';
+  }).join('');
+}
+
+function fmt(n){return Math.round(n||0).toLocaleString('ko-KR');}
+function toast(msg){var t=document.getElementById('toast');t.textContent=msg;t.className='show';clearTimeout(t._t);t._t=setTimeout(function(){t.className='';},3000);}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+</script>
+</body>
+</html>

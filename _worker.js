@@ -427,6 +427,12 @@ export default {
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'public, max-age=86400' } });
     }
 
+    // ★ 정산 분석 리포트
+    if (path === '/report' || path === '/report/') {
+      const resp = await env.ASSETS.fetch(new Request(new URL('/report.html', url)));
+      return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+    }
+
     // ★ 근로계약서
     if (path === '/contract' || path === '/contract/') {
       const resp = await env.ASSETS.fetch(new Request(new URL('/contract.html', url)));
