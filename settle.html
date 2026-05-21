@@ -276,8 +276,91 @@ function getCampByRoute(route){
 // _getIncSetting 간단 대체 (settle.html용)
 function _getIncSetting(driver,route){return{on:true,rate:G_PRICES&&G_PRICES.freshbag_inc||25};}
 
-// ██ calcNet ██
+
+// ██ 업종별 정산 엔진 (DONWAY Multi-Industry) ██
+var _COMPANY_CFG = null; // 회사 업종 설정 캐시
+
+function _loadCompanyCfg(dealerId){
+  if(!_db||!dealerId) return;
+  _db.collection('companies').where('code','==',dealerId).limit(1).get()
+    .then(function(snap){
+      if(!snap.empty){ _COMPANY_CFG = snap.docs[0].data(); }
+    }).catch(function(){});
+}
+
+// 배달대행 정산
+function calcNet_delivery(x, cfg){
+  var calls = +x.dcnt||+x.callCnt||0;
+  var extra = +x.extraCnt||0;
+  var callPrice = cfg.callPrice||3500;
+  var extraPrice = cfg.extraPrice||0;
+  var programFee = cfg.programFee||0;
+  var gross = calls * callPrice + extra * extraPrice;
+  var taxRate = cfg.withhold==='3.3' ? 0.033 : 0;
+  var tax = Math.round(gross * taxRate);
+  var net = gross - tax - programFee;
+  return { gross:gross, tax:tax, net:Math.max(0,net), income:gross,
+           emp:0, work:0, deductions:tax+programFee,
+           label:'콜 '+calls+'건 × '+callPrice.toLocaleString()+'원' };
+}
+
+// 소상공인 정산
+function calcNet_smallbiz(x, cfg){
+  var sales = +x.sales||+x.totalSales||0;
+  var cardFee = Math.round(sales * (cfg.cardFeeRate||0) / 100);
+  var delivFee = Math.round(sales * (cfg.deliveryFeeRate||0) / 100);
+  var laborCost = +x.laborCost||0;
+  var net = sales - cardFee - delivFee - laborCost;
+  return { gross:sales, net:Math.max(0,net), income:sales,
+           emp:0, work:0, deductions:cardFee+delivFee+laborCost,
+           label:'매출 ₩'+sales.toLocaleString() };
+}
+
+// 용역업체 정산
+function calcNet_service(x, cfg){
+  var hours = +x.hours||+x.workHours||0;
+  var days  = +x.days||+x.workDays||0;
+  var rate  = cfg.serviceRate||12000;
+  var type  = cfg.serviceType||'hourly';
+  var gross = type==='hourly' ? hours*rate : type==='daily' ? days*rate : (+x.monthly||0);
+  var allowance = cfg.allowance||0;
+  var insRate = cfg.insurance==='3.3' ? 0.033 : cfg.insurance==='yes' ? 0.099 : 0;
+  var tax = Math.round(gross * insRate);
+  var net = gross - tax + allowance;
+  return { gross:gross, tax:tax, net:Math.max(0,net), income:gross,
+           emp:0, work:0, deductions:tax,
+           label:(type==='hourly'?hours+'시간':days+'일')+' × '+rate.toLocaleString()+'원' };
+}
+
+// 프리랜서 정산
+function calcNet_freelance(x, cfg){
+  var amount = +x.amount||+x.projectAmt||+x.dcnt||0;
+  var taxRate = cfg.taxRate==='3.3'?0.033 : cfg.taxRate==='8.8'?0.088 : 0;
+  var tax = Math.round(amount * taxRate);
+  var net = amount - tax;
+  return { gross:amount, tax:tax, net:Math.max(0,net), income:amount,
+           emp:0, work:0, deductions:tax,
+           label:'프리랜서 ₩'+amount.toLocaleString() };
+}
+
+// 업종 자동 감지 → 해당 엔진으로 분기
+function calcNetByIndustry(x){
+  var cfg = _COMPANY_CFG&&_COMPANY_CFG.industryConfig;
+  if(!cfg) return null; // 쿠팡 기본 엔진 사용
+  var type = cfg.type||(_COMPANY_CFG&&_COMPANY_CFG.industryType)||'coupang';
+  if(type==='delivery')   return calcNet_delivery(x, cfg);
+  if(type==='smallbiz')   return calcNet_smallbiz(x, cfg);
+  if(type==='service')    return calcNet_service(x, cfg);
+  if(type==='freelance')  return calcNet_freelance(x, cfg);
+  return null; // coupang → 기존 calcNet 사용
+}
+
+// ██ calcNet (쿠팡 물류 기본) ██
 function calcNet(x){
+  // ★ 업종별 엔진 먼저 시도
+  var _indResult = calcNetByIndustry(x);
+  if(_indResult) return _indResult;
+  // 쿠팡 물류 기본 엔진 (하위 호환)
   var dcnt=+x.dcnt||+x.delivCount||0;
   var rcnt=+x.rcnt||+x.retCount||0;
   // 용차: 건수×단가, 쿠팡: 라우트별 RPRICE × 건수로 강제 재계산 (v9.25)
@@ -1008,7 +1091,7 @@ function initFirebase(){
     _auth=firebase.auth();
     _auth.onAuthStateChanged(function(user){
       if(!user){document.getElementById('login-screen').style.display='flex';document.getElementById('app').style.display='none';_CU=null;window._CU=null;}
-      else{_db.doc('users/'+user.uid).get().then(function(snap){var d=snap.exists?snap.data():{};_CU={uid:user.uid,email:user.email,name:d.name||'',role:d.role||'dealer',dealerId:d.dealerId||user.uid,termsVersion:d.termsVersion||''};window._CU=_CU;_db.doc('settings/routePrices').get().then(function(rs){if(rs.exists)Object.assign(RPRICE,rs.data());}).catch(function(){});showApp();}).catch(function(){_CU={uid:user.uid,email:user.email,name:'',role:'dealer',dealerId:user.uid,termsVersion:''};window._CU=_CU;showApp();});}
+      else{_db.doc('users/'+user.uid).get().then(function(snap){var d=snap.exists?snap.data():{};_CU={uid:user.uid,email:user.email,name:d.name||'',role:d.role||'dealer',dealerId:d.dealerId||user.uid,termsVersion:d.termsVersion||''};window._CU=_CU;_db.doc('settings/routePrices').get().then(function(rs){if(rs.exists)Object.assign(RPRICE,rs.data());}).catch(function(){});_loadCompanyCfg(_CU.dealerId||_CU.companyCode||_CU.uid);showApp();}).catch(function(){_CU={uid:user.uid,email:user.email,name:'',role:'dealer',dealerId:user.uid,termsVersion:''};window._CU=_CU;showApp();});}
     });return;
   }
   if(!firebase.apps.length){
@@ -2791,6 +2874,7 @@ function openAddDriver(){
     +(_drvCache&&_drvCache.length?[...new Set(_drvCache.map(function(d){return d.camp||''}).filter(Boolean))].sort():['기타']).map(function(cc){return '<option>'+cc+'</option>';}).join('')+'<option>기타</option></select></div>'
     +'<div class="fg"><label>상태</label><select id="adr-active"><option value="true">재직</option><option value="false">퇴직</option></select></div></div>'
     +'<div class="fg"><label>연락처</label><input id="adr-phone" placeholder="010-0000-0000"></div>'
+    +'<div class="fg"><label>이메일</label><input id="adr-email" type="email" placeholder="driver@email.com"></div>'
     +'<div class="mdf"><button class="btn" onclick="this.closest(\'.mo\').remove()">취소</button>'
     +'<button class="btn btn-blue" onclick="saveNewDriver()">저장</button></div></div>';
   document.getElementById('modals').appendChild(mo);
@@ -2803,6 +2887,7 @@ function saveNewDriver(){
     name:name||'',userId:uid,dealerId:_CU.dealerId,
     camp:(document.getElementById('adr-camp')||{value:''}).value||'',
     phone:(document.getElementById('adr-phone')||{value:''}).value.trim()||'',
+    email:(document.getElementById('adr-email')||{value:''}).value.trim()||'',
     jobsub:'쿠팡',is_active:(document.getElementById('adr-active')||{value:'true'}).value!=='false',
     status:'재직',createdAt:firebase.firestore.FieldValue.serverTimestamp()
   }).then(function(){closeMoById('mo-add-dr');_drvCache=null;toast('✅ 기사 추가');pageDrivers();})
@@ -2819,7 +2904,8 @@ function editDriver(id){
       +'<div class="gr"><div class="fg"><label>캠프</label><select id="edr-camp">'
       +(_drvCache&&_drvCache.length?[...new Set(_drvCache.map(function(dv){return dv.camp||''}).filter(Boolean))].sort():['기타']).map(function(cc){return '<option '+(d.camp===cc?'selected':'')+'>'+cc+'</option>';}).join('')+'<option '+(d.camp==='기타'||!d.camp?'selected':'')+'>기타</option></select></div>'
       +'<div class="fg"><label>상태</label><select id="edr-active"><option value="true" '+(d.is_active!==false?'selected':'')+'>재직</option><option value="false" '+(d.is_active===false?'selected':'')+'>퇴직</option></select></div></div>'
-      +'<div class="fg"><label>연락처</label><input id="edr-phone" value="'+esc(d.phone||'')+'"></div>'
+      +'<div class="gr"><div class="fg"><label>연락처</label><input id="edr-phone" value="'+esc(d.phone||'')+'"></div>'
+      +'<div class="fg"><label>이메일</label><input id="edr-email" type="email" value="'+esc(d.email||d.driverEmail||'')+'"></div></div>'
       +'<div style="border-top:1px dashed var(--border);margin:8px 0;padding-top:8px">'
       +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
       +'<span style="font-size:11px;font-weight:800;color:var(--text2)">📋 사업자 정보 (세금계산서용)</span>'
@@ -2894,6 +2980,7 @@ function saveDriver(id){
     userId:stripDf(gv('edr-uid')||''),
     camp:gv('edr-camp')||'',
     phone:gv('edr-phone')||'',
+    email:gv('edr-email')||'',
     is_active:(document.getElementById('edr-active')||{value:'true'}).value!=='false',
     bizNum:gv('edr-biznum')||'',
     bizName:gv('edr-bizname')||'',
