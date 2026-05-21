@@ -1,6 +1,6 @@
 // MBTI Logistics + LogiNet — Cloudflare Worker
 
-const PROJECT_ID = 'mbti-logistics-bfcd3';
+const PROJECT_ID = 'mbti-logistics';
 const FS_BASE    = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
 
 // ── Service Account JWT ───────────────────────────────────────────────────────
@@ -508,8 +508,10 @@ export default {
       }
     }
 
-    // ──────────────────────────────────────────────────────────────────────
-
+    // 모두싸인 계약서 발송 프록시 (API 키 보호)
+    if (path === '/modusign-send' && method === 'POST') {
+      try {
+        const body = await request.json();
         const apiKey = env.MODUSIGN_API_KEY || '';
         if(!apiKey) return new Response(JSON.stringify({error:'MODUSIGN_API_KEY 미설정'}),{status:500,headers:{'Content-Type':'application/json'}});
         const encoded = btoa(apiKey + ':');

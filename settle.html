@@ -3535,10 +3535,10 @@ function editDriver(id){
       +'<div style="border-top:1px dashed var(--border);margin:8px 0;padding-top:8px">'
       +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
       +'<span style="font-size:11px;font-weight:800;color:var(--text2)">📋 사업자 정보 (세금계산서용)</span>'
-      +'<label style="cursor:pointer;background:#3b82f6;color:#fff;padding:4px 10px;border-radius:6px;font-size:10px;font-weight:700">'
-      +'📷 사업자등록증 OCR<input type="file" accept="image/*" style="display:none" onchange="_ocrBizCard(this)">'
-      +'</label>'
-      +'<span id="edr-ocr-status" style="font-size:10px;color:var(--text3)"></span>'
+      +'<button onclick="_openOcrModal()" style="cursor:pointer;background:linear-gradient(135deg,#3b82f6,#06b6d4);color:#fff;padding:4px 12px;border-radius:8px;font-size:10px;font-weight:700;border:none;display:flex;align-items:center;gap:5px">'
+      +'<span>📷</span><span>OCR 자동입력</span>'
+      +'</button>'
+      +'<span id="edr-ocr-status" style="font-size:10px;color:var(--cyan)"></span>'
       +'</div>'
       +'<div class="gr"><div class="fg"><label>사업자번호</label><input id="edr-biznum" value="'+esc(d.bizNum||'')+'" placeholder="000-00-00000"></div>'
       +'<div class="fg"><label>상호명</label><input id="edr-bizname" value="'+esc(d.bizName||'')+'"></div></div>'
@@ -3554,26 +3554,151 @@ function editDriver(id){
   });
 }
 
-// ── 사업자등록증 OCR (Claude Vision)
-async function _ocrBizCard(inp){
-  var file=inp.files[0];
+// ── 사업자등록증 OCR (드래그앤드롭 + 카메라 + 클린 모달)
+function _openOcrModal(){
+  var old=document.getElementById('mo-ocr-upload');if(old)old.remove();
+  var mo=document.createElement('div');mo.className='mo show';mo.id='mo-ocr-upload';
+  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  mo.innerHTML=`
+<div class="md" style="max-width:440px;width:95vw;border-radius:18px;overflow:hidden;padding:0">
+  <!-- 헤더 -->
+  <div style="background:linear-gradient(135deg,#1e3a5f,#0a1628);padding:20px 20px 14px;display:flex;align-items:center;justify-content:space-between">
+    <div>
+      <div style="font-size:11px;letter-spacing:.15em;color:var(--cyan);font-family:monospace;font-weight:700;margin-bottom:4px">DOCUMENT OCR</div>
+      <div style="font-size:16px;font-weight:800;color:#fff">📷 사업자등록증 자동입력</div>
+    </div>
+    <button onclick="document.getElementById('mo-ocr-upload').remove()" style="background:rgba(255,255,255,.1);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">✕</button>
+  </div>
+  <!-- 업로드 존 -->
+  <div style="padding:20px;background:var(--bg)">
+    <!-- 드래그앤드롭 영역 -->
+    <div id="ocr-drop-zone" onclick="document.getElementById('ocr-file-input').click()" style="border:2px dashed rgba(0,212,255,.3);border-radius:14px;padding:32px 20px;text-align:center;cursor:pointer;transition:.3s;position:relative;background:rgba(0,212,255,.03)" ondragover="event.preventDefault();this.style.borderColor='var(--cyan)';this.style.background='rgba(0,212,255,.08)'" ondragleave="this.style.borderColor='rgba(0,212,255,.3)';this.style.background='rgba(0,212,255,.03)'" ondrop="_ocrHandleDrop(event)">
+      <div style="font-size:40px;margin-bottom:10px">📋</div>
+      <div style="font-size:14px;font-weight:700;color:var(--white);margin-bottom:6px">파일을 여기에 드래그하거나 클릭</div>
+      <div style="font-size:11px;color:var(--text3)">JPG · PNG · PDF · HEIC 지원</div>
+      <input id="ocr-file-input" type="file" accept="image/*,.pdf" style="display:none" onchange="_ocrHandleFile(this.files[0])">
+    </div>
+    <!-- 카메라 촬영 버튼 -->
+    <button onclick="_ocrOpenCamera()" style="width:100%;margin-top:10px;padding:12px;background:linear-gradient(135deg,rgba(0,102,255,.15),rgba(0,212,255,.15));border:1px solid rgba(0,212,255,.25);border-radius:12px;color:var(--cyan);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+      <span style="font-size:18px">📸</span> 카메라로 바로 촬영
+    </button>
+    <!-- 미리보기 -->
+    <div id="ocr-preview-wrap" style="display:none;margin-top:14px;border-radius:12px;overflow:hidden;border:1px solid var(--border)">
+      <img id="ocr-preview-img" style="width:100%;max-height:200px;object-fit:contain;display:block;background:#000">
+      <div style="padding:10px;background:var(--bg2);display:flex;align-items:center;justify-content:space-between">
+        <span id="ocr-file-name" style="font-size:11px;color:var(--text3)"></span>
+        <button onclick="document.getElementById('ocr-preview-wrap').style.display='none';document.getElementById('ocr-analyze-btn').style.display='none'" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px">✕ 취소</button>
+      </div>
+    </div>
+    <!-- 분석 버튼 -->
+    <button id="ocr-analyze-btn" onclick="_ocrAnalyze()" style="display:none;width:100%;margin-top:12px;padding:14px;background:linear-gradient(135deg,#0066ff,#00d4ff);border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:.05em">
+      🔍 AI 분석 시작
+    </button>
+    <!-- 상태 표시 -->
+    <div id="ocr-modal-status" style="display:none;margin-top:12px;padding:12px;border-radius:10px;font-size:12px;text-align:center"></div>
+    <!-- 카메라 뷰 -->
+    <div id="ocr-camera-wrap" style="display:none;margin-top:14px;border-radius:12px;overflow:hidden;border:1px solid var(--border)">
+      <video id="ocr-camera-video" autoplay playsinline style="width:100%;max-height:220px;display:block;background:#000"></video>
+      <div style="padding:10px;background:var(--bg2);display:flex;gap:8px">
+        <button onclick="_ocrCapture()" style="flex:1;padding:10px;background:linear-gradient(135deg,#0066ff,#00d4ff);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer">📸 촬영</button>
+        <button onclick="_ocrStopCamera()" style="padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text2);font-size:13px;cursor:pointer">취소</button>
+      </div>
+    </div>
+  </div>
+</div>`;
+  document.body.appendChild(mo);
+}
+
+var _ocrCurrentFile = null;
+var _ocrCameraStream = null;
+
+function _ocrHandleDrop(e){
+  e.preventDefault();
+  var f=e.dataTransfer.files[0];
+  if(f) _ocrHandleFile(f);
+  var dz=document.getElementById('ocr-drop-zone');
+  if(dz){dz.style.borderColor='rgba(0,212,255,.3)';dz.style.background='rgba(0,212,255,.03)';}
+}
+
+function _ocrHandleFile(file){
   if(!file)return;
-  var status=document.getElementById('edr-ocr-status');
-  if(status)status.textContent='🔄 분석 중...';
-  try{
-    var b64=await new Promise(function(res,rej){
-      var r=new FileReader();
-      r.onload=function(){res(r.result.split(',')[1]);};
-      r.onerror=rej;
-      r.readAsDataURL(file);
+  _ocrCurrentFile=file;
+  var preview=document.getElementById('ocr-preview-wrap');
+  var img=document.getElementById('ocr-preview-img');
+  var nameEl=document.getElementById('ocr-file-name');
+  var analyzeBtn=document.getElementById('ocr-analyze-btn');
+  if(!preview||!img)return;
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    img.src=ev.target.result;
+    if(nameEl) nameEl.textContent=file.name+' ('+Math.round(file.size/1024)+'KB)';
+    preview.style.display='block';
+    if(analyzeBtn) analyzeBtn.style.display='block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function _ocrOpenCamera(){
+  var wrap=document.getElementById('ocr-camera-wrap');
+  var video=document.getElementById('ocr-camera-video');
+  if(!wrap||!video)return;
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}})
+    .then(function(stream){
+      _ocrCameraStream=stream;
+      video.srcObject=stream;
+      wrap.style.display='block';
+    })
+    .catch(function(e){
+      _ocrSetStatus('❌ 카메라 접근 실패: '+e.message,'rgba(239,68,68,.1)','#ef4444');
     });
-    var mime=file.type||'image/jpeg';
+}
+
+function _ocrCapture(){
+  var video=document.getElementById('ocr-camera-video');
+  if(!video)return;
+  var canvas=document.createElement('canvas');
+  canvas.width=video.videoWidth||640;
+  canvas.height=video.videoHeight||480;
+  canvas.getContext('2d').drawImage(video,0,0);
+  _ocrStopCamera();
+  canvas.toBlob(function(blob){
+    var file=new File([blob],'camera_'+Date.now()+'.jpg',{type:'image/jpeg'});
+    _ocrHandleFile(file);
+  },'image/jpeg',0.92);
+}
+
+function _ocrStopCamera(){
+  if(_ocrCameraStream){_ocrCameraStream.getTracks().forEach(t=>t.stop());_ocrCameraStream=null;}
+  var wrap=document.getElementById('ocr-camera-wrap');
+  if(wrap) wrap.style.display='none';
+}
+
+function _ocrSetStatus(msg, bg, color){
+  var el=document.getElementById('ocr-modal-status');
+  if(!el)return;
+  el.style.display='block';
+  el.style.background=bg||'rgba(0,212,255,.08)';
+  el.style.color=color||'var(--cyan)';
+  el.style.border='1px solid '+(color||'rgba(0,212,255,.3)');
+  el.textContent=msg;
+}
+
+async function _ocrAnalyze(){
+  if(!_ocrCurrentFile){_ocrSetStatus('⚠️ 파일을 먼저 선택해주세요','rgba(245,158,11,.1)','#f59e0b');return;}
+  var btn=document.getElementById('ocr-analyze-btn');
+  if(btn){btn.disabled=true;btn.textContent='🔄 AI 분석 중...';}
+  _ocrSetStatus('🔄 사업자등록증 분석 중... 잠시만 기다려주세요','rgba(0,212,255,.08)','var(--cyan)');
+
+  try{
+    // 이미지 압축 (1MB 이상이면 리사이즈)
+    var b64 = await _ocrCompressImage(_ocrCurrentFile, 1200, 0.88);
+    var mime=_ocrCurrentFile.type||'image/jpeg';
     var resp=await fetch('/claude-ocr',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         model:'claude-sonnet-4-20250514',
-        max_tokens:500,
+        max_tokens:600,
         messages:[{role:'user',content:[
           {type:'image',source:{type:'base64',media_type:mime,data:b64}},
           {type:'text',text:'이 사업자등록증에서 항목을 추출해서 JSON만 출력하세요 (설명 없이 JSON만):\n{"name":"대표자성명","bizNum":"사업자등록번호(000-00-00000형식)","bizName":"상호또는법인명","bizRep":"대표자성명","bizAddr":"사업장소재지전체주소","bizType":"업태","bizItem":"종목"}'}
@@ -3581,23 +3706,41 @@ async function _ocrBizCard(inp){
       })
     });
     var data=await resp.json();
-    var text=(data.content||[]).filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('');
+    var text=(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
     var json=JSON.parse(text.replace(/```json|```/g,'').trim());
     var map={name:'edr-name',bizNum:'edr-biznum',bizName:'edr-bizname',bizRep:'edr-bizrep',bizAddr:'edr-bizaddr',bizType:'edr-biztype',bizItem:'edr-bizitem'};
     var filled=0;
-    Object.keys(map).forEach(function(k){
-      if(json[k]){
-        var el=document.getElementById(map[k]);
-        if(el){el.value=json[k];filled++;}
-      }
+    Object.keys(map).forEach(k=>{
+      if(json[k]){var el=document.getElementById(map[k]);if(el){el.value=json[k];filled++;}}
     });
-    if(status)status.textContent='✅ '+filled+'개 항목 자동 입력됨';
+    _ocrSetStatus('✅ '+filled+'개 항목 자동입력 완료!','rgba(0,255,136,.08)','#00ff88');
+    var statusOuter=document.getElementById('edr-ocr-status');
+    if(statusOuter) statusOuter.textContent='✅ OCR 완료';
+    setTimeout(()=>{var mo=document.getElementById('mo-ocr-upload');if(mo)mo.remove();},1500);
   }catch(e){
     console.error('OCR 오류:',e);
-    if(status)status.textContent='❌ OCR 실패 — 수동 입력해주세요';
+    _ocrSetStatus('❌ 분석 실패 — 선명한 이미지로 다시 시도해주세요','rgba(239,68,68,.1)','#ef4444');
+    if(btn){btn.disabled=false;btn.textContent='🔍 다시 시도';}
   }
-  inp.value='';
 }
+
+async function _ocrCompressImage(file, maxW, quality){
+  return new Promise(resolve=>{
+    var img=new Image();
+    var url=URL.createObjectURL(file);
+    img.onload=function(){
+      var w=img.width,h=img.height;
+      if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}
+      var canvas=document.createElement('canvas');
+      canvas.width=w;canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/jpeg',quality).split(',')[1]);
+    };
+    img.src=url;
+  });
+}
+
 
 function saveDriver(id){
   function gv(eid){return (document.getElementById(eid)||{value:''}).value.trim();}
