@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#030912">
+<title>DONWAY — 출퇴근 QR 스캔</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{--bg:#030912;--bg2:#060f1f;--bg3:#0a1628;--blue:#0066ff;--cyan:#00d4ff;--green:#00ff88;--red:#ef4444;--gray:#5a7299;--white:#e8f4ff;--border:rgba(0,212,255,.12);--border2:rgba(0,102,255,.18)}
+body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun Gothic',sans-serif;min-height:100vh}
+.wrap{max-width:440px;margin:0 auto;padding:0 0 90px}
+
+.topbar{background:rgba(3,9,18,.97);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;backdrop-filter:blur(20px)}
+.logo{font-size:14px;font-weight:900;letter-spacing:3px}.logo span{color:var(--cyan)}
+
+/* 출근/퇴근 */
+.type-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 20px}
+.type-btn{padding:18px;border-radius:14px;border:2px solid var(--border2);background:var(--bg2);color:var(--gray);font-size:16px;font-weight:800;cursor:pointer;transition:.2s;text-align:center;line-height:1.4}
+.type-btn small{display:block;font-size:11px;font-weight:400;margin-top:4px;opacity:.7}
+.t-in-on{background:linear-gradient(135deg,#064e3b,#0F6E56);border-color:#059669;color:#fff;box-shadow:0 4px 20px rgba(5,150,105,.25)}
+.t-out-on{background:linear-gradient(135deg,#7f1d1d,#dc2626);border-color:var(--red);color:#fff;box-shadow:0 4px 20px rgba(220,38,38,.25)}
+
+/* 이름 입력 */
+.name-row{display:flex;gap:10px;margin:0 20px 14px;align-items:center}
+.name-inp{flex:1;padding:12px 14px;background:var(--bg2);border:1.5px solid var(--border2);border-radius:10px;color:var(--white);font-size:15px;font-weight:700;outline:none;transition:.2s}
+.name-inp:focus{border-color:var(--cyan)}
+.code-inp{width:110px;padding:12px 12px;background:var(--bg2);border:1.5px solid var(--border2);border-radius:10px;color:var(--cyan);font-size:13px;font-weight:700;outline:none;font-family:monospace;letter-spacing:1px;transition:.2s;flex-shrink:0}
+.code-inp:focus{border-color:var(--cyan)}
+
+/* ★ 실시간 카메라 스캐너 */
+.scanner-wrap{position:relative;margin:0 20px;border-radius:16px;overflow:hidden;background:#000;border:2px solid rgba(0,212,255,.3);box-shadow:0 0 40px rgba(0,102,255,.15)}
+.scanner-wrap video{width:100%;display:block;border-radius:14px}
+.scanner-overlay{position:absolute;inset:0;pointer-events:none}
+
+/* 스캔 가이드 박스 */
+.scan-guide{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:65%;aspect-ratio:1;border:2.5px solid rgba(0,212,255,.7);border-radius:12px;box-shadow:0 0 0 2000px rgba(0,0,0,.4)}
+.scan-guide-line{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);box-shadow:0 0 10px var(--cyan);animation:scanLine 2s ease-in-out infinite}
+@keyframes scanLine{0%,100%{top:5%;opacity:.5}50%{top:92%;opacity:1}}
+
+/* 모서리 마커 */
+.g-corner{position:absolute;width:20px;height:20px}
+.g-tl{top:-1px;left:-1px;border-top:3px solid var(--cyan);border-left:3px solid var(--cyan);border-radius:3px 0 0 0}
+.g-tr{top:-1px;right:-1px;border-top:3px solid var(--cyan);border-right:3px solid var(--cyan);border-radius:0 3px 0 0}
+.g-bl{bottom:-1px;left:-1px;border-bottom:3px solid var(--cyan);border-left:3px solid var(--cyan);border-radius:0 0 0 3px}
+.g-br{bottom:-1px;right:-1px;border-bottom:3px solid var(--cyan);border-right:3px solid var(--cyan);border-radius:0 0 3px 0}
+
+/* 스캐너 상태 */
+.scanner-status{position:absolute;bottom:0;left:0;right:0;padding:10px 16px;background:linear-gradient(transparent,rgba(0,0,0,.8));text-align:center;font-size:13px;font-weight:600;color:rgba(255,255,255,.7)}
+.scanner-btn-row{display:flex;gap:8px;margin:10px 20px 0}
+.method-tabs{display:flex;gap:0;background:rgba(10,22,40,.8);border:1px solid var(--border2);border-radius:12px;margin:0 20px 0;overflow:hidden}
+.method-tab{flex:1;padding:11px;border:none;background:transparent;color:var(--gray);font-size:13px;font-weight:700;cursor:pointer;transition:.2s}
+.method-tab.on{background:linear-gradient(135deg,var(--blue),var(--cyan));color:var(--bg)}
+.pin-wrap{margin:12px 20px;display:none}
+.pin-title{font-size:12px;color:var(--gray);margin-bottom:10px;text-align:center}
+.pin-display{display:flex;gap:10px;justify-content:center;margin-bottom:16px}
+.pin-digit{width:54px;height:64px;background:var(--bg2);border:2px solid var(--border2);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;font-family:monospace;color:var(--white);transition:.2s}
+.pin-digit.filled{border-color:var(--cyan);color:var(--cyan);background:rgba(0,212,255,.08)}
+.pin-keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.key-btn{padding:16px;background:var(--bg2);border:1.5px solid var(--border2);border-radius:12px;color:var(--white);font-size:20px;font-weight:700;cursor:pointer;text-align:center;transition:.15s;-webkit-tap-highlight-color:transparent}
+.key-btn:active{background:rgba(0,212,255,.15);border-color:var(--cyan);transform:scale(.94)}
+.key-del{font-size:18px;color:var(--gray)}
+.key-ok{background:linear-gradient(135deg,var(--blue),var(--cyan));color:var(--bg);border-color:transparent;font-size:16px}
+.cam-btn{flex:1;padding:12px;border-radius:10px;border:1.5px solid var(--border2);background:var(--bg2);color:var(--cyan);font-size:13px;font-weight:700;cursor:pointer;transition:.2s}
+.cam-btn:active{transform:scale(.97)}
+.cam-btn.active{background:linear-gradient(135deg,var(--blue),var(--cyan));color:var(--bg);border-color:transparent;box-shadow:0 4px 16px rgba(0,102,255,.3)}
+
+/* 결과 */
+.result-box{border-radius:16px;padding:22px;text-align:center;margin:14px 20px;display:none;animation:popIn .3s ease}
+@keyframes popIn{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
+.res-ok{background:rgba(0,255,136,.08);border:2px solid rgba(0,255,136,.25)}
+.res-err{background:rgba(239,68,68,.08);border:2px solid rgba(239,68,68,.2)}
+.res-icon{font-size:44px;margin-bottom:8px}
+.res-title{font-size:20px;font-weight:900;margin-bottom:6px}
+.res-detail{font-size:13px;color:var(--gray);line-height:1.9}
+.res-detail strong{color:var(--white)}
+.res-again{margin-top:14px;padding:10px 24px;border-radius:10px;background:linear-gradient(135deg,var(--blue),var(--cyan));border:none;color:var(--bg);font-size:14px;font-weight:700;cursor:pointer}
+
+/* 기록 */
+.card{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;margin:14px 20px}
+.card-title{font-size:10px;font-weight:700;color:var(--gray);letter-spacing:.15em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+.log-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(0,212,255,.06)}
+.log-row:last-child{border-bottom:none}
+.log-loc{font-size:13px;font-weight:700}.log-sub{font-size:10px;color:var(--gray);margin-top:2px}
+.log-in{color:var(--green);font-weight:700;font-size:12px;text-align:right}
+.log-out{color:var(--red);font-weight:700;font-size:12px;text-align:right}
+.log-time{font-size:10px;color:var(--gray);font-family:monospace;margin-top:2px}
+
+/* 하단 */
+.bottombar{position:fixed;bottom:0;left:0;right:0;max-width:440px;margin:0 auto;background:rgba(6,15,31,.97);border-top:1px solid var(--border);display:flex;padding:8px 0;z-index:100}
+.bot-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px;border:none;background:transparent;cursor:pointer;color:var(--gray)}
+.bot-btn.on{color:var(--cyan)}
+.bot-icon{font-size:20px}.bot-lbl{font-size:9px;font-weight:700;letter-spacing:.5px}
+
+#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg2);border:1px solid var(--border2);color:var(--white);padding:10px 20px;border-radius:99px;font-size:12px;font-weight:700;opacity:0;transition:.3s;pointer-events:none;z-index:9999;white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.ok{border-color:var(--green);color:var(--green)}
+#toast.err{border-color:var(--red);color:var(--red)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{width:14px;height:14px;border:2px solid rgba(0,212,255,.2);border-top-color:var(--cyan);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:middle}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+
+<div class="topbar">
+  <div class="logo"><span>D</span>ONWAY 출퇴근</div>
+  <div style="font-size:11px;color:var(--gray)" id="today-date"></div>
+</div>
+
+<div class="wrap">
+
+  <!-- 출근 / 퇴근 선택 -->
+  <div class="type-row">
+    <button class="type-btn t-in-on" id="btn-in" onclick="setType('in')">🟢 출근<small>입장 시 스캔</small></button>
+    <button class="type-btn" id="btn-out" onclick="setType('out')" style="border-color:var(--border2)">🔴 퇴근<small>퇴장 시 스캔</small></button>
+  </div>
+
+  <!-- 이름 + 회사코드 -->
+  <div class="name-row">
+    <input class="name-inp" id="my-name" placeholder="이름 입력" maxlength="10">
+    <input class="code-inp" id="my-company" placeholder="회사코드" maxlength="10">
+  </div>
+
+  <!-- 스캔 방법 탭 -->
+  <div class="method-tabs">
+    <button class="method-tab on" id="tab-cam" onclick="switchMethod('cam')">📷 카메라 스캔</button>
+    <button class="method-tab" id="tab-pin" onclick="switchMethod('pin')">🔢 번호 수동 입력</button>
+  </div>
+
+  <!-- ★ 실시간 카메라 스캐너 -->
+  <div class="scanner-wrap" id="scanner-wrap">
+    <video id="scanner-video" autoplay playsinline muted></video>
+    <div class="scanner-overlay">
+      <div class="scan-guide">
+        <div class="scan-guide-line"></div>
+        <div class="g-corner g-tl"></div>
+        <div class="g-corner g-tr"></div>
+        <div class="g-corner g-bl"></div>
+        <div class="g-corner g-br"></div>
+      </div>
+      <div class="scanner-status" id="scanner-status">📷 카메라를 QR에 가져다 대세요</div>
+    </div>
+    <canvas id="scan-canvas" style="display:none"></canvas>
+  </div>
+
+  <!-- 카메라 버튼 -->
+  <div class="scanner-btn-row" id="cam-btn-row">
+    <button class="cam-btn active" id="cam-start-btn" onclick="startCamera()">📷 카메라 시작</button>
+    <button class="cam-btn" id="cam-stop-btn" onclick="stopCamera()">⏹ 중지</button>
+    <button class="cam-btn" onclick="switchCamera()">🔄 전/후면</button>
+  </div>
+
+  <!-- 수동 PIN 입력 -->
+  <div class="pin-wrap" id="pin-wrap">
+    <div class="pin-title">매장 화면의 <strong style="color:var(--cyan)">4자리 숫자</strong>를 입력하세요</div>
+    <div class="pin-display">
+      <div class="pin-digit" id="pd0">-</div>
+      <div class="pin-digit" id="pd1">-</div>
+      <div class="pin-digit" id="pd2">-</div>
+      <div class="pin-digit" id="pd3">-</div>
+    </div>
+    <div class="pin-keypad">
+      <button class="key-btn" onclick="pinKey('1')">1</button>
+      <button class="key-btn" onclick="pinKey('2')">2</button>
+      <button class="key-btn" onclick="pinKey('3')">3</button>
+      <button class="key-btn" onclick="pinKey('4')">4</button>
+      <button class="key-btn" onclick="pinKey('5')">5</button>
+      <button class="key-btn" onclick="pinKey('6')">6</button>
+      <button class="key-btn" onclick="pinKey('7')">7</button>
+      <button class="key-btn" onclick="pinKey('8')">8</button>
+      <button class="key-btn" onclick="pinKey('9')">9</button>
+      <button class="key-btn key-del" onclick="pinDel()">⌫</button>
+      <button class="key-btn" onclick="pinKey('0')">0</button>
+      <button class="key-btn key-ok" onclick="pinSubmit()">확인 ✓</button>
+    </div>
+  </div>
+
+  <!-- 결과 -->
+  <div class="result-box" id="result-box">
+    <div class="res-icon" id="res-icon"></div>
+    <div class="res-title" id="res-title"></div>
+    <div class="res-detail" id="res-detail"></div>
+    <button class="res-again" onclick="resumeScan()">다시 스캔하기</button>
+  </div>
+
+  <!-- 오늘 내 기록 -->
+  <div class="card">
+    <div class="card-title">
+      오늘 내 기록
+      <button onclick="loadMyLog()" style="font-size:10px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.15);border-radius:6px;color:var(--cyan);cursor:pointer;padding:3px 8px">새로고침</button>
+    </div>
+    <div id="my-log"><div style="text-align:center;padding:12px;color:var(--gray);font-size:12px">기록 없음</div></div>
+  </div>
+
+</div>
+
+<div class="bottombar">
+  <button class="bot-btn on">
+    <span class="bot-icon">📱</span><span class="bot-lbl">스캔</span>
+  </button>
+  <button class="bot-btn" onclick="location.href='/attendance-display'">
+    <span class="bot-icon">🖥</span><span class="bot-lbl">매장QR</span>
+  </button>
+  <button class="bot-btn" onclick="location.href='/settle'">
+    <span class="bot-icon">🏠</span><span class="bot-lbl">홈</span>
+  </button>
+</div>
+
+<script>
+// Firebase
+var _db=null;
+(function initFB(){
+  if(typeof firebase==='undefined'){setTimeout(initFB,300);return;}
+  try{
+    var app;try{app=firebase.app('ae');}catch(e){
+      app=firebase.initializeApp({apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.firebasestorage.app',messagingSenderId:'40761160761',appId:'1:40761160761:web:20545b610f03f534e949e8'},'ae');
+    }
+    _db=app.firestore();
+  }catch(e){}
+})();
+
+var _type='in', _SECRET='DONWAY2026QR';
+var _stream=null, _scanRaf=null, _paused=false, _facingMode='environment', _lastResult='';
+
+document.addEventListener('DOMContentLoaded',function(){
+  document.getElementById('today-date').textContent=new Date().toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'});
+  try{var s=JSON.parse(localStorage.getItem('dw_emp')||'{}');if(s.name)document.getElementById('my-name').value=s.name;if(s.company)document.getElementById('my-company').value=s.company;}catch(e){}
+  startCamera();
+});
+
+// 출근/퇴근
+function setType(t){
+  _type=t;
+  document.getElementById('btn-in').className='type-btn'+(t==='in'?' t-in-on':'');
+  document.getElementById('btn-out').className='type-btn'+(t==='out'?' t-out-on':'');
+  if(t!=='in')document.getElementById('btn-in').style.borderColor='var(--border2)';
+  if(t!=='out')document.getElementById('btn-out').style.borderColor='var(--border2)';
+}
+
+// ★ 실시간 카메라 스캐너
+function startCamera(){
+  stopCamera();
+  _paused=false;
+  document.getElementById('result-box').style.display='none';
+  var video=document.getElementById('scanner-video');
+  var status=document.getElementById('scanner-status');
+  status.textContent='📷 카메라 연결 중...';
+  navigator.mediaDevices.getUserMedia({
+    video:{facingMode:_facingMode,width:{ideal:1280},height:{ideal:720}}
+  }).then(function(stream){
+    _stream=stream;
+    video.srcObject=stream;
+    video.play();
+    status.textContent='QR을 화면 중앙에 맞추세요';
+    document.getElementById('cam-start-btn').className='cam-btn';
+    document.getElementById('cam-stop-btn').className='cam-btn active';
+    _scanLoop();
+  }).catch(function(e){
+    status.textContent='❌ 카메라 접근 실패: '+e.message;
+    document.getElementById('cam-start-btn').className='cam-btn active';
+  });
+}
+
+function stopCamera(){
+  if(_scanRaf){cancelAnimationFrame(_scanRaf);_scanRaf=null;}
+  if(_stream){_stream.getTracks().forEach(function(t){t.stop();});_stream=null;}
+  var video=document.getElementById('scanner-video');
+  if(video)video.srcObject=null;
+  document.getElementById('cam-start-btn').className='cam-btn active';
+  document.getElementById('cam-stop-btn').className='cam-btn';
+}
+
+function switchCamera(){
+  _facingMode=_facingMode==='environment'?'user':'environment';
+  startCamera();
+}
+
+function _scanLoop(){
+  var video=document.getElementById('scanner-video');
+  var canvas=document.getElementById('scan-canvas');
+  if(!video||!canvas||_paused){_scanRaf=requestAnimationFrame(_scanLoop);return;}
+  if(!video.videoWidth){_scanRaf=requestAnimationFrame(_scanLoop);return;}
+  canvas.width=video.videoWidth;canvas.height=video.videoHeight;
+  var ctx=canvas.getContext('2d');
+  ctx.drawImage(video,0,0);
+  var imageData=ctx.getImageData(0,0,canvas.width,canvas.height);
+  var qr=typeof jsQR!=='undefined'?jsQR(imageData.data,imageData.width,imageData.height,{inversionAttempts:'dontInvert'}):null;
+  if(qr&&qr.data&&qr.data!==_lastResult){
+    _lastResult=qr.data;
+    _paused=true;
+    _processQR(qr.data);
+    return; // 스캔 성공 후 루프 중단
+  }
+  _scanRaf=requestAnimationFrame(_scanLoop);
+}
+
+function resumeScan(){
+  _paused=false;_lastResult='';
+  document.getElementById('result-box').style.display='none';
+  document.getElementById('scanner-status').textContent='QR을 화면 중앙에 맞추세요';
+  if(!_stream)startCamera();
+  else _scanRaf=requestAnimationFrame(_scanLoop);
+}
+
+// ── 입력 방법 전환 ──
+function switchMethod(m){
+  document.getElementById('tab-cam').className='method-tab'+(m==='cam'?' on':'');
+  document.getElementById('tab-pin').className='method-tab'+(m==='pin'?' on':'');
+  var camWrap=document.getElementById('scanner-wrap');
+  var camBtns=document.getElementById('cam-btn-row');
+  var pinWrap=document.getElementById('pin-wrap');
+  if(m==='cam'){
+    if(camWrap)camWrap.style.display='block';
+    if(camBtns)camBtns.style.display='flex';
+    if(pinWrap)pinWrap.style.display='none';
+    startCamera();
+  } else {
+    stopCamera();
+    if(camWrap)camWrap.style.display='none';
+    if(camBtns)camBtns.style.display='none';
+    if(pinWrap)pinWrap.style.display='block';
+    _pinClear();
+  }
+}
+
+// ── PIN 수동 입력 ──
+var _pinVal='';
+function _pinClear(){_pinVal='';_pinRender();}
+function _pinRender(){
+  for(var i=0;i<4;i++){
+    var el=document.getElementById('pd'+i);
+    if(!el)continue;
+    if(i<_pinVal.length){el.textContent=_pinVal[i];el.className='pin-digit filled';}
+    else{el.textContent='-';el.className='pin-digit';}
+  }
+}
+function pinKey(n){
+  if(_pinVal.length>=4)return;
+  _pinVal+=n;_pinRender();
+  if(_pinVal.length===4)setTimeout(pinSubmit,200);
+}
+function pinDel(){if(_pinVal.length>0){_pinVal=_pinVal.slice(0,-1);_pinRender();}}
+
+function pinSubmit(){
+  if(_pinVal.length<4){alert('4자리를 모두 입력하세요');return;}
+  var myName=(document.getElementById('my-name').value||'').trim()||'직원';
+  var myCompany=(document.getElementById('my-company').value||'').trim().toUpperCase();
+  // PIN 검증: 현재 및 직전 윈도우 모두 확인 (시간 오차 허용)
+  var verified=_verifyPIN(_pinVal,myCompany);
+  var rb=document.getElementById('result-box');
+  if(!verified.ok){
+    document.getElementById('res-icon').textContent='❌';
+    document.getElementById('res-title').textContent='인증 실패';
+    document.getElementById('res-detail').textContent=verified.msg;
+    rb.className='result-box res-err';rb.style.display='block';
+    _pinClear();
+    return;
+  }
+  _doRecord(myName,myCompany,verified.company,verified.loc);
+}
+
+function _verifyPIN(pin, myCompany){
+  // 최근 2개 윈도우의 PIN을 모두 확인 (30초 오차 허용)
+  // PIN은 회사코드 기반이라 회사코드 필요
+  var company = myCompany || 'DONWAY';
+  // 가능한 모든 interval 값에 대해 체크
+  var intervals=[30,15,60];
+  for(var ii=0;ii<intervals.length;ii++){
+    var interval=intervals[ii];
+    for(var delta=0;delta<=1;delta++){
+      var win=Math.floor(Date.now()/(interval*1000))-delta;
+      var raw=_pinHash(company+'|PIN|'+win+'DONWAY2026QR');
+      var digits='';
+      for(var j=0;j<raw.length&&digits.length<4;j++){
+        if(raw[j]>='0'&&raw[j]<='9')digits+=raw[j];
+      }
+      while(digits.length<4)digits+=String(Math.abs(raw.charCodeAt(digits.length%raw.length)%10));
+      digits=digits.slice(0,4);
+      if(digits===pin)return{ok:true,company:company,loc:'PIN 인증'};
+    }
+  }
+  return{ok:false,msg:'번호가 맞지 않습니다. 화면의 번호를 다시 확인하세요.'};
+}
+function _pinHash(str){var h=0x811c9dc5>>>0;for(var i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0;}return h.toString(36).toUpperCase().padStart(8,'0');}
+
+function _doRecord(myName,myCompany,company,loc){
+  var now=new Date();
+  var timeStr=now.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  var dateStr=now.toISOString().slice(0,10);
+  var isIn=_type==='in';
+  var rb=document.getElementById('result-box');
+  document.getElementById('res-icon').textContent=isIn?'🟢':'🔴';
+  document.getElementById('res-title').textContent=(isIn?'출근':'퇴근')+' 완료!';
+  document.getElementById('res-detail').innerHTML='<strong>'+esc(myName)+'</strong><br>'+esc(loc)+' · <strong>'+timeStr+'</strong>';
+  rb.className='result-box res-ok';rb.style.display='block';
+  if(navigator.vibrate)navigator.vibrate([100,50,100]);
+  var record={type:_type,loc:loc,company:company||myCompany,name:myName,date:dateStr,time:timeStr,timestamp:now.toISOString(),dealerId:myCompany||company,gpsUsed:false,lat:0,lng:0,method:'pin'};
+  if(_db){_db.collection('attendance').add(record).then(function(){toast('✅ '+(isIn?'출근':'퇴근')+' 기록 저장','ok');saveInfo();loadMyLog();}).catch(function(){toast('❌ 저장 실패','err');});}
+  else{toast('✅ 인증 완료 (오프라인)','ok');}
+  _pinClear();
+}
+
+// 토큰 검증
+function _b64dec(b64){
+  try{return decodeURIComponent(Array.prototype.map.call(atob(b64.replace(/-/g,'+').replace(/_/g,'/')+'==='),function(c){return'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2);}).join(''));}
+  catch(e){return null;}
+}
+function _hash(str){var h=0x811c9dc5>>>0;for(var i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0;}return h.toString(36).toUpperCase().padStart(8,'0').slice(0,8);}
+function _verify(token){
+  if(!token||!token.startsWith('DW1:'))return{ok:false,msg:'DONWAY QR이 아닙니다'};
+  try{
+    var rest=token.slice(4);var dot=rest.lastIndexOf('.');if(dot<0)return{ok:false,msg:'잘못된 QR'};
+    var payload=_b64dec(rest.slice(0,dot));if(!payload)return{ok:false,msg:'QR 해독 실패'};
+    var hash=rest.slice(dot+1);var parts=payload.split('|');if(parts.length<4)return{ok:false,msg:'QR 데이터 오류'};
+    var company=parts[0],loc=parts[1],win=parseInt(parts[2]),interval=parseInt(parts[3]);
+    var now=Math.floor(Date.now()/(interval*1000));
+    if(Math.abs(win-now)>1)return{ok:false,msg:'QR 만료. 화면의 QR이 갱신될 때까지 기다리세요.'};
+    if(_hash(payload+_SECRET)!==hash)return{ok:false,msg:'QR 위변조 감지'};
+    return{ok:true,company:company,loc:loc};
+  }catch(e){return{ok:false,msg:'오류: '+e.message};}
+}
+
+function _processQR(tokenData){
+  var myName=(document.getElementById('my-name').value||'').trim()||'직원';
+  var myCompany=(document.getElementById('my-company').value||'').trim().toUpperCase();
+  var result=_verify(tokenData);
+  var status=document.getElementById('scanner-status');
+  var rb=document.getElementById('result-box');
+
+  if(!result.ok){
+    status.textContent='❌ '+result.msg;
+    document.getElementById('res-icon').textContent='❌';
+    document.getElementById('res-title').textContent='인증 실패';
+    document.getElementById('res-detail').textContent=result.msg;
+    rb.className='result-box res-err';rb.style.display='block';
+    // 3초 후 자동 재스캔
+    setTimeout(resumeScan,3000);
+    return;
+  }
+  if(myCompany&&result.company!==myCompany){
+    status.textContent='⚠ 다른 회사 QR입니다';
+    document.getElementById('res-icon').textContent='⚠️';
+    document.getElementById('res-title').textContent='회사 불일치';
+    document.getElementById('res-detail').innerHTML='스캔: <strong>'+esc(result.company)+'</strong><br>내 코드: <strong>'+esc(myCompany)+'</strong>';
+    rb.className='result-box res-err';rb.style.display='block';
+    setTimeout(resumeScan,3000);
+    return;
+  }
+
+  // ✅ 성공
+  var now=new Date();
+  var timeStr=now.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  var dateStr=now.toISOString().slice(0,10);
+  var isIn=_type==='in';
+  status.textContent='✅ '+(isIn?'출근':'퇴근')+' 완료!';
+  document.getElementById('res-icon').textContent=isIn?'🟢':'🔴';
+  document.getElementById('res-title').textContent=(isIn?'출근':'퇴근')+' 완료!';
+  document.getElementById('res-detail').innerHTML='<strong>'+esc(myName)+'</strong><br>'+esc(result.loc)+' · <strong>'+timeStr+'</strong>';
+  rb.className='result-box res-ok';rb.style.display='block';
+
+  // 진동 피드백
+  if(navigator.vibrate)navigator.vibrate([100,50,100]);
+
+  // Firestore 저장
+  var record={type:_type,loc:result.loc,company:result.company,name:myName,date:dateStr,time:timeStr,timestamp:now.toISOString(),dealerId:myCompany||result.company,gpsUsed:false,lat:0,lng:0};
+  if(_db){
+    _db.collection('attendance').add(record)
+      .then(function(){toast('✅ '+(isIn?'출근':'퇴근')+' 기록 저장','ok');saveInfo();loadMyLog();})
+      .catch(function(e){toast('❌ 저장 실패','err');});
+  }
+}
+
+function saveInfo(){try{localStorage.setItem('dw_emp',JSON.stringify({name:document.getElementById('my-name').value,company:document.getElementById('my-company').value}));}catch(e){}}
+function loadMyLog(){
+  var listEl=document.getElementById('my-log');if(!listEl||!_db)return;
+  var today=new Date().toISOString().slice(0,10);
+  var name=(document.getElementById('my-name').value||'').trim();
+  if(!name){listEl.innerHTML='<div style="text-align:center;padding:12px;color:var(--gray);font-size:12px">이름을 입력하세요</div>';return;}
+  _db.collection('attendance').where('date','==',today).where('name','==',name).orderBy('timestamp','asc').limit(20).get()
+    .then(function(snap){
+      if(snap.empty){listEl.innerHTML='<div style="text-align:center;padding:12px;color:var(--gray);font-size:12px">오늘 기록 없음</div>';return;}
+      listEl.innerHTML=snap.docs.map(function(d){var r=d.data();var isIn=r.type==='in';return'<div class="log-row"><div><div class="log-loc">'+esc(r.loc||'')+'</div><div class="log-sub">📷 QR 인증</div></div><div class="'+(isIn?'log-in':'log-out')+'">'+(isIn?'🟢 출근':'🔴 퇴근')+'<div class="log-time">'+esc(r.time||'')+'</div></div></div>';}).join('');
+    }).catch(function(){});
+}
+function toast(msg,type){var t=document.getElementById('toast');t.textContent=msg;t.className='show'+(type?' '+type:'');clearTimeout(t._t);t._t=setTimeout(function(){t.className='';},3000);}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// 페이지 떠날 때 카메라 종료
+window.addEventListener('pagehide',stopCamera);
+window.addEventListener('beforeunload',stopCamera);
+</script>
+</body>
+</html>

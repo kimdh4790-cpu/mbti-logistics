@@ -415,6 +415,18 @@ export default {
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
+    // ★ DONWAY 출퇴근 QR (모든 업종 공통)
+    if (path === '/attendance' || path === '/attendance/') {
+      const resp = await env.ASSETS.fetch(new Request(new URL('/attendance.html', url)));
+      return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+    }
+
+    // ★ 매장/회사 QR 디스플레이 (입구 화면)
+    if (path === '/attendance-display' || path === '/attendance-display/') {
+      const resp = await env.ASSETS.fetch(new Request(new URL('/attendance-display.html', url)));
+      return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+    }
+
     // 회사 코드 검증 API (join.html 에서 호출)
     if (path === '/company-get' && method === 'GET') {
       try {
