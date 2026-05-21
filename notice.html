@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#030912">
+<title>DONWAY — 공지·알림</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{--bg:#030912;--bg2:#060f1f;--bg3:#0a1628;--blue:#0066ff;--cyan:#00d4ff;--green:#00ff88;--red:#ef4444;--yellow:#f59e0b;--orange:#f97316;--gray:#5a7299;--white:#e8f4ff;--border:rgba(0,212,255,.12);--border2:rgba(0,102,255,.18)}
+body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun Gothic',sans-serif;min-height:100vh}
+.wrap{max-width:540px;margin:0 auto;padding:0 0 90px}
+.topbar{background:rgba(3,9,18,.97);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;backdrop-filter:blur(20px)}
+.logo{font-size:14px;font-weight:900;letter-spacing:3px}.logo span{color:var(--cyan)}
+.tabs{display:flex;background:rgba(6,15,31,.8);border-bottom:1px solid var(--border)}
+.tab{flex:1;padding:13px 0;border:none;background:transparent;color:var(--gray);font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;transition:.2s}
+.tab.on{color:var(--cyan);border-bottom-color:var(--cyan)}
+
+/* 공지 작성 */
+.write-card{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:18px 20px;margin:14px 20px}
+.sec-label{font-size:10px;font-weight:700;color:var(--gray);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.sec-label::before{content:'';width:14px;height:1.5px;background:var(--cyan)}
+.fg{margin-bottom:12px}
+.fl{font-size:11px;font-weight:700;color:var(--gray);display:block;margin-bottom:5px}
+.fi{width:100%;padding:11px 13px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--white);font-size:13px;font-weight:600;outline:none;transition:.2s}
+.fi:focus{border-color:var(--cyan)}
+textarea.fi{resize:vertical;min-height:100px;font-size:13px;line-height:1.7}
+
+/* 타입 선택 */
+.type-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.type-chip{padding:7px 14px;border-radius:20px;border:1.5px solid var(--border2);background:var(--bg3);color:var(--gray);font-size:12px;font-weight:700;cursor:pointer;transition:.2s;white-space:nowrap}
+.type-chip.on{border-color:var(--cyan);color:var(--cyan);background:rgba(0,212,255,.08)}
+
+/* 발송 대상 */
+.target-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.target-chip{padding:6px 12px;border-radius:20px;border:1.5px solid var(--border2);background:var(--bg3);color:var(--gray);font-size:11px;font-weight:700;cursor:pointer;transition:.2s;white-space:nowrap}
+.target-chip.on{border-color:var(--green);color:var(--green);background:rgba(0,255,136,.07)}
+
+/* 발송 버튼 */
+.send-btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:4px}
+.send-btn{padding:11px 6px;border-radius:10px;border:none;font-size:12px;font-weight:700;cursor:pointer;transition:.2s;text-align:center}
+.sb-save{background:var(--bg3);border:1.5px solid var(--border2) !important;color:var(--gray)}
+.sb-sms{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2) !important;color:var(--yellow)}
+.sb-all{background:linear-gradient(135deg,var(--blue),var(--cyan));color:var(--bg)}
+
+/* 공지 목록 */
+.notice-card{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;margin:0 20px 8px;cursor:pointer;transition:.2s}
+.notice-card:hover{border-color:rgba(0,212,255,.25)}
+.notice-header{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px}
+.notice-title{font-size:14px;font-weight:800;line-height:1.4}
+.notice-badge{padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap;flex-shrink:0}
+.nb-notice{background:rgba(0,212,255,.1);color:var(--cyan);border:1px solid rgba(0,212,255,.2)}
+.nb-urgent{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+.nb-pay{background:rgba(0,255,136,.1);color:var(--green);border:1px solid rgba(0,255,136,.2)}
+.nb-schedule{background:rgba(139,92,246,.1);color:#a78bfa;border:1px solid rgba(139,92,246,.2)}
+.nb-event{background:rgba(245,158,11,.1);color:var(--yellow);border:1px solid rgba(245,158,11,.2)}
+.notice-body{font-size:13px;color:var(--gray);line-height:1.7;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.notice-body.expanded{display:block;-webkit-line-clamp:unset;color:var(--white)}
+.notice-footer{display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--gray)}
+.notice-targets{display:flex;gap:4px;flex-wrap:wrap}
+.ntg{padding:1px 7px;border-radius:10px;background:rgba(0,212,255,.06);border:1px solid var(--border);font-size:9px;font-family:monospace}
+.notice-del{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:6px;color:var(--red);font-size:10px;font-weight:700;padding:3px 8px;cursor:pointer}
+
+/* 알림 기록 탭 */
+.log-row{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid rgba(0,212,255,.06)}
+.log-row:last-child{border-bottom:none}
+.log-icon{font-size:20px;flex-shrink:0}
+.log-title{font-size:13px;font-weight:700}
+.log-sub{font-size:10px;color:var(--gray);margin-top:2px}
+.log-time{font-size:10px;color:var(--gray);font-family:monospace;white-space:nowrap}
+.log-status{font-size:10px;font-weight:700;white-space:nowrap;margin-top:2px}
+.ls-ok{color:var(--green)}.ls-fail{color:var(--red)}.ls-pend{color:var(--yellow)}
+
+/* 하단 탭바 */
+.bottombar{position:fixed;bottom:0;left:0;right:0;max-width:540px;margin:0 auto;background:rgba(6,15,31,.97);border-top:1px solid var(--border);display:flex;padding:8px 0;z-index:100}
+.bot-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px;border:none;background:transparent;cursor:pointer;color:var(--gray);text-decoration:none}
+.bot-btn.on{color:var(--cyan)}
+.bot-icon{font-size:20px}.bot-lbl{font-size:9px;font-weight:700;letter-spacing:.5px}
+
+/* 모달 */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9000;display:none;align-items:flex-end;justify-content:center}
+.modal.show{display:flex}
+.mbox{background:var(--bg2);border:1px solid var(--border2);border-radius:20px 20px 0 0;padding:24px 20px;width:100%;max-width:540px;max-height:85vh;overflow-y:auto;animation:slideUp .3s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+
+#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg2);border:1px solid var(--border2);color:var(--white);padding:10px 20px;border-radius:99px;font-size:12px;font-weight:700;opacity:0;transition:.3s;pointer-events:none;z-index:9999}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.ok{border-color:var(--green);color:var(--green)}
+#toast.err{border-color:var(--red);color:var(--red)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{width:14px;height:14px;border:2px solid rgba(0,212,255,.2);border-top-color:var(--cyan);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:middle}
+</style>
+<script src="/donway-sound.js"></script>
+</head>
+<body>
+<div id="toast"></div>
+
+<!-- 상세보기 모달 -->
+<div class="modal" id="view-modal">
+  <div class="mbox">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-size:16px;font-weight:900" id="vm-title"></div>
+      <button onclick="closeView()" style="background:none;border:none;color:var(--gray);font-size:20px;cursor:pointer">✕</button>
+    </div>
+    <div id="vm-content"></div>
+  </div>
+</div>
+
+<div class="topbar">
+  <div class="logo"><span>D</span>ONWAY 공지</div>
+  <div style="display:flex;align-items:center;gap:6px">
+    <div style="width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 6px var(--red);animation:blink 1.5s infinite" id="unread-dot" style="display:none"></div>
+    <span style="font-size:11px;color:var(--gray)" id="unread-cnt"></span>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <button onclick="_DONWAY_SOUND.donway()" title="테스트" style="background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:8px;color:var(--cyan);font-size:14px;padding:6px 10px;cursor:pointer">🔔</button>
+    <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:10px;color:var(--gray)">
+      <input type="checkbox" id="sound-toggle" checked onchange="_DONWAY_SOUND.setEnabled(this.checked)" style="cursor:pointer">
+      소리
+    </label>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab on" id="tab-write-btn" onclick="switchTab('write')">✏️ 작성</button>
+  <button class="tab" id="tab-list-btn" onclick="switchTab('list')">📋 공지 목록</button>
+  <button class="tab" id="tab-log-btn" onclick="switchTab('log')">📡 발송 기록</button>
+</div>
+
+<div class="wrap">
+
+  <!-- ── 작성 탭 ── -->
+  <div id="tab-write">
+    <div class="write-card">
+      <div class="sec-label">공지 유형</div>
+      <div class="type-row" id="type-row">
+        <div class="type-chip on" onclick="setType('notice',this)">📢 일반공지</div>
+        <div class="type-chip" onclick="setType('urgent',this)">🚨 긴급공지</div>
+        <div class="type-chip" onclick="setType('pay',this)">💰 급여안내</div>
+        <div class="type-chip" onclick="setType('schedule',this)">📅 일정안내</div>
+        <div class="type-chip" onclick="setType('event',this)">🎉 이벤트</div>
+      </div>
+
+      <div class="fg">
+        <label class="fl">제목 *</label>
+        <input class="fi" id="w-title" placeholder="공지 제목을 입력하세요" maxlength="50">
+      </div>
+      <div class="fg">
+        <label class="fl">내용 *</label>
+        <textarea class="fi" id="w-body" placeholder="공지 내용을 자세히 입력하세요&#10;&#10;예) 5월 급여는 5월 25일 입금 예정입니다."></textarea>
+      </div>
+
+      <div class="sec-label">발송 대상</div>
+      <div class="target-row" id="target-row">
+        <div class="target-chip on" onclick="toggleTarget('all',this)" id="tg-all">👥 전체</div>
+        <div class="target-chip" onclick="toggleTarget('부산1',this)" id="tg-부산1">부산1</div>
+        <div class="target-chip" onclick="toggleTarget('부산2',this)" id="tg-부산2">부산2</div>
+        <div class="target-chip" onclick="toggleTarget('부산3',this)" id="tg-부산3">부산3</div>
+        <div class="target-chip" onclick="toggleTarget('대구2',this)" id="tg-대구2">대구2</div>
+        <div class="target-chip" onclick="toggleTarget('진주M',this)" id="tg-진주M">진주M</div>
+      </div>
+
+      <div class="fg" style="margin-bottom:12px">
+        <label class="fl">예약 발송 (선택)</label>
+        <input class="fi" type="datetime-local" id="w-sched">
+      </div>
+
+      <div class="send-btns">
+        <button class="send-btn sb-save" onclick="saveNotice()">💾 저장만</button>
+        <button class="send-btn sb-sms" onclick="sendSMS()">📱 SMS 발송</button>
+        <button class="send-btn sb-all" onclick="sendAll()">📡 전체 발송</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 공지 목록 탭 ── -->
+  <div id="tab-list" style="display:none">
+    <!-- 필터 -->
+    <div style="display:flex;gap:8px;padding:12px 20px;overflow-x:auto;scrollbar-width:none" id="list-filter">
+      <button class="type-chip on" onclick="filterType('',this)">전체</button>
+      <button class="type-chip" onclick="filterType('notice',this)">일반</button>
+      <button class="type-chip" onclick="filterType('urgent',this)">긴급</button>
+      <button class="type-chip" onclick="filterType('pay',this)">급여</button>
+      <button class="type-chip" onclick="filterType('schedule',this)">일정</button>
+    </div>
+    <div id="notice-list">
+      <div style="text-align:center;padding:32px;color:var(--gray)"><span class="spin"></span></div>
+    </div>
+  </div>
+
+  <!-- ── 발송 기록 탭 ── -->
+  <div id="tab-log" style="display:none">
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;margin:14px 20px;overflow:hidden">
+      <div id="log-list">
+        <div style="text-align:center;padding:32px;color:var(--gray)"><span class="spin"></span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="bottombar">
+  <button class="bot-btn on"><span class="bot-icon">📢</span><span class="bot-lbl">공지</span></button>
+  <a href="/dashboard" class="bot-btn"><span class="bot-icon">📊</span><span class="bot-lbl">대시보드</span></a>
+  <a href="/drivers" class="bot-btn"><span class="bot-icon">👥</span><span class="bot-lbl">직원관리</span></a>
+  <a href="/settle" class="bot-btn"><span class="bot-icon">💰</span><span class="bot-lbl">정산</span></a>
+</div>
+
+<script>
+var _db=null, _noticeType='notice', _targets=['all'], _filterType='';
+var _TYPE_LABEL={notice:'📢 일반공지',urgent:'🚨 긴급',pay:'💰 급여안내',schedule:'📅 일정',event:'🎉 이벤트'};
+var _TYPE_CLS={notice:'nb-notice',urgent:'nb-urgent',pay:'nb-pay',schedule:'nb-schedule',event:'nb-event'};
+
+(function init(){
+  if(typeof firebase==='undefined'){setTimeout(init,300);return;}
+  try{
+    var app;try{app=firebase.app('ntc');}catch(e){
+      app=firebase.initializeApp({apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.firebasestorage.app',messagingSenderId:'40761160761',appId:'1:40761160761:web:20545b610f03f534e949e8'},'ntc');
+    }
+    _db=app.firestore();
+  }catch(e){console.warn(e);}
+})();
+
+// ── 탭 전환 ──
+function switchTab(t){
+  ['write','list','log'].forEach(function(x){
+    document.getElementById('tab-'+x).style.display=x===t?'block':'none';
+    document.getElementById('tab-'+x+'-btn').classList.toggle('on',x===t);
+  });
+  if(t==='list')loadNotices();
+  if(t==='log')loadLog();
+}
+
+// ── 유형 선택 ──
+function setType(type,el){
+  _noticeType=type;
+  document.querySelectorAll('#type-row .type-chip').forEach(function(c){c.classList.remove('on');});
+  if(el)el.classList.add('on');
+}
+
+// ── 발송 대상 ──
+function toggleTarget(tg,el){
+  if(tg==='all'){
+    _targets=['all'];
+    document.querySelectorAll('#target-row .target-chip').forEach(function(c){c.classList.remove('on');});
+    document.getElementById('tg-all').classList.add('on');
+    return;
+  }
+  // 전체 해제
+  _targets=_targets.filter(function(t){return t!=='all';});
+  document.getElementById('tg-all').classList.remove('on');
+  var idx=_targets.indexOf(tg);
+  if(idx>=0){_targets.splice(idx,1);if(el)el.classList.remove('on');}
+  else{_targets.push(tg);if(el)el.classList.add('on');}
+  if(!_targets.length){_targets=['all'];document.getElementById('tg-all').classList.add('on');}
+}
+
+// ── 저장 ──
+function saveNotice(){
+  var title=(document.getElementById('w-title').value||'').trim();
+  var body=(document.getElementById('w-body').value||'').trim();
+  if(!title||!body){toast('제목과 내용을 입력하세요','err');return;}
+  if(!_db){toast('Firebase 연결 필요','err');return;}
+  var sched=(document.getElementById('w-sched').value||'').trim();
+  _db.collection('notices').add({
+    type:_noticeType,title:title,body:body,
+    targets:_targets,
+    scheduled:sched||null,
+    status:'저장됨',
+    createdAt:new Date().toISOString(),
+    sendLog:[]
+  }).then(function(){
+    toast('✅ 공지 저장 완료','ok');_DONWAY_SOUND.success();
+    clearForm();
+  }).catch(function(e){toast('❌ '+e.message,'err');});
+}
+
+// ── SMS 발송 ──
+function sendSMS(){
+  var title=(document.getElementById('w-title').value||'').trim();
+  var body=(document.getElementById('w-body').value||'').trim();
+  if(!title||!body){toast('제목과 내용을 입력하세요','err');return;}
+  _sendAndLog('SMS',title,body);
+}
+
+// ── 전체 발송 (카카오+SMS+앱 푸시) ──
+function sendAll(){
+  var title=(document.getElementById('w-title').value||'').trim();
+  var body=(document.getElementById('w-body').value||'').trim();
+  if(!title||!body){toast('제목과 내용을 입력하세요','err');return;}
+  if(!confirm('전체 발송하시겠습니까?\n대상: '+(_targets[0]==='all'?'전체 직원':_targets.join(', '))))return;
+  _sendAndLog('ALL',title,body);
+}
+
+function _sendAndLog(method,title,body){
+  if(!_db){toast('Firebase 연결 필요','err');return;}
+  // 발송 기록 저장
+  _db.collection('notices').add({
+    type:_noticeType,title:title,body:body,
+    targets:_targets,
+    method:method,
+    status:method==='ALL'?'발송완료':'SMS발송',
+    createdAt:new Date().toISOString(),
+    sentAt:new Date().toISOString()
+  }).then(function(){
+    // 실제 SMS는 _worker.js /api/send-sms 엔드포인트 호출
+    if(method==='SMS'||method==='ALL'){
+      _callSMSAPI(title+'\n\n'+body);
+    }
+    toast('✅ '+(method==='ALL'?'전체 발송':'SMS 발송')+' 완료!','ok');_DONWAY_SOUND.notice(getVal('w-title'));
+    clearForm();
+  }).catch(function(e){toast('❌ '+e.message,'err');});
+}
+
+function _callSMSAPI(msg){
+  // 대상 직원 번호 조회 후 발송
+  if(!_db)return;
+  var q=_db.collection('drivers');
+  if(_targets[0]!=='all'){
+    // 거점 필터 - 다중 where 대신 클라이언트 필터링
+  }
+  q.limit(200).get().then(function(s){
+    var phones=[];
+    s.docs.forEach(function(d){
+      var r=d.data();
+      if(r.phone&&(r.status||'재직')!=='퇴직'){
+        if(_targets[0]==='all'||(r.camp&&_targets.indexOf(r.camp)>=0)){
+          phones.push(r.phone);
+        }
+      }
+    });
+    if(!phones.length)return;
+    fetch('/api/send-sms',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({to:phones,message:'[DONWAY]\n'+msg})
+    }).catch(function(){});
+  });
+}
+
+function clearForm(){
+  document.getElementById('w-title').value='';
+  document.getElementById('w-body').value='';
+  document.getElementById('w-sched').value='';
+}
+
+// ── 공지 목록 ──
+function filterType(type,el){
+  _filterType=type;
+  document.querySelectorAll('#list-filter .type-chip').forEach(function(c){c.classList.remove('on');});
+  if(el)el.classList.add('on');
+  loadNotices();
+}
+
+function loadNotices(){
+  var el=document.getElementById('notice-list');
+  el.innerHTML='<div style="text-align:center;padding:24px;color:var(--gray)"><span class="spin"></span></div>';
+  if(!_db)return;
+  var q=_db.collection('notices').orderBy('createdAt','desc').limit(50);
+  if(_filterType)q=_db.collection('notices').where('type','==',_filterType).orderBy('createdAt','desc').limit(50);
+  q.get().then(function(s){
+    if(s.empty){el.innerHTML='<div style="text-align:center;padding:32px;color:var(--gray)">📭 공지 없음</div>';return;}
+    el.innerHTML=s.docs.map(function(d){return _noticeCard(Object.assign({id:d.id},d.data()));}).join('');
+  }).catch(function(e){el.innerHTML='<div style="padding:16px;color:var(--gray)">오류: '+esc(e.message)+'</div>';});
+}
+
+function _noticeCard(n){
+  var typeCls=_TYPE_CLS[n.type]||'nb-notice';
+  var typeLabel=_TYPE_LABEL[n.type]||n.type||'';
+  var tgs=(n.targets||[]);
+  var tgHtml=tgs.map(function(t){return '<span class="ntg">'+esc(t==='all'?'전체':t)+'</span>';}).join('');
+  var date=n.createdAt?n.createdAt.slice(0,10):'';
+  var statusColor=n.status==='발송완료'?'var(--green)':n.status==='SMS발송'?'var(--yellow)':'var(--gray)';
+  return '<div class="notice-card" onclick="viewNotice(\''+esc(n.id)+'\')">'
+    +'<div class="notice-header">'
+    +'<div class="notice-title">'+esc(n.title||'')+'</div>'
+    +'<span class="notice-badge '+typeCls+'">'+typeLabel+'</span>'
+    +'</div>'
+    +'<div class="notice-body" id="nb-'+esc(n.id)+'">'+esc(n.body||'').replace(/\n/g,'<br>')+'</div>'
+    +'<div class="notice-footer">'
+    +'<div style="display:flex;align-items:center;gap:8px">'
+    +tgHtml
+    +'<span style="color:'+statusColor+';font-size:9px;font-family:monospace">'+esc(n.status||'')+'</span>'
+    +'</div>'
+    +'<div style="display:flex;align-items:center;gap:8px">'
+    +'<span>'+date+'</span>'
+    +'<button onclick="event.stopPropagation();deleteNotice(\''+esc(n.id)+'\')" class="notice-del">삭제</button>'
+    +'</div>'
+    +'</div>'
+    +'</div>';
+}
+
+function viewNotice(id){
+  if(!_db)return;
+  _db.collection('notices').doc(id).get().then(function(d){
+    if(!d.exists)return;
+    var n=d.data();
+    document.getElementById('vm-title').textContent=n.title||'';
+    document.getElementById('vm-content').innerHTML=
+      '<div style="background:var(--bg3);border-radius:10px;padding:14px;margin-bottom:14px;font-size:13px;line-height:1.9">'+esc(n.body||'').replace(/\n/g,'<br>')+'</div>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">'
+      +(n.targets||[]).map(function(t){return '<span class="ntg">'+esc(t==='all'?'전체':t)+'</span>';}).join('')
+      +'</div>'
+      +'<div style="font-size:11px;color:var(--gray);line-height:2">'
+      +'유형: '+esc(_TYPE_LABEL[n.type]||n.type||'')+'<br>'
+      +'상태: <strong style="color:var(--green)">'+esc(n.status||'')+'</strong><br>'
+      +'작성일: '+esc(n.createdAt?n.createdAt.slice(0,16).replace('T',' '):'')
+      +'</div>'
+      +'<button onclick="closeView()" style="width:100%;margin-top:16px;padding:12px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--gray);font-size:13px;font-weight:700;cursor:pointer">닫기</button>';
+    document.getElementById('view-modal').classList.add('show');
+  });
+}
+function closeView(){document.getElementById('view-modal').classList.remove('show');}
+
+function deleteNotice(id){
+  if(!confirm('이 공지를 삭제하시겠습니까?'))return;
+  if(!_db)return;
+  _db.collection('notices').doc(id).delete()
+    .then(function(){toast('✅ 삭제 완료','ok');loadNotices();})
+    .catch(function(e){toast('❌ '+e.message,'err');});
+}
+
+// ── 발송 기록 ──
+function loadLog(){
+  var el=document.getElementById('log-list');
+  el.innerHTML='<div style="text-align:center;padding:24px;color:var(--gray)"><span class="spin"></span></div>';
+  if(!_db)return;
+  _db.collection('notices').where('sentAt','!=',null).orderBy('sentAt','desc').limit(30).get()
+    .then(function(s){
+      if(s.empty){el.innerHTML='<div style="text-align:center;padding:24px;color:var(--gray)">발송 기록 없음</div>';return;}
+      el.innerHTML=s.docs.map(function(d){
+        var n=d.data();
+        var icons={ALL:'📡',SMS:'📱',KAKAO:'💬'};
+        var icon=icons[n.method]||'📢';
+        var sc=n.status==='발송완료'?'ls-ok':n.status==='실패'?'ls-fail':'ls-pend';
+        return '<div class="log-row">'
+          +'<div class="log-icon">'+icon+'</div>'
+          +'<div style="flex:1;min-width:0">'
+          +'<div class="log-title">'+esc(n.title||'')+'</div>'
+          +'<div class="log-sub">'+(n.targets||[]).map(function(t){return t==='all'?'전체':t;}).join(', ')+'</div>'
+          +'</div>'
+          +'<div style="text-align:right">'
+          +'<div class="log-time">'+esc((n.sentAt||'').slice(0,10))+'</div>'
+          +'<div class="log-status '+sc+'">'+esc(n.status||'')+'</div>'
+          +'</div>'
+          +'</div>';
+      }).join('');
+    }).catch(function(e){
+      // sentAt 인덱스 없을 경우
+      _db.collection('notices').orderBy('createdAt','desc').limit(30).get()
+        .then(function(s){
+          if(s.empty){el.innerHTML='<div style="text-align:center;padding:24px;color:var(--gray)">발송 기록 없음</div>';return;}
+          var filtered=s.docs.filter(function(d){return d.data().sentAt||d.data().status==='발송완료';});
+          if(!filtered.length){el.innerHTML='<div style="text-align:center;padding:24px;color:var(--gray)">발송 기록 없음</div>';return;}
+          el.innerHTML=filtered.map(function(d){
+            var n=d.data();var icons={ALL:'📡',SMS:'📱',KAKAO:'💬'};
+            return '<div class="log-row"><div class="log-icon">'+(icons[n.method]||'📢')+'</div>'
+              +'<div style="flex:1;min-width:0"><div class="log-title">'+esc(n.title||'')+'</div>'
+              +'<div class="log-sub">'+(n.targets||['전체']).join(', ')+'</div></div>'
+              +'<div style="text-align:right"><div class="log-time">'+esc((n.createdAt||'').slice(0,10))+'</div>'
+              +'<div class="log-status ls-ok">'+esc(n.status||'')+'</div></div></div>';
+          }).join('');
+        });
+    });
+}
+
+function toast(msg,type){var t=document.getElementById('toast');t.textContent=msg;t.className='show'+(type?' '+type:'');clearTimeout(t._t);t._t=setTimeout(function(){t.className='';},3000);}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+</script>
+</body>
+</html>

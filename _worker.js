@@ -421,6 +421,18 @@ export default {
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
+    // ★ DONWAY 사운드 모듈
+    if (path === '/donway-sound.js') {
+      const resp = await env.ASSETS.fetch(new Request(new URL('/donway-sound.js', url)));
+      return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'public, max-age=86400' } });
+    }
+
+    // ★ 공지·알림
+    if (path === '/notice' || path === '/notice/') {
+      const resp = await env.ASSETS.fetch(new Request(new URL('/notice.html', url)));
+      return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+    }
+
     // ★ 시스템 설정
     if (path === '/settings' || path === '/settings/') {
       const resp = await env.ASSETS.fetch(new Request(new URL('/settings.html', url)));

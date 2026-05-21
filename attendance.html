@@ -127,6 +127,7 @@ canvas#scan-canvas{display:none}
 @keyframes spin{to{transform:rotate(360deg)}}
 .spin{width:14px;height:14px;border:2px solid rgba(0,212,255,.2);border-top-color:var(--cyan);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:middle}
 </style>
+<script src="/donway-sound.js"></script>
 </head>
 <body>
 <div id="toast"></div>
@@ -438,6 +439,7 @@ function _doFullAuth(qrResult, now){
       .then(function(){
         _showSuccess(isIn, myName, qrResult.loc, timeStr, gpsMsg, netType);
         if(navigator.vibrate)navigator.vibrate([100,50,200]);
+  _DONWAY_SOUND.attendance(_type,(document.getElementById('my-name')||{}).value||'직원');
         loadMyLog();
       }).catch(function(e){
         _showFail('저장 실패',e.message,'❌');
