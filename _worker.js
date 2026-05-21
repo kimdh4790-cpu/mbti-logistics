@@ -353,20 +353,7 @@ export default {
       }
     }
 
-    if (path === '/label' || path === '/label/') {
-      const req  = new Request(new URL('/label.html', url).toString(), { method: 'GET', headers: request.headers });
-      const resp = await env.ASSETS.fetch(req);
-      const html = await resp.text();
-      const key  = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
-      const injected = html.replace('<head>', '<head><script>window.__AK=' + JSON.stringify(key) + ';</script>');
-      return new Response(injected, { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
-    }
 
-    if (path === '/truck' || path === '/truck/') {
-      const req  = new Request(new URL('/truck.html', url).toString(), { method: 'GET', headers: request.headers });
-      const resp = await env.ASSETS.fetch(req);
-      return new Response(resp.body, { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
-    }
 
     if (path === '/scan' || path === '/scan/') {
       const req  = new Request(new URL('/scan.html', url).toString(), { method: 'GET', headers: request.headers });
@@ -383,19 +370,10 @@ export default {
       return new Response(resp.body, { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
     }
 
-    if (path === '/admin' || path === '/admin/') {
-      const req  = new Request(new URL('/admin.html', url).toString(), { method: 'GET', headers: request.headers });
-      const resp = await env.ASSETS.fetch(req);
-      return new Response(resp.body, { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
-    }
 
     // ── Phase 2: 신규 라우트 ──────────────────────────────────────────────
 
     // 기사 배송앱
-    if (path === '/delivery' || path === '/delivery/') {
-      const resp = await env.ASSETS.fetch(new Request(new URL('/delivery.html', url)));
-      return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
-    }
 
     // 통합 포털
     if (path === '/portal' || path === '/portal/') {
@@ -532,22 +510,6 @@ export default {
 
     // ──────────────────────────────────────────────────────────────────────
 
-    if (path === '/subscribe' || path === '/subscribe/') {
-      const req  = new Request(new URL('/subscribe.html', url).toString(), { method: 'GET', headers: request.headers });
-      const resp = await env.ASSETS.fetch(req);
-      return new Response(resp.body, { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
-    }
-
-    if (path === '/subscribe/success') {
-      const req  = new Request(new URL('/subscribe-success.html', url).toString(), { method: 'GET', headers: request.headers });
-      const resp = await env.ASSETS.fetch(req);
-      return new Response(resp.body, { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
-    }
-
-    // 모두싸인 계약서 발송 프록시 (API 키 보호)
-    if (path === '/modusign-send' && method === 'POST') {
-      try {
-        const body = await request.json();
         const apiKey = env.MODUSIGN_API_KEY || '';
         if(!apiKey) return new Response(JSON.stringify({error:'MODUSIGN_API_KEY 미설정'}),{status:500,headers:{'Content-Type':'application/json'}});
         const encoded = btoa(apiKey + ':');
