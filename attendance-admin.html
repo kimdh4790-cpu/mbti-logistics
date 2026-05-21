@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#030912">
+<title>DONWAY — 출퇴근 대시보드</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{--bg:#030912;--bg2:#060f1f;--bg3:#0a1628;--blue:#0066ff;--cyan:#00d4ff;--green:#00ff88;--red:#ef4444;--yellow:#f59e0b;--gray:#5a7299;--white:#e8f4ff;--border:rgba(0,212,255,.12);--border2:rgba(0,102,255,.18)}
+body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun Gothic',sans-serif;min-height:100vh}
+.wrap{max-width:600px;margin:0 auto;padding:0 0 90px}
+
+/* 헤더 */
+.topbar{background:rgba(3,9,18,.97);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;backdrop-filter:blur(20px)}
+.logo{font-size:14px;font-weight:900;letter-spacing:3px}.logo span{color:var(--cyan)}
+.live-badge{display:flex;align-items:center;gap:5px;font-size:10px;font-family:monospace;color:var(--cyan);background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:20px;padding:4px 10px}
+.live-dot{width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:blink 1.5s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* 날짜 선택 */
+.date-bar{display:flex;gap:8px;margin:14px 20px;align-items:center}
+.date-inp{flex:1;padding:10px 14px;background:var(--bg2);border:1.5px solid var(--border2);border-radius:10px;color:var(--white);font-size:14px;font-weight:700;outline:none;transition:.2s}
+.date-inp:focus{border-color:var(--cyan)}
+.date-btn{padding:10px 14px;background:var(--bg2);border:1.5px solid var(--border2);border-radius:10px;color:var(--gray);font-size:12px;font-weight:700;cursor:pointer;transition:.2s;white-space:nowrap}
+.date-btn.on{border-color:var(--cyan);color:var(--cyan)}
+
+/* 요약 카드 */
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 20px 14px}
+.sum-card{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:14px 10px;text-align:center}
+.sum-num{font-size:28px;font-weight:900;line-height:1;font-family:monospace}
+.sum-lbl{font-size:9px;color:var(--gray);margin-top:4px;letter-spacing:.5px;font-weight:700}
+
+/* 거점 필터 */
+.loc-tabs{display:flex;gap:6px;margin:0 20px 12px;flex-wrap:wrap}
+.loc-tab{padding:6px 14px;border-radius:20px;border:1.5px solid var(--border2);background:var(--bg2);color:var(--gray);font-size:12px;font-weight:700;cursor:pointer;transition:.2s;white-space:nowrap}
+.loc-tab.on{border-color:var(--cyan);color:var(--cyan);background:rgba(0,212,255,.08)}
+
+/* 직원 카드 */
+.emp-list{margin:0 20px}
+.emp-card{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;margin-bottom:8px;overflow:hidden;transition:.2s}
+.emp-card:hover{border-color:rgba(0,212,255,.3)}
+.emp-header{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;cursor:pointer}
+.emp-name{font-size:15px;font-weight:800}
+.emp-meta{font-size:10px;color:var(--gray);margin-top:2px;display:flex;gap:8px}
+.emp-status{display:flex;align-items:center;gap:6px}
+.status-in{color:var(--green);font-size:12px;font-weight:700}
+.status-out{color:var(--red);font-size:12px;font-weight:700}
+.status-none{color:var(--gray);font-size:12px;font-weight:700}
+.emp-body{display:none;border-top:1px solid var(--border2);padding:12px 16px}
+.emp-body.open{display:block}
+.timeline{position:relative;padding-left:20px}
+.timeline::before{content:'';position:absolute;left:6px;top:0;bottom:0;width:1.5px;background:var(--border2)}
+.tl-item{position:relative;margin-bottom:12px}
+.tl-dot{position:absolute;left:-17px;top:3px;width:10px;height:10px;border-radius:50%;border:2px solid}
+.tl-dot.in{background:var(--green);border-color:var(--green);box-shadow:0 0 6px var(--green)}
+.tl-dot.out{background:var(--red);border-color:var(--red);box-shadow:0 0 4px var(--red)}
+.tl-time{font-family:monospace;font-size:13px;font-weight:700}
+.tl-type{font-size:12px;color:var(--gray);margin-left:8px}
+.tl-badges{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap}
+.tl-badge{font-size:9px;padding:2px 7px;border-radius:10px;font-family:monospace;font-weight:700}
+.b-qr{background:rgba(0,212,255,.1);color:var(--cyan)}
+.b-gps{background:rgba(0,255,136,.1);color:var(--green)}
+.b-wifi{background:rgba(245,158,11,.1);color:var(--yellow)}
+.b-loc{background:rgba(139,92,246,.1);color:#a78bfa}
+
+/* 근무 시간 표시 */
+.work-bar{display:flex;align-items:center;gap:8px;margin-top:8px;padding:8px 12px;background:var(--bg3);border-radius:8px}
+.work-time{font-family:monospace;font-size:14px;font-weight:900;color:var(--cyan)}
+.work-lbl{font-size:10px;color:var(--gray)}
+
+/* 엑셀 다운로드 */
+.toolbar{display:flex;gap:8px;margin:0 20px 12px;justify-content:flex-end;flex-wrap:wrap}
+.tool-btn{padding:8px 14px;border-radius:8px;border:1.5px solid var(--border2);background:var(--bg2);color:var(--gray);font-size:12px;font-weight:700;cursor:pointer;transition:.2s;white-space:nowrap}
+.tool-btn:hover{border-color:var(--cyan);color:var(--cyan)}
+.tool-btn.primary{background:linear-gradient(135deg,var(--blue),var(--cyan));color:var(--bg);border-color:transparent}
+
+/* 빈 상태 */
+.empty{text-align:center;padding:40px;color:var(--gray);font-size:13px}
+
+/* 하단 탭바 */
+.bottombar{position:fixed;bottom:0;left:0;right:0;max-width:600px;margin:0 auto;background:rgba(6,15,31,.97);border-top:1px solid var(--border);display:flex;padding:8px 0;z-index:100}
+.bot-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px;border:none;background:transparent;cursor:pointer;color:var(--gray)}
+.bot-btn.on{color:var(--cyan)}
+.bot-icon{font-size:20px}.bot-lbl{font-size:9px;font-weight:700;letter-spacing:.5px}
+
+#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg2);border:1px solid var(--border2);color:var(--white);padding:10px 20px;border-radius:99px;font-size:12px;font-weight:700;opacity:0;transition:.3s;pointer-events:none;z-index:9999}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{width:14px;height:14px;border:2px solid rgba(0,212,255,.2);border-top-color:var(--cyan);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:middle}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+
+<div class="topbar">
+  <div class="logo"><span>D</span>ONWAY</div>
+  <div class="live-badge"><span class="live-dot"></span>출퇴근 대시보드</div>
+</div>
+
+<div class="wrap">
+
+  <!-- 날짜 선택 -->
+  <div class="date-bar">
+    <button class="date-btn" onclick="setDate(-1)">◀ 전날</button>
+    <input class="date-inp" type="date" id="sel-date" onchange="load()">
+    <button class="date-btn on" onclick="setDate(0)">오늘</button>
+    <button class="date-btn" onclick="setDate(1)">다음날 ▶</button>
+  </div>
+
+  <!-- 요약 -->
+  <div class="summary">
+    <div class="sum-card">
+      <div class="sum-num" style="color:var(--green)" id="cnt-in">0</div>
+      <div class="sum-lbl">출근</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-num" style="color:var(--red)" id="cnt-out">0</div>
+      <div class="sum-lbl">퇴근</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-num" style="color:var(--cyan)" id="cnt-ppl">0</div>
+      <div class="sum-lbl">총인원</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-num" style="color:var(--yellow)" id="cnt-working">0</div>
+      <div class="sum-lbl">근무중</div>
+    </div>
+  </div>
+
+  <!-- 거점 필터 -->
+  <div class="loc-tabs" id="loc-tabs">
+    <button class="loc-tab on" onclick="filterLoc('')" id="tab-all">전체</button>
+  </div>
+
+  <!-- 툴바 -->
+  <div class="toolbar">
+    <button class="tool-btn" onclick="load()">🔄 새로고침</button>
+    <button class="tool-btn" onclick="exportCSV()">📊 CSV 다운로드</button>
+    <button class="tool-btn primary" onclick="location.href='/attendance-display'">🖥 QR 디스플레이</button>
+  </div>
+
+  <!-- 직원 목록 -->
+  <div class="emp-list" id="emp-list">
+    <div class="empty"><span class="spin"></span> 로딩 중...</div>
+  </div>
+
+</div>
+
+<div class="bottombar">
+  <button class="bot-btn on"><span class="bot-icon">📊</span><span class="bot-lbl">대시보드</span></button>
+  <button class="bot-btn" onclick="location.href='/attendance'"><span class="bot-icon">📱</span><span class="bot-lbl">직원스캔</span></button>
+  <button class="bot-btn" onclick="location.href='/attendance-display'"><span class="bot-icon">🖥</span><span class="bot-lbl">매장QR</span></button>
+  <button class="bot-btn" onclick="location.href='/settle'"><span class="bot-icon">🏠</span><span class="bot-lbl">홈</span></button>
+</div>
+
+<script>
+// Firebase
+var _db=null;
+(function initFB(){
+  if(typeof firebase==='undefined'){setTimeout(initFB,300);return;}
+  try{
+    var app;try{app=firebase.app('adm');}catch(e){
+      app=firebase.initializeApp({apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.firebasestorage.app',messagingSenderId:'40761160761',appId:'1:40761160761:web:20545b610f03f534e949e8'},'adm');
+    }
+    _db=app.firestore();
+    load();
+  }catch(e){console.warn('FB:',e);}
+})();
+
+var _allRecords=[], _filterLoc='';
+
+// 날짜 초기화
+document.addEventListener('DOMContentLoaded',function(){
+  document.getElementById('sel-date').value=new Date().toISOString().slice(0,10);
+});
+
+function setDate(delta){
+  var d=new Date(document.getElementById('sel-date').value||new Date().toISOString().slice(0,10));
+  d.setDate(d.getDate()+delta);
+  document.getElementById('sel-date').value=d.toISOString().slice(0,10);
+  load();
+}
+
+// ══════════════════════════════
+// 데이터 로드
+// ══════════════════════════════
+function load(){
+  var date=document.getElementById('sel-date').value||new Date().toISOString().slice(0,10);
+  var el=document.getElementById('emp-list');
+  el.innerHTML='<div class="empty"><span class="spin"></span> 로딩 중...</div>';
+  if(!_db)return;
+
+  _db.collection('attendance').where('date','==',date)
+    .orderBy('timestamp','asc').limit(500).get()
+    .then(function(snap){
+      _allRecords=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
+      _buildLocTabs();
+      _render();
+    }).catch(function(e){
+      el.innerHTML='<div class="empty">오류: '+esc(e.message)+'</div>';
+    });
+}
+
+function _buildLocTabs(){
+  var locs=[...new Set(_allRecords.map(function(r){return r.loc||r.camp||''}))].filter(Boolean).sort();
+  var tabs=document.getElementById('loc-tabs');
+  var allBtn='<button class="loc-tab'+(_filterLoc===''?' on':'')+'" onclick="filterLoc(\'\')" id="tab-all">전체 ('+_allRecords.length+')</button>';
+  var locBtns=locs.map(function(l){
+    var cnt=_allRecords.filter(function(r){return (r.loc||r.camp||'')===l;}).length;
+    return '<button class="loc-tab'+(_filterLoc===l?' on':'')+'" onclick="filterLoc(\''+l.replace(/'/g,"\\'")+'\')">'
+      +esc(l)+' ('+cnt+')</button>';
+  }).join('');
+  tabs.innerHTML=allBtn+locBtns;
+}
+
+function filterLoc(loc){
+  _filterLoc=loc;
+  _buildLocTabs();
+  _render();
+}
+
+function _render(){
+  var records=_filterLoc?_allRecords.filter(function(r){return(r.loc||r.camp||'')===_filterLoc;}):_allRecords;
+
+  // 직원별 그룹화
+  var empMap={};
+  records.forEach(function(r){
+    var name=r.name||'이름없음';
+    if(!empMap[name])empMap[name]={name:name,loc:r.loc||r.camp||'',records:[]};
+    empMap[name].records.push(r);
+  });
+
+  var emps=Object.values(empMap);
+  var inCnt=records.filter(function(r){return r.type==='in';}).length;
+  var outCnt=records.filter(function(r){return r.type==='out';}).length;
+  var ppl=emps.length;
+  // 근무중 = 출근은 있는데 퇴근 없는 사람
+  var working=emps.filter(function(e){
+    var ins=e.records.filter(function(r){return r.type==='in';});
+    var outs=e.records.filter(function(r){return r.type==='out';});
+    return ins.length>0&&outs.length===0;
+  }).length;
+
+  document.getElementById('cnt-in').textContent=inCnt;
+  document.getElementById('cnt-out').textContent=outCnt;
+  document.getElementById('cnt-ppl').textContent=ppl;
+  document.getElementById('cnt-working').textContent=working;
+
+  if(!emps.length){document.getElementById('emp-list').innerHTML='<div class="empty">📭 출퇴근 기록 없음</div>';return;}
+
+  // 직원 카드 렌더
+  document.getElementById('emp-list').innerHTML=emps.map(function(emp,idx){
+    var ins=emp.records.filter(function(r){return r.type==='in';});
+    var outs=emp.records.filter(function(r){return r.type==='out';});
+    var lastIn=ins[ins.length-1];
+    var lastOut=outs[outs.length-1];
+    var isWorking=ins.length>0&&outs.length===0;
+    var isDone=ins.length>0&&outs.length>0;
+
+    // 근무 시간 계산
+    var workMin=null;
+    if(isDone&&lastIn&&lastOut){
+      var inT=new Date(lastIn.timestamp);var outT=new Date(lastOut.timestamp);
+      workMin=Math.round((outT-inT)/60000);
+    }
+
+    var statusHtml='';
+    if(isWorking)statusHtml='<span class="status-in">🟢 근무중</span>';
+    else if(isDone)statusHtml='<span class="status-out">🔴 퇴근완료</span>';
+    else statusHtml='<span class="status-none">○ 미출근</span>';
+
+    var timeline=emp.records.map(function(r){
+      var isIn=r.type==='in';
+      var badges='<span class="tl-badge b-qr">QR</span>';
+      if(r.gpsUsed)badges+='<span class="tl-badge b-gps">GPS</span>';
+      if(r.networkType&&r.networkType!=='unknown')badges+='<span class="tl-badge b-wifi">'+(r.networkType==='wifi'?'Wi-Fi':r.networkType)+'</span>';
+      if(r.loc||r.camp)badges+='<span class="tl-badge b-loc">'+esc(r.loc||r.camp||'')+'</span>';
+      return '<div class="tl-item">'
+        +'<div class="tl-dot '+(isIn?'in':'out')+'"></div>'
+        +'<span class="tl-time">'+esc(r.time||'')+'</span>'
+        +'<span class="tl-type">'+(isIn?'출근':'퇴근')+'</span>'
+        +'<div class="tl-badges">'+badges+'</div>'
+        +'</div>';
+    }).join('');
+
+    var workBarHtml='';
+    if(workMin!==null){
+      var h=Math.floor(workMin/60);var m=workMin%60;
+      workBarHtml='<div class="work-bar"><span class="work-lbl">총 근무시간</span><span class="work-time">'+h+'시간 '+m+'분</span></div>';
+    } else if(isWorking&&lastIn){
+      var nowMin=Math.round((new Date()-new Date(lastIn.timestamp))/60000);
+      var hh=Math.floor(nowMin/60);var mm=nowMin%60;
+      workBarHtml='<div class="work-bar"><span class="work-lbl">현재 근무중</span><span class="work-time" style="color:var(--green)">'+hh+'시간 '+mm+'분</span></div>';
+    }
+
+    return '<div class="emp-card">'
+      +'<div class="emp-header" onclick="toggleEmp('+idx+')">'
+      +'<div><div class="emp-name">'+esc(emp.name)+'</div>'
+      +'<div class="emp-meta"><span>'+esc(emp.loc)+'</span><span>스캔 '+emp.records.length+'회</span></div></div>'
+      +'<div class="emp-status">'+statusHtml+'</div>'
+      +'</div>'
+      +'<div class="emp-body" id="emp-body-'+idx+'">'
+      +'<div class="timeline">'+timeline+'</div>'
+      +workBarHtml
+      +'</div></div>';
+  }).join('');
+}
+
+function toggleEmp(idx){
+  var el=document.getElementById('emp-body-'+idx);
+  if(el)el.classList.toggle('open');
+}
+
+// CSV 다운로드
+function exportCSV(){
+  if(!_allRecords.length){toast('데이터가 없습니다');return;}
+  var date=document.getElementById('sel-date').value;
+  var rows=[['이름','거점','유형','시각','GPS','네트워크','날짜']];
+  _allRecords.forEach(function(r){
+    rows.push([
+      r.name||'',r.loc||r.camp||'',r.type==='in'?'출근':'퇴근',
+      r.time||'',r.gpsUsed?'O':'X',r.networkType||'',r.date||''
+    ]);
+  });
+  var csv='\uFEFF'+rows.map(function(r){return r.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+  var a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='출퇴근_'+date+'.csv';
+  a.click();
+  toast('✅ CSV 다운로드 완료');
+}
+
+function toast(msg){var t=document.getElementById('toast');t.textContent=msg;t.className='show';clearTimeout(t._t);t._t=setTimeout(function(){t.className='';},3000);}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// 30초마다 자동 새로고침
+setInterval(function(){
+  var d=document.getElementById('sel-date').value;
+  var today=new Date().toISOString().slice(0,10);
+  if(d===today)load();
+},30000);
+</script>
+</body>
+</html>

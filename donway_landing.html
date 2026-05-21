@@ -301,6 +301,10 @@ footer{border-top:1px solid var(--border);padding:50px 60px;position:relative;z-
 @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
 .reveal{opacity:0;transform:translateY(32px);transition:opacity .8s,transform .8s}
 .reveal.on{opacity:1;transform:translateY(0)}
+
+@media(max-width:640px){
+  [style*="grid-template-columns:repeat(3,1fr)"]{grid-template-columns:1fr!important}
+}
 </style>
 </head>
 <body>
@@ -640,6 +644,7 @@ footer{border-top:1px solid var(--border);padding:50px 60px;position:relative;z-
   <div class="s-label" style="justify-content:center;margin-bottom:16px">GET STARTED</div>
   <h2>지금 바로<br><span class="hl">시작하세요</span></h2>
   <p class="cta-sub">7일 무료 · 카드 등록 불필요 · 10분 안에 첫 정산 완료</p>
+  <p style="font-size:12px;color:rgba(232,244,255,.4);margin-top:8px">무통장 입금: 하나은행 270-910019-24204 (유)엠비티아이</p>
   <div class="cta-btns">
     <a href="/settle" class="btn-main" style="font-size:15px;padding:18px 52px">🚀 무료로 시작하기</a>
     <a href="tel:051-711-3103" class="btn-sub" style="font-size:14px;padding:18px 36px">📞 도입 문의</a>
