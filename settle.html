@@ -3711,15 +3711,26 @@ async function _ocrAnalyze(){
   if(!_ocrCurrentFile){_ocrSetStatus('⚠️ 파일을 먼저 선택해주세요','rgba(245,158,11,.1)','#f59e0b');return;}
   var btn=document.getElementById('ocr-analyze-btn');
   if(btn){btn.disabled=true;btn.textContent='🔄 AI 분석 중...';}
-  _ocrSetStatus('🔄 사업자등록증 분석 중... 잠시만 기다려주세요','rgba(0,212,255,.08)','var(--cyan)');
-
+  _ocrSetStatus('🔄 사업자등록증 분석 중...','rgba(0,212,255,.08)','var(--cyan)');
   try{
-    // 이미지 압축 (1MB 이상이면 리사이즈)
+    // API 키를 서버에서 가져오기
+    var keyResp = await fetch('/get-label-key');
+    var keyData = await keyResp.json();
+    var AK = (keyData.k||'').trim();
+    if(!AK) throw new Error('API 키 없음 — Cloudflare Workers 환경변수 확인 필요');
+
     var b64 = await _ocrCompressImage(_ocrCurrentFile, 1200, 0.88);
-    var mime=_ocrCurrentFile.type||'image/jpeg';
-    var resp=await fetch('/claude-ocr',{
+    var mime = _ocrCurrentFile.type||'image/jpeg';
+
+    // 브라우저에서 직접 Anthropic 호출 (이전에 작동했던 방식)
+    var resp = await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key': AK,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
       body:JSON.stringify({
         model:'claude-3-haiku-20240307',
         max_tokens:600,
@@ -3731,20 +3742,18 @@ async function _ocrAnalyze(){
     });
     if(!resp.ok){
       var errData=await resp.json().catch(()=>({}));
-      var errMsg=errData.error?.message||errData.error||resp.status;
-      // 401: API 키 문제, 403: 권한/구독 문제
-      if(resp.status===401) errMsg='API 키 오류 — Cloudflare Workers 환경변수 ANTHROPIC_API_KEY 확인';
-      if(resp.status===403) errMsg='접근 권한 없음 ('+errMsg+') — API 키 또는 계정 권한 확인';
+      var errMsg=errData.error?.message||resp.status;
+      if(resp.status===401) errMsg='API 키 오류';
+      if(resp.status===403) errMsg='접근 권한 없음 — API 키 확인';
       throw new Error(String(errMsg));
     }
     var data=await resp.json();
     if(data.error) throw new Error(data.error.message||'API 오류');
     var text=(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('').trim();
-    if(!text) throw new Error('응답이 비어있습니다 — 이미지를 다시 업로드해주세요');
+    if(!text) throw new Error('응답이 비어있습니다');
     var cleaned=text.replace(/```json|```/g,'').trim();
-    // JSON 블록만 추출 (앞뒤 설명 있어도 처리)
     var jsonMatch=cleaned.match(/\{[\s\S]+\}/);
-    if(!jsonMatch) throw new Error('JSON 형식 응답 없음 — 더 선명한 이미지로 시도해주세요');
+    if(!jsonMatch) throw new Error('JSON 형식 응답 없음');
     var json=JSON.parse(jsonMatch[0]);
     var map={name:'edr-name',bizNum:'edr-biznum',bizName:'edr-bizname',bizRep:'edr-bizrep',bizAddr:'edr-bizaddr',bizType:'edr-biztype',bizItem:'edr-bizitem'};
     var filled=0;
@@ -3757,15 +3766,12 @@ async function _ocrAnalyze(){
     setTimeout(()=>{var mo=document.getElementById('mo-ocr-upload');if(mo)mo.remove();},1500);
   }catch(e){
     console.error('OCR 오류:',e);
-    var errMsg = e.message||'알 수 없는 오류';
-    // API 키 오류 안내
-    if(errMsg.includes('401')||errMsg.includes('Unauthorized')) errMsg='API 키 오류 — 관리자에게 문의';
-    else if(errMsg.includes('429')) errMsg='요청 한도 초과 — 잠시 후 재시도';
-    else if(errMsg.includes('500')) errMsg='서버 오류 — 잠시 후 재시도';
+    var errMsg=e.message||'알 수 없는 오류';
     _ocrSetStatus('❌ '+errMsg,'rgba(239,68,68,.1)','#ef4444');
     if(btn){btn.disabled=false;btn.textContent='🔍 다시 시도';}
   }
 }
+
 
 async function _ocrCompressImage(file, maxW, quality){
   return new Promise(resolve=>{
