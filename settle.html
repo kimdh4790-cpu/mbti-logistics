@@ -842,7 +842,8 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           // 세금계산서 작성금액 (엑셀 단가 기준 초기값)
           var damt=dm.delAmt||0;
           var ramt=dm.retAmt||0;
-          var taxBase=damt+ramt+freshAmt+fincVal+addIncAmt+(dm.nocontAmt||0);
+          var freshVat=Math.round(freshAmt*1.1); // VAT포함 변환
+          var taxBase=damt+ramt+freshVat+fincVal+addIncAmt+(dm.nocontAmt||0);
           // 공제 계산
           var supplyAmt=Math.round(taxBase/1.1);
           var monthlyWage=Math.round(supplyAmt*0.654);
@@ -858,7 +859,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             jobsub:'쿠팡', month:month,
             dcnt:dm.dcnt, rcnt:dm.rcnt,
             damt:damt, ramt:ramt,
-            fresh:freshAmt,        // 프레시백 회수금액
+            fresh:freshAmt,        // 프레시백 회수금액 (VAT제외 원본 저장 - calcNet에서 ×1.1)
             finc:fincVal,          // 프레시백 인센티브
             inc:addIncAmt,         // 추가인센티브(가중요인)
             nocont:dm.nocontAmt||0,nocontCnt:dm.nocontCnt||0,
@@ -1111,8 +1112,10 @@ function cancelCp(){window._cpPending=null;goPage('settlements');}
 function _saveCpDriver(camp,dm,name,month,cb){
   if(!window._db){if(cb)cb();return;}
   var uid=dm.uid;
-  var damt=dm.delAmt||0,ramt=dm.retAmt||0,fresh=dm.freshAmt||0,finc=Math.round((dm.dcnt||0)*25);
-  var income=damt+ramt+fresh+finc+(dm.nocontAmt||0);
+  var damt=dm.delAmt||0,ramt=dm.retAmt||0,freshRaw=dm.freshAmt||0;
+  var freshVat=Math.round(freshRaw*1.1); // VAT포함 변환
+  var finc=Math.round((dm.dcnt||0)*25);
+  var income=damt+ramt+freshVat+finc+(dm.nocontAmt||0);
   var sa=Math.round(income/1.1),wage=Math.round(sa*(1-0.346));
   var emp=wage>=800000?Math.floor(wage*0.008/10)*10:0,work=Math.floor(wage*0.0088/10)*10;
   var routeDetails=[];
@@ -1122,9 +1125,9 @@ function _saveCpDriver(camp,dm,name,month,cb){
   });
   var dealerId=window._CU?window._CU.dealerId:'';
   var payload={dealerId:dealerId,driverName:name,driver:uid,camp:camp,month:month,jobsub:'쿠팡',
-    dcnt:dm.dcnt||0,rcnt:dm.rcnt||0,damt:damt,ramt:ramt,fresh:fresh,finc:finc,inc:0,
+    dcnt:dm.dcnt||0,rcnt:dm.rcnt||0,damt:damt,ramt:ramt,fresh:freshRaw,finc:finc,inc:0,
     nocont:dm.nocontAmt||0,nocontCnt:dm.nocontCnt||0,etcPlus:0,etcMinus:0,dmg:0,adv:0,
-    income:income,supplyAmt:sa,monthlyWage:wage,emp:emp,work:work,deduct:emp+work,net:income-(emp+work),
+    totalAmt:income,income:income,supplyAmt:sa,monthlyWage:wage,emp:emp,work:work,deduct:emp+work,net:income-(emp+work),
     routeDetails:routeDetails,status:'정산예정'};
   window._db.collection('settlements')
     .where('dealerId','==',dealerId).where('driver','==',uid).where('month','==',month).get()
@@ -4229,24 +4232,28 @@ function recalcAllSettlements(){
       var s=_getIncSetting(x.userId||x.driver,rd.route);
       if(s.on&&s.rate>0)fincVal+=(rd.cnt||0)*s.rate;
     });
-    var fresh=x.fresh||0;
+    var freshRaw=x.fresh||0;
+    var freshVat=Math.round(freshRaw*1.1); // VAT포함 변환
     var addInc=x.inc||0;
     var nocont=x.nocont||0;
     var dmg=x.dmg||0;
+    var adv=x.adv||0;
+    var eq=x.eq||0;
     var etcPlus=x.etcPlus||0;
     var etcMinus=x.etcMinus||0;
-    // 세금계산서 작성금액
-    var taxBase=newDamt+newRamt+fresh+fincVal+addInc+nocont+etcPlus-etcMinus;
+    // 세금계산서 기준 (etcMinus 제외)
+    var taxBase=newDamt+newRamt+freshVat+fincVal+addInc+nocont+etcPlus;
     var supplyAmt=Math.round(taxBase/1.1);
     var monthlyWage=Math.round(supplyAmt*0.654);
     var empIns=monthlyWage>=800000?Math.floor(monthlyWage*0.008/10)*10:0;
     var workIns=Math.floor(monthlyWage*0.0088/10)*10;
-    var net=taxBase-dmg-empIns-workIns;
+    var deductTotal=dmg+empIns+workIns+adv+eq+etcMinus;
+    var net=taxBase-deductTotal;
     var update={
       routeDetails:newRds,
       damt:newDamt,ramt:newRamt,finc:fincVal,
       totalAmt:taxBase,supplyAmt:supplyAmt,monthlyWage:monthlyWage,
-      emp:empIns,work:workIns,
+      emp:empIns,work:workIns,deduct:deductTotal,net:net,
       updatedAt:new Date().toISOString()
     };
     promises.push(_db.collection('settlements').doc(x.id).update(update)
