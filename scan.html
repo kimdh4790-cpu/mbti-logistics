@@ -637,54 +637,45 @@ async function _decodeQR(file){
 }
 
 async function _doOCR(file){
-  // /claude-ocr 프록시 경유 (API 키 서버 보관)
+  // 브라우저 직접 Anthropic 호출 (settle.html과 동일 방식)
   var b64=await new Promise(function(res,rej){
     var r=new FileReader();
     r.onload=function(e){res(e.target.result.split(',')[1]);};
     r.onerror=rej;
     r.readAsDataURL(file);
   });
-  var resp=await fetch('/claude-ocr',{
+  // API 키 서버에서 가져오기
+  var keyResp=await fetch('/get-label-key');
+  var keyData=await keyResp.json();
+  var AK=(keyData.k||'').trim();
+  if(!AK) throw new Error('API 키 없음');
+
+  var resp=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
-    headers:{'Content-Type':'application/json'},
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key':AK,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true'
+    },
     body:JSON.stringify({
-      model:'claude-haiku-4-5-20251001',max_tokens:200,
+      model:'claude-sonnet-4-5',max_tokens:200,
       messages:[{role:'user',content:[
         {type:'image',source:{type:'base64',media_type:file.type||'image/jpeg',data:b64}},
-        {type:'text',text:'쿠팡 배송 라벨에서 ★ 뒤 노선번호(예:812 B01, 101a)와 캠프명(예:부산2)을 추출하라.\nJSON만 반환: {\"route\":\"...\",\"camp\":\"...\"}\n없으면 null. 다른 텍스트 없이 JSON만.'}
+        {type:'text',text:'택배 운송장 라벨에서 라우트 코드만 추출하세요. 예: 508B, 213A, 109C 형태. JSON으로만 답하세요: {"route":"코드"}'}
       ]}]
     })
   });
-  if(!resp.ok){var ed=await resp.json().catch(function(){return{};});throw new Error('OCR 서버 오류 '+(ed.error||resp.status));}
+  if(!resp.ok){var ed=await resp.json().catch(()=>({}));throw new Error(ed.error?.message||resp.status);}
   var data=await resp.json();
-  if(data.error) throw new Error(data.error.message||'API 오류');
-  var text=(data.content&&data.content[0]&&data.content[0].text)||'';
-  if(!text) return {};
+  if(data.error) throw new Error(data.error.message);
+  var text=(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('').trim();
   var m=text.match(/\{[\s\S]+\}/);
-  try{return m?JSON.parse(m[0]):{};}catch(e){return {};}
+  if(!m) return null;
+  try{return JSON.parse(m[0]);}catch(e){return null;}
 }
 
-// ── 유틸 ──
-function setStatus(id,msg,cls){
-  var el=document.getElementById(id);
-  el.className='scan-status '+cls;
-  el.innerHTML=msg;
-}
-function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function _copyText(text,cb){
-  if(navigator.clipboard){navigator.clipboard.writeText(text).then(cb);}
-  else{var t=document.createElement('textarea');t.value=text;document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();cb&&cb();}
-}
 
-refreshRecv();
-
-// 세션ID
-function _sessionId(camp){
-  var today=new Date().toISOString().slice(0,10);
-  return today+'_'+(camp||'전체').replace(/\s/g,'');
-}
-
-// 물류센터 적재 데이터 불러오기
 async function loadFromCenter(){
   var camp=document.getElementById('r-camp').value;
   var sid=_sessionId(camp);
