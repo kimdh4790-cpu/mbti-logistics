@@ -142,6 +142,28 @@ tr:hover>td{background:var(--bg3)}
       <div class="fg"><label>관리자 이메일</label><input id="r-email" type="email" placeholder="admin@company.com"></div>
       <div class="fg"><label>비밀번호</label><input id="r-pw" type="password" placeholder="8자 이상"></div>
       <div class="fg"><label>비밀번호 확인</label><input id="r-pw2" type="password" placeholder="비밀번호 재입력"></div>
+      <!-- 서비스 선택 -->
+      <div class="fg" style="margin-bottom:14px">
+        <label style="font-size:13px;font-weight:700;margin-bottom:8px;display:block">사용할 서비스를 선택하세요</label>
+        <div style="display:flex;gap:8px">
+          <label id="svc-settle-label" onclick="selectService('settle')" style="flex:1;border:2px solid var(--brand);border-radius:10px;padding:12px;cursor:pointer;text-align:center;transition:.2s;background:var(--brand-l)">
+            <div style="font-size:20px;margin-bottom:4px">💰</div>
+            <div style="font-size:12px;font-weight:700;color:var(--brand)">AI 자동 정산</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:2px">정산·급여·계약서</div>
+          </label>
+          <label id="svc-qr-label" onclick="selectService('qr')" style="flex:1;border:2px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;text-align:center;transition:.2s">
+            <div style="font-size:20px;margin-bottom:4px">🔐</div>
+            <div style="font-size:12px;font-weight:700;color:var(--text2)">QR 출퇴근</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:2px">출퇴근·스케줄·직원</div>
+          </label>
+          <label id="svc-full-label" onclick="selectService('full')" style="flex:1;border:2px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;text-align:center;transition:.2s">
+            <div style="font-size:20px;margin-bottom:4px">⚡</div>
+            <div style="font-size:12px;font-weight:700;color:var(--text2)">풀패키지</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:2px">전체 기능</div>
+          </label>
+        </div>
+        <input type="hidden" id="r-service" value="settle">
+      </div>
       <div id="r-err" style="color:var(--red);font-size:12px;margin-bottom:8px;display:none"></div>
       <button class="btn btn-blue" style="width:100%;padding:11px;font-size:14px;font-weight:700" onclick="doRegister()">7일 무료 체험 시작</button>
     </div>
@@ -1144,6 +1166,7 @@ function initFirebase(){
         var d=snap.exists?snap.data():{};
         _CU={uid:user.uid,email:user.email,name:d.name||'',
           companyName:d.companyName||d.name||'',
+          serviceType:d.serviceType||'full',
           role:d.role||'dealer',dealerId:d.dealerId||user.uid,
           termsVersion:d.termsVersion||''};
         window._CU=_CU;
@@ -1215,6 +1238,11 @@ function showApp(){
       }
     }).catch(function(){});
   }
+  // 서비스 타입에 따라 메뉴 설정
+  var sType = _CU.serviceType||'full';
+  if(sType==='settle') MENUS=MENUS_SETTLE;
+  else if(sType==='qr') MENUS=MENUS_QR;
+  else MENUS=MENUS_FULL;
   buildNav();
   // 슬러그 모드: 회사 정보 로드 및 브랜딩
   if(window._SLUG_MODE && _db){
@@ -1298,6 +1326,23 @@ function generateCompanyCode(){
 }
 
 // ── 회사 등록 ──
+
+function selectService(type){
+  ['settle','qr','full'].forEach(function(t){
+    var el=document.getElementById('svc-'+t+'-label');
+    if(!el) return;
+    if(t===type){
+      el.style.borderColor='var(--brand)';
+      el.style.background='var(--brand-l)';
+      el.querySelector('div:nth-child(2)').style.color='var(--brand)';
+    } else {
+      el.style.borderColor='var(--border)';
+      el.style.background='';
+      el.querySelector('div:nth-child(2)').style.color='var(--text2)';
+    }
+  });
+  document.getElementById('r-service').value=type;
+}
 function doRegister(){
   var company=document.getElementById('r-company').value.trim();
   var biz=document.getElementById('r-biznum').value.trim();
@@ -1325,6 +1370,7 @@ function doRegister(){
 
   _auth.createUserWithEmailAndPassword(email,pw).then(function(cred){
     var uid=cred.user.uid;
+    var serviceType=(document.getElementById('r-service')||{value:'full'}).value||'full';
     var slugVal=(document.getElementById('r-slug')||{value:''}).value.trim()||
       company.replace(/[^a-zA-Z0-9가-힣]/g,'').substring(0,20).toLowerCase()||uid.substring(0,8);
     return _db.collection('companies').doc(uid).set({
@@ -1334,6 +1380,7 @@ function doRegister(){
       plan:plan,
       slug:slugVal,
       companyCode:companyCode,
+      serviceType:serviceType,
       trialStart:now.toISOString().slice(0,10),
       trialEnd:isOwner?'9999-12-31':trialEnd.toISOString().slice(0,10),
       trialUsed:true,
@@ -1419,12 +1466,25 @@ function doLogin(){
 function doLogout(){if(_auth)_auth.signOut();}
 
 // ══ 메뉴 ══
-var MENUS=[
+// 서비스 타입별 메뉴 정의
+var MENUS_SETTLE = [
   {s:'메인',items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'📋',l:'정산 관리',p:'settlements'}]},
   {s:'운영',items:[{ic:'👤',l:'기사 관리',p:'drivers'},{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'📅',l:'시즌 단가표',p:'season'}]},
   {s:'분석',items:[{ic:'📈',l:'통계',p:'stats'}]},
   {s:'커뮤니티',items:[{ic:'📢',l:'관리자 공지',p:'notices'}]}
 ];
+var MENUS_QR = [
+  {s:'메인',items:[{ic:'🔐',l:'출퇴근 현황',p:'attendance'},{ic:'📅',l:'스케줄',p:'schedule'}]},
+  {s:'직원',items:[{ic:'👤',l:'직원 관리',p:'drivers'},{ic:'📝',l:'근로계약서',p:'contract'}]},
+  {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices'}]}
+];
+var MENUS_FULL = [
+  {s:'정산',items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'📋',l:'정산 관리',p:'settlements'},{ic:'📈',l:'통계',p:'stats'}]},
+  {s:'운영',items:[{ic:'👤',l:'기사/직원',p:'drivers'},{ic:'🔐',l:'출퇴근',p:'attendance'},{ic:'📅',l:'스케줄',p:'schedule'}]},
+  {s:'설정',items:[{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'📝',l:'근로계약서',p:'contract'}]},
+  {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices'}]}
+];
+var MENUS = MENUS_SETTLE; // 기본값
 function buildNav(){
   var nav=document.getElementById('snav');
   nav.innerHTML=MENUS.map(function(g){
