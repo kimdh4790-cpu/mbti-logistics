@@ -550,6 +550,11 @@ export default {
     }
 
     // ★ 관리자 종합 대시보드
+    if (path === '/admin' || path === '/admin/') {
+      const resp = await env.ASSETS.fetch(new Request(new URL('/admin.html', url)));
+      return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' } });
+    }
+
     if (path === '/dashboard' || path === '/dashboard/') {
       const resp = await env.ASSETS.fetch(new Request(new URL('/dashboard.html', url)));
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
