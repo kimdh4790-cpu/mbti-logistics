@@ -1199,18 +1199,13 @@ function initFirebase(){
 }
 
 function showApp(){
-  // ── 하위 페이지 인증 토큰 발급 (8시간 유효) ──
-  var token = _CU ? (_CU.uid + ':' + Date.now()) : '';
-  var expire = Date.now() + 8 * 60 * 60 * 1000;
-  if (token) {
-    sessionStorage.setItem('donway_auth_token', token);
-    sessionStorage.setItem('donway_auth_expire', expire.toString());
-    // 로그인 전 접근했던 페이지로 리다이렉트
-    var redirect = sessionStorage.getItem('donway_redirect');
-    if (redirect && redirect !== '/settle' && redirect !== '/') {
-      sessionStorage.removeItem('donway_redirect');
-      window.location.href = redirect;
-      return;
+  // ── 본사(MBTI) 유료 기능 자동 활성화 ──
+  if(_CU&&(isSuperAdmin()||OWNER_EMAIL.includes(_CU.email))){
+    var _cid=_CU.dealerId||_CU.companyId||_CU.uid;
+    if(_cid&&_db){
+      _db.collection('companies').doc(_cid).set({
+        contractPaid:true,rosterPaid:true,isOwner:true,plan:'OWNER'
+      },{merge:true}).catch(function(){});
     }
   }
   // 구독 상태 확인 (슈퍼어드민은 제외)
@@ -1418,6 +1413,9 @@ function doRegister(){
       trialEnd:isOwner?'9999-12-31':trialEnd.toISOString().slice(0,10),
       trialUsed:true,
       isOwner:isOwner,
+      // 본사 직영 — 모든 유료 기능 자동 활성화
+      contractPaid:isOwner?true:false,
+      rosterPaid:isOwner?true:false,
       createdAt:firebase.firestore.FieldValue.serverTimestamp(),
       uid:uid
     });
@@ -1535,14 +1533,14 @@ function doLogin(){
   if(!email||!pw){err.textContent='이메일과 비밀번호를 입력하세요';err.style.display='block';return;}
   _auth.signInWithEmailAndPassword(email,pw).catch(function(e){err.textContent='로그인 실패: '+e.message;err.style.display='block';});
 }
-function doLogout(){
-  sessionStorage.removeItem('donway_auth_token');
-  sessionStorage.removeItem('donway_auth_expire');
-  if(_auth)_auth.signOut();
-}
+function doLogout(){if(_auth)_auth.signOut();}
 
 // ══ 위수탁 계약서 ══
 function pageContract(){
+  // 슈퍼어드민(본사) → 무조건 활성화
+  if(isSuperAdmin()||(_CU&&OWNER_EMAIL.includes(_CU.email))){
+    _renderContractPage(); return;
+  }
   if(_db&&_CU&&_CU.dealerId){
     _db.collection('companies').doc(_CU.dealerId).get().then(function(snap){
       var d=snap.exists?snap.data():{};
@@ -1628,6 +1626,10 @@ function uploadContract(input){
 
 // ══ 근무표 관리 ══
 function pageRoster(){
+  // 슈퍼어드민(본사) → 무조건 활성화
+  if(isSuperAdmin()||(_CU&&OWNER_EMAIL.includes(_CU.email))){
+    _renderRosterPage(); return;
+  }
   if(_db&&_CU&&(_CU.dealerId||_CU.companyId)){
     var cid=_CU.dealerId||_CU.companyId;
     _db.collection('companies').doc(cid).get().then(function(snap){
