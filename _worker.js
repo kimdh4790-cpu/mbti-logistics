@@ -151,6 +151,37 @@ export default {
       });
     }
 
+
+    // API 키 테스트 엔드포인트
+    if (path === '/test-apikey') {
+      try {
+        const k = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim();
+        if (!k) {
+          return new Response(JSON.stringify({ ok:false, reason:'NO_KEY' }), 
+            { headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'} });
+        }
+        const masked = k.substring(0,10)+'...'+k.substring(k.length-4);
+        const testResp = await fetch('https://api.anthropic.com/v1/messages', {
+          method:'POST',
+          headers:{'Content-Type':'application/json','x-api-key':k,'anthropic-version':'2023-06-01'},
+          body:JSON.stringify({model:'claude-3-haiku-20240307',max_tokens:5,messages:[{role:'user',content:'test'}]})
+        });
+        const testJson = await testResp.json();
+        return new Response(JSON.stringify({
+          ok: testResp.ok,
+          http_status: testResp.status,
+          key_prefix: masked,
+          key_len: k.length,
+          anthropic_error: testResp.ok ? null : (testJson.error?.message || JSON.stringify(testJson.error)),
+          model_ok: testResp.ok
+        }), { headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'} });
+      } catch(err) {
+        return new Response(JSON.stringify({ok:false, exception:err.message}),
+          { headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'} });
+      }
+    }
+
+
     // favicon 404/500 방지
     if (path === '/favicon.ico' || path === '/favicon.png') {
       return new Response('', { status: 204 });
