@@ -1086,7 +1086,7 @@ function initFirebase(){
     _auth=firebase.auth();
     _auth.onAuthStateChanged(function(user){
       if(!user){document.getElementById('login-screen').style.display='flex';document.getElementById('app').style.display='none';_CU=null;window._CU=null;}
-      else{_db.doc('users/'+user.uid).get().then(function(snap){var d=snap.exists?snap.data():{};_CU={uid:user.uid,email:user.email,name:d.name||'',role:d.role||'dealer',dealerId:d.dealerId||user.uid,termsVersion:d.termsVersion||''};window._CU=_CU;_db.doc('settings/routePrices').get().then(function(rs){if(rs.exists)Object.assign(RPRICE,rs.data());}).catch(function(){});_loadCompanyCfg(_CU.dealerId||_CU.companyCode||_CU.uid);showApp();}).catch(function(){_CU={uid:user.uid,email:user.email,name:'',role:'dealer',dealerId:user.uid,termsVersion:''};window._CU=_CU;showApp();});}
+      else{_db.doc('users/'+user.uid).get().then(function(snap){var d=snap.exists?snap.data():{};_CU={uid:user.uid,email:user.email,name:d.name||'',role:d.role||'dealer',dealerId:d.dealerId||user.uid,termsVersion:d.termsVersion||''};window._CU=_CU;_loadCompanyCfg(_CU.dealerId||_CU.companyCode||_CU.uid);showApp();}).catch(function(){_CU={uid:user.uid,email:user.email,name:'',role:'dealer',dealerId:user.uid,termsVersion:''};window._CU=_CU;showApp();});}
     });return;
   }
   if(!firebase.apps.length){
@@ -1113,7 +1113,7 @@ function initFirebase(){
           role:d.role||'dealer',dealerId:d.dealerId||user.uid,
           termsVersion:d.termsVersion||''};
         window._CU=_CU;
-        _db.doc('settings/routePrices').get().then(function(rs){if(rs.exists)Object.assign(RPRICE,rs.data());}).catch(function(){});
+        
         _db.doc('settings/prices_'+_CU.dealerId).get().then(function(ps){if(ps.exists)Object.assign(G_PRICES,ps.data());}).catch(function(){});
         // 관리자/대리점 모두 DONWAY 접속 가능
         // 관리자는 슈퍼어드민 모드 자동 활성
