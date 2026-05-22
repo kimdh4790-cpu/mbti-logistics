@@ -3721,7 +3721,7 @@ async function _ocrAnalyze(){
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        model:'claude-haiku-4-5-20251001',
+        model:'claude-3-haiku-20240307',
         max_tokens:600,
         messages:[{role:'user',content:[
           {type:'image',source:{type:'base64',media_type:mime,data:b64}},
@@ -3731,7 +3731,11 @@ async function _ocrAnalyze(){
     });
     if(!resp.ok){
       var errData=await resp.json().catch(()=>({}));
-      throw new Error('API 오류 '+(errData.error?.message||resp.status));
+      var errMsg=errData.error?.message||errData.error||resp.status;
+      // 401: API 키 문제, 403: 권한/구독 문제
+      if(resp.status===401) errMsg='API 키 오류 — Cloudflare Workers 환경변수 ANTHROPIC_API_KEY 확인';
+      if(resp.status===403) errMsg='접근 권한 없음 ('+errMsg+') — API 키 또는 계정 권한 확인';
+      throw new Error(String(errMsg));
     }
     var data=await resp.json();
     if(data.error) throw new Error(data.error.message||'API 오류');

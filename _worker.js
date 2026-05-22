@@ -197,7 +197,9 @@ export default {
           body: JSON.stringify(body)
         });
         const data = await resp.json();
+        // Anthropic 응답 그대로 전달 (에러 status code 포함)
         return new Response(JSON.stringify(data), {
+          status: resp.status,
           headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
         });
       } catch (e) {
@@ -228,7 +230,9 @@ export default {
           body: JSON.stringify(body)
         });
         const data = await resp.json();
+        // Anthropic 응답 그대로 전달 (에러 status code 포함)
         return new Response(JSON.stringify(data), {
+          status: resp.status,
           headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
         });
       } catch (e) {
