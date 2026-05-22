@@ -3719,7 +3719,7 @@ async function _ocrAnalyze(){
     var AK = (keyData.k||'').trim();
     if(!AK) throw new Error('API 키 없음 — Cloudflare Workers 환경변수 확인 필요');
 
-    var b64 = await _ocrCompressImage(_ocrCurrentFile, 1200, 0.88);
+    var b64 = await _ocrCompressImage(_ocrCurrentFile, 1600, 0.92);
     var mime = _ocrCurrentFile.type||'image/jpeg';
 
     // 브라우저에서 직접 Anthropic 호출 (이전에 작동했던 방식)
@@ -3732,11 +3732,11 @@ async function _ocrAnalyze(){
         'anthropic-dangerous-direct-browser-access':'true'
       },
       body:JSON.stringify({
-        model:'claude-haiku-4-5-20251001',
+        model:'claude-sonnet-4-5',
         max_tokens:600,
         messages:[{role:'user',content:[
           {type:'image',source:{type:'base64',media_type:mime,data:b64}},
-          {type:'text',text:'이 사업자등록증에서 항목을 추출해서 JSON만 출력하세요 (설명 없이 JSON만):\n{"name":"대표자성명","bizNum":"사업자등록번호(000-00-00000형식)","bizName":"상호또는법인명","bizRep":"대표자성명","bizAddr":"사업장소재지전체주소","bizType":"업태","bizItem":"종목"}'}
+          {type:'text',text:'사업자등록증 이미지에서 항목을 추출해 JSON만 출력하세요 (마크다운/설명 없이 순수 JSON만).\n업태와 종목은 여러 줄에 걸쳐 있어도 전부 포함하세요.\n형식: {"bizNum":"000-00-00000","bizName":"상호명","bizRep":"대표자명","bizAddr":"전체주소","bizType":"업태(전체)","bizItem":"종목(전체)","name":"대표자명"}'}
         ]}]
       })
     });
