@@ -288,6 +288,167 @@ footer{border-top:1px solid var(--border);padding:48px 24px 32px;max-width:1200p
   .fc-grid{grid-template-columns:1fr!important}
   .fc.wide{grid-column:span 1!important}
 }
+
+/* ══ 히어로 2단 레이아웃 ══ */
+.hero-inner{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:40px;
+  width:100%;
+  max-width:1100px;
+  margin:0 auto;
+  padding:0 24px;
+  position:relative;
+  z-index:2;
+}
+.hero-content{
+  flex:1;
+  max-width:540px;
+}
+.hero-visual{
+  flex-shrink:0;
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+/* QR 박스 */
+.hero-qr-wrap{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-top:20px;
+  padding:10px 14px;
+  background:rgba(0,212,255,.06);
+  border:1px solid rgba(0,212,255,.2);
+  border-radius:10px;
+  max-width:220px;
+}
+.hero-qr-box{
+  flex-shrink:0;
+  background:#050A14;
+  border:1px solid rgba(0,212,255,.3);
+  border-radius:6px;
+  padding:4px;
+  display:flex;
+}
+.hero-qr-label{
+  font-size:11px;
+  font-weight:800;
+  color:var(--white);
+  margin-bottom:2px;
+}
+.hero-qr-sub{
+  font-size:10px;
+  color:var(--gray);
+}
+
+/* 핸드폰 목업 */
+.phone-mockup{
+  position:relative;
+  width:160px;
+}
+.phone-frame{
+  background:linear-gradient(145deg,#0d1f3c,#0a1628);
+  border:2px solid rgba(255,255,255,.12);
+  border-radius:24px;
+  padding:10px 8px;
+  box-shadow:
+    0 0 0 1px rgba(0,212,255,.08),
+    0 30px 60px rgba(0,0,0,.6),
+    0 0 40px rgba(0,102,255,.08);
+  overflow:hidden;
+  position:relative;
+}
+.phone-notch{
+  width:40px;
+  height:5px;
+  background:rgba(255,255,255,.1);
+  border-radius:3px;
+  margin:0 auto 8px;
+}
+.phone-screen{
+  background:#050A14;
+  border-radius:14px;
+  overflow:hidden;
+  min-height:200px;
+}
+.app-topbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:6px 8px 5px;
+  background:#030810;
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+.app-card-sm{
+  margin:6px 8px;
+  background:rgba(0,102,255,.12);
+  border:1px solid rgba(0,212,255,.2);
+  border-radius:8px;
+  padding:8px 10px;
+}
+
+/* 플로팅 배지 */
+.float-badge{
+  position:absolute;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  background:rgba(5,10,20,.9);
+  border:1px solid rgba(0,212,255,.25);
+  border-radius:10px;
+  padding:7px 10px;
+  backdrop-filter:blur(10px);
+  box-shadow:0 8px 20px rgba(0,0,0,.4);
+  animation:floatBadge 3s ease-in-out infinite;
+  white-space:nowrap;
+}
+.badge-top{
+  top:-16px;
+  right:-40px;
+  animation-delay:0s;
+}
+.badge-bottom{
+  bottom:-16px;
+  left:-40px;
+  animation-delay:1.5s;
+}
+@keyframes floatBadge{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-6px)}
+}
+
+/* 반응형 */
+@media(max-width:768px){
+  .hero-inner{flex-direction:column;gap:24px;text-align:center}
+  .hero-visual{display:none}
+  .hero-qr-wrap{margin:20px auto 0}
+}
+
+/* HOW IT WORKS 단계 이미지 */
+.hiw-img{
+  margin-top:10px;
+  display:flex;
+  justify-content:center;
+  opacity:.85;
+  transition:opacity .3s;
+}
+.hiw-step:hover .hiw-img{opacity:1;}
+
+/* feat-card 이미지 */
+.feat-img{
+  margin-top:12px;
+  border-radius:8px;
+  overflow:hidden;
+  border:1px solid rgba(0,212,255,.1);
+  background:#030810;
+  transition:border-color .3s;
+}
+.feat-card:hover .feat-img{border-color:rgba(0,212,255,.3);}
+.feat-card.highlight .feat-img{border-color:rgba(0,212,255,.25);}
 </style>
 </head>
 <body>
@@ -312,24 +473,100 @@ footer{border-top:1px solid var(--border);padding:48px 24px 32px;max-width:1200p
   <!-- 플로팅 카드 -->
   <div class="float-cards" id="float-cards"></div>
 
-  <div class="hero-content">
-    <div class="hero-badge">
-      <span class="hero-badge-dot"></span>
-      AI 자동화 플랫폼 · 특허 출원 중
+  <div class="hero-inner">
+    <!-- 왼쪽: 텍스트 -->
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="hero-badge-dot"></span>
+        AI 자동화 플랫폼 · 특허 출원 중
+      </div>
+      <h1 class="hero-title">
+        <span class="line1">정산도 출퇴근도</span>
+        <span class="line2">DONWAY 하나로</span>
+        <span class="line3">끝납니다</span>
+      </h1>
+      <p class="hero-sub">
+        물류·배달대행·소상공인·용역·프리랜서<br>
+        <strong>5종 업종 × 16개 기능</strong> — 정산·출퇴근·계약서·분석·스케줄까지<br>
+        AI 자동화로 수작업 2시간을 <strong>3분</strong>으로 줄입니다
+      </p>
+      <div class="hero-btns">
+        <a href="/settle" class="btn-primary">🚀 7일 무료 시작하기</a>
+        <a href="#features" class="btn-secondary">기능 살펴보기 →</a>
+      </div>
+      <!-- QR 코드 -->
+      <div class="hero-qr-wrap">
+        <div class="hero-qr-box" id="hero-qr-box">
+          <canvas id="hero-qr-canvas" width="64" height="64" style="display:block;border-radius:4px"></canvas>
+        </div>
+        <div class="hero-qr-info">
+          <div class="hero-qr-label">donway.ai.kr</div>
+          <div class="hero-qr-sub">QR 스캔으로 바로 시작</div>
+          <div style="font-size:9px;color:rgba(0,212,255,.5);margin-top:2px" id="qr-refresh-label">30초마다 갱신</div>
+        </div>
+      </div>
     </div>
-    <h1 class="hero-title">
-      <span class="line1">정산도 출퇴근도</span>
-      <span class="line2">DONWAY 하나로</span>
-      <span class="line3">끝납니다</span>
-    </h1>
-    <p class="hero-sub">
-      물류·배달대행·소상공인·용역·프리랜서<br>
-      <strong>5종 업종 × 16개 기능</strong> — 정산·출퇴근·계약서·분석·스케줄까지<br>
-      AI 자동화로 수작업 2시간을 <strong>3분</strong>으로 줄입니다
-    </p>
-    <div class="hero-btns">
-      <a href="/settle" class="btn-primary">🚀 7일 무료 시작하기</a>
-      <a href="#features" class="btn-secondary">기능 살펴보기 →</a>
+    <!-- 오른쪽: 앱 목업 -->
+    <div class="hero-visual">
+      <!-- 핸드폰 목업 -->
+      <div class="phone-mockup">
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <!-- 앱 상단바 -->
+            <div class="app-topbar">
+              <span style="font-size:9px;font-weight:800;color:#00d4ff;letter-spacing:.05em">DONWAY</span>
+              <span style="font-size:8px;color:rgba(255,255,255,.4)">v1.0</span>
+            </div>
+            <!-- 정산 카드 -->
+            <div class="app-card-sm">
+              <div style="font-size:7px;color:rgba(0,212,255,.7);font-weight:700;margin-bottom:3px;letter-spacing:.05em">5월 정산 완료 ✓</div>
+              <div style="font-size:14px;font-weight:900;color:#fff">₩4,950,534</div>
+              <div style="font-size:7px;color:rgba(255,255,255,.4);margin-top:2px">부산1캠프 · 508B · 29건</div>
+              <div style="display:flex;gap:3px;margin-top:5px">
+                <div style="flex:1;height:2px;background:linear-gradient(90deg,#0066ff,#00d4ff);border-radius:1px"></div>
+              </div>
+            </div>
+            <!-- 발송 버튼 -->
+            <div style="display:flex;gap:4px;padding:0 8px;margin-bottom:6px">
+              <div style="flex:1;background:rgba(240,165,0,.15);border:1px solid rgba(240,165,0,.3);border-radius:5px;padding:4px 2px;text-align:center;font-size:7px;color:#f0a500;font-weight:700">💬 카카오</div>
+              <div style="flex:1;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.25);border-radius:5px;padding:4px 2px;text-align:center;font-size:7px;color:#00ff88;font-weight:700">📱 SMS</div>
+              <div style="flex:1;background:rgba(0,102,255,.15);border:1px solid rgba(0,102,255,.3);border-radius:5px;padding:4px 2px;text-align:center;font-size:7px;color:#60a5fa;font-weight:700">✉️ 메일</div>
+            </div>
+            <!-- 출퇴근 현황 -->
+            <div style="padding:0 8px">
+              <div style="font-size:7px;color:rgba(255,255,255,.4);margin-bottom:3px;letter-spacing:.05em">TODAY 출퇴근</div>
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <div style="display:flex;align-items:center;gap:4px;background:rgba(0,255,136,.08);border-radius:4px;padding:3px 5px">
+                  <span style="font-size:6px;color:#00ff88">●</span>
+                  <span style="font-size:7px;color:#fff;font-weight:600">김형수</span>
+                  <span style="font-size:6px;color:rgba(255,255,255,.4);margin-left:auto">07:23</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:4px;background:rgba(0,255,136,.08);border-radius:4px;padding:3px 5px">
+                  <span style="font-size:6px;color:#00ff88">●</span>
+                  <span style="font-size:7px;color:#fff;font-weight:600">박민준</span>
+                  <span style="font-size:6px;color:rgba(255,255,255,.4);margin-left:auto">07:45</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- 플로팅 배지들 -->
+        <div class="float-badge badge-top">
+          <span style="font-size:10px">⚡</span>
+          <div>
+            <div style="font-size:8px;font-weight:800;color:#fff">3분 완료</div>
+            <div style="font-size:7px;color:rgba(255,255,255,.5)">AI 정산</div>
+          </div>
+        </div>
+        <div class="float-badge badge-bottom">
+          <span style="font-size:10px">✅</span>
+          <div>
+            <div style="font-size:8px;font-weight:800;color:#fff">31명 발송</div>
+            <div style="font-size:7px;color:rgba(255,255,255,.5)">카카오+SMS</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -383,7 +620,37 @@ footer{border-top:1px solid var(--border);padding:48px 24px 32px;max-width:1200p
         <div class="feat-icon" style="background:linear-gradient(135deg,rgba(0,102,255,.3),rgba(0,212,255,.2))">🔐</div>
         <div class="feat-title">3중 복합 QR 출퇴근</div>
         <div class="feat-desc">인쇄 QR 또는 30초 갱신 화면 QR. 스캔 시 <strong style="color:var(--white)">GPS 위치 + Wi-Fi 네트워크</strong> 동시 검증. 캡처 공유·대리출퇴근 원천 차단. 국내 유일 특허 출원 기술.</div>
-        <div class="feat-tags"><span class="feat-tag">📷 QR 스캔</span><span class="feat-tag">📍 GPS</span><span class="feat-tag">📶 Wi-Fi</span><span class="feat-tag">특허 출원</span></div>
+        <div class="feat-tags"><span class="feat-tag">📷 QR 스캔</span><span class="feat-tag">📍 GPS</span><span class="feat-tag">📶 Wi-Fi</span><span class="feat-tag">특허 출원</span><div class="feat-img">
+          <svg viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:80px">
+            <rect width="120" height="80" fill="#030810" rx="6"/>
+            <rect x="8" y="6" width="50" height="50" rx="3" fill="#000" stroke="rgba(0,212,255,.3)" stroke-width="1"/>
+            <!-- QR 파인더 -->
+            <rect x="11" y="9" width="14" height="14" fill="none" stroke="#00d4ff" stroke-width="1.2"/>
+            <rect x="13" y="11" width="10" height="10" fill="rgba(0,212,255,.5)"/>
+            <rect x="29" y="9" width="14" height="14" fill="none" stroke="#00d4ff" stroke-width="1.2"/>
+            <rect x="31" y="11" width="10" height="10" fill="rgba(0,212,255,.5)"/>
+            <rect x="11" y="27" width="14" height="14" fill="none" stroke="#00d4ff" stroke-width="1.2"/>
+            <rect x="13" y="29" width="10" height="10" fill="rgba(0,212,255,.5)"/>
+            <!-- 데이터 -->
+            <rect x="29" y="27" width="3" height="3" fill="#00d4ff"/><rect x="34" y="27" width="3" height="3" fill="#00d4ff"/>
+            <rect x="29" y="32" width="5" height="3" fill="#00d4ff"/><rect x="37" y="32" width="3" height="3" fill="#00d4ff"/>
+            <rect x="29" y="37" width="3" height="3" fill="#00d4ff"/><rect x="34" y="37" width="5" height="3" fill="#00d4ff"/>
+            <!-- 스캔라인 -->
+            <line x1="8" y1="31" x2="58" y2="31" stroke="rgba(0,255,136,.7)" stroke-width="1.5" stroke-dasharray="3 2">
+              <animate attributeName="y1" values="9;56;9" dur="2s" repeatCount="indefinite"/>
+              <animate attributeName="y2" values="9;56;9" dur="2s" repeatCount="indefinite"/>
+            </line>
+            <!-- 오른쪽 상태 -->
+            <rect x="66" y="10" width="46" height="18" rx="4" fill="rgba(0,255,136,.1)" stroke="rgba(0,255,136,.3)" stroke-width="1"/>
+            <text x="89" y="22" text-anchor="middle" fill="#00ff88" font-size="7" font-weight="700">✓ 출근 인증</text>
+            <rect x="66" y="32" width="46" height="14" rx="3" fill="rgba(255,255,255,.04)"/>
+            <text x="89" y="42" text-anchor="middle" fill="rgba(255,255,255,.4)" font-size="6">GPS ±8m ✓</text>
+            <rect x="66" y="50" width="46" height="14" rx="3" fill="rgba(255,255,255,.04)"/>
+            <text x="89" y="60" text-anchor="middle" fill="rgba(255,255,255,.4)" font-size="6">Wi-Fi ✓</text>
+            <text x="60" y="74" text-anchor="middle" fill="rgba(0,212,255,.4)" font-size="7" font-family="monospace">3중 검증</text>
+          </svg>
+        </div>
+      </div>
       </div>
       <!-- 2. AI 정산 -->
       <div class="feat-card highlight wide reveal reveal-delay-1">
@@ -395,28 +662,36 @@ footer{border-top:1px solid var(--border);padding:48px 24px 32px;max-width:1200p
           <strong style="color:var(--white)">🏪 소상공인</strong> → 매출 - 카드수수료 - 배달앱수수료<br>
           <strong style="color:var(--white)">🏗️ 용역</strong> → 시간/일급 × 4대보험 &nbsp; <strong style="color:var(--white)">👨‍💼 프리랜서</strong> → 금액 - 원천세
         </div>
-        <div class="feat-tags"><span class="feat-tag">엑셀 업로드</span><span class="feat-tag">AI 자동 파싱</span><span class="feat-tag">오류율 0%</span><span class="feat-tag">3분 완성</span></div>
+        <div class="feat-tags"><span class="feat-tag">엑셀 업로드</span><span class="feat-tag">AI 자동 파싱</span><span class="feat-tag">오류율 0%</span><span class="feat-tag">3분 완성</span>
+        <div class="feat-img"><svg viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:80px;display:block"><rect width="120" height="80" fill="#030810"/><rect x="6" y="14" width="28" height="34" rx="3" fill="rgba(0,102,255,.12)" stroke="rgba(0,102,255,.3)" stroke-width="1"/><text x="20" y="24" text-anchor="middle" fill="#60a5fa" font-size="6" font-weight="700">EXCEL</text><rect x="10" y="28" width="20" height="2" rx="1" fill="rgba(255,255,255,.2)"/><rect x="10" y="32" width="15" height="2" rx="1" fill="rgba(255,255,255,.15)"/><rect x="10" y="36" width="18" height="2" rx="1" fill="rgba(255,255,255,.15)"/><path d="M36,31 L44,31" stroke="#00d4ff" stroke-width="1.5"/><polygon points="44,28 48,31 44,34" fill="#00d4ff"/><circle cx="58" cy="31" r="10" fill="rgba(0,102,255,.15)" stroke="rgba(0,212,255,.4)" stroke-width="1.5"/><text x="58" y="29" text-anchor="middle" fill="#00d4ff" font-size="8" font-weight="900">AI</text><text x="58" y="37" text-anchor="middle" fill="rgba(0,212,255,.6)" font-size="5">3분</text><path d="M69,31 L77,31" stroke="#00ff88" stroke-width="1.5"/><polygon points="77,28 81,31 77,34" fill="#00ff88"/><rect x="83" y="14" width="32" height="34" rx="3" fill="rgba(0,255,136,.08)" stroke="rgba(0,255,136,.25)" stroke-width="1"/><text x="99" y="24" text-anchor="middle" fill="#00ff88" font-size="5">완료 ✓</text><text x="99" y="33" text-anchor="middle" fill="#fff" font-size="9" font-weight="900">₩4.9M</text><text x="60" y="70" text-anchor="middle" fill="rgba(0,212,255,.4)" font-size="6" font-family="monospace">5종 업종 자동분기</text></svg></div>
+      </div>
       </div>
       <!-- 3. 급여명세서 -->
       <div class="feat-card reveal reveal-delay-2">
         <div class="feat-icon" style="background:linear-gradient(135deg,rgba(245,158,11,.3),rgba(239,68,68,.2))">💰</div>
         <div class="feat-title">급여명세서 PDF</div>
         <div class="feat-desc">직원별 급여명세서 일괄 생성. A4 인쇄·PDF 출력. Firestore 저장 후 직원이 마이페이지에서 직접 조회.</div>
-        <div class="feat-tags"><span class="feat-tag">일괄 출력</span><span class="feat-tag">계좌 자동 입력</span></div>
+        <div class="feat-tags"><span class="feat-tag">일괄 출력</span><span class="feat-tag">계좌 자동 입력</span>
+        <div class="feat-img"><svg viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:80px;display:block"><rect width="120" height="80" fill="#030810"/><rect x="22" y="8" width="76" height="56" rx="4" fill="rgba(255,255,255,.03)" stroke="rgba(0,212,255,.2)" stroke-width="1"/><rect x="22" y="8" width="76" height="13" rx="4" fill="rgba(0,102,255,.3)"/><text x="60" y="18" text-anchor="middle" fill="#fff" font-size="7" font-weight="800">급 여 명 세 서</text><rect x="30" y="25" width="60" height="2" rx="1" fill="rgba(255,255,255,.15)"/><rect x="30" y="30" width="45" height="2" rx="1" fill="rgba(255,255,255,.1)"/><rect x="30" y="35" width="52" height="2" rx="1" fill="rgba(255,255,255,.1)"/><rect x="30" y="42" width="60" height="14" rx="3" fill="rgba(0,255,136,.08)" stroke="rgba(0,255,136,.25)" stroke-width="1"/><text x="60" y="50" text-anchor="middle" fill="#fff" font-size="6">실지급액</text><text x="60" y="57" text-anchor="middle" fill="#00ff88" font-size="8" font-weight="900">₩5,040,549</text><rect x="30" y="70" width="24" height="6" rx="2" fill="rgba(239,68,68,.7)"/><text x="42" y="75" text-anchor="middle" fill="#fff" font-size="5" font-weight="700">PDF</text><rect x="60" y="70" width="24" height="6" rx="2" fill="rgba(0,102,255,.6)"/><text x="72" y="75" text-anchor="middle" fill="#fff" font-size="5" font-weight="700">발송</text></svg></div>
+      </div>
       </div>
       <!-- 4. 근로계약서 -->
       <div class="feat-card reveal reveal-delay-1">
         <div class="feat-icon" style="background:linear-gradient(135deg,rgba(139,92,246,.3),rgba(0,102,255,.2))">📝</div>
         <div class="feat-title">근로계약서 자동완성</div>
         <div class="feat-desc">직원 선택 → 정보 자동 입력. 근로/단시간/기간제/위탁 4종. A4 계약서 PDF 출력. 법정 3년 보관.</div>
-        <div class="feat-tags"><span class="feat-tag">4종 유형</span><span class="feat-tag">자동 입력</span><span class="feat-tag">A4 출력</span></div>
+        <div class="feat-tags"><span class="feat-tag">4종 유형</span><span class="feat-tag">자동 입력</span><span class="feat-tag">A4 출력</span>
+        <div class="feat-img"><svg viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:80px;display:block"><rect width="120" height="80" fill="#030810"/><rect x="10" y="6" width="56" height="66" rx="4" fill="rgba(255,255,255,.03)" stroke="rgba(139,92,246,.2)" stroke-width="1"/><rect x="10" y="6" width="56" height="13" rx="4" fill="rgba(99,102,241,.35)"/><text x="38" y="16" text-anchor="middle" fill="#fff" font-size="6" font-weight="800">위수탁 계약서</text><rect x="16" y="23" width="44" height="2" rx="1" fill="rgba(255,255,255,.15)"/><rect x="16" y="28" width="36" height="2" rx="1" fill="rgba(255,255,255,.1)"/><rect x="16" y="33" width="40" height="2" rx="1" fill="rgba(255,255,255,.1)"/><rect x="16" y="38" width="30" height="2" rx="1" fill="rgba(255,255,255,.1)"/><rect x="16" y="48" width="44" height="16" rx="2" fill="rgba(255,255,255,.03)" stroke="rgba(255,255,255,.08)" stroke-width="1"/><text x="38" y="56" text-anchor="middle" fill="rgba(255,255,255,.3)" font-size="5">서명란</text><path d="M20,62 Q26,56 32,60 Q38,64 44,58" fill="none" stroke="rgba(139,92,246,.8)" stroke-width="1.5"/><rect x="74" y="10" width="40" height="12" rx="3" fill="rgba(139,92,246,.12)" stroke="rgba(139,92,246,.3)" stroke-width="1"/><text x="94" y="19" text-anchor="middle" fill="#a78bfa" font-size="6" font-weight="700">자동완성</text><rect x="74" y="26" width="40" height="12" rx="3" fill="rgba(0,212,255,.08)" stroke="rgba(0,212,255,.2)" stroke-width="1"/><text x="94" y="35" text-anchor="middle" fill="#00d4ff" font-size="6" font-weight="700">PDF 출력</text><rect x="74" y="42" width="40" height="12" rx="3" fill="rgba(0,255,136,.08)" stroke="rgba(0,255,136,.2)" stroke-width="1"/><text x="94" y="51" text-anchor="middle" fill="#00ff88" font-size="6" font-weight="700">전자서명</text></svg></div>
+      </div>
       </div>
       <!-- 5. 분석 리포트 -->
       <div class="feat-card reveal reveal-delay-2">
         <div class="feat-icon" style="background:linear-gradient(135deg,rgba(0,212,255,.3),rgba(139,92,246,.2))">📊</div>
         <div class="feat-title">정산 분석 리포트</div>
         <div class="feat-desc">월별 바차트·거점별 비교·TOP10 직원·업종별 도넛차트. 기간별 KPI 분석. 데이터 기반 경영 판단.</div>
-        <div class="feat-tags"><span class="feat-tag">TOP10 랭킹</span><span class="feat-tag">차트·도넛</span><span class="feat-tag">PDF 출력</span></div>
+        <div class="feat-tags"><span class="feat-tag">TOP10 랭킹</span><span class="feat-tag">차트·도넛</span><span class="feat-tag">PDF 출력</span>
+        <div class="feat-img"><svg viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:80px;display:block"><rect width="120" height="80" fill="#030810"/><line x1="14" y1="8" x2="14" y2="58" stroke="rgba(255,255,255,.15)" stroke-width="1"/><line x1="14" y1="58" x2="108" y2="58" stroke="rgba(255,255,255,.15)" stroke-width="1"/><rect x="18" y="36" width="12" height="22" rx="2" fill="rgba(0,102,255,.5)"/><rect x="34" y="28" width="12" height="30" rx="2" fill="rgba(0,150,255,.6)"/><rect x="50" y="20" width="12" height="38" rx="2" fill="rgba(0,200,255,.7)"/><rect x="66" y="14" width="12" height="44" rx="2" fill="rgba(0,212,255,.85)"/><rect x="82" y="8" width="12" height="50" rx="2" fill="#00ff88" opacity=".8"/><text x="24" y="66" text-anchor="middle" fill="rgba(255,255,255,.3)" font-size="5">1월</text><text x="40" y="66" text-anchor="middle" fill="rgba(255,255,255,.3)" font-size="5">2월</text><text x="56" y="66" text-anchor="middle" fill="rgba(255,255,255,.3)" font-size="5">3월</text><text x="72" y="66" text-anchor="middle" fill="rgba(255,255,255,.3)" font-size="5">4월</text><text x="88" y="66" text-anchor="middle" fill="#00ff88" font-size="5" font-weight="700">5월</text><text x="88" y="7" text-anchor="middle" fill="#00ff88" font-size="6" font-weight="700">↑18%</text><rect x="100" y="10" width="18" height="36" rx="3" fill="rgba(255,255,255,.03)" stroke="rgba(255,255,255,.06)"/><text x="109" y="22" text-anchor="middle" fill="rgba(0,212,255,.7)" font-size="5">₩2.1억</text><text x="109" y="30" text-anchor="middle" fill="rgba(255,255,255,.3)" font-size="4">총액</text></svg></div>
+      </div>
       </div>
       <!-- 6. 주간 스케줄 -->
       <div class="feat-card reveal">
@@ -430,7 +705,9 @@ footer{border-top:1px solid var(--border);padding:48px 24px 32px;max-width:1200p
         <div class="feat-icon" style="background:linear-gradient(135deg,rgba(0,255,136,.2),rgba(0,212,255,.2))">📡</div>
         <div class="feat-title">4채널 자동 발송</div>
         <div class="feat-desc">카카오 알림톡·SMS·이메일·팩스. 체크박스 선택 후 클릭 1회로 전체 일괄 발송. 발송 결과 즉시 확인.</div>
-        <div class="feat-tags"><span class="feat-tag">카카오</span><span class="feat-tag">SMS</span><span class="feat-tag">이메일</span><span class="feat-tag">팩스</span></div>
+        <div class="feat-tags"><span class="feat-tag">카카오</span><span class="feat-tag">SMS</span><span class="feat-tag">이메일</span><span class="feat-tag">팩스</span>
+        <div class="feat-img"><svg viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:80px;display:block"><rect width="120" height="80" fill="#030810"/><circle cx="60" cy="36" r="14" fill="rgba(0,102,255,.15)" stroke="rgba(0,212,255,.4)" stroke-width="1.5"/><circle cx="60" cy="36" r="9" fill="rgba(0,102,255,.3)" stroke="rgba(0,212,255,.6)" stroke-width="1"/><text x="60" y="40" text-anchor="middle" fill="#fff" font-size="8" font-weight="900">전송</text><line x1="46" y1="26" x2="26" y2="16" stroke="rgba(240,165,0,.5)" stroke-width="1" stroke-dasharray="3 2"/><line x1="74" y1="26" x2="94" y2="16" stroke="rgba(0,102,255,.5)" stroke-width="1" stroke-dasharray="3 2"/><line x1="46" y1="46" x2="26" y2="60" stroke="rgba(0,255,136,.5)" stroke-width="1" stroke-dasharray="3 2"/><line x1="74" y1="46" x2="94" y2="60" stroke="rgba(139,92,246,.5)" stroke-width="1" stroke-dasharray="3 2"/><rect x="6" y="8" width="24" height="14" rx="3" fill="rgba(240,165,0,.12)" stroke="rgba(240,165,0,.4)" stroke-width="1"/><text x="18" y="18" text-anchor="middle" fill="#f0a500" font-size="5.5" font-weight="700">카카오</text><rect x="90" y="8" width="24" height="14" rx="3" fill="rgba(0,102,255,.1)" stroke="rgba(0,102,255,.4)" stroke-width="1"/><text x="102" y="18" text-anchor="middle" fill="#60a5fa" font-size="5.5" font-weight="700">이메일</text><rect x="6" y="56" width="24" height="14" rx="3" fill="rgba(0,255,136,.08)" stroke="rgba(0,255,136,.35)" stroke-width="1"/><text x="18" y="66" text-anchor="middle" fill="#00ff88" font-size="5.5" font-weight="700">SMS</text><rect x="90" y="56" width="24" height="14" rx="3" fill="rgba(139,92,246,.08)" stroke="rgba(139,92,246,.35)" stroke-width="1"/><text x="102" y="66" text-anchor="middle" fill="#a78bfa" font-size="5.5" font-weight="700">팩스</text><text x="60" y="76" text-anchor="middle" fill="rgba(0,212,255,.4)" font-size="6" font-family="monospace">원클릭 전체발송</text></svg></div>
+      </div>
       </div>
       <!-- 8. 법정문서 -->
       <div class="feat-card reveal reveal-delay-2">
@@ -464,6 +741,31 @@ footer{border-top:1px solid var(--border);padding:48px 24px 32px;max-width:1200p
         <div class="hiw-title">QR 설치</div>
         <div class="hiw-desc">인쇄 QR을 매장 입구에 부착하거나 태블릿에 화면 QR 띄우기</div>
         <div class="hiw-tag">1회 설치</div>
+        <!-- QR 일러스트 -->
+        <div class="hiw-img">
+          <svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" style="width:70px;height:70px">
+            <rect width="80" height="80" rx="8" fill="rgba(0,102,255,.08)" stroke="rgba(0,212,255,.2)" stroke-width="1"/>
+            <!-- 종이 -->
+            <rect x="18" y="12" width="44" height="56" rx="4" fill="rgba(255,255,255,.06)" stroke="rgba(255,255,255,.15)" stroke-width="1"/>
+            <!-- QR 패턴 -->
+            <rect x="26" y="20" width="12" height="12" rx="1" fill="none" stroke="#00d4ff" stroke-width="1.2"/>
+            <rect x="28" y="22" width="8" height="8" rx="0.5" fill="rgba(0,212,255,.4)"/>
+            <rect x="42" y="20" width="12" height="12" rx="1" fill="none" stroke="#00d4ff" stroke-width="1.2"/>
+            <rect x="44" y="22" width="8" height="8" rx="0.5" fill="rgba(0,212,255,.4)"/>
+            <rect x="26" y="36" width="12" height="12" rx="1" fill="none" stroke="#00d4ff" stroke-width="1.2"/>
+            <rect x="28" y="38" width="8" height="8" rx="0.5" fill="rgba(0,212,255,.4)"/>
+            <!-- 데이터 도트 -->
+            <rect x="43" y="37" width="2" height="2" fill="#00d4ff"/><rect x="47" y="37" width="2" height="2" fill="#00d4ff"/>
+            <rect x="43" y="41" width="4" height="2" fill="#00d4ff"/><rect x="49" y="41" width="2" height="2" fill="#00d4ff"/>
+            <rect x="43" y="45" width="2" height="2" fill="#00d4ff"/><rect x="47" y="45" width="4" height="2" fill="#00d4ff"/>
+            <!-- 하단 텍스트 -->
+            <rect x="28" y="52" width="24" height="2" rx="1" fill="rgba(255,255,255,.2)"/>
+            <rect x="32" y="56" width="16" height="2" rx="1" fill="rgba(255,255,255,.1)"/>
+            <!-- 프린터 -->
+            <rect x="26" y="8" width="28" height="8" rx="2" fill="rgba(0,102,255,.3)" stroke="rgba(0,102,255,.5)" stroke-width="1"/>
+            <rect x="35" y="5" width="10" height="6" rx="1" fill="rgba(255,255,255,.1)"/>
+          </svg>
+        </div>
       </div>
       <div class="hiw-step reveal reveal-delay-1">
         <div class="hiw-circle" style="background:linear-gradient(135deg,#0066ff,#00d4ff)">📱</div>
@@ -642,60 +944,42 @@ footer{border-top:1px solid var(--border);padding:48px 24px 32px;max-width:1200p
           <div class="fc-wide-img-overlay"></div>
           <svg viewBox="0 0 320 200" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block">
   <defs>
-    <linearGradient id="g01a" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0a1628"/><stop offset="1" stop-color="#0d2040"/></linearGradient>
-    <linearGradient id="g01b" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0066ff" stop-opacity=".9"/><stop offset="1" stop-color="#00d4ff" stop-opacity=".9"/></linearGradient>
-    <linearGradient id="g01c" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#00ff88" stop-opacity=".8"/><stop offset="1" stop-color="#00d4ff" stop-opacity=".6"/></linearGradient>
-    <filter id="glow01"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <linearGradient id="g01bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0a1628"/><stop offset="1" stop-color="#050A14"/></linearGradient>
+    <linearGradient id="g01a" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0066ff"/><stop offset="1" stop-color="#00d4ff"/></linearGradient>
+    <linearGradient id="g01b" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#00ff88"/><stop offset="1" stop-color="#00d4ff"/></linearGradient>
   </defs>
-  <rect width="320" height="200" fill="url(#g01a)"/>
-  <!-- 배경 그리드 -->
-  <g opacity=".06" stroke="#00d4ff" stroke-width=".5">
-    <line x1="0" y1="40" x2="320" y2="40"/><line x1="0" y1="80" x2="320" y2="80"/><line x1="0" y1="120" x2="320" y2="120"/><line x1="0" y1="160" x2="320" y2="160"/>
-    <line x1="64" y1="0" x2="64" y2="200"/><line x1="128" y1="0" x2="128" y2="200"/><line x1="192" y1="0" x2="192" y2="200"/><line x1="256" y1="0" x2="256" y2="200"/>
-  </g>
-  <!-- 엑셀 → AI → 결과 플로우 -->
-  <!-- 엑셀 파일 아이콘 -->
-  <g transform="translate(24,60)">
-    <rect width="54" height="68" rx="6" fill="rgba(0,102,255,.15)" stroke="rgba(0,102,255,.4)" stroke-width="1.5"/>
-    <rect y="0" width="54" height="20" rx="6" fill="url(#g01b)" opacity=".8"/>
-    <text x="27" y="14" text-anchor="middle" fill="#fff" font-size="9" font-weight="800" font-family="monospace">EXCEL</text>
-    <g fill="rgba(0,212,255,.5)" font-size="7" font-family="monospace">
-      <text x="8" y="32">쿠팡물류</text><text x="8" y="42">배달대행</text><text x="8" y="52">소상공인</text><text x="8" y="62">프리랜서</text>
-    </g>
-  </g>
-  <!-- 화살표 -->
-  <g filter="url(#glow01)">
-    <line x1="86" y1="94" x2="118" y2="94" stroke="url(#g01b)" stroke-width="2.5"/>
-    <polygon points="118,90 126,94 118,98" fill="#00d4ff"/>
-  </g>
-  <!-- AI 처리 원 -->
-  <g transform="translate(160,94)">
-    <circle r="28" fill="rgba(0,102,255,.12)" stroke="rgba(0,212,255,.3)" stroke-width="1.5"/>
-    <circle r="20" fill="rgba(0,102,255,.2)" stroke="rgba(0,212,255,.5)" stroke-width="1"/>
-    <text y="-6" text-anchor="middle" fill="url(#g01b)" font-size="16" font-weight="900">AI</text>
-    <text y="8" text-anchor="middle" fill="rgba(0,212,255,.7)" font-size="7" font-family="monospace">3분</text>
-    <!-- 회전 점선 -->
-    <circle r="34" fill="none" stroke="rgba(0,212,255,.15)" stroke-width="1" stroke-dasharray="4 4"/>
-  </g>
-  <!-- 화살표 2 -->
-  <g filter="url(#glow01)">
-    <line x1="194" y1="94" x2="226" y2="94" stroke="url(#g01c)" stroke-width="2.5"/>
-    <polygon points="226,90 234,94 226,98" fill="#00ff88"/>
-  </g>
-  <!-- 정산 결과 카드 -->
-  <g transform="translate(240,56)">
-    <rect width="60" height="76" rx="8" fill="rgba(0,255,136,.1)" stroke="rgba(0,255,136,.35)" stroke-width="1.5"/>
-    <text x="30" y="15" text-anchor="middle" fill="url(#g01c)" font-size="8" font-weight="800" font-family="monospace">RESULT</text>
-    <g fill="rgba(0,255,136,.7)" font-size="8" font-family="monospace">
-      <text x="8" y="30">✓ 공제 적용</text>
-      <text x="8" y="42">✓ 인센 산출</text>
-      <text x="8" y="54">✓ 4대보험</text>
-    </g>
-    <rect x="8" y="60" width="44" height="10" rx="4" fill="url(#g01c)" opacity=".8"/>
-    <text x="30" y="68" text-anchor="middle" fill="#000" font-size="7" font-weight="900" font-family="monospace">발송완료</text>
-  </g>
-  <!-- 바텀 텍스트 -->
-  <text x="160" y="182" text-anchor="middle" fill="rgba(0,212,255,.35)" font-size="8" font-family="monospace" letter-spacing="2">5종 업종 자동 분기</text>
+  <rect width="320" height="200" fill="url(#g01bg)"/>
+  <!-- 앱 상단바 -->
+  <rect x="0" y="0" width="320" height="28" fill="#030810"/>
+  <text x="14" y="18" fill="#00d4ff" font-size="9" font-weight="800" font-family="monospace" letter-spacing="1">DONWAY</text>
+  <text x="14" y="28" fill="rgba(255,255,255,.3)" font-size="7" font-family="monospace">정산 관리</text>
+  <!-- 정산 완료 카드 -->
+  <rect x="12" y="36" width="140" height="60" rx="8" fill="rgba(0,255,136,.08)" stroke="rgba(0,255,136,.25)" stroke-width="1"/>
+  <text x="22" y="52" fill="rgba(0,255,136,.8)" font-size="7" font-weight="700" font-family="monospace">5월 정산 완료 ✓</text>
+  <text x="22" y="66" fill="#fff" font-size="16" font-weight="900" font-family="monospace">₩4,950,534</text>
+  <text x="22" y="78" fill="rgba(255,255,255,.4)" font-size="7">부산1캠프 · 508B · 29건</text>
+  <rect x="22" y="84" width="110" height="3" rx="1.5" fill="url(#g01a)" opacity=".7"/>
+  <!-- 두번째 정산 카드 -->
+  <rect x="162" y="36" width="146" height="60" rx="8" fill="rgba(0,102,255,.08)" stroke="rgba(0,102,255,.25)" stroke-width="1"/>
+  <text x="172" y="52" fill="rgba(0,212,255,.8)" font-size="7" font-weight="700" font-family="monospace">대구2캠프</text>
+  <text x="172" y="66" fill="#fff" font-size="15" font-weight="900" font-family="monospace">₩6,243,180</text>
+  <text x="172" y="78" fill="rgba(255,255,255,.4)" font-size="7">213A · 31건 · 인센 포함</text>
+  <rect x="172" y="84" width="100" height="3" rx="1.5" fill="url(#g01a)" opacity=".5"/>
+  <!-- 합계 -->
+  <rect x="12" y="104" width="296" height="32" rx="6" fill="rgba(0,212,255,.06)" stroke="rgba(0,212,255,.2)" stroke-width="1"/>
+  <text x="22" y="123" fill="rgba(255,255,255,.6)" font-size="8" font-weight="700">합계 (공급가액)</text>
+  <text x="220" y="123" fill="#00d4ff" font-size="12" font-weight="900" font-family="monospace">₩17,284,650</text>
+  <!-- 발송 버튼들 -->
+  <rect x="12" y="144" width="66" height="22" rx="5" fill="rgba(240,165,0,.15)" stroke="rgba(240,165,0,.35)" stroke-width="1"/>
+  <text x="45" y="158" text-anchor="middle" fill="#f0a500" font-size="8" font-weight="700">💬 카카오</text>
+  <rect x="84" y="144" width="58" height="22" rx="5" fill="rgba(0,255,136,.1)" stroke="rgba(0,255,136,.3)" stroke-width="1"/>
+  <text x="113" y="158" text-anchor="middle" fill="#00ff88" font-size="8" font-weight="700">📱 SMS</text>
+  <rect x="148" y="144" width="58" height="22" rx="5" fill="rgba(0,102,255,.1)" stroke="rgba(0,102,255,.3)" stroke-width="1"/>
+  <text x="177" y="158" text-anchor="middle" fill="#60a5fa" font-size="8" font-weight="700">✉️ 이메일</text>
+  <rect x="212" y="144" width="96" height="22" rx="5" fill="url(#g01a)"/>
+  <text x="260" y="158" text-anchor="middle" fill="#fff" font-size="8" font-weight="800">📊 Excel 내보내기</text>
+  <!-- 하단 -->
+  <text x="160" y="188" text-anchor="middle" fill="rgba(0,212,255,.3)" font-size="7" font-family="monospace" letter-spacing="1.5">5종 업종 · 원클릭 완료</text>
 </svg>
         </div>
       </div>
@@ -711,58 +995,39 @@ footer{border-top:1px solid var(--border);padding:48px 24px 32px;max-width:1200p
         <div class="fc-img-tag">03 / MULTI-CHANNEL</div>
         <svg viewBox="0 0 220 200" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block">
   <defs>
-    <linearGradient id="g02a" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0a1628"/><stop offset="1" stop-color="#0f2040"/></linearGradient>
-    <linearGradient id="g02k" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#f0a500"/><stop offset="1" stop-color="#ffe066"/></linearGradient>
-    <linearGradient id="g02s" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#00ff88"/><stop offset="1" stop-color="#00cc66"/></linearGradient>
-    <linearGradient id="g02e" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0066ff"/><stop offset="1" stop-color="#00d4ff"/></linearGradient>
-    <filter id="glow02"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <linearGradient id="g02bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0a1628"/><stop offset="1" stop-color="#050A14"/></linearGradient>
   </defs>
-  <rect width="220" height="200" fill="url(#g02a)"/>
-  <!-- 중심 발송 버튼 -->
-  <g transform="translate(110,88)" filter="url(#glow02)">
-    <circle r="28" fill="rgba(0,102,255,.2)" stroke="rgba(0,212,255,.5)" stroke-width="2"/>
-    <circle r="20" fill="rgba(0,102,255,.4)" stroke="rgba(0,212,255,.7)" stroke-width="1.5"/>
-    <text y="5" text-anchor="middle" fill="#fff" font-size="11" font-weight="900">전송</text>
-    <!-- 펄스 링 -->
-    <circle r="38" fill="none" stroke="rgba(0,212,255,.12)" stroke-width="3"/>
-    <circle r="48" fill="none" stroke="rgba(0,212,255,.06)" stroke-width="2"/>
-  </g>
-  <!-- 카카오 채널 -->
-  <g transform="translate(18,30)">
-    <rect width="56" height="38" rx="8" fill="rgba(240,165,0,.12)" stroke="rgba(240,165,0,.4)" stroke-width="1.5"/>
-    <text x="28" y="14" text-anchor="middle" fill="url(#g02k)" font-size="9" font-weight="800">💬 Kakao</text>
-    <rect x="8" y="20" width="40" height="6" rx="3" fill="url(#g02k)" opacity=".7"/>
-    <text x="28" y="33" text-anchor="middle" fill="rgba(240,165,0,.6)" font-size="7" font-family="monospace">✓ 31명</text>
-  </g>
-  <!-- SMS -->
-  <g transform="translate(18,110)">
-    <rect width="56" height="38" rx="8" fill="rgba(0,255,136,.1)" stroke="rgba(0,255,136,.35)" stroke-width="1.5"/>
-    <text x="28" y="14" text-anchor="middle" fill="url(#g02s)" font-size="9" font-weight="800">📱 SMS</text>
-    <rect x="8" y="20" width="32" height="6" rx="3" fill="url(#g02s)" opacity=".7"/>
-    <text x="28" y="33" text-anchor="middle" fill="rgba(0,255,136,.6)" font-size="7" font-family="monospace">✓ 발송</text>
-  </g>
-  <!-- 이메일 -->
-  <g transform="translate(148,30)">
-    <rect width="56" height="38" rx="8" fill="rgba(0,102,255,.1)" stroke="rgba(0,102,255,.35)" stroke-width="1.5"/>
-    <text x="28" y="14" text-anchor="middle" fill="url(#g02e)" font-size="9" font-weight="800">✉️ Mail</text>
-    <rect x="8" y="20" width="24" height="6" rx="3" fill="url(#g02e)" opacity=".7"/>
-    <text x="28" y="33" text-anchor="middle" fill="rgba(0,212,255,.6)" font-size="7" font-family="monospace">✓ 발송</text>
-  </g>
-  <!-- 팩스 -->
-  <g transform="translate(148,110)">
-    <rect width="56" height="38" rx="8" fill="rgba(139,92,246,.1)" stroke="rgba(139,92,246,.35)" stroke-width="1.5"/>
-    <text x="28" y="14" text-anchor="middle" fill="#a78bfa" font-size="9" font-weight="800">📠 Fax</text>
-    <rect x="8" y="20" width="20" height="6" rx="3" fill="#8b5cf6" opacity=".7"/>
-    <text x="28" y="33" text-anchor="middle" fill="rgba(167,139,250,.6)" font-size="7" font-family="monospace">✓ 발송</text>
-  </g>
-  <!-- 연결선 -->
-  <g stroke-width="1.5" opacity=".5">
-    <line x1="74" y1="49" x2="95" y2="78" stroke="#f0a500" stroke-dasharray="4 3"/>
-    <line x1="74" y1="129" x2="95" y2="100" stroke="#00ff88" stroke-dasharray="4 3"/>
-    <line x1="148" y1="49" x2="130" y2="78" stroke="#0066ff" stroke-dasharray="4 3"/>
-    <line x1="148" y1="129" x2="130" y2="100" stroke="#8b5cf6" stroke-dasharray="4 3"/>
-  </g>
-  <text x="110" y="185" text-anchor="middle" fill="rgba(0,212,255,.3)" font-size="8" font-family="monospace" letter-spacing="2">클릭 1회 전체 발송</text>
+  <rect width="220" height="200" fill="url(#g02bg)"/>
+  <!-- 앱바 -->
+  <rect x="0" y="0" width="220" height="24" fill="#030810"/>
+  <text x="12" y="15" fill="#00d4ff" font-size="8" font-weight="800" font-family="monospace">발송 현황</text>
+  <!-- 발송 완료 배너 -->
+  <rect x="10" y="30" width="200" height="24" rx="6" fill="rgba(0,255,136,.1)" stroke="rgba(0,255,136,.3)" stroke-width="1"/>
+  <text x="110" y="45" text-anchor="middle" fill="#00ff88" font-size="8" font-weight="700">✅ 31명 전체 발송 완료</text>
+  <!-- 채널별 현황 -->
+  <rect x="10" y="62" width="200" height="28" rx="6" fill="rgba(240,165,0,.08)" stroke="rgba(240,165,0,.2)" stroke-width="1"/>
+  <text x="22" y="78" fill="#f0a500" font-size="9" font-weight="700">💬 카카오 알림톡</text>
+  <rect x="130" y="70" width="60" height="12" rx="3" fill="rgba(240,165,0,.15)"/>
+  <rect x="130" y="70" width="56" height="12" rx="3" fill="rgba(240,165,0,.5)"/>
+  <text x="200" y="80" text-anchor="end" fill="#f0a500" font-size="8" font-weight="800">31/31</text>
+
+  <rect x="10" y="96" width="200" height="28" rx="6" fill="rgba(0,255,136,.06)" stroke="rgba(0,255,136,.15)" stroke-width="1"/>
+  <text x="22" y="112" fill="#00ff88" font-size="9" font-weight="700">📱 SMS</text>
+  <rect x="130" y="104" width="60" height="12" rx="3" fill="rgba(0,255,136,.1)"/>
+  <rect x="130" y="104" width="54" height="12" rx="3" fill="rgba(0,255,136,.4)"/>
+  <text x="200" y="114" text-anchor="end" fill="#00ff88" font-size="8" font-weight="800">28/31</text>
+
+  <rect x="10" y="130" width="200" height="28" rx="6" fill="rgba(0,102,255,.06)" stroke="rgba(0,102,255,.15)" stroke-width="1"/>
+  <text x="22" y="146" fill="#60a5fa" font-size="9" font-weight="700">✉️ 이메일</text>
+  <rect x="130" y="138" width="60" height="12" rx="3" fill="rgba(0,102,255,.1)"/>
+  <rect x="130" y="138" width="40" height="12" rx="3" fill="rgba(0,102,255,.4)"/>
+  <text x="200" y="148" text-anchor="end" fill="#60a5fa" font-size="8" font-weight="800">21/31</text>
+
+  <rect x="10" y="164" width="200" height="28" rx="6" fill="rgba(139,92,246,.06)" stroke="rgba(139,92,246,.15)" stroke-width="1"/>
+  <text x="22" y="180" fill="#a78bfa" font-size="9" font-weight="700">📠 팩스</text>
+  <rect x="130" y="172" width="60" height="12" rx="3" fill="rgba(139,92,246,.1)"/>
+  <rect x="130" y="172" width="18" height="12" rx="3" fill="rgba(139,92,246,.4)"/>
+  <text x="200" y="182" text-anchor="end" fill="#a78bfa" font-size="8" font-weight="800">9/31</text>
 </svg>
       </div>
       <div class="fc-body"><div class="fc-title">4채널 자동 발송</div>
@@ -779,41 +1044,35 @@ footer{border-top:1px solid var(--border);padding:48px 24px 32px;max-width:1200p
           <div style="position:absolute;bottom:8px;left:8px;font-size:8px;font-family:monospace;color:var(--cyan);z-index:2;font-weight:700">OCR</div>
           <svg viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block">
   <defs>
-    <linearGradient id="g03a" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0a1628"/><stop offset="1" stop-color="#0d2040"/></linearGradient>
-    <linearGradient id="g03b" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0066ff"/><stop offset="1" stop-color="#00d4ff"/></linearGradient>
-    <filter id="glow03"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <linearGradient id="g03rbg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d2040"/><stop offset="1" stop-color="#050A14"/></linearGradient>
+    <linearGradient id="g03rb" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0066ff"/><stop offset="1" stop-color="#00d4ff"/></linearGradient>
   </defs>
-  <rect width="160" height="160" fill="url(#g03a)"/>
-  <!-- 카메라/촬영 아이콘 -->
-  <g transform="translate(80,60)" filter="url(#glow03)">
-    <!-- 카메라 바디 -->
-    <rect x="-32" y="-22" width="64" height="44" rx="8" fill="rgba(0,102,255,.15)" stroke="rgba(0,212,255,.5)" stroke-width="1.5"/>
-    <!-- 렌즈 외곽 -->
-    <circle r="14" fill="rgba(0,102,255,.2)" stroke="rgba(0,212,255,.6)" stroke-width="2"/>
-    <!-- 렌즈 내부 -->
-    <circle r="9" fill="rgba(0,102,255,.4)" stroke="rgba(0,212,255,.8)" stroke-width="1.5"/>
-    <circle r="4" fill="rgba(0,212,255,.9)"/>
-    <!-- 뷰파인더 -->
-    <rect x="18" y="-20" width="10" height="8" rx="2" fill="rgba(0,212,255,.3)" stroke="rgba(0,212,255,.5)" stroke-width="1"/>
-    <!-- 스캔 라인 -->
-    <line x1="-32" y1="0" x2="32" y2="0" stroke="rgba(0,255,136,.6)" stroke-width="1.5" stroke-dasharray="4 2" opacity=".8"/>
-  </g>
-  <!-- OCR 스캔 포인트 -->
-  <g opacity=".7">
-    <circle cx="36" cy="38" r="3" fill="#00d4ff" filter="url(#glow03)"/>
-    <circle cx="124" cy="38" r="3" fill="#00d4ff" filter="url(#glow03)"/>
-    <circle cx="36" cy="122" r="3" fill="#00d4ff" filter="url(#glow03)"/>
-    <circle cx="124" cy="122" r="3" fill="#00d4ff" filter="url(#glow03)"/>
-    <line x1="36" y1="38" x2="56" y2="38" stroke="#00d4ff" stroke-width="1.5"/>
-    <line x1="36" y1="38" x2="36" y2="58" stroke="#00d4ff" stroke-width="1.5"/>
-    <line x1="124" y1="38" x2="104" y2="38" stroke="#00d4ff" stroke-width="1.5"/>
-    <line x1="124" y1="38" x2="124" y2="58" stroke="#00d4ff" stroke-width="1.5"/>
-    <line x1="36" y1="122" x2="56" y2="122" stroke="#00d4ff" stroke-width="1.5"/>
-    <line x1="36" y1="122" x2="36" y2="102" stroke="#00d4ff" stroke-width="1.5"/>
-    <line x1="124" y1="122" x2="104" y2="122" stroke="#00d4ff" stroke-width="1.5"/>
-    <line x1="124" y1="122" x2="124" y2="102" stroke="#00d4ff" stroke-width="1.5"/>
-  </g>
-  <text x="80" y="148" text-anchor="middle" fill="rgba(0,212,255,.5)" font-size="8" font-family="monospace" letter-spacing="1">OCR 99.8%</text>
+  <rect width="160" height="160" fill="url(#g03rbg)"/>
+  <!-- 문서 카드들 (겹치기) -->
+  <rect x="32" y="22" width="90" height="115" rx="6" fill="rgba(0,102,255,.06)" stroke="rgba(0,102,255,.2)" stroke-width="1" transform="rotate(6, 77, 80)"/>
+  <rect x="28" y="18" width="90" height="115" rx="6" fill="rgba(0,102,255,.08)" stroke="rgba(0,102,255,.25)" stroke-width="1" transform="rotate(3, 73, 76)"/>
+  <!-- 메인 문서 -->
+  <rect x="24" y="14" width="90" height="115" rx="6" fill="rgba(5,10,20,.95)" stroke="rgba(0,212,255,.4)" stroke-width="1.5"/>
+  <!-- 문서 헤더 -->
+  <rect x="24" y="14" width="90" height="18" rx="6" fill="url(#g03rb)" opacity=".7"/>
+  <text x="69" y="26" text-anchor="middle" fill="#fff" font-size="7" font-weight="800">세 금 계 산 서</text>
+  <!-- 문서 내용 -->
+  <rect x="32" y="38" width="74" height="3" rx="1" fill="rgba(0,212,255,.2)"/>
+  <rect x="32" y="45" width="55" height="3" rx="1" fill="rgba(0,212,255,.15)"/>
+  <rect x="32" y="52" width="65" height="3" rx="1" fill="rgba(0,212,255,.15)"/>
+  <rect x="32" y="59" width="40" height="3" rx="1" fill="rgba(0,212,255,.12)"/>
+  <!-- 금액 강조 -->
+  <rect x="32" y="70" width="74" height="18" rx="4" fill="rgba(0,255,136,.08)" stroke="rgba(0,255,136,.25)" stroke-width="1"/>
+  <text x="69" y="82" text-anchor="middle" fill="#00ff88" font-size="8" font-weight="900" font-family="monospace">₩5,121,729</text>
+  <!-- 도장 -->
+  <circle cx="100" cy="105" r="14" fill="none" stroke="rgba(239,68,68,.4)" stroke-width="1.5"/>
+  <circle cx="100" cy="105" r="10" fill="none" stroke="rgba(239,68,68,.3)" stroke-width="1"/>
+  <text x="100" y="108" text-anchor="middle" fill="rgba(239,68,68,.6)" font-size="6" font-weight="700">엠비티아이</text>
+  <!-- 하단 버튼 -->
+  <rect x="32" y="96" width="50" height="14" rx="4" fill="url(#g03rb)" opacity=".8"/>
+  <text x="57" y="106" text-anchor="middle" fill="#fff" font-size="6" font-weight="700">🖨 인쇄/PDF</text>
+  <!-- 7종 라벨 -->
+  <text x="80" y="148" text-anchor="middle" fill="rgba(0,212,255,.4)" font-size="7" font-family="monospace">7종 자동 발행</text>
 </svg>
         </div>
         <div style="position:relative;overflow:hidden">
@@ -870,56 +1129,43 @@ footer{border-top:1px solid var(--border);padding:48px 24px 32px;max-width:1200p
           <div class="fc-wide-img-overlay"></div>
           <svg viewBox="0 0 280 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block">
   <defs>
-    <linearGradient id="g04a" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0a1628"/><stop offset="1" stop-color="#0c1a30"/></linearGradient>
-    <linearGradient id="g04b" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6366f1"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient>
-    <linearGradient id="g04c" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0066ff"/><stop offset="1" stop-color="#00d4ff"/></linearGradient>
-    <filter id="glow04"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <linearGradient id="g04bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0a1628"/><stop offset="1" stop-color="#050A14"/></linearGradient>
+    <linearGradient id="g04a" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6366f1"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient>
   </defs>
-  <rect width="280" height="220" fill="url(#g04a)"/>
-  <!-- 배경 원 -->
-  <circle cx="240" cy="40" r="80" fill="rgba(99,102,241,.04)"/>
-  <!-- 보관함 타임라인 -->
-  <!-- 년도 라벨 -->
-  <g fill="rgba(0,212,255,.25)" font-size="8" font-family="monospace">
-    <text x="16" y="38">2024</text>
-    <text x="16" y="78">2025</text>
-    <text x="16" y="118">2026</text>
-    <text x="16" y="158">2027</text>
-  </g>
-  <!-- 타임라인 선 -->
-  <line x1="48" y1="30" x2="48" y2="170" stroke="rgba(0,212,255,.2)" stroke-width="1.5"/>
-  <!-- 문서 보관 아이템들 -->
-  <g>
-    <!-- 2024 - 계약서 5년 -->
-    <circle cx="48" cy="32" r="4" fill="#6366f1" filter="url(#glow04)"/>
-    <rect x="60" y="22" width="130" height="20" rx="5" fill="rgba(99,102,241,.12)" stroke="rgba(99,102,241,.35)" stroke-width="1"/>
-    <text x="70" y="35" fill="rgba(167,139,250,.9)" font-size="8" font-weight="700" font-family="monospace">📄 근로계약서 · 5년 보존</text>
-    <rect x="196" y="24" width="48" height="16" rx="4" fill="url(#g04b)" opacity=".6"/>
-    <text x="220" y="35" text-anchor="middle" fill="#fff" font-size="7" font-weight="800" font-family="monospace">완료</text>
-    <!-- 2025 - 정산 3년 -->
-    <circle cx="48" cy="72" r="4" fill="#00d4ff" filter="url(#glow04)"/>
-    <rect x="60" y="62" width="140" height="20" rx="5" fill="rgba(0,212,255,.08)" stroke="rgba(0,212,255,.3)" stroke-width="1"/>
-    <text x="70" y="75" fill="rgba(0,212,255,.9)" font-size="8" font-weight="700" font-family="monospace">📊 정산내역 · 3년 보존</text>
-    <rect x="206" y="64" width="48" height="16" rx="4" fill="url(#g04c)" opacity=".6"/>
-    <text x="230" y="75" text-anchor="middle" fill="#fff" font-size="7" font-weight="800" font-family="monospace">진행중</text>
-    <!-- 2026 - 세금 5년 -->
-    <circle cx="48" cy="112" r="4" fill="#00ff88" filter="url(#glow04)"/>
-    <rect x="60" y="102" width="135" height="20" rx="5" fill="rgba(0,255,136,.07)" stroke="rgba(0,255,136,.25)" stroke-width="1"/>
-    <text x="70" y="115" fill="rgba(0,255,136,.8)" font-size="8" font-weight="700" font-family="monospace">🧾 세금계산서 · 5년</text>
-    <rect x="201" y="104" width="48" height="16" rx="4" fill="rgba(0,255,136,.2)" stroke="rgba(0,255,136,.4)" stroke-width="1"/>
-    <text x="225" y="115" text-anchor="middle" fill="#00ff88" font-size="7" font-weight="800" font-family="monospace">저장됨</text>
-    <!-- 2027 - 서류 10년 -->
-    <circle cx="48" cy="152" r="4" fill="rgba(0,212,255,.4)" filter="url(#glow04)"/>
-    <rect x="60" y="142" width="130" height="20" rx="5" fill="rgba(0,212,255,.04)" stroke="rgba(0,212,255,.15)" stroke-width="1"/>
-    <text x="70" y="155" fill="rgba(0,212,255,.5)" font-size="8" font-family="monospace">📁 사업서류 · 10년 보존</text>
-  </g>
+  <rect width="280" height="220" fill="url(#g04bg)"/>
+  <!-- 앱바 -->
+  <rect x="0" y="0" width="280" height="26" fill="#030810"/>
+  <text x="14" y="17" fill="#8b5cf6" font-size="8" font-weight="800" font-family="monospace">법정문서 보관함</text>
+  <text x="240" y="17" fill="rgba(0,255,136,.7)" font-size="7" font-weight="700">● 보관중</text>
+  <!-- 보관 아이템들 -->
+  <rect x="12" y="34" width="256" height="32" rx="6" fill="rgba(99,102,241,.08)" stroke="rgba(99,102,241,.25)" stroke-width="1"/>
+  <text x="22" y="52" fill="#a78bfa" font-size="9" font-weight="700">📄 근로계약서</text>
+  <text x="22" y="60" fill="rgba(255,255,255,.3)" font-size="7">31건 · 5년 보존 · 2031년 만료</text>
+  <rect x="200" y="40" width="58" height="18" rx="4" fill="rgba(99,102,241,.2)" stroke="rgba(99,102,241,.4)" stroke-width="1"/>
+  <text x="229" y="52" text-anchor="middle" fill="#a78bfa" font-size="7" font-weight="800">✓ 완료</text>
+
+  <rect x="12" y="72" width="256" height="32" rx="6" fill="rgba(0,212,255,.06)" stroke="rgba(0,212,255,.2)" stroke-width="1"/>
+  <text x="22" y="90" fill="#00d4ff" font-size="9" font-weight="700">📊 정산내역</text>
+  <text x="22" y="98" fill="rgba(255,255,255,.3)" font-size="7">2025-04 ~ 2026-05 · 3년 보존</text>
+  <rect x="200" y="78" width="58" height="18" rx="4" fill="url(#g04a)" opacity=".7"/>
+  <text x="229" y="90" text-anchor="middle" fill="#fff" font-size="7" font-weight="800">진행중</text>
+
+  <rect x="12" y="110" width="256" height="32" rx="6" fill="rgba(0,255,136,.05)" stroke="rgba(0,255,136,.18)" stroke-width="1"/>
+  <text x="22" y="128" fill="#00ff88" font-size="9" font-weight="700">🧾 세금계산서</text>
+  <text x="22" y="136" fill="rgba(255,255,255,.3)" font-size="7">월별 발행 · 5년 보존 · 자동 생성</text>
+  <rect x="200" y="116" width="58" height="18" rx="4" fill="rgba(0,255,136,.15)" stroke="rgba(0,255,136,.35)" stroke-width="1"/>
+  <text x="229" y="128" text-anchor="middle" fill="#00ff88" font-size="7" font-weight="800">저장됨</text>
+
+  <rect x="12" y="148" width="256" height="32" rx="6" fill="rgba(255,255,255,.03)" stroke="rgba(255,255,255,.08)" stroke-width="1"/>
+  <text x="22" y="166" fill="rgba(255,255,255,.5)" font-size="9" font-weight="700">📁 사업서류</text>
+  <text x="22" y="174" fill="rgba(255,255,255,.25)" font-size="7">사업자등록증 외 · 10년 보존</text>
   <!-- 자물쇠 아이콘 -->
-  <g transform="translate(250,100)" filter="url(#glow04)">
-    <rect x="-18" y="-8" width="36" height="28" rx="6" fill="rgba(99,102,241,.2)" stroke="rgba(99,102,241,.6)" stroke-width="2"/>
-    <path d="M-10,-8 L-10,-20 Q0,-30 10,-20 L10,-8" fill="none" stroke="rgba(99,102,241,.7)" stroke-width="2.5" stroke-linecap="round"/>
-    <circle cx="0" cy="8" r="5" fill="rgba(167,139,250,.8)"/>
-  </g>
-  <text x="140" y="200" text-anchor="middle" fill="rgba(99,102,241,.35)" font-size="8" font-family="monospace" letter-spacing="2">법정 보존기간 자동 알림</text>
+  <rect x="200" y="154" width="22" height="20" rx="4" fill="rgba(99,102,241,.15)" stroke="rgba(99,102,241,.4)" stroke-width="1"/>
+  <rect x="204" y="148" width="14" height="10" rx="7" fill="none" stroke="rgba(139,92,246,.5)" stroke-width="1.5"/>
+  <circle cx="211" cy="163" r="3" fill="rgba(167,139,250,.6)"/>
+  <!-- 만료 알림 뱃지 -->
+  <rect x="148" y="194" width="110" height="18" rx="5" fill="rgba(245,158,11,.1)" stroke="rgba(245,158,11,.3)" stroke-width="1"/>
+  <text x="203" y="206" text-anchor="middle" fill="#f59e0b" font-size="7" font-weight="700">⏰ D-7 만료 예정 1건</text>
 </svg>
         </div>
       </div>
@@ -1018,7 +1264,7 @@ if(canvas){
 
 /* ── 4. 숫자 카운팅 애니메이션 (stats) ── */
 function animCount(el){
-  var target = parseInt(el.dataset.count||el.textContent);
+  var target = parseInt(el.dataset.count||el.dataset.target||el.textContent);
   if(isNaN(target)) return;
   var unit = el.dataset.unit||'';
   var start = 0, duration = 1500, begin = null;
@@ -1034,12 +1280,18 @@ function animCount(el){
 var statsIO = new IntersectionObserver(function(entries){
   entries.forEach(function(e){
     if(e.isIntersecting){
-      e.target.querySelectorAll('[data-count]').forEach(animCount);
+      e.target.querySelectorAll('[data-count],[data-target]').forEach(animCount);
       statsIO.unobserve(e.target);
     }
   });
 },{threshold:0.3});
-document.querySelectorAll('.stats-grid,.stat').forEach(function(el){ statsIO.observe(el); });
+document.querySelectorAll('.stats-grid,.stat,.stat-item').forEach(function(el){ statsIO.observe(el); });
+setTimeout(function(){
+  document.querySelectorAll('[data-target]').forEach(function(el){
+    var rect=el.getBoundingClientRect();
+    if(rect.top < window.innerHeight*1.1) animCount(el);
+  });
+}, 500);
 
 /* ── 5. FAQ 아코디언 ── */
 document.querySelectorAll('.faq-q').forEach(function(btn){
@@ -1088,4 +1340,91 @@ setTimeout(function(){
 }, 100);
 
 })();
+
+/* ── 동적 QR 코드 (30초 갱신) ── */
+(function(){
+  var QR_URL = 'https://donway.ai.kr/settle';
+  var qrSec = 30;
+  var qrTimer;
+
+  function drawQR(canvas, text){
+    var ctx = canvas.getContext('2d');
+    var sz = canvas.width;
+    ctx.fillStyle = '#050A14';
+    ctx.fillRect(0,0,sz,sz);
+
+    // 간단한 체크섬 기반 패턴 생성 (실제 QR 표준 아님 - 시각적 효과)
+    var seed = 0;
+    for(var i=0;i<text.length;i++) seed = (seed*31 + text.charCodeAt(i)) & 0xFFFFFF;
+    var now = Date.now();
+    seed = (seed ^ (now / 30000 | 0)) & 0xFFFFFF;
+
+    var mod = 7; // 모듈 크기
+    var cols = Math.floor(sz / mod);
+    var offset = Math.floor((sz - cols*mod) / 2);
+
+    ctx.fillStyle = '#00d4ff';
+
+    // 파인더 패턴 (3개 고정 마커)
+    function finder(x,y){
+      // 외곽 7x7
+      ctx.fillStyle='#00d4ff';
+      ctx.fillRect(offset+x*mod, offset+y*mod, 7*mod, 7*mod);
+      ctx.fillStyle='#050A14';
+      ctx.fillRect(offset+(x+1)*mod, offset+(y+1)*mod, 5*mod, 5*mod);
+      ctx.fillStyle='#00d4ff';
+      ctx.fillRect(offset+(x+2)*mod, offset+(y+2)*mod, 3*mod, 3*mod);
+    }
+    finder(0,0); finder(cols-7,0); finder(0,cols-7);
+
+    // 데이터 모듈 (seed 기반 랜덤)
+    ctx.fillStyle='#00d4ff';
+    var rng = seed;
+    for(var row=0;row<cols;row++){
+      for(var col=0;col<cols;col++){
+        // 파인더 패턴 영역 skip
+        if((row<9&&col<9)||(row<9&&col>cols-9)||(row>cols-9&&col<9)) continue;
+        rng = (rng * 1664525 + 1013904223) & 0xFFFFFFFF;
+        if(rng & 1){
+          ctx.fillRect(offset+col*mod, offset+row*mod, mod-1, mod-1);
+        }
+      }
+    }
+
+    // 타이밍 패턴 (수평/수직 점선)
+    ctx.fillStyle='#00d4ff';
+    for(var i=8;i<cols-8;i+=2){
+      ctx.fillRect(offset+i*mod, offset+6*mod, mod-1, mod-1);
+      ctx.fillRect(offset+6*mod, offset+i*mod, mod-1, mod-1);
+    }
+  }
+
+  function refreshQR(){
+    var canvas = document.getElementById('hero-qr-canvas');
+    if(!canvas) return;
+    var ts = Math.floor(Date.now()/30000)*30000;
+    drawQR(canvas, QR_URL + '?t=' + ts);
+    // 라벨 업데이트
+    var label = document.getElementById('qr-refresh-label');
+    if(label) label.textContent = '30초마다 갱신 ● 방금 갱신됨';
+    setTimeout(function(){
+      if(label) label.textContent = '30초마다 갱신';
+    }, 2000);
+  }
+
+  // 초기 렌더링
+  window.addEventListener('DOMContentLoaded', function(){
+    refreshQR();
+    qrTimer = setInterval(function(){
+      qrSec--;
+      if(qrSec <= 0){
+        qrSec = 30;
+        refreshQR();
+      }
+      var label = document.getElementById('qr-refresh-label');
+      if(label && qrSec < 30) label.textContent = qrSec+'초 후 갱신';
+    }, 1000);
+  });
+})();
+
 </script>
