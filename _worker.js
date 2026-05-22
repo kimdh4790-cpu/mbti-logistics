@@ -48,16 +48,17 @@ function generateTempPassword() {
 // ── 플랜별 접속 URL 반환 ──
 function getPlanUrl(planType, slug) {
   const base = 'https://donway.ai.kr';
-  const slugPath = slug ? `/${slug}` : '/settle';
+  const slugPath = slug ? ('/' + slug) : '/settle';
   const urls = {
     settle:   slugPath,
     full:     slugPath,
     contract: slugPath,
     roster:   slugPath,
-    qr:       `${base}/attendance`
+    qr:       base + '/attendance'
   };
   return base + (urls[planType] || slugPath);
 }
+
 
 // ── 환영 이메일 발송 (Gmail SMTP via Cloudflare Email) ──
 async function sendWelcomeEmail(env, { email, companyName, tempPassword, planType, loginUrl, planLabel }) {
@@ -586,7 +587,8 @@ export default {
       '/notice','/settings','/schedule','/drivers','/dashboard',
       '/my','/attendance-admin','/attendance-display',
       '/company-get','/modusign-send','/toss-confirm',
-      '/api','/cron-expire'
+      '/api','/cron-expire','/favicon.ico','/manifest.json',
+      '/sw.js','/firebase-messaging-sw.js','/robots.txt'
     ]);
     const slugMatch = path.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/?$/);
     if (slugMatch && !knownPaths.has(slugMatch[0].replace(/\/$/,'')) && method === 'GET') {
@@ -595,19 +597,15 @@ export default {
         const req = new Request(new URL('/settle.html', url).toString(), { method:'GET', headers:request.headers });
         const resp = await env.ASSETS.fetch(req);
         let html = await resp.text();
-        // 슬러그 및 회사 컨텍스트 주입
-        html = html.replace(
-          '<script>',
-          '<script>window._COMPANY_SLUG=' + JSON.stringify(companySlug) + ';window._SLUG_MODE=true;</script>\n<script>'
-        );
-        return new Response(html, {
-          status: 200,
-          headers: {
-            'Content-Type': 'text/html; charset=utf-8',
-            'Cache-Control': 'no-cache',
-            'X-Company-Slug': companySlug
-          }
-        });
+        // slug + 보안헤더 주입 (</head> 앞에 삽입 - 가장 안전한 위치)
+        const slugScript = '<script>window._COMPANY_SLUG=' + JSON.stringify(companySlug) + ';window._SLUG_MODE=true;</script>';
+        html = html.replace('</head>', slugScript + '\n</head>');
+        const slugHeaders = new Headers();
+        slugHeaders.set('Content-Type', 'text/html; charset=utf-8');
+        slugHeaders.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+        slugHeaders.set('X-Company-Slug', companySlug);
+        Object.entries(SECURITY_HEADERS).forEach(([k,v]) => slugHeaders.set(k,v));
+        return new Response(html, { status: 200, headers: slugHeaders });
       } catch(e) {
         return new Response('Not found', { status: 404 });
       }

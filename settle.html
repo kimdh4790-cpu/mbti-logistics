@@ -291,12 +291,24 @@ function _applySlugBranding(){
   var cn = _slugCompany.companyName||_slugCompany.name||_companySlug;
   // 로그인 화면 회사명 표시
   var loginBrand = document.getElementById('login-brand-name');
-  if(loginBrand) loginBrand.textContent = cn;
+  if(loginBrand){loginBrand.textContent=cn;loginBrand.style.display='block';}
   // 페이지 타이틀
   document.title = 'DONWAY — ' + cn;
   // 로그인 화면 서브타이틀
   var sub = document.getElementById('login-subtitle');
   if(sub) sub.textContent = cn + ' 전용 관리 시스템';
+  // ★ 사이드바 DONWAY 옆에 회사명 표시
+  _updateSidebarBrand(cn);
+}
+
+function _updateSidebarBrand(cn){
+  if(!cn) return;
+  var slText = document.querySelector('.sl-text');
+  if(slText){
+    slText.innerHTML = 'DONWAY <span style="font-size:11px;font-weight:600;color:var(--brand);opacity:.85;margin-left:2px">· '+cn+'</span>';
+  }
+  var slVer = document.querySelector('.sl-ver');
+  if(slVer) slVer.textContent = '돈의 방향';
 }
 
 var RPRICE = {};
@@ -1251,9 +1263,12 @@ function showApp(){
   }
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='flex';
-  document.getElementById('sb-av').textContent=(_CU.companyName||_CU.name||_CU.email||'?')[0].toUpperCase();
+  var _cn0=_CU.companyName||_CU.name||_CU.email||'?';
+  document.getElementById('sb-av').textContent=_cn0[0].toUpperCase();
   document.getElementById('sb-name').textContent=_CU.companyName||_CU.name||_CU.email||'';
   document.getElementById('sb-role').textContent=_CU.role==='admin'?'슈퍼관리자':(_CU.companyName?'대리점 관리자 · '+_CU.email:'대리점 관리자');
+  // ★ 로그인 즉시 사이드바 DONWAY · 회사명 표시
+  if(_CU.companyName) _updateSidebarBrand(_CU.companyName);
   // 회사명 없으면 companies 컬렉션에서 로드
   if(!_CU.companyName&&_db&&_CU.dealerId){
     _db.collection('companies').doc(_CU.dealerId).get().then(function(snap){
@@ -1264,6 +1279,8 @@ function showApp(){
           document.getElementById('sb-name').textContent=cn;
           document.getElementById('sb-av').textContent=cn[0].toUpperCase();
           document.getElementById('sb-role').textContent='대리점 관리자 · '+_CU.email;
+          // ★ 비동기로 로드된 회사명도 사이드바에 반영
+          _updateSidebarBrand(cn);
         }
       }
     }).catch(function(){});
@@ -1405,8 +1422,10 @@ function doRegister(){
   _auth.createUserWithEmailAndPassword(email,pw).then(function(cred){
     var uid=cred.user.uid;
     var serviceType=(document.getElementById('r-service')||{value:'full'}).value||'full';
+    // ★ slug: 이메일 @ 앞부분 → 영문+숫자만 추출 (URL 안전)
+    var emailPrefix=email.split('@')[0].replace(/[^a-zA-Z0-9]/g,'').toLowerCase();
     var slugVal=(document.getElementById('r-slug')||{value:''}).value.trim()||
-      company.replace(/[^a-zA-Z0-9가-힣]/g,'').substring(0,20).toLowerCase()||uid.substring(0,8);
+      emailPrefix||uid.substring(0,8);
     return _db.collection('companies').doc(uid).set({
       companyName:company,
       bizNumber:biz,
@@ -1423,8 +1442,15 @@ function doRegister(){
       uid:uid
     });
   }).then(function(){
-    toast('✅ 등록 완료! 회사코드: '+companyCode+' (직원 가입 시 공유하세요)');
-    setTimeout(function(){alert('📋 회사코드\n\n'+companyCode+'\n\n직원/기사에게 이 코드를 공유하세요.');},300);
+    var myUrl=window.location.origin+'/'+slugVal;
+    toast('✅ 등록 완료! 전용 URL이 생성됐습니다');
+    setTimeout(function(){
+      alert('✅ 등록 완료!\n\n'
+        +'📌 전용 URL\n'+myUrl+'\n\n'
+        +'📋 회사코드: '+companyCode+'\n'
+        +'(직원/기사 가입 시 공유)\n\n'
+        +'전용 URL을 북마크해두세요!');
+    },300);
   }).catch(function(e){
     err.style.color='var(--red)';
     if(e.code==='auth/email-already-in-use') err.textContent='이미 사용 중인 이메일입니다';
@@ -1617,6 +1643,18 @@ async function _tossPay(planType,amount){
       }).then(function(r){return r.json();}).then(function(data){
         if(data.success){
           toast('🎉 결제 완료! 기능이 즉시 활성화됐습니다');
+          // 회사 slug 조회해서 URL 안내
+          if(_CU&&_db){
+            _db.collection('companies').doc(_CU.dealerId).get().then(function(snap){
+              var sl=snap.exists&&snap.data().slug;
+              if(sl){
+                var myUrl=window.location.origin+'/'+sl;
+                setTimeout(function(){
+                  toast('📌 전용 URL: '+myUrl);
+                },2000);
+              }
+            }).catch(function(){});
+          }
           setTimeout(function(){location.reload();},1500);
         } else {
           toast('❌ '+(data.error||'결제 확인 실패'));
