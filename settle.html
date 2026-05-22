@@ -221,6 +221,7 @@ tr:hover>td{background:var(--bg3)}
       <button class="btn" style="width:100%;font-size:11px;margin-bottom:4px" onclick="toggleDark()">🌙 다크모드</button>
       <button class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:var(--bg3);color:var(--text2)" onclick="openChangePw()">🔑 비밀번호 변경</button>
       <button id="admin-btn" class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:#1e293b;color:#f59e0b;display:none" onclick="openAdminPanel()">👑 슈퍼 어드민</button>
+      <button class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:linear-gradient(135deg,#185FA5,#7C3AED);color:#fff;border:none" onclick="_showSubModal()">💳 구독 / 갱신</button>
       <button class="btn btn-red" style="width:100%;font-size:11px" onclick="doLogout()">로그아웃</button>
     </div>
   </div>
@@ -1224,7 +1225,12 @@ function showApp(){
               +'<div style="font-size:18px;font-weight:800;margin-bottom:8px">구독이 만료되었습니다</div>'
               +'<div style="font-size:13px;color:#718096;margin-bottom:20px">'
                 +(exp?'만료일: '+exp.toLocaleDateString('ko-KR'):'')+'<br>계속 이용하려면 구독을 갱신해 주세요.</div>'
-              +'<div style="font-size:12px;color:#a0aec0">문의: 엠비티아이 유한회사<br>051-711-3103</div>'
+              +'<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">'
+              +'<button onclick="_showSubModal()" style="padding:12px;background:linear-gradient(135deg,#185FA5,#0C447C);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">💳 바로 결제하기</button>'
+              +'<a href="https://pf.kakao.com/_xkuxabX/chat" target="_blank" style="text-decoration:none">'
+              +'<button style="width:100%;padding:10px;background:#FEE500;color:#3A1D1D;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">💬 카카오톡 문의</button></a>'
+              +'</div>'
+              +'<div style="font-size:11px;color:#a0aec0">문의: 051-711-3103 | 엠비티아이 유한회사</div>'
               +'</div></div>';
             return;
           }
@@ -1539,7 +1545,14 @@ var PLAN_INFO={
   roster:  {label:'근무표 관리',  amount:9900},
   qr:      {label:'QR 출퇴근',   amount:29900},
   full:    {label:'풀패키지',     amount:69900},
-  settle:  {label:'AI 정산',      amount:39900}
+  settle:  {label:'AI 정산',      amount:39900},
+  // ── 월정액 구독 플랜
+  starter: {label:'Starter (1~10명)',  amount:30000, days:30},
+  basic:   {label:'Basic (11~20명)',   amount:50000, days:30},
+  pro:     {label:'Pro (21~40명)',     amount:80000, days:30},
+  starter3:{label:'Starter 3개월',    amount:81000, days:90},
+  basic3:  {label:'Basic 3개월',      amount:135000,days:90},
+  pro3:    {label:'Pro 3개월',        amount:216000,days:90}
 };
 
 
@@ -5153,6 +5166,54 @@ function addRpCamp(cid){
   setTimeout(function(){showRpCampTab(campName);},30);
   toast('✅ '+k+' ('+v.toLocaleString()+'원) 추가');
 }
+// ══ 구독 플랜 선택 모달 ══
+function _showSubModal(){
+  var mo=document.getElementById('mo-sub');if(mo)mo.remove();
+  var moEl=document.createElement('div');moEl.className='mo show';moEl.id='mo-sub';
+  var plans=[
+    {key:'starter', name:'Starter', price:'30,000', period:'월', drivers:'1~10명', color:'#3B82F6'},
+    {key:'basic',   name:'Basic',   price:'50,000', period:'월', drivers:'11~20명',color:'#8B5CF6'},
+    {key:'pro',     name:'Pro',     price:'80,000', period:'월', drivers:'21~40명',color:'#10B981'},
+    {key:'starter3',name:'Starter', price:'81,000', period:'3개월', drivers:'1~10명', color:'#3B82F6', badge:'10% 할인'},
+    {key:'basic3',  name:'Basic',   price:'135,000',period:'3개월', drivers:'11~20명',color:'#8B5CF6', badge:'10% 할인'},
+    {key:'pro3',    name:'Pro',     price:'216,000',period:'3개월', drivers:'21~40명',color:'#10B981', badge:'10% 할인'},
+  ];
+  var html='<div class="md" style="max-width:520px">'
+    +'<div class="mdt">💳 구독 플랜 선택'
+    +'<button onclick="var m=document.getElementById(\'mo-sub\');if(m)m.remove()" style="background:none;border:none;cursor:pointer;font-size:18px">✕</button></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">';
+
+  plans.forEach(function(p){
+    html+='<div onclick="confirmSubPay(\''+p.key+'\')" style="border:2px solid '+p.color+'22;border-radius:12px;padding:14px;cursor:pointer;position:relative;transition:all .15s" '
+      +'onmouseover="this.style.borderColor=\''+p.color+'\';this.style.background=\''+p.color+'11\'" '
+      +'onmouseout="this.style.borderColor=\''+p.color+'22\';this.style.background=\'\'"">'
+      +(p.badge?'<div style="position:absolute;top:-1px;right:8px;background:'+p.color+';color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:0 0 6px 6px">'+p.badge+'</div>':'')
+      +'<div style="font-size:11px;font-weight:700;color:'+p.color+'">'+p.name+'</div>'
+      +'<div style="font-size:11px;color:var(--text3);margin-bottom:4px">'+p.drivers+'</div>'
+      +'<div style="font-size:17px;font-weight:800">₩'+p.price+'</div>'
+      +'<div style="font-size:10px;color:var(--text3)">'+p.period+'</div>'
+      +'</div>';
+  });
+
+  html+='</div>'
+    +'<div style="background:var(--bg3);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--text2);margin-bottom:12px">'
+    +'✅ 결제 즉시 자동 활성화&nbsp;&nbsp;✅ 카드·계좌이체 가능&nbsp;&nbsp;✅ 41명 이상: 051-711-3103 문의'
+    +'</div>'
+    +'<div class="mdf">'
+    +'<button class="btn" onclick="var m=document.getElementById(\'mo-sub\');if(m)m.remove()">닫기</button>'
+    +'</div></div>';
+
+  moEl.innerHTML=html;
+  document.body.appendChild(moEl);
+}
+
+function confirmSubPay(planKey){
+  var plan=PLAN_INFO[planKey];
+  if(!plan){toast('❌ 플랜 정보 없음');return;}
+  var mo=document.getElementById('mo-sub');if(mo)mo.remove();
+  _tossPay(planKey, plan.amount);
+}
+
 // ══ 캠프 관리 페이지 ══
 function pageCamps(){
   document.getElementById('page-title').textContent='🏭 캠프 관리';
