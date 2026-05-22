@@ -38,6 +38,83 @@ function forbidden(msg = '접근이 거부되었습니다') {
 
 const PROJECT_ID = 'mbti-logistics';
 
+// ── 임시 비밀번호 생성 (영문+숫자 8자리) ──
+function generateTempPassword() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  const bytes = crypto.getRandomValues(new Uint8Array(8));
+  return Array.from(bytes).map(b => chars[b % chars.length]).join('');
+}
+
+// ── 플랜별 접속 URL 반환 ──
+function getPlanUrl(planType, slug) {
+  const base = 'https://donway.ai.kr';
+  const slugPath = slug ? `/${slug}` : '/settle';
+  const urls = {
+    settle:   slugPath,
+    full:     slugPath,
+    contract: slugPath,
+    roster:   slugPath,
+    qr:       `${base}/attendance`
+  };
+  return base + (urls[planType] || slugPath);
+}
+
+// ── 환영 이메일 발송 (Gmail SMTP via Cloudflare Email) ──
+async function sendWelcomeEmail(env, { email, companyName, tempPassword, planType, loginUrl, planLabel }) {
+  // Cloudflare Email Workers 또는 외부 SMTP 서비스 사용
+  // 현재는 로그만 남기고 추후 연동 (EmailJS, Resend, SendGrid 등)
+  const emailKey = env.EMAIL_API_KEY;
+  if (!emailKey) {
+    console.log(`[Email] 미설정 — 발송 대상: ${email}, 임시PW: ${tempPassword}`);
+    return { sent: false, reason: 'EMAIL_API_KEY 미설정' };
+  }
+  // Resend API 사용 (env.EMAIL_API_KEY = re_xxxx)
+  try {
+    const resp = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${emailKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: 'DONWAY <noreply@donway.ai.kr>',
+        to: [email],
+        subject: `[DONWAY] ${companyName} 계정이 생성됐습니다`,
+        html: `
+          <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
+            <div style="background:#0066ff;color:#fff;border-radius:12px 12px 0 0;padding:20px 24px">
+              <h1 style="margin:0;font-size:20px">DONWAY 가입을 환영합니다! 🎉</h1>
+            </div>
+            <div style="background:#f8faff;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px;padding:24px">
+              <p style="margin:0 0 16px;color:#334155">안녕하세요, <strong>${companyName}</strong>님</p>
+              <p style="margin:0 0 20px;color:#64748b">${planLabel} 결제가 완료됐습니다. 아래 정보로 로그인하세요.</p>
+              <div style="background:#fff;border:1px solid #cbd5e1;border-radius:8px;padding:16px;margin-bottom:20px">
+                <div style="margin-bottom:10px"><span style="color:#64748b;font-size:13px">접속 URL</span><br>
+                  <a href="${loginUrl}" style="color:#0066ff;font-weight:700">${loginUrl}</a>
+                </div>
+                <div style="margin-bottom:10px"><span style="color:#64748b;font-size:13px">이메일</span><br>
+                  <strong>${email}</strong>
+                </div>
+                <div><span style="color:#64748b;font-size:13px">임시 비밀번호</span><br>
+                  <strong style="font-size:20px;letter-spacing:2px;color:#0f172a">${tempPassword}</strong>
+                </div>
+              </div>
+              <p style="color:#ef4444;font-size:13px;margin:0 0 20px">⚠️ 로그인 후 반드시 비밀번호를 변경해주세요</p>
+              <a href="${loginUrl}" style="display:block;background:#0066ff;color:#fff;text-align:center;padding:14px;border-radius:8px;text-decoration:none;font-weight:700">바로 시작하기 →</a>
+              <p style="margin:20px 0 0;font-size:12px;color:#94a3b8;text-align:center">
+                문의: 051-711-3103 | donway.ai.kr<br>엠비티아이 유한회사
+              </p>
+            </div>
+          </div>
+        `
+      })
+    });
+    return resp.ok ? { sent: true } : { sent: false, reason: await resp.text() };
+  } catch(e) {
+    return { sent: false, reason: e.message };
+  }
+}
+
 // 16진수 문자열 → Uint8Array
 function hexToBytes(hex) {
   const bytes = new Uint8Array(hex.length / 2);
@@ -1023,11 +1100,39 @@ export default {
           }})
         });
 
+        // 6. 임시 비밀번호 생성 & Firestore에 저장
+        const tempPassword = generateTempPassword();
+        const email = fields.email?.stringValue || '';
+        const companyName = fields.companyName?.stringValue || '고객사';
+        const slug = fields.slug?.stringValue || '';
+
+        // companies 문서에 임시 비밀번호 저장 (관리자 확인용)
+        if (dealerId) {
+          await fetch(`${FS_BASE}/companies/${dealerId}?updateMask.fieldPaths=tempPassword&updateMask.fieldPaths=tempPasswordAt&updateMask.fieldPaths=needsPasswordChange`, {
+            method: 'PATCH',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fields: {
+              tempPassword:         { stringValue: tempPassword },
+              tempPasswordAt:       { timestampValue: new Date().toISOString() },
+              needsPasswordChange:  { booleanValue: true }
+            }})
+          });
+        }
+
+        // 7. 환영 이메일 발송
+        const PLAN_LABELS = { contract:'위수탁 계약서', roster:'근무표 관리', qr:'QR 출퇴근', full:'풀패키지', settle:'AI 정산' };
+        const loginUrl = getPlanUrl(planType, slug);
+        const emailResult = await sendWelcomeEmail(env, {
+          email, companyName, tempPassword, planType, loginUrl,
+          planLabel: PLAN_LABELS[planType] || planType
+        });
+
         return new Response(JSON.stringify({
           success: true,
           message: '결제 완료! 기능이 즉시 활성화됐습니다.',
-          planType,
-          dealerId
+          planType, dealerId, tempPassword,
+          emailSent: emailResult.sent,
+          loginUrl
         }), {
           headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS }
         });
@@ -1099,6 +1204,38 @@ export default {
         }
         return new Response('OK', { status: 200, headers: SECURITY_HEADERS });
       } catch (e) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500, headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS }
+        });
+      }
+    }
+
+    // ── 임시 비밀번호 조회 (슈퍼어드민 전용) /toss/temp-pw ──
+    if (path === '/toss/temp-pw' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const { dealerId, adminEmail } = body;
+        const ADMIN_EMAILS = ['kimdh4790@gmail.com','soungkyekim@naver.com'];
+        if (!ADMIN_EMAILS.includes(adminEmail)) {
+          return new Response(JSON.stringify({ error: '권한 없음' }), {
+            status: 403, headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS }
+          });
+        }
+        const token = await getAccessToken(env);
+        const resp = await fetch(`${FS_BASE}/companies/${dealerId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const doc = await resp.json();
+        const f = doc.fields || {};
+        return new Response(JSON.stringify({
+          tempPassword: f.tempPassword?.stringValue || '',
+          needsChange: f.needsPasswordChange?.booleanValue || false,
+          email: f.email?.stringValue || '',
+          companyName: f.companyName?.stringValue || ''
+        }), {
+          headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS }
+        });
+      } catch(e) {
         return new Response(JSON.stringify({ error: e.message }), {
           status: 500, headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS }
         });

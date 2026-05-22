@@ -1537,6 +1537,7 @@ var PLAN_INFO={
   settle:  {label:'AI 정산',      amount:39900}
 };
 
+
 async function _tossPay(planType,amount){
   if(!_CU){toast('❌ 로그인 필요');return;}
   var plan=PLAN_INFO[planType];
@@ -5626,6 +5627,7 @@ function openResetPanel(){
   var mdf=d.querySelector('.mdf');
   var cancelBtn=document.createElement('button');cancelBtn.className='btn';cancelBtn.textContent='취소';
   cancelBtn.onclick=function(){mo.remove();};
+  if(forced) cancelBtn.style.display='none';
   var delBtn=document.createElement('button');
   delBtn.style.cssText='padding:8px 18px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer';
   delBtn.textContent='🗑 선택 항목 삭제';
@@ -5696,12 +5698,13 @@ function doResetData(){
   }).catch(function(e){toast('⚠️ 일부 실패: '+e.message);});
 }
 
-function openChangePw(){
+function openChangePw(forced){
   var old2=document.getElementById('mo-chpw');if(old2)old2.remove();
   var mo=document.createElement('div');mo.className='mo show';mo.id='mo-chpw';
-  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  if(!forced) mo.onclick=function(e){if(e.target===mo)mo.remove();};
   var d=document.createElement('div');d.className='md';d.style.maxWidth='400px';
-  d.innerHTML='<div class="mdt" style="border-bottom:1px solid var(--border);padding-bottom:10px">🔑 비밀번호 변경</div>'
+  var forcedBanner=forced?'<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:10px 14px;font-size:12px;color:#92400e;margin-bottom:12px">⚠️ 임시 비밀번호가 발급됐습니다. 지금 바로 변경해주세요.</div>':'';
+  d.innerHTML='<div class="mdt" style="border-bottom:1px solid var(--border);padding-bottom:10px">🔑 비밀번호 변경</div>'+forcedBanner
     +'<div style="padding:14px 0">'
     +'<div class="fg" style="margin-bottom:10px"><label style="font-size:11px;color:var(--text3)">현재 비밀번호</label>'
     +'<input id="chpw-cur" type="password" placeholder="현재 비밀번호" style="width:100%;padding:9px 11px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--bg);color:var(--text)"></div>'
@@ -6369,6 +6372,12 @@ function _loadFeaturePanel(container){
           +'color:'+(on?'#fff':'var(--text3)')+';">'
           +(on?'✅ ':'')+(f.label)+'</button>';
       });
+      // 임시 비번 표시
+      if(item.tempPassword&&item.needsPasswordChange){
+        html+='<div style="width:100%;margin-top:8px;padding:6px 10px;background:rgba(245,184,0,.08);border:1px solid rgba(245,184,0,.2);border-radius:6px;font-size:11px;">'
+          +'🔑 임시비번: <strong style="letter-spacing:1px;color:var(--gold)">'+esc(item.tempPassword)+'</strong>'
+          +' <span style="color:var(--text3)">(미변경)</span></div>';
+      }
       html+='</div></div>';
     });
     container.innerHTML=html;
