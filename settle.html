@@ -4023,7 +4023,8 @@ function updSECalc(){
   if(vR)vR.textContent='₩'+fmt(totalRamt);
   // 항목별 합산
   function gv(id){var el=document.getElementById(id);return el?+el.value||0:0;}
-  var fresh=gv('se-fresh'),finc=gv('se-finc'),nocont=gv('se-nocont');
+  var freshRaw=gv('se-fresh'),finc=gv('se-finc'),nocont=gv('se-nocont');
+  var fresh=Math.round(freshRaw*1.1);  // VAT포함 변환 (calcNet과 동일)
   var dmg=gv('se-dmg'),etcP=gv('se-etc-plus'),etcM=gv('se-etc-minus'),adv=gv('se-adv');
   var taxBase=totalDamt+totalRamt+fresh+finc+nocont+etcP;  // 세금계산서 기준 (etcMinus 제외)
   var supplyAmt=Math.round(taxBase/1.1);
@@ -4109,7 +4110,8 @@ function _saveSECurrent(){
     });
   }
   var nocont=cached?cached.nocont||0:0;
-  var taxBase=newDamt+newRamt+fresh+finc+inc+nocont+etcPlus; // 세금계산서 기준
+  var freshVat=Math.round(fresh*1.1);  // VAT포함 변환
+  var taxBase=newDamt+newRamt+freshVat+finc+inc+nocont+etcPlus; // 세금계산서 기준
   var supplyAmt=Math.round(taxBase/1.1);
   var monthlyWage=Math.round(supplyAmt*0.654);
   var empIns=monthlyWage>=800000?Math.floor(monthlyWage*0.008/10)*10:0;
