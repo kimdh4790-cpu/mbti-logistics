@@ -105,6 +105,8 @@ tr:hover>td{background:var(--bg3)}
     <div style="text-align:center;margin-bottom:20px">
       <div style="width:52px;height:52px;border-radius:14px;background:var(--brand);display:inline-flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:8px">💰</div>
       <div style="font-size:22px;font-weight:900;color:var(--brand)">DONWAY</div>
+      <div id="login-subtitle" style="font-size:11px;color:var(--text3);margin-top:2px">돈의 방향을 자동화합니다</div>
+      <div id="login-brand-name" style="font-size:13px;font-weight:700;color:var(--brand);margin-top:4px;display:none"></div>
       <div style="font-size:11px;color:var(--text3);margin-top:2px">돈의 방향을 자동화합니다</div>
     </div>
 
@@ -226,6 +228,37 @@ var DEFAULT_UNIT_PRICES = {
 };
 // 런타임 단가 (Firestore 로드 후 업데이트)
 var G_PRICES = Object.assign({}, DEFAULT_UNIT_PRICES);
+
+
+/* ── 회사 슬러그 모드 ── */
+var _companySlug = window._COMPANY_SLUG || null;
+var _slugCompany = null; // 슬러그로 조회한 회사 정보
+
+async function _loadSlugCompany(){
+  if(!_companySlug||!_db) return;
+  try{
+    // companies 컬렉션에서 slug 필드로 조회
+    var snap = await _db.collection('companies').where('slug','==',_companySlug).limit(1).get();
+    if(!snap.empty){
+      _slugCompany = snap.docs[0].data();
+      _slugCompany._id = snap.docs[0].id;
+      _applySlugBranding();
+    }
+  }catch(e){}
+}
+
+function _applySlugBranding(){
+  if(!_slugCompany) return;
+  var cn = _slugCompany.companyName||_slugCompany.name||_companySlug;
+  // 로그인 화면 회사명 표시
+  var loginBrand = document.getElementById('login-brand-name');
+  if(loginBrand) loginBrand.textContent = cn;
+  // 페이지 타이틀
+  document.title = 'DONWAY — ' + cn;
+  // 로그인 화면 서브타이틀
+  var sub = document.getElementById('login-subtitle');
+  if(sub) sub.textContent = cn + ' 전용 관리 시스템';
+}
 
 var RPRICE = {};
 // ※ 단가는 Firestore(_routePrices)에서만 로드. 하드코딩 기본값 없음.
@@ -1086,7 +1119,7 @@ function initFirebase(){
     _auth=firebase.auth();
     _auth.onAuthStateChanged(function(user){
       if(!user){document.getElementById('login-screen').style.display='flex';document.getElementById('app').style.display='none';_CU=null;window._CU=null;}
-      else{_db.doc('users/'+user.uid).get().then(function(snap){var d=snap.exists?snap.data():{};_CU={uid:user.uid,email:user.email,name:d.name||'',role:d.role||'dealer',dealerId:d.dealerId||user.uid,termsVersion:d.termsVersion||''};window._CU=_CU;_loadCompanyCfg(_CU.dealerId||_CU.companyCode||_CU.uid);showApp();}).catch(function(){_CU={uid:user.uid,email:user.email,name:'',role:'dealer',dealerId:user.uid,termsVersion:''};window._CU=_CU;showApp();});}
+      else{_db.doc('users/'+user.uid).get().then(function(snap){var d=snap.exists?snap.data():{};_CU={uid:user.uid,email:user.email,name:d.name||'',companyName:d.companyName||d.name||'',role:d.role||'dealer',dealerId:d.dealerId||user.uid,termsVersion:d.termsVersion||''};window._CU=_CU;_loadCompanyCfg(_CU.dealerId||_CU.companyCode||_CU.uid);showApp();}).catch(function(){_CU={uid:user.uid,email:user.email,name:'',role:'dealer',dealerId:user.uid,termsVersion:''};window._CU=_CU;showApp();});}
     });return;
   }
   if(!firebase.apps.length){
@@ -1110,6 +1143,7 @@ function initFirebase(){
       _db.doc('users/'+user.uid).get().then(function(snap){
         var d=snap.exists?snap.data():{};
         _CU={uid:user.uid,email:user.email,name:d.name||'',
+          companyName:d.companyName||d.name||'',
           role:d.role||'dealer',dealerId:d.dealerId||user.uid,
           termsVersion:d.termsVersion||''};
         window._CU=_CU;
@@ -1164,10 +1198,28 @@ function showApp(){
   }
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='flex';
-  document.getElementById('sb-av').textContent=(_CU.name||_CU.email||'?')[0].toUpperCase();
-  document.getElementById('sb-name').textContent=_CU.name||_CU.email||'';
-  document.getElementById('sb-role').textContent=_CU.role==='admin'?'슈퍼관리자':'대리점 관리자';
+  document.getElementById('sb-av').textContent=(_CU.companyName||_CU.name||_CU.email||'?')[0].toUpperCase();
+  document.getElementById('sb-name').textContent=_CU.companyName||_CU.name||_CU.email||'';
+  document.getElementById('sb-role').textContent=_CU.role==='admin'?'슈퍼관리자':(_CU.companyName?'대리점 관리자 · '+_CU.email:'대리점 관리자');
+  // 회사명 없으면 companies 컬렉션에서 로드
+  if(!_CU.companyName&&_db&&_CU.dealerId){
+    _db.collection('companies').doc(_CU.dealerId).get().then(function(snap){
+      if(snap.exists){
+        var cn=snap.data().companyName||snap.data().name||'';
+        if(cn){
+          _CU.companyName=cn;
+          document.getElementById('sb-name').textContent=cn;
+          document.getElementById('sb-av').textContent=cn[0].toUpperCase();
+          document.getElementById('sb-role').textContent='대리점 관리자 · '+_CU.email;
+        }
+      }
+    }).catch(function(){});
+  }
   buildNav();
+  // 슬러그 모드: 회사 정보 로드 및 브랜딩
+  if(window._SLUG_MODE && _db){
+    _loadSlugCompany();
+  }
   // 환영 팝업 (당일 첫 로그인)
   var _wday=new Date().toDateString();if(localStorage.getItem('mbti_welcome')!==_wday){localStorage.setItem('mbti_welcome',_wday);setTimeout(_showWelcome,700);}
   _loadRouteCampMap();  // 라우트→캠프 매핑 로드
@@ -1273,11 +1325,14 @@ function doRegister(){
 
   _auth.createUserWithEmailAndPassword(email,pw).then(function(cred){
     var uid=cred.user.uid;
+    var slugVal=(document.getElementById('r-slug')||{value:''}).value.trim()||
+      company.replace(/[^a-zA-Z0-9가-힣]/g,'').substring(0,20).toLowerCase()||uid.substring(0,8);
     return _db.collection('companies').doc(uid).set({
       companyName:company,
       bizNumber:biz,
       email:email,
       plan:plan,
+      slug:slugVal,
       companyCode:companyCode,
       trialStart:now.toISOString().slice(0,10),
       trialEnd:isOwner?'9999-12-31':trialEnd.toISOString().slice(0,10),
@@ -5455,7 +5510,12 @@ document.addEventListener('click',function(e){
   var sb=document.getElementById('sidebar');
   if(sb&&sb.classList.contains('open')&&!sb.contains(e.target))sb.classList.remove('open');
 });
-window.addEventListener('load',function(){setTimeout(initFirebase,200);});
+window.addEventListener('load',function(){setTimeout(initFirebase,200);
+  if(window._COMPANY_SLUG){
+    var bn=document.getElementById('login-brand-name');
+    if(bn){bn.textContent=window._COMPANY_SLUG.toUpperCase()+' 전용';bn.style.display='block';}
+  }
+});
 </script>
 
 <!-- 약관 동의 모달 -->

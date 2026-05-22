@@ -433,6 +433,45 @@ export default {
       return new Response(injected, { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
+
+    // ── 회사별 전용 URL (/{slug}) ──
+    // 예: /mbti → 엠비티아이 전용, /abc물류 → ABC물류 전용
+    const knownPaths = new Set([
+      '/donway_landing','/test-apikey','/favicon.ico','/favicon.png',
+      '/worker-test','/label-ocr','/claude-ocr','/get-label-key',
+      '/test-inject','/truck-save','/scan-save',
+      '/scan','/settle','/portal','/join','/company-register',
+      '/attendance','/donway-sound.js','/report','/contract',
+      '/notice','/settings','/schedule','/drivers','/dashboard',
+      '/my','/attendance-admin','/attendance-display',
+      '/company-get','/modusign-send','/toss-confirm',
+      '/api','/cron-expire'
+    ]);
+    const slugMatch = path.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/?$/);
+    if (slugMatch && !knownPaths.has(slugMatch[0].replace(/\/$/,'')) && method === 'GET') {
+      const companySlug = slugMatch[1];
+      try {
+        const req = new Request(new URL('/settle.html', url).toString(), { method:'GET', headers:request.headers });
+        const resp = await env.ASSETS.fetch(req);
+        let html = await resp.text();
+        // 슬러그 및 회사 컨텍스트 주입
+        html = html.replace(
+          '<script>',
+          '<script>window._COMPANY_SLUG=' + JSON.stringify(companySlug) + ';window._SLUG_MODE=true;</script>\n<script>'
+        );
+        return new Response(html, {
+          status: 200,
+          headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+            'Cache-Control': 'no-cache',
+            'X-Company-Slug': companySlug
+          }
+        });
+      } catch(e) {
+        return new Response('Not found', { status: 404 });
+      }
+    }
+
     if (path === '/settle' || path === '/settle/') {
       const req  = new Request(new URL('/settle.html', url).toString(), { method: 'GET', headers: request.headers });
       const resp = await env.ASSETS.fetch(req);
