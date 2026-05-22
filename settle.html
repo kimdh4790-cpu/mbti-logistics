@@ -5049,7 +5049,12 @@ function _renderPrices(c){
   var editHTML='<div class="card"><div class="ch">'
     +'<span class="ct">📌 라우트별 단가 수정</span>'
     +'<span style="font-size:10px;color:var(--text3)">(저장 즉시 정산 반영)</span>'
-    +'<button class="btn btn-sm btn-teal" onclick="saveRprice()" style="margin-left:auto">💾 저장</button>'
+    +'<input type="file" id="rp-import-file" accept=".xlsx,.txt" style="display:none" onchange="importRpFile(this)">'
+    +'<button class="btn btn-sm" onclick="document.getElementById(\'rp-import-file\').click()" style="margin-left:auto;background:#7c3aed;color:#fff;border:none">📥 파일 일괄 등록</button>'
+    +'<button class="btn btn-sm btn-teal" onclick="saveRprice()" style="margin-left:4px">💾 저장</button>'
+    +'</div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-bottom:8px;padding:6px 10px;background:var(--bg3);border-radius:8px">'
+    +'📎 <b>엑셀(.xlsx)</b>: 캠프명 행 → 라우트코드/단가 행 순서 | <b>메모장(.txt)</b>: 라우트번호 → A/B/C/D 단가 순서'
     +'</div>';
   if(!hasAny){
     editHTML+='<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px">쿠팡 엑셀 업로드 후 자동으로 라우트가 등록됩니다</div></div>';
@@ -5138,6 +5143,105 @@ function saveRprice(){
     var c=document.getElementById('content');_renderPrices(c);
     setTimeout(function(){if(_rpCampActive)showRpCampTab(_rpCampActive);},30);
   }).catch(function(e){toast('❌ '+e.message);});
+}
+
+// ══ 라우트 단가 파일 일괄 등록 ══
+function importRpFile(input){
+  var file=input.files[0];
+  if(!file)return;
+  input.value='';
+  var ext=file.name.split('.').pop().toLowerCase();
+  if(ext==='xlsx'){
+    var reader=new FileReader();
+    reader.onload=function(e){
+      try{
+        var wb=XLSX.read(e.target.result,{type:'array'});
+        var ws=wb.Sheets[wb.SheetNames[0]];
+        var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+        var result={};
+        var campNames=['부산1','부산2','부산3','대구2','진주M','부산1캠프','부산2캠프','부산3캠프','대구2캠프','진주M캠프'];
+        rows.forEach(function(row){
+          if(!row||!row[0])return;
+          var first=String(row[0]).trim();
+          // 캠프명 행 스킵
+          var isCamp=campNames.some(function(cn){return first.includes(cn.replace('캠프',''));});
+          if(isCamp)return;
+          // 라우트코드 + 단가
+          var code=first.toUpperCase();
+          var price=null;
+          for(var i=1;i<row.length;i++){
+            if(row[i]!==null&&row[i]!==undefined&&!isNaN(+row[i])&&+row[i]>0){price=+row[i];break;}
+          }
+          if(price&&/^[0-9]{3}[A-D]$/.test(code)){result[code]=price;}
+        });
+        _showImportPreview(result,file.name);
+      }catch(e){toast('❌ 엑셀 파싱 오류: '+e.message);}
+    };
+    reader.readAsArrayBuffer(file);
+  } else if(ext==='txt'){
+    var reader2=new FileReader();
+    reader2.onload=function(e){
+      try{
+        var lines=e.target.result.replace(/\r/g,'').split('\n');
+        var result={};
+        var curNum='';
+        lines.forEach(function(line){
+          line=line.trim();
+          if(!line)return;
+          // 숫자만 있는 줄 = 라우트 번호
+          if(/^[0-9]{3}$/.test(line)){curNum=line;return;}
+          // "A 920" 형태
+          var m=line.match(/^([A-D])\s+(\d+)$/i);
+          if(m&&curNum){result[curNum+m[1].toUpperCase()]=+m[2];}
+          // "608B 920" 형태도 처리
+          var m2=line.match(/^([0-9]{3}[A-D])\s+(\d+)$/i);
+          if(m2){result[m2[1].toUpperCase()]=+m2[2];}
+        });
+        _showImportPreview(result,file.name);
+      }catch(e){toast('❌ 파일 파싱 오류: '+e.message);}
+    };
+    reader2.readAsText(file,'utf-8');
+  } else {
+    toast('❌ .xlsx 또는 .txt 파일만 지원합니다');
+  }
+}
+
+function _showImportPreview(result,fname){
+  var keys=Object.keys(result);
+  if(!keys.length){toast('❌ 파싱된 데이터가 없습니다');return;}
+  var html='<div style="font-size:13px;font-weight:700;margin-bottom:10px">📥 '+fname+'</div>'
+    +'<div style="font-size:12px;color:var(--text2);margin-bottom:12px">아래 단가를 적용하시겠습니까? (기존 동일 라우트는 덮어씁니다)</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:6px;max-height:300px;overflow-y:auto;margin-bottom:14px">';
+  keys.sort().forEach(function(k){
+    html+='<div style="background:var(--bg3);border-radius:8px;padding:7px 4px;text-align:center;border:1px solid var(--brand)44">'
+      +'<div style="font-size:10px;font-weight:700;color:var(--brand)">'+k+'</div>'
+      +'<div style="font-size:13px;font-weight:700;color:var(--green)">'+result[k].toLocaleString()+'</div>'
+      +'<div style="font-size:9px;color:var(--text3)">원/건</div></div>';
+  });
+  html+='</div><div style="font-size:11px;color:var(--text3)">총 '+keys.length+'개 라우트</div>';
+
+  var mo=document.createElement('div');mo.className='mo show';mo.id='mo-rp-import';
+  mo.innerHTML='<div class="md" style="max-width:520px">'
+    +'<div class="mdt">단가 일괄 등록 미리보기 <button onclick="var m=document.getElementById(\'mo-rp-import\');if(m)m.remove()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3)">✕</button></div>'
+    +'<div>'+html+'</div>'
+    +'<div class="mdf">'
+    +'<button class="btn" onclick="var m=document.getElementById(\'mo-rp-import\');if(m)m.remove()">취소</button>'
+    +'<button class="btn btn-blue" onclick="_applyImport('+JSON.stringify(result)+')">✅ 적용 및 저장</button>'
+    +'</div></div>';
+  document.body.appendChild(mo);
+}
+
+function _applyImport(result){
+  var mo=document.getElementById('mo-rp-import');if(mo)mo.remove();
+  Object.assign(RPRICE,result);
+  // Firestore 저장
+  var did=_CU&&_CU.dealerId?_CU.dealerId:'shared';
+  var newPrices=Object.assign({},RPRICE);
+  _db.collection('settings').doc(did+'_routePrices').set(newPrices,{merge:true})
+    .then(function(){
+      toast('✅ '+Object.keys(result).length+'개 라우트 단가 저장 완료!');
+      pagePrices();
+    }).catch(function(e){toast('❌ 저장 실패: '+e.message);});
 }
 
 // ══ 통계 ══
