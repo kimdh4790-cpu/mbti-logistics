@@ -60,6 +60,74 @@ function getPlanUrl(planType, slug) {
 }
 
 
+// ── FCM 푸시 발송 (Cloud Function sendPush 경유) ──
+async function sendFCMPush(fcmToken, title, body, data = {}) {
+  if (!fcmToken) return { sent: false, reason: 'no token' };
+  try {
+    const resp = await fetch('https://us-central1-mbti-logistics.cloudfunctions.net/sendPush', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: fcmToken, title, body, data })
+    });
+    return resp.ok ? { sent: true } : { sent: false, reason: await resp.text() };
+  } catch(e) {
+    return { sent: false, reason: e.message };
+  }
+}
+
+// ── 관리자 FCM 푸시 발송 ──
+async function sendAdminFCM(env, token, { title, body, type }) {
+  try {
+    const accessToken = await getAccessToken(env);
+    const resp = await fetch(
+      `https://fcm.googleapis.com/v1/projects/${PROJECT_ID}/messages:send`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message: {
+            token: token,
+            notification: { title, body },
+            data: { type: type || 'alert' },
+            android: { priority: 'high', notification: { sound: 'default', channelId: 'donway_admin' } },
+            apns: { payload: { aps: { sound: 'default', badge: 1 } } },
+            webpush: { notification: { icon: '/icon-192.png', badge: '/icon-192.png', requireInteraction: true } }
+          }
+        })
+      }
+    );
+    return resp.ok;
+  } catch(e) {
+    console.error('[FCM]', e.message);
+    return false;
+  }
+}
+
+// 관리자 전체 기기에 FCM 푸시 발송
+async function notifyAdmins(env, token, { title, body, type }) {
+  try {
+    // admin_tokens 컬렉션에서 모든 관리자 토큰 조회
+    const resp = await fetch(`${FS_BASE}/admin_tokens`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!resp.ok) return;
+    const data = await resp.json();
+    const docs = data.documents || [];
+    // 병렬로 모든 관리자 기기에 발송
+    await Promise.allSettled(
+      docs.map(doc => {
+        const fcmToken = doc.fields?.token?.stringValue;
+        if (fcmToken) return sendAdminFCM(env, fcmToken, { title, body, type });
+      }).filter(Boolean)
+    );
+  } catch(e) {
+    console.error('[notifyAdmins]', e.message);
+  }
+}
+
 // ── 환영 이메일 발송 (Gmail SMTP via Cloudflare Email) ──
 async function sendWelcomeEmail(env, { email, companyName, tempPassword, planType, loginUrl, planLabel }) {
   // Cloudflare Email Workers 또는 외부 SMTP 서비스 사용
@@ -90,15 +158,16 @@ async function sendWelcomeEmail(env, { email, companyName, tempPassword, planTyp
               <p style="margin:0 0 16px;color:#334155">안녕하세요, <strong>${companyName}</strong>님</p>
               <p style="margin:0 0 20px;color:#64748b">${planLabel} 결제가 완료됐습니다. 아래 정보로 로그인하세요.</p>
               <div style="background:#fff;border:1px solid #cbd5e1;border-radius:8px;padding:16px;margin-bottom:20px">
-                <div style="margin-bottom:10px"><span style="color:#64748b;font-size:13px">접속 URL</span><br>
-                  <a href="${loginUrl}" style="color:#0066ff;font-weight:700">${loginUrl}</a>
+                <div style="margin-bottom:10px"><span style="color:#64748b;font-size:13px">전용 접속 URL</span><br>
+                  <a href="${loginUrl}" style="color:#0066ff;font-weight:700;font-size:15px">${loginUrl}</a>
                 </div>
-                <div style="margin-bottom:10px"><span style="color:#64748b;font-size:13px">이메일</span><br>
+                <div style="margin-bottom:10px"><span style="color:#64748b;font-size:13px">로그인 이메일</span><br>
                   <strong>${email}</strong>
                 </div>
-                <div><span style="color:#64748b;font-size:13px">임시 비밀번호</span><br>
-                  <strong style="font-size:20px;letter-spacing:2px;color:#0f172a">${tempPassword}</strong>
+                <div style="margin-bottom:10px"><span style="color:#64748b;font-size:13px">플랜</span><br>
+                  <strong>${planLabel}</strong> — 즉시 활성화됨 ✅
                 </div>
+                ${tempPassword ? '<div style="background:#fef9c3;border:1px solid #fde047;border-radius:6px;padding:12px;margin-top:8px"><span style="color:#854d0e;font-size:12px">🔑 임시 비밀번호 (최초 로그인용)</span><br><strong style="font-size:20px;letter-spacing:2px;color:#0f172a">' + tempPassword + '</strong><br><span style="color:#854d0e;font-size:11px">로그인 후 반드시 비밀번호를 변경하세요</span></div>' : ''}
               </div>
               <p style="color:#ef4444;font-size:13px;margin:0 0 20px">⚠️ 로그인 후 반드시 비밀번호를 변경해주세요</p>
               <a href="${loginUrl}" style="display:block;background:#0066ff;color:#fff;text-align:center;padding:14px;border-radius:8px;text-decoration:none;font-weight:700">바로 시작하기 →</a>
@@ -988,6 +1057,7 @@ export default {
             planType:    { stringValue: planType },
             amount:      { integerValue: String(amount) },
             status:      { stringValue: 'pending' },
+            slug:        { stringValue: '' },   // confirm 시 companies에서 채워짐
             createdAt:   { timestampValue: new Date().toISOString() }
           }
         };
@@ -1098,11 +1168,23 @@ export default {
           }})
         });
 
-        // 6. 임시 비밀번호 생성 & Firestore에 저장
-        const tempPassword = generateTempPassword();
+        // 6. companies 문서에서 slug + email 조회 (toss_orders에는 slug 없음)
         const email = fields.email?.stringValue || '';
         const companyName = fields.companyName?.stringValue || '고객사';
-        const slug = fields.slug?.stringValue || '';
+        let slug = '';
+        if (dealerId) {
+          try {
+            const compResp = await fetch(`${FS_BASE}/companies/${dealerId}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            if (compResp.ok) {
+              const compDoc = await compResp.json();
+              slug = compDoc.fields?.slug?.stringValue || '';
+            }
+          } catch(e) { /* slug 없어도 계속 진행 */ }
+        }
+        // 임시 비밀번호 생성 (기존 계정이면 불필요하지만 관리자 확인용으로 저장)
+        const tempPassword = generateTempPassword();
 
         // companies 문서에 임시 비밀번호 저장 (관리자 확인용)
         if (dealerId) {
@@ -1117,25 +1199,79 @@ export default {
           });
         }
 
-        // 7. 환영 이메일 발송
-        const PLAN_LABELS = { contract:'위수탁 계약서', roster:'근무표 관리', qr:'QR 출퇴근', full:'풀패키지', settle:'AI 정산' };
+        // 7. 관리자 FCM 푸시 알림 (결제 완료)
+        await notifyAdmins(env, token, {
+          title: '💳 새 결제 완료!',
+          body: `${companyName} · ${planType} 플랜 결제`,
+          type: 'pay'
+        });
+
+        // 8. 환영 이메일 발송
+        const PLAN_LABELS = {
+          contract:'위수탁 계약서', roster:'근무표 관리', qr:'QR 출퇴근',
+          full:'풀패키지', settle:'AI 정산',
+          starter:'Starter 플랜', basic:'Basic 플랜', pro:'Pro 플랜',
+          starter3:'Starter 3개월', basic3:'Basic 3개월', pro3:'Pro 3개월'
+        };
         const loginUrl = getPlanUrl(planType, slug);
         const emailResult = await sendWelcomeEmail(env, {
           email, companyName, tempPassword, planType, loginUrl,
           planLabel: PLAN_LABELS[planType] || planType
         });
 
+        // ★ FCM 푸시 알림 발송 (앱이 열려 있으면 즉시 수신)
+        let fcmResult = { sent: false };
+        try {
+          const compDocResp = await fetch(`${FS_BASE}/companies/${dealerId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (compDocResp.ok) {
+            const compDoc = await compDocResp.json();
+            const fcmToken = compDoc.fields?.fcmToken?.stringValue;
+            if (fcmToken) {
+              fcmResult = await sendFCMPush(
+                fcmToken,
+                '🎉 결제 완료! 기능 활성화됨',
+                `${PLAN_LABELS[planType]||planType} 이용을 시작하세요`,
+                { loginUrl, planType }
+              );
+            }
+          }
+        } catch(e) { /* FCM 실패해도 결제는 성공 */ }
+
         return new Response(JSON.stringify({
           success: true,
           message: '결제 완료! 기능이 즉시 활성화됐습니다.',
           planType, dealerId, tempPassword,
           emailSent: emailResult.sent,
+          fcmSent: fcmResult.sent,
           loginUrl
         }), {
           headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS }
         });
       } catch (e) {
         return new Response(JSON.stringify({ error: e.message }), {
+          status: 500, headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS }
+        });
+      }
+    }
+
+    // ── 관리자 FCM 알림 (/fcm/notify-admin) ──
+    if (path === '/fcm/notify-admin' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const { title, body: msgBody, type } = body;
+        const token = await getAccessToken(env);
+        await notifyAdmins(env, token, {
+          title: title || 'DONWAY 알림',
+          body: msgBody || '',
+          type: type || 'alert'
+        });
+        return new Response(JSON.stringify({ ok: true }), {
+          headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS }
+        });
+      } catch(e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), {
           status: 500, headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS }
         });
       }

@@ -222,6 +222,7 @@ tr:hover>td{background:var(--bg3)}
       <button class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:var(--bg3);color:var(--text2)" onclick="openChangePw()">🔑 비밀번호 변경</button>
       <button id="admin-btn" class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:#1e293b;color:#f59e0b;display:none" onclick="openAdminPanel()">👑 슈퍼 어드민</button>
       <button class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:linear-gradient(135deg,#185FA5,#7C3AED);color:#fff;border:none" onclick="_showSubModal()">💳 구독 / 갱신</button>
+      <button class="btn" id="my-url-btn" style="width:100%;font-size:10px;margin-bottom:4px;background:var(--brand-l);color:var(--brand);border:1px solid var(--brand);display:none" onclick="_showMyUrl()">🔗 내 전용 URL</button>
       <button class="btn btn-red" style="width:100%;font-size:11px" onclick="doLogout()">로그아웃</button>
     </div>
   </div>
@@ -299,6 +300,98 @@ function _applySlugBranding(){
   if(sub) sub.textContent = cn + ' 전용 관리 시스템';
   // ★ 사이드바 DONWAY 옆에 회사명 표시
   _updateSidebarBrand(cn);
+}
+
+// ══ 내 전용 URL 조회 & 표시 ══
+function _showMyUrl(){
+  var slug=window._mySlug||'';
+  if(!slug){toast('URL 조회 중...');return;}
+  var url=window.location.origin+'/'+slug;
+  var mo=document.createElement('div');
+  mo.className='mo show';
+  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  var md=document.createElement('div');
+  md.className='md';md.style.cssText='max-width:360px;text-align:center';
+  md.innerHTML='<div class="mdt" style="justify-content:center">🔗 내 전용 URL</div>'
+    +'<div style="padding:16px">'
+    +'<div style="background:var(--bg3);border:2px solid var(--brand);border-radius:10px;padding:14px;margin-bottom:12px">'
+    +'<div style="font-size:14px;font-weight:700;color:var(--brand);word-break:break-all;margin-bottom:8px" id="mu-url-disp"></div>'
+    +'<button id="mu-copy-btn" style="width:100%;padding:9px;background:var(--brand);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📋 복사</button>'
+    +'</div>'
+    +'<div style="font-size:11px;color:var(--text3)">이 URL로 접속하면 회사 전용 화면이 됩니다</div>'
+    +'</div>'
+    +'<div class="mdf"><button id="mu-close-btn" class="btn">닫기</button></div>';
+  mo.appendChild(md);
+  document.body.appendChild(mo);
+  document.getElementById('mu-url-disp').textContent=url;
+  document.getElementById('mu-copy-btn').onclick=function(){
+    navigator.clipboard.writeText(url).then(function(){toast('✅ 복사됨!');}).catch(function(){
+      var ta=document.createElement('textarea');ta.value=url;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast('✅ 복사됨!');
+    });
+  };
+  document.getElementById('mu-close-btn').onclick=function(){mo.remove();};
+}
+
+// 로그인 후 내 slug 캐시 + 사이드바 버튼 활성화
+function _loadMySlug(){
+  if(!_db||!_CU||!_CU.dealerId||isSuperAdmin()) return;
+  _db.collection('companies').doc(_CU.dealerId).get().then(function(snap){
+    if(snap.exists){
+      var slug=snap.data().slug||'';
+      if(slug){
+        window._mySlug=slug;
+        var btn=document.getElementById('my-url-btn');
+        if(btn) btn.style.display='block';
+      }
+    }
+  }).catch(function(){});
+}
+
+// ══ 전용 URL 안내 배너 (최초 로그인 시) ══
+function _showUrlWelcomeBanner(slug, companyName){
+  _playNotifSound('join');
+  var url=window.location.origin+'/'+slug;
+  var mo=document.createElement('div');
+  mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  var box=document.createElement('div');
+  box.style.cssText='background:var(--bg1);border-radius:20px;padding:28px 24px;max-width:380px;width:100%;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.4)';
+  box.innerHTML='<div style="font-size:48px;margin-bottom:8px">&#x1F389;</div>'
+    +'<div style="font-size:18px;font-weight:800;margin-bottom:4px">DONWAY &#xC624;&#xC2E0; &#xAC83;&#xC744; &#xD658;&#xC601;&#xD569;&#xB2C8;&#xB2E4;!</div>'
+    +'<div style="font-size:13px;color:var(--text3);margin-bottom:20px" id="wb-co"></div>'
+    +'<div style="background:var(--bg3);border:2px solid var(--brand);border-radius:12px;padding:16px;margin-bottom:16px">'
+    +'<div style="font-size:11px;color:var(--text3);margin-bottom:6px">&#x1F4CC; &#xB098;&#xB9CC;&#xC758; &#xC804;&#xC6A9; &#xC811;&#xC18D; URL</div>'
+    +'<div id="my-url-text" style="font-size:15px;font-weight:700;color:var(--brand);word-break:break-all;margin-bottom:10px"></div>'
+    +'<button id="wb-copy-btn" style="width:100%;padding:10px;background:var(--brand);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">&#x1F4CB; URL &#xBCF5;&#xC0AC;&#xD558;&#xAE30;</button>'
+    +'</div>'
+    +'<div style="font-size:11px;color:var(--text3);line-height:1.7;margin-bottom:16px">&#xC774; URL&#xC744; &#xBD81;&#xB9C8;&#xD06C;&#xD574;&#xB450;&#xBA74; &#xBC14;&#xB85C; &#xC811;&#xC18D;&#xD560; &#xC218; &#xC788;&#xC2B5;&#xB2C8;&#xB2E4;<br>&#xC0AC;&#xC774;&#xB4DC;&#xBC14; &#x1F517; &#xBC84;&#xD2BC;&#xC73C;&#xB85C; &#xC5B8;&#xC81C;&#xB4E0; &#xB2E4;&#xC2DC; &#xD655;&#xC778; &#xAC00;&#xB2A5;&#xD569;&#xB2C8;&#xB2E4;</div>'
+    +'<button id="wb-close-btn" style="width:100%;padding:12px;background:var(--bg3);color:var(--text2);border:1px solid var(--border);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">&#xD655;&#xC778;</button>';
+  mo.appendChild(box);
+  document.body.appendChild(mo);
+  var coEl=document.getElementById('wb-co');if(coEl)coEl.textContent=companyName||'';
+  var urlEl=document.getElementById('my-url-text');if(urlEl)urlEl.textContent=url;
+  document.getElementById('wb-copy-btn').onclick=function(){
+    navigator.clipboard.writeText(url).then(function(){toast('URL 복사됨! 북마크에 추가하세요');}).catch(function(){
+      var ta=document.createElement('textarea');ta.value=url;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast('URL 복사됨!');
+    });
+  };
+  document.getElementById('wb-close-btn').onclick=function(){mo.remove();};
+  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+}
+
+
+function _copyMyUrl(){
+  var urlEl=document.getElementById('my-url-text');
+  if(!urlEl)return;
+  var url=urlEl.textContent.trim();
+  navigator.clipboard.writeText(url).then(function(){
+    toast('✅ URL 복사됨! 북마크에 추가하세요');
+  }).catch(function(){
+    // 폴백
+    var ta=document.createElement('textarea');ta.value=url;
+    document.body.appendChild(ta);ta.select();document.execCommand('copy');
+    document.body.removeChild(ta);
+    toast('✅ URL 복사됨!');
+  });
 }
 
 function _updateSidebarBrand(cn){
@@ -965,6 +1058,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
 <script>
 // ══ 캠프별 취합 UI (parseCoupangExcel 이후 호출) ══
 function renderCpPending(){
@@ -1299,9 +1393,34 @@ function showApp(){
   if(window._SLUG_MODE && _db){
     _loadSlugCompany();
   }
+  // FCM 푸시 알림 등록 (관리자/대리점만)
+  if(_CU.role !== 'driver' && _CU.role !== 'member'){
+    setTimeout(_registerFCM, 2000);
+    setTimeout(_initFCMReceiver, 1000);
+  }
+  // ★ 신규 가입 후 첫 로그인: URL 안내 배너 표시
+  if(_CU&&_CU.role!=='admin'&&_CU.role!=='driver'){
+    var _urlShownKey='donway_url_shown_'+(_CU.dealerId||'');
+    if(!localStorage.getItem(_urlShownKey)){
+      localStorage.setItem(_urlShownKey,'1');
+      setTimeout(function(){
+        var _slug=_CU.slug||_CU.companySlug||'';
+        // Firestore에서 slug 조회
+        if(!_slug&&_db&&_CU.dealerId){
+          _db.collection('companies').doc(_CU.dealerId).get().then(function(snap){
+            if(snap.exists) _slug=snap.data().slug||'';
+            if(_slug) _showUrlWelcomeBanner(_slug, _CU.companyName||'');
+          }).catch(function(){});
+        } else if(_slug){
+          _showUrlWelcomeBanner(_slug, _CU.companyName||'');
+        }
+      }, 1200);
+    }
+  }
   // 환영 팝업 (당일 첫 로그인)
   var _wday=new Date().toDateString();if(localStorage.getItem('mbti_welcome')!==_wday){localStorage.setItem('mbti_welcome',_wday);setTimeout(_showWelcome,700);}
   _loadRouteCampMap();  // 라우트→캠프 매핑 로드
+  _loadMySlug();  // 내 전용 URL 로드
   _loadSeasonPrices();  // 시즌 단가 로드
   // 슈퍼 어드민 버튼 표시
   var adminBtn=document.getElementById('admin-btn');
@@ -1444,6 +1563,16 @@ function doRegister(){
   }).then(function(){
     var myUrl=window.location.origin+'/'+slugVal;
     toast('✅ 등록 완료! 전용 URL이 생성됐습니다');
+    // ★ 관리자 앱에 신규 가입 FCM 푸시 발송 (회사코드 포함)
+    fetch('/fcm/notify-admin',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        title:'신규 가입!',
+        body:company+' | 코드: '+companyCode+' | 7일 무료체험',
+        type:'join'
+      })
+    }).catch(function(){});
     setTimeout(function(){
       alert('✅ 등록 완료!\n\n'
         +'📌 전용 URL\n'+myUrl+'\n\n'
@@ -2421,6 +2550,116 @@ function checkDealerDataIntegrity(docs, dealerId, collectionName){
       '['+collectionName+'] 타 대리점 데이터 '+contaminated.length+'건 감지!<br>즉시 관리자에게 문의하세요.<br>(자동 보고 완료)'
     );
   }
+}
+
+// ══ FCM 푸시 알림 등록 ══
+var VAPID_KEY = 'BNDQMuIj8gVt0uqOXOiMSLODRDiQiNO-5x4D1C-ZOXcxnf5iKJjNs5sHHFdHkZOXB9U3M8lP5W4xEpS7T2N4Ejo';
+// ★ Firebase Console → 프로젝트 설정 → 클라우드 메시징 → 웹 푸시 인증서 키로 교체 필요
+
+async function _registerFCM(){
+  if(!_db||!_CU||!_CU.dealerId) return;
+  try{
+    if(!('Notification' in window)){return;}
+    var perm = await Notification.requestPermission();
+    if(perm !== 'granted'){return;}
+    var messaging = firebase.messaging();
+    var token = await messaging.getToken({vapidKey: VAPID_KEY});
+    if(!token) return;
+    var isAdmin = isSuperAdmin();
+    // 대리점 FCM 토큰 저장
+    await _db.collection('companies').doc(_CU.dealerId).update({
+      fcmToken: token,
+      fcmUpdatedAt: new Date().toISOString()
+    });
+    // ★ 슈퍼어드민은 admin_tokens 컬렉션에도 저장 (결제알림 수신용)
+    if(isAdmin){
+      await _db.collection('admin_tokens').doc(_CU.dealerId).set({
+        token: token,
+        email: _CU.email||'',
+        updatedAt: new Date().toISOString(),
+        device: navigator.userAgent.includes('Mobile')?'mobile':'desktop'
+      });
+    }
+    console.log('[FCM] 토큰 등록 완료'+(isAdmin?' (관리자)':''));
+  } catch(e){
+    console.log('[FCM] 등록 실패:', e.message);
+  }
+}
+
+// ── 알림 소리 재생 (Web Audio API - 외부 파일 불필요) ──
+function _playNotifSound(type){
+  try{
+    var ctx = new (window.AudioContext||window.webkitAudioContext)();
+    // type: 'join'(신규가입) / 'pay'(결제완료) / 'alert'(일반알림)
+    var notes = {
+      join:  [523,659,784,1047],   // C-E-G-C (밝은 상승음)
+      pay:   [784,1047,1319],      // G-C-E (결제 완료음)
+      alert: [440,440]             // A (일반 알림음)
+    };
+    var seq = notes[type]||notes.alert;
+    var now = ctx.currentTime;
+    seq.forEach(function(freq, i){
+      var o = ctx.createOscillator();
+      var g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = freq;
+      o.type = 'sine';
+      g.gain.setValueAtTime(0, now + i*0.12);
+      g.gain.linearRampToValueAtTime(0.3, now + i*0.12 + 0.02);
+      g.gain.linearRampToValueAtTime(0, now + i*0.12 + 0.18);
+      o.start(now + i*0.12);
+      o.stop(now + i*0.12 + 0.2);
+    });
+  } catch(e){}
+}
+
+// ── 신규 가입/결제 알림 배너 ──
+function _showJoinBanner(title, body, type){
+  _playNotifSound(type||'alert');
+  // 기존 배너 제거
+  var old=document.getElementById('join-banner');if(old)old.remove();
+  var banner=document.createElement('div');
+  banner.id='join-banner';
+  var colors={join:'linear-gradient(135deg,#059669,#10b981)',pay:'linear-gradient(135deg,#2563eb,#7c3aed)',alert:'linear-gradient(135deg,#f59e0b,#f97316)'};
+  banner.style.cssText='position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999;'
+    +'background:'+( colors[type]||colors.alert )+';color:#fff;'
+    +'padding:14px 24px;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.3);'
+    +'min-width:280px;max-width:420px;text-align:center;animation:bannerIn .3s ease';
+  banner.innerHTML='<div style="font-size:20px;margin-bottom:4px">'+(type==='join'?'🎉':type==='pay'?'💳':'🔔')+'</div>'
+    +'<div style="font-size:14px;font-weight:800">'+title+'</div>'
+    +(body?'<div style="font-size:12px;opacity:.9;margin-top:4px">'+body+'</div>':'');
+  // 클릭으로 닫기
+  banner.onclick=function(){banner.remove();};
+  document.body.appendChild(banner);
+  // 5초 후 자동 제거
+  setTimeout(function(){if(banner.parentNode)banner.remove();},5000);
+}
+
+// ── CSS 애니메이션 추가 ──
+(function(){
+  if(!document.getElementById('notif-style')){
+    var st=document.createElement('style');st.id='notif-style';
+    st.textContent='@keyframes bannerIn{from{opacity:0;transform:translateX(-50%) translateY(-20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}';
+    document.head.appendChild(st);
+  }
+})();
+
+// ── 앱 내 푸시 수신 처리 (포그라운드) ──
+function _initFCMReceiver(){
+  try{
+    var messaging = firebase.messaging();
+    messaging.onMessage(function(payload){
+      var title = payload.notification?.title || 'DONWAY';
+      var body  = payload.notification?.body  || '';
+      var data  = payload.data || {};
+      var type  = data.type || 'alert';
+      // 소리 + 배너 + 브라우저 알림
+      _showJoinBanner(title, body, type);
+      if(Notification.permission==='granted'){
+        new Notification(title, {body:body, icon:'/icon-192.png', badge:'/icon-192.png'});
+      }
+    });
+  } catch(e){}
 }
 
 function goPage(page){
