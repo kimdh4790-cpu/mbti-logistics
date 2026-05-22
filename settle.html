@@ -1471,17 +1471,18 @@ var MENUS_SETTLE = [
   {s:'메인',items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'📋',l:'정산 관리',p:'settlements'}]},
   {s:'운영',items:[{ic:'👤',l:'기사 관리',p:'drivers'},{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'📅',l:'시즌 단가표',p:'season'}]},
   {s:'분석',items:[{ic:'📈',l:'통계',p:'stats'}]},
+  {s:'설정',items:[{ic:'📝',l:'위수탁 계약서',p:'contract'}]},
   {s:'커뮤니티',items:[{ic:'📢',l:'관리자 공지',p:'notices'}]}
 ];
 var MENUS_QR = [
   {s:'메인',items:[{ic:'🔐',l:'출퇴근 현황',p:'attendance'},{ic:'📅',l:'스케줄',p:'schedule'}]},
-  {s:'직원',items:[{ic:'👤',l:'직원 관리',p:'drivers'},{ic:'📝',l:'위수탁 계약서',p:'contract'}]},
+  {s:'직원',items:[{ic:'👤',l:'직원 관리',p:'drivers'}]},
   {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices'}]}
 ];
 var MENUS_FULL = [
   {s:'정산',items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'📋',l:'정산 관리',p:'settlements'},{ic:'📈',l:'통계',p:'stats'}]},
   {s:'운영',items:[{ic:'👤',l:'기사/직원',p:'drivers'},{ic:'📅',l:'스케줄',p:'schedule'}]},
-  {s:'설정',items:[{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'📝',l:'위수탁 계약서',p:'contract'}]},
+  {s:'설정',items:[{ic:'📌',l:'라우트 단가표',p:'prices'}]},
   {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices'}]}
 ];
 var MENUS = MENUS_SETTLE; // 기본값
@@ -1560,6 +1561,64 @@ function SP(pg,el){
 
 // ══ 위수탁 계약서 ══
 function pageContract(){
+  var content=document.getElementById('content');
+  // 결제 여부 확인
+  if(_db && _CU && _CU.dealerId){
+    _db.collection('companies').doc(_CU.dealerId).get().then(function(snap){
+      var d=snap.exists?snap.data():{};
+      if(d.contractPaid){
+        _renderContractPage();
+      } else {
+        _renderContractPaywall();
+      }
+    }).catch(function(){ _renderContractPaywall(); });
+  } else {
+    _renderContractPaywall();
+  }
+}
+
+function _renderContractPaywall(){
+  var content=document.getElementById('content');
+  content.innerHTML='<div style="max-width:480px;margin:0 auto;padding:24px;text-align:center">'
+    +'<div style="font-size:48px;margin-bottom:12px">🔒</div>'
+    +'<div style="font-size:18px;font-weight:800;margin-bottom:8px">위수탁 계약서</div>'
+    +'<div style="font-size:13px;color:var(--text2);margin-bottom:24px;line-height:1.6">위수탁 계약서 기능은 별도 결제 후 이용 가능합니다.<br>결제 완료 후 즉시 이용하실 수 있습니다.</div>'
+    +'<div class="card" style="margin-bottom:16px;text-align:left">'
+    +'<div style="font-size:13px;font-weight:700;margin-bottom:10px">📋 포함 기능</div>'
+    +'<div style="font-size:12px;color:var(--text2);line-height:2">'
+    +'✅ 영업점-택배기사 위수탁 계약서 양식<br>'
+    +'✅ 기사별 계약서 PDF 업로드·보관<br>'
+    +'✅ 계약서 목록 관리'
+    +'</div>'
+    +'</div>'
+    +'<div class="card" style="margin-bottom:16px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.3)">'
+    +'<div style="font-size:20px;font-weight:900;color:var(--primary);margin-bottom:4px">월 9,900원</div>'
+    +'<div style="font-size:11px;color:var(--text3)">부가세 포함 · 매월 자동 결제</div>'
+    +'</div>'
+    +'<button onclick="_contractPayRequest()" style="width:100%;padding:14px;background:var(--primary);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px">💳 결제 신청하기</button>'
+    +'<div style="font-size:11px;color:var(--text3)">결제 문의: 카카오톡 <strong>MBTI Co. LOGISTICS</strong></div>'
+    +'</div>';
+}
+
+function _contractPayRequest(){
+  // 결제 요청을 Firestore에 기록 + 카카오 채널로 안내
+  if(_db && _CU){
+    _db.collection('payment_requests').add({
+      dealerId:_CU.dealerId,
+      companyName:_CU.companyName||'',
+      email:_CU.email||'',
+      type:'contract',
+      status:'pending',
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    }).then(function(){
+      toast('✅ 결제 신청이 접수됐습니다! 카카오톡으로 안내드릴게요.');
+    }).catch(function(){});
+  }
+  // 카카오 채널 열기
+  window.open('https://pf.kakao.com/_xnxmxmxb','_blank');
+}
+
+function _renderContractPage(){
   var content=document.getElementById('content');
   content.innerHTML='<div style="max-width:600px;margin:0 auto;padding:16px">'
     +'<div style="font-size:18px;font-weight:800;margin-bottom:16px">📝 위수탁 계약서</div>'
