@@ -3732,7 +3732,7 @@ async function _ocrAnalyze(){
         'anthropic-dangerous-direct-browser-access':'true'
       },
       body:JSON.stringify({
-        model:'claude-3-haiku-20240307',
+        model:'claude-3-5-haiku-20241022',
         max_tokens:600,
         messages:[{role:'user',content:[
           {type:'image',source:{type:'base64',media_type:mime,data:b64}},
