@@ -37,6 +37,15 @@ function forbidden(msg = '접근이 거부되었습니다') {
 }
 
 const PROJECT_ID = 'mbti-logistics';
+
+// 16진수 문자열 → Uint8Array
+function hexToBytes(hex) {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+  }
+  return bytes;
+}
 const FS_BASE    = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
 
 // ── Service Account JWT ───────────────────────────────────────────────────────
@@ -865,6 +874,233 @@ export default {
       } catch (e) {
         return new Response(JSON.stringify({ success: false, error: e.message }), {
           status: 500, headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
+
+    // ══════════════════════════════════════════════════════════════
+    // 토스페이먼츠 PG 연동
+    // ══════════════════════════════════════════════════════════════
+
+    // ── 결제 주문 생성 (/toss/create-order) ──
+    if (path === '/toss/create-order' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const { dealerId, companyName, email, planType, amount } = body;
+        if (!dealerId || !planType || !amount) {
+          return new Response(JSON.stringify({ error: '필수 파라미터 누락' }), {
+            status: 400, headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS }
+          });
+        }
+        const PLAN_LABELS = {
+          contract: '위수탁 계약서',
+          roster: '근무표 관리',
+          qr: 'QR 출퇴근',
+          full: '풀패키지',
+          settle: 'AI 정산'
+        };
+        // 주문 ID 생성 (dealerId + timestamp)
+        const orderId = `DONWAY-${dealerId.slice(0,8)}-${Date.now()}`;
+        // Firestore에 주문 기록 저장
+        const token = await getAccessToken(env);
+        const orderDoc = {
+          fields: {
+            orderId:     { stringValue: orderId },
+            dealerId:    { stringValue: dealerId },
+            companyName: { stringValue: companyName || '' },
+            email:       { stringValue: email || '' },
+            planType:    { stringValue: planType },
+            amount:      { integerValue: String(amount) },
+            status:      { stringValue: 'pending' },
+            createdAt:   { timestampValue: new Date().toISOString() }
+          }
+        };
+        await fetch(`${FS_BASE}/toss_orders?documentId=${orderId}`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderDoc)
+        });
+        return new Response(JSON.stringify({
+          orderId,
+          orderName: `DONWAY ${PLAN_LABELS[planType] || planType}`,
+          amount,
+          customerEmail: email,
+          customerName: companyName
+        }), {
+          headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS }
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500, headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS }
+        });
+      }
+    }
+
+    // ── 결제 확인 & 기능 활성화 (/toss/confirm) ──
+    if (path === '/toss/confirm' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const { paymentKey, orderId, amount } = body;
+        if (!paymentKey || !orderId || !amount) {
+          return new Response(JSON.stringify({ error: '필수 파라미터 누락' }), {
+            status: 400, headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS }
+          });
+        }
+        const secretKey = env.TOSS_SECRET_KEY;
+        if (!secretKey) {
+          return new Response(JSON.stringify({ error: 'TOSS_SECRET_KEY 미설정' }), {
+            status: 500, headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS }
+          });
+        }
+
+        // 1. 토스 결제 승인 API 호출
+        const tossResp = await fetch('https://api.tosspayments.com/v1/payments/confirm', {
+          method: 'POST',
+          headers: {
+            Authorization: `Basic ${btoa(secretKey + ':')}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ paymentKey, orderId, amount })
+        });
+        const tossData = await tossResp.json();
+        if (!tossResp.ok) {
+          return new Response(JSON.stringify({ error: tossData.message || '결제 승인 실패', code: tossData.code }), {
+            status: 400, headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS }
+          });
+        }
+
+        // 2. Firestore에서 주문 정보 조회
+        const token = await getAccessToken(env);
+        const orderResp = await fetch(`${FS_BASE}/toss_orders/${orderId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!orderResp.ok) {
+          return new Response(JSON.stringify({ error: '주문 정보 없음' }), {
+            status: 404, headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS }
+          });
+        }
+        const orderDoc = await orderResp.json();
+        const fields = orderDoc.fields || {};
+        const dealerId = fields.dealerId?.stringValue;
+        const planType = fields.planType?.stringValue;
+
+        // 3. 플랜별 활성화 필드 매핑
+        const PLAN_FIELDS = {
+          contract: { contractPaid: { booleanValue: true } },
+          roster:   { rosterPaid:   { booleanValue: true } },
+          qr:       { qrPaid:       { booleanValue: true } },
+          full:     { contractPaid: { booleanValue: true }, rosterPaid: { booleanValue: true }, qrPaid: { booleanValue: true }, settlePaid: { booleanValue: true } },
+          settle:   { settlePaid:   { booleanValue: true } }
+        };
+        const planFields = PLAN_FIELDS[planType] || {};
+
+        // 4. Firestore companies 문서 업데이트 (기능 즉시 활성화)
+        if (dealerId && Object.keys(planFields).length) {
+          const updateFields = {
+            ...planFields,
+            plan:            { stringValue: 'paid' },
+            lastPaymentKey:  { stringValue: paymentKey },
+            lastPaidAt:      { timestampValue: new Date().toISOString() },
+            lastPlanType:    { stringValue: planType }
+          };
+          const updateMask = Object.keys(updateFields).map(k => `updateMask.fieldPaths=${k}`).join('&');
+          await fetch(`${FS_BASE}/companies/${dealerId}?${updateMask}`, {
+            method: 'PATCH',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fields: updateFields })
+          });
+        }
+
+        // 5. 주문 상태 완료로 업데이트
+        await fetch(`${FS_BASE}/toss_orders/${orderId}?updateMask.fieldPaths=status&updateMask.fieldPaths=paidAt&updateMask.fieldPaths=paymentKey`, {
+          method: 'PATCH',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fields: {
+            status:     { stringValue: 'paid' },
+            paidAt:     { timestampValue: new Date().toISOString() },
+            paymentKey: { stringValue: paymentKey }
+          }})
+        });
+
+        return new Response(JSON.stringify({
+          success: true,
+          message: '결제 완료! 기능이 즉시 활성화됐습니다.',
+          planType,
+          dealerId
+        }), {
+          headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS }
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500, headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS }
+        });
+      }
+    }
+
+    // ── 토스 웹훅 수신 (/toss/webhook) ──
+    if (path === '/toss/webhook' && method === 'POST') {
+      try {
+        // 토스 웹훅 서명 검증
+        const webhookSecret = env.TOSS_WEBHOOK_SECRET;
+        const signature = request.headers.get('TossPayments-Signature');
+        const bodyText = await request.text();
+        if (webhookSecret && signature) {
+          const key = await crypto.subtle.importKey(
+            'raw', new TextEncoder().encode(webhookSecret),
+            { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']
+          );
+          const valid = await crypto.subtle.verify(
+            'HMAC', key, hexToBytes(signature),
+            new TextEncoder().encode(bodyText)
+          );
+          if (!valid) {
+            return new Response('Invalid signature', { status: 401, headers: SECURITY_HEADERS });
+          }
+        }
+        const event = JSON.parse(bodyText);
+        // 결제 완료 이벤트만 처리
+        if (event.eventType === 'PAYMENT_STATUS_CHANGED' && event.data?.status === 'DONE') {
+          const orderId = event.data.orderId;
+          const paymentKey = event.data.paymentKey;
+          // 위 confirm 로직과 동일하게 처리 (이중 안전장치)
+          const token = await getAccessToken(env);
+          const orderResp = await fetch(`${FS_BASE}/toss_orders/${orderId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (orderResp.ok) {
+            const orderDoc = await orderResp.json();
+            const f = orderDoc.fields || {};
+            const dealerId = f.dealerId?.stringValue;
+            const planType = f.planType?.stringValue;
+            const PLAN_FIELDS = {
+              contract: { contractPaid: { booleanValue: true } },
+              roster:   { rosterPaid:   { booleanValue: true } },
+              qr:       { qrPaid:       { booleanValue: true } },
+              full:     { contractPaid: { booleanValue: true }, rosterPaid: { booleanValue: true }, qrPaid: { booleanValue: true }, settlePaid: { booleanValue: true } },
+              settle:   { settlePaid:   { booleanValue: true } }
+            };
+            const planFields = PLAN_FIELDS[planType] || {};
+            if (dealerId && Object.keys(planFields).length) {
+              const updateFields = {
+                ...planFields,
+                plan: { stringValue: 'paid' },
+                lastPaymentKey: { stringValue: paymentKey || '' },
+                lastPaidAt: { timestampValue: new Date().toISOString() }
+              };
+              const mask = Object.keys(updateFields).map(k => `updateMask.fieldPaths=${k}`).join('&');
+              await fetch(`${FS_BASE}/companies/${dealerId}?${mask}`, {
+                method: 'PATCH',
+                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fields: updateFields })
+              });
+            }
+          }
+        }
+        return new Response('OK', { status: 200, headers: SECURITY_HEADERS });
+      } catch (e) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500, headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS }
         });
       }
     }
