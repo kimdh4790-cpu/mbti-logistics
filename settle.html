@@ -303,31 +303,30 @@ var RPRICE_ADJ = {}; // 수정 단가 (라우트수정단가 파일 적용)
 // ※ 단가는 Firestore(_routePrices)에서만 로드. 하드코딩 기본값 없음.
 // 초기화(전체초기화) 시 완전히 비워집니다.
 // 캠프명 매핑 (라우트 숫자코드 → 캠프명)
-var CAMP_NAMES={
-  '101':'부산1캠프','215':'부산1캠프',
-  '812':'부산2캠프',
-  '508':'부산3캠프',
-  '109':'대구2캠프','213':'대구2B캠프',
-  '608':'진주M캠프','612':'진주M캠프','613':'진주M캠프',
-  '614':'진주M캠프','619':'진주M캠프'
-};
-// 캠프 표시 순서
-var CAMP_ORDER=['부산1캠프','부산2캠프','부산3캠프','대구2캠프','대구2B캠프','진주M캠프'];
-// 캠프 색상
-var CAMP_COLOR={
-  '부산1캠프':'#3B82F6','부산2캠프':'#8B5CF6','부산3캠프':'#10B981',
-  '대구2캠프':'#F59E0B','대구2B캠프':'#FB923C','진주M캠프':'#EF4444'
-};
-// ★ v9.25: 캠프 GPS 좌표 (출근 체크인 300m 거리 검증용)
-//    관리자가 [기사관리 > 캠프 GPS 등록] 메뉴에서 수정 가능 → localStorage 'campGps'
-var CAMP_GPS_DEFAULT={
-  '부산1캠프':{lat:35.1941,lng:129.1198,addr:'부산광역시 해운대구 반여로 20'},
-  '부산2캠프':{lat:35.1252,lng:128.9641,addr:'부산광역시 사상구 강변대로456번길 15-36'},
-  '부산3캠프':{lat:35.0659,lng:129.0100,addr:'부산광역시 서구 원양로 203'},
-  '대구2캠프':{lat:35.8183,lng:128.7203,addr:'경상북도 경산시 삼성현로 156'},          // 109노선
-  '대구2B캠프':{lat:35.8762,lng:128.6794,addr:'대구광역시 동구 동촌로 374'},            // 213노선
-  '진주M캠프':{lat:35.1190,lng:128.0989,addr:'경남 진주시 정촌면 화개천로 12'}
-};
+// 캠프 설정 (Firestore {dealerId}_campConfig 에서 로드 - per dealer)
+var _campConfig={};  // { campName: {color,lat,lng,addr} }
+// ★ CAMP_NAMES, CAMP_ORDER, CAMP_COLOR, CAMP_GPS_DEFAULT 하드코딩 제거
+//    모든 캠프 정보는 _routeCampMap(라우트→캠프) + _campConfig(캠프→설정)에서 동적 로드
+var CAMP_NAMES={};   // 호환성 유지 (비워둠 - _routeCampMap이 우선)
+var CAMP_ORDER=[];   // 동적
+var CAMP_COLOR={};   // 동적
+var CAMP_GPS_DEFAULT={};  // 동적
+
+// 캠프 GPS 조회 (per-dealer)
+function getCampGps(campName){
+  var cfg=_campConfig[campName];
+  if(cfg&&cfg.lat)return{lat:cfg.lat,lng:cfg.lng,addr:cfg.addr||''};
+  return null;
+}
+// _campConfig → _CAMP_FIXED_COLORS 동기화
+function _syncCampColors(){
+  Object.keys(_campConfig).forEach(function(cn){
+    if(_campConfig[cn]&&_campConfig[cn].color){
+      _CAMP_FIXED_COLORS[cn]=_campConfig[cn].color;
+    }
+  });
+  _campColorCache={};  // 캐시 초기화
+}
 
 function getCampByRoute(route){
   if(!route) return '';
@@ -749,8 +748,9 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         newRoutes.forEach(function(nr){RPRICE[nr.route]=0;newPriceObj[nr.route]=0;});
         if(Object.keys(newPriceObj).length){
           var dpId=(_CU.dealerId||'shared')+'_routePrices';
+          // ★ 신규 라우트만 0으로 추가 (기존 단가 절대 덮어쓰지 않음)
           routePromises.push(
-            _db.collection('settings').doc(dpId).set(RPRICE,{merge:true}).catch(function(){})
+            _db.collection('settings').doc(dpId).set(newPriceObj,{merge:true}).catch(function(){})
           );
         }
       }
@@ -1189,6 +1189,10 @@ function initFirebase(){
         window._CU=_CU;
         
         _db.doc('settings/prices_'+_CU.dealerId).get().then(function(ps){if(ps.exists)Object.assign(G_PRICES,ps.data());}).catch(function(){});
+        // 캠프 설정 로드
+        _db.collection('settings').doc(_CU.dealerId+'_campConfig').get().then(function(cs){
+          if(cs.exists){_campConfig=cs.data()||{};_syncCampColors();}
+        }).catch(function(){});
         // 관리자/대리점 모두 DONWAY 접속 가능
         // 관리자는 슈퍼어드민 모드 자동 활성
         showApp();
@@ -2281,7 +2285,7 @@ var MENUS_SETTLE = [
   {s:'메인',items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'📋',l:'정산 관리',p:'settlements'}]},
   {s:'운영',items:[{ic:'👤',l:'기사 관리',p:'drivers'},{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'📅',l:'시즌 단가표',p:'season'}]},
   {s:'분석',items:[{ic:'📈',l:'통계',p:'stats'}]},
-  {s:'설정',items:[{ic:'📝',l:'위수탁 계약서',p:'contract'},{ic:'📅',l:'달력',p:'schedule'},{ic:'🗓',l:'근무표',p:'roster'}]},
+  {s:'설정',items:[{ic:'🏭',l:'캠프 관리',p:'camps'},{ic:'📝',l:'위수탁 계약서',p:'contract'},{ic:'📅',l:'달력',p:'schedule'},{ic:'🗓',l:'근무표',p:'roster'}]},
   {s:'커뮤니티',items:[{ic:'📢',l:'관리자 공지',p:'notices'}]}
 ];
 // QR 출퇴근 전용 (일반직원, 위수탁X)
@@ -2294,7 +2298,7 @@ var MENUS_QR = [
 var MENUS_FULL = [
   {s:'정산',items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'📋',l:'정산 관리',p:'settlements'},{ic:'📈',l:'통계',p:'stats'}]},
   {s:'운영',items:[{ic:'👤',l:'기사/직원',p:'drivers'},{ic:'📅',l:'달력',p:'schedule'}]},
-  {s:'설정',items:[{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'📝',l:'위수탁 계약서',p:'contract'},{ic:'🗓',l:'근무표',p:'roster'}]},
+  {s:'설정',items:[{ic:'🏭',l:'캠프 관리',p:'camps'},{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'📝',l:'위수탁 계약서',p:'contract'},{ic:'🗓',l:'근무표',p:'roster'}]},
   {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices'}]}
 ];
 // 기사/직원 전용 (본인 정산만)
@@ -2364,7 +2368,7 @@ function goPage(page){
   var nav=document.getElementById('nav-'+page);if(nav)nav.classList.add('on');
   document.getElementById('topbar-right').innerHTML='';
   document.getElementById('sidebar').classList.remove('open');
-  var pages={settle:pageSettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,roster:pageRoster};
+  var pages={settle:pageSettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,roster:pageRoster,camps:pageCamps};
   var fn=pages[page];
   if(fn)fn();
   else document.getElementById('content').innerHTML='<div class="empty"><div class="empty-icon">🚧</div>준비 중</div>';
@@ -2401,7 +2405,7 @@ function pageSettle(){
     settles.forEach(function(s){
       var r=calcNet(s);
       var ct=s.coupangTotal||(((s.damt||0)+(s.ramt||0)+(s.fresh||0)+(s.inc||0)+(s.nocont||0)))||0;
-      totCoupang+=ct?Math.round(ct*1.1):Math.round((r.income||0)*1.1); // 쿠팡→MBTI VAT포함
+      totCoupang+=ct?Math.round(ct*1.1):Math.round((r.income||0)*1.1); // 쿠팡→MBTI VAT포함 (회사 수입용)
       totTaxBase+=(r.income||0);   // 기사 세금계산서 (이미 VAT포함)
       totNet+=r.net||0;
       totDeduct+=r.deduct||0;
@@ -2500,14 +2504,7 @@ function pageSettle(){
 }
 
 var _CAMP_PALETTE=['#1D4ED8','#7C3AED','#059669','#D97706','#DC2626','#0891B2','#65A30D','#BE185D','#4F46E5','#0F766E'];
-var _CAMP_FIXED_COLORS={
-  '대구2캠프':'#F97316','대구2B캠프':'#FB923C',
-  '부산1캠프':'#1D4ED8',
-  '부산2캠프':'#7C3AED',
-  '부산3캠프':'#059669',
-  '진주M캠프':'#DC2626',
-  '대구2':'#F97316','부산1':'#1D4ED8','부산2':'#7C3AED','부산3':'#059669','진주M':'#DC2626'
-};
+var _CAMP_FIXED_COLORS={}; // 동적 (_campConfig에서 로드)
 function _campColor(camp){
   if(!camp)return '#64748B';
   if(_CAMP_FIXED_COLORS[camp])return _CAMP_FIXED_COLORS[camp];
@@ -2783,8 +2780,7 @@ function _settleRow(x){
   if(!x)return '';
   var r=calcNet(x);
   var net=r.net||0;
-  var ct=x.coupangTotal||(((x.damt||0)+(x.ramt||0)+(x.fresh||0)+(x.inc||0)+(x.nocont||0)))||0;
-  var vatIncome=ct?Math.round(ct*1.1):Math.round((r.income||0)*1.1);
+  var vatIncome=r.totalAmt||0;  // ★ 기사 세금계산서 합계 (RPRICE 기반)
   var campCC=_getSettleCamp(x)||'기타';
   var col=_campColor(campCC)||'var(--purple)';
   var sent=x.taxSent;
@@ -2820,8 +2816,7 @@ function openSendModal(x){
   var r=calcNet(x);
   var net=r.net||0;
   var emp=(r.emp||0)+(r.work||0);
-  var ct=x.coupangTotal||(((x.damt||0)+(x.ramt||0)+(x.fresh||0)+(x.inc||0)+(x.nocont||0)))||0;
-  var vatIncome=ct?Math.round(ct*1.1):Math.round((r.income||0)*1.1);
+  var vatIncome=r.totalAmt||0;  // ★ 기사 세금계산서 합계
   var name=x.driver||x.userId||'기사';
   var month=x.month||'';
   var phone=x.phone||x.driverPhone||'';
@@ -4835,9 +4830,10 @@ function pagePrices(){
   Promise.all([
     _db.collection('settings').doc(did+'_routePrices').get().catch(function(){return null;}),
     _db.collection('settings').doc(did+'_routeCampMap').get().catch(function(){return null;}),
-    _db.collection('settings').doc(did+'_routePricesAdj').get().catch(function(){return null;})
+    _db.collection('settings').doc(did+'_routePricesAdj').get().catch(function(){return null;}),
+    _db.collection('settings').doc(did+'_campConfig').get().catch(function(){return null;})
   ]).then(function(results){
-    var rpSnap=results[0],rcSnap=results[1],raSnap=results[2];
+    var rpSnap=results[0],rcSnap=results[1],raSnap=results[2],ccSnap=results[3];
     if(rpSnap&&rpSnap.exists){
       var data=rpSnap.data();
       Object.keys(RPRICE).forEach(function(k){delete RPRICE[k];});
@@ -4850,6 +4846,10 @@ function pagePrices(){
       Object.keys(RPRICE_ADJ).forEach(function(k){delete RPRICE_ADJ[k];});
       var raData=raSnap.data();
       Object.keys(raData).forEach(function(k){if(typeof raData[k]==='number')RPRICE_ADJ[k]=raData[k];});
+    }
+    if(ccSnap&&ccSnap.exists){
+      _campConfig=ccSnap.data()||{};
+      _syncCampColors();
     }
     // settlements 캐시에서 캠프 매핑 재구성 (없으면 Firebase에서 로드)
     function rebuildAndRender(){
@@ -5153,6 +5153,148 @@ function addRpCamp(cid){
   setTimeout(function(){showRpCampTab(campName);},30);
   toast('✅ '+k+' ('+v.toLocaleString()+'원) 추가');
 }
+// ══ 캠프 관리 페이지 ══
+function pageCamps(){
+  document.getElementById('page-title').textContent='🏭 캠프 관리';
+  document.getElementById('topbar-right').innerHTML='';
+  var el=document.getElementById('content');
+  if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
+
+  // 실제 데이터에서 캠프 목록 수집
+  var campSet={};
+  (_settleCache||[]).forEach(function(s){
+    var cc=s.camp||_getRouteCamp((s.routeDetails&&s.routeDetails[0]&&s.routeDetails[0].route)||'');
+    if(cc&&cc!=='기타')campSet[cc]=1;
+  });
+  (_drvCache||[]).forEach(function(d){if(d.camp)campSet[d.camp]=1;});
+  Object.keys(_routeCampMap||{}).forEach(function(r){if(_routeCampMap[r])campSet[_routeCampMap[r]]=1;});
+  var campList=Object.keys(campSet).sort();
+
+  function render(){
+    var html='<div class="card" style="margin-bottom:12px">'
+      +'<div class="card-header"><div class="card-title">🏭 캠프 목록</div>'
+      +'<button class="btn btn-sm btn-blue" onclick="openAddCampModal()">+ 캠프 추가</button></div>'
+      +'<div style="font-size:11px;color:var(--text3);margin-bottom:12px">'
+      +'캠프별 GPS 주소를 입력하면 기사 앱에서 네비게이션이 작동합니다. 색상은 자동 배정됩니다.</div>';
+
+    if(!campList.length){
+      html+='<div class="empty" style="padding:30px"><div class="empty-icon">🏭</div>'
+        +'<div>아직 캠프가 없습니다</div>'
+        +'<div style="font-size:11px;color:var(--text3);margin-top:6px">쿠팡 엑셀 업로드 시 자동 생성됩니다<br>또는 직접 추가할 수 있습니다</div></div>';
+    } else {
+      html+='<div style="display:grid;gap:8px">';
+      campList.forEach(function(camp){
+        var cfg=_campConfig[camp]||{};
+        var color=_campColor(camp);
+        var addr=cfg.addr||'';
+        var hasGps=!!(cfg.lat&&cfg.lng);
+        html+='<div style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--bg3);border-radius:10px;border-left:4px solid '+color+'">'
+          +'<div style="width:10px;height:10px;border-radius:50%;background:'+color+';flex-shrink:0"></div>'
+          +'<div style="flex:1">'
+          +'<div style="font-size:13px;font-weight:700">'+esc(camp)+'</div>'
+          +'<div style="font-size:11px;color:'+(hasGps?'var(--green)':'var(--text3)')+'">'
+          +(hasGps?'📍 '+esc(addr):'📍 GPS 미설정 (기사 앱 네비 불가)')+'</div>'
+          +'</div>'
+          +'<button class="btn btn-sm" onclick="openEditCampModal(this.dataset.c)" data-c="'+esc(camp)+'">📍 GPS 설정</button>'
+          +'<button class="btn btn-sm btn-red" onclick="deleteCamp(this.dataset.c)" data-c="'+esc(camp)+'">🗑</button>'
+          +'</div>';
+      });
+      html+='</div>';
+    }
+    html+='</div>';
+    html+='<div class="card" style="background:var(--brand-l);border-color:var(--brand)">'
+      +'<div style="font-size:12px;color:var(--brand);line-height:1.9">'
+      +'✅ 캠프명·색상은 엑셀 업로드 시 <b>자동 생성</b>됩니다<br>'
+      +'📍 GPS 주소만 입력하면 기사 앱 네비게이션 작동<br>'
+      +'🔒 내 캠프 정보는 다른 대리점에 공개되지 않습니다'
+      +'</div></div>';
+    el.innerHTML=html;
+  }
+  render();
+}
+
+function openAddCampModal(){
+  _openCampModal(null,null);
+}
+function openEditCampModal(campName){
+  _openCampModal(campName,_campConfig[campName]||{});
+}
+function _openCampModal(campName,cfg){
+  var isNew=!campName;
+  var mo=document.getElementById('mo-camp');if(mo)mo.remove();
+  var moEl=document.createElement('div');moEl.className='mo show';moEl.id='mo-camp';
+  moEl.innerHTML='<div class="md" style="max-width:420px">'
+    +'<div class="mdt">'+(isNew?'캠프 추가':'📍 GPS 주소 설정 — '+esc(campName||''))
+    +'<button onclick="var m=document.getElementById(\'mo-camp\');if(m)m.remove()" style="background:none;border:none;cursor:pointer;font-size:18px">✕</button></div>'
+    +(isNew?'<div class="fg"><label>캠프명</label><input id="camp-name-inp" value="" placeholder="예: 인천1캠프"></div>':'<input id="camp-name-inp" type="hidden" value="'+esc(campName||'')+'">')
+    +'<div class="fg"><label>캠프 주소</label>'
+    +'<input id="camp-addr-inp" value="'+(cfg&&cfg.addr?esc(cfg.addr):'')+'" placeholder="예: 인천시 남동구 xxx로 123">'
+    +'</div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-bottom:12px">주소 입력 시 자동 좌표 변환 → 기사 앱 네비게이션 작동</div>'
+    +'<div class="mdf">'
+    +'<button class="btn" onclick="var m=document.getElementById(\'mo-camp\');if(m)m.remove()">취소</button>'
+    +'<button class="btn btn-blue" onclick="saveCamp()">저장</button>'
+    +'</div></div>';
+  document.body.appendChild(moEl);
+}
+
+function _setCampColor(el){
+  var inp=document.getElementById('camp-color-inp');
+  if(inp)inp.value=el.dataset.c||'#1D4ED8';
+}
+
+function saveCamp(oldName){
+  var nameEl=document.getElementById('camp-name-inp');
+  oldName=oldName||'';
+  var addrEl=document.getElementById('camp-addr-inp');
+  if(!nameEl||!colorEl)return;
+  var name=nameEl.value.trim();
+  var addr=addrEl?addrEl.value.trim():'';
+  if(!name){toast('❌ 캠프명을 입력하세요');return;}
+
+  var did=_CU&&_CU.dealerId;
+  if(!did||!_db){toast('❌ Firebase 미연결');return;}
+
+  function doSave(lat,lng){
+    if(!_campConfig[name])_campConfig[name]={};
+    if(addr)_campConfig[name].addr=addr;
+    if(lat)_campConfig[name].lat=lat;
+    if(lng)_campConfig[name].lng=lng;
+    _db.collection('settings').doc(did+'_campConfig').set(_campConfig,{merge:false})
+      .then(function(){
+        _syncCampColors();
+        var mo=document.getElementById('mo-camp');if(mo)mo.remove();
+        toast('✅ '+name+' 저장 완료');
+        pageCamps();
+      }).catch(function(e){toast('❌ 저장 실패: '+e.message);});
+  }
+
+  // 주소 → 좌표 변환 (카카오)
+  if(addr&&window.kakao&&kakao.maps&&kakao.maps.services){
+    var gc=new kakao.maps.services.Geocoder();
+    gc.addressSearch(addr,function(res,status){
+      if(status===kakao.maps.services.Status.OK&&res.length){
+        doSave(parseFloat(res[0].y),parseFloat(res[0].x));
+      } else {
+        doSave(null,null);
+      }
+    });
+  } else {
+    doSave(null,null);
+  }
+}
+
+function deleteCamp(campName){
+  if(!confirm(campName+' 캠프를 삭제하시겠습니까?'))return;
+  delete _campConfig[campName];
+  delete _CAMP_FIXED_COLORS[campName];
+  _campColorCache={};
+  var did=_CU&&_CU.dealerId;
+  _db.collection('settings').doc(did+'_campConfig').set(_campConfig,{merge:false})
+    .then(function(){toast('🗑 '+campName+' 삭제');pageCamps();})
+    .catch(function(e){toast('❌ '+e.message);});
+}
+
 function saveRprice(){
   if(!_db){toast('❌ Firebase 미연결');return;}
   var newPrices={};
