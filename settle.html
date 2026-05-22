@@ -4737,8 +4737,15 @@ function doResetData(){
   // 라우트 단가표 초기화
   if(doRoutes){
     var rpId=did+'_routePrices';
+    var rcId=did+'_routeCampMap';
     promises.push(_db.collection('settings').doc(rpId).delete().catch(function(){}));
+    promises.push(_db.collection('settings').doc(rcId).delete().catch(function(){}));
+    // RPRICE 메모리 및 하드코딩 기본값 완전 초기화
     Object.keys(RPRICE).forEach(function(k){delete RPRICE[k];});
+    // _routeCampMap도 초기화
+    if(window._routeCampMap){Object.keys(_routeCampMap).forEach(function(k){delete _routeCampMap[k];});}
+    // G_PRICES 초기화
+    if(window.G_PRICES){Object.keys(G_PRICES).forEach(function(k){delete G_PRICES[k];});}
   }
   // 인센 설정 초기화
   if(doInc){
@@ -4748,8 +4755,11 @@ function doResetData(){
     Object.keys(localStorage).filter(function(k){return k.startsWith('inc_');}).forEach(function(k){localStorage.removeItem(k);});
   }
   Promise.all(promises).then(function(){
-    toast('✅ 초기화 완료!\n'+items.join(', ')+' 삭제됨');
-    goPage('settle');
+    toast('✅ 초기화 완료! '+items.join(', ')+' 삭제됨');
+    // 완전한 초기화를 위해 페이지 새로고침
+    setTimeout(function(){
+      location.reload();
+    }, 1200);
   }).catch(function(e){toast('⚠️ 일부 실패: '+e.message);});
 }
 
