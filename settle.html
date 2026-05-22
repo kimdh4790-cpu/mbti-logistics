@@ -1475,13 +1475,13 @@ var MENUS_SETTLE = [
 ];
 var MENUS_QR = [
   {s:'메인',items:[{ic:'🔐',l:'출퇴근 현황',p:'attendance'},{ic:'📅',l:'스케줄',p:'schedule'}]},
-  {s:'직원',items:[{ic:'👤',l:'직원 관리',p:'drivers'},{ic:'📝',l:'근로계약서',p:'contract'}]},
+  {s:'직원',items:[{ic:'👤',l:'직원 관리',p:'drivers'},{ic:'📝',l:'위수탁 계약서',p:'contract'}]},
   {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices'}]}
 ];
 var MENUS_FULL = [
   {s:'정산',items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'📋',l:'정산 관리',p:'settlements'},{ic:'📈',l:'통계',p:'stats'}]},
-  {s:'운영',items:[{ic:'👤',l:'기사/직원',p:'drivers'},{ic:'🔐',l:'출퇴근',p:'attendance'},{ic:'📅',l:'스케줄',p:'schedule'}]},
-  {s:'설정',items:[{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'📝',l:'근로계약서',p:'contract'}]},
+  {s:'운영',items:[{ic:'👤',l:'기사/직원',p:'drivers'},{ic:'📅',l:'스케줄',p:'schedule'}]},
+  {s:'설정',items:[{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'📝',l:'위수탁 계약서',p:'contract'}]},
   {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices'}]}
 ];
 var MENUS = MENUS_SETTLE; // 기본값
@@ -1546,7 +1546,7 @@ function goPage(page){
   var nav=document.getElementById('nav-'+page);if(nav)nav.classList.add('on');
   document.getElementById('topbar-right').innerHTML='';
   document.getElementById('sidebar').classList.remove('open');
-  var pages={settle:pageSettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,notices:pageNotices};
+  var pages={settle:pageSettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,notices:pageNotices,contract:pageContract,attendance:pageAttendance,schedule:pageSchedule};
   var fn=pages[page];
   if(fn)fn();
   else document.getElementById('content').innerHTML='<div class="empty"><div class="empty-icon">🚧</div>준비 중</div>';
@@ -1555,6 +1555,89 @@ function goPage(page){
 function SP(pg,el){
   if(pg==='settle'&&window._cpPending){renderCpPending();return;}
   goPage(pg||'settle');
+}
+
+
+// ══ 위수탁 계약서 ══
+function pageContract(){
+  var content=document.getElementById('content');
+  content.innerHTML='<div style="max-width:600px;margin:0 auto;padding:16px">'
+    +'<div style="font-size:18px;font-weight:800;margin-bottom:16px">📝 위수탁 계약서</div>'
+    +'<div class="card" style="margin-bottom:12px">'
+    +'<div style="font-size:14px;font-weight:700;margin-bottom:8px">📋 계약서 업로드</div>'
+    +'<div style="font-size:12px;color:var(--text2);margin-bottom:12px">서명된 위수탁 계약서를 PDF로 업로드하세요.</div>'
+    +'<div id="contract-upload-area" style="border:2px dashed var(--border);border-radius:10px;padding:24px;text-align:center;cursor:pointer;margin-bottom:12px" onclick="uploadContractClick()">'
+    +'<div style="font-size:32px;margin-bottom:8px">📄</div>'
+    +'<div style="font-size:13px;font-weight:600">클릭하여 파일 선택</div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-top:4px">PDF 파일 (최대 10MB)</div>'
+    +'</div>'
+    +'<input id="contract-file-input" type="file" accept=".pdf" style="display:none" onchange="uploadContract(this)">'
+    +'<div id="contract-list" style="margin-top:8px"></div>'
+    +'</div>'
+    +'<div class="card" style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3)">'
+    +'<div style="font-size:12px;color:#d97706;font-weight:600;margin-bottom:4px">💡 안내</div>'
+    +'<div style="font-size:11px;color:var(--text2);line-height:1.6">'
+    +'위수탁 계약서 양식이 필요하시면 카카오톡 채널 <strong>MBTI Co. LOGISTICS</strong> 로 문의해 주세요.<br>'
+    +'계약서 작성 후 서명·날인하여 PDF로 업로드하시면 됩니다.'
+    +'</div>'
+    +'</div>'
+    +'</div>';
+
+  // 기존 업로드된 계약서 목록 로드
+  if(_db && _CU && _CU.dealerId){
+    _db.collection('contracts').where('dealerId','==',_CU.dealerId).orderBy('createdAt','desc').limit(10).get()
+    .then(function(snap){
+      var html='';
+      snap.forEach(function(doc){
+        var d=doc.data();
+        var date=d.createdAt?new Date(d.createdAt.seconds*1000).toLocaleDateString('ko-KR'):'';
+        html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:8px;background:var(--bg2);border-radius:6px;margin-bottom:6px">'
+          +'<div><div style="font-size:12px;font-weight:600">'+esc(d.fileName||'계약서')+'</div>'
+          +'<div style="font-size:10px;color:var(--text3)">'+date+'</div></div>'
+          +'<a href="'+esc(d.url||'#')+'" target="_blank" style="font-size:11px;color:var(--primary);text-decoration:none">📥 다운로드</a>'
+          +'</div>';
+      });
+      document.getElementById('contract-list').innerHTML=html||'<div style="font-size:12px;color:var(--text3);text-align:center;padding:8px">업로드된 계약서가 없습니다</div>';
+    }).catch(function(){});
+  }
+}
+
+function uploadContractClick(){document.getElementById('contract-file-input').click();}
+function uploadContract(input){
+  var file=input.files[0];
+  if(!file)return;
+  if(file.size>10*1024*1024){toast('❌ 파일 크기는 10MB 이하여야 합니다');return;}
+  var area=document.getElementById('contract-upload-area');
+  area.innerHTML='<div style="font-size:13px;color:var(--text2)">⏳ 업로드 중...</div>';
+
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var base64=e.target.result.split(',')[1];
+    // Firebase Storage 대신 Firestore에 메타 저장 (URL은 추후 연동)
+    if(_db && _CU){
+      _db.collection('contracts').add({
+        dealerId:_CU.dealerId,
+        fileName:file.name,
+        fileSize:file.size,
+        createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+        status:'uploaded'
+      }).then(function(){
+        toast('✅ 계약서가 업로드됐습니다');
+        pageContract();
+      }).catch(function(e){
+        toast('❌ 업로드 실패: '+e.message);
+        area.innerHTML='<div style="font-size:32px;margin-bottom:8px">📄</div><div style="font-size:13px;font-weight:600">클릭하여 파일 선택</div>';
+      });
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function pageAttendance(){
+  document.getElementById('content').innerHTML='<div class="empty"><div class="empty-icon">🔐</div>출퇴근 현황<br><div style="font-size:12px;color:var(--text3);margin-top:8px">QR 출퇴근 서비스 전용 기능입니다</div></div>';
+}
+function pageSchedule(){
+  document.getElementById('content').innerHTML='<div class="empty"><div class="empty-icon">📅</div>스케줄<br><div style="font-size:12px;color:var(--text3);margin-top:8px">준비 중입니다</div></div>';
 }
 
 // ══ 정산 현황 ══
