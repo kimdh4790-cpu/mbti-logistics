@@ -1,5 +1,41 @@
 // MBTI Logistics + LogiNet — Cloudflare Worker
 
+// ── 보안 설정 ──────────────────────────────────────────────────────────────
+const SECURITY_HEADERS = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'SAMEORIGIN',
+  'X-XSS-Protection': '1; mode=block',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=(self)',
+};
+
+// Rate Limiting (메모리 기반, Worker 재시작 시 초기화)
+const rateLimitMap = new Map();
+function checkRateLimit(ip, limit = 60, windowMs = 60000) {
+  const now = Date.now();
+  const key = ip;
+  if (!rateLimitMap.has(key)) rateLimitMap.set(key, []);
+  const timestamps = rateLimitMap.get(key).filter(t => now - t < windowMs);
+  timestamps.push(now);
+  rateLimitMap.set(key, timestamps);
+  return timestamps.length <= limit;
+}
+
+// 보안 헤더 적용 헬퍼
+function addSecurityHeaders(response) {
+  const newHeaders = new Headers(response.headers);
+  Object.entries(SECURITY_HEADERS).forEach(([k,v]) => newHeaders.set(k, v));
+  return new Response(response.body, { status: response.status, headers: newHeaders });
+}
+
+// 접근 거부 헬퍼
+function forbidden(msg = '접근이 거부되었습니다') {
+  return new Response(JSON.stringify({ error: msg }), {
+    status: 403,
+    headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS }
+  });
+}
+
 const PROJECT_ID = 'mbti-logistics';
 const FS_BASE    = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
 
@@ -141,13 +177,32 @@ export default {
     const method   = request.method;
     const hostname = url.hostname;
 
+    // ── HTTPS 강제 리다이렉트 (HTTP → HTTPS) ──
+    if (url.protocol === 'http:' && !hostname.includes('localhost') && !hostname.includes('workers.dev')) {
+      return Response.redirect('https://' + hostname + url.pathname + url.search, 301);
+    }
+
+    // ── Rate Limiting (API 엔드포인트만) ──
+    const isApiPath = ['/claude-ocr','/label-ocr','/scan-save','/truck-save'].includes(path);
+    if (isApiPath) {
+      const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+      if (!checkRateLimit(ip, 30, 60000)) {
+        return new Response(JSON.stringify({ error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' }), {
+          status: 429,
+          headers: { 'Content-Type': 'application/json', 'Retry-After': '60', ...SECURITY_HEADERS }
+        });
+      }
+    }
+
     // ★ 루트 접속 → 랜딩페이지 리라이트 (URL 유지, workers.dev 제외)
     if ((path === '/' || path === '' || path === '/donway_landing' || path === '/donway_landing/') && !hostname.includes('workers.dev')) {
       const landingUrl = new URL('/donway_landing.html', url);
       const landingResp = await env.ASSETS.fetch(new Request(landingUrl.toString(), request));
+      const landingHeaders = new Headers(landingResp.headers);
+      Object.entries(SECURITY_HEADERS).forEach(([k,v]) => landingHeaders.set(k,v));
       return new Response(landingResp.body, {
         status: landingResp.status,
-        headers: landingResp.headers
+        headers: landingHeaders
       });
     }
 
@@ -551,6 +606,7 @@ export default {
 
     // ★ 관리자 종합 대시보드
     if (path === '/admin' || path === '/admin/') {
+      // 슈퍼어드민 접근 로그 기록 (선택적)
       const resp = await env.ASSETS.fetch(new Request(new URL('/admin.html', url)));
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' } });
     }
@@ -813,7 +869,9 @@ export default {
       }
     }
 
-    return env.ASSETS.fetch(request);
+    // 정적 파일 서빙 + 보안 헤더 적용
+    const assetResp = await env.ASSETS.fetch(request);
+    return addSecurityHeaders(assetResp);
   },
 
   // Cloudflare Cron Trigger — 매일 01:00 UTC (한국 10:00 KST)
