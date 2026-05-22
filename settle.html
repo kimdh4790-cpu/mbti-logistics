@@ -2096,8 +2096,31 @@ function _buildPayslipHTML(rows){
     +'<div style="display:flex;gap:8px">'
     +'<button class="btn" onclick="savePayslipsFirestore()" style="background:var(--bg3);border:1px solid var(--border2)">☁ 저장</button>'
     +'<button class="btn btn-blue" onclick="printAllPayslips('+JSON.stringify(rows).replace(/</g,'\u003c')+')">🖨 선택 인쇄 / PDF</button>'
-    +'</div></div>'
+    
+    +'<button class="btn" style="background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);color:#22c55e" onclick="exportSettleExcel(rows)">📊 Excel</button>'+'</div></div>'
     +'</div>';
+}
+
+
+function exportSettleExcel(rows){
+  if(!rows||!rows.length){toast('❌ 내보낼 데이터가 없습니다');return;}
+  try{
+    var wb=XLSX.utils.book_new();
+    var wsData=[['기사ID','기사명','캠프','라우트','배송건','단가','배송금','프레시백','인센','공제','실지급']];
+    rows.forEach(function(r){
+      wsData.push([
+        r.userId||r.driver||'',r.name||'',r.camp||'',r.route||'',
+        r.delivCnt||0,r.unitPrice||0,r.delivAmt||0,
+        r.freshAmt||0,r.incAmt||0,r.deductAmt||0,r.netPay||0
+      ]);
+    });
+    var ws=XLSX.utils.aoa_to_sheet(wsData);
+    ws['!cols']=[{wch:12},{wch:10},{wch:10},{wch:8},{wch:8},{wch:8},{wch:12},{wch:10},{wch:10},{wch:10},{wch:12}];
+    XLSX.utils.book_append_sheet(wb,ws,'정산내역');
+    var month=(rows[0]&&rows[0].month)||new Date().toISOString().slice(0,7);
+    XLSX.writeFile(wb,'DONWAY_정산_'+month+'.xlsx');
+    toast('✅ Excel 내보내기 완료!');
+  }catch(e){toast('❌ Excel 오류: '+e.message);}
 }
 
 function psToggleAll(cb){
