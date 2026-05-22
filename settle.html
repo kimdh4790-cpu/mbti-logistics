@@ -1559,7 +1559,7 @@ async function _tossPay(planType,amount){
 
     // 2. 토스 결제창 열기
     // ★ 실제 클라이언트 키로 교체 필요 (토스페이먼츠 대시보드에서 발급)
-    var clientKey=typeof TOSS_CLIENT_KEY!=='undefined'?TOSS_CLIENT_KEY:'test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq';
+    var clientKey='test_ck_mBZ1gQ4YVXQwywWXyyKXrl2KPoqN';
     var tossPayments=TossPayments(clientKey);
     var payment=tossPayments.payment({customerKey:_CU.dealerId||_CU.uid||'guest'});
     await payment.requestPayment({
