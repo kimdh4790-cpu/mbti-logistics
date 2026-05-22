@@ -1469,12 +1469,35 @@ function doJoin(){
 
   err.textContent='가입 중...';err.style.color='var(--text3)';err.style.display='block';
   _auth.createUserWithEmailAndPassword(email,pw).then(function(cred){
-    return _db.collection('users').doc(cred.user.uid).set({
+    var uid=cred.user.uid;
+    var userDoc={
       name:name,driverId:driverId,email:email,
       companyId:companyId,companyName:companyName,
       role:'driver',
       bizNum:bizNum,bizName:bizName,bizOwner:bizOwner,
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    };
+    // users 컬렉션 저장
+    return _db.collection('users').doc(uid).set(userDoc).then(function(){
+      // drivers 컬렉션에도 자동 등록 (관리자 기사 관리에 표시)
+      return _db.collection('drivers').where('dealerId','==',companyId).where('userId','==',driverId).get()
+      .then(function(snap){
+        if(snap.empty){
+          return _db.collection('drivers').add({
+            dealerId:companyId,
+            userId:driverId,
+            name:name,
+            email:email,
+            bizNum:bizNum,bizName:bizName,bizOwner:bizOwner,
+            camp:'',route:'',
+            authUid:uid,
+            joinedAt:firebase.firestore.FieldValue.serverTimestamp(),
+            createdAt:firebase.firestore.FieldValue.serverTimestamp()
+          });
+        }
+        // 이미 있으면 authUid만 업데이트
+        return snap.docs[0].ref.update({authUid:uid,email:email,bizNum:bizNum,bizName:bizName,bizOwner:bizOwner});
+      });
     });
   }).then(function(){
     toast('✅ 가입 완료! 로그인해 주세요');
@@ -2170,11 +2193,11 @@ var MENUS_QR = [
   {s:'직원',items:[{ic:'👤',l:'직원 관리',p:'drivers'},{ic:'🗓',l:'근무표',p:'roster'}]},
   {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices'}]}
 ];
-// 풀패키지 (위수탁X, 출퇴근O)
+// 풀패키지 (택배+QR, 위수탁O)
 var MENUS_FULL = [
   {s:'정산',items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'📋',l:'정산 관리',p:'settlements'},{ic:'📈',l:'통계',p:'stats'}]},
   {s:'운영',items:[{ic:'👤',l:'기사/직원',p:'drivers'},{ic:'📅',l:'달력',p:'schedule'}]},
-  {s:'설정',items:[{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'🗓',l:'근무표',p:'roster'}]},
+  {s:'설정',items:[{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'📝',l:'위수탁 계약서',p:'contract'},{ic:'🗓',l:'근무표',p:'roster'}]},
   {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices'}]}
 ];
 // 기사/직원 전용 (본인 정산만)
