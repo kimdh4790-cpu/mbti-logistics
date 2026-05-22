@@ -85,6 +85,7 @@ tr:hover>td{background:var(--bg3)}
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(8px);background:#1a1a18;color:#fff;padding:10px 20px;border-radius:var(--r);font-size:13px;z-index:600;opacity:0;transition:.22s;pointer-events:none;white-space:nowrap}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
+<script src="https://js.tosspayments.com/v2/standard"></script>
 </head>
 <body>
 <script>
@@ -1199,15 +1200,6 @@ function initFirebase(){
 }
 
 function showApp(){
-  // ── 본사(MBTI) 유료 기능 자동 활성화 ──
-  if(_CU&&(isSuperAdmin()||OWNER_EMAIL.includes(_CU.email))){
-    var _cid=_CU.dealerId||_CU.companyId||_CU.uid;
-    if(_cid&&_db){
-      _db.collection('companies').doc(_cid).set({
-        contractPaid:true,rosterPaid:true,isOwner:true,plan:'OWNER'
-      },{merge:true}).catch(function(){});
-    }
-  }
   // 구독 상태 확인 (슈퍼어드민은 제외)
   if(_CU&&_CU.email!=='kimdh4790@gmail.com'&&_db){
     _db.collection('subscriptions').doc(_CU.dealerId||_CU.uid).get()
@@ -1413,9 +1405,6 @@ function doRegister(){
       trialEnd:isOwner?'9999-12-31':trialEnd.toISOString().slice(0,10),
       trialUsed:true,
       isOwner:isOwner,
-      // 본사 직영 — 모든 유료 기능 자동 활성화
-      contractPaid:isOwner?true:false,
-      rosterPaid:isOwner?true:false,
       createdAt:firebase.firestore.FieldValue.serverTimestamp(),
       uid:uid
     });
@@ -1533,14 +1522,93 @@ function doLogin(){
   if(!email||!pw){err.textContent='이메일과 비밀번호를 입력하세요';err.style.display='block';return;}
   _auth.signInWithEmailAndPassword(email,pw).catch(function(e){err.textContent='로그인 실패: '+e.message;err.style.display='block';});
 }
-function doLogout(){if(_auth)_auth.signOut();}
+function doLogout(){
+  sessionStorage.removeItem('donway_auth_token');
+  sessionStorage.removeItem('donway_auth_expire');
+  if(_auth)_auth.signOut();
+}
+
+// ══ 토스페이먼츠 결제 ══
+var PLAN_INFO={
+  contract:{label:'위수탁 계약서',amount:9900},
+  roster:  {label:'근무표 관리',  amount:9900},
+  qr:      {label:'QR 출퇴근',   amount:29900},
+  full:    {label:'풀패키지',     amount:69900},
+  settle:  {label:'AI 정산',      amount:39900}
+};
+
+async function _tossPay(planType,amount){
+  if(!_CU){toast('❌ 로그인 필요');return;}
+  var plan=PLAN_INFO[planType];
+  if(!plan){toast('❌ 알 수 없는 플랜');return;}
+  try{
+    // 1. 주문 생성
+    var orderResp=await fetch('/toss/create-order',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        dealerId:_CU.dealerId||_CU.uid,
+        companyName:_CU.companyName||'',
+        email:_CU.email||'',
+        planType:planType,
+        amount:amount||plan.amount
+      })
+    });
+    var order=await orderResp.json();
+    if(!orderResp.ok||order.error){toast('❌ '+(order.error||'주문 생성 실패'));return;}
+
+    // 2. 토스 결제창 열기
+    // ★ 실제 클라이언트 키로 교체 필요 (토스페이먼츠 대시보드에서 발급)
+    var clientKey=typeof TOSS_CLIENT_KEY!=='undefined'?TOSS_CLIENT_KEY:'test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq';
+    var tossPayments=TossPayments(clientKey);
+    var payment=tossPayments.payment({customerKey:_CU.dealerId||_CU.uid||'guest'});
+    await payment.requestPayment({
+      method:'CARD',
+      amount:{currency:'KRW',value:amount||plan.amount},
+      orderId:order.orderId,
+      orderName:'DONWAY '+plan.label,
+      successUrl:window.location.origin+'/settle?toss=success&orderId='+order.orderId,
+      failUrl:window.location.origin+'/settle?toss=fail',
+      customerEmail:_CU.email||'',
+      customerName:_CU.companyName||'고객사',
+      card:{useEscrow:false,flowMode:'DEFAULT',useCardPoint:false}
+    });
+  }catch(e){
+    if(e.code==='USER_CANCEL'||e.message==='사용자가 결제를 취소하였습니다.') return;
+    toast('❌ 결제 오류: '+(e.message||e.code||''));
+  }
+}
+
+// 결제 성공/실패 콜백 (successUrl 복귀 시)
+(function _checkTossReturn(){
+  var params=new URLSearchParams(window.location.search);
+  if(params.get('toss')==='success'){
+    var paymentKey=params.get('paymentKey');
+    var orderId=params.get('orderId');
+    var amt=params.get('amount');
+    history.replaceState(null,'',window.location.pathname);
+    if(paymentKey&&orderId&&amt){
+      fetch('/toss/confirm',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({paymentKey:paymentKey,orderId:orderId,amount:parseInt(amt)})
+      }).then(function(r){return r.json();}).then(function(data){
+        if(data.success){
+          toast('🎉 결제 완료! 기능이 즉시 활성화됐습니다');
+          setTimeout(function(){location.reload();},1500);
+        } else {
+          toast('❌ '+(data.error||'결제 확인 실패'));
+        }
+      }).catch(function(e){toast('❌ '+e.message);});
+    }
+  } else if(params.get('toss')==='fail'){
+    history.replaceState(null,'',window.location.pathname);
+    toast('결제가 취소됐습니다');
+  }
+})();
 
 // ══ 위수탁 계약서 ══
 function pageContract(){
-  // 슈퍼어드민(본사) → 무조건 활성화
-  if(isSuperAdmin()||(_CU&&OWNER_EMAIL.includes(_CU.email))){
-    _renderContractPage(); return;
-  }
   if(_db&&_CU&&_CU.dealerId){
     _db.collection('companies').doc(_CU.dealerId).get().then(function(snap){
       var d=snap.exists?snap.data():{};
@@ -1563,7 +1631,8 @@ function _renderContractPaywall(){
     +'<div style="font-size:20px;font-weight:900;color:var(--primary);margin-bottom:4px">월 9,900원</div>'
     +'<div style="font-size:11px;color:var(--text3)">부가세 포함 · 매월 자동 결제</div>'
     +'</div>'
-    +'<button onclick="_contractPayRequest()" style="width:100%;padding:14px;background:var(--primary);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px">💳 결제 신청하기</button>'
+    +'<button onclick="_tossPay(\'contract\',9900)" style="width:100%;padding:14px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px">💳 카드·계좌이체로 결제하기</button>'
+    +'<button onclick="_contractPayRequest()" style="width:100%;padding:12px;background:var(--bg2);color:var(--text2);border:1px solid var(--border);border-radius:10px;font-size:13px;cursor:pointer;margin-bottom:10px">💬 카카오톡으로 결제 문의</button>'
     +'<div style="font-size:11px;color:var(--text3)">결제 문의: 카카오톡 <strong>MBTI Co. LOGISTICS</strong></div>'
     +'</div>';
 }
@@ -1626,10 +1695,6 @@ function uploadContract(input){
 
 // ══ 근무표 관리 ══
 function pageRoster(){
-  // 슈퍼어드민(본사) → 무조건 활성화
-  if(isSuperAdmin()||(_CU&&OWNER_EMAIL.includes(_CU.email))){
-    _renderRosterPage(); return;
-  }
   if(_db&&_CU&&(_CU.dealerId||_CU.companyId)){
     var cid=_CU.dealerId||_CU.companyId;
     _db.collection('companies').doc(cid).get().then(function(snap){
@@ -1660,7 +1725,8 @@ function _renderRosterPaywall(){
     +'<div style="font-size:20px;font-weight:900;color:#10b981;margin-bottom:4px">월 9,900원</div>'
     +'<div style="font-size:11px;color:var(--text3)">부가세 포함 · 매월 자동 결제</div>'
     +'</div>'
-    +'<button onclick="_rosterPayRequest()" style="width:100%;padding:14px;background:#10b981;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px">💳 결제 신청하기</button>'
+    +'<button onclick="_tossPay(\'roster\',9900)" style="width:100%;padding:14px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px">💳 카드·계좌이체로 결제하기</button>'
+    +'<button onclick="_rosterPayRequest()" style="width:100%;padding:12px;background:var(--bg2);color:var(--text2);border:1px solid var(--border);border-radius:10px;font-size:13px;cursor:pointer;margin-bottom:10px">💬 카카오톡으로 결제 문의</button>'
     +'<div style="font-size:11px;color:var(--text3)">결제 문의: 카카오톡 <strong>MBTI Co. LOGISTICS</strong></div>'
     +'</div>';
 }
@@ -6082,9 +6148,40 @@ function openAdminPanel(){
   hdr.textContent='👑 슈퍼 어드민 패널';
   d.appendChild(hdr);
 
-  var body=document.createElement('div');body.id='admin-body';body.style.padding='16px';
+  // ── 탭 바 ──
+  var tabBar=document.createElement('div');
+  tabBar.style.cssText='display:flex;border-bottom:1px solid var(--border);background:var(--bg2)';
+  ['🏢 대리점 목록','💳 결제 승인','⚙️ 기능 활성화'].forEach(function(t,i){
+    var tb=document.createElement('button');
+    tb.style.cssText='flex:1;padding:10px 4px;border:none;background:transparent;font-size:12px;font-weight:700;cursor:pointer;color:'+(i===0?'var(--primary)':'var(--text3)')+';border-bottom:'+(i===0?'2px solid var(--primary)':'2px solid transparent');
+    tb.textContent=t;
+    tb.onclick=(function(idx){return function(){
+      d.querySelectorAll('.admin-tab-content').forEach(function(el){el.style.display='none';});
+      d.querySelectorAll('.admin-tab-btn').forEach(function(el){el.style.color='var(--text3)';el.style.borderBottom='2px solid transparent';});
+      d.querySelector('#admin-tab-'+idx).style.display='block';
+      tb.style.color='var(--primary)';tb.style.borderBottom='2px solid var(--primary)';
+      if(idx===1) _loadPaymentRequests(d.querySelector('#admin-tab-1'));
+      if(idx===2) _loadFeaturePanel(d.querySelector('#admin-tab-2'));
+    };})(i);
+    tb.className='admin-tab-btn';
+    tabBar.appendChild(tb);
+  });
+  d.appendChild(tabBar);
+
+  // 탭0 — 대리점 목록
+  var body=document.createElement('div');body.id='admin-body';body.className='admin-tab-content';body.setAttribute('id','admin-tab-0');body.style.padding='16px';
   body.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">⏳ 대리점 목록 로딩 중...</div>';
   d.appendChild(body);
+
+  // 탭1 — 결제 승인
+  var payTab=document.createElement('div');payTab.className='admin-tab-content';payTab.id='admin-tab-1';payTab.style.cssText='padding:16px;display:none';
+  payTab.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">⏳ 로딩 중...</div>';
+  d.appendChild(payTab);
+
+  // 탭2 — 기능 활성화
+  var featTab=document.createElement('div');featTab.className='admin-tab-content';featTab.id='admin-tab-2';featTab.style.cssText='padding:16px;display:none';
+  featTab.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">⏳ 로딩 중...</div>';
+  d.appendChild(featTab);
 
   if(window._adminViewDealerId){
     var notice=document.createElement('div');
@@ -6149,6 +6246,149 @@ function openAdminPanel(){
     });
     Promise.all(userProms).then(function(items){buildDealerRows(items);});
   }).catch(function(e){body.innerHTML='<div style="color:var(--red)">❌ '+e.message+'</div>';});
+}
+
+// ══ 결제 승인 패널 ══
+function _loadPaymentRequests(container){
+  if(!_db||!isSuperAdmin()) return;
+  container.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">⏳ 로딩 중...</div>';
+  _db.collection('payment_requests').orderBy('createdAt','desc').limit(50).get()
+  .then(function(snap){
+    var items=[];
+    snap.forEach(function(doc){items.push(Object.assign({id:doc.id},doc.data()));});
+    if(!items.length){container.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">📭 결제 신청 없음</div>';return;}
+
+    var TYPE_LABEL={contract:'📝 위수탁 계약서',roster:'🗓 근무표',qr:'🔐 QR 출퇴근',full:'⚡ 풀패키지',settle:'💰 AI 정산'};
+    var TYPE_PRICE={contract:9900,roster:9900,qr:29900,full:69900,settle:39900};
+    var TYPE_FIELD={contract:{contractPaid:true},roster:{rosterPaid:true},qr:{qrPaid:true},full:{contractPaid:true,rosterPaid:true,qrPaid:true,settlePaid:true},settle:{settlePaid:true}};
+    var STATUS_COLOR={pending:'#f59e0b',approved:'#10b981',rejected:'#ef4444'};
+
+    var html='';
+    items.forEach(function(item){
+      var statusKr=item.status==='approved'?'✅ 승인됨':item.status==='rejected'?'❌ 거절':' 대기중';
+      var col=STATUS_COLOR[item.status]||'#f59e0b';
+      html+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
+        +'<div>'
+        +'<div style="font-size:13px;font-weight:700">'+esc(item.companyName||item.dealerId||'')+'</div>'
+        +'<div style="font-size:11px;color:var(--text3)">'+esc(item.email||'')+'</div>'
+        +'</div>'
+        +'<span style="font-size:11px;font-weight:700;color:'+col+';background:rgba(255,255,255,.06);padding:3px 10px;border-radius:20px">'+statusKr+'</span>'
+        +'</div>'
+        +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+        +'<span style="font-size:12px;font-weight:600;color:var(--primary)">'+(TYPE_LABEL[item.type]||item.type)+'</span>'
+        +'<span style="font-size:11px;color:var(--text3)">월 '+(TYPE_PRICE[item.type]||0).toLocaleString()+'원</span>'
+        +(item.status==='pending'
+          ?'<button class="ap-btn" data-rid="'+item.id+'" data-did="'+item.dealerId+'" data-type="'+item.type+'" style="margin-left:auto;padding:6px 16px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">✅ 승인</button>'
+          +'<button class="rj-btn" data-rid="'+item.id+'" style="padding:6px 12px;background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">거절</button>'
+          :'')
+        +'</div>'
+        +'</div>';
+    });
+    container.innerHTML=html;
+    // 이벤트 위임
+    container.onclick=function(e){
+      var ab=e.target.closest('.ap-btn');
+      var rb=e.target.closest('.rj-btn');
+      if(ab) _approvePayment(ab.dataset.rid,ab.dataset.did,ab.dataset.type);
+      if(rb) _rejectPayment(rb.dataset.rid);
+    };
+  }).catch(function(e){container.innerHTML='<div style="color:var(--red)">❌ '+e.message+'</div>';});
+}
+
+function _approvePayment(reqId, dealerId, type){
+  if(!_db||!isSuperAdmin()) return;
+  var TYPE_FIELD={
+    contract:{contractPaid:true},
+    roster:{rosterPaid:true},
+    qr:{qrPaid:true},
+    full:{contractPaid:true,rosterPaid:true,qrPaid:true},
+    settle:{settlePaid:true}
+  };
+  var fields=TYPE_FIELD[type]||{};
+  if(!Object.keys(fields).length){toast('❌ 알 수 없는 유형: '+type);return;}
+  if(!dealerId){toast('❌ dealerId 없음');return;}
+
+  var batch=_db.batch();
+  // 결제 요청 상태 승인
+  batch.update(_db.collection('payment_requests').doc(reqId),{
+    status:'approved',
+    approvedAt:firebase.firestore.FieldValue.serverTimestamp(),
+    approvedBy:_CU.email
+  });
+  // 회사 기능 활성화
+  batch.set(_db.collection('companies').doc(dealerId),
+    Object.assign(fields,{plan:'paid',updatedAt:firebase.firestore.FieldValue.serverTimestamp()}),
+    {merge:true}
+  );
+  batch.commit().then(function(){
+    toast('✅ 승인 완료! 기능이 즉시 활성화됐습니다');
+    var payTab=document.getElementById('admin-tab-1');
+    if(payTab) _loadPaymentRequests(payTab);
+  }).catch(function(e){toast('❌ '+e.message);});
+}
+
+function _rejectPayment(reqId){
+  if(!_db||!isSuperAdmin()) return;
+  _db.collection('payment_requests').doc(reqId).update({
+    status:'rejected',rejectedAt:firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){
+    toast('거절 처리됐습니다');
+    var payTab=document.getElementById('admin-tab-1');
+    if(payTab) _loadPaymentRequests(payTab);
+  }).catch(function(e){toast('❌ '+e.message);});
+}
+
+// ══ 기능 직접 활성화 패널 ══
+function _loadFeaturePanel(container){
+  if(!_db||!isSuperAdmin()) return;
+  container.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">⏳ 회사 목록 로딩 중...</div>';
+  _db.collection('companies').orderBy('createdAt','desc').limit(30).get()
+  .then(function(snap){
+    var items=[];
+    snap.forEach(function(doc){items.push(Object.assign({id:doc.id},doc.data()));});
+    if(!items.length){container.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">등록된 회사 없음</div>';return;}
+
+    var FEATS=[
+      {key:'contractPaid',label:'위수탁',color:'#8b5cf6'},
+      {key:'rosterPaid',label:'근무표',color:'#10b981'},
+      {key:'qrPaid',label:'QR출퇴근',color:'#0066ff'},
+    ];
+
+    var html='<div style="font-size:11px;color:var(--text3);margin-bottom:12px">회사별 기능을 바로 켜고 끌 수 있습니다</div>';
+    items.forEach(function(item){
+      html+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px">'
+        +'<div style="font-size:13px;font-weight:700;margin-bottom:8px">'+esc(item.companyName||item.id)
+        +(item.isOwner?'<span style="margin-left:6px;font-size:10px;color:#f59e0b">👑 본사</span>':'')+'</div>'
+        +'<div style="display:flex;gap:8px;flex-wrap:wrap">';
+      FEATS.forEach(function(f){
+        var on=item[f.key]===true;
+        html+='<button class="tf-btn" data-cid="'+item.id+'" data-field="'+f.key+'" data-val="'+(!on)+'" '
+          +'style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;'
+          +'background:'+(on?f.color:'rgba(255,255,255,.08)')+';'
+          +'color:'+(on?'#fff':'var(--text3)')+';">'
+          +(on?'✅ ':'')+(f.label)+'</button>';
+      });
+      html+='</div></div>';
+    });
+    container.innerHTML=html;
+    container.onclick=function(e){
+      var tb=e.target.closest('.tf-btn');
+      if(tb) _toggleFeature(tb.dataset.cid,tb.dataset.field,tb.dataset.val==='true');
+    };
+  }).catch(function(e){container.innerHTML='<div style="color:var(--red)">❌ '+e.message+'</div>';});
+}
+
+function _toggleFeature(companyId, field, value){
+  if(!_db||!isSuperAdmin()) return;
+  var update={};update[field]=value;
+  update.updatedAt=firebase.firestore.FieldValue.serverTimestamp();
+  _db.collection('companies').doc(companyId).set(update,{merge:true})
+  .then(function(){
+    toast((value?'✅ 활성화':'⛔ 비활성화')+' 완료');
+    var featTab=document.getElementById('admin-tab-2');
+    if(featTab) _loadFeaturePanel(featTab);
+  }).catch(function(e){toast('❌ '+e.message);});
 }
 
 function switchDealer(dealerId){
