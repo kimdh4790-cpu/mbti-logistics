@@ -160,21 +160,38 @@ export default {
           return new Response(JSON.stringify({ ok:false, reason:'NO_KEY' }), 
             { headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'} });
         }
-        const masked = k.substring(0,10)+'...'+k.substring(k.length-4);
+        // 키 형식 검사
+        const isValidFormat = k.startsWith('sk-ant-');
+        const masked = k.substring(0,12)+'...'+k.substring(k.length-6);
+        
+        // Anthropic API 직접 호출 (텍스트만, 이미지 없이)
         const testResp = await fetch('https://api.anthropic.com/v1/messages', {
           method:'POST',
-          headers:{'Content-Type':'application/json','x-api-key':k,'anthropic-version':'2023-06-01'},
-          body:JSON.stringify({model:'claude-3-haiku-20240307',max_tokens:5,messages:[{role:'user',content:'test'}]})
+          headers:{
+            'Content-Type':'application/json',
+            'x-api-key': k,
+            'anthropic-version':'2023-06-01'
+          },
+          body: JSON.stringify({
+            model: 'claude-3-haiku-20240307',
+            max_tokens: 10,
+            messages: [{role:'user', content:'hi'}]
+          })
         });
-        const testJson = await testResp.json();
+        const rawText = await testResp.text();
+        let testJson = {};
+        try { testJson = JSON.parse(rawText); } catch(e) {}
+        
         return new Response(JSON.stringify({
           ok: testResp.ok,
           http_status: testResp.status,
           key_prefix: masked,
           key_len: k.length,
-          anthropic_error: testResp.ok ? null : (testJson.error?.message || JSON.stringify(testJson.error)),
-          model_ok: testResp.ok
-        }), { headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'} });
+          valid_format: isValidFormat,
+          error_type: testJson.error?.type || null,
+          error_message: testJson.error?.message || null,
+          raw_response: testResp.ok ? 'OK' : rawText.substring(0,200)
+        }, null, 2), { headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'} });
       } catch(err) {
         return new Response(JSON.stringify({ok:false, exception:err.message}),
           { headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'} });
