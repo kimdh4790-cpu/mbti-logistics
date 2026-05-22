@@ -180,12 +180,19 @@ export default {
       }
       try {
         const body = await request.json();
+        const apiKey = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
+        if (!apiKey) {
+          return new Response(JSON.stringify({ error: { message: 'ANTHROPIC_API_KEY 환경변수 미설정. Cloudflare Workers 환경변수를 확인하세요.' } }), {
+            status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+          });
+        }
         const resp = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-api-key': (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, ''),
-            'anthropic-version': '2023-06-01'
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'anthropic-beta': 'messages-2023-12-15'
           },
           body: JSON.stringify(body)
         });
@@ -204,12 +211,19 @@ export default {
     if (path === '/claude-ocr' && method === 'POST') {
       try {
         const body = await request.json();
+        const apiKey = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
+        if (!apiKey) {
+          return new Response(JSON.stringify({ error: { message: 'ANTHROPIC_API_KEY 환경변수 미설정. Cloudflare Workers 환경변수를 확인하세요.' } }), {
+            status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+          });
+        }
         const resp = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-api-key': (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, ''),
-            'anthropic-version': '2023-06-01'
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'anthropic-beta': 'messages-2023-12-15'
           },
           body: JSON.stringify(body)
         });
