@@ -450,6 +450,22 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,'Malgun Go
 </div>
 
 <script>
+
+// ── 인증 가드 (sessionStorage 토큰 방식) ──────────────────────────────────
+(function authGuard() {
+  // settle.html에서 로그인 후 세션 토큰 저장 여부 확인
+  var token = sessionStorage.getItem('donway_auth_token');
+  var expire = parseInt(sessionStorage.getItem('donway_auth_expire') || '0');
+  var now = Date.now();
+  if (!token || expire < now) {
+    // 미인증 → 현재 URL 저장 후 로그인 화면으로
+    sessionStorage.setItem('donway_redirect', window.location.pathname);
+    window.location.href = '/settle';
+    return;
+  }
+})();
+// ── 인증 가드 끝 ───────────────────────────────────────────────────────────
+
 // ── Firebase (mbti-logistics — v9 같은 프로젝트) ──
 var _fk=['AIzaSyDQmEFf','LczgCuPQidu','nbBXqaHWgs3','9VMg0'].join('');
 var FB2, _db2;

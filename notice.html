@@ -209,6 +209,22 @@ textarea.fi{resize:vertical;min-height:100px;font-size:13px;line-height:1.7}
 </div>
 
 <script>
+
+// ── 인증 가드 (sessionStorage 토큰 방식) ──────────────────────────────────
+(function authGuard() {
+  // settle.html에서 로그인 후 세션 토큰 저장 여부 확인
+  var token = sessionStorage.getItem('donway_auth_token');
+  var expire = parseInt(sessionStorage.getItem('donway_auth_expire') || '0');
+  var now = Date.now();
+  if (!token || expire < now) {
+    // 미인증 → 현재 URL 저장 후 로그인 화면으로
+    sessionStorage.setItem('donway_redirect', window.location.pathname);
+    window.location.href = '/settle';
+    return;
+  }
+})();
+// ── 인증 가드 끝 ───────────────────────────────────────────────────────────
+
 var _db=null, _noticeType='notice', _targets=['all'], _filterType='';
 var _TYPE_LABEL={notice:'📢 일반공지',urgent:'🚨 긴급',pay:'💰 급여안내',schedule:'📅 일정',event:'🎉 이벤트'};
 var _TYPE_CLS={notice:'nb-notice',urgent:'nb-urgent',pay:'nb-pay',schedule:'nb-schedule',event:'nb-event'};

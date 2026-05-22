@@ -1199,6 +1199,20 @@ function initFirebase(){
 }
 
 function showApp(){
+  // ── 하위 페이지 인증 토큰 발급 (8시간 유효) ──
+  var token = _CU ? (_CU.uid + ':' + Date.now()) : '';
+  var expire = Date.now() + 8 * 60 * 60 * 1000;
+  if (token) {
+    sessionStorage.setItem('donway_auth_token', token);
+    sessionStorage.setItem('donway_auth_expire', expire.toString());
+    // 로그인 전 접근했던 페이지로 리다이렉트
+    var redirect = sessionStorage.getItem('donway_redirect');
+    if (redirect && redirect !== '/settle' && redirect !== '/') {
+      sessionStorage.removeItem('donway_redirect');
+      window.location.href = redirect;
+      return;
+    }
+  }
   // 구독 상태 확인 (슈퍼어드민은 제외)
   if(_CU&&_CU.email!=='kimdh4790@gmail.com'&&_db){
     _db.collection('subscriptions').doc(_CU.dealerId||_CU.uid).get()
@@ -1521,7 +1535,11 @@ function doLogin(){
   if(!email||!pw){err.textContent='이메일과 비밀번호를 입력하세요';err.style.display='block';return;}
   _auth.signInWithEmailAndPassword(email,pw).catch(function(e){err.textContent='로그인 실패: '+e.message;err.style.display='block';});
 }
-function doLogout(){if(_auth)_auth.signOut();}
+function doLogout(){
+  sessionStorage.removeItem('donway_auth_token');
+  sessionStorage.removeItem('donway_auth_expire');
+  if(_auth)_auth.signOut();
+}
 
 // ══ 위수탁 계약서 ══
 function pageContract(){
