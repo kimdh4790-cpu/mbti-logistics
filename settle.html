@@ -3669,13 +3669,24 @@ function openTaxInvoice(id){
   var today2=new Date().toISOString().slice(0,10);
   var issDay=today2.slice(8,10);
   var moNum=parseInt(mo2,10);
-  var bizNum=x.bizNum||'___-__-_____';
-  var bizName=x.bizName||x.driver||x.userId||'';
-  var drvAddr=x.bizAddr||'(주소 미입력)';
+  // ★ 기사 실제 정보 조회 (drivers 캐시 우선)
+  var _uid=x.userId||x.driver||'';
+  var _drvRec=(_drvCache||[]).find(function(d){
+    return d.userId===_uid||d.driverId===_uid||d.id===_uid||d.name===_uid;
+  });
+  // 실제 성함: driverName > drivers캐시.name > driver 필드 (ID가 아닌 이름)
+  var driverRealName=x.driverName||(_drvRec&&_drvRec.name)||x.driver||x.userId||'';
+  // 사업자 정보: 정산서 저장값 > drivers캐시 순으로 fallback
+  var bizNum=x.bizNum||(_drvRec&&_drvRec.bizNum)||'___-__-_____';
+  var bizName=x.bizName||(_drvRec&&_drvRec.bizName)||driverRealName;
+  var bizRep=x.bizRep||x.bizOwner||(_drvRec&&_drvRec.bizRep)||(_drvRec&&_drvRec.bizOwner)||driverRealName;
+  var drvAddr=x.bizAddr||(_drvRec&&_drvRec.bizAddr)||'(주소 미입력)';
+  var bizType=x.bizType||(_drvRec&&_drvRec.bizType)||'서비스업';
+  var bizItem=x.bizItem||(_drvRec&&_drvRec.bizItem)||'기타물품운반원';
   var missing=[];
-  if(!x.bizNum)missing.push('사업자번호');
-  if(!x.bizName)missing.push('상호명');
-  if(!x.bizAddr)missing.push('사업장주소');
+  if(!x.bizNum&&!(_drvRec&&_drvRec.bizNum))missing.push('사업자번호');
+  if(!x.bizName&&!(_drvRec&&_drvRec.bizName))missing.push('상호명');
+  if(!x.bizAddr&&!(_drvRec&&_drvRec.bizAddr))missing.push('사업장주소');
   var warnHtml=missing.length?'<div style="background:#fef2f2;border:2px solid #ef4444;border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:12px;font-weight:700;color:#dc2626">⚠️ 미입력: '+missing.join(' · ')+' — 정산 수정에서 입력하세요</div>':'';
   var serial=today2.replace(/-/g,'')+'-'+String(Math.floor(Math.random()*9999)+1).padStart(4,'0');
   var html='<div style="display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;max-width:720px;margin:4px auto">'
@@ -3699,7 +3710,7 @@ function openTaxInvoice(id){
     +'</tr><tr>'
     +'<td style="border:1px solid #000;background:#f0f0f0;padding:3px 6px">상&nbsp;&nbsp;&nbsp;호<br><span style="font-size:9px">(법 인 명)</span></td>'
     +'<td style="border:1px solid #000;padding:3px 6px;font-weight:700">'+esc(bizName)+'</td>'
-    +'<td style="border:1px solid #000;padding:3px 6px;font-size:10px">성명 <strong>'+esc(x.driver||x.userId||'')+'</strong> <span style="border:1px solid #555;padding:0 4px;font-size:8px">인</span></td>'
+    +'<td style="border:1px solid #000;padding:3px 6px;font-size:10px">성명 <strong>'+esc(bizRep)+'</strong> <span style="border:1px solid #555;padding:0 4px;font-size:8px">인</span></td>'
     +'<td style="border:1px solid #000;background:#f0f0f0;padding:3px 6px">상&nbsp;&nbsp;&nbsp;호<br><span style="font-size:9px">(법 인 명)</span></td>'
     +'<td style="border:1px solid #000;padding:3px 6px;font-weight:700">엠비티아이유한회사</td>'
     +'<td style="border:1px solid #000;padding:3px 6px;font-size:10px">성명 <strong>관리자</strong> <span style="border:1px solid #555;padding:0 4px;font-size:8px">인</span></td>'
@@ -3710,8 +3721,8 @@ function openTaxInvoice(id){
     +'<td colspan="2" style="border:1px solid #000;padding:3px 6px">부산시 수영구 수영로 668, 607호</td>'
     +'</tr><tr>'
     +'<td style="border:1px solid #000;background:#f0f0f0;padding:3px 6px">업&nbsp;&nbsp;&nbsp;&nbsp;태</td>'
-    +'<td style="border:1px solid #000;padding:3px 6px">'+(x.bizType||'서비스업')+'</td>'
-    +'<td style="border:1px solid #000;padding:3px 6px">종목 '+(x.bizItem||'기타물품운반원')+'</td>'
+    +'<td style="border:1px solid #000;padding:3px 6px">'+bizType+'</td>'
+    +'<td style="border:1px solid #000;padding:3px 6px">종목 '+bizItem+'</td>'
     +'<td style="border:1px solid #000;background:#f0f0f0;padding:3px 6px">업&nbsp;&nbsp;&nbsp;&nbsp;태</td>'
     +'<td style="border:1px solid #000;padding:3px 6px">서비스업</td>'
     +'<td style="border:1px solid #000;padding:3px 6px">종목 택배</td>'
@@ -3962,7 +3973,9 @@ function _showSEModal(s){
   bizSec.innerHTML='<div style="font-size:11px;font-weight:700;color:#15803d;margin-bottom:6px">📋 사업자 정보 (세금계산서용)</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">'
     +'<div class="fg" style="margin:0"><label style="font-size:10px">사업자번호</label><input id="se-biznum" value="'+esc(s.bizNum||'')+'" placeholder="000-00-00000" style="font-size:11px"></div>'
-    +'<div class="fg" style="margin:0"><label style="font-size:10px">상호명</label><input id="se-bizname" value="'+esc(s.bizName||'')+'" style="font-size:11px"></div>'
+    +'<div class="fg" style="margin:0"><label style="font-size:10px">상호명</label><input id="se-bizname" value="'+esc(s.bizName||s.driverName||'')+'" style="font-size:11px"></div>'
+    +'<div class="fg" style="margin:0"><label style="font-size:10px">대표자(성함)</label><input id="se-bizrep" value="'+esc(s.bizRep||s.bizOwner||s.driverName||s.driver||'')+'" placeholder="기사 성함" style="font-size:11px"></div>'
+    +'<div class="fg" style="margin:0"><label style="font-size:10px">업태</label><input id="se-biztype" value="'+esc(s.bizType||'서비스업')+'" style="font-size:11px"></div>'
     +'<div class="fg" style="margin:0;grid-column:span 2"><label style="font-size:10px">사업장주소</label><input id="se-bizaddr" value="'+esc(s.bizAddr||'')+'" style="font-size:11px"></div>'
     +'</div>';
   body.appendChild(bizSec);
@@ -3979,7 +3992,18 @@ function _showSEModal(s){
   var taxBtn=document.createElement('button');taxBtn.className='btn';taxBtn.style.cssText='background:#15803d;color:#fff;border:none';
   taxBtn.textContent='🧾 세금계산서';taxBtn.onclick=function(){
     var id=(document.getElementById('se-id')||{value:''}).value;
-    if(id)openTaxInvoice(id);else toast('💾 먼저 저장하세요');
+    if(!id){toast('💾 먼저 저장하세요');return;}
+    // 편집기 현재 입력값을 캐시에 임시 반영 (저장 전에도 세금계산서 실시간 반영)
+    var cached=(_settleCache||[]).find(function(x){return x.id===id||x.fbId===id;});
+    if(cached){
+      var _g=function(eid){return (document.getElementById(eid)||{value:''}).value.trim();};
+      if(_g('se-biznum'))cached.bizNum=_g('se-biznum');
+      if(_g('se-bizname'))cached.bizName=_g('se-bizname');
+      if(_g('se-bizrep'))cached.bizRep=_g('se-bizrep');
+      if(_g('se-biztype'))cached.bizType=_g('se-biztype');
+      if(_g('se-bizaddr'))cached.bizAddr=_g('se-bizaddr');
+    }
+    openTaxInvoice(id);
   };
   var saveBtn=document.createElement('button');saveBtn.className='btn btn-blue';
   saveBtn.textContent='💾 저장 후 재계산';saveBtn.onclick=_saveSECurrent;
@@ -4145,8 +4169,12 @@ function _saveSECurrent(){
     camp:cached?cached.camp||'':'',
     updatedAt:new Date().toISOString()
   };
+  var bizRep=(document.getElementById('se-bizrep')||{value:''}).value.trim();
+  var bizType=(document.getElementById('se-biztype')||{value:''}).value.trim();
   if(bizNum)payload.bizNum=bizNum;
   if(bizName)payload.bizName=bizName;
+  if(bizRep)payload.bizRep=bizRep;
+  if(bizType)payload.bizType=bizType;
   if(bizAddr)payload.bizAddr=bizAddr;
   // ★ 업태/종목 — 기사 정보에서 가져와 정산서에 포함
   if(cached&&cached.bizType)payload.bizType=cached.bizType;
@@ -4688,7 +4716,7 @@ async function _ocrAnalyze(){
     var AK = (keyData.k||'').trim();
     if(!AK) throw new Error('API 키 없음 — Cloudflare Workers 환경변수 확인 필요');
 
-    var b64 = await _ocrCompressImage(_ocrCurrentFile, 1600, 0.92);
+    var b64 = await _ocrCompressImage(_ocrCurrentFile, 2400, 0.95);  // 해상도 높여 한글 인식률 향상
     var mime = _ocrCurrentFile.type||'image/jpeg';
 
     // 브라우저에서 직접 Anthropic 호출 (이전에 작동했던 방식)
@@ -4702,10 +4730,24 @@ async function _ocrAnalyze(){
       },
       body:JSON.stringify({
         model:'claude-sonnet-4-5',
-        max_tokens:600,
+        max_tokens:800,
         messages:[{role:'user',content:[
           {type:'image',source:{type:'base64',media_type:mime,data:b64}},
-          {type:'text',text:'사업자등록증 이미지에서 항목을 추출해 JSON만 출력하세요 (마크다운/설명 없이 순수 JSON만).\n업태와 종목은 여러 줄에 걸쳐 있어도 전부 포함하세요.\n형식: {"bizNum":"000-00-00000","bizName":"상호명","bizRep":"대표자명","bizAddr":"전체주소","bizType":"업태(전체)","bizItem":"종목(전체)","name":"대표자명"}'}
+          {type:'text',text:`[한국어 사업자등록증 OCR]
+
+다음 규칙을 반드시 따르세요:
+1. 사업자등록증 이미지에서 정보를 추출합니다.
+2. 만약 세금계산서(tax invoice)라면 반드시 왼쪽 "공급자" 칸의 정보만 추출하세요. 오른쪽 "공급받는자" 칸은 절대 추출하지 마세요.
+3. 한글 문자를 정확히 인식하세요. 비슷한 글자 주의: ㅇ/ㅎ/ㅁ/ㄴ, 회/최/외, 이/아/이
+4. 사업자번호는 반드시 숫자와 하이픈만 포함 (예: 123-45-67890)
+5. 주소는 시/도부터 전체 주소 포함
+6. 업태와 종목이 여러 줄이면 전부 쉼표로 연결해 포함
+7. 마크다운, 설명 없이 순수 JSON만 출력
+
+출력 형식:
+{"bizNum":"000-00-00000","bizName":"상호명(한글)","bizRep":"대표자성명","bizAddr":"전체주소","bizType":"업태전체","bizItem":"종목전체","name":"대표자성명"}
+
+주의: bizName과 bizRep, name 모두 한글로 정확히 인식하세요.`}
         ]}]
       })
     });
