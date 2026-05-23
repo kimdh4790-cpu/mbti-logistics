@@ -6217,6 +6217,30 @@ function pagePrices(){
       _syncCampColors();
     }
     // settlements 캐시에서 캠프 매핑 재구성 (없으면 Firebase에서 로드)
+    // ★ 미계약건 단가 섹션 항상 먼저 렌더링
+    var _noContCard=document.createElement('div');
+    _noContCard.id='nocont-price-card';
+    _noContCard.className='card';
+    _noContCard.style.cssText='margin-bottom:14px';
+    _noContCard.innerHTML='<div class="ch"><span class="ct">📦 미계약건 단가 설정</span>'
+      +'<button class="btn btn-sm btn-teal" onclick="saveNocontPrice()" style="margin-left:auto">💾 저장</button></div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:4px 0">'
+      +'<div style="background:var(--bg3);border-radius:10px;padding:12px;border:1px solid rgba(139,92,246,.3)">'
+      +'<div style="font-size:12px;font-weight:700;color:#7c3aed;margin-bottom:6px">🌙 WAVE1 야간 단가</div>'
+      +'<input id="rp-nocont-w1" type="number" value="'+(RPRICE['nocont_w1']||0)+'" step="50" min="0"'
+      +' style="width:100%;padding:8px;border:1.5px solid rgba(139,92,246,.4);border-radius:8px;font-size:16px;font-weight:800;text-align:center;background:var(--bg);color:#7c3aed">'
+      +'<div style="font-size:10px;color:var(--text3);margin-top:4px;text-align:center">진주M·대구2 야간</div></div>'
+      +'<div style="background:var(--bg3);border-radius:10px;padding:12px;border:1px solid rgba(249,115,22,.3)">'
+      +'<div style="font-size:12px;font-weight:700;color:#ea580c;margin-bottom:6px">☀️ WAVE2 주간 단가</div>'
+      +'<input id="rp-nocont-w2" type="number" value="'+(RPRICE['nocont_w2']||0)+'" step="50" min="0"'
+      +' style="width:100%;padding:8px;border:1.5px solid rgba(249,115,22,.4);border-radius:8px;font-size:16px;font-weight:800;text-align:center;background:var(--bg);color:#ea580c">'
+      +'<div style="font-size:10px;color:var(--text3);margin-top:4px;text-align:center">부산1·2·3 주간</div></div>'
+      +'</div>';
+    el.innerHTML='';
+    el.appendChild(_noContCard);
+    var _rpDiv=document.createElement('div');_rpDiv.id='rp-main-area';
+    el.appendChild(_rpDiv);
+
     function rebuildAndRender(){
       (_settleCache||[]).forEach(function(s){
         var camp=s.camp||_getSettleCamp(s);
@@ -6225,7 +6249,7 @@ function pagePrices(){
           if(rd.route)_routeCampMap[rd.route]=camp;
         });
       });
-      _renderPrices(el);
+      _renderPrices(_rpDiv);
     }
     if(!_settleCache||!_settleCache.length){
       _db.collection('settlements').where('dealerId','==',did).get()
@@ -6421,8 +6445,8 @@ function _renderPrices(c){
   var campGroups=_buildRouteCampGroups();
   var hasAny=campGroups.length>0;
   // ─ 상단 보기
-  // ★ 미계약건 단가 섹션
-  var nocontHTML='<div class="card" style="margin-bottom:14px">'    +'<div class="ch"><span class="ct">📦 미계약건 단가 설정</span>'    +'<button class="btn btn-sm btn-teal" onclick="saveNocontPrice()" style="margin-left:auto">💾 저장</button></div>'    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:4px 0">'    +'<div style="background:var(--bg3);border-radius:10px;padding:12px;border:1px solid rgba(139,92,246,.3)">'    +'<div style="font-size:12px;font-weight:700;color:#7c3aed;margin-bottom:6px">🌙 WAVE1 야간 단가</div>'    +'<input id="rp-nocont-w1" type="number" value="'+(RPRICE['nocont_w1']||0)+'" step="50" min="0"'    +' style="width:100%;padding:8px;border:1.5px solid rgba(139,92,246,.4);border-radius:8px;font-size:16px;font-weight:800;text-align:center;background:var(--bg);color:var(--purple)">'    +'<div style="font-size:10px;color:var(--text3);margin-top:4px;text-align:center">진주M·대구2 야간</div></div>'    +'<div style="background:var(--bg3);border-radius:10px;padding:12px;border:1px solid rgba(249,115,22,.3)">'    +'<div style="font-size:12px;font-weight:700;color:#ea580c;margin-bottom:6px">☀️ WAVE2 주간 단가</div>'    +'<input id="rp-nocont-w2" type="number" value="'+(RPRICE['nocont_w2']||0)+'" step="50" min="0"'    +' style="width:100%;padding:8px;border:1.5px solid rgba(249,115,22,.4);border-radius:8px;font-size:16px;font-weight:800;text-align:center;background:var(--bg);color:#ea580c">'    +'<div style="font-size:10px;color:var(--text3);margin-top:4px;text-align:center">부산1·2·3 주간</div></div>'    +'</div></div>';  var viewHTML='<div class="card" style="margin-bottom:14px">'    +'<div class="ch"><span class="ct">쿠팡 라우트 단가표</span>'
+  var nocontHTML=''; // ★ pagePrices에서 주입
+  var viewHTML='<div class="card" style="margin-bottom:14px">'    +'<div class="ch"><span class="ct">쿠팡 라우트 단가표</span>'
     +'<span style="font-size:11px;color:var(--text3)">캠프명 탭 눌러서 펼치기</span></div>';
   if(!hasAny){
     viewHTML+='<div class="empty" style="padding:24px 0"><div class="empty-icon">📋</div>'
