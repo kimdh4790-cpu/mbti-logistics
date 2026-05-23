@@ -1039,8 +1039,10 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           drvMap[cleanId].camp=campName;
 
         if(isNocont){
-          drvMap[cleanId].nocontCnt+=dcnt+rcnt;
-          drvMap[cleanId].nocontAmt+=rowTotal;
+          var nc=dcnt+rcnt;
+          drvMap[cleanId].nocontCnt+=nc;
+          // nocontAmt: rowTotal 있으면 사용, 없으면 나중에 RPRICE 기반으로 계산
+          if(rowTotal>0) drvMap[cleanId].nocontAmt+=rowTotal;
           continue;
         }
         var delAmt=rowTotal>0?rowTotal:(dcnt*unitPrc);
@@ -1314,7 +1316,17 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           var empIns=monthlyWage>=800000?Math.floor(monthlyWage*0.008/10)*10:0;
           var workIns=Math.floor(monthlyWage*0.0088/10)*10;
 
-          var coupangRawTotal=tm.totalAmt||(Math.round((dm.delAmt||0)+(dm.retAmt||0)+(freshAmt||0)+(addIncAmt||0)+(dm.nocontAmt||0)-(dmgAmt||0)));
+          // ★ nocontAmt: Firestore 저장값이 0이면 RPRICE 기반 계산
+          var nocontCntVal=dm.nocontCnt||0;
+          var nocontAmtCalc=dm.nocontAmt||0;
+          if(nocontCntVal>0&&nocontAmtCalc===0){
+            // camp WAVE로 W1/W2 단가 결정
+            var camp=dm.camp||'';
+            var isW2=camp.includes('부산');
+            var nocontUnit=isW2?(RPRICE['nocont_w2']||0):(RPRICE['nocont_w1']||0);
+            nocontAmtCalc=nocontCntVal*nocontUnit;
+          }
+          var coupangRawTotal=tm.totalAmt||(Math.round((dm.delAmt||0)+(dm.retAmt||0)+(freshAmt||0)+(addIncAmt||0)+nocontAmtCalc-(dmgAmt||0)));
           var entry={
             driver:drvName, userId:cleanId, dealerId:_CU.dealerId,
             camp:dm.camp||drvObj.camp||'',
@@ -1326,7 +1338,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             fresh:freshAmt,        // 프레시백 회수금액 (VAT제외 원본 저장 - calcNet에서 ×1.1)
             finc:fincVal,          // 프레시백 인센티브
             inc:addIncAmt,         // 추가인센티브(가중요인)
-            nocont:dm.nocontAmt||0,nocontCnt:dm.nocontCnt||0,
+            nocont:nocontAmtCalc,nocontCnt:nocontCntVal,
             dmg:dmgAmt,
             etcPlus:0,etcMinus:0,
             totalAmt:taxBase,
@@ -5204,7 +5216,7 @@ function updSECalc(){
   function gv(id){var el=document.getElementById(id);return el?+el.value||0:0;}
   var fresh=gv('se-fresh'),finc=gv('se-finc'),inc=gv('se-inc'),nocont=gv('se-nocont');
   var dmg=gv('se-dmg'),etcP=gv('se-etc-plus'),etcM=gv('se-etc-minus'),adv=gv('se-adv');
-  var taxBase=totalDamt+totalRamt+fresh+finc+inc+nocont+etcP;  // 모두 VAT포함가  // 세금계산서 기준 (etcMinus 제외)
+  var taxBase=totalDamt+totalRamt+fresh+finc+nocont+etcP;  // ★ inc 제외 (세금계산서 base 아님)
   var supplyAmt=Math.round(taxBase/1.1);
   var vatAmt=taxBase-supplyAmt;
   // ★ v9.26: SE 모달 배너 제거 — 기사 vs 쿠팡 비교는 의미 없음 (마진 차이 당연)
