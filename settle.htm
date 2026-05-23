@@ -2557,6 +2557,7 @@ function _loadRoster(){
     '</select>'+
     '<button onclick="_loadPrevWeekRoster()" style="padding:6px 12px;background:#6366f1;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">📋 이전 스케줄 불러오기</button>'+
     '<button onclick="_downloadRosterExcel()" style="padding:6px 12px;background:#10b981;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">📥 엑셀 다운로드</button>'+
+    '<label style="padding:6px 12px;background:#3b82f6;color:#fff;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">📂 쿠팡 업로드<input type="file" accept=".xlsx,.xls" style="display:none" onchange="_importRosterExcel(this)"></label>'+
     '</div>'+
     '<div id="roster-content"><div style="text-align:center;padding:30px;color:var(--text3)">⏳ 로딩 중...</div></div>'+
     '</div>';
@@ -2753,7 +2754,7 @@ function _setRosterRoute(sel){
   var status=(window._rosterData[driverId][dayIndex]&&window._rosterData[driverId][dayIndex].status)||'work';
   window._rosterData[driverId][dayIndex]={status:status,route:route};
   _saveRosterCell(driverId,dayIndex,status,route);
-  toast('✅ 저장됨');
+  var ss=document.getElementById('roster-save-status');if(ss){ss.textContent='✅ 저장됨';setTimeout(function(){ss.textContent='';},1500);}
 }
 
 // Firestore 저장
@@ -2876,17 +2877,19 @@ function _downloadRosterExcel(){
       var campShort=camp.replace('캠프','').trim();
       var cfg=CAMP_CONFIG[camp]||CAMP_CONFIG[campShort]||{wave:'',rotation:''};
       weekDays.forEach(function(dateObj,i){
-        // Date → 문자열 변환 (XLSX 호환성 보장)
         var y=dateObj.getFullYear();
         var m=String(dateObj.getMonth()+1).padStart(2,'0');
         var d2=String(dateObj.getDate()).padStart(2,'0');
         var dateStr=y+'-'+m+'-'+d2;
         var entry=(rosterData[drv.id]&&rosterData[drv.id][i])||{status:'work',route:''};
         var status=entry.status==='work'?'출근':'휴무';
-        var rotation=status==='출근'?(cfg.rotation||''):'';
-        var route=status==='출근'?(entry.route||''):'';
-        rows.push([dateStr,vendorName,bizNum,camp,cfg.wave||'',
-          drv.name||'',drv.driverId||drv.userId||'',status,rotation,route]);
+        var rotation=status==='출근'?String(cfg.rotation||''):'';
+        var route=status==='출근'?String(entry.route||''):'';
+        // ★ 모든 값 String 강제변환 (indexOf 오류 방지)
+        rows.push([String(dateStr),String(vendorName||''),String(bizNum||''),
+          String(camp),String(cfg.wave||''),
+          String(drv.name||''),String(drv.driverId||drv.userId||''),
+          String(status),String(rotation),String(route)]);
       });
     });
 
