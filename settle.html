@@ -403,11 +403,33 @@ var _slugCompany = null; // 슬러그로 조회한 회사 정보
 async function _loadSlugCompany(){
   if(!_companySlug||!_db) return;
   try{
-    // companies 컬렉션에서 slug 필드로 조회
     var snap = await _db.collection('companies').where('slug','==',_companySlug).limit(1).get();
     if(!snap.empty){
       _slugCompany = snap.docs[0].data();
       _slugCompany._id = snap.docs[0].id;
+      // ★ v9.26 핵심 수정: 슬러그 모드에서는 URL 슬러그 회사의 dealerId로 덮어씀
+      // 슈퍼어드민이 /test123 접속 시 test123 데이터 보임, /mbti 접속 시 mbti 데이터 보임
+      // 일반 대리점 로그인 시: 자기 슬러그 URL로만 접근 가능 (다른 대리점 URL = 빈 화면)
+      if(isSuperAdmin()){
+        // 슈퍼어드민: 슬러그 회사 dealerId로 전환 (다른 대리점 데이터 조회 가능)
+        if(_CU && _slugCompany._id){
+          _CU.dealerId = _slugCompany._id;
+          _CU.companyName = _slugCompany.companyName||_slugCompany.name||_companySlug;
+          window._CU = _CU;
+          console.log('[SLUG] 슈퍼어드민 dealerId 전환:', _slugCompany._id, '('+_companySlug+')');
+        }
+      } else {
+        // 일반 대리점: 자기 회사 슬러그와 URL 슬러그가 다르면 접근 차단
+        if(_CU && _slugCompany._id !== _CU.dealerId){
+          console.warn('[SLUG] 접근 차단: 다른 대리점 URL');
+          document.getElementById('app').style.display='none';
+          var msg=document.createElement('div');
+          msg.style.cssText='position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);flex-direction:column;gap:12px;z-index:9999';
+          msg.innerHTML='<div style="font-size:40px">🔒</div><div style="font-size:16px;font-weight:800">접근 권한 없음</div><div style="font-size:13px;color:var(--text3)">해당 대리점 URL에 접근할 수 없습니다</div>';
+          document.body.appendChild(msg);
+          return;
+        }
+      }
       _applySlugBranding();
     }
   }catch(e){}
@@ -426,6 +448,10 @@ function _applySlugBranding(){
   if(sub) sub.textContent = cn + ' 전용 관리 시스템';
   // ★ 사이드바 DONWAY 옆에 회사명 표시
   _updateSidebarBrand(cn);
+  // ★ v9.26: dealerId 전환 후 현재 페이지 데이터 리프레시
+  if(isSuperAdmin() && window._curPage){
+    setTimeout(function(){ goPage(window._curPage); }, 100);
+  }
 }
 
 // ══ 내 전용 URL 조회 & 표시 ══
@@ -3392,7 +3418,8 @@ function pageSettle(){
     settles.forEach(function(s){
       var r=calcNet(s);
       var ct=s.coupangTotal||(((s.damt||0)+(s.ramt||0)+(s.fresh||0)+(s.inc||0)+(s.nocont||0)))||0;
-      totCoupang+=ct?ct:(r.income||0); // 쿠팡→MBTI 금액 (이미 VAT포함)
+      // ★ coupangTotal = 엑셀 VAT별도 원본 → ×1.1 해야 VAT포함
+      totCoupang+=ct?Math.round(ct*1.1):(r.income||0);
       totTaxBase+=(r.totalAmt||r.income||0);   // ★ v9.26: 저장된 totalAmt 우선 (정산관리 행과 일치)
       totNet+=r.net||0;
       totDeduct+=r.deduct||0;
@@ -3737,7 +3764,7 @@ function _renderSettlePage(settles,c){
       +'<span style="display:flex;align-items:center;gap:8px"><button onclick="event.stopPropagation();deleteMonthSettlements(\''+mo+'\')" style="padding:3px 10px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">🗑 월 삭제</button><span style="font-size:11px;color:var(--text3)">'+gRows.length+'명</span><span id="'+gid+'_a" style="font-size:11px;color:var(--text3)">'+arrow+'</span></span>'
       +'</div>'
       +'<div style="display:flex;flex-wrap:wrap;gap:5px;font-size:10px">'
-      +'<span style="padding:2px 8px;background:rgba(59,130,246,.12);border-radius:12px;color:#3b82f6">📦 쿠팡 총매출(VAT포함) ₩'+fmt(gRows.reduce(function(s,x){var ct=x.coupangTotal||(((x.damt||0)+(x.ramt||0)+(x.fresh||0)+(x.inc||0)+(x.nocont||0)))||0;return s+(ct?ct:(calcNet(x).income||0));},0))+'</span>'
+      +'<span style="padding:2px 8px;background:rgba(59,130,246,.12);border-radius:12px;color:#3b82f6">📦 쿠팡 총매출(VAT포함) ₩'+fmt(gRows.reduce(function(s,x){var ct=x.coupangTotal||(((x.damt||0)+(x.ramt||0)+(x.fresh||0)+(x.inc||0)+(x.nocont||0)))||0;return s+(ct?Math.round(ct*1.1):(calcNet(x).income||0));},0))+'</span>'
       // ★ 프레시백/추가인센/분실파손 — 모두 VAT포함으로 표시 (×1.1)
       +'<span style="padding:2px 8px;background:rgba(16,185,129,.12);border-radius:12px;color:#059669">🧾 프레시백 ₩'+fmt(Math.round(gRows.reduce(function(s,x){return s+(+x.fresh||0);},0)*1.1))+'</span>'
       +(gRows.reduce(function(s,x){return s+(+x.inc||0);},0)>0?'<span style="padding:2px 8px;background:rgba(245,158,11,.12);border-radius:12px;color:#d97706">⭐ 추가인센 ₩'+fmt(Math.round(gRows.reduce(function(s,x){return s+(+x.inc||0);},0)*1.1))+'</span>':'')
@@ -5041,35 +5068,10 @@ function updSECalc(){
   var taxBase=totalDamt+totalRamt+fresh+finc+inc+nocont+etcP;  // 모두 VAT포함가  // 세금계산서 기준 (etcMinus 제외)
   var supplyAmt=Math.round(taxBase/1.1);
   var vatAmt=taxBase-supplyAmt;
-  // 엑셀 총금액 불일치 검증 (역마진 감지: 기사 정산 > 쿠팡 수입이면 경보)
-  var ctEl=document.getElementById('se-coupang-total');
+  // ★ v9.26: SE 모달 배너 제거 — 기사 vs 쿠팡 비교는 의미 없음 (마진 차이 당연)
+  //           실제 알림은 엑셀 업로드 시 쿠팡 합계행 vs 개별합산 비교(_showUploadResult)에서 처리
   var banner=document.getElementById('se-mismatch-banner');
-  if(ctEl&&banner){
-    var excelTotal=+ctEl.value||0;  // coupangTotal (쿠팡→대리점, VAT포함)
-    // ★ 정상: taxBase(기사정산) < excelTotal(쿠팡수입) → 대리점 마진 = 정상 차이
-    // ★ 경보: taxBase > excelTotal → 역마진 (기사에게 쿠팡수입보다 더 많이 지급)
-    var overPay = excelTotal>0 && (taxBase - excelTotal) > 5000;
-    if(overPay){
-      if(banner.style.display==='none'||banner.style.display===''){
-        try{
-          var ac=new AudioContext();
-          [880,660,440].forEach(function(freq,i){
-            var o=ac.createOscillator();var g=ac.createGain();
-            o.connect(g);g.connect(ac.destination);
-            o.frequency.value=freq;o.type='triangle';
-            g.gain.setValueAtTime(0,ac.currentTime+i*0.12);
-            g.gain.linearRampToValueAtTime(0.3,ac.currentTime+i*0.12+0.04);
-            g.gain.linearRampToValueAtTime(0,ac.currentTime+i*0.12+0.12);
-            o.start(ac.currentTime+i*0.12);o.stop(ac.currentTime+i*0.12+0.12);
-          });
-        }catch(e){}
-      }
-      banner.style.display='block';
-      banner.innerHTML='⚠️ <strong>역마진 경고</strong> — 기사 정산액이 쿠팡 수취액을 초과합니다!<br>'
-        +'<span style="font-size:10px;color:#78350f">💡 쿠팡→대리점 수취(엑셀)보다 대리점→기사 정산이 큽니다. 단가표를 확인하세요.</span><br>'
-        +'<span style="font-weight:500">쿠팡 수취(VAT포함): ₩'+fmt(excelTotal)+' / 기사 정산(VAT포함): ₩'+fmt(taxBase)+' / <strong>초과: +₩'+fmt(taxBase-excelTotal)+'원</strong></span>';
-    } else { banner.style.display='none'; }
-  }
+  if(banner) banner.style.display='none';
   var monthlyWage=Math.round(supplyAmt*0.654);
   var empIns=monthlyWage>=800000?Math.floor(monthlyWage*0.008/10)*10:0;
   var workIns=Math.floor(monthlyWage*0.0088/10)*10;
@@ -8534,6 +8536,19 @@ function _showUploadResult(month,added,updated,newDrvCnt,routeCnt,newDrivers,lef
     var hasRawErr=Math.abs(ev.diffRaw)>THR;
     var hasErr=errItems.length>0||hasRawErr;
     if(hasErr){
+      // ★ v9.26: 쿠팡 합계행 vs 개별 합산 불일치 → 소리 알림 (트리플 경보음)
+      try{
+        var _ac=new (window.AudioContext||window.webkitAudioContext)();
+        [[880,0],[660,0.18],[440,0.36],[880,0.6],[660,0.78],[440,0.96]].forEach(function(pair){
+          var o=_ac.createOscillator();var g=_ac.createGain();
+          o.connect(g);g.connect(_ac.destination);
+          o.frequency.value=pair[0];o.type='triangle';
+          g.gain.setValueAtTime(0,_ac.currentTime+pair[1]);
+          g.gain.linearRampToValueAtTime(0.4,_ac.currentTime+pair[1]+0.04);
+          g.gain.linearRampToValueAtTime(0,_ac.currentTime+pair[1]+0.14);
+          o.start(_ac.currentTime+pair[1]);o.stop(_ac.currentTime+pair[1]+0.15);
+        });
+      }catch(e){}
       var errBanner=document.createElement('div');
       errBanner.style.cssText='background:#fef9c3;border:2px solid #f59e0b;border-radius:10px;padding:14px;margin-bottom:12px';
       var errLines='<table style="width:100%;font-size:10px;border-collapse:collapse;margin-top:8px">'        +'<tr style="background:#fde68a"><th style="padding:4px 6px;text-align:left">항목</th>'        +'<th style="padding:4px 6px;text-align:right">엑셀 합계행</th>'        +'<th style="padding:4px 6px;text-align:right">개별 합산</th>'        +'<th style="padding:4px 6px;text-align:right">차이</th></tr>';
@@ -8547,7 +8562,7 @@ function _showUploadResult(month,added,updated,newDrvCnt,routeCnt,newDrivers,lef
         errLines+='<tr style="border-top:2px solid #f59e0b;background:#fef3c7">'          +'<td style="padding:4px 6px;font-weight:700">Raw 시트 계산</td>'          +'<td style="padding:4px 6px;text-align:right;font-family:monospace">₩'+fmt2(ev.excelTotal)+'</td>'          +'<td style="padding:4px 6px;text-align:right;font-family:monospace">₩'+fmt2(ev.rawCalc)+'</td>'          +'<td style="padding:4px 6px;text-align:right;font-family:monospace;font-weight:800;color:#b45309">'+rs+fmt2(ev.diffRaw)+'</td>'          +'</tr>';
       }
       errLines+='</table>';
-      errBanner.innerHTML='<div style="font-size:13px;font-weight:800;color:#92400e;margin-bottom:2px">⚠️ 엑셀 항목별 금액 불일치 감지! ('+errItems.length+'개 항목)</div>'        +'<div style="font-size:10px;color:#78350f;margin-bottom:4px">📌 왜 차이가 날까요? ① 반품/취소 건이 별도 시트에 집계 ② 날짜 범위가 두 달에 걸침 ③ 엑셀 파일 수동 수정. 정산 금액은 개별 행 기준으로 계산됩니다.</div>'        +errLines;
+      errBanner.innerHTML='<div style="font-size:13px;font-weight:800;color:#92400e;margin-bottom:2px">🔔 쿠팡↔대리점 금액 불일치! ('+errItems.length+'개 항목)</div>'        +'<div style="font-size:11px;font-weight:700;color:#b45309;margin-bottom:4px">엑셀 합계행(쿠팡 기준) ≠ 개별 기사 합산 — 쿠팡 수취액을 확인하세요</div>'        +'<div style="font-size:10px;color:#78350f;margin-bottom:4px">📌 원인: ① 반품/취소 건이 별도 집계 ② 기간이 두 달에 걸침 ③ 엑셀 수동 수정</div>'        +errLines;
       d.appendChild(errBanner);
     } else {
       var okBanner=document.createElement('div');
