@@ -30,7 +30,7 @@
 }
 *{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,'Malgun Gothic',sans-serif;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);color:var(--text);font-size:14px}
-body.dark{--bg:#1a1a18;--bg2:#242422;--bg3:#1e1e1c;--text:#e8e6e0;--text2:#a0a09a;--text3:#666663;--border:rgba(255,255,255,.12)}
+body.dark{--bg:#0d0d0b;--bg2:#161614;--bg3:#1c1c1a;--text:#f0ede6;--text2:#b8b5ae;--text3:#7a7772;--border:rgba(255,255,255,.15);--brand:#3b82f6;--brand-l:rgba(59,130,246,.15);--brand-d:#2563eb;--green:#22c55e;--green-l:rgba(34,197,94,.15);--red:#f87171;--red-l:rgba(248,113,113,.15);--amber:#fbbf24;--amber-l:rgba(251,191,36,.15);--purple:#a78bfa;--purple-l:rgba(167,139,250,.15)}
 #app{display:flex;min-height:100vh}
 .sidebar{width:200px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100}
 .main{margin-left:200px;flex:1;display:flex;flex-direction:column;min-height:100vh}
@@ -39,10 +39,24 @@ body.dark{--bg:#1a1a18;--bg2:#242422;--bg3:#1e1e1c;--text:#e8e6e0;--text2:#a0a09
 .sl-text{font-size:13px;font-weight:800;color:var(--brand)}
 .sl-ver{font-size:9px;color:var(--purple);font-weight:600;display:block}
 .snav{flex:1;padding:6px;overflow-y:auto}
-.ns{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.05em;padding:6px 8px 2px}
-.ni{padding:7px 9px;border-radius:var(--r);cursor:pointer;color:var(--text2);font-size:12px;margin-bottom:1px;display:flex;align-items:center;gap:6px}
-.ni:hover{background:var(--bg3)}
-.ni.on{background:var(--brand-l);color:var(--brand);font-weight:600}
+.ns{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 12px 10px 14px;cursor:pointer;user-select:none;
+  font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--text3);border-radius:var(--r);margin:2px 6px;
+  transition:all .2s;
+}
+.ns:hover{background:var(--bg3);color:var(--text2)}
+.ns.open{color:var(--brand)}
+.ns-arrow{font-size:10px;transition:transform .25s;opacity:.7}
+.ns.open .ns-arrow{transform:rotate(90deg)}
+.ns-items{overflow:hidden;max-height:0;transition:max-height .3s ease;padding:0 6px}
+.ns-items.open{max-height:300px}
+.ni{padding:8px 10px;border-radius:8px;cursor:pointer;color:var(--text2);
+  font-size:12px;margin-bottom:2px;display:flex;align-items:center;gap:8px;
+  transition:all .15s;border-left:2px solid transparent}
+.ni:hover{background:var(--bg3);color:var(--text1,var(--text));border-left-color:var(--brand)}
+.ni.on{background:var(--brand-l);color:var(--brand);font-weight:700;border-left-color:var(--brand)}
 .sb-bot{padding:9px 12px;border-top:1px solid var(--border)}
 .topbar{height:46px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 16px;gap:8px;position:sticky;top:0;z-index:50}
 .topbar-title{font-size:15px;font-weight:700}
@@ -3631,10 +3645,37 @@ var MENUS_DRIVER = [
 var MENUS = MENUS_SETTLE; // 기본값
 function buildNav(){
   var nav=document.getElementById('snav');
-  nav.innerHTML=MENUS.map(function(g){
-    return '<div class="ns">'+g.s+'</div>'
-      +g.items.map(function(m){return '<div class="ni" id="nav-'+m.p+'" onclick="goPage(\''+m.p+'\')">'+m.ic+' '+m.l+'</div>';}).join('');
+  nav.innerHTML=MENUS.map(function(g,gi){
+    var id='nsec-'+gi;
+    // 현재 페이지가 이 섹션에 있으면 기본 open
+    var hasActive=g.items.some(function(m){return m.p===_curPage;});
+    return '<div class="ns'+(hasActive?' open':'')
+      +'" onclick="_toggleNavSection(this,\''+id+'\')">'+
+      '<span>'+g.s+'</span><span class="ns-arrow">›</span></div>'+
+      '<div class="ns-items'+(hasActive?' open':'')+'" id="'+id+'">'+
+      g.items.map(function(m){
+        return '<div class="ni'+(m.p===_curPage?' on':'')+'" id="nav-'+m.p+'" onclick="goPage(\''+m.p+'\')">'+
+          '<span style="font-size:14px">'+m.ic+'</span><span>'+m.l+'</span></div>';
+      }).join('')+
+      '</div>';
   }).join('');
+}
+
+function _toggleNavSection(el,id){
+  // 해당 섹션 토글
+  var items=document.getElementById(id);
+  if(!items)return;
+  var isOpen=items.classList.contains('open');
+  // 모든 섹션 닫기 (선택: 하나만 열리게)
+  // document.querySelectorAll('.ns-items').forEach(function(x){x.classList.remove('open');});
+  // document.querySelectorAll('.ns').forEach(function(x){x.classList.remove('open');});
+  if(isOpen){
+    items.classList.remove('open');
+    el.classList.remove('open');
+  }else{
+    items.classList.add('open');
+    el.classList.add('open');
+  }
 }
 
 // ── 보안 경고 팝업 + Firestore 기록 ──
@@ -3799,7 +3840,17 @@ function goPage(page){
     return;
   }
   document.querySelectorAll('.ni').forEach(function(n){n.classList.remove('on');});
-  var nav=document.getElementById('nav-'+page);if(nav)nav.classList.add('on');
+  var nav=document.getElementById('nav-'+page);
+  if(nav){
+    nav.classList.add('on');
+    // 해당 섹션 자동 열기
+    var parent=nav.parentElement;
+    if(parent&&parent.classList.contains('ns-items')){
+      parent.classList.add('open');
+      var hdr=parent.previousElementSibling;
+      if(hdr&&hdr.classList.contains('ns'))hdr.classList.add('open');
+    }
+  }
   document.getElementById('topbar-right').innerHTML='';
   document.getElementById('sidebar').classList.remove('open');
   var _bd=document.getElementById('sb-backdrop');if(_bd)_bd.style.display='none';
