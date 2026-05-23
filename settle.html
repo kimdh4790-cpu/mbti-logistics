@@ -1808,9 +1808,25 @@ function showApp(){
   _loadRouteCampMap();  // 라우트→캠프 매핑 로드
   _loadMySlug();  // 내 전용 URL 로드
   _loadSeasonPrices();  // 시즌 단가 로드
-  // 슈퍼 어드민 버튼 표시
+  // 슈퍼 어드민 버튼 표시 + 신규 trial 가입자 배지
   var adminBtn=document.getElementById('admin-btn');
-  if(adminBtn)adminBtn.style.display=isSuperAdmin()?'block':'none';
+  if(adminBtn){
+    adminBtn.style.display=isSuperAdmin()?'block':'none';
+    if(isSuperAdmin()&&_db){
+      // 오늘 기준 7일 이내 신규 trial 가입자 수 배지
+      var since=new Date(Date.now()-7*24*60*60*1000).toISOString().slice(0,10);
+      _db.collection('companies').where('plan','==','trial').get().then(function(snap){
+        var newCnt=0;
+        snap.forEach(function(doc){
+          var d=doc.data();
+          if(d.trialStart&&d.trialStart>=since) newCnt++;
+        });
+        if(newCnt>0){
+          adminBtn.innerHTML='👑 슈퍼 어드민 <span style="display:inline-block;background:#ef4444;color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;margin-left:4px">+'+newCnt+'</span>';
+        }
+      }).catch(function(){});
+    }
+  }
   // 파일 입력 연결 (영구적)
   var fi=document.getElementById('excel-input');
   fi.onchange=function(){if(this.files[0])parseCoupangExcel(this);};
@@ -8299,7 +8315,7 @@ function openAdminPanel(){
   function buildDealerRows(items){
     var tbl=document.createElement('table');tbl.className='tbl';tbl.style.width='100%';
     var thead=document.createElement('thead');
-    thead.innerHTML='<tr><th>대리점</th><th>플랜</th><th>전용URL</th><th>정산수</th><th></th></tr>';
+    thead.innerHTML='<tr><th>대리점</th><th>플랜</th><th>전용URL</th><th>가입일/만료일</th><th>정산수</th><th></th></tr>';
     tbl.appendChild(thead);
     var tbody=document.createElement('tbody');
     items.forEach(function(item){
@@ -8308,6 +8324,15 @@ function openAdminPanel(){
       var slugUrl = item.slug ? (window.location.origin+'/'+item.slug) : '-';
       var planLabel = {'trial':'무료체험','settle':'AI정산','qr':'QR출퇴근','full':'풀패키지','hourly':'급여관리','OWNER':'관리자'}[item.plan||'trial']||item.plan||'-';
       var planColor = item.plan==='trial'?'var(--amber)':item.plan==='OWNER'?'#f59e0b':'var(--green)';
+      var today=new Date().toISOString().slice(0,10);
+      var isExpired=item.plan==='trial'&&item.trialEnd&&item.trialEnd<today;
+      var dateHtml='';
+      if(item.plan==='OWNER'){dateHtml='<span style="font-size:10px;color:var(--text3)">영구</span>';}
+      else if(item.trialStart||item.trialEnd){
+        var expColor=isExpired?'var(--red)':'var(--green)';
+        dateHtml='<span style="font-size:10px;color:var(--text3)">'+(item.trialStart||'-')+'</span><br>'
+          +'<span style="font-size:10px;color:'+expColor+';font-weight:700">'+(isExpired?'❌ 만료 ':'⏳ ~')+(item.trialEnd||'-')+'</span>';
+      } else {dateHtml='<span style="font-size:10px;color:var(--text3)">-</span>';}
       tr.innerHTML='<td style="padding:8px 10px"><strong>'+esc(item.name||item.id)+'</strong><br>'
         +'<span style="font-size:10px;color:var(--text3)">'+esc(item.email||'')+'</span></td>'
         +'<td style="padding:8px 10px;text-align:center"><span style="background:'+planColor+'22;color:'+planColor+';font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">'+planLabel+'</span></td>'
@@ -8317,6 +8342,7 @@ function openAdminPanel(){
             +'<button id="slug-copy-'+item.id+'" style="background:none;border:none;cursor:pointer;font-size:11px;margin-left:4px">📋</button>'
           :'<span style="color:var(--text3)">-</span>')
         +'</td>'
+        +'<td style="padding:8px 6px;text-align:center">'+dateHtml+'</td>'
         +'<td style="padding:8px 10px;text-align:center">'+item.cnt+'건</td>';
       var td=document.createElement('td');td.style.padding='8px 10px';
       var btn=document.createElement('button');
@@ -8348,12 +8374,15 @@ function openAdminPanel(){
         name:d.companyName||d.name||doc.id,
         email:d.email||d.adminEmail||'',
         slug:d.slug||'',
-        plan:d.plan||d.serviceType||d.trialEnd?'trial':'unknown',
+        plan:d.plan||(d.trialEnd?'trial':'unknown'),
+        trialStart:d.trialStart||'',
+        trialEnd:d.trialEnd||'',
+        createdAt:d.createdAt&&d.createdAt.seconds?d.createdAt.seconds:0,
         cnt:dealerCnt[doc.id]||0
       });
     });
     if(!items.length){body.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">등록된 대리점 없음</div>';return;}
-    items.sort(function(a,b){return b.cnt-a.cnt;});
+    items.sort(function(a,b){return b.createdAt-a.createdAt;});// 최신 가입순
     buildDealerRows(items);
     // 복사 버튼 이벤트 바인딩
     setTimeout(function(){
