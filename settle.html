@@ -1305,6 +1305,8 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             fbPromises.push(_db.collection('settlements').doc(docId).set(clean)
               .then(function(){x.fbId=docId;}).catch(function(){}));
           });
+          // ★ dealerId 강제 갱신 (다른 계정 데이터 혼입 방지)
+          settlements.forEach(function(x){x.dealerId=_CU.dealerId;});
           Promise.all(fbPromises).then(function(){
             _settleCache=null;
             var newCount=driverPromises.length;
@@ -1695,6 +1697,24 @@ function showApp(){
   if(_CU.role !== 'driver' && _CU.role !== 'member'){
     setTimeout(_registerFCM, 2000);
     setTimeout(_initFCMReceiver, 1000);
+  }
+  // ★ 로그인 후 개인 slug URL로 자동 이동 (현재 URL이 /settle 또는 slug가 다를 때)
+  if(_CU&&_CU.role!=='admin'&&_CU.role!=='driver'){
+    var _curPath=window.location.pathname.replace(/\/$/,'');
+    // 내 slug 확인 후 맞는 URL로 이동
+    if(_db&&_CU.dealerId){
+      _db.collection('companies').doc(_CU.dealerId).get().then(function(snap){
+        if(!snap.exists)return;
+        var mySlug=snap.data().slug||'';
+        if(!mySlug)return;
+        var slugPath='/'+mySlug;
+        // /settle 이거나 다른 slug면 내 slug로 이동
+        if(_curPath==='/settle'||(_curPath!==slugPath&&!_curPath.startsWith('/settle?'))){
+          window.history.replaceState({},'',slugPath);
+          document.title='DONWAY — '+(snap.data().companyName||mySlug);
+        }
+      }).catch(function(){});
+    }
   }
   // ★ 신규 가입 후 첫 로그인: URL 안내 배너 표시
   if(_CU&&_CU.role!=='admin'&&_CU.role!=='driver'){
@@ -3058,7 +3078,7 @@ var MENUS_QR = [
 // 풀패키지 (택배+QR, 위수탁O)
 var MENUS_FULL = [
   {s:'정산',items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'📋',l:'정산 관리',p:'settlements'},{ic:'📈',l:'통계',p:'stats'}]},
-  {s:'운영',items:[{ic:'👤',l:'기사/직원',p:'drivers'},{ic:'🔐',l:'출퇴근 현황',p:'attendance'},{ic:'📅',l:'달력',p:'schedule'}]},
+  {s:'운영',items:[{ic:'👤',l:'기사/직원',p:'drivers'},{ic:'📅',l:'달력',p:'schedule'}]},
   {s:'설정',items:[{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'📝',l:'위수탁 계약서',p:'contract'},{ic:'🗓',l:'근무표',p:'roster'}]},
   {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices'}]}
 ];
