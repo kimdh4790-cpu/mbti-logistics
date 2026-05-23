@@ -2711,8 +2711,7 @@ function _renderRosterTable(drivers,rosterData,weekDays,dNames,fmt){
       '</div>'+
       '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">'+
       '<thead><tr style="background:var(--bg3)">'+
-      '<th style="padding:6px 10px;text-align:left;border:1px solid var(--border);min-width:80px">이름</th>'+
-      '<th style="padding:6px 10px;text-align:left;border:1px solid var(--border);min-width:60px">기본라우트</th>'+
+      '<th style="padding:6px 10px;text-align:left;border:1px solid var(--border);min-width:90px">이름 / 회전</th>'+
       weekDays.map(function(d,i){
         var col2=i===0?'#ef4444':i===6?'#3b82f6':'inherit';
         return '<th style="padding:4px 6px;text-align:center;border:1px solid var(--border);min-width:70px;color:'+col2+'">'+
@@ -2722,7 +2721,7 @@ function _renderRosterTable(drivers,rosterData,weekDays,dNames,fmt){
       '</tr>'+
       // 요약 행
       '<tr style="background:var(--bg2);font-size:10px">'+
-      '<td colspan="2" style="padding:4px 8px;border:1px solid var(--border);color:var(--text3)">출근/유무</td>'+
+      '<td style="padding:4px 8px;border:1px solid var(--border);color:var(--text3)">출근/유무</td>'+
       daySummary.map(function(s){
         return '<td style="padding:3px 4px;text-align:center;border:1px solid var(--border)">'+
           '<span style="color:#10b981;font-weight:700">출근:'+s.work+'명</span><br>'+
@@ -2751,17 +2750,22 @@ function _renderRosterTable(drivers,rosterData,weekDays,dNames,fmt){
           'background:'+(isOff?'#e5e7eb':'#dbeafe')+';color:'+(isOff?'#6b7280':'#1d4ed8')+'">'+
           (isOff?'⊘ 휴무':'✓ 출근')+'</button>'+
           (isOff?'':
-            '<input id="'+rtId+'" type="text" value="'+route+'"'+
+            '<input type="text" value="'+route+'"'+
             ' onchange="_setRosterRouteText(this)" data-did="'+drv.id+'" data-day="'+i+'" data-rot="'+rot+'"'+
-            ' placeholder="라우트" style="width:100%;font-size:10px;padding:2px 3px;border:1px solid var(--border);border-radius:3px;background:var(--bg);text-align:center">'+
-            (rot?'<div style="font-size:9px;color:var(--text3);margin-top:1px">'+rot+'</div>':'')
+            ' placeholder="라우트" style="width:100%;font-size:10px;padding:2px 3px;border:1px solid var(--border);border-radius:3px;background:var(--bg);text-align:center;margin-bottom:2px">'+
+            '<input type="text" value="'+rot+'"'+
+            ' onchange="_setRosterRotText(this)" data-did="'+drv.id+'" data-day="'+i+'"'+
+            ' placeholder="회전" style="width:100%;font-size:9px;padding:1px 3px;border:1px solid var(--border);border-radius:3px;background:var(--bg3);text-align:center;color:var(--text3)">'+
+            ''
           )+
           '</td>';
       }).join('');
+      var defStr=defRoutes.slice(0,2).join(',');
       html+='<tr>'+
-        '<td style="padding:6px 8px;border:1px solid var(--border);font-weight:600;white-space:nowrap">'+
+        '<td style="padding:6px 8px;border:1px solid var(--border);font-weight:600;white-space:nowrap;max-width:100px">'+
           esc(drv.name)+
           (campRotation?'<div style="font-size:9px;color:var(--text3);font-weight:400">'+campRotation+'</div>':'')+
+          (defStr?'<div style="font-size:9px;color:var(--brand);font-weight:400;white-space:normal;line-height:1.2">'+defStr+'</div>':'')+
         '</td>'+
         cells+
         '<td style="padding:4px;text-align:center;font-weight:700;color:'+col+';border:1px solid var(--border)">'+workCnt+'일</td>'+
@@ -2799,15 +2803,30 @@ function _toggleRosterStatus(el){
 }
 
 // 라우트 변경
+function _setRosterRotText(inp){
+  var driverId=inp.getAttribute('data-did');
+  var dayIndex=parseInt(inp.getAttribute('data-day'));
+  var rot=inp.value.trim();
+  if(!window._rosterData)window._rosterData={};
+  if(!window._rosterData[driverId])window._rosterData[driverId]={};
+  var cur=window._rosterData[driverId][dayIndex]||{};
+  var route=cur.route||'';
+  var status=cur.status||'work';
+  window._rosterData[driverId][dayIndex]={status:status,route:route,rotation:rot,fbId:cur.fbId};
+  _saveRosterCell(driverId,dayIndex,status,route,rot);
+  var ss=document.getElementById('roster-save-status');
+  if(ss){ss.textContent='✅ 회전 저장됨';setTimeout(function(){ss.textContent='';},1500);}
+}
 function _setRosterRouteText(inp){
   var driverId=inp.getAttribute('data-did');
   var dayIndex=parseInt(inp.getAttribute('data-day'));
   var route=inp.value.trim();
-  var rot=inp.getAttribute('data-rot')||'';
   if(!window._rosterData)window._rosterData={};
   if(!window._rosterData[driverId])window._rosterData[driverId]={};
-  var status=(window._rosterData[driverId][dayIndex]&&window._rosterData[driverId][dayIndex].status)||'work';
-  window._rosterData[driverId][dayIndex]={status:status,route:route,rotation:rot};
+  var cur=window._rosterData[driverId][dayIndex]||{};
+  var rot=cur.rotation||inp.getAttribute('data-rot')||'';
+  var status=cur.status||'work';
+  window._rosterData[driverId][dayIndex]={status:status,route:route,rotation:rot,fbId:cur.fbId};
   _saveRosterCell(driverId,dayIndex,status,route,rot);
   var ss=document.getElementById('roster-save-status');if(ss){ss.textContent='✅ 저장됨';setTimeout(function(){ss.textContent='';},1500);}
 }
