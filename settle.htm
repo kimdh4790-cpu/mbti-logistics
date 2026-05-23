@@ -51,7 +51,7 @@ body.dark{--bg:#0d0d0b;--bg2:#161614;--bg3:#1c1c1a;--text:#f0ede6;--text2:#b8b5a
 .ns-arrow{font-size:10px;transition:transform .25s;opacity:.7}
 .ns.open .ns-arrow{transform:rotate(90deg)}
 .ns-items{overflow:hidden;max-height:0;transition:max-height .3s ease;padding:0 6px}
-.ns-items.open{max-height:300px}
+.ns-items.open{max-height:500px}
 .ni{padding:8px 10px;border-radius:8px;cursor:pointer;color:var(--text2);
   font-size:12px;margin-bottom:2px;display:flex;align-items:center;gap:8px;
   transition:all .15s;border-left:2px solid transparent}
@@ -71,12 +71,17 @@ body.dark{--bg:#0d0d0b;--bg2:#161614;--bg3:#1c1c1a;--text:#f0ede6;--text2:#b8b5a
 .btn-green{background:var(--green);color:#fff;border-color:var(--green)}
 .btn-red{background:var(--red);color:#fff;border-color:var(--red)}
 .btn-orange{background:#f97316;color:#fff;border-color:#f97316}
+.btn-purple{background:var(--purple);color:#fff;border-color:var(--purple)}
+.btn-teal{background:#0f766e;color:#fff;border-color:#0f766e}
 .btn-sm{padding:4px 9px;font-size:11px;min-height:36px;-webkit-tap-highlight-color:transparent}
 .badge{display:inline-block;font-size:10px;font-weight:500;padding:2px 7px;border-radius:999px}
 .b-green{background:var(--green-l);color:var(--green)}
 .b-amber{background:var(--amber-l);color:var(--amber)}
 .b-blue{background:var(--brand-l);color:var(--brand)}
 .b-red{background:var(--red-l);color:var(--red)}
+.b-wait{background:var(--bg3);color:var(--text3)}
+.ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.ct{font-size:14px;font-weight:800;color:var(--text)}
 table{width:100%;border-collapse:collapse;font-size:12px}
 th,td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:left;vertical-align:middle}
 th{background:var(--bg3);font-weight:600;color:var(--text2);font-size:11px}
@@ -3113,11 +3118,11 @@ function _importRosterExcel(input){
           if(!uid&&!nm)return Promise.resolve();
 
           // ★ 다중 키 우선순위: coupangId > 이름+캠프 복합 > 이름 단독
+          var campShort=String(drv.camp||'').replace('캠프','').trim();
           var campKey=nmNorm+'@'+campShort;
           var docId=existMap[uidLow]
             ||existMap['nc:'+campKey]
             ||(nmNorm?existMap['n:'+nmNorm]:null);
-          var campShort=String(drv.camp||'').replace('캠프','').trim();
           var wv=drv.wave||((cfg2[campShort]||cfg2[drv.camp]||{}).wave||'');
 
           if(docId){
@@ -5751,17 +5756,36 @@ function _saveSECurrent(){
   var etcPlus=gv('se-etc-plus'),etcMinus=gv('se-etc-minus'),adv=gv('se-adv');
   var finc=gv('se-finc');
   var nocont=gv('se-nocont');
-  var dcnt=cached?cached.dcnt||0:0;
-  var rcnt=cached?cached.rcnt||0:0;
   var status=(document.getElementById('se-status')||{value:'정산예정'}).value;
-  var rds=cached?cached.routeDetails||[]:[];
+  // ★ DOM 입력값으로 routeDetails 재구성 (사용자가 편집한 cnt/ret/price 반영)
+  var rds=cached?JSON.parse(JSON.stringify(cached.routeDetails||[])):[];
+  var byIdx={};
+  document.querySelectorAll('.se-rd-inp').forEach(function(inp){
+    var idx=+inp.dataset.rdidx;var field=inp.dataset.field;var val=+inp.value||0;
+    if(!byIdx[idx])byIdx[idx]={};
+    byIdx[idx][field]=val;
+  });
+  // DOM 값이 있으면 rds에 반영
+  if(Object.keys(byIdx).length>0){
+    Object.keys(byIdx).forEach(function(idx){
+      var i=+idx;
+      if(rds[i]){
+        if(byIdx[i].cnt!==undefined)rds[i].cnt=byIdx[i].cnt;
+        if(byIdx[i].ret!==undefined)rds[i].ret=byIdx[i].ret;
+        if(byIdx[i].price!==undefined)rds[i].unitPrice=byIdx[i].price;
+      }
+    });
+  }
   var newDamt=0,newRamt=0;
   rds.forEach(function(rd){
-    var price=RPRICE[rd.route]>0?RPRICE[rd.route]:(rd.unitPrice||0);
+    var price=(rd.unitPrice&&rd.unitPrice>0)?rd.unitPrice:(RPRICE[rd.route]||0);
     newDamt+=(rd.cnt||0)*price;newRamt+=(rd.ret||0)*price;
   });
-  if(!newDamt&&cached)newDamt=cached.damt||0;
-  if(!newRamt&&cached)newRamt=cached.ramt||0;
+  if(!newDamt&&cached&&!Object.keys(byIdx).length)newDamt=cached.damt||0;
+  if(!newRamt&&cached&&!Object.keys(byIdx).length)newRamt=cached.ramt||0;
+  // dcnt/rcnt 재계산 (DOM 반영)
+  var dcnt=rds.reduce(function(s,rd){return s+(rd.cnt||0);},0)||cached&&cached.dcnt||0;
+  var rcnt=rds.reduce(function(s,rd){return s+(rd.ret||0);},0)||cached&&cached.rcnt||0;
   if(!finc&&rds.length){
     rds.forEach(function(rd){
       var s2=_getIncSetting(cached&&cached.userId||driver,rd.route);
@@ -5807,7 +5831,7 @@ function _saveSECurrent(){
     ?_db.collection('settlements').doc(id).set(payload,{merge:true})
     :_db.collection('settlements').add(Object.assign(payload,{createdAt:new Date().toISOString()}));
   p.then(function(){
-    toast('✅ 저장완료 nocont:'+nocont+' fresh:'+fresh);
+    toast('✅ 저장 완료!');
     // ★ bizNum이 있으면 driver 프로필에도 사업자번호 연동 (이중검증 데이터 축적)
     if(bizNum&&driver&&_db&&_CU){
       var cid3=_CU.dealerId||_CU.companyId;
