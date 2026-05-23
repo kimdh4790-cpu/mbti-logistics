@@ -5279,19 +5279,22 @@ function updSECalc(){
 }
 function _saveSECurrent(){
   // ★ gv 로컬 정의
-  function gv(id){var el=document.getElementById(id);return el?+el.value||0:0;}
+  function gv(eid){var el=document.getElementById(eid);return el?+el.value||0:0;}
   var id=(document.getElementById('se-id')||{value:''}).value.trim()||'';
+  var driver=(document.getElementById('se-driver')||{value:''}).value.trim();
+  var month=(document.getElementById('se-month')||{value:''}).value.trim();
   if(!_db||!_CU){toast('❌ 로그인 필요');return;}
-  // ★ driver/month는 id로 캐시에서 조회 (se-driver/se-month input 없음)
-  var cached=id?(_settleCache||[]).find(function(x){return x.id===id||x.fbId===id;}):null;
-  var driver=cached?cached.driver||cached.driverName||'':'';
-  var month=cached?cached.month||'':'';
-  if(!driver||!month){toast('❌ 정산서를 찾을 수 없습니다 (id:'+id+')');return;}
+  if(!id){toast('❌ ID없음 - 먼저 저장 필요');return;}
+  var cached=(_settleCache||[]).find(function(x){return x.id===id||x.fbId===id;})||null;
+  if(!driver&&cached)driver=cached.driver||cached.driverName||cached.userId||'';
+  if(!month&&cached)month=cached.month||'';
+  alert('[DONWAY 저장 확인]\n기사:'+driver+'\n월:'+month+'\nID:'+id+'\n미계약:'+gv('se-nocont')+'\n프레시백:'+gv('se-fresh'));
+  if(!driver||!month){toast('❌ 기사/월 정보 없음');return;}
 
   var fresh=gv('se-fresh'),dmg=gv('se-dmg'),inc=gv('se-inc');
   var etcPlus=gv('se-etc-plus'),etcMinus=gv('se-etc-minus'),adv=gv('se-adv');
-  var dcnt=cached?cached.dcnt||0:0;
-  var rcnt=cached?cached.rcnt||0:0;
+  var dcnt=gv('se-dcnt')||gv('se-tot-dcnt')||(cached?cached.dcnt||0:0);
+  var rcnt=gv('se-rcnt')||(cached?cached.rcnt||0:0);
   var finc=gv('se-finc');
   var status=(document.getElementById('se-status')||{value:'정산예정'}).value;
   var rds=cached?cached.routeDetails||[]:[];
