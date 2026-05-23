@@ -5282,55 +5282,44 @@ function updSECalc(){
   }
 }
 function _saveSECurrent(){
-  // ★ gv 로컬 정의
   function gv(eid){var el=document.getElementById(eid);return el?+el.value||0:0;}
   var id=(document.getElementById('se-id')||{value:''}).value.trim()||'';
   var driver=(document.getElementById('se-driver')||{value:''}).value.trim();
   var month=(document.getElementById('se-month')||{value:''}).value.trim();
   if(!_db||!_CU){toast('❌ 로그인 필요');return;}
-  if(!id){toast('❌ ID없음 - 먼저 저장 필요');return;}
+  if(!id){toast('❌ ID 없음');return;}
   var cached=(_settleCache||[]).find(function(x){return x.id===id||x.fbId===id;})||null;
   if(!driver&&cached)driver=cached.driver||cached.driverName||cached.userId||'';
   if(!month&&cached)month=cached.month||'';
-  alert('[DONWAY 저장 확인]\n기사:'+driver+'\n월:'+month+'\nID:'+id+'\n미계약:'+gv('se-nocont')+'\n프레시백:'+gv('se-fresh'));
-  if(!driver||!month){toast('❌ 기사/월 정보 없음');return;}
-
+  if(!driver||!month){toast('❌ 기사/월 정보 없음 id='+id);return;}
   var fresh=gv('se-fresh'),dmg=gv('se-dmg'),inc=gv('se-inc');
   var etcPlus=gv('se-etc-plus'),etcMinus=gv('se-etc-minus'),adv=gv('se-adv');
-  var dcnt=gv('se-dcnt')||gv('se-tot-dcnt')||(cached?cached.dcnt||0:0);
-  var rcnt=gv('se-rcnt')||(cached?cached.rcnt||0:0);
   var finc=gv('se-finc');
+  var nocont=gv('se-nocont');
+  var dcnt=cached?cached.dcnt||0:0;
+  var rcnt=cached?cached.rcnt||0:0;
   var status=(document.getElementById('se-status')||{value:'정산예정'}).value;
   var rds=cached?cached.routeDetails||[]:[];
   var newDamt=0,newRamt=0;
   rds.forEach(function(rd){
     var price=RPRICE[rd.route]>0?RPRICE[rd.route]:(rd.unitPrice||0);
-    newDamt+=(rd.cnt||0)*price;
-    newRamt+=(rd.ret||0)*price;
+    newDamt+=(rd.cnt||0)*price;newRamt+=(rd.ret||0)*price;
   });
   if(!newDamt&&cached)newDamt=cached.damt||0;
   if(!newRamt&&cached)newRamt=cached.ramt||0;
-  // 프레시백 인센 재계산
   if(!finc&&rds.length){
     rds.forEach(function(rd){
       var s2=_getIncSetting(cached&&cached.userId||driver,rd.route);
       if(s2.on&&s2.rate>0)finc+=(rd.cnt||0)*s2.rate;
     });
   }
-  // ★ nocont 강제 직접 읽기 (디버그)
-  var _nocontEl=document.getElementById('se-nocont');
-  var nocont=_nocontEl?parseFloat(_nocontEl.value)||0:0;
-  alert('se-nocont 존재:'+(_nocontEl?'YES':'NO')+'\n입력값:'+(_nocontEl?_nocontEl.value:'없음')+'\n파싱값:'+nocont);
-  var taxBase=newDamt+newRamt+fresh+finc+nocont+etcPlus; // ★ inc 제외
+  var taxBase=newDamt+newRamt+fresh+finc+nocont+etcPlus;
   var supplyAmt=Math.round(taxBase/1.1);
   var monthlyWage=Math.round(supplyAmt*0.654);
   var empIns=monthlyWage>=800000?Math.floor(monthlyWage*0.008/10)*10:0;
   var workIns=Math.floor(monthlyWage*0.0088/10)*10;
-  var deductTotal=empIns+workIns+dmg+etcMinus+adv; // 전체 공제
-  var netPay=taxBase-deductTotal; // 실지급금
-  var bizNum=(document.getElementById('se-biznum')||{value:''}).value.trim();
-  var bizName=(document.getElementById('se-bizname')||{value:''}).value.trim();
-  var bizAddr=(document.getElementById('se-bizaddr')||{value:''}).value.trim();
+  var deductTotal=empIns+workIns+dmg+etcMinus+adv;
+  var netPay=taxBase-deductTotal;
   var payload={
     driver:driver,userId:cached?cached.userId||driver:driver,
     month:month,dcnt:dcnt,rcnt:rcnt,
@@ -5344,46 +5333,33 @@ function _saveSECurrent(){
     camp:cached?cached.camp||'':'',
     updatedAt:new Date().toISOString()
   };
+  var bizNum=(document.getElementById('se-biznum')||{value:''}).value.trim();
+  var bizName=(document.getElementById('se-bizname')||{value:''}).value.trim();
   var bizRep=(document.getElementById('se-bizrep')||{value:''}).value.trim();
   var bizType=(document.getElementById('se-biztype')||{value:''}).value.trim();
+  var bizAddr=(document.getElementById('se-bizaddr')||{value:''}).value.trim();
   if(bizNum)payload.bizNum=bizNum;
   if(bizName)payload.bizName=bizName;
   if(bizRep)payload.bizRep=bizRep;
   if(bizType)payload.bizType=bizType;
   if(bizAddr)payload.bizAddr=bizAddr;
-  // ★ 업태/종목 — 기사 정보에서 가져와 정산서에 포함
-  if(cached&&cached.bizType)payload.bizType=cached.bizType;
+  if(cached&&cached.bizType&&!bizType)payload.bizType=cached.bizType;
   if(cached&&cached.bizItem)payload.bizItem=cached.bizItem;
   if(rds.length)payload.routeDetails=rds;
   var btn=document.querySelector('#mo-se .btn-blue');
   if(btn){btn.textContent='저장 중...';btn.disabled=true;}
-  // ★ 저장 확인 (디버그)
-  if(!confirm('저장합니다\n\n기사: '+driver+'\n월: '+month+'\nID: '+(id||'신규')+'\n미계약건: '+nocont+'원\n프레시백: '+fresh+'원\n\n계속하시겠습니까?'))return;
-  // ★ set(merge) 방식: update 대신 사용 (문서 없어도 생성, 필드 누락 방지)
-  var p;
-  if(id){
-    payload.updatedAt=new Date().toISOString();
-    p=_db.collection('settlements').doc(id).set(payload,{merge:true});
-  } else {
-    payload.createdAt=new Date().toISOString();
-    p=_db.collection('settlements').add(payload);
-  }
-  p.then(function(ref){
-    if(ref&&ref.id){
-      payload.id=ref.id;
-      if(_settleCache)_settleCache.push(payload);
-    } else if(cached){
-      Object.assign(cached,payload);
-    }
-    toast('✅ 저장 완료');
+  var p=id
+    ?_db.collection('settlements').doc(id).set(payload,{merge:true})
+    :_db.collection('settlements').add(Object.assign(payload,{createdAt:new Date().toISOString()}));
+  p.then(function(){
+    toast('✅ 저장완료 nocont:'+nocont+' fresh:'+fresh);
     var mo=document.getElementById('mo-se');if(mo)mo.remove();
-    // ★ localStorage도 클리어해서 항상 Firestore에서 신선한 데이터 로드
-    try{var _did2=_CU&&_CU.dealerId||'shared';
-      localStorage.removeItem('dw_'+_did2+'_settlements');
+    try{var d2=_CU&&_CU.dealerId||'shared';
+      localStorage.removeItem('dw_'+d2+'_settlements');
       localStorage.removeItem('settlements');}catch(e){}
     _settleCache=null;_reloadSettlePage();
   }).catch(function(e){
-    toast('❌ '+e.message);
+    toast('❌ 저장실패: '+e.message);
     if(btn){btn.textContent='💾 저장 후 재계산';btn.disabled=false;}
   });
 }
