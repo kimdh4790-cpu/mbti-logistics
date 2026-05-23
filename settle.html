@@ -57,7 +57,7 @@ body.dark{--bg:#1a1a18;--bg2:#242422;--bg3:#1e1e1c;--text:#e8e6e0;--text2:#a0a09
 .btn-green{background:var(--green);color:#fff;border-color:var(--green)}
 .btn-red{background:var(--red);color:#fff;border-color:var(--red)}
 .btn-orange{background:#f97316;color:#fff;border-color:#f97316}
-.btn-sm{padding:4px 9px;font-size:11px}
+.btn-sm{padding:4px 9px;font-size:11px;min-height:36px;-webkit-tap-highlight-color:transparent}
 .badge{display:inline-block;font-size:10px;font-weight:500;padding:2px 7px;border-radius:999px}
 .b-green{background:var(--green-l);color:var(--green)}
 .b-amber{background:var(--amber-l);color:var(--amber)}
@@ -247,7 +247,7 @@ tr:hover>td{background:var(--bg3)}
   <div class="main">
     <div class="topbar">
       <div style="display:flex;align-items:center;gap:10px">
-        <button class="ham" onclick="document.getElementById('sidebar').classList.toggle('open');document.getElementById('sb-backdrop').style.display=document.getElementById('sidebar').classList.contains('open')?'block':'none'" ontouchstart="">☰</button>
+        <button class="ham" onclick="_toggleSidebar()" ontouchstart="_toggleSidebar()">☰</button>
         <div class="topbar-title" id="page-title">대시보드</div>
       </div>
       <div class="topbar-right" id="topbar-right"></div>
@@ -1813,6 +1813,12 @@ function showApp(){
   _loadRouteCampMap();  // 라우트→캠프 매핑 로드
   _loadMySlug();  // 내 전용 URL 로드
   _loadSeasonPrices();  // 시즌 단가 로드
+  // ★ RPRICE 로드 (로그인/리로드 후에도 단가표 유지)
+  if(_db&&_CU&&_CU.dealerId){
+    _db.collection('settings').doc(_CU.dealerId+'_routePrices').get().then(function(snap){
+      if(snap.exists){Object.assign(RPRICE,snap.data());console.log('[RPRICE] 로드 완료',Object.keys(RPRICE).length+'개');}
+    }).catch(function(){});
+  }
   // 슈퍼 어드민 버튼 표시 + 신규 trial 가입자 배지
   var adminBtn=document.getElementById('admin-btn');
   if(adminBtn){
@@ -3888,7 +3894,7 @@ function _settleRow(x){
     +'<td style="text-align:right;color:var(--red)">-₩'+fmt((r.emp||0)+(r.work||0))+'</td>'
     +'<td style="text-align:right;font-weight:800;color:var(--purple)">₩'+fmt(net)+'</td>'
     +'<td>'+statusBadge+'</td>'
-    +'<td style="white-space:nowrap">'      +'<button class="btn btn-sm btn-blue" onclick="openSE(this.dataset.id)" data-id="'+docId+'" style="margin-right:2px">수정</button>'      +'<button class="btn btn-sm" onclick="openTaxInvoice(this.dataset.id)" data-id="'+docId+'" style="background:#15803d;color:#fff;border:none;font-size:10px;margin-right:2px">🧾</button>'      +'<button class="btn btn-sm" onclick="sendOne(this.dataset.id)" data-id="'+docId+'" style="background:#059669;color:#fff;border:none;font-size:10px">📤</button>'    +'</td>'
+    +'<td style="white-space:nowrap;padding:4px 6px">'      +'<button class="btn btn-sm btn-blue" onclick="openSE(\''+docId+'\')" style="margin-right:3px;padding:6px 10px;touch-action:manipulation">수정</button>'      +'<button class="btn btn-sm" onclick="openTaxInvoice(\''+docId+'\')" style="background:#15803d;color:#fff;border:none;padding:6px 10px;margin-right:3px;touch-action:manipulation">🧾</button>'      +'<button class="btn btn-sm" onclick="sendOne(\''+docId+'\')" style="background:#059669;color:#fff;border:none;padding:6px 10px;touch-action:manipulation">📤</button>'    +'</td>'
     +'</tr>';
 }
 
@@ -8814,6 +8820,16 @@ function _showWelcome(){
   mo.appendChild(d);document.body.appendChild(mo);
   // 3초 후 자동 닫기
   setTimeout(function(){var m=document.getElementById('mo-welcome');if(m)m.remove();},4000);
+}
+
+
+// ══ 사이드바 토글 (모바일 햄버거) ══
+function _toggleSidebar(){
+  var sb=document.getElementById('sidebar');
+  var bd=document.getElementById('sb-backdrop');
+  if(!sb)return;
+  var isOpen=sb.classList.toggle('open');
+  if(bd)bd.style.display=isOpen?'block':'none';
 }
 
 // ══ 초기화 ══
