@@ -85,7 +85,7 @@ tr:hover>td{background:var(--bg3)}
 .login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg)}
 .login-card{background:var(--bg2);border-radius:20px;padding:32px 28px;width:360px;max-width:95vw;box-shadow:0 8px 32px rgba(0,0,0,.12)}
 /* 모바일 */
-.ham{display:none;width:32px;height:32px;align-items:center;justify-content:center;cursor:pointer;border-radius:8px;border:1px solid var(--border);font-size:16px}
+.ham{display:none;width:36px;height:36px;align-items:center;justify-content:center;cursor:pointer;border-radius:8px;border:1px solid var(--border);font-size:18px;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none}
 @media(max-width:640px){
   .sidebar{transform:translateX(-100%);transition:.25s}
   .sidebar.open{transform:translateX(0)}
@@ -223,6 +223,8 @@ tr:hover>td{background:var(--bg3)}
 
 <!-- 앱 -->
 <div id="app" style="display:none">
+  <!-- 모바일 사이드바 backdrop -->
+  <div id="sb-backdrop" onclick="document.getElementById('sidebar').classList.remove('open');this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99;-webkit-tap-highlight-color:transparent"></div>
   <div class="sidebar" id="sidebar">
     <div class="sl">
       <div class="sl-icon">💰</div>
@@ -245,7 +247,7 @@ tr:hover>td{background:var(--bg3)}
   <div class="main">
     <div class="topbar">
       <div style="display:flex;align-items:center;gap:10px">
-        <div class="ham" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</div>
+        <button class="ham" onclick="document.getElementById('sidebar').classList.toggle('open');document.getElementById('sb-backdrop').style.display=document.getElementById('sidebar').classList.contains('open')?'block':'none'" ontouchstart="">☰</button>
         <div class="topbar-title" id="page-title">대시보드</div>
       </div>
       <div class="topbar-right" id="topbar-right"></div>
@@ -3381,6 +3383,7 @@ function goPage(page){
   var nav=document.getElementById('nav-'+page);if(nav)nav.classList.add('on');
   document.getElementById('topbar-right').innerHTML='';
   document.getElementById('sidebar').classList.remove('open');
+  var _bd=document.getElementById('sb-backdrop');if(_bd)_bd.style.display='none';
   var pages={settle:pageSettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch};
   var fn=pages[page];
   if(fn)fn();
@@ -8676,7 +8679,10 @@ function _showWelcome(){
 // ══ 초기화 ══
 document.addEventListener('click',function(e){
   var sb=document.getElementById('sidebar');
-  if(sb&&sb.classList.contains('open')&&!sb.contains(e.target))sb.classList.remove('open');
+  if(sb&&sb.classList.contains('open')&&!sb.contains(e.target)){
+    sb.classList.remove('open');
+    var _bd=document.getElementById('sb-backdrop');if(_bd)_bd.style.display='none';
+  }
 });
 window.addEventListener('load',function(){
   // PWA 서비스워커 등록 (실제 배포 도메인에서만)
