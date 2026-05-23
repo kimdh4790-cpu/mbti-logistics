@@ -3889,13 +3889,54 @@ function _settleRow(x){
     +'<td style="text-align:right;color:var(--red)">-₩'+fmt((r.emp||0)+(r.work||0))+'</td>'
     +'<td style="text-align:right;font-weight:800;color:var(--purple)">₩'+fmt(net)+'</td>'
     +'<td>'+statusBadge+'</td>'
-    +'<td style="white-space:nowrap">'
-      +'<button class="btn btn-sm btn-blue" onclick="openSE(this.dataset.id)" data-id="'+docId+'" style="margin-right:2px">수정</button>'
-      +'<button class="btn btn-sm" onclick="openTaxInvoice(this.dataset.id)" data-id="'+docId+'" style="background:#15803d;color:#fff;border:none;font-size:10px;margin-right:2px">🧾</button>'
-      +'<button class="btn btn-sm" onclick="sendOne(this.dataset.id)" data-id="'+docId+'" style="background:#059669;color:#fff;border:none;font-size:10px">📤</button>'
-    +'</td>'
+    +'<td style="text-align:center">'      +'<button onclick="_settleMenu(event,\''+docId+'\')" style="background:none;border:none;cursor:pointer;font-size:20px;padding:8px 12px;color:var(--text2);-webkit-tap-highlight-color:transparent;line-height:1">⋮</button>'    +'</td>'
     +'</tr>';
 }
+
+// ══ 정산서 행 액션 메뉴 (모바일 친화적) ══
+function _settleMenu(e,id){
+  e.stopPropagation();
+  // 기존 메뉴 제거
+  var old=document.getElementById('settle-action-menu');if(old)old.remove();
+  var mo=document.createElement('div');
+  mo.id='settle-action-menu';
+  mo.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.4);display:flex;align-items:flex-end';
+  mo.onclick=function(ev){if(ev.target===mo)mo.remove();};
+  var sheet=document.createElement('div');
+  sheet.style.cssText='width:100%;background:var(--bg2);border-radius:16px 16px 0 0;padding:16px;';
+  sheet.innerHTML='<div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px"></div>'    +'<button onclick="openSE(\''+id+'\');document.getElementById(\'settle-action-menu\').remove()" style="display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;border:none;background:none;font-size:14px;font-weight:700;color:var(--text1);cursor:pointer;border-radius:10px;-webkit-tap-highlight-color:transparent" onmouseenter="this.style.background=\'var(--bg3)\'" onmouseleave="this.style.background=\'none\'">✏️ 정산서 수정</button>'    +'<button onclick="openTaxInvoice(\''+id+'\');document.getElementById(\'settle-action-menu\').remove()" style="display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;border:none;background:none;font-size:14px;font-weight:700;color:var(--text1);cursor:pointer;border-radius:10px;-webkit-tap-highlight-color:transparent" onmouseenter="this.style.background=\'var(--bg3)\'" onmouseleave="this.style.background=\'none\'">🧾 세금계산서</button>'    +'<button onclick="sendOne(\''+id+'\');document.getElementById(\'settle-action-menu\').remove()" style="display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;border:none;background:none;font-size:14px;font-weight:700;color:var(--text1);cursor:pointer;border-radius:10px;-webkit-tap-highlight-color:transparent" onmouseenter="this.style.background=\'var(--bg3)\'" onmouseleave="this.style.background=\'none\'">📤 명세서 발송</button>'    +'<button onclick="document.getElementById(\'settle-action-menu\').remove()" style="display:block;width:100%;margin-top:8px;padding:14px;border:none;background:var(--bg3);font-size:14px;font-weight:700;color:var(--text3);cursor:pointer;border-radius:10px">취소</button>';
+  mo.appendChild(sheet);
+  document.getElementById('modals').appendChild(mo);
+  // 바텀시트 애니메이션
+  sheet.style.transform='translateY(100%)';
+  sheet.style.transition='transform .25s ease';
+  requestAnimationFrame(function(){sheet.style.transform='translateY(0)';});
+}
+
+
+// ══ 정산서 행 액션 메뉴 (모바일 바텀시트) ══
+function _settleMenu(e,id){
+  e.stopPropagation();
+  var old=document.getElementById('settle-action-menu');if(old)old.remove();
+  var mo=document.createElement('div');
+  mo.id='settle-action-menu';
+  mo.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.45);display:flex;align-items:flex-end';
+  mo.onclick=function(ev){if(ev.target===mo)mo.remove();};
+  var sheet=document.createElement('div');
+  sheet.style.cssText='width:100%;background:var(--bg2);border-radius:16px 16px 0 0;padding:12px 16px 24px;transform:translateY(100%);transition:transform .22s ease';
+  var items=[
+    {icon:'✏️',label:'정산서 수정',fn:'openSE("'+id+'")'},
+    {icon:'🧾',label:'세금계산서',fn:'openTaxInvoice("'+id+'")'},
+    {icon:'📤',label:'명세서 발송',fn:'sendOne("'+id+'")'}
+  ];
+  sheet.innerHTML='<div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 14px"></div>'    +items.map(function(it){
+      return '<button onclick="'+it.fn+';document.getElementById(\'settle-action-menu\').remove()" '        +'style="display:flex;align-items:center;gap:14px;width:100%;padding:15px 12px;border:none;background:none;font-size:14px;font-weight:700;color:var(--text1);cursor:pointer;border-radius:10px;-webkit-tap-highlight-color:transparent">'        +'<span style="font-size:20px">'+it.icon+'</span>'+it.label+'</button>';
+    }).join('')    +'<button onclick="document.getElementById(\'settle-action-menu\').remove()" '    +'style="display:block;width:100%;margin-top:6px;padding:14px;border:none;background:var(--bg3);font-size:13px;font-weight:700;color:var(--text3);cursor:pointer;border-radius:10px">취소</button>';
+  mo.appendChild(sheet);
+  document.getElementById('modals').appendChild(mo);
+  requestAnimationFrame(function(){sheet.style.transform='translateY(0)';});
+}
+
 // ══ 발송 모달 ══
 function sendOne(id){
   if(!id||id==='undefined'){toast('❌ ID 없음');return;}
@@ -5190,6 +5231,8 @@ function updSECalc(){
   }
 }
 function _saveSECurrent(){
+  // ★ gv 로컬 정의 (글로벌 스코프에 없어서 버튼 무반응 버그 수정)
+  function gv(id){var el=document.getElementById(id);return el?+el.value||0:0;}
   var id=(document.getElementById('se-id')||{value:''}).value.trim()||'';
   var driver=(document.getElementById('se-driver')||{value:''}).value.trim();
   var month=(document.getElementById('se-month')||{value:''}).value.trim();
@@ -5825,7 +5868,7 @@ async function _ocrAnalyze(){
         'anthropic-dangerous-direct-browser-access':'true'
       },
       body:JSON.stringify({
-        model:'claude-sonnet-4-5',
+        model:'claude-haiku-4-5-20251001',
         max_tokens:800,
         messages:[{role:'user',content:[
           {type:'image',source:{type:'base64',media_type:mime,data:b64}},
