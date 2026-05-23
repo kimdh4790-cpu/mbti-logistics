@@ -957,10 +957,21 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
   reader.onload=function(e){
     try{
       var wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
-      var rawSheet=wb.Sheets['정산Raw']||wb.Sheets[wb.SheetNames[2]];
-      var totalSheet=wb.Sheets['정산총괄']||wb.Sheets[wb.SheetNames[1]];
-      var dmgSheet=wb.Sheets['분실파손List']||wb.Sheets[wb.SheetNames[3]];
-      if(!rawSheet){toast('❌ 정산Raw 시트를 찾을 수 없습니다');return;}
+      var sn=wb.SheetNames;
+      // ★ 시트명 유연 탐지 (정확한 이름 → 포함 검색 → 순서)
+      function findSheet(exact, keyword, idx){
+        return wb.Sheets[exact]
+          || wb.Sheets[sn.find(function(n){return n.replace(/\s/g,'').toLowerCase().includes(keyword.toLowerCase());})]
+          || (sn[idx]?wb.Sheets[sn[idx]]:null);
+      }
+      var rawSheet   = findSheet('정산Raw',   'raw',   2);
+      var totalSheet = findSheet('정산총괄',  '총괄',  1);
+      var dmgSheet   = findSheet('분실파손List','분실', 3);
+      if(!rawSheet){
+        toast('❌ 정산Raw 시트 없음. 시트 목록: '+sn.join(', '));
+        console.error('[엑셀] 시트 목록:', sn);
+        return;
+      }
       var raw=XLSX.utils.sheet_to_json(rawSheet,{header:1,raw:false,dateNF:'yyyy-mm-dd'});
       var total=totalSheet?XLSX.utils.sheet_to_json(totalSheet,{header:1}):[];
       var dmgRows=dmgSheet?XLSX.utils.sheet_to_json(dmgSheet,{header:1}):[];
