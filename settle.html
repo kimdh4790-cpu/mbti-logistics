@@ -16,6 +16,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon.ico">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <style>
 :root{
   --brand:#185FA5;--brand-l:#E6F1FB;--brand-d:#0C447C;
@@ -2749,6 +2750,199 @@ function pageAttendance(){
   });
 }
 
+// ══ 직원용: QR 출퇴근 스캔 ══
+function pageMyQR(){
+  document.getElementById('page-title').textContent='📷 QR 출퇴근';
+  var el=document.getElementById('content');
+  if(!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
+
+  var today=new Date().toISOString().slice(0,10);
+  var _scanState='idle'; // idle / scanning / done
+
+  el.innerHTML='<div style="max-width:420px;margin:0 auto;padding:16px">'
+    // 오늘 출퇴근 상태
+    +'<div class="card" style="margin-bottom:16px;text-align:center">'
+    +'<div style="font-size:13px;color:var(--text3);margin-bottom:4px">'+today+'</div>'
+    +'<div id="qr-status-text" style="font-size:16px;font-weight:800;margin-bottom:12px">확인 중...</div>'
+    +'<div id="qr-time-display" style="font-size:12px;color:var(--text3)"></div>'
+    +'</div>'
+    // 스캔 영역
+    +'<div class="card" style="text-align:center">'
+    +'<div style="font-size:13px;font-weight:700;margin-bottom:16px">회사 화면의 QR을 스캔하세요</div>'
+    +'<div id="qr-reader-wrap" style="position:relative;width:100%;max-width:300px;margin:0 auto;border-radius:16px;overflow:hidden;background:#000">'
+    +'<video id="qr-video" style="width:100%;display:block" playsinline autoplay></video>'
+    +'<canvas id="qr-canvas" style="display:none"></canvas>'
+    +'<div style="position:absolute;inset:0;border:3px solid var(--brand);border-radius:16px;pointer-events:none">'
+    +'<div style="position:absolute;top:20%;left:10%;right:10%;bottom:20%;border:2px solid rgba(255,255,255,.6);border-radius:8px"></div>'
+    +'<div id="qr-scan-line" style="position:absolute;left:10%;right:10%;height:2px;background:linear-gradient(90deg,transparent,var(--brand),transparent);animation:scanLine 2s linear infinite;top:30%"></div>'
+    +'</div>'
+    +'</div>'
+    +'<button id="qr-scan-btn" onclick="_startQRScan()" class="btn btn-blue" style="width:100%;margin-top:14px;padding:13px;font-size:14px;font-weight:700">📷 카메라 시작</button>'
+    +'<div id="qr-scan-msg" style="margin-top:10px;font-size:12px;color:var(--text3);min-height:20px"></div>'
+    +'</div>'
+    +'</div>'
+    +'<style>@keyframes scanLine{0%{top:25%}50%{top:65%}100%{top:25%}}</style>';
+
+  // 오늘 출퇴근 현황 로드
+  if(_db&&_CU){
+    _db.collection('attendance')
+      .where('dealerId','==',_CU.companyId||_CU.dealerId||'')
+      .where('userId','==',_CU.driverId||_CU.userId||_CU.uid||'')
+      .where('date','==',today).limit(1).get()
+    .then(function(snap){
+      var st=document.getElementById('qr-status-text');
+      var td=document.getElementById('qr-time-display');
+      if(!st)return;
+      if(snap.empty){
+        st.innerHTML='<span style="color:var(--amber)">⏳ 미출근</span>';
+        td.textContent='';
+      } else {
+        var d=snap.docs[0].data();
+        if(d.checkOut){
+          st.innerHTML='<span style="color:var(--green)">✅ 퇴근 완료</span>';
+          td.textContent='출근 '+esc(d.checkIn||'')+'  ·  퇴근 '+esc(d.checkOut||'');
+        } else {
+          st.innerHTML='<span style="color:var(--blue)">🟢 출근 중</span>';
+          td.textContent='출근 '+esc(d.checkIn||'')+'  ·  퇴근 미처리';
+        }
+      }
+    }).catch(function(){});
+  }
+}
+
+// QR 스캔 시작
+function _startQRScan(){
+  var video=document.getElementById('qr-video');
+  var btn=document.getElementById('qr-scan-btn');
+  var msg=document.getElementById('qr-scan-msg');
+  if(!video||!btn)return;
+
+  btn.disabled=true;btn.textContent='카메라 켜는 중...';
+
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}})
+  .then(function(stream){
+    video.srcObject=stream;
+    btn.textContent='🔍 QR 인식 중...';
+    msg.textContent='회사 화면의 QR 코드에 카메라를 갖다 대세요';
+    window._qrStream=stream;
+    _scanQRLoop(video);
+  })
+  .catch(function(e){
+    btn.disabled=false;btn.textContent='📷 카메라 시작';
+    msg.textContent='카메라 접근 실패: '+e.message;
+  });
+}
+
+// QR 프레임 인식 루프
+function _scanQRLoop(video){
+  var canvas=document.getElementById('qr-canvas');
+  if(!canvas||!video)return;
+  var ctx=canvas.getContext('2d');
+  var loop=function(){
+    if(video.readyState===video.HAVE_ENOUGH_DATA){
+      canvas.width=video.videoWidth;
+      canvas.height=video.videoHeight;
+      ctx.drawImage(video,0,0,canvas.width,canvas.height);
+      var img=ctx.getImageData(0,0,canvas.width,canvas.height);
+      // jsQR 라이브러리 사용
+      if(window.jsQR){
+        var code=jsQR(img.data,img.width,img.height);
+        if(code&&code.data){
+          _processQRData(code.data);
+          return; // 성공 시 루프 종료
+        }
+      }
+    }
+    window._qrLoopId=requestAnimationFrame(loop);
+  };
+  window._qrLoopId=requestAnimationFrame(loop);
+}
+
+// QR 데이터 처리
+function _processQRData(data){
+  // 카메라 정지
+  if(window._qrStream)window._qrStream.getTracks().forEach(function(t){t.stop();});
+  if(window._qrLoopId)cancelAnimationFrame(window._qrLoopId);
+
+  var msg=document.getElementById('qr-scan-msg');
+  var btn=document.getElementById('qr-scan-btn');
+  var st=document.getElementById('qr-status-text');
+
+  try{
+    var payload=JSON.parse(data);
+    // 유효성 검사: dealerId 일치 + 30초 이내
+    var now=Date.now();
+    var qrTime=payload.ts||0;
+    var did=payload.dealerId||'';
+
+    if(now-qrTime>35000){ // 35초 초과 = 만료
+      if(msg)msg.innerHTML='<span style="color:var(--red)">❌ QR이 만료됐습니다. 다시 스캔하세요</span>';
+      if(btn){btn.disabled=false;btn.textContent='📷 다시 스캔';}
+      return;
+    }
+    if(did!==(_CU.companyId||_CU.dealerId||'')){
+      if(msg)msg.innerHTML='<span style="color:var(--red)">❌ 다른 회사의 QR입니다</span>';
+      if(btn){btn.disabled=false;btn.textContent='📷 다시 스캔';}
+      return;
+    }
+
+    // 출퇴근 기록 저장
+    var today=new Date().toISOString().slice(0,10);
+    var timeStr=new Date().toTimeString().slice(0,5);
+    var uid=_CU.driverId||_CU.userId||_CU.uid||'';
+    var compId=_CU.companyId||_CU.dealerId||'';
+
+    _db.collection('attendance')
+      .where('dealerId','==',compId).where('userId','==',uid).where('date','==',today).limit(1).get()
+    .then(function(snap){
+      if(snap.empty){
+        // 출근 처리
+        var tsVal = (typeof firebase!=='undefined'&&firebase.firestore)
+          ? firebase.firestore.FieldValue.serverTimestamp()
+          : new Date().toISOString();
+        return _db.collection('attendance').add({
+          dealerId:compId, userId:uid,
+          driverName:_CU.name||'',
+          camp:payload.camp||'',
+          date:today, checkIn:timeStr,
+          createdAt:tsVal
+        }).then(function(){
+          if(st)st.innerHTML='<span style="color:var(--green)">✅ 출근 완료!</span>';
+          if(msg)msg.innerHTML='<span style="color:var(--green)">🟢 '+timeStr+' 출근이 기록됐습니다</span>';
+          if(btn){btn.disabled=false;btn.textContent='퇴근 QR 스캔';}
+          _playNotifSound('join');
+        });
+      } else {
+        var doc=snap.docs[0];
+        if(doc.data().checkOut){
+          if(msg)msg.innerHTML='<span style="color:var(--text3)">오늘 이미 출퇴근 완료됐습니다</span>';
+          if(btn){btn.disabled=false;btn.textContent='📷 다시 스캔';}
+          return;
+        }
+        // 퇴근 처리
+        var tsVal2 = (typeof firebase!=='undefined'&&firebase.firestore)
+          ? firebase.firestore.FieldValue.serverTimestamp()
+          : new Date().toISOString();
+        return _db.collection('attendance').doc(doc.id).update({
+          checkOut:timeStr,
+          updatedAt:tsVal2
+        }).then(function(){
+          if(st)st.innerHTML='<span style="color:var(--green)">✅ 퇴근 완료!</span>';
+          if(msg)msg.innerHTML='<span style="color:var(--green)">🌙 '+timeStr+' 퇴근이 기록됐습니다</span>';
+          if(btn){btn.disabled=false;btn.textContent='📷 다시 스캔';}
+          _playNotifSound('alert');
+        });
+      }
+    }).catch(function(e){
+      if(msg)msg.innerHTML='<span style="color:var(--red)">❌ 저장 실패: '+esc(e.message)+'</span>';
+      if(btn){btn.disabled=false;btn.textContent='📷 다시 스캔';}
+    });
+  }catch(e){
+    if(msg)msg.innerHTML='<span style="color:var(--red)">❌ QR 인식 오류</span>';
+    if(btn){btn.disabled=false;btn.textContent='📷 다시 스캔';}
+  }
+}
+
 // ══ 기사 전용: 내 정산 현황 ══
 function pageMySettle(){
   var content=document.getElementById('content');
@@ -2856,6 +3050,7 @@ var MENUS_HOURLY = [
 ];
 // 기사/직원 전용 (본인 정산만)
 var MENUS_DRIVER = [
+  {s:'출퇴근',items:[{ic:'📷',l:'QR 출퇴근',p:'my_qr'}]},
   {s:'내 정산',items:[{ic:'📊',l:'내 정산 현황',p:'my_settle'},{ic:'📋',l:'정산 내역',p:'my_statements'}]},
   {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices'}]}
 ];
@@ -3031,7 +3226,7 @@ function goPage(page){
   var nav=document.getElementById('nav-'+page);if(nav)nav.classList.add('on');
   document.getElementById('topbar-right').innerHTML='';
   document.getElementById('sidebar').classList.remove('open');
-  var pages={settle:pageSettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch};
+  var pages={settle:pageSettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch};
   var fn=pages[page];
   if(fn)fn();
   else document.getElementById('content').innerHTML='<div class="empty"><div class="empty-icon">🚧</div>준비 중</div>';
