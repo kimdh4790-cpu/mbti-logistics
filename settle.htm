@@ -5278,20 +5278,22 @@ function updSECalc(){
   }
 }
 function _saveSECurrent(){
-  // ★ gv 로컬 정의 (글로벌 스코프에 없어서 버튼 무반응 버그 수정)
+  // ★ gv 로컬 정의
   function gv(id){var el=document.getElementById(id);return el?+el.value||0:0;}
   var id=(document.getElementById('se-id')||{value:''}).value.trim()||'';
-  var driver=(document.getElementById('se-driver')||{value:''}).value.trim();
-  var month=(document.getElementById('se-month')||{value:''}).value.trim();
-  if(!driver||!month){toast('❌ 기사명·정산월 필수');return;}
   if(!_db||!_CU){toast('❌ 로그인 필요');return;}
-  
+  // ★ driver/month는 id로 캐시에서 조회 (se-driver/se-month input 없음)
+  var cached=id?(_settleCache||[]).find(function(x){return x.id===id||x.fbId===id;}):null;
+  var driver=cached?cached.driver||cached.driverName||'':'';
+  var month=cached?cached.month||'':'';
+  if(!driver||!month){toast('❌ 정산서를 찾을 수 없습니다 (id:'+id+')');return;}
+
   var fresh=gv('se-fresh'),dmg=gv('se-dmg'),inc=gv('se-inc');
   var etcPlus=gv('se-etc-plus'),etcMinus=gv('se-etc-minus'),adv=gv('se-adv');
-  var dcnt=gv('se-dcnt'),rcnt=gv('se-rcnt'),finc=gv('se-finc');
+  var dcnt=cached?cached.dcnt||0:0;
+  var rcnt=cached?cached.rcnt||0:0;
+  var finc=gv('se-finc');
   var status=(document.getElementById('se-status')||{value:'정산예정'}).value;
-  // 기존 정산서에서 routeDetails 가져와서 재계산
-  var cached=id?(_settleCache||[]).find(function(x){return x.id===id||x.fbId===id;}):null;
   var rds=cached?cached.routeDetails||[]:[];
   var newDamt=0,newRamt=0;
   rds.forEach(function(rd){
