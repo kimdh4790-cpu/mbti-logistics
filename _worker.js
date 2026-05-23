@@ -38,10 +38,12 @@ function forbidden(msg = '접근이 거부되었습니다') {
 
 const PROJECT_ID = 'mbti-logistics';
 // ★ Pages 배포 URL (env.ASSETS 대체 - wrangler assets 이슈 우회)
-const PAGES_BASE = 'https://mbti-logistics.pages.dev';
+const GITHUB_RAW = 'https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main';
 async function fetchAsset(path, request) {
-  const assetUrl = PAGES_BASE + (path.startsWith('/') ? path : '/' + path);
-  return fetch(assetUrl, { headers: { 'User-Agent': 'CF-Worker' } });
+  const filePath = path.startsWith('/') ? path : '/' + path;
+  const assetUrl = GITHUB_RAW + filePath;
+  const resp = await fetch(assetUrl, { cf: { cacheEverything: true, cacheTtl: 60 } });
+  return resp;
 }
 
 // ── 임시 비밀번호 생성 (영문+숫자 8자리) ──
@@ -640,7 +642,7 @@ export default {
 
     if (path === '/scan' || path === '/scan/') {
       const req  = new Request(new URL('/scan.html', url).toString(), { method: 'GET', headers: request.headers });
-      const resp = await fetchAsset(req.url.replace(PAGES_BASE,''), request);
+      const resp = await fetchAsset(new URL(req.url).pathname, request);
       const html = await resp.text();
       const key  = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
       const injected = html.replace('<head>', '<head><script>window.__AK=' + JSON.stringify(key) + ';</script>');
@@ -667,7 +669,7 @@ export default {
       const companySlug = slugMatch[1];
       try {
         const req = new Request(new URL('/settle.html', url).toString(), { method:'GET', headers:request.headers });
-        const resp = await fetchAsset(req.url.replace(PAGES_BASE,''), request);
+        const resp = await fetchAsset(new URL(req.url).pathname, request);
         let html = await resp.text();
         // slug + 보안헤더 주입 (</head> 앞에 삽입 - 가장 안전한 위치)
         const slugScript = '<script>window._COMPANY_SLUG=' + JSON.stringify(companySlug) + ';window._SLUG_MODE=true;</script>';
@@ -685,7 +687,7 @@ export default {
 
     if (path === '/settle' || path === '/settle/') {
       const req  = new Request(new URL('/settle.html', url).toString(), { method: 'GET', headers: request.headers });
-      const resp = await fetchAsset(req.url.replace(PAGES_BASE,''), request);
+      const resp = await fetchAsset(new URL(req.url).pathname, request);
       return new Response(resp.body, { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
     }
 
