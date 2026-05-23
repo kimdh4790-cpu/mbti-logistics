@@ -1376,6 +1376,45 @@ export default {
       }
     }
 
+    // ── firebase-messaging-sw.js 인라인 서빙 (404 방지) ──
+    if (path === '/firebase-messaging-sw.js') {
+      const swContent = "importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');"
+        + "importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');"
+        + "firebase.initializeApp({apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.firebasestorage.app',messagingSenderId:'40761160761',appId:'1:40761160761:web:20545b610f03f534e949e8'});"
+        + "const messaging=firebase.messaging();"
+        + "messaging.onBackgroundMessage(function(payload){"
+        + "  const data=payload.data||{};const type=data.type||'alert';"
+        + "  const title='DONWAY '+(payload.notification&&payload.notification.title||'알림');"
+        + "  const body=(payload.notification&&payload.notification.body)||'';"
+        + "  return self.registration.showNotification(title,{body:body,icon:'/icon-192.png',badge:'/icon-192.png',tag:'donway-'+type,renotify:true,vibrate:[200,100,200]});"
+        + "});"
+        + "self.addEventListener('notificationclick',function(e){e.notification.close();if(e.action==='close')return;e.waitUntil(clients.openWindow('/settle'));});"
+        + "self.addEventListener('install',function(){self.skipWaiting();});"
+        + "self.addEventListener('activate',function(e){e.waitUntil(clients.claim());});";
+      return new Response(swContent, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/javascript; charset=utf-8',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Service-Worker-Allowed': '/'
+        }
+      });
+    }
+
+    // ── manifest.json 인라인 서빙 ──
+    if (path === '/manifest.json') {
+      return new Response(JSON.stringify({
+        name:'DONWAY — 자동화 정산 플랫폼', short_name:'DONWAY',
+        description:'AI 자동 정산 · QR 출퇴근 · 급여 관리',
+        start_url:'/settle', scope:'/', display:'standalone',
+        orientation:'portrait', background_color:'#185FA5', theme_color:'#185FA5', lang:'ko',
+        icons:[
+          {src:'/icon-192.png',sizes:'192x192',type:'image/png',purpose:'any maskable'},
+          {src:'/icon-512.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}
+        ]
+      }), { status:200, headers:{'Content-Type':'application/manifest+json','Cache-Control':'no-cache'} });
+    }
+
     // 정적 파일 서빙 + 보안 헤더 적용
     const assetResp = await env.ASSETS.fetch(request);
     return addSecurityHeaders(assetResp);
