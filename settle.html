@@ -3679,6 +3679,8 @@ function deleteMonthSettlements(month){
       // localStorage + 캐시도 정리
       _settleCache=(_settleCache||[]).filter(function(x){return x.month!==month;});
       var did2=(_CU&&_CU.dealerId)||'shared';
+      // localStorage도 필터링된 상태로 덮어쓰기 (removeItem 대신 확실하게)
+      lss('settlements',_settleCache);
       localStorage.removeItem('dw_'+did2+'_settlements');
       SP('settlements',null);
       toast('✅ '+month+' 정산서 삭제 완료');
@@ -3742,6 +3744,8 @@ function pageSettlements(){
     .then(function(snap){
       _settleCache=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
       _settleCache.sort(function(a,b){return (b.month||'').localeCompare(a.month||'');});
+      // ★ Firestore → localStorage 강제 동기화 (삭제 시 캐시 정리)
+      lss('settlements',_settleCache);
       _renderSettlePage(_settleCache,c);
     }).catch(function(e){logError('정산관리',e.message);c.innerHTML='<div class="empty">⚠️ '+e.message+'</div>';});
 }
@@ -7795,7 +7799,10 @@ function doResetData(){
       return snap.size?b.commit():Promise.resolve();
     }));
     var _did2=(_CU&&_CU.dealerId)||'shared';
-    localStorage.removeItem('dw_'+_did2+'_settlements');_settleCache=null;
+    // localStorage 완전 초기화 (removeItem + 빈 배열 덮어쓰기)
+    localStorage.removeItem('dw_'+_did2+'_settlements');
+    localStorage.setItem('dw_'+_did2+'_settlements','[]');
+    _settleCache=[];SP('settlements',null);
   }
 
   // 기사 삭제
