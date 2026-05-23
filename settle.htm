@@ -1,8 +1,4 @@
-  // DOM 배너 디버그 (alert 차단 대비)
-  var _dbg=document.createElement('div');
-  _dbg.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:#ef4444;color:#fff;padding:16px;font-size:14px;font-weight:700;text-align:center';
-  _dbg.innerHTML='[저장] 기사:'+driver+' 월:'+month+' ID:'+(id||'없음')+' nocont:'+gv('se-nocont')+' fresh:'+gv('se-fresh')+'<br><button onclick="this.parentNode.remove()" style="margin-top:8px;padding:4px 16px;background:#fff;color:#ef4444;border:none;border-radius:4px;cursor:pointer">확인</button>';
-  document.body.appendChild(_dbg);<!DOCTYPE html>
+  // 저장 진행<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -2412,14 +2408,7 @@ function uploadContract(input){
 
 // ══ 근무표 관리 ══
 function pageRoster(){
-  if(_db&&_CU&&(_CU.dealerId||_CU.companyId)){
-    var cid=_CU.dealerId||_CU.companyId;
-    _db.collection('companies').doc(cid).get().then(function(snap){
-      var d=snap.exists?snap.data():{};
-      if(d.rosterPaid) _renderRosterPage();
-      else _renderRosterPaywall();
-    }).catch(function(){_renderRosterPaywall();});
-  } else { _renderRosterPaywall(); }
+  _renderRosterPage();
 }
 
 function _renderRosterPaywall(){
@@ -2543,31 +2532,37 @@ function _loadRoster(){
   var weekDays=_getWeekDays(weekStart);
   var weekEnd=weekDays[6];
   var dNames=['일','월','화','수','목','금','토'];
-
-  var fmt=function(d){return (d.getMonth()+1)+'/'+(d.getDate());};
+  var fmt=function(d){return (d.getMonth()+1)+'/'+String(d.getDate()).padStart(2,'0');};
+  var ymd=function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
   var content=document.getElementById('content');
+  var ywStart=ymd(weekStart);
 
-  content.innerHTML='<div style="max-width:800px;margin:0 auto;padding:16px">'
-    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
-    +'<button onclick="_rosterPrevWeek()" style="background:var(--bg2);border:none;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:16px;color:var(--text1)">‹</button>'
-    +'<div style="text-align:center">'
-    +'<div style="font-size:16px;font-weight:800">🗓 근무표</div>'
-    +'<div style="font-size:12px;color:var(--text2)">'+fmt(weekStart)+' (일) ~ '+fmt(weekEnd)+' (토)</div>'
-    +'</div>'
-    +'<button onclick="_rosterNextWeek()" style="background:var(--bg2);border:none;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:16px;color:var(--text1)">›</button>'
-    +'</div>'
-    +'<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">'
-    +'<button onclick="_downloadRosterExcel()" style="padding:8px 14px;background:#10b981;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700">📥 엑셀 다운로드</button>'
-    +'<button onclick="document.getElementById(\'roster-file\').click()" style="padding:8px 14px;background:#3b82f6;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700">📂 쿠팡 엑셀 업로드</button>'
-    +'<input id="roster-file" type="file" accept=".xlsx,.xls" style="display:none" onchange="_importRosterExcel(this)">'
-    +'</div>'
-    +'<div id="roster-content"><div style="text-align:center;padding:20px;color:var(--text3)">⏳ 로딩 중...</div></div>'
-    +'</div>';
+  // ── 페이지 껍데기 렌더
+  content.innerHTML=
+    '<div style="padding:12px 0">'+
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">'+
+    '<button onclick="_rosterPrevWeek()" style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 12px;cursor:pointer;font-size:14px">‹</button>'+
+    '<span style="font-weight:700;font-size:14px">'+fmt(weekStart)+' (일) ~ '+fmt(weekEnd)+' (토)</span>'+
+    '<button onclick="_rosterNextWeek()" style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 12px;cursor:pointer;font-size:14px">›</button>'+
+    '<select id="roster-camp-filter" onchange="_rosterApplyFilter()" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--bg)">'+
+    '<option value="all">전체 캠프</option>'+
+    '<option value="부산1">부산1</option><option value="부산2">부산2</option>'+
+    '<option value="부산3">부산3</option><option value="대구2">대구2</option>'+
+    '<option value="진주M">진주M</option>'+
+    '</select>'+
+    '<select id="roster-wave-filter" onchange="_rosterApplyFilter()" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--bg)">'+
+    '<option value="all">전체 WAVE</option>'+
+    '<option value="WAVE1">WAVE1(야간)</option>'+
+    '<option value="WAVE2">WAVE2(주간)</option>'+
+    '</select>'+
+    '<button onclick="_loadPrevWeekRoster()" style="padding:6px 12px;background:#6366f1;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">📋 이전 스케줄 불러오기</button>'+
+    '<button onclick="_downloadRosterExcel()" style="padding:6px 12px;background:#10b981;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">📥 엑셀 다운로드</button>'+
+    '</div>'+
+    '<div id="roster-content"><div style="text-align:center;padding:30px;color:var(--text3)">⏳ 로딩 중...</div></div>'+
+    '</div>';
 
   if(!_db||!_CU)return;
   var cid=_CU.dealerId||_CU.companyId;
-  var ywStart=weekStart.getFullYear()+'-'+String(weekStart.getMonth()+1).padStart(2,'0')+'-'+String(weekStart.getDate()).padStart(2,'0');
-  var ywEnd=weekEnd.getFullYear()+'-'+String(weekEnd.getMonth()+1).padStart(2,'0')+'-'+String(weekEnd.getDate()).padStart(2,'0');
 
   Promise.all([
     _db.collection('drivers').where('dealerId','==',cid).orderBy('name').get(),
@@ -2576,74 +2571,240 @@ function _loadRoster(){
     var drivers=[];
     results[0].forEach(function(doc){
       var d=doc.data();
-      drivers.push({id:doc.id,name:d.name||'',camp:d.camp||'',driverId:d.userId||d.driverId||d.coupangId||''});
+      if(d.is_active===false||d.status==='pending')return;
+      // 기사 기본 라우트 수집 (settleCache에서)
+      var defaultRoutes=[];
+      if(_settleCache){
+        var lastSettle=null;
+        _settleCache.forEach(function(s){
+          if((s.driver===d.userId||s.userId===d.userId)&&s.routeDetails&&s.routeDetails.length){
+            if(!lastSettle||s.month>lastSettle.month) lastSettle=s;
+          }
+        });
+        if(lastSettle&&lastSettle.routeDetails)
+          defaultRoutes=lastSettle.routeDetails.map(function(rd){return rd.route;}).filter(Boolean);
+      }
+      var camp=(d.camp||'').replace('캠프','').trim();
+      var cfg=CAMP_CONFIG[camp]||CAMP_CONFIG[d.camp]||{wave:'WAVE1'};
+      drivers.push({id:doc.id,name:d.name||'',camp:camp,wave:cfg.wave,
+        driverId:d.userId||doc.id,defaultRoutes:defaultRoutes});
     });
 
-    // rosterData[driverId][dayIndex(0~6)] = {status, route}
     var rosterData={};
     results[1].forEach(function(doc){
       var d=doc.data();
-      if(!rosterData[d.driverId]) rosterData[d.driverId]={};
-      rosterData[d.driverId][d.dayIndex]={status:d.status||'work',route:d.route||''};
+      if(!rosterData[d.driverId])rosterData[d.driverId]={};
+      rosterData[d.driverId][d.dayIndex]={status:d.status||'work',route:d.route||'',fbId:doc.id};
     });
 
     window._rosterDrivers=drivers;
     window._rosterData=rosterData;
     window._rosterWeekStartStr=ywStart;
-
-    // 캠프별 그룹핑
-    var campGroups={};
-    drivers.forEach(function(drv){
-      var camp=drv.camp||'미배정';
-      if(!campGroups[camp]) campGroups[camp]=[];
-      campGroups[camp].push(drv);
-    });
-
-    var html='';
-    Object.keys(campGroups).sort().forEach(function(camp){
-      var cfg=CAMP_CONFIG[camp]||{wave:'WAVE1',rotation:''};
-      html+='<div style="margin-bottom:16px">'
-        +'<div style="font-size:13px;font-weight:700;margin-bottom:6px;color:var(--primary)">'+esc(camp.replace('캠프','').trim())+' <span style="font-size:11px;color:var(--text3)">'+cfg.wave+'</span></div>'
-        +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">'
-        +'<thead><tr>'
-        +'<th style="padding:6px 8px;background:var(--bg2);text-align:left;min-width:70px;border-bottom:1px solid var(--border)">이름</th>'
-        +weekDays.map(function(d,i){
-          var color=i===0?'#ef4444':i===6?'#3b82f6':'var(--text2)';
-          return '<th style="padding:4px 6px;background:var(--bg2);text-align:center;border-bottom:1px solid var(--border);color:'+color+';min-width:52px">'
-            +(d.getMonth()+1)+'/'+(d.getDate())+'<br><span style="font-size:9px">'+dNames[i]+'</span></th>';
-        }).join('')
-        +'<th style="padding:4px;background:var(--bg2);text-align:center;border-bottom:1px solid var(--border);min-width:40px">근무일</th>'
-        +'</tr></thead><tbody>';
-
-      campGroups[camp].forEach(function(drv){
-        var workCnt=0;
-        var cells=weekDays.map(function(d,i){
-          var entry=(rosterData[drv.id]&&rosterData[drv.id][i])||{status:'work',route:''};
-          var status=entry.status;
-          if(status==='work') workCnt++;
-          var bg=status==='work'?'#3b82f6':'#6b7280';
-          var label=status==='work'?'출근':'휴무';
-          return '<td style="padding:2px;text-align:center">'
-            +'<div onclick="_toggleRosterCell(this)" data-did="'+drv.id+'" data-day="'+i+'" style="padding:3px 2px;border-radius:4px;background:'+bg+';color:#fff;font-size:10px;cursor:pointer;text-align:center;font-weight:600">'+label+'</div>'
-            +'</td>';
-        }).join('');
-        html+='<tr>'
-          +'<td style="padding:6px 8px;font-weight:600;border-bottom:1px solid var(--border);white-space:nowrap">'+esc(drv.name)+'</td>'
-          +cells
-          +'<td style="padding:4px;text-align:center;font-weight:700;color:var(--primary);border-bottom:1px solid var(--border)">'+workCnt+'</td>'
-          +'</tr>';
-      });
-
-      html+='</tbody></table></div></div>';
-    });
-
-    if(drivers.length===0){
-      html='<div class="empty"><div class="empty-icon">👤</div>등록된 기사가 없습니다<br><div style="font-size:12px;color:var(--text3);margin-top:8px">기사 관리에서 캠프를 등록해주세요</div></div>';
-    }
-    document.getElementById('roster-content').innerHTML=html;
+    _renderRosterTable(drivers,rosterData,weekDays,dNames,fmt);
   }).catch(function(e){
-    document.getElementById('roster-content').innerHTML='<div class="empty"><div class="empty-icon">⚠️</div>'+e.message+'</div>';
+    var rc=document.getElementById('roster-content');
+    if(rc)rc.innerHTML='<div class="empty">⚠️ '+e.message+'</div>';
   });
+}
+
+function _rosterApplyFilter(){
+  var cf=(document.getElementById('roster-camp-filter')||{value:'all'}).value;
+  var wf=(document.getElementById('roster-wave-filter')||{value:'all'}).value;
+  var drivers=window._rosterDrivers||[];
+  var filtered=drivers.filter(function(d){
+    if(cf!=='all'&&d.camp!==cf)return false;
+    if(wf!=='all'&&d.wave!==wf)return false;
+    return true;
+  });
+  var weekDays=_getWeekDays(window._rosterWeekStart);
+  var dNames=['일','월','화','수','목','금','토'];
+  var fmt=function(d){return (d.getMonth()+1)+'/'+String(d.getDate()).padStart(2,'0');};
+  _renderRosterTable(filtered,window._rosterData||{},weekDays,dNames,fmt);
+}
+
+function _renderRosterTable(drivers,rosterData,weekDays,dNames,fmt){
+  // 캠프별 그룹핑
+  var campOrder=['부산1','부산2','부산3','대구2','진주M'];
+  var campGroups={};
+  drivers.forEach(function(d){
+    var k=d.camp||'미배정';
+    if(!campGroups[k])campGroups[k]=[];
+    campGroups[k].push(d);
+  });
+
+  var CCOL2={'부산1':'#10b981','부산2':'#ef4444','부산3':'#f97316','대구2':'#6366f1','진주M':'#ec4899'};
+
+  var html='';
+  var orderedCamps=campOrder.filter(function(cp){return campGroups[cp];});
+  Object.keys(campGroups).forEach(function(cp){if(!campGroups[cp]||orderedCamps.includes(cp))return;orderedCamps.push(cp);});
+
+  orderedCamps.forEach(function(camp){
+    var grp=campGroups[camp];if(!grp||!grp.length)return;
+    var col=CCOL2[camp]||'#94a3b8';
+    var cfg=CAMP_CONFIG[camp]||{wave:'WAVE1'};
+
+    // 일별 출근/휴무 카운트
+    var daySummary=weekDays.map(function(_,i){
+      var work=0,off=0;
+      grp.forEach(function(d){
+        var e=(rosterData[d.id]&&rosterData[d.id][i]);
+        if(!e||e.status==='work')work++;else off++;
+      });
+      return {work:work,off:off};
+    });
+
+    html+='<div style="margin-bottom:20px">'+
+      '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:'+col+'22;border-left:4px solid '+col+';border-radius:0 8px 8px 0;margin-bottom:6px">'+
+      '<span style="font-weight:800;color:'+col+';font-size:14px">'+camp+'캠프</span>'+
+      '<span style="font-size:11px;color:var(--text3)">'+cfg.wave+'('+( cfg.wave==='WAVE1'?'야간':'주간')+')</span>'+
+      '<span style="font-size:11px;color:var(--text3)">총 '+grp.length+'명</span>'+
+      '</div>'+
+      '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">'+
+      '<thead><tr style="background:var(--bg3)">'+
+      '<th style="padding:6px 10px;text-align:left;border:1px solid var(--border);min-width:80px">이름</th>'+
+      '<th style="padding:6px 10px;text-align:left;border:1px solid var(--border);min-width:60px">기본라우트</th>'+
+      weekDays.map(function(d,i){
+        var col2=i===0?'#ef4444':i===6?'#3b82f6':'inherit';
+        return '<th style="padding:4px 6px;text-align:center;border:1px solid var(--border);min-width:70px;color:'+col2+'">'+
+          fmt(d)+'<br><span style="font-size:9px">'+dNames[i]+'</span></th>';
+      }).join('')+
+      '<th style="padding:4px;text-align:center;border:1px solid var(--border);min-width:45px">근무일</th>'+
+      '</tr>'+
+      // 요약 행
+      '<tr style="background:var(--bg2);font-size:10px">'+
+      '<td colspan="2" style="padding:4px 8px;border:1px solid var(--border);color:var(--text3)">출근/유무</td>'+
+      daySummary.map(function(s){
+        return '<td style="padding:3px 4px;text-align:center;border:1px solid var(--border)">'+
+          '<span style="color:#10b981;font-weight:700">출근:'+s.work+'명</span><br>'+
+          '<span style="color:var(--text3)">유무:'+s.off+'명</span></td>';
+      }).join('')+
+      '<td style="border:1px solid var(--border)"></td></tr>'+
+      '</thead><tbody>';
+
+    grp.forEach(function(drv){
+      var workCnt=0;
+      var defRoutes=drv.defaultRoutes||[];
+      var cells=weekDays.map(function(d,i){
+        var entry=(rosterData[drv.id]&&rosterData[drv.id][i])||{status:'work',route:defRoutes[0]||''};
+        var status=entry.status;
+        var route=entry.route||'';
+        if(status==='work')workCnt++;
+        var isOff=status==='off';
+        return '<td style="padding:3px;text-align:center;border:1px solid var(--border)">'+
+          '<button onclick="_toggleRosterStatus(this)" data-did="'+drv.id+'" data-day="'+i+'" data-defrts="'+defRoutes.join(',')+'"'+
+          ' style="display:block;width:100%;padding:2px 4px;border:none;border-radius:4px;cursor:pointer;font-size:10px;font-weight:700;margin-bottom:2px;'+
+          'background:'+(isOff?'#e5e7eb':'#dbeafe')+';color:'+(isOff?'#6b7280':'#1d4ed8')+'">'+
+          (isOff?'⊘ 휴무':'✓ 출근')+'</button>'+
+          (isOff?'':
+            '<select onchange="_setRosterRoute(this)" data-did="'+drv.id+'" data-day="'+i+'"'+
+            ' style="width:100%;font-size:10px;padding:1px 2px;border:1px solid var(--border);border-radius:3px;background:var(--bg)">'+
+            '<option value="">-</option>'+
+            Object.keys(_routeCampMap).filter(function(r){return _routeCampMap[r]===camp||_routeCampMap[r]===camp+'캠프';}).map(function(r){
+              return '<option value="'+r+'"'+(route===r?' selected':'')+'>'+r+'</option>';
+            }).join('')+
+            '</select>'
+          )+
+          '</td>';
+      }).join('');
+      html+='<tr>'+
+        '<td style="padding:6px 8px;border:1px solid var(--border);font-weight:600;white-space:nowrap">'+esc(drv.name)+'</td>'+
+        '<td style="padding:4px 6px;border:1px solid var(--border);font-size:10px;color:var(--text3)">'+defRoutes.slice(0,2).join(',')+'</td>'+
+        cells+
+        '<td style="padding:4px;text-align:center;font-weight:700;color:'+col+';border:1px solid var(--border)">'+workCnt+'일</td>'+
+        '</tr>';
+    });
+
+    html+='</tbody></table></div></div>';
+  });
+
+  if(!orderedCamps.length)
+    html='<div class="empty"><div class="empty-icon">👤</div>기사가 없습니다<br><small>기사 관리에서 캠프를 등록해주세요</small></div>';
+
+  var rc=document.getElementById('roster-content');
+  if(rc)rc.innerHTML=html;
+}
+
+// 상태 토글 (출근↔휴무)
+function _toggleRosterStatus(el){
+  var driverId=el.getAttribute('data-did');
+  var dayIndex=parseInt(el.getAttribute('data-day'));
+  var defRts=(el.getAttribute('data-defrts')||'').split(',').filter(Boolean);
+  if(!window._rosterData)window._rosterData={};
+  if(!window._rosterData[driverId])window._rosterData[driverId]={};
+  var cur=(window._rosterData[driverId][dayIndex]&&window._rosterData[driverId][dayIndex].status)||'work';
+  var next=cur==='work'?'off':'work';
+  var curRoute=(window._rosterData[driverId][dayIndex]&&window._rosterData[driverId][dayIndex].route)||defRts[0]||'';
+  window._rosterData[driverId][dayIndex]={status:next,route:curRoute};
+  _saveRosterCell(driverId,dayIndex,next,curRoute);
+  // 셀만 새로고침
+  var weekDays=_getWeekDays(window._rosterWeekStart);
+  var dNames=['일','월','화','수','목','금','토'];
+  var fmt=function(d){return (d.getMonth()+1)+'/'+String(d.getDate()).padStart(2,'0');};
+  _renderRosterTable(window._rosterDrivers||[],window._rosterData,weekDays,dNames,fmt);
+}
+
+// 라우트 변경
+function _setRosterRoute(sel){
+  var driverId=sel.getAttribute('data-did');
+  var dayIndex=parseInt(sel.getAttribute('data-day'));
+  var route=sel.value;
+  if(!window._rosterData)window._rosterData={};
+  if(!window._rosterData[driverId])window._rosterData[driverId]={};
+  var status=(window._rosterData[driverId][dayIndex]&&window._rosterData[driverId][dayIndex].status)||'work';
+  window._rosterData[driverId][dayIndex]={status:status,route:route};
+  _saveRosterCell(driverId,dayIndex,status,route);
+  toast('✅ 저장됨');
+}
+
+// Firestore 저장
+function _saveRosterCell(driverId,dayIndex,status,route){
+  if(!_db||!_CU)return;
+  var cid=_CU.dealerId||_CU.companyId;
+  var ywStart=window._rosterWeekStartStr||'';
+  if(!ywStart)return;
+  // 기존 도큐 찾아서 update, 없으면 add
+  var existing=window._rosterData&&window._rosterData[driverId]&&window._rosterData[driverId][dayIndex]&&window._rosterData[driverId][dayIndex].fbId;
+  if(existing){
+    _db.collection('roster_week').doc(existing).update({status:status,route:route,updatedAt:new Date().toISOString()}).catch(function(){});
+  }else{
+    _db.collection('roster_week').add({dealerId:cid,weekStart:ywStart,driverId:driverId,dayIndex:dayIndex,status:status,route:route,createdAt:firebase.firestore.FieldValue.serverTimestamp()})
+      .then(function(ref){
+        if(window._rosterData[driverId][dayIndex])window._rosterData[driverId][dayIndex].fbId=ref.id;
+      }).catch(function(){});
+  }
+}
+
+// 이전 주 스케줄 불러오기
+function _loadPrevWeekRoster(){
+  if(!_db||!_CU){toast('❌ 로그인 필요');return;}
+  var cid=_CU.dealerId||_CU.companyId;
+  var prev=new Date(window._rosterWeekStart.getTime()-7*86400000);
+  var prevStr=prev.getFullYear()+'-'+String(prev.getMonth()+1).padStart(2,'0')+'-'+String(prev.getDate()).padStart(2,'0');
+  _db.collection('roster_week').where('dealerId','==',cid).where('weekStart','==',prevStr).get()
+    .then(function(snap){
+      if(snap.empty){toast('⚠️ 이전 주 스케줄 없음');return;}
+      var ywStart=window._rosterWeekStartStr||'';
+      var batch=_db.batch();
+      var count=0;
+      snap.forEach(function(doc){
+        var d=doc.data();
+        // 이번 주에 같은 기사+요일 없으면 복사
+        if(!window._rosterData[d.driverId]||!window._rosterData[d.driverId][d.dayIndex]){
+          var ref=_db.collection('roster_week').doc();
+          batch.set(ref,{dealerId:cid,weekStart:ywStart,driverId:d.driverId,dayIndex:d.dayIndex,status:d.status||'work',route:d.route||'',createdAt:new Date().toISOString()});
+          if(!window._rosterData[d.driverId])window._rosterData[d.driverId]={};
+          window._rosterData[d.driverId][d.dayIndex]={status:d.status||'work',route:d.route||'',fbId:ref.id};
+          count++;
+        }
+      });
+      batch.commit().then(function(){
+        toast('✅ 이전 스케줄 '+count+'건 불러옴');
+        var weekDays=_getWeekDays(window._rosterWeekStart);
+        var dNames=['일','월','화','수','목','금','토'];
+        var fmt2=function(d){return (d.getMonth()+1)+'/'+String(d.getDate()).padStart(2,'0');};
+        _renderRosterTable(window._rosterDrivers||[],window._rosterData,weekDays,dNames,fmt2);
+      }).catch(function(e){toast('❌ '+e.message);});
+    }).catch(function(e){toast('❌ '+e.message);});
 }
 
 function _rosterPrevWeek(){
@@ -5181,7 +5342,7 @@ function _showSEModal(s){
     openTaxInvoice(id);
   };
   var saveBtn=document.createElement('button');saveBtn.className='btn btn-blue';
-  saveBtn.textContent='💾 [v2] 저장';saveBtn.onclick=_saveSECurrent;
+  saveBtn.textContent='💾 저장 후 재계산';saveBtn.onclick=_saveSECurrent;
   mdf.appendChild(cancelBtn);mdf.appendChild(taxBtn);mdf.appendChild(saveBtn);
   wrap.appendChild(mdf);
 
