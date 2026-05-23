@@ -1840,7 +1840,14 @@ function showApp(){
   // ★ RPRICE 로드 (로그인/리로드 후에도 단가표 유지)
   if(_db&&_CU&&_CU.dealerId){
     _db.collection('settings').doc(_CU.dealerId+'_routePrices').get().then(function(snap){
-      if(snap.exists){Object.assign(RPRICE,snap.data());console.log('[RPRICE] 로드 완료',Object.keys(RPRICE).length+'개');}
+      if(snap.exists){
+        Object.assign(RPRICE,snap.data());
+        console.log('[RPRICE] 로드 완료',Object.keys(RPRICE).length+'개');
+        // ★ 단가표 페이지 자동 갱신
+        var c2=document.getElementById('content');
+        if(c2&&document.getElementById('page-title')&&document.getElementById('page-title').textContent.includes('단가'))
+          _renderPrices(c2);
+      }
     }).catch(function(){});
   }
   // 슈퍼 어드민 버튼 표시 + 신규 trial 가입자 배지
@@ -5330,6 +5337,7 @@ function _saveSECurrent(){
   if(rds.length)payload.routeDetails=rds;
   var btn=document.querySelector('#mo-se .btn-blue');
   if(btn){btn.textContent='저장 중...';btn.disabled=true;}
+  console.log('[저장] id='+id+' nocont='+nocont+' fresh='+fresh+' finc='+finc);
   var p;
   if(id){
     p=_db.collection('settlements').doc(id).update(payload);
@@ -7546,7 +7554,7 @@ function _renderStats(settles,c){
     byCamp[camp].net+=r.net||0;byCamp[camp].dcnt+=(+s.dcnt||0);byCamp[camp].cnt++;byCamp[camp].income+=r.income||0;
   });
   var months=Object.keys(byMonth).sort().reverse().slice(0,12);
-  var drivers=Object.keys(byDriver).sort(function(a,b){return byDriver[b].net-byDriver[a].net;}).slice(0,20);
+  var drivers=Object.keys(byDriver).sort(function(a,b){return byDriver[b].dcnt-byDriver[a].dcnt;}).slice(0,20);  // ★ 건수 기준
   var campRows=[].concat(CAMPS,['기타']).filter(function(cc){return byCamp[cc];}).map(function(cc){
     var col=CCOL[cc]||'#94A3B8';
     return '<tr><td><strong style="color:'+col+'">'+cc+'</strong></td><td>'+byCamp[cc].cnt+'건</td><td>'+fmt(byCamp[cc].dcnt)+'건</td>'
@@ -8118,7 +8126,7 @@ function openSettleCompare(){
     if(!by[n])by[n]={dcnt:0,net:0,cnt:0,camp:cc};
     by[n].dcnt+=(s.dcnt||0);by[n].net+=calcNet(s).net;by[n].cnt++;
   });
-  var sorted=Object.keys(by).sort(function(a,b){return by[b].net-by[a].net;});
+  var sorted=Object.keys(by).sort(function(a,b){return by[b].dcnt-by[a].dcnt;});  // ★ 건수 기준
   var medals=['🥇','🥈','🥉'];
   var rows=sorted.map(function(n,i){
     var rank=i+1;var bd=by[n];var col=_campColor(bd.camp);
