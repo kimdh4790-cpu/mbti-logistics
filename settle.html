@@ -1245,6 +1245,8 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
       Promise.all(routePromises.concat(driverPromises)).then(function(){
         _drvCache=null;  // 기사 캐시 초기화 (재로드)
         var settlements=ls('settlements');
+        // ★ 해당 월 기존 데이터 제거 (엑셀 재업로드 시 깔끔하게 덮어쓰기)
+        settlements=settlements.filter(function(s){return s.month!==month;});
         var added=0,updated=0;
         allCleanIds.forEach(function(cleanId){
           var dm=drvMap[cleanId];
