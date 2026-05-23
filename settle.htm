@@ -1,4 +1,8 @@
-<!DOCTYPE html>
+  // DOM 배너 디버그 (alert 차단 대비)
+  var _dbg=document.createElement('div');
+  _dbg.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:#ef4444;color:#fff;padding:16px;font-size:14px;font-weight:700;text-align:center';
+  _dbg.innerHTML='[저장] 기사:'+driver+' 월:'+month+' ID:'+(id||'없음')+' nocont:'+gv('se-nocont')+' fresh:'+gv('se-fresh')+'<br><button onclick="this.parentNode.remove()" style="margin-top:8px;padding:4px 16px;background:#fff;color:#ef4444;border:none;border-radius:4px;cursor:pointer">확인</button>';
+  document.body.appendChild(_dbg);<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -5177,7 +5181,7 @@ function _showSEModal(s){
     openTaxInvoice(id);
   };
   var saveBtn=document.createElement('button');saveBtn.className='btn btn-blue';
-  saveBtn.textContent='💾 저장 후 재계산';saveBtn.onclick=_saveSECurrent;
+  saveBtn.textContent='💾 [v2] 저장';saveBtn.onclick=_saveSECurrent;
   mdf.appendChild(cancelBtn);mdf.appendChild(taxBtn);mdf.appendChild(saveBtn);
   wrap.appendChild(mdf);
 
