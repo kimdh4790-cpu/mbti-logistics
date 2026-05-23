@@ -3393,7 +3393,7 @@ function pageSettle(){
       var r=calcNet(s);
       var ct=s.coupangTotal||(((s.damt||0)+(s.ramt||0)+(s.fresh||0)+(s.inc||0)+(s.nocont||0)))||0;
       totCoupang+=ct?ct:(r.income||0); // 쿠팡→MBTI 금액 (이미 VAT포함)
-      totTaxBase+=(r.income||0);   // 기사 세금계산서 (이미 VAT포함)
+      totTaxBase+=(r.totalAmt||r.income||0);   // ★ v9.26: 저장된 totalAmt 우선 (정산관리 행과 일치)
       totNet+=r.net||0;
       totDeduct+=r.deduct||0;
       totDcnt+=(s.dcnt||0);
@@ -3720,7 +3720,7 @@ function _renderSettlePage(settles,c){
     var gid='sg_'+mo.replace(/-/g,'');
     var gRows=mmap[mo];
     var totNet=gRows.reduce(function(s,x){return s+calcNet(x).net;},0);
-    var totIncome=gRows.reduce(function(s,x){return s+calcNet(x).income;},0);
+    var totIncome=gRows.reduce(function(s,x){var r=calcNet(x);return s+(r.totalAmt||r.income||0);},0);  // ★ v9.26
     var totEmp=gRows.reduce(function(s,x){return s+calcNet(x).emp;},0);
     var totWork=gRows.reduce(function(s,x){return s+calcNet(x).work;},0);
     var totDmg=gRows.reduce(function(s,x){return s+(+x.dmg||+x.damage||0);},0);
@@ -3737,7 +3737,7 @@ function _renderSettlePage(settles,c){
       +'<span style="display:flex;align-items:center;gap:8px"><button onclick="event.stopPropagation();deleteMonthSettlements(\''+mo+'\')" style="padding:3px 10px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">🗑 월 삭제</button><span style="font-size:11px;color:var(--text3)">'+gRows.length+'명</span><span id="'+gid+'_a" style="font-size:11px;color:var(--text3)">'+arrow+'</span></span>'
       +'</div>'
       +'<div style="display:flex;flex-wrap:wrap;gap:5px;font-size:10px">'
-      +'<span style="padding:2px 8px;background:rgba(59,130,246,.12);border-radius:12px;color:#3b82f6">📦 쿠팡 총매출(VAT포함) ₩'+fmt(gRows.reduce(function(s,x){var ct=x.coupangTotal||(((x.damt||0)+(x.ramt||0)+(x.fresh||0)+(x.inc||0)+(x.nocont||0)))||0;return s+(ct?Math.round(ct*1.1):Math.round((calcNet(x).income||0)*1.1));},0))+'</span>'
+      +'<span style="padding:2px 8px;background:rgba(59,130,246,.12);border-radius:12px;color:#3b82f6">📦 쿠팡 총매출(VAT포함) ₩'+fmt(gRows.reduce(function(s,x){var ct=x.coupangTotal||(((x.damt||0)+(x.ramt||0)+(x.fresh||0)+(x.inc||0)+(x.nocont||0)))||0;return s+(ct?ct:(calcNet(x).income||0));},0))+'</span>'
       // ★ 프레시백/추가인센/분실파손 — 모두 VAT포함으로 표시 (×1.1)
       +'<span style="padding:2px 8px;background:rgba(16,185,129,.12);border-radius:12px;color:#059669">🧾 프레시백 ₩'+fmt(Math.round(gRows.reduce(function(s,x){return s+(+x.fresh||0);},0)*1.1))+'</span>'
       +(gRows.reduce(function(s,x){return s+(+x.inc||0);},0)>0?'<span style="padding:2px 8px;background:rgba(245,158,11,.12);border-radius:12px;color:#d97706">⭐ 추가인센 ₩'+fmt(Math.round(gRows.reduce(function(s,x){return s+(+x.inc||0);},0)*1.1))+'</span>':'')
@@ -4896,7 +4896,9 @@ function _showSEModal(s){
   mismatchBanner.style.cssText='display:none;margin-top:8px;padding:8px 12px;background:#fef9c3;border:1.5px solid #fbbf24;border-radius:8px;font-size:11px;font-weight:700;color:#92400e';
   rdSec.appendChild(mismatchBanner);
   body.appendChild(rdSec);
-  var hiddenCT=document.createElement('input');hiddenCT.type='hidden';hiddenCT.id='se-coupang-total';hiddenCT.value=s.coupangTotal||0;
+  var hiddenCT=document.createElement('input');hiddenCT.type='hidden';hiddenCT.id='se-coupang-total';
+  // ★ v9.26: coupangTotal = 엑셀 VAT제외 원본 → ×1.1로 VAT포함 변환하여 taxBase와 단위 일치
+  hiddenCT.value=s.coupangTotal ? Math.round(s.coupangTotal*1.1) : 0;
   body.appendChild(hiddenCT);
 
   // ── 항목별 입력
@@ -5039,15 +5041,16 @@ function updSECalc(){
   var taxBase=totalDamt+totalRamt+fresh+finc+inc+nocont+etcP;  // 모두 VAT포함가  // 세금계산서 기준 (etcMinus 제외)
   var supplyAmt=Math.round(taxBase/1.1);
   var vatAmt=taxBase-supplyAmt;
-  // 엑셀 총금액 불일치 검증
+  // 엑셀 총금액 불일치 검증 (역마진 감지: 기사 정산 > 쿠팡 수입이면 경보)
   var ctEl=document.getElementById('se-coupang-total');
   var banner=document.getElementById('se-mismatch-banner');
   if(ctEl&&banner){
-    var excelTotal=+ctEl.value||0;
-    var diff=supplyAmt-excelTotal;
-    if(excelTotal>0&&Math.abs(diff)>1000){
+    var excelTotal=+ctEl.value||0;  // coupangTotal (쿠팡→대리점, VAT포함)
+    // ★ 정상: taxBase(기사정산) < excelTotal(쿠팡수입) → 대리점 마진 = 정상 차이
+    // ★ 경보: taxBase > excelTotal → 역마진 (기사에게 쿠팡수입보다 더 많이 지급)
+    var overPay = excelTotal>0 && (taxBase - excelTotal) > 5000;
+    if(overPay){
       if(banner.style.display==='none'||banner.style.display===''){
-        // ★ 소리 알림 (첫 표시 시에만)
         try{
           var ac=new AudioContext();
           [880,660,440].forEach(function(freq,i){
@@ -5062,9 +5065,9 @@ function updSECalc(){
         }catch(e){}
       }
       banner.style.display='block';
-      banner.innerHTML='⚠️ <strong>엑셀 금액 불일치</strong> — 쿠팡→대리점 수취액 확인 필요!<br>'
-        +'<span style="font-size:10px;color:#78350f">💡 엑셀(쿠팡→대리점): VAT포함 총액 / 계산(대리점→기사): 단가표 기준 공급가액 — 단가 차이는 대리점 마진</span><br>'
-        +'<span style="font-weight:500">엑셀: ₩'+fmt(excelTotal)+' / 계산(VAT포함): ₩'+fmt(taxBase)+' / <strong>차이: '+(taxBase-excelTotal>=0?'+':'')+fmt(taxBase-excelTotal)+'원</strong></span>';
+      banner.innerHTML='⚠️ <strong>역마진 경고</strong> — 기사 정산액이 쿠팡 수취액을 초과합니다!<br>'
+        +'<span style="font-size:10px;color:#78350f">💡 쿠팡→대리점 수취(엑셀)보다 대리점→기사 정산이 큽니다. 단가표를 확인하세요.</span><br>'
+        +'<span style="font-weight:500">쿠팡 수취(VAT포함): ₩'+fmt(excelTotal)+' / 기사 정산(VAT포함): ₩'+fmt(taxBase)+' / <strong>초과: +₩'+fmt(taxBase-excelTotal)+'원</strong></span>';
     } else { banner.style.display='none'; }
   }
   var monthlyWage=Math.round(supplyAmt*0.654);
@@ -5746,23 +5749,51 @@ async function _ocrAnalyze(){
         max_tokens:800,
         messages:[{role:'user',content:[
           {type:'image',source:{type:'base64',media_type:mime,data:b64}},
-          {type:'text',text:`[한국어 사업자등록증 OCR]
+          {type:'text',text:`[한국어 사업자등록증 OCR - 정밀 인식 모드]
 
-다음 규칙을 반드시 따르세요:
-1. 사업자등록증 이미지에서 정보를 추출합니다.
-2. 만약 세금계산서(tax invoice)라면 반드시 왼쪽 "공급자" 칸의 정보만 추출하세요. 오른쪽 "공급받는자" 칸은 절대 추출하지 마세요.
-3. 한글 문자를 정확히 인식하세요. 비슷한 글자 주의: ㅂ/ㅁ(매우 중요), ㅇ/ㅎ, 회/화/최, 이/아
-   - '엠비티아이' '엠비티아이유한회사' 등 고유명사는 원문 그대로 인식
-   - ㅂ과 ㅁ을 혼동하지 마세요: 예) '엠'을 '엡'으로 쓰지 않기
-4. 사업자번호는 반드시 숫자와 하이픈만 포함 (예: 123-45-67890)
-5. 주소는 시/도부터 전체 주소 포함
-6. 업태와 종목이 여러 줄이면 전부 쉼표로 연결해 포함
-7. 마크다운, 설명 없이 순수 JSON만 출력
+반드시 아래 지시사항을 전부 따르세요:
 
-출력 형식:
-{"bizNum":"000-00-00000","bizName":"상호명(한글)","bizRep":"대표자성명","bizAddr":"전체주소","bizType":"업태전체","bizItem":"종목전체","name":"대표자성명"}
+【문서 유형 판단】
+- 사업자등록증: 모든 항목 추출
+- 세금계산서: 반드시 왼쪽 "공급자" 칸만 추출. 오른쪽 "공급받는자"는 절대 추출 금지
+- 신분증/운전면허증: bizName=성명, bizNum=주민등록번호(앞6자리만), bizAddr=주소
 
-주의: bizName과 bizRep, name 모두 한글로 정확히 인식하세요.`}
+【한글 정밀 인식 규칙 - 아래 혼동 절대 금지】
+▶ 초성 혼동:
+  - ㅁ vs ㅂ: 엠(O)/엡(X), 미(O)/비(X), 무(O)/부(X)
+  - ㅅ vs ㅆ: 씨(O)/시(X)때 구분 주의
+  - ㄴ vs ㄹ: 나(O)/라(X), 난(O)/란(X)
+  - ㅎ vs ㅇ: 회사(O)/화사(X), 하(O)/아(X)
+▶ 받침 혼동:
+  - 산(O)/삼(X), 원(O)/월(X), 수(O)/숙(X)
+  - 구(O)/군(X), 동(O)/돔(X), 로(O)/록(X)
+▶ 모음 혼동:
+  - 유(O)/우(X), 의(O)/이(X), 위(O)/이(X)
+  - 부산(O)/보산(X), 수영(O)/소영(X)
+▶ 자주 틀리는 단어 목록 (정확한 표기):
+  유한회사, 주식회사, 합자회사, 합명회사, 협동조합
+  부산광역시, 서울특별시, 대구광역시, 인천광역시, 광주광역시, 대전광역시, 울산광역시
+  수영구, 수영로, 해운대구, 남구, 북구, 동구, 서구, 연제구, 금정구, 강서구, 사상구, 사하구
+
+【사업자번호 규칙】
+- 형식: 숫자3-숫자2-숫자5 (예: 373-86-02536)
+- O → 0, I/l → 1, B → 8 로 교정
+- 하이픈이 없으면 10자리 숫자를 3-2-5로 분리
+
+【상호명 교정 규칙】
+- (유) = 유한회사, (주) = 주식회사, (합) = 합자회사
+- 영문+한글 혼합 상호 그대로 유지
+- 괄호 앞뒤 공백 표준화
+
+【주소 규칙】
+- 광역시/도 → 시/군/구 → 로/길 → 번지 → (건물명) 전체 추출
+- "부산광역시 수영구 수영로 668" 형식 유지
+- 층수, 호수 포함
+
+【출력 형식 - 순수 JSON만, 마크다운 없음】
+{"bizNum":"000-00-00000","bizName":"상호명","bizRep":"대표자성명","bizAddr":"전체주소","bizType":"업태","bizItem":"종목","name":"대표자성명"}
+
+최종 주의: 불확실한 글자는 가장 흔한 한국어 단어 맥락으로 판단하세요.`}
         ]}]
       })
     });
@@ -5782,19 +5813,78 @@ async function _ocrAnalyze(){
     if(!jsonMatch) throw new Error('JSON 형식 응답 없음');
     var json=JSON.parse(jsonMatch[0]);
     var map={name:'edr-name',bizNum:'edr-biznum',bizName:'edr-bizname',bizRep:'edr-bizrep',bizAddr:'edr-bizaddr',bizType:'edr-biztype',bizItem:'edr-bizitem'};
-    // ★ OCR 한글 오류 후처리 (자주 틀리는 글자 교정)
+    // ★ OCR 한글 오류 후처리 v9.26 — 패턴 대폭 확장
     function _fixOcrKorean(str){
       if(!str) return str;
-      // 사업자 등록증에서 자주 발생하는 OCR 오류 교정
       return str
-        .replace(/엡비티아이/g,'엠비티아이')  // ㅂ→ㅁ 오인식
+        // ── 법인 형태 (가장 빈번한 오류)
+        .replace(/엡비티아이/g,'엠비티아이')
         .replace(/앱비티아이/g,'엠비티아이')
-        .replace(/유한회사/g,'유한회사')       // 정상
-        .replace(/주식화사/g,'주식회사')      // 회→화 오인식
+        .replace(/엠비티아[이이]/g,'엠비티아이')
         .replace(/유한화사/g,'유한회사')
-        .replace(/([0-9]{3})-([0-9]{2})-([0-9]{5,6})/g, function(m,a,b,c){
-          return a+'-'+b+'-'+c.slice(0,5); // 사업자번호 정규화
-        });
+        .replace(/유안회사/g,'유한회사')
+        .replace(/유란회사/g,'유한회사')
+        .replace(/유탄회사/g,'유한회사')
+        .replace(/주식화사/g,'주식회사')
+        .replace(/주식회사/g,'주식회사')  // 정상통과
+        .replace(/합자화사/g,'합자회사')
+        .replace(/합명화사/g,'합명회사')
+        .replace(/합병화사/g,'합명회사')  // 합명 오인식
+        .replace(/협동조함/g,'협동조합')
+        .replace(/협동조항/g,'협동조합')
+        // ── (유)/(주) 표기 정규화
+        .replace(/\(유\)\s*/g,'(유)')
+        .replace(/\(주\)\s*/g,'(주)')
+        .replace(/유한\s*회사/g,'유한회사')
+        .replace(/주식\s*회사/g,'주식회사')
+        // ── 광역시/도 교정
+        .replace(/보산광역시/g,'부산광역시')
+        .replace(/부삼광역시/g,'부산광역시')
+        .replace(/부산광역시/g,'부산광역시')  // 정상
+        .replace(/서율특별시/g,'서울특별시')
+        .replace(/서울특별시/g,'서울특별시')  // 정상
+        .replace(/대구광역시/g,'대구광역시')  // 정상
+        .replace(/대전광역시/g,'대전광역시')  // 정상
+        .replace(/인천광역시/g,'인천광역시')  // 정상
+        .replace(/광주광역시/g,'광주광역시')  // 정상
+        .replace(/울산광역시/g,'울산광역시')  // 정상
+        .replace(/경기도/g,'경기도')          // 정상
+        // ── 부산 구 이름 교정
+        .replace(/수연구/g,'수영구')
+        .replace(/수염구/g,'수영구')
+        .replace(/수명구/g,'수영구')
+        .replace(/소영구/g,'수영구')
+        .replace(/해운대구/g,'해운대구')  // 정상
+        .replace(/연재구/g,'연제구')
+        .replace(/금성구/g,'금정구')
+        // ── 도로명 교정
+        .replace(/수연로/g,'수영로')
+        .replace(/수명로/g,'수영로')
+        .replace(/소영로/g,'수영로')
+        // ── 숫자/영문↔한글 교정 (사업자번호)
+        .replace(/([0-9O]{3})-([0-9O]{2})-([0-9OIlBSG]{4,6})/gi, function(m){
+          return m.toUpperCase()
+            .replace(/O/g,'0').replace(/I/g,'1').replace(/L/g,'1')
+            .replace(/B/g,'8').replace(/S/g,'5').replace(/G/g,'6');
+        })
+        // ── 사업자번호 하이픈 없는 경우 자동 삽입
+        .replace(/^([0-9]{3})([0-9]{2})([0-9]{5})$/, '$1-$2-$3')
+        // ── 사업자번호 6자리→5자리 정규화
+        .replace(/([0-9]{3})-([0-9]{2})-([0-9]{6})/g, function(m,a,b,c){
+          return a+'-'+b+'-'+c.slice(0,5);
+        })
+        // ── 업태/종목 공통 오류
+        .replace(/서비스엽/g,'서비스업')
+        .replace(/서비스알/g,'서비스업')
+        .replace(/도소매엽/g,'도소매업')
+        .replace(/운수엽/g,'운수업')
+        .replace(/제조엽/g,'제조업')
+        .replace(/건설엽/g,'건설업')
+        .replace(/음식점엽/g,'음식점업')
+        .replace(/숙박엽/g,'숙박업')
+        // ── 불필요한 공백 정리
+        .replace(/\s{2,}/g,' ')
+        .trim();
     }
     // 모든 OCR 결과에 후처리 적용
     Object.keys(json).forEach(k=>{ if(typeof json[k]==='string') json[k]=_fixOcrKorean(json[k]); });
