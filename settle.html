@@ -3642,11 +3642,49 @@ function filterSettleC(cc){
     var el=document.getElementById('content');
     if(el&&_settleCache&&_settleCache.length){
       _renderSettlePage(_settleCache,el);
+      // 탭 영역으로 스크롤 복귀
+      setTimeout(function(){
+        var tb=document.getElementById('camp-tabs-bar');
+        if(tb)tb.scrollIntoView({behavior:'smooth',block:'nearest'});
+      },50);
     } else {
       _settle_camp=cc||'all';
       pageSettlements();
     }
   }catch(e){console.error('[filterSettleC]',e);toast('❌ '+e.message);}
+}
+// ══ 월별 정산서 삭제 ══
+function deleteMonthSettlements(month){
+  if(!month){toast('❌ 월 정보 없음');return;}
+  if(!confirm('⚠️ '+month+' 정산서를 전부 삭제하시겠습니까?\n\n삭제 후 되돌릴 수 없습니다.'))return;
+  var did=_CU&&_CU.dealerId;
+  if(!_db||!did){toast('❌ 로그인 정보 없음');return;}
+  toast('🗑 '+month+' 삭제 중...');
+  _db.collection('settlements')
+    .where('dealerId','==',did)
+    .where('month','==',month)
+    .get()
+    .then(function(snap){
+      if(!snap.size){toast('ℹ️ 삭제할 데이터 없음');return;}
+      // 500개 단위 배치 처리
+      var batches=[],b=_db.batch(),cnt=0;
+      snap.forEach(function(doc){
+        b.delete(doc.ref);cnt++;
+        if(cnt%499===0){batches.push(b.commit());b=_db.batch();cnt=0;}
+      });
+      if(cnt>0)batches.push(b.commit());
+      return Promise.all(batches);
+    })
+    .then(function(){
+      // localStorage + 캐시도 정리
+      _settleCache=(_settleCache||[]).filter(function(x){return x.month!==month;});
+      var did2=(_CU&&_CU.dealerId)||'shared';
+      localStorage.removeItem('dw_'+did2+'_settlements');
+      SP('settlements',null);
+      toast('✅ '+month+' 정산서 삭제 완료');
+      _reloadSettlePage();
+    })
+    .catch(function(e){toast('❌ 삭제 실패: '+e.message);});
 }
 
 // ══ 재계약 시즌 단가 ══
@@ -3761,7 +3799,7 @@ function _renderSettlePage(settles,c){
   var campCount={all:settles.length};
   CAMP_LIST_S.forEach(function(cc){campCount[cc]=0;});
   settles.forEach(function(x){var cc=_getSettleCamp(x);campCount[cc]=(campCount[cc]||0)+1;});
-  var campTabs='<div style="display:flex;gap:5px;padding:0 0 10px;flex-wrap:wrap;align-items:center">'
+  var campTabs='<div id="camp-tabs-bar" style="display:flex;gap:5px;padding:0 0 10px;flex-wrap:wrap;align-items:center">'
     +'<span style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:0.5px;margin-right:4px">🏕️ 캠프</span>'
     +_campTabHTML('전체',campCount.all,(filterCamp==='all'),'settle','all')
     +CAMP_LIST_S.map(function(cc){var on=(cc===filterCamp);var cnt=campCount[cc]||0;
