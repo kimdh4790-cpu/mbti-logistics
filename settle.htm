@@ -1040,9 +1040,15 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
 
         if(isNocont){
           var nc=dcnt+rcnt;
+          // ★ drvMap 없으면 최소 생성
+          if(!drvMap[cleanId]) drvMap[cleanId]={cleanId:cleanId,camp:campName||'기타',
+            dcnt:0,rcnt:0,delAmt:0,retAmt:0,freshAmt:0,freshIncAmt:0,
+            addIncAmt:0,dmgAmt:0,nocontCnt:0,nocontAmt:0,routes:{}};
           drvMap[cleanId].nocontCnt+=nc;
-          // nocontAmt: rowTotal 있으면 사용, 없으면 나중에 RPRICE 기반으로 계산
           if(rowTotal>0) drvMap[cleanId].nocontAmt+=rowTotal;
+          // 캠프 업데이트
+          if(campName&&campName!=='기타'&&drvMap[cleanId].camp==='기타')
+            drvMap[cleanId].camp=campName;
           continue;
         }
         var delAmt=rowTotal>0?rowTotal:(dcnt*unitPrc);
@@ -5337,7 +5343,7 @@ function _saveSECurrent(){
   if(rds.length)payload.routeDetails=rds;
   var btn=document.querySelector('#mo-se .btn-blue');
   if(btn){btn.textContent='저장 중...';btn.disabled=true;}
-  console.log('[저장] id='+id+' nocont='+nocont+' fresh='+fresh+' finc='+finc);
+  toast('💾 저장중: id='+(id?id.slice(-6):'없음')+' nocont='+nocont);
   var p;
   if(id){
     p=_db.collection('settlements').doc(id).update(payload);
@@ -6550,7 +6556,7 @@ function addRpCamp(cid){
   var k=kEl.value.trim().toUpperCase(),v=parseInt(vEl.value)||0;
   if(!k||!v){toast('라우트 코드와 단가를 입력하세요');return;}
   RPRICE[k]=v;kEl.value='';vEl.value='';
-  var c=document.getElementById('content');
+  var c=document.getElementById('rp-main-area')||document.getElementById('content');
   _renderPrices(c);
   setTimeout(function(){showRpCampTab(campName);},30);
   toast('✅ '+k+' ('+v.toLocaleString()+'원) 추가');
