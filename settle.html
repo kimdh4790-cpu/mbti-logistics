@@ -2836,14 +2836,14 @@ var MENUS_SETTLE = [
 ];
 // QR 출퇴근 전용 (일반직원, 위수탁X)
 var MENUS_QR = [
-  {s:'메인',items:[{ic:'🔐',l:'출퇴근 현황',p:'attendance'},{ic:'📅',l:'달력',p:'schedule'}]},
+  {s:'메인',items:[{ic:'🔐',l:'출퇴근 현황',p:'attendance'},{ic:'⏰',l:'시급·일급 정산',p:'hourly_settle'},{ic:'📅',l:'달력',p:'schedule'}]},
   {s:'직원',items:[{ic:'👤',l:'직원 관리',p:'drivers'},{ic:'🗓',l:'근무표',p:'roster'}]},
   {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices'}]}
 ];
 // 풀패키지 (택배+QR, 위수탁O)
 var MENUS_FULL = [
-  {s:'정산',items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'📋',l:'정산 관리',p:'settlements'},{ic:'📈',l:'통계',p:'stats'}]},
-  {s:'운영',items:[{ic:'👤',l:'기사/직원',p:'drivers'},{ic:'📅',l:'달력',p:'schedule'}]},
+  {s:'정산',items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'📋',l:'정산 관리',p:'settlements'},{ic:'⏰',l:'시급·일급 정산',p:'hourly_settle'},{ic:'📈',l:'통계',p:'stats'}]},
+  {s:'운영',items:[{ic:'👤',l:'기사/직원',p:'drivers'},{ic:'🔐',l:'출퇴근 현황',p:'attendance'},{ic:'🚗',l:'배차 관리',p:'dispatch'},{ic:'📅',l:'달력',p:'schedule'}]},
   {s:'설정',items:[{ic:'🏭',l:'캠프 관리',p:'camps'},{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'📝',l:'위수탁 계약서',p:'contract'},{ic:'🗓',l:'근무표',p:'roster'}]},
   {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices'}]}
 ];
@@ -7826,15 +7826,25 @@ function openAdminPanel(){
   function buildDealerRows(items){
     var tbl=document.createElement('table');tbl.className='tbl';tbl.style.width='100%';
     var thead=document.createElement('thead');
-    thead.innerHTML='<tr><th>대리점</th><th>ID</th><th>정산수</th><th></th></tr>';
+    thead.innerHTML='<tr><th>대리점</th><th>플랜</th><th>전용URL</th><th>정산수</th><th></th></tr>';
     tbl.appendChild(thead);
     var tbody=document.createElement('tbody');
     items.forEach(function(item){
       var tr=document.createElement('tr');tr.style.borderBottom='1px solid var(--border)';
       var isCurrent=(window._adminViewDealerId===item.id);
-      tr.innerHTML='<td style="padding:8px 10px"><strong>'+esc(item.name||item.id)+'</strong></td>'
-        +'<td style="padding:8px 10px;font-family:monospace;font-size:10px">'+esc(item.id)+'</td>'
-        +'<td style="padding:8px 10px">'+item.cnt+'건</td>';
+      var slugUrl = item.slug ? (window.location.origin+'/'+item.slug) : '-';
+      var planLabel = {'trial':'무료체험','settle':'AI정산','qr':'QR출퇴근','full':'풀패키지','hourly':'급여관리','OWNER':'관리자'}[item.plan||'trial']||item.plan||'-';
+      var planColor = item.plan==='trial'?'var(--amber)':item.plan==='OWNER'?'#f59e0b':'var(--green)';
+      tr.innerHTML='<td style="padding:8px 10px"><strong>'+esc(item.name||item.id)+'</strong><br>'
+        +'<span style="font-size:10px;color:var(--text3)">'+esc(item.email||'')+'</span></td>'
+        +'<td style="padding:8px 10px;text-align:center"><span style="background:'+planColor+'22;color:'+planColor+';font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">'+planLabel+'</span></td>'
+        +'<td style="padding:8px 6px;font-size:10px">'
+        +(item.slug
+          ?'<a href="'+slugUrl+'" target="_blank" style="color:var(--primary);text-decoration:none">'+esc('/'+item.slug)+'</a>'
+            +'<button id="slug-copy-'+item.id+'" style="background:none;border:none;cursor:pointer;font-size:11px;margin-left:4px">📋</button>'
+          :'<span style="color:var(--text3)">-</span>')
+        +'</td>'
+        +'<td style="padding:8px 10px;text-align:center">'+item.cnt+'건</td>';
       var td=document.createElement('td');td.style.padding='8px 10px';
       var btn=document.createElement('button');
       btn.className='btn btn-sm '+(isCurrent?'btn-teal':'btn-blue');
@@ -7846,21 +7856,44 @@ function openAdminPanel(){
     body.innerHTML='';body.appendChild(tbl);
   }
 
-  // settlements에서 dealerId 수집 후 users에서 이름 조회
-  _db.collection('settlements').get().then(function(sSnap){
-    var dealerMap={};
+  // companies 컬렉션에서 전체 대리점 로드 (slug/email/plan 포함)
+  Promise.all([
+    _db.collection('companies').get(),
+    _db.collection('settlements').get()
+  ]).then(function(results){
+    var compSnap=results[0], sSnap=results[1];
+    var dealerCnt={};
     sSnap.forEach(function(doc){
       var did=doc.data().dealerId;
-      if(did)dealerMap[did]=(dealerMap[did]||0)+1;
+      if(did)dealerCnt[did]=(dealerCnt[did]||0)+1;
     });
-    var dids=Object.keys(dealerMap).sort();
-    if(!dids.length){body.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">등록된 대리점 없음</div>';return;}
-    var userProms=dids.map(function(did){
-      return _db.collection('users').doc(did).get().then(function(us){
-        return{id:did,name:us.exists?(us.data().companyName||us.data().name||did):did,cnt:dealerMap[did]};
-      }).catch(function(){return{id:did,name:did,cnt:dealerMap[did]};});
+    var items=[];
+    compSnap.forEach(function(doc){
+      var d=doc.data();
+      items.push({
+        id:doc.id,
+        name:d.companyName||d.name||doc.id,
+        email:d.email||d.adminEmail||'',
+        slug:d.slug||'',
+        plan:d.plan||d.serviceType||d.trialEnd?'trial':'unknown',
+        cnt:dealerCnt[doc.id]||0
+      });
     });
-    Promise.all(userProms).then(function(items){buildDealerRows(items);});
+    if(!items.length){body.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">등록된 대리점 없음</div>';return;}
+    items.sort(function(a,b){return b.cnt-a.cnt;});
+    buildDealerRows(items);
+    // 복사 버튼 이벤트 바인딩
+    setTimeout(function(){
+      items.forEach(function(item){
+        var btn=document.getElementById('slug-copy-'+item.id);
+        if(btn&&item.slug){
+          var url=window.location.origin+'/'+item.slug;
+          btn.onclick=function(){
+            navigator.clipboard.writeText(url).then(function(){toast('✅ URL 복사됨');}).catch(function(){});
+          };
+        }
+      });
+    },100);
   }).catch(function(e){body.innerHTML='<div style="color:var(--red)">❌ '+e.message+'</div>';});
 }
 
@@ -8174,11 +8207,15 @@ document.addEventListener('click',function(e){
   if(sb&&sb.classList.contains('open')&&!sb.contains(e.target))sb.classList.remove('open');
 });
 window.addEventListener('load',function(){
-  // PWA 서비스워커 등록
+  // PWA 서비스워커 등록 (실제 배포 도메인에서만)
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('/firebase-messaging-sw.js')
-      .then(function(reg){console.log('[DONWAY] SW 등록 완료');})
-      .catch(function(e){console.log('[DONWAY] SW 등록 실패:',e.message);});
+    var _host = window.location.hostname;
+    var _isProd = _host.includes('donway') || _host.includes('cloudflare') || _host.includes('workers.dev');
+    if(_isProd){
+      navigator.serviceWorker.register('/firebase-messaging-sw.js')
+        .then(function(reg){console.log('[DONWAY] SW 등록 완료');})
+        .catch(function(e){console.warn('[DONWAY] SW 등록 실패:',e.message);});
+    }
   }
   initFirebase(); // Firebase 즉시 초기화
   if(window._COMPANY_SLUG){
