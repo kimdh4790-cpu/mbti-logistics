@@ -5343,10 +5343,12 @@ function _saveSECurrent(){
   if(rds.length)payload.routeDetails=rds;
   var btn=document.querySelector('#mo-se .btn-blue');
   if(btn){btn.textContent='저장 중...';btn.disabled=true;}
-  toast('💾 저장중: id='+(id?id.slice(-6):'없음')+' nocont='+nocont);
+  // 저장 진행 (id, nocont 확인됨)
+  // ★ set(merge) 방식: update 대신 사용 (문서 없어도 생성, 필드 누락 방지)
   var p;
   if(id){
-    p=_db.collection('settlements').doc(id).update(payload);
+    payload.updatedAt=new Date().toISOString();
+    p=_db.collection('settlements').doc(id).set(payload,{merge:true});
   } else {
     payload.createdAt=new Date().toISOString();
     p=_db.collection('settlements').add(payload);
@@ -5360,6 +5362,10 @@ function _saveSECurrent(){
     }
     toast('✅ 저장 완료');
     var mo=document.getElementById('mo-se');if(mo)mo.remove();
+    // ★ localStorage도 클리어해서 항상 Firestore에서 신선한 데이터 로드
+    try{var _did2=_CU&&_CU.dealerId||'shared';
+      localStorage.removeItem('dw_'+_did2+'_settlements');
+      localStorage.removeItem('settlements');}catch(e){}
     _settleCache=null;_reloadSettlePage();
   }).catch(function(e){
     toast('❌ '+e.message);
