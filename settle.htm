@@ -1017,8 +1017,10 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         // 유효하지 않은 ID 스킵 (한글 포함, 공백, 특수단어)
         if(!cleanId||/[ㄱ-ㅎ가-힣]/.test(cleanId)||cleanId.length>30)continue;
         var divVal=String(row[rColDiv]||'').trim();
-        var isNocont=divVal.includes('미계약')||divVal.includes('에코백')||divVal.includes('프레시백')||divVal.includes('소급');
+        var isNocont=divVal.includes('미계약')||divVal.includes('에코백')||divVal.includes('프레시백')||divVal.includes('소급')||divVal.includes('계약외')||divVal.includes('외근');
         var route=String(row[rColRoute]||'').trim();
+        // ★ route가 '미계약'이면 isNocont로 처리
+        if(!isNocont&&(route.includes('미계약')||route==='계약외'))isNocont=true;
         var campRaw=String(row[rColCamp]||'').trim();
         var campName=_normCamp(campRaw);
         var dcnt=Number(row[rColDcnt])||0;
@@ -5343,7 +5345,8 @@ function _saveSECurrent(){
   if(rds.length)payload.routeDetails=rds;
   var btn=document.querySelector('#mo-se .btn-blue');
   if(btn){btn.textContent='저장 중...';btn.disabled=true;}
-  // 저장 진행 (id, nocont 확인됨)
+  // ★ 저장 확인 (디버그)
+  if(!confirm('저장합니다\n\n기사: '+driver+'\n월: '+month+'\nID: '+(id||'신규')+'\n미계약건: '+nocont+'원\n프레시백: '+fresh+'원\n\n계속하시겠습니까?'))return;
   // ★ set(merge) 방식: update 대신 사용 (문서 없어도 생성, 필드 누락 방지)
   var p;
   if(id){
