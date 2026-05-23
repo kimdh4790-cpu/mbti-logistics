@@ -882,7 +882,7 @@ function calcNet(x){
   var etcMinus = +x.etcMinus || 0;  // ★ 기타(-)
   // ★ v9.25: 기타(+)만 세금계산서(income)에 포함 → 고용·산재 기준
   //           기타(-)는 세금계산서 제외, 실지급에서만 차감 (공제 항목)
-  var income=damt+ramt+fresh+finc+inc+nocont+etcPlus;
+  var income=damt+ramt+fresh+finc+nocont+etcPlus;  // ★ inc(추가인센)은 세금계산서 base 제외
   // ★ 항상 routeDetails×unitPrice 기반 재계산 (명세서와 일치)
   //   저장된 totalAmt는 참고용으로만 사용하지 않음
   var totalAmt=income;
@@ -1295,7 +1295,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           //   엑셀 Raw 금액(damt)이 아닌 라우트 단가표 기준으로 계산
           var rdDamt=routeDetails.reduce(function(s,rd){return s+(rd.cnt||0)*(rd.unitPrice||0);},0);
           var rdRamt=routeDetails.reduce(function(s,rd){return s+(rd.ret||0)*(rd.unitPrice||0);},0);
-          var taxBase=(rdDamt||damt)+(rdRamt||ramt)+freshAmt+fincVal+addIncAmt+(dm.nocontAmt||0);  // 모두 VAT포함가
+          var taxBase=(rdDamt||damt)+(rdRamt||ramt)+freshAmt+fincVal+(dm.nocontAmt||0);  // ★ addIncAmt 제외 (세금계산서 base 아님)
           // 공제 계산
           var supplyAmt=Math.round(taxBase/1.1);
           var monthlyWage=Math.round(supplyAmt*0.654);
@@ -5267,7 +5267,7 @@ function _saveSECurrent(){
     });
   }
   var nocont=cached?cached.nocont||0:0;
-  var taxBase=newDamt+newRamt+fresh+finc+inc+nocont+etcPlus; // 모두 VAT포함가
+  var taxBase=newDamt+newRamt+fresh+finc+nocont+etcPlus; // ★ inc 제외
   var supplyAmt=Math.round(taxBase/1.1);
   var monthlyWage=Math.round(supplyAmt*0.654);
   var empIns=monthlyWage>=800000?Math.floor(monthlyWage*0.008/10)*10:0;
