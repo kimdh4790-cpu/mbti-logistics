@@ -883,10 +883,9 @@ function calcNet(x){
   // ★ v9.25: 기타(+)만 세금계산서(income)에 포함 → 고용·산재 기준
   //           기타(-)는 세금계산서 제외, 실지급에서만 차감 (공제 항목)
   var income=damt+ramt+fresh+finc+inc+nocont+etcPlus;
-  // ★ v9.26: 저장된 totalAmt 우선 사용 → RPRICE 변경 후에도 정산관리/현황 금액 일치
-  //           저장값 없거나 0이면 재계산값 사용 (신규 데이터 호환)
-  var _storedTotal=(x.totalAmt!==undefined&&x.totalAmt!==null&&x.totalAmt!==''&&+x.totalAmt>0)?+x.totalAmt:0;
-  var totalAmt=_storedTotal||income;
+  // ★ 항상 routeDetails×unitPrice 기반 재계산 (명세서와 일치)
+  //   저장된 totalAmt는 참고용으로만 사용하지 않음
+  var totalAmt=income;
   var supplyAmt = Math.round(totalAmt / 1.1);
   var expenseAmt = Math.round(supplyAmt * 0.346);
   var monthlyWage = supplyAmt - expenseAmt;
@@ -3771,7 +3770,7 @@ function _renderSettlePage(settles,c){
   var autoHTML='<div style="background:linear-gradient(135deg,rgba(249,115,22,.08),rgba(234,88,12,.04));border:1.5px solid rgba(249,115,22,.25);border-radius:12px;padding:14px;margin-bottom:10px">'
     +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'
     +'<div style="font-size:12px;font-weight:700;color:#ea580c">📦 정산 자동화</div>'
-    +'<button onclick="toggleSettleMore(this)" style="padding:3px 9px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;color:var(--text2)">더보기 ▼</button>'
+    +'<button onclick="toggleSettleMore(this)" style="padding:8px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;color:var(--text2);min-height:36px;-webkit-tap-highlight-color:transparent">더보기 ▼</button>'
     +'</div>'
     +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
     +'<label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#f97316;color:#fff;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📤 쿠팡 엑셀 업로드 → 자동정산<input type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style="display:none" onchange="parseCoupangExcel(this)"></label>'
@@ -3889,7 +3888,7 @@ function _settleRow(x){
     +'<td style="text-align:right;color:var(--red)">-₩'+fmt((r.emp||0)+(r.work||0))+'</td>'
     +'<td style="text-align:right;font-weight:800;color:var(--purple)">₩'+fmt(net)+'</td>'
     +'<td>'+statusBadge+'</td>'
-    +'<td style="text-align:center">'      +'<button onclick="_settleMenu(event,\''+docId+'\')" style="background:none;border:none;cursor:pointer;font-size:20px;padding:8px 12px;color:var(--text2);-webkit-tap-highlight-color:transparent;line-height:1">⋮</button>'    +'</td>'
+    +'<td style="white-space:nowrap">'      +'<button class="btn btn-sm btn-blue" onclick="openSE(this.dataset.id)" data-id="'+docId+'" style="margin-right:2px">수정</button>'      +'<button class="btn btn-sm" onclick="openTaxInvoice(this.dataset.id)" data-id="'+docId+'" style="background:#15803d;color:#fff;border:none;font-size:10px;margin-right:2px">🧾</button>'      +'<button class="btn btn-sm" onclick="sendOne(this.dataset.id)" data-id="'+docId+'" style="background:#059669;color:#fff;border:none;font-size:10px">📤</button>'    +'</td>'
     +'</tr>';
 }
 
@@ -5943,6 +5942,9 @@ async function _ocrAnalyze(){
         // ── 법인 형태 (가장 빈번한 오류)
         .replace(/엡비티아이/g,'엠비티아이')
         .replace(/앱비티아이/g,'엠비티아이')
+        .replace(/웰비티아이/g,'엠비티아이')
+        .replace(/웸비티아이/g,'엠비티아이')
+        .replace(/월비티아이/g,'엠비티아이')
         .replace(/엠비티아[이이]/g,'엠비티아이')
         .replace(/유한화사/g,'유한회사')
         .replace(/유안회사/g,'유한회사')
@@ -5984,6 +5986,10 @@ async function _ocrAnalyze(){
         .replace(/수연로/g,'수영로')
         .replace(/수명로/g,'수영로')
         .replace(/소영로/g,'수영로')
+        // ── 부산 구 누락 보정 (수영구/해운대구 등 생략되는 경우)
+        .replace(/부산광역시\s+수영로/g,'부산광역시 수영구 수영로')
+        .replace(/부산광역시\s+해운대로/g,'부산광역시 해운대구 해운대로')
+        .replace(/부산광역시\s+중앙로/g,'부산광역시 중구 중앙로')
         // ── 숫자/영문↔한글 교정 (사업자번호)
         .replace(/([0-9O]{3})-([0-9O]{2})-([0-9OIlBSG]{4,6})/gi, function(m){
           return m.toUpperCase()
