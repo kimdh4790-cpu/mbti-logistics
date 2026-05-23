@@ -1292,7 +1292,11 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           // 세금계산서 작성금액 (엑셀 단가 기준 초기값)
           var damt=dm.delAmt||0;
           var ramt=dm.retAmt||0;
-          var taxBase=damt+ramt+freshAmt+fincVal+addIncAmt+(dm.nocontAmt||0);  // 모두 VAT포함가
+          // ★ taxBase: routeDetails × unitPrice 기준 (calcNet/명세서와 동일하게 맞춤)
+          //   엑셀 Raw 금액(damt)이 아닌 라우트 단가표 기준으로 계산
+          var rdDamt=routeDetails.reduce(function(s,rd){return s+(rd.cnt||0)*(rd.unitPrice||0);},0);
+          var rdRamt=routeDetails.reduce(function(s,rd){return s+(rd.ret||0)*(rd.unitPrice||0);},0);
+          var taxBase=(rdDamt||damt)+(rdRamt||ramt)+freshAmt+fincVal+addIncAmt+(dm.nocontAmt||0);  // 모두 VAT포함가
           // 공제 계산
           var supplyAmt=Math.round(taxBase/1.1);
           var monthlyWage=Math.round(supplyAmt*0.654);
