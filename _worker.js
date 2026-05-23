@@ -37,6 +37,12 @@ function forbidden(msg = '접근이 거부되었습니다') {
 }
 
 const PROJECT_ID = 'mbti-logistics';
+// ★ Pages 배포 URL (env.ASSETS 대체 - wrangler assets 이슈 우회)
+const PAGES_BASE = 'https://mbti-logistics.pages.dev';
+async function fetchAsset(path, request) {
+  const assetUrl = PAGES_BASE + (path.startsWith('/') ? path : '/' + path);
+  return fetch(assetUrl, { headers: { 'User-Agent': 'CF-Worker' } });
+}
 
 // ── 임시 비밀번호 생성 (영문+숫자 8자리) ──
 function generateTempPassword() {
@@ -353,7 +359,7 @@ export default {
     // ★ 루트 접속 → 랜딩페이지 리라이트 (URL 유지, workers.dev 제외)
     if ((path === '/' || path === '' || path === '/donway_landing' || path === '/donway_landing/') && !hostname.includes('workers.dev')) {
       const landingUrl = new URL('/donway_landing.html', url);
-      const landingResp = await env.ASSETS.fetch(new Request(landingUrl.toString(), request));
+      const landingResp = await fetchAsset('/donway_landing.html', request);
       const landingHeaders = new Headers(landingResp.headers);
       Object.entries(SECURITY_HEADERS).forEach(([k,v]) => landingHeaders.set(k,v));
       return new Response(landingResp.body, {
@@ -634,7 +640,7 @@ export default {
 
     if (path === '/scan' || path === '/scan/') {
       const req  = new Request(new URL('/scan.html', url).toString(), { method: 'GET', headers: request.headers });
-      const resp = await env.ASSETS.fetch(req);
+      const resp = await fetchAsset(req.url.replace(PAGES_BASE,''), request);
       const html = await resp.text();
       const key  = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
       const injected = html.replace('<head>', '<head><script>window.__AK=' + JSON.stringify(key) + ';</script>');
@@ -661,7 +667,7 @@ export default {
       const companySlug = slugMatch[1];
       try {
         const req = new Request(new URL('/settle.html', url).toString(), { method:'GET', headers:request.headers });
-        const resp = await env.ASSETS.fetch(req);
+        const resp = await fetchAsset(req.url.replace(PAGES_BASE,''), request);
         let html = await resp.text();
         // slug + 보안헤더 주입 (</head> 앞에 삽입 - 가장 안전한 위치)
         const slugScript = '<script>window._COMPANY_SLUG=' + JSON.stringify(companySlug) + ';window._SLUG_MODE=true;</script>';
@@ -679,7 +685,7 @@ export default {
 
     if (path === '/settle' || path === '/settle/') {
       const req  = new Request(new URL('/settle.html', url).toString(), { method: 'GET', headers: request.headers });
-      const resp = await env.ASSETS.fetch(req);
+      const resp = await fetchAsset(req.url.replace(PAGES_BASE,''), request);
       return new Response(resp.body, { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
     }
 
@@ -690,97 +696,97 @@ export default {
 
     // 통합 포털
     if (path === '/portal' || path === '/portal/') {
-      const resp = await env.ASSETS.fetch(new Request(new URL('/portal.html', url)));
+      const resp = await fetchAsset('/portal.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
     // 기사 자체 가입
     if (path === '/join' || path === '/join/') {
-      const resp = await env.ASSETS.fetch(new Request(new URL('/join.html', url)));
+      const resp = await fetchAsset('/join.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
     // 회사 신규 등록
     if (path === '/company-register' || path === '/company-register/') {
-      const resp = await env.ASSETS.fetch(new Request(new URL('/company-register.html', url)));
+      const resp = await fetchAsset('/company-register.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
     // ★ DONWAY 출퇴근 QR (모든 업종 공통)
     if (path === '/attendance' || path === '/attendance/') {
-      const resp = await env.ASSETS.fetch(new Request(new URL('/attendance.html', url)));
+      const resp = await fetchAsset('/attendance.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
     // ★ DONWAY 사운드 모듈
     if (path === '/donway-sound.js') {
-      const resp = await env.ASSETS.fetch(new Request(new URL('/donway-sound.js', url)));
+      const resp = await fetchAsset('/donway-sound.js', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'public, max-age=86400' } });
     }
 
     // ★ 정산 분석 리포트
     if (path === '/report' || path === '/report/') {
-      const resp = await env.ASSETS.fetch(new Request(new URL('/report.html', url)));
+      const resp = await fetchAsset('/report.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
     // ★ 근로계약서
     if (path === '/contract' || path === '/contract/') {
-      const resp = await env.ASSETS.fetch(new Request(new URL('/contract.html', url)));
+      const resp = await fetchAsset('/contract.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
     // ★ 공지·알림
     if (path === '/notice' || path === '/notice/') {
-      const resp = await env.ASSETS.fetch(new Request(new URL('/notice.html', url)));
+      const resp = await fetchAsset('/notice.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
     // ★ 시스템 설정
     if (path === '/settings' || path === '/settings/') {
-      const resp = await env.ASSETS.fetch(new Request(new URL('/settings.html', url)));
+      const resp = await fetchAsset('/settings.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
     // ★ 근무 스케줄러
     if (path === '/schedule' || path === '/schedule/') {
-      const resp = await env.ASSETS.fetch(new Request(new URL('/schedule.html', url)));
+      const resp = await fetchAsset('/schedule.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
     // ★ 직원 관리
     if (path === '/drivers' || path === '/drivers/') {
-      const resp = await env.ASSETS.fetch(new Request(new URL('/drivers.html', url)));
+      const resp = await fetchAsset('/drivers.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
     // ★ 관리자 종합 대시보드
     if (path === '/admin' || path === '/admin/') {
       // 슈퍼어드민 접근 로그 기록 (선택적)
-      const resp = await env.ASSETS.fetch(new Request(new URL('/admin.html', url)));
+      const resp = await fetchAsset('/admin.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' } });
     }
 
     if (path === '/dashboard' || path === '/dashboard/') {
-      const resp = await env.ASSETS.fetch(new Request(new URL('/dashboard.html', url)));
+      const resp = await fetchAsset('/dashboard.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
     // ★ 직원 마이페이지
     if (path === '/my' || path === '/my/') {
-      const resp = await env.ASSETS.fetch(new Request(new URL('/my.html', url)));
+      const resp = await fetchAsset('/my.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
     // ★ 출퇴근 관리자 대시보드
     if (path === '/attendance-admin' || path === '/attendance-admin/') {
-      const resp = await env.ASSETS.fetch(new Request(new URL('/attendance-admin.html', url)));
+      const resp = await fetchAsset('/attendance-admin.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
     // ★ 매장/회사 QR 디스플레이 (입구 화면)
     if (path === '/attendance-display' || path === '/attendance-display/') {
-      const resp = await env.ASSETS.fetch(new Request(new URL('/attendance-display.html', url)));
+      const resp = await fetchAsset('/attendance-display.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
@@ -1433,7 +1439,7 @@ export default {
     }
 
     // 정적 파일 서빙 + 보안 헤더 적용
-    const assetResp = await env.ASSETS.fetch(request);
+    const assetResp = await fetchAsset(url.pathname, request);
     return addSecurityHeaders(assetResp);
   },
 
