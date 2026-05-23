@@ -1577,9 +1577,14 @@ function initFirebase(){
   _auth=firebase.auth();
   _auth.onAuthStateChanged(function(user){
     if(!user){
+      // ★ 계정 전환/로그아웃 시 모든 캐시 완전 초기화
+      _settleCache=null; _drvCache=null;
+      _campConfig={}; _CAMP_FIXED_COLORS={}; _campColorCache={};
+      try{Object.keys(_routeCampMap).forEach(function(k){delete _routeCampMap[k];});}catch(e){}
+      try{Object.keys(RPRICE).forEach(function(k){delete RPRICE[k];});}catch(e){}
+      _CU=null; window._CU=null; window._mySlug=null;
       document.getElementById('login-screen').style.display='flex';
       document.getElementById('app').style.display='none';
-      _CU=null;window._CU=null;
     }else{
       _db.doc('users/'+user.uid).get().then(function(snap){
         var d=snap.exists?snap.data():{};
@@ -2005,6 +2010,24 @@ function doLogin(){
     });
 }
 function doLogout(){
+  // ★ 모든 캐시 완전 초기화 (계정 전환 시 데이터 격리)
+  _settleCache=null;
+  _drvCache=null;
+  _campConfig={};
+  _CAMP_FIXED_COLORS={};
+  _campColorCache={};
+  Object.keys(_routeCampMap).forEach(function(k){delete _routeCampMap[k];});
+  Object.keys(RPRICE).forEach(function(k){delete RPRICE[k];});
+  Object.keys(RPRICE_ADJ).forEach(function(k){delete RPRICE_ADJ[k];});
+  _CU=null;
+  window._mySlug=null;
+  window._hsState=null;
+  window._rosterDrivers=null;
+  window._rosterData=null;
+  // 사이드바 초기화
+  var slText=document.querySelector('.sl-text');
+  if(slText)slText.textContent='DONWAY';
+  // 인증 초기화
   sessionStorage.removeItem('donway_auth_token');
   sessionStorage.removeItem('donway_auth_expire');
   if(_auth)_auth.signOut();
@@ -3021,32 +3044,30 @@ function _viewMyStatement(el){var id=el.getAttribute('data-id');
 // 서비스 타입별 메뉴 정의
 // 쿠팡 정산 전용 (출퇴근X, 위수탁계약서O)
 var MENUS_SETTLE = [
-  {s:'메인',items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'📋',l:'정산 관리',p:'settlements'}]},
-  {s:'운영',items:[{ic:'👤',l:'기사 관리',p:'drivers'},{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'📅',l:'시즌 단가표',p:'season'}]},
-  {s:'분석',items:[{ic:'📈',l:'통계',p:'stats'}]},
-  {s:'정산',items:[{ic:'⏰',l:'시급·일급 정산',p:'hourly_settle'},{ic:'🚗',l:'배차 관리',p:'dispatch'}]},
-  {s:'설정',items:[{ic:'🏭',l:'캠프 관리',p:'camps'},{ic:'📝',l:'위수탁 계약서',p:'contract'},{ic:'📅',l:'달력',p:'schedule'},{ic:'🗓',l:'근무표',p:'roster'}]},
-  {s:'커뮤니티',items:[{ic:'📢',l:'관리자 공지',p:'notices'}]}
+  {s:'정산',items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'📋',l:'정산 관리',p:'settlements'},{ic:'📈',l:'통계',p:'stats'}]},
+  {s:'운영',items:[{ic:'👤',l:'기사 관리',p:'drivers'},{ic:'📅',l:'달력',p:'schedule'}]},
+  {s:'설정',items:[{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'📝',l:'위수탁 계약서',p:'contract'},{ic:'🗓',l:'근무표',p:'roster'}]},
+  {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices'}]}
 ];
 // QR 출퇴근 전용 (일반직원, 위수탁X)
 var MENUS_QR = [
-  {s:'메인',items:[{ic:'🔐',l:'출퇴근 현황',p:'attendance'},{ic:'⏰',l:'시급·일급 정산',p:'hourly_settle'},{ic:'📅',l:'달력',p:'schedule'}]},
+  {s:'메인',items:[{ic:'🔐',l:'출퇴근 현황',p:'attendance'},{ic:'📅',l:'달력',p:'schedule'}]},
   {s:'직원',items:[{ic:'👤',l:'직원 관리',p:'drivers'},{ic:'🗓',l:'근무표',p:'roster'}]},
   {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices'}]}
 ];
 // 풀패키지 (택배+QR, 위수탁O)
 var MENUS_FULL = [
-  {s:'정산',items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'📋',l:'정산 관리',p:'settlements'},{ic:'⏰',l:'시급·일급 정산',p:'hourly_settle'},{ic:'📈',l:'통계',p:'stats'}]},
-  {s:'운영',items:[{ic:'👤',l:'기사/직원',p:'drivers'},{ic:'🔐',l:'출퇴근 현황',p:'attendance'},{ic:'🚗',l:'배차 관리',p:'dispatch'},{ic:'📅',l:'달력',p:'schedule'}]},
-  {s:'설정',items:[{ic:'🏭',l:'캠프 관리',p:'camps'},{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'📝',l:'위수탁 계약서',p:'contract'},{ic:'🗓',l:'근무표',p:'roster'}]},
+  {s:'정산',items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'📋',l:'정산 관리',p:'settlements'},{ic:'📈',l:'통계',p:'stats'}]},
+  {s:'운영',items:[{ic:'👤',l:'기사/직원',p:'drivers'},{ic:'🔐',l:'출퇴근 현황',p:'attendance'},{ic:'📅',l:'달력',p:'schedule'}]},
+  {s:'설정',items:[{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'📝',l:'위수탁 계약서',p:'contract'},{ic:'🗓',l:'근무표',p:'roster'}]},
   {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices'}]}
 ];
 // ★ 소상공인/사장님 전용 (시급·일급·월급 정산)
 var MENUS_HOURLY = [
-  {s:'메인',items:[{ic:'📊',l:'급여 현황',p:'hourly_settle'},{ic:'🔐',l:'출퇴근 현황',p:'attendance'}]},
+  {s:'메인',items:[{ic:'📊',l:'급여 현황',p:'hourly_settle'},{ic:'🔐',l:'출퇴근 현황',p:'attendance'},{ic:'📅',l:'달력',p:'schedule'}]},
   {s:'직원',items:[{ic:'👤',l:'직원 관리',p:'drivers'},{ic:'🗓',l:'근무표',p:'roster'}]},
   {s:'분석',items:[{ic:'📈',l:'통계',p:'stats'}]},
-  {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices'},{ic:'📅',l:'달력',p:'schedule'}]}
+  {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices'}]}
 ];
 // 기사/직원 전용 (본인 정산만)
 var MENUS_DRIVER = [
@@ -7469,7 +7490,8 @@ function doResetData(){
       var b=_db.batch();snap.forEach(function(d){b.delete(d.ref);});
       return snap.size?b.commit():Promise.resolve();
     }));
-    localStorage.removeItem('mbti_settlements');_settleCache=null;
+    var _did2=(_CU&&_CU.dealerId)||'shared';
+    localStorage.removeItem('dw_'+_did2+'_settlements');_settleCache=null;
   }
 
   // 기사 삭제
@@ -7564,8 +7586,14 @@ function doChangePw(){
 }
 
 // localStorage 헬퍼 (물류앱 호환)
-function ls(key){try{return JSON.parse(localStorage.getItem('mbti_'+key)||'[]');}catch(e){return[];}}
-function lss(key,val){try{localStorage.setItem('mbti_'+key,JSON.stringify(val));}catch(e){}}
+function ls(key){
+  var did=(_CU&&_CU.dealerId)||'shared';
+  try{return JSON.parse(localStorage.getItem('dw_'+did+'_'+key)||'[]');}catch(e){return[];}
+}
+function lss(key,val){
+  var did=(_CU&&_CU.dealerId)||'shared';
+  try{localStorage.setItem('dw_'+did+'_'+key,JSON.stringify(val));}catch(e){}
+}
 
 function filterRouteCamp(camp){
   document.querySelectorAll('#route-stat-tbl tbody tr').forEach(function(tr){
