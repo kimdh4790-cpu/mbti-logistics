@@ -3234,8 +3234,9 @@ function checkDealerDataIntegrity(docs, dealerId, collectionName){
 var VAPID_KEY = 'BNDQMuIj8gVt0uqOXOiMSLODRDiQiNO-5x4D1C-ZOXcxnf5iKJjNs5sHHFdHkZOXB9U3M8lP5W4xEpS7T2N4Ejo';
 // ★ Firebase Console → 프로젝트 설정 → 클라우드 메시징 → 웹 푸시 인증서 키로 교체 필요
 
+var _fcmRegFailed = false;  // ★ VAPID 키 오류 시 재시도 방지
 async function _registerFCM(){
-  if(!_db||!_CU||!_CU.dealerId) return;
+  if(!_db||!_CU||!_CU.dealerId||_fcmRegFailed) return;
   try{
     if(!('Notification' in window)){return;}
     var perm = await Notification.requestPermission();
@@ -3260,7 +3261,8 @@ async function _registerFCM(){
     }
     console.log('[FCM] 토큰 등록 완료'+(isAdmin?' (관리자)':''));
   } catch(e){
-    console.log('[FCM] 등록 실패:', e.message);
+    _fcmRegFailed = true;  // ★ VAPID 키 불일치 등 → 재시도 차단
+    console.warn('[FCM] 등록 실패 (푸시 비활성화):', e.message);
   }
 }
 

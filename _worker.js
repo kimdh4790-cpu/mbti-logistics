@@ -1429,7 +1429,7 @@ export default {
           {src:'/icon-192.png',sizes:'192x192',type:'image/png',purpose:'any maskable'},
           {src:'/icon-512.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}
         ]
-      }), { status:200, headers:{'Content-Type':'application/manifest+json','Cache-Control':'no-cache'} });
+      }), { status:200, headers:{'Content-Type':'application/manifest+json; charset=utf-8','Cache-Control':'no-cache'} });
     }
 
     // 정적 파일 서빙 + 보안 헤더 적용
