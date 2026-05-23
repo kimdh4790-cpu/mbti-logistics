@@ -668,7 +668,7 @@ export default {
     if (slugMatch && !knownPaths.has(slugMatch[0].replace(/\/$/,'')) && method === 'GET') {
       const companySlug = slugMatch[1];
       try {
-        const req = new Request(new URL('/settle.html', url).toString(), { method:'GET', headers:request.headers });
+        const req = new Request(new URL('/settle.htm', url).toString(), { method:'GET', headers:request.headers });
         const resp = await fetchAsset(new URL(req.url).pathname, request);
         let html = await resp.text();
         // slug + 보안헤더 주입 (</head> 앞에 삽입 - 가장 안전한 위치)
@@ -686,7 +686,7 @@ export default {
     }
 
     if (path === '/settle' || path === '/settle/') {
-      const req  = new Request(new URL('/settle.html', url).toString(), { method: 'GET', headers: request.headers });
+      const req  = new Request(new URL('/settle.htm', url).toString(), { method: 'GET', headers: request.headers });
       const resp = await fetchAsset(new URL(req.url).pathname, request);
       return new Response(resp.body, { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
     }
