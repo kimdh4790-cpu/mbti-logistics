@@ -3668,6 +3668,7 @@ var MENUS_DRIVER = [
 ];
 var MENUS = MENUS_SETTLE; // 기본값
 function buildNav(){
+  try{
   var nav=document.getElementById('snav');
   nav.innerHTML=MENUS.map(function(g,gi){
     var id='nsec-'+gi;
@@ -3683,6 +3684,7 @@ function buildNav(){
       }).join('')+
       '</div>';
   }).join('');
+  }catch(e){console.error('[buildNav]',e);}
 }
 
 function _toggleNavSection(el,id){
@@ -3855,6 +3857,7 @@ function _initFCMReceiver(){
 }
 
 function goPage(page){
+  _curPage = page; window._curPage = page; // ★ 현재 페이지 추적
   // 딜러가 admin 전용 페이지 접근 시 차단
   var adminOnlyPages=['admin','dealers','all_settlements','all_drivers','subscriptions','invoices','error_logs'];
   if(_CU&&_CU.role==='dealer'&&adminOnlyPages.indexOf(page)>=0){
@@ -4195,6 +4198,7 @@ function _getOverlappingSeasons(month){
 
 // ══ 정산 관리 (메인앱 동일 UI) ══
 var _settle_month='all',_settle_camp='all',_settleCache=null;
+var _curPage='settle'; // ★ 현재 활성 페이지 추적
 function pageSettlements(){
   document.getElementById('page-title').textContent='정산서 관리';
   var tr=document.getElementById('topbar-right');tr.innerHTML='';
@@ -8850,6 +8854,7 @@ var TERMS_CONTENT = {
 };
 
 function checkTermsAgreement(){
+  try{
   // 슈퍼어드민은 생략
   if(_CU&&_CU.email==='kimdh4790@gmail.com'){goPage('settle');return;}
   if(_CU&&_CU.termsVersion===TERMS_VER){goPage('settle');return;}
@@ -8859,6 +8864,7 @@ function checkTermsAgreement(){
   document.getElementById('ta-terms-body').innerHTML=esc(TERMS_CONTENT.terms).replace(/\n/g,'<br>');
   document.getElementById('ta-privacy-body').innerHTML=esc(TERMS_CONTENT.privacy).replace(/\n/g,'<br>');
   mo.classList.add('show');
+  }catch(e){console.error('[checkTermsAgreement]',e);goPage('settle');}
 }
 
 function agreeTerms(){
