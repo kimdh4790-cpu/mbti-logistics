@@ -848,7 +848,7 @@ function calcNet(x){
   var finc = hasStoredFinc
     ? +x.finc
     : (isCoupang ? Math.round(dcnt*(G_PRICES.freshbag_inc||25)) : 0);
-  var inc=Math.round((+x.inc||0)*1.1); // 추가인센 VAT포함 변환
+  var inc=+x.inc||0;  // 추가인센 VAT포함가 그대로 사용 (×1.1 없음)
   var nocont = +x.nocont || 0;  // ★ 미계약건 (+수익)
   var etcPlus  = +x.etcPlus  || 0;  // ★ 기타(+)
   var etcMinus = +x.etcMinus || 0;  // ★ 기타(-)
@@ -5042,9 +5042,25 @@ function updSECalc(){
     var excelTotal=+ctEl.value||0;
     var diff=supplyAmt-excelTotal;
     if(excelTotal>0&&Math.abs(diff)>1000){
+      if(banner.style.display==='none'||banner.style.display===''){
+        // ★ 소리 알림 (첫 표시 시에만)
+        try{
+          var ac=new AudioContext();
+          [880,660,440].forEach(function(freq,i){
+            var o=ac.createOscillator();var g=ac.createGain();
+            o.connect(g);g.connect(ac.destination);
+            o.frequency.value=freq;o.type='triangle';
+            g.gain.setValueAtTime(0,ac.currentTime+i*0.12);
+            g.gain.linearRampToValueAtTime(0.3,ac.currentTime+i*0.12+0.04);
+            g.gain.linearRampToValueAtTime(0,ac.currentTime+i*0.12+0.12);
+            o.start(ac.currentTime+i*0.12);o.stop(ac.currentTime+i*0.12+0.12);
+          });
+        }catch(e){}
+      }
       banner.style.display='block';
-      banner.innerHTML='⚠️ 엑셀 총금액과 계산값 불일치<br><span style="font-size:10px;color:#78350f">💡 엑셀은 VAT포함 총액, 계산값은 공급가액(÷1.1) 기준입니다. 고용·산재 공제 후 실지급액과는 다릅니다.</span><br>'
-        +'<span style="font-weight:500">엑셀: ₩'+fmt(excelTotal)+' / 계산: ₩'+fmt(supplyAmt)+' / <strong>차이: '+(diff>=0?'+':'')+fmt(diff)+'원</strong></span>';
+      banner.innerHTML='⚠️ <strong>엑셀 금액 불일치</strong> — 쿠팡→대리점 수취액 확인 필요!<br>'
+        +'<span style="font-size:10px;color:#78350f">💡 엑셀(쿠팡→대리점): VAT포함 총액 / 계산(대리점→기사): 단가표 기준 공급가액 — 단가 차이는 대리점 마진</span><br>'
+        +'<span style="font-weight:500">엑셀: ₩'+fmt(excelTotal)+' / 계산(VAT포함): ₩'+fmt(taxBase)+' / <strong>차이: '+(taxBase-excelTotal>=0?'+':'')+fmt(taxBase-excelTotal)+'원</strong></span>';
     } else { banner.style.display='none'; }
   }
   var monthlyWage=Math.round(supplyAmt*0.654);
@@ -5731,7 +5747,9 @@ async function _ocrAnalyze(){
 다음 규칙을 반드시 따르세요:
 1. 사업자등록증 이미지에서 정보를 추출합니다.
 2. 만약 세금계산서(tax invoice)라면 반드시 왼쪽 "공급자" 칸의 정보만 추출하세요. 오른쪽 "공급받는자" 칸은 절대 추출하지 마세요.
-3. 한글 문자를 정확히 인식하세요. 비슷한 글자 주의: ㅇ/ㅎ/ㅁ/ㄴ, 회/최/외, 이/아/이
+3. 한글 문자를 정확히 인식하세요. 비슷한 글자 주의: ㅂ/ㅁ(매우 중요), ㅇ/ㅎ, 회/화/최, 이/아
+   - '엠비티아이' '엠비티아이유한회사' 등 고유명사는 원문 그대로 인식
+   - ㅂ과 ㅁ을 혼동하지 마세요: 예) '엠'을 '엡'으로 쓰지 않기
 4. 사업자번호는 반드시 숫자와 하이픈만 포함 (예: 123-45-67890)
 5. 주소는 시/도부터 전체 주소 포함
 6. 업태와 종목이 여러 줄이면 전부 쉼표로 연결해 포함
@@ -5760,6 +5778,22 @@ async function _ocrAnalyze(){
     if(!jsonMatch) throw new Error('JSON 형식 응답 없음');
     var json=JSON.parse(jsonMatch[0]);
     var map={name:'edr-name',bizNum:'edr-biznum',bizName:'edr-bizname',bizRep:'edr-bizrep',bizAddr:'edr-bizaddr',bizType:'edr-biztype',bizItem:'edr-bizitem'};
+    // ★ OCR 한글 오류 후처리 (자주 틀리는 글자 교정)
+    function _fixOcrKorean(str){
+      if(!str) return str;
+      // 사업자 등록증에서 자주 발생하는 OCR 오류 교정
+      return str
+        .replace(/엡비티아이/g,'엠비티아이')  // ㅂ→ㅁ 오인식
+        .replace(/앱비티아이/g,'엠비티아이')
+        .replace(/유한회사/g,'유한회사')       // 정상
+        .replace(/주식화사/g,'주식회사')      // 회→화 오인식
+        .replace(/유한화사/g,'유한회사')
+        .replace(/([0-9]{3})-([0-9]{2})-([0-9]{5,6})/g, function(m,a,b,c){
+          return a+'-'+b+'-'+c.slice(0,5); // 사업자번호 정규화
+        });
+    }
+    // 모든 OCR 결과에 후처리 적용
+    Object.keys(json).forEach(k=>{ if(typeof json[k]==='string') json[k]=_fixOcrKorean(json[k]); });
     var filled=0;
     Object.keys(map).forEach(k=>{
       if(json[k]){var el=document.getElementById(map[k]);if(el){el.value=json[k];filled++;}}
