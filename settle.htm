@@ -1273,8 +1273,20 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           var dm=drvMap[cleanId];
           var tm=totalMap[cleanId]||{};
           var dmgInfo=dmgMap[cleanId]||{};
-          var drvObj=fbDrivers.find(function(d){return(d.userId||'').trim()===cleanId;})||{name:'',camp:dm.camp||''};
-          var drvName=drvObj.name||cleanId;  // 이름 없으면 ID로 표시
+          // ★ 이중검증 드라이버 매핑: coupangId → bizNum → 이름 순
+          var cleanIdLow=cleanId.toLowerCase();
+          var drvObj=fbDrivers.find(function(d){
+            // ① coupangId/userId 일치
+            var ids=[d.coupangId,d.userId,d.driverId].filter(Boolean)
+              .map(function(x){return String(x).trim().toLowerCase();});
+            if(ids.indexOf(cleanIdLow)>=0)return true;
+            // ② 이름 정규화 일치
+            var dnNorm=String(d.name||'').replace(/\s+/g,'').toLowerCase();
+            var cmNorm=String(dm.name||cleanId).replace(/\s+/g,'').toLowerCase();
+            if(dnNorm&&dnNorm===cmNorm)return true;
+            return false;
+          })||{name:'',camp:dm.camp||''};
+          var drvName=drvObj.name||dm.name||cleanId;
           // 분실파손
           var dmgAmt=dmgInfo.dmg||tm.dmgAmt||0;
           // 프레시백 회수금액
@@ -2639,6 +2651,29 @@ function _renderRosterTable(drivers,rosterData,weekDays,dNames,fmt){
   var orderedCamps=campOrder.filter(function(cp){return campGroups[cp];});
   Object.keys(campGroups).forEach(function(cp){if(!campGroups[cp]||orderedCamps.includes(cp))return;orderedCamps.push(cp);});
 
+  // ★ 날짜별 전체 취합 (모든 캠프 합산)
+  var dayTotal=weekDays.map(function(_,i){
+    var w=0,o=0;
+    drivers.forEach(function(d){
+      var e=rosterData[d.id]&&rosterData[d.id][i];
+      if(!e||e.status!=='off')w++;else o++;
+    });
+    return {work:w,off:o};
+  });
+  if(drivers.length>0){
+    html+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;padding:10px 12px;background:var(--bg2);border-radius:10px;border:1px solid var(--border)">';
+    html+='<span style="font-size:11px;font-weight:700;color:var(--text1);margin-right:4px">📊 전체</span>';
+    weekDays.forEach(function(d,i){
+      var col2=i===0?'#ef4444':i===6?'#3b82f6':'var(--text2)';
+      html+='<div style="text-align:center;min-width:52px;padding:4px 6px;background:var(--bg);border-radius:6px;border:1px solid var(--border)">'
+        +'<div style="font-size:10px;font-weight:700;color:'+col2+'">'+fmt(d)+'('+dNames[i]+')</div>'
+        +'<div style="font-size:10px;color:#10b981;font-weight:700">출근:'+dayTotal[i].work+'</div>'
+        +'<div style="font-size:10px;color:var(--text3)">휴무:'+dayTotal[i].off+'</div>'
+        +'</div>';
+    });
+    html+='</div>';
+  }
+
   orderedCamps.forEach(function(camp){
     var grp=campGroups[camp];if(!grp||!grp.length)return;
     var col=CCOL2[camp]||'#94a3b8';
@@ -2951,8 +2986,12 @@ function _importRosterExcel(input){
       var hdr=rows[0];
       var iDate=hdr.indexOf('업무일'),iCamp=hdr.indexOf('캠프명');
       var iName=hdr.indexOf('이름'),iId=hdr.indexOf('아이디');
+      var iVendor=hdr.indexOf('벤더명'),iBizNum=hdr.indexOf('사업자등록번호');
       var iWave=hdr.indexOf('웨이브'),iStatus=hdr.indexOf('업무상태'),iRotation=hdr.indexOf('회전'),iRoute=hdr.indexOf('업무라우트');
       if(iDate<0||iName<0||iStatus<0){toast('❌ 쿠팡 근무표 형식이 아닙니다');return;}
+      // ★ 회사명/사업자번호 추출 (첫 데이터 행)
+      var xlsVendor=iVendor>=0?String(rows[1][iVendor]||'').trim():'';
+      var xlsBizNum=iBizNum>=0?String(rows[1][iBizNum]||'').trim():'';
 
       // 날짜 파싱 → 해당 주 일요일 구하기
       var firstDateRaw=rows[1][iDate];
@@ -3004,18 +3043,29 @@ function _importRosterExcel(input){
       // Step1: 기존 기사 조회
       _db.collection('drivers').where('dealerId','==',cid).get()
       .then(function(snap){
-        // ★ coupangId(아이디)를 primary key로 - 이름/다양한 ID 모두 매핑
-        var existMap={}; // coupangId → {docId, name}
+        // ★ 다중 키 이중 검증 매핑
+        var existMap={};
         snap.forEach(function(doc){
           var d=doc.data();
-          // 쿠팡 ID 관련 모든 필드 체크
-          var ids=[d.coupangId,d.userId,d.driverId,d.loginId].filter(Boolean)
-            .map(function(x){return String(x).trim().toLowerCase();});
-          ids.forEach(function(uid){if(uid)existMap[uid]=doc.id;});
-          // 이름 정규화 (공백 제거, 소문자)
+          // ① 쿠팡 ID (가장 신뢰도 높음)
+          [d.coupangId,d.userId,d.driverId,d.loginId].filter(Boolean)
+            .forEach(function(x){
+              var k=String(x).trim().toLowerCase();
+              if(k)existMap[k]=doc.id;
+            });
+          // ② 사업자등록번호 (bizNum - 하이픈 제거)
+          if(d.bizNum){
+            var bn=String(d.bizNum).replace(/[^0-9]/g,'');
+            if(bn.length>=9)existMap['b:'+bn]=doc.id;
+          }
+          // ③ 이름 정규화
           if(d.name){
-            var nm=String(d.name).replace(/\s/g,'').toLowerCase();
+            var nm=String(d.name).trim().replace(/\s+/g,'').toLowerCase();
             existMap['n:'+nm]=doc.id;
+            // ④ 이름+캠프 복합키 (동명이인 구분)
+            if(d.camp){
+              existMap['nc:'+nm+'@'+String(d.camp).replace('캠프','').trim()]=doc.id;
+            }
           }
         });
 
@@ -3029,8 +3079,11 @@ function _importRosterExcel(input){
           var nmNorm=nm.replace(/\s/g,'').toLowerCase();
           if(!uid&&!nm)return Promise.resolve();
 
-          // ★ coupangId 우선, 이름 정규화 fallback
-          var docId=existMap[uidLow]||(nmNorm?existMap['n:'+nmNorm]:null);
+          // ★ 다중 키 우선순위: coupangId > 이름+캠프 복합 > 이름 단독
+          var campKey=nmNorm+'@'+campShort;
+          var docId=existMap[uidLow]
+            ||existMap['nc:'+campKey]
+            ||(nmNorm?existMap['n:'+nmNorm]:null);
           var campShort=String(drv.camp||'').replace('캠프','').trim();
           var wv=drv.wave||((cfg2[campShort]||cfg2[drv.camp]||{}).wave||'');
 
@@ -3044,6 +3097,7 @@ function _importRosterExcel(input){
             }).then(function(){
               existMap[uidLow]=docId;
               existMap['n:'+nmNorm]=docId;
+              existMap['nc:'+campKey]=docId;
             }).catch(function(e){console.warn('upd:'+nm,e.message);});
           }else{
             newCount++;
@@ -3057,6 +3111,7 @@ function _importRosterExcel(input){
             }).then(function(ref){
               existMap[uidLow]=ref.id;
               existMap['n:'+nmNorm]=ref.id;
+              existMap['nc:'+campKey]=ref.id;
             }).catch(function(e){console.warn('add:'+nm,e.message);});
           }
         });
@@ -3101,8 +3156,20 @@ function _importRosterExcel(input){
       })
       .then(function(){
         window._rosterWeekStart=weekSun;
-        // 기사목록 캐시 초기화 → 재로드
         window._rosterDrivers=null;
+        // ★ 회사명/사업자번호 자동 등록
+        if(xlsVendor&&_db&&_CU){
+          var cidU=_CU.dealerId||_CU.companyId;
+          var compUpdate={rosterUploaded:true,lastRosterAt:new Date().toISOString()};
+          // 벤더명에서 슬래시 앞 한글 이름만 추출 (예: "엠비티아이 유한회사/MBTIU" → "엠비티아이 유한회사")
+          var vendKo=xlsVendor.split('/')[0].trim();
+          if(vendKo)compUpdate.companyName=vendKo;
+          if(xlsBizNum)compUpdate.bizNumber=xlsBizNum;
+          _db.collection('companies').doc(cidU).update(compUpdate).catch(function(){});
+          // _CU 메모리 업데이트
+          if(vendKo&&_CU)_CU.companyName=vendKo;
+          if(xlsBizNum&&_CU)_CU.bizNumber=xlsBizNum;
+        }
         toast('✅ 기사 '+uniqueDrivers.length+'명 + 근무표 '+toSave.length+'건 자동 등록 완료!');
         _loadRoster();
       }).catch(function(e){toast('❌ 저장 실패: '+e.message);});
@@ -4064,15 +4131,48 @@ function pageSettlements(){
   if(!_db){c.innerHTML='<div class="empty"><div class="empty-icon">🔐</div>로그인 후 이용하세요</div>';return;}
   c.innerHTML='<div class="loading">로딩 중...</div>';
   if(_settleCache){_renderSettlePage(_settleCache,c);return;}
-  _db.collection('settlements').where('dealerId','==',_CU.dealerId)
-    .get()
-    .then(function(snap){
-      _settleCache=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
-      _settleCache.sort(function(a,b){return (b.month||'').localeCompare(a.month||'');});
-      // ★ Firestore → localStorage 강제 동기화 (삭제 시 캐시 정리)
-      lss('settlements',_settleCache);
-      _renderSettlePage(_settleCache,c);
-    }).catch(function(e){logError('정산관리',e.message);c.innerHTML='<div class="empty">⚠️ '+e.message+'</div>';});
+  var cid2=_CU.dealerId||_CU.companyId;
+  // ★ 정산 + 등록 기사 동시 로드
+  Promise.all([
+    _db.collection('settlements').where('dealerId','==',cid2).get(),
+    _db.collection('drivers').where('dealerId','==',cid2).where('is_active','!=',false).get()
+  ]).then(function(results){
+    _settleCache=results[0].docs.map(function(d){return Object.assign({id:d.id},d.data());});
+    _settleCache.sort(function(a,b){return (b.month||'').localeCompare(a.month||'');});
+
+    // ★ 등록된 기사 중 이번달 정산 없는 기사 → 미정산으로 추가
+    var curMonth=new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0');
+    var settledUsers=new Set(_settleCache.filter(function(s){return s.month===curMonth;}).map(function(s){return s.userId||s.driver;}));
+    results[1].docs.forEach(function(doc){
+      var d=doc.data();
+      if(d.status==='pending')return;
+      var uid=d.userId||d.coupangId||'';
+      var nm=d.name||'';
+      if(!uid&&!nm)return;
+      var isSettled=settledUsers.has(uid)||settledUsers.has(nm);
+      if(!isSettled){
+        // 미정산 기사 → 정산 목록에 추가 (읽기 전용 표시용)
+        _settleCache.push({
+          id:'__driver__'+doc.id,
+          driver:nm,userId:uid,
+          camp:d.camp||'',month:curMonth,
+          totalAmt:0,net:0,status:'미등록',
+          _driverOnly:true // 정산 미등록 플래그
+        });
+      }
+    });
+    lss('settlements',_settleCache.filter(function(s){return !s._driverOnly;}));
+    _renderSettlePage(_settleCache,c);
+  }).catch(function(e){
+    // fallback: 정산만 로드
+    _db.collection('settlements').where('dealerId','==',cid2).get()
+      .then(function(snap){
+        _settleCache=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
+        _settleCache.sort(function(a,b){return (b.month||'').localeCompare(a.month||'');});
+        lss('settlements',_settleCache);
+        _renderSettlePage(_settleCache,c);
+      }).catch(function(e2){c.innerHTML='<div class="empty">⚠️ '+e2.message+'</div>';});
+  });
 }
 function _reloadSettlePage(){_settleCache=null;pageSettlements();}
 function toggleSettleMore(btn){
@@ -4189,6 +4289,20 @@ function appSettle(id){
 // ══ 정산서 작성/편집 모달 ══
 function _settleRow(x){
   if(!x)return '';
+  // ★ 미등록 기사 (roster에서 자동 추가된 기사) - 간소화 행
+  if(x._driverOnly){
+    var nm=esc(x.driver||x.userId||'');
+    var campCC=x.camp||'기타';
+    var col=_campColor(campCC)||'var(--purple)';
+    return '<tr style="opacity:0.6">'+
+      '<td><strong>'+nm+'</strong><br><small style="color:var(--text3);font-size:10px">근무표 등록됨</small></td>'+
+      '<td>'+_makeCampBadge(campCC)+'</td>'+
+      '<td>'+esc(x.month||'')+'</td>'+
+      '<td colspan="3" style="text-align:center;color:var(--text3);font-size:11px">정산 미등록</td>'+
+      '<td><span class="badge b-wait">미등록</span></td>'+
+      '<td><button class="btn btn-sm btn-blue" onclick="openSE(\'\')">+ 정산 작성</button></td>'+
+      '</tr>';
+  }
   var r=calcNet(x);
   var net=r.net||0;
   var vatIncome=r.totalAmt||0;  // ★ 기사 세금계산서 합계 (RPRICE 기반)
@@ -5624,6 +5738,24 @@ function _saveSECurrent(){
     :_db.collection('settlements').add(Object.assign(payload,{createdAt:new Date().toISOString()}));
   p.then(function(){
     toast('✅ 저장완료 nocont:'+nocont+' fresh:'+fresh);
+    // ★ bizNum이 있으면 driver 프로필에도 사업자번호 연동 (이중검증 데이터 축적)
+    if(bizNum&&driver&&_db&&_CU){
+      var cid3=_CU.dealerId||_CU.companyId;
+      _db.collection('drivers')
+        .where('dealerId','==',cid3)
+        .where('userId','==',payload.userId||driver)
+        .limit(1).get()
+        .then(function(snap){
+          if(!snap.empty){
+            var bnClean=bizNum.replace(/[^0-9]/g,'');
+            snap.docs[0].ref.update({
+              bizNum:bizNum,bizNumClean:bnClean,
+              bizName:bizName||'',bizRep:bizRep||'',
+              updatedAt:new Date().toISOString()
+            }).catch(function(){});
+          }
+        }).catch(function(){});
+    }
     var mo=document.getElementById('mo-se');if(mo)mo.remove();
     try{var d2=_CU&&_CU.dealerId||'shared';
       localStorage.removeItem('dw_'+d2+'_settlements');
