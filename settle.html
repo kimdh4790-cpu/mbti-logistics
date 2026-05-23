@@ -4,7 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#185FA5">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DONWAY">
+<meta name="application-name" content="DONWAY">
+<meta name="msapplication-TileColor" content="#185FA5">
+<meta name="msapplication-TileImage" content="/icon-192.png">
 <title>DONWAY — 자동화 정산 플랫폼</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon.ico">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
@@ -162,6 +172,11 @@ tr:hover>td{background:var(--bg3)}
             <div style="font-size:12px;font-weight:700;color:var(--text2)">풀패키지</div>
             <div style="font-size:10px;color:var(--text3);margin-top:2px">전체 기능</div>
           </label>
+          <label id="svc-hourly-label" onclick="selectService('hourly')" style="flex:1;border:2px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;text-align:center;transition:.2s">
+            <div style="font-size:20px;margin-bottom:4px">⏰</div>
+            <div style="font-size:12px;font-weight:700;color:var(--text2)">급여 관리</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:2px">시급·일급·월급</div>
+          </label>
         </div>
         <input type="hidden" id="r-service" value="settle">
       </div>
@@ -269,6 +284,116 @@ var DEFAULT_UNIT_PRICES = {
 // 런타임 단가 (Firestore 로드 후 업데이트)
 var G_PRICES = Object.assign({}, DEFAULT_UNIT_PRICES);
 
+
+// ════════════════════════════════════════════════════════
+// ★★★ DONWAY 지능형 배차 엔진 v1.0 (특허 출원) ★★★
+// ════════════════════════════════════════════════════════
+// 특허출원: 10-2026-0093157 (지능형배차)
+
+var DISPATCH_CONFIG = {
+  maxDailyDeliveries: 200,  // 기사 1인 최대 배송건수
+  maxRoutePerDriver:  3,    // 기사 1인 최대 라우트 수
+  waveOrder: ['WAVE1','WAVE2','WAVE3'], // 웨이브 우선순위
+};
+
+// ════════════════════════════════════════
+// ★ 배차 점수 계산 공식
+//   Score = (배송효율 × 0.4) + (거리효율 × 0.3) +
+//           (경험점수 × 0.2) + (부하균형 × 0.1)
+// ════════════════════════════════════════
+function calcDispatchScore(driver, route, context) {
+  // driver: { id, name, camp, currentLoad, totalDeliveries, experience }
+  // route:  { id, camp, wave, expectedCount }
+  // context: { allDrivers, campRoutes }
+
+  // 1. 배송효율: 같은 캠프 기사 우선
+  var campMatch = (driver.camp === route.camp) ? 100 : 50;
+
+  // 2. 거리효율: 현재 라우트와의 근접도 (캠프 기준)
+  var distScore = campMatch;
+
+  // 3. 경험점수: 해당 라우트 과거 배송 경험
+  var expScore = Math.min(100, (driver.routeExp && driver.routeExp[route.id] || 0) * 10);
+
+  // 4. 부하균형: 현재 배송량이 적을수록 높은 점수
+  var loadScore = Math.max(0, 100 - Math.round((driver.currentLoad || 0) / DISPATCH_CONFIG.maxDailyDeliveries * 100));
+
+  // 5. 가중 합산
+  var score = (campMatch  * 0.4)
+            + (distScore  * 0.3)
+            + (expScore   * 0.2)
+            + (loadScore  * 0.1);
+
+  return {
+    score: Math.round(score * 10) / 10,
+    breakdown: { campMatch, distScore, expScore, loadScore }
+  };
+}
+
+// ════════════════════════════════════════
+// ★ 라우트 → 기사 자동 배정
+// ════════════════════════════════════════
+function autoDispatch(routes, drivers, options) {
+  // routes: [{ id, camp, wave, expectedCount }]
+  // drivers: [{ id, name, camp, currentLoad, routeExp }]
+  // options: { priorityWave, balanceLoad }
+
+  var result = {}; // routeId → driverId
+  var driverLoad = {}; // driverId → 배정 라우트 수
+  drivers.forEach(function(d){ driverLoad[d.id] = 0; });
+
+  // 웨이브별 정렬 (우선 배차)
+  var sortedRoutes = routes.slice().sort(function(a,b){
+    var ai = DISPATCH_CONFIG.waveOrder.indexOf(a.wave);
+    var bi = DISPATCH_CONFIG.waveOrder.indexOf(b.wave);
+    return ai - bi;
+  });
+
+  sortedRoutes.forEach(function(route) {
+    // 해당 라우트에 배정 가능한 기사 필터
+    var eligible = drivers.filter(function(d){
+      return driverLoad[d.id] < DISPATCH_CONFIG.maxRoutePerDriver;
+    });
+
+    if(!eligible.length) return;
+
+    // 점수 계산 후 최고 점수 기사 배정
+    var scored = eligible.map(function(d){
+      var s = calcDispatchScore(d, route, { allDrivers: drivers });
+      return { driver: d, score: s.score, breakdown: s.breakdown };
+    }).sort(function(a,b){ return b.score - a.score; });
+
+    var best = scored[0];
+    result[route.id] = {
+      driverId: best.driver.id,
+      driverName: best.driver.name,
+      score: best.score,
+      breakdown: best.breakdown
+    };
+    driverLoad[best.driver.id]++;
+  });
+
+  return result;
+}
+
+// ════════════════════════════════════════
+// ★ 배차 균형 검사
+// ════════════════════════════════════════
+function checkDispatchBalance(dispatchResult, drivers) {
+  var loadMap = {};
+  drivers.forEach(function(d){ loadMap[d.id] = 0; });
+  Object.values(dispatchResult).forEach(function(r){
+    if(r.driverId) loadMap[r.driverId] = (loadMap[r.driverId]||0) + 1;
+  });
+
+  var counts = Object.values(loadMap);
+  var avg = counts.reduce(function(s,v){return s+v;},0) / counts.length;
+  var max = Math.max.apply(null, counts);
+  var min = Math.min.apply(null, counts);
+  var balance = max > 0 ? Math.round((1 - (max-min)/max) * 100) : 100;
+
+  return { avg: Math.round(avg*10)/10, max, min, balance, loadMap };
+}
 
 /* ── 회사 슬러그 모드 ── */
 var _companySlug = window._COMPANY_SLUG || null;
@@ -402,6 +527,172 @@ function _updateSidebarBrand(cn){
   }
   var slVer = document.querySelector('.sl-ver');
   if(slVer) slVer.textContent = '돈의 방향';
+}
+
+// ════════════════════════════════════════════════════════
+// ★★★ DONWAY 범용 정산 엔진 v1.0 (2026 법정기준) ★★★
+// ════════════════════════════════════════════════════════
+
+// ── 2026 법정 상수 ──
+var LABOR_LAW_2026 = {
+  minWage:      10320,     // 2026 최저시급 (원/시간)
+  minDaily:     82560,     // 최저일급 (10,320 × 8시간)
+  minMonthly:   2156880,   // 최저월급 (10,320 × 209시간)
+  overtimeRate: 1.5,       // 연장근로수당 (8시간 초과)
+  nightRate:    0.5,       // 야간근로 추가율 (22:00~06:00)
+  holidayRate:  1.5,       // 휴일근로수당
+  nightStart:   22,        // 야간 시작 시각
+  nightEnd:     6,         // 야간 종료 시각
+  weeklyMaxH:   40,        // 주 법정근로시간
+  dailyMaxH:    8,         // 일 법정근로시간
+  // 주휴수당: 1주 15시간 이상 근무 시 1일분 지급
+  juhuMin:      15,        // 주휴수당 최소 근무시간
+};
+
+// ── 업종 타입 ──
+var WORK_TYPES = {
+  hourly:    { label:'시급제',   icon:'⏰', unit:'시간당' },
+  daily:     { label:'일급제',   icon:'📅', unit:'1일당' },
+  monthly:   { label:'월급제',   icon:'💼', unit:'월정액' },
+  delivery:  { label:'건당(배송)',icon:'📦', unit:'건당'  },
+  commission:{ label:'수수료제', icon:'💰', unit:'매출×%' }
+};
+
+// ════════════════════════════════════════
+// ★ 핵심 함수: 야간시간 계산
+// ════════════════════════════════════════
+function calcNightHours(startH, endH) {
+  // startH, endH: 시각 (0~24)
+  // 야간 = 22:00~06:00
+  var nightH = 0;
+  var s = startH, e = endH;
+  if(e < s) e += 24; // 자정 넘김
+  for(var h = s; h < e; h++) {
+    var hh = h % 24;
+    if(hh >= 22 || hh < 6) nightH++;
+  }
+  return nightH;
+}
+
+// ════════════════════════════════════════
+// ★ 시급제 정산 계산
+// ════════════════════════════════════════
+function calcHourlyPay(params) {
+  // params: { totalHours, hourlyRate, startH, endH, isHoliday, juhuHours }
+  var L = LABOR_LAW_2026;
+  var rate = params.hourlyRate || L.minWage;
+  var total = params.totalHours || 0;
+  var nightH = (params.startH !== undefined && params.endH !== undefined)
+    ? calcNightHours(params.startH, params.endH) : 0;
+
+  // 기본 / 연장 구분
+  var regularH = Math.min(total, L.dailyMaxH);
+  var overtimeH = Math.max(0, total - L.dailyMaxH);
+
+  var regularPay  = regularH  * rate;
+  var overtimePay = overtimeH * rate * (L.overtimeRate - 1); // 0.5 추가분
+  var nightPay    = nightH    * rate * L.nightRate;          // 0.5 추가분
+  var holidayPay  = params.isHoliday ? regularPay * (L.holidayRate - 1) : 0;
+
+  // 주휴수당
+  var juhuPay = 0;
+  if((params.juhuHours || 0) >= L.juhuMin) {
+    juhuPay = L.dailyMaxH * rate; // 1일분
+  }
+
+  var totalPay = regularPay + overtimePay + nightPay + holidayPay + juhuPay;
+  return {
+    regularH, overtimeH, nightH,
+    regularPay, overtimePay, nightPay, holidayPay, juhuPay,
+    totalPay,
+    breakdown: {
+      '기본급': regularPay,
+      '연장수당': overtimePay,
+      '야간수당': nightPay,
+      '휴일수당': holidayPay,
+      '주휴수당': juhuPay
+    }
+  };
+}
+
+// ════════════════════════════════════════
+// ★ QR 출퇴근 → 근무시간 계산
+// ════════════════════════════════════════
+function calcWorkHoursFromQR(checkIn, checkOut) {
+  // checkIn/Out: "HH:MM" 또는 timestamp
+  if(!checkIn || !checkOut) return { hours:0, nightH:0, startH:0, endH:0 };
+  var parseT = function(t) {
+    if(typeof t === 'string' && t.includes(':')) {
+      var p = t.split(':');
+      return parseFloat(p[0]) + parseFloat(p[1])/60;
+    }
+    return 0;
+  };
+  var s = parseT(checkIn);
+  var e = parseT(checkOut);
+  if(e < s) e += 24; // 자정 넘김
+  var hours = Math.max(0, e - s - 0.5); // 30분 휴게 자동 차감 (4시간 이상 시)
+  if(e - s < 4) hours = e - s;
+  var nightH = calcNightHours(Math.floor(s), Math.ceil(e));
+  return { hours: Math.round(hours * 10)/10, nightH, startH: s, endH: e };
+}
+
+// ════════════════════════════════════════
+// ★ 일급제 정산
+// ════════════════════════════════════════
+function calcDailyPay(params) {
+  var L = LABOR_LAW_2026;
+  var dailyRate = params.dailyRate || L.minDaily;
+  var days = params.workDays || 0;
+  var isHoliday = params.holidayDays || 0;
+
+  var normalPay  = (days - isHoliday) * dailyRate;
+  var holidayPay = isHoliday * dailyRate * L.holidayRate;
+  var totalPay   = normalPay + holidayPay;
+
+  return { days, normalPay, holidayPay, totalPay,
+    breakdown: { '일급': normalPay, '휴일수당': holidayPay }
+  };
+}
+
+// ════════════════════════════════════════
+// ★ 수수료제 정산
+// ════════════════════════════════════════
+function calcCommissionPay(params) {
+  var sales       = params.salesAmount || 0;
+  var rate        = (params.commissionRate || 0) / 100;
+  var baseGuarantee = params.baseGuarantee || 0;
+  var commission  = Math.round(sales * rate);
+  var totalPay    = Math.max(commission, baseGuarantee); // 최저보장액
+
+  return { sales, commission, baseGuarantee, totalPay,
+    breakdown: { '수수료': commission, '최저보장': baseGuarantee > commission ? baseGuarantee - commission : 0 }
+  };
+}
+
+// ════════════════════════════════════════
+// ★ 주급/월급 주휴수당 자동 계산
+// ════════════════════════════════════════
+function calcJuhuSudang(weeklyHours, hourlyRate) {
+  var L = LABOR_LAW_2026;
+  if(weeklyHours < L.juhuMin) return 0;
+  var rate = hourlyRate || L.minWage;
+  return L.dailyMaxH * rate; // 1일분 지급
+}
+
+// ════════════════════════════════════════
+// ★ 최저임금 위반 체크
+// ════════════════════════════════════════
+function checkMinWage(totalPay, totalHours) {
+  var L = LABOR_LAW_2026;
+  var effective = totalHours > 0 ? Math.round(totalPay / totalHours) : 0;
+  var violation = effective < L.minWage;
+  return {
+    effectiveRate: effective,
+    minRequired: L.minWage * totalHours,
+    violation: violation,
+    shortage: violation ? Math.max(0, L.minWage * totalHours - totalPay) : 0
+  };
 }
 
 var RPRICE = {};
@@ -1386,6 +1677,7 @@ function showApp(){
     var sType = _CU.serviceType||'full';
     if(sType==='settle') MENUS=MENUS_SETTLE;
     else if(sType==='qr') MENUS=MENUS_QR;
+    else if(sType==='hourly') MENUS=MENUS_HOURLY;  // ★ 소상공인/사장님 전용
     else MENUS=MENUS_FULL;
   }
   buildNav();
@@ -1498,7 +1790,7 @@ function generateCompanyCode(){
 // ── 회사 등록 ──
 
 function selectService(type){
-  ['settle','qr','full'].forEach(function(t){
+  ['settle','qr','full','hourly'].forEach(function(t){
     var el=document.getElementById('svc-'+t+'-label');
     if(!el) return;
     if(t===type){
@@ -1689,7 +1981,27 @@ function doLogin(){
   var pw=document.getElementById('l-pw').value;
   var err=document.getElementById('l-err');err.style.display='none';
   if(!email||!pw){err.textContent='이메일과 비밀번호를 입력하세요';err.style.display='block';return;}
-  _auth.signInWithEmailAndPassword(email,pw).catch(function(e){err.textContent='로그인 실패: '+e.message;err.style.display='block';});
+  // Firebase 아직 로딩 중이면 잠시 대기 후 재시도
+  if(!_auth){
+    err.textContent='잠시 후 다시 시도하세요 (초기화 중...)';err.style.display='block';
+    initFirebase();
+    setTimeout(doLogin, 800);
+    return;
+  }
+  var btn=document.querySelector('.login-submit-btn');
+  if(btn){btn.disabled=true;btn.textContent='로그인 중...';}
+  _auth.signInWithEmailAndPassword(email,pw)
+    .catch(function(e){
+      if(btn){btn.disabled=false;btn.textContent='로그인';}
+      var msg={
+        'auth/user-not-found':'등록되지 않은 이메일입니다',
+        'auth/wrong-password':'비밀번호가 올바르지 않습니다',
+        'auth/invalid-email':'올바른 이메일 형식이 아닙니다',
+        'auth/too-many-requests':'잠시 후 다시 시도하세요'
+      };
+      err.textContent=msg[e.code]||('로그인 실패: '+e.message);
+      err.style.display='block';
+    });
 }
 function doLogout(){
   sessionStorage.removeItem('donway_auth_token');
@@ -2398,7 +2710,43 @@ function _calDeleteMemo(btn){
 
 // ══ 출퇴근 (QR 전용) ══
 function pageAttendance(){
-  document.getElementById('content').innerHTML='<div class="empty"><div class="empty-icon">🔐</div>출퇴근 현황<br><div style="font-size:12px;color:var(--text3);margin-top:8px">QR 출퇴근 서비스 전용 기능입니다</div></div>';
+  var el=document.getElementById('content');
+  if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
+  var did=_CU.dealerId;
+  var today=new Date().toISOString().slice(0,10);
+  el.innerHTML='<div style="max-width:700px;margin:0 auto">'
+    +'<div class="card" style="margin-bottom:12px">'
+    +'<div class="card-title" style="margin-bottom:12px">🔐 오늘 출퇴근 현황 <span style="font-size:11px;color:var(--text3);font-weight:400">'+today+'</span></div>'
+    +'<div id="att-list"><div class="empty"><div class="empty-icon">⏳</div>로딩 중...</div></div>'
+    +'</div></div>';
+  _db.collection('attendance')
+    .where('dealerId','==',did)
+    .where('date','==',today)
+    .orderBy('checkIn','asc').limit(100).get()
+  .then(function(snap){
+    var html='<table style="width:100%;border-collapse:collapse;font-size:12px">'
+      +'<tr style="background:var(--bg3)"><th style="padding:8px;text-align:left">직원</th>'
+      +'<th style="padding:8px">출근</th><th style="padding:8px">퇴근</th>'
+      +'<th style="padding:8px">근무시간</th><th style="padding:8px">야간</th></tr>';
+    var rows='';
+    snap.forEach(function(doc){
+      var d=doc.data();
+      var qr=calcWorkHoursFromQR(d.checkIn||'',d.checkOut||'');
+      var hasOut=!!d.checkOut;
+      rows+='<tr style="border-bottom:1px solid var(--border)">'
+        +'<td style="padding:8px;font-weight:700">'+esc(d.driverName||d.userId||'')+'</td>'
+        +'<td style="padding:8px;text-align:center;color:var(--green)">'+esc(d.checkIn||'-')+'</td>'
+        +'<td style="padding:8px;text-align:center;color:'+(hasOut?'var(--text2)':'var(--orange)')+'">'+esc(d.checkOut||'근무중')+'</td>'
+        +'<td style="padding:8px;text-align:center">'+Math.round(qr.hours*10)/10+'h</td>'
+        +'<td style="padding:8px;text-align:center;color:var(--purple)">'+Math.round(qr.nightH*10)/10+'h</td>'
+        +'</tr>';
+    });
+    if(!rows)rows='<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text3)">오늘 출퇴근 기록 없음</td></tr>';
+    html+=rows+'</table>';
+    document.getElementById('att-list').innerHTML=html;
+  }).catch(function(e){
+    document.getElementById('att-list').innerHTML='<div class="empty">'+esc(e.message)+'</div>';
+  });
 }
 
 // ══ 기사 전용: 내 정산 현황 ══
@@ -2482,6 +2830,7 @@ var MENUS_SETTLE = [
   {s:'메인',items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'📋',l:'정산 관리',p:'settlements'}]},
   {s:'운영',items:[{ic:'👤',l:'기사 관리',p:'drivers'},{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'📅',l:'시즌 단가표',p:'season'}]},
   {s:'분석',items:[{ic:'📈',l:'통계',p:'stats'}]},
+  {s:'정산',items:[{ic:'⏰',l:'시급·일급 정산',p:'hourly_settle'},{ic:'🚗',l:'배차 관리',p:'dispatch'}]},
   {s:'설정',items:[{ic:'🏭',l:'캠프 관리',p:'camps'},{ic:'📝',l:'위수탁 계약서',p:'contract'},{ic:'📅',l:'달력',p:'schedule'},{ic:'🗓',l:'근무표',p:'roster'}]},
   {s:'커뮤니티',items:[{ic:'📢',l:'관리자 공지',p:'notices'}]}
 ];
@@ -2497,6 +2846,13 @@ var MENUS_FULL = [
   {s:'운영',items:[{ic:'👤',l:'기사/직원',p:'drivers'},{ic:'📅',l:'달력',p:'schedule'}]},
   {s:'설정',items:[{ic:'🏭',l:'캠프 관리',p:'camps'},{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'📝',l:'위수탁 계약서',p:'contract'},{ic:'🗓',l:'근무표',p:'roster'}]},
   {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices'}]}
+];
+// ★ 소상공인/사장님 전용 (시급·일급·월급 정산)
+var MENUS_HOURLY = [
+  {s:'메인',items:[{ic:'📊',l:'급여 현황',p:'hourly_settle'},{ic:'🔐',l:'출퇴근 현황',p:'attendance'}]},
+  {s:'직원',items:[{ic:'👤',l:'직원 관리',p:'drivers'},{ic:'🗓',l:'근무표',p:'roster'}]},
+  {s:'분석',items:[{ic:'📈',l:'통계',p:'stats'}]},
+  {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices'},{ic:'📅',l:'달력',p:'schedule'}]}
 ];
 // 기사/직원 전용 (본인 정산만)
 var MENUS_DRIVER = [
@@ -2675,7 +3031,7 @@ function goPage(page){
   var nav=document.getElementById('nav-'+page);if(nav)nav.classList.add('on');
   document.getElementById('topbar-right').innerHTML='';
   document.getElementById('sidebar').classList.remove('open');
-  var pages={settle:pageSettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,roster:pageRoster,camps:pageCamps};
+  var pages={settle:pageSettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch};
   var fn=pages[page];
   if(fn)fn();
   else document.getElementById('content').innerHTML='<div class="empty"><div class="empty-icon">🚧</div>준비 중</div>';
@@ -4835,6 +5191,30 @@ function editDriver(id){
       +'<div class="fg"><label>상태</label><select id="edr-active"><option value="true" '+(d.is_active!==false?'selected':'')+'>재직</option><option value="false" '+(d.is_active===false?'selected':'')+'>퇴직</option></select></div></div>'
       +'<div class="gr"><div class="fg"><label>연락처</label><input id="edr-phone" value="'+esc(d.phone||'')+'"></div>'
       +'<div class="fg"><label>이메일</label><input id="edr-email" type="email" value="'+esc(d.email||d.driverEmail||'')+'"></div></div>'
+      // ── 근무 타입 (시급/일급/수수료/쿠팡)
+      +'<div style="border-top:1px dashed var(--border);margin:8px 0;padding-top:8px">'
+      +'<div style="font-size:11px;font-weight:800;color:var(--text2);margin-bottom:8px">💼 급여 설정</div>'
+      +'<div class="fg"><label>근무 타입</label>'
+      +'<select id="edr-worktype" onchange="_hwToggleRateFields(this.value)">'
+      +'<option value="coupang" '+((!d.workType||d.workType==="coupang")?"selected":"")+'>📦 쿠팡 기사 (건당)</option>'
+      +'<option value="hourly" '+(d.workType==="hourly"?"selected":"")+'>⏰ 시급제</option>'
+      +'<option value="daily" '+(d.workType==="daily"?"selected":"")+'>📅 일급제</option>'
+      +'<option value="commission" '+(d.workType==="commission"?"selected":"")+'>💰 수수료제</option>'
+      +'<option value="monthly" '+(d.workType==="monthly"?"selected":"")+'>💼 월급제</option>'
+      +'</select></div>'
+      +'<div class="gr" id="edr-rate-fields" style="'+((!d.workType||d.workType==="coupang")?"display:none":"")+'">'
+      +'<div class="fg" id="edr-hourly-f" style="'+(d.workType!=="hourly"?"display:none":"")+'">'
+      +'<label>시급 (원)</label><input id="edr-hourlyrate" type="number" value="'+(d.hourlyRate||10320)+'" min="10320"></div>'
+      +'<div class="fg" id="edr-daily-f" style="'+(d.workType!=="daily"?"display:none":"")+'">'
+      +'<label>일급 (원)</label><input id="edr-dailyrate" type="number" value="'+(d.dailyRate||82560)+'"></div>'
+      +'<div class="fg" id="edr-comm-f" style="'+(d.workType!=="commission"?"display:none":"")+'">'
+      +'<label>수수료율 (%)</label><input id="edr-commrate" type="number" value="'+(d.commissionRate||10)+'" step="0.1" min="0" max="100"></div>'
+      +'<div class="fg" id="edr-monthly-f" style="'+(d.workType!=="monthly"?"display:none":"")+'">'
+      +'<label>월 기본급 (원)</label><input id="edr-monthlyrate" type="number" value="'+(d.monthlyRate||2156880)+'"></div>'
+      +'<div class="fg" id="edr-guarantee-f" style="'+(d.workType!=="commission"?"display:none":"")+'">'
+      +'<label>최저보장액 (원)</label><input id="edr-guarantee" type="number" value="'+(d.baseGuarantee||0)+'"></div>'
+      +'</div>'
+      +'</div>'
       +'<div style="border-top:1px dashed var(--border);margin:8px 0;padding-top:8px">'
       +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
       +'<span style="font-size:11px;font-weight:800;color:var(--text2)">📋 사업자 정보 (세금계산서용)</span>'
@@ -5109,7 +5489,13 @@ function saveDriver(id){
     bizRep:gvs('edr-bizrep')||'',
     bizAddr:gvs('edr-bizaddr')||'',
     bizType:gvs('edr-biztype')||'',
-    bizItem:gvs('edr-bizitem')||''
+    bizItem:gvs('edr-bizitem')||'',
+    workType:gvs('edr-worktype')||'coupang',
+    hourlyRate:parseFloat(gvs('edr-hourlyrate'))||10320,
+    dailyRate:parseFloat(gvs('edr-dailyrate'))||82560,
+    commissionRate:parseFloat(gvs('edr-commrate'))||10,
+    monthlyRate:parseFloat(gvs('edr-monthlyrate'))||2156880,
+    baseGuarantee:parseFloat(gvs('edr-guarantee'))||0
   };
   _db.collection('drivers').doc(id).update(payload).then(function(){
     var mo=document.getElementById('mo-edit-dr');if(mo)mo.remove();
@@ -5552,6 +5938,525 @@ function confirmSubPay(planKey){
   if(!plan){toast('❌ 플랜 정보 없음');return;}
   var mo=document.getElementById('mo-sub');if(mo)mo.remove();
   _tossPay(planKey, plan.amount);
+}
+
+// ════════════════════════════════════════════════════════
+// ★ 범용 정산 페이지 (시급/일급/수수료)
+// ════════════════════════════════════════════════════════
+function pageDispatch(){
+  document.getElementById('page-title').textContent='🚗 지능형 배차';
+  var el=document.getElementById('content');
+  if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
+
+  var drivers=window._rosterDrivers||[];
+  if(!drivers.length){
+    el.innerHTML='<div class="card"><div class="empty"><div class="empty-icon">🚗</div>'
+      +'<div>기사 데이터가 없습니다</div>'
+      +'<div style="font-size:11px;color:var(--text3);margin-top:6px">근무표 페이지에서 쿠팡 엑셀을 먼저 업로드하세요</div></div></div>';
+    return;
+  }
+
+  // RPRICE 기반 라우트 목록
+  var routes=Object.keys(RPRICE).map(function(r){
+    return{id:r,camp:_getRouteCamp(r)||'기타',wave:CAMP_CONFIG[_getRouteCamp(r)]&&CAMP_CONFIG[_getRouteCamp(r)].wave||'WAVE1',expectedCount:150};
+  });
+
+  var result=autoDispatch(routes, drivers.map(function(d){
+    return{id:d.id||d.driverId,name:d.name||d.id,camp:d.camp||'',currentLoad:0,routeExp:{}};
+  }), {});
+
+  var balance=checkDispatchBalance(result, drivers);
+
+  var html='<div style="max-width:700px;margin:0 auto">'
+    +'<div class="card" style="margin-bottom:12px">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
+    +'<div class="card-title">🚗 자동 배차 결과</div>'
+    +'<div style="font-size:12px">균형도 <span style="font-weight:800;color:var(--green)">'+balance.balance+'%</span></div>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">'
+    +'<div style="text-align:center;padding:10px;background:var(--bg3);border-radius:8px"><div style="font-size:18px;font-weight:800">'+routes.length+'</div><div style="font-size:11px;color:var(--text3)">총 라우트</div></div>'
+    +'<div style="text-align:center;padding:10px;background:var(--bg3);border-radius:8px"><div style="font-size:18px;font-weight:800">'+drivers.length+'</div><div style="font-size:11px;color:var(--text3)">배정 기사</div></div>'
+    +'<div style="text-align:center;padding:10px;background:var(--bg3);border-radius:8px"><div style="font-size:18px;font-weight:800">'+balance.avg+'</div><div style="font-size:11px;color:var(--text3)">평균 라우트/인</div></div>'
+    +'</div>'
+    +'<table class="tbl" style="width:100%"><thead><tr><th>라우트</th><th>캠프</th><th>웨이브</th><th>배정 기사</th><th>점수</th></tr></thead><tbody>';
+
+  Object.entries(result).forEach(function(e){
+    var routeId=e[0],info=e[1];
+    html+='<tr><td><b>'+routeId+'</b></td>'
+      +'<td>'+_makeCampBadge(_getRouteCamp(routeId)||'기타')+'</td>'
+      +'<td><span style="font-size:11px">'+( CAMP_CONFIG[_getRouteCamp(routeId)] ? CAMP_CONFIG[_getRouteCamp(routeId)].wave : '-')+'</span></td>'
+      +'<td><b>'+(info.driverName||'-')+'</b></td>'
+      +'<td><span style="color:var(--green);font-weight:700">'+(info.score||0)+'</span></td></tr>';
+  });
+
+  html+='</tbody></table></div></div>';
+  el.innerHTML=html;
+}
+
+function pageHourlySettle(){
+  // 서비스 타입에 따라 타이틀 변경
+  var _svcType=_CU&&_CU.serviceType||'';
+  var _pageTitle=(_svcType==='hourly')?'💼 급여 관리':'⏰ 시급·일급·수수료 정산';
+  document.getElementById('page-title').textContent=_pageTitle;
+  var tr=document.getElementById('topbar-right');
+  tr.innerHTML='';
+  var el=document.getElementById('content');
+  if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
+
+  var did=_CU.dealerId;
+  var now=new Date();
+  var curYM=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  var _selMonth=curYM;
+  var _workers=[]; // 직원 목록 (근무타입 있는 자)
+  var _attMap={};  // {userId: [{date,checkIn,checkOut}]}
+  var _results={}; // {userId: calcResult}
+
+  el.innerHTML='<div style="max-width:800px;margin:0 auto">'
+    +'<div class="card" style="margin-bottom:12px">'
+    +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">'
+    +'<select id="hs-month-sel" style="padding:8px 12px;border:1px solid var(--border);background:var(--bg2);color:var(--text1);border-radius:8px;font-size:13px;font-weight:700"></select>'
+    +'<button onclick="_hsLoad()" class="btn btn-blue">🔄 QR 데이터 불러오기</button>'
+    +'<button onclick="_hsSaveAll()" class="btn btn-teal" style="margin-left:auto">💾 전체 정산 저장</button>'
+    +'</div>'
+    +'<div style="font-size:11px;color:var(--text3)">QR 출퇴근 기록을 불러와 자동으로 급여를 계산합니다</div>'
+    +'</div>'
+    // 탭: 계산기 / QR 자동정산
+    +'<div style="display:flex;gap:6px;margin-bottom:12px">'
+    +'<button id="hs-tab-auto" onclick="_hsTabSwitch(this.dataset.t)" data-t="auto" class="btn btn-blue" style="font-size:12px">📱 QR 자동 정산</button>'
+    +'<button id="hs-tab-calc" onclick="_hsTabSwitch(this.dataset.t)" data-t="calc" class="btn" style="font-size:12px">🧮 수동 계산기</button>'
+    +'</div>'
+    +'<div id="hs-auto-area">'
+    +'<div id="hs-result-list"><div class="empty"><div class="empty-icon">📱</div>월 선택 후 QR 데이터 불러오기를 클릭하세요</div></div>'
+    +'</div>'
+    +'<div id="hs-calc-area" style="display:none">'
+    +'<div class="card"><div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">'
+    +Object.entries(WORK_TYPES).map(function(kv){
+      var k=kv[0],v=kv[1];
+      return '<button onclick="_hwTab(this,this.dataset.tab)" data-tab="'+k+'" class="btn btn-sm" '
+        +(k==='hourly'?'style="background:var(--brand);color:#fff;border-color:var(--brand)"':'')
+        +'>'+v.icon+' '+v.label+'</button>';
+    }).join('')
+    +'</div><div id="hw-calc-area">'+_hwRenderCalc('hourly')+'</div></div>'
+    +'</div>'
+    +'</div>';
+
+  // 월 선택 드롭다운 채우기
+  var sel=document.getElementById('hs-month-sel');
+  for(var i=0;i<12;i++){
+    var d2=new Date(now.getFullYear(),now.getMonth()-i,1);
+    var ym=d2.getFullYear()+'-'+String(d2.getMonth()+1).padStart(2,'0');
+    var opt=document.createElement('option');
+    opt.value=ym;opt.textContent=ym;
+    if(ym===curYM)opt.selected=true;
+    sel.appendChild(opt);
+  }
+  window._hsState={workers:_workers,attMap:_attMap,results:_results,did:did};
+}
+
+function _hsTabSwitch(tab){
+  document.getElementById('hs-auto-area').style.display=tab==='auto'?'':'none';
+  document.getElementById('hs-calc-area').style.display=tab==='calc'?'':'none';
+  var ab=document.getElementById('hs-tab-auto');
+  var cb=document.getElementById('hs-tab-calc');
+  if(ab){ab.className='btn '+(tab==='auto'?'btn-blue':'');}
+  if(cb){cb.className='btn '+(tab==='calc'?'btn-blue':'');}
+}
+
+// QR 데이터 불러오기 + 자동 계산
+function _hsLoad(){
+  if(!_db||!_CU)return;
+  var sel=document.getElementById('hs-month-sel');
+  var ym=sel?sel.value:'';
+  if(!ym)return;
+  var did=_CU.dealerId;
+  var listEl=document.getElementById('hs-result-list');
+  listEl.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">⏳ 로딩 중...</div>';
+
+  // 해당 월의 시작/끝 날짜
+  var parts=ym.split('-');
+  var yr=parseInt(parts[0]),mo=parseInt(parts[1]);
+  var dateFrom=ym+'-01';
+  var dateTo=ym+'-'+String(new Date(yr,mo,0).getDate()).padStart(2,'0');
+
+  Promise.all([
+    // 직원 목록 (workType 있는 자)
+    _db.collection('drivers').where('dealerId','==',did).get(),
+    // 출퇴근 기록 (해당 월)
+    _db.collection('attendance')
+      .where('dealerId','==',did)
+      .where('date','>=',dateFrom)
+      .where('date','<=',dateTo).get()
+  ]).then(function(results){
+    var drvSnap=results[0], attSnap=results[1];
+
+    // 직원 파싱
+    var workers=[];
+    drvSnap.forEach(function(doc){
+      var d=doc.data();
+      if(!d.workType||d.workType==='coupang') return; // 쿠팡 기사 제외
+      workers.push({
+        id:doc.id,
+        name:d.name||d.userId||'',
+        userId:d.userId||d.coupangId||'',
+        workType:d.workType||'hourly',
+        hourlyRate:d.hourlyRate||LABOR_LAW_2026.minWage,
+        dailyRate:d.dailyRate||LABOR_LAW_2026.minDaily,
+        commissionRate:d.commissionRate||10,
+        baseGuarantee:d.baseGuarantee||0,
+        camp:d.camp||''
+      });
+    });
+
+    // 출퇴근 파싱
+    var attMap={};
+    attSnap.forEach(function(doc){
+      var d=doc.data();
+      var uid=d.userId||d.driverId||d.driverName||'';
+      if(!uid)return;
+      if(!attMap[uid])attMap[uid]=[];
+      attMap[uid].push({
+        date:d.date||'',
+        checkIn:d.checkIn||d.check_in||'',
+        checkOut:d.checkOut||d.check_out||'',
+        isHoliday:d.isHoliday||false
+      });
+    });
+
+    window._hsState={workers:workers,attMap:attMap,did:did,ym:ym};
+    _hsRenderResults(workers, attMap, ym);
+  }).catch(function(e){
+    listEl.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div>'+esc(e.message)+'</div>';
+  });
+}
+
+// 결과 렌더링
+function _hsRenderResults(workers, attMap, ym){
+  var listEl=document.getElementById('hs-result-list');
+  if(!workers.length){
+    listEl.innerHTML='<div class="empty"><div class="empty-icon">👤</div>'
+      +'<div>기사 관리에서 근무 타입(시급/일급/수수료)을 등록하세요</div></div>';
+    return;
+  }
+
+  var html='';
+  var L=LABOR_LAW_2026;
+  var results={};
+
+  workers.forEach(function(w){
+    var records=attMap[w.userId]||attMap[w.name]||attMap[w.id]||[];
+    var totalH=0, nightH=0, overtimeH=0, workDays=0, holidayDays=0;
+
+    records.forEach(function(r){
+      if(!r.checkIn||!r.checkOut)return;
+      var qr=calcWorkHoursFromQR(r.checkIn,r.checkOut);
+      totalH+=qr.hours;
+      nightH+=qr.nightH;
+      if(qr.hours>L.dailyMaxH)overtimeH+=qr.hours-L.dailyMaxH;
+      workDays++;
+      if(r.isHoliday)holidayDays++;
+    });
+
+    // 주간 근무시간 (월 근무시간 / 4.33주)
+    var weeklyH=Math.round(totalH/4.33*10)/10;
+
+    var res={};
+    if(w.workType==='hourly'){
+      res=calcHourlyPay({
+        hourlyRate:w.hourlyRate,totalHours:totalH,
+        nightH:nightH,overtimeH:overtimeH,
+        isHoliday:holidayDays>0,juhuHours:weeklyH
+      });
+    } else if(w.workType==='daily'){
+      res=calcDailyPay({dailyRate:w.dailyRate,workDays:workDays,holidayDays:holidayDays});
+    } else if(w.workType==='commission'){
+      var salesEl=document.getElementById('sales-'+w.id);
+      var sales=salesEl?parseFloat(salesEl.value)||0:0;
+      res=calcCommissionPay({salesAmount:sales,commissionRate:w.commissionRate,baseGuarantee:w.baseGuarantee});
+    } else {
+      res={totalPay:0,breakdown:{}};
+    }
+
+    // 최저임금 위반 체크
+    var mw=totalH>0?checkMinWage(res.totalPay,totalH):{violation:false};
+    results[w.id]=Object.assign({},res,{w:w,workDays:workDays,totalH:totalH,nightH:nightH,overtimeH:overtimeH,mwCheck:mw,ym:ym});
+
+    var typeLabel=WORK_TYPES[w.workType]||{icon:'👤',label:w.workType};
+    var color=w.workType==='hourly'?'var(--blue)':w.workType==='daily'?'var(--purple)':'var(--green)';
+
+    html+='<div class="card" style="margin-bottom:10px;border-left:4px solid '+color+'">'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'
+      +'<div style="font-size:13px;font-weight:700">'+esc(w.name||w.userId)+'</div>'
+      +'<span style="background:'+color+'22;color:'+color+';font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">'+typeLabel.icon+' '+typeLabel.label+'</span>'
+      +(w.camp?'<span style="font-size:10px;color:var(--text3)">'+esc(w.camp)+'</span>':'')
+      +(mw.violation?'<span style="background:#ef4444;color:#fff;font-size:9px;padding:2px 8px;border-radius:10px;margin-left:auto">⚠️ 최저임금 미달</span>':'')
+      +'</div>'
+      // 근무 요약
+      +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px">'
+      +_hsStat('근무일',''+workDays+'일')
+      +_hsStat('총 시간',Math.round(totalH*10)/10+'h')
+      +_hsStat('야간',Math.round(nightH*10)/10+'h')
+      +_hsStat('연장',Math.round(overtimeH*10)/10+'h')
+      +'</div>'
+      // 급여 내역
+      +'<div style="background:var(--bg3);border-radius:8px;padding:10px;margin-bottom:8px">'
+      +Object.entries(res.breakdown||{}).filter(function(e){return e[1]>0;}).map(function(e){
+        return '<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px">'
+          +'<span style="color:var(--text3)">'+esc(e[0])+'</span>'
+          +'<span>₩'+Math.round(e[1]).toLocaleString()+'</span></div>';
+      }).join('')
+      +'<div style="display:flex;justify-content:space-between;padding:6px 0 0;border-top:1px solid var(--border);margin-top:4px;font-weight:800;font-size:14px">'
+      +'<span>실지급 합계</span><span style="color:var(--primary)">₩'+Math.round(res.totalPay||0).toLocaleString()+'</span>'
+      +'</div></div>'
+      +(w.workType==='commission'
+        ?'<div class="fg" style="margin-bottom:8px"><label style="font-size:11px">매출액 입력 후 다시 계산</label>'
+         +'<input id="sales-'+w.id+'" type="number" placeholder="매출액" style="font-size:12px" onchange="_hsLoad()"></div>'
+        :'')
+      +'<div style="display:flex;gap:6px">'
+      +'<button onclick="_hsSave(this.dataset.id)" data-id="'+w.id+'" class="btn btn-sm btn-blue" style="flex:1">💾 정산 저장</button>'
+      +'<button onclick="_hsPayslip(this.dataset.id)" data-id="'+w.id+'" class="btn btn-sm" style="flex:1">📄 급여명세서</button>'
+      +'</div>'
+      +'</div>';
+  });
+
+  window._hsState.results=results;
+  listEl.innerHTML=html||'<div class="empty">출퇴근 기록이 없습니다</div>';
+}
+
+function _hsStat(label,val){
+  return '<div style="text-align:center;background:var(--bg3);border-radius:6px;padding:6px 4px">'
+    +'<div style="font-size:9px;color:var(--text3)">'+label+'</div>'
+    +'<div style="font-size:13px;font-weight:700">'+val+'</div>'
+    +'</div>';
+}
+
+// 개별 정산 저장
+function _hsSave(wid){
+  var st=window._hsState||{};
+  var r=st.results&&st.results[wid];
+  var did=st.did;
+  if(!r||!_db||!did){toast('❌ 데이터 없음');return;}
+  var w=r.w;
+  var payload={
+    dealerId:did, driverName:w.name||w.userId, userId:w.userId||w.id,
+    settleType:w.workType, month:r.ym||'',
+    workDays:r.workDays||0, totalHours:r.totalH||0,
+    nightHours:r.nightH||0, overtimeHours:r.overtimeH||0,
+    totalPay:Math.round(r.totalPay||0),
+    breakdown:r.breakdown||{},
+    hourlyRate:w.hourlyRate||0, dailyRate:w.dailyRate||0,
+    minWageViolation:!!(r.mwCheck&&r.mwCheck.violation),
+    status:'정산완료',
+    createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+    updatedAt:new Date().toISOString()
+  };
+  _db.collection('hourly_settlements').add(payload)
+    .then(function(){toast('✅ '+w.name+' 정산 저장 완료');})
+    .catch(function(e){toast('❌ '+e.message);});
+}
+
+// 전체 정산 저장
+function _hsSaveAll(){
+  var st=window._hsState||{};
+  if(!st.results||!Object.keys(st.results).length){toast('⚠️ 먼저 QR 데이터를 불러오세요');return;}
+  Object.keys(st.results).forEach(function(wid){_hsSave(wid);});
+}
+
+// 급여명세서 팝업
+function _hsPayslip(wid){
+  var st=window._hsState||{};
+  var r=st.results&&st.results[wid];
+  if(!r){toast('❌ 데이터 없음');return;}
+  var w=r.w;
+  var L=LABOR_LAW_2026;
+  var mo=document.createElement('div');
+  mo.className='mo show';mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  var typeLabel=WORK_TYPES[w.workType]||{label:w.workType};
+  var violation=r.mwCheck&&r.mwCheck.violation;
+
+  var box=document.createElement('div');
+  box.className='md';box.style.maxWidth='460px';
+  var rows=Object.entries(r.breakdown||{}).filter(function(e){return e[1]>0;}).map(function(e){
+    return '<tr><td style="padding:6px 12px;color:var(--text3)">'+esc(e[0])+'</td>'
+      +'<td style="padding:6px 12px;text-align:right">₩'+Math.round(e[1]).toLocaleString()+'</td></tr>';
+  }).join('');
+
+  box.innerHTML='<div class="mdt">📄 급여명세서</div>'
+    +'<div style="padding:16px">'
+    +'<div style="background:var(--bg3);border-radius:10px;padding:14px;margin-bottom:12px">'
+    +'<div style="display:flex;justify-content:space-between;margin-bottom:6px">'
+    +'<div style="font-size:14px;font-weight:700" id="ps-name"></div>'
+    +'<div style="font-size:11px;color:var(--text3)" id="ps-type"></div></div>'
+    +'<div style="font-size:11px;color:var(--text3)" id="ps-period"></div>'
+    +'</div>'
+    +'<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:12px">'+rows
+    +'<tr style="border-top:2px solid var(--border);font-weight:800;font-size:14px">'
+    +'<td style="padding:8px 12px">총 지급액</td>'
+    +'<td style="padding:8px 12px;text-align:right;color:var(--primary)" id="ps-total"></td></tr>'
+    +'</table>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:11px;margin-bottom:8px">'
+    +'<div style="background:var(--bg3);border-radius:6px;padding:8px;text-align:center">'
+    +'<div style="color:var(--text3)">총 근무</div><div id="ps-days" style="font-weight:700"></div></div>'
+    +'<div style="background:var(--bg3);border-radius:6px;padding:8px;text-align:center">'
+    +'<div style="color:var(--text3)">총 시간</div><div id="ps-hours" style="font-weight:700"></div></div>'
+    +'<div style="background:var(--bg3);border-radius:6px;padding:8px;text-align:center">'
+    +'<div style="color:var(--text3)">야간/연장</div><div id="ps-ex" style="font-weight:700"></div></div>'
+    +'</div>'
+    +(violation?'<div style="background:#fef2f2;border:1px solid #ef4444;border-radius:8px;padding:8px 12px;font-size:11px;color:#dc2626;margin-bottom:8px" id="ps-warn"></div>':'')
+    +'<div style="font-size:10px;color:var(--text3);text-align:center">2026 최저시급 ₩10,320 기준 · '+(_CU&&_CU.companyName||'DONWAY')+'</div>'
+    +'</div>'
+    +'<div class="mdf"><button class="btn" id="ps-close">닫기</button></div>';
+
+  mo.appendChild(box);document.body.appendChild(mo);
+
+  document.getElementById('ps-name').textContent=w.name||w.userId;
+  document.getElementById('ps-type').textContent=typeLabel.label+' · '+esc(r.ym||'');
+  document.getElementById('ps-period').textContent=r.ym+' 정산';
+  document.getElementById('ps-total').textContent='₩'+Math.round(r.totalPay||0).toLocaleString();
+  document.getElementById('ps-days').textContent=r.workDays+'일';
+  document.getElementById('ps-hours').textContent=Math.round(r.totalH*10)/10+'h';
+  document.getElementById('ps-ex').textContent=Math.round(r.nightH*10)/10+'h / '+Math.round(r.overtimeH*10)/10+'h';
+  if(violation){
+    var warn=document.getElementById('ps-warn');
+    if(warn)warn.textContent='⚠️ 최저임금 미달: 부족액 ₩'+(r.mwCheck.shortage||0).toLocaleString();
+  }
+  document.getElementById('ps-close').onclick=function(){mo.remove();};
+}
+
+
+function _hwToggleRateFields(type){
+  var rf=document.getElementById('edr-rate-fields');
+  if(rf)rf.style.display=(type==='coupang'?'none':'grid');
+  ['hourly','daily','comm','monthly','guarantee'].forEach(function(t){
+    var el=document.getElementById('edr-'+t+'-f');
+    if(!el)return;
+    var show=(t==='hourly'&&type==='hourly')||(t==='daily'&&type==='daily')
+      ||(t==='comm'&&type==='commission')||(t==='monthly'&&type==='monthly')
+      ||(t==='guarantee'&&type==='commission');
+    el.style.display=show?'':'none';
+  });
+}
+
+function _hwTab(btn, type){
+  document.querySelectorAll("[data-tab]").forEach(function(b){
+    b.style.background='';b.style.color='';b.style.borderColor='';
+  });
+  btn.style.cssText='background:var(--brand);color:#fff;border-color:var(--brand)';
+  document.getElementById('hw-calc-area').innerHTML=_hwRenderCalc(type);
+}
+
+function _hwRenderCalc(type){
+  var L=LABOR_LAW_2026;
+  if(type==='hourly') return ''
+    +'<div class="card-title" style="margin-bottom:12px">&#x23F0; 시급제 계산기</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+    +'<div class="fg"><label>시급 (원)</label><input id="hw-rate" type="number" value="'+L.minWage+'" placeholder="10320"></div>'
+    +'<div class="fg"><label>근무 시간</label><input id="hw-hours" type="number" value="8" step="0.5"></div>'
+    +'<div class="fg"><label>출근 시각</label><input id="hw-start" type="time" value="09:00"></div>'
+    +'<div class="fg"><label>퇴근 시각</label><input id="hw-end" type="time" value="18:00"></div>'
+    +'<div class="fg"><label>주간 총 근무시간</label><input id="hw-weekly" type="number" value="40" step="0.5"></div>'
+    +'<div class="fg"><label>휴일 근무?</label><select id="hw-holiday"><option value="0">아니오</option><option value="1">예 (휴일)</option></select></div>'
+    +'</div>'
+    +'<button onclick="_hwCalc(this.dataset.t)" data-t="hourly" class="btn btn-blue" style="width:100%;margin-top:8px">&#x1F4B0; 계산하기</button>'
+    +'<div id="hw-result" style="margin-top:12px"></div>';
+
+  if(type==='daily') return ''
+    +'<div class="card-title" style="margin-bottom:12px">&#x1F4C5; 일급제 계산기</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+    +'<div class="fg"><label>일급 (원)</label><input id="hw-rate" type="number" value="'+L.minDaily+'" placeholder="82560"></div>'
+    +'<div class="fg"><label>근무 일수</label><input id="hw-days" type="number" value="22"></div>'
+    +'<div class="fg"><label>휴일 근무일수</label><input id="hw-hdays" type="number" value="0"></div>'
+    +'</div>'
+    +'<button onclick="_hwCalc(this.dataset.t)" data-t="daily" class="btn btn-blue" style="width:100%;margin-top:8px">&#x1F4B0; 계산하기</button>'
+    +'<div id="hw-result" style="margin-top:12px"></div>';
+
+  if(type==='commission') return ''
+    +'<div class="card-title" style="margin-bottom:12px">&#x1F4B0; 수수료제 계산기</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+    +'<div class="fg"><label>매출액 (원)</label><input id="hw-sales" type="number" placeholder="5000000"></div>'
+    +'<div class="fg"><label>수수료율 (%)</label><input id="hw-crate" type="number" value="10" step="0.1"></div>'
+    +'<div class="fg"><label>최저보장액 (원)</label><input id="hw-guarantee" type="number" value="0"></div>'
+    +'</div>'
+    +'<button onclick="_hwCalc(this.dataset.t)" data-t="commission" class="btn btn-blue" style="width:100%;margin-top:8px">&#x1F4B0; 계산하기</button>'
+    +'<div id="hw-result" style="margin-top:12px"></div>';
+
+  if(type==='delivery') return ''
+    +'<div class="card-title" style="margin-bottom:12px">&#x1F4E6; 건당 배송 계산기</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+    +'<div class="fg"><label>배송 건수</label><input id="hw-cnt" type="number" value="0"></div>'
+    +'<div class="fg"><label>반품 건수</label><input id="hw-ret" type="number" value="0"></div>'
+    +'<div class="fg"><label>배송 단가 (원)</label><input id="hw-dprice" type="number" value="800"></div>'
+    +'<div class="fg"><label>반품 단가 (원)</label><input id="hw-rprice" type="number" value="800"></div>'
+    +'<div class="fg"><label>추가수당 (원)</label><input id="hw-bonus" type="number" value="0"></div>'
+    +'</div>'
+    +'<button onclick="_hwCalc(this.dataset.t)" data-t="delivery" class="btn btn-blue" style="width:100%;margin-top:8px">&#x1F4B0; 계산하기</button>'
+    +'<div id="hw-result" style="margin-top:12px"></div>';
+
+  if(type==='monthly') return ''
+    +'<div class="card-title" style="margin-bottom:12px">&#x1F4BC; 월급제 계산기</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+    +'<div class="fg"><label>월 기본급 (원)</label><input id="hw-monthly" type="number" value="'+L.minMonthly+'"></div>'
+    +'<div class="fg"><label>연장근로 시간 (월)</label><input id="hw-ot" type="number" value="0"></div>'
+    +'<div class="fg"><label>야간근로 시간 (월)</label><input id="hw-night" type="number" value="0"></div>'
+    +'<div class="fg"><label>식대 (원/월)</label><input id="hw-meal" type="number" value="200000"></div>'
+    +'</div>'
+    +'<button onclick="_hwCalc(this.dataset.t)" data-t="monthly" class="btn btn-blue" style="width:100%;margin-top:8px">&#x1F4B0; 계산하기</button>'
+    +'<div id="hw-result" style="margin-top:12px"></div>';
+
+  return '';
+}
+
+
+function _hwCalc(btnOrType){
+  var type=typeof btnOrType==='string'?btnOrType:(btnOrType&&btnOrType.dataset&&btnOrType.dataset.t)||btnOrType;
+  var L=LABOR_LAW_2026;
+  var g=function(id){return parseFloat((document.getElementById(id)||{value:0}).value)||0;};
+  var res,r2=document.getElementById('hw-result');
+  if(!r2)return;
+
+  if(type==='hourly'){
+    var startEl=document.getElementById('hw-start');
+    var endEl=document.getElementById('hw-end');
+    var startH=startEl?parseFloat(startEl.value.split(':')[0])+(parseFloat(startEl.value.split(':')[1])/60):9;
+    var endH=endEl?parseFloat(endEl.value.split(':')[0])+(parseFloat(endEl.value.split(':')[1])/60):18;
+    res=calcHourlyPay({hourlyRate:g('hw-rate'),totalHours:g('hw-hours'),startH:startH,endH:endH,isHoliday:g('hw-holiday')>0,juhuHours:g('hw-weekly')});
+    var mw=checkMinWage(res.totalPay,g('hw-hours'));
+  } else if(type==='daily'){
+    res=calcDailyPay({dailyRate:g('hw-rate'),workDays:g('hw-days'),holidayDays:g('hw-hdays')});
+  } else if(type==='commission'){
+    res=calcCommissionPay({salesAmount:g('hw-sales'),commissionRate:g('hw-crate'),baseGuarantee:g('hw-guarantee')});
+  } else if(type==='delivery'){
+    var pay=(g('hw-cnt')*g('hw-dprice'))+(g('hw-ret')*g('hw-rprice'))+g('hw-bonus');
+    res={totalPay:pay,breakdown:{'배송금':(g('hw-cnt')*g('hw-dprice')),'반품금':(g('hw-ret')*g('hw-rprice')),'추가수당':g('hw-bonus')}};
+  } else if(type==='monthly'){
+    var base=g('hw-monthly');
+    var hourlyEq=Math.round(base/209);
+    var ot=g('hw-ot')*hourlyEq*(L.overtimeRate-1);
+    var nt=g('hw-night')*hourlyEq*L.nightRate;
+    var meal=g('hw-meal');
+    res={totalPay:base+ot+nt+meal,breakdown:{'기본급':base,'연장수당':ot,'야간수당':nt,'식대':meal}};
+  }
+
+  if(!res){r2.innerHTML='';return;}
+
+  var bkHtml=Object.entries(res.breakdown||{}).filter(function(e){return e[1]>0;}).map(function(e){
+    return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)">'+
+      '<span style="font-size:12px">'+e[0]+'</span>'+
+      '<span style="font-size:12px;font-weight:700">₩'+Math.round(e[1]).toLocaleString()+'</span></div>';
+  }).join('');
+
+  var warnHtml='';
+  if(mw&&mw.violation){
+    warnHtml='<div style="background:#fef2f2;border:1px solid #ef4444;border-radius:8px;padding:8px 12px;margin-top:8px;font-size:11px;color:#dc2626;font-weight:700">'+
+      '⚠️ 최저임금 위반! 부족액: ₩'+mw.shortage.toLocaleString()+'</div>';
+  }
+
+  r2.innerHTML='<div style="background:var(--bg3);border-radius:10px;padding:14px">'+
+    '<div style="font-size:11px;color:var(--text3);margin-bottom:8px">지급 상세</div>'+
+    bkHtml+
+    '<div style="display:flex;justify-content:space-between;margin-top:10px;padding-top:8px;border-top:2px solid var(--brand)">'+
+    '<span style="font-size:13px;font-weight:700">총 지급액</span>'+
+    '<span style="font-size:18px;font-weight:900;color:var(--brand)">₩'+Math.round(res.totalPay).toLocaleString()+'</span></div>'+
+    '</div>'+warnHtml;
 }
 
 // ══ 캠프 관리 페이지 ══
@@ -7268,7 +8173,14 @@ document.addEventListener('click',function(e){
   var sb=document.getElementById('sidebar');
   if(sb&&sb.classList.contains('open')&&!sb.contains(e.target))sb.classList.remove('open');
 });
-window.addEventListener('load',function(){setTimeout(initFirebase,200);
+window.addEventListener('load',function(){
+  // PWA 서비스워커 등록
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('/firebase-messaging-sw.js')
+      .then(function(reg){console.log('[DONWAY] SW 등록 완료');})
+      .catch(function(e){console.log('[DONWAY] SW 등록 실패:',e.message);});
+  }
+  initFirebase(); // Firebase 즉시 초기화
   if(window._COMPANY_SLUG){
     var bn=document.getElementById('login-brand-name');
     if(bn){bn.textContent=window._COMPANY_SLUG.toUpperCase()+' 전용';bn.style.display='block';}
