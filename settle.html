@@ -839,7 +839,7 @@ function calcNet(x){
   var damt=isYong ? dcnt*yDel : (_rdList.length ? _damtRP : (+x.damt||+x.delivAmt||+x.base||0));
   var ramt=isYong ? rcnt*yRet : (_rdList.length ? _ramtRP : (+x.ramt||+x.retAmt||0));
   // ★ fresh/inc: 정산총괄에서 VAT제외로 파싱됨 → income 계산 시 VAT포함 변환
-  var fresh=Math.round((+x.fresh||+x.freshAmt||0)*1.1);
+  var fresh=+x.fresh||+x.freshAmt||0;  // VAT포함가 그대로 사용 (×1.1 없음)
   // ★ 프레시백 인센 계산 (v9.25 방어 로직)
   // 1순위: 저장된 x.finc 값이 있으면 jobsub과 무관하게 그대로 사용 (데이터 정합성 우선)
   // 2순위: x.finc 없으면 쿠팡은 건수×25원, 그 외(용차/컬리/CJ)는 0
@@ -1249,8 +1249,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           // 세금계산서 작성금액 (엑셀 단가 기준 초기값)
           var damt=dm.delAmt||0;
           var ramt=dm.retAmt||0;
-          var freshVat=Math.round(freshAmt*1.1); // VAT포함 변환
-          var taxBase=damt+ramt+freshVat+fincVal+addIncAmt+(dm.nocontAmt||0);
+          var taxBase=damt+ramt+freshAmt+fincVal+addIncAmt+(dm.nocontAmt||0);  // 모두 VAT포함가
           // 공제 계산
           var supplyAmt=Math.round(taxBase/1.1);
           var monthlyWage=Math.round(supplyAmt*0.654);
@@ -1524,9 +1523,8 @@ function _saveCpDriver(camp,dm,name,month,cb){
   if(!window._db){if(cb)cb();return;}
   var uid=dm.uid;
   var damt=dm.delAmt||0,ramt=dm.retAmt||0,freshRaw=dm.freshAmt||0;
-  var freshVat=Math.round(freshRaw*1.1); // VAT포함 변환
-  var finc=Math.round((dm.dcnt||0)*25);
-  var income=damt+ramt+freshVat+finc+(dm.nocontAmt||0);
+  var finc=dm.freshIncAmt||Math.round((dm.dcnt||0)*25);
+  var income=damt+ramt+freshRaw+finc+(dm.nocontAmt||0);  // 모두 VAT포함가nocontAmt||0);
   var sa=Math.round(income/1.1),wage=Math.round(sa*(1-0.346));
   var emp=wage>=800000?Math.floor(wage*0.008/10)*10:0,work=Math.floor(wage*0.0088/10)*10;
   var routeDetails=[];
@@ -2193,10 +2191,35 @@ function pageContract(){
 }
 function _renderContractPaywall(){
   var content=document.getElementById('content');
-  content.innerHTML='<div style="max-width:480px;margin:0 auto;padding:24px;text-align:center">'
-    +'<div style="font-size:48px;margin-bottom:12px">🔒</div>'
-    +'<div style="font-size:18px;font-weight:800;margin-bottom:8px">위수탁 계약서</div>'
-    +'<div style="font-size:13px;color:var(--text2);margin-bottom:24px;line-height:1.6">위수탁 계약서 기능은 별도 결제 후 이용 가능합니다.</div>'
+  var cn=esc((_CU&&_CU.companyName)||'대리점명');
+  content.innerHTML='<div style="max-width:700px;margin:0 auto;padding:16px">'
+    // 샘플 계약서 미리보기
+    +'<div class="card" style="margin-bottom:16px;position:relative;overflow:hidden">'
+    +'<div style="position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;backdrop-filter:blur(2px)">'
+    +'<div style="font-size:28px;margin-bottom:8px">🔒</div>'
+    +'<div style="color:#fff;font-size:15px;font-weight:800;margin-bottom:4px">결제 후 이용 가능</div>'
+    +'<div style="color:rgba(255,255,255,.7);font-size:11px">월 9,900원으로 기사별 계약서 자동 생성</div>'
+    +'</div>'
+    +'<div style="pointer-events:none">'
+    +'<div style="text-align:center;font-size:14px;font-weight:800;margin-bottom:10px">화물자동차운송 위수탁 표준계약서</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:11px;margin-bottom:10px">'
+    +'<div style="background:var(--bg3);padding:10px;border-radius:6px">'
+    +'<div style="color:var(--text3);margin-bottom:4px;font-size:10px">■ 수탁자(기사)</div>'
+    +'<div><b>홍길동</b></div><div>사업자: 000-00-00000</div>'
+    +'<div>주소: 부산시 ○○구 ○○로 000</div></div>'
+    +'<div style="background:var(--bg3);padding:10px;border-radius:6px">'
+    +'<div style="color:var(--text3);margin-bottom:4px;font-size:10px">■ 위탁자(대리점)</div>'
+    +'<div><b>'+cn+'</b></div><div>사업자: 000-00-00000</div>'
+    +'<div>주소: 부산시 수영구 수영로 668</div></div>'
+    +'</div>'
+    +'<div style="font-size:10px;color:var(--text3);line-height:1.9;background:var(--bg3);padding:10px;border-radius:6px">'
+    +'제1조(목적) 본 계약은 위탁자와 수탁자 간의 화물운송 위수탁 관계를 규정함을 목적으로 한다.<br>'
+    +'제2조(계약기간) 본 계약의 유효기간은 계약일로부터 1년으로 한다.<br>'
+    +'제3조(운임) 배송 1건당 단가는 별도 라우트 단가표에 따른다.<br>'
+    +'<span style="color:var(--brand)">... 서명란 및 전체 내용은 결제 후 열람 가능 ...</span>'
+    +'</div></div></div>'
+    +'<div style="max-width:480px;margin:0 auto;text-align:center">'
+    +'<div style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6">위수탁 계약서 기능은 별도 결제 후 이용 가능합니다.</div>'
     +'<div class="card" style="margin-bottom:16px;text-align:left">'
     +'<div style="font-size:13px;font-weight:700;margin-bottom:10px">📋 포함 기능</div>'
     +'<div style="font-size:12px;color:var(--text2);line-height:2">✅ 영업점-택배기사 위수탁 계약서 양식<br>✅ 기사별 계약서 PDF 업로드·보관<br>✅ 계약서 목록 관리</div>'
@@ -2290,10 +2313,42 @@ function pageRoster(){
 
 function _renderRosterPaywall(){
   var content=document.getElementById('content');
-  content.innerHTML='<div style="max-width:480px;margin:0 auto;padding:24px;text-align:center">'
-    +'<div style="font-size:48px;margin-bottom:12px">🗓</div>'
-    +'<div style="font-size:18px;font-weight:800;margin-bottom:8px">근무표 관리</div>'
-    +'<div style="font-size:13px;color:var(--text2);margin-bottom:24px;line-height:1.6">근무표 관리 기능은 추가 결제 후 이용 가능합니다.</div>'
+  // ★ 데모 근무표 미리보기 생성
+  var today=new Date();var yr=today.getFullYear();var mo=today.getMonth()+1;
+  var moStr=yr+'년 '+mo+'월';
+  var demoDrivers=['홍길동','김영희','이철수','박민준','최수연'];
+  var demoRows=demoDrivers.map(function(n){
+    var cells='';
+    for(var d=1;d<=7;d++){
+      var isOff=d===1||d===4;
+      cells+='<td style="text-align:center;padding:6px 4px;border:1px solid var(--border)">'
+        +'<span style="font-size:10px;font-weight:700;color:'+(isOff?'var(--text3)':'var(--brand)')+';'
+        +'background:'+(isOff?'var(--bg3)':'var(--brand-l)')+';padding:2px 6px;border-radius:10px">'
+        +(isOff?'휴무':'출근')+'</span></td>';
+    }
+    return '<tr><td style="padding:6px 10px;font-size:12px;font-weight:600;border:1px solid var(--border)">'+n+'</td>'+cells+'<td style="text-align:center;padding:6px;font-size:12px;font-weight:700;border:1px solid var(--border)">6일</td></tr>';
+  }).join('');
+  content.innerHTML='<div style="max-width:700px;margin:0 auto;padding:16px">'
+    // 데모 미리보기
+    +'<div class="card" style="margin-bottom:16px;position:relative;overflow:hidden">'
+    +'<div style="position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;backdrop-filter:blur(2px)">'
+    +'<div style="font-size:28px;margin-bottom:8px">🔒</div>'
+    +'<div style="color:#fff;font-size:15px;font-weight:800;margin-bottom:4px">결제 후 이용 가능</div>'
+    +'<div style="color:rgba(255,255,255,.7);font-size:11px">월 9,900원으로 모든 기능 무제한 사용</div>'
+    +'</div>'
+    +'<div style="pointer-events:none">'
+    +'<div style="font-size:13px;font-weight:700;margin-bottom:8px">🗓 '+moStr+' 근무표 <span style="font-size:10px;color:var(--text3)">(미리보기)</span></div>'
+    +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">'
+    +'<thead><tr style="background:var(--bg3)"><th style="padding:6px 10px;border:1px solid var(--border)">이름</th>'
+    +'<th style="padding:6px;border:1px solid var(--border)">1일</th><th style="padding:6px;border:1px solid var(--border)">2일</th>'
+    +'<th style="padding:6px;border:1px solid var(--border)">3일</th><th style="padding:6px;border:1px solid var(--border)">4일</th>'
+    +'<th style="padding:6px;border:1px solid var(--border)">5일</th><th style="padding:6px;border:1px solid var(--border)">6일</th>'
+    +'<th style="padding:6px;border:1px solid var(--border)">7일</th><th style="padding:6px;border:1px solid var(--border)">근무일</th>'
+    +'</tr></thead><tbody>'+demoRows+'</tbody></table></div>'
+    +'</div></div>'
+    // 결제 안내
+    +'<div style="max-width:480px;margin:0 auto;text-align:center">'
+    +'<div style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6">근무표 관리 기능은 추가 결제 후 이용 가능합니다.</div>'
     +'<div class="card" style="margin-bottom:16px;text-align:left">'
     +'<div style="font-size:13px;font-weight:700;margin-bottom:10px">🗓 포함 기능</div>'
     +'<div style="font-size:12px;color:var(--text2);line-height:2">'
@@ -3333,7 +3388,7 @@ function pageSettle(){
     settles.forEach(function(s){
       var r=calcNet(s);
       var ct=s.coupangTotal||(((s.damt||0)+(s.ramt||0)+(s.fresh||0)+(s.inc||0)+(s.nocont||0)))||0;
-      totCoupang+=ct?Math.round(ct*1.1):Math.round((r.income||0)*1.1); // 쿠팡→MBTI VAT포함 (회사 수입용)
+      totCoupang+=ct?ct:(r.income||0); // 쿠팡→MBTI 금액 (이미 VAT포함)
       totTaxBase+=(r.income||0);   // 기사 세금계산서 (이미 VAT포함)
       totNet+=r.net||0;
       totDeduct+=r.deduct||0;
@@ -3872,11 +3927,16 @@ function sendSMS(msgEnc,phoneEnc){
 // ██ 급여명세서 PDF 출력 ██
 // ══════════════════════════════════════════
 function openPayslipModal(){
-  // 현재 정산 데이터에서 기사 목록 가져오기
-  var rows=_getSettleRows();
-  if(!rows||!rows.length){
-    toast('정산 데이터가 없습니다. 먼저 정산을 진행해주세요.');return;
+  // settleCache에서 현재 필터된 기사 목록
+  var rows=[];
+  if(_settleCache&&_settleCache.length){
+    var fm=_settle_month||'all';
+    var fc=_settle_camp||'all';
+    rows=_settleCache.filter(function(x){
+      return (fm==='all'||x.month===fm)&&(fc==='all'||(_getSettleCamp(x)||'기타')===fc);
+    });
   }
+  if(!rows.length){toast('⚠️ 정산 데이터가 없습니다. 먼저 엑셀 업로드 또는 정산을 진행해주세요.');return;}
   var mo=document.createElement('div');mo.className='mo show';mo.id='mo-payslip';
   mo.innerHTML=_buildPayslipHTML(rows);
   document.getElementById('modals').appendChild(mo);
@@ -4970,10 +5030,9 @@ function updSECalc(){
   if(vR)vR.textContent='₩'+fmt(totalRamt);
   // 항목별 합산
   function gv(id){var el=document.getElementById(id);return el?+el.value||0:0;}
-  var freshRaw=gv('se-fresh'),finc=gv('se-finc'),inc=gv('se-inc'),nocont=gv('se-nocont');
-  var fresh=Math.round(freshRaw*1.1);  // VAT포함 변환 (calcNet과 동일)
+  var fresh=gv('se-fresh'),finc=gv('se-finc'),inc=gv('se-inc'),nocont=gv('se-nocont');
   var dmg=gv('se-dmg'),etcP=gv('se-etc-plus'),etcM=gv('se-etc-minus'),adv=gv('se-adv');
-  var taxBase=totalDamt+totalRamt+fresh+finc+inc+nocont+etcP;  // 세금계산서 기준 (etcMinus 제외)
+  var taxBase=totalDamt+totalRamt+fresh+finc+inc+nocont+etcP;  // 모두 VAT포함가  // 세금계산서 기준 (etcMinus 제외)
   var supplyAmt=Math.round(taxBase/1.1);
   var vatAmt=taxBase-supplyAmt;
   // 엑셀 총금액 불일치 검증
@@ -5057,8 +5116,7 @@ function _saveSECurrent(){
     });
   }
   var nocont=cached?cached.nocont||0:0;
-  var freshVat=Math.round(fresh*1.1);  // VAT포함 변환
-  var taxBase=newDamt+newRamt+freshVat+finc+inc+nocont+etcPlus; // 세금계산서 기준
+  var taxBase=newDamt+newRamt+fresh+finc+inc+nocont+etcPlus; // 모두 VAT포함가
   var supplyAmt=Math.round(taxBase/1.1);
   var monthlyWage=Math.round(supplyAmt*0.654);
   var empIns=monthlyWage>=800000?Math.floor(monthlyWage*0.008/10)*10:0;
@@ -5173,7 +5231,6 @@ function recalcAllSettlements(){
       if(s.on&&s.rate>0)fincVal+=(rd.cnt||0)*s.rate;
     });
     var freshRaw=x.fresh||0;
-    var freshVat=Math.round(freshRaw*1.1); // VAT포함 변환
     var addInc=x.inc||0;
     var nocont=x.nocont||0;
     var dmg=x.dmg||0;
@@ -5182,7 +5239,7 @@ function recalcAllSettlements(){
     var etcPlus=x.etcPlus||0;
     var etcMinus=x.etcMinus||0;
     // 세금계산서 기준 (etcMinus 제외)
-    var taxBase=newDamt+newRamt+freshVat+fincVal+addInc+nocont+etcPlus;
+    var taxBase=newDamt+newRamt+freshRaw+fincVal+addInc+nocont+etcPlus; // 모두 VAT포함가
     var supplyAmt=Math.round(taxBase/1.1);
     var monthlyWage=Math.round(supplyAmt*0.654);
     var empIns=monthlyWage>=800000?Math.floor(monthlyWage*0.008/10)*10:0;
@@ -7506,7 +7563,7 @@ function openResetPanel(){
   var mdf=d.querySelector('.mdf');
   var cancelBtn=document.createElement('button');cancelBtn.className='btn';cancelBtn.textContent='취소';
   cancelBtn.onclick=function(){mo.remove();};
-  if(forced) cancelBtn.style.display='none';
+  // cancelBtn 항상 표시
   var delBtn=document.createElement('button');
   delBtn.style.cssText='padding:8px 18px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer';
   delBtn.textContent='🗑 선택 항목 삭제';

@@ -410,10 +410,7 @@ export default {
     }
 
 
-    // favicon 404/500 방지
-    if (path === '/favicon.ico' || path === '/favicon.png') {
-      return new Response('', { status: 204 });
-    }
+    // favicon: 뒤에서 icon-192.png 기반으로 서빙 (204 제거)
 
     if (method === 'OPTIONS') {
       return new Response(null, {
