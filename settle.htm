@@ -2682,34 +2682,38 @@ function _renderRosterTable(drivers,rosterData,weekDays,dNames,fmt){
       '<td style="border:1px solid var(--border)"></td></tr>'+
       '</thead><tbody>';
 
+    var campRotation=(CAMP_CONFIG[camp]||CAMP_CONFIG[camp+'캠프']||{rotation:''}).rotation||'';
     grp.forEach(function(drv){
       var workCnt=0;
       var defRoutes=drv.defaultRoutes||[];
       var cells=weekDays.map(function(d,i){
-        var entry=(rosterData[drv.id]&&rosterData[drv.id][i])||{status:'work',route:defRoutes[0]||''};
-        var status=entry.status;
-        var route=entry.route||'';
+        var entry=(rosterData[drv.id]&&rosterData[drv.id][i]);
+        var defRoute=defRoutes.join(',')||'';
+        if(!entry) entry={status:'work',route:defRoute,rotation:campRotation};
+        var status=entry.status||'work';
+        var route=String(entry.route||'');
+        var rot=String(entry.rotation||campRotation);
         if(status==='work')workCnt++;
         var isOff=status==='off';
-        return '<td style="padding:3px;text-align:center;border:1px solid var(--border)">'+
-          '<button onclick="_toggleRosterStatus(this)" data-did="'+drv.id+'" data-day="'+i+'" data-defrts="'+defRoutes.join(',')+'"'+
+        var rtId='rt_'+drv.id.replace(/[^a-z0-9]/gi,'_')+'_'+i;
+        return '<td style="padding:3px;text-align:center;border:1px solid var(--border);min-width:72px">'+
+          '<button onclick="_toggleRosterStatus(this)" data-did="'+drv.id+'" data-day="'+i+'"'+
           ' style="display:block;width:100%;padding:2px 4px;border:none;border-radius:4px;cursor:pointer;font-size:10px;font-weight:700;margin-bottom:2px;'+
           'background:'+(isOff?'#e5e7eb':'#dbeafe')+';color:'+(isOff?'#6b7280':'#1d4ed8')+'">'+
           (isOff?'⊘ 휴무':'✓ 출근')+'</button>'+
           (isOff?'':
-            '<select onchange="_setRosterRoute(this)" data-did="'+drv.id+'" data-day="'+i+'"'+
-            ' style="width:100%;font-size:10px;padding:1px 2px;border:1px solid var(--border);border-radius:3px;background:var(--bg)">'+
-            '<option value="">-</option>'+
-            Object.keys(_routeCampMap).filter(function(r){return _routeCampMap[r]===camp||_routeCampMap[r]===camp+'캠프';}).map(function(r){
-              return '<option value="'+r+'"'+(route===r?' selected':'')+'>'+r+'</option>';
-            }).join('')+
-            '</select>'
+            '<input id="'+rtId+'" type="text" value="'+route+'"'+
+            ' onchange="_setRosterRouteText(this)" data-did="'+drv.id+'" data-day="'+i+'" data-rot="'+rot+'"'+
+            ' placeholder="라우트" style="width:100%;font-size:10px;padding:2px 3px;border:1px solid var(--border);border-radius:3px;background:var(--bg);text-align:center">'+
+            (rot?'<div style="font-size:9px;color:var(--text3);margin-top:1px">'+rot+'</div>':'')
           )+
           '</td>';
       }).join('');
       html+='<tr>'+
-        '<td style="padding:6px 8px;border:1px solid var(--border);font-weight:600;white-space:nowrap">'+esc(drv.name)+'</td>'+
-        '<td style="padding:4px 6px;border:1px solid var(--border);font-size:10px;color:var(--text3)">'+defRoutes.slice(0,2).join(',')+'</td>'+
+        '<td style="padding:6px 8px;border:1px solid var(--border);font-weight:600;white-space:nowrap">'+
+          esc(drv.name)+
+          (campRotation?'<div style="font-size:9px;color:var(--text3);font-weight:400">'+campRotation+'</div>':'')+
+        '</td>'+
         cells+
         '<td style="padding:4px;text-align:center;font-weight:700;color:'+col+';border:1px solid var(--border)">'+workCnt+'일</td>'+
         '</tr>';
@@ -2735,8 +2739,9 @@ function _toggleRosterStatus(el){
   var cur=(window._rosterData[driverId][dayIndex]&&window._rosterData[driverId][dayIndex].status)||'work';
   var next=cur==='work'?'off':'work';
   var curRoute=(window._rosterData[driverId][dayIndex]&&window._rosterData[driverId][dayIndex].route)||defRts[0]||'';
-  window._rosterData[driverId][dayIndex]={status:next,route:curRoute};
-  _saveRosterCell(driverId,dayIndex,next,curRoute);
+  var curRot=(window._rosterData[driverId][dayIndex]&&window._rosterData[driverId][dayIndex].rotation)||'';
+  window._rosterData[driverId][dayIndex]={status:next,route:curRoute,rotation:curRot};
+  _saveRosterCell(driverId,dayIndex,next,curRoute,curRot);
   // 셀만 새로고침
   var weekDays=_getWeekDays(window._rosterWeekStart);
   var dNames=['일','월','화','수','목','금','토'];
@@ -2745,30 +2750,33 @@ function _toggleRosterStatus(el){
 }
 
 // 라우트 변경
-function _setRosterRoute(sel){
-  var driverId=sel.getAttribute('data-did');
-  var dayIndex=parseInt(sel.getAttribute('data-day'));
-  var route=sel.value;
+function _setRosterRouteText(inp){
+  var driverId=inp.getAttribute('data-did');
+  var dayIndex=parseInt(inp.getAttribute('data-day'));
+  var route=inp.value.trim();
+  var rot=inp.getAttribute('data-rot')||'';
   if(!window._rosterData)window._rosterData={};
   if(!window._rosterData[driverId])window._rosterData[driverId]={};
   var status=(window._rosterData[driverId][dayIndex]&&window._rosterData[driverId][dayIndex].status)||'work';
-  window._rosterData[driverId][dayIndex]={status:status,route:route};
-  _saveRosterCell(driverId,dayIndex,status,route);
+  window._rosterData[driverId][dayIndex]={status:status,route:route,rotation:rot};
+  _saveRosterCell(driverId,dayIndex,status,route,rot);
   var ss=document.getElementById('roster-save-status');if(ss){ss.textContent='✅ 저장됨';setTimeout(function(){ss.textContent='';},1500);}
 }
+function _setRosterRoute(sel){}
 
 // Firestore 저장
-function _saveRosterCell(driverId,dayIndex,status,route){
+function _saveRosterCell(driverId,dayIndex,status,route,rotation){
   if(!_db||!_CU)return;
   var cid=_CU.dealerId||_CU.companyId;
   var ywStart=window._rosterWeekStartStr||'';
   if(!ywStart)return;
-  // 기존 도큐 찾아서 update, 없으면 add
+  var rot=String(rotation||'');
+  var rt=String(route||'');
   var existing=window._rosterData&&window._rosterData[driverId]&&window._rosterData[driverId][dayIndex]&&window._rosterData[driverId][dayIndex].fbId;
   if(existing){
-    _db.collection('roster_week').doc(existing).update({status:status,route:route,updatedAt:new Date().toISOString()}).catch(function(){});
+    _db.collection('roster_week').doc(existing).update({status:status,route:rt,rotation:rot,updatedAt:new Date().toISOString()}).catch(function(){});
   }else{
-    _db.collection('roster_week').add({dealerId:cid,weekStart:ywStart,driverId:driverId,dayIndex:dayIndex,status:status,route:route,createdAt:firebase.firestore.FieldValue.serverTimestamp()})
+    _db.collection('roster_week').add({dealerId:cid,weekStart:ywStart,driverId:driverId,dayIndex:dayIndex,status:status,route:rt,rotation:rot,createdAt:firebase.firestore.FieldValue.serverTimestamp()})
       .then(function(ref){
         if(window._rosterData[driverId][dayIndex])window._rosterData[driverId][dayIndex].fbId=ref.id;
       }).catch(function(){});
@@ -2792,9 +2800,9 @@ function _loadPrevWeekRoster(){
         // 이번 주에 같은 기사+요일 없으면 복사
         if(!window._rosterData[d.driverId]||!window._rosterData[d.driverId][d.dayIndex]){
           var ref=_db.collection('roster_week').doc();
-          batch.set(ref,{dealerId:cid,weekStart:ywStart,driverId:d.driverId,dayIndex:d.dayIndex,status:d.status||'work',route:d.route||'',createdAt:new Date().toISOString()});
+          batch.set(ref,{dealerId:cid,weekStart:ywStart,driverId:d.driverId,dayIndex:d.dayIndex,status:d.status||'work',route:d.route||'',rotation:d.rotation||'',createdAt:new Date().toISOString()});
           if(!window._rosterData[d.driverId])window._rosterData[d.driverId]={};
-          window._rosterData[d.driverId][d.dayIndex]={status:d.status||'work',route:d.route||'',fbId:ref.id};
+          window._rosterData[d.driverId][d.dayIndex]={status:d.status||'work',route:d.route||'',rotation:d.rotation||'',fbId:ref.id};
           count++;
         }
       });
@@ -2924,7 +2932,7 @@ function _importRosterExcel(input){
       var hdr=rows[0];
       var iDate=hdr.indexOf('업무일'),iCamp=hdr.indexOf('캠프명');
       var iName=hdr.indexOf('이름'),iId=hdr.indexOf('아이디');
-      var iStatus=hdr.indexOf('업무상태'),iRotation=hdr.indexOf('회전'),iRoute=hdr.indexOf('업무라우트');
+      var iWave=hdr.indexOf('웨이브'),iStatus=hdr.indexOf('업무상태'),iRotation=hdr.indexOf('회전'),iRoute=hdr.indexOf('업무라우트');
       if(iDate<0||iName<0||iStatus<0){toast('❌ 쿠팡 근무표 형식이 아닙니다');return;}
 
       // 날짜 파싱 → 해당 주 일요일 구하기
@@ -2949,54 +2957,102 @@ function _importRosterExcel(input){
         toSave.push({
           name:(row[iName]||'').trim(),
           driverId:(row[iId]||'').trim(),
-          camp:(row[iCamp]||'').trim(),
+          camp:(row[iCamp]||'').replace('캠프','').trim(),
+          wave:iWave>=0?(row[iWave]||'').trim():'',
           dayIndex:dayIndex,
           status:status,
-          route:(row[iRoute]||'').trim(),
-          rotation:(row[iRotation]||'').trim()
+          route:iRoute>=0?String(row[iRoute]||'').trim():'',
+          rotation:iRotation>=0?String(row[iRotation]||'').trim():''
         });
       });
 
       if(!_db||!_CU){toast('❌ 로그인 필요');return;}
       var cid=_CU.dealerId||_CU.companyId;
-      toast('⏳ '+toSave.length+'건 등록 중...');
 
-      // 기존 해당 주 데이터 삭제 후 재등록
-      _db.collection('roster_week').where('dealerId','==',cid).where('weekStart','==',ywStart).get()
+      // ★ 고유 기사 목록 추출 (이름+아이디+캠프+웨이브)
+      var driverSet={};
+      toSave.forEach(function(item){
+        var key=item.driverId||item.name;
+        if(key&&!driverSet[key]) driverSet[key]={
+          userId:item.driverId,name:item.name,
+          camp:item.camp.replace('캠프','').trim(),
+          wave:item.wave||'',rotation:item.rotation||''
+        };
+      });
+      var uniqueDrivers=Object.values(driverSet);
+      toast('⏳ 기사 '+uniqueDrivers.length+'명 + 근무표 '+toSave.length+'건 등록 중...');
+
+      // Step1: 기존 기사 조회
+      _db.collection('drivers').where('dealerId','==',cid).get()
       .then(function(snap){
-        var batch=_db.batch();
-        snap.forEach(function(doc){batch.delete(doc.ref);});
-        return batch.commit();
-      }).then(function(){
-        // 드라이버 목록으로 id 매핑
-        return _db.collection('drivers').where('dealerId','==',cid).get();
-      }).then(function(snap){
-        var driverMap={};
+        var existMap={}; // userId → docId
         snap.forEach(function(doc){
           var d=doc.data();
-          var uid=(d.userId||d.driverId||'').trim();
-          var nm=(d.name||'').trim();
-          driverMap[uid]=doc.id;
-          driverMap[nm]=driverMap[nm]||doc.id;
+          var uid=(d.userId||'').trim();
+          if(uid) existMap[uid]=doc.id;
         });
 
+        // ★ 신규 기사는 추가, 기존 기사는 캠프/이름 업데이트
+        var cfg2=CAMP_CONFIG;
+        var promises=uniqueDrivers.map(function(drv){
+          var uid=drv.userId;
+          if(!uid) return Promise.resolve(null);
+          if(existMap[uid]){
+            // 기존 기사 - 캠프/wave 업데이트
+            return _db.collection('drivers').doc(existMap[uid]).update({
+              camp:drv.camp, wave:drv.wave||((cfg2[drv.camp]||{}).wave||''),
+              updatedAt:new Date().toISOString()
+            }).then(function(){return existMap[uid];});
+          }else{
+            // 신규 기사 등록
+            return _db.collection('drivers').add({
+              dealerId:cid, name:drv.name, userId:uid,
+              camp:drv.camp,
+              wave:drv.wave||((cfg2[drv.camp]||{}).wave||''),
+              rotation:drv.rotation||'',
+              status:'active', is_active:true,
+              createdAt:firebase.firestore.FieldValue.serverTimestamp()
+            }).then(function(ref){
+              existMap[uid]=ref.id;
+              return ref.id;
+            });
+          }
+        });
+
+        return Promise.all(promises).then(function(){return existMap;});
+      })
+      // Step2: 기존 근무표 삭제
+      .then(function(driverMap){
+        return _db.collection('roster_week')
+          .where('dealerId','==',cid).where('weekStart','==',ywStart).get()
+          .then(function(snap){
+            var batch=_db.batch();
+            snap.forEach(function(doc){batch.delete(doc.ref);});
+            return batch.commit().then(function(){return driverMap;});
+          });
+      })
+      // Step3: 근무표 등록
+      .then(function(driverMap){
         var batch2=_db.batch();
         toSave.forEach(function(item){
-          var did=driverMap[item.driverId]||driverMap[item.name]||item.driverId;
+          var did=driverMap[item.driverId]||item.driverId||item.name;
           var ref=_db.collection('roster_week').doc();
           batch2.set(ref,{
             dealerId:cid,weekStart:ywStart,
             driverId:did,dayIndex:item.dayIndex,
-            status:item.status,route:item.route,
+            status:item.status,route:String(item.route||''),
+            rotation:String(item.rotation||''),
             name:item.name,camp:item.camp,
             createdAt:firebase.firestore.FieldValue.serverTimestamp()
           });
         });
         return batch2.commit();
-      }).then(function(){
-        // 해당 주로 이동
+      })
+      .then(function(){
         window._rosterWeekStart=weekSun;
-        toast('✅ 근무표 '+toSave.length+'건 등록됐습니다!');
+        // 기사목록 캐시 초기화 → 재로드
+        window._rosterDrivers=null;
+        toast('✅ 기사 '+uniqueDrivers.length+'명 + 근무표 '+toSave.length+'건 자동 등록 완료!');
         _loadRoster();
       }).catch(function(e){toast('❌ 저장 실패: '+e.message);});
     }catch(e){toast('❌ 파일 오류: '+e.message);}
