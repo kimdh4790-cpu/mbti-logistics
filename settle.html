@@ -1297,16 +1297,17 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         lss('settlements',settlements);
         // Firebase 저장
         if(_db){
+          // ★ dealerId 강제 갱신 (다른 계정 데이터 혼입 방지) - fbPromises 전에 실행
+          settlements.forEach(function(x){x.dealerId=_CU.dealerId;});
           var fbPromises=[];
-          settlements.filter(function(x){return x.month===month&&x.dealerId===_CU.dealerId;}).forEach(function(x){
-            var docId=x.fbId||(x.userId+'_'+x.month);
+          settlements.filter(function(x){return x.month===month;}).forEach(function(x){
+            var docId=x.fbId||(x.dealerId+'_'+x.userId+'_'+x.month);
+            x.fbId=docId;
             var clean=Object.assign({},x);
             Object.keys(clean).forEach(function(k){if(clean[k]===undefined)delete clean[k];});
             fbPromises.push(_db.collection('settlements').doc(docId).set(clean)
-              .then(function(){x.fbId=docId;}).catch(function(){}));
+              .catch(function(e){console.error('저장 실패:',e);}));
           });
-          // ★ dealerId 강제 갱신 (다른 계정 데이터 혼입 방지)
-          settlements.forEach(function(x){x.dealerId=_CU.dealerId;});
           Promise.all(fbPromises).then(function(){
             _settleCache=null;
             var newCount=driverPromises.length;
@@ -1697,6 +1698,24 @@ function showApp(){
   if(_CU.role !== 'driver' && _CU.role !== 'member'){
     setTimeout(_registerFCM, 2000);
     setTimeout(_initFCMReceiver, 1000);
+  }
+  // ★ 구 localStorage 데이터 마이그레이션 (mbti_ → dw_{uid}_)
+  if(_CU&&_CU.dealerId){
+    var _did=_CU.dealerId;
+    ['settlements','drivers','settings','incSettings'].forEach(function(key){
+      var oldKey='mbti_'+key;
+      var newKey='dw_'+_did+'_'+key;
+      // 신규 키가 없고 구 키에 데이터가 있으면 마이그레이션
+      if(!localStorage.getItem(newKey)&&localStorage.getItem(oldKey)){
+        try{
+          var oldData=JSON.parse(localStorage.getItem(oldKey)||'[]');
+          if(oldData&&oldData.length){
+            localStorage.setItem(newKey,JSON.stringify(oldData));
+            console.log('[마이그레이션] '+oldKey+' → '+newKey+' ('+oldData.length+'건)');
+          }
+        }catch(e){}
+      }
+    });
   }
   // ★ 로그인 후 개인 slug URL로 자동 이동 (현재 URL이 /settle 또는 slug가 다를 때)
   if(_CU&&_CU.role!=='admin'&&_CU.role!=='driver'){
