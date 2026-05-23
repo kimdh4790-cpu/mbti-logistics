@@ -943,7 +943,10 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
       }
       var rh=raw[rawHdrIdx]||[];
       var rColDiv=0,rColID=1,rColRoute=2,rColDate=3,rColCamp=4,
-          rColDcnt=7,rColRcnt=8,rColUnit=9,rColAddInc=10,rColFresh=14,rColTotal=13;
+          rColDcnt=7,rColRcnt=8,rColUnit=9,rColAddInc=10,
+          rColFresh=14,    // 프레시백 회수금액
+          rColFreshInc=-1, // 프레시백 인센티브 (별도 컬럼)
+          rColTotal=13;
       for(var c2=0;c2<rh.length;c2++){
         var cn=String(rh[c2]||'').replace(/\s+/g,'');
         if(cn==='구분')rColDiv=c2;
@@ -955,7 +958,10 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         else if(cn.includes('반품')&&(cn.includes('운송장')||cn.includes('parcel')))rColRcnt=c2;
         else if(cn.includes('단가')&&!cn.includes('금액')&&!cn.includes('기본')&&!cn.includes('인센'))rColUnit=c2;
         else if(cn.includes('추가인센')&&!cn.includes('금액'))rColAddInc=c2;
-        else if(cn.includes('프레시백')||cn.includes('프레쉬백'))rColFresh=c2;
+        // 프레시백: 회수금액 vs 인센티브 분리
+        else if((cn.includes('프레시백')||cn.includes('프레쉬백'))&&(cn.includes('인센')||cn.includes('incentive')))rColFreshInc=c2;
+        else if((cn.includes('프레시백')||cn.includes('프레쉬백'))&&(cn.includes('회수')||cn.includes('금액')))rColFresh=c2;
+        else if(cn.includes('프레시백')||cn.includes('프레쉬백'))rColFresh=c2; // 단일 컬럼
         else if(cn==='총금액')rColTotal=c2;
       }
 
@@ -979,12 +985,13 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         var rcnt=Number(row[rColRcnt])||0;
         var unitPrc=Number(row[rColUnit])||0;
         var addInc=Number(row[rColAddInc])||0;
-        var freshInc=Number(row[rColFresh])||0;
+        var freshInc=Number(row[rColFresh])||0;      // 프레시백 회수금액
+        var freshIncInc=rColFreshInc>=0?Number(row[rColFreshInc])||0:0; // 프레시백 인센티브
         var rowTotal=Number(row[rColTotal])||0;
 
         if(!drvMap[cleanId])drvMap[cleanId]={
           cleanId:cleanId,camp:campName,dcnt:0,rcnt:0,
-          delAmt:0,retAmt:0,freshAmt:0,addIncAmt:0,
+          delAmt:0,retAmt:0,freshAmt:0,freshIncAmt:0,addIncAmt:0,
           nocontCnt:0,nocontAmt:0,routes:{}
         };
         // 캠프: 첫 번째로 발견된 캠프 우선
@@ -1003,6 +1010,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         drvMap[cleanId].delAmt+=delAmt;
         drvMap[cleanId].retAmt+=retAmt;
         drvMap[cleanId].freshAmt+=freshInc;
+        drvMap[cleanId].freshIncAmt+=freshIncInc;  // 프레시백 인센
         drvMap[cleanId].addIncAmt+=addInc;
         // 날짜 추출
         var rowDateRaw=String(row[rColDate]||'').trim();
@@ -1209,13 +1217,15 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           var freshAmt=tm.freshAmt||dm.freshAmt||0;
           // 추가 인센티브(가중요인)
           var addIncAmt=tm.incAmt||dm.addIncAmt||0;
-          // 프레시백 인센티브 (기사별 설정)
-          var fincVal=0;
-          Object.keys(dm.routes).forEach(function(route){
-            var rv=dm.routes[route];
-            var s=_getIncSetting(cleanId,route);
-            if(s.on&&s.rate>0)fincVal+=rv.cnt*s.rate;
-          });
+          // ★ 프레시백 인센티브: 엑셀 freshIncAmt 우선 → 없으면 기사별 설정 계산
+          var fincVal=dm.freshIncAmt||0;
+          if(fincVal===0){
+            Object.keys(dm.routes).forEach(function(route){
+              var rv=dm.routes[route];
+              var s=_getIncSetting(cleanId,route);
+              if(s.on&&s.rate>0)fincVal+=rv.cnt*s.rate;
+            });
+          }
           // routeDetails (엑셀 단가 기준 - 첫 업로드)
           // 시즌 라우트와 일반 라우트 분리
             var allRouteKeys=Object.keys(dm.routes);
@@ -1274,8 +1284,8 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           var existing=settlements.findIndex(function(s){return s.userId===cleanId&&s.month===month;});
           if(existing>=0){
             var prev=settlements[existing];
-            // 수동 편집값 보호
-            ['fresh','dmg','etcPlus','etcMinus','finc'].forEach(function(k){
+            // ★ fresh/finc/inc는 엑셀값으로 항상 갱신 (수동 입력값은 dmg/etcPlus/etcMinus만 보호)
+            ['dmg','etcPlus','etcMinus'].forEach(function(k){
               if(prev[k]!==undefined&&prev[k]!==0)entry[k]=prev[k];
             });
             ['status','taxSent','taxSentAt','paidAt','fbId','createdAt'].forEach(function(k){
@@ -2197,7 +2207,7 @@ function _renderContractPaywall(){
     +'</div>'
     +'<button onclick="_tossPay(\'contract\',9900)" style="width:100%;padding:14px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px">💳 카드·계좌이체로 결제하기</button>'
     +'<button onclick="_contractPayRequest()" style="width:100%;padding:12px;background:var(--bg2);color:var(--text2);border:1px solid var(--border);border-radius:10px;font-size:13px;cursor:pointer;margin-bottom:10px">💬 카카오톡으로 결제 문의</button>'
-    +'<div style="font-size:11px;color:var(--text3)">결제 문의: 카카오톡 <strong>MBTI Co. LOGISTICS</strong></div>'
+    +'<div style="font-size:11px;color:var(--text3)">결제 문의: 카카오톡 <strong>DONWAY</strong></div>'
     +'</div>';
 }
 function _contractPayRequest(){
@@ -2300,7 +2310,7 @@ function _renderRosterPaywall(){
     +'</div>'
     +'<button onclick="_tossPay(\'roster\',9900)" style="width:100%;padding:14px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px">💳 카드·계좌이체로 결제하기</button>'
     +'<button onclick="_rosterPayRequest()" style="width:100%;padding:12px;background:var(--bg2);color:var(--text2);border:1px solid var(--border);border-radius:10px;font-size:13px;cursor:pointer;margin-bottom:10px">💬 카카오톡으로 결제 문의</button>'
-    +'<div style="font-size:11px;color:var(--text3)">결제 문의: 카카오톡 <strong>MBTI Co. LOGISTICS</strong></div>'
+    +'<div style="font-size:11px;color:var(--text3)">결제 문의: 카카오톡 <strong>DONWAY</strong></div>'
     +'</div>';
 }
 
@@ -3345,7 +3355,7 @@ function pageSettle(){
     var totMargin=totCoupang-totTaxBase;
     hero.innerHTML='<div style="position:absolute;top:-30px;right:-30px;width:200px;height:200px;background:rgba(255,255,255,.04);border-radius:50%"></div>'
       +'<div style="position:absolute;bottom:-40px;left:40px;width:160px;height:160px;background:rgba(255,255,255,.03);border-radius:50%"></div>'
-      +'<div style="font-size:11px;font-weight:600;letter-spacing:2px;opacity:.6;margin-bottom:14px">DONWAY · MBTI Co. · 정산 현황</div>'
+      +'<div style="font-size:11px;font-weight:600;letter-spacing:2px;opacity:.6;margin-bottom:14px">DONWAY · '+((_CU&&_CU.companyName)||'MBTI Co.')+' · 정산 현황</div>'
       +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">'
         +'<div><div style="font-size:10px;opacity:.6;margin-bottom:3px">🏢 쿠팡 수입 (VAT포함)</div>'
           +'<div style="font-size:20px;font-weight:900;color:#34d399">₩'+fmt(totCoupang)+'</div>'
@@ -3584,10 +3594,10 @@ function pageSettlements(){
 function _reloadSettlePage(){_settleCache=null;pageSettlements();}
 function toggleSettleMore(btn){
   var box=document.getElementById('settle-more-btns');
-  if(!box)return;
-  var open=box.style.display!=='none'&&box.style.display!=='';
-  box.style.display=open?'none':'flex';
-  btn.textContent=open?'더보기 ▼':'접기 ▲';
+  if(!box){toast('⚠️ 정산 데이터 먼저 로드하세요');return;}
+  var isHidden = box.style.display==='none'||box.style.display==='';
+  box.style.display = isHidden ? 'flex' : 'none';
+  btn.textContent = isHidden ? '접기 ▲' : '더보기 ▼';
 }
 
 function _renderSettlePage(settles,c){
@@ -4389,7 +4399,7 @@ function openBulkSendModal(){
     +'<div style="margin-bottom:14px">'
     +'<div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">📝 메시지 템플릿 (편집 가능)</div>'
     +'<textarea id="bs-msg-tmpl" rows="6" style="width:100%;padding:10px 12px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);font-size:12px;resize:vertical;line-height:1.7">'
-    +'[DONWAY 정산명세서]\n기사: {이름}\n정산월: '+month+'\n실지급: {금액}원\n\n문의: 051-711-3103\nKakao: MBTI Co. LOGISTICS'
+    +'[DONWAY 정산명세서]\n기사: {이름}\n정산월: '+month+'\n실지급: {금액}원\n\n문의: 051-711-3103\nKakao: DONWAY'
     +'</textarea>'
     +'<div style="font-size:10px;color:var(--text3);margin-top:4px">{이름} {금액} 은 자동으로 채워집니다</div>'
     +'</div>'
@@ -4742,7 +4752,7 @@ function _showSEModal(s){
   // ── 헤더
   var hdr=document.createElement('div');
   hdr.style.cssText='background:linear-gradient(135deg,#1e3a8a,#3b82f6);color:#fff;padding:14px 18px';
-  hdr.innerHTML='<div style="font-size:10px;font-weight:600;letter-spacing:1px;opacity:.8;margin-bottom:4px">OFFICIAL STATEMENT · MBTI Co., Ltd.</div>'
+  hdr.innerHTML='<div style="font-size:10px;font-weight:600;letter-spacing:1px;opacity:.8;margin-bottom:4px">OFFICIAL STATEMENT · '+((_CU&&_CU.companyName)||'MBTI Co., Ltd.')+'</div>'
     +'<div style="font-size:16px;font-weight:800;margin-bottom:2px" id="se-title-text">'+(s.month?s.month.replace('-','년 ')+'월 정산 명세서':'정산서 작성')+'</div>'
     +'<div style="font-size:12px;opacity:.85" id="se-name-text">'+(s.driver||s.userId||'기사명 입력')+'&nbsp;<span style="opacity:.6">쿠팡</span></div>';
   wrap.appendChild(hdr);
@@ -4960,10 +4970,10 @@ function updSECalc(){
   if(vR)vR.textContent='₩'+fmt(totalRamt);
   // 항목별 합산
   function gv(id){var el=document.getElementById(id);return el?+el.value||0:0;}
-  var freshRaw=gv('se-fresh'),finc=gv('se-finc'),nocont=gv('se-nocont');
+  var freshRaw=gv('se-fresh'),finc=gv('se-finc'),inc=gv('se-inc'),nocont=gv('se-nocont');
   var fresh=Math.round(freshRaw*1.1);  // VAT포함 변환 (calcNet과 동일)
   var dmg=gv('se-dmg'),etcP=gv('se-etc-plus'),etcM=gv('se-etc-minus'),adv=gv('se-adv');
-  var taxBase=totalDamt+totalRamt+fresh+finc+nocont+etcP;  // 세금계산서 기준 (etcMinus 제외)
+  var taxBase=totalDamt+totalRamt+fresh+finc+inc+nocont+etcP;  // 세금계산서 기준 (etcMinus 제외)
   var supplyAmt=Math.round(taxBase/1.1);
   var vatAmt=taxBase-supplyAmt;
   // 엑셀 총금액 불일치 검증
@@ -8449,7 +8459,7 @@ function _showWelcome(){
   d.style.cssText='background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 60%,#7c3aed 100%);border-radius:20px;padding:36px 32px;text-align:center;max-width:360px;width:100%;color:#fff;position:relative;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5)';
   d.innerHTML='<div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:rgba(255,255,255,.04);border-radius:50%"></div>'
     +'<div style="font-size:48px;margin-bottom:8px;animation:bounce 1s infinite">👑</div>'
-    +'<div style="font-size:13px;opacity:.7;margin-bottom:4px;letter-spacing:1px">DONWAY · MBTI Co.</div>'
+    +'<div style="font-size:13px;opacity:.7;margin-bottom:4px;letter-spacing:1px">DONWAY · '+((_CU&&_CU.companyName)||'MBTI Co.')+'</div>'
     +'<div style="font-size:22px;font-weight:900;margin-bottom:4px">'+greeting+'</div>'
     +'<div style="font-size:16px;font-weight:700;margin-bottom:16px;color:#93c5fd">'+esc(name)+' 님 ✨</div>'
     +'<div style="background:rgba(255,255,255,.1);border-radius:12px;padding:12px;margin-bottom:20px">'
