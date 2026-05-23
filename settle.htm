@@ -2901,13 +2901,31 @@ function _downloadRosterExcel(){
       });
     });
 
-    var ws=XLSX.utils.aoa_to_sheet(rows);
+    // ★ 모든 row값 완전 안전 변환 (null/undefined/object 방지)
+    var safeRows=rows.map(function(row){
+      return row.map(function(v){
+        if(v===null||v===undefined)return '';
+        if(typeof v==='object')return '';
+        return String(v);
+      });
+    });
+    var ws=XLSX.utils.aoa_to_sheet(safeRows);
     ws['!cols']=[{wch:14},{wch:28},{wch:16},{wch:10},{wch:8},{wch:10},{wch:14},{wch:8},{wch:12},{wch:20}];
     var wb=XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb,'Sheet0',ws);
-    var weekStr=(weekStart.getMonth()+1)+'월'+(weekStart.getDate())+'일';
-    XLSX.writeFile(wb,'쿠팡근무표_'+weekStr+'.xlsx');
-    toast('✅ 엑셀 다운로드 완료! ('+(rows.length-1)+'건)');
+    var mo=weekStart.getMonth()+1;
+    var dd=weekStart.getDate();
+    var fname='schedule_'+mo+'_'+dd+'.xlsx';
+    // ★ Blob 방식 다운로드 (모바일/PC 모두 호환)
+    var wbout=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+    var blob=new Blob([wbout],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');
+    a.href=url; a.download=fname;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){URL.revokeObjectURL(url);},1000);
+    toast('✅ 다운로드 완료! ('+(safeRows.length-1)+'건)');
   }catch(err){
     console.error('근무표 엑셀 오류:',err);
     toast('❌ 다운로드 오류: '+err.message);
@@ -2985,41 +3003,56 @@ function _importRosterExcel(input){
       // Step1: 기존 기사 조회
       _db.collection('drivers').where('dealerId','==',cid).get()
       .then(function(snap){
-        var existMap={}; // userId → docId
+        // ★ 다양한 ID 필드 모두 매핑 (userId, driverId, coupangId + 이름 fallback)
+        var existMap={};
         snap.forEach(function(doc){
           var d=doc.data();
-          var uid=(d.userId||'').trim();
-          if(uid) existMap[uid]=doc.id;
+          var ids=[d.userId,d.driverId,d.coupangId].filter(Boolean).map(function(x){return String(x).trim();});
+          ids.forEach(function(uid){if(uid)existMap[uid]=doc.id;});
+          if(d.name)existMap['n:'+String(d.name).trim()]=doc.id;
         });
 
-        // ★ 신규 기사는 추가, 기존 기사는 캠프/이름 업데이트
         var cfg2=CAMP_CONFIG;
+        var total=0,newCount=0,updCount=0;
+
+        // ★ 각 기사 독립 처리 (한 명 실패해도 나머지 계속)
         var promises=uniqueDrivers.map(function(drv){
-          var uid=drv.userId;
-          if(!uid) return Promise.resolve(null);
-          if(existMap[uid]){
-            // 기존 기사 - 캠프/wave 업데이트
-            return _db.collection('drivers').doc(existMap[uid]).update({
-              camp:drv.camp, wave:drv.wave||((cfg2[drv.camp]||{}).wave||''),
+          var uid=String(drv.userId||'').trim();
+          var nm=String(drv.name||'').trim();
+          if(!uid&&!nm)return Promise.resolve();
+          var docId=existMap[uid]||(nm?existMap['n:'+nm]:null);
+          var campShort=drv.camp.replace('캠프','').trim();
+          var wv=drv.wave||((cfg2[campShort]||cfg2[drv.camp]||{}).wave||'');
+          if(docId){
+            updCount++;
+            return _db.collection('drivers').doc(docId).update({
+              camp:campShort, wave:wv,
               updatedAt:new Date().toISOString()
-            }).then(function(){return existMap[uid];});
+            }).then(function(){
+              if(uid)existMap[uid]=docId;
+              if(nm)existMap['n:'+nm]=docId;
+            }).catch(function(e){console.warn('update fail:'+nm,e.message);});
           }else{
-            // 신규 기사 등록
+            newCount++;
             return _db.collection('drivers').add({
-              dealerId:cid, name:drv.name, userId:uid,
-              camp:drv.camp,
-              wave:drv.wave||((cfg2[drv.camp]||{}).wave||''),
-              rotation:drv.rotation||'',
-              status:'active', is_active:true,
+              dealerId:cid,name:nm,userId:uid,
+              camp:campShort,wave:wv,
+              rotation:String(drv.rotation||''),
+              status:'active',is_active:true,
               createdAt:firebase.firestore.FieldValue.serverTimestamp()
             }).then(function(ref){
-              existMap[uid]=ref.id;
-              return ref.id;
-            });
+              if(uid)existMap[uid]=ref.id;
+              if(nm)existMap['n:'+nm]=ref.id;
+            }).catch(function(e){console.warn('add fail:'+nm,e.message);});
           }
         });
 
-        return Promise.all(promises).then(function(){return existMap;});
+        // 모든 기사 처리 완료 후 (실패 포함)
+        return Promise.all(promises.map(function(p){return p?p.catch(function(){}):(Promise.resolve());}))
+          .then(function(){
+            toast('👤 기사 신규:'+newCount+'명 업데이트:'+updCount+'명');
+            return existMap;
+          });
       })
       // Step2: 기존 근무표 삭제
       .then(function(driverMap){
@@ -3035,7 +3068,9 @@ function _importRosterExcel(input){
       .then(function(driverMap){
         var batch2=_db.batch();
         toSave.forEach(function(item){
-          var did=driverMap[item.driverId]||item.driverId||item.name;
+          var uid=String(item.driverId||'').trim();
+          var nm=String(item.name||'').trim();
+          var did=driverMap[uid]||(nm?driverMap['n:'+nm]:null)||uid||nm;
           var ref=_db.collection('roster_week').doc();
           batch2.set(ref,{
             dealerId:cid,weekStart:ywStart,
