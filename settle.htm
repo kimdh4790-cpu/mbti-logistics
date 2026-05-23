@@ -5966,6 +5966,10 @@ async function _ocrAnalyze(){
         .replace(/웰비티아이/g,'엠비티아이')
         .replace(/웸비티아이/g,'엠비티아이')
         .replace(/월비티아이/g,'엠비티아이')
+        .replace(/웰비타이/g,'엠비티아이')
+        // ★ 패턴 매칭 - 비티아이 앞 오인식 전체 포괄
+        .replace(/[웰웸월왤]비티아이/g,'엠비티아이')
+        .replace(/월비티아이/g,'엠비티아이')
         .replace(/엠비티아[이이]/g,'엠비티아이')
         .replace(/유한화사/g,'유한회사')
         .replace(/유안회사/g,'유한회사')
@@ -6023,6 +6027,8 @@ async function _ocrAnalyze(){
         .replace(/([0-9]{3})-([0-9]{2})-([0-9]{6})/g, function(m,a,b,c){
           return a+'-'+b+'-'+c.slice(0,5);
         })
+        // ── OCR 라벨 앞붙음 보정
+        .replace(/^업태\s+/,'').replace(/^종목\s+/,'').replace(/^상호\s+/,'').replace(/^대표자\s+/,'')
         // ── 업태/종목 공통 오류
         .replace(/서비스엽/g,'서비스업')
         .replace(/서비스알/g,'서비스업')
@@ -6474,7 +6480,7 @@ function _renderPrices(c){
       +'</div></div>';
   });
   editHTML+='</div>';
-  c.innerHTML=viewHTML+editHTML;
+  c.innerHTML=nocontHTML+viewHTML+editHTML;
   if(campGroups.length)setTimeout(function(){showRpCampTab(campGroups[0].name);},10);
 }
 function toggleRpCamp(gid){
