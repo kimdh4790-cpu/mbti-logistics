@@ -855,8 +855,10 @@ function calcNet(x){
   // ★ v9.25: 기타(+)만 세금계산서(income)에 포함 → 고용·산재 기준
   //           기타(-)는 세금계산서 제외, 실지급에서만 차감 (공제 항목)
   var income=damt+ramt+fresh+finc+inc+nocont+etcPlus;
-  // 세금계산서 기준 금액 = etcPlus 포함, etcMinus 제외
-  var totalAmt = income;
+  // ★ v9.26: 저장된 totalAmt 우선 사용 → RPRICE 변경 후에도 정산관리/현황 금액 일치
+  //           저장값 없거나 0이면 재계산값 사용 (신규 데이터 호환)
+  var _storedTotal=(x.totalAmt!==undefined&&x.totalAmt!==null&&x.totalAmt!==''&&+x.totalAmt>0)?+x.totalAmt:0;
+  var totalAmt=_storedTotal||income;
   var supplyAmt = Math.round(totalAmt / 1.1);
   var expenseAmt = Math.round(supplyAmt * 0.346);
   var monthlyWage = supplyAmt - expenseAmt;
