@@ -41,7 +41,9 @@ const PROJECT_ID = 'mbti-logistics';
 const GITHUB_RAW = 'https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main';
 async function fetchAsset(path, request) {
   const filePath = path.startsWith('/') ? path : '/' + path;
-  const assetUrl = GITHUB_RAW + filePath;
+  // ★ 한글/특수문자 파일명 URL 인코딩 (/ 구분자는 유지)
+  const encodedPath = filePath.split('/').map(seg => seg ? encodeURIComponent(decodeURIComponent(seg)) : seg).join('/');
+  const assetUrl = GITHUB_RAW + encodedPath;
   const resp = await fetch(assetUrl, { cf: { cacheEverything: true, cacheTtl: 60 } });
   return resp;
 }
