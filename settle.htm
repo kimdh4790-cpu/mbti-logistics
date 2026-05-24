@@ -7351,10 +7351,10 @@ function buildNav(){
     _db.collection('companies').doc(did).get().then(function(snap){
       var d=snap.exists?snap.data():{};
       window._cachedPlan=d.plan||'';
-      window._cachedHasPaid=!!(d.settlePaid||d.rosterPaid||d.plan);
+      window._cachedHasPaid=_isPlanAllowed(d);
       _buildNavRender(nav,cur,window._cachedPlan,window._cachedHasPaid);
     }).catch(function(){_buildNavRender(nav,cur,'',isSuperAdmin());});
-    _buildNavRender(nav,cur,'',isSuperAdmin());
+    _buildNavRender(nav,cur,'',false); // 캐시 없을 땐 일단 잠금 표시
     return;
   }
   _buildNavRender(nav,cur,window._cachedPlan||'',window._cachedHasPaid||isSuperAdmin());
@@ -13070,6 +13070,7 @@ function _buildNavRender(nav,cur,plan,hasPaid){
     }).then(function(){
       window._cachedPlan=planType;
       window._cachedHasPaid=true;
+      window._cachedPlan=planType;
       window._navPlanLoaded=false;
       toast('🎉 결제 완료! 모든 기능이 활성화됐습니다');
       // 잠금 해제 후 사이드바 즉시 갱신
