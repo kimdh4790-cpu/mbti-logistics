@@ -1061,26 +1061,30 @@ export default {
         };
         // 주문 ID 생성 (dealerId + timestamp)
         const orderId = `DONWAY-${dealerId.slice(0,8)}-${Date.now()}`;
-        // Firestore에 주문 기록 저장
-        const token = await getAccessToken(env);
-        const orderDoc = {
-          fields: {
-            orderId:     { stringValue: orderId },
-            dealerId:    { stringValue: dealerId },
-            companyName: { stringValue: companyName || '' },
-            email:       { stringValue: email || '' },
-            planType:    { stringValue: planType },
-            amount:      { integerValue: String(amount) },
-            status:      { stringValue: 'pending' },
-            slug:        { stringValue: '' },   // confirm 시 companies에서 채워짐
-            createdAt:   { timestampValue: new Date().toISOString() }
-          }
-        };
-        await fetch(`${FS_BASE}/toss_orders?documentId=${orderId}`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify(orderDoc)
-        });
+        // Firestore에 주문 기록 저장 (실패해도 결제 진행)
+        try {
+          const token = await getAccessToken(env);
+          const orderDoc = {
+            fields: {
+              orderId:     { stringValue: orderId },
+              dealerId:    { stringValue: dealerId },
+              companyName: { stringValue: companyName || '' },
+              email:       { stringValue: email || '' },
+              planType:    { stringValue: planType },
+              amount:      { integerValue: String(amount) },
+              status:      { stringValue: 'pending' },
+              createdAt:   { timestampValue: new Date().toISOString() }
+            }
+          };
+          await fetch(`${FS_BASE}/toss_orders?documentId=${orderId}`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(orderDoc)
+          });
+        } catch(fsErr) {
+          // Firestore 저장 실패해도 결제는 진행
+          console.log('Firestore order save failed:', fsErr.message);
+        }
         return new Response(JSON.stringify({
           orderId,
           orderName: `DONWAY ${PLAN_LABELS[planType] || planType}`,
