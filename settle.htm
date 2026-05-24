@@ -7568,36 +7568,29 @@ var VAPID_KEY = 'BNDQMuIj8gVt0uqOXOiMSLODRDiQiNO-5x4D1C-ZOXcxnf5iKJjNs5sHHFdHkZO
 
 var _fcmRegFailed = false;  // ★ VAPID 키 오류 시 재시도 방지
 async function _registerFCM(){
-  if(!_db||!_CU||!_CU.dealerId||_fcmRegFailed) return;
-  try{
-    if(!('Notification' in window)){return;}
-    var perm = await Notification.requestPermission();
-    if(perm !== 'granted'){return;}
-    var messaging = firebase.messaging();
-    var token = await messaging.getToken({vapidKey: VAPID_KEY});
-    if(!token) return;
-    var isAdmin = isSuperAdmin();
-    // 대리점 FCM 토큰 저장
-    await _db.collection('companies').doc(_CU.dealerId).update({
-      fcmToken: token,
-      fcmUpdatedAt: new Date().toISOString()
-    });
-    // ★ 슈퍼어드민은 admin_tokens 컬렉션에도 저장 (결제알림 수신용)
-    if(isAdmin){
-      await _db.collection('admin_tokens').doc(_CU.dealerId).set({
-        token: token,
-        email: _CU.email||'',
-        updatedAt: new Date().toISOString(),
-        device: navigator.userAgent.includes('Mobile')?'mobile':'desktop'
-      });
-    }
-} catch(e){
-    _fcmRegFailed = true;  // ★ VAPID 키 불일치 등 → 재시도 차단
-    console.warn('[FCM] 등록 실패 (푸시 비활성화):', e.message);
-  }
+  if(!_db||!_CU||!_CU.dealerId||_fcmRegFailed)return;
+  if(!('Notification' in window))return;
+  if(typeof firebase==='undefined'||!firebase.messaging)return;
+  Notification.requestPermission().then(function(perm){
+    if(perm!=='granted'){_fcmRegFailed=true;return;}
+    try{
+      var messaging=firebase.messaging();
+      messaging.getToken({vapidKey:VAPID_KEY}).then(function(token){
+        if(!token){_fcmRegFailed=true;return;}
+        var isAdmin=isSuperAdmin();
+        var did=_CU.dealerId;
+        var uid=_CU.uid||'';
+        var ref=isAdmin
+          ?_db.collection('companies').doc(did)
+          :_db.collection('drivers').where('dealerId','==',did).where('userId','==',uid).limit(1);
+        if(isAdmin){
+          _db.collection('companies').doc(did).update({fcmToken:token,fcmUpdated:new Date().toISOString()}).catch(function(){});
+        }
+      }).catch(function(e){_fcmRegFailed=true;});
+    }catch(e){_fcmRegFailed=true;}
+  }).catch(function(){_fcmRegFailed=true;});
 }
 
-// ── 알림 소리 재생 (Web Audio API - 외부 파일 불필요) ──
 function _playNotifSound(type){
   try{
     var ctx = new (window.AudioContext||window.webkitAudioContext)();
