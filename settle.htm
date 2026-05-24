@@ -5141,15 +5141,8 @@ function pageHome(){
   document.getElementById('topbar-right').innerHTML='';
   var el=document.getElementById('content');
   if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
-
-  // ★ 슈퍼어드민: 전체 현황 대시보드
-  if(isSuperAdmin()){_homeRenderSuperAdmin(el);return;}
-
-  var did=_CU.dealerId||_CU.companyId||'';
-  if(!did){
-    el.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div>회사 정보가 없습니다<br><small>관리자에게 문의하세요</small></div>';
-    return;
-  }
+  if(isSuperAdmin()&&!_CU.dealerId){_homeRenderSuperAdmin(el);return;}
+  var did=_CU.dealerId||_CU.companyId||_CU.uid||'';
   var today=new Date().toISOString().slice(0,10);
   var now=new Date();
   var ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
@@ -5244,100 +5237,6 @@ function _todoItem(type, label, page){
     +'<span style="font-size:12px;font-weight:700;color:'+col+'">'+label+'</span>'
     +'<span style="font-size:11px;color:'+col+'">처리하기 →</span>'
     +'</div>';
-}
-
-// 슈퍼어드민 전체 현황 대시보드
-function _homeRenderSuperAdmin(el){
-  el.innerHTML='<div style="max-width:960px;margin:0 auto">'
-    // 헤더
-    +'<div style="background:linear-gradient(135deg,#1a1a1a,#2d1b69,#1e3a5f);border-radius:18px;padding:22px 24px;margin-bottom:18px;color:#fff">'
-    +'<div style="font-size:22px;font-weight:900;margin-bottom:4px">👑 슈퍼어드민 대시보드</div>'
-    +'<div style="font-size:12px;opacity:.7">전체 대리점 현황 · DONWAY 관리자 전용</div>'
-    +'</div>'
-    // 전체 통계
-    +'<div id="sa-stats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:18px">'
-    +'<div class="card" style="text-align:center"><div style="font-size:28px">⏳</div><div style="font-size:11px;color:var(--text3)">로딩 중...</div></div>'
-    +'</div>'
-    // 대리점 목록
-    +'<div class="card" style="margin-bottom:14px">'
-    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
-    +'<div style="font-size:14px;font-weight:800">🏢 대리점 목록</div>'
-    +'<button onclick="goPage(\'dealers\')" class="btn btn-blue" style="font-size:11px">전체 관리 →</button>'
-    +'</div>'
-    +'<div id="sa-dealers"><div class="empty"><div class="empty-icon">⏳</div>로딩 중...</div></div>'
-    +'</div>'
-    // 최근 정산 현황
-    +'<div class="card">'
-    +'<div style="font-size:14px;font-weight:800;margin-bottom:12px">📊 최근 정산 현황</div>'
-    +'<div id="sa-settlements"><div class="empty"><div class="empty-icon">⏳</div>로딩 중...</div></div>'
-    +'</div>'
-    +'</div>';
-  _saLoadStats();
-}
-
-function _saLoadStats(){
-  if(!_db)return;
-  var now=new Date();
-  var ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
-  // 전체 대리점 + 드라이버 + 정산 집계
-  Promise.all([
-    _db.collection('companies').get(),
-    _db.collection('drivers').get(),
-    _db.collection('settlements').where('month','==',ym).get()
-  ]).then(function(res){
-    var companies=res[0].size, drivers=res[1].size, settles=res[2].size;
-    var totalPay=0; res[2].forEach(function(d){totalPay+=(d.data().totalPay||d.data().calcNet||0);});
-    var statsEl=document.getElementById('sa-stats');
-    if(statsEl){
-      statsEl.innerHTML=''
-        +'<div class="card" style="text-align:center;background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff">'
-        +'<div style="font-size:22px;font-weight:900">'+companies+'</div><div style="font-size:11px;opacity:.8">총 대리점</div></div>'
-        +'<div class="card" style="text-align:center">'
-        +'<div style="font-size:22px;font-weight:900;color:var(--brand)">'+drivers+'</div><div style="font-size:11px;color:var(--text3)">총 기사/직원</div></div>'
-        +'<div class="card" style="text-align:center">'
-        +'<div style="font-size:22px;font-weight:900;color:var(--green)">'+settles+'</div><div style="font-size:11px;color:var(--text3)">이번달 정산</div></div>'
-        +'<div class="card" style="text-align:center;background:linear-gradient(135deg,#059669,#10b981);color:#fff">'
-        +'<div style="font-size:18px;font-weight:900">₩'+Math.round(totalPay/10000).toLocaleString()+'만</div><div style="font-size:11px;opacity:.8">이번달 총지급</div></div>';
-    }
-    // 대리점 목록
-    var dealerEl=document.getElementById('sa-dealers');
-    if(dealerEl){
-      var html='<div style="display:flex;flex-direction:column;gap:6px">';
-      res[0].forEach(function(doc){
-        var d=doc.data();
-        html+='<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg3);border-radius:8px">'
-          +'<div style="font-size:16px">🏢</div>'
-          +'<div style="flex:1">'
-          +'<div style="font-size:12px;font-weight:800">'+esc(d.name||d.companyName||doc.id)+'</div>'
-          +'<div style="font-size:10px;color:var(--text3)">'+esc(d.serviceType||'full')+' · '+esc(d.ceoName||'')+'</div>'
-          +'</div>'
-          +'<span style="font-size:10px;background:var(--green-l);color:var(--green);padding:2px 8px;border-radius:10px;font-weight:700">'+(d.settlePaid?'유료':'무료')+'</span>'
-          +'</div>';
-      });
-      dealerEl.innerHTML=html+'</div>';
-    }
-    // 최근 정산
-    var settleEl=document.getElementById('sa-settlements');
-    if(settleEl){
-      var sHtml='<table style="width:100%;border-collapse:collapse;font-size:12px">'
-        +'<tr style="background:var(--bg3)"><th style="padding:6px 10px;text-align:left">기사</th>'
-        +'<th style="padding:6px">월</th><th style="padding:6px;text-align:right">지급액</th></tr>';
-      var cnt=0;
-      res[2].forEach(function(doc){
-        if(cnt++>8)return;
-        var d=doc.data();
-        sHtml+='<tr style="border-bottom:1px solid var(--border)">'
-          +'<td style="padding:6px 10px;font-weight:700">'+esc(d.driverName||d.driver||'')+'</td>'
-          +'<td style="padding:6px;text-align:center;color:var(--text3)">'+esc(d.month||'')+'</td>'
-          +'<td style="padding:6px;text-align:right;font-weight:700;color:var(--brand)">₩'+(d.totalPay||d.calcNet||0).toLocaleString()+'</td>'
-          +'</tr>';
-      });
-      settleEl.innerHTML=sHtml+'</table>';
-    }
-  }).catch(function(e){
-    var s=document.getElementById('sa-stats');
-    if(s)s.innerHTML='<div style="color:var(--red);font-size:12px;padding:10px">'+esc(e.message)+'</div>';
-  });
 }
 
 function _homeQuickBtn(icon, label, page, color, bg){
@@ -5476,9 +5375,6 @@ function pageEmpHome(){
   if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
   var did=_CU.dealerId||_CU.companyId||'';
   var uid=_CU.driverId||_CU.userId||_CU.uid||'';
-  if(!did&&!isSuperAdmin()){
-    el.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div>소속 회사 정보가 없습니다</div>';return;
-  }
   var today=new Date().toISOString().slice(0,10);
   var now=new Date();
   var ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
@@ -13030,14 +12926,11 @@ var TERMS_CONTENT = {
 };
 
 function checkTermsAgreement(){
-  // 첫 진입 페이지 결정
-  var _firstPage=(_CU&&(_CU.role==='driver'||_CU.role==='member'))?'emp_home':'home';
-  // 슈퍼어드민
-  if(isSuperAdmin()){goPage('home');return;}
-  if(_CU&&_CU.termsVersion===TERMS_VER){goPage(_firstPage);return;}
-  // 약관 동의 필요
+  var _fp=(_CU&&(_CU.role==='driver'||_CU.role==='member'))?'emp_home':isSuperAdmin()?'home':'home';
+  if(_CU&&_CU.email==='kimdh4790@gmail.com'){goPage('home');return;}
+  if(_CU&&_CU.termsVersion===TERMS_VER){goPage(_fp);return;}
   var mo=document.getElementById('mo-terms-agree');
-  if(!mo){goPage(_firstPage);return;}
+  if(!mo){goPage(_fp);return;}
   document.getElementById('ta-terms-body').innerHTML=esc(TERMS_CONTENT.terms).replace(/\n/g,'<br>');
   document.getElementById('ta-privacy-body').innerHTML=esc(TERMS_CONTENT.privacy).replace(/\n/g,'<br>');
   mo.classList.add('show');
@@ -13055,8 +12948,7 @@ function agreeTerms(){
   },{merge:true}).then(function(){
     document.getElementById('mo-terms-agree').classList.remove('show');
     _CU.termsVersion=TERMS_VER;
-    var _fp2=(_CU&&(_CU.role==='driver'||_CU.role==='member'))?'emp_home':'home';
-    goPage(_fp2);
+    goPage((_CU&&(_CU.role==='driver'||_CU.role==='member'))?'emp_home':'home');
     toast('약관 동의가 완료되었습니다.');
   }).catch(function(e){
     toast('저장 실패: '+e.message);
