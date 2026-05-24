@@ -2293,18 +2293,21 @@ function doLogout(){
 
 // ══ 토스페이먼츠 결제 ══
 var PLAN_INFO={
+  // ── 신규 묶음 패키지 ──
+  qr_only:    {label:'📷 QR 출퇴근',      amount:19900, days:30},
+  settle_taxi:{label:'📦 택배 정산',       amount:29900, days:30},
+  payroll:    {label:'💼 급여 관리',       amount:29900, days:30},
+  qr_payroll: {label:'📷💼 QR+급여',      amount:44900, days:30},
+  full:       {label:'🚀 ALL-IN-ONE',     amount:59900, days:30},
+  // ── 3개월 할인 ──
+  qr_only_3m:    {label:'📷 QR 출퇴근 3개월',   amount:53730, days:90},
+  settle_taxi_3m:{label:'📦 택배 정산 3개월',    amount:80730, days:90},
+  payroll_3m:    {label:'💼 급여 관리 3개월',    amount:80730, days:90},
+  qr_payroll_3m: {label:'📷💼 QR+급여 3개월',   amount:121230,days:90},
+  full_3m:       {label:'🚀 ALL-IN-ONE 3개월',  amount:152730,days:90},
+  // ── 구버전 호환 ──
   contract:{label:'위수탁 계약서',amount:9900},
   roster:  {label:'근무표 관리',  amount:9900},
-  qr:      {label:'QR 출퇴근',   amount:29900},
-  full:    {label:'풀패키지',     amount:69900},
-  settle:  {label:'AI 정산',      amount:39900},
-  // ── 월정액 구독 플랜
-  starter: {label:'Starter (1~10명)',  amount:30000, days:30},
-  basic:   {label:'Basic (11~20명)',   amount:50000, days:30},
-  pro:     {label:'Pro (21~40명)',     amount:80000, days:30},
-  starter3:{label:'Starter 3개월',    amount:81000, days:90},
-  basic3:  {label:'Basic 3개월',      amount:135000,days:90},
-  pro3:    {label:'Pro 3개월',        amount:216000,days:90}
 };
 
 async function _tossPay(planType,amount){
@@ -2364,20 +2367,24 @@ async function _tossPay(planType,amount){
         body:JSON.stringify({paymentKey:paymentKey,orderId:orderId,amount:parseInt(amt)})
       }).then(function(r){return r.json();}).then(function(data){
         if(data.success){
-          toast('🎉 결제 완료! 기능이 즉시 활성화됐습니다');
-          // 회사 slug 조회해서 URL 안내
-          if(_CU&&_db){
-            _db.collection('companies').doc(_CU.dealerId).get().then(function(snap){
-              var sl=snap.exists&&snap.data().slug;
-              if(sl){
-                var myUrl=window.location.origin+'/'+sl;
-                setTimeout(function(){
-                  toast('📌 전용 URL: '+myUrl);
-                },2000);
-              }
-            }).catch(function(){});
-          }
-          setTimeout(function(){location.reload();},1500);
+          // ★ 플랜 자동 활성화
+          var planKey=data.planType||window._pendingPlanKey||'full';
+          _autoActivatePlan(planKey, orderId).then(function(){
+            toast('🎉 결제 완료! '+planKey+' 플랜이 즉시 활성화됐습니다');
+            // 전용 URL 안내
+            if(_CU&&_db){
+              _db.collection('companies').doc(_CU.dealerId||_CU.uid).get().then(function(snap){
+                if(snap.exists&&snap.data().slug){
+                  var myUrl=window.location.origin+'/'+snap.data().slug;
+                  setTimeout(function(){toast('📌 전용 URL: '+myUrl);},2000);
+                }
+              }).catch(function(){});
+            }
+          }).catch(function(){
+            // Firestore 업데이트 실패해도 표시
+            toast('🎉 결제 완료! 잠시 후 새로고침하세요');
+            setTimeout(function(){location.reload();},2000);
+          });
         } else {
           toast('❌ '+(data.error||'결제 확인 실패'));
         }
@@ -10875,8 +10882,16 @@ function _showSubModal(){
 function confirmSubPay(planKey){
   var plan=PLAN_INFO[planKey];
   if(!plan){toast('❌ 플랜 정보 없음');return;}
+  window._pendingPlanKey=planKey; // 결제 완료 후 활성화에 사용
   var mo=document.getElementById('mo-sub');if(mo)mo.remove();
-  _tossPay(planKey, plan.amount);
+  // 인원수/기간 반영 가격 계산
+  var tier=window._DRIVER_TIERS&&window._DRIVER_TIERS[window._subTier||0];
+  var mult=tier&&!tier.custom?(tier.mult||1):1;
+  var period=window._subPeriod||'m';
+  var baseKey=period==='3m'?(planKey+'_3m'):planKey;
+  var basePlan=PLAN_INFO[baseKey]||plan;
+  var amount=Math.round((basePlan.amount||plan.amount)*mult);
+  _tossPay(planKey, amount);
 }
 
 // ════════════════════════════════════════════════════════

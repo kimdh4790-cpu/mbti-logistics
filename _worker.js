@@ -41,9 +41,7 @@ const PROJECT_ID = 'mbti-logistics';
 const GITHUB_RAW = 'https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main';
 async function fetchAsset(path, request) {
   const filePath = path.startsWith('/') ? path : '/' + path;
-  // ★ 한글/특수문자 파일명 URL 인코딩 (/ 구분자는 유지)
-  const encodedPath = filePath.split('/').map(seg => seg ? encodeURIComponent(decodeURIComponent(seg)) : seg).join('/');
-  const assetUrl = GITHUB_RAW + encodedPath;
+  const assetUrl = GITHUB_RAW + filePath;
   const resp = await fetch(assetUrl, { cf: { cacheEverything: true, cacheTtl: 60 } });
   return resp;
 }
@@ -374,9 +372,7 @@ export default {
         return new Response(logisticsResp.body, { status: logisticsResp.status, headers: lh });
       } else {
         const landingResp = await fetchAsset('/donway_landing.html', request);
-        const landingHeaders = new Headers();
-        landingHeaders.set('Content-Type', 'text/html; charset=utf-8');  // ★ GitHub Raw text/plain 덮어씀
-        landingHeaders.set('Cache-Control', 'no-cache');
+        const landingHeaders = new Headers(landingResp.headers);
         Object.entries(SECURITY_HEADERS).forEach(([k,v]) => landingHeaders.set(k,v));
         return new Response(landingResp.body, { status: landingResp.status, headers: landingHeaders });
       }
@@ -1055,11 +1051,13 @@ export default {
           });
         }
         const PLAN_LABELS = {
-          contract: '위수탁 계약서',
-          roster: '근무표 관리',
-          qr: 'QR 출퇴근',
-          full: '풀패키지',
-          settle: 'AI 정산'
+          qr_only:'📷 QR 출퇴근', settle_taxi:'📦 택배 정산',
+          payroll:'💼 급여 관리', qr_payroll:'📷💼 QR+급여',
+          full:'🚀 ALL-IN-ONE',
+          qr_only_3m:'📷 QR 출퇴근 3개월', settle_taxi_3m:'📦 택배 정산 3개월',
+          payroll_3m:'💼 급여 관리 3개월', qr_payroll_3m:'📷💼 QR+급여 3개월',
+          full_3m:'🚀 ALL-IN-ONE 3개월',
+          contract:'위수탁 계약서', roster:'근무표', qr:'QR출퇴근(구)', settle:'AI정산(구)'
         };
         // 주문 ID 생성 (dealerId + timestamp)
         const orderId = `DONWAY-${dealerId.slice(0,8)}-${Date.now()}`;
@@ -1149,11 +1147,23 @@ export default {
 
         // 3. 플랜별 활성화 필드 매핑
         const PLAN_FIELDS = {
+          // ── 신규 패키지 ──
+          qr_only:    { plan:{stringValue:'qr_only'},    settlePaid:{booleanValue:true}, rosterPaid:{booleanValue:true}, qrPaid:{booleanValue:true} },
+          settle_taxi:{ plan:{stringValue:'settle_taxi'}, settlePaid:{booleanValue:true}, rosterPaid:{booleanValue:true} },
+          payroll:    { plan:{stringValue:'payroll'},     settlePaid:{booleanValue:true}, rosterPaid:{booleanValue:true} },
+          qr_payroll: { plan:{stringValue:'qr_payroll'},  settlePaid:{booleanValue:true}, rosterPaid:{booleanValue:true}, qrPaid:{booleanValue:true} },
+          full:       { plan:{stringValue:'full'},        settlePaid:{booleanValue:true}, rosterPaid:{booleanValue:true}, qrPaid:{booleanValue:true}, contractPaid:{booleanValue:true} },
+          // ── 3개월 (동일 플랜, 기간만 다름) ──
+          qr_only_3m:    { plan:{stringValue:'qr_only'},    settlePaid:{booleanValue:true}, rosterPaid:{booleanValue:true}, qrPaid:{booleanValue:true} },
+          settle_taxi_3m:{ plan:{stringValue:'settle_taxi'}, settlePaid:{booleanValue:true}, rosterPaid:{booleanValue:true} },
+          payroll_3m:    { plan:{stringValue:'payroll'},     settlePaid:{booleanValue:true}, rosterPaid:{booleanValue:true} },
+          qr_payroll_3m: { plan:{stringValue:'qr_payroll'},  settlePaid:{booleanValue:true}, rosterPaid:{booleanValue:true}, qrPaid:{booleanValue:true} },
+          full_3m:       { plan:{stringValue:'full'},        settlePaid:{booleanValue:true}, rosterPaid:{booleanValue:true}, qrPaid:{booleanValue:true}, contractPaid:{booleanValue:true} },
+          // ── 구버전 호환 ──
           contract: { contractPaid: { booleanValue: true } },
           roster:   { rosterPaid:   { booleanValue: true } },
-          qr:       { qrPaid:       { booleanValue: true } },
-          full:     { contractPaid: { booleanValue: true }, rosterPaid: { booleanValue: true }, qrPaid: { booleanValue: true }, settlePaid: { booleanValue: true } },
-          settle:   { settlePaid:   { booleanValue: true } }
+          qr:       { qrPaid:       { booleanValue: true }, plan:{stringValue:'qr_only'} },
+          settle:   { settlePaid:   { booleanValue: true }, plan:{stringValue:'settle_taxi'} }
         };
         const planFields = PLAN_FIELDS[planType] || {};
 
