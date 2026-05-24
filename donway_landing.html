@@ -287,6 +287,68 @@ footer{padding:46px 24px;border-top:1px solid var(--bdr);text-align:center}
       <div class="hst"><span class="hstn gp" data-cnt="0" data-suf="원">0원</span><span class="hstl">기기 구매 비용</span></div>
       <div class="hst"><span class="hstn go" data-cnt="3" data-suf="건">3건</span><span class="hstl">특허 출원</span></div>
     </div>
+
+    <!-- ANIMATED OG CARD -->
+    <div id="og-wrap" style="margin-top:52px;width:100%;max-width:760px;border-radius:18px;overflow:hidden;position:relative;aspect-ratio:1200/630;animation:su .8s .8s both;box-shadow:0 0 60px rgba(0,200,248,.12),0 0 120px rgba(29,111,255,.06)">
+      <canvas id="ogcvs" style="position:absolute;inset:0;width:100%;height:100%"></canvas>
+      <div style="position:absolute;inset:0;display:flex;align-items:center;padding:0 6%">
+        <!-- logo icon -->
+        <div style="flex-shrink:0;margin-right:5%;position:relative;width:21%;aspect-ratio:1">
+          <svg id="og-logo" viewBox="0 0 200 200" style="width:100%;height:100%">
+            <defs>
+              <radialGradient id="sph" cx="40%" cy="35%" r="60%">
+                <stop offset="0%" stop-color="#4488ff"/>
+                <stop offset="45%" stop-color="#0a1a6e"/>
+                <stop offset="100%" stop-color="#000510"/>
+              </radialGradient>
+              <radialGradient id="shl" cx="35%" cy="30%" r="40%">
+                <stop offset="0%" stop-color="rgba(120,180,255,0.9)"/>
+                <stop offset="100%" stop-color="transparent"/>
+              </radialGradient>
+              <radialGradient id="sgl" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="rgba(0,200,248,0.3)"/>
+                <stop offset="100%" stop-color="transparent"/>
+              </radialGradient>
+            </defs>
+            <circle cx="100" cy="100" r="95" fill="url(#sgl)"/>
+            <polygon id="ohex3" points="100,14 169,56 169,144 100,186 31,144 31,56" fill="none" stroke="rgba(0,200,248,0.12)" stroke-width="1"/>
+            <polygon id="ohex2" points="100,30 154,62 154,128 100,160 46,128 46,62" fill="none" stroke="rgba(0,200,248,0.22)" stroke-width="1"/>
+            <polygon id="ohex1" points="100,48 142,72 142,128 100,152 58,128 58,72" fill="none" stroke="rgba(0,200,248,0.38)" stroke-width="1.2"/>
+            <circle cx="100" cy="100" r="52" fill="url(#sph)"/>
+            <circle cx="100" cy="100" r="52" fill="url(#shl)"/>
+            <circle cx="100" cy="100" r="52" fill="none" stroke="rgba(0,120,255,0.5)" stroke-width="1.5"/>
+            <rect id="osc" x="48" y="98" width="104" height="1.5" fill="rgba(0,200,248,0.6)" rx="1"/>
+            <ellipse cx="100" cy="100" rx="64" ry="18" fill="none" stroke="rgba(0,200,248,0.28)" stroke-width="1" stroke-dasharray="5 3"/>
+            <circle id="oorb" cx="164" cy="100" r="3.5" fill="#00c8f8"/>
+            <circle cx="100" cy="46" r="2.5" fill="none" stroke="#00c8f8" stroke-width="1" opacity="0.4"/>
+            <circle cx="100" cy="154" r="2.5" fill="none" stroke="#00c8f8" stroke-width="1" opacity="0.4"/>
+            <circle cx="169" cy="100" r="2.5" fill="none" stroke="#00c8f8" stroke-width="1" opacity="0.4"/>
+          </svg>
+        </div>
+        <!-- text area -->
+        <div style="flex:1;min-width:0;text-align:left">
+          <div id="og-badge" style="display:inline-flex;align-items:center;gap:5px;background:rgba(245,184,0,.1);border:.5px solid rgba(245,184,0,.35);border-radius:20px;padding:3px 12px;margin-bottom:2%;opacity:0">
+            <span style="width:6px;height:6px;border-radius:50%;background:#f5b800;box-shadow:0 0 8px #f5b800;flex-shrink:0"></span>
+            <span style="font-size:clamp(7px,1.1vw,11px);font-weight:700;color:#f5b800;font-family:sans-serif;letter-spacing:2px">특허 출원 중 — 3건</span>
+          </div>
+          <div id="og-title" style="line-height:1.05;margin-bottom:1.5%;opacity:0">
+            <span style="font-size:clamp(22px,5.2vw,64px);font-weight:900;letter-spacing:.08em;background:linear-gradient(120deg,#fff 0%,#00c8f8 45%,#a855f7 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 20px rgba(0,200,248,.25))">DON</span><span style="font-size:clamp(22px,5.2vw,64px);font-weight:900;letter-spacing:.08em;color:#fff">WAY</span>
+          </div>
+          <div id="og-sub" style="font-family:sans-serif;font-size:clamp(8px,1.2vw,13px);color:rgba(0,200,248,.55);letter-spacing:.3em;margin-bottom:2.5%;opacity:0">AI AUTOMATION · SETTLEMENT PLATFORM</div>
+          <div id="og-line" style="height:1.5px;background:linear-gradient(90deg,#00c8f8,#a855f7,transparent);border-radius:1px;margin-bottom:2.5%;width:0;transition:width .7s cubic-bezier(.16,1,.3,1)"></div>
+          <div id="og-tags" style="display:flex;gap:1.5%;flex-wrap:wrap;opacity:0">
+            <span style="font-family:sans-serif;font-size:clamp(7px,1vw,10px);font-weight:700;padding:3px 9px;border-radius:20px;background:rgba(0,200,248,.1);border:.5px solid rgba(0,200,248,.3);color:#00c8f8">⚡ AI 자동 정산</span>
+            <span style="font-family:sans-serif;font-size:clamp(7px,1vw,10px);font-weight:700;padding:3px 9px;border-radius:20px;background:rgba(0,232,122,.08);border:.5px solid rgba(0,232,122,.3);color:#00e87a">🔐 QR 출퇴근</span>
+            <span style="font-family:sans-serif;font-size:clamp(7px,1vw,10px);font-weight:700;padding:3px 9px;border-radius:20px;background:rgba(168,85,247,.08);border:.5px solid rgba(168,85,247,.3);color:#a855f7">🧾 세금계산서</span>
+            <span style="font-family:sans-serif;font-size:clamp(7px,1vw,10px);font-weight:700;padding:3px 9px;border-radius:20px;background:rgba(245,184,0,.08);border:.5px solid rgba(245,184,0,.3);color:#f5b800">📱 직원 앱</span>
+          </div>
+          <div id="og-url" style="font-family:sans-serif;font-size:clamp(7px,.9vw,10px);color:rgba(255,255,255,.2);letter-spacing:2px;margin-top:2%;opacity:0">donway.ai.kr</div>
+        </div>
+      </div>
+      <!-- top accent line -->
+      <div style="position:absolute;top:0;left:0;right:0;height:2.5px;background:linear-gradient(90deg,#00c8f8,#1d6fff,#a855f7)"></div>
+    </div>
+
   </div>
   <div class="shi"><div class="shii"><div class="shid"></div></div></div>
 </section>
@@ -617,6 +679,45 @@ footer{padding:46px 24px;border-top:1px solid var(--bdr);text-align:center}
   <div style="margin-top:14px;font-size:11px;color:rgba(255,255,255,.08)">&copy; 2026 DONWAY · MBTI Co. All rights reserved.</div>
 </footer>
 
+<script>
+/* ── OG CARD ANIMATION ── */
+(function(){
+  var cv=document.getElementById('ogcvs');
+  if(!cv)return;
+  var ctx=cv.getContext('2d'),W,H,pts=[],ogT=0;
+  function resize(){var r=cv.parentElement.getBoundingClientRect();W=r.width;H=r.height;cv.width=W*devicePixelRatio;cv.height=H*devicePixelRatio;ctx.scale(devicePixelRatio,devicePixelRatio);}
+  function initPts(){pts=[];for(var i=0;i<55;i++)pts.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.25,vy:(Math.random()-.5)*.25,r:Math.random()*1.2+.3,o:Math.random()*.25+.04,h:Math.random()>.6?195:Math.random()>.5?270:180});}
+  function drawBg(){
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle='#020817';ctx.fillRect(0,0,W,H);
+    var grd=ctx.createRadialGradient(W*.75,H*.2,0,W*.75,H*.2,W*.4);
+    grd.addColorStop(0,'rgba(168,85,247,0.07)');grd.addColorStop(1,'transparent');
+    ctx.fillStyle=grd;ctx.fillRect(0,0,W,H);
+    var grd2=ctx.createRadialGradient(W*.15,H*.8,0,W*.15,H*.8,W*.35);
+    grd2.addColorStop(0,'rgba(29,111,255,0.08)');grd2.addColorStop(1,'transparent');
+    ctx.fillStyle=grd2;ctx.fillRect(0,0,W,H);
+    pts.forEach(function(p){p.x+=p.vx;p.y+=p.vy;if(p.x<0)p.x=W;if(p.x>W)p.x=0;if(p.y<0)p.y=H;if(p.y>H)p.y=0;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle='hsla('+p.h+',100%,70%,'+p.o+')';ctx.fill();});
+    for(var i=0;i<pts.length;i++)for(var j=i+1;j<pts.length;j++){var dx=pts[i].x-pts[j].x,dy=pts[i].y-pts[j].y,d=Math.sqrt(dx*dx+dy*dy);if(d<90){ctx.beginPath();ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[j].x,pts[j].y);ctx.strokeStyle='rgba(0,200,248,'+(0.035*(1-d/90))+')';ctx.lineWidth=.35;ctx.stroke();}}
+  }
+  function animLogo(){
+    ogT+=.012;
+    var od=document.getElementById('oorb');
+    if(od){od.setAttribute('cx',100+64*Math.cos(ogT));od.setAttribute('cy',100+18*Math.sin(ogT));od.style.opacity=0.5+0.5*Math.abs(Math.sin(ogT));}
+    var sc=document.getElementById('osc');
+    if(sc){var sy=48+Math.round((Math.sin(ogT*.8)+1)/2*104);sc.setAttribute('y',sy);sc.style.opacity=0.25+0.55*Math.abs(Math.sin(ogT*.8));}
+    ['ohex1','ohex2','ohex3'].forEach(function(id,i){var el=document.getElementById(id);if(el)el.style.opacity=0.4+0.6*Math.sin(ogT*1.1+i*.8);});
+  }
+  function loop(){drawBg();animLogo();requestAnimationFrame(loop);}
+  function fadeEl(id,delay){setTimeout(function(){var el=document.getElementById(id);if(el){el.style.transition='opacity 500ms ease';el.style.opacity='1';}},delay);}
+  resize();initPts();ctx=cv.getContext('2d');loop();
+  window.addEventListener('resize',function(){resize();initPts();});
+  setTimeout(function(){
+    fadeEl('og-badge',200);fadeEl('og-title',400);fadeEl('og-sub',800);
+    setTimeout(function(){var l=document.getElementById('og-line');if(l)l.style.width='82%';},1000);
+    fadeEl('og-tags',1300);fadeEl('og-url',1600);
+  },600);
+})();
+</script>
 <script>
 function toggleM(){var h=document.getElementById('ham'),m=document.getElementById('mob');h.classList.toggle('open');m.style.display=m.style.display==='flex'?'none':'flex';}
 function closeM(){var h=document.getElementById('ham'),m=document.getElementById('mob');h.classList.remove('open');m.style.display='none';}
