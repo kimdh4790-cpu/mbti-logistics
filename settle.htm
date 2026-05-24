@@ -2310,46 +2310,46 @@ var PLAN_INFO={
   roster:  {label:'근무표 관리',  amount:9900},
 };
 
-async function _tossPay(planType,amount){
+async function _tossPay(planType, amount){
   if(!_CU){toast('❌ 로그인 필요');return;}
   var plan=PLAN_INFO[planType];
-  if(!plan){toast('❌ 알 수 없는 플랜');return;}
-  try{
-    // 1. 주문 생성
-    var orderResp=await fetch('/toss/create-order',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        dealerId:_CU.dealerId||_CU.uid,
-        companyName:_CU.companyName||'',
-        email:_CU.email||'',
-        planType:planType,
-        amount:amount||plan.amount
-      })
-    });
-    var order=await orderResp.json();
-    if(!orderResp.ok||order.error){toast('❌ '+(order.error||'주문 생성 실패'));return;}
-
-    // 2. 토스 결제창 열기
-    // ★ 실제 클라이언트 키로 교체 필요 (토스페이먼츠 대시보드에서 발급)
-    var clientKey='test_ck_mBZ1gQ4YVXQwywWXyyKXrl2KPoqN';
+  if(!plan){toast('❌ 알 수 없는 플랜: '+planType);return;}
+  var clientKey='test_ck_mBZ1gQ4YVXQwywWXyyKXrl2KPoqN';
+  var finalAmount=amount||plan.amount;
+  toast('⏳ 주문 생성 중...');
+  // 1. 주문 생성 (Promise 방식)
+  fetch('/toss/create-order',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      dealerId:_CU.dealerId||_CU.uid||'',
+      companyName:_CU.companyName||_CU.name||'',
+      email:_CU.email||'',
+      planType:planType,
+      amount:finalAmount
+    })
+  }).then(function(r){return r.json();})
+  .then(function(order){
+    if(order.error){toast('❌ '+(order.error||'주문 생성 실패'));return;}
+    if(!order.orderId){toast('❌ 주문 ID 없음');return;}
+    // 2. 토스 결제창
     var tossPayments=TossPayments(clientKey);
     var payment=tossPayments.payment({customerKey:_CU.dealerId||_CU.uid||'guest'});
-    await payment.requestPayment({
+    return payment.requestPayment({
       method:'CARD',
-      amount:{currency:'KRW',value:amount||plan.amount},
+      amount:{currency:'KRW',value:finalAmount},
       orderId:order.orderId,
       orderName:'DONWAY '+plan.label,
-      successUrl:window.location.origin+'/settle?toss=success&orderId='+order.orderId,
+      successUrl:window.location.origin+'/settle?toss=success&orderId='+order.orderId+'&planType='+planType,
       failUrl:window.location.origin+'/settle?toss=fail',
       customerEmail:_CU.email||'',
       customerName:_CU.companyName||'고객사',
       card:{useEscrow:false,flowMode:'DEFAULT',useCardPoint:false}
     });
-  }catch(e){
-    if(e.code==='USER_CANCEL'||e.message==='사용자가 결제를 취소하였습니다.') return;
-    toast('❌ 결제 오류: '+(e.message||e.code||''));
-  }
+  }).catch(function(e){
+    if(e&&(e.code==='USER_CANCEL'||e.message==='사용자가 결제를 취소하였습니다.'))return;
+    toast('❌ 결제 오류: '+(e&&(e.message||e.code)||'알 수 없는 오류'));
+  });
 }
 
 // 결제 성공/실패 콜백 (successUrl 복귀 시)
@@ -2359,6 +2359,7 @@ async function _tossPay(planType,amount){
     var paymentKey=params.get('paymentKey');
     var orderId=params.get('orderId');
     var amt=params.get('amount');
+    var planTypeParam=params.get('planType')||window._pendingPlanKey||'';
     history.replaceState(null,'',window.location.pathname);
     if(paymentKey&&orderId&&amt){
       fetch('/toss/confirm',{
@@ -2368,7 +2369,7 @@ async function _tossPay(planType,amount){
       }).then(function(r){return r.json();}).then(function(data){
         if(data.success){
           // ★ 플랜 자동 활성화
-          var planKey=data.planType||window._pendingPlanKey||'full';
+          var planKey=data.planType||planTypeParam||window._pendingPlanKey||'full';
           _autoActivatePlan(planKey, orderId).then(function(){
             toast('🎉 결제 완료! '+planKey+' 플랜이 즉시 활성화됐습니다');
             // 전용 URL 안내
