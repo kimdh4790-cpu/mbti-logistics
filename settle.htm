@@ -7367,6 +7367,7 @@ var MENUS_SETTLE = [
 ];
 // QR 출퇴근 전용 (일반직원, 위수탁X)
 var MENUS_QR = [
+  {s:'홈',items:[{ic:'🏠',l:'대시보드',p:'home'}]},
   {s:'메인',items:[{ic:'🔐',l:'출퇴근 현황',p:'attendance'},{ic:'📅',l:'달력',p:'schedule'}]},
   {s:'직원',items:[{ic:'👤',l:'직원 관리',p:'drivers'},{ic:'🌴',l:'휴가 관리',p:'leave'},{ic:'🗓',l:'근무표',p:'roster'}]},
   {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices'}]}
@@ -7382,6 +7383,7 @@ var MENUS_FULL = [
 ];
 // ★ 소상공인/사장님 전용 (시급·일급·월급 정산)
 var MENUS_HOURLY = [
+  {s:'홈',items:[{ic:'🏠',l:'대시보드',p:'home'}]},
   {s:'메인',items:[{ic:'📊',l:'급여 현황',p:'hourly_settle'},{ic:'🔐',l:'출퇴근 현황',p:'attendance'},{ic:'📅',l:'달력',p:'schedule'}]},
   {s:'직원',items:[{ic:'👤',l:'직원 관리',p:'drivers'},{ic:'🌴',l:'휴가 관리',p:'leave'},{ic:'🗓',l:'근무표',p:'roster'}]},
   {s:'분석',items:[{ic:'📈',l:'통계',p:'stats'}]},
@@ -7397,20 +7399,29 @@ var MENUS_DRIVER = [
 var MENUS = MENUS_SETTLE; // 기본값
 function buildNav(){
   var nav=document.getElementById('snav');
+  if(!nav)return;
+  if(!MENUS||!MENUS.length){nav.innerHTML='';return;}
+  var cur=typeof _curPage!=='undefined'?(_curPage||''):'';
+  var anyOpen=false;
   nav.innerHTML=MENUS.map(function(g,gi){
+    if(!g||!g.items)return'';
     var id='nsec-'+gi;
-    // 현재 페이지가 이 섹션에 있으면 기본 open
-    var hasActive=g.items.some(function(m){return m.p===_curPage;});
-    return '<div class="ns'+(hasActive?' open':'')
-      +'" onclick="_toggleNavSection(this,\''+id+'\')">'+
+    var hasActive=g.items.some(function(m){return m&&m.p===cur;});
+    if(hasActive)anyOpen=true;
+    return '<div class="ns'+(hasActive?' open':'')+'" id="nshead-'+gi+'" onclick="_toggleNavSection(this,\''+id+'\')">'+
       '<span>'+g.s+'</span><span class="ns-arrow">›</span></div>'+
       '<div class="ns-items'+(hasActive?' open':'')+'" id="'+id+'">'+
-      g.items.map(function(m){
-        return '<div class="ni'+(m.p===_curPage?' on':'')+'" id="nav-'+m.p+'" onclick="goPage(\''+m.p+'\')">'+
+      g.items.filter(function(m){return m&&m.p;}).map(function(m){
+        return '<div class="ni'+(m.p===cur?' on':'')+'" id="nav-'+m.p+'" onclick="goPage(\''+m.p+'\')">'+
           '<span style="font-size:14px">'+m.ic+'</span><span>'+m.l+'</span></div>';
-      }).join('')+
-      '</div>';
+      }).join('')+'</div>';
   }).join('');
+  if(!anyOpen){
+    var f0=document.getElementById('nsec-0');
+    var h0=document.getElementById('nshead-0');
+    if(f0)f0.classList.add('open');
+    if(h0)h0.classList.add('open');
+  }
 }
 
 function _toggleNavSection(el,id){
