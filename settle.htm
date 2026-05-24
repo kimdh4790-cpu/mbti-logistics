@@ -2313,91 +2313,51 @@ var PLAN_INFO={
 async function _tossPay(planType, amount){
   if(!_CU){toast('❌ 로그인 필요');return;}
   var plan=PLAN_INFO[planType];
-  if(!plan){toast('❌ 알 수 없는 플랜: '+planType);return;}
-  var clientKey='test_ck_mBZ1gQ4YVXQwywWXyyKXrl2KPoqN';
+  if(!plan){toast('❌ 플랜 정보 없음: '+planType);return;}
   var finalAmount=amount||plan.amount;
-  toast('⏳ 주문 생성 중...');
-  // 1. 주문 생성 (Promise 방식)
-  fetch('/toss/create-order',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      dealerId:_CU.dealerId||_CU.uid||'',
-      companyName:_CU.companyName||_CU.name||'',
-      email:_CU.email||'',
+  if(!finalAmount||finalAmount<100){toast('❌ 금액 오류');return;}
+
+  // 클라이언트에서 직접 주문ID 생성 (서버 호출 불필요)
+  var uid=(_CU.dealerId||_CU.uid||'user').replace(/[^a-zA-Z0-9]/g,'').slice(0,8);
+  var orderId='DW'+uid+Date.now().toString().slice(-8);
+  var clientKey='test_ck_mBZ1gQ4YVXQwywWXyyKXrl2KPoqN';
+
+  // Firestore에 주문 저장 (비동기, 결제 블로킹 안함)
+  if(_db&&_CU.dealerId){
+    _db.collection('payment_requests').add({
+      orderId:orderId,
+      dealerId:_CU.dealerId,
       planType:planType,
-      amount:finalAmount
-    })
-  }).then(function(r){return r.json();})
-  .then(function(order){
-    if(order.error){toast('❌ '+(order.error||'주문 생성 실패'));return;}
-    if(!order.orderId){toast('❌ 주문 ID 없음');return;}
-    // 2. 토스 결제창
+      amount:finalAmount,
+      status:'pending',
+      createdAt:new Date().toISOString()
+    }).catch(function(){});
+  }
+
+  try{
     var tossPayments=TossPayments(clientKey);
-    var payment=tossPayments.payment({customerKey:_CU.dealerId||_CU.uid||'guest'});
-    return payment.requestPayment({
+    var payment=tossPayments.payment({
+      customerKey:(_CU.dealerId||_CU.uid||'guest').replace(/[^a-zA-Z0-9-_=.@+]/g,'').slice(0,30)
+    });
+    payment.requestPayment({
       method:'CARD',
       amount:{currency:'KRW',value:finalAmount},
-      orderId:order.orderId,
+      orderId:orderId,
       orderName:'DONWAY '+plan.label,
-      successUrl:window.location.origin+'/settle?toss=success&orderId='+order.orderId+'&planType='+planType,
-      failUrl:window.location.origin+'/settle?toss=fail',
+      successUrl:window.location.origin+window.location.pathname+'?toss=success&orderId='+orderId+'&planType='+planType,
+      failUrl:window.location.origin+window.location.pathname+'?toss=fail',
       customerEmail:_CU.email||'',
-      customerName:_CU.companyName||'고객사',
+      customerName:(_CU.companyName||_CU.name||'고객사').slice(0,20),
       card:{useEscrow:false,flowMode:'DEFAULT',useCardPoint:false}
+    }).catch(function(e){
+      if(e&&(e.code==='USER_CANCEL'||String(e.message).indexOf('취소')>=0))return;
+      toast('❌ '+(e&&e.message||'결제 오류'));
     });
-  }).catch(function(e){
-    if(e&&(e.code==='USER_CANCEL'||e.message==='사용자가 결제를 취소하였습니다.'))return;
-    toast('❌ 결제 오류: '+(e&&(e.message||e.code)||'알 수 없는 오류'));
-  });
+  }catch(e){
+    toast('❌ 토스 초기화 오류: '+(e&&e.message||''));
+  }
 }
 
-// 결제 성공/실패 콜백 (successUrl 복귀 시)
-(function _checkTossReturn(){
-  var params=new URLSearchParams(window.location.search);
-  if(params.get('toss')==='success'){
-    var paymentKey=params.get('paymentKey');
-    var orderId=params.get('orderId');
-    var amt=params.get('amount');
-    var planTypeParam=params.get('planType')||window._pendingPlanKey||'';
-    history.replaceState(null,'',window.location.pathname);
-    if(paymentKey&&orderId&&amt){
-      fetch('/toss/confirm',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({paymentKey:paymentKey,orderId:orderId,amount:parseInt(amt)})
-      }).then(function(r){return r.json();}).then(function(data){
-        if(data.success){
-          // ★ 플랜 자동 활성화
-          var planKey=data.planType||planTypeParam||window._pendingPlanKey||'full';
-          _autoActivatePlan(planKey, orderId).then(function(){
-            toast('🎉 결제 완료! '+planKey+' 플랜이 즉시 활성화됐습니다');
-            // 전용 URL 안내
-            if(_CU&&_db){
-              _db.collection('companies').doc(_CU.dealerId||_CU.uid).get().then(function(snap){
-                if(snap.exists&&snap.data().slug){
-                  var myUrl=window.location.origin+'/'+snap.data().slug;
-                  setTimeout(function(){toast('📌 전용 URL: '+myUrl);},2000);
-                }
-              }).catch(function(){});
-            }
-          }).catch(function(){
-            // Firestore 업데이트 실패해도 표시
-            toast('🎉 결제 완료! 잠시 후 새로고침하세요');
-            setTimeout(function(){location.reload();},2000);
-          });
-        } else {
-          toast('❌ '+(data.error||'결제 확인 실패'));
-        }
-      }).catch(function(e){toast('❌ '+e.message);});
-    }
-  } else if(params.get('toss')==='fail'){
-    history.replaceState(null,'',window.location.pathname);
-    toast('결제가 취소됐습니다');
-  }
-})();
-
-// ══ 위수탁 계약서 ══
 function pageContract(){
   if(_db&&_CU&&_CU.dealerId){
     _db.collection('companies').doc(_CU.dealerId).get().then(function(snap){
