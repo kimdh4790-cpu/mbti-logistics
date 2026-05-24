@@ -1,4 +1,4 @@
-  // 저장 진행<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -17,6 +17,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon.ico">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <style>
 :root{
   --brand:#185FA5;--brand-l:#E6F1FB;--brand-d:#0C447C;
@@ -58,6 +59,9 @@ body.dark{--bg:#0d0d0b;--bg2:#161614;--bg3:#1c1c1a;--text:#f0ede6;--text2:#b8b5a
 .ni:hover{background:var(--bg3);color:var(--text1,var(--text));border-left-color:var(--brand)}
 .ni.on{background:var(--brand-l);color:var(--brand);font-weight:700;border-left-color:var(--brand)}
 .sb-bot{padding:9px 12px;border-top:1px solid var(--border)}
+.btn-iv{padding:4px 10px;border:1px solid var(--border);border-radius:20px;background:var(--bg2);color:var(--text2);font-size:11px;cursor:pointer;transition:all .15s}
+.btn-iv:hover{background:var(--brand-l);color:var(--brand);border-color:var(--brand)}
+.btn-iv.active{background:var(--brand);color:#fff;border-color:var(--brand);font-weight:700}
 .topbar{height:46px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 16px;gap:8px;position:sticky;top:0;z-index:50}
 .topbar-title{font-size:15px;font-weight:700}
 .topbar-right{display:flex;align-items:center;gap:7px}
@@ -594,11 +598,13 @@ var LABOR_LAW_2026 = {
 
 // ── 업종 타입 ──
 var WORK_TYPES = {
-  hourly:    { label:'시급제',   icon:'⏰', unit:'시간당' },
-  daily:     { label:'일급제',   icon:'📅', unit:'1일당' },
-  monthly:   { label:'월급제',   icon:'💼', unit:'월정액' },
-  delivery:  { label:'건당(배송)',icon:'📦', unit:'건당'  },
-  commission:{ label:'수수료제', icon:'💰', unit:'매출×%' }
+  hourly:      { label:'시급제',     icon:'⏰', unit:'시간당' },
+  daily:       { label:'일급제',     icon:'📅', unit:'1일당' },
+  weekly_fixed:{ label:'주급제',     icon:'📆', unit:'주정액' },
+  monthly:     { label:'월급제',     icon:'💼', unit:'월정액' },
+  monthly_fixed:{ label:'월급제(고정)',icon:'💼', unit:'월정액' },
+  delivery:    { label:'건당(배송)', icon:'📦', unit:'건당'  },
+  commission:  { label:'수수료제',   icon:'💰', unit:'매출×%' }
 };
 
 // ════════════════════════════════════════
@@ -1802,6 +1808,7 @@ function showApp(){
     else MENUS=MENUS_FULL;
   }
   buildNav();
+  _checkDeviceMode();
   // 슬러그 모드: 회사 정보 로드 및 브랜딩
   if(window._SLUG_MODE && _db){
     _loadSlugCompany();
@@ -3326,43 +3333,902 @@ function _calDeleteMemo(btn){
 
 // ══ 출퇴근 (QR 전용) ══
 function pageAttendance(){
+  document.getElementById('page-title').textContent='🔐 출퇴근 현황';
   var el=document.getElementById('content');
   if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
   var did=_CU.dealerId;
   var today=new Date().toISOString().slice(0,10);
-  el.innerHTML='<div style="max-width:700px;margin:0 auto">'
-    +'<div class="card" style="margin-bottom:12px">'
-    +'<div class="card-title" style="margin-bottom:12px">🔐 오늘 출퇴근 현황 <span style="font-size:11px;color:var(--text3);font-weight:400">'+today+'</span></div>'
-    +'<div id="att-list"><div class="empty"><div class="empty-icon">⏳</div>로딩 중...</div></div>'
-    +'</div></div>';
-  _db.collection('attendance')
-    .where('dealerId','==',did)
-    .where('date','==',today)
-    .orderBy('checkIn','asc').limit(100).get()
+
+  el.innerHTML='<div style="max-width:860px;margin:0 auto">'
+    // ── 탭 ──
+    +'<div style="display:flex;gap:6px;margin-bottom:14px">'
+    +'<button id="att-tab-qr" class="btn btn-blue" onclick="_attTab(\'qr\')" style="font-size:12px">📺 QR 코드 표시</button>'
+    +'<button id="att-tab-today" class="btn" onclick="_attTab(\'today\')" style="font-size:12px">📋 오늘 현황</button>'
+    +'<button id="att-tab-hist" class="btn" onclick="_attTab(\'hist\')" style="font-size:12px">📅 기간별 조회</button>'
+    +'</div>'
+    +'<div id="att-qr-area"></div>'
+    +'<div id="att-today-area" style="display:none"></div>'
+    +'<div id="att-hist-area" style="display:none"></div>'
+    +'</div>';
+
+  _attTab('qr');
+}
+
+function _attTab(tab){
+  ['qr','today','hist'].forEach(function(t){
+    var btn=document.getElementById('att-tab-'+t);
+    var area=document.getElementById('att-'+t+'-area');
+    if(!btn||!area)return;
+    var active=(t===tab);
+    btn.className=active?'btn btn-blue':'btn';
+    area.style.display=active?'':'none';
+  });
+  if(tab==='qr')_attRenderQR();
+  if(tab==='today')_attRenderToday();
+  if(tab==='hist')_attRenderHist();
+}
+
+// ── QR 코드 표시 (관리자가 모니터/태블릿에 띄워두는 화면) ──
+function _attRenderQR(){
+  var area=document.getElementById('att-qr-area');
+  if(!area)return;
+  var did=_CU.dealerId;
+  window._attQRMode='dynamic'; // 기본: 동적
+
+  area.innerHTML=''
+    // ── 모드 선택 탭 ──
+    +'<div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">'
+    +'<button id="qrmode-dynamic" onclick="_attSetQRMode(\'dynamic\')" class="btn btn-blue" style="font-size:12px">⚡ 동적 QR (보안)</button>'
+    +'<button id="qrmode-static"  onclick="_attSetQRMode(\'static\')"  class="btn" style="font-size:12px">📌 정적 QR (고정)</button>'
+    +'<button id="qrmode-empqr"   onclick="_attSetQRMode(\'empqr\')"   class="btn" style="font-size:12px">👤 직원 개인 QR</button>'
+    +'</div>'
+    // ── 동적 QR 영역 ──
+    +'<div id="qrarea-dynamic" style="display:flex;gap:14px;flex-wrap:wrap">'
+      +'<div class="card" style="flex:1;min-width:280px;text-align:center">'
+      +'<div class="card-title" style="margin-bottom:4px">⚡ 동적 QR (보안 권장)</div>'
+      +'<div style="font-size:11px;color:var(--text3);margin-bottom:6px">5분마다 자동 갱신 — 사진 캡처 재사용 불가</div>'
+      +'<div id="att-qr-box" style="display:inline-block;padding:14px;background:#fff;border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,.12)"></div>'
+      +'<div id="att-qr-timer" style="margin-top:8px;font-size:14px;color:var(--brand);font-weight:800"></div>'
+      +'<div id="att-qr-token" style="font-size:10px;color:var(--text3);margin-top:2px"></div>'
+      // 갱신 주기 설정
+      +'<div style="margin-top:12px;padding:10px;background:var(--bg3);border-radius:10px">'
+      +'<div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:600">⏱ 갱신 주기 설정</div>'
+      +'<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center">'
+      +'<button onclick="_attSetInterval(30)" class="btn-iv" id="iv-30">30초</button>'
+      +'<button onclick="_attSetInterval(60)" class="btn-iv" id="iv-60">1분</button>'
+      +'<button onclick="_attSetInterval(120)" class="btn-iv" id="iv-120">2분</button>'
+      +'<button onclick="_attSetInterval(180)" class="btn-iv" id="iv-180">3분</button>'
+      +'<button onclick="_attSetInterval(300)" class="btn-iv" id="iv-300">5분</button>'
+      +'<button onclick="_attSetInterval(600)" class="btn-iv" id="iv-600">10분</button>'
+      +'</div>'
+      +'<div id="att-emp-guide" style="margin-top:6px;font-size:10px;color:var(--text3);text-align:center"></div>'
+      +'</div>'
+      +'<div style="margin-top:10px;display:flex;gap:6px;justify-content:center">'
+      +'<button data-did="'+did+'" onclick="_attGenQR(this.dataset.did)" class="btn" style="font-size:11px">🔄 즉시 갱신</button>'
+      +'<button onclick="_attPrintQR()" class="btn" style="font-size:11px">🖨 인쇄</button>'
+      +'</div></div>'
+      // GPS 설정
+      +'<div class="card" style="flex:1;min-width:260px">'
+      +'<div class="card-title" style="margin-bottom:10px">📍 GPS 위치 검증</div>'
+      +'<div style="font-size:11px;color:var(--text3);margin-bottom:10px">직원이 일정 반경 밖에서 찍으면 자동 차단</div>'
+      +'<div id="att-gps-status" style="margin-bottom:10px"></div>'
+      +'<button onclick="_attSetGPS()" class="btn btn-teal" style="width:100%;margin-bottom:8px">📍 현재 위치 = 회사 위치로 설정</button>'
+      +'<div style="display:flex;gap:6px;align-items:center">'
+      +'<span style="font-size:12px;color:var(--text3)">허용 반경</span>'
+      +'<select id="att-radius-sel" onchange="_attSaveRadius(this.value)" style="flex:1;padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px">'
+      +'<option value="50">50m (엄격)</option><option value="100" selected>100m (기본)</option>'
+      +'<option value="200">200m (여유)</option><option value="500">500m (넓게)</option>'
+      +'<option value="0">검증 안함</option></select></div>'
+      +'</div>'
+    +'</div>'
+    // ── 장치 등록 카드 ──
+    +'<div class="card" style="width:100%;margin-top:6px">'
+    +'<div class="card-title" style="margin-bottom:4px">🖥 장치 등록 (PC / 키오스크)</div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-bottom:12px">'
+    +'PC·키오스크에 전용 URL을 등록하면 해당 장치에서 바로 출퇴근 QR이 열립니다</div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">'
+    +'<button onclick="_attOpenDeviceModal(\'pc\')" class="btn btn-blue" style="font-size:12px">💻 PC 장치 등록</button>'
+    +'<button onclick="_attOpenDeviceModal(\'kiosk\')" class="btn btn-blue" style="font-size:12px">📟 키오스크 등록</button>'
+    +'</div>'
+    +'<div id="att-device-list"><div style="font-size:11px;color:var(--text3)">로딩 중...</div></div>'
+    +'</div>'
+    // ── 정적 QR 영역 ──
+    +'<div id="qrarea-static" style="display:none">'
+      +'<div class="card" style="max-width:500px">'
+      +'<div class="card-title" style="margin-bottom:4px">📌 정적 QR (고정 코드)</div>'
+      +'<div style="font-size:11px;color:var(--text3);margin-bottom:14px">인쇄해서 벽에 붙이는 용도 — 시간 제한 없음 · GPS 검증만 적용</div>'
+      +'<div style="text-align:center">'
+      +'<div id="att-qr-static-box" style="display:inline-block;padding:14px;background:#fff;border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,.12)"></div>'
+      +'</div>'
+      +'<div style="margin-top:12px;display:flex;gap:8px;justify-content:center">'
+      +'<button onclick="_attGenStaticQR()" class="btn btn-blue" style="font-size:12px">🔄 코드 재생성</button>'
+      +'<button onclick="_attPrintStaticQR()" class="btn" style="font-size:12px">🖨 인쇄/저장</button>'
+      +'</div>'
+      +'<div style="margin-top:10px;padding:10px;background:var(--amber-l);border-radius:8px;font-size:11px;color:var(--amber)">'
+      +'⚠️ 정적 QR은 한번 찍히면 당일 출퇴근에만 유효합니다. 보안을 위해 동적 QR 사용을 권장합니다.'
+      +'</div>'
+      +'</div>'
+    +'</div>'
+    // ── 직원 개인 QR 영역 ──
+    +'<div id="qrarea-empqr" style="display:none">'
+      +'<div class="card">'
+      +'<div class="card-title" style="margin-bottom:4px">👤 직원 개인 QR</div>'
+      +'<div style="font-size:11px;color:var(--text3);margin-bottom:14px">각 직원 고유 QR — 관리자가 스캔해서 출퇴근 처리 (반대 방식)</div>'
+      +'<div id="emp-qr-list"><div class="empty"><div class="empty-icon">⏳</div>직원 목록 로딩 중...</div></div>'
+      +'</div>'
+    +'</div>';
+
+  // 초기화 - 기본 30초
+  window._attIvSec = window._attIvSec || 30;
+  setTimeout(function(){
+    var btn30=document.getElementById('iv-30');
+    if(btn30)btn30.className='btn-iv active';
+  },50);
+  _attLoadEmpCount(did);
+  _attGenQR(did);
+  _attLoadGPSStatus(did);
+  _attGenStaticQR(did);
+  _attLoadEmpQRList(did);
+  _attLoadDeviceList(did);
+  if(window._attQRInterval)clearInterval(window._attQRInterval);
+  window._attQRInterval=null;
+}
+
+// ════════════════════════════════
+// 장치 등록 (PC / 키오스크)
+// ════════════════════════════════
+
+function _attOpenDeviceModal(type){
+  var typeLabel=type==='kiosk'?'📟 키오스크':'💻 PC';
+  var did=_CU&&_CU.dealerId||'';
+  var mo=document.createElement('div');
+  mo.id='mo-device';
+  mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  mo.innerHTML='<div style="background:var(--bg2);border-radius:16px;padding:20px;width:100%;max-width:420px">'
+    +'<div style="font-size:16px;font-weight:800;margin-bottom:16px">'+typeLabel+' 장치 등록</div>'
+    +'<div style="margin-bottom:12px">'
+    +'<label style="font-size:12px;color:var(--text3);display:block;margin-bottom:4px">장치 이름</label>'
+    +'<input id="dev-name" type="text" placeholder="예: 사무실 데스크탑, 1층 키오스크" '
+    +'style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:13px">'
+    +'</div>'
+    +(type==='kiosk'?
+      '<div style="margin-bottom:12px">'
+      +'<label style="font-size:12px;color:var(--text3);display:block;margin-bottom:4px">위치/캠프</label>'
+      +'<input id="dev-loc" type="text" placeholder="예: 부산1캠프, 본사 1층" '
+      +'style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:13px">'
+      +'</div>':'')
+    +'<div style="margin-bottom:16px">'
+    +'<label style="font-size:12px;color:var(--text3);display:block;margin-bottom:4px">갱신 주기</label>'
+    +'<select id="dev-iv" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:13px">'
+    +'<option value="30">30초</option><option value="60">1분</option>'
+    +'<option value="120">2분</option><option value="300">5분</option>'
+    +'</select></div>'
+    +'<div style="background:var(--brand-l);border-radius:8px;padding:10px;margin-bottom:14px;font-size:11px;color:var(--brand)">'
+    +(type==='kiosk'
+      ?'📟 <b>키오스크</b>: 매장 태블릿/키오스크에 전용 URL을 북마크하면<br>열 때마다 자동으로 대형 QR이 표시됩니다'
+      :'💻 <b>PC 모드</b>: 개인 컴퓨터에서 URL 열면 컴팩트 QR이 자동 표시<br>직원이 본인 폰으로 스캔해서 출퇴근')
+    +'</div>'
+    +'<div style="display:flex;gap:8px">'
+    +'<button onclick="document.getElementById(\'mo-device\').remove()" '
+    +'style="flex:1;padding:10px;border:1px solid var(--border);border-radius:8px;background:none;color:var(--text2);cursor:pointer">취소</button>'
+    +'<button data-type="'+type+'" data-did="'+did+'" onclick="_attRegisterDevice(this.dataset.type,this.dataset.did)" '
+    +'class="btn btn-blue" style="flex:2;padding:10px">✅ 등록 & URL 생성</button>'
+    +'</div>'
+    +'</div>';
+  document.body.appendChild(mo);
+  setTimeout(function(){var el=document.getElementById('dev-name');if(el)el.focus();},100);
+}
+
+function _attRegisterDevice(type, did){
+  var name=(document.getElementById('dev-name')||{}).value||'';
+  var loc=(document.getElementById('dev-loc')||{}).value||'';
+  var iv=parseInt((document.getElementById('dev-iv')||{}).value||'30');
+  if(!name.trim()){toast('❌ 장치 이름을 입력하세요');return;}
+
+  // 고유 장치 ID 생성
+  var devId='dev_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,6);
+  var baseUrl=window.location.origin+window.location.pathname;
+  var url=baseUrl+'?mode='+(type==='kiosk'?'kiosk':'pc')+'&did='+did+'&devId='+devId+'&iv='+iv;
+
+  // Firestore에 장치 저장
+  var devData={
+    devId:devId, dealerId:did, type:type,
+    name:name.trim(), location:loc.trim(),
+    interval:iv, url:url,
+    createdAt:new Date().toISOString()
+  };
+
+  if(_db){
+    _db.collection('devices').doc(devId).set(devData)
+      .then(function(){
+        document.getElementById('mo-device').remove();
+        _attShowDeviceURL(type, name, url, devId);
+        _attLoadDeviceList(did);
+      }).catch(function(e){toast('❌ '+e.message);});
+  } else {
+    document.getElementById('mo-device').remove();
+    _attShowDeviceURL(type, name, url, devId);
+  }
+}
+
+function _attShowDeviceURL(type, name, url, devId){
+  var mo=document.createElement('div');
+  mo.id='mo-devurl';
+  mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  mo.innerHTML='<div style="background:var(--bg2);border-radius:16px;padding:20px;width:100%;max-width:460px">'
+    +'<div style="font-size:16px;font-weight:800;margin-bottom:4px">✅ 장치 등록 완료</div>'
+    +'<div style="font-size:12px;color:var(--text3);margin-bottom:16px">'+esc(name)+'</div>'
+    // URL 표시
+    +'<div style="background:var(--bg3);border-radius:8px;padding:10px;margin-bottom:12px">'
+    +'<div style="font-size:10px;color:var(--text3);margin-bottom:4px">장치 전용 URL</div>'
+    +'<div style="font-size:11px;word-break:break-all;color:var(--brand);font-weight:600">'+url+'</div>'
+    +'</div>'
+    // QR 코드 (URL을 QR로)
+    +'<div style="text-align:center;margin-bottom:14px">'
+    +'<div style="font-size:11px;color:var(--text3);margin-bottom:8px">이 QR을 장치 카메라로 열거나, URL을 북마크하세요</div>'
+    +'<div id="devurl-qr" style="display:inline-block;background:#fff;padding:10px;border-radius:10px"></div>'
+    +'</div>'
+    +'<div style="display:flex;gap:8px">'
+    +'<button data-url="'+url+'" onclick="navigator.clipboard&&navigator.clipboard.writeText(this.dataset.url).then(function(){toast(\'✅ URL 복사됨\');})" '
+    +'class="btn" style="flex:1;font-size:12px">📋 URL 복사</button>'
+    +'<button data-url="'+url+'" onclick="window.open(this.dataset.url,\'_blank\')" '
+    +'class="btn btn-blue" style="flex:1;font-size:12px">🔗 바로 열기</button>'
+    +'<button onclick="document.getElementById(\'mo-devurl\').remove()" '
+    +'style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;background:none;color:var(--text2);cursor:pointer;font-size:12px">닫기</button>'
+    +'</div>'
+    +'</div>';
+  document.body.appendChild(mo);
+  // URL QR 생성
+  setTimeout(function(){
+    var box=document.getElementById('devurl-qr');
+    if(box&&window.QRCode){
+      try{new QRCode(box,{text:url,width:160,height:160,correctLevel:QRCode.CorrectLevel.M});}catch(e){}
+    }
+  },100);
+}
+
+function _attLoadDeviceList(did){
+  var list=document.getElementById('att-device-list');
+  if(!list||!_db)return;
+  _db.collection('devices').where('dealerId','==',did).orderBy('createdAt','desc').limit(20).get()
   .then(function(snap){
-    var html='<table style="width:100%;border-collapse:collapse;font-size:12px">'
-      +'<tr style="background:var(--bg3)"><th style="padding:8px;text-align:left">직원</th>'
-      +'<th style="padding:8px">출근</th><th style="padding:8px">퇴근</th>'
-      +'<th style="padding:8px">근무시간</th><th style="padding:8px">야간</th></tr>';
-    var rows='';
+    if(snap.empty){list.innerHTML='<div style="font-size:11px;color:var(--text3)">등록된 장치 없음</div>';return;}
+    var html='<div style="display:flex;flex-direction:column;gap:6px">';
     snap.forEach(function(doc){
       var d=doc.data();
+      var icon=d.type==='kiosk'?'📟':'💻';
+      var badgeColor=d.type==='kiosk'?'var(--purple)':'var(--brand)';
+      html+='<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg3);border-radius:8px">'
+        +'<span style="font-size:16px">'+icon+'</span>'
+        +'<div style="flex:1">'
+        +'<div style="font-size:12px;font-weight:700">'+esc(d.name||'')+'</div>'
+        +(d.location?'<div style="font-size:10px;color:var(--text3)">'+esc(d.location)+'</div>':'')
+        +'<div style="font-size:10px;color:var(--text3)">갱신주기: '+d.interval+'초</div>'
+        +'</div>'
+        +'<div style="display:flex;gap:4px">'
+        +'<button data-url="'+esc(d.url||'')+'" onclick="window.open(this.dataset.url,\'_blank\')" class="btn" style="font-size:10px;padding:3px 8px">열기</button>'
+        +'<button data-url="'+esc(d.url||'')+'" onclick="navigator.clipboard&&navigator.clipboard.writeText(this.dataset.url).then(function(){toast(\'✅ 복사됨\');})" class="btn" style="font-size:10px;padding:3px 8px">복사</button>'
+        +'<button data-docid="'+doc.id+'" data-did="'+did+'" onclick="_attDeleteDevice(this.dataset.docid,this.dataset.did)" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:14px">🗑</button>'
+        +'</div>'
+        +'</div>';
+    });
+    html+='</div>';
+    list.innerHTML=html;
+  }).catch(function(){list.innerHTML='<div style="font-size:11px;color:var(--text3)">-</div>';});
+}
+
+function _attDeleteDevice(docId, did){
+  if(!confirm('이 장치를 삭제하시겠습니까?'))return;
+  _db.collection('devices').doc(docId).delete()
+    .then(function(){toast('🗑 삭제됨');_attLoadDeviceList(did);})
+    .catch(function(e){toast('❌ '+e.message);});
+}
+
+// ════════════════════════════════
+// 키오스크 / PC 모드 자동 실행
+// ════════════════════════════════
+function _checkDeviceMode(){
+  var params=new URLSearchParams(window.location.search);
+  var mode=params.get('mode');
+  var did=params.get('did');
+  var devId=params.get('devId');
+  var iv=parseInt(params.get('iv')||'30');
+  if(!mode||!did)return;
+  window._attIvSec=iv;
+  window._DEVICE_MODE=mode;
+  window._DEVICE_DID=did;
+  window._DEVICE_ID=devId;
+  if(mode==='kiosk')_launchKioskMode(did,iv);
+  else if(mode==='pc')_launchPCMode(did,iv);
+}
+
+// ── 키오스크 모드 (풀스크린 대형 QR) ──
+function _launchKioskMode(did, iv){
+  document.body.style.overflow='hidden';
+  var wrap=document.createElement('div');
+  wrap.id='kiosk-wrap';
+  wrap.style.cssText='position:fixed;inset:0;background:#0a0a0f;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff';
+  var now=new Date();
+  wrap.innerHTML=''
+    +'<div style="position:absolute;top:16px;left:50%;transform:translateX(-50%);text-align:center">'
+    +'<div style="font-size:13px;font-weight:800;letter-spacing:.1em;color:#60a5fa">DONWAY 출퇴근</div>'
+    +'<div id="kiosk-clock" style="font-size:32px;font-weight:900;color:#fff;margin-top:4px;letter-spacing:.05em"></div>'
+    +'<div id="kiosk-date" style="font-size:13px;color:#94a3b8"></div>'
+    +'</div>'
+    // 메인 QR
+    +'<div style="text-align:center">'
+    +'<div style="font-size:15px;font-weight:700;color:#94a3b8;margin-bottom:16px;letter-spacing:.05em">📱 본인 폰으로 스캔하여 출퇴근하세요</div>'
+    +'<div id="kiosk-qr-box" style="display:inline-block;padding:20px;background:#fff;border-radius:20px;box-shadow:0 0 60px rgba(59,130,246,.4)"></div>'
+    +'<div id="kiosk-timer-bar" style="margin-top:14px;width:320px;max-width:90vw"></div>'
+    +'<div id="kiosk-token" style="font-size:10px;color:#475569;margin-top:6px"></div>'
+    +'</div>'
+    // 하단: 최근 출퇴근
+    +'<div id="kiosk-recent" style="position:absolute;bottom:16px;left:50%;transform:translateX(-50%);'
+    +'display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:90vw"></div>'
+    // 풀스크린 버튼
+    +'<button onclick="_kioskFullscreen()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,.1);border:none;border-radius:8px;color:#94a3b8;padding:6px 12px;cursor:pointer;font-size:12px">⛶ 전체화면</button>'
+    +'<button onclick="_kioskExit()" style="position:absolute;bottom:16px;right:16px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#475569;padding:6px 12px;cursor:pointer;font-size:11px">✕ 종료</button>';
+  document.body.appendChild(wrap);
+
+  // 시계 업데이트
+  _kioskClock();
+  window._kioskClockInt=setInterval(_kioskClock, 1000);
+
+  // QR 생성 (키오스크 전용 함수)
+  window._attCompanyGPS=window._attCompanyGPS||{lat:0,lng:0};
+  // GPS + 회사 정보 로드
+  if(window.firebase&&firebase.firestore){
+    firebase.firestore().collection('companies').doc(did).get().then(function(snap){
+      if(snap.exists){
+        var d=snap.data();
+        if(d.gpsLat)window._attCompanyGPS={lat:d.gpsLat,lng:d.gpsLng};
+        if(d.gpsRadius){
+          var rsel=document.getElementById('att-radius-sel');
+          if(rsel)rsel.value=String(d.gpsRadius);
+        }
+      }
+      _kioskGenQR(did,iv);
+    }).catch(function(){_kioskGenQR(did,iv);});
+  } else {
+    setTimeout(function(){_kioskGenQR(did,iv);},2000);
+  }
+
+  // Realtime 출퇴근 알림
+  if(window.firebase&&firebase.firestore){
+    var today=new Date().toISOString().slice(0,10);
+    firebase.firestore().collection('attendance')
+      .where('dealerId','==',did).where('date','==',today)
+      .orderBy('createdAt','desc').limit(5)
+      .onSnapshot(function(snap){_kioskUpdateRecent(snap);});
+  }
+}
+
+function _kioskClock(){
+  var cl=document.getElementById('kiosk-clock');
+  var dt=document.getElementById('kiosk-date');
+  var now=new Date();
+  if(cl)cl.textContent=now.toTimeString().slice(0,8);
+  if(dt){
+    var days=['일','월','화','수','목','금','토'];
+    dt.textContent=now.getFullYear()+'.'+(now.getMonth()+1).toString().padStart(2,'0')+'.'+now.getDate().toString().padStart(2,'0')+'('+days[now.getDay()]+')';
+  }
+}
+
+function _kioskGenQR(did,iv){
+  var box=document.getElementById('kiosk-qr-box');
+  var tokenEl=document.getElementById('kiosk-token');
+  if(!box)return;
+  box.innerHTML='';
+  var now=Date.now();
+  var gps=window._attCompanyGPS||{lat:0,lng:0};
+  var payload=JSON.stringify({v:2,dealerId:did,ts:now,ivSec:iv,gpsLat:gps.lat,gpsLng:gps.lng,radius:100});
+  if(window.QRCode){
+    try{new QRCode(box,{text:payload,width:280,height:280,correctLevel:QRCode.CorrectLevel.M});}
+    catch(e){box.innerHTML='<div style="color:red;padding:20px">QR 오류</div>';}
+  }
+  if(tokenEl)tokenEl.textContent='토큰 '+now.toString(36).toUpperCase();
+  // 프로그레스바
+  if(window._kioskCountdown)clearInterval(window._kioskCountdown);
+  var rem=iv;
+  _kioskTimerBar(rem,iv);
+  window._kioskCountdown=setInterval(function(){
+    rem--;
+    if(rem<=0){clearInterval(window._kioskCountdown);_kioskGenQR(did,iv);return;}
+    _kioskTimerBar(rem,iv);
+  },1000);
+}
+
+function _kioskTimerBar(rem,total){
+  var el=document.getElementById('kiosk-timer-bar');
+  if(!el)return;
+  var pct=Math.round(rem/total*100);
+  var col=pct>50?'#22c55e':pct>20?'#fbbf24':'#ef4444';
+  var s=rem%60, m=Math.floor(rem/60);
+  var tStr=m>0?(m+'분 '+s+'초'):(s+'초');
+  el.innerHTML='<div style="font-size:13px;color:'+col+';font-weight:700;margin-bottom:6px;text-align:center">갱신까지 '+tStr+'</div>'
+    +'<div style="width:320px;max-width:90vw;height:6px;background:rgba(255,255,255,.1);border-radius:3px">'
+    +'<div style="height:100%;width:'+pct+'%;background:'+col+';border-radius:3px;transition:width 1s linear"></div></div>';
+}
+
+function _kioskUpdateRecent(snap){
+  var el=document.getElementById('kiosk-recent');
+  if(!el)return;
+  var html='';
+  snap.forEach(function(doc){
+    var d=doc.data();
+    var hasOut=!!d.checkOut;
+    html+='<div style="background:rgba(255,255,255,.06);border-radius:8px;padding:6px 12px;text-align:center;min-width:80px">'
+      +'<div style="font-size:11px;font-weight:700;color:#e2e8f0">'+esc(d.driverName||d.userId||'')+'</div>'
+      +'<div style="font-size:10px;color:'+(hasOut?'#94a3b8':'#4ade80')+'">'+(hasOut?'퇴근 '+esc(d.checkOut):'출근 '+esc(d.checkIn))+'</div>'
+      +'</div>';
+  });
+  el.innerHTML=html||'<div style="font-size:11px;color:#475569">오늘 출퇴근 기록 없음</div>';
+}
+
+function _kioskFullscreen(){
+  var el=document.getElementById('kiosk-wrap');
+  if(el&&el.requestFullscreen)el.requestFullscreen();
+  else if(document.documentElement.requestFullscreen)document.documentElement.requestFullscreen();
+}
+
+function _kioskExit(){
+  if(!confirm('키오스크 모드를 종료하시겠습니까?'))return;
+  if(window._kioskCountdown)clearInterval(window._kioskCountdown);
+  if(window._kioskClockInt)clearInterval(window._kioskClockInt);
+  var wrap=document.getElementById('kiosk-wrap');
+  if(wrap)wrap.remove();
+  document.body.style.overflow='';
+  if(document.exitFullscreen)document.exitFullscreen().catch(function(){});
+}
+
+// ── PC 모드 (컴팩트 QR 팝업) ──
+function _launchPCMode(did,iv){
+  var wrap=document.createElement('div');
+  wrap.id='pc-qr-wrap';
+  wrap.style.cssText='position:fixed;bottom:20px;right:20px;z-index:9999;'
+    +'background:var(--bg2);border-radius:16px;padding:16px;box-shadow:0 8px 40px rgba(0,0,0,.2);'
+    +'border:1px solid var(--border);width:220px;text-align:center';
+  wrap.innerHTML=''
+    +'<div style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--text1)">📱 출퇴근 QR</div>'
+    +'<div id="pc-qr-box" style="display:inline-block;background:#fff;padding:8px;border-radius:10px"></div>'
+    +'<div id="pc-qr-timer" style="margin-top:6px;font-size:11px;color:var(--brand);font-weight:700"></div>'
+    +'<div id="pc-att-status" style="margin-top:6px;font-size:11px;color:var(--text3)">오늘 출퇴근 확인 중...</div>'
+    +'<button onclick="document.getElementById(\'pc-qr-wrap\').style.display=\'none\'" '
+    +'style="margin-top:8px;background:none;border:none;cursor:pointer;font-size:11px;color:var(--text3)">접기 ↓</button>';
+  document.body.appendChild(wrap);
+
+  // GPS 로드
+  if(window.firebase&&firebase.firestore){
+    firebase.firestore().collection('companies').doc(did).get().then(function(snap){
+      if(snap.exists){var d=snap.data();if(d.gpsLat)window._attCompanyGPS={lat:d.gpsLat,lng:d.gpsLng};}
+      _pcGenQR(did,iv);
+    }).catch(function(){_pcGenQR(did,iv);});
+  } else {
+    setTimeout(function(){_pcGenQR(did,iv);},2000);
+  }
+}
+
+function _pcGenQR(did,iv){
+  var box=document.getElementById('pc-qr-box');
+  var timer=document.getElementById('pc-qr-timer');
+  if(!box)return;
+  box.innerHTML='';
+  var now=Date.now();
+  var gps=window._attCompanyGPS||{lat:0,lng:0};
+  var payload=JSON.stringify({v:2,dealerId:did,ts:now,ivSec:iv,gpsLat:gps.lat,gpsLng:gps.lng,radius:100});
+  if(window.QRCode){
+    try{new QRCode(box,{text:payload,width:150,height:150,correctLevel:QRCode.CorrectLevel.M});}
+    catch(e){}
+  }
+  if(window._pcCountdown)clearInterval(window._pcCountdown);
+  var rem=iv;
+  window._pcCountdown=setInterval(function(){
+    rem--;
+    if(rem<=0){clearInterval(window._pcCountdown);_pcGenQR(did,iv);return;}
+    if(timer){
+      var s=rem%60,m=Math.floor(rem/60);
+      var pct=Math.round(rem/iv*100);
+      var col=pct>50?'var(--green)':pct>20?'var(--amber)':'var(--red)';
+      timer.innerHTML='<span style="color:'+col+'">갱신 '+(m?m+'분 ':'')+s+'초</span>';
+    }
+  },1000);
+}
+
+// 직원 수 카운트 → 추천 주기 표시
+function _attLoadEmpCount(did){
+  if(!_db||!did)return;
+  _db.collection('drivers').where('dealerId','==',did).get().then(function(snap){
+    window._attEmpCount=snap.size;
+    var rec=_attRecommendInterval(snap.size);
+    var guide=document.getElementById('att-emp-guide');
+    if(guide){
+      guide.innerHTML='직원 <b>'+snap.size+'명</b> 기준 추천: <b style="color:var(--brand)">'+_attSecLabel(rec)+'</b>'
+        +(rec===window._attIvSec?' ✅':'  <button onclick="_attSetInterval('+rec+')" style="margin-left:4px;padding:1px 8px;border:1px solid var(--brand);border-radius:10px;background:none;color:var(--brand);font-size:10px;cursor:pointer">적용</button>');
+    }
+  }).catch(function(){});
+}
+
+// QR 모드 전환
+function _attSetQRMode(mode){
+  window._attQRMode=mode;
+  ['dynamic','static','empqr'].forEach(function(m){
+    var btn=document.getElementById('qrmode-'+m);
+    var area=document.getElementById('qrarea-'+m);
+    if(btn)btn.className=(m===mode)?'btn btn-blue':'btn';
+    if(area)area.style.display=(m===mode)?'':'none';
+  });
+  if(mode==='dynamic'&&window._attQRInterval){
+    if(window._attCountdown)clearInterval(window._attCountdown);
+    _attGenQR(_CU.dealerId);
+  }
+}
+
+// 정적 QR 생성
+function _attGenStaticQR(did){
+  did=did||(_CU&&_CU.dealerId)||'';
+  var box=document.getElementById('att-qr-static-box');
+  if(!box)return;
+  box.innerHTML='';
+  // 정적: 날짜 + dealerId (시간 없음)
+  var today=new Date().toISOString().slice(0,10);
+  var gps=window._attCompanyGPS||{lat:0,lng:0};
+  var radius=parseInt((document.getElementById('att-radius-sel')||{}).value||'100');
+  var payload=JSON.stringify({
+    v:2, type:'static', dealerId:did,
+    date:today, gpsLat:gps.lat, gpsLng:gps.lng, radius:radius
+  });
+  if(window.QRCode){
+    try{new QRCode(box,{text:payload,width:200,height:200,correctLevel:QRCode.CorrectLevel.M});}
+    catch(e){box.innerHTML='<div style="padding:20px;color:red">QR 오류</div>';}
+  }
+}
+
+// 정적 QR 인쇄
+function _attPrintStaticQR(){
+  var box=document.getElementById('att-qr-static-box');
+  if(!box)return;
+  var canvas=box.querySelector('canvas');
+  var imgSrc=canvas?canvas.toDataURL('image/png'):'';
+  var win=window.open('','_blank','width=400,height=500');
+  if(!win)return;
+  win.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>출퇴근 QR</title>'
+    +'<style>body{margin:30px;text-align:center;font-family:sans-serif}'
+    +'h2{font-size:20px;margin-bottom:6px}p{color:#666;font-size:13px;margin-bottom:16px}'
+    +'@media print{button{display:none}}</style></head><body>'
+    +'<h2>📍 출퇴근 QR 코드</h2>'
+    +'<p>출근/퇴근 시 이 QR을 스캔해주세요</p>'
+    +(imgSrc?'<img src="'+imgSrc+'" style="width:220px;height:220px">':'<div>QR 없음</div>')
+    +'<p style="margin-top:12px;font-size:11px;color:#999">'+new Date().toLocaleDateString('ko-KR')+' · 당일만 유효</p>'
+    +'<button onclick="window.print()" style="margin-top:16px;padding:8px 20px;background:#185FA5;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px">🖨 인쇄</button>'
+    +'</body></html>');
+  win.document.close();
+}
+
+// 동적 QR 인쇄 (현재 QR)
+function _attPrintQR(){
+  var box=document.getElementById('att-qr-box');
+  if(!box)return;
+  var canvas=box.querySelector('canvas');
+  var imgSrc=canvas?canvas.toDataURL('image/png'):'';
+  var win=window.open('','_blank','width=400,height:500');
+  if(!win)return;
+  win.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>출퇴근 QR</title>'
+    +'<style>body{margin:30px;text-align:center;font-family:sans-serif}'
+    +'@media print{button{display:none}}</style></head><body>'
+    +'<h2>⚡ 동적 출퇴근 QR</h2>'
+    +'<p style="color:#666;font-size:12px">5분 이내 스캔 필수</p>'
+    +(imgSrc?'<img src="'+imgSrc+'" style="width:220px;height:220px">':'')
+    +'<button onclick="window.print()" style="margin-top:16px;padding:8px 20px;background:#185FA5;color:#fff;border:none;border-radius:6px;cursor:pointer">인쇄</button>'
+    +'</body></html>');
+  win.document.close();
+}
+
+// 직원 개인 QR 목록
+function _attLoadEmpQRList(did){
+  did=did||(_CU&&_CU.dealerId)||'';
+  var list=document.getElementById('emp-qr-list');
+  if(!list||!_db)return;
+  _db.collection('drivers').where('dealerId','==',did).limit(100).get()
+  .then(function(snap){
+    if(snap.empty){list.innerHTML='<div class="empty">등록된 직원 없음</div>';return;}
+    var html='<div style="display:flex;gap:10px;flex-wrap:wrap">';
+    snap.forEach(function(doc){
+      var d=doc.data();
+      var uid=d.userId||d.coupangId||doc.id;
+      var name=d.name||uid;
+      var qrId='empqr-'+doc.id;
+      html+='<div style="text-align:center;padding:12px;background:var(--bg3);border-radius:12px;min-width:130px">'
+        +'<div style="font-weight:700;font-size:12px;margin-bottom:8px">'+esc(name)+'</div>'
+        +'<div id="'+qrId+'" style="display:inline-block;background:#fff;padding:6px;border-radius:6px"></div>'
+        +'<div style="font-size:9px;color:var(--text3);margin-top:4px">'+esc(uid)+'</div>'
+        +'</div>';
+    });
+    html+='</div>';
+    list.innerHTML=html;
+    // QR 생성
+    snap.forEach(function(doc){
+      var d=doc.data();
+      var uid=d.userId||d.coupangId||doc.id;
+      var box=document.getElementById('empqr-'+doc.id);
+      if(!box||!window.QRCode)return;
+      var payload=JSON.stringify({v:2,type:'emp',dealerId:did,userId:uid,name:d.name||''});
+      try{new QRCode(box,{text:payload,width:110,height:110,correctLevel:QRCode.CorrectLevel.M});}
+      catch(e){}
+    });
+  }).catch(function(e){if(list)list.innerHTML='<div class="empty">'+esc(e.message)+'</div>';});
+}
+
+// 기본 갱신 주기: 30초
+window._attIvSec = window._attIvSec || 30;
+
+function _attGenQR(did){
+  var box=document.getElementById('att-qr-box');
+  var timer=document.getElementById('att-qr-timer');
+  var tokenEl=document.getElementById('att-qr-token');
+  if(!box)return;
+  box.innerHTML='';
+  var now=Date.now();
+  var ivSec=window._attIvSec||30;
+  var gpsData=window._attCompanyGPS||{lat:0,lng:0};
+  var radius=parseInt((document.getElementById('att-radius-sel')||{}).value||'100');
+  var payload=JSON.stringify({
+    v:2, dealerId:did, ts:now, ivSec:ivSec,
+    gpsLat:gpsData.lat, gpsLng:gpsData.lng, radius:radius
+  });
+  try{
+    new QRCode(box,{text:payload,width:220,height:220,correctLevel:QRCode.CorrectLevel.M});
+  }catch(e){
+    box.innerHTML='<div style="padding:20px;color:var(--red)">QR 생성 실패</div>';
+  }
+  if(tokenEl) tokenEl.textContent='토큰: '+now.toString(36).toUpperCase()+' · 주기: '+ivSec+'초';
+  // 카운트다운
+  if(window._attCountdown)clearInterval(window._attCountdown);
+  var remaining=ivSec;
+  _attUpdateTimerBar(remaining, ivSec);
+  window._attCountdown=setInterval(function(){
+    remaining--;
+    if(remaining<=0){
+      clearInterval(window._attCountdown);
+      // 자동 갱신
+      _attGenQR(did);
+      _attRestartInterval(did);
+      return;
+    }
+    _attUpdateTimerBar(remaining, ivSec);
+  },1000);
+}
+
+function _attUpdateTimerBar(remaining, total){
+  var timer=document.getElementById('att-qr-timer');
+  if(!timer)return;
+  var pct=Math.round(remaining/total*100);
+  var color=pct>50?'var(--green)':pct>20?'var(--amber)':'var(--red)';
+  var m=Math.floor(remaining/60), s=remaining%60;
+  var tStr=m>0?(m+'분 '+s+'초'):(s+'초');
+  timer.innerHTML='<div style="margin-bottom:4px;font-size:13px;color:'+color+'">⏱ 갱신까지 <b>'+tStr+'</b></div>'
+    +'<div style="width:100%;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden">'
+    +'<div style="height:100%;width:'+pct+'%;background:'+color+';border-radius:3px;transition:width 1s linear"></div></div>';
+}
+
+function _attRestartInterval(did){
+  if(window._attQRInterval)clearInterval(window._attQRInterval);
+  // setInterval은 _attGenQR 내부 자동갱신으로 대체됨 (재귀 방식)
+  window._attQRInterval=null;
+}
+
+// 갱신 주기 변경
+function _attSetInterval(sec){
+  window._attIvSec=sec;
+  // 버튼 활성화
+  [30,60,120,180,300,600].forEach(function(v){
+    var btn=document.getElementById('iv-'+v);
+    if(btn)btn.className='btn-iv'+(v===sec?' active':'');
+  });
+  // 직원수 기준 가이드 표시
+  var guide=document.getElementById('att-emp-guide');
+  if(guide){
+    var empCnt=window._attEmpCount||0;
+    var rec=_attRecommendInterval(empCnt);
+    var match=sec===rec;
+    guide.innerHTML=empCnt>0
+      ?'직원 '+empCnt+'명 기준 추천: <b style="color:var(--brand)">'+_attSecLabel(rec)+'</b>'
+        +(match?' ✅':'  → 현재: '+_attSecLabel(sec))
+      :'직원 수 로딩 중...';
+  }
+  // 즉시 재생성
+  if(window._attCountdown)clearInterval(window._attCountdown);
+  _attGenQR(_CU&&_CU.dealerId||'');
+}
+
+function _attSecLabel(s){
+  if(s<60)return s+'초';
+  return Math.floor(s/60)+'분'+(s%60?s%60+'초':'');
+}
+
+// 직원 수 → 추천 갱신 주기
+function _attRecommendInterval(cnt){
+  if(cnt<=5)  return 30;   // ~5명: 30초
+  if(cnt<=10) return 60;   // ~10명: 1분
+  if(cnt<=20) return 120;  // ~20명: 2분
+  if(cnt<=30) return 180;  // ~30명: 3분
+  if(cnt<=50) return 300;  // ~50명: 5분
+  return 600;              // 50명+: 10분
+}
+
+function _attSetGPS(did){
+  var status=document.getElementById('att-gps-status');
+  if(status)status.innerHTML='<span style="color:var(--text3)">📡 위치 가져오는 중...</span>';
+  navigator.geolocation.getCurrentPosition(function(pos){
+    var lat=pos.coords.latitude, lng=pos.coords.longitude;
+    window._attCompanyGPS={lat:lat,lng:lng};
+    var cid=_CU.dealerId;
+    if(_db&&cid){
+      _db.collection('companies').doc(cid).update({gpsLat:lat,gpsLng:lng}).catch(function(){});
+    }
+    if(status)status.innerHTML='<div style="font-size:11px;color:var(--green)">✅ 위치 저장됨<br>'
+      +'위도: '+lat.toFixed(5)+'  경도: '+lng.toFixed(5)+'</div>';
+    // QR 재생성 (GPS 포함)
+    _attGenQR(cid);
+  },function(e){
+    if(status)status.innerHTML='<span style="color:var(--red)">❌ 위치 실패: '+e.message+'</span>';
+  },{enableHighAccuracy:true,timeout:8000});
+}
+
+function _attSaveRadius(val){
+  var cid=_CU&&_CU.dealerId;
+  if(_db&&cid)_db.collection('companies').doc(cid).update({gpsRadius:parseInt(val)}).catch(function(){});
+}
+
+function _attLoadGPSStatus(cid){
+  if(!_db||!cid)return;
+  _db.collection('companies').doc(cid).get().then(function(snap){
+    var d=snap.exists?snap.data():{};
+    var status=document.getElementById('att-gps-status');
+    var rsel=document.getElementById('att-radius-sel');
+    if(d.gpsLat&&status){
+      window._attCompanyGPS={lat:d.gpsLat,lng:d.gpsLng};
+      status.innerHTML='<div style="font-size:11px;color:var(--green)">✅ 위치 설정됨<br>위도: '+d.gpsLat.toFixed(5)+'  경도: '+d.gpsLng.toFixed(5)+'</div>';
+      _attGenQR(cid);
+    } else if(status){
+      status.innerHTML='<div style="font-size:11px;color:var(--amber)">⚠️ 위치 미설정 (GPS 검증 비활성)</div>';
+    }
+    if(d.gpsRadius&&rsel) rsel.value=String(d.gpsRadius);
+  }).catch(function(){});
+}
+
+// ── 오늘 출퇴근 현황 ──
+function _attRenderToday(){
+  var area=document.getElementById('att-today-area');
+  if(!area)return;
+  var did=_CU.dealerId;
+  var today=new Date().toISOString().slice(0,10);
+  area.innerHTML='<div class="card">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
+    +'<div class="card-title">📋 오늘 출퇴근 현황 <span style="font-size:11px;color:var(--text3);font-weight:400">'+today+'</span></div>'
+    +'<button onclick="_attRenderToday()" class="btn" style="font-size:11px">🔄 새로고침</button>'
+    +'</div>'
+    +'<div id="att-today-list"><div class="empty"><div class="empty-icon">⏳</div>로딩 중...</div></div>'
+    +'</div>';
+  _db.collection('attendance')
+    .where('dealerId','==',did).where('date','==',today)
+    .orderBy('checkIn','asc').limit(200).get()
+  .then(function(snap){
+    var html='<table style="width:100%;border-collapse:collapse;font-size:12px">'
+      +'<tr style="background:var(--bg3)">'
+      +'<th style="padding:8px 10px;text-align:left;border-bottom:2px solid var(--border)">직원</th>'
+      +'<th style="padding:8px;border-bottom:2px solid var(--border)">출근</th>'
+      +'<th style="padding:8px;border-bottom:2px solid var(--border)">퇴근</th>'
+      +'<th style="padding:8px;border-bottom:2px solid var(--border)">근무</th>'
+      +'<th style="padding:8px;border-bottom:2px solid var(--border)">야간</th>'
+      +'<th style="padding:8px;border-bottom:2px solid var(--border)">GPS</th>'
+      +'<th style="padding:8px;border-bottom:2px solid var(--border)">수정</th>'
+      +'</tr>';
+    var rows=''; var wCnt=0; var oCnt=0;
+    snap.forEach(function(doc){
+      var d=doc.data(); var docId=doc.id;
       var qr=calcWorkHoursFromQR(d.checkIn||'',d.checkOut||'');
       var hasOut=!!d.checkOut;
+      if(hasOut)wCnt++; else oCnt++;
+      var gpsOk=d.gpsOk===false?'<span style="color:var(--red)">❌</span>':d.gpsOk?'<span style="color:var(--green)">✅</span>':'<span style="color:var(--text3)">-</span>';
       rows+='<tr style="border-bottom:1px solid var(--border)">'
-        +'<td style="padding:8px;font-weight:700">'+esc(d.driverName||d.userId||'')+'</td>'
-        +'<td style="padding:8px;text-align:center;color:var(--green)">'+esc(d.checkIn||'-')+'</td>'
-        +'<td style="padding:8px;text-align:center;color:'+(hasOut?'var(--text2)':'var(--orange)')+'">'+esc(d.checkOut||'근무중')+'</td>'
-        +'<td style="padding:8px;text-align:center">'+Math.round(qr.hours*10)/10+'h</td>'
+        +'<td style="padding:8px 10px;font-weight:700">'+esc(d.driverName||d.userId||'')+'</td>'
+        +'<td style="padding:6px 8px;text-align:center">'
+        +'<input type="text" value="'+esc(d.checkIn||'')+'" data-id="'+docId+'" data-f="checkIn" onchange="_attUpdateTime(this.dataset.id,this.dataset.f,this.value)" style="width:52px;text-align:center;border:1px solid var(--border);border-radius:4px;padding:2px;font-size:11px;background:var(--bg)"></td>'
+        +'<td style="padding:6px 8px;text-align:center">'
+        +'<input type="text" value="'+esc(d.checkOut||'')+'" data-id="'+docId+'" data-f="checkOut" onchange="_attUpdateTime(this.dataset.id,this.dataset.f,this.value)" placeholder="--:--" style="width:52px;text-align:center;border:1px solid var(--border);border-radius:4px;padding:2px;font-size:11px;background:var(--bg)"></td>'
+        +'<td style="padding:8px;text-align:center;font-weight:700;color:var(--brand)">'+Math.round(qr.hours*10)/10+'h</td>'
         +'<td style="padding:8px;text-align:center;color:var(--purple)">'+Math.round(qr.nightH*10)/10+'h</td>'
+        +'<td style="padding:8px;text-align:center">'+gpsOk+'</td>'
+        +'<td style="padding:6px 8px;text-align:center">'
+        +'<button data-id="'+docId+'" onclick="_attDeleteRecord(this.dataset.id)" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:14px">🗑</button></td>'
         +'</tr>';
     });
-    if(!rows)rows='<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text3)">오늘 출퇴근 기록 없음</td></tr>';
-    html+=rows+'</table>';
-    document.getElementById('att-list').innerHTML=html;
+    var summary='<div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap">'
+      +'<span style="background:var(--green-l);color:var(--green);padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700">✅ 퇴근완료 '+wCnt+'명</span>'
+      +'<span style="background:var(--brand-l);color:var(--brand);padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700">🟢 근무중 '+oCnt+'명</span>'
+      +'<span style="background:var(--bg3);color:var(--text3);padding:4px 12px;border-radius:20px;font-size:12px">총 '+(wCnt+oCnt)+'명</span>'
+      +'</div>';
+    if(!rows)rows='<tr><td colspan="7" style="padding:20px;text-align:center;color:var(--text3)">오늘 출퇴근 기록 없음</td></tr>';
+    document.getElementById('att-today-list').innerHTML=summary+html+rows+'</table>';
   }).catch(function(e){
-    document.getElementById('att-list').innerHTML='<div class="empty">'+esc(e.message)+'</div>';
+    document.getElementById('att-today-list').innerHTML='<div class="empty">'+esc(e.message)+'</div>';
   });
+}
+
+function _attUpdateTime(docId, field, val){
+  if(!_db)return;
+  var upd={}; upd[field]=val.trim();
+  _db.collection('attendance').doc(docId).update(upd)
+    .then(function(){toast('✅ 수정됨');})
+    .catch(function(e){toast('❌ '+e.message);});
+}
+
+function _attDeleteRecord(docId){
+  if(!confirm('이 출퇴근 기록을 삭제하시겠습니까?'))return;
+  _db.collection('attendance').doc(docId).delete()
+    .then(function(){toast('🗑 삭제됨');_attRenderToday();})
+    .catch(function(e){toast('❌ '+e.message);});
+}
+
+// ── 기간별 조회 ──
+function _attRenderHist(){
+  var area=document.getElementById('att-hist-area');
+  if(!area)return;
+  var now=new Date();
+  var defYM=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  area.innerHTML='<div class="card">'
+    +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px">'
+    +'<div class="card-title" style="margin:0">📅 기간별 출퇴근</div>'
+    +'<input type="month" id="att-hist-ym" value="'+defYM+'" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:12px">'
+    +'<button onclick="_attLoadHist()" class="btn btn-blue" style="font-size:12px">🔍 조회</button>'
+    +'</div>'
+    +'<div id="att-hist-list"><div class="empty">월을 선택 후 조회하세요</div></div>'
+    +'</div>';
+}
+
+function _attLoadHist(){
+  var ym=(document.getElementById('att-hist-ym')||{}).value||'';
+  if(!ym)return;
+  var listEl=document.getElementById('att-hist-list');
+  listEl.innerHTML='<div class="empty"><div class="empty-icon">⏳</div>로딩 중...</div>';
+  var did=_CU.dealerId;
+  var from=ym+'-01', to=ym+'-31';
+  _db.collection('attendance')
+    .where('dealerId','==',did)
+    .where('date','>=',from).where('date','<=',to)
+    .orderBy('date','asc').orderBy('checkIn','asc').limit(1000).get()
+  .then(function(snap){
+    // 직원별 집계
+    var byUser={};
+    snap.forEach(function(doc){
+      var d=doc.data();
+      var uid=d.userId||d.driverName||'';
+      if(!byUser[uid])byUser[uid]={name:d.driverName||uid,days:0,totalH:0,nightH:0,records:[]};
+      var qr=calcWorkHoursFromQR(d.checkIn||'',d.checkOut||'');
+      if(d.checkIn)byUser[uid].days++;
+      byUser[uid].totalH+=qr.hours;
+      byUser[uid].nightH+=qr.nightH;
+      byUser[uid].records.push(d);
+    });
+    var users=Object.values(byUser);
+    if(!users.length){listEl.innerHTML='<div class="empty">해당 월 기록 없음</div>';return;}
+    var html='<table style="width:100%;border-collapse:collapse;font-size:12px">'
+      +'<tr style="background:var(--bg3)">'
+      +'<th style="padding:8px;text-align:left">직원</th>'
+      +'<th style="padding:8px">근무일</th><th style="padding:8px">총시간</th>'
+      +'<th style="padding:8px">야간</th>'
+      +'</tr>';
+    users.forEach(function(u){
+      html+='<tr style="border-bottom:1px solid var(--border)">'
+        +'<td style="padding:8px;font-weight:700">'+esc(u.name)+'</td>'
+        +'<td style="padding:8px;text-align:center;font-weight:700;color:var(--brand)">'+u.days+'일</td>'
+        +'<td style="padding:8px;text-align:center">'+Math.round(u.totalH*10)/10+'h</td>'
+        +'<td style="padding:8px;text-align:center;color:var(--purple)">'+Math.round(u.nightH*10)/10+'h</td>'
+        +'</tr>';
+    });
+    html+='</table>';
+    listEl.innerHTML='<div style="font-size:11px;color:var(--text3);margin-bottom:8px">총 '+snap.size+'건</div>'+html;
+  }).catch(function(e){listEl.innerHTML='<div class="empty">'+esc(e.message)+'</div>';});
 }
 
 // ══ 직원용: QR 출퇴근 스캔 ══
@@ -3490,17 +4356,93 @@ function _processQRData(data){
     var qrTime=payload.ts||0;
     var did=payload.dealerId||'';
 
-    if(now-qrTime>35000){ // 35초 초과 = 만료
-      if(msg)msg.innerHTML='<span style="color:var(--red)">❌ QR이 만료됐습니다. 다시 스캔하세요</span>';
+    var myDid=_CU.companyId||_CU.dealerId||'';
+    var qrType=payload.type||'dynamic';
+
+    // ── 정적 QR 처리 ──
+    if(qrType==='static'){
+      var today2=new Date().toISOString().slice(0,10);
+      if(payload.date!==today2){
+        if(msg)msg.innerHTML='<span style="color:var(--red)">❌ 오늘 유효하지 않은 QR입니다</span>';
+        if(btn){btn.disabled=false;btn.textContent='📷 다시 스캔';}
+        return;
+      }
+      if(did&&did!==myDid){
+        if(msg)msg.innerHTML='<span style="color:var(--red)">❌ 다른 회사의 QR입니다</span>';
+        if(btn){btn.disabled=false;btn.textContent='📷 다시 스캔';}
+        return;
+      }
+      // GPS → 기록
+      var qrLat2=payload.gpsLat||0,qrLng2=payload.gpsLng||0,qrR2=payload.radius||0;
+      if(qrR2>0&&qrLat2!==0){
+        if(msg)msg.innerHTML='<span style="color:var(--text3)">📡 위치 확인 중...</span>';
+        navigator.geolocation.getCurrentPosition(function(pos){
+          var dist=_gpsDistance(pos.coords.latitude,pos.coords.longitude,qrLat2,qrLng2);
+          if(dist>qrR2){if(msg)msg.innerHTML='<span style="color:var(--red)">❌ 위치 불일치 ('+Math.round(dist)+'m)</span>';
+            if(btn){btn.disabled=false;btn.textContent='📷 다시 스캔';}return;}
+          _doAttRecord(payload,msg,btn,st,true);
+        },function(){_doAttRecord(payload,msg,btn,st,null);},{enableHighAccuracy:true,timeout:6000});
+      } else {
+        _doAttRecord(payload,msg,btn,st,null);
+      }
+      return;
+    }
+
+    // ── 동적 QR 처리 ──
+    // ① 만료 체크 (설정된 주기 기준)
+    var ivMs=(payload.ivSec||30)*1000 + 5000; // 여유 5초
+    if(now-qrTime>ivMs){
+      var ivLabel=_attSecLabel?_attSecLabel(payload.ivSec||30):(payload.ivSec||30)+'초';
+      if(msg)msg.innerHTML='<span style="color:var(--red)">❌ QR이 만료됐습니다 ('+ivLabel+' 초과). 다시 스캔하세요</span>';
       if(btn){btn.disabled=false;btn.textContent='📷 다시 스캔';}
       return;
     }
-    if(did!==(_CU.companyId||_CU.dealerId||'')){
+    // ② 회사 일치 체크
+    if(did&&did!==myDid){
       if(msg)msg.innerHTML='<span style="color:var(--red)">❌ 다른 회사의 QR입니다</span>';
       if(btn){btn.disabled=false;btn.textContent='📷 다시 스캔';}
       return;
     }
+    // ③ GPS 위치 검증 (radius>0 이고 좌표 있을 때)
+    var qrLat=payload.gpsLat||0, qrLng=payload.gpsLng||0;
+    var qrRadius=payload.radius||0;
+    if(qrRadius>0 && qrLat!==0){
+      if(msg)msg.innerHTML='<span style="color:var(--text3)">📡 위치 확인 중...</span>';
+      navigator.geolocation.getCurrentPosition(function(pos){
+        var dist=_gpsDistance(pos.coords.latitude,pos.coords.longitude,qrLat,qrLng);
+        if(dist>qrRadius){
+          if(msg)msg.innerHTML='<span style="color:var(--red)">❌ 위치 불일치 (거리: '+Math.round(dist)+'m, 허용: '+qrRadius+'m)<br>회사 근처에서 스캔하세요</span>';
+          if(btn){btn.disabled=false;btn.textContent='📷 다시 스캔';}
+          return;
+        }
+        _doAttRecord(payload, msg, btn, st, true);
+      },function(){
+        // GPS 실패 시 경고 후 허용
+        _doAttRecord(payload, msg, btn, st, null);
+      },{enableHighAccuracy:true,timeout:6000});
+      return;
+    }
+    // GPS 미설정 시 바로 기록
+    _doAttRecord(payload, msg, btn, st, null);
+  }catch(e){
+    if(msg)msg.innerHTML='<span style="color:var(--red)">❌ QR 인식 오류</span>';
+    if(btn){btn.disabled=false;btn.textContent='📷 다시 스캔';}
+  }
+}
 
+// GPS 거리 계산 (Haversine, 미터 단위)
+function _gpsDistance(lat1,lng1,lat2,lng2){
+  var R=6371000;
+  var dLat=(lat2-lat1)*Math.PI/180;
+  var dLng=(lng2-lng1)*Math.PI/180;
+  var a=Math.sin(dLat/2)*Math.sin(dLat/2)+
+    Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
+    Math.sin(dLng/2)*Math.sin(dLng/2);
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+// 실제 출퇴근 기록 저장
+function _doAttRecord(payload, msg, btn, st, gpsOk){
     // 출퇴근 기록 저장
     var today=new Date().toISOString().slice(0,10);
     var timeStr=new Date().toTimeString().slice(0,5);
@@ -3518,8 +4460,9 @@ function _processQRData(data){
         return _db.collection('attendance').add({
           dealerId:compId, userId:uid,
           driverName:_CU.name||'',
-          camp:payload.camp||'',
+          camp:payload.camp||_CU.camp||'',
           date:today, checkIn:timeStr,
+          gpsOk:gpsOk,
           createdAt:tsVal
         }).then(function(){
           if(st)st.innerHTML='<span style="color:var(--green)">✅ 출근 완료!</span>';
@@ -3552,10 +4495,84 @@ function _processQRData(data){
       if(msg)msg.innerHTML='<span style="color:var(--red)">❌ 저장 실패: '+esc(e.message)+'</span>';
       if(btn){btn.disabled=false;btn.textContent='📷 다시 스캔';}
     });
-  }catch(e){
-    if(msg)msg.innerHTML='<span style="color:var(--red)">❌ QR 인식 오류</span>';
-    if(btn){btn.disabled=false;btn.textContent='📷 다시 스캔';}
+}
+
+// ══ 급여 계산 - 주급/월급 ══
+function calcWeeklyPay(params){
+  var L=LABOR_LAW_2026;
+  // 주급: 시급제 기반 (주 소정근로시간 기준)
+  var type=params.payType||'hourly';
+  if(type==='weekly_fixed'){
+    // 고정 주급
+    return {totalPay:params.weeklyRate||0, breakdown:{'주급':params.weeklyRate||0}};
   }
+  // 시급 기반 주급
+  var rate=params.hourlyRate||L.minWage;
+  var weekH=params.weekH||40;
+  var regularPay=Math.min(weekH,40)*rate;
+  var overtimePay=Math.max(weekH-40,0)*rate*L.overtimeRate;
+  // 주휴수당 (주 15시간 이상 근무 시 지급)
+  var juhuPay=weekH>=15?(rate*8):0;
+  var total=regularPay+overtimePay+juhuPay;
+  return {totalPay:total,breakdown:{'기본급':regularPay,'연장수당':overtimePay,'주휴수당':juhuPay}};
+}
+
+function calcMonthlyPay(params){
+  var L=LABOR_LAW_2026;
+  var type=params.payType||'monthly_fixed';
+  if(type==='monthly_fixed'){
+    // 고정 월급 (공제 별도)
+    var base=params.monthlyRate||L.minMonthly;
+    var overtimePay=params.overtimeH?Math.round(params.overtimeH*(base/209)*L.overtimeRate):0;
+    var nightPay=params.nightH?Math.round(params.nightH*(base/209)*L.nightRate):0;
+    var total=base+overtimePay+nightPay;
+    return {totalPay:total,breakdown:{'기본급':base,'연장수당':overtimePay,'야간수당':nightPay}};
+  }
+  // 시급 → 월급 환산
+  var rate=params.hourlyRate||L.minWage;
+  var monthly=rate*209; // 209시간 기준
+  return {totalPay:monthly,breakdown:{'월 기본급(209h)':monthly}};
+}
+
+// 급여 명세서 출력
+function _printPayslip(worker, result, ym){
+  var w=worker; var r=result;
+  var compName=(_CU&&_CU.companyName)||'회사명';
+  var html='<!DOCTYPE html><html><head><meta charset="utf-8">'
+    +'<title>급여명세서</title>'
+    +'<style>body{font-family:Malgun Gothic,sans-serif;margin:30px;color:#1a1a1a;font-size:13px}'
+    +'h2{font-size:18px;text-align:center;margin-bottom:4px}'
+    +'.sub{text-align:center;color:#666;margin-bottom:20px;font-size:12px}'
+    +'table{width:100%;border-collapse:collapse;margin-bottom:16px}'
+    +'th,td{border:1px solid #ccc;padding:7px 10px}'
+    +'th{background:#f5f5f5;text-align:left;font-weight:600}'
+    +'.total{background:#1e3a5f;color:#fff;font-size:15px;font-weight:700}'
+    +'@media print{button{display:none}}</style>'
+    +'</head><body>'
+    +'<button onclick="window.print()" style="float:right;margin-bottom:10px;padding:6px 14px;background:#185FA5;color:#fff;border:none;border-radius:6px;cursor:pointer">🖨 인쇄</button>'
+    +'<h2>💼 급여 명세서</h2>'
+    +'<div class="sub">'+compName+' · '+ym+'</div>'
+    +'<table><tr><th>성명</th><td>'+esc(w.name||w.userId)+'</td>'
+    +'<th>근무형태</th><td>'+(WORK_TYPES[w.workType]||{label:w.workType}).label+'</td></tr>'
+    +'<tr><th>근무일수</th><td>'+r.workDays+'일</td>'
+    +'<th>총 근무시간</th><td>'+Math.round(r.totalH*10)/10+'h</td></tr>'
+    +'<tr><th>야간근무</th><td>'+Math.round((r.nightH||0)*10)/10+'h</td>'
+    +'<th>연장근무</th><td>'+Math.round((r.overtimeH||0)*10)/10+'h</td></tr>'
+    +'</table>'
+    +'<table><tr><th colspan="2">지급 내역</th></tr>';
+  Object.entries(r.breakdown||{}).forEach(function(e){
+    if(e[1]>0)html+='<tr><td>'+esc(e[0])+'</td><td style="text-align:right">₩'+Math.round(e[1]).toLocaleString()+'</td></tr>';
+  });
+  html+='<tr class="total"><td>지급 합계</td><td style="text-align:right">₩'+Math.round(r.totalPay||0).toLocaleString()+'</td></tr>'
+    +'</table>';
+  if(r.mwCheck&&r.mwCheck.violation){
+    html+='<div style="background:#fff3cd;border:1px solid #ffc107;padding:10px;border-radius:6px;font-size:12px;color:#856404">'
+      +'⚠️ 최저임금 미달 경고: 실지급액이 최저임금에 미치지 않습니다</div>';
+  }
+  html+='<div style="margin-top:20px;font-size:11px;color:#999;text-align:center">본 명세서는 전자 발행된 급여명세서입니다 · '+new Date().toLocaleDateString('ko-KR')+'</div>'
+    +'</body></html>';
+  var win=window.open('','_blank','width=600,height=700');
+  if(win){win.document.write(html);win.document.close();}
 }
 
 // ══ 기사 전용: 내 정산 현황 ══
@@ -6188,6 +7205,8 @@ function editDriver(id){
       +'<select id="edr-worktype" onchange="_hwToggleRateFields(this.value)">'
       +'<option value="coupang" '+((!d.workType||d.workType==="coupang")?"selected":"")+'>📦 쿠팡 기사 (건당)</option>'
       +'<option value="hourly" '+(d.workType==="hourly"?"selected":"")+'>⏰ 시급제</option>'
+      +'<option value="weekly_fixed" '+(d.workType==="weekly_fixed"?"selected":"")+'>📅 주급제</option>'
+      +'<option value="monthly_fixed" '+(d.workType==="monthly_fixed"?"selected":"")+'>💼 월급제</option>'
       +'<option value="daily" '+(d.workType==="daily"?"selected":"")+'>📅 일급제</option>'
       +'<option value="commission" '+(d.workType==="commission"?"selected":"")+'>💰 수수료제</option>'
       +'<option value="monthly" '+(d.workType==="monthly"?"selected":"")+'>💼 월급제</option>'
@@ -7313,6 +8332,11 @@ function _hsRenderResults(workers, attMap, ym){
       });
     } else if(w.workType==='daily'){
       res=calcDailyPay({dailyRate:w.dailyRate,workDays:workDays,holidayDays:holidayDays});
+    } else if(w.workType==='weekly_fixed'){
+      res=calcWeeklyPay({payType:'weekly_fixed',weeklyRate:w.weeklyRate||0});
+    } else if(w.workType==='monthly_fixed'||w.workType==='monthly'){
+      res=calcMonthlyPay({payType:'monthly_fixed',monthlyRate:w.monthlyRate||w.salary||0,
+        nightH:nightH,overtimeH:overtimeH});
     } else if(w.workType==='commission'){
       var salesEl=document.getElementById('sales-'+w.id);
       var sales=salesEl?parseFloat(salesEl.value)||0:0;
