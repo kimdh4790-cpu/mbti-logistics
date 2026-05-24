@@ -374,7 +374,9 @@ export default {
         return new Response(logisticsResp.body, { status: logisticsResp.status, headers: lh });
       } else {
         const landingResp = await fetchAsset('/donway_landing.html', request);
-        const landingHeaders = new Headers(landingResp.headers);
+        const landingHeaders = new Headers();
+        landingHeaders.set('Content-Type', 'text/html; charset=utf-8');  // ★ GitHub Raw text/plain 덮어씀
+        landingHeaders.set('Cache-Control', 'no-cache');
         Object.entries(SECURITY_HEADERS).forEach(([k,v]) => landingHeaders.set(k,v));
         return new Response(landingResp.body, { status: landingResp.status, headers: landingHeaders });
       }
