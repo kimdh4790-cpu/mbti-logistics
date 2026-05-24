@@ -118,15 +118,7 @@ tr:hover>td{background:var(--bg3)}
 </head>
 <body>
 <script>
-(function(){
-  document.addEventListener("contextmenu",function(e){e.preventDefault();});
-  document.addEventListener("keydown",function(e){
-    if(e.keyCode===123){e.preventDefault();return false;}
-    if(e.ctrlKey&&e.shiftKey&&(e.keyCode===73||e.keyCode===74||e.keyCode===67)){e.preventDefault();return false;}
-    if(e.ctrlKey&&!e.shiftKey&&e.keyCode===85){e.preventDefault();return false;}
-    if(e.ctrlKey&&e.keyCode===83){e.preventDefault();return false;}
-  });
-})();
+// 디버그 모드
 </script>
 
 <!-- 로그인 -->
@@ -2264,103 +2256,50 @@ function doLogout(){
 
 // ══ 토스페이먼츠 결제 ══
 var PLAN_INFO={
+  qr_only:    {label:'📷 QR 출퇴근',  amount:19900},
+  settle_taxi:{label:'📦 택배 정산',  amount:29900},
+  payroll:    {label:'💼 급여 관리',  amount:29900},
+  qr_payroll: {label:'📷💼 QR+급여', amount:44900},
+  full:       {label:'🚀 ALL-IN-ONE',amount:59900},
   contract:{label:'위수탁 계약서',amount:9900},
-  roster:  {label:'근무표 관리',  amount:9900},
-  qr:      {label:'QR 출퇴근',   amount:29900},
-  full:    {label:'풀패키지',     amount:69900},
-  settle:  {label:'AI 정산',      amount:39900},
-  // ── 월정액 구독 플랜
-  starter: {label:'Starter (1~10명)',  amount:30000, days:30},
-  basic:   {label:'Basic (11~20명)',   amount:50000, days:30},
-  pro:     {label:'Pro (21~40명)',     amount:80000, days:30},
-  starter3:{label:'Starter 3개월',    amount:81000, days:90},
-  basic3:  {label:'Basic 3개월',      amount:135000,days:90},
-  pro3:    {label:'Pro 3개월',        amount:216000,days:90}
+  roster:  {label:'근무표',        amount:9900},
 };
 
-async function _tossPay(planType,amount){
+async function _tossPay(planType, amount){
   if(!_CU){toast('❌ 로그인 필요');return;}
-  var plan=PLAN_INFO[planType];
-  if(!plan){toast('❌ 알 수 없는 플랜');return;}
-  try{
-    // 1. 주문 생성
-    var orderResp=await fetch('/toss/create-order',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        dealerId:_CU.dealerId||_CU.uid,
-        companyName:_CU.companyName||'',
-        email:_CU.email||'',
-        planType:planType,
-        amount:amount||plan.amount
-      })
-    });
-    var order=await orderResp.json();
-    if(!orderResp.ok||order.error){toast('❌ '+(order.error||'주문 생성 실패'));return;}
-
-    // 2. 토스 결제창 열기
-    // ★ 실제 클라이언트 키로 교체 필요 (토스페이먼츠 대시보드에서 발급)
-    var clientKey='test_ck_mBZ1gQ4YVXQwywWXyyKXrl2KPoqN';
-    var tossPayments=TossPayments(clientKey);
-    var payment=tossPayments.payment({customerKey:_CU.dealerId||_CU.uid||'guest'});
-    await payment.requestPayment({
-      method:'CARD',
-      amount:{currency:'KRW',value:amount||plan.amount},
-      orderId:order.orderId,
-      orderName:'DONWAY '+plan.label,
-      successUrl:window.location.origin+'/settle?toss=success&orderId='+order.orderId,
-      failUrl:window.location.origin+'/settle?toss=fail',
-      customerEmail:_CU.email||'',
-      customerName:_CU.companyName||'고객사',
-      card:{useEscrow:false,flowMode:'DEFAULT',useCardPoint:false}
-    });
-  }catch(e){
-    if(e.code==='USER_CANCEL'||e.message==='사용자가 결제를 취소하였습니다.') return;
-    toast('❌ 결제 오류: '+(e.message||e.code||''));
+  var plan=PLAN_INFO&&PLAN_INFO[planType];
+  if(!plan){toast('❌ 플랜 없음: '+planType);return;}
+  var finalAmount=amount||plan.amount;
+  if(!finalAmount){toast('❌ 금액 오류');return;}
+  var uid=(_CU.dealerId||_CU.uid||'u').replace(/[^a-zA-Z0-9]/g,'').slice(0,8)||'user0001';
+  var orderId='DW'+uid+Date.now().toString().slice(-8);
+  if(_db&&(_CU.uid||_CU.dealerId)){
+    _db.collection('payment_requests').add({
+      orderId:orderId,dealerId:_CU.uid||_CU.dealerId,
+      planType:planType,amount:finalAmount,status:'pending',
+      createdAt:new Date().toISOString()
+    }).catch(function(){});
   }
+  try{
+    var tossPayments=TossPayments('test_ck_mBZ1gQ4YVXQwywWXyyKXrl2KPoqN');
+    var custKey=(_CU.dealerId||_CU.uid||'guest').replace(/[^a-zA-Z0-9\-_]/g,'').slice(0,30)||'guest01';
+    tossPayments.payment({customerKey:custKey}).requestPayment({
+      method:'CARD',
+      amount:{currency:'KRW',value:finalAmount},
+      orderId:orderId,
+      orderName:'DONWAY '+plan.label,
+      successUrl:window.location.origin+window.location.pathname+'?toss=success&orderId='+orderId+'&planType='+planType,
+      failUrl:window.location.origin+window.location.pathname+'?toss=fail',
+      customerEmail:_CU.email||'',
+      customerName:(_CU.companyName||_CU.name||'고객사').slice(0,20),
+      card:{useEscrow:false,flowMode:'DEFAULT',useCardPoint:false}
+    }).catch(function(e){
+      if(e&&(e.code==='USER_CANCEL'||String(e.message||'').indexOf('취소')>=0))return;
+      toast('❌ '+(e&&e.message||'결제 오류'));
+    });
+  }catch(e){toast('❌ 토스 오류: '+(e&&e.message||''));}
 }
 
-// 결제 성공/실패 콜백 (successUrl 복귀 시)
-(function _checkTossReturn(){
-  var params=new URLSearchParams(window.location.search);
-  if(params.get('toss')==='success'){
-    var paymentKey=params.get('paymentKey');
-    var orderId=params.get('orderId');
-    var amt=params.get('amount');
-    history.replaceState(null,'',window.location.pathname);
-    if(paymentKey&&orderId&&amt){
-      fetch('/toss/confirm',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({paymentKey:paymentKey,orderId:orderId,amount:parseInt(amt)})
-      }).then(function(r){return r.json();}).then(function(data){
-        if(data.success){
-          toast('🎉 결제 완료! 기능이 즉시 활성화됐습니다');
-          // 회사 slug 조회해서 URL 안내
-          if(_CU&&_db){
-            _db.collection('companies').doc(_CU.dealerId).get().then(function(snap){
-              var sl=snap.exists&&snap.data().slug;
-              if(sl){
-                var myUrl=window.location.origin+'/'+sl;
-                setTimeout(function(){
-                  toast('📌 전용 URL: '+myUrl);
-                },2000);
-              }
-            }).catch(function(){});
-          }
-          setTimeout(function(){location.reload();},1500);
-        } else {
-          toast('❌ '+(data.error||'결제 확인 실패'));
-        }
-      }).catch(function(e){toast('❌ '+e.message);});
-    }
-  } else if(params.get('toss')==='fail'){
-    history.replaceState(null,'',window.location.pathname);
-    toast('결제가 취소됐습니다');
-  }
-})();
-
-// ══ 위수탁 계약서 ══
 function pageContract(){
   if(_db&&_CU&&_CU.dealerId){
     _db.collection('companies').doc(_CU.dealerId).get().then(function(snap){
@@ -10769,12 +10708,11 @@ function _showSubModal(){
   var mo=document.getElementById('mo-sub');if(mo)mo.remove();
   var moEl=document.createElement('div');moEl.className='mo show';moEl.id='mo-sub';
   var plans=[
-    {key:'starter', name:'Starter', price:'30,000', period:'월', drivers:'1~10명', color:'#3B82F6'},
-    {key:'basic',   name:'Basic',   price:'50,000', period:'월', drivers:'11~20명',color:'#8B5CF6'},
-    {key:'pro',     name:'Pro',     price:'80,000', period:'월', drivers:'21~40명',color:'#10B981'},
-    {key:'starter3',name:'Starter', price:'81,000', period:'3개월', drivers:'1~10명', color:'#3B82F6', badge:'10% 할인'},
-    {key:'basic3',  name:'Basic',   price:'135,000',period:'3개월', drivers:'11~20명',color:'#8B5CF6', badge:'10% 할인'},
-    {key:'pro3',    name:'Pro',     price:'216,000',period:'3개월', drivers:'21~40명',color:'#10B981', badge:'10% 할인'},
+    {key:'qr_only',     name:'📷 QR 출퇴근',  price:'19,900', period:'월', color:'#0891b2'},
+    {key:'settle_taxi', name:'📦 택배 정산',   price:'29,900', period:'월', color:'#dc2626'},
+    {key:'payroll',     name:'💼 급여 관리',   price:'29,900', period:'월', color:'#7c3aed'},
+    {key:'qr_payroll',  name:'📷💼 QR+급여',  price:'44,900', period:'월', color:'#059669', badge:'13% 할인'},
+    {key:'full',        name:'🚀 ALL-IN-ONE', price:'59,900', period:'월', color:'#185FA5', badge:'⭐ 베스트'},
   ];
   var html='<div class="md" style="max-width:520px">'
     +'<div class="mdt">💳 구독 플랜 선택'
@@ -10806,8 +10744,9 @@ function _showSubModal(){
 }
 
 function confirmSubPay(planKey){
-  var plan=PLAN_INFO[planKey];
-  if(!plan){toast('❌ 플랜 정보 없음');return;}
+  var plan=PLAN_INFO&&PLAN_INFO[planKey];
+  if(!plan){toast('❌ 플랜 없음: '+planKey);return;}
+  window._pendingPlanKey=planKey;
   var mo=document.getElementById('mo-sub');if(mo)mo.remove();
   _tossPay(planKey, plan.amount);
 }
@@ -13013,37 +12952,34 @@ function _requirePlan(feature,callback){
   if(!did){callback();return;}
   _db.collection('companies').doc(did).get().then(function(snap){
     var d=snap.exists?snap.data():{};
-    if(_isPlanAllowed(d,feature)){callback();}
+    if(_isPlanAllowed(d)){callback();}
     else{_renderPaywall(feature);}
   }).catch(function(){callback();});
 }
 
-function _isPlanAllowed(d,feature){
+function _isPlanAllowed(d){
   if(d.settlePaid||d.rosterPaid)return true;
   var plan=d.plan||'';
-  var plans=d.plans||[];
   var paid=['qr_only','settle_taxi','payroll','qr_payroll','full'];
-  if(paid.indexOf(plan)>=0)return true;
-  if(plans.length>0)return true;
-  return false;
+  return paid.indexOf(plan)>=0||(d.plans&&d.plans.length>0);
 }
 
 function _renderPaywall(feature){
   var el=document.getElementById('content');
   if(!el)return;
   var PV={
-    'qr':{label:'QR 출퇴근',icon:'📷',color:'#0891b2',pkgLabel:'📷 QR 출퇴근 — ₩19,900/월',items:['동적 QR (자동 갱신)','GPS 위치 검증','키오스크 모드','지각·결근 자동 감지']},
-    'attendance':{label:'출퇴근 현황',icon:'🔐',color:'#0891b2',pkgLabel:'📷 QR 출퇴근 — ₩19,900/월',items:['실시간 출퇴근 현황','월별 기록 조회']},
-    'leave':{label:'휴가·연차',icon:'🌴',color:'#059669',pkgLabel:'💼 급여 관리 — ₩29,900/월',items:['연차·반차·병가 신청','관리자 승인/반려','법정 연차 자동계산']},
-    'vehicle':{label:'차량 관리',icon:'🚗',color:'#d97706',pkgLabel:'🚀 ALL-IN-ONE — ₩59,900/월',items:['보험·검사 만료 경고','정비이력 기록']},
-    'expense':{label:'경비 관리',icon:'💸',color:'#7c3aed',pkgLabel:'🚀 ALL-IN-ONE — ₩59,900/월',items:['영수증 첨부','월별 집계']},
-    'overtime':{label:'연장근로',icon:'⏰',color:'#dc2626',pkgLabel:'💼 급여 관리 — ₩29,900/월',items:['직원 신청','관리자 승인','급여 자동 반영']},
-    'evaluation':{label:'직원 평가',icon:'⭐',color:'#f59e0b',pkgLabel:'💼 급여 관리 — ₩29,900/월',items:['별점 평가','월별 기록']},
-    'delivery_platform':{label:'배달대행 정산',icon:'🛵',color:'#ff6b35',pkgLabel:'📦 택배 정산 — ₩29,900/월',items:['쿠팡이츠·배민·바로고','이벤트 수당 자동계산']},
-    'hourly_settle':{label:'급여 관리',icon:'💼',color:'#7c3aed',pkgLabel:'💼 급여 관리 — ₩29,900/월',items:['시급/일급/주급/월급','4대보험 자동계산','급여명세서']},
-    'roster':{label:'근무표',icon:'🗓',color:'#185FA5',pkgLabel:'📷 QR 출퇴근 — ₩19,900/월',items:['주간 근무표','직원별 배정']}
+    'qr':{label:'QR 출퇴근',icon:'📷',color:'#0891b2',pkg:'📷 QR 출퇴근 — ₩19,900/월',items:['동적 QR 자동 갱신','GPS 위치 검증','키오스크 모드','지각·결근 자동 감지']},
+    'attendance':{label:'출퇴근 현황',icon:'🔐',color:'#0891b2',pkg:'📷 QR 출퇴근 — ₩19,900/월',items:['실시간 출퇴근 현황','월별 기록 조회']},
+    'leave':{label:'휴가·연차',icon:'🌴',color:'#059669',pkg:'💼 급여 관리 — ₩29,900/월',items:['연차·반차·병가 신청','관리자 승인/반려']},
+    'vehicle':{label:'차량 관리',icon:'🚗',color:'#d97706',pkg:'🚀 ALL-IN-ONE — ₩59,900/월',items:['보험·검사 만료 경고','정비이력']},
+    'expense':{label:'경비 관리',icon:'💸',color:'#7c3aed',pkg:'🚀 ALL-IN-ONE — ₩59,900/월',items:['영수증 첨부','월별 집계']},
+    'overtime':{label:'연장근로',icon:'⏰',color:'#dc2626',pkg:'💼 급여 관리 — ₩29,900/월',items:['직원 신청','관리자 승인']},
+    'evaluation':{label:'직원 평가',icon:'⭐',color:'#f59e0b',pkg:'💼 급여 관리 — ₩29,900/월',items:['별점 평가','월별 기록']},
+    'delivery_platform':{label:'배달대행 정산',icon:'🛵',color:'#ff6b35',pkg:'📦 택배 정산 — ₩29,900/월',items:['쿠팡이츠·배민·바로고','이벤트 수당 계산']},
+    'hourly_settle':{label:'급여 관리',icon:'💼',color:'#7c3aed',pkg:'💼 급여 관리 — ₩29,900/월',items:['시급/일급/주급/월급','4대보험 자동계산','급여명세서']},
+    'roster':{label:'근무표',icon:'🗓',color:'#185FA5',pkg:'📷 QR 출퇴근 — ₩19,900/월',items:['주간 근무표','직원별 배정']}
   };
-  var pv=PV[feature]||{label:feature,icon:'🔒',color:'#6b7280',pkgLabel:'💳 구독하기',items:[]};
+  var pv=PV[feature]||{label:feature,icon:'🔒',color:'#6b7280',pkg:'💳 구독하기',items:[]};
   el.innerHTML=''
     +'<div style="background:linear-gradient(135deg,'+pv.color+'18,'+pv.color+'05);border:2px solid '+pv.color+'33;border-radius:16px;padding:20px;margin-bottom:14px;position:relative">'
     +'<div style="position:absolute;top:50%;right:16px;transform:translateY(-50%);font-size:72px;opacity:.06">🔒</div>'
@@ -13052,13 +12988,14 @@ function _renderPaywall(feature){
     +'<div><div style="font-size:18px;font-weight:900;color:'+pv.color+'">'+pv.label+'</div>'
     +'<span style="background:'+pv.color+';color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">🔒 유료 기능</span>'
     +'</div></div></div>'
-    +'<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:8px">✨ 이런 기능을 사용할 수 있어요</div>'
+    +'<div style="margin-bottom:14px">'
+    +'<div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:8px">✨ 이런 기능을 사용할 수 있어요</div>'
     +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px">'
     +pv.items.map(function(t){return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:12px;font-weight:600">'+t+'</div>';}).join('')
     +'</div></div>'
     +'<div style="background:var(--bg2);border-radius:14px;padding:16px;text-align:center">'
     +'<div style="font-size:12px;font-weight:700;margin-bottom:4px">이 기능이 포함된 플랜</div>'
-    +'<div style="font-size:16px;font-weight:900;color:'+pv.color+';margin-bottom:14px">'+pv.pkgLabel+'</div>'
+    +'<div style="font-size:16px;font-weight:900;color:'+pv.color+';margin-bottom:14px">'+pv.pkg+'</div>'
     +'<button onclick="_showSubModal()" class="btn btn-blue" style="padding:11px 28px;font-size:13px;font-weight:800">💳 지금 구독하기</button>'
     +'<div style="margin-top:8px;font-size:10px;color:var(--text3)">✅ 결제 즉시 활성화 · 언제든 해지</div>'
     +'</div>';
@@ -13067,28 +13004,21 @@ function _renderPaywall(feature){
 function _buildNavRender(nav,cur,plan,hasPaid){
   if(!nav||!MENUS||!MENUS.length)return;
   var paid=['qr_only','settle_taxi','payroll','qr_payroll','full'];
-  var isUnlocked=hasPaid||paid.indexOf(plan)>=0||isSuperAdmin();
-
-  function isLocked(m){
-    if(!m.plan||m.plan==='free')return false;
-    return !isUnlocked;
-  }
-
+  var unlocked=hasPaid||paid.indexOf(plan)>=0||isSuperAdmin();
   var freeItems=[],lockItems=[],anyOpen=false,openSections=[];
   MENUS.forEach(function(g,gi){
     if(!g||!g.items)return;
-    var free=g.items.filter(function(m){return m&&m.p&&!isLocked(m);});
-    var lock=g.items.filter(function(m){return m&&m.p&&isLocked(m);});
+    var free=g.items.filter(function(m){return m&&m.p&&(unlocked||!m.plan||m.plan==='free');});
+    var lock=g.items.filter(function(m){return m&&m.p&&!unlocked&&m.plan&&m.plan!=='free';});
     lock.forEach(function(m){lockItems.push(m);});
     if(free.length)openSections.push({s:g.s,items:free,gi:gi});
   });
-
   var html='';
   openSections.forEach(function(g){
     var id='nsec-'+g.gi;
     var hasActive=g.items.some(function(m){return m.p===cur;});
     if(hasActive)anyOpen=true;
-    html+='<div class="ns'+(hasActive?' open':'')+'" id="nshead-'+g.gi+'" onclick="_toggleNavSection(this,\''+id+'\')">'+
+    html+='<div class="ns'+(hasActive?' open':'')+'" id="nshead-'+g.gi+'" onclick="_toggleNavSection(this,this.nextElementSibling.id)">'+
       '<span>'+g.s+'</span><span class="ns-arrow">›</span></div>'+
       '<div class="ns-items'+(hasActive?' open':'')+'" id="'+id+'">';
     g.items.forEach(function(m){
@@ -13097,15 +13027,14 @@ function _buildNavRender(nav,cur,plan,hasPaid){
     });
     html+='</div>';
   });
-
   if(lockItems.length){
     html+='<div style="margin:8px 10px 0;border-top:1px dashed var(--border);padding-top:8px">'
-      +'<div style="font-size:9px;color:var(--text3);font-weight:700;padding:0 4px 6px;display:flex;align-items:center;gap:4px">'
+      +'<div style="font-size:9px;color:var(--text3);font-weight:700;padding:0 4px 6px;display:flex;align-items:center">'
       +'🔒 유료 기능'
       +'<button onclick="_showSubModal()" style="margin-left:auto;background:var(--brand);color:#fff;border:none;border-radius:8px;font-size:9px;padding:2px 7px;cursor:pointer">구독</button>'
       +'</div>';
     lockItems.forEach(function(m){
-      html+='<div class="ni" id="nav-'+m.p+'" data-p="'+m.p+'" onclick="goPage(this.dataset.p)" style="opacity:.6">'+
+      html+='<div class="ni" id="nav-'+m.p+'" data-p="'+m.p+'" onclick="goPage(this.dataset.p)" style="opacity:.55">'+
         '<span style="font-size:14px">'+m.ic+'</span><span style="flex:1">'+m.l+'</span>'+
         '<span style="font-size:9px;color:#f59e0b">🔒</span></div>';
     });
@@ -13119,6 +13048,32 @@ function _buildNavRender(nav,cur,plan,hasPaid){
     if(f0)f0.classList.add('open');
   }
 }
+
+// 결제 완료 자동 처리
+(function(){
+  var params=new URLSearchParams(window.location.search);
+  if(params.get('toss')!=='success')return;
+  var orderId=params.get('orderId')||'';
+  var planType=params.get('planType')||'full';
+  history.replaceState(null,'',window.location.pathname);
+  function doActivate(){
+    if(!_CU||!_db){setTimeout(doActivate,600);return;}
+    var did=_CU.uid||_CU.dealerId||'';
+    if(!did){setTimeout(doActivate,600);return;}
+    _db.collection('companies').doc(did).update({
+      plan:planType, plans:[], settlePaid:true, rosterPaid:true,
+      planActivatedAt:new Date().toISOString(),
+      planExpiry:new Date(Date.now()+30*86400000).toISOString(),
+      lastOrderId:orderId
+    }).then(function(){
+      window._cachedPlan=planType;
+      window._cachedHasPaid=true;
+      toast('🎉 결제 완료! 모든 기능이 활성화됐습니다');
+      buildNav();
+    }).catch(function(e){toast('⚠️ 활성화 오류: '+e.message);});
+  }
+  setTimeout(doActivate,800);
+})();
 
 
 
