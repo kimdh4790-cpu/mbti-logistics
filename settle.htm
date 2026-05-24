@@ -2394,7 +2394,8 @@ function _activateAfterPay(planType, orderId){
       setTimeout(doActivate, 500);
       return;
     }
-    var did=_CU.dealerId||_CU.companyId||_CU.uid||'';
+    // companies 문서 ID는 항상 Firebase Auth UID
+    var did=_CU.uid||_CU.dealerId||_CU.companyId||'';
     if(!did){setTimeout(doActivate,500);return;}
     var planMap={
       'qr_only':  {plan:'qr_only',  plans:['plan_qr'],label:'📷 QR 출퇴근'},
@@ -13284,8 +13285,9 @@ function _buildNavRender(nav, cur, plan, hasPaid){
 // 💳 결제 완료 → 자동 플랜 활성화
 // ════════════════════════════════
 function _autoActivatePlan(planKey, orderId){
-  var did=_CU&&(_CU.dealerId||_CU.companyId||'');
-  if(!did||!_db){toast('❌ 활성화 실패');return;}
+  // companies 문서 ID = Firebase Auth UID
+  var did=_CU&&(_CU.uid||_CU.dealerId||_CU.companyId||'');
+  if(!did||!_db){toast('❌ 활성화 실패 (로그인 확인)');return;}
   var planMap={
     'qr_only':   {plan:'qr_only',  plans:['plan_qr'],              label:'📷 QR 출퇴근'},
     'settle_taxi':{plan:'settle_taxi',plans:['plan_settle'],        label:'📦 택배 정산'},
