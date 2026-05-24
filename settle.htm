@@ -58,6 +58,8 @@ body.dark{--bg:#0a0a0f;--bg2:#12121a;--bg3:#1a1a24;--text:#f0ede6;--text2:#b8b5a
   transition:all .15s;border-left:3px solid transparent}
 .ni:hover{background:var(--bg3);color:var(--text);border-left-color:var(--brand);transform:translateX(2px)}
 .ni.on{background:linear-gradient(135deg,var(--brand-l),rgba(59,130,246,.08));color:var(--brand);font-weight:800;border-left-color:var(--brand);box-shadow:0 2px 8px rgba(59,130,246,.15)}
+.ni-locked{cursor:pointer;opacity:.7}
+.ni-locked:hover{opacity:1;background:var(--amber-l)}
 .sb-bot{padding:9px 12px;border-top:1px solid var(--border)}
 .btn-iv{padding:4px 10px;border:1px solid var(--border);border-radius:20px;background:var(--bg2);color:var(--text2);font-size:11px;cursor:pointer;transition:all .15s}
 .btn-iv:hover{background:var(--brand-l);color:var(--brand);border-color:var(--brand)}
@@ -5175,12 +5177,7 @@ function pageHome(){
     +'</div>'
     // 빠른 실행 버튼
     +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-bottom:18px">'
-    +_homeQuickBtn('📺','QR 표시','attendance','#3b82f6','#eff6ff')
-    +_homeQuickBtn('📋','출퇴근','attendance','#059669','#f0fdf4')
-    +_homeQuickBtn('💼','급여 계산','hourly_settle','#7c3aed','#faf5ff')
-    +_homeQuickBtn('🌴','휴가 승인','leave','#d97706','#fffbeb')
-    +_homeQuickBtn('👤','직원 관리','drivers','#0891b2','#ecfeff')
-    +_homeQuickBtn('🗓','근무표','roster','#db2777','#fdf2f8')
+    +_homeFilteredBtns()
     +'</div>'
     // 통계 카드들
     +'<div id="home-stats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:20px">'
@@ -5254,6 +5251,58 @@ function _todoItem(type, label, page){
     +'</div>';
 }
 
+
+// 플랜 기반 빠른실행 버튼 필터링
+function _homeFilteredBtns(){
+  var plan=window._cachedPlan||'';
+  var paid=window._cachedHasPaid||isSuperAdmin();
+  // 전체 버튼 정의 (page: 필요 플랜)
+  var allBtns=[
+    {ic:'👤',l:'직원 관리',  p:'drivers',      plan:'free',       color:'#0891b2'},
+    {ic:'📊',l:'정산 현황',  p:'settle',        plan:'free',       color:'#185FA5'},
+    {ic:'📷',l:'QR 출퇴근',  p:'attendance',    plan:'qr',         color:'#3b82f6'},
+    {ic:'💼',l:'급여 계산',  p:'hourly_settle', plan:'payroll',    color:'#7c3aed'},
+    {ic:'🌴',l:'휴가 승인',  p:'leave',         plan:'payroll',    color:'#d97706'},
+    {ic:'🗓',l:'근무표',     p:'roster',        plan:'settle',     color:'#db2777'},
+    {ic:'🚗',l:'차량 관리',  p:'vehicle',       plan:'full',       color:'#059669'},
+    {ic:'💸',l:'경비 관리',  p:'expense',       plan:'full',       color:'#f97316'},
+    {ic:'📦',l:'배달 실적',  p:'delivery_report',plan:'settle',    color:'#dc2626'},
+  ];
+  var qrOk=['qr_only','qr_payroll','full'];
+  var settleOk=['settle_taxi','full'];
+  var payrollOk=['payroll','qr_payroll','full'];
+  function canAccess(btnPlan){
+    if(btnPlan==='free')return true;
+    if(paid){
+      if(btnPlan==='qr'&&qrOk.indexOf(plan)>=0)return true;
+      if(btnPlan==='settle'&&settleOk.indexOf(plan)>=0)return true;
+      if(btnPlan==='payroll'&&payrollOk.indexOf(plan)>=0)return true;
+      if(btnPlan==='full'&&plan==='full')return true;
+      if(paid&&(plan==='settle_taxi'||plan==='full'))return true;
+      return paid; // 유료 아무거나 있으면 기본 허용
+    }
+    return false;
+  }
+  // 접근 가능한 버튼 먼저, 잠긴 버튼 뒤
+  var free=allBtns.filter(function(b){return canAccess(b.plan);});
+  var locked=allBtns.filter(function(b){return !canAccess(b.plan);});
+  var html='';
+  free.forEach(function(b){
+    html+=_homeQuickBtn(b.ic,b.l,b.p,b.color,'');
+  });
+  if(locked.length){
+    locked.slice(0,3).forEach(function(b){
+      html+='<div onclick="_showSubModal()" style="background:var(--bg2);border-radius:14px;padding:14px 10px;text-align:center;cursor:pointer;border:2px dashed var(--border);opacity:.6;transition:all .2s" '
+        +'onmouseover="this.style.opacity=\'1\';this.style.borderColor=\'#f59e0b\'" '
+        +'onmouseout="this.style.opacity=\'0.6\';this.style.borderColor=\'var(--border)\'">'
+        +'<div style="font-size:28px;margin-bottom:7px;filter:grayscale(1)">'+b.ic+'</div>'
+        +'<div style="font-size:10px;font-weight:800;color:var(--text3)">'+b.l+'</div>'
+        +'<div style="font-size:9px;color:#f59e0b;margin-top:3px">🔒 구독 필요</div>'
+        +'</div>';
+    });
+  }
+  return html;
+}
 function _homeQuickBtn(icon, label, page, color, bg){
   return '<div onclick="goPage(\''+page+'\')" '
     +'style="background:var(--bg2);border-radius:14px;padding:14px 10px;text-align:center;cursor:pointer;'
@@ -7481,27 +7530,105 @@ function buildNav(){
   if(!nav)return;
   if(!MENUS||!MENUS.length){nav.innerHTML='';return;}
   var cur=typeof _curPage!=='undefined'?(_curPage||''):'';
+
+  // 결제 플랜 확인
+  var userPlan='';
+  var hasPaid=false;
+  if(_CU&&_db){
+    // 캐시된 플랜 사용
+    if(window._cachedPlan){
+      userPlan=window._cachedPlan;
+      hasPaid=window._cachedHasPaid||false;
+      _buildNavRender(nav,cur,userPlan,hasPaid);
+    } else {
+      var did=_CU.dealerId||_CU.companyId||'';
+      if(did){
+        _db.collection('companies').doc(did).get().then(function(snap){
+          var d=snap.exists?snap.data():{};
+          window._cachedPlan=d.plan||'';
+          window._cachedHasPaid=!!(d.settlePaid||d.rosterPaid||d.plan);
+          _buildNavRender(nav,cur,window._cachedPlan,window._cachedHasPaid);
+        }).catch(function(){_buildNavRender(nav,cur,'',false);});
+        return;
+      }
+    }
+  }
+  _buildNavRender(nav,cur,'',isSuperAdmin());
+}
+
+function _buildNavRender(nav,cur,plan,hasPaid){
   var anyOpen=false;
-  nav.innerHTML=MENUS.map(function(g,gi){
-    if(!g||!g.items)return'';
-    var id='nsec-'+gi;
-    var hasActive=g.items.some(function(m){return m&&m.p===cur;});
+
+  // 각 메뉴 아이템이 잠겼는지 확인
+  function isItemLocked(m){
+    if(!m.plan||m.plan==='free')return false;
+    if(isSuperAdmin()||hasPaid)return false;
+    var qrPlans=['plan_qr','qr_only','qr_payroll','full'];
+    var settlePlans=['plan_settle','settle_taxi','full'];
+    var payrollPlans=['plan_payroll','payroll','qr_payroll','full'];
+    var qrFeatures=['qr','attendance'];
+    var settleFeatures=['settle','roster'];
+    var payrollFeatures=['hourly_settle','evaluation','overtime','leave','vehicle','expense','delivery_platform'];
+    if(qrPlans.indexOf(plan)>=0&&qrFeatures.indexOf(m.p)>=0)return false;
+    if(settlePlans.indexOf(plan)>=0&&settleFeatures.indexOf(m.p)>=0)return false;
+    if(payrollPlans.indexOf(plan)>=0&&payrollFeatures.indexOf(m.p)>=0)return false;
+    return true;
+  }
+
+  // 섹션별로 잠긴 항목/열린 항목 분리
+  var openSections=[];
+  var lockedItems=[];
+
+  MENUS.forEach(function(g,gi){
+    if(!g||!g.items)return;
+    var freeItems=g.items.filter(function(m){return m&&m.p&&!isItemLocked(m);});
+    var lockItems=g.items.filter(function(m){return m&&m.p&&isItemLocked(m);});
+    lockItems.forEach(function(m){lockedItems.push(m);});
+    if(freeItems.length){
+      openSections.push({s:g.s,items:freeItems,gi:gi});
+    }
+  });
+
+  var html='';
+
+  // ① 결제된(무료 포함) 항목 먼저
+  openSections.forEach(function(g,gi){
+    var id='nsec-'+g.gi;
+    var hasActive=g.items.some(function(m){return m.p===cur;});
     if(hasActive)anyOpen=true;
-    return '<div class="ns'+(hasActive?' open':'')+'" id="nshead-'+gi+'" onclick="_toggleNavSection(this,\''+id+'\')">'+
+    html+='<div class="ns'+(hasActive?' open':'')+'" id="nshead-'+g.gi+'" onclick="_toggleNavSection(this,this.nextElementSibling.id)">'+
       '<span>'+g.s+'</span><span class="ns-arrow">›</span></div>'+
-      '<div class="ns-items'+(hasActive?' open':'')+'" id="'+id+'">'+
-      g.items.filter(function(m){return m&&m.p;}).map(function(m){
-        var isLocked=m.lock||(m.plan&&m.plan!=='free');
-        var lockBadge=isLocked?'<span style="font-size:9px;color:#f59e0b;margin-left:auto;opacity:.8">🔒</span>':'';
-        return '<div class="ni'+(m.p===cur?' on':'')+'" id="nav-'+m.p+'" onclick="goPage(\''+m.p+'\')">'+
-          '<span style="font-size:14px">'+m.ic+'</span><span style="flex:1">'+m.l+'</span>'+lockBadge+'</div>';
-      }).join('')+'</div>';
-  }).join('');
-  if(!anyOpen){
-    var f0=document.getElementById('nsec-0');
-    var h0=document.getElementById('nshead-0');
-    if(f0)f0.classList.add('open');
-    if(h0)h0.classList.add('open');
+      '<div class="ns-items'+(hasActive?' open':'')+'" id="'+id+'">';
+    g.items.forEach(function(m){
+      html+='<div class="ni'+(m.p===cur?' on':'')+'" id="nav-'+m.p+'" onclick="goPage(this.dataset.p)" data-p="'+m.p+'">'+
+        '<span style="font-size:14px">'+m.ic+'</span><span style="flex:1">'+m.l+'</span></div>';
+    });
+    html+='</div>';
+  });
+
+  // ② 구분선 (잠긴 항목 있을 때)
+  if(lockedItems.length){
+    html+='<div style="margin:8px 10px;border-top:1px dashed var(--border);padding-top:8px">'
+      +'<div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.08em;padding:0 4px 6px;display:flex;align-items:center;gap:4px">'
+      +'<span>🔒</span> 유료 기능'
+      +'<button onclick="_showSubModal()" style="margin-left:auto;background:var(--brand);color:#fff;border:none;border-radius:8px;font-size:9px;padding:2px 7px;cursor:pointer;font-weight:700">구독</button>'
+      +'</div>';
+    lockedItems.forEach(function(m){
+      html+='<div class="ni ni-locked" id="nav-'+m.p+'" onclick="goPage(this.dataset.p)" data-p="'+m.p+'">'+
+        '<span style="font-size:14px;opacity:.5">'+m.ic+'</span>'+
+        '<span style="flex:1;opacity:.5">'+m.l+'</span>'+
+        '<span style="font-size:9px;color:#f59e0b">🔒</span></div>';
+    });
+    html+='</div>';
+  }
+
+  nav.innerHTML=html;
+
+  if(!anyOpen&&openSections.length){
+    var f=document.getElementById('nsec-'+openSections[0].gi);
+    var h=document.getElementById('nshead-'+openSections[0].gi);
+    if(f)f.classList.add('open');
+    if(h)h.classList.add('open');
   }
 }
 
@@ -10198,11 +10325,20 @@ async function _ocrAnalyze(){
         'anthropic-dangerous-direct-browser-access':'true'
       },
       body:JSON.stringify({
-        model:'claude-haiku-4-5-20251001',
-        max_tokens:800,
+        model:'claude-sonnet-4-5-20251022',
+        max_tokens:1500,
         messages:[{role:'user',content:[
           {type:'image',source:{type:'base64',media_type:mime,data:b64}},
-          {type:'text',text:`[한국어 사업자등록증 OCR - 정밀 인식 모드]
+          {type:'text',text:`[한국어 공문서 OCR 전문가 - 최고 정밀도 모드]
+
+당신은 한국어 공문서 인식 전문가입니다. 이미지를 픽셀 단위로 분석하여 정확하게 추출하세요.
+
+【STEP 1: 이미지 전처리 판단】
+- 이미지가 기울어져 있으면 수평으로 보정하여 읽기
+- 흐릿하거나 저화질이면 문맥 기반으로 최대한 복원
+- 스캔본/사진 모두 처리 가능
+
+【STEP 2: 문서 유형 판단】
 
 반드시 아래 지시사항을 전부 따르세요:
 
@@ -10244,7 +10380,7 @@ async function _ocrAnalyze(){
 - 층수, 호수 포함
 
 【출력 형식 - 순수 JSON만, 마크다운 없음】
-{"bizNum":"000-00-00000","bizName":"상호명","bizRep":"대표자성명","bizAddr":"전체주소","bizType":"업태","bizItem":"종목","name":"대표자성명"}
+{"bizNum":"000-00-00000","bizName":"상호명","bizRep":"대표자성명","bizAddr":"전체주소","bizType":"업태","bizItem":"종목","bizOpen":"개업연월일","name":"대표자성명","confidence":"high/medium/low"}
 
 최종 주의: 불확실한 글자는 가장 흔한 한국어 단어 맥락으로 판단하세요.`}
         ]}]
