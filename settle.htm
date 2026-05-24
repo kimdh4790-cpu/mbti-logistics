@@ -10843,12 +10843,11 @@ function _showSubModal(){
   var mo=document.getElementById('mo-sub');if(mo)mo.remove();
   var moEl=document.createElement('div');moEl.className='mo show';moEl.id='mo-sub';
   var plans=[
-    {key:'starter', name:'Starter', price:'30,000', period:'월', drivers:'1~10명', color:'#3B82F6'},
-    {key:'basic',   name:'Basic',   price:'50,000', period:'월', drivers:'11~20명',color:'#8B5CF6'},
-    {key:'pro',     name:'Pro',     price:'80,000', period:'월', drivers:'21~40명',color:'#10B981'},
-    {key:'starter3',name:'Starter', price:'81,000', period:'3개월', drivers:'1~10명', color:'#3B82F6', badge:'10% 할인'},
-    {key:'basic3',  name:'Basic',   price:'135,000',period:'3개월', drivers:'11~20명',color:'#8B5CF6', badge:'10% 할인'},
-    {key:'pro3',    name:'Pro',     price:'216,000',period:'3개월', drivers:'21~40명',color:'#10B981', badge:'10% 할인'},
+    {key:'qr_only',     name:'📷 QR 출퇴근',    price:'19,900', period:'월', drivers:'',     color:'#0891b2'},
+    {key:'settle_taxi', name:'📦 택배 정산',     price:'29,900', period:'월', drivers:'',     color:'#dc2626'},
+    {key:'payroll',     name:'💼 급여 관리',     price:'29,900', period:'월', drivers:'',     color:'#7c3aed'},
+    {key:'qr_payroll',  name:'📷💼 QR+급여',    price:'44,900', period:'월', drivers:'',     color:'#059669', badge:'13% 할인'},
+    {key:'full',        name:'🚀 ALL-IN-ONE',   price:'59,900', period:'월', drivers:'',     color:'#185FA5', badge:'⭐ 베스트'},
   ];
   var html='<div class="md" style="max-width:520px">'
     +'<div class="mdt">💳 구독 플랜 선택'
