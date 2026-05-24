@@ -2420,6 +2420,7 @@ function uploadContract(input){
 
 // ══ 근무표 관리 ══
 function pageRoster(){
+  if(!isSuperAdmin()&&window._cachedHasPaid===false){_renderPaywall('roster');return;}
   if(!_db||!_CU){_renderRosterPaywall();return;}
   var cid=_CU.dealerId||_CU.companyId;
   _db.collection('companies').doc(cid).get().then(function(snap){
@@ -10805,6 +10806,7 @@ function pageDispatch(){
 }
 
 function pageHourlySettle(){
+  if(!isSuperAdmin()&&window._cachedHasPaid===false){_renderPaywall('hourly_settle');return;}
   // 서비스 타입에 따라 타이틀 변경
   var _svcType=_CU&&_CU.serviceType||'';
   var _pageTitle=(_svcType==='hourly')?'💼 급여 관리':'⏰ 시급·일급·수수료 정산';
@@ -10866,7 +10868,7 @@ function pageHourlySettle(){
     sel.appendChild(opt);
   }
   window._hsState={workers:_workers,attMap:_attMap,results:_results,did:did};
-}
+};
 
 function _hsTabSwitch(tab){
   document.getElementById('hs-auto-area').style.display=tab==='auto'?'':'none';
@@ -13068,8 +13070,14 @@ function _buildNavRender(nav,cur,plan,hasPaid){
     }).then(function(){
       window._cachedPlan=planType;
       window._cachedHasPaid=true;
+      window._navPlanLoaded=false;
       toast('🎉 결제 완료! 모든 기능이 활성화됐습니다');
-      buildNav();
+      // 잠금 해제 후 사이드바 즉시 갱신
+      setTimeout(function(){
+        buildNav();
+        // 현재 페이지 새로고침
+        if(typeof _curPage!=='undefined'&&_curPage)goPage(_curPage);
+      },300);
     }).catch(function(e){toast('⚠️ 활성화 오류: '+e.message);});
   }
   setTimeout(doActivate,800);
