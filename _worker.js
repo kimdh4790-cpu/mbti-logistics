@@ -359,15 +359,23 @@ export default {
     }
 
     // ★ 루트 접속 → 랜딩페이지 리라이트 (URL 유지, workers.dev 제외)
-    if ((path === '/' || path === '' || path === '/donway_landing' || path === '/donway_landing/') && !hostname.includes('workers.dev')) {
-      const landingUrl = new URL('/donway_landing.html', url);
-      const landingResp = await fetchAsset('/donway_landing.html', request);
-      const landingHeaders = new Headers(landingResp.headers);
-      Object.entries(SECURITY_HEADERS).forEach(([k,v]) => landingHeaders.set(k,v));
-      return new Response(landingResp.body, {
-        status: landingResp.status,
-        headers: landingHeaders
-      });
+    // ── 루트 경로 처리 ──
+    if (path === '/' || path === '' || path === '/donway_landing' || path === '/donway_landing/') {
+      // workers.dev = 물류앱, 그 외 = DONWAY 랜딩
+      if (hostname.includes('workers.dev') || hostname.includes('kimdh4790')) {
+        // ★ 물류앱 메인 HTML 서빙
+        const logisticsResp = await fetchAsset('/엠비티아이_물류관리_v9.html', request);
+        const lh = new Headers();
+        lh.set('Content-Type', 'text/html; charset=utf-8');
+        lh.set('Cache-Control', 'no-cache');
+        Object.entries(SECURITY_HEADERS).forEach(([k,v]) => lh.set(k,v));
+        return new Response(logisticsResp.body, { status: logisticsResp.status, headers: lh });
+      } else {
+        const landingResp = await fetchAsset('/donway_landing.html', request);
+        const landingHeaders = new Headers(landingResp.headers);
+        Object.entries(SECURITY_HEADERS).forEach(([k,v]) => landingHeaders.set(k,v));
+        return new Response(landingResp.body, { status: landingResp.status, headers: landingHeaders });
+      }
     }
 
 
