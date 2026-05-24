@@ -13357,8 +13357,15 @@ function openAdminPanel(){
       var tr=document.createElement('tr');tr.style.borderBottom='1px solid var(--border)';
       var isCurrent=(window._adminViewDealerId===item.id);
       var slugUrl = item.slug ? (window.location.origin+'/'+item.slug) : '-';
-      var planLabel = {'trial':'무료체험','settle':'AI정산','qr':'QR출퇴근','full':'풀패키지','hourly':'급여관리','OWNER':'관리자'}[item.plan||'trial']||item.plan||'-';
-      var planColor = item.plan==='trial'?'var(--amber)':item.plan==='OWNER'?'#f59e0b':'var(--green)';
+      var _planMap={
+        'trial':'🆓 무료체험','OWNER':'👑 관리자',
+        'qr_only':'📷 QR 출퇴근','settle_taxi':'📦 택배 정산',
+        'payroll':'💼 급여 관리','qr_payroll':'📷💼 QR+급여',
+        'full':'🚀 ALL-IN-ONE','settle':'📦 AI정산(구)',
+        'qr':'📷 QR(구)','hourly':'💼 급여(구)'
+      };
+      var planLabel=_planMap[item.plan||'trial']||item.plan||'🆓 무료체험';
+      var planColor=item.plan==='trial'||!item.plan?'var(--amber)':item.plan==='OWNER'?'#f59e0b':'var(--green)';
       var today=new Date().toISOString().slice(0,10);
       var isExpired=item.plan==='trial'&&item.trialEnd&&item.trialEnd<today;
       var dateHtml='';
@@ -13370,7 +13377,7 @@ function openAdminPanel(){
       } else {dateHtml='<span style="font-size:10px;color:var(--text3)">-</span>';}
       tr.innerHTML='<td style="padding:8px 10px"><strong>'+esc(item.name||item.id)+'</strong><br>'
         +'<span style="font-size:10px;color:var(--text3)">'+esc(item.email||'')+'</span></td>'
-        +'<td style="padding:8px 10px;text-align:center"><span style="background:'+planColor+'22;color:'+planColor+';font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">'+planLabel+'</span></td>'
+        +'<td style="padding:8px 6px;min-width:120px">'        +'<span style="background:'+planColor+'22;color:'+planColor+';font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;display:inline-block;margin-bottom:3px">'+planLabel+'</span>'        +(item.planActivatedAt?'<br><span style="font-size:9px;color:var(--text3)">활성화: '+item.planActivatedAt.slice(0,10)+'</span>':'')        +(item.planExpiry?'<br><span style="font-size:9px;color:var(--brand)">만료: '+item.planExpiry.slice(0,10)+'</span>':'')        +'<br><button data-id="'+item.id+'" data-name="'+esc(item.name||'')+'" onclick="_adminChangePlan(this.dataset.id,this.dataset.name)" '        +'style="font-size:9px;padding:2px 7px;border:1px solid var(--border);border-radius:6px;background:var(--bg);cursor:pointer;margin-top:2px">플랜 변경 ✏️</button>'        +'</td>'
         +'<td style="padding:8px 6px;font-size:10px">'
         +(item.slug
           ?'<a href="'+slugUrl+'" target="_blank" style="color:var(--primary);text-decoration:none">'+esc('/'+item.slug)+'</a>'
@@ -13410,6 +13417,10 @@ function openAdminPanel(){
         email:d.email||d.adminEmail||'',
         slug:d.slug||'',
         plan:d.plan||(d.trialEnd?'trial':'unknown'),
+        plans:d.plans||[],
+        planActivatedAt:d.planActivatedAt||'',
+        planExpiry:d.planExpiry||'',
+        settlePaid:d.settlePaid||false,
         trialStart:d.trialStart||'',
         trialEnd:d.trialEnd||'',
         createdAt:d.createdAt&&d.createdAt.seconds?d.createdAt.seconds:0,
@@ -13432,6 +13443,90 @@ function openAdminPanel(){
       });
     },100);
   }).catch(function(e){body.innerHTML='<div style="color:var(--red)">❌ '+e.message+'</div>';});
+}
+
+// ══ 슈퍼어드민: 플랜 직접 변경 ══
+function _adminChangePlan(did, compName){
+  var planOptions=[
+    {v:'',label:'🆓 무료체험 (플랜 없음)'},
+    {v:'qr_only',label:'📷 QR 출퇴근 (₩19,900)'},
+    {v:'settle_taxi',label:'📦 택배 정산 (₩29,900)'},
+    {v:'payroll',label:'💼 급여 관리 (₩29,900)'},
+    {v:'qr_payroll',label:'📷💼 QR + 급여 (₩44,900)'},
+    {v:'full',label:'🚀 ALL-IN-ONE (₩59,900)'},
+    {v:'OWNER',label:'👑 관리자 (무제한)'}
+  ];
+  var mo=document.createElement('div');
+  mo.className='mo show';mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  var box=document.createElement('div');
+  box.className='md';box.style.maxWidth='380px';
+  box.innerHTML='<div class="mdt">✏️ 플랜 변경 — '+esc(compName)+'</div>'
+    +'<div style="padding:16px">'
+    +'<div style="font-size:12px;color:var(--text3);margin-bottom:10px">현재 플랜을 확인하고 변경하세요</div>'
+    +'<div style="display:flex;flex-direction:column;gap:6px" id="plan-opts">'
+    +planOptions.map(function(p){
+      return '<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg3);border-radius:8px;cursor:pointer">'
+        +'<input type="radio" name="new-plan" value="'+p.v+'"> '
+        +'<span style="font-size:12px">'+p.label+'</span></label>';
+    }).join('')
+    +'</div>'
+    +'<div style="margin-top:12px">'
+    +'<label style="font-size:11px;color:var(--text3)">만료일 (비워두면 1개월)</label>'
+    +'<input id="plan-expiry" type="date" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);margin-top:4px">'
+    +'</div>'
+    +'</div>'
+    +'<div class="mdf">'
+    +'<button onclick="this.closest(\'.mo\').remove()" class="btn">취소</button>'
+    +'<button data-id="'+did+'" data-name="'+esc(compName)+'" onclick="_adminSavePlan(this.dataset.id,this.dataset.name)" class="btn btn-blue">저장</button>'
+    +'</div>';
+  mo.appendChild(box);document.body.appendChild(mo);
+  // 현재 플랜 선택
+  _db.collection('companies').doc(did).get().then(function(snap){
+    if(!snap.exists)return;
+    var d=snap.data();
+    var cur=d.plan||'';
+    var radio=mo.querySelector('input[value="'+cur+'"]');
+    if(radio)radio.checked=true;
+    if(d.planExpiry){var expEl=mo.querySelector('#plan-expiry');if(expEl)expEl.value=d.planExpiry.slice(0,10);}
+  });
+}
+
+function _adminSavePlan(did, compName){
+  var radio=document.querySelector('input[name="new-plan"]:checked');
+  if(!radio){toast('❌ 플랜을 선택하세요');return;}
+  var planKey=radio.value;
+  var expiryEl=document.getElementById('plan-expiry');
+  var expiry=expiryEl&&expiryEl.value?new Date(expiryEl.value).toISOString()
+    :new Date(Date.now()+30*86400000).toISOString();
+
+  var planMap={
+    'qr_only':   {plans:['plan_qr']},
+    'settle_taxi':{plans:['plan_settle']},
+    'payroll':   {plans:['plan_payroll']},
+    'qr_payroll':{plans:['plan_qr','plan_payroll']},
+    'full':      {plans:['plan_qr','plan_payroll','plan_settle']},
+    'OWNER':     {plans:['plan_qr','plan_payroll','plan_settle']},
+    '':          {plans:[]}
+  };
+  var pm=planMap[planKey]||{plans:[]};
+  var hasPaid=planKey&&planKey!==''&&planKey!=='trial';
+
+  _db.collection('companies').doc(did).update({
+    plan:planKey,
+    plans:pm.plans,
+    settlePaid:hasPaid,
+    rosterPaid:hasPaid,
+    planActivatedAt:new Date().toISOString(),
+    planExpiry:expiry,
+    updatedAt:new Date().toISOString()
+  }).then(function(){
+    var mo=document.querySelector('.mo.show');if(mo)mo.remove();
+    toast('✅ '+esc(compName)+' 플랜 변경됨: '+planKey);
+    // 대리점 목록 새로고침
+    var adminBody=document.getElementById('admin-tab-0');
+    if(adminBody)adminBody.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">⏳ 새로고침 중...</div>';
+    openAdminPanel();
+  }).catch(function(e){toast('❌ '+e.message);});
 }
 
 // ══ 결제 승인 패널 ══
