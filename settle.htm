@@ -54,7 +54,7 @@ body.dark{--bg:#0a0a0f;--bg2:#12121a;--bg3:#1a1a24;--text:#f0ede6;--text2:#b8b5a
 .ns-items{overflow:hidden;max-height:0;transition:max-height .3s ease;padding:0 6px}
 .ns-items.open{max-height:300px}
 .ni{padding:9px 12px;border-radius:10px;cursor:pointer;color:var(--text2);
-  font-size:12px;margin-bottom:3px;display:flex;align-items:center;gap:9px;
+  font-size:12px;margin-bottom:3px;display:flex;align-items:center;gap:9px;width:100%;
   transition:all .15s;border-left:3px solid transparent}
 .ni:hover{background:var(--bg3);color:var(--text);border-left-color:var(--brand);transform:translateX(2px)}
 .ni.on{background:linear-gradient(135deg,var(--brand-l),rgba(59,130,246,.08));color:var(--brand);font-weight:800;border-left-color:var(--brand);box-shadow:0 2px 8px rgba(59,130,246,.15)}
@@ -7380,35 +7380,93 @@ function _viewMyStatement(el){var id=el.getAttribute('data-id');
 // 서비스 타입별 메뉴 정의
 // 쿠팡 정산 전용 (출퇴근X, 위수탁계약서O)
 var MENUS_SETTLE = [
-  {s:'홈',items:[{ic:'🏠',l:'대시보드',p:'home'}]},
-  {s:'정산',items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'📋',l:'정산 관리',p:'settlements'},{ic:'📈',l:'통계',p:'stats'}]},
-  {s:'운영',items:[{ic:'👤',l:'기사 관리',p:'drivers'},{ic:'🌴',l:'휴가 관리',p:'leave'},{ic:'🚗',l:'차량 관리',p:'vehicle'},{ic:'💸',l:'경비 관리',p:'expense'},{ic:'📅',l:'달력',p:'schedule'}]},
-  {s:'설정',items:[{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'⏰',l:'연장 승인',p:'overtime'},{ic:'📝',l:'위수탁 계약서',p:'contract'},{ic:'🗓',l:'근무표',p:'roster'}]},
-  {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices'}]}
+  {s:'홈',items:[{ic:'🏠',l:'대시보드',p:'home',plan:'free'}]},
+  {s:'정산',items:[
+    {ic:'📊',l:'정산 현황',p:'settle',plan:'settle'},
+    {ic:'📋',l:'정산 관리',p:'settlements',plan:'settle'},
+    {ic:'📈',l:'통계',p:'stats',plan:'settle'}
+  ]},
+  {s:'운영',items:[
+    {ic:'👤',l:'기사 관리',p:'drivers',plan:'free'},
+    {ic:'🌴',l:'휴가 관리',p:'leave',plan:'payroll'},
+    {ic:'🚗',l:'차량 관리',p:'vehicle',plan:'payroll'},
+    {ic:'💸',l:'경비 관리',p:'expense',plan:'payroll'},
+    {ic:'📅',l:'달력',p:'schedule',plan:'free'}
+  ]},
+  {s:'급여',items:[
+    {ic:'💼',l:'급여 계산',p:'hourly_settle',plan:'payroll'},
+    {ic:'📦',l:'배달실적',p:'delivery_report',plan:'payroll'},
+    {ic:'🛒',l:'배달대행',p:'delivery_platform',plan:'payroll'},
+    {ic:'⭐',l:'직원 평가',p:'evaluation',plan:'payroll'}
+  ]},
+  {s:'설정',items:[
+    {ic:'📌',l:'라우트 단가표',p:'prices',plan:'settle'},
+    {ic:'⏰',l:'연장 승인',p:'overtime',plan:'payroll'},
+    {ic:'📝',l:'위수탁 계약서',p:'contract',plan:'free'},
+    {ic:'🗓',l:'근무표',p:'roster',plan:'settle'}
+  ]},
+  {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices',plan:'free'}]}
 ];
 // QR 출퇴근 전용 (일반직원, 위수탁X)
 var MENUS_QR = [
-  {s:'홈',items:[{ic:'🏠',l:'대시보드',p:'home'}]},
-  {s:'메인',items:[{ic:'🔐',l:'출퇴근 현황',p:'attendance'},{ic:'📅',l:'달력',p:'schedule'}]},
-  {s:'직원',items:[{ic:'👤',l:'직원 관리',p:'drivers'},{ic:'🌴',l:'휴가 관리',p:'leave'},{ic:'🗓',l:'근무표',p:'roster'}]},
-  {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices'}]}
+  {s:'홈',items:[{ic:'🏠',l:'대시보드',p:'home',plan:'free'}]},
+  {s:'출퇴근',items:[
+    {ic:'🔐',l:'QR 출퇴근',p:'attendance',plan:'qr'},
+    {ic:'📅',l:'달력',p:'schedule',plan:'free'}
+  ]},
+  {s:'직원',items:[
+    {ic:'👤',l:'직원 관리',p:'drivers',plan:'free'},
+    {ic:'🌴',l:'휴가 관리',p:'leave',plan:'payroll'},
+    {ic:'⏰',l:'연장 승인',p:'overtime',plan:'payroll'},
+    {ic:'🗓',l:'근무표',p:'roster',plan:'settle'}
+  ]},
+  {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices',plan:'free'}]}
 ];
 // 풀패키지 (택배+QR, 위수탁O)
 var MENUS_FULL = [
-  {s:'홈',items:[{ic:'🏠',l:'대시보드',p:'home'}]},
-  {s:'정산',items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'📋',l:'정산 관리',p:'settlements'},{ic:'📈',l:'통계',p:'stats'}]},
-  {s:'운영',items:[{ic:'👤',l:'기사/직원',p:'drivers'},{ic:'🌴',l:'휴가 관리',p:'leave'},{ic:'🚗',l:'차량 관리',p:'vehicle'},{ic:'💸',l:'경비 관리',p:'expense'},{ic:'📅',l:'달력',p:'schedule'}]},
-  {s:'정산2',items:[{ic:'📦',l:'배달 실적',p:'delivery_report'},{ic:'🛒',l:'배달대행 정산',p:'delivery_platform'},{ic:'⭐',l:'직원 평가',p:'evaluation'}]},
-  {s:'설정',items:[{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'⏰',l:'연장 승인',p:'overtime'},{ic:'📝',l:'위수탁 계약서',p:'contract'},{ic:'🗓',l:'근무표',p:'roster'}]},
-  {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices'}]}
+  {s:'홈',items:[{ic:'🏠',l:'대시보드',p:'home',plan:'free'}]},
+  {s:'정산',items:[
+    {ic:'📊',l:'정산 현황',p:'settle',plan:'settle'},
+    {ic:'📋',l:'정산 관리',p:'settlements',plan:'settle'},
+    {ic:'📈',l:'통계',p:'stats',plan:'settle'}
+  ]},
+  {s:'운영',items:[
+    {ic:'👤',l:'기사/직원',p:'drivers',plan:'free'},
+    {ic:'🌴',l:'휴가 관리',p:'leave',plan:'payroll'},
+    {ic:'🔐',l:'출퇴근 현황',p:'attendance',plan:'qr'},
+    {ic:'🚗',l:'차량 관리',p:'vehicle',plan:'payroll'},
+    {ic:'💸',l:'경비 관리',p:'expense',plan:'payroll'},
+    {ic:'📅',l:'달력',p:'schedule',plan:'free'}
+  ]},
+  {s:'급여',items:[
+    {ic:'💼',l:'급여 계산',p:'hourly_settle',plan:'payroll'},
+    {ic:'📦',l:'배달실적',p:'delivery_report',plan:'payroll'},
+    {ic:'🛒',l:'배달대행',p:'delivery_platform',plan:'payroll'},
+    {ic:'⭐',l:'직원 평가',p:'evaluation',plan:'payroll'}
+  ]},
+  {s:'설정',items:[
+    {ic:'📌',l:'라우트 단가표',p:'prices',plan:'settle'},
+    {ic:'⏰',l:'연장 승인',p:'overtime',plan:'payroll'},
+    {ic:'📝',l:'위수탁 계약서',p:'contract',plan:'free'},
+    {ic:'🗓',l:'근무표',p:'roster',plan:'settle'}
+  ]},
+  {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices',plan:'free'}]}
 ];
 // ★ 소상공인/사장님 전용 (시급·일급·월급 정산)
 var MENUS_HOURLY = [
-  {s:'홈',items:[{ic:'🏠',l:'대시보드',p:'home'}]},
-  {s:'메인',items:[{ic:'📊',l:'급여 현황',p:'hourly_settle'},{ic:'🔐',l:'출퇴근 현황',p:'attendance'},{ic:'📅',l:'달력',p:'schedule'}]},
-  {s:'직원',items:[{ic:'👤',l:'직원 관리',p:'drivers'},{ic:'🌴',l:'휴가 관리',p:'leave'},{ic:'🗓',l:'근무표',p:'roster'}]},
-  {s:'분석',items:[{ic:'📈',l:'통계',p:'stats'}]},
-  {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices'}]}
+  {s:'홈',items:[{ic:'🏠',l:'대시보드',p:'home',plan:'free'}]},
+  {s:'급여',items:[
+    {ic:'💼',l:'급여 현황',p:'hourly_settle',plan:'payroll'},
+    {ic:'🔐',l:'출퇴근 현황',p:'attendance',plan:'qr'},
+    {ic:'📅',l:'달력',p:'schedule',plan:'free'}
+  ]},
+  {s:'직원',items:[
+    {ic:'👤',l:'직원 관리',p:'drivers',plan:'free'},
+    {ic:'🌴',l:'휴가 관리',p:'leave',plan:'payroll'},
+    {ic:'⏰',l:'연장 승인',p:'overtime',plan:'payroll'},
+    {ic:'⭐',l:'직원 평가',p:'evaluation',plan:'payroll'}
+  ]},
+  {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices',plan:'free'}]}
 ];
 // 기사/직원 전용 (본인 정산만)
 var MENUS_DRIVER = [
@@ -7433,8 +7491,10 @@ function buildNav(){
       '<span>'+g.s+'</span><span class="ns-arrow">›</span></div>'+
       '<div class="ns-items'+(hasActive?' open':'')+'" id="'+id+'">'+
       g.items.filter(function(m){return m&&m.p;}).map(function(m){
+        var isLocked=m.lock||(m.plan&&m.plan!=='free');
+        var lockBadge=isLocked?'<span style="font-size:9px;color:#f59e0b;margin-left:auto;opacity:.8">🔒</span>':'';
         return '<div class="ni'+(m.p===cur?' on':'')+'" id="nav-'+m.p+'" onclick="goPage(\''+m.p+'\')">'+
-          '<span style="font-size:14px">'+m.ic+'</span><span>'+m.l+'</span></div>';
+          '<span style="font-size:14px">'+m.ic+'</span><span style="flex:1">'+m.l+'</span>'+lockBadge+'</div>';
       }).join('')+'</div>';
   }).join('');
   if(!anyOpen){
@@ -10793,42 +10853,185 @@ function addRpCamp(cid){
 function _showSubModal(){
   var mo=document.getElementById('mo-sub');if(mo)mo.remove();
   var moEl=document.createElement('div');moEl.className='mo show';moEl.id='mo-sub';
-  var plans=[
-    {key:'starter', name:'Starter', price:'30,000', period:'월', drivers:'1~10명', color:'#3B82F6'},
-    {key:'basic',   name:'Basic',   price:'50,000', period:'월', drivers:'11~20명',color:'#8B5CF6'},
-    {key:'pro',     name:'Pro',     price:'80,000', period:'월', drivers:'21~40명',color:'#10B981'},
-    {key:'starter3',name:'Starter', price:'81,000', period:'3개월', drivers:'1~10명', color:'#3B82F6', badge:'10% 할인'},
-    {key:'basic3',  name:'Basic',   price:'135,000',period:'3개월', drivers:'11~20명',color:'#8B5CF6', badge:'10% 할인'},
-    {key:'pro3',    name:'Pro',     price:'216,000',period:'3개월', drivers:'21~40명',color:'#10B981', badge:'10% 할인'},
+  moEl.onclick=function(e){if(e.target===moEl)moEl.remove();};
+
+  // ★ 기능 묶음 패키지
+  var PACKAGES=[
+    {
+      key:'qr_only',
+      icon:'📷',
+      name:'QR 출퇴근',
+      tag:'출퇴근 전용',
+      color:'#0891b2',
+      price_m:19900,
+      price_3m:53730,
+      features:['QR 출근/퇴근 (동적+정적)','GPS 위치 검증','키오스크/PC 모드','출퇴근 현황 실시간','지각/결근 자동 감지'],
+      not_included:['정산/급여 기능','휴가 관리'],
+      plans:['plan_qr']
+    },
+    {
+      key:'settle_taxi',
+      icon:'📦',
+      name:'택배 정산',
+      tag:'쿠팡·물류 전용',
+      color:'#dc2626',
+      price_m:29900,
+      price_3m:80730,
+      badge:'물류사 추천',
+      features:['쿠팡 엑셀 자동 정산','건당 단가 계산','캠프별 분류','정산 내역 기사 공개','AI 이상감지','세무사 자료 공유'],
+      not_included:['QR 출퇴근','시급/월급 급여'],
+      plans:['plan_settle']
+    },
+    {
+      key:'payroll',
+      icon:'💼',
+      name:'급여 관리',
+      tag:'시급·일급·주급·월급',
+      color:'#7c3aed',
+      price_m:29900,
+      price_3m:80730,
+      features:['시급/일급/주급/월급 계산','4대보험 자동계산 (2026)','급여 명세서 출력','가불/공제 항목 관리','세무사 공유','연장근로 사전 승인'],
+      not_included:['택배 정산','QR 출퇴근'],
+      plans:['plan_payroll']
+    },
+    {
+      key:'qr_payroll',
+      icon:'📷💼',
+      name:'QR + 급여',
+      tag:'출퇴근·급여 세트',
+      color:'#059669',
+      price_m:44900,
+      price_3m:121230,
+      badge:'💰 13% 할인',
+      features:['QR 출근/퇴근 전체','GPS 위치 검증','시급/일급/주급/월급','4대보험 자동계산','급여 명세서','출퇴근 기반 급여 자동계산','휴가·연차 관리','직원 평가'],
+      not_included:['택배 정산'],
+      plans:['plan_qr','plan_payroll']
+    },
+    {
+      key:'full',
+      icon:'🚀',
+      name:'ALL-IN-ONE',
+      tag:'전체 기능 무제한',
+      color:'#185FA5',
+      price_m:59900,
+      price_3m:152730,
+      badge:'⭐ 베스트',
+      features:['택배(쿠팡) 자동 정산','QR 출퇴근 전체','시급/일급/주급/월급','4대보험 자동계산','급여 명세서','휴가·연차 관리','차량 관리','경비 관리','직원 평가','배달대행 정산','AI 이상감지','세무사 자료 공유','직원 서류 첨부'],
+      not_included:[],
+      plans:['plan_qr','plan_payroll','plan_settle']
+    }
   ];
-  var html='<div class="md" style="max-width:520px">'
-    +'<div class="mdt">💳 구독 플랜 선택'
-    +'<button onclick="var m=document.getElementById(\'mo-sub\');if(m)m.remove()" style="background:none;border:none;cursor:pointer;font-size:18px">✕</button></div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">';
 
-  plans.forEach(function(p){
-    html+='<div onclick="confirmSubPay(\''+p.key+'\')" style="border:2px solid '+p.color+'22;border-radius:12px;padding:14px;cursor:pointer;position:relative;transition:all .15s" '
-      +'onmouseover="this.style.borderColor=\''+p.color+'\';this.style.background=\''+p.color+'11\'" '
-      +'onmouseout="this.style.borderColor=\''+p.color+'22\';this.style.background=\'\'"">'
-      +(p.badge?'<div style="position:absolute;top:-1px;right:8px;background:'+p.color+';color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:0 0 6px 6px">'+p.badge+'</div>':'')
-      +'<div style="font-size:11px;font-weight:700;color:'+p.color+'">'+p.name+'</div>'
-      +'<div style="font-size:11px;color:var(--text3);margin-bottom:4px">'+p.drivers+'</div>'
-      +'<div style="font-size:17px;font-weight:800">₩'+p.price+'</div>'
-      +'<div style="font-size:10px;color:var(--text3)">'+p.period+'</div>'
-      +'</div>';
-  });
+  // 인원수 선택
+  var DRIVER_TIERS=[
+    {label:'~10명',mult:1.0},
+    {label:'11~20명',mult:1.4},
+    {label:'21~40명',mult:1.8},
+    {label:'41~100명',mult:2.5},
+    {label:'100명+',mult:0,custom:true}
+  ];
+  window._subTier=0; // 기본 ~10명
+  window._subPeriod='m'; // 기본 월간
 
-  html+='</div>'
-    +'<div style="background:var(--bg3);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--text2);margin-bottom:12px">'
-    +'✅ 결제 즉시 자동 활성화&nbsp;&nbsp;✅ 카드·계좌이체 가능&nbsp;&nbsp;✅ 41명 이상: 051-711-3103 문의'
+  var html='<div class="md" style="max-width:640px;max-height:88vh;overflow-y:auto">'
+    +'<div class="mdt" style="background:linear-gradient(135deg,#185FA5,#7c3aed);color:#fff;border-radius:12px 12px 0 0">'
+    +'💳 서비스 플랜 선택'
+    +'<button onclick="document.getElementById(\'mo-sub\').remove()" '
+    +'style="background:none;border:none;cursor:pointer;font-size:18px;color:#fff;margin-left:auto">✕</button>'
+    +'</div>'
+    +'<div style="padding:16px">'
+    // 인원수 선택
+    +'<div style="margin-bottom:14px">'
+    +'<div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:6px">👥 직원/기사 수</div>'
+    +'<div id="sub-tier-btns" style="display:flex;gap:6px;flex-wrap:wrap">'
+    +DRIVER_TIERS.map(function(t,i){
+      return '<button onclick="_subSetTier('+i+')" id="sub-tier-'+i+'" class="btn'+(i===0?' btn-blue':'')+'" style="font-size:11px;padding:5px 12px">'+t.label+'</button>';
+    }).join('')
+    +'</div></div>'
+    // 기간 선택
+    +'<div style="display:flex;gap:8px;margin-bottom:16px">'
+    +'<button onclick="_subSetPeriod(\'m\')" id="sub-period-m" class="btn btn-blue" style="font-size:12px;flex:1">📅 월간 결제</button>'
+    +'<button onclick="_subSetPeriod(\'3m\')" id="sub-period-3m" class="btn" style="font-size:12px;flex:1">📆 3개월 <span style="color:#059669;font-weight:800">10% 할인</span></button>'
+    +'</div>'
+    // 패키지 카드
+    +'<div id="sub-pkg-grid" style="display:flex;flex-direction:column;gap:10px">'
+    +PACKAGES.map(function(pkg){
+      var price=Math.round(pkg.price_m*1.0);
+      return '<div id="pkg-'+pkg.key+'" onclick="confirmSubPay(\''+pkg.key+'\')" '
+        +'style="border:2px solid '+pkg.color+'33;border-radius:14px;padding:14px 16px;cursor:pointer;transition:all .18s;position:relative" '
+        +'onmouseover="this.style.borderColor=\''+pkg.color+'\';this.style.transform=\'translateY(-1px)\';this.style.boxShadow=\'0 4px 16px '+pkg.color+'33\'" '
+        +'onmouseout="this.style.borderColor=\''+pkg.color+'33\';this.style.transform=\'\';this.style.boxShadow=\'\'">'
+        +(pkg.badge?'<div style="position:absolute;top:-1px;right:12px;background:'+pkg.color+';color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:0 0 8px 8px">'+pkg.badge+'</div>':'')
+        +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
+        +'<span style="font-size:24px">'+pkg.icon+'</span>'
+        +'<div><div style="font-size:15px;font-weight:900;color:'+pkg.color+'">'+pkg.name+'</div>'
+        +'<div style="font-size:10px;color:var(--text3)">'+pkg.tag+'</div></div>'
+        +'<div style="margin-left:auto;text-align:right">'
+        +'<div class="pkg-price-'+pkg.key+'" style="font-size:20px;font-weight:900">₩'+price.toLocaleString()+'</div>'
+        +'<div style="font-size:10px;color:var(--text3)">/ 월</div>'
+        +'</div></div>'
+        +'<div style="display:flex;flex-wrap:wrap;gap:4px">'
+        +pkg.features.map(function(f){return '<span style="font-size:10px;background:'+pkg.color+'15;color:'+pkg.color+';padding:2px 8px;border-radius:10px;font-weight:600">✅ '+f+'</span>';}).join('')
+        +(pkg.not_included.length?pkg.not_included.map(function(f){return '<span style="font-size:10px;background:var(--bg3);color:var(--text3);padding:2px 8px;border-radius:10px">❌ '+f+'</span>';}).join(''):'')
+        +'</div></div>';
+    }).join('')
+    +'</div>'
+    // 안내
+    +'<div style="margin-top:14px;padding:10px 12px;background:var(--bg3);border-radius:8px;font-size:11px;color:var(--text2);line-height:1.8">'
+    +'✅ 결제 즉시 자동 활성화&nbsp; ✅ 카드·계좌이체 가능&nbsp; ✅ 언제든 해지 가능<br>'
+    +'📞 기업/단체 문의: 051-711-3103'
+    +'</div>'
     +'</div>'
     +'<div class="mdf">'
-    +'<button class="btn" onclick="var m=document.getElementById(\'mo-sub\');if(m)m.remove()">닫기</button>'
+    +'<button class="btn" onclick="document.getElementById(\'mo-sub\').remove()">닫기</button>'
     +'</div></div>';
 
   moEl.innerHTML=html;
   document.body.appendChild(moEl);
+
+  // 패키지 데이터 저장
+  window._PACKAGES=PACKAGES;
+  window._DRIVER_TIERS=DRIVER_TIERS;
 }
+
+function _subSetTier(i){
+  window._subTier=i;
+  var tiers=window._DRIVER_TIERS||[];
+  var tier=tiers[i]||{mult:1,custom:false};
+  document.querySelectorAll('[id^="sub-tier-"]').forEach(function(b){
+    b.className=b.id==='sub-tier-'+i?'btn btn-blue':'btn';
+  });
+  if(tier.custom){
+    alert('41명 이상은 051-711-3103으로 문의해 주세요.');
+    return;
+  }
+  _subUpdatePrices();
+}
+
+function _subSetPeriod(p){
+  window._subPeriod=p;
+  document.getElementById('sub-period-m').className=p==='m'?'btn btn-blue':'btn';
+  document.getElementById('sub-period-3m').className=p==='3m'?'btn btn-blue':'btn';
+  _subUpdatePrices();
+}
+
+function _subUpdatePrices(){
+  var pkgs=window._PACKAGES||[];
+  var tiers=window._DRIVER_TIERS||[];
+  var tier=tiers[window._subTier||0]||{mult:1};
+  var period=window._subPeriod||'m';
+  pkgs.forEach(function(pkg){
+    var el=document.querySelector('.pkg-price-'+pkg.key);
+    if(!el)return;
+    var base=period==='3m'?pkg.price_3m:pkg.price_m;
+    var price=Math.round(base*(tier.mult||1));
+    var perM=period==='3m'?Math.round(price/3):price;
+    el.innerHTML='₩'+price.toLocaleString();
+    var sub=el.nextElementSibling;
+    if(sub)sub.textContent=period==='3m'?'/ 3개월 (월 ₩'+perM.toLocaleString()+')':'/ 월';
+  });
+}
+
 
 function confirmSubPay(planKey){
   var plan=PLAN_INFO[planKey];
@@ -13041,38 +13244,170 @@ function _requirePlan(feature, callback){
     var freeFeatures=['attend_view','notice'];
     if(freeFeatures.indexOf(feature)>=0){callback();return;}
     // 유료 체크
-    if(d.settlePaid||d.rosterPaid||d.plan==='basic'||d.plan==='pro'||d.plan==='starter'||d.plan==='starter3'){
-      callback();
-    } else {
-      _renderPaywall(feature);
-    }
+    // 패키지별 기능 허용 체크
+    var fp=d.plan||'';
+    var hasPaid=d.settlePaid||d.rosterPaid;
+    var qrFeatures=['qr','attendance'];
+    var settleFeatures=['settle','roster'];
+    var payrollFeatures=['hourly_settle','evaluation','overtime','leave','vehicle','expense','delivery_platform'];
+    var allowed=false;
+    if(hasPaid||fp==='full')allowed=true;
+    else if((fp==='qr_only'||fp==='qr_payroll')&&qrFeatures.indexOf(feature)>=0)allowed=true;
+    else if((fp==='settle_taxi'||fp==='full')&&settleFeatures.indexOf(feature)>=0)allowed=true;
+    else if((fp==='payroll'||fp==='qr_payroll'||fp==='full')&&payrollFeatures.indexOf(feature)>=0)allowed=true;
+    // 플랜 배열 지원
+    var plans=d.plans||[];
+    if(plans.indexOf('plan_qr')>=0&&qrFeatures.indexOf(feature)>=0)allowed=true;
+    if(plans.indexOf('plan_settle')>=0&&settleFeatures.indexOf(feature)>=0)allowed=true;
+    if(plans.indexOf('plan_payroll')>=0&&payrollFeatures.indexOf(feature)>=0)allowed=true;
+    if(allowed){callback();}else{_renderPaywall(feature);}
   }).catch(function(){callback();}); // 조회 실패 시 허용 (UX)
 }
 
 function _renderPaywall(feature){
   var el=document.getElementById('content');
   if(!el)return;
-  var labels={
-    'qr':'QR 출퇴근',
-    'leave':'휴가 관리',
-    'vehicle':'차량 관리',
-    'expense':'경비 관리',
-    'overtime':'연장 승인',
-    'evaluation':'직원 평가',
-    'delivery_platform':'배달대행 정산',
-    'hourly_settle':'급여 관리',
+
+  // 기능별 미리보기 데이터
+  var PREVIEW={
+    'qr':{
+      label:'QR 출퇴근', icon:'📷', pkg:'qr_only',
+      color:'#0891b2',
+      desc:'직원이 폰으로 QR을 스캔하면 자동 출퇴근 처리',
+      preview:[
+        {title:'동적 QR 생성',sub:'5분~30초 자동 갱신 · 사진 재사용 차단'},
+        {title:'GPS 위치 검증',sub:'반경 밖 스캔 자동 차단'},
+        {title:'키오스크 모드',sub:'태블릿에 대형 QR 상시 표시'},
+        {title:'실시간 현황',sub:'출근/퇴근/근무중 한눈에 확인'},
+        {title:'지각/결근 감지',sub:'자동 관리자 알림'},
+      ]
+    },
+    'leave':{
+      label:'휴가·연차 관리', icon:'🌴', pkg:'qr_payroll',
+      color:'#059669',
+      desc:'직원이 앱으로 신청 → 관리자 승인/반려 자동화',
+      preview:[
+        {title:'연차·반차·병가 신청',sub:'앱에서 직접 신청'},
+        {title:'관리자 승인/반려',sub:'승인 시 직원에게 알림'},
+        {title:'연차 잔여 현황',sub:'직원별 사용/잔여 일수'},
+        {title:'법정 연차 자동계산',sub:'입사일 기준 자동'},
+      ]
+    },
+    'vehicle':{
+      label:'차량 관리', icon:'🚗', pkg:'full',
+      color:'#d97706',
+      desc:'보험·검사 만료 알림, 정비이력 관리',
+      preview:[
+        {title:'차량 등록/관리',sub:'번호판·담당기사·차종'},
+        {title:'보험/검사 만료 D-30 경고',sub:'만료 전 자동 빨간 경고'},
+        {title:'정비이력 기록',sub:'수리비용 누적 집계'},
+      ]
+    },
+    'expense':{
+      label:'경비 관리', icon:'💸', pkg:'full',
+      color:'#7c3aed',
+      desc:'주유비·수리비 등 경비 기록 + 영수증 첨부',
+      preview:[
+        {title:'경비 등록',sub:'주유/수리/통행료/식대 등 분류'},
+        {title:'영수증 사진 첨부',sub:'파일 업로드 후 언제든 확인'},
+        {title:'월별 종류별 집계',sub:'항목별 지출 현황 차트'},
+      ]
+    },
+    'overtime':{
+      label:'연장근로 사전승인', icon:'⏰', pkg:'qr_payroll',
+      color:'#dc2626',
+      desc:'근로기준법 의무 사항 · 직원 신청 → 관리자 승인',
+      preview:[
+        {title:'연장근로 신청',sub:'날짜·시간·사유 입력'},
+        {title:'관리자 승인/반려',sub:'즉시 알림'},
+        {title:'급여 자동 반영',sub:'승인된 연장만 급여 계산에 포함'},
+      ]
+    },
+    'evaluation':{
+      label:'직원 평가', icon:'⭐', pkg:'qr_payroll',
+      color:'#f59e0b',
+      desc:'월별 직원 별점 평가 + 코멘트 관리',
+      preview:[
+        {title:'별점 평가 (1~5점)',sub:'직원별 월별 기록'},
+        {title:'평가 코멘트',sub:'메모 저장'},
+        {title:'누적 이력 조회',sub:'과거 평가 기록 확인'},
+      ]
+    },
+    'delivery_platform':{
+      label:'배달대행 정산', icon:'🛵', pkg:'settle_taxi',
+      color:'#ff6b35',
+      desc:'쿠팡이츠·배민·바로고 등 이벤트 수당 포함 정산',
+      preview:[
+        {title:'플랫폼별 정산 구조',sub:'쿠팡이츠/배민/바로고/부릉/생각대로'},
+        {title:'이벤트 추가수당 계산',sub:'악천후·심야·공휴일 자동 포함'},
+        {title:'원천징수 자동 공제',sub:'3.3% 자동 계산'},
+      ]
+    },
+    'hourly_settle':{
+      label:'급여 관리', icon:'💼', pkg:'payroll',
+      color:'#7c3aed',
+      desc:'시급·일급·주급·월급 + 4대보험 자동계산',
+      preview:[
+        {title:'4가지 급여방식 지원',sub:'시급/일급/주급/월급'},
+        {title:'2026 법정 4대보험',sub:'국민연금·건강보험·고용보험 자동'},
+        {title:'급여명세서 출력',sub:'가불·공제 항목 포함'},
+        {title:'AI 급여 이상감지',sub:'이전달 대비 급격한 변동 감지'},
+        {title:'세무사 자료 자동 공유',sub:'CSV·공유링크 생성'},
+      ]
+    }
   };
-  var label=labels[feature]||feature;
-  el.innerHTML='<div class="empty" style="padding:40px 20px">'
-    +'<div style="font-size:48px;margin-bottom:16px">🔒</div>'
-    +'<div style="font-size:18px;font-weight:900;margin-bottom:8px">'+label+' — 유료 기능</div>'
-    +'<div style="font-size:13px;color:var(--text3);margin-bottom:24px;line-height:1.6">'
-    +'이 기능은 구독 플랜이 필요합니다<br>'
-    +'구독 후 모든 기능을 무제한으로 사용하세요</div>'
-    +'<button onclick="_showSubModal()" class="btn btn-blue" style="padding:14px 32px;font-size:14px;font-weight:800">💳 지금 구독하기</button>'
-    +'<div style="margin-top:12px;font-size:11px;color:var(--text3)">월 30,000원부터 · 언제든 해지 가능</div>'
+
+  var pv=PREVIEW[feature]||{label:feature,icon:'🔒',desc:'',preview:[],color:'#6b7280',pkg:'full'};
+
+  // 해당 기능이 포함된 패키지 찾기
+  var pkgMap={
+    'qr_only':'📷 QR 출퇴근 — ₩19,900/월',
+    'settle_taxi':'📦 택배 정산 — ₩29,900/월',
+    'payroll':'💼 급여 관리 — ₩29,900/월',
+    'qr_payroll':'📷💼 QR + 급여 — ₩44,900/월',
+    'full':'🚀 ALL-IN-ONE — ₩59,900/월'
+  };
+  var pkgLabel=pkgMap[pv.pkg]||'💳 구독하기';
+
+  el.innerHTML=''
+    // 상단: 잠금 배너
+    +'<div style="background:linear-gradient(135deg,'+pv.color+'22,'+pv.color+'08);border:2px solid '+pv.color+'33;border-radius:16px;padding:20px 22px;margin-bottom:16px;position:relative;overflow:hidden">'
+    +'<div style="position:absolute;top:50%;right:20px;transform:translateY(-50%);font-size:64px;opacity:.08">🔒</div>'
+    +'<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">'
+    +'<span style="font-size:32px">'+pv.icon+'</span>'
+    +'<div>'
+    +'<div style="font-size:18px;font-weight:900;color:'+pv.color+'">'+pv.label+'</div>'
+    +'<div style="font-size:12px;color:var(--text2);margin-top:2px">'+pv.desc+'</div>'
+    +'</div>'
+    +'<span style="margin-left:auto;background:'+pv.color+';color:#fff;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;white-space:nowrap">🔒 유료 기능</span>'
+    +'</div>'
+    +'</div>'
+
+    // 기능 미리보기
+    +'<div style="margin-bottom:16px">'
+    +'<div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:8px;letter-spacing:.05em">✨ 이런 기능을 사용할 수 있어요</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">'
+    +pv.preview.map(function(p){
+      return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;position:relative;overflow:hidden">'
+        +'<div style="position:absolute;inset:0;background:rgba(255,255,255,.0);backdrop-filter:blur(0px)"></div>'
+        +'<div style="font-size:12px;font-weight:700;margin-bottom:2px">'+p.title+'</div>'
+        +'<div style="font-size:11px;color:var(--text3)">'+p.sub+'</div>'
+        +'</div>';
+    }).join('')
+    +'</div></div>'
+
+    // 결제 유도
+    +'<div style="background:var(--bg2);border-radius:14px;padding:16px;border:1px solid var(--border);text-align:center">'
+    +'<div style="font-size:13px;font-weight:800;margin-bottom:4px">이 기능이 포함된 플랜</div>'
+    +'<div style="font-size:15px;font-weight:900;color:'+pv.color+';margin-bottom:14px">'+pkgLabel+'</div>'
+    +'<div style="display:flex;gap:8px;justify-content:center">'
+    +'<button onclick="_showSubModal()" class="btn btn-blue" style="padding:11px 28px;font-size:13px;font-weight:800">💳 지금 구독하기</button>'
+    +'<button onclick="_showSubModal()" class="btn" style="padding:11px 20px;font-size:12px">플랜 비교 →</button>'
+    +'</div>'
+    +'<div style="margin-top:10px;font-size:10px;color:var(--text3)">✅ 결제 즉시 활성화 · 언제든 해지 가능</div>'
     +'</div>';
 }
+
 function isSuperAdmin(){return _CU&&_CU.email===SUPER_ADMIN_EMAIL;}
 
 function openAdminPanel(){
