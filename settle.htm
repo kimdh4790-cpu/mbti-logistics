@@ -2358,6 +2358,72 @@ async function _tossPay(planType, amount){
   }
 }
 
+// ★ 결제 완료/실패 콜백 (successUrl 복귀 시 자동 실행)
+(function(){
+  var params=new URLSearchParams(window.location.search);
+  if(params.get('toss')==='success'){
+    var paymentKey=params.get('paymentKey');
+    var orderId=params.get('orderId');
+    var amt=parseInt(params.get('amount')||'0');
+    var planType=params.get('planType')||window._pendingPlanKey||'full';
+    history.replaceState(null,'',window.location.pathname);
+    if(orderId){
+      // /toss/confirm 호출
+      fetch('/toss/confirm',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({paymentKey:paymentKey||'',orderId:orderId,amount:amt,planType:planType})
+      }).then(function(r){return r.json();})
+      .then(function(data){
+        // confirm 성공/실패 무관하게 Firestore 직접 활성화
+        _activateAfterPay(planType, orderId);
+      }).catch(function(){
+        _activateAfterPay(planType, orderId);
+      });
+    }
+  } else if(params.get('toss')==='fail'){
+    history.replaceState(null,'',window.location.pathname);
+    setTimeout(function(){toast('결제가 취소됐습니다.');},500);
+  }
+})();
+
+function _activateAfterPay(planType, orderId){
+  // Firebase Auth 로딩 대기 후 활성화
+  function doActivate(){
+    if(!_CU||!_db){
+      setTimeout(doActivate, 500);
+      return;
+    }
+    var did=_CU.dealerId||_CU.companyId||_CU.uid||'';
+    if(!did){setTimeout(doActivate,500);return;}
+    var planMap={
+      'qr_only':  {plan:'qr_only',  plans:['plan_qr'],label:'📷 QR 출퇴근'},
+      'settle_taxi':{plan:'settle_taxi',plans:['plan_settle'],label:'📦 택배 정산'},
+      'payroll':  {plan:'payroll',  plans:['plan_payroll'],label:'💼 급여 관리'},
+      'qr_payroll':{plan:'qr_payroll',plans:['plan_qr','plan_payroll'],label:'📷💼 QR+급여'},
+      'full':     {plan:'full',     plans:['plan_qr','plan_payroll','plan_settle'],label:'🚀 ALL-IN-ONE'}
+    };
+    var pm=planMap[planType]||{plan:planType,plans:[],label:planType};
+    var expiry=new Date(Date.now()+30*86400000).toISOString();
+    _db.collection('companies').doc(did).update({
+      plan:pm.plan, plans:pm.plans,
+      settlePaid:true, rosterPaid:true,
+      planActivatedAt:new Date().toISOString(),
+      planExpiry:expiry,
+      lastOrderId:orderId||''
+    }).then(function(){
+      window._cachedPlan=pm.plan;
+      window._cachedHasPaid=true;
+      toast('🎉 '+pm.label+' 결제 완료! 모든 기능이 활성화됐습니다');
+      buildNav();
+      _sendAdminNotif('💳 결제 완료',(_CU.companyName||did)+' → '+pm.label);
+    }).catch(function(e){
+      toast('⚠️ 결제는 완료됐으나 활성화 오류: '+e.message);
+    });
+  }
+  setTimeout(doActivate, 800);
+}
+
 function pageContract(){
   if(_db&&_CU&&_CU.dealerId){
     _db.collection('companies').doc(_CU.dealerId).get().then(function(snap){
@@ -2482,7 +2548,8 @@ function pageRoster(){
   var cid=_CU.dealerId||_CU.companyId;
   _db.collection('companies').doc(cid).get().then(function(snap){
     var d=snap.exists?snap.data():{};
-    if(d.rosterPaid||d.settlePaid||isSuperAdmin())_renderRosterPage();
+    var _rPaid=['qr_only','settle_taxi','payroll','qr_payroll','full'];
+    if(d.rosterPaid||d.settlePaid||isSuperAdmin()||_rPaid.indexOf(d.plan||'')>=0||(d.plans&&d.plans.length>0))_renderRosterPage();
     else _renderRosterPaywall();
   }).catch(function(){_renderRosterPaywall();});
 }
@@ -13086,6 +13153,10 @@ function _isPlanAllowed(d, feature){
   var plan=d.plan||'';
   var plans=d.plans||[];
   if(plan==='full'||plans.indexOf('plan_full')>=0)return true;
+  // 유료 결제만 됐으면 모든 기능 허용 (settlePaid/rosterPaid는 이미 위에서 체크)
+  var allPaidPlans=['qr_only','settle_taxi','payroll','qr_payroll','full'];
+  if(allPaidPlans.indexOf(plan)>=0)return true;
+  if(plans.length>0)return true; // plans 배열에 뭔가 있으면 유료
   var qrF=['qr','attendance'];
   var settleF=['settle','roster'];
   var payrollF=['hourly_settle','evaluation','overtime','leave','vehicle','expense','delivery_platform'];
