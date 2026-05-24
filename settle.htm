@@ -13030,12 +13030,14 @@ var TERMS_CONTENT = {
 };
 
 function checkTermsAgreement(){
-  // 슈퍼어드민은 생략
-  if(_CU&&_CU.email==='kimdh4790@gmail.com'){goPage('settle');return;}
-  if(_CU&&_CU.termsVersion===TERMS_VER){goPage('settle');return;}
+  // 첫 진입 페이지 결정
+  var _firstPage=(_CU&&(_CU.role==='driver'||_CU.role==='member'))?'emp_home':'home';
+  // 슈퍼어드민
+  if(isSuperAdmin()){goPage('home');return;}
+  if(_CU&&_CU.termsVersion===TERMS_VER){goPage(_firstPage);return;}
   // 약관 동의 필요
   var mo=document.getElementById('mo-terms-agree');
-  if(!mo){goPage('settle');return;}
+  if(!mo){goPage(_firstPage);return;}
   document.getElementById('ta-terms-body').innerHTML=esc(TERMS_CONTENT.terms).replace(/\n/g,'<br>');
   document.getElementById('ta-privacy-body').innerHTML=esc(TERMS_CONTENT.privacy).replace(/\n/g,'<br>');
   mo.classList.add('show');
@@ -13053,7 +13055,8 @@ function agreeTerms(){
   },{merge:true}).then(function(){
     document.getElementById('mo-terms-agree').classList.remove('show');
     _CU.termsVersion=TERMS_VER;
-    goPage('settle');
+    var _fp2=(_CU&&(_CU.role==='driver'||_CU.role==='member'))?'emp_home':'home';
+    goPage(_fp2);
     toast('약관 동의가 완료되었습니다.');
   }).catch(function(e){
     toast('저장 실패: '+e.message);
