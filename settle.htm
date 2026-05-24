@@ -3871,6 +3871,9 @@ function calcDeliveryBonus(platform, conditions){
 // ════════════════════════════════════════
 function pageDeliveryPlatform(){
   document.getElementById('page-title').textContent='📦 배달대행 정산';
+  _requirePlan('delivery_platform',function(){_renderDeliveryPlatformPage();});
+}
+function _renderDeliveryPlatformPage(){
   var el=document.getElementById('content');
   if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
   var did=_CU.dealerId;
@@ -4174,6 +4177,9 @@ function _sigSave(driverId,driverName,did,contractId){
 // ════════════════════════════════════════════════
 function pageVehicle(){
   document.getElementById('page-title').textContent='🚗 차량 관리';
+  _requirePlan('vehicle',function(){_renderVehiclePage();});
+}
+function _renderVehiclePage(){
   var el=document.getElementById('content');
   if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
   var did=_CU.dealerId;
@@ -4357,6 +4363,9 @@ var EXPENSE_TYPES={
 
 function pageExpense(){
   document.getElementById('page-title').textContent='💸 경비 관리';
+  _requirePlan('expense',function(){_renderExpensePage();});
+}
+function _renderExpensePage(){
   var el=document.getElementById('content');
   if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
   var did=_CU.dealerId;
@@ -4496,6 +4505,9 @@ function _expenseDelete(id,did,ym){
 // ════════════════════════════════════════════════
 function pageOvertime(){
   document.getElementById('page-title').textContent='⏰ 연장근로 승인';
+  _requirePlan('overtime',function(){_renderOvertimePage();});
+}
+function _renderOvertimePage(){
   var el=document.getElementById('content');
   if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
   var did=_CU.dealerId;
@@ -4611,6 +4623,9 @@ function _otReject(id){
 // ════════════════════════════════════════════════
 function pageEvaluation(){
   document.getElementById('page-title').textContent='⭐ 직원 평가';
+  _requirePlan('evaluation',function(){_renderEvaluationPage();});
+}
+function _renderEvaluationPage(){
   var el=document.getElementById('content');
   if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
   var did=_CU.dealerId;
@@ -5511,6 +5526,9 @@ function _empHomeLoad(did, uid, today, ym){
 
 function pageLeave(){
   document.getElementById('page-title').textContent='🌴 휴가 관리';
+  _requirePlan('leave',function(){_renderLeavePage();});
+}
+function _renderLeavePage(){
   var tr=document.getElementById('topbar-right'); tr.innerHTML='';
   var el=document.getElementById('content');
   if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
@@ -6029,6 +6047,9 @@ function _calDeleteMemo(btn){
 // ══ 출퇴근 (QR 전용) ══
 function pageAttendance(){
   document.getElementById('page-title').textContent='🔐 출퇴근 현황';
+  _requirePlan('qr',function(){_renderAttendancePage();});
+}
+function _renderAttendancePage(){
   var el=document.getElementById('content');
   if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
   var did=_CU.dealerId;
@@ -13007,6 +13028,51 @@ function pageNotices(){
 
 // ══ 슈퍼 어드민 ══
 var SUPER_ADMIN_EMAIL = 'kimdh4790@gmail.com';
+
+// ★ 공통 유료 플랜 체크
+function _requirePlan(feature, callback){
+  if(!_db||!_CU){toast('❌ 로그인 필요');return;}
+  if(isSuperAdmin()){callback();return;} // 슈퍼어드민 항상 허용
+  var did=_CU.dealerId||_CU.companyId||'';
+  if(!did){callback();return;}
+  _db.collection('companies').doc(did).get().then(function(snap){
+    var d=snap.exists?snap.data():{};
+    // 무료 허용 기능
+    var freeFeatures=['attend_view','notice'];
+    if(freeFeatures.indexOf(feature)>=0){callback();return;}
+    // 유료 체크
+    if(d.settlePaid||d.rosterPaid||d.plan==='basic'||d.plan==='pro'||d.plan==='starter'||d.plan==='starter3'){
+      callback();
+    } else {
+      _renderPaywall(feature);
+    }
+  }).catch(function(){callback();}); // 조회 실패 시 허용 (UX)
+}
+
+function _renderPaywall(feature){
+  var el=document.getElementById('content');
+  if(!el)return;
+  var labels={
+    'qr':'QR 출퇴근',
+    'leave':'휴가 관리',
+    'vehicle':'차량 관리',
+    'expense':'경비 관리',
+    'overtime':'연장 승인',
+    'evaluation':'직원 평가',
+    'delivery_platform':'배달대행 정산',
+    'hourly_settle':'급여 관리',
+  };
+  var label=labels[feature]||feature;
+  el.innerHTML='<div class="empty" style="padding:40px 20px">'
+    +'<div style="font-size:48px;margin-bottom:16px">🔒</div>'
+    +'<div style="font-size:18px;font-weight:900;margin-bottom:8px">'+label+' — 유료 기능</div>'
+    +'<div style="font-size:13px;color:var(--text3);margin-bottom:24px;line-height:1.6">'
+    +'이 기능은 구독 플랜이 필요합니다<br>'
+    +'구독 후 모든 기능을 무제한으로 사용하세요</div>'
+    +'<button onclick="_showSubModal()" class="btn btn-blue" style="padding:14px 32px;font-size:14px;font-weight:800">💳 지금 구독하기</button>'
+    +'<div style="margin-top:12px;font-size:11px;color:var(--text3)">월 30,000원부터 · 언제든 해지 가능</div>'
+    +'</div>';
+}
 function isSuperAdmin(){return _CU&&_CU.email===SUPER_ADMIN_EMAIL;}
 
 function openAdminPanel(){
