@@ -22,18 +22,18 @@
 html{scroll-behavior:smooth}
 body{background:var(--bg);color:var(--white);font-family:var(--fb);overflow-x:hidden;line-height:1.6}
 ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:linear-gradient(var(--cyan),var(--purple))}
-.gc{background:linear-gradient(120deg,var(--cyan),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.gp{background:linear-gradient(120deg,var(--blue),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.gg{background:linear-gradient(120deg,var(--cyan),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.go{background:linear-gradient(120deg,var(--gold),var(--orange));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.gr{background:linear-gradient(120deg,var(--red),var(--orange));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.gm{background:linear-gradient(120deg,var(--cyan),var(--blue) 40%,var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-size:200%;animation:gf 5s ease infinite}
+.gc{background:linear-gradient(120deg,var(--cyan),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 10px rgba(0,200,248,.6)) drop-shadow(0 0 24px rgba(0,150,255,.3))}
+.gp{background:linear-gradient(120deg,var(--blue),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 10px rgba(168,85,247,.6)) drop-shadow(0 0 24px rgba(130,60,220,.3))}
+.gg{background:linear-gradient(120deg,var(--cyan),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 10px rgba(0,232,122,.6)) drop-shadow(0 0 24px rgba(0,180,100,.3))}
+.go{background:linear-gradient(120deg,var(--gold),var(--orange));-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 10px rgba(245,184,0,.6)) drop-shadow(0 0 24px rgba(200,140,0,.3))}
+.gr{background:linear-gradient(120deg,var(--red),var(--orange));-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 10px rgba(255,75,110,.6)) drop-shadow(0 0 24px rgba(220,50,80,.3))}
+.gm{background:linear-gradient(120deg,var(--cyan),var(--blue) 40%,var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-size:200%;animation:gf 5s ease infinite;filter:drop-shadow(0 0 14px rgba(0,200,248,.65)) drop-shadow(0 0 30px rgba(168,85,247,.35))}
 @keyframes gf{0%,100%{background-position:0%}50%{background-position:100%}}
 .cc{color:var(--cyan)}.cp{color:var(--purple)}.cg{color:var(--green)}.co{color:var(--gold)}.cr{color:var(--red)}
 .pat{background:linear-gradient(90deg,transparent,rgba(245,184,0,.14),transparent);border-bottom:1px solid rgba(245,184,0,.16);padding:9px 20px;text-align:center;font-size:11px;font-weight:700;color:var(--gold);letter-spacing:1.5px;position:relative;z-index:10}
 nav{position:fixed;top:0;left:0;right:0;z-index:999;padding:14px 48px;display:flex;align-items:center;justify-content:space-between;transition:.4s;height:64px}
 nav.sc{background:rgba(2,8,23,.96);border-bottom:1px solid var(--bdr);backdrop-filter:blur(24px)}
-.logo{font-family:var(--fd);font-size:22px;font-weight:900;letter-spacing:6px;background:linear-gradient(120deg,#fff,var(--cyan) 50%,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-size:200%;animation:gf 6s ease infinite;text-decoration:none}
+.logo{font-family:var(--fd);font-size:22px;font-weight:900;letter-spacing:6px;background:linear-gradient(120deg,#fff,var(--cyan) 50%,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-size:200%;animation:gf 6s ease infinite;text-decoration:none;filter:drop-shadow(0 0 8px rgba(0,200,248,.5)) drop-shadow(0 0 20px rgba(0,150,255,.25))}
 .nl{display:flex;align-items:center;gap:26px}.nl a{color:var(--gray);font-size:13px;font-weight:500;text-decoration:none;transition:.2s}.nl a:hover{color:#fff}
 .nc{padding:10px 26px;background:linear-gradient(135deg,var(--blue),var(--cyan));border-radius:50px;color:#020817!important;font-weight:900!important;font-size:13px!important;box-shadow:0 0 24px rgba(0,200,248,.3);transition:.3s!important}
 .nc:hover{transform:translateY(-2px)!important;box-shadow:0 8px 32px rgba(0,200,248,.55)!important}
@@ -58,14 +58,15 @@ nav.sc{background:rgba(2,8,23,.96);border-bottom:1px solid var(--bdr);backdrop-f
 @keyframes lp{0%,100%{transform:scale(1);box-shadow:0 0 12px var(--green)}50%{transform:scale(1.6);box-shadow:0 0 28px var(--green)}}
 .hey{font-size:13px;font-weight:700;letter-spacing:4px;color:rgba(0,200,248,.5);text-transform:uppercase;margin-bottom:12px;animation:su .8s .1s both}
 .hh{font-family:var(--fd);font-size:clamp(44px,9.5vw,110px);font-weight:900;line-height:.92;letter-spacing:-4px;margin-bottom:26px;animation:su .8s .15s both}
-.hh .l1{display:block;color:#fff;margin-bottom:6px}
-.hh .l2{display:block;background:linear-gradient(120deg,var(--cyan) 0%,var(--blue) 40%,var(--purple) 80%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-size:300%;animation:gf 5s ease infinite;filter:drop-shadow(0 0 40px rgba(0,200,248,.22))}
+.hh .l1{display:block;color:#fff;margin-bottom:6px;text-shadow:0 0 30px rgba(255,255,255,.35),0 0 60px rgba(200,220,255,.15),0 0 100px rgba(180,210,255,.08)}
+.hh .l2{display:block;background:linear-gradient(120deg,var(--cyan) 0%,var(--blue) 40%,var(--purple) 80%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-size:300%;animation:gf 5s ease infinite,neonFlicker 8s ease infinite;filter:drop-shadow(0 0 18px rgba(0,200,248,.7)) drop-shadow(0 0 40px rgba(0,150,255,.4)) drop-shadow(0 0 80px rgba(0,100,200,.2))}
+@keyframes neonFlicker{0%,95%,100%{filter:drop-shadow(0 0 18px rgba(0,200,248,.7)) drop-shadow(0 0 40px rgba(0,150,255,.4))}96%{filter:drop-shadow(0 0 4px rgba(0,200,248,.3)) drop-shadow(0 0 8px rgba(0,150,255,.2))}97%{filter:drop-shadow(0 0 18px rgba(0,200,248,.7)) drop-shadow(0 0 40px rgba(0,150,255,.4))}98%{filter:drop-shadow(0 0 6px rgba(0,200,248,.3))}99%{filter:drop-shadow(0 0 22px rgba(0,200,248,.9)) drop-shadow(0 0 50px rgba(0,150,255,.5))}}
 .hsb{font-size:clamp(15px,2.3vw,21px);color:var(--gray);max-width:660px;margin:0 auto 44px;font-weight:300;line-height:1.8;animation:su .8s .3s both}
 .hsb strong{color:#fff}.hsb .hl{color:var(--cyan);font-weight:700}
 .cur{display:inline-block;width:3px;height:.85em;background:var(--cyan);margin-left:3px;animation:bl 1s step-end infinite;vertical-align:middle}
 @keyframes bl{0%,100%{opacity:1}50%{opacity:0}}
 .hbtns{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;animation:su .8s .45s both;margin-bottom:52px}
-.bp{padding:17px 50px;background:linear-gradient(135deg,var(--blue),var(--cyan));border:none;border-radius:50px;color:#020817;font-size:15px;font-weight:900;cursor:pointer;transition:.3s;box-shadow:0 0 40px rgba(0,200,248,.3);font-family:var(--fb);text-decoration:none;display:inline-block;position:relative;overflow:hidden}
+.bp{padding:17px 50px;background:linear-gradient(135deg,var(--blue),var(--cyan));border:none;border-radius:50px;color:#020817;font-size:15px;font-weight:900;cursor:pointer;transition:.3s;box-shadow:0 0 40px rgba(0,200,248,.35),0 0 80px rgba(0,150,255,.15),inset 0 1px 0 rgba(255,255,255,.2);font-family:var(--fb);text-decoration:none;display:inline-block;position:relative;overflow:hidden}
 .bp::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,.2);opacity:0;transition:.3s}
 .bp:hover{transform:translateY(-3px);box-shadow:0 16px 48px rgba(0,200,248,.65)}.bp:hover::after{opacity:1}
 .bs{padding:16px 38px;background:transparent;border:1px solid rgba(255,255,255,.16);border-radius:50px;color:#fff;font-size:15px;font-weight:600;cursor:pointer;transition:.3s;font-family:var(--fb);text-decoration:none;display:inline-block}
@@ -73,7 +74,12 @@ nav.sc{background:rgba(2,8,23,.96);border-bottom:1px solid var(--bdr);backdrop-f
 .hsr{display:flex;align-items:center;justify-content:center;animation:su .8s .6s both}
 .hst{text-align:center;padding:0 32px;position:relative}
 .hst+.hst::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);height:40px;width:1px;background:var(--bdr2)}
-.hstn{font-family:var(--fd);font-size:32px;font-weight:900;display:block;line-height:1.1}
+.hstn{font-family:var(--fd);font-size:32px;font-weight:900;display:block;line-height:1.1;transition:filter .3s}
+.hstn.gc{filter:drop-shadow(0 0 12px rgba(0,200,248,.8)) drop-shadow(0 0 28px rgba(0,150,255,.4))}
+.hstn.gg{filter:drop-shadow(0 0 12px rgba(0,232,122,.8)) drop-shadow(0 0 28px rgba(0,180,100,.4))}
+.hstn.gp{filter:drop-shadow(0 0 12px rgba(168,85,247,.8)) drop-shadow(0 0 28px rgba(130,60,220,.4))}
+.hstn.go{filter:drop-shadow(0 0 12px rgba(245,184,0,.8)) drop-shadow(0 0 28px rgba(200,140,0,.4))}
+.hstn.gm{filter:drop-shadow(0 0 12px rgba(0,200,248,.7)) drop-shadow(0 0 28px rgba(168,85,247,.4))}
 .hstl{font-size:11px;color:var(--gray);letter-spacing:.8px;font-weight:500;margin-top:3px}
 @media(max-width:580px){.hst{padding:0 15px}.hstn{font-size:22px}}
 .shi{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);z-index:5;animation:shb 2s ease infinite}
@@ -220,7 +226,11 @@ section{position:relative;z-index:10}
 @media(max-width:680px){.ngrid{grid-template-columns:1fr 1fr}}
 .ni{background:rgba(255,255,255,.025);border:1px solid var(--bdr);border-radius:18px;padding:28px 18px;transition:.3s;position:relative;overflow:hidden}
 .ni::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 0%,rgba(0,200,248,.05),transparent 65%);opacity:0;transition:.4s}.ni:hover{border-color:rgba(0,200,248,.22)}.ni:hover::before{opacity:1}
-.nin{font-family:var(--fd);font-size:44px;font-weight:900;display:block;line-height:1.05;margin-bottom:6px}.nil{font-size:12px;color:var(--gray)}
+.nin{font-family:var(--fd);font-size:44px;font-weight:900;display:block;line-height:1.05;margin-bottom:6px;transition:filter .3s}
+.nin.gc{filter:drop-shadow(0 0 14px rgba(0,200,248,.9)) drop-shadow(0 0 32px rgba(0,150,255,.5))}
+.nin.gm{filter:drop-shadow(0 0 14px rgba(100,150,255,.8)) drop-shadow(0 0 30px rgba(168,85,247,.4))}
+.nin.gg{filter:drop-shadow(0 0 14px rgba(0,232,122,.9)) drop-shadow(0 0 32px rgba(0,180,100,.5))}
+.nin.go{filter:drop-shadow(0 0 14px rgba(245,184,0,.9)) drop-shadow(0 0 32px rgba(200,140,0,.5))}.nil{font-size:12px;color:var(--gray)}
 .faqsec{padding:100px 24px;max-width:760px;margin:0 auto}
 .fqi{border-bottom:1px solid var(--bdr)}
 .fqq{display:flex;align-items:center;justify-content:space-between;padding:18px 0;cursor:pointer;font-size:14px;font-weight:600;color:#fff;transition:.2s;gap:16px}.fqq:hover{color:var(--cyan)}
@@ -271,92 +281,71 @@ footer{padding:46px 24px;border-top:1px solid var(--bdr);text-align:center}
   <a href="https://donway.ai.kr/settle" class="mc">7일 무료로 시작하기 →</a>
 </div>
 
-<section class="hero">
-  <canvas id="hcvs"></canvas>
-  <div class="o1"></div><div class="o2"></div><div class="o3"></div>
-  <div class="hg"></div>
-  <div class="hc">
-    <div class="hchip"><span class="dlv"></span>AI 자동화 플랫폼 &middot; 특허 출원 중</div>
-    <div class="hey">DONWAY &mdash; 돈의 방향을 자동화</div>
-    <h1 class="hh">
-      <span class="l1" id="htyped">매달 반복하던 그 일,</span>
-      <span class="l2">이제 자동으로<span class="cur"></span></span>
-    </h1>
-    <p class="hsb"><strong>택배 대리점, 편의점, 식당, 미용실</strong> &mdash; 업종 관계없이<br><span class="hl">엑셀 한 번</span>으로 수백 명 정산&middot;세금계산서&middot;발송까지 <strong>5분 완료</strong></p>
-    <div class="hbtns">
-      <a href="https://donway.ai.kr/settle" class="bp">7일 무료로 시작하기 →</a>
-      <a href="#scen" class="bs">내 업종 사례 보기</a>
-    </div>
-    <div class="hsr">
-      <div class="hst"><span class="hstn gg" data-cnt="5" data-suf="분">5분</span><span class="hstl">전원 정산 완료</span></div>
-      <div class="hst"><span class="hstn gc" data-cnt="98" data-suf="%">98%</span><span class="hstl">자동화율</span></div>
-      <div class="hst"><span class="hstn gp" data-cnt="0" data-suf="원">0원</span><span class="hstl">기기 구매 비용</span></div>
-      <div class="hst"><span class="hstn go" data-cnt="3" data-suf="건">3건</span><span class="hstl">특허 출원</span></div>
+<section class="hero" style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:100px 32px 80px;position:relative;overflow:hidden">
+
+  <!-- BG 파티클 캔버스 -->
+  <canvas id="hcvs" style="position:absolute;inset:0;z-index:1"></canvas>
+
+  <!-- TOP 바 -->
+  <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#00c8f8,#1d6fff,#a855f7);z-index:5"></div>
+
+  <!-- 메인 레이아웃: 헥사곤 + 텍스트 -->
+  <div style="position:relative;z-index:5;width:100%;max-width:1200px;display:flex;align-items:center;gap:5%;margin-bottom:52px">
+
+    <!-- 왼쪽: 헥사곤 캔버스 -->
+    <div style="flex-shrink:0;width:38%;max-width:460px;aspect-ratio:1;position:relative">
+      <canvas id="hxc" style="width:100%;height:100%"></canvas>
     </div>
 
-    <!-- ANIMATED OG CARD -->
-    <div id="og-wrap" style="margin-top:52px;width:100%;max-width:760px;border-radius:18px;overflow:hidden;position:relative;aspect-ratio:1200/630;animation:su .8s .8s both;box-shadow:0 0 60px rgba(0,200,248,.12),0 0 120px rgba(29,111,255,.06)">
-      <canvas id="ogcvs" style="position:absolute;inset:0;width:100%;height:100%"></canvas>
-      <div style="position:absolute;inset:0;display:flex;align-items:center;padding:0 6%">
-        <!-- logo icon -->
-        <div style="flex-shrink:0;margin-right:5%;position:relative;width:21%;aspect-ratio:1">
-          <svg id="og-logo" viewBox="0 0 200 200" style="width:100%;height:100%">
-            <defs>
-              <radialGradient id="sph" cx="40%" cy="35%" r="60%">
-                <stop offset="0%" stop-color="#4488ff"/>
-                <stop offset="45%" stop-color="#0a1a6e"/>
-                <stop offset="100%" stop-color="#000510"/>
-              </radialGradient>
-              <radialGradient id="shl" cx="35%" cy="30%" r="40%">
-                <stop offset="0%" stop-color="rgba(120,180,255,0.9)"/>
-                <stop offset="100%" stop-color="transparent"/>
-              </radialGradient>
-              <radialGradient id="sgl" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stop-color="rgba(0,200,248,0.3)"/>
-                <stop offset="100%" stop-color="transparent"/>
-              </radialGradient>
-            </defs>
-            <circle cx="100" cy="100" r="95" fill="url(#sgl)"/>
-            <polygon id="ohex3" points="100,14 169,56 169,144 100,186 31,144 31,56" fill="none" stroke="rgba(0,200,248,0.12)" stroke-width="1"/>
-            <polygon id="ohex2" points="100,30 154,62 154,128 100,160 46,128 46,62" fill="none" stroke="rgba(0,200,248,0.22)" stroke-width="1"/>
-            <polygon id="ohex1" points="100,48 142,72 142,128 100,152 58,128 58,72" fill="none" stroke="rgba(0,200,248,0.38)" stroke-width="1.2"/>
-            <circle cx="100" cy="100" r="52" fill="url(#sph)"/>
-            <circle cx="100" cy="100" r="52" fill="url(#shl)"/>
-            <circle cx="100" cy="100" r="52" fill="none" stroke="rgba(0,120,255,0.5)" stroke-width="1.5"/>
-            <rect id="osc" x="48" y="98" width="104" height="1.5" fill="rgba(0,200,248,0.6)" rx="1"/>
-            <ellipse cx="100" cy="100" rx="64" ry="18" fill="none" stroke="rgba(0,200,248,0.28)" stroke-width="1" stroke-dasharray="5 3"/>
-            <circle id="oorb" cx="164" cy="100" r="3.5" fill="#00c8f8"/>
-            <circle cx="100" cy="46" r="2.5" fill="none" stroke="#00c8f8" stroke-width="1" opacity="0.4"/>
-            <circle cx="100" cy="154" r="2.5" fill="none" stroke="#00c8f8" stroke-width="1" opacity="0.4"/>
-            <circle cx="169" cy="100" r="2.5" fill="none" stroke="#00c8f8" stroke-width="1" opacity="0.4"/>
-          </svg>
-        </div>
-        <!-- text area -->
-        <div style="flex:1;min-width:0;text-align:left">
-          <div id="og-badge" style="display:inline-flex;align-items:center;gap:5px;background:rgba(245,184,0,.1);border:.5px solid rgba(245,184,0,.35);border-radius:20px;padding:3px 12px;margin-bottom:2%;opacity:0">
-            <span style="width:6px;height:6px;border-radius:50%;background:#f5b800;box-shadow:0 0 8px #f5b800;flex-shrink:0"></span>
-            <span style="font-size:clamp(7px,1.1vw,11px);font-weight:700;color:#f5b800;font-family:sans-serif;letter-spacing:2px">특허 출원 중 — 3건</span>
-          </div>
-          <div id="og-title" style="line-height:1.05;margin-bottom:1.5%;opacity:0">
-            <span style="font-size:clamp(22px,5.2vw,64px);font-weight:900;letter-spacing:.08em;background:linear-gradient(120deg,#fff 0%,#00c8f8 45%,#a855f7 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 20px rgba(0,200,248,.25))">DON</span><span style="font-size:clamp(22px,5.2vw,64px);font-weight:900;letter-spacing:.08em;color:#fff">WAY</span>
-          </div>
-          <div id="og-sub" style="font-family:sans-serif;font-size:clamp(8px,1.2vw,13px);color:rgba(0,200,248,.55);letter-spacing:.3em;margin-bottom:2.5%;opacity:0">AI AUTOMATION · SETTLEMENT PLATFORM</div>
-          <div id="og-line" style="height:1.5px;background:linear-gradient(90deg,#00c8f8,#a855f7,transparent);border-radius:1px;margin-bottom:2.5%;width:0;transition:width .7s cubic-bezier(.16,1,.3,1)"></div>
-          <div id="og-tags" style="display:flex;gap:1.5%;flex-wrap:wrap;opacity:0">
-            <span style="font-family:sans-serif;font-size:clamp(7px,1vw,10px);font-weight:700;padding:3px 9px;border-radius:20px;background:rgba(0,200,248,.1);border:.5px solid rgba(0,200,248,.3);color:#00c8f8">⚡ AI 자동 정산</span>
-            <span style="font-family:sans-serif;font-size:clamp(7px,1vw,10px);font-weight:700;padding:3px 9px;border-radius:20px;background:rgba(0,232,122,.08);border:.5px solid rgba(0,232,122,.3);color:#00e87a">🔐 QR 출퇴근</span>
-            <span style="font-family:sans-serif;font-size:clamp(7px,1vw,10px);font-weight:700;padding:3px 9px;border-radius:20px;background:rgba(168,85,247,.08);border:.5px solid rgba(168,85,247,.3);color:#a855f7">🧾 세금계산서</span>
-            <span style="font-family:sans-serif;font-size:clamp(7px,1vw,10px);font-weight:700;padding:3px 9px;border-radius:20px;background:rgba(245,184,0,.08);border:.5px solid rgba(245,184,0,.3);color:#f5b800">📱 직원 앱</span>
-          </div>
-          <div id="og-url" style="font-family:sans-serif;font-size:clamp(7px,.9vw,10px);color:rgba(255,255,255,.2);letter-spacing:2px;margin-top:2%;opacity:0">donway.ai.kr</div>
-        </div>
+    <!-- 오른쪽: 텍스트 -->
+    <div style="flex:1;text-align:left">
+
+      <!-- 특허 배지 -->
+      <div id="h-badge" style="display:inline-flex;align-items:center;gap:8px;background:rgba(245,184,0,.1);border:1px solid rgba(245,184,0,.35);border-radius:30px;padding:6px 18px;margin-bottom:20px;opacity:0;transition:opacity .6s">
+        <span id="h-bdot" style="width:8px;height:8px;border-radius:50%;background:#f5b800;box-shadow:0 0 10px #f5b800;flex-shrink:0;display:block"></span>
+        <span style="font-size:clamp(10px,1.2vw,14px);font-weight:700;color:#f5b800;font-family:sans-serif;letter-spacing:2px">특허 출원 중 — 3건</span>
       </div>
-      <!-- top accent line -->
-      <div style="position:absolute;top:0;left:0;right:0;height:2.5px;background:linear-gradient(90deg,#00c8f8,#1d6fff,#a855f7)"></div>
-    </div>
 
+      <!-- DONWAY 타이틀 -->
+      <div id="h-title" style="line-height:.95;margin-bottom:16px;opacity:0;transition:opacity .8s .25s">
+        <span style="font-size:clamp(52px,8vw,120px);font-weight:900;font-family:'Arial Black',sans-serif;letter-spacing:.04em;color:#00e8ff;text-shadow:0 0 25px rgba(0,220,255,.8),0 0 55px rgba(0,180,255,.5),0 0 100px rgba(0,140,255,.25)">DON</span><span style="font-size:clamp(52px,8vw,120px);font-weight:900;font-family:'Arial Black',sans-serif;letter-spacing:.04em;color:#ffffff;text-shadow:0 0 25px rgba(255,255,255,.5),0 0 55px rgba(200,220,255,.25)">WAY</span>
+      </div>
+
+      <!-- 서브 -->
+      <div id="h-sub" style="font-size:clamp(12px,1.6vw,20px);font-weight:700;font-family:sans-serif;letter-spacing:.28em;color:#00e8ff;text-shadow:0 0 14px rgba(0,200,255,.7);margin-bottom:20px;opacity:0;transition:opacity .6s .55s">AI AUTOMATION · SETTLEMENT PLATFORM</div>
+
+      <!-- 타이핑 문장 -->
+      <p id="h-typed-wrap" style="font-size:clamp(15px,1.8vw,22px);color:rgba(255,255,255,.75);margin-bottom:28px;font-weight:300;line-height:1.7;opacity:0;transition:opacity .6s .75s">
+        <strong style="color:#fff">택배 대리점, 편의점, 식당, 미용실</strong> — 업종 관계없이<br>
+        <span style="color:#00c8f8;font-weight:700">엑셀 한 번</span>으로 수백 명 정산·세금계산서·발송까지 <strong style="color:#fff">5분 완료</strong>
+      </p>
+
+      <!-- 기능 태그 -->
+      <div id="h-tags" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:28px;opacity:0;transition:opacity .6s .95s">
+        <span style="font-family:sans-serif;font-size:clamp(10px,1.1vw,14px);font-weight:700;padding:7px 16px;border-radius:30px;border:1px solid rgba(0,210,255,.55);background:rgba(0,210,255,.1);color:#00d2ff;text-shadow:0 0 10px rgba(0,210,255,.5)">⚡ AI 자동 정산</span>
+        <span style="font-family:sans-serif;font-size:clamp(10px,1.1vw,14px);font-weight:700;padding:7px 16px;border-radius:30px;border:1px solid rgba(0,240,130,.55);background:rgba(0,240,130,.1);color:#00f082;text-shadow:0 0 10px rgba(0,240,130,.5)">🔐 QR 출퇴근</span>
+        <span style="font-family:sans-serif;font-size:clamp(10px,1.1vw,14px);font-weight:700;padding:7px 16px;border-radius:30px;border:1px solid rgba(220,80,255,.55);background:rgba(220,80,255,.1);color:#dc50ff;text-shadow:0 0 10px rgba(220,80,255,.5)">🧾 세금계산서</span>
+        <span style="font-family:sans-serif;font-size:clamp(10px,1.1vw,14px);font-weight:700;padding:7px 16px;border-radius:30px;border:1px solid rgba(255,195,0,.55);background:rgba(255,195,0,.1);color:#ffc300;text-shadow:0 0 10px rgba(255,195,0,.5)">📱 직원 앱</span>
+      </div>
+
+      <!-- CTA 버튼 -->
+      <div id="h-btns" style="display:flex;gap:14px;flex-wrap:wrap;opacity:0;transition:opacity .6s 1.1s">
+        <a href="https://donway.ai.kr/settle" class="bp" style="font-size:clamp(13px,1.3vw,16px)">7일 무료로 시작하기 →</a>
+        <a href="#scen" class="bs" style="font-size:clamp(13px,1.3vw,16px)">내 업종 사례 보기</a>
+      </div>
+
+    </div>
   </div>
-  <div class="shi"><div class="shii"><div class="shid"></div></div></div>
+
+  <!-- 통계 바 -->
+  <div id="h-stats" style="position:relative;z-index:5;display:flex;align-items:center;justify-content:center;gap:0;background:rgba(0,200,248,.04);border:1px solid rgba(0,200,248,.1);border-radius:18px;padding:22px 32px;width:100%;max-width:1200px;backdrop-filter:blur(12px);opacity:0;transition:opacity .6s 1.3s">
+    <div class="hst"><span class="hstn gg" data-cnt="5" data-suf="분">5분</span><span class="hstl">전원 정산 완료</span></div>
+    <div class="hst"><span class="hstn gc" data-cnt="98" data-suf="%">98%</span><span class="hstl">자동화율</span></div>
+    <div class="hst"><span class="hstn gp" data-cnt="0" data-suf="원">0원</span><span class="hstl">기기 구매 비용</span></div>
+    <div class="hst"><span class="hstn go" data-cnt="3" data-suf="건">3건</span><span class="hstl">특허 출원</span></div>
+  </div>
+
+  <div class="shi" style="z-index:5"><div class="shii"><div class="shid"></div></div></div>
 </section>
 
 <div class="mqb"><div class="mqt"><span class="mqi"><span>⚡</span>AI 자동 정산</span><span class="mqi"><span>🔐</span>30초 동적 QR 출퇴근</span><span class="mqi"><span>🧾</span>세금계산서 자동 발행</span><span class="mqi"><span>📝</span>위수탁 계약서 관리</span><span class="mqi"><span>🗓</span>근무표 자동 완성</span><span class="mqi"><span>📱</span>직원 셈프 조회 앱</span><span class="mqi"><span>📊</span>통계·분석 대시보드</span><span class="mqi"><span>🔔</span>카카오·문자 알림</span><span class="mqi"><span>📸</span>사업자등록증 AI OCR</span><span class="mqi"><span>🚀</span>직원 수 무제한</span><span class="mqi"><span>⚡</span>AI 자동 정산</span><span class="mqi"><span>🔐</span>30초 동적 QR 출퇴근</span><span class="mqi"><span>🧾</span>세금계산서 자동 발행</span><span class="mqi"><span>📝</span>위수탁 계약서 관리</span><span class="mqi"><span>🗓</span>근무표 자동 완성</span><span class="mqi"><span>📱</span>직원 셈프 조회 앱</span><span class="mqi"><span>📊</span>통계·분석 대시보드</span><span class="mqi"><span>🔔</span>카카오·문자 알림</span><span class="mqi"><span>📸</span>사업자등록증 AI OCR</span><span class="mqi"><span>🚀</span>직원 수 무제한</span></div></div>
@@ -686,45 +675,164 @@ footer{padding:46px 24px;border-top:1px solid var(--bdr);text-align:center}
 </footer>
 
 <script>
-/* ── OG CARD ANIMATION ── */
+/* ── HERO ANIMATION ── */
 (function(){
-  var cv=document.getElementById('ogcvs');
-  if(!cv)return;
-  var ctx=cv.getContext('2d'),W,H,pts=[],ogT=0;
-  function resize(){var r=cv.parentElement.getBoundingClientRect();W=r.width;H=r.height;cv.width=W*devicePixelRatio;cv.height=H*devicePixelRatio;ctx.scale(devicePixelRatio,devicePixelRatio);}
-  function initPts(){pts=[];for(var i=0;i<55;i++)pts.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.25,vy:(Math.random()-.5)*.25,r:Math.random()*1.2+.3,o:Math.random()*.25+.04,h:Math.random()>.6?195:Math.random()>.5?270:180});}
+  /* BG 파티클 */
+  var bgc=document.getElementById('hcvs');
+  if(!bgc)return;
+  var bctx=bgc.getContext('2d'),W,H,pts=[];
+  function resizeBg(){W=innerWidth;H=innerHeight;bgc.width=W;bgc.height=H;}
+  resizeBg();window.addEventListener('resize',resizeBg);
+  for(var i=0;i<80;i++)pts.push({x:Math.random()*99999%9999,y:Math.random()*99999%9999,vx:(Math.random()-.5)*.25,vy:(Math.random()-.5)*.25,r:Math.random()*1.3+.3,o:Math.random()*.22+.04,h:Math.random()>.55?(Math.random()>.5?180:270):195});
   function drawBg(){
-    ctx.clearRect(0,0,W,H);
-    ctx.fillStyle='#020817';ctx.fillRect(0,0,W,H);
-    var grd=ctx.createRadialGradient(W*.75,H*.2,0,W*.75,H*.2,W*.4);
-    grd.addColorStop(0,'rgba(168,85,247,0.07)');grd.addColorStop(1,'transparent');
-    ctx.fillStyle=grd;ctx.fillRect(0,0,W,H);
-    var grd2=ctx.createRadialGradient(W*.15,H*.8,0,W*.15,H*.8,W*.35);
-    grd2.addColorStop(0,'rgba(29,111,255,0.08)');grd2.addColorStop(1,'transparent');
-    ctx.fillStyle=grd2;ctx.fillRect(0,0,W,H);
-    pts.forEach(function(p){p.x+=p.vx;p.y+=p.vy;if(p.x<0)p.x=W;if(p.x>W)p.x=0;if(p.y<0)p.y=H;if(p.y>H)p.y=0;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle='hsla('+p.h+',100%,70%,'+p.o+')';ctx.fill();});
-    for(var i=0;i<pts.length;i++)for(var j=i+1;j<pts.length;j++){var dx=pts[i].x-pts[j].x,dy=pts[i].y-pts[j].y,d=Math.sqrt(dx*dx+dy*dy);if(d<90){ctx.beginPath();ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[j].x,pts[j].y);ctx.strokeStyle='rgba(0,200,248,'+(0.035*(1-d/90))+')';ctx.lineWidth=.35;ctx.stroke();}}
+    W=innerWidth;H=innerHeight;bgc.width=W;bgc.height=H;
+    bctx.fillStyle='#020c14';bctx.fillRect(0,0,W,H);
+    var g1=bctx.createRadialGradient(W*.78,H*.18,0,W*.78,H*.18,W*.38);
+    g1.addColorStop(0,'rgba(0,100,140,.1)');g1.addColorStop(1,'transparent');bctx.fillStyle=g1;bctx.fillRect(0,0,W,H);
+    var g2=bctx.createRadialGradient(W*.1,H*.8,0,W*.1,H*.8,W*.3);
+    g2.addColorStop(0,'rgba(20,70,130,.1)');g2.addColorStop(1,'transparent');bctx.fillStyle=g2;bctx.fillRect(0,0,W,H);
+    var gs=Math.round(W/26);
+    bctx.strokeStyle='rgba(0,180,220,.1)';bctx.lineWidth=.5;
+    for(var x=0;x<W;x+=gs){bctx.beginPath();bctx.moveTo(x,0);bctx.lineTo(x,H);bctx.stroke();}
+    for(var y=0;y<H;y+=gs){bctx.beginPath();bctx.moveTo(0,y);bctx.lineTo(W,y);bctx.stroke();}
+    pts.forEach(function(p){
+      p.x+=p.vx;p.y+=p.vy;
+      if(p.x<0)p.x=W;if(p.x>W)p.x=0;if(p.y<0)p.y=H;if(p.y>H)p.y=0;
+      bctx.beginPath();bctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      bctx.fillStyle='hsla('+p.h+',100%,75%,'+p.o+')';bctx.fill();
+    });
+    for(var i=0;i<pts.length;i++)for(var j=i+1;j<pts.length;j++){
+      var dx=pts[i].x-pts[j].x,dy=pts[i].y-pts[j].y,d=Math.sqrt(dx*dx+dy*dy);
+      if(d<100){bctx.beginPath();bctx.moveTo(pts[i].x,pts[i].y);bctx.lineTo(pts[j].x,pts[j].y);bctx.strokeStyle='rgba(0,200,248,'+(0.038*(1-d/100))+')';bctx.lineWidth=.4;bctx.stroke();}
+    }
   }
-  function animLogo(){
-    ogT+=.012;
-    var od=document.getElementById('oorb');
-    if(od){od.setAttribute('cx',100+64*Math.cos(ogT));od.setAttribute('cy',100+18*Math.sin(ogT));od.style.opacity=0.5+0.5*Math.abs(Math.sin(ogT));}
-    var sc=document.getElementById('osc');
-    if(sc){var sy=48+Math.round((Math.sin(ogT*.8)+1)/2*104);sc.setAttribute('y',sy);sc.style.opacity=0.25+0.55*Math.abs(Math.sin(ogT*.8));}
-    ['ohex1','ohex2','ohex3'].forEach(function(id,i){var el=document.getElementById(id);if(el)el.style.opacity=0.4+0.6*Math.sin(ogT*1.1+i*.8);});
+
+  /* 헥사곤 */
+  var hxc=document.getElementById('hxc');
+  if(!hxc)return;
+  var hctx=hxc.getContext('2d'),hT=0,hW,hH;
+  function resizeHx(){var r=hxc.parentElement.getBoundingClientRect();hW=r.width;hH=r.height;hxc.width=hW*devicePixelRatio;hxc.height=hH*devicePixelRatio;hctx.scale(devicePixelRatio,devicePixelRatio);}
+  resizeHx();window.addEventListener('resize',resizeHx);
+
+  function hexPts(cx,cy,r,rot){var a=[];for(var i=0;i<6;i++){var ang=Math.PI/180*(90+(rot||0)+60*i);a.push([cx+r*Math.cos(ang),cy+r*Math.sin(ang)]);}return a;}
+  function drawHexPoly(h,pts2,stroke,lw,fill){
+    h.beginPath();h.moveTo(pts2[0][0],pts2[0][1]);
+    for(var i=1;i<pts2.length;i++)h.lineTo(pts2[i][0],pts2[i][1]);
+    h.closePath();
+    if(fill){h.fillStyle=fill;h.fill();}
+    if(stroke){h.strokeStyle=stroke;h.lineWidth=lw||1;h.stroke();}
   }
-  function loop(){drawBg();animLogo();requestAnimationFrame(loop);}
-  function fadeEl(id,delay){setTimeout(function(){var el=document.getElementById(id);if(el){el.style.transition='opacity 500ms ease';el.style.opacity='1';}},delay);}
-  resize();initPts();ctx=cv.getContext('2d');loop();
-  window.addEventListener('resize',function(){resize();initPts();});
+  function glowHex(h,cx,cy,r,color,lw,rot){
+    for(var g=6;g>0;g--){h.shadowBlur=g*5;h.shadowColor=color;drawHexPoly(h,hexPts(cx,cy,r,rot),color,lw||2);}
+    h.shadowBlur=0;
+  }
+
+  function drawHx(){
+    hctx.clearRect(0,0,hW,hH);
+    var cx=hW/2,cy=hH/2,mx=Math.min(hW,hH)*.44;
+
+    /* 바깥 회전 점선 링 */
+    hctx.save();hctx.translate(cx,cy);hctx.rotate(hT*.25);
+    hctx.setLineDash([5,10]);hctx.beginPath();hctx.arc(0,0,mx*1.15,0,Math.PI*2);
+    hctx.strokeStyle='rgba(0,200,248,.18)';hctx.lineWidth=.8;hctx.stroke();
+    hctx.setLineDash([]);hctx.restore();
+
+    /* 헥사곤 3겹 (시안/핑크/그린) */
+    glowHex(hctx,cx,cy,mx,'rgba(0,230,255,.95)',2.5);
+    glowHex(hctx,cx,cy,mx*.76,'rgba(255,55,195,.9)',2);
+    glowHex(hctx,cx,cy,mx*.55,'rgba(0,245,128,.9)',2);
+
+    /* 내부 채우기 */
+    drawHexPoly(hctx,hexPts(cx,cy,mx*.53),'',0,'rgba(0,18,32,.97)');
+
+    /* 내부 회전 헥사곤들 */
+    var spin=hT*28;
+    hctx.globalAlpha=.55;
+    drawHexPoly(hctx,hexPts(cx,cy,mx*.38,spin),'rgba(0,200,248,.8)',1);
+    drawHexPoly(hctx,hexPts(cx,cy,mx*.27,-spin),'rgba(168,85,247,.7)',1);
+    hctx.globalAlpha=1;
+
+    /* 내부 원형 링 */
+    [[mx*.44,'rgba(0,200,248,.45)'],[mx*.33,'rgba(168,85,247,.55)'],[mx*.22,'rgba(0,240,130,.55)']].forEach(function(rg){
+      hctx.beginPath();hctx.arc(cx,cy,rg[0],0,Math.PI*2);
+      hctx.shadowBlur=14;hctx.shadowColor=rg[1];
+      hctx.strokeStyle=rg[1];hctx.lineWidth=1;hctx.stroke();hctx.shadowBlur=0;
+    });
+
+    /* 스캔 라인 */
+    var sy=cy+mx*.48*Math.sin(hT*.75),sa=.3+.55*Math.abs(Math.sin(hT*.75));
+    hctx.beginPath();hctx.moveTo(cx-mx*.53,sy);hctx.lineTo(cx+mx*.53,sy);
+    hctx.strokeStyle='rgba(0,230,255,'+sa+')';hctx.lineWidth=1.5;hctx.stroke();
+
+    /* 중앙 코어 */
+    var cg=hctx.createRadialGradient(cx,cy,0,cx,cy,mx*.18);
+    cg.addColorStop(0,'rgba(255,255,255,1)');
+    cg.addColorStop(.35,'rgba(80,220,255,1)');
+    cg.addColorStop(.7,'rgba(60,160,255,.6)');
+    cg.addColorStop(1,'transparent');
+    hctx.beginPath();hctx.arc(cx,cy,mx*.18,0,Math.PI*2);
+    hctx.shadowBlur=35;hctx.shadowColor='rgba(0,220,255,1)';
+    hctx.fillStyle=cg;hctx.fill();hctx.shadowBlur=0;
+    hctx.beginPath();hctx.arc(cx,cy,mx*.055,0,Math.PI*2);
+    hctx.fillStyle='#fff';hctx.shadowBlur=18;hctx.shadowColor='#fff';
+    hctx.fill();hctx.shadowBlur=0;
+
+    /* 꼭짓점 컬러 도트 (3링 각 6개) */
+    var dc=[[0,230,255],[255,55,195],[0,245,128],[0,230,255],[255,55,195],[0,245,128]];
+    [[mx,0],[mx*.76,1],[mx*.55,2]].forEach(function(pair,ri){
+      for(var i=0;i<6;i++){
+        var ang=Math.PI/180*(90+60*i);
+        var dx=cx+pair[0]*Math.cos(ang),dy=cy+pair[0]*Math.sin(ang);
+        var c=dc[(i+ri)%6];
+        hctx.beginPath();hctx.arc(dx,dy,mx*.038,0,Math.PI*2);
+        hctx.fillStyle='rgba('+c[0]+','+c[1]+','+c[2]+',1)';
+        hctx.shadowBlur=12;hctx.shadowColor='rgba('+c[0]+','+c[1]+','+c[2]+',1)';
+        hctx.fill();hctx.shadowBlur=0;
+      }
+    });
+
+    /* 회로 라인 */
+    [[0,'rgba(0,220,255,.85)'],[Math.PI/2,'rgba(0,240,130,.7)'],[Math.PI,'rgba(255,55,195,.65)'],[Math.PI*1.5,'rgba(168,85,247,.7)']].forEach(function(pair){
+      var ax=cx+mx*Math.cos(pair[0]),ay=cy+mx*Math.sin(pair[0]);
+      var bx=cx+(mx+mx*.24)*Math.cos(pair[0]),by=cy+(mx+mx*.24)*Math.sin(pair[0]);
+      hctx.beginPath();hctx.moveTo(ax,ay);hctx.lineTo(bx,by);
+      hctx.strokeStyle=pair[1];hctx.lineWidth=1.8;hctx.stroke();
+      hctx.beginPath();hctx.arc(bx,by,mx*.035,0,Math.PI*2);
+      hctx.fillStyle=pair[1];hctx.shadowBlur=10;hctx.shadowColor=pair[1];
+      hctx.fill();hctx.shadowBlur=0;
+    });
+
+    /* 빛 입자 궤적 */
+    for(var p=0;p<4;p++){
+      var pang=hT*1.4+p*(Math.PI/2);
+      var pr=mx*(0.6+0.4*((p%2)*.5));
+      var px=cx+pr*Math.cos(pang),py=cy+pr*Math.sin(pang);
+      var pc=[[0,230,255],[255,55,195],[0,245,128],[245,184,0]][p];
+      hctx.beginPath();hctx.arc(px,py,mx*.022,0,Math.PI*2);
+      hctx.fillStyle='rgba('+pc[0]+','+pc[1]+','+pc[2]+',0.85)';
+      hctx.shadowBlur=16;hctx.shadowColor='rgba('+pc[0]+','+pc[1]+','+pc[2]+',1)';
+      hctx.fill();hctx.shadowBlur=0;
+    }
+  }
+
+  function loop(){
+    hT+=.012;
+    drawBg();drawHx();
+    /* 배지 도트 펄스 */
+    var dot=document.getElementById('h-bdot');
+    if(dot){var s=0.85+.4*Math.sin(hT*2.5);dot.style.transform='scale('+s+')';dot.style.boxShadow='0 0 '+(8+6*Math.sin(hT*2.5))+'px rgba(245,184,0,.9)';}
+    requestAnimationFrame(loop);
+  }
+  resizeHx();loop();
+
+  /* 등장 애니메이션 */
   setTimeout(function(){
-    fadeEl('og-badge',200);fadeEl('og-title',400);fadeEl('og-sub',800);
-    setTimeout(function(){var l=document.getElementById('og-line');if(l)l.style.width='82%';},1000);
-    fadeEl('og-tags',1300);fadeEl('og-url',1600);
-  },600);
+    ['h-badge','h-title','h-sub','h-typed-wrap','h-tags','h-btns','h-stats'].forEach(function(id,i){
+      setTimeout(function(){var el=document.getElementById(id);if(el)el.style.opacity='1';},i*160);
+    });
+  },400);
 })();
-</script>
-<script>
+
 function toggleM(){var h=document.getElementById('ham'),m=document.getElementById('mob');h.classList.toggle('open');m.style.display=m.style.display==='flex'?'none':'flex';}
 function closeM(){var h=document.getElementById('ham'),m=document.getElementById('mob');h.classList.remove('open');m.style.display='none';}
 document.addEventListener('click',function(e){var h=document.getElementById('ham'),m=document.getElementById('mob');if(m&&m.style.display==='flex'&&!h.contains(e.target)&&!m.contains(e.target))closeM();});

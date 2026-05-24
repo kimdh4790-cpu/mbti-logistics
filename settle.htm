@@ -5159,7 +5159,9 @@ function pageHome(){
   document.getElementById('topbar-right').innerHTML='';
   var el=document.getElementById('content');
   if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
-  var did=_CU.dealerId;
+  if(isSuperAdmin()&&!_CU.dealerId){_homeRenderSuperAdmin(el);return;}
+  var did=_CU.dealerId||_CU.companyId||'';
+  if(!did){el.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div>회사 정보가 없습니다</div>';return;}
   var today=new Date().toISOString().slice(0,10);
   var now=new Date();
   var ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
@@ -7416,20 +7418,34 @@ var MENUS_DRIVER = [
 var MENUS = MENUS_SETTLE; // 기본값
 function buildNav(){
   var nav=document.getElementById('snav');
+  if(!nav)return;
+  if(!MENUS||!MENUS.length){nav.innerHTML='';return;}
+  var cur=(typeof _curPage!=='undefined')?(_curPage||''):'';
+  var anyOpen=false;
   nav.innerHTML=MENUS.map(function(g,gi){
+    if(!g||!g.items)return'';
     var id='nsec-'+gi;
-    // 현재 페이지가 이 섹션에 있으면 기본 open
-    var hasActive=g.items.some(function(m){return m.p===_curPage;});
-    return '<div class="ns'+(hasActive?' open':'')
-      +'" onclick="_toggleNavSection(this,\''+id+'\')">'+
+    var hasActive=g.items.some(function(m){return m&&m.p===cur;});
+    if(hasActive)anyOpen=true;
+    var isLocked=false;
+    return '<div class="ns'+(hasActive?' open':'')+'" id="nshead-'+gi+'" onclick="_toggleNavSection(this,\''+id+'\')">'+
       '<span>'+g.s+'</span><span class="ns-arrow">›</span></div>'+
       '<div class="ns-items'+(hasActive?' open':'')+'" id="'+id+'">'+
-      g.items.map(function(m){
-        return '<div class="ni'+(m.p===_curPage?' on':'')+'" id="nav-'+m.p+'" onclick="goPage(\''+m.p+'\')">'+
-          '<span style="font-size:14px">'+m.ic+'</span><span>'+m.l+'</span></div>';
-      }).join('')+
-      '</div>';
+      g.items.filter(function(m){return m&&m.p;}).map(function(m){
+        var locked=m.lock||(m.plan&&m.plan!=='free');
+        return '<div class="ni'+(m.p===cur?' on':'')+'" id="nav-'+m.p+'" data-p="'+m.p+'" onclick="goPage(this.dataset.p)">'+
+          '<span style="font-size:14px">'+m.ic+'</span>'+
+          '<span style="flex:1">'+m.l+'</span>'+
+          (locked?'<span style="font-size:9px;color:#f59e0b">🔒</span>':'')+
+          '</div>';
+      }).join('')+'</div>';
   }).join('');
+  if(!anyOpen){
+    var f0=document.getElementById('nsec-0');
+    var h0=document.getElementById('nshead-0');
+    if(f0)f0.classList.add('open');
+    if(h0)h0.classList.add('open');
+  }
 }
 
 function _toggleNavSection(el,id){
@@ -12974,12 +12990,11 @@ var TERMS_CONTENT = {
 };
 
 function checkTermsAgreement(){
-  // 슈퍼어드민은 생략
-  if(_CU&&_CU.email==='kimdh4790@gmail.com'){goPage('settle');return;}
-  if(_CU&&_CU.termsVersion===TERMS_VER){goPage('settle');return;}
-  // 약관 동의 필요
+  var _fp=(_CU&&(_CU.role==='driver'||_CU.role==='member'))?'emp_home':'home';
+  if(isSuperAdmin()){goPage('home');return;}
+  if(_CU&&_CU.termsVersion===TERMS_VER){goPage(_fp);return;}
   var mo=document.getElementById('mo-terms-agree');
-  if(!mo){goPage('settle');return;}
+  if(!mo){goPage(_fp);return;}
   document.getElementById('ta-terms-body').innerHTML=esc(TERMS_CONTENT.terms).replace(/\n/g,'<br>');
   document.getElementById('ta-privacy-body').innerHTML=esc(TERMS_CONTENT.privacy).replace(/\n/g,'<br>');
   mo.classList.add('show');
@@ -12997,7 +13012,7 @@ function agreeTerms(){
   },{merge:true}).then(function(){
     document.getElementById('mo-terms-agree').classList.remove('show');
     _CU.termsVersion=TERMS_VER;
-    goPage('settle');
+    goPage((_CU&&(_CU.role==='driver'||_CU.role==='member'))?'emp_home':'home');
     toast('약관 동의가 완료되었습니다.');
   }).catch(function(e){
     toast('저장 실패: '+e.message);
