@@ -10504,14 +10504,14 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
       <label class="lbl">비밀번호</label>
       <input class="fi" id="lpw" type="password" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doLogin()">
       <button class="btn-login" id="lbtn" onclick="doLogin()">로그인</button>
-      <!-- ★ 연결 상태 표시 -->
-      <div id="fb-status" style="margin-top:8px;font-size:11px;text-align:center;color:var(--sub)">
-        <span id="fb-dot" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#aaa;margin-right:5px"></span>
-        <span id="fb-txt">서버 연결 확인 중...</span>
+      <!-- 연결 상태 -->
+      <div id="fb-status" style="margin-top:8px;font-size:11px;text-align:center">
+        <span id="fb-dot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#888;margin-right:5px;vertical-align:middle"></span>
+        <span id="fb-txt" style="color:#888">서버 연결 확인 중...</span>
       </div>
-      <div id="lock-notice" style="display:none;margin-top:8px;padding:7px;background:rgba(255,80,80,.08);border:1px solid rgba(255,80,80,.2);border-radius:8px;font-size:11px;color:#f87171;text-align:center">
-        🔒 로그인 잠금 상태입니다<br>
-        <a href="?unlock=1" style="color:#60a5fa;font-weight:700">여기를 클릭하여 잠금 해제</a>
+      <div id="lock-notice" style="display:none;margin-top:8px;padding:8px;background:rgba(255,80,80,.1);border:1px solid rgba(255,80,80,.3);border-radius:8px;font-size:12px;color:#f87171;text-align:center">
+        🔒 로그인 잠금 상태<br>
+        <a href="?unlock=1" style="color:#60a5fa;font-weight:700;text-decoration:underline">여기 클릭 → 잠금 해제</a>
       </div>
       <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
         <button id="help-toggle-btn" onclick="var b=document.getElementById('login-help-box');if(b){b.style.display=b.style.display==='none'||!b.style.display?'block':'none';}" style="width:100%;padding:9px;background:transparent;border:1.5px dashed var(--border);border-radius:10px;color:var(--text2);font-size:12px;cursor:pointer;font-weight:600">
@@ -11765,31 +11765,12 @@ function findDriverIdByName(){
     // Firebase에서도 검색
     if(FB&&_db){
       result.innerHTML='<span style="color:var(--blue)">🔍 검색 중...</span>';
-      // ★ 전체 스캔 방식 (인덱스 불필요)
-      _db.collection('drivers').limit(300).get()
+      _db.collection('drivers').limit(300).get
         .then(function(snap){
-          var filtered=[];
-          snap.forEach(function(doc){var d=doc.data();if(d.name&&d.name.indexOf(name)>=0)filtered.push(d);});
-          snap={forEach:function(){},docs:filtered.map(function(d){return{data:function(){return d;}};})};
-          // filtered 결과로 재처리
-          var res2=filtered;
-          if(res2.length){
-            result.innerHTML=res2.map(function(d){
-              return '<div style="padding:5px 8px;background:var(--bg2);border-radius:6px;margin-bottom:4px">'
-                +'<span style="font-weight:700">'+d.name+'</span> → 아이디: <b style="color:var(--teal)">'+d.userId+'</b>'
-                +'<button onclick="document.getElementById(\'lid\').value=\''+d.userId+'\'" style="margin-left:8px;padding:2px 8px;background:var(--teal);color:#fff;border:none;border-radius:4px;font-size:10px;cursor:pointer">입력</button>'
-                +'</div>';
-            }).join('');
-          } else {
-            result.innerHTML='<span style="color:var(--red)">❌ "'+name+'"으로 등록된 기사를 찾을 수 없습니다</span>';
-          }
-          return; // 아래 then 로직 스킵
-        })
-        .then(function(snap){ if(!snap)return; // 스킵
           var res2=[];
           snap.forEach(function(doc){
             var d=doc.data();
-            if(d.name&&d.userId) res2.push(d);
+            if(d.name&&d.name.indexOf(name)>=0&&d.userId) res2.push(d);
           });
           if(res2.length){
             result.innerHTML = res2.map(function(d){
@@ -11946,18 +11927,6 @@ async function selfResetPwSave(){
   }, 2000);
 }
 
-
-// ★ 긴급 잠금 해제 (URL에 ?unlock=1 추가 시)
-(function(){
-  if(location.search.includes('unlock=1')){
-    localStorage.removeItem('mbti_lock');
-    console.log('[UNLOCK] 로그인 잠금 해제됨');
-    var u=new URL(location.href);u.searchParams.delete('unlock');
-    history.replaceState(null,'',u.toString());
-    if(typeof toast==='function') setTimeout(function(){toast('🔓 잠금 해제됨');},1000);
-  }
-})();
-
 function doLogin(){
   // ── 보안: 로그인 실패 횟수 제한
   var lockKey='mbti_lock';
@@ -12016,22 +11985,17 @@ function doLogin(){
         _finishAdminLogin(info);
       }
     };
-    // ★ 타임아웃: Firebase 3초 안에 응답 없으면 localStorage로 진행
-    var _adminDone=false;
-    var _adminFallback=function(){
-      if(_adminDone)return; _adminDone=true;
-      _doAdminCheck(JSON.parse(localStorage.getItem('mbti_admin_info')||'{}'));
-    };
-    var _adminTimer=setTimeout(_adminFallback, 3000);
+    var _aDone=false;
+    var _aFb=function(){if(_aDone)return;_aDone=true;_doAdminCheck(JSON.parse(localStorage.getItem('mbti_admin_info')||'{}'));};
+    var _aT=setTimeout(_aFb,3000);
     if(FB&&_db){
-      _fsGetCached('settings/adminInfo', 60).then(function(doc){
-        clearTimeout(_adminTimer);
-        if(_adminDone)return; _adminDone=true;
+      _fsGetCached('settings/adminInfo',60).then(function(doc){
+        clearTimeout(_aT);if(_aDone)return;_aDone=true;
         var info=JSON.parse(localStorage.getItem('mbti_admin_info')||'{}');
-        if(doc) Object.assign(info, doc);
+        if(doc)Object.assign(info,doc);
         _doAdminCheck(info);
-      }).catch(function(){clearTimeout(_adminTimer);_adminFallback();});
-    } else {clearTimeout(_adminTimer);_adminFallback();}
+      }).catch(function(){clearTimeout(_aT);_aFb();});
+    } else {clearTimeout(_aT);_aFb();}
     return;
   } else {
     // ── v6.1: Firebase에서 먼저 찾고, 없으면 localStorage
@@ -12045,31 +12009,21 @@ function doLogin(){
           if(!q1.empty){var d=q1.docs[0].data();d.fbId=q1.docs[0].id;found=d;}
         }catch(e){
           console.warn('Firebase 조회 오류',e);
-          // Firebase 실패 시 에러 유형 표시
-          if(e.code==='permission-denied'){
-            toast('⚠️ Firebase 권한 오류 — 관리자에게 문의(051-711-3103)');
-          } else if(e.code==='unavailable'||e.message&&e.message.includes('offline')){
-            toast('📡 오프라인 — 저장된 정보로 로그인 시도');
-          }
+          if(e.code==='permission-denied') toast('⚠️ Firebase 권한 오류');
         }
+      }
+      // 전체스캔 fallback (userId 필드명 다를 수 있음)
+      if(!found&&FB&&_db){
+        try{
+          var qA=await _db.collection('drivers').limit(300).get();
+          qA.forEach(function(doc){var d=doc.data();if(!found&&(d.userId===id||d.phone===id||d.id===id)){d.fbId=doc.id;found=d;}});
+        }catch(e2){console.warn('전체스캔 실패',e2);}
+      
       }
       // localStorage fallback
       if(!found){
         var drs=ls('drivers');
-        found=drs.find(function(d){return d.userId===id||d.phone===id||d.name===id;})||null;
-      }
-      // 마지막 수단: Firebase 전체 스캔 (userId 필드명 다를 수 있음)
-      if(!found && FB && _db){
-        try{
-          var qAll=await _db.collection('drivers').limit(200).get();
-          qAll.forEach(function(doc){
-            var d=doc.data();
-            if(!found&&(d.userId===id||d.phone===id||d.id===id||d.driverId===id)){
-              d.fbId=doc.id; found=d;
-            }
-          });
-          if(found) console.log('[Login] 전체스캔으로 발견:', found.name);
-        }catch(e2){console.warn('전체스캔 실패',e2);}
+        found=drs.find(d=>d.userId===id||d.phone===id||d.name===id)||null;
       }
       if(found){
         // ★ 강화: 탈퇴/거부 계정 완전 차단 (상태/활성 양쪽 체크)
@@ -32344,5 +32298,37 @@ async function otpLoginVerify(){
   otpLoginCancel();
   if(cb) cb(info);
 }
+</script>
+
+// ★ 긴급 잠금 해제
+(function(){if(location.search.includes('unlock=1')){localStorage.removeItem('mbti_lock');var u=new URL(location.href);u.searchParams.delete('unlock');history.replaceState(null,'',u.toString());setTimeout(function(){if(typeof toast==='function')toast('🔓 잠금 해제됨');},800);}})();
+
+<script>
+/* ★ Firebase 연결 상태 표시 */
+(function(){
+  function chk(){
+    var dot=document.getElementById('fb-dot');
+    var txt=document.getElementById('fb-txt');
+    var lk=document.getElementById('lock-notice');
+    if(!dot)return;
+    try{
+      var ld=JSON.parse(localStorage.getItem('mbti_lock')||'{"cnt":0,"ts":0}');
+      if(ld.cnt>=5&&Date.now()-ld.ts<600000){
+        var rm=Math.ceil((600000-(Date.now()-ld.ts))/60000);
+        if(lk)lk.style.display='block';
+        dot.style.cssText='display:inline-block;width:8px;height:8px;border-radius:50%;background:#f87171;box-shadow:0 0 6px #f87171;margin-right:5px;vertical-align:middle';
+        txt.style.color='#f87171';txt.textContent='잠금 '+rm+'분 남음';return;
+      } else {if(lk)lk.style.display='none';}
+    }catch(e){}
+    if(window.FB===true&&window._db){
+      dot.style.cssText='display:inline-block;width:8px;height:8px;border-radius:50%;background:#00e87a;box-shadow:0 0 6px #00e87a;margin-right:5px;vertical-align:middle';
+      txt.style.color='#00e87a';txt.textContent='서버 연결됨 ●';
+    } else {
+      dot.style.cssText='display:inline-block;width:8px;height:8px;border-radius:50%;background:#f5b800;box-shadow:0 0 5px #f5b800;margin-right:5px;vertical-align:middle';
+      txt.style.color='#f5b800';txt.textContent='연결 중...';
+    }
+  }
+  setTimeout(chk,600);setInterval(chk,2000);
+})();
 </script>
 </body>
