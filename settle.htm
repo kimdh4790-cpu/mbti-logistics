@@ -7385,9 +7385,22 @@ function _viewMyStatement(el){var id=el.getAttribute('data-id');
 // 쿠팡 정산 전용 (출퇴근X, 위수탁계약서O)
 var MENUS_SETTLE = [
   {s:'home',items:[{ic:'🏠',l:'대시보드',p:'home'}]},
-  {s:'settle',items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'📋',l:'정산 관리',p:'settlements'},{ic:'📈',l:'통계',p:'stats'}]},
-  {s:'operation',items:[{ic:'👤',l:'기사 관리',p:'drivers'},{ic:'🚗',l:'배차 관리',p:'dispatch'},{ic:'📅',l:'달력',p:'schedule'},{ic:'📢',l:'공지',p:'notices'}]},
-  {s:'settings',items:[{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'📅',l:'시즌 단가표',p:'season'}]},
+  {s:'settle',items:[
+    {ic:'📊',l:'정산 현황',p:'settle'},
+    {ic:'📋',l:'정산 관리',p:'settlements'},
+    {ic:'📈',l:'통계',p:'stats'}
+  ]},
+  {s:'operation',items:[
+    {ic:'👤',l:'기사 관리',p:'drivers'},
+    {ic:'🏭',l:'캠프 관리',p:'camps'},
+    {ic:'🚗',l:'배차 관리',p:'dispatch'},
+    {ic:'📅',l:'달력',p:'schedule'},
+    {ic:'📢',l:'공지',p:'notices'}
+  ]},
+  {s:'settings',items:[
+    {ic:'📌',l:'라우트 단가표',p:'prices'},
+    {ic:'📅',l:'시즌 단가표',p:'season'}
+  ]},
   {s:'paid',items:[
     {ic:'🔐',l:'QR 출퇴근',p:'attendance',plan:'paid'},
     {ic:'💰',l:'급여 현황',p:'hourly_settle',plan:'paid'},
@@ -7397,6 +7410,7 @@ var MENUS_SETTLE = [
     {ic:'⏰',l:'연장 승인',p:'overtime',plan:'paid'},
     {ic:'📝',l:'위수탁 계약서',p:'contract',plan:'paid'},
     {ic:'🗓',l:'근무표',p:'roster',plan:'paid'},
+    {ic:'⭐',l:'직원 평가',p:'evaluation',plan:'paid'},
     {ic:'🧾',l:'세무사 공유',p:'tax_share',plan:'paid'}
   ]}
 ];
@@ -7409,9 +7423,25 @@ var MENUS_QR = [
 // 풀패키지 (택배+QR, 위수탁O)
 var MENUS_FULL = [
   {s:'home',items:[{ic:'🏠',l:'대시보드',p:'home'}]},
-  {s:'settle',items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'🛵',l:'배달대행 정산',p:'delivery_platform'},{ic:'📋',l:'정산 관리',p:'settlements'},{ic:'📈',l:'통계',p:'stats'}]},
-  {s:'operation',items:[{ic:'👤',l:'기사/직원',p:'drivers'},{ic:'🚗',l:'배차 관리',p:'dispatch'},{ic:'📋',l:'배차 히스토리',p:'dispatch_history'},{ic:'📅',l:'달력',p:'schedule'},{ic:'📢',l:'공지',p:'notices'}]},
-  {s:'settings',items:[{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'📅',l:'시즌 단가표',p:'season'}]},
+  {s:'settle',items:[
+    {ic:'📊',l:'정산 현황',p:'settle'},
+    {ic:'🛵',l:'배달대행 정산',p:'delivery_platform'},
+    {ic:'📋',l:'정산 관리',p:'settlements'},
+    {ic:'📈',l:'통계',p:'stats'},
+    {ic:'📦',l:'배달 실적',p:'delivery_report'}
+  ]},
+  {s:'operation',items:[
+    {ic:'👤',l:'기사/직원',p:'drivers'},
+    {ic:'🏭',l:'캠프 관리',p:'camps'},
+    {ic:'🚗',l:'배차 관리',p:'dispatch'},
+    {ic:'📋',l:'배차 히스토리',p:'dispatch_history'},
+    {ic:'📅',l:'달력',p:'schedule'},
+    {ic:'📢',l:'공지',p:'notices'}
+  ]},
+  {s:'settings',items:[
+    {ic:'📌',l:'라우트 단가표',p:'prices'},
+    {ic:'📅',l:'시즌 단가표',p:'season'}
+  ]},
   {s:'paid',items:[
     {ic:'🔐',l:'QR 출퇴근',p:'attendance',plan:'paid'},
     {ic:'💰',l:'급여 현황',p:'hourly_settle',plan:'paid'},
