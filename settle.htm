@@ -1845,14 +1845,12 @@ function showApp(){
   if(_CU.role==='driver'||_CU.role==='member'){
     MENUS=MENUS_DRIVER;
   } else {
-    if(isSuperAdmin()){MENUS=MENUS_FULL;} else {
-    if(typeof isSuperAdmin==='function'&&isSuperAdmin()){MENUS=MENUS_FULL;} else {
+    if((typeof isSuperAdmin==='function'&&isSuperAdmin())||(_CU&&_CU.email==='kimdh4790@gmail.com')){MENUS=MENUS_FULL;} else {
     var sType = _CU.serviceType||'full';
     if(sType==='settle') MENUS=MENUS_SETTLE;
     else if(sType==='qr') MENUS=MENUS_QR;
     else if(sType==='hourly') MENUS=MENUS_HOURLY;  // ★ 소상공인/사장님 전용
     else MENUS=MENUS_FULL;
-    }
     }
   }
   buildNav();
@@ -7589,8 +7587,11 @@ function _initFCMReceiver(){
 var PAID_PAGES=['roster','leave','vehicle','expense','overtime','evaluation',
   'delivery_platform','dispatch','dispatch_history','hourly_settle','attendance','season'];
 function _isPaidUser(){
-  if(isSuperAdmin()) return true;
-  return window._cachedHasPaid===true||(_CU&&_CU.plan==='paid');
+  // isSuperAdmin은 나중에 정의되므로 안전하게 호출
+  try{ if(typeof isSuperAdmin==='function'&&isSuperAdmin()) return true; }catch(e){}
+  // kimdh4790@gmail.com 직접 체크 (폴백)
+  if(_CU&&_CU.email==='kimdh4790@gmail.com') return true;
+  return window._cachedHasPaid===true||(_CU&&(_CU.plan==='paid'||_CU.settlePaid===true));
 }
 function _showPaywall(page){
   document.getElementById('page-title').textContent='🔒 유료 기능';
