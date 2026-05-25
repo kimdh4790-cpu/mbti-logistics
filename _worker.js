@@ -1051,40 +1051,34 @@ export default {
           });
         }
         const PLAN_LABELS = {
-          qr_only:'📷 QR 출퇴근', settle_taxi:'📦 택배 정산',
-          payroll:'💼 급여 관리', qr_payroll:'📷💼 QR+급여',
-          full:'🚀 ALL-IN-ONE',
-          qr_only_3m:'📷 QR 출퇴근 3개월', settle_taxi_3m:'📦 택배 정산 3개월',
-          payroll_3m:'💼 급여 관리 3개월', qr_payroll_3m:'📷💼 QR+급여 3개월',
-          full_3m:'🚀 ALL-IN-ONE 3개월',
-          contract:'위수탁 계약서', roster:'근무표', qr:'QR출퇴근(구)', settle:'AI정산(구)'
+          contract: '위수탁 계약서',
+          roster: '근무표 관리',
+          qr: 'QR 출퇴근',
+          full: '풀패키지',
+          settle: 'AI 정산'
         };
         // 주문 ID 생성 (dealerId + timestamp)
         const orderId = `DONWAY-${dealerId.slice(0,8)}-${Date.now()}`;
-        // Firestore에 주문 기록 저장 (실패해도 결제 진행)
-        try {
-          const token = await getAccessToken(env);
-          const orderDoc = {
-            fields: {
-              orderId:     { stringValue: orderId },
-              dealerId:    { stringValue: dealerId },
-              companyName: { stringValue: companyName || '' },
-              email:       { stringValue: email || '' },
-              planType:    { stringValue: planType },
-              amount:      { integerValue: String(amount) },
-              status:      { stringValue: 'pending' },
-              createdAt:   { timestampValue: new Date().toISOString() }
-            }
-          };
-          await fetch(`${FS_BASE}/toss_orders?documentId=${orderId}`, {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify(orderDoc)
-          });
-        } catch(fsErr) {
-          // Firestore 저장 실패해도 결제는 진행
-          console.log('Firestore order save failed:', fsErr.message);
-        }
+        // Firestore에 주문 기록 저장
+        const token = await getAccessToken(env);
+        const orderDoc = {
+          fields: {
+            orderId:     { stringValue: orderId },
+            dealerId:    { stringValue: dealerId },
+            companyName: { stringValue: companyName || '' },
+            email:       { stringValue: email || '' },
+            planType:    { stringValue: planType },
+            amount:      { integerValue: String(amount) },
+            status:      { stringValue: 'pending' },
+            slug:        { stringValue: '' },   // confirm 시 companies에서 채워짐
+            createdAt:   { timestampValue: new Date().toISOString() }
+          }
+        };
+        await fetch(`${FS_BASE}/toss_orders?documentId=${orderId}`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderDoc)
+        });
         return new Response(JSON.stringify({
           orderId,
           orderName: `DONWAY ${PLAN_LABELS[planType] || planType}`,
@@ -1151,23 +1145,11 @@ export default {
 
         // 3. 플랜별 활성화 필드 매핑
         const PLAN_FIELDS = {
-          // ── 신규 패키지 ──
-          qr_only:    { plan:{stringValue:'qr_only'},    settlePaid:{booleanValue:true}, rosterPaid:{booleanValue:true}, qrPaid:{booleanValue:true} },
-          settle_taxi:{ plan:{stringValue:'settle_taxi'}, settlePaid:{booleanValue:true}, rosterPaid:{booleanValue:true} },
-          payroll:    { plan:{stringValue:'payroll'},     settlePaid:{booleanValue:true}, rosterPaid:{booleanValue:true} },
-          qr_payroll: { plan:{stringValue:'qr_payroll'},  settlePaid:{booleanValue:true}, rosterPaid:{booleanValue:true}, qrPaid:{booleanValue:true} },
-          full:       { plan:{stringValue:'full'},        settlePaid:{booleanValue:true}, rosterPaid:{booleanValue:true}, qrPaid:{booleanValue:true}, contractPaid:{booleanValue:true} },
-          // ── 3개월 (동일 플랜, 기간만 다름) ──
-          qr_only_3m:    { plan:{stringValue:'qr_only'},    settlePaid:{booleanValue:true}, rosterPaid:{booleanValue:true}, qrPaid:{booleanValue:true} },
-          settle_taxi_3m:{ plan:{stringValue:'settle_taxi'}, settlePaid:{booleanValue:true}, rosterPaid:{booleanValue:true} },
-          payroll_3m:    { plan:{stringValue:'payroll'},     settlePaid:{booleanValue:true}, rosterPaid:{booleanValue:true} },
-          qr_payroll_3m: { plan:{stringValue:'qr_payroll'},  settlePaid:{booleanValue:true}, rosterPaid:{booleanValue:true}, qrPaid:{booleanValue:true} },
-          full_3m:       { plan:{stringValue:'full'},        settlePaid:{booleanValue:true}, rosterPaid:{booleanValue:true}, qrPaid:{booleanValue:true}, contractPaid:{booleanValue:true} },
-          // ── 구버전 호환 ──
           contract: { contractPaid: { booleanValue: true } },
           roster:   { rosterPaid:   { booleanValue: true } },
-          qr:       { qrPaid:       { booleanValue: true }, plan:{stringValue:'qr_only'} },
-          settle:   { settlePaid:   { booleanValue: true }, plan:{stringValue:'settle_taxi'} }
+          qr:       { qrPaid:       { booleanValue: true } },
+          full:     { contractPaid: { booleanValue: true }, rosterPaid: { booleanValue: true }, qrPaid: { booleanValue: true }, settlePaid: { booleanValue: true } },
+          settle:   { settlePaid:   { booleanValue: true } }
         };
         const planFields = PLAN_FIELDS[planType] || {};
 
@@ -1464,6 +1446,16 @@ export default {
           {src:'/icon-512.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}
         ]
       }), { status:200, headers:{'Content-Type':'application/manifest+json; charset=utf-8','Cache-Control':'no-cache'} });
+    }
+
+    // ── donway_og.jpg / OG 이미지 CORS 허용 ──
+    if (path === '/donway_og.jpg' || path === '/donway_og.png') {
+      const resp = await fetchAsset(path, request);
+      const h = new Headers(resp.headers);
+      h.set('Content-Type', path.endsWith('.png') ? 'image/png' : 'image/jpeg');
+      h.set('Cache-Control', 'public, max-age=86400');
+      h.set('Access-Control-Allow-Origin', '*');
+      return new Response(resp.body, { status: resp.status, headers: h });
     }
 
     // 정적 파일 서빙 + 보안 헤더 적용
