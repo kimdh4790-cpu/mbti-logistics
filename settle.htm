@@ -1521,6 +1521,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           }
         });
         lss('settlements',settlements);
+        window._lastParsedSettlements = settlements; // 경험치 업데이트용
         // Firebase 저장
         if(_db){
           // ★ dealerId 강제 갱신 (다른 계정 데이터 혼입 방지) - fbPromises 전에 실행
@@ -1538,6 +1539,13 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             _settleCache=null;
             var newCount=driverPromises.length;
             var routeCount=newRoutes.length;
+            // ★ 경험점수 자동 업데이트 (배차 엔진에 활용)
+            try{
+              var expData = (window._lastParsedSettlements||[]).map(function(s){
+                return {driverId:s.userId||s.driver, route:s.route||s.jobsub, dcnt:s.dcnt||0};
+              }).filter(function(x){return x.driverId&&x.route&&x.dcnt>0;});
+              if(expData.length) _updateAllRouteExp(expData).catch(function(){});
+            }catch(e){}
             SP('settlements',null);
             // 전월 대비 변동 기사 분석
             _db.collection('settlements')
@@ -7402,7 +7410,7 @@ function _viewMyStatement(el){var id=el.getAttribute('data-id');
 var MENUS_SETTLE = [
   {s:'홈',items:[{ic:'🏠',l:'대시보드',p:'home'}]},
   {s:'정산',items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'📋',l:'정산 관리',p:'settlements'},{ic:'📈',l:'통계',p:'stats'}]},
-  {s:'운영',items:[{ic:'👤',l:'기사 관리',p:'drivers'},{ic:'🚗',l:'배차 관리',p:'dispatch'},{ic:'🌴',l:'휴가 관리',p:'leave',plan:'paid'},{ic:'🚗',l:'차량 관리',p:'vehicle',plan:'paid'},{ic:'💸',l:'경비 관리',p:'expense',plan:'paid'},{ic:'📅',l:'달력',p:'schedule'}]},
+  {s:'운영',items:[{ic:'👤',l:'기사 관리',p:'drivers'},{ic:'🚗',l:'배차 관리',p:'dispatch'},{ic:'📋',l:'배차 히스토리',p:'dispatch_history'},{ic:'🌴',l:'휴가 관리',p:'leave',plan:'paid'},{ic:'🚗',l:'차량 관리',p:'vehicle',plan:'paid'},{ic:'💸',l:'경비 관리',p:'expense',plan:'paid'},{ic:'📅',l:'달력',p:'schedule'}]},
   {s:'설정',items:[{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'📅',l:'시즌 단가표',p:'season'},{ic:'⏰',l:'연장 승인',p:'overtime',plan:'paid'},{ic:'📝',l:'위수탁 계약서',p:'contract'},{ic:'🗓',l:'근무표',p:'roster',plan:'paid'}]},
   {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices'}]}
 ];
@@ -7416,7 +7424,7 @@ var MENUS_QR = [
 var MENUS_FULL = [
   {s:'홈',items:[{ic:'🏠',l:'대시보드',p:'home'}]},
   {s:'정산',items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'📋',l:'정산 관리',p:'settlements'},{ic:'📈',l:'통계',p:'stats'}]},
-  {s:'운영',items:[{ic:'👤',l:'기사/직원',p:'drivers'},{ic:'🚗',l:'배차 관리',p:'dispatch'},{ic:'🌴',l:'휴가 관리',p:'leave',plan:'paid'},{ic:'🚗',l:'차량 관리',p:'vehicle',plan:'paid'},{ic:'💸',l:'경비 관리',p:'expense',plan:'paid'},{ic:'📅',l:'달력',p:'schedule'}]},
+  {s:'운영',items:[{ic:'👤',l:'기사/직원',p:'drivers'},{ic:'🚗',l:'배차 관리',p:'dispatch'},{ic:'📋',l:'배차 히스토리',p:'dispatch_history'},{ic:'🌴',l:'휴가 관리',p:'leave',plan:'paid'},{ic:'🚗',l:'차량 관리',p:'vehicle',plan:'paid'},{ic:'💸',l:'경비 관리',p:'expense',plan:'paid'},{ic:'📅',l:'달력',p:'schedule'}]},
   {s:'정산2',items:[{ic:'📦',l:'배달 실적',p:'delivery_report',plan:'paid'},{ic:'🛒',l:'배달대행 정산',p:'delivery_platform',plan:'paid'},{ic:'⭐',l:'직원 평가',p:'evaluation',plan:'paid'}]},
   {s:'설정',items:[{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'📅',l:'시즌 단가표',p:'season'},{ic:'⏰',l:'연장 승인',p:'overtime',plan:'paid'},{ic:'📝',l:'위수탁 계약서',p:'contract'},{ic:'🗓',l:'근무표',p:'roster',plan:'paid'}]},
   {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices'}]}
@@ -7783,7 +7791,7 @@ function goPage(page){
   document.getElementById('topbar-right').innerHTML='';
   document.getElementById('sidebar').classList.remove('open');
   var _bd=document.getElementById('sb-backdrop');if(_bd)_bd.style.display='none';
-  var pages={settle:pageSettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,sa_events:pageSaEvents,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,leave:pageLeave,home:pageHome,emp_home:pageEmpHome,vehicle:pageVehicle,expense:pageExpense,overtime:pageOvertime,evaluation:pageEvaluation,delivery_report:pageDeliveryReport,delivery_platform:pageDeliveryPlatform};
+  var pages={settle:pageSettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,leave:pageLeave,home:pageHome,emp_home:pageEmpHome,vehicle:pageVehicle,expense:pageExpense,overtime:pageOvertime,evaluation:pageEvaluation,delivery_report:pageDeliveryReport,delivery_platform:pageDeliveryPlatform};
   var fn=pages[page];
   if(fn)fn();
   else document.getElementById('content').innerHTML='<div class="empty"><div class="empty-icon">🚧</div>준비 중</div>';
@@ -10986,6 +10994,125 @@ function confirmSubPay(planKey){
 // ════════════════════════════════════════════════════════
 // ★ 범용 정산 페이지 (시급/일급/수수료)
 // ════════════════════════════════════════════════════════
+
+// ════════════════════════════════════════════════════════
+// ★ 배차 결과 기사 앱 알림 발송
+// ════════════════════════════════════════════════════════
+async function notifyDispatchToDrivers(dispatchResult, routes){
+  if(!_db||!_CU) return;
+  var routeMap = {};
+  routes.forEach(function(r){ routeMap[r.id]=r; });
+
+  // 기사별 배정 라우트 그룹화
+  var driverRoutes = {};
+  Object.entries(dispatchResult).forEach(function(entry){
+    var routeId=entry[0], res=entry[1];
+    if(!res.driverId) return;
+    if(!driverRoutes[res.driverId]) driverRoutes[res.driverId]={name:res.driverName, routes:[]};
+    driverRoutes[res.driverId].routes.push(routeId);
+  });
+
+  var count = 0;
+  for(var driverId in driverRoutes){
+    var info = driverRoutes[driverId];
+    var routeStr = info.routes.slice(0,5).join(', ')+(info.routes.length>5?'...':'');
+    // Firestore driver_notifications에 알림 저장 (기사 앱에서 실시간 수신)
+    try{
+      await _db.collection('driver_notifications').add({
+        dealerId: _CU.dealerId,
+        targetDriverId: driverId,
+        targetDriverName: info.name,
+        type: 'dispatch',
+        title: '📦 오늘 배차 확정',
+        body: '담당 라우트: '+routeStr+' ('+info.routes.length+'개)',
+        routeIds: info.routes,
+        date: new Date().toISOString().slice(0,10),
+        isRead: false,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      count++;
+    }catch(e){ console.warn('[배차알림] 실패:', driverId, e); }
+  }
+  if(count>0) toast('📱 '+count+'명 기사에게 배차 알림 전송 완료');
+}
+
+// ════════════════════════════════════════════════════════
+// ★ 배차 히스토리 페이지
+// ════════════════════════════════════════════════════════
+function pageDispatchHistory(){
+  document.getElementById('page-title').textContent='📋 배차 히스토리';
+  var el=document.getElementById('content');
+  if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
+  el.innerHTML='<div class="loading">로딩 중...</div>';
+
+  _db.collection('dispatch_results')
+    .where('dealerId','==',_CU.dealerId||_CU.uid)
+    .orderBy('createdAt','desc').limit(30).get()
+    .then(function(snap){
+      if(snap.empty){
+        el.innerHTML='<div class="card"><div class="empty">'
+          +'<div class="empty-icon">📋</div>'
+          +'<div>배차 기록이 없습니다</div>'
+          +'<div style="font-size:11px;color:var(--text3);margin-top:6px">'
+          +'배차 관리 페이지에서 배차 후 저장하면 기록됩니다</div>'
+          +'<button onclick="goPage(\'dispatch\')" class="btn btn-blue" style="margin-top:12px">🚗 배차 하러 가기</button>'
+          +'</div></div>';
+        return;
+      }
+
+      var html='<div style="max-width:700px;margin:0 auto">';
+      snap.forEach(function(doc){
+        var d=doc.data();
+        var result=d.result||{};
+        var routeCount=Object.keys(result).length;
+        var balance=d.balance||{};
+        var ts=d.createdAt&&d.createdAt.toDate?d.createdAt.toDate():null;
+        var timeStr=ts?ts.toLocaleDateString('ko-KR')+' '+ts.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}):'';
+        var bColor=balance.balance>=80?'var(--green)':balance.balance>=60?'var(--amber)':'var(--red)';
+
+        html+='<div class="card" style="margin-bottom:10px">'
+          +'<div style="display:flex;justify-content:space-between;align-items:center">'
+          +'<div>'
+            +'<div style="font-size:14px;font-weight:700">📅 '+d.date+'</div>'
+            +'<div style="font-size:11px;color:var(--text3);margin-top:2px">'+timeStr+'</div>'
+          +'</div>'
+          +'<div style="display:flex;gap:12px;align-items:center">'
+            +'<div style="text-align:center"><div style="font-size:16px;font-weight:800">'+routeCount+'</div><div style="font-size:10px;color:var(--text3)">라우트</div></div>'
+            +'<div style="text-align:center"><div style="font-size:16px;font-weight:800;color:'+bColor+'">'+( balance.balance||'?')+'%</div><div style="font-size:10px;color:var(--text3)">균형도</div></div>'
+            +'<button class="btn btn-sm" style="background:var(--bg3);color:var(--text2)" onclick="var d=this.closest(\'.card\').querySelector(\'.hist-detail\');d.style.display=d.style.display===\'none\'?\'block\':\'none\';">상세 ▼</button>'
+          +'</div>'
+          +'</div>'
+          // 접힌 상세
+          +'<div class="hist-detail" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:10px">'
+          +'<table style="width:100%;border-collapse:collapse;font-size:12px">'
+          +'<thead><tr style="background:var(--bg3)">'
+          +'<th style="padding:5px 8px;text-align:left">라우트</th>'
+          +'<th style="padding:5px 8px;text-align:left">배정 기사</th>'
+          +'<th style="padding:5px 8px;text-align:center">점수</th>'
+          +'</tr></thead><tbody>';
+
+        Object.entries(result).slice(0,20).forEach(function(entry){
+          var routeId=entry[0], res=entry[1];
+          html+='<tr style="border-bottom:1px solid var(--border)">'
+            +'<td style="padding:5px 8px;font-weight:700;color:var(--teal)">'+routeId+'</td>'
+            +'<td style="padding:5px 8px">'+res.driverName+'</td>'
+            +'<td style="padding:5px 8px;text-align:center;color:'+(res.score>=80?'var(--green)':'var(--text2)')+'">'+res.score+'</td>'
+            +'</tr>';
+        });
+        if(Object.keys(result).length>20){
+          html+='<tr><td colspan="3" style="padding:5px 8px;text-align:center;color:var(--text3);font-size:11px">... 외 '+(Object.keys(result).length-20)+'건</td></tr>';
+        }
+        html+='</tbody></table></div></div>';
+      });
+      html+='</div>';
+      el.innerHTML=html;
+    })
+    .catch(function(e){
+      el.innerHTML='<div class="card"><div class="empty">❌ 로드 오류: '+e.message+'<br>'
+        +'<small>Firestore 인덱스가 필요할 수 있습니다. 콘솔에서 링크를 클릭하세요.</small></div></div>';
+    });
+}
+
 function pageDispatch(){
   document.getElementById('page-title').textContent='🚗 지능형 배차';
   var el=document.getElementById('content');
@@ -11049,7 +11176,10 @@ function pageDispatch(){
     html += '<div class="card" style="margin-bottom:12px">'
       +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
       +'<div class="ch"><span class="ct">🤖 AI 배차 결과 — '+today+'</span></div>'
-      +'<button class="btn btn-blue btn-sm" onclick="saveDispatchResult()">💾 저장</button>'
+      +'<div style="display:flex;gap:6px">'
+      +'<button class="btn btn-blue btn-sm" onclick="saveDispatchResult()">💾 저장 · 알림발송</button>'
+      +'<button class="btn btn-sm" style="background:var(--bg3);color:var(--text2)" onclick="goPage(\'dispatch_history\')">📋 히스토리</button>'
+      +'</div>'
       +'</div>'
       +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px">'
       +'<div style="text-align:center;padding:10px;background:var(--bg3);border-radius:8px">'
@@ -11151,6 +11281,8 @@ async function saveDispatchResult(){
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     toast('✅ 배차 결과 저장 완료 ('+r.date+')');
+    // 기사 앱 알림 발송
+    notifyDispatchToDrivers(r.result, r.routes).catch(function(){});
   }catch(e){
     toast('❌ 저장 실패: '+e.message);
   }
@@ -14014,5 +14146,31 @@ window.addEventListener('load',function(){
   </div>
 </div>
 
+<script>
+
+function _startDispatchListener(uid){
+  if(!window._db||!uid)return;
+  var td=new Date().toISOString().slice(0,10);
+  try{
+    window._db.collection('driver_notifications')
+      .where('targetDriverId','==',uid).where('type','==','dispatch')
+      .where('date','==',td).where('isRead','==',false).limit(3)
+      .onSnapshot(function(snap){
+        snap.docChanges().forEach(function(ch){
+          if(ch.type!=='added')return;
+          var d=ch.doc.data();
+          var bn=document.createElement('div');
+          bn.style.cssText='position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:9998;background:#1e40af;color:#fff;padding:14px 20px;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.4);min-width:260px;text-align:center;cursor:pointer;font-family:inherit';
+          bn.innerHTML='<div style="font-size:20px">📦</div><div style="font-size:14px;font-weight:800">'+(d.title||'배차 알림')+'</div><div style="font-size:12px;margin-top:4px;opacity:.9">'+(d.body||'')+'</div>';
+          bn.onclick=function(){bn.remove();if(window._db&&ch.doc.id)window._db.collection('driver_notifications').doc(ch.doc.id).update({isRead:true}).catch(function(){});};
+          document.body.appendChild(bn);
+          if(navigator.vibrate)navigator.vibrate([200,100,200]);
+          setTimeout(function(){if(bn.parentNode)bn.remove();},10000);
+        });
+      },function(e){console.warn('[배차알림]',e);});
+  }catch(e){console.warn('[배차알림시작]',e);}
+}
+
+</script>
 </body>
 </html>
