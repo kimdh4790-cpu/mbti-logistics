@@ -7398,21 +7398,30 @@ var MENUS_DRIVER = [
 ];
 var MENUS = MENUS_SETTLE; // 기본값
 function buildNav(){
+  if(!MENUS||!MENUS.length) return;
   var nav=document.getElementById('snav');
-  nav.innerHTML=MENUS.map(function(g,gi){
+  if(!nav) return;
+  var paid=typeof _isPaidUser==='function'?_isPaidUser():true;
+  var curPage=typeof _curPage!=='undefined'?_curPage:'';
+  var html='';
+  var hasAnyActive=MENUS.some(function(g){return g.items.some(function(m){return m.p===curPage;});});
+  MENUS.forEach(function(g,gi){
     var id='nsec-'+gi;
-    // 현재 페이지가 이 섹션에 있으면 기본 open
-    var hasActive=g.items.some(function(m){return m.p===_curPage;});
-    return '<div class="ns'+(hasActive?' open':'')
-      +'" onclick="_toggleNavSection(this,\''+id+'\')">'+
-      '<span>'+g.s+'</span><span class="ns-arrow">›</span></div>'+
-      '<div class="ns-items'+(hasActive?' open':'')+'" id="'+id+'">'+
-      g.items.map(function(m){
-        return '<div class="ni'+(m.p===_curPage?' on':'')+'" id="nav-'+m.p+'" onclick="goPage(\''+m.p+'\')">'+
-          '<span style="font-size:14px">'+m.ic+'</span><span>'+m.l+'</span></div>';
-      }).join('')+
-      '</div>';
-  }).join('');
+    var hasActive=g.items.some(function(m){return m.p===curPage;});
+    // 현재 페이지 없으면 첫 섹션 열기
+    var isOpen=hasActive||(gi===0&&!hasAnyActive);
+    html+='<div class="ns'+(isOpen?' open':'')+'" onclick="_toggleNavSection(this,\''+id+'\')" id="nshead-'+gi+'">'
+      +'<span>'+g.s+'</span><span class="ns-arrow">›</span></div>'
+      +'<div class="ns-items'+(isOpen?' open':'')+'" id="'+id+'">';
+    g.items.forEach(function(m){
+      var locked=(typeof PAID_PAGES!=='undefined')&&!paid&&PAID_PAGES.indexOf(m.p)>=0;
+      html+='<div class="ni'+(m.p===curPage?' on':'')+'" id="nav-'+m.p+'" data-page="'+m.p+'" onclick="goPage(this.dataset.page)"'
+        +(locked?' style="opacity:.55"':'')+'>'+
+        '<span style="font-size:14px">'+m.ic+'</span><span>'+m.l+(locked?' 🔒':'')+'</span></div>';
+    });
+    html+='</div>';
+  });
+  nav.innerHTML=html;
 }
 
 function _toggleNavSection(el,id){
