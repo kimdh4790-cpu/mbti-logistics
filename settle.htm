@@ -925,19 +925,62 @@ function _loadCompanyCfg(dealerId){
 }
 
 // 배달대행 정산
+// 배달대행 차액 정산법 (고정단가 / 앱실수령 차액)
+// 기사: 건수 × 고정단가 → 항상 이 금액 보장
+// 대리점: 앱실수령 - 기사지급 = 마진(+)손실(-)
+function _getDeliveryTierPrice(weekTotal, tiers, basePrice){
+  if(!tiers||!tiers.length) return basePrice||2900;
+  var sorted=tiers.slice().sort(function(a,b){return b.minCnt-a.minCnt;});
+  for(var i=0;i<sorted.length;i++){if(weekTotal>=sorted[i].minCnt)return sorted[i].price;}
+  return basePrice||2900;
+}
 function calcNet_delivery(x, cfg){
-  var calls = +x.dcnt||+x.callCnt||0;
-  var extra = +x.extraCnt||0;
-  var callPrice = cfg.callPrice||3500;
-  var extraPrice = cfg.extraPrice||0;
-  var programFee = cfg.programFee||0;
-  var gross = calls * callPrice + extra * extraPrice;
-  var taxRate = cfg.withhold==='3.3' ? 0.033 : 0;
-  var tax = Math.round(gross * taxRate);
-  var net = gross - tax - programFee;
-  return { gross:gross, tax:tax, net:Math.max(0,net), income:gross,
-           emp:0, work:0, deductions:tax+programFee,
-           label:'콜 '+calls+'건 × '+callPrice.toLocaleString()+'원' };
+  var weekTotal      = +x.weekTotal||+x.dcnt||+x.callCnt||0;
+  var actualEarnings = +x.actualEarnings||0;   // 앱 실수령
+  var nightCnt       = +x.nightCnt||0;
+  var missionAmt     = +x.missionAmt||0;
+  var eventAmt       = +x.eventAmt||0;
+  var tiers          = cfg.tiers||[];
+  var basePrice      = cfg.callPrice||2900;
+  var nightSurcharge = cfg.nightSurcharge||0;
+  var programFee     = cfg.programFee||0;
+  var taxRate        = cfg.withhold==='3.3'?0.033:0;
+
+  // 주간 건수 → 구간 단가 결정
+  var fixedPrice  = _getDeliveryTierPrice(weekTotal, tiers, basePrice);
+  // 기사 보장액 = 건수 × 고정단가
+  var driverGuarantee = weekTotal * fixedPrice;
+  // 심야 추가
+  var nightAddAmt = nightCnt * nightSurcharge;
+  var gross = driverGuarantee + nightAddAmt + missionAmt + eventAmt;
+  var tax   = Math.round(gross * taxRate);
+  var net   = gross - tax - programFee;
+
+  // 대리점 차액 계산 (앱실수령 입력 시)
+  var agencyMargin = 0, topUpAmt = 0, recoveryAmt = 0;
+  if(actualEarnings > 0){
+    agencyMargin  = actualEarnings - driverGuarantee;
+    topUpAmt      = agencyMargin < 0 ? Math.abs(agencyMargin) : 0;  // 대리점 보전
+    recoveryAmt   = agencyMargin > 0 ? agencyMargin : 0;             // 대리점 회수
+  }
+
+  var label = weekTotal+'건 × ₩'+fixedPrice.toLocaleString()+'/건(고정)'
+    +(actualEarnings>0 ? ' | 앱실수령 ₩'+actualEarnings.toLocaleString()
+      +(agencyMargin>=0 ? ' → 대리점 +₩'+recoveryAmt.toLocaleString()
+                        : ' → 대리점 -₩'+topUpAmt.toLocaleString()) : '')
+    +(nightCnt>0   ? ' | 심야 '+nightCnt+'건' : '')
+    +(missionAmt>0 ? ' | 미션 +₩'+missionAmt.toLocaleString() : '');
+
+  return {
+    gross:gross, tax:tax, net:Math.max(0,net), income:gross,
+    emp:0, work:0, deductions:tax+programFee,
+    // 차액 정산 전용 필드
+    fixedPrice:fixedPrice, driverGuarantee:driverGuarantee,
+    actualEarnings:actualEarnings, agencyMargin:agencyMargin,
+    topUpAmt:topUpAmt, recoveryAmt:recoveryAmt,
+    nightAddAmt:nightAddAmt,
+    label:label
+  };
 }
 
 // 소상공인 정산
@@ -3966,15 +4009,17 @@ function pageDeliveryPlatform(){
     +'</select></div>'
     +'<div class="fg"><label style="font-size:11px;color:var(--text3)">기본 배달건수</label>'
     +'<input id="pf-cnt" type="number" value="30" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:12px"></div>'
-    +'<div class="fg"><label style="font-size:11px;color:var(--text3)">미션 달성건</label>'
-    +'<input id="pf-mission" type="number" value="0" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:12px"></div>'
-    +'<div class="fg"><label style="font-size:11px;color:var(--text3)">악천후 건수</label>'
-    +'<input id="pf-weather" type="number" value="0" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:12px"></div>'
+    +'<div class="fg"><label style="font-size:11px;color:var(--text3);font-weight:700;color:#1d4ed8">📌 고정 계약단가(원/건)</label>'
+    +'<input id="pf-contract" type="number" placeholder="예: 5300" style="width:100%;padding:8px;border:2px solid #3b82f6;border-radius:8px;background:var(--bg);font-size:12px;font-weight:700"></div>'
+    +'<div class="fg"><label style="font-size:11px;color:#2563eb;font-weight:700">📱 앱 실수령(원) ← 차액계산</label>'
+    +'<input id="pf-actual" type="number" placeholder="0이면 차액계산 생략" style="width:100%;padding:8px;border:1px solid #93c5fd;border-radius:8px;background:#eff6ff;font-size:12px"></div>'
     +'<div class="fg"><label style="font-size:11px;color:var(--text3)">심야 건수</label>'
     +'<input id="pf-night" type="number" value="0" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:12px"></div>'
     +'<div class="fg"><label style="font-size:11px;color:var(--text3)">공휴일 건수</label>'
     +'<input id="pf-holiday" type="number" value="0" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:12px"></div>'
     +'</div>'
+    +'<div style="font-size:11px;color:#1d4ed8;background:#eff6ff;border-radius:8px;padding:8px 12px;margin-bottom:10px">'
+    +'💡 <strong>고정단가 정산법:</strong> 기사는 항상 건수×계약단가를 받습니다. 앱실수령이 낮으면 대리점이 보전, 높으면 차액을 회수합니다.</div>'
     +'<button onclick="_pfCalc()" class="btn btn-blue" style="width:100%;padding:10px;font-size:13px;font-weight:800">⚡ 이벤트 수당 포함 정산 계산</button>'
     +'<div id="pf-result" style="margin-top:12px"></div>'
     +'</div>'
@@ -4030,38 +4075,75 @@ function _pfCalc(){
   var pf=DELIVERY_PLATFORMS[pfKey];
   if(!pf)return;
   var g=function(id){return parseInt((document.getElementById(id)||{value:0}).value)||0;};
-  var cnt=g('pf-cnt'), mission=g('pf-mission');
-  var weather=g('pf-weather'), night=g('pf-night'), holiday=g('pf-holiday');
+  var cnt=g('pf-cnt'), night=g('pf-night'), holiday=g('pf-holiday');
+  var actualEarnings=parseInt((document.getElementById('pf-actual')||{value:0}).value)||0;
+  var contractPrice=parseInt((document.getElementById('pf-contract')||{value:0}).value)||pf.baseRate;
 
-  // 기본 배달료
-  var base=cnt*pf.baseRate;
-  // 추가수당
-  var bonus=calcDeliveryBonus(pfKey,{weather:weather>0,night:night>0,holiday:holiday>0,peak:false});
-  var weatherAmt=weather*((pf.peaks.find(function(p){return p.type==='weather';})||{amount:0}).amount||0);
-  var nightAmt=night*((pf.peaks.find(function(p){return p.type==='night';})||{amount:0}).amount||0);
-  var holidayAmt=holiday*((pf.peaks.find(function(p){return p.type==='holiday';})||{amount:0}).amount||0);
-  var totalBonus=weatherAmt+nightAmt+holidayAmt;
-  var totalGross=base+totalBonus;
+  // ── 차액 정산 계산 (이전 대화 정산법)
+  var driverGuarantee = cnt * contractPrice;               // 기사 보장액
+  var nightSurcharge  = (pf.peaks.find(function(p){return p.type==='night';})||{amount:0}).amount||0;
+  var holidaySurcharge= (pf.peaks.find(function(p){return p.type==='holiday';})||{amount:0}).amount||0;
+  var nightAmt        = night * nightSurcharge;
+  var holidayAmt      = holiday * holidaySurcharge;
+  var gross           = driverGuarantee + nightAmt + holidayAmt;
+  var commRate        = pf.commission>1 ? 0 : pf.commission;
+  var commFixed       = pf.commission>1 ? pf.commission : 0;
+  var tax             = pf.commission>1 ? cnt*commFixed : Math.round(gross*commRate);
+  var net             = gross - tax;
 
-  // 수수료 공제
-  var commDeduct=pf.commission>1?(cnt*pf.commission):Math.round(totalGross*pf.commission);
-  var net=totalGross-commDeduct;
+  // 대리점 차액
+  var agencyMargin    = actualEarnings > 0 ? actualEarnings - driverGuarantee : 0;
+  var isTopUp         = agencyMargin < 0;
 
   var result=document.getElementById('pf-result');
   if(!result)return;
-  result.innerHTML='<div style="background:var(--bg3);border-radius:12px;padding:14px">'
-    +'<div style="font-size:13px;font-weight:800;margin-bottom:10px">'+pf.icon+' '+pf.label+' 정산 내역</div>'
-    +'<table style="width:100%;border-collapse:collapse;font-size:12px">'
-    +'<tr><td style="padding:5px 0;color:var(--text3)">기본 배달료 ('+cnt+'건 × ₩'+pf.baseRate.toLocaleString()+')</td><td style="text-align:right;font-weight:700">₩'+base.toLocaleString()+'</td></tr>'
-    +(weatherAmt?'<tr><td style="padding:5px 0;color:var(--brand)">🌧 악천후 수당 ('+weather+'건)</td><td style="text-align:right;font-weight:700;color:var(--brand)">+₩'+weatherAmt.toLocaleString()+'</td></tr>':'')
-    +(nightAmt?'<tr><td style="padding:5px 0;color:#7c3aed">🌙 심야 수당 ('+night+'건)</td><td style="text-align:right;font-weight:700;color:#7c3aed">+₩'+nightAmt.toLocaleString()+'</td></tr>':'')
-    +(holidayAmt?'<tr><td style="padding:5px 0;color:#059669">🎌 공휴일 수당 ('+holiday+'건)</td><td style="text-align:right;font-weight:700;color:#059669">+₩'+holidayAmt.toLocaleString()+'</td></tr>':'')
-    +'<tr style="border-top:1px solid var(--border)"><td style="padding:6px 0;font-weight:700">지급 합계</td><td style="text-align:right;font-weight:900;color:var(--green)">₩'+totalGross.toLocaleString()+'</td></tr>'
-    +'<tr><td style="padding:5px 0;color:var(--red)">원천징수/수수료 공제</td><td style="text-align:right;color:var(--red)">-₩'+commDeduct.toLocaleString()+'</td></tr>'
-    +'<tr style="border-top:2px solid var(--brand)"><td style="padding:8px 0;font-size:15px;font-weight:900;color:var(--brand)">💳 실 지급액</td><td style="text-align:right;font-size:18px;font-weight:900;color:var(--brand)">₩'+net.toLocaleString()+'</td></tr>'
-    +'</table>'
-    +'<div style="margin-top:8px;font-size:10px;color:var(--text3)">정산주기: '+esc(pf.settleDay)+'</div>'
-    +'</div>';
+
+  var isAdmin = !(_CU&&(_CU.role==='driver'||_CU.role==='member'));
+  var html = '<div style="background:var(--bg3);border-radius:12px;padding:14px">'
+    +'<div style="font-size:13px;font-weight:800;margin-bottom:10px">'+pf.icon+' '+pf.label+' 정산 내역</div>';
+
+  if(isAdmin){
+    // ── 관리자 화면: 차액 정산 풀 내역
+    html+='<table style="width:100%;border-collapse:collapse;font-size:12px">'
+      +'<tr><td style="padding:5px 0;color:var(--text3)">📦 '+cnt+'건 × ₩'+contractPrice.toLocaleString()+'/건(계약단가)</td>'
+      +'<td style="text-align:right;font-weight:700">₩'+driverGuarantee.toLocaleString()+'</td><td style="padding-left:8px;font-size:10px;color:var(--text3)">기사 보장액</td></tr>';
+    if(actualEarnings>0){
+      html+='<tr><td style="padding:5px 0;color:#2563eb">📱 플랫폼 실수령</td>'
+        +'<td style="text-align:right;font-weight:700;color:#2563eb">₩'+actualEarnings.toLocaleString()+'</td>'
+        +'<td style="padding-left:8px;font-size:10px;color:var(--text3)">앱 입금액</td></tr>';
+      if(isTopUp){
+        html+='<tr><td style="padding:5px 0;color:var(--red)">📤 대리점 보전 (낮은콜)</td>'
+          +'<td style="text-align:right;font-weight:700;color:var(--red)">+₩'+Math.abs(agencyMargin).toLocaleString()+'</td>'
+          +'<td style="padding-left:8px;font-size:10px;color:var(--red)">실수령 &lt; 보장</td></tr>';
+      } else if(agencyMargin>0){
+        html+='<tr><td style="padding:5px 0;color:var(--green)">💰 대리점 회수 (높은콜)</td>'
+          +'<td style="text-align:right;font-weight:700;color:var(--green)">-₩'+agencyMargin.toLocaleString()+'</td>'
+          +'<td style="padding-left:8px;font-size:10px;color:var(--green)">실수령 &gt; 보장</td></tr>';
+      }
+    }
+    if(nightAmt)html+='<tr><td style="padding:5px 0;color:#7c3aed">🌙 심야 '+night+'건 할증</td><td style="text-align:right;font-weight:700;color:#7c3aed">+₩'+nightAmt.toLocaleString()+'</td><td></td></tr>';
+    if(holidayAmt)html+='<tr><td style="padding:5px 0;color:#059669">🎌 공휴일 '+holiday+'건 수당</td><td style="text-align:right;font-weight:700;color:#059669">+₩'+holidayAmt.toLocaleString()+'</td><td></td></tr>';
+    html+='<tr><td style="padding:5px 0;color:var(--red)">🏛 원천징수(3.3%)</td><td style="text-align:right;color:var(--red)">-₩'+tax.toLocaleString()+'</td><td></td></tr>'
+      +'<tr style="border-top:2px solid var(--brand)"><td style="padding:8px 0;font-size:14px;font-weight:900;color:var(--brand)">💳 최종 지급액</td>'
+      +'<td style="text-align:right;font-size:17px;font-weight:900;color:var(--brand)">₩'+net.toLocaleString()+'</td><td></td></tr>'
+      +'</table>';
+    if(actualEarnings>0){
+      var mc=isTopUp?'var(--red)':'var(--green)';
+      var ml=isTopUp?'🔴 -₩'+Math.abs(agencyMargin).toLocaleString()+' (보전 지출)':'🟢 +₩'+agencyMargin.toLocaleString()+' (차액 회수)';
+      html+='<div style="margin-top:8px;padding:8px 12px;background:'+(isTopUp?'var(--red-l)':'var(--green-l)')+';border-radius:8px;font-size:12px;font-weight:700;color:'+mc+'">'
+        +'대리점 마진: '+ml+'</div>';
+    }
+  } else {
+    // ── 기사 화면: 단순 보장액만 표시
+    html+='<div style="text-align:center;padding:12px 0">'
+      +'<div style="font-size:11px;color:var(--text3);margin-bottom:4px">이번 주 (고정 계약단가)</div>'
+      +'<div style="font-size:28px;font-weight:900;color:var(--brand)">₩'+net.toLocaleString()+'</div>'
+      +'<div style="font-size:12px;color:var(--text3);margin-top:4px">'+cnt+'건 × ₩'+contractPrice.toLocaleString()+'/건</div>'
+      +(tax?'<div style="font-size:11px;color:var(--red);margin-top:2px">원천징수(3.3%): -₩'+tax.toLocaleString()+'</div>':'')
+      +'</div>';
+  }
+  html+='<div style="margin-top:6px;font-size:10px;color:var(--text3)">정산주기: '+esc(pf.settleDay)+'</div>'+'</div>';
+  result.innerHTML=html;
 }
 
 function _pfLoadStats(did, ym){
@@ -5229,6 +5311,18 @@ function pageTaxShare(){
     +'<div class="card" style="margin-bottom:14px">'
     +'<div class="card-title" style="margin-bottom:12px">🧾 세무사 자료 공유</div>'
     +'<div style="font-size:12px;color:var(--text3);margin-bottom:14px">정산 데이터를 세무사에게 공유합니다. 공유 링크는 30일간 유효합니다.</div>'
+    // OCR 사진 등록
+    +'<div style="background:linear-gradient(135deg,#eff6ff,#f5f3ff);border:1px dashed var(--brand);border-radius:10px;padding:12px;margin-bottom:14px;text-align:center">'
+    +'<div style="font-size:12px;font-weight:700;color:var(--brand);margin-bottom:8px">📷 영수증·서류 사진으로 자동 인식</div>'
+    +'<input id="txs-ocr-cam" type="file" accept="image/*" capture="environment" style="display:none" onchange="window._txsOcr(\'cam\')">'
+    +'<input id="txs-ocr-gal" type="file" accept="image/*" style="display:none" onchange="window._txsOcr(\'gal\')">'
+    +'<div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap">'
+    +'<button onclick="document.getElementById(\'txs-ocr-cam\').click()" class="btn btn-blue" style="font-size:11px">📸 카메라 촬영</button>'
+    +'<button onclick="document.getElementById(\'txs-ocr-gal\').click()" class="btn" style="font-size:11px">🖼 갤러리 선택</button>'
+    +'</div>'
+    +'<div id="txs-ocr-status" style="font-size:11px;color:var(--text3);margin-top:6px"></div>'
+    +'<div id="txs-ocr-result" style="margin-top:8px"></div>'
+    +'</div>'
     +'<div style="display:flex;gap:8px;margin-bottom:12px">'
     +'<div style="flex:1"><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">정산 월</label>'
     +'<input id="txs-ym" type="month" value="'+ym+'" style="padding:7px;border:1px solid var(--border);border-radius:8px;font-size:13px;width:100%"></div>'
@@ -5252,20 +5346,23 @@ function pageTaxShare(){
     +'<div class="card-title" style="margin-bottom:12px">📋 공유 이력</div>'
     +'<div id="txs-history"><div style="font-size:12px;color:var(--text3)">로딩 중...</div></div>'
     +'</div></div>';
-  // 저장된 세무사 정보 로드
+  // 세무사 정보 로드
   _db.collection('companies').doc(did).get().then(function(snap){
     if(!snap.exists)return;
     var d=snap.data();
     if(d.taxEmail){var e=document.getElementById('txs-email');if(e)e.value=d.taxEmail;}
     if(d.taxName) {var n=document.getElementById('txs-name'); if(n)n.value=d.taxName;}
   }).catch(function(){});
-  // 공유 이력
-  _db.collection('taxShares').where('dealerId','==',did).orderBy('createdAt','desc').limit(10).get()
+  // 공유 이력 (orderBy 없이 - Firestore 인덱스 불필요)
+  _db.collection('taxShares').where('dealerId','==',did).limit(10).get()
     .then(function(snap){
       var hist=document.getElementById('txs-history');if(!hist)return;
       if(snap.empty){hist.innerHTML='<div style="font-size:12px;color:var(--text3)">공유 이력 없음</div>';return;}
+      var docs=snap.docs.slice().sort(function(a,b){
+        return (b.data().createdAt||'').localeCompare(a.data().createdAt||'');
+      });
       var rows='';
-      snap.forEach(function(doc){
+      docs.forEach(function(doc){
         var d=doc.data();
         var exp=d.expiresAt?new Date(d.expiresAt):null;
         var isExp=exp&&exp<new Date();
@@ -5284,6 +5381,45 @@ function pageTaxShare(){
       if(h)h.innerHTML='<div style="font-size:12px;color:var(--text3)">이력 로딩 실패 (인덱스 설정 필요)</div>';
     });
 }
+
+// ── 세무사 공유 OCR: 서류 사진 → AI 자동 인식 → 메모 자동 채움
+window._txsOcr=function(src){
+  var inp=document.getElementById(src==='cam'?'txs-ocr-cam':'txs-ocr-gal');
+  var file=inp&&inp.files&&inp.files[0];
+  if(!file)return;
+  var st=document.getElementById('txs-ocr-status');
+  var res=document.getElementById('txs-ocr-result');
+  if(st)st.innerHTML='⏳ AI 문서 분석 중...';
+  if(res)res.innerHTML='';
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    var base64=ev.target.result.split(',')[1];
+    fetch('/claude-ocr',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        image:base64,
+        mediaType:file.type||'image/jpeg',
+        prompt:'이 문서에서 세무사에게 필요한 정보를 추출하세요. JSON으로만 응답: {"ym":"YYYY-MM","desc":"문서 요약","amount":숫자또는0,"docType":"세금계산서/영수증/급여명세서/기타"}. 금액이 없으면 0.'
+      })
+    }).then(function(r){return r.json();})
+    .then(function(data){
+      var txt=(data.content&&data.content[0]&&data.content[0].text)||'{}';
+      try{
+        var parsed=JSON.parse(txt.replace(/```json|```/g,'').trim());
+        var memo='';
+        if(parsed.ym){var y=document.getElementById('txs-ym');if(y)y.value=parsed.ym;}
+        if(parsed.desc)memo+=parsed.desc;
+        if(parsed.amount>0)memo+=' (₩'+Number(parsed.amount).toLocaleString()+')';
+        if(memo){var m=document.getElementById('txs-memo');if(m&&!m.value.trim())m.value=memo;}
+        if(st)st.innerHTML='✅ 자동 인식 완료';
+        if(res)res.innerHTML='<div style="font-size:11px;background:var(--green-l);color:var(--green);padding:6px 10px;border-radius:6px">'
+          +'📄 '+esc(parsed.docType||'문서')+(parsed.amount>0?' · ₩'+Number(parsed.amount).toLocaleString():'')+'</div>';
+      }catch(e){if(st)st.innerHTML='⚠️ 인식 실패 — 수동 입력해 주세요.';}
+    }).catch(function(){if(st)st.innerHTML='⚠️ OCR 서버 오류';});
+  };
+  reader.readAsDataURL(file);
+};
 
 window._txsGenLink=function(){
   if(!_db||!_CU){toast('❌ 로그인 필요');return;}
@@ -7596,7 +7732,7 @@ function _viewMyStatement(el){var id=el.getAttribute('data-id');
 // 쿠팡 택배 전용
 var MENUS_SETTLE = [
   {s:'홈',   items:[{ic:'🏠',l:'대시보드',p:'home'}]},
-  {s:'정산', items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'📋',l:'정산 관리',p:'settlements'},{ic:'📈',l:'통계',p:'stats'},{ic:'📦',l:'배달 실적',p:'delivery_report'}]},
+  {s:'정산', items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'📋',l:'정산 관리',p:'settlements'},{ic:'📈',l:'통계',p:'stats'},{ic:'📦',l:'배달 실적',p:'delivery_report'},{ic:'🛵',l:'배달대행 정산',p:'delivery_platform'}]},
   {s:'운영', items:[{ic:'👤',l:'기사 관리',p:'drivers'},{ic:'🌴',l:'휴가 관리',p:'leave',plan:'paid'},{ic:'🚗',l:'차량 관리',p:'vehicle',plan:'paid'},{ic:'💸',l:'경비 관리',p:'expense',plan:'paid'},{ic:'📅',l:'달력',p:'schedule'}]},
   {s:'설정', items:[{ic:'⏰',l:'연장 승인',p:'overtime',plan:'paid'},{ic:'📝',l:'위수탁 계약서',p:'contract'},{ic:'🗓',l:'근무표',p:'roster',plan:'paid'},{ic:'🔐',l:'QR 출퇴근',p:'attendance',plan:'paid'},{ic:'💼',l:'급여 현황',p:'hourly_settle',plan:'paid'},{ic:'🧾',l:'세무사 공유',p:'tax_share',plan:'paid'}]},
   {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices'}]}
@@ -7610,7 +7746,7 @@ var MENUS_QR = [
 // 풀패키지 (택배+QR+배달대행)
 var MENUS_FULL = [
   {s:'홈',   items:[{ic:'🏠',l:'대시보드',p:'home'}]},
-  {s:'정산', items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'📋',l:'정산 관리',p:'settlements'},{ic:'📈',l:'통계',p:'stats'},{ic:'📦',l:'배달 실적',p:'delivery_report'},{ic:'🛒',l:'배달대행 정산',p:'delivery_platform',plan:'paid'}]},
+  {s:'정산', items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'📋',l:'정산 관리',p:'settlements'},{ic:'📈',l:'통계',p:'stats'},{ic:'📦',l:'배달 실적',p:'delivery_report'},{ic:'🛵',l:'배달대행 정산',p:'delivery_platform'}]},
   {s:'운영', items:[{ic:'👤',l:'기사/직원',p:'drivers'},{ic:'🌴',l:'휴가 관리',p:'leave',plan:'paid'},{ic:'🚗',l:'차량 관리',p:'vehicle',plan:'paid'},{ic:'💸',l:'경비 관리',p:'expense',plan:'paid'},{ic:'⭐',l:'직원 평가',p:'evaluation',plan:'paid'},{ic:'📅',l:'달력',p:'schedule'}]},
   {s:'유료', items:[{ic:'🚗',l:'배차 관리',p:'dispatch',plan:'paid'},{ic:'📋',l:'배차 히스토리',p:'dispatch_history',plan:'paid'}]},
   {s:'설정', items:[{ic:'⏰',l:'연장 승인',p:'overtime',plan:'paid'},{ic:'📝',l:'위수탁 계약서',p:'contract'},{ic:'🗓',l:'근무표',p:'roster',plan:'paid'},{ic:'🔐',l:'QR 출퇴근',p:'attendance',plan:'paid'},{ic:'💼',l:'급여 현황',p:'hourly_settle',plan:'paid'},{ic:'🧾',l:'세무사 공유',p:'tax_share',plan:'paid'}]},
@@ -11040,12 +11176,17 @@ function pageSeason(tabMode){
         +'배송건수 × 시즌단가 = 소계 (배송=반품 단가 동일)'
         +'</div>';
       el.appendChild(infoDiv);
-      // + 기간 추가 버튼
+      // + 기간 추가 / 파일 일괄 등록 버튼
       var addRow=document.createElement('div');
-      addRow.style.cssText='display:flex;justify-content:flex-end;margin-bottom:10px';
+      addRow.style.cssText='display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px';
+      // 파일 일괄 등록
+      var fileBtn=document.createElement('button');fileBtn.className='btn';
+      fileBtn.style.cssText='background:#7c3aed;color:#fff;border:none';
+      fileBtn.innerHTML='📥 엑셀/파일 일괄 등록';
+      fileBtn.onclick=function(){_openSeasonImportModal();};
       var addBtn=document.createElement('button');addBtn.className='btn btn-blue';
       addBtn.innerHTML='+ 시즌 기간 추가';addBtn.onclick=function(){openAddSeasonPeriod();};
-      addRow.appendChild(addBtn);el.appendChild(addRow);
+      addRow.appendChild(fileBtn);addRow.appendChild(addBtn);el.appendChild(addRow);
       _renderSeasonSection(el);
     }).catch(function(e){logError('시즌단가표',e.message);el.innerHTML='<div class="empty">❌ '+e.message+'</div>';});
 }
@@ -11101,6 +11242,182 @@ function _renderSeasonSection(container){
   container.appendChild(wrap);
 }
 function openAddSeasonPeriod(){_openSeasonModal(null,-1);}
+
+// ── 시즌 단가표 파일 일괄 등록 모달
+function _openSeasonImportModal(){
+  var old=document.getElementById('mo-season-import');if(old)old.remove();
+  var mo=document.createElement('div');mo.className='mo show';mo.id='mo-season-import';
+  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  var d=document.createElement('div');d.className='md';d.style.maxWidth='540px';
+  d.innerHTML='<div class="mdt">📥 시즌 단가표 파일 일괄 등록</div>'
+    +'<div style="padding:16px;display:flex;flex-direction:column;gap:14px">'
+    // 포맷 안내
+    +'<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px;font-size:11px;line-height:1.8">'
+    +'<div style="font-weight:700;color:#1d4ed8;margin-bottom:6px">📋 지원 파일 형식</div>'
+    +'<div><strong>엑셀 (.xlsx)</strong> — 각 시트 = 하나의 시즌 기간</div>'
+    +'<div style="color:var(--text3)">시트명 형식: <code>기간명|YYYY-MM-DD~YYYY-MM-DD</code></div>'
+    +'<div style="color:var(--text3)">예: <code>재계약1차|2026-05-26~2026-05-31</code></div>'
+    +'<div style="color:var(--text3)">시트 내용: A열=라우트, B열=단가(숫자)</div>'
+    +'<br>'
+    +'<div><strong>텍스트/CSV (.txt, .csv)</strong> — 단일 시즌 기간</div>'
+    +'<div style="color:var(--text3)">1행: <code>#기간명|2026-05-26~2026-05-31</code></div>'
+    +'<div style="color:var(--text3)">이후 행: <code>라우트명,단가</code> (예: D1,5300)</div>'
+    +'<br>'
+    +'<button onclick="window._seasonDownloadTemplate()" class="btn btn-sm" style="font-size:10px">📄 엑셀 템플릿 다운로드</button>'
+    +'</div>'
+    // 파일 선택
+    +'<div>'
+    +'<label style="font-size:12px;font-weight:700;display:block;margin-bottom:6px">파일 선택</label>'
+    +'<input id="season-import-file" type="file" accept=".xlsx,.xls,.txt,.csv"'
+    +' style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg)">'
+    +'</div>'
+    +'<div id="season-import-preview" style="min-height:20px"></div>'
+    +'</div>'
+    +'<div class="mdf">'
+    +'<button class="btn" onclick="this.closest(\'.mo\').remove()">취소</button>'
+    +'<button class="btn btn-blue" onclick="window._seasonImportExecute()">💾 등록</button>'
+    +'</div>';
+  mo.appendChild(d);document.getElementById('modals').appendChild(mo);
+
+  // 파일 선택 시 미리보기
+  setTimeout(function(){
+    var fi=document.getElementById('season-import-file');
+    if(fi)fi.onchange=function(){window._seasonImportPreview(this.files[0]);};
+  },100);
+}
+
+// 파일 미리보기 파싱
+window._seasonImportPreview=function(file){
+  var prev=document.getElementById('season-import-preview');
+  if(!file||!prev)return;
+  prev.innerHTML='<div style="font-size:11px;color:var(--text3)">⏳ 파싱 중...</div>';
+  var ext=file.name.split('.').pop().toLowerCase();
+  var reader=new FileReader();
+
+  if(ext==='xlsx'||ext==='xls'){
+    reader.onload=function(ev){
+      try{
+        var wb=XLSX.read(ev.target.result,{type:'array'});
+        var parsed=[];
+        wb.SheetNames.forEach(function(sn){
+          var parts=sn.split('|');
+          var label=parts[0].trim();
+          var range=(parts[1]||'').trim();
+          var dates=range.split('~');
+          var start=(dates[0]||'').trim();
+          var end  =(dates[1]||'').trim();
+          var ws=wb.Sheets[sn];
+          var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+          var prices={};
+          rows.forEach(function(row){
+            var route=String(row[0]||'').trim();
+            var price=parseFloat(row[1])||0;
+            if(route&&price>0)prices[route]=price;
+          });
+          if(label&&Object.keys(prices).length>0){
+            parsed.push({id:'si'+Date.now()+'_'+Math.random().toString(36).slice(2,5),
+              label:label, start:start, end:end, prices:prices});
+          }
+        });
+        window._seasonImportParsed=parsed;
+        _showSeasonImportPreview(parsed,prev);
+      }catch(e){prev.innerHTML='<div style="color:var(--red);font-size:12px">❌ 엑셀 파싱 오류: '+esc(e.message)+'</div>';}
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    // TXT / CSV
+    reader.onload=function(ev){
+      try{
+        var lines=ev.target.result.split(/\r?\n/).filter(function(l){return l.trim();});
+        var label='시즌',start='',end='';
+        var prices={};
+        lines.forEach(function(line){
+          line=line.trim();
+          if(line.startsWith('#')){
+            var hdr=line.slice(1).split('|');
+            label=hdr[0].trim();
+            var dates=(hdr[1]||'').split('~');
+            start=(dates[0]||'').trim();
+            end  =(dates[1]||'').trim();
+          } else {
+            var cols=line.split(/[,\t]/);
+            var route=(cols[0]||'').trim();
+            var price=parseFloat(cols[1])||0;
+            if(route&&price>0)prices[route]=price;
+          }
+        });
+        var parsed=[];
+        if(Object.keys(prices).length>0){
+          parsed.push({id:'si'+Date.now(),label:label,start:start,end:end,prices:prices});
+        }
+        window._seasonImportParsed=parsed;
+        _showSeasonImportPreview(parsed,prev);
+      }catch(e){prev.innerHTML='<div style="color:var(--red);font-size:12px">❌ 파싱 오류: '+esc(e.message)+'</div>';}
+    };
+    reader.readAsText(file,'utf-8');
+  }
+};
+
+function _showSeasonImportPreview(parsed,prev){
+  if(!parsed||!parsed.length){
+    prev.innerHTML='<div style="color:var(--red);font-size:12px">❌ 인식된 시즌 기간이 없습니다. 파일 형식을 확인하세요.</div>';
+    return;
+  }
+  var html='<div style="background:var(--green-l);border-radius:8px;padding:10px;font-size:12px">'
+    +'<div style="font-weight:700;color:var(--green);margin-bottom:8px">✅ '+parsed.length+'개 기간 인식됨</div>';
+  parsed.forEach(function(p){
+    var cnt=Object.keys(p.prices).length;
+    html+='<div style="padding:6px 0;border-bottom:1px solid var(--border)">'
+      +'<strong>'+esc(p.label)+'</strong>'
+      +(p.start?' <span style="color:var(--text3);font-size:11px">'+p.start+' ~ '+p.end+'</span>':'')
+      +'<span style="float:right;color:var(--text3);font-size:11px">'+cnt+'개 라우트</span>'
+      +'</div>';
+    // 단가 미리보기 (최대 5개)
+    var routes=Object.keys(p.prices).sort().slice(0,5);
+    html+='<div style="display:flex;flex-wrap:wrap;gap:4px;padding:4px 0">'
+      +routes.map(function(r){
+        return '<span style="background:#fef3c7;color:#b45309;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700">'+r+' ₩'+p.prices[r].toLocaleString()+'</span>';
+      }).join('')
+      +(Object.keys(p.prices).length>5?'<span style="font-size:10px;color:var(--text3)">+'+( Object.keys(p.prices).length-5)+'개...</span>':'')
+      +'</div>';
+  });
+  html+='</div>';
+  prev.innerHTML=html;
+}
+
+// 실제 등록 실행
+window._seasonImportExecute=function(){
+  var parsed=window._seasonImportParsed;
+  if(!parsed||!parsed.length){toast('❌ 먼저 파일을 선택해 주세요');return;}
+  // 기존과 병합 (같은 label이면 덮어쓰기)
+  parsed.forEach(function(p){
+    var idx=SEASON_PRICES.findIndex(function(s){return s.label===p.label;});
+    if(idx>=0) SEASON_PRICES[idx]=p;
+    else SEASON_PRICES.push(p);
+  });
+  _saveSeasonPrices(function(){
+    toast('✅ '+parsed.length+'개 시즌 기간 등록 완료');
+    var mo=document.getElementById('mo-season-import');if(mo)mo.remove();
+    window._seasonImportParsed=null;
+    pageSeason();
+  });
+};
+
+// 엑셀 템플릿 다운로드
+window._seasonDownloadTemplate=function(){
+  var wb=XLSX.utils.book_new();
+  // 예시 시트 1
+  var routes=Object.keys(RPRICE).sort();
+  var data1=[['라우트','단가(원/건)']].concat(routes.map(function(r){return[r,RPRICE[r]||0];}));
+  var ws1=XLSX.utils.aoa_to_sheet(data1);
+  XLSX.utils.book_append_sheet(wb,ws1,'재계약1차|2026-05-26~2026-05-31');
+  // 예시 시트 2
+  var data2=[['라우트','단가(원/건)']].concat(routes.map(function(r){return[r,RPRICE[r]||0];}));
+  var ws2=XLSX.utils.aoa_to_sheet(data2);
+  XLSX.utils.book_append_sheet(wb,ws2,'재계약2차|2026-06-01~2026-06-25');
+  XLSX.writeFile(wb,'시즌단가표_템플릿.xlsx');
+  toast('📄 템플릿 다운로드됨');
+};
 function openEditSeasonPeriod(idx){_openSeasonModal(SEASON_PRICES[idx],idx);}
 function deleteSeasonPeriod(idx){
   if(!confirm(SEASON_PRICES[idx].label+' 삭제?'))return;
