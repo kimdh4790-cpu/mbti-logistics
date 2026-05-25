@@ -11918,6 +11918,18 @@ async function selfResetPwSave(){
   }, 2000);
 }
 
+
+// ★ 긴급 잠금 해제 (URL에 ?unlock=1 추가 시)
+(function(){
+  if(location.search.includes('unlock=1')){
+    localStorage.removeItem('mbti_lock');
+    console.log('[UNLOCK] 로그인 잠금 해제됨');
+    var u=new URL(location.href);u.searchParams.delete('unlock');
+    history.replaceState(null,'',u.toString());
+    if(typeof toast==='function') setTimeout(function(){toast('🔓 잠금 해제됨');},1000);
+  }
+})();
+
 function doLogin(){
   // ── 보안: 로그인 실패 횟수 제한
   var lockKey='mbti_lock';
