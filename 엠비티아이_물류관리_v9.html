@@ -11987,7 +11987,7 @@ function doLogin(){
     };
     var _aDone=false;
     var _aFb=function(){if(_aDone)return;_aDone=true;_doAdminCheck(JSON.parse(localStorage.getItem('mbti_admin_info')||'{}'));};
-    var _aT=setTimeout(_aFb,3000);
+    var _aT=setTimeout(_aFb,8000); // Firebase 초기화 대기 (8초)
     if(FB&&_db){
       _fsGetCached('settings/adminInfo',60).then(function(doc){
         clearTimeout(_aT);if(_aDone)return;_aDone=true;
@@ -27496,7 +27496,31 @@ function startListeners(){
   }
   _listenersInitDone=true;
   _initialLoad=true;
-  if(!FB||!_db){_listenersInitDone=false;return;}
+  if(!FB||!_db){
+    // ★ Firebase 아직 준비 중 → 최대 10초 대기 후 자동 재시도
+    _listenersInitDone=false;
+    var _retryCount=(window._startListenersRetry||0)+1;
+    window._startListenersRetry=_retryCount;
+    if(_retryCount<=10){
+      console.log('[startListeners] Firebase 준비 대기 ('+_retryCount+'/10)...');
+      setTimeout(function(){
+        if(FB&&_db){
+          console.log('[startListeners] Firebase 준비 완료 — 재시작');
+          window._startListenersRetry=0;
+          startListeners();
+          // 현재 페이지 새로고침
+          setTimeout(function(){
+            if(S.page&&typeof SP==='function') SP(S.page,null);
+            if(typeof updBadge==='function') updBadge();
+          }, 800);
+        }
+      }, 1000);
+    } else {
+      console.warn('[startListeners] Firebase 10초 내 미연결 — 오프라인 모드');
+      window._startListenersRetry=0;
+    }
+    return;
+  }
   // ★ v9.25: 기존 리스너 해제 후 300ms 대기 → Firebase 내부 정리 완료 보장
   // disableNetwork/enableNetwork 제거 (오히려 Target ID 충돌 유발)
   _unsubAll();
