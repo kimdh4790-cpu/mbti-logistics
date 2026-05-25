@@ -1605,7 +1605,30 @@ function showCpCamp(campName){
       +'<td>'+priceInps+'</td>'
       +'<td><button onclick="saveSingleCp('+i+')" style="background:'+col+';color:#fff'
         +';border:none;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">저장</button></td>'
-      +'</tr>';
+      +'</tr>'
+      // 관리자용 콜 구간별 단가 입력 행
+      +(function(){
+        if(!(_CU&&!(_CU.role==='driver'||_CU.role==='member'))) return '';
+        var groups=s.callGroups||[{actualPrice:'',cnt:''}];
+        var groupHtml='<tr id="cg-expand-'+did+'" style="display:none"><td colspan="8" style="padding:0">'
+          +'<div style="padding:8px 12px;background:#fffbeb;border-bottom:1px solid var(--border)">'
+          +'<div style="font-size:11px;font-weight:700;color:#b45309;margin-bottom:8px">📊 콜 단가 구간 입력 (차액 계산용)</div>'
+          +'<div data-cg-driver="'+did+'" id="cg-rows-'+did+'">';
+        groups.forEach(function(g,i){
+          groupHtml+='<div class="cg-row gr" style="gap:6px;margin-bottom:5px">'
+            +'<div class="fg"><label style="font-size:10px">앱 실제 단가(원)</label>'
+            +'<input class="cg-price" type="number" value="'+(g.actualPrice||'')+'" placeholder="예:3200" style="padding:4px;border:1px solid var(--border);border-radius:4px;font-size:12px;width:100%"></div>'
+            +'<div class="fg"><label style="font-size:10px">해당 건수</label>'
+            +'<input class="cg-cnt" type="number" value="'+(g.cnt||'')+'" placeholder="건" style="padding:4px;border:1px solid var(--border);border-radius:4px;font-size:12px;width:100%"></div>'
+            +'<button class="btn btn-sm" style="color:var(--red);margin-top:18px" onclick="this.parentNode.remove()">×</button>'
+            +'</div>';
+        });
+        groupHtml+='</div>'
+          +'<button class="btn btn-sm" style="font-size:11px;margin-top:4px" data-did="'+did+'" onclick="_addCgRow(this.dataset.did)">+ 구간 추가</button>'
+          +'<div style="font-size:10px;color:var(--text3);margin-top:4px">※ 단가×건수 합계 = 앱실수령액과 맞춰주세요</div>'
+          +'</div></td></tr>';
+        return groupHtml;
+      })()
   });
   document.getElementById('cp-camp-content').innerHTML=
     '<div class="card"><div class="card-header">'
@@ -7361,10 +7384,21 @@ function _viewMyStatement(el){var id=el.getAttribute('data-id');
 // 서비스 타입별 메뉴 정의
 // 쿠팡 정산 전용 (출퇴근X, 위수탁계약서O)
 var MENUS_SETTLE = [
-  {s:'정산',items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'📋',l:'정산 관리',p:'settlements'},{ic:'📈',l:'통계',p:'stats'}]},
-  {s:'운영',items:[{ic:'👤',l:'기사 관리',p:'drivers'},{ic:'🔐',l:'QR 출퇴근',p:'attendance'},{ic:'💰',l:'급여 현황',p:'hourly_settle'},{ic:'🚗',l:'배차 관리',p:'dispatch'},{ic:'📋',l:'배차 히스토리',p:'dispatch_history'},{ic:'📅',l:'달력',p:'schedule'}]},
-  {s:'설정',items:[{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'📅',l:'시즌 단가표',p:'season'},{ic:'📝',l:'위수탁 계약서',p:'contract'},{ic:'🗓',l:'근무표',p:'roster'},{ic:'🌴',l:'휴가 관리',p:'leave'},{ic:'🚗',l:'차량 관리',p:'vehicle'},{ic:'💸',l:'경비 관리',p:'expense'},{ic:'⏰',l:'연장 승인',p:'overtime'}]},
-  {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices'}]}
+  {s:'home',items:[{ic:'🏠',l:'대시보드',p:'home'}]},
+  {s:'settle',items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'📋',l:'정산 관리',p:'settlements'},{ic:'📈',l:'통계',p:'stats'}]},
+  {s:'operation',items:[{ic:'👤',l:'기사 관리',p:'drivers'},{ic:'🚗',l:'배차 관리',p:'dispatch'},{ic:'📅',l:'달력',p:'schedule'},{ic:'📢',l:'공지',p:'notices'}]},
+  {s:'settings',items:[{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'📅',l:'시즌 단가표',p:'season'}]},
+  {s:'paid',items:[
+    {ic:'🔐',l:'QR 출퇴근',p:'attendance',plan:'paid'},
+    {ic:'💰',l:'급여 현황',p:'hourly_settle',plan:'paid'},
+    {ic:'🌴',l:'휴가 관리',p:'leave',plan:'paid'},
+    {ic:'🚗',l:'차량 관리',p:'vehicle',plan:'paid'},
+    {ic:'💸',l:'경비 관리',p:'expense',plan:'paid'},
+    {ic:'⏰',l:'연장 승인',p:'overtime',plan:'paid'},
+    {ic:'📝',l:'위수탁 계약서',p:'contract',plan:'paid'},
+    {ic:'🗓',l:'근무표',p:'roster',plan:'paid'},
+    {ic:'🧾',l:'세무사 공유',p:'tax_share',plan:'paid'}
+  ]}
 ];
 // QR 출퇴근 전용 (일반직원, 위수탁X)
 var MENUS_QR = [
@@ -7374,10 +7408,22 @@ var MENUS_QR = [
 ];
 // 풀패키지 (택배+QR, 위수탁O)
 var MENUS_FULL = [
-  {s:'정산',items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'🛵',l:'배달대행 정산',p:'delivery_platform'},{ic:'📋',l:'정산 관리',p:'settlements'},{ic:'📈',l:'통계',p:'stats'}]},
-  {s:'운영',items:[{ic:'👤',l:'기사/직원',p:'drivers'},{ic:'🔐',l:'QR 출퇴근',p:'attendance'},{ic:'💰',l:'급여 현황',p:'hourly_settle'},{ic:'🚗',l:'배차 관리',p:'dispatch'},{ic:'📋',l:'배차 히스토리',p:'dispatch_history'},{ic:'📅',l:'달력',p:'schedule'}]},
-  {s:'설정',items:[{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'📅',l:'시즌 단가표',p:'season'},{ic:'📝',l:'위수탁 계약서',p:'contract'},{ic:'🗓',l:'근무표',p:'roster'},{ic:'🌴',l:'휴가 관리',p:'leave'},{ic:'🚗',l:'차량 관리',p:'vehicle'},{ic:'💸',l:'경비 관리',p:'expense'},{ic:'⏰',l:'연장 승인',p:'overtime'},{ic:'⭐',l:'직원 평가',p:'evaluation'}]},
-  {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices'}]}
+  {s:'home',items:[{ic:'🏠',l:'대시보드',p:'home'}]},
+  {s:'settle',items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'🛵',l:'배달대행 정산',p:'delivery_platform'},{ic:'📋',l:'정산 관리',p:'settlements'},{ic:'📈',l:'통계',p:'stats'}]},
+  {s:'operation',items:[{ic:'👤',l:'기사/직원',p:'drivers'},{ic:'🚗',l:'배차 관리',p:'dispatch'},{ic:'📋',l:'배차 히스토리',p:'dispatch_history'},{ic:'📅',l:'달력',p:'schedule'},{ic:'📢',l:'공지',p:'notices'}]},
+  {s:'settings',items:[{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'📅',l:'시즌 단가표',p:'season'}]},
+  {s:'paid',items:[
+    {ic:'🔐',l:'QR 출퇴근',p:'attendance',plan:'paid'},
+    {ic:'💰',l:'급여 현황',p:'hourly_settle',plan:'paid'},
+    {ic:'🌴',l:'휴가 관리',p:'leave',plan:'paid'},
+    {ic:'🚗',l:'차량 관리',p:'vehicle',plan:'paid'},
+    {ic:'💸',l:'경비 관리',p:'expense',plan:'paid'},
+    {ic:'⏰',l:'연장 승인',p:'overtime',plan:'paid'},
+    {ic:'📝',l:'위수탁 계약서',p:'contract',plan:'paid'},
+    {ic:'🗓',l:'근무표',p:'roster',plan:'paid'},
+    {ic:'⭐',l:'직원 평가',p:'evaluation',plan:'paid'},
+    {ic:'🧾',l:'세무사 공유',p:'tax_share',plan:'paid'}
+  ]}
 ];
 // ★ 소상공인/사장님 전용 (시급·일급·월급 정산)
 var MENUS_HOURLY = [
@@ -7395,24 +7441,30 @@ var MENUS_DRIVER = [
 ];
 var MENUS = MENUS_SETTLE; // 기본값
 function buildNav(){
-  if(!MENUS||!MENUS.length) return;
+  if(!MENUS||!MENUS.length)return;
   var nav=document.getElementById('snav');
-  if(!nav) return;
-  var paid=typeof _isPaidUser==='function'?_isPaidUser():true;
+  if(!nav)return;
   var curPage=typeof _curPage!=='undefined'?_curPage:'';
+  var hasPaidPlan=window._cachedHasPaid===true||(_CU&&(_CU.plan==='paid'||_CU.settlePaid===true))||isSuperAdmin();
   var html='';
-  var hasAnyActive=MENUS.some(function(g){return g.items.some(function(m){return m.p===curPage;});});
+  var sLabels={home:'홈',settle:'정산',operation:'운영',settings:'설정'};
   MENUS.forEach(function(g,gi){
     var id='nsec-'+gi;
     var hasActive=g.items.some(function(m){return m.p===curPage;});
-    // 현재 페이지 없으면 첫 섹션 열기
-    var isOpen=hasActive||(gi===0&&!hasAnyActive);
-    html+='<div class="ns'+(isOpen?' open':'')+'" onclick="_toggleNavSection(this,\''+id+'\')" id="nshead-'+gi+'">'
-      +'<span>'+g.s+'</span><span class="ns-arrow">›</span></div>'
-      +'<div class="ns-items'+(isOpen?' open':'')+'" id="'+id+'">';
+    var isPaidSec=g.s==='paid';
+    var hasAny=MENUS.some(function(x){return x.items.some(function(m){return m.p===curPage;});});
+    var isOpen=hasActive||(gi===0&&!hasAny);
+    if(isPaidSec){
+      html+='<div style="margin:8px 0 4px;padding:6px 12px;font-size:10px;font-weight:700;color:var(--text3);border-top:1px solid var(--border)">'+(hasPaidPlan?'— 유료 기능':'— 유료 기능 🔒')+'</div>';
+      html+='<div id="'+id+'">';
+    } else {
+      html+='<div class="ns'+(isOpen?' open':'')+'" onclick="_toggleNavSection(this,\''+id+'\')" id="nshead-'+gi+'">'+'<span>'+(sLabels[g.s]||g.s)+'</span><span class="ns-arrow">›</span></div>';
+      html+='<div class="ns-items'+(isOpen?' open':'')+'" id="'+id+'">';
+    }
     g.items.forEach(function(m){
-      html+='<div class="ni'+(m.p===curPage?' on':'')+'" id="nav-'+m.p+'" data-page="'+m.p+'" onclick="goPage(this.dataset.page)">'+
-        '<span style="font-size:14px">'+m.ic+'</span><span>'+m.l+'</span></div>';
+      var locked=isPaidSec&&!hasPaidPlan;
+      html+='<div class="ni'+(m.p===curPage?' on':'')+'" id="nav-'+m.p+'" data-page="'+m.p+'" onclick="goPage(this.dataset.page)"'+(locked?' style="opacity:.5"':'')+'>'+
+        '<span style="font-size:14px">'+m.ic+'</span><span>'+m.l+(locked?' 🔒':'')+'</span></div>';
     });
     html+='</div>';
   });
@@ -7631,7 +7683,7 @@ function goPage(page){
   document.getElementById('topbar-right').innerHTML='';
   document.getElementById('sidebar').classList.remove('open');
   var _bd=document.getElementById('sb-backdrop');if(_bd)_bd.style.display='none';
-  var pages={settle:pageSettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,dispatch_history:pageDispatchHistory,sa_events:pageSaEvents,delivery_platform:pageDeliveryPlatform,leave:pageLeave,home:pageHome,emp_home:pageEmpHome,vehicle:pageVehicle,expense:pageExpense,overtime:pageOvertime,evaluation:pageEvaluation,delivery_report:pageDeliveryReport,delivery_platform:pageDeliveryPlatform};
+  var pages={settle:pageSettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,dispatch_history:pageDispatchHistory,sa_events:pageSaEvents,delivery_platform:pageDeliveryPlatform,leave:pageLeave,home:pageHome,emp_home:pageEmpHome,vehicle:pageVehicle,expense:pageExpense,overtime:pageOvertime,evaluation:pageEvaluation,delivery_report:pageDeliveryReport,delivery_platform:pageDeliveryPlatform};
   var fn=pages[page];
   if(fn)fn();
   else document.getElementById('content').innerHTML='<div class="empty"><div class="empty-icon">🚧</div>준비 중</div>';
@@ -13758,6 +13810,8 @@ function _renderDeliveryInput(el,cfg){
           :'<input data-driver="'+did+'" data-field="missionAmt" type="number" value="'+(s.missionAmt||'')+'" placeholder="0" style="width:70px;padding:4px;border:1px solid var(--border);border-radius:4px;text-align:center;font-size:12px">')
       +'</td>'
       +'<td style="padding:4px 6px"><input data-driver="'+did+'" data-field="eventAmt" type="number" value="'+(s.eventAmt||'')+'" placeholder="0" style="width:65px;padding:4px;border:1px solid var(--border);border-radius:4px;text-align:center;font-size:12px"></td>'
+      // 관리자용 콜그룹 펼치기
+      +(_CU&&!(_CU.role==='driver'||_CU.role==='member')?'<td style="padding:4px 6px;text-align:center"><button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--bg3)" data-did="'+did+'" onclick="_toggleCgInput(this.dataset.did)">📊 구간</button></td>':'')
       +'<td style="padding:6px 8px;text-align:center;font-weight:700;color:'+fc+'" id="dp-tier-'+did+'">'+(wt>0?fp.toLocaleString()+'원':'-')+'</td>'
       +'</tr>'
       // 미션 펼치기 행
@@ -13822,6 +13876,24 @@ window._dpUpdateTmRow=function(input){
   if(!window._dpWeekData[did].timeMissions)window._dpWeekData[did].timeMissions={};
   window._dpWeekData[did].timeMissions[tmId]=cnt;
 };
+
+window._toggleCgInput=function(did){
+  var row=document.getElementById('cg-expand-'+did);
+  if(row)row.style.display=row.style.display==='none'?'table-row':'none';
+};
+window._addCgRow=function(did){
+  var wrap=document.getElementById('cg-rows-'+did);
+  if(!wrap)return;
+  var d=document.createElement('div');
+  d.className='cg-row gr';d.style.cssText='gap:6px;margin-bottom:5px';
+  d.innerHTML='<div class="fg"><label style="font-size:10px">앱 실제 단가(원)</label>'
+    +'<input class="cg-price" type="number" placeholder="예:3200" style="padding:4px;border:1px solid var(--border);border-radius:4px;font-size:12px;width:100%"></div>'
+    +'<div class="fg"><label style="font-size:10px">해당 건수</label>'
+    +'<input class="cg-cnt" type="number" placeholder="건" style="padding:4px;border:1px solid var(--border);border-radius:4px;font-size:12px;width:100%"></div>'
+    +'<button class="btn btn-sm" style="color:var(--red);margin-top:18px" onclick="this.parentNode.remove()">×</button>';
+  wrap.appendChild(d);
+};
+
 window._dpSaveInput=function(){
   var data={};
   document.querySelectorAll('[data-driver]').forEach(function(el){
@@ -13839,53 +13911,146 @@ window._dpSaveInput=function(){
       if(wd.timeMissions){if(!data[did])data[did]={};data[did].timeMissions=wd.timeMissions;}
     });
   }
+  // callGroups 저장 (관리자 상세 차액 계산용)
+  document.querySelectorAll('[data-cg-driver]').forEach(function(wrap){
+    var did=wrap.dataset.cgDriver;
+    if(!data[did])data[did]={};
+    var groups=[];
+    wrap.querySelectorAll('.cg-row').forEach(function(row){
+      var ap=+(row.querySelector('.cg-price')||{value:0}).value||0;
+      var cnt=+(row.querySelector('.cg-cnt')||{value:0}).value||0;
+      if(ap>0&&cnt>0)groups.push({actualPrice:ap,cnt:cnt});
+    });
+    if(groups.length)data[did].callGroups=groups;
+  });
   window._dpWeekData=data;toast('✅ 입력 저장');
 };
 
 function _renderDeliveryResult(el,cfg){
   var stored=window._dpWeekData||{};
   var drvList=ls('drivers').filter(function(d){return d.is_active!==false&&d.status!=='탈퇴'&&d.status!=='거부';});
+  var isAdmin=!(_CU&&(_CU.role==='driver'||_CU.role==='member'));
   var card=document.createElement('div');card.className='card';
   var totalGross=0,totalNet=0,totalCalls=0,totalMargin=0;
   var rows='';
+
   drvList.forEach(function(d){
-    var did=d.userId||d.name;var s=stored[did];
+    var did=d.userId||d.name;
+    var s=stored[did];
     if(!s||!s.weekTotal)return;
-    var x={weekTotal:s.weekTotal||0,actualEarnings:s.actualEarnings||0,nightCnt:s.nightCnt||0,missionAmt:0,eventAmt:s.eventAmt||0,timeMissions:s.timeMissions||{}};
+    var x={weekTotal:+s.weekTotal||0,actualEarnings:+s.actualEarnings||0,
+           nightCnt:+s.nightCnt||0,missionAmt:0,eventAmt:+s.eventAmt||0,
+           timeMissions:s.timeMissions||{}};
     var r=calcNet_delivery(x,cfg);
-    totalGross+=r.gross;totalNet+=r.net;totalCalls+=x.weekTotal;totalMargin+=r.agencyMargin||0;
-    var fc=x.weekTotal>=350?'var(--green)':x.weekTotal>=300?'var(--teal)':x.weekTotal>=250?'var(--blue)':x.weekTotal>=180?'var(--amber)':'var(--text3)';
-    rows+='<div class="card" style="margin-bottom:8px;border-left:3px solid '+fc+'">'
-      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
-      +'<div><span style="font-size:14px;font-weight:700">'+d.name+'</span>'
-      +'<span style="font-size:11px;color:'+fc+';margin-left:8px;font-weight:700">'+r.fixedPrice.toLocaleString()+'원/건</span></div>'
-      +'<div style="text-align:right"><div style="font-size:16px;font-weight:800">₩'+r.net.toLocaleString()+'</div>'
-      +'<div style="font-size:10px;color:var(--text3)">세전₩'+r.gross.toLocaleString()+'</div></div></div>'
-      +'<div style="display:flex;gap:6px;flex-wrap:wrap;font-size:11px;color:var(--text2)">'
-      +'<span>📦 '+x.weekTotal+'건</span>'
-      +(x.actualEarnings>0?'<span style="color:var(--text3)">앱₩'+x.actualEarnings.toLocaleString()+'</span>':'')
-      +(r.agencyMargin<0?'<span style="color:var(--red);font-weight:700">📤보전+₩'+r.topUpAmt.toLocaleString()+'</span>'
-        :r.agencyMargin>0?'<span style="color:var(--green);font-weight:700">📥회수₩'+r.recoveryAmt.toLocaleString()+'</span>':'')
-      +(r.tmDetails&&r.tmDetails.length?'<div style="display:flex;flex-wrap:wrap;gap:3px;width:100%">'+r.tmDetails.map(function(tm){
-          return '<span style="font-size:10px;padding:2px 6px;border-radius:8px;background:'+(tm.achieved?'#d1fae5':'var(--bg3)')+';color:'+(tm.achieved?'#059669':'var(--text3)')+'">'+tm.name+(tm.achieved?' ✅+₩'+tm.bonus.toLocaleString():' '+tm.cnt+'/'+tm.targetCnt+'건')+'</span>';
-        }).join('')+'</div>':'')
-      +'</div><div style="font-size:11px;color:var(--text3);margin-top:4px">'+r.label+'</div></div>';
+    totalGross+=r.gross;totalNet+=r.net;
+    totalCalls+=x.weekTotal;totalMargin+=r.agencyMargin||0;
+    var fc=x.weekTotal>=350?'var(--green)':x.weekTotal>=300?'var(--teal)':
+           x.weekTotal>=250?'var(--blue)':x.weekTotal>=180?'var(--amber)':'var(--text3)';
+
+    if(isAdmin){
+      // ── 관리자: 상세 차액 내역 표시
+      var callGroups=s.callGroups||[];  // [{actualPrice, cnt}]
+      var hasGroups=callGroups.length>0;
+      var groupRows='';
+      var totalTopUp=0,totalRecovery=0;
+      if(hasGroups){
+        callGroups.forEach(function(g){
+          var actual=+g.actualPrice||0;var cnt=+g.cnt||0;
+          var diff=(actual-r.fixedPrice)*cnt;
+          var isUp=diff<0;
+          totalTopUp+=isUp?Math.abs(diff):0;
+          totalRecovery+=isUp?0:diff;
+          groupRows+='<tr style="border-bottom:1px solid var(--border)">'
+            +'<td style="padding:5px 8px;text-align:right">'+actual.toLocaleString()+'원</td>'
+            +'<td style="padding:5px 8px;text-align:center">'+cnt+'건</td>'
+            +'<td style="padding:5px 8px;text-align:right">'+r.fixedPrice.toLocaleString()+'원</td>'
+            +'<td style="padding:5px 8px;text-align:right;font-weight:700;color:'+(isUp?'var(--red)':'var(--green)')+'">'
+            +(isUp?'📤 -':'📥 +')+Math.abs(diff).toLocaleString()+'원</td>'
+            +'<td style="padding:5px 8px;text-align:right;font-size:10px;color:var(--text3)">'+(isUp?'보전':'회수')+'</td>'
+            +'</tr>';
+        });
+      }
+
+      rows+='<div class="card" style="margin-bottom:10px;border-left:3px solid '+fc+'">'
+        // 헤더
+        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+        +'<div><span style="font-size:14px;font-weight:700">'+d.name+'</span>'
+        +'<span style="font-size:11px;color:'+fc+';margin-left:8px;font-weight:700">고정 '+r.fixedPrice.toLocaleString()+'원/건</span></div>'
+        +'<div style="text-align:right">'
+        +'<div style="font-size:16px;font-weight:800">₩'+r.net.toLocaleString()+'</div>'
+        +'<div style="font-size:10px;color:var(--text3)">세전 ₩'+r.gross.toLocaleString()+'</div>'
+        +'</div></div>'
+        // 주간 요약
+        +'<div style="display:flex;gap:10px;flex-wrap:wrap;font-size:12px;margin-bottom:8px;padding:8px;background:var(--bg3);border-radius:8px">'
+        +'<span>📦 <b>'+x.weekTotal+'건</b></span>'
+        +(x.actualEarnings>0?'<span>앱실수령 <b>₩'+x.actualEarnings.toLocaleString()+'</b></span>':'')
+        +'<span>보장합계 <b>₩'+r.driverPay.toLocaleString()+'</b></span>'
+        +(r.agencyMargin<0
+          ?'<span style="color:var(--red);font-weight:700">📤 대리점 보전 ₩'+r.topUpAmt.toLocaleString()+'</span>'
+          :r.agencyMargin>0
+          ?'<span style="color:var(--green);font-weight:700">📥 대리점 회수 ₩'+r.recoveryAmt.toLocaleString()+'</span>'
+          :'')
+        +'</div>'
+        // 콜 구간별 차액 상세
+        +(hasGroups
+          ?'<div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">콜 단가별 차액 상세</div>'
+           +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">'
+           +'<thead><tr style="background:var(--bg3)">'
+           +'<th style="padding:5px 8px;text-align:right">앱 단가</th>'
+           +'<th style="padding:5px 8px;text-align:center">건수</th>'
+           +'<th style="padding:5px 8px;text-align:right">고정단가</th>'
+           +'<th style="padding:5px 8px;text-align:right">차액합계</th>'
+           +'<th style="padding:5px 8px;text-align:right">구분</th>'
+           +'</tr></thead><tbody>'+groupRows+'</tbody>'
+           +'<tfoot><tr style="background:var(--bg3);font-weight:700">'
+           +'<td colspan="3" style="padding:5px 8px;text-align:right">최종 합계</td>'
+           +'<td style="padding:5px 8px;text-align:right;color:'+(r.agencyMargin<0?'var(--red)':'var(--green)')+'">'
+           +(r.agencyMargin<0?'-':'+')+(Math.abs(r.agencyMargin)).toLocaleString()+'원</td>'
+           +'<td style="padding:5px 8px;text-align:right;font-size:10px">'+(r.agencyMargin<0?'보전':'회수')+'</td>'
+           +'</tr></tfoot></table></div>'
+          :'<div style="font-size:11px;color:var(--text3);padding:6px;background:#fef3c720;border-radius:6px;border-left:3px solid var(--amber)">'
+           +'💡 콜 구간별 상세 내역을 보려면 입력 탭에서 단가 그룹을 추가하세요</div>')
+        +'</div>';
+
+    } else {
+      // ── 기사: 간단 표시
+      rows+='<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--bg2);border-radius:10px;margin-bottom:8px;border-left:3px solid '+fc+'">'
+        +'<div>'
+        +'<div style="font-size:14px;font-weight:700">'+d.name+'</div>'
+        +'<div style="font-size:12px;color:var(--text3);margin-top:2px">'+x.weekTotal+'건 완료</div>'
+        +'</div>'
+        +'<div style="text-align:right">'
+        +'<div style="font-size:20px;font-weight:800;color:var(--green)">₩'+r.net.toLocaleString()+'</div>'
+        +'<div style="font-size:10px;color:var(--text3)">이번 주 지급액</div>'
+        +'</div>'
+        +'</div>';
+    }
   });
+
   var mc=totalMargin>=0?'var(--green)':'var(--red)';
-  var mBg=totalMargin>=0?'#d1fae520':'#fee2e220';
-  var html='<div class="ch"><span class="ct">💰 주간 정산결과</span></div>';
-  if(!rows){html+='<div class="empty">입력 탭에서 건수를 먼저 입력하세요</div>';} 
-  else {
-    html+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px">'
-      +'<div style="text-align:center;padding:10px;background:var(--bg3);border-radius:8px"><div style="font-size:18px;font-weight:800">'+totalCalls+'</div><div style="font-size:10px;color:var(--text3)">총건수</div></div>'
-      +'<div style="text-align:center;padding:10px;background:var(--bg3);border-radius:8px"><div style="font-size:18px;font-weight:800;color:var(--teal)">₩'+totalGross.toLocaleString()+'</div><div style="font-size:10px;color:var(--text3)">지급총액(세전)</div></div>'
-      +'<div style="text-align:center;padding:10px;background:var(--bg3);border-radius:8px"><div style="font-size:18px;font-weight:800;color:var(--green)">₩'+totalNet.toLocaleString()+'</div><div style="font-size:10px;color:var(--text3)">지급총액(세후)</div></div>'
-      +'<div style="text-align:center;padding:10px;background:'+mBg+';border-radius:8px;border:1px solid '+mc+'"><div style="font-size:18px;font-weight:800;color:'+mc+'">'+(totalMargin>=0?'+':'')+totalMargin.toLocaleString()+'원</div><div style="font-size:10px;color:var(--text3)">대리점마진(±)</div></div>'
-      +'</div>'+rows
-      +'<div style="display:flex;justify-content:flex-end;margin-top:10px"><button class="btn btn-blue" onclick="_saveDeliverySettle()">💾 정산저장</button></div>';
+  var html='<div class="ch"><span class="ct">'+( isAdmin?'💰 주간 정산결과 (관리자)':'💰 이번 주 수입')+'</span></div>';
+  if(!rows){html+='<div class="empty">입력 탭에서 건수를 먼저 입력하세요</div>';}
+  else{
+    if(isAdmin){
+      // 관리자 합계
+      html+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">'
+        +'<div style="text-align:center;padding:10px;background:var(--bg3);border-radius:8px"><div style="font-size:18px;font-weight:800">'+totalCalls+'</div><div style="font-size:10px;color:var(--text3)">총건수</div></div>'
+        +'<div style="text-align:center;padding:10px;background:var(--bg3);border-radius:8px"><div style="font-size:18px;font-weight:800;color:var(--teal)">₩'+totalGross.toLocaleString()+'</div><div style="font-size:10px;color:var(--text3)">지급총액(세전)</div></div>'
+        +'<div style="text-align:center;padding:10px;background:var(--bg3);border-radius:8px"><div style="font-size:18px;font-weight:800;color:var(--green)">₩'+totalNet.toLocaleString()+'</div><div style="font-size:10px;color:var(--text3)">지급총액(세후)</div></div>'
+        +'<div style="text-align:center;padding:10px;border-radius:8px;border:1px solid '+mc+'">'
+        +'<div style="font-size:18px;font-weight:800;color:'+mc+'">'+(totalMargin>=0?'+':'')+totalMargin.toLocaleString()+'원</div>'
+        +'<div style="font-size:10px;color:var(--text3)">대리점 마진(±)</div></div>'
+        +'</div>';
+    }
+    html+=rows;
+    if(isAdmin){
+      html+='<div style="display:flex;justify-content:flex-end;margin-top:10px">'
+        +'<button class="btn btn-blue" onclick="_saveDeliverySettle()">💾 정산 저장</button></div>';
+    }
   }
   card.innerHTML=html;el.appendChild(card);
 }
+
 window._saveDeliverySettle=function(){
   if(!_db||!_CU){toast('❌ 로그인필요');return;}
   var cfg=window._deliveryCfg||G_DELIVERY_CFG;
