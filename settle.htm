@@ -3896,59 +3896,207 @@ function calcDeliveryBonus(platform, conditions){
 // 📊 배달대행 정산 통합 관리 페이지
 // ════════════════════════════════════════
 function pageDeliveryPlatform(){
-  document.getElementById('page-title').textContent='📦 배달대행 정산';
+  document.getElementById('page-title').textContent='🛵 배달대행 정산';
   var el=document.getElementById('content');
   if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
-  var did=_CU.dealerId;
-  var now=new Date();
-  var ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  var isDriver=_CU.role==='driver'||_CU.role==='member';
+  if(isDriver) _renderDeliveryDriver(el);
+  else _renderDeliveryAdmin(el);
+}
 
-  el.innerHTML='<div style="max-width:960px;margin:0 auto">'
-    // 상단: 플랫폼 카드
-    +'<div style="font-size:15px;font-weight:800;margin-bottom:12px">📦 운영 중인 배달 플랫폼</div>'
-    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:20px">'
-    +Object.entries(DELIVERY_PLATFORMS).map(function(e){
-      var k=e[0],pf=e[1];
-      return '<div onclick="_pfDetail(\''+k+'\')" style="background:var(--bg2);border-radius:14px;padding:14px 12px;text-align:center;cursor:pointer;border:2px solid var(--border);transition:all .2s" '
-        +'onmouseover="this.style.borderColor=\''+pf.color+'\';this.style.transform=\'translateY(-2px)\'" '
-        +'onmouseout="this.style.borderColor=\'var(--border)\';this.style.transform=\'\'">'
-        +'<div style="font-size:28px;margin-bottom:6px">'+pf.icon+'</div>'
-        +'<div style="font-size:12px;font-weight:800;color:'+pf.color+'">'+pf.label+'</div>'
-        +'<div style="font-size:10px;color:var(--text3);margin-top:2px">기본 ₩'+pf.baseRate.toLocaleString()+'</div>'
-        +'</div>';
-    }).join('')
-    +'</div>'
-    // 이벤트 수당 계산기
-    +'<div class="card" style="margin-bottom:14px">'
-    +'<div style="font-size:14px;font-weight:800;margin-bottom:12px">⚡ 이벤트 추가수당 계산기</div>'
-    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:12px">'
-    +'<div class="fg"><label style="font-size:11px;color:var(--text3)">플랫폼</label>'
-    +'<select id="pf-sel" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:12px">'
-    +Object.entries(DELIVERY_PLATFORMS).map(function(e){return '<option value="'+e[0]+'">'+e[1].icon+' '+e[1].label+'</option>';}).join('')
-    +'</select></div>'
-    +'<div class="fg"><label style="font-size:11px;color:var(--text3)">기본 배달건수</label>'
-    +'<input id="pf-cnt" type="number" value="30" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:12px"></div>'
-    +'<div class="fg"><label style="font-size:11px;color:var(--text3)">미션 달성건</label>'
-    +'<input id="pf-mission" type="number" value="0" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:12px"></div>'
-    +'<div class="fg"><label style="font-size:11px;color:var(--text3)">악천후 건수</label>'
-    +'<input id="pf-weather" type="number" value="0" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:12px"></div>'
-    +'<div class="fg"><label style="font-size:11px;color:var(--text3)">심야 건수</label>'
-    +'<input id="pf-night" type="number" value="0" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:12px"></div>'
-    +'<div class="fg"><label style="font-size:11px;color:var(--text3)">공휴일 건수</label>'
-    +'<input id="pf-holiday" type="number" value="0" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:12px"></div>'
-    +'</div>'
-    +'<button onclick="_pfCalc()" class="btn btn-blue" style="width:100%;padding:10px;font-size:13px;font-weight:800">⚡ 이벤트 수당 포함 정산 계산</button>'
-    +'<div id="pf-result" style="margin-top:12px"></div>'
-    +'</div>'
-    // 이번달 플랫폼별 통계
-    +'<div class="card">'
-    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
-    +'<div style="font-size:14px;font-weight:800">📊 이번달 플랫폼별 현황 <span style="font-size:11px;color:var(--text3)">'+ym+'</span></div>'
-    +'<button onclick="_pfLoadStats(\''+did+'\',\''+ym+'\')" class="btn btn-blue" style="font-size:11px">🔄 집계</button>'
-    +'</div>'
-    +'<div id="pf-stats">월별 집계 버튼을 클릭하세요</div>'
-    +'</div>'
+// ══ 기사 뷰 - 간단 (내 수령액만) ══
+function _renderDeliveryDriver(el){
+  var cfg=window._deliveryCfg||G_DELIVERY_CFG;
+  var stored=window._dpWeekData||{};
+  var uid=_CU.userId||_CU.uid;
+  var s=stored[uid]||{};
+  var ws=_getWeekStart(null,cfg.weekStart);
+  var we=new Date(ws);we.setDate(we.getDate()+6);
+  var wLabel=ws.toLocaleDateString('ko-KR',{month:'2-digit',day:'2-digit'})+'~'+we.toLocaleDateString('ko-KR',{month:'2-digit',day:'2-digit'});
+
+  var html='<div style="max-width:480px;margin:0 auto">';
+  // 이번 주 요약
+  if(s.weekTotal){
+    var r=calcNet_delivery({weekTotal:s.weekTotal||0,actualEarnings:0,nightCnt:s.nightCnt||0,missionAmt:0,eventAmt:0,timeMissions:s.timeMissions||{}},cfg);
+    html+='<div class="card" style="margin-bottom:12px;border-left:4px solid var(--teal)">'
+      +'<div style="font-size:12px;color:var(--text3);margin-bottom:6px">이번 주 정산 ('+wLabel+')</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+      +'<div style="text-align:center;padding:12px;background:var(--bg3);border-radius:10px">'
+        +'<div style="font-size:24px;font-weight:800;color:var(--teal)">'+s.weekTotal+'건</div>'
+        +'<div style="font-size:11px;color:var(--text3)">주간 배달건수</div></div>'
+      +'<div style="text-align:center;padding:12px;background:var(--bg3);border-radius:10px">'
+        +'<div style="font-size:24px;font-weight:800;color:var(--green)">₩'+r.net.toLocaleString()+'</div>'
+        +'<div style="font-size:11px;color:var(--text3)">내 수령액(세후)</div></div>'
+      +'</div>'
+      +'<div style="margin-top:10px;padding:8px;background:var(--bg3);border-radius:8px;font-size:12px">'
+        +'<div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">고정 계약단가</span><span style="font-weight:700;color:var(--teal)">₩'+r.fixedPrice.toLocaleString()+'/건</span></div>'
+        +(s.nightCnt?'<div style="display:flex;justify-content:space-between;margin-top:4px"><span style="color:var(--text3)">심야 수당</span><span>+₩'+r.nightAddAmt.toLocaleString()+'</span></div>':'')
+        +(r.tmBonusAmt?'<div style="display:flex;justify-content:space-between;margin-top:4px"><span style="color:var(--text3)">미션 수당</span><span style="color:var(--green)">+₩'+r.tmBonusAmt.toLocaleString()+'</span></div>':'')
+        +(r.tax?'<div style="display:flex;justify-content:space-between;margin-top:4px"><span style="color:var(--text3)">원천징수(3.3%)</span><span style="color:var(--red)">-₩'+r.tax.toLocaleString()+'</span></div>':'')
+      +'</div></div>';
+  } else {
+    html+='<div class="card" style="margin-bottom:12px"><div class="empty"><div class="empty-icon">🛵</div><div>이번 주 배달 데이터 없음</div></div></div>';
+  }
+
+  // 구간단가 안내
+  html+='<div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:10px">📊 주간 건수별 단가</div>';
+  var allTiers=[{minCnt:0,price:cfg.callPrice}].concat((cfg.tiers||[]).slice().sort(function(a,b){return a.minCnt-b.minCnt;}));
+  allTiers.forEach(function(t,i){
+    var next=allTiers[i+1];
+    var myRange=s.weekTotal>=t.minCnt&&(!next||s.weekTotal<next.minCnt);
+    html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:8px;margin-bottom:4px;background:'+(myRange?'var(--teal)20':'var(--bg3)')+';border:1px solid '+(myRange?'var(--teal)':'transparent')+'">'
+      +'<span style="font-size:12px;color:var(--text2)">'+(t.minCnt===0?'기본 (~'+(next?next.minCnt-1:'')+'건)':t.minCnt+'건 이상')+'</span>'
+      +'<span style="font-size:13px;font-weight:700;color:'+(myRange?'var(--teal)':'var(--text2)')+'">₩'+t.price.toLocaleString()+'/건'+(myRange?' ✓':'')+'</span>'
+      +'</div>';
+  });
+  html+='</div></div>';
+  el.innerHTML=html;
+}
+
+// ══ 관리자 뷰 - 상세 (차액 정산 내역) ══
+function _renderDeliveryAdmin(el){
+  var cfg=window._deliveryCfg||G_DELIVERY_CFG;
+  var stored=window._dpWeekData||{};
+  var ws=_getWeekStart(null,cfg.weekStart);
+  var we=new Date(ws);we.setDate(we.getDate()+6);
+  var wLabel=ws.toLocaleDateString('ko-KR',{month:'2-digit',day:'2-digit'})+'~'+we.toLocaleDateString('ko-KR',{month:'2-digit',day:'2-digit'});
+  window._dpTab=window._dpTab||'input';
+
+  el.innerHTML='';
+  // 탭
+  var tabs=document.createElement('div');tabs.style.cssText='display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap';
+  [['입력','input'],['정산결과','result'],['설정','config']].forEach(function(t){
+    var btn=document.createElement('button');btn.className='btn'+(window._dpTab===t[1]?' btn-blue':'');
+    btn.textContent=t[0];btn.onclick=function(){window._dpTab=t[1];pageDeliveryPlatform();};tabs.appendChild(btn);
+  });
+  el.appendChild(tabs);
+
+  if(window._dpTab==='config') _renderDeliveryConfig(el,cfg);
+  else if(window._dpTab==='result') _renderDeliveryResult_admin(el,cfg,wLabel);
+  else _renderDeliveryInput(el,cfg,wLabel);
+}
+
+// ══ 관리자 정산결과 - 차액 상세 ══
+function _renderDeliveryResult_admin(el,cfg,wLabel){
+  var stored=window._dpWeekData||{};
+  var drvList=ls('drivers').filter(function(d){return d.is_active!==false&&d.status!=='탈퇴'&&d.status!=='거부';});
+  var card=document.createElement('div');card.className='card';
+  var totalGross=0,totalNet=0,totalCalls=0,totalMargin=0;
+  var rows='';
+
+  drvList.forEach(function(d){
+    var did=d.userId||d.name;var s=stored[did];
+    if(!s||!s.weekTotal)return;
+    var x={weekTotal:+s.weekTotal||0,actualEarnings:+s.actualEarnings||0,nightCnt:+s.nightCnt||0,
+           missionAmt:0,eventAmt:+s.eventAmt||0,timeMissions:s.timeMissions||{}};
+    var r=calcNet_delivery(x,cfg);
+    totalGross+=r.gross;totalNet+=r.net;totalCalls+=x.weekTotal;totalMargin+=r.agencyMargin||0;
+    var fc=x.weekTotal>=350?'var(--green)':x.weekTotal>=300?'var(--teal)':x.weekTotal>=250?'var(--blue)':x.weekTotal>=180?'var(--amber)':'var(--text3)';
+
+    rows+='<div class="card" style="margin-bottom:10px;border-left:3px solid '+fc+'">'
+      // 기본 정보
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'
+        +'<div><span style="font-size:14px;font-weight:700">'+d.name+'</span>'
+          +'<span style="font-size:11px;background:'+fc+'20;color:'+fc+';padding:2px 8px;border-radius:10px;font-weight:700;margin-left:8px">'+r.fixedPrice.toLocaleString()+'원/건</span></div>'
+        +'<div style="text-align:right">'
+          +'<div style="font-size:16px;font-weight:800">₩'+r.net.toLocaleString()+'</div>'
+          +'<div style="font-size:10px;color:var(--text3)">기사 수령(세후)</div>'
+        +'</div>'
+      +'</div>'
+      // 차액 정산 상세 테이블
+      +'<table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:6px">'
+        +'<thead><tr style="background:var(--bg3)">'
+          +'<th style="padding:5px 8px;text-align:left">항목</th>'
+          +'<th style="padding:5px 8px;text-align:right">금액</th>'
+          +'<th style="padding:5px 8px;text-align:right">비고</th>'
+        +'</tr></thead><tbody>'
+        // 주간건수 × 고정단가
+        +'<tr style="border-bottom:1px solid var(--border)">'
+          +'<td style="padding:5px 8px;color:var(--text2)">📦 '+x.weekTotal+'건 × '+r.fixedPrice.toLocaleString()+'원</td>'
+          +'<td style="padding:5px 8px;text-align:right;font-weight:700">₩'+r.driverPay.toLocaleString()+'</td>'
+          +'<td style="padding:5px 8px;text-align:right;font-size:10px;color:var(--text3)">기사 보장액</td>'
+        +'</tr>'
+        // 앱 실수령
+        +(x.actualEarnings>0?
+          '<tr style="border-bottom:1px solid var(--border)">'
+            +'<td style="padding:5px 8px;color:var(--text2)">📱 플랫폼 실수령</td>'
+            +'<td style="padding:5px 8px;text-align:right">₩'+x.actualEarnings.toLocaleString()+'</td>'
+            +'<td style="padding:5px 8px;text-align:right;font-size:10px;color:var(--text3)">앱 입금액</td>'
+          +'</tr>':'')
+        // 차액 (보전/회수)
+        +(x.actualEarnings>0?
+          '<tr style="border-bottom:1px solid var(--border);background:'+(r.agencyMargin<0?'#fee2e215':'#d1fae515')+'">'
+            +'<td style="padding:5px 8px;font-weight:700;color:'+(r.agencyMargin<0?'var(--red)':'var(--green)')+'">'+
+            (r.agencyMargin<0?'📤 대리점 보전 (낮은단가 보충)':'📥 대리점 회수 (높은단가 차감)')+'</td>'
+            +'<td style="padding:5px 8px;text-align:right;font-weight:700;color:'+(r.agencyMargin<0?'var(--red)':'var(--green)')+'">'+
+            (r.agencyMargin<0?'+':'-')+'₩'+Math.abs(r.agencyMargin).toLocaleString()+'</td>'
+            +'<td style="padding:5px 8px;text-align:right;font-size:10px;color:var(--text3)">'+
+            (r.agencyMargin<0?'실수령<보장':'실수령>보장')+'</td>'
+          +'</tr>':'')
+        // 심야
+        +(x.nightCnt>0?
+          '<tr style="border-bottom:1px solid var(--border)">'
+            +'<td style="padding:5px 8px;color:var(--text2)">🌙 심야 '+x.nightCnt+'건 할증</td>'
+            +'<td style="padding:5px 8px;text-align:right">+₩'+r.nightAddAmt.toLocaleString()+'</td>'
+            +'<td style="padding:5px 8px;text-align:right;font-size:10px;color:var(--text3)">+'+cfg.nightSurcharge+'원/건</td>'
+          +'</tr>':'')
+        // 미션
+        +(r.tmBonusAmt>0?
+          '<tr style="border-bottom:1px solid var(--border)">'
+            +'<td style="padding:5px 8px;color:var(--text2)">🎯 시간대 미션 달성</td>'
+            +'<td style="padding:5px 8px;text-align:right;color:var(--green)">+₩'+r.tmBonusAmt.toLocaleString()+'</td>'
+            +'<td style="padding:5px 8px;text-align:right;font-size:10px;color:var(--text3)">'+
+            (r.tmDetails||[]).filter(function(m){return m.achieved;}).map(function(m){return m.name;}).join('·')+'</td>'
+          +'</tr>':'')
+        // 원천징수
+        +(r.tax>0?
+          '<tr style="border-bottom:1px solid var(--border)">'
+            +'<td style="padding:5px 8px;color:var(--text2)">🏛 원천징수(3.3%)</td>'
+            +'<td style="padding:5px 8px;text-align:right;color:var(--red)">-₩'+r.tax.toLocaleString()+'</td>'
+            +'<td style="padding:5px 8px;text-align:right;font-size:10px;color:var(--text3)">세금</td>'
+          +'</tr>':'')
+        // 최종
+        +'<tr style="background:var(--bg3);font-weight:800">'
+          +'<td style="padding:6px 8px">최종 지급액</td>'
+          +'<td style="padding:6px 8px;text-align:right;color:var(--teal);font-size:13px">₩'+r.net.toLocaleString()+'</td>'
+          +'<td style="padding:6px 8px;text-align:right;font-size:10px;color:var(--text3)">세후</td>'
+        +'</tr>'
+      +'</tbody></table>'
+      // 미션 구간별 달성 여부
+      +(r.tmDetails&&r.tmDetails.length?
+        '<div style="display:flex;flex-wrap:wrap;gap:4px">'+r.tmDetails.map(function(tm){
+          return '<span style="font-size:10px;padding:2px 7px;border-radius:8px;background:'+(tm.achieved?'#d1fae5':'var(--bg3)')+';color:'+(tm.achieved?'#059669':'var(--text3)')+'">'+
+            tm.name+(tm.achieved?' ✅+₩'+tm.bonus.toLocaleString():' '+tm.cnt+'/'+tm.targetCnt+'건')+'</span>';
+        }).join('')+'</div>':'')
+      +'</div>';
+  });
+
+  // 합계 카드
+  var mc=totalMargin>=0?'var(--green)':'var(--red)';
+  var html='<div class="ch" style="margin-bottom:12px">'
+    +'<span class="ct">💰 주간 정산결과</span>'
+    +'<span style="font-size:12px;color:var(--text3)">'+wLabel+'</span></div>';
+
+  if(!rows){
+    html+='<div class="empty">입력 탭에서 건수를 먼저 입력하세요</div>';
+  } else {
+    html+='<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px">'
+      +'<div style="padding:12px;background:var(--bg3);border-radius:10px;text-align:center">'
+        +'<div style="font-size:11px;color:var(--text3);margin-bottom:4px">총 기사 지급액</div>'
+        +'<div style="font-size:18px;font-weight:800;color:var(--teal)">₩'+totalNet.toLocaleString()+'</div>'
+      +'</div>'
+      +'<div style="padding:12px;border-radius:10px;text-align:center;background:'+(totalMargin>=0?'#d1fae520':'#fee2e220')+';border:1px solid '+mc+'">'
+        +'<div style="font-size:11px;color:var(--text3);margin-bottom:4px">대리점 마진(±)</div>'
+        +'<div style="font-size:18px;font-weight:800;color:'+mc+'">'+(totalMargin>=0?'+':'')+totalMargin.toLocaleString()+'원</div>'
+        +'<div style="font-size:10px;color:var(--text3)">'+(totalMargin>=0?'회수 수익':'보전 지출')+'</div>'
+      +'</div>'
     +'</div>';
+    html+=rows;
+    html+='<div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end">'
+      +'<button class="btn btn-blue" onclick="_saveDeliverySettle()">💾 정산 저장</button>'
+      +'</div>';
+  }
+  card.innerHTML=html;el.appendChild(card);
 }
 
 function _pfDetail(pfKey){
