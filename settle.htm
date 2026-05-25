@@ -1842,11 +1842,16 @@ function showApp(){
   if(_CU.role==='driver'||_CU.role==='member'){
     MENUS=MENUS_DRIVER;
   } else {
-    var sType = _CU.serviceType||'full';
-    if(sType==='settle') MENUS=MENUS_SETTLE;
-    else if(sType==='qr') MENUS=MENUS_QR;
-    else if(sType==='hourly') MENUS=MENUS_HOURLY;  // ★ 소상공인/사장님 전용
-    else MENUS=MENUS_FULL;
+    // 슈퍼어드민은 전체 메뉴 항상 표시
+    if(isSuperAdmin()){
+      MENUS=MENUS_FULL;
+    } else {
+      var sType = _CU.serviceType||'full';
+      if(sType==='settle') MENUS=MENUS_SETTLE;
+      else if(sType==='qr') MENUS=MENUS_QR;
+      else if(sType==='hourly') MENUS=MENUS_HOURLY;
+      else MENUS=MENUS_FULL;
+    }
   }
   buildNav();
   // 슬러그 모드: 회사 정보 로드 및 브랜딩
@@ -3323,7 +3328,7 @@ function _viewMyStatement(el){var id=el.getAttribute('data-id');
 // 쿠팡 정산 전용 (출퇴근X, 위수탁계약서O)
 var MENUS_SETTLE = [
   {s:'정산',items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'🛵',l:'배달대행 정산',p:'delivery_platform'},{ic:'📋',l:'정산 관리',p:'settlements'},{ic:'📈',l:'통계',p:'stats'}]},
-  {s:'운영',items:[{ic:'👤',l:'기사 관리',p:'drivers'},{ic:'🚗',l:'배차 관리',p:'dispatch'},{ic:'📋',l:'배차 히스토리',p:'dispatch_history'},{ic:'📅',l:'달력',p:'schedule'}]},
+  {s:'운영',items:[{ic:'👤',l:'기사 관리',p:'drivers'},{ic:'🔐',l:'QR 출퇴근',p:'attendance'},{ic:'💰',l:'급여 현황',p:'hourly_settle'},{ic:'🚗',l:'배차 관리',p:'dispatch'},{ic:'📋',l:'배차 히스토리',p:'dispatch_history'},{ic:'📅',l:'달력',p:'schedule'}]},
   {s:'설정',items:[{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'📅',l:'시즌 단가표',p:'season'},{ic:'📝',l:'위수탁 계약서',p:'contract'},{ic:'🗓',l:'근무표',p:'roster'}]},
   {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices'}]}
 ];
@@ -3336,7 +3341,7 @@ var MENUS_QR = [
 // 풀패키지 (택배+QR, 위수탁O)
 var MENUS_FULL = [
   {s:'정산',items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'🛵',l:'배달대행 정산',p:'delivery_platform'},{ic:'📋',l:'정산 관리',p:'settlements'},{ic:'📈',l:'통계',p:'stats'}]},
-  {s:'운영',items:[{ic:'👤',l:'기사/직원',p:'drivers'},{ic:'🚗',l:'배차 관리',p:'dispatch'},{ic:'📋',l:'배차 히스토리',p:'dispatch_history'},{ic:'📅',l:'달력',p:'schedule'}]},
+  {s:'운영',items:[{ic:'👤',l:'기사/직원',p:'drivers'},{ic:'🔐',l:'QR 출퇴근',p:'attendance'},{ic:'💰',l:'급여 현황',p:'hourly_settle'},{ic:'🚗',l:'배차 관리',p:'dispatch'},{ic:'📋',l:'배차 히스토리',p:'dispatch_history'},{ic:'📅',l:'달력',p:'schedule'}]},
   {s:'설정',items:[{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'📅',l:'시즌 단가표',p:'season'},{ic:'📝',l:'위수탁 계약서',p:'contract'},{ic:'🗓',l:'근무표',p:'roster'}]},
   {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices'}]}
 ];
