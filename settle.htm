@@ -781,9 +781,12 @@ function _loadCompanyCfg(dealerId){
 }
 
 // 배달대행 정산
-// 배달대행 최저단가 보장 계산
-// 플랫폼 실제 수령액 vs 보장금액 중 높은 쪽 지급
-// 대리점이 차액(보전액) 지급
+// ════════════════════════════════════════════════════════
+// 배달대행 차액 정산법 (고정단가 정산)
+// 기사: 건수 × 고정단가 (약속된 금액 항상 보장)
+// 대리점: 앱 실수령 - 기사 지급액 = 마진(±)
+// 낮은 콜 → 대리점이 차액 보전 / 높은 콜 → 대리점이 차액 회수
+// ════════════════════════════════════════════════════════
 
 function _getDeliveryTierPrice(weekTotal, tiers, basePrice){
   if(!tiers||!tiers.length) return basePrice||2900;
@@ -795,36 +798,79 @@ function _getDeliveryTierPrice(weekTotal, tiers, basePrice){
 }
 
 function calcNet_delivery(x, cfg){
-  var weekTotal      = +x.weekTotal||0;
-  var actualEarnings = +x.actualEarnings||0;
+  var weekTotal      = +x.weekTotal||0;       // 주간 총 건수
+  var actualEarnings = +x.actualEarnings||0;  // 앱 실수령 총액
   var nightCnt       = +x.nightCnt||0;
   var missionAmt     = +x.missionAmt||0;
+
+  // ── 시간대별 미션 달성 수당 계산
+  var tmBonusAmt  = 0;
+  var tmDetails   = [];
+  var missions    = cfg.timeMissions||[];
+  var tmInput     = x.timeMissions||{};  // {tm1:{cnt:25}, tm2:{cnt:40}, ...}
+  missions.forEach(function(tm){
+    if(!tm.active||!tm.targetCnt||!tm.bonus) return;
+    var cnt = +( tmInput[tm.id]||0 );
+    var achieved = cnt >= tm.targetCnt;
+    if(achieved) tmBonusAmt += tm.bonus;
+    tmDetails.push({id:tm.id, name:tm.name, targetCnt:tm.targetCnt,
+      bonus:tm.bonus, cnt:cnt, achieved:achieved});
+  });
+  missionAmt += tmBonusAmt;
   var eventAmt       = +x.eventAmt||0;
-  var tiers          = cfg.tiers||[];
-  var basePrice      = cfg.callPrice||2900;
-  var tierPrice      = _getDeliveryTierPrice(weekTotal, tiers, basePrice);
-  var guaranteeAmt   = weekTotal * tierPrice;
-  var callAmt        = (actualEarnings>0) ? Math.max(actualEarnings, guaranteeAmt) : guaranteeAmt;
-  var topUpAmt       = Math.max(0, guaranteeAmt - actualEarnings);
-  var nightAddAmt    = nightCnt * (cfg.nightSurcharge||0);
-  var programFee     = cfg.programFee||0;
-  var gross = callAmt + nightAddAmt + missionAmt + eventAmt;
-  var taxRate = cfg.withhold==='3.3' ? 0.033 : 0;
-  var tax = Math.round(gross * taxRate);
-  var net = gross - tax - programFee;
-  var isGuaranteeApplied = actualEarnings>0 && guaranteeAmt>actualEarnings;
-  var label = weekTotal+'건 × 보장 '+tierPrice.toLocaleString()+'원'
-    +(isGuaranteeApplied?' [보장적용 +'+topUpAmt.toLocaleString()+'원]'
-      :(actualEarnings>0?' [실수령>보장]':''))
-    +(nightCnt>0?' | 심야'+nightCnt+'건':'')
-    +(missionAmt>0?' | 미션+'+missionAmt.toLocaleString():'' )
-    +(eventAmt>0?' | 이벤트+'+eventAmt.toLocaleString():'');
-  return {gross:gross,tax:tax,net:Math.max(0,net),income:gross,emp:0,work:0,
-    deductions:tax+programFee,tierPrice:tierPrice,
-    guaranteeAmt:guaranteeAmt,actualEarnings:actualEarnings,
-    topUpAmt:topUpAmt,isGuaranteeApplied:isGuaranteeApplied,
-    callAmt:callAmt,nightAddAmt:nightAddAmt,
-    missionAmt:missionAmt,eventAmt:eventAmt,label:label};
+
+  var tiers     = cfg.tiers||[];
+  var basePrice = cfg.callPrice||2900;
+
+  // ── 주간 건수로 고정 계약단가 결정
+  var fixedPrice   = _getDeliveryTierPrice(weekTotal, tiers, basePrice);
+
+  // ── 기사 실지급액 = 건수 × 고정단가 (항상 이 금액)
+  var driverPay    = weekTotal * fixedPrice;
+
+  // ── 차액 정산 (대리점 관점)
+  // 앱 실수령이 입력된 경우에만 계산
+  var diffAmt      = 0;      // 앱실수령 - 기사지급 = 대리점 마진(+) or 손실(-)
+  var topUpAmt     = 0;      // 대리점이 보전해준 금액 (낮은콜 채워준 것)
+  var recoveryAmt  = 0;      // 대리점이 회수한 금액 (높은콜에서 가져간 것)
+  var agencyMargin = 0;
+
+  if(actualEarnings > 0){
+    diffAmt     = actualEarnings - driverPay;
+    agencyMargin = diffAmt; // + 면 대리점 수익, - 면 대리점 손실
+    if(diffAmt < 0){
+      topUpAmt = Math.abs(diffAmt);    // 대리점이 메워준 금액
+    } else {
+      recoveryAmt = diffAmt;           // 대리점이 가져간 금액
+    }
+  }
+
+  // ── 심야 추가 수당 (06~24시 외)
+  var nightAddAmt  = nightCnt * (cfg.nightSurcharge||0);
+
+  var programFee   = cfg.programFee||0;
+  var gross        = driverPay + nightAddAmt + missionAmt + eventAmt;
+  var taxRate      = cfg.withhold==='3.3' ? 0.033 : 0;
+  var tax          = Math.round(gross * taxRate);
+  var net          = gross - tax - programFee;
+
+  var label = weekTotal+'건 × '+fixedPrice.toLocaleString()+'원(고정)'
+    +(actualEarnings>0 ? ' | 앱실수령 ₩'+actualEarnings.toLocaleString()
+      +(agencyMargin>=0 ? ' → 대리점+₩'+recoveryAmt.toLocaleString()
+                        : ' → 대리점-₩'+topUpAmt.toLocaleString()) : '')
+    +(nightCnt>0  ? ' | 심야'+nightCnt+'건' : '')
+    +(missionAmt>0 ? ' | 미션+₩'+missionAmt.toLocaleString() : '')
+    +(eventAmt>0   ? ' | 이벤트+₩'+eventAmt.toLocaleString() : '');
+
+  return {
+    gross:gross, tax:tax, net:Math.max(0,net), income:gross,
+    emp:0, work:0, deductions:tax+programFee,
+    fixedPrice:fixedPrice, driverPay:driverPay,
+    actualEarnings:actualEarnings, diffAmt:diffAmt,
+    agencyMargin:agencyMargin, topUpAmt:topUpAmt, recoveryAmt:recoveryAmt,
+    nightAddAmt:nightAddAmt, missionAmt:missionAmt, eventAmt:eventAmt,
+    label:label
+  };
 }
 
 // ════════════════════════════
@@ -839,11 +885,18 @@ var G_DELIVERY_CFG = {
   programFee: 0,
   withhold: '3.3',
   weekStart: 3,             // 3=수요일 (수~화 기준)
-  tiers: [                  // 주간 소급 구간
+  tiers: [
     {minCnt: 350, price: 5500},
     {minCnt: 300, price: 5300},
     {minCnt: 250, price: 5100},
     {minCnt: 180, price: 4200}
+  ],
+  timeMissions: [
+    {id:'tm1', name:'아침 피크',  startH:7,  endH:11, targetCnt:0, bonus:0, active:true},
+    {id:'tm2', name:'점심 피크',  startH:11, endH:14, targetCnt:0, bonus:0, active:true},
+    {id:'tm3', name:'오후 노피크',startH:14, endH:17, targetCnt:0, bonus:0, active:true},
+    {id:'tm4', name:'저녁 피크',  startH:17, endH:21, targetCnt:0, bonus:0, active:true},
+    {id:'tm5', name:'야간 노피크',startH:21, endH:24, targetCnt:0, bonus:0, active:true}
   ]
 };
 
@@ -3271,7 +3324,7 @@ function _viewMyStatement(el){var id=el.getAttribute('data-id');
 var MENUS_SETTLE = [
   {s:'정산',items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'🛵',l:'배달대행 정산',p:'delivery_platform'},{ic:'📋',l:'정산 관리',p:'settlements'},{ic:'📈',l:'통계',p:'stats'}]},
   {s:'운영',items:[{ic:'👤',l:'기사 관리',p:'drivers'},{ic:'🚗',l:'배차 관리',p:'dispatch'},{ic:'📋',l:'배차 히스토리',p:'dispatch_history'},{ic:'📅',l:'달력',p:'schedule'}]},
-  {s:'설정',items:[{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'📅',l:'시즌 단가표',p:'season'},{ic:'📅',l:'시즌 단가표',p:'season'},{ic:'📝',l:'위수탁 계약서',p:'contract'},{ic:'🗓',l:'근무표',p:'roster'}]},
+  {s:'설정',items:[{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'📅',l:'시즌 단가표',p:'season'},{ic:'📝',l:'위수탁 계약서',p:'contract'},{ic:'🗓',l:'근무표',p:'roster'}]},
   {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices'}]}
 ];
 // QR 출퇴근 전용 (일반직원, 위수탁X)
@@ -3282,9 +3335,9 @@ var MENUS_QR = [
 ];
 // 풀패키지 (택배+QR, 위수탁O)
 var MENUS_FULL = [
-  {s:'정산',items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'📋',l:'정산 관리',p:'settlements'},{ic:'📈',l:'통계',p:'stats'}]},
+  {s:'정산',items:[{ic:'📊',l:'정산 현황',p:'settle'},{ic:'🛵',l:'배달대행 정산',p:'delivery_platform'},{ic:'📋',l:'정산 관리',p:'settlements'},{ic:'📈',l:'통계',p:'stats'}]},
   {s:'운영',items:[{ic:'👤',l:'기사/직원',p:'drivers'},{ic:'🚗',l:'배차 관리',p:'dispatch'},{ic:'📋',l:'배차 히스토리',p:'dispatch_history'},{ic:'📅',l:'달력',p:'schedule'}]},
-  {s:'설정',items:[{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'📝',l:'위수탁 계약서',p:'contract'},{ic:'🗓',l:'근무표',p:'roster'}]},
+  {s:'설정',items:[{ic:'📌',l:'라우트 단가표',p:'prices'},{ic:'📅',l:'시즌 단가표',p:'season'},{ic:'📝',l:'위수탁 계약서',p:'contract'},{ic:'🗓',l:'근무표',p:'roster'}]},
   {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices'}]}
 ];
 // ★ 소상공인/사장님 전용 (시급·일급·월급 정산)
@@ -6833,6 +6886,17 @@ function pageDispatch(){
     });
     html+='</div>';
     el.innerHTML=html;
+    // 마진 카드 색상 동적 적용
+    setTimeout(function(){
+      var mv=document.getElementById('dp-margin-val');
+      var mc=document.getElementById('dp-margin-card');
+      if(mv&&mc){
+        var isPos=totalMargin>=0;
+        mv.style.color=isPos?'var(--green)':'var(--red)';
+        mc.style.background=isPos?'#d1fae520':'#fee2e220';
+        mc.style.border='1px solid '+(isPos?'var(--green)':'var(--red)');
+      }
+    },100);
   }).catch(function(e){el.innerHTML='<div class="empty">❌ '+e.message+'</div>';});
 }
 
@@ -6993,6 +7057,20 @@ function _renderDeliveryConfig(el, cfg){
   });
   html += '</div>'
     +'<button class="btn btn-sm" style="margin-top:6px" onclick="_addDeliveryTierRow()">+ 구간 추가</button>'
+    // ── 시간대 미션 설정
+    +'<div style="font-size:12px;font-weight:700;color:var(--text2);margin:14px 0 8px;padding-top:12px;border-top:1px solid var(--border)">⏰ 시간대별 미션 설정</div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-bottom:10px">각 시간대 목표 건수 달성 시 추가 수당이 지급됩니다</div>'
+    +'<div id="dp-tm-wrap">';
+
+  var missions = cfg.timeMissions || [];
+  missions.forEach(function(tm, i){
+    html += _tmRow(i, tm);
+  });
+
+  html += '</div>'
+    +'<div style="display:flex;gap:8px;margin-top:6px">'
+    +'<button class="btn btn-sm" onclick="_addTmRow()">+ 구간 추가</button>'
+    +'</div>'
     +'<div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">'
     +'<button class="btn btn-blue" onclick="_saveDeliveryConfig()">저장</button>'
     +'</div>';
@@ -7019,6 +7097,33 @@ window._addDeliveryTierRow = function(){
   wrap.insertAdjacentHTML('beforeend', _tierRow(i,'',''));
 };
 
+function _tmRow(i, tm){
+  return '<div class="gr" style="gap:6px;margin-bottom:8px;align-items:flex-end" id="dp-tm-'+i+'">'
+    +'<div class="fg" style="min-width:90px"><label style="font-size:10px">구간명</label>'
+    +'<input class="tm-name" value="'+(tm.name||'')+'" placeholder="아침 피크" style="padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;width:100%"></div>'
+    +'<div style="width:70px"><label style="font-size:10px">시작(시)</label>'
+    +'<input class="tm-sh" type="number" value="'+(tm.startH||0)+'" min="0" max="23" style="width:100%;padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;text-align:center"></div>'
+    +'<div style="width:70px"><label style="font-size:10px">종료(시)</label>'
+    +'<input class="tm-eh" type="number" value="'+(tm.endH||0)+'" min="0" max="24" style="width:100%;padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;text-align:center"></div>'
+    +'<div style="width:70px"><label style="font-size:10px">목표건수</label>'
+    +'<input class="tm-cnt" type="number" value="'+(tm.targetCnt||0)+'" placeholder="30" style="width:100%;padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;text-align:center"></div>'
+    +'<div style="width:80px"><label style="font-size:10px">달성수당(원)</label>'
+    +'<input class="tm-bonus" type="number" value="'+(tm.bonus||0)+'" placeholder="3000" style="width:100%;padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;text-align:center"></div>'
+    +'<label style="display:flex;align-items:center;gap:4px;font-size:11px;padding-bottom:6px;white-space:nowrap;cursor:pointer">'
+    +'<input class="tm-active" type="checkbox"'+(tm.active!==false?' checked':'')+'>사용</label>'
+    +'<button class="btn btn-sm" style="color:var(--red);padding:5px 8px;margin-bottom:2px" '
+    +'<button class="btn btn-sm" style="color:var(--red);padding:5px 8px;margin-bottom:2px" '
+    +'onclick="var _r=this.parentNode;if(_r)_r.remove();">×</button>'
+    +'</div>';
+}
+
+window._addTmRow = function(){
+  var wrap = document.getElementById('dp-tm-wrap');
+  if(!wrap) return;
+  var i = 'new_'+Date.now();
+  wrap.insertAdjacentHTML('beforeend', _tmRow(i,{name:'',startH:0,endH:0,targetCnt:0,bonus:0,active:true}));
+};
+
 window._saveDeliveryConfig = function(){
   var tiers = [];
   document.querySelectorAll('#dp-tiers-wrap .gr').forEach(function(row){
@@ -7027,6 +7132,19 @@ window._saveDeliveryConfig = function(){
     if(min>0&&price>0) tiers.push({minCnt:min, price:price});
   });
   tiers.sort(function(a,b){return b.minCnt-a.minCnt;});
+  // 시간대 미션 수집
+  var timeMissions = [];
+  document.querySelectorAll('#dp-tm-wrap .gr').forEach(function(row, i){
+    var name    = (row.querySelector('.tm-name')||{}).value||'';
+    var startH  = +((row.querySelector('.tm-sh')||{}).value||0);
+    var endH    = +((row.querySelector('.tm-eh')||{}).value||0);
+    var targetCnt = +((row.querySelector('.tm-cnt')||{}).value||0);
+    var bonus   = +((row.querySelector('.tm-bonus')||{}).value||0);
+    var active  = (row.querySelector('.tm-active')||{}).checked!==false;
+    if(name) timeMissions.push({id:'tm'+(i+1),name:name,startH:startH,endH:endH,
+      targetCnt:targetCnt,bonus:bonus,active:active});
+  });
+
   var newCfg = {
     platform: document.getElementById('dp-platform').value,
     callPrice: +document.getElementById('dp-base').value||2900,
@@ -7036,7 +7154,8 @@ window._saveDeliveryConfig = function(){
     programFee: +document.getElementById('dp-fee').value||0,
     withhold: document.getElementById('dp-tax').value,
     weekStart: +document.getElementById('dp-weekstart').value,
-    tiers: tiers
+    tiers: tiers,
+    timeMissions: timeMissions
   };
   window._deliveryCfg = newCfg;
   if(_db&&_CU){
@@ -7058,7 +7177,7 @@ function _renderDeliveryInput(el, cfg, weekLabel){
   var html = '<div class="ch"><span class="ct">📋 주간 배달 건수 입력</span>'
     +'<span style="font-size:12px;color:var(--text3)">'+weekLabel+'</span></div>'
     +'<div style="font-size:11px;color:var(--amber);margin-bottom:10px;padding:8px;background:#fef3c720;border-radius:6px;border-left:3px solid var(--amber)">'
-    +'💡 최저단가 보장 | 플랫폼 실수령액 < 보장금액 → 대리점이 차액 보전 | 06~24시 적용 | 실수령액은 앱에서 확인 후 입력</div>';
+    +'💡 차액정산법: 기사는 항상 건수×고정단가 수령 | 앱 실수령액 입력 시 대리점 보전/회수 금액 자동 계산</div>';
 
   // 기사별 입력 폼
   html += '<table style="width:100%;border-collapse:collapse;font-size:12px">'
@@ -7067,7 +7186,7 @@ function _renderDeliveryInput(el, cfg, weekLabel){
     +'<th style="padding:6px 8px;text-align:center">주간건수</th>'
     +'<th style="padding:6px 8px;text-align:center">실제수령액(원)</th>'
     +'<th style="padding:6px 8px;text-align:center">심야건수</th>'
-    +'<th style="padding:6px 8px;text-align:center">미션수당</th>'
+    +'<th style="padding:6px 8px;text-align:center">시간미션</th>'
     +'<th style="padding:6px 8px;text-align:center">이벤트</th>'
     +'<th style="padding:6px 8px;text-align:center">적용단가</th>'
     +'</tr></thead><tbody>';
@@ -7083,10 +7202,37 @@ function _renderDeliveryInput(el, cfg, weekLabel){
       +'<td style="padding:4px 6px"><input data-driver="'+did+'" data-field="weekTotal" type="number" value="'+(s.weekTotal||'')+'" placeholder="0" style="width:70px;padding:4px;border:1px solid var(--border);border-radius:4px;text-align:center;font-size:12px" onchange="_dpUpdateRow(this)"></td>'
       +'<td style="padding:4px 6px"><input data-driver="'+did+'" data-field="actualEarnings" type="number" value="'+(s.actualEarnings||'')+'" placeholder="실수령" style="width:88px;padding:4px;border:1px solid var(--border);border-radius:4px;text-align:center;font-size:12px"></td>'
       +'<td style="padding:4px 6px"><input data-driver="'+did+'" data-field="nightCnt" type="number" value="'+(s.nightCnt||'')+'" placeholder="0" style="width:60px;padding:4px;border:1px solid var(--border);border-radius:4px;text-align:center;font-size:12px"></td>'
-      +'<td style="padding:4px 6px"><input data-driver="'+did+'" data-field="missionAmt" type="number" value="'+(s.missionAmt||'')+'" placeholder="0" style="width:70px;padding:4px;border:1px solid var(--border);border-radius:4px;text-align:center;font-size:12px"></td>'
+      +'<td style="padding:4px 6px;text-align:center">'
+      +(cfg.timeMissions&&cfg.timeMissions.filter(function(m){return m.active&&m.targetCnt&&m.bonus;}).length>0
+        ? '<button class="btn btn-sm" style="font-size:11px;padding:3px 8px" onclick="_toggleTmInput(\'' + did + '\')">⏰ 미션</button>'
+        : '<input data-driver="'+did+'" data-field="missionAmt" type="number" value="'+(s.missionAmt||'')+'" placeholder="0" style="width:70px;padding:4px;border:1px solid var(--border);border-radius:4px;text-align:center;font-size:12px">')
+      +'</td>'
       +'<td style="padding:4px 6px"><input data-driver="'+did+'" data-field="eventAmt" type="number" value="'+(s.eventAmt||'')+'" placeholder="0" style="width:70px;padding:4px;border:1px solid var(--border);border-radius:4px;text-align:center;font-size:12px"></td>'
       +'<td style="padding:6px 8px;text-align:center;font-weight:700;color:'+tierColor+'" id="dp-tier-'+did+'">'+(wt>0?tierPrice.toLocaleString()+'원':'-')+'</td>'
-      +'</tr>';
+      
+      // 시간대 미션 펼치기 행
+      +'<tr id="tm-expand-'+did+'" style="display:none"><td colspan="7" style="padding:0">'
+      +'<div style="padding:8px 12px;background:var(--bg3);border-bottom:1px solid var(--border)">'
+      +'<div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px">⏰ 시간대별 미션 달성 건수 입력</div>'
+      +(function(){
+        var ms = cfg.timeMissions||[];
+        var activeMissions = ms.filter(function(m){return m.active&&m.targetCnt&&m.bonus;});
+        if(!activeMissions.length) return '<div style="color:var(--text3);font-size:11px">설정된 미션이 없습니다</div>';
+        return activeMissions.map(function(tm){
+          var curCnt = (s.timeMissions&&s.timeMissions[tm.id])||0;
+          var achieved = curCnt>=tm.targetCnt;
+          return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
+            +'<span style="font-size:11px;font-weight:700;width:80px;color:var(--teal)">'+tm.name+'</span>'
+            +'<span style="font-size:10px;color:var(--text3);width:70px">'+tm.startH+'~'+tm.endH+'시</span>'
+            +'<input data-driver="'+did+'" data-tm="'+tm.id+'" type="number" value="'+curCnt+'" '
+            +'placeholder="0" style="width:60px;padding:4px;border:1px solid var(--border);border-radius:4px;text-align:center;font-size:12px" '
+            +'onchange="_dpUpdateTmRow(this)">'
+            +'<span style="font-size:11px;color:var(--text3)">/'+tm.targetCnt+'건 달성시 +₩'+tm.bonus.toLocaleString()+'</span>'
+            +'<span id="tm-badge-'+did+'-'+tm.id+'" style="font-size:11px;font-weight:700;color:'+(achieved?'var(--green)':'var(--text3)');+'">'+(achieved?'✅ 달성!':'')+'</span>'
+            +'</div>';
+        }).join('');
+      })()
+      +'</div></td></tr>'+'</tr>';
   });
 
   html += '</tbody></table>'
@@ -7134,14 +7280,78 @@ window._dpUpdateRow = function(input){
   }
 };
 
+
+window._toggleTmInput = function(did){
+  var row = document.getElementById('tm-expand-'+did);
+  if(row) row.style.display = row.style.display==='none'?'table-row':'none';
+};
+
+window._dpUpdateTmRow = function(input){
+  var did = input.dataset.driver;
+  var tmId = input.dataset.tm;
+  var cnt = +input.value||0;
+  if(!window._dpWeekData) window._dpWeekData={};
+  if(!window._dpWeekData[did]) window._dpWeekData[did]={};
+  if(!window._dpWeekData[did].timeMissions) window._dpWeekData[did].timeMissions={};
+  window._dpWeekData[did].timeMissions[tmId] = cnt;
+
+  // 배지 업데이트
+  var cfg = window._deliveryCfg||G_DELIVERY_CFG;
+  var tm = (cfg.timeMissions||[]).find(function(m){return m.id===tmId;});
+  var badge = document.getElementById('tm-badge-'+did+'-'+tmId);
+  if(badge&&tm){
+    var achieved = cnt>=tm.targetCnt;
+    badge.textContent = achieved?'✅ 달성!':'';
+    badge.style.color = achieved?'var(--green)':'var(--text3)';
+  }
+
+  // 단가 셀 갱신 (미션 포함 예상 수당 표시)
+  _dpCalcPreview(did);
+};
+
+window._dpCalcPreview = function(did){
+  var cfg  = window._deliveryCfg||G_DELIVERY_CFG;
+  var s    = (window._dpWeekData&&window._dpWeekData[did])||{};
+  var wt   = +s.weekTotal||0;
+  if(!wt) return;
+  var x    = { weekTotal:wt, actualEarnings:+s.actualEarnings||0,
+               nightCnt:+s.nightCnt||0, missionAmt:0, eventAmt:+s.eventAmt||0,
+               timeMissions:s.timeMissions||{} };
+  var r    = calcNet_delivery(x, cfg);
+  var cell = document.getElementById('dp-tier-'+did);
+  if(cell){
+    var color = wt>=350?'var(--green)':wt>=300?'var(--teal)':wt>=250?'var(--blue)':wt>=180?'var(--amber)':'var(--text3)';
+    cell.style.color = color;
+    cell.innerHTML = r.fixedPrice.toLocaleString()+'원'
+      +(r.tmBonusAmt>0?'<br><span style="font-size:10px;color:var(--green)">+₩'+r.tmBonusAmt.toLocaleString()+'</span>':'');
+  }
+};
+
 window._dpSaveInput = function(){
   var data = {};
   document.querySelectorAll('[data-driver]').forEach(function(el){
     var did = el.dataset.driver;
-    var field = el.dataset.field;
-    if(!data[did]) data[did]={};
-    if(el.value) data[did][field]=+el.value;
+    if(el.dataset.tm){
+      // 시간대 미션 건수
+      if(!data[did]) data[did]={};
+      if(!data[did].timeMissions) data[did].timeMissions={};
+      if(el.value) data[did].timeMissions[el.dataset.tm]=+el.value;
+    } else if(el.dataset.field){
+      var field = el.dataset.field;
+      if(!data[did]) data[did]={};
+      if(el.value) data[did][field]=+el.value;
+    }
   });
+  // window._dpWeekData의 timeMissions도 병합
+  if(window._dpWeekData){
+    Object.keys(window._dpWeekData).forEach(function(did){
+      var wd = window._dpWeekData[did];
+      if(wd.timeMissions){
+        if(!data[did]) data[did]={};
+        data[did].timeMissions = wd.timeMissions;
+      }
+    });
+  }
   window._dpWeekData = data;
   toast('✅ 입력 저장됨');
 };
@@ -7153,7 +7363,7 @@ function _renderDeliveryResult(el, cfg, weekLabel){
   });
 
   var card = document.createElement('div'); card.className='card';
-  var totalGross=0, totalNet=0, totalCalls=0;
+  var totalGross=0, totalNet=0, totalCalls=0, totalMargin=0;
 
   var html = '<div class="ch"><span class="ct">💰 주간 정산 결과</span>'
     +'<span style="font-size:12px;color:var(--text3)">'+weekLabel+'</span></div>';
@@ -7166,7 +7376,7 @@ function _renderDeliveryResult(el, cfg, weekLabel){
     var x = { weekTotal:s.weekTotal||0, nightCnt:s.nightCnt||0,
                dcnt:s.weekTotal||0, missionAmt:s.missionAmt||0, eventAmt:s.eventAmt||0 };
     var r = calcNet_delivery(x, cfg);
-    totalGross += r.gross; totalNet += r.net; totalCalls += x.weekTotal;
+    totalGross += r.gross; totalNet += r.net; totalCalls += x.weekTotal; totalMargin += (r.agencyMargin||0);
 
     var tierColor = x.weekTotal>=350?'var(--green)':x.weekTotal>=300?'var(--teal)':x.weekTotal>=250?'var(--blue)':x.weekTotal>=180?'var(--amber)':'var(--text3)';
 
@@ -7183,9 +7393,21 @@ function _renderDeliveryResult(el, cfg, weekLabel){
       +'</div>'
       +'<div style="display:flex;gap:8px;flex-wrap:wrap;font-size:11px;color:var(--text2)">'
       +'<span>📦 주간 '+x.weekTotal+'건</span>'
-      +(x.actualEarnings>0?'<span style="color:var(--text3)"> | 실수령 ₩'+Number(x.actualEarnings).toLocaleString()+'</span>':'')
-      +(r.isGuaranteeApplied?'<span style="color:var(--amber);font-weight:700;margin-left:4px">🔒보장 +₩'+Number(r.topUpAmt).toLocaleString()+'</span>':'<span style="color:var(--green);margin-left:4px">✓실수령>보장</span>')
+      +(r.tmDetails&&r.tmDetails.length?'<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:4px">'+r.tmDetails.map(function(tm){var bg=tm.achieved?'#d1fae5':'var(--bg3)';var col=tm.achieved?'#059669':'var(--text3)';return '<span style="font-size:10px;padding:2px 6px;border-radius:10px;background:'+bg+';color:'+col+'">'+tm.name+' '+(tm.achieved?'✅+₩'+tm.bonus.toLocaleString():tm.cnt+'/'+tm.targetCnt+'건')+'</span>';}).join('')+'</div>':'')
+      +(x.actualEarnings>0?'<span style="color:var(--text3)"> | 앱실수령 ₩'+Number(x.actualEarnings).toLocaleString()+'</span>':'')
+      +(r.agencyMargin<0?'<span style="color:var(--red);font-weight:700"> 📤보전+'+Number(r.topUpAmt).toLocaleString()+'</span>':(r.agencyMargin>0?'<span style="color:var(--green);font-weight:700"> 📥회수'+Number(r.recoveryAmt).toLocaleString()+'</span>':''))
       +(x.nightCnt>0?'<span>🌙 심야 '+x.nightCnt+'건</span>':'')
+      +(r.tmDetails&&r.tmDetails.length?'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">'+r.tmDetails.map(function(tm){return '<span style="font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;background:'+(tm.achieved?'#d1fae5':'var(--bg3)')+';color:'+(tm.achieved?'#059669':'var(--text3)')+';">'+tm.name+(tm.achieved?' ✅+₩'+tm.bonus.toLocaleString():' '+tm.cnt+'/'+tm.targetCnt+'건')+'</span>';}).join('')+'</div>':'')
+      +(r.tmDetails&&r.tmDetails.length
+        ?'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">'
+          +r.tmDetails.map(function(tm){
+            return '<span style="font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;background:'
+              +(tm.achieved?'#d1fae5':'var(--bg3)')
+              +';color:'+(tm.achieved?'#059669':'var(--text3)')+';">'
+              +tm.name+(tm.achieved?' ✅+₩'+tm.bonus.toLocaleString():' '+tm.cnt+'/'+tm.targetCnt+'건')
+              +'</span>';
+          }).join('')+'</div>'
+        :'')
       +(r.missionAmt>0?'<span>🎯 미션 +₩'+r.missionAmt.toLocaleString()+'</span>':'')
       +(r.eventAmt>0?'<span>🎉 이벤트 +₩'+r.eventAmt.toLocaleString()+'</span>':'')
       +(r.tax>0?'<span>세금 -₩'+r.tax.toLocaleString()+'</span>':'')
@@ -7208,6 +7430,9 @@ function _renderDeliveryResult(el, cfg, weekLabel){
       +'<div style="text-align:center;padding:10px;background:var(--bg3);border-radius:8px">'
         +'<div style="font-size:18px;font-weight:800;color:var(--green)">₩'+totalNet.toLocaleString()+'</div>'
         +'<div style="font-size:10px;color:var(--text3)">총 지급액(세후)</div></div>'
+      +'<div id="dp-margin-card" style="text-align:center;padding:10px;background:var(--bg3);border-radius:8px">'
+        +'<div id="dp-margin-val" style="font-size:18px;font-weight:800">'+(totalMargin>=0?'+':'')+totalMargin.toLocaleString()+'원</div>'
+        +'<div style="font-size:10px;color:var(--text3)">대리점 마진(±)</div></div>'
       +'</div>';
     html += rows;
     html += '<div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">'
