@@ -11973,6 +11973,23 @@ function doLogin(){
         SP('dash',null); updBadge(); updFbUI(); initGrps();
         document.getElementById('tbdate').textContent=new Date().toLocaleDateString('ko-KR');
         startListeners();
+        // ★ 기사 데이터 강제 로드 (localStorage 비어있으면 Firebase에서 즉시 가져옴)
+        setTimeout(function(){
+          if(FB&&_db&&!ls('drivers').length){
+            console.log('[Admin Login] 기사 목록 강제 로드...');
+            _db.collection('drivers').get().then(function(snap){
+              var all=[];
+              snap.forEach(function(doc){var d=doc.data();d.fbId=doc.id;all.push(d);});
+              if(all.length){
+                lss('drivers',all);
+                console.log('[Admin Login] 기사 '+all.length+'명 로드 완료');
+                updBadge();
+                if(S.page==='dash'||S.page==='drivers') SP(S.page,null);
+                toast('✅ 기사 '+all.length+'명 데이터 로드됨');
+              }
+            }).catch(function(e){console.warn('[Admin] 기사 로드 실패:',e);});
+          }
+        }, 600);
         // ★ v9.43 fix: initInqListener 호출 안전화 (legacy 함수 — 정의 없으면 skip)
         setTimeout(function(){
           if(typeof initInqListener==='function') initInqListener();
