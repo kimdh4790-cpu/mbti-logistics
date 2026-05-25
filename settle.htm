@@ -247,7 +247,7 @@ tr:hover>td{background:var(--bg3)}
   <div class="main">
     <div class="topbar">
       <div style="display:flex;align-items:center;gap:10px">
-        <button class="ham" onclick="document.getElementById('sidebar').classList.toggle('open');document.getElementById('sb-backdrop').style.display=document.getElementById('sidebar').classList.contains('open')?'block':'none'" ontouchstart="">☰</button>
+        <button class="ham" onclick="document.getElementById('sidebar').classList.toggle('open');document.getElementById('sb-backdrop').style.display=document.getElementById('sidebar').classList.contains('open')?'block':'none'" ontouchstart="this.click()">☰</button>
         <div class="topbar-title" id="page-title">대시보드</div>
       </div>
       <div class="topbar-right" id="topbar-right"></div>
@@ -3361,10 +3361,17 @@ var MENUS_DRIVER = [
 var MENUS = MENUS_SETTLE; // 기본값
 function buildNav(){
   var nav=document.getElementById('snav');
-  nav.innerHTML=MENUS.map(function(g){
-    return '<div class="ns">'+g.s+'</div>'
-      +g.items.map(function(m){return '<div class="ni" id="nav-'+m.p+'" onclick="goPage(\''+m.p+'\')">'+m.ic+' '+m.l+'</div>';}).join('');
-  }).join('');
+  var paid=_isPaidUser();
+  var html='';
+  MENUS.forEach(function(g){
+    html+='<div class="ns">'+g.s+'</div>';
+    g.items.forEach(function(m){
+      var locked=!paid&&PAID_PAGES&&PAID_PAGES.indexOf(m.p)>=0;
+      var sty=locked?' style="opacity:.6"':'';
+      html+='<div class="ni" id="nav-'+m.p+'" data-page="'+m.p+'" onclick="goPage(this.dataset.page)"'+sty+'>'+m.ic+' '+m.l+(locked?' 🔒':'')+'</div>';
+    });
+  });
+  nav.innerHTML=html;
 }
 
 // ── 보안 경고 팝업 + Firestore 기록 ──
@@ -3519,6 +3526,31 @@ function _initFCMReceiver(){
   } catch(e){}
 }
 
+// 유료 기능 페이지 목록 (무료 플랜에서 잠금)
+var PAID_PAGES = ['roster','leave','vehicle','expense','overtime','evaluation',
+  'delivery_platform','dispatch','dispatch_history','hourly_settle','attendance',
+  'season'];
+
+function _isPaidUser(){
+  if(isSuperAdmin()) return true;           // 슈퍼어드민 항상 허용
+  if(!_CU) return false;
+  // Firebase companies 문서에서 plan 확인
+  return window._cachedHasPaid===true || (_CU&&_CU.plan==='paid');
+}
+
+function _showPaywall(page){
+  var el = document.getElementById('content');
+  if(!el) return;
+  document.getElementById('page-title').textContent = '🔒 유료 기능';
+  el.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:50vh;text-align:center;padding:30px">'
+    +'<div style="font-size:52px;margin-bottom:12px">🔒</div>'
+    +'<div style="font-size:18px;font-weight:800;margin-bottom:8px">유료 기능입니다</div>'
+    +'<div style="font-size:13px;color:var(--text3);margin-bottom:20px">이 기능은 유료 구독 후 이용하실 수 있습니다</div>'
+    +'<button class="btn btn-blue" style="padding:12px 28px;font-size:14px" onclick="_showSubModal()">💳 구독 시작하기</button>'
+    +'<div style="font-size:11px;color:var(--text3);margin-top:12px">첫 달 50% 할인 · 언제든 해지 가능</div>'
+    +'</div>';
+}
+
 function goPage(page){
   // 딜러가 admin 전용 페이지 접근 시 차단
   var adminOnlyPages=['admin','dealers','all_settlements','all_drivers','subscriptions','invoices','error_logs'];
@@ -3526,6 +3558,16 @@ function goPage(page){
     showSecurityAlert('unauthorized_access',
       '권한 없는 페이지 접근 시도: '+page+'<br>(현재 역할: 대리점 관리자)'
     );
+    return;
+  }
+  // ★ 유료 기능 잠금
+  if(PAID_PAGES.indexOf(page)>=0 && !_isPaidUser()){
+    document.querySelectorAll('.ni').forEach(function(n){n.classList.remove('on');});
+    var nav=document.getElementById('nav-'+page);if(nav)nav.classList.add('on');
+    document.getElementById('topbar-right').innerHTML='';
+    document.getElementById('sidebar').classList.remove('open');
+    var _bd=document.getElementById('sb-backdrop');if(_bd)_bd.style.display='none';
+    _showPaywall(page);
     return;
   }
   document.querySelectorAll('.ni').forEach(function(n){n.classList.remove('on');});
