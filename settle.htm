@@ -1959,9 +1959,10 @@ function _showTrialExpiredPopup(){
   mo.id='trial-expired-popup';
   mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
   var PLANS=[
-    {key:'settle',label:'AI 자동 정산',price:'49,000원/월',desc:'엑셀 업로드→자동 정산, 세금계산서, 명세서 발송'},
-    {key:'qr',label:'QR 출퇴근',price:'49,000원/월',desc:'동적 QR+GPS 출퇴근, 위변조 방지'},
-    {key:'full',label:'풀패키지',price:'89,000원/월',desc:'정산+QR+계약서+보고서 모두 포함'},
+    {key:'settle',  label:'📦 AI 택배정산',price:'89,000원/월',desc:'정산현황·관리·통계'},
+    {key:'qr',     label:'🔐 QR 근태관리',price:'49,000원/월',desc:'QR출퇴근·근무표'},
+    {key:'payroll',label:'💼 급여관리',   price:'79,000원/월',desc:'급여현황'},
+    {key:'delivery',label:'🛵 배달대행', price:'89,000원/월',desc:'배달대행 정산'},
   ];
   var cards=PLANS.map(function(p){
     return '<div class="sp-card" data-plan="'+p.key+'" style="background:#1a2744;border:1px solid rgba(0,200,248,.3);border-radius:12px;padding:16px;cursor:pointer">';
@@ -1975,7 +1976,7 @@ function _showTrialExpiredPopup(){
     +'<div style="font-size:28px;text-align:center;margin-bottom:8px">⏰</div>'
     +'<h2 style="text-align:center;margin-bottom:4px;font-size:20px">7일 무료 체험이 종료됐습니다</h2>'
     +'<p style="text-align:center;color:#94a3b8;font-size:13px;margin-bottom:20px">요금제를 선택하고 계속 이용하세요</p>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">'+cards+'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">'+cards+'</div>'
     +'<div style="text-align:center;font-size:11px;color:#64748b">카드 자동결제 · 언제든 해지 가능<br>'
     +'문의: <a href="tel:051-711-3103" style="color:#00c8f8">051-711-3103</a> · <a href="https://pf.kakao.com/_xkuxabX/chat" style="color:#00c8f8">카카오 돈웨이</a></div>'
     +'</div>';
@@ -2580,13 +2581,12 @@ function doLogout(){
 
 // ══ 토스페이먼츠 결제 ══
 var PLAN_INFO={
-  qr_only:    {label:'📷 QR 출퇴근',  amount:49000},
-  settle_taxi:{label:'📦 택배 정산',  amount:89000},
-  payroll:    {label:'💼 급여 관리',  amount:89000},
-  qr_payroll: {label:'📷💼 QR+급여', amount:119000},
-  full:       {label:'🚀 ALL-IN-ONE',amount:179000},
-  contract:{label:'위수탁 계약서',amount:9900},
-  roster:  {label:'근무표',        amount:9900},
+  settle:   {label:'📦 AI 택배정산', amount:89000,  field:'settlePaid',  desc:'정산현황·관리·통계'},
+  qr:       {label:'🔐 QR 근태관리', amount:49000,  field:'qrPaid',      desc:'QR출퇴근·근무표'},
+  payroll:  {label:'💼 급여관리',    amount:79000,  field:'payrollPaid', desc:'급여현황'},
+  delivery: {label:'🛵 배달대행',    amount:89000,  field:'deliveryPaid',desc:'배달대행 정산'},
+  contract: {label:'위수탁 계약서',  amount:9900,   field:'contractPaid',desc:'계약서 관리'},
+  roster:   {label:'근무표',         amount:9900,   field:'rosterPaid',  desc:'근무표'},
 };
 
 async function _tossPay(planType, amount){
@@ -13784,11 +13784,10 @@ function _showSubModal(){
   var mo=document.getElementById('mo-sub');if(mo)mo.remove();
   var moEl=document.createElement('div');moEl.className='mo show';moEl.id='mo-sub';
   var plans=[
-    {key:'qr_only',     name:'📷 QR 출퇴근',  price:'49,000', period:'월', color:'#0891b2'},
-    {key:'settle_taxi', name:'📦 택배 정산',   price:'89,000', period:'월', color:'#dc2626'},
-    {key:'payroll',     name:'💼 급여 관리',   price:'89,000', period:'월', color:'#7c3aed'},
-    {key:'qr_payroll',  name:'📷💼 QR+급여',  price:'119,000', period:'월', color:'#059669', badge:'13% 할인'},
-    {key:'full',        name:'🚀 ALL-IN-ONE', price:'179,000', period:'월', color:'#185FA5', badge:'⭐ 베스트'},
+    {key:'settle',   name:'📦 AI 택배정산', price:'89,000', period:'월', color:'#0891b2', desc:'정산현황·관리·통계'},
+    {key:'qr',       name:'🔐 QR 근태관리', price:'49,000', period:'월', color:'#059669', desc:'QR출퇴근·근무표'},
+    {key:'payroll',  name:'💼 급여관리',    price:'79,000', period:'월', color:'#7c3aed', desc:'급여현황'},
+    {key:'delivery', name:'🛵 배달대행',    price:'89,000', period:'월', color:'#dc2626', desc:'배달대행 정산'},
   ];
   var html='<div class="md" style="max-width:520px">'
     +'<div class="mdt">💳 구독 플랜 선택'
@@ -13801,7 +13800,7 @@ function _showSubModal(){
       +'onmouseout="this.style.borderColor=\''+p.color+'22\';this.style.background=\'\'"">'
       +(p.badge?'<div style="position:absolute;top:-1px;right:8px;background:'+p.color+';color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:0 0 6px 6px">'+p.badge+'</div>':'')
       +'<div style="font-size:11px;font-weight:700;color:'+p.color+'">'+p.name+'</div>'
-      +'<div style="font-size:11px;color:var(--text3);margin-bottom:4px">'+p.drivers+'</div>'
+      +'<div style="font-size:11px;color:var(--text3);margin-bottom:4px">'+p.desc+'</div>'
       +'<div style="font-size:17px;font-weight:800">₩'+p.price+'</div>'
       +'<div style="font-size:10px;color:var(--text3)">'+p.period+'</div>'
       +'</div>';
@@ -16584,12 +16583,12 @@ function _showPlanUpsell(planKey){
     if(!did){setTimeout(doActivate,600);return;}
     var expiry=new Date(Date.now()+30*86400000);
     Promise.all([
-      _db.collection('companies').doc(did).update({
-        plan:planType, plans:[], settlePaid:true, rosterPaid:true,
-        planActivatedAt:new Date().toISOString(),
-        planExpiry:expiry.toISOString(),
-        lastOrderId:orderId
-      }),
+      _db.collection('companies').doc(did).update((function(){
+        var f={plan:planType,planActivatedAt:new Date().toISOString(),planExpiry:expiry.toISOString(),lastOrderId:orderId};
+        var PI=window.PLAN_INFO&&window.PLAN_INFO[planType];
+        if(PI&&PI.field) f[PI.field]=true;
+        return f;
+      })()),
       _db.collection('subscriptions').doc(did).set({
         status:'active',
         expireDate:firebase.firestore.Timestamp.fromDate(expiry),
@@ -16974,9 +16973,9 @@ function _loadPaymentRequests(container){
     snap.forEach(function(doc){items.push(Object.assign({id:doc.id},doc.data()));});
     if(!items.length){container.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">📭 결제 신청 없음</div>';return;}
 
-    var TYPE_LABEL={contract:'📝 위수탁 계약서',roster:'🗓 근무표',qr:'🔐 QR 출퇴근',full:'⚡ 풀패키지',settle:'💰 AI 정산'};
-    var TYPE_PRICE={contract:9900,roster:9900,qr:29900,full:69900,settle:39900};
-    var TYPE_FIELD={contract:{contractPaid:true},roster:{rosterPaid:true},qr:{qrPaid:true},full:{contractPaid:true,rosterPaid:true,qrPaid:true,settlePaid:true},settle:{settlePaid:true}};
+    var TYPE_LABEL={settle:'📦 AI 택배정산',qr:'🔐 QR 근태관리',payroll:'💼 급여관리',delivery:'🛵 배달대행',contract:'📝 위수탁 계약서',roster:'🗓 근무표',full:'⚡ ALL-IN-ONE'};
+    var TYPE_PRICE={settle:89000,qr:49000,payroll:79000,delivery:89000,contract:9900,roster:9900,full:179000};
+    var TYPE_FIELD={settle:{settlePaid:true},qr:{qrPaid:true},payroll:{payrollPaid:true},delivery:{deliveryPaid:true},contract:{contractPaid:true},roster:{rosterPaid:true},full:{settlePaid:true,qrPaid:true,payrollPaid:true,deliveryPaid:true,contractPaid:true,rosterPaid:true}};
     var STATUS_COLOR={pending:'#f59e0b',approved:'#10b981',rejected:'#ef4444'};
 
     var html='';
@@ -17015,11 +17014,13 @@ function _loadPaymentRequests(container){
 function _approvePayment(reqId, dealerId, type){
   if(!_db||!isSuperAdmin()) return;
   var TYPE_FIELD={
-    contract:{contractPaid:true},
-    roster:{rosterPaid:true},
-    qr:{qrPaid:true},
-    full:{contractPaid:true,rosterPaid:true,qrPaid:true},
-    settle:{settlePaid:true}
+    contract: {contractPaid:true},
+    roster:   {rosterPaid:true},
+    qr:       {qrPaid:true},
+    settle:   {settlePaid:true},
+    payroll:  {payrollPaid:true},
+    delivery: {deliveryPaid:true},
+    full:     {contractPaid:true,rosterPaid:true,qrPaid:true,settlePaid:true,payrollPaid:true,deliveryPaid:true},
   };
   var fields=TYPE_FIELD[type]||{};
   if(!Object.keys(fields).length){toast('❌ 알 수 없는 유형: '+type);return;}
