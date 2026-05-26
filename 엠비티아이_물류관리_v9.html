@@ -16525,7 +16525,11 @@ async function uploadDocSlot(inp,driverId,key,mode,label){
 function assignAllDriverNums(){
   if(!FB||!_db){toast('Firebase 미연결');return;}
   var all=ls('drivers').filter(function(d){return d.is_active===true&&d.isNew!==true&&d.status!=='탈퇴'&&d.status!=='거부';});
-  all.sort(function(a,b){return (a.approvedAt||a.createdAt||'').localeCompare(b.approvedAt||b.createdAt||'');});
+  all.sort(function(a,b){
+    var ta=String(a.approvedAt&&a.approvedAt.toDate?a.approvedAt.toDate().toISOString():(a.approvedAt||a.createdAt||''));
+    var tb=String(b.approvedAt&&b.approvedAt.toDate?b.approvedAt.toDate().toISOString():(b.approvedAt||b.createdAt||''));
+    return ta.localeCompare(tb);
+  });
   var count=0;
   all.forEach(function(d,i){
     var num='MBTI'+String(i+1).padStart(2,'0');
