@@ -5560,7 +5560,7 @@ function _dwAdminLiveView(el){
   if(!el)return;
   el.innerHTML='<div style="max-width:960px;margin:0 auto">'
     +'<div style="display:flex;gap:10px;margin-bottom:14px;align-items:center">'
-      +'<div style="font-size:14px;font-weight:800">🛵 실시간 기사 배달 현황</div>'
+      +'<div style="font-size:14px;font-weight:800">🛵 실시간 기사 배달 현황 + 마진 밸런스</div>'
       +'<button onclick="_dwAdminLiveView(document.getElementById(\'dw-admin-live\'))" class="btn btn-sm" style="margin-left:auto">🔄 새로고침</button>'
     +'</div>'
     +'<div id="dw-admin-sessions">⏳ 로드 중...</div>'
@@ -5580,32 +5580,121 @@ function _dwAdminLiveView(el){
         container.innerHTML='<div class="empty">이번 기간 입력된 세션 없음<br><span style="font-size:11px;color:var(--text3)">기사들이 배달 입력 후 표시됩니다</span></div>';
         return;
       }
-      // 총합
+
+      // ── 집계
       var totCnt=0,totNet=0,totInj=0,totExt=0;
-      sessions.forEach(function(s){totCnt+=s.totalCount||0;totNet+=s.net||0;totInj+=s.injected||0;totExt+=s.extracted||0;});
-      var html='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;background:var(--bg3);border-radius:12px;padding:12px;margin-bottom:14px">'
-        +'<div style="text-align:center"><div style="font-size:10px;color:var(--text3)">기사 수</div><div style="font-size:18px;font-weight:900">'+sessions.length+'명</div></div>'
-        +'<div style="text-align:center"><div style="font-size:10px;color:var(--text3)">총 건수</div><div style="font-size:18px;font-weight:900">'+totCnt+'건</div></div>'
-        +'<div style="text-align:center"><div style="font-size:10px;color:#b45309">보전 투입</div><div style="font-size:16px;font-weight:800;color:#b45309">-₩'+Math.round(totInj).toLocaleString()+'</div></div>'
-        +'<div style="text-align:center"><div style="font-size:10px;color:#047857">환수 차감</div><div style="font-size:16px;font-weight:800;color:#047857">+₩'+Math.round(totExt).toLocaleString()+'</div></div>'
-        +'<div style="text-align:center"><div style="font-size:10px;color:var(--brand)">대리점 순마진</div><div style="font-size:16px;font-weight:800;color:var(--brand)">'+(totExt-totInj>=0?'+':'')+'₩'+Math.round(totExt-totInj).toLocaleString()+'</div></div>'
+      sessions.forEach(function(s){
+        totCnt+=s.totalCount||0;
+        totNet+=s.net||0;
+        totInj+=s.injected||0;
+        totExt+=s.extracted||0;
+      });
+      var poolBalance=totExt-totInj; // 양수=마진, 음수=적자
+      var riskScore=totInj>0?Math.round(totExt/totInj*100):100; // 100%이상=안전
+      var riskColor=poolBalance>=0?'#059669':poolBalance>-50000?'#f59e0b':'#ef4444';
+      var riskLabel=poolBalance>=0?'✅ 안전':'⚠️ 주의';
+      if(poolBalance<-100000)riskLabel='🚨 위험';
+
+      // ── ① 마진 밸런스 점수판 (상단)
+      var html='<div style="background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:16px;padding:16px;margin-bottom:14px;color:#fff">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
+          +'<div style="font-size:13px;font-weight:900">💰 돈웨이 마진 밸런스 점수</div>'
+          +'<div style="background:'+riskColor+';color:#fff;font-size:11px;font-weight:800;padding:4px 12px;border-radius:20px">'+riskLabel+'</div>'
+        +'</div>'
+        // KPI 4개
+        +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">'
+          +'<div style="background:rgba(255,255,255,.08);border-radius:10px;padding:10px;text-align:center">'
+            +'<div style="font-size:9px;opacity:.7;margin-bottom:2px">기사 수</div>'
+            +'<div style="font-size:22px;font-weight:900">'+sessions.length+'</div>'
+            +'<div style="font-size:9px;opacity:.6">명</div></div>'
+          +'<div style="background:rgba(255,255,255,.08);border-radius:10px;padding:10px;text-align:center">'
+            +'<div style="font-size:9px;opacity:.7;margin-bottom:2px">총 배달</div>'
+            +'<div style="font-size:22px;font-weight:900">'+totCnt+'</div>'
+            +'<div style="font-size:9px;opacity:.6">건</div></div>'
+          +'<div style="background:rgba(180,83,9,.3);border-radius:10px;padding:10px;text-align:center">'
+            +'<div style="font-size:9px;color:#fbbf24;margin-bottom:2px">보전 투입</div>'
+            +'<div style="font-size:16px;font-weight:900;color:#fbbf24">-₩'+Math.round(totInj/1000)+'K</div>'
+            +'<div style="font-size:9px;opacity:.6">대리점→기사</div></div>'
+          +'<div style="background:rgba(5,150,105,.25);border-radius:10px;padding:10px;text-align:center">'
+            +'<div style="font-size:9px;color:#6ee7b7;margin-bottom:2px">환수 차감</div>'
+            +'<div style="font-size:16px;font-weight:900;color:#6ee7b7">+₩'+Math.round(totExt/1000)+'K</div>'
+            +'<div style="font-size:9px;opacity:.6">기사→대리점</div></div>'
+        +'</div>'
+
+        // 순마진 게이지
+        +'<div style="margin-bottom:10px">'
+          +'<div style="display:flex;justify-content:space-between;font-size:10px;opacity:.75;margin-bottom:5px">'
+            +'<span>대리점 풀(Pool) 순마진</span>'
+            +'<span style="font-weight:900;color:'+riskColor+';">'+(poolBalance>=0?'+':'')+'₩'+Math.round(poolBalance).toLocaleString()+'</span>'
+          +'</div>'
+          // 밸런스 바 (가운데 기준선)
+          +'<div style="position:relative;height:12px;background:rgba(255,255,255,.1);border-radius:6px">'
+            +(poolBalance>=0
+              ? '<div style="position:absolute;left:50%;width:'+Math.min(riskScore/2,50)+'%;height:100%;background:#059669;border-radius:0 6px 6px 0;top:0"></div>'
+              : '<div style="position:absolute;right:50%;width:'+Math.min(Math.abs(poolBalance)/Math.max(totInj,1)*50,50)+'%;height:100%;background:#ef4444;border-radius:6px 0 0 6px;top:0"></div>')
+            +'<div style="position:absolute;left:50%;width:1px;height:16px;top:-2px;background:#fff;opacity:.6"></div>'
+          +'</div>'
+          +'<div style="display:flex;justify-content:space-between;font-size:9px;opacity:.5;margin-top:3px"><span>적자 ←</span><span>← 0 →</span><span>→ 흑자</span></div>'
+        +'</div>'
+
+        // 환수/보전 비율
+        +'<div style="font-size:10px;opacity:.7">환수/보전 커버율: <strong style="color:'+riskColor+'">'+riskScore+'%</strong>'
+          +(riskScore>=100?' (보전 비용 완전 충당)':riskScore>=70?' (부분 충당 — 주의)':' (보전 과다 — 즉시 확인)')
+        +'</div>'
       +'</div>'
+
+      // ── ② 기사별 마진 바차트
+      +'<div style="background:var(--bg2);border-radius:14px;padding:14px;margin-bottom:14px">'
+        +'<div style="font-size:12px;font-weight:800;margin-bottom:10px">📊 기사별 마진 기여도 (환수 - 보전)</div>'
+        +'<div style="display:flex;flex-direction:column;gap:6px">'
+        +sessions.slice().sort(function(a,b){
+          var ma=(b.extracted||0)-(b.injected||0);
+          var mb=(a.extracted||0)-(a.injected||0);
+          return ma-mb; // 기여 큰 순
+        }).map(function(s){
+          var margin=(s.extracted||0)-(s.injected||0);
+          var maxAbs=Math.max(Math.abs(margin),1);
+          var barW=Math.min(Math.abs(margin)/Math.max(totInj||1,totExt||1)*100,100);
+          var isPos=margin>=0;
+          var tc=_dwTrack(s.totalCount||0,s.defPrice||2900);
+          return '<div style="display:flex;align-items:center;gap:8px">'
+            +'<div style="width:80px;font-size:10px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(s.driverName||s.driverId||'?')+'</div>'
+            +'<div style="flex:1;position:relative;height:18px;background:var(--bg3);border-radius:4px;overflow:hidden">'
+              +'<div style="position:absolute;'+(isPos?'left:0':'right:0')+';width:'+barW+'%;height:100%;background:'+(isPos?'#059669':'#ef4444')+';border-radius:4px;opacity:.8"></div>'
+              +'<div style="position:absolute;inset:0;display:flex;align-items:center;padding:0 6px;font-size:9px;font-weight:700;color:#fff">'
+                +(isPos?'+':'')+'₩'+Math.round(margin).toLocaleString()
+              +'</div>'
+            +'</div>'
+            +'<div style="width:40px;text-align:right;font-size:10px;color:var(--text3)">'+( s.totalCount||0)+'건</div>'
+          +'</div>';
+        }).join('')
+        +'</div>'
+      +'</div>'
+
+      // ── ③ 기사 카드 그리드
       +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px">';
+
       sessions.sort(function(a,b){return (b.totalCount||0)-(a.totalCount||0);}).forEach(function(s){
         var track=_dwTrack(s.totalCount||0, s.defPrice||2900);
         var tc=track.isDefault?'#6b7280':track.price>=5500?'#7c3aed':track.price>=5100?'#2563eb':track.price>=4200?'#059669':'#d97706';
+        var margin=(s.extracted||0)-(s.injected||0);
+        var mc=margin>=0?'#059669':'#ef4444';
         html+='<div style="background:var(--bg2);border-radius:12px;border-top:3px solid '+tc+';padding:12px">'
           +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
             +'<div style="font-size:12px;font-weight:800">'+esc(s.driverName||s.driverId)+'</div>'
             +(s.isVerified?'<span style="font-size:9px;background:#d1fae5;color:#059669;padding:2px 6px;border-radius:6px;font-weight:700">✅검증</span>':'<span style="font-size:9px;background:#fef3c7;color:#92400e;padding:2px 6px;border-radius:6px">⏳가상</span>')
           +'</div>'
           +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:8px">'
-            +'<div style="text-align:center"><div style="font-size:9px;color:var(--text3)">건수</div><div style="font-size:16px;font-weight:900">'+(s.totalCount||0)+'</div></div>'
+            +'<div style="text-align:center"><div style="font-size:9px;color:var(--text3)">건수(유효)</div>'
+              +'<div style="font-size:16px;font-weight:900">'+(s.totalCount||0)+'</div>'
+              +'<div style="font-size:8px;color:var(--text3)">심야 제외</div></div>'
             +'<div style="text-align:center"><div style="font-size:9px;color:var(--text3)">트랙</div><div style="font-size:11px;font-weight:800;color:'+tc+'">₩'+(track.isDefault?Number(s.defPrice||2900).toLocaleString():track.price.toLocaleString())+'</div></div>'
             +'<div style="text-align:center"><div style="font-size:9px;color:var(--brand)">예상지급</div><div style="font-size:14px;font-weight:900;color:var(--brand)">₩'+Math.round(s.net||0).toLocaleString()+'</div></div>'
           +'</div>'
-          +'<div style="font-size:10px;color:var(--text3);border-top:1px solid var(--border);padding-top:6px">'
-            +'보전 -₩'+Math.round(s.injected||0).toLocaleString()+' / 환수 +₩'+Math.round(s.extracted||0).toLocaleString()
+          +'<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);border-top:1px solid var(--border);padding-top:6px">'
+            +'<span>보전 <span style="color:#b45309">-₩'+Math.round(s.injected||0).toLocaleString()+'</span></span>'
+            +'<span>환수 <span style="color:#047857">+₩'+Math.round(s.extracted||0).toLocaleString()+'</span></span>'
+            +'<span style="color:'+mc+';font-weight:700">'+(margin>=0?'+':'')+'₩'+Math.round(margin).toLocaleString()+'</span>'
           +'</div>'
         +'</div>';
       });
