@@ -14648,6 +14648,42 @@ function openSettleCompare(){
   document.body.appendChild(mo);
 }
 
+// duplicate driver cleanup (admin only)
+async function cleanDuplicateDrivers(){
+  if(!_db){toast('DB 연결 안됨');return;}
+  if(!confirm('동일 userId 중복 기사를 검사하고 오래된 항목을 삭제합니다. 계속할까요?'))return;
+  toast('검사 중...');
+  try{
+    var snap=await _db.collection('drivers').get();
+    var map={};
+    snap.forEach(function(doc){
+      var d=doc.data();
+      var key=(d.userId||'')+'__'+(d.adminId||d.dealerId||'');
+      if(!key||key==='__')return;
+      if(!map[key])map[key]=[];
+      map[key].push({id:doc.id,createdAt:d.createdAt||d.joinDate||'',name:d.name||''});
+    });
+    var dupKeys=Object.keys(map).filter(function(k){return map[k].length>1;});
+    if(dupKeys.length===0){toast('중복 기사 없음');return;}
+    var total=0;
+    var batch=_db.batch();
+    dupKeys.forEach(function(k){
+      var list=map[k];
+      list.sort(function(a,b){return (b.createdAt>a.createdAt)?1:-1;});
+      list.slice(1).forEach(function(item){
+        batch.delete(_db.collection('drivers').doc(item.id));
+        total++;
+      });
+    });
+    await batch.commit();
+    toast('중복 기사 '+total+'명 삭제 완료');
+    SP('drivers',null);
+  }catch(e){
+    toast('오류: '+e.message);
+  }
+}
+
+
 function checkDuplicateSettlements(){
   var s=ls('settlements');
   if(!s.length){alert('정산서가 없습니다.');return;}
@@ -15453,6 +15489,7 @@ function rDrivers(){
       <div style="display:flex;gap:6px">
         <button class="btn btn-sm" style="background:#dc2626;color:#fff;border:none" onclick="openCampGpsAdmin()">🏕 캠프 GPS</button>
         <button class="btn btn-sm" style="background:#7c3aed;color:#fff;border:none" onclick="assignAllDriverNums()">🔢 사번 일괄저장</button>
+        <button class="btn btn-sm" style="background:#b45309;color:#fff;border:none" onclick="cleanDuplicateDrivers()">🔍 중복기사 정리</button>
         <button class="btn btn-sm" onclick="S.eFilter='all';S.tFilter='all';S.dFilter='all';S.cFilter='all';SP('drivers',null)">전체보기</button>
       </div>
     </div>
@@ -32555,8 +32592,10 @@ async function otpLoginVerify(){
 }
 </script>
 
-// ★ 긴급 잠금 해제
+<script>
+// emergency unlock
 (function(){if(location.search.includes('unlock=1')){localStorage.removeItem('mbti_lock');var u=new URL(location.href);u.searchParams.delete('unlock');history.replaceState(null,'',u.toString());setTimeout(function(){if(typeof toast==='function')toast('🔓 잠금 해제됨');},800);}})();
+</script>
 
 <script>
 /* ★ Firebase 연결 상태 표시 */
