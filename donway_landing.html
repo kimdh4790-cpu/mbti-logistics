@@ -193,7 +193,7 @@ section{position:relative;z-index:10}
 .fpp{background:rgba(168,85,247,.08);color:#c084fc;border:1px solid rgba(168,85,247,.2)}
 .fnew{position:absolute;top:10px;right:10px;background:var(--green);color:#020817;font-size:8px;font-weight:900;padding:2px 6px;border-radius:3px;letter-spacing:.5px}
 .cmp{padding:100px 24px;text-align:center}
-.cmpt{width:100%;border-collapse:collapse;font-size:13px;min-width:580px}
+.cmpt{width:100%;border-collapse:collapse;font-size:13px;}
 .cmpt th{padding:12px 16px;text-align:left;background:rgba(0,200,248,.06);border:1px solid var(--bdr);font-weight:700;color:var(--cyan)}
 .cmpt th:last-child{background:rgba(0,200,248,.14);color:#fff;border-color:rgba(0,200,248,.22)}
 .cmpt td{padding:11px 16px;border:1px solid rgba(255,255,255,.045);color:var(--gray);vertical-align:middle}
@@ -509,12 +509,11 @@ footer{padding:46px 24px;border-top:1px solid var(--bdr);text-align:center}
 html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#020817)}
 #nav{position:fixed;top:0;left:0;right:0;z-index:500;height:54px;padding:0 16px}
 .pat{position:fixed!important;top:54px;left:0;right:0;z-index:499;padding:5px 12px!important;font-size:10px!important}
-#sw{position:fixed;top:86px;left:0;right:0;bottom:0;z-index:10;overflow:hidden}
-.slide{position:absolute;inset:0;opacity:0;pointer-events:none;
-  transition:opacity .22s ease-out,transform .22s ease-out;transform:translateY(30px)}
-.slide.on{opacity:1;pointer-events:auto;transform:none}
-.slide.up{opacity:0;transform:translateY(-50px);pointer-events:none}
-.slide.dn{opacity:0;transform:translateY(50px);pointer-events:none}
+#sw{position:fixed;top:86px;left:0;right:0;bottom:0;z-index:10;overflow:hidden;display:flex;transition:transform .28s cubic-bezier(.25,.46,.45,.94);will-change:transform;}
+.slide{position:relative;flex:0 0 100vw;width:100vw;height:100%;opacity:1;pointer-events:auto;overflow-y:auto;overflow-x:hidden;}
+
+
+
 .s-body{height:100%;width:100%;overflow:hidden;display:flex;flex-direction:column;box-sizing:border-box}
 .s-center{align-items:center;justify-content:center;text-align:center;padding:12px 16px 10px;gap:0}
 .s-fit{overflow-y:auto;padding:10px 14px 50px;scrollbar-width:thin;scrollbar-color:rgba(0,200,248,.2) transparent}
@@ -670,36 +669,105 @@ html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#02
 }
 
 
-/* ★ 모바일 강화 패치 */
-@media(max-width:480px){
-  /* 기본 섹션 제목 더 축소 */
-  .st{font-size:clamp(16px,5.5vw,26px)!important;margin-bottom:8px!important;letter-spacing:-.5px!important;}
-  .ss{font-size:13px!important;line-height:1.6!important;}
-  /* 히어로 */
-  .s-title{font-size:clamp(26px,10vw,42px)!important;}
-  .s-sub{font-size:9px!important;letter-spacing:.12em!important;}
-  /* s-center 패딩 축소 */
-  .s-center{padding:8px 12px 6px!important;}
-  .s-fit{padding:8px 12px 44px!important;}
-  /* 비교 슬라이드 (slide-7) */
-  #slide-7 .st{font-size:clamp(14px,5vw,22px)!important;}
-  /* CTA 슬라이드 */
-  .ctah{font-size:clamp(22px,7vw,36px)!important;}
-  /* slide-9 FAQ margin */
-  #slide-9 .st{margin-bottom:16px!important;}
-  /* 가격 슬라이드 tier 버튼 */
-  .tier-btn{padding:4px 5px!important;min-width:0!important;}
-  .tier-icon{font-size:13px!important;}
-  .tier-name{font-size:9px!important;}
+/* ★★★ 모바일 완전 수정 (360~480px) ★★★ */
+@media(max-width:520px){
+
+  /* ── 네비 ── */
+  #nav{height:44px!important;padding:0 10px!important;}
+  #sw{top:76px!important;}
+  .pat{top:44px!important;font-size:9px!important;padding:3px 10px!important;}
+
+  /* ── 공통 제목들 (clamp 최솟값 강제 축소) ── */
+  .logo-main{font-size:clamp(44px,12vw,80px)!important;letter-spacing:-3px!important;filter:none!important;}
+  .logo-sub{font-size:clamp(9px,2.5vw,12px)!important;letter-spacing:5px!important;}
+  .logo-tagline{font-size:clamp(12px,3vw,16px)!important;margin-top:10px!important;}
+  .hh{font-size:clamp(22px,7vw,40px)!important;letter-spacing:-2px!important;margin-bottom:14px!important;}
+  .hsb{font-size:clamp(12px,3.5vw,16px)!important;margin-bottom:24px!important;}
+  .st{font-size:clamp(15px,5vw,24px)!important;margin-bottom:8px!important;letter-spacing:-0.5px!important;}
+  .s-title{font-size:clamp(22px,9vw,38px)!important;}
+  .ss{font-size:clamp(11px,3.5vw,14px)!important;line-height:1.6!important;}
+  .ctah{font-size:clamp(20px,6vw,34px)!important;letter-spacing:-1px!important;margin-bottom:12px!important;}
+  .nin{font-size:clamp(18px,5vw,26px)!important;margin-bottom:4px!important;}
+  .ni2-num{font-size:clamp(20px,6vw,30px)!important;}
+
+  /* ── 패딩 ── */
+  .s-center{padding:6px 12px 4px!important;}
+  .s-fit{padding:6px 10px 44px!important;}
+
+  /* ── 히어로 배지/태그 ── */
+  .s-badge,.stg,.stag{font-size:8px!important;padding:2px 6px!important;margin-bottom:4px!important;}
+
+  /* ── 페인포인트 그리드 (slide-1) ── */
+  .pgrid{grid-template-columns:1fr 1fr!important;gap:8px!important;margin-top:12px!important;}
+  .pi{padding:10px!important;}
+  .pi-ic{font-size:20px!important;}
+  .pi-t{font-size:12px!important;font-weight:700!important;}
+  .pi-d{font-size:10px!important;line-height:1.4!important;}
+
+  /* ── 비교 테이블 (slide-7) ── */
+  .cmpt{min-width:0!important;font-size:11px!important;}
+  .cmpt th,.cmpt td{padding:7px 8px!important;}
+  #slide-7 .st{font-size:clamp(13px,4.5vw,18px)!important;}
+
+  /* ── 가격 (slide-8) ── */
+  #slide-8 .st{font-size:clamp(13px,4vw,18px)!important;}
+  #slide-8 h2.st{font-size:clamp(13px,4vw,18px)!important;}
+  #slide-8 .pc-price{font-size:clamp(18px,7vw,28px)!important;line-height:1!important;}
+  #slide-8 .pc-name{font-size:9px!important;}
+  #slide-8 #price-cards{grid-template-columns:1fr 1fr!important;gap:6px!important;}
+  #slide-8 .pc{padding:8px 8px!important;}
+  .tier-btn{padding:5px 4px!important;min-width:0!important;flex:1!important;}
+  .tier-icon{font-size:12px!important;display:block!important;}
+  .tier-name{font-size:8px!important;}
   .tier-type{font-size:7px!important;}
-  .pc-price{font-size:clamp(18px,6vw,28px)!important;}
-  /* 네비 높이 축소 */
-  #nav{height:46px!important;padding:0 12px!important;}
-  #sw{top:78px!important;}
-  .pat{top:46px!important;}
-  /* dot 네비 */
+  #tier-btns{gap:3px!important;}
+
+  /* ── SS 숫자 카드 ── */
+  .ss-item b{font-size:clamp(16px,6vw,24px)!important;}
+  .ss-item span{font-size:8px!important;}
+
+  /* ── FAQ ── */
+  #slide-9 .st{font-size:clamp(16px,5vw,22px)!important;margin-bottom:12px!important;}
+  .fqq{font-size:12px!important;padding:12px 0!important;}
+  .fqa{font-size:11px!important;}
+
+  /* ── CTA (slide-10) ── */
+  .ctah .hi{font-size:clamp(18px,6vw,28px)!important;}
+
+  /* ── 플랫폼 (slide-11) ── */
+  #slide-11 .st{font-size:clamp(13px,4vw,18px)!important;}
+
+  /* ── 공통 버튼 ── */
+  .pcbtn{padding:10px 16px!important;font-size:13px!important;}
+  .bs{padding:10px 20px!important;font-size:13px!important;}
+
+  /* ── 하단 네비 닷 ── */
   .dot{width:5px!important;height:5px!important;}
+  #sctr{font-size:10px!important;}
+
+  /* ── 숨겨도 되는 요소 ── */
+  #slide-9 .st{margin-bottom:10px!important;}
 }
+
+/* ── 좌우 화살표 버튼 ── */
+#btn-prev,#btn-next{
+  position:fixed;top:50%;transform:translateY(-50%);
+  z-index:200;background:rgba(10,22,40,.7);border:1px solid rgba(0,200,248,.3);
+  color:#00c8f8;border-radius:50%;width:36px;height:36px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:16px;backdrop-filter:blur(8px);
+  transition:.2s;user-select:none;-webkit-user-select:none;
+}
+#btn-prev{left:8px;}
+#btn-next{right:8px;}
+#btn-prev:active,#btn-next:active{background:rgba(0,200,248,.25);}
+@media(min-width:800px){
+  #btn-prev{left:20px;width:44px;height:44px;font-size:20px;}
+  #btn-next{right:20px;width:44px;height:44px;font-size:20px;}
+}
+/* ── 슬라이드 내부 세로 스크롤 ── */
+.slide{scroll-behavior:smooth;}
+.s-fit,.s-center{height:100%;}
 
 </style>
 </head>
@@ -1075,7 +1143,7 @@ html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#02
   <div style="max-width:940px;margin:52px auto 0;overflow-x:auto" class="rv">
     <table class="cmpt">
       <thead><tr>
-        <th style="min-width:160px">기능</th>
+        <th>기능</th>
         <th><div>근태관리 앱 ①</div><div class="cph">출퇴근 전문</div></th>
         <th><div>HR 플랫폼 ②</div><div class="cph">인사·급여</div></th>
         <th><div>급여 관리 앱 ③</div><div class="cph">급여 전문</div></th>
@@ -1245,7 +1313,7 @@ html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#02
 
   <!-- 인원별 전체 비교표 -->
   <div class="rv" style="max-width:900px;margin:0 auto 8px;overflow-x:auto">
-    <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:600px">
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
       <thead>
         <tr style="background:rgba(0,200,248,.06)">
           <th style="padding:12px 16px;text-align:left;border:1px solid rgba(255,255,255,.06);color:rgba(0,200,248,.8)">플랜</th>
@@ -1367,10 +1435,12 @@ html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#02
   </div>
 </div>
 </div>
+<button id="btn-prev" aria-label="이전">‹</button>
+<button id="btn-next" aria-label="다음">›</button>
 <div id="dots"><button class="dot on" data-idx="0" title="🏠 DONWAY" onclick="gS(0)"></button><button class="dot" data-idx="1" title="😩 공통 고민" onclick="gS(1)"></button><button class="dot" data-idx="2" title="🏢 업종별 사례" onclick="gS(2)"></button><button class="dot" data-idx="3" title="⚡ 이용 방법" onclick="gS(3)"></button><button class="dot" data-idx="4" title="📱 QR 출퇴근" onclick="gS(4)"></button><button class="dot" data-idx="5" title="🔧 기능 소개" onclick="gS(5)"></button><button class="dot" data-idx="6" title="💡 데모" onclick="gS(6)"></button><button class="dot" data-idx="7" title="🏆 경쟁사 비교" onclick="gS(7)"></button><button class="dot" data-idx="8" title="💰 요금제" onclick="gS(8)"></button><button class="dot" data-idx="9" title="❓ FAQ" onclick="gS(9)"></button><button class="dot" data-idx="10" title="🚀 무료 시작" onclick="gS(10)"></button><button class="dot" data-idx="11" title="🖼️ 플랫폼 개요" onclick="gS(11)"></button>
 </div>
 <div id="sctr">1 / 12</div>
-<div id="aring" title="자동넘기기"><svg viewBox="0 0 22 22" fill="none">
+<div id="aring" style="display:none" title="자동넘기기"><svg viewBox="0 0 22 22" fill="none">
 <circle cx="11" cy="11" r="9.5" stroke="rgba(255,255,255,.1)" stroke-width="1.5"/>
 <circle id="aarc" cx="11" cy="11" r="9.5" stroke="#00c8f8" stroke-width="1.5" stroke-linecap="round" transform="rotate(-90 11 11)" stroke-dasharray="60" stroke-dashoffset="60"/></svg>
 <div id="aicon">⏸</div></div>
@@ -2017,68 +2087,83 @@ if(!_initTier()){document.addEventListener('DOMContentLoaded',_initTier);}
 </script>
 <script>
 (function(){
-  var N=12,c=0,busy=false,paused=false,tmr=null,DELAY=4000;
-  var arc=document.getElementById('aarc');
+  var N=12,c=0;
+  var sw=document.getElementById('sw');
+
   window.gS=function(i){
-    if(busy||i===c||i<0||i>=N)return;busy=true;
-    var fr=document.getElementById('slide-'+c),to=document.getElementById('slide-'+i),dn=i>c;
-    /* ★ 블랙스크린 방지: to를 먼저 즉시 표시(transition 끄고) → fr만 페이드아웃 */
-    to.style.cssText='transition:none;opacity:1;transform:none;pointer-events:auto;';
-    to.classList.remove('up','dn');
-    to.classList.add('on');
-    requestAnimationFrame(function(){
-      to.style.cssText=''; /* transition 복원 */
-      fr.classList.remove('on');
-      fr.classList.add(dn?'up':'dn');
-    });
-    c=i;uUI();setTimeout(function(){fr.classList.remove('up','dn');busy=false;},350);
+    i=((i%N)+N)%N;
+    if(i===c)return;
+    c=i;
+    sw.style.transform='translateX(-'+c*100+'vw)';
+    uUI();
+    /* ★ 현재 슬라이드 rv 즉시 표시 */
+    var cur=document.getElementById('slide-'+c);
+    if(cur){setTimeout(function(){
+      cur.querySelectorAll('.rv,.rvl,.rvr').forEach(function(el){
+        el.classList.add('on');
+      });
+    },80);}
   };
+
   function uUI(){
     document.querySelectorAll('.dot').forEach(function(d,i){d.classList.toggle('on',i===c)});
     document.querySelectorAll('.mi').forEach(function(d,i){d.classList.toggle('on',i===c)});
     var ct=document.getElementById('sctr');if(ct)ct.textContent=(c+1)+' / '+N;
     var pb=document.getElementById('pbar');if(pb)pb.style.width=(c/(N-1)*100)+'%';
-    /* ★ 현재 슬라이드의 rv 요소 즉시 표시 (모바일 IntersectionObserver 지연 방지) */
-    var cur=document.getElementById('slide-'+c);
-    if(cur){setTimeout(function(){cur.querySelectorAll('.rv,.rvl,.rvr').forEach(function(el){el.classList.add('on');});},80);}
   }
-  function sa(){
-    if(paused)return;clearTimeout(tmr);
-    if(arc){arc.style.transition='none';arc.style.strokeDashoffset='60';
-      requestAnimationFrame(function(){arc.style.transition='stroke-dashoffset '+DELAY/1000+'s linear';arc.style.strokeDashoffset='0';});}
-    tmr=setTimeout(function(){window.gS((c+1)%N);sa();},DELAY);
-  }
-  function stopA(){clearTimeout(tmr);if(arc){arc.style.transition='none';arc.style.strokeDashoffset='60';}}
-  function ut(){stopA();clearTimeout(window._rt);window._rt=setTimeout(function(){if(!paused)sa();},8000);}
-  window.tA=function(){paused=!paused;var ic=document.querySelector('#aicon');if(ic)ic.textContent=paused?'▶':'⏸';if(paused)stopA();else sa();};
-  window.tM=function(){document.getElementById('mn').classList.toggle('on');document.getElementById('mov').classList.toggle('on');ut();};
-  document.getElementById('mov').addEventListener('click',tM);
-  document.getElementById('aring').addEventListener('click',tA);
+
+  /* ── 키보드 ── */
   document.addEventListener('keydown',function(e){
-    if(['ArrowDown','ArrowRight',' '].includes(e.key)){e.preventDefault();ut();window.gS(c+1);}
-    if(['ArrowUp','ArrowLeft'].includes(e.key)){e.preventDefault();ut();window.gS(c-1);}
+    if(['ArrowRight',' ','ArrowDown'].includes(e.key)){e.preventDefault();window.gS(c+1);}
+    if(['ArrowLeft','ArrowUp'].includes(e.key)){e.preventDefault();window.gS(c-1);}
   });
+
+  /* ── 터치 스와이프 ── */
+  var tx=0,ty=0,swiping=false;
+  document.addEventListener('touchstart',function(e){
+    tx=e.touches[0].clientX;ty=e.touches[0].clientY;swiping=true;
+  },{passive:true});
+  document.addEventListener('touchend',function(e){
+    if(!swiping)return;swiping=false;
+    var dx=tx-e.changedTouches[0].clientX;
+    var dy=ty-e.changedTouches[0].clientY;
+    /* 가로 스와이프만 감지 (세로보다 가로 더 많이 움직였을 때) */
+    if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>40){
+      window.gS(dx>0?c+1:c-1);
+    }
+  },{passive:true});
+
+  /* ── 마우스 휠 (데스크탑) ── */
   var wl=false;
   document.addEventListener('wheel',function(e){
+    /* s-fit 내부 스크롤 허용 */
     var sc=e.target.closest('.s-fit');
-    if(sc){var aT=sc.scrollTop<=0,aB=sc.scrollTop+sc.clientHeight>=sc.scrollHeight-4;if((e.deltaY<0&&!aT)||(e.deltaY>0&&!aB))return;}
-    if(wl)return;wl=true;ut();if(e.deltaY>0)window.gS(c+1);else window.gS(c-1);setTimeout(function(){wl=false;},400);
-  },{passive:true});
-  var ty=0;
-  document.addEventListener('touchstart',function(e){ty=e.touches[0].clientY;},{passive:true});
-  document.addEventListener('touchend',function(e){var dy=ty-e.changedTouches[0].clientY;if(Math.abs(dy)>50){ut();if(dy>0)window.gS(c+1);else window.gS(c-1);}});
-  uUI();
-  // ★ 블랙스크린 방지: 인트로 완료 확인 후 오토플레이 시작
-  setTimeout(function(){
-    var introEl=document.getElementById('intro-screen');
-    var introDone=!introEl||introEl.style.display==='none'||parseFloat(getComputedStyle(introEl).opacity||'1')<0.1;
-    if(introEl&&!introDone){
-      // 인트로 아직 진행 중 → 조금 더 대기
-      setTimeout(function(){if(!paused)sa();},1800);
-    } else {
-      if(!paused)sa();
+    if(sc){
+      var atTop=sc.scrollTop<=1;
+      var atBot=sc.scrollTop+sc.clientHeight>=sc.scrollHeight-4;
+      if((e.deltaY<0&&!atTop)||(e.deltaY>0&&!atBot))return;
     }
-  },2600);
+    if(wl)return;wl=true;
+    if(e.deltaY>0)window.gS(c+1);else window.gS(c-1);
+    setTimeout(function(){wl=false;},400);
+  },{passive:true});
+
+  /* ── 좌우 화살표 버튼 표시 ── */
+  var leftBtn=document.getElementById('btn-prev');
+  var rightBtn=document.getElementById('btn-next');
+  if(leftBtn)leftBtn.addEventListener('click',function(){window.gS(c-1);});
+  if(rightBtn)rightBtn.addEventListener('click',function(){window.gS(c+1);});
+
+  /* ── 초기화 ── */
+  if(sw)sw.style.transform='translateX(0)';
+  uUI();
+  /* 인트로 후 rv 초기화 */
+  setTimeout(function(){
+    var s0=document.getElementById('slide-0');
+    if(s0)s0.querySelectorAll('.rv,.rvl,.rvr,.s-badge,.s-title,.s-sub,.s-desc,.s-tags,.ss-grid').forEach(function(el){
+      el.classList.add('on');el.style.opacity='1';el.style.transform='none';
+    });
+  },2200);
 })();
 </script>
 </body>
