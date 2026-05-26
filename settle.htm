@@ -2059,6 +2059,7 @@ function showApp(){
   _loadRouteCampMap();  // 라우트→캠프 매핑 로드
   _loadMySlug();  // 내 전용 URL 로드
   _loadSeasonPrices();  // 시즌 단가 로드
+  _dwLoadSettings();    // ★ 배달대행 + 택배 계산 설정 로드
   // ★ RPRICE 로드 (로그인/리로드 후에도 단가표 유지)
   if(_db&&_CU&&_CU.dealerId){
     _db.collection('settings').doc(_CU.dealerId+'_routePrices').get().then(function(snap){
@@ -3895,8 +3896,8 @@ function _obSkip(did){
 var DELIVERY_PLATFORMS = {
   coupang: {
     label:'쿠팡이츠', icon:'🛒', color:'#c0392b',
-    baseRate:2800, // 기본 배달료 (원)
-    commission:0.033, // 3.3% 원천징수
+    baseRate:2800,
+    commission:0.033,
     settleDay:'주 4회 (수~화 → 영업일 3일 후)',
     peaks:[
       {label:'피크타임 보너스', type:'count', desc:'점심(11-13시) 3건 → +3,000원'},
@@ -3917,47 +3918,6 @@ var DELIVERY_PLATFORMS = {
       {label:'심야 추가', type:'night', desc:'22시 이후 +500~1,000원'},
       {label:'공휴일 수당', type:'holiday', desc:'공휴일 건당 추가'}
     ]
-  },
-  barogo: {
-    label:'바로고', icon:'🏍', color:'#ff6b35',
-    baseRate:3800,
-    commission:500, // 건당 수수료
-    settleDay:'매일 정산',
-    peaks:[
-      {label:'야간 할증', type:'night', desc:'22:00~06:00 +500원'},
-      {label:'우천 할증', type:'weather', amount:500, desc:'우천 시 +500~1,000원'},
-      {label:'거리 할증', type:'distance', desc:'기본거리 초과 500m당 +500원'},
-      {label:'피크 수당', type:'peak', desc:'점심/저녁 시간대 추가'}
-    ]
-  },
-  boorung: {
-    label:'부릉', icon:'🏎', color:'#9b59b6',
-    baseRate:3500,
-    commission:300,
-    settleDay:'매일 정산 (즉시 출금 가능)',
-    peaks:[
-      {label:'악천후', type:'weather', amount:1000, desc:'우천/강설 +1,000원'},
-      {label:'야간', type:'night', desc:'심야 시간대 할증'},
-      {label:'공휴일', type:'holiday', desc:'공휴일 추가 수당'}
-    ]
-  },
-  saenggak: {
-    label:'생각대로', icon:'🛵', color:'#27ae60',
-    baseRate:3800,
-    commission:200,
-    settleDay:'매일 정산',
-    peaks:[
-      {label:'기상 할증', type:'weather', amount:500, desc:'우천/한파/폭염 경보 시'},
-      {label:'거리 할증', type:'distance', desc:'500m당 +500원'},
-      {label:'심야 할증', type:'night', desc:'야간 추가'}
-    ]
-  },
-  custom: {
-    label:'자체 배달', icon:'🚚', color:'#185FA5',
-    baseRate:0,
-    commission:0,
-    settleDay:'직접 설정',
-    peaks:[]
   }
 };
 
@@ -4465,23 +4425,66 @@ window._dpDownloadTemplate=function(){
 // ════════════════════════════════════════════════
 
 // ── 수행 건수별 최저단가 보전 트랙
+// ── 건수별 트랙 (기본값 — Firestore 로드로 덮어씌움)
 var DW_TRACKS=[
-  {min:350,  max:Infinity, price:5500, label:'350건+ 트랙'},
-  {min:300,  max:350,      price:5300, label:'300~349건 트랙'},
-  {min:250,  max:300,      price:5100, label:'250~299건 트랙'},
-  {min:180,  max:250,      price:4200, label:'180~249건 트랙'},
-  {min:0,    max:180,      price:0,    label:'180건 미만 (기본계약단가)'}
+  {min:350,  max:Infinity, price:5500, label:'350건+ 트랙',    key:'t350'},
+  {min:300,  max:350,      price:5300, label:'300~349건 트랙', key:'t300'},
+  {min:250,  max:300,      price:5100, label:'250~299건 트랙', key:'t250'},
+  {min:180,  max:250,      price:4200, label:'180~249건 트랙', key:'t180'},
+  {min:0,    max:180,      price:0,    label:'180건 미만',      key:'t0'}
 ];
 
-// ── 5대 시간대 구간
+// ── 5대 시간대 구간 (기본값 — 슬롯별 단가 포함)
 var DW_SLOTS={
-  morning:    {label:'아침',      color:'#f59e0b',start:6, end:11},
-  lunch_peak: {label:'점심피크',  color:'#ef4444',start:11,end:13},
-  lunch_off:  {label:'점심노피크',color:'#6b7280',start:13,end:17},
-  dinner_peak:{label:'저녁피크',  color:'#8b5cf6',start:17,end:21},
-  dinner_off: {label:'저녁노피크',color:'#3b82f6',start:21,end:24},
-  midnight:   {label:'심야(예외)',color:'#374151',start:0, end:6}
+  morning:    {label:'아침',      color:'#f59e0b', start:6,  end:11, price:0},
+  lunch_peak: {label:'점심피크',  color:'#ef4444', start:11, end:13, price:0},
+  lunch_off:  {label:'점심노피크',color:'#6b7280', start:13, end:17, price:0},
+  dinner_peak:{label:'저녁피크',  color:'#8b5cf6', start:17, end:21, price:0},
+  dinner_off: {label:'저녁노피크',color:'#3b82f6', start:21, end:24, price:0},
+  midnight:   {label:'심야(예외)',color:'#374151', start:0,  end:6,  price:0}
 };
+
+// ── 택배 정산 계산 설정 (기본값)
+var PARCEL_CALC_CFG={
+  freshbag_inc: 25,    // 프레시백 인센 (원/건)
+  emp_rate:     0.008, // 고용보험 (0.8%)
+  work_rate:    0.0088,// 산재보험 (0.88%)
+  supply_ratio: 1.1,   // VAT (공급가액 = taxBase / 1.1)
+  wage_ratio:   0.654  // 월보수액 = 공급가액 × 0.654
+};
+
+// ── Firestore 설정 로드
+function _dwLoadSettings(){
+  if(!_db||!_CU)return;
+  var did=_CU.dealerId;
+  _db.collection('settings').doc(did+'_dwSettings').get().then(function(snap){
+    if(!snap.exists)return;
+    var d=snap.data();
+    // 트랙 단가 덮어씌우기
+    if(d.tracks){
+      DW_TRACKS.forEach(function(t){
+        if(d.tracks[t.key]!==undefined) t.price=d.tracks[t.key];
+      });
+    }
+    // 슬롯 단가 덮어씌우기
+    if(d.slots){
+      Object.keys(DW_SLOTS).forEach(function(k){
+        if(d.slots[k]!==undefined) DW_SLOTS[k].price=d.slots[k];
+      });
+    }
+    // 택배 계산 설정
+    if(d.parcel) Object.assign(PARCEL_CALC_CFG, d.parcel);
+  }).catch(function(){});
+}
+
+// ── Firestore 설정 저장
+function _dwSaveSettings(cfg, cb){
+  if(!_db||!_CU){toast('❌ 로그인 필요');return;}
+  _db.collection('settings').doc(_CU.dealerId+'_dwSettings')
+    .set(cfg, {merge:true})
+    .then(function(){toast('✅ 설정 저장 완료');if(cb)cb();})
+    .catch(function(e){toast('❌ 저장 실패: '+e.message);});
+}
 
 function _dwSlot(hour){
   if(hour>=6 &&hour<11) return 'morning';
@@ -4621,8 +4624,141 @@ function _dwParseExcel(file, cb){
   reader.readAsArrayBuffer(file);
 }
 
-// ── 전역 임시 저장
-var _dwRiderMap=null;
+// ── 설정 모달 (배달대행 단가 + 택배 계산법)
+window._dwOpenSettings=function(){
+  var mo=document.createElement('div');mo.className='mo show';
+  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+
+  // 트랙 단가 입력 행
+  var trackRows=DW_TRACKS.map(function(t){
+    var disabled=t.key==='t0';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)">'
+      +'<div style="flex:1;font-size:12px;font-weight:700">'+t.label+'</div>'
+      +(disabled
+        ?'<div style="font-size:12px;color:var(--text3)">기본 계약단가 사용</div>'
+        :'<div style="display:flex;align-items:center;gap:4px">'
+          +'<input id="dw-track-'+t.key+'" type="number" value="'+t.price+'" min="0" step="100"'
+          +' style="width:90px;padding:6px 8px;border:1.5px solid #3b82f6;border-radius:8px;font-size:13px;font-weight:700;color:#1d4ed8;text-align:right">'
+          +'<span style="font-size:11px;color:var(--text3)">원/건</span>'
+        +'</div>')
+    +'</div>';
+  }).join('');
+
+  // 슬롯 단가 입력 행
+  var slotRows=Object.keys(DW_SLOTS).map(function(k){
+    var s=DW_SLOTS[k];
+    var isMid=k==='midnight';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)">'
+      +'<div style="display:flex;align-items:center;gap:6px;flex:1">'
+        +'<span style="width:8px;height:8px;border-radius:50%;background:'+s.color+';display:inline-block"></span>'
+        +'<span style="font-size:12px;font-weight:700">'+s.label+'</span>'
+        +'<span style="font-size:10px;color:var(--text3)">'+String(s.start).padStart(2,'0')+':00~'+String(s.end).padStart(2,'0')+':00</span>'
+      +'</div>'
+      +(isMid
+        ?'<div style="font-size:11px;color:var(--text3)">심야 예외 (밸런싱 없음)</div>'
+        :'<div style="display:flex;align-items:center;gap:4px">'
+          +'<input id="dw-slot-'+k+'" type="number" value="'+s.price+'" min="0" step="100" placeholder="0=트랙단가"'
+          +' style="width:90px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:12px;text-align:right">'
+          +'<span style="font-size:11px;color:var(--text3)">원 (0=트랙)</span>'
+        +'</div>')
+    +'</div>';
+  }).join('');
+
+  mo.innerHTML='<div class="md" style="max-width:560px">'
+    // ── 헤더
+    +'<div class="mdt" style="background:linear-gradient(135deg,#1a1a2e,#16213e);color:#fff">'
+      +'⚙️ 정산 계산 설정 (관리자 전용)'
+      +'<button onclick="this.closest(\'.mo\').remove()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:2px 8px;cursor:pointer;margin-left:auto">✕</button>'
+    +'</div>'
+    +'<div style="padding:16px;max-height:75vh;overflow-y:auto">'
+
+    // ── 섹션 1: 배달대행 건수별 트랙 단가
+    +'<div style="font-size:13px;font-weight:900;color:#1d4ed8;margin-bottom:8px;display:flex;align-items:center;gap:6px">'
+      +'🛵 배달대행 — 건수별 최저단가 트랙'
+    +'</div>'
+    +'<div style="background:#eff6ff;border-radius:10px;padding:12px;margin-bottom:16px">'
+      +'<div style="font-size:11px;color:#2563eb;margin-bottom:8px">정산 기간 내 총 수행건수에 따라 자동 트랙 적용. 트랙 단가보다 낮은 콜 → 대리점 보전, 높은 콜 → 대리점 환수.</div>'
+      +trackRows
+    +'</div>'
+
+    // ── 섹션 2: 시간대별 슬롯 단가
+    +'<div style="font-size:13px;font-weight:900;color:#7c3aed;margin-bottom:8px">⏰ 시간대별 슬롯 단가 (선택)</div>'
+    +'<div style="background:#f5f3ff;border-radius:10px;padding:12px;margin-bottom:16px">'
+      +'<div style="font-size:11px;color:#7c3aed;margin-bottom:8px">0원이면 위 트랙 단가 적용. 직접 입력 시 해당 시간대에 입력 단가 우선 적용.</div>'
+      +slotRows
+    +'</div>'
+
+    // ── 섹션 3: 택배 정산 계산 파라미터
+    +'<div style="font-size:13px;font-weight:900;color:#059669;margin-bottom:8px">📦 택배 정산 — 계산 파라미터</div>'
+    +'<div style="background:#ecfdf5;border-radius:10px;padding:12px;margin-bottom:16px">'
+      +'<div style="font-size:11px;color:#059669;margin-bottom:10px">쿠팡 택배 정산 계산식에 적용되는 기준값. 변경 즉시 엑셀 재업로드 시 반영.</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+        +'<div><label style="font-size:10px;color:var(--text3);display:block;margin-bottom:3px">프레시백 인센 (원/건)</label>'
+          +'<input id="pc-freshbag" type="number" value="'+PARCEL_CALC_CFG.freshbag_inc+'" min="0" step="5"'
+          +' style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-weight:700"></div>'
+        +'<div><label style="font-size:10px;color:var(--text3);display:block;margin-bottom:3px">VAT 비율 (공급가액 계산)</label>'
+          +'<input id="pc-supply" type="number" value="'+PARCEL_CALC_CFG.supply_ratio+'" min="1" max="2" step="0.01"'
+          +' style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-weight:700"></div>'
+        +'<div><label style="font-size:10px;color:var(--text3);display:block;margin-bottom:3px">월보수액 비율</label>'
+          +'<input id="pc-wage" type="number" value="'+PARCEL_CALC_CFG.wage_ratio+'" min="0" max="1" step="0.001"'
+          +' style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-weight:700"></div>'
+        +'<div><label style="font-size:10px;color:var(--text3);display:block;margin-bottom:3px">고용보험율 (%)</label>'
+          +'<input id="pc-emp" type="number" value="'+(PARCEL_CALC_CFG.emp_rate*100).toFixed(2)+'" min="0" step="0.01"'
+          +' style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-weight:700"></div>'
+        +'<div><label style="font-size:10px;color:var(--text3);display:block;margin-bottom:3px">산재보험율 (%)</label>'
+          +'<input id="pc-work" type="number" value="'+(PARCEL_CALC_CFG.work_rate*100).toFixed(2)+'" min="0" step="0.01"'
+          +' style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-weight:700"></div>'
+      +'</div>'
+      +'<div style="margin-top:10px;padding:8px;background:#d1fae5;border-radius:8px;font-size:11px;color:#065f46">'
+        +'📐 계산식: taxBase÷'+PARCEL_CALC_CFG.supply_ratio+'=공급가액 → ×'+PARCEL_CALC_CFG.wage_ratio+'=월보수액 → 고용'+(PARCEL_CALC_CFG.emp_rate*100).toFixed(1)+'%+산재'+(PARCEL_CALC_CFG.work_rate*100).toFixed(2)+'%'
+      +'</div>'
+    +'</div>'
+    +'</div>'
+
+    // ── 저장 버튼
+    +'<div class="mdf">'
+      +'<button class="btn" onclick="this.closest(\'.mo\').remove()">취소</button>'
+      +'<button class="btn btn-blue" onclick="_dwApplySettings()">💾 저장 (Firestore 반영)</button>'
+    +'</div>'
+  +'</div>';
+  document.body.appendChild(mo);
+};
+
+window._dwApplySettings=function(){
+  var g=function(id){return parseFloat((document.getElementById(id)||{value:0}).value)||0;};
+
+  // 트랙 단가 업데이트
+  var tracks={};
+  DW_TRACKS.forEach(function(t){
+    var el=document.getElementById('dw-track-'+t.key);
+    if(el){t.price=parseInt(el.value)||0;tracks[t.key]=t.price;}
+  });
+
+  // 슬롯 단가 업데이트
+  var slots={};
+  Object.keys(DW_SLOTS).forEach(function(k){
+    var el=document.getElementById('dw-slot-'+k);
+    if(el){DW_SLOTS[k].price=parseInt(el.value)||0;slots[k]=DW_SLOTS[k].price;}
+  });
+
+  // 택배 계산 파라미터
+  var freshbag=g('pc-freshbag')||25;
+  var supply=g('pc-supply')||1.1;
+  var wage=g('pc-wage')||0.654;
+  var emp=(g('pc-emp')||0.8)/100;
+  var work=(g('pc-work')||0.88)/100;
+  var parcel={freshbag_inc:freshbag,supply_ratio:supply,wage_ratio:wage,emp_rate:emp,work_rate:work};
+  Object.assign(PARCEL_CALC_CFG,parcel);
+  // G_PRICES도 동기화
+  if(typeof G_PRICES!=='undefined') G_PRICES.freshbag_inc=freshbag;
+
+  _dwSaveSettings({tracks:tracks,slots:slots,parcel:parcel},function(){
+    var mo=document.querySelector('.mo.show');if(mo)mo.remove();
+    // 엔진 헤더 새로고침
+    var old=document.getElementById('dw-engine-wrap');if(old)old.remove();
+    _dwRenderEngine();
+  });
+};
 var _dwResults=[];
 var _dwPlatform='coupangEats';
 
@@ -4638,9 +4774,16 @@ function _dwRenderEngine(){
   wrap.innerHTML=
   // ① 상단 설명
   '<div style="background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:16px;padding:20px;margin-bottom:16px;color:#fff">'
-    +'<div style="font-size:16px;font-weight:900;margin-bottom:4px">🛵 DONWAY 배달대행 통합 정산 엔진 v2</div>'
-    +'<div style="font-size:12px;opacity:.75">쿠팡이츠·배민 엑셀 자동인식 → 건수별 트랙 → 보전/환수 밸런싱 → 3.3% 세무 → 명세서</div>'
-    +'<div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">'
+    +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">'
+      +'<div>'
+        +'<div style="font-size:16px;font-weight:900;margin-bottom:2px">🛵 DONWAY 배달대행 통합 정산 엔진 v2</div>'
+        +'<div style="font-size:11px;opacity:.6">쿠팡이츠·배민 엑셀 자동인식 → 건수별 트랙 → 보전/환수 밸런싱 → 3.3% 세무 → 명세서</div>'
+      +'</div>'
+      +'<button onclick="_dwOpenSettings()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">⚙️ 단가 설정</button>'
+    +'</div>'
+    // 건수별 트랙
+    +'<div style="font-size:10px;opacity:.5;letter-spacing:1px;margin-bottom:6px">📊 건수별 최저단가 보전 트랙</div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">'
     +DW_TRACKS.slice(0,4).map(function(t){
       return '<div style="background:rgba(255,255,255,.1);border-radius:8px;padding:6px 10px;font-size:10px">'
         +'<div style="opacity:.7">'+t.label+'</div>'
@@ -4649,6 +4792,21 @@ function _dwRenderEngine(){
     +'<div style="background:rgba(255,255,255,.06);border-radius:8px;padding:6px 10px;font-size:10px">'
       +'<div style="opacity:.7">180건 미만</div>'
       +'<div style="font-size:12px;font-weight:700;color:#94a3b8">기본 계약단가</div></div>'
+    +'</div>'
+    // 5대 시간대 구간 + 슬롯별 단가
+    +'<div style="font-size:10px;opacity:.5;letter-spacing:1px;margin-bottom:6px">⏰ 5대 시간대 구간 & 슬롯 단가 (0원 = 트랙 단가 적용 / 직접 설정 시 우선)</div>'
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
+    +Object.keys(DW_SLOTS).map(function(k){
+      var s=DW_SLOTS[k];
+      var isMid=k==='midnight';
+      return '<div style="background:'+(isMid?'rgba(255,255,255,.04)':'rgba(255,255,255,.1)')+';border-radius:8px;padding:6px 10px;font-size:10px;'+(isMid?'opacity:.5':'')+'">'
+        +'<div style="font-weight:800;color:'+s.color+'">'+s.label+'</div>'
+        +'<div style="opacity:.6;font-size:9px">'+String(s.start).padStart(2,'0')+':00~'+String(s.end).padStart(2,'0')+':00</div>'
+        +'<div style="font-size:12px;font-weight:900;color:#fbbf24;margin-top:2px">'
+          +(s.price>0?'₩'+s.price.toLocaleString():(isMid?'예외':'트랙단가'))
+        +'</div>'
+      +'</div>';
+    }).join('')
     +'</div>'
   +'</div>'
 
@@ -4665,6 +4823,24 @@ function _dwRenderEngine(){
     +'</div>'
 
     // 기사 마스터 공제 설정
+    +'<div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:12px">'
+      +'<div style="font-size:12px;font-weight:700;margin-bottom:8px">⏰ 시간대별 보전 단가 설정 <span style="font-size:10px;color:var(--text3);font-weight:400">(빈 칸 = 건수 트랙 자동 적용)</span></div>'
+      +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px">'
+      +Object.keys(DW_SLOTS).map(function(k){
+        var s=DW_SLOTS[k];
+        var isMid=k==='midnight';
+        return '<div style="'+(isMid?'opacity:.5':'')+'">'
+          +'<label style="font-size:10px;display:block;margin-bottom:3px;font-weight:700;color:'+s.color+'">'+s.label
+            +'<span style="font-weight:400;color:var(--text3);font-size:9px"> '+String(s.start).padStart(2,'0')+':00~'+String(s.end).padStart(2,'0')+':00</span></label>'
+          +'<input id="dw-slot-'+k+'" type="number" placeholder="'+(isMid?'예외(심야)':'트랙 자동')+'" '+(isMid?'disabled':'')+' '
+            +'style="width:100%;padding:7px;border:1.5px solid '+s.color+'44;border-radius:8px;font-size:13px;font-weight:700;background:var(--bg);color:'+s.color+'">'
+        +'</div>';
+      }).join('')
+      +'</div>'
+      +'<div style="font-size:10px;color:var(--text3);margin-top:8px">💡 점심피크·저녁피크에 높은 단가, 노피크에 낮은 단가 설정 가능. 심야(00~06시)는 보전/환수 적용 안 됨.</div>'
+    +'</div>'
+
+    // 기사별 공제·기간 설정
     +'<div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:12px">'
       +'<div style="font-size:12px;font-weight:700;margin-bottom:8px">⚙️ 기사 마스터 공제 설정</div>'
       +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px">'
@@ -4709,12 +4885,19 @@ window._dwLoadFile=function(){
 
 function _dwGetCfg(){
   var g=function(id){return parseInt((document.getElementById(id)||{value:0}).value)||0;};
+  // 시간대별 단가 (0이면 트랙 자동 적용)
+  var slotPrices={};
+  Object.keys(DW_SLOTS).forEach(function(k){
+    var v=parseInt((document.getElementById('dw-slot-'+k)||{value:''}).value)||0;
+    slotPrices[k]=v;
+  });
   return{
     defaultPrice:g('dw-def-price'),
     leaseFee:g('dw-lease'),
     programFee:g('dw-program'),
     insuranceFee:g('dw-insurance'),
-    period:(document.getElementById('dw-period')||{value:''}).value||''
+    period:(document.getElementById('dw-period')||{value:''}).value||'',
+    slotPrices:slotPrices  // ★ 슬롯별 단가 (0이면 트랙 기준)
   };
 }
 
