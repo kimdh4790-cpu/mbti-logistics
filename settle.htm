@@ -1852,6 +1852,24 @@ function cancelCp(){window._cpPending=null;goPage('settlements');}
 function _saveCpDriver(camp,dm,name,month,cb){
   if(!window._db){if(cb)cb();return;}
   var uid=dm.uid;
+  // ★ 기사 자동 등록: drivers 컬렉션에 없으면 생성
+  var did=_CU&&_CU.dealerId||'';
+  if(did&&uid){
+    _db.collection('drivers').where('dealerId','==',did).where('userId','==',uid).limit(1).get()
+      .then(function(snap){
+        if(snap.empty){
+          _db.collection('drivers').add({
+            name:name||uid, userId:uid, dealerId:did,
+            camp:camp||'', coupangId:uid,
+            is_active:true, joinedAt:new Date().toISOString(),
+            autoRegistered:true
+          }).catch(function(){});
+        } else {
+          // 캠프 정보 업데이트
+          if(camp) snap.docs[0].ref.update({camp:camp}).catch(function(){});
+        }
+      }).catch(function(){});
+  }
   var damt=dm.delAmt||0,ramt=dm.retAmt||0,freshRaw=dm.freshAmt||0;
   var finc=dm.freshIncAmt||Math.round((dm.dcnt||0)*25);
   var income=damt+ramt+freshRaw+finc+(dm.nocontAmt||0);  // 모두 VAT포함가nocontAmt||0);
@@ -1888,6 +1906,51 @@ function _saveCpDriver(camp,dm,name,month,cb){
           });
       }
     }).then(function(){if(cb)cb();}).catch(function(e){toast('❌ '+e.message);});
+}
+
+
+// ★ 단가표 이미지 OCR (Claude Vision)
+function _ocrPriceTable(){
+  var input=document.createElement('input');
+  input.type='file';input.accept='image/*';
+  input.onchange=function(){
+    var file=input.files[0];if(!file)return;
+    var reader=new FileReader();
+    reader.onload=function(e){
+      var b64=e.target.result.split(',')[1];
+      toast('📷 OCR 분석 중...');
+      fetch('/claude-ocr',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          model:'claude-haiku-4-5-20251001',
+          max_tokens:2000,
+          messages:[{role:'user',content:[
+            {type:'image',source:{type:'base64',media_type:file.type,data:b64}},
+            {type:'text',text:'이 이미지는 택배 라우트 단가표입니다. 라우트코드(예: 608A, 213B)와 단가(숫자)를 추출하여 JSON 형식으로만 출력하세요. 예: {"608A":920,"608B":930,"213A":1080} 다른 텍스트 없이 JSON만 출력.'}
+          ]}]
+        })
+      })
+      .then(function(r){return r.json();})
+      .then(function(data){
+        var text='';
+        if(data.content&&data.content[0]) text=data.content[0].text||'';
+        // JSON 파싱
+        var m=text.match(/\{[^}]+\}/);
+        if(!m){toast('❌ OCR 파싱 실패. 수동 입력해주세요.');return;}
+        try{
+          var prices=JSON.parse(m[0]);
+          var cnt=Object.keys(prices).length;
+          if(!cnt){toast('❌ 인식된 단가 없음');return;}
+          _showImportPreview(prices,'OCR_단가표');
+          toast('✅ OCR 완료: '+cnt+'개 라우트 인식');
+        }catch(e){toast('❌ JSON 파싱 오류: '+e.message);}
+      })
+      .catch(function(e){toast('❌ OCR 오류: '+e.message);});
+    };
+    reader.readAsDataURL(file);
+  };
+  input.click();
 }
 
 // ══ Firebase + 앱 로직 ══
@@ -10600,7 +10663,7 @@ function pageSettlements(){
   c.innerHTML='<div style="display:flex;gap:6px;margin-bottom:14px">'
     +'<button id="stab-list"  class="btn btn-blue"  onclick="window._sTab(\'list\')"  style="font-size:12px">📋 정산 목록</button>'
     +'<button id="stab-price" class="btn"           onclick="window._sTab(\'price\')" style="font-size:12px">📌 라우트 단가표</button>'
-    +'<button id="stab-season"class="btn"           onclick="window._sTab(\'season\')" style="font-size:12px">📅 시즌 단가표</button>'
+    +'<button id="stab-season" class="btn btn-blue"           onclick="window._sTab(\'season\')" style="font-size:12px;font-weight:700">📅 시즌 단가표</button>'
     +'</div>'
     +'<div id="stab-content"></div>';
 
@@ -10697,7 +10760,7 @@ function _renderSettlePage(settles,c){
     +'<button onclick="openSettleCompare()" style="padding:8px 14px;background:#6366f1;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📊 기사별 실적 비교</button>'
     +'<button onclick="checkDuplicateSettlements()" style="padding:8px 14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔍 중복 검사</button>'
     +'<button onclick="syncFirebaseSettlements()" style="padding:8px 14px;background:#0d9488;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔄 Firebase 동기화</button>'
-    +'<button onclick="openResetPanel()" style="padding:8px 14px;background:#7f1d1d;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗑 전체 초기화</button>'
+    +'<button onclick="openDeleteMonthPanel()" style="padding:8px 14px;background:#854d0e;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;margin-right:6px">🗓 월삭제</button>'    +'<button onclick="openResetPanel()" style="padding:8px 14px;background:#7f1d1d;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗑 전체초기화</button>'
     +'</div>'
     +'<div style="font-size:10px;color:var(--text3);margin-top:8px">💡 핵심 4단계: 업로드 → 재계산 → 일괄전달 → 보관함 조회. 그 외 기능은 [더보기]에서.</div>'
     +'</div>'
@@ -13193,7 +13256,12 @@ function _buildRouteCampGroups(){
 }
 function pagePrices(tabMode){
   var el=tabMode?document.getElementById('stab-content'):document.getElementById('content');
-  if(!tabMode){document.getElementById('page-title').textContent='쿠팡 라우트 단가표';document.getElementById('topbar-right').innerHTML='';}
+  if(!tabMode){
+    document.getElementById('page-title').textContent='쿠팡 라우트 단가표';
+    // ★ 상단 OCR 버튼
+    document.getElementById('topbar-right').innerHTML=
+      '<button onclick="_ocrPriceTable()" class="btn btn-blue" style="font-size:11px;padding:6px 10px">📷 단가표 OCR</button>';
+  }
   if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
   el.innerHTML='<div class="loading">로딩 중...</div>';
   var did=_CU.dealerId;
@@ -15824,6 +15892,31 @@ function _incCampAll2(prefixes,onVal){
     return prefixes.some(function(p){return r.startsWith(p);});
   });
   _incCampRoutes(routes,onVal);
+}
+
+// ★ 월삭제 전용 (정산만 삭제, 단가/기사/캠프 보존)
+function openDeleteMonthPanel(){
+  var settles=ls('settlements')||[];
+  var months=[...new Set(settles.map(function(x){return x.month||'';}).filter(Boolean))].sort().reverse();
+  var mo=document.createElement('div');mo.className='mo show';mo.id='mo-del-month';
+  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  var opts=months.length
+    ?months.map(function(m){return '<option value="'+m+'">'+m+'</option>';}).join('')
+    :'<option value="">정산 데이터 없음</option>';
+  mo.innerHTML='<div class="md" style="max-width:360px">'
+    +'<div class="mdt" style="background:#854d0e;color:#fff;border-radius:10px 10px 0 0;margin:-1px -1px 0;padding:14px 20px">🗓 월별 정산 삭제</div>'
+    +'<div style="padding:16px">'
+    +'<div style="font-size:12px;background:#fef3c7;border-left:3px solid #f59e0b;padding:8px 10px;border-radius:6px;margin-bottom:14px">'
+    +'정산 데이터만 삭제됩니다.<br><b>라우트 단가 · 캠프 · 기사 정보는 유지</b>됩니다.</div>'
+    +'<label style="font-size:12px;color:var(--text3);display:block;margin-bottom:6px">삭제할 정산 월</label>'
+    +'<select id="del-month-sel" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;background:var(--bg);color:var(--text)">'
+    +opts+'</select>'
+    +'</div>'
+    +'<div class="mdf">'
+    +'<button class="btn" onclick="(function(){var m=document.getElementById(\"mo-del-month\");if(m)m.remove();})()">취소</button>'
+    +'<button class="btn" style="background:#dc2626;color:#fff;border:none" onclick="(function(){var s=document.getElementById(\"del-month-sel\");if(s&&s.value){deleteMonthSettlements(s.value);var m=document.getElementById(\"mo-del-month\");if(m)m.remove();}else toast(\"월을 선택하세요\");})()">🗑 삭제</button>'
+    +'</div></div>';
+  document.getElementById('modals').appendChild(mo);
 }
 
 function openResetPanel(){
