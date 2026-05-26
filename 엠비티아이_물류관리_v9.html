@@ -15499,7 +15499,7 @@ function rDrivers(){
     ).join('');
     return`<tr style="background:var(--amber-l)">
     <td><strong>${d.name}</strong><br><span style="font-size:10px;color:var(--blue)">${d.userId||d.phone}</span></td>
-    <td style="font-weight:700;color:var(--blue)">${d.plate}</td>
+    <td style="font-weight:700;color:var(--blue)">${d.plate||''}</td>
     <td><span class="badge ${d.jobtype==='택배'?'b-coral':'b-blue'}">${d.jobtype||'택배'}</span><br><span style="font-size:10px;color:var(--text2)">${d.jobsub||''}</span></td>
     <td><span class="badge b-done">${d.employ||'지입'}</span></td>
     <td><div style="display:flex;gap:3px;flex-wrap:wrap">${docHtml}</div></td>
@@ -20989,7 +20989,7 @@ function dHome(){
       _db.collection('entries')
         .where('driver','==',S.curDriver)
         .where('date','==',todayStr)
-        .orderBy('checkIn','desc').limit(1).get()
+        .limit(5).get()
         .then(function(snap){
           if(!snap.empty){
             var d=snap.docs[0].data();
