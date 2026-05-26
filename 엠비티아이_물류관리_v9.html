@@ -16522,6 +16522,22 @@ function rInsurance(){
         <button class="btn btn-sm btn-blue" style="font-size:11px" onclick="addRpRoute()">+ 추가</button>
       </div>
     </div>
+  </div>
+  <div class="card" style="margin-top:10px">
+    <div class="ch"><span class="ct">📤 단가표 엑셀 일괄 업로드</span></div>
+    <div style="background:var(--bg3);border-radius:var(--r);padding:10px;font-size:11px;color:var(--text2);margin-bottom:8px;line-height:1.7">
+      <strong>자동 인식 지원 포맷:</strong><br>
+      · <b>[A] 캠프명 구분형</b> — 부산1/부산2… 행 아래 라우트+단가 (고정.xlsx 스타일)<br>
+      · <b>[B] 라우트·단가 2~3열형</b> — A열=라우트코드, B·C열=단가<br>
+      · <b>[C] 헤더 명시형</b> — "라우트", "단가" 컬럼명 있는 경우<br>
+      · <b>[D] 쿠팡 공식 정산서</b> — "구분" 헤더 포함 파일<br>
+      · <b>[E] 단순 2열형</b> — A=코드, B=금액만 있는 파일
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;background:var(--blue);color:#fff;padding:9px 16px;border-radius:var(--r);cursor:pointer;font-size:12px;font-weight:700;width:fit-content">
+      📂 단가표 파일 선택 (.xlsx / .xls / .csv)
+      <input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="parseRoutePriceExcel(this)">
+    </label>
+    <div style="margin-top:6px;font-size:10px;color:var(--text3)">업로드 후 반드시 [💾 저장] 버튼을 눌러주세요</div>
   </div>`:''}`;
 }
 // ══ 마이페이지
@@ -18747,6 +18763,185 @@ function parseExcel(inp){
 }
 
 // ══ 기사 앱
+// ★ 라우트 단가표 전용 파서 — 다양한 포맷 자동 인식
+// 지원 포맷:
+//  [A] 캠프명 행 + 라우트/단가 행  (고정.xlsx 스타일)
+//  [B] 헤더 없음 — 컬럼A:라우트, 컬럼C:단가
+//  [C] 헤더 있음 — "라우트","단가" 또는 "route","price" 컬럼
+//  [D] 쿠팡 공식 단가표 — "구분" 헤더
+//  [E] 2컬럼 단순형 — 라우트/단가만
+function parseRoutePriceExcel(inp){
+  var file=inp.files[0]; if(!file)return;
+  toast('📊 라우트 단가표 분석 중...');
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var result={};
+      var detected='';
+      var log=[];
+
+      // 모든 시트 순회
+      wb.SheetNames.forEach(function(sn){
+        var ws=wb.Sheets[sn];
+        var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+        if(!rows||!rows.length)return;
+
+        // ─ 포맷 자동 감지
+        var fmt=_detectRPFormat(rows);
+        detected=fmt;
+        log.push('시트['+sn+']: '+fmt+' 포맷 감지');
+
+        var parsed={};
+        if(fmt==='A') parsed=_parseRP_A(rows);   // 캠프명 구분 + 라우트/단가
+        else if(fmt==='B') parsed=_parseRP_B(rows); // 헤더없음 A=라우트 C=단가
+        else if(fmt==='C') parsed=_parseRP_C(rows); // 헤더있음
+        else if(fmt==='D') parsed=_parseRP_D(rows); // 쿠팡 공식
+        else if(fmt==='E') parsed=_parseRP_E(rows); // 2컬럼 단순형
+
+        Object.assign(result,parsed);
+        log.push('→ '+Object.keys(parsed).length+'개 라우트 인식');
+      });
+
+      if(!Object.keys(result).length){
+        toast('❌ 라우트/단가를 찾을 수 없습니다\n파일 형식: '+detected);
+        return;
+      }
+
+      // RPRICE 업데이트
+      var updated=0, added=0;
+      Object.entries(result).forEach(function(e){
+        if(RPRICE[e[0]]!==undefined) updated++;
+        else added++;
+        RPRICE[e[0]]=e[1];
+      });
+
+      // 단가표 표시 새로고침
+      if(typeof buildRpriceGrid==='function'){
+        var g=document.getElementById('rprice-grid');
+        if(g)g.innerHTML=buildRpriceGrid();
+      }
+      SP('insurance',null);
+
+      var msg='✅ 라우트 단가표 인식 완료\n'
+        +'포맷: '+detected+' | 총 '+Object.keys(result).length+'개\n'
+        +'(갱신 '+updated+'개 / 신규 '+added+'개)\n'
+        +'저장하려면 [💾 저장] 버튼을 눌러주세요';
+      alert(msg);
+      console.log('[단가표파서]',log.join('\n'));
+
+    }catch(err){
+      toast('❌ 단가표 파싱 오류: '+err.message);
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// 포맷 자동 감지
+function _detectRPFormat(rows){
+  var flat=rows.slice(0,10).map(function(r){return (r||[]).map(function(c){return c?String(c).trim():'';});});
+
+  // D: 쿠팡 공식 — "구분" 헤더
+  if(flat.some(function(r){return r[0]==='구분';})) return 'D';
+
+  // C: 헤더 있음 — 라우트/단가 키워드
+  var hdr=flat[0]||[];
+  var hdrStr=hdr.join('|').toLowerCase();
+  if(/라우트|route|노선/.test(hdrStr)&&/단가|price|금액|원/.test(hdrStr)) return 'C';
+
+  // A: 캠프명 행 감지 — 값 1개짜리 행 + 다음 행에 라우트+숫자 패턴
+  var campLike=rows.some(function(r,i){
+    var vals=(r||[]).filter(function(c){return c!=null&&String(c).trim()!='';});
+    if(vals.length!==1)return false;
+    var next=rows[i+1]||[];
+    return next[0]&&/^[0-9]{3}[A-Z]?/.test(String(next[0]).trim());
+  });
+  if(campLike) return 'A';
+
+  // E: 2컬럼 — A=라우트코드, B=단가
+  var twoCol=rows.filter(function(r){return r&&r[0]&&r[1];})
+    .filter(function(r){return /^[0-9]{3}/.test(String(r[0]).trim())&&!isNaN(r[1]);});
+  if(twoCol.length>3) return 'E';
+
+  // B: 기본 — A=라우트, C=단가
+  return 'B';
+}
+
+// 포맷 A: 캠프명 행 + 라우트(A) / 단가(C)
+function _parseRP_A(rows){
+  var result={};
+  rows.forEach(function(r){
+    if(!r||!r[0])return;
+    var key=String(r[0]).trim();
+    // 라우트 패턴: 3자리숫자+문자 (예: 101C, 812A)
+    if(!/^[0-9]{2,4}[A-Z]?$/.test(key))return;
+    // 단가: C컬럼(인덱스2) 우선, 없으면 B(1)
+    var price=+r[2]||+r[1]||0;
+    if(price>0) result[key]=price;
+  });
+  return result;
+}
+
+// 포맷 B: 헤더없음, A=라우트, C=단가
+function _parseRP_B(rows){
+  var result={};
+  rows.forEach(function(r){
+    if(!r||!r[0])return;
+    var key=String(r[0]).trim().toUpperCase();
+    if(!/^[0-9]{2,4}[A-Z]?$/.test(key))return;
+    var price=+r[2]||+r[1]||0;
+    if(price>0) result[key]=price;
+  });
+  return result;
+}
+
+// 포맷 C: 헤더 있음 — 라우트/단가 컬럼 매핑
+function _parseRP_C(rows){
+  var result={};
+  var hdr=(rows[0]||[]).map(function(c){return c?String(c).trim().toLowerCase():'';});
+  var rIdx=hdr.findIndex(function(h){return /라우트|route|노선/.test(h);});
+  var pIdx=hdr.findIndex(function(h){return /단가|price|금액|원/.test(h);});
+  if(rIdx<0||pIdx<0)return result;
+  rows.slice(1).forEach(function(r){
+    if(!r||!r[rIdx])return;
+    var key=String(r[rIdx]).trim().toUpperCase();
+    var price=+r[pIdx]||0;
+    if(key&&price>0) result[key]=price;
+  });
+  return result;
+}
+
+// 포맷 D: 쿠팡 공식 정산서 — 라우트 단가 컬럼에서 추출
+function _parseRP_D(rows){
+  var result={};
+  var hIdx=rows.findIndex(function(r){return r&&r[0]==='구분';});
+  if(hIdx<0)return result;
+  rows.slice(hIdx+1).forEach(function(r){
+    if(!r||!r[0])return;
+    var cat=String(r[0]).trim();
+    if(cat==='배송'||cat==='수기반영'){
+      var route=r[2]?String(r[2]).trim():'';
+      // 단가는 row[9] 또는 RPRICE에서 (이미 있으면 유지)
+      var price=+r[9]||+r[10]||0;
+      if(route&&price>0&&!result[route]) result[route]=price;
+    }
+  });
+  return result;
+}
+
+// 포맷 E: 2컬럼 단순형 — A=라우트, B=단가
+function _parseRP_E(rows){
+  var result={};
+  rows.forEach(function(r){
+    if(!r||!r[0]||!r[1])return;
+    var key=String(r[0]).trim().toUpperCase();
+    var price=+r[1]||0;
+    if(/^[0-9]{2,4}/.test(key)&&price>0) result[key]=price;
+  });
+  return result;
+}
+
 // ★ 정산서 강제 불러오기 (기사용)
 function forceLoadSettle(){
   var db = _db;

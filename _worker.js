@@ -1464,6 +1464,14 @@ export default {
 
     // 정적 파일 서빙 + 보안 헤더 적용
     const assetResp = await fetchAsset(url.pathname, request);
+    // ★ JS 파일은 반드시 application/javascript로 서빙 (GitHub Raw는 text/plain 반환)
+    if (url.pathname.endsWith('.js')) {
+      const jsHeaders = new Headers(assetResp.headers);
+      jsHeaders.set('Content-Type', 'application/javascript; charset=utf-8');
+      jsHeaders.set('Service-Worker-Allowed', '/');
+      Object.entries(SECURITY_HEADERS).forEach(([k,v]) => jsHeaders.set(k,v));
+      return new Response(assetResp.body, { status: assetResp.status, headers: jsHeaders });
+    }
     return addSecurityHeaders(assetResp);
   },
 

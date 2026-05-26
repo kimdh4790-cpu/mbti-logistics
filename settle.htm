@@ -4616,13 +4616,24 @@ function _dwParseExcel(file, cb){
   reader.onload=function(ev){
     try{
       var wb=XLSX.read(ev.target.result,{type:'array',cellDates:true});
-      var ws=wb.Sheets[wb.SheetNames[0]];
+
+      // ★ 여러 시트 중 데이터 있는 첫 번째 사용
+      var ws=null;
+      for(var si=0;si<wb.SheetNames.length;si++){
+        var candidate=wb.Sheets[wb.SheetNames[si]];
+        var testRows=XLSX.utils.sheet_to_json(candidate,{header:1,defval:null});
+        if(testRows&&testRows.filter(function(r){return r&&r.some(function(c){return c!=null;});}).length>1){
+          ws=candidate; break;
+        }
+      }
+      if(!ws){cb(null,'데이터 없음');return;}
+
       var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null,raw:false,dateNF:'yyyy-mm-dd HH:MM:SS'});
       if(rows.length<2){cb(null,'데이터 없음');return;}
 
-      // 헤더 탐색
+      // ★ 헤더 탐색 (빈 행 건너뜀)
       var hIdx=-1;
-      for(var i=0;i<Math.min(rows.length,10);i++){
+      for(var i=0;i<Math.min(rows.length,15);i++){
         if(rows[i]&&rows[i].some(function(c){return c&&String(c).trim();})){hIdx=i;break;}
       }
       if(hIdx<0){cb(null,'헤더 없음');return;}
@@ -4630,40 +4641,68 @@ function _dwParseExcel(file, cb){
       var headers=rows[hIdx].map(function(c){return String(c||'').trim();});
       var platform=_dwDetectPlatform(headers);
 
-      // 컬럼 인덱스 탐지
-      var colId=-1, colPrice=-1, colTime=-1;
+      // ★ 컬럼 인덱스 탐지 (확장된 키워드)
+      var colId=-1, colPrice=-1, colTime=-1, colName=-1, colCnt=-1;
       headers.forEach(function(h,ci){
-        var hn=h.toLowerCase();
+        var hn=h.toLowerCase().replace(/\s/g,'');
         // ID 컬럼
-        if(colId<0&&(hn.includes('배달원 id')||hn.includes('배달원id')||hn.includes('라이더 id')||hn.includes('라이더id')||hn.includes('사번')||hn.includes('rider_id')||hn.includes('rider id')))colId=ci;
+        if(colId<0&&(hn.includes('배달원id')||hn.includes('라이더id')||hn.includes('사번')
+          ||hn.includes('riderid')||hn.includes('rider_id')||hn.includes('기사id')
+          ||hn.includes('userid')||hn.includes('id')))colId=ci;
+        // 이름 컬럼
+        if(colName<0&&(hn.includes('이름')||hn.includes('성명')||hn.includes('기사명')
+          ||hn.includes('라이더명')||hn.includes('name')))colName=ci;
         // 금액 컬럼
-        if(colPrice<0&&(hn.includes('플랫폼 총 지급액')||hn.includes('플랫폼총지급액')||hn.includes('최종 정산금액')||hn.includes('최종정산금액')||hn.includes('지급액')||hn.includes('정산금액')||hn.includes('amount')))colPrice=ci;
+        if(colPrice<0&&(hn.includes('플랫폼총지급액')||hn.includes('최종정산금액')
+          ||hn.includes('지급액')||hn.includes('정산금액')||hn.includes('단가')
+          ||hn.includes('금액')||hn.includes('amount')||hn.includes('price')
+          ||hn.includes('fee')||hn.includes('pay')))colPrice=ci;
+        // 건수 컬럼
+        if(colCnt<0&&(hn.includes('건수')||hn.includes('배달건')||hn.includes('완료건')
+          ||hn.includes('count')||hn.includes('cnt')||hn.includes('qty')))colCnt=ci;
         // 시간 컬럼
-        if(colTime<0&&(hn.includes('완료시간')||hn.includes('배달완료')||hn.includes('완료일시')||hn.includes('completed')||hn.includes('done_at')||hn.includes('배달시간')))colTime=ci;
+        if(colTime<0&&(hn.includes('완료시간')||hn.includes('배달완료')||hn.includes('완료일시')
+          ||hn.includes('completed')||hn.includes('done_at')||hn.includes('배달시간')
+          ||hn.includes('시간')||hn.includes('time')))colTime=ci;
       });
 
+      // ★ Fallback 1: 이름으로 ID 대체
+      if(colId<0&&colName>=0)colId=colName;
+
+      // ★ Fallback 2: 데이터 행에서 숫자 컬럼 자동 탐지
       if(colId<0||colPrice<0){
-        // fallback: 첫 번째 문자열 열 → ID, 첫 숫자 열 → 금액
-        headers.forEach(function(h,ci){
-          if(colId<0&&h)colId=ci;
-        });
-        for(var ri=hIdx+1;ri<Math.min(rows.length,hIdx+5);ri++){
+        headers.forEach(function(h,ci){if(colId<0&&h)colId=ci;});
+        for(var ri=hIdx+1;ri<Math.min(rows.length,hIdx+10);ri++){
           if(!rows[ri])continue;
           rows[ri].forEach(function(v,ci){
-            if(colPrice<0&&ci!==colId&&+v>0&&+v<100000)colPrice=ci;
+            var num=parseFloat(String(v||'').replace(/[,₩원]/g,''));
+            if(colPrice<0&&ci!==colId&&num>0&&num<5000000)colPrice=ci;
           });
           if(colPrice>=0)break;
         }
       }
-      if(colId<0||colPrice<0){cb(null,'ID 또는 금액 컬럼을 찾을 수 없습니다');return;}
 
-      // 라이더별 주문 집계
+      // ★ Fallback 3: 건수×단가 구조 (colCnt + colPrice)
+      if(colId<0||colPrice<0){cb(null,'ID 또는 금액 컬럼을 찾을 수 없습니다\n\n지원 컬럼명:\n· ID: "배달원ID", "라이더ID", "이름", "기사명"\n· 금액: "지급액", "정산금액", "금액", "단가"\n· 건수: "건수", "배달건"');return;}
+
+      // ★ 라이더별 주문 집계
       var riderMap={};
       rows.slice(hIdx+1).forEach(function(row){
-        if(!row||!row[colId])return;
-        var rid=String(row[colId]).trim();
-        var price=parseFloat(String(row[colPrice]||'').replace(/[,₩]/g,''))||0;
-        if(!rid||price<=0)return;
+        if(!row)return;
+        var rid=row[colId]!=null?String(row[colId]).trim():'';
+        if(!rid||rid==='-'||rid==='합계'||rid==='소계'||rid==='total')return;
+
+        // 금액 파싱 (건수×단가 or 직접 금액)
+        var price=0;
+        if(colCnt>=0&&colPrice>=0){
+          var cnt=parseFloat(String(row[colCnt]||'').replace(/[,₩원]/g,''))||0;
+          var unit=parseFloat(String(row[colPrice]||'').replace(/[,₩원]/g,''))||0;
+          price=cnt>0&&unit>0&&unit<50000?cnt*unit:unit; // 단가×건수 or 직접금액
+        } else {
+          price=parseFloat(String(row[colPrice]||'').replace(/[,₩원]/g,''))||0;
+        }
+        if(price<=0)return;
+
         var hour=0;
         if(colTime>=0&&row[colTime]){
           var ts=String(row[colTime]);
@@ -4673,6 +4712,11 @@ function _dwParseExcel(file, cb){
         if(!riderMap[rid])riderMap[rid]=[];
         riderMap[rid].push({riderId:rid,platformPrice:price,hour:hour});
       });
+
+      if(!Object.keys(riderMap).length){
+        cb(null,'인식된 기사 데이터 없음\n헤더행: '+headers.filter(Boolean).join(', '));
+        return;
+      }
 
       cb(riderMap, null, platform);
     }catch(e){cb(null,'파싱 오류: '+e.message);}
