@@ -16442,11 +16442,21 @@ function openAdminPanel(){
         extBtn.textContent='🔄 7일 연장';
         extBtn.onclick=(function(id,nm){return function(){
           var newExpiry=new Date(Date.now()+7*86400000).toISOString().slice(0,10);
-          _db.collection('companies').doc(id).update({
-            trialEnd:newExpiry,
-            trialExtended:true,
-            trialExtendedAt:new Date().toISOString()
-          }).then(function(){
+          var newExpiryDate=new Date(Date.now()+7*86400000);
+          // ★ companies + subscriptions 동시 업데이트 (showApp 체크 통과)
+          Promise.all([
+            _db.collection('companies').doc(id).update({
+              trialEnd:newExpiry,
+              trialExtended:true,
+              trialExtendedAt:new Date().toISOString()
+            }),
+            _db.collection('subscriptions').doc(id).set({
+              status:'trial',
+              expireDate:firebase.firestore.Timestamp.fromDate(newExpiryDate),
+              extendedAt:new Date().toISOString(),
+              extendedBy:'superadmin'
+            },{merge:true})
+          ]).then(function(){
             toast('✅ '+nm+' 체험 7일 연장 → '+newExpiry);
             extBtn.textContent='✅ '+newExpiry;
             extBtn.style.background='#059669';
@@ -16568,24 +16578,38 @@ window._extendTrialByEmail=function(email, btn, days){
         if(usnap.empty)throw new Error('이메일로 계정을 찾을 수 없습니다: '+email);
         var updates=[];
         usnap.forEach(function(udoc){
+          var expiryDate3=new Date(Date.now()+days*86400000);
           updates.push(_db.collection('companies').doc(udoc.id).update({
             trialEnd:newExpiry,
             trialExtended:true,
             trialExtendedAt:new Date().toISOString(),
             trialExtendNote:'슈퍼어드민 '+days+'일 연장'
           }));
+          updates.push(_db.collection('subscriptions').doc(udoc.id).set({
+            status:'trial',
+            expireDate:firebase.firestore.Timestamp.fromDate(expiryDate3),
+            extendedAt:new Date().toISOString(),
+            extendedBy:'superadmin'
+          },{merge:true}));
         });
         return Promise.all(updates).then(function(){return usnap.size;});
       });
     }
     var updates=[];
     snap.forEach(function(doc){
+      var expiryDate2=new Date(Date.now()+days*86400000);
       updates.push(_db.collection('companies').doc(doc.id).update({
         trialEnd:newExpiry,
         trialExtended:true,
         trialExtendedAt:new Date().toISOString(),
         trialExtendNote:'슈퍼어드민 '+days+'일 연장'
       }));
+      updates.push(_db.collection('subscriptions').doc(doc.id).set({
+        status:'trial',
+        expireDate:firebase.firestore.Timestamp.fromDate(expiryDate2),
+        extendedAt:new Date().toISOString(),
+        extendedBy:'superadmin'
+      },{merge:true}));
     });
     return Promise.all(updates).then(function(){return snap.size;});
   })
