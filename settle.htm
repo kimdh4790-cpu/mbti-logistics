@@ -128,6 +128,7 @@ tr:hover>td{background:var(--bg3)}
   });
 })();
 </script>
+<script src="https://cdn.iamport.kr/v1/iamport.js"></script>
 </head>
 <body>
 <script>
@@ -173,6 +174,16 @@ tr:hover>td{background:var(--bg3)}
           <button class="btn btn-sm btn-blue" onclick="checkBizNum()" style="white-space:nowrap">중복확인</button>
         </div>
         <div id="r-biznum-msg" style="font-size:11px;margin-top:4px;display:none"></div>
+        <!-- ★ 핸드폰 본인인증 -->
+        <div style="margin-top:12px">
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">핸드폰 본인인증 <span style="color:var(--red)">*</span></label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input id="r-phone-display" type="text" placeholder="인증 후 자동 입력" readonly
+              style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px">
+            <button class="btn btn-sm btn-blue" onclick="doPhoneVerify()" id="r-phone-btn" style="white-space:nowrap">인증하기</button>
+          </div>
+          <div id="r-phone-msg" style="font-size:11px;margin-top:4px"></div>
+        </div>
       </div>
       <div class="fg"><label>관리자 이메일</label><input id="r-email" type="email" placeholder="admin@company.com"></div>
       <div class="fg"><label>비밀번호</label><input id="r-pw" type="password" placeholder="8자 이상"></div>
@@ -1912,6 +1923,46 @@ function initFirebase(){
   });
 }
 
+// ★ 체험 만료 결제 유도 팝업
+function _showTrialExpiredPopup(){
+  if(document.getElementById('trial-expired-popup')) return;
+  var mo=document.createElement('div');
+  mo.id='trial-expired-popup';
+  mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  var PLANS=[
+    {key:'settle',label:'AI 자동 정산',price:'49,000원/월',desc:'엑셀 업로드→자동 정산, 세금계산서, 명세서 발송'},
+    {key:'qr',label:'QR 출퇴근',price:'49,000원/월',desc:'동적 QR+GPS 출퇴근, 위변조 방지'},
+    {key:'full',label:'풀패키지',price:'89,000원/월',desc:'정산+QR+계약서+보고서 모두 포함'},
+  ];
+  var cards=PLANS.map(function(p){
+    return '<div class="sp-card" data-plan="'+p.key+'" style="background:#1a2744;border:1px solid rgba(0,200,248,.3);border-radius:12px;padding:16px;cursor:pointer">';
+      +'<div style="font-weight:800;font-size:15px;color:#00c8f8;margin-bottom:4px">'+p.label+'</div>'
+      +'<div style="font-size:18px;font-weight:900;color:#fff;margin-bottom:6px">'+p.price+'</div>'
+      +'<div style="font-size:11px;color:#94a3b8">'+p.desc+'</div>'
+      +'<div style="margin-top:10px;background:#00c8f8;color:#000;font-weight:700;font-size:12px;padding:8px;border-radius:8px;text-align:center">선택하기 →</div>'
+      +'</div>';
+  }).join('');
+  mo.innerHTML='<div style="background:#0d1b3e;border-radius:20px;padding:28px 24px;max-width:480px;width:90%;color:#fff">'
+    +'<div style="font-size:28px;text-align:center;margin-bottom:8px">⏰</div>'
+    +'<h2 style="text-align:center;margin-bottom:4px;font-size:20px">7일 무료 체험이 종료됐습니다</h2>'
+    +'<p style="text-align:center;color:#94a3b8;font-size:13px;margin-bottom:20px">요금제를 선택하고 계속 이용하세요</p>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">'+cards+'</div>'
+    +'<div style="text-align:center;font-size:11px;color:#64748b">카드 자동결제 · 언제든 해지 가능<br>'
+    +'문의: <a href="tel:051-711-3103" style="color:#00c8f8">051-711-3103</a> · <a href="https://pf.kakao.com/_xkuxabX/chat" style="color:#00c8f8">카카오 돈웨이</a></div>'
+    +'</div>';
+  document.body.appendChild(mo);
+  mo.querySelectorAll('.sp-card').forEach(function(c){
+    c.addEventListener('click',function(){window._subRequest(c.dataset.plan);});
+    c.addEventListener('mouseover',function(){c.style.borderColor='#00c8f8';});
+    c.addEventListener('mouseout',function(){c.style.borderColor='rgba(0,200,248,.3)';});
+  });
+}
+function _subRequest(planKey){
+  document.getElementById('trial-expired-popup').remove();
+  if(typeof _showSubModal==='function') _showSubModal(planKey);
+  else toast('구독 문의: 051-711-3103 또는 카카오채널 돈웨이');
+}
+
 function showApp(){
   // 구독 상태 확인 (슈퍼어드민은 제외)
   if(_CU&&!isSuperAdmin()&&_db){
@@ -1949,10 +2000,18 @@ function showApp(){
             }).catch(function(){});
             return;
           }
-          // 만료 7일 전 경고
+          // 만료 7일 전 경고 + 만료 시 결제 팝업
           if(exp){
             var daysLeft=Math.ceil((exp-now)/(1000*60*60*24));
-            if(daysLeft<=7){
+            if(daysLeft<=0){
+              // 만료됨 → 결제 요청 팝업
+              setTimeout(function(){ _showTrialExpiredPopup(); },1500);
+            } else if(daysLeft<=3){
+              setTimeout(function(){
+                toast('⚠️ 구독 만료 '+daysLeft+'일 전입니다. 지금 갱신하세요!');
+                setTimeout(function(){ _showTrialExpiredPopup(); },3000);
+              },2000);
+            } else if(daysLeft<=7){
               setTimeout(function(){
                 toast('⚠️ 구독 만료 '+daysLeft+'일 전입니다. 갱신해 주세요.');
               },2000);
@@ -2140,6 +2199,47 @@ function switchTab(tab){
 }
 
 // ── 사업자번호 중복 확인 ──
+// ★ 핸드폰 본인인증
+var _verifiedPhone='';
+var _verifiedName='';
+function doPhoneVerify(){
+  if(typeof IMP==='undefined'){toast('❌ 본인인증 모듈 로드 중. 잠시 후 다시 시도하세요.');return;}
+  IMP.init('imp46571008');
+  IMP.certification({
+    pg:'danal',
+    merchant_uid:'donway_cert_'+Date.now(),
+    popup:true
+  },function(rsp){
+    var msg=document.getElementById('r-phone-msg');
+    var btn=document.getElementById('r-phone-btn');
+    var inp=document.getElementById('r-phone-display');
+    if(rsp.success){
+      _verifiedPhone=rsp.phone||'';
+      _verifiedName=rsp.name||'';
+      inp.value=(_verifiedPhone?_verifiedPhone+' ':'')+(_verifiedName?'('+_verifiedName+')':'');
+      inp.dataset.verified='ok';
+      msg.style.color='var(--green)';
+      msg.textContent='✅ 본인인증 완료';
+      btn.textContent='✅ 완료';
+      btn.disabled=true;
+      btn.style.background='var(--green)';
+      // 핸드폰 중복 체크
+      _db.collection('companies').where('phone','==',_verifiedPhone).get({source:'server'}).then(function(snap){
+        if(!snap.empty){
+          msg.style.color='var(--red)';
+          msg.textContent='❌ 이미 가입된 전화번호입니다. 기존 계정으로 로그인하세요.';
+          inp.dataset.verified='blocked';
+          btn.textContent='인증하기';btn.disabled=false;btn.style.background='';
+          _verifiedPhone='';_verifiedName='';
+        }
+      }).catch(function(){});
+    } else {
+      msg.style.color='var(--red)';
+      msg.textContent='❌ 본인인증 실패: '+(rsp.error_msg||'다시 시도해주세요');
+    }
+  });
+}
+
 function checkBizNum(){
   var biz=document.getElementById('r-biznum').value.trim();
   var msg=document.getElementById('r-biznum-msg');
@@ -2217,6 +2317,10 @@ function doRegister(){
   var verified=document.getElementById('r-biznum').dataset.verified;
   if(!verified){err.textContent='사업자번호 중복 확인을 먼저 해주세요';err.style.display='block';return;}
   if(verified==='blocked'){err.textContent='사용할 수 없는 사업자번호입니다';err.style.display='block';return;}
+  // ★ 핸드폰 본인인증 체크
+  var phoneVerified=document.getElementById('r-phone-display').dataset.verified;
+  if(!phoneVerified||phoneVerified!=='ok'){err.textContent='핸드폰 본인인증이 필요합니다';err.style.display='block';return;}
+  if(phoneVerified==='blocked'){err.textContent='이미 가입된 전화번호입니다';err.style.display='block';return;}
 
   var isOwner=OWNER_BIZ.includes(biz)||OWNER_EMAIL.includes(email);
   var plan=isOwner?'OWNER':'trial';
@@ -2226,7 +2330,12 @@ function doRegister(){
 
   err.textContent='계정 생성 중...';err.style.color='var(--text3)';err.style.display='block';
 
-  _auth.createUserWithEmailAndPassword(email,pw).then(function(cred){
+  // ★ 서버측 사업자번호 이중 확인 (클라이언트 우회 방지)
+  _db.collection('companies').where('bizNumber','==',biz).get({source:'server'}).then(function(dupSnap){
+    if(!dupSnap.empty&&!isOwner&&!OWNER_EMAIL.includes(email)){
+      err.textContent='이미 등록된 사업자번호입니다. 재가입은 불가합니다.';return;
+    }
+    _auth.createUserWithEmailAndPassword(email,pw).then(function(cred){
     var uid=cred.user.uid;
     var serviceType=(document.getElementById('r-service')||{value:'full'}).value||'full';
     // ★ slug: 이메일 @ 앞부분 → 영문+숫자만 추출 (URL 안전)
@@ -2245,6 +2354,8 @@ function doRegister(){
       trialEnd:isOwner?'9999-12-31':trialEnd.toISOString().slice(0,10),
       trialUsed:true,
       isOwner:isOwner,
+      phone:_verifiedPhone||'',
+      certName:_verifiedName||'',
       createdAt:firebase.firestore.FieldValue.serverTimestamp(),
       uid:uid
     });
@@ -2276,12 +2387,13 @@ function doRegister(){
         +'(직원/기사 가입 시 공유)\n\n'
         +'전용 URL을 북마크해두세요!');
     },300);
-  }).catch(function(e){
-    err.style.color='var(--red)';
-    if(e.code==='auth/email-already-in-use') err.textContent='이미 사용 중인 이메일입니다';
-    else err.textContent='오류: '+e.message;
-    err.style.display='block';
-  });
+    }).catch(function(e){
+      err.style.color='var(--red)';
+      if(e.code==='auth/email-already-in-use') err.textContent='이미 사용 중인 이메일입니다';
+      else err.textContent='오류: '+e.message;
+      err.style.display='block';
+    });
+  }).catch(function(e){err.style.display='block';err.textContent='서버 오류: '+e.message;});
 }
 
 // ── 회사코드 확인 ──
@@ -16070,7 +16182,7 @@ function _requirePlan(feature,callback){
   if(isSuperAdmin()){callback();return;}
   var did=_CU.uid||_CU.dealerId||_CU.companyId||'';
   if(!did){callback();return;}
-  _db.collection('companies').doc(did).get().then(function(snap){
+  _db.collection('companies').doc(did).get({source:'server'}).then(function(snap){
     var d=snap.exists?snap.data():{};
     if(_isPlanAllowed(d)){callback();}
     else{_renderPaywall(feature);}
@@ -16079,6 +16191,11 @@ function _requirePlan(feature,callback){
 
 function _isPlanAllowed(d){
   if(d.settlePaid||d.rosterPaid)return true;
+  // ★ 체험 유효 기간 중이면 선택한 서비스 그대로 사용 가능
+  if(d.plan==='trial'&&d.trialEnd){
+    var today=new Date().toISOString().slice(0,10);
+    if(d.trialEnd>=today) return true;
+  }
   var plan=d.plan||'';
   var paid=['qr_only','settle_taxi','payroll','qr_payroll','full'];
   return paid.indexOf(plan)>=0||(d.plans&&d.plans.length>0);
@@ -16123,13 +16240,22 @@ function _renderPaywall(feature){
 
 // ── 플랜 보유 여부 체크 헬퍼
 function _hasSettle(d){
-  return isSuperAdmin()||(d.settlePaid)||(['settle_taxi','qr_payroll','full'].indexOf(d.plan||'')>=0);
+  if(isSuperAdmin())return true;
+  if(d.settlePaid)return true;
+  if(d.plan==='trial'&&d.trialEnd>=new Date().toISOString().slice(0,10))return true;
+  return ['settle_taxi','qr_payroll','full'].indexOf(d.plan||'')>=0;
 }
 function _hasQr(d){
-  return isSuperAdmin()||(d.qrPaid||d.rosterPaid)||(['qr_only','qr_payroll','full'].indexOf(d.plan||'')>=0);
+  if(isSuperAdmin())return true;
+  if(d.qrPaid||d.rosterPaid)return true;
+  if(d.plan==='trial'&&d.trialEnd>=new Date().toISOString().slice(0,10))return true;
+  return ['qr_only','qr_payroll','full'].indexOf(d.plan||'')>=0;
 }
 function _hasPayroll(d){
-  return isSuperAdmin()||(d.payrollPaid||d.rosterPaid)||(['payroll','qr_payroll','full'].indexOf(d.plan||'')>=0);
+  if(isSuperAdmin())return true;
+  if(d.payrollPaid||d.rosterPaid)return true;
+  if(d.plan==='trial'&&d.trialEnd>=new Date().toISOString().slice(0,10))return true;
+  return ['payroll','qr_payroll','full'].indexOf(d.plan||'')>=0;
 }
 function _hasDelivery(d){  // ★ 배달대행 - 택배와 완전 별개
   return isSuperAdmin()||(d.deliveryPaid)||(['delivery','full'].indexOf(d.plan||'')>=0);
@@ -16406,7 +16532,7 @@ function openAdminPanel(){
   function buildDealerRows(items){
     var tbl=document.createElement('table');tbl.className='tbl';tbl.style.width='100%';
     var thead=document.createElement('thead');
-    thead.innerHTML='<tr><th>대리점</th><th>플랜</th><th>전용URL</th><th>가입일/만료일</th><th>정산수</th><th></th></tr>';
+    thead.innerHTML='<tr><th>대리점</th><th>플랜/서비스</th><th>전용URL</th><th>가입일/만료일</th><th>정산수</th><th></th></tr>';
     tbl.appendChild(thead);
     var tbody=document.createElement('tbody');
     items.forEach(function(item){
@@ -16414,6 +16540,9 @@ function openAdminPanel(){
       var isCurrent=(window._adminViewDealerId===item.id);
       var slugUrl = item.slug ? (window.location.origin+'/'+item.slug) : '-';
       var planLabel = {'trial':'무료체험','settle':'AI정산','qr':'QR출퇴근','full':'풀패키지','hourly':'급여관리','OWNER':'관리자'}[item.plan||'trial']||item.plan||'-';
+      var svcMap={'settle':'AI정산','qr':'QR출퇴근','full':'풀패키지','hourly':'급여관리'};
+      var svcLabel=svcMap[item.serviceType]||'';
+      if(svcLabel&&svcLabel!==planLabel) planLabel+=' · '+svcLabel;
       var planColor = item.plan==='trial'?'var(--amber)':item.plan==='OWNER'?'#f59e0b':'var(--green)';
       var today=new Date().toISOString().slice(0,10);
       var isExpired=item.plan==='trial'&&item.trialEnd&&item.trialEnd<today;
@@ -16507,6 +16636,7 @@ function openAdminPanel(){
         email:d.email||d.adminEmail||'',
         slug:d.slug||'',
         plan:d.plan||(d.trialEnd?'trial':'unknown'),
+        serviceType:d.serviceType||'full',
         trialStart:d.trialStart||'',
         trialEnd:d.trialEnd||'',
         createdAt:d.createdAt&&d.createdAt.seconds?d.createdAt.seconds:0,
