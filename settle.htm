@@ -1055,17 +1055,16 @@ function calcNet(x){
   var damt=isYong ? dcnt*yDel : (_rdList.length ? _damtRP : (+x.damt||+x.delivAmt||+x.base||0));
   var ramt=isYong ? rcnt*yRet : (_rdList.length ? _ramtRP : (+x.ramt||+x.retAmt||0));
   // ★ fresh/inc: 정산총괄에서 VAT제외로 파싱됨 → income 계산 시 VAT포함 변환
-  var fresh=+x.fresh||+x.freshAmt||0;  // VAT포함가 그대로 사용 (×1.1 없음)
-  // ★ 프레시백 인센 계산 (v9.25 방어 로직)
-  // 1순위: 저장된 x.finc 값이 있으면 jobsub과 무관하게 그대로 사용 (데이터 정합성 우선)
-  // 2순위: x.finc 없으면 쿠팡은 건수×25원, 그 외(용차/컬리/CJ)는 0
+  var fresh=+x.fresh||+x.freshAmt||0;  // ★ 프레시백 회수금액만 엑셀값 사용
+  // ★ 프레시백 인센티브: 항상 건수 × 25원 재계산 (저장값 무시 — 앱에서 계산)
   var isCoupang=(x.jobsub==='쿠팡'||x.client==='쿠팡');
-  var hasStoredFinc=(x.finc!==undefined&&x.finc!==null&&x.finc!=='');
-  var finc = hasStoredFinc
-    ? +x.finc
-    : (isCoupang ? Math.round(dcnt*(G_PRICES.freshbag_inc||25)) : 0);
-  var inc=+x.inc||0;  // 추가인센 VAT포함가 그대로 사용 (×1.1 없음)
-  var nocont = +x.nocont || 0;  // ★ 미계약건 (+수익)
+  var finc = isCoupang ? Math.round(dcnt*(G_PRICES.freshbag_inc||25)) : 0;
+  var inc=+x.inc||0;
+  // ★ 미계약건: 항상 RPRICE['nocont_w1/w2'] × 건수 재계산 (저장값·엑셀금액 무시)
+  var _nocontCnt=+x.nocontCnt||0;
+  var _nocontIsW2=(x.camp||'').includes('부산');
+  var _nocontUnit=_nocontIsW2?(RPRICE['nocont_w2']||0):(RPRICE['nocont_w1']||0);
+  var nocont = _nocontCnt>0 ? _nocontCnt*_nocontUnit : 0;
   var etcPlus  = +x.etcPlus  || 0;  // ★ 기타(+)
   var etcMinus = +x.etcMinus || 0;  // ★ 기타(-)
   // ★ v9.25: 기타(+)만 세금계산서(income)에 포함 → 고용·산재 기준
@@ -1523,24 +1522,22 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           //   RPRICE 없는 라우트만 routeDetails.unitPrice(엑셀단가) fallback
           var rdDamt=routeDetails.reduce(function(s,rd){return s+(rd.cnt||0)*(RPRICE[rd.route]||rd.unitPrice||0);},0);
           var rdRamt=routeDetails.reduce(function(s,rd){return s+(rd.ret||0)*(RPRICE[rd.route]||rd.unitPrice||0);},0);
-          var taxBase=(rdDamt||damt)+(rdRamt||ramt)+freshAmt+fincVal+(dm.nocontAmt||0);  // ★ addIncAmt 제외 (세금계산서 base 아님)
+          // ★ 미계약건: RPRICE × 건수 (엑셀금액은 회사단가 — 절대 사용 안 함)
+          var nocontCntVal=dm.nocontCnt||0;
+          var _nocontCamp=dm.camp||'';
+          var _isW2=_nocontCamp.includes('부산');
+          var nocontUnit=_isW2?(RPRICE['nocont_w2']||0):(RPRICE['nocont_w1']||0);
+          var nocontAmtCalc=nocontCntVal>0 ? nocontCntVal*nocontUnit : 0;
+          // (RPRICE 단가 미설정 시 0 — 엑셀금액 fallback 없음)
+
+          var taxBase=(rdDamt||damt)+(rdRamt||ramt)+freshAmt+fincVal+nocontAmtCalc;  // ★ addIncAmt 제외 (세금계산서 base 아님)
           // 공제 계산
           var supplyAmt=Math.round(taxBase/1.1);
           var monthlyWage=Math.round(supplyAmt*0.654);
           var empIns=monthlyWage>=800000?Math.floor(monthlyWage*0.008/10)*10:0;
           var workIns=Math.floor(monthlyWage*0.0088/10)*10;
 
-          // ★ nocontAmt: Firestore 저장값이 0이면 RPRICE 기반 계산
-          var nocontCntVal=dm.nocontCnt||0;
-          var nocontAmtCalc=dm.nocontAmt||0;
-          if(nocontCntVal>0&&nocontAmtCalc===0){
-            // camp WAVE로 W1/W2 단가 결정
-            var camp=dm.camp||'';
-            var isW2=camp.includes('부산');
-            var nocontUnit=isW2?(RPRICE['nocont_w2']||0):(RPRICE['nocont_w1']||0);
-            nocontAmtCalc=nocontCntVal*nocontUnit;
-          }
-          var coupangRawTotal=tm.totalAmt||(Math.round((dm.delAmt||0)+(dm.retAmt||0)+(freshAmt||0)+(addIncAmt||0)+nocontAmtCalc-(dmgAmt||0)));
+          var coupangRawTotal=tm.totalAmt||(Math.round((dm.delAmt||0)+(dm.retAmt||0)+(freshAmt||0)+(addIncAmt||0)+(dm.nocontAmt||0)-(dmgAmt||0)));
           var entry={
             driver:drvName, userId:cleanId, dealerId:_CU.dealerId,
             camp:dm.camp||drvObj.camp||'',
