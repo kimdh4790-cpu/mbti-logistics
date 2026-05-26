@@ -311,10 +311,10 @@ var DEFAULT_UNIT_PRICES = {
 var G_PRICES = Object.assign({}, DEFAULT_UNIT_PRICES);
 
 // ── 슈퍼어드민 이메일 (최상단 선언 필수 - showApp보다 먼저 평가)
-// ★ 슈퍼어드민 이메일 — 코드 내 하드코딩 제거, Firestore admins 컬렉션 기준
-// Firestore: admins/{email} 문서에 {role:'superadmin'} 저장
-var _SUPER_ADMIN_CACHE = null; // 로그인 시 1회 캐시
-var SUPER_ADMIN_EMAIL  = 'kimdh4790@gmail.com'; // 레거시 호환용 (읽기 전용)
+// 슈퍼어드민 이메일 (Firestore admins 컬렉션 마이그레이션 전 임시 유지)
+var SUPER_ADMIN_EMAILS = ['kimdh4790@gmail.com','soungkyekim@naver.com'];
+var SUPER_ADMIN_EMAIL  = SUPER_ADMIN_EMAILS[0];
+var _SUPER_ADMIN_CACHE = null;
 
 // ════════════════════════════════════════════════════════
 // ★★★ DONWAY 지능형 배차 엔진 v1.0 (특허 출원) ★★★
@@ -2114,8 +2114,7 @@ function showApp(){
 
 // ══ DONWAY 화이트리스트 (영구 무료 계정) ══
 var OWNER_BIZ = ['373-86-02536'];
-// ★ OWNER_EMAIL — Firestore admins 컬렉션으로 관리 (코드 내 이메일 제거)
-var OWNER_EMAIL = []; // _loadAdminStatus에서 채워짐 (레거시 호환용)
+var OWNER_EMAIL = ['kimdh4790@gmail.com','soungkyekim@naver.com'];
 
 // ── 탭 전환 ──
 function switchTab(tab){
@@ -15994,26 +15993,24 @@ function pageNotices(){
 
 // ══ 슈퍼 어드민 ══
 // SUPER_ADMIN_EMAILS/EMAIL 상단에서 선언됨
-// ★ isSuperAdmin: Firestore admins/{email} 기준 (코드 내 이메일 미노출)
+// isSuperAdmin: 이메일 즉시 판단 (동기)
 function isSuperAdmin(){
-  if(!_CU||!_CU.email)return false;
-  // 캐시된 결과 우선 사용
-  if(_SUPER_ADMIN_CACHE!==null)return _SUPER_ADMIN_CACHE;
-  return false; // 비동기 로드 전 기본값
+  return !!((_CU&&_CU.email&&SUPER_ADMIN_EMAILS.indexOf(_CU.email)>=0)
+    ||(_SUPER_ADMIN_CACHE===true));
 }
 
-// 로그인 시 1회 어드민 여부 확인 (Firestore admins 컬렉션)
+// Firestore admins 컬렉션 연동 (마이그레이션 준비용 — 현재는 보조)
 function _loadAdminStatus(){
-  if(!_db||!_CU||!_CU.email){_SUPER_ADMIN_CACHE=false;return;}
-  var safeEmail=_CU.email.replace(/\./g,'_'); // Firestore 문서 ID용
+  if(!_db||!_CU||!_CU.email)return;
+  var safeEmail=_CU.email.replace(/\./g,'_');
   _db.collection('admins').doc(safeEmail).get()
     .then(function(snap){
-      _SUPER_ADMIN_CACHE=snap.exists&&snap.data().role==='superadmin';
-      // 어드민 버튼 업데이트
-      var adminBtn=document.getElementById('admin-btn');
-      if(adminBtn)adminBtn.style.display=_SUPER_ADMIN_CACHE?'block':'none';
-    })
-    .catch(function(){_SUPER_ADMIN_CACHE=false;});
+      if(snap.exists&&snap.data().role==='superadmin'){
+        _SUPER_ADMIN_CACHE=true;
+        var btn=document.getElementById('admin-btn');
+        if(btn)btn.style.display='block';
+      }
+    }).catch(function(){});
 }
 
 function _requirePlan(feature,callback){
