@@ -16193,7 +16193,7 @@ function openAdminPanel(){
   // ── 탭 바 ──
   var tabBar=document.createElement('div');
   tabBar.style.cssText='display:flex;border-bottom:1px solid var(--border);background:var(--bg2)';
-  ['🏢 대리점 목록','💳 결제 승인','⚙️ 기능 활성화'].forEach(function(t,i){
+  ['🏢 대리점 목록','💳 결제 승인','⚙️ 기능 활성화','🔄 체험 연장'].forEach(function(t,i){
     var tb=document.createElement('button');
     tb.style.cssText='flex:1;padding:10px 4px;border:none;background:transparent;font-size:12px;font-weight:700;cursor:pointer;color:'+(i===0?'var(--primary)':'var(--text3)')+';border-bottom:'+(i===0?'2px solid var(--primary)':'2px solid transparent');
     tb.textContent=t;
@@ -16204,6 +16204,7 @@ function openAdminPanel(){
       tb.style.color='var(--primary)';tb.style.borderBottom='2px solid var(--primary)';
       if(idx===1) _loadPaymentRequests(d.querySelector('#admin-tab-1'));
       if(idx===2) _loadFeaturePanel(d.querySelector('#admin-tab-2'));
+      if(idx===3) _loadTrialExtendPanel(d.querySelector('#admin-tab-3'));
     };})(i);
     tb.className='admin-tab-btn';
     tabBar.appendChild(tb);
@@ -16224,6 +16225,11 @@ function openAdminPanel(){
   var featTab=document.createElement('div');featTab.className='admin-tab-content';featTab.id='admin-tab-2';featTab.style.cssText='padding:16px;display:none';
   featTab.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">⏳ 로딩 중...</div>';
   d.appendChild(featTab);
+
+  // 탭3 — 체험 연장
+  var trialTab=document.createElement('div');trialTab.className='admin-tab-content';trialTab.id='admin-tab-3';trialTab.style.cssText='padding:16px;display:none';
+  trialTab.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">⏳ 로딩 중...</div>';
+  d.appendChild(trialTab);
 
   if(window._adminViewDealerId){
     var notice=document.createElement('div');
@@ -16286,7 +16292,30 @@ function openAdminPanel(){
       btn.className='btn btn-sm '+(isCurrent?'btn-teal':'btn-blue');
       btn.textContent=isCurrent?'✅ 보는 중':'🔍 열람';
       btn.onclick=(function(id){return function(){switchDealer(id);mo.remove();};})(item.id);
-      td.appendChild(btn);tr.appendChild(td);tbody.appendChild(tr);
+      td.appendChild(btn);
+
+      // ★ 체험 연장 버튼 (만료됐거나 trial 플랜인 경우)
+      if(item.plan==='trial'||isExpired){
+        var extBtn=document.createElement('button');
+        extBtn.className='btn btn-sm';
+        extBtn.style.cssText='background:#7c3aed;color:#fff;margin-left:4px;font-size:10px';
+        extBtn.textContent='🔄 7일 연장';
+        extBtn.onclick=(function(id,nm){return function(){
+          var newExpiry=new Date(Date.now()+7*86400000).toISOString().slice(0,10);
+          _db.collection('companies').doc(id).update({
+            trialEnd:newExpiry,
+            trialExtended:true,
+            trialExtendedAt:new Date().toISOString()
+          }).then(function(){
+            toast('✅ '+nm+' 체험 7일 연장 → '+newExpiry);
+            extBtn.textContent='✅ '+newExpiry;
+            extBtn.style.background='#059669';
+          }).catch(function(e){toast('❌ '+e.message);});
+        };})(item.id, item.name||item.email);
+        td.appendChild(extBtn);
+      }
+
+      tr.appendChild(td);tbody.appendChild(tr);
     });
     tbl.appendChild(tbody);
     body.innerHTML='';body.appendChild(tbl);
@@ -16335,6 +16364,103 @@ function openAdminPanel(){
     },100);
   }).catch(function(e){body.innerHTML='<div style="color:var(--red)">❌ '+e.message+'</div>';});
 }
+
+// ══ 체험 연장 패널 ══
+function _loadTrialExtendPanel(container){
+  if(!container)return;
+
+  // 미리 등록된 테스트 계정 (이메일 기준)
+  var TEST_ACCOUNTS=['test0@naver.com','test123@naver.com','test1@naver.com'];
+
+  container.innerHTML='<div style="font-size:13px;font-weight:800;margin-bottom:12px">🔄 체험 기간 연장</div>'
+    +'<div style="background:#eff6ff;border-radius:10px;padding:12px;margin-bottom:16px;font-size:11px;color:#1d4ed8">'
+      +'💡 이메일로 회사 문서를 찾아 무료 체험 기간을 연장합니다.<br>사업자번호 1회 제한을 우회하지 않고 <strong>만료일만 연장</strong>됩니다.'
+    +'</div>'
+
+    // 테스트 계정 빠른 연장
+    +'<div style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--text2)">⚡ 테스트 계정 빠른 연장</div>'
+    +'<div id="trial-test-list">'
+    +TEST_ACCOUNTS.map(function(email){
+      return '<div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--bg3);border-radius:8px;margin-bottom:6px">'
+        +'<div style="flex:1;font-size:12px;font-weight:600">'+email+'</div>'
+        +'<button onclick="_extendTrialByEmail(\''+email+'\',this)" '
+          +'style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer">🔄 7일 연장</button>'
+        +'<button onclick="_extendTrialByEmail(\''+email+'\',this,30)" '
+          +'style="background:#059669;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer">📅 30일</button>'
+      +'</div>';
+    }).join('')
+    +'</div>'
+
+    // 수동 이메일 입력
+    +'<div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">'
+      +'<div style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--text2)">✏️ 직접 입력</div>'
+      +'<div style="display:flex;gap:8px;margin-bottom:8px">'
+        +'<input id="trial-email-input" type="email" placeholder="이메일 주소" '
+          +'style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg)">'
+        +'<input id="trial-days-input" type="number" value="7" min="1" max="365" '
+          +'style="width:60px;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg)">'
+        +'<span style="align-self:center;font-size:11px;color:var(--text3)">일</span>'
+      +'</div>'
+      +'<button onclick="_extendTrialByEmail(document.getElementById(\'trial-email-input\').value,this,parseInt(document.getElementById(\'trial-days-input\').value)||7)" '
+        +'class="btn btn-blue" style="width:100%;padding:10px;font-size:12px;font-weight:700">🔄 체험 연장 실행</button>'
+    +'</div>'
+    +'<div id="trial-result" style="margin-top:10px;font-size:11px;min-height:16px"></div>';
+}
+
+// 이메일로 companies 문서 찾아 trial 연장
+window._extendTrialByEmail=function(email, btn, days){
+  if(!email||!email.includes('@')){toast('❌ 이메일을 확인해 주세요');return;}
+  if(!_db){toast('❌ Firebase 미연결');return;}
+  days=days||7;
+  var origText=btn.textContent;
+  btn.textContent='⏳ 처리 중...';btn.disabled=true;
+
+  var result=document.getElementById('trial-result');
+  var newExpiry=new Date(Date.now()+days*86400000).toISOString().slice(0,10);
+
+  // 1차: companies.email 검색
+  _db.collection('companies').where('email','==',email).get()
+  .then(function(snap){
+    if(snap.empty){
+      // 2차: users 컬렉션에서 uid 찾기
+      return _db.collection('users').where('email','==',email).get()
+      .then(function(usnap){
+        if(usnap.empty)throw new Error('이메일로 계정을 찾을 수 없습니다: '+email);
+        var updates=[];
+        usnap.forEach(function(udoc){
+          updates.push(_db.collection('companies').doc(udoc.id).update({
+            trialEnd:newExpiry,
+            trialExtended:true,
+            trialExtendedAt:new Date().toISOString(),
+            trialExtendNote:'슈퍼어드민 '+days+'일 연장'
+          }));
+        });
+        return Promise.all(updates).then(function(){return usnap.size;});
+      });
+    }
+    var updates=[];
+    snap.forEach(function(doc){
+      updates.push(_db.collection('companies').doc(doc.id).update({
+        trialEnd:newExpiry,
+        trialExtended:true,
+        trialExtendedAt:new Date().toISOString(),
+        trialExtendNote:'슈퍼어드민 '+days+'일 연장'
+      }));
+    });
+    return Promise.all(updates).then(function(){return snap.size;});
+  })
+  .then(function(cnt){
+    btn.textContent='✅ 완료 ~'+newExpiry;
+    btn.style.background='#059669';btn.disabled=false;
+    if(result)result.innerHTML='<span style="color:var(--green)">✅ <strong>'+email+'</strong> — '+days+'일 연장 완료 (만료: '+newExpiry+', '+cnt+'개 문서 업데이트)</span>';
+    toast('✅ '+email+' 체험 '+days+'일 연장 완료');
+  })
+  .catch(function(e){
+    btn.textContent=origText;btn.disabled=false;
+    if(result)result.innerHTML='<span style="color:var(--red)">❌ '+esc(e.message)+'</span>';
+    toast('❌ '+e.message);
+  });
+};
 
 // ══ 결제 승인 패널 ══
 function _loadPaymentRequests(container){
