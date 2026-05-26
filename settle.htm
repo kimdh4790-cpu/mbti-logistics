@@ -16489,8 +16489,8 @@ function openAdminPanel(){
 
   // companies 컬렉션에서 전체 대리점 로드 (slug/email/plan 포함)
   Promise.all([
-    _db.collection('companies').get(),
-    _db.collection('settlements').get()
+    _db.collection('companies').get({source:'server'}),
+    _db.collection('settlements').get({source:'server'})
   ]).then(function(results){
     var compSnap=results[0], sSnap=results[1];
     var dealerCnt={};
@@ -16585,7 +16585,7 @@ window._extendTrialByEmail=function(email, btn, days){
   var newExpiry=new Date(Date.now()+days*86400000).toISOString().slice(0,10);
 
   // 1차: companies.email 검색
-  _db.collection('companies').where('email','==',email).get()
+  _db.collection('companies').where('email','==',email).get({source:'server'})
   .then(function(snap){
     if(snap.empty){
       // 2차: users 컬렉션에서 uid 찾기
@@ -16737,7 +16737,7 @@ function _rejectPayment(reqId){
 function _loadFeaturePanel(container){
   if(!_db||!isSuperAdmin()) return;
   container.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">⏳ 회사 목록 로딩 중...</div>';
-  _db.collection('companies').orderBy('createdAt','desc').limit(30).get()
+  _db.collection('companies').orderBy('createdAt','desc').limit(30).get({source:'server'})
   .then(function(snap){
     var items=[];
     snap.forEach(function(doc){items.push(Object.assign({id:doc.id},doc.data()));});
