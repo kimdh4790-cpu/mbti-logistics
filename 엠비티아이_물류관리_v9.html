@@ -13024,10 +13024,21 @@ function rSettle(){
   var CAMP_COL_S={'부산1':'#3B82F6','부산2':'#8B5CF6','부산3':'#10B981','대구2':'#F59E0B','대구2B':'#FB923C','진주M':'#EF4444'};
   // ★ settlement의 캠프 판별 (drivers 기반 - 근무표관리와 동일 로직)
   var _drvMap_S={};
-  ls('drivers').forEach(function(d){ if(d&&d.name) _drvMap_S[d.name]=d; });
+  var _drvByUserId={};  // ★ userId → driver 역방향 맵 (정산 driver 필드가 userId일 때 변환용)
+  ls('drivers').forEach(function(d){
+    if(d&&d.name){ _drvMap_S[d.name]=d; }
+    if(d&&d.userId&&d.name){ _drvByUserId[d.userId]=d; }
+  });
+  // ★ settlement.driver → 실제 이름 변환 (userId로 저장된 경우 대응)
+  function _resolveDriverName(driver){
+    if(!driver) return '(미지정)';
+    if(_drvMap_S[driver]) return driver;           // 이미 이름
+    if(_drvByUserId[driver]) return _drvByUserId[driver].name; // userId → 이름
+    return driver;                                  // 변환 불가 → 원본 표시
+  }
   function _getSettleCamp(x){
-    var nm=(x&&x.driver)||'';
-    var d=_drvMap_S[nm];
+    var nm=_resolveDriverName(x&&x.driver);  // ★ userId→이름 자동변환
+    var d=_drvMap_S[nm]||_drvByUserId[x&&x.driver||''];
     if(d){
       // 1순위: 기사 프로필의 camp
       if(d.camp){
@@ -13097,7 +13108,7 @@ function rSettle(){
       var _cp=_getSettleCamp(x);
       var _cpCol=CAMP_COL_S[_cp]||'#94a3b8';
       return`<tr>
-        <td><strong>${x.driver}</strong> <span style="display:inline-block;padding:1px 6px;margin-left:3px;border-radius:4px;font-size:9px;font-weight:700;color:#fff;background:${_cpCol};letter-spacing:-0.3px">${_cp}</span></td>
+        <td><strong>${_resolveDriverName(x.driver)}</strong> <span style="display:inline-block;padding:1px 6px;margin-left:3px;border-radius:4px;font-size:9px;font-weight:700;color:#fff;background:${_cpCol};letter-spacing:-0.3px">${_cp}</span></td>
         <td><span class="badge ${jobBadge}" style="font-size:10px">${x.jobsub||'쿠팡'}</span></td>
         <td>${x.month}</td>
         <td style="color:var(--green)">₩${r.income.toLocaleString()}</td>
@@ -14510,7 +14521,7 @@ async function syncFirebaseSettlements(){
   var _thr = new Date(); _thr.setMonth(_thr.getMonth()-3);
   var _thrStr = _thr.getFullYear()+''+String(_thr.getMonth()+1).padStart(2,'0');
   return _db.collection('settlements').orderBy('month','desc')
-    .where('month','>=',_thrStr).limit(200).get();
+    .where('month','>=',_thrStr).where('adminId','==','admin').limit(200).get();
 })();
     var fbMap={},fbArr=[];
     snap.forEach(function(d){
@@ -14610,7 +14621,7 @@ function openSettleCompare(){
         var pct=maxNet>0?Math.round(r.net/maxNet*100):0;
         var medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
         return '<tr style="border-bottom:1px solid var(--border)">'
-          +'<td style="padding:7px 8px;font-weight:600">'+medal+' '+x.driver+'</td>'
+          +'<td style="padding:7px 8px;font-weight:600">'+medal+' '+_resolveDriverName(x.driver)+'</td>'
           +'<td style="padding:7px 8px;text-align:right;color:var(--green)">₩'+r.income.toLocaleString()+'</td>'
           +'<td style="padding:7px 8px;text-align:right;color:var(--purple);font-weight:700">₩'+r.net.toLocaleString()+'</td>'
           +'<td style="padding:7px 8px;text-align:right;color:var(--text2)">'+(+x.dcnt||0).toLocaleString()+'건</td>'
@@ -17689,7 +17700,7 @@ function viewStmt(i){
       <div style="font-size:11px;opacity:.7;margin-bottom:3px">OFFICIAL STATEMENT · MBTI Co., Ltd.</div>
       <div class="stmt-title">${x.month.replace('-','년 ')}월 정산 명세서</div>
       <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:5px;opacity:.9">
-        <span>${x.driver} 기사</span>
+        <span>${_resolveDriverName(x.driver)} 기사</span>
         <span style="font-size:11px;opacity:.7">${x.jobsub||'쿠팡'}</span>
       </div>
     </div>
@@ -28002,7 +28013,7 @@ function startListeners(){
       // entries/deliveries: 오늘만 실시간 구독
       if(col==='entries'||col==='deliveries') q=q.where('date','==',todayStr);
       // ★ v9.40: settlements는 최근 3개월만 (이전월+현재월+다음월 윈도우)
-      else if(col==='settlements') q=q.where('month','>=',_3moStr);
+      else if(col==='settlements') q=q.where('month','>=',_3moStr).where('adminId','==','admin');
       // ★ v9.40: temp_logs는 최근 7일만 (실시간 모니터링용)
       else if(col==='temp_logs') q=q.where('date','>=',_7dStr);
       // ★ v9.40: accidents는 최근 30일만
