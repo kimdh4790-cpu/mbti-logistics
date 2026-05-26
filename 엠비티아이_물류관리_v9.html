@@ -14656,7 +14656,15 @@ async function cleanDuplicateDrivers(){
   try{
     var snap=await _db.collection('drivers').where('adminId','==','admin').get();
     snap.forEach(function(doc){var d=doc.data();d.fbId=doc.id;allDocs.push(d);});
-  }catch(e){toast('로드 실패: '+e.message);return;}
+  }catch(e){
+    // Target ID 충돌 시 localStorage 폴백 (onSnapshot이 이미 로드한 데이터 사용)
+    if((e.message||'').indexOf('Target ID')>=0||(e.message||'').indexOf('already')>=0){
+      allDocs=ls('drivers').filter(function(d){return d.adminId==='admin'&&d.fbId;});
+      if(!allDocs.length){toast('로드 실패 (새로고침 후 재시도)');return;}
+    } else {
+      toast('로드 실패: '+e.message);return;
+    }
+  }
   if(!allDocs.length){toast('기사 없음');return;}
   // 이름(name) 기준 중복 탐지
   var nameMap={};
