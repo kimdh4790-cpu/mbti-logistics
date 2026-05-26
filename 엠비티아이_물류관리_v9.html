@@ -14651,66 +14651,63 @@ function openSettleCompare(){
 // duplicate driver cleanup - localStorage 기반 + Firestore 삭제
 async function cleanDuplicateDrivers(){
   if(!_db){toast('DB 연결 안됨');return;}
-  // localStorage에서 중복 탐지
-  var drivers=ls('drivers');
-  var map={};
-  drivers.forEach(function(d){
-    var key=(d.userId||'')+'__'+(d.adminId||d.dealerId||'');
-    if(!key||key==='__')return;
-    if(!map[key])map[key]=[];
-    map[key].push(d);
+  toast('🔍 Firestore 전체 기사 로드 중...');
+  var allDocs=[];
+  try{
+    var snap=await _db.collection('drivers').where('adminId','>=','').get();
+    snap.forEach(function(doc){var d=doc.data();d.fbId=doc.id;allDocs.push(d);});
+  }catch(e){toast('로드 실패: '+e.message);return;}
+  if(!allDocs.length){toast('기사 없음');return;}
+  // 이름(name) 기준 중복 탐지
+  var nameMap={};
+  allDocs.forEach(function(d){
+    var nm=(d.name||'').trim();
+    if(!nm)return;
+    if(!nameMap[nm])nameMap[nm]=[];
+    nameMap[nm].push(d);
   });
-  var dupKeys=Object.keys(map).filter(function(k){return map[k].length>1;});
-  if(dupKeys.length===0){toast('중복 기사 없음');return;}
-  var msg='중복 발견:\n';
-  dupKeys.forEach(function(k){
-    var list=map[k];
-    msg+=list[0].name+'('+list[0].userId+') '+list.length+'개\n';
-  });
-  msg+='\n최신 1건만 남기고 나머지를 삭제합니다. 계속할까요?';
+  var dupNames=Object.keys(nameMap).filter(function(n){return nameMap[n].length>1;});
+  if(dupNames.length===0){toast('중복 기사 없음 (전체 '+allDocs.length+'명)');return;}
+  var preview=dupNames.slice(0,8).map(function(n){return n+': '+nameMap[n].length+'개';}).join('\n');
+  var extra=dupNames.length>8?'\n...외 '+(dupNames.length-8)+'명':'';
+  var msg='⚠️ 중복 기사 '+dupNames.length+'명 발견\n(전체 '+allDocs.length+'건 → 실제 '+Object.keys(nameMap).length+'명)\n\n'+preview+extra+'\n\n최신 1건만 남기고 나머지 삭제할까요?';
   if(!confirm(msg))return;
-  toast('삭제 중...');
+  toast('🗑 중복 삭제 중...');
   var deleted=0;
   try{
-    for(var k of dupKeys){
-      var list=map[k];
-      // 최신순 정렬 (createdAt 또는 joinDate 기준)
+    for(var nm of dupNames){
+      var list=nameMap[nm];
       list.sort(function(a,b){
-        var ta=a.createdAt||a.joinDate||'';
-        var tb=b.createdAt||b.joinDate||'';
-        return tb>ta?1:-1;
+        var ta=a.approvedAt&&a.approvedAt.toDate?a.approvedAt.toDate().toISOString():(a.approvedAt||a.createdAt||a.joinDate||'');
+        var tb=b.approvedAt&&b.approvedAt.toDate?b.approvedAt.toDate().toISOString():(b.approvedAt||b.createdAt||b.joinDate||'');
+        return tb>ta?1:(ta>tb?-1:0);
       });
-      // 오래된 것들 삭제
       for(var i=1;i<list.length;i++){
-        var fbId=list[i].fbId||list[i]._fbId||null;
-        if(fbId){
-          try{ await _db.collection('drivers').doc(fbId).delete(); }catch(e){ console.warn('Firestore 삭제 실패:',fbId,e.code); }
+        if(list[i].fbId){
+          try{await _db.collection('drivers').doc(list[i].fbId).delete();deleted++;}
+          catch(e){console.warn('삭제 실패:',list[i].fbId,e.code);}
         }
-        deleted++;
       }
     }
-    // localStorage 정리 (중복 제거, 최신만 유지)
-    var kept=[];
+    // localStorage 정리
     var seen={};
-    drivers.sort(function(a,b){
-      var ta=a.createdAt||a.joinDate||'';
-      var tb=b.createdAt||b.joinDate||'';
+    var kept=[];
+    var local=ls('drivers');
+    local.sort(function(a,b){
+      var ta=a.approvedAt&&a.approvedAt.toDate?a.approvedAt.toDate().toISOString():(a.approvedAt||a.createdAt||a.joinDate||'');
+      var tb=b.approvedAt&&b.approvedAt.toDate?b.approvedAt.toDate().toISOString():(b.approvedAt||b.createdAt||b.joinDate||'');
       return tb>ta?1:-1;
     });
-    drivers.forEach(function(d){
-      var key=(d.userId||'')+'__'+(d.adminId||d.dealerId||'');
-      if(!key||key==='__'){kept.push(d);return;}
-      if(!seen[key]){seen[key]=true;kept.push(d);}
+    local.forEach(function(d){
+      var nm=(d.name||'').trim();
+      if(!nm){kept.push(d);return;}
+      if(!seen[nm]){seen[nm]=true;kept.push(d);}
     });
     lss('drivers',kept);
-    toast('중복 기사 '+deleted+'명 정리 완료 (총 '+(drivers.length-kept.length)+'건 제거)');
-    SP('drivers',null);
-  }catch(e){
-    toast('오류: '+e.message);
-  }
+    toast('✅ '+deleted+'건 삭제 완료 ('+allDocs.length+'명 → '+(allDocs.length-deleted)+'명)');
+    setTimeout(function(){SP('drivers',null);},500);
+  }catch(e){toast('오류: '+e.message);}
 }
-
-
 function checkDuplicateSettlements(){
   var s=ls('settlements');
   if(!s.length){alert('정산서가 없습니다.');return;}
@@ -27925,7 +27922,7 @@ function startListeners(){
   
     // ── photo_logs: Firestore → localStorage → UI 직접 반영 (1초 이내)
     // ── drivers: Firestore → localStorage → UI 직접 반영 (1초 이내)
-    if(!Array.isArray(window._fbUnsubs))window._fbUnsubs=[];window._fbUnsubs.push(_db.collection('drivers').limit(100)
+    if(!Array.isArray(window._fbUnsubs))window._fbUnsubs=[];window._fbUnsubs.push(_db.collection('drivers').where('adminId','>=','').limit(200)
       .onSnapshot({includeMetadataChanges:false}, snap=>{
         // ① Firestore 전체 데이터 배열화
         var fbDrivers=[];
