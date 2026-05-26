@@ -385,7 +385,6 @@ async function _updateAllRouteExp(settlementData) {
   });
   await Promise.all(promises.filter(Boolean));
   window._driversCache = null; // 캐시 무효화
-  console.log('[배차] 경험치 일괄 업데이트 완료:', Object.keys(grouped).length+'명');
 }
 
 // Firebase에서 기사 목록 로드 (routeExp 포함)
@@ -10445,25 +10444,6 @@ function _settleRow(x){
 }
 
 // ══ 정산서 행 액션 메뉴 (모바일 친화적) ══
-function _settleMenu(e,id){
-  e.stopPropagation();
-  // 기존 메뉴 제거
-  var old=document.getElementById('settle-action-menu');if(old)old.remove();
-  var mo=document.createElement('div');
-  mo.id='settle-action-menu';
-  mo.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.4);display:flex;align-items:flex-end';
-  mo.onclick=function(ev){if(ev.target===mo)mo.remove();};
-  var sheet=document.createElement('div');
-  sheet.style.cssText='width:100%;background:var(--bg2);border-radius:16px 16px 0 0;padding:16px;';
-  sheet.innerHTML='<div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px"></div>'    +'<button onclick="openSE(\''+id+'\');document.getElementById(\'settle-action-menu\').remove()" style="display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;border:none;background:none;font-size:14px;font-weight:700;color:var(--text1);cursor:pointer;border-radius:10px;-webkit-tap-highlight-color:transparent" onmouseenter="this.style.background=\'var(--bg3)\'" onmouseleave="this.style.background=\'none\'">✏️ 정산서 수정</button>'    +'<button onclick="openTaxInvoice(\''+id+'\');document.getElementById(\'settle-action-menu\').remove()" style="display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;border:none;background:none;font-size:14px;font-weight:700;color:var(--text1);cursor:pointer;border-radius:10px;-webkit-tap-highlight-color:transparent" onmouseenter="this.style.background=\'var(--bg3)\'" onmouseleave="this.style.background=\'none\'">🧾 세금계산서</button>'    +'<button onclick="sendOne(\''+id+'\');document.getElementById(\'settle-action-menu\').remove()" style="display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;border:none;background:none;font-size:14px;font-weight:700;color:var(--text1);cursor:pointer;border-radius:10px;-webkit-tap-highlight-color:transparent" onmouseenter="this.style.background=\'var(--bg3)\'" onmouseleave="this.style.background=\'none\'">📤 명세서 발송</button>'    +'<button onclick="window._seTaxSyncById(\''+id+'\');document.getElementById(\'settle-action-menu\').remove()" style="display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;border:none;background:none;font-size:14px;font-weight:700;color:#059669;cursor:pointer;border-radius:10px" onmouseenter="this.style.background=\'#f0fdf4\'" onmouseleave="this.style.background=\'none\'">🔗 세무사 연동</button>'
-    +'<button onclick="document.getElementById(\'settle-action-menu\').remove()" style="display:block;width:100%;margin-top:8px;padding:14px;border:none;background:var(--bg3);font-size:14px;font-weight:700;color:var(--text3);cursor:pointer;border-radius:10px">취소</button>';
-  mo.appendChild(sheet);
-  document.getElementById('modals').appendChild(mo);
-  // 바텀시트 애니메이션
-  sheet.style.transform='translateY(100%)';
-  sheet.style.transition='transform .25s ease';
-  requestAnimationFrame(function(){sheet.style.transform='translateY(0)';});
-}
 
 // ══ 정산서 행 액션 메뉴 (모바일 바텀시트) ══
 function _settleMenu(e,id){
@@ -10787,13 +10767,13 @@ function printAllPayslips(allRows){
       +'<table>'
       +'<thead><tr><th>항목</th><th>내용</th><th style="text-align:right">금액(원)</th></tr></thead>'
       +'<tbody>'
-      +'<tr><td>배송 건수</td><td style="text-align:center">'+(r.deliveries||0)+'건</td><td class="amt">'+fmtP(r.unitPrice&&r.deliveries?(r.unitPrice*r.deliveries):0)+'</td></tr>'
-      +'<tr><td>인센티브</td><td style="text-align:center">-</td><td class="amt">'+fmtP(r.incentive||0)+'</td></tr>'
-      +'<tr class="ded"><td>공제 합계</td><td style="text-align:center">고용·산재보험 등</td><td class="amt" style="color:red">-'+fmtP(r.deduction||0)+'</td></tr>'
+      +'<tr><td>배송 건수</td><td style="text-align:center">'+(r.deliveries||0)+'건</td><td class="amt">'+fmt(r.unitPrice&&r.deliveries?(r.unitPrice*r.deliveries):0)+'</td></tr>'
+      +'<tr><td>인센티브</td><td style="text-align:center">-</td><td class="amt">'+fmt(r.incentive||0)+'</td></tr>'
+      +'<tr class="ded"><td>공제 합계</td><td style="text-align:center">고용·산재보험 등</td><td class="amt" style="color:red">-'+fmt(r.deduction||0)+'</td></tr>'
       +'</tbody></table>'
       +'<div class="total-box">'
       +'<div class="total-lbl">실 수령액</div>'
-      +'<div class="total-amt">'+fmtP(r.netPay||r.totalPay||0)+' 원</div>'
+      +'<div class="total-amt">'+fmt(r.netPay||r.totalPay||0)+' 원</div>'
       +'</div>'
       +(note?'<div class="note">📌 '+esc(note)+'</div>':'')
       +'<div class="bank-box">'
@@ -10838,7 +10818,6 @@ function printAllPayslips(allRows){
   if(w){w.document.write(html2);w.document.close();setTimeout(function(){w.focus();w.print();},600);}
   else{toast('팝업 차단됨. 브라우저 팝업 허용 후 다시 시도하세요');}
 }
-function fmtP(n){return Math.round(n||0).toLocaleString('ko-KR');}
 
 // ══════════════════════════════════════════
 // ██ 견적서 · 거래명세서 생성기 ██
@@ -11795,8 +11774,7 @@ function updSECalc(){
   }
 }
 function _saveSECurrent(){
-  function gv(eid){var el=document.getElementById(eid);return el?+el.value||0:0;}
-  var id=(document.getElementById('se-id')||{value:''}).value.trim()||'';
+    var id=(document.getElementById('se-id')||{value:''}).value.trim()||'';
   var driver=(document.getElementById('se-driver')||{value:''}).value.trim();
   var month=(document.getElementById('se-month')||{value:''}).value.trim();
   if(!_db||!_CU){toast('❌ 로그인 필요');return;}
