@@ -12300,6 +12300,20 @@ async function submitReg(){
   if(pw.length<6){toast('비밀번호 6자리 이상');return;}
   if(pw!==pw2){toast('비밀번호가 일치하지 않습니다');return;}
   if(!jobtype){toast('업무 유형을 선택해 주세요');return;}
+
+  // ★ Firestore 중복 체크 (아이디 + 전화번호)
+  var dupBtn=document.querySelector('[onclick*="submitReg"]');
+  if(dupBtn){dupBtn.disabled=true;dupBtn.textContent='확인 중...';}
+  try{
+    var chkId=await _db.collection('drivers').where('userId','==',userId).where('adminId','==',resolvedAdminId).limit(1).get();
+    if(!chkId.empty){toast('⚠️ 이미 사용 중인 아이디입니다\n다른 아이디를 입력해 주세요');if(dupBtn){dupBtn.disabled=false;dupBtn.textContent='가입하기';}return;}
+    var chkPhone=await _db.collection('drivers').where('phone','==',phone).where('adminId','==',resolvedAdminId).limit(1).get();
+    if(!chkPhone.empty){toast('⚠️ 이미 가입된 전화번호입니다\n관리자에게 문의해 주세요 (051-711-3103)');if(dupBtn){dupBtn.disabled=false;dupBtn.textContent='가입하기';}return;}
+  }catch(e){
+    // Firestore 오류 시 로컬 체크만으로 진행
+    console.warn('중복체크 오류(로컬 대체):',e);
+  }
+  if(dupBtn){dupBtn.disabled=false;dupBtn.textContent='가입하기';}
   // 필수 2종 이미지 검증 (자동차등록증 + 사업자등록증)
   // 이미지 업로드 제거 → 텍스트 입력
   // 텍스트 3종 입력 확인
