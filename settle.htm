@@ -1205,6 +1205,10 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         // 유효하지 않은 ID 스킵 (한글 포함, 공백, 특수단어)
         if(!cleanId||/[ㄱ-ㅎ가-힣]/.test(cleanId)||cleanId.length>30)continue;
         var divVal=String(row[rColDiv]||'').trim();
+        // ★ 주간/야간 인센 행은 회사 단가 기준 항목 → 기사 정산 제외 (건수/반품만 합산용)
+        var isSkipRow=divVal.includes('주간')&&(divVal.includes('인센')||divVal.includes('할증')||divVal.includes('추가'));
+        if(!isSkipRow) isSkipRow=divVal.includes('야간')&&(divVal.includes('인센')||divVal.includes('할증')||divVal.includes('추가'));
+        if(isSkipRow)continue;
         var isNocont=divVal.includes('미계약')||divVal.includes('에코백')||divVal.includes('프레시백')||divVal.includes('소급')||divVal.includes('계약외')||divVal.includes('외근');
         var route=String(row[rColRoute]||'').trim();
         // ★ route가 '미계약'이면 isNocont로 처리
@@ -11601,19 +11605,48 @@ window._seasonImportPreview=function(file){
         var parsed=[];
         wb.SheetNames.forEach(function(sn){
           var parts=sn.split('|');
-          var label=parts[0].trim();
+          var label=parts[0].trim()||sn;
           var range=(parts[1]||'').trim();
           var dates=range.split('~');
           var start=(dates[0]||'').trim();
           var end  =(dates[1]||'').trim();
           var ws=wb.Sheets[sn];
-          var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+          var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
           var prices={};
-          rows.forEach(function(row){
-            var route=String(row[0]||'').trim();
-            var price=parseFloat(row[1])||0;
-            if(route&&price>0)prices[route]=price;
+
+          // ★ 헤더행에서 "라우트번호" 컬럼 위치 탐지 (다중열 그룹 구조 대응)
+          var routeCols=[],priceCols=[];
+          var headerRow=rows[0]||[];
+          headerRow.forEach(function(cell,ci){
+            if(!cell)return;
+            var cn=String(cell).replace(/\n/g,'').toLowerCase().trim();
+            if(cn.includes('라우트')&&(cn.includes('번호')||cn.includes('코드')||cn.includes('route')))routeCols.push(ci);
+            if(cn.includes('단가')||cn.includes('price'))priceCols.push(ci);
           });
+
+          if(routeCols.length>0){
+            // 다중열 그룹: 라우트번호 컬럼 위치 기준으로 읽기
+            rows.slice(1).forEach(function(row){
+              if(!row)return;
+              routeCols.forEach(function(rc,gi){
+                var pc=priceCols[gi]!==undefined?priceCols[gi]:rc+1;
+                var rawRoute=String(row[rc]||'').trim();
+                var price=row[pc];
+                if(!rawRoute||!price)return;
+                var code=rawRoute.toUpperCase().replace(/_/g,'');
+                if(code&&+price>0)prices[code]=+price;
+              });
+            });
+          } else {
+            // 기존 2열 구조: row[0]=라우트, row[1]=단가
+            rows.forEach(function(row){
+              if(!row||!row[0])return;
+              var route=String(row[0]||'').trim().toUpperCase().replace(/_/g,'');
+              var price=parseFloat(row[1])||0;
+              if(route&&price>0)prices[route]=price;
+            });
+          }
+
           if(label&&Object.keys(prices).length>0){
             parsed.push({id:'si'+Date.now()+'_'+Math.random().toString(36).slice(2,5),
               label:label, start:start, end:end, prices:prices});
@@ -11644,22 +11677,22 @@ window._seasonImportPreview=function(file){
             end  =(dates[1]||'').trim();
             return;
           }
-          // ① 쉼표/탭 구분: "608A,920" or "608A\t920"
+          // ① 쉼표/탭 구분: "608A,920" or "608_A\t920"
           if(line.indexOf(',')>=0||line.indexOf('\t')>=0){
             var cols=line.split(/[,\t]/);
-            var code=String(cols[0]||'').trim().toUpperCase();
+            var code=String(cols[0]||'').trim().toUpperCase().replace(/_/g,'');
             var price=parseFloat(cols[1])||0;
             if(code&&price>100){prices[code]=Math.round(price);curNum='';}
             return;
           }
-          // ② 숫자만 3자리 = 라우트 번호 누적 (다음 줄에 알파벳+단가)
+          // ② 숫자만 3자리 = 라우트 번호 누적
           if(/^[0-9]{3}$/.test(line)){curNum=line;return;}
           // ③ "A 920" 형태 (curNum과 조합)
           var m1=line.match(/^([A-Z])\s+([0-9]+)$/i);
           if(m1&&curNum){prices[curNum+m1[1].toUpperCase()]=+m1[2];return;}
-          // ④ "608A 920" 스페이스 구분 (고정단가 메모장 주요 형식)
-          var m2=line.match(/^([0-9A-Z]{2,6})\s+([0-9]+)$/i);
-          if(m2&&+m2[2]>100){prices[m2[1].toUpperCase()]=+m2[2];curNum='';return;}
+          // ④ "608A 920" or "608_A 920" 스페이스 구분
+          var m2=line.match(/^([0-9A-Z_]{2,7})\s+([0-9]+)$/i);
+          if(m2&&+m2[2]>100){prices[m2[1].toUpperCase().replace(/_/g,'')]=+m2[2];curNum='';return;}
         });
         var parsed=[];
         if(Object.keys(prices).length>0){
@@ -13278,16 +13311,20 @@ function importRpFile(input){
   var ext=file.name.split('.').pop().toLowerCase();
 
   // 라우트코드 인식 패턴 (다양한 포맷)
+  // ★ 라우트코드 정규화 (언더스코어 제거: 109_A → 109A)
+  function _normRoute(s){
+    return String(s||'').trim().toUpperCase().replace(/_/g,'');
+  }
   function _isRoute(s){
     if(!s)return false;
-    s=String(s).trim().toUpperCase();
-    // 숫자3자리+알파벳 (예: 608B, 213A)
+    s=_normRoute(s);
+    // 숫자3자리+알파벳 (예: 608B, 213A, 109A)
     if(/^[0-9]{3}[A-Z]$/.test(s))return true;
-    // 숫자만 (예: D1, F3)
+    // 알파벳+숫자 (예: D1, F3)
     if(/^[A-Z][0-9]{1,2}$/.test(s))return true;
     // 캠프코드 형식 (예: BS1, DG2, JJ1)
     if(/^[A-Z]{2}[0-9]$/.test(s))return true;
-    // 확장: 영숫자 2~5자 (기타 코드)
+    // 확장: 영숫자 2~6자
     if(/^[0-9A-Z]{2,6}$/.test(s)&&!/^\d+$/.test(s))return true;
     return false;
   }
@@ -13295,8 +13332,8 @@ function importRpFile(input){
   function _isHeaderRow(s){
     if(!s)return true;
     s=String(s).trim();
-    var skip=['라우트','캠프','구분','단가','코드','route','camp','부산','대구','진주','wave','WAVE','합계','총계','평균'];
-    return skip.some(function(k){return s.includes(k);})||s.length>10;
+    var skip=['라우트','캠프','구분','단가','코드','타입','route','camp','type','부산','대구','진주','wave','WAVE','합계','총계','평균','기사단가','년'];
+    return skip.some(function(k){return s.toLowerCase().includes(k.toLowerCase());})||s.length>10;
   }
 
   if(ext==='xlsx'||ext==='xls'){
@@ -13305,36 +13342,57 @@ function importRpFile(input){
       try{
         var wb=XLSX.read(e.target.result,{type:'array'});
         var result={};
-        // 모든 시트 탐색
+
         wb.SheetNames.forEach(function(sn){
           var ws=wb.Sheets[sn];
           var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
-          rows.forEach(function(row){
-            if(!row||!row[0])return;
-            var first=String(row[0]).trim().toUpperCase();
-            if(_isHeaderRow(first))return;
-            // 라우트코드인지 확인
-            if(!_isRoute(first))return;
-            // 단가 찾기: 숫자인 셀 중 첫번째
-            var price=null;
-            for(var i=1;i<row.length;i++){
-              var v=row[i];
-              if(v!==null&&v!==undefined&&v!==''&&!isNaN(+v)&&+v>100){price=Math.round(+v);break;}
-            }
-            if(price)result[first]=price;
+          if(!rows.length)return;
+
+          // ★ 헤더행에서 "라우트번호" 컬럼 위치 자동 탐지 (다중열 그룹 구조 대응)
+          // 예: [캠프, 타입, 라우트번호, 기사단가, None, 캠프, 타입, 라우트번호, 기사단가, ...]
+          var routeCols=[];  // 라우트 컬럼 인덱스 목록
+          var priceCols=[];  // 단가 컬럼 인덱스 목록
+          var headerRow=rows[0]||[];
+          headerRow.forEach(function(cell,ci){
+            if(!cell)return;
+            var cn=String(cell).replace(/\n/g,'').toLowerCase().trim();
+            if(cn.includes('라우트')&&(cn.includes('번호')||cn.includes('코드')||cn.includes('route')))routeCols.push(ci);
+            if(cn.includes('단가')||cn.includes('price'))priceCols.push(ci);
           });
+
+          if(routeCols.length>0){
+            // ★ 다중열 그룹 구조 (캠프|타입|라우트|단가 반복)
+            rows.slice(1).forEach(function(row){
+              if(!row)return;
+              routeCols.forEach(function(rc,gi){
+                var pc=priceCols[gi]!==undefined?priceCols[gi]:rc+1;
+                var rawRoute=String(row[rc]||'').trim();
+                var price=row[pc];
+                if(!rawRoute||!price)return;
+                var code=_normRoute(rawRoute);
+                if(_isRoute(code)&&+price>100)result[code]=Math.round(+price);
+              });
+            });
+          } else {
+            // 기존 2열 구조 (라우트, 단가) 또는 전체 셀 스캔
+            rows.forEach(function(row){
+              if(!row)return;
+              // 모든 셀 쌍 검사 (셀[i]=라우트코드, 셀[i+1]=단가)
+              for(var ci=0;ci<row.length-1;ci++){
+                var rawCode=String(row[ci]||'').trim();
+                if(!rawCode)continue;
+                var code=_normRoute(rawCode);
+                if(!_isRoute(code))continue;
+                var v=row[ci+1];
+                if(v!==null&&v!==undefined&&v!==''&&!isNaN(+v)&&+v>100){
+                  result[code]=Math.round(+v);
+                  break;
+                }
+              }
+            });
+          }
         });
-        if(!Object.keys(result).length){
-          // 2열 구조: A열=코드, B열=단가 재시도 (헤더 무시)
-          var ws0=wb.Sheets[wb.SheetNames[0]];
-          var rows0=XLSX.utils.sheet_to_json(ws0,{header:1,defval:null});
-          rows0.slice(1).forEach(function(row){
-            if(!row||row.length<2)return;
-            var code=String(row[0]||'').trim().toUpperCase();
-            var price=parseFloat(row[1])||0;
-            if(code&&price>100)result[code]=Math.round(price);
-          });
-        }
+
         _showImportPreview(result,file.name);
       }catch(e){toast('❌ 엑셀 파싱 오류: '+e.message);}
     };
@@ -13350,22 +13408,22 @@ function importRpFile(input){
         lines.forEach(function(line){
           line=line.trim();
           if(!line||line.startsWith('#')||line.startsWith('//'))return;
-          // CSV: 라우트,단가
+          // CSV: 라우트,단가 (언더스코어 정규화: 109_A → 109A)
           var cols=line.split(/[,\t]/);
           if(cols.length>=2){
-            var code=String(cols[0]||'').trim().toUpperCase();
+            var code=String(cols[0]||'').trim().toUpperCase().replace(/_/g,'');
             var price=parseFloat(cols[1])||0;
-            if(price>100)result[code]=Math.round(price);
+            if(code&&price>100)result[code]=Math.round(price);
             return;
           }
-          // 숫자만 = 라우트 번호 (텍스트 방식)
+          // 숫자만 3자리 = 라우트 번호 (텍스트 방식)
           if(/^[0-9]{3}$/.test(line)){curNum=line;return;}
-          // "A 920" 형태
+          // "A 920" 형태 (curNum과 조합)
           var m=line.match(/^([A-Z])\s+([0-9]+)$/i);
           if(m&&curNum){result[curNum+m[1].toUpperCase()]=+m[2];return;}
-          // "608B 920" 형태
-          var m2=line.match(/^([0-9A-Z]{2,6})\s+([0-9]+)$/i);
-          if(m2&&+m2[2]>100)result[m2[1].toUpperCase()]=+m2[2];
+          // "608B 920" or "608_B 920" 스페이스 구분
+          var m2=line.match(/^([0-9A-Z_]{2,7})\s+([0-9]+)$/i);
+          if(m2&&+m2[2]>100)result[m2[1].toUpperCase().replace(/_/g,'')]=+m2[2];
         });
         _showImportPreview(result,file.name);
       }catch(e){toast('❌ 파일 파싱 오류: '+e.message);}
