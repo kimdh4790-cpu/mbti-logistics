@@ -3989,8 +3989,6 @@ function pageDeliveryPlatform(){
   var ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
 
   el.innerHTML='<div style="max-width:960px;margin:0 auto">'
-    // 상단: 플랫폼 카드
-    +'<div style="font-size:15px;font-weight:800;margin-bottom:12px">📦 운영 중인 배달 플랫폼</div>'
     +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:20px">'
     +Object.entries(DELIVERY_PLATFORMS).map(function(e){
       var k=e[0],pf=e[1];
@@ -4064,6 +4062,8 @@ function pageDeliveryPlatform(){
     +'<div id="dp-result"></div>'
     +'</div>'
     +'</div>';
+  // ★ DonWay 통합 정산 엔진 v2 섹션 prepend
+  _dwRenderEngine();
   });
 }
 function _pfDetail(pfKey){
@@ -4457,6 +4457,499 @@ window._dpDownloadTemplate=function(){
   XLSX.utils.book_append_sheet(wb,ws,'배달대행정산');
   XLSX.writeFile(wb,'배달대행_주간정산_템플릿.xlsx');
   toast('📄 템플릿 다운로드됨');
+};
+
+// ════════════════════════════════════════════════
+// 🛵 DONWAY 배달대행 통합 정산 엔진 v2
+// 쿠팡이츠·배민 엑셀 자동인식 → 건수별 트랙 → 밸런싱 → 세금·공제 → 명세서
+// ════════════════════════════════════════════════
+
+// ── 수행 건수별 최저단가 보전 트랙
+var DW_TRACKS=[
+  {min:350,  max:Infinity, price:5500, label:'350건+ 트랙'},
+  {min:300,  max:350,      price:5300, label:'300~349건 트랙'},
+  {min:250,  max:300,      price:5100, label:'250~299건 트랙'},
+  {min:180,  max:250,      price:4200, label:'180~249건 트랙'},
+  {min:0,    max:180,      price:0,    label:'180건 미만 (기본계약단가)'}
+];
+
+// ── 5대 시간대 구간
+var DW_SLOTS={
+  morning:    {label:'아침',      color:'#f59e0b',start:6, end:11},
+  lunch_peak: {label:'점심피크',  color:'#ef4444',start:11,end:13},
+  lunch_off:  {label:'점심노피크',color:'#6b7280',start:13,end:17},
+  dinner_peak:{label:'저녁피크',  color:'#8b5cf6',start:17,end:21},
+  dinner_off: {label:'저녁노피크',color:'#3b82f6',start:21,end:24},
+  midnight:   {label:'심야(예외)',color:'#374151',start:0, end:6}
+};
+
+function _dwSlot(hour){
+  if(hour>=6 &&hour<11) return 'morning';
+  if(hour>=11&&hour<13) return 'lunch_peak';
+  if(hour>=13&&hour<17) return 'lunch_off';
+  if(hour>=17&&hour<21) return 'dinner_peak';
+  if(hour>=21&&hour<24) return 'dinner_off';
+  return 'midnight';
+}
+
+function _dwTrack(cnt, defPrice){
+  for(var i=0;i<DW_TRACKS.length;i++){
+    var t=DW_TRACKS[i];
+    if(cnt>=t.min&&cnt<t.max) return {price:t.price>0?t.price:(defPrice||2900),label:t.label,isDefault:t.price===0};
+  }
+  return {price:defPrice||2900,label:'기본계약단가',isDefault:true};
+}
+
+// ── 핵심 정산 계산 엔진
+function calcDonWaySettlement(orders, cfg){
+  var cnt=orders.length;
+  var track=_dwTrack(cnt, cfg.defaultPrice||2900);
+  var target=track.price;
+  var pfSum=0, injected=0, extracted=0;
+  var slotStat={};
+  Object.keys(DW_SLOTS).forEach(function(k){slotStat[k]={cnt:0,pfSum:0,inject:0,extract:0};});
+
+  var details=orders.map(function(o){
+    var price=o.platformPrice||0;
+    pfSum+=price;
+    var slot=_dwSlot(o.hour||0);
+    slotStat[slot].cnt++;
+    slotStat[slot].pfSum+=price;
+    var inj=0,ext=0;
+    if(slot!=='midnight'){   // 06:00~24:00만 밸런싱 적용
+      if(price<target){inj=target-price; injected+=inj; slotStat[slot].inject+=inj;}
+      else if(price>target){ext=price-target; extracted+=ext; slotStat[slot].extract+=ext;}
+    }
+    return Object.assign({},o,{slot:slot,inject:inj,extract:ext});
+  });
+
+  var preTax=pfSum+injected-extracted;
+  var tax3=Math.floor(preTax*0.03);
+  var tax03=Math.floor(tax3*0.1);
+  var totalTax=tax3+tax03;
+  var deduct=(cfg.leaseFee||0)+(cfg.programFee||0)+(cfg.insuranceFee||0);
+  var net=Math.max(0,preTax-totalTax-deduct);
+
+  return{
+    trackLabel:track.label, targetPrice:target, isDefault:track.isDefault,
+    totalCount:cnt, pfSum:pfSum,
+    injected:injected, extracted:extracted, agencyMargin:extracted-injected,
+    preTax:preTax, tax3:tax3, tax03:tax03, totalTax:totalTax,
+    leaseFee:cfg.leaseFee||0, programFee:cfg.programFee||0, insuranceFee:cfg.insuranceFee||0,
+    deduct:deduct, net:net, slotStat:slotStat, details:details,
+    riderName:cfg.riderName||'', riderId:cfg.riderId||'', period:cfg.period||''
+  };
+}
+
+// ── 엑셀 플랫폼 자동 감지
+function _dwDetectPlatform(headers){
+  var h=headers.map(function(c){return String(c||'').toLowerCase();});
+  var joined=h.join('|');
+  if(joined.includes('배달원')&&joined.includes('지급액')) return 'coupangEats';
+  if(joined.includes('사번')||joined.includes('라이더id')||(joined.includes('라이더')&&joined.includes('정산'))) return 'baemin';
+  if(joined.includes('rider')&&joined.includes('amount')) return 'coupangEats';
+  return 'unknown';
+}
+
+// ── 쿠팡이츠/배민 엑셀 파싱 → {riderId: [orders]}
+function _dwParseExcel(file, cb){
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    try{
+      var wb=XLSX.read(ev.target.result,{type:'array',cellDates:true});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null,raw:false,dateNF:'yyyy-mm-dd HH:MM:SS'});
+      if(rows.length<2){cb(null,'데이터 없음');return;}
+
+      // 헤더 탐색
+      var hIdx=-1;
+      for(var i=0;i<Math.min(rows.length,10);i++){
+        if(rows[i]&&rows[i].some(function(c){return c&&String(c).trim();})){hIdx=i;break;}
+      }
+      if(hIdx<0){cb(null,'헤더 없음');return;}
+
+      var headers=rows[hIdx].map(function(c){return String(c||'').trim();});
+      var platform=_dwDetectPlatform(headers);
+
+      // 컬럼 인덱스 탐지
+      var colId=-1, colPrice=-1, colTime=-1;
+      headers.forEach(function(h,ci){
+        var hn=h.toLowerCase();
+        // ID 컬럼
+        if(colId<0&&(hn.includes('배달원 id')||hn.includes('배달원id')||hn.includes('라이더 id')||hn.includes('라이더id')||hn.includes('사번')||hn.includes('rider_id')||hn.includes('rider id')))colId=ci;
+        // 금액 컬럼
+        if(colPrice<0&&(hn.includes('플랫폼 총 지급액')||hn.includes('플랫폼총지급액')||hn.includes('최종 정산금액')||hn.includes('최종정산금액')||hn.includes('지급액')||hn.includes('정산금액')||hn.includes('amount')))colPrice=ci;
+        // 시간 컬럼
+        if(colTime<0&&(hn.includes('완료시간')||hn.includes('배달완료')||hn.includes('완료일시')||hn.includes('completed')||hn.includes('done_at')||hn.includes('배달시간')))colTime=ci;
+      });
+
+      if(colId<0||colPrice<0){
+        // fallback: 첫 번째 문자열 열 → ID, 첫 숫자 열 → 금액
+        headers.forEach(function(h,ci){
+          if(colId<0&&h)colId=ci;
+        });
+        for(var ri=hIdx+1;ri<Math.min(rows.length,hIdx+5);ri++){
+          if(!rows[ri])continue;
+          rows[ri].forEach(function(v,ci){
+            if(colPrice<0&&ci!==colId&&+v>0&&+v<100000)colPrice=ci;
+          });
+          if(colPrice>=0)break;
+        }
+      }
+      if(colId<0||colPrice<0){cb(null,'ID 또는 금액 컬럼을 찾을 수 없습니다');return;}
+
+      // 라이더별 주문 집계
+      var riderMap={};
+      rows.slice(hIdx+1).forEach(function(row){
+        if(!row||!row[colId])return;
+        var rid=String(row[colId]).trim();
+        var price=parseFloat(String(row[colPrice]||'').replace(/[,₩]/g,''))||0;
+        if(!rid||price<=0)return;
+        var hour=0;
+        if(colTime>=0&&row[colTime]){
+          var ts=String(row[colTime]);
+          var hm=ts.match(/(\d{1,2}):(\d{2})/);
+          if(hm)hour=parseInt(hm[1]);
+        }
+        if(!riderMap[rid])riderMap[rid]=[];
+        riderMap[rid].push({riderId:rid,platformPrice:price,hour:hour});
+      });
+
+      cb(riderMap, null, platform);
+    }catch(e){cb(null,'파싱 오류: '+e.message);}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ── 전역 임시 저장
+var _dwRiderMap=null;
+var _dwResults=[];
+var _dwPlatform='coupangEats';
+
+// ── 배달대행 통합 정산 페이지 (엔진 v2 섹션)
+function _dwRenderEngine(){
+  var el=document.getElementById('content');
+  if(!el)return;
+  // 기존 content 위에 엔진 섹션 prepend
+  var wrap=document.createElement('div');
+  wrap.id='dw-engine-wrap';
+  wrap.style.cssText='max-width:960px;margin:0 auto 20px';
+
+  wrap.innerHTML=
+  // ① 상단 설명
+  '<div style="background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:16px;padding:20px;margin-bottom:16px;color:#fff">'
+    +'<div style="font-size:16px;font-weight:900;margin-bottom:4px">🛵 DONWAY 배달대행 통합 정산 엔진 v2</div>'
+    +'<div style="font-size:12px;opacity:.75">쿠팡이츠·배민 엑셀 자동인식 → 건수별 트랙 → 보전/환수 밸런싱 → 3.3% 세무 → 명세서</div>'
+    +'<div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">'
+    +DW_TRACKS.slice(0,4).map(function(t){
+      return '<div style="background:rgba(255,255,255,.1);border-radius:8px;padding:6px 10px;font-size:10px">'
+        +'<div style="opacity:.7">'+t.label+'</div>'
+        +'<div style="font-size:14px;font-weight:900;color:#fbbf24">₩'+t.price.toLocaleString()+'</div></div>';
+    }).join('')
+    +'<div style="background:rgba(255,255,255,.06);border-radius:8px;padding:6px 10px;font-size:10px">'
+      +'<div style="opacity:.7">180건 미만</div>'
+      +'<div style="font-size:12px;font-weight:700;color:#94a3b8">기본 계약단가</div></div>'
+    +'</div>'
+  +'</div>'
+
+  // ② 엑셀 업로드
+  +'<div class="card" style="margin-bottom:14px">'
+    +'<div style="font-size:14px;font-weight:800;margin-bottom:12px">📂 정산 엑셀 업로드 (쿠팡이츠 / 배민)</div>'
+    +'<div style="display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:10px;align-items:center">'
+      +'<input id="dw-file" type="file" accept=".xlsx,.xls" style="padding:8px;border:1.5px dashed var(--border);border-radius:8px;font-size:12px;background:var(--bg)">'
+      +'<button onclick="_dwLoadFile()" class="btn btn-blue" style="white-space:nowrap;padding:8px 16px">📊 분석</button>'
+    +'</div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-bottom:12px">'
+      +'쿠팡이츠: <strong>배달원 ID + 플랫폼 총 지급액 + 완료시간</strong> &nbsp;|&nbsp; '
+      +'배민: <strong>라이더 사번 + 최종 정산금액(세전) + 완료시간</strong> 컬럼 자동 인식'
+    +'</div>'
+
+    // 기사 마스터 공제 설정
+    +'<div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:12px">'
+      +'<div style="font-size:12px;font-weight:700;margin-bottom:8px">⚙️ 기사 마스터 공제 설정</div>'
+      +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px">'
+        +'<div><label style="font-size:10px;color:var(--text3);display:block;margin-bottom:3px">🏍 기본 계약단가(원/건)</label>'
+          +'<input id="dw-def-price" type="number" value="2900" style="width:100%;padding:7px;border:1.5px solid #3b82f6;border-radius:8px;font-size:13px;font-weight:700;color:#1d4ed8"></div>'
+        +'<div><label style="font-size:10px;color:var(--text3);display:block;margin-bottom:3px">🛵 오토바이 리스료(원)</label>'
+          +'<input id="dw-lease" type="number" value="0" placeholder="0" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:12px"></div>'
+        +'<div><label style="font-size:10px;color:var(--text3);display:block;margin-bottom:3px">📱 앱비·보험료(원)</label>'
+          +'<input id="dw-program" type="number" value="0" placeholder="0" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:12px"></div>'
+        +'<div><label style="font-size:10px;color:var(--text3);display:block;margin-bottom:3px">🛡 기타 공제(원)</label>'
+          +'<input id="dw-insurance" type="number" value="0" placeholder="0" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:12px"></div>'
+        +'<div><label style="font-size:10px;color:var(--text3);display:block;margin-bottom:3px">📅 정산 기간</label>'
+          +'<input id="dw-period" type="text" placeholder="예: 2026-05-26~06-25" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:12px"></div>'
+      +'</div>'
+    +'</div>'
+    +'<div id="dw-parse-status" style="min-height:20px;font-size:12px;color:var(--text3)"></div>'
+  +'</div>'
+
+  // ③ 기사별 결과
+  +'<div id="dw-results"></div>';
+
+  // 기존 content 맨 앞에 삽입
+  el.insertBefore(wrap, el.firstChild);
+}
+
+window._dwLoadFile=function(){
+  var fi=document.getElementById('dw-file');
+  if(!fi||!fi.files[0]){toast('파일을 선택해 주세요');return;}
+  var st=document.getElementById('dw-parse-status');
+  if(st)st.innerHTML='⏳ 파싱 중...';
+  _dwParseExcel(fi.files[0],function(riderMap,err,platform){
+    if(err){if(st)st.innerHTML='<span style="color:var(--red)">❌ '+esc(err)+'</span>';return;}
+    _dwRiderMap=riderMap;
+    _dwPlatform=platform;
+    var cnt=Object.keys(riderMap).length;
+    var totalOrders=Object.values(riderMap).reduce(function(s,arr){return s+arr.length;},0);
+    if(st)st.innerHTML='✅ <strong>'+cnt+'명</strong> 기사, <strong>'+totalOrders.toLocaleString()+'건</strong> 주문 인식'
+      +' &nbsp;<span style="color:var(--text3);font-size:11px">플랫폼: '+(platform==='baemin'?'배달의민족':'쿠팡이츠')+'</span>';
+    _dwCalcAll();
+  });
+};
+
+function _dwGetCfg(){
+  var g=function(id){return parseInt((document.getElementById(id)||{value:0}).value)||0;};
+  return{
+    defaultPrice:g('dw-def-price'),
+    leaseFee:g('dw-lease'),
+    programFee:g('dw-program'),
+    insuranceFee:g('dw-insurance'),
+    period:(document.getElementById('dw-period')||{value:''}).value||''
+  };
+}
+
+function _dwCalcAll(){
+  var riderMap=_dwRiderMap;
+  if(!riderMap)return;
+  var cfg=_dwGetCfg();
+  _dwResults=[];
+  Object.keys(riderMap).sort().forEach(function(rid){
+    var orders=riderMap[rid];
+    var r=calcDonWaySettlement(orders, Object.assign({},cfg,{riderId:rid}));
+    _dwResults.push(r);
+  });
+  _dwRenderResults();
+}
+
+function _dwRenderResults(){
+  var el=document.getElementById('dw-results');
+  if(!el)return;
+  if(!_dwResults.length){el.innerHTML='';return;}
+
+  // 전체 요약
+  var sumNet=0,sumInj=0,sumExt=0,sumCnt=0,sumTax=0;
+  _dwResults.forEach(function(r){sumNet+=r.net;sumInj+=r.injected;sumExt+=r.extracted;sumCnt+=r.totalCount;sumTax+=r.totalTax;});
+  var agencyTotal=sumExt-sumInj;
+
+  var html='<div style="background:linear-gradient(135deg,#065f46,#047857);color:#fff;border-radius:14px;padding:16px;margin-bottom:14px">'
+    +'<div style="font-size:13px;font-weight:800;margin-bottom:10px">📊 전체 기사 집계 ('+_dwResults.length+'명 / '+sumCnt.toLocaleString()+'건)</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px">'
+    +'<div style="text-align:center"><div style="font-size:10px;opacity:.7">총 실지급액</div><div style="font-size:18px;font-weight:900;color:#fbbf24">₩'+sumNet.toLocaleString()+'</div></div>'
+    +'<div style="text-align:center"><div style="font-size:10px;opacity:.7">총 원천징수</div><div style="font-size:15px;font-weight:700;color:#fca5a5">-₩'+sumTax.toLocaleString()+'</div></div>'
+    +'<div style="text-align:center"><div style="font-size:10px;opacity:.7">대리점 보전(투입)</div><div style="font-size:15px;font-weight:700;color:#fca5a5">-₩'+sumInj.toLocaleString()+'</div></div>'
+    +'<div style="text-align:center"><div style="font-size:10px;opacity:.7">대리점 환수(회수)</div><div style="font-size:15px;font-weight:700;color:#6ee7b7">+₩'+sumExt.toLocaleString()+'</div></div>'
+    +'<div style="text-align:center"><div style="font-size:10px;opacity:.7">대리점 순마진</div><div style="font-size:18px;font-weight:900;color:'+(agencyTotal>=0?'#6ee7b7':'#fca5a5')+';">'+(agencyTotal>=0?'+':'')+' ₩'+agencyTotal.toLocaleString()+'</div></div>'
+    +'</div></div>';
+
+  // 기사별 카드
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">';
+  _dwResults.forEach(function(r,idx){
+    var trackColor=r.isDefault?'#6b7280':r.targetPrice>=5500?'#7c3aed':r.targetPrice>=5100?'#2563eb':r.targetPrice>=4200?'#059669':'#d97706';
+    html+='<div style="background:var(--bg2);border-radius:14px;border:1.5px solid var(--border);overflow:hidden">'
+      // 헤더
+      +'<div style="background:'+trackColor+';color:#fff;padding:10px 12px;display:flex;justify-content:space-between;align-items:center">'
+        +'<div><div style="font-size:13px;font-weight:900">'+esc(r.riderId)+'</div>'
+          +'<div style="font-size:10px;opacity:.8">'+esc(r.trackLabel)+'</div></div>'
+        +'<div style="text-align:right"><div style="font-size:10px;opacity:.7">목표단가</div>'
+          +'<div style="font-size:14px;font-weight:900">'+(r.isDefault?'계약단가':'₩'+r.targetPrice.toLocaleString()+'/건')+'</div></div>'
+      +'</div>'
+      // 수치
+      +'<div style="padding:12px">'
+        +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">'
+          +'<div style="background:var(--bg3);border-radius:8px;padding:7px;text-align:center">'
+            +'<div style="font-size:10px;color:var(--text3)">수행건수</div>'
+            +'<div style="font-size:16px;font-weight:900">'+r.totalCount+'건</div></div>'
+          +'<div style="background:var(--bg3);border-radius:8px;padding:7px;text-align:center">'
+            +'<div style="font-size:10px;color:var(--text3)">플랫폼 수령</div>'
+            +'<div style="font-size:14px;font-weight:800">₩'+r.pfSum.toLocaleString()+'</div></div>'
+          +'<div style="background:#fef3c7;border-radius:8px;padding:7px;text-align:center">'
+            +'<div style="font-size:10px;color:#92400e">보전 투입</div>'
+            +'<div style="font-size:13px;font-weight:800;color:#b45309">'+(r.injected>0?'-₩'+r.injected.toLocaleString():'—')+'</div></div>'
+          +'<div style="background:#d1fae5;border-radius:8px;padding:7px;text-align:center">'
+            +'<div style="font-size:10px;color:#065f46">환수 차감</div>'
+            +'<div style="font-size:13px;font-weight:800;color:#047857">'+(r.extracted>0?'+₩'+r.extracted.toLocaleString():'—')+'</div></div>'
+        +'</div>'
+        // 세전→세후
+        +'<div style="font-size:11px;border-top:1px solid var(--border);padding-top:8px">'
+          +'<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:var(--text3)">세전 수수료</span><span style="font-weight:700">₩'+r.preTax.toLocaleString()+'</span></div>'
+          +'<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:var(--red)">원천징수 3.3%</span><span style="color:var(--red)">-₩'+r.totalTax.toLocaleString()+'</span></div>'
+          +(r.deduct>0?'<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:var(--text3)">공제합계</span><span style="color:var(--red)">-₩'+r.deduct.toLocaleString()+'</span></div>':'')
+          +'<div style="display:flex;justify-content:space-between;padding:5px 0;border-top:1.5px solid var(--brand);margin-top:4px">'
+            +'<span style="font-weight:900;color:var(--brand)">💳 실지급액</span>'
+            +'<span style="font-size:16px;font-weight:900;color:var(--brand)">₩'+r.net.toLocaleString()+'</span>'
+          +'</div>'
+        +'</div>'
+        // 구간별 통계
+        +'<div style="margin-top:8px">'
+          +'<div style="font-size:10px;color:var(--text3);margin-bottom:5px">시간대별 배달 건수</div>'
+          +'<div style="display:flex;flex-wrap:wrap;gap:4px">'
+          +Object.keys(DW_SLOTS).map(function(k){
+            var s=DW_SLOTS[k], st=r.slotStat[k];
+            if(!st||!st.cnt)return '';
+            return '<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:'+s.color+'22;color:'+s.color+';font-weight:700">'+s.label+' '+st.cnt+'건</span>';
+          }).join('')
+          +'</div>'
+        +'</div>'
+        // 명세서 버튼
+        +'<div style="margin-top:10px;display:flex;gap:6px">'
+          +'<button onclick="_dwShowStatement('+idx+')" class="btn btn-blue" style="flex:1;font-size:11px;padding:7px">📄 명세서</button>'
+          +'<button onclick="_dwShowOrderDetail('+idx+')" class="btn" style="flex:1;font-size:11px;padding:7px">📋 건별 상세</button>'
+        +'</div>'
+      +'</div>'
+    +'</div>';
+  });
+  html+='</div>';
+
+  // 전체 재계산 버튼
+  html+='<div style="text-align:center;margin-top:14px">'
+    +'<button onclick="_dwCalcAll()" class="btn" style="font-size:12px;padding:9px 24px">🔄 설정 변경 후 재계산</button>'
+    +'<button onclick="_dwExportAll()" class="btn btn-blue" style="font-size:12px;padding:9px 24px;margin-left:8px">📥 전체 엑셀 다운로드</button>'
+    +'</div>';
+
+  el.innerHTML=html;
+}
+
+// ── 명세서 모달
+window._dwShowStatement=function(idx){
+  var r=_dwResults[idx];
+  if(!r)return;
+  var mo=document.createElement('div');mo.className='mo show';
+  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  var trackColor=r.isDefault?'#6b7280':'#2563eb';
+
+  var slotRows='';
+  Object.keys(DW_SLOTS).forEach(function(k){
+    var s=DW_SLOTS[k],st=r.slotStat[k];
+    if(!st||!st.cnt)return;
+    slotRows+='<tr style="border-bottom:1px solid #e5e7eb">'
+      +'<td style="padding:5px 8px;font-size:11px;font-weight:700;color:'+s.color+'">'+s.label+'</td>'
+      +'<td style="padding:5px 8px;text-align:center;font-size:11px">'+st.cnt+'건</td>'
+      +'<td style="padding:5px 8px;text-align:right;font-size:11px">₩'+st.pfSum.toLocaleString()+'</td>'
+      +'<td style="padding:5px 8px;text-align:right;font-size:11px;color:'+(st.inject>0?'#b45309':'var(--text3)')+'">'+( st.inject>0?'-₩'+st.inject.toLocaleString():'—')+'</td>'
+      +'<td style="padding:5px 8px;text-align:right;font-size:11px;color:'+(st.extract>0?'#047857':'var(--text3)')+'">'+( st.extract>0?'+₩'+st.extract.toLocaleString():'—')+'</td>'
+    +'</tr>';
+  });
+
+  var html='<div class="md" style="max-width:520px" id="dw-stmt-box">'
+    +'<div class="mdt" style="background:'+trackColor+';color:#fff">'
+      +'🛵 배달대행 정산 명세서 — '+esc(r.riderId)
+      +'<button onclick="this.closest(\'.mo\').remove()" style="background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:6px;padding:2px 8px;cursor:pointer;margin-left:auto">✕</button>'
+    +'</div>'
+    +'<div style="padding:16px;font-size:12px">'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px">'
+        +'<div><span style="color:#6b7280">라이더 ID</span> <strong>'+esc(r.riderId)+'</strong></div>'
+        +'<div><span style="color:#6b7280">정산 기간</span> <strong>'+(r.period||'—')+'</strong></div>'
+        +'<div><span style="color:#6b7280">적용 트랙</span> <strong style="color:'+trackColor+'">'+esc(r.trackLabel)+'</strong></div>'
+        +'<div><span style="color:#6b7280">목표 단가</span> <strong>'+(r.isDefault?'계약단가':'₩'+r.targetPrice.toLocaleString()+'/건')+'</strong></div>'
+      +'</div>'
+      // 시간대별 테이블
+      +'<table style="width:100%;border-collapse:collapse;margin-bottom:12px;font-size:11px">'
+        +'<thead><tr style="background:#f3f4f6">'
+          +'<th style="padding:6px 8px;text-align:left">구간</th><th style="padding:6px 8px">건수</th>'
+          +'<th style="padding:6px 8px;text-align:right">플랫폼</th>'
+          +'<th style="padding:6px 8px;text-align:right;color:#b45309">보전(투입)</th>'
+          +'<th style="padding:6px 8px;text-align:right;color:#047857">환수(차감)</th>'
+        +'</tr></thead><tbody>'+slotRows+'</tbody>'
+        +'<tfoot><tr style="background:#f9fafb;font-weight:700">'
+          +'<td style="padding:6px 8px">합계</td>'
+          +'<td style="padding:6px 8px;text-align:center">'+r.totalCount+'건</td>'
+          +'<td style="padding:6px 8px;text-align:right">₩'+r.pfSum.toLocaleString()+'</td>'
+          +'<td style="padding:6px 8px;text-align:right;color:#b45309">'+(r.injected>0?'-₩'+r.injected.toLocaleString():'—')+'</td>'
+          +'<td style="padding:6px 8px;text-align:right;color:#047857">'+(r.extracted>0?'+₩'+r.extracted.toLocaleString():'—')+'</td>'
+        +'</tr></tfoot>'
+      +'</table>'
+      // 공제/지급 내역
+      +'<div style="background:#f8fafc;border-radius:8px;padding:10px">'
+        +'<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:#6b7280">플랫폼 수령 합계</span><span>₩'+r.pfSum.toLocaleString()+'</span></div>'
+        +'<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:#b45309">대리점 보전(투입)</span><span style="color:#b45309">'+(r.injected?'+₩'+r.injected.toLocaleString():'₩0')+'</span></div>'
+        +'<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:#047857">대리점 환수(차감)</span><span style="color:#047857">'+(r.extracted?'-₩'+r.extracted.toLocaleString():'₩0')+'</span></div>'
+        +'<div style="display:flex;justify-content:space-between;padding:3px 0;border-top:1px solid #e5e7eb;margin-top:3px"><span style="font-weight:700">세전 수수료</span><span style="font-weight:700">₩'+r.preTax.toLocaleString()+'</span></div>'
+        +'<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:#ef4444">소득세 3%</span><span style="color:#ef4444">-₩'+r.tax3.toLocaleString()+'</span></div>'
+        +'<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:#ef4444">지방소득세 0.3%</span><span style="color:#ef4444">-₩'+r.tax03.toLocaleString()+'</span></div>'
+        +(r.leaseFee?'<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:#6b7280">오토바이 리스료</span><span style="color:#ef4444">-₩'+r.leaseFee.toLocaleString()+'</span></div>':'')
+        +(r.programFee?'<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:#6b7280">앱비·보험료</span><span style="color:#ef4444">-₩'+r.programFee.toLocaleString()+'</span></div>':'')
+        +(r.insuranceFee?'<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:#6b7280">기타 공제</span><span style="color:#ef4444">-₩'+r.insuranceFee.toLocaleString()+'</span></div>':'')
+        +'<div style="display:flex;justify-content:space-between;padding:7px 0;border-top:2px solid #3b82f6;margin-top:4px">'
+          +'<span style="font-size:14px;font-weight:900;color:#1d4ed8">💳 최종 실지급액</span>'
+          +'<span style="font-size:18px;font-weight:900;color:#1d4ed8">₩'+r.net.toLocaleString()+'</span>'
+        +'</div>'
+      +'</div>'
+    +'</div>'
+    +'<div class="mdf">'
+      +'<button class="btn" onclick="this.closest(\'.mo\').remove()">닫기</button>'
+    +'</div>'
+  +'</div>';
+  mo.innerHTML=html;
+  document.body.appendChild(mo);
+};
+
+// ── 건별 상세 모달
+window._dwShowOrderDetail=function(idx){
+  var r=_dwResults[idx];
+  if(!r)return;
+  var mo=document.createElement('div');mo.className='mo show';
+  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  var rows=r.details.map(function(o,i){
+    var s=DW_SLOTS[o.slot]||{label:o.slot,color:'#6b7280'};
+    var diff=(o.slot!=='midnight')?(r.targetPrice-(o.platformPrice)):0;
+    var col=diff>0?'#b45309':diff<0?'#047857':'var(--text3)';
+    return '<tr style="border-bottom:1px solid var(--border)">'
+      +'<td style="padding:4px 6px;font-size:10px;text-align:center">'+(i+1)+'</td>'
+      +'<td style="padding:4px 6px;font-size:10px">'+(o.hour!==undefined?String(o.hour).padStart(2,'0')+':xx':'—')+'</td>'
+      +'<td style="padding:4px 6px"><span style="font-size:9px;font-weight:700;color:'+s.color+';background:'+s.color+'22;padding:1px 6px;border-radius:8px">'+s.label+'</span></td>'
+      +'<td style="padding:4px 6px;text-align:right;font-size:11px">₩'+o.platformPrice.toLocaleString()+'</td>'
+      +'<td style="padding:4px 6px;text-align:right;font-size:11px;font-weight:700;color:'+col+'">'+(diff!==0?(diff>0?'-':'+')+'₩'+Math.abs(diff).toLocaleString():'—')+'</td>'
+    +'</tr>';
+  }).join('');
+  mo.innerHTML='<div class="md" style="max-width:480px">'
+    +'<div class="mdt">📋 건별 상세 — '+esc(r.riderId)+' ('+r.totalCount+'건)'
+      +'<button onclick="this.closest(\'.mo\').remove()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:2px 8px;cursor:pointer;margin-left:auto">✕</button>'
+    +'</div>'
+    +'<div style="padding:12px;max-height:60vh;overflow-y:auto">'
+      +'<table style="width:100%;border-collapse:collapse;font-size:11px">'
+        +'<thead><tr style="background:var(--bg3)"><th style="padding:5px 6px">#</th><th style="padding:5px 6px">시간</th><th style="padding:5px 6px">구간</th><th style="padding:5px 6px;text-align:right">플랫폼단가</th><th style="padding:5px 6px;text-align:right">보전/환수</th></tr></thead>'
+        +'<tbody>'+rows+'</tbody>'
+      +'</table>'
+    +'</div>'
+    +'<div class="mdf"><button class="btn" onclick="this.closest(\'.mo\').remove()">닫기</button></div>'
+  +'</div>';
+  document.body.appendChild(mo);
+};
+
+// ── 전체 엑셀 다운로드
+window._dwExportAll=function(){
+  if(!_dwResults.length){toast('먼저 정산을 계산해 주세요');return;}
+  var wb=XLSX.utils.book_new();
+  // 요약 시트
+  var summary=[['라이더ID','건수','트랙','목표단가','플랫폼수령','보전투입','환수차감','세전수수료','원천징수','공제합계','실지급액','대리점마진']];
+  _dwResults.forEach(function(r){
+    summary.push([r.riderId,r.totalCount,r.trackLabel,r.isDefault?'계약단가':r.targetPrice,r.pfSum,r.injected,r.extracted,r.preTax,r.totalTax,r.deduct,r.net,r.agencyMargin]);
+  });
+  var ws1=XLSX.utils.aoa_to_sheet(summary);
+  ws1['!cols']=[{wch:16},{wch:6},{wch:16},{wch:10},{wch:12},{wch:10},{wch:10},{wch:12},{wch:10},{wch:10},{wch:12},{wch:12}];
+  XLSX.utils.book_append_sheet(wb,ws1,'요약');
+  // 건별 시트
+  var detail=[['라이더ID','건번호','시간','구간','플랫폼단가','보전','환수']];
+  _dwResults.forEach(function(r){
+    r.details.forEach(function(o,i){
+      var s=DW_SLOTS[o.slot]||{label:o.slot};
+      detail.push([r.riderId,i+1,(o.hour!==undefined?String(o.hour).padStart(2,'0')+':00':''),s.label,o.platformPrice,o.inject,o.extract]);
+    });
+  });
+  var ws2=XLSX.utils.aoa_to_sheet(detail);
+  XLSX.utils.book_append_sheet(wb,ws2,'건별상세');
+  XLSX.writeFile(wb,'DONWAY_배달대행정산_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  toast('📥 엑셀 다운로드 완료');
 };
 
 // ════════════════════════════════════════════════
