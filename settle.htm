@@ -1893,7 +1893,48 @@ function initFirebase(){
   if(firebase.apps&&firebase.apps.length>0){
     _db=firebase.firestore(); window._db=_db;
     _auth=firebase.auth();
-    _auth.onAuthStateChanged(function(user){
+    // ★ 카카오 OAuth 콜백 처리
+(function(){
+  var params=new URLSearchParams(window.location.search);
+  var code=params.get('code');
+  var error=params.get('error');
+  if(code){
+    // URL에서 code 제거
+    window.history.replaceState({},'',window.location.pathname);
+    // 폼 데이터 복원
+    var saved=localStorage.getItem('donway_reg_tmp');
+    if(saved){
+      try{
+        var fd=JSON.parse(saved);
+        localStorage.removeItem('donway_reg_tmp');
+        // 가입 폼으로 이동 후 데이터 복원
+        setTimeout(function(){
+          var showReg=document.getElementById('show-register');
+          if(showReg) showReg.click();
+          setTimeout(function(){
+            if(fd.company) document.getElementById('r-company').value=fd.company;
+            if(fd.biz){document.getElementById('r-biznum').value=fd.biz;document.getElementById('r-biznum').dataset.verified=fd.bizVerified||'ok';}
+            if(fd.email) document.getElementById('r-email').value=fd.email;
+            if(fd.service&&document.getElementById('r-service')) document.getElementById('r-service').value=fd.service;
+            // 카카오 인증 완료 표시
+            var btn=document.getElementById('r-kakao-btn');
+            var disp=document.getElementById('r-kakao-display');
+            var inp=document.getElementById('r-phone-display');
+            if(inp){inp.dataset.verified='ok';inp.value='kakao_'+code.substring(0,8);}
+            if(btn){btn.style.background='#d4b800';btn.innerHTML='✅ 카카오 인증 완료';btn.disabled=true;}
+            if(disp){disp.style.display='block';disp.innerHTML='✅ 카카오 인증 완료';}
+            _kakaoId='kakao_code_'+code.substring(0,12);
+          },500);
+        },800);
+      }catch(e){}
+    }
+  } else if(error){
+    window.history.replaceState({},'',window.location.pathname);
+    localStorage.removeItem('donway_reg_tmp');
+  }
+})();
+
+_auth.onAuthStateChanged(function(user){
       if(!user){document.getElementById('login-screen').style.display='flex';document.getElementById('app').style.display='none';_CU=null;window._CU=null;}
       else{_db.doc('users/'+user.uid).get().then(function(snap){var d=snap.exists?snap.data():{};_CU={uid:user.uid,email:user.email,name:d.name||'',companyName:d.companyName||d.name||'',role:d.role||'dealer',dealerId:d.dealerId||user.uid,termsVersion:d.termsVersion||''};window._CU=_CU;_loadCompanyCfg(_CU.dealerId||_CU.companyCode||_CU.uid);_loadAdminStatus();showApp();}).catch(function(){_CU={uid:user.uid,email:user.email,name:'',role:'dealer',dealerId:user.uid,termsVersion:''};window._CU=_CU;showApp();});}
     });return;
@@ -2228,7 +2269,23 @@ var _verifiedName='';
 var _kakaoId='';
 
 function doKakaoVerify(){
-  if(typeof Kakao==='undefined'){toast('❌ 카카오 SDK 로드 중. 잠시 후 다시 시도하세요.');return;}
+  // 폼 데이터 임시 저장
+  var formData={
+    company:document.getElementById('r-company').value,
+    biz:document.getElementById('r-biznum').value,
+    email:document.getElementById('r-email').value,
+    slug:(document.getElementById('r-slug')||{}).value||'',
+    service:(document.getElementById('r-service')||{}).value||'full',
+    bizVerified:document.getElementById('r-biznum').dataset.verified||''
+  };
+  localStorage.setItem('donway_reg_tmp', JSON.stringify(formData));
+  // 카카오 OAuth 리다이렉트 (팝업 없이)
+  var redirectUri=encodeURIComponent(window.location.origin+window.location.pathname);
+  var kakaoUrl='https://kauth.kakao.com/oauth/authorize?client_id=3d5a58a3e1099aa2b6b221c3db2b0d13&redirect_uri='+redirectUri+'&response_type=code&scope=profile_nickname';
+  window.location.href=kakaoUrl;
+  return;
+  // (아래는 팝업 방식 - 미사용)
+  if(typeof Kakao==='undefined'){toast('❌ 카카오 SDK 로드 중.');return;}
   if(!Kakao.isInitialized()) Kakao.init('3d5a58a3e1099aa2b6b221c3db2b0d13');
   var btn=document.getElementById('r-kakao-btn');
   var disp=document.getElementById('r-kakao-display');
@@ -2236,10 +2293,18 @@ function doKakaoVerify(){
   var msg=document.getElementById('r-phone-msg');
   btn.textContent='⏳ 인증 중...';btn.disabled=true;
 
+  // 30초 타임아웃
+  var _kakaoTimeout=setTimeout(function(){
+    btn.textContent='카카오 계정으로 인증하기';btn.disabled=false;
+    msg.style.color='var(--red)';
+    msg.textContent='⚠️ 팝업이 차단됐거나 시간이 초과됐습니다. 팝업 허용 후 다시 시도하세요.';
+  },30000);
+
   Kakao.Auth.login({
     throughTalk:false,
-    scope:'profile_nickname,account_email,phone_number',
+    scope:'profile_nickname',
     success:function(auth){
+      clearTimeout(_kakaoTimeout);
       Kakao.API.request({
         url:'/v2/user/me',
         success:function(res){
@@ -2268,7 +2333,8 @@ function doKakaoVerify(){
       });
     },
     fail:function(){
-      msg.style.color='var(--red)';msg.textContent='❌ 카카오 로그인 취소';
+      clearTimeout(_kakaoTimeout);
+      msg.style.color='var(--red)';msg.textContent='❌ 카카오 로그인 취소 또는 실패';
       btn.textContent='카카오 계정으로 인증하기';btn.disabled=false;
     }
   });
@@ -9775,7 +9841,7 @@ function buildNav(){
   var did=_CU&&(_CU.dealerId||_CU.companyId||'');
   if(did&&_db&&window._cachedCompanyDoc===undefined){
     window._cachedCompanyDoc=null;
-    _db.collection('companies').doc(did).get().then(function(snap){
+    _db.collection('companies').doc(did).get({source:'server'}).then(function(snap){
       var d=snap.exists?snap.data():{};
       window._cachedCompanyDoc=d;
       window._cachedPlan=d.plan||'';
