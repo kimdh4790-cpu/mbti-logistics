@@ -129,6 +129,7 @@ tr:hover>td{background:var(--bg3)}
 })();
 </script>
 <script src="https://cdn.iamport.kr/v1/iamport.js"></script>
+<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js"></script>
 </head>
 <body>
 <script>
@@ -174,15 +175,53 @@ tr:hover>td{background:var(--bg3)}
           <button class="btn btn-sm btn-blue" onclick="checkBizNum()" style="white-space:nowrap">중복확인</button>
         </div>
         <div id="r-biznum-msg" style="font-size:11px;margin-top:4px;display:none"></div>
-        <!-- ★ 핸드폰 본인인증 -->
+        <!-- ★ 사업자등록증 업로드 -->
         <div style="margin-top:12px">
-          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">핸드폰 본인인증 <span style="color:var(--red)">*</span></label>
-          <div style="display:flex;gap:8px;align-items:center">
-            <input id="r-phone-display" type="text" placeholder="인증 후 자동 입력" readonly
-              style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px">
-            <button class="btn btn-sm btn-blue" onclick="doPhoneVerify()" id="r-phone-btn" style="white-space:nowrap">인증하기</button>
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">사업자등록증 <span style="color:var(--red)">*</span></label>
+          <div id="r-bizdoc-area" onclick="document.getElementById('r-bizdoc-input').click()"
+            style="border:2px dashed var(--border);border-radius:8px;padding:16px;text-align:center;cursor:pointer;transition:.2s"
+            onmouseover="this.style.borderColor='#00c8f8'" onmouseout="this.style.borderColor='var(--border)'">
+            <div id="r-bizdoc-placeholder">
+              <div style="font-size:24px;margin-bottom:4px">📄</div>
+              <div style="font-size:12px;color:var(--text3)">클릭하여 사업자등록증 업로드<br><span style="font-size:10px">JPG, PNG, PDF (최대 5MB)</span></div>
+            </div>
+            <div id="r-bizdoc-preview" style="display:none">
+              <div style="font-size:20px">✅</div>
+              <div id="r-bizdoc-name" style="font-size:12px;color:var(--green);margin-top:4px"></div>
+            </div>
           </div>
+          <input id="r-bizdoc-input" type="file" accept="image/*,.pdf" style="display:none" onchange="onBizDocSelected(this)">
+          <div id="r-bizdoc-msg" style="font-size:11px;margin-top:4px"></div>
+        </div>
+
+        <!-- ★ 카카오 본인인증 -->
+        <div style="margin-top:12px">
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">본인 인증 <span style="color:var(--text3);font-weight:400">(재가입 방지)</span></label>
+          <button onclick="doKakaoVerify()" id="r-kakao-btn"
+            style="width:100%;background:#FEE500;color:#191919;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+            <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#191919" d="M9 1.5C4.858 1.5 1.5 4.142 1.5 7.406c0 2.099 1.323 3.94 3.32 4.99l-.845 3.15a.188.188 0 0 0 .288.2L8.02 13.3a8.4 8.4 0 0 0 .98.057c4.142 0 7.5-2.642 7.5-5.906C16.5 4.142 13.142 1.5 9 1.5"/></svg>
+            카카오 계정으로 인증하기
+          </button>
+          <div id="r-kakao-display" style="display:none;margin-top:6px;padding:8px 12px;background:rgba(254,229,0,.1);border:1px solid rgba(254,229,0,.4);border-radius:8px;font-size:12px"></div>
           <div id="r-phone-msg" style="font-size:11px;margin-top:4px"></div>
+          <input id="r-phone-display" type="hidden">
+        </div>
+        <!-- ★ 사업자등록증 업로드 -->
+        <div style="margin-top:12px">
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">
+            사업자등록증 <span style="color:var(--red)">*</span>
+            <span style="font-weight:400;color:var(--text3)"> · jpg/png/pdf</span>
+          </label>
+          <div id="r-biz-doc-area" style="border:2px dashed var(--border);border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:.2s"
+            onclick="document.getElementById('r-biz-doc-input').click()"
+            ondragover="event.preventDefault();this.style.borderColor='#00c8f8'"
+            ondragleave="this.style.borderColor='var(--border)'"
+            ondrop="event.preventDefault();this.style.borderColor='var(--border)';_handleBizDoc(event.dataTransfer.files[0])">
+            <div id="r-biz-doc-text" style="color:var(--text3);font-size:13px">📎 클릭하거나 파일을 끌어다 놓으세요</div>
+          </div>
+          <input id="r-biz-doc-input" type="file" accept=".jpg,.jpeg,.png,.pdf" style="display:none"
+            onchange="_handleBizDoc(this.files[0])">
+          <div id="r-biz-doc-msg" style="font-size:11px;margin-top:4px"></div>
         </div>
       </div>
       <div class="fg"><label>관리자 이메일</label><input id="r-email" type="email" placeholder="admin@company.com"></div>
@@ -2199,47 +2238,56 @@ function switchTab(tab){
 }
 
 // ── 사업자번호 중복 확인 ──
-// ★ 핸드폰 본인인증
+// ★ 카카오 본인인증
 var _verifiedPhone='';
 var _verifiedName='';
-function doPhoneVerify(){
-  if(typeof IMP==='undefined'){toast('❌ 본인인증 모듈 로드 중. 잠시 후 다시 시도하세요.');return;}
-  IMP.init('imp46571008');
-  IMP.certification({
-    pg:'danal',
-    merchant_uid:'donway_cert_'+Date.now(),
-    popup:true
-  },function(rsp){
-    var msg=document.getElementById('r-phone-msg');
-    var btn=document.getElementById('r-phone-btn');
-    var inp=document.getElementById('r-phone-display');
-    if(rsp.success){
-      _verifiedPhone=rsp.phone||'';
-      _verifiedName=rsp.name||'';
-      inp.value=(_verifiedPhone?_verifiedPhone+' ':'')+(_verifiedName?'('+_verifiedName+')':'');
-      inp.dataset.verified='ok';
-      msg.style.color='var(--green)';
-      msg.textContent='✅ 본인인증 완료';
-      btn.textContent='✅ 완료';
-      btn.disabled=true;
-      btn.style.background='var(--green)';
-      // 핸드폰 중복 체크
-      _db.collection('companies').where('phone','==',_verifiedPhone).get({source:'server'}).then(function(snap){
-        if(!snap.empty){
-          msg.style.color='var(--red)';
-          msg.textContent='❌ 이미 가입된 전화번호입니다. 기존 계정으로 로그인하세요.';
-          inp.dataset.verified='blocked';
-          btn.textContent='인증하기';btn.disabled=false;btn.style.background='';
-          _verifiedPhone='';_verifiedName='';
-        }
-      }).catch(function(){});
-    } else {
-      msg.style.color='var(--red)';
-      msg.textContent='❌ 본인인증 실패: '+(rsp.error_msg||'다시 시도해주세요');
+var _kakaoId='';
+
+function doKakaoVerify(){
+  if(typeof Kakao==='undefined'){toast('❌ 카카오 SDK 로드 중. 잠시 후 다시 시도하세요.');return;}
+  if(!Kakao.isInitialized()) Kakao.init('3d5a58a3e1099aa2b6b221c3db2b0d13');
+  var btn=document.getElementById('r-kakao-btn');
+  var disp=document.getElementById('r-kakao-display');
+  var inp=document.getElementById('r-phone-display');
+  var msg=document.getElementById('r-phone-msg');
+  btn.textContent='⏳ 인증 중...';btn.disabled=true;
+
+  Kakao.Auth.login({
+    scope:'profile_nickname,account_email,phone_number',
+    success:function(auth){
+      Kakao.API.request({
+        url:'/v2/user/me',
+        success:function(res){
+          _kakaoId=String(res.id||'');
+          _verifiedName=(res.kakao_account&&res.kakao_account.profile&&res.kakao_account.profile.nickname)||'';
+          _verifiedPhone=(res.kakao_account&&res.kakao_account.phone_number)||'';
+          _db.collection('companies').where('kakaoId','==',_kakaoId).get({source:'server'}).then(function(snap){
+            if(!snap.empty){
+              msg.style.color='var(--red)';
+              msg.textContent='❌ 이미 가입된 카카오 계정입니다. 기존 계정으로 로그인하세요.';
+              inp.dataset.verified='blocked';
+              btn.textContent='카카오 계정으로 인증하기';btn.disabled=false;
+              _kakaoId='';return;
+            }
+            inp.dataset.verified='ok';inp.value=_kakaoId;
+            if(disp){disp.style.display='block';
+              disp.innerHTML='✅ <b>'+(esc(_verifiedName)||'인증완료')+'</b>'+(_verifiedPhone?' · '+_verifiedPhone:'')+' <span style="color:var(--green)">카카오 인증 완료</span>';}
+            btn.style.background='#d4b800';
+            btn.textContent='✅ 카카오 인증 완료';btn.disabled=true;
+          }).catch(function(){
+            inp.dataset.verified='ok';inp.value=_kakaoId;
+            btn.textContent='✅ 카카오 인증 완료';btn.style.background='#d4b800';btn.disabled=true;
+          });
+        },
+        fail:function(){msg.style.color='var(--red)';msg.textContent='❌ 카카오 정보 조회 실패';btn.textContent='카카오 계정으로 인증하기';btn.disabled=false;}
+      });
+    },
+    fail:function(){
+      msg.style.color='var(--red)';msg.textContent='❌ 카카오 로그인 취소';
+      btn.textContent='카카오 계정으로 인증하기';btn.disabled=false;
     }
   });
 }
-
 function checkBizNum(){
   var biz=document.getElementById('r-biznum').value.trim();
   var msg=document.getElementById('r-biznum-msg');
@@ -2317,10 +2365,14 @@ function doRegister(){
   var verified=document.getElementById('r-biznum').dataset.verified;
   if(!verified){err.textContent='사업자번호 중복 확인을 먼저 해주세요';err.style.display='block';return;}
   if(verified==='blocked'){err.textContent='사용할 수 없는 사업자번호입니다';err.style.display='block';return;}
-  // ★ 핸드폰 본인인증 체크
+  // ★ 핸드폰 본인인증 (현재 선택사항 - DANAL 계약 완료 후 필수 전환)
   var phoneVerified=document.getElementById('r-phone-display').dataset.verified;
-  if(!phoneVerified||phoneVerified!=='ok'){err.textContent='핸드폰 본인인증이 필요합니다';err.style.display='block';return;}
   if(phoneVerified==='blocked'){err.textContent='이미 가입된 전화번호입니다';err.style.display='block';return;}
+  // 미인증 시 경고만 (차단 안 함)
+  if(!phoneVerified||phoneVerified!=='ok'){
+    var proceed=confirm('핸드폰 본인인증을 하지 않으면 중복 가입 방지가 어렵습니다.\n인증 없이 계속 진행하시겠습니까?');
+    if(!proceed) return;
+  }
 
   var isOwner=OWNER_BIZ.includes(biz)||OWNER_EMAIL.includes(email);
   var plan=isOwner?'OWNER':'trial';
@@ -2329,6 +2381,9 @@ function doRegister(){
   var companyCode=generateCompanyCode();
 
   err.textContent='계정 생성 중...';err.style.color='var(--text3)';err.style.display='block';
+
+  // ★ 사업자등록증 확인
+  if(!_bizDocFile){err.textContent='사업자등록증을 업로드해 주세요';err.style.display='block';return;}
 
   // ★ 서버측 사업자번호 이중 확인 (클라이언트 우회 방지)
   _db.collection('companies').where('bizNumber','==',biz).get({source:'server'}).then(function(dupSnap){
@@ -2356,12 +2411,30 @@ function doRegister(){
       isOwner:isOwner,
       phone:_verifiedPhone||'',
       certName:_verifiedName||'',
+      kakaoId:_kakaoId||'',
       createdAt:firebase.firestore.FieldValue.serverTimestamp(),
       uid:uid
     });
   }).then(function(){
     var myUrl=window.location.origin+'/'+slugVal;
-    toast('✅ 등록 완료! 전용 URL이 생성됐습니다');
+    toast('✅ 등록 완료! 사업자등록증 업로드 중...');
+    // ★ 사업자등록증 Firebase Storage 업로드
+    if(_bizDocFile && firebase.storage){
+      var storageRef=firebase.storage().ref('biz_docs/'+uid+'/'+_bizDocFile.name);
+      storageRef.put(_bizDocFile).then(function(snap){
+        return snap.ref.getDownloadURL();
+      }).then(function(url){
+        _db.collection('companies').doc(uid).update({
+          bizDocUrl:url,
+          bizDocName:_bizDocFile.name,
+          approvalStatus:'pending'
+        });
+        toast('✅ 등록 완료! 승인 후 전체 기능을 이용하실 수 있습니다');
+      }).catch(function(e){
+        _db.collection('companies').doc(uid).update({approvalStatus:'pending'});
+        toast('✅ 등록 완료! (서류는 이메일로 제출해 주세요)');
+      });
+    }
     // ★ 관리자 앱에 신규 가입 FCM 푸시 발송 (회사코드 포함)
     fetch('/fcm/notify-admin',{
       method:'POST',
