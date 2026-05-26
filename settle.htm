@@ -1049,8 +1049,9 @@ function calcNet(x){
   //          엑셀의 회사 단가/저장된 x.damt 흔적 차단 → routeDetails 우선
   //          정책: 엑셀 단가 = 회사 단가(매출), 기사 단가 = 앱 관리자 RPRICE
   var _rdList = x.routeDetails || [];
-  var _damtRP = _rdList.reduce(function(s,rd){return s+(rd.cnt||0)*((rd.unitPrice&&rd.unitPrice>0?rd.unitPrice:0)||RPRICE[rd.route]||0);},0);
-  var _ramtRP = _rdList.reduce(function(s,rd){return s+(rd.ret||0)*((rd.unitPrice&&rd.unitPrice>0?rd.unitPrice:0)||RPRICE[rd.route]||0);},0);
+  // ★ RPRICE(라우트단가표) 절대 우선 → routeDetails.unitPrice(업로드 시 이미 RPRICE 반영) 순
+  var _damtRP = _rdList.reduce(function(s,rd){return s+(rd.cnt||0)*(RPRICE[rd.route]||rd.unitPrice||0);},0);
+  var _ramtRP = _rdList.reduce(function(s,rd){return s+(rd.ret||0)*(RPRICE[rd.route]||rd.unitPrice||0);},0);
   var damt=isYong ? dcnt*yDel : (_rdList.length ? _damtRP : (+x.damt||+x.delivAmt||+x.base||0));
   var ramt=isYong ? rcnt*yRet : (_rdList.length ? _ramtRP : (+x.ramt||+x.retAmt||0));
   // ★ fresh/inc: 정산총괄에서 VAT제외로 파싱됨 → income 계산 시 VAT포함 변환
@@ -1504,18 +1505,20 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             });
             var routeDetails=normalKeys.map(function(r){
             var rv=dm.routes[r];
+            // ★ 라우트단가표(RPRICE) 우선 → 없으면 엑셀단가 fallback
+            var rUnitPrice=RPRICE[r]||rv.unitPrc||0;
             return{route:r,cnt:rv.cnt,ret:rv.ret,
-              unitPrice:rv.unitPrc||0,  // 엑셀 단가 (쿠팡→대리점)
-              excelUnitPrice:rv.unitPrc||0,  // 원본 보존
+              unitPrice:rUnitPrice,         // ★ 라우트단가표 기준 (기사 지급단가)
+              excelUnitPrice:rv.unitPrc||0, // 엑셀 원본 단가 (쿠팡→대리점 매출단가) 보존
               amt:rv.delAmt||0,retAmt:rv.retAmt||0,addInc:rv.addInc||0};
           });
           // 세금계산서 작성금액 (엑셀 단가 기준 초기값)
           var damt=dm.delAmt||0;
           var ramt=dm.retAmt||0;
-          // ★ taxBase: routeDetails × unitPrice 기준 (calcNet/명세서와 동일하게 맞춤)
-          //   엑셀 Raw 금액(damt)이 아닌 라우트 단가표 기준으로 계산
-          var rdDamt=routeDetails.reduce(function(s,rd){return s+(rd.cnt||0)*(rd.unitPrice||0);},0);
-          var rdRamt=routeDetails.reduce(function(s,rd){return s+(rd.ret||0)*(rd.unitPrice||0);},0);
+          // ★ taxBase: 라우트단가표(RPRICE) 기준 계산 (calcNet/명세서와 동일하게 맞춤)
+          //   RPRICE 없는 라우트만 routeDetails.unitPrice(엑셀단가) fallback
+          var rdDamt=routeDetails.reduce(function(s,rd){return s+(rd.cnt||0)*(RPRICE[rd.route]||rd.unitPrice||0);},0);
+          var rdRamt=routeDetails.reduce(function(s,rd){return s+(rd.ret||0)*(RPRICE[rd.route]||rd.unitPrice||0);},0);
           var taxBase=(rdDamt||damt)+(rdRamt||ramt)+freshAmt+fincVal+(dm.nocontAmt||0);  // ★ addIncAmt 제외 (세금계산서 base 아님)
           // 공제 계산
           var supplyAmt=Math.round(taxBase/1.1);
@@ -11490,13 +11493,18 @@ function _renderSeasonSection(container){
       cardHdr.innerHTML='<div><strong style="color:#d97706">'+esc(p.label||'시즌')+'</strong>'
         +'<span style="font-size:11px;color:var(--text3);margin-left:8px">'+p.start+' ~ '+p.end+'</span></div>';
       var btnWrap=document.createElement('div');btnWrap.style.display='flex';btnWrap.style.gap='5px';
+      // ★ 고정단가로 적용 버튼
+      var applyBtn=document.createElement('button');applyBtn.className='btn btn-sm';
+      applyBtn.style.cssText='background:#16a34a;color:#fff;border:none;font-size:10px';
+      applyBtn.textContent='📌 고정단가 적용';applyBtn.setAttribute('data-idx',idx);
+      applyBtn.onclick=function(){_applySeasonToRprice(+this.dataset.idx);};
       var editBtn=document.createElement('button');editBtn.className='btn btn-sm';
       editBtn.textContent='수정';editBtn.setAttribute('data-idx',idx);
       editBtn.onclick=function(){openEditSeasonPeriod(+this.dataset.idx);};
       var delBtn=document.createElement('button');delBtn.className='btn btn-sm btn-red';
       delBtn.textContent='삭제';delBtn.setAttribute('data-idx',idx);
       delBtn.onclick=function(){deleteSeasonPeriod(+this.dataset.idx);};
-      btnWrap.appendChild(editBtn);btnWrap.appendChild(delBtn);
+      btnWrap.appendChild(applyBtn);btnWrap.appendChild(editBtn);btnWrap.appendChild(delBtn);
       cardHdr.appendChild(btnWrap);card.appendChild(cardHdr);
       var grid=document.createElement('div');
       grid.style.cssText='display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:5px';
@@ -11515,6 +11523,25 @@ function _renderSeasonSection(container){
   container.appendChild(wrap);
 }
 function openAddSeasonPeriod(){_openSeasonModal(null,-1);}
+
+// ★ 시즌 단가 → 고정 라우트 단가(RPRICE)로 전환 등록
+function _applySeasonToRprice(idx){
+  var p=SEASON_PRICES[idx];
+  if(!p||!p.prices||!Object.keys(p.prices).length){toast('❌ 단가 데이터 없음');return;}
+  var cnt=Object.keys(p.prices).length;
+  var label=p.label||'시즌';
+  if(!confirm('['+label+'] 시즌 단가 '+cnt+'개 라우트를 고정 라우트 단가(RPRICE)에 덮어씌웁니다.\n\n기존 고정 단가가 변경됩니다. 계속하시겠습니까?'))return;
+  // RPRICE 메모리 반영
+  Object.assign(RPRICE, p.prices);
+  // Firestore 저장
+  var did=_CU&&_CU.dealerId?_CU.dealerId:'shared';
+  _db.collection('settings').doc(did+'_routePrices')
+    .set(p.prices,{merge:true})
+    .then(function(){
+      toast('✅ ['+label+'] → 고정 라우트 단가 '+cnt+'개 적용 완료');
+      pagePrices();  // 단가표 페이지로 이동해서 확인
+    }).catch(function(e){toast('❌ 저장 실패: '+e.message);});
+}
 
 // ── 시즌 단가표 파일 일괄 등록 모달
 function _openSeasonImportModal(){
@@ -11598,26 +11625,41 @@ window._seasonImportPreview=function(file){
     };
     reader.readAsArrayBuffer(file);
   } else {
-    // TXT / CSV
+    // TXT / CSV — 고정단가 파서와 동일한 패턴 지원
     reader.onload=function(ev){
       try{
-        var lines=ev.target.result.split(/\r?\n/).filter(function(l){return l.trim();});
+        var lines=ev.target.result.replace(/\r/g,'').split('\n');
         var label='시즌',start='',end='';
         var prices={};
+        var curNum='';  // "608\nA 920" 방식 번호 누적
         lines.forEach(function(line){
           line=line.trim();
+          if(!line)return;
+          // # 헤더: # 재계약1차|2026-05-26~2026-05-31
           if(line.startsWith('#')){
             var hdr=line.slice(1).split('|');
-            label=hdr[0].trim();
+            label=(hdr[0]||'').trim()||label;
             var dates=(hdr[1]||'').split('~');
             start=(dates[0]||'').trim();
             end  =(dates[1]||'').trim();
-          } else {
-            var cols=line.split(/[,\t]/);
-            var route=(cols[0]||'').trim();
-            var price=parseFloat(cols[1])||0;
-            if(route&&price>0)prices[route]=price;
+            return;
           }
+          // ① 쉼표/탭 구분: "608A,920" or "608A\t920"
+          if(line.indexOf(',')>=0||line.indexOf('\t')>=0){
+            var cols=line.split(/[,\t]/);
+            var code=String(cols[0]||'').trim().toUpperCase();
+            var price=parseFloat(cols[1])||0;
+            if(code&&price>100){prices[code]=Math.round(price);curNum='';}
+            return;
+          }
+          // ② 숫자만 3자리 = 라우트 번호 누적 (다음 줄에 알파벳+단가)
+          if(/^[0-9]{3}$/.test(line)){curNum=line;return;}
+          // ③ "A 920" 형태 (curNum과 조합)
+          var m1=line.match(/^([A-Z])\s+([0-9]+)$/i);
+          if(m1&&curNum){prices[curNum+m1[1].toUpperCase()]=+m1[2];return;}
+          // ④ "608A 920" 스페이스 구분 (고정단가 메모장 주요 형식)
+          var m2=line.match(/^([0-9A-Z]{2,6})\s+([0-9]+)$/i);
+          if(m2&&+m2[2]>100){prices[m2[1].toUpperCase()]=+m2[2];curNum='';return;}
         });
         var parsed=[];
         if(Object.keys(prices).length>0){
