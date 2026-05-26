@@ -16443,7 +16443,15 @@ function openAdminPanel(){
       td.appendChild(btn);
 
       // ★ 체험 연장 버튼 (만료됐거나 trial 플랜인 경우)
-      if(item.plan==='trial'||isExpired){
+      if(item.plan==='trial'&&!isExpired&&item.trialEnd&&item.trialEnd>=today){
+        // 아직 유효 → 날짜 표시만 (버튼 없음)
+        var extBtn=document.createElement('button');
+        extBtn.className='btn btn-sm';
+        extBtn.style.cssText='background:#059669;color:#fff;margin-left:4px;font-size:10px;cursor:default';
+        extBtn.textContent='✅ '+item.trialEnd;
+        extBtn.onclick=function(e){e.stopPropagation();};
+        td.appendChild(extBtn);
+      } else if(item.plan==='trial'||isExpired){
         var extBtn=document.createElement('button');
         extBtn.className='btn btn-sm';
         extBtn.style.cssText='background:#7c3aed;color:#fff;margin-left:4px;font-size:10px';
