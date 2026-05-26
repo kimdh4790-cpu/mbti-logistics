@@ -1922,8 +1922,15 @@ function showApp(){
           var now=new Date();
           var exp=sub.expireDate&&sub.expireDate.toDate?sub.expireDate.toDate():null;
           if(sub.status==='expired'||(exp&&exp<now)){
-            // 만료됨 → 접근 차단
-            document.getElementById('login-screen').style.display='none';
+            // ★ subscriptions 만료 → companies.trialEnd 이중 확인 (슈퍼어드민 연장 반영)
+            var _did=_CU.dealerId||_CU.uid;
+            var _exp=exp; var _sub=sub;
+            _db.collection('companies').doc(_did).get().then(function(cs){
+              var trialEnd=cs.exists?cs.data().trialEnd:'';
+              var today=new Date().toISOString().slice(0,10);
+              if(trialEnd&&trialEnd>=today) return; // companies.trialEnd 살아있으면 통과
+              // 진짜 만료 → 차단
+              document.getElementById('login-screen').style.display='none';
             document.getElementById('app').style.display='none';
             var body=document.body;
             body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f0f4f8">'
@@ -1939,6 +1946,7 @@ function showApp(){
               +'</div>'
               +'<div style="font-size:11px;color:#a0aec0">문의: 051-711-3103 | 엠비티아이 유한회사</div>'
               +'</div></div>';
+            }).catch(function(){});
             return;
           }
           // 만료 7일 전 경고
