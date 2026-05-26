@@ -17,7 +17,7 @@ const messaging = firebase.messaging();
 const ICON = '';
 const BADGE = '';
 // ★ 타임스탬프 기반 캐시 — GitHub 업로드마다 자동으로 SW 업데이트됨
-const CACHE = 'mbti-v9-' + '202605210600'; // ★ 강제 갱신
+const CACHE = 'mbti-v9-' + '202605262200'; // ★ 강제 갱신
 
 self.addEventListener('install', e => {
   console.log('[SW] install v9.69');
@@ -116,12 +116,10 @@ self.addEventListener('notificationclick', function(e) {
 self.addEventListener('fetch', function(e) {
   const url = e.request.url;
   if (!url || url.includes('/undefined') || url.endsWith('undefined')) {
-    e.respondWith(new Response('', {status:204})); return;
+    e.respondWith(new Response(null, {status:204})); return;
   }
-  // ★ donway.ai.kr 전체 요청 SW 개입 없음 (DONWAY 랜딩페이지 정상 서빙)
-  // ★ donway.ai.kr 전체 + attendance 신규 파일 캐시 제외
-  if (url.startsWith('https://donway.ai.kr/') || url.startsWith('https://www.donway.ai.kr/')) return;
-  if (url.includes('/attendance') || url.includes('/join') || url.includes('/company-register')) return;
+  // ★ donway.ai.kr 루트는 SW 개입 없이 네이티브 처리 (Page Rules 리다이렉트 작동)
+  if (url === 'https://donway.ai.kr/' || url === 'https://www.donway.ai.kr/') return;
   if (url.startsWith('chrome-extension://') || url.startsWith('chrome://') ||
       url.startsWith('blob:') || url.includes('firestore.googleapis.com') ||
       url.includes('firebase') || url.includes('googleapis.com') ||
