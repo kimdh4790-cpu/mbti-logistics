@@ -14654,7 +14654,7 @@ async function cleanDuplicateDrivers(){
   toast('🔍 Firestore 전체 기사 로드 중...');
   var allDocs=[];
   try{
-    var snap=await _db.collection('drivers').where('adminId','>=','').get();
+    var snap=await _db.collection('drivers').where('adminId','==','admin').get();
     snap.forEach(function(doc){var d=doc.data();d.fbId=doc.id;allDocs.push(d);});
   }catch(e){toast('로드 실패: '+e.message);return;}
   if(!allDocs.length){toast('기사 없음');return;}
@@ -27922,7 +27922,7 @@ function startListeners(){
   
     // ── photo_logs: Firestore → localStorage → UI 직접 반영 (1초 이내)
     // ── drivers: Firestore → localStorage → UI 직접 반영 (1초 이내)
-    if(!Array.isArray(window._fbUnsubs))window._fbUnsubs=[];window._fbUnsubs.push(_db.collection('drivers').where('adminId','>=','').limit(200)
+    if(!Array.isArray(window._fbUnsubs))window._fbUnsubs=[];window._fbUnsubs.push(_db.collection('drivers').where('adminId','==','admin').limit(200)
       .onSnapshot({includeMetadataChanges:false}, snap=>{
         // ① Firestore 전체 데이터 배열화
         var fbDrivers=[];
