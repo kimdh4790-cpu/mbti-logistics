@@ -2616,8 +2616,7 @@ async function _tossPay(planType, amount){
       failUrl:window.location.origin+window.location.pathname+'?toss=fail',
       customerEmail:_CU.email||'',
       customerName:(_CU.companyName||_CU.name||'고객사').slice(0,20),
-      card:{useEscrow:false,flowMode:'DEFAULT',useCardPoint:false},
-      transfer:{cashReceipt:{type:'소득공제'}}
+      card:{useEscrow:false,flowMode:'DEFAULT',useCardPoint:false}
     }).catch(function(e){
       if(e&&(e.code==='USER_CANCEL'||String(e.message||'').indexOf('취소')>=0))return;
       toast('❌ '+(e&&e.message||'결제 오류'));
@@ -2632,7 +2631,7 @@ function pageContract(){
       if(d.contractPaid||(d.plan==='trial'&&d.trialEnd&&d.trialEnd>=new Date().toISOString().slice(0,10))) _renderContractPage();
       else _renderContractPaywall();
     }).catch(function(e){if(e&&e.code==='permission-denied'){_renderContractPaywall();}else{_renderContractPage();}});
-  } else { _renderContractPaywall(); }
+  } else if(window._trialActive){_renderContractPage();} else { _renderContractPaywall(); }
 }
 function _renderContractPaywall(){
   var content=document.getElementById('content');
@@ -2753,7 +2752,7 @@ function pageRoster(){
     if(d.rosterPaid||d.settlePaid||isSuperAdmin()||(d.plan==='trial'&&d.trialEnd&&d.trialEnd>=new Date().toISOString().slice(0,10)))_renderRosterPage();
     else _renderRosterPaywall();
   }).catch(function(){
-    if(isSuperAdmin())_renderRosterPage();
+    if(isSuperAdmin()||window._trialActive)_renderRosterPage();
     else _renderRosterPaywall();
   });
 }
@@ -16360,7 +16359,7 @@ function _loadAdminStatus(){
 
 function _requirePlan(feature,callback){
   if(!_db||!_CU){toast('❌ 로그인 필요');return;}
-  if(isSuperAdmin()){callback();return;}
+  if(isSuperAdmin()||window._trialActive){callback();return;} // ★ trial 즉시 통과
   var did=_CU.uid||_CU.dealerId||_CU.companyId||'';
   if(!did){callback();return;}
   _db.collection('companies').doc(did).get({source:'server'}).then(function(snap){
