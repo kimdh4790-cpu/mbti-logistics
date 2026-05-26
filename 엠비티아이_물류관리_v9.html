@@ -11444,10 +11444,10 @@ function updBadge(){
   var nb=document.getElementById('new-badge');if(nb)nb.style.display=pnd?'':'none';
 }
 function updFbUI(){
-  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.59 · 🔥 실시간':'v9.59 · 데모';
+  var sv=document.getElementById('sl-ver');if(sv)sv.textContent=FB?'v9.70 · 🔥 실시간':'v9.70 · 데모';
   var sc=document.getElementById('sl-conn');if(sc)sc.textContent=FB?'Firebase 실시간':'데모 모드';
   var dc=document.getElementById('drv-conn');if(dc){dc.style.color=FB?'#9FE1CB':'rgba(255,255,255,.5)';dc.textContent=FB?'● 실시간':'● 데모';}
-  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.59 · Firebase 실시간':'v9.59 · MBTI 물류관리';
+  var fv=document.getElementById('fb-ver');if(fv)fv.textContent=FB?'v9.70 · Firebase 실시간':'v9.70 · MBTI 물류관리';
 }
 function toggleGrp(id){
   var el=document.getElementById(id);
@@ -11623,7 +11623,7 @@ function _filterSplashByLastJob(){
   }catch(e){console.warn('splash filter:',e);}
 }
 // ── v6.1 비밀번호 SHA-256 해시 (Web Crypto API)
-// ★ v9.59: Firestore 읽기 절감 — 설정 전역 캐시 (TTL 20분)
+// ★ v9.70: Firestore 읽기 절감 — 설정 전역 캐시 (TTL 20분)
 window._fsCacheStore = {};
 // ★ 드라이버 목록 메모리 캐시 (5분)
 window._driversCache = null;
@@ -12989,6 +12989,17 @@ function nextAccSt(idx){
     var ca = document.getElementById('ca');
     if(ca) ca.innerHTML = rAcc();
   }
+}
+
+// ★ 전역 _resolveDriverName (viewStmt 등 외부에서 사용)
+function _resolveDriverName(driver){
+  if(!driver) return '(미지정)';
+  var _dm={},_du={};
+  var _dl=ls('drivers')||[];
+  _dl.forEach(function(d){if(d&&d.name){_dm[d.name]=d;}if(d&&d.userId&&d.name){_du[d.userId]=d;}});
+  if(_dm[driver]) return driver;
+  if(_du[driver]) return _du[driver].name;
+  return driver;
 }
 
 function rSettle(){
@@ -14520,8 +14531,7 @@ async function syncFirebaseSettlements(){
     var snap=await (function(){
   var _thr = new Date(); _thr.setMonth(_thr.getMonth()-3);
   var _thrStr = _thr.getFullYear()+''+String(_thr.getMonth()+1).padStart(2,'0');
-  return _db.collection('settlements').orderBy('month','desc')
-    .where('month','>=',_thrStr).where('adminId','==','admin').limit(200).get();
+  return _db.collection('settlements').where('adminId','==','admin').orderBy('month','desc').limit(200).get(); // ★ 단일인덱스
 })();
     var fbMap={},fbArr=[];
     snap.forEach(function(d){
@@ -16845,7 +16855,7 @@ function rMypage(){
       html+='</div>';
     }
 
-    // ★ v9.59: 카카오 REST API 키 (주소→좌표 변환, 아파트 핀 정확도)
+    // ★ v9.70: 카카오 REST API 키 (주소→좌표 변환, 아파트 핀 정확도)
     if(isAdmin){
       var savedKakaoKey = window._cachedKakaoApiKey || (localStorage.getItem('mbti_kakao_api_key')||'').trim();
       var maskedKakao = savedKakaoKey ? (savedKakaoKey.slice(0,8)+'...'+savedKakaoKey.slice(-4)) : '';
@@ -21223,7 +21233,7 @@ function dHome(){
 // ★ v9.25: 휴무 변경 요청
 // ★ v9.25: Claude API 키 저장 (Firebase + localStorage)
 
-// ★ v9.59: 카카오 REST API 키 저장
+// ★ v9.70: 카카오 REST API 키 저장
 async function saveKakaoRestKey(){
   var key = (document.getElementById('mp-kakao-rest-key')?.value||'').trim();
   if(!key){ toast('❌ 키를 입력해주세요'); return; }
@@ -21325,7 +21335,7 @@ function _emerCloseWithCheck(){
 
 
 
-// ★ v9.59: 주소 정제 — OCR/파싱 아티팩트 제거
+// ★ v9.70: 주소 정제 — OCR/파싱 아티팩트 제거
 
 // ★ 지오코딩 결과 배너 (폰에서 확인용 — 30초 유지)
 function _geoResultBanner(msg){
@@ -22118,7 +22128,7 @@ async function emerOcrScan(file, _statusOverride){
   // QR 해독 실패 → Google Vision OCR 폴백
   if(status) status.innerHTML = '<span style="color:var(--blue)">🤖 QR 미인식 → AI OCR 시도 중...</span>';
 
-  // ★ v9.59: Google Vision API 키 — localStorage 우선 (Firestore 타임아웃 방지)
+  // ★ v9.70: Google Vision API 키 — localStorage 우선 (Firestore 타임아웃 방지)
   var apiKey = window._cachedGoogleApiKey
             || localStorage.getItem('mbti_google_api_key')
             || localStorage.getItem('mbti_google_key') || '';
@@ -22370,7 +22380,7 @@ async function emerOcrScan(file, _statusOverride){
         if(_d3.length>=14 && _d3.length<=16){ var _m10=_d3.match(/10\d{12}/); if(_m10){ trackingDigits=_m10[0]; break; } }
       }
     }
-    // ★ v9.59: 전체 텍스트 공백 제거 후 재탐색
+    // ★ v9.70: 전체 텍스트 공백 제거 후 재탐색
     if(!trackingDigits){
       var _compact = fullText.replace(/[\s,\.]/g,'');
       var _tm = _compact.match(/10\d{12}/);
@@ -22481,7 +22491,7 @@ async function emerOcrScan(file, _statusOverride){
 
         // 영어 잡텍스트 잘라내기
         l = l.replace(/\s+[a-zA-Z][a-zA-Z\s]{1,}.*$/,'').trim();
-        // ★ v9.59: 번지 뒤 잡문자 제거 (아파트명은 보존)
+        // ★ v9.70: 번지 뒤 잡문자 제거 (아파트명은 보존)
         // 번지수 뒤에 붙은 OCR 아티팩트 (~, 숫자 등) 제거
         l = l.replace(/((?:로|길|번길)\s*\d{1,4})([~\-]\d+|\d{1,2}(?=[\s\D]))/, '$1').trim();
         // 2글자 이하 한글 잡텍스트만 제거 (아파트명 3글자↑ 보존)
@@ -22650,7 +22660,7 @@ async function emerOcrScan(file, _statusOverride){
     var tw = document.getElementById('emer-tracking-wrap');
     if(tw && window._emerTrackings.length>0) tw.style.display='none';
 
-    // ★ v9.59: OCR 결과 디버그
+    // ★ v9.70: OCR 결과 디버그
     console.log('[OCR_RESULT]', JSON.stringify({
       tracking: p.tracking_no,
       addr: _cleanAddr(p.address),
@@ -22658,7 +22668,7 @@ async function emerOcrScan(file, _statusOverride){
       ocrLen: (ocrText||'').length
     }));
 
-    // ★ v9.59: 주소 없으면 OCR 전체 텍스트에서 재추출 시도
+    // ★ v9.70: 주소 없으면 OCR 전체 텍스트에서 재추출 시도
     if(!p.address && ocrText){
       var _lines2 = ocrText.split('\n').map(function(l){return l.trim();}).filter(Boolean);
       var _addrLine = _lines2.find(function(l){
@@ -22672,7 +22682,7 @@ async function emerOcrScan(file, _statusOverride){
       }
     }
 
-    // ★ v9.59: QR GPS 우선 사용 — QR에 좌표가 있으면 재지오코딩 불필요
+    // ★ v9.70: QR GPS 우선 사용 — QR에 좌표가 있으면 재지오코딩 불필요
     var pinGps = null;
     var _qrGps = window._emerGps;
     if(_qrGps && _qrGps.src === 'QR' && _qrGps.lat && _qrGps.lng){
@@ -22785,7 +22795,7 @@ async function emerOcrScan(file, _statusOverride){
     }
 
     // 운송장 사진 배송 사진으로 자동 추가
-    // ★ v9.59: 스캔 사진 1장만 (플래그 가드)
+    // ★ v9.70: 스캔 사진 1장만 (플래그 가드)
     if(!window._scanPhotoAdded){
       window._scanPhotoAdded = true;
       var reader = new FileReader();
@@ -22796,7 +22806,7 @@ async function emerOcrScan(file, _statusOverride){
     // ★ v9.25: 등록방식 = OCR 자동인식
     window._emerEntryMode = 'ocr';
 
-    // ★ v9.59: 운송장 OR 주소 있으면 저장 (수령인 없으면 미상 처리)
+    // ★ v9.70: 운송장 OR 주소 있으면 저장 (수령인 없으면 미상 처리)
     var _ocrTrk = window._emerTrackings && window._emerTrackings[0];
     var _ocrAddr = p.address || (document.getElementById('emer-addr')&&document.getElementById('emer-addr').value.trim());
     if(!document.getElementById('emer-recipient')?.value?.trim()){
@@ -22905,8 +22915,8 @@ function emerUnifiedScan(input){
   var file = input.files[0];
   input.value = '';
   window._scanPhotoAdded=false;
-  window._emerGps=null;           // ★ v9.59: GPS 초기화
-  window._pendingPhotoUpload=null; // ★ v9.59: 이전 사진 취소
+  window._emerGps=null;           // ★ v9.70: GPS 초기화
+  window._pendingPhotoUpload=null; // ★ v9.70: 이전 사진 취소
   if(statusEl) statusEl.innerHTML = '🔍 QR 분석 중...';
 
   var url = URL.createObjectURL(file);
@@ -22918,7 +22928,7 @@ function emerUnifiedScan(input){
     var cv=document.createElement('canvas'); cv.width=cw; cv.height=ch;
     var ctx=cv.getContext('2d'); ctx.drawImage(img,0,0,cw,ch);
 
-    // ★ v9.59: 파란 송장 감지 → 전처리 캔버스 추가
+    // ★ v9.70: 파란 송장 감지 → 전처리 캔버스 추가
     var _smp=document.createElement('canvas'); _smp.width=100; _smp.height=100;
     _smp.getContext('2d').drawImage(img,0,0,cw,ch,0,0,100,100);
     var _sd=_smp.getContext('2d').getImageData(0,0,100,100);
@@ -22951,7 +22961,7 @@ function emerUnifiedScan(input){
       try{ bd=new BarcodeDetector({formats:['qr_code','data_matrix','aztec']}); }
       catch(e){ try{ bd=new BarcodeDetector({formats:['qr_code']}); }catch(e2){} }
       if(bd){
-        // ★ v9.59: 파란 송장이면 전처리 캔버스도 시도
+        // ★ v9.70: 파란 송장이면 전처리 캔버스도 시도
         var _detectTarget = (_isBlueLabel && cvBlue) ? cvBlue : cv;
         bd.detect(_detectTarget).then(function(codes){
           if(codes&&codes.length&&codes[0].rawValue){
@@ -23014,7 +23024,7 @@ function _nativeCamJsQR(cv, cw, ch, statusEl, fallback){
   if(!window.jsQR){ if(statusEl) statusEl.textContent='❌ jsQR 미로드'; if(fallback) fallback(); return; }
   var cv2=document.createElement('canvas'), ctx2=cv2.getContext('2d');
 
-  // ★ v9.59: 파란 쿠팡 송장 감지 — 파란 배경 제거 후 흑백 변환
+  // ★ v9.70: 파란 쿠팡 송장 감지 — 파란 배경 제거 후 흑백 변환
   function isBlueLabel(d){
     var px=d.data, blue=0, total=px.length/4;
     for(var i=0;i<px.length;i+=16){ // 4픽셀 샘플링
@@ -23214,7 +23224,7 @@ function emerStartScan(){
             function bdTick(){
               if(!_active) return;
               if(video.readyState < 2){ requestAnimationFrame(bdTick); return; }
-              // ★ v9.59: live video 대신 스냅샷 방식 (BarcodeDetector 정확도 향상)
+              // ★ v9.70: live video 대신 스냅샷 방식 (BarcodeDetector 정확도 향상)
               createImageBitmap(video).then(function(bmp){
                 return bd.detect(bmp).then(function(codes){ bmp.close(); return codes; });
               }).catch(function(){ return bd.detect(video); })
@@ -23443,7 +23453,7 @@ function _emerHandleScan(raw, statusEl){
         // ① GPS 15m 이내
         var dist = _gpsDist(_newGps, x.gps);
         if(dist > 15) return false;
-        // ② 수령인 일치 (★ v9.59: 수령인 미상이면 동호수만으로 판단)
+        // ② 수령인 일치 (★ v9.70: 수령인 미상이면 동호수만으로 판단)
         var xName = (x.recipient||'').replace(/\*/g,'');
         var _nameUnknown = !_newName || _newName==='수령인미상' || _newName==='수령인 미상';
         var _xUnknown = !xName || xName==='수령인미상' || xName==='수령인 미상';
@@ -23569,7 +23579,7 @@ function _emerHandleScan(raw, statusEl){
     }
   }
 
-  // ★ v9.59: QR/바코드 인식 후 자동저장 — 운송장만 있어도 저장
+  // ★ v9.70: QR/바코드 인식 후 자동저장 — 운송장만 있어도 저장
   if(qp.tracking_no || (window._emerTrackings && window._emerTrackings.length > 0)){
     var _scanMo = document.getElementById('emer-scan-mo');
     if(_scanMo){ _scanMo.style.display='none'; emerStopScan&&emerStopScan(); }
@@ -23631,7 +23641,7 @@ function _emerHandleScan(raw, statusEl){
         // 모달이 아직 열려있고 저장 중이 아닐 때만 실행
         var _t=(window._emerTrackings&&window._emerTrackings.length>0)||(document.getElementById('emer-tracking-inp')&&document.getElementById('emer-tracking-inp').value.trim().length>5);
         var _a=document.getElementById('emer-addr')&&document.getElementById('emer-addr').value.trim().length>5;
-        // ★ v9.59: 수령인 없으면 "수령인 미상" 자동 입력 후 저장
+        // ★ v9.70: 수령인 없으면 "수령인 미상" 자동 입력 후 저장
         var _rEl=document.getElementById('emer-recipient');
         if(_rEl && !_rEl.value.trim()){ _rEl.value='수령인 미상'; }
         if(document.getElementById('emer-del-mo')&&!window._emerSaving&&typeof emerSave==='function'){
@@ -23996,7 +24006,7 @@ async function emerSave(){
   if(!window._emerTrackings||!window._emerTrackings.length){
     var inp = document.getElementById('emer-tracking-inp')?.value.replace(/[\.\-\s]/g,'').trim();
     if(inp){ window._emerTrackings=[inp]; emerRefreshTrackingList(); }
-    // ★ v9.59: 운송장 없어도 주소 있으면 저장 허용 (파란송장 등 OCR 부분 인식)
+    // ★ v9.70: 운송장 없어도 주소 있으면 저장 허용 (파란송장 등 OCR 부분 인식)
     else {
       var _addrCheck = (document.getElementById('emer-addr')?.value||'').trim();
       if(!_addrCheck){
@@ -24014,7 +24024,7 @@ async function emerSave(){
 
   var orderId   = (document.getElementById('emer-orderid')?.value||'').trim();
   if(!orderId && window._pendingOrderId) orderId = window._pendingOrderId; // ★ OCR 경로 보완
-  var recipient = (document.getElementById('emer-recipient')?.value||'').trim(); if(!recipient) recipient='수령인 미상'; // ★ v9.59
+  var recipient = (document.getElementById('emer-recipient')?.value||'').trim(); if(!recipient) recipient='수령인 미상'; // ★ v9.70
   var addr      = (document.getElementById('emer-addr')?.value||'').trim();
   // ★ v9.65: 카카오 매칭 도로명이 있으면 addr 강제 보정 (OCR 텍스트 오류 무력화)
   if(window._emerGps && window._emerGps.matchedAddr && window._emerGps.src && window._emerGps.src.indexOf('kakao')>=0){
@@ -24052,7 +24062,7 @@ async function emerSave(){
       window._emerGps.src==='kakao_kw'||window._emerGps.src==='kakao_kw2'||
       window._emerGps.src==='kakao_kw_dong'||window._emerGps.src==='kakao_kw_apt'||
       window._emerGps.src==='cache')){
-    // ★ v9.59: 카카오/QR/Geocode 좌표 모두 재사용 (중복 geocoding 방지)
+    // ★ v9.70: 카카오/QR/Geocode 좌표 모두 재사용 (중복 geocoding 방지)
     gpsClean = {lat:window._emerGps.lat, lng:window._emerGps.lng, acc:0, src:window._emerGps.src};
     console.debug('[emerSave] 기존 GPS 사용:', window._emerGps.src);
   } else if(addr){
@@ -24144,7 +24154,7 @@ async function emerSave(){
   var uploaded = [];
   var isOnline = navigator.onLine;
 
-  // ★ v9.59: 사진은 백그라운드 업로드 — 저장 먼저, 사진은 나중에 붙임
+  // ★ v9.70: 사진은 백그라운드 업로드 — 저장 먼저, 사진은 나중에 붙임
   record.photos = []; // 일단 빈 배열로 저장
   if(!isOnline){
     record._syncStatus = 'offline';
@@ -24220,7 +24230,7 @@ async function emerSave(){
         // ★ v9.25: undefined 완전 제거 후 저장
         var fbRecord = JSON.parse(JSON.stringify(record)); // undefined 키 자동 제거
         var docRef = await _db.collection('emergency_deliveries').add(fbRecord);
-      // ★ v9.59: 저장 완료 즉시 백그라운드 사진 업로드
+      // ★ v9.70: 저장 완료 즉시 백그라운드 사진 업로드
       if(window._pendingPhotoUpload && FB && _st){
         var _pp=window._pendingPhotoUpload; window._pendingPhotoUpload=null;
         var _did=docRef.id;
@@ -28013,7 +28023,7 @@ function startListeners(){
       // entries/deliveries: 오늘만 실시간 구독
       if(col==='entries'||col==='deliveries') q=q.where('date','==',todayStr);
       // ★ v9.40: settlements는 최근 3개월만 (이전월+현재월+다음월 윈도우)
-      else if(col==='settlements') q=q.where('month','>=',_3moStr).where('adminId','==','admin');
+      else if(col==='settlements') q=q.where('adminId','==','admin').orderBy('month','desc'); // ★ 복합인덱스 불필요
       // ★ v9.40: temp_logs는 최근 7일만 (실시간 모니터링용)
       else if(col==='temp_logs') q=q.where('date','>=',_7dStr);
       // ★ v9.40: accidents는 최근 30일만
