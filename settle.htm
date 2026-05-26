@@ -1931,10 +1931,23 @@ _auth.onAuthStateChanged(function(user){
             var cd=cSnap.data();
             _CU.plan=cd.plan||'';
             _CU.trialEnd=cd.trialEnd||'';
+            // ★ 전체 플랜 필드 일괄 로드
             _CU.settlePaid=cd.settlePaid||false;
             _CU.rosterPaid=cd.rosterPaid||false;
             _CU.contractPaid=cd.contractPaid||false;
             _CU.qrPaid=cd.qrPaid||false;
+            _CU.payrollPaid=cd.payrollPaid||false;
+            _CU.deliveryPaid=cd.deliveryPaid||false;
+            _CU.onestopPaid=cd.onestopPaid||false;
+            // ★ serviceType도 companies에서 우선 읽기 (users보다 정확)
+            if(cd.serviceType) _CU.serviceType=cd.serviceType;
+            // ★ 결제된 플랜 자동 감지 (serviceType 미설정 시)
+            if(!_CU.serviceType||_CU.serviceType==='full'){
+              if(cd.deliveryPaid&&!cd.settlePaid&&!cd.qrPaid) _CU.serviceType='delivery';
+              else if(cd.payrollPaid&&!cd.settlePaid) _CU.serviceType='payroll';
+              else if(cd.qrPaid&&!cd.settlePaid&&!cd.payrollPaid) _CU.serviceType='qr';
+              else if(cd.settlePaid) _CU.serviceType='settle';
+            }
             var _today=new Date().toISOString().slice(0,10);
             if(cd.plan==='trial'&&cd.trialEnd&&cd.trialEnd>=_today){
               window._cachedHasPaid=true;
