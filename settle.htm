@@ -206,23 +206,7 @@ tr:hover>td{background:var(--bg3)}
           <div id="r-phone-msg" style="font-size:11px;margin-top:4px"></div>
           <input id="r-phone-display" type="hidden">
         </div>
-        <!-- ★ 사업자등록증 업로드 -->
-        <div style="margin-top:12px">
-          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">
-            사업자등록증 <span style="color:var(--red)">*</span>
-            <span style="font-weight:400;color:var(--text3)"> · jpg/png/pdf</span>
-          </label>
-          <div id="r-biz-doc-area" style="border:2px dashed var(--border);border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:.2s"
-            onclick="document.getElementById('r-biz-doc-input').click()"
-            ondragover="event.preventDefault();this.style.borderColor='#00c8f8'"
-            ondragleave="this.style.borderColor='var(--border)'"
-            ondrop="event.preventDefault();this.style.borderColor='var(--border)';_handleBizDoc(event.dataTransfer.files[0])">
-            <div id="r-biz-doc-text" style="color:var(--text3);font-size:13px">📎 클릭하거나 파일을 끌어다 놓으세요</div>
-          </div>
-          <input id="r-biz-doc-input" type="file" accept=".jpg,.jpeg,.png,.pdf" style="display:none"
-            onchange="_handleBizDoc(this.files[0])">
-          <div id="r-biz-doc-msg" style="font-size:11px;margin-top:4px"></div>
-        </div>
+
       </div>
       <div class="fg"><label>관리자 이메일</label><input id="r-email" type="email" placeholder="admin@company.com"></div>
       <div class="fg"><label>비밀번호</label><input id="r-pw" type="password" placeholder="8자 이상"></div>
@@ -2253,6 +2237,7 @@ function doKakaoVerify(){
   btn.textContent='⏳ 인증 중...';btn.disabled=true;
 
   Kakao.Auth.login({
+    throughTalk:false,
     scope:'profile_nickname,account_email,phone_number',
     success:function(auth){
       Kakao.API.request({
