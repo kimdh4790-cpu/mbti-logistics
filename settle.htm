@@ -2269,22 +2269,6 @@ var _verifiedName='';
 var _kakaoId='';
 
 function doKakaoVerify(){
-  // 폼 데이터 임시 저장
-  var formData={
-    company:document.getElementById('r-company').value,
-    biz:document.getElementById('r-biznum').value,
-    email:document.getElementById('r-email').value,
-    slug:(document.getElementById('r-slug')||{}).value||'',
-    service:(document.getElementById('r-service')||{}).value||'full',
-    bizVerified:document.getElementById('r-biznum').dataset.verified||''
-  };
-  localStorage.setItem('donway_reg_tmp', JSON.stringify(formData));
-  // 카카오 OAuth 리다이렉트 (팝업 없이)
-  var redirectUri=encodeURIComponent(window.location.origin+window.location.pathname);
-  var kakaoUrl='https://kauth.kakao.com/oauth/authorize?client_id=3d5a58a3e1099aa2b6b221c3db2b0d13&redirect_uri='+redirectUri+'&response_type=code&scope=profile_nickname';
-  window.location.href=kakaoUrl;
-  return;
-  // (아래는 팝업 방식 - 미사용)
   if(typeof Kakao==='undefined'){toast('❌ 카카오 SDK 로드 중.');return;}
   if(!Kakao.isInitialized()) Kakao.init('3d5a58a3e1099aa2b6b221c3db2b0d13');
   var btn=document.getElementById('r-kakao-btn');
@@ -2715,9 +2699,9 @@ async function _tossPay(planType, amount){
 
 function pageContract(){
   if(_db&&_CU&&_CU.dealerId){
-    _db.collection('companies').doc(_CU.dealerId).get().then(function(snap){
+    _db.collection('companies').doc(_CU.dealerId).get({source:'server'}).then(function(snap){
       var d=snap.exists?snap.data():{};
-      if(d.contractPaid) _renderContractPage();
+      if(d.contractPaid||(d.plan==='trial'&&d.trialEnd&&d.trialEnd>=new Date().toISOString().slice(0,10))) _renderContractPage();
       else _renderContractPaywall();
     }).catch(function(){_renderContractPaywall();});
   } else { _renderContractPaywall(); }
@@ -2836,9 +2820,9 @@ function pageRoster(){
   if(!isSuperAdmin()&&window._cachedHasPaid===false){_renderPaywall('roster');return;}
   if(!_db||!_CU){_renderRosterPaywall();return;}
   var cid=_CU.dealerId||_CU.companyId;
-  _db.collection('companies').doc(cid).get().then(function(snap){
+  _db.collection('companies').doc(cid).get({source:'server'}).then(function(snap){
     var d=snap.exists?snap.data():{};
-    if(d.rosterPaid||d.settlePaid||isSuperAdmin())_renderRosterPage();
+    if(d.rosterPaid||d.settlePaid||isSuperAdmin()||(d.plan==='trial'&&d.trialEnd&&d.trialEnd>=new Date().toISOString().slice(0,10)))_renderRosterPage();
     else _renderRosterPaywall();
   }).catch(function(){
     if(isSuperAdmin())_renderRosterPage();
