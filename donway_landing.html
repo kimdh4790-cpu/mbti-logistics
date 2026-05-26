@@ -509,8 +509,8 @@ footer{padding:46px 24px;border-top:1px solid var(--bdr);text-align:center}
 html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#020817)}
 #nav{position:fixed;top:0;left:0;right:0;z-index:500;height:54px;padding:0 16px}
 .pat{position:fixed!important;top:54px;left:0;right:0;z-index:499;padding:5px 12px!important;font-size:10px!important}
-#sw{position:fixed;top:86px;left:0;right:0;bottom:0;z-index:10;} .swiper,.swiper-wrapper,.swiper-slide{height:100%!important;}
-.slide{position:relative!important;flex:0 0 100vw!important;width:100vw!important;min-width:100vw!important;opacity:1!important;pointer-events:auto!important;overflow-y:auto;overflow-x:hidden;height:100%;}
+#sw{position:fixed;top:86px;left:0;right:0;bottom:0;z-index:10;overflow:hidden;}
+.slide{position:absolute!important;inset:0!important;transform:translateX(100%);transition:transform .28s ease;overflow-y:auto;overflow-x:hidden;} .slide.s-cur{transform:translateX(0)!important;} .slide.s-prev{transform:translateX(-100%)!important;}
 
 
 
@@ -1418,7 +1418,7 @@ html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#02
 
 </div>
 <div class="slide" id="slide-11" data-idx="11">
-<div class="s-body" style="display:flex;flex-direction:column;height:100%;overflow-y:auto;overflow-x:hidden;padding:6px 10px 44px;justify-content:space-between;">
+<div class="s-body" style="display:flex;flex-direction:column;height:100%;overflow-y:auto;overflow-x:hidden;padding:6px 10px 44px;gap:8px;">
   <div style="text-align:center;padding:4px 0 6px;flex-shrink:0">
     <div class="stag c" style="display:inline-block;font-size:9px;padding:2px 8px;margin-bottom:3px">PLATFORM OVERVIEW</div>
     <h2 class="st" style="font-size:clamp(13px,3.2vw,18px);margin:0 0 5px">DONWAY <span class="gm">플랫폼 한눈에</span></h2>
@@ -1442,7 +1442,7 @@ html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#02
 <div id="dots"><button class="dot on" data-idx="0" title="🏠 DONWAY" onclick="gS(0)"></button><button class="dot" data-idx="1" title="😩 공통 고민" onclick="gS(1)"></button><button class="dot" data-idx="2" title="🏢 업종별 사례" onclick="gS(2)"></button><button class="dot" data-idx="3" title="⚡ 이용 방법" onclick="gS(3)"></button><button class="dot" data-idx="4" title="📱 QR 출퇴근" onclick="gS(4)"></button><button class="dot" data-idx="5" title="🔧 기능 소개" onclick="gS(5)"></button><button class="dot" data-idx="6" title="💡 데모" onclick="gS(6)"></button><button class="dot" data-idx="7" title="🏆 경쟁사 비교" onclick="gS(7)"></button><button class="dot" data-idx="8" title="💰 요금제" onclick="gS(8)"></button><button class="dot" data-idx="9" title="❓ FAQ" onclick="gS(9)"></button><button class="dot" data-idx="10" title="🚀 무료 시작" onclick="gS(10)"></button><button class="dot" data-idx="11" title="🖼️ 플랫폼 개요" onclick="gS(11)"></button>
 </div>
 <div id="sctr">1 / 12</div>
-<div id="ver" style="position:fixed;bottom:4px;left:50%;transform:translateX(-50%);font-size:9px;color:rgba(255,255,255,.25);z-index:999;pointer-events:none">v2.7</div>
+<div id="ver" style="position:fixed;bottom:4px;left:50%;transform:translateX(-50%);font-size:9px;color:rgba(255,255,255,.25);z-index:999;pointer-events:none">v2.9</div>
 <div id="aring" style="display:none" title="자동넘기기"><svg viewBox="0 0 22 22" fill="none">
 <circle cx="11" cy="11" r="9.5" stroke="rgba(255,255,255,.1)" stroke-width="1.5"/>
 <circle id="aarc" cx="11" cy="11" r="9.5" stroke="#00c8f8" stroke-width="1.5" stroke-linecap="round" transform="rotate(-90 11 11)" stroke-dasharray="60" stroke-dashoffset="60"/></svg>
@@ -2091,18 +2091,27 @@ if(!_initTier()){document.addEventListener('DOMContentLoaded',_initTier);}
 <script>
 (function(){
   var N=12;
-  window._c=0;  // 전역 공유 (onclick에서 접근)
-  var sw=document.getElementById('sw');
+  window._c=0;
+  var slides=document.querySelectorAll('.slide');
 
-  // ── 슬라이드 CSS 적용
-  if(sw){
-    sw.style.cssText='position:fixed;top:86px;left:0;right:0;bottom:0;z-index:10;overflow:hidden;display:flex;transition:transform .28s cubic-bezier(.25,.46,.45,.94);';
-    document.querySelectorAll('.slide').forEach(function(s){
-      s.style.flex='0 0 100vw';s.style.width='100vw';
-      s.style.position='relative';s.style.overflowY='auto';
-      s.style.overflowX='hidden';s.style.opacity='1';s.style.pointerEvents='auto';
-    });
+  function show(i,prev){
+    slides.forEach(function(s){ s.classList.remove('s-cur','s-prev'); });
+    if(prev!=null) slides[prev].classList.add('s-prev');
+    slides[i].classList.add('s-cur');
   }
+
+  window.gS=function(i){
+    i=Math.max(0,Math.min(N-1,i));
+    if(i===window._c)return;
+    var prev=window._c;
+    window._c=i;
+    show(i,prev);
+    uUI();
+    setTimeout(function(){
+      var cur=document.getElementById('slide-'+i);
+      if(cur) cur.querySelectorAll('.rv,.rvl,.rvr').forEach(function(el){el.classList.add('on');});
+    },80);
+  };
 
   function uUI(){
     var c=window._c;
@@ -2116,51 +2125,22 @@ if(!_initTier()){document.addEventListener('DOMContentLoaded',_initTier);}
     if(bn)bn.style.display=c<N-1?'flex':'none';
   }
 
-  // ── 슬라이드 이동 (전역)
-  window.gS=function(i){
-    i=Math.max(0,Math.min(N-1,i));
-    if(i===window._c)return;
-    window._c=i;
-    if(sw) sw.style.transform='translateX(-'+(i*100)+'vw)';
-    uUI();
-    setTimeout(function(){
-      var cur=document.getElementById('slide-'+i);
-      if(cur) cur.querySelectorAll('.rv,.rvl,.rvr').forEach(function(el){el.classList.add('on');});
-    },80);
-  };
-
-  // ── 터치 스와이프
-  var tx=0,ty=0,tMoved=false;
-  document.addEventListener('touchstart',function(e){
-    tx=e.touches[0].clientX;ty=e.touches[0].clientY;tMoved=false;
-  },{passive:true});
-  document.addEventListener('touchmove',function(e){tMoved=true;},{passive:true});
+  // 터치 스와이프
+  var tx=0,ty=0;
+  document.addEventListener('touchstart',function(e){tx=e.touches[0].clientX;ty=e.touches[0].clientY;},{passive:true});
   document.addEventListener('touchend',function(e){
-    if(!tMoved)return;
-    var dx=tx-e.changedTouches[0].clientX;
-    var dy=ty-e.changedTouches[0].clientY;
-    if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>44){window.gS(window._c+(dx>0?1:-1));}
+    var dx=tx-e.changedTouches[0].clientX,dy=ty-e.changedTouches[0].clientY;
+    if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>44) window.gS(window._c+(dx>0?1:-1));
   },{passive:true});
 
-  // ── 키보드
+  // 키보드
   document.addEventListener('keydown',function(e){
     if(['ArrowRight','ArrowDown',' '].includes(e.key)){e.preventDefault();window.gS(window._c+1);}
     if(['ArrowLeft','ArrowUp'].includes(e.key)){e.preventDefault();window.gS(window._c-1);}
   });
 
-  // ── 마우스휠 (데스크탑)
-  var wl=false;
-  document.addEventListener('wheel',function(e){
-    var sc=e.target.closest('.s-fit,.s-body');
-    if(sc){var aT=sc.scrollTop<=1,aB=sc.scrollTop+sc.clientHeight>=sc.scrollHeight-4;
-      if((e.deltaY<0&&!aT)||(e.deltaY>0&&!aB))return;}
-    if(wl)return;wl=true;
-    window.gS(window._c+(e.deltaY>0?1:-1));
-    setTimeout(function(){wl=false;},450);
-  },{passive:true});
-
-  // ── 초기화
-  if(sw) sw.style.transform='translateX(0)';
+  // 초기화
+  show(0,null);
   uUI();
   setTimeout(function(){
     var s0=document.getElementById('slide-0');
