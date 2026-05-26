@@ -661,6 +661,12 @@ export default {
       return new Response(injected, { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
+    // ★ 간선차 GPS 공유
+    if (path === '/truck' || path === '/truck/') {
+      const resp = await fetchAsset('/truck.html', request);
+      return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+    }
+
 
     // ── 회사별 전용 URL (/{slug}) ──
     // 예: /mbti → 엠비티아이 전용, /abc물류 → ABC물류 전용
@@ -668,7 +674,7 @@ export default {
       '/donway_landing','/test-apikey','/favicon.ico','/favicon.png',
       '/worker-test','/label-ocr','/claude-ocr','/get-label-key',
       '/test-inject','/truck-save','/scan-save',
-      '/scan','/settle','/portal','/join','/company-register',
+      '/scan','/truck','/settle','/portal','/join','/company-register',
       '/attendance','/donway-sound.js','/report','/contract',
       '/notice','/settings','/schedule','/drivers','/dashboard',
       '/my','/attendance-admin','/attendance-display',
@@ -1411,6 +1417,17 @@ export default {
       return new Response(bytes.buffer, {
         headers: {'Content-Type': ct, 'Cache-Control': 'public, max-age=86400'}
       });
+    }
+
+    // ★ sw.js — Service Worker (MIME 명시)
+    if (path === '/sw.js') {
+      const resp = await fetchAsset('/sw.js', request);
+      const h = new Headers();
+      h.set('Content-Type', 'application/javascript; charset=utf-8');
+      h.set('Service-Worker-Allowed', '/');
+      h.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      h.set('X-Content-Type-Options', 'nosniff');
+      return new Response(resp.body, { status: resp.status, headers: h });
     }
 
     // ── firebase-messaging-sw.js 인라인 서빙 (404 방지) ──
