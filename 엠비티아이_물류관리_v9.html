@@ -11169,8 +11169,8 @@ var _db=null,_st=null,FB=false;
     if(FB_CFG.projectId&&FB_CFG.projectId.length>3){
       firebase.initializeApp(FB_CFG);
       _db=firebase.firestore(); _st=firebase.storage();
-      // ★ v9.61: 오프라인 캐시 활성화
-      try{ _db.enablePersistence({synchronizeTabs:false}); }catch(e){ console.warn('[Persist]',e.code); }
+      // ★ v9.69: 오프라인 캐시 (multi-tab 안전)
+      try{ _db.enablePersistence({synchronizeTabs:true}); }catch(e){ if(e.code!=='failed-precondition'&&e.code!=='unimplemented') console.warn('[Persist]',e.code); }
       FB=true;
 
       // ★ 인증 완료 후 리스너 설정 (타이밍 오류 방지)
@@ -12310,8 +12310,13 @@ async function submitReg(){
     var chkPhone=await _db.collection('drivers').where('phone','==',phone).where('adminId','==',resolvedAdminId).limit(1).get();
     if(!chkPhone.empty){toast('⚠️ 이미 가입된 전화번호입니다\n관리자에게 문의해 주세요 (051-711-3103)');if(dupBtn){dupBtn.disabled=false;dupBtn.textContent='가입하기';}return;}
   }catch(e){
-    // Firestore 오류 시 로컬 체크만으로 진행
+    // Firestore 오류 시 로컬 체크 + 경고
     console.warn('중복체크 오류(로컬 대체):',e);
+    if(e&&e.code==='permission-denied'){
+      toast('⚠️ 중복 확인 오류 — 잠시 후 다시 시도해 주세요');
+      if(dupBtn){dupBtn.disabled=false;dupBtn.textContent='가입하기';}
+      return;
+    }
   }
   if(dupBtn){dupBtn.disabled=false;dupBtn.textContent='가입하기';}
   // 필수 2종 이미지 검증 (자동차등록증 + 사업자등록증)
@@ -15499,7 +15504,7 @@ function rDrivers(){
       var fbId=d.fbId||d.id||'';
       return `<tr>
       <td><strong>${d.name}</strong>${d.verifiedAt?'<span title="개인 PIN 설정 ('+new Date(d.verifiedAt).toLocaleDateString('ko-KR')+')" style="display:inline-block;margin-left:4px;background:var(--teal);color:#fff;font-size:9px;padding:1px 5px;border-radius:999px;font-weight:700">✓ 인증</span>':'<span title="개인 PIN 미설정" style="display:inline-block;margin-left:4px;background:var(--amber-l);color:var(--amber);font-size:9px;padding:1px 5px;border-radius:999px;font-weight:700;border:1px solid var(--amber)">미인증</span>'}<br><span style="font-size:10px;color:var(--blue)">${d.userId||d.phone}</span></td>
-      <td style="font-size:11px">${d.plate}<br><span class="badge b-done" style="font-size:9px">${d.ton||''}</span></td>
+      <td style="font-size:11px">${d.plate||''}<br><span class="badge b-done" style="font-size:9px">${d.ton||''}</span></td>
       <td><span class="badge ${d.jobtype==='택배'?'b-coral':'b-blue'}" style="font-size:10px">${d.jobtype||'택배'}</span><br><select onchange="setDrvJobsub('${fbId}',this.value)" title="업무 유형 변경" style="font-size:10px;padding:2px 3px;margin-top:2px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text2);cursor:pointer">${['쿠팡','컬리','CJ','용차','MBTI본사'].map(v=>`<option value="${v}" ${(d.jobsub||'')===v?'selected':''}>${v}</option>`).join('')}</select></td>
       <td><span class="badge b-done" style="font-size:10px">${d.employ||'지입'}</span></td>
       <td style="font-size:11px">${d.camp?`<span style="display:inline-block;background:rgba(245,158,11,.18);color:var(--amber);padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;margin-right:3px">🏕${d.camp}</span>`:''}${d.shift?`<span style="display:inline-block;background:${d.shift==='주간'?'rgba(59,130,246,.18)':d.shift==='야간'?'rgba(139,92,246,.18)':'rgba(16,185,129,.18)'};color:${d.shift==='주간'?'#3B82F6':d.shift==='야간'?'#8B5CF6':'#10B981'};padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;margin-right:3px">${d.shift==='주간'?'☀':d.shift==='야간'?'🌙':'🌓'}${d.shift}</span>`:''}${d.route||''}</td>
