@@ -5304,185 +5304,238 @@ function _dwAddEntry(price, hour, source){
   return entry;
 }
 
-// ── ★ Phase 1: 기사 앱 실시간 배달 입력 페이지
-function pageDeliveryInput(){
-  document.getElementById('page-title').textContent='🛵 배달 입력';
-  var el=document.getElementById('content');
-  el.innerHTML='<div style="max-width:480px;margin:0 auto;padding:8px">'
-    +'<div id="dw-input-body"><div style="text-align:center;padding:40px;color:var(--text3)">⏳ 세션 로드 중...</div></div>'
-  +'</div>';
-  _dwLoadSession(function(s){_dwRenderInputPage(s);});
+// ════════════════════════════════════════════════════════
+// 🔔 지능형 트랙 알림 엔진
+// 엑셀 교정 후 건수 변화 → driver_notifications 자동 발송
+// ════════════════════════════════════════════════════════
+
+var _DW_TRACK_THRESHOLDS=[180,250,300,350]; // 알림 기준 건수
+var _DW_PRE_ALERT=5;                         // 달성 N건 전 예고 알림
+
+// 트랙 알림 발송 (Firestore driver_notifications 기록)
+function _dwSendTrackAlert(alertType, opts){
+  if(!_db||!opts.driverId)return;
+  var payload={
+    type:'settle_alert',
+    subType:alertType,           // 'pre_achieve' | 'achieved'
+    targetDriverId:opts.driverId,
+    dealerId:opts.dealerId||(_CU&&_CU.dealerId)||'',
+    driverName:opts.driverName||'',
+    title:opts.title,
+    body:opts.body,
+    trackPrice:opts.trackPrice||0,
+    totalCount:opts.totalCount||0,
+    isRead:false,
+    date:new Date().toISOString().slice(0,10),
+    createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  };
+  _db.collection('driver_notifications').add(payload)
+    .catch(function(e){console.warn('[트랙알림발송]',e);});
 }
 
-function _dwRenderInputPage(s){
-  var el=document.getElementById('dw-input-body');
-  if(!el)return;
-  _dwRecalcSession(s);
-  var track=_dwTrack(s.totalCount, s.defPrice||2900);
+// 건수 변화 → 알림 트리거 판단
+function _dwCheckTierNotifications(prevCount, newCount, opts){
+  if(newCount<=prevCount)return; // 건수 감소 시 무시
 
-  // 다음 트랙 계산
-  var nextTrack=null;
-  for(var i=0;i<DW_TRACKS.length;i++){
-    if(DW_TRACKS[i].min>s.totalCount&&DW_TRACKS[i].price>0){
-      nextTrack=DW_TRACKS[i];break;
+  _DW_TRACK_THRESHOLDS.forEach(function(threshold){
+    var prevTrack=_dwTrack(prevCount, opts.defPrice||2900);
+    var newTrack=_dwTrack(newCount, opts.defPrice||2900);
+
+    // ① 달성 완료: 이번 업데이트로 구간 돌파
+    if(prevCount<threshold && newCount>=threshold && newTrack.price>0){
+      _dwSendTrackAlert('achieved',{
+        driverId:opts.driverId,
+        dealerId:opts.dealerId,
+        driverName:opts.driverName,
+        title:'🎉 '+threshold+'건 돌파! 최저단가 업그레이드',
+        body:'축하합니다! 누적 '+newCount+'건 돌파로 최저 단가 '
+          +newTrack.price.toLocaleString()+'원 보장이 확정되었습니다.\n'
+          +'이후 수행건은 돈웨이 엔진이 차액을 자동 보전합니다.',
+        trackPrice:newTrack.price,
+        totalCount:newCount
+      });
     }
-  }
-  // 역순으로 찾기 (트랙이 내림차순 정렬이므로)
-  nextTrack=null;
-  for(var i=DW_TRACKS.length-1;i>=0;i--){
-    if(DW_TRACKS[i].min>s.totalCount&&DW_TRACKS[i].price>0){nextTrack=DW_TRACKS[i];break;}
-  }
 
-  var pct=nextTrack?Math.round((s.totalCount-track.min)/(nextTrack.min-track.min)*100):100;
-  pct=Math.max(0,Math.min(100,pct||0));
-  var remaining=nextTrack?(nextTrack.min-s.totalCount):0;
+    // ② 달성 예정: 목표 - 5건 진입
+    var prePoint=threshold-_DW_PRE_ALERT;
+    if(prevCount<prePoint && newCount>=prePoint && newCount<threshold){
+      var nextT=null;
+      for(var i=0;i<DW_TRACKS.length;i++){
+        if(DW_TRACKS[i].min===threshold){nextT=DW_TRACKS[i];break;}
+      }
+      var nextPrice=nextT?nextT.price:0;
+      if(nextPrice>0){
+        _dwSendTrackAlert('pre_achieve',{
+          driverId:opts.driverId,
+          dealerId:opts.dealerId,
+          driverName:opts.driverName,
+          title:'🔥 단가 점프까지 딱 '+(threshold-newCount)+'건 남았습니다!',
+          body:'현재 '+newCount+'건 달성. 조금만 더 타면 최저 단가 '
+            +nextPrice.toLocaleString()+'원 트랙으로 자동 업그레이드됩니다!',
+          trackPrice:nextPrice,
+          totalCount:newCount
+        });
+      }
+    }
+  });
+}
 
-  // 트랙 색상
+// ── ★ Phase 1 리빌드: 기사 앱 배달 대시보드 (수동 입력 폐지)
+// 기사는 입력 없이 실시간 세션 데이터만 확인
+function pageDeliveryInput(){
+  document.getElementById('page-title').textContent='🛵 배달 현황';
+  var el=document.getElementById('content');
+  el.innerHTML='<div style="max-width:480px;margin:0 auto;padding:8px">'
+    +'<div id="dw-driver-dash"><div style="text-align:center;padding:40px;color:var(--text3)">⏳ 로드 중...</div></div>'
+  +'</div>';
+
+  // 기사 세션 실시간 구독
+  if(!_db||!_CU)return;
+  var did=(_CU.dealerId||_CU.companyId||'');
+  var uid=_CU.uid||'';
+  var period=_dwCurrentPeriod();
+  var sid=_dwSessionId(did,uid,period);
+
+  // 기존 구독 해제
+  if(window._dwDashUnsub){try{window._dwDashUnsub();}catch(e){}}
+
+  window._dwDashUnsub=_db.collection('delivery_sessions').doc(sid)
+    .onSnapshot(function(snap){
+      var s=snap.exists?snap.data():null;
+      if(!s){
+        // 아직 세션 없음 (관리자가 엑셀 업로드 전)
+        document.getElementById('dw-driver-dash').innerHTML=
+          '<div style="text-align:center;padding:40px 20px">'
+            +'<div style="font-size:64px;margin-bottom:16px">🛵</div>'
+            +'<div style="font-size:16px;font-weight:800;margin-bottom:8px">배달 현황 대기 중</div>'
+            +'<div style="font-size:13px;color:var(--text3);line-height:1.6">'
+              +'관리자가 정산 데이터를 업로드하면<br>실시간으로 현황이 표시됩니다.<br><br>'
+              +'<strong style="color:var(--brand)">트랙 달성 시 자동으로 알림이 옵니다! 🔔</strong>'
+            +'</div>'
+          +'</div>';
+        return;
+      }
+      _dwRenderDriverDash(s);
+    },function(){
+      document.getElementById('dw-driver-dash').innerHTML=
+        '<div class="empty">데이터를 불러올 수 없습니다</div>';
+    });
+}
+
+// 기사 대시보드 렌더링 (읽기 전용)
+function _dwRenderDriverDash(s){
+  var el=document.getElementById('dw-driver-dash');
+  if(!el||!s)return;
+  _dwRecalcSession(s);
+  var cnt=s.totalCount||0;
+  var track=_dwTrack(cnt, s.defPrice||2900);
   var tc=track.isDefault?'#6b7280':track.price>=5500?'#7c3aed':track.price>=5100?'#2563eb':track.price>=4200?'#059669':'#d97706';
 
+  // 다음 트랙 계산
+  var nextTrack=null, remaining=0, pct=100;
+  for(var i=DW_TRACKS.length-1;i>=0;i--){
+    if(DW_TRACKS[i].min>cnt&&DW_TRACKS[i].price>0){nextTrack=DW_TRACKS[i];break;}
+  }
+  if(nextTrack){
+    remaining=nextTrack.min-cnt;
+    pct=Math.round((cnt-track.min)/(nextTrack.min-track.min)*100);
+    pct=Math.max(0,Math.min(100,pct||0));
+  }
+
+  // 시간대별 건수 집계
+  var slotCounts={};
+  Object.keys(DW_SLOTS).forEach(function(k){slotCounts[k]=0;});
+  (s.entries||[]).forEach(function(e){if(e.slot)slotCounts[e.slot]=(slotCounts[e.slot]||0)+1;});
+
   el.innerHTML=
-  // ── 상단 현황 카드
-  '<div style="background:linear-gradient(135deg,'+tc+','+tc+'cc);border-radius:20px;padding:20px;color:#fff;margin-bottom:16px">'
-    +'<div style="font-size:11px;opacity:.8;margin-bottom:4px">📅 '+esc(s.period)+'</div>'
-    +'<div style="display:flex;justify-content:space-between;align-items:flex-start">'
+  // ── 메인 트랙 카드
+  '<div style="background:linear-gradient(135deg,'+tc+'ee,'+tc+'aa);border-radius:22px;padding:22px;color:#fff;margin-bottom:14px;position:relative;overflow:hidden">'
+    +'<div style="position:absolute;right:-10px;top:-10px;font-size:80px;opacity:.1">🛵</div>'
+    +'<div style="font-size:11px;opacity:.75;margin-bottom:6px">📅 '+esc(s.period||'')+(s.isVerified?' ✅ 검증완료':' ⚠️ 가상정산')+'</div>'
+    +'<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:14px">'
       +'<div>'
-        +'<div style="font-size:13px;opacity:.8;margin-bottom:2px">현재 트랙</div>'
-        +'<div style="font-size:22px;font-weight:900">'+esc(track.label||'기본')+'</div>'
-        +'<div style="font-size:28px;font-weight:900;color:#fbbf24;margin-top:2px">'
+        +'<div style="font-size:12px;opacity:.8">현재 보장 트랙</div>'
+        +'<div style="font-size:32px;font-weight:900;line-height:1">'
           +(track.isDefault?'₩'+Number(s.defPrice||2900).toLocaleString():'₩'+track.price.toLocaleString())
-          +'<span style="font-size:12px;font-weight:400;opacity:.8">/건 보전</span>'
         +'</div>'
+        +'<div style="font-size:11px;opacity:.7">/건 최저 보장</div>'
       +'</div>'
       +'<div style="text-align:right">'
         +'<div style="font-size:11px;opacity:.8">누적 수행</div>'
-        +'<div style="font-size:40px;font-weight:900;line-height:1">'+s.totalCount+'</div>'
+        +'<div style="font-size:52px;font-weight:900;line-height:1;color:#fbbf24">'+cnt+'</div>'
         +'<div style="font-size:11px;opacity:.8">건</div>'
       +'</div>'
     +'</div>'
-    // 게이지 바
-    +(nextTrack?
-      '<div style="margin-top:14px">'
-        +'<div style="display:flex;justify-content:space-between;font-size:10px;opacity:.8;margin-bottom:4px">'
-          +'<span>'+track.min+'건</span>'
-          +'<span style="color:#fbbf24;font-weight:700">다음 트랙까지 '+remaining+'건 🔥</span>'
-          +'<span>'+nextTrack.min+'건 → ₩'+nextTrack.price.toLocaleString()+'</span>'
+    // 게이지 + 다음 트랙 안내
+    +(nextTrack
+      ?'<div>'
+          +'<div style="display:flex;justify-content:space-between;font-size:10px;opacity:.85;margin-bottom:5px">'
+            +'<span>현재 '+track.min+'건~</span>'
+            +'<span style="font-weight:900;color:#fbbf24">🔥 '+remaining+'건 더하면 ₩'+nextTrack.price.toLocaleString()+'!</span>'
+            +'<span>→'+nextTrack.min+'건</span>'
+          +'</div>'
+          +'<div style="background:rgba(255,255,255,.3);border-radius:999px;height:12px;position:relative">'
+            +'<div style="background:#fbbf24;border-radius:999px;height:12px;width:'+pct+'%;transition:width .6s;box-shadow:0 0 8px #fbbf2488"></div>'
+          +'</div>'
+          +'<div style="text-align:right;font-size:10px;opacity:.75;margin-top:3px">'+pct+'%</div>'
         +'</div>'
-        +'<div style="background:rgba(255,255,255,.25);border-radius:999px;height:10px">'
-          +'<div style="background:#fbbf24;border-radius:999px;height:10px;width:'+pct+'%;transition:width .5s"></div>'
-        +'</div>'
-      +'</div>'
-    :'<div style="margin-top:10px;font-size:12px;color:#fbbf24;font-weight:800">🏆 최고 트랙 달성!</div>')
+      :'<div style="background:rgba(255,255,255,.2);border-radius:10px;padding:8px 12px;text-align:center;font-size:13px;font-weight:800">🏆 최고 트랙 달성 완료! 5,500원 보장</div>')
   +'</div>'
 
-  // ── KPI
-  +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">'
-    +'<div style="background:var(--bg2);border-radius:12px;padding:12px;text-align:center">'
-      +'<div style="font-size:10px;color:var(--text3)">플랫폼 수령</div>'
-      +'<div style="font-size:15px;font-weight:800">₩'+Math.round(s.rawPlatformSum).toLocaleString()+'</div></div>'
-    +'<div style="background:#fef3c7;border-radius:12px;padding:12px;text-align:center">'
-      +'<div style="font-size:10px;color:#92400e">보전 투입</div>'
-      +'<div style="font-size:15px;font-weight:800;color:#b45309">+₩'+Math.round(s.injected).toLocaleString()+'</div></div>'
-    +'<div style="background:#d1fae5;border-radius:12px;padding:12px;text-align:center">'
+  // ── 정산 요약
+  +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">'
+    +'<div style="background:var(--bg2);border-radius:14px;padding:14px">'
+      +'<div style="font-size:10px;color:var(--text3);margin-bottom:4px">세전 수수료</div>'
+      +'<div style="font-size:18px;font-weight:800">₩'+Math.round(s.preTax||0).toLocaleString()+'</div>'
+      +'<div style="font-size:10px;color:var(--red);margin-top:2px">원천징수 -₩'+Math.round(s.tax||0).toLocaleString()+'</div>'
+    +'</div>'
+    +'<div style="background:linear-gradient(135deg,var(--brand-l),var(--bg2));border:2px solid var(--brand);border-radius:14px;padding:14px;text-align:center">'
+      +'<div style="font-size:10px;color:var(--text3);margin-bottom:4px">💳 예상 실지급액</div>'
+      +'<div style="font-size:22px;font-weight:900;color:var(--brand)">₩'+Math.round(s.net||0).toLocaleString()+'</div>'
+    +'</div>'
+  +'</div>'
+  +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">'
+    +'<div style="background:#fef3c7;border-radius:12px;padding:10px;text-align:center">'
+      +'<div style="font-size:10px;color:#92400e">대리점 보전</div>'
+      +'<div style="font-size:15px;font-weight:800;color:#b45309">+₩'+Math.round(s.injected||0).toLocaleString()+'</div>'
+    +'</div>'
+    +'<div style="background:#d1fae5;border-radius:12px;padding:10px;text-align:center">'
       +'<div style="font-size:10px;color:#065f46">환수 차감</div>'
-      +'<div style="font-size:15px;font-weight:800;color:#047857">-₩'+Math.round(s.extracted).toLocaleString()+'</div></div>'
-  +'</div>'
-  +'<div style="background:var(--brand-l);border:2px solid var(--brand);border-radius:14px;padding:14px;text-align:center;margin-bottom:16px">'
-    +'<div style="font-size:11px;color:var(--text3)">세전 수수료</div>'
-    +'<div style="font-size:14px;font-weight:700;color:var(--text2)">₩'+Math.round(s.preTax).toLocaleString()+' → 원천징수 3.3% -₩'+Math.round(s.tax).toLocaleString()+'</div>'
-    +'<div style="font-size:11px;color:var(--text3);margin-top:2px">예상 실지급액</div>'
-    +'<div style="font-size:32px;font-weight:900;color:var(--brand)">₩'+Math.round(s.net).toLocaleString()+'</div>'
-    +(s.isVerified?'<div style="font-size:10px;color:#059669;font-weight:700;margin-top:4px">✅ 엑셀 검증 완료</div>':'<div style="font-size:10px;color:#f59e0b;margin-top:4px">⚠️ 관리자 엑셀 검증 전 (가상 정산)</div>')
-  +'</div>'
-
-  // ── 퀵 입력 패널
-  +'<div style="background:var(--bg2);border-radius:16px;padding:16px;margin-bottom:14px">'
-    +'<div style="font-size:14px;font-weight:800;margin-bottom:12px">⚡ 배달 완료 입력</div>'
-    +'<div style="display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:8px">'
-      +'<div>'
-        +'<label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">📱 앱에 표시된 단가 (원)</label>'
-        +'<input id="dw-entry-price" type="number" placeholder="예: 3500" inputmode="numeric"'
-        +' style="width:100%;padding:14px;border:2px solid var(--brand);border-radius:12px;font-size:22px;font-weight:900;text-align:center;background:var(--bg);color:var(--brand)">'
-      +'</div>'
-      +'<div>'
-        +'<label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">완료시간</label>'
-        +'<input id="dw-entry-hour" type="number" min="0" max="23" value="'+new Date().getHours()+'"'
-        +' style="width:60px;padding:14px 8px;border:1.5px solid var(--border);border-radius:12px;font-size:18px;font-weight:700;text-align:center;background:var(--bg)">'
-        +'<div style="font-size:9px;color:var(--text3);text-align:center;margin-top:2px">시</div>'
-      +'</div>'
-    +'</div>'
-    +'<button onclick="window._dwSubmitEntry()" style="width:100%;padding:16px;background:linear-gradient(135deg,var(--brand),#7c3aed);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:900;cursor:pointer">✅ 배달 완료 등록</button>'
-    +'<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'
-      +[2800,3000,3200,3500,4000,4500,5000,5500,6000,7000].map(function(p){
-        return '<button onclick="document.getElementById(\'dw-entry-price\').value=\''+p+'\'" '
-          +'style="padding:5px 10px;border:1px solid var(--border);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;background:var(--bg3)">'+p.toLocaleString()+'</button>';
-      }).join('')
+      +'<div style="font-size:15px;font-weight:800;color:#047857">-₩'+Math.round(s.extracted||0).toLocaleString()+'</div>'
     +'</div>'
   +'</div>'
 
-  // ── 최근 5건
-  +(s.entries.length?
+  // ── 시간대별 수행 분포
+  +(cnt>0?
     '<div style="background:var(--bg2);border-radius:14px;padding:14px;margin-bottom:14px">'
-      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
-        +'<div style="font-size:13px;font-weight:800">📋 최근 입력 내역</div>'
-        +'<button onclick="window._dwShowAllEntries()" style="font-size:11px;color:var(--brand);background:none;border:none;cursor:pointer">전체보기 →</button>'
-      +'</div>'
-      +s.entries.slice(-5).reverse().map(function(e,i){
-        var sd=DW_SLOTS[e.slot]||{label:e.slot,color:'#6b7280'};
-        var inj=(e.inject||0),ext=(e.extract||0);
-        var diff=inj>0?'+₩'+inj.toLocaleString():ext>0?'-₩'+ext.toLocaleString():'—';
-        var col=inj>0?'#b45309':ext>0?'#047857':'var(--text3)';
-        return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">'
-          +'<span style="font-size:9px;font-weight:700;color:'+sd.color+';background:'+sd.color+'22;padding:2px 6px;border-radius:6px">'+sd.label+'</span>'
-          +'<span style="font-size:12px;font-weight:700">₩'+(e.price||0).toLocaleString()+'</span>'
-          +'<span style="font-size:11px;color:'+col+';font-weight:700;margin-left:auto">'+diff+'</span>'
-          +(e.source==='excel'?'<span style="font-size:9px;color:#059669">✅검증</span>':'')
+      +'<div style="font-size:12px;font-weight:800;margin-bottom:10px">⏰ 시간대별 배달 현황</div>'
+      +'<div style="display:flex;flex-direction:column;gap:5px">'
+      +Object.keys(DW_SLOTS).map(function(k){
+        var sd=DW_SLOTS[k]; var c=slotCounts[k]||0;
+        if(!c)return '';
+        var barW=cnt>0?Math.round(c/cnt*100):0;
+        return '<div style="display:flex;align-items:center;gap:8px">'
+          +'<div style="width:60px;font-size:10px;font-weight:700;color:'+sd.color+'">'+sd.label+'</div>'
+          +'<div style="flex:1;background:var(--bg3);border-radius:999px;height:8px">'
+            +'<div style="background:'+sd.color+';border-radius:999px;height:8px;width:'+barW+'%"></div>'
+          +'</div>'
+          +'<div style="width:32px;text-align:right;font-size:11px;font-weight:700">'+c+'건</div>'
         +'</div>';
       }).join('')
+      +'</div>'
     +'</div>'
   :'')
+
+  // ── 알림 안내
+  +'<div style="background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:14px;padding:14px;color:#fff;text-align:center">'
+    +'<div style="font-size:22px;margin-bottom:6px">🔔</div>'
+    +'<div style="font-size:13px;font-weight:800;margin-bottom:6px">자동 알림 활성화</div>'
+    +'<div style="font-size:11px;opacity:.75;line-height:1.6">'
+      +'관리자가 데이터를 업데이트하면<br>'
+      +'트랙 달성 <strong style="color:#fbbf24">5건 전</strong>에 예고 알림,<br>'
+      +'트랙 돌파 시 <strong style="color:#6ee7b7">즉시 알림</strong>을 자동 발송합니다.'
+    +'</div>'
   +'</div>';
-
-  // 제출 핸들러
-  window._dwSubmitEntry=function(){
-    var price=parseInt((document.getElementById('dw-entry-price')||{}).value)||0;
-    var hour=parseInt((document.getElementById('dw-entry-hour')||{}).value)||new Date().getHours();
-    if(price<=0){toast('❌ 단가를 입력하세요');return;}
-    var entry=_dwAddEntry(price,hour,'manual');
-    document.getElementById('dw-entry-price').value='';
-    toast('✅ '+price.toLocaleString()+'원 등록! ('+DW_SLOTS[entry.slot].label+')');
-    _dwRenderInputPage(_DW_SESSION);
-  };
-
-  // 전체 내역 보기
-  window._dwShowAllEntries=function(){
-    var s=_DW_SESSION;if(!s)return;
-    var mo=document.createElement('div');mo.className='mo show';
-    mo.onclick=function(e){if(e.target===mo)mo.remove();};
-    var rows=s.entries.slice().reverse().map(function(e,i){
-      var sd=DW_SLOTS[e.slot]||{label:e.slot,color:'#6b7280'};
-      var inj=e.inject||0,ext=e.extract||0;
-      return '<tr style="border-bottom:1px solid var(--border)">'
-        +'<td style="padding:5px 6px;font-size:11px">'+(s.entries.length-i)+'</td>'
-        +'<td style="padding:5px 6px"><span style="font-size:9px;color:'+sd.color+';background:'+sd.color+'22;padding:1px 5px;border-radius:4px">'+sd.label+'</span></td>'
-        +'<td style="padding:5px 6px;text-align:right;font-size:12px;font-weight:700">₩'+(e.price||0).toLocaleString()+'</td>'
-        +'<td style="padding:5px 6px;text-align:right;font-size:11px;color:'+(inj>0?'#b45309':'#047857')+'">'+( inj>0?'+₩'+inj.toLocaleString():ext>0?'-₩'+ext.toLocaleString():'—')+'</td>'
-        +'<td style="padding:5px 6px;font-size:9px;color:'+(e.source==='excel'?'#059669':'var(--text3)')+'">'+( e.source==='excel'?'✅검증':'앱')+'</td>'
-      +'</tr>';
-    }).join('');
-    mo.innerHTML='<div class="md" style="max-width:440px">'
-      +'<div class="mdt">📋 전체 배달 내역 ('+s.totalCount+'건)'
-        +'<button onclick="this.closest(\'.mo\').remove()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:2px 8px;cursor:pointer;margin-left:auto">✕</button>'
-      +'</div>'
-      +'<div style="padding:10px;max-height:65vh;overflow-y:auto">'
-        +'<table style="width:100%;border-collapse:collapse;font-size:11px">'
-          +'<thead><tr style="background:var(--bg3)"><th style="padding:5px 6px">#</th><th>구간</th><th style="text-align:right">단가</th><th style="text-align:right">보전/환수</th><th>출처</th></tr></thead>'
-          +'<tbody>'+rows+'</tbody>'
-        +'</table>'
-      +'</div>'
-      +'<div class="mdf"><button class="btn" onclick="this.closest(\'.mo\').remove()">닫기</button></div>'
-    +'</div>';
-    document.body.appendChild(mo);
-  };
 }
 
 // ── ★ Phase 2: 관리자 - 실시간 기사 현황 + 엑셀 검증
@@ -5548,7 +5601,7 @@ function _dwAdminLiveView(el){
     });
 }
 
-// Phase2: 엑셀 업로드 → 세션 데이터 교정
+// Phase2: 엑셀 업로드 → 세션 데이터 교정 + 지능형 알림 발송
 window._dwVerifyExcel=function(){
   var fi=document.getElementById('dw-verify-file');
   if(!fi||!fi.files[0]){toast('파일을 선택해 주세요');return;}
@@ -5559,31 +5612,46 @@ window._dwVerifyExcel=function(){
     var did=_CU&&_CU.dealerId||'';
     var period=_dwCurrentPeriod();
     var riderIds=Object.keys(riderMap);
-    var updated=0,promises=[];
+    var updated=0, alertsSent=0, promises=[];
     riderIds.forEach(function(rid){
       var orders=riderMap[rid];
       var sid=_dwSessionId(did,rid,period);
       promises.push(
         _db.collection('delivery_sessions').doc(sid).get().then(function(snap){
-          var s=snap.exists?snap.data():{sid:sid,dealerId:did,driverId:rid,driverName:rid,
+          var prevCount=0, prevSession=null;
+          if(snap.exists){
+            prevSession=snap.data();
+            prevCount=prevSession.totalCount||0;
+          }
+          var s=prevSession||{sid:sid,dealerId:did,driverId:rid,driverName:rid,
             period:period,entries:[],defPrice:2900,leaseFee:0,fineFee:0};
           // 엑셀 주문으로 entries 교정 (source:'excel' 태그)
           var excelEntries=orders.map(function(o){
             return{price:o.platformPrice,hour:o.hour||12,slot:_dwSlot(o.hour||12),source:'excel',at:o.completedAt||new Date().toISOString()};
           });
-          // 기존 manual 항목은 삭제하고 excel로 교체 (공식 데이터 우선)
           s.entries=excelEntries;
           s.isVerified=true;
           _dwRecalcSession(s);
           updated++;
+
+          // ★ 지능형 알림 트리거
+          if(s.totalCount!==prevCount){
+            _dwCheckTierNotifications(prevCount, s.totalCount, {
+              driverId:rid,
+              dealerId:did,
+              driverName:s.driverName||rid,
+              defPrice:s.defPrice||2900
+            });
+            alertsSent++;
+          }
+
           return _db.collection('delivery_sessions').doc(sid).set(s);
         })
       );
     });
     Promise.all(promises).then(function(){
-      if(st)st.innerHTML='<span style="color:var(--green)">✅ '+updated+'명 기사 데이터 교정 완료 (출처: '+(platform==='baemin'?'배민':'쿠팡이츠')+')</span>';
-      toast('✅ 엑셀 검증 완료 — '+updated+'명 교정');
-      // 화면 새로고침
+      if(st)st.innerHTML='<span style="color:var(--green)">✅ '+updated+'명 교정 완료 · 알림 체크 '+alertsSent+'건 ('+( platform==='baemin'?'배민':'쿠팡이츠')+')</span>';
+      toast('✅ 엑셀 검증 완료 — '+updated+'명 교정·알림 발송');
       setTimeout(function(){_dwAdminLiveView(document.getElementById('dw-admin-live'));},800);
     }).catch(function(e){if(st)st.innerHTML='<span style="color:var(--red)">❌ '+e.message+'</span>';});
   });
@@ -16571,6 +16639,8 @@ window.addEventListener('load',function(){
 function _startDispatchListener(uid){
   if(!window._db||!uid)return;
   var td=new Date().toISOString().slice(0,10);
+
+  // ── 배차 알림
   try{
     window._db.collection('driver_notifications')
       .where('targetDriverId','==',uid).where('type','==','dispatch')
@@ -16589,6 +16659,54 @@ function _startDispatchListener(uid){
         });
       },function(e){console.warn('[배차알림]',e);});
   }catch(e){console.warn('[배차알림시작]',e);}
+
+  // ── ★ 배달대행 트랙 알림 (settle_alert)
+  try{
+    window._db.collection('driver_notifications')
+      .where('targetDriverId','==',uid).where('type','==','settle_alert')
+      .where('isRead','==',false).limit(5)
+      .onSnapshot(function(snap){
+        snap.docChanges().forEach(function(ch){
+          if(ch.type!=='added')return;
+          var d=ch.doc.data();
+          var isAchieved=d.subType==='achieved';
+
+          // 팝업 스타일: 달성예정=주황, 달성완료=초록+축하
+          var bg=isAchieved
+            ?'linear-gradient(135deg,#065f46,#059669)'
+            :'linear-gradient(135deg,#92400e,#d97706)';
+          var icon=isAchieved?'🎉':'🔥';
+          var vibPat=isAchieved?[300,100,300,100,500]:[200,80,200];
+
+          var bn=document.createElement('div');
+          bn.style.cssText='position:fixed;top:70px;left:50%;transform:translateX(-50%) scale(0.8);z-index:9998;'
+            +'background:'+bg+';color:#fff;padding:18px 22px;border-radius:18px;'
+            +'box-shadow:0 12px 40px rgba(0,0,0,.5);min-width:280px;max-width:340px;'
+            +'text-align:center;cursor:pointer;font-family:inherit;'
+            +'transition:transform .3s cubic-bezier(.34,1.56,.64,1);';
+          bn.innerHTML=
+            '<div style="font-size:36px;margin-bottom:6px">'+icon+'</div>'
+            +'<div style="font-size:15px;font-weight:900;line-height:1.4;margin-bottom:6px">'+(d.title||'트랙 알림')+'</div>'
+            +'<div style="font-size:12px;opacity:.9;line-height:1.5">'+(d.body||'')+'</div>'
+            +(isAchieved
+              ?'<div style="margin-top:10px;background:rgba(255,255,255,.2);border-radius:8px;padding:6px 10px;font-size:13px;font-weight:900">₩'+Number(d.trackPrice||0).toLocaleString()+' 보장 확정! ✅</div>'
+              :'<div style="margin-top:8px;font-size:12px;opacity:.8">탭하여 닫기</div>');
+
+          setTimeout(function(){bn.style.transform='translateX(-50%) scale(1)';},10);
+
+          bn.onclick=function(){
+            bn.style.transform='translateX(-50%) scale(0.8)';
+            setTimeout(function(){bn.remove();},200);
+            if(window._db&&ch.doc.id)
+              window._db.collection('driver_notifications').doc(ch.doc.id).update({isRead:true}).catch(function(){});
+          };
+          document.body.appendChild(bn);
+          if(navigator.vibrate)navigator.vibrate(vibPat);
+          // 달성 완료는 15초, 예정 알림은 10초
+          setTimeout(function(){if(bn.parentNode){bn.style.transform='translateX(-50%) scale(0.8)';setTimeout(function(){bn.remove();},200);}},isAchieved?15000:10000);
+        });
+      },function(e){console.warn('[트랙알림]',e);});
+  }catch(e){console.warn('[트랙알림시작]',e);}
 }
 
 </script>
