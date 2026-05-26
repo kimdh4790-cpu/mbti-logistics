@@ -5312,6 +5312,15 @@ function _dwAddEntry(price, hour, source){
 var _DW_TRACK_THRESHOLDS=[180,250,300,350]; // 알림 기준 건수
 var _DW_PRE_ALERT=5;                         // 달성 N건 전 예고 알림
 
+// ★ 심야 건 필터: 06~24시 수행건만 카운트 (00~05:59 제외)
+function _dwFilterDayCount(entries){
+  if(!entries||!entries.length)return 0;
+  return entries.filter(function(e){
+    var h=typeof e.hour==='number'?e.hour:(e.slot==='midnight'?2:12);
+    return h>=6; // 06시 이상만 유효
+  }).length;
+}
+
 // 트랙 알림 발송 (Firestore driver_notifications 기록)
 function _dwSendTrackAlert(alertType, opts){
   if(!_db||!opts.driverId)return;
@@ -5333,49 +5342,56 @@ function _dwSendTrackAlert(alertType, opts){
     .catch(function(e){console.warn('[트랙알림발송]',e);});
 }
 
-// 건수 변화 → 알림 트리거 판단
+// 건수 변화 → 알림 트리거 (심야 필터 적용 후 유효 건수 기준)
 function _dwCheckTierNotifications(prevCount, newCount, opts){
-  if(newCount<=prevCount)return; // 건수 감소 시 무시
+  if(newCount<=prevCount)return;
+
+  // ★ 유효 건수: entries에서 심야(00-05시) 제외
+  var effectiveNew=newCount;
+  var effectivePrev=prevCount;
+  if(opts.entries){
+    effectiveNew=_dwFilterDayCount(opts.entries);
+    // prevEntries 없으면 비율로 근사
+    effectivePrev=Math.max(0,effectiveNew-(newCount-prevCount));
+  }
 
   _DW_TRACK_THRESHOLDS.forEach(function(threshold){
-    var prevTrack=_dwTrack(prevCount, opts.defPrice||2900);
-    var newTrack=_dwTrack(newCount, opts.defPrice||2900);
+    var nextT=null;
+    for(var i=DW_TRACKS.length-1;i>=0;i--){
+      if(DW_TRACKS[i].min===threshold){nextT=DW_TRACKS[i];break;}
+    }
+    var nextPrice=nextT?nextT.price:0;
+    if(nextPrice<=0)return;
 
-    // ① 달성 완료: 이번 업데이트로 구간 돌파
-    if(prevCount<threshold && newCount>=threshold && newTrack.price>0){
+    // ① 달성 완료 (구간 돌파)
+    if(effectivePrev<threshold && effectiveNew>=threshold){
       _dwSendTrackAlert('achieved',{
         driverId:opts.driverId,
         dealerId:opts.dealerId,
         driverName:opts.driverName,
         title:'🎉 '+threshold+'건 돌파! 최저단가 업그레이드',
-        body:'축하합니다! 누적 '+newCount+'건 돌파로 최저 단가 '
-          +newTrack.price.toLocaleString()+'원 보장이 확정되었습니다.\n'
+        body:'축하합니다! 누적 '+effectiveNew+'건 돌파로 '
+          +'최저 단가 '+nextPrice.toLocaleString()+'원 보장이 확정되었습니다.\n'
           +'이후 수행건은 돈웨이 엔진이 차액을 자동 보전합니다.',
-        trackPrice:newTrack.price,
-        totalCount:newCount
+        trackPrice:nextPrice,
+        totalCount:effectiveNew
       });
     }
 
-    // ② 달성 예정: 목표 - 5건 진입
+    // ② 달성 예정 (목표 - 5건 진입)
     var prePoint=threshold-_DW_PRE_ALERT;
-    if(prevCount<prePoint && newCount>=prePoint && newCount<threshold){
-      var nextT=null;
-      for(var i=0;i<DW_TRACKS.length;i++){
-        if(DW_TRACKS[i].min===threshold){nextT=DW_TRACKS[i];break;}
-      }
-      var nextPrice=nextT?nextT.price:0;
-      if(nextPrice>0){
-        _dwSendTrackAlert('pre_achieve',{
-          driverId:opts.driverId,
-          dealerId:opts.dealerId,
-          driverName:opts.driverName,
-          title:'🔥 단가 점프까지 딱 '+(threshold-newCount)+'건 남았습니다!',
-          body:'현재 '+newCount+'건 달성. 조금만 더 타면 최저 단가 '
-            +nextPrice.toLocaleString()+'원 트랙으로 자동 업그레이드됩니다!',
-          trackPrice:nextPrice,
-          totalCount:newCount
-        });
-      }
+    if(effectivePrev<prePoint && effectiveNew>=prePoint && effectiveNew<threshold){
+      var remaining=threshold-effectiveNew;
+      _dwSendTrackAlert('pre_achieve',{
+        driverId:opts.driverId,
+        dealerId:opts.dealerId,
+        driverName:opts.driverName,
+        title:'🔥 단가 점프까지 딱 '+remaining+'건 남았습니다!',
+        body:'현재 '+effectiveNew+'건 달성. 조금만 더 타면 '
+          +'최저 단가 '+nextPrice.toLocaleString()+'원 트랙으로 자동 업그레이드됩니다!',
+        trackPrice:nextPrice,
+        totalCount:effectiveNew
+      });
     }
   });
 }
@@ -5634,13 +5650,14 @@ window._dwVerifyExcel=function(){
           _dwRecalcSession(s);
           updated++;
 
-          // ★ 지능형 알림 트리거
+          // ★ 지능형 알림 트리거 (심야 필터 적용)
           if(s.totalCount!==prevCount){
             _dwCheckTierNotifications(prevCount, s.totalCount, {
               driverId:rid,
               dealerId:did,
               driverName:s.driverName||rid,
-              defPrice:s.defPrice||2900
+              defPrice:s.defPrice||2900,
+              entries:s.entries||[]  // ★ 심야 필터용 entries 전달
             });
             alertsSent++;
           }
@@ -5656,6 +5673,80 @@ window._dwVerifyExcel=function(){
     }).catch(function(e){if(st)st.innerHTML='<span style="color:var(--red)">❌ '+e.message+'</span>';});
   });
 };
+// ════════════════════════════════════════════════════════
+// 🔔 트랙 보장 내역 (알림 히스토리) 페이지
+// driver_notifications에서 settle_alert 타입만 시간순 열람
+// ════════════════════════════════════════════════════════
+function pageNotifyHistory(){
+  document.getElementById('page-title').textContent='🔔 트랙 보장 내역';
+  var el=document.getElementById('content');
+  el.innerHTML='<div style="max-width:480px;margin:0 auto;padding:8px">'
+    +'<div id="nh-body"><div style="text-align:center;padding:40px;color:var(--text3)">⏳ 불러오는 중...</div></div>'
+  +'</div>';
+  if(!_db||!_CU)return;
+  _db.collection('driver_notifications')
+    .where('targetDriverId','==',_CU.uid)
+    .where('type','==','settle_alert')
+    .orderBy('createdAt','desc')
+    .limit(50)
+    .get().then(function(snap){
+      var el2=document.getElementById('nh-body');
+      if(!el2)return;
+      if(snap.empty){
+        el2.innerHTML='<div class="empty"><div class="empty-icon">🔕</div>받은 트랙 알림이 없습니다<br><span style="font-size:11px;color:var(--text3)">관리자가 정산 데이터를 업로드하면<br>트랙 달성 시 자동으로 기록됩니다</span></div>';
+        return;
+      }
+      var achieved=0, pre=0;
+      snap.forEach(function(doc){var d=doc.data();if(d.subType==='achieved')achieved++;else pre++;});
+
+      var html='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">'
+        +'<div style="background:linear-gradient(135deg,#065f46,#059669);border-radius:12px;padding:12px;text-align:center;color:#fff">'
+          +'<div style="font-size:10px;opacity:.8;margin-bottom:2px">달성 완료 🎉</div>'
+          +'<div style="font-size:28px;font-weight:900">'+achieved+'</div>'
+          +'<div style="font-size:10px;opacity:.7">건</div></div>'
+        +'<div style="background:linear-gradient(135deg,#92400e,#d97706);border-radius:12px;padding:12px;text-align:center;color:#fff">'
+          +'<div style="font-size:10px;opacity:.8;margin-bottom:2px">예고 알림 🔥</div>'
+          +'<div style="font-size:28px;font-weight:900">'+pre+'</div>'
+          +'<div style="font-size:10px;opacity:.7">건</div></div>'
+      +'</div>'
+      +'<div style="font-size:12px;font-weight:800;margin-bottom:8px;color:var(--text2)">📋 전체 내역 (최근 50건)</div>';
+
+      snap.forEach(function(doc){
+        var d=doc.data();
+        var isAchieved=d.subType==='achieved';
+        var ts=d.createdAt&&d.createdAt.toDate?d.createdAt.toDate():new Date(d.createdAt||0);
+        var dateStr=ts.toLocaleDateString('ko-KR',{month:'numeric',day:'numeric'});
+        var timeStr=ts.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+        var bg=isAchieved?'linear-gradient(135deg,#065f46,#059669)':'linear-gradient(135deg,#92400e,#d97706)';
+        var unread=!d.isRead;
+        html+='<div style="background:var(--bg2);border-radius:12px;margin-bottom:8px;overflow:hidden;'+(unread?'border:1px solid var(--brand)':'')+'">'
+          +'<div style="background:'+bg+';padding:8px 12px;display:flex;align-items:center;justify-content:space-between">'
+            +'<div style="font-size:12px;font-weight:800;color:#fff">'+(isAchieved?'🎉 달성 완료':'🔥 달성 예정')+'</div>'
+            +(unread?'<span style="background:rgba(255,255,255,.25);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:6px">NEW</span>':'')
+            +'<div style="font-size:10px;color:rgba(255,255,255,.75)">'+dateStr+' '+timeStr+'</div>'
+          +'</div>'
+          +'<div style="padding:10px 12px">'
+            +'<div style="font-size:13px;font-weight:800;margin-bottom:4px">'+esc(d.title||'')+'</div>'
+            +'<div style="font-size:11px;color:var(--text2);line-height:1.5;white-space:pre-line">'+esc(d.body||'')+'</div>'
+            +(d.trackPrice>0?'<div style="margin-top:8px;background:var(--bg3);border-radius:8px;padding:6px 10px;display:flex;justify-content:space-between;align-items:center">'
+              +'<span style="font-size:11px;color:var(--text3)">보장 단가</span>'
+              +'<span style="font-size:16px;font-weight:900;color:var(--brand)">₩'+Number(d.trackPrice).toLocaleString()+'/건</span>'
+            +'</div>':'')
+            +(d.totalCount?'<div style="margin-top:4px;font-size:10px;color:var(--text3)">수행 건수: '+d.totalCount+'건 (06~24시 기준)</div>':'')
+          +'</div>'
+        +'</div>';
+        if(unread&&_db){
+          _db.collection('driver_notifications').doc(doc.id)
+            .update({isRead:true,readAt:new Date().toISOString()}).catch(function(){});
+        }
+      });
+      el2.innerHTML=html;
+    }).catch(function(e){
+      var c=document.getElementById('nh-body');
+      if(c)c.innerHTML='<div class="empty">❌ '+esc(e.message)+'</div>';
+    });
+}
+
 // ════════════════════════════════════════════════
 // 출퇴근 기록 저장 시 지각/결근 자동 판단
 function _checkLateness(checkInTime, stdStartTime, driverId, driverName, did, date){
@@ -9353,7 +9444,8 @@ var MENUS_DRIVER = [
     {ic:'📋',l:'정산 내역',  p:'my_statements', plan_key:'free'}
   ]},
   {s:'배달대행',items:[
-    {ic:'🛵',l:'배달 입력',  p:'delivery_input', plan_key:'free'}
+    {ic:'🛵',l:'배달 현황',    p:'delivery_input',    plan_key:'free'},
+    {ic:'🔔',l:'트랙 보장 내역',p:'notify_history',   plan_key:'free'}
   ]},
   {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices',plan_key:'free'}]}
 ];
@@ -9707,7 +9799,7 @@ function goPage(page){
   document.getElementById('topbar-right').innerHTML='';
   document.getElementById('sidebar').classList.remove('open');
   var _bd=document.getElementById('sb-backdrop');if(_bd)_bd.style.display='none';
-  var pages={settle:pageSettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,emp_home:pageEmpHome,vehicle:pageVehicle,expense:pageExpense,overtime:pageOvertime,evaluation:pageEvaluation,delivery_report:pageDeliveryReport,delivery_platform:pageDeliveryPlatform,delivery_input:pageDeliveryInput};
+  var pages={settle:pageSettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,emp_home:pageEmpHome,vehicle:pageVehicle,expense:pageExpense,overtime:pageOvertime,evaluation:pageEvaluation,delivery_report:pageDeliveryReport,delivery_platform:pageDeliveryPlatform,delivery_input:pageDeliveryInput,notify_history:pageNotifyHistory};
   var fn=pages[page];
   if(fn)fn();
   else document.getElementById('content').innerHTML='<div class="empty"><div class="empty-icon">🚧</div>준비 중</div>';
@@ -16697,8 +16789,15 @@ function _startDispatchListener(uid){
           bn.onclick=function(){
             bn.style.transform='translateX(-50%) scale(0.8)';
             setTimeout(function(){bn.remove();},200);
-            if(window._db&&ch.doc.id)
-              window._db.collection('driver_notifications').doc(ch.doc.id).update({isRead:true}).catch(function(){});
+            // ★ 읽음 처리 후 기사 배달 대시보드(주간 수수료·보전 내역)로 퀵 랜딩
+            if(window._db&&ch.doc.id){
+              window._db.collection('driver_notifications').doc(ch.doc.id)
+                .update({isRead:true,readAt:new Date().toISOString()})
+                .then(function(){
+                  // 기사 앱 > 배달 현황 페이지로 다이렉트 이동
+                  if(typeof goPage==='function') goPage('delivery_input');
+                }).catch(function(){});
+            }
           };
           document.body.appendChild(bn);
           if(navigator.vibrate)navigator.vibrate(vibPat);
