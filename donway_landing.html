@@ -510,7 +510,7 @@ html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#02
 #nav{position:fixed;top:0;left:0;right:0;z-index:500;height:54px;padding:0 16px}
 .pat{position:fixed!important;top:54px;left:0;right:0;z-index:499;padding:5px 12px!important;font-size:10px!important}
 #sw{position:fixed;top:86px;left:0;right:0;bottom:0;z-index:10;overflow:hidden;}
-.slide{position:absolute!important;inset:0!important;transform:translateX(100%);transition:transform .28s ease;overflow-y:auto;overflow-x:hidden;} .slide.s-cur{transform:translateX(0)!important;} .slide.s-prev{transform:translateX(-100%)!important;}
+.slide{display:none!important;position:absolute!important;inset:0!important;overflow-y:auto;overflow-x:hidden;} .slide.s-cur{display:block!important;}
 
 
 
@@ -1442,7 +1442,7 @@ html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#02
 <div id="dots"><button class="dot on" data-idx="0" title="🏠 DONWAY" onclick="gS(0)"></button><button class="dot" data-idx="1" title="😩 공통 고민" onclick="gS(1)"></button><button class="dot" data-idx="2" title="🏢 업종별 사례" onclick="gS(2)"></button><button class="dot" data-idx="3" title="⚡ 이용 방법" onclick="gS(3)"></button><button class="dot" data-idx="4" title="📱 QR 출퇴근" onclick="gS(4)"></button><button class="dot" data-idx="5" title="🔧 기능 소개" onclick="gS(5)"></button><button class="dot" data-idx="6" title="💡 데모" onclick="gS(6)"></button><button class="dot" data-idx="7" title="🏆 경쟁사 비교" onclick="gS(7)"></button><button class="dot" data-idx="8" title="💰 요금제" onclick="gS(8)"></button><button class="dot" data-idx="9" title="❓ FAQ" onclick="gS(9)"></button><button class="dot" data-idx="10" title="🚀 무료 시작" onclick="gS(10)"></button><button class="dot" data-idx="11" title="🖼️ 플랫폼 개요" onclick="gS(11)"></button>
 </div>
 <div id="sctr">1 / 12</div>
-<div id="ver" style="position:fixed;bottom:4px;left:50%;transform:translateX(-50%);font-size:9px;color:rgba(255,255,255,.25);z-index:999;pointer-events:none">v2.9</div>
+<div id="ver" style="position:fixed;bottom:4px;left:50%;transform:translateX(-50%);font-size:9px;color:rgba(255,255,255,.25);z-index:999;pointer-events:none">v3.0</div>
 <div id="aring" style="display:none" title="자동넘기기"><svg viewBox="0 0 22 22" fill="none">
 <circle cx="11" cy="11" r="9.5" stroke="rgba(255,255,255,.1)" stroke-width="1.5"/>
 <circle id="aarc" cx="11" cy="11" r="9.5" stroke="#00c8f8" stroke-width="1.5" stroke-linecap="round" transform="rotate(-90 11 11)" stroke-dasharray="60" stroke-dashoffset="60"/></svg>
@@ -2094,9 +2094,8 @@ if(!_initTier()){document.addEventListener('DOMContentLoaded',_initTier);}
   window._c=0;
   var slides=document.querySelectorAll('.slide');
 
-  function show(i,prev){
-    slides.forEach(function(s){ s.classList.remove('s-cur','s-prev'); });
-    if(prev!=null) slides[prev].classList.add('s-prev');
+  function show(i){
+    slides.forEach(function(s){ s.classList.remove('s-cur'); });
     slides[i].classList.add('s-cur');
   }
 
@@ -2105,7 +2104,7 @@ if(!_initTier()){document.addEventListener('DOMContentLoaded',_initTier);}
     if(i===window._c)return;
     var prev=window._c;
     window._c=i;
-    show(i,prev);
+    show(i);
     uUI();
     setTimeout(function(){
       var cur=document.getElementById('slide-'+i);
@@ -2140,7 +2139,7 @@ if(!_initTier()){document.addEventListener('DOMContentLoaded',_initTier);}
   });
 
   // 초기화
-  show(0,null);
+  show(0);
   uUI();
   setTimeout(function(){
     var s0=document.getElementById('slide-0');
