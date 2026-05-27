@@ -5143,21 +5143,211 @@ var _dwPlatform='coupangEats';
 function _dwRenderSimulator(){
   var el=document.getElementById('dw-simulator-wrap');
   if(!el)return;
-  var defaultPrice=DW_TRACKS&&DW_TRACKS.length?DW_TRACKS[0].price:2900;
-  var tracks=DW_TRACKS||[];
+
+  var tracks=(DW_TRACKS&&DW_TRACKS.length>1)?DW_TRACKS:
+    [{min:0,price:2900,label:'기본',key:'t0'},
+     {min:180,price:4200,label:'180건+',key:'t1'},
+     {min:250,price:5100,label:'250건+',key:'t2'},
+     {min:300,price:5300,label:'300건+',key:'t3'},
+     {min:350,price:5500,label:'350건+',key:'t4'}];
+
+  var trackCards=tracks.slice(1).map(function(t,i){
+    var cs=['#3b82f6','#8b5cf6','#f59e0b','#10b981'];
+    var c=cs[i%cs.length];
+    return '<div style="text-align:center;padding:10px 6px;background:'+c+'22;border:2px solid '+c+'55;border-radius:10px;min-width:80px">'
+      +'<div style="font-size:16px;font-weight:900;color:'+c+'">₩'+t.price.toLocaleString()+'</div>'
+      +'<div style="font-size:10px;font-weight:700;color:'+c+';margin-top:2px">'+t.label+'</div>'
+      +'</div>';
+  }).join('');
 
   el.innerHTML=
-    '<div style="background:linear-gradient(135deg,#0f172a,#1e293b);border-radius:16px;padding:20px;margin-bottom:16px;color:#fff">'      +'<div style="font-size:15px;font-weight:900;margin-bottom:4px">⚡ DONWAY 보전·환수 엔진 시뮬레이터</div>'      +'<div style="font-size:11px;color:rgba(255,255,255,.6)">실제 정산 방식을 숫자로 확인해보세요</div>'    +'</div>'    // ① 트랙 설명
-    +'<div class="card" style="margin-bottom:10px">'      +'<div style="font-size:13px;font-weight:800;margin-bottom:10px;color:var(--brand)">① 주간 건수 → 트랙 단가 자동 결정</div>'      +'<div style="font-size:11px;color:var(--text3);margin-bottom:10px">기사의 이번 주 배달 완료 건수에 따라 목표 보장단가(트랙)가 자동으로 올라갑니다.</div>'      +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:6px">'      +tracks.slice(1).map(function(t,i){
-        var colors=['#3b82f6','#8b5cf6','#f59e0b','#10b981'];
-        var c=colors[i%colors.length];
-        return '<div style="text-align:center;padding:10px 6px;background:'+c+'22;border:1.5px solid '+c+'44;border-radius:10px">'          +'<div style="font-size:18px;font-weight:900;color:'+c+'">'+t.price.toLocaleString()+'</div>'          +'<div style="font-size:9px;color:var(--text3)">원/건</div>'          +'<div style="font-size:10px;font-weight:700;color:'+c+';margin-top:3px">'+t.label+'</div>'          +'</div>';
-      }).join('')      +'</div>'    +'</div>'    // ② 시뮬레이터 입력
-    +'<div class="card" style="margin-bottom:10px">'      +'<div style="font-size:13px;font-weight:800;margin-bottom:12px;color:var(--brand)">② 직접 계산해보기</div>'      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">'        +'<div>'          +'<label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">📦 이번 주 배달 건수</label>'          +'<input id="sim-cnt" type="number" value="280" min="1" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:15px;font-weight:700;text-align:center;background:var(--bg);color:var(--text)">'        +'</div>'        +'<div>'          +'<label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">💰 플랫폼 실제 지급단가 (건당)</label>'          +'<input id="sim-price" type="number" value="3800" min="0" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:15px;font-weight:700;text-align:center;background:var(--bg);color:var(--text)">'        +'</div>'      +'</div>'      +'<button onclick="_dwSimCalc()" class="btn btn-blue" style="width:100%;padding:10px;font-size:13px;font-weight:800">⚡ 계산하기</button>'      +'<div id="sim-result" style="margin-top:12px"></div>'    +'</div>'    // ③ 원리 설명
-    +'<div class="card">'      +'<div style="font-size:13px;font-weight:800;margin-bottom:10px;color:var(--brand)">③ 보전·환수 원리 (핵심)</div>'      +'<div style="display:flex;flex-direction:column;gap:8px">'        +'<div style="padding:10px 12px;background:#dbeafe;border-radius:10px;border-left:3px solid #3b82f6">'          +'<div style="font-size:12px;font-weight:800;color:#1d4ed8;margin-bottom:3px">📥 보전 (대리점 → 기사)</div>'          +'<div style="font-size:11px;color:#1e40af">플랫폼 단가 < 목표단가 → <b>차액만큼 대리점이 기사에게 지급</b><br>예: 목표 5,300원 / 플랫폼 4,200원 → 대리점이 1,100원 보전</div>'        +'</div>'        +'<div style="padding:10px 12px;background:#fce7f3;border-radius:10px;border-left:3px solid #ec4899">'          +'<div style="font-size:12px;font-weight:800;color:#be185d;margin-bottom:3px">📤 환수 (기사 → 대리점)</div>'          +'<div style="font-size:11px;color:#9d174d">플랫폼 단가 > 목표단가 → <b>차액만큼 기사가 대리점에 반납</b><br>예: 목표 5,300원 / 플랫폼 6,000원 → 기사가 700원 환수</div>'        +'</div>'        +'<div style="padding:10px 12px;background:#d1fae5;border-radius:10px;border-left:3px solid #10b981">'          +'<div style="font-size:12px;font-weight:800;color:#065f46;margin-bottom:3px">🌙 심야 예외 (00:00~06:00)</div>'          +'<div style="font-size:11px;color:#047857">심야 시간대 배달은 보전·환수 없이 플랫폼 지급액 그대로 적용</div>'        +'</div>'        +'<div style="padding:10px 12px;background:#fef3c7;border-radius:10px;border-left:3px solid #f59e0b">'          +'<div style="font-size:12px;font-weight:800;color:#92400e;margin-bottom:3px">🚫 취소/패널티 건 자동 제외</div>'          +'<div style="font-size:11px;color:#78350f">플랫폼 단가 0원 이하인 취소·오배송 건은 보전·환수 계산 및 건수 카운트에서 자동 제외</div>'        +'</div>'      +'</div>'    +'</div>';
-
-  _dwSimCalc();
+    // ── 헤더
+    '<div style="background:linear-gradient(135deg,#0f172a,#1e3a5f);border-radius:16px;padding:18px 20px;margin-bottom:12px;color:#fff;display:flex;align-items:center;justify-content:space-between">'
+      +'<div>'
+        +'<div style="font-size:15px;font-weight:900">🛵 DONWAY 엔진 실시간 정산 시뮬레이터</div>'
+        +'<div style="font-size:11px;opacity:.6;margin-top:2px">건별 보전·환수 판정을 눈앞에서 확인하세요</div>'
+      +'</div>'
+      +'<button id="dw-sim-btn" onclick="dwStartLiveSimulation()" style="background:#3b82f6;border:none;color:#fff;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap">⚡ 시뮬레이션 시작</button>'
+    +'</div>'
+    // ── 트랙 단가 표시
+    +'<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">'+trackCards+'</div>'
+    // ── 전광판
+    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px" id="dw-sim-scoreboard">'
+      +'<div style="background:var(--bg2);border-radius:12px;padding:12px;text-align:center;border:1.5px solid var(--border)">'
+        +'<div style="font-size:10px;color:var(--text3);font-weight:700">현재 트랙 단가</div>'
+        +'<div id="dw-sc-track" style="font-size:18px;font-weight:900;color:var(--text);margin-top:4px">₩2,900</div>'
+        +'<div id="dw-sc-cnt" style="font-size:10px;color:var(--text3)">0건</div>'
+      +'</div>'
+      +'<div style="background:#dbeafe;border-radius:12px;padding:12px;text-align:center;border:1.5px solid #93c5fd">'
+        +'<div style="font-size:10px;color:#1d4ed8;font-weight:700">📥 보전 투입 총액</div>'
+        +'<div id="dw-sc-inj" style="font-size:18px;font-weight:900;color:#1d4ed8;margin-top:4px">₩0</div>'
+        +'<div style="height:4px;background:#bfdbfe;border-radius:4px;margin-top:6px"><div id="dw-bar-inj" style="height:100%;background:#3b82f6;border-radius:4px;width:0%;transition:width .3s"></div></div>'
+      +'</div>'
+      +'<div style="background:#fce7f3;border-radius:12px;padding:12px;text-align:center;border:1.5px solid #f9a8d4">'
+        +'<div style="font-size:10px;color:#be185d;font-weight:700">📤 환수 차감 총액</div>'
+        +'<div id="dw-sc-ext" style="font-size:18px;font-weight:900;color:#be185d;margin-top:4px">₩0</div>'
+        +'<div style="height:4px;background:#fbcfe8;border-radius:4px;margin-top:6px"><div id="dw-bar-ext" style="height:100%;background:#ec4899;border-radius:4px;width:0%;transition:width .3s"></div></div>'
+      +'</div>'
+      +'<div style="background:#d1fae5;border-radius:12px;padding:12px;text-align:center;border:1.5px solid #6ee7b7">'
+        +'<div style="font-size:10px;color:#065f46;font-weight:700">💼 대리점 순마진</div>'
+        +'<div id="dw-sc-margin" style="font-size:18px;font-weight:900;color:#065f46;margin-top:4px">₩0</div>'
+        +'<div id="dw-sc-margin-badge" style="font-size:9px;margin-top:4px"></div>'
+      +'</div>'
+    +'</div>'
+    // ── 트랙 점프 알림
+    +'<div id="dw-track-alert" style="display:none;padding:10px 16px;border-radius:10px;margin-bottom:10px;text-align:center;font-weight:800;font-size:13px;transition:all .3s"></div>'
+    // ── 스트림 콘솔
+    +'<div style="background:#0d1117;border-radius:12px;overflow:hidden">'
+      +'<div style="padding:8px 14px;background:#161b22;display:flex;align-items:center;gap:6px">'
+        +'<div style="width:10px;height:10px;border-radius:50%;background:#ff5f56"></div>'
+        +'<div style="width:10px;height:10px;border-radius:50%;background:#ffbd2e"></div>'
+        +'<div style="width:10px;height:10px;border-radius:50%;background:#27c93f"></div>'
+        +'<span style="font-size:11px;color:#8b949e;margin-left:8px">donway-engine.js — 실시간 정산 스트림</span>'
+      +'</div>'
+      +'<div id="dw-sim-console" style="max-height:300px;overflow-y:auto;padding:2px 0">'
+        +'<div style="padding:14px;text-align:center;color:#8b949e;font-size:12px">▶ 시뮬레이션 시작 버튼을 누르면 건별 정산 판정이 실시간으로 스트리밍됩니다.</div>'
+      +'</div>'
+    +'</div>'
+    // ── 범례
+    +'<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">'
+      +'<span style="font-size:11px;background:#dcfce7;color:#166534;padding:3px 8px;border-radius:20px">📥 보전 = 대리점→기사 지급</span>'
+      +'<span style="font-size:11px;background:#fee2e2;color:#991b1b;padding:3px 8px;border-radius:20px">📤 환수 = 기사→대리점 반납</span>'
+      +'<span style="font-size:11px;background:#f3f4f6;color:#6b7280;padding:3px 8px;border-radius:20px">🌙 심야 = 계산 제외</span>'
+      +'<span style="font-size:11px;background:#fef3c7;color:#92400e;padding:3px 8px;border-radius:20px">⬆ 트랙 점프 = 보장단가 상승</span>'
+    +'</div>';
 }
+
+window.dwStartLiveSimulation=function(){
+  var btn=document.getElementById('dw-sim-btn');
+  var console_el=document.getElementById('dw-sim-console');
+  if(!btn||!console_el)return;
+
+  btn.disabled=true; btn.textContent='⏳ 가동 중...'; btn.style.background='#64748b';
+
+  // 가상 데이터 생성 (200건 - 주간/심야 혼합)
+  var hours=[8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,1,2,3,4];
+  var prices=[2800,2900,3100,3300,3500,3800,4000,4200,4500,5000,5500,6000,2700,6200];
+  var data=[];
+  for(var i=1;i<=200;i++){
+    data.push({
+      id:i,
+      hour:hours[Math.floor(Math.random()*hours.length)],
+      platformPrice:prices[Math.floor(Math.random()*prices.length)]
+    });
+  }
+
+  // 상태 초기화
+  var validCount=0, totalInj=0, totalExt=0;
+  var idx=0;
+  var maxShow=50; // 50건까지 시각화
+  var prevTrackPrice=0;
+  console_el.innerHTML='';
+
+  var DWT=window.DW_TRACKS&&DW_TRACKS.length>1?DW_TRACKS:[
+    {min:0,price:2900},{min:180,price:4200},{min:250,price:5100},{min:300,price:5300},{min:350,price:5500}
+  ];
+
+  function getTrack(cnt){
+    var t=DWT[0];
+    for(var i=DWT.length-1;i>=0;i--){if(cnt>=(DWT[i].min||0)){t=DWT[i];break;}}
+    return t;
+  }
+
+  var timer=setInterval(function(){
+    if(idx>=data.length||idx>=maxShow){
+      clearInterval(timer);
+      btn.disabled=false; btn.textContent='⚡ 다시 시뮬레이션'; btn.style.background='#3b82f6';
+      // 완료 배너
+      var done=document.createElement('div');
+      done.style.cssText='padding:12px;text-align:center;background:#d1fae5;color:#065f46;font-weight:800;font-size:13px;border-top:1px solid #6ee7b7';
+      done.textContent='✅ '+idx+'건 정산 시뮬레이션 완료 | 보전 ₩'+totalInj.toLocaleString()+' | 환수 ₩'+totalExt.toLocaleString();
+      console_el.appendChild(done);
+      return;
+    }
+
+    var o=data[idx];
+    var isMid=o.hour<6;
+    var target=getTrack(validCount).price;
+
+    if(!isMid&&o.platformPrice>0) validCount++;
+
+    var newTrack=getTrack(validCount).price;
+
+    // 트랙 점프 감지
+    if(newTrack!==prevTrackPrice&&prevTrackPrice>0){
+      var alert_el=document.getElementById('dw-track-alert');
+      if(alert_el){
+        alert_el.style.display='block';
+        alert_el.style.background='linear-gradient(135deg,#fbbf24,#f59e0b)';
+        alert_el.style.color='#78350f';
+        alert_el.textContent='🚀 트랙 점프! '+validCount+'건 돌파 → 보장단가 ₩'+prevTrackPrice.toLocaleString()+' → ₩'+newTrack.toLocaleString()+'으로 상승!';
+        setTimeout(function(){if(alert_el)alert_el.style.display='none';},2000);
+      }
+    }
+    prevTrackPrice=newTrack;
+    target=newTrack;
+
+    // 보전/환수 계산
+    var inj=0,ext=0,badge='',rowBg='transparent';
+    if(isMid){
+      badge='<span style="font-size:10px;background:#374151;color:#9ca3af;padding:2px 8px;border-radius:12px">🌙 심야 계산 제외</span>';
+      rowBg='rgba(255,255,255,.03)';
+    } else if(o.platformPrice<=0){
+      badge='<span style="font-size:10px;background:#7f1d1d;color:#fca5a5;padding:2px 8px;border-radius:12px">🚫 취소·패널티 제외</span>';
+      rowBg='rgba(239,68,68,.05)';
+    } else if(o.platformPrice<target){
+      inj=Math.floor(target-o.platformPrice);
+      totalInj+=inj;
+      badge='<span style="font-size:11px;background:#065f46;color:#6ee7b7;padding:3px 10px;border-radius:12px;font-weight:700">📥 +₩'+inj.toLocaleString()+' 보전</span>';
+      rowBg='rgba(16,185,129,.08)';
+    } else if(o.platformPrice>target){
+      ext=Math.floor(o.platformPrice-target);
+      totalExt+=ext;
+      badge='<span style="font-size:11px;background:#881337;color:#fda4af;padding:3px 10px;border-radius:12px;font-weight:700">📤 -₩'+ext.toLocaleString()+' 환수</span>';
+      rowBg='rgba(244,63,94,.08)';
+    } else {
+      badge='<span style="font-size:10px;color:#6b7280">⚖️ 균형</span>';
+    }
+
+    // 행 추가
+    var row=document.createElement('div');
+    row.style.cssText='display:grid;grid-template-columns:36px 48px 90px 90px 1fr;gap:0;padding:5px 14px;border-bottom:1px solid #21262d;align-items:center;background:'+rowBg+';font-family:monospace;font-size:11px;'+(isMid?'opacity:.4;':'');
+    row.innerHTML=
+      '<span style="color:#8b949e">#'+o.id+'</span>'
+      +'<span style="color:#8b949e">'+(o.hour<10?'0'+o.hour:o.hour)+':xx</span>'
+      +'<span style="color:#ffd700;font-weight:700">₩'+o.platformPrice.toLocaleString()+'</span>'
+      +'<span style="color:#79c0ff">₩'+target.toLocaleString()+'</span>'
+      +'<span style="text-align:right">'+badge+'</span>';
+    // 애니메이션
+    row.style.opacity='0'; row.style.transform='translateY(-4px)';
+    console_el.appendChild(row);
+    setTimeout(function(){row.style.transition='all .2s';row.style.opacity=(isMid?'.4':'1');row.style.transform='none';},20);
+    console_el.scrollTop=console_el.scrollHeight;
+
+    // 전광판 업데이트
+    var sc_t=document.getElementById('dw-sc-track');
+    var sc_c=document.getElementById('dw-sc-cnt');
+    var sc_i=document.getElementById('dw-sc-inj');
+    var sc_e=document.getElementById('dw-sc-ext');
+    var sc_m=document.getElementById('dw-sc-margin');
+    var sc_mb=document.getElementById('dw-sc-margin-badge');
+    var bi=document.getElementById('dw-bar-inj');
+    var be=document.getElementById('dw-bar-ext');
+    if(sc_t)sc_t.textContent='₩'+target.toLocaleString();
+    if(sc_c)sc_c.textContent=validCount+'건';
+    if(sc_i)sc_i.textContent='₩'+totalInj.toLocaleString();
+    if(sc_e)sc_e.textContent='₩'+totalExt.toLocaleString();
+    var margin=totalExt-totalInj;
+    if(sc_m){sc_m.textContent='₩'+Math.abs(margin).toLocaleString();sc_m.style.color=margin>=0?'#065f46':'#9f1239';}
+    if(sc_mb){sc_mb.textContent=margin>=0?'▲ 대리점 이익':'▼ 대리점 투입';sc_mb.style.color=margin>=0?'#065f46':'#9f1239';}
+    var maxBar=Math.max(totalInj,totalExt,1);
+    if(bi)bi.style.width=Math.min(100,Math.round(totalInj/maxBar*100))+'%';
+    if(be)be.style.width=Math.min(100,Math.round(totalExt/maxBar*100))+'%';
+
+    idx++;
+  }, 250);
+};
+
 
 window._dwSimCalc=function(){
   var cnt=parseInt(document.getElementById('sim-cnt').value)||0;
