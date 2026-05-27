@@ -770,6 +770,18 @@ html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#02
 .s-fit,.s-center{height:100%;}
 
 
+
+/* 플랜별 체크 색상 */
+#pc-qr .pcfl li::before{background:rgba(0,200,248,.12);border-color:rgba(0,200,248,.35);color:#00c8f8;}
+#pc-settle .pcfl li::before{background:rgba(245,184,0,.12);border-color:rgba(245,184,0,.35);color:#f5b800;}
+#pc-payroll .pcfl li::before{background:rgba(168,85,247,.12);border-color:rgba(168,85,247,.35);color:#a855f7;}
+#pc-combo .pcfl li::before{background:rgba(0,232,122,.12);border-color:rgba(0,232,122,.35);color:#00e87a;}
+#pc-full .pcfl li::before{background:rgba(255,75,110,.12);border-color:rgba(255,75,110,.35);color:#ff4b6e;}
+/* 🆕 뱃지 */
+.pcfl li:has(.badge-new)::before{content:'🆕';background:none;border:none;font-size:12px;}
+.pcfl-lock{display:flex;align-items:center;gap:9px;font-size:13px;color:rgba(255,255,255,.78);padding:4px 0;}
+.pcfl-lock::before{content:'🔒';font-size:13px;}
+.pcfl-lock.unlocked::before{content:'✓';}
 </style>
 </head>
 <body>
@@ -1292,6 +1304,7 @@ html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#02
 
     <div class="pc rv" id="pc-qr">
       <div class="pcpl">QR 출퇴근</div>
+      <div style="font-size:10px;color:rgba(0,200,248,.6);text-align:center;margin-bottom:4px;letter-spacing:1px">🔐 QR · GPS · 방문자 등록 포함</div>
       <div class="pcnm">📷 QR 출퇴근</div>
       <div class="pcfor" id="pc-qr-for">소규모 매장 · ~10명</div>
       <div class="pcprice" id="pc-qr-price">29,000<span>원</span></div>
@@ -1312,6 +1325,7 @@ html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#02
 
     <div class="pc rv" id="pc-settle">
       <div class="pcpl">택배 정산</div>
+      <div style="font-size:10px;color:rgba(245,184,0,.6);text-align:center;margin-bottom:4px;letter-spacing:1px">📦 쿠팡·CJ·배달대행 정산 포함</div>
       <div class="pcnm">📦 택배 정산</div>
       <div class="pcfor" id="pc-settle-for">쿠팡·CJ 대리점 전용</div>
       <div class="pcprice" id="pc-settle-price">59,000<span>원</span></div>
@@ -1330,6 +1344,7 @@ html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#02
 
     <div class="pc rv" id="pc-payroll">
       <div class="pcpl">급여 관리</div>
+      <div style="font-size:10px;color:rgba(168,85,247,.6);text-align:center;margin-bottom:4px;letter-spacing:1px">💼 4대보험·연차·수당 자동화 포함</div>
       <div class="pcnm">💼 급여 관리</div>
       <div class="pcfor" id="pc-payroll-for">시급·일급·월급·수수료</div>
       <div class="pcprice" id="pc-payroll-price">49,000<span>원</span></div>
@@ -1349,6 +1364,7 @@ html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#02
 
     <div class="pc rv" id="pc-combo">
       <div class="pcpl">QR + 급여</div>
+      <div style="font-size:10px;color:rgba(0,232,122,.6);text-align:center;margin-bottom:4px;letter-spacing:1px">🔐💼 QR출퇴근 + 급여관리 통합</div>
       <div class="pcnm">📷💼 QR + 급여</div>
       <div class="pcfor" id="pc-combo-for">출퇴근 + 급여 통합</div>
       <div class="pcprice" id="pc-combo-price">69,000<span>원</span></div>
@@ -1364,23 +1380,21 @@ html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#02
 <button class="pcbtn pcnav" onclick="gS(5)" style="background:rgba(0,200,248,.12);color:#00c8f8;border:1px solid rgba(0,200,248,.35);margin-top:4px">기능 소개 →</button>
     </div>
 
-    <div class="pc hot rv" id="pc-full">
-      <div class="pcbdg">⭐ 베스트</div>
-      <div class="pcpl">올인원</div>
-      <div class="pcnm">🚀 ALL-IN-ONE</div>
-      <div class="pcfor" id="pc-full-for">모든 기능 무제한</div>
-      <div class="pcprice" id="pc-full-price">99,000<span>원</span></div>
-      <div class="pcper">/ 월 · <span style="color:#00c8f8;font-weight:700" id="pc-full-range">구간 선택 후 결정</span></div>
+    <div class="pc rv" id="pc-custom" style="border:1px solid rgba(255,255,255,.2);background:linear-gradient(135deg,rgba(255,255,255,.04),rgba(255,255,255,.02))">
+      <div class="pcnm">🔧 맞춤 기능 추가</div>
+      <div class="pcfor">필요한 기능만 골라서</div>
+      <div class="pcprice" style="font-size:22px">별도 <span style="font-size:14px">견적</span></div>
+      <div class="pcper">/ 원하는 기능 선택 가능</div>
       <ul class="pcfl">
-        <li>택배 정산 자동화</li>
-        <li>QR 출퇴근 (특허)</li>
-        <li>급여·4대보험 자동</li>
-        <li>세금계산서 자동 발행</li>
-        <li>차량·경비 관리</li>
-        <li>GPS 캠프 네비</li>
-        <li id="pc-full-extra" style="color:#f5b800;font-weight:700"></li>
+        <li>🚚 원스톱 물류 (긴급배송·스캔)</li>
+        <li>🧾 세금계산서 자동 발행</li>
+        <li>📝 위수탁 계약서 관리</li>
+        <li>🚗 차량·경비 관리</li>
+        <li>⭐ 직원 평가 시스템</li>
+        <li>🛠 기타 맞춤 기능 개발</li>
       </ul>
-      <button class="pcbtn pcbp" onclick="location.href='https://donway.ai.kr/settle'">지금 무료 시작</button>
+      <button class="pcbtn" onclick="location.href='tel:051-711-3103'" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.3);color:#fff">📞 051-711-3103 문의</button>
+      <button class="pcbtn" onclick="location.href='https://pf.kakao.com/_xnKxnxj'" style="background:rgba(254,229,0,.12);border:1px solid rgba(254,229,0,.3);color:#FFE000;margin-top:4px">💬 카카오톡 문의</button>
     </div>
 
   </div>
