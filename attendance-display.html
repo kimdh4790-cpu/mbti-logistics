@@ -283,12 +283,29 @@ function genCode(slot){
   return n.toString().padStart(6,'0');
 }
 
+// GPS 정보 로드
+var _dispGPS={lat:0,lng:0,radius:0};
+function loadDispGPS(){
+  if(!_db||!_dealerId) return;
+  _db.collection('settings').doc(_dealerId+'_attConfig').get().then(function(snap){
+    if(snap.exists){
+      var d=snap.data();
+      if(d.gpsLat){_dispGPS={lat:d.gpsLat,lng:d.gpsLng,radius:d.radius||100};}
+    }
+  }).catch(function(){});
+}
+
 // QR 데이터 생성 - URL 방식 (카메라로 찍으면 바로 체크인 페이지로 이동)
 function genQrData(slot){
   var code=genCode(slot);
-  return location.origin+'/checkin?did='+_dealerId+
+  var url=location.origin+'/checkin?did='+_dealerId+
     '&slot='+slot+'&token='+code+
     (_companyName?'&name='+encodeURIComponent(_companyName):'');
+  // GPS 설정 있으면 포함
+  if(_dispGPS.lat&&_dispGPS.lng){
+    url+='&gpsLat='+_dispGPS.lat+'&gpsLng='+_dispGPS.lng+'&radius='+(_dispGPS.radius||100);
+  }
+  return url;
 }
 
 // ── UI 구성 ──
@@ -475,6 +492,7 @@ window.addEventListener('load',function(){
   // Firebase 초기화
   if(!firebase.apps.length) firebase.initializeApp(FB_CFG);
   _db=firebase.firestore();
+  loadDispGPS();
   buildUI();
   buildAttendanceQr(_curSlot);
   setInterval(updateTimer,100);

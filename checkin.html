@@ -234,8 +234,12 @@ window.addEventListener('load',function(){
   // ★ URL에 slot/token 있으면 QR 스캔한 것 → 자동 검증
   if(_urlSlot&&_urlToken){
     if(verifySlot(_urlSlot,_urlToken)){
-      _qrResult={slot:_urlSlot,code:_urlToken,dealerId:_dealerId};
-      showStatus('qr-status','✅ QR 인식 완료! 쿠팡ID를 입력하세요','ok');
+      _qrResult={slot:_urlSlot,code:_urlToken,dealerId:_dealerId,
+        gpsLat:parseFloat(_params.get('gpsLat')||0),
+        gpsLng:parseFloat(_params.get('gpsLng')||0),
+        radius:parseInt(_params.get('radius')||0)};
+      showStatus('qr-status','✅ QR 인식! GPS 확인 중...','ok');
+      checkGPS(_qrResult);
       // 카메라 안 켜도 됨
     } else {
       document.body.innerHTML='<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#080810;color:#e8e8f0;font-family:sans-serif;text-align:center;padding:20px">'+
@@ -293,21 +297,85 @@ function scanFrame(){
   ctx.drawImage(video,0,0);
   var imageData=ctx.getImageData(0,0,canvas.width,canvas.height);
   var code=jsQR(imageData.data,imageData.width,imageData.height);
-  if(code&&code.data){
-    try{
-      var data=JSON.parse(code.data);
-      if(data.type==='attendance'&&data.dealerId===_dealerId){
-        if(verifySlot(data.slot,data.code)){
-          stopQrScan();
-          _qrResult=data;
-          showStatus('qr-status','✅ QR 인식 완료! 직원 ID를 확인해주세요','ok');
-        } else {
-          showStatus('qr-status','⏰ QR이 만료됐습니다. 화면을 다시 스캔해주세요','err');
-        }
+  if(!code||!code.data) return;
+
+  try{
+    var data=JSON.parse(code.data);
+
+    // ── 방식 1: 직원 개인 QR {v:2, type:'emp', dealerId, userId, name} ──
+    if(data.type==='emp' && data.dealerId===_dealerId){
+      stopQrScan();
+      _qrResult={type:'emp', slot:0, code:'emp', dealerId:_dealerId,
+        gpsLat:data.gpsLat||0, gpsLng:data.gpsLng||0, radius:data.radius||0};
+      document.getElementById('emp-id').value=data.userId||'';
+      showStatus('qr-status','✅ '+esc(data.name||data.userId)+' QR 인식! GPS 확인 중...','ok');
+      checkGPS(_qrResult);
+      return;
+    }
+
+    // ── 방식 2: 동적 QR {v:2, dealerId, ts, ivSec, gpsLat, gpsLng, radius} ──
+    if(data.v===2 && data.dealerId===_dealerId && data.ts){
+      var ivMs=(data.ivSec||30)*1000;
+      var age=Date.now()-data.ts;
+      if(age>ivMs*1.5){
+        showStatus('qr-status','⏰ QR이 만료됐습니다. 화면을 다시 스캔해주세요','err');
+        return;
       }
-    }catch(e){}
-  }
+      stopQrScan();
+      _qrResult=data;
+      showStatus('qr-status','✅ QR 인식! GPS 확인 중...','ok');
+      checkGPS(data);
+      return;
+    }
+
+    // ── 방식 3: URL QR (donway.ai.kr/checkin?slot=...) ── 이미 URL로 처리됨
+  }catch(e){}
 }
+
+// ── GPS 거리 감지 ──
+function checkGPS(qrData){
+  var gpsLat=parseFloat(qrData.gpsLat||0);
+  var gpsLng=parseFloat(qrData.gpsLng||0);
+  var radius=parseInt(qrData.radius||0);
+
+  // GPS 설정 없으면 바로 통과
+  if(!gpsLat||!gpsLng||radius===0){
+    if(qrData.type!=='emp'){
+      showStatus('qr-status','✅ QR 인식 완료! 직원 ID를 확인해주세요','ok');
+    } else {
+      showStatus('qr-status','✅ QR 인식 완료! 출퇴근 기록 버튼을 눌러주세요','ok');
+    }
+    return;
+  }
+
+  showStatus('qr-status','📍 현재 위치 확인 중...','loading');
+  navigator.geolocation.getCurrentPosition(function(pos){
+    var dist=getDistance(pos.coords.latitude,pos.coords.longitude,gpsLat,gpsLng);
+    if(dist<=radius){
+      showStatus('qr-status','✅ QR 인식 + 위치 확인 완료! ('+Math.round(dist)+'m) 직원 ID를 확인해주세요','ok');
+    } else {
+      _qrResult=null;
+      showStatus('qr-status','🚫 위치 오류: 현재 위치가 회사에서 '+Math.round(dist)+'m 떨어져 있습니다 (허용 '+radius+'m 이내)','err');
+      setTimeout(function(){startQrScan();},2000);
+    }
+  },function(){
+    // 위치 권한 거부 → 경고만 표시하고 통과
+    showStatus('qr-status','⚠️ 위치 확인 불가 — QR 인식은 완료됐습니다. 직원 ID를 확인해주세요','ok');
+  },{timeout:8000,maximumAge:30000});
+}
+
+// ── 두 좌표 간 거리 계산 (Haversine) ──
+function getDistance(lat1,lng1,lat2,lng2){
+  var R=6371000;
+  var dLat=(lat2-lat1)*Math.PI/180;
+  var dLng=(lng2-lng1)*Math.PI/180;
+  var a=Math.sin(dLat/2)*Math.sin(dLat/2)+
+    Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
+    Math.sin(dLng/2)*Math.sin(dLng/2);
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 // ── 슬롯 검증 ──
 function verifySlot(slot,code){
@@ -399,7 +467,7 @@ async function doCheckin(){
       type:newType,date:today,
       time:now.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}),
       recordedAt:firebase.firestore.FieldValue.serverTimestamp(),
-      method:_mode==='qr'?'QR':'코드입력',
+      method:_mode==='qr'?(_qrResult&&_qrResult.type==='emp'?'개인QR':'동적QR'):'코드입력',
       slot:usedSlot
     });
 
