@@ -283,16 +283,12 @@ function genCode(slot){
   return n.toString().padStart(6,'0');
 }
 
-// QR 데이터 생성
+// QR 데이터 생성 - URL 방식 (카메라로 찍으면 바로 체크인 페이지로 이동)
 function genQrData(slot){
   var code=genCode(slot);
-  return JSON.stringify({
-    type:'attendance',
-    dealerId:_dealerId,
-    slot:slot,
-    code:code,
-    ts:Date.now()
-  });
+  return location.origin+'/checkin?did='+_dealerId+
+    '&slot='+slot+'&token='+code+
+    (_companyName?'&name='+encodeURIComponent(_companyName):'');
 }
 
 // ── UI 구성 ──

@@ -255,10 +255,23 @@ select option{background:#13131a;}
 
     <div class="card">
       <div class="card-title">🪪 신분증 / 운전면허증 촬영</div>
-      <div class="id-upload" id="id-upload-area" onclick="document.getElementById('id-file').click()">
-        <input type="file" id="id-file" accept="image/*" capture="environment" onchange="onIdFile(event)">
-        <div class="id-upload-icon">📷</div>
-        <div class="id-upload-text">신분증 또는 운전면허증 촬영</div>
+      <!-- 카메라 촬영 -->
+      <input type="file" id="id-file-cam" accept="image/*" capture="environment" onchange="onIdFile(event)" style="display:none">
+      <!-- 갤러리 선택 -->
+      <input type="file" id="id-file-gallery" accept="image/*" onchange="onIdFile(event)" style="display:none">
+
+      <div style="display:flex;gap:10px;margin-bottom:12px">
+        <button onclick="document.getElementById('id-file-cam').click()" style="flex:1;padding:14px 10px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:12px;color:var(--cyan);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
+          📷 카메라 촬영
+        </button>
+        <button onclick="document.getElementById('id-file-gallery').click()" style="flex:1;padding:14px 10px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);border-radius:12px;color:var(--green);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
+          🖼 갤러리 선택
+        </button>
+      </div>
+
+      <div class="id-upload" id="id-upload-area" onclick="document.getElementById('id-file-gallery').click()">
+        <div class="id-upload-icon" id="upload-icon">📋</div>
+        <div class="id-upload-text">신분증 또는 운전면허증</div>
         <div class="id-upload-sub">JPG · PNG · HEIC 지원</div>
         <img id="id-preview" class="id-preview">
       </div>
@@ -445,6 +458,7 @@ function onIdFile(e){
   var file=e.target.files[0];
   if(!file) return;
   _ocrFile=file;
+  document.getElementById('upload-icon').textContent='✅';
   var area=document.getElementById('id-upload-area');
   var prev=document.getElementById('id-preview');
   var reader=new FileReader();
