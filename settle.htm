@@ -13654,9 +13654,35 @@ async function _ocrAnalyze(){
     var text=(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('').trim();
     if(!text) throw new Error('응답이 비어있습니다');
     var cleaned=text.replace(/```json|```/g,'').trim();
+    // ★ JSON 파싱 시도, 실패 시 Naver OCR 텍스트에서 직접 추출
+    var json={};
     var jsonMatch=cleaned.match(/\{[\s\S]+\}/);
-    if(!jsonMatch) throw new Error('JSON 형식 응답 없음');
-    var json=JSON.parse(jsonMatch[0]);
+    if(jsonMatch){
+      try{ json=JSON.parse(jsonMatch[0]); }catch(e){ json={}; }
+    }
+    // Naver OCR 결과(일반 텍스트)에서 사업자등록증 필드 직접 추출
+    if(!json.bizNum){
+      var lines=cleaned.split(/\s+/);
+      var fullText=cleaned;
+      // 사업자등록번호 (000-00-00000)
+      var bnMatch=fullText.match(/(\d{3}-\d{2}-\d{5})/);
+      if(bnMatch) json.bizNum=bnMatch[1];
+      // 법인명/상호
+      var nmMatch=fullText.match(/상\s*호\s*[:：]?\s*([^\n\r]+?)(?:\s+대표|\s+법인|$)/);
+      if(nmMatch) json.bizName=nmMatch[1].trim();
+      // 대표자
+      var repMatch=fullText.match(/대\s*표\s*자?\s*[:：]?\s*([가-힣]{2,4})/);
+      if(repMatch) json.bizRep=repMatch[1].trim();
+      // 사업장 주소
+      var addrMatch=fullText.match(/소\s*재\s*지?\s*[:：]?\s*([^\n\r]+?(?:시|군|구)[^\n\r]+)/);
+      if(addrMatch) json.bizAddr=addrMatch[1].trim();
+      // 업태
+      var typeMatch=fullText.match(/업\s*태\s*[:：]?\s*([^\n\r종]{2,20})/);
+      if(typeMatch) json.bizType=typeMatch[1].trim();
+      // 종목
+      var itemMatch=fullText.match(/종\s*목\s*[:：]?\s*([^\n\r]{2,20})/);
+      if(itemMatch) json.bizItem=itemMatch[1].trim();
+    }
     var map={name:'edr-name',bizNum:'edr-biznum',bizName:'edr-bizname',bizRep:'edr-bizrep',bizAddr:'edr-bizaddr',bizType:'edr-biztype',bizItem:'edr-bizitem'};
     // ★ OCR 한글 오류 후처리 v9.26 — 패턴 대폭 확장
     function _fixOcrKorean(str){
