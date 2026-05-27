@@ -4821,7 +4821,19 @@ function _dwTrack(cnt, defPrice){
 
 // ── 핵심 정산 계산 엔진
 function calcDonWaySettlement(orders, cfg){
-  var cnt=orders.length;
+  if(!orders||!orders.length) return null;
+  // ★ [방어2] 주차 필터 락: periodStart~periodEnd 범위 외 데이터 제외
+  var ps=cfg&&cfg.periodStart?new Date(cfg.periodStart):null;
+  var pe=cfg&&cfg.periodEnd?new Date(cfg.periodEnd):null;
+  if(ps&&pe){
+    orders=orders.filter(function(o){
+      if(!o.completedAt)return true;
+      var t=new Date(o.completedAt);
+      return t>=ps&&t<=pe;
+    });
+  }
+  // ★ validCount: 취소건(price≤0) 제외한 실 배달 건수
+  var cnt=orders.filter(function(o){return (o.platformPrice||0)>0;}).length;
   var track=_dwTrack(cnt, cfg.defaultPrice||2900);
   var target=track.price;
   var pfSum=0, injected=0, extracted=0;
@@ -4830,30 +4842,33 @@ function calcDonWaySettlement(orders, cfg){
 
   var details=orders.map(function(o){
     var price=o.platformPrice||0;
+    // ★ [방어1] 취소/패널티 건: platformPrice≤0 → 보전·환수·카운트 완전 제외
+    if(price<=0){
+      return Object.assign({},o,{slot:'midnight',inject:0,extract:0,cancelled:true});
+    }
     pfSum+=price;
     var slot=_dwSlot(o.hour||0);
     slotStat[slot].cnt++;
     slotStat[slot].pfSum+=price;
     var inj=0,ext=0;
     if(slot!=='midnight'){   // 06:00~24:00만 밸런싱 적용
-      if(price<target){inj=target-price; injected+=inj; slotStat[slot].inject+=inj;}
-      else if(price>target){ext=price-target; extracted+=ext; slotStat[slot].extract+=ext;}
+      if(price<target){inj=Math.floor(target-price); injected+=inj; slotStat[slot].inject+=inj;}
+      else if(price>target){ext=Math.floor(price-target); extracted+=ext; slotStat[slot].extract+=ext;}
     }
     return Object.assign({},o,{slot:slot,inject:inj,extract:ext});
   });
 
-  var preTax=pfSum+injected-extracted;
-  var tax3=Math.floor(preTax*0.03);
-  var tax03=Math.floor(tax3*0.1);
-  var totalTax=tax3+tax03;
-  var deduct=(cfg.leaseFee||0)+(cfg.programFee||0)+(cfg.insuranceFee||0);
-  var net=Math.max(0,preTax-totalTax-deduct);
+  var preTax=Math.floor(pfSum+injected-extracted); // ★ 원단위 절사
+  var tax3=Math.floor(preTax*0.033);               // ★ [방어3] 3.3% 정확히 (30+3)
+  var totalTax=tax3;
+  var deduct=Math.floor((cfg.leaseFee||0)+(cfg.programFee||0)+(cfg.insuranceFee||0));
+  var net=Math.max(0,Math.floor(preTax-totalTax-deduct)); // ★ 최종 절사
 
   return{
     trackLabel:track.label, targetPrice:target, isDefault:track.isDefault,
     totalCount:cnt, pfSum:pfSum,
     injected:injected, extracted:extracted, agencyMargin:extracted-injected,
-    preTax:preTax, tax3:tax3, tax03:tax03, totalTax:totalTax,
+    preTax:preTax, tax3:tax3, tax03:0, totalTax:totalTax,
     leaseFee:cfg.leaseFee||0, programFee:cfg.programFee||0, insuranceFee:cfg.insuranceFee||0,
     deduct:deduct, net:net, slotStat:slotStat, details:details,
     riderName:cfg.riderName||'', riderId:cfg.riderId||'', period:cfg.period||''
@@ -5123,6 +5138,60 @@ var _dwResults=[];
 var _dwPlatform='coupangEats';
 
 // ── 배달대행 통합 정산 페이지 (엔진 v2 섹션)
+
+// ★ DONWAY 정산 시뮬레이터 (배달대행 정산 원리 설명)
+function _dwRenderSimulator(){
+  var el=document.getElementById('dw-simulator-wrap');
+  if(!el)return;
+  var defaultPrice=DW_TRACKS&&DW_TRACKS.length?DW_TRACKS[0].price:2900;
+  var tracks=DW_TRACKS||[];
+
+  el.innerHTML=
+    '<div style="background:linear-gradient(135deg,#0f172a,#1e293b);border-radius:16px;padding:20px;margin-bottom:16px;color:#fff">'      +'<div style="font-size:15px;font-weight:900;margin-bottom:4px">⚡ DONWAY 보전·환수 엔진 시뮬레이터</div>'      +'<div style="font-size:11px;color:rgba(255,255,255,.6)">실제 정산 방식을 숫자로 확인해보세요</div>'    +'</div>'    // ① 트랙 설명
+    +'<div class="card" style="margin-bottom:10px">'      +'<div style="font-size:13px;font-weight:800;margin-bottom:10px;color:var(--brand)">① 주간 건수 → 트랙 단가 자동 결정</div>'      +'<div style="font-size:11px;color:var(--text3);margin-bottom:10px">기사의 이번 주 배달 완료 건수에 따라 목표 보장단가(트랙)가 자동으로 올라갑니다.</div>'      +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:6px">'      +tracks.slice(1).map(function(t,i){
+        var colors=['#3b82f6','#8b5cf6','#f59e0b','#10b981'];
+        var c=colors[i%colors.length];
+        return '<div style="text-align:center;padding:10px 6px;background:'+c+'22;border:1.5px solid '+c+'44;border-radius:10px">'          +'<div style="font-size:18px;font-weight:900;color:'+c+'">'+t.price.toLocaleString()+'</div>'          +'<div style="font-size:9px;color:var(--text3)">원/건</div>'          +'<div style="font-size:10px;font-weight:700;color:'+c+';margin-top:3px">'+t.label+'</div>'          +'</div>';
+      }).join('')      +'</div>'    +'</div>'    // ② 시뮬레이터 입력
+    +'<div class="card" style="margin-bottom:10px">'      +'<div style="font-size:13px;font-weight:800;margin-bottom:12px;color:var(--brand)">② 직접 계산해보기</div>'      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">'        +'<div>'          +'<label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">📦 이번 주 배달 건수</label>'          +'<input id="sim-cnt" type="number" value="280" min="1" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:15px;font-weight:700;text-align:center;background:var(--bg);color:var(--text)">'        +'</div>'        +'<div>'          +'<label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">💰 플랫폼 실제 지급단가 (건당)</label>'          +'<input id="sim-price" type="number" value="3800" min="0" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:15px;font-weight:700;text-align:center;background:var(--bg);color:var(--text)">'        +'</div>'      +'</div>'      +'<button onclick="_dwSimCalc()" class="btn btn-blue" style="width:100%;padding:10px;font-size:13px;font-weight:800">⚡ 계산하기</button>'      +'<div id="sim-result" style="margin-top:12px"></div>'    +'</div>'    // ③ 원리 설명
+    +'<div class="card">'      +'<div style="font-size:13px;font-weight:800;margin-bottom:10px;color:var(--brand)">③ 보전·환수 원리 (핵심)</div>'      +'<div style="display:flex;flex-direction:column;gap:8px">'        +'<div style="padding:10px 12px;background:#dbeafe;border-radius:10px;border-left:3px solid #3b82f6">'          +'<div style="font-size:12px;font-weight:800;color:#1d4ed8;margin-bottom:3px">📥 보전 (대리점 → 기사)</div>'          +'<div style="font-size:11px;color:#1e40af">플랫폼 단가 < 목표단가 → <b>차액만큼 대리점이 기사에게 지급</b><br>예: 목표 5,300원 / 플랫폼 4,200원 → 대리점이 1,100원 보전</div>'        +'</div>'        +'<div style="padding:10px 12px;background:#fce7f3;border-radius:10px;border-left:3px solid #ec4899">'          +'<div style="font-size:12px;font-weight:800;color:#be185d;margin-bottom:3px">📤 환수 (기사 → 대리점)</div>'          +'<div style="font-size:11px;color:#9d174d">플랫폼 단가 > 목표단가 → <b>차액만큼 기사가 대리점에 반납</b><br>예: 목표 5,300원 / 플랫폼 6,000원 → 기사가 700원 환수</div>'        +'</div>'        +'<div style="padding:10px 12px;background:#d1fae5;border-radius:10px;border-left:3px solid #10b981">'          +'<div style="font-size:12px;font-weight:800;color:#065f46;margin-bottom:3px">🌙 심야 예외 (00:00~06:00)</div>'          +'<div style="font-size:11px;color:#047857">심야 시간대 배달은 보전·환수 없이 플랫폼 지급액 그대로 적용</div>'        +'</div>'        +'<div style="padding:10px 12px;background:#fef3c7;border-radius:10px;border-left:3px solid #f59e0b">'          +'<div style="font-size:12px;font-weight:800;color:#92400e;margin-bottom:3px">🚫 취소/패널티 건 자동 제외</div>'          +'<div style="font-size:11px;color:#78350f">플랫폼 단가 0원 이하인 취소·오배송 건은 보전·환수 계산 및 건수 카운트에서 자동 제외</div>'        +'</div>'      +'</div>'    +'</div>';
+
+  _dwSimCalc();
+}
+
+window._dwSimCalc=function(){
+  var cnt=parseInt(document.getElementById('sim-cnt').value)||0;
+  var price=parseInt(document.getElementById('sim-price').value)||0;
+  var el=document.getElementById('sim-result');
+  if(!el)return;
+
+  // 트랙 결정
+  var track={price:DW_TRACKS&&DW_TRACKS.length?DW_TRACKS[0].price:2900,label:'기본'};
+  if(DW_TRACKS){
+    for(var i=DW_TRACKS.length-1;i>=0;i--){
+      if(cnt>=DW_TRACKS[i].min){track=DW_TRACKS[i];break;}
+    }
+  }
+  var target=track.price;
+  var pfTotal=price*cnt;
+  var diff=target-price;
+  var isInject=diff>0;
+  var isExtract=diff<0;
+  var totalDiff=Math.floor(Math.abs(diff)*cnt);
+  var preTax=isInject?pfTotal+totalDiff:pfTotal-totalDiff;
+  var tax=Math.floor(preTax*0.033);
+  var net=Math.floor(preTax-tax);
+
+  var diffColor=isInject?'#3b82f6':isExtract?'#ec4899':'#10b981';
+  var diffLabel=isInject?'보전(대리점→기사)':isExtract?'환수(기사→대리점)':'차액 없음';
+  var diffIcon=isInject?'📥':isExtract?'📤':'⚖️';
+
+  el.innerHTML=
+    // 트랙 배지
+    '<div style="background:'+diffColor+'22;border:1.5px solid '+diffColor+'44;border-radius:10px;padding:10px 14px;margin-bottom:10px;text-align:center">'      +'<div style="font-size:11px;color:var(--text3)">이번 주 건수 <b>'+cnt+'건</b> → 적용 트랙</div>'      +'<div style="font-size:20px;font-weight:900;color:'+diffColor+'">목표 '+target.toLocaleString()+'원/건</div>'      +'<div style="font-size:10px;color:var(--text3)">'+track.label+'</div>'    +'</div>'    // 계산 테이블
+    +'<table style="width:100%;border-collapse:collapse;font-size:12px">'      +'<tr style="background:var(--bg3)"><td style="padding:7px 10px">📦 배달 건수</td><td style="padding:7px 10px;text-align:right;font-weight:700">'+cnt+'건</td></tr>'      +'<tr><td style="padding:7px 10px">💰 플랫폼 지급단가</td><td style="padding:7px 10px;text-align:right;font-weight:700">'+price.toLocaleString()+'원</td></tr>'      +'<tr style="background:var(--bg3)"><td style="padding:7px 10px">📊 플랫폼 총액</td><td style="padding:7px 10px;text-align:right;font-weight:700">'+pfTotal.toLocaleString()+'원</td></tr>'      +'<tr style="background:'+diffColor+'11"><td style="padding:7px 10px;color:'+diffColor+';font-weight:700">'+diffIcon+' '+diffLabel+'<br><span style="font-size:10px;font-weight:400;color:var(--text3)">|'+target.toLocaleString()+' - '+price.toLocaleString()+'| × '+cnt+'건</span></td><td style="padding:7px 10px;text-align:right;font-weight:900;font-size:14px;color:'+diffColor+'">'+(isInject?'+':isExtract?'-':'')+totalDiff.toLocaleString()+'원</td></tr>'      +'<tr><td style="padding:7px 10px;border-top:2px solid var(--border);font-weight:700">💼 세전 실수령</td><td style="padding:7px 10px;text-align:right;font-weight:800;border-top:2px solid var(--border)">'+preTax.toLocaleString()+'원</td></tr>'      +'<tr style="background:var(--bg3)"><td style="padding:7px 10px;color:#dc2626">🏦 사업소득세 3.3%</td><td style="padding:7px 10px;text-align:right;color:#dc2626">-'+tax.toLocaleString()+'원</td></tr>'      +'<tr style="background:#f0fdf4"><td style="padding:10px;font-size:14px;font-weight:900;color:#065f46">✅ 최종 실지급액</td><td style="padding:10px;text-align:right;font-size:18px;font-weight:900;color:#065f46">'+net.toLocaleString()+'원</td></tr>'    +'</table>';
+};
+
 function _dwRenderEngine(){
   var el=document.getElementById('content');
   if(!el)return;
@@ -5130,6 +5199,10 @@ function _dwRenderEngine(){
   var wrap=document.createElement('div');
   wrap.id='dw-engine-wrap';
   wrap.style.cssText='max-width:960px;margin:0 auto 20px';
+  // ★ 시뮬레이터 컨테이너 선 삽입
+  var simDiv=document.createElement('div');
+  simDiv.id='dw-simulator-wrap';
+  wrap.appendChild(simDiv);
 
   wrap.innerHTML=
   // ① 상단 설명
@@ -5224,6 +5297,11 @@ function _dwRenderEngine(){
 
   // 기존 content 맨 앞에 삽입
   el.insertBefore(wrap, el.firstChild);
+  // ★ 시뮬레이터 섹션 (wrap 맨 앞에 prepend)
+  var simDiv2=document.createElement('div');
+  simDiv2.id='dw-simulator-wrap';
+  wrap.insertBefore(simDiv2, wrap.firstChild);
+  _dwRenderSimulator();
 }
 
 window._dwLoadFile=function(){
