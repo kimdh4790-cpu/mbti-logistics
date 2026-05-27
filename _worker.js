@@ -489,29 +489,64 @@ export default {
     if (path === '/claude-ocr' && method === 'POST') {
       try {
         const body = await request.json();
-        const apiKey = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
-        if (!apiKey) {
-          return new Response(JSON.stringify({ error: { message: 'ANTHROPIC_API_KEY 환경변수 미설정. Cloudflare Workers 환경변수를 확인하세요.' } }), {
+        const ocrSecret = (env.NAVER_OCR_SECRET || '').trim();
+        const ocrUrl   = (env.NAVER_OCR_URL    || '').trim();
+
+        if (!ocrSecret || !ocrUrl) {
+          return new Response(JSON.stringify({ error: { message: 'NAVER_OCR_SECRET 또는 NAVER_OCR_URL 환경변수 미설정' } }), {
             status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
           });
         }
-        const resp = await fetch('https://api.anthropic.com/v1/messages', {
+
+        // ★ Naver Clova OCR 포맷 변환
+        let base64Data = '', mediaType = 'image/jpeg';
+        if (body.messages && body.messages[0] && body.messages[0].content) {
+          for (const c of body.messages[0].content) {
+            if (c.type === 'image' && c.source) {
+              base64Data = c.source.data || '';
+              mediaType  = c.source.media_type || 'image/jpeg';
+            }
+          }
+        }
+        const ext = mediaType.includes('png') ? 'png' : mediaType.includes('pdf') ? 'pdf' : 'jpg';
+
+        const naverBody = {
+          version: 'V2',
+          requestId: 'settle-' + Date.now(),
+          timestamp: Date.now(),
+          lang: 'ko',
+          images: [{ format: ext, name: 'ocr_image', data: base64Data }],
+          enableTableDetect: false
+        };
+
+        const naverResp = await fetch(ocrUrl, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01'
-          },
-          body: JSON.stringify(body)
+          headers: { 'Content-Type': 'application/json', 'X-OCR-SECRET': ocrSecret },
+          body: JSON.stringify(naverBody)
         });
-        const data = await resp.json();
-        // Anthropic 응답 그대로 전달 (에러 status code 포함)
-        return new Response(JSON.stringify(data), {
-          status: resp.status,
+
+        if (!naverResp.ok) {
+          const err = await naverResp.text();
+          return new Response(JSON.stringify({ error: { message: 'Naver OCR 오류: ' + err } }), {
+            status: naverResp.status, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+          });
+        }
+
+        const naverData = await naverResp.json();
+
+        // ★ Naver 결과 → Anthropic 호환 형식 변환
+        const allText = (naverData.images || []).map(img =>
+          (img.fields || []).map(f => f.inferText || '').join(' ')
+        ).join('
+');
+
+        return new Response(JSON.stringify({ content: [{ type: 'text', text: allText }] }), {
+          status: 200,
           headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
         });
+
       } catch (e) {
-        return new Response(JSON.stringify({ error: e.message }), {
+        return new Response(JSON.stringify({ error: { message: e.message } }), {
           status: 500,
           headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
         });
