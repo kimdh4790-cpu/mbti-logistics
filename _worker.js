@@ -537,8 +537,7 @@ export default {
         // ★ Naver 결과 → Anthropic 호환 형식 변환
         const allText = (naverData.images || []).map(img =>
           (img.fields || []).map(f => f.inferText || '').join(' ')
-        ).join('
-');
+        ).join(' ');
 
         return new Response(JSON.stringify({ content: [{ type: 'text', text: allText }] }), {
           status: 200,
