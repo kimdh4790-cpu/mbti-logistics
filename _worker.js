@@ -710,7 +710,7 @@ export default {
       '/donway_landing','/test-apikey','/favicon.ico','/favicon.png',
       '/worker-test','/label-ocr','/claude-ocr','/get-label-key',
       '/test-inject','/truck-save','/scan-save',
-      '/scan','/truck','/settle','/visitor','/portal','/join','/company-register',
+      '/scan','/truck','/settle','/visitor','/checkin','/portal','/join','/company-register',
       '/attendance','/donway-sound.js','/report','/contract',
       '/notice','/settings','/schedule','/drivers','/dashboard',
       '/my','/attendance-admin','/attendance-display',
@@ -841,6 +841,12 @@ export default {
     }
 
     // ★ 매장/회사 QR 디스플레이 (입구 화면)
+    // ★ 직원 셀프 체크인
+    if (path === '/checkin' || path === '/checkin/') {
+      const resp = await fetchAsset('/checkin.html', request);
+      return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+    }
+
     // ★ 방문자 등록 페이지
     if (path === '/visitor' || path === '/visitor/') {
       const resp = await fetchAsset('/visitor.html', request);

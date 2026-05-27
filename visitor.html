@@ -236,6 +236,23 @@ select option{background:#13131a;}
 
   <!-- 페이지 1: 신분증 -->
   <div class="page active" id="page1">
+    <!-- QR 못 스캔 시 6자리 코드 입력 -->
+    <div class="card" id="code-entry-card">
+      <div class="card-title">🔢 QR 스캔이 안 되시나요?</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:12px">디스플레이 화면의 <b style="color:var(--orange)">6자리 숫자</b>를 입력하세요</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="tel" id="v-code" maxlength="6" inputmode="numeric"
+          placeholder="6자리 입력"
+          style="text-align:center;font-size:24px;font-weight:800;letter-spacing:8px;flex:1"
+          oninput="this.value=this.value.replace(/\D/g,'').slice(0,6)">
+        <button onclick="verifyCode()" style="padding:12px 16px;background:rgba(255,149,0,.15);border:1px solid rgba(255,149,0,.3);color:var(--orange);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit">확인 →</button>
+      </div>
+      <div id="code-status" style="font-size:12px;margin-top:8px;display:none"></div>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);text-align:center">
+        <span style="font-size:11px;color:var(--text2)">또는 신분증으로 직접 등록 ↓</span>
+      </div>
+    </div>
+
     <div class="card">
       <div class="card-title">🪪 신분증 / 운전면허증 촬영</div>
       <div class="id-upload" id="id-upload-area" onclick="document.getElementById('id-file').click()">
@@ -396,6 +413,31 @@ function formatPhone(el){
   if(v.length>7) v=v.slice(0,3)+'-'+v.slice(3,7)+'-'+v.slice(7);
   else if(v.length>3) v=v.slice(0,3)+'-'+v.slice(3);
   el.value=v;
+}
+
+// ── 6자리 코드 검증 ──
+function verifyCode(){
+  var code=document.getElementById('v-code').value.trim();
+  var st=document.getElementById('code-status');
+  if(code.length!==6){st.style.display='block';st.style.color='var(--red)';st.textContent='❌ 6자리를 입력해주세요';return;}
+  var SLOT=30000;
+  var secret='DONWAY_'+_dealerId;
+  function genC(slot){
+    var s=secret+'|'+slot+'|'+_dealerId;
+    var h1=0,h2=0,h3=0;
+    for(var i=0;i<s.length;i++){h1=(Math.imul(31,h1)+s.charCodeAt(i))|0;h2=(Math.imul(37,h2)+s.charCodeAt(i)*17)|0;h3=(Math.imul(41,h3)+s.charCodeAt(i)*31)|0;}
+    var n=((Math.abs(h1)%10)*100000+(Math.abs(h2)%10)*10000+(Math.abs(h3)%10)*1000+(Math.abs(h1^h2)%10)*100+(Math.abs(h2^h3)%10)*10+(Math.abs(h1^h3)%10));
+    return n.toString().padStart(6,'0');
+  }
+  var cur=Math.floor(Date.now()/SLOT);
+  var valid=[cur,cur-1].some(function(s){return genC(s)===code;});
+  st.style.display='block';
+  if(valid){
+    st.style.color='var(--green)';st.textContent='✅ 코드 확인됨! 아래 정보를 입력해주세요';
+    document.getElementById('v-code').style.borderColor='var(--green)';
+  } else {
+    st.style.color='var(--red)';st.textContent='❌ 코드가 맞지 않습니다. 화면을 다시 확인해주세요';
+  }
 }
 
 // ── 신분증 파일 선택 ──

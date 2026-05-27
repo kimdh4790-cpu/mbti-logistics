@@ -333,6 +333,10 @@ function buildUI(){
       '<div class="panel-sub">QR을 스캔하여 방문자 등록을<br>진행해주세요</div>'+
       '<div class="visitor-qr-wrap"><div id="visitor-canvas-wrap"></div></div>'+
       '<div class="visitor-scan-hint">📱 휴대폰 카메라로 QR 스캔<br>신분증 촬영 후 간단 등록</div>'+
+      '<div class="timer-wrap">'+
+        '<div class="timer-bar"><div class="timer-fill visitor-fill" id="visitor-timer-fill"></div></div>'+
+        '<div class="timer-text" id="visitor-timer-text">30초마다 자동 갱신</div>'+
+      '</div>'+
       '<div class="visitor-log" id="visitor-log"></div>';
     _mainEl.appendChild(vpanel);
     _visitorCanvas=document.getElementById('visitor-canvas-wrap');
@@ -405,9 +409,13 @@ function updateTimer(){
   var pct=(rem/SLOT)*100;
   var fill=document.getElementById('qr-timer-fill');
   var txt=document.getElementById('qr-timer-text');
+  var vfill=document.getElementById('visitor-timer-fill');
+  var vtxt=document.getElementById('visitor-timer-text');
   if(fill) fill.style.width=pct+'%';
+  if(vfill) vfill.style.width=pct+'%';
   var sec=Math.ceil(rem/1000);
   if(txt) txt.textContent=sec+'초 후 갱신';
+  if(vtxt) vtxt.textContent=sec+'초 후 갱신';
 
   // 슬롯 변경 감지
   var slot=getSlot();

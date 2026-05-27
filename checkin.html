@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>출퇴근 체크인 — DONWAY</title>
+<style>
+:root{
+  --bg:#080810;--card:#10101a;--border:#1a1a2e;
+  --cyan:#00d4ff;--green:#00ff88;--red:#ff4466;--orange:#ff9500;
+  --text:#e8e8f0;--text2:#666680;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;min-height:100vh;display:flex;flex-direction:column;}
+
+.header{
+  background:linear-gradient(135deg,#0a0a14,#10101e);
+  border-bottom:1px solid var(--border);
+  padding:20px;text-align:center;
+}
+.logo{font-size:10px;letter-spacing:4px;color:var(--cyan);font-weight:800;opacity:.7;}
+.title{font-size:22px;font-weight:800;margin-top:4px;}
+.subtitle{font-size:12px;color:var(--text2);margin-top:4px;}
+
+.container{flex:1;padding:20px 16px;display:flex;flex-direction:column;gap:14px;}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px;}
+.card-title{font-size:12px;font-weight:700;color:var(--cyan);margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+
+/* 탭 */
+.tabs{display:flex;gap:8px;margin-bottom:16px;}
+.tab{
+  flex:1;padding:10px;border-radius:10px;
+  border:1px solid var(--border);
+  background:transparent;color:var(--text2);
+  font-size:13px;font-weight:700;cursor:pointer;
+  font-family:inherit;transition:.2s;
+}
+.tab.active{background:rgba(0,212,255,.1);border-color:var(--cyan);color:var(--cyan);}
+
+/* QR 스캔 */
+.qr-scan-area{
+  background:#000;border-radius:12px;
+  overflow:hidden;position:relative;
+  aspect-ratio:1;width:100%;max-width:300px;margin:0 auto;
+}
+#qr-video{width:100%;height:100%;object-fit:cover;}
+.qr-overlay{
+  position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  pointer-events:none;
+}
+.qr-frame{
+  width:65%;height:65%;
+  border:3px solid var(--cyan);
+  border-radius:8px;
+  box-shadow:0 0 0 9999px rgba(0,0,0,.4);
+}
+.qr-corner{position:absolute;width:20px;height:20px;border-color:var(--cyan);border-style:solid;}
+.qr-corner.tl{top:17.5%;left:17.5%;border-width:3px 0 0 3px;}
+.qr-corner.tr{top:17.5%;right:17.5%;border-width:3px 3px 0 0;}
+.qr-corner.bl{bottom:17.5%;left:17.5%;border-width:0 0 3px 3px;}
+.qr-corner.br{bottom:17.5%;right:17.5%;border-width:0 3px 3px 0;}
+.scan-line{
+  position:absolute;left:17.5%;right:17.5%;
+  height:2px;background:var(--cyan);
+  animation:scan 2s linear infinite;opacity:.8;
+}
+@keyframes scan{0%{top:17.5%}100%{top:82.5%}}
+
+/* 코드 입력 */
+.code-input-wrap{text-align:center;}
+.code-hint{font-size:12px;color:var(--text2);margin-bottom:12px;}
+.code-input{
+  display:flex;gap:8px;justify-content:center;
+  margin-bottom:12px;
+}
+.code-digit-input{
+  width:44px;height:56px;
+  background:rgba(0,212,255,.05);
+  border:2px solid var(--border);
+  border-radius:10px;
+  text-align:center;font-size:26px;font-weight:800;
+  color:var(--cyan);font-family:inherit;
+  outline:none;-webkit-appearance:none;
+  caret-color:var(--cyan);
+}
+.code-digit-input:focus{border-color:var(--cyan);}
+
+/* 직원 ID */
+label{display:block;font-size:11px;color:var(--text2);margin-bottom:6px;font-weight:600;}
+input[type=text],input[type=tel]{
+  width:100%;background:#0a0a14;border:1px solid var(--border);
+  border-radius:10px;padding:12px 14px;color:var(--text);
+  font-size:14px;font-family:inherit;outline:none;transition:.2s;
+}
+input:focus{border-color:var(--cyan);}
+.form-row{margin-bottom:12px;}
+
+/* 버튼 */
+.btn{width:100%;padding:15px;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;transition:.2s;font-family:inherit;}
+.btn-primary{background:linear-gradient(135deg,var(--cyan),#0088cc);color:#000;}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;}
+
+/* 결과 */
+.result-card{
+  display:none;text-align:center;padding:30px 20px;
+}
+.result-icon{font-size:56px;margin-bottom:12px;}
+.result-title{font-size:20px;font-weight:800;margin-bottom:6px;}
+.result-sub{font-size:13px;color:var(--text2);line-height:1.6;}
+.result-type{
+  display:inline-block;margin-top:12px;
+  padding:6px 20px;border-radius:20px;
+  font-size:14px;font-weight:700;
+}
+.result-type.in{background:rgba(0,255,136,.1);color:var(--green);}
+.result-type.out{background:rgba(255,68,102,.1);color:var(--red);}
+
+/* 상태 */
+.status-msg{
+  padding:10px 12px;border-radius:8px;font-size:12px;margin-top:10px;display:none;
+}
+.status-msg.ok{background:rgba(0,255,136,.08);color:var(--green);border:1px solid rgba(0,255,136,.2);}
+.status-msg.err{background:rgba(255,68,102,.08);color:var(--red);border:1px solid rgba(255,68,102,.2);}
+.status-msg.loading{background:rgba(0,212,255,.08);color:var(--cyan);border:1px solid rgba(0,212,255,.2);}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">DONWAY CHECK-IN</div>
+  <div class="title">출퇴근 체크인</div>
+  <div class="subtitle" id="hdr-company">직원 출퇴근 기록</div>
+</div>
+
+<div class="container">
+
+  <div class="card" id="main-card">
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('qr')" id="tab-qr">📷 QR 스캔</button>
+      <button class="tab" onclick="switchTab('code')" id="tab-code">🔢 코드 입력</button>
+    </div>
+
+    <!-- QR 스캔 탭 -->
+    <div id="tab-qr-content">
+      <div class="qr-scan-area">
+        <video id="qr-video" autoplay playsinline muted></video>
+        <div class="qr-overlay">
+          <div class="qr-frame"></div>
+          <div class="scan-line"></div>
+          <div class="qr-corner tl"></div>
+          <div class="qr-corner tr"></div>
+          <div class="qr-corner bl"></div>
+          <div class="qr-corner br"></div>
+        </div>
+      </div>
+      <div class="status-msg" id="qr-status"></div>
+      <div style="text-align:center;margin-top:12px;font-size:11px;color:var(--text2)">
+        카메라를 QR 코드에 맞춰주세요
+      </div>
+    </div>
+
+    <!-- 코드 입력 탭 -->
+    <div id="tab-code-content" style="display:none">
+      <div class="code-input-wrap">
+        <div class="code-hint">📺 디스플레이 화면의 <b style="color:var(--cyan)">6자리 숫자</b>를 입력하세요</div>
+        <div class="code-input">
+          <input class="code-digit-input" maxlength="1" type="tel" id="c0" oninput="codeInput(0)" onkeydown="codeBk(0,event)">
+          <input class="code-digit-input" maxlength="1" type="tel" id="c1" oninput="codeInput(1)" onkeydown="codeBk(1,event)">
+          <input class="code-digit-input" maxlength="1" type="tel" id="c2" oninput="codeInput(2)" onkeydown="codeBk(2,event)">
+          <input class="code-digit-input" maxlength="1" type="tel" id="c3" oninput="codeInput(3)" onkeydown="codeBk(3,event)">
+          <input class="code-digit-input" maxlength="1" type="tel" id="c4" oninput="codeInput(4)" onkeydown="codeBk(4,event)">
+          <input class="code-digit-input" maxlength="1" type="tel" id="c5" oninput="codeInput(5)" onkeydown="codeBk(5,event)">
+        </div>
+      </div>
+      <div class="status-msg" id="code-status"></div>
+    </div>
+
+    <!-- 공통: 직원 ID -->
+    <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px;">
+      <div class="form-row">
+        <label>쿠팡 ID / 사번 *</label>
+        <input type="text" id="emp-id" placeholder="예: hyun83" autocomplete="username">
+      </div>
+      <button class="btn btn-primary" onclick="doCheckin()" id="btn-checkin">✅ 출퇴근 기록</button>
+    </div>
+  </div>
+
+  <!-- 결과 카드 -->
+  <div class="card result-card" id="result-card">
+    <div class="result-icon" id="res-icon">✅</div>
+    <div class="result-title" id="res-title">출근 완료</div>
+    <div class="result-sub" id="res-sub"></div>
+    <div class="result-type in" id="res-type">출근</div>
+    <div style="margin-top:20px">
+      <button class="btn btn-primary" onclick="reset()" style="max-width:200px">← 돌아가기</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- jsQR -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.min.js"></script>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+<script>
+var FB_CFG={
+  apiKey:"AIzaSyBGe5LtENnJ0-xH9iRSyCwt2XK5D2eRE5I",
+  authDomain:"mbti-logistics.firebaseapp.com",
+  projectId:"mbti-logistics",
+  storageBucket:"mbti-logistics.appspot.com",
+  messagingSenderId:"1097631848952",
+  appId:"1:1097631848952:web:b4e37b47e3ff3e3b5d38b8"
+};
+var _db=null;
+var _params=new URLSearchParams(location.search);
+var _dealerId=_params.get('did')||'shared';
+var _companyName=_params.get('name')||'';
+var _mode='qr'; // qr | code
+var _qrResult=null;
+var _scanning=false;
+var _scanInterval=null;
+
+window.addEventListener('load',function(){
+  if(!firebase.apps.length) firebase.initializeApp(FB_CFG);
+  _db=firebase.firestore();
+  if(_companyName) document.getElementById('hdr-company').textContent=_companyName+' 출퇴근 기록';
+  startQrScan();
+});
+
+// ── 탭 전환 ──
+function switchTab(tab){
+  _mode=tab;
+  document.getElementById('tab-qr').className='tab'+(tab==='qr'?' active':'');
+  document.getElementById('tab-code').className='tab'+(tab==='code'?' active':'');
+  document.getElementById('tab-qr-content').style.display=tab==='qr'?'block':'none';
+  document.getElementById('tab-code-content').style.display=tab==='code'?'block':'none';
+  if(tab==='qr') startQrScan();
+  else { stopQrScan(); document.getElementById('c0').focus(); }
+  _qrResult=null;
+}
+
+// ── QR 스캔 ──
+var _videoStream=null;
+function startQrScan(){
+  if(_scanning) return;
+  var video=document.getElementById('qr-video');
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}})
+  .then(function(stream){
+    _videoStream=stream;
+    video.srcObject=stream;
+    _scanning=true;
+    _scanInterval=setInterval(scanFrame,300);
+  }).catch(function(){
+    // 카메라 없으면 코드 탭으로
+    switchTab('code');
+    showStatus('qr-status','⚠️ 카메라 사용 불가 — 코드 입력을 이용해주세요','err');
+  });
+}
+function stopQrScan(){
+  if(_scanInterval) clearInterval(_scanInterval);
+  if(_videoStream) _videoStream.getTracks().forEach(function(t){t.stop();});
+  _scanning=false;_videoStream=null;
+}
+function scanFrame(){
+  var video=document.getElementById('qr-video');
+  if(video.readyState!==video.HAVE_ENOUGH_DATA) return;
+  var canvas=document.createElement('canvas');
+  canvas.width=video.videoWidth;canvas.height=video.videoHeight;
+  var ctx=canvas.getContext('2d');
+  ctx.drawImage(video,0,0);
+  var imageData=ctx.getImageData(0,0,canvas.width,canvas.height);
+  var code=jsQR(imageData.data,imageData.width,imageData.height);
+  if(code&&code.data){
+    try{
+      var data=JSON.parse(code.data);
+      if(data.type==='attendance'&&data.dealerId===_dealerId){
+        if(verifySlot(data.slot,data.code)){
+          stopQrScan();
+          _qrResult=data;
+          showStatus('qr-status','✅ QR 인식 완료! 직원 ID를 확인해주세요','ok');
+        } else {
+          showStatus('qr-status','⏰ QR이 만료됐습니다. 화면을 다시 스캔해주세요','err');
+        }
+      }
+    }catch(e){}
+  }
+}
+
+// ── 슬롯 검증 ──
+function verifySlot(slot,code){
+  var SLOT=30000;
+  var cur=Math.floor(Date.now()/SLOT);
+  return [cur,cur-1].some(function(s){return genCode(s)===code&&Math.abs(s-slot)<=1;});
+}
+function genCode(slot){
+  var secret='DONWAY_'+_dealerId;
+  var s=secret+'|'+slot+'|'+_dealerId;
+  var h1=0,h2=0,h3=0;
+  for(var i=0;i<s.length;i++){
+    h1=(Math.imul(31,h1)+s.charCodeAt(i))|0;
+    h2=(Math.imul(37,h2)+s.charCodeAt(i)*17)|0;
+    h3=(Math.imul(41,h3)+s.charCodeAt(i)*31)|0;
+  }
+  var n=((Math.abs(h1)%10)*100000+(Math.abs(h2)%10)*10000+(Math.abs(h3)%10)*1000+(Math.abs(h1^h2)%10)*100+(Math.abs(h2^h3)%10)*10+(Math.abs(h1^h3)%10));
+  return n.toString().padStart(6,'0');
+}
+
+// ── 코드 입력 ──
+function codeInput(idx){
+  var el=document.getElementById('c'+idx);
+  el.value=el.value.replace(/\D/g,'').slice(-1);
+  if(el.value&&idx<5) document.getElementById('c'+(idx+1)).focus();
+  checkCodeComplete();
+}
+function codeBk(idx,e){
+  if(e.key==='Backspace'&&!document.getElementById('c'+idx).value&&idx>0)
+    document.getElementById('c'+(idx-1)).focus();
+}
+function getCode(){
+  var code='';
+  for(var i=0;i<6;i++) code+=document.getElementById('c'+i).value||'';
+  return code;
+}
+function checkCodeComplete(){
+  var code=getCode();
+  if(code.length===6){
+    var SLOT=30000;
+    var cur=Math.floor(Date.now()/SLOT);
+    var valid=[cur,cur-1].some(function(s){return genCode(s)===code;});
+    var st=document.getElementById('code-status');
+    st.style.display='block';
+    if(valid){ st.className='status-msg ok'; st.textContent='✅ 코드 확인됨'; }
+    else { st.className='status-msg err'; st.textContent='❌ 코드가 맞지 않습니다'; }
+  }
+}
+
+// ── 출퇴근 기록 ──
+async function doCheckin(){
+  var empId=document.getElementById('emp-id').value.trim();
+  if(!empId){alert('쿠팡 ID / 사번을 입력해주세요');return;}
+
+  // 코드 검증
+  var codeOk=false;
+  var usedSlot=0;
+  if(_mode==='qr'){
+    if(!_qrResult){alert('QR을 먼저 스캔해주세요');return;}
+    codeOk=true;usedSlot=_qrResult.slot;
+  } else {
+    var code=getCode();
+    if(code.length!==6){alert('6자리 코드를 입력해주세요');return;}
+    var SLOT=30000;var cur=Math.floor(Date.now()/SLOT);
+    for(var s of [cur,cur-1]){
+      if(genCode(s)===code){codeOk=true;usedSlot=s;break;}
+    }
+    if(!codeOk){alert('코드가 맞지 않습니다. 화면을 다시 확인해주세요');return;}
+  }
+
+  var btn=document.getElementById('btn-checkin');
+  btn.disabled=true;btn.textContent='⏳ 기록 중...';
+
+  try{
+    // 오늘 마지막 기록 확인 → 출근/퇴근 자동 판정
+    var today=new Date().toISOString().slice(0,10);
+    var lastSnap=await _db.collection('attendance')
+      .where('dealerId','==',_dealerId)
+      .where('empId','==',empId)
+      .where('date','==',today)
+      .orderBy('recordedAt','desc').limit(1).get();
+
+    var lastType=lastSnap.empty?null:lastSnap.docs[0].data().type;
+    var newType=(!lastType||lastType==='퇴근')?'출근':'퇴근';
+    var now=new Date();
+
+    await _db.collection('attendance').add({
+      dealerId:_dealerId,empId:empId,
+      type:newType,date:today,
+      time:now.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}),
+      recordedAt:firebase.firestore.FieldValue.serverTimestamp(),
+      method:_mode==='qr'?'QR':'코드입력',
+      slot:usedSlot
+    });
+
+    // 결과 표시
+    document.getElementById('main-card').style.display='none';
+    var rc=document.getElementById('result-card');
+    rc.style.display='block';
+    document.getElementById('res-icon').textContent=newType==='출근'?'🟢':'🔴';
+    document.getElementById('res-title').textContent=newType+' 완료';
+    document.getElementById('res-sub').innerHTML=
+      '<b>'+empId+'</b><br>'+
+      now.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    var rt=document.getElementById('res-type');
+    rt.textContent=newType;
+    rt.className='result-type '+(newType==='출근'?'in':'out');
+
+    // 5초 후 자동 초기화
+    setTimeout(reset,5000);
+
+  }catch(e){
+    btn.disabled=false;btn.textContent='✅ 출퇴근 기록';
+    alert('오류: '+e.message);
+  }
+}
+
+// ── 초기화 ──
+function reset(){
+  document.getElementById('main-card').style.display='block';
+  document.getElementById('result-card').style.display='none';
+  document.getElementById('btn-checkin').disabled=false;
+  document.getElementById('btn-checkin').textContent='✅ 출퇴근 기록';
+  document.getElementById('emp-id').value='';
+  for(var i=0;i<6;i++) document.getElementById('c'+i).value='';
+  document.getElementById('code-status').style.display='none';
+  _qrResult=null;
+  if(_mode==='qr') startQrScan();
+}
+
+function showStatus(id,msg,type){
+  var el=document.getElementById(id);
+  el.style.display='block';
+  el.className='status-msg '+type;
+  el.textContent=msg;
+}
+</script>
+</body>
+</html>
