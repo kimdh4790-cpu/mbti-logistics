@@ -490,10 +490,11 @@ export default {
       try {
         const body = await request.json();
         const ocrSecret = (env.NAVER_OCR_SECRET || '').trim();
-        const ocrUrl   = (env.NAVER_OCR_URL    || '').trim();
+        // ★ URL 하드코딩 (환경변수 사라짐 이슈 방지)
+        const ocrUrl = (env.NAVER_OCR_URL || 'https://jd9jzde89h.apigw.ntruss.com/custom/v1/52759/9cd1de305ba49cd1c5bd1e3d626ddd0eadabcc4316948e808782025b65cc36ee/general').trim();
 
-        if (!ocrSecret || !ocrUrl) {
-          return new Response(JSON.stringify({ error: { message: 'NAVER_OCR_SECRET 또는 NAVER_OCR_URL 환경변수 미설정' } }), {
+        if (!ocrSecret) {
+          return new Response(JSON.stringify({ error: { message: 'NAVER_OCR_SECRET 환경변수 미설정' } }), {
             status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
           });
         }
