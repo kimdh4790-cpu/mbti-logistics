@@ -8500,6 +8500,7 @@ function pageLeave(){
     +(isDriver?'':'<button id="ltab-pending" class="btn btn-blue" onclick="_leaveTab(this.dataset.t)" data-t="pending" style="font-size:12px">⏳ 승인대기</button>')
     +(isDriver?'':'<button id="ltab-all" class="btn" onclick="_leaveTab(this.dataset.t)" data-t="all" style="font-size:12px">📋 전체 현황</button>')
     +(isDriver?'':'<button id="ltab-balance" class="btn" onclick="_leaveTab(this.dataset.t)" data-t="balance" style="font-size:12px">📊 잔여 연차</button>')
+    +(isDriver?'':'<button id="ltab-yearend" class="btn" onclick="_leaveTab(this.dataset.t)" data-t="yearend" style="font-size:12px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none">🗓 연도말 처리</button>')
     +'<button id="ltab-mine" class="btn'+(isDriver?' btn-blue':'')+'" onclick="_leaveTab(this.dataset.t)" data-t="mine" style="font-size:12px">👤 내 휴가</button>'
     +'<button onclick="_leaveApplyModal()" class="btn btn-teal" style="font-size:12px;margin-left:auto">✏️ 휴가 신청</button>'
     +'</div>'
@@ -8510,7 +8511,7 @@ function pageLeave(){
   });
 }
 function _leaveTab(tab){
-  ['pending','all','balance','mine'].forEach(function(t){
+  ['pending','all','balance','yearend','mine'].forEach(function(t){
     var btn=document.getElementById('ltab-'+t);
     if(btn)btn.className=(t===tab)?'btn btn-blue':'btn';
   });
@@ -8519,6 +8520,7 @@ function _leaveTab(tab){
   if(tab==='pending')_leaveRenderPending(el);
   else if(tab==='all')_leaveRenderAll(el);
   else if(tab==='balance')_leaveRenderBalance(el);
+  else if(tab==='yearend')_leaveRenderYearEnd(el);
   else if(tab==='mine')_leaveRenderMine(el);
 }
 
@@ -8664,6 +8666,94 @@ function _leaveSetBalance(uid,name,docId,curTotal){
   _db.collection('drivers').doc(docId).update(upd)
     .then(function(){toast('✅ 연차 '+n+'일로 저장됨');_leaveTab('balance');})
     .catch(function(e){toast('❌ '+e.message);});
+}
+
+// ══ 연도말 미사용 연차 처리 ══
+function _leaveRenderYearEnd(el){
+  var did=_CU.dealerId;
+  var year=new Date().getFullYear();
+  el.innerHTML='<div class="empty"><div class="empty-icon">⏳</div>로딩 중...</div>';
+
+  Promise.all([
+    _db.collection('drivers').where('dealerId','==',did).limit(100).get(),
+    _db.collection('leaves').where('dealerId','==',did).where('status','==','approved')
+      .where('startDate','>=',year+'-01-01').where('startDate','<=',year+'-12-31').limit(500).get()
+  ]).then(function(results){
+    var driverSnap=results[0], leaveSnap=results[1];
+    var usedMap={};
+    leaveSnap.forEach(function(doc){
+      var d=doc.data(); var uid=d.userId||'';
+      usedMap[uid]=(usedMap[uid]||0)+(d.days||1);
+    });
+
+    var html='<div class="card" style="margin-bottom:12px;border-left:4px solid #7c3aed">'      +'<div class="card-title" style="color:#7c3aed">🗓 '+year+'년 미사용 연차 처리</div>'      +'<div style="font-size:11px;color:var(--text3);margin-bottom:12px">'      +'미사용 연차를 <b>이월</b>(내년 연차에 추가) 또는 <b>현금</b>(연차수당으로 급여 지급)으로 처리합니다.'      +'</div>'      +'<table style="width:100%;border-collapse:collapse;font-size:12px">'      +'<tr style="background:var(--bg3)">'      +'<th style="padding:8px 10px;text-align:left">직원</th>'      +'<th style="padding:8px;text-align:center">총 연차</th>'      +'<th style="padding:8px;text-align:center">사용</th>'      +'<th style="padding:8px;text-align:center;color:#7c3aed">미사용</th>'      +'<th style="padding:8px;text-align:center">연차수당 (현금)</th>'      +'<th style="padding:8px;text-align:center">처리 방법</th>'      +'<th style="padding:8px;text-align:center">적용</th>'      +'</tr>';
+
+    driverSnap.forEach(function(doc){
+      var d=doc.data();
+      var uid=d.userId||d.coupangId||doc.id;
+      var legal=d.hireDate?calcLegalLeave(d.hireDate,year):15;
+      var total=d.annualLeave||d['annualLeave'+year]||legal;
+      var used=usedMap[uid]||0;
+      var remain=Math.max(0,total-used);
+      if(remain===0) return; // 미사용 없으면 스킵
+
+      // 연차수당 = 미사용 일수 × 일급
+      var dailyPay=d.dailyRate||(d.hourlyRate||LABOR_LAW_2026.minWage)*8||LABOR_LAW_2026.minDaily;
+      var leavePay=Math.round(remain*dailyPay);
+
+      html+='<tr style="border-bottom:1px solid var(--border)">'        +'<td style="padding:8px 10px;font-weight:700">'+esc(d.name||uid)+'</td>'        +'<td style="padding:8px;text-align:center">'+total+'일</td>'        +'<td style="padding:8px;text-align:center;color:var(--text3)">'+used+'일</td>'        +'<td style="padding:8px;text-align:center;font-weight:800;color:#7c3aed">'+remain+'일</td>'        +'<td style="padding:8px;text-align:center;font-weight:700;color:#059669">₩'+leavePay.toLocaleString()+'</td>'        +'<td style="padding:8px;text-align:center">'        +'<select id="ye-sel-'+doc.id+'" style="padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:11px">'        +'<option value="carryover">📅 이월 (내년 추가)</option>'        +'<option value="cash">💰 현금 (연차수당)</option>'        +'<option value="expire">❌ 소멸</option>'        +'</select></td>'        +'<td style="padding:8px;text-align:center">'        +'<button data-id="'+doc.id+'" data-uid="'+esc(uid)+'" data-remain="'+remain+'" data-pay="'+leavePay+'" '        +'onclick="_leaveApplyYearEnd(this.dataset.id,this.dataset.uid,parseInt(this.dataset.remain),parseInt(this.dataset.pay))" '        +'class="btn btn-blue" style="font-size:11px;padding:4px 10px">적용</button>'        +'</td></tr>';
+    });
+    html+='</table>'      +'<div style="margin-top:12px;display:flex;gap:8px">'      +'<button onclick="_leaveApplyAllYearEnd()" class="btn btn-blue" style="font-size:12px">✅ 전체 일괄 적용</button>'      +'</div>'      +'</div>';
+    el.innerHTML=html;
+  }).catch(function(e){el.innerHTML='<div class="empty">'+esc(e.message)+'</div>';});
+}
+
+function _leaveApplyYearEnd(docId,uid,remain,leavePay){
+  var sel=document.getElementById('ye-sel-'+docId);
+  var method=sel?sel.value:'carryover';
+  var nextYear=new Date().getFullYear()+1;
+  var did=_CU&&_CU.dealerId||'';
+
+  if(method==='carryover'){
+    // 내년 연차에 추가
+    _db.collection('drivers').doc(docId).get().then(function(snap){
+      var d=snap.data()||{};
+      var cur=d['annualLeave'+nextYear]||d.annualLeave||15;
+      var upd={}; upd['annualLeave'+nextYear]=cur+remain;
+      return _db.collection('drivers').doc(docId).update(upd);
+    }).then(function(){toast('✅ '+remain+'일 → '+nextYear+'년으로 이월 완료');})
+    .catch(function(e){toast('❌ '+e.message);});
+
+  } else if(method==='cash'){
+    // 연차수당 기록 저장 (급여 계산 시 포함)
+    _db.collection('leave_payments').add({
+      dealerId:did, userId:uid, driverId:docId,
+      year:new Date().getFullYear(),
+      unusedDays:remain, payAmount:leavePay,
+      type:'연차수당', status:'pending',
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    }).then(function(){toast('✅ 연차수당 ₩'+leavePay.toLocaleString()+' → 급여에 반영 예정');})
+    .catch(function(e){toast('❌ '+e.message);});
+
+  } else {
+    // 소멸 처리
+    var upd={}; upd['annualLeave'+new Date().getFullYear()]=0;
+    _db.collection('drivers').doc(docId).update(upd)
+      .then(function(){toast('✅ '+remain+'일 소멸 처리됨');})
+      .catch(function(e){toast('❌ '+e.message);});
+  }
+}
+
+function _leaveApplyAllYearEnd(){
+  var rows=document.querySelectorAll('[id^="ye-sel-"]');
+  if(!rows.length){toast('⚠️ 처리할 미사용 연차 없음');return;}
+  var confirmed=confirm('전 직원 미사용 연차를 일괄 처리할까요?');
+  if(!confirmed) return;
+  rows.forEach(function(sel){
+    var docId=sel.id.replace('ye-sel-','');
+    var btn=document.querySelector('[data-id="'+docId+'"]');
+    if(btn) _leaveApplyYearEnd(docId,btn.dataset.uid,parseInt(btn.dataset.remain),parseInt(btn.dataset.pay));
+  });
 }
 
 // ── 내 휴가 목록 ──
@@ -15014,9 +15104,13 @@ function _hsLoad(){
       .where('dealerId','==',did)
       .where('status','==','approved')
       .where('date','>=',dateFrom)
-      .where('date','<=',dateTo).get()
+      .where('date','<=',dateTo).get(),
+    // ★ 연차수당 (현금 처리)
+    _db.collection('leave_payments')
+      .where('dealerId','==',did)
+      .where('status','==','pending').get()
   ]).then(function(results){
-    var drvSnap=results[0], attSnap=results[1], otSnap=results[2];
+    var drvSnap=results[0], attSnap=results[1], otSnap=results[2], lpSnap=results[3];
     // 연장승인 Map {userId: 총 연장시간}
     var otMap={};
     otSnap.forEach(function(doc){
@@ -15025,6 +15119,16 @@ function _hsLoad(){
       if(!uid)return;
       var h=parseFloat(d.hours||0);
       otMap[uid]=(otMap[uid]||0)+h;
+    });
+    // 연차수당 Map {userId: 금액}
+    var lpMap={};var lpDocMap={};
+    lpSnap.forEach(function(doc){
+      var d=doc.data();
+      var uid=d.userId||'';
+      if(!uid)return;
+      lpMap[uid]=(lpMap[uid]||0)+(d.payAmount||0);
+      if(!lpDocMap[uid])lpDocMap[uid]=[];
+      lpDocMap[uid].push(doc.id);
     });
 
     // 직원 파싱
@@ -15081,6 +15185,7 @@ function _hsRenderResults(workers, attMap, ym){
   var results={};
 
   workers.forEach(function(w){
+    var leavePay2=lpMap[w.userId]||lpMap[w.id]||0;
     var records=attMap[w.userId]||attMap[w.name]||attMap[w.id]||[];
     var totalH=0, nightH=0, overtimeH=0, workDays=0, holidayDays=0;
     // ★ 승인된 연장근무 시간 추가
@@ -15128,7 +15233,12 @@ function _hsRenderResults(workers, attMap, ym){
 
     // 최저임금 위반 체크
     var mw=totalH>0?checkMinWage(res.totalPay,totalH):{violation:false};
-    results[w.id]=Object.assign({},res,{w:w,workDays:workDays,totalH:totalH,nightH:nightH,overtimeH:overtimeH,mwCheck:mw,ym:ym});
+    if(leavePay2>0){
+      res.totalPay=(res.totalPay||0)+leavePay2;
+      res.breakdown=res.breakdown||{};
+      res.breakdown['연차수당']=leavePay2;
+    }
+    results[w.id]=Object.assign({},res,{w:w,workDays:workDays,totalH:totalH,nightH:nightH,overtimeH:overtimeH,mwCheck:mw,ym:ym,leavePay:leavePay2,leaveDocIds:lpDocMap[w.userId]||lpDocMap[w.id]||[]});
 
     var typeLabel=WORK_TYPES[w.workType]||{icon:'👤',label:w.workType};
     var color=w.workType==='hourly'?'var(--blue)':w.workType==='daily'?'var(--purple)':'var(--green)';
@@ -15138,7 +15248,8 @@ function _hsRenderResults(workers, attMap, ym){
       +'<div style="font-size:13px;font-weight:700">'+esc(w.name||w.userId)+'</div>'
       +'<span style="background:'+color+'22;color:'+color+';font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">'+typeLabel.icon+' '+typeLabel.label+'</span>'
       +(w.camp?'<span style="font-size:10px;color:var(--text3)">'+esc(w.camp)+'</span>':'')
-      +(approvedOT>0?'<span style="background:rgba(245,158,11,.15);color:#f59e0b;font-size:9px;padding:2px 8px;border-radius:10px">✅ 연장승인 '+approvedOT+'h 반영</span>':'')
+      +(approvedOT>0?'<span style="background:rgba(245,158,11,.15);color:#f59e0b;font-size:9px;padding:2px 8px;border-radius:10px">✅ 연장승인 '+approvedOT+'h</span>':'')
+      +(leavePay2>0?'<span style="background:rgba(124,58,237,.15);color:#a855f7;font-size:9px;padding:2px 8px;border-radius:10px">🌴 연차수당 ₩'+leavePay2.toLocaleString()+'</span>':'')
       +(mw.violation?'<span style="background:#ef4444;color:#fff;font-size:9px;padding:2px 8px;border-radius:10px;margin-left:auto">⚠️ 최저임금 미달</span>':'')
       +'</div>'
       // 근무 요약
@@ -15201,7 +15312,11 @@ function _hsSave(wid){
     updatedAt:new Date().toISOString()
   };
   _db.collection('hourly_settlements').add(payload)
-    .then(function(){toast('✅ '+w.name+' 정산 저장 완료');})
+    .then(function(){
+      var ldIds=r.leaveDocIds||[];
+      ldIds.forEach(function(lid){_db.collection('leave_payments').doc(lid).update({status:'paid',paidAt:new Date().toISOString()});});
+      toast('✅ '+w.name+' 정산 저장 완료');
+    })
     .catch(function(e){toast('❌ '+e.message);});
 }
 
