@@ -193,6 +193,9 @@ body{
   color:var(--text2);font-size:11px;
   padding:5px 12px;border-radius:6px;cursor:pointer;
 }
+  /* 캡처 방지 */
+  @media print { body { display: none !important; } }
+  .qr-wrapper img, .qr-wrapper canvas { -webkit-user-select:none; user-select:none; pointer-events:none; }
 </style>
 </head>
 <body>

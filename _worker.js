@@ -383,8 +383,12 @@ export default {
     }
 
 
-    // API 키 테스트 엔드포인트
+    // API 키 테스트 엔드포인트 (슈퍼어드민만)
     if (path === '/test-apikey') {
+      const testEmail = request.headers.get('X-Admin-Email') || '';
+      if(!['kimdh4790@gmail.com','soungkyekim@naver.com'].includes(testEmail)){
+        return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers:{'Content-Type':'application/json'}});
+      }
       try {
         const k = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim();
         if (!k) {
@@ -433,11 +437,15 @@ export default {
     // favicon: 뒤에서 icon-192.png 기반으로 서빙 (204 제거)
 
     if (method === 'OPTIONS') {
+      const allowedOrigins = ['https://donway.ai.kr','https://mbti-logistics.kimdh4790.workers.dev'];
+      const origin = request.headers.get('Origin') || '';
+      const allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
       return new Response(null, {
         headers: {
-          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Origin': allowOrigin,
           'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type'
+          'Access-Control-Allow-Headers': 'Content-Type',
+          'Vary': 'Origin'
         }
       });
     }

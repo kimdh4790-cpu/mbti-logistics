@@ -7885,139 +7885,7 @@ function _taxSendEmail(token, email){
 function _taxShareEmail(){_taxShareLink();}
 
 // ── 세무사 공유 페이지 (pageTaxShare)
-function pageTaxShare(){
-  document.getElementById('page-title').textContent='🧾 세무사 공유';
-  var el=document.getElementById('content');
-  if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
-  var did=_CU.dealerId||_CU.uid;
-  var now=new Date();
-  var ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
 
-  // 최근 6개월 선택지
-  var monthOpts='';
-  for(var i=0;i<6;i++){
-    var d=new Date(now.getFullYear(),now.getMonth()-i,1);
-    var v=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
-    monthOpts+='<option value="'+v+'"'+(i===0?' selected':'')+'>'+v+'</option>';
-  }
-
-  el.innerHTML='<div class="cards">'
-    +'<div class="card">'
-    +'<div class="ch"><span class="ct">🧾 세무사 자료 공유</span></div>'
-    +'<div class="fg"><label style="font-size:12px;font-weight:600">세무사 이메일</label>'
-    +'<input id="txs-email" type="email" placeholder="tax@example.com" class="inp"></div>'
-    +'<div class="fg"><label style="font-size:12px;font-weight:600">세무사 이름 (선택)</label>'
-    +'<input id="txs-name" type="text" placeholder="홍길동 세무사" class="inp"></div>'
-    +'<div class="fg"><label style="font-size:12px;font-weight:600">공유 월</label>'
-    +'<select id="txs-ym" class="inp">'+monthOpts+'</select></div>'
-    +'<div class="fg"><label style="font-size:12px;font-weight:600">메모 (선택)</label>'
-    +'<textarea id="txs-memo" rows="2" placeholder="세무사에게 전달할 내용..." class="inp"></textarea></div>'
-    +'<div style="display:flex;gap:8px;margin-top:8px">'
-    +'<button class="btn btn-blue" onclick="window._txsShareAll()" style="flex:1">🔗 전체 공유 링크 생성</button>'
-    +'<button class="btn" onclick="window._txsExportAll()" style="flex:1">💾 CSV 전체 다운로드</button>'
-    +'</div>'
-    +'<div id="txs-result" style="margin-top:10px"></div>'
-    +'</div>'
-    +'<div class="card">'
-    +'<div class="ch"><span class="ct">📋 공유 이력</span></div>'
-    +'<div id="txs-history"><div style="font-size:12px;color:var(--text3)">로딩 중...</div></div>'
-    +'</div></div>';
-
-  // 저장된 세무사 정보 로드
-  _db.collection('companies').doc(did).get({source:'server'}).then(function(snap){
-    if(snap.exists){
-      var d=snap.data();
-      if(d.taxEmail){var e=document.getElementById('txs-email');if(e)e.value=d.taxEmail;}
-      if(d.taxName){var n=document.getElementById('txs-name');if(n)n.value=d.taxName;}
-    }
-  }).catch(function(){});
-
-  // 공유 이력 로드
-  _db.collection('taxShares').where('dealerId','==',did).limit(10).get()
-    .then(function(snap){
-      var hist=document.getElementById('txs-history');
-      if(!hist)return;
-      if(snap.empty){hist.innerHTML='<div style="font-size:12px;color:var(--text3)">공유 이력 없음</div>';return;}
-      var docs=snap.docs.slice().sort(function(a,b){return (b.data().createdAt||'').localeCompare(a.data().createdAt||'');});
-      var rows='';
-      docs.forEach(function(doc){
-        var d=doc.data();
-        var exp=d.expiresAt?new Date(d.expiresAt):null;
-        var isExp=exp&&exp<new Date();
-        var url=window.location.origin+window.location.pathname+'?taxShare='+d.token;
-        rows+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">'
-          +'<div><div style="font-size:12px;font-weight:700">'+esc(d.ym||'')+(d.email?' → '+esc(d.email):'')+'</div>'
-          +'<div style="font-size:10px;color:'+(isExp?'var(--red)':'var(--green)')+'">'+( isExp?'만료됨':'유효 ~'+(exp?exp.toLocaleDateString('ko-KR'):''))+'</div></div>'
-          +(isExp?'':'<button data-url="'+url+'" onclick="_copyText(this.dataset.url)" class="btn btn-sm" style="font-size:10px">📋 복사</button>')
-          +'</div>';
-      });
-      hist.innerHTML=rows||'<div style="font-size:12px;color:var(--text3)">이력 없음</div>';
-    }).catch(function(){
-      var h=document.getElementById('txs-history');
-      if(h)h.innerHTML='<div style="font-size:12px;color:var(--text3)">이력 로드 실패</div>';
-    });
-}
-
-// ★ 전체 공유 링크 생성
-window._txsShareAll=function(){
-  var did=_CU&&_CU.dealerId||'';
-  var ym=(document.getElementById('txs-ym')||{}).value||'';
-  var email=(document.getElementById('txs-email')||{}).value||'';
-  var name=(document.getElementById('txs-name')||{}).value||'';
-  var memo=(document.getElementById('txs-memo')||{}).value||'';
-  if(!ym){toast('❌ 월을 선택해 주세요');return;}
-  if(email&&_db&&did){
-    _db.collection('companies').doc(did).update({taxEmail:email,taxName:name}).catch(function(){});
-  }
-  var token='txs_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,6);
-  var shareData={type:'tax_share',dealerId:did,ym:ym,token:token,email:email,name:name,memo:memo,
-    createdAt:new Date().toISOString(),expiresAt:new Date(Date.now()+30*24*60*60*1000).toISOString()};
-  if(_db){
-    _db.collection('taxShares').doc(token).set(shareData).then(function(){
-      var url=window.location.origin+window.location.pathname+'?taxShare='+token;
-      var res=document.getElementById('txs-result');
-      if(res){
-        res.innerHTML='<div style="background:rgba(0,200,100,.1);border:1px solid var(--green);border-radius:8px;padding:10px">'
-          +'<div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:6px">✅ '+ym+' 전체 정산 공유 링크 생성!</div>'
-          +'<div style="font-size:11px;word-break:break-all;color:var(--text);margin-bottom:8px">'+url+'</div>'
-          +'<div style="display:flex;gap:6px">'
-          +'<button class="btn btn-sm btn-blue" id="txs-copy-btn" style="flex:1;font-size:11px">📋 링크 복사</button>'
-          +'</div></div>';
-      }
-      pageTaxShare(); // 이력 갱신
-      setTimeout(function(){
-        var cb=document.getElementById('txs-copy-btn');
-        if(cb){cb.onclick=function(){_copyText(url);if(email)toast('📧 링크 복사됨! 이메일로 직접 전달하세요: '+email);};}
-      },200);
-    }).catch(function(e){toast('❌ '+e.message);});
-  }
-};
-
-// ★ 전체 CSV 다운로드
-window._txsExportAll=function(){
-  var ym=(document.getElementById('txs-ym')||{}).value||'';
-  var did=_CU&&_CU.dealerId||'';
-  if(!ym){toast('❌ 월을 선택해 주세요');return;}
-  if(!_db){toast('❌ DB 미연결');return;}
-  toast('📊 '+ym+' 전체 정산 데이터 로딩...');
-  _db.collection('settlements').where('dealerId','==',did).orderBy('month','desc').limit(200).get()
-    .then(function(snap){
-      if(snap.empty){toast('ℹ️ '+ym+' 정산 데이터 없음');return;}
-      var rows=['﻿기사명,월,배송건수,반품건수,배송금액,반품금액,공제,실지급액'];
-      snap.forEach(function(doc){
-        var d=doc.data();
-        rows.push('"'+(d.driverName||'')+'",'+(d.month||'')+','+(d.totalCnt||0)+','+(d.retCnt||0)+','+(d.grossAmt||d.totalAmt||0)+','+(d.retAmt||0)+','+(d.deductAmt||0)+','+(d.netAmt||d.payAmt||0));
-      });
-      var blob=new Blob([rows.join('\n')],{type:'text/csv;charset=utf-8'});
-      var a=document.createElement('a');
-      a.href=URL.createObjectURL(blob);
-      a.download=((_CU&&_CU.companyName)||'DONWAY')+'_'+ym+'_정산자료.csv';
-      a.click();
-      toast('✅ CSV 다운로드 완료 ('+snap.size+'건)');
-    }).catch(function(e){toast('❌ '+e.message);});
-};
-
-// ── 세무사 공유 페이지 (pageTaxShare)
 function pageTaxShare(){
   document.getElementById('page-title').textContent='🧾 세무사 공유';
   var el=document.getElementById('content');
@@ -9240,8 +9108,8 @@ function _attRenderQR(){
     // ── 모드 선택 탭 ──
     +'<div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">'
     +'<button id="qrmode-dynamic" onclick="_attSetQRMode(\'dynamic\')" class="btn btn-blue" style="font-size:12px">⚡ 동적 QR (보안)</button>'
-    +'<button id="qrmode-static"  onclick="_attSetQRMode(\'static\')"  class="btn" style="font-size:12px">📌 정적 QR (고정)</button>'
-    +'<button id="qrmode-empqr"   onclick="_attSetQRMode(\'empqr\')"   class="btn" style="font-size:12px">👤 직원 개인 QR</button>'
+    
+    
     +'</div>'
     // ── 동적 QR 영역 ──
     +'<div id="qrarea-dynamic" style="display:flex;gap:14px;flex-wrap:wrap">'

@@ -420,6 +420,9 @@ function _genCode(slot){
   }
 })();
 
+// ── XSS 방어 ──
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
 // ── 핸드폰 포맷 ──
 function formatPhone(el){
   var v=el.value.replace(/\D/g,'').substring(0,11);
