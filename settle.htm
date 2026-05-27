@@ -7096,16 +7096,30 @@ window._expOcrScan=function(src){
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        image:base64,
-        mediaType:file.type||'image/jpeg',
-        prompt:'이 영수증 이미지에서 다음을 JSON으로 추출하세요: date(YYYY-MM-DD), desc(가게명/내용), amount(숫자만), type(주유비/식비/통신비/기타 중 하나). 반드시 JSON만 출력하세요.'
+        model:'naver-ocr',
+        max_tokens:500,
+        messages:[{role:'user',content:[
+          {type:'image',source:{type:'base64',media_type:file.type||'image/jpeg',data:base64}},
+          {type:'text',text:'영수증 OCR'}
+        ]}]
       })
     }).then(function(r){return r.json();})
     .then(function(data){
-      var txt=(data.content&&data.content[0]&&data.content[0].text)||'{}';
+      var txt=(data.content&&data.content[0]&&data.content[0].text)||'';
       try{
+        // Naver OCR 텍스트에서 직접 추출
         var clean=txt.replace(/```json|```/g,'').trim();
-        var parsed=JSON.parse(clean);
+        var parsed={};
+        // JSON 시도
+        var jm=clean.match(/\{[\s\S]+\}/);
+        if(jm){try{parsed=JSON.parse(jm[0]);}catch(e){parsed={};}}
+        // 텍스트 직접 파싱
+        if(!parsed.amount){
+          var amtM=clean.match(/(\d{1,3}(?:,\d{3})*|\d+)\s*원/);
+          if(amtM)parsed.amount=parseInt(amtM[1].replace(/,/g,''));
+          var dateM=clean.match(/(\d{4})[.\-\/](\d{1,2})[.\-\/](\d{1,2})/);
+          if(dateM)parsed.date=dateM[1]+'-'+dateM[2].padStart(2,'0')+'-'+dateM[3].padStart(2,'0');
+        }
         if(parsed.date){var d=document.getElementById('exp-date');if(d)d.value=parsed.date;}
         if(parsed.desc){var dc=document.getElementById('exp-desc');if(dc)dc.value=parsed.desc;}
         if(parsed.amount){var am=document.getElementById('exp-amount');if(am)am.value=parsed.amount;}
@@ -7995,9 +8009,12 @@ window._txsOcr=function(src){
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        image:base64,
-        mediaType:file.type||'image/jpeg',
-        prompt:'이 문서에서 세무사에게 필요한 정보를 추출하세요. JSON으로만 응답: {"ym":"YYYY-MM","desc":"문서 요약","amount":숫자또는0,"docType":"세금계산서/영수증/급여명세서/기타"}. 금액이 없으면 0.'
+        model:'naver-ocr',
+        max_tokens:500,
+        messages:[{role:'user',content:[
+          {type:'image',source:{type:'base64',media_type:file.type||'image/jpeg',data:base64}},
+          {type:'text',text:'세무서류 OCR'}
+        ]}]
       })
     }).then(function(r){return r.json();})
     .then(function(data){
@@ -13670,18 +13687,23 @@ async function _ocrAnalyze(){
       // 법인명/상호
       var nmMatch=fullText.match(/상\s*호\s*[:：]?\s*([^\n\r]+?)(?:\s+대표|\s+법인|$)/);
       if(nmMatch) json.bizName=nmMatch[1].trim();
-      // 대표자
-      var repMatch=fullText.match(/대\s*표\s*자?\s*[:：]?\s*([가-힣]{2,4})/);
+      // 대표자 - 성명 또는 대표자 뒤 한글 2~4자
+      var repMatch=fullText.match(/(?:대\s*표\s*자?|성\s*명)\s*[:：]?\s*([가-힣]{2,5})/);
       if(repMatch) json.bizRep=repMatch[1].trim();
       // 사업장 주소
-      var addrMatch=fullText.match(/소\s*재\s*지?\s*[:：]?\s*([^\n\r]+?(?:시|군|구)[^\n\r]+)/);
-      if(addrMatch) json.bizAddr=addrMatch[1].trim();
-      // 업태
-      var typeMatch=fullText.match(/업\s*태\s*[:：]?\s*([^\n\r종]{2,20})/);
-      if(typeMatch) json.bizType=typeMatch[1].trim();
+      var addrMatch=fullText.match(/(?:소\s*재\s*지?|사\s*업\s*장)\s*[:：]?\s*([가-힣\s\d\-,()]+(?:시|군|구|로|길)[가-힣\s\d\-,()]+)/);
+      if(addrMatch) json.bizAddr=addrMatch[1].replace(/\s+/g,' ').trim();
+      // 업태 - 종목 앞까지
+      var typeMatch=fullText.match(/업\s*태\s*[:：]?\s*([가-힣\s,]+?)(?:\s*종\s*목|\s*업\s*종|$)/);
+      if(typeMatch) json.bizType=typeMatch[1].replace(/\s+/g,' ').trim().substring(0,20);
       // 종목
-      var itemMatch=fullText.match(/종\s*목\s*[:：]?\s*([^\n\r]{2,20})/);
-      if(itemMatch) json.bizItem=itemMatch[1].trim();
+      var itemMatch=fullText.match(/종\s*목\s*[:：]?\s*([가-힣\s,]+?)(?:\s*\d|\s*사업|$)/);
+      if(itemMatch) json.bizItem=itemMatch[1].replace(/\s+/g,' ').trim().substring(0,20);
+      // 상호명 추가 추출
+      if(!json.bizName){
+        var nmMatch2=fullText.match(/(?:상\s*호|법\s*인\s*명)\s*[:：]?\s*([가-힣a-zA-Z()\s]{2,20}?)(?:\s*유한|\s*주식|\s*\()/);
+        if(nmMatch2) json.bizName=nmMatch2[1].trim();
+      }
     }
     var map={name:'edr-name',bizNum:'edr-biznum',bizName:'edr-bizname',bizRep:'edr-bizrep',bizAddr:'edr-bizaddr',bizType:'edr-biztype',bizItem:'edr-bizitem'};
     // ★ OCR 한글 오류 후처리 v9.26 — 패턴 대폭 확장
