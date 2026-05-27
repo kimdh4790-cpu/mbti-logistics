@@ -15275,6 +15275,7 @@ function _hsRenderResults(workers, attMap, ym){
         :'')
       +'<div style="display:flex;gap:6px">'
       +'<button onclick="_hsSave(this.dataset.id)" data-id="'+w.id+'" class="btn btn-sm btn-blue" style="flex:1">💾 정산 저장</button>'
+      +'<button onclick="_hsAddAllowance(this.dataset.id)" data-id="'+w.id+'" class="btn btn-sm" style="flex:1;background:linear-gradient(135deg,#059669,#10b981);color:#fff;border:none">➕ 수당 추가</button>'
       +'<button onclick="_hsPayslip(this.dataset.id)" data-id="'+w.id+'" class="btn btn-sm" style="flex:1">📄 급여명세서</button>'
       +'</div>'
       +'</div>';
@@ -15282,6 +15283,51 @@ function _hsRenderResults(workers, attMap, ym){
 
   window._hsState.results=results;
   listEl.innerHTML=html||'<div class="empty">출퇴근 기록이 없습니다</div>';
+}
+
+// ★ 수당 수동 추가
+function _hsAddAllowance(wid){
+  var st=window._hsState||{};
+  var r=st.results&&st.results[wid];
+  if(!r){toast('❌ 데이터 없음');return;}
+  var w=r.w;
+
+  var mo=document.createElement('div');
+  mo.className='mo show';mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  var box=document.createElement('div');
+  box.className='md';box.style.maxWidth='380px';
+
+  // 자주 쓰는 수당 프리셋
+  var presets=[
+    {n:'식대',v:200000},
+    {n:'교통비',v:100000},
+    {n:'직책수당',v:0},
+    {n:'가족수당',v:0},
+    {n:'특근수당',v:0},
+    {n:'위험수당',v:0},
+    {n:'기타수당',v:0}
+  ];
+
+  box.innerHTML='<div class="mdt">➕ 수당 추가 — '+esc(w.name||w.userId)+'</div>'    +'<div style="padding:16px">'    +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">'    +presets.map(function(p){      return '<button onclick="document.getElementById(\'allow-name\').value=\''+p.n+'\';document.getElementById(\'allow-amt\').value=\''+p.v+'\'" '        +'style="padding:4px 10px;border:1px solid var(--border);border-radius:16px;background:var(--bg3);font-size:11px;cursor:pointer">'+p.n+'</button>';    }).join('')    +'</div>'    +'<div style="display:flex;flex-direction:column;gap:10px">'    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">수당명</label>'    +'<input id="allow-name" type="text" placeholder="예: 식대, 교통비, 직책수당" '    +'style="width:100%;padding:9px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:13px"></div>'    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">금액 (원)</label>'    +'<input id="allow-amt" type="number" placeholder="0" min="0" '    +'style="width:100%;padding:9px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:13px"></div>'    +'</div>'    +'<div style="display:flex;gap:8px;margin-top:14px">'    +'<button onclick="this.closest(\'.mo\').remove()" style="flex:1;padding:9px;border:1px solid var(--border);border-radius:8px;background:none;cursor:pointer">취소</button>'    +'<button id="allow-save" class="btn btn-blue" style="flex:2;padding:9px">➕ 추가</button>'    +'</div>'    +'</div>';
+
+  mo.appendChild(box);document.body.appendChild(mo);
+
+  document.getElementById('allow-save').onclick=function(){
+    var name=document.getElementById('allow-name').value.trim();
+    var amt=parseFloat(document.getElementById('allow-amt').value)||0;
+    if(!name){toast('⚠️ 수당명을 입력해주세요');return;}
+    if(!amt){toast('⚠️ 금액을 입력해주세요');return;}
+
+    // breakdown에 추가
+    r.breakdown=r.breakdown||{};
+    r.breakdown[name]=(r.breakdown[name]||0)+amt;
+    r.totalPay=(r.totalPay||0)+amt;
+
+    // 화면 새로고침
+    _hsRenderResults(st.workers,st.attMap,st.ym);
+    mo.remove();
+    toast('✅ '+name+' ₩'+amt.toLocaleString()+' 추가됨');
+  };
 }
 
 function _hsStat(label,val){
@@ -17422,6 +17468,8 @@ var _PLAN_FEATURE_MAP={
   'leave':function(d){return d.payrollPaid;},
   'overtime':function(d){return d.qrPaid||d.payrollPaid;},
   'free':function(d){return true;},
+  'visitor':function(d){return d.qrPaid||d.payrollPaid||d.settlePaid;},
+  'survey':function(d){return d.qrPaid||d.payrollPaid||d.settlePaid;},
   'vehicle':function(d){return d.settlePaid||d.payrollPaid;},
   'expense':function(d){return d.settlePaid||d.payrollPaid;},
   'evaluation':function(d){return d.payrollPaid;},
