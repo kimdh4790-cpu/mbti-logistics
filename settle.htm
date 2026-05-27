@@ -2009,7 +2009,8 @@ _auth.onAuthStateChanged(function(user){
         }).catch(function(){});
 
         // ★ companies 읽어서 plan/trialEnd _CU에 추가 → 기능잠금 동기적 처리
-        _db.collection('companies').doc(_dealerId).get({source:'server'}).then(function(cSnap){
+        // ★ companies 캐시 (로그인당 1회만 서버 읽기)
+        _db.collection('companies').doc(_dealerId).get({source:window._companyFetched?'cache':'server'}).then(function(cSnap){window._companyFetched=true;
           if(cSnap.exists){
             var cd=cSnap.data();
             _CU.plan=cd.plan||'';
@@ -2270,7 +2271,7 @@ function showApp(){
   _dwLoadSettings();    // ★ 배달대행 + 택배 계산 설정 로드
   // ★ RPRICE 로드 (로그인/리로드 후에도 단가표 유지)
   if(_db&&_CU&&_CU.dealerId){
-    _db.collection('settings').doc(_CU.dealerId+'_routePrices').get().then(function(snap){
+    _db.collection('settings').doc(_CU.dealerId+'_routePrices').get({source:'cache'}).catch(function(){return _db.collection('settings').doc(_CU.dealerId+'_routePrices').get();}).then(function(snap){
       if(snap.exists){
         Object.assign(RPRICE,snap.data());
 // ★ 단가표 페이지 자동 갱신
@@ -3006,7 +3007,7 @@ function _loadRoster(){
   var cid=_CU.dealerId||_CU.companyId;
 
   Promise.all([
-    _db.collection('drivers').where('dealerId','==',cid).orderBy('name').get(),
+    _db.collection('drivers').where('dealerId','==',cid).orderBy('name').get({source:'default'}),
     _db.collection('roster_week').where('dealerId','==',cid).where('weekStart','==',ywStart).get()
   ]).then(function(results){
     var drivers=[];
@@ -10014,7 +10015,12 @@ function pageSettle(){
   var c=document.getElementById('content');
   c.innerHTML='<div class="loading">로딩 중...</div>';
   if(!_db){c.innerHTML='<div class="empty"><div class="empty-icon">📊</div>로그인 후 이용하세요</div>';return;}
-  _db.collection('settlements').where('dealerId','==',_CU.dealerId).get().then(function(snap){
+  // ★ 캐시 우선 (TTL 5분)
+  var _cS=ls('settlements');
+  if(_cS&&_cS.length>0){_settleCache=_cS;_renderPageSettle(c,_cS);return;}
+  var _6mo=new Date();_6mo.setMonth(_6mo.getMonth()-6);
+  var _6moStr=_6mo.getFullYear()+'-'+String(_6mo.getMonth()+1).padStart(2,'0');
+  _db.collection('settlements').where('dealerId','==',_CU.dealerId).where('month','>=',_6moStr).orderBy('month','desc').limit(500).get().then(function(snap){
     if(snap.empty){
       c.innerHTML='<div class="empty" style="padding:60px 20px"><div style="font-size:48px;margin-bottom:12px">📊</div>'
         +'<div style="font-size:17px;font-weight:800;margin-bottom:6px">정산 데이터가 없습니다</div>'
@@ -10022,6 +10028,7 @@ function pageSettle(){
       return;
     }
     var settles=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
+    lss('settlements',settles);_settleCache=settles;
     // 집계
     var totCoupang=0,totTaxBase=0,totNet=0,totDcnt=0,totDeduct=0;
     var byCamp={};
@@ -10044,6 +10051,12 @@ function pageSettle(){
     var campKeys=Object.keys(byCamp).sort();
 
     c.innerHTML='';
+    // 렌더링은 아래 코드에서 직접 실행
+
+
+
+
+
 
     // ── Hero 섹션
     var hero=document.createElement('div');
@@ -10257,7 +10270,7 @@ function deleteMonthSettlements(month){
     })
     .then(function(){
       // localStorage + 캐시도 정리
-      _settleCache=(_settleCache||[]).filter(function(x){return x.month!==month;});
+      _settleCache=(_settleCache||[]).filter(function(x){return x.month!==month;});lsInvalidate('settlements');
       var did2=(_CU&&_CU.dealerId)||'shared';
       // localStorage도 필터링된 상태로 덮어쓰기 (removeItem 대신 확실하게)
       lss('settlements',_settleCache);
@@ -10345,11 +10358,21 @@ function _renderSettleList(){
   if(_settleCache){_renderSettlePage(_settleCache,c);return;}
   var cid2=_CU.dealerId||_CU.companyId;
   // ★ 정산 + 등록 기사 동시 로드
+  // ★ localStorage 캐시 우선 (TTL 5분)
+  var _lsS=ls('settlements');
+  if(_lsS&&_lsS.length>0){
+    _settleCache=_lsS;
+    _renderSettlePage(_settleCache,c);
+    return;
+  }
+  var _6mo2=new Date();_6mo2.setMonth(_6mo2.getMonth()-6);
+  var _6moStr2=_6mo2.getFullYear()+'-'+String(_6mo2.getMonth()+1).padStart(2,'0');
   Promise.all([
-    _db.collection('settlements').where('dealerId','==',cid2).get(),
+    _db.collection('settlements').where('dealerId','==',cid2).where('month','>=',_6moStr2).orderBy('month','desc').limit(500).get(),
     _db.collection('drivers').where('dealerId','==',cid2).where('is_active','!=',false).get()
   ]).then(function(results){
     _settleCache=results[0].docs.map(function(d){return Object.assign({id:d.id},d.data());});
+    lss('settlements',_settleCache); // ★ 캐시 저장
     _settleCache.sort(function(a,b){return (b.month||'').localeCompare(a.month||'');});
 
     // ★ 등록된 기사 중 이번달 정산 없는 기사 → 미정산으로 추가
@@ -15733,13 +15756,39 @@ function doChangePw(){
 }
 
 // localStorage 헬퍼 (물류앱 호환)
+// ★ TTL 캐시 시스템 (읽기 비용 절감)
+var _LS_TTL={
+  settlements: 5*60*1000,   // 5분
+  drivers:    15*60*1000,   // 15분
+  settings:   30*60*1000,   // 30분 (단가/캠프 설정)
+};
 function ls(key){
   var did=(_CU&&_CU.dealerId)||'shared';
-  try{return JSON.parse(localStorage.getItem('dw_'+did+'_'+key)||'[]');}catch(e){return[];}
+  try{
+    var raw=localStorage.getItem('dw_'+did+'_'+key);
+    if(!raw)return[];
+    var obj=JSON.parse(raw);
+    // TTL 체크
+    if(obj&&obj.__ts__&&_LS_TTL[key]){
+      if(Date.now()-obj.__ts__ > _LS_TTL[key]){
+        localStorage.removeItem('dw_'+did+'_'+key);
+        return[];
+      }
+      return obj.__v__;
+    }
+    return Array.isArray(obj)?obj:[];
+  }catch(e){return[];}
 }
 function lss(key,val){
   var did=(_CU&&_CU.dealerId)||'shared';
-  try{localStorage.setItem('dw_'+did+'_'+key,JSON.stringify(val));}catch(e){}
+  try{
+    var payload=_LS_TTL[key]?{__ts__:Date.now(),__v__:val}:val;
+    localStorage.setItem('dw_'+did+'_'+key,JSON.stringify(payload));
+  }catch(e){}
+}
+function lsInvalidate(key){
+  var did=(_CU&&_CU.dealerId)||'shared';
+  localStorage.removeItem('dw_'+did+'_'+key);
 }
 
 function filterRouteCamp(camp){
@@ -15912,10 +15961,12 @@ function checkDuplicateSettlements(){
 function syncFirebaseSettlements(){
   if(!_db||!_CU){toast('❌ 로그인 필요');return;}
   toast('🔄 Firebase 동기화 중...');
-  _db.collection('settlements').where('dealerId','==',_CU.dealerId).get().then(function(snap){
+  var _6mo=new Date();_6mo.setMonth(_6mo.getMonth()-6);
+  var _6moStr=_6mo.getFullYear()+'-'+String(_6mo.getMonth()+1).padStart(2,'0');
+  _db.collection('settlements').where('dealerId','==',_CU.dealerId).where('month','>=',_6moStr).orderBy('month','desc').limit(500).get().then(function(snap){
     var arr=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
     _settleCache=arr;lss('settlements',arr);
-    toast('✅ 동기화 완료 ('+arr.length+'건)');
+    toast('✅ 동기화 완료 ('+arr.length+'건, 최근 6개월)');
     pageSettlements();
   }).catch(function(e){toast('❌ '+e.message);});
 }
