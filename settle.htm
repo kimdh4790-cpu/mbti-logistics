@@ -1866,18 +1866,10 @@ function cancelCp(){window._cpPending=null;goPage('settlements');}
 function _saveCpDriver(camp,dm,name,month,cb){
   if(!window._db){if(cb)cb();return;}
   var uid=dm.uid;
-  // ★ 기사 자동등록
+  // ★ 기사 자동등록 비활성화 (물류앱v9와 drivers 컬렉션 공유 → 중복 방지)
+  // settle.html은 drivers 컬렉션에 직접 쓰지 않음
+  // 기사 등록은 물류앱v9에서만 관리
   var _did=_CU&&_CU.dealerId||'';
-  if(_did&&uid){
-    _db.collection('drivers').where('dealerId','==',_did).where('userId','==',uid).limit(1).get()
-      .then(function(snap){
-        if(snap.empty){
-          _db.collection('drivers').add({name:name||uid,userId:uid,dealerId:_did,camp:camp||'',
-            coupangId:uid,is_active:true,joinedAt:new Date().toISOString(),autoRegistered:true
-          }).catch(function(){});
-        } else if(camp){snap.docs[0].ref.update({camp:camp}).catch(function(){});}
-      }).catch(function(){});
-  }
   var damt=dm.delAmt||0,ramt=dm.retAmt||0,freshRaw=dm.freshAmt||0;
   // ★ finc: 엑셀 col10×건수(addIncAmt) 우선 → 기사별 설정(_getIncSetting) → 글로벌
   var finc=0;
@@ -4486,7 +4478,7 @@ function _pfLoadStats(did, ym){
   var statsEl=document.getElementById('pf-stats');
   if(!statsEl)return;
   statsEl.innerHTML='<div class="empty"><div class="empty-icon">⏳</div>집계 중...</div>';
-  _db.collection('settlements').where('dealerId','==',did).where('month','==',ym).get()
+  _db.collection('settlements').where('dealerId','==',did).orderBy('month','desc').limit(200).get()
   .then(function(snap){
     var byPf={}; var total=0;
     snap.forEach(function(doc){
@@ -7397,7 +7389,7 @@ function _loadDeliveryReport(){
   var tbl=document.getElementById('dr-table');
   if(tbl)tbl.innerHTML='<div class="empty"><div class="empty-icon">⏳</div>데이터 집계 중...</div>';
   _db.collection('settlements')
-    .where('dealerId','==',did).where('month','==',ym).limit(500).get()
+    .where('dealerId','==',did).orderBy('month','desc').limit(200).get()
   .then(function(snap){
     var byDriver={};var byCamp={};
     var totalPay=0,totalDeliv=0;
@@ -7887,7 +7879,7 @@ window._txsExportAll=function(){
   if(!ym){toast('❌ 월을 선택해 주세요');return;}
   if(!_db){toast('❌ DB 미연결');return;}
   toast('📊 '+ym+' 전체 정산 데이터 로딩...');
-  _db.collection('settlements').where('dealerId','==',did).where('month','==',ym).get()
+  _db.collection('settlements').where('dealerId','==',did).orderBy('month','desc').limit(200).get()
     .then(function(snap){
       if(snap.empty){toast('ℹ️ '+ym+' 정산 데이터 없음');return;}
       var rows=['﻿기사명,월,배송건수,반품건수,배송금액,반품금액,공제,실지급액'];
