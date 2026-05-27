@@ -10203,9 +10203,11 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
 var _db=firebase.firestore(),_auth=firebase.auth(),_storage=firebase.storage();
 var _CU=null,FB=true;
 window._geoCacheMem={}; // 지오코딩 캐시
-// 물류앱 전역 상태 스텁
-var S={curDriver:(_CU&&_CU.email)||'', curPlate:'', curJobtype:'택배', curJobsub:'쿠팡',
-  curMode:'admin', curAdminName:(_CU&&_CU.email)||''};
+// 물류앱 전역 상태 스텁 (로그인 전 빈값, 로그인 후 업데이트)
+var S={curDriver:'', curPlate:'', curJobtype:'택배', curJobsub:'쿠팡',
+  curMode:'admin', curAdminName:''};
+window.S=S;
+function today(){ return new Date().toISOString().slice(0,10); }
 window._emerScanCount=0;window._emerSaveCount=0;
 window._cachedKakaoApiKey='';window._googleApiKey='';
 
