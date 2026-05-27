@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>방문자 등록 — DONWAY</title>
+<style>
+:root{
+  --bg:#0a0a0f;
+  --card:#13131a;
+  --border:#1e1e2e;
+  --cyan:#00d4ff;
+  --green:#00ff88;
+  --text:#e8e8f0;
+  --text2:#888899;
+  --red:#ff4466;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  min-height:100vh;
+  padding:0 0 40px;
+}
+.header{
+  background:linear-gradient(135deg,#0d1117 0%,#131620 100%);
+  border-bottom:1px solid var(--border);
+  padding:20px 20px 16px;
+  text-align:center;
+  position:sticky;top:0;z-index:100;
+}
+.logo{font-size:11px;letter-spacing:3px;color:var(--cyan);font-weight:700;opacity:.7;margin-bottom:4px;}
+.title{font-size:20px;font-weight:800;letter-spacing:-0.5px;}
+.subtitle{font-size:12px;color:var(--text2);margin-top:4px;}
+
+/* 단계 표시 */
+.steps{
+  display:flex;align-items:center;justify-content:center;
+  padding:16px 20px;gap:0;
+}
+.step{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  flex:1;position:relative;
+}
+.step:not(:last-child)::after{
+  content:'';position:absolute;
+  top:14px;left:60%;width:80%;height:2px;
+  background:var(--border);z-index:0;
+}
+.step.done:not(:last-child)::after{background:var(--cyan);}
+.step-circle{
+  width:28px;height:28px;border-radius:50%;
+  border:2px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;color:var(--text2);
+  background:var(--bg);z-index:1;position:relative;
+  transition:.3s;
+}
+.step.active .step-circle{border-color:var(--cyan);color:var(--cyan);}
+.step.done .step-circle{border-color:var(--cyan);background:var(--cyan);color:#000;}
+.step-label{font-size:10px;color:var(--text2);text-align:center;}
+.step.active .step-label{color:var(--cyan);}
+
+.container{padding:0 16px;}
+
+/* 카드 */
+.card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:20px;
+  margin-bottom:16px;
+}
+.card-title{
+  font-size:13px;font-weight:700;
+  color:var(--cyan);
+  margin-bottom:14px;
+  display:flex;align-items:center;gap:6px;
+}
+
+/* 폼 */
+label{display:block;font-size:11px;color:var(--text2);margin-bottom:6px;font-weight:600;}
+input,select,textarea{
+  width:100%;background:#0d0d15;
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:12px 14px;
+  color:var(--text);
+  font-size:14px;
+  font-family:inherit;
+  outline:none;
+  transition:.2s;
+  -webkit-appearance:none;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,212,255,.1);}
+textarea{resize:none;height:80px;}
+.form-row{margin-bottom:14px;}
+select option{background:#13131a;}
+
+/* 신분증 업로드 */
+.id-upload{
+  border:2px dashed var(--border);
+  border-radius:12px;
+  padding:20px;
+  text-align:center;
+  cursor:pointer;
+  transition:.3s;
+  position:relative;
+  overflow:hidden;
+}
+.id-upload:hover{border-color:var(--cyan);background:rgba(0,212,255,.04);}
+.id-upload.has-file{border-color:var(--green);background:rgba(0,255,136,.04);}
+.id-upload input{position:absolute;inset:0;opacity:0;cursor:pointer;z-index:2;}
+.id-upload-icon{font-size:32px;margin-bottom:8px;}
+.id-upload-text{font-size:13px;color:var(--text2);}
+.id-upload-sub{font-size:11px;color:var(--text2);opacity:.6;margin-top:4px;}
+.id-preview{
+  width:100%;max-height:180px;object-fit:cover;
+  border-radius:8px;margin-top:10px;
+  display:none;
+}
+
+/* OCR 상태 */
+.ocr-status{
+  display:none;
+  margin-top:10px;
+  padding:10px 12px;
+  background:rgba(0,212,255,.08);
+  border:1px solid rgba(0,212,255,.2);
+  border-radius:8px;
+  font-size:12px;
+  color:var(--cyan);
+}
+.ocr-status.error{background:rgba(255,68,102,.08);border-color:rgba(255,68,102,.2);color:var(--red);}
+
+/* 버튼 */
+.btn{
+  width:100%;padding:15px;
+  border:none;border-radius:12px;
+  font-size:15px;font-weight:700;
+  cursor:pointer;transition:.2s;
+  font-family:inherit;
+  margin-bottom:10px;
+}
+.btn-primary{
+  background:linear-gradient(135deg,var(--cyan),#0088cc);
+  color:#000;
+}
+.btn-primary:hover{opacity:.9;transform:translateY(-1px);}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text2);}
+
+/* 동의 */
+.agree-box{
+  display:flex;align-items:flex-start;gap:10px;
+  background:rgba(255,255,255,.03);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:12px;
+  cursor:pointer;
+}
+.agree-box input[type=checkbox]{
+  width:18px;height:18px;flex-shrink:0;
+  accent-color:var(--cyan);
+  margin-top:1px;
+}
+.agree-text{font-size:12px;color:var(--text2);line-height:1.5;}
+.agree-text b{color:var(--text);}
+
+/* 완료 화면 */
+.done-screen{
+  display:none;
+  text-align:center;
+  padding:40px 20px;
+}
+.done-icon{font-size:60px;margin-bottom:16px;}
+.done-title{font-size:22px;font-weight:800;margin-bottom:8px;}
+.done-sub{font-size:14px;color:var(--text2);line-height:1.6;}
+.done-code{
+  display:inline-block;
+  margin-top:20px;
+  padding:10px 24px;
+  background:rgba(0,255,136,.1);
+  border:1px solid rgba(0,255,136,.3);
+  border-radius:10px;
+  font-size:24px;font-weight:800;letter-spacing:4px;color:var(--green);
+}
+.done-code-label{font-size:11px;color:var(--text2);margin-top:6px;}
+
+/* 타이머 */
+.timer-bar{
+  height:3px;background:var(--border);border-radius:2px;margin-top:12px;overflow:hidden;
+}
+.timer-fill{
+  height:100%;background:var(--cyan);border-radius:2px;
+  animation:countdown 30s linear forwards;
+}
+@keyframes countdown{from{width:100%;}to{width:0%}}
+
+/* 단계별 표시 */
+.page{display:none;}
+.page.active{display:block;}
+
+.company-name{
+  font-size:18px;font-weight:800;color:var(--cyan);
+  text-align:center;margin-bottom:4px;
+}
+.visit-date{font-size:12px;color:var(--text2);text-align:center;margin-bottom:16px;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">DONWAY VISITOR</div>
+  <div class="title">방문자 등록</div>
+  <div class="subtitle" id="header-company">방문하신 것을 환영합니다</div>
+</div>
+
+<div class="steps">
+  <div class="step active" id="step1">
+    <div class="step-circle">1</div>
+    <div class="step-label">신분 확인</div>
+  </div>
+  <div class="step" id="step2">
+    <div class="step-circle">2</div>
+    <div class="step-label">방문 정보</div>
+  </div>
+  <div class="step" id="step3">
+    <div class="step-circle">3</div>
+    <div class="step-label">완료</div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- 페이지 1: 신분증 -->
+  <div class="page active" id="page1">
+    <div class="card">
+      <div class="card-title">🪪 신분증 / 운전면허증 촬영</div>
+      <div class="id-upload" id="id-upload-area" onclick="document.getElementById('id-file').click()">
+        <input type="file" id="id-file" accept="image/*" capture="environment" onchange="onIdFile(event)">
+        <div class="id-upload-icon">📷</div>
+        <div class="id-upload-text">신분증 또는 운전면허증 촬영</div>
+        <div class="id-upload-sub">JPG · PNG · HEIC 지원</div>
+        <img id="id-preview" class="id-preview">
+      </div>
+      <div class="ocr-status" id="ocr-status"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">👤 기본 정보 확인</div>
+      <div class="form-row">
+        <label>성명 *</label>
+        <input type="text" id="v-name" placeholder="홍길동" inputmode="text">
+      </div>
+      <div class="form-row">
+        <label>연락처 *</label>
+        <input type="tel" id="v-phone" placeholder="010-0000-0000" inputmode="tel" oninput="formatPhone(this)">
+      </div>
+    </div>
+
+    <button class="btn btn-primary" onclick="goPage2()" id="btn-next1">다음 →</button>
+  </div>
+
+  <!-- 페이지 2: 방문 정보 -->
+  <div class="page" id="page2">
+    <div class="card">
+      <div class="card-title">🏢 방문 정보</div>
+      <div class="form-row">
+        <label>소속 회사 / 기관</label>
+        <input type="text" id="v-company" placeholder="○○주식회사 (없으면 개인)">
+      </div>
+      <div class="form-row">
+        <label>방문 목적 *</label>
+        <select id="v-purpose">
+          <option value="">선택해주세요</option>
+          <option value="업무협의">업무 협의</option>
+          <option value="납품/배송">납품 / 배송</option>
+          <option value="면접">면접</option>
+          <option value="시설점검">시설 점검</option>
+          <option value="교육/연수">교육 / 연수</option>
+          <option value="기타">기타</option>
+        </select>
+      </div>
+      <div class="form-row" id="purpose-etc-row" style="display:none">
+        <label>기타 방문 목적</label>
+        <input type="text" id="v-purpose-etc" placeholder="방문 목적을 입력해주세요">
+      </div>
+      <div class="form-row">
+        <label>면담 대상자 (선택)</label>
+        <input type="text" id="v-contact-person" placeholder="담당자 성함">
+      </div>
+      <div class="form-row">
+        <label>차량번호 (선택)</label>
+        <input type="text" id="v-car" placeholder="12가 3456">
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="agree-box" onclick="toggleAgree()">
+        <input type="checkbox" id="v-agree" onclick="event.stopPropagation()">
+        <div class="agree-text">
+          <b>개인정보 수집 · 이용 동의</b><br>
+          방문자 신원 확인 및 보안을 위해 성명, 연락처, 방문 정보를 수집합니다. 수집된 정보는 방문 당일 이후 30일간 보관됩니다.
+        </div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" onclick="submitVisitor()" id="btn-submit">✅ 등록 완료</button>
+    <button class="btn btn-outline" onclick="goPage1()">← 이전</button>
+  </div>
+
+  <!-- 페이지 3: 완료 -->
+  <div class="page" id="page3">
+    <div class="done-screen" style="display:block">
+      <div class="done-icon">✅</div>
+      <div class="done-title">방문 등록 완료</div>
+      <div class="done-sub" id="done-msg">담당자에게 도착 사실을 알려드렸습니다.<br>잠시만 기다려 주세요.</div>
+      <div class="done-code" id="done-code">---</div>
+      <div class="done-code-label">방문 확인 번호</div>
+      <div class="timer-bar"><div class="timer-fill" id="timer-fill"></div></div>
+      <div style="font-size:11px;color:var(--text2);margin-top:6px">30초 후 화면이 초기화됩니다</div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
+
+<script>
+// ── Firebase 초기화 ──
+var FB_CFG={
+  apiKey:"AIzaSyBGe5LtENnJ0-xH9iRSyCwt2XK5D2eRE5I",
+  authDomain:"mbti-logistics.firebaseapp.com",
+  projectId:"mbti-logistics",
+  storageBucket:"mbti-logistics.appspot.com",
+  messagingSenderId:"1097631848952",
+  appId:"1:1097631848952:web:b4e37b47e3ff3e3b5d38b8"
+};
+if(!firebase.apps.length) firebase.initializeApp(FB_CFG);
+var _db=firebase.firestore();
+var _storage=firebase.storage();
+
+// ── URL 파라미터 ──
+var _params=new URLSearchParams(location.search);
+var _dealerId=_params.get('did')||'shared';
+var _companyName=_params.get('name')||'';
+var _ocrFile=null;
+var _ocrData={};
+
+// 회사명 표시
+if(_companyName){
+  document.getElementById('header-company').textContent=_companyName+' 방문자 등록';
+}
+
+// ── 핸드폰 포맷 ──
+function formatPhone(el){
+  var v=el.value.replace(/\D/g,'').substring(0,11);
+  if(v.length>7) v=v.slice(0,3)+'-'+v.slice(3,7)+'-'+v.slice(7);
+  else if(v.length>3) v=v.slice(0,3)+'-'+v.slice(3);
+  el.value=v;
+}
+
+// ── 신분증 파일 선택 ──
+function onIdFile(e){
+  var file=e.target.files[0];
+  if(!file) return;
+  _ocrFile=file;
+  var area=document.getElementById('id-upload-area');
+  var prev=document.getElementById('id-preview');
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    prev.src=ev.target.result;
+    prev.style.display='block';
+    area.classList.add('has-file');
+    runIdOcr(file,ev.target.result.split(',')[1]);
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── 신분증 OCR ──
+async function runIdOcr(file,b64){
+  var st=document.getElementById('ocr-status');
+  st.style.display='block';
+  st.className='ocr-status';
+  st.textContent='🔄 신분증 분석 중...';
+  try{
+    var resp=await fetch('/claude-ocr',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'naver-ocr',
+        max_tokens:500,
+        messages:[{role:'user',content:[
+          {type:'image',source:{type:'base64',media_type:file.type||'image/jpeg',data:b64}},
+          {type:'text',text:'신분증/운전면허증 OCR - 성명과 생년월일 추출'}
+        ]}]
+      })
+    });
+    var data=await resp.json();
+    var text=(data.content&&data.content[0]&&data.content[0].text)||'';
+    // 이름 추출
+    var nameMatch=text.match(/(?:성\s*명|이\s*름)?\s*([가-힣]{2,5})(?:\s|$)/);
+    if(nameMatch){
+      var nm=nameMatch[1];
+      var badWords=['주민','등록','번호','운전','면허','발급','앞면','뒷면','한국'];
+      if(badWords.indexOf(nm)<0){
+        document.getElementById('v-name').value=nm;
+        _ocrData.name=nm;
+        st.textContent='✅ 이름 자동 인식: '+nm;
+      } else {
+        st.textContent='⚠️ 자동 인식 실패 — 직접 입력해주세요';
+        st.classList.add('error');
+      }
+    } else {
+      st.textContent='⚠️ 이름을 직접 입력해주세요';
+    }
+  }catch(e){
+    st.textContent='⚠️ OCR 실패 — 직접 입력해주세요';
+    st.classList.add('error');
+  }
+}
+
+// ── 기타 방문목적 ──
+document.getElementById('v-purpose').addEventListener('change',function(){
+  var row=document.getElementById('purpose-etc-row');
+  row.style.display=this.value==='기타'?'block':'none';
+});
+
+// ── 동의 토글 ──
+function toggleAgree(){
+  var cb=document.getElementById('v-agree');
+  cb.checked=!cb.checked;
+}
+
+// ── 페이지 이동 ──
+function goPage2(){
+  var name=document.getElementById('v-name').value.trim();
+  var phone=document.getElementById('v-phone').value.trim();
+  if(!name){alert('성명을 입력해주세요');return;}
+  if(!phone||phone.length<9){alert('연락처를 입력해주세요');return;}
+  setStep(2);
+  document.getElementById('page1').classList.remove('active');
+  document.getElementById('page2').classList.add('active');
+}
+function goPage1(){
+  setStep(1);
+  document.getElementById('page2').classList.remove('active');
+  document.getElementById('page1').classList.add('active');
+}
+
+function setStep(n){
+  for(var i=1;i<=3;i++){
+    var s=document.getElementById('step'+i);
+    s.classList.remove('active','done');
+    if(i<n) s.classList.add('done');
+    else if(i===n) s.classList.add('active');
+  }
+}
+
+// ── 방문자 등록 제출 ──
+async function submitVisitor(){
+  var name=document.getElementById('v-name').value.trim();
+  var phone=document.getElementById('v-phone').value.trim();
+  var company=document.getElementById('v-company').value.trim();
+  var purpose=document.getElementById('v-purpose').value;
+  var purposeEtc=document.getElementById('v-purpose-etc').value.trim();
+  var contactPerson=document.getElementById('v-contact-person').value.trim();
+  var car=document.getElementById('v-car').value.trim();
+  var agreed=document.getElementById('v-agree').checked;
+
+  if(!purpose){alert('방문 목적을 선택해주세요');return;}
+  if(!agreed){alert('개인정보 수집에 동의해주세요');return;}
+
+  var btn=document.getElementById('btn-submit');
+  btn.disabled=true;btn.textContent='⏳ 등록 중...';
+
+  var finalPurpose=purpose==='기타'?(purposeEtc||'기타'):purpose;
+  var visitCode=Math.floor(100000+Math.random()*900000).toString();
+  var now=new Date();
+
+  try{
+    // 신분증 이미지 Storage 업로드
+    var idImageUrl='';
+    if(_ocrFile){
+      try{
+        var path='visitors/'+_dealerId+'/'+now.getFullYear()+'-'+(now.getMonth()+1)+'/'+Date.now()+'_id.jpg';
+        var ref=_storage.ref(path);
+        await ref.put(_ocrFile);
+        idImageUrl=await ref.getDownloadURL();
+      }catch(e){ console.warn('이미지 업로드 실패',e); }
+    }
+
+    // Firestore 저장
+    await _db.collection('visitors').add({
+      dealerId:_dealerId,
+      name:name,
+      phone:phone,
+      company:company||'개인',
+      purpose:finalPurpose,
+      contactPerson:contactPerson,
+      car:car,
+      visitCode:visitCode,
+      idImageUrl:idImageUrl,
+      visitedAt:firebase.firestore.FieldValue.serverTimestamp(),
+      visitDate:now.toISOString().slice(0,10),
+      status:'방문중'
+    });
+
+    // 완료 화면
+    setStep(3);
+    document.getElementById('page2').classList.remove('active');
+    document.getElementById('page3').classList.add('active');
+    document.getElementById('done-code').textContent=visitCode;
+    document.getElementById('done-msg').innerHTML=
+      '<b>'+name+'</b>님, 등록이 완료되었습니다.<br>담당자에게 아래 번호를 보여주세요.';
+
+    // 30초 후 초기화
+    setTimeout(function(){location.reload();},30000);
+
+  }catch(e){
+    btn.disabled=false;btn.textContent='✅ 등록 완료';
+    alert('등록 중 오류: '+e.message);
+  }
+}
+</script>
+</body>
+</html>

@@ -2,291 +2,464 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DONWAY 출퇴근</title>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>출퇴근 · 방문자 등록 — DONWAY</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,'Malgun Gothic',sans-serif}
-:root{--brand:#185FA5;--bg:#0a0f1e;--bg2:#0f172a;--cyan:#00d4ff;--green:#00ff88}
-body{background:var(--bg);color:#fff;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center}
+:root{
+  --bg:#060608;
+  --card:#0e0e14;
+  --border:#1a1a28;
+  --cyan:#00d4ff;
+  --green:#00ff88;
+  --orange:#ff9500;
+  --text:#e8e8f0;
+  --text2:#666680;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:100%;height:100%;overflow:hidden;}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  display:flex;flex-direction:column;
+  position:relative;
+}
 
-/* 상단 헤더 */
-.header{width:100%;padding:16px 32px;background:var(--bg2);border-bottom:1px solid rgba(0,212,255,.15);display:flex;align-items:center;justify-content:space-between;position:fixed;top:0;left:0;z-index:10}
-.logo{font-size:22px;font-weight:900;letter-spacing:3px;color:#fff}
-.logo span{color:var(--cyan)}
-.camp-name{font-size:14px;color:var(--cyan);font-weight:700;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.3);border-radius:20px;padding:6px 16px}
-.clock{font-size:28px;font-weight:800;font-family:monospace;color:#fff}
-.date-str{font-size:12px;color:rgba(255,255,255,.5);text-align:right}
+/* 배경 효과 */
+.bg-grid{
+  position:fixed;inset:0;
+  background-image:
+    linear-gradient(rgba(0,212,255,.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,212,255,.03) 1px,transparent 1px);
+  background-size:60px 60px;
+  pointer-events:none;
+}
+.bg-glow{
+  position:fixed;
+  width:600px;height:600px;border-radius:50%;
+  filter:blur(120px);pointer-events:none;
+  opacity:.15;
+}
+.bg-glow.left{background:var(--cyan);top:-100px;left:-200px;}
+.bg-glow.right{background:var(--orange);bottom:-100px;right:-200px;}
 
-/* 메인 레이아웃 */
-.main{display:grid;grid-template-columns:1fr 1fr;gap:32px;padding:100px 40px 40px;width:100%;max-width:1100px;align-items:start}
+/* 헤더 */
+.header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 28px;
+  border-bottom:1px solid var(--border);
+  background:rgba(6,6,8,.8);backdrop-filter:blur(20px);
+  z-index:10;flex-shrink:0;
+}
+.logo{
+  font-size:11px;letter-spacing:4px;
+  color:var(--cyan);font-weight:800;opacity:.8;
+}
+.company-name{font-size:18px;font-weight:800;letter-spacing:-0.5px;}
+.clock{
+  text-align:right;
+}
+.clock-time{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--cyan);}
+.clock-date{font-size:11px;color:var(--text2);margin-top:2px;}
 
-/* QR 섹션 */
-.qr-section{background:var(--bg2);border:1px solid rgba(0,212,255,.2);border-radius:20px;padding:32px;text-align:center}
-.qr-title{font-size:14px;letter-spacing:3px;color:var(--cyan);margin-bottom:8px;font-family:monospace}
-.qr-subtitle{font-size:12px;color:rgba(255,255,255,.4);margin-bottom:24px}
-#qr-box{width:220px;height:220px;margin:0 auto 20px;background:#fff;border-radius:12px;padding:10px;display:flex;align-items:center;justify-content:center}
-#qr-box canvas,#qr-box img{width:100%!important;height:100%!important}
+/* 메인 */
+.main{
+  flex:1;
+  display:grid;
+  gap:20px;
+  padding:20px 28px;
+  overflow:hidden;
+}
+.main.dual{grid-template-columns:1fr 1fr;}
+.main.single{grid-template-columns:1fr;max-width:520px;margin:0 auto;width:100%;}
 
-/* 타이머 바 */
-.timer-wrap{margin:0 auto 16px;width:220px}
-.timer-bar{height:4px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden;margin-bottom:6px}
-.timer-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--brand));border-radius:2px;transition:width .1s linear}
-.timer-text{font-size:11px;color:rgba(255,255,255,.5);text-align:center;font-family:monospace}
+/* QR 패널 */
+.panel{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:20px;
+  display:flex;flex-direction:column;
+  align-items:center;
+  padding:24px 20px 20px;
+  position:relative;
+  overflow:hidden;
+}
+.panel::before{
+  content:'';position:absolute;
+  top:0;left:0;right:0;height:3px;
+}
+.panel.qr-panel::before{background:linear-gradient(90deg,var(--cyan),#0088cc);}
+.panel.visitor-panel::before{background:linear-gradient(90deg,var(--orange),#ff5500);}
 
-/* 안내 */
-.qr-guide{background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.15);border-radius:10px;padding:14px;font-size:12px;color:rgba(255,255,255,.6);line-height:2;text-align:left}
-.qr-guide strong{color:var(--cyan)}
+.panel-badge{
+  font-size:10px;letter-spacing:2px;font-weight:800;
+  padding:4px 12px;border-radius:20px;
+  margin-bottom:12px;
+}
+.panel.qr-panel .panel-badge{background:rgba(0,212,255,.1);color:var(--cyan);}
+.panel.visitor-panel .panel-badge{background:rgba(255,149,0,.1);color:var(--orange);}
 
-/* 출퇴근 현황 */
-.att-section{background:var(--bg2);border:1px solid rgba(0,255,136,.15);border-radius:20px;padding:28px;max-height:80vh;overflow-y:auto}
-.att-title{font-size:14px;letter-spacing:3px;color:var(--green);margin-bottom:16px;font-family:monospace;display:flex;align-items:center;justify-content:space-between}
-.att-count{font-size:11px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.2);padding:3px 10px;border-radius:20px;color:var(--green)}
-.att-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06)}
-.att-row:last-child{border-bottom:none}
-.att-avatar{width:36px;height:36px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0}
-.att-name{font-size:14px;font-weight:700;flex:1}
-.att-camp{font-size:10px;color:rgba(255,255,255,.4)}
-.att-in{font-size:12px;color:var(--green);font-family:monospace}
-.att-out{font-size:12px;color:rgba(255,255,255,.4);font-family:monospace}
-.att-status{font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px}
-.att-status.working{background:rgba(0,255,136,.15);color:var(--green)}
-.att-status.done{background:rgba(255,255,255,.08);color:rgba(255,255,255,.4)}
-.att-status.absent{background:rgba(239,68,68,.1);color:#f87171}
-.empty-att{text-align:center;padding:40px;color:rgba(255,255,255,.3);font-size:13px}
+.panel-title{font-size:18px;font-weight:800;margin-bottom:4px;}
+.panel-sub{font-size:12px;color:var(--text2);margin-bottom:16px;text-align:center;}
 
-/* 설정 오버레이 */
-.setup-overlay{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:100;display:flex;align-items:center;justify-content:center}
-.setup-box{background:var(--bg2);border:1px solid rgba(0,212,255,.3);border-radius:20px;padding:36px;width:100%;max-width:420px}
-.setup-title{font-size:18px;font-weight:800;margin-bottom:24px;color:#fff}
-.fg{margin-bottom:16px}
-.fg label{display:block;font-size:12px;color:rgba(255,255,255,.5);margin-bottom:6px}
-.fg input,.fg select{width:100%;padding:10px 14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:14px}
-.btn{padding:12px 24px;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;width:100%}
-.btn-blue{background:var(--brand);color:#fff}
+/* QR 코드 */
+.qr-wrapper{
+  background:#fff;
+  border-radius:16px;
+  padding:16px;
+  position:relative;
+}
+.qr-wrapper canvas{display:block;}
+.qr-expiring{
+  position:absolute;inset:0;border-radius:16px;
+  background:rgba(255,255,255,.95);
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:700;color:#333;
+  opacity:0;transition:.3s;
+}
 
-@media(max-width:768px){.main{grid-template-columns:1fr;padding:90px 16px 20px}}
+/* 6자리 코드 */
+.code-display{
+  display:flex;gap:8px;margin-top:16px;align-items:center;
+}
+.code-digit{
+  width:44px;height:56px;
+  background:rgba(0,212,255,.06);
+  border:1px solid rgba(0,212,255,.2);
+  border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;
+  color:var(--cyan);
+  transition:.3s;
+}
+.code-sep{font-size:18px;color:var(--border);}
+
+/* 타이머 */
+.timer-wrap{width:100%;margin-top:14px;}
+.timer-bar{
+  height:4px;background:rgba(255,255,255,.05);
+  border-radius:2px;overflow:hidden;
+}
+.timer-fill{
+  height:100%;border-radius:2px;
+  transition:width .1s linear;
+}
+.qr-panel .timer-fill{background:linear-gradient(90deg,var(--cyan),#0088cc);}
+.visitor-panel .timer-fill{background:linear-gradient(90deg,var(--orange),#ff5500);}
+.timer-text{font-size:11px;color:var(--text2);text-align:center;margin-top:6px;}
+
+/* 방문자 QR */
+.visitor-qr-wrap{
+  background:#fff;
+  border-radius:16px;
+  padding:16px;
+}
+.visitor-qr-wrap canvas{display:block;}
+.visitor-scan-hint{
+  font-size:12px;color:var(--text2);text-align:center;
+  margin-top:10px;line-height:1.5;
+}
+
+/* 방문자 로그 (소형) */
+.visitor-log{
+  width:100%;margin-top:12px;
+  max-height:120px;overflow-y:auto;
+}
+.visitor-log-item{
+  display:flex;align-items:center;gap:8px;
+  padding:6px 8px;
+  background:rgba(255,255,255,.03);
+  border-radius:6px;margin-bottom:4px;
+  font-size:11px;
+}
+.visitor-log-name{font-weight:700;color:var(--text);}
+.visitor-log-time{color:var(--text2);}
+.visitor-log-purpose{color:var(--orange);margin-left:auto;}
+
+/* 하단 상태 */
+.footer{
+  padding:10px 28px;
+  border-top:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(6,6,8,.8);
+  flex-shrink:0;
+}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.status-text{font-size:11px;color:var(--text2);display:flex;align-items:center;gap:6px;}
+.status-hint{font-size:10px;color:var(--text2);opacity:.5;}
+.fullscreen-btn{
+  background:rgba(255,255,255,.05);border:1px solid var(--border);
+  color:var(--text2);font-size:11px;
+  padding:5px 12px;border-radius:6px;cursor:pointer;
+}
 </style>
 </head>
 <body>
+<div class="bg-grid"></div>
+<div class="bg-glow left"></div>
+<div class="bg-glow right"></div>
 
-<!-- 설정 오버레이 (최초 1회) -->
-<div class="setup-overlay" id="setup-overlay">
-  <div class="setup-box">
-    <div class="setup-title">🏭 출퇴근 화면 설정</div>
-    <div class="fg">
-      <label>회사(대리점) ID</label>
-      <input id="cfg-dealer" placeholder="Firebase UID 입력" value="">
-    </div>
-    <div class="fg">
-      <label>캠프/지점명</label>
-      <input id="cfg-camp" placeholder="예: 부산1캠프, 1호점" value="">
-    </div>
-    <div class="fg">
-      <label>관리자 비밀번호 (화면 보호용)</label>
-      <input id="cfg-pw" type="password" placeholder="4자리 이상">
-    </div>
-    <button class="btn btn-blue" onclick="saveConfig()">시작하기 →</button>
-    <div id="cfg-msg" style="font-size:12px;color:#f87171;margin-top:10px;text-align:center"></div>
-  </div>
-</div>
-
-<!-- 헤더 -->
 <div class="header">
-  <div class="logo"><span>D</span>ONWAY</div>
-  <div class="camp-name" id="header-camp">캠프 로딩 중...</div>
-  <div>
-    <div class="clock" id="clock">00:00:00</div>
-    <div class="date-str" id="date-str"></div>
+  <div class="logo">DONWAY DISPLAY</div>
+  <div class="company-name" id="hdr-company">출퇴근 · 방문자 등록</div>
+  <div class="clock">
+    <div class="clock-time" id="clock-time">00:00:00</div>
+    <div class="clock-date" id="clock-date"></div>
   </div>
 </div>
 
-<!-- 메인 -->
-<div class="main">
-  <!-- 왼쪽: QR -->
-  <div class="qr-section">
-    <div class="qr-title">// DONWAY QR ENGINE</div>
-    <div class="qr-subtitle">직원 앱에서 이 QR을 스캔하세요</div>
-    <div id="qr-box"></div>
-    <div class="timer-wrap">
-      <div class="timer-bar"><div class="timer-fill" id="timer-fill" style="width:100%"></div></div>
-      <div class="timer-text" id="timer-text">30초 후 갱신</div>
-    </div>
-    <div class="qr-guide">
-      <strong>① DONWAY 앱</strong> 로그인<br>
-      <strong>② 📷 QR 출퇴근</strong> 메뉴 선택<br>
-      <strong>③ 카메라 시작</strong> 후 이 QR 스캔<br>
-      <strong>④ 출/퇴근 자동 기록</strong>
-    </div>
-  </div>
-
-  <!-- 오른쪽: 현황 -->
-  <div class="att-section">
-    <div class="att-title">
-      오늘 출퇴근 현황
-      <span class="att-count" id="att-count">0명 출근</span>
-    </div>
-    <div id="att-list"><div class="empty-att">⏳ 로딩 중...</div></div>
-  </div>
+<div class="main" id="main-area">
+  <!-- JS로 동적 생성 -->
 </div>
+
+<div class="footer">
+  <div class="status-text"><div class="status-dot"></div>실시간 연결됨</div>
+  <div class="status-hint" id="footer-hint">QR 또는 6자리 코드로 출퇴근 기록</div>
+  <button class="fullscreen-btn" onclick="toggleFS()">⛶ 전체화면</button>
+</div>
+
+<!-- QR 라이브러리 -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
 
 <script>
-var CONFIG = JSON.parse(localStorage.getItem('donway_att_cfg')||'{}');
-var _db = null;
-var _qrSecs = 30;
-var _qrInterval = null;
-var _attInterval = null;
+// ── Firebase ──
+var FB_CFG={
+  apiKey:"AIzaSyBGe5LtENnJ0-xH9iRSyCwt2XK5D2eRE5I",
+  authDomain:"mbti-logistics.firebaseapp.com",
+  projectId:"mbti-logistics",
+  storageBucket:"mbti-logistics.appspot.com",
+  messagingSenderId:"1097631848952",
+  appId:"1:1097631848952:web:b4e37b47e3ff3e3b5d38b8"
+};
+if(!firebase.apps.length) firebase.initializeApp(FB_CFG);
+var _db=firebase.firestore();
 
-// 설정 저장
-function saveConfig(){
-  var dealer = document.getElementById('cfg-dealer').value.trim();
-  var camp   = document.getElementById('cfg-camp').value.trim();
-  var pw     = document.getElementById('cfg-pw').value.trim();
-  var msg    = document.getElementById('cfg-msg');
-  if(!dealer||!camp){msg.textContent='회사 ID와 캠프명을 입력하세요';return;}
-  if(pw.length>0&&pw.length<4){msg.textContent='비밀번호 4자리 이상';return;}
-  CONFIG = {dealer:dealer, camp:camp, pw:pw};
-  localStorage.setItem('donway_att_cfg', JSON.stringify(CONFIG));
-  document.getElementById('setup-overlay').style.display='none';
-  init();
+// ── URL 파라미터 ──
+var _params=new URLSearchParams(location.search);
+var _dealerId=_params.get('did')||'shared';
+var _companyName=_params.get('name')||'';
+// mode: qr / visitor / both
+var _mode=_params.get('mode')||'both';
+
+if(_companyName) document.getElementById('hdr-company').textContent=_companyName;
+
+// ── 시계 ──
+var _days=['일','월','화','수','목','금','토'];
+function updateClock(){
+  var n=new Date();
+  var hh=n.getHours().toString().padStart(2,'0');
+  var mm=n.getMinutes().toString().padStart(2,'0');
+  var ss=n.getSeconds().toString().padStart(2,'0');
+  document.getElementById('clock-time').textContent=hh+':'+mm+':'+ss;
+  document.getElementById('clock-date').textContent=
+    n.getFullYear()+'년 '+(n.getMonth()+1)+'월 '+n.getDate()+'일 ('+_days[n.getDay()]+')';
+}
+setInterval(updateClock,1000);updateClock();
+
+// ── 30초 슬롯 (TOTP 방식) ──
+var SLOT=30000;
+var _secret='DONWAY_'+_dealerId;
+
+function getSlot(){return Math.floor(Date.now()/SLOT);}
+function slotRemaining(){return SLOT-((Date.now())%SLOT);}
+
+// 6자리 코드 생성 (슬롯 기반)
+function genCode(slot){
+  var s=_secret+slot;
+  var h=0;
+  for(var i=0;i<s.length;i++){h=(Math.imul(31,h)+s.charCodeAt(i))|0;}
+  return (Math.abs(h)%900000+100000).toString();
 }
 
-// 초기화
-function init(){
-  if(!CONFIG.dealer){return;}
-  document.getElementById('setup-overlay').style.display='none';
-  document.getElementById('header-camp').textContent=CONFIG.camp||'캠프';
-  startClock();
-  generateQR();
-  loadAttendance();
-  // 30초마다 QR 갱신
-  _qrInterval = setInterval(function(){
-    _qrSecs=30;
-    generateQR();
-  }, 30000);
-  // 10초마다 출퇴근 현황 갱신
-  _attInterval = setInterval(loadAttendance, 10000);
-  // 타이머 카운트다운
-  setInterval(function(){
-    _qrSecs--;
-    if(_qrSecs<0)_qrSecs=30;
-    var fill=document.getElementById('timer-fill');
-    var txt=document.getElementById('timer-text');
-    if(fill)fill.style.width=(_qrSecs/30*100)+'%';
-    if(txt)txt.textContent=_qrSecs+'초 후 갱신';
-  },1000);
-}
-
-// 동적 QR 생성
-function generateQR(){
-  var box=document.getElementById('qr-box');
-  if(!box)return;
-  box.innerHTML='';
-  var payload = JSON.stringify({
-    dealerId: CONFIG.dealer,
-    camp: CONFIG.camp||'',
-    ts: Date.now()  // 타임스탬프 (30초 유효)
-  });
-  new QRCode(box,{
-    text: payload,
-    width: 200,
-    height: 200,
-    colorDark: '#000000',
-    colorLight: '#ffffff',
-    correctLevel: QRCode.CorrectLevel.M
+// QR 데이터 생성
+function genQrData(slot){
+  var code=genCode(slot);
+  return JSON.stringify({
+    type:'attendance',
+    dealerId:_dealerId,
+    slot:slot,
+    code:code,
+    ts:Date.now()
   });
 }
 
-// 출퇴근 현황 로드
-function loadAttendance(){
-  if(!_db||!CONFIG.dealer)return;
+// ── UI 구성 ──
+var _mainEl=document.getElementById('main-area');
+var _qrCanvas=null,_visitorCanvas=null;
+var _curSlot=getSlot();
+
+function buildUI(){
+  _mainEl.innerHTML='';
+  if(_mode==='both') _mainEl.className='main dual';
+  else _mainEl.className='main single';
+
+  if(_mode==='qr'||_mode==='both'){
+    var panel=document.createElement('div');
+    panel.className='panel qr-panel';
+    panel.id='qr-panel';
+    panel.innerHTML=
+      '<div class="panel-badge">직원 출퇴근</div>'+
+      '<div class="panel-title">QR 코드 스캔</div>'+
+      '<div class="panel-sub">앱으로 QR을 스캔하거나<br>6자리 코드를 입력하세요</div>'+
+      '<div class="qr-wrapper"><canvas id="qr-canvas"></canvas><div class="qr-expiring" id="qr-expiring">갱신 중...</div></div>'+
+      '<div class="code-display" id="code-display"></div>'+
+      '<div class="timer-wrap">'+
+        '<div class="timer-bar"><div class="timer-fill qr-fill" id="qr-timer-fill"></div></div>'+
+        '<div class="timer-text" id="qr-timer-text">30초마다 자동 갱신</div>'+
+      '</div>';
+    _mainEl.appendChild(panel);
+    _qrCanvas=document.getElementById('qr-canvas');
+  }
+
+  if(_mode==='visitor'||_mode==='both'){
+    var vpanel=document.createElement('div');
+    vpanel.className='panel visitor-panel';
+    vpanel.id='visitor-panel';
+    vpanel.innerHTML=
+      '<div class="panel-badge">방문자 등록</div>'+
+      '<div class="panel-title">방문자 등록</div>'+
+      '<div class="panel-sub">QR을 스캔하여 방문자 등록을<br>진행해주세요</div>'+
+      '<div class="visitor-qr-wrap"><canvas id="visitor-canvas"></canvas></div>'+
+      '<div class="visitor-scan-hint">📱 휴대폰 카메라로 QR 스캔<br>신분증 촬영 후 간단 등록</div>'+
+      '<div class="visitor-log" id="visitor-log"></div>';
+    _mainEl.appendChild(vpanel);
+    _visitorCanvas=document.getElementById('visitor-canvas');
+    buildVisitorQr();
+    loadRecentVisitors();
+  }
+}
+
+// ── QR 생성 ──
+function buildAttendanceQr(slot){
+  if(!_qrCanvas) return;
+  var data=genQrData(slot);
+  var size=_mode==='both'?220:280;
+  QRCode.toCanvas(_qrCanvas,data,{
+    width:size,margin:1,
+    color:{dark:'#000000',light:'#ffffff'}
+  },function(e){if(e) console.error(e);});
+  buildCodeDigits(genCode(slot));
+}
+
+function buildVisitorQr(){
+  if(!_visitorCanvas) return;
+  var url=location.origin+'/visitor?did='+_dealerId+(
+    _companyName?'&name='+encodeURIComponent(_companyName):'');
+  var size=_mode==='both'?200:280;
+  QRCode.toCanvas(_visitorCanvas,url,{
+    width:size,margin:1,
+    color:{dark:'#000000',light:'#ffffff'}
+  },function(e){if(e) console.error(e);});
+}
+
+// ── 6자리 코드 표시 ──
+function buildCodeDigits(code){
+  var el=document.getElementById('code-display');
+  if(!el) return;
+  var html='';
+  for(var i=0;i<6;i++){
+    if(i===3) html+='<div class="code-sep">·</div>';
+    html+='<div class="code-digit" id="d'+i+'">'+code[i]+'</div>';
+  }
+  el.innerHTML=html;
+}
+
+function animateCodeChange(oldCode,newCode){
+  for(var i=0;i<6;i++){
+    if(oldCode[i]!==newCode[i]){
+      var el=document.getElementById('d'+i);
+      if(el){
+        el.style.transform='translateY(-10px)';
+        el.style.opacity='0';
+        (function(idx,digit){
+          setTimeout(function(){
+            var d=document.getElementById('d'+idx);
+            if(d){d.textContent=digit;d.style.transform='translateY(10px)';}
+          },150);
+          setTimeout(function(){
+            var d=document.getElementById('d'+idx);
+            if(d){d.style.transform='';d.style.opacity='1';}
+          },200);
+        })(i,newCode[i]);
+      }
+    }
+  }
+}
+
+// ── 타이머 업데이트 ──
+function updateTimer(){
+  var rem=slotRemaining();
+  var pct=(rem/SLOT)*100;
+  var fill=document.getElementById('qr-timer-fill');
+  var txt=document.getElementById('qr-timer-text');
+  if(fill) fill.style.width=pct+'%';
+  var sec=Math.ceil(rem/1000);
+  if(txt) txt.textContent=sec+'초 후 갱신';
+
+  // 슬롯 변경 감지
+  var slot=getSlot();
+  if(slot!==_curSlot){
+    var oldCode=genCode(_curSlot);
+    var newCode=genCode(slot);
+    _curSlot=slot;
+    // QR 갱신 (페이드)
+    var expiring=document.getElementById('qr-expiring');
+    if(expiring){
+      expiring.style.opacity='1';
+      setTimeout(function(){
+        buildAttendanceQr(slot);
+        if(expiring) expiring.style.opacity='0';
+        animateCodeChange(oldCode,newCode);
+      },300);
+    } else {
+      buildAttendanceQr(slot);
+    }
+  }
+}
+
+// ── 최근 방문자 ──
+function loadRecentVisitors(){
   var today=new Date().toISOString().slice(0,10);
-  _db.collection('attendance')
-    .where('dealerId','==',CONFIG.dealer)
-    .where('date','==',today)
-    .orderBy('checkIn','asc').limit(50).get()
-  .then(function(snap){
-    var rows=[];
-    snap.forEach(function(doc){rows.push(doc.data());});
-    renderAttendance(rows);
-  }).catch(function(){});
-}
-
-function renderAttendance(rows){
-  var list=document.getElementById('att-list');
-  var cnt=document.getElementById('att-count');
-  if(!list)return;
-  if(!rows.length){
-    list.innerHTML='<div class="empty-att">아직 출근 기록이 없습니다</div>';
-    if(cnt)cnt.textContent='0명 출근';
-    return;
-  }
-  var working=rows.filter(function(r){return r.checkIn&&!r.checkOut;}).length;
-  if(cnt)cnt.textContent=working+'명 근무 중 / 총 '+rows.length+'명';
-  list.innerHTML=rows.map(function(r){
-    var initials=(r.driverName||r.userId||'?')[0].toUpperCase();
-    var status=r.checkOut?'done':'working';
-    var statusTxt=r.checkOut?'퇴근':'근무 중';
-    return '<div class="att-row">'
-      +'<div class="att-avatar">'+initials+'</div>'
-      +'<div style="flex:1">'
-      +'<div class="att-name">'+(r.driverName||r.userId||'')+'</div>'
-      +'<div class="att-camp">'+(r.camp||'')+'</div>'
-      +'</div>'
-      +'<div style="text-align:right">'
-      +'<div class="att-in">🟢 '+(r.checkIn||'-')+'</div>'
-      +(r.checkOut?'<div class="att-out">🌙 '+r.checkOut+'</div>':'')
-      +'</div>'
-      +'<span class="att-status '+status+'">'+statusTxt+'</span>'
-      +'</div>';
-  }).join('');
-}
-
-// 시계
-function startClock(){
-  function tick(){
-    var now=new Date();
-    var h=String(now.getHours()).padStart(2,'0');
-    var m=String(now.getMinutes()).padStart(2,'0');
-    var s=String(now.getSeconds()).padStart(2,'0');
-    var cl=document.getElementById('clock');
-    var ds=document.getElementById('date-str');
-    if(cl)cl.textContent=h+':'+m+':'+s;
-    if(ds)ds.textContent=now.getFullYear()+'.'+(now.getMonth()+1)+'.'+now.getDate()+' '+'일월화수목금토'[now.getDay()]+'요일';
-  }
-  tick();setInterval(tick,1000);
-}
-
-// 시작 (Firebase 로드 완료 후)
-window.addEventListener('load', function(){
-  // Firebase 초기화
-  try{
-    if(!firebase.apps||!firebase.apps.length){
-      firebase.initializeApp({
-        apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',
-        authDomain:'mbti-logistics.firebaseapp.com',
-        projectId:'mbti-logistics',
-        storageBucket:'mbti-logistics.firebasestorage.app',
-        messagingSenderId:'40761160761',
-        appId:'1:40761160761:web:20545b610f03f534e949e8'
+  _db.collection('visitors')
+    .where('dealerId','==',_dealerId)
+    .where('visitDate','==',today)
+    .orderBy('visitedAt','desc')
+    .limit(5)
+    .onSnapshot(function(snap){
+      var log=document.getElementById('visitor-log');
+      if(!log) return;
+      if(snap.empty){log.innerHTML='<div style="font-size:11px;color:var(--text2);text-align:center;padding:8px">오늘 방문자 없음</div>';return;}
+      var html='';
+      snap.forEach(function(d){
+        var data=d.data();
+        var t=data.visitedAt&&data.visitedAt.toDate?
+          data.visitedAt.toDate().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}):'--:--';
+        html+='<div class="visitor-log-item">'+
+          '<span class="visitor-log-name">'+data.name+'</span>'+
+          '<span class="visitor-log-time">'+t+'</span>'+
+          '<span class="visitor-log-purpose">'+data.purpose+'</span>'+
+          '</div>';
       });
-    }
-    _db = firebase.firestore();
-  }catch(e){ console.error('Firebase 초기화 실패:', e); }
+      log.innerHTML=html;
+    });
+}
 
-  if(CONFIG.dealer){
-    init();
-  } else {
-    // URL 파라미터로 자동 입력
-    var params=new URLSearchParams(window.location.search);
-    if(params.get('dealer')){
-      document.getElementById('cfg-dealer').value=params.get('dealer');
-      document.getElementById('cfg-camp').value=params.get('camp')||'';
-    }
-  }
-});
+// ── 전체화면 ──
+function toggleFS(){
+  if(!document.fullscreenElement) document.documentElement.requestFullscreen().catch(function(){});
+  else document.exitFullscreen();
+}
+document.addEventListener('keydown',function(e){if(e.key==='F11'){e.preventDefault();toggleFS();}});
+
+// ── 시작 ──
+buildUI();
+buildAttendanceQr(_curSlot);
+setInterval(updateTimer,100);
 </script>
 </body>
 </html>
