@@ -349,6 +349,8 @@ var _storage=firebase.storage();
 var _params=new URLSearchParams(location.search);
 var _dealerId=_params.get('did')||'shared';
 var _companyName=_params.get('name')||'';
+var _slot=parseInt(_params.get('slot')||'0');
+var _token=_params.get('token')||'';
 var _ocrFile=null;
 var _ocrData={};
 
@@ -356,6 +358,37 @@ var _ocrData={};
 if(_companyName){
   document.getElementById('header-company').textContent=_companyName+' 방문자 등록';
 }
+
+// ★ QR 유효성 검증 (30초 유효)
+function _genCode(slot){
+  var secret='DONWAY_'+_dealerId;
+  var s=secret+'|'+slot+'|'+_dealerId;
+  var h1=0,h2=0,h3=0;
+  for(var i=0;i<s.length;i++){
+    h1=(Math.imul(31,h1)+s.charCodeAt(i))|0;
+    h2=(Math.imul(37,h2)+s.charCodeAt(i)*17)|0;
+    h3=(Math.imul(41,h3)+s.charCodeAt(i)*31)|0;
+  }
+  var n=((Math.abs(h1)%10)*100000+(Math.abs(h2)%10)*10000+
+         (Math.abs(h3)%10)*1000+(Math.abs(h1^h2)%10)*100+
+         (Math.abs(h2^h3)%10)*10+(Math.abs(h1^h3)%10));
+  return n.toString().padStart(6,'0');
+}
+
+(function checkQrValidity(){
+  if(!_slot||!_token) return; // 직접 접속 허용
+  var SLOT=30000;
+  var curSlot=Math.floor(Date.now()/SLOT);
+  var validSlots=[curSlot,curSlot-1]; // 현재 + 이전 슬롯 허용 (최대 60초)
+  var valid=validSlots.some(function(s){ return _genCode(s)===_token; });
+  if(!valid){
+    document.body.innerHTML='<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0a0a0f;color:#e8e8f0;font-family:sans-serif;text-align:center;padding:20px">'+
+      '<div style="font-size:60px;margin-bottom:16px">⏰</div>'+
+      '<div style="font-size:22px;font-weight:800;margin-bottom:8px">QR 코드가 만료됐습니다</div>'+
+      '<div style="font-size:14px;color:#888;line-height:1.6">디스플레이의 QR 코드를 다시 스캔해주세요.<br>QR 코드는 30초마다 갱신됩니다.</div>'+
+      '</div>';
+  }
+})();
 
 // ── 핸드폰 포맷 ──
 function formatPhone(el){

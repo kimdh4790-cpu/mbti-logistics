@@ -268,12 +268,19 @@ var _secret='DONWAY_'+_dealerId;
 function getSlot(){return Math.floor(Date.now()/SLOT);}
 function slotRemaining(){return SLOT-((Date.now())%SLOT);}
 
-// 6자리 코드 생성 (슬롯 기반)
+// 6자리 코드 생성 (슬롯 기반 - 전체 자리 변동)
 function genCode(slot){
-  var s=_secret+slot;
-  var h=0;
-  for(var i=0;i<s.length;i++){h=(Math.imul(31,h)+s.charCodeAt(i))|0;}
-  return (Math.abs(h)%900000+100000).toString();
+  var s=_secret+'|'+slot+'|'+_dealerId;
+  var h1=0,h2=0,h3=0;
+  for(var i=0;i<s.length;i++){
+    h1=(Math.imul(31,h1)+s.charCodeAt(i))|0;
+    h2=(Math.imul(37,h2)+s.charCodeAt(i)*17)|0;
+    h3=(Math.imul(41,h3)+s.charCodeAt(i)*31)|0;
+  }
+  var n=((Math.abs(h1)%10)*100000+(Math.abs(h2)%10)*10000+
+         (Math.abs(h3)%10)*1000+(Math.abs(h1^h2)%10)*100+
+         (Math.abs(h2^h3)%10)*10+(Math.abs(h1^h3)%10));
+  return n.toString().padStart(6,'0');
 }
 
 // QR 데이터 생성
@@ -349,8 +356,11 @@ function buildVisitorQr(){
   var wrap=document.getElementById('visitor-canvas-wrap');
   if(!wrap) return;
   wrap.innerHTML='';
-  var url=location.origin+'/visitor?did='+_dealerId+(
-    _companyName?'&name='+encodeURIComponent(_companyName):'');
+  var slot=getSlot();
+  var token=genCode(slot); // 30초 유효 토큰
+  var url=location.origin+'/visitor?did='+_dealerId+
+    '&slot='+slot+'&token='+token+
+    (_companyName?'&name='+encodeURIComponent(_companyName):'');
   var size=_mode==='both'?200:280;
   new QRCode(wrap,{text:url,width:size,height:size,correctLevel:QRCode.CorrectLevel.M});
 }
@@ -411,11 +421,13 @@ function updateTimer(){
       expiring.style.opacity='1';
       setTimeout(function(){
         buildAttendanceQr(slot);
+        buildVisitorQr(); // ★ 방문자 QR도 같이 갱신
         if(expiring) expiring.style.opacity='0';
         animateCodeChange(oldCode,newCode);
       },300);
     } else {
       buildAttendanceQr(slot);
+      buildVisitorQr();
     }
   }
 }
