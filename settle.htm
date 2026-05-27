@@ -12495,6 +12495,13 @@ function openSE(id){
     }).catch(function(e){toast('❌ '+e.message);});
 }
 function _showSEModal(s){
+  // ★ calcNet으로 RPRICE 기반 실시간 재계산 (저장값 override)
+  var _cn=calcNet(s);
+  if(_cn){
+    // RPRICE 설정된 항목만 override (0이면 저장값 유지)
+    if(_cn.nocont>0) s=Object.assign({},s,{nocont:_cn.nocont});
+    if(_cn.finc>0&&!s.finc) s=Object.assign({},s,{finc:_cn.finc});
+  }
   var old2=document.getElementById('mo-se');if(old2)old2.remove();
   if(!s){
     // 신규 작성: 빈 폼
@@ -12613,8 +12620,16 @@ function _showSEModal(s){
   // ── 항목별 입력
   var items=[
     {ic:'🧊',n:'③ 프레시백 회수금액',id:'se-fresh',val:s.fresh||0,sign:'+',editable:true,note:''},
-    {ic:'⭐',n:'④ 프레시백 인센티브',id:'se-finc',val:s.finc||0,sign:'+',editable:false,note:(s.dcnt||0)+'건 × '+(s._fincPerUnit||Math.round((s.finc||0)/(s.dcnt||1)))+'원'},
-    {ic:'➕',n:'⑤ 미계약건',id:'se-nocont',val:s.nocont||0,sign:'+',editable:true,
+    {ic:'⭐',n:'④ 프레시백 인센티브',id:'se-finc',val:(_cn&&_cn.finc>0?_cn.finc:s.finc)||0,sign:'+',editable:false,note:(s.dcnt||0)+'건 × '+(s._fincPerUnit||Math.round((s.finc||0)/(s.dcnt||1)))+'원'},
+    {ic:'➕',n:'⑤ 미계약건',id:'se-nocont',
+      val:(function(){
+        // RPRICE 기반 재계산 우선, 없으면 저장값
+        var _cnt=+s.nocontCnt||0;
+        var _isW2=(s.camp||'').includes('부산');
+        var _unit=_isW2?(RPRICE['nocont_w2']||0):(RPRICE['nocont_w1']||0);
+        return _cnt>0&&_unit>0 ? _cnt*_unit : (+s.nocont||+s.nocontAmt||0);
+      })(),
+      sign:'+',editable:true,
       note:(s.nocontCnt?s.nocontCnt+'건':'')+
            (RPRICE&&(RPRICE['nocont_w1']||RPRICE['nocont_w2'])?
             ' (W1:'+Number(RPRICE['nocont_w1']||0).toLocaleString()+'/W2:'+Number(RPRICE['nocont_w2']||0).toLocaleString()+'원)':' 금액 직접입력')},
