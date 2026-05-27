@@ -10202,6 +10202,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
   });
 var _db=firebase.firestore(),_auth=firebase.auth(),_storage=firebase.storage();
 var _CU=null,FB=true;
+window._geoCacheMem={}; // 지오코딩 캐시
 window._emerScanCount=0;window._emerSaveCount=0;
 window._cachedKakaoApiKey='';window._googleApiKey='';
 
@@ -13045,7 +13046,6 @@ function _geoCacheKey(address){
   return s.slice(0, 30);
 }
 
-window._geoCacheMem = window._geoCacheMem||{};
 function _geoCacheGet(address){
   var k = _geoCacheKey(address);
   if(!k) return null;
