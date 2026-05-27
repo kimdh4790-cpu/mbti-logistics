@@ -1853,6 +1853,18 @@ function cancelCp(){window._cpPending=null;goPage('settlements');}
 function _saveCpDriver(camp,dm,name,month,cb){
   if(!window._db){if(cb)cb();return;}
   var uid=dm.uid;
+  // ★ 기사 자동등록
+  var _did=_CU&&_CU.dealerId||'';
+  if(_did&&uid){
+    _db.collection('drivers').where('dealerId','==',_did).where('userId','==',uid).limit(1).get()
+      .then(function(snap){
+        if(snap.empty){
+          _db.collection('drivers').add({name:name||uid,userId:uid,dealerId:_did,camp:camp||'',
+            coupangId:uid,is_active:true,joinedAt:new Date().toISOString(),autoRegistered:true
+          }).catch(function(){});
+        } else if(camp){snap.docs[0].ref.update({camp:camp}).catch(function(){});}
+      }).catch(function(){});
+  }
   var damt=dm.delAmt||0,ramt=dm.retAmt||0,freshRaw=dm.freshAmt||0;
   var finc=dm.freshIncAmt||Math.round((dm.dcnt||0)*25);
   var income=damt+ramt+freshRaw+finc+(dm.nocontAmt||0);  // 모두 VAT포함가nocontAmt||0);
@@ -7657,6 +7669,21 @@ function pageHome(){
   _homeLoadTodo(did, today);
 }
 
+
+function _homeLoadWeather(){
+  var el=document.getElementById('home-weather');
+  if(!el)return;
+  var lat=35.1796,lon=129.0756; // 기본: 부산
+  fetch('https://api.open-meteo.com/v1/forecast?latitude='+lat+'&longitude='+lon+'&current=temperature_2m,weathercode,windspeed_10m&timezone=Asia%2FSeoul',{signal:AbortSignal.timeout(5000)})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d.current)return;
+      var t=Math.round(d.current.temperature_2m),ws=Math.round(d.current.windspeed_10m),code=d.current.weathercode;
+      var icon=code===0?'☀️':code<=3?'🌤':code<=48?'🌫':code<=67?'🌧':code<=77?'🌨':'⛈';
+      el.textContent=icon+' '+t+'°C  바람 '+ws+'km/h  부산';
+    }).catch(function(){if(el)el.textContent='';});
+}
+
 function _homeLoadTodo(did, today){
   var el=document.getElementById('home-todo');
   if(!el||!_db)return;
@@ -10761,7 +10788,7 @@ function _renderSettlePage(settles,c){
     +'<button onclick="openSettleCompare()" style="padding:8px 14px;background:#6366f1;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📊 기사별 실적 비교</button>'
     +'<button onclick="checkDuplicateSettlements()" style="padding:8px 14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔍 중복 검사</button>'
     +'<button onclick="syncFirebaseSettlements()" style="padding:8px 14px;background:#0d9488;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔄 Firebase 동기화</button>'
-    +'<button onclick="openResetPanel()" style="padding:8px 14px;background:#7f1d1d;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗑 전체 초기화</button>'
+    +'<button onclick="openDeleteMonthPanel()" style="padding:8px 14px;background:#854d0e;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;margin-right:6px">🗓 월삭제</button>'    +'<button onclick="openResetPanel()" style="padding:8px 14px;background:#7f1d1d;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗑 전체초기화</button>'
     +'</div>'
     +'<div style="font-size:10px;color:var(--text3);margin-top:8px">💡 핵심 4단계: 업로드 → 재계산 → 일괄전달 → 보관함 조회. 그 외 기능은 [더보기]에서.</div>'
     +'</div>'
@@ -15930,6 +15957,32 @@ function _incCampAll2(prefixes,onVal){
   _incCampRoutes(routes,onVal);
 }
 
+
+// ★ 월삭제 (정산만 삭제, 단가·캠프·기사 보존)
+function openDeleteMonthPanel(){
+  var settles=ls('settlements')||[];
+  var months=[...new Set(settles.map(function(x){return x.month||'';}).filter(Boolean))].sort().reverse();
+  var mo=document.createElement('div');mo.className='mo show';mo.id='mo-del-month';
+  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  var opts=months.length
+    ?months.map(function(m){return '<option value="'+m+'">'+m+'</option>';}).join('')
+    :'<option value="">정산 데이터 없음</option>';
+  mo.innerHTML='<div class="md" style="max-width:360px">'
+    +'<div class="mdt" style="background:#854d0e;color:#fff;border-radius:12px 12px 0 0;margin:-1px -1px 0;padding:14px 20px">🗓 월별 정산 삭제</div>'
+    +'<div style="padding:16px">'
+      +'<div style="font-size:12px;background:#fef3c7;border-left:3px solid #f59e0b;padding:8px 10px;border-radius:6px;margin-bottom:14px">'
+        +'정산 데이터만 삭제됩니다.<br><b>라우트 단가 · 캠프 · 기사 정보는 유지</b>됩니다.</div>'
+      +'<label style="font-size:12px;color:var(--text3);display:block;margin-bottom:6px">삭제할 정산 월</label>'
+      +'<select id="del-month-sel" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;background:var(--bg);color:var(--text)">'
+        +opts+'</select>'
+    +'</div>'
+    +'<div class="mdf">'
+      +'<button class="btn" onclick="var m=document.getElementById(\'mo-del-month\');if(m)m.remove()">취소</button>'
+      +'<button class="btn" style="background:#dc2626;color:#fff;border:none" onclick="(function(){var s=document.getElementById(\'del-month-sel\');if(!s||!s.value){toast(\'월을 선택하세요\');return;}deleteMonthSettlements(s.value);lsInvalidate(\'settlements\');var m=document.getElementById(\'mo-del-month\');if(m)m.remove();})()">🗑 삭제</button>'
+    +'</div></div>';
+  document.getElementById('modals').appendChild(mo);
+}
+
 function openResetPanel(){
   var mo=document.createElement('div');mo.className='mo show';mo.id='mo-reset';
   mo.onclick=function(e){if(e.target===mo)mo.remove();};
@@ -16085,13 +16138,30 @@ function doChangePw(){
 }
 
 // localStorage 헬퍼 (물류앱 호환)
+var _LS_TTL={settlements:5*60*1000,drivers:15*60*1000,settings:30*60*1000};
 function ls(key){
   var did=(_CU&&_CU.dealerId)||'shared';
-  try{return JSON.parse(localStorage.getItem('dw_'+did+'_'+key)||'[]');}catch(e){return[];}
+  try{
+    var raw=localStorage.getItem('dw_'+did+'_'+key);
+    if(!raw)return[];
+    var obj=JSON.parse(raw);
+    if(obj&&obj.__ts__&&_LS_TTL[key]){
+      if(Date.now()-obj.__ts__>_LS_TTL[key]){localStorage.removeItem('dw_'+did+'_'+key);return[];}
+      return obj.__v__||[];
+    }
+    return Array.isArray(obj)?obj:[];
+  }catch(e){return[];}
 }
 function lss(key,val){
   var did=(_CU&&_CU.dealerId)||'shared';
-  try{localStorage.setItem('dw_'+did+'_'+key,JSON.stringify(val));}catch(e){}
+  try{
+    var payload=_LS_TTL[key]?{__ts__:Date.now(),__v__:val}:val;
+    localStorage.setItem('dw_'+did+'_'+key,JSON.stringify(payload));
+  }catch(e){}
+}
+function lsInvalidate(key){
+  var did=(_CU&&_CU.dealerId)||'shared';
+  try{localStorage.removeItem('dw_'+did+'_'+key);}catch(e){}
 }
 
 function filterRouteCamp(camp){
