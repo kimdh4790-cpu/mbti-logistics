@@ -13877,18 +13877,18 @@ function _showSubModal(){
   var mo=document.getElementById('mo-sub');if(mo)mo.remove();
   var moEl=document.createElement('div');moEl.className='mo show';moEl.id='mo-sub';
   var plans=[
-    {key:'settle',   name:'📦 택배 정산 관리',    price:'89,000', period:'월/30인기준', color:'#0891b2', badge:'가장 인기',
-     tagline:'엑셀 올리면 끝 — 정산 자동화',
-     features:['✅ 쿠팡 엑셀 자동 파싱·분류','✅ 세금계산서 자동 계산','✅ 고용·산재보험 자동 산출','✅ 라우트별 단가표 관리','✅ 시즌 단가 설정·적용','✅ 기사 실지급 명세서 발송','✅ 위수탁 계약서 관리','✅ 월별 정산 현황 대시보드']},
-    {key:'delivery', name:'🛵 배달대행 정산',      price:'89,000', period:'월/30인기준', color:'#dc2626',
-     tagline:'플랫폼 차액 자동 보전·회수 엔진',
-     features:['✅ 쿠팡이츠·배민 엑셀 자동 인식','✅ 건수별 5단계 트랙 단가','✅ 5대 시간대 자동 보전·회수','✅ 심야 예외 처리 자동 적용','✅ 이벤트·미션 수당 집계','✅ 기사 앱 실시간 정산 현황','✅ 엑셀 교정 검증 시스템','✅ 주간 정산 내역 자동 발송']},
-    {key:'payroll',  name:'💼 QR근태+급여관리',    price:'89,000', period:'월/30인기준', color:'#7c3aed', badge:'추천',
+    {key:'settle',   icon:'📦', name:'택배 정산 관리',   price:'89,000', period:'월 / 30인 기준', color:'#0891b2', badge:'가장 인기',
+     tagline:'엑셀 올리면 끝, 정산 자동화',
+     features:['쿠팡 엑셀 자동 파싱·분류','세금계산서 자동 계산','고용·산재보험 자동 산출','라우트별 단가표 관리','시즌 단가 설정·적용','기사 실지급 명세서 발송','위수탁 계약서 관리','월별 정산 현황 대시보드']},
+    {key:'delivery', icon:'🛵', name:'배달대행 정산',     price:'89,000', period:'월 / 30인 기준', color:'#dc2626',
+     tagline:'플랫폼 차액 자동 보전·회수',
+     features:['쿠팡이츠·배민 엑셀 자동 인식','건수별 5단계 트랙 단가','5대 시간대 자동 보전·회수','심야 예외 처리 자동 적용','이벤트·미션 수당 집계','기사 앱 실시간 정산 현황','엑셀 교정 검증 시스템','주간 정산 내역 자동 발송']},
+    {key:'payroll',  icon:'💼', name:'QR근태 + 급여관리', price:'89,000', period:'월 / 30인 기준', color:'#7c3aed', badge:'추천',
      tagline:'출퇴근부터 급여까지 원스톱',
-     features:['✅ 동적 QR 출퇴근 (위변조 방지)','✅ GPS 출근 검증·키오스크 모드','✅ 시급·일급·월급 자동 계산','✅ 연장·야간·휴일수당 산출','✅ 근무표 자동 생성','✅ 휴가 신청·승인 워크플로우','✅ 급여 명세서 자동 발송','✅ 2026 근로계약서 내장']},
-    {key:'qr',       name:'🔐 QR 근태관리',        price:'49,000', period:'월/30인기준', color:'#059669',
+     features:['동적 QR 출퇴근 (위변조 방지)','GPS 출근 검증·키오스크 모드','시급·일급·월급 자동 계산','연장·야간·휴일수당 산출','근무표 자동 생성','휴가 신청·승인 워크플로우','급여 명세서 자동 발송','2026 근로계약서 내장']},
+    {key:'qr',       icon:'🔐', name:'QR 근태관리',       price:'49,000', period:'월 / 30인 기준', color:'#059669',
      tagline:'QR 하나로 출퇴근 완전 자동화',
-     features:['✅ 동적 QR 출퇴근 (위변조 방지)','✅ GPS 기반 출근 검증','✅ 근무표 자동 관리','✅ 출퇴근 기록 엑셀 다운로드','✅ 개인 출퇴근 현황 조회','⬜ 급여 자동 계산 (payroll 플랜)']},
+     features:['동적 QR 출퇴근 (위변조 방지)','GPS 기반 출근 검증','근무표 자동 관리','출퇴근 기록 엑셀 다운로드','개인 출퇴근 현황 조회','급여 계산은 QR근태+급여 플랜']},
   ];
   var html='<div class="md" style="max-width:640px;max-height:90vh;overflow-y:auto">'
     +'<div class="mdt" style="position:sticky;top:0;background:var(--bg2);border-radius:12px 12px 0 0;z-index:2">💳 구독 플랜 선택'
@@ -13897,22 +13897,49 @@ function _showSubModal(){
     +'<div style="display:flex;flex-direction:column;gap:12px;padding:0 2px 12px">';
 
   plans.forEach(function(p){
+    // 기능 목록 (사이드바 메뉴 스타일)
     var featHtml=(p.features||[]).map(function(f){
-      return '<div style="font-size:11px;color:'+(f.startsWith('✅')?'var(--text)':'var(--text3)')+';padding:2px 0">'+f+'</div>';
+      return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">'
+        +'<span style="font-size:14px;color:'+p.color+'">✓</span>'
+        +'<span style="font-size:12px;color:var(--text)">'+f+'</span>'
+        +'</div>';
     }).join('');
-    html+='<div style="border:2px solid '+p.color+'33;border-radius:14px;overflow:hidden;cursor:pointer;transition:all .2s" '
+
+    html+='<div style="border:2px solid '+p.color+'22;border-radius:16px;overflow:hidden;cursor:pointer;transition:all .18s" '
       +'onclick="confirmSubPay(\''+p.key+'\')" '
-      +'onmouseover="this.style.borderColor=\''+p.color+'\';this.style.boxShadow=\'0 4px 20px '+p.color+'44\'" '
-      +'onmouseout="this.style.borderColor=\''+p.color+'33\';this.style.boxShadow=\'none\'">'
-      +'<div style="background:linear-gradient(135deg,'+p.color+','+p.color+'bb);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;position:relative">'
-      +(p.badge?'<div style="position:absolute;top:-1px;right:14px;background:#fff;color:'+p.color+';font-size:9px;font-weight:900;padding:2px 10px;border-radius:0 0 8px 8px">'+p.badge+'</div>':'')
-      +'<div><div style="font-size:15px;font-weight:900;color:#fff">'+p.name+'</div>'
-      +'<div style="font-size:11px;color:rgba(255,255,255,.85);margin-top:2px">'+p.tagline+'</div></div>'
-      +'<div style="text-align:right;margin-left:12px"><div style="font-size:22px;font-weight:900;color:#fff">₩'+p.price+'</div>'
-      +'<div style="font-size:10px;color:rgba(255,255,255,.7)">'+p.period+'</div></div></div>'
-      +'<div style="padding:12px 16px;background:var(--bg);display:grid;grid-template-columns:1fr 1fr;gap:1px 10px">'+featHtml+'</div>'
-      +'<div style="padding:7px 16px;background:'+p.color+'11;text-align:center">'
-      +'<span style="font-size:11px;font-weight:700;color:'+p.color+'">이 플랜으로 시작하기 →</span></div></div>';
+      +'onmouseover="this.style.borderColor=\''+p.color+'\';this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 8px 24px '+p.color+'33\'" '
+      +'onmouseout="this.style.borderColor=\''+p.color+'22\';this.style.transform=\'none\';this.style.boxShadow=\'none\'">'
+
+      // ── 상단: 아이콘 + 제목 + 가격
+      +'<div style="background:'+p.color+';padding:16px 18px;display:flex;align-items:center;gap:14px;position:relative">'
+        +(p.badge?'<div style="position:absolute;top:-1px;right:12px;background:#fff;color:'+p.color+';font-size:9px;font-weight:900;padding:2px 10px;border-radius:0 0 8px 8px;letter-spacing:.04em">'+p.badge+'</div>':'')
+        // 아이콘 원형
+        +'<div style="width:52px;height:52px;border-radius:14px;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0">'
+          +p.icon
+        +'</div>'
+        // 제목 + 태그라인
+        +'<div style="flex:1">'
+          +'<div style="font-size:16px;font-weight:900;color:#fff;letter-spacing:-.02em">'+p.name+'</div>'
+          +'<div style="font-size:11px;color:rgba(255,255,255,.8);margin-top:3px">'+p.tagline+'</div>'
+        +'</div>'
+        // 가격
+        +'<div style="text-align:right;flex-shrink:0">'
+          +'<div style="font-size:20px;font-weight:900;color:#fff">₩'+p.price+'</div>'
+          +'<div style="font-size:10px;color:rgba(255,255,255,.7);margin-top:1px">'+p.period+'</div>'
+        +'</div>'
+      +'</div>'
+
+      // ── 기능 목록 (사이드바 스타일)
+      +'<div style="padding:4px 16px 8px;background:var(--bg)">'
+        +featHtml
+      +'</div>'
+
+      // ── 하단 CTA
+      +'<div style="padding:9px 18px;background:'+p.color+'0d;display:flex;align-items:center;justify-content:space-between">'
+        +'<span style="font-size:11px;color:'+p.color+';font-weight:700">결제하고 바로 시작하기</span>'
+        +'<span style="font-size:14px;color:'+p.color+'">→</span>'
+      +'</div>'
+    +'</div>';
   });
 
   html+='</div>'
