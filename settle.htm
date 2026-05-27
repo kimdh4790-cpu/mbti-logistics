@@ -17147,12 +17147,18 @@ function _loadAdminStatus(){
 
 function _requirePlan(feature,callback){
   if(!_db||!_CU){toast('❌ 로그인 필요');return;}
-  if(isSuperAdmin()||window._trialActive){callback();return;} // ★ trial 즉시 통과
+  if(isSuperAdmin()){callback();return;}
+  // ★ trial = settle 범위만 허용 (delivery/qr/payroll 제외)
+  if(window._trialActive){
+    var _trialOkFeatures=['settle','settlements','stats','prices','season','contract','tax_share','roster','free',''];
+    if(!feature||_trialOkFeatures.indexOf(feature)>=0){callback();return;}
+    else{_renderPaywall(feature);return;}
+  }
   var did=_CU.uid||_CU.dealerId||_CU.companyId||'';
   if(!did){callback();return;}
   _db.collection('companies').doc(did).get({source:'server'}).then(function(snap){
     var d=snap.exists?snap.data():{};
-    if(_isPlanAllowed(d)){callback();}
+    if(_isPlanAllowed(d,feature)){callback();}
     else{_renderPaywall(feature);}
   }).catch(function(){callback();});
 }
@@ -17176,6 +17182,9 @@ var _PLAN_FEATURE_MAP={
   'leave':function(d){return d.payrollPaid;},
   'overtime':function(d){return d.payrollPaid;},
   'free':function(d){return true;},
+  'vehicle':function(d){return d.settlePaid||d.payrollPaid;},
+  'expense':function(d){return d.settlePaid||d.payrollPaid;},
+  'evaluation':function(d){return d.payrollPaid;},
 };
 function _isPlanAllowed(d,feature){
   var isTrial=window._trialActive||(d.plan==='trial'&&d.trialEnd&&d.trialEnd>=new Date().toISOString().slice(0,10));
