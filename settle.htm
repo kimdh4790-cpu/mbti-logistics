@@ -1891,6 +1891,64 @@ function _saveCpDriver(camp,dm,name,month,cb){
 // ══ Firebase + 앱 로직 ══
 var _db=null,_auth=null,_CU=null;
 
+
+// ★ QR 스캔 URL 처리 (/attend?q=... 접속 시 자동 출퇴근)
+(function(){
+  var params=new URLSearchParams(location.search);
+  var qData=params.get('q');
+  if(!qData)return;
+  try{
+    var payload=JSON.parse(atob(qData));
+    if(!payload||payload.v!==2)return;
+    window._pendingQrAttend=payload;
+    console.log('[QR] 출퇴근 요청 감지:', payload.dealerId);
+  }catch(e){}
+})();
+
+
+// ★ QR 스캔 출퇴근 자동 처리
+function _processQrAttend(){
+  var p=window._pendingQrAttend;
+  if(!p||!_db||!_CU){return;}
+  window._pendingQrAttend=null;
+  var now=Date.now();
+  // ivSec(초) 이내 유효한 QR인지 체크
+  var age=(now-parseInt(p.ts||0))/1000;
+  if(age>p.ivSec*2){toast('⚠️ QR이 만료됐습니다. 새 QR을 스캔하세요.','#f97316');return;}
+  // 오늘 이미 출근했는지 확인
+  var today=new Date().toISOString().slice(0,10);
+  var uid=_CU.uid;
+  _db.collection('attendance').where('dealerId','==',p.dealerId)
+    .where('userId','==',uid).where('date','==',today).limit(1).get()
+    .then(function(snap){
+      if(snap.empty){
+        // 출근 처리
+        return _db.collection('attendance').add({
+          dealerId:p.dealerId, userId:uid,
+          name:_CU.name||'', date:today,
+          checkIn:new Date().toISOString(),
+          checkOut:null, status:'checked_in',
+          gpsLat:p.gpsLat||0, gpsLng:p.gpsLng||0,
+          createdAt:firebase.firestore.FieldValue.serverTimestamp()
+        }).then(function(){
+          toast('✅ 출근 완료! ('+today+')','#059669');
+          goPage('my_qr');
+        });
+      } else {
+        var doc=snap.docs[0];
+        if(doc.data().checkOut){toast('✅ 오늘 출퇴근이 이미 완료됐습니다.','#0891b2');return;}
+        // 퇴근 처리
+        return doc.ref.update({
+          checkOut:new Date().toISOString(), status:'checked_out',
+          updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+        }).then(function(){
+          toast('✅ 퇴근 완료! 오늘도 수고하셨습니다.','#7c3aed');
+          goPage('my_qr');
+        });
+      }
+    }).catch(function(e){toast('❌ 출퇴근 처리 실패: '+e.message);});
+}
+
 function initFirebase(){
   if(typeof firebase==='undefined'){setTimeout(initFirebase,300);return;}
   // 이미 초기화된 경우 앱 재사용
@@ -2133,6 +2191,8 @@ function showApp(){
   buildNav();
   _checkDeviceMode();
   setTimeout(_checkOnboarding,1500);
+  // ★ QR 스캔 출퇴근 처리
+  if(window._pendingQrAttend){setTimeout(_processQrAttend,500);}
   // 슬러그 모드: 회사 정보 로드 및 브랜딩
   if(window._SLUG_MODE && _db){
     _loadSlugCompany();
@@ -3646,7 +3706,8 @@ function _simGenQR(){
   var info=document.getElementById('sim-qr-info');
   if(box){
     box.innerHTML='';
-    try{new QRCode(box,{text:JSON.stringify(window._simQRPayload),width:140,height:140,correctLevel:QRCode.CorrectLevel.M});}
+    try{var _qrUrl=location.origin+'/attend?q='+btoa(JSON.stringify(window._simQRPayload));
+new QRCode(box,{text:_qrUrl,width:140,height:140,correctLevel:QRCode.CorrectLevel.M});}
     catch(e){box.innerHTML='<div style="padding:20px;font-size:11px">QRCode.js 필요</div>';}
   }
   if(info){
@@ -9783,7 +9844,6 @@ var MENUS_SETTLE = [
   ]},
   {s:'근태관리', items:[
     {ic:'🔐',l:'QR 출퇴근',        p:'attendance',       plan_key:'qr'},
-    {ic:'🗓',l:'근무표',           p:'roster',           plan_key:'qr'},
     {ic:'🌴',l:'휴가 관리',        p:'leave',            plan_key:'payroll'},
     {ic:'⏰',l:'연장 승인',        p:'overtime',         plan_key:'payroll'}
   ]},
@@ -10604,7 +10664,7 @@ function pageSettlements(){
     +'<button id="stab-price" class="btn"           onclick="window._sTab(\'price\')" style="font-size:12px">📌 라우트 단가표</button>'
     +'<button id="stab-season"class="btn"           onclick="window._sTab(\'season\')" style="font-size:12px">📅 시즌 단가표</button>'
     +'</div>'
-    +'<div id="stab-content"></div>';
+    +'<div id="stab-content" style="overflow-y:auto"></div>';
 
   window._sTab=function(tab){
     ['list','price','season'].forEach(function(t){
@@ -12919,8 +12979,8 @@ async function _ocrAnalyze(){
         'anthropic-dangerous-direct-browser-access':'true'
       },
       body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:800,
+        model:'claude-sonnet-4-5-20251001',
+        max_tokens:1500,
         messages:[{role:'user',content:[
           {type:'image',source:{type:'base64',media_type:mime,data:b64}},
           {type:'text',text:`[한국어 사업자등록증 OCR - 정밀 인식 모드]
@@ -13815,40 +13875,54 @@ function _showSubModal(){
   var mo=document.getElementById('mo-sub');if(mo)mo.remove();
   var moEl=document.createElement('div');moEl.className='mo show';moEl.id='mo-sub';
   var plans=[
-    {key:'settle',   name:'📦 AI 택배정산', price:'89,000', period:'월', color:'#0891b2', desc:'정산현황·관리·통계'},
-    {key:'qr',       name:'🔐 QR 근태관리', price:'49,000', period:'월', color:'#059669', desc:'QR출퇴근·근무표'},
-    {key:'payroll',  name:'💼 급여관리',    price:'79,000', period:'월', color:'#7c3aed', desc:'급여현황'},
-    {key:'delivery', name:'🛵 배달대행',    price:'89,000', period:'월', color:'#dc2626', desc:'배달대행 정산'},
+    {key:'settle',   name:'📦 택배 정산 관리',    price:'89,000', period:'월/30인기준', color:'#0891b2', badge:'가장 인기',
+     tagline:'엑셀 올리면 끝 — 정산 자동화',
+     features:['✅ 쿠팡 엑셀 자동 파싱·분류','✅ 세금계산서 자동 계산','✅ 고용·산재보험 자동 산출','✅ 라우트별 단가표 관리','✅ 시즌 단가 설정·적용','✅ 기사 실지급 명세서 발송','✅ 위수탁 계약서 관리','✅ 월별 정산 현황 대시보드']},
+    {key:'delivery', name:'🛵 배달대행 정산',      price:'89,000', period:'월/30인기준', color:'#dc2626',
+     tagline:'플랫폼 차액 자동 보전·회수 엔진',
+     features:['✅ 쿠팡이츠·배민 엑셀 자동 인식','✅ 건수별 5단계 트랙 단가','✅ 5대 시간대 자동 보전·회수','✅ 심야 예외 처리 자동 적용','✅ 이벤트·미션 수당 집계','✅ 기사 앱 실시간 정산 현황','✅ 엑셀 교정 검증 시스템','✅ 주간 정산 내역 자동 발송']},
+    {key:'payroll',  name:'💼 QR근태+급여관리',    price:'89,000', period:'월/30인기준', color:'#7c3aed', badge:'추천',
+     tagline:'출퇴근부터 급여까지 원스톱',
+     features:['✅ 동적 QR 출퇴근 (위변조 방지)','✅ GPS 출근 검증·키오스크 모드','✅ 시급·일급·월급 자동 계산','✅ 연장·야간·휴일수당 산출','✅ 근무표 자동 생성','✅ 휴가 신청·승인 워크플로우','✅ 급여 명세서 자동 발송','✅ 2026 근로계약서 내장']},
+    {key:'qr',       name:'🔐 QR 근태관리',        price:'49,000', period:'월/30인기준', color:'#059669',
+     tagline:'QR 하나로 출퇴근 완전 자동화',
+     features:['✅ 동적 QR 출퇴근 (위변조 방지)','✅ GPS 기반 출근 검증','✅ 근무표 자동 관리','✅ 출퇴근 기록 엑셀 다운로드','✅ 개인 출퇴근 현황 조회','⬜ 급여 자동 계산 (payroll 플랜)']},
   ];
-  var html='<div class="md" style="max-width:520px">'
-    +'<div class="mdt">💳 구독 플랜 선택'
-    +'<button onclick="var m=document.getElementById(\'mo-sub\');if(m)m.remove()" style="background:none;border:none;cursor:pointer;font-size:18px">✕</button></div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">';
+  var html='<div class="md" style="max-width:640px;max-height:90vh;overflow-y:auto">'
+    +'<div class="mdt" style="position:sticky;top:0;background:var(--bg2);border-radius:12px 12px 0 0;z-index:2">💳 구독 플랜 선택'
+    +'<button onclick="(function(){var m=document.getElementById(\'mo-sub\');if(m)m.remove();})()" style="background:none;border:none;cursor:pointer;font-size:20px;margin-left:auto">✕</button></div>'
+    +'<div style="font-size:11px;color:var(--text3);text-align:center;padding:6px 0 10px">30인 기준 · 초과 인원 추가 과금 · 결제 즉시 활성화</div>'
+    +'<div style="display:flex;flex-direction:column;gap:12px;padding:0 2px 12px">';
 
   plans.forEach(function(p){
-    html+='<div onclick="confirmSubPay(\''+p.key+'\')" style="border:2px solid '+p.color+'22;border-radius:12px;padding:14px;cursor:pointer;position:relative;transition:all .15s" '
-      +'onmouseover="this.style.borderColor=\''+p.color+'\';this.style.background=\''+p.color+'11\'" '
-      +'onmouseout="this.style.borderColor=\''+p.color+'22\';this.style.background=\'\'"">'
-      +(p.badge?'<div style="position:absolute;top:-1px;right:8px;background:'+p.color+';color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:0 0 6px 6px">'+p.badge+'</div>':'')
-      +'<div style="font-size:11px;font-weight:700;color:'+p.color+'">'+p.name+'</div>'
-      +'<div style="font-size:11px;color:var(--text3);margin-bottom:4px">'+p.desc+'</div>'
-      +'<div style="font-size:17px;font-weight:800">₩'+p.price+'</div>'
-      +'<div style="font-size:10px;color:var(--text3)">'+p.period+'</div>'
-      +'</div>';
+    var featHtml=(p.features||[]).map(function(f){
+      return '<div style="font-size:11px;color:'+(f.startsWith('✅')?'var(--text)':'var(--text3)')+';padding:2px 0">'+f+'</div>';
+    }).join('');
+    html+='<div style="border:2px solid '+p.color+'33;border-radius:14px;overflow:hidden;cursor:pointer;transition:all .2s" '
+      +'onclick="confirmSubPay(\''+p.key+'\')" '
+      +'onmouseover="this.style.borderColor=\''+p.color+'\';this.style.boxShadow=\'0 4px 20px '+p.color+'44\'" '
+      +'onmouseout="this.style.borderColor=\''+p.color+'33\';this.style.boxShadow=\'none\'">'
+      +'<div style="background:linear-gradient(135deg,'+p.color+','+p.color+'bb);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;position:relative">'
+      +(p.badge?'<div style="position:absolute;top:-1px;right:14px;background:#fff;color:'+p.color+';font-size:9px;font-weight:900;padding:2px 10px;border-radius:0 0 8px 8px">'+p.badge+'</div>':'')
+      +'<div><div style="font-size:15px;font-weight:900;color:#fff">'+p.name+'</div>'
+      +'<div style="font-size:11px;color:rgba(255,255,255,.85);margin-top:2px">'+p.tagline+'</div></div>'
+      +'<div style="text-align:right;margin-left:12px"><div style="font-size:22px;font-weight:900;color:#fff">₩'+p.price+'</div>'
+      +'<div style="font-size:10px;color:rgba(255,255,255,.7)">'+p.period+'</div></div></div>'
+      +'<div style="padding:12px 16px;background:var(--bg);display:grid;grid-template-columns:1fr 1fr;gap:1px 10px">'+featHtml+'</div>'
+      +'<div style="padding:7px 16px;background:'+p.color+'11;text-align:center">'
+      +'<span style="font-size:11px;font-weight:700;color:'+p.color+'">이 플랜으로 시작하기 →</span></div></div>';
   });
 
   html+='</div>'
-    +'<div style="background:var(--bg3);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--text2);margin-bottom:12px">'
-    +'✅ 결제 즉시 자동 활성화&nbsp;&nbsp;✅ 카드·계좌이체 가능&nbsp;&nbsp;✅ 41명 이상: 051-711-3103 문의'
-    +'</div>'
-    +'<div class="mdf">'
-    +'<button class="btn" onclick="var m=document.getElementById(\'mo-sub\');if(m)m.remove()">닫기</button>'
+    +'<div style="background:var(--bg3);border-radius:8px;padding:10px 14px;font-size:11px;color:var(--text2);margin-bottom:12px">'
+    +'✅ 결제 즉시 자동 활성화&nbsp;&nbsp;✅ 카드·계좌이체 가능&nbsp;&nbsp;✅ 41명 이상: <b>051-711-3103</b></div>'
+    +'<div class="mdf"><button class="btn" onclick="(function(){var m=document.getElementById(\'mo-sub\');if(m)m.remove();})()">닫기</button>'
+    +'<button class="btn btn-blue" onclick="window.location.href=\'tel:051-711-3103\'" style="font-size:11px">📞 전화 문의</button>'
     +'</div></div>';
 
   moEl.innerHTML=html;
   document.body.appendChild(moEl);
 }
-
 function confirmSubPay(planKey){
   var plan=PLAN_INFO&&PLAN_INFO[planKey];
   if(!plan){toast('❌ 플랜 없음: '+planKey);return;}

@@ -675,7 +675,7 @@ export default {
       '/worker-test','/label-ocr','/claude-ocr','/get-label-key',
       '/test-inject','/truck-save','/scan-save',
       '/scan','/truck','/settle','/portal','/join','/company-register',
-      '/attendance','/donway-sound.js','/report','/contract',
+      '/attend','/attendance','/donway-sound.js','/report','/contract',
       '/notice','/settings','/schedule','/drivers','/dashboard',
       '/my','/attendance-admin','/attendance-display',
       '/company-get','/modusign-send','/toss-confirm',
@@ -730,6 +730,20 @@ export default {
     if (path === '/company-register' || path === '/company-register/') {
       const resp = await fetchAsset('/company-register.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+    }
+
+    // ★ QR 스캔 출퇴근 자동처리 (/attend?q=...)
+    if (path === '/attend' || path === '/attend/') {
+      // settle.html 서빙 (settle.html이 URL 파라미터 자동 처리)
+      const resp = await fetchAsset('/settle.htm', request);
+      return new Response(await resp.text(), {
+        status: resp.status,
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'no-store',
+          'Service-Worker-Allowed': '/'
+        }
+      });
     }
 
     // ★ DONWAY 출퇴근 QR (모든 업종 공통)
