@@ -220,7 +220,7 @@ body{
 </div>
 
 <!-- QR 라이브러리 -->
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
@@ -306,14 +306,14 @@ function buildUI(){
       '<div class="panel-badge">직원 출퇴근</div>'+
       '<div class="panel-title">QR 코드 스캔</div>'+
       '<div class="panel-sub">앱으로 QR을 스캔하거나<br>6자리 코드를 입력하세요</div>'+
-      '<div class="qr-wrapper"><canvas id="qr-canvas"></canvas><div class="qr-expiring" id="qr-expiring">갱신 중...</div></div>'+
+      '<div class="qr-wrapper"><div id="qr-canvas-wrap"></div><div class="qr-expiring" id="qr-expiring">갱신 중...</div></div>'+
       '<div class="code-display" id="code-display"></div>'+
       '<div class="timer-wrap">'+
         '<div class="timer-bar"><div class="timer-fill qr-fill" id="qr-timer-fill"></div></div>'+
         '<div class="timer-text" id="qr-timer-text">30초마다 자동 갱신</div>'+
       '</div>';
     _mainEl.appendChild(panel);
-    _qrCanvas=document.getElementById('qr-canvas');
+    _qrCanvas=document.getElementById('qr-canvas-wrap');
   }
 
   if(_mode==='visitor'||_mode==='both'){
@@ -324,11 +324,11 @@ function buildUI(){
       '<div class="panel-badge">방문자 등록</div>'+
       '<div class="panel-title">방문자 등록</div>'+
       '<div class="panel-sub">QR을 스캔하여 방문자 등록을<br>진행해주세요</div>'+
-      '<div class="visitor-qr-wrap"><canvas id="visitor-canvas"></canvas></div>'+
+      '<div class="visitor-qr-wrap"><div id="visitor-canvas-wrap"></div></div>'+
       '<div class="visitor-scan-hint">📱 휴대폰 카메라로 QR 스캔<br>신분증 촬영 후 간단 등록</div>'+
       '<div class="visitor-log" id="visitor-log"></div>';
     _mainEl.appendChild(vpanel);
-    _visitorCanvas=document.getElementById('visitor-canvas');
+    _visitorCanvas=document.getElementById('visitor-canvas-wrap');
     buildVisitorQr();
     loadRecentVisitors();
   }
@@ -336,25 +336,23 @@ function buildUI(){
 
 // ── QR 생성 ──
 function buildAttendanceQr(slot){
-  if(!_qrCanvas) return;
+  var wrap=document.getElementById('qr-canvas-wrap');
+  if(!wrap) return;
+  wrap.innerHTML='';
   var data=genQrData(slot);
   var size=_mode==='both'?220:280;
-  QRCode.toCanvas(_qrCanvas,data,{
-    width:size,margin:1,
-    color:{dark:'#000000',light:'#ffffff'}
-  },function(e){if(e) console.error(e);});
+  new QRCode(wrap,{text:data,width:size,height:size,correctLevel:QRCode.CorrectLevel.M});
   buildCodeDigits(genCode(slot));
 }
 
 function buildVisitorQr(){
-  if(!_visitorCanvas) return;
+  var wrap=document.getElementById('visitor-canvas-wrap');
+  if(!wrap) return;
+  wrap.innerHTML='';
   var url=location.origin+'/visitor?did='+_dealerId+(
     _companyName?'&name='+encodeURIComponent(_companyName):'');
   var size=_mode==='both'?200:280;
-  QRCode.toCanvas(_visitorCanvas,url,{
-    width:size,margin:1,
-    color:{dark:'#000000',light:'#ffffff'}
-  },function(e){if(e) console.error(e);});
+  new QRCode(wrap,{text:url,width:size,height:size,correctLevel:QRCode.CorrectLevel.M});
 }
 
 // ── 6자리 코드 표시 ──
