@@ -10288,6 +10288,7 @@ async function _callOcr(b64,mimeType){
 }
 function showLoading(msg){toast(msg||'처리 중...');}
 function hideLoading(){}
+function _tts(msg){console.log('[tts]',msg);} // 음성 스텁
 
 function openEmergencyDelivery(){
   // ★ v9.34: 모달 중복 열림 방지 (빠른 더블탭/이벤트 충돌 차단)
@@ -11284,7 +11285,7 @@ function emerUnifiedScan(input){
     var scale = Math.min(1, 2000/Math.max(img.naturalWidth, img.naturalHeight));
     var cw=Math.round(img.naturalWidth*scale), ch=Math.round(img.naturalHeight*scale);
     var cv=document.createElement('canvas'); cv.width=cw; cv.height=ch;
-    var ctx=cv.getContext('2d'); ctx.drawImage(img,0,0,cw,ch);
+    var ctx=cv.getContext('2d',{willReadFrequently:true}); ctx.drawImage(img,0,0,cw,ch);
 
     // ★ v9.59: 파란 송장 감지 → 전처리 캔버스 추가
     var _smp=document.createElement('canvas'); _smp.width=100; _smp.height=100;
@@ -13044,6 +13045,7 @@ function _geoCacheKey(address){
   return s.slice(0, 30);
 }
 
+window._geoCacheMem = window._geoCacheMem||{};
 function _geoCacheGet(address){
   var k = _geoCacheKey(address);
   if(!k) return null;
