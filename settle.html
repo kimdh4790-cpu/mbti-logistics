@@ -10556,7 +10556,7 @@ var MENUS_SETTLE = [
   {s:'근태관리', items:[
     {ic:'🔐',l:'QR 출퇴근',        p:'attendance',       plan_key:'qr'},
     {ic:'🌴',l:'휴가 관리',        p:'leave',            plan_key:'payroll'},
-    {ic:'⏰',l:'연장 승인',        p:'overtime',         plan_key:'payroll'}
+    {ic:'⏰',l:'연장 승인',        p:'overtime',         plan_key:'qr'}
   ]},
   {s:'급여', items:[
     {ic:'💼',l:'급여 현황',        p:'hourly_settle',    plan_key:'payroll'}
@@ -10583,7 +10583,7 @@ var MENUS_QR = [
     {ic:'🔐',l:'QR 출퇴근',        p:'attendance',       plan_key:'qr'},
     {ic:'🗓',l:'근무표',           p:'roster',           plan_key:'qr'},
     {ic:'🌴',l:'휴가 관리',        p:'leave',            plan_key:'payroll'},
-    {ic:'⏰',l:'연장 승인',        p:'overtime',         plan_key:'payroll'}
+    {ic:'⏰',l:'연장 승인',        p:'overtime',         plan_key:'qr'}
   ]},
   {s:'직원', items:[
     {ic:'👤',l:'직원 관리',        p:'drivers',          plan_key:'free'},
@@ -10626,7 +10626,7 @@ var MENUS_FULL = [
   {s:'근태관리', items:[
     {ic:'🔐',l:'QR 출퇴근',        p:'attendance',       plan_key:'qr'},
         {ic:'🌴',l:'휴가 관리',        p:'leave',            plan_key:'payroll'},
-    {ic:'⏰',l:'연장 승인',        p:'overtime',         plan_key:'payroll'}
+    {ic:'⏰',l:'연장 승인',        p:'overtime',         plan_key:'qr'}
   ]},
   {s:'급여', items:[
     {ic:'💼',l:'급여 현황',        p:'hourly_settle',    plan_key:'payroll'}
@@ -17353,7 +17353,7 @@ var _PLAN_FEATURE_MAP={
   'payroll':function(d){return d.payrollPaid;},
   'hourly_settle':function(d){return d.payrollPaid;},
   'leave':function(d){return d.payrollPaid;},
-  'overtime':function(d){return d.payrollPaid;},
+  'overtime':function(d){return d.qrPaid||d.payrollPaid;},
   'free':function(d){return true;},
   'vehicle':function(d){return d.settlePaid||d.payrollPaid;},
   'expense':function(d){return d.settlePaid||d.payrollPaid;},
