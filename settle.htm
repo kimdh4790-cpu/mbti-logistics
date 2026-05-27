@@ -5306,112 +5306,140 @@ window.dwRunLiveCalculations=function(){
   var btn=document.getElementById('dw-btn-calc');
   var con=document.getElementById('dw-sim-console');
   var prog=document.getElementById('dw-progress');
-  if(!btn||!con||!window._dwSimData){toast('먼저 1단계를 진행해주세요');return;}
+  if(!btn||!con||!window._dwSimData||!window._dwSimData.length){toast('먼저 1단계를 진행해주세요');return;}
+
   btn.disabled=true; btn.textContent='⏳ 연산 중...'; btn.style.background='#64748b';
+
+  // ━━ 상태 변수: setInterval 클로저 외부에서 1회만 선언 (중복 누적 방지)
+  var _pfSum=0;     // 건별 플랫폼 단가 합산
+  var _totalInj=0;  // 건별 보전액 합산 (inj는 매 틱 초기화 후 1번만 더함)
+  var _totalExt=0;  // 건별 환수액 합산
+  var _validCnt=0;  // 심야·취소 제외 건수
+  var _idx=0;
+  var _maxShow=Math.min(window._dwSimData.length,50);
+  var _prevTrack=0;
   var data=window._dwSimData;
-  var validCount=0,totalInj=0,totalExt=0,pfSum=0;
-  var idx=0,maxShow=Math.min(data.length,50),prevTrack=0;
 
   var DWT=window.DW_TRACKS&&DW_TRACKS.length>1?DW_TRACKS:[
     {min:0,price:2900},{min:180,price:4200},{min:250,price:5100},{min:300,price:5300},{min:350,price:5500}
   ];
-  function getTP(cnt){var p=DWT[0].price;for(var i=DWT.length-1;i>=0;i--){if(cnt>=(DWT[i].min||0)){p=DWT[i].price;break;}}return p;}
+  function _getTP(cnt){
+    var p=DWT[0].price;
+    for(var i=DWT.length-1;i>=0;i--){if(cnt>=(DWT[i].min||0)){p=DWT[i].price;break;}}
+    return p;
+  }
+  // ━━ 우측 영수증 실시간 업데이트 함수 (매 틱 호출)
+  function _updateReceipt(){
+    var leaseFee=Math.floor((window._DW_LEASE||0)+(window._DW_PROG||0)+(window._DW_INS||0));
+    var preTax=Math.floor(_pfSum+_totalInj-_totalExt);  // 정확한 수식
+    var tax=Math.floor(preTax*0.033);                   // 3.3% 절사
+    var netPay=Math.max(0,Math.floor(preTax-tax-leaseFee));
+    var map={
+      'r-raw-sum':'₩'+_pfSum.toLocaleString(),
+      'r-total-inj':'+₩'+_totalInj.toLocaleString(),
+      'r-total-ext':'-₩'+_totalExt.toLocaleString(),
+      'r-pretax':'₩'+preTax.toLocaleString(),
+      'r-tax':'-₩'+tax.toLocaleString(),
+      'r-fixed':leaseFee>0?'-₩'+leaseFee.toLocaleString():'₩0',
+      'r-net-pay':'₩'+netPay.toLocaleString()
+    };
+    Object.keys(map).forEach(function(k){var el=document.getElementById(k);if(el)el.textContent=map[k];});
+    return {preTax:preTax,tax:tax,netPay:netPay};
+  }
 
   // 구분선
   var sep=document.createElement('div');
   sep.style.cssText='padding:6px 14px;background:#161b22;font-family:monospace;font-size:11px;color:#27c93f;border-top:1px solid #21262d';
-  sep.textContent='> 2단계 정산 연산 시작 — 건별 보전/환수 판정 스트리밍...';
+  sep.textContent='> 2단계 정산 연산 시작 ─ 건별 보전/환수 판정 스트리밍...';
   con.appendChild(sep);
-
-  // 컬럼 헤더
   var hdr=document.createElement('div');
   hdr.style.cssText='display:grid;grid-template-columns:32px 80px 80px 100px 80px 1fr;gap:0;padding:5px 14px;font-size:10px;color:#6b7280;border-bottom:1px solid #30363d;font-family:monospace';
-  hdr.innerHTML='<span>#</span><span>구역</span><span>플랫폼</span><span>이벤트</span><span>목표</span><span style="text-align:right">판정</span>';
+  hdr.innerHTML='<span>#</span><span>구역</span><span>플랫폼단가</span><span>이벤트</span><span>목표단가</span><span style="text-align:right">판정</span>';
   con.appendChild(hdr);
 
-  var timer=setInterval(function(){
-    if(idx>=data.length||idx>=maxShow){
-      clearInterval(timer);
-      // ━━ 3단계 명세서 업데이트
-      var leaseFee=Math.floor((window._DW_LEASE||0)+(window._DW_PROG||0)+(window._DW_INS||0));
-      var preTax=Math.floor(pfSum+totalInj-totalExt);
-      var tax=Math.floor(preTax*0.033);
-      var netPay=Math.max(0,Math.floor(preTax-tax-leaseFee));
-      var els={
-        'r-raw-sum':'₩'+pfSum.toLocaleString(),
-        'r-total-inj':'+₩'+totalInj.toLocaleString(),
-        'r-total-ext':'-₩'+totalExt.toLocaleString(),
-        'r-pretax':'₩'+preTax.toLocaleString(),
-        'r-tax':'-₩'+tax.toLocaleString(),
-        'r-fixed':'-₩'+leaseFee.toLocaleString(),
-        'r-net-pay':'₩'+netPay.toLocaleString()
-      };
-      Object.keys(els).forEach(function(k){var el=document.getElementById(k);if(el)el.textContent=els[k];});
-      var note=document.getElementById('dw-statement-note');
-      if(note)note.textContent='✅ '+idx+'건 정산 완료 | 3.3% 세무 절사 적용';
-      // 완료 배너
+  var _timer=setInterval(function(){
+    if(_idx>=data.length||_idx>=_maxShow){
+      clearInterval(_timer);
+      var res=_updateReceipt();
       var done=document.createElement('div');
       done.style.cssText='padding:10px 14px;text-align:center;background:#d1fae5;color:#065f46;font-weight:800;font-size:12px;border-top:1px solid #6ee7b7;font-family:sans-serif';
-      done.textContent='✅ '+idx+'건 정산 완료 | 보전 ₩'+totalInj.toLocaleString()+' | 환수 ₩'+totalExt.toLocaleString()+' | 실지급 ₩'+netPay.toLocaleString();
+      done.textContent='✅ '+_idx+'건 완료 | 보전 ₩'+_totalInj.toLocaleString()+' | 환수 ₩'+_totalExt.toLocaleString()+' | 실지급 ₩'+res.netPay.toLocaleString();
       con.appendChild(done);
+      var note=document.getElementById('dw-statement-note');
+      if(note)note.textContent='✅ '+_idx+'건 완료 · 3.3% 절사 적용';
       btn.disabled=false; btn.textContent='⚡ 2단계: 다시 계산'; btn.style.background='#3b82f6';
       if(prog)prog.textContent='';
       return;
     }
-    var o=data[idx];
+
+    var o=data[_idx];
     var isMid=(o.hour>=0&&o.hour<6);
-    if(!isMid&&o.platformPrice>0){validCount++;pfSum+=o.platformPrice;}
+    var tp=_getTP(_validCnt);
 
-    var tp=getTP(validCount);
-    var finalT=tp+(o.event.price||0);
-    var inj=0,ext=0,badge='',rowBg='transparent';
+    // ━━ 건별 순수 delta만 계산 (누적변수 오염 방지)
+    var _inj=0, _ext=0;  // 이 건의 차액 (루프마다 0으로 리셋)
+    if(!isMid&&o.platformPrice>0){
+      _validCnt++;
+      _pfSum+=o.platformPrice;  // 플랫폼 원단가 1번만 합산
+      tp=_getTP(_validCnt);     // validCount 업데이트 후 트랙 재확인
+      var finalT=tp+(o.event.price||0);
+      if(o.platformPrice<finalT){
+        _inj=Math.floor(finalT-o.platformPrice);
+        _totalInj+=_inj;        // ★ 이 건의 보전액만 1번 더함
+      } else if(o.platformPrice>finalT){
+        _ext=Math.floor(o.platformPrice-finalT);
+        _totalExt+=_ext;        // ★ 이 건의 환수액만 1번 더함
+      }
+    }
+    var finalT2=tp+(o.event.price||0);
 
-    if(tp!==prevTrack&&prevTrack>0){
+    // 트랙 점프 감지
+    if(tp!==_prevTrack&&_prevTrack>0){
       var al=document.getElementById('dw-track-alert');
       if(al){
         al.style.cssText='display:block;padding:8px 14px;border-radius:8px;margin-bottom:6px;text-align:center;font-weight:800;font-size:12px;font-family:sans-serif;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#78350f';
-        al.textContent='🚀 트랙 점프! '+validCount+'건 → 보장단가 ₩'+prevTrack.toLocaleString()+' → ₩'+tp.toLocaleString()+'으로 상승!';
+        al.textContent='🚀 트랙 점프! '+_validCnt+'건 → 보장단가 ₩'+_prevTrack.toLocaleString()+' → ₩'+tp.toLocaleString()+'';
         setTimeout(function(){if(al)al.style.display='none';},2500);
       }
     }
-    prevTrack=tp;
+    _prevTrack=tp;
 
+    // 배지 결정
+    var badge='',rowBg='transparent';
     if(isMid){
       badge='<span style="font-size:10px;background:#374151;color:#9ca3af;padding:2px 7px;border-radius:10px">🌙 심야 제외</span>';
       rowBg='rgba(255,255,255,.02)';
     } else if(o.platformPrice<=0){
       badge='<span style="font-size:10px;background:#7f1d1d;color:#fca5a5;padding:2px 7px;border-radius:10px">🚫 취소 제외</span>';
-    } else if(o.platformPrice<finalT){
-      inj=Math.floor(finalT-o.platformPrice); totalInj+=inj;
-      badge='<span style="font-size:11px;background:#065f46;color:#6ee7b7;padding:2px 9px;border-radius:10px;font-weight:700">📥+₩'+inj.toLocaleString()+'</span>';
+    } else if(_inj>0){
+      badge='<span style="font-size:11px;background:#065f46;color:#6ee7b7;padding:2px 9px;border-radius:10px;font-weight:700">📥+₩'+_inj.toLocaleString()+'</span>';
       rowBg='rgba(16,185,129,.07)';
-    } else if(o.platformPrice>finalT){
-      ext=Math.floor(o.platformPrice-finalT); totalExt+=ext;
-      badge='<span style="font-size:11px;background:#881337;color:#fda4af;padding:2px 9px;border-radius:10px;font-weight:700">📤-₩'+ext.toLocaleString()+'</span>';
+    } else if(_ext>0){
+      badge='<span style="font-size:11px;background:#881337;color:#fda4af;padding:2px 9px;border-radius:10px;font-weight:700">📤-₩'+_ext.toLocaleString()+'</span>';
       rowBg='rgba(244,63,94,.07)';
     } else {
-      badge='<span style="font-size:10px;color:#6b7280">⚖️</span>';
+      badge='<span style="font-size:10px;color:#6b7280">⚖️ 균형</span>';
     }
-
-    var evBadge=o.event.price>0
+    var evBadge=o.event&&o.event.price>0
       ?'<span style="font-size:10px;color:'+(o.event.color||'#fb923c')+';font-weight:700">'+o.event.name+' +'+o.event.price+'</span>'
       :'<span style="font-size:10px;color:#374151">—</span>';
 
+    // 행 추가
     var row=document.createElement('div');
     row.style.cssText='display:grid;grid-template-columns:32px 80px 80px 100px 80px 1fr;gap:0;padding:4px 14px;border-bottom:1px solid #21262d;align-items:center;background:'+rowBg+';font-family:monospace;font-size:11px;'+(isMid?'opacity:.3;':'');
     row.innerHTML=
       '<span style="color:#6b7280">#'+o.id+'</span>'
       +'<span style="color:#22d3ee;font-size:10px">'+o.zone.slice(0,5)+'</span>'
-      +'<span style="color:#ffd700;font-weight:700">₩'+o.platformPrice.toLocaleString()+'</span>'
+      +'<span style="color:#ffd700;font-weight:700">₩'+(o.platformPrice>0?o.platformPrice.toLocaleString():'취소')+'</span>'
       +evBadge
-      +'<span style="color:#93c5fd;font-weight:700">₩'+finalT.toLocaleString()+'</span>'
+      +'<span style="color:#93c5fd;font-weight:700">₩'+finalT2.toLocaleString()+'</span>'
       +'<span style="text-align:right">'+badge+'</span>';
     row.style.opacity='0';
     con.appendChild(row);
     setTimeout(function(){row.style.transition='opacity .15s';row.style.opacity=(isMid?'.3':'1');},10);
     con.scrollTop=con.scrollHeight;
 
-    // 전광판
+    // ━━ 전광판 + 영수증 매 틱 동기화
     var sc={
       't':document.getElementById('dw-sc-track'),'c':document.getElementById('dw-sc-cnt'),
       'i':document.getElementById('dw-sc-inj'),'e':document.getElementById('dw-sc-ext'),
@@ -5419,20 +5447,24 @@ window.dwRunLiveCalculations=function(){
       'bi':document.getElementById('dw-bar-inj'),'be':document.getElementById('dw-bar-ext')
     };
     if(sc.t)sc.t.textContent='₩'+tp.toLocaleString();
-    if(sc.c)sc.c.textContent=validCount+'건';
-    if(sc.i)sc.i.textContent='₩'+totalInj.toLocaleString();
-    if(sc.e)sc.e.textContent='₩'+totalExt.toLocaleString();
-    var mg=totalExt-totalInj;
+    if(sc.c)sc.c.textContent=_validCnt+'건';
+    if(sc.i)sc.i.textContent='₩'+_totalInj.toLocaleString();
+    if(sc.e)sc.e.textContent='₩'+_totalExt.toLocaleString();
+    var mg=_totalExt-_totalInj;
     if(sc.m){sc.m.textContent='₩'+Math.abs(mg).toLocaleString();sc.m.style.color=mg>=0?'#065f46':'#9f1239';}
-    if(sc.mb){sc.mb.textContent=mg>=0?'▲ 이익':'▼ 투입';sc.mb.style.color=mg>=0?'#065f46':'#9f1239';}
-    var mx=Math.max(totalInj,totalExt,1);
-    if(sc.bi)sc.bi.style.width=Math.min(100,Math.round(totalInj/mx*100))+'%';
-    if(sc.be)sc.be.style.width=Math.min(100,Math.round(totalExt/mx*100))+'%';
-    if(prog)prog.textContent='분석 중... ('+(idx+1)+'/'+maxShow+'건)';
-    idx++;
+    if(sc.mb){sc.mb.textContent=mg>=0?'▲ 대리점 이익':'▼ 대리점 투입';sc.mb.style.color=mg>=0?'#065f46':'#9f1239';}
+    var mx=Math.max(_totalInj,_totalExt,1);
+    if(sc.bi)sc.bi.style.width=Math.min(100,Math.round(_totalInj/mx*100))+'%';
+    if(sc.be)sc.be.style.width=Math.min(100,Math.round(_totalExt/mx*100))+'%';
+    if(prog)prog.textContent='분석 중... '+(_idx+1)+'/'+_maxShow+'건';
+
+    // ━━ 영수증 매 틱 실시간 업데이트
+    _updateReceipt();
+
+    _idx++;
   },280);
 };
-// 기존 dwStartLiveSimulation 호환
+window.dwStartLiveSimulation=function(){dwLoadVirtualExcel();};
 window.dwStartLiveSimulation=function(){dwLoadVirtualExcel();};
 
 
