@@ -14999,7 +14999,7 @@ async function saveDispatchResult(){
 
 
 function pageHourlySettle(){
-  if(!isSuperAdmin()&&window._cachedHasPaid===false&&!window._trialActive){_renderPaywall('hourly_settle');return;}
+  _requirePlan('payroll',function(){
   // 서비스 타입에 따라 타이틀 변경
   var _svcType=_CU&&_CU.serviceType||'';
   var _pageTitle=(_svcType==='hourly')?'💼 급여 관리':'⏰ 시급·일급·수수료 정산';
@@ -15062,8 +15062,8 @@ function pageHourlySettle(){
     sel.appendChild(opt);
   }
   window._hsState={workers:_workers,attMap:_attMap,results:_results,did:did};
-};
-
+  }); // _requirePlan
+}
 function _hsTabSwitch(tab){
   document.getElementById('hs-auto-area').style.display=tab==='auto'?'':'none';
   document.getElementById('hs-calc-area').style.display=tab==='calc'?'':'none';
@@ -17446,7 +17446,7 @@ function _requirePlan(feature,callback){
     var d=snap.exists?snap.data():{};
     if(_isPlanAllowed(d,feature)){callback();}
     else{_renderPaywall(feature);}
-  }).catch(function(){callback();});
+  }).catch(function(e){console.warn('_requirePlan 오류',e);_renderPaywall(feature);});
 }
 
 // ★ 기능별 플랜 허용 맵
