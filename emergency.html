@@ -13095,10 +13095,6 @@ function _geoFromStoredDeliveries(address){
 // ★ v9.68a: Claude Vision Haiku 검증 — Google OCR 동번호 오인식 보정
 // 1순위: Firestore의 anthropicApiKey로 직접 호출 (이미 등록된 키 활용)
 // 2순위: /claude-ocr 프록시 폴백 (Cloudflare env.CLAUDE_API_KEY)
-
-function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);}
-// ── 보안: 강화된 활동 로그 (actor, mode, details 포함)
-
 function _loadMapsScript(apiKey){
   return new Promise(function(res, rej){
     if(window.google && window.google.maps){ res(); return; }
