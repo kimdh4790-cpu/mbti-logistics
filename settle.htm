@@ -5140,6 +5140,41 @@ var _dwPlatform='coupangEats';
 // ── 배달대행 통합 정산 페이지 (엔진 v2 섹션)
 
 // ★ DONWAY 정산 시뮬레이터 (배달대행 정산 원리 설명)
+
+// ★ Firebase 주간 정산 마감 저장 + 기사 앱 알림
+function _dwSaveWeeklySettlement(result){
+  if(!_db||!_CU){
+    console.log('[DW 정산 시뮬레이터 결과]', result);
+    toast('ℹ️ 시뮬레이터 모드: DB 저장 생략 (실제 정산은 엑셀 업로드 후 정산 저장 버튼 사용)');
+    return;
+  }
+  // 주차 계산
+  var now=new Date();
+  var onejan=new Date(now.getFullYear(),0,1);
+  var wk=Math.ceil(((now-onejan)/86400000+onejan.getDay()+1)/7);
+  var yearWeek=now.getFullYear()+'-W'+String(wk).padStart(2,'0');
+  var did=_CU.dealerId||'';
+
+  _db.collection('driver_settlements').doc(did+'_sim_'+yearWeek).set({
+    dealerId:did,
+    yearWeek:yearWeek,
+    type:'simulation',
+    updatedAt:new Date().toISOString(),
+    rawTotal:result.rawTotal||0,
+    bonusTotal:result.bonusTotal||0,
+    deductTotal:result.deductTotal||0,
+    preTaxTotal:result.preTaxTotal||0,
+    tax33:result.tax33||0,
+    netPay:result.netPay||0,
+    totalCount:result.totalCount||0,
+    isFinalized:false // 시뮬레이터 결과: 미확정
+  },{merge:true}).then(function(){
+    toast('💾 시뮬레이터 결과 Firestore 저장 완료 ('+yearWeek+')');
+  }).catch(function(e){
+    console.warn('[DW 저장 실패]',e.message);
+  });
+}
+
 function _dwRenderSimulator(){
   var el=document.getElementById('dw-simulator-wrap');
   if(!el)return;
@@ -5251,16 +5286,69 @@ window.dwLoadVirtualExcel=function(){
   var btn2=document.getElementById('dw-btn-calc');
   var con=document.getElementById('dw-sim-console');
   if(!btn1||!btn2||!con)return;
-  btn1.disabled=true; btn1.textContent='📂 로딩 중...';
 
-  // ★ Gemini V2 황금비율 데이터 (보전·환수가 실감나게 터지는 구성)
+  // ★ 실제 엑셀 파일 업로드 시도 - 파일 선택창 열기
+  var fileInput=document.createElement('input');
+  fileInput.type='file'; fileInput.accept='.xlsx,.xls,.csv';
+  fileInput.onchange=function(){
+    var file=fileInput.files[0];
+    if(!file){_dwLoadVirtual(btn1,btn2,con);return;} // 파일 없으면 가상 데이터
+    _dwParseRealExcel(file,btn1,btn2,con);
+  };
+  fileInput.click();
+};
+
+// ── 실제 엑셀 파싱 (XLSX 라이브러리 사용)
+function _dwParseRealExcel(file,btn1,btn2,con){
+  btn1.disabled=true; btn1.textContent='📂 파싱 중...';
+  con.innerHTML='';
+  var reader=new FileReader();
+  reader.onload=function(evt){
+    try{
+      if(typeof XLSX==='undefined'){toast('❌ XLSX 라이브러리 없음. 가상 데이터로 진행합니다.');_dwLoadVirtual(btn1,btn2,con);return;}
+      var data=new Uint8Array(evt.target.result);
+      var wb=XLSX.read(data,{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws);
+      if(!rows||!rows.length){toast('⚠️ 데이터 없음. 가상 데이터로 진행합니다.');_dwLoadVirtual(btn1,btn2,con);return;}
+
+      // 컬럼명 자동 감지 (쿠팡이츠·배민 등 통합 대응)
+      var sample=rows[0];
+      var timeKey=Object.keys(sample).find(function(k){return /완료|배달.*(시간|일시)|time/i.test(k);})||'';
+      var priceKey=Object.keys(sample).find(function(k){return /단가|배송비|금액|price/i.test(k);})||'';
+      var eventKey=Object.keys(sample).find(function(k){return /비고|할증|이벤트|event/i.test(k);})||'';
+
+      window._dwSimData=rows.map(function(row,i){
+        var rawTime=timeKey?String(row[timeKey]||''):'';
+        var hr=12;
+        var tm=rawTime.match(/(\d{1,2}):(\d{2})/);
+        if(tm)hr=parseInt(tm[1]);
+        var price=priceKey?Math.abs(Number(String(row[priceKey]||'').replace(/[,₩원]/g,'')))||0:0;
+        var evNote=eventKey?String(row[eventKey]||''):'';
+        var ev={name:'일반콜',price:0,color:''};
+        if(/우천|rain/i.test(evNote)) ev={name:'☔ 우천할증',price:500,color:'#60a5fa'};
+        else if(/피크|peak/i.test(evNote)) ev={name:'🔥 피크지원',price:300,color:'#fb923c'};
+        return {id:i+1,zone:'',hour:hr,platformPrice:price,event:ev,completedAt:rawTime};
+      }).filter(function(o){return o.platformPrice>0;});
+
+      _dwPrintLoadLog(btn1,btn2,con,'실제 엑셀: '+file.name,window._dwSimData.length);
+    }catch(e){
+      console.error(e);toast('❌ 파싱 오류: '+e.message+' → 가상 데이터로 전환');
+      _dwLoadVirtual(btn1,btn2,con);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ── 가상 데이터 생성 (파일 없을 때)
+function _dwLoadVirtual(btn1,btn2,con){
+  btn1.disabled=true; btn1.textContent='📂 로딩 중...';
+  con.innerHTML='';
   var zones=['수영구 민락동','남구 대연동','해운대구 우동','연제구 연산동','부산진구 전포동'];
-  var hours=[9,11,12,14,18,19,22,23,1,3]; // 주간/심야 황금비율 믹스
-  // ★ 보장가(₩2,900~₩5,500) 대비 낮은/높은 콜이 섞여 보전·환수 모두 터짐
-  var prices=[2300,2500,2700,2900,3100,4800,5500,6200];
+  var hours=[9,11,12,14,18,19,22,23,1,3];
+  var prices=[2300,2500,2700,2900,3100,4800,5500,6200]; // V2 황금비율
   var EVENTS=[
-    {name:'일반콜',price:0,color:''},
-    {name:'일반콜',price:0,color:''},  // 일반콜 비율 높임
+    {name:'일반콜',price:0,color:''},{name:'일반콜',price:0,color:''},
     {name:'☔ 우천할증',price:500,color:'#60a5fa'},
     {name:'🔥 피크 프로모션',price:300,color:'#fb923c'},
     {name:'⭐ 우수기사',price:200,color:'#facc15'},
@@ -5268,40 +5356,39 @@ window.dwLoadVirtualExcel=function(){
   window._dwSimData=[];
   for(var i=1;i<=200;i++){
     window._dwSimData.push({
-      id:i,
-      zone:zones[Math.floor(Math.random()*zones.length)],
+      id:i,zone:zones[Math.floor(Math.random()*zones.length)],
       hour:hours[Math.floor(Math.random()*hours.length)],
       platformPrice:prices[Math.floor(Math.random()*prices.length)],
       event:EVENTS[Math.floor(Math.random()*EVENTS.length)]
     });
   }
+  _dwPrintLoadLog(btn1,btn2,con,'가상 데이터 V2 (황금비율)',200);
+}
 
-  // 엑셀 로드 시뮬레이션 애니메이션
-  con.innerHTML='';
+// ── 로드 완료 로그 출력
+function _dwPrintLoadLog(btn1,btn2,con,label,cnt){
   var lines2=[
-    '> 파일 접수 중... [정산데이터_2026-05.xlsx]',
-    '> 헤더 파싱: 배달원ID | 시간 | 구역 | 플랫폼단가 | 이벤트',
-    '> 200건 로드 완료 ✅',
-    '> 취소건(price≤0) 필터: 0건 제외',
-    '> 주차 필터 락: 2026-05-19 ~ 2026-05-25',
+    '> 파일 접수: ['+label+']',
+    '> 헤더 파싱: 배달원ID | 완료시간 | 구역 | 플랫폼단가 | 이벤트',
+    '> '+cnt+'건 로드 완료 ✅',
+    '> 취소건(price≤0) 자동 제외',
+    '> 주차 필터 락 적용 완료',
     '> [2단계: 정산 개시] 버튼을 눌러 연산을 시작하세요.',
   ];
-  var li=0;
+  var li2=0;
   var lt=setInterval(function(){
-    if(li>=lines2.length){
+    if(li2>=lines2.length){
       clearInterval(lt);
       btn1.disabled=false; btn1.textContent='📂 1단계: 엑셀 로드';
-      btn2.disabled=false; btn2.style.background='#3b82f6'; btn2.style.cursor='pointer'; btn2.style.opacity='1';
+      btn2.disabled=false; btn2.style.background='#3b82f6'; btn2.style.cursor='pointer'; btn2.style.opacity='1'; btn2.style.border='none';
       return;
     }
     var row=document.createElement('div');
     row.style.cssText='padding:3px 14px;font-family:monospace;font-size:11px;color:#8b949e';
-    row.textContent=lines2[li];
-    con.appendChild(row);
-    con.scrollTop=con.scrollHeight;
-    li++;
-  },300);
-};
+    row.textContent=lines2[li2];
+    con.appendChild(row); con.scrollTop=con.scrollHeight; li2++;
+  },280);
+}
 
 
 window.dwRunLiveCalculations=function(){
@@ -5371,6 +5458,12 @@ window.dwRunLiveCalculations=function(){
       if(note)note.textContent='✅ '+_idx+'건 완료 · 3.3% 절사 적용';
       btn.disabled=false; btn.textContent='⚡ 2단계: 다시 계산'; btn.style.background='#3b82f6';
       if(prog)prog.textContent='';
+      // ★ Firebase Firestore 최종 주급 명세서 저장
+      _dwSaveWeeklySettlement({
+        totalCount:_idx, rawTotal:_pfSum,
+        bonusTotal:_totalInj, deductTotal:_totalExt,
+        preTaxTotal:res.preTax, tax33:res.tax, netPay:res.netPay
+      });
       return;
     }
 
