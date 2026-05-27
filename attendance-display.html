@@ -236,8 +236,8 @@ var FB_CFG={
   messagingSenderId:"1097631848952",
   appId:"1:1097631848952:web:b4e37b47e3ff3e3b5d38b8"
 };
-if(!firebase.apps.length) firebase.initializeApp(FB_CFG);
-var _db=firebase.firestore();
+// Firebase 초기화는 window.load에서
+var _db=null;
 
 // ── URL 파라미터 ──
 var _params=new URLSearchParams(location.search);
@@ -455,9 +455,14 @@ function toggleFS(){
 document.addEventListener('keydown',function(e){if(e.key==='F11'){e.preventDefault();toggleFS();}});
 
 // ── 시작 ──
-buildUI();
-buildAttendanceQr(_curSlot);
-setInterval(updateTimer,100);
+window.addEventListener('load',function(){
+  // Firebase 초기화
+  if(!firebase.apps.length) firebase.initializeApp(FB_CFG);
+  _db=firebase.firestore();
+  buildUI();
+  buildAttendanceQr(_curSlot);
+  setInterval(updateTimer,100);
+});
 </script>
 </body>
 </html>
