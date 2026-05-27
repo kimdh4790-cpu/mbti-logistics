@@ -10203,6 +10203,9 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
 var _db=firebase.firestore(),_auth=firebase.auth(),_storage=firebase.storage();
 var _CU=null,FB=true;
 window._geoCacheMem={}; // 지오코딩 캐시
+// 물류앱 전역 상태 스텁
+var S={curDriver:(_CU&&_CU.email)||'', curPlate:'', curJobtype:'택배', curJobsub:'쿠팡',
+  curMode:'admin', curAdminName:(_CU&&_CU.email)||''};
 window._emerScanCount=0;window._emerSaveCount=0;
 window._cachedKakaoApiKey='';window._googleApiKey='';
 
@@ -10226,6 +10229,7 @@ _auth.onAuthStateChanged(function(user){
   if(user){
     _CU={uid:user.uid,email:user.email,dealerId:user.uid};
     window._CU=_CU;
+    S.curDriver=user.email||''; S.curAdminName=user.email||'';
     document.getElementById('login-screen').style.display='none';
     document.getElementById('main-screen').style.display='block';
     loadApiKeys();loadTodayStats();
@@ -10287,6 +10291,35 @@ async function _callOcr(b64,mimeType){
     return (data.content&&data.content[0]&&data.content[0].text)||'';
   }catch(e){return '';}
 }
+
+
+function _addBusanPrefix(addr){
+  if(!addr) return addr;
+  if(/^(서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주)/.test(addr.trim())) return addr;
+  if(/구|동|로|길|번길/.test(addr)) return '부산 '+addr.trim();
+  return addr;
+}
+
+// ★ v9.60: 동별 GPS 캐시 (localStorage 90일 + 메모리)
+window._geoCacheMem = window._geoCacheMem || {};
+// ★ v9.63: 부팅 시 1회 자동 캐시 무효화 (v9.62 이전 잘못된 캐시 제거)
+(function(){
+  try{
+    var ver = localStorage.getItem('mbti_geo_cache_ver');
+    if(ver !== 'v968'){
+      var removed = 0;
+      var keys = Object.keys(localStorage);
+      for(var i=0;i<keys.length;i++){
+        if(keys[i].indexOf('mbti_geo_cache_') === 0 && keys[i] !== 'mbti_geo_cache_ver'){
+          localStorage.removeItem(keys[i]); removed++;
+        }
+      }
+      localStorage.setItem('mbti_geo_cache_ver', 'v968');
+      if(removed > 0) console.log('[v9.68 CACHE_FLUSH]', removed, '개 항목 자동 무효화 (v9.62 이전 캐시)');
+    }
+  }catch(e){ console.debug('cache flush skip:', e); }
+})();
+
 function showLoading(msg){toast(msg||'처리 중...');}
 function hideLoading(){}
 function _tts(msg){console.log('[tts]',msg);} // 음성 스텁
