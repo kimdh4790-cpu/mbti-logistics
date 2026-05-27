@@ -13687,9 +13687,18 @@ async function _ocrAnalyze(){
       // 법인명/상호
       var nmMatch=fullText.match(/상\s*호\s*[:：]?\s*([^\n\r]+?)(?:\s+대표|\s+법인|$)/);
       if(nmMatch) json.bizName=nmMatch[1].trim();
-      // 대표자 - 성명 또는 대표자 뒤 한글 2~4자
-      var repMatch=fullText.match(/(?:대\s*표\s*자?|성\s*명)\s*[:：]?\s*([가-힣]{2,5})/);
-      if(repMatch) json.bizRep=repMatch[1].trim();
+      // 대표자 - "대표자" 또는 "성명" 뒤 한글, "유형/법인/개인" 등 제외
+      var repMatch=fullText.match(/(?:대\s*표\s*자|성\s*명)\s*[:：]?\s*([가-힣]{2,5})/);
+      if(repMatch){
+        var repVal=repMatch[1].trim();
+        var badWords=['유형','법인','개인','사업','단체','기관','외국'];
+        if(badWords.indexOf(repVal)<0) json.bizRep=repVal;
+      }
+      // 대표자 못 찾았으면 "법인명" 바로 다음 줄 등 추가 시도
+      if(!json.bizRep){
+        var repMatch2=fullText.match(/법\s*인\s*등\s*록[^\n]*\n\s*([가-힣]{2,5})/);
+        if(repMatch2) json.bizRep=repMatch2[1].trim();
+      }
       // 사업장 주소
       var addrMatch=fullText.match(/(?:소\s*재\s*지?|사\s*업\s*장)\s*[:：]?\s*([가-힣\s\d\-,()]+(?:시|군|구|로|길)[가-힣\s\d\-,()]+)/);
       if(addrMatch) json.bizAddr=addrMatch[1].replace(/\s+/g,' ').trim();
@@ -18306,4 +18315,4 @@ function _startDispatchListener(uid){
 </script>
 </body>
 </html>
-<script>document.addEventListener("DOMContentLoaded",function(){if(typeof initFirebase==="function")initFirebase();});</script> 
+<script>document.addEventListener("DOMContentLoaded",function(){if(typeof initFirebase==="function")initFirebase();});</script>
