@@ -5060,6 +5060,23 @@ window._dwOpenSettings=function(){
   document.body.appendChild(mo);
 };
 
+
+// ★ _dwOpenSettings 저장 처리
+window._dwApplySettings=function(){
+  var cfg={tracks:{},slots:{},updatedAt:new Date().toISOString()};
+  DW_TRACKS.forEach(function(t){
+    var el=document.getElementById('dw-track-'+t.key);
+    if(el){var v=parseInt(el.value)||0;if(v>0){t.price=v;cfg.tracks[t.key]=v;}}
+  });
+  Object.keys(DW_SLOTS).forEach(function(k){
+    var el=document.getElementById('dw-slot-'+k);
+    if(el){var v=parseInt(el.value)||0;DW_SLOTS[k].price=v;cfg.slots[k]=v;}
+  });
+  _dwSaveSettings(cfg,function(){
+    var m=document.querySelector('.mo.show');if(m)m.remove();
+    toast('✅ 배달대행 정산 설정 저장');
+  });
+};
 // ── 건별 상세 모달
 window._dwShowOrderDetail=function(idx){
   var r=_dwResults[idx];
