@@ -16580,7 +16580,7 @@ function openResetPanel(){
     +'<label style="display:flex;align-items:center;gap:8px;padding:8px 4px;cursor:pointer;font-size:13px;font-weight:600">'
     +'<input type="checkbox" id="rst-drivers" checked style="width:16px;height:16px"> 👤 기사 정보 전체 삭제</label>'
     +'<label style="display:flex;align-items:center;gap:8px;padding:8px 4px;cursor:pointer;font-size:13px;font-weight:600">'
-    +'<input type="checkbox" id="rst-routes" style="width:16px;height:16px"> 📌 라우트 단가표 초기화</label>'
+    +'<input type="checkbox" id="rst-routes" style="width:16px;height:16px"> 📌 라우트+시즌 단가표 초기화</label>'
     +'<label style="display:flex;align-items:center;gap:8px;padding:8px 4px;cursor:pointer;font-size:13px;font-weight:600">'
     +'<input type="checkbox" id="rst-inc" checked style="width:16px;height:16px"> ⚙️ 인센 설정 초기화</label>'
     +'</div>'
@@ -16636,10 +16636,13 @@ function doResetData(){
     }));
     _drvCache=null;localStorage.removeItem('mbti_drivers');
   }
-  // 라우트 단가표 초기화
+  // 라우트 단가표 + 시즌단가표 초기화
   if(doRoutes){
     var rpId=did+'_routePrices';
     var rcId=did+'_routeCampMap';
+    var rsId=did+'_seasonPrices'; // ★ 시즌단가표도 삭제
+    promises.push(_db.collection('settings').doc(rsId).delete().catch(function(){}));
+    SEASON_PRICES=[]; // ★ 메모리 초기화
     promises.push(_db.collection('settings').doc(rpId).delete().catch(function(){}));
     promises.push(_db.collection('settings').doc(rcId).delete().catch(function(){}));
     Object.keys(RPRICE).forEach(function(k){delete RPRICE[k];});
