@@ -14933,6 +14933,7 @@ function pageHourlySettle(){
     +'<select id="hs-month-sel" style="padding:8px 12px;border:1px solid var(--border);background:var(--bg2);color:var(--text1);border-radius:8px;font-size:13px;font-weight:700"></select>'
     +'<button onclick="_hsLoad()" class="btn btn-blue">🔄 QR 데이터 불러오기</button>'
     +'<button onclick="_hsSaveAll()" class="btn btn-teal">💾 전체 저장</button>'
+    +'<button onclick="_hsSendAll()" class="btn" style="background:linear-gradient(135deg,#059669,#10b981);color:#fff;border:none">📱 전체 급여 문자 발송</button>'
     +'<button onclick="_hsAnomalyCheck()" class="btn" style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none">🤖 AI 이상감지</button>'
     +'<button onclick="_hsTaxShare()" class="btn" style="background:linear-gradient(135deg,#0891b2,#0e7490);color:#fff;border:none;margin-left:auto">📤 세무사 공유</button>'
     +'</div>'
@@ -15007,9 +15008,24 @@ function _hsLoad(){
     _db.collection('attendance')
       .where('dealerId','==',did)
       .where('date','>=',dateFrom)
+      .where('date','<=',dateTo).get(),
+    // ★ 승인된 연장근무 (해당 월)
+    _db.collection('overtimes')
+      .where('dealerId','==',did)
+      .where('status','==','approved')
+      .where('date','>=',dateFrom)
       .where('date','<=',dateTo).get()
   ]).then(function(results){
-    var drvSnap=results[0], attSnap=results[1];
+    var drvSnap=results[0], attSnap=results[1], otSnap=results[2];
+    // 연장승인 Map {userId: 총 연장시간}
+    var otMap={};
+    otSnap.forEach(function(doc){
+      var d=doc.data();
+      var uid=d.userId||d.driverId||'';
+      if(!uid)return;
+      var h=parseFloat(d.hours||0);
+      otMap[uid]=(otMap[uid]||0)+h;
+    });
 
     // 직원 파싱
     var workers=[];
@@ -15067,6 +15083,8 @@ function _hsRenderResults(workers, attMap, ym){
   workers.forEach(function(w){
     var records=attMap[w.userId]||attMap[w.name]||attMap[w.id]||[];
     var totalH=0, nightH=0, overtimeH=0, workDays=0, holidayDays=0;
+    // ★ 승인된 연장근무 시간 추가
+    var approvedOT=otMap[w.userId]||otMap[w.id]||0;
 
     records.forEach(function(r){
       if(!r.checkIn||!r.checkOut)return;
@@ -15077,6 +15095,11 @@ function _hsRenderResults(workers, attMap, ym){
       workDays++;
       if(r.isHoliday)holidayDays++;
     });
+    // ★ 승인된 연장근무 합산
+    if(approvedOT>0){
+      overtimeH+=approvedOT;
+      totalH+=approvedOT;
+    }
 
     // 주간 근무시간 (월 근무시간 / 4.33주)
     var weeklyH=Math.round(totalH/4.33*10)/10;
@@ -15115,6 +15138,7 @@ function _hsRenderResults(workers, attMap, ym){
       +'<div style="font-size:13px;font-weight:700">'+esc(w.name||w.userId)+'</div>'
       +'<span style="background:'+color+'22;color:'+color+';font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">'+typeLabel.icon+' '+typeLabel.label+'</span>'
       +(w.camp?'<span style="font-size:10px;color:var(--text3)">'+esc(w.camp)+'</span>':'')
+      +(approvedOT>0?'<span style="background:rgba(245,158,11,.15);color:#f59e0b;font-size:9px;padding:2px 8px;border-radius:10px">✅ 연장승인 '+approvedOT+'h 반영</span>':'')
       +(mw.violation?'<span style="background:#ef4444;color:#fff;font-size:9px;padding:2px 8px;border-radius:10px;margin-left:auto">⚠️ 최저임금 미달</span>':'')
       +'</div>'
       // 근무 요약
@@ -15300,6 +15324,10 @@ function _psSetDeduct(wid){
   ];
   box2.innerHTML='<div class="mdt">💸 공제 항목 설정</div>'
     +'<div style="padding:16px">'
+    +'<div style="display:flex;gap:8px;margin-bottom:14px;padding:10px;background:rgba(59,130,246,.08);border-radius:10px;align-items:center">'
+    +'<div style="flex:1;font-size:11px;color:var(--text3)">2026 법정 요율로 자동 계산합니다</div>'
+    +'<button id="ps-auto-ins" class="btn btn-blue" style="font-size:11px;padding:5px 12px;white-space:nowrap">⚡ 4대보험 자동계산</button>'
+    +'</div>'
     +fields.map(function(f){
       var val=w[f[0]]||0;
       return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
@@ -15314,6 +15342,35 @@ function _psSetDeduct(wid){
     +'</div>'
     +'</div>';
   mo2.appendChild(box2);document.body.appendChild(mo2);
+  // ★ 4대보험 자동계산
+  document.getElementById('ps-auto-ins').onclick=function(){
+    var r=(window._hsState&&window._hsState.results&&window._hsState.results[wid])||{};
+    var totalPay=r.totalPay||0;
+    if(!totalPay){toast('⚠️ 급여 먼저 계산해주세요');return;}
+    var ins=LABOR_LAW_2026.ins;
+    var L=LABOR_LAW_2026;
+    // 국민연금
+    var pBase=Math.min(Math.max(totalPay,ins.pension_base_min),ins.pension_base_max);
+    var pension=Math.round(pBase*ins.pension_worker);
+    // 건강보험
+    var health=Math.round(totalPay*ins.health_worker);
+    // 장기요양
+    var care=Math.round(health*ins.care_rate*ins.care_worker_pct);
+    // 고용보험
+    var employ=Math.round(totalPay*ins.employ_worker);
+    // 소득세
+    var dep=1; // 부양가족 기본 1인
+    var taxObj=L.calcIncomeTax(totalPay,dep);
+    // 입력칸에 자동 입력
+    var setVal=function(id,val){var el=document.getElementById('ps-deduct-'+id);if(el)el.value=val;};
+    setVal('taxIncome',taxObj.income);
+    setVal('taxLocal',taxObj.local);
+    setVal('taxHealth',health+care);
+    setVal('taxEmp',employ);
+    setVal('taxPension',pension);
+    toast('✅ 4대보험 자동계산 완료');
+  };
+
   document.getElementById('ps-deduct-save').onclick=function(){
     var did=_CU&&_CU.dealerId||'';
     var upd={};
@@ -15404,6 +15461,33 @@ function _hwToggleRateFields(type){
     el.style.display=show?'':'none';
   });
 }
+
+// ★ 전체 급여 문자 발송
+function _hsSendAll(){
+  var st=window._hsState||{};
+  if(!st.results||!Object.keys(st.results).length){toast('⚠️ 먼저 QR 데이터를 불러오세요');return;}
+  var workers=st.workers||[];
+  var confirmed=confirm('💬 전 직원('+workers.length+'명)에게 급여 내역 문자를 발송할까요?');
+  if(!confirmed)return;
+  var sent=0,fail=0;
+  Object.keys(st.results).forEach(function(wid){
+    var r=st.results[wid];
+    var w=r.w;
+    if(!w.phone){fail++;return;}
+    var msg='['+(_CU&&_CU.companyName||'DONWAY')+'] '+r.ym+' 급여 안내 / 성명: '+w.name+' / 지급액: ₩'+(r.totalPay||0).toLocaleString()+' / 근무: '+r.workDays+'일 '+(Math.round(r.totalH*10)/10)+'h / 문의: '+((_CU&&_CU.phone)||'');
+    // Solapi SMS 발송
+    fetch('/send-sms',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({to:w.phone,text:msg})
+    }).then(function(res){
+      if(res.ok){sent++;if(sent+fail===Object.keys(st.results).length)toast('✅ '+sent+'명 발송 완료'+(fail>0?' ('+fail+'명 실패)':''));}
+      else{fail++;}
+    }).catch(function(){fail++;});
+  });
+  if(!sent&&!fail)toast('⚠️ 연락처 있는 직원 없음');
+}
+
 
 function _hwTab(btn, type){
   document.querySelectorAll("[data-tab]").forEach(function(b){
