@@ -1081,7 +1081,8 @@ function calcNet(x){
   var fresh=+x.fresh||+x.freshAmt||0;  // ★ 프레시백 회수금액만 엑셀값 사용
   // ★ 프레시백 인센티브: 항상 건수 × 25원 재계산 (저장값 무시 — 앱에서 계산)
   var isCoupang=(x.jobsub==='쿠팡'||x.client==='쿠팡');
-  var finc = isCoupang ? Math.round(dcnt*(G_PRICES.freshbag_inc||25)) : 0;
+  // ★ finc = 저장된 addIncAmt(col10×건수) 우선, 없으면 freshbag_inc×건수
+  var finc = isCoupang ? (+x.finc>0?+x.finc:Math.round(dcnt*(G_PRICES.freshbag_inc||0))) : 0;
   var inc=+x.inc||0;
   // ★ 미계약건: 항상 RPRICE['nocont_w1/w2'] × 건수 재계산 (저장값·엑셀금액 무시)
   var _nocontCnt=+x.nocontCnt||0;
@@ -1242,8 +1243,8 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         var campName=_normCamp(campRaw);
         var dcnt=Number(row[rColDcnt])||0;
         var rcnt=Number(row[rColRcnt])||0;
+        var addInc=Number(row[rColAddInc])||0; // ★ 추가 인센 단가(col10) - 기사별 0/9/23원
         var unitPrc=Number(row[rColUnit])||0;
-        var addInc=Number(row[rColAddInc])||0;
         var freshInc=Number(row[rColFresh])||0;      // 프레시백 회수금액
         var freshIncInc=rColFreshInc>=0?Number(row[rColFreshInc])||0:0; // 프레시백 인센티브
         var rowTotal=Number(row[rColTotal])||0;
@@ -1294,7 +1295,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         drvMap[cleanId].retAmt+=retAmt;
         drvMap[cleanId].freshAmt+=freshInc;
         drvMap[cleanId].freshIncAmt+=freshIncInc;  // 프레시백 인센
-        drvMap[cleanId].addIncAmt+=addInc;
+        drvMap[cleanId].addIncAmt+=addInc*dcnt; // ★ col10단가 × 건수 = 실제 추가인센 금액
         // 날짜 추출
         var rowDateRaw=String(row[rColDate]||'').trim();
         var rowDate=rowDateRaw?rowDateRaw.slice(0,10):'';  // yyyy-mm-dd
@@ -1866,7 +1867,9 @@ function _saveCpDriver(camp,dm,name,month,cb){
       }).catch(function(){});
   }
   var damt=dm.delAmt||0,ramt=dm.retAmt||0,freshRaw=dm.freshAmt||0;
-  var finc=dm.freshIncAmt||Math.round((dm.dcnt||0)*25);
+  // ★ finc = 엑셀 col10×건수 합산값 우선, 없으면 G_PRICES.freshbag_inc 기본값
+  var _addIncRate=G_PRICES&&G_PRICES.freshbag_inc||25;
+  var finc=dm.addIncAmt>0?Math.round(dm.addIncAmt):(dm.freshIncAmt||Math.round((dm.dcnt||0)*_addIncRate));
   var income=damt+ramt+freshRaw+finc+(dm.nocontAmt||0);  // 모두 VAT포함가nocontAmt||0);
   var sa=Math.round(income/1.1),wage=Math.round(sa*(1-0.346));
   var emp=wage>=800000?Math.floor(wage*0.008/10)*10:0,work=Math.floor(wage*0.0088/10)*10;
