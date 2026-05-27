@@ -43,7 +43,7 @@ body.dark{--bg:#0a0a0f;--bg2:#12121a;--bg3:#1a1a24;--text:#f0ede6;--text2:#b8b5a
 .ns{
   display:flex;align-items:center;justify-content:space-between;
   padding:10px 12px 10px 14px;cursor:pointer;user-select:none;
-  font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  font-size:11px;font-weight:700;letter-spacing:.03em;
   color:var(--text3);border-radius:var(--r);margin:2px 6px;
   transition:all .2s;
 }
@@ -10496,7 +10496,7 @@ var MENUS_SETTLE = [
   {s:'🏠 홈', items:[
     {ic:'🏠',l:'🏠 대시보드',         p:'home',             plan_key:'free'}
   ]},
-  {s:'📦 택배 정산', items:[
+  {s:'📦 택배·배달 정산', items:[
     {ic:'📊',l:'📊 정산 현황',        p:'settle',           plan_key:'settle'},
     {ic:'📋',l:'📋 정산 관리',        p:'settlements',      plan_key:'settle'},
     {ic:'📈',l:'📈 통계',             p:'stats',            plan_key:'settle'},
@@ -10508,15 +10508,15 @@ var MENUS_SETTLE = [
     {ic:'⭐',l:'⭐ 직원 평가',        p:'evaluation',       plan_key:'free'},
     {ic:'💸',l:'💸 경비 관리',        p:'expense',          plan_key:'free'}
   ]},
-  {s:'🛵 배달대행', items:[
+  {s:'🛵 배달대행 정산', items:[
     {ic:'🛵',l:'🛵 배달대행 정산',    p:'delivery_platform',plan_key:'delivery'}
   ]},
-  {s:'🔐 근태관리', items:[
+  {s:'🔐 QR 근태관리', items:[
     {ic:'🔐',l:'🔐 QR 출퇴근',        p:'attendance',       plan_key:'qr'},
     {ic:'🌴',l:'🌴 휴가 관리',        p:'leave',            plan_key:'payroll'},
     {ic:'⏰',l:'⏰ 연장 승인',        p:'overtime',         plan_key:'qr'}
   ]},
-  {s:'💼 급여', items:[
+  {s:'💼 급여 관리', items:[
     {ic:'💼',l:'💼 급여 현황',        p:'hourly_settle',    plan_key:'payroll'}
   ]},
   {s:'🚚 원스톱 물류', items:[
@@ -10537,20 +10537,20 @@ var MENUS_QR = [
   {s:'🏠 홈', items:[
     {ic:'🏠',l:'🏠 대시보드',         p:'home',             plan_key:'free'}
   ]},
-  {s:'🔐 근태관리', items:[
+  {s:'🔐 QR 근태관리', items:[
     {ic:'🔐',l:'🔐 QR 출퇴근',        p:'attendance',       plan_key:'qr'},
     {ic:'🗓',l:'🗓 근무표',           p:'roster',           plan_key:'qr'},
     {ic:'🌴',l:'🌴 휴가 관리',        p:'leave',            plan_key:'payroll'},
     {ic:'⏰',l:'⏰ 연장 승인',        p:'overtime',         plan_key:'qr'}
   ]},
-  {s:'👤 직원', items:[
+  {s:'👤 직원 관리', items:[
     {ic:'👤',l:'👤 직원 관리',        p:'drivers',          plan_key:'free'},
     {ic:'📝',l:'📝 위수탁 계약서',    p:'contract',         plan_key:'free'},
     {ic:'📅',l:'📅 달력',             p:'schedule',         plan_key:'free'},
     {ic:'⭐',l:'⭐ 직원 평가',        p:'evaluation',       plan_key:'free'},
     {ic:'💸',l:'💸 경비 관리',        p:'expense',          plan_key:'free'}
   ]},
-  {s:'💼 급여', items:[
+  {s:'💼 급여 관리', items:[
     {ic:'💼',l:'💼 급여 현황',        p:'hourly_settle',    plan_key:'payroll'}
   ]},
   {s:'🚚 원스톱 물류', items:[
@@ -10567,7 +10567,7 @@ var MENUS_FULL = [
   {s:'🏠 홈', items:[
     {ic:'🏠',l:'🏠 대시보드',         p:'home',             plan_key:'free'}
   ]},
-  {s:'📦 택배 정산', items:[
+  {s:'📦 택배·배달 정산', items:[
     {ic:'📊',l:'📊 정산 현황',        p:'settle',           plan_key:'settle'},
     {ic:'📋',l:'📋 정산 관리',        p:'settlements',      plan_key:'settle'},
     {ic:'📈',l:'📈 통계',             p:'stats',            plan_key:'settle'},
@@ -10578,15 +10578,15 @@ var MENUS_FULL = [
     {ic:'⭐',l:'⭐ 직원 평가',        p:'evaluation',       plan_key:'free'},
     {ic:'💸',l:'💸 경비 관리',        p:'expense',          plan_key:'free'}
   ]},
-  {s:'🛵 배달대행', items:[
+  {s:'🛵 배달대행 정산', items:[
     {ic:'🛵',l:'🛵 배달대행 정산',    p:'delivery_platform',plan_key:'delivery'}
   ]},
-  {s:'🔐 근태관리', items:[
+  {s:'🔐 QR 근태관리', items:[
     {ic:'🔐',l:'🔐 QR 출퇴근',        p:'attendance',       plan_key:'qr'},
         {ic:'🌴',l:'🌴 휴가 관리',        p:'leave',            plan_key:'payroll'},
     {ic:'⏰',l:'⏰ 연장 승인',        p:'overtime',         plan_key:'qr'}
   ]},
-  {s:'💼 급여', items:[
+  {s:'💼 급여 관리', items:[
     {ic:'💼',l:'💼 급여 현황',        p:'hourly_settle',    plan_key:'payroll'}
   ]},
   {s:'🚚 원스톱 물류', items:[
@@ -10607,13 +10607,13 @@ var MENUS_HOURLY = [
     {ic:'🔐',l:'출퇴근 현황',      p:'attendance',    plan_key:'qr'},
     {ic:'📅',l:'📅 달력',             p:'schedule',      plan_key:'free'}
   ]},
-  {s:'👤 직원', items:[
+  {s:'👤 직원 관리', items:[
     {ic:'👤',l:'👤 직원 관리',        p:'drivers',  plan_key:'free'},
     {ic:'🌴',l:'🌴 휴가 관리',        p:'leave',    plan_key:'payroll'},
     {ic:'⏰',l:'⏰ 연장 승인',        p:'overtime', plan_key:'payroll'},
     {ic:'🗓',l:'🗓 근무표',           p:'roster',   plan_key:'payroll'}
   ]},
-  {s:'🛵 배달대행', items:[
+  {s:'🛵 배달대행 정산', items:[
     {ic:'🛵',l:'🛵 배달대행 정산',    p:'delivery_platform', plan_key:'delivery'}
   ]},
   {s:'공통', items:[
@@ -10633,7 +10633,7 @@ var MENUS_DRIVER = [
     {ic:'📊',l:'내 정산 현황',p:'my_settle',    plan_key:'free'},
     {ic:'📋',l:'정산 내역',  p:'my_statements', plan_key:'free'}
   ]},
-  {s:'🛵 배달대행',items:[
+  {s:'🛵 배달대행 정산',items:[
     {ic:'🛵',l:'배달 현황',    p:'delivery_input',    plan_key:'free'},
     {ic:'🔔',l:'트랙 보장 내역',p:'notify_history',   plan_key:'free'}
   ]},
@@ -17593,12 +17593,15 @@ function _buildNavRender(nav,cur,companyDoc){
   MENUS.forEach(function(g,gi){
     if(!g||!g.items)return;
     var allowed=g.items.filter(function(m){return m&&m.p&&_isAllowed(m.plan_key||'free');});
+    var locked=g.items.filter(function(m){return m&&m.p&&!_isAllowed(m.plan_key||'free');});
     g.items.forEach(function(m){
       if(!m||!m.p)return;
       var pk=m.plan_key||'free';
       if(!_isAllowed(pk)&&lockByPlan[pk])lockByPlan[pk].push(m);
     });
-    if(allowed.length)openSections.push({s:g.s,items:allowed,gi:gi});
+    // 허용 항목 + 잠긴 항목 모두 섹션에 포함
+    var allItems=allowed.concat(locked.map(function(m){return Object.assign({},m,{_locked:true});}));
+    if(allItems.length)openSections.push({s:g.s,items:allItems,gi:gi});
   });
 
   var html='';
@@ -17612,8 +17615,14 @@ function _buildNavRender(nav,cur,companyDoc){
       +'<span>'+g.s+'</span><span class="ns-arrow">›</span></div>'
       +'<div class="ns-items'+(hasActive?' open':'')+'" id="'+id+'">';
     g.items.forEach(function(m){
-      html+='<div class="ni'+(m.p===cur?' on':'')+'" id="nav-'+m.p+'" data-p="'+m.p+'" onclick="goPage(this.dataset.p)">'
-        +'<span style="font-size:14px">'+m.ic+'</span><span style="flex:1">'+m.l+'</span></div>';
+      if(m._locked){
+        var u=_PLAN_UPSELL[m.plan_key||'']||{};
+        var lockColor=u.color||'#888';
+        html+='<div class="ni" data-p="'+m.p+'" onclick="_showPlanUpsell(\''+( m.plan_key||'')+'\')" style="opacity:.55;cursor:pointer"><span style="font-size:14px">'+m.ic+'</span><span style="flex:1">'+m.l+'</span><span style="font-size:10px;color:'+lockColor+';font-weight:700">🔒</span></div>';
+      } else {
+        html+='<div class="ni'+(m.p===cur?' on':'')+'" id="nav-'+m.p+'" data-p="'+m.p+'" onclick="goPage(this.dataset.p)">'
+          +'<span style="font-size:14px">'+m.ic+'</span><span style="flex:1">'+m.l+'</span></div>';
+      }
     });
     html+='</div>';
   });
