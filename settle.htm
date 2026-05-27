@@ -1222,7 +1222,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         var userId=String(row[rColID]).trim();
         if(!userId||userId.toLowerCase()==='id')continue;
         // 한글/특수어 포함 ID는 기사 ID가 아님 (에코백회수 등) → 미계약 처리
-        if(/[ㄱ-ㅎ가-힣]/.test(userId)){isNocont=true;}
+        var _isKoreanId=/[ㄱ-ㅎ가-힣]/.test(userId); // 한글ID = 특수행
         var cleanId=userId.replace(/@[a-z0-9@._-]+$/i,'').trim();  // @df 등 제거
         // 유효하지 않은 ID 스킵 (한글 포함, 공백, 특수단어)
         if(!cleanId||/[ㄱ-ㅎ가-힣]/.test(cleanId)||cleanId.length>30)continue;
@@ -1231,7 +1231,10 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         var isSkipRow=divVal.includes('주간')&&(divVal.includes('인센')||divVal.includes('할증')||divVal.includes('추가'));
         if(!isSkipRow) isSkipRow=divVal.includes('야간')&&(divVal.includes('인센')||divVal.includes('할증')||divVal.includes('추가'));
         if(isSkipRow)continue;
-        var isNocont=divVal.includes('미계약')||divVal.includes('에코백')||divVal.includes('프레시백')||divVal.includes('소급')||divVal.includes('계약외')||divVal.includes('외근');
+        var isFreshRow=divVal.includes('프레시백')||divVal.includes('프레쉬백');
+        var isEcoRow=divVal.includes('에코백');
+        var isSugi=divVal.includes('수기')&&(divVal.includes('반품')||divVal.includes('회수'));
+        var isNocont=_isKoreanId||(!isFreshRow&&!isEcoRow&&!isSugi&&(divVal.includes('미계약')||divVal.includes('소급')||divVal.includes('계약외')||divVal.includes('외근')));
         var route=String(row[rColRoute]||'').trim();
         // ★ route가 '미계약'이면 isNocont로 처리
         if(!isNocont&&(route.includes('미계약')||route==='계약외'))isNocont=true;
@@ -9914,8 +9917,7 @@ var MENUS_FULL = [
   ]},
   {s:'근태관리', items:[
     {ic:'🔐',l:'QR 출퇴근',        p:'attendance',       plan_key:'qr'},
-    {ic:'🗓',l:'근무표',           p:'roster',           plan_key:'qr'},
-    {ic:'🌴',l:'휴가 관리',        p:'leave',            plan_key:'payroll'},
+        {ic:'🌴',l:'휴가 관리',        p:'leave',            plan_key:'payroll'},
     {ic:'⏰',l:'연장 승인',        p:'overtime',         plan_key:'payroll'}
   ]},
   {s:'급여', items:[
@@ -9943,7 +9945,7 @@ var MENUS_HOURLY = [
     {ic:'👤',l:'직원 관리',        p:'drivers',  plan_key:'free'},
     {ic:'🌴',l:'휴가 관리',        p:'leave',    plan_key:'payroll'},
     {ic:'⏰',l:'연장 승인',        p:'overtime', plan_key:'payroll'},
-    {ic:'🗓',l:'근무표',           p:'roster',   plan_key:'qr'}
+    {ic:'🗓',l:'근무표',           p:'roster',   plan_key:'payroll'}
   ]},
   {s:'배달대행', items:[
     {ic:'🛵',l:'배달대행 정산',    p:'delivery_platform', plan_key:'delivery'}
