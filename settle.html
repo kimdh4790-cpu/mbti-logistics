@@ -9243,19 +9243,29 @@ function _calLoadMemos(day){
   var y=window._calYear,m=window._calMonth;
   var ym=y+'-'+(m+1<10?'0'+(m+1):(m+1));
   if(!_db||!_CU)return;
-  _db.collection('cal_memos').where('dealerId','==',_CU.dealerId||_CU.uid).where('ym','==',ym).where('day','==',day).orderBy('createdAt','asc').get()
+  _db.collection('cal_memos').where('dealerId','==',_CU.dealerId||_CU.uid).where('ym','==',ym).where('day','==',day).get()
   .then(function(snap){
+    var rows=[];
+    snap.forEach(function(doc){rows.push({id:doc.id,d:doc.data()});});
+    rows.sort(function(a,b){
+      var ta=a.d.createdAt&&a.d.createdAt.toMillis?a.d.createdAt.toMillis():0;
+      var tb=b.d.createdAt&&b.d.createdAt.toMillis?b.d.createdAt.toMillis():0;
+      return ta-tb;
+    });
     var html='';
-    snap.forEach(function(doc){
-      var d=doc.data();
-      html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;background:var(--bg2);border-radius:6px;margin-bottom:4px">'
-        +'<div style="font-size:12px">'+esc(d.text)+'</div>'
-        +'<button onclick="_calDeleteMemo(this)" data-id="'+doc.id+'" data-day="'+day+'" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:0 4px">×</button>'
+    rows.forEach(function(r){
+      var d=r.d;
+      var isAdv=d.type==='advance';
+      var bg=isAdv?'background:#fef3c7;border:1px solid #fcd34d':'background:var(--bg2)';
+      html+='<div style="display:flex;align-items:flex-start;justify-content:space-between;padding:7px 10px;'+bg+';border-radius:8px;margin-bottom:5px">'
+        +'<div style="font-size:12px;line-height:1.6;flex:1">'+esc(d.text)
+        +(d.note?'<div style="font-size:11px;color:var(--text3);margin-top:2px">📝 '+esc(d.note)+'</div>':'')+'</div>'
+        +'<button onclick="_calDeleteMemo(this)" data-id="'+r.id+'" data-day="'+day+'" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:15px;padding:0 4px;margin-left:6px">×</button>'
         +'</div>';
     });
     var el=document.getElementById('cal-memo-list');
     if(el) el.innerHTML=html||'<div style="font-size:11px;color:var(--text3);margin-bottom:6px">등록된 메모가 없습니다</div>';
-  }).catch(function(){});
+  }).catch(function(e){console.warn('[calLoad]',e);});
 }
 function _calAddMemo(day){
   var inp=document.getElementById('cal-memo-input');
