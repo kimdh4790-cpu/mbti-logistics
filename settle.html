@@ -2235,25 +2235,45 @@ function _showTrialExpiredPopup(){
   mo.id='trial-expired-popup';
   mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
   var PLANS=[
-    {key:'settle',  label:'📦 AI 택배정산',price:'89,000원/월',desc:'정산현황·관리·통계'},
-    {key:'qr',     label:'🔐 QR 근태관리',price:'49,000원/월',desc:'QR출퇴근·근무표'},
-    {key:'payroll',label:'💼 급여관리',   price:'79,000원/월',desc:'급여현황'},
-    {key:'delivery',label:'🛵 배달대행', price:'89,000원/월',desc:'배달대행 정산'},
+    {key:'settle',       label:'📦 AI 정산',       price:'17,000원/인', per:'월', desc:'AI정산·세무·명세서', group:1},
+    {key:'qr',           label:'🔐 QR 근태',        price:'12,000원/인', per:'월', desc:'QR출퇴근·근무표',   group:2},
+    {key:'payroll',      label:'💼 급여 관리',      price:'12,000원/인', per:'월', desc:'급여·4대보험·명세서', group:2},
+    {key:'qr_payroll',   label:'🔐💼 QR+급여',     price:'17,000원/인', per:'월', desc:'QR출퇴근+급여 통합', group:1, badge:'추천'},
+    {key:'customer_g1',  label:'🛍️ 고객 관리 G1',  price:'8,500원/인',  per:'월', desc:'고객방문·알림·VIP (그룹1 사용자)', group:1, isCustomer:true},
+    {key:'customer_g2',  label:'🛍️ 고객 관리 G2',  price:'6,000원/인',  per:'월', desc:'고객방문·알림·VIP (그룹2 사용자)', group:2, isCustomer:true},
+    {key:'delivery',     label:'🛵 배달대행',       price:'17,000원/인', per:'월', desc:'배달대행 정산', group:1},
   ];
   var cards=PLANS.map(function(p){
-    return '<div class="sp-card" data-plan="'+p.key+'" style="background:#1a2744;border:1px solid rgba(0,200,248,.3);border-radius:12px;padding:16px;cursor:pointer">';
-      +'<div style="font-weight:800;font-size:15px;color:#00c8f8;margin-bottom:4px">'+p.label+'</div>'
-      +'<div style="font-size:18px;font-weight:900;color:#fff;margin-bottom:6px">'+p.price+'</div>'
-      +'<div style="font-size:11px;color:#94a3b8">'+p.desc+'</div>'
-      +'<div style="margin-top:10px;background:#00c8f8;color:#000;font-weight:700;font-size:12px;padding:8px;border-radius:8px;text-align:center">선택하기 →</div>'
+    var borderCol = p.badge ? '#00e87a' : (p.isCustomer ? 'rgba(236,72,153,.4)' : 'rgba(0,200,248,.3)');
+    var badgeHtml = p.badge ? '<span style="background:#00e87a;color:#000;font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;margin-left:6px">'+p.badge+'</span>' : '';
+    var unitPrice = parseInt((p.price||'0').replace(/[^0-9]/g,''));
+    var custLabel = p.isCustomer ? '<span style="font-size:9px;background:rgba(236,72,153,.15);color:#ec4899;padding:1px 5px;border-radius:3px;margin-left:4px">고객용</span>' : '';
+    return '<div class="sp-card" data-plan="'+p.key+'" data-unit="'+unitPrice+'" style="background:#1a2744;border:2px solid '+borderCol+';border-radius:12px;padding:14px;cursor:pointer">'
+      +'<div style="font-weight:800;font-size:14px;color:'+(p.isCustomer?'#ec4899':'#00c8f8')+';margin-bottom:6px">'+p.label+badgeHtml+custLabel+'</div>'
+      +'<div style="font-size:11px;color:#94a3b8;margin-bottom:8px">'+p.desc+'</div>'
+      +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">'
+      +'<input type="number" min="1" max="9999" value="30" placeholder="인원수" '
+      +'oninput="_calcPlanTotal(this)" '
+      +'style="width:60px;padding:4px 6px;border:1px solid rgba(0,200,248,.3);border-radius:6px;background:#0d1b3e;color:#fff;font-size:12px;text-align:center">'
+      +'<span style="font-size:11px;color:#94a3b8">명 ×</span>'
+      +'<span style="font-size:13px;font-weight:700;color:#fff">'+p.price+'</span>'
+      +'</div>'
+      +'<div class="sp-total" style="font-size:16px;font-weight:900;color:#00e87a;margin-bottom:8px">'
+      +'= '+(unitPrice*30).toLocaleString()+'원/월'
+      +'</div>'
+      +'<div style="background:'+(p.badge?'#00e87a':(p.isCustomer?'#ec4899':'#00c8f8'))+';color:#000;font-weight:700;font-size:12px;padding:7px;border-radius:8px;text-align:center">선택하기 →</div>'
       +'</div>';
   }).join('');
   mo.innerHTML='<div style="background:#0d1b3e;border-radius:20px;padding:28px 24px;max-width:480px;width:90%;color:#fff">'
     +'<div style="font-size:28px;text-align:center;margin-bottom:8px">⏰</div>'
     +'<h2 style="text-align:center;margin-bottom:4px;font-size:20px">7일 무료 체험이 종료됐습니다</h2>'
     +'<p style="text-align:center;color:#94a3b8;font-size:13px;margin-bottom:20px">요금제를 선택하고 계속 이용하세요</p>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">'+cards+'</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">'+cards+'</div>'
     +'<div style="text-align:center;font-size:11px;color:#64748b">카드 자동결제 · 언제든 해지 가능<br>'
+    +'<div style="margin:8px 0;padding:8px;background:rgba(0,200,248,.06);border-radius:8px;font-size:11px;color:#94a3b8;text-align:left">'
+    +'<span style="color:#00c8f8;font-weight:700">📱 알림 포함:</span> 앱 푸시 무제한 · 카카오·문자 월 300건<br>'
+    +'<span style="color:#94a3b8">초과 시 건당 10원 · 7일 무료 체험</span>'
+    +'</div>'
     +'문의: <a href="tel:051-711-3103" style="color:#00c8f8">051-711-3103</a> · <a href="https://pf.kakao.com/_xkuxabX/chat" style="color:#00c8f8">카카오 돈웨이</a></div>'
     +'</div>';
   document.body.appendChild(mo);
@@ -2262,6 +2282,16 @@ function _showTrialExpiredPopup(){
     c.addEventListener('mouseover',function(){c.style.borderColor='#00c8f8';});
     c.addEventListener('mouseout',function(){c.style.borderColor='rgba(0,200,248,.3)';});
   });
+}
+
+function _calcPlanTotal(input){
+  var card = input.closest('.sp-card');
+  if(!card) return;
+  var unit = parseInt(card.dataset.unit||0);
+  var cnt  = parseInt(input.value)||0;
+  var total = unit * cnt;
+  var totalEl = card.querySelector('.sp-total');
+  if(totalEl) totalEl.textContent = '= ' + total.toLocaleString() + '원/월';
 }
 function _subRequest(planKey){
   document.getElementById('trial-expired-popup').remove();
@@ -2377,6 +2407,7 @@ function showApp(){
     if(sType==='settle')   MENUS=MENUS_SETTLE;
     else if(sType==='delivery') MENUS=MENUS_DELIVERY;
     else if(sType==='qr')  MENUS=MENUS_QR;
+    else if(sType==='qr_payroll') MENUS=MENUS_QR_PAYROLL;
     else if(sType==='payroll'||sType==='hourly') MENUS=MENUS_HOURLY;
     else MENUS=MENUS_SETTLE; // full은 SETTLE과 동일
   }
@@ -4227,7 +4258,7 @@ function _attRenderGuide(){
   var checkinUrl=base+'/checkin?did='+did+'&name='+enc;
   var visitorUrl=base+'/visitor?did='+did+'&name='+enc;
 
-  area.innerHTML='<div class="card">'    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'    +'<div class="card-title" style="margin-bottom:0">📄 직원 안내문</div>'    +'<button onclick="_attPrintGuide()" class="btn btn-blue" style="font-size:12px">🖨 인쇄 / PDF 저장</button>'    +'</div>'    +'<div id="guide-preview" style="background:#fff;color:#111;padding:24px;border-radius:10px;font-family:sans-serif;font-size:13px;line-height:1.7">'    +'<div style="text-align:center;margin-bottom:20px">'    +'<div style="font-size:20px;font-weight:900;letter-spacing:-0.5px">'+name+' DONWAY 출퇴근 안내</div>'    +'<div style="font-size:12px;color:#666;margin-top:4px">아래 방법으로 출퇴근을 기록해주세요</div>'    +'</div>'    +'<hr style="border:none;border-top:2px solid #e5e7eb;margin:16px 0">'    +'<div style="margin-bottom:20px">'    +'<div style="font-size:15px;font-weight:800;margin-bottom:8px">📱 방법 1 — QR 코드 스캔 (추천)</div>'    +'<ol style="padding-left:20px;color:#374151">'    +'<li>입구 화면의 <b>직원 QR 코드</b>에 휴대폰 카메라를 가져다 대세요</li>'    +'<li>자동으로 체크인 페이지가 열립니다</li>'    +'<li><b>쿠팡 ID</b>를 입력하고 <b>출퇴근 기록</b> 버튼을 누르세요</li>'    +'</ol>'    +'</div>'    +'<div style="margin-bottom:20px">'    +'<div style="font-size:15px;font-weight:800;margin-bottom:8px">🔢 방법 2 — 6자리 코드 입력 (카메라 불가 시)</div>'    +'<ol style="padding-left:20px;color:#374151">'    +'<li>아래 URL을 브라우저에서 여세요 (북마크 권장)</li>'    +'<li style="word-break:break-all"><b>'+checkinUrl+'</b></li>'    +'<li><b>코드 입력</b> 탭을 선택하세요</li>'    +'<li>입구 화면의 <b>6자리 숫자</b>를 입력하세요 (30초마다 바뀜)</li>'    +'<li><b>쿠팡 ID</b>를 입력하고 <b>출퇴근 기록</b> 버튼을 누르세요</li>'    +'</ol>'    +'</div>'    +'<hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0">'    +'<div style="background:#fef9c3;padding:12px;border-radius:8px;font-size:12px;color:#713f12">'    +'⚠️ QR코드는 <b>30초마다 자동 갱신</b>됩니다. 화면을 캡처해도 30초 후 무효화됩니다.<br>'    +'출퇴근 기록은 매일 자동으로 저장되며, 담당자가 settle.html에서 확인할 수 있습니다.'    +'</div>'    +'</div>'    +'</div>'    +'<div class="card" style="margin-top:12px">'    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'    +'<div class="card-title" style="margin-bottom:0">📄 방문자 안내문</div>'    +'<button onclick="_attPrintVisitorGuide()" class="btn btn-blue" style="font-size:12px">🖨 인쇄 / PDF 저장</button>'    +'</div>'    +'<div id="visitor-guide-preview" style="background:#fff;color:#111;padding:24px;border-radius:10px;font-family:sans-serif;font-size:13px;line-height:1.7">'    +'<div style="text-align:center;margin-bottom:20px">'    +'<div style="font-size:20px;font-weight:900">'+name+' 방문자 등록 안내</div>'    +'<div style="font-size:12px;color:#666;margin-top:4px">방문하신 모든 분께 등록을 부탁드립니다</div>'    +'</div>'    +'<hr style="border:none;border-top:2px solid #e5e7eb;margin:16px 0">'    +'<div style="margin-bottom:20px">'    +'<div style="font-size:15px;font-weight:800;margin-bottom:8px">📱 방법 1 — QR 코드 스캔</div>'    +'<ol style="padding-left:20px;color:#374151">'    +'<li>입구 화면 오른쪽의 <b>방문자 QR 코드</b>를 스캔하세요</li>'    +'<li>신분증(주민등록증/운전면허증) 사진을 첨부해주세요</li>'    +'<li>연락처와 방문 목적을 입력하고 <b>등록 완료</b>를 누르세요</li>'    +'</ol>'    +'</div>'    +'<div style="margin-bottom:20px">'    +'<div style="font-size:15px;font-weight:800;margin-bottom:8px">🔢 방법 2 — 직접 접속</div>'    +'<ol style="padding-left:20px;color:#374151">'    +'<li>아래 URL을 브라우저에서 여세요</li>'    +'<li style="word-break:break-all"><b>'+visitorUrl+'</b></li>'    +'<li>화면의 <b>6자리 숫자</b>를 입력해 현장 인증을 완료하세요</li>'    +'<li>신분증 촬영 후 방문 정보를 입력하세요</li>'    +'</ol>'    +'</div>'    +'<hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0">'    +'<div style="background:#fef9c3;padding:12px;border-radius:8px;font-size:12px;color:#713f12">'    +'📋 수집된 개인정보는 방문자 신원 확인 목적으로만 사용되며 30일 후 자동 삭제됩니다.'    +'</div>'    +'</div>'    +'</div>';
+  area.innerHTML='<div class="card">'    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'    +'<div class="card-title" style="margin-bottom:0">📄 직원 안내문</div>'    +'<button onclick="_attPrintGuide()" class="btn btn-blue" style="font-size:12px">🖨 인쇄 / PDF 저장</button>'    +'</div>'    +'<div id="guide-preview" style="background:#fff;color:#111;padding:24px;border-radius:10px;font-family:sans-serif;font-size:13px;line-height:1.7">'    +'<div style="text-align:center;margin-bottom:20px">'    +'<div style="font-size:20px;font-weight:900;letter-spacing:-0.5px">'+name+' DONWAY 출퇴근 안내</div>'    +'<div style="font-size:12px;color:#666;margin-top:4px">아래 방법으로 출퇴근을 기록해주세요</div>'    +'</div>'    +'<hr style="border:none;border-top:2px solid #e5e7eb;margin:16px 0">'    +'<div style="margin-bottom:20px">'    +'<div style="font-size:15px;font-weight:800;margin-bottom:8px">📱 방법 1 — QR 코드 스캔 (추천)</div>'    +'<ol style="padding-left:20px;color:#374151">'    +'<li>입구 화면의 <b>직원 QR 코드</b>에 휴대폰 카메라를 가져다 대세요</li>'    +'<li>자동으로 체크인 페이지가 열립니다</li>'    +'<li><b>직원 ID</b>를 입력하고 <b>출퇴근 기록</b> 버튼을 누르세요</li>'    +'</ol>'    +'</div>'    +'<div style="margin-bottom:20px">'    +'<div style="font-size:15px;font-weight:800;margin-bottom:8px">🔢 방법 2 — 6자리 코드 입력 (카메라 불가 시)</div>'    +'<ol style="padding-left:20px;color:#374151">'    +'<li>아래 URL을 브라우저에서 여세요 (북마크 권장)</li>'    +'<li style="word-break:break-all"><b>'+checkinUrl+'</b></li>'    +'<li><b>코드 입력</b> 탭을 선택하세요</li>'    +'<li>입구 화면의 <b>6자리 숫자</b>를 입력하세요 (30초마다 바뀜)</li>'    +'<li><b>쿠팡 ID</b>를 입력하고 <b>출퇴근 기록</b> 버튼을 누르세요</li>'    +'</ol>'    +'</div>'    +'<hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0">'    +'<div style="background:#fef9c3;padding:12px;border-radius:8px;font-size:12px;color:#713f12">'    +'⚠️ QR코드는 <b>30초마다 자동 갱신</b>됩니다. 화면을 캡처해도 30초 후 무효화됩니다.<br>'    +'출퇴근 기록은 매일 자동으로 저장되며, 담당자가 settle.html에서 확인할 수 있습니다.'    +'</div>'    +'</div>'    +'</div>'    +'<div class="card" style="margin-top:12px">'    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'    +'<div class="card-title" style="margin-bottom:0">📄 방문자 안내문</div>'    +'<button onclick="_attPrintVisitorGuide()" class="btn btn-blue" style="font-size:12px">🖨 인쇄 / PDF 저장</button>'    +'</div>'    +'<div id="visitor-guide-preview" style="background:#fff;color:#111;padding:24px;border-radius:10px;font-family:sans-serif;font-size:13px;line-height:1.7">'    +'<div style="text-align:center;margin-bottom:20px">'    +'<div style="font-size:20px;font-weight:900">'+name+' 방문자 등록 안내</div>'    +'<div style="font-size:12px;color:#666;margin-top:4px">방문하신 모든 분께 등록을 부탁드립니다</div>'    +'</div>'    +'<hr style="border:none;border-top:2px solid #e5e7eb;margin:16px 0">'    +'<div style="margin-bottom:20px">'    +'<div style="font-size:15px;font-weight:800;margin-bottom:8px">📱 방법 1 — QR 코드 스캔</div>'    +'<ol style="padding-left:20px;color:#374151">'    +'<li>입구 화면 오른쪽의 <b>방문자 QR 코드</b>를 스캔하세요</li>'    +'<li>신분증(주민등록증/운전면허증) 사진을 첨부해주세요</li>'    +'<li>연락처와 방문 목적을 입력하고 <b>등록 완료</b>를 누르세요</li>'    +'</ol>'    +'</div>'    +'<div style="margin-bottom:20px">'    +'<div style="font-size:15px;font-weight:800;margin-bottom:8px">🔢 방법 2 — 직접 접속</div>'    +'<ol style="padding-left:20px;color:#374151">'    +'<li>아래 URL을 브라우저에서 여세요</li>'    +'<li style="word-break:break-all"><b>'+visitorUrl+'</b></li>'    +'<li>화면의 <b>6자리 숫자</b>를 입력해 현장 인증을 완료하세요</li>'    +'<li>신분증 촬영 후 방문 정보를 입력하세요</li>'    +'</ol>'    +'</div>'    +'<hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0">'    +'<div style="background:#fef9c3;padding:12px;border-radius:8px;font-size:12px;color:#713f12">'    +'📋 수집된 개인정보는 방문자 신원 확인 목적으로만 사용되며 30일 후 자동 삭제됩니다.'    +'</div>'    +'</div>'    +'</div>';
 }
 function _attPrintGuide(){
   var content=document.getElementById('guide-preview').innerHTML;
@@ -11055,39 +11086,67 @@ var MENUS_SETTLE = [
     {ic:'🛵',l:'배달대행 정산',    p:'delivery_platform',plan_key:'delivery'}
   ]},
   {s:'🔐 QR 근태관리', items:[
-    {ic:'🔐',l:'🔐 QR 출퇴근',        p:'attendance',       plan_key:'qr'},
-    {ic:'🌴',l:'🌴 휴가 관리',        p:'leave',            plan_key:'payroll'},
+    {ic:'🔐',l:'QR 출퇴근',        p:'attendance',       plan_key:'qr'},
+    {ic:'🌴',l:'휴가 관리',        p:'leave',            plan_key:'payroll'},
     {ic:'⏰',l:'⏰ 연장 승인',        p:'overtime',         plan_key:'qr'}
   ]},
   {s:'💼 급여 관리', items:[
     {ic:'💼',l:'급여 현황',        p:'hourly_settle',    plan_key:'payroll'}
   ]},
   {s:'🚚 원스톱 물류', items:[
-    {ic:'📦',l:'📦 배달 실적',        p:'delivery_report',  plan_key:'settle'},
+    {ic:'📦',l:'배달 실적',        p:'delivery_report',  plan_key:'settle'},
     {ic:'🚗',l:'차량 관리',        p:'vehicle',          plan_key:'free'},
-    {ic:'🚦',l:'🚦 배차 관리',        p:'dispatch',         plan_key:'free'},
-    {ic:'📋',l:'📋 배차 히스토리',    p:'dispatch_history', plan_key:'free'},
-    {ic:'🖨',l:'🖨 라벨 출력',        p:'ext_label',        plan_key:'free'},
-    {ic:'📷',l:'📷 수령 스캔',        p:'ext_scan',         plan_key:'free'},
-    {ic:'🚛',l:'🚛 간선차 GPS',       p:'ext_truck',        plan_key:'free'}
+    {ic:'🚦',l:'배차 관리',        p:'dispatch',         plan_key:'free'},
+    {ic:'📋',l:'배차 히스토리',    p:'dispatch_history', plan_key:'free'},
+    {ic:'🖨',l:'라벨 출력',        p:'ext_label',        plan_key:'free'},
+    {ic:'📷',l:'수령 스캔',        p:'ext_scan',         plan_key:'free'},
+    {ic:'🚛',l:'간선차 GPS',       p:'ext_truck',        plan_key:'free'}
   ]}
 ];
 
 // QR 전용
 
 // QR 전용
+
+var MENUS_QR_PAYROLL = [
+  {s:'🏠 홈', items:[
+    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'}
+  ]},
+  {s:'🔐 QR 근태관리', items:[
+    {ic:'🔐',l:'QR 출퇴근',        p:'attendance',       plan_key:'qr'},
+    {ic:'🗓',l:'근무표',           p:'roster',           plan_key:'qr'},
+    {ic:'🌴',l:'휴가 관리',        p:'leave',            plan_key:'payroll'},
+    {ic:'⏰',l:'연장 승인',        p:'overtime',         plan_key:'qr'}
+  ]},
+  {s:'💼 급여 관리', items:[
+    {ic:'💼',l:'급여 현황',        p:'hourly_settle',    plan_key:'payroll'},
+    {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'any_paid'}
+  ]},
+  {s:'👤 직원 관리', items:[
+    {ic:'👤',l:'직원 관리',        p:'drivers',          plan_key:'free'},
+    {ic:'📝',l:'위수탁 계약서',    p:'contract',         plan_key:'free'},
+    {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
+    {ic:'⭐',l:'직원 평가',        p:'evaluation',       plan_key:'free'},
+    {ic:'💸',l:'경비 관리',        p:'expense',          plan_key:'free'}
+  ]},
+  {s:'📢 공지·알림', items:[
+    {ic:'📢',l:'공지',             p:'notices',          plan_key:'free'},
+    {ic:'🛍️',l:'고객 관리',       p:'customer',         plan_key:'qr'}
+  ]}
+];
+
 var MENUS_QR = [
   {s:'🏠 홈', items:[
     {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'}
   ]},
   {s:'🔐 QR 근태관리', items:[
-    {ic:'🔐',l:'🔐 QR 출퇴근',        p:'attendance',       plan_key:'qr'},
-    {ic:'🗓',l:'🗓 근무표',           p:'roster',           plan_key:'qr'},
-    {ic:'🌴',l:'🌴 휴가 관리',        p:'leave',            plan_key:'payroll'},
-    {ic:'⏰',l:'⏰ 연장 승인',        p:'overtime',         plan_key:'qr'}
+    {ic:'🔐',l:'QR 출퇴근',        p:'attendance',       plan_key:'qr'},
+    {ic:'🗓',l:'근무표',           p:'roster',           plan_key:'qr'},
+    {ic:'🌴',l:'휴가 관리',        p:'leave',            plan_key:'payroll'},
+    {ic:'⏰',l:'연장 승인',        p:'overtime',         plan_key:'qr'}
   ]},
   {s:'👤 직원 관리', items:[
-    {ic:'👤',l:'👤 직원 관리',        p:'drivers',          plan_key:'free'},
+    {ic:'👤',l:'직원 관리',        p:'drivers',          plan_key:'free'},
     {ic:'📝',l:'위수탁 계약서',    p:'contract',         plan_key:'free'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
     {ic:'⭐',l:'직원 평가',        p:'evaluation',       plan_key:'free'},
@@ -11097,9 +11156,9 @@ var MENUS_QR = [
     {ic:'💼',l:'급여 현황',        p:'hourly_settle',    plan_key:'payroll'}
   ]},
   {s:'🚚 원스톱 물류', items:[
-    {ic:'🖨',l:'🖨 라벨 출력',        p:'ext_label',        plan_key:'free'},
-    {ic:'📷',l:'📷 수령 스캔',        p:'ext_scan',         plan_key:'free'},
-    {ic:'🚛',l:'🚛 간선차 GPS',       p:'ext_truck',        plan_key:'free'}
+    {ic:'🖨',l:'라벨 출력',        p:'ext_label',        plan_key:'free'},
+    {ic:'📷',l:'수령 스캔',        p:'ext_scan',         plan_key:'free'},
+    {ic:'🚛',l:'간선차 GPS',       p:'ext_truck',        plan_key:'free'}
   ]}
 ];
 
@@ -11125,21 +11184,21 @@ var MENUS_FULL = [
     {ic:'🛵',l:'배달대행 정산',    p:'delivery_platform',plan_key:'delivery'}
   ]},
   {s:'🔐 QR 근태관리', items:[
-    {ic:'🔐',l:'🔐 QR 출퇴근',        p:'attendance',       plan_key:'qr'},
-        {ic:'🌴',l:'🌴 휴가 관리',        p:'leave',            plan_key:'payroll'},
+    {ic:'🔐',l:'QR 출퇴근',        p:'attendance',       plan_key:'qr'},
+        {ic:'🌴',l:'휴가 관리',        p:'leave',            plan_key:'payroll'},
     {ic:'⏰',l:'⏰ 연장 승인',        p:'overtime',         plan_key:'qr'}
   ]},
   {s:'💼 급여 관리', items:[
     {ic:'💼',l:'급여 현황',        p:'hourly_settle',    plan_key:'payroll'}
   ]},
   {s:'🚚 원스톱 물류', items:[
-    {ic:'📦',l:'📦 배달 실적',        p:'delivery_report',  plan_key:'settle'},
+    {ic:'📦',l:'배달 실적',        p:'delivery_report',  plan_key:'settle'},
     {ic:'🚗',l:'차량 관리',        p:'vehicle',          plan_key:'free'},
-    {ic:'🚦',l:'🚦 배차 관리',        p:'dispatch',         plan_key:'free'},
-    {ic:'📋',l:'📋 배차 히스토리',    p:'dispatch_history', plan_key:'free'},
-    {ic:'🖨',l:'🖨 라벨 출력',        p:'ext_label',        plan_key:'free'},
-    {ic:'📷',l:'📷 수령 스캔',        p:'ext_scan',         plan_key:'free'},
-    {ic:'🚛',l:'🚛 간선차 GPS',       p:'ext_truck',        plan_key:'free'}
+    {ic:'🚦',l:'배차 관리',        p:'dispatch',         plan_key:'free'},
+    {ic:'📋',l:'배차 히스토리',    p:'dispatch_history', plan_key:'free'},
+    {ic:'🖨',l:'라벨 출력',        p:'ext_label',        plan_key:'free'},
+    {ic:'📷',l:'수령 스캔',        p:'ext_scan',         plan_key:'free'},
+    {ic:'🚛',l:'간선차 GPS',       p:'ext_truck',        plan_key:'free'}
   ]}
 ];
 
@@ -11151,10 +11210,10 @@ var MENUS_HOURLY = [
     {ic:'📅',l:'달력',             p:'schedule',      plan_key:'free'}
   ]},
   {s:'👤 직원 관리', items:[
-    {ic:'👤',l:'👤 직원 관리',        p:'drivers',  plan_key:'free'},
-    {ic:'🌴',l:'🌴 휴가 관리',        p:'leave',    plan_key:'payroll'},
-    {ic:'⏰',l:'⏰ 연장 승인',        p:'overtime', plan_key:'payroll'},
-    {ic:'🗓',l:'🗓 근무표',           p:'roster',   plan_key:'payroll'}
+    {ic:'👤',l:'직원 관리',        p:'drivers',  plan_key:'free'},
+    {ic:'🌴',l:'휴가 관리',        p:'leave',    plan_key:'payroll'},
+    {ic:'⏰',l:'연장 승인',        p:'overtime', plan_key:'payroll'},
+    {ic:'🗓',l:'근무표',           p:'roster',   plan_key:'payroll'}
   ]},
   {s:'🛵 배달대행 정산', items:[
     {ic:'🛵',l:'배달대행 정산',    p:'delivery_platform', plan_key:'delivery'}
