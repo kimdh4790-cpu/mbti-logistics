@@ -148,10 +148,22 @@ tr:hover>td{background:var(--bg3)}
 
     <!-- 로그인 폼 -->
     <div id="form-login">
-      <div class="fg"><label>이메일</label><input id="l-email" type="email" placeholder="example@email.com" onkeydown="if(event.key==='Enter')doLogin()"></div>
-      <div class="fg"><label>비밀번호</label><input id="l-pw" type="password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div style="display:flex;gap:4px;margin-bottom:14px;background:var(--bg3);border-radius:8px;padding:4px">
+        <button id="login-tab-email" onclick="_switchLoginTab('email')" style="flex:1;padding:7px;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;background:var(--brand);color:#fff;transition:.2s">📧 이메일</button>
+        <button id="login-tab-phone" onclick="_switchLoginTab('phone')" style="flex:1;padding:7px;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);transition:.2s">📱 전화번호</button>
+      </div>
+      <div id="login-email-form">
+        <div class="fg"><label>이메일</label><input id="l-email" type="email" placeholder="example@email.com" onkeydown="if(event.key==='Enter')doLogin()"></div>
+        <div class="fg"><label>비밀번호</label><input id="l-pw" type="password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      </div>
+      <div id="login-phone-form" style="display:none">
+        <div style="background:rgba(0,200,248,.06);border:1px solid rgba(0,200,248,.15);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:var(--text3)">📱 QR 가입 직원 — <strong style="color:var(--brand)">전화번호 + 가입 시 비밀번호</strong></div>
+        <div class="fg"><label>전화번호</label><input id="l-phone" type="tel" placeholder="01012345678" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeydown="if(event.key==='Enter')doPhoneLogin()"></div>
+        <div class="fg"><label>비밀번호</label><input id="l-phone-pw" type="password" onkeydown="if(event.key==='Enter')doPhoneLogin()"></div>
+      </div>
       <div id="l-err" style="color:var(--red);font-size:12px;margin-bottom:8px;display:none"></div>
-      <button class="btn btn-blue" style="width:100%;padding:11px;font-size:14px;font-weight:700" onclick="doLogin()">로그인</button>
+      <button id="btn-login-submit" class="btn btn-blue" style="width:100%;padding:11px;font-size:14px;font-weight:700"
+        onclick="document.getElementById('login-phone-form').style.display==='none'?doLogin():doPhoneLogin()">로그인</button>
       <div style="text-align:center;margin-top:10px"><button class="btn btn-sm" onclick="toggleDark()">🌙 다크모드</button></div>
     </div>
 
@@ -225,36 +237,45 @@ tr:hover>td{background:var(--bg3)}
 
     <!-- 직원 가입 폼 -->
     <div id="form-join" style="display:none">
-      <div style="background:rgba(212,160,23,.08);border:1px solid rgba(212,160,23,.2);border-radius:8px;padding:10px 12px;margin-bottom:16px;font-size:11px;color:var(--text2)">
-        🔑 관리자에게 <strong>회사코드</strong>를 받아 입력하세요
+      <div style="display:flex;gap:4px;margin-bottom:14px;background:var(--bg3);border-radius:8px;padding:4px">
+        <button id="join-tab-quick" onclick="_switchJoinTab('quick')" style="flex:1;padding:7px;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;background:var(--brand);color:#fff">⚡ 빠른 가입</button>
+        <button id="join-tab-full"  onclick="_switchJoinTab('full')"  style="flex:1;padding:7px;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3)">📝 일반 가입</button>
       </div>
-      <div class="fg"><label>이름</label><input id="j-name" type="text" placeholder="홍길동"></div>
-      <div class="fg"><label>정산 아이디</label><input id="j-driverid" type="text" placeholder="예: kim001 (영문+숫자)"></div>
-      <div class="fg"><label>이메일</label><input id="j-email" type="email" placeholder="example@email.com"></div>
-      <div class="fg"><label>비밀번호</label><input id="j-pw" type="password" placeholder="8자 이상"></div>
-      <div class="fg">
-        <label>사업자등록증 <span style="color:var(--text3);font-weight:400">(선택 · 세금계산서 발급용)</span></label>
-        <div style="display:flex;gap:8px;margin-bottom:6px">
-          <button class="btn btn-sm" onclick="document.getElementById('j-biz-file').click()" style="white-space:nowrap">📄 파일 첨부</button>
-          <button class="btn btn-sm" onclick="toggleBizManual()" style="white-space:nowrap">✏️ 직접 입력</button>
+      <div id="join-quick-form">
+        <div style="background:rgba(0,200,248,.08);border:1px solid rgba(0,200,248,.2);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:var(--text2)">🔑 QR 스캔 또는 회사코드 → 이름·연락처·비번 → 가입 완료</div>
+        <div class="fg"><label>이름 <span style="color:var(--red)">*</span></label><input id="j-name" type="text" placeholder="홍길동"></div>
+        <div class="fg"><label>연락처 <span style="color:var(--red)">*</span></label><input id="j-phone" type="tel" placeholder="01012345678" oninput="this.value=this.value.replace(/[^0-9-]/g,'')"></div>
+        <div class="fg">
+          <label>사업자이신가요?</label>
+          <div style="display:flex;gap:8px">
+            <button id="j-biz-yes" type="button" onclick="_setBizType(true)"  style="flex:1;padding:8px;border:2px solid var(--border);border-radius:8px;background:transparent;color:var(--text);font-size:12px;font-weight:700;cursor:pointer">✅ 네 (사업자)</button>
+            <button id="j-biz-no"  type="button" onclick="_setBizType(false)" style="flex:1;padding:8px;border:2px solid var(--brand);border-radius:8px;background:rgba(0,200,248,.1);color:var(--brand);font-size:12px;font-weight:700;cursor:pointer">👤 아니요</button>
+          </div>
         </div>
-        <input id="j-biz-file" type="file" accept="image/*,.pdf" style="display:none" onchange="previewBizFile(this)">
-        <div id="j-biz-preview" style="display:none;font-size:11px;color:var(--primary);margin-bottom:4px"></div>
-        <div id="j-biz-manual" style="display:none">
-          <input id="j-biz-num" type="text" placeholder="사업자번호 (000-00-00000)" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text1);font-size:12px;margin-bottom:4px">
-          <input id="j-biz-name" type="text" placeholder="상호명" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text1);font-size:12px;margin-bottom:4px">
-          <input id="j-biz-owner" type="text" placeholder="대표자명" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text1);font-size:12px">
+        <div id="j-biz-info" style="display:none;border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:12px;background:rgba(245,158,11,.04);margin-bottom:8px">
+          <div style="font-size:11px;font-weight:700;color:#f59e0b;margin-bottom:8px">🧾 사업자 정보</div>
+          <div class="fg"><label>사업자등록번호</label><input id="j-biz-num" type="text" placeholder="000-00-00000" oninput="this.value=this.value.replace(/[^0-9-]/g,'')"></div>
+          <div class="fg"><label>상호명</label><input id="j-biz-cname" type="text" placeholder="홍길동 개인사업자"></div>
+          <div class="fg"><label>업태 / 업종</label>
+            <div style="display:flex;gap:6px"><input id="j-biz-type" type="text" placeholder="운수" style="flex:1"><input id="j-biz-kind" type="text" placeholder="택배운반" style="flex:1"></div></div>
+          <div class="fg"><label>사업장 주소</label><input id="j-biz-addr" type="text" placeholder="부산시..."></div>
         </div>
+        <div class="fg"><label>비밀번호 <span style="color:var(--red)">*</span></label><input id="j-pw" type="password" placeholder="6자 이상"></div>
+        <div class="fg"><label>회사코드 <span style="color:var(--red)">*</span></label>
+          <input id="j-code" type="text" placeholder="ABCD1234" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase();_quickVerifyCode(this.value)">
+          <div id="j-code-msg" style="font-size:11px;margin-top:4px"></div></div>
       </div>
-      <div class="fg"><label>회사코드</label>
-        <div style="display:flex;gap:8px">
-          <input id="j-code" type="text" placeholder="DNW-0000" style="flex:1;text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
-          <button class="btn btn-sm btn-blue" onclick="checkCompanyCode()" style="white-space:nowrap">확인</button>
-        </div>
-        <div id="j-code-msg" style="font-size:11px;margin-top:4px;display:none"></div>
+      <div id="join-full-form" style="display:none">
+        <div style="background:rgba(212,160,23,.08);border:1px solid rgba(212,160,23,.2);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:var(--text2)">🔑 관리자에게 <strong>회사코드</strong>를 받아 입력하세요</div>
+        <div class="fg"><label>이름</label><input id="j-name-full" type="text" placeholder="홍길동"></div>
+        <div class="fg"><label>정산 아이디</label><input id="j-driverid" type="text" placeholder="kim001 (영문+숫자)"></div>
+        <div class="fg"><label>이메일</label><input id="j-email" type="email" placeholder="example@email.com"></div>
+        <div class="fg"><label>비밀번호</label><input id="j-pw-full" type="password" placeholder="8자 이상"></div>
+        <div class="fg"><label>회사코드</label><input id="j-code-full" type="text" placeholder="ABCD1234" style="text-transform:uppercase"></div>
       </div>
       <div id="j-err" style="color:var(--red);font-size:12px;margin-bottom:8px;display:none"></div>
-      <button class="btn btn-blue" style="width:100%;padding:11px;font-size:14px;font-weight:700" onclick="doJoin()">가입하기</button>
+      <button id="join-submit-btn" class="btn btn-blue" style="width:100%;padding:11px;font-size:14px;font-weight:700"
+        onclick="document.getElementById('join-full-form').style.display!=='none'?doJoin():doQuickJoin()">가입하기</button>
     </div>
   </div>
 </div>
@@ -1094,7 +1115,7 @@ function calcNet(x){
   var nocont=_nocontCnt>0
     ? (_nocontUnit>0 ? _nocontCnt*_nocontUnit : (+x.nocont||+x.nocontAmt||0))
     : (+x.nocont||+x.nocontAmt||0);
-  var etcPlus  = +x.etcPlus  || 0;  // ★ 기타(+)
+  var etcPlus  = (+x.etcPlus||0) + (+x.etcPlusTL||0);  // ★ 기타(+) + 팀장수수료
   var etcMinus = +x.etcMinus || 0;  // ★ 기타(-)
   // ★ v9.25: 기타(+)만 세금계산서(income)에 포함 → 고용·산재 기준
   //           기타(-)는 세금계산서 제외, 실지급에서만 차감 (공제 항목)
@@ -1632,6 +1653,20 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             settlements.push(entry);added++;
           }
         });
+        // ★ 팀장 수수료 자동 계산
+        if(TL_PRICES&&TL_PRICES.length){
+          var _tlRT={};
+          settlements.filter(function(s){return s.month===month;}).forEach(function(s){
+            (s.routeDetails||[]).forEach(function(rd){if(rd.route)_tlRT[rd.route]=(_tlRT[rd.route]||0)+(rd.cnt||0);});
+          });
+          var _tlB=_calcTeamLeaderBonus(_tlRT);
+          Object.keys(_tlB).forEach(function(tlId){
+            var bonus=_tlB[tlId];
+            var tlE=settlements.find(function(s){return s.userId===tlId&&s.month===month;});
+            if(tlE){tlE.etcPlusTL=bonus.amount;tlE.etcPlusTLReason='팀장수수료 ('+bonus.amount.toLocaleString()+'원)';toast('✅ 팀장 '+bonus.name+' '+bonus.amount.toLocaleString()+'원 적용');}
+            else{toast('⚠️ 팀장 '+bonus.name+' 정산 없음 → 수동 확인');}
+          });
+        }
         lss('settlements',settlements);
         window._lastParsedSettlements = settlements; // 경험치 업데이트용
         // Firebase 저장
@@ -2213,6 +2248,7 @@ function showApp(){
     if(sType==='settle')   MENUS=MENUS_SETTLE;
     else if(sType==='delivery') MENUS=MENUS_DELIVERY;
     else if(sType==='qr')  MENUS=MENUS_QR;
+    else if(sType==='qr_payroll') MENUS=MENUS_QR_PAYROLL;
     else if(sType==='payroll'||sType==='hourly') MENUS=MENUS_HOURLY;
     else MENUS=MENUS_SETTLE; // full은 SETTLE과 동일
   }
@@ -2579,6 +2615,117 @@ function previewBizFile(input){
   prev.style.display='block';
   prev.textContent='📄 '+file.name+' 첨부됨';
 }
+
+function _switchJoinTab(tab){
+  var qf=document.getElementById('join-quick-form'),ff=document.getElementById('join-full-form');
+  var tq=document.getElementById('join-tab-quick'),tf=document.getElementById('join-tab-full');
+  var isQ=(tab==='quick');
+  if(qf)qf.style.display=isQ?'':'none'; if(ff)ff.style.display=isQ?'none':'';
+  if(tq){tq.style.background=isQ?'var(--brand)':'transparent';tq.style.color=isQ?'#fff':'var(--text3)';}
+  if(tf){tf.style.background=isQ?'transparent':'var(--brand)';tf.style.color=isQ?'var(--text3)':'#fff';}
+}
+function _setBizType(isBiz){
+  var bi=document.getElementById('j-biz-info');
+  var yb=document.getElementById('j-biz-yes'),nb=document.getElementById('j-biz-no');
+  if(bi)bi.style.display=isBiz?'':'none';
+  if(yb){yb.style.borderColor=isBiz?'#f59e0b':'var(--border)';yb.style.background=isBiz?'rgba(245,158,11,.1)':'transparent';yb.style.color=isBiz?'#f59e0b':'var(--text)';}
+  if(nb){nb.style.borderColor=isBiz?'var(--border)':'var(--brand)';nb.style.background=isBiz?'transparent':'rgba(0,200,248,.1)';nb.style.color=isBiz?'var(--text)':'var(--brand)';}
+  window._joinIsBiz=isBiz;
+}
+var _quickCodeTimer=null;
+function _quickVerifyCode(code){
+  var msg=document.getElementById('j-code-msg');if(!msg)return;
+  if(code.length<4){msg.innerHTML='';return;}
+  clearTimeout(_quickCodeTimer);
+  msg.innerHTML='<span style="color:var(--text3)">확인 중...</span>';
+  _quickCodeTimer=setTimeout(function(){
+    if(!_db){msg.innerHTML='';return;}
+    _db.collection('companies').where('companyCode','==',code).limit(1).get()
+      .then(function(snap){
+        if(snap.empty){msg.innerHTML='<span style="color:var(--red)">❌ 코드를 찾을 수 없습니다</span>';}
+        else{
+          var d=snap.docs[0].data(),cid=snap.docs[0].id;
+          var el=document.getElementById('j-code');
+          if(el){el.dataset.companyId=cid;el.dataset.companyName=d.companyName||'';}
+          msg.innerHTML='<span style="color:var(--green)">✅ '+esc(d.companyName||'확인됨')+'</span>';
+        }
+      }).catch(function(){msg.innerHTML='<span style="color:var(--red)">오류</span>';});
+  },500);
+}
+function doQuickJoin(){
+  var name=((document.getElementById('j-name')||{}).value||'').trim();
+  var phone=((document.getElementById('j-phone')||{}).value||'').replace(/[^0-9]/g,'');
+  var pw=((document.getElementById('j-pw')||{}).value||'');
+  var el=document.getElementById('j-code')||{dataset:{},value:''};
+  var companyId=el.dataset.companyId||'',companyName=el.dataset.companyName||'';
+  var err=document.getElementById('j-err');if(err)err.style.display='none';
+  if(!name){if(err){err.textContent='이름을 입력하세요';err.style.display='';}return;}
+  if(phone.length<10){if(err){err.textContent='연락처를 입력하세요';err.style.display='';}return;}
+  if(pw.length<6){if(err){err.textContent='비밀번호 6자 이상';err.style.display='';}return;}
+  if(!companyId){if(err){err.textContent='회사코드를 확인하세요';err.style.display='';}return;}
+  var isBiz=!!window._joinIsBiz;
+  var bizNum=isBiz?((document.getElementById('j-biz-num')||{}).value||'').trim():'';
+  var bizName=isBiz?((document.getElementById('j-biz-cname')||{}).value||'').trim():'';
+  var bizType=isBiz?((document.getElementById('j-biz-type')||{}).value||'').trim():'';
+  var bizKind=isBiz?((document.getElementById('j-biz-kind')||{}).value||'').trim():'';
+  var bizAddr=isBiz?((document.getElementById('j-biz-addr')||{}).value||'').trim():'';
+  var email=phone+'@donway.internal';
+  var driverId='drv_'+phone.slice(-4)+'_'+Date.now().toString(36).slice(-4);
+  var btn=document.getElementById('join-submit-btn');
+  if(btn){btn.disabled=true;btn.textContent='가입 중...';}
+  firebase.auth().createUserWithEmailAndPassword(email,pw)
+    .then(function(cred){
+      var uid=cred.user.uid;
+      var data={uid:uid,name:name,phone:phone,email:email,dealerId:companyId,companyName:companyName,
+        role:'driver',driverId:driverId,isBiz:isBiz,bizNum:bizNum,bizName:bizName,
+        bizType:bizType,bizKind:bizKind,bizAddr:bizAddr,
+        createdAt:firebase.firestore.FieldValue.serverTimestamp(),joinType:'quick'};
+      return _db.collection('users').doc(uid).set(data).then(function(){
+        return _db.collection('drivers').add(Object.assign({},data,{
+          userId:uid,is_active:true,status:'재직',jobsub:'',camp:'',wave:'',joinedViaQR:true
+        }));
+      });
+    })
+    .then(function(){
+      if(btn){btn.disabled=false;btn.textContent='가입하기';}
+      toast('✅ 가입 완료! 전화번호로 로그인하세요');
+      switchTab('login');
+      if(typeof _switchLoginTab==='function')_switchLoginTab('phone');
+    })
+    .catch(function(e){
+      if(btn){btn.disabled=false;btn.textContent='가입하기';}
+      var msgs={'auth/email-already-in-use':'이미 등록된 연락처','auth/weak-password':'비밀번호가 너무 짧습니다'};
+      if(err){err.textContent=msgs[e.code]||e.message;err.style.display='';}
+    });
+}
+
+// 앱 설치 유도
+function _showAppInstallBanner(){
+  if(document.getElementById('app-install-banner'))return;
+  var b=document.createElement('div');b.id='app-install-banner';
+  b.style.cssText='position:fixed;bottom:0;left:0;right:0;background:linear-gradient(135deg,#1d6fff,#0ea5e9);color:#fff;padding:14px 16px;z-index:9998;display:flex;align-items:center;gap:12px;box-shadow:0 -4px 20px rgba(0,0,0,.3)';
+  var bi=document.createElement('div');bi.style='font-size:28px';bi.textContent='📱';
+  var bt=document.createElement('div');bt.style='flex:1';
+  var bt1=document.createElement('div');bt1.style='font-size:13px;font-weight:700';bt1.textContent='DONWAY 앱 설치 후 알림을 받으세요';
+  var bt2=document.createElement('div');bt2.style='font-size:11px;opacity:.85';bt2.textContent='명세서·출퇴근·공지를 앱 푸시로 즉시 수신';
+  bt.appendChild(bt1);bt.appendChild(bt2);
+  var bx=document.createElement('button');bx.style='background:none;border:none;color:rgba(255,255,255,.6);font-size:18px;cursor:pointer';bx.textContent='✕';
+  bx.onclick=function(){var bb=document.getElementById('app-install-banner');if(bb)bb.remove();};
+  b.appendChild(bi);b.appendChild(bt);b.appendChild(bx);
+  document.body.appendChild(b);
+}
+
+// URL 파라미터 자동처리 (QR 스캔)
+function _processJoinUrlParams(){
+  var params=new URLSearchParams(window.location.search);
+  var code=(params.get('code')||'').toUpperCase();
+  var isJoin=params.get('join');
+  if(!code&&!isJoin)return;
+  setTimeout(function(){
+    if(typeof switchTab==='function')switchTab('join');
+    if(code){var el=document.getElementById('j-code');if(el){el.value=code;_quickVerifyCode(code);}}
+  },600);
+}
 function doJoin(){
   var name=document.getElementById('j-name').value.trim();
   var driverId=document.getElementById('j-driverid').value.trim();
@@ -2643,6 +2790,36 @@ function doJoin(){
   });
 }
 
+
+function _switchLoginTab(tab){
+  var ef=document.getElementById('login-email-form');
+  var pf=document.getElementById('login-phone-form');
+  var eb=document.getElementById('login-tab-email');
+  var pb=document.getElementById('login-tab-phone');
+  if(!ef||!pf)return;
+  var isP=(tab==='phone');
+  ef.style.display=isP?'none':''; pf.style.display=isP?'':'none';
+  if(eb){eb.style.background=isP?'transparent':'var(--brand)';eb.style.color=isP?'var(--text3)':'#fff';}
+  if(pb){pb.style.background=isP?'var(--brand)':'transparent';pb.style.color=isP?'#fff':'var(--text3)';}
+}
+function doPhoneLogin(){
+  var phone=((document.getElementById('l-phone')||{}).value||'').replace(/[^0-9]/g,'');
+  var pw=((document.getElementById('l-phone-pw')||{}).value||'');
+  var err=document.getElementById('l-err');
+  if(err)err.style.display='none';
+  if(phone.length<10){if(err){err.textContent='전화번호를 입력하세요';err.style.display='';}return;}
+  if(!pw){if(err){err.textContent='비밀번호를 입력하세요';err.style.display='';}return;}
+  if(!_auth){if(err){err.textContent='잠시 후 다시 시도하세요';err.style.display='';}setTimeout(doPhoneLogin,800);return;}
+  var btn=document.getElementById('btn-login-submit');
+  if(btn){btn.disabled=true;btn.textContent='로그인 중...';}
+  _auth.signInWithEmailAndPassword(phone+'@donway.internal',pw)
+    .then(function(){if(btn){btn.disabled=false;btn.textContent='로그인';}})
+    .catch(function(e){
+      if(btn){btn.disabled=false;btn.textContent='로그인';}
+      var msgs={'auth/user-not-found':'등록되지 않은 전화번호','auth/wrong-password':'비밀번호가 틀렸습니다','auth/invalid-credential':'전화번호 또는 비밀번호 오류','auth/too-many-requests':'잠시 후 시도하세요'};
+      if(err){err.textContent=msgs[e.code]||e.message;err.style.display='';}
+    });
+}
 function doLogin(){
   var email=document.getElementById('l-email').value.trim();
   var pw=document.getElementById('l-pw').value;
@@ -2696,13 +2873,21 @@ function doLogout(){
 
 // ══ 토스페이먼츠 결제 ══
 var PLAN_INFO={
-  settle:   {label:'📦 AI 택배정산', amount:89000,  field:'settlePaid',  desc:'정산현황·관리·통계'},
-  qr:       {label:'🔐 QR 근태관리', amount:49000,  field:'qrPaid',      desc:'QR출퇴근·근무표'},
-  payroll:  {label:'💼 급여관리',    amount:79000,  field:'payrollPaid', desc:'급여현황'},
-  delivery: {label:'🛵 배달대행',    amount:89000,  field:'deliveryPaid',desc:'배달대행 정산'},
-  contract: {label:'위수탁 계약서',  amount:9900,   field:'contractPaid',desc:'계약서 관리'},
-  roster:   {label:'🗓 근무표',         amount:9900,   field:'rosterPaid',  desc:'근무표'},
+  settle:      {label:'📦 AI 정산',       unitPrice:17000, amount:510000, group:1, field:'settlePaid',      desc:'AI정산·세무·명세서'},
+  qr:          {label:'🔐 QR 근태',       unitPrice:12000, amount:360000, group:2, field:'qrPaid',          desc:'QR출퇴근·근무표'},
+  payroll:     {label:'💼 급여관리',      unitPrice:12000, amount:360000, group:2, field:'payrollPaid',     desc:'급여·4대보험'},
+  qr_payroll:  {label:'🔐💼 QR+급여',    unitPrice:17000, amount:510000, group:1, field:'qrPayrollPaid',   desc:'QR출퇴근+급여 통합'},
+  delivery:    {label:'🛵 배달대행',      unitPrice:17000, amount:510000, group:1, field:'deliveryPaid',    desc:'배달대행 정산'},
+  customer_g1: {label:'🛍️ 고객관리 G1', unitPrice:8500,  amount:255000, group:1, field:'customerG1Paid',  desc:'고객방문·알림·VIP'},
+  customer_g2: {label:'🛍️ 고객관리 G2', unitPrice:6000,  amount:180000, group:2, field:'customerG2Paid',  desc:'고객방문·알림·VIP'},
+  contract:    {label:'위수탁 계약서',    unitPrice:0,     amount:9900,   group:0, field:'contractPaid',    desc:'계약서 관리'},
+  roster:      {label:'🗓 근무표',        unitPrice:0,     amount:9900,   group:0, field:'rosterPaid',      desc:'근무표'},
 };
+function _calcPlanAmount(planKey,headcount){
+  var p=PLAN_INFO[planKey];if(!p)return 0;
+  if(!p.unitPrice)return p.amount;
+  return p.unitPrice*Math.max(1,parseInt(headcount)||30);
+}
 
 async function _tossPay(planType, amount){
   if(!_CU){toast('❌ 로그인 필요');return;}
@@ -8152,6 +8337,58 @@ async function runDealerPatch(){
   console.log('패치 완료 - dealerId:'+did+', 패치:'+patched+'개');
 }
 
+
+function _renderHomeJoinQR(){
+  if(!_CU)return;
+  var did=_CU.dealerId||_CU.uid||'';
+  var code=_CU.companyCode||did.slice(0,8).toUpperCase();
+  var joinUrl='https://donway.ai.kr/settle?code='+code+'&join=1';
+  var canvas=document.getElementById('home-qr-canvas');
+  var urlEl=document.getElementById('home-join-url');
+  if(canvas)drawQR(canvas,joinUrl,84);
+  if(urlEl)urlEl.textContent=joinUrl;
+  window._homeJoinUrl=joinUrl;window._homeJoinCode=code;
+  if(_db&&did){
+    _db.collection('companies').doc(did).get().then(function(snap){
+      if(!snap.exists)return;
+      var d=snap.data();
+      var rc=d.companyCode||d.slug||did.slice(0,8).toUpperCase();
+      var ru='https://donway.ai.kr/settle?code='+rc+'&join=1';
+      if(canvas)drawQR(canvas,ru,84);
+      if(urlEl)urlEl.textContent=ru;
+      window._homeJoinUrl=ru;window._homeJoinCode=rc;
+    }).catch(function(){});
+  }
+}
+function _copyJoinUrl(){
+  var url=window._homeJoinUrl||'';if(!url){toast('❌ URL 없음');return;}
+  if(navigator.clipboard){navigator.clipboard.writeText(url).then(function(){toast('✅ 링크 복사됨');});}
+  else{var ta=document.createElement('textarea');ta.value=url;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();toast('✅ 링크 복사됨');}
+}
+function _shareJoinKakao(){
+  var url=window._homeJoinUrl||'https://donway.ai.kr/settle';
+  var name=(_CU&&_CU.companyName)||'DONWAY';
+  if(typeof Kakao!=='undefined'&&Kakao.Share){
+    Kakao.Share.sendDefault({objectType:'feed',content:{title:name+' — DONWAY 직원 가입',description:'QR 스캔 → 이름·연락처·비번 → 가입 완료!',link:{mobileWebUrl:url,webUrl:url}}});
+  } else {
+    if(navigator.clipboard)navigator.clipboard.writeText(url).then(function(){toast('✅ 링크 복사됨');});
+  }
+}
+function _printJoinQR(){
+  var canvas=document.getElementById('home-qr-canvas');
+  var name=(_CU&&_CU.companyName)||'DONWAY',code=window._homeJoinCode||'';
+  if(!canvas){toast('❌ QR 없음');return;}
+  var img=canvas.toDataURL('image/png');
+  var w=window.open('','_blank');
+  w.document.write('<html><head><title>직원 가입 QR</title><style>body{font-family:sans-serif;padding:30px;text-align:center}@media print{button{display:none}}</style></head><body>'
+    +'<h2>'+name+'</h2><p>QR 스캔 또는 코드 직접 입력</p>'
+    +'<img src="'+img+'" style="width:180px;height:180px;border:2px solid #e5e7eb;border-radius:8px;padding:8px">'
+    +'<div style="font-size:28px;font-weight:900;letter-spacing:4px;margin:12px 0;color:#2563eb">'+code+'</div>'
+    +'<p style="font-size:11px;color:#888">1. QR 스캔 또는 donway.ai.kr/settle 접속<br>2. 이름·연락처·비밀번호 입력<br>3. 가입 완료 → 앱 설치 → 알림 수신</p>'
+    +'<button onclick="window.print()" style="margin-top:16px;padding:10px 24px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer">🖨 인쇄</button>'
+    +'</body></html>');
+  w.document.close();
+}
 function pageHome(){
   document.getElementById('page-title').textContent='🏠 대시보드';
   document.getElementById('topbar-right').innerHTML=isSuperAdmin()?'<button onclick="runDealerPatch()" style="padding:6px 10px;background:#dc2626;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">🔧 dealerId 패치</button>':'';
@@ -8185,6 +8422,20 @@ function pageHome(){
     +_homeQuickBtn('👤','직원 관리','drivers','#0891b2','#ecfeff')
     +_homeQuickBtn('🗓','근무표','roster','#db2777','#fdf2f8')
     +'</div>'
+
+    // ★ 직원 가입 QR 위젯
+    +'<div style="background:linear-gradient(135deg,#0f2744,#1e3a5f);border:1px solid rgba(0,200,248,.25);border-radius:16px;padding:18px 20px;margin-bottom:18px;display:flex;align-items:center;gap:20px;flex-wrap:wrap">'
+    +'<div style="flex-shrink:0;background:#fff;border-radius:10px;padding:8px;width:100px;height:100px;display:flex;align-items:center;justify-content:center"><canvas id="home-qr-canvas" width="84" height="84"></canvas></div>'
+    +'<div style="flex:1;min-width:180px">'
+    +'<div style="font-size:14px;font-weight:800;color:#fff;margin-bottom:4px">📱 직원 가입 QR</div>'
+    +'<div style="font-size:11px;color:#94a3b8;margin-bottom:10px">스캔 → 이름·연락처·비번 → 가입 완료<br>앱 설치 시 명세서·알림 자동 수신</div>'
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
+    +'<button onclick="_copyJoinUrl()" style="background:var(--brand);color:#fff;border:none;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔗 링크 복사</button>'
+    +'<button onclick="_shareJoinKakao()" style="background:#FEE500;color:#3A1D1D;border:none;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">💬 카카오</button>'
+    +'<button onclick="_printJoinQR()" style="background:rgba(255,255,255,.1);color:#fff;border:none;padding:7px 14px;border-radius:8px;font-size:12px;cursor:pointer">🖨 출력</button>'
+    +'</div>'
+    +'<div id="home-join-url" style="font-size:10px;color:#475569;margin-top:6px;word-break:break-all"></div>'
+    +'</div></div>'
     // 통계 카드들
     +'<div id="home-stats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:20px">'
     +'<div class="card" style="text-align:center"><div style="font-size:11px;color:var(--text3)">⏳</div><div style="font-size:22px;font-weight:900;color:var(--brand)">-</div><div style="font-size:11px;color:var(--text3)">로딩 중...</div></div>'
@@ -10593,6 +10844,23 @@ var MENUS_SETTLE = [
 // QR 전용
 
 // QR 전용
+
+var MENUS_QR_PAYROLL = [
+  {s:'🏠 홈', items:[{ic:'🏠',l:'대시보드',p:'home',plan_key:'free'}]},
+  {s:'🔐 QR 근태관리', items:[
+    {ic:'🔐',l:'QR 출퇴근',p:'attendance',plan_key:'qr'},
+    {ic:'🗓',l:'근무표',p:'roster',plan_key:'qr'},
+    {ic:'🌴',l:'휴가 관리',p:'leave',plan_key:'payroll'},
+    {ic:'⏰',l:'연장 승인',p:'overtime',plan_key:'qr'}]},
+  {s:'💼 급여 관리', items:[
+    {ic:'💼',l:'급여 현황',p:'hourly_settle',plan_key:'payroll'},
+    {ic:'🧾',l:'세무사 연동',p:'tax_share',plan_key:'any_paid'}]},
+  {s:'👤 직원 관리', items:[
+    {ic:'👤',l:'직원 관리',p:'drivers',plan_key:'free'},
+    {ic:'📝',l:'위수탁 계약서',p:'contract',plan_key:'free'},
+    {ic:'📅',l:'달력',p:'schedule',plan_key:'free'}]},
+  {s:'📢 공지', items:[{ic:'📢',l:'공지',p:'notices',plan_key:'free'}]}
+];
 var MENUS_QR = [
   {s:'🏠 홈', items:[
     {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'}
@@ -11714,7 +11982,9 @@ function openSendModal(x){
   var channels=[
     {icon:'💬',name:'카카오톡 공유',sub:'카카오톡 앱으로 전송',bg:'#FEE500',color:'#3A1D1D',fn:function(){sendKakao(msgEnc);}},
     {icon:'📱',name:'문자(SMS) 발송',sub:phone||'전화번호 없음 - 기사정보에 추가',bg:'var(--blue)',color:'#fff',fn:function(){sendSMS(msgEnc,encodeURIComponent(phone));}},
-    {icon:'📧',name:'이메일 발송',sub:email||'이메일 없음 - 기사정보에 추가',bg:'#059669',color:'#fff',fn:function(){sendEmailMsg(encodeURIComponent(email),subjectEnc,msgEnc);}}
+    {icon:'📧',name:'이메일 발송',sub:email||'이메일 없음 - 기사정보에 추가',bg:'#059669',color:'#fff',fn:function(){sendEmailMsg(encodeURIComponent(email),subjectEnc,msgEnc);}},
+    {icon:'🔔',name:'앱 푸시 알림',sub:'명세서 이미지 포함',bg:'var(--brand)',color:'#fff',fn:function(){_sendPayslipPush(x,r,name,month,net,vatIncome,docId);}},
+    {icon:'🧾',name:'세금계산서 앱 발송',sub:'이미지+링크',bg:'#7c3aed',color:'#fff',fn:function(){_sendTaxInvoicePush(x,r,name,month,vatIncome,docId);}}
   ];
   var btnWrap=document.createElement('div');
   btnWrap.style.cssText='display:flex;flex-direction:column;gap:8px';
@@ -16213,6 +16483,99 @@ function deleteCamp(campName){
     .catch(function(e){toast('❌ '+e.message);});
 }
 
+function _sendPayslipPush(x,r,name,month,net,vatIncome,docId){
+  var did=_CU.dealerId,uid=x.userId||x.driverId||'';
+  var docUrl='https://donway.ai.kr/view?type=payslip&did='+did+'&id='+docId;
+  _db.collection('driver_notifications').add({
+    dealerId:did,targetDriverId:uid,targetDriverName:name,type:'payslip',
+    title:'💰 '+month+' 정산명세서 도착',body:name+'님 실지급액: '+fmt(net)+'원',
+    docUrl:docUrl,imageUrl:'https://donway.ai.kr/api/payslip-img?did='+did+'&id='+docId,
+    net:net,vatIncome:vatIncome,month:month,isRead:false,
+    createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){toast('✅ 앱 푸시 발송 — '+name+'님');}).catch(function(e){toast('❌ '+e.message);});
+}
+function _sendTaxInvoicePush(x,r,name,month,vatIncome,docId){
+  var did=_CU.dealerId,uid=x.userId||x.driverId||'';
+  var docUrl='https://donway.ai.kr/view?type=taxinvoice&did='+did+'&id='+docId;
+  _db.collection('driver_notifications').add({
+    dealerId:did,targetDriverId:uid,targetDriverName:name,type:'tax_invoice',
+    title:'🧾 '+month+' 세금계산서 발행',body:name+'님 공급가액: '+fmt(Math.round(vatIncome/1.1))+'원',
+    docUrl:docUrl,imageUrl:'https://donway.ai.kr/api/taxinvoice-img?did='+did+'&id='+docId,
+    vatIncome:vatIncome,month:month,isRead:false,
+    createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){toast('✅ 세금계산서 앱 푸시 — '+name+'님');}).catch(function(e){toast('❌ '+e.message);});
+}
+
+// 팀장 수수료
+var TL_PRICES=[];
+function _loadTeamLeaderPrices(cb){
+  if(!_db||!_CU){if(cb)cb();return;}
+  _db.collection('settings').doc(_CU.dealerId+'_teamLeaderPrices').get()
+    .then(function(snap){TL_PRICES=snap.exists?((snap.data()||{}).leaders||[]):[];if(cb)cb();}).catch(function(){if(cb)cb();});
+}
+function _saveTeamLeaderPrices(cb){
+  if(!_db||!_CU){toast('❌ 로그인 필요');return;}
+  _db.collection('settings').doc(_CU.dealerId+'_teamLeaderPrices')
+    .set({leaders:TL_PRICES,updatedAt:new Date().toISOString()},{merge:false})
+    .then(function(){toast('✅ 팀장 수수료 저장');if(cb)cb();}).catch(function(e){toast('❌ '+e.message);});
+}
+function _parseTLLines(lines){
+  var leaders=[],cur=null,curRoute=null;
+  for(var i=0;i<lines.length;i++){
+    var line=lines[i].trim();if(!line)continue;
+    var nm=line.match(/^(.+?)\(([^)]+)\)\s*$/);
+    if(nm){cur={name:nm[1].trim(),id:nm[2].trim(),routes:{}};leaders.push(cur);curRoute=null;continue;}
+    if(!cur)continue;
+    var rn=line.match(/^(\d{3,4})$/);if(rn){curRoute=rn[1];continue;}
+    if(!curRoute)continue;
+    line.split(/\s+/).forEach(function(p){var m=p.match(/^([A-Za-z])(\d+)$/);if(m)cur.routes[curRoute+m[1].toUpperCase()]=parseInt(m[2]);});
+  }
+  return leaders;
+}
+function _parseTeamLeaderFile(file,cb){
+  var ext=(file.name||'').split('.').pop().toLowerCase();
+  var reader=new FileReader();
+  if(ext==='xlsx'||ext==='xls'){
+    reader.onload=function(e){
+      try{
+        var wb=XLSX.read(e.target.result,{type:'array'});
+        var rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true});
+        cb(_parseTLLines(rows.map(function(r){return r.join('\t');})));
+      }catch(err){toast('❌ '+err.message);}
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    reader.onload=function(e){
+      cb(_parseTLLines(e.target.result.split('\n')));
+    };
+    reader.readAsText(file,'utf-8');
+  }
+}
+
+function _calcTeamLeaderBonus(routeTotals){
+  var bonus={};
+  TL_PRICES.forEach(function(ldr){
+    var total=0;
+    Object.keys(ldr.routes||{}).forEach(function(route){total+=(routeTotals[route]||0)*(ldr.routes[route]||0);});
+    if(total>0)bonus[ldr.id]={name:ldr.name,id:ldr.id,amount:total};
+  });
+  return bonus;
+}
+function _renderTeamLeaderSection(container){
+  var wrap=document.createElement('div');wrap.id='tl-section';wrap.className='card';wrap.style.marginTop='14px';
+  var ch=document.createElement('div');ch.className='ch';
+  ch.innerHTML='<span class="ct">👑 팀장 수수료 단가</span><span style="font-size:10px;color:var(--text3);margin-left:6px">엑셀 업로드 시 자동 계산</span>';
+  var bw=document.createElement('div');bw.style='display:flex;gap:6px;margin-left:auto';
+  var fi=document.createElement('input');fi.type='file';fi.accept='.txt,.xlsx,.csv';fi.style.display='none';fi.id='tl-file-input';
+  fi.onchange=function(){if(!this.files[0])return;_parseTeamLeaderFile(this.files[0],function(leaders){if(!leaders||!leaders.length){toast('❌ 파싱 실패');return;}TL_PRICES=leaders;_saveTeamLeaderPrices(function(){_renderTeamLeaderSection(container);});});this.value='';};
+  var ub=document.createElement('button');ub.className='btn btn-sm';ub.style='background:#7c3aed;color:#fff';ub.innerHTML='📥 파일 등록';ub.onclick=function(){document.getElementById('tl-file-input').click();};
+  var sb=document.createElement('button');sb.className='btn btn-sm btn-teal';sb.innerHTML='💾 저장';sb.onclick=function(){_saveTeamLeaderPrices(null);};
+  bw.appendChild(fi);bw.appendChild(ub);bw.appendChild(sb);ch.appendChild(bw);wrap.appendChild(ch);
+  if(!TL_PRICES||!TL_PRICES.length){var emp=document.createElement('div');emp.className='empty';emp.style.padding='20px 0';emp.textContent='등록된 팀장 수수료 없음 — 파일 업로드로 등록';wrap.appendChild(emp);}
+  else{TL_PRICES.forEach(function(ldr,li){var card=document.createElement('div');card.style='border:1.5px solid rgba(124,58,237,.35);border-radius:10px;padding:12px;margin-bottom:10px;background:rgba(124,58,237,.04)';var grid=document.createElement('div');grid.style='display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:5px;margin-top:8px';card.innerHTML='<div style="font-size:14px;font-weight:800;color:#7c3aed">👑 '+esc(ldr.name)+'</div><div style="font-size:11px;color:var(--text3)">'+esc(ldr.id)+'</div>';Object.keys(ldr.routes||{}).sort().forEach(function(r){var box=document.createElement('div');box.style='background:rgba(124,58,237,.08);border-radius:6px;padding:5px;text-align:center';box.innerHTML='<div style="font-size:10px;font-weight:700;color:#7c3aed">'+esc(r)+'</div><input type="number" value="'+ldr.routes[r]+'" onchange="TL_PRICES['+li+'].routes[\''+r+'\']=parseInt(this.value)||0" style="width:100%;text-align:center;border:1px solid rgba(124,58,237,.3);border-radius:4px;font-size:12px;padding:3px;background:var(--bg);color:#7c3aed"><div style="font-size:9px;color:var(--text3)">원/건</div>';grid.appendChild(box);});card.appendChild(grid);wrap.appendChild(card);});}
+  var old=document.getElementById('tl-section');if(old)old.replaceWith(wrap);else container.appendChild(wrap);
+}
+
 function saveRprice(){
   if(!_db){toast('❌ Firebase 미연결');return;}
   var newPrices={};
@@ -17712,13 +18075,13 @@ function _hasSettle(d){
 }
 function _hasQr(d){
   if(isSuperAdmin())return true;
-  if(d.qrPaid||d.rosterPaid)return true;
+  if(d.qrPaid||d.rosterPaid||d.qrPayrollPaid)return true;
   // ★ trial = QR 불허
   return ['qr_only','qr_payroll','full'].indexOf(d.plan||'')>=0;
 }
 function _hasPayroll(d){
   if(isSuperAdmin())return true;
-  if(d.payrollPaid||d.rosterPaid)return true;
+  if(d.payrollPaid||d.rosterPaid||d.qrPayrollPaid)return true;
   // ★ trial = 급여 불허
   return ['payroll','qr_payroll','full'].indexOf(d.plan||'')>=0;
 }
@@ -18748,14 +19111,7 @@ function _startDispatchListener(uid){
 </script>
 </body>
 </html>
-<script>document.addEventListener("DOMContentLoaded",function(){if(typeof initFirebase==="function")initFirebase();});
-(function(){
-  function _onReady(fn){
-    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',fn);
-    else fn();
-  }
-  _onReady(function(){
-    if(typeof initFirebase==='function') initFirebase();
-  });
-})();
+<script>document.addEventListener("DOMContentLoaded",function(){if(typeof initFirebase==="function")initFirebase();if(typeof _processJoinUrlParams==="function")_processJoinUrlParams();});
 </script>
+</body>
+</html>
