@@ -2736,6 +2736,18 @@ function toggleBizManual(){
   var el=document.getElementById('j-biz-manual');
   el.style.display=el.style.display==='none'?'block':'none';
 }
+
+function onBizDocSelected(input){
+  var file = input.files[0];
+  if(!file) return;
+  var area = document.getElementById('r-bizdoc-area');
+  var msg  = document.getElementById('r-bizdoc-msg');
+  if(area){
+    area.innerHTML = '<div style="font-size:20px">✅</div>'
+      + '<div id="r-bizdoc-name" style="font-size:12px;color:var(--green);margin-top:4px">📄 '+file.name+'</div>';
+  }
+  if(msg) msg.textContent = '첨부 완료';
+}
 function previewBizFile(input){
   var file=input.files[0];
   if(!file)return;
