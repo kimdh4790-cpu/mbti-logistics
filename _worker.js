@@ -750,7 +750,7 @@ export default {
     if (path === '/settle' || path === '/settle/') {
       const req  = new Request(new URL('/settle.htm', url).toString(), { method: 'GET', headers: request.headers });
       const resp = await fetchAsset(new URL(req.url).pathname, request);
-      return new Response(resp.body, { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+      return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store, no-cache, must-revalidate', 'Pragma': 'no-cache' } });
     }
 
 
