@@ -44,10 +44,15 @@ input{width:100%;padding:10px;border:1px solid #1a1a2e;border-radius:8px;backgro
   <div class="log" id="log">대기 중...</div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
 <script>
+// Firebase 로드 확인
+if(typeof firebase === 'undefined'){
+  document.body.innerHTML='<div style="color:red;padding:20px">Firebase SDK 로딩 실패. 새로고침해주세요.</div>';
+  throw new Error('firebase not defined');
+}
 firebase.initializeApp({
   apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',
   authDomain:'mbti-logistics.firebaseapp.com',
