@@ -895,6 +895,7 @@ function checkMinWage(totalPay, totalHours) {
 var RPRICE = {};
 var RPRICE_ADJ = {}; // 수정 단가 (라우트수정단가 파일 적용)
 // ※ 단가는 Firestore(_routePrices)에서만 로드. 하드코딩 기본값 없음.
+var TL_PRICES = []; // 팀장 수수료: [{name,id,routes:{"608B":60,...}}]
 // 초기화(전체초기화) 시 완전히 비워집니다.
 // 캠프명 매핑 (라우트 숫자코드 → 캠프명)
 // 캠프 설정 (Firestore {dealerId}_campConfig 에서 로드 - per dealer)
@@ -1639,6 +1640,40 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             settlements.push(entry);added++;
           }
         });
+        // ★ 팀장 수수료 자동 계산 → etcPlus 반영
+        if(TL_PRICES&&TL_PRICES.length){
+          // 라우트별 전체 배송건수 집계
+          var _tlRouteTotals={};
+          settlements.filter(function(s){return s.month===month;}).forEach(function(s){
+            (s.routeDetails||[]).forEach(function(rd){
+              if(rd.route)_tlRouteTotals[rd.route]=(_tlRouteTotals[rd.route]||0)+(rd.cnt||0);
+            });
+          });
+          // 팀장별 수수료 계산
+          var _tlBonus=_calcTeamLeaderBonus(_tlRouteTotals);
+          // 팀장 정산에 etcPlus 반영 (VAT 없이 그대로)
+          Object.keys(_tlBonus).forEach(function(tlId){
+            var bonus=_tlBonus[tlId];
+            var tlEntry=settlements.find(function(s){return s.userId===tlId&&s.month===month;});
+            if(tlEntry){
+              // 기존 etcPlus에 팀장 수수료 추가
+              var prev=tlEntry.etcPlus||0;
+              var prevReason=tlEntry.etcPlusReason||'';
+              // 이전에 팀장수수료가 있으면 제거 후 재계산
+              if(prevReason.includes('팀장수수료')){
+                var prevBonus=parseInt((prevReason.match(/팀장수수료(\d+)/)||[])[1])||0;
+                prev=Math.max(0,prev-prevBonus);
+              }
+              tlEntry.etcPlus=prev+bonus.amount;
+              tlEntry.etcPlusReason=(prev>0?prevReason+' + ':'')+'팀장수수료'+bonus.amount;
+            }
+            // 팀장이 이번 달 정산에 없으면 로그만
+            else{
+              console.log('[팀장수수료] '+bonus.name+'('+bonus.id+') 이번달 정산 없음 → 수동 등록 필요: '+bonus.amount.toLocaleString()+'원');
+              toast('⚠️ 팀장 '+bonus.name+' 정산 없음 → 수수료 '+bonus.amount.toLocaleString()+'원 수동 확인');
+            }
+          });
+        }
         lss('settlements',settlements);
         window._lastParsedSettlements = settlements; // 경험치 업데이트용
         // Firebase 저장
@@ -14191,7 +14226,8 @@ function pagePrices(tabMode){
     _db.collection('settings').doc(did+'_routePrices').get().catch(function(){return null;}),
     _db.collection('settings').doc(did+'_routeCampMap').get().catch(function(){return null;}),
     _db.collection('settings').doc(did+'_routePricesAdj').get().catch(function(){return null;}),
-    _db.collection('settings').doc(did+'_campConfig').get().catch(function(){return null;})
+    _db.collection('settings').doc(did+'_campConfig').get().catch(function(){return null;}),
+    _db.collection('settings').doc(did+'_teamLeaderPrices').get().catch(function(){return null;})
   ]).then(function(results){
     var rpSnap=results[0],rcSnap=results[1],raSnap=results[2],ccSnap=results[3];
     if(rpSnap&&rpSnap.exists){
@@ -14211,6 +14247,8 @@ function pagePrices(tabMode){
       _campConfig=ccSnap.data()||{};
       _syncCampColors();
     }
+    var tlSnap=results[4];
+    if(tlSnap&&tlSnap.exists){TL_PRICES=((tlSnap.data()||{}).leaders)||[];}
     // settlements 캐시에서 캠프 매핑 재구성 (없으면 Firebase에서 로드)
     // ★ 미계약건 단가 섹션 항상 먼저 렌더링
     var _noContCard=document.createElement('div');
@@ -14768,6 +14806,8 @@ function _renderPrices(c){
   editHTML+='</div>';
   c.innerHTML=nocontHTML+viewHTML+editHTML;
   if(campGroups.length)setTimeout(function(){showRpCampTab(campGroups[0].name);},10);
+  // ★ 팀장 수수료 섹션
+  _renderTeamLeaderSection(c);
 }
 function toggleRpCamp(gid){
   var b=document.getElementById(gid);var a=document.getElementById(gid+'_a');
@@ -16320,6 +16360,200 @@ function deleteCamp(campName){
     .then(function(){toast('🗑 '+campName+' 삭제');pageCamps();})
     .catch(function(e){toast('❌ '+e.message);});
 }
+
+// ══════════════════════════════════════════════════════
+// ★ 팀장 수수료 기능
+// ══════════════════════════════════════════════════════
+
+// Firestore 로드
+function _loadTeamLeaderPrices(cb){
+  if(!_db||!_CU){if(cb)cb();return;}
+  _db.collection('settings').doc(_CU.dealerId+'_teamLeaderPrices').get()
+  .then(function(snap){
+    TL_PRICES=snap.exists?((snap.data()||{}).leaders||[]):[];
+    if(cb)cb();
+  }).catch(function(){if(cb)cb();});
+}
+
+// Firestore 저장
+function _saveTeamLeaderPrices(cb){
+  if(!_db||!_CU){toast('❌ 로그인 필요');return;}
+  _db.collection('settings').doc(_CU.dealerId+'_teamLeaderPrices')
+  .set({leaders:TL_PRICES,updatedAt:new Date().toISOString()},{merge:false})
+  .then(function(){toast('✅ 팀장 수수료 저장 완료');if(cb)cb();})
+  .catch(function(e){toast('❌ 저장 실패: '+e.message);});
+}
+
+// ── 파일 파서 (txt/xlsx/csv)
+function _parseTeamLeaderFile(file, cb){
+  var ext=(file.name||'').split('.').pop().toLowerCase();
+  if(ext==='xlsx'||ext==='xls'){
+    var r=new FileReader();
+    r.onload=function(e){
+      try{
+        var wb=XLSX.read(e.target.result,{type:'array'});
+        var rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true});
+        cb(_parseTLRows(rows.map(function(r){return r.join('	');})));
+      }catch(e2){toast('❌ 파일 파싱 실패: '+e2.message);}
+    };
+    r.readAsArrayBuffer(file);
+  } else {
+    var r2=new FileReader();
+    r2.onload=function(e){
+      var lines=e.target.result.replace(/\r/g,'').split('\n').map(function(l){return l.trim();}).filter(Boolean);
+      cb(_parseTLLines(lines));
+    };
+    r2.readAsText(file,'utf-8');
+  }
+}
+
+function _parseTLLines(lines){
+  var leaders=[];
+  var cur=null;
+  var curRoute=null;
+  for(var i=0;i<lines.length;i++){
+    var line=lines[i].trim();
+    if(!line)continue;
+    // 이름(아이디) 패턴 감지
+    var nameMatch=line.match(/^(.+?)\(([^)]+)\)\s*$/);
+    if(nameMatch){
+      cur={name:nameMatch[1].trim(),id:nameMatch[2].trim(),routes:{}};
+      leaders.push(cur);curRoute=null;continue;
+    }
+    if(!cur)continue;
+    // 숫자만 → 라우트 번호
+    var routeNum=line.match(/^(\d{3,4})$/);
+    if(routeNum){curRoute=routeNum[1];continue;}
+    if(!curRoute)continue;
+    // A60 B140 C50 등 서브코드+단가 파싱
+    var parts=line.split(/\s+/);
+    parts.forEach(function(p){
+      var m=p.match(/^([A-Za-z])(\d+)$/);
+      if(m){
+        var key=curRoute+m[1].toUpperCase();
+        cur.routes[key]=parseInt(m[2]);
+      }
+    });
+  }
+  return leaders;
+}
+
+function _parseTLRows(rows){
+  // xlsx/csv를 줄 문자열 배열로 변환 후 동일 파서 사용
+  var lines=[];
+  rows.forEach(function(row){
+    // 탭 구분 → 각 셀을 공백으로
+    var cells=row.split(/	/).map(function(c){return String(c||'').trim();}).filter(Boolean);
+    if(cells.length)lines.push(cells.join(' '));
+  });
+  return _parseTLLines(lines);
+}
+
+// ── 팀장 수수료 섹션 렌더링
+function _renderTeamLeaderSection(container){
+  var wrap=document.createElement('div');
+  wrap.id='tl-section';
+  wrap.className='card';
+  wrap.style.marginTop='14px';
+
+  var ch=document.createElement('div');ch.className='ch';
+  ch.innerHTML='<span class="ct">👑 팀장 수수료 단가</span>'
+    +'<span style="font-size:10px;color:var(--text3);margin-left:6px">엑셀 정산 업로드 시 자동 계산 → 기타(+) 반영</span>';
+  var btnWrap=document.createElement('div');btnWrap.style='display:flex;gap:6px;margin-left:auto';
+  var fileInput=document.createElement('input');
+  fileInput.type='file';fileInput.accept='.txt,.xlsx,.csv';fileInput.style.display='none';
+  fileInput.id='tl-file-input';
+  fileInput.onchange=function(){
+    if(!this.files[0])return;
+    _parseTeamLeaderFile(this.files[0],function(leaders){
+      if(!leaders||!leaders.length){toast('❌ 파싱 실패 - 포맷 확인');return;}
+      TL_PRICES=leaders;
+      _saveTeamLeaderPrices(function(){_renderTeamLeaderSection(container);});
+    });
+    this.value='';
+  };
+  var uploadBtn=document.createElement('button');uploadBtn.className='btn btn-sm';
+  uploadBtn.style='background:#7c3aed;color:#fff;border:none';
+  uploadBtn.innerHTML='📥 파일 등록';
+  uploadBtn.onclick=function(){document.getElementById('tl-file-input').click();};
+  var saveBtn=document.createElement('button');saveBtn.className='btn btn-sm btn-teal';
+  saveBtn.innerHTML='💾 저장';
+  saveBtn.onclick=function(){_saveTeamLeaderPrices(null);};
+  btnWrap.appendChild(fileInput);btnWrap.appendChild(uploadBtn);btnWrap.appendChild(saveBtn);
+  ch.appendChild(btnWrap);wrap.appendChild(ch);
+
+  // 안내
+  var guide=document.createElement('div');
+  guide.style='font-size:11px;color:var(--text3);padding:6px 10px;background:var(--bg3);border-radius:8px;margin-bottom:10px';
+  guide.innerHTML='📎 <b>txt</b>: 이름(아이디) → 라우트번호 → 서브코드+단가(예: B60 C60) | <b>xlsx/csv</b>: 동일 포맷 셀 입력';
+  wrap.appendChild(guide);
+
+  if(!TL_PRICES||!TL_PRICES.length){
+    var emp=document.createElement('div');emp.className='empty';emp.style.padding='20px 0';
+    emp.innerHTML='<div style="font-size:13px;color:var(--text3)">등록된 팀장 수수료 없음 — 파일 업로드로 등록하세요</div>';
+    wrap.appendChild(emp);
+  } else {
+    TL_PRICES.forEach(function(ldr,li){
+      var card=document.createElement('div');
+      card.style='border:1.5px solid rgba(124,58,237,.35);border-radius:10px;padding:12px;margin-bottom:10px;background:rgba(124,58,237,.04)';
+      var hdr=document.createElement('div');
+      hdr.style='display:flex;align-items:center;justify-content:space-between;margin-bottom:8px';
+      hdr.innerHTML='<div style="display:flex;align-items:center;gap:8px">'
+        +'<div style="width:32px;height:32px;border-radius:50%;background:rgba(124,58,237,.15);display:flex;align-items:center;justify-content:center;font-size:16px">👑</div>'
+        +'<div><div style="font-size:14px;font-weight:800;color:#7c3aed">'+esc(ldr.name)+'</div>'
+        +'<div style="font-size:11px;color:var(--text3)">'+esc(ldr.id)+'</div></div></div>'
+        +'<button onclick="_removeTLLeader('+li+')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;padding:0 4px">×</button>';
+      card.appendChild(hdr);
+      // 라우트별 단가 그리드
+      var grid=document.createElement('div');
+      grid.style='display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:5px';
+      var routes=ldr.routes||{};
+      Object.keys(routes).sort().forEach(function(r){
+        var box=document.createElement('div');
+        box.style='background:rgba(124,58,237,.08);border-radius:6px;padding:5px;text-align:center';
+        box.innerHTML='<div style="font-size:10px;font-weight:700;color:#7c3aed">'+esc(r)+'</div>'
+          +'<input type="number" value="'+routes[r]+'" min="0" step="10"'
+          +' onchange="TL_PRICES['+li+'].routes[\''+r+'\''+']=parseInt(this.value)||0"'
+          +' style="width:100%;text-align:center;border:1px solid rgba(124,58,237,.3);border-radius:4px;font-size:12px;font-weight:700;padding:3px;background:var(--bg);color:#7c3aed">'
+          +'<div style="font-size:9px;color:var(--text3)">원/건</div>';
+        grid.appendChild(box);
+      });
+      card.appendChild(grid);wrap.appendChild(card);
+    });
+  }
+  // 기존 섹션 교체 또는 추가
+  var old=document.getElementById('tl-section');
+  if(old)old.replaceWith(wrap);
+  else container.appendChild(wrap);
+}
+
+function _removeTLLeader(idx){
+  if(!confirm(TL_PRICES[idx].name+' 팀장 수수료를 삭제하시겠습니까?'))return;
+  TL_PRICES.splice(idx,1);
+  _saveTeamLeaderPrices(function(){
+    var c=document.getElementById('rp-main-area')||document.getElementById('content');
+    _renderTeamLeaderSection(c);
+  });
+}
+
+// ── 엑셀 정산 업로드 시 팀장 수수료 계산
+// routeTotals: {"608B":150,"608C":200,...} - 라우트별 전체 배송건수
+function _calcTeamLeaderBonus(routeTotals){
+  // 팀장별 수수료 계산
+  var bonus={};  // leaderId → {name, id, amount}
+  TL_PRICES.forEach(function(ldr){
+    var total=0;
+    Object.keys(ldr.routes||{}).forEach(function(route){
+      var cnt=routeTotals[route]||0;
+      total+=cnt*(ldr.routes[route]||0);
+    });
+    if(total>0){
+      bonus[ldr.id]={name:ldr.name,id:ldr.id,amount:total};
+    }
+  });
+  return bonus;
+}
+
 
 function saveRprice(){
   if(!_db){toast('❌ Firebase 미연결');return;}
