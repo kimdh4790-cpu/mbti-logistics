@@ -120,12 +120,7 @@ tr:hover>td{background:var(--bg3)}
 <script src="https://js.tosspayments.com/v2/standard"></script>
 <script>
 (function(){
-  document.addEventListener('contextmenu',function(e){e.preventDefault();});
-  document.addEventListener('keydown',function(e){
-    if(e.keyCode===123){e.preventDefault();return false;}
-    if(e.ctrlKey&&e.shiftKey&&(e.keyCode===73||e.keyCode===74||e.keyCode===67)){e.preventDefault();return false;}
-    if(e.ctrlKey&&!e.shiftKey&&e.keyCode===85){e.preventDefault();return false;}
-  });
+  // F12 임시 해제
 })();
 </script>
 <script src="https://cdn.iamport.kr/v1/iamport.js"></script>
