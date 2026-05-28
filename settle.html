@@ -8092,6 +8092,38 @@ function calcLegalLeave(hireDateStr, targetYear){
 // ════════════════════════════════════════════════
 // 🏠 관리자 홈 대시보드
 // ════════════════════════════════════════════════
+// ★ 임시 패치 함수 (슈퍼어드민 전용)
+async function runDealerPatch(){
+  if(!isSuperAdmin()){toast('❌ 슈퍼어드민만 가능');return;}
+  if(!confirm('dealerId 없는 전체 문서에 현재 UID를 패치합니다. 진행할까요?'))return;
+  var uid=_CU.dealerId;
+  toast('🔄 패치 시작...');
+  var cols=['drivers','settlements','attendance','settings','notices',
+    'delivery_sessions','hourly_settlements','visitors','leave_payments',
+    'overtimes','leaves','accidents','activity','emergency_deliveries',
+    'campSupports','inquiries','complaints','photo_logs','driver_locations',
+    'admin_notifications','temp_logs','deliveries','device_tokens',
+    'driver_notifications','vehicles','expenses','contracts',
+    'signatures','driverDocs','cal_memos','roster_week'];
+  var total=0,patched=0;
+  for(var i=0;i<cols.length;i++){
+    try{
+      var snap=await _db.collection(cols[i]).get();
+      var noPatch=snap.docs.filter(function(d){return !d.data().dealerId;});
+      if(!noPatch.length)continue;
+      for(var j=0;j<noPatch.length;j+=400){
+        var batch=_db.batch();
+        noPatch.slice(j,j+400).forEach(function(doc){batch.update(doc.ref,{dealerId:uid});});
+        await batch.commit();
+      }
+      total+=snap.size; patched+=noPatch.length;
+      toast('✅ '+cols[i]+': '+noPatch.length+'개 패치');
+    }catch(e){console.warn(cols[i],e.message);}
+  }
+  toast('🎉 패치 완료! 총 '+patched+'개 문서 dealerId 추가');
+  alert('패치 완료! 총 '+patched+'개 문서에 dealerId 추가됨\n\n이제 Rules 강화 요청해주세요!');
+}
+
 function pageHome(){
   document.getElementById('page-title').textContent='🏠 대시보드';
   document.getElementById('topbar-right').innerHTML='';
