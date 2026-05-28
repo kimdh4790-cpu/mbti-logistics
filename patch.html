@@ -22,21 +22,22 @@ input{width:100%;padding:10px;border:1px solid #1a1a2e;border-radius:8px;backgro
   <div style="font-size:12px;color:#666;margin-bottom:16px">dealerId 없는 문서에 현재 로그인 UID를 일괄 추가합니다</div>
   <div id="auth-area">
     <input type="email" id="email" placeholder="이메일" value="kimdh4790@gmail.com">
-    <input type="password" id="pw" placeholder="비밀번호">
-    <button class="btn-blue" onclick="doLogin()">로그인</button>
+    <input type="password" id="pw" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn-blue" onclick="doLogin()" style="width:100%;padding:12px;font-size:15px">로그인</button>
   </div>
   <div id="patch-area" style="display:none">
-    <div style="font-size:13px;margin-bottom:10px">로그인: <span id="uid-display" style="color:#00d4ff"></span></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-      <button class="btn-blue" onclick="runPatch()">🚀 전체 패치 실행</button>
-      <button class="btn-red" onclick="doLogout()">로그아웃</button>
+    <div style="font-size:13px;margin-bottom:14px;padding:10px;background:#0a2a1a;border-radius:8px;border:1px solid #059669">
+      ✅ 로그인됨: <span id="uid-display" style="color:#00d4ff"></span>
     </div>
-    <div style="font-size:11px;color:#666;margin-bottom:10px">
+    <button class="btn-blue" onclick="runPatch()" style="width:100%;padding:14px;font-size:16px;margin-bottom:8px">🚀 전체 패치 실행</button>
+    <button class="btn-red" onclick="doLogout()" style="width:100%;padding:10px">로그아웃</button>
+    <div style="font-size:11px;color:#666;margin-top:10px">
       패치 대상: drivers, settlements, attendance, settings, notices,
       delivery_sessions, hourly_settlements, visitors, leave_payments,
-      overtimes, leaves, accidents, activity, emergency_deliveries
+      overtimes, leaves, accidents, activity, emergency_deliveries 등
     </div>
   </div>
+  <div id="status-area" style="padding:10px;font-size:13px;color:#f59e0b">로딩 중...</div>
 </div>
 <div class="card">
   <div style="font-size:13px;font-weight:700;margin-bottom:8px">📋 패치 로그</div>
@@ -65,16 +66,19 @@ function log(msg,cls){
 }
 
 _auth.onAuthStateChanged(function(user){
+  var sa=document.getElementById('status-area');
   if(user){
     _uid=user.uid;
     document.getElementById('auth-area').style.display='none';
     document.getElementById('patch-area').style.display='block';
+    if(sa)sa.style.display='none';
     document.getElementById('uid-display').textContent=user.email+' ('+user.uid+')';
     log('✅ 로그인 완료: '+user.email,'ok');
     log('UID: '+user.uid,'info');
   } else {
     document.getElementById('auth-area').style.display='block';
     document.getElementById('patch-area').style.display='none';
+    if(sa)sa.textContent='로그인이 필요합니다.';
   }
 });
 
