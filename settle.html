@@ -11030,10 +11030,16 @@ function pageSettle(){
       return;
     }
     var settles=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
-    // 집계
+    // ★ 현재 선택된 월 필터 (settlements 탭의 _settle_month 공유)
+    var curMonthFilter=_settle_month||'all';
+    var filteredSettles=curMonthFilter==='all'?settles:settles.filter(function(s){return s.month===curMonthFilter;});
+    // 월 선택 탭 추가
+    var allMonths=[...new Set(settles.map(function(s){return s.month||''}).filter(Boolean))].sort().reverse();
+
+    // 집계 (필터 적용)
     var totCoupang=0,totTaxBase=0,totNet=0,totDcnt=0,totDeduct=0;
     var byCamp={};
-    settles.forEach(function(s){
+    filteredSettles.forEach(function(s){
       var r=calcNet(s);
       var ct=s.coupangTotal||(((s.damt||0)+(s.ramt||0)+(s.fresh||0)+(s.inc||0)+(s.nocont||0)))||0;
       // ★ coupangTotal = 엑셀 VAT별도 원본 → ×1.1 해야 VAT포함
@@ -11047,19 +11053,28 @@ function pageSettle(){
       byCamp[cc].cnt++;byCamp[cc].net+=r.net||0;byCamp[cc].dcnt+=(s.dcnt||0);
     });
     var byMonth={};
-    settles.forEach(function(s){var m=s.month||'';if(!byMonth[m])byMonth[m]={cnt:0,net:0};byMonth[m].cnt++;byMonth[m].net+=(calcNet(s).net||0);});
+    filteredSettles.forEach(function(s){var m=s.month||'';if(!byMonth[m])byMonth[m]={cnt:0,net:0};byMonth[m].cnt++;byMonth[m].net+=(calcNet(s).net||0);});
     var months=Object.keys(byMonth).sort().reverse().slice(0,6);
     var campKeys=Object.keys(byCamp).sort();
 
     c.innerHTML='';
+    // ★ 월 선택 탭 UI
+    var monthTabEl=document.createElement('div');
+    monthTabEl.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;align-items:center';
+    monthTabEl.innerHTML='<span style="font-size:10px;color:var(--text3);font-weight:700">📅 기간</span>'
+      +'<button onclick="_settle_month=\'all\';pageSettle()" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(curMonthFilter==='all'?'var(--blue)':'var(--border)')+';background:'+(curMonthFilter==='all'?'var(--blue)':'var(--bg)')+';color:'+(curMonthFilter==='all'?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">전체</button>'
+      +allMonths.map(function(m){var on=m===curMonthFilter;return '<button onclick="_settle_month=\''+m+'\';pageSettle()" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(on?'var(--blue)':'var(--border)')+';background:'+(on?'var(--blue)':'var(--bg)')+';color:'+(on?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">'+m+'</button>';}).join('');
+    c.appendChild(monthTabEl);
 
     // ── Hero 섹션
     var hero=document.createElement('div');
     hero.style.cssText='background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 50%,#312e81 100%);border-radius:16px;padding:28px 24px;margin-bottom:16px;color:#fff;position:relative;overflow:hidden';
     var totMargin=totCoupang-totTaxBase;
+    // 선택 월 표시
+    var monthLabel=curMonthFilter==='all'?'전체 누적':curMonthFilter;
     hero.innerHTML='<div style="position:absolute;top:-30px;right:-30px;width:200px;height:200px;background:rgba(255,255,255,.04);border-radius:50%"></div>'
       +'<div style="position:absolute;bottom:-40px;left:40px;width:160px;height:160px;background:rgba(255,255,255,.03);border-radius:50%"></div>'
-      +'<div style="font-size:11px;font-weight:600;letter-spacing:2px;opacity:.6;margin-bottom:14px">DONWAY · '+((_CU&&_CU.companyName)||'MBTI Co.')+' · 정산 현황</div>'
+      +'<div style="font-size:11px;font-weight:600;letter-spacing:2px;opacity:.6;margin-bottom:14px">DONWAY · '+((_CU&&_CU.companyName)||'MBTI Co.')+' · 정산 현황 · '+monthLabel+'</div>'
       +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">'
         +'<div><div style="font-size:10px;opacity:.6;margin-bottom:3px">🏢 쿠팡 수입 (VAT포함)</div>'
           +'<div style="font-size:20px;font-weight:900;color:#34d399">₩'+fmt(totCoupang)+'</div>'
@@ -11445,9 +11460,11 @@ function _renderSettlePage(settles,c){
       +'<button onclick="deleteMonthSettlements(\''+m+'\')" title="'+m+' 정산서 전체 삭제" style="padding:5px 8px;border-radius:0 100px 100px 0;border:1.5px solid '+(on?'var(--blue)':'var(--border)')+';border-left:1px solid '+(on?'rgba(255,255,255,.4)':'var(--border)')+';background:'+(on?'rgba(0,0,0,.15)':'var(--bg)')+';color:'+(on?'#fff':'#dc2626')+';font-size:11px;cursor:pointer;font-weight:700">🗑</button>'
       +'</span>';}).join('')
     +'</div>';
-  var campCount={all:settles.length};
+  // ★ 캠프 카운트: 월 필터 적용 후 기준
+  var filteredForCamp=filterMonth==='all'?settles:settles.filter(function(x){return x.month===filterMonth;});
+  var campCount={all:filteredForCamp.length};
   CAMP_LIST_S.forEach(function(cc){campCount[cc]=0;});
-  settles.forEach(function(x){var cc=_getSettleCamp(x);campCount[cc]=(campCount[cc]||0)+1;});
+  filteredForCamp.forEach(function(x){var cc=_getSettleCamp(x);campCount[cc]=(campCount[cc]||0)+1;});
   var campTabs='<div id="camp-tabs-bar" style="display:flex;gap:5px;padding:0 0 10px;flex-wrap:wrap;align-items:center">'
     +'<span style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:0.5px;margin-right:4px">🏕️ 캠프</span>'
     +_campTabHTML('전체',campCount.all,(filterCamp==='all'),'settle','all')
