@@ -15,9 +15,9 @@
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon.ico">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script src="/xlsx.full.min.js"></script>
+<script src="/jsQR.min.js"></script>
+<script src="/qrcode.min.js"></script>
 <style>
 :root{
   --brand:#185FA5;--brand-l:#E6F1FB;--brand-d:#0C447C;
@@ -117,11 +117,11 @@ tr:hover>td{background:var(--bg3)}
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(8px);background:#1a1a18;color:#fff;padding:10px 20px;border-radius:var(--r);font-size:13px;z-index:600;opacity:0;transition:.22s;pointer-events:none;white-space:nowrap}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
-<script src="https://js.tosspayments.com/v2/standard"></script>
+<script src="https://js.tosspayments.com/v2/standard" onerror="console.warn('TossPayments 로드 실패 - 결제 기능 비활성화')"></script>
 <script>
 // 개발자도구 차단 해제
 </script>
-<script src="https://cdn.iamport.kr/v1/iamport.js"></script>
+<script src="https://cdn.iamport.kr/v1/iamport.js" onerror="console.warn('Iamport 로드 실패')"></script>
 </head>
 <body>
 <script>
@@ -386,6 +386,69 @@ var _SUPER_ADMIN_CACHE = null;
 function isSuperAdmin(){
   return !!((_CU&&_CU.email&&SUPER_ADMIN_EMAILS.indexOf(_CU.email)>=0)
     ||(_SUPER_ADMIN_CACHE===true));
+}
+
+// ══════════════════════════════════════════════════════════
+// ★ 플랜 체크 함수들
+// ══════════════════════════════════════════════════════════
+
+function _hasSettle(d){
+  if(isSuperAdmin())return true;
+  if(d.settlePaid)return true;
+  if(d.plan==='trial'&&d.trialEnd&&d.trialEnd>=new Date().toISOString().slice(0,10))return true;
+  return ['settle','full'].indexOf(d.plan||'')>=0;
+}
+
+function _hasQr(d){
+  if(isSuperAdmin())return true;
+  if(d.qrPaid||d.rosterPaid||d.qrPayrollPaid)return true;
+  return ['qr_only','qr_payroll','full'].indexOf(d.plan||'')>=0;
+}
+
+function _hasPayroll(d){
+  if(isSuperAdmin())return true;
+  if(d.payrollPaid||d.rosterPaid||d.qrPayrollPaid)return true;
+  return ['payroll','qr_payroll','full'].indexOf(d.plan||'')>=0;
+}
+
+function _hasDelivery(d){
+  if(isSuperAdmin())return true;
+  if(d.deliveryPaid)return true;
+  return ['delivery','full'].indexOf(d.plan||'')>=0;
+}
+
+function _hasPremium(d){
+  if(isSuperAdmin())return true;
+  return !!(d.premiumPaid||(d.plan==='full'));
+}
+
+function _hasAnyPaid(d){
+  return isSuperAdmin()||_hasSettle(d)||_hasQr(d)||_hasPayroll(d)||_hasDelivery(d)||_hasPremium(d);
+}
+
+function _isPlanAllowed(d,feature){
+  var isTrial=window._trialActive||(d.plan==='trial'&&d.trialEnd&&d.trialEnd>=new Date().toISOString().slice(0,10));
+  if(isTrial)return true;
+  return _hasAnyPaid(d);
+}
+
+// 플랜 업셀 팝업
+var _PLAN_UPSELL={
+  settle:     {icon:'📦',label:'AI 정산',    color:'#0891b2',planKey:'settle'},
+  qr:         {icon:'🔐',label:'QR 근태',     color:'#059669',planKey:'qr'},
+  payroll:    {icon:'💼',label:'급여관리',    color:'#8b5cf6',planKey:'payroll'},
+  qr_payroll: {icon:'🔐💼',label:'QR+급여',  color:'#7c3aed',planKey:'qr_payroll'},
+  delivery:   {icon:'🛵',label:'배달대행 정산',color:'#dc2626',planKey:'delivery'},
+  premium:    {icon:'🚀',label:'ALL-IN-ONE', color:'#f97316',planKey:'full'},
+};
+
+function _showPlanUpsell(planKey){
+  _showSubModal(planKey);
+}
+
+function _navUpsellClick(el){
+  var pk=(el&&el.dataset&&el.dataset.pk)||'';
+  if(pk) _showPlanUpsell(pk);
 }
 
 function _loadAdminStatus(){
@@ -1787,10 +1850,10 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
 </script>
 
 <!-- Firebase v8 SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
+<script src="/firebase-app-compat.js"></script>
+<script src="/firebase-auth-compat.js"></script>
+<script src="/firebase-firestore-compat.js"></script>
+<script src="/firebase-messaging-compat.js"></script>
 <script>
 // ══ 캠프별 취합 UI (parseCoupangExcel 이후 호출) ══
 function renderCpPending(){
@@ -11229,6 +11292,90 @@ function buildNav(){
     return;
   }
   _buildNavRender(nav,cur,window._cachedCompanyDoc||{});
+}
+
+
+function _navUpsellClick(el){
+  var pk = el.dataset.pk||'';
+  if(pk && typeof _showPlanUpsell==='function') _showPlanUpsell(pk);
+}
+function _buildNavRender(nav,cur,companyDoc){
+  if(!nav||!MENUS||!MENUS.length)return;
+  var d=companyDoc||{};
+  var sa=isSuperAdmin();
+  var hasSettle=_hasSettle(d),hasQr=_hasQr(d),hasPayroll=_hasPayroll(d);
+  var hasDelivery=_hasDelivery(d),hasPremium=_hasPremium(d),hasAnyPaid=_hasAnyPaid(d);
+
+  function _isAllowed(plan_key){
+    if(sa||plan_key==='free')    return true;
+    if(plan_key==='settle')      return hasSettle;
+    if(plan_key==='delivery')    return hasDelivery;
+    if(plan_key==='qr')          return hasQr;
+    if(plan_key==='payroll')     return hasPayroll;
+    if(plan_key==='qr_payroll')  return hasQr&&hasPayroll;
+    if(plan_key==='premium')     return hasPremium;
+    if(plan_key==='any_paid')    return hasAnyPaid;
+    return false;
+  }
+
+  var openSections=[],lockedSections=[],anyOpen=false;
+  var lockByPlan={settle:[],delivery:[],qr:[],payroll:[],qr_payroll:[],premium:[]};
+
+  MENUS.forEach(function(g,gi){
+    if(!g||!g.items)return;
+    var allowed=g.items.filter(function(m){return m&&m.p&&_isAllowed(m.plan_key||'free');});
+    var locked =g.items.filter(function(m){return m&&m.p&&!_isAllowed(m.plan_key||'free');});
+    g.items.forEach(function(m){
+      if(!m||!m.p)return;
+      var pk=m.plan_key||'free';
+      if(!_isAllowed(pk)&&lockByPlan[pk])lockByPlan[pk].push(m);
+    });
+    if(allowed.length){
+      openSections.push({s:g.s,items:allowed,gi:gi});
+    } else if(locked.length){
+      var pk=locked[0].plan_key||'';
+      lockedSections.push({s:g.s,plan_key:pk,gi:gi});
+    }
+  });
+
+  var html='';
+
+  // 허용된 메뉴
+  openSections.forEach(function(g){
+    var id='nsec-'+g.gi;
+    var hasActive=g.items.some(function(m){return m.p===cur;});
+    if(hasActive)anyOpen=true;
+    html+='<div class="ns'+(hasActive?' open':'')+'" id="nshead-'+g.gi+'" onclick="_toggleNavSection(this,this.nextElementSibling.id)">'      +'<span>'+g.s+'</span><span class="ns-arrow">›</span></div>'      +'<div class="ns-items'+(hasActive?' open':'')+'" id="'+id+'">';
+    g.items.forEach(function(m){
+      html+='<div class="ni'+(m.p===cur?' on':'')+'" id="nav-'+m.p+'" data-p="'+m.p+'" onclick="goPage(this.dataset.p)">'        +'<span style="font-size:14px">'+m.ic+'</span><span style="flex:1">'+m.l+'</span></div>';
+    });
+    html+='</div>';
+  });
+
+  // 잠긴 플랜 구매 유도
+  var hasLocked=Object.keys(lockByPlan).some(function(k){return lockByPlan[k].length>0;});
+  if(hasLocked){
+    html+='<div style="margin:10px 8px 0;border-top:2px dashed var(--border);padding-top:10px">';
+    ['settle','delivery','qr','payroll','qr_payroll','premium'].forEach(function(pk){
+      if(!lockByPlan[pk]||!lockByPlan[pk].length)return;
+      var u=_PLAN_UPSELL&&_PLAN_UPSELL[pk];
+      var color=(u&&u.color)||'#888';
+      var label=(u&&u.label)||pk;
+      html+='<div data-pk="'+pk+'" onclick="_navUpsellClick(this)" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;opacity:.7;margin-bottom:4px">';
+    });
+    html+='</div>';
+  }
+
+  nav.innerHTML=html;
+
+  // 첫 번째 섹션 자동 열기
+  if(!anyOpen&&openSections.length){
+    var firstId='nsec-'+openSections[0].gi;
+    var firstItems=document.getElementById(firstId);
+    var firstHead=document.getElementById('nshead-'+openSections[0].gi);
+    if(firstItems)firstItems.classList.add('open');
+    if(firstHead)firstHead.classList.add('open');
+  }
 }
 
 function _toggleNavSection(el,id){
