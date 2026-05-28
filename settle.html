@@ -9234,7 +9234,7 @@ function _calSelectDay(day){
     +'<button onclick="_calAddMemo('+day+')" style="padding:8px 14px;background:var(--primary);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">등록</button>'
     +'</div>'
     +'<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;gap:8px">'
-    +'<button onclick="_openAdvanceModal(y+\'-\'+(m+1<10?\'0\'+(m+1):(m+1))+\'-\'+(day<10?\'0\'+day:day))" style="flex:1;padding:8px;background:#f59e0b;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700">💸 가불</button>'
+    +(function(){var ds=y+'-'+(m+1<10?'0'+(m+1):(m+1))+'-'+(day<10?'0'+day:day);return '<button onclick="_openAdvanceModal(\'' +ds+ '\')\" style="flex:1;padding:8px;background:#f59e0b;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700">💸 가불</button>';}())
     +'</div>'
     +'</div>';
   _calLoadMemos(day);
