@@ -1642,6 +1642,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         });
         // ★ 팀장 수수료 자동 계산 → etcPlus 반영
         if(TL_PRICES&&TL_PRICES.length){
+          console.log('[TL] 팀장 수수료 계산 시작, 팀장 수:'+TL_PRICES.length);
           // 라우트별 전체 배송건수 집계
           var _tlRouteTotals={};
           settlements.filter(function(s){return s.month===month;}).forEach(function(s){
@@ -1649,14 +1650,15 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               if(rd.route)_tlRouteTotals[rd.route]=(_tlRouteTotals[rd.route]||0)+(rd.cnt||0);
             });
           });
+          console.log('[TL] 라우트별 건수:', JSON.stringify(_tlRouteTotals).slice(0,200));
           // 팀장별 수수료 계산
           var _tlBonus=_calcTeamLeaderBonus(_tlRouteTotals);
+          console.log('[TL] 팀장별 수수료:', JSON.stringify(_tlBonus));
           // 팀장 정산에 etcPlus 반영 (VAT 없이 그대로)
           Object.keys(_tlBonus).forEach(function(tlId){
             var bonus=_tlBonus[tlId];
             var tlEntry=settlements.find(function(s){return s.userId===tlId&&s.month===month;});
             if(tlEntry){
-              // 기존 etcPlus에 팀장 수수료 추가
               var prev=tlEntry.etcPlus||0;
               var prevReason=tlEntry.etcPlusReason||'';
               // 이전에 팀장수수료가 있으면 제거 후 재계산
@@ -1665,14 +1667,16 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                 prev=Math.max(0,prev-prevBonus);
               }
               tlEntry.etcPlus=prev+bonus.amount;
-              tlEntry.etcPlusReason=(prev>0?prevReason+' + ':'')+'팀장수수료'+bonus.amount;
-            }
-            // 팀장이 이번 달 정산에 없으면 로그만
-            else{
-              console.log('[팀장수수료] '+bonus.name+'('+bonus.id+') 이번달 정산 없음 → 수동 등록 필요: '+bonus.amount.toLocaleString()+'원');
-              toast('⚠️ 팀장 '+bonus.name+' 정산 없음 → 수수료 '+bonus.amount.toLocaleString()+'원 수동 확인');
+              tlEntry.etcPlusReason=(prev>0?prevReason+' + ':'')+'팀장수수료 '+bonus.amount.toLocaleString()+'원';
+              console.log('[TL] '+bonus.name+' etcPlus 적용: '+tlEntry.etcPlus.toLocaleString()+'원');
+              toast('✅ 팀장 '+bonus.name+' 수수료 '+bonus.amount.toLocaleString()+'원 적용');
+            } else {
+              console.warn('[TL] '+bonus.name+'('+tlId+') 이번달 정산 없음, 수수료:'+bonus.amount.toLocaleString()+'원');
+              toast('⚠️ 팀장 '+bonus.name+' 정산 없음 → 수수료 '+bonus.amount.toLocaleString()+'원 수동 확인 필요');
             }
           });
+        } else {
+          console.log('[TL] 팀장 수수료 없음 (TL_PRICES 비어있음)');
         }
         lss('settlements',settlements);
         window._lastParsedSettlements = settlements; // 경험치 업데이트용
@@ -2332,6 +2336,12 @@ function showApp(){
   _loadMySlug();  // 내 전용 URL 로드
   _loadSeasonPrices();  // 시즌 단가 로드
   _dwLoadSettings();    // ★ 배달대행 + 택배 계산 설정 로드
+  // ★ TL_PRICES 로드 (팀장 수수료 - 엑셀 업로드 전 반드시 로드)
+  if(_db&&_CU&&_CU.dealerId){
+    _loadTeamLeaderPrices(function(){
+      console.log('[TL] 팀장 수수료 로드 완료: '+TL_PRICES.length+'명');
+    });
+  }
   // ★ RPRICE 로드 (로그인/리로드 후에도 단가표 유지)
   if(_db&&_CU&&_CU.dealerId){
     _db.collection('settings').doc(_CU.dealerId+'_routePrices').get().then(function(snap){
