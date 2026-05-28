@@ -2732,6 +2732,13 @@ function _quickVerifyCode(code){
       }).catch(function(){msg.innerHTML='<span style="color:var(--red)">오류</span>';});
   },500);
 }
+
+function _closeJoinDone(){
+  var m=document.getElementById('mo-join-done');
+  if(m)m.remove();
+  if(typeof switchTab==='function')switchTab('login');
+  if(typeof _switchLoginTab==='function')_switchLoginTab('phone');
+}
 function doQuickJoin(){
   var name=((document.getElementById('j-name')||{}).value||'').trim();
   var phone=((document.getElementById('j-phone')||{}).value||'').replace(/[^0-9]/g,'');
@@ -2786,8 +2793,7 @@ function doQuickJoin(){
         +'<div style="font-size:13px;font-weight:700">전화번호: <span style="color:#00c8f8">'+phone+'</span></div>'
         +'<div style="font-size:11px;color:#475569;margin-top:4px">앱 설치 후 [📱 전화번호] 탭으로 로그인하세요</div>'
         +'</div>'
-        +'<button onclick="var m=document.getElementById('mo-join-done');if(m)m.remove();switchTab('login');if(typeof _switchLoginTab!=='undefined')_switchLoginTab('phone');" '
-        +'style="width:100%;padding:11px;background:var(--brand);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">로그인하기</button>'
+        +'<button onclick="_closeJoinDone()" style="width:100%;padding:11px;background:var(--brand);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">로그인하기</button>'
         +'</div>';
       document.body.appendChild(mo);
     })
@@ -15413,4 +15419,6 @@ function _calcTeamLeaderBonus(routeTotals){
   });
   return bonus;
 }
->
+</script>
+</body>
+</html>
