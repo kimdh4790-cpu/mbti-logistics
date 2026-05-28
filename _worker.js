@@ -849,6 +849,12 @@ export default {
     }
 
     // ★ 매장/회사 QR 디스플레이 (입구 화면)
+    // ★ 임시 패치 (사용 후 삭제 예정)
+    if (path === '/patch' || path === '/patch/') {
+      const resp = await fetchAsset('/patch.html', request);
+      return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+    }
+
     // ★ 긴급배송
     if (path === '/emergency' || path === '/emergency/') {
       const resp = await fetchAsset('/emergency.html', request);
