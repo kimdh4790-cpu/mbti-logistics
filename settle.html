@@ -9106,37 +9106,113 @@ function _renderCalendar(){
   }
 }
 
-// ★ 가불 등록 모달 (이자 계산 포함)
-function _openAdvanceModal(dateStr){
-  var mo=document.createElement('div');mo.className='mo show';mo.id='mo-advance';
-  mo.onclick=function(e){if(e.target===mo)mo.remove();};
-  mo.innerHTML='<div class="md" style="max-width:380px">'    +'<div class="mdt">💸 가불 등록</div>'    +'<div style="padding:16px;display:flex;flex-direction:column;gap:12px">'      +'<div style="font-size:12px;font-weight:700;color:var(--text3)">📅 날짜: '+esc(dateStr)+'</div>'      +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">기사 이름</label>'        +'<input id="adv-name" type="text" placeholder="기사명" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text)"></div>'      +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">가불 금액</label>'        +'<input id="adv-amount" type="number" placeholder="0" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-weight:700;background:var(--bg);color:var(--text)"></div>'      +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">이자율 (%/월, 0=무이자)</label>'        +'<div style="display:flex;align-items:center;gap:8px">'          +'<input id="adv-rate" type="number" value="0" min="0" max="100" step="0.5" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text)">'          +'<span style="font-size:12px;color:var(--text3)">%/월</span>'        +'</div>'        +'<div id="adv-preview" style="font-size:12px;color:var(--amber);margin-top:6px;padding:6px 8px;background:#fef3c7;border-radius:6px;display:none"></div></div>'      +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">메모</label>'        +'<input id="adv-note" type="text" placeholder="예: 긴급 가불" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text)"></div>'    +'</div>'    +'<div class="mdf">'      +'<button class="btn" onclick="var m=document.getElementById(\'mo-advance\');if(m)m.remove()">취소</button>'      +'<button class="btn btn-blue" onclick="_saveAdvance(\''+dateStr+'\')">💸 저장</button>'    +'</div></div>';
-  document.getElementById('modals').appendChild(mo);
-  var amtEl=document.getElementById('adv-amount');
-  var rateEl=document.getElementById('adv-rate');
-  var prevEl=document.getElementById('adv-preview');
-  function calcPrev(){
-    var amt=parseFloat(amtEl.value)||0;
-    var rate=parseFloat(rateEl.value)||0;
-    if(amt>0&&rate>0){
-      var monthly=Math.round(amt*rate/100);
-      prevEl.style.display='block';
-      prevEl.textContent='💰 월 이자: '+monthly.toLocaleString()+'원 (연 '+(rate*12)+'%)';
-    }else{prevEl.style.display='none';}
-  }
-  if(amtEl)amtEl.addEventListener('input',calcPrev);
-  if(rateEl)rateEl.addEventListener('input',calcPrev);
+// ★ 가불 기본 이자율 로드
+var _advDefaultRate = 5;
+function _loadAdvRate(cb){
+  if(!_db||!_CU){if(cb)cb(_advDefaultRate);return;}
+  _db.collection('settings').doc(_CU.dealerId+'_dwSettings').get().then(function(snap){
+    if(snap.exists&&snap.data().advRate!==undefined) _advDefaultRate=snap.data().advRate;
+    if(cb)cb(_advDefaultRate);
+  }).catch(function(){if(cb)cb(_advDefaultRate);});
 }
-function _saveAdvance(dateStr){
+function _saveAdvRate(rate){
+  if(!_db||!_CU){toast('❌ 로그인 필요');return;}
+  _advDefaultRate=rate;
+  _db.collection('settings').doc(_CU.dealerId+'_dwSettings')
+    .set({advRate:rate},{merge:true})
+    .then(function(){toast('✅ 기본 이자율 저장됨 ('+rate+'%)');})
+    .catch(function(e){toast('❌ 저장 실패: '+e.message);});
+}
+
+// ★ 가불 등록 모달 (총금액/이자/실수령 계산)
+function _openAdvanceModal(dateStr){
+  _loadAdvRate(function(defaultRate){
+    var mo=document.createElement('div');mo.className='mo show';mo.id='mo-advance';
+    mo.onclick=function(e){if(e.target===mo)mo.remove();};
+    var html='<div class="md" style="max-width:400px">'
+      +'<div class="mdt">💸 가불 등록</div>'
+      +'<div style="padding:16px;display:flex;flex-direction:column;gap:12px">'
+      +'<div style="display:flex;align-items:center;gap:8px">'
+        +'<span style="font-size:11px;color:var(--text3);font-weight:700;min-width:60px">📅 날짜</span>'
+        +'<input id="adv-date" type="date" value="'+dateStr+'" style="flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text)">'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:8px">'
+        +'<span style="font-size:11px;color:var(--text3);font-weight:700;min-width:60px">👤 이름</span>'
+        +'<input id="adv-name" type="text" placeholder="기사명" style="flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text)">'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:8px">'
+        +'<span style="font-size:11px;color:var(--text3);font-weight:700;min-width:60px">💰 금액</span>'
+        +'<input id="adv-amount" type="number" placeholder="0" style="flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-weight:700;background:var(--bg);color:var(--text)">'
+        +'<span style="font-size:12px;color:var(--text3)">원</span>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:8px">'
+        +'<span style="font-size:11px;color:var(--text3);font-weight:700;min-width:60px">📊 이자율</span>'
+        +'<input id="adv-rate" type="number" value="'+defaultRate+'" min="0" max="100" step="0.5" style="width:64px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:700;background:var(--bg);color:var(--text)">'
+        +'<span style="font-size:12px;color:var(--text3)">%</span>'
+        +'<button onclick="_saveAdvRate(parseFloat(document.getElementById(\'adv-rate\').value)||0)" style="flex:1;padding:6px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;font-size:11px;cursor:pointer;color:var(--text2)">기본값 저장</button>'
+      +'</div>'
+      +'<div id="adv-calc" style="display:none;background:var(--bg2);border-radius:10px;padding:12px;border:1.5px solid var(--border)">'
+        +'<div style="font-size:11px;color:var(--text3);font-weight:700;margin-bottom:8px">💡 가불 계산 결과</div>'
+        +'<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)">'
+          +'<span style="font-size:13px;color:var(--text2)">가불 금액</span>'
+          +'<span id="adv-r-amount" style="font-size:14px;font-weight:700;color:var(--text1)">0원</span>'
+        +'</div>'
+        +'<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)">'
+          +'<span id="adv-r-rate-label" style="font-size:13px;color:#f59e0b">이자 (0%)</span>'
+          +'<span id="adv-r-interest" style="font-size:14px;font-weight:700;color:#f59e0b">+0원</span>'
+        +'</div>'
+        +'<div style="display:flex;justify-content:space-between;padding:6px 0;margin-top:2px">'
+          +'<span style="font-size:13px;font-weight:700;color:var(--red)">실 지급액</span>'
+          +'<span id="adv-r-net" style="font-size:16px;font-weight:800;color:var(--red)">0원</span>'
+        +'</div>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:8px">'
+        +'<span style="font-size:11px;color:var(--text3);font-weight:700;min-width:60px">📝 메모</span>'
+        +'<input id="adv-note" type="text" placeholder="예: 긴급 가불, 생활비 등" style="flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text)">'
+      +'</div>'
+      +'</div>'
+      +'<div class="mdf">'
+        +'<button class="btn" onclick="var m=document.getElementById(\'mo-advance\');if(m)m.remove()">취소</button>'
+        +'<button class="btn btn-blue" onclick="_saveAdvance()">💸 저장</button>'
+      +'</div></div>';
+    mo.innerHTML=html;
+    document.getElementById('modals').appendChild(mo);
+    function _calcAdv(){
+      var amt=parseFloat(document.getElementById('adv-amount').value)||0;
+      var rate=parseFloat(document.getElementById('adv-rate').value)||0;
+      var calc=document.getElementById('adv-calc');
+      if(amt>0){
+        var interest=Math.round(amt*rate/100);
+        var net=amt-interest;
+        document.getElementById('adv-r-amount').textContent=amt.toLocaleString()+'원';
+        document.getElementById('adv-r-rate-label').textContent='이자 ('+rate+'%)';
+        document.getElementById('adv-r-interest').textContent='+'+interest.toLocaleString()+'원';
+        document.getElementById('adv-r-net').textContent=net.toLocaleString()+'원';
+        calc.style.display='block';
+      }else{
+        calc.style.display='none';
+      }
+    }
+    document.getElementById('adv-amount').addEventListener('input',_calcAdv);
+    document.getElementById('adv-rate').addEventListener('input',_calcAdv);
+  });
+}
+function _saveAdvance(){
   var name=(document.getElementById('adv-name')||{}).value||'';
   var amount=parseFloat((document.getElementById('adv-amount')||{}).value)||0;
   var rate=parseFloat((document.getElementById('adv-rate')||{}).value)||0;
   var note=(document.getElementById('adv-note')||{}).value||'';
+  var dateStr=(document.getElementById('adv-date')||{}).value||'';
+  var interest=Math.round(amount*rate/100);
+  var net=amount-interest;
   if(!name||!amount){toast('이름과 금액을 입력하세요');return;}
+  if(!dateStr){toast('날짜를 선택하세요');return;}
   if(!_db||!_CU){toast('로그인 필요');return;}
+  var label='💸 가불: '+name+' '+amount.toLocaleString()+'원'
+    +(rate>0?' | 이자'+rate+'%('+interest.toLocaleString()+'원) | 실지급 '+net.toLocaleString()+'원':'');
   _db.collection('cal_memos').add({
-    type:'advance',text:'💸 가불: '+name+' '+amount.toLocaleString()+'원'+(rate>0?' (이자'+rate+'%/월)':''),
-    name:name,amount:amount,rate:rate,note:note,date:dateStr,
+    type:'advance',text:label,
+    name:name,amount:amount,rate:rate,interest:interest,net:net,note:note,date:dateStr,
     ym:dateStr.slice(0,7),day:parseInt(dateStr.slice(8))||1,
     dealerId:_CU.dealerId||'',createdAt:firebase.firestore.FieldValue.serverTimestamp()
   }).then(function(){
