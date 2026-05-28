@@ -5001,7 +5001,9 @@ function _dwTrack(cnt, defPrice){
 // ── 핵심 정산 계산 엔진
 function calcDonWaySettlement(orders, cfg){
   if(!orders||!orders.length) return null;
-  // ★ [방어2] 주차 필터 락: periodStart~periodEnd 범위 외 데이터 제외
+  var defPrice=cfg.defaultPrice||2900;
+
+  // ★ [방어2] 주차 필터 락
   var ps=cfg&&cfg.periodStart?new Date(cfg.periodStart):null;
   var pe=cfg&&cfg.periodEnd?new Date(cfg.periodEnd):null;
   if(ps&&pe){
@@ -5011,17 +5013,23 @@ function calcDonWaySettlement(orders, cfg){
       return t>=ps&&t<=pe;
     });
   }
-  // ★ validCount: 취소건(price≤0) 제외한 실 배달 건수
+
+  // ★ 총 건수로 트랙 결정 → 전 건 소급 적용 (주급 정산 방식)
+  // 예) 300건 달성 → 1번~300번 전부 4,000원 기준
   var cnt=orders.filter(function(o){return (o.platformPrice||0)>0;}).length;
-  var track=_dwTrack(cnt, cfg.defaultPrice||2900);
+  var track=_dwTrack(cnt, defPrice);
   var target=track.price;
+
   var pfSum=0, injected=0, extracted=0;
   var slotStat={};
   Object.keys(DW_SLOTS).forEach(function(k){slotStat[k]={cnt:0,pfSum:0,inject:0,extract:0};});
 
+  // ★ 일별 정산 집계
+  var dayMap={};
+
   var details=orders.map(function(o){
     var price=o.platformPrice||0;
-    // ★ [방어1] 취소/패널티 건: platformPrice≤0 → 보전·환수·카운트 완전 제외
+    // [방어1] 취소/패널티 건 완전 제외
     if(price<=0){
       return Object.assign({},o,{slot:'midnight',inject:0,extract:0,cancelled:true});
     }
@@ -5029,27 +5037,60 @@ function calcDonWaySettlement(orders, cfg){
     var slot=_dwSlot(o.hour||0);
     slotStat[slot].cnt++;
     slotStat[slot].pfSum+=price;
+
     var inj=0,ext=0;
-    if(slot!=='midnight'){   // 06:00~24:00만 밸런싱 적용
-      if(price<target){inj=Math.floor(target-price); injected+=inj; slotStat[slot].inject+=inj;}
-      else if(price>target){ext=Math.floor(price-target); extracted+=ext; slotStat[slot].extract+=ext;}
+    if(slot!=='midnight'){
+      var finalTarget=target+(o.event&&o.event.price?o.event.price:0);
+      if(price<finalTarget){
+        inj=Math.floor(finalTarget-price);
+        injected+=inj;
+        slotStat[slot].inject+=inj;
+      } else if(price>finalTarget){
+        ext=Math.floor(price-finalTarget);
+        extracted+=ext;
+        slotStat[slot].extract+=ext;
+      }
     }
+
+    // ★ 일별 집계
+    var dateKey=o.completedAt?String(o.completedAt).slice(0,10):'unknown';
+    if(!dayMap[dateKey])dayMap[dateKey]={cnt:0,pfSum:0,injected:0,extracted:0};
+    dayMap[dateKey].cnt++;
+    dayMap[dateKey].pfSum+=price;
+    dayMap[dateKey].injected+=inj;
+    dayMap[dateKey].extracted+=ext;
+
     return Object.assign({},o,{slot:slot,inject:inj,extract:ext});
   });
 
-  var preTax=Math.floor(pfSum+injected-extracted); // ★ 원단위 절사
-  var tax3=Math.floor(preTax*0.033);               // ★ [방어3] 3.3% 정확히 (30+3)
-  var totalTax=tax3;
+  // ★ 일별 실지급 계산
+  var dailyResults=Object.keys(dayMap).sort().map(function(d){
+    var dm=dayMap[d];
+    var dayPre=Math.floor(dm.pfSum+dm.injected-dm.extracted);
+    var dayTax=Math.floor(dayPre*0.033);
+    var dayDeduct=Math.floor((cfg.leaseFee||0)+(cfg.programFee||0)+(cfg.insuranceFee||0));
+    return {
+      date:d, cnt:dm.cnt, pfSum:dm.pfSum,
+      injected:dm.injected, extracted:dm.extracted,
+      preTax:dayPre, tax:dayTax, deduct:dayDeduct,
+      net:Math.max(0,Math.floor(dayPre-dayTax-dayDeduct))
+    };
+  });
+
+  var preTax=Math.floor(pfSum+injected-extracted);
+  var tax3=Math.floor(preTax*0.033);
   var deduct=Math.floor((cfg.leaseFee||0)+(cfg.programFee||0)+(cfg.insuranceFee||0));
-  var net=Math.max(0,Math.floor(preTax-totalTax-deduct)); // ★ 최종 절사
+  var net=Math.max(0,Math.floor(preTax-tax3-deduct));
 
   return{
     trackLabel:track.label, targetPrice:target, isDefault:track.isDefault,
     totalCount:cnt, pfSum:pfSum,
     injected:injected, extracted:extracted, agencyMargin:extracted-injected,
-    preTax:preTax, tax3:tax3, tax03:0, totalTax:totalTax,
+    preTax:preTax, tax3:tax3, tax03:0, totalTax:tax3,
     leaseFee:cfg.leaseFee||0, programFee:cfg.programFee||0, insuranceFee:cfg.insuranceFee||0,
-    deduct:deduct, net:net, slotStat:slotStat, details:details,
+    deduct:deduct, net:net,
+    slotStat:slotStat, details:details,
+    dailyResults:dailyResults,
     riderName:cfg.riderName||'', riderId:cfg.riderId||'', period:cfg.period||''
   };
 }
@@ -6093,6 +6134,14 @@ window._dwShowStatement=function(idx){
       +'<button class="btn" onclick="this.closest(\'.mo\').remove()">닫기</button>'
     +'</div>'
   +'</div>';
+  // ★ 일별 정산 내역 추가
+  if(r.dailyResults&&r.dailyResults.length){
+    var dailyRows=r.dailyResults.map(function(d){
+      return '<tr style="border-bottom:1px solid #e5e7eb">'        +'<td style="padding:4px 8px;font-size:11px;font-weight:600">'+d.date+'</td>'        +'<td style="padding:4px 8px;text-align:center;font-size:11px">'+d.cnt+'건</td>'        +'<td style="padding:4px 8px;text-align:right;font-size:11px">₩'+d.pfSum.toLocaleString()+'</td>'        +'<td style="padding:4px 8px;text-align:right;font-size:11px;color:#b45309">'+(d.injected>0?'-₩'+d.injected.toLocaleString():'—')+'</td>'        +'<td style="padding:4px 8px;text-align:right;font-size:11px;color:#047857">'+(d.extracted>0?'+₩'+d.extracted.toLocaleString():'—')+'</td>'        +'<td style="padding:4px 8px;text-align:right;font-size:12px;font-weight:800;color:#1d4ed8">₩'+d.net.toLocaleString()+'</td>'      +'</tr>';
+    }).join('');
+    var dailySection='<div style="padding:0 16px 16px">'      +'<div style="font-size:12px;font-weight:800;margin-bottom:8px;color:#374151;padding-top:12px;border-top:1.5px dashed #e5e7eb">📅 일별 정산 내역</div>'      +'<table style="width:100%;border-collapse:collapse">'        +'<thead><tr style="background:#f3f4f6;font-size:10px">'          +'<th style="padding:5px 8px;text-align:left">날짜</th>'          +'<th style="padding:5px 8px">건수</th>'          +'<th style="padding:5px 8px;text-align:right">플랫폼</th>'          +'<th style="padding:5px 8px;text-align:right;color:#b45309">보전</th>'          +'<th style="padding:5px 8px;text-align:right;color:#047857">환수</th>'          +'<th style="padding:5px 8px;text-align:right;color:#1d4ed8">일 실지급</th>'        +'</tr></thead>'        +'<tbody>'+dailyRows+'</tbody>'      +'</table>'    +'</div>';
+    html=html.replace('</div>\n    +\'<div class=\"mdf\">', dailySection+'\n    '+'<div class="mdf">');
+  }
   mo.innerHTML=html;
   document.body.appendChild(mo);
 };
@@ -6476,16 +6525,7 @@ function _dwRenderDriverDash(s){
       +'<div style="font-size:22px;font-weight:900;color:var(--brand)">₩'+Math.round(s.net||0).toLocaleString()+'</div>'
     +'</div>'
   +'</div>'
-  +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">'
-    +'<div style="background:#fef3c7;border-radius:12px;padding:10px;text-align:center">'
-      +'<div style="font-size:10px;color:#92400e">대리점 보전</div>'
-      +'<div style="font-size:15px;font-weight:800;color:#b45309">+₩'+Math.round(s.injected||0).toLocaleString()+'</div>'
-    +'</div>'
-    +'<div style="background:#d1fae5;border-radius:12px;padding:10px;text-align:center">'
-      +'<div style="font-size:10px;color:#065f46">환수 차감</div>'
-      +'<div style="font-size:15px;font-weight:800;color:#047857">-₩'+Math.round(s.extracted||0).toLocaleString()+'</div>'
-    +'</div>'
-  +'</div>'
+    // ★ 보전/환수 미표시 (관리자 전용 정보)
 
   // ── 시간대별 수행 분포
   +(cnt>0?
@@ -11827,7 +11867,9 @@ function openSendModal(x){
   var email=x.email||x.driverEmail||'';
   var docId=x.id||x.fbId||'';
 
-  var msgArr=['[DONWAY 정산명세서]','기사: '+name,'정산월: '+month,'총수익(VAT포함): '+fmt(vatIncome)+'원','공제합계: -'+fmt(emp)+'원','─────────────','실지급: '+fmt(net)+'원','','문의: 051-711-3103','엠비티아이 유한회사'];
+  // ★ 기사 발송 메시지: 미계약건 금액/단가 미포함 (관리자 전용)
+  var _driverIncome = vatIncome - (r.nocont||0); // 미계약 제외한 수익
+  var msgArr=['[DONWAY 정산명세서]','기사: '+name,'정산월: '+month,'배송 수익(VAT포함): '+fmt(_driverIncome)+'원','공제합계: -'+fmt(emp)+'원','─────────────','실지급: '+fmt(net)+'원','','문의: 051-711-3103','엠비티아이 유한회사'];
   var msg=msgArr.join('\n');
   var msgEnc=encodeURIComponent(msg);
   var subjectEnc=encodeURIComponent('[DONWAY] '+month+' 정산명세서 - '+name);
@@ -12960,7 +13002,8 @@ function _showSEModal(s){
       sign:'+',editable:true,
       note:(s.nocontCnt?s.nocontCnt+'건':'')+
            (RPRICE&&(RPRICE['nocont_w1']||RPRICE['nocont_w2'])?
-            ' (W1:'+Number(RPRICE['nocont_w1']||0).toLocaleString()+'/W2:'+Number(RPRICE['nocont_w2']||0).toLocaleString()+'원)':' 금액 직접입력')},
+            ' (W1:'+Number(RPRICE['nocont_w1']||0).toLocaleString()+'/W2:'+Number(RPRICE['nocont_w2']||0).toLocaleString()+'원) 🔒관리자 전용':'') +
+           ' — 기사 명세서 미표시'},
     {ic:'⚠️',n:'⑥ 분실/파손 공제',id:'se-dmg',val:s.dmg||0,sign:'-',editable:true,note:'사유 입력',hasReason:true,reasonId:'se-dmg-reason',reasonVal:s.dmgReason||''},
     {ic:'➕',n:'⑦ 기타(+)'+(s.etcPlusTL?'<span style="font-size:9px;color:#7c3aed;margin-left:4px">+팀장수수료'+s.etcPlusTL.toLocaleString()+'원</span>':''),id:'se-etc-plus',val:(s.etcPlus||0)+(s.etcPlusTL||0),sign:'+',editable:false,note:'사유 입력',hasReason:true,reasonId:'se-etc-plus-reason',reasonVal:(s.etcPlusTL?(s.etcPlusReason?s.etcPlusReason+' / ':'')+s.etcPlusTLReason:s.etcPlusReason||'')},
     {ic:'➖',n:'⑧ 기타(-)',id:'se-etc-minus',val:s.etcMinus||0,sign:'-',editable:true,note:'사유 입력',hasReason:true,reasonId:'se-etc-minus-reason',reasonVal:s.etcMinusReason||''},
