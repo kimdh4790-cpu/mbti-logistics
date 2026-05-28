@@ -3819,14 +3819,11 @@ function _importRosterExcel(input){
 
 // ── 방문자 관리 ──
 function _attRenderVisitor(){
-  var area=document.getElementById('att-visitor-area');
-  if(!area)return;
-  var did=_CU.dealerId;
-  area.innerHTML='<div class="card"><div class="card-title">🙋 방문자 관리</div>'    +'<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">'    +'<input type="date" id="vis-date" value="'+new Date().toISOString().slice(0,10)+'" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:12px">'    +'<button onclick="_visLoad()" class="btn btn-blue" style="font-size:12px">🔍 조회</button>'    +'</div>'    +'<div id="vis-list"><div style="font-size:12px;color:var(--text3);text-align:center;padding:20px">조회를 눌러주세요</div></div>'    +'</div>';
+  _renderCustomerDashboard();
 }
 function _visLoad(){
   var area=document.getElementById('vis-list');
-  var date=document.getElementById('vis-date').value;
+  var date=(document.getElementById('cst-vis-date')||document.getElementById('vis-date')||{value:new Date().toISOString().slice(0,10)}).value;
   var did=_CU.dealerId;
   area.innerHTML='<div style="font-size:12px;color:var(--text3)">로딩 중...</div>';
   _db.collection('visitors').where('dealerId','==',did).where('visitDate','==',date)
@@ -3846,6 +3843,316 @@ function _visLoad(){
 }
 
 // ── URL 발급 ──
+
+// ════════════════════════════════════════════════════════
+// 고객 관리 기능 (4개 신규)
+// 1. 고객 앱 설치 유도
+// 2. VIP·재방문 자동 감지
+// 3. 관리자 → 고객 일괄 알림 발송
+// 4. 고객 현황 대시보드
+// ════════════════════════════════════════════════════════
+
+// ── 1. 방문자 등록 완료 시 앱 설치 링크 자동 발송 ──
+function _visSendAppInvite(phone, name, dealerId){
+  if(!phone || phone.length < 10) return;
+  var normalized = phone.replace(/[^0-9]/g,'');
+  var msg = '[DONWAY] '+name+'님, 방문해주셔서 감사합니다.\n'
+          + '앱을 설치하시면 이벤트·공지를 앱 알림으로 받으실 수 있습니다.\n'
+          + '▶ https://donway.ai.kr/app?d='+dealerId;
+  // Firestore에 앱 초대 기록
+  _db.collection('customer_invites').add({
+    dealerId: dealerId,
+    phone: normalized,
+    name: name,
+    invitedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    status: 'sent',
+    type: 'visitor_app_invite'
+  }).catch(function(e){ console.warn('초대 기록 실패:', e); });
+  // 문자 발송 (카카오 fallback)
+  _db.collection('sms_queue').add({
+    dealerId: dealerId,
+    to: normalized,
+    message: msg,
+    type: 'app_invite',
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){ toast('📱 앱 설치 안내 발송됨'); })
+    .catch(function(e){ console.warn('문자 큐 실패:', e); });
+}
+
+// ── 2. 방문 횟수 카운트 및 VIP 자동 태깅 ──
+function _visCountAndTag(phone, dealerId){
+  if(!phone) return;
+  var normalized = phone.replace(/[^0-9]/g,'');
+  var ref = _db.collection('customer_profiles')
+               .where('dealerId','==',dealerId)
+               .where('phone','==',normalized);
+  ref.get().then(function(snap){
+    if(snap.empty){
+      // 첫 방문 → 신규 고객 프로필 생성
+      _db.collection('customer_profiles').add({
+        dealerId: dealerId,
+        phone: normalized,
+        visitCount: 1,
+        firstVisit: firebase.firestore.FieldValue.serverTimestamp(),
+        lastVisit: firebase.firestore.FieldValue.serverTimestamp(),
+        tag: 'new',
+        appInstalled: false
+      });
+    } else {
+      // 재방문 → 카운트 업
+      var doc = snap.docs[0];
+      var cnt = (doc.data().visitCount||0) + 1;
+      var tag = cnt >= 10 ? 'vvip' : cnt >= 5 ? 'vip' : cnt >= 3 ? 'regular' : 'new';
+      doc.ref.update({
+        visitCount: cnt,
+        lastVisit: firebase.firestore.FieldValue.serverTimestamp(),
+        tag: tag
+      });
+      // VIP 달성 시 축하 알림
+      if(cnt === 5 || cnt === 10){
+        var label = cnt >= 10 ? 'VVIP' : 'VIP';
+        toast('⭐ '+phone+' '+label+' 달성!');
+        _db.collection('customer_notifications').add({
+          dealerId: dealerId,
+          phone: normalized,
+          title: label+' 등급 달성 축하드립니다!',
+          body: '총 '+cnt+'회 방문하셨습니다. 특별 혜택을 확인하세요.',
+          type: 'vip_achieved',
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          read: false
+        });
+      }
+    }
+  }).catch(function(e){ console.warn('고객 태깅 실패:', e); });
+}
+
+// ── 3. 고객 현황 대시보드 렌더링 ──
+function _renderCustomerDashboard(){
+  var did = _CU.dealerId;
+  var area = document.getElementById('att-visitor-area');
+  if(!area) return;
+
+  // 현황 카드 HTML
+  var statsHtml = '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:16px">'
+    + '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center">'
+    + '<div style="font-size:22px;font-weight:700;color:var(--brand)" id="cst-total">-</div>'
+    + '<div style="font-size:11px;color:var(--text3);margin-top:2px">총 등록 고객</div></div>'
+    + '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center">'
+    + '<div style="font-size:22px;font-weight:700;color:#00e87a" id="cst-app">-</div>'
+    + '<div style="font-size:11px;color:var(--text3);margin-top:2px">앱 설치 고객</div></div>'
+    + '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center">'
+    + '<div style="font-size:22px;font-weight:700;color:#f59e0b" id="cst-vip">-</div>'
+    + '<div style="font-size:11px;color:var(--text3);margin-top:2px">VIP 고객</div></div>'
+    + '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center">'
+    + '<div style="font-size:22px;font-weight:700;color:#ec4899" id="cst-today">-</div>'
+    + '<div style="font-size:11px;color:var(--text3);margin-top:2px">오늘 방문</div></div>'
+    + '</div>';
+
+  // 고객 알림 발송 UI
+  var notifyHtml = '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px">'
+    + '<div style="font-size:13px;font-weight:700;margin-bottom:10px">📣 고객 알림 발송</div>'
+    + '<div style="display:flex;flex-direction:column;gap:8px">'
+    + '<div style="display:flex;gap:8px">'
+    + '<select id="cst-noti-target" style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:12px">'
+    + '<option value="all">전체 고객</option>'
+    + '<option value="app">앱 설치 고객만</option>'
+    + '<option value="vip">VIP 이상만</option>'
+    + '<option value="regular">단골 이상만</option>'
+    + '</select>'
+    + '<select id="cst-noti-type" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:12px">'
+    + '<option value="event">🎉 이벤트</option>'
+    + '<option value="notice">📢 공지</option>'
+    + '<option value="vip">⭐ VIP 혜택</option>'
+    + '</select>'
+    + '</div>'
+    + '<input id="cst-noti-title" placeholder="알림 제목 (예: 이번 주 특별 할인 20%!)" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:12px;width:100%;box-sizing:border-box">'
+    + '<textarea id="cst-noti-body" placeholder="내용을 입력하세요..." rows="3" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:12px;width:100%;box-sizing:border-box;resize:vertical"></textarea>'
+    + '<button onclick="_sendCustomerNotification()" class="btn btn-blue" style="width:100%;padding:10px">📱 고객에게 앱 푸시 발송</button>'
+    + '</div></div>';
+
+  // 고객 목록
+  var listHtml = '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
+    + '<div style="font-size:13px;font-weight:700">👥 고객 목록</div>'
+    + '<div style="display:flex;gap:6px">'
+    + '<select id="cst-filter-tag" onchange="_loadCustomerList()" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:11px">'
+    + '<option value="all">전체</option><option value="vvip">VVIP</option><option value="vip">VIP</option><option value="regular">단골</option><option value="new">신규</option>'
+    + '</select>'
+    + '<button onclick="_loadCustomerList()" class="btn" style="font-size:11px;padding:4px 10px">새로고침</button>'
+    + '</div></div>'
+    + '<div id="cst-list">로딩 중...</div></div>';
+
+  area.innerHTML = '<div class="card"><div class="card-title">🛍️ 고객 관리</div>'
+    + statsHtml + notifyHtml + listHtml + '</div>';
+
+  // 통계 로드
+  _loadCustomerStats();
+  _loadCustomerList();
+
+  // 날짜별 방문자 조회 버튼 추가
+  var visitBox = document.createElement('div');
+  visitBox.innerHTML = '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:10px">'
+    + '<div style="font-size:13px;font-weight:700;margin-bottom:10px">📋 날짜별 방문 기록</div>'
+    + '<div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">'
+    + '<input type="date" id="cst-vis-date" value="'+new Date().toISOString().slice(0,10)+'" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:12px">'
+    + '<button onclick="_visLoad()" class="btn btn-blue" style="font-size:12px">🔍 조회</button>'
+    + '</div>'
+    + '<div id="vis-list"><div style="font-size:12px;color:var(--text3);text-align:center;padding:12px">조회를 눌러주세요</div></div></div>';
+  if(area.querySelector('.card')) area.querySelector('.card').appendChild(visitBox.firstChild);
+}
+
+// ── 4. 고객 통계 로드 ──
+function _loadCustomerStats(){
+  var did = _CU.dealerId;
+  var today = new Date().toISOString().slice(0,10);
+
+  _db.collection('customer_profiles').where('dealerId','==',did).get().then(function(snap){
+    var total = snap.size;
+    var appCnt = 0, vipCnt = 0;
+    snap.forEach(function(d){
+      var dt = d.data();
+      if(dt.appInstalled) appCnt++;
+      if(dt.tag === 'vip' || dt.tag === 'vvip') vipCnt++;
+    });
+    var el1=document.getElementById('cst-total');
+    var el2=document.getElementById('cst-app');
+    var el3=document.getElementById('cst-vip');
+    if(el1) el1.textContent = total;
+    if(el2) el2.textContent = appCnt;
+    if(el3) el3.textContent = vipCnt;
+  }).catch(function(e){ console.warn('통계 로드 실패:', e); });
+
+  _db.collection('visitors').where('dealerId','==',did).where('visitDate','==',today).get().then(function(snap){
+    var el=document.getElementById('cst-today');
+    if(el) el.textContent = snap.size;
+  }).catch(function(){});
+}
+
+// ── 5. 고객 목록 로드 ──
+function _loadCustomerList(){
+  var did = _CU.dealerId;
+  var tag = (document.getElementById('cst-filter-tag')||{}).value || 'all';
+  var list = document.getElementById('cst-list');
+  if(!list) return;
+  list.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:16px">로딩 중...</div>';
+
+  var query = _db.collection('customer_profiles').where('dealerId','==',did).orderBy('lastVisit','desc').limit(50);
+  if(tag !== 'all') query = query.where('tag','==',tag);
+
+  query.get().then(function(snap){
+    if(snap.empty){
+      list.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:20px">등록된 고객이 없습니다</div>';
+      return;
+    }
+    var TAG_LABELS = {vvip:'💎 VVIP', vip:'⭐ VIP', regular:'🔄 단골', new:'🆕 신규'};
+    var TAG_COLORS = {vvip:'#a855f7', vip:'#f5b800', regular:'#00e87a', new:'#60a5fa'};
+    var html = '<div style="display:flex;flex-direction:column;gap:6px">';
+    snap.forEach(function(d){
+      var c = d.data();
+      var tag2 = c.tag||'new';
+      var lastDate = c.lastVisit&&c.lastVisit.toDate ? c.lastVisit.toDate().toLocaleDateString('ko-KR') : '-';
+      html += '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg);border-radius:8px;border:1px solid var(--border)">'
+        + '<div style="width:32px;height:32px;border-radius:50%;background:rgba(0,200,248,.1);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--brand);flex-shrink:0">'
+        + (c.name||'?')[0] + '</div>'
+        + '<div style="flex:1;min-width:0">'
+        + '<div style="font-size:12px;font-weight:600">' + (c.name||'이름없음') + '</div>'
+        + '<div style="font-size:10px;color:var(--text3)">' + (c.phone||'') + ' · 방문 ' + (c.visitCount||1) + '회 · ' + lastDate + '</div>'
+        + '</div>'
+        + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">'
+        + '<span style="font-size:10px;font-weight:700;color:'+(TAG_COLORS[tag2]||'#60a5fa')+'">'+( TAG_LABELS[tag2]||'신규')+'</span>'
+        + (c.appInstalled ? '<span style="font-size:9px;color:#00e87a">📱 앱설치</span>' : '<span style="font-size:9px;color:var(--text3)">앱미설치</span>')
+        + '</div></div>';
+    });
+    html += '</div>';
+    list.innerHTML = html;
+  }).catch(function(e){
+    list.innerHTML = '<div style="font-size:12px;color:#f87171;padding:12px">오류: '+e.message+'</div>';
+  });
+}
+
+// ── 6. 고객 알림 일괄 발송 ──
+function _sendCustomerNotification(){
+  var did = _CU.dealerId;
+  var target = (document.getElementById('cst-noti-target')||{}).value||'all';
+  var type = (document.getElementById('cst-noti-type')||{}).value||'notice';
+  var title = (document.getElementById('cst-noti-title')||{}).value.trim();
+  var body = (document.getElementById('cst-noti-body')||{}).value.trim();
+
+  if(!title||!body){ toast('❌ 제목과 내용을 입력해주세요'); return; }
+
+  var TYPE_LABELS = {event:'🎉 이벤트', notice:'📢 공지', vip:'⭐ VIP 혜택'};
+  var fullTitle = (TYPE_LABELS[type]||'') + ' ' + title;
+
+  // Firestore에 발송 큐 추가 (Cloud Function이 처리)
+  _db.collection('customer_push_queue').add({
+    dealerId: did,
+    target: target,
+    title: fullTitle,
+    body: body,
+    type: type,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    status: 'pending',
+    sentBy: _CU.email||'admin'
+  }).then(function(){
+    // 발송 기록도 저장
+    _db.collection('customer_notifications').add({
+      dealerId: did,
+      target: target,
+      title: fullTitle,
+      body: body,
+      type: type,
+      sentAt: firebase.firestore.FieldValue.serverTimestamp(),
+      sentBy: _CU.email||'admin'
+    });
+    toast('✅ 알림 발송 요청 완료!');
+    var ti = document.getElementById('cst-noti-title');
+    var bo = document.getElementById('cst-noti-body');
+    if(ti) ti.value='';
+    if(bo) bo.value='';
+  }).catch(function(e){ toast('❌ 발송 실패: '+e.message); });
+}
+
+
+// ── 실시간 방문자 감지 → 자동 VIP 태깅 + 앱 초대 ──
+var _visRealtimeUnsub = null;
+function _startVisitorRealtimeWatch(){
+  if(_visRealtimeUnsub){ _visRealtimeUnsub(); _visRealtimeUnsub=null; }
+  var did = _CU.dealerId;
+  var today = new Date().toISOString().slice(0,10);
+  // 오늘 방문자 실시간 감지
+  _visRealtimeUnsub = _db.collection('visitors')
+    .where('dealerId','==',did)
+    .where('visitDate','==',today)
+    .orderBy('visitedAt','desc')
+    .limit(1)
+    .onSnapshot(function(snap){
+      snap.docChanges().forEach(function(change){
+        if(change.type === 'added'){
+          var v = change.doc.data();
+          if(v.phone){
+            // VIP 자동 태깅
+            _visCountAndTag(v.phone, did);
+            // 신규 방문자면 앱 설치 초대
+            var ref = _db.collection('customer_profiles')
+                         .where('dealerId','==',did)
+                         .where('phone','==',v.phone.replace(/[^0-9]/g,''));
+            ref.get().then(function(ps){
+              if(ps.empty && v.name){
+                _visSendAppInvite(v.phone, v.name, did);
+              }
+            });
+          }
+          // 통계 갱신
+          _loadCustomerStats();
+        }
+      });
+    }, function(e){ console.warn('실시간 감지 오류:', e); });
+}
+
+// ── Firestore 규칙 필요 컬렉션 목록 ──
+// customer_profiles, customer_invites, customer_push_queue,
+// customer_notifications, sms_queue
+
 function _attRenderUrl(){
   var area=document.getElementById('att-url-area');
   if(!area)return;
@@ -9376,7 +9683,7 @@ function pageAttendance(){
     +'<button id="att-tab-qr" class="btn btn-blue" onclick="_attTab(\'qr\')" style="font-size:12px">📺 QR 코드 표시</button>'
     +'<button id="att-tab-today" class="btn" onclick="_attTab(\'today\')" style="font-size:12px">📋 오늘 현황</button>'
     +'<button id="att-tab-hist" class="btn" onclick="_attTab(\'hist\')" style="font-size:12px">📅 기간별 조회</button>'
-    +'<button id="att-tab-visitor" class="btn" onclick="_attTab(\'visitor\')" style="font-size:12px">🙋 방문자 관리</button>'
+    +'<button id="att-tab-visitor" class="btn" onclick="_attTab(\'visitor\')" style="font-size:12px">🛍️ 고객 관리</button>'
     +'<button id="att-tab-url" class="btn" onclick="_attTab(\'url\')" style="font-size:12px;background:linear-gradient(135deg,#0ea5e9,#6366f1);color:#fff;border:none">🔗 URL 발급</button>'
     +'<button id="att-tab-guide" class="btn" onclick="_attTab(\'guide\')" style="font-size:12px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none">📄 안내문 출력</button>'
     +'<button id="att-tab-sim" class="btn" onclick="_attTab(\'sim\')" style="font-size:12px;background:linear-gradient(135deg,#f97316,#ef4444);color:#fff;border:none">🧪 시뮬레이션</button>'
@@ -9405,7 +9712,7 @@ function _attTab(tab){
   if(tab==='qr')_attRenderQR();
   if(tab==='today')_attRenderToday();
   if(tab==='hist')_attRenderHist();
-  if(tab==='visitor')_attRenderVisitor();
+  if(tab==='visitor'){_attRenderVisitor(); _startVisitorRealtimeWatch();}
   if(tab==='url')_attRenderUrl();
   if(tab==='guide')_attRenderGuide();
   if(tab==='sim')_attRenderSim();
