@@ -8119,9 +8119,44 @@ async function runDealerPatch(){
   alert('패치 완료! 총 '+patched+'개 문서에 dealerId 추가됨\n\n이제 Rules 강화 요청해주세요!');
 }
 
+// ── 슈퍼어드민 dealerId 패치 ──
+async function runDealerPatch(){
+  if(!isSuperAdmin()){toast('❌ 슈퍼어드민만 가능');return;}
+  if(!confirm('모든 dealerId 없는 문서에 현재 UID를 추가합니다. 계속할까요?'))return;
+  var did=_CU.dealerId||_CU.uid;
+  toast('🔄 패치 시작...');
+  var cols=['drivers','settlements','attendance','settings','notices',
+    'delivery_sessions','hourly_settlements','visitors','leave_payments',
+    'overtimes','leaves','accidents','activity','emergency_deliveries',
+    'campSupports','inquiries','complaints','photo_logs','driver_locations',
+    'admin_notifications','temp_logs','deliveries','device_tokens',
+    'driver_notifications','vehicles','expenses','contracts',
+    'signatures','driverDocs','cal_memos','roster_week'];
+  var total=0,patched=0;
+  for(var i=0;i<cols.length;i++){
+    try{
+      var snap=await _db.collection(cols[i]).get();
+      var noPatch=snap.docs.filter(function(d){return !d.data().dealerId;});
+      if(!noPatch.length)continue;
+      var batches=[];
+      for(var j=0;j<noPatch.length;j+=400)batches.push(noPatch.slice(j,j+400));
+      for(var b=0;b<batches.length;b++){
+        var batch=_db.batch();
+        batches[b].forEach(function(doc){batch.update(doc.ref,{dealerId:did});});
+        await batch.commit();
+        patched+=batches[b].length;
+      }
+      total+=snap.size;
+      toast('✅ '+cols[i]+' 완료');
+    }catch(e){console.warn(cols[i],e.message);}
+  }
+  toast('🎉 패치 완료! '+patched+'개 문서 업데이트');
+  console.log('패치 완료 - dealerId:'+did+', 패치:'+patched+'개');
+}
+
 function pageHome(){
   document.getElementById('page-title').textContent='🏠 대시보드';
-  document.getElementById('topbar-right').innerHTML='';
+  document.getElementById('topbar-right').innerHTML=isSuperAdmin()?'<button onclick="runDealerPatch()" style="padding:6px 10px;background:#dc2626;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">🔧 dealerId 패치</button>':'';
   var el=document.getElementById('content');
   if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
   var did=_CU.dealerId;
