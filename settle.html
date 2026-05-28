@@ -895,7 +895,6 @@ function checkMinWage(totalPay, totalHours) {
 var RPRICE = {};
 var RPRICE_ADJ = {}; // 수정 단가 (라우트수정단가 파일 적용)
 // ※ 단가는 Firestore(_routePrices)에서만 로드. 하드코딩 기본값 없음.
-var TL_PRICES = []; // 팀장 수수료: [{name,id,routes:{"608B":60,...}}]
 // 초기화(전체초기화) 시 완전히 비워집니다.
 // 캠프명 매핑 (라우트 숫자코드 → 캠프명)
 // 캠프 설정 (Firestore {dealerId}_campConfig 에서 로드 - per dealer)
@@ -1102,7 +1101,7 @@ function calcNet(x){
   var nocont=_nocontCnt>0
     ? (_nocontUnit>0 ? _nocontCnt*_nocontUnit : (+x.nocont||+x.nocontAmt||0))
     : (+x.nocont||+x.nocontAmt||0);
-  var etcPlus  = (+x.etcPlus||0) + (+x.etcPlusTL||0);  // ★ 기타(+) + 팀장수수료
+  var etcPlus  = +x.etcPlus  || 0;  // ★ 기타(+)
   var etcMinus = +x.etcMinus || 0;  // ★ 기타(-)
   // ★ v9.25: 기타(+)만 세금계산서(income)에 포함 → 고용·산재 기준
   //           기타(-)는 세금계산서 제외, 실지급에서만 차감 (공제 항목)
@@ -1153,6 +1152,160 @@ function _extractMonthFromFilename(filename){
   if(m2)return m2[1]+'-'+m2[2];
   return null;
 }
+
+// ══════════════════════════════════════════════════════
+// DONWAY 다층 인원 방지 시스템 (Plan Guard)
+// 층1: 플랜별 월 누적 고유 기사 한도
+// 층2: 전화번호 정규화 동일인 탐지
+// 층3: 사업자번호 단일 계정 강제
+// 층4: 급격한 인원 변동 이상감지
+// 층5: 관리자 알림 (의심 패턴 자동 플래그)
+// ══════════════════════════════════════════════════════
+
+var _PLAN_LIMITS = {
+  qr:         { name:'QR 근태',   limit30:30,  limit60:60,  limit100:100, limit200:200 },
+  payroll:    { name:'급여 관리', limit30:30,  limit60:60,  limit100:100, limit200:200 },
+  settle:     { name:'AI 정산',   limit30:30,  limit60:60,  limit100:100, limit200:200 },
+  delivery:   { name:'배달대행',  limit30:30,  limit60:60,  limit100:100, limit200:200 },
+  premium:    { name:'풀 패키지', limit30:200, limit60:200, limit100:200, limit200:200 },
+  any_paid:   { name:'유료',      limit30:30,  limit60:60,  limit100:100, limit200:200 }
+};
+
+// 현재 플랜 기사 한도 반환
+function _getPlanDriverLimit(){
+  if(!window._CU)return 30;
+  var plan=window._CU.plan||'free';
+  var tier=window._CU.tier||'limit30';
+  var cfg=_PLAN_LIMITS[plan]||_PLAN_LIMITS['any_paid'];
+  return cfg[tier]||30;
+}
+
+// 층1+2: 월 누적 기사 검증 (전화번호 정규화 포함)
+function _normPhone(p){
+  if(!p)return '';
+  return String(p).replace(/[^0-9]/g,'').replace(/^82/,'0');
+}
+
+function _getMonthlySettledKey(dealerId, month){
+  return 'planGuard_' + dealerId + '_' + month;
+}
+
+// Firestore에서 당월 정산된 고유 기사 수 조회 + 신규 추가 검증
+function _checkPlanGuard(newDrivers, month, cb){
+  if(!window._db || !window._CU){ cb(true, 0, 0); return; }
+  var dealerId = window._CU.dealerId;
+  var limit = _getPlanDriverLimit();
+  var guardRef = window._db.collection('plan_guards').doc(dealerId + '_' + month);
+
+  guardRef.get().then(function(doc){
+    var existing = doc.exists ? (doc.data().phones || []) : [];
+
+    // 층2: 전화번호 정규화 → 동일인 탐지
+    var normExisting = existing.map(function(p){ return _normPhone(p); }).filter(Boolean);
+    var normNew = newDrivers.map(function(d){
+      return _normPhone(d.phone||d.tel||d.mobile||d.연락처||'');
+    }).filter(Boolean);
+
+    // 중복 제거 — 기존 + 신규 합집합
+    var allSet = {};
+    normExisting.forEach(function(p){ allSet[p]=1; });
+    normNew.forEach(function(p){ allSet[p]=1; });
+    var totalUnique = Object.keys(allSet).length;
+    var existingCount = normExisting.length;
+    var newCount = totalUnique - existingCount;
+
+    // 층4: 급격한 인원 변동 감지 (기존 대비 2배 이상 신규 추가 시 플래그)
+    if(newCount > 0 && existingCount > 0 && newCount >= existingCount * 2){
+      _flagSuspiciousPattern(dealerId, month, existingCount, newCount, 'sudden_increase');
+    }
+
+    if(totalUnique > limit){
+      cb(false, totalUnique, limit);
+    } else {
+      // 정상 → Firestore 업데이트
+      var allPhones = Object.keys(allSet);
+      guardRef.set({
+        dealerId: dealerId,
+        month: month,
+        phones: allPhones,
+        count: allPhones.length,
+        limit: limit,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, {merge:true}).catch(function(){});
+      cb(true, totalUnique, limit);
+    }
+  }).catch(function(){ cb(true, 0, 0); });
+}
+
+// 층5: 관리자 이상패턴 알림
+function _flagSuspiciousPattern(dealerId, month, existing, added, type){
+  if(!window._db)return;
+  window._db.collection('plan_guard_alerts').add({
+    dealerId: dealerId,
+    month: month,
+    type: type,
+    existingCount: existing,
+    addedCount: added,
+    flaggedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    status: 'pending'
+  }).catch(function(){});
+}
+
+// 층3: 사업자번호 단일 계정 강제 (가입 시 체크)
+function _checkBizNoUnique(bizNo, cb){
+  if(!window._db || !bizNo){ cb(true); return; }
+  var norm = String(bizNo).replace(/[^0-9]/g,'');
+  window._db.collection('companies')
+    .where('bizNo','==',norm)
+    .limit(2).get()
+    .then(function(snap){
+      if(snap.size > 1){
+        cb(false); // 이미 같은 사업자번호 존재
+      } else {
+        cb(true);
+      }
+    }).catch(function(){ cb(true); });
+}
+
+// UI: 한도 초과 시 업그레이드 모달
+function _showPlanLimitModal(current, limit){
+  var overlay = document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.innerHTML='<div style="background:#0d1e35;border:1px solid rgba(0,200,248,.3);border-radius:16px;padding:28px;max-width:360px;width:100%;text-align:center">'
+    +'<div style="font-size:36px;margin-bottom:12px">🚫</div>'
+    +'<div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:8px">플랜 한도 초과</div>'
+    +'<div style="font-size:13px;color:rgba(238,244,255,.7);margin-bottom:16px;line-height:1.6">'
+      +'이번 달 정산 가능 기사: <strong style="color:#f87171">'+limit+'명</strong><br>'
+      +'현재 정산 시도: <strong style="color:#f87171">'+current+'명</strong><br>'
+      +'<span style="font-size:11px;color:#475569;margin-top:6px;display:block">'
+        +'플랜 업그레이드 후 이번 달 남은 정산을 계속할 수 있습니다'
+      +'</span>'
+    +'</div>'
+    +'<div style="display:flex;gap:8px;justify-content:center">'
+      +'<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="padding:8px 16px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:transparent;color:rgba(238,244,255,.7);cursor:pointer;font-family:inherit;font-size:12px">닫기</button>'
+      +'<button onclick="this.closest(\'div[style*=fixed]\').remove();goPage(\'billing\')" style="padding:8px 20px;border-radius:8px;border:none;background:linear-gradient(135deg,#1d6fff,#00c8f8);color:#fff;cursor:pointer;font-family:inherit;font-size:12px;font-weight:700">업그레이드 →</button>'
+    +'</div>'
+  +'</div>';
+  document.body.appendChild(overlay);
+}
+
+// 층1 래퍼: parseCoupangExcel 진입 전 호출
+function _validateBeforeSettle(drivers, month, onPass, onFail){
+  _checkPlanGuard(drivers, month, function(ok, current, limit){
+    if(ok){
+      onPass();
+    } else {
+      _showPlanLimitModal(current, limit);
+      if(onFail) onFail(current, limit);
+    }
+  });
+}
+
+// DonWay 배달대행도 동일 검증 적용
+var _origDwSave = typeof _dwSaveWeeklySettlement !== 'undefined' ? _dwSaveWeeklySettlement : null;
+
+
+
 function parseCoupangExcel(inp){
   var file=inp.files[0]; if(!file)return;
   if(typeof XLSX==='undefined'){toast('⚠️ 엑셀 라이브러리 로딩 중...'); return;}
@@ -1172,7 +1325,10 @@ function parseCoupangExcel(inp){
       .catch(function(){return[];})
     :Promise.resolve([]);
   fbPromise.then(function(fbDrivers){
-    _parseCoupangExcelInner(file,fbDrivers,month);
+    // ── Plan Guard: 기사 수 검증 후 정산 실행
+    _validateBeforeSettle(fbDrivers, month, function(){
+      _parseCoupangExcelInner(file,fbDrivers,month);
+    }, null);
   });
 }
 function _parseCoupangExcelInner(file,fbDrivers,month){
@@ -1263,15 +1419,13 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         var rowTotal=Number(row[rColTotal])||0;
 
         if(!drvMap[cleanId])drvMap[cleanId]={
-          cleanId:cleanId,camp:campName,camps:[],dcnt:0,rcnt:0,
+          cleanId:cleanId,camp:campName,dcnt:0,rcnt:0,
           delAmt:0,retAmt:0,freshAmt:0,freshIncAmt:0,addIncAmt:0,
           nocontCnt:0,nocontAmt:0,routes:{}
         };
-        // 캠프: 첫 번째로 발견된 캠프 우선 + 다중 캠프 집계
-        if(campName&&campName!=='기타'){
-          if(drvMap[cleanId].camp==='기타') drvMap[cleanId].camp=campName;
-          if(drvMap[cleanId].camps.indexOf(campName)<0) drvMap[cleanId].camps.push(campName);
-        }
+        // 캠프: 첫 번째로 발견된 캠프 우선
+        if(campName&&campName!=='기타'&&drvMap[cleanId].camp==='기타')
+          drvMap[cleanId].camp=campName;
 
         if(isEcoRow){ continue; } // 에코백 완전 제외
         if(isFreshRow){
@@ -1477,28 +1631,18 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                 .where('userId','==',cid).limit(1).get()
                 .then(function(chk){
                   if(!chk.empty){
-                    var exDoc=chk.docs[0];
-                    var exData=exDoc.data();
-                    // ★ 다중 캠프 업데이트: 새 캠프가 있으면 camps 배열 갱신
-                    var newCamps=dinfo.camps||[];
-                    var oldCamps=exData.camps||[];
-                    var merged=oldCamps.slice();
-                    newCamps.forEach(function(c){if(merged.indexOf(c)<0)merged.push(c);});
-                    var updateObj={camps:merged};
-                    if(merged.length>oldCamps.length) _db.collection('drivers').doc(exDoc.id).update(updateObj).catch(function(){});
-                    fbDrivers.push({id:exDoc.id,userId:cid,name:exData.name||autoName,camp:exData.camp||dinfo.camp||'',camps:merged});
+                    fbDrivers.push({id:chk.docs[0].id,userId:cid,name:chk.docs[0].data().name||autoName,camp:dinfo.camp||''});
                     return;
                   }
                   return _db.collection('drivers').add({
                     userId:cid,name:autoName,
                     camp:dinfo.camp||'',
-                    camps:dinfo.camps||[dinfo.camp].filter(Boolean),
                     dealerId:_CU.dealerId,
                     jobsub:'쿠팡',is_active:true,status:'재직',
                     autoNamed:!dname,
                     createdAt:firebase.firestore.FieldValue.serverTimestamp()
                   }).then(function(ref){
-                    fbDrivers.push({id:ref.id,userId:cid,name:autoName,camp:dinfo.camp||'',camps:dinfo.camps||[]});
+                    fbDrivers.push({id:ref.id,userId:cid,name:autoName,camp:dinfo.camp||''});
                   });
                 }).catch(function(){});
             })()
@@ -1652,38 +1796,6 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             settlements.push(entry);added++;
           }
         });
-        // ★ 팀장 수수료 자동 계산 → etcPlus 반영
-        if(TL_PRICES&&TL_PRICES.length){
-          console.log('[TL] 팀장 수수료 계산 시작, 팀장 수:'+TL_PRICES.length);
-          // 라우트별 전체 배송건수 집계
-          var _tlRouteTotals={};
-          settlements.filter(function(s){return s.month===month;}).forEach(function(s){
-            (s.routeDetails||[]).forEach(function(rd){
-              if(rd.route)_tlRouteTotals[rd.route]=(_tlRouteTotals[rd.route]||0)+(rd.cnt||0);
-            });
-          });
-          console.log('[TL] 라우트별 건수:', JSON.stringify(_tlRouteTotals).slice(0,200));
-          // 팀장별 수수료 계산
-          var _tlBonus=_calcTeamLeaderBonus(_tlRouteTotals);
-          console.log('[TL] 팀장별 수수료:', JSON.stringify(_tlBonus));
-          // 팀장 정산에 etcPlus 반영 (VAT 없이 그대로)
-          Object.keys(_tlBonus).forEach(function(tlId){
-            var bonus=_tlBonus[tlId];
-            var tlEntry=settlements.find(function(s){return s.userId===tlId&&s.month===month;});
-            if(tlEntry){
-              // ★ etcPlusTL: 팀장수수료 전용 필드 (재업로드 시 항상 덮어씌움)
-              tlEntry.etcPlusTL=bonus.amount;
-              tlEntry.etcPlusTLReason='팀장수수료 ('+bonus.amount.toLocaleString()+'원)';
-              console.log('[TL] '+bonus.name+' 수수료 적용: '+bonus.amount.toLocaleString()+'원');
-              toast('✅ 팀장 '+bonus.name+' 수수료 '+bonus.amount.toLocaleString()+'원 적용');
-            } else {
-              console.warn('[TL] '+bonus.name+'('+tlId+') 이번달 정산 없음, 수수료:'+bonus.amount.toLocaleString()+'원');
-              toast('⚠️ 팀장 '+bonus.name+' 정산 없음 → 수수료 '+bonus.amount.toLocaleString()+'원 수동 확인 필요');
-            }
-          });
-        } else {
-          console.log('[TL] 팀장 수수료 없음 (TL_PRICES 비어있음)');
-        }
         lss('settlements',settlements);
         window._lastParsedSettlements = settlements; // 경험치 업데이트용
         // Firebase 저장
@@ -2342,12 +2454,6 @@ function showApp(){
   _loadMySlug();  // 내 전용 URL 로드
   _loadSeasonPrices();  // 시즌 단가 로드
   _dwLoadSettings();    // ★ 배달대행 + 택배 계산 설정 로드
-  // ★ TL_PRICES 로드 (팀장 수수료 - 엑셀 업로드 전 반드시 로드)
-  if(_db&&_CU&&_CU.dealerId){
-    _loadTeamLeaderPrices(function(){
-      console.log('[TL] 팀장 수수료 로드 완료: '+TL_PRICES.length+'명');
-    });
-  }
   // ★ RPRICE 로드 (로그인/리로드 후에도 단가표 유지)
   if(_db&&_CU&&_CU.dealerId){
     _db.collection('settings').doc(_CU.dealerId+'_routePrices').get().then(function(snap){
@@ -2586,7 +2692,6 @@ function doRegister(){
       _db.collection('admin_events').add({
         type:'join', companyName:company, bizNumber:biz,
         email:email, plan:plan, companyCode:companyCode,
-        dealerId:(_auth.currentUser&&_auth.currentUser.uid)||'',
         createdAt:firebase.firestore.FieldValue.serverTimestamp()
       }).catch(function(){});
     }
@@ -5001,9 +5106,7 @@ function _dwTrack(cnt, defPrice){
 // ── 핵심 정산 계산 엔진
 function calcDonWaySettlement(orders, cfg){
   if(!orders||!orders.length) return null;
-  var defPrice=cfg.defaultPrice||2900;
-
-  // ★ [방어2] 주차 필터 락
+  // ★ [방어2] 주차 필터 락: periodStart~periodEnd 범위 외 데이터 제외
   var ps=cfg&&cfg.periodStart?new Date(cfg.periodStart):null;
   var pe=cfg&&cfg.periodEnd?new Date(cfg.periodEnd):null;
   if(ps&&pe){
@@ -5013,23 +5116,17 @@ function calcDonWaySettlement(orders, cfg){
       return t>=ps&&t<=pe;
     });
   }
-
-  // ★ 총 건수로 트랙 결정 → 전 건 소급 적용 (주급 정산 방식)
-  // 예) 300건 달성 → 1번~300번 전부 4,000원 기준
+  // ★ validCount: 취소건(price≤0) 제외한 실 배달 건수
   var cnt=orders.filter(function(o){return (o.platformPrice||0)>0;}).length;
-  var track=_dwTrack(cnt, defPrice);
+  var track=_dwTrack(cnt, cfg.defaultPrice||2900);
   var target=track.price;
-
   var pfSum=0, injected=0, extracted=0;
   var slotStat={};
   Object.keys(DW_SLOTS).forEach(function(k){slotStat[k]={cnt:0,pfSum:0,inject:0,extract:0};});
 
-  // ★ 일별 정산 집계
-  var dayMap={};
-
   var details=orders.map(function(o){
     var price=o.platformPrice||0;
-    // [방어1] 취소/패널티 건 완전 제외
+    // ★ [방어1] 취소/패널티 건: platformPrice≤0 → 보전·환수·카운트 완전 제외
     if(price<=0){
       return Object.assign({},o,{slot:'midnight',inject:0,extract:0,cancelled:true});
     }
@@ -5037,60 +5134,27 @@ function calcDonWaySettlement(orders, cfg){
     var slot=_dwSlot(o.hour||0);
     slotStat[slot].cnt++;
     slotStat[slot].pfSum+=price;
-
     var inj=0,ext=0;
-    if(slot!=='midnight'){
-      var finalTarget=target+(o.event&&o.event.price?o.event.price:0);
-      if(price<finalTarget){
-        inj=Math.floor(finalTarget-price);
-        injected+=inj;
-        slotStat[slot].inject+=inj;
-      } else if(price>finalTarget){
-        ext=Math.floor(price-finalTarget);
-        extracted+=ext;
-        slotStat[slot].extract+=ext;
-      }
+    if(slot!=='midnight'){   // 06:00~24:00만 밸런싱 적용
+      if(price<target){inj=Math.floor(target-price); injected+=inj; slotStat[slot].inject+=inj;}
+      else if(price>target){ext=Math.floor(price-target); extracted+=ext; slotStat[slot].extract+=ext;}
     }
-
-    // ★ 일별 집계
-    var dateKey=o.completedAt?String(o.completedAt).slice(0,10):'unknown';
-    if(!dayMap[dateKey])dayMap[dateKey]={cnt:0,pfSum:0,injected:0,extracted:0};
-    dayMap[dateKey].cnt++;
-    dayMap[dateKey].pfSum+=price;
-    dayMap[dateKey].injected+=inj;
-    dayMap[dateKey].extracted+=ext;
-
     return Object.assign({},o,{slot:slot,inject:inj,extract:ext});
   });
 
-  // ★ 일별 실지급 계산
-  var dailyResults=Object.keys(dayMap).sort().map(function(d){
-    var dm=dayMap[d];
-    var dayPre=Math.floor(dm.pfSum+dm.injected-dm.extracted);
-    var dayTax=Math.floor(dayPre*0.033);
-    var dayDeduct=Math.floor((cfg.leaseFee||0)+(cfg.programFee||0)+(cfg.insuranceFee||0));
-    return {
-      date:d, cnt:dm.cnt, pfSum:dm.pfSum,
-      injected:dm.injected, extracted:dm.extracted,
-      preTax:dayPre, tax:dayTax, deduct:dayDeduct,
-      net:Math.max(0,Math.floor(dayPre-dayTax-dayDeduct))
-    };
-  });
-
-  var preTax=Math.floor(pfSum+injected-extracted);
-  var tax3=Math.floor(preTax*0.033);
+  var preTax=Math.floor(pfSum+injected-extracted); // ★ 원단위 절사
+  var tax3=Math.floor(preTax*0.033);               // ★ [방어3] 3.3% 정확히 (30+3)
+  var totalTax=tax3;
   var deduct=Math.floor((cfg.leaseFee||0)+(cfg.programFee||0)+(cfg.insuranceFee||0));
-  var net=Math.max(0,Math.floor(preTax-tax3-deduct));
+  var net=Math.max(0,Math.floor(preTax-totalTax-deduct)); // ★ 최종 절사
 
   return{
     trackLabel:track.label, targetPrice:target, isDefault:track.isDefault,
     totalCount:cnt, pfSum:pfSum,
     injected:injected, extracted:extracted, agencyMargin:extracted-injected,
-    preTax:preTax, tax3:tax3, tax03:0, totalTax:tax3,
+    preTax:preTax, tax3:tax3, tax03:0, totalTax:totalTax,
     leaseFee:cfg.leaseFee||0, programFee:cfg.programFee||0, insuranceFee:cfg.insuranceFee||0,
-    deduct:deduct, net:net,
-    slotStat:slotStat, details:details,
-    dailyResults:dailyResults,
+    deduct:deduct, net:net, slotStat:slotStat, details:details,
     riderName:cfg.riderName||'', riderId:cfg.riderId||'', period:cfg.period||''
   };
 }
@@ -6134,14 +6198,6 @@ window._dwShowStatement=function(idx){
       +'<button class="btn" onclick="this.closest(\'.mo\').remove()">닫기</button>'
     +'</div>'
   +'</div>';
-  // ★ 일별 정산 내역 추가
-  if(r.dailyResults&&r.dailyResults.length){
-    var dailyRows=r.dailyResults.map(function(d){
-      return '<tr style="border-bottom:1px solid #e5e7eb">'        +'<td style="padding:4px 8px;font-size:11px;font-weight:600">'+d.date+'</td>'        +'<td style="padding:4px 8px;text-align:center;font-size:11px">'+d.cnt+'건</td>'        +'<td style="padding:4px 8px;text-align:right;font-size:11px">₩'+d.pfSum.toLocaleString()+'</td>'        +'<td style="padding:4px 8px;text-align:right;font-size:11px;color:#b45309">'+(d.injected>0?'-₩'+d.injected.toLocaleString():'—')+'</td>'        +'<td style="padding:4px 8px;text-align:right;font-size:11px;color:#047857">'+(d.extracted>0?'+₩'+d.extracted.toLocaleString():'—')+'</td>'        +'<td style="padding:4px 8px;text-align:right;font-size:12px;font-weight:800;color:#1d4ed8">₩'+d.net.toLocaleString()+'</td>'      +'</tr>';
-    }).join('');
-    var dailySection='<div style="padding:0 16px 16px">'      +'<div style="font-size:12px;font-weight:800;margin-bottom:8px;color:#374151;padding-top:12px;border-top:1.5px dashed #e5e7eb">📅 일별 정산 내역</div>'      +'<table style="width:100%;border-collapse:collapse">'        +'<thead><tr style="background:#f3f4f6;font-size:10px">'          +'<th style="padding:5px 8px;text-align:left">날짜</th>'          +'<th style="padding:5px 8px">건수</th>'          +'<th style="padding:5px 8px;text-align:right">플랫폼</th>'          +'<th style="padding:5px 8px;text-align:right;color:#b45309">보전</th>'          +'<th style="padding:5px 8px;text-align:right;color:#047857">환수</th>'          +'<th style="padding:5px 8px;text-align:right;color:#1d4ed8">일 실지급</th>'        +'</tr></thead>'        +'<tbody>'+dailyRows+'</tbody>'      +'</table>'    +'</div>';
-    html=html.replace('</div>\n    +\'<div class=\"mdf\">', dailySection+'\n    '+'<div class="mdf">');
-  }
   mo.innerHTML=html;
   document.body.appendChild(mo);
 };
@@ -6525,7 +6581,16 @@ function _dwRenderDriverDash(s){
       +'<div style="font-size:22px;font-weight:900;color:var(--brand)">₩'+Math.round(s.net||0).toLocaleString()+'</div>'
     +'</div>'
   +'</div>'
-    // ★ 보전/환수 미표시 (관리자 전용 정보)
+  +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">'
+    +'<div style="background:#fef3c7;border-radius:12px;padding:10px;text-align:center">'
+      +'<div style="font-size:10px;color:#92400e">대리점 보전</div>'
+      +'<div style="font-size:15px;font-weight:800;color:#b45309">+₩'+Math.round(s.injected||0).toLocaleString()+'</div>'
+    +'</div>'
+    +'<div style="background:#d1fae5;border-radius:12px;padding:10px;text-align:center">'
+      +'<div style="font-size:10px;color:#065f46">환수 차감</div>'
+      +'<div style="font-size:15px;font-weight:800;color:#047857">-₩'+Math.round(s.extracted||0).toLocaleString()+'</div>'
+    +'</div>'
+  +'</div>'
 
   // ── 시간대별 수행 분포
   +(cnt>0?
@@ -9198,113 +9263,37 @@ function _renderCalendar(){
   }
 }
 
-// ★ 가불 기본 이자율 로드
-var _advDefaultRate = 5;
-function _loadAdvRate(cb){
-  if(!_db||!_CU){if(cb)cb(_advDefaultRate);return;}
-  _db.collection('settings').doc(_CU.dealerId+'_dwSettings').get().then(function(snap){
-    if(snap.exists&&snap.data().advRate!==undefined) _advDefaultRate=snap.data().advRate;
-    if(cb)cb(_advDefaultRate);
-  }).catch(function(){if(cb)cb(_advDefaultRate);});
-}
-function _saveAdvRate(rate){
-  if(!_db||!_CU){toast('❌ 로그인 필요');return;}
-  _advDefaultRate=rate;
-  _db.collection('settings').doc(_CU.dealerId+'_dwSettings')
-    .set({advRate:rate},{merge:true})
-    .then(function(){toast('✅ 기본 이자율 저장됨 ('+rate+'%)');})
-    .catch(function(e){toast('❌ 저장 실패: '+e.message);});
-}
-
-// ★ 가불 등록 모달 (총금액/이자/실수령 계산)
+// ★ 가불 등록 모달 (이자 계산 포함)
 function _openAdvanceModal(dateStr){
-  _loadAdvRate(function(defaultRate){
-    var mo=document.createElement('div');mo.className='mo show';mo.id='mo-advance';
-    mo.onclick=function(e){if(e.target===mo)mo.remove();};
-    var html='<div class="md" style="max-width:400px">'
-      +'<div class="mdt">💸 가불 등록</div>'
-      +'<div style="padding:16px;display:flex;flex-direction:column;gap:12px">'
-      +'<div style="display:flex;align-items:center;gap:8px">'
-        +'<span style="font-size:11px;color:var(--text3);font-weight:700;min-width:60px">📅 날짜</span>'
-        +'<input id="adv-date" type="date" value="'+dateStr+'" style="flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text)">'
-      +'</div>'
-      +'<div style="display:flex;align-items:center;gap:8px">'
-        +'<span style="font-size:11px;color:var(--text3);font-weight:700;min-width:60px">👤 이름</span>'
-        +'<input id="adv-name" type="text" placeholder="기사명" style="flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text)">'
-      +'</div>'
-      +'<div style="display:flex;align-items:center;gap:8px">'
-        +'<span style="font-size:11px;color:var(--text3);font-weight:700;min-width:60px">💰 금액</span>'
-        +'<input id="adv-amount" type="number" placeholder="0" style="flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-weight:700;background:var(--bg);color:var(--text)">'
-        +'<span style="font-size:12px;color:var(--text3)">원</span>'
-      +'</div>'
-      +'<div style="display:flex;align-items:center;gap:8px">'
-        +'<span style="font-size:11px;color:var(--text3);font-weight:700;min-width:60px">📊 이자율</span>'
-        +'<input id="adv-rate" type="number" value="'+defaultRate+'" min="0" max="100" step="0.5" style="width:64px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:700;background:var(--bg);color:var(--text)">'
-        +'<span style="font-size:12px;color:var(--text3)">%</span>'
-        +'<button onclick="_saveAdvRate(parseFloat(document.getElementById(\'adv-rate\').value)||0)" style="flex:1;padding:6px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;font-size:11px;cursor:pointer;color:var(--text2)">기본값 저장</button>'
-      +'</div>'
-      +'<div id="adv-calc" style="display:none;background:var(--bg2);border-radius:10px;padding:12px;border:1.5px solid var(--border)">'
-        +'<div style="font-size:11px;color:var(--text3);font-weight:700;margin-bottom:8px">💡 가불 계산 결과</div>'
-        +'<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)">'
-          +'<span style="font-size:13px;color:var(--text2)">가불 금액</span>'
-          +'<span id="adv-r-amount" style="font-size:14px;font-weight:700;color:var(--text1)">0원</span>'
-        +'</div>'
-        +'<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)">'
-          +'<span id="adv-r-rate-label" style="font-size:13px;color:#f59e0b">이자 (0%)</span>'
-          +'<span id="adv-r-interest" style="font-size:14px;font-weight:700;color:#f59e0b">+0원</span>'
-        +'</div>'
-        +'<div style="display:flex;justify-content:space-between;padding:6px 0;margin-top:2px">'
-          +'<span style="font-size:13px;font-weight:700;color:var(--red)">실 지급액</span>'
-          +'<span id="adv-r-net" style="font-size:16px;font-weight:800;color:var(--red)">0원</span>'
-        +'</div>'
-      +'</div>'
-      +'<div style="display:flex;align-items:center;gap:8px">'
-        +'<span style="font-size:11px;color:var(--text3);font-weight:700;min-width:60px">📝 메모</span>'
-        +'<input id="adv-note" type="text" placeholder="예: 긴급 가불, 생활비 등" style="flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text)">'
-      +'</div>'
-      +'</div>'
-      +'<div class="mdf">'
-        +'<button class="btn" onclick="var m=document.getElementById(\'mo-advance\');if(m)m.remove()">취소</button>'
-        +'<button class="btn btn-blue" onclick="_saveAdvance()">💸 저장</button>'
-      +'</div></div>';
-    mo.innerHTML=html;
-    document.getElementById('modals').appendChild(mo);
-    function _calcAdv(){
-      var amt=parseFloat(document.getElementById('adv-amount').value)||0;
-      var rate=parseFloat(document.getElementById('adv-rate').value)||0;
-      var calc=document.getElementById('adv-calc');
-      if(amt>0){
-        var interest=Math.round(amt*rate/100);
-        var net=amt-interest;
-        document.getElementById('adv-r-amount').textContent=amt.toLocaleString()+'원';
-        document.getElementById('adv-r-rate-label').textContent='이자 ('+rate+'%)';
-        document.getElementById('adv-r-interest').textContent='+'+interest.toLocaleString()+'원';
-        document.getElementById('adv-r-net').textContent=net.toLocaleString()+'원';
-        calc.style.display='block';
-      }else{
-        calc.style.display='none';
-      }
-    }
-    document.getElementById('adv-amount').addEventListener('input',_calcAdv);
-    document.getElementById('adv-rate').addEventListener('input',_calcAdv);
-  });
+  var mo=document.createElement('div');mo.className='mo show';mo.id='mo-advance';
+  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  mo.innerHTML='<div class="md" style="max-width:380px">'    +'<div class="mdt">💸 가불 등록</div>'    +'<div style="padding:16px;display:flex;flex-direction:column;gap:12px">'      +'<div style="font-size:12px;font-weight:700;color:var(--text3)">📅 날짜: '+esc(dateStr)+'</div>'      +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">기사 이름</label>'        +'<input id="adv-name" type="text" placeholder="기사명" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text)"></div>'      +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">가불 금액</label>'        +'<input id="adv-amount" type="number" placeholder="0" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-weight:700;background:var(--bg);color:var(--text)"></div>'      +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">이자율 (%/월, 0=무이자)</label>'        +'<div style="display:flex;align-items:center;gap:8px">'          +'<input id="adv-rate" type="number" value="0" min="0" max="100" step="0.5" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text)">'          +'<span style="font-size:12px;color:var(--text3)">%/월</span>'        +'</div>'        +'<div id="adv-preview" style="font-size:12px;color:var(--amber);margin-top:6px;padding:6px 8px;background:#fef3c7;border-radius:6px;display:none"></div></div>'      +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">메모</label>'        +'<input id="adv-note" type="text" placeholder="예: 긴급 가불" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text)"></div>'    +'</div>'    +'<div class="mdf">'      +'<button class="btn" onclick="var m=document.getElementById(\'mo-advance\');if(m)m.remove()">취소</button>'      +'<button class="btn btn-blue" onclick="_saveAdvance(\''+dateStr+'\')">💸 저장</button>'    +'</div></div>';
+  document.getElementById('modals').appendChild(mo);
+  var amtEl=document.getElementById('adv-amount');
+  var rateEl=document.getElementById('adv-rate');
+  var prevEl=document.getElementById('adv-preview');
+  function calcPrev(){
+    var amt=parseFloat(amtEl.value)||0;
+    var rate=parseFloat(rateEl.value)||0;
+    if(amt>0&&rate>0){
+      var monthly=Math.round(amt*rate/100);
+      prevEl.style.display='block';
+      prevEl.textContent='💰 월 이자: '+monthly.toLocaleString()+'원 (연 '+(rate*12)+'%)';
+    }else{prevEl.style.display='none';}
+  }
+  if(amtEl)amtEl.addEventListener('input',calcPrev);
+  if(rateEl)rateEl.addEventListener('input',calcPrev);
 }
-function _saveAdvance(){
+function _saveAdvance(dateStr){
   var name=(document.getElementById('adv-name')||{}).value||'';
   var amount=parseFloat((document.getElementById('adv-amount')||{}).value)||0;
   var rate=parseFloat((document.getElementById('adv-rate')||{}).value)||0;
   var note=(document.getElementById('adv-note')||{}).value||'';
-  var dateStr=(document.getElementById('adv-date')||{}).value||'';
-  var interest=Math.round(amount*rate/100);
-  var net=amount-interest;
   if(!name||!amount){toast('이름과 금액을 입력하세요');return;}
-  if(!dateStr){toast('날짜를 선택하세요');return;}
   if(!_db||!_CU){toast('로그인 필요');return;}
-  var label='💸 가불: '+name+' '+amount.toLocaleString()+'원'
-    +(rate>0?' | 이자'+rate+'%('+interest.toLocaleString()+'원) | 실지급 '+net.toLocaleString()+'원':'');
   _db.collection('cal_memos').add({
-    type:'advance',text:label,
-    name:name,amount:amount,rate:rate,interest:interest,net:net,note:note,date:dateStr,
+    type:'advance',text:'💸 가불: '+name+' '+amount.toLocaleString()+'원'+(rate>0?' (이자'+rate+'%/월)':''),
+    name:name,amount:amount,rate:rate,note:note,date:dateStr,
     ym:dateStr.slice(0,7),day:parseInt(dateStr.slice(8))||1,
     dealerId:_CU.dealerId||'',createdAt:firebase.firestore.FieldValue.serverTimestamp()
   }).then(function(){
@@ -9326,7 +9315,7 @@ function _calSelectDay(day){
     +'<button onclick="_calAddMemo('+day+')" style="padding:8px 14px;background:var(--primary);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">등록</button>'
     +'</div>'
     +'<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;gap:8px">'
-    +(function(){var ds=y+'-'+(m+1<10?'0'+(m+1):(m+1))+'-'+(day<10?'0'+day:day);return '<button onclick="_openAdvanceModal(\'' +ds+ '\')\" style="flex:1;padding:8px;background:#f59e0b;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700">💸 가불</button>';}())
+    +'<button onclick="_openAdvanceModal(y+\'-\'+(m+1<10?\'0\'+(m+1):(m+1))+\'-\'+(day<10?\'0\'+day:day))" style="flex:1;padding:8px;background:#f59e0b;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700">💸 가불</button>'
     +'</div>'
     +'</div>';
   _calLoadMemos(day);
@@ -9335,29 +9324,19 @@ function _calLoadMemos(day){
   var y=window._calYear,m=window._calMonth;
   var ym=y+'-'+(m+1<10?'0'+(m+1):(m+1));
   if(!_db||!_CU)return;
-  _db.collection('cal_memos').where('dealerId','==',_CU.dealerId||_CU.uid).where('ym','==',ym).where('day','==',day).get()
+  _db.collection('cal_memos').where('dealerId','==',_CU.dealerId||_CU.uid).where('ym','==',ym).where('day','==',day).orderBy('createdAt','asc').get()
   .then(function(snap){
-    var rows=[];
-    snap.forEach(function(doc){rows.push({id:doc.id,d:doc.data()});});
-    rows.sort(function(a,b){
-      var ta=a.d.createdAt&&a.d.createdAt.toMillis?a.d.createdAt.toMillis():0;
-      var tb=b.d.createdAt&&b.d.createdAt.toMillis?b.d.createdAt.toMillis():0;
-      return ta-tb;
-    });
     var html='';
-    rows.forEach(function(r){
-      var d=r.d;
-      var isAdv=d.type==='advance';
-      var bg=isAdv?'background:#fef3c7;border:1px solid #fcd34d':'background:var(--bg2)';
-      html+='<div style="display:flex;align-items:flex-start;justify-content:space-between;padding:7px 10px;'+bg+';border-radius:8px;margin-bottom:5px">'
-        +'<div style="font-size:12px;line-height:1.6;flex:1">'+esc(d.text)
-        +(d.note?'<div style="font-size:11px;color:var(--text3);margin-top:2px">📝 '+esc(d.note)+'</div>':'')+'</div>'
-        +'<button onclick="_calDeleteMemo(this)" data-id="'+r.id+'" data-day="'+day+'" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:15px;padding:0 4px;margin-left:6px">×</button>'
+    snap.forEach(function(doc){
+      var d=doc.data();
+      html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;background:var(--bg2);border-radius:6px;margin-bottom:4px">'
+        +'<div style="font-size:12px">'+esc(d.text)+'</div>'
+        +'<button onclick="_calDeleteMemo(this)" data-id="'+doc.id+'" data-day="'+day+'" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:0 4px">×</button>'
         +'</div>';
     });
     var el=document.getElementById('cal-memo-list');
     if(el) el.innerHTML=html||'<div style="font-size:11px;color:var(--text3);margin-bottom:6px">등록된 메모가 없습니다</div>';
-  }).catch(function(e){console.warn('[calLoad]',e);});
+  }).catch(function(){});
 }
 function _calAddMemo(day){
   var inp=document.getElementById('cal-memo-input');
@@ -10737,167 +10716,152 @@ function _viewMyStatement(el){var id=el.getAttribute('data-id');
 // premium  : ALL-IN-ONE (차량·배차·GPS 등 고급 기능)
 // any_paid : 위 중 하나라도 결제하면 허용 (세무사 연동 등)
 
-// ══ 플랜별 기능 정의 ══════════════════════════════════
-// free     : 로그인만 하면 항상 허용
-// settle   : AI정산 구독 (쿠팡 택배 대리점)
-// delivery : 배달대행 정산 구독
-// qr       : QR 근태관리 구독
-// payroll  : 급여 관리 구독
-// premium  : ALL-IN-ONE
-// any_paid : 위 중 하나라도 결제하면 허용
-
 var MENUS_SETTLE = [
-  {s:'대시보드', items:[
-    {ic:'🏠',l:'대시보드',      p:'home',             plan_key:'free'}
+  {s:'🏠 홈', items:[
+    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'}
   ]},
-  {s:'📊 AI정산', items:[
-    {ic:'📊',l:'정산 현황',     p:'settle',           plan_key:'settle'},
-    {ic:'📋',l:'정산 관리',     p:'settlements',      plan_key:'settle'},
-    {ic:'📈',l:'통계',          p:'stats',            plan_key:'settle'},
-    {ic:'👤',l:'기사 관리',     p:'drivers',          plan_key:'free'},
-    {ic:'📝',l:'위수탁 계약서', p:'contract',         plan_key:'free'},
-    {ic:'🗓',l:'라우트 근무표', p:'roster',           plan_key:'settle'},
-    {ic:'📅',l:'달력',          p:'schedule',         plan_key:'any_paid'},
-    {ic:'🧾',l:'세무사 연동',   p:'tax_share',        plan_key:'any_paid'},
-    {ic:'💸',l:'경비 처리',     p:'expense',          plan_key:'any_paid'},
-    {ic:'⭐',l:'직원 평가',     p:'evaluation',       plan_key:'any_paid'}
+  {s:'📦 택배·배달 정산', items:[
+    {ic:'📊',l:'정산 현황',        p:'settle',           plan_key:'settle'},
+    {ic:'📋',l:'정산 관리',        p:'settlements',      plan_key:'settle'},
+    {ic:'📈',l:'통계',             p:'stats',            plan_key:'settle'},
+    {ic:'👤',l:'기사 관리',        p:'drivers',          plan_key:'free'},
+    {ic:'📝',l:'위수탁 계약서',    p:'contract',         plan_key:'free'},
+    {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
+    {ic:'🗓',l:'라우트 근무표',   p:'roster',           plan_key:'settle'},
+    {ic:'🧾',l:'세무사 공유',      p:'tax_share',        plan_key:'settle'},
+    {ic:'⭐',l:'직원 평가',        p:'evaluation',       plan_key:'free'},
+    {ic:'💸',l:'경비 관리',        p:'expense',          plan_key:'free'}
   ]},
-  {s:'🛵 배달대행', items:[
-    {ic:'🛵',l:'배달대행 정산', p:'delivery_platform',plan_key:'delivery'},
-    {ic:'📅',l:'달력',          p:'schedule',         plan_key:'any_paid'},
-    {ic:'🧾',l:'세무사 연동',   p:'tax_share',        plan_key:'any_paid'},
-    {ic:'💸',l:'경비 처리',     p:'expense',          plan_key:'any_paid'},
-    {ic:'⭐',l:'직원 평가',     p:'evaluation',       plan_key:'any_paid'}
+  {s:'🛵 배달대행 정산', items:[
+    {ic:'🛵',l:'배달대행 정산',    p:'delivery_platform',plan_key:'delivery'}
   ]},
   {s:'🔐 QR 근태관리', items:[
-    {ic:'🔐',l:'QR 출퇴근',     p:'attendance',       plan_key:'qr'},
-    {ic:'🗓',l:'근무표',         p:'roster',           plan_key:'qr'},
-    {ic:'🌴',l:'휴가 관리',     p:'leave',            plan_key:'payroll'},
-    {ic:'⏰',l:'연장 승인',     p:'overtime',         plan_key:'payroll'},
-    {ic:'⭐',l:'직원 평가',     p:'evaluation',       plan_key:'payroll'}
+    {ic:'🔐',l:'🔐 QR 출퇴근',        p:'attendance',       plan_key:'qr'},
+    {ic:'🌴',l:'🌴 휴가 관리',        p:'leave',            plan_key:'payroll'},
+    {ic:'⏰',l:'⏰ 연장 승인',        p:'overtime',         plan_key:'qr'}
   ]},
   {s:'💼 급여 관리', items:[
-    {ic:'💼',l:'급여 현황',     p:'hourly_settle',    plan_key:'payroll'},
-    {ic:'📅',l:'달력',          p:'schedule',         plan_key:'any_paid'},
-    {ic:'🧾',l:'세무사 연동',   p:'tax_share',        plan_key:'any_paid'},
-    {ic:'💸',l:'경비 처리',     p:'expense',          plan_key:'any_paid'},
-    {ic:'⭐',l:'직원 평가',     p:'evaluation',       plan_key:'any_paid'}
+    {ic:'💼',l:'급여 현황',        p:'hourly_settle',    plan_key:'payroll'}
   ]},
   {s:'🚚 원스톱 물류', items:[
-    {ic:'📦',l:'배달 실적',     p:'delivery_report',  plan_key:'settle'},
-    {ic:'🚗',l:'차량 관리',     p:'vehicle',          plan_key:'free'},
-    {ic:'🚦',l:'배차 관리',     p:'dispatch',         plan_key:'free'},
-    {ic:'📋',l:'배차 히스토리', p:'dispatch_history', plan_key:'free'},
-    {ic:'🖨',l:'라벨 출력',     p:'ext_label',        plan_key:'free'},
-    {ic:'📷',l:'수령 스캔',     p:'ext_scan',         plan_key:'free'},
-    {ic:'🚛',l:'간선차 GPS',    p:'ext_truck',        plan_key:'free'}
+    {ic:'📦',l:'📦 배달 실적',        p:'delivery_report',  plan_key:'settle'},
+    {ic:'🚗',l:'차량 관리',        p:'vehicle',          plan_key:'free'},
+    {ic:'🚦',l:'🚦 배차 관리',        p:'dispatch',         plan_key:'free'},
+    {ic:'📋',l:'📋 배차 히스토리',    p:'dispatch_history', plan_key:'free'},
+    {ic:'🖨',l:'🖨 라벨 출력',        p:'ext_label',        plan_key:'free'},
+    {ic:'📷',l:'📷 수령 스캔',        p:'ext_scan',         plan_key:'free'},
+    {ic:'🚛',l:'🚛 간선차 GPS',       p:'ext_truck',        plan_key:'free'}
   ]}
 ];
 
 // QR 전용
+
+// QR 전용
 var MENUS_QR = [
-  {s:'대시보드', items:[
-    {ic:'🏠',l:'대시보드',      p:'home',             plan_key:'free'}
+  {s:'🏠 홈', items:[
+    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'}
   ]},
   {s:'🔐 QR 근태관리', items:[
-    {ic:'🔐',l:'QR 출퇴근',     p:'attendance',       plan_key:'qr'},
-    {ic:'🗓',l:'근무표',         p:'roster',           plan_key:'qr'},
-    {ic:'🌴',l:'휴가 관리',     p:'leave',            plan_key:'payroll'},
-    {ic:'⏰',l:'연장 승인',     p:'overtime',         plan_key:'payroll'},
-    {ic:'⭐',l:'직원 평가',     p:'evaluation',       plan_key:'payroll'}
+    {ic:'🔐',l:'🔐 QR 출퇴근',        p:'attendance',       plan_key:'qr'},
+    {ic:'🗓',l:'🗓 근무표',           p:'roster',           plan_key:'qr'},
+    {ic:'🌴',l:'🌴 휴가 관리',        p:'leave',            plan_key:'payroll'},
+    {ic:'⏰',l:'⏰ 연장 승인',        p:'overtime',         plan_key:'qr'}
+  ]},
+  {s:'👤 직원 관리', items:[
+    {ic:'👤',l:'👤 직원 관리',        p:'drivers',          plan_key:'free'},
+    {ic:'📝',l:'위수탁 계약서',    p:'contract',         plan_key:'free'},
+    {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
+    {ic:'⭐',l:'직원 평가',        p:'evaluation',       plan_key:'free'},
+    {ic:'💸',l:'경비 관리',        p:'expense',          plan_key:'free'}
   ]},
   {s:'💼 급여 관리', items:[
-    {ic:'💼',l:'급여 현황',     p:'hourly_settle',    plan_key:'payroll'},
-    {ic:'📅',l:'달력',          p:'schedule',         plan_key:'any_paid'},
-    {ic:'🧾',l:'세무사 연동',   p:'tax_share',        plan_key:'any_paid'},
-    {ic:'💸',l:'경비 처리',     p:'expense',          plan_key:'any_paid'},
-    {ic:'⭐',l:'직원 평가',     p:'evaluation',       plan_key:'any_paid'}
+    {ic:'💼',l:'급여 현황',        p:'hourly_settle',    plan_key:'payroll'}
+  ]},
+  {s:'🚚 원스톱 물류', items:[
+    {ic:'🖨',l:'🖨 라벨 출력',        p:'ext_label',        plan_key:'free'},
+    {ic:'📷',l:'📷 수령 스캔',        p:'ext_scan',         plan_key:'free'},
+    {ic:'🚛',l:'🚛 간선차 GPS',       p:'ext_truck',        plan_key:'free'}
   ]}
 ];
 
+// ALL-IN-ONE
+
 // ALL-IN-ONE (풀패키지)
 var MENUS_FULL = [
-  {s:'대시보드', items:[
-    {ic:'🏠',l:'대시보드',      p:'home',             plan_key:'free'}
+  {s:'🏠 홈', items:[
+    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'}
   ]},
-  {s:'📊 AI정산', items:[
-    {ic:'📊',l:'정산 현황',     p:'settle',           plan_key:'settle'},
-    {ic:'📋',l:'정산 관리',     p:'settlements',      plan_key:'settle'},
-    {ic:'📈',l:'통계',          p:'stats',            plan_key:'settle'},
-    {ic:'👤',l:'기사 관리',     p:'drivers',          plan_key:'free'},
-    {ic:'📝',l:'위수탁 계약서', p:'contract',         plan_key:'free'},
-    {ic:'🗓',l:'라우트 근무표', p:'roster',           plan_key:'settle'},
-    {ic:'📅',l:'달력',          p:'schedule',         plan_key:'any_paid'},
-    {ic:'🧾',l:'세무사 연동',   p:'tax_share',        plan_key:'any_paid'},
-    {ic:'💸',l:'경비 처리',     p:'expense',          plan_key:'any_paid'},
-    {ic:'⭐',l:'직원 평가',     p:'evaluation',       plan_key:'any_paid'}
+  {s:'📦 택배·배달 정산', items:[
+    {ic:'📊',l:'정산 현황',        p:'settle',           plan_key:'settle'},
+    {ic:'📋',l:'정산 관리',        p:'settlements',      plan_key:'settle'},
+    {ic:'📈',l:'통계',             p:'stats',            plan_key:'settle'},
+    {ic:'👤',l:'기사 관리',        p:'drivers',          plan_key:'free'},
+    {ic:'📝',l:'위수탁 계약서',    p:'contract',         plan_key:'free'},
+    {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
+    {ic:'🧾',l:'세무사 공유',      p:'tax_share',        plan_key:'settle'},
+    {ic:'⭐',l:'직원 평가',        p:'evaluation',       plan_key:'free'},
+    {ic:'💸',l:'경비 관리',        p:'expense',          plan_key:'free'}
   ]},
-  {s:'🛵 배달대행', items:[
-    {ic:'🛵',l:'배달대행 정산', p:'delivery_platform',plan_key:'delivery'},
-    {ic:'📅',l:'달력',          p:'schedule',         plan_key:'any_paid'},
-    {ic:'🧾',l:'세무사 연동',   p:'tax_share',        plan_key:'any_paid'},
-    {ic:'💸',l:'경비 처리',     p:'expense',          plan_key:'any_paid'},
-    {ic:'⭐',l:'직원 평가',     p:'evaluation',       plan_key:'any_paid'}
+  {s:'🛵 배달대행 정산', items:[
+    {ic:'🛵',l:'배달대행 정산',    p:'delivery_platform',plan_key:'delivery'}
   ]},
   {s:'🔐 QR 근태관리', items:[
-    {ic:'🔐',l:'QR 출퇴근',     p:'attendance',       plan_key:'qr'},
-    {ic:'🗓',l:'근무표',         p:'roster',           plan_key:'qr'},
-    {ic:'🌴',l:'휴가 관리',     p:'leave',            plan_key:'payroll'},
-    {ic:'⏰',l:'연장 승인',     p:'overtime',         plan_key:'payroll'},
-    {ic:'⭐',l:'직원 평가',     p:'evaluation',       plan_key:'payroll'}
+    {ic:'🔐',l:'🔐 QR 출퇴근',        p:'attendance',       plan_key:'qr'},
+        {ic:'🌴',l:'🌴 휴가 관리',        p:'leave',            plan_key:'payroll'},
+    {ic:'⏰',l:'⏰ 연장 승인',        p:'overtime',         plan_key:'qr'}
   ]},
   {s:'💼 급여 관리', items:[
-    {ic:'💼',l:'급여 현황',     p:'hourly_settle',    plan_key:'payroll'},
-    {ic:'📅',l:'달력',          p:'schedule',         plan_key:'any_paid'},
-    {ic:'🧾',l:'세무사 연동',   p:'tax_share',        plan_key:'any_paid'},
-    {ic:'💸',l:'경비 처리',     p:'expense',          plan_key:'any_paid'},
-    {ic:'⭐',l:'직원 평가',     p:'evaluation',       plan_key:'any_paid'}
+    {ic:'💼',l:'급여 현황',        p:'hourly_settle',    plan_key:'payroll'}
   ]},
   {s:'🚚 원스톱 물류', items:[
-    {ic:'📦',l:'배달 실적',     p:'delivery_report',  plan_key:'settle'},
-    {ic:'🚗',l:'차량 관리',     p:'vehicle',          plan_key:'free'},
-    {ic:'🚦',l:'배차 관리',     p:'dispatch',         plan_key:'free'},
-    {ic:'📋',l:'배차 히스토리', p:'dispatch_history', plan_key:'free'},
-    {ic:'🖨',l:'라벨 출력',     p:'ext_label',        plan_key:'free'},
-    {ic:'📷',l:'수령 스캔',     p:'ext_scan',         plan_key:'free'},
-    {ic:'🚛',l:'간선차 GPS',    p:'ext_truck',        plan_key:'free'}
+    {ic:'📦',l:'📦 배달 실적',        p:'delivery_report',  plan_key:'settle'},
+    {ic:'🚗',l:'차량 관리',        p:'vehicle',          plan_key:'free'},
+    {ic:'🚦',l:'🚦 배차 관리',        p:'dispatch',         plan_key:'free'},
+    {ic:'📋',l:'📋 배차 히스토리',    p:'dispatch_history', plan_key:'free'},
+    {ic:'🖨',l:'🖨 라벨 출력',        p:'ext_label',        plan_key:'free'},
+    {ic:'📷',l:'📷 수령 스캔',        p:'ext_scan',         plan_key:'free'},
+    {ic:'🚛',l:'🚛 간선차 GPS',       p:'ext_truck',        plan_key:'free'}
   ]}
 ];
 
 // 소상공인/사장님 전용 (급여 위주)
 var MENUS_HOURLY = [
-  {s:'대시보드', items:[
-    {ic:'🏠',l:'대시보드',      p:'home',             plan_key:'free'}
+  {s:'메인', items:[
+    {ic:'💼',l:'급여 현황',        p:'hourly_settle', plan_key:'payroll'},
+    {ic:'🔐',l:'출퇴근 현황',      p:'attendance',    plan_key:'qr'},
+    {ic:'📅',l:'달력',             p:'schedule',      plan_key:'free'}
   ]},
-  {s:'💼 급여 관리', items:[
-    {ic:'💼',l:'급여 현황',     p:'hourly_settle',    plan_key:'payroll'},
-    {ic:'🔐',l:'QR 출퇴근',     p:'attendance',       plan_key:'qr'},
-    {ic:'📅',l:'달력',          p:'schedule',         plan_key:'any_paid'},
-    {ic:'🧾',l:'세무사 연동',   p:'tax_share',        plan_key:'any_paid'},
-    {ic:'💸',l:'경비 처리',     p:'expense',          plan_key:'any_paid'},
-    {ic:'⭐',l:'직원 평가',     p:'evaluation',       plan_key:'any_paid'}
+  {s:'👤 직원 관리', items:[
+    {ic:'👤',l:'👤 직원 관리',        p:'drivers',  plan_key:'free'},
+    {ic:'🌴',l:'🌴 휴가 관리',        p:'leave',    plan_key:'payroll'},
+    {ic:'⏰',l:'⏰ 연장 승인',        p:'overtime', plan_key:'payroll'},
+    {ic:'🗓',l:'🗓 근무표',           p:'roster',   plan_key:'payroll'}
   ]},
-  {s:'🛵 배달대행', items:[
-    {ic:'🛵',l:'배달대행 정산', p:'delivery_platform',plan_key:'delivery'}
+  {s:'🛵 배달대행 정산', items:[
+    {ic:'🛵',l:'배달대행 정산',    p:'delivery_platform', plan_key:'delivery'}
+  ]},
+  {s:'공통', items:[
+    {ic:'🧾',l:'세무사 연동',      p:'tax_share', plan_key:'any_paid'},
+    {ic:'📢',l:'공지',             p:'notices',   plan_key:'free'}
   ]}
 ];
 
 // 기사/직원 전용 (플랜 무관)
 var MENUS_DRIVER = [
-  {s:'홈',    items:[{ic:'🏠',l:'내 홈',p:'emp_home',plan_key:'free'}]},
+  {s:'🏠 홈',    items:[{ic:'🏠',l:'내 홈',p:'emp_home',plan_key:'free'}]},
   {s:'출퇴근',items:[
-    {ic:'📷',l:'QR 출퇴근',     p:'my_qr',            plan_key:'free'},
-    {ic:'🌴',l:'내 휴가',       p:'leave',            plan_key:'free'}
+    {ic:'📷',l:'🔐 QR 출퇴근',p:'my_qr', plan_key:'free'},
+    {ic:'🌴',l:'내 휴가',  p:'leave', plan_key:'free'}
   ]},
   {s:'내 정산',items:[
-    {ic:'📊',l:'내 정산 현황',  p:'my_settle',        plan_key:'free'},
-    {ic:'📋',l:'정산 내역',     p:'my_statements',    plan_key:'free'}
+    {ic:'📊',l:'내 정산 현황',p:'my_settle',    plan_key:'free'},
+    {ic:'📋',l:'정산 내역',  p:'my_statements', plan_key:'free'}
   ]},
-  {s:'🛵 배달대행',items:[
-    {ic:'🛵',l:'배달 현황',     p:'delivery_input',   plan_key:'free'},
+  {s:'🛵 배달대행 정산',items:[
+    {ic:'🛵',l:'배달 현황',    p:'delivery_input',    plan_key:'free'},
     {ic:'🔔',l:'트랙 보장 내역',p:'notify_history',   plan_key:'free'}
   ]},
-  {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices', plan_key:'free'}]}
+  {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices',plan_key:'free'}]}
 ];
 var MENUS = MENUS_SETTLE; // 기본값
 function buildNav(){
@@ -11867,9 +11831,7 @@ function openSendModal(x){
   var email=x.email||x.driverEmail||'';
   var docId=x.id||x.fbId||'';
 
-  // ★ 기사 발송 메시지: 미계약건 금액/단가 미포함 (관리자 전용)
-  var _driverIncome = vatIncome - (r.nocont||0); // 미계약 제외한 수익
-  var msgArr=['[DONWAY 정산명세서]','기사: '+name,'정산월: '+month,'배송 수익(VAT포함): '+fmt(_driverIncome)+'원','공제합계: -'+fmt(emp)+'원','─────────────','실지급: '+fmt(net)+'원','','문의: 051-711-3103','엠비티아이 유한회사'];
+  var msgArr=['[DONWAY 정산명세서]','기사: '+name,'정산월: '+month,'총수익(VAT포함): '+fmt(vatIncome)+'원','공제합계: -'+fmt(emp)+'원','─────────────','실지급: '+fmt(net)+'원','','문의: 051-711-3103','엠비티아이 유한회사'];
   var msg=msgArr.join('\n');
   var msgEnc=encodeURIComponent(msg);
   var subjectEnc=encodeURIComponent('[DONWAY] '+month+' 정산명세서 - '+name);
@@ -13002,10 +12964,9 @@ function _showSEModal(s){
       sign:'+',editable:true,
       note:(s.nocontCnt?s.nocontCnt+'건':'')+
            (RPRICE&&(RPRICE['nocont_w1']||RPRICE['nocont_w2'])?
-            ' (W1:'+Number(RPRICE['nocont_w1']||0).toLocaleString()+'/W2:'+Number(RPRICE['nocont_w2']||0).toLocaleString()+'원) 🔒관리자 전용':'') +
-           ' — 기사 명세서 미표시'},
+            ' (W1:'+Number(RPRICE['nocont_w1']||0).toLocaleString()+'/W2:'+Number(RPRICE['nocont_w2']||0).toLocaleString()+'원)':' 금액 직접입력')},
     {ic:'⚠️',n:'⑥ 분실/파손 공제',id:'se-dmg',val:s.dmg||0,sign:'-',editable:true,note:'사유 입력',hasReason:true,reasonId:'se-dmg-reason',reasonVal:s.dmgReason||''},
-    {ic:'➕',n:'⑦ 기타(+)'+(s.etcPlusTL?'<span style="font-size:9px;color:#7c3aed;margin-left:4px">+팀장수수료'+s.etcPlusTL.toLocaleString()+'원</span>':''),id:'se-etc-plus',val:(s.etcPlus||0)+(s.etcPlusTL||0),sign:'+',editable:false,note:'사유 입력',hasReason:true,reasonId:'se-etc-plus-reason',reasonVal:(s.etcPlusTL?(s.etcPlusReason?s.etcPlusReason+' / ':'')+s.etcPlusTLReason:s.etcPlusReason||'')},
+    {ic:'➕',n:'⑦ 기타(+)',id:'se-etc-plus',val:s.etcPlus||0,sign:'+',editable:true,note:'사유 입력',hasReason:true,reasonId:'se-etc-plus-reason',reasonVal:s.etcPlusReason||''},
     {ic:'➖',n:'⑧ 기타(-)',id:'se-etc-minus',val:s.etcMinus||0,sign:'-',editable:true,note:'사유 입력',hasReason:true,reasonId:'se-etc-minus-reason',reasonVal:s.etcMinusReason||''},
     {ic:'💸',n:'⑨ 가불 공제',id:'se-adv',val:s.adv||0,sign:'-',editable:true,note:'가불 금액'}
   ];
@@ -13675,22 +13636,13 @@ function _renderDrivers(drivers,c){
   var act=drivers.filter(function(d){return d.is_active!==false&&d.status!=='탈퇴'&&d.status!=='거부';});
   // 실제 기사 데이터 기반 동적 캠프
   var campSet={};
-  // ★ 다중 캠프: camps 배열 우선, 없으면 단일 camp 사용
-  function _getDrvCamps(d){
-    if(d.camps&&d.camps.length)return d.camps;
-    var c=_getDrvCamp(d);return c&&c!=='미지정'?[c]:[];
-  }
-  act.forEach(function(d){
-    _getDrvCamps(d).forEach(function(cc){if(cc&&cc!=='미지정')campSet[cc]=_campColor(cc);});
-  });
+  act.forEach(function(d){var cc=_getDrvCamp(d);if(cc&&cc!=='미지정')campSet[cc]=_campColor(cc);});
   var CAMPS=Object.keys(campSet).sort();
   var cntMap={};
   CAMPS.forEach(function(cc){cntMap[cc]=0;});
-  act.forEach(function(d){
-    _getDrvCamps(d).forEach(function(cc){if(cntMap[cc]!==undefined)cntMap[cc]++;});
-  });
+  act.forEach(function(d){var cc=_getDrvCamp(d);if(cntMap[cc]!==undefined)cntMap[cc]++;});
   var flt=_drvCampFilter;
-  var filtered=flt==='all'?act:act.filter(function(d){return _getDrvCamps(d).indexOf(flt)>=0;});
+  var filtered=flt==='all'?act:act.filter(function(d){return _getDrvCamp(d)===flt;});
   var tabs='<div style="display:flex;gap:5px;padding:8px 0 12px;flex-wrap:wrap;align-items:center">'
     +'<span style="font-size:10px;color:var(--text3);font-weight:700;margin-right:4px">🏕️ 캠프</span>'
     +_campTabHTML('전체',act.length,(_drvCampFilter==='all'),'drvf','all')
@@ -13701,16 +13653,7 @@ function _renderDrivers(drivers,c){
   if(!act.length){c.innerHTML=tabs+'<div class="empty"><div class="empty-icon">👤</div>기사가 없습니다.<br><small style="color:var(--text3)">엑셀 업로드 시 자동 등록됩니다</small></div>';return;}
   if(!filtered.length){c.innerHTML=tabs+'<div class="empty"><div class="empty-icon">👤</div>해당 캠프 기사가 없습니다</div>';return;}
   var byCamp={};
-  filtered.forEach(function(d){
-    var camps=_getDrvCamps(d);
-    if(!camps.length)camps=['미지정'];
-    // flt가 특정 캠프면 해당 캠프에만 넣기, all이면 모든 캠프에 넣기
-    var targetCamps=(flt==='all')?camps:[flt];
-    targetCamps.forEach(function(camp){
-      if(!byCamp[camp])byCamp[camp]=[];
-      byCamp[camp].push(d);
-    });
-  });
+  filtered.forEach(function(d){var camp=_getDrvCamp(d)||'미지정';if(!byCamp[camp])byCamp[camp]=[];byCamp[camp].push(d);});
   var campOrder=flt==='all'?[].concat(CAMPS,['미지정']):[flt];
   var html=tabs+campOrder.filter(function(cc){return byCamp[cc]&&byCamp[cc].length;}).map(function(camp){
     var col=campSet[camp]||'#94A3B8';
@@ -13751,26 +13694,15 @@ function saveNewDriver(){
   var name=(document.getElementById('adr-name')||{value:''}).value.trim();
   var uid=stripDf((document.getElementById('adr-uid')||{value:''}).value.trim());
   if(!uid){toast('쿠팡 ID를 입력하세요');return;}
-  if(!_db||!_CU){toast('로그인 필요');return;}
-  // ★ userId 중복 체크
-  _db.collection('drivers')
-    .where('dealerId','==',_CU.dealerId)
-    .where('userId','==',uid).limit(1).get()
-  .then(function(chk){
-    if(!chk.empty){
-      var ex=chk.docs[0].data();
-      toast('⚠️ 이미 등록된 기사: '+(ex.name||uid)+(ex.is_active===false?' (퇴직)':' (재직)'));
-      return;
-    }
-    return _db.collection('drivers').add({
-      name:name||'',userId:uid,dealerId:_CU.dealerId,
-      camp:(document.getElementById('adr-camp')||{value:''}).value||'',
-      phone:(document.getElementById('adr-phone')||{value:''}).value.trim()||'',
-      email:(document.getElementById('adr-email')||{value:''}).value.trim()||'',
-      jobsub:'쿠팡',is_active:(document.getElementById('adr-active')||{value:'true'}).value!=='false',
-      status:'재직',createdAt:firebase.firestore.FieldValue.serverTimestamp()
-    }).then(function(){closeMoById('mo-add-dr');_drvCache=null;toast('✅ 기사 추가 완료');pageDrivers();});
-  }).catch(function(e){toast('❌ '+e.message);});
+  _db.collection('drivers').add({
+    name:name||'',userId:uid,dealerId:_CU.dealerId,
+    camp:(document.getElementById('adr-camp')||{value:''}).value||'',
+    phone:(document.getElementById('adr-phone')||{value:''}).value.trim()||'',
+    email:(document.getElementById('adr-email')||{value:''}).value.trim()||'',
+    jobsub:'쿠팡',is_active:(document.getElementById('adr-active')||{value:'true'}).value!=='false',
+    status:'재직',createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){closeMoById('mo-add-dr');_drvCache=null;toast('✅ 기사 추가');pageDrivers();})
+  .catch(function(e){toast('❌ '+e.message);});
 }
 function editDriver(id){
   _db.collection('drivers').doc(id).get().then(function(snap){
@@ -14315,8 +14247,7 @@ function pagePrices(tabMode){
     _db.collection('settings').doc(did+'_routePrices').get().catch(function(){return null;}),
     _db.collection('settings').doc(did+'_routeCampMap').get().catch(function(){return null;}),
     _db.collection('settings').doc(did+'_routePricesAdj').get().catch(function(){return null;}),
-    _db.collection('settings').doc(did+'_campConfig').get().catch(function(){return null;}),
-    _db.collection('settings').doc(did+'_teamLeaderPrices').get().catch(function(){return null;})
+    _db.collection('settings').doc(did+'_campConfig').get().catch(function(){return null;})
   ]).then(function(results){
     var rpSnap=results[0],rcSnap=results[1],raSnap=results[2],ccSnap=results[3];
     if(rpSnap&&rpSnap.exists){
@@ -14336,8 +14267,6 @@ function pagePrices(tabMode){
       _campConfig=ccSnap.data()||{};
       _syncCampColors();
     }
-    var tlSnap=results[4];
-    if(tlSnap&&tlSnap.exists){TL_PRICES=((tlSnap.data()||{}).leaders)||[];}
     // settlements 캐시에서 캠프 매핑 재구성 (없으면 Firebase에서 로드)
     // ★ 미계약건 단가 섹션 항상 먼저 렌더링
     var _noContCard=document.createElement('div');
@@ -14895,8 +14824,6 @@ function _renderPrices(c){
   editHTML+='</div>';
   c.innerHTML=nocontHTML+viewHTML+editHTML;
   if(campGroups.length)setTimeout(function(){showRpCampTab(campGroups[0].name);},10);
-  // ★ 팀장 수수료 섹션
-  _renderTeamLeaderSection(c);
 }
 function toggleRpCamp(gid){
   var b=document.getElementById(gid);var a=document.getElementById(gid+'_a');
@@ -16449,200 +16376,6 @@ function deleteCamp(campName){
     .then(function(){toast('🗑 '+campName+' 삭제');pageCamps();})
     .catch(function(e){toast('❌ '+e.message);});
 }
-
-// ══════════════════════════════════════════════════════
-// ★ 팀장 수수료 기능
-// ══════════════════════════════════════════════════════
-
-// Firestore 로드
-function _loadTeamLeaderPrices(cb){
-  if(!_db||!_CU){if(cb)cb();return;}
-  _db.collection('settings').doc(_CU.dealerId+'_teamLeaderPrices').get()
-  .then(function(snap){
-    TL_PRICES=snap.exists?((snap.data()||{}).leaders||[]):[];
-    if(cb)cb();
-  }).catch(function(){if(cb)cb();});
-}
-
-// Firestore 저장
-function _saveTeamLeaderPrices(cb){
-  if(!_db||!_CU){toast('❌ 로그인 필요');return;}
-  _db.collection('settings').doc(_CU.dealerId+'_teamLeaderPrices')
-  .set({leaders:TL_PRICES,updatedAt:new Date().toISOString()},{merge:false})
-  .then(function(){toast('✅ 팀장 수수료 저장 완료');if(cb)cb();})
-  .catch(function(e){toast('❌ 저장 실패: '+e.message);});
-}
-
-// ── 파일 파서 (txt/xlsx/csv)
-function _parseTeamLeaderFile(file, cb){
-  var ext=(file.name||'').split('.').pop().toLowerCase();
-  if(ext==='xlsx'||ext==='xls'){
-    var r=new FileReader();
-    r.onload=function(e){
-      try{
-        var wb=XLSX.read(e.target.result,{type:'array'});
-        var rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true});
-        cb(_parseTLRows(rows.map(function(r){return r.join('	');})));
-      }catch(e2){toast('❌ 파일 파싱 실패: '+e2.message);}
-    };
-    r.readAsArrayBuffer(file);
-  } else {
-    var r2=new FileReader();
-    r2.onload=function(e){
-      var lines=e.target.result.replace(/\r/g,'').split('\n').map(function(l){return l.trim();}).filter(Boolean);
-      cb(_parseTLLines(lines));
-    };
-    r2.readAsText(file,'utf-8');
-  }
-}
-
-function _parseTLLines(lines){
-  var leaders=[];
-  var cur=null;
-  var curRoute=null;
-  for(var i=0;i<lines.length;i++){
-    var line=lines[i].trim();
-    if(!line)continue;
-    // 이름(아이디) 패턴 감지
-    var nameMatch=line.match(/^(.+?)\(([^)]+)\)\s*$/);
-    if(nameMatch){
-      cur={name:nameMatch[1].trim(),id:nameMatch[2].trim(),routes:{}};
-      leaders.push(cur);curRoute=null;continue;
-    }
-    if(!cur)continue;
-    // 숫자만 → 라우트 번호
-    var routeNum=line.match(/^(\d{3,4})$/);
-    if(routeNum){curRoute=routeNum[1];continue;}
-    if(!curRoute)continue;
-    // A60 B140 C50 등 서브코드+단가 파싱
-    var parts=line.split(/\s+/);
-    parts.forEach(function(p){
-      var m=p.match(/^([A-Za-z])(\d+)$/);
-      if(m){
-        var key=curRoute+m[1].toUpperCase();
-        cur.routes[key]=parseInt(m[2]);
-      }
-    });
-  }
-  return leaders;
-}
-
-function _parseTLRows(rows){
-  // xlsx/csv를 줄 문자열 배열로 변환 후 동일 파서 사용
-  var lines=[];
-  rows.forEach(function(row){
-    // 탭 구분 → 각 셀을 공백으로
-    var cells=row.split(/	/).map(function(c){return String(c||'').trim();}).filter(Boolean);
-    if(cells.length)lines.push(cells.join(' '));
-  });
-  return _parseTLLines(lines);
-}
-
-// ── 팀장 수수료 섹션 렌더링
-function _renderTeamLeaderSection(container){
-  var wrap=document.createElement('div');
-  wrap.id='tl-section';
-  wrap.className='card';
-  wrap.style.marginTop='14px';
-
-  var ch=document.createElement('div');ch.className='ch';
-  ch.innerHTML='<span class="ct">👑 팀장 수수료 단가</span>'
-    +'<span style="font-size:10px;color:var(--text3);margin-left:6px">엑셀 정산 업로드 시 자동 계산 → 기타(+) 반영</span>';
-  var btnWrap=document.createElement('div');btnWrap.style='display:flex;gap:6px;margin-left:auto';
-  var fileInput=document.createElement('input');
-  fileInput.type='file';fileInput.accept='.txt,.xlsx,.csv';fileInput.style.display='none';
-  fileInput.id='tl-file-input';
-  fileInput.onchange=function(){
-    if(!this.files[0])return;
-    _parseTeamLeaderFile(this.files[0],function(leaders){
-      if(!leaders||!leaders.length){toast('❌ 파싱 실패 - 포맷 확인');return;}
-      TL_PRICES=leaders;
-      _saveTeamLeaderPrices(function(){_renderTeamLeaderSection(container);});
-    });
-    this.value='';
-  };
-  var uploadBtn=document.createElement('button');uploadBtn.className='btn btn-sm';
-  uploadBtn.style='background:#7c3aed;color:#fff;border:none';
-  uploadBtn.innerHTML='📥 파일 등록';
-  uploadBtn.onclick=function(){document.getElementById('tl-file-input').click();};
-  var saveBtn=document.createElement('button');saveBtn.className='btn btn-sm btn-teal';
-  saveBtn.innerHTML='💾 저장';
-  saveBtn.onclick=function(){_saveTeamLeaderPrices(null);};
-  btnWrap.appendChild(fileInput);btnWrap.appendChild(uploadBtn);btnWrap.appendChild(saveBtn);
-  ch.appendChild(btnWrap);wrap.appendChild(ch);
-
-  // 안내
-  var guide=document.createElement('div');
-  guide.style='font-size:11px;color:var(--text3);padding:6px 10px;background:var(--bg3);border-radius:8px;margin-bottom:10px';
-  guide.innerHTML='📎 <b>txt</b>: 이름(아이디) → 라우트번호 → 서브코드+단가(예: B60 C60) | <b>xlsx/csv</b>: 동일 포맷 셀 입력';
-  wrap.appendChild(guide);
-
-  if(!TL_PRICES||!TL_PRICES.length){
-    var emp=document.createElement('div');emp.className='empty';emp.style.padding='20px 0';
-    emp.innerHTML='<div style="font-size:13px;color:var(--text3)">등록된 팀장 수수료 없음 — 파일 업로드로 등록하세요</div>';
-    wrap.appendChild(emp);
-  } else {
-    TL_PRICES.forEach(function(ldr,li){
-      var card=document.createElement('div');
-      card.style='border:1.5px solid rgba(124,58,237,.35);border-radius:10px;padding:12px;margin-bottom:10px;background:rgba(124,58,237,.04)';
-      var hdr=document.createElement('div');
-      hdr.style='display:flex;align-items:center;justify-content:space-between;margin-bottom:8px';
-      hdr.innerHTML='<div style="display:flex;align-items:center;gap:8px">'
-        +'<div style="width:32px;height:32px;border-radius:50%;background:rgba(124,58,237,.15);display:flex;align-items:center;justify-content:center;font-size:16px">👑</div>'
-        +'<div><div style="font-size:14px;font-weight:800;color:#7c3aed">'+esc(ldr.name)+'</div>'
-        +'<div style="font-size:11px;color:var(--text3)">'+esc(ldr.id)+'</div></div></div>'
-        +'<button onclick="_removeTLLeader('+li+')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;padding:0 4px">×</button>';
-      card.appendChild(hdr);
-      // 라우트별 단가 그리드
-      var grid=document.createElement('div');
-      grid.style='display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:5px';
-      var routes=ldr.routes||{};
-      Object.keys(routes).sort().forEach(function(r){
-        var box=document.createElement('div');
-        box.style='background:rgba(124,58,237,.08);border-radius:6px;padding:5px;text-align:center';
-        box.innerHTML='<div style="font-size:10px;font-weight:700;color:#7c3aed">'+esc(r)+'</div>'
-          +'<input type="number" value="'+routes[r]+'" min="0" step="10"'
-          +' onchange="TL_PRICES['+li+'].routes[\''+r+'\''+']=parseInt(this.value)||0"'
-          +' style="width:100%;text-align:center;border:1px solid rgba(124,58,237,.3);border-radius:4px;font-size:12px;font-weight:700;padding:3px;background:var(--bg);color:#7c3aed">'
-          +'<div style="font-size:9px;color:var(--text3)">원/건</div>';
-        grid.appendChild(box);
-      });
-      card.appendChild(grid);wrap.appendChild(card);
-    });
-  }
-  // 기존 섹션 교체 또는 추가
-  var old=document.getElementById('tl-section');
-  if(old)old.replaceWith(wrap);
-  else container.appendChild(wrap);
-}
-
-function _removeTLLeader(idx){
-  if(!confirm(TL_PRICES[idx].name+' 팀장 수수료를 삭제하시겠습니까?'))return;
-  TL_PRICES.splice(idx,1);
-  _saveTeamLeaderPrices(function(){
-    var c=document.getElementById('rp-main-area')||document.getElementById('content');
-    _renderTeamLeaderSection(c);
-  });
-}
-
-// ── 엑셀 정산 업로드 시 팀장 수수료 계산
-// routeTotals: {"608B":150,"608C":200,...} - 라우트별 전체 배송건수
-function _calcTeamLeaderBonus(routeTotals){
-  // 팀장별 수수료 계산
-  var bonus={};  // leaderId → {name, id, amount}
-  TL_PRICES.forEach(function(ldr){
-    var total=0;
-    Object.keys(ldr.routes||{}).forEach(function(route){
-      var cnt=routeTotals[route]||0;
-      total+=cnt*(ldr.routes[route]||0);
-    });
-    if(total>0){
-      bonus[ldr.id]={name:ldr.name,id:ldr.id,amount:total};
-    }
-  });
-  return bonus;
-}
-
 
 function saveRprice(){
   if(!_db){toast('❌ Firebase 미연결');return;}
