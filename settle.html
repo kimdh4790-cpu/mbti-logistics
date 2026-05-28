@@ -383,6 +383,23 @@ var SUPER_ADMIN_EMAILS = ['kimdh4790@gmail.com','soungkyekim@naver.com'];
 var SUPER_ADMIN_EMAIL  = SUPER_ADMIN_EMAILS[0];
 var _SUPER_ADMIN_CACHE = null;
 
+function isSuperAdmin(){
+  return !!((_CU&&_CU.email&&SUPER_ADMIN_EMAILS.indexOf(_CU.email)>=0)
+    ||(_SUPER_ADMIN_CACHE===true));
+}
+
+function _loadAdminStatus(){
+  if(!_db||!_CU||!_CU.email)return;
+  var safeEmail=_CU.email.replace(/\./g,'_');
+  _db.collection('admins').doc(safeEmail).get()
+    .then(function(snap){
+      if(snap.exists){
+        _SUPER_ADMIN_CACHE=true;
+        console.log('[SA] admin 확인됨');
+      }
+    }).catch(function(){});
+}
+
 // ════════════════════════════════════════════════════════
 // ★★★ DONWAY 지능형 배차 엔진 v1.0 (특허 출원) ★★★
 // ════════════════════════════════════════════════════════
