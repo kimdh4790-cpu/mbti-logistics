@@ -1102,7 +1102,7 @@ function calcNet(x){
   var nocont=_nocontCnt>0
     ? (_nocontUnit>0 ? _nocontCnt*_nocontUnit : (+x.nocont||+x.nocontAmt||0))
     : (+x.nocont||+x.nocontAmt||0);
-  var etcPlus  = +x.etcPlus  || 0;  // ★ 기타(+)
+  var etcPlus  = (+x.etcPlus||0) + (+x.etcPlusTL||0);  // ★ 기타(+) + 팀장수수료
   var etcMinus = +x.etcMinus || 0;  // ★ 기타(-)
   // ★ v9.25: 기타(+)만 세금계산서(income)에 포함 → 고용·산재 기준
   //           기타(-)는 세금계산서 제외, 실지급에서만 차감 (공제 항목)
@@ -1659,16 +1659,10 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             var bonus=_tlBonus[tlId];
             var tlEntry=settlements.find(function(s){return s.userId===tlId&&s.month===month;});
             if(tlEntry){
-              var prev=tlEntry.etcPlus||0;
-              var prevReason=tlEntry.etcPlusReason||'';
-              // 이전에 팀장수수료가 있으면 제거 후 재계산
-              if(prevReason.includes('팀장수수료')){
-                var prevBonus=parseInt((prevReason.match(/팀장수수료(\d+)/)||[])[1])||0;
-                prev=Math.max(0,prev-prevBonus);
-              }
-              tlEntry.etcPlus=prev+bonus.amount;
-              tlEntry.etcPlusReason=(prev>0?prevReason+' + ':'')+'팀장수수료 '+bonus.amount.toLocaleString()+'원';
-              console.log('[TL] '+bonus.name+' etcPlus 적용: '+tlEntry.etcPlus.toLocaleString()+'원');
+              // ★ etcPlusTL: 팀장수수료 전용 필드 (재업로드 시 항상 덮어씌움)
+              tlEntry.etcPlusTL=bonus.amount;
+              tlEntry.etcPlusTLReason='팀장수수료 ('+bonus.amount.toLocaleString()+'원)';
+              console.log('[TL] '+bonus.name+' 수수료 적용: '+bonus.amount.toLocaleString()+'원');
               toast('✅ 팀장 '+bonus.name+' 수수료 '+bonus.amount.toLocaleString()+'원 적용');
             } else {
               console.warn('[TL] '+bonus.name+'('+tlId+') 이번달 정산 없음, 수수료:'+bonus.amount.toLocaleString()+'원');
@@ -12955,7 +12949,7 @@ function _showSEModal(s){
            (RPRICE&&(RPRICE['nocont_w1']||RPRICE['nocont_w2'])?
             ' (W1:'+Number(RPRICE['nocont_w1']||0).toLocaleString()+'/W2:'+Number(RPRICE['nocont_w2']||0).toLocaleString()+'원)':' 금액 직접입력')},
     {ic:'⚠️',n:'⑥ 분실/파손 공제',id:'se-dmg',val:s.dmg||0,sign:'-',editable:true,note:'사유 입력',hasReason:true,reasonId:'se-dmg-reason',reasonVal:s.dmgReason||''},
-    {ic:'➕',n:'⑦ 기타(+)',id:'se-etc-plus',val:s.etcPlus||0,sign:'+',editable:true,note:'사유 입력',hasReason:true,reasonId:'se-etc-plus-reason',reasonVal:s.etcPlusReason||''},
+    {ic:'➕',n:'⑦ 기타(+)'+(s.etcPlusTL?'<span style="font-size:9px;color:#7c3aed;margin-left:4px">+팀장수수료'+s.etcPlusTL.toLocaleString()+'원</span>':''),id:'se-etc-plus',val:(s.etcPlus||0)+(s.etcPlusTL||0),sign:'+',editable:false,note:'사유 입력',hasReason:true,reasonId:'se-etc-plus-reason',reasonVal:(s.etcPlusTL?(s.etcPlusReason?s.etcPlusReason+' / ':'')+s.etcPlusTLReason:s.etcPlusReason||'')},
     {ic:'➖',n:'⑧ 기타(-)',id:'se-etc-minus',val:s.etcMinus||0,sign:'-',editable:true,note:'사유 입력',hasReason:true,reasonId:'se-etc-minus-reason',reasonVal:s.etcMinusReason||''},
     {ic:'💸',n:'⑨ 가불 공제',id:'se-adv',val:s.adv||0,sign:'-',editable:true,note:'가불 금액'}
   ];
@@ -13683,15 +13677,26 @@ function saveNewDriver(){
   var name=(document.getElementById('adr-name')||{value:''}).value.trim();
   var uid=stripDf((document.getElementById('adr-uid')||{value:''}).value.trim());
   if(!uid){toast('쿠팡 ID를 입력하세요');return;}
-  _db.collection('drivers').add({
-    name:name||'',userId:uid,dealerId:_CU.dealerId,
-    camp:(document.getElementById('adr-camp')||{value:''}).value||'',
-    phone:(document.getElementById('adr-phone')||{value:''}).value.trim()||'',
-    email:(document.getElementById('adr-email')||{value:''}).value.trim()||'',
-    jobsub:'쿠팡',is_active:(document.getElementById('adr-active')||{value:'true'}).value!=='false',
-    status:'재직',createdAt:firebase.firestore.FieldValue.serverTimestamp()
-  }).then(function(){closeMoById('mo-add-dr');_drvCache=null;toast('✅ 기사 추가');pageDrivers();})
-  .catch(function(e){toast('❌ '+e.message);});
+  if(!_db||!_CU){toast('로그인 필요');return;}
+  // ★ userId 중복 체크
+  _db.collection('drivers')
+    .where('dealerId','==',_CU.dealerId)
+    .where('userId','==',uid).limit(1).get()
+  .then(function(chk){
+    if(!chk.empty){
+      var ex=chk.docs[0].data();
+      toast('⚠️ 이미 등록된 기사: '+(ex.name||uid)+(ex.is_active===false?' (퇴직)':' (재직)'));
+      return;
+    }
+    return _db.collection('drivers').add({
+      name:name||'',userId:uid,dealerId:_CU.dealerId,
+      camp:(document.getElementById('adr-camp')||{value:''}).value||'',
+      phone:(document.getElementById('adr-phone')||{value:''}).value.trim()||'',
+      email:(document.getElementById('adr-email')||{value:''}).value.trim()||'',
+      jobsub:'쿠팡',is_active:(document.getElementById('adr-active')||{value:'true'}).value!=='false',
+      status:'재직',createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    }).then(function(){closeMoById('mo-add-dr');_drvCache=null;toast('✅ 기사 추가 완료');pageDrivers();});
+  }).catch(function(e){toast('❌ '+e.message);});
 }
 function editDriver(id){
   _db.collection('drivers').doc(id).get().then(function(snap){
