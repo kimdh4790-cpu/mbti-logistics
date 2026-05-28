@@ -730,8 +730,7 @@ export default {
     if (slugMatch && !knownPaths.has(slugMatch[0].replace(/\/$/,'')) && method === 'GET') {
       const companySlug = slugMatch[1];
       try {
-        const req = new Request(new URL('/settle.htm', url).toString(), { method:'GET', headers:request.headers });
-        const resp = await fetchAsset(new URL(req.url).pathname, request);
+        const resp = await fetchAsset('/settle.html', request);
         let html = await resp.text();
         // slug + 보안헤더 주입 (</head> 앞에 삽입 - 가장 안전한 위치)
         const slugScript = '<script>window._COMPANY_SLUG=' + JSON.stringify(companySlug) + ';window._SLUG_MODE=true;</script>';
