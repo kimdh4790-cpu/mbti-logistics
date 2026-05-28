@@ -14407,6 +14407,10 @@ function pagePrices(tabMode){
         });
       });
       _renderPrices(_rpDiv);
+      // ★ 팀장 수수료 섹션
+      _loadTeamLeaderPrices(function(){
+        _renderTeamLeaderSection(_rpDiv);
+      });
     }
     if(!_settleCache||!_settleCache.length){
       _db.collection('settlements').where('dealerId','==',did).get()
@@ -16516,42 +16520,152 @@ function _saveTeamLeaderPrices(cb){
 }
 function _parseTLLines(lines){
   var leaders=[],cur=null,curRoute=null;
+  lines=lines.map(function(l){return l.replace(/\t/g,' ').trim();});
   for(var i=0;i<lines.length;i++){
-    var line=lines[i].trim();if(!line)continue;
-    var nm=line.match(/^(.+?)\(([^)]+)\)\s*$/);
+    var line=lines[i];
+    if(!line){curRoute=null;continue;}
+    // 이름(아이디) — 전각 괄호 포함
+    var nm=line.match(/^(.+?)\s*[\(\（]([^\)\）]+)[\)\）]\s*$/);
     if(nm){cur={name:nm[1].trim(),id:nm[2].trim(),routes:{}};leaders.push(cur);curRoute=null;continue;}
     if(!cur)continue;
-    var rn=line.match(/^(\d{3,4})$/);if(rn){curRoute=rn[1];continue;}
-    if(!curRoute)continue;
-    line.split(/\s+/).forEach(function(p){var m=p.match(/^([A-Za-z])(\d+)$/);if(m)cur.routes[curRoute+m[1].toUpperCase()]=parseInt(m[2]);});
+    // 라우트번호만 (3~4자리)
+    var rn=line.match(/^(\d{3,4})\s*$/);
+    if(rn){curRoute=rn[1];continue;}
+    // 라우트번호 + 단가 한 줄 (예: 608 60 / 608 B60 C80)
+    var rp=line.match(/^(\d{3,4})\s+(.+)$/);
+    if(rp){curRoute=rp[1];_parseTLPricePart(cur,curRoute,rp[2]);continue;}
+    // 608A 60 608B 80 형식 (라우트+서브코드 공백 단가)
+    var multi=line.match(/^(\d{3,4}[A-Za-z])\s+(\d+)/);
+    if(multi){
+      var parts=line.match(/(\d{3,4})([A-Za-z]?)\s+(\d+)/g);
+      if(parts){parts.forEach(function(p){var m=p.match(/(\d{3,4})([A-Za-z]?)\s+(\d+)/);if(m)cur.routes[m[1]+(m[2]?m[2].toUpperCase():'_')]=parseInt(m[3]);});continue;}
+    }
+    // 단가 파트 (현재 curRoute 기준)
+    if(curRoute)_parseTLPricePart(cur,curRoute,line);
   }
   return leaders;
 }
+function _parseTLPricePart(cur,curRoute,text){
+  // 서브코드+단가: B60 / B 60 / B:60 / B=60
+  var found=text.match(/([A-Za-z])\s*[:=]?\s*(\d+)/g);
+  if(found&&found.length){
+    found.forEach(function(p){var m=p.match(/([A-Za-z])\s*[:=]?\s*(\d+)/);if(m)cur.routes[curRoute+m[1].toUpperCase()]=parseInt(m[2]);});
+    return;
+  }
+  // 숫자만 (서브코드 없음 → 기본 단가)
+  var nums=text.match(/\d+/);
+  if(nums&&parseInt(nums[0])>0)cur.routes[curRoute+'_']=parseInt(nums[0]);
+}
+
 function _parseTeamLeaderFile(file,cb){
-  var ext=(file.name||'').split('.').pop().toLowerCase();
+  var name=file.name||'';
+  var ext=name.split('.').pop().toLowerCase();
   var reader=new FileReader();
+
+  // ── xlsx / xls ──
   if(ext==='xlsx'||ext==='xls'){
     reader.onload=function(e){
       try{
         var wb=XLSX.read(e.target.result,{type:'array'});
-        var rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true});
-        cb(_parseTLLines(rows.map(function(r){return r.join('\t');})));
-      }catch(err){toast('❌ '+err.message);}
+        var rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true,defval:''});
+        var lines=rows.map(function(r){return r.map(function(c){return String(c||'').trim();}).filter(Boolean).join(' ');});
+        cb(_parseTLLines(lines));
+      }catch(err){toast('❌ xlsx 파싱 실패: '+err.message);}
     };
     reader.readAsArrayBuffer(file);
-  } else {
+    return;
+  }
+
+  // ── docx (Word) ──
+  if(ext==='docx'||ext==='doc'){
     reader.onload=function(e){
-      cb(_parseTLLines(e.target.result.split('\n')));
+      try{
+        if(typeof mammoth!=='undefined'){
+          mammoth.extractRawText({arrayBuffer:e.target.result})
+            .then(function(res){
+              cb(_parseTLLines(res.value.split('\n')));
+            }).catch(function(err){
+              // mammoth 실패 시 바이너리에서 텍스트 직접 추출 시도
+              cb(_parseTLLinesFromBinary(e.target.result));
+            });
+        } else {
+          // mammoth 없으면 직접 추출
+          cb(_parseTLLinesFromBinary(e.target.result));
+        }
+      }catch(err){toast('❌ docx 파싱 실패: '+err.message);}
+    };
+    reader.readAsArrayBuffer(file);
+    return;
+  }
+
+  // ── csv ──
+  if(ext==='csv'){
+    reader.onload=function(e){
+      var raw=e.target.result;
+      var lines=raw.split('\n').map(function(l){
+        // CSV 셀 분리 (쉼표 구분)
+        return l.split(',').map(function(c){return c.replace(/^"|"$/g,'').trim();}).join(' ');
+      });
+      cb(_parseTLLines(lines));
     };
     reader.readAsText(file,'utf-8');
+    return;
   }
+
+  // ── hwp (한글) — 텍스트만 추출 시도 ──
+  if(ext==='hwp'){
+    reader.onload=function(e){
+      try{
+        cb(_parseTLLinesFromBinary(e.target.result));
+      }catch(err){toast('❌ hwp 직접 파싱 불가 — txt로 저장 후 업로드해 주세요');}
+    };
+    reader.readAsArrayBuffer(file);
+    return;
+  }
+
+  // ── txt / 기타 (메모장, 모든 텍스트 파일) ──
+  reader.onload=function(e){
+    var raw=e.target.result;
+    // BOM 제거
+    if(raw.charCodeAt(0)===0xFEFF) raw=raw.slice(1);
+    cb(_parseTLLines(raw.split('\n')));
+  };
+  // EUC-KR 인코딩 시도 (메모장 저장 시 기본값)
+  try{reader.readAsText(file,'utf-8');}catch(e){reader.readAsText(file,'euc-kr');}
+}
+
+// docx/hwp 바이너리에서 텍스트 직접 추출 (휴리스틱)
+function _parseTLLinesFromBinary(buf){
+  var arr=new Uint8Array(buf);
+  var text='';
+  // XML 태그 사이 텍스트 추출 (docx는 ZIP 내부 XML)
+  var str='';
+  for(var i=0;i<Math.min(arr.length,500000);i++){
+    var c=arr[i];
+    if(c>=32&&c<128)str+=String.fromCharCode(c);
+    else if(c===13||c===10){str+='\n';}
+  }
+  // 이름(아이디), 라우트, 단가 패턴만 추출
+  var lines=str.split('\n').map(function(l){return l.trim();}).filter(Boolean);
+  return _parseTLLines(lines);
 }
 
 function _calcTeamLeaderBonus(routeTotals){
   var bonus={};
   TL_PRICES.forEach(function(ldr){
     var total=0;
-    Object.keys(ldr.routes||{}).forEach(function(route){total+=(routeTotals[route]||0)*(ldr.routes[route]||0);});
+    Object.keys(ldr.routes||{}).forEach(function(rkey){
+      var price=ldr.routes[rkey]||0;
+      if(rkey.endsWith('_')){
+        // 기본단가: 해당 라우트번호 모든 서브코드 합산
+        var base=rkey.slice(0,-1);
+        Object.keys(routeTotals).forEach(function(rt){
+          if(rt===base||rt.startsWith(base))total+=(routeTotals[rt]||0)*price;
+        });
+      } else {
+        total+=(routeTotals[rkey]||0)*price;
+      }
+    });
     if(total>0)bonus[ldr.id]={name:ldr.name,id:ldr.id,amount:total};
   });
   return bonus;
@@ -16561,7 +16675,7 @@ function _renderTeamLeaderSection(container){
   var ch=document.createElement('div');ch.className='ch';
   ch.innerHTML='<span class="ct">👑 팀장 수수료 단가</span><span style="font-size:10px;color:var(--text3);margin-left:6px">엑셀 업로드 시 자동 계산</span>';
   var bw=document.createElement('div');bw.style='display:flex;gap:6px;margin-left:auto';
-  var fi=document.createElement('input');fi.type='file';fi.accept='.txt,.xlsx,.csv';fi.style.display='none';fi.id='tl-file-input';
+  var fi=document.createElement('input');fi.type='file';fi.accept='.txt,.xlsx,.xls,.csv,.docx,.doc,.hwp';fi.style.display='none';fi.id='tl-file-input';
   fi.onchange=function(){if(!this.files[0])return;_parseTeamLeaderFile(this.files[0],function(leaders){if(!leaders||!leaders.length){toast('❌ 파싱 실패');return;}TL_PRICES=leaders;_saveTeamLeaderPrices(function(){_renderTeamLeaderSection(container);});});this.value='';};
   var ub=document.createElement('button');ub.className='btn btn-sm';ub.style='background:#7c3aed;color:#fff';ub.innerHTML='📥 파일 등록';ub.onclick=function(){document.getElementById('tl-file-input').click();};
   var sb=document.createElement('button');sb.className='btn btn-sm btn-teal';sb.innerHTML='💾 저장';sb.onclick=function(){_saveTeamLeaderPrices(null);};
