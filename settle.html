@@ -1263,13 +1263,15 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         var rowTotal=Number(row[rColTotal])||0;
 
         if(!drvMap[cleanId])drvMap[cleanId]={
-          cleanId:cleanId,camp:campName,dcnt:0,rcnt:0,
+          cleanId:cleanId,camp:campName,camps:[],dcnt:0,rcnt:0,
           delAmt:0,retAmt:0,freshAmt:0,freshIncAmt:0,addIncAmt:0,
           nocontCnt:0,nocontAmt:0,routes:{}
         };
-        // 캠프: 첫 번째로 발견된 캠프 우선
-        if(campName&&campName!=='기타'&&drvMap[cleanId].camp==='기타')
-          drvMap[cleanId].camp=campName;
+        // 캠프: 첫 번째로 발견된 캠프 우선 + 다중 캠프 집계
+        if(campName&&campName!=='기타'){
+          if(drvMap[cleanId].camp==='기타') drvMap[cleanId].camp=campName;
+          if(drvMap[cleanId].camps.indexOf(campName)<0) drvMap[cleanId].camps.push(campName);
+        }
 
         if(isEcoRow){ continue; } // 에코백 완전 제외
         if(isFreshRow){
@@ -1475,18 +1477,28 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                 .where('userId','==',cid).limit(1).get()
                 .then(function(chk){
                   if(!chk.empty){
-                    fbDrivers.push({id:chk.docs[0].id,userId:cid,name:chk.docs[0].data().name||autoName,camp:dinfo.camp||''});
+                    var exDoc=chk.docs[0];
+                    var exData=exDoc.data();
+                    // ★ 다중 캠프 업데이트: 새 캠프가 있으면 camps 배열 갱신
+                    var newCamps=dinfo.camps||[];
+                    var oldCamps=exData.camps||[];
+                    var merged=oldCamps.slice();
+                    newCamps.forEach(function(c){if(merged.indexOf(c)<0)merged.push(c);});
+                    var updateObj={camps:merged};
+                    if(merged.length>oldCamps.length) _db.collection('drivers').doc(exDoc.id).update(updateObj).catch(function(){});
+                    fbDrivers.push({id:exDoc.id,userId:cid,name:exData.name||autoName,camp:exData.camp||dinfo.camp||'',camps:merged});
                     return;
                   }
                   return _db.collection('drivers').add({
                     userId:cid,name:autoName,
                     camp:dinfo.camp||'',
+                    camps:dinfo.camps||[dinfo.camp].filter(Boolean),
                     dealerId:_CU.dealerId,
                     jobsub:'쿠팡',is_active:true,status:'재직',
                     autoNamed:!dname,
                     createdAt:firebase.firestore.FieldValue.serverTimestamp()
                   }).then(function(ref){
-                    fbDrivers.push({id:ref.id,userId:cid,name:autoName,camp:dinfo.camp||''});
+                    fbDrivers.push({id:ref.id,userId:cid,name:autoName,camp:dinfo.camp||'',camps:dinfo.camps||[]});
                   });
                 }).catch(function(){});
             })()
@@ -2574,6 +2586,7 @@ function doRegister(){
       _db.collection('admin_events').add({
         type:'join', companyName:company, bizNumber:biz,
         email:email, plan:plan, companyCode:companyCode,
+        dealerId:(_auth.currentUser&&_auth.currentUser.uid)||'',
         createdAt:firebase.firestore.FieldValue.serverTimestamp()
       }).catch(function(){});
     }
@@ -13619,13 +13632,22 @@ function _renderDrivers(drivers,c){
   var act=drivers.filter(function(d){return d.is_active!==false&&d.status!=='탈퇴'&&d.status!=='거부';});
   // 실제 기사 데이터 기반 동적 캠프
   var campSet={};
-  act.forEach(function(d){var cc=_getDrvCamp(d);if(cc&&cc!=='미지정')campSet[cc]=_campColor(cc);});
+  // ★ 다중 캠프: camps 배열 우선, 없으면 단일 camp 사용
+  function _getDrvCamps(d){
+    if(d.camps&&d.camps.length)return d.camps;
+    var c=_getDrvCamp(d);return c&&c!=='미지정'?[c]:[];
+  }
+  act.forEach(function(d){
+    _getDrvCamps(d).forEach(function(cc){if(cc&&cc!=='미지정')campSet[cc]=_campColor(cc);});
+  });
   var CAMPS=Object.keys(campSet).sort();
   var cntMap={};
   CAMPS.forEach(function(cc){cntMap[cc]=0;});
-  act.forEach(function(d){var cc=_getDrvCamp(d);if(cntMap[cc]!==undefined)cntMap[cc]++;});
+  act.forEach(function(d){
+    _getDrvCamps(d).forEach(function(cc){if(cntMap[cc]!==undefined)cntMap[cc]++;});
+  });
   var flt=_drvCampFilter;
-  var filtered=flt==='all'?act:act.filter(function(d){return _getDrvCamp(d)===flt;});
+  var filtered=flt==='all'?act:act.filter(function(d){return _getDrvCamps(d).indexOf(flt)>=0;});
   var tabs='<div style="display:flex;gap:5px;padding:8px 0 12px;flex-wrap:wrap;align-items:center">'
     +'<span style="font-size:10px;color:var(--text3);font-weight:700;margin-right:4px">🏕️ 캠프</span>'
     +_campTabHTML('전체',act.length,(_drvCampFilter==='all'),'drvf','all')
@@ -13636,7 +13658,16 @@ function _renderDrivers(drivers,c){
   if(!act.length){c.innerHTML=tabs+'<div class="empty"><div class="empty-icon">👤</div>기사가 없습니다.<br><small style="color:var(--text3)">엑셀 업로드 시 자동 등록됩니다</small></div>';return;}
   if(!filtered.length){c.innerHTML=tabs+'<div class="empty"><div class="empty-icon">👤</div>해당 캠프 기사가 없습니다</div>';return;}
   var byCamp={};
-  filtered.forEach(function(d){var camp=_getDrvCamp(d)||'미지정';if(!byCamp[camp])byCamp[camp]=[];byCamp[camp].push(d);});
+  filtered.forEach(function(d){
+    var camps=_getDrvCamps(d);
+    if(!camps.length)camps=['미지정'];
+    // flt가 특정 캠프면 해당 캠프에만 넣기, all이면 모든 캠프에 넣기
+    var targetCamps=(flt==='all')?camps:[flt];
+    targetCamps.forEach(function(camp){
+      if(!byCamp[camp])byCamp[camp]=[];
+      byCamp[camp].push(d);
+    });
+  });
   var campOrder=flt==='all'?[].concat(CAMPS,['미지정']):[flt];
   var html=tabs+campOrder.filter(function(cc){return byCamp[cc]&&byCamp[cc].length;}).map(function(camp){
     var col=campSet[camp]||'#94A3B8';
