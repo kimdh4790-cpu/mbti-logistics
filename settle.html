@@ -2257,7 +2257,7 @@ function showApp(){
   } else {
     var sType = _CU.serviceType||'full';
     // ★ sType 디버그 로그 (슈퍼어드민용)
-    if(isSuperAdmin()) console.log('[Nav] sType:', sType, '| dealerId:', did);
+    if(isSuperAdmin()) console.log('[Nav] sType:', sType, '| dealerId:', _CU&&_CU.dealerId);
     if(sType==='settle')   MENUS=MENUS_SETTLE;
     else if(sType==='delivery') MENUS=MENUS_DELIVERY;
     else if(sType==='qr')  MENUS=MENUS_QR;
@@ -8078,6 +8078,43 @@ function _taxShareEmail(){_taxShareLink();}
 
 // ── 세무사 공유 페이지 (pageTaxShare)
 
+
+// ══════════════════════════════════════════
+// 더존 HiPlus 원천징수 CSV 생성
+// 포맷: 성명,지급일,지급액,소득세(3.3%),지방세,기타공제,실지급액
+// ══════════════════════════════════════════
+function _downloadDouzoneCSV(ym){
+  if(!_settleCache||!_settleCache.length){toast('\u274c \uc815\uc0b0 \ub370\uc774\ud130 \uc5c6\uc74c');return;}
+  var month=ym||(_settleCache[0]&&_settleCache[0].month)||new Date().toISOString().slice(0,7);
+  var rows=_settleCache.filter(function(s){return s.month===month;});
+  if(!rows.length){toast('\u274c '+month+' \ub370\uc774\ud130 \uc5c6\uc74c');return;}
+  var cName=(_CU&&_CU.companyName)||'DONWAY';
+  var cBiz=(_CU&&_CU.bizNum)||'';
+  var payDate=month.replace('-','');
+  var lines=[];
+  var cols=['\uac70\ub798\uccb4\uba85','\uc0ac\uc5c5\uc790\ubc88\ud638','\uc131\uba85','\uc8fc\ubbfc\ub4f1\ub85d\ubc88\ud638','\uc9c0\uae09\uc5f0\uc6d4','\uc9c0\uae09\uc561','\uc18c\ub4dd\uc138','\uc8fc\ubbfc\uc138','\uae30\ud0c0\uacf5\uc81c','\ucc28\uc778\uc9c0\uae09\uc561'];
+  lines.push(cols.join(','));
+  rows.forEach(function(s){
+    if(!s)return;
+    var net=calcNet(s);
+    var vatIncome=net.vatIncome||0;
+    var supplyAmt=Math.round(vatIncome/1.1);
+    var incomeTax=Math.round(supplyAmt*0.033);
+    var localTax=Math.round(incomeTax*0.1);
+    var etcDeduct=(net.emp||0)+(net.work||0)+(net.eq||0)+(net.dmg||0);
+    var netPay=net.net||0;
+    var row=['"'+cName+'"','"'+cBiz+'"','"'+(s.driver||s.userId||'')+'"','"'+(s.ssn||'')+'"','"'+payDate+'"',supplyAmt,incomeTax,localTax,etcDeduct,netPay];
+    lines.push(row.join(','));
+  });
+  var csv=lines.join('\n');
+  var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');a.href=url;a.download='douzone_'+month+'.csv';
+  document.body.appendChild(a);a.click();
+  setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},1000);
+  toast('\u2705 \ub354\uc874 CSV '+rows.length+'\uba85');
+}
+
 function pageTaxShare(){
   document.getElementById('page-title').textContent='🧾 세무사 공유';
   var el=document.getElementById('content');
@@ -8317,8 +8354,8 @@ async function runDealerPatch(){
 }
 
 // ── 슈퍼어드민 dealerId 패치 ──
-async 
-function drawQR(canvas, url, size){
+async function drawQR(canvas, url, size){
+
   if(!canvas||!url)return;
   // canvas 초기화
   canvas.width = size||84; canvas.height = size||84;
@@ -13396,7 +13433,8 @@ function _saveSECurrent(){
     toast('✅ 저장완료');
     // ── 세무사 자동 연동 (체크박스 활성화 시)
     var syncChk=document.getElementById('se-tax-sync');
-    if(syncChk&&syncChk.checked) _seTaxSync(savedId,payload);
+    // 세무사 자동 연동 (선택 없이 항상 실행)
+    if(typeof _seTaxSync==='function') _seTaxSync(savedId,payload);
     // ★ bizNum이 있으면 driver 프로필에도 사업자번호 연동 (이중검증 데이터 축적)
     if(bizNum&&driver&&_db&&_CU){
       var cid3=_CU.dealerId||_CU.companyId;
