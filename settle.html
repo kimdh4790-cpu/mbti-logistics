@@ -13213,7 +13213,7 @@ function _showSEModal(s){
   var items=[
     {ic:'🧊',n:'③ 프레시백 회수금액',id:'se-fresh',val:s.fresh||0,sign:'+',editable:true,note:''},
     {ic:'⭐',n:'④ 프레시백 인센티브',id:'se-finc',val:(_cn&&_cn.finc>0?_cn.finc:s.finc)||0,sign:'+',editable:false,note:(s.dcnt||0)+'건 × '+(s._fincPerUnit||Math.round((s.finc||0)/(s.dcnt||1)))+'원'},
-    {ic:'➕',n:'⑤ 미계약건',id:'se-nocont',_hidden:true,
+    {ic:'➕',n:'⑤ 미계약건',id:'se-nocont',
       val:(function(){
         // RPRICE 기반 재계산 우선, 없으면 저장값
         var _cnt=+s.nocontCnt||0;
@@ -13222,9 +13222,7 @@ function _showSEModal(s){
         return _cnt>0&&_unit>0 ? _cnt*_unit : (+s.nocont||+s.nocontAmt||0);
       })(),
       sign:'+',editable:true,
-      note:(s.nocontCnt?s.nocontCnt+'건':'')+
-           (RPRICE&&(RPRICE['nocont_w1']||RPRICE['nocont_w2'])?
-            ' (W1:'+Number(RPRICE['nocont_w1']||0).toLocaleString()+'/W2:'+Number(RPRICE['nocont_w2']||0).toLocaleString()+'원)':' 금액 직접입력')},
+      note:(s.nocontCnt?s.nocontCnt+'건':'')+(s.nocontCnt?'':' 사유 입력')},
     {ic:'⚠️',n:'⑥ 분실/파손 공제',id:'se-dmg',val:s.dmg||0,sign:'-',editable:true,note:'사유 입력',hasReason:true,reasonId:'se-dmg-reason',reasonVal:s.dmgReason||''},
     {ic:'➕',n:'⑦ 기타(+)'+(s.etcPlusTL?'<span style="font-size:9px;color:#7c3aed;margin-left:4px">+팀장수수료 '+(s.etcPlusTL).toLocaleString()+'원</span>':''),id:'se-etc-plus',val:(s.etcPlus||0)+(s.etcPlusTL||0),sign:'+',editable:true,note:'사유 입력',hasReason:true,reasonId:'se-etc-plus-reason',reasonVal:(s.etcPlusTL?(s.etcPlusReason?s.etcPlusReason+' / ':'')+s.etcPlusTLReason:s.etcPlusReason||'')},
     {ic:'➖',n:'⑧ 기타(-)',id:'se-etc-minus',val:s.etcMinus||0,sign:'-',editable:true,note:'사유 입력',hasReason:true,reasonId:'se-etc-minus-reason',reasonVal:s.etcMinusReason||''},
