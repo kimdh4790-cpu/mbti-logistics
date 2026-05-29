@@ -2207,7 +2207,7 @@ function _showTrialExpiredPopup(){
     {key:'delivery',label:'🛵 배달대행', price:'89,000원/월',desc:'배달대행 정산'},
   ];
   var cards=PLANS.map(function(p){
-    return '<div class="sp-card" data-plan="'+p.key+'" style="background:#1a2744;border:1px solid rgba(0,200,248,.3);border-radius:12px;padding:16px;cursor:pointer">';
+    return '<div class="sp-card" data-plan="'+p.key+'" style="background:#1a2744;border:1px solid rgba(0,200,248,.3);border-radius:12px;padding:16px;cursor:pointer">'
       +'<div style="font-weight:800;font-size:15px;color:#00c8f8;margin-bottom:4px">'+p.label+'</div>'
       +'<div style="font-size:18px;font-weight:900;color:#fff;margin-bottom:6px">'+p.price+'</div>'
       +'<div style="font-size:11px;color:#94a3b8">'+p.desc+'</div>'
@@ -2358,9 +2358,9 @@ function showApp(){
   if(window._SLUG_MODE && _db){
     _loadSlugCompany();
   }
-  // FCM 푸시 알림 등록 (관리자/대리점만)
+  // FCM 푸시 알림 등록 (전체 — 관리자/대리점 + 기사 모두)
+  setTimeout(_registerFCM, 2000);
   if(_CU.role !== 'driver' && _CU.role !== 'member'){
-    setTimeout(_registerFCM, 2000);
     setTimeout(_initFCMReceiver, 1000);
   }
   // ★ 구 localStorage 데이터 마이그레이션 (mbti_ → dw_{uid}_)
@@ -3360,7 +3360,7 @@ function _showFindPw(){
     +'<div class="fg"><label>이메일</label><input id="find-pw-email" type="email" placeholder="가입한 이메일 주소"></div>'
     +'<div id="find-pw-msg" style="font-size:12px;margin-bottom:8px;display:none"></div>'
     +'<button onclick="_sendFindPw()" class="btn btn-blue" style="width:100%;padding:10px;font-weight:700;margin-bottom:8px">재설정 메일 발송</button>'
-    +'<button onclick="this.closest('div[style*=fixed]').remove()" class="btn" style="width:100%;padding:10px">닫기</button>'
+    +'<button onclick="this.closest(&quot;div[style*=fixed]&quot;).remove()" class="btn" style="width:100%;padding:10px">닫기</button>'
     +'</div>';
   document.body.appendChild(mo);
   setTimeout(function(){var el=document.getElementById('find-pw-email');if(el)el.focus();},100);
@@ -11756,19 +11756,35 @@ async function _registerFCM(){
     var token = await messaging.getToken({vapidKey: VAPID_KEY});
     if(!token) return;
     var isAdmin = isSuperAdmin();
-    // 대리점 FCM 토큰 저장
-    await _db.collection('companies').doc(_CU.dealerId).update({
-      fcmToken: token,
-      fcmUpdatedAt: new Date().toISOString()
-    });
-    // ★ 슈퍼어드민은 admin_tokens 컬렉션에도 저장 (결제알림 수신용)
-    if(isAdmin){
-      await _db.collection('admin_tokens').doc(_CU.dealerId).set({
-        token: token,
-        email: _CU.email||'',
-        updatedAt: new Date().toISOString(),
-        device: navigator.userAgent.includes('Mobile')?'mobile':'desktop'
+    var isDriver = _CU.role==='driver'||_CU.role==='member';
+    if(isDriver){
+      // ★ 기사 FCM 토큰 → members 컬렉션에 저장
+      var driverId = _CU.driverId||_CU.uid;
+      await _db.collection('members').doc(driverId).update({
+        fcmToken: token,
+        fcmUpdatedAt: new Date().toISOString()
+      }).catch(function(){
+        return _db.collection('members').doc(driverId).set({
+          fcmToken: token,
+          fcmUpdatedAt: new Date().toISOString(),
+          dealerId: _CU.dealerId
+        },{merge:true});
       });
+    } else {
+      // 대리점 FCM 토큰 저장
+      await _db.collection('companies').doc(_CU.dealerId).update({
+        fcmToken: token,
+        fcmUpdatedAt: new Date().toISOString()
+      });
+      // ★ 슈퍼어드민은 admin_tokens 컬렉션에도 저장 (결제알림 수신용)
+      if(isAdmin){
+        await _db.collection('admin_tokens').doc(_CU.dealerId).set({
+          token: token,
+          email: _CU.email||'',
+          updatedAt: new Date().toISOString(),
+          device: navigator.userAgent.includes('Mobile')?'mobile':'desktop'
+        });
+      }
     }
 } catch(e){
     _fcmRegFailed = true;  // ★ VAPID 키 불일치 등 → 재시도 차단
@@ -18976,6 +18992,7 @@ function _saveNotice(){
     }).then(function(snap){
       var batch=_db.batch();
       var fcmTokens=[];
+      var driverIds=[];
       snap.forEach(function(doc){
         var d=doc.data();
         var ref=_db.collection('driver_notifications').doc();
@@ -18984,18 +19001,27 @@ function _saveNotice(){
           fileUrl:fileUrl||'',read:false,
           createdAt:firebase.firestore.FieldValue.serverTimestamp()
         });
-        // FCM 토큰 수집
-        if(d.fcmToken)fcmTokens.push(d.fcmToken);
+        // drivers 컬렉션에 토큰 있으면 바로 사용
+        if(d.fcmToken) fcmTokens.push(d.fcmToken);
+        else driverIds.push(doc.id);
       });
-      // FCM 푸시 발송 (토큰 있는 기사만)
-      if(fcmTokens.length>0){
-        fetch('https://mbti-logistics.kimdh4790.workers.dev/fcm/notify-drivers',{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({tokens:fcmTokens,title:title,body:body||'내용을 확인하세요',type:type})
+      // drivers에 토큰 없는 기사는 members 컬렉션에서 보완
+      var memberPromises = driverIds.map(function(id){
+        return _db.collection('members').doc(id).get().then(function(m){
+          if(m.exists&&m.data().fcmToken) fcmTokens.push(m.data().fcmToken);
         }).catch(function(){});
-      }
-      return batch.commit().then(function(){return snap.size;});
+      });
+      return Promise.all(memberPromises).then(function(){
+        // FCM 푸시 발송 (토큰 있는 기사만)
+        if(fcmTokens.length>0){
+          fetch('https://mbti-logistics.kimdh4790.workers.dev/fcm/notify-drivers',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({tokens:fcmTokens,title:title,body:body||'내용을 확인하세요',type:type})
+          }).catch(function(){});
+        }
+        return batch.commit().then(function(){return snap.size;});
+      });
     }).then(function(cnt){
       toast('✅ 공지 발송 완료 — '+cnt+'명에게 알림');
       if(btn){btn.disabled=false;btn.textContent='📢 공지 발송';}
