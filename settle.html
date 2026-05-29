@@ -8394,54 +8394,57 @@ async function drawQR(canvas, url, size){
 function _renderHomeJoinQR(){
   if(!_CU)return;
   var did=_CU.dealerId||_CU.uid||'';
-  // dealerId 앞 8자를 코드로 사용 (Firestore 없어도 동작)
   var code=_CU.companyCode||(_CU.dealerId||'').slice(0,8).toUpperCase()||did.slice(0,8).toUpperCase();
-  if(!code||code.length<4) code=did.slice(-8).toUpperCase();
+  if(!code||code.length<4)code=did.slice(-8).toUpperCase();
   var joinUrl='https://donway.ai.kr/settle?code='+code+'&join=1';
+
+  window._homeJoinUrl=joinUrl; window._homeJoinCode=code;
 
   var qrBox=document.getElementById('home-qr-box');
   var urlEl=document.getElementById('home-join-url');
+  if(urlEl)urlEl.textContent=joinUrl;
 
-  function _applyQR(url, c){
-    window._homeJoinUrl=url; window._homeJoinCode=c;
-    if(urlEl)urlEl.textContent=url;
-    if(qrBox){
-      qrBox.innerHTML='';
-      function _tryQR(attempt){
-        if(typeof QRCode!=='undefined'){
-          qrBox.innerHTML='';
-          try{new QRCode(qrBox,{text:url,width:84,height:84,correctLevel:QRCode.CorrectLevel.M});}
-          catch(e){qrBox.innerHTML='<div style="font-size:10px;color:#888;padding:8px">QR 오류</div>';}
-        } else if(attempt<10){
-          qrBox.innerHTML='<div style="font-size:10px;color:#aaa;padding:8px;text-align:center">로드 중...</div>';
-          setTimeout(function(){_tryQR(attempt+1);},500);
-        }
+  // QR 렌더링 — QRCode 라이브러리 로드 대기
+  function _tryRender(n){
+    var box=document.getElementById('home-qr-box');
+    if(!box)return;
+    if(typeof QRCode!=='undefined'){
+      box.innerHTML='';
+      try{
+        new QRCode(box,{text:joinUrl,width:84,height:84,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+      }catch(e){
+        box.innerHTML='<div style="font-size:9px;color:#888;text-align:center;padding:4px;word-break:break-all">'+code+'</div>';
       }
-      _tryQR(0);
+    } else if(n<20){
+      setTimeout(function(){_tryRender(n+1);},300);
+    } else {
+      // 포기 — 코드 텍스트로 표시
+      box.innerHTML='<div style="font-size:10px;font-weight:700;color:#2563eb;text-align:center;padding:8px;letter-spacing:2px">'+code+'</div>';
     }
   }
+  setTimeout(function(){_tryRender(0);},200);
 
-  _applyQR(joinUrl, code);
-
-  // Firestore에서 실제 companyCode 조회
+  // Firestore에서 companyCode 조회
   if(_db&&did){
     _db.collection('companies').doc(did).get().then(function(snap){
       var rc=code;
       if(snap.exists){
-        var d=snap.data();
-        rc=d.companyCode||d.slug||code;
-        // companies에 companyCode 없으면 저장
-        if(!d.companyCode){
-          _db.collection('companies').doc(did).set({companyCode:code},{merge:true}).catch(function(){});
-        }
+        var d=snap.data(); rc=d.companyCode||d.slug||code;
+        if(!d.companyCode)_db.collection('companies').doc(did).set({companyCode:code},{merge:true}).catch(function(){});
       } else {
-        // companies 문서 자체가 없으면 코드 저장
-        _db.collection('companies').doc(did).set({
-          companyCode:code,dealerId:did,
-          createdAt:firebase.firestore.FieldValue.serverTimestamp()
-        },{merge:true}).catch(function(){});
+        _db.collection('companies').doc(did).set({companyCode:code,dealerId:did,createdAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true}).catch(function(){});
       }
-      _applyQR('https://donway.ai.kr/settle?code='+rc+'&join=1', rc);
+      window._homeJoinUrl='https://donway.ai.kr/settle?code='+rc+'&join=1';
+      window._homeJoinCode=rc;
+      if(urlEl)urlEl.textContent=window._homeJoinUrl;
+      var box=document.getElementById('home-qr-box');
+      if(box){
+        box.innerHTML='';
+        if(typeof QRCode!=='undefined'){
+          try{new QRCode(box,{text:window._homeJoinUrl,width:84,height:84,correctLevel:QRCode.CorrectLevel.M});}
+          catch(e){}
+        }
+      }
     }).catch(function(){});
   }
 }
