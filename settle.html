@@ -1087,12 +1087,12 @@ function calcNet(x){
   // ★ v9.25: 쿠팡 기사 정산은 무조건 RPRICE × 건수로 재계산
   //          엑셀의 회사 단가/저장된 x.damt 흔적 차단 → routeDetails 우선
   //          정책: 엑셀 단가 = 회사 단가(매출), 기사 단가 = 앱 관리자 RPRICE
-  var _rdList = x.routeDetails || [];
+  var _xRoutes = x.routeDetails || [];
   // ★ RPRICE(라우트단가표) 절대 우선 → routeDetails.unitPrice(업로드 시 이미 RPRICE 반영) 순
-  var _damtRP = _rdList.reduce(function(s,rd){return s+(rd.cnt||0)*(RPRICE[rd.route]||rd.unitPrice||0);},0);
-  var _ramtRP = _rdList.reduce(function(s,rd){return s+(rd.ret||0)*(RPRICE[rd.route]||rd.unitPrice||0);},0);
-  var damt=isYong ? dcnt*yDel : (_rdList.length ? _damtRP : (+x.damt||+x.delivAmt||+x.base||0));
-  var ramt=isYong ? rcnt*yRet : (_rdList.length ? _ramtRP : (+x.ramt||+x.retAmt||0));
+  var _damtRP = _xRoutes.reduce(function(s,rd){return s+(rd.cnt||0)*(RPRICE[rd.route]||rd.unitPrice||0);},0);
+  var _ramtRP = _xRoutes.reduce(function(s,rd){return s+(rd.ret||0)*(RPRICE[rd.route]||rd.unitPrice||0);},0);
+  var damt=isYong ? dcnt*yDel : (_xRoutes.length ? _damtRP : (+x.damt||+x.delivAmt||+x.base||0));
+  var ramt=isYong ? rcnt*yRet : (_xRoutes.length ? _ramtRP : (+x.ramt||+x.retAmt||0));
   // ★ fresh/inc: 정산총괄에서 VAT제외로 파싱됨 → income 계산 시 VAT포함 변환
   var fresh=+x.fresh||+x.freshAmt||0;  // ★ 프레시백 회수금액만 엑셀값 사용
   // ★ 프레시백 인센티브: 기사별 설정값(0/10/15/25원) 또는 col10 실제값 사용
@@ -1100,27 +1100,28 @@ function calcNet(x){
   // ★ finc: 저장된 값(col10 실제값) 우선, 없으면 _getIncSetting 기사별 설정
   var _fincStored=+x.finc||0;
   var _fincRate=0;
-  // ★ 모든 라우트 ON 여부 체크
+  // ★ routeDetails로 라우트 ON/OFF 체크
+  var _xRoutes=x.routeDetails||[];
   var _cnetAnyOff=false;
-  if(typeof _getIncSetting==='function'&&(_rdList&&_rdList.length)){
-    for(var _ri=0;_ri<_rdList.length;_ri++){
-      if(!_getIncSetting(uid,_rdList[_ri].route||'').on){_cnetAnyOff=true;break;}
+  if(typeof _getIncSetting==='function'&&_xRoutes.length){
+    for(var _ri=0;_ri<_xRoutes.length;_ri++){
+      if(!_getIncSetting(uid,_xRoutes[_ri].route||'').on){_cnetAnyOff=true;break;}
     }
   }
-  if(!_fincStored&&isCoupang&&dcnt>0&&!_cnetAnyOff){
-    // 인센 설정값 읽기 (전체 ON일 때만)
-    _fincRate=typeof _getIncSetting==='function'
-      ?(_getIncSetting(x.userId||x.driver||'','__all__').rate||0)
-      :(G_PRICES&&G_PRICES.freshbag_inc||0);
-  } else if(!_fincStored&&isCoupang&&dcnt>0&&_cnetAnyOff){
-    // 일부 OFF — ON인 라우트만 계산
-    if(typeof _getIncSetting==='function'&&_rdList){
+  if(!_fincStored&&isCoupang&&dcnt>0){
+    if(!_cnetAnyOff){
+      // 전체 ON — __all__ 기본 단가
+      _fincRate=typeof _getIncSetting==='function'
+        ?(_getIncSetting(uid,'__all__').rate||0)
+        :(G_PRICES&&G_PRICES.freshbag_inc||0);
+    } else if(_xRoutes.length&&typeof _getIncSetting==='function'){
+      // 일부 OFF — ON 라우트만 finc 계산
       var _fincVal=0;
-      _rdList.forEach(function(rd){
+      _xRoutes.forEach(function(rd){
         var _s=_getIncSetting(uid,rd.route||'');
         if(_s.on&&_s.rate>0) _fincVal+=(rd.cnt||0)*_s.rate;
       });
-      return Math.round(_fincVal);
+      _fincRate=dcnt>0?_fincVal/dcnt:0; // 실질 단가로 환산
     }
   }
   var finc=isCoupang?(_fincStored>0?_fincStored:Math.round(dcnt*_fincRate)):0;
@@ -13226,6 +13227,8 @@ function _showSEModal(s){
   var itemSec=document.createElement('div');
   itemSec.style.cssText='border-top:2px solid var(--border);padding-top:12px;margin-bottom:10px';
   items.forEach(function(it){
+    if(!it)return;
+    if(it._adminOnly&&_CU&&(_CU.role==='driver'||_CU.isDriver===true))return;
     var row=document.createElement('div');
     row.style.cssText='display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--bg3)';
     var lbl=document.createElement('div');
