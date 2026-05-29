@@ -260,6 +260,7 @@ tr:hover>td{background:var(--bg3)}
             <div style="display:flex;gap:6px"><input id="j-biz-type" type="text" placeholder="운수" style="flex:1"><input id="j-biz-kind" type="text" placeholder="택배운반" style="flex:1"></div></div>
           <div class="fg"><label>사업장 주소</label><input id="j-biz-addr" type="text" placeholder="부산시..."></div>
         </div>
+        <div class="fg"><label>정산 아이디 <span style="color:var(--text3);font-size:10px;font-weight:400">(쿠팡ID 등)</span></label><input id="j-driverid-quick" type="text" placeholder="kim001 (영문+숫자)"></div>
         <div class="fg"><label>비밀번호 <span style="color:var(--red)">*</span></label><input id="j-pw" type="password" placeholder="6자 이상"></div>
         <div class="fg"><label>회사코드 <span style="color:var(--red)">*</span></label>
           <input id="j-code" type="text" placeholder="ABCD1234" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase();_quickVerifyCode(this.value)">
@@ -2743,6 +2744,7 @@ function doQuickJoin(){
   var name=((document.getElementById('j-name')||{}).value||'').trim();
   var phone=((document.getElementById('j-phone')||{}).value||'').replace(/[^0-9]/g,'');
   var pw=((document.getElementById('j-pw')||{}).value||'');
+  var driverIdInput=((document.getElementById('j-driverid-quick')||{}).value||'').trim();
   var el=document.getElementById('j-code')||{dataset:{},value:''};
   var companyId=el.dataset.companyId||'',companyName=el.dataset.companyName||'';
   var err=document.getElementById('j-err');if(err)err.style.display='none';
@@ -2757,7 +2759,7 @@ function doQuickJoin(){
   var bizKind=isBiz?((document.getElementById('j-biz-kind')||{}).value||'').trim():'';
   var bizAddr=isBiz?((document.getElementById('j-biz-addr')||{}).value||'').trim():'';
   var email=phone+'@donway.internal';
-  var driverId='drv_'+phone.slice(-4)+'_'+Date.now().toString(36).slice(-4);
+  var driverId=driverIdInput||('drv_'+phone.slice(-4)+'_'+Date.now().toString(36).slice(-4));
   var btn=document.getElementById('join-submit-btn');
   if(btn){btn.disabled=true;btn.textContent='가입 중...';}
   firebase.auth().createUserWithEmailAndPassword(email,pw)
