@@ -2795,7 +2795,7 @@ function doQuickJoin(){
       var uid=cred.user.uid;
       var data={uid:uid,name:name,phone:phone,email:email,dealerId:companyId,companyName:companyName,
         role:'driver',driverId:driverId,isBiz:isBiz,bizNum:bizNum,bizName:bizName,
-        bizType:bizType,bizKind:bizKind,bizAddr:bizAddr,
+        bizType:bizType,bizKind:bizKind,bizItem:bizKind,bizAddr:bizAddr,
         createdAt:firebase.firestore.FieldValue.serverTimestamp(),joinType:'quick'};
       return _db.collection('users').doc(uid).set(data).then(function(){
         return _db.collection('drivers').add(Object.assign({},data,{
@@ -15098,6 +15098,20 @@ function saveDriver(id){
   _db.collection('drivers').doc(id).update(payload).then(function(){
     var mo=document.getElementById('mo-edit-dr');if(mo)mo.remove();
     _drvCache=null;
+    // ★ users 컬렉션도 동기화 (직원 앱에서 반영되도록)
+    _db.collection('drivers').doc(id).get().then(function(snap){
+      if(!snap.exists) return;
+      var userId = snap.data().userId||snap.data().uid||'';
+      if(userId){
+        _db.collection('users').doc(userId).update({
+          name:payload.name,phone:payload.phone,
+          bizNum:payload.bizNum,bizName:payload.bizName,
+          bizRep:payload.bizRep,bizAddr:payload.bizAddr,
+          bizType:payload.bizType,bizItem:payload.bizItem,bizKind:payload.bizItem,
+          workType:payload.workType,camp:payload.camp
+        }).catch(function(){});
+      }
+    }).catch(function(){});
 
     // ★ 기사명 저장 시 → 해당 userId의 정산서 driver 필드 자동 갱신
     var newName=payload.name;
@@ -20180,12 +20194,13 @@ function _showWelcome(){
       +'<div style="font-size:13px;font-weight:600;margin-bottom:4px">🚀 오늘도 번창하세요!</div>'
       +'<div style="font-size:11px;opacity:.75">DONWAY · 돈의 방향을 자동화</div>'
     +'</div>'
-    +'<button onclick="document.getElementById(\'mo-welcome\').remove()" '
-      +(Notification.permission!=='granted'?'<button onclick="_reqNotifPerm()" style="background:#00e87a;color:#000;border:none;border-radius:100px;padding:10px 32px;font-size:13px;font-weight:800;cursor:pointer;width:100%;margin-bottom:8px">🔔 알림 허용하기 (필수)</button>':'<div style="font-size:11px;opacity:.6;margin-bottom:8px">✅ 알림 허용됨</div>')
-    +'style="background:#fff;color:#1e3a8a;border:none;border-radius:100px;padding:10px 32px;font-size:14px;font-weight:800;cursor:pointer;width:100%">입장하기 →</button>';
+    +(Notification.permission!=='granted'
+      ?'<button id="btn-notif-perm" onclick="_reqNotifPerm()" style="background:#00e87a;color:#000;border:none;border-radius:100px;padding:10px 32px;font-size:13px;font-weight:800;cursor:pointer;width:100%;margin-bottom:8px;display:block">🔔 알림 허용하기 (필수)</button>'
+      :'<div style="font-size:11px;color:#86efac;margin-bottom:8px">✅ 알림 허용됨</div>')
+    +'<button onclick="document.getElementById(\'mo-welcome\').remove()" style="background:#fff;color:#1e3a8a;border:none;border-radius:100px;padding:10px 32px;font-size:14px;font-weight:800;cursor:pointer;width:100%">입장하기 →</button>';
   mo.appendChild(d);document.body.appendChild(mo);
-  // 3초 후 자동 닫기
-  setTimeout(function(){var m=document.getElementById('mo-welcome');if(m)m.remove();},4000);
+  // 5초 후 자동 닫기 (알림 허용 누를 시간)
+  setTimeout(function(){var m=document.getElementById('mo-welcome');if(m)m.remove();},5000);
 }
 
 // ══ 사이드바 토글 (모바일 햄버거) ══
