@@ -2084,7 +2084,7 @@ function initFirebase(){
   // 이미 초기화된 경우 앱 재사용
   if(firebase.apps&&firebase.apps.length>0){
     _db=firebase.firestore();
-    _db.settings({experimentalForceLongPolling:true, merge:true});
+    _db.settings({experimentalAutoDetectLongPolling:true, merge:true});
     window._db=_db;
     _auth=firebase.auth();
     
@@ -2105,7 +2105,7 @@ _auth.onAuthStateChanged(function(user){
   }
   _db=firebase.firestore();
   // ★ Cloudflare Workers 환경에서 WebChannel 400 에러 방지
-  _db.settings({experimentalForceLongPolling:true, merge:true});
+  _db.settings({experimentalAutoDetectLongPolling:true, merge:true});
   window._db=_db;
   _auth=firebase.auth();
   _auth.onAuthStateChanged(function(user){
