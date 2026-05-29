@@ -8410,10 +8410,23 @@ function _renderHomeJoinQR(){
     if(!box)return;
     if(typeof QRCode!=='undefined'){
       box.innerHTML='';
+      box.style.display='block';
+      box.style.textAlign='center';
       try{
-        new QRCode(box,{text:joinUrl,width:84,height:84,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+        var qr=new QRCode(box,{
+          text:joinUrl,width:84,height:84,
+          colorDark:'#000000',colorLight:'#ffffff',
+          correctLevel:QRCode.CorrectLevel?QRCode.CorrectLevel.M:1
+        });
+        // img가 있으면 크기 보정
+        setTimeout(function(){
+          var img=box.querySelector('img');
+          if(img){img.style.width='84px';img.style.height='84px';}
+          var cvs=box.querySelector('canvas');
+          if(cvs){cvs.style.width='84px';cvs.style.height='84px';}
+        },100);
       }catch(e){
-        box.innerHTML='<div style="font-size:9px;color:#888;text-align:center;padding:4px;word-break:break-all">'+code+'</div>';
+        box.innerHTML='<div style="font-size:11px;font-weight:700;color:#2563eb;text-align:center;padding:16px;letter-spacing:2px">'+code+'</div>';
       }
     } else if(n<20){
       setTimeout(function(){_tryRender(n+1);},300);
@@ -8440,9 +8453,16 @@ function _renderHomeJoinQR(){
       var box=document.getElementById('home-qr-box');
       if(box){
         box.innerHTML='';
+        box.style.display='block';
         if(typeof QRCode!=='undefined'){
-          try{new QRCode(box,{text:window._homeJoinUrl,width:84,height:84,correctLevel:QRCode.CorrectLevel.M});}
-          catch(e){}
+          try{
+            new QRCode(box,{text:window._homeJoinUrl,width:84,height:84,
+              colorDark:'#000000',colorLight:'#ffffff',
+              correctLevel:QRCode.CorrectLevel?QRCode.CorrectLevel.M:1});
+            setTimeout(function(){
+              var img=box.querySelector('img');if(img){img.style.width='84px';img.style.height='84px';}
+            },100);
+          }catch(e){}
         }
       }
     }).catch(function(){});
@@ -8523,7 +8543,7 @@ function pageHome(){
 
     // ★ 직원 가입 QR 위젯
     +'<div style="background:linear-gradient(135deg,#0f2744,#1e3a5f);border:1px solid rgba(0,200,248,.25);border-radius:16px;padding:18px 20px;margin-bottom:18px;display:flex;align-items:center;gap:20px;flex-wrap:wrap">'
-    +'<div style="flex-shrink:0;background:#fff;border-radius:10px;padding:8px;width:100px;height:100px;display:flex;align-items:center;justify-content:center"><div id="home-qr-box" style="width:84px;height:84px;display:flex;align-items:center;justify-content:center"></div></div>'
+    +'<div style="flex-shrink:0;background:#fff;border-radius:10px;padding:8px;width:100px;height:100px;display:flex;align-items:center;justify-content:center"><div id="home-qr-box" style="width:84px;height:84px"></div></div>'
     +'<div style="flex:1;min-width:180px">'
     +'<div style="font-size:14px;font-weight:800;color:#fff;margin-bottom:4px">📱 직원 가입 QR</div>'
     +'<div style="font-size:11px;color:#94a3b8;margin-bottom:10px">스캔 → 이름·연락처·비번 → 가입 완료<br>앱 설치 시 명세서·알림 자동 수신</div>'
