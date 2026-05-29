@@ -20253,7 +20253,7 @@ function _showUploadResult(month,added,updated,newDrvCnt,routeCnt,newDrivers,lef
 }
 
 function _showWelcome(){
-  var name=(_CU&&_CU.displayName)||(_CU&&_CU.email&&_CU.email.split('@')[0])||'관리자';
+  var name=(_CU&&(_CU.name||_CU.displayName))||(_CU&&_CU.email&&_CU.email.split('@')[0])||'직원';
   var now=new Date();
   var h=now.getHours();
   var greeting=h<6?'🌙 새벽에도 수고하세요':h<12?'🌅 좋은 아침이에요':h<18?'☀️ 좋은 오후예요':'🌙 수고하셨어요';
@@ -20264,23 +20264,50 @@ function _showWelcome(){
   var d=document.createElement('div');
   d.style.cssText='background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 60%,#7c3aed 100%);border-radius:20px;padding:36px 32px;text-align:center;max-width:360px;width:100%;color:#fff;position:relative;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5)';
   d.innerHTML='<div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:rgba(255,255,255,.04);border-radius:50%"></div>'
-    +'<div style="font-size:48px;margin-bottom:8px;animation:bounce 1s infinite">👑</div>'
+    +'<div style="font-size:48px;margin-bottom:8px">👑</div>'
     +'<div style="font-size:13px;opacity:.7;margin-bottom:4px;letter-spacing:1px">DONWAY · '+((_CU&&_CU.companyName)||'MBTI Co.')+'</div>'
     +'<div style="font-size:22px;font-weight:900;margin-bottom:4px">'+greeting+'</div>'
     +'<div style="font-size:16px;font-weight:700;margin-bottom:16px;color:#93c5fd">'+esc(name)+' 님 ✨</div>'
-    +'<div style="background:rgba(255,255,255,.1);border-radius:12px;padding:12px;margin-bottom:20px">'
+    +'<div style="background:rgba(255,255,255,.1);border-radius:12px;padding:12px;margin-bottom:16px">'
       +'<div style="font-size:13px;font-weight:600;margin-bottom:4px">🚀 오늘도 번창하세요!</div>'
       +'<div style="font-size:11px;opacity:.75">DONWAY · 돈의 방향을 자동화</div>'
     +'</div>'
-    +(Notification.permission!=='granted'
-      ?'<button id="btn-notif-perm" onclick="_reqNotifPerm()" style="background:#00e87a;color:#000;border:none;border-radius:100px;padding:10px 32px;font-size:13px;font-weight:800;cursor:pointer;width:100%;margin-bottom:8px;display:block">🔔 알림 허용하기 (필수)</button>'
-      :'<div style="font-size:11px;color:#86efac;margin-bottom:8px">✅ 알림 허용됨</div>')
-    +'<button onclick="document.getElementById(\'mo-welcome\').remove()" style="background:#fff;color:#1e3a8a;border:none;border-radius:100px;padding:10px 32px;font-size:14px;font-weight:800;cursor:pointer;width:100%">입장하기 →</button>';
-  mo.appendChild(d);document.body.appendChild(mo);
-  // 알림 미허용 시 자동닫기 안 함 (허용 후 자동닫기)
-  if(Notification.permission==='granted'){
+    +'<div id="welcome-notif-area" style="margin-bottom:8px"></div>'
+    +'<div id="welcome-enter-area"></div>';
+  mo.appendChild(d);
+  document.body.appendChild(mo);
+  // ★ 버튼 DOM 직접 생성 (onclick 안정적 바인딩)
+  var notifArea=document.getElementById('welcome-notif-area');
+  var enterArea=document.getElementById('welcome-enter-area');
+  if(Notification.permission!=='granted'){
+    var notifBtn=document.createElement('button');
+    notifBtn.textContent='🔔 알림 허용하기 (필수)';
+    notifBtn.style.cssText='background:#00e87a;color:#000;border:none;border-radius:100px;padding:12px 32px;font-size:13px;font-weight:800;cursor:pointer;width:100%;display:block';
+    notifBtn.onclick=function(){
+      Notification.requestPermission().then(function(perm){
+        if(perm==='granted'){
+          toast('✅ 알림이 허용되었습니다!');
+          setTimeout(_registerFCM,500);
+          notifBtn.style.background='#d1fae5';
+          notifBtn.style.color='#065f46';
+          notifBtn.textContent='✅ 알림 허용됨';
+          notifBtn.disabled=true;
+          setTimeout(function(){var m=document.getElementById('mo-welcome');if(m)m.remove();},2000);
+        } else {
+          toast('⚠️ 알림을 허용해야 푸시 알림을 받을 수 있어요');
+        }
+      });
+    };
+    notifArea.appendChild(notifBtn);
+  } else {
+    notifArea.innerHTML='<div style="font-size:11px;color:#86efac">✅ 알림 허용됨</div>';
     setTimeout(function(){var m=document.getElementById('mo-welcome');if(m)m.remove();},4000);
   }
+  var enterBtn=document.createElement('button');
+  enterBtn.textContent='입장하기 →';
+  enterBtn.style.cssText='background:#fff;color:#1e3a8a;border:none;border-radius:100px;padding:10px 32px;font-size:14px;font-weight:800;cursor:pointer;width:100%';
+  enterBtn.onclick=function(){mo.remove();};
+  enterArea.appendChild(enterBtn);
 }
 
 // ══ 사이드바 토글 (모바일 햄버거) ══
