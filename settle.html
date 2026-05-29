@@ -13934,7 +13934,6 @@ function updSECalc(){
   if(vD)vD.textContent='₩'+fmt(totalDamt);
   if(vR)vR.textContent='₩'+fmt(totalRamt);
   // 항목별 합산
-  function gv(id){var el=document.getElementById(id);return el?+el.value||0:0;}
   var fresh=gv('se-fresh'),finc=gv('se-finc'),inc=gv('se-inc'),nocont=gv('se-nocont');
   var dmg=gv('se-dmg'),etcP=gv('se-etc-plus'),etcM=gv('se-etc-minus'),adv=gv('se-adv');
   var taxBase=totalDamt+totalRamt+fresh+finc+nocont+etcP;  // ★ inc 제외 (세금계산서 base 아님)
@@ -13983,6 +13982,7 @@ function updSECalc(){
       +'</div>';
   }
 }
+function gv(id){var el=document.getElementById(id);return el?+el.value||0:0;}
 function _saveSECurrent(){
     var id=(document.getElementById('se-id')||{value:''}).value.trim()||'';
   var driver=(document.getElementById('se-driver')||{value:''}).value.trim();
@@ -15752,11 +15752,55 @@ function addRpCamp(cid){
 }
 // ══ 구독 플랜 선택 모달 ══
 
+// ── 구간별 정액 요금 계산 (3% 계좌이체 할인 적용) ──
+// 그룹1: 17,000원/인 | 그룹2: 12,000원/인
+// 구간: 1~30명(×30) / 31~60명(×60) / 61~100명(×100)
+var SUB_TIERS=[
+  {cap:30,  label:'1~30명'},
+  {cap:60,  label:'31~60명'},
+  {cap:100, label:'61~100명'},
+];
+function _tierAmt(up, hc){
+  var cap=hc<=30?30:hc<=60?60:100;
+  return Math.round(up*cap*0.97); // 3% 계좌이체 할인
+}
+function _tierLabel(hc){
+  return hc<=30?'1~30명':hc<=60?'31~60명':'61~100명';
+}
 function _subPayClick(btn){
   var key=btn.dataset.pkey||'';
   var up=parseInt(btn.dataset.uprice)||0;
   var hc=parseInt((document.getElementById('sub-headcount')||{value:'30'}).value)||30;
-  if(key&&up) _tossPay(key, up*hc);
+  if(!key||!up) return;
+  var amt=_tierAmt(up,hc);
+  // 계좌이체 신청 안내
+  _showTransferGuide(key, amt, hc);
+}
+function _showTransferGuide(planKey, amt, hc){
+  var mo=document.getElementById('mo-transfer');if(mo)mo.remove();
+  var moEl=document.createElement('div');moEl.className='mo show';moEl.id='mo-transfer';
+  var tierLabel=_tierLabel(hc);
+  var planNames={settle:'AI 정산',qr_payroll:'QR+급여 통합',qr:'QR 근태',payroll:'급여 관리',delivery:'배달대행 정산'};
+  moEl.innerHTML='<div class="md" style="max-width:420px;padding:28px 24px">'
+    +'<div style="font-size:18px;font-weight:800;margin-bottom:4px">💳 계좌이체 신청</div>'
+    +'<div style="font-size:12px;color:var(--text3);margin-bottom:18px">카드결제 준비 중 — 계좌이체로 신청해주세요 (3% 할인 적용)</div>'
+    +'<div style="background:var(--bg3);border-radius:10px;padding:14px;margin-bottom:16px;font-size:13px;line-height:2">'
+    +'<div><b>플랜</b> : '+(planNames[planKey]||planKey)+'</div>'
+    +'<div><b>인원 구간</b> : '+tierLabel+'</div>'
+    +'<div><b>결제 금액</b> : <span style="font-size:17px;font-weight:900;color:var(--brand)">'+amt.toLocaleString()+'원/월</span></div>'
+    +'<div style="font-size:11px;color:var(--text3)">(정가의 3% 할인 적용)</div>'
+    +'</div>'
+    +'<div style="background:#fff8e1;border-radius:10px;padding:14px;margin-bottom:16px;font-size:13px;line-height:1.9">'
+    +'<div style="font-weight:800;margin-bottom:4px">📬 신청 방법</div>'
+    +'<div>① 아래 카카오채널로 신청 메시지 전송</div>'
+    +'<div>② 입금 확인 후 당일 활성화</div>'
+    +'<div style="margin-top:8px;font-size:12px;color:#888">입금 계좌는 신청 후 안내드립니다</div>'
+    +'</div>'
+    +'<a href="https://pf.kakao.com/_xkuxabX/chat" target="_blank" onclick="document.getElementById(&quot;mo-transfer&quot;).remove()" style="display:block;width:100%;padding:13px;background:#FEE500;color:#000;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;text-align:center;text-decoration:none;margin-bottom:8px">💬 카카오채널로 신청하기</a>'
+    +'<button onclick="document.getElementById(&quot;mo-transfer&quot;).remove()" style="width:100%;padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;font-size:13px;cursor:pointer;color:var(--text)">닫기</button>'
+    +'</div>';
+  document.body.appendChild(moEl);
+  moEl.onclick=function(e){if(e.target===moEl)moEl.remove();};
 }
 function _closeSubModal(){var m=document.getElementById("mo-sub");if(m)m.remove();}
 function _showSubModal(){
@@ -15787,28 +15831,33 @@ function _showSubModal(){
   var html='<div class="md" style="max-width:660px;max-height:92vh;overflow-y:auto">'
     +'<div class="mdt" style="position:sticky;top:0;background:var(--bg2);border-radius:12px 12px 0 0;z-index:2;display:flex;align-items:center">💳 구독 플랜 선택'
     +'<button onclick="_closeSubModal()" style="background:none;border:none;cursor:pointer;font-size:20px;margin-left:auto">✕</button></div>'
-    +'<div style="background:var(--bg3);border-radius:10px;padding:10px 14px;margin:10px 0;display:flex;align-items:center;gap:10px">'
-    +'<span style="font-size:13px;font-weight:700">👥 직원 수</span>'
-    +'<input id="sub-headcount" type="number" min="1" max="9999" value="'+_hc+'" oninput="_refreshSubCalc()" style="width:70px;padding:5px 8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:14px;font-weight:700;text-align:center">'
-    +'<span style="font-size:12px;color:var(--text3)">명 × 인당 단가 = 월 요금</span>'
+    +'<div style="background:var(--bg3);border-radius:10px;padding:10px 14px;margin:10px 0">'
+    +'<div style="font-size:13px;font-weight:700;margin-bottom:8px">👥 직원 수 구간 선택</div>'
+    +'<div style="display:flex;gap:8px">'
+    +'<button id="sub-tier-30" onclick="_selectTier(30)" style="flex:1;padding:8px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:2px solid var(--brand);background:var(--brand);color:#fff">1~30명</button>'
+    +'<button id="sub-tier-60" onclick="_selectTier(60)" style="flex:1;padding:8px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:2px solid var(--border);background:var(--bg);color:var(--text)">31~60명</button>'
+    +'<button id="sub-tier-100" onclick="_selectTier(100)" style="flex:1;padding:8px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:2px solid var(--border);background:var(--bg);color:var(--text)">61~100명</button>'
+    +'</div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-top:6px">💡 계좌이체 3% 할인 적용 금액입니다</div>'
     +'</div>'
     +'<div style="display:flex;flex-direction:column;gap:10px;padding:0 2px 12px">';
   plans.forEach(function(p){
-    var amt=p.up*_hc;
+    var cap=30;
+    var amt=_tierAmt(p.up,cap);
     var badge=p.badge?'<span style="background:#00e87a;color:#000;font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;margin-left:6px">'+p.badge+'</span>':'';
     var grp=p.g===1?'<span style="font-size:9px;background:rgba(0,200,248,.15);color:#00c8f8;padding:1px 6px;border-radius:4px;margin-left:4px">그룹1</span>':'<span style="font-size:9px;background:rgba(0,232,122,.12);color:#00e87a;padding:1px 6px;border-radius:4px;margin-left:4px">그룹2</span>';
     html+='<div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px">'
       +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
       +'<span style="font-size:24px">'+p.ic+'</span>'
       +'<div style="flex:1"><div style="font-size:14px;font-weight:800">'+p.nm+badge+grp+'</div><div style="font-size:11px;color:var(--text3)">'+p.tl+'</div></div>'
-      +'<div style="text-align:right"><div style="font-size:11px;color:var(--text3)">'+_hc+'명 × '+p.up.toLocaleString()+'원</div>'
-      +'<div class="sub-amt-'+p.key+'" style="font-size:19px;font-weight:900;color:'+p.color+'">'+amt.toLocaleString()+'<span style="font-size:11px;font-weight:400">원/월</span></div></div>'
-      +'</div>'
+      +'<div style="text-align:right">'
+      +'<div class="sub-tier-label-'+p.key+'" style="font-size:11px;color:var(--text3)">1~30명 × '+p.up.toLocaleString()+'원 × 97%</div>'
+      +'<div class="sub-amt-'+p.key+'" style="font-size:19px;font-weight:900;color:'+p.color+'">'+amt.toLocaleString()+'<span style="font-size:11px;font-weight:400">원/월</span></div>'
+      +'</div></div>'
       +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-bottom:8px">'
       +p.ft.map(function(f){return '<div style="font-size:11px;color:var(--text2);display:flex;align-items:center;gap:3px"><span style="color:'+p.color+'">✓</span>'+f+'</div>';}).join('')
       +'</div>'
-      +'<button data-pkey="'+p.key+'" data-uprice="'+p.up+'" onclick="_subPayClick(this)" style="width:100%;padding:10px;background:'+p.color+';color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">결제하기 → <span class="sub-btn-amt-'+p.key+'">'+amt.toLocaleString()+'원</span>/월</button>'
-
+      +'<button data-pkey="'+p.key+'" data-uprice="'+p.up+'" onclick="_subPayClick(this)" style="width:100%;padding:10px;background:'+p.color+';color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">💬 계좌이체 신청 → <span class="sub-btn-amt-'+p.key+'">'+amt.toLocaleString()+'원</span>/월</button>'
       +'</div>';
   });
   html+='</div><div style="text-align:center;font-size:11px;color:var(--text3);padding:0 0 12px">📱 앱 푸시 무제한 · 문의: <a href="tel:051-711-3103" style="color:var(--brand)">051-711-3103</a></div></div>';
@@ -15816,21 +15865,37 @@ function _showSubModal(){
   document.body.appendChild(moEl);
   moEl.onclick=function(e){if(e.target===moEl)moEl.remove();};
 }
-function _refreshSubCalc(){
-  var hc=parseInt((document.getElementById('sub-headcount')||{value:'30'}).value)||30;
+function _selectTier(cap){
+  // 버튼 스타일 갱신
+  [30,60,100].forEach(function(c){
+    var btn=document.getElementById('sub-tier-'+c);
+    if(!btn) return;
+    if(c===cap){btn.style.background='var(--brand)';btn.style.color='#fff';btn.style.borderColor='var(--brand)';}
+    else{btn.style.background='var(--bg)';btn.style.color='var(--text)';btn.style.borderColor='var(--border)';}
+  });
+  // 금액 갱신
   var prices={settle:17000,qr_payroll:17000,qr:12000,payroll:12000,delivery:17000};
+  var tierLabel=cap<=30?'1~30명':cap<=60?'31~60명':'61~100명';
   Object.keys(prices).forEach(function(k){
-    var amt=prices[k]*hc;
+    var amt=Math.round(prices[k]*cap*0.97);
     document.querySelectorAll('.sub-amt-'+k).forEach(function(el){el.innerHTML=amt.toLocaleString()+'<span style="font-size:11px;font-weight:400">원/월</span>';});
     document.querySelectorAll('.sub-btn-amt-'+k).forEach(function(el){el.textContent=amt.toLocaleString()+'원';});
+    document.querySelectorAll('.sub-tier-label-'+k).forEach(function(el){el.textContent=tierLabel+' × '+prices[k].toLocaleString()+'원 × 97%';});
+  });
+  // 버튼에 선택된 cap 저장
+  document.querySelectorAll('[data-pkey]').forEach(function(btn){
+    var up=parseInt(btn.dataset.uprice)||0;
+    btn.dataset.selcap=cap;
   });
 }
+function _refreshSubCalc(){_selectTier(30);}
 function confirmSubPay(planKey){
   var plan=PLAN_INFO&&PLAN_INFO[planKey];
   if(!plan){toast('❌ 플랜 없음: '+planKey);return;}
-  window._pendingPlanKey=planKey;
-  var mo=document.getElementById('mo-sub');if(mo)mo.remove();
-  _tossPay(planKey, plan.amount);
+  var tierBtn=document.querySelector('[data-pkey="'+planKey+'"]');
+  var cap=tierBtn?parseInt(tierBtn.dataset.selcap||30):30;
+  var amt=_tierAmt(plan.unitPrice||17000, cap);
+  _showTransferGuide(planKey, amt, cap);
 }
 
 // ════════════════════════════════════════════════════════
