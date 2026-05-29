@@ -1073,6 +1073,7 @@ function calcNetByIndustry(x){
 
 // ██ calcNet (쿠팡 물류 기본) ██
 function calcNet(x){
+  if(!x)return {damt:0,ramt:0,fresh:0,finc:0,_fincPerUnit:0,inc:0,nocont:0,etcPlus:0,etcMinus:0,totalAmt:0,vatIncome:0,hourlyWage:0,tax:0,emp:0,work:0,eq:0,dmg:0,adv:0,deduct:0,net:0,isYong:false,isCoupang:false,yDel:0,yRet:0};
   // ★ 업종별 엔진 먼저 시도
   var _indResult = calcNetByIndustry(x);
   if(_indResult) return _indResult;
@@ -2335,6 +2336,7 @@ function showApp(){
   _loadRouteCampMap();  // 라우트→캠프 매핑 로드
   _loadMySlug();  // 내 전용 URL 로드
   _loadSeasonPrices();  // 시즌 단가 로드
+  if(typeof _loadTeamLeaderPrices==="function")_loadTeamLeaderPrices(null);  // 팀장 수수료 로드
   _dwLoadSettings();    // ★ 배달대행 + 택배 계산 설정 로드
   // ★ RPRICE 로드 (로그인/리로드 후에도 단가표 유지)
   if(_db&&_CU&&_CU.dealerId){
@@ -8313,42 +8315,7 @@ async function runDealerPatch(){
 }
 
 // ── 슈퍼어드민 dealerId 패치 ──
-async function runDealerPatch(){
-  if(!isSuperAdmin()){toast('❌ 슈퍼어드민만 가능');return;}
-  if(!confirm('모든 dealerId 없는 문서에 현재 UID를 추가합니다. 계속할까요?'))return;
-  var did=_CU.dealerId||_CU.uid;
-  toast('🔄 패치 시작...');
-  var cols=['drivers','settlements','attendance','settings','notices',
-    'delivery_sessions','hourly_settlements','visitors','leave_payments',
-    'overtimes','leaves','accidents','activity','emergency_deliveries',
-    'campSupports','inquiries','complaints','photo_logs','driver_locations',
-    'admin_notifications','temp_logs','deliveries','device_tokens',
-    'driver_notifications','vehicles','expenses','contracts',
-    'signatures','driverDocs','cal_memos','roster_week'];
-  var total=0,patched=0;
-  for(var i=0;i<cols.length;i++){
-    try{
-      var snap=await _db.collection(cols[i]).get();
-      var noPatch=snap.docs.filter(function(d){return !d.data().dealerId;});
-      if(!noPatch.length)continue;
-      var batches=[];
-      for(var j=0;j<noPatch.length;j+=400)batches.push(noPatch.slice(j,j+400));
-      for(var b=0;b<batches.length;b++){
-        var batch=_db.batch();
-        batches[b].forEach(function(doc){batch.update(doc.ref,{dealerId:did});});
-        await batch.commit();
-        patched+=batches[b].length;
-      }
-      total+=snap.size;
-      toast('✅ '+cols[i]+' 완료');
-    }catch(e){console.warn(cols[i],e.message);}
-  }
-  toast('🎉 패치 완료! '+patched+'개 문서 업데이트');
-  console.log('패치 완료 - dealerId:'+did+', 패치:'+patched+'개');
-}
-
-
-
+async 
 function drawQR(canvas, url, size){
   if(!canvas||!url)return;
   // canvas 초기화
@@ -8401,14 +8368,17 @@ function _renderHomeJoinQR(){
     if(urlEl)urlEl.textContent=url;
     if(qrBox){
       qrBox.innerHTML='';
-      if(typeof QRCode!=='undefined'){
-        try{
-          new QRCode(qrBox,{text:url,width:84,height:84,correctLevel:QRCode.CorrectLevel.M});
-        }catch(e){qrBox.textContent='QR 오류';}
-      } else {
-        qrBox.innerHTML='<div style="font-size:10px;color:#888;text-align:center;padding:8px">QR 라이브러리<br>로드 중...</div>';
-        setTimeout(function(){_renderHomeJoinQR();},800);
+      function _tryQR(attempt){
+        if(typeof QRCode!=='undefined'){
+          qrBox.innerHTML='';
+          try{new QRCode(qrBox,{text:url,width:84,height:84,correctLevel:QRCode.CorrectLevel.M});}
+          catch(e){qrBox.innerHTML='<div style="font-size:10px;color:#888;padding:8px">QR 오류</div>';}
+        } else if(attempt<10){
+          qrBox.innerHTML='<div style="font-size:10px;color:#aaa;padding:8px;text-align:center">로드 중...</div>';
+          setTimeout(function(){_tryQR(attempt+1);},500);
+        }
       }
+      _tryQR(0);
     }
   }
 
@@ -8437,7 +8407,17 @@ function _renderHomeJoinQR(){
   }
 }
 function _copyJoinUrl(){
-  var url=window._homeJoinUrl||'';if(!url){toast('❌ URL 없음');return;}
+  var url=window._homeJoinUrl||'';
+  if(!url){
+    // 즉시 재생성 시도
+    if(_CU){
+      var did=_CU.dealerId||_CU.uid||'';
+      var code=did.slice(0,8).toUpperCase();
+      url='https://donway.ai.kr/settle?code='+code+'&join=1';
+      window._homeJoinUrl=url;
+    }
+    if(!url){toast('❌ 로그인 후 다시 시도하세요');return;}
+  }
   if(navigator.clipboard){navigator.clipboard.writeText(url).then(function(){toast('✅ 링크 복사됨');});}
   else{var ta=document.createElement('textarea');ta.value=url;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();toast('✅ 링크 복사됨');}
 }
@@ -8501,7 +8481,7 @@ function pageHome(){
 
     // ★ 직원 가입 QR 위젯
     +'<div style="background:linear-gradient(135deg,#0f2744,#1e3a5f);border:1px solid rgba(0,200,248,.25);border-radius:16px;padding:18px 20px;margin-bottom:18px;display:flex;align-items:center;gap:20px;flex-wrap:wrap">'
-    +'<div style="flex-shrink:0;background:#fff;border-radius:10px;padding:8px;width:100px;height:100px;display:flex;align-items:center;justify-content:center"><canvas id="home-qr-canvas" width="84" height="84"></canvas></div>'
+    +'<div style="flex-shrink:0;background:#fff;border-radius:10px;padding:8px;width:100px;height:100px;display:flex;align-items:center;justify-content:center"><div id="home-qr-box" style="width:84px;height:84px;display:flex;align-items:center;justify-content:center"></div></div>'
     +'<div style="flex:1;min-width:180px">'
     +'<div style="font-size:14px;font-weight:800;color:#fff;margin-bottom:4px">📱 직원 가입 QR</div>'
     +'<div style="font-size:11px;color:#94a3b8;margin-bottom:10px">스캔 → 이름·연락처·비번 → 가입 완료<br>앱 설치 시 명세서·알림 자동 수신</div>'
@@ -13009,6 +12989,7 @@ function openSE(id){
     }).catch(function(e){toast('❌ '+e.message);});
 }
 function _showSEModal(s){
+  if(!s){toast('❌ 정산 데이터를 불러올 수 없습니다');return;}
   // ★ calcNet으로 RPRICE 기반 실시간 재계산 (저장값 override)
   var _cn=calcNet(s);
   if(_cn){
@@ -13875,7 +13856,7 @@ function openAddDriver(){
 function saveNewDriver(){
   var name=(document.getElementById('adr-name')||{value:''}).value.trim();
   var uid=stripDf((document.getElementById('adr-uid')||{value:''}).value.trim());
-  if(!uid){toast('쿠팡 ID를 입력하세요');return;}
+  if(!uid){toast('직원 ID를 입력하세요');return;}
   _db.collection('drivers').add({
     name:name||'',userId:uid,dealerId:_CU.dealerId,
     camp:(document.getElementById('adr-camp')||{value:''}).value||'',
