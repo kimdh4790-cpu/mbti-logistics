@@ -2795,7 +2795,7 @@ function doQuickJoin(){
       var uid=cred.user.uid;
       var data={uid:uid,name:name,phone:phone,email:email,dealerId:companyId,companyName:companyName,
         role:'driver',driverId:driverId,isBiz:isBiz,bizNum:bizNum,bizName:bizName,
-        bizType:bizType,bizKind:bizKind,bizItem:bizKind,bizAddr:bizAddr,
+        bizType:bizType,bizKind:bizKind,bizItem:bizKind,bizAddr:bizAddr,bizRep:name,
         createdAt:firebase.firestore.FieldValue.serverTimestamp(),joinType:'quick'};
       return _db.collection('users').doc(uid).set(data).then(function(){
         return _db.collection('drivers').add(Object.assign({},data,{
@@ -9377,14 +9377,22 @@ function pageEmpHome(){
     +'<div style="font-size:13px;font-weight:700;margin-bottom:8px">오늘 내 출퇴근</div>'
     +'<div id="emp-today-status" style="font-size:22px;font-weight:900;margin-bottom:8px">확인 중...</div>'
     +'<div id="emp-today-time" style="font-size:12px;color:var(--text3);margin-bottom:12px"></div>'
-    +'<button onclick="goPage(\'my_qr\')" class="btn btn-blue" style="width:100%;padding:12px;font-size:14px;font-weight:800">📷 QR 출퇴근 스캔</button>'
+    +'<button onclick="goPage(\'my_qr\')" class="btn btn-blue" style="width:100%;padding:10px;font-size:13px;font-weight:700">📷 QR 출퇴근 스캔</button>'
+    +'</div>'
+    // 이번주 근무표 (실시간)
+    +'<div class="card" style="margin-bottom:14px">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'
+    +'<div style="font-size:14px;font-weight:800">📅 이번주 근무표</div>'
+    +'<div id="emp-roster-status" style="font-size:11px;color:var(--text3)">로딩 중...</div>'
+    +'</div>'
+    +'<div id="emp-roster-grid"></div>'
     +'</div>'
     // 빠른 메뉴
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">'
-    +_empQuickBtn('📷','QR 출퇴근','my_qr','#2563eb','출근·퇴근 스캔')
     +_empQuickBtn('🌴','휴가 신청','leave','#059669','연차·반차·병가')
     +_empQuickBtn('📊','내 정산','my_settle','#7c3aed','이번달 정산 확인')
     +_empQuickBtn('📋','정산 내역','my_statements','#0891b2','전체 정산 기록')
+    +_empQuickBtn('📢','공지사항','notices','#0891b2','회사 공지 확인')
     +'</div>'
     // 이번달 내 근무 요약
     +'<div class="card" style="margin-bottom:14px">'
@@ -9402,6 +9410,72 @@ function pageEmpHome(){
     +'</div>';
 
   _empHomeLoad(did, uid, today, ym);
+  // ★ 이번주 근무표 실시간 onSnapshot
+  _empLoadRoster(did, uid, today);
+}
+
+// ★ 직원 이번주 근무표 실시간 로드
+function _empLoadRoster(did, uid, today){
+  var weekStart = _getWeekStart(today);
+  var days3=['일','월','화','수','목','금','토'];
+  // 이번주 7일 날짜 배열
+  var weekDays=[];
+  for(var i=0;i<7;i++){
+    var d=new Date(weekStart);d.setDate(d.getDate()+i);
+    weekDays.push(d.toISOString().slice(0,10));
+  }
+  _db.collection('roster_week')
+    .where('dealerId','==',did)
+    .where('weekStart','==',weekStart)
+    .where('driverId','==',uid)
+    .onSnapshot(function(snap){
+      var grid=document.getElementById('emp-roster-grid');
+      var status=document.getElementById('emp-roster-status');
+      if(!grid) return;
+      if(snap.empty){
+        grid.innerHTML='<div style="font-size:12px;color:var(--text3);text-align:center;padding:10px">이번주 근무표가 없습니다</div>';
+        if(status) status.textContent='미등록';
+        return;
+      }
+      // 날짜별 데이터 정리
+      var byDay={};
+      snap.forEach(function(doc){
+        var d=doc.data();
+        byDay[d.dayIndex]=d;
+      });
+      var html='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center;font-size:11px">';
+      // 요일 헤더
+      weekDays.forEach(function(dt,idx){
+        var isToday=dt===today;
+        html+='<div style="font-weight:700;padding:4px 2px;border-radius:6px;background:'+(isToday?'var(--brand)':'var(--bg3)')+';color:'+(isToday?'#fff':'var(--text3)')+'">'+days3[new Date(dt).getDay()]+'<br><span style="font-size:9px">'+dt.slice(5)+'</span></div>';
+      });
+      // 근무 내용
+      weekDays.forEach(function(dt,idx){
+        var d=byDay[idx]||null;
+        var isToday=dt===today;
+        var status=d?d.status:'off';
+        var route=d?d.route||'':'-';
+        var bg=status==='work'?'rgba(0,200,124,.15)':status==='off'?'var(--bg3)':'rgba(255,180,0,.15)';
+        var color=status==='work'?'var(--green)':status==='off'?'var(--text3)':'var(--amber)';
+        var label=status==='work'?'출근':status==='off'?'휴무':'기타';
+        html+='<div style="padding:5px 2px;border-radius:6px;background:'+bg+';border:'+(isToday?'1px solid var(--brand)':'1px solid transparent')+'">'
+          +'<div style="color:'+color+';font-weight:700;font-size:10px">'+label+'</div>'
+          +(route&&route!=='-'?'<div style="color:var(--text3);font-size:9px;margin-top:2px">'+esc(route)+'</div>':'')
+          +'</div>';
+      });
+      html+='</div>';
+      grid.innerHTML=html;
+      if(status) status.textContent='실시간 ✓';
+    },function(){
+      var grid=document.getElementById('emp-roster-grid');
+      if(grid) grid.innerHTML='<div style="font-size:12px;color:var(--text3);text-align:center;padding:10px">근무표를 불러올 수 없습니다</div>';
+    });
+}
+function _getWeekStart(today){
+  var d=new Date(today);
+  var day=d.getDay(); // 0=일
+  d.setDate(d.getDate()-day);
+  return d.toISOString().slice(0,10);
 }
 
 function _empQuickBtn(icon, label, page, color, sub){
@@ -11419,10 +11493,13 @@ function pageMySettle(){
     +'<div id="my-settle-list"><div style="text-align:center;padding:20px;color:var(--text3)">⏳ 로딩 중...</div></div>'
     +'</div>';
   if(!_db||!_CU)return;
-  // 본인 이름으로 정산 조회
+  // 본인 userId 또는 이름으로 정산 조회
+  var _did=_CU.companyId||_CU.dealerId||'';
+  var _uid=_CU.uid||'';
+  var _uname=_CU.name||'';
   _db.collection('settlements')
-    .where('dealerId','==',_CU.companyId||_CU.dealerId||'')
-    .where('driverName','==',_CU.name||'')
+    .where('dealerId','==',_did)
+    .where('userId','==',_uid)
     .orderBy('createdAt','desc').limit(20).get()
   .then(function(snap){
     var html='';
@@ -14004,9 +14081,10 @@ function _reqNotifPerm(){
     if(perm==='granted'){
       toast('✅ 알림이 허용되었습니다!');
       setTimeout(_registerFCM, 500);
-      // 버튼 → 허용됨으로 교체
+      // 버튼 → 허용됨으로 교체 후 3초 뒤 모달 닫기
       var btn=document.querySelector('[onclick="_reqNotifPerm()"]');
       if(btn){btn.style.background='#d1fae5';btn.style.color='#065f46';btn.textContent='✅ 알림 허용됨';btn.onclick=null;}
+      setTimeout(function(){var m=document.getElementById('mo-welcome');if(m)m.remove();},2000);
     } else {
       toast('⚠️ 알림을 허용해야 푸시 알림을 받을 수 있어요');
     }
@@ -20199,8 +20277,10 @@ function _showWelcome(){
       :'<div style="font-size:11px;color:#86efac;margin-bottom:8px">✅ 알림 허용됨</div>')
     +'<button onclick="document.getElementById(\'mo-welcome\').remove()" style="background:#fff;color:#1e3a8a;border:none;border-radius:100px;padding:10px 32px;font-size:14px;font-weight:800;cursor:pointer;width:100%">입장하기 →</button>';
   mo.appendChild(d);document.body.appendChild(mo);
-  // 5초 후 자동 닫기 (알림 허용 누를 시간)
-  setTimeout(function(){var m=document.getElementById('mo-welcome');if(m)m.remove();},5000);
+  // 알림 미허용 시 자동닫기 안 함 (허용 후 자동닫기)
+  if(Notification.permission==='granted'){
+    setTimeout(function(){var m=document.getElementById('mo-welcome');if(m)m.remove();},4000);
+  }
 }
 
 // ══ 사이드바 토글 (모바일 햄버거) ══
