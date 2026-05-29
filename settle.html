@@ -2256,6 +2256,8 @@ function showApp(){
     MENUS=MENUS_DRIVER;
   } else {
     var sType = _CU.serviceType||'full';
+    // ★ sType 디버그 로그 (슈퍼어드민용)
+    if(isSuperAdmin()) console.log('[Nav] sType:', sType, '| dealerId:', did);
     if(sType==='settle')   MENUS=MENUS_SETTLE;
     else if(sType==='delivery') MENUS=MENUS_DELIVERY;
     else if(sType==='qr')  MENUS=MENUS_QR;
@@ -10872,6 +10874,7 @@ var MENUS_SETTLE = [
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
     {ic:'🗓',l:'라우트 근무표',   p:'roster',           plan_key:'settle'},
     {ic:'🧾',l:'세무사 공유',      p:'tax_share',        plan_key:'settle'},
+    {ic:'🔐💼',l:'QR+급여 테스트',  p:'attendance',       plan_key:'free'},
     {ic:'⭐',l:'직원 평가',        p:'evaluation',       plan_key:'free'},
     {ic:'💸',l:'경비 관리',        p:'expense',          plan_key:'free'}
   ]},
@@ -13424,6 +13427,55 @@ function _saveSECurrent(){
 }
 
 // ── 세무사 연동: 정산서 저장 시 자동 공유 토큰 생성 + Firestore 저장
+
+function _sendAllTaxShare(){
+  if(!_settleCache||!_settleCache.length){toast('❌ 먼저 엑셀을 업로드하세요');return;}
+  var did=_CU&&_CU.dealerId||'';
+  if(!did){toast('❌ 로그인 필요');return;}
+  if(!confirm('이번 달 정산 완료된 기사 전체에게 세무사 연동 데이터를 일괄 전송하시겠습니까?'))return;
+
+  // 월 추출
+  var ym=(_settleCache[0]&&_settleCache[0].month)||new Date().toISOString().slice(0,7);
+
+  // 세무사 정보 로드
+  _db.collection('settings').doc(did+'_taxAccountant').get().then(function(snap){
+    var ta=snap.exists?snap.data():{};
+    var taxEmail=ta.email||'';
+    var taxName=ta.name||'세무사';
+
+    var settled=_settleCache.filter(function(s){return s.month===ym;});
+    if(!settled.length){toast('❌ '+ym+' 정산 데이터 없음');return;}
+
+    var sent=0,fail=0;
+    var total=settled.length;
+
+    settled.forEach(function(s){
+      var token=did+'_'+s.userId+'_'+ym+'_'+Date.now().toString(36);
+      var net=calcNet(s);
+      var shareData={
+        type:'tax_share',dealerId:did,driverId:s.userId,driverName:s.driver||s.userId,
+        ym:ym,token:token,email:taxEmail,taxAccountantName:taxName,
+        vatIncome:net.vatIncome||0,net:net.net||0,
+        createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+        status:'pending',source:'bulk'
+      };
+      _db.collection('taxShares').doc(token).set(shareData)
+        .then(function(){
+          sent++;
+          if(sent+fail===total){
+            toast('✅ 세무사 일괄 전송 완료 — '+sent+'명 / 실패 '+fail+'명');
+          }
+        }).catch(function(){
+          fail++;
+          if(sent+fail===total){
+            toast('⚠️ '+sent+'명 전송, '+fail+'명 실패');
+          }
+        });
+    });
+
+    toast('⏳ '+total+'명 세무사 전송 중...');
+  }).catch(function(){toast('⚠️ 세무사 정보 없음 — 세무사 정보 등록 후 시도하세요');});
+}
 function _seTaxSync(settleId, payload){
   if(!_db||!_CU) return;
   var did=_CU.dealerId||_CU.uid;
