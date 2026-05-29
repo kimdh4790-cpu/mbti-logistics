@@ -22,41 +22,39 @@ messaging.onBackgroundMessage(function(payload) {
   const data = payload.data || {};
   const type = data.type || 'alert';
 
-  // 알림 타입별 이모지
-  const icons = {
-    join:  '🎉',
-    pay:   '💳',
-    alert: '🔔',
-    settle:'💰'
-  };
-  const icon = icons[type] || '🔔';
-
   const notifTitle = payload.notification?.title || 'DONWAY 알림';
   const notifBody  = payload.notification?.body  || '';
+  const brandTitle = 'DONWAY · ' + notifTitle;
 
   const options = {
     body: notifBody,
     icon: '/icon-192.png',
     badge: '/icon-192.png',
-    tag: 'donway-' + type,          // 같은 타입은 덮어쓰기
-    renotify: true,                  // 덮어써도 소리 재생
-    requireInteraction: type === 'join' || type === 'pay',  // 중요 알림은 유지
-    vibrate: [200, 100, 200],        // 진동 패턴
-    data: {
-      url: '/settle',
-      type: type,
-      payload: data
-    },
+    tag: 'donway-' + type + '-1',   // 첫 번째 알림 태그
+    renotify: true,
+    requireInteraction: type === 'join' || type === 'pay',
+    vibrate: [300, 100, 300],
+    data: { url: '/settle', type: type, payload: data },
     actions: [
       { action: 'open', title: '🔍 확인하기' },
       { action: 'close', title: '✕ 닫기' }
     ]
   };
 
-  // 제목에 DONWAY 브랜드 강조
-  const brandTitle = 'DONWAY · ' + notifTitle;
-
-  return self.registration.showNotification(brandTitle, options);
+  // ★ 첫 번째 알림 표시 후 1.5초 뒤 두 번째 알림
+  return self.registration.showNotification(brandTitle, options)
+    .then(function() {
+      return new Promise(function(resolve) {
+        setTimeout(resolve, 1500);
+      });
+    })
+    .then(function() {
+      return self.registration.showNotification(brandTitle, Object.assign({}, options, {
+        tag: 'donway-' + type + '-2',  // 다른 태그로 두 번째 알림
+        body: '🔔 ' + notifBody,       // 두 번째는 벨 이모지 추가
+        vibrate: [300, 100, 300],
+      }));
+    });
 });
 
 // 알림 클릭 처리
@@ -70,13 +68,11 @@ self.addEventListener('notificationclick', function(event) {
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then(function(clientList) {
-        // 이미 열린 탭이 있으면 포커스
         for (const client of clientList) {
           if (client.url.includes('donway') && 'focus' in client) {
             return client.focus();
           }
         }
-        // 없으면 새 탭
         if (clients.openWindow) {
           return clients.openWindow(url);
         }

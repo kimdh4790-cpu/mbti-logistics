@@ -11758,18 +11758,27 @@ async function _registerFCM(){
     var isAdmin = isSuperAdmin();
     var isDriver = _CU.role==='driver'||_CU.role==='member';
     if(isDriver){
-      // ★ 기사 FCM 토큰 → members 컬렉션에 저장
-      var driverId = _CU.driverId||_CU.uid;
-      await _db.collection('members').doc(driverId).update({
-        fcmToken: token,
-        fcmUpdatedAt: new Date().toISOString()
-      }).catch(function(){
-        return _db.collection('members').doc(driverId).set({
-          fcmToken: token,
-          fcmUpdatedAt: new Date().toISOString(),
-          dealerId: _CU.dealerId
-        },{merge:true});
-      });
+      // ★ 기사 FCM 토큰 → drivers 컬렉션에서 userId로 찾아서 저장
+      var _uid = _CU.uid;
+      var _did = _CU.dealerId;
+      _db.collection('drivers')
+        .where('userId','==',_uid)
+        .limit(1).get()
+        .then(function(snap){
+          if(!snap.empty){
+            snap.docs[0].ref.update({
+              fcmToken: token,
+              fcmUpdatedAt: new Date().toISOString()
+            });
+          } else {
+            // fallback: uid 기반 저장
+            _db.collection('drivers').doc(_uid).set({
+              fcmToken: token,
+              fcmUpdatedAt: new Date().toISOString(),
+              dealerId: _did
+            },{merge:true});
+          }
+        }).catch(function(e){ console.warn('[FCM] 기사 토큰 저장 실패:', e.message); });
     } else {
       // 대리점 FCM 토큰 저장
       await _db.collection('companies').doc(_CU.dealerId).update({
