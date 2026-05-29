@@ -297,6 +297,7 @@ tr:hover>td{background:var(--bg3)}
     <div class="sb-bot">
       <button class="btn" style="width:100%;font-size:11px;margin-bottom:4px" onclick="toggleDark()">🌙 다크모드</button>
       <button class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:var(--bg3);color:var(--text2)" onclick="openChangePw()">🔑 비밀번호 변경</button>
+      <button id="btn-init-admin" class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:#7c3aed;color:#fff;display:none" onclick="_initSuperAdminDocs()">🛠️ 슈퍼어드민 초기화</button>
       <button id="admin-btn" class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:#1e293b;color:#f59e0b;display:none" onclick="openAdminPanel()">👑 슈퍼 어드민</button>
       <button class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:linear-gradient(135deg,#185FA5,#7C3AED);color:#fff;border:none" onclick="_showSubModal()">💳 구독 / 갱신</button>
       <button class="btn" id="my-url-btn" style="width:100%;font-size:10px;margin-bottom:4px;background:var(--brand-l);color:var(--brand);border:1px solid var(--brand);display:none" onclick="_showMyUrl()">🔗 내 전용 URL</button>
@@ -18834,18 +18835,60 @@ function isSuperAdmin(){
     ||(_SUPER_ADMIN_CACHE===true));
 }
 
+function _initSuperAdminDocs(){
+  if(!_db||!_CU){toast('❌ Firebase 미연결');return;}
+  if(SUPER_ADMIN_EMAILS.indexOf(_CU.email)<0){toast('❌ 권한 없음');return;}
+  var emails = SUPER_ADMIN_EMAILS;
+  var done = 0;
+  emails.forEach(function(email){
+    // 원본 이메일로 문서 ID 저장
+    _db.collection('admins').doc(email).set({
+      email: email,
+      role: 'superadmin',
+      createdAt: new Date().toISOString()
+    }, {merge: true}).then(function(){
+      done++;
+      if(done === emails.length){
+        _SUPER_ADMIN_CACHE = true;
+        toast('✅ 슈퍼어드민 초기화 완료! 페이지 새로고침 하세요.');
+        document.getElementById('btn-init-admin').style.display='none';
+      }
+    }).catch(function(e){toast('❌ 오류: '+e.message);});
+  });
+}
+
+function _showInitAdminBtn(){
+  var btn = document.getElementById('btn-init-admin');
+  if(btn && _CU && SUPER_ADMIN_EMAILS.indexOf(_CU.email)>=0){
+    btn.style.display='block';
+  }
+}
+
 // Firestore admins 컬렉션 연동 (마이그레이션 준비용 — 현재는 보조)
 function _loadAdminStatus(){
   if(!_db||!_CU||!_CU.email)return;
-  var safeEmail=_CU.email.replace(/\./g,'_');
-  _db.collection('admins').doc(safeEmail).get()
+  _db.collection('admins').doc(_CU.email).get()
     .then(function(snap){
       if(snap.exists&&snap.data().role==='superadmin'){
         _SUPER_ADMIN_CACHE=true;
         var btn=document.getElementById('admin-btn');
         if(btn)btn.style.display='block';
+      } else {
+        var safeEmail=_CU.email.replace(/\./g,'_');
+        return _db.collection('admins').doc(safeEmail).get()
+          .then(function(snap2){
+            if(snap2.exists&&snap2.data().role==='superadmin'){
+              _SUPER_ADMIN_CACHE=true;
+              var btn=document.getElementById('admin-btn');
+              if(btn)btn.style.display='block';
+            } else if(SUPER_ADMIN_EMAILS.indexOf(_CU.email)>=0){
+              _showInitAdminBtn();
+            }
+          });
       }
-    }).catch(function(){});
+    }).catch(function(){
+      if(SUPER_ADMIN_EMAILS.indexOf(_CU.email)>=0) _showInitAdminBtn();
+    });
 }
 
 function _requirePlan(feature,callback){
