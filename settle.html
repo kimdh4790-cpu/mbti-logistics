@@ -1109,19 +1109,19 @@ function calcNet(x){
     }
   }
   if(!_fincStored&&isCoupang&&dcnt>0){
-    if(!_cnetAnyOff){
-      // 전체 ON — __all__ 기본 단가
-      _fincRate=typeof _getIncSetting==='function'
-        ?(_getIncSetting(uid,'__all__').rate||0)
-        :(G_PRICES&&G_PRICES.freshbag_inc||0);
-    } else if(_xRoutes.length&&typeof _getIncSetting==='function'){
-      // 일부 OFF — ON 라우트만 finc 계산
+    if(_xRoutes.length&&typeof _getIncSetting==='function'){
+      // ★ 라우트별 단가 계산 (ON 라우트만)
       var _fincVal=0;
       _xRoutes.forEach(function(rd){
         var _s=_getIncSetting(uid,rd.route||'');
         if(_s.on&&_s.rate>0) _fincVal+=(rd.cnt||0)*_s.rate;
       });
-      _fincRate=dcnt>0?_fincVal/dcnt:0; // 실질 단가로 환산
+      _fincRate=dcnt>0?_fincVal/dcnt:0;
+    } else {
+      // ★ 라우트 없을 때만 __all__ fallback
+      _fincRate=typeof _getIncSetting==='function'
+        ?(_getIncSetting(uid,'__all__').rate||0)
+        :(G_PRICES&&G_PRICES.freshbag_inc||0);
     }
   }
   var finc=isCoupang?(_fincStored>0?_fincStored:Math.round(dcnt*_fincRate)):0;
@@ -2961,7 +2961,9 @@ async function _tossPay(planType, amount){
   if(!_CU){toast('❌ 로그인 필요');return;}
   var plan=PLAN_INFO&&PLAN_INFO[planType];
   if(!plan){toast('❌ 플랜 없음: '+planType);return;}
-  var finalAmount=amount||plan.amount;
+  // ★ 인당 모델: amount = unitPrice × headcount (외부에서 계산해 전달)
+  // plan.amount는 30명 기준 기본값 (fallback)
+  var finalAmount=amount||(plan.unitPrice*(parseInt((document.getElementById('sub-headcount')||{value:30}).value)||30))||plan.amount;
   if(!finalAmount){toast('❌ 금액 오류');return;}
   var uid=(_CU.dealerId||_CU.uid||'u').replace(/[^a-zA-Z0-9]/g,'').slice(0,8)||'user0001';
   var orderId='DW'+uid+Date.now().toString().slice(-8);
@@ -8170,7 +8172,10 @@ function _downloadDouzoneCSV(ym){
 }
 
 function pageTaxShare(){
-  document.getElementById('page-title').textContent='🧾 세무사 공유';
+  document.getElementById('page-title').textContent='🧾 세무사 연동';
+  document.getElementById('topbar-right').innerHTML=
+    '<button class="btn btn-sm" onclick="_downloadDouzoneCSV()" style="background:#1e40af;color:#fff;font-size:12px">💾 더존 CSV</button> '+
+    '<button class="btn btn-sm" onclick="_sendAllTaxShare()" style="background:linear-gradient(135deg,#059669,#0891b2);color:#fff;font-size:12px">📤 일괄 전송</button>';
   var el=document.getElementById('content');
   if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
   var did=_CU.dealerId||_CU.uid;
@@ -13080,6 +13085,7 @@ function openSE(id){
     }).catch(function(e){toast('❌ '+e.message);});
 }
 function _showSEModal(s){
+  window._currentSEData=s; // ★ 인센 재계산용
   if(!s){toast('❌ 정산 데이터를 불러올 수 없습니다');return;}
   // ★ calcNet으로 RPRICE 기반 실시간 재계산 (저장값 override)
   var _cn=calcNet(s);
@@ -13207,7 +13213,7 @@ function _showSEModal(s){
   var items=[
     {ic:'🧊',n:'③ 프레시백 회수금액',id:'se-fresh',val:s.fresh||0,sign:'+',editable:true,note:''},
     {ic:'⭐',n:'④ 프레시백 인센티브',id:'se-finc',val:(_cn&&_cn.finc>0?_cn.finc:s.finc)||0,sign:'+',editable:false,note:(s.dcnt||0)+'건 × '+(s._fincPerUnit||Math.round((s.finc||0)/(s.dcnt||1)))+'원'},
-    {ic:'➕',n:'⑤ 미계약건',id:'se-nocont',_adminOnly:true,
+    {ic:'➕',n:'⑤ 미계약건',id:'se-nocont',_hidden:true,
       val:(function(){
         // RPRICE 기반 재계산 우선, 없으면 저장값
         var _cnt=+s.nocontCnt||0;
@@ -13228,7 +13234,7 @@ function _showSEModal(s){
   itemSec.style.cssText='border-top:2px solid var(--border);padding-top:12px;margin-bottom:10px';
   items.forEach(function(it){
     if(!it)return;
-    if(it._adminOnly&&_CU&&(_CU.role==='driver'||_CU.isDriver===true))return;
+    if(it._hidden)return; // 미계약건 완전 숨김
     var row=document.createElement('div');
     row.style.cssText='display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--bg3)';
     var lbl=document.createElement('div');
@@ -17705,6 +17711,28 @@ function _incRate2(rateBtn){
   });
   // 직접입력 칸 초기화
   var ci=document.querySelector('.inc-custom-inp[data-k="'+k+'"]');if(ci)ci.value='';
+  // ★ 열려있는 명세서 finc 실시간 업데이트
+  _refreshOpenSEFinc();
+}
+function _refreshOpenSEFinc(){
+  // 열린 명세서에서 현재 정산 데이터 찾아 finc 재계산
+  var seModal=document.getElementById('mo-se');
+  if(!seModal)return;
+  var cached=window._currentSEData;
+  if(!cached)return;
+  var net=calcNet(cached);
+  var fincEl=document.getElementById('se-finc');
+  if(fincEl){
+    fincEl.value=net.finc||0;
+    // 건당 단가 라벨 업데이트
+    var noteEl=fincEl.closest('.se-row');
+    if(noteEl){
+      var noteSpan=noteEl.querySelector('.se-note');
+      if(noteSpan) noteSpan.textContent=(cached.dcnt||0)+'건 × '+(net._fincPerUnit||0)+'원';
+    }
+  }
+  // 합계 재계산
+  if(typeof _updateSETotal==='function') _updateSETotal();
 }
 function _incCustom2(inp){
   var k=inp.dataset.k;var rate=parseInt(inp.value);
@@ -18666,7 +18694,11 @@ function _showPlanUpsell(planKey){
         expireDate:firebase.firestore.Timestamp.fromDate(expiry),
         plan:planType,
         activatedAt:new Date().toISOString(),
-        orderId:orderId
+        orderId:orderId,
+        // ★ 인당 구독료 정보 저장
+        unitPrice:(window.PLAN_INFO&&window.PLAN_INFO[planType]&&window.PLAN_INFO[planType].unitPrice)||0,
+        headcount:(function(){var hc=parseInt((document.getElementById('sub-headcount')||{value:30}).value)||30;return hc;}()),
+        monthlyAmount:(window.PLAN_INFO&&window.PLAN_INFO[planType]&&window.PLAN_INFO[planType].unitPrice||0)*((function(){return parseInt((document.getElementById('sub-headcount')||{value:30}).value)||30;})())
       },{merge:true})
     ]).then(function(){
       window._cachedPlan=planType;
