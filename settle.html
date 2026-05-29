@@ -2707,17 +2707,29 @@ function _quickVerifyCode(code){
   clearTimeout(_quickCodeTimer);
   msg.innerHTML='<span style="color:var(--text3)">확인 중...</span>';
   _quickCodeTimer=setTimeout(function(){
-    if(!_db){msg.innerHTML='';return;}
+    if(!_db){msg.innerHTML='<span style="color:var(--text3)">로딩 중...</span>';setTimeout(function(){_quickVerifyCode(code);},800);return;}
     _db.collection('companies').where('companyCode','==',code).limit(1).get()
       .then(function(snap){
-        if(snap.empty){msg.innerHTML='<span style="color:var(--red)">❌ 코드를 찾을 수 없습니다</span>';}
-        else{
+        if(!snap.empty){
           var d=snap.docs[0].data(),cid=snap.docs[0].id;
           var el=document.getElementById('j-code');
           if(el){el.dataset.companyId=cid;el.dataset.companyName=d.companyName||'';}
           msg.innerHTML='<span style="color:var(--green)">✅ '+esc(d.companyName||'확인됨')+'</span>';
+        } else {
+          // companyCode 없으면 slug로도 시도
+          return _db.collection('companies').where('slug','==',code).limit(1).get()
+            .then(function(snap2){
+              if(!snap2.empty){
+                var d=snap2.docs[0].data(),cid=snap2.docs[0].id;
+                var el=document.getElementById('j-code');
+                if(el){el.dataset.companyId=cid;el.dataset.companyName=d.companyName||'';}
+                msg.innerHTML='<span style="color:var(--green)">✅ '+esc(d.companyName||'확인됨')+'</span>';
+              } else {
+                msg.innerHTML='<span style="color:var(--red)">❌ 코드를 찾을 수 없습니다<br><span style="font-size:10px">관리자에게 정확한 코드 확인 요청</span></span>';
+              }
+            });
         }
-      }).catch(function(){msg.innerHTML='<span style="color:var(--red)">오류</span>';});
+      }).catch(function(e){msg.innerHTML='<span style="color:var(--red)">오류: '+e.message+'</span>';});
   },500);
 }
 function doQuickJoin(){
@@ -2762,7 +2774,7 @@ function doQuickJoin(){
     })
     .catch(function(e){
       if(btn){btn.disabled=false;btn.textContent='가입하기';}
-      var msgs={'auth/email-already-in-use':'이미 등록된 연락처','auth/weak-password':'비밀번호가 너무 짧습니다'};
+      var msgs={'auth/email-already-in-use':'이미 등록된 연락처입니다','auth/weak-password':'비밀번호 6자 이상','auth/network-request-failed':'네트워크 오류 — 인터넷 연결 확인','auth/too-many-requests':'잠시 후 다시 시도하세요','auth/invalid-email':'이메일 형식 오류'};
       if(err){err.textContent=msgs[e.code]||e.message;err.style.display='';}
     });
 }
@@ -2789,6 +2801,132 @@ function _showAppInstallBanner(){
 // 세무사 공유 페이지 (로그인 없이 접근)
 // URL: ?taxShare=TOKEN
 // ══════════════════════════════════════════
+
+// ════════════════════════════════════════
+// 경비 등록 공개 페이지 (드라이버 로그인 불필요)
+// URL: ?expense=1&did=DEALER_ID
+//   or ?expense=1&code=COMPANY_CODE
+// ════════════════════════════════════════
+function _renderExpenseRegView(dealerId){
+  var el=document.getElementById('content')||document.body;
+  el.innerHTML='<div style="max-width:480px;margin:0 auto;padding:20px"><div style="text-align:center;padding:20px;color:var(--text3)">🔄 로딩 중...</div></div>';
+
+  function _doRender(){
+    if(!_db){ setTimeout(_doRender,400); return; }
+
+    var CATS={'식비':'🍽','교통비':'🚗','주유비':'⛽','통신비':'📱','소모품':'📦','기타':'📋'};
+
+    var html='<div style="max-width:480px;margin:0 auto;padding:16px;font-family:sans-serif">'
+      +'<div style="background:linear-gradient(135deg,#185FA5,#0891b2);border-radius:14px;padding:18px 20px;color:#fff;margin-bottom:20px;text-align:center">'
+      +'<div style="font-size:11px;opacity:.7;margin-bottom:4px">DONWAY</div>'
+      +'<div style="font-size:20px;font-weight:800">💸 경비 등록</div>'
+      +'<div style="font-size:12px;opacity:.8;margin-top:4px">영수증 정보를 입력하세요</div>'
+      +'</div>'
+
+      // 이름
+      +'<div style="margin-bottom:12px">'
+      +'<label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:4px">👤 이름 *</label>'
+      +'<input id="exp-name" type="text" placeholder="이름 입력" style="width:100%;padding:10px;border:1.5px solid #d1d5db;border-radius:8px;font-size:14px;box-sizing:border-box">'
+      +'</div>'
+
+      // 날짜
+      +'<div style="margin-bottom:12px">'
+      +'<label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:4px">📅 날짜 *</label>'
+      +'<input id="exp-date" type="date" value="'+new Date().toISOString().slice(0,10)+'" style="width:100%;padding:10px;border:1.5px solid #d1d5db;border-radius:8px;font-size:14px;box-sizing:border-box">'
+      +'</div>'
+
+      // 상호명
+      +'<div style="margin-bottom:12px">'
+      +'<label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:4px">🏪 상호명 *</label>'
+      +'<input id="exp-vendor" type="text" placeholder="ex) 세븐일레븐, GS25, 주유소명" style="width:100%;padding:10px;border:1.5px solid #d1d5db;border-radius:8px;font-size:14px;box-sizing:border-box">'
+      +'</div>'
+
+      // 금액
+      +'<div style="margin-bottom:12px">'
+      +'<label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:4px">💰 금액 *</label>'
+      +'<input id="exp-amount" type="number" placeholder="0" style="width:100%;padding:10px;border:1.5px solid #d1d5db;border-radius:8px;font-size:14px;box-sizing:border-box">'
+      +'</div>'
+
+      // 분류
+      +'<div style="margin-bottom:12px">'
+      +'<label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:4px">📂 분류</label>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:6px">'
+      +Object.entries(CATS).map(function(e){
+        return '<button onclick="_expCatSelect(this)" data-cat="'+e[0]+'" style="padding:6px 12px;border:1.5px solid #d1d5db;border-radius:20px;background:#f9fafb;font-size:12px;cursor:pointer">'+e[1]+' '+e[0]+'</button>';
+      }).join('')
+      +'</div>'
+      +'</div>'
+
+      // 메모
+      +'<div style="margin-bottom:20px">'
+      +'<label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:4px">📝 메모</label>'
+      +'<input id="exp-memo" type="text" placeholder="간단한 메모 (선택)" style="width:100%;padding:10px;border:1.5px solid #d1d5db;border-radius:8px;font-size:14px;box-sizing:border-box">'
+      +'</div>'
+
+      // 제출 버튼
+      +(function(){window._expDealerId=dealerId;return '<button id="exp-submit-btn" onclick="_submitExpenseForm(window._expDealerId)" style="width:100%;padding:14px;background:linear-gradient(135deg,#185FA5,#0891b2);color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer">✅ 경비 등록</button>';}())
+      +'<div id="exp-msg" style="margin-top:12px;text-align:center;font-size:13px;display:none"></div>'
+      +'</div>';
+
+    el.innerHTML=html;
+
+    // 분류 선택 함수
+    window._expCatSelect=function(btn){
+      document.querySelectorAll('[data-cat]').forEach(function(b){
+        b.style.background='#f9fafb';b.style.borderColor='#d1d5db';b.style.color='#374151';
+      });
+      btn.style.background='#185FA5';btn.style.borderColor='#185FA5';btn.style.color='#fff';
+      window._expSelectedCat=btn.dataset.cat;
+    };
+
+    // 제출 함수
+    window._submitExpenseForm=function(did){
+      var name=(document.getElementById('exp-name')||{}).value||'';
+      var date=(document.getElementById('exp-date')||{}).value||'';
+      var vendor=(document.getElementById('exp-vendor')||{}).value||'';
+      var amount=parseInt((document.getElementById('exp-amount')||{}).value)||0;
+      var memo=(document.getElementById('exp-memo')||{}).value||'';
+      var cat=window._expSelectedCat||'기타';
+      var msg=document.getElementById('exp-msg');
+
+      if(!name){if(msg){msg.textContent='❌ 이름을 입력하세요';msg.style.display='block';}return;}
+      if(!vendor){if(msg){msg.textContent='❌ 상호명을 입력하세요';msg.style.display='block';}return;}
+      if(!amount){if(msg){msg.textContent='❌ 금액을 입력하세요';msg.style.display='block';}return;}
+
+      var btn=document.getElementById('exp-submit-btn');
+      if(btn){btn.disabled=true;btn.textContent='등록 중...';}
+
+      _db.collection('expenses').add({
+        dealerId:did,
+        name:name,
+        date:date,
+        vendor:vendor,
+        amount:amount,
+        category:cat,
+        memo:memo,
+        createdAt:new Date().toISOString(),
+        source:'qr_form'
+      }).then(function(){
+        if(msg){msg.style.color='#059669';msg.textContent='✅ 경비 등록 완료!';msg.style.display='block';}
+        if(btn){btn.textContent='✅ 등록완료';}
+        // 입력 초기화
+        setTimeout(function(){
+          document.getElementById('exp-name').value='';
+          document.getElementById('exp-vendor').value='';
+          document.getElementById('exp-amount').value='';
+          document.getElementById('exp-memo').value='';
+          if(btn){btn.disabled=false;btn.textContent='✅ 경비 등록';}
+          if(msg)msg.style.display='none';
+          window._expSelectedCat='기타';
+        },2000);
+      }).catch(function(e){
+        if(msg){msg.style.color='#dc2626';msg.textContent='❌ '+e.message;msg.style.display='block';}
+        if(btn){btn.disabled=false;btn.textContent='✅ 경비 등록';}
+      });
+    };
+  }
+  _doRender();
+}
 function _renderTaxShareView(token){
   var el=document.getElementById('content')||document.body;
   el.innerHTML='<div style="max-width:800px;margin:0 auto;padding:20px"><div style="text-align:center;padding:20px;color:var(--text3)">🔄 자료 불러오는 중...</div></div>';
@@ -3042,10 +3180,42 @@ function _processJoinUrlParams(){
   var code=(params.get('code')||'').toUpperCase();
   var isJoin=params.get('join');
   if(!code&&!isJoin)return;
-  setTimeout(function(){
-    if(typeof switchTab==='function')switchTab('join');
-    if(code){var el=document.getElementById('j-code');if(el){el.value=code;_quickVerifyCode(code);}}
-  },600);
+  // ★ 경비 등록 URL 처리 (?expense=1&did=xxx 또는 ?expense=1&code=xxx)
+  var expParam=tsParams.get('expense');
+  var expDid=tsParams.get('did')||tsParams.get('code')||'';
+  if(expParam){
+    function _waitDbAndExp(retry){
+      if(_db||retry>10){
+        if(!_db){toast('❌ 서버 연결 실패');return;}
+        if(expDid){
+          // dealerId 직접 전달
+          document.getElementById('sidebar')&&(document.getElementById('sidebar').style.display='none');
+          document.getElementById('topbar')&&(document.getElementById('topbar').style.display='none');
+          document.body.style.background='#f1f5f9';
+          var main=document.getElementById('main')||document.getElementById('content');
+          if(main)main.style.marginLeft='0';
+          _renderExpenseRegView(expDid);
+        } else {
+          toast('❌ 회사코드 없음 — 올바른 링크인지 확인');
+        }
+      } else {
+        setTimeout(function(){_waitDbAndExp(retry+1);},400);
+      }
+    }
+    setTimeout(function(){_waitDbAndExp(0);},300);
+    return;
+  }
+
+  // _db 초기화 대기 후 실행
+  function _waitDbAndJoin(retry){
+    if(_db||retry>10){
+      if(typeof switchTab==='function')switchTab('join');
+      if(code){var el=document.getElementById('j-code');if(el){el.value=code;_quickVerifyCode(code);}}
+    } else {
+      setTimeout(function(){_waitDbAndJoin(retry+1);},400);
+    }
+  }
+  setTimeout(function(){_waitDbAndJoin(0);},300);
 }
 function doJoin(){
   var name=document.getElementById('j-name').value.trim();
