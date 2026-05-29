@@ -8338,25 +8338,91 @@ async function runDealerPatch(){
 }
 
 
+
+function drawQR(canvas, url, size){
+  if(!canvas||!url)return;
+  // canvas 초기화
+  canvas.width = size||84; canvas.height = size||84;
+  var ctx = canvas.getContext('2d');
+  if(ctx){ ctx.clearRect(0,0,canvas.width,canvas.height); }
+
+  // QRCode 라이브러리 사용 (div 생성 후 이미지 추출)
+  if(typeof QRCode !== 'undefined'){
+    var tmp = document.createElement('div');
+    tmp.style.cssText = 'position:absolute;left:-9999px;top:-9999px';
+    document.body.appendChild(tmp);
+    try{
+      new QRCode(tmp, {
+        text: url,
+        width: size||84,
+        height: size||84,
+        correctLevel: QRCode.CorrectLevel.M
+      });
+      // 생성된 img 또는 canvas 복사
+      var qrImg = tmp.querySelector('img');
+      var qrCvs = tmp.querySelector('canvas');
+      if(qrCvs && ctx){
+        canvas.width = qrCvs.width; canvas.height = qrCvs.height;
+        ctx.drawImage(qrCvs, 0, 0);
+      } else if(qrImg && ctx){
+        qrImg.onload = function(){
+          canvas.width = qrImg.naturalWidth||size||84;
+          canvas.height = qrImg.naturalHeight||size||84;
+          ctx.drawImage(qrImg, 0, 0, canvas.width, canvas.height);
+        };
+      }
+    }catch(e){ console.warn('[QR]', e); }
+    finally{ setTimeout(function(){if(tmp.parentNode)tmp.parentNode.removeChild(tmp);}, 1000); }
+  }
+}
 function _renderHomeJoinQR(){
   if(!_CU)return;
   var did=_CU.dealerId||_CU.uid||'';
-  var code=_CU.companyCode||did.slice(0,8).toUpperCase();
+  // dealerId 앞 8자를 코드로 사용 (Firestore 없어도 동작)
+  var code=_CU.companyCode||(_CU.dealerId||'').slice(0,8).toUpperCase()||did.slice(0,8).toUpperCase();
+  if(!code||code.length<4) code=did.slice(-8).toUpperCase();
   var joinUrl='https://donway.ai.kr/settle?code='+code+'&join=1';
-  var canvas=document.getElementById('home-qr-canvas');
+
+  var qrBox=document.getElementById('home-qr-box');
   var urlEl=document.getElementById('home-join-url');
-  if(canvas)drawQR(canvas,joinUrl,84);
-  if(urlEl)urlEl.textContent=joinUrl;
-  window._homeJoinUrl=joinUrl;window._homeJoinCode=code;
+
+  function _applyQR(url, c){
+    window._homeJoinUrl=url; window._homeJoinCode=c;
+    if(urlEl)urlEl.textContent=url;
+    if(qrBox){
+      qrBox.innerHTML='';
+      if(typeof QRCode!=='undefined'){
+        try{
+          new QRCode(qrBox,{text:url,width:84,height:84,correctLevel:QRCode.CorrectLevel.M});
+        }catch(e){qrBox.textContent='QR 오류';}
+      } else {
+        qrBox.innerHTML='<div style="font-size:10px;color:#888;text-align:center;padding:8px">QR 라이브러리<br>로드 중...</div>';
+        setTimeout(function(){_renderHomeJoinQR();},800);
+      }
+    }
+  }
+
+  _applyQR(joinUrl, code);
+
+  // Firestore에서 실제 companyCode 조회
   if(_db&&did){
     _db.collection('companies').doc(did).get().then(function(snap){
-      if(!snap.exists)return;
-      var d=snap.data();
-      var rc=d.companyCode||d.slug||did.slice(0,8).toUpperCase();
-      var ru='https://donway.ai.kr/settle?code='+rc+'&join=1';
-      if(canvas)drawQR(canvas,ru,84);
-      if(urlEl)urlEl.textContent=ru;
-      window._homeJoinUrl=ru;window._homeJoinCode=rc;
+      var rc=code;
+      if(snap.exists){
+        var d=snap.data();
+        rc=d.companyCode||d.slug||code;
+        // companies에 companyCode 없으면 저장
+        if(!d.companyCode){
+          _db.collection('companies').doc(did).set({companyCode:code},{merge:true}).catch(function(){});
+        }
+      } else {
+        // companies 문서 자체가 없으면 코드 저장
+        _db.collection('companies').doc(did).set({
+          companyCode:code,dealerId:did,
+          createdAt:firebase.firestore.FieldValue.serverTimestamp()
+        },{merge:true}).catch(function(){});
+      }
+      _applyQR('https://donway.ai.kr/settle?code='+rc+'&join=1', rc);
     }).catch(function(){});
   }
 }
@@ -13072,7 +13138,7 @@ function _showSEModal(s){
            (RPRICE&&(RPRICE['nocont_w1']||RPRICE['nocont_w2'])?
             ' (W1:'+Number(RPRICE['nocont_w1']||0).toLocaleString()+'/W2:'+Number(RPRICE['nocont_w2']||0).toLocaleString()+'원)':' 금액 직접입력')},
     {ic:'⚠️',n:'⑥ 분실/파손 공제',id:'se-dmg',val:s.dmg||0,sign:'-',editable:true,note:'사유 입력',hasReason:true,reasonId:'se-dmg-reason',reasonVal:s.dmgReason||''},
-    {ic:'➕',n:'⑦ 기타(+)',id:'se-etc-plus',val:s.etcPlus||0,sign:'+',editable:true,note:'사유 입력',hasReason:true,reasonId:'se-etc-plus-reason',reasonVal:s.etcPlusReason||''},
+    {ic:'➕',n:'⑦ 기타(+)'+(s.etcPlusTL?'<span style="font-size:9px;color:#7c3aed;margin-left:4px">+팀장수수료 '+(s.etcPlusTL).toLocaleString()+'원</span>':''),id:'se-etc-plus',val:(s.etcPlus||0)+(s.etcPlusTL||0),sign:'+',editable:true,note:'사유 입력',hasReason:true,reasonId:'se-etc-plus-reason',reasonVal:(s.etcPlusTL?(s.etcPlusReason?s.etcPlusReason+' / ':'')+s.etcPlusTLReason:s.etcPlusReason||'')},
     {ic:'➖',n:'⑧ 기타(-)',id:'se-etc-minus',val:s.etcMinus||0,sign:'-',editable:true,note:'사유 입력',hasReason:true,reasonId:'se-etc-minus-reason',reasonVal:s.etcMinusReason||''},
     {ic:'💸',n:'⑨ 가불 공제',id:'se-adv',val:s.adv||0,sign:'-',editable:true,note:'가불 금액'}
   ];
