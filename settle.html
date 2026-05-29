@@ -1099,11 +1099,28 @@ function calcNet(x){
   // ★ finc: 저장된 값(col10 실제값) 우선, 없으면 _getIncSetting 기사별 설정
   var _fincStored=+x.finc||0;
   var _fincRate=0;
-  if(!_fincStored&&isCoupang&&dcnt>0){
-    // _getIncSetting에서 기사별 설정값 읽기 (0/10/15/25원)
+  // ★ 모든 라우트 ON 여부 체크
+  var _cnetAnyOff=false;
+  if(typeof _getIncSetting==='function'&&(_rdList&&_rdList.length)){
+    for(var _ri=0;_ri<_rdList.length;_ri++){
+      if(!_getIncSetting(uid,_rdList[_ri].route||'').on){_cnetAnyOff=true;break;}
+    }
+  }
+  if(!_fincStored&&isCoupang&&dcnt>0&&!_cnetAnyOff){
+    // 인센 설정값 읽기 (전체 ON일 때만)
     _fincRate=typeof _getIncSetting==='function'
       ?(_getIncSetting(x.userId||x.driver||'','__all__').rate||0)
       :(G_PRICES&&G_PRICES.freshbag_inc||0);
+  } else if(!_fincStored&&isCoupang&&dcnt>0&&_cnetAnyOff){
+    // 일부 OFF — ON인 라우트만 계산
+    if(typeof _getIncSetting==='function'&&_rdList){
+      var _fincVal=0;
+      _rdList.forEach(function(rd){
+        var _s=_getIncSetting(uid,rd.route||'');
+        if(_s.on&&_s.rate>0) _fincVal+=(rd.cnt||0)*_s.rate;
+      });
+      return Math.round(_fincVal);
+    }
   }
   var finc=isCoupang?(_fincStored>0?_fincStored:Math.round(dcnt*_fincRate)):0;
   var _fincPerUnit=dcnt>0?Math.round(finc/dcnt):_fincRate; // 건당 단가 (명세서 표시용)
@@ -1224,6 +1241,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           rColDcnt=7,rColRcnt=8,rColUnit=9,rColAddInc=10,
           rColFresh=14,    // 프레시백 회수금액
           rColFreshInc=-1, // 프레시백 인센티브 (별도 컬럼)
+          rColBasicAmt=11, // ★ 기본 배송단가 금액 (추가인센 미포함)
           rColTotal=13;
       for(var c2=0;c2<rh.length;c2++){
         var cn=String(rh[c2]||'').replace(/\s+/g,'');
@@ -1241,6 +1259,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         else if((cn.includes('프레시백')||cn.includes('프레쉬백'))&&(cn.includes('회수')||cn.includes('금액')))rColFresh=c2;
         else if(cn.includes('프레시백')||cn.includes('프레쉬백'))rColFresh=c2; // 단일 컬럼
         else if(cn==='총금액')rColTotal=c2;
+        else if(cn.includes('기본')&&cn.includes('배송')&&cn.includes('금액'))rColBasicAmt=c2;
       }
 
       // ── Raw 시트 파싱 → drvMap 구성
@@ -1285,7 +1304,14 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         if(campName&&campName!=='기타'&&drvMap[cleanId].camp==='기타')
           drvMap[cleanId].camp=campName;
 
-        if(isEcoRow){ continue; } // 에코백 완전 제외
+        if(isEcoRow){
+          // ★ 에코백 소급: col14(인센) 있으면 프레시백인센에 포함
+          if(freshInc>0||freshIncInc>0){
+            if(!drvMap[cleanId])drvMap[cleanId]={cleanId:cleanId,camp:campName||'기타',dcnt:0,rcnt:0,delAmt:0,retAmt:0,freshAmt:0,freshIncAmt:0,addIncAmt:0,dmgAmt:0,nocontCnt:0,nocontAmt:0,routes:{}};
+            drvMap[cleanId].freshIncAmt+=(freshInc||freshIncInc||0);
+          }
+          continue;
+        }
         if(isFreshRow){
           if(!drvMap[cleanId]) drvMap[cleanId]={cleanId:cleanId,camp:campName||'기타',
             dcnt:0,rcnt:0,delAmt:0,retAmt:0,freshAmt:0,freshIncAmt:0,
@@ -1323,7 +1349,9 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             drvMap[cleanId].camp=campName;
           continue;
         }
-        var delAmt=rowTotal>0?rowTotal:(dcnt*unitPrc);
+        // ★ basicAmt(기본배송단가금액, 추가인센 미포함) 우선 — 없으면 dcnt×unitPrc, 미계약은 col13
+        var basicAmt=rColBasicAmt>=0?Number(row[rColBasicAmt])||0:0;
+        var delAmt=basicAmt>0?basicAmt:(dcnt*unitPrc)||(isNocont?rowTotal:0);
         var retAmt=rcnt*unitPrc;
         drvMap[cleanId].dcnt+=dcnt;
         drvMap[cleanId].rcnt+=rcnt;
@@ -1331,7 +1359,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         drvMap[cleanId].retAmt+=retAmt;
         drvMap[cleanId].freshAmt+=freshInc;
         drvMap[cleanId].freshIncAmt+=freshIncInc;  // 프레시백 인센
-        drvMap[cleanId].addIncAmt+=addInc*dcnt; // ★ col10단가 × 건수 = 실제 추가인센 금액
+        drvMap[cleanId].addIncAmt+=addInc*(dcnt+rcnt); // ★ col10단가 × (배송+반품)건수
         // 날짜 추출
         var rowDateRaw=String(row[rColDate]||'').trim();
         var rowDate=rowDateRaw?rowDateRaw.slice(0,10):'';  // yyyy-mm-dd
@@ -12252,7 +12280,7 @@ function _buildPayslipHTML(rows){
     +'<button class="btn" onclick="this.closest(\'.mo\').remove()">닫기</button>'
     +'<div style="display:flex;gap:8px">'
     +'<button class="btn" onclick="savePayslipsFirestore()" style="background:var(--bg3);border:1px solid var(--border2)">☁ 저장</button>'
-    +'<button class="btn btn-blue" onclick="printAllPayslips('+JSON.stringify(rows).replace(/</g,'\u003c')+')">🖨 선택 인쇄 / PDF</button>'
+    +(function(){window._payslipRows=rows;return '<button class="btn btn-blue" onclick="printAllPayslips(window._payslipRows)">🖨 선택 인쇄 / PDF</button>';}())
     
     +'<button class="btn" style="background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);color:#22c55e" onclick="exportSettleExcel(rows)">📊 Excel</button>'+'</div></div>'
     +'</div>';
@@ -13177,7 +13205,7 @@ function _showSEModal(s){
   var items=[
     {ic:'🧊',n:'③ 프레시백 회수금액',id:'se-fresh',val:s.fresh||0,sign:'+',editable:true,note:''},
     {ic:'⭐',n:'④ 프레시백 인센티브',id:'se-finc',val:(_cn&&_cn.finc>0?_cn.finc:s.finc)||0,sign:'+',editable:false,note:(s.dcnt||0)+'건 × '+(s._fincPerUnit||Math.round((s.finc||0)/(s.dcnt||1)))+'원'},
-    {ic:'➕',n:'⑤ 미계약건',id:'se-nocont',
+    {ic:'➕',n:'⑤ 미계약건',id:'se-nocont',_adminOnly:true,
       val:(function(){
         // RPRICE 기반 재계산 우선, 없으면 저장값
         var _cnt=+s.nocontCnt||0;
