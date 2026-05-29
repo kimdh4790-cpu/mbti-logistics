@@ -7877,9 +7877,10 @@ window._expOcrScan=function(src){
   var reader=new FileReader();
   reader.onload=function(ev){
     var base64=ev.target.result.split(',')[1];
-    fetch('https://mbti-logistics.kimdh4790.workers.dev/doc-scan',{
+    var _ak=window.__AK||'';
+    fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','x-api-key':_ak,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
         model:'claude-sonnet-4-5-20251001',
         max_tokens:500,
@@ -8712,9 +8713,10 @@ window._txsOcr=function(src){
   var reader=new FileReader();
   reader.onload=function(ev){
     var base64=ev.target.result.split(',')[1];
-    fetch('https://mbti-logistics.kimdh4790.workers.dev/doc-scan',{
+    var _ak=window.__AK||'';
+    fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','x-api-key':_ak,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
         model:'claude-sonnet-4-5-20251001',
         max_tokens:500,
@@ -14685,9 +14687,10 @@ async function _ocrAnalyze(){
     var mime = _ocrCurrentFile.type||'image/jpeg';
 
     // 브라우저에서 직접 Anthropic 호출 (이전에 작동했던 방식)
-    var resp = await fetch('https://mbti-logistics.kimdh4790.workers.dev/doc-scan',{
+    var _ak2=window.__AK||'';
+    var resp = await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','x-api-key':_ak2,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
         model:'claude-haiku-4-5-20251001',
         max_tokens:1500,
