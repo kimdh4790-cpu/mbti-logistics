@@ -1654,19 +1654,29 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           }
         });
         // ★ 팀장 수수료 자동 계산
-        if(TL_PRICES&&TL_PRICES.length){
-          var _tlRT={};
-          settlements.filter(function(s){return s.month===month;}).forEach(function(s){
-            (s.routeDetails||[]).forEach(function(rd){if(rd.route)_tlRT[rd.route]=(_tlRT[rd.route]||0)+(rd.cnt||0);});
-          });
-          var _tlB=_calcTeamLeaderBonus(_tlRT);
-          Object.keys(_tlB).forEach(function(tlId){
-            var bonus=_tlB[tlId];
-            var tlE=settlements.find(function(s){return s.userId===tlId&&s.month===month;});
-            if(tlE){tlE.etcPlusTL=bonus.amount;tlE.etcPlusTLReason='팀장수수료 ('+bonus.amount.toLocaleString()+'원)';toast('✅ 팀장 '+bonus.name+' '+bonus.amount.toLocaleString()+'원 적용');}
-            else{toast('⚠️ 팀장 '+bonus.name+' 정산 없음 → 수동 확인');}
-          });
-        }
+        (function(){
+          function applyTL(){
+            if(!TL_PRICES||!TL_PRICES.length) return;
+            var _tlRT={};
+            settlements.filter(function(s){return s.month===month;}).forEach(function(s){
+              (s.routeDetails||[]).forEach(function(rd){if(rd.route)_tlRT[rd.route]=(_tlRT[rd.route]||0)+(rd.cnt||0);});
+            });
+            var _tlB=_calcTeamLeaderBonus(_tlRT);
+            Object.keys(_tlB).forEach(function(tlId){
+              var bonus=_tlB[tlId];
+              var tlE=settlements.find(function(s){return s.userId===tlId&&s.month===month;});
+              if(tlE){tlE.etcPlusTL=bonus.amount;tlE.etcPlusTLReason='팀장수수료 ('+bonus.amount.toLocaleString()+'원)';toast('✅ 팀장 '+bonus.name+' '+bonus.amount.toLocaleString()+'원 적용');}
+              else{toast('⚠️ 팀장 '+bonus.name+' 이번달 정산 없음');}
+            });
+          }
+          if(TL_PRICES&&TL_PRICES.length){
+            applyTL();
+          } else if(_db&&_CU&&_CU.dealerId){
+            _db.collection('settings').doc(_CU.dealerId+'_teamLeaderPrices').get()
+              .then(function(snap){if(snap.exists)TL_PRICES=(snap.data()||{}).leaders||[];applyTL();})
+              .catch(function(){});
+          }
+        })();
         lss('settlements',settlements);
         window._lastParsedSettlements = settlements; // 경험치 업데이트용
         // Firebase 저장
@@ -16716,6 +16726,78 @@ function _parseTLLinesFromBinary(buf){
   return _parseTLLines(lines);
 }
 
+
+// ══════════════════════════════════════
+// ★ 팀장 수수료 재계산 (엑셀 재업로드 불필요)
+// ══════════════════════════════════════
+
+function _promptTLRecalc(){
+  var ym=prompt('팀장 수수료 재계산할 월 입력 (예: 2026-05)','');
+  if(!ym||!ym.match(/^\d{4}-\d{2}$/)){if(ym!==null)toast('❌ 형식: YYYY-MM');return;}
+  _loadTeamLeaderPrices(function(){_recalcTeamLeaderBonus(ym,null);});
+}
+function _recalcTeamLeaderBonus(month, cb){
+  if(!_db||!_CU){toast('❌ 로그인 필요');return;}
+  if(!TL_PRICES||!TL_PRICES.length){toast('❌ 팀장 단가 미등록 — 단가표에서 먼저 등록하세요');return;}
+  var did=_CU.dealerId;
+  toast('🔄 팀장 수수료 재계산 중...');
+
+  _db.collection('settlements')
+    .where('dealerId','==',did)
+    .where('month','==',month)
+    .get()
+    .then(function(snap){
+      if(snap.empty){toast('❌ '+month+' 정산 없음');return;}
+
+      // 라우트별 전체 건수 집계
+      var routeTotals={};
+      var docs=[];
+      snap.forEach(function(doc){
+        var d=doc.data();
+        docs.push({id:doc.id,data:d});
+        (d.routeDetails||[]).forEach(function(rd){
+          if(rd.route)routeTotals[rd.route]=(routeTotals[rd.route]||0)+(rd.cnt||0);
+        });
+      });
+
+      // 팀장 수수료 계산
+      var bonus=_calcTeamLeaderBonus(routeTotals);
+      var tlIds=Object.keys(bonus);
+      if(!tlIds.length){toast('⚠️ 매칭되는 팀장 없음 — 아이디 확인 필요');return;}
+
+      // Firestore 일괄 업데이트
+      var batch=_db.batch();
+      var updated=0;
+      tlIds.forEach(function(tlId){
+        var b=bonus[tlId];
+        var entry=docs.find(function(d){return d.data.userId===tlId||d.data.driverId===tlId;});
+        if(entry){
+          batch.update(_db.collection('settlements').doc(entry.id),{
+            etcPlusTL: b.amount,
+            etcPlusTLReason: '팀장수수료 ('+b.amount.toLocaleString()+'원)',
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          updated++;
+          // 로컬 캐시도 업데이트
+          if(window._settleCache){
+            var cache=window._settleCache.find(function(s){return s.userId===tlId&&s.month===month;});
+            if(cache){cache.etcPlusTL=b.amount;cache.etcPlusTLReason='팀장수수료 ('+b.amount.toLocaleString()+'원)';}
+          }
+          toast('✅ 팀장 '+b.name+' 수수료 '+b.amount.toLocaleString()+'원 적용');
+        } else {
+          toast('⚠️ '+b.name+'('+tlId+') 이번 달 정산 없음');
+        }
+      });
+
+      if(updated===0){toast('⚠️ 업데이트 없음 — 팀장 아이디 확인 필요');return;}
+
+      batch.commit().then(function(){
+        toast('✅ 팀장 수수료 재계산 완료 ('+updated+'명) — 새로고침하면 반영됩니다');
+        if(typeof _reloadSettlePage==='function')_reloadSettlePage();
+        if(cb)cb();
+      }).catch(function(e){toast('❌ '+e.message);});
+    }).catch(function(e){toast('❌ '+e.message);});
+}
 function _calcTeamLeaderBonus(routeTotals){
   var bonus={};
   TL_PRICES.forEach(function(ldr){
@@ -16745,6 +16827,15 @@ function _renderTeamLeaderSection(container){
   fi.onchange=function(){if(!this.files[0])return;_parseTeamLeaderFile(this.files[0],function(leaders){if(!leaders||!leaders.length){toast('❌ 파싱 실패');return;}TL_PRICES=leaders;_saveTeamLeaderPrices(function(){_renderTeamLeaderSection(container);});});this.value='';};
   var ub=document.createElement('button');ub.className='btn btn-sm';ub.style='background:#7c3aed;color:#fff';ub.innerHTML='📥 파일 등록';ub.onclick=function(){document.getElementById('tl-file-input').click();};
   var sb=document.createElement('button');sb.className='btn btn-sm btn-teal';sb.innerHTML='💾 저장';sb.onclick=function(){_saveTeamLeaderPrices(null);};
+  // 재계산 버튼
+  var rb=document.createElement('button');rb.className='btn btn-sm';
+  rb.style='background:#dc2626;color:#fff';rb.innerHTML='🔄 재계산';
+  rb.onclick=function(){
+    var ym=prompt('재계산할 정산월 입력 (예: 2026-05)','');
+    if(!ym||!ym.match(/^\d{4}-\d{2}$/)){toast('❌ 형식: YYYY-MM');return;}
+    _loadTeamLeaderPrices(function(){_recalcTeamLeaderBonus(ym,null);});
+  };
+  bw.appendChild(rb);
   bw.appendChild(fi);bw.appendChild(ub);bw.appendChild(sb);ch.appendChild(bw);wrap.appendChild(ch);
   if(!TL_PRICES||!TL_PRICES.length){var emp=document.createElement('div');emp.className='empty';emp.style.padding='20px 0';emp.textContent='등록된 팀장 수수료 없음 — 파일 업로드로 등록';wrap.appendChild(emp);}
   else{TL_PRICES.forEach(function(ldr,li){var card=document.createElement('div');card.style='border:1.5px solid rgba(124,58,237,.35);border-radius:10px;padding:12px;margin-bottom:10px;background:rgba(124,58,237,.04)';var grid=document.createElement('div');grid.style='display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:5px;margin-top:8px';card.innerHTML='<div style="font-size:14px;font-weight:800;color:#7c3aed">👑 '+esc(ldr.name)+'</div><div style="font-size:11px;color:var(--text3)">'+esc(ldr.id)+'</div>';Object.keys(ldr.routes||{}).sort().forEach(function(r){var box=document.createElement('div');box.style='background:rgba(124,58,237,.08);border-radius:6px;padding:5px;text-align:center';box.innerHTML='<div style="font-size:10px;font-weight:700;color:#7c3aed">'+esc(r)+'</div><input type="number" value="'+ldr.routes[r]+'" onchange="TL_PRICES['+li+'].routes[\''+r+'\']=parseInt(this.value)||0" style="width:100%;text-align:center;border:1px solid rgba(124,58,237,.3);border-radius:4px;font-size:12px;padding:3px;background:var(--bg);color:#7c3aed"><div style="font-size:9px;color:var(--text3)">원/건</div>';grid.appendChild(box);});card.appendChild(grid);wrap.appendChild(card);});}
