@@ -119,13 +119,7 @@ tr:hover>td{background:var(--bg3)}
 </style>
 <script src="https://js.tosspayments.com/v2/standard"></script>
 <script>
-// ★ 개발자도구 차단
-document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
-document.addEventListener('keydown', function(e){
-  if(e.keyCode===123) e.preventDefault(); // F12
-  if(e.ctrlKey && e.shiftKey && (e.keyCode===73||e.keyCode===74||e.keyCode===67)) e.preventDefault(); // Ctrl+Shift+I/J/C
-  if(e.ctrlKey && e.keyCode===85) e.preventDefault(); // Ctrl+U
-});
+// 개발자도구 차단 해제 (개발중)
 </script>
 <script src="https://cdn.iamport.kr/v1/iamport.js"></script>
 </head>
@@ -8120,7 +8114,7 @@ function _otTab(tab){
 var isDriver=false;
 function _otApplyModal(){
   var did=_CU&&_CU.dealerId||'';
-  var uid=_CU.driverId||_CU.userId||_CU.uid||'';
+  var uid=_CU.uid||_CU.userId||'';
   var today=new Date().toISOString().slice(0,10);
   var mo=document.createElement('div');
   mo.className='mo show';mo.onclick=function(e){if(e.target===mo)mo.remove();};
@@ -11738,10 +11732,6 @@ var MENUS_DRIVER = [
   {s:'내 정산',items:[
     {ic:'📊',l:'내 정산 현황',p:'my_settle',    plan_key:'free'},
     {ic:'📋',l:'정산 내역',  p:'my_statements', plan_key:'free'}
-  ]},
-  {s:'🛵 배달대행 정산',items:[
-    {ic:'🛵',l:'배달 현황',    p:'delivery_input',    plan_key:'free'},
-    {ic:'🔔',l:'트랙 보장 내역',p:'notify_history',   plan_key:'free'}
   ]},
   {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices',plan_key:'free'}]}
 ];
@@ -20253,7 +20243,7 @@ function _showUploadResult(month,added,updated,newDrvCnt,routeCnt,newDrivers,lef
 }
 
 function _showWelcome(){
-  var name=(_CU&&(_CU.name||_CU.displayName))||(_CU&&_CU.email&&_CU.email.split('@')[0])||'직원';
+  var name=(_CU&&_CU.name)||(_CU&&_CU.displayName)||'직원';
   var now=new Date();
   var h=now.getHours();
   var greeting=h<6?'🌙 새벽에도 수고하세요':h<12?'🌅 좋은 아침이에요':h<18?'☀️ 좋은 오후예요':'🌙 수고하셨어요';
@@ -20282,7 +20272,7 @@ function _showWelcome(){
   if(Notification.permission!=='granted'){
     var notifBtn=document.createElement('button');
     notifBtn.textContent='🔔 알림 허용하기 (필수)';
-    notifBtn.style.cssText='background:#00e87a;color:#000;border:none;border-radius:100px;padding:12px 32px;font-size:13px;font-weight:800;cursor:pointer;width:100%;display:block';
+    notifBtn.style.cssText='background:#00e87a;color:#000;border:none;border-radius:100px;padding:12px 32px;font-size:13px;font-weight:800;cursor:pointer;width:100%;display:block;position:relative;z-index:10001';
     notifBtn.onclick=function(){
       Notification.requestPermission().then(function(perm){
         if(perm==='granted'){
