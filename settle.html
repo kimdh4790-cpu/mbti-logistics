@@ -8472,21 +8472,7 @@ function _shareJoinKakao(){
     if(navigator.clipboard)navigator.clipboard.writeText(url).then(function(){toast('✅ 링크 복사됨');});
   }
 }
-function _printJoinQR(){
-  var canvas=document.getElementById('home-qr-canvas');
-  var name=(_CU&&_CU.companyName)||'DONWAY',code=window._homeJoinCode||'';
-  if(!canvas){toast('❌ QR 없음');return;}
-  var img=canvas.toDataURL('image/png');
-  var w=window.open('','_blank');
-  w.document.write('<html><head><title>직원 가입 QR</title><style>body{font-family:sans-serif;padding:30px;text-align:center}@media print{button{display:none}}</style></head><body>'
-    +'<h2>'+name+'</h2><p>QR 스캔 또는 코드 직접 입력</p>'
-    +'<img src="'+img+'" style="width:180px;height:180px;border:2px solid #e5e7eb;border-radius:8px;padding:8px">'
-    +'<div style="font-size:28px;font-weight:900;letter-spacing:4px;margin:12px 0;color:#2563eb">'+code+'</div>'
-    +'<p style="font-size:11px;color:#888">1. QR 스캔 또는 donway.ai.kr/settle 접속<br>2. 이름·연락처·비밀번호 입력<br>3. 가입 완료 → 앱 설치 → 알림 수신</p>'
-    +'<button onclick="window.print()" style="margin-top:16px;padding:10px 24px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer">🖨 인쇄</button>'
-    +'</body></html>');
-  w.document.close();
-}
+
 function pageHome(){
   document.getElementById('page-title').textContent='🏠 대시보드';
   document.getElementById('topbar-right').innerHTML=isSuperAdmin()?'<button onclick="runDealerPatch()" style="padding:6px 10px;background:#dc2626;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">🔧 dealerId 패치</button>':'';
@@ -8530,7 +8516,7 @@ function pageHome(){
     +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
     +'<button onclick="_copyJoinUrl()" style="background:var(--brand);color:#fff;border:none;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔗 링크 복사</button>'
     +'<button onclick="_shareJoinKakao()" style="background:#FEE500;color:#3A1D1D;border:none;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">💬 카카오</button>'
-    +'<button onclick="_printJoinQR()" style="background:rgba(255,255,255,.1);color:#fff;border:none;padding:7px 14px;border-radius:8px;font-size:12px;cursor:pointer">🖨 출력</button>'
+    
     +'</div>'
     +'<div id="home-join-url" style="font-size:10px;color:#475569;margin-top:6px;word-break:break-all"></div>'
     +'</div></div>'
@@ -10915,7 +10901,6 @@ var MENUS_SETTLE = [
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
     {ic:'🗓',l:'라우트 근무표',   p:'roster',           plan_key:'settle'},
     {ic:'🧾',l:'세무사 공유',      p:'tax_share',        plan_key:'settle'},
-    {ic:'🔐💼',l:'QR+급여 테스트',  p:'attendance',       plan_key:'free'},
     {ic:'⭐',l:'직원 평가',        p:'evaluation',       plan_key:'free'},
     {ic:'💸',l:'경비 관리',        p:'expense',          plan_key:'free'}
   ]},
@@ -14545,7 +14530,7 @@ function pagePrices(tabMode){
       +'<div style="font-size:10px;color:var(--text3);margin-top:4px;text-align:center">부산1·2·3 주간</div></div>'
       +'</div>';
     el.innerHTML='';
-    el.appendChild(_noContCard);
+    if(isSuperAdmin())el.appendChild(_noContCard);
     var _rpDiv=document.createElement('div');_rpDiv.id='rp-main-area';
     el.appendChild(_rpDiv);
 
@@ -17789,18 +17774,27 @@ function doResetData(){
     }));
     _drvCache=null;localStorage.removeItem('mbti_drivers');
   }
-  // 라우트 단가표 + 시즌단가표 초기화
+  // 라우트 단가표 + 시즌단가표 + 팀장수수료 초기화
   if(doRoutes){
     var rpId=did+'_routePrices';
     var rcId=did+'_routeCampMap';
-    var rsId=did+'_seasonPrices'; // ★ 시즌단가표도 삭제
+    var rsId=did+'_seasonPrices';
+    var tlId=did+'_teamLeaderPrices'; // ★ 팀장수수료도 삭제
     promises.push(_db.collection('settings').doc(rsId).delete().catch(function(){}));
-    SEASON_PRICES=[]; // ★ 메모리 초기화
     promises.push(_db.collection('settings').doc(rpId).delete().catch(function(){}));
     promises.push(_db.collection('settings').doc(rcId).delete().catch(function(){}));
+    promises.push(_db.collection('settings').doc(tlId).delete().catch(function(){})); // ★ 팀장수수료
+    SEASON_PRICES=[]; TL_PRICES=[]; // ★ 메모리 초기화
     Object.keys(RPRICE).forEach(function(k){delete RPRICE[k];});
     if(window._routeCampMap){Object.keys(_routeCampMap).forEach(function(k){delete _routeCampMap[k];});}
     if(window.G_PRICES){Object.keys(G_PRICES).forEach(function(k){delete G_PRICES[k];});}
+  }
+  // ★ 달력 메모 초기화 (정산서 삭제 시 함께)
+  if(doSettle){
+    promises.push(_db.collection('cal_memos').where('dealerId','==',did).get().then(function(snap){
+      if(!snap.size)return;
+      var b=_db.batch();snap.forEach(function(d){b.delete(d.ref);});return b.commit();
+    }).catch(function(){}));
   }
   // 인센 설정 초기화
   if(doInc){
