@@ -119,7 +119,13 @@ tr:hover>td{background:var(--bg3)}
 </style>
 <script src="https://js.tosspayments.com/v2/standard"></script>
 <script>
-// 개발자도구 차단 해제
+// ★ 개발자도구 차단
+document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+document.addEventListener('keydown', function(e){
+  if(e.keyCode===123) e.preventDefault(); // F12
+  if(e.ctrlKey && e.shiftKey && (e.keyCode===73||e.keyCode===74||e.keyCode===67)) e.preventDefault(); // Ctrl+Shift+I/J/C
+  if(e.ctrlKey && e.keyCode===85) e.preventDefault(); // Ctrl+U
+});
 </script>
 <script src="https://cdn.iamport.kr/v1/iamport.js"></script>
 </head>
@@ -13992,6 +13998,20 @@ function updSECalc(){
   }
 }
 function gv(id){var el=document.getElementById(id);return el?+el.value||0:0;}
+// ★ 알림 허용 요청 (기사 웰컴 모달용)
+function _reqNotifPerm(){
+  Notification.requestPermission().then(function(perm){
+    if(perm==='granted'){
+      toast('✅ 알림이 허용되었습니다!');
+      setTimeout(_registerFCM, 500);
+      // 버튼 → 허용됨으로 교체
+      var btn=document.querySelector('[onclick="_reqNotifPerm()"]');
+      if(btn){btn.style.background='#d1fae5';btn.style.color='#065f46';btn.textContent='✅ 알림 허용됨';btn.onclick=null;}
+    } else {
+      toast('⚠️ 알림을 허용해야 푸시 알림을 받을 수 있어요');
+    }
+  });
+}
 function _saveSECurrent(){
     var id=(document.getElementById('se-id')||{value:''}).value.trim()||'';
   var driver=(document.getElementById('se-driver')||{value:''}).value.trim();
@@ -19000,7 +19020,8 @@ function pageNotices(){
   var c=document.getElementById('content');
   c.innerHTML='<div class="loading">로딩 중...</div>';
   if(!_db){c.innerHTML='<div class="empty"><div class="empty-icon">📢</div>로그인 후 이용하세요</div>';return;}
-  var form='<div class="card" style="margin-bottom:16px">'
+  var isDriver=_CU&&(_CU.role==='driver'||_CU.role==='member');
+  var form=isDriver?'':('<div class="card" style="margin-bottom:16px">'
     +'<div style="font-size:14px;font-weight:700;margin-bottom:12px">📢 새 공지 작성</div>'
     +'<div class="fg"><label>유형</label>'
     +'<select id="n-type" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text)">'
@@ -19014,7 +19035,7 @@ function pageNotices(){
     +'<input id="n-file" type="file" accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text)">'
     +'<div id="n-file-status" style="font-size:11px;color:var(--text3);margin-top:4px"></div></div>'
     +'<button onclick="_saveNotice()" class="btn btn-blue" style="width:100%;padding:10px;font-weight:700">📢 공지 발송</button>'
-    +'</div>';
+    +'</div>');
   _db.collection('notices').where('dealerId','==',_CU.dealerId||_CU.uid).orderBy('createdAt','desc').get().then(function(snap){
     var typeIcon={info:'📢',update:'🔄',warning:'⚠️',event:'🎉',payslip:'💰',tax:'🧾'};
     var typeColor={info:'#dbeafe',update:'#d1fae5',warning:'#fef3c7',event:'#fce7f3',payslip:'#d1fae5',tax:'#ede9fe'};
@@ -20160,7 +20181,8 @@ function _showWelcome(){
       +'<div style="font-size:11px;opacity:.75">DONWAY · 돈의 방향을 자동화</div>'
     +'</div>'
     +'<button onclick="document.getElementById(\'mo-welcome\').remove()" '
-      +'style="background:#fff;color:#1e3a8a;border:none;border-radius:100px;padding:10px 32px;font-size:14px;font-weight:800;cursor:pointer;width:100%">입장하기 →</button>';
+      +(Notification.permission!=='granted'?'<button onclick="_reqNotifPerm()" style="background:#00e87a;color:#000;border:none;border-radius:100px;padding:10px 32px;font-size:13px;font-weight:800;cursor:pointer;width:100%;margin-bottom:8px">🔔 알림 허용하기 (필수)</button>':'<div style="font-size:11px;opacity:.6;margin-bottom:8px">✅ 알림 허용됨</div>')
+    +'style="background:#fff;color:#1e3a8a;border:none;border-radius:100px;padding:10px 32px;font-size:14px;font-weight:800;cursor:pointer;width:100%">입장하기 →</button>';
   mo.appendChild(d);document.body.appendChild(mo);
   // 3초 후 자동 닫기
   setTimeout(function(){var m=document.getElementById('mo-welcome');if(m)m.remove();},4000);
