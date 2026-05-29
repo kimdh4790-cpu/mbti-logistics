@@ -1299,7 +1299,16 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           if(!drvMap[cleanId]) drvMap[cleanId]={cleanId:cleanId,camp:campName||'기타',
             dcnt:0,rcnt:0,delAmt:0,retAmt:0,freshAmt:0,freshIncAmt:0,
             addIncAmt:0,dmgAmt:0,nocontCnt:0,nocontAmt:0,routes:{}};
-          drvMap[cleanId].rcnt+=(dcnt+rcnt);
+          var sugiCnt=(dcnt+rcnt);
+          drvMap[cleanId].rcnt+=sugiCnt;
+          // ★ 라우트별 반품에도 추가 → RPRICE 계산에 반영
+          if(route){
+            if(!drvMap[cleanId].routes[route])
+              drvMap[cleanId].routes[route]={cnt:0,ret:0,unitPrc:0,delAmt:0,retAmt:0,addInc:0};
+            drvMap[cleanId].routes[route].ret+=sugiCnt;
+          }
+          if(campName&&campName!=='기타'&&drvMap[cleanId].camp==='기타')
+            drvMap[cleanId].camp=campName;
           continue;
         }
         if(isNocont){
@@ -1912,8 +1921,23 @@ function _saveCpDriver(camp,dm,name,month,cb){
   var damt=dm.delAmt||0,ramt=dm.retAmt||0,freshRaw=dm.freshAmt||0;
   // ★ finc: 엑셀 col10×건수(addIncAmt) 우선 → 기사별 설정(_getIncSetting) → 글로벌
   var finc=0;
-  if(dm.addIncAmt>0){
-    finc=Math.round(dm.addIncAmt); // ★ col10 실제값 최우선
+  // ★ 인센 ON/OFF 설정 먼저 확인
+  var _anyRouteOff=false;
+  if(typeof _getIncSetting==='function'){
+    Object.keys(dm.routes||{}).forEach(function(r){
+      if(!_getIncSetting(uid,r).on) _anyRouteOff=true;
+    });
+  }
+  if(dm.addIncAmt>0 && !_anyRouteOff){
+    finc=Math.round(dm.addIncAmt); // ★ col10 실제값 (전체 ON일 때만)
+  } else if(dm.addIncAmt>0 && _anyRouteOff){
+    // 일부 OFF — 라우트별 ON 것만 계산
+    Object.keys(dm.routes||{}).forEach(function(r){
+      var rv=dm.routes[r];
+      var s=typeof _getIncSetting==='function'?_getIncSetting(uid,r):{on:true,rate:0};
+      if(s.on && s.rate>0) finc+=rv.cnt*(s.rate||0);
+    });
+    finc=Math.round(finc);
   } else if(dm.freshIncAmt>0){
     finc=Math.round(dm.freshIncAmt);
   } else {
@@ -12364,9 +12388,17 @@ function printAllPayslips(allRows){
 
   // ★ Blob URL 방식 (팝업 차단 우회)
   try{
+    // ★ iframe 방식으로 팝업 차단 우회
+    var _pif=document.getElementById('_print_iframe');
+    if(_pif)_pif.remove();
+    var _pif=document.createElement('iframe');
+    _pif.id='_print_iframe';
+    _pif.style.cssText='position:fixed;top:-9999px;left:-9999px;width:960px;height:700px;border:none';
+    document.body.appendChild(_pif);
     var blob=new Blob([html2],{type:'text/html;charset=utf-8'});
     var burl=URL.createObjectURL(blob);
-    var w=window.open(burl,'_blank','width=960,height=700');
+    _pif.src=burl;
+    var w=_pif.contentWindow;
     if(w){
       setTimeout(function(){try{w.focus();w.print();}catch(e){}URL.revokeObjectURL(burl);},800);
     } else {
@@ -14530,7 +14562,9 @@ function pagePrices(tabMode){
       +'<div style="font-size:10px;color:var(--text3);margin-top:4px;text-align:center">부산1·2·3 주간</div></div>'
       +'</div>';
     el.innerHTML='';
-    if(isSuperAdmin())el.appendChild(_noContCard);
+    // 미계약건 단가 — 드라이버 제외 (관리자는 모두 표시)
+    var _isDriverUser=_CU&&(_CU.role==='driver'||_CU.isDriver===true||(_CU.dealerId&&_CU.dealerId!==_CU.uid&&!isSuperAdmin()&&!_CU.isAdmin));
+    if(!_isDriverUser) el.appendChild(_noContCard);
     var _rpDiv=document.createElement('div');_rpDiv.id='rp-main-area';
     el.appendChild(_rpDiv);
 
