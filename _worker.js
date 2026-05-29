@@ -349,7 +349,7 @@ export default {
     }
 
     // ── Rate Limiting (API 엔드포인트만) ──
-    const isApiPath = ['/doc-scan','/label-ocr','/scan-save','/truck-save'].includes(path);
+    const isApiPath = ['/claude-ocr','/label-ocr','/scan-save','/truck-save'].includes(path);
     if (isApiPath) {
       const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
       if (!checkRateLimit(ip, 30, 60000)) {
@@ -494,7 +494,7 @@ export default {
       }
     }
 
-    if (path === '/doc-scan' && method === 'POST') {
+    if (path === '/claude-ocr' && method === 'POST') {
       try {
         const body = await request.json();
         const apiKey = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
@@ -682,7 +682,7 @@ export default {
     // 예: /mbti → 엠비티아이 전용, /abc물류 → ABC물류 전용
     const knownPaths = new Set([
       '/donway_landing','/test-apikey','/favicon.ico','/favicon.png',
-      '/worker-test','/label-ocr','/doc-scan','/get-label-key',
+      '/worker-test','/label-ocr','/claude-ocr','/get-label-key',
       '/test-inject','/truck-save','/scan-save',
       '/scan','/truck','/settle','/visitor','/checkin','/emergency','/portal','/join','/company-register',
       '/attendance','/donway-sound.js','/report','/contract',
@@ -700,8 +700,7 @@ export default {
         let html = await resp.text();
         // slug + 보안헤더 주입 (</head> 앞에 삽입 - 가장 안전한 위치)
         const slugScript = '<script>window._COMPANY_SLUG=' + JSON.stringify(companySlug) + ';window._SLUG_MODE=true;</script>';
-        const ak = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
-        html = html.replace('</head>', '<script>window.__AK='+JSON.stringify(ak)+';</script>\n' + slugScript + '\n</head>');
+        html = html.replace('</head>', slugScript + '\n</head>');
         const slugHeaders = new Headers();
         slugHeaders.set('Content-Type', 'text/html; charset=utf-8');
         slugHeaders.set('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -715,10 +714,7 @@ export default {
 
     if (path === '/settle' || path === '/settle/') {
       const resp = await fetchAsset('/settle.html', request);
-      const html = await resp.text();
-      const key = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
-      const injected = html.replace('</head>', '<script>window.__AK='+JSON.stringify(key)+';</script></head>');
-      return new Response(injected, { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store, no-cache, must-revalidate', 'Pragma': 'no-cache' } });
+      return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store, no-cache, must-revalidate', 'Pragma': 'no-cache' } });
     }
 
 
@@ -1332,6 +1328,55 @@ export default {
       } catch(e) {
         return new Response(JSON.stringify({ ok: false, error: e.message }), {
           status: 500, headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS }
+        });
+      }
+    }
+
+    // ── 기사 FCM 알림 (/fcm/notify-drivers) ──
+    if (path === '/fcm/notify-drivers' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const { tokens, title, body: msgBody, type } = body;
+        if (!tokens || !tokens.length) {
+          return new Response(JSON.stringify({ ok: true, sent: 0 }), {
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+          });
+        }
+        const accessToken = await getAccessToken(env);
+        const PROJECT_ID_FCM = 'mbti-logistics';
+        let sent = 0;
+        // 토큰별 개별 발송 (최대 20개)
+        const targets = tokens.slice(0, 20);
+        await Promise.all(targets.map(async (token) => {
+          try {
+            const resp = await fetch(
+              `https://fcm.googleapis.com/v1/projects/${PROJECT_ID_FCM}/messages:send`,
+              {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${accessToken}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  message: {
+                    token: token,
+                    notification: { title: title || 'DONWAY 알림', body: msgBody || '' },
+                    data: { type: type || 'notice', click_action: 'FLUTTER_NOTIFICATION_CLICK' },
+                    android: { priority: 'high' },
+                    apns: { payload: { aps: { sound: 'default', badge: 1 } } }
+                  }
+                })
+              }
+            );
+            if (resp.ok) sent++;
+          } catch(e) {}
+        }));
+        return new Response(JSON.stringify({ ok: true, sent, total: targets.length }), {
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        });
+      } catch(e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), {
+          status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
         });
       }
     }
