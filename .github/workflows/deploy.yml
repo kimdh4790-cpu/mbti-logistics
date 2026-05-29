@@ -10,16 +10,16 @@ jobs:
     name: Deploy
     steps:
       - uses: actions/checkout@v3
+
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '22'
-      - name: Install Wrangler
-        run: npm install -g wrangler@3.78.2
-      - name: Remove node_modules
-        run: rm -rf node_modules
-      - name: Deploy
-        run: wrangler deploy
+          node-version: '20'
+
+      - name: Install Wrangler v4
+        run: npm install -g wrangler@4
+
+      - name: Deploy to Cloudflare Workers
+        run: npx wrangler deploy
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
