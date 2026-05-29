@@ -8354,7 +8354,7 @@ async function runDealerPatch(){
 }
 
 // ── 슈퍼어드민 dealerId 패치 ──
-async function drawQR(canvas, url, size){
+function drawQR(canvas, url, size){
 
   if(!canvas||!url)return;
   // canvas 초기화
@@ -8394,75 +8394,55 @@ async function drawQR(canvas, url, size){
 function _renderHomeJoinQR(){
   if(!_CU)return;
   var did=_CU.dealerId||_CU.uid||'';
-  var code=_CU.companyCode||(_CU.dealerId||'').slice(0,8).toUpperCase()||did.slice(0,8).toUpperCase();
-  if(!code||code.length<4)code=did.slice(-8).toUpperCase();
+  var code=(_CU.companyCode||did).slice(0,8).toUpperCase();
   var joinUrl='https://donway.ai.kr/settle?code='+code+'&join=1';
+  window._homeJoinUrl=joinUrl;
+  window._homeJoinCode=code;
 
-  window._homeJoinUrl=joinUrl; window._homeJoinCode=code;
-
-  var qrBox=document.getElementById('home-qr-box');
   var urlEl=document.getElementById('home-join-url');
   if(urlEl)urlEl.textContent=joinUrl;
 
-  // QR 렌더링 — QRCode 라이브러리 로드 대기
-  function _tryRender(n){
-    var box=document.getElementById('home-qr-box');
-    if(!box)return;
-    if(typeof QRCode!=='undefined'){
-      box.innerHTML='';
-      box.style.display='block';
-      box.style.textAlign='center';
-      try{
-        var qr=new QRCode(box,{
-          text:joinUrl,width:84,height:84,
-          colorDark:'#000000',colorLight:'#ffffff',
-          correctLevel:QRCode.CorrectLevel?QRCode.CorrectLevel.M:1
-        });
-        // img가 있으면 크기 보정
-        setTimeout(function(){
-          var img=box.querySelector('img');
-          if(img){img.style.width='84px';img.style.height='84px';}
-          var cvs=box.querySelector('canvas');
-          if(cvs){cvs.style.width='84px';cvs.style.height='84px';}
-        },100);
-      }catch(e){
-        box.innerHTML='<div style="font-size:11px;font-weight:700;color:#2563eb;text-align:center;padding:16px;letter-spacing:2px">'+code+'</div>';
-      }
-    } else if(n<20){
-      setTimeout(function(){_tryRender(n+1);},300);
+  var box=document.getElementById('home-qr-box');
+  if(box){
+    box.innerHTML='';
+    if(window.QRCode){
+      try{new QRCode(box,{text:joinUrl,width:84,height:84,correctLevel:QRCode.CorrectLevel.M});}
+      catch(e){box.innerHTML='<div style="font-size:10px;font-weight:700;color:#2563eb;padding:8px;letter-spacing:2px">'+code+'</div>';}
     } else {
-      // 포기 — 코드 텍스트로 표시
-      box.innerHTML='<div style="font-size:10px;font-weight:700;color:#2563eb;text-align:center;padding:8px;letter-spacing:2px">'+code+'</div>';
+      // QRCode 로드 대기
+      var attempt=0;
+      var timer=setInterval(function(){
+        attempt++;
+        if(window.QRCode){
+          clearInterval(timer);
+          box.innerHTML='';
+          try{new QRCode(box,{text:joinUrl,width:84,height:84,correctLevel:QRCode.CorrectLevel.M});}catch(e){}
+        } else if(attempt>20){
+          clearInterval(timer);
+          box.innerHTML='<div style="font-size:10px;font-weight:700;color:#2563eb;padding:8px;letter-spacing:2px">'+code+'</div>';
+        }
+      },300);
     }
   }
-  setTimeout(function(){_tryRender(0);},200);
 
-  // Firestore에서 companyCode 조회
+  // Firestore에서 실제 companyCode 조회
   if(_db&&did){
     _db.collection('companies').doc(did).get().then(function(snap){
       var rc=code;
       if(snap.exists){
-        var d=snap.data(); rc=d.companyCode||d.slug||code;
+        var d=snap.data();rc=d.companyCode||d.slug||code;
         if(!d.companyCode)_db.collection('companies').doc(did).set({companyCode:code},{merge:true}).catch(function(){});
-      } else {
+      }else{
         _db.collection('companies').doc(did).set({companyCode:code,dealerId:did,createdAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true}).catch(function(){});
       }
-      window._homeJoinUrl='https://donway.ai.kr/settle?code='+rc+'&join=1';
-      window._homeJoinCode=rc;
-      if(urlEl)urlEl.textContent=window._homeJoinUrl;
-      var box=document.getElementById('home-qr-box');
-      if(box){
-        box.innerHTML='';
-        box.style.display='block';
-        if(typeof QRCode!=='undefined'){
-          try{
-            new QRCode(box,{text:window._homeJoinUrl,width:84,height:84,
-              colorDark:'#000000',colorLight:'#ffffff',
-              correctLevel:QRCode.CorrectLevel?QRCode.CorrectLevel.M:1});
-            setTimeout(function(){
-              var img=box.querySelector('img');if(img){img.style.width='84px';img.style.height='84px';}
-            },100);
-          }catch(e){}
+      if(rc!==code){
+        window._homeJoinUrl='https://donway.ai.kr/settle?code='+rc+'&join=1';
+        window._homeJoinCode=rc;
+        if(urlEl)urlEl.textContent=window._homeJoinUrl;
+        var b=document.getElementById('home-qr-box');
+        if(b&&window.QRCode){
+          b.innerHTML='';
+          try{new QRCode(b,{text:window._homeJoinUrl,width:84,height:84,correctLevel:QRCode.CorrectLevel.M});}catch(e){}
         }
       }
     }).catch(function(){});
@@ -8592,6 +8572,7 @@ function pageHome(){
   // 데이터 로드
   _homeLoadStats(did, today, ym);
   _homeLoadTodo(did, today);
+  setTimeout(_renderHomeJoinQR, 400);  // 직원 가입 QR
 }
 
 
