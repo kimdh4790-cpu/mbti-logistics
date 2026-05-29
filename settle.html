@@ -298,6 +298,7 @@ tr:hover>td{background:var(--bg3)}
       <button class="btn" style="width:100%;font-size:11px;margin-bottom:4px" onclick="toggleDark()">🌙 다크모드</button>
       <button class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:var(--bg3);color:var(--text2)" onclick="openChangePw()">🔑 비밀번호 변경</button>
       <button id="btn-init-admin" class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:#7c3aed;color:#fff;display:none" onclick="_initSuperAdminDocs()">🛠️ 슈퍼어드민 초기화</button>
+      <button id="btn-init-admin" class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:#7c3aed;color:#fff;display:none" onclick="_initSuperAdminDocs()">🛠️ 슈퍼어드민 초기화</button>
       <button id="admin-btn" class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:#1e293b;color:#f59e0b;display:none" onclick="openAdminPanel()">👑 슈퍼 어드민</button>
       <button class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:linear-gradient(135deg,#185FA5,#7C3AED);color:#fff;border:none" onclick="_showSubModal()">💳 구독 / 갱신</button>
       <button class="btn" id="my-url-btn" style="width:100%;font-size:10px;margin-bottom:4px;background:var(--brand-l);color:var(--brand);border:1px solid var(--brand);display:none" onclick="_showMyUrl()">🔗 내 전용 URL</button>
@@ -2129,7 +2130,7 @@ _auth.onAuthStateChanged(function(user){
         }).catch(function(){});
 
         // ★ companies 읽어서 plan/trialEnd _CU에 추가 → 기능잠금 동기적 처리
-        _db.collection('companies').doc(_dealerId).get({source:'server'}).then(function(cSnap){
+        _db.collection('companies').doc(_dealerId).get().then(function(cSnap){
           if(cSnap.exists){
             var cd=cSnap.data();
             _CU.plan=cd.plan||'';
@@ -2209,7 +2210,7 @@ function _subRequest(planKey){
 function showApp(){
   // 구독 상태 확인 (슈퍼어드민은 제외)
   if(_CU&&!isSuperAdmin()&&_db){
-    _db.collection('subscriptions').doc(_CU.dealerId||_CU.uid).get({source:'server'})
+    _db.collection('subscriptions').doc(_CU.dealerId||_CU.uid).get()
       .then(function(snap){
         if(snap.exists){
           var sub=snap.data();
@@ -2219,7 +2220,7 @@ function showApp(){
             // ★ subscriptions 만료 → companies.trialEnd 이중 확인 (슈퍼어드민 연장 반영)
             var _did=_CU.dealerId||_CU.uid;
             var _exp=exp; var _sub=sub;
-            _db.collection('companies').doc(_did).get({source:'server'}).then(function(cs){
+            _db.collection('companies').doc(_did).get().then(function(cs){
               var trialEnd=cs.exists?cs.data().trialEnd:'';
               var today=new Date().toISOString().slice(0,10);
               if(trialEnd&&trialEnd>=today) return; // companies.trialEnd 살아있으면 통과
@@ -2268,7 +2269,7 @@ function showApp(){
   // ★ trial 기간 즉시 체크 → 기능 잠금 해제
   if(_CU&&!isSuperAdmin()&&_db){
     var _trialDid=_CU.dealerId||_CU.uid;
-    _db.collection('companies').doc(_trialDid).get({source:'server'}).then(function(snap){
+    _db.collection('companies').doc(_trialDid).get().then(function(snap){
       if(snap.exists){
         var _cd=snap.data();
         var _today=new Date().toISOString().slice(0,10);
@@ -2569,7 +2570,7 @@ function doRegister(){
   if(!_bizDocFile){err.textContent='사업자등록증을 업로드해 주세요';err.style.display='block';return;}
 
   // ★ 서버측 사업자번호 이중 확인 (클라이언트 우회 방지)
-  _db.collection('companies').where('bizNumber','==',biz).get({source:'server'}).then(function(dupSnap){
+  _db.collection('companies').where('bizNumber','==',biz).get().then(function(dupSnap){
     if(!dupSnap.empty&&!isOwner&&!OWNER_EMAIL.includes(email)){
       err.textContent='이미 등록된 사업자번호입니다. 재가입은 불가합니다.';return;
     }
@@ -3420,7 +3421,7 @@ async function _tossPay(planType, amount){
 
 function pageContract(){
   if(_db&&_CU&&_CU.dealerId){
-    _db.collection('companies').doc(_CU.dealerId).get({source:'server'}).then(function(snap){
+    _db.collection('companies').doc(_CU.dealerId).get().then(function(snap){
       var d=snap.exists?snap.data():{};
       if(d.contractPaid||(d.plan==='trial'&&d.trialEnd&&d.trialEnd>=new Date().toISOString().slice(0,10))) _renderContractPage();
       else _renderContractPaywall();
@@ -3543,7 +3544,7 @@ function pageRoster(){
   if(!isSuperAdmin()&&window._cachedHasPaid===false&&!window._trialActive){_renderPaywall('roster');return;}
   if(!_db||!_CU){_renderRosterPaywall();return;}
   var cid=_CU.dealerId||_CU.companyId;
-  _db.collection('companies').doc(cid).get({source:'server'}).then(function(snap){
+  _db.collection('companies').doc(cid).get().then(function(snap){
     var d=snap.exists?snap.data():{};
     if(d.rosterPaid||d.settlePaid||isSuperAdmin()||(d.plan==='trial'&&d.trialEnd&&d.trialEnd>=new Date().toISOString().slice(0,10)))_renderRosterPage();
     else _renderRosterPaywall();
@@ -11558,7 +11559,7 @@ function buildNav(){
   var did=_CU&&(_CU.dealerId||_CU.companyId||'');
   if(did&&_db&&window._cachedCompanyDoc===undefined){
     window._cachedCompanyDoc=null;
-    _db.collection('companies').doc(did).get({source:'server'}).then(function(snap){
+    _db.collection('companies').doc(did).get().then(function(snap){
       var d=snap.exists?snap.data():{};
       window._cachedCompanyDoc=d;
       window._cachedPlan=d.plan||'';
@@ -18902,7 +18903,7 @@ function _requirePlan(feature,callback){
   }
   var did=_CU.uid||_CU.dealerId||_CU.companyId||'';
   if(!did){callback();return;}
-  _db.collection('companies').doc(did).get({source:'server'}).then(function(snap){
+  _db.collection('companies').doc(did).get().then(function(snap){
     var d=snap.exists?snap.data():{};
     if(_isPlanAllowed(d,feature)){callback();}
     else{_renderPaywall(feature);}
@@ -19404,8 +19405,8 @@ function openAdminPanel(){
 
   // companies 컬렉션에서 전체 대리점 로드 (slug/email/plan 포함)
   Promise.all([
-    _db.collection('companies').get({source:'server'}),
-    _db.collection('settlements').get({source:'server'})
+    _db.collection('companies').get(),
+    _db.collection('settlements').get()
   ]).then(function(results){
     var compSnap=results[0], sSnap=results[1];
     var dealerCnt={};
@@ -19501,7 +19502,7 @@ window._extendTrialByEmail=function(email, btn, days){
   var newExpiry=new Date(Date.now()+days*86400000).toISOString().slice(0,10);
 
   // 1차: companies.email 검색
-  _db.collection('companies').where('email','==',email).get({source:'server'})
+  _db.collection('companies').where('email','==',email).get()
   .then(function(snap){
     if(snap.empty){
       // 2차: users 컬렉션에서 uid 찾기
@@ -19655,7 +19656,7 @@ function _rejectPayment(reqId){
 function _loadFeaturePanel(container){
   if(!_db||!isSuperAdmin()) return;
   container.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">⏳ 회사 목록 로딩 중...</div>';
-  _db.collection('companies').orderBy('createdAt','desc').limit(30).get({source:'server'})
+  _db.collection('companies').orderBy('createdAt','desc').limit(30).get()
   .then(function(snap){
     var items=[];
     snap.forEach(function(doc){items.push(Object.assign({id:doc.id},doc.data()));});
