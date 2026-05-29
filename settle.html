@@ -11430,6 +11430,10 @@ var MENUS_SETTLE = [
     {ic:'🖨',l:'라벨 출력',        p:'ext_label',        plan_key:'free'},
     {ic:'📷',l:'수령 스캔',        p:'ext_scan',         plan_key:'free'},
     {ic:'🚛',l:'간선차 GPS',       p:'ext_truck',        plan_key:'free'}
+  ]},
+  {s:'📢 공지·알림', items:[
+    {ic:'📢',l:'공지사항',         p:'notices',          plan_key:'free'},
+    {ic:'🔔',l:'알림 발송',        p:'notify_history',   plan_key:'free'}
   ]}
 ];
 
@@ -18802,42 +18806,105 @@ function agreeTerms(){
 
 // ══ 관리자 공지 ══
 function pageNotices(){
-  document.getElementById('page-title').textContent='관리자 공지';
+  document.getElementById('page-title').textContent='공지사항';
   document.getElementById('topbar-right').innerHTML='';
   var c=document.getElementById('content');
   c.innerHTML='<div class="loading">로딩 중...</div>';
   if(!_db){c.innerHTML='<div class="empty"><div class="empty-icon">📢</div>로그인 후 이용하세요</div>';return;}
-  _db.collection('notices').orderBy('createdAt','desc').get().then(function(snap){
-    if(snap.empty){
-      c.innerHTML='<div class="empty"><div class="empty-icon">📢</div><div style="font-size:16px;font-weight:700;margin-bottom:6px">공지사항 없음</div><div style="font-size:13px;color:var(--text3)">새로운 공지가 없습니다</div></div>';
-      return;
-    }
-    var typeIcon={info:'📢',update:'🔄',warning:'⚠️',event:'🎉'};
-    var typeColor={info:'#dbeafe',update:'#d1fae5',warning:'#fef3c7',event:'#fce7f3'};
-    var typeTxtColor={info:'#1e40af',update:'#065f46',warning:'#92400e',event:'#9d174d'};
-    var html='<div style="display:flex;flex-direction:column;gap:10px">';
+  var form='<div class="card" style="margin-bottom:16px">'
+    +'<div style="font-size:14px;font-weight:700;margin-bottom:12px">📢 새 공지 작성</div>'
+    +'<div class="fg"><label>유형</label>'
+    +'<select id="n-type" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text)">'
+    +'<option value="info">📢 공지</option><option value="update">🔄 업데이트</option>'
+    +'<option value="warning">⚠️ 점검</option><option value="event">🎉 이벤트</option>'
+    +'<option value="payslip">💰 명세서 발송</option><option value="tax">🧾 세금계산서</option>'
+    +'</select></div>'
+    +'<div class="fg"><label>제목 *</label><input id="n-title" type="text" placeholder="공지 제목"></div>'
+    +'<div class="fg"><label>내용</label><textarea id="n-body" rows="3" placeholder="내용 입력..." style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);resize:vertical"></textarea></div>'
+    +'<div class="fg"><label>첨부파일 (명세서·세금계산서·PDF)</label>'
+    +'<input id="n-file" type="file" accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text)">'
+    +'<div id="n-file-status" style="font-size:11px;color:var(--text3);margin-top:4px"></div></div>'
+    +'<button onclick="_saveNotice()" class="btn btn-blue" style="width:100%;padding:10px;font-weight:700">📢 공지 발송</button>'
+    +'</div>';
+  _db.collection('notices').where('dealerId','==',_CU.dealerId||_CU.uid).orderBy('createdAt','desc').get().then(function(snap){
+    var typeIcon={info:'📢',update:'🔄',warning:'⚠️',event:'🎉',payslip:'💰',tax:'🧾'};
+    var typeColor={info:'#dbeafe',update:'#d1fae5',warning:'#fef3c7',event:'#fce7f3',payslip:'#d1fae5',tax:'#ede9fe'};
+    var typeTxtColor={info:'#1e40af',update:'#065f46',warning:'#92400e',event:'#9d174d',payslip:'#065f46',tax:'#5b21b6'};
+    var typeLabel={info:'공지',update:'업데이트',warning:'점검',event:'이벤트',payslip:'명세서',tax:'세금계산서'};
+    var list='<div style="display:flex;flex-direction:column;gap:10px">';
+    if(snap.empty){list+='<div class="empty"><div class="empty-icon">📢</div>아직 공지가 없습니다</div>';}
     snap.forEach(function(doc){
       var n=doc.data();
       var dt=n.createdAt&&n.createdAt.toDate?n.createdAt.toDate().toLocaleDateString('ko-KR'):'-';
       var ic=typeIcon[n.type]||'📢';
       var bg=typeColor[n.type]||'#dbeafe';
       var tc=typeTxtColor[n.type]||'#1e40af';
-      html+='<div class="card" style="border-left:4px solid '+tc+'">'
+      var lb=typeLabel[n.type]||n.type;
+      list+='<div class="card" style="border-left:4px solid '+tc+'">'
         +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">'
         +'<div style="display:flex;align-items:center;gap:8px">'
-        +'<span style="background:'+bg+';color:'+tc+';padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700">'+ic+' '+(n.type==='info'?'공지':n.type==='update'?'업데이트':n.type==='warning'?'점검':n.type==='event'?'이벤트':n.type)+'</span>'
+        +'<span style="background:'+bg+';color:'+tc+';padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700">'+ic+' '+lb+'</span>'
         +'<strong style="font-size:14px">'+esc(n.title||'')+'</strong></div>'
         +'<span style="font-size:10px;color:var(--text3);white-space:nowrap">'+dt+'</span></div>'
         +'<div style="font-size:13px;color:var(--text2);line-height:1.6;white-space:pre-wrap">'+esc(n.body||'')+'</div>'
-        +'</div>';
+        +(n.fileUrl?'<a href="'+n.fileUrl+'" target="_blank" style="display:inline-block;margin-top:8px;font-size:12px;color:var(--brand)">📎 첨부파일 보기</a>':'')+'</div>';
     });
-    html+='</div>';
-    c.innerHTML=html;
+    list+='</div>';
+    c.innerHTML=form+list;
   }).catch(function(e){
-    logError('관리자공지',e.message);c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div>'+esc(e.message)+'</div>';
+    c.innerHTML=form+'<div class="empty"><div class="empty-icon">⚠️</div>'+esc(e.message)+'</div>';
   });
 }
 
+function _saveNotice(){
+  if(!_db||!_CU){toast('❌ 로그인 필요');return;}
+  var title=((document.getElementById('n-title')||{}).value||'').trim();
+  var body=((document.getElementById('n-body')||{}).value||'').trim();
+  var type=((document.getElementById('n-type')||{}).value||'info');
+  var fileInput=document.getElementById('n-file');
+  var file=fileInput&&fileInput.files&&fileInput.files[0];
+  if(!title){toast('❌ 제목을 입력하세요');return;}
+  var btn=document.querySelector('[onclick="_saveNotice()"]');
+  if(btn){btn.disabled=true;btn.textContent='저장 중...';}
+  var did=_CU.dealerId||_CU.uid;
+  function saveDoc(fileUrl){
+    _db.collection('notices').add({
+      title:title,body:body,type:type,fileUrl:fileUrl||'',
+      dealerId:did,createdBy:_CU.email||_CU.uid,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    }).then(function(){
+      return _db.collection('drivers').where('dealerId','==',did).get();
+    }).then(function(snap){
+      var batch=_db.batch();
+      snap.forEach(function(doc){
+        var ref=_db.collection('driver_notifications').doc();
+        batch.set(ref,{
+          driverId:doc.id,dealerId:did,title:title,body:body||'',type:type,
+          fileUrl:fileUrl||'',read:false,
+          createdAt:firebase.firestore.FieldValue.serverTimestamp()
+        });
+      });
+      return batch.commit();
+    }).then(function(){
+      toast('✅ 공지 발송 완료 — '+snap.size+'명에게 알림');
+      if(btn){btn.disabled=false;btn.textContent='📢 공지 발송';}
+      pageNotices();
+    }).catch(function(e){
+      toast('❌ '+e.message);
+      if(btn){btn.disabled=false;btn.textContent='📢 공지 발송';}
+    });
+  }
+  if(file){
+    var status=document.getElementById('n-file-status');
+    if(status)status.textContent='⏳ 파일 업로드 중...';
+    var storageRef=firebase.storage().ref('notices/'+Date.now()+'_'+file.name);
+    storageRef.put(file).then(function(snap){return snap.ref.getDownloadURL();})
+      .then(function(url){if(status)status.textContent='✅ 업로드 완료';saveDoc(url);})
+      .catch(function(){if(status)status.textContent='⚠️ 업로드 실패 — 파일 없이 저장';saveDoc('');});
+  } else {
+    saveDoc('');
+  }
+}
 // ══ 슈퍼 어드민 ══
 // SUPER_ADMIN_EMAILS/EMAIL 상단에서 선언됨
 // isSuperAdmin: 이메일 즉시 판단 (동기)
