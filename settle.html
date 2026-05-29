@@ -1073,6 +1073,7 @@ function calcNetByIndustry(x){
 
 // ██ calcNet (쿠팡 물류 기본) ██
 function calcNet(x){
+  var uid=x.userId||x.driver||x.id||'';
   if(!x)return {damt:0,ramt:0,fresh:0,finc:0,_fincPerUnit:0,inc:0,nocont:0,etcPlus:0,etcMinus:0,totalAmt:0,vatIncome:0,hourlyWage:0,tax:0,emp:0,work:0,eq:0,dmg:0,adv:0,deduct:0,net:0,isYong:false,isCoupang:false,yDel:0,yRet:0};
   // ★ 업종별 엔진 먼저 시도
   var _indResult = calcNetByIndustry(x);
