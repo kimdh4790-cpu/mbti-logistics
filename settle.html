@@ -8722,7 +8722,7 @@ window._txsOcr=function(src){
         max_tokens:500,
         messages:[{role:'user',content:[
           {type:'image',source:{type:'base64',media_type:file.type||'image/jpeg',data:base64}},
-          {type:'text',text:'세무서류 OCR'}
+          {type:'text',text:'이 세무서류(세금계산서/영수증/거래명세서)에서 다음 정보를 JSON으로만 추출하세요. 다른 설명 없이 JSON만 반환: {"docType":"문서종류","ym":"YYYY-MM","amount":금액숫자,"desc":"간단설명"}'}
         ]}]
       })
     }).then(function(r){return r.json();})
