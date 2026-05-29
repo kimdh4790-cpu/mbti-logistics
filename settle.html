@@ -7877,7 +7877,7 @@ window._expOcrScan=function(src){
   var reader=new FileReader();
   reader.onload=function(ev){
     var base64=ev.target.result.split(',')[1];
-    fetch('https://donway.ai.kr/claude-ocr',{
+    fetch('https://donway.ai.kr/doc-scan',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
@@ -8712,7 +8712,7 @@ window._txsOcr=function(src){
   var reader=new FileReader();
   reader.onload=function(ev){
     var base64=ev.target.result.split(',')[1];
-    fetch('https://donway.ai.kr/claude-ocr',{
+    fetch('https://donway.ai.kr/doc-scan',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
@@ -14685,7 +14685,7 @@ async function _ocrAnalyze(){
     var mime = _ocrCurrentFile.type||'image/jpeg';
 
     // 브라우저에서 직접 Anthropic 호출 (이전에 작동했던 방식)
-    var resp = await fetch('https://donway.ai.kr/claude-ocr',{
+    var resp = await fetch('https://donway.ai.kr/doc-scan',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({

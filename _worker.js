@@ -349,7 +349,7 @@ export default {
     }
 
     // ── Rate Limiting (API 엔드포인트만) ──
-    const isApiPath = ['/claude-ocr','/label-ocr','/scan-save','/truck-save'].includes(path);
+    const isApiPath = ['/doc-scan','/label-ocr','/scan-save','/truck-save'].includes(path);
     if (isApiPath) {
       const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
       if (!checkRateLimit(ip, 30, 60000)) {
@@ -494,7 +494,7 @@ export default {
       }
     }
 
-    if (path === '/claude-ocr' && method === 'POST') {
+    if (path === '/doc-scan' && method === 'POST') {
       try {
         const body = await request.json();
         const apiKey = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
@@ -682,7 +682,7 @@ export default {
     // 예: /mbti → 엠비티아이 전용, /abc물류 → ABC물류 전용
     const knownPaths = new Set([
       '/donway_landing','/test-apikey','/favicon.ico','/favicon.png',
-      '/worker-test','/label-ocr','/claude-ocr','/get-label-key',
+      '/worker-test','/label-ocr','/doc-scan','/get-label-key',
       '/test-inject','/truck-save','/scan-save',
       '/scan','/truck','/settle','/visitor','/checkin','/emergency','/portal','/join','/company-register',
       '/attendance','/donway-sound.js','/report','/contract',
