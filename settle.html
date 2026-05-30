@@ -7518,6 +7518,12 @@ function _dwCheckTierNotifications(prevCount, newCount, opts){
 // ── ★ Phase 1 리빌드: 기사 앱 배달 대시보드 (수동 입력 폐지)
 // 기사는 입력 없이 실시간 세션 데이터만 확인
 function pageDeliveryInput(){
+  // ★ 관리자면 엔진v2로, 기사면 기사 대시보드로
+  if(_CU&&_CU.role!=='driver'&&_CU.role!=='member'){
+    document.getElementById('page-title').textContent='🛵 배달대행 정산';
+    _dwRenderEngine();
+    return;
+  }
   document.getElementById('page-title').textContent='🛵 배달 현황';
   var el=document.getElementById('content');
   el.innerHTML='<div style="max-width:480px;margin:0 auto;padding:8px">'
