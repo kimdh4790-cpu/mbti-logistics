@@ -3247,8 +3247,9 @@ function _processJoinUrlParams(){
       document.getElementById('sidebar')&&(document.getElementById('sidebar').style.display='none');
       document.getElementById('topbar')&&(document.getElementById('topbar').style.display='none');
       document.body.style.background='#f1f5f9';
+      var ls=document.getElementById('login-screen');if(ls)ls.style.display='none';
       var main=document.getElementById('main')||document.getElementById('content');
-      if(main)main.style.marginLeft='0';
+      if(main){main.style.marginLeft='0';main.style.display='block';}
       _renderTaxShareView(tsToken);
     }
     _waitAndShow();
