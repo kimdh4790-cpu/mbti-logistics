@@ -4793,7 +4793,8 @@ function _loadDriverDocs(driverId, did){
         +'<div style="font-size:12px;font-weight:700">'+dt.label+'</div>'
         +'<div style="font-size:10px;color:var(--text3)">'+(d.fileName||'')+'  ·  '+(d.uploadedAt||'').slice(0,10)+'</div>'
         +'</div>'
-        +(d.fileUrl?'<a href="'+esc(d.fileUrl)+'" target="_blank" style="font-size:11px;color:var(--brand);text-decoration:none">보기</a>':'')
+        window._txsDocUrls=window._txsDocUrls||{};window._txsDocUrls['txs_'+doc.id]=d.fileUrl;
+        +(d.fileUrl?'<button class="btn" onclick="_txsShowImg(this)" data-url="txs_'+doc.id+'" style="font-size:11px;padding:2px 8px">보기</button>':'')
         +'<button data-id="'+doc.id+'" data-drid="'+driverId+'" data-did="'+did+'" '
         +'onclick="_deleteDriverDoc(this.dataset.id,this.dataset.drid,this.dataset.did)" '
         +'style="background:none;border:none;cursor:pointer;color:var(--red);font-size:14px">🗑</button>'
