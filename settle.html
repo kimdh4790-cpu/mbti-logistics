@@ -9305,21 +9305,9 @@ window._txsUpload=function(src){
         ocrPromise.then(function(ocr){
           // Firebase Storage 업로드
           var storePath='tax_docs/'+did+'/'+ym+'/'+cat+'/'+(Date.now())+'_'+file.name;
-          var base64data=ev.target.result.split(',')[1];
-          var contentType=file.type||'image/jpeg';
-          return firebase.auth().currentUser.getIdToken().then(function(token){
-            return fetch('https://mbti-logistics.kimdh4790.workers.dev/storage-upload',{
-              method:'POST',
-              headers:{'Content-Type':'application/json'},
-              body:JSON.stringify({storagePath:storePath,base64data:base64data,contentType:contentType,idToken:token})
-            });
-          }).then(function(r){return r.json();})
-          .then(function(res){
-            if(!res.ok)throw new Error(res.error||'업로드 실패');
-            var url=res.url;
-            return Promise.resolve(url);
-          })
-            .then(function(url){
+          var dataUrl=ev.target.result;
+          var url=dataUrl; // Firestore에 dataURL 직접 저장
+          return Promise.resolve(url).then(function(url){
               // Firestore 메타데이터 저장
               return _db.collection('tax_docs').add({
                 dealerId:did,
@@ -9374,9 +9362,7 @@ window._txsDeleteDoc=function(docId){
     if(!snap.exists)return;
     var d=snap.data();
     var del=_db.collection('tax_docs').doc(docId).delete();
-    if(d.filePath){
-      firebase.storage().ref(d.filePath).delete().catch(function(){});
-    }
+    // Storage 파일은 Firestore dataURL 방식으로 저장됨 (별도 삭제 불필요)
     return del;
   }).then(function(){
     toast('✅ 삭제 완료');
