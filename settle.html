@@ -2847,7 +2847,7 @@ function _showAppInstallBanner(){
 //   or ?expense=1&code=COMPANY_CODE
 // ════════════════════════════════════════
 function _renderExpenseRegView(dealerId){
-  var el=document.getElementById('content')||document.body;
+  var el=document.getElementById('tax-share-wrap')||document.getElementById('content')||document.body;
   el.innerHTML='<div style="max-width:480px;margin:0 auto;padding:20px"><div style="text-align:center;padding:20px;color:var(--text3)">🔄 로딩 중...</div></div>';
 
   function _doRender(){
@@ -2967,7 +2967,7 @@ function _renderExpenseRegView(dealerId){
   _doRender();
 }
 function _renderTaxShareView(token){
-  var el=document.getElementById('content')||document.body;
+  var el=document.getElementById('tax-share-wrap')||document.getElementById('content')||document.body;
   el.innerHTML='<div style="max-width:800px;margin:0 auto;padding:20px"><div style="text-align:center;padding:20px;color:var(--text3)">🔄 자료 불러오는 중...</div></div>';
 
   if(!_db){
@@ -3247,9 +3247,18 @@ function _processJoinUrlParams(){
       document.getElementById('sidebar')&&(document.getElementById('sidebar').style.display='none');
       document.getElementById('topbar')&&(document.getElementById('topbar').style.display='none');
       document.body.style.background='#f1f5f9';
-      var ls=document.getElementById('login-screen');if(ls)ls.style.display='none';
-      var main=document.getElementById('main')||document.getElementById('content');
-      if(main){main.style.marginLeft='0';main.style.display='block';}
+      // 로그인/앱 화면 숨기기
+      ['login-screen','sidebar','topbar','main-app'].forEach(function(id){
+        var el=document.getElementById(id);if(el)el.style.display='none';
+      });
+      document.body.style.background='#f1f5f9';
+      document.body.style.margin='0';
+      // 세무사 전용 컨테이너 생성
+      var wrap=document.createElement('div');
+      wrap.id='tax-share-wrap';
+      wrap.style.cssText='min-height:100vh;background:#f1f5f9';
+      document.body.appendChild(wrap);
+      window._db=window._db||db2;
       _renderTaxShareView(tsToken);
     }
     _waitAndShow();
