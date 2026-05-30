@@ -5844,9 +5844,11 @@ function _dwParseExcel(file, cb){
           ||hn.includes('실지급')||hn.includes('단가')||hn.includes('fee')
           ||hn.includes('amount')||hn.includes('pay'))
           &&!hn.includes('주문금액')&&!hn.includes('배달대행비')&&!hn.includes('배달팁'))colPrice=ci;
-        // 2순위: 주문금액 (정산금액 없을 때)
+        // 2순위: 배달대행비 직접 매칭
+        if(colPrice<0&&hn.includes('배달대행비'))colPrice=ci;
+        // 3순위: 기타 금액 (주문금액 제외)
         if(colPrice<0&&(hn.includes('금액')||hn.includes('price'))
-          &&!hn.includes('배달대행비')&&!hn.includes('배달팁'))colPrice=ci;
+          &&!hn.includes('주문금액')&&!hn.includes('배달팁')&&!hn.includes('주문'))colPrice=ci;
         // 건수 컬럼
         if(colCnt<0&&(hn.includes('건수')||hn.includes('배달건')||hn.includes('완료건')
           ||hn.includes('count')||hn.includes('cnt')||hn.includes('qty')))colCnt=ci;
