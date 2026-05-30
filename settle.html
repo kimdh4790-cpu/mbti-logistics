@@ -5984,7 +5984,6 @@ function _dwRenderSimulator(){
           +'<div style="font-size:11px;opacity:.6">엑셀 업로드 → 기사별 순차 스트리밍 → 보전/환수 자동판정 → 실시간 명세서 생성</div>'
         +'</div>'
         +'<div style="display:flex;gap:6px;flex-shrink:0">'
-          +'<button onclick="document.getElementById(\'dw-file\').click()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">📂 파일 선택</button>'
           +'<button id="dw-btn-calc" onclick="dwRunLiveCalculations()" disabled style="background:#64748b;border:none;color:#fff;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:not-allowed;opacity:.6">⚡ 정산 개시</button>'
         +'</div>'
       +'</div>'
@@ -6065,18 +6064,17 @@ function _dwRenderSimulator(){
     +'</div>';
 
   // ★ 건수별 트랙 단가 설정 (메인 화면)
-  +(function(){
-    var trackHtml='<div class="card" style="margin-bottom:14px">'
+  el.innerHTML+=
+    '<div class="card" style="margin-bottom:14px">'
       +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
         +'<div style="font-size:13px;font-weight:800">📊 건수별 최저단가 트랙</div>'
-        +'<button onclick="_dwOpenSettings()" style="font-size:11px;padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;cursor:pointer">⚙️ 상세설정</button>'
       +'</div>'
       +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">'
-      +DW_TRACKS.filter(function(t){return t.min>0;}).map(function(t){
+      +DW_TRACKS.filter(function(t){return t.min>0;}).map(function(t,i){
         return '<div><div style="font-size:10px;font-weight:700;color:var(--text3);margin-bottom:3px">'+(t.label||t.min+'건+')+'</div>'
           +'<input id="dw-track-'+(t.key||i)+'" type="number" value="'+t.price+'" min="0" step="100"'
           +' style="width:100%;padding:6px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);text-align:right"'
-          +' oninput="if(DW_TRACKS){var _k=this.getAttribute(\'data-key\');var tk=DW_TRACKS.find(function(x){return (x.key||x.min+\'\')===_k;});if(tk)tk.price=parseInt(this.value)||0;_dwRenderEngine();}" data-key="'+(t.key||t.min)+'">'
+          +' oninput="if(DW_TRACKS){var _k=this.getAttribute(\'data-key\');var tk=DW_TRACKS.find(function(x){return (x.key||x.min+\'\')===_k;});if(tk)tk.price=parseInt(this.value)||0;}" data-key="'+(t.key||t.min)+'">'
         +'</div>';
       }).join('')
       +'<div><div style="font-size:10px;font-weight:700;color:var(--text3);margin-bottom:3px">180건 미만</div>'
@@ -6085,8 +6083,7 @@ function _dwRenderSimulator(){
       +'</div>'
       +'<div style="font-size:10px;color:var(--text3);margin-top:6px">💡 총 수행건수 기준 자동 트랙 적용 · 수정 즉시 반영</div>'
     +'</div>';
-    return trackHtml;
-  })()
+
 
   // ② 엑셀 업로드 + 공제설정 + dw-results
   el.innerHTML+=
@@ -9154,6 +9151,22 @@ function _downloadDouzoneCSV(ym){
 }
 
 function pageTaxShare(){
+  document.getElementById('page-title').textContent='🧾 세무사 연동';
+  // 플랜 체크 — settle·payroll·delivery·qr 중 하나라도 유료면 허용
+  if(!isSuperAdmin()&&!window._trialActive){
+    var _did=(_CU&&(_CU.dealerId||_CU.uid))||'';
+    if(_did&&_db){
+      _db.collection('companies').doc(_did).get().then(function(snap){
+        var d=snap.exists?snap.data():{};
+        if(!(d.settlePaid||d.payrollPaid||d.deliveryPaid||d.qrPaid)){_renderPaywall('tax_share');return;}
+        _pageTaxShareRender();
+      });
+      return;
+    }
+  }
+  _pageTaxShareRender();
+}
+function _pageTaxShareRender(){
   document.getElementById('page-title').textContent='🧾 세무사 연동';
   document.getElementById('topbar-right').innerHTML=
     '<button class="btn btn-sm" onclick="_downloadDouzoneCSV()" style="background:#1e40af;color:#fff;font-size:12px">💾 더존 CSV</button> '+

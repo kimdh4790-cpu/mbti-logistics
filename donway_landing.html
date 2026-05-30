@@ -982,7 +982,7 @@ html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#02
         <tr><td>사업자 AI OCR</td><td class="cx">✕</td><td class="cx">✕</td><td class="cx">✕</td><td class="cx">✕</td><td class="ck">✓ 독점</td></tr>
         <tr><td>카카오 알림톡</td><td class="cx">✕</td><td class="cx">✕</td><td class="cx">✕</td><td class="cx">✕</td><td class="ck">✓ 독점</td></tr>
         <tr><td>인원 구간별 플랜 선택</td><td class="cpt">인당 과금</td><td class="cpt">인당 과금</td><td class="ck">✓</td><td class="cpt">건당 과금</td><td class="ck">✓ 구간별 선택</td></tr>
-        <tr class="cpr"><td>월 비용 (30명)</td><td>₩90,000+</td><td>₩130,000+</td><td>₩12,000</td><td>₩40,000+</td><td>₩79,000</td></tr>
+        <tr class="cpr"><td>월 비용 (30명)</td><td>₩90,000+</td><td>₩130,000+</td><td>₩15,000</td><td>₩40,000+</td><td>₩99,000</td></tr>
       </tbody>
     </table>
   </div>
@@ -1033,35 +1033,55 @@ html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#02
   <!-- 인원 구간 선택 -->
   <div class="rv" style="max-width:800px;margin:0 auto 8px">
     <div style="font-size:12px;color:rgba(107,128,153,1);text-align:center;margin-bottom:14px;letter-spacing:2px;font-weight:700">👥 직원 수 선택</div>
-    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap" id="tier-btns">
+    <!-- 인원 구간 버튼 -->
+    <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap" id="tier-btns">
       <button class="tier-btn active" data-tier="0" onclick="setTier(0)">
-        <span class="tier-icon">🚚</span>
-        <span class="tier-name">~30명</span>
-        <span class="tier-type">기준가 · 30명 이상</span>
+        <span class="tier-icon">🏪</span>
+        <span class="tier-name">~20명</span>
+        <span class="tier-type">소규모</span>
       </button>
       <button class="tier-btn" data-tier="1" onclick="setTier(1)">
-        <span class="tier-icon">📦</span>
-        <span class="tier-name">~60명</span>
-        <span class="tier-type">중규모 사업장</span>
+        <span class="tier-icon">🏬</span>
+        <span class="tier-name">~40명</span>
+        <span class="tier-type">소형</span>
       </button>
       <button class="tier-btn" data-tier="2" onclick="setTier(2)">
-        <span class="tier-icon">🏭</span>
-        <span class="tier-name">~100명</span>
-        <span class="tier-type">대형 사업장</span>
+        <span class="tier-icon">🚚</span>
+        <span class="tier-name">~60명</span>
+        <span class="tier-type">중형</span>
       </button>
       <button class="tier-btn" data-tier="3" onclick="setTier(3)">
-        <span class="tier-icon">🏗</span>
-        <span class="tier-name">~200명</span>
-        <span class="tier-type">공장·사업장</span>
+        <span class="tier-icon">🏭</span>
+        <span class="tier-name">~80명</span>
+        <span class="tier-type">중규모</span>
       </button>
       <button class="tier-btn" data-tier="4" onclick="setTier(4)">
-        <span class="tier-icon">🌐</span>
-        <span class="tier-name">200명+</span>
-        <span class="tier-type">대기업·문의</span>
+        <span class="tier-icon">🏗</span>
+        <span class="tier-name">~100명</span>
+        <span class="tier-type">대규모</span>
+      </button>
+      <button class="tier-btn" data-tier="5" onclick="setTier(5)">
+        <span class="tier-icon">✏️</span>
+        <span class="tier-name">직접입력</span>
+        <span class="tier-type">맞춤</span>
       </button>
     </div>
-    <!-- 선택된 구간 설명 -->
-    <div id="tier-desc" style="text-align:center;margin-top:14px;font-size:13px;color:rgba(0,200,248,.8);font-weight:600;min-height:20px"></div>
+    <!-- 직접입력 인원수 -->
+    <div id="tier-custom-wrap" style="display:none;align-items:center;justify-content:center;gap:10px;margin-top:14px;flex-wrap:wrap">
+      <span style="font-size:13px;color:rgba(238,244,255,.7);font-weight:600">인원수 입력</span>
+      <div style="display:flex;align-items:center;gap:6px;background:rgba(0,200,248,.06);border:1.5px solid rgba(0,200,248,.4);border-radius:12px;padding:6px 14px">
+        <input id="tier-custom-n" type="number" min="1" max="99999" value="150"
+          style="width:80px;background:transparent;border:none;color:#fff;font-size:20px;font-weight:900;text-align:center;outline:none;font-family:'Syne',sans-serif"
+          oninput="_calcCustomTier(this.value)">
+        <span style="font-size:15px;color:rgba(238,244,255,.6);font-weight:600">명</span>
+      </div>
+      <div style="font-size:11px;color:rgba(0,200,248,.7);text-align:center;line-height:1.6">
+        그룹1 × 22,000원 &nbsp;|&nbsp; 그룹2 × 15,000원<br>
+        <span style="color:rgba(0,232,122,.8)">인원이 많아도 걱정없는 시스템</span>
+      </div>
+    </div>
+    <!-- 구간 설명 -->
+    <div id="tier-desc" style="text-align:center;margin-top:12px;font-size:12px;color:rgba(0,200,248,.75);font-weight:600;min-height:18px;letter-spacing:.3px"></div>
   </div>
 
   <!-- 번들 추천 -->
@@ -1090,8 +1110,8 @@ html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#02
       </div>
     </div>
     <div style="text-align:center;font-size:11px;color:rgba(238,244,255,.7)">
-      QR 플랜(그룹2 · 12,000원)으로 시작 →
-      <strong style="color:#00c8f8"> 콤보(그룹1 · 17,000원)로 업그레이드하면 전부 포함</strong>
+      QR 플랜(그룹2 · 15,000원)으로 시작 →
+      <strong style="color:#00c8f8"> 콤보(그룹1 · 22,000원)로 업그레이드하면 전부 포함</strong>
     </div>
   </div>
 
@@ -1116,8 +1136,9 @@ html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#02
         <li>근무표 자동 생성</li>
         <li>캡처 차단 보안</li>
       </ul>
-      <button class="pcbtn pcbg" onclick="location.href='https://donway.ai.kr/settle'">무료로 시작하기</button>
-<button class="pcbtn pcnav" onclick="gS(4)" style="background:rgba(0,200,248,.12);color:#00c8f8;border:1px solid rgba(0,200,248,.35);margin-top:4px">QR 출퇴근 자세히 →</button>
+      <button class="pcbtn pcbg" onclick="location.href='https://donway.ai.kr/settle'">7일 무료 시작</button>
+      <button class="pcbtn" onclick="_dwShowPayModal('qr')" style="background:linear-gradient(135deg,#0ea5e9,#2563eb);color:#fff;border:none;margin-top:4px;font-weight:800">💳 이 플랜 결제하기</button>
+<button class="pcbtn pcnav" onclick="gS(4)" style="background:rgba(0,200,248,.12);color:#00c8f8;border:1px solid rgba(0,200,248,.35);margin-top:4px">자세히 보기 →</button>
     </div>
 
     <div class="pc rv" id="pc-settle">
@@ -1135,7 +1156,8 @@ html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#02
         <li>📱 앱 푸시 알림 + 카카오·문자 발송</li>
         <li>세무사 공유 기능</li>
       </ul>
-      <button class="pcbtn pcbg" onclick="location.href='https://donway.ai.kr/settle'">무료로 시작하기</button>
+      <button class="pcbtn pcbg" onclick="location.href='https://donway.ai.kr/settle'">7일 무료 시작</button>
+      <button class="pcbtn" onclick="_dwShowPayModal('settle')" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;margin-top:4px;font-weight:800">💳 이 플랜 결제하기</button>
 <button class="pcbtn pcnav" onclick="gS(3)" style="background:rgba(0,200,248,.12);color:#00c8f8;border:1px solid rgba(0,200,248,.35);margin-top:4px">업종별 활용 →</button>
     </div>
 
@@ -1155,7 +1177,8 @@ html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#02
         <li>연장·야간·휴일·주휴수당</li>
         <li>🆕 전 직원 급여 일괄 문자 발송</li>
       </ul>
-      <button class="pcbtn pcbg" onclick="location.href='https://donway.ai.kr/settle'">무료로 시작하기</button>
+      <button class="pcbtn pcbg" onclick="location.href='https://donway.ai.kr/settle'">7일 무료 시작</button>
+      <button class="pcbtn" onclick="_dwShowPayModal('payroll')" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:#fff;border:none;margin-top:4px;font-weight:800">💳 이 플랜 결제하기</button>
 <button class="pcbtn pcnav" onclick="gS(6)" style="background:rgba(0,200,248,.12);color:#00c8f8;border:1px solid rgba(0,200,248,.35);margin-top:4px">기능 소개 →</button>
     </div>
 
@@ -1173,7 +1196,8 @@ html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#02
         <li>통합 대시보드</li>
         <li>직원 셀프 앱</li>
       </ul>
-      <button class="pcbtn pcbg" onclick="location.href='https://donway.ai.kr/settle'">무료로 시작하기</button>
+      <button class="pcbtn pcbg" onclick="location.href='https://donway.ai.kr/settle'">7일 무료 시작</button>
+      <button class="pcbtn" onclick="_dwShowPayModal('combo')" style="background:linear-gradient(135deg,#00e87a,#059669);color:#fff;border:none;margin-top:4px;font-weight:800">💳 이 플랜 결제하기</button>
 <button class="pcbtn pcnav" onclick="gS(5)" style="background:rgba(0,200,248,.12);color:#00c8f8;border:1px solid rgba(0,200,248,.35);margin-top:4px">기능 소개 →</button>
     </div>
 
@@ -1202,50 +1226,40 @@ html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#02
       <thead>
         <tr style="background:rgba(0,200,248,.06)">
           <th style="padding:12px 16px;text-align:left;border:1px solid rgba(255,255,255,.06);color:rgba(0,200,248,.8)">플랜</th>
-          <th style="padding:12px 16px;text-align:center;border:1px solid rgba(255,255,255,.06);color:rgba(107,128,153,1)">~10명</th>
-          <th style="padding:12px 16px;text-align:center;border:1px solid rgba(255,255,255,.06);color:rgba(107,128,153,1)">~30명</th>
-          <th style="padding:12px 16px;text-align:center;border:1px solid rgba(255,255,255,.06);color:#00c8f8">~60명</th>
+          <th style="padding:12px 16px;text-align:center;border:1px solid rgba(255,255,255,.06);color:#00c8f8">~20명</th>
+          <th style="padding:12px 16px;text-align:center;border:1px solid rgba(255,255,255,.06);color:#1d6fff">~60명</th>
           <th style="padding:12px 16px;text-align:center;border:1px solid rgba(255,255,255,.06);color:#a855f7">~100명</th>
-          <th style="padding:12px 16px;text-align:center;border:1px solid rgba(255,255,255,.06);color:#f5b800">~200명</th>
-          <th style="padding:12px 16px;text-align:center;border:1px solid rgba(255,255,255,.06);color:#ff4b6e">200명+</th>
+          <th style="padding:12px 16px;text-align:center;border:1px solid rgba(255,255,255,.06);color:#f5b800">직접입력</th>
         </tr>
       </thead>
       <tbody>
         <tr><td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);font-weight:700">📷 QR 출퇴근</td>
-          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:rgba(238,244,255,.7)">₩29,000</td>
-          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:rgba(238,244,255,.7)">₩49,000</td>
-          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:#00c8f8;font-weight:700">₩79,000</td>
-          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:#a855f7;font-weight:700">₩109,000</td>
-          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:#f5b800;font-weight:700">₩149,000</td>
-          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:#ff4b6e">문의</td>
+          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:#00c8f8;font-weight:700">₩300,000</td>
+          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:#1d6fff;font-weight:700">₩900,000</td>
+          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:#a855f7;font-weight:700">₩1,500,000</td>
+          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:#f5b800;font-weight:700">인원×15,000</td>
         </tr>
         <tr style="background:rgba(255,255,255,.015)"><td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);font-weight:700">📦 택배 정산</td>
-          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:rgba(238,244,255,.7)">₩59,000</td>
-          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:rgba(238,244,255,.7)">₩89,000</td>
-          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:#00c8f8;font-weight:700">₩129,000</td>
-          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:#a855f7;font-weight:700">₩179,000</td>
-          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:#f5b800;font-weight:700">₩249,000</td>
-          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:#ff4b6e">문의</td>
+          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:#00c8f8;font-weight:700">₩440,000</td>
+          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:#1d6fff;font-weight:700">₩1,320,000</td>
+          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:#a855f7;font-weight:700">₩2,200,000</td>
+          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:#f5b800;font-weight:700">인원×22,000</td>
         </tr>
         <tr><td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);font-weight:700">💼 급여 관리</td>
-          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:rgba(238,244,255,.7)">₩49,000</td>
-          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:rgba(238,244,255,.7)">₩79,000</td>
-          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:#00c8f8;font-weight:700">₩109,000</td>
-          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:#a855f7;font-weight:700">₩149,000</td>
-          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:#f5b800;font-weight:700">₩199,000</td>
-          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:#ff4b6e">문의</td>
+          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:#00c8f8;font-weight:700">₩300,000</td>
+          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:#1d6fff;font-weight:700">₩900,000</td>
+          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:#a855f7;font-weight:700">₩1,500,000</td>
+          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:#f5b800;font-weight:700">인원×15,000</td>
         </tr>
         <tr style="background:rgba(255,255,255,.015)"><td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);font-weight:700">🚀 ALL-IN-ONE</td>
-          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:rgba(238,244,255,.7)">₩99,000</td>
-          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:rgba(238,244,255,.7)">₩179,000</td>
-          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;background:rgba(0,200,248,.04);color:#00c8f8;font-weight:900;font-size:14px">₩239,000</td>
-          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:#a855f7;font-weight:900;font-size:14px">₩299,000</td>
-          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:#f5b800;font-weight:900;font-size:14px">₩399,000</td>
-          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:#ff4b6e;font-weight:700">별도 문의</td>
+          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;background:rgba(0,200,248,.04);color:#00c8f8;font-weight:900;font-size:14px">₩440,000</td>
+          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:#1d6fff;font-weight:900;font-size:14px">₩1,320,000</td>
+          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:#a855f7;font-weight:900;font-size:14px">₩2,200,000</td>
+          <td style="padding:10px 16px;border:1px solid rgba(255,255,255,.04);text-align:center;color:#f5b800;font-weight:900;font-size:14px">인원×22,000</td>
         </tr>
       </tbody>
     </table>
-    <div style="margin-top:10px;font-size:11px;color:rgba(107,128,153,1);text-align:center">* 팀 규모에 맞는 플랜 선택 · 구간은 동시 접속 사용자 기준</div>
+    <div style="margin-top:10px;font-size:11px;color:rgba(107,128,153,1);text-align:center">* 팀 규모에 맞는 플랜 선택 · 구간은 등록 인원 기준 · 인당 단가 × 인원수</div>
   </div>
 
   <!-- 비교 설명 -->
@@ -1253,7 +1267,7 @@ html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#02
     <div style="font-size:14px;font-weight:700;margin-bottom:8px">💡 타사 대비 얼마나 저렴한가요?</div>
     <div style="font-size:13px;color:var(--gray);line-height:1.9">
       시프티 근태만 60명 → 월 <strong style="color:#ff4b6e">180,000원</strong> &nbsp;|&nbsp; 에버타임 → 월 <strong style="color:#ff4b6e">300,000원↑</strong><br>
-      DONWAY ALL-IN-ONE 60명 → 월 <strong style="color:#00e87a">239,000원</strong> &nbsp;(정산자동화 + QR + 급여 + 직원앱 전부 포함)
+      DONWAY ALL-IN-ONE 20명 → 월 <strong style="color:#00e87a">440,000원</strong> &nbsp;(정산자동화 + QR + 급여 + 직원앱 전부 포함)
     </div>
   </div>
 
@@ -1278,7 +1292,7 @@ html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#02
 <div class="fqi"><div class="fqq" onclick="tFaq(this)"><span>직원 수에 따라 추가 요금이 있나요?</span><span class="fqic">+</span></div><div class="fqa">아니요. 모든 플랜은 인원 규모에 맞는 구간별 플랜을 선택하시면 됩니다. 5명부터 대규모 팀까지 모든 규모를 지원하며, 규모가 클수록 인당 비용이 낮아집니다.</div></div>
     <div class="fqi"><div class="fqq" onclick="tFaq(this)"><span>어떤 업종에서 사용할 수 있나요?</span><span class="fqic">+</span></div><div class="fqa">택배·용역·도급·파견·소매·외식·서비스·건설 등 모든 업종 등 직원 정산·출퇴근이 필요한 모든 업종에서 사용 가능합니다. 건당·시급·일급·수수료 방식을 모두 지원합니다.</div></div>
     <div class="fqi"><div class="fqq" onclick="tFaq(this)"><span>소상공인도 사용할 수 있나요? 직원이 2~3명인데요.</span><span class="fqa-arrow">＋</span></div>
-    <div class="fqa">네, 오히려 소상공인에게 더 유용합니다. 직원 2~3명이라도 <strong>급여 계산, 출퇴근 기록, 세금계산서, 세무 자료</strong>를 매달 수기로 처리하는 부담이 있습니다. DONWAY는 <strong>디지털 직원 장부</strong>처럼 모든 기록이 자동으로 쌓이고, 분실 걱정 없이 언제든 조회 가능합니다. 그룹2 기준 2명은 월 24,000원입니다.</div></div>
+    <div class="fqa">네, 오히려 소상공인에게 더 유용합니다. 직원 2~3명이라도 <strong>급여 계산, 출퇴근 기록, 세금계산서, 세무 자료</strong>를 매달 수기로 처리하는 부담이 있습니다. DONWAY는 <strong>디지털 직원 장부</strong>처럼 모든 기록이 자동으로 쌓이고, 분실 걱정 없이 언제든 조회 가능합니다. 그룹2 기준 2명도 1~10명 구간 적용 — 월 150,000원입니다.</div></div>
 
     <div class="fqi"><div class="fqq" onclick="tFaq(this)"><span>회사 내부 포털(홈페이지)처럼 쓸 수 있나요?</span><span class="fqa-arrow">＋</span></div>
     <div class="fqa">네. 모든 사업장은 <strong>donway.ai.kr/회사명</strong>으로 전용 포털이 생성됩니다. 직원 공지, 업무 자료, 조직도, 연락처, 일정을 한 곳에서 관리할 수 있어 <strong>사내 인트라넷</strong>처럼 운영 가능합니다. 직원들은 앱에서 접근하고, 외부 공개 여부도 설정할 수 있습니다.</div></div>
@@ -1315,7 +1329,7 @@ html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#02
           <span style="font-size:10px;background:rgba(0,232,122,.1);color:#00e87a;padding:3px 8px;border-radius:4px">🔐 직원 QR 출퇴근</span>
           <span style="color:#475569;font-size:11px">+</span>
           <span style="font-size:10px;background:rgba(168,85,247,.1);color:#a855f7;padding:3px 8px;border-radius:4px">💼 급여 자동화</span>
-          <span style="font-size:10px;color:#00e87a;font-weight:700;margin-left:4px">= 그룹1 · 17,000원/인</span>
+          <span style="font-size:10px;color:#00e87a;font-weight:700;margin-left:4px">= 그룹1 · 22,000원/인</span>
         </div>
       </div>
     </div></div>
@@ -1869,7 +1883,7 @@ function _priceCard(cfg){
       +'</div>'
       +'<div style="text-align:right">'
         +'<div style="font-size:26px;font-weight:900;color:#fff;line-height:1">₩'+cfg.price.toLocaleString()+'</div>'
-        +'<div style="font-size:10px;color:rgba(255,255,255,.65)">월 / 30인 기준</div>'
+        +'<div style="font-size:10px;color:rgba(255,255,255,.65)">월 / 10인 기준</div>'
       +'</div>'
     +'</div>'
     +'<div style="padding:14px 18px">'
@@ -1919,8 +1933,8 @@ var SIM_DATA2 = {
   // ── 0: AI 정산 ─────────────────────────────────────
   0: {
     url: 'donway.ai.kr — AI 정산',
-    price: 510000,
-    sub: '30명 기준 · 인당 17,000원',
+    price: 220000,
+    sub: '10명 기준 · 인당 22,000원',
     steps: ['데이터 업로드','AI 자동 분석','정산 완성','일괄 발송','세무 연동'],
     durations: [4200,4500,5000,4000,4500],
     btnBg: 'linear-gradient(135deg,#0ea5e9,#2563eb)',
@@ -2046,7 +2060,7 @@ var SIM_DATA2 = {
   1: {
     url: 'donway.ai.kr — QR 근태',
     price: 360000,
-    sub: '30명 기준 · 인당 12,000원',
+    sub: '10명 기준 · 인당 15,000원',
     steps: ['동적 QR 생성','실시간 출퇴근','GPS 검증','근무표 자동 생성','급여 자동 연동'],
     durations: [4000,4500,4500,4500,4000],
     btnBg: 'linear-gradient(135deg,#059669,#10b981)',
@@ -2174,7 +2188,7 @@ var SIM_DATA2 = {
   2: {
     url: 'donway.ai.kr — 급여 관리',
     price: 360000,
-    sub: '30명 기준 · 인당 12,000원',
+    sub: '10명 기준 · 인당 15,000원',
     steps: ['고용형태 설정','급여 자동 계산','수당 자동 적용','4대보험 공제','명세서 발송'],
     durations: [4000,4500,4500,4500,4000],
     btnBg: 'linear-gradient(135deg,#7c3aed,#a855f7)',
@@ -2287,8 +2301,8 @@ var SIM_DATA2 = {
   // ── 3: 업무 정산 ─────────────────────────────────────
   3: {
     url: 'donway.ai.kr — 업무 정산',
-    price: 510000,
-    sub: '30명 기준 · 인당 17,000원',
+    price: 220000,
+    sub: '10명 기준 · 인당 22,000원',
     steps: ['업무 데이터 업로드','구간 실적 계산','보전·환수 판정','직원 명세서','세무 연동'],
     durations: [4000,4500,4500,5000,4500],
     btnBg: 'linear-gradient(135deg,#d97706,#f59e0b)',
@@ -2507,7 +2521,50 @@ function drawSimQR2(canvas,data,size){
 // 전역 함수 명시 노출
 window.simGoTo = simGoTo;
 window.simToggle = simToggle;
+
+// ── 결제 안내 모달
+function _dwShowPayModal(planKey){
+  var n = _dwTierN(_dwSelTier, _dwCustomN);
+  var fee = _dwMonthlyFee(planKey, n);
+  var planNames={qr:'📷 QR 출퇴근',settle:'📦 AI 정산',payroll:'💼 급여 관리',combo:'📷💼 QR+급여 통합',full:'🚀 ALL-IN-ONE'};
+  var existing=document.getElementById('dw-pay-modal');
+  if(existing) existing.remove();
+  var modal=document.createElement('div');
+  modal.id='dw-pay-modal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  modal.innerHTML='<div style="background:#0f172a;border:1px solid rgba(0,200,248,.3);border-radius:20px;padding:28px 24px;max-width:420px;width:100%;box-shadow:0 0 60px rgba(0,200,248,.15)">'
+    +'<div style="font-size:18px;font-weight:900;color:#fff;margin-bottom:4px">💳 플랜 결제 안내</div>'
+    +'<div style="font-size:12px;color:rgba(0,200,248,.7);margin-bottom:20px">토스페이먼츠 심사 완료 후 카드결제 오픈 예정</div>'
+    +'<div style="background:rgba(0,200,248,.06);border:1px solid rgba(0,200,248,.2);border-radius:12px;padding:16px;margin-bottom:16px">'
+      +'<div style="font-size:13px;color:rgba(238,244,255,.7);margin-bottom:6px">선택 플랜</div>'
+      +'<div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:12px">'+(planNames[planKey]||planKey)+'</div>'
+      +'<div style="font-size:12px;color:rgba(238,244,255,.6);margin-bottom:4px">적용 인원</div>'
+      +'<div style="font-size:22px;font-weight:900;color:#00c8f8;letter-spacing:-1px;margin-bottom:4px">'+n+'명</div>'
+      +'<div style="font-size:12px;color:rgba(238,244,255,.6);margin-bottom:4px">월 결제금액</div>'
+      +'<div style="font-size:28px;font-weight:900;color:#00e87a;letter-spacing:-1px">'+fee.toLocaleString()+'원</div>'
+      +'<div style="font-size:10px;color:rgba(238,244,255,.4);margin-top:4px">계좌이체 시 3% 추가 할인 적용</div>'
+    +'</div>'
+    +'<div style="margin-bottom:12px">'
+      +'<div style="font-size:12px;font-weight:700;color:#f5b800;margin-bottom:8px">🏦 지금 바로 계좌이체로 신청</div>'
+      +'<div style="background:rgba(245,184,0,.06);border:1px solid rgba(245,184,0,.2);border-radius:10px;padding:12px;font-size:12px;color:rgba(238,244,255,.8);line-height:1.8">'
+        +'입금 후 담당자 확인 → 즉시 활성화<br>'
+        +'<strong style="color:#f5b800">신한은행 140-014-788253</strong><br>'
+        +'예금주: (유)엠비티아이'
+      +'</div>'
+    +'</div>'
+    +'<div style="display:flex;gap:8px">'
+      +'<a href="tel:051-711-3103" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:12px;background:rgba(0,200,248,.12);border:1px solid rgba(0,200,248,.3);border-radius:10px;color:#00c8f8;font-weight:700;font-size:13px;text-decoration:none">📞 전화 문의</a>'
+      +'<a href="https://pf.kakao.com/_xnKxnxj" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:12px;background:rgba(254,229,0,.1);border:1px solid rgba(254,229,0,.3);border-radius:10px;color:#FFE000;font-weight:700;font-size:13px;text-decoration:none">💬 카카오 문의</a>'
+    +'</div>'
+    +'<button onclick="document.getElementById(\"dw-pay-modal\").remove()" style="width:100%;margin-top:10px;padding:10px;background:transparent;border:1px solid rgba(255,255,255,.1);border-radius:10px;color:rgba(238,244,255,.5);font-size:12px;cursor:pointer">닫기</button>'
+  +'</div>';
+  modal.onclick=function(e){if(e.target===modal)modal.remove();};
+  document.body.appendChild(modal);
+}
+
 window.setTier = setTier;
+window._dwShowPayModal = _dwShowPayModal;
+window._calcCustomTier = _calcCustomTier;
 window.tFaq = tFaq;
 window.tM = toggleM;
 window.closeM = closeM;
@@ -2538,103 +2595,88 @@ if(!_initTier()){
 
 
 
-/* ══ 인원 구간별 가격 ══ */
-var TIER_DATA = [
-  // 그룹1 (유력·콤보) 17,000원/인 | 그룹2 (QR·급여) 12,000원/인
-  // 계좌이체 -3% 할인 | 카드 정가 | 최저 기준 30명
-  {name:'~30명',  type:'택배·업무 정산 기준',
-   qr:360000, settle:510000, payroll:360000, combo:510000, delivery:510000,
-   color:'#00c8f8', desc:'업계 표준 — AI정산+세무사연동 포함'},
-
-  {name:'~60명',  type:'중규모 사업장',
-   qr:720000, settle:1020000, payroll:720000, combo:1020000, delivery:1020000,
-   color:'#1d6fff', desc:'중규모 사업장 · 다지점 운영'},
-
-  {name:'~100명', type:'대형 사업장·중견기업',
-   qr:1200000, settle:1700000, payroll:1200000, combo:1700000, delivery:1700000,
-   color:'#a855f7', desc:'대형 사업장 · 공장 · 중견기업'},
-
-  {name:'~200명', type:'대기업·대형 물류',
-   qr:2400000, settle:3400000, payroll:2400000, combo:3400000, delivery:3400000,
-   color:'#f5b800', desc:'대형 물류 · 건설 현장 · 대기업'},
-
-  {name:'200명+', type:'별도 견적 문의',
-   qr:0, settle:0, payroll:0, combo:0, delivery:0,
-   color:'#ff4b6e', desc:'200명 이상은 별도 견적 — 051-711-3103'}
+/* ══ 인원 구간별 가격 (10명 단위) ══ */
+// ── 인당 단가 & 구간 설정
+var DW_RATE_G1 = 22000; // 그룹1: settle·combo·delivery·AI정산
+var DW_RATE_G2 = 15000; // 그룹2: qr·payroll
+// 구간: 20명 단위 (1~20 / 21~40 / 41~60 / 61~80 / 81~100 / 101명+)
+var DW_TIERS = [
+  {label:'~20명',  max:20},
+  {label:'~40명',  max:40},
+  {label:'~60명',  max:60},
+  {label:'~80명',  max:80},
+  {label:'~100명', max:100},
+  {label:'직접입력', max:Infinity}
 ];
+// 플랜별 그룹 (g1=22000, g2=15000)
+var DW_PLAN_GROUP = {
+  qr:'g2', settle:'g1', payroll:'g2', combo:'g1', full:'g1'
+};
+// 현재 선택 상태
+var _dwSelTier = 0;   // 0~5
+var _dwCustomN = 150; // 직접입력 인원
+
+function _dwTierN(tierIdx, customN){
+  return DW_TIERS[tierIdx].max === Infinity ? (customN||150) : DW_TIERS[tierIdx].max;
+}
+function _dwMonthlyFee(planKey, n){
+  var rate = DW_PLAN_GROUP[planKey]==='g1' ? DW_RATE_G1 : DW_RATE_G2;
+  return rate * n;
+}
+// 구간 버튼 활성화 + 가격/설명 갱신
+function setTier(i){
+  _dwSelTier = i;
+  document.querySelectorAll('.tier-btn').forEach(function(b){
+    b.classList.toggle('active', +b.dataset.tier===i);
+  });
+  var customWrap = document.getElementById('tier-custom-wrap');
+  if(i===5){
+    if(customWrap) customWrap.style.display='flex';
+  } else {
+    if(customWrap) customWrap.style.display='none';
+  }
+  _dwUpdatePrices();
+}
+function _dwUpdatePrices(){
+  var n = _dwTierN(_dwSelTier, _dwCustomN);
+  var tierName = _dwSelTier===5 ? n+'명' : DW_TIERS[_dwSelTier].label;
+  // 각 플랜 카드 가격 업데이트
+  ['qr','settle','payroll','combo','full'].forEach(function(k){
+    var el = document.getElementById('pc-'+k+'-price');
+    if(!el) return;
+    var target = _dwMonthlyFee(k, n);
+    var cur = parseInt((el.textContent||'').replace(/[^0-9]/g,''))||0;
+    var step=(target-cur)/20, count=0;
+    clearInterval(el._anim);
+    el._anim = setInterval(function(){
+      count++; cur+=step;
+      if(count>=20){cur=target;clearInterval(el._anim);}
+      el.innerHTML = Math.round(cur).toLocaleString()+'<span>원</span>';
+    },25);
+    // for 텍스트
+    var forEl = document.getElementById('pc-'+k+'-for');
+    var labels={qr:'QR출퇴근',settle:'AI정산',payroll:'급여관리',combo:'QR+급여',full:'ALL-IN-ONE'};
+    if(forEl) forEl.textContent = (labels[k]||k)+' · '+tierName;
+  });
+  // 설명
+  var desc = document.getElementById('tier-desc');
+  if(desc) desc.textContent = '인원이 많아도 걱정없는 시스템 · '+tierName+' 기준 월정액';
+  // combo 할인
+  var discEl=document.getElementById('pc-combo-disc');
+  if(discEl){
+    var g1fee=_dwMonthlyFee('settle',n), g2fee=_dwMonthlyFee('qr',n), combofee=_dwMonthlyFee('combo',n);
+    var disc=Math.round((1-(combofee/(g1fee+g2fee)))*100);
+    discEl.textContent=disc>0?disc+'% 할인':'';
+  }
+}
+function _calcCustomTier(v){
+  _dwCustomN = Math.max(1, parseInt(v)||1);
+  _dwUpdatePrices();
+}
 
 function fmtP(n){return n.toLocaleString();}
 
-function setTier(i){
-  var t = TIER_DATA[i];
-  if(!t)return;  // 범위 초과 방어
-  // 버튼 활성화
-  document.querySelectorAll('.tier-btn').forEach(function(b){
-    if(b&&b.classList) b.classList.toggle('active', +b.dataset.tier===i);
-  });
-  // 설명 텍스트
-  var desc = document.getElementById('tier-desc');
-  if(desc) desc.textContent = t.desc;
 
-  if(i===4){
-    // 문의 처리
-    ['qr','settle','payroll','combo','full'].forEach(function(k){
-      var el=document.getElementById('pc-'+k+'-price');
-      if(el) el.innerHTML='문의<span></span>';
-    });
-    var fullEl=document.getElementById('pc-full-extra');
-    if(fullEl) fullEl.textContent='전담 영업팀 배정';
-    var fullFor=document.getElementById('pc-full-for');
-    if(fullFor) fullFor.textContent='200명+ · 별도 견적';
-    return;
-  }
-
-  // 가격 업데이트 (카운트업 애니메이션)
-  var prices = {
-    qr: t.qr, settle: t.settle, payroll: t.payroll,
-    combo: t.combo, full: t.delivery
-  };
-  Object.keys(prices).forEach(function(k){
-    var el = document.getElementById('pc-'+k+'-price');
-    if(!el) return;
-    var target = prices[k];
-    var cur = parseInt(el.textContent.replace(/[^0-9]/g,''))||0;
-    var step = (target-cur)/20;
-    var count = 0;
-    var interval = setInterval(function(){
-      if(!el){clearInterval(interval);return;}
-      count++;
-      cur += step;
-      if(count>=20){cur=target;clearInterval(interval);}
-      el.innerHTML = fmtP(Math.round(cur)) + '<span>원</span>';
-    }, 25);
-  });
-
-  // for 텍스트 업데이트
-  var forTexts = {
-    qr: t.name+' · '+t.type,
-    settle: '모든 사업장 · '+t.name,
-    payroll: '시급·일급·월급 · '+t.name,
-    combo: '출퇴근+급여 통합 · '+t.name,
-    full: '모든 기능 · '+t.name
-  };
-  Object.keys(forTexts).forEach(function(k){
-    var el = document.getElementById('pc-'+k+'-for');
-    if(el) el.textContent = forTexts[k];
-  });
-
-  // ALL-IN-ONE 추가 설명
-  var extras = ['','전담 상담 지원','전담 매니저 배정','전담 팀 + 커스텀',''];
-  var fullEl = document.getElementById('pc-full-extra');
-  if(fullEl) fullEl.textContent = (extras[i]||'');
-
-  // 할인율 업데이트
-  var discEl = document.getElementById('pc-combo-disc');
-  if(discEl){
-    var disc = Math.round((1-(t.combo/(t.qr+t.payroll)))*100);
-    discEl.textContent = disc+'% 할인';
-  }
-}
 
 // 카운트다운 타이머
 (function(){
