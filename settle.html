@@ -2991,7 +2991,7 @@ function _renderTaxShareView(token){
     var ym=d.ym||'';
     var bizNum=d.bizNum||'';
     // 서브컬렉션에서 settlements 조회
-    snap.ref.collection('settlements').get().then(function(sSnap){
+    _db.collection('taxShares').doc(token).collection('settlements').get().then(function(sSnap){
     var settlements=[];
     sSnap.forEach(function(sd){settlements.push(sd.data());});
     if(!settlements.length) settlements=d.settlements||[]; // 폴백
@@ -9460,6 +9460,7 @@ window._txsGenLink=function(){
   .then(function(snap){
     var cd=window._cachedCompanyDoc||{};
     var mainRef=_db.collection('taxShares').doc(token);
+    var subRef=_db.collection('taxShares').doc(token).collection('settlements');
     var batch=_db.batch();
     batch.set(mainRef,{
       type:'tax_share',dealerId:did,ym:ym,token:token,email:email,name:name,memo:memo,
@@ -9470,7 +9471,7 @@ window._txsGenLink=function(){
     });
     snap.forEach(function(doc){
       var s=doc.data();
-      batch.set(mainRef.collection('settlements').doc(doc.id),{
+      batch.set(subRef.doc(doc.id),{
         driver:s.driver||'',userId:s.userId||'',camp:s.camp||'',
         month:s.month||'',dcnt:s.dcnt||0,rcnt:s.rcnt||0,
         totalAmt:s.totalAmt||0,supplyAmt:s.supplyAmt||0,
