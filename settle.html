@@ -9327,7 +9327,7 @@ window._txsUpload=function(src){
     var ok=results.filter(function(r){return r.ok;}).length;
     var failed=results.filter(function(r){return !r.ok;});
     if(st)st.innerHTML='✅ '+ok+'개 업로드 완료'+(failed.length?' ('+failed.length+'개 실패)':'');
-    if(failed.length){toast('❌ '+( failed[0].err||'실패'));}
+    if(failed.length){var em=failed[0].err||'실패';if(st)st.innerHTML='❌ 오류: '+em;console.error('업로드실패:',em);}
     // 미리보기
     if(preview){
       results.forEach(function(r){
