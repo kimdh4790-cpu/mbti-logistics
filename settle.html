@@ -9305,9 +9305,20 @@ window._txsUpload=function(src){
         ocrPromise.then(function(ocr){
           // Firebase Storage 업로드
           var storePath='tax_docs/'+did+'/'+ym+'/'+cat+'/'+(Date.now())+'_'+file.name;
-          var storageRef=firebase.storage().ref(storePath);
-          return storageRef.putString(ev.target.result,'data_url',{contentType:file.type})
-            .then(function(snap){return snap.ref.getDownloadURL();})
+          var base64data=ev.target.result.split(',')[1];
+          var contentType=file.type||'image/jpeg';
+          var bucket='mbti-logistics.appspot.com';
+          var uploadUrl='https://firebasestorage.googleapis.com/v0/b/'+bucket+'/o?uploadType=media&name='+encodeURIComponent(storePath);
+          var binary=atob(base64data);
+          var bytes=new Uint8Array(binary.length);
+          for(var i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+          return firebase.auth().currentUser.getIdToken().then(function(token){
+            return fetch(uploadUrl,{method:'POST',headers:{'Content-Type':contentType,'Authorization':'Bearer '+token},body:bytes});
+          }).then(function(r){return r.json();})
+          .then(function(){
+            var url='https://firebasestorage.googleapis.com/v0/b/'+bucket+'/o/'+encodeURIComponent(storePath)+'?alt=media';
+            return Promise.resolve(url);
+          })
             .then(function(url){
               // Firestore 메타데이터 저장
               return _db.collection('tax_docs').add({
