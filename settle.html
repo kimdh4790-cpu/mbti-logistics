@@ -18036,11 +18036,15 @@ function _dwAutoSendPayslips(sessions, platform, periodInfo){
     var did2=did;
     _db.collection('users').where('driverId','==',s.driverId).limit(1).get()
       .then(function(dSnap){
-        toast('🔍 driverId:'+s.driverId+' 결과:'+dSnap.size+'건');
-        if(dSnap.empty)return;
+        if(dSnap.empty){
+          // driverId 없으면 uid로 시도
+          return _db.collection('users').where('dealerId','==',did).where('name','==',s.driverName||'').limit(1).get();
+        }
+        return dSnap;
+      }).then(function(dSnap){
+        if(!dSnap||dSnap.empty)return;
         var fcmToken=dSnap.docs[0].data().fcmToken;
-        toast('🔑 토큰:'+(fcmToken?fcmToken.slice(0,15):'없음'));
-        if(!fcmToken)return;
+        if(!fcmToken||fcmToken.length<20)return;
         fetch('https://mbti-logistics.kimdh4790.workers.dev/fcm/notify-drivers',{
           method:'POST',
           headers:{'Content-Type':'application/json'},
