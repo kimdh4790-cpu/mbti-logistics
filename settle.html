@@ -6232,7 +6232,10 @@ function _dwParseRealExcel(file,btn1,btn2,con){
       // 컬럼명 자동 감지 (쿠팡이츠·배민 등 통합 대응)
       var sample=rows[0];
       var timeKey=Object.keys(sample).find(function(k){return /완료|배달.*(시간|일시)|time/i.test(k);})||'';
-      var priceKey=Object.keys(sample).find(function(k){return /단가|배송비|금액|price/i.test(k);})||'';
+      // ★ 정산금액/배달대행비 우선 → 주문금액 제외
+      var priceKey=Object.keys(sample).find(function(k){return /정산금액|정산예정금액|지급액|배달대행비|실지급/i.test(k);})||'';
+      if(!priceKey) priceKey=Object.keys(sample).find(function(k){return /단가|배송비|price/i.test(k);})||'';
+      if(!priceKey) priceKey=Object.keys(sample).find(function(k){return /금액/i.test(k)&&!/주문금액|배달팁/.test(k);})||'';
       var eventKey=Object.keys(sample).find(function(k){return /비고|할증|이벤트|event/i.test(k);})||'';
 
       window._dwSimData=rows.map(function(row,i){
