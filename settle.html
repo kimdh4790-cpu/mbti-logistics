@@ -12428,7 +12428,10 @@ var VAPID_KEY = 'BHO3mU6K2VlLkYfUgsunV5zXsx6oOc_I4dIyE9ErYPBZE5AkBhPP-HUmQhqvHLD
 
 var _fcmRegFailed = false;  // ★ VAPID 키 오류 시 재시도 방지
 async function _registerFCM(){
-  if(!_db||!_CU||!_CU.dealerId||_fcmRegFailed) return;
+  if(!_db||!_CU||!_CU.dealerId||_fcmRegFailed){
+    toast('⚠️ FCM조건미충족: db='+!!_db+' CU='+!!_CU+' did='+((_CU&&_CU.dealerId)||'없음'));
+    return;
+  }
   try{
     if(!('Notification' in window)){return;}
     var perm = await Notification.requestPermission();
