@@ -6116,7 +6116,7 @@ function _dwRenderSimulator(){
           +'<div style="font-size:11px;opacity:.6">[1단계: 엑셀 로드] → [2단계: 건별 보전·환수 판정] → [3단계: 세무 공제 후 주급 명세서 출력]</div>'
         +'</div>'
         +'<div style="display:flex;gap:6px;flex-shrink:0">'
-          +'<button id="dw-btn-load" onclick="dwLoadVirtualExcel()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">📂 1단계: 엑셀 로드</button>'
+          +'<input id="dw-file-sim" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="_dwSimFileLoad(this)">'          +'<button id="dw-btn-load" onclick="document.getElementById(\'dw-file-sim\').click()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">📂 1단계: 엑셀 로드</button>'
           +'<button id="dw-btn-calc" onclick="dwRunLiveCalculations()" disabled style="background:#64748b;border:none;color:#fff;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:not-allowed;opacity:.6">⚡ 2단계: 정산 개시</button>'
         +'</div>'
       +'</div>'
@@ -6198,6 +6198,30 @@ function _dwRenderSimulator(){
 }
 
 // ━━ 1단계: 가상 엑셀 로드
+// ★ 시뮬레이터 파일 직접 로드 (1단계 버튼)
+window._dwSimFileLoad=function(input){
+  var file=input&&input.files&&input.files[0];
+  if(!file)return;
+  var btn1=document.getElementById('dw-btn-load');
+  var btn2=document.getElementById('dw-btn-calc');
+  var con=document.getElementById('dw-sim-console');
+  if(!btn1||!btn2||!con)return;
+  // 아래 엑셀 업로드 섹션도 동기화
+  var dw_file=document.getElementById('dw-file');
+  if(dw_file){
+    var dt=new DataTransfer();
+    dt.items.add(file);
+    dw_file.files=dt.files;
+  }
+  _dwParseRealExcel(file,btn1,btn2,con);
+  // _dwRiderMap 세팅 후 자동 계산 (파서 완료 후 0.5초 딜레이)
+  setTimeout(function(){
+    if(window._dwRiderMap&&Object.keys(window._dwRiderMap).length>0){
+      _dwCalcAll();
+    }
+  },1500);
+};
+
 window.dwLoadVirtualExcel=function(){
   var btn1=document.getElementById('dw-btn-load');
   var btn2=document.getElementById('dw-btn-calc');
@@ -6355,19 +6379,122 @@ window.dwRunLiveCalculations=function(){
   var btn=document.getElementById('dw-btn-calc');
   var con=document.getElementById('dw-sim-console');
   var prog=document.getElementById('dw-progress');
-  if(!btn||!con||!window._dwSimData||!window._dwSimData.length){toast('먼저 1단계를 진행해주세요');return;}
+  if(!btn||!con){toast('먼저 1단계를 진행해주세요');return;}
+
+  // ★ riderMap 기반 기사별 순차 처리
+  var riderMap=window._dwRiderMap;
+  var hasRiderMap=riderMap&&Object.keys(riderMap).length>0;
+  var simData=window._dwSimData||[];
+  if(!simData.length&&!hasRiderMap){toast('먼저 1단계를 진행해주세요');return;}
 
   btn.disabled=true; btn.textContent='⏳ 연산 중...'; btn.style.background='#64748b';
+  con.innerHTML='';
+  var resultsEl=document.getElementById('dw-results');
+  if(resultsEl) resultsEl.innerHTML='';
 
-  // ━━ 상태 변수: setInterval 클로저 외부에서 1회만 선언 (중복 누적 방지)
-  var _pfSum=0;     // 건별 플랫폼 단가 합산
-  var _totalInj=0;  // 건별 보전액 합산 (inj는 매 틱 초기화 후 1번만 더함)
-  var _totalExt=0;  // 건별 환수액 합산
-  var _validCnt=0;  // 심야·취소 제외 건수
+  if(hasRiderMap){
+    // ★ 기사별 순차 스트리밍
+    var riderIds=Object.keys(riderMap).sort();
+    var riderIdx=0;
+    var cfg=typeof _dwGetCfg==='function'?_dwGetCfg():{};
+
+    function processNextRider(){
+      if(riderIdx>=riderIds.length){
+        btn.disabled=false; btn.textContent='⚡ 2단계: 다시 계산'; btn.style.background='#3b82f6';
+        if(prog) prog.textContent='';
+        return;
+      }
+      var rid=riderIds[riderIdx];
+      var orders=riderMap[rid];
+      riderIdx++;
+
+      // 기사 헤더 출력
+      var hdr=document.createElement('div');
+      hdr.style.cssText='padding:8px 14px;background:#1a2744;font-family:monospace;font-size:12px;color:#fbbf24;font-weight:700;border-top:1px solid #21262d;margin-top:8px';
+      hdr.textContent='▶ 기사: '+rid+' ('+orders.length+'건)';
+      con.appendChild(hdr);
+
+      // 기사별 스트리밍 계산
+      var _pfSum=0,_totalInj=0,_totalExt=0,_validCnt=0,_idx=0,_prevTrack=0;
+      var DWT=window.DW_TRACKS&&DW_TRACKS.length>1?DW_TRACKS:[
+        {min:0,price:cfg.defPrice||2900},{min:180,price:4200},{min:250,price:5100},{min:300,price:5300},{min:350,price:5500}
+      ];
+      function _getTP(cnt){
+        var p=DWT[0].price;
+        for(var i=DWT.length-1;i>=0;i--){if(cnt>=(DWT[i].min||0)){p=DWT[i].price;break;}}
+        return p;
+      }
+
+      var timer=setInterval(function(){
+        if(_idx>=orders.length){
+          clearInterval(timer);
+          // ★ 기사 카드 즉시 생성
+          var r=calcDonWaySettlement(orders,Object.assign({},cfg,{riderId:rid}));
+          r.totalCount=_validCnt;
+          r.injected=_totalInj;
+          r.extracted=_totalExt;
+          var preTax=Math.floor(_pfSum+_totalInj-_totalExt);
+          var tax=Math.floor(preTax*0.033);
+          r.preTax=preTax; r.totalTax=tax; r.net=Math.max(0,preTax-tax);
+          r.pfSum=_pfSum;
+          // 카드 추가
+          if(!window._dwResults) window._dwResults=[];
+          window._dwResults.push(r);
+          _dwAppendRiderCard(r);
+          if(prog) prog.textContent='기사 '+riderIdx+'/'+riderIds.length+' 완료';
+          // 다음 기사
+          setTimeout(processNextRider,300);
+          return;
+        }
+        var o=orders[_idx];
+        var isMid=(o.hour>=0&&o.hour<6);
+        var tp=_getTP(_validCnt);
+        var _inj=0,_ext=0;
+        if(!isMid&&o.platformPrice>0){
+          _validCnt++;
+          _pfSum+=o.platformPrice;
+          tp=_getTP(_validCnt);
+          var slotKey=_dwSlot?_dwSlot(o.hour||12):'';
+          var slotP=window.DW_SLOTS&&slotKey&&DW_SLOTS[slotKey]&&DW_SLOTS[slotKey].price>0?DW_SLOTS[slotKey].price:tp;
+          slotP=isNaN(slotP)||slotP<=0?tp:slotP;
+          var finalT=slotP+(o.event&&o.event.price||0);
+          if(o.platformPrice<finalT){_inj=Math.floor(finalT-o.platformPrice);_totalInj+=_inj;}
+          else if(o.platformPrice>finalT){_ext=Math.floor(o.platformPrice-finalT);_totalExt+=_ext;}
+        }
+        // 콘솔 행 추가
+        var badge='',rowBg='transparent';
+        if(isMid) badge='<span style="font-size:10px;background:#374151;color:#9ca3af;padding:2px 7px;border-radius:10px">🌙 심야</span>';
+        else if(_inj>0){badge='<span style="font-size:11px;background:#065f46;color:#6ee7b7;padding:2px 9px;border-radius:10px;font-weight:700">📥+₩'+_inj.toLocaleString()+'</span>';rowBg='rgba(16,185,129,.07)';}
+        else if(_ext>0){badge='<span style="font-size:11px;background:#881337;color:#fda4af;padding:2px 9px;border-radius:10px;font-weight:700">📤-₩'+_ext.toLocaleString()+'</span>';rowBg='rgba(244,63,94,.07)';}
+        else badge='<span style="font-size:10px;color:#6b7280">⚖️</span>';
+        var evBadge=o.event&&o.event.price>0?'<span style="font-size:10px;color:'+(o.event.color||'#fb923c')+';font-weight:700">'+o.event.name+' +'+o.event.price+'</span>':'<span style="font-size:10px;color:#374151">—</span>';
+        var finalT2=tp+(o.event&&o.event.price||0);
+        var row=document.createElement('div');
+        row.style.cssText='display:grid;grid-template-columns:32px 80px 80px 100px 80px 1fr;gap:0;padding:4px 14px;border-bottom:1px solid #21262d;align-items:center;background:'+rowBg+';font-family:monospace;font-size:11px;'+(isMid?'opacity:.3;':'');
+        row.innerHTML='<span style="color:#6b7280">#'+(_idx+1)+'</span>'
+          +'<span style="color:#22d3ee;font-size:10px">'+rid.slice(0,6)+'</span>'
+          +'<span style="color:#ffd700;font-weight:700">₩'+(o.platformPrice>0?o.platformPrice.toLocaleString():'취소')+'</span>'
+          +evBadge
+          +'<span style="color:#93c5fd;font-weight:700">₩'+finalT2.toLocaleString()+'</span>'
+          +'<span style="text-align:right">'+badge+'</span>';
+        row.style.opacity='0';
+        con.appendChild(row);
+        setTimeout(function(){row.style.transition='opacity .1s';row.style.opacity=(isMid?'.3':'1');},10);
+        con.scrollTop=con.scrollHeight;
+        _idx++;
+      },80); // 기사별 80ms 간격 (전체 빠르게)
+    }
+    window._dwResults=[];
+    processNextRider();
+    return;
+  }
+
+  // ━━ fallback: _dwSimData 기반 (riderMap 없을 때)
+  var _pfSum=0,_totalInj=0,_totalExt=0,_validCnt=0;
   var _idx=0;
-  var _maxShow=window._dwSimData.length; // ★ 전체 건수 계산
+  var _maxShow=simData.length;
   var _prevTrack=0;
-  var data=window._dwSimData;
+  var data=simData;
 
   var DWT=window.DW_TRACKS&&DW_TRACKS.length>1?DW_TRACKS:[
     {min:0,price:2900},{min:180,price:4200},{min:250,price:5100},{min:300,price:5300},{min:350,price:5500}
@@ -6681,6 +6808,32 @@ function _dwRenderEngine(){
   _dwRenderSimulator();
 }
 
+// ★ 통합 로드 - 아래 업로드 섹션 파일 선택 시 시뮬레이터 자동 실행
+window._dwAllInOneLoad=function(input){
+  var file=input&&input.files&&input.files[0];
+  if(!file)return;
+  var btn1=document.getElementById('dw-btn-load');
+  var btn2=document.getElementById('dw-btn-calc');
+  var con=document.getElementById('dw-sim-console');
+  if(btn1&&btn2&&con){
+    _dwParseRealExcel(file,btn1,btn2,con);
+  }
+  // 기사별 카드도 동시 계산
+  _dwParseExcel(file,function(riderMap,err,platform){
+    if(err)return;
+    window._dwRiderMap=riderMap;
+    window._dwPlatform=platform;
+    var st=document.getElementById('dw-parse-status');
+    if(st){
+      var pInfo=_dwCurrentPeriod(platform);
+      st.innerHTML='✅ <strong>'+Object.keys(riderMap).length+'명</strong> · <strong>'+Object.values(riderMap).reduce(function(s,a){return s+a.length;},0).toLocaleString()+'건</strong>'
+        +'&nbsp;<span style="color:var(--brand);font-size:11px">'+(platform==='baemin'?'🟢 배민':'🔴 쿠팡이츠')+'</span>'
+        +(pInfo.payDate?'&nbsp;<span style="color:var(--green);font-size:11px">💳 입금예정 '+pInfo.payDate+'</span>':'');
+    }
+    setTimeout(function(){ _dwCalcAll(); },1200);
+  });
+};
+
 window._dwLoadFile=function(){
   var fi=document.getElementById('dw-file');
   if(!fi||!fi.files[0]){toast('파일을 선택해 주세요');return;}
@@ -6792,6 +6945,60 @@ function _dwCalcAll(){
       if(done===riderIds.length) _dwRenderResults();
     });
   });
+}
+
+// ★ 기사 카드 순차 추가 (스트리밍 완료 시마다 호출)
+function _dwAppendRiderCard(r){
+  var el=document.getElementById('dw-results');
+  if(!el)return;
+  var trackColor=r.isDefault?'#6b7280':r.targetPrice>=5500?'#7c3aed':r.targetPrice>=5100?'#2563eb':r.targetPrice>=4200?'#059669':'#d97706';
+  var preTax=r.preTax||0;
+  var tax=r.totalTax||0;
+  var sanjae=Math.round(preTax*0.0088);
+  var goyal=Math.round(preTax*0.008);
+  var totalDeduct=tax+sanjae+goyal;
+  var net=Math.max(0,preTax-totalDeduct);
+
+  var card=document.createElement('div');
+  card.style.cssText='background:var(--bg2);border-radius:14px;border:1.5px solid var(--border);overflow:hidden;margin-bottom:12px;opacity:0;transform:translateY(10px);transition:all .3s';
+  card.innerHTML=
+    '<div style="background:'+trackColor+';color:#fff;padding:10px 12px;display:flex;justify-content:space-between;align-items:center">'+
+      '<div><div style="font-size:13px;font-weight:900">'+esc(r.riderId)+'</div>'+
+        '<div style="font-size:10px;opacity:.8">'+(r.trackLabel||'트랙')+'</div></div>'+
+      '<div style="text-align:right"><div style="font-size:10px;opacity:.7">목표단가</div>'+
+        '<div style="font-size:14px;font-weight:900">'+(r.isDefault?'계약단가':'₩'+r.targetPrice.toLocaleString()+'/건')+'</div></div>'+
+    '</div>'+
+    '<div style="padding:12px">'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">'+
+        '<div style="background:var(--bg3);border-radius:8px;padding:7px;text-align:center">'+
+          '<div style="font-size:10px;color:var(--text3)">수행건수</div>'+
+          '<div style="font-size:16px;font-weight:900">'+r.totalCount+'건</div></div>'+
+        '<div style="background:var(--bg3);border-radius:8px;padding:7px;text-align:center">'+
+          '<div style="font-size:10px;color:var(--text3)">플랫폼 수령</div>'+
+          '<div style="font-size:14px;font-weight:800">₩'+(r.pfSum||0).toLocaleString()+'</div></div>'+
+        '<div style="background:#fef3c7;border-radius:8px;padding:7px;text-align:center">'+
+          '<div style="font-size:10px;color:#92400e">보전 투입</div>'+
+          '<div style="font-size:13px;font-weight:800;color:#b45309">'+(r.injected>0?'-₩'+r.injected.toLocaleString():'—')+'</div></div>'+
+        '<div style="background:#d1fae5;border-radius:8px;padding:7px;text-align:center">'+
+          '<div style="font-size:10px;color:#065f46">환수 차감</div>'+
+          '<div style="font-size:13px;font-weight:800;color:#047857">'+(r.extracted>0?'+₩'+r.extracted.toLocaleString():'—')+'</div></div>'+
+      '</div>'+
+      '<div style="font-size:11px;border-top:1px solid var(--border);padding-top:8px">'+
+        // 명세서 항목
+        '<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:var(--text3)">지급 합계</span><span style="font-weight:700">₩'+preTax.toLocaleString()+'</span></div>'+
+        '<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:var(--red)">산재보험 0.88%</span><span style="color:var(--red)">-₩'+sanjae.toLocaleString()+'</span></div>'+
+        '<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:var(--red)">고용보험 0.8%</span><span style="color:var(--red)">-₩'+goyal.toLocaleString()+'</span></div>'+
+        '<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:var(--red)">원천세 3.3%</span><span style="color:var(--red)">-₩'+tax.toLocaleString()+'</span></div>'+
+        '<div style="display:flex;justify-content:space-between;padding:5px 0;border-top:1.5px solid var(--brand);margin-top:4px">'+
+          '<span style="font-weight:900;color:var(--brand)">💳 실지급액</span>'+
+          '<span style="font-size:16px;font-weight:900;color:var(--brand)">₩'+net.toLocaleString()+'</span>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+
+  el.appendChild(card);
+  setTimeout(function(){card.style.opacity='1';card.style.transform='translateY(0)';},50);
+  card.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
 function _dwRenderResults(){
