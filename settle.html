@@ -6725,104 +6725,11 @@ function _dwRenderEngine(){
   wrap.id='dw-engine-wrap';
   wrap.style.cssText='max-width:960px;margin:0 auto 20px';
 
-  wrap.innerHTML=
-  // ① 상단 설명
-  '<div style="background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:16px;padding:20px;margin-bottom:16px;color:#fff">'
-    +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">'
-      +'<div>'
-        +'<div style="font-size:16px;font-weight:900;margin-bottom:2px">🛵 DONWAY 배달대행 통합 정산 엔진 v2</div>'
-        +'<div style="font-size:11px;opacity:.6">쿠팡이츠·배민 엑셀 자동인식 → 건수별 트랙 → 보전/환수 밸런싱 → 3.3% 세무 → 명세서</div>'
-      +'</div>'
-      +'<button onclick="_dwOpenSettings()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">⚙️ 단가 설정</button>'
-    +'</div>'
-    // 건수별 트랙
-    +'<div style="font-size:10px;opacity:.5;letter-spacing:1px;margin-bottom:6px">📊 건수별 최저단가 보전 트랙</div>'
-    +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">'
-    +DW_TRACKS.slice(0,4).map(function(t){
-      return '<div style="background:rgba(255,255,255,.1);border-radius:8px;padding:6px 10px;font-size:10px">'
-        +'<div style="opacity:.7">'+t.label+'</div>'
-        +'<div style="font-size:14px;font-weight:900;color:#fbbf24">₩'+t.price.toLocaleString()+'</div></div>';
-    }).join('')
-    +'<div style="background:rgba(255,255,255,.06);border-radius:8px;padding:6px 10px;font-size:10px">'
-      +'<div style="opacity:.7">180건 미만</div>'
-      +'<div style="font-size:12px;font-weight:700;color:#94a3b8">기본 계약단가</div></div>'
-    +'</div>'
-    // 5대 시간대 구간 + 슬롯별 단가
-    +'<div style="font-size:10px;opacity:.5;letter-spacing:1px;margin-bottom:6px">⏰ 5대 시간대 구간 & 슬롯 단가 (0원 = 트랙 단가 적용 / 직접 설정 시 우선)</div>'
-    +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
-    +Object.keys(DW_SLOTS).map(function(k){
-      var s=DW_SLOTS[k];
-      var isMid=k==='midnight';
-      return '<div style="background:'+(isMid?'rgba(255,255,255,.04)':'rgba(255,255,255,.1)')+';border-radius:8px;padding:6px 10px;font-size:10px;'+(isMid?'opacity:.5':'')+'">'
-        +'<div style="font-weight:800;color:'+s.color+'">'+s.label+'</div>'
-        +'<div style="opacity:.6;font-size:9px">'+String(s.start).padStart(2,'0')+':00~'+String(s.end).padStart(2,'0')+':00</div>'
-        +'<div style="font-size:12px;font-weight:900;color:#fbbf24;margin-top:2px">'
-          +(s.price>0?'₩'+s.price.toLocaleString():(isMid?'예외':'트랙단가'))
-        +'</div>'
-      +'</div>';
-    }).join('')
-    +'</div>'
-  +'</div>'
-
-  // ② 엑셀 업로드
-  +'<div class="card" style="margin-bottom:14px">'
-    +'<div style="font-size:14px;font-weight:800;margin-bottom:12px">📂 정산 엑셀 업로드 (쿠팡이츠 / 배민)</div>'
-    +'<div style="display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:10px;align-items:center">'
-      +'<input id="dw-file" type="file" accept=".xlsx,.xls,.csv,.tsv" onchange="_dwLoadFile()" style="padding:8px;border:1.5px dashed var(--border);border-radius:8px;font-size:12px;background:var(--bg)">'
-      +'<button onclick="_dwLoadFile()" class="btn btn-blue" style="white-space:nowrap;padding:8px 16px">📊 분석</button>'
-    +'</div>'
-     +'<div style="font-size:11px;color:var(--text3);margin-bottom:6px">📁 지원: <strong>xlsx · xls · csv</strong> — 컬럼명 자동 인식</div>'
-     +'<div style="background:var(--bg3);border-radius:8px;padding:8px 12px;font-size:11px;margin-bottom:10px">'
-       +'<span style="color:#16a34a;font-weight:700">🟢 배민</span> 수~화 집계 → 금요일 입금 &nbsp;|&nbsp; '
-       +'<span style="color:#dc2626;font-weight:700">🔴 쿠팡이츠</span> 일~토 집계 → 다음주 금요일 입금'
-     +'</div>'
-    // 기사 마스터 공제 설정
-    +'<div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:12px">'
-      +'<div style="font-size:12px;font-weight:700;margin-bottom:8px">⏰ 시간대별 보전 단가 설정 <span style="font-size:10px;color:var(--text3);font-weight:400">(빈 칸 = 건수 트랙 자동 적용)</span></div>'
-      +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px">'
-      +Object.keys(DW_SLOTS).map(function(k){
-        var s=DW_SLOTS[k];
-        var isMid=k==='midnight';
-        return '<div style="'+(isMid?'opacity:.5':'')+'">'
-          +'<label style="font-size:10px;display:block;margin-bottom:3px;font-weight:700;color:'+s.color+'">'+s.label
-            +'<span style="font-weight:400;color:var(--text3);font-size:9px"> '+String(s.start).padStart(2,'0')+':00~'+String(s.end).padStart(2,'0')+':00</span></label>'
-          +'<input id="dw-slot-'+k+'" type="number" placeholder="'+(isMid?'예외(심야)':'트랙 자동')+'" '+(isMid?'disabled':'')+' '
-            +'style="width:100%;padding:7px;border:1.5px solid '+s.color+'44;border-radius:8px;font-size:13px;font-weight:700;background:var(--bg);color:'+s.color+'">'
-        +'</div>';
-      }).join('')
-      +'</div>'
-      +'<div style="font-size:10px;color:var(--text3);margin-top:8px">💡 점심피크·저녁피크에 높은 단가, 노피크에 낮은 단가 설정 가능. 심야(00~06시)는 보전/환수 적용 안 됨.</div>'
-    +'</div>'
-
-    // 기사별 공제·기간 설정
-    +'<div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:12px">'
-      +'<div style="font-size:12px;font-weight:700;margin-bottom:8px">⚙️ 기사 마스터 공제 설정</div>'
-      +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px">'
-        +'<div><label style="font-size:10px;color:var(--text3);display:block;margin-bottom:3px">🏍 기본 계약단가(원/건)</label>'
-          +'<input id="dw-def-price" type="number" value="2900" style="width:100%;padding:7px;border:1.5px solid #3b82f6;border-radius:8px;font-size:13px;font-weight:700;color:#1d4ed8"></div>'
-        +'<div><label style="font-size:10px;color:var(--text3);display:block;margin-bottom:3px">🛵 오토바이 리스료(원)</label>'
-          +'<input id="dw-lease" type="number" value="0" placeholder="0" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:12px"></div>'
-        +'<div><label style="font-size:10px;color:var(--text3);display:block;margin-bottom:3px">📱 앱비·보험료(원)</label>'
-          +'<input id="dw-program" type="number" value="0" placeholder="0" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:12px"></div>'
-        +'<div><label style="font-size:10px;color:var(--text3);display:block;margin-bottom:3px">🛡 기타 공제(원)</label>'
-          +'<input id="dw-insurance" type="number" value="0" placeholder="0" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:12px"></div>'
-        +'<div><label style="font-size:10px;color:var(--text3);display:block;margin-bottom:3px">📅 정산 기간</label>'
-          +'<input id="dw-period" type="text" placeholder="예: 2026-05-26~06-25" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:12px"></div>'
-      +'</div>'
-    +'</div>'
-    +'<div id="dw-parse-status" style="min-height:20px;font-size:12px;color:var(--text3)"></div>'
-  +'</div>'
-
-  // ③ 기사별 결과
-  +'<div id="dw-results"></div>';
-
-  // 기존 content 맨 앞에 삽입
+  // ★ _dwRenderSimulator가 실제 UI 담당
   el.appendChild(wrap);
-  // ★ 시뮬레이터 섹션 (wrap 맨 앞에 prepend)
-  var simDiv2=document.createElement('div');
-  simDiv2.id='dw-simulator-wrap';
-  wrap.insertBefore(simDiv2, wrap.firstChild);
   _dwRenderSimulator();
+
+  el.appendChild(wrap);
 }
 
 // ★ 통합 로드 - 아래 업로드 섹션 파일 선택 시 시뮬레이터 자동 실행
