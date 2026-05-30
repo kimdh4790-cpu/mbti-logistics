@@ -9307,16 +9307,16 @@ window._txsUpload=function(src){
           var storePath='tax_docs/'+did+'/'+ym+'/'+cat+'/'+(Date.now())+'_'+file.name;
           var base64data=ev.target.result.split(',')[1];
           var contentType=file.type||'image/jpeg';
-          var bucket='mbti-logistics.appspot.com';
-          var uploadUrl='https://firebasestorage.googleapis.com/v0/b/'+bucket+'/o?uploadType=media&name='+encodeURIComponent(storePath);
-          var binary=atob(base64data);
-          var bytes=new Uint8Array(binary.length);
-          for(var i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
           return firebase.auth().currentUser.getIdToken().then(function(token){
-            return fetch(uploadUrl,{method:'POST',headers:{'Content-Type':contentType,'Authorization':'Bearer '+token},body:bytes});
+            return fetch('https://mbti-logistics.kimdh4790.workers.dev/storage-upload',{
+              method:'POST',
+              headers:{'Content-Type':'application/json'},
+              body:JSON.stringify({storagePath:storePath,base64data:base64data,contentType:contentType,idToken:token})
+            });
           }).then(function(r){return r.json();})
-          .then(function(){
-            var url='https://firebasestorage.googleapis.com/v0/b/'+bucket+'/o/'+encodeURIComponent(storePath)+'?alt=media';
+          .then(function(res){
+            if(!res.ok)throw new Error(res.error||'업로드 실패');
+            var url=res.url;
             return Promise.resolve(url);
           })
             .then(function(url){
