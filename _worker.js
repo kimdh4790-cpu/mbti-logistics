@@ -446,6 +446,52 @@ export default {
       });
     }
 
+
+    // ── Firebase Storage 업로드 프록시 ──
+    if (path === '/storage-upload' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const { storagePath, base64data, contentType, idToken } = body;
+        const bucket = 'mbti-logistics.appspot.com';
+        const uploadUrl = 'https://firebasestorage.googleapis.com/v0/b/' + bucket + '/o?uploadType=media&name=' + encodeURIComponent(storagePath);
+        const binary = atob(base64data);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        const resp = await fetch(uploadUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': contentType || 'image/jpeg', 'Authorization': 'Bearer ' + idToken },
+          body: bytes
+        });
+        const result = await resp.json();
+        const downloadUrl = 'https://firebasestorage.googleapis.com/v0/b/' + bucket + '/o/' + encodeURIComponent(storagePath) + '?alt=media';
+        return new Response(JSON.stringify({ ok: true, url: downloadUrl }), {
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        });
+      } catch(e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), {
+          status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        });
+      }
+    }
+
+    // ── Firebase Storage 삭제 프록시 ──
+    if (path === '/storage-delete' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const { storagePath, idToken } = body;
+        const bucket = 'mbti-logistics.appspot.com';
+        await fetch('https://firebasestorage.googleapis.com/v0/b/' + bucket + '/o/' + encodeURIComponent(storagePath), {
+          method: 'DELETE', headers: { 'Authorization': 'Bearer ' + idToken }
+        });
+        return new Response(JSON.stringify({ ok: true }), {
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        });
+      } catch(e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), {
+          status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        });
+      }
+    }
     if (path === '/worker-test') {
       return new Response(JSON.stringify({ status: 'worker OK', path, method }), {
         headers: { 'Content-Type': 'application/json' }
