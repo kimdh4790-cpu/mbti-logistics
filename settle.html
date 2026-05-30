@@ -9278,70 +9278,34 @@ window._txsUpload=function(src){
   var preview=document.getElementById('txs-preview');
   if(st)st.innerHTML='⏳ 업로드 중 ('+files.length+'개)...';
 
-  var uploadPromises=files.map(function(file,idx){
+  var promises=files.map(function(file){
     return new Promise(function(resolve){
       var reader=new FileReader();
       reader.onload=function(ev){
-        var base64=ev.target.result.split(',')[1];
-        // OCR 분석 (이미지인 경우)
-        var ocrPromise=file.type.startsWith('image/')?
-          fetch('https://api.anthropic.com/v1/messages',{
-            method:'POST',
-            headers:{'Content-Type':'application/json','x-api-key':(window.__AK||''),'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-            body:JSON.stringify({
-              model:'claude-haiku-4-5-20251001',
-              max_tokens:300,
-              messages:[{role:'user',content:[
-                {type:'image',source:{type:'base64',media_type:file.type,data:base64}},
-                {type:'text',text:'이 서류에서 JSON만 반환(설명없이): {"docType":"종류","amount":금액숫자,"vendor":"거래처","desc":"한줄설명"}'}
-              ]}]
-            })
-          }).then(function(r){return r.json();}).then(function(data){
-            try{return JSON.parse((data.content[0].text||'{}').replace(/```json|```/g,'').trim());}
-            catch(e){return {};}
-          }).catch(function(){return {};})
-          :Promise.resolve({});
-
-        ocrPromise.then(function(ocr){
-          // Firebase Storage 업로드
-          var storePath='tax_docs/'+did+'/'+ym+'/'+cat+'/'+(Date.now())+'_'+file.name;
-          var dataUrl=ev.target.result;
-          var url=dataUrl; // Firestore에 dataURL 직접 저장
-          return Promise.resolve(url).then(function(url){
-              // Firestore 메타데이터 저장
-              return _db.collection('tax_docs').add({
-                dealerId:did,
-                ym:ym,
-                category:cat,
-                memo:memo||ocr.desc||'',
-                desc:ocr.desc||'',
-                amount:ocr.amount||0,
-                vendor:ocr.vendor||'',
-                docType:ocr.docType||'',
-                fileUrl:url,
-                filePath:storePath,
-                fileType:file.type,
-                fileName:file.name,
-                createdAt:new Date().toISOString(),
-                uploadedBy:_CU.uid
-              });
-            })
-            .then(function(){resolve({ok:true,url:file.type.startsWith('image/')?ev.target.result:null});});
+        var dataUrl=ev.target.result;
+        // Firestore에 직접 저장 (Storage 미사용)
+        _db.collection('tax_docs').add({
+          dealerId:did, ym:ym, category:cat,
+          memo:memo||'', desc:'', amount:0, vendor:'', docType:'',
+          fileUrl:dataUrl, filePath:'', fileType:file.type,
+          fileName:file.name, createdAt:new Date().toISOString(),
+          uploadedBy:_CU.uid
+        }).then(function(){
+          resolve({ok:true,url:file.type.startsWith('image/')?dataUrl:null});
         }).catch(function(e){resolve({ok:false,err:e.message});});
       };
       reader.readAsDataURL(file);
     });
   });
 
-  Promise.all(uploadPromises).then(function(results){
+  Promise.all(promises).then(function(results){
     var ok=results.filter(function(r){return r.ok;}).length;
     var failed=results.filter(function(r){return !r.ok;});
-    if(st)st.innerHTML='✅ '+ok+'개 업로드 완료'+(ok<files.length?' ('+failed.length+'개 실패)':'');
-    if(failed.length){var errMsg=failed.map(function(r){return r.err||'알 수 없는 오류';}).join(', ');console.error('업로드 실패:', errMsg);toast('❌ 업로드 실패: '+errMsg.slice(0,80));}
-    // 미리보기
+    if(st)st.innerHTML='✅ '+ok+'개 업로드 완료'+(failed.length?' ('+failed.length+'개 실패)':'');
+    if(failed.length){toast('❌ 실패: '+failed[0].err);}
     if(preview){
       results.forEach(function(r){
-        if(r.ok&&r.url){
+        if(r.ok&&r.url&&r.url.startsWith('data:image')){
           var img=document.createElement('img');
           img.src=r.url;
           img.style.cssText='width:60px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border)';
@@ -9349,13 +9313,11 @@ window._txsUpload=function(src){
         }
       });
     }
-    // 목록/체크리스트 새로고침
-    _txsLoadDocs(did, ym);
-    _txsLoadChecklist(did, ym);
+    _txsLoadDocs(did,ym);
+    _txsLoadChecklist(did,ym);
   });
 };
 
-// 서류 삭제
 window._txsDeleteDoc=function(docId){
   if(!confirm('이 서류를 삭제하시겠습니까?'))return;
   _db.collection('tax_docs').doc(docId).get().then(function(snap){
