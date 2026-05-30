@@ -6409,6 +6409,15 @@ window.dwRunLiveCalculations=function(){
         bonusTotal:_totalInj, deductTotal:_totalExt,
         preTaxTotal:res.preTax, tax33:res.tax, netPay:res.netPay
       });
+      // ★ 시뮬레이터 완료 → 기사별 카드 자동 생성
+      if(window._dwRiderMap&&typeof _dwCalcAll==='function'){
+        setTimeout(function(){
+          _dwCalcAll();
+          // dw-results로 스크롤
+          var el=document.getElementById('dw-results');
+          if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
+        },500);
+      }
       return;
     }
 
@@ -6769,6 +6778,40 @@ function _dwRenderResults(){
   var el=document.getElementById('dw-results');
   if(!el)return;
   if(!_dwResults.length){el.innerHTML='';return;}
+  // ★ 기사별 결과 자동 Firestore 저장 (명세서 버튼 없이 자동)
+  if(_db&&_CU){
+    var did=_CU.dealerId||_CU.uid;
+    var platform=_dwPlatform||'';
+    var periodInfo=_dwCurrentPeriod(platform);
+    var weekLabel=periodInfo.label||periodInfo.start+'~'+periodInfo.end;
+    _dwResults.forEach(function(r){
+      if(!r.riderId||!r.net)return;
+      // driver_notifications에 자동 저장 (중복 방지: 같은 period)
+      _db.collection('driver_notifications')
+        .where('dealerId','==',did)
+        .where('targetDriverId','==',r.riderId)
+        .where('period','==',weekLabel)
+        .where('type','==','payslip_auto')
+        .limit(1).get().then(function(snap){
+          var data={
+            dealerId:did,targetDriverId:r.riderId,
+            targetDriverName:r.riderName||r.riderId,
+            type:'payslip_auto',platform:platform,period:weekLabel,
+            title:'💰 '+weekLabel+' 정산 현황',
+            totalCount:r.totalCount||0,
+            preTax:r.preTax||0,net:r.net||0,
+            injected:r.injected||0,extracted:r.extracted||0,
+            isRead:false,updatedAt:new Date().toISOString(),
+            createdAt:firebase.firestore.FieldValue.serverTimestamp()
+          };
+          if(snap.empty){
+            _db.collection('driver_notifications').add(data).catch(function(){});
+          } else {
+            snap.docs[0].ref.update(data).catch(function(){});
+          }
+        }).catch(function(){});
+    });
+  }
 
   // 전체 요약
   var sumNet=0,sumInj=0,sumExt=0,sumCnt=0,sumTax=0;
