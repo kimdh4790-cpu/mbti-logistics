@@ -8335,9 +8335,9 @@ window._expOcrScan=function(src){
   reader.onload=function(ev){
     var base64=ev.target.result.split(',')[1];
     var _ak=window.__AK||'';
-    fetch('https://mbti-logistics.kimdh4790.workers.dev/claude-ocr',{
+    fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','x-api-key':(window.__AK||''),'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
         model:'claude-haiku-4-5-20251001',
         max_tokens:500,
@@ -9401,9 +9401,9 @@ window._txsOcr=function(src){
   reader.onload=function(ev){
     var base64=ev.target.result.split(',')[1];
     var _ak=window.__AK||'';
-    fetch('https://mbti-logistics.kimdh4790.workers.dev/claude-ocr',{
+    fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','x-api-key':(window.__AK||''),'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
         model:'claude-haiku-4-5-20251001',
         max_tokens:500,
