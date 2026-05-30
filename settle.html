@@ -6724,12 +6724,12 @@ function _dwRenderEngine(){
   var wrap=document.createElement('div');
   wrap.id='dw-engine-wrap';
   wrap.style.cssText='max-width:960px;margin:0 auto 20px';
-
-  // ★ _dwRenderSimulator가 실제 UI 담당
+  // dw-simulator-wrap 생성
+  var simWrap=document.createElement('div');
+  simWrap.id='dw-simulator-wrap';
+  wrap.appendChild(simWrap);
   el.appendChild(wrap);
   _dwRenderSimulator();
-
-  el.appendChild(wrap);
 }
 
 // ★ 통합 로드 - 아래 업로드 섹션 파일 선택 시 시뮬레이터 자동 실행
