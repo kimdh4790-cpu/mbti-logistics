@@ -6046,9 +6046,12 @@ window._dwApplySettings=function(){
 
   _dwSaveSettings({tracks:tracks,slots:slots,parcel:parcel},function(){
     var mo=document.querySelector('.mo.show');if(mo)mo.remove();
-    // 엔진 헤더 새로고침
-    var old=document.getElementById('dw-engine-wrap');if(old)old.remove();
-    _dwRenderEngine();
+    toast('✅ 단가 저장 완료 — 2단계 계산을 눌러주세요');
+    // ★ 저장된 슬롯값을 input에 반영 (새로고침 없이)
+    Object.keys(DW_SLOTS).forEach(function(k){
+      var el=document.getElementById('dw-slot-'+k);
+      if(el&&DW_SLOTS[k].price>0) el.value=DW_SLOTS[k].price;
+    });
   });
 };
 var _dwResults=[];
@@ -6589,7 +6592,7 @@ function _dwRenderEngine(){
         return '<div style="'+(isMid?'opacity:.5':'')+'">'
           +'<label style="font-size:10px;display:block;margin-bottom:3px;font-weight:700;color:'+s.color+'">'+s.label
             +'<span style="font-weight:400;color:var(--text3);font-size:9px"> '+String(s.start).padStart(2,'0')+':00~'+String(s.end).padStart(2,'0')+':00</span></label>'
-          +'<input id="dw-slot-'+k+'" type="number" placeholder="'+(isMid?'예외(심야)':'트랙 자동')+'" '+(isMid?'disabled':'')+' '
+          +'<input id="dw-slot-'+k+'" type="number" placeholder="'+(isMid?'예외(심야)':'트랙 자동')+'" '+(isMid?'disabled':'')+(s.price>0?' value="'+s.price+'"':'')+' '
             +'style="width:100%;padding:7px;border:1.5px solid '+s.color+'44;border-radius:8px;font-size:13px;font-weight:700;background:var(--bg);color:'+s.color+'">'
         +'</div>';
       }).join('')
