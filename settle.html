@@ -9293,30 +9293,30 @@ window._txsUpload=function(src){
 
         ocrPromise.then(function(ocr){
           // Firebase Storage 업로드
-          var storePath='tax_docs/'+did+'/'+ym+'/'+cat+'/'+(Date.now())+'_'+file.name;
-          var storageRef=firebase.storage().ref(storePath);
-          return storageRef.putString(ev.target.result,'data_url',{contentType:file.type})
-            .then(function(snap){return snap.ref.getDownloadURL();})
-            .then(function(url){
-              // Firestore 메타데이터 저장
-              return _db.collection('tax_docs').add({
-                dealerId:did,
-                ym:ym,
-                category:cat,
-                memo:memo||ocr.desc||'',
-                desc:ocr.desc||'',
-                amount:ocr.amount||0,
-                vendor:ocr.vendor||'',
-                docType:ocr.docType||'',
-                fileUrl:url,
-                filePath:storePath,
-                fileType:file.type,
-                fileName:file.name,
-                createdAt:new Date().toISOString(),
-                uploadedBy:_CU.uid
-              });
-            })
-            .then(function(){resolve({ok:true,url:file.type.startsWith('image/')?ev.target.result:null});});
+          var ocrP=(file.type.startsWith('image/')&&window.__AK)
+            ?fetch('https://api.anthropic.com/v1/messages',{
+                method:'POST',
+                headers:{'Content-Type':'application/json','x-api-key':window.__AK,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+                body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:200,
+                  messages:[{role:'user',content:[
+                    {type:'image',source:{type:'base64',media_type:file.type,data:ev.target.result.split(',')[1]}},
+                    {type:'text',text:'이 서류 분석 후 JSON만: {"docType":"receipt|tax_invoice|contract|payslip|expense|other","amount":숫자,"vendor":"거래처명","desc":"한줄설명"}'}
+                  ]}]})
+              }).then(function(r){return r.json();})
+                .then(function(r){var raw=(r.content&&r.content[0]&&r.content[0].text)||'{}';var m=raw.match(/\{[\s\S]*\}/);try{return JSON.parse(m?m[0]:'{}');}catch(e){return {};}})
+                .catch(function(){return {};})
+            :Promise.resolve({});
+          ocrP.then(function(ocr){
+            var dtMap={receipt:'receipt',tax_invoice:'tax_invoice',contract:'contract',payslip:'payslip',expense:'expense',other:'other'};
+            var finalCat=ocr.docType&&dtMap[ocr.docType]?dtMap[ocr.docType]:cat;
+            return _db.collection('tax_docs').add({
+              dealerId:did,ym:ym,category:finalCat,
+              memo:memo||ocr.desc||'',desc:ocr.desc||'',amount:ocr.amount||0,
+              vendor:ocr.vendor||'',docType:ocr.docType||'',
+              fileUrl:ev.target.result,filePath:'',fileType:file.type,
+              fileName:file.name,createdAt:new Date().toISOString(),uploadedBy:_CU.uid
+            });
+          }).then(function(){resolve({ok:true,url:file.type.startsWith('image/')?ev.target.result:null});});
         }).catch(function(e){resolve({ok:false,err:e.message});});
       };
       reader.readAsDataURL(file);
