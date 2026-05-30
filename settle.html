@@ -2342,7 +2342,8 @@ function showApp(){
     var sType = _CU.serviceType||'full';
     // ★ sType 디버그 로그 (슈퍼어드민용)
     if(isSuperAdmin()) console.log('[Nav] sType:', sType, '| dealerId:', _CU&&_CU.dealerId);
-    if(sType==='settle')        MENUS=MENUS_SETTLE;
+    if(isSuperAdmin())          MENUS=MENUS_SETTLE;
+    else if(sType==='settle')   MENUS=MENUS_SETTLE;
     else if(sType==='delivery') MENUS=MENUS_DELIVERY;
     else if(sType==='qr')       MENUS=MENUS_QR;
     else if(sType==='qr_payroll') MENUS=MENUS_QR_PAYROLL;
