@@ -6947,19 +6947,26 @@ function _dwCurrentPeriod(){
 }
 
 // 단일 배달 건 엔진 계산 (건별 보전·환수)
-function _dwCalcEntry(price, hour, session){
+function _dwCalcEntry(price, hour, session, opts){
   var defPrice=session.defPrice||2900;
   var track=_dwTrack(session.totalCount+1, defPrice);
   var target=track.price;
   var slot=_dwSlot(hour);
   var inject=0, extract=0;
+  // ★ 우천/이벤트 할증 감지 (+500~1000원 자동 상향)
+  var extraSurcharge=0;
+  if(opts&&opts.remark){
+    var rm=(opts.remark||'').toLowerCase();
+    if(rm.includes('우천')||rm.includes('폭우')||rm.includes('태풍')||rm.includes('폭설')) extraSurcharge=1000;
+    else if(rm.includes('이벤트')||rm.includes('할증')||rm.includes('피크')) extraSurcharge=500;
+  }
   if(slot!=='midnight'){
-    // 슬롯별 단가가 설정되어 있으면 우선 적용
     var slotPrice=DW_SLOTS[slot]&&DW_SLOTS[slot].price>0?DW_SLOTS[slot].price:target;
+    slotPrice+=extraSurcharge; // ★ 할증 반영
     if(price<slotPrice)       inject=slotPrice-price;
     else if(price>slotPrice)  extract=price-slotPrice;
   }
-  return {inject:inject,extract:extract,slot:slot,track:track};
+  return {inject:inject,extract:extract,slot:slot,track:track,extra:extraSurcharge};
 }
 
 // 세션 재계산 (전체 entries 기준)
