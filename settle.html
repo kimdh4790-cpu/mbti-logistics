@@ -12439,9 +12439,13 @@ async function _registerFCM(){
     var isAdmin = isSuperAdmin();
     var isDriver = _CU.role==='driver'||_CU.role==='member';
     if(isDriver){
-      // ★ 기사 FCM 토큰 → drivers 컬렉션에서 userId로 찾아서 저장
       var _uid = _CU.uid;
       var _did = _CU.dealerId;
+      // ★ users 컬렉션에 직접 저장 (uid = 문서ID)
+      _db.collection('users').doc(_uid).update({
+        fcmToken: token, fcmUpdatedAt: new Date().toISOString()
+      }).catch(function(){});
+      // drivers 컬렉션에도 저장
       _db.collection('drivers')
         .where('uid','==',_uid)
         .limit(1).get()
