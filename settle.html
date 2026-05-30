@@ -2103,6 +2103,7 @@ function _processQrAttend(){
 }
 
 function initFirebase(){
+  if(new URLSearchParams(window.location.search).get('taxShare'))return;
   if(typeof firebase==='undefined'){setTimeout(initFirebase,300);return;}
   // 이미 초기화된 경우 앱 재사용
   if(firebase.apps&&firebase.apps.length>0){
