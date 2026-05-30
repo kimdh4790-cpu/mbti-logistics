@@ -6063,6 +6063,33 @@ function _dwRenderSimulator(){
       +'<span style="font-size:10px;background:#fff7ed;color:#9a3412;padding:2px 8px;border-radius:20px">☔ 이벤트 = 트랙+추가단가</span>'
       +'<span style="font-size:10px;background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:20px">⬆ 트랙점프 = 보장단가 상승</span>'
     +'</div>';
+
+  // ② 엑셀 업로드 + 공제설정 + dw-results
+  el.innerHTML+=
+  '<div class="card" style="margin-bottom:14px">'
+    +'<div style="font-size:13px;font-weight:800;margin-bottom:10px">📂 정산 파일 선택 후 [⚡ 정산 개시] 클릭</div>'
+    +'<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">'
+      +'<input id="dw-file" type="file" accept=".xlsx,.xls,.csv,.tsv" onchange="_dwAllInOneLoad(this)" style="flex:1;padding:8px;border:1.5px dashed var(--border);border-radius:8px;font-size:12px;background:var(--bg)">'
+      +'<button onclick="_dwCalcAll()" style="padding:8px 16px;background:var(--brand);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📊 분석</button>'
+    +'</div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-bottom:6px">📁 지원: xlsx · xls · csv — 컬럼명 자동 인식</div>'
+    +'<div style="background:var(--bg3);border-radius:8px;padding:8px 12px;font-size:11px;margin-bottom:8px">'
+      +'<span style="color:#16a34a;font-weight:700">🟢 배민</span> 수~화 집계 → 금요일 입금 &nbsp;|&nbsp; '
+      +'<span style="color:#dc2626;font-weight:700">🔴 쿠팡이츠</span> 일~토 집계 → 다음주 금요일 입금'
+    +'</div>'
+    +'<div id="dw-parse-status" style="font-size:12px;color:var(--text3)"></div>'
+  +'</div>'
+  +'<div class="card" style="margin-bottom:14px">'
+    +'<div style="font-size:13px;font-weight:800;margin-bottom:10px">⚙️ 기사 마스터 공제 설정</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px">'
+      +'<div class="fg"><label style="font-size:10px;color:var(--text3)">🏍 기본 계약단가(원/건)</label><input id="dw-defprice" type="number" class="inp" value="2900" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg)"></div>'
+      +'<div class="fg"><label style="font-size:10px;color:var(--text3)">🛵 오토바이 리스료(원)</label><input id="dw-lease" type="number" class="inp" value="0" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg)"></div>'
+      +'<div class="fg"><label style="font-size:10px;color:var(--text3)">📱 앱비·보험료(원)</label><input id="dw-prog" type="number" class="inp" value="0" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg)"></div>'
+      +'<div class="fg"><label style="font-size:10px;color:var(--text3)">🛡 기타 공제(원)</label><input id="dw-ins" type="number" class="inp" value="0" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg)"></div>'
+      +'<div class="fg"><label style="font-size:10px;color:var(--text3)">📅 정산 기간</label><input id="dw-period" type="text" class="inp" placeholder="예: 2026-05-26~06-25" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg)"></div>'
+    +'</div>'
+  +'</div>'
+  +'<div id="dw-results"></div>';
 }
 
 // ━━ 1단계: 가상 엑셀 로드
@@ -6331,7 +6358,8 @@ window.dwRunLiveCalculations=function(){
         var rNetEl=document.getElementById('r-net-pay');
         if(rNetEl){rNetEl.style.color='#fbbf24';rNetEl.style.fontSize='20px';setTimeout(function(){rNetEl.style.color='#065f46';rNetEl.style.fontSize='16px';},800);}
         var note=document.getElementById('dw-statement-note');
-        if(note) note.textContent='✅ '+totalCnt+'건 완료 · 3.3% 절사 적용';
+        var realCnt=window._dwTotalCnt||totalCnt;
+        if(note) note.textContent='✅ '+realCnt+'건 완료 · 3.3% 절사 적용';
         // 완료 배너
         var done=document.createElement('div');
         done.style.cssText='padding:12px 14px;text-align:center;background:#d1fae5;color:#065f46;font-weight:800;font-size:13px;border-top:2px solid #6ee7b7;margin-top:8px;border-radius:8px';
@@ -6497,6 +6525,9 @@ window.dwRunLiveCalculations=function(){
         if(isMid) row.style.opacity='.3';
         con.appendChild(row);
         con.scrollTop=con.scrollHeight;
+        // ★ 콘솔 DOM 노드 제한 (최근 150건만 유지 - 성능)
+        var rows=con.querySelectorAll('div[style*="grid-template-columns"]');
+        if(rows.length>150) rows[0].remove();
         _idx++;
       },60);
     }
@@ -12173,6 +12204,24 @@ function _viewMyStatement(el){var id=el.getAttribute('data-id');
 // payroll  : 급여 관리 구독
 // premium  : ALL-IN-ONE (차량·배차·GPS 등 고급 기능)
 // any_paid : 위 중 하나라도 결제하면 허용 (세무사 연동 등)
+
+var MENUS_DELIVERY = [
+  {s:'🏠 홈', items:[
+    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'}
+  ]},
+  {s:'🛵 배달대행 정산', items:[
+    {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',   plan_key:'delivery'},
+    {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
+    {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'any_paid'}
+  ]},
+  {s:'👤 직원 관리', items:[
+    {ic:'👤',l:'직원 관리',        p:'drivers',          plan_key:'free'},
+    {ic:'📝',l:'위수탁 계약서',    p:'contract',         plan_key:'settle'}
+  ]},
+  {s:'📢 공지', items:[
+    {ic:'📢',l:'공지사항',         p:'notices',          plan_key:'free'}
+  ]}
+];
 
 var MENUS_SETTLE = [
   {s:'🏠 홈', items:[
