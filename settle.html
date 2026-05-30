@@ -9453,10 +9453,17 @@ window._txsGenLink=function(){
   if(email&&name)_db.collection('companies').doc(did).update({taxEmail:email,taxName:name}).catch(function(){});
   var token='txs_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,6);
   var url=window.location.origin+window.location.pathname+'?taxShare='+token;
-  _db.collection('taxShares').doc(token).set({
-    type:'tax_share',dealerId:did,ym:ym,token:token,email:email,name:name,memo:memo,
-    createdAt:new Date().toISOString(),
-    expiresAt:new Date(Date.now()+30*24*60*60*1000).toISOString()
+  _db.collection('settlements').where('dealerId','==',did).where('ym','==',ym).get()
+  .then(function(snap){
+    var sdata=[];snap.forEach(function(doc){sdata.push(doc.data());});
+    var cd=window._cachedCompanyDoc||{};
+    return _db.collection('taxShares').doc(token).set({
+      type:'tax_share',dealerId:did,ym:ym,token:token,email:email,name:name,memo:memo,
+      companyName:cd.companyName||'',bizNum:cd.bizNum||'',
+      settlements:sdata,
+      createdAt:new Date().toISOString(),
+      expiresAt:new Date(Date.now()+30*24*60*60*1000).toISOString()
+    });
   }).then(function(){
     var res=document.getElementById('txs-result');
     if(res)res.innerHTML='<div style="background:var(--green-l);border-radius:8px;padding:12px">'
