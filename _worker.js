@@ -695,7 +695,8 @@ export default {
         const resp = await fetchAsset('/settle.html', request);
         let html = await resp.text();
         // slug + 보안헤더 주입 (</head> 앞에 삽입 - 가장 안전한 위치)
-        const slugScript = '<script>window._COMPANY_SLUG=' + JSON.stringify(companySlug) + ';window._SLUG_MODE=true;</script>';
+        const akKey = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
+        const slugScript = '<script>window.__AK=' + JSON.stringify(akKey) + ';window._COMPANY_SLUG=' + JSON.stringify(companySlug) + ';window._SLUG_MODE=true;</script>';
         html = html.replace('</head>', slugScript + '\n</head>');
         const slugHeaders = new Headers();
         slugHeaders.set('Content-Type', 'text/html; charset=utf-8');
@@ -710,7 +711,10 @@ export default {
 
     if (path === '/settle' || path === '/settle/') {
       const resp = await fetchAsset('/settle.html', request);
-      return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store, no-cache, must-revalidate', 'Pragma': 'no-cache' } });
+      const html = await resp.text();
+      const key = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
+      const injected = html.replace('<head>', '<head><script>window.__AK=' + JSON.stringify(key) + ';</script>');
+      return new Response(injected, { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store, no-cache, must-revalidate', 'Pragma': 'no-cache' } });
     }
 
 
