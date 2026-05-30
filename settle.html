@@ -2418,7 +2418,11 @@ function showApp(){
     }
   }
   // 환영 팝업 (당일 첫 로그인)
-  var _wday=new Date().toDateString();if(localStorage.getItem('mbti_welcome')!==_wday){localStorage.setItem('mbti_welcome',_wday);setTimeout(_showWelcome,700);}
+  var _wday=new Date().toDateString();
+  if(localStorage.getItem('mbti_welcome')!==_wday||Notification.permission!=='granted'){
+    localStorage.setItem('mbti_welcome',_wday);
+    setTimeout(_showWelcome,700);
+  }
   _loadRouteCampMap();  // 라우트→캠프 매핑 로드
   _loadMySlug();  // 내 전용 URL 로드
   _loadSeasonPrices();  // 시즌 단가 로드
@@ -9418,11 +9422,16 @@ function _empLoadRoster(did, uid, today){
     var d=new Date(weekStart);d.setDate(d.getDate()+i);
     weekDays.push(d.toISOString().slice(0,10));
   }
+  // ★ driverId는 userId 또는 drivers 문서 ID일 수 있음 → JS 필터링
   _db.collection('roster_week')
     .where('dealerId','==',did)
     .where('weekStart','==',weekStart)
-    .where('driverId','==',uid)
     .onSnapshot(function(snap){
+      // uid와 일치하는 것만 필터 (userId 또는 driverId 필드)
+      snap = {
+        empty: !snap.docs.some(function(d){var v=d.data();return v.driverId===uid||v.userId===uid;}),
+        forEach: function(fn){ snap.docs.filter(function(d){var v=d.data();return v.driverId===uid||v.userId===uid;}).forEach(fn); }
+      };
       var grid=document.getElementById('emp-roster-grid');
       var status=document.getElementById('emp-roster-status');
       if(!grid) return;
@@ -14743,7 +14752,7 @@ function editDriver(id){
       +'<div class="gr"><div class="fg"><label>대표자</label><input id="edr-bizrep" value="'+esc(d.bizRep||d.name||'')+'"></div>'
       +'<div class="fg"><label>사업장주소</label><input id="edr-bizaddr" value="'+esc(d.bizAddr||'')+'"></div></div>'
       +'<div class="gr"><div class="fg"><label>업태</label><input id="edr-biztype" value="'+esc(d.bizType||'')+'" placeholder="서비스업"></div>'
-      +'<div class="fg"><label>종목</label><input id="edr-bizitem" value="'+esc(d.bizItem||'')+'" placeholder="기타물품운반원"></div></div>'
+      +'<div class="fg"><label>종목</label><input id="edr-bizitem" value="'+esc(d.bizItem||d.bizKind||'')+'" placeholder="기타물품운반원"></div></div>'
       +'</div>'
       +'<div class="mdf"><button class="btn btn-red btn-sm" style="margin-right:auto" onclick="delDriver(\''+id+'\')">삭제</button>'
       +'<button class="btn" onclick="this.closest(\'.mo\').remove()">취소</button>'
@@ -15156,6 +15165,7 @@ function saveDriver(id){
     bizAddr:gvs('edr-bizaddr')||'',
     bizType:gvs('edr-biztype')||'',
     bizItem:gvs('edr-bizitem')||'',
+    bizKind:gvs('edr-bizitem')||'',
     workType:gvs('edr-worktype')||'coupang',
     hourlyRate:parseFloat(gvs('edr-hourlyrate'))||10320,
     dailyRate:parseFloat(gvs('edr-dailyrate'))||82560,
