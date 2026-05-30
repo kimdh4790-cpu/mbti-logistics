@@ -6111,12 +6111,28 @@ function _dwRenderSimulator(){
       +'</div>'
       +'<div style="font-size:10px;color:var(--text3);margin-top:6px">💡 총 수행건수 기준 자동 트랙 적용 · 수정 즉시 반영</div>'
     +'</div>';
+
+  // ⑤ 시간대별 보전 단가 설정
+  el.innerHTML+=
+  '<div class="card" style="margin-bottom:14px">'
+    +'<div style="font-size:13px;font-weight:800;margin-bottom:4px">⏰ 시간대별 보전 단가 설정 <span style="font-size:10px;font-weight:400;color:var(--text3)">(빈칸=건수 트랙 자동)</span></div>'
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-top:8px">'
+    +Object.keys(DW_SLOTS).map(function(k){
+      var s=DW_SLOTS[k];
+      var isMid=k==='midnight';
+      return '<div>'
+        +'<div style="font-size:10px;font-weight:700;color:'+s.color+';margin-bottom:4px">'+s.label+'</div>'
+        +(isMid
+          ?'<input type="text" value="예외(심야)" disabled style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg2);color:var(--text3)">'
+          :'<input id="dw-slot-'+k+'" type="number" value="'+(s.price>0?s.price:'')+'" placeholder="트랙 자동" step="100" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg)" oninput="_dwSetSlot(this)">'
+        )
+        +'</div>';
     }).join('')
     +'</div>'
     +'<div style="font-size:10px;color:var(--text3);margin-top:6px">💡 점심·저녁피크에 높은 단가, 노피크에 낮은 단가. 심야(00~06시)는 보전/환수 없음.</div>'
-  +'</div>'
+  +'</div>';
 
-  +'<div id="dw-results"></div>';
+  el.innerHTML+='<div id="dw-results"></div>';
 }
 
 // ━━ 1단계: 가상 엑셀 로드
