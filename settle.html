@@ -6206,20 +6206,56 @@ window._dwSimFileLoad=function(input){
   var btn2=document.getElementById('dw-btn-calc');
   var con=document.getElementById('dw-sim-console');
   if(!btn1||!btn2||!con)return;
-  // 아래 엑셀 업로드 섹션도 동기화
-  var dw_file=document.getElementById('dw-file');
-  if(dw_file){
-    var dt=new DataTransfer();
-    dt.items.add(file);
-    dw_file.files=dt.files;
-  }
-  _dwParseRealExcel(file,btn1,btn2,con);
-  // _dwRiderMap 세팅 후 자동 계산 (파서 완료 후 0.5초 딜레이)
-  setTimeout(function(){
-    if(window._dwRiderMap&&Object.keys(window._dwRiderMap).length>0){
-      _dwCalcAll();
+
+  // ★ _dwParseExcel로 riderMap 확실히 세팅 (콜백 기반)
+  btn1.disabled=true; btn1.textContent='📂 파싱 중...';
+  if(con) con.innerHTML='<div style="padding:8px 14px;font-family:monospace;font-size:11px;color:#8b949e">⏳ 파일 파싱 중...</div>';
+
+  _dwParseExcel(file, function(riderMap, err, platform){
+    if(err){
+      if(con) con.innerHTML='<div style="padding:8px 14px;color:#ef4444;font-family:monospace;font-size:11px">❌ '+err+'</div>';
+      btn1.disabled=false; btn1.textContent='📂 1단계: 엑셀 로드';
+      return;
     }
-  },1500);
+    // ★ riderMap 세팅 완료
+    window._dwRiderMap=riderMap;
+    window._dwPlatform=platform;
+    var totalOrders=Object.values(riderMap).reduce(function(s,a){return s+a.length;},0);
+    var cnt=Object.keys(riderMap).length;
+
+    // 콘솔에 파싱 결과 표시
+    if(con){
+      con.innerHTML='';
+      var lines=[
+        '> 파일 접수: ['+file.name+']',
+        '> 기사 '+cnt+'명 / 총 '+totalOrders.toLocaleString()+'건 인식',
+        '> 플랫폼: '+(platform==='baemin'?'🟢 배달의민족':'🔴 쿠팡이츠'),
+        '> 취소건 자동 제외',
+        '> ⚡ [2단계: 정산 개시] 버튼을 눌러 연산을 시작하세요.',
+      ];
+      lines.forEach(function(l,i){
+        setTimeout(function(){
+          var row=document.createElement('div');
+          row.style.cssText='padding:3px 14px;font-family:monospace;font-size:11px;color:'+(i===lines.length-1?'#27c93f':'#8b949e');
+          row.textContent=l;
+          con.appendChild(row);
+        }, i*200);
+      });
+    }
+
+    // 하단 파싱 상태도 업데이트
+    var st=document.getElementById('dw-parse-status');
+    if(st){
+      var pInfo=_dwCurrentPeriod(platform);
+      st.innerHTML='✅ <strong>'+cnt+'명</strong> · <strong>'+totalOrders.toLocaleString()+'건</strong>'
+        +' &nbsp;<span style="color:var(--brand);font-size:11px">'+(platform==='baemin'?'🟢 배민':'🔴 쿠팡이츠')+'</span>'
+        +(pInfo.payDate?'&nbsp;<span style="color:var(--green);font-size:11px">💳 입금예정 '+pInfo.payDate+'</span>':'');
+    }
+
+    btn1.disabled=false; btn1.textContent='📂 1단계: 엑셀 로드';
+    // 2단계 버튼 활성화
+    btn2.disabled=false; btn2.style.background='#3b82f6'; btn2.style.cursor='pointer'; btn2.style.opacity='1';
+  });
 };
 
 window.dwLoadVirtualExcel=function(){
@@ -6400,6 +6436,46 @@ window.dwRunLiveCalculations=function(){
 
     function processNextRider(){
       if(riderIdx>=riderIds.length){
+        // ★ 전체 완료 - 최종 명세서 확정 + 완료 메시지
+        var finalInj=window._dwTotalInj||0;
+        var finalExt=window._dwTotalExt||0;
+        var finalPf=window._dwTotalPf||0;
+        var finalPre=Math.floor(finalPf+finalInj-finalExt);
+        var finalTax=Math.floor(finalPre*0.033);
+        var finalNet=Math.max(0,finalPre-finalTax);
+        var totalCnt=window._dwTotalCnt||0;
+
+        // 명세서 최종 확정 (깜박임 효과)
+        var rNetEl=document.getElementById('r-net-pay');
+        if(rNetEl){
+          rNetEl.style.transition='all .3s';
+          rNetEl.style.color='#fbbf24';
+          rNetEl.style.fontSize='20px';
+          setTimeout(function(){rNetEl.style.color='#065f46';rNetEl.style.fontSize='16px';},800);
+        }
+
+        // 완료 배너
+        var done=document.createElement('div');
+        done.style.cssText='padding:12px 14px;text-align:center;background:#d1fae5;color:#065f46;font-weight:800;font-size:13px;border-top:2px solid #6ee7b7;font-family:sans-serif;margin-top:8px;border-radius:8px';
+        done.innerHTML='✅ '+riderIds.length+'명 · '+totalCnt.toLocaleString()+'건 완료'
+          +' &nbsp;|&nbsp; 보전 ₩'+finalInj.toLocaleString()
+          +' &nbsp;|&nbsp; 환수 ₩'+finalExt.toLocaleString()
+          +' &nbsp;|&nbsp; 실지급 ₩'+finalNet.toLocaleString();
+        con.appendChild(done);
+
+        // note 업데이트
+        var note=document.getElementById('dw-statement-note');
+        if(note) note.textContent='✅ '+totalCnt+'건 완료 · 3.3% 절사 적용';
+
+        // Firestore 자동 저장
+        if(typeof _dwSaveWeeklySettlement==='function'){
+          _dwSaveWeeklySettlement({
+            totalCount:totalCnt, rawTotal:finalPf,
+            bonusTotal:finalInj, deductTotal:finalExt,
+            preTaxTotal:finalPre, tax33:finalTax, netPay:finalNet
+          });
+        }
+
         btn.disabled=false; btn.textContent='⚡ 2단계: 다시 계산'; btn.style.background='#3b82f6';
         if(prog) prog.textContent='';
         return;
@@ -6425,9 +6501,32 @@ window.dwRunLiveCalculations=function(){
         return p;
       }
 
+      // 전광판 누적 변수 (전체 기사 합산용)
+      if(!window._dwTotalInj) window._dwTotalInj=0;
+      if(!window._dwTotalExt) window._dwTotalExt=0;
+      if(!window._dwTotalCnt) window._dwTotalCnt=0;
+
       var timer=setInterval(function(){
         if(_idx>=orders.length){
           clearInterval(timer);
+          // ★ 전광판 누적 업데이트
+          window._dwTotalInj+=_totalInj;
+          window._dwTotalExt+=_totalExt;
+          window._dwTotalCnt+=_validCnt;
+          if(!window._dwTotalPf) window._dwTotalPf=0;
+          window._dwTotalPf+=_pfSum;
+          var scInj=document.getElementById('dw-sc-inj');
+          var scExt=document.getElementById('dw-sc-ext');
+          var scCnt=document.getElementById('dw-sc-cnt');
+          var scMg=document.getElementById('dw-sc-margin');
+          var scMgB=document.getElementById('dw-sc-margin-badge');
+          if(scInj) scInj.textContent='₩'+window._dwTotalInj.toLocaleString();
+          if(scExt) scExt.textContent='₩'+window._dwTotalExt.toLocaleString();
+          if(scCnt) scCnt.textContent=window._dwTotalCnt+'건';
+          var mg=window._dwTotalExt-window._dwTotalInj;
+          if(scMg){scMg.textContent='₩'+Math.abs(mg).toLocaleString();scMg.style.color=mg>=0?'#065f46':'#9f1239';}
+          if(scMgB){scMgB.textContent=mg>=0?'▲ 대리점 이익':'▼ 대리점 투입';scMgB.style.color=mg>=0?'#065f46':'#9f1239';}
+
           // ★ 기사 카드 즉시 생성
           var r=calcDonWaySettlement(orders,Object.assign({},cfg,{riderId:rid}));
           r.totalCount=_validCnt;
@@ -6481,10 +6580,38 @@ window.dwRunLiveCalculations=function(){
         con.appendChild(row);
         setTimeout(function(){row.style.transition='opacity .1s';row.style.opacity=(isMid?'.3':'1');},10);
         con.scrollTop=con.scrollHeight;
+
+        // ★ 매 건마다 명세서 실시간 카운팅
+        var _allInj=(window._dwTotalInj||0)+_totalInj;
+        var _allExt=(window._dwTotalExt||0)+_totalExt;
+        var _allPf=(window._dwTotalPf||0)+_pfSum;
+        var _preTax=Math.floor(_allPf+_allInj-_allExt);
+        var _tax=Math.floor(_preTax*0.033);
+        var _net=Math.max(0,_preTax-_tax);
+        var _updateEl=function(id,val){var el=document.getElementById(id);if(el)el.textContent=val;};
+        _updateEl('r-raw-sum','₩'+_allPf.toLocaleString());
+        _updateEl('r-total-inj','+₩'+_allInj.toLocaleString());
+        _updateEl('r-total-ext','-₩'+_allExt.toLocaleString());
+        _updateEl('r-pretax','₩'+_preTax.toLocaleString());
+        _updateEl('r-tax','-₩'+_tax.toLocaleString());
+        _updateEl('r-net-pay','₩'+_net.toLocaleString());
+        // 전광판도 매 건마다
+        var scInj=document.getElementById('dw-sc-inj');
+        var scExt=document.getElementById('dw-sc-ext');
+        var scMg=document.getElementById('dw-sc-margin');
+        if(scInj) scInj.textContent='₩'+_allInj.toLocaleString();
+        if(scExt) scExt.textContent='₩'+_allExt.toLocaleString();
+        var mg=_allExt-_allInj;
+        if(scMg){scMg.textContent='₩'+Math.abs(mg).toLocaleString();scMg.style.color=mg>=0?'#065f46':'#9f1239';}
+
         _idx++;
-      },80); // 기사별 80ms 간격 (전체 빠르게)
+      },80); // 기사별 80ms 간격
     }
     window._dwResults=[];
+    window._dwTotalInj=0;
+    window._dwTotalExt=0;
+    window._dwTotalCnt=0;
+    window._dwTotalPf=0;
     processNextRider();
     return;
   }
