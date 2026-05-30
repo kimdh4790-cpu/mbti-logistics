@@ -6260,6 +6260,8 @@ function _dwParseRealExcel(file,btn1,btn2,con){
       var eventKey=keys.find(function(k){return /비고|할증|이벤트|event|remark/i.test(k);})||'';
       console.log('[DONWAY Parser] 컬럼감지 → 라이더:'+riderKey+' | 금액:'+priceKey+' | 시간:'+timeKey+' | 취소:'+cancelKey);
 
+      // ★ riderMap도 동시 생성 (기사별 카드 연동용)
+      var _riderMapTemp={};
       window._dwSimData=rows.map(function(row,i){
         var rawTime=timeKey?String(row[timeKey]||''):'';
         var hr=12;
@@ -6273,8 +6275,21 @@ function _dwParseRealExcel(file,btn1,btn2,con){
         var ev={name:'일반콜',price:0,color:''};
         if(/우천|rain/i.test(evNote)) ev={name:'☔ 우천할증',price:500,color:'#60a5fa'};
         else if(/피크|peak/i.test(evNote)) ev={name:'🔥 피크지원',price:300,color:'#fb923c'};
-        return {id:i+1,zone:'',hour:hr,platformPrice:price,event:ev,completedAt:rawTime};
+        // ★ riderKey로 기사별 분류
+        var rid=riderKey?String(row[riderKey]||'').trim():'unknown';
+        if(!rid)rid='unknown';
+        if(!_riderMapTemp[rid])_riderMapTemp[rid]=[];
+        _riderMapTemp[rid].push({platformPrice:price,hour:hr,completedAt:rawTime});
+        return {id:i+1,zone:'',hour:hr,platformPrice:price,event:ev,completedAt:rawTime,riderId:rid};
       }).filter(function(o){return o&&o.platformPrice>0;});
+
+      // ★ _dwRiderMap 동시 세팅 → 기사별 카드 자동 생성 가능
+      window._dwRiderMap=_riderMapTemp;
+      // 플랫폼 감지
+      var _pf='unknown';
+      if(/배달원id|라이더사번/i.test(riderKey)||/배달대행비|최종정산금액/i.test(priceKey)) _pf='baemin';
+      else if(/라이더코드|배달원id/i.test(riderKey)||/정산예정금액/i.test(priceKey)) _pf='coupangEats';
+      window._dwPlatform=_pf;
 
       _dwPrintLoadLog(btn1,btn2,con,'실제 엑셀: '+file.name,window._dwSimData.length);
     }catch(e){
@@ -6671,6 +6686,11 @@ window._dwLoadFile=function(){
   if(!fi||!fi.files[0]){toast('파일을 선택해 주세요');return;}
   var st=document.getElementById('dw-parse-status');
   if(st)st.innerHTML='⏳ 파싱 중...';
+  // ★ 시뮬레이터(1단계)도 같은 파일로 자동 실행
+  var btn1=document.getElementById('dw-btn-load');
+  var btn2=document.getElementById('dw-btn-calc');
+  var con=document.getElementById('dw-sim-console');
+  if(btn1&&btn2&&con) _dwParseRealExcel(fi.files[0],btn1,btn2,con);
   _dwParseExcel(fi.files[0],function(riderMap,err,platform){
     if(err){if(st)st.innerHTML='<span style="color:var(--red)">❌ '+esc(err)+'</span>';return;}
     _dwRiderMap=riderMap;
