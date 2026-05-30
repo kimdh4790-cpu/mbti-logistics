@@ -9458,9 +9458,19 @@ window._txsGenLink=function(){
   var url=window.location.origin+window.location.pathname+'?taxShare='+token;
   _db.collection('settlements').where('dealerId','==',did).where('month','==',ym).get()
   .then(function(snap){
-    var sdata=[];snap.forEach(function(doc){
+    var cd=window._cachedCompanyDoc||{};
+    var mainRef=_db.collection('taxShares').doc(token);
+    var batch=_db.batch();
+    batch.set(mainRef,{
+      type:'tax_share',dealerId:did,ym:ym,token:token,email:email,name:name,memo:memo,
+      companyName:cd.companyName||'',bizNum:cd.bizNum||'',
+      count:snap.size,
+      createdAt:new Date().toISOString(),
+      expiresAt:new Date(Date.now()+30*24*60*60*1000).toISOString()
+    });
+    snap.forEach(function(doc){
       var s=doc.data();
-      sdata.push({
+      batch.set(mainRef.collection('settlements').doc(doc.id),{
         driver:s.driver||'',userId:s.userId||'',camp:s.camp||'',
         month:s.month||'',dcnt:s.dcnt||0,rcnt:s.rcnt||0,
         totalAmt:s.totalAmt||0,supplyAmt:s.supplyAmt||0,
@@ -9469,14 +9479,7 @@ window._txsGenLink=function(){
         deduct:s.deduct||0,dmg:s.dmg||0
       });
     });
-    var cd=window._cachedCompanyDoc||{};
-    return _db.collection('taxShares').doc(token).set({
-      type:'tax_share',dealerId:did,ym:ym,token:token,email:email,name:name,memo:memo,
-      companyName:cd.companyName||'',bizNum:cd.bizNum||'',
-      settlements:sdata,
-      createdAt:new Date().toISOString(),
-      expiresAt:new Date(Date.now()+30*24*60*60*1000).toISOString()
-    });
+    return batch.commit();
   }).then(function(){
     var res=document.getElementById('txs-result');
     if(res)res.innerHTML='<div style="background:var(--green-l);border-radius:8px;padding:12px">'
