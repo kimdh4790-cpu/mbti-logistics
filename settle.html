@@ -2112,6 +2112,7 @@ function initFirebase(){
     _auth=firebase.auth();
     
 _auth.onAuthStateChanged(function(user){
+      if(new URLSearchParams(window.location.search).get('taxShare'))return;
       if(!user){document.getElementById('login-screen').style.display='flex';document.getElementById('app').style.display='none';_CU=null;window._CU=null;}
       else{_db.doc('users/'+user.uid).get().then(function(snap){var d=snap.exists?snap.data():{};_CU={uid:user.uid,email:user.email,name:d.name||'',companyName:d.companyName||d.name||'',role:d.role||'dealer',dealerId:d.dealerId||user.uid,termsVersion:d.termsVersion||''};window._CU=_CU;_loadCompanyCfg(_CU.dealerId||_CU.companyCode||_CU.uid);_loadAdminStatus();showApp();}).catch(function(){_CU={uid:user.uid,email:user.email,name:'',role:'dealer',dealerId:user.uid,termsVersion:''};window._CU=_CU;showApp();});}
     });return;
