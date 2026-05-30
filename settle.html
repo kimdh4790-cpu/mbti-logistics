@@ -15541,11 +15541,10 @@ async function _ocrAnalyze(){
     var b64 = await _ocrCompressImage(_ocrCurrentFile, 2400, 0.95);  // 해상도 높여 한글 인식률 향상
     var mime = _ocrCurrentFile.type||'image/jpeg';
 
-    // 브라우저에서 직접 Anthropic 호출 (이전에 작동했던 방식)
-    var _ak2=window.__AK||'';
-    var resp = await fetch('https://mbti-logistics.kimdh4790.workers.dev/claude-ocr',{
+    // 직접 Anthropic 호출
+    var resp = await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','x-api-key':AK,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
         model:'claude-haiku-4-5-20251001',
         max_tokens:1500,
