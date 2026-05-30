@@ -9453,7 +9453,7 @@ window._txsGenLink=function(){
   if(email&&name)_db.collection('companies').doc(did).update({taxEmail:email,taxName:name}).catch(function(){});
   var token='txs_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,6);
   var url=window.location.origin+window.location.pathname+'?taxShare='+token;
-  _db.collection('settlements').where('dealerId','==',did).where('ym','==',ym).get()
+  _db.collection('settlements').where('dealerId','==',did).where('month','==',ym).get()
   .then(function(snap){
     var sdata=[];snap.forEach(function(doc){sdata.push(doc.data());});
     var cd=window._cachedCompanyDoc||{};
