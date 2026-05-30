@@ -9196,6 +9196,30 @@ window._taxViewTab=function(tab){
 };
 
 // 서류 목록 로드
+window._txsShowImgUrl=function(btn){
+  var url=decodeURIComponent(btn.getAttribute('data-url')||'');
+  if(!url)return;
+  var existing=document.getElementById('txs-img-modal');
+  if(existing)existing.remove();
+  var modal=document.createElement('div');
+  modal.id='txs-img-modal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  var inner=document.createElement('div');
+  inner.style.cssText='position:relative;max-width:100%';
+  var img=document.createElement('img');
+  img.src=url;
+  img.style.cssText='max-width:90vw;max-height:85vh;border-radius:8px;display:block';
+  var cls=document.createElement('button');
+  cls.textContent='×';
+  cls.style.cssText='position:absolute;top:-14px;right:-14px;width:30px;height:30px;border-radius:50%;background:#ef4444;color:#fff;border:none;font-size:18px;cursor:pointer;line-height:1;font-weight:700';
+  cls.onclick=function(){modal.remove();};
+  inner.appendChild(img);
+  inner.appendChild(cls);
+  modal.appendChild(inner);
+  modal.onclick=function(e){if(e.target===modal)modal.remove();};
+  document.body.appendChild(modal);
+};
+
 function _txsLoadDocs(did, ym){
   var list=document.getElementById('txs-doclist');
   if(!list)return;
