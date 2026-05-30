@@ -1512,6 +1512,13 @@ export default {
       return new Response(resp.body, { status: resp.status, headers: h });
     }
 
+    // ── firebase-storage-compat.js 프록시 ──
+    if (path === '/firebase-storage-compat.js') {
+      const r = await fetch('https://www.gstatic.com/firebasejs/8.10.1/firebase-storage-compat.js');
+      const js = await r.text();
+      return new Response(js, { headers: { 'Content-Type': 'application/javascript', 'Cache-Control': 'public, max-age=86400' } });
+    }
+
     // ── firebase-messaging-sw.js 인라인 서빙 (404 방지) ──
     if (path === '/firebase-messaging-sw.js') {
       const swContent = "importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');"
