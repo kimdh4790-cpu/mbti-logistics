@@ -696,8 +696,9 @@ export default {
         let html = await resp.text();
         // slug + 보안헤더 주입 (</head> 앞에 삽입 - 가장 안전한 위치)
         const akKey = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
+        const storageSDK = '<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage-compat.js"></script>';
         const slugScript = '<script>window.__AK=' + JSON.stringify(akKey) + ';window._COMPANY_SLUG=' + JSON.stringify(companySlug) + ';window._SLUG_MODE=true;</script>';
-        html = html.replace('</head>', slugScript + '\n</head>');
+        html = html.replace('</head>', storageSDK + '\n' + slugScript + '\n</head>');
         const slugHeaders = new Headers();
         slugHeaders.set('Content-Type', 'text/html; charset=utf-8');
         slugHeaders.set('Cache-Control', 'no-cache, no-store, must-revalidate');
