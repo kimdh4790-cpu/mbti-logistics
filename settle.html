@@ -5112,147 +5112,15 @@ function calcDeliveryBonus(platform, conditions){
 // 📊 배달대행 정산 통합 관리 페이지
 // ════════════════════════════════════════
 function pageDeliveryPlatform(){
-  document.getElementById('page-title').textContent='📦 배달대행 정산';
+  document.getElementById('page-title').textContent='🛵 배달대행 정산';
   _requirePlan('delivery_platform',function(){
   var el=document.getElementById('content');
   if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
-  var did=_CU.dealerId;
-  var now=new Date();
-  var ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
-
-  el.innerHTML='<div style="max-width:960px;margin:0 auto">'
-    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:20px">'
-    +Object.entries(DELIVERY_PLATFORMS).map(function(e){
-      var k=e[0],pf=e[1];
-      return '<div onclick="_pfDetail(\''+k+'\')" style="background:var(--bg2);border-radius:14px;padding:14px 12px;text-align:center;cursor:pointer;border:2px solid var(--border);transition:all .2s" '
-        +'onmouseover="this.style.borderColor=\''+pf.color+'\';this.style.transform=\'translateY(-2px)\'" '
-        +'onmouseout="this.style.borderColor=\'var(--border)\';this.style.transform=\'\'">'
-        +'<div style="font-size:28px;margin-bottom:6px">'+pf.icon+'</div>'
-        +'<div style="font-size:12px;font-weight:800;color:'+pf.color+'">'+pf.label+'</div>'
-        +'<div style="font-size:10px;color:var(--text3);margin-top:2px">기본 ₩'+pf.baseRate.toLocaleString()+'</div>'
-        +'</div>';
-    }).join('')
-    +'</div>'
-    // 이벤트 수당 계산기
-    +'<div class="card" style="margin-bottom:14px">'
-    +'<div style="font-size:14px;font-weight:800;margin-bottom:12px">⚡ 이벤트 추가수당 계산기</div>'
-    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:12px">'
-    +'<div class="fg"><label style="font-size:11px;color:var(--text3)">플랫폼</label>'
-    +'<select id="pf-sel" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:12px">'
-    +Object.entries(DELIVERY_PLATFORMS).map(function(e){return '<option value="'+e[0]+'">'+e[1].icon+' '+e[1].label+'</option>';}).join('')
-    +'</select></div>'
-    +'<div class="fg"><label style="font-size:11px;color:var(--text3)">기본 배달건수</label>'
-    +'<input id="pf-cnt" type="number" value="30" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:12px"></div>'
-    +'<div class="fg"><label style="font-size:11px;color:var(--text3);font-weight:700;color:#1d4ed8">📌 고정 계약단가(원/건)</label>'
-    +'<input id="pf-contract" type="number" placeholder="예: 5300" style="width:100%;padding:8px;border:2px solid #3b82f6;border-radius:8px;background:var(--bg);font-size:12px;font-weight:700"></div>'
-    +'<div class="fg"><label style="font-size:11px;color:#2563eb;font-weight:700">📱 앱 실수령(원) ← 차액계산</label>'
-    +'<input id="pf-actual" type="number" placeholder="0이면 차액계산 생략" style="width:100%;padding:8px;border:1px solid #93c5fd;border-radius:8px;background:#eff6ff;font-size:12px"></div>'
-    +'<div class="fg"><label style="font-size:11px;color:var(--text3)">심야 건수</label>'
-    +'<input id="pf-night" type="number" value="0" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:12px"></div>'
-    +'<div class="fg"><label style="font-size:11px;color:var(--text3)">공휴일 건수</label>'
-    +'<input id="pf-holiday" type="number" value="0" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:12px"></div>'
-    +'</div>'
-    +'<div style="font-size:11px;color:#1d4ed8;background:#eff6ff;border-radius:8px;padding:8px 12px;margin-bottom:10px">'
-    +'💡 <strong>고정단가 정산법:</strong> 기사는 항상 건수×계약단가를 받습니다. 앱실수령이 낮으면 대리점이 보전, 높으면 차액을 회수합니다.</div>'
-    +'<button onclick="_pfCalc()" class="btn btn-blue" style="width:100%;padding:10px;font-size:13px;font-weight:800">⚡ 이벤트 수당 포함 정산 계산</button>'
-    +'<div id="pf-result" style="margin-top:12px"></div>'
-    +'</div>'
-    // 이번달 플랫폼별 통계
-    +'<div class="card">'
-    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
-    +'<div style="font-size:14px;font-weight:800">📊 이번달 플랫폼별 현황 <span style="font-size:11px;color:var(--text3)">'+ym+'</span></div>'
-    +'<button onclick="_pfLoadStats(\''+did+'\',\''+ym+'\')" class="btn btn-blue" style="font-size:11px">🔄 집계</button>'
-    +'</div>'
-    +'<div id="pf-stats">월별 집계 버튼을 클릭하세요</div>'
-    +'</div>'
-    // ── 주간 차액 정산 (엑셀 업로드)
-    +'<div class="card">'
-    +'<div style="font-size:14px;font-weight:800;margin-bottom:4px">📊 주간 차액 정산 계산기</div>'
-    +'<div style="font-size:11px;color:var(--text3);margin-bottom:12px">배달앱 정산 엑셀을 올리면 5구간별 일별 내역을 분석하고 주간 보장단가 차액을 계산합니다.</div>'
-    // 보장 조건 설정
-    +'<div style="background:#eff6ff;border-radius:10px;padding:12px;margin-bottom:12px">'
-    +'<div style="font-size:12px;font-weight:700;color:#1d4ed8;margin-bottom:8px">⚙️ 주간 보장 조건 설정</div>'
-    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px">'
-    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">보장 기준 건수 (주/건)</label>'
-    +'<input id="dp-threshold" type="number" value="200" min="1" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-weight:700"></div>'
-    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">고정 계약단가 (원/건)</label>'
-    +'<input id="dp-guarantee" type="number" value="4000" min="100" style="width:100%;padding:7px;border:1px solid #3b82f6;border-radius:8px;font-size:13px;font-weight:700;color:#1d4ed8"></div>'
-    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">원천징수(%)</label>'
-    +'<select id="dp-tax" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:13px"><option value="3.3">3.3%</option><option value="0">없음</option></select></div>'
-    +'</div>'
-    +'<div style="font-size:11px;color:#1d4ed8;margin-top:8px">💡 주간 건수가 기준 이상이면 고정 계약단가 보장 적용. 미달 시 앱 실수령 그대로.</div>'
-    +'</div>'
-    // 엑셀 업로드
-    +'<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">'
-    +'<input id="dp-excel-file" type="file" accept=".xlsx,.xls,.csv,.txt" style="flex:1;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg)">'
-    +'<button onclick="window._dpParseExcel()" class="btn btn-blue" style="font-size:12px;white-space:nowrap">📊 분석</button>'
-    +'<button onclick="window._dpDownloadTemplate()" class="btn" style="font-size:11px;white-space:nowrap">📄 템플릿</button>'
-    +'</div>'
-    +'<div style="font-size:11px;color:var(--text3);background:var(--bg3);border-radius:6px;padding:7px 10px;margin-bottom:10px">'
-    +'📎 <strong>엑셀 컬럼:</strong> 날짜 | 구간(아침/점심피크/점심노피크/저녁피크/저녁노피크) | 건수 | 단가(원) | 금액(선택)'
-    +'</div>'
-    +'<div id="dp-result"></div>'
-    +'</div>'
-    +'</div>'
-    // ── Phase 2: 실시간 기사 현황 + 엑셀 검증
-    +'<div class="card" style="margin-top:14px">'
-      +'<div style="font-size:15px;font-weight:900;margin-bottom:4px;display:flex;align-items:center;gap:8px">'
-        +'🛵 Phase 2 — 실시간 기사 현황 / 엑셀 검증'
-        +'<span style="font-size:10px;background:#d1fae5;color:#059669;padding:2px 8px;border-radius:6px;font-weight:700">하이브리드 엔진</span>'
-      +'</div>'
-      +'<div style="font-size:11px;color:var(--text3);margin-bottom:12px">기사 앱 실시간 가상 정산 → 관리자 엑셀 업로드로 교정 검증</div>'
-      // 탭
-      +'<div style="display:flex;gap:6px;margin-bottom:14px">'
-        +'<button id="dwtab-live" onclick="_dwSwitchTab(\'live\')" class="btn btn-blue" style="font-size:12px">📡 실시간 기사 현황</button>'
-        +'<button id="dwtab-verify" onclick="_dwSwitchTab(\'verify\')" class="btn" style="font-size:12px">✅ 엑셀 교정 검증</button>'
-      +'</div>'
-      // 실시간 현황 패널
-      +'<div id="dw-admin-live"></div>'
-      // 엑셀 검증 패널 (초기 숨김)
-      +'<div id="dw-verify-panel" style="display:none">'
-        +'<div style="background:#eff6ff;border-radius:10px;padding:12px;margin-bottom:12px">'
-          +'<div style="font-size:12px;font-weight:700;color:#1d4ed8;margin-bottom:6px">📤 관리자 엑셀 업로드 → 기사 가상 데이터 교정</div>'
-          +'<div style="font-size:11px;color:#2563eb;margin-bottom:8px">쿠팡이츠·배민 원본 엑셀 업로드 시, 기사 앱에 입력된 가상 데이터를 본사 확정 데이터로 자동 교정합니다.</div>'
-          +'<div style="display:flex;gap:8px;align-items:center">'
-            +'<input id="dw-verify-file" type="file" accept=".xlsx,.xls" style="flex:1;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg)">'
-            +'<button onclick="window._dwVerifyExcel()" class="btn btn-blue" style="white-space:nowrap;font-size:12px">🔍 검증·교정</button>'
-          +'</div>'
-          +'<div id="dw-verify-status" style="min-height:18px;font-size:12px;margin-top:8px"></div>'
-        +'</div>'
-        +'<div style="background:var(--bg3);border-radius:10px;padding:10px;font-size:11px;color:var(--text3)">'
-          +'✅ 검증 완료 → 기사 앱에 <strong>파란 검증 뱃지</strong> 표시<br>'
-          +'⚠️ 데이터 불일치 건수 자동 감지 및 교정<br>'
-          +'🔒 부정 입력(허위 단가 입력) 자동 필터링'
-        +'</div>'
-      +'</div>'
-    +'</div>';
-  // ★ DonWay 통합 정산 엔진 v2 섹션 prepend
-  _dwRenderEngine();
-  // Phase2 초기 로드
-  setTimeout(function(){
-    _dwAdminLiveView(document.getElementById('dw-admin-live'));
-  },100);
+  // ★ 엔진v2로 바로 이동
+  goPage('delivery_input');
   });
 }
 
-// Phase2 탭 전환
-window._dwSwitchTab=function(tab){
-  var live=document.getElementById('dw-admin-live');
-  var verify=document.getElementById('dw-verify-panel');
-  var btnLive=document.getElementById('dwtab-live');
-  var btnVerify=document.getElementById('dwtab-verify');
-  if(tab==='live'){
-    if(live)live.style.display='';
-    if(verify)verify.style.display='none';
-    if(btnLive){btnLive.classList.add('btn-blue');btnLive.classList.remove('btn');}
-    if(btnVerify){btnVerify.classList.remove('btn-blue');btnVerify.classList.add('btn');}
-  } else {
-    if(live)live.style.display='none';
-    if(verify)verify.style.display='';
-    if(btnVerify){btnVerify.classList.add('btn-blue');btnVerify.classList.remove('btn');}
-    if(btnLive){btnLive.classList.remove('btn-blue');btnLive.classList.add('btn');}
-  }
-};
 function _pfDetail(pfKey){
   var pf=DELIVERY_PLATFORMS[pfKey];
   if(!pf)return;
@@ -6112,12 +5980,12 @@ function _dwRenderSimulator(){
     '<div style="background:linear-gradient(135deg,#0f172a,#1e3a5f);border-radius:16px;padding:18px 20px;margin-bottom:12px;color:#fff">'
       +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">'
         +'<div>'
-          +'<div style="font-size:15px;font-weight:900;margin-bottom:3px">📊 DONWAY 통전(End-to-End) 정산 시뮬레이터</div>'
-          +'<div style="font-size:11px;opacity:.6">[1단계: 엑셀 로드] → [2단계: 건별 보전·환수 판정] → [3단계: 세무 공제 후 주급 명세서 출력]</div>'
+          +'<div style="font-size:15px;font-weight:900;margin-bottom:3px">🛵 DONWAY 배달대행 실시간 정산 엔진</div>'
+          +'<div style="font-size:11px;opacity:.6">엑셀 업로드 → 기사별 순차 스트리밍 → 보전/환수 자동판정 → 실시간 명세서 생성</div>'
         +'</div>'
         +'<div style="display:flex;gap:6px;flex-shrink:0">'
-          +'<input id="dw-file-sim" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="_dwSimFileLoad(this)">'          +'<button id="dw-btn-load" onclick="document.getElementById(\'dw-file-sim\').click()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">📂 1단계: 엑셀 로드</button>'
-          +'<button id="dw-btn-calc" onclick="dwRunLiveCalculations()" disabled style="background:#64748b;border:none;color:#fff;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:not-allowed;opacity:.6">⚡ 2단계: 정산 개시</button>'
+          +'<input id="dw-file-sim" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="_dwSimFileLoad(this)">'          +'<button id="dw-btn-load" onclick="document.getElementById(\'dw-file-sim\').click()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">📂 엑셀 업로드</button>'
+          +'<button id="dw-btn-calc" onclick="dwRunLiveCalculations()" disabled style="background:#64748b;border:none;color:#fff;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:not-allowed;opacity:.6">⚡ 정산 개시</button>'
         +'</div>'
       +'</div>'
     +'</div>'
@@ -6472,7 +6340,7 @@ window.dwRunLiveCalculations=function(){
         if(typeof _dwSaveWeeklySettlement==='function'){
           _dwSaveWeeklySettlement({totalCount:totalCnt,rawTotal:finalPf,bonusTotal:finalInj,deductTotal:finalExt,preTaxTotal:finalPre,tax33:finalTax,netPay:finalNet});
         }
-        btn.disabled=false; btn.textContent='⚡ 2단계: 다시 계산'; btn.style.background='#3b82f6';
+        btn.disabled=false; btn.textContent='⚡ 다시 계산'; btn.style.background='#3b82f6';
         if(prog) prog.textContent='';
         return;
       }
@@ -6695,7 +6563,7 @@ window.dwRunLiveCalculations=function(){
       con.appendChild(done);
       var note=document.getElementById('dw-statement-note');
       if(note)note.textContent='✅ '+_idx+'건 완료 · 3.3% 절사 적용';
-      btn.disabled=false; btn.textContent='⚡ 2단계: 다시 계산'; btn.style.background='#3b82f6';
+      btn.disabled=false; btn.textContent='⚡ 다시 계산'; btn.style.background='#3b82f6';
       if(prog)prog.textContent='';
       // ★ Firebase Firestore 최종 주급 명세서 저장
       _dwSaveWeeklySettlement({
@@ -12411,7 +12279,7 @@ var MENUS_SETTLE = [
     {ic:'💸',l:'경비 관리',        p:'expense',          plan_key:'free'}
   ]},
   {s:'🛵 배달대행 정산', items:[
-    {ic:'🛵',l:'배달대행 정산',    p:'delivery_platform',plan_key:'delivery'}
+    {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',   plan_key:'delivery'}
   ]},
   {s:'🔐 QR 근태관리', items:[
     {ic:'🔐',l:'QR 출퇴근',        p:'attendance',       plan_key:'qr'},
@@ -12502,7 +12370,7 @@ var MENUS_FULL = [
     {ic:'💸',l:'경비 관리',        p:'expense',          plan_key:'free'}
   ]},
   {s:'🛵 배달대행 정산', items:[
-    {ic:'🛵',l:'배달대행 정산',    p:'delivery_platform',plan_key:'delivery'}
+    {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',   plan_key:'delivery'}
   ]},
   {s:'🔐 QR 근태관리', items:[
     {ic:'🔐',l:'QR 출퇴근',        p:'attendance',       plan_key:'qr'},
