@@ -12443,7 +12443,7 @@ async function _registerFCM(){
       var _uid = _CU.uid;
       var _did = _CU.dealerId;
       _db.collection('drivers')
-        .where('userId','==',_uid)
+        .where('uid','==',_uid)
         .limit(1).get()
         .then(function(snap){
           if(!snap.empty){
