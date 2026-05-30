@@ -2342,12 +2342,12 @@ function showApp(){
     var sType = _CU.serviceType||'full';
     // ★ sType 디버그 로그 (슈퍼어드민용)
     if(isSuperAdmin()) console.log('[Nav] sType:', sType, '| dealerId:', _CU&&_CU.dealerId);
-    if(sType==='settle')   MENUS=MENUS_SETTLE;
+    if(sType==='settle')        MENUS=MENUS_SETTLE;
     else if(sType==='delivery') MENUS=MENUS_DELIVERY;
-    else if(sType==='qr')  MENUS=MENUS_QR;
+    else if(sType==='qr')       MENUS=MENUS_QR;
     else if(sType==='qr_payroll') MENUS=MENUS_QR_PAYROLL;
     else if(sType==='payroll'||sType==='hourly') MENUS=MENUS_HOURLY;
-    else MENUS=MENUS_SETTLE; // full은 SETTLE과 동일
+    else                        MENUS=MENUS_FULL; // full 또는 미분류 → 전체 메뉴
   }
   buildNav();
   _checkDeviceMode();
