@@ -21185,4 +21185,10 @@ function _startDispatchListener(uid){
 
 </script>
 </body>
-</html>
+</html// ★ 기사 FCM 토큰 → users 컬렉션에 uid로 직접 저장
+      var _uid = _CU.uid;
+      _db.collection('users').doc(_uid).update({
+        fcmToken: token,
+        fcmUpdatedAt: new Date().toISOString()
+      }).catch(function(e){console.warn('[FCM] 토큰 저장 실패:',e.message);});
+    >
