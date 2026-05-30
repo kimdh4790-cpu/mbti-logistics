@@ -6343,7 +6343,7 @@ window.dwRunLiveCalculations=function(){
   var _totalExt=0;  // 건별 환수액 합산
   var _validCnt=0;  // 심야·취소 제외 건수
   var _idx=0;
-  var _maxShow=Math.min(window._dwSimData.length,50);
+  var _maxShow=window._dwSimData.length; // ★ 전체 건수 계산
   var _prevTrack=0;
   var data=window._dwSimData;
 
@@ -6415,7 +6415,10 @@ window.dwRunLiveCalculations=function(){
       _validCnt++;
       _pfSum+=o.platformPrice;  // 플랫폼 원단가 1번만 합산
       tp=_getTP(_validCnt);     // validCount 업데이트 후 트랙 재확인
-      var finalT=tp+(o.event.price||0);
+      // ★ 슬롯 단가 우선 적용 (시간대 설정값 > 트랙 단가)
+      var slotKey=_dwSlot?_dwSlot(o.hour||12):'';
+      var slotP=window.DW_SLOTS&&slotKey&&DW_SLOTS[slotKey]&&DW_SLOTS[slotKey].price>0?DW_SLOTS[slotKey].price:tp;
+      var finalT=slotP+(o.event.price||0);
       if(o.platformPrice<finalT){
         _inj=Math.floor(finalT-o.platformPrice);
         _totalInj+=_inj;        // ★ 이 건의 보전액만 1번 더함
@@ -6424,7 +6427,7 @@ window.dwRunLiveCalculations=function(){
         _totalExt+=_ext;        // ★ 이 건의 환수액만 1번 더함
       }
     }
-    var finalT2=tp+(o.event.price||0);
+    var finalT2=slotP+(o.event.price||0); // ★ 슬롯 단가 반영된 목표단가
 
     // 트랙 점프 감지
     if(tp!==_prevTrack&&_prevTrack>0){
