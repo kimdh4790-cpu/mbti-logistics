@@ -6719,14 +6719,11 @@ window._dwSimCalc=function(){
 function _dwRenderEngine(){
   var el=document.getElementById('content');
   if(!el)return;
-  // 기존 content 위에 엔진 섹션 prepend
+  // ★ content 완전 초기화 후 엔진만 렌더링
+  el.innerHTML='';
   var wrap=document.createElement('div');
   wrap.id='dw-engine-wrap';
   wrap.style.cssText='max-width:960px;margin:0 auto 20px';
-  // ★ 시뮬레이터 컨테이너 선 삽입
-  var simDiv=document.createElement('div');
-  simDiv.id='dw-simulator-wrap';
-  wrap.appendChild(simDiv);
 
   wrap.innerHTML=
   // ① 상단 설명
@@ -6820,7 +6817,7 @@ function _dwRenderEngine(){
   +'<div id="dw-results"></div>';
 
   // 기존 content 맨 앞에 삽입
-  el.insertBefore(wrap, el.firstChild);
+  el.appendChild(wrap);
   // ★ 시뮬레이터 섹션 (wrap 맨 앞에 prepend)
   var simDiv2=document.createElement('div');
   simDiv2.id='dw-simulator-wrap';
