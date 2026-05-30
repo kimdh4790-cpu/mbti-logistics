@@ -3003,7 +3003,7 @@ function _renderTaxShareView(token){
     // ── 요약 카드 ──
     var totSupply=0,totEmp=0,totWork=0,totNet=0,totDcnt=0;
     settlements.forEach(function(s){
-      totSupply+=(s.coupangTotal||s.totalAmt||s.supplyAmt||0);
+      totSupply+=(s.supplyAmt||0);
       totEmp+=(s.emp||0);
       totWork+=(s.work||0);
       totNet+=(s.net||0);
@@ -3011,7 +3011,7 @@ function _renderTaxShareView(token){
     });
     html+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px">'
       +_txsCard('📦 총 배송건수', totDcnt.toLocaleString()+'건','#0891b2')
-      +_txsCard('💰 쿠팡매출합계(VAT포함)', '₩'+totSupply.toLocaleString(),'#7c3aed')
+      +_txsCard('💰 공급가액 합계', '₩'+totSupply.toLocaleString(),'#7c3aed')
       +_txsCard('🏥 고용+산재 합계', '₩'+(totEmp+totWork).toLocaleString(),'#059669')
       +_txsCard('✅ 실지급 합계', '₩'+totNet.toLocaleString(),'#185FA5')
       +'</div>';
@@ -3047,7 +3047,7 @@ function _renderTaxShareView(token){
       html+='<tr style="background:'+bg+'">'
         +'<td style="padding:8px 12px;font-weight:600">'+(s.driver||s.userId||'')+'</td>'
         +'<td style="padding:8px;text-align:right;color:#64748b">'+(s.dcnt||0).toLocaleString()+'</td>'
-        +'<td style="padding:8px;text-align:right">₩'+(s.coupangTotal||s.totalAmt||s.supplyAmt||0).toLocaleString()+'</td>'
+        +'<td style="padding:8px;text-align:right">₩'+(s.supplyAmt||0).toLocaleString()+'</td>'
         +'<td style="padding:8px;text-align:right;color:#059669">₩'+(s.emp||0).toLocaleString()+'</td>'
         +'<td style="padding:8px;text-align:right;color:#059669">₩'+(s.work||0).toLocaleString()+'</td>'
         +'<td style="padding:8px;text-align:right;color:#dc2626">₩'+(s.tax||0).toLocaleString()+'</td>'
