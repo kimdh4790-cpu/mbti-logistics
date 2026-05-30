@@ -7983,9 +7983,9 @@ window._expOcrScan=function(src){
   reader.onload=function(ev){
     var base64=ev.target.result.split(',')[1];
     var _ak=window.__AK||'';
-    fetch('https://api.anthropic.com/v1/messages',{
+    fetch('https://mbti-logistics.kimdh4790.workers.dev/claude-ocr',{
       method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':_ak,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         model:'claude-haiku-4-5-20251001',
         max_tokens:500,
@@ -15145,9 +15145,9 @@ async function _ocrAnalyze(){
 
     // 브라우저에서 직접 Anthropic 호출 (이전에 작동했던 방식)
     var _ak2=window.__AK||'';
-    var resp = await fetch('https://api.anthropic.com/v1/messages',{
+    var resp = await fetch('https://mbti-logistics.kimdh4790.workers.dev/claude-ocr',{
       method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':_ak2,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         model:'claude-haiku-4-5-20251001',
         max_tokens:1500,
