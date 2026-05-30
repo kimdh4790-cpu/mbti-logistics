@@ -2989,8 +2989,12 @@ function _renderTaxShareView(token){
     }
     var companyName=d.companyName||d.dealerId||'회사';
     var ym=d.ym||'';
-    var settlements=d.settlements||[];
     var bizNum=d.bizNum||'';
+    // 서브컬렉션에서 settlements 조회
+    snap.ref.collection('settlements').get().then(function(sSnap){
+    var settlements=[];
+    sSnap.forEach(function(sd){settlements.push(sd.data());});
+    if(!settlements.length) settlements=d.settlements||[]; // 폴백
 
     // ── 헤더 ──
     var html='<div style="max-width:860px;margin:0 auto;padding:20px;font-family:sans-serif">'
@@ -3132,6 +3136,7 @@ function _renderTaxShareView(token){
         m.appendChild(img);m.onclick=function(){m.remove();};document.body.appendChild(m);
       };
     }).catch(function(){});
+    }); // sSnap
   }).catch(function(e){
     el.innerHTML='<div style="padding:40px;text-align:center;color:red">오류: '+e.message+'</div>';
   });
