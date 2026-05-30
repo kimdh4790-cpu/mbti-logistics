@@ -6067,15 +6067,18 @@ function _dwRenderSimulator(){
     +'</div>';
 
   // ★ 건수별 트랙 단가 설정 (메인 화면)
-  el.innerHTML+=
-    '<div class="card" style="margin-bottom:14px">'
-      +'<div style="font-size:13px;font-weight:800;margin-bottom:10px">📊 건수별 최저단가 트랙</div>'
+  +(function(){
+    var trackHtml='<div class="card" style="margin-bottom:14px">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
+        +'<div style="font-size:13px;font-weight:800">📊 건수별 최저단가 트랙</div>'
+        +'<button onclick="_dwOpenSettings()" style="font-size:11px;padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;cursor:pointer">⚙️ 상세설정</button>'
+      +'</div>'
       +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">'
-      +DW_TRACKS.filter(function(t){return t.min>0;}).map(function(t,i){
+      +DW_TRACKS.filter(function(t){return t.min>0;}).map(function(t){
         return '<div><div style="font-size:10px;font-weight:700;color:var(--text3);margin-bottom:3px">'+(t.label||t.min+'건+')+'</div>'
-          +'<input id="dw-track-'+(t.key||i)+'" type="number" value="'+t.price+'" min="0" step="100"'
+          +'<input id="dw-track-'+t.key+'" type="number" value="'+t.price+'" min="0" step="100"'
           +' style="width:100%;padding:6px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);text-align:right"'
-          +' oninput="if(DW_TRACKS){var _k=this.getAttribute(\'data-key\');var tk=DW_TRACKS.find(function(x){return (x.key||x.min+\'\')===_k;});if(tk)tk.price=parseInt(this.value)||0;}" data-key="'+(t.key||t.min)+'">'
+          +' oninput="if(DW_TRACKS){var tk=DW_TRACKS.find(function(x){return x.key===this.getAttribute(\'data-key\')},this);if(tk)tk.price=parseInt(this.value)||0;}" data-key="'+t.key+'">'
         +'</div>';
       }).join('')
       +'<div><div style="font-size:10px;font-weight:700;color:var(--text3);margin-bottom:3px">180건 미만</div>'
@@ -6084,10 +6087,24 @@ function _dwRenderSimulator(){
       +'</div>'
       +'<div style="font-size:10px;color:var(--text3);margin-top:6px">💡 총 수행건수 기준 자동 트랙 적용 · 수정 즉시 반영</div>'
     +'</div>';
-
+    return trackHtml;
+  })()
 
   // ② 엑셀 업로드 + 공제설정 + dw-results
-  el.innerHTML+='<div id="dw-parse-status" style="font-size:12px;color:var(--text3);margin-bottom:8px"></div>';
+  el.innerHTML+=
+  '<div class="card" style="margin-bottom:14px">'
+    +'<div style="font-size:13px;font-weight:800;margin-bottom:10px">📂 정산 파일 선택 후 [⚡ 정산 개시] 클릭</div>'
+    +'<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">'
+      +'<input id="dw-file" type="file" accept=".xlsx,.xls,.csv,.tsv" onchange="_dwAllInOneLoad(this)" style="flex:1;padding:8px;border:1.5px dashed var(--border);border-radius:8px;font-size:12px;background:var(--bg)">'
+      +'<button onclick="_dwCalcAll()" style="padding:8px 16px;background:var(--brand);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📊 분석</button>'
+    +'</div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-bottom:6px">📁 지원: xlsx · xls · csv — 컬럼명 자동 인식</div>'
+    +'<div style="background:var(--bg3);border-radius:8px;padding:8px 12px;font-size:11px;margin-bottom:8px">'
+      +'<span style="color:#16a34a;font-weight:700">🟢 배민</span> 수~화 집계 → 금요일 입금 &nbsp;|&nbsp; '
+      +'<span style="color:#dc2626;font-weight:700">🔴 쿠팡이츠</span> 일~토 집계 → 다음주 금요일 입금'
+    +'</div>'
+    +'<div id="dw-parse-status" style="font-size:12px;color:var(--text3)"></div>'
+  +'</div>'
   +'<div class="card" style="margin-bottom:14px">'
     +'<div style="font-size:13px;font-weight:800;margin-bottom:10px">⚙️ 기사 마스터 공제 설정</div>'
     +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px">'
@@ -6100,8 +6117,7 @@ function _dwRenderSimulator(){
   +'</div>'
 
   // ⑤ 시간대별 보전 단가 설정
-  el.innerHTML+=
-  '<div class="card" style="margin-bottom:14px">'
+  +'<div class="card" style="margin-bottom:14px">'
     +'<div style="font-size:13px;font-weight:800;margin-bottom:4px">⏰ 시간대별 보전 단가 설정 <span style="font-size:10px;font-weight:400;color:var(--text3)">(빈칸=건수 트랙 자동)</span></div>'
     +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-top:8px">'
     +Object.keys(DW_SLOTS).map(function(k){
@@ -6119,7 +6135,7 @@ function _dwRenderSimulator(){
     +'<div style="font-size:10px;color:var(--text3);margin-top:6px">💡 점심·저녁피크에 높은 단가, 노피크에 낮은 단가. 심야(00~06시)는 보전/환수 없음.</div>'
   +'</div>'
 
-  el.innerHTML+='<div id="dw-results"></div>';
+  +'<div id="dw-results"></div>';
 }
 
 // ━━ 1단계: 가상 엑셀 로드
@@ -6343,7 +6359,7 @@ window.dwRunLiveCalculations=function(){
   if(!btn||!con){toast('먼저 1단계를 진행해주세요');return;}
 
   // ★ 파일 input에서 파일 가져와서 riderMap 없으면 재파싱 후 실행
-          +'<input id="dw-file" type="file" accept=".xlsx,.xls,.csv,.tsv" onchange="_dwAllInOneLoad(this)" style="display:none">'
+  var fileInput=document.getElementById('dw-file-sim')||document.getElementById('dw-file');
   var riderMap=window._dwRiderMap;
   var hasRiderMap=riderMap&&Object.keys(riderMap).length>0;
   var simData=window._dwSimData||[];
@@ -12246,7 +12262,7 @@ var MENUS_DELIVERY = [
     {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'}
   ]},
   {s:'🛵 배달대행 정산', items:[
-    {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',   plan_key:'any_paid'},
+    {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',   plan_key:'delivery'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
     {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'any_paid'}
   ]},
@@ -12271,6 +12287,7 @@ var MENUS_SETTLE = [
     {ic:'📝',l:'위수탁 계약서',    p:'contract',         plan_key:'settle'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
     {ic:'🗓',l:'라우트 근무표',   p:'roster',           plan_key:'settle'},
+    {ic:'🧾',l:'세무사 공유',      p:'tax_share',        plan_key:'settle'},
     {ic:'⭐',l:'직원 평가',        p:'evaluation',       plan_key:'free'},
     {ic:'💸',l:'경비 관리',        p:'expense',          plan_key:'free'},
     {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'any_paid'}
@@ -12339,8 +12356,7 @@ var MENUS_QR = [
     {ic:'📝',l:'위수탁 계약서',    p:'contract',         plan_key:'settle'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
     {ic:'⭐',l:'직원 평가',        p:'evaluation',       plan_key:'free'},
-    {ic:'💸',l:'경비 관리',        p:'expense',          plan_key:'free'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'any_paid'}
+    {ic:'💸',l:'경비 관리',        p:'expense',          plan_key:'free'}
   ]},
   {s:'💼 급여 관리', items:[
     {ic:'💼',l:'급여 현황',        p:'hourly_settle',    plan_key:'payroll'}
@@ -12366,23 +12382,20 @@ var MENUS_FULL = [
     {ic:'👤',l:'기사 관리',        p:'drivers',          plan_key:'free'},
     {ic:'📝',l:'위수탁 계약서',    p:'contract',         plan_key:'settle'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
+    {ic:'🧾',l:'세무사 공유',      p:'tax_share',        plan_key:'settle'},
     {ic:'⭐',l:'직원 평가',        p:'evaluation',       plan_key:'free'},
-    {ic:'💸',l:'경비 관리',        p:'expense',          plan_key:'free'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'any_paid'}
+    {ic:'💸',l:'경비 관리',        p:'expense',          plan_key:'free'}
   ]},
   {s:'🛵 배달대행 정산', items:[
-    {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',   plan_key:'any_paid'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'any_paid'}
+    {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',   plan_key:'delivery'}
   ]},
   {s:'🔐 QR 근태관리', items:[
     {ic:'🔐',l:'QR 출퇴근',        p:'attendance',       plan_key:'qr'},
         {ic:'🌴',l:'휴가 관리',        p:'leave',            plan_key:'payroll'},
-    {ic:'⏰',l:'연장 승인',        p:'overtime',         plan_key:'qr'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'any_paid'}
+    {ic:'⏰',l:'연장 승인',        p:'overtime',         plan_key:'qr'}
   ]},
   {s:'💼 급여 관리', items:[
-    {ic:'💼',l:'급여 현황',        p:'hourly_settle',    plan_key:'payroll'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'any_paid'}
+    {ic:'💼',l:'급여 현황',        p:'hourly_settle',    plan_key:'payroll'}
   ]},
   {s:'🚚 원스톱 물류', items:[
     {ic:'📦',l:'배달 실적',        p:'delivery_report',  plan_key:'settle'},
@@ -12392,10 +12405,6 @@ var MENUS_FULL = [
     {ic:'🖨',l:'라벨 출력',        p:'ext_label',        plan_key:'free'},
     {ic:'📷',l:'수령 스캔',        p:'ext_scan',         plan_key:'free'},
     {ic:'🚛',l:'간선차 GPS',       p:'ext_truck',        plan_key:'free'}
-  ]},
-  {s:'📢 공통', items:[
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'any_paid'},
-    {ic:'📢',l:'공지사항',         p:'notices',          plan_key:'free'}
   ]}
 ];
 
@@ -12413,7 +12422,7 @@ var MENUS_HOURLY = [
     {ic:'🗓',l:'근무표',           p:'roster',   plan_key:'payroll'}
   ]},
   {s:'🛵 배달대행 정산', items:[
-    {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',    plan_key:'any_paid'}
+    {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',    plan_key:'delivery'}
   ]},
   {s:'공통', items:[
     {ic:'🧾',l:'세무사 연동',      p:'tax_share', plan_key:'any_paid'},
