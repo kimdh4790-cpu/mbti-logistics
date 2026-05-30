@@ -6064,6 +6064,30 @@ function _dwRenderSimulator(){
       +'<span style="font-size:10px;background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:20px">⬆ 트랙점프 = 보장단가 상승</span>'
     +'</div>';
 
+  // ★ 건수별 트랙 단가 설정 (메인 화면)
+  +(function(){
+    var trackHtml='<div class="card" style="margin-bottom:14px">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
+        +'<div style="font-size:13px;font-weight:800">📊 건수별 최저단가 트랙</div>'
+        +'<button onclick="_dwOpenSettings()" style="font-size:11px;padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;cursor:pointer">⚙️ 상세설정</button>'
+      +'</div>'
+      +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">'
+      +DW_TRACKS.filter(function(t){return t.min>0;}).map(function(t){
+        return '<div><div style="font-size:10px;font-weight:700;color:var(--text3);margin-bottom:3px">'+(t.label||t.min+'건+')+'</div>'
+          +'<input id="dw-track-'+t.key+'" type="number" value="'+t.price+'" min="0" step="100"'
+          +' style="width:100%;padding:6px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);text-align:right"'
+          +' oninput="if(DW_TRACKS){var tk=DW_TRACKS.find(function(x){return x.key===this.getAttribute(\'data-key\')},this);if(tk)tk.price=parseInt(this.value)||0;}" data-key="'+t.key+'">'
+        +'</div>';
+      }).join('')
+      +'<div><div style="font-size:10px;font-weight:700;color:var(--text3);margin-bottom:3px">180건 미만</div>'
+        +'<div style="padding:6px;border:1px solid var(--border);border-radius:8px;font-size:11px;background:var(--bg2);color:var(--text3)">기본 계약단가</div>'
+      +'</div>'
+      +'</div>'
+      +'<div style="font-size:10px;color:var(--text3);margin-top:6px">💡 총 수행건수 기준 자동 트랙 적용 · 수정 즉시 반영</div>'
+    +'</div>';
+    return trackHtml;
+  })()
+
   // ② 엑셀 업로드 + 공제설정 + dw-results
   el.innerHTML+=
   '<div class="card" style="margin-bottom:14px">'
@@ -12238,7 +12262,7 @@ var MENUS_DELIVERY = [
   {s:'🛵 배달대행 정산', items:[
     {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',   plan_key:'delivery'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'any_paid'}
+    {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'delivery'}
   ]},
   {s:'👤 직원 관리', items:[
     {ic:'👤',l:'직원 관리',        p:'drivers',          plan_key:'free'},
