@@ -6359,7 +6359,7 @@ window.dwRunLiveCalculations=function(){
   if(!btn||!con){toast('먼저 1단계를 진행해주세요');return;}
 
   // ★ 파일 input에서 파일 가져와서 riderMap 없으면 재파싱 후 실행
-  var fileInput=document.getElementById('dw-file-sim')||document.getElementById('dw-file');
+  var fileInput=document.getElementById('dw-file');
   var riderMap=window._dwRiderMap;
   var hasRiderMap=riderMap&&Object.keys(riderMap).length>0;
   var simData=window._dwSimData||[];
