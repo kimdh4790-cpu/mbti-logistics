@@ -18167,7 +18167,7 @@ function _dwAutoSendPayslips(sessions, platform, periodInfo){
 
     // FCM 푸시 알림 발송
     var did2=did;
-    _db.collection('drivers').where('userId','==',s.driverId).limit(1).get()
+    _db.collection('users').where('driverId','==',s.driverId).limit(1).get()
       .then(function(dSnap){
         if(dSnap.empty)return;
         var fcmToken=dSnap.docs[0].data().fcmToken;
