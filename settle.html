@@ -6140,50 +6140,28 @@ function _dwRenderSimulator(){
     return trackHtml;
   })()
 
-  // ② 엑셀 업로드 + 공제설정 + dw-results
+  // ② 트랙 단가표 (관리자 수정 가능)
   el.innerHTML+=
   '<div class="card" style="margin-bottom:14px">'
-    +'<div style="font-size:13px;font-weight:800;margin-bottom:10px">📂 정산 파일 선택 후 [⚡ 정산 개시] 클릭</div>'
-    +'<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">'
-      +'<input id="dw-file" type="file" accept=".xlsx,.xls,.csv,.tsv" onchange="_dwAllInOneLoad(this)" style="flex:1;padding:8px;border:1.5px dashed var(--border);border-radius:8px;font-size:12px;background:var(--bg)">'
-      +'<button onclick="_dwCalcAll()" style="padding:8px 16px;background:var(--brand);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📊 분석</button>'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
+      +'<div style="font-size:13px;font-weight:800">건수별 트랙 단가 설정</div>'
+      +'<button onclick="_dwSaveTracks()" style="font-size:11px;padding:4px 12px;background:var(--brand);color:#fff;border:none;border-radius:6px;cursor:pointer">저장</button>'
     +'</div>'
-    +'<div style="font-size:11px;color:var(--text3);margin-bottom:6px">📁 지원: xlsx · xls · csv — 컬럼명 자동 인식</div>'
-    +'<div style="background:var(--bg3);border-radius:8px;padding:8px 12px;font-size:11px;margin-bottom:8px">'
-      +'<span style="color:#16a34a;font-weight:700">🟢 배민</span> 수~화 집계 → 금요일 입금 &nbsp;|&nbsp; '
-      +'<span style="color:#dc2626;font-weight:700">🔴 쿠팡이츠</span> 일~토 집계 → 다음주 금요일 입금'
-    +'</div>'
-    +'<div id="dw-parse-status" style="font-size:12px;color:var(--text3)"></div>'
-  +'</div>'
-  +'<div class="card" style="margin-bottom:14px">'
-    +'<div style="font-size:13px;font-weight:800;margin-bottom:10px">⚙️ 기사 마스터 공제 설정</div>'
-    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px">'
-      +'<div class="fg"><label style="font-size:10px;color:var(--text3)">🏍 기본 계약단가(원/건)</label><input id="dw-defprice" type="number" class="inp" value="2900" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg)"></div>'
-      +'<div class="fg"><label style="font-size:10px;color:var(--text3)">🛵 오토바이 리스료(원)</label><input id="dw-lease" type="number" class="inp" value="0" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg)"></div>'
-      +'<div class="fg"><label style="font-size:10px;color:var(--text3)">📱 앱비·보험료(원)</label><input id="dw-prog" type="number" class="inp" value="0" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg)"></div>'
-      +'<div class="fg"><label style="font-size:10px;color:var(--text3)">🛡 기타 공제(원)</label><input id="dw-ins" type="number" class="inp" value="0" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg)"></div>'
-      +'<div class="fg"><label style="font-size:10px;color:var(--text3)">📅 정산 기간</label><input id="dw-period" type="text" class="inp" placeholder="예: 2026-05-26~06-25" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg)"></div>'
-    +'</div>'
-  +'</div>'
-
-  // ⑤ 시간대별 보전 단가 설정
-  +'<div class="card" style="margin-bottom:14px">'
-    +'<div style="font-size:13px;font-weight:800;margin-bottom:4px">⏰ 시간대별 보전 단가 설정 <span style="font-size:10px;font-weight:400;color:var(--text3)">(빈칸=건수 트랙 자동)</span></div>'
-    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-top:8px">'
-    +Object.keys(DW_SLOTS).map(function(k){
-      var s=DW_SLOTS[k];
-      var isMid=k==='midnight';
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px">'
+    +DW_TRACKS.filter(function(t){return t.min>0;}).map(function(t,i){
       return '<div>'
-        +'<div style="font-size:10px;font-weight:700;color:'+s.color+';margin-bottom:4px">'+s.label+'</div>'
-        +(isMid
-          ?'<input type="text" value="예외(심야)" disabled style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg2);color:var(--text3)">'
-          :'<input id="dw-slot-'+k+'" type="number" value="'+(s.price>0?s.price:'')+'" placeholder="트랙 자동" step="100" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg)" oninput="_dwSetSlot(this)">'
-        )
-      +'</div>';
+        +'<div style="font-size:10px;font-weight:700;color:var(--text3);margin-bottom:3px">'+(t.label||t.min+'건+')+'</div>'
+        +'<input id="dw-track2-'+(t.key||i)+'" type="number" value="'+t.price+'" min="0" step="100"'
+        +' style="width:100%;padding:6px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);text-align:right"'
+        +' oninput="if(DW_TRACKS){var _k=this.getAttribute(\'data-key\');var tk=DW_TRACKS.find(function(x){return (x.key||x.min+\'\')===_k;});if(tk)tk.price=parseInt(this.value)||0;}" data-key="'+(t.key||t.min)+'">'
+        +'</div>';
     }).join('')
+    +'<div><div style="font-size:10px;font-weight:700;color:var(--text3);margin-bottom:3px">180건 미만</div>'
+      +'<div style="padding:6px;border:1px solid var(--border);border-radius:8px;font-size:11px;background:var(--bg2);color:var(--text3)">기본 계약단가</div>'
     +'</div>'
-    +'<div style="font-size:10px;color:var(--text3);margin-top:6px">💡 점심·저녁피크에 높은 단가, 노피크에 낮은 단가. 심야(00~06시)는 보전/환수 없음.</div>'
-  +'</div>'
+    +'</div>'
+    +'<div style="font-size:10px;color:var(--text3);margin-top:6px">수정 후 저장 버튼 눌러야 업데이트</div>'
+  +'</div>';
 
   +'<div id="dw-results"></div>';
 }
