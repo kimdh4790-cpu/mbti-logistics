@@ -8725,86 +8725,316 @@ function pageTaxShare(){
   document.getElementById('page-title').textContent='🧾 세무사 연동';
   document.getElementById('topbar-right').innerHTML=
     '<button class="btn btn-sm" onclick="_downloadDouzoneCSV()" style="background:#1e40af;color:#fff;font-size:12px">💾 더존 CSV</button> '+
-    '<button class="btn btn-sm" onclick="_generateTaxShareLink()" style="background:linear-gradient(135deg,#7c3aed,#185FA5);color:#fff;font-size:12px;font-weight:700">🔗 세무사 공유링크</button> <button class="btn btn-sm" onclick="_sendAllTaxShare()" style="background:linear-gradient(135deg,#059669,#0891b2);color:#fff;font-size:12px">📤 일괄 전송</button>';
+    '<button class="btn btn-sm" onclick="_generateTaxShareLink()" style="background:linear-gradient(135deg,#7c3aed,#185FA5);color:#fff;font-size:12px;font-weight:700">🔗 공유링크</button>';
   var el=document.getElementById('content');
   if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
   var did=_CU.dealerId||_CU.uid;
   var now=new Date();
   var ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
-  el.innerHTML='<div style="max-width:700px;margin:0 auto">'
+
+  // 서류 카테고리 정의
+  var TAX_CATS=[
+    {key:'tax_invoice', label:'🧾 세금계산서', color:'#7c3aed'},
+    {key:'receipt',     label:'🧾 영수증/지출증빙', color:'#0891b2'},
+    {key:'expense',     label:'💳 경비·비용', color:'#059669'},
+    {key:'contract',    label:'📝 계약서', color:'#dc2626'},
+    {key:'payslip',     label:'💰 급여명세서', color:'#f59e0b'},
+    {key:'other',       label:'📁 기타서류', color:'#6b7280'},
+  ];
+
+  el.innerHTML='<div style="max-width:720px;margin:0 auto">'
+
+    // ── 1. 서류 업로드 카드
     +'<div class="card" style="margin-bottom:14px">'
-    +'<div class="card-title" style="margin-bottom:12px">🧾 세무사 자료 공유</div>'
-    +'<div style="font-size:12px;color:var(--text3);margin-bottom:14px">정산 데이터를 세무사에게 공유합니다. 공유 링크는 30일간 유효합니다.</div>'
-    // OCR 사진 등록
-    +'<div style="background:linear-gradient(135deg,#eff6ff,#f5f3ff);border:1px dashed var(--brand);border-radius:10px;padding:12px;margin-bottom:14px;text-align:center">'
-    +'<div style="font-size:12px;font-weight:700;color:var(--brand);margin-bottom:8px">📷 영수증·서류 사진으로 자동 인식</div>'
-    +'<input id="txs-ocr-cam" type="file" accept="image/*" capture="environment" style="display:none" onchange="window._txsOcr(\'cam\')">'
-    +'<input id="txs-ocr-gal" type="file" accept="image/*" style="display:none" onchange="window._txsOcr(\'gal\')">'
-    +'<div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap">'
-    +'<button onclick="document.getElementById(\'txs-ocr-cam\').click()" class="btn btn-blue" style="font-size:11px">📸 카메라 촬영</button>'
-    +'<button onclick="document.getElementById(\'txs-ocr-gal\').click()" class="btn" style="font-size:11px">🖼 갤러리 선택</button>'
-    +'</div>'
-    +'<div id="txs-ocr-status" style="font-size:11px;color:var(--text3);margin-top:6px"></div>'
-    +'<div id="txs-ocr-result" style="margin-top:8px"></div>'
-    +'</div>'
+    +'<div style="font-size:14px;font-weight:800;margin-bottom:4px">📂 서류 등록</div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-bottom:12px">사진·파일을 찍거나 올리면 AI가 자동 분류합니다</div>'
+
+    // 카테고리 선택
+    +'<div style="margin-bottom:10px"><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">서류 종류</label>'
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap" id="tax-cat-btns">'
+    +TAX_CATS.map(function(c,i){
+      return '<button onclick="_taxSelectCat(&quot;'+c.key+'&quot;)" data-cat="'+c.key+'" '
+        +'style="padding:5px 10px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:2px solid '+(i===0?c.color:'var(--border)')+';background:'+(i===0?c.color:'transparent')+';color:'+(i===0?'#fff':'var(--text)')+'">'+c.label+'</button>';
+    }).join('')
+    +'</div></div>'
+
+    // 월 선택
     +'<div style="display:flex;gap:8px;margin-bottom:12px">'
     +'<div style="flex:1"><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">정산 월</label>'
     +'<input id="txs-ym" type="month" value="'+ym+'" style="padding:7px;border:1px solid var(--border);border-radius:8px;font-size:13px;width:100%"></div>'
+    +'<div style="flex:2"><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">메모 (거래처/내용)</label>'
+    +'<input id="txs-memo" placeholder="예: 주유비, GS칼텍스 부산점" style="padding:7px;border:1px solid var(--border);border-radius:8px;font-size:13px;width:100%"></div>'
     +'</div>'
-    +'<div style="display:flex;gap:8px;margin-bottom:12px">'
+
+    // 업로드 버튼
+    +'<input id="txs-file-cam" type="file" accept="image/*" capture="environment" multiple style="display:none" onchange="_txsUpload(&quot;cam&quot;)">'
+    +'<input id="txs-file-gal" type="file" accept="image/*,application/pdf" multiple style="display:none" onchange="_txsUpload(&quot;gal&quot;)">'
+    +'<div style="display:flex;gap:8px;margin-bottom:8px">'
+    +'<button onclick="document.getElementById(&quot;txs-file-cam&quot;).click()" class="btn btn-blue" style="flex:1;font-size:12px">📸 카메라 촬영</button>'
+    +'<button onclick="document.getElementById(&quot;txs-file-gal&quot;).click()" class="btn" style="flex:1;font-size:12px">🖼 갤러리·파일 선택</button>'
+    +'</div>'
+    +'<div id="txs-upload-status" style="font-size:11px;color:var(--text3)"></div>'
+    +'<div id="txs-preview" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"></div>'
+    +'</div>'
+
+    // ── 2. 저장된 서류 목록 (탭별)
+    +'<div class="card" style="margin-bottom:14px">'
+    +'<div style="font-size:14px;font-weight:800;margin-bottom:10px">📋 등록된 서류</div>'
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" id="tax-view-tabs">'
+    +'<button onclick="_taxViewTab(&quot;all&quot;)" data-tab="all" style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:2px solid var(--brand);background:var(--brand);color:#fff">전체</button>'
+    +TAX_CATS.map(function(c){
+      return '<button onclick="_taxViewTab(&quot;'+c.key+'&quot;)" data-tab="'+c.key+'" '
+        +'style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:2px solid var(--border);background:transparent;color:var(--text)">'+c.label+'</button>';
+    }).join('')
+    +'</div>'
+    +'<div id="txs-doclist"><div style="font-size:12px;color:var(--text3)">로딩 중...</div></div>'
+    +'</div>'
+
+    // ── 3. 세무사 공유
+    +'<div class="card" style="margin-bottom:14px">'
+    +'<div style="font-size:14px;font-weight:800;margin-bottom:4px">🔗 세무사 공유</div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-bottom:12px">공유 링크로 세무사가 직접 서류를 확인합니다 (30일 유효)</div>'
+    +'<div style="display:flex;gap:8px;margin-bottom:10px">'
     +'<div style="flex:1"><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">세무사 이름</label>'
-    +'<input id="txs-name" placeholder="홍길동 세무사" style="padding:7px;border:1px solid var(--border);border-radius:8px;font-size:13px;width:100%"></div>'
+    +'<input id="txs-tax-name" placeholder="홍길동 세무사" style="padding:7px;border:1px solid var(--border);border-radius:8px;font-size:13px;width:100%"></div>'
     +'<div style="flex:1"><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">세무사 이메일</label>'
-    +'<input id="txs-email" type="email" placeholder="tax@example.com" style="padding:7px;border:1px solid var(--border);border-radius:8px;font-size:13px;width:100%"></div>'
+    +'<input id="txs-tax-email" type="email" placeholder="tax@example.com" style="padding:7px;border:1px solid var(--border);border-radius:8px;font-size:13px;width:100%"></div>'
     +'</div>'
-    +'<div style="margin-bottom:14px"><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">메모</label>'
-    +'<textarea id="txs-memo" rows="2" placeholder="세무사에게 전달할 내용..."'
-    +' style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:12px;resize:none;background:var(--bg)">'+ym+' 급여 정산 자료 공유드립니다.</textarea></div>'
     +'<div style="display:flex;gap:8px">'
     +'<button class="btn btn-blue" onclick="window._txsGenLink()" style="flex:1">🔗 공유 링크 생성</button>'
     +'<button class="btn" onclick="window._txsDownloadCsv()" style="flex:1">💾 CSV 다운로드</button>'
     +'</div>'
-    +'<div id="txs-result" style="margin-top:12px"></div>'
+    +'<div id="txs-result" style="margin-top:10px"></div>'
     +'</div>'
-    +'<div class="card">'
-    +'<div class="card-title" style="margin-bottom:12px">📋 공유 이력</div>'
-    +'<div id="txs-history"><div style="font-size:12px;color:var(--text3)">로딩 중...</div></div>'
-    +'</div></div>';
+
+    // ── 4. 세무사 방문 체크리스트
+    +'<div class="card" style="margin-bottom:14px">'
+    +'<div style="font-size:14px;font-weight:800;margin-bottom:8px">✅ 세무사 방문 체크리스트</div>'
+    +'<div id="txs-checklist"><div style="font-size:12px;color:var(--text3)">로딩 중...</div></div>'
+    +'</div>'
+
+    +'</div>';
+
   // 세무사 정보 로드
   _db.collection('companies').doc(did).get().then(function(snap){
     if(!snap.exists)return;
     var d=snap.data();
-    if(d.taxEmail){var e=document.getElementById('txs-email');if(e)e.value=d.taxEmail;}
-    if(d.taxName) {var n=document.getElementById('txs-name'); if(n)n.value=d.taxName;}
+    if(d.taxEmail){var e=document.getElementById('txs-tax-email');if(e)e.value=d.taxEmail;}
+    if(d.taxName) {var n=document.getElementById('txs-tax-name'); if(n)n.value=d.taxName;}
   }).catch(function(){});
-  // 공유 이력 (orderBy 없이 - Firestore 인덱스 불필요)
-  _db.collection('taxShares').where('dealerId','==',did).limit(10).get()
+
+  // 서류 목록 로드
+  window._taxCurrentCat='tax_invoice';
+  window._taxCurrentTab='all';
+  _txsLoadDocs(did, ym);
+  _txsLoadChecklist(did, ym);
+}
+
+// 카테고리 선택
+window._taxSelectCat=function(key){
+  window._taxCurrentCat=key;
+  document.querySelectorAll('#tax-cat-btns button').forEach(function(btn){
+    var isActive=btn.dataset.cat===key;
+    var colors={tax_invoice:'#7c3aed',receipt:'#0891b2',expense:'#059669',contract:'#dc2626',payslip:'#f59e0b',other:'#6b7280'};
+    var c=colors[btn.dataset.cat]||'var(--brand)';
+    btn.style.borderColor=isActive?c:'var(--border)';
+    btn.style.background=isActive?c:'transparent';
+    btn.style.color=isActive?'#fff':'var(--text)';
+  });
+};
+
+// 탭 전환
+window._taxViewTab=function(tab){
+  window._taxCurrentTab=tab;
+  document.querySelectorAll('#tax-view-tabs button').forEach(function(btn){
+    var isActive=btn.dataset.tab===tab;
+    btn.style.borderColor=isActive?'var(--brand)':'var(--border)';
+    btn.style.background=isActive?'var(--brand)':'transparent';
+    btn.style.color=isActive?'#fff':'var(--text)';
+  });
+  var did=_CU.dealerId||_CU.uid;
+  var ym=(document.getElementById('txs-ym')||{value:''}).value;
+  _txsLoadDocs(did, ym);
+};
+
+// 서류 목록 로드
+function _txsLoadDocs(did, ym){
+  var list=document.getElementById('txs-doclist');
+  if(!list)return;
+  list.innerHTML='<div style="font-size:12px;color:var(--text3)">로딩 중...</div>';
+  var tab=window._taxCurrentTab||'all';
+  var query=_db.collection('tax_docs')
+    .where('dealerId','==',did)
+    .where('ym','==',ym);
+  if(tab!=='all') query=query.where('category','==',tab);
+  query.orderBy('createdAt','desc').limit(50).get()
     .then(function(snap){
-      var hist=document.getElementById('txs-history');if(!hist)return;
-      if(snap.empty){hist.innerHTML='<div style="font-size:12px;color:var(--text3)">공유 이력 없음</div>';return;}
-      var docs=snap.docs.slice().sort(function(a,b){
-        return (b.data().createdAt||'').localeCompare(a.data().createdAt||'');
-      });
-      var rows='';
-      docs.forEach(function(doc){
+      if(snap.empty){
+        list.innerHTML='<div style="font-size:12px;color:var(--text3);text-align:center;padding:20px">📭 등록된 서류가 없습니다</div>';
+        return;
+      }
+      var catColors={tax_invoice:'#7c3aed',receipt:'#0891b2',expense:'#059669',contract:'#dc2626',payslip:'#f59e0b',other:'#6b7280'};
+      var catLabels={tax_invoice:'세금계산서',receipt:'영수증',expense:'경비',contract:'계약서',payslip:'급여명세서',other:'기타'};
+      var html='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px">';
+      snap.forEach(function(doc){
         var d=doc.data();
-        var exp=d.expiresAt?new Date(d.expiresAt):null;
-        var isExp=exp&&exp<new Date();
-        var url=window.location.origin+window.location.pathname+'?taxShare='+d.token;
-        var expColor=isExp?'var(--red)':'var(--green)';
-        rows+='<div style="padding:10px;border-radius:8px;background:var(--bg3);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">'
-          +'<div><div style="font-size:12px;font-weight:700">'+esc(d.ym||'')+(d.email?' → '+esc(d.email):'')+'</div>'
-          +'<div style="font-size:10px;color:'+expColor+'">'
-          +(isExp?'만료됨':'유효 ~'+(exp?exp.toLocaleDateString('ko-KR'):''))+'</div></div>'
-          +(isExp?'':'<button data-url="'+url+'" onclick="_copyText(this.dataset.url)" class="btn btn-sm" style="font-size:10px">📋 복사</button>')
-          +'</div>';
+        var cat=d.category||'other';
+        var color=catColors[cat]||'#6b7280';
+        var label=catLabels[cat]||'기타';
+        var isImg=d.fileType&&d.fileType.startsWith('image/');
+        html+='<div style="border-radius:10px;border:1px solid var(--border);overflow:hidden;background:var(--bg3)">'
+          +(isImg&&d.fileUrl
+            ?'<img src="'+d.fileUrl+'" style="width:100%;height:90px;object-fit:cover;display:block" loading="lazy">'
+            :'<div style="height:90px;display:flex;align-items:center;justify-content:center;background:var(--bg3);font-size:28px">'+(d.fileType==='application/pdf'?'📄':'📁')+'</div>')
+          +'<div style="padding:6px">'
+          +'<div style="font-size:9px;font-weight:800;color:'+color+';margin-bottom:2px">'+label+'</div>'
+          +'<div style="font-size:10px;color:var(--text);line-height:1.3">'+esc(d.memo||d.desc||'서류')+'</div>'
+          +(d.amount?'<div style="font-size:10px;color:var(--text3);margin-top:2px">₩'+Number(d.amount).toLocaleString()+'</div>':'')
+          +'<div style="display:flex;gap:4px;margin-top:6px">'
+          +(d.fileUrl?'<a href="'+d.fileUrl+'" target="_blank" style="flex:1;font-size:9px;padding:3px;background:var(--brand);color:#fff;border-radius:4px;text-align:center;text-decoration:none">보기</a>':'')
+          +'<button onclick="_txsDeleteDoc(&quot;'+doc.id+'&quot;)" style="font-size:9px;padding:3px 6px;background:var(--bg);border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text3)">삭제</button>'
+          +'</div>'
+          +'</div></div>';
       });
-      hist.innerHTML=rows;
-    }).catch(function(){
-      var h=document.getElementById('txs-history');
-      if(h)h.innerHTML='<div style="font-size:12px;color:var(--text3)">이력 로딩 실패 (인덱스 설정 필요)</div>';
+      html+='</div>';
+      list.innerHTML=html;
+    }).catch(function(e){
+      list.innerHTML='<div style="font-size:12px;color:var(--red)">로딩 실패: '+e.message+'</div>';
     });
 }
+
+// 체크리스트 로드
+function _txsLoadChecklist(did, ym){
+  var cl=document.getElementById('txs-checklist');
+  if(!cl)return;
+  var cats={tax_invoice:'🧾 세금계산서',receipt:'🧾 영수증/지출증빙',expense:'💳 경비·비용',contract:'📝 계약서',payslip:'💰 급여명세서'};
+  var promises=Object.keys(cats).map(function(cat){
+    return _db.collection('tax_docs').where('dealerId','==',did).where('ym','==',ym).where('category','==',cat).limit(1).get()
+      .then(function(snap){return {cat:cat,label:cats[cat],count:snap.size,has:!snap.empty};})
+      .catch(function(){return {cat:cat,label:cats[cat],count:0,has:false};});
+  });
+  Promise.all(promises).then(function(results){
+    var html='<div style="display:flex;flex-direction:column;gap:8px">';
+    results.forEach(function(r){
+      html+='<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:'+(r.has?'rgba(0,200,124,.08)':'var(--bg3)')+'">'
+        +'<span style="font-size:18px">'+(r.has?'✅':'⬜')+'</span>'
+        +'<span style="font-size:13px;font-weight:700;flex:1">'+r.label+'</span>'
+        +(r.has?'<span style="font-size:11px;color:var(--green)">등록됨</span>':'<span style="font-size:11px;color:var(--text3)">미등록</span>')
+        +'</div>';
+    });
+    html+='</div>';
+    cl.innerHTML=html;
+  });
+}
+
+// 서류 업로드 (Firebase Storage → Firestore)
+window._txsUpload=function(src){
+  var inp=document.getElementById(src==='cam'?'txs-file-cam':'txs-file-gal');
+  var files=inp&&inp.files?Array.from(inp.files):[];
+  if(!files.length)return;
+  var did=_CU.dealerId||_CU.uid;
+  var ym=(document.getElementById('txs-ym')||{value:''}).value;
+  var memo=(document.getElementById('txs-memo')||{value:''}).value.trim();
+  var cat=window._taxCurrentCat||'other';
+  var st=document.getElementById('txs-upload-status');
+  var preview=document.getElementById('txs-preview');
+  if(st)st.innerHTML='⏳ 업로드 중 ('+files.length+'개)...';
+
+  var uploadPromises=files.map(function(file,idx){
+    return new Promise(function(resolve){
+      var reader=new FileReader();
+      reader.onload=function(ev){
+        var base64=ev.target.result.split(',')[1];
+        // OCR 분석 (이미지인 경우)
+        var ocrPromise=file.type.startsWith('image/')?
+          fetch('https://mbti-logistics.kimdh4790.workers.dev/claude-ocr',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({
+              model:'claude-haiku-4-5-20251001',
+              max_tokens:300,
+              messages:[{role:'user',content:[
+                {type:'image',source:{type:'base64',media_type:file.type,data:base64}},
+                {type:'text',text:'이 서류에서 JSON만 반환(설명없이): {"docType":"종류","amount":금액숫자,"vendor":"거래처","desc":"한줄설명"}'}
+              ]}]
+            })
+          }).then(function(r){return r.json();}).then(function(data){
+            try{return JSON.parse((data.content[0].text||'{}').replace(/```json|```/g,'').trim());}
+            catch(e){return {};}
+          }).catch(function(){return {};})
+          :Promise.resolve({});
+
+        ocrPromise.then(function(ocr){
+          // Firebase Storage 업로드
+          var storePath='tax_docs/'+did+'/'+ym+'/'+cat+'/'+(Date.now())+'_'+file.name;
+          var storageRef=firebase.storage().ref(storePath);
+          return storageRef.putString(ev.target.result,'data_url',{contentType:file.type})
+            .then(function(snap){return snap.ref.getDownloadURL();})
+            .then(function(url){
+              // Firestore 메타데이터 저장
+              return _db.collection('tax_docs').add({
+                dealerId:did,
+                ym:ym,
+                category:cat,
+                memo:memo||ocr.desc||'',
+                desc:ocr.desc||'',
+                amount:ocr.amount||0,
+                vendor:ocr.vendor||'',
+                docType:ocr.docType||'',
+                fileUrl:url,
+                filePath:storePath,
+                fileType:file.type,
+                fileName:file.name,
+                createdAt:new Date().toISOString(),
+                uploadedBy:_CU.uid
+              });
+            })
+            .then(function(){resolve({ok:true,url:file.type.startsWith('image/')?ev.target.result:null});});
+        }).catch(function(e){resolve({ok:false,err:e.message});});
+      };
+      reader.readAsDataURL(file);
+    });
+  });
+
+  Promise.all(uploadPromises).then(function(results){
+    var ok=results.filter(function(r){return r.ok;}).length;
+    if(st)st.innerHTML='✅ '+ok+'개 업로드 완료'+(ok<files.length?' (일부 실패)':'');
+    // 미리보기
+    if(preview){
+      results.forEach(function(r){
+        if(r.ok&&r.url){
+          var img=document.createElement('img');
+          img.src=r.url;
+          img.style.cssText='width:60px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border)';
+          preview.appendChild(img);
+        }
+      });
+    }
+    // 목록/체크리스트 새로고침
+    _txsLoadDocs(did, ym);
+    _txsLoadChecklist(did, ym);
+  });
+};
+
+// 서류 삭제
+window._txsDeleteDoc=function(docId){
+  if(!confirm('이 서류를 삭제하시겠습니까?'))return;
+  _db.collection('tax_docs').doc(docId).get().then(function(snap){
+    if(!snap.exists)return;
+    var d=snap.data();
+    var del=_db.collection('tax_docs').doc(docId).delete();
+    if(d.filePath){
+      firebase.storage().ref(d.filePath).delete().catch(function(){});
+    }
+    return del;
+  }).then(function(){
+    toast('✅ 삭제 완료');
+    var did=_CU.dealerId||_CU.uid;
+    var ym=(document.getElementById('txs-ym')||{value:''}).value;
+    _txsLoadDocs(did, ym);
+    _txsLoadChecklist(did, ym);
+  }).catch(function(e){toast('❌ '+e.message);});
+};
 
 // ── 세무사 공유 OCR: 서류 사진 → AI 자동 인식 → 메모 자동 채움
 window._txsOcr=function(src){
@@ -8819,15 +9049,15 @@ window._txsOcr=function(src){
   reader.onload=function(ev){
     var base64=ev.target.result.split(',')[1];
     var _ak=window.__AK||'';
-    fetch('https://api.anthropic.com/v1/messages',{
+    fetch('https://mbti-logistics.kimdh4790.workers.dev/claude-ocr',{
       method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':_ak,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         model:'claude-haiku-4-5-20251001',
         max_tokens:500,
         messages:[{role:'user',content:[
           {type:'image',source:{type:'base64',media_type:file.type||'image/jpeg',data:base64}},
-          {type:'text',text:'이 세무서류(세금계산서/영수증/거래명세서)에서 다음 정보를 JSON으로만 추출하세요. 다른 설명 없이 JSON만 반환: {"docType":"문서종류","ym":"YYYY-MM","amount":금액숫자,"desc":"간단설명"}'}
+          {type:'text',text:'이 세무서류(세금계산서/영수증/거래명세서)에서 다음 정보를 JSON으로만 추출하세요. 다른 설명 없이 JSON만 반환: {"docType":"문서종류","ym":"YYYY-MM","amount":금액숫자,"desc":"간단설명","vendor":"거래처명"}'}
         ]}]
       })
     }).then(function(r){return r.json();})
