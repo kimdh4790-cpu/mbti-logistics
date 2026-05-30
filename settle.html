@@ -7909,13 +7909,12 @@ function pageNotifyHistory(){
 
   el.innerHTML='<div style="max-width:600px;margin:0 auto">'    +'<div class="card" style="margin-bottom:14px">'      +'<div style="font-size:14px;font-weight:800;margin-bottom:12px">📢 기사 알림 발송</div>'      +'<div style="margin-bottom:10px">'        +'<label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">수신자</label>'        +'<select id="notif-target" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg)">'          +'<option value="all">전체 기사</option>'        +'</select>'      +'</div>'      +'<div style="margin-bottom:10px">'        +'<label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">제목</label>'        +'<input id="notif-title" type="text" placeholder="알림 제목" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg)">'      +'</div>'      +'<div style="margin-bottom:12px">'        +'<label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">내용</label>'        +'<textarea id="notif-body" rows="3" placeholder="알림 내용" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);resize:vertical"></textarea>'      +'</div>'      +'<button onclick="_sendAdminNotif()" style="width:100%;padding:12px;background:var(--brand);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">📤 알림 발송</button>'      +'<div id="notif-status" style="font-size:12px;color:var(--text3);margin-top:8px;text-align:center"></div>'    +'</div>'    +'<div class="card">'      +'<div style="font-size:13px;font-weight:800;margin-bottom:10px">📋 발송 내역</div>'      +'<div id="notif-history"><div style="font-size:12px;color:var(--text3)">⏳ 불러오는 중...</div></div>'    +'</div>'  +'</div>';
 
-  // 기사 목록 로드
-  _db.collection('members').where('dealerId','==',did).get().then(function(snap){
+  // 기사 목록 로드 (drivers 컬렉션)
+  _db.collection('drivers').where('dealerId','==',did).get().then(function(snap){
     var sel=document.getElementById('notif-target');
     if(!sel)return;
     snap.forEach(function(doc){
       var d=doc.data();
-      if(!d.fcmToken)return;
       var opt=document.createElement('option');
       opt.value=doc.id;
       opt.textContent=(d.name||d.driverName||doc.id)+(d.fcmToken?'':' (알림불가)');
@@ -7957,9 +7956,10 @@ window._sendAdminNotif=function(){
     type:'admin_push',isRead:false,createdAt:new Date().toISOString()
   }).then(function(){
     var q=target==='all'
-      ?_db.collection('members').where('dealerId','==',did)
-      :_db.collection('members').where('dealerId','==',did).where('userId','==',target);
-    return q.get();
+      ?_db.collection('drivers').where('dealerId','==',did)
+      :_db.collection('drivers').doc(target);
+    var qp=target==='all'?q.get():q.get().then(function(d){return {forEach:function(fn){if(d.exists)fn(d);}};});
+    return qp;
   }).then(function(snap){
     var tokens=[];
     snap.forEach(function(doc){var tk=doc.data().fcmToken;if(tk)tokens.push(tk);});
