@@ -6046,12 +6046,9 @@ window._dwApplySettings=function(){
 
   _dwSaveSettings({tracks:tracks,slots:slots,parcel:parcel},function(){
     var mo=document.querySelector('.mo.show');if(mo)mo.remove();
-    toast('✅ 단가 저장 완료 — 2단계 계산을 눌러주세요');
-    // ★ 저장된 슬롯값을 input에 반영 (새로고침 없이)
-    Object.keys(DW_SLOTS).forEach(function(k){
-      var el=document.getElementById('dw-slot-'+k);
-      if(el&&DW_SLOTS[k].price>0) el.value=DW_SLOTS[k].price;
-    });
+    // 엔진 헤더 새로고침
+    var old=document.getElementById('dw-engine-wrap');if(old)old.remove();
+    _dwRenderEngine();
   });
 };
 var _dwResults=[];
@@ -6234,25 +6231,43 @@ function _dwParseRealExcel(file,btn1,btn2,con){
 
       // 컬럼명 자동 감지 (쿠팡이츠·배민 등 통합 대응)
       var sample=rows[0];
-      var timeKey=Object.keys(sample).find(function(k){return /완료|배달.*(시간|일시)|time/i.test(k);})||'';
-      // ★ 정산금액/배달대행비 우선 → 주문금액 제외
-      var priceKey=Object.keys(sample).find(function(k){return /정산금액|정산예정금액|지급액|배달대행비|실지급/i.test(k);})||'';
-      if(!priceKey) priceKey=Object.keys(sample).find(function(k){return /단가|배송비|price/i.test(k);})||'';
-      if(!priceKey) priceKey=Object.keys(sample).find(function(k){return /금액/i.test(k)&&!/주문금액|배달팁/.test(k);})||'';
-      var eventKey=Object.keys(sample).find(function(k){return /비고|할증|이벤트|event/i.test(k);})||'';
+      var keys=Object.keys(sample);
+      // ★ 포괄적 컬럼 자동 감지 (배민/쿠팡이츠/요기요/바로고/생각대로 통합)
+      // 라이더ID: 배달원ID > 라이더ID > 기사ID > 사번 > 라이더코드 > 기사코드 등
+      var riderKey=keys.find(function(k){return /배달원id|라이더id|기사id/i.test(k);})||'';
+      if(!riderKey) riderKey=keys.find(function(k){return /라이더사번|라이더코드|배달원코드|기사코드|기사번호|배달원번호|배달파트너id|파트너id|사번/i.test(k);})||'';
+      if(!riderKey) riderKey=keys.find(function(k){return /id$/i.test(k);})||'';
+      // 금액: 정산/지급/대행비 우선 → 주문금액/배달팁 제외
+      var priceKey=keys.find(function(k){return /최종정산금액|정산금액\(세전\)|정산예정금액|플랫폼총지급액|지급예정금액/i.test(k);})||'';
+      if(!priceKey) priceKey=keys.find(function(k){return /^정산금액$|^배달대행비$|^지급금액$|^지급액$|^세전금액$|^수령금액$/i.test(k);})||'';
+      if(!priceKey) priceKey=keys.find(function(k){return /배달대행비|배달료|배달비|건당단가|배달단가/i.test(k);})||'';
+      if(!priceKey) priceKey=keys.find(function(k){return /단가|지급|정산|금액/i.test(k)&&!/주문금액|배달팁|할인|쿠폰|부담|프로모션/.test(k);})||'';
+      // 시간: 배달완료 우선
+      var timeKey=keys.find(function(k){return /배달완료시각|배달완료일시|배달완료시간|완료시각|완료일시|완료시간|처리시각/i.test(k);})||'';
+      if(!timeKey) timeKey=keys.find(function(k){return /배달완료|완료|픽업완료/i.test(k)&&/시각|일시|시간|time/i.test(k);})||'';
+      if(!timeKey) timeKey=keys.find(function(k){return /완료|배달.*time|time/i.test(k);})||'';
+      // 취소: 취소여부 우선
+      var cancelKey=keys.find(function(k){return /^취소여부$/i.test(k);})||'';
+      if(!cancelKey) cancelKey=keys.find(function(k){return /취소|cancel/i.test(k);})||'';
+      // 이벤트/비고
+      var eventKey=keys.find(function(k){return /비고|할증|이벤트|event|remark/i.test(k);})||'';
+      console.log('[DONWAY Parser] 컬럼감지 → 라이더:'+riderKey+' | 금액:'+priceKey+' | 시간:'+timeKey+' | 취소:'+cancelKey);
 
       window._dwSimData=rows.map(function(row,i){
         var rawTime=timeKey?String(row[timeKey]||''):'';
         var hr=12;
         var tm=rawTime.match(/(\d{1,2}):(\d{2})/);
         if(tm)hr=parseInt(tm[1]);
-        var price=priceKey?Math.abs(Number(String(row[priceKey]||'').replace(/[,₩원]/g,'')))||0:0;
+        var price=priceKey?Math.abs(Number(String(row[priceKey]||'').replace(/[,₩원,]/g,'')))||0:0;
+        // 취소건 제외
+        var cancelVal=cancelKey?String(row[cancelKey]||''):'';
+        if(cancelVal==='Y'||cancelVal==='취소'||cancelVal==='배달취소'||cancelVal==='주문취소') return null;
         var evNote=eventKey?String(row[eventKey]||''):'';
         var ev={name:'일반콜',price:0,color:''};
         if(/우천|rain/i.test(evNote)) ev={name:'☔ 우천할증',price:500,color:'#60a5fa'};
         else if(/피크|peak/i.test(evNote)) ev={name:'🔥 피크지원',price:300,color:'#fb923c'};
         return {id:i+1,zone:'',hour:hr,platformPrice:price,event:ev,completedAt:rawTime};
-      }).filter(function(o){return o.platformPrice>0;});
+      }).filter(function(o){return o&&o.platformPrice>0;});
 
       _dwPrintLoadLog(btn1,btn2,con,'실제 엑셀: '+file.name,window._dwSimData.length);
     }catch(e){
@@ -6592,7 +6607,7 @@ function _dwRenderEngine(){
         return '<div style="'+(isMid?'opacity:.5':'')+'">'
           +'<label style="font-size:10px;display:block;margin-bottom:3px;font-weight:700;color:'+s.color+'">'+s.label
             +'<span style="font-weight:400;color:var(--text3);font-size:9px"> '+String(s.start).padStart(2,'0')+':00~'+String(s.end).padStart(2,'0')+':00</span></label>'
-          +'<input id="dw-slot-'+k+'" type="number" placeholder="'+(isMid?'예외(심야)':'트랙 자동')+'" '+(isMid?'disabled':'')+(s.price>0?' value="'+s.price+'"':'')+' '
+          +'<input id="dw-slot-'+k+'" type="number" placeholder="'+(isMid?'예외(심야)':'트랙 자동')+'" '+(isMid?'disabled':'')+' '
             +'style="width:100%;padding:7px;border:1.5px solid '+s.color+'44;border-radius:8px;font-size:13px;font-weight:700;background:var(--bg);color:'+s.color+'">'
         +'</div>';
       }).join('')
