@@ -7286,7 +7286,9 @@ var _DW_SESSION = null; // 현재 로그인 기사의 실시간 세션
 
 // 세션 ID 생성 (dealerId_driverId_period)
 function _dwSessionId(dealerId, driverId, period){
-  return (dealerId||'x')+'_'+(driverId||'x')+'_'+(period||'now').replace(/[^0-9\-]/g,'');
+  // period가 객체일 수도 있고 문자열일 수도 있음
+  var pStr=period&&typeof period==='object'?(period.start||'now'):((period||'now')+'');
+  return (dealerId||'x')+'_'+(driverId||'x')+'_'+pStr.replace(/[^0-9\-]/g,'');
 }
 
 // Firestore에서 세션 로드
@@ -7294,7 +7296,7 @@ function _dwLoadSession(cb){
   if(!_db||!_CU)return;
   var did=_CU.dealerId||'';
   var uid=_CU.uid||'';
-  var period=_dwCurrentPeriod();
+  var period=_dwPeriodStr();
   var sid=_dwSessionId(did,uid,period);
   _db.collection('delivery_sessions').doc(sid).get().then(function(snap){
     if(snap.exists){
@@ -7526,7 +7528,7 @@ function pageDeliveryInput(){
   if(!_db||!_CU)return;
   var did=(_CU.dealerId||_CU.companyId||'');
   var uid=_CU.uid||'';
-  var period=_dwCurrentPeriod();
+  var period=_dwPeriodStr();
   var sid=_dwSessionId(did,uid,period);
 
   // 기존 구독 해제
@@ -7699,7 +7701,7 @@ function _dwAdminLiveView(el){
   +'</div>';
 
   if(!_db||!_CU)return;
-  var period=_dwCurrentPeriod();
+  var period=_dwPeriodStr();
   var did=_CU.dealerId||'';
 
   // ★ onSnapshot — Firestore 변경 즉시 자동 반영
@@ -7848,7 +7850,7 @@ window._dwVerifyExcel=function(){
   _dwParseExcel(fi.files[0],function(riderMap,err,platform){
     if(err){if(st)st.innerHTML='<span style="color:var(--red)">❌ '+esc(err)+'</span>';return;}
     var did=_CU&&_CU.dealerId||'';
-    var period=_dwCurrentPeriod();
+    var period=_dwPeriodStr();
     var riderIds=Object.keys(riderMap);
     var updated=0, alertsSent=0, promises=[];
     riderIds.forEach(function(rid){
