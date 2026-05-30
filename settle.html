@@ -9284,13 +9284,29 @@ window._txsUpload=function(src){
       reader.onload=function(ev){
         var dataUrl=ev.target.result;
         // Firestore에 직접 저장 (Storage 미사용)
-        _db.collection('tax_docs').add({
+        // OCR 분석 후 저장
+        var ocrPromise=file.type.startsWith('image/')&&(window.__AK)
+          ?fetch('https://api.anthropic.com/v1/messages',{
+              method:'POST',
+              headers:{'Content-Type':'application/json','x-api-key':window.__AK,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+              body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:300,
+                messages:[{role:'user',content:[
+                  {type:'image',source:{type:'base64',media_type:file.type,data:dataUrl.split(',')[1]}},
+                  {type:'text',text:'이 서류에서 JSON만 반환(설명없이): {"docType":"종류","amount":금액숫자,"vendor":"거래처","desc":"한줄설명"}'}
+                ]}]})
+            }).then(function(r){return r.json();})
+              .then(function(d){try{return JSON.parse((d.content[0].text||'{}').replace(/```json|```/g,'').trim());}catch(e){return {};}})
+              .catch(function(){return {};})
+          :Promise.resolve({});
+        ocrPromise.then(function(ocr){
+        return _db.collection('tax_docs').add({
           dealerId:did, ym:ym, category:cat,
-          memo:memo||'', desc:'', amount:0, vendor:'', docType:'',
+          memo:memo||ocr.desc||'', desc:ocr.desc||'', amount:ocr.amount||0,
+          vendor:ocr.vendor||'', docType:ocr.docType||'',
           fileUrl:dataUrl, filePath:'', fileType:file.type,
           fileName:file.name, createdAt:new Date().toISOString(),
           uploadedBy:_CU.uid
-        }).then(function(){
+        });}).then(function(){
           resolve({ok:true,url:file.type.startsWith('image/')?dataUrl:null});
         }).catch(function(e){resolve({ok:false,err:e.message});});
       };
