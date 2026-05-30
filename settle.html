@@ -9453,7 +9453,17 @@ window._txsGenLink=function(){
   var url=window.location.origin+window.location.pathname+'?taxShare='+token;
   _db.collection('settlements').where('dealerId','==',did).where('month','==',ym).get()
   .then(function(snap){
-    var sdata=[];snap.forEach(function(doc){sdata.push(doc.data());});
+    var sdata=[];snap.forEach(function(doc){
+      var s=doc.data();
+      sdata.push({
+        driver:s.driver||'',userId:s.userId||'',camp:s.camp||'',
+        month:s.month||'',dcnt:s.dcnt||0,rcnt:s.rcnt||0,
+        totalAmt:s.totalAmt||0,supplyAmt:s.supplyAmt||0,
+        coupangTotal:s.coupangTotal||0,
+        emp:s.emp||0,work:s.work||0,net:s.net||0,
+        deduct:s.deduct||0,dmg:s.dmg||0
+      });
+    });
     var cd=window._cachedCompanyDoc||{};
     return _db.collection('taxShares').doc(token).set({
       type:'tax_share',dealerId:did,ym:ym,token:token,email:email,name:name,memo:memo,
