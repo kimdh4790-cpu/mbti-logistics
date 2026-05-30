@@ -6100,7 +6100,8 @@ function _dwRenderSimulator(){
   +'</div>'
 
   // ⑤ 시간대별 보전 단가 설정
-  +'<div class="card" style="margin-bottom:14px">'
+  el.innerHTML+=
+  '<div class="card" style="margin-bottom:14px">'
     +'<div style="font-size:13px;font-weight:800;margin-bottom:4px">⏰ 시간대별 보전 단가 설정 <span style="font-size:10px;font-weight:400;color:var(--text3)">(빈칸=건수 트랙 자동)</span></div>'
     +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-top:8px">'
     +Object.keys(DW_SLOTS).map(function(k){
@@ -6118,7 +6119,7 @@ function _dwRenderSimulator(){
     +'<div style="font-size:10px;color:var(--text3);margin-top:6px">💡 점심·저녁피크에 높은 단가, 노피크에 낮은 단가. 심야(00~06시)는 보전/환수 없음.</div>'
   +'</div>'
 
-  +'<div id="dw-results"></div>';
+  el.innerHTML+='<div id="dw-results"></div>';
 }
 
 // ━━ 1단계: 가상 엑셀 로드
