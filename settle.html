@@ -6418,6 +6418,7 @@ window.dwRunLiveCalculations=function(){
       // ★ 슬롯 단가 우선 적용 (시간대 설정값 > 트랙 단가)
       var slotKey=_dwSlot?_dwSlot(o.hour||12):'';
       var slotP=window.DW_SLOTS&&slotKey&&DW_SLOTS[slotKey]&&DW_SLOTS[slotKey].price>0?DW_SLOTS[slotKey].price:tp;
+      slotP=isNaN(slotP)||slotP<=0?tp:slotP; // NaN 방어
       var finalT=slotP+(o.event.price||0);
       if(o.platformPrice<finalT){
         _inj=Math.floor(finalT-o.platformPrice);
