@@ -1810,7 +1810,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
 <script src="/firebase-auth-compat.js"></script>
 <script src="/firebase-firestore-compat.js"></script>
 <script src="/firebase-messaging-compat.js"></script>
-<script src="/firebase-storage-compat.js"></script>
+
 <script>
 // ══ 캠프별 취합 UI (parseCoupangExcel 이후 호출) ══
 function renderCpPending(){
@@ -21071,6 +21071,42 @@ window.addEventListener('load',function(){
   }
 });
 </script>
+
+<script>
+// Firebase Storage polyfill - firebase-storage-compat.js 대체
+if(typeof firebase !== 'undefined' && !firebase.storage) {
+  firebase.storage = function() {
+    var bucket = 'mbti-logistics.appspot.com';
+    var getToken = function() {
+      return firebase.auth().currentUser ? firebase.auth().currentUser.getIdToken() : Promise.resolve('');
+    };
+    return {
+      ref: function(path) {
+        return {
+          putString: function(data, format, meta) {
+            return getToken().then(function(token) {
+              var base64 = data.split(',')[1];
+              return fetch('https://firebasestorage.googleapis.com/v0/b/'+bucket+'/o?uploadType=media&name='+encodeURIComponent(path), {
+                method: 'POST',
+                headers: {'Authorization':'Bearer '+token,'Content-Type': meta && meta.contentType || 'application/octet-stream'},
+                body: Uint8Array.from(atob(base64), function(c){return c.charCodeAt(0);})
+              }).then(function(r){return r.json();}).then(function(res){
+                return { ref: { getDownloadURL: function(){ return Promise.resolve('https://firebasestorage.googleapis.com/v0/b/'+bucket+'/o/'+encodeURIComponent(path)+'?alt=media'); } } };
+              });
+            });
+          },
+          delete: function() {
+            return getToken().then(function(token){
+              return fetch('https://firebasestorage.googleapis.com/v0/b/'+bucket+'/o/'+encodeURIComponent(path),{method:'DELETE',headers:{'Authorization':'Bearer '+token}});
+            });
+          }
+        };
+      }
+    };
+  };
+}
+</script>
+
 
 <!-- 약관 동의 모달 -->
 <div class="mo" id="mo-terms-agree" style="z-index:9999;background:rgba(0,0,0,.7)">
