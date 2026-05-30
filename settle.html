@@ -4793,7 +4793,7 @@ function _loadDriverDocs(driverId, did){
         +'<div style="font-size:12px;font-weight:700">'+dt.label+'</div>'
         +'<div style="font-size:10px;color:var(--text3)">'+(d.fileName||'')+'  ·  '+(d.uploadedAt||'').slice(0,10)+'</div>'
         +'</div>'
-        +(d.fileUrl?'<button class="btn" onclick="_txsShowImgUrl(this)" data-url="'+encodeURIComponent(d.fileUrl)+'" style="font-size:11px;padding:2px 8px">보기</button>':'')
+        +(d.fileUrl?'<button class="btn" onclick="_txsShowImgUrl(\''+doc.id+'\')" style="font-size:11px;padding:2px 8px">보기</button>':'')
         +'<button data-id="'+doc.id+'" data-drid="'+driverId+'" data-did="'+did+'" '
         +'onclick="_deleteDriverDoc(this.dataset.id,this.dataset.drid,this.dataset.did)" '
         +'style="background:none;border:none;cursor:pointer;color:var(--red);font-size:14px">🗑</button>'
@@ -9196,9 +9196,11 @@ window._taxViewTab=function(tab){
 };
 
 // 서류 목록 로드
-window._txsShowImgUrl=function(btn){
-  var url=decodeURIComponent(btn.getAttribute('data-url')||'');
-  if(!url)return;
+window._txsShowImgUrl=function(docId){
+  _db.collection('tax_docs').doc(docId).get().then(function(snap){
+    if(!snap.exists)return;
+    var url=snap.data().fileUrl;
+    if(!url)return;
   var existing=document.getElementById('txs-img-modal');
   if(existing)existing.remove();
   var modal=document.createElement('div');
@@ -9218,6 +9220,7 @@ window._txsShowImgUrl=function(btn){
   modal.appendChild(inner);
   modal.onclick=function(e){if(e.target===modal)modal.remove();};
   document.body.appendChild(modal);
+  });
 };
 
 function _txsLoadDocs(did, ym){
