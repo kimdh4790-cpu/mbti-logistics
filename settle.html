@@ -6518,8 +6518,8 @@ window.dwRunLiveCalculations=function(){
         var u=function(id,v){var el=document.getElementById(id);if(el)el.textContent=v;};
         u(cardId+'-cnt',_validCnt+'건');
         u(cardId+'-pf','₩'+_pfSum.toLocaleString());
-        u(cardId+'-inj',(_totalInj>0?'+₩':' ₩')+_totalInj.toLocaleString());
-        u(cardId+'-ext',(_totalExt>0?'-₩':' ₩')+_totalExt.toLocaleString());
+        u(cardId+'-inj',(_totalInj>0?'-₩':' ₩')+_totalInj.toLocaleString());
+        u(cardId+'-ext',(_totalExt>0?'+₩':' ₩')+_totalExt.toLocaleString());
         u(cardId+'-pre','₩'+preTax.toLocaleString());
         u(cardId+'-sanjae','-₩'+sanjae.toLocaleString());
         u(cardId+'-goyal','-₩'+goyal.toLocaleString());
