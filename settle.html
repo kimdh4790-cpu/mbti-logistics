@@ -5838,11 +5838,15 @@ function _dwParseExcel(file, cb){
         // 이름 컬럼
         if(colName<0&&(hn.includes('이름')||hn.includes('성명')||hn.includes('기사명')
           ||hn.includes('라이더명')||hn.includes('name')))colName=ci;
-        // 금액 컬럼
+        // 금액 컬럼 (정산금액/지급액 우선 → 주문금액/배달대행비 제외)
         if(colPrice<0&&(hn.includes('플랫폼총지급액')||hn.includes('최종정산금액')
-          ||hn.includes('지급액')||hn.includes('정산금액')||hn.includes('단가')
-          ||hn.includes('금액')||hn.includes('amount')||hn.includes('price')
-          ||hn.includes('fee')||hn.includes('pay')))colPrice=ci;
+          ||hn.includes('정산예정금액')||hn.includes('정산금액')||hn.includes('지급액')
+          ||hn.includes('실지급')||hn.includes('단가')||hn.includes('fee')
+          ||hn.includes('amount')||hn.includes('pay'))
+          &&!hn.includes('주문금액')&&!hn.includes('배달대행비')&&!hn.includes('배달팁'))colPrice=ci;
+        // 2순위: 주문금액 (정산금액 없을 때)
+        if(colPrice<0&&(hn.includes('금액')||hn.includes('price'))
+          &&!hn.includes('배달대행비')&&!hn.includes('배달팁'))colPrice=ci;
         // 건수 컬럼
         if(colCnt<0&&(hn.includes('건수')||hn.includes('배달건')||hn.includes('완료건')
           ||hn.includes('count')||hn.includes('cnt')||hn.includes('qty')))colCnt=ci;
