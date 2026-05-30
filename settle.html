@@ -18036,8 +18036,10 @@ function _dwAutoSendPayslips(sessions, platform, periodInfo){
     var did2=did;
     _db.collection('users').where('driverId','==',s.driverId).limit(1).get()
       .then(function(dSnap){
+        toast('🔍 driverId:'+s.driverId+' 결과:'+dSnap.size+'건');
         if(dSnap.empty)return;
         var fcmToken=dSnap.docs[0].data().fcmToken;
+        toast('🔑 토큰:'+(fcmToken?fcmToken.slice(0,15):'없음'));
         if(!fcmToken)return;
         fetch('https://mbti-logistics.kimdh4790.workers.dev/fcm/notify-drivers',{
           method:'POST',
