@@ -15525,11 +15525,9 @@ async function _ocrAnalyze(){
   if(btn){btn.disabled=true;btn.textContent='🔄 AI 분석 중...';}
   _ocrSetStatus('🔄 사업자등록증 분석 중...','rgba(0,212,255,.08)','var(--cyan)');
   try{
-    // API 키를 서버에서 가져오기
-    var keyResp = await fetch('https://donway.ai.kr/get-label-key');
-    var keyData = await keyResp.json();
-    var AK = (keyData.k||'').trim();
-    if(!AK) throw new Error('API 키 없음 — Cloudflare Workers 환경변수 확인 필요');
+    // window.__AK 직접 사용
+    var AK = (window.__AK||'').trim();
+    if(!AK) throw new Error('API 키 없음 — 슬러그(/mbti) 경로로 접속해주세요');
 
     var b64 = await _ocrCompressImage(_ocrCurrentFile, 2400, 0.95);  // 해상도 높여 한글 인식률 향상
     var mime = _ocrCurrentFile.type||'image/jpeg';
