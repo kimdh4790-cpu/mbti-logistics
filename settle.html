@@ -9325,7 +9325,9 @@ window._txsUpload=function(src){
 
   Promise.all(uploadPromises).then(function(results){
     var ok=results.filter(function(r){return r.ok;}).length;
-    if(st)st.innerHTML='✅ '+ok+'개 업로드 완료'+(ok<files.length?' (일부 실패)':'');
+    var failed=results.filter(function(r){return !r.ok;});
+    if(st)st.innerHTML='✅ '+ok+'개 업로드 완료'+(failed.length?' ('+failed.length+'개 실패)':'');
+    if(failed.length){toast('❌ '+( failed[0].err||'실패'));}
     // 미리보기
     if(preview){
       results.forEach(function(r){
