@@ -1752,6 +1752,18 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         })();
         lss('settlements',settlements);
         window._lastParsedSettlements = settlements; // 경험치 업데이트용
+        // ★ Plan Guard 체크
+        if(window._guardCheckDriverCount){
+          var _pgIds=[...new Set(settlements.map(function(s){return s.userId||s.driver||'';}).filter(Boolean))];
+          _guardCheckDriverCount(_pgIds.length);
+          _guardCheckDateRange(settlements);
+          _guardCheckAmountSpike(settlements);
+          _guardMarkUpload();
+          var _pgRoutes=new Set();
+          settlements.forEach(function(s){(s.routeDetails||[]).forEach(function(r){_pgRoutes.add(r.route);});});
+          _guardCheckRouteSpike(_pgRoutes.size);
+          _guardUpdateMonthlySeat(settlements, month);
+        }
         // Firebase 저장
         if(_db){
           // ★ dealerId 강제 갱신 (다른 계정 데이터 혼입 방지) - fbPromises 전에 실행
@@ -2299,6 +2311,8 @@ function _subRequest(planKey){
 }
 
 function showApp(){
+  // Plan Guard 초기화
+  setTimeout(function(){ if(window._initPlanGuard) _initPlanGuard(); }, 2000);
   // idSupport 규칙 사전 캐시
   if(_db&&_CU&&_CU.dealerId){
     _db.collection('idSupport').where('dealerId','==',_CU.dealerId).get()
@@ -11304,6 +11318,328 @@ if(navigator.serviceWorker){
   });
 }
 
+
+// ════════════════════════════════════════════════════════
+// DONWAY Plan Guard — 악용 방지 시스템 v1.0
+// 슈퍼어드민 계정은 모든 체크 제외
+// ════════════════════════════════════════════════════════
+
+// 슈퍼어드민 여부
+function _isGuardExempt(){
+  return isSuperAdmin() || (SUPER_ADMIN_EMAILS.indexOf((_CU&&_CU.email)||'') >= 0);
+}
+
+// security_logs 기록 + 슈퍼어드민 FCM 알림
+function _guardLog(type, detail, severity){
+  if(_isGuardExempt()) return;
+  if(!_db||!_CU) return;
+  var did = _CU.dealerId||_CU.uid||'';
+  var email = _CU.email||'';
+  var log = {
+    dealerId: did, email: email,
+    type: type, detail: detail,
+    severity: severity||'warn',
+    at: new Date().toISOString()
+  };
+  _db.collection('security_logs').add(log).catch(function(){});
+  // 슈퍼어드민 FCM 알림
+  if(severity === 'critical' || severity === 'high'){
+    fetch('/fcm/notify-admin',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        title: '?? 이상 감지: '+type,
+        body: (email||did)+' — '+detail,
+        type: 'guard'
+      })
+    }).catch(function(){});
+  }
+}
+
+// IP 가져오기 (비동기, 캐싱)
+window._cachedIP = null;
+function _getClientIP(cb){
+  if(window._cachedIP){ cb(window._cachedIP); return; }
+  fetch('https://api.ipify.org?format=json')
+    .then(function(r){ return r.json(); })
+    .then(function(d){ window._cachedIP=d.ip; cb(d.ip); })
+    .catch(function(){ cb('unknown'); });
+}
+
+// ① 엑셀 기사 수 vs 구독 구간 초과 체크
+function _guardCheckDriverCount(parsedCount){
+  if(_isGuardExempt()) return true; // 통과
+  if(!_CU||!_db) return true;
+  var did = _CU.dealerId;
+  _db.collection('subscriptions').where('dealerId','==',did).where('status','==','active').limit(1).get()
+    .then(function(snap){
+      if(snap.empty) return;
+      var sub = snap.docs[0].data();
+      var allowedCap = (sub.headcount||10);
+      if(parsedCount > allowedCap){
+        var msg = '엑셀 기사수('+parsedCount+'명)가 구독 구간('+allowedCap+'명)을 초과합니다';
+        toast('?? '+msg, '#ef4444');
+        _guardLog('seat_exceed', msg, 'high');
+      }
+    }).catch(function(){});
+  return true;
+}
+window._guardCheckDriverCount = _guardCheckDriverCount;
+
+// ② 월별 고유 기사 누적 카운팅
+function _guardUpdateMonthlySeat(settlements, month){
+  if(_isGuardExempt()) return;
+  if(!_CU||!_db) return;
+  var did = _CU.dealerId;
+  var ids = [...new Set(settlements.map(function(s){ return s.userId||s.driver||''; }).filter(Boolean))];
+  var docId = did+'_'+month;
+  _db.collection('plan_guards').doc(docId).set({
+    dealerId:did, month:month, driverIds:ids, count:ids.length,
+    updatedAt:new Date().toISOString()
+  },{merge:true}).then(function(){
+    // 구독 구간과 비교
+    _db.collection('subscriptions').where('dealerId','==',did).where('status','==','active').limit(1).get()
+      .then(function(snap){
+        if(snap.empty) return;
+        var cap = snap.docs[0].data().headcount||10;
+        if(ids.length > cap){
+          _guardLog('monthly_seat_exceed',
+            month+' 월 실제 기사수('+ids.length+'명) > 구독('+cap+'명)', 'high');
+        }
+      });
+  }).catch(function(){});
+}
+window._guardUpdateMonthlySeat = _guardUpdateMonthlySeat;
+
+// ③ 동일 사업자번호 다계정 감지
+function _guardCheckBizDup(bizNum){
+  if(_isGuardExempt()) return;
+  if(!bizNum||!_db) return;
+  _db.collection('companies').where('bizNumber','==',bizNum).get()
+    .then(function(snap){
+      if(snap.size > 1){
+        _guardLog('biz_dup',
+          '사업자번호('+bizNum+') 다중계정 감지('+snap.size+'개)', 'critical');
+      }
+    }).catch(function(){});
+}
+window._guardCheckBizDup = _guardCheckBizDup;
+
+// ④ 라우트 수 급증 감지
+function _guardCheckRouteSpike(currentRoutes){
+  if(_isGuardExempt()) return;
+  if(!_CU||!_db) return;
+  var did = _CU.dealerId;
+  _db.collection('plan_guards').where('dealerId','==',did).orderBy('month','desc').limit(2).get()
+    .then(function(snap){
+      if(snap.size < 2) return;
+      var prev = snap.docs[1].data().routeCount||0;
+      if(prev > 0 && currentRoutes > prev*2){
+        _guardLog('route_spike',
+          '라우트 수 급증: 전월('+prev+') → 이월('+currentRoutes+')', 'high');
+      }
+    }).catch(function(){});
+}
+window._guardCheckRouteSpike = _guardCheckRouteSpike;
+
+// ⑤ 날짜 범위 이상 감지
+function _guardCheckDateRange(settlements){
+  if(_isGuardExempt()) return;
+  var dates = settlements.map(function(s){ return s.month||''; }).filter(Boolean);
+  var unique = [...new Set(dates)];
+  if(unique.length > 2){
+    _guardLog('date_range_anomaly',
+      '단일 업로드에 '+unique.length+'개월 데이터 포함: '+unique.join(', '), 'warn');
+  }
+}
+window._guardCheckDateRange = _guardCheckDateRange;
+
+// ⑥ 정산 총액 급증 감지
+function _guardCheckAmountSpike(settlements){
+  if(_isGuardExempt()) return;
+  if(!_CU||!_db) return;
+  var did = _CU.dealerId;
+  var totalAmt = settlements.reduce(function(s,x){ return s+(x.totalAmt||0); }, 0);
+  _db.collection('plan_guards').where('dealerId','==',did).orderBy('month','desc').limit(1).get()
+    .then(function(snap){
+      if(snap.empty) return;
+      var prev = snap.docs[0].data().totalAmt||0;
+      if(prev > 0 && totalAmt > prev*3){
+        _guardLog('amount_spike',
+          '정산총액 급증: 전월 ₩'+prev.toLocaleString()+' → 이월 ₩'+totalAmt.toLocaleString(), 'high');
+      }
+    }).catch(function(){});
+}
+window._guardCheckAmountSpike = _guardCheckAmountSpike;
+
+// ⑦⑧ IP + 디바이스 다계정 감지
+function _guardCheckIPDevice(){
+  if(_isGuardExempt()) return;
+  if(!_db||!_CU) return;
+  var did = _CU.dealerId;
+  _getClientIP(function(ip){
+    var fp = navigator.userAgent + (screen.width||0) + (screen.height||0) + navigator.language;
+    var fpHash = btoa(fp).slice(0,20);
+    _db.collection('security_logs')
+      .where('ip','==',ip).where('type','==','login')
+      .orderBy('at','desc').limit(10).get()
+      .then(function(snap){
+        var dealers = new Set();
+        snap.forEach(function(d){ dealers.add(d.data().dealerId||''); });
+        dealers.delete(did);
+        if(dealers.size >= 2){
+          _guardLog('ip_multiaccout',
+            'IP('+ip+') 에서 '+( dealers.size+1)+'개 회사 접속 감지', 'high');
+        }
+      }).catch(function(){});
+    // 로그인 기록
+    _db.collection('security_logs').add({
+      dealerId:did, email:_CU.email||'', type:'login',
+      ip:ip, fp:fpHash, at:new Date().toISOString(), severity:'info'
+    }).catch(function(){});
+  });
+}
+window._guardCheckIPDevice = _guardCheckIPDevice;
+
+// ⑨ 무료 체험 반복 시도 차단
+function _guardCheckTrialAbuse(bizNum, email){
+  if(_isGuardExempt()) return Promise.resolve(true);
+  if(!_db) return Promise.resolve(true);
+  return _db.collection('companies')
+    .where('bizNumber','==',bizNum).get()
+    .then(function(snap){
+      var tried = snap.docs.filter(function(d){
+        var st=d.data().planStatus||'';
+        return st==='trial'||st==='trial_expired';
+      });
+      if(tried.length > 0){
+        _guardLog('trial_abuse',
+          '사업자번호('+bizNum+') 무료체험 재시도 감지', 'critical');
+        return false;
+      }
+      return true;
+    }).catch(function(){ return true; });
+}
+window._guardCheckTrialAbuse = _guardCheckTrialAbuse;
+
+// ⑩ 불가능한 접속 패턴 (임포서블 트래블)
+function _guardCheckImpossibleTravel(){
+  if(_isGuardExempt()) return;
+  if(!_db||!_CU) return;
+  var did = _CU.dealerId;
+  _getClientIP(function(ip){
+    _db.collection('security_logs')
+      .where('dealerId','==',did).where('type','==','login')
+      .orderBy('at','desc').limit(1).get()
+      .then(function(snap){
+        if(snap.empty) return;
+        var last = snap.docs[0].data();
+        var lastIP = last.ip||'';
+        if(lastIP && lastIP !== ip && lastIP !== 'unknown'){
+          var lastAt = new Date(last.at).getTime();
+          var now = Date.now();
+          var diffMin = (now-lastAt)/60000;
+          if(diffMin < 30 && lastIP.split('.')[0] !== ip.split('.')[0]){
+            _guardLog('impossible_travel',
+              '다른 IP 빠른 접속: '+lastIP+' → '+ip+' ('+Math.round(diffMin)+'분)', 'warn');
+          }
+        }
+      }).catch(function(){});
+  });
+}
+window._guardCheckImpossibleTravel = _guardCheckImpossibleTravel;
+
+// ⑪ 전체초기화 반복 감지
+function _guardLogReset(){
+  if(_isGuardExempt()) return;
+  if(!_db||!_CU) return;
+  var did = _CU.dealerId;
+  var today = new Date().toISOString().slice(0,10);
+  _db.collection('security_logs')
+    .where('dealerId','==',did).where('type','==','reset')
+    .where('at','>=',today).get()
+    .then(function(snap){
+      var cnt = snap.size;
+      _guardLog('reset', '전체초기화 실행 ('+오늘+' '+cnt+'번째)', cnt>=2?'high':'warn');
+    }).catch(function(){
+      _guardLog('reset', '전체초기화 실행', 'warn');
+    });
+}
+window._guardLogReset = _guardLogReset;
+
+// ⑫ 월 데이터 반복 삭제 감지
+function _guardLogMonthDelete(month){
+  if(_isGuardExempt()) return;
+  if(!_db||!_CU) return;
+  var did = _CU.dealerId;
+  var today = new Date().toISOString().slice(0,7);
+  _db.collection('security_logs')
+    .where('dealerId','==',did).where('type','==','month_delete')
+    .where('month','==',month).get()
+    .then(function(snap){
+      var cnt = snap.size;
+      _guardLog('month_delete', month+' 월 삭제 ('+(cnt+1)+'번째)', cnt>=1?'high':'warn');
+      // plan_guard에도 기록
+      _db.collection('plan_guard_alerts').add({
+        dealerId:did, type:'month_delete_repeat', month:month, count:cnt+1,
+        at:new Date().toISOString()
+      }).catch(function(){});
+    }).catch(function(){
+      _guardLog('month_delete', month+' 월 삭제', 'warn');
+    });
+}
+window._guardLogMonthDelete = _guardLogMonthDelete;
+
+// ⑬ 업로드 후 즉시 삭제 감지
+var _guardLastUploadAt = null;
+function _guardMarkUpload(){ _guardLastUploadAt = Date.now(); }
+function _guardCheckQuickDelete(month){
+  if(_isGuardExempt()) return;
+  if(_guardLastUploadAt){
+    var diffMin = (Date.now()-_guardLastUploadAt)/60000;
+    if(diffMin < 10){
+      _guardLog('quick_delete',
+        '업로드 '+Math.round(diffMin)+'분 후 '+month+' 삭제', 'high');
+    }
+  }
+}
+window._guardMarkUpload = _guardMarkUpload;
+window._guardCheckQuickDelete = _guardCheckQuickDelete;
+
+// ⑭ 정산 금액 수동 수정 이력 추적
+function _guardLogManualEdit(driverId, field, before, after){
+  if(_isGuardExempt()) return;
+  var diff = Math.abs((after||0)-(before||0));
+  var pct = before>0 ? Math.round(diff/before*100) : 0;
+  if(pct > 20){
+    _guardLog('manual_edit',
+      driverId+' '+field+' 수동수정: ₩'+before.toLocaleString()+' → ₩'+after.toLocaleString()+' ('+pct+'%)', 
+      pct>50?'high':'warn');
+  }
+}
+window._guardLogManualEdit = _guardLogManualEdit;
+
+// ⑮ 기사 대량 등록/삭제 패턴 감지
+function _guardCheckDriverFluctuation(newCount, prevCount){
+  if(_isGuardExempt()) return;
+  if(!prevCount || prevCount < 3) return;
+  var change = Math.abs(newCount-prevCount)/prevCount;
+  if(change > 0.5){
+    _guardLog('driver_fluctuation',
+      '기사수 급변: '+prevCount+'명 → '+newCount+'명 ('+Math.round(change*100)+'%변동)', 
+      change>0.8?'high':'warn');
+  }
+}
+window._guardCheckDriverFluctuation = _guardCheckDriverFluctuation;
+
+// 전체 가드 초기 실행 (로그인 후)
+function _initPlanGuard(){
+  if(_isGuardExempt()) return;
+  _guardCheckIPDevice();
+  _guardCheckImpossibleTravel();
+  if(_CU&&_CU.bizNumber) _guardCheckBizDup(_CU.bizNumber);
+}
+window._initPlanGuard = _initPlanGuard;
+
 function _openAdvanceModal(dateStr){
   var mo=document.createElement('div');mo.className='mo show';mo.id='mo-advance';
   mo.onclick=function(e){if(e.target===mo)mo.remove();};
@@ -13590,6 +13926,7 @@ function filterSettleC(cc){
 // ══ 월별 정산서 삭제 ══
 function deleteMonthSettlements(month){
   if(!month){toast('❌ 월 정보 없음');return;}
+  if(window._guardLogMonthDelete){ _guardCheckQuickDelete(month); _guardLogMonthDelete(month); }
   if(!confirm('⚠️ '+month+' 정산서를 전부 삭제하시겠습니까?\n\n삭제 후 되돌릴 수 없습니다.'))return;
   var did=_CU&&_CU.dealerId;
   if(!_db||!did){toast('❌ 로그인 정보 없음');return;}
