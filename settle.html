@@ -365,6 +365,8 @@ document.addEventListener('DOMContentLoaded',function(){
 <input type="file" id="excel-input" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style="display:none">
 
 <script>
+var SUPER_ADMIN_EMAILS = ['kimdh4790@gmail.com','soungkyekim@naver.com'];
+var SUPER_ADMIN_EMAIL  = SUPER_ADMIN_EMAILS[0];
 // ██ 유틸 ██
 function fmt(n){return Math.round(n||0).toLocaleString('ko-KR');}
 function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
@@ -391,8 +393,6 @@ var G_PRICES = Object.assign({}, DEFAULT_UNIT_PRICES);
 
 // ── 슈퍼어드민 이메일 (최상단 선언 필수 - showApp보다 먼저 평가)
 // 슈퍼어드민 이메일 (Firestore admins 컬렉션 마이그레이션 전 임시 유지)
-var SUPER_ADMIN_EMAILS = ['kimdh4790@gmail.com','soungkyekim@naver.com'];
-var SUPER_ADMIN_EMAIL  = SUPER_ADMIN_EMAILS[0];
 var _SUPER_ADMIN_CACHE = null;
 
 // ════════════════════════════════════════════════════════
