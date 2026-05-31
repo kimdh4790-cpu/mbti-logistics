@@ -1787,6 +1787,23 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                 fs.etcMinus=(fs.etcMinus||0)+tot;
                 var prevM=fs.etcMinusReason||'';
                 fs.etcMinusReason=(prevM?prevM+' / ':'')+'지원차감('+toId+') '+pts.join('·');
+                // ★ routeDetails 건수도 차감
+                if(fs.routeDetails&&fs.routeDetails.length){
+                  Object.keys(fd.dateRoutes).forEach(function(dt){
+                    if(tD.length&&tD.indexOf(dt)<0)return;
+                    Object.keys(fd.dateRoutes[dt]).forEach(function(rt){
+                      if(tR.length&&tR.indexOf(rt)<0)return;
+                      var rd=fd.dateRoutes[dt][rt];
+                      var rdIdx=fs.routeDetails.findIndex(function(r){return r.route===rt;});
+                      if(rdIdx<0)return;
+                      fs.routeDetails[rdIdx].cnt=Math.max(0,(fs.routeDetails[rdIdx].cnt||0)-(rd.cnt||0));
+                      fs.routeDetails[rdIdx].ret=Math.max(0,(fs.routeDetails[rdIdx].ret||0)-(rd.ret||0));
+                    });
+                  });
+                  // dcnt/rcnt 재계산
+                  fs.dcnt=fs.routeDetails.reduce(function(s,r){return s+(r.cnt||0);},0);
+                  fs.rcnt=fs.routeDetails.reduce(function(s,r){return s+(r.ret||0);},0);
+                }
               }
             });
           }
