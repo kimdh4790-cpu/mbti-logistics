@@ -2340,7 +2340,7 @@ function showApp(){
             document.getElementById('app').style.display='none';
             var body=document.body;
             body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f0f4f8">'
-              +'<div style="text-align:center;padding:40px;background:#fff;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.1);max-width:360px">'
+              +'<div style="text-align:center;padding:40px;background:var(--bg);border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.1);max-width:360px">'
               +'<div style="font-size:48px;margin-bottom:12px">🔒</div>'
               +'<div style="font-size:18px;font-weight:800;margin-bottom:8px">구독이 만료되었습니다</div>'
               +'<div style="font-size:13px;color:#718096;margin-bottom:20px">'
@@ -2945,41 +2945,41 @@ function _renderExpenseRegView(dealerId){
 
       // 이름
       +'<div style="margin-bottom:12px">'
-      +'<label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:4px">👤 이름 *</label>'
+      +'<label style="font-size:12px;font-weight:700;color:var(--text);display:block;margin-bottom:4px">👤 이름 *</label>'
       +'<input id="exp-name" type="text" placeholder="이름 입력" style="width:100%;padding:10px;border:1.5px solid #d1d5db;border-radius:8px;font-size:14px;box-sizing:border-box">'
       +'</div>'
 
       // 날짜
       +'<div style="margin-bottom:12px">'
-      +'<label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:4px">📅 날짜 *</label>'
+      +'<label style="font-size:12px;font-weight:700;color:var(--text);display:block;margin-bottom:4px">📅 날짜 *</label>'
       +'<input id="exp-date" type="date" value="'+new Date().toISOString().slice(0,10)+'" style="width:100%;padding:10px;border:1.5px solid #d1d5db;border-radius:8px;font-size:14px;box-sizing:border-box">'
       +'</div>'
 
       // 상호명
       +'<div style="margin-bottom:12px">'
-      +'<label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:4px">🏪 상호명 *</label>'
+      +'<label style="font-size:12px;font-weight:700;color:var(--text);display:block;margin-bottom:4px">🏪 상호명 *</label>'
       +'<input id="exp-vendor" type="text" placeholder="ex) 세븐일레븐, GS25, 주유소명" style="width:100%;padding:10px;border:1.5px solid #d1d5db;border-radius:8px;font-size:14px;box-sizing:border-box">'
       +'</div>'
 
       // 금액
       +'<div style="margin-bottom:12px">'
-      +'<label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:4px">💰 금액 *</label>'
+      +'<label style="font-size:12px;font-weight:700;color:var(--text);display:block;margin-bottom:4px">💰 금액 *</label>'
       +'<input id="exp-amount" type="number" placeholder="0" style="width:100%;padding:10px;border:1.5px solid #d1d5db;border-radius:8px;font-size:14px;box-sizing:border-box">'
       +'</div>'
 
       // 분류
       +'<div style="margin-bottom:12px">'
-      +'<label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:4px">📂 분류</label>'
+      +'<label style="font-size:12px;font-weight:700;color:var(--text);display:block;margin-bottom:4px">📂 분류</label>'
       +'<div style="display:flex;flex-wrap:wrap;gap:6px">'
       +Object.entries(CATS).map(function(e){
-        return '<button onclick="_expCatSelect(this)" data-cat="'+e[0]+'" style="padding:6px 12px;border:1.5px solid #d1d5db;border-radius:20px;background:#f9fafb;font-size:12px;cursor:pointer">'+e[1]+' '+e[0]+'</button>';
+        return '<button onclick="_expCatSelect(this)" data-cat="'+e[0]+'" style="padding:6px 12px;border:1.5px solid #d1d5db;border-radius:20px;background:var(--bg2);font-size:12px;cursor:pointer">'+e[1]+' '+e[0]+'</button>';
       }).join('')
       +'</div>'
       +'</div>'
 
       // 메모
       +'<div style="margin-bottom:20px">'
-      +'<label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:4px">📝 메모</label>'
+      +'<label style="font-size:12px;font-weight:700;color:var(--text);display:block;margin-bottom:4px">📝 메모</label>'
       +'<input id="exp-memo" type="text" placeholder="간단한 메모 (선택)" style="width:100%;padding:10px;border:1.5px solid #d1d5db;border-radius:8px;font-size:14px;box-sizing:border-box">'
       +'</div>'
 
@@ -3112,7 +3112,7 @@ function _renderTaxShareView(token){
     }
 
     // ── 기사별 명세서 테이블 ──
-    html+='<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:16px">'
+    html+='<div style="background:var(--bg);border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:16px">'
       +'<div style="padding:12px 16px;border-bottom:1px solid #e2e8f0;font-weight:700;font-size:13px">📋 기사별 명세서</div>'
       +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'
       +'<thead><tr style="background:#f8fafc">'
@@ -3156,7 +3156,7 @@ function _renderTaxShareView(token){
     // 경비 내역
     var expenses=d.expenses||[];
     if(expenses.length){
-      html+='<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:16px">'
+      html+='<div style="background:var(--bg);border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:16px">'
         +'<div style="padding:12px 16px;border-bottom:1px solid #e2e8f0;font-weight:700;font-size:13px">💸 경비 내역</div>'
         +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'
         +'<thead><tr style="background:#f8fafc"><th style="padding:8px 12px;text-align:left">날짜</th><th style="padding:8px;text-align:left">상호</th><th style="padding:8px;text-align:left">분류</th><th style="padding:8px;text-align:right">금액</th><th style="padding:8px;text-align:left">메모</th></tr></thead><tbody>';
@@ -3198,7 +3198,7 @@ function _renderTaxShareView(token){
             :'<div style="height:100px;display:flex;align-items:center;justify-content:center;font-size:32px;background:#f8f9fa">📄</div>')
           +'<div style="padding:8px">'
             +'<div style="font-size:10px;font-weight:800;color:#0891b2">'+label+'</div>'
-            +'<div style="font-size:11px;color:#374151;margin-top:2px">'+((dv.memo||dv.desc||'').slice(0,30))+'</div>'
+            +'<div style="font-size:11px;color:var(--text);margin-top:2px">'+((dv.memo||dv.desc||'').slice(0,30))+'</div>'
             +(dv.amount?'<div style="font-size:11px;font-weight:700;color:#7c3aed;margin-top:2px">₩'+Number(dv.amount).toLocaleString()+'</div>':'')
             +(dv.fileUrl
               ?'<a href="'+dv.fileUrl+'" download="'+label+'_'+(dv.fileName||'파일')+'" style="display:block;margin-top:6px;font-size:10px;background:#185FA5;color:#fff;padding:5px;border-radius:4px;text-align:center;text-decoration:none">⬇ 다운로드</a>'
@@ -3224,7 +3224,7 @@ function _renderTaxShareView(token){
 }
 
 function _txsCard(label,val,color){
-  return '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px">'
+  return '<div style="background:var(--bg);border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px">'
     +'<div style="font-size:10px;color:#64748b;margin-bottom:4px">'+label+'</div>'
     +'<div style="font-size:16px;font-weight:800;color:'+color+'">'+val+'</div></div>';
 }
@@ -4048,7 +4048,7 @@ function _renderRosterTable(drivers,rosterData,weekDays,dNames,fmt){
       html+='<div style="text-align:center;min-width:52px;padding:4px 6px;background:var(--bg);border-radius:6px;border:1px solid var(--border)">'
         +'<div style="font-size:10px;font-weight:700;color:'+col2+'">'+fmt(d)+'('+dNames[i]+')</div>'
         +'<div style="font-size:11px;color:#059669;font-weight:800">출근:'+dayTotal[i].work+'</div>'
-        +'<div style="font-size:11px;color:#6b7280;font-weight:600">유무:'+dayTotal[i].off+'</div>'
+        +'<div style="font-size:11px;color:var(--text3);font-weight:600">유무:'+dayTotal[i].off+'</div>'
         +'</div>';
     });
     html+='</div>';
@@ -4673,7 +4673,7 @@ function _attRenderGuide(){
   var checkinUrl=base+'/checkin?did='+did+'&name='+enc;
   var visitorUrl=base+'/visitor?did='+did+'&name='+enc;
 
-  area.innerHTML='<div class="card">'    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'    +'<div class="card-title" style="margin-bottom:0">📄 직원 안내문</div>'    +'<button onclick="_attPrintGuide()" class="btn btn-blue" style="font-size:12px">🖨 인쇄 / PDF 저장</button>'    +'</div>'    +'<div id="guide-preview" style="background:#fff;color:#111;padding:24px;border-radius:10px;font-family:sans-serif;font-size:13px;line-height:1.7">'    +'<div style="text-align:center;margin-bottom:20px">'    +'<div style="font-size:20px;font-weight:900;letter-spacing:-0.5px">'+name+' DONWAY 출퇴근 안내</div>'    +'<div style="font-size:12px;color:#666;margin-top:4px">아래 방법으로 출퇴근을 기록해주세요</div>'    +'</div>'    +'<hr style="border:none;border-top:2px solid #e5e7eb;margin:16px 0">'    +'<div style="margin-bottom:20px">'    +'<div style="font-size:15px;font-weight:800;margin-bottom:8px">📱 방법 1 — QR 코드 스캔 (추천)</div>'    +'<ol style="padding-left:20px;color:#374151">'    +'<li>입구 화면의 <b>직원 QR 코드</b>에 휴대폰 카메라를 가져다 대세요</li>'    +'<li>자동으로 체크인 페이지가 열립니다</li>'    +'<li><b>직원 ID</b>를 입력하고 <b>출퇴근 기록</b> 버튼을 누르세요</li>'    +'</ol>'    +'</div>'    +'<div style="margin-bottom:20px">'    +'<div style="font-size:15px;font-weight:800;margin-bottom:8px">🔢 방법 2 — 6자리 코드 입력 (카메라 불가 시)</div>'    +'<ol style="padding-left:20px;color:#374151">'    +'<li>아래 URL을 브라우저에서 여세요 (북마크 권장)</li>'    +'<li style="word-break:break-all"><b>'+checkinUrl+'</b></li>'    +'<li><b>코드 입력</b> 탭을 선택하세요</li>'    +'<li>입구 화면의 <b>6자리 숫자</b>를 입력하세요 (30초마다 바뀜)</li>'    +'<li><b>직원 ID</b>를 입력하고 <b>출퇴근 기록</b> 버튼을 누르세요</li>'    +'</ol>'    +'</div>'    +'<hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0">'    +'<div style="background:#fef9c3;padding:12px;border-radius:8px;font-size:12px;color:#713f12">'    +'⚠️ QR코드는 <b>30초마다 자동 갱신</b>됩니다. 화면을 캡처해도 30초 후 무효화됩니다.<br>'    +'출퇴근 기록은 매일 자동으로 저장되며, 담당자가 settle.html에서 확인할 수 있습니다.'    +'</div>'    +'</div>'    +'</div>'    +'<div class="card" style="margin-top:12px">'    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'    +'<div class="card-title" style="margin-bottom:0">📄 방문자 안내문</div>'    +'<button onclick="_attPrintVisitorGuide()" class="btn btn-blue" style="font-size:12px">🖨 인쇄 / PDF 저장</button>'    +'</div>'    +'<div id="visitor-guide-preview" style="background:#fff;color:#111;padding:24px;border-radius:10px;font-family:sans-serif;font-size:13px;line-height:1.7">'    +'<div style="text-align:center;margin-bottom:20px">'    +'<div style="font-size:20px;font-weight:900">'+name+' 방문자 등록 안내</div>'    +'<div style="font-size:12px;color:#666;margin-top:4px">방문하신 모든 분께 등록을 부탁드립니다</div>'    +'</div>'    +'<hr style="border:none;border-top:2px solid #e5e7eb;margin:16px 0">'    +'<div style="margin-bottom:20px">'    +'<div style="font-size:15px;font-weight:800;margin-bottom:8px">📱 방법 1 — QR 코드 스캔</div>'    +'<ol style="padding-left:20px;color:#374151">'    +'<li>입구 화면 오른쪽의 <b>방문자 QR 코드</b>를 스캔하세요</li>'    +'<li>신분증(주민등록증/운전면허증) 사진을 첨부해주세요</li>'    +'<li>연락처와 방문 목적을 입력하고 <b>등록 완료</b>를 누르세요</li>'    +'</ol>'    +'</div>'    +'<div style="margin-bottom:20px">'    +'<div style="font-size:15px;font-weight:800;margin-bottom:8px">🔢 방법 2 — 직접 접속</div>'    +'<ol style="padding-left:20px;color:#374151">'    +'<li>아래 URL을 브라우저에서 여세요</li>'    +'<li style="word-break:break-all"><b>'+visitorUrl+'</b></li>'    +'<li>화면의 <b>6자리 숫자</b>를 입력해 현장 인증을 완료하세요</li>'    +'<li>신분증 촬영 후 방문 정보를 입력하세요</li>'    +'</ol>'    +'</div>'    +'<hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0">'    +'<div style="background:#fef9c3;padding:12px;border-radius:8px;font-size:12px;color:#713f12">'    +'📋 수집된 개인정보는 방문자 신원 확인 목적으로만 사용되며 30일 후 자동 삭제됩니다.'    +'</div>'    +'</div>'    +'</div>';
+  area.innerHTML='<div class="card">'    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'    +'<div class="card-title" style="margin-bottom:0">📄 직원 안내문</div>'    +'<button onclick="_attPrintGuide()" class="btn btn-blue" style="font-size:12px">🖨 인쇄 / PDF 저장</button>'    +'</div>'    +'<div id="guide-preview" style="background:var(--bg);color:#111;padding:24px;border-radius:10px;font-family:sans-serif;font-size:13px;line-height:1.7">'    +'<div style="text-align:center;margin-bottom:20px">'    +'<div style="font-size:20px;font-weight:900;letter-spacing:-0.5px">'+name+' DONWAY 출퇴근 안내</div>'    +'<div style="font-size:12px;color:#666;margin-top:4px">아래 방법으로 출퇴근을 기록해주세요</div>'    +'</div>'    +'<hr style="border:none;border-top:2px solid #e5e7eb;margin:16px 0">'    +'<div style="margin-bottom:20px">'    +'<div style="font-size:15px;font-weight:800;margin-bottom:8px">📱 방법 1 — QR 코드 스캔 (추천)</div>'    +'<ol style="padding-left:20px;color:var(--text)">'    +'<li>입구 화면의 <b>직원 QR 코드</b>에 휴대폰 카메라를 가져다 대세요</li>'    +'<li>자동으로 체크인 페이지가 열립니다</li>'    +'<li><b>직원 ID</b>를 입력하고 <b>출퇴근 기록</b> 버튼을 누르세요</li>'    +'</ol>'    +'</div>'    +'<div style="margin-bottom:20px">'    +'<div style="font-size:15px;font-weight:800;margin-bottom:8px">🔢 방법 2 — 6자리 코드 입력 (카메라 불가 시)</div>'    +'<ol style="padding-left:20px;color:var(--text)">'    +'<li>아래 URL을 브라우저에서 여세요 (북마크 권장)</li>'    +'<li style="word-break:break-all"><b>'+checkinUrl+'</b></li>'    +'<li><b>코드 입력</b> 탭을 선택하세요</li>'    +'<li>입구 화면의 <b>6자리 숫자</b>를 입력하세요 (30초마다 바뀜)</li>'    +'<li><b>직원 ID</b>를 입력하고 <b>출퇴근 기록</b> 버튼을 누르세요</li>'    +'</ol>'    +'</div>'    +'<hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0">'    +'<div style="background:#fef9c3;padding:12px;border-radius:8px;font-size:12px;color:#713f12">'    +'⚠️ QR코드는 <b>30초마다 자동 갱신</b>됩니다. 화면을 캡처해도 30초 후 무효화됩니다.<br>'    +'출퇴근 기록은 매일 자동으로 저장되며, 담당자가 settle.html에서 확인할 수 있습니다.'    +'</div>'    +'</div>'    +'</div>'    +'<div class="card" style="margin-top:12px">'    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'    +'<div class="card-title" style="margin-bottom:0">📄 방문자 안내문</div>'    +'<button onclick="_attPrintVisitorGuide()" class="btn btn-blue" style="font-size:12px">🖨 인쇄 / PDF 저장</button>'    +'</div>'    +'<div id="visitor-guide-preview" style="background:var(--bg);color:#111;padding:24px;border-radius:10px;font-family:sans-serif;font-size:13px;line-height:1.7">'    +'<div style="text-align:center;margin-bottom:20px">'    +'<div style="font-size:20px;font-weight:900">'+name+' 방문자 등록 안내</div>'    +'<div style="font-size:12px;color:#666;margin-top:4px">방문하신 모든 분께 등록을 부탁드립니다</div>'    +'</div>'    +'<hr style="border:none;border-top:2px solid #e5e7eb;margin:16px 0">'    +'<div style="margin-bottom:20px">'    +'<div style="font-size:15px;font-weight:800;margin-bottom:8px">📱 방법 1 — QR 코드 스캔</div>'    +'<ol style="padding-left:20px;color:var(--text)">'    +'<li>입구 화면 오른쪽의 <b>방문자 QR 코드</b>를 스캔하세요</li>'    +'<li>신분증(주민등록증/운전면허증) 사진을 첨부해주세요</li>'    +'<li>연락처와 방문 목적을 입력하고 <b>등록 완료</b>를 누르세요</li>'    +'</ol>'    +'</div>'    +'<div style="margin-bottom:20px">'    +'<div style="font-size:15px;font-weight:800;margin-bottom:8px">🔢 방법 2 — 직접 접속</div>'    +'<ol style="padding-left:20px;color:var(--text)">'    +'<li>아래 URL을 브라우저에서 여세요</li>'    +'<li style="word-break:break-all"><b>'+visitorUrl+'</b></li>'    +'<li>화면의 <b>6자리 숫자</b>를 입력해 현장 인증을 완료하세요</li>'    +'<li>신분증 촬영 후 방문 정보를 입력하세요</li>'    +'</ol>'    +'</div>'    +'<hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0">'    +'<div style="background:#fef9c3;padding:12px;border-radius:8px;font-size:12px;color:#713f12">'    +'📋 수집된 개인정보는 방문자 신원 확인 목적으로만 사용되며 30일 후 자동 삭제됩니다.'    +'</div>'    +'</div>'    +'</div>';
 }
 function _attPrintGuide(){
   var content=document.getElementById('guide-preview').innerHTML;
@@ -4704,7 +4704,7 @@ function _attRenderSim(){
     +'<div style="flex:1;min-width:280px;background:var(--bg3);border-radius:12px;padding:14px">'
     +'<div style="font-size:13px;font-weight:800;margin-bottom:10px;color:#3b82f6">📺 관리자 (QR 생성)</div>'
     +'<div id="sim-admin-qr" style="text-align:center;margin-bottom:10px">'
-    +'<div id="sim-qr-box" style="display:inline-block;background:#fff;padding:10px;border-radius:10px"></div>'
+    +'<div id="sim-qr-box" style="display:inline-block;background:var(--bg);padding:10px;border-radius:10px"></div>'
     +'<div id="sim-qr-info" style="font-size:10px;color:var(--text3);margin-top:6px"></div>'
     +'</div>'
     +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
@@ -6163,7 +6163,7 @@ function _dwRenderSimulator(){
           +'<div style="width:10px;height:10px;border-radius:50%;background:#ffbd2e"></div>'
           +'<div style="width:10px;height:10px;border-radius:50%;background:#27c93f"></div>'
           +'<span style="font-size:11px;color:#8b949e;margin-left:8px">donway-engine — 실시간 정산 스트림</span>'
-          +'<span id="dw-progress" style="font-size:10px;color:#6b7280;margin-left:auto"></span>'
+          +'<span id="dw-progress" style="font-size:10px;color:var(--text3);margin-left:auto"></span>'
         +'</div>'
         +'<div id="dw-sim-console" style="max-height:280px;overflow-y:auto">'
           +'<div style="padding:20px;text-align:center;color:#8b949e;font-size:12px">📂 먼저 [1단계: 엑셀 로드] 버튼을 눌러주세요</div>'
@@ -6197,7 +6197,7 @@ function _dwRenderSimulator(){
     +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
       +'<span style="font-size:10px;background:#dcfce7;color:#166534;padding:2px 8px;border-radius:20px">📥 보전 = 대리점→기사</span>'
       +'<span style="font-size:10px;background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:20px">📤 환수 = 기사→대리점</span>'
-      +'<span style="font-size:10px;background:#f3f4f6;color:#6b7280;padding:2px 8px;border-radius:20px">🌙 심야 = 계산 제외</span>'
+      +'<span style="font-size:10px;background:#f3f4f6;color:var(--text3);padding:2px 8px;border-radius:20px">🌙 심야 = 계산 제외</span>'
       +'<span style="font-size:10px;background:#fff7ed;color:#9a3412;padding:2px 8px;border-radius:20px">☔ 이벤트 = 트랙+추가단가</span>'
       +'<span style="font-size:10px;background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:20px">⬆ 트랙점프 = 보장단가 상승</span>'
     +'</div>';
@@ -6719,7 +6719,7 @@ window.dwRunLiveCalculations=function(){
         else if(_inj>0){badge='<span style="font-size:11px;background:#065f46;color:#6ee7b7;padding:2px 9px;border-radius:10px;font-weight:700">📥+₩'+_inj.toLocaleString()+'</span>';rowBg='rgba(16,185,129,.07)';}
         else if(_ext>0){badge='<span style="font-size:11px;background:#881337;color:#fda4af;padding:2px 9px;border-radius:10px;font-weight:700">📤-₩'+_ext.toLocaleString()+'</span>';rowBg='rgba(244,63,94,.07)';}
         else badge='<span style="font-size:10px;color:#6b7280">⚖️</span>';
-        var evBadge=o.event&&o.event.price>0?'<span style="font-size:10px;color:'+(o.event.color||'#fb923c')+';font-weight:700">'+o.event.name+'</span>':'<span style="font-size:10px;color:#374151">—</span>';
+        var evBadge=o.event&&o.event.price>0?'<span style="font-size:10px;color:'+(o.event.color||'#fb923c')+';font-weight:700">'+o.event.name+'</span>':'<span style="font-size:10px;color:var(--text)">—</span>';
         var finalT2=tp+(o.event&&o.event.price||0);
         var row=document.createElement('div');
         row.style.cssText='display:grid;grid-template-columns:32px 70px 80px 90px 80px 1fr;gap:0;padding:3px 14px;border-bottom:1px solid #21262d;align-items:center;background:'+rowBg+';font-family:monospace;font-size:11px';
@@ -6799,7 +6799,7 @@ window.dwRunLiveCalculations=function(){
   sep.textContent='> 2단계 정산 연산 시작 ─ 건별 보전/환수 판정 스트리밍...';
   con.appendChild(sep);
   var hdr=document.createElement('div');
-  hdr.style.cssText='display:grid;grid-template-columns:32px 80px 80px 100px 80px 1fr;gap:0;padding:5px 14px;font-size:10px;color:#6b7280;border-bottom:1px solid #30363d;font-family:monospace';
+  hdr.style.cssText='display:grid;grid-template-columns:32px 80px 80px 100px 80px 1fr;gap:0;padding:5px 14px;font-size:10px;color:var(--text3);border-bottom:1px solid #30363d;font-family:monospace';
   hdr.innerHTML='<span>#</span><span>구역</span><span>플랫폼단가</span><span>이벤트</span><span>목표단가</span><span style="text-align:right">판정</span>';
   con.appendChild(hdr);
 
@@ -6862,7 +6862,7 @@ window.dwRunLiveCalculations=function(){
     if(tp!==_prevTrack&&_prevTrack>0){
       var al=document.getElementById('dw-track-alert');
       if(al){
-        al.style.cssText='display:block;padding:8px 14px;border-radius:8px;margin-bottom:6px;text-align:center;font-weight:800;font-size:12px;font-family:sans-serif;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#78350f';
+        al.style.cssText='display:block;padding:8px 14px;border-radius:8px;margin-bottom:6px;text-align:center;font-weight:800;font-size:12px;font-family:sans-serif;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:var(--amber)';
         al.textContent='🚀 트랙 점프! '+_validCnt+'건 → 보장단가 ₩'+_prevTrack.toLocaleString()+' → ₩'+tp.toLocaleString()+'';
         setTimeout(function(){if(al)al.style.display='none';},2500);
       }
@@ -6887,7 +6887,7 @@ window.dwRunLiveCalculations=function(){
     }
     var evBadge=o.event&&o.event.price>0
       ?'<span style="font-size:10px;color:'+(o.event.color||'#fb923c')+';font-weight:700">'+o.event.name+' +'+o.event.price+'</span>'
-      :'<span style="font-size:10px;color:#374151">—</span>';
+      :'<span style="font-size:10px;color:var(--text)">—</span>';
 
     // 행 추가
     var row=document.createElement('div');
@@ -7344,7 +7344,7 @@ window._dwShowStatement=function(idx){
           +'<th style="padding:6px 8px;text-align:right;color:#b45309">보전(투입)</th>'
           +'<th style="padding:6px 8px;text-align:right;color:#047857">환수(차감)</th>'
         +'</tr></thead><tbody>'+slotRows+'</tbody>'
-        +'<tfoot><tr style="background:#f9fafb;font-weight:700">'
+        +'<tfoot><tr style="background:var(--bg2);font-weight:700">'
           +'<td style="padding:6px 8px">합계</td>'
           +'<td style="padding:6px 8px;text-align:center">'+r.totalCount+'건</td>'
           +'<td style="padding:6px 8px;text-align:right">₩'+r.pfSum.toLocaleString()+'</td>'
@@ -7353,7 +7353,7 @@ window._dwShowStatement=function(idx){
         +'</tr></tfoot>'
       +'</table>'
       // 공제/지급 내역
-      +'<div style="background:#f8fafc;border-radius:8px;padding:10px">'
+      +'<div style="background:var(--bg2);border-radius:8px;padding:10px">'
         +'<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:#6b7280">플랫폼 수령 합계</span><span>₩'+r.pfSum.toLocaleString()+'</span></div>'
         +'<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:#b45309">대리점 보전(투입)</span><span style="color:#b45309">'+(r.injected?'+₩'+r.injected.toLocaleString():'₩0')+'</span></div>'
         +'<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:#047857">대리점 환수(차감)</span><span style="color:#047857">'+(r.extracted?'-₩'+r.extracted.toLocaleString():'₩0')+'</span></div>'
@@ -7936,7 +7936,7 @@ function _dwAdminLiveView(el){
             +(poolBalance>=0
               ?'<div style="position:absolute;left:50%;width:'+Math.min(riskScore/2,50)+'%;height:100%;background:#059669;border-radius:0 6px 6px 0;top:0;transition:width .5s"></div>'
               :'<div style="position:absolute;right:50%;width:'+Math.min(Math.abs(poolBalance)/Math.max(totInj,1)*50,50)+'%;height:100%;background:#ef4444;border-radius:6px 0 0 6px;top:0;transition:width .5s"></div>')
-            +'<div style="position:absolute;left:50%;width:1px;height:16px;top:-2px;background:#fff;opacity:.6"></div>'
+            +'<div style="position:absolute;left:50%;width:1px;height:16px;top:-2px;background:var(--bg);opacity:.6"></div>'
           +'</div>'
           +'<div style="display:flex;justify-content:space-between;font-size:9px;opacity:.5;margin-top:3px"><span>적자 ←</span><span>0</span><span>→ 흑자</span></div>'
         +'</div>'
@@ -9856,7 +9856,7 @@ function pageHome(){
 
     // ★ 직원 가입 QR 위젯
     +'<div style="background:linear-gradient(135deg,#0f2744,#1e3a5f);border:1px solid rgba(0,200,248,.25);border-radius:16px;padding:18px 20px;margin-bottom:18px;display:flex;align-items:center;gap:20px;flex-wrap:wrap">'
-    +'<div style="flex-shrink:0;background:#fff;border-radius:10px;padding:8px;width:100px;height:100px;display:flex;align-items:center;justify-content:center"><div id="home-qr-box" style="width:84px;height:84px"></div></div>'
+    +'<div style="flex-shrink:0;background:var(--bg);border-radius:10px;padding:8px;width:100px;height:100px;display:flex;align-items:center;justify-content:center"><div id="home-qr-box" style="width:84px;height:84px"></div></div>'
     +'<div style="flex:1;min-width:180px">'
     +'<div style="font-size:14px;font-weight:800;color:#fff;margin-bottom:4px">📱 직원 가입 QR</div>'
     +'<div style="font-size:11px;color:#94a3b8;margin-bottom:10px">스캔 → 이름·연락처·비번 → 가입 완료<br>앱 설치 시 명세서·알림 자동 수신</div>'
@@ -11794,7 +11794,7 @@ function _attRenderQR(){
       +'<div class="card" style="flex:1;min-width:280px;text-align:center">'
       +'<div class="card-title" style="margin-bottom:4px">⚡ 동적 QR (보안 권장)</div>'
       +'<div style="font-size:11px;color:var(--text3);margin-bottom:6px">5분마다 자동 갱신 — 사진 캡처 재사용 불가</div>'
-      +'<div id="att-qr-box" style="display:inline-block;padding:14px;background:#fff;border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,.12)"></div>'
+      +'<div id="att-qr-box" style="display:inline-block;padding:14px;background:var(--bg);border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,.12)"></div>'
       +'<div id="att-qr-timer" style="margin-top:8px;font-size:14px;color:var(--brand);font-weight:800"></div>'
       +'<div id="att-qr-token" style="font-size:10px;color:var(--text3);margin-top:2px"></div>'
       // 갱신 주기 설정
@@ -11845,7 +11845,7 @@ function _attRenderQR(){
       +'<div class="card-title" style="margin-bottom:4px">📌 정적 QR (고정 코드)</div>'
       +'<div style="font-size:11px;color:var(--text3);margin-bottom:14px">인쇄해서 벽에 붙이는 용도 — 시간 제한 없음 · GPS 검증만 적용</div>'
       +'<div style="text-align:center">'
-      +'<div id="att-qr-static-box" style="display:inline-block;padding:14px;background:#fff;border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,.12)"></div>'
+      +'<div id="att-qr-static-box" style="display:inline-block;padding:14px;background:var(--bg);border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,.12)"></div>'
       +'</div>'
       +'<div style="margin-top:12px;display:flex;gap:8px;justify-content:center">'
       +'<button onclick="_attGenStaticQR()" class="btn btn-blue" style="font-size:12px">🔄 코드 재생성</button>'
@@ -11973,7 +11973,7 @@ function _attShowDeviceURL(type, name, url, devId){
     // QR 코드 (URL을 QR로)
     +'<div style="text-align:center;margin-bottom:14px">'
     +'<div style="font-size:11px;color:var(--text3);margin-bottom:8px">이 QR을 장치 카메라로 열거나, URL을 북마크하세요</div>'
-    +'<div id="devurl-qr" style="display:inline-block;background:#fff;padding:10px;border-radius:10px"></div>'
+    +'<div id="devurl-qr" style="display:inline-block;background:var(--bg);padding:10px;border-radius:10px"></div>'
     +'</div>'
     +'<div style="display:flex;gap:8px">'
     +'<button data-url="'+url+'" onclick="navigator.clipboard&&navigator.clipboard.writeText(this.dataset.url).then(function(){toast(\'✅ URL 복사됨\');})" '
@@ -12065,7 +12065,7 @@ function _launchKioskMode(did, iv){
     // 메인 QR
     +'<div style="text-align:center">'
     +'<div style="font-size:15px;font-weight:700;color:#94a3b8;margin-bottom:16px;letter-spacing:.05em">📱 본인 폰으로 스캔하여 출퇴근하세요</div>'
-    +'<div id="kiosk-qr-box" style="display:inline-block;padding:20px;background:#fff;border-radius:20px;box-shadow:0 0 60px rgba(59,130,246,.4)"></div>'
+    +'<div id="kiosk-qr-box" style="display:inline-block;padding:20px;background:var(--bg);border-radius:20px;box-shadow:0 0 60px rgba(59,130,246,.4)"></div>'
     +'<div id="kiosk-timer-bar" style="margin-top:14px;width:320px;max-width:90vw"></div>'
     +'<div id="kiosk-token" style="font-size:10px;color:#475569;margin-top:6px"></div>'
     +'</div>'
@@ -12197,7 +12197,7 @@ function _launchPCMode(did,iv){
     +'border:1px solid var(--border);width:220px;text-align:center';
   wrap.innerHTML=''
     +'<div style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--text1)">📱 출퇴근 QR</div>'
-    +'<div id="pc-qr-box" style="display:inline-block;background:#fff;padding:8px;border-radius:10px"></div>'
+    +'<div id="pc-qr-box" style="display:inline-block;background:var(--bg);padding:8px;border-radius:10px"></div>'
     +'<div id="pc-qr-timer" style="margin-top:6px;font-size:11px;color:var(--brand);font-weight:700"></div>'
     +'<div id="pc-att-status" style="margin-top:6px;font-size:11px;color:var(--text3)">오늘 출퇴근 확인 중...</div>'
     +'<button onclick="document.getElementById(\'pc-qr-wrap\').style.display=\'none\'" '
@@ -12350,7 +12350,7 @@ function _attLoadEmpQRList(did){
       var qrId='empqr-'+doc.id;
       html+='<div style="text-align:center;padding:12px;background:var(--bg3);border-radius:12px;min-width:130px">'
         +'<div style="font-weight:700;font-size:12px;margin-bottom:8px">'+esc(name)+'</div>'
-        +'<div id="'+qrId+'" style="display:inline-block;background:#fff;padding:6px;border-radius:6px"></div>'
+        +'<div id="'+qrId+'" style="display:inline-block;background:var(--bg);padding:6px;border-radius:6px"></div>'
         +'<div style="font-size:9px;color:var(--text3);margin-top:4px">'+esc(uid)+'</div>'
         +'</div>';
     });
@@ -13328,7 +13328,7 @@ function showSecurityAlert(type, detail){
     +'<div style="font-size:22px;font-weight:800">보안 경고</div>'
     +'<div style="font-size:14px;max-width:400px;line-height:1.6;background:rgba(0,0,0,.2);border-radius:10px;padding:16px">'+detail+'</div>'
     +'<div style="font-size:12px;opacity:.8">이 내용이 관리자에게 자동 보고됩니다.</div>'
-    +'<button onclick="document.getElementById(\'mbti-sec-overlay\').remove()" style="background:#fff;color:#c53030;border:none;padding:12px 28px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">확인</button>';
+    +'<button onclick="document.getElementById(\'mbti-sec-overlay\').remove()" style="background:var(--bg);color:#c53030;border:none;padding:12px 28px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">확인</button>';
   document.body.appendChild(overlay);
   // Firestore 보안 로그 기록
   if(_db){
@@ -14592,7 +14592,7 @@ function printAllPayslips(allRows){
     +'<style>'
     +'*{box-sizing:border-box;margin:0;padding:0;font-family:"맑은 고딕","Malgun Gothic",sans-serif}'
     +'body{background:#f5f5f5}'
-    +'.page{background:#fff;width:190mm;margin:10mm auto;padding:18mm 16mm;page-break-after:always;border:1px solid #ddd}'
+    +'.page{background:var(--bg);width:190mm;margin:10mm auto;padding:18mm 16mm;page-break-after:always;border:1px solid #ddd}'
     +'.title{text-align:center;font-size:22pt;font-weight:900;letter-spacing:5px;border-bottom:3px solid #000;padding-bottom:10px;margin-bottom:6px}'
     +'.sub{text-align:center;font-size:10pt;color:#666;margin-bottom:16px}'
     +'.info-box{background:#f9f9f9;border:1px solid #ddd;border-radius:4px;padding:10px 14px;margin-bottom:14px}'
@@ -15162,7 +15162,7 @@ function openTaxInvoice(id){
   var serial=today2.replace(/-/g,'')+'-'+String(Math.floor(Math.random()*9999)+1).padStart(4,'0');
   var html='<div style="display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;max-width:720px;margin:4px auto">'
     +warnHtml
-    +'<div id="tax-invoice-wrap" style="width:100%;background:#fff;border:2px solid #000;font-family:\'Malgun Gothic\',\'Apple SD Gothic Neo\',sans-serif;font-size:11px">'
+    +'<div id="tax-invoice-wrap" style="width:100%;background:var(--bg);border:2px solid #000;font-family:\'Malgun Gothic\',\'Apple SD Gothic Neo\',sans-serif;font-size:11px">'
     +'<table style="width:100%;border-collapse:collapse">'
     +'<tr>'
     +'<td style="border:1px solid #000;width:14%;padding:3px 6px;font-size:9px">[별지 제11호 서식]</td>'
@@ -21839,7 +21839,7 @@ function _showUploadResult(month,added,updated,newDrvCnt,routeCnt,newDrivers,lef
         errLines+='<tr style="border-top:2px solid #f59e0b;background:#fef3c7">'          +'<td style="padding:4px 6px;font-weight:700">Raw 시트 계산</td>'          +'<td style="padding:4px 6px;text-align:right;font-family:monospace">₩'+fmt2(ev.excelTotal)+'</td>'          +'<td style="padding:4px 6px;text-align:right;font-family:monospace">₩'+fmt2(ev.rawCalc)+'</td>'          +'<td style="padding:4px 6px;text-align:right;font-family:monospace;font-weight:800;color:#b45309">'+rs+fmt2(ev.diffRaw)+'</td>'          +'</tr>';
       }
       errLines+='</table>';
-      errBanner.innerHTML='<div style="font-size:13px;font-weight:800;color:#92400e;margin-bottom:2px">🔔 쿠팡↔대리점 금액 불일치! ('+errItems.length+'개 항목)</div>'        +'<div style="font-size:11px;font-weight:700;color:#b45309;margin-bottom:4px">엑셀 합계행(쿠팡 기준) ≠ 개별 기사 합산 — 쿠팡 수취액을 확인하세요</div>'        +'<div style="font-size:10px;color:#78350f;margin-bottom:4px">📌 원인: ① 반품/취소 건이 별도 집계 ② 기간이 두 달에 걸침 ③ 엑셀 수동 수정</div>'        +errLines;
+      errBanner.innerHTML='<div style="font-size:13px;font-weight:800;color:#92400e;margin-bottom:2px">🔔 쿠팡↔대리점 금액 불일치! ('+errItems.length+'개 항목)</div>'        +'<div style="font-size:11px;font-weight:700;color:#b45309;margin-bottom:4px">엑셀 합계행(쿠팡 기준) ≠ 개별 기사 합산 — 쿠팡 수취액을 확인하세요</div>'        +'<div style="font-size:10px;color:var(--amber);margin-bottom:4px">📌 원인: ① 반품/취소 건이 별도 집계 ② 기간이 두 달에 걸침 ③ 엑셀 수동 수정</div>'        +errLines;
       d.appendChild(errBanner);
     } else {
       var okBanner=document.createElement('div');
@@ -21976,7 +21976,7 @@ function _showWelcome(){
   }
   var enterBtn=document.createElement('button');
   enterBtn.textContent='입장하기 →';
-  enterBtn.style.cssText='background:#fff;color:#1e3a8a;border:none;border-radius:100px;padding:10px 32px;font-size:14px;font-weight:800;cursor:pointer;width:100%';
+  enterBtn.style.cssText='background:var(--bg);color:#1e3a8a;border:none;border-radius:100px;padding:10px 32px;font-size:14px;font-weight:800;cursor:pointer;width:100%';
   enterBtn.onclick=function(){mo.remove();};
   enterArea.appendChild(enterBtn);
 }
