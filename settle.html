@@ -2249,6 +2249,15 @@ function _processQrAttend(){
     }).catch(function(e){toast('❌ 출퇴근 처리 실패: '+e.message);});
 }
 
+
+function _fbStorage(){
+  try{
+    if(typeof firebase!=='undefined'&&firebase.apps&&firebase.apps.length&&firebase.storage){
+      return firebase.storage();
+    }
+  }catch(e){}
+  return null;
+}
 function initFirebase(){
   if(typeof firebase==='undefined'){setTimeout(initFirebase,300);return;}
   // 이미 초기화된 경우 앱 재사용
@@ -2792,8 +2801,8 @@ function doRegister(){
     var myUrl=window.location.origin+'/'+slugVal;
     toast('✅ 등록 완료! 사업자등록증 업로드 중...');
     // ★ 사업자등록증 Firebase Storage 업로드
-    if(_bizDocFile && firebase.storage){
-      var storageRef=firebase.storage().ref('biz_docs/'+uid+'/'+_bizDocFile.name);
+    if(_bizDocFile && _fbStorage()){
+      var storageRef=_fbStorage().ref('biz_docs/'+uid+'/'+_bizDocFile.name);
       storageRef.put(_bizDocFile).then(function(snap){
         return snap.ref.getDownloadURL();
       }).then(function(url){
@@ -5039,7 +5048,7 @@ function _uploadDriverDoc(input, driverId, driverName){
   }
   // Firebase Storage 업로드
   var path='driverDocs/'+did+'/'+driverId+'/'+docType+'_'+Date.now()+'_'+file.name;
-  var ref=firebase.storage().ref(path);
+  var ref=_fbStorage().ref(path);
   ref.put(file).then(function(snapshot){
     return snapshot.ref.getDownloadURL();
   }).then(function(url){
@@ -8606,7 +8615,7 @@ function _expenseSave(did){
   }
   if(file&&typeof firebase!=='undefined'&&firebase.storage){
     var path='expenses/'+did+'/'+Date.now()+'_'+file.name;
-    firebase.storage().ref(path).put(file).then(function(s){return s.ref.getDownloadURL();})
+    _fbStorage().ref(path).put(file).then(function(s){return s.ref.getDownloadURL();})
       .then(function(url){doSave(url);}).catch(function(){doSave('');});
   } else { doSave(''); }
 }
@@ -9544,8 +9553,8 @@ window._txsUpload=function(src){
             var dtMap={receipt:'receipt',tax_invoice:'tax_invoice',contract:'contract',payslip:'payslip',expense:'expense',other:'other'};
             var finalCat=ocr.docType&&dtMap[ocr.docType]?dtMap[ocr.docType]:cat;
             var storagePath='tax_docs/'+did+'/'+Date.now()+'_'+file.name;
-            var uploadP=(typeof firebase!=='undefined'&&firebase.storage&&file.size<10*1024*1024)
-              ?firebase.storage().ref(storagePath).put(file)
+            var _fbs=_fbStorage();var uploadP=(_fbs&&file.size<10*1024*1024)
+              ?_fbs.ref(storagePath).put(file)
                 .then(function(snap){return snap.ref.getDownloadURL();})
                 .catch(function(){return '';})
               :Promise.resolve('');
