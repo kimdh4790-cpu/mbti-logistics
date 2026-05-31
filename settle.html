@@ -1814,43 +1814,59 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           // ★ dealerId 강제 갱신 (다른 계정 데이터 혼입 방지) - fbPromises 전에 실행
           settlements.forEach(function(x){x.dealerId=_CU.dealerId;});
           if(window._idSupportRules&&window._idSupportRules.length){
-            function _normDate(s){
+            function _normD(s){
               if(!s)return '';
               var p=String(s).trim().split('-');
               if(p.length!==3)return s;
               return p[0]+'-'+(p[1].length<2?'0'+p[1]:p[1])+'-'+(p[2].length<2?'0'+p[2]:p[2]);
             }
-            // fromId별 규칙 목록 (규칙별 독립 처리)
-            var _fd={};  // {fid: [{tot,pts,tD,tR}]}
+            var _fd={};
             window._idSupportRules.forEach(function(rule){
-              var fid=rule.fromId,tid=rule.toId;
-              var fd=drvMap[fid]; if(!fd||!fd.dateRoutes)return;
+              var fid=rule.fromId, tid=rule.toId;
+              var fd=drvMap[fid]; if(!fd)return;
               var ts=settlements.find(function(s){return (s.userId||s.driver)===tid;});
               if(!ts)return;
-              var tD=(rule.dates||[]).map(_normDate).filter(Boolean);
+              var tD=(rule.dates||[]).map(_normD).filter(Boolean);
               var tR=rule.routes||[];
-              var tot=0,pts=[];
-              Object.keys(fd.dateRoutes).forEach(function(dt){
-                var normDt=_normDate(dt);
-                if(tD.length&&tD.indexOf(normDt)<0)return;
-                Object.keys(fd.dateRoutes[dt]).forEach(function(rt){
-                  if(tR.length&&tR.indexOf(rt)<0)return;
-                  var rd=fd.dateRoutes[dt][rt];
-                  var up=RPRICE[rt]||0; if(!up)return;
-                  var amt=(rd.cnt||0)*up+(rd.ret||0)*up; if(!amt)return;
-                  tot+=amt;
-                  pts.push(rt+' '+(rd.cnt||0)+'건'+(rd.ret>0?' 반품'+(rd.ret)+'건':''));
+              var tot=0, pts=[];
+
+              // dateRoutes 있으면 날짜 기준, 없으면 routeDetails 기준
+              var hasDateRoutes=fd.dateRoutes&&Object.keys(fd.dateRoutes).length>0;
+              if(hasDateRoutes){
+                Object.keys(fd.dateRoutes).forEach(function(dt){
+                  var normDt=_normD(dt);
+                  if(tD.length&&tD.indexOf(normDt)<0)return;
+                  Object.keys(fd.dateRoutes[dt]).forEach(function(rt){
+                    if(tR.length&&tR.indexOf(rt)<0)return;
+                    var rd=fd.dateRoutes[dt][rt];
+                    var up=RPRICE[rt]||0; if(!up)return;
+                    var amt=(rd.cnt||0)*up+(rd.ret||0)*up; if(!amt)return;
+                    tot+=amt;
+                    pts.push(rt+' '+(rd.cnt||0)+'건'+(rd.ret>0?' 반품'+(rd.ret)+'건':''));
+                  });
                 });
-              });
+              } else {
+                // fallback: routeDetails 기준으로 계산
+                var fs2=settlements.find(function(s){return (s.userId||s.driver)===fid;});
+                if(fs2&&fs2.routeDetails){
+                  fs2.routeDetails.forEach(function(rd){
+                    if(tR.length&&tR.indexOf(rd.route)<0)return;
+                    var up=RPRICE[rd.route]||0; if(!up)return;
+                    var amt=(rd.cnt||0)*up+(rd.ret||0)*up; if(!amt)return;
+                    tot+=amt;
+                    pts.push(rd.route+' '+(rd.cnt||0)+'건'+(rd.ret>0?' 반품'+(rd.ret)+'건':''));
+                  });
+                }
+              }
+
               if(!tot)return;
               ts.etcPlus=(ts.etcPlus||0)+tot;
               var pv=ts.etcPlusReason||'';
               ts.etcPlusReason=(pv?pv+' / ':'')+'아이디지원('+fid+') '+pts.join('·');
-              // 규칙별로 독립 저장
               if(!_fd[fid]) _fd[fid]=[];
-              _fd[fid].push({tot:tot,pts:pts,tD:tD,tR:tR});
+              _fd[fid].push({tot:tot,pts:pts,tD:tD,tR:tR,hasDateRoutes:hasDateRoutes});
             });
-            // fromId 차감 - 규칙별 독립 처리
+
             Object.keys(_fd).forEach(function(fid){
               var rules=_fd[fid];
               var fs=settlements.find(function(s){return (s.userId||s.driver)===fid;});
@@ -1860,22 +1876,37 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               fs.etcMinus=(fs.etcMinus||0)+totalDeduct;
               var pvm=fs.etcMinusReason||'';
               fs.etcMinusReason=(pvm?pvm+' / ':'')+'지원차감 '+allPts.join('·');
-              // routeDetails 차감 - 규칙별로 해당 날짜+라우트만
-              var fdm=drvMap[fid];
-              if(fdm&&fdm.dateRoutes&&fs.routeDetails&&fs.routeDetails.length){
+
+              if(fs.routeDetails&&fs.routeDetails.length){
                 rules.forEach(function(rule){
-                  Object.keys(fdm.dateRoutes).forEach(function(dt){
-                    var normDt=_normDate(dt);
-                    if(rule.tD.length&&rule.tD.indexOf(normDt)<0)return;
-                    Object.keys(fdm.dateRoutes[dt]).forEach(function(rt){
-                      if(rule.tR.length&&rule.tR.indexOf(rt)<0)return;
-                      var rd=fdm.dateRoutes[dt][rt];
+                  if(rule.hasDateRoutes){
+                    // dateRoutes 기준 차감
+                    var fdm=drvMap[fid];
+                    if(fdm&&fdm.dateRoutes){
+                      Object.keys(fdm.dateRoutes).forEach(function(dt){
+                        var normDt=_normD(dt);
+                        if(rule.tD.length&&rule.tD.indexOf(normDt)<0)return;
+                        Object.keys(fdm.dateRoutes[dt]).forEach(function(rt){
+                          if(rule.tR.length&&rule.tR.indexOf(rt)<0)return;
+                          var rd=fdm.dateRoutes[dt][rt];
+                          var ri=fs.routeDetails.findIndex(function(r){return r.route===rt;});
+                          if(ri<0)return;
+                          fs.routeDetails[ri].cnt=Math.max(0,(fs.routeDetails[ri].cnt||0)-(rd.cnt||0));
+                          fs.routeDetails[ri].ret=Math.max(0,(fs.routeDetails[ri].ret||0)-(rd.ret||0));
+                        });
+                      });
+                    }
+                  } else {
+                    // fallback: pts에 있는 라우트만 차감
+                    rule.pts.forEach(function(pt){
+                      var m=pt.match(/^(\S+)\s+(\d+)건/);
+                      if(!m)return;
+                      var rt=m[1], cnt=parseInt(m[2]);
                       var ri=fs.routeDetails.findIndex(function(r){return r.route===rt;});
                       if(ri<0)return;
-                      fs.routeDetails[ri].cnt=Math.max(0,(fs.routeDetails[ri].cnt||0)-(rd.cnt||0));
-                      fs.routeDetails[ri].ret=Math.max(0,(fs.routeDetails[ri].ret||0)-(rd.ret||0));
+                      fs.routeDetails[ri].cnt=Math.max(0,(fs.routeDetails[ri].cnt||0)-cnt);
                     });
-                  });
+                  }
                 });
                 fs.dcnt=fs.routeDetails.reduce(function(s,r){return s+(r.cnt||0);},0);
                 fs.rcnt=fs.routeDetails.reduce(function(s,r){return s+(r.ret||0);},0);
