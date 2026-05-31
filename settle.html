@@ -9531,7 +9531,7 @@ window._txsUpload=function(src){
               fileUrl:'',filePath:'',fileType:file.type,
               fileName:file.name,createdAt:new Date().toISOString(),uploadedBy:_CU.uid
             });
-          }).then(function(){resolve({ok:true,url:file.type.startsWith('image/')?ev.target.result:null});});
+          }).then(function(){resolve({ok:true,url:null});});
         }).catch(function(e){resolve({ok:false,err:e.message});});
       };
       reader.readAsDataURL(file);
