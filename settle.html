@@ -39,7 +39,7 @@
 *{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,'Malgun Gothic',sans-serif;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);color:var(--text);font-size:14px}
 body.dark{--bg:#0a0a0f;--bg2:#12121a;--bg3:#1a1a24;--text:#f0ede6;--text2:#b8b5ae;--text3:#6b6b7a;--border:rgba(255,255,255,.12);--brand:#60a5fa;--brand-l:rgba(96,165,250,.15);--brand-d:#3b82f6;--green:#4ade80;--green-l:rgba(74,222,128,.15);--red:#f87171;--red-l:rgba(248,113,113,.15);--amber:#fbbf24;--amber-l:rgba(251,191,36,.15);--purple:#c084fc;--purple-l:rgba(192,132,252,.15)}
-#app{display:flex;min-height:100vh}
+#app{display:none;min-height:100vh}
 .sidebar{width:220px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100;box-shadow:2px 0 12px rgba(0,0,0,.06);overflow:hidden}
 .main{margin-left:220px;flex:1;display:flex;flex-direction:column;min-height:100vh}
 .sl{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
@@ -11713,13 +11713,11 @@ function onBizDocSelected(input){
       },
       body: JSON.stringify({
         model:'claude-haiku-4-5-20251001',
-        max_tokens: 800,
+        max_tokens: 1500,
         messages:[{role:'user',content:[
           {type: mediaType==='application/pdf'?'document':'image',
            source:{type:'base64',media_type:mediaType,data:b64}},
-          {type:'text',text:'이 사업자등록증에서 다음 정보를 JSON으로 추출해줘:\n'
-            +'{"bizNum":"사업자등록번호(숫자만)","companyName":"상호","repName":"대표자명","bizAddr":"사업장주소","bizType":"업태","bizItem":"종목"}\n'
-            +'없는 항목은 빈 문자열로. JSON만 출력.'}
+          {type:'text',text:'이 사업자등록증 이미지에서 정보를 추출해서 JSON으로만 답해줘. 다른 말은 하지 마.\n한글을 정확하게 인식해줘. 특히 상호명은 오탈자 없이 정확하게.\n{"bizNum":"사업자번호 숫자 10자리","companyName":"상호명(정확하게)","repName":"대표자성명","bizAddr":"사업장소재지","bizType":"업태","bizItem":"종목"}\nJSON만 출력.}
         ]}]
       })
     })
