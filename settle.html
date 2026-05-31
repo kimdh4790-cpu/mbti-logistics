@@ -1429,7 +1429,6 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         drvMap[cleanId].addIncAmt+=addInc*(dcnt+rcnt); // ★ col10단가 × (배송+반품)건수
         // 날짜 추출
         var rowDateRaw=row[rColDate];
-        if(window._dbgDateLogged!==true){console.log('[날짜debug] rColDate=',rColDate,'rowDateRaw=',rowDateRaw,'type=',typeof rowDateRaw,'isDate=',rowDateRaw instanceof Date);window._dbgDateLogged=true;}
         var rowDate='';
         if(rowDateRaw instanceof Date){
           var _y=rowDateRaw.getFullYear();
@@ -1458,6 +1457,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           drvMap[cleanId].routes[route].retAmt+=retAmt;
           drvMap[cleanId].routes[route].addInc+=addInc;
           if(unitPrc>0)drvMap[cleanId].routes[route].unitPrc=unitPrc;
+          if(window._dbgDateLogged2!==true){console.log('[날짜debug2] rowDateRaw=',row[rColDate],'type=',typeof row[rColDate],'rowDate=',rowDate);window._dbgDateLogged2=true;}
           if(rowDate){
             if(!drvMap[cleanId].dateRoutes)drvMap[cleanId].dateRoutes={};
             if(!drvMap[cleanId].dateRoutes[rowDate])drvMap[cleanId].dateRoutes[rowDate]={};
