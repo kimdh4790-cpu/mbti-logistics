@@ -1,0 +1,307 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isSuperAdmin() {
+      return isAuth() && (
+        request.auth.token.email == 'kimdh4790@gmail.com' ||
+        request.auth.token.email == 'soungkyekim@naver.com'
+      );
+    }
+
+    // 자기 회사 데이터인지 확인 (dealerId 필드 기준)
+    function isMyDealer(dealerId) {
+      return isAuth() && (
+        request.auth.uid == dealerId ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.dealerId == dealerId ||
+        isSuperAdmin()
+      );
+    }
+
+    // 문서의 dealerId가 내 것인지 확인
+    function ownsDoc() {
+      return isAuth() && (
+        resource.data.dealerId == request.auth.uid ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.dealerId == resource.data.dealerId ||
+        isSuperAdmin()
+      );
+    }
+
+    function ownsNewDoc() {
+      return isAuth() && (
+        request.resource.data.dealerId == request.auth.uid ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.dealerId == request.resource.data.dealerId ||
+        isSuperAdmin()
+      );
+    }
+
+    // ── 슈퍼어드민 전용 ──
+    match /admins/{docId} {
+      allow read: if isAuth();
+      allow write: if isSuperAdmin();
+    }
+
+    match /security_logs/{docId} {
+      allow read: if isSuperAdmin();
+      allow create: if isAuth();
+    }
+
+    match /error_logs/{docId} {
+      allow create: if isAuth();
+      allow read: if isSuperAdmin();
+    }
+
+    match /admin_events/{docId} {
+      allow read, write: if isSuperAdmin();
+    }
+
+    match /admin_notifications/{docId} {
+      allow read, write: if isSuperAdmin();
+    }
+
+    match /admin_tokens/{docId} {
+      allow read, write: if isAuth();
+    }
+
+    // ── 회사 등록 / 공개 ──
+    match /companies/{dealerId} {
+      allow read: if true;
+      allow create: if isAuth();
+      allow update, delete: if isMyDealer(dealerId);
+    }
+
+    // ── 사용자 ──
+    match /users/{userId} {
+      allow read: if isAuth() && (
+        request.auth.uid == userId ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.dealerId ==
+          resource.data.dealerId ||
+        isSuperAdmin()
+      );
+      allow create: if isAuth();
+      allow update, delete: if isAuth() && (
+        request.auth.uid == userId || isSuperAdmin()
+      );
+    }
+
+    // ── 핵심 정산 데이터 (dealerId 격리) ──
+    match /settlements/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
+    match /drivers/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
+    match /members/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
+    match /tax_docs/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
+    match /idSupport/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
+    match /cal_memos/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
+    match /attendance/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
+    match /driver_settlements/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
+    match /delivery_sessions/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
+    match /dispatch_results/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
+    match /hourly_settlements/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
+    match /contracts/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
+    match /leaves/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
+    match /absences/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
+    match /leave_payments/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
+    match /overtimes/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
+    match /evaluations/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
+    match /notices/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
+    match /driver_notifications/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
+    match /devices/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
+    match /biometrics/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
+    match /lunch/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
+    match /lunch_alerts/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
+    match /roster_week/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
+    match /vehicles/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
+    match /maintenance/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
+    match /expenses/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
+    match /documents/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
+    match /signatures/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
+    match /driverDocs/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
+    // ── 구독/결제 ──
+    match /subscriptions/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow write: if isSuperAdmin();
+    }
+
+    match /payment_requests/{docId} {
+      allow read: if ownsDoc();
+      allow create: if ownsNewDoc();
+      allow update, delete: if isSuperAdmin();
+    }
+
+    match /plan_guards/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
+    match /plan_guard_alerts/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
+    match /settings/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
+    // ── 세무사 공유 (토큰 기반 공개 접근) ──
+    match /taxShares/{docId} {
+      allow read: if true;
+      allow write: if isAuth();
+      match /settlements/{sId} {
+        allow read: if true;
+        allow write: if isAuth();
+      }
+    }
+
+    // ── 방문자/고객 (공개 생성 허용) ──
+    match /visitors/{docId} {
+      allow read, write: if isAuth();
+      allow create: if true;
+    }
+
+    match /customer_profiles/{docId} {
+      allow read, write: if isAuth();
+      allow create: if true;
+    }
+
+    match /customer_invites/{docId} {
+      allow read, write: if isAuth();
+    }
+
+    match /customer_notifications/{docId} {
+      allow read, write: if isAuth();
+    }
+
+    match /customer_push_queue/{docId} {
+      allow read, write: if isAuth();
+    }
+
+    match /sms_queue/{docId} {
+      allow read, write: if isAuth();
+    }
+
+  }
+}
