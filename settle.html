@@ -2258,6 +2258,23 @@ function _fbStorage(){
   }catch(e){}
   return null;
 }
+function _fbStorageReady(cb){
+  if(_fbStorage()){cb(_fbStorage());return;}
+  _loadStorageSDK(function(){
+    setTimeout(function(){
+      if(_fbStorage()) cb(_fbStorage());
+      else cb(null);
+    },300);
+  });
+}
+function _loadStorageSDK(cb){
+  if(typeof firebase!=='undefined'&&firebase.storage){cb();return;}
+  var s=document.createElement('script');
+  s.src='https://www.gstatic.com/firebasejs/8.10.1/firebase-storage-compat.js';
+  s.onload=function(){cb();};
+  s.onerror=function(){cb();};
+  document.head.appendChild(s);
+}
 function initFirebase(){
   if(typeof firebase==='undefined'){setTimeout(initFirebase,300);return;}
   // 이미 초기화된 경우 앱 재사용
@@ -9553,12 +9570,16 @@ window._txsUpload=function(src){
             var dtMap={receipt:'receipt',tax_invoice:'tax_invoice',contract:'contract',payslip:'payslip',expense:'expense',other:'other'};
             var finalCat=ocr.docType&&dtMap[ocr.docType]?dtMap[ocr.docType]:cat;
             var storagePath='tax_docs/'+did+'/'+Date.now()+'_'+file.name;
-            var _fbs=_fbStorage();var uploadP=(_fbs&&file.size<10*1024*1024)
-              ?_fbs.ref(storagePath).put(file)
-                .then(function(snap){return snap.ref.getDownloadURL();})
-                .catch(function(){return '';})
-              :Promise.resolve('');
-            return uploadP.then(function(fileUrl){
+            return new Promise(function(res2){
+              _fbStorageReady(function(fbs){
+                var up=(fbs&&file.size<10*1024*1024)
+                  ?fbs.ref(storagePath).put(file)
+                    .then(function(snap){return snap.ref.getDownloadURL();})
+                    .catch(function(){return '';})
+                  :Promise.resolve('');
+                up.then(function(fileUrl){res2(fileUrl);});
+              });
+            }).then(function(fileUrl){
               return _db.collection('tax_docs').add({
                 dealerId:did,ym:ym,category:finalCat,
                 memo:memo||ocr.desc||'',desc:ocr.desc||'',amount:ocr.amount||0,
