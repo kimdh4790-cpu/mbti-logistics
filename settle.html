@@ -1769,55 +1769,55 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           // ★ dealerId 강제 갱신 (다른 계정 데이터 혼입 방지) - fbPromises 전에 실행
           settlements.forEach(function(x){x.dealerId=_CU.dealerId;});
           if(window._idSupportRules&&window._idSupportRules.length){
+            var _fd={};
             window._idSupportRules.forEach(function(rule){
-              var fromId=rule.fromId,toId=rule.toId;
-              var fd=drvMap[fromId]; if(!fd||!fd.dateRoutes)return;
-              var ts=settlements.find(function(s){return (s.userId||s.driver)===toId;});
+              var fid=rule.fromId,tid=rule.toId;
+              var fd=drvMap[fid]; if(!fd||!fd.dateRoutes)return;
+              var ts=settlements.find(function(s){return (s.userId||s.driver)===tid;});
               if(!ts)return;
-              var tD=rule.dates||[],tR=rule.routes||[];
-              var tot=0,pts=[];
+              var tD=rule.dates||[],tR=rule.routes||[],tot=0,pts=[];
               Object.keys(fd.dateRoutes).forEach(function(dt){
                 if(tD.length&&tD.indexOf(dt)<0)return;
                 Object.keys(fd.dateRoutes[dt]).forEach(function(rt){
                   if(tR.length&&tR.indexOf(rt)<0)return;
                   var rd=fd.dateRoutes[dt][rt];
                   var up=RPRICE[rt]||0; if(!up)return;
-                  var amt=(rd.cnt||0)*up+(rd.ret||0)*up;
-                  if(!amt)return;
+                  var amt=(rd.cnt||0)*up+(rd.ret||0)*up; if(!amt)return;
                   tot+=amt;
                   pts.push(rt+' '+(rd.cnt||0)+'건'+(rd.ret>0?' 반품'+(rd.ret)+'건':''));
                 });
               });
               if(!tot)return;
-              // ★ 지원기사 etcPlus 합산
               ts.etcPlus=(ts.etcPlus||0)+tot;
-              var prev=ts.etcPlusReason||'';
-              ts.etcPlusReason=(prev?prev+' / ':'')+'아이디지원('+fromId+') '+pts.join('·');
-              // ★ 원래기사(fromId) etcMinus 차감 - 이중계산 방지
-              var fs=settlements.find(function(s){return (s.userId||s.driver)===fromId;});
-              if(fs){
-                fs.etcMinus=(fs.etcMinus||0)+tot;
-                var prevM=fs.etcMinusReason||'';
-                fs.etcMinusReason=(prevM?prevM+' / ':'')+'지원차감('+toId+') '+pts.join('·');
-                // ★ routeDetails 건수도 차감
-                if(fs.routeDetails&&fs.routeDetails.length){
-                  Object.keys(fd.dateRoutes).forEach(function(dt){
-                    if(tD.length&&tD.indexOf(dt)<0)return;
-                    Object.keys(fd.dateRoutes[dt]).forEach(function(rt){
-                      if(tR.length&&tR.indexOf(rt)<0)return;
-                      var rd=fd.dateRoutes[dt][rt];
-                      var rdIdx=fs.routeDetails.findIndex(function(r){return r.route===rt;});
-                      if(rdIdx<0)return;
-                      fs.routeDetails[rdIdx].cnt=Math.max(0,(fs.routeDetails[rdIdx].cnt||0)-(rd.cnt||0));
-                      fs.routeDetails[rdIdx].ret=Math.max(0,(fs.routeDetails[rdIdx].ret||0)-(rd.ret||0));
-                    });
+              var pv=ts.etcPlusReason||'';
+              ts.etcPlusReason=(pv?pv+' / ':'')+'아이디지원('+fid+') '+pts.join('·');
+              if(!_fd[fid]) _fd[fid]={tot:0,pts:[]};
+              _fd[fid].tot+=tot;
+              _fd[fid].pts=_fd[fid].pts.concat(pts);
+            });
+            Object.keys(_fd).forEach(function(fid){
+              var dc=_fd[fid];
+              var fs=settlements.find(function(s){return (s.userId||s.driver)===fid;});
+              if(!fs)return;
+              fs.etcMinus=(fs.etcMinus||0)+dc.tot;
+              var pvm=fs.etcMinusReason||'';
+              fs.etcMinusReason=(pvm?pvm+' / ':'')+'지원차감 '+dc.pts.join('·');
+              var fdm=drvMap[fid];
+              if(fdm&&fdm.dateRoutes&&fs.routeDetails&&fs.routeDetails.length){
+                Object.keys(fdm.dateRoutes).forEach(function(dt){
+                  Object.keys(fdm.dateRoutes[dt]).forEach(function(rt){
+                    var rd=fdm.dateRoutes[dt][rt];
+                    var ri=fs.routeDetails.findIndex(function(r){return r.route===rt;});
+                    if(ri<0)return;
+                    fs.routeDetails[ri].cnt=Math.max(0,(fs.routeDetails[ri].cnt||0)-(rd.cnt||0));
+                    fs.routeDetails[ri].ret=Math.max(0,(fs.routeDetails[ri].ret||0)-(rd.ret||0));
                   });
-                  // dcnt/rcnt 재계산
-                  fs.dcnt=fs.routeDetails.reduce(function(s,r){return s+(r.cnt||0);},0);
-                  fs.rcnt=fs.routeDetails.reduce(function(s,r){return s+(r.ret||0);},0);
-                }
+                });
+                fs.dcnt=fs.routeDetails.reduce(function(s,r){return s+(r.cnt||0);},0);
+                fs.rcnt=fs.routeDetails.reduce(function(s,r){return s+(r.ret||0);},0);
               }
             });
+          }
           }
           var fbPromises=[];
           settlements.filter(function(x){return x.month===month;}).forEach(function(x){
