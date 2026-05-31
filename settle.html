@@ -11088,35 +11088,28 @@ window._lunchAdminView=_lunchAdminView;
 function _dwSaveTracks(){
   var did=_CU&&_CU.dealerId;
   if(!did||!_db){toast('로그인 필요');return;}
-  var newTracks=[];
-  document.querySelectorAll('.dw-track-row').forEach(function(row){
-    var minEl=row.querySelector('.dw-track-min');
-    var priceEl=row.querySelector('.dw-track-price');
-    if(!minEl||!priceEl)return;
-    var min=parseInt(minEl.value)||0;
-    var price=parseInt(priceEl.value)||0;
-    if(price>0) newTracks.push({min:min,price:price});
-  });
-  // DW_TRACKS 전역 업데이트
-  if(newTracks.length>0){
-    window.DW_TRACKS=newTracks.sort(function(a,b){return b.min-a.min;});
+  // DW_TRACKS id: dw-track-{t.key}
+  if(window.DW_TRACKS){
+    window.DW_TRACKS.forEach(function(t){
+      var el=document.getElementById('dw-track-'+t.key);
+      if(el) t.price=parseInt(el.value)||t.price;
+    });
   }
-  // Firestore 저장
   _db.collection('companies').doc(did).update({dwTracks:window.DW_TRACKS})
-    .then(function(){toast('✅ 트랙 단가 저장');})
+    .then(function(){toast('✅ 트랙 단가 저장');_dwRenderSimulator();})
     .catch(function(e){toast('❌ '+e.message);});
 }
 
 function _dwSaveSlots(){
   var did=_CU&&_CU.dealerId;
   if(!did||!_db){toast('로그인 필요');return;}
-  var slotKeys=['morning','lunch_peak','lunch_off','dinner_peak','dinner_off'];
-  slotKeys.forEach(function(k){
-    var el=document.getElementById('dw-slot-'+k);
-    if(el&&window.DW_SLOTS&&window.DW_SLOTS[k]){
-      window.DW_SLOTS[k].price=parseInt(el.value)||0;
-    }
-  });
+  // DW_SLOTS id: dw-slot-{key}
+  if(window.DW_SLOTS){
+    Object.keys(window.DW_SLOTS).forEach(function(k){
+      var el=document.getElementById('dw-slot-'+k);
+      if(el) window.DW_SLOTS[k].price=parseInt(el.value)||0;
+    });
+  }
   _db.collection('companies').doc(did).update({dwSlots:window.DW_SLOTS})
     .then(function(){toast('✅ 시간대 단가 저장');})
     .catch(function(e){toast('❌ '+e.message);});
@@ -11131,7 +11124,7 @@ function _dwLoadCfg(did){
       window.DW_TRACKS=d.dwTracks;
       // UI 업데이트
       d.dwTracks.forEach(function(t){
-        var el=document.querySelector('.dw-track-row[data-min="'+t.min+'"] .dw-track-price');
+        var el=document.getElementById('dw-track-'+t.key);
         if(el) el.value=t.price;
       });
     }
