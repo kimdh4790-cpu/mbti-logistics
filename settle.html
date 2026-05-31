@@ -1429,6 +1429,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         drvMap[cleanId].addIncAmt+=addInc*(dcnt+rcnt); // ★ col10단가 × (배송+반품)건수
         // 날짜 추출
         var rowDateRaw=row[rColDate];
+        if(window._dbgDateLogged!==true){console.log('[날짜debug] rColDate=',rColDate,'rowDateRaw=',rowDateRaw,'type=',typeof rowDateRaw,'isDate=',rowDateRaw instanceof Date);window._dbgDateLogged=true;}
         var rowDate='';
         if(rowDateRaw instanceof Date){
           var _y=rowDateRaw.getFullYear();
