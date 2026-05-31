@@ -1806,20 +1806,19 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           // ★ dealerId 강제 갱신 (다른 계정 데이터 혼입 방지) - fbPromises 전에 실행
           settlements.forEach(function(x){x.dealerId=_CU.dealerId;});
           if(window._idSupportRules&&window._idSupportRules.length){
-            // 날짜 정규화 함수 (2026-4-29 → 2026-04-29)
             function _normDate(s){
               if(!s)return '';
               var p=String(s).trim().split('-');
               if(p.length!==3)return s;
               return p[0]+'-'+(p[1].length<2?'0'+p[1]:p[1])+'-'+(p[2].length<2?'0'+p[2]:p[2]);
             }
-            var _fd={};
+            // fromId별 규칙 목록 (규칙별 독립 처리)
+            var _fd={};  // {fid: [{tot,pts,tD,tR}]}
             window._idSupportRules.forEach(function(rule){
               var fid=rule.fromId,tid=rule.toId;
               var fd=drvMap[fid]; if(!fd||!fd.dateRoutes)return;
               var ts=settlements.find(function(s){return (s.userId||s.driver)===tid;});
               if(!ts)return;
-              // 날짜 정규화
               var tD=(rule.dates||[]).map(_normDate).filter(Boolean);
               var tR=rule.routes||[];
               var tot=0,pts=[];
@@ -1839,31 +1838,35 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               ts.etcPlus=(ts.etcPlus||0)+tot;
               var pv=ts.etcPlusReason||'';
               ts.etcPlusReason=(pv?pv+' / ':'')+'아이디지원('+fid+') '+pts.join('·');
-              if(!_fd[fid]) _fd[fid]={tot:0,pts:[],tD:tD,tR:tR};
-              else { _fd[fid].tD=_fd[fid].tD.concat(tD); _fd[fid].tR=_fd[fid].tR.concat(tR); }
-              _fd[fid].tot+=tot;
-              _fd[fid].pts=_fd[fid].pts.concat(pts);
+              // 규칙별로 독립 저장
+              if(!_fd[fid]) _fd[fid]=[];
+              _fd[fid].push({tot:tot,pts:pts,tD:tD,tR:tR});
             });
+            // fromId 차감 - 규칙별 독립 처리
             Object.keys(_fd).forEach(function(fid){
-              var dc=_fd[fid];
+              var rules=_fd[fid];
               var fs=settlements.find(function(s){return (s.userId||s.driver)===fid;});
               if(!fs)return;
-              fs.etcMinus=(fs.etcMinus||0)+dc.tot;
+              var totalDeduct=rules.reduce(function(s,r){return s+r.tot;},0);
+              var allPts=[];rules.forEach(function(r){allPts=allPts.concat(r.pts);});
+              fs.etcMinus=(fs.etcMinus||0)+totalDeduct;
               var pvm=fs.etcMinusReason||'';
-              fs.etcMinusReason=(pvm?pvm+' / ':'')+'지원차감 '+dc.pts.join('·');
+              fs.etcMinusReason=(pvm?pvm+' / ':'')+'지원차감 '+allPts.join('·');
+              // routeDetails 차감 - 규칙별로 해당 날짜+라우트만
               var fdm=drvMap[fid];
               if(fdm&&fdm.dateRoutes&&fs.routeDetails&&fs.routeDetails.length){
-                // 지원한 날짜+라우트에 해당하는 건수만 차감
-                Object.keys(fdm.dateRoutes).forEach(function(dt){
-                  var normDt=_normDate(dt);
-                  if(dc.tD.length&&dc.tD.indexOf(normDt)<0)return;
-                  Object.keys(fdm.dateRoutes[dt]).forEach(function(rt){
-                    if(dc.tR.length&&dc.tR.indexOf(rt)<0)return;
-                    var rd=fdm.dateRoutes[dt][rt];
-                    var ri=fs.routeDetails.findIndex(function(r){return r.route===rt;});
-                    if(ri<0)return;
-                    fs.routeDetails[ri].cnt=Math.max(0,(fs.routeDetails[ri].cnt||0)-(rd.cnt||0));
-                    fs.routeDetails[ri].ret=Math.max(0,(fs.routeDetails[ri].ret||0)-(rd.ret||0));
+                rules.forEach(function(rule){
+                  Object.keys(fdm.dateRoutes).forEach(function(dt){
+                    var normDt=_normDate(dt);
+                    if(rule.tD.length&&rule.tD.indexOf(normDt)<0)return;
+                    Object.keys(fdm.dateRoutes[dt]).forEach(function(rt){
+                      if(rule.tR.length&&rule.tR.indexOf(rt)<0)return;
+                      var rd=fdm.dateRoutes[dt][rt];
+                      var ri=fs.routeDetails.findIndex(function(r){return r.route===rt;});
+                      if(ri<0)return;
+                      fs.routeDetails[ri].cnt=Math.max(0,(fs.routeDetails[ri].cnt||0)-(rd.cnt||0));
+                      fs.routeDetails[ri].ret=Math.max(0,(fs.routeDetails[ri].ret||0)-(rd.ret||0));
+                    });
                   });
                 });
                 fs.dcnt=fs.routeDetails.reduce(function(s,r){return s+(r.cnt||0);},0);
