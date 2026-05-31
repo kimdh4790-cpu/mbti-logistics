@@ -10953,6 +10953,94 @@ window._biometricVerify = _biometricVerify;
 window._biometricRegister = _biometricRegister;
 window._biometricSupported = _biometricSupported;
 
+
+// 점심시간 타이머
+var _lunchTimer=null;
+function _lunchStart(){
+  var uid=_CU&&_CU.uid,did=_CU&&_CU.dealerId,name=_CU&&(_CU.name||_CU.userId||'');
+  if(!uid||!did||!_db)return;
+  var dur=parseInt((document.getElementById('lunch-duration')||{value:60}).value)||60;
+  var now=Date.now();
+  _db.collection('lunch').doc(did+'_'+uid).set({
+    uid:uid,dealerId:did,name:name,startAt:now,duration:dur,
+    endAt:now+dur*60*1000,status:'active',date:new Date().toISOString().slice(0,10)
+  }).then(function(){
+    toast('?? 점심 시작! '+dur+'분 타이머');
+    _lunchTimerRun(now,dur,uid,did); _lunchUpdateUI(true);
+  });
+}
+function _lunchEnd(){
+  var uid=_CU&&_CU.uid,did=_CU&&_CU.dealerId;
+  if(!uid||!did||!_db)return;
+  if(_lunchTimer){clearInterval(_lunchTimer);_lunchTimer=null;}
+  _db.collection('lunch').doc(did+'_'+uid)
+    .update({status:'done',actualEndAt:Date.now()})
+    .then(function(){toast('✅ 점심 종료');_lunchUpdateUI(false);});
+}
+function _lunchTimerRun(startAt,dur,uid,did){
+  if(_lunchTimer){clearInterval(_lunchTimer);_lunchTimer=null;}
+  var endAt=startAt+dur*60*1000,notified=false;
+  _lunchTimer=setInterval(function(){
+    var rem=Math.round((endAt-Date.now())/1000);
+    var el=document.getElementById('lunch-countdown');
+    if(el){
+      if(rem<=0){
+        el.textContent='⏰ 점심시간 초과!';
+        el.style.color='#ef4444';
+      } else {
+        el.style.color=rem<=600?'#f97316':'#059669';
+        el.textContent=Math.floor(rem/60)+'분 '+String(rem%60).padStart(2,'0')+'초 남음';
+      }
+    }
+    if(!notified&&rem<=600&&rem>0){
+      notified=true;
+      toast('⚠️ 점심 종료 10분 전!','#f97316');
+      if(_db)_db.collection('lunch_alerts').add(
+        {dealerId:did,uid:uid,name:(_CU&&_CU.name)||'',type:'10min',at:Date.now()});
+    }
+    if(rem<=0){
+      clearInterval(_lunchTimer);_lunchTimer=null;
+      toast('⏰ 점심 초과! 복귀하세요','#ef4444');
+      if(_db){
+        _db.collection('lunch').doc(did+'_'+uid).update({status:'overtime'});
+        _db.collection('lunch_alerts').add(
+          {dealerId:did,uid:uid,name:(_CU&&_CU.name)||'',type:'overtime',at:Date.now()});
+      }
+    }
+  },1000);
+}
+function _lunchUpdateUI(active){
+  var sb=document.getElementById('lunch-start-btn'),eb=document.getElementById('lunch-end-btn'),cd=document.getElementById('lunch-countdown');
+  if(sb)sb.style.display=active?'none':'block';
+  if(eb)eb.style.display=active?'block':'none';
+  if(cd)cd.style.display=active?'block':'none';
+}
+function _lunchAdminView(did){
+  if(!_db||!did)return;
+  var el=document.getElementById('lunch-admin-list');
+  if(!el)return;
+  var today=new Date().toISOString().slice(0,10);
+  _db.collection('lunch').where('dealerId','==',did).where('date','==',today)
+    .onSnapshot(function(snap){
+      if(!el)return;
+      if(snap.empty){el.innerHTML='<div style="font-size:12px;color:var(--text3)">점심중 직원 없음</div>';return;}
+      var html='';
+      snap.forEach(function(doc){
+        var d=doc.data(),now=Date.now(),rem=Math.round((d.endAt-now)/1000);
+        var sts=d.status==='done'?'✅ 복귀':rem<=0||d.status==='overtime'?'⏰ 초과':'?? 점심중';
+        var col=d.status==='done'?'#059669':rem<=600?'#f97316':'#185FA5';
+        var rs=d.status==='done'?'':(rem>0?Math.floor(rem/60)+'분 남음':'초과 '+Math.floor(-rem/60)+'분');
+        html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--bg2);border-radius:8px;margin-bottom:6px">'
+          +'<span style="font-weight:700;font-size:13px">'+esc(d.name||d.uid)+'</span>'
+          +'<span style="font-size:12px;color:'+col+'">'+sts+' '+rs+'</span></div>';
+      });
+      el.innerHTML=html;
+    });
+}
+window._lunchStart=_lunchStart;
+window._lunchEnd=_lunchEnd;
+window._lunchAdminView=_lunchAdminView;
+
 function _openAdvanceModal(dateStr){
   var mo=document.createElement('div');mo.className='mo show';mo.id='mo-advance';
   mo.onclick=function(e){if(e.target===mo)mo.remove();};
@@ -11093,6 +11181,7 @@ function _attTab(tab){
   });
   if(tab==='qr')_attRenderQR();
   if(tab==='today')_attRenderToday();
+  _lunchAdminView(did);
   if(tab==='hist')_attRenderHist();
   if(tab==='visitor')_attRenderVisitor();
   if(tab==='url')_attRenderUrl();
