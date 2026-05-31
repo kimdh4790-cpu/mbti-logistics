@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>DONWAY 서비스 소개서</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;700;900&family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans KR',sans-serif;background:#fff;width:297mm;}
+.page{width:297mm;height:210mm;overflow:hidden;page-break-after:always;display:flex;}
+.page-block{width:297mm;min-height:210mm;overflow:hidden;page-break-after:always;}
+
+/* ── COVER ── */
+.cover{
+  width:297mm;height:210mm;
+  background:linear-gradient(135deg,#0A1628 0%,#0C447C 55%,#185FA5 100%);
+  display:flex;align-items:center;justify-content:center;
+  flex-direction:column;text-align:center;
+  position:relative;overflow:hidden;
+  page-break-after:always;
+}
+.cover::before{content:'';position:absolute;width:500px;height:500px;border-radius:50%;
+  background:radial-gradient(circle,rgba(0,200,248,.12) 0%,transparent 70%);top:-150px;right:-150px;}
+.cover::after{content:'';position:absolute;width:300px;height:300px;border-radius:50%;
+  background:radial-gradient(circle,rgba(245,158,11,.08) 0%,transparent 70%);bottom:-80px;left:-80px;}
+.cv-logo{font-family:'Montserrat',sans-serif;font-size:80px;font-weight:900;color:#fff;
+  letter-spacing:-3px;position:relative;z-index:1;line-height:1;}
+.cv-logo span{color:#00C8F8;}
+.cv-sub{font-size:15px;color:rgba(255,255,255,.5);margin:8px 0 40px;position:relative;z-index:1;letter-spacing:2px;}
+.cv-tagline{font-size:28px;font-weight:900;color:#fff;line-height:1.4;margin-bottom:16px;position:relative;z-index:1;}
+.cv-desc{font-size:14px;color:rgba(255,255,255,.65);line-height:1.9;margin-bottom:40px;position:relative;z-index:1;}
+.cv-free{
+  display:inline-flex;align-items:center;gap:12px;
+  background:rgba(255,255,255,.08);border:1.5px solid rgba(0,200,248,.4);
+  border-radius:50px;padding:12px 32px;position:relative;z-index:1;
+}
+.cv-free-num{font-family:'Montserrat',sans-serif;font-size:48px;font-weight:900;color:#00C8F8;line-height:1;}
+.cv-free-text{text-align:left;}
+.cv-free-text strong{display:block;font-size:18px;font-weight:900;color:#fff;}
+.cv-free-text span{font-size:12px;color:rgba(255,255,255,.5);}
+.cv-chips{display:flex;gap:10px;margin-top:24px;position:relative;z-index:1;}
+.cv-chip{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);
+  color:rgba(255,255,255,.7);font-size:11px;padding:5px 14px;border-radius:20px;}
+
+/* ── CONTENT PAGES ── */
+.cp-header{
+  height:52px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 44px;border-bottom:2px solid;
+}
+.cp-header-left{display:flex;align-items:center;gap:12px;}
+.cp-logo{font-family:'Montserrat',sans-serif;font-size:18px;font-weight:900;color:#fff;}
+.cp-logo span{color:#00C8F8;}
+.cp-pg-title{font-size:15px;font-weight:900;color:#fff;}
+.cp-pg-num{font-size:11px;color:rgba(255,255,255,.4);}
+.cp-body{padding:28px 44px;display:flex;gap:32px;}
+.cp-main{flex:1;}
+.cp-side{width:260px;flex-shrink:0;}
+
+/* section title */
+.sec-chip{display:inline-block;font-size:10px;font-weight:700;letter-spacing:1.5px;
+  text-transform:uppercase;padding:3px 12px;border-radius:20px;margin-bottom:10px;}
+.sec-title{font-size:30px;font-weight:900;line-height:1.2;margin-bottom:10px;color:#0A1628;}
+.sec-lead{font-size:12px;color:#64748B;line-height:1.85;margin-bottom:18px;}
+
+/* points */
+.pts{display:flex;flex-direction:column;gap:8px;}
+.pt{display:flex;gap:10px;padding:11px 13px;border-radius:11px;align-items:flex-start;}
+.pt-ico{font-size:18px;flex-shrink:0;margin-top:1px;}
+.pt-title{font-size:12px;font-weight:700;margin-bottom:2px;}
+.pt-desc{font-size:10px;color:#64748B;line-height:1.6;}
+
+/* industry badges */
+.ind-title{font-size:11px;font-weight:700;color:#475569;margin-bottom:8px;margin-top:16px;}
+.inds{display:flex;flex-wrap:wrap;gap:5px;}
+.ind{font-size:10px;padding:3px 10px;border-radius:6px;font-weight:700;}
+
+/* pricing card */
+.price-card{border-radius:16px;padding:20px;height:100%;}
+.pc-header{margin-bottom:14px;}
+.pc-name{font-size:14px;font-weight:900;margin-bottom:2px;}
+.pc-per{font-size:10px;color:rgba(255,255,255,.6);}
+.disc-banner{
+  background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);
+  border-radius:10px;padding:8px 12px;margin-bottom:12px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.disc-label{font-size:9px;color:rgba(255,255,255,.7);font-weight:700;letter-spacing:1px;}
+.disc-val{font-size:13px;font-weight:900;color:#4ADE80;}
+.tier-table{width:100%;border-collapse:collapse;}
+.tier-table tr td{padding:5px 8px;font-size:10px;border-bottom:1px solid rgba(255,255,255,.08);}
+.tier-table tr td:first-child{color:rgba(255,255,255,.6);}
+.tier-table tr td:last-child{text-align:right;font-weight:700;color:#fff;}
+.tier-table tr td .ori{font-size:9px;color:rgba(255,255,255,.35);text-decoration:line-through;margin-right:4px;}
+.tier-table tr.highlight td{background:rgba(0,200,248,.12);}
+.tier-table tr.highlight td:last-child{color:#00C8F8 !important;}
+.tier-note{font-size:9px;color:rgba(255,255,255,.4);margin-top:8px;line-height:1.5;}
+
+/* footer */
+.cp-footer{
+  height:28px;background:#F1F5F9;
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;color:#94A3B8;gap:20px;
+}
+
+@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
+@page{margin:0;size:A4 landscape;}
+</style>
+</head>
+<body>
+
+<!-- ══ PAGE 1: COVER ══ -->
+<div class="cover">
+  <div class="cv-logo">DON<span>WAY</span></div>
+  <div class="cv-sub">donway.ai.kr — AI 기반 정산·급여·근태 플랫폼</div>
+  <div class="cv-tagline">반복되는 정산 업무,<br>이제 자동으로 해결하세요</div>
+  <div class="cv-desc">
+    물류·배달·소상공인·중소기업 모두를 위한 통합 업무 자동화 솔루션<br>
+    엑셀 업로드 하나로 정산·급여·세금계산서까지 완성됩니다
+  </div>
+  <div class="cv-free">
+    <div class="cv-free-num">7</div>
+    <div class="cv-free-text">
+      <strong>일 무료 체험</strong>
+      <span>카드 등록 불필요 · 사업자번호 1회 한정</span>
+    </div>
+  </div>
+  <div class="cv-chips">
+    <div class="cv-chip">📦 AI 정산 자동화</div>
+    <div class="cv-chip">🛵 배달대행 정산</div>
+    <div class="cv-chip">🔐 QR 근태</div>
+    <div class="cv-chip">💼 급여 자동 계산</div>
+    <div class="cv-chip">📋 세무사 연동</div>
+  </div>
+</div>
+
+<!-- ══ PAGE 2: AI 정산 ══ -->
+<div class="page-block">
+<div class="cp-header" style="background:#0C447C;border-color:#1D6FA8;">
+  <div class="cp-header-left">
+    <div class="cp-logo">DON<span>WAY</span></div>
+    <div class="cp-pg-title" style="color:#fff;">📦 AI 정산 자동화</div>
+  </div>
+  <div class="cp-pg-num">02 / 05</div>
+</div>
+<div class="cp-body">
+  <div class="cp-main">
+    <div class="sec-chip" style="background:#E6F1FB;color:#185FA5;">AI 정산</div>
+    <div class="sec-title">엑셀 한 장으로<br>정산이 끝납니다</div>
+    <div class="sec-lead">
+      매월 20~40시간 걸리던 정산 업무를 단 몇 분으로 줄입니다. 단가표·보험료·세금계산서까지
+      한 번에 자동 처리됩니다. 수작업 실수 없이, 반복 없이.
+    </div>
+    <div class="pts">
+      <div class="pt" style="background:#EFF6FF;">
+        <div class="pt-ico">🗂️</div>
+        <div>
+          <div class="pt-title" style="color:#1D4ED8;">라우트·반품·프레쉬백 자동 분류 및 계산</div>
+          <div class="pt-desc">쿠팡·물류 정산 엑셀을 업로드하면 기사별·캠프별로 자동 분류합니다. 관리자가 설정한 라우트단가표 기준으로 실지급액을 계산하고, 시즌 단가도 기간별 소급 적용됩니다.</div>
+        </div>
+      </div>
+      <div class="pt" style="background:#F0FDF4;">
+        <div class="pt-ico">📄</div>
+        <div>
+          <div class="pt-title" style="color:#166534;">고용·산재보험 자동 산출 + 세금계산서 즉시 생성</div>
+          <div class="pt-desc">2026년 최신 요율이 자동 적용됩니다. 계산 완료 즉시 세금계산서가 생성되고, 세무사에게 90일 유효 공유 링크 하나로 전달 완료됩니다.</div>
+        </div>
+      </div>
+      <div class="pt" style="background:#FFF7ED;">
+        <div class="pt-ico">🔄</div>
+        <div>
+          <div class="pt-title" style="color:#C2410C;">아이디 지원(대리 운행) 날짜·라우트 기준 자동 분배</div>
+          <div class="pt-desc">원래 기사 명의로 다른 기사가 대신 운행한 건수를 날짜·라우트 기준으로 자동 감지하여 지원 기사 명세서에 자동 반영합니다. 수작업 분배 불필요.</div>
+        </div>
+      </div>
+    </div>
+    <div class="ind-title">✅ 이런 업종에서 바로 사용 가능합니다</div>
+    <div class="inds">
+      <span class="ind" style="background:#EFF6FF;color:#1D4ED8;">택배·물류 대리점</span>
+      <span class="ind" style="background:#F0FDF4;color:#166534;">용역·인력파견업</span>
+      <span class="ind" style="background:#FFF7ED;color:#C2410C;">청소·시설관리 대행</span>
+      <span class="ind" style="background:#F5F3FF;color:#7C3AED;">경비·주차 관리업</span>
+      <span class="ind" style="background:#ECFDF5;color:#065F46;">세탁·크린토피아 대리점</span>
+      <span class="ind" style="background:#FEF2F2;color:#991B1B;">퀵서비스·이륜 대행</span>
+      <span class="ind" style="background:#E6F1FB;color:#185FA5;">건수×단가 계산이 필요한 모든 업종</span>
+    </div>
+  </div>
+  <div class="cp-side">
+    <div class="price-card" style="background:linear-gradient(160deg,#0C447C,#185FA5);">
+      <div class="pc-header">
+        <div class="pc-name" style="color:#fff;">📦 AI 정산 요금제</div>
+        <div class="pc-per">10명 단위 구간 · 인당 22,000원</div>
+      </div>
+      <div class="disc-banner">
+        <div>
+          <div class="disc-label">✂️ 계좌이체 결제 시</div>
+          <div style="font-size:16px;font-weight:900;color:#4ADE80;margin-top:2px;">3% 즉시 할인</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:9px;color:rgba(255,255,255,.5);">정가 대비</div>
+          <div style="font-size:18px;font-weight:900;color:#FBBF24;">↓ 절약</div>
+        </div>
+      </div>
+      <table class="tier-table">
+        <tr><td>1~10명</td><td><span class="ori">₩220,000</span>₩213,400</td></tr>
+        <tr><td>11~20명</td><td><span class="ori">₩440,000</span>₩426,800</td></tr>
+        <tr><td>21~30명</td><td><span class="ori">₩660,000</span>₩640,200</td></tr>
+        <tr><td>31~40명</td><td><span class="ori">₩880,000</span>₩853,600</td></tr>
+        <tr><td>41~50명</td><td><span class="ori">₩1,100,000</span>₩1,067,000</td></tr>
+        <tr class="highlight"><td>51~60명 ★</td><td><span class="ori">₩1,320,000</span>₩1,280,400</td></tr>
+      </table>
+      <div class="tier-note">
+        ★ 60명 기준 월 <strong style="color:#4ADE80;">₩39,600 절약</strong><br>
+        인원 초과 시 상위 구간 자동 적용
+      </div>
+    </div>
+  </div>
+</div>
+<div class="cp-footer">
+  <span>donway.ai.kr</span><span>|</span><span>고객센터 051-711-3103</span><span>|</span><span>7일 무료 체험 · 카드 등록 불필요</span>
+</div>
+</div>
+
+<!-- ══ PAGE 3: 배달대행 ══ -->
+<div class="page-block">
+<div class="cp-header" style="background:#991B1B;border-color:#DC2626;">
+  <div class="cp-header-left">
+    <div class="cp-logo">DON<span>WAY</span></div>
+    <div class="cp-pg-title">🛵 배달대행 정산</div>
+  </div>
+  <div class="cp-pg-num">03 / 05</div>
+</div>
+<div class="cp-body">
+  <div class="cp-main">
+    <div class="sec-chip" style="background:#FEF2F2;color:#DC2626;">배달대행 정산</div>
+    <div class="sec-title">플랫폼 차액,<br>자동으로 보전·환수</div>
+    <div class="sec-lead">
+      배달의민족·쿠팡이츠 플랫폼이 지급하는 단가와 라이더 계약 단가의 차액을 자동으로 계산합니다.
+      매주 반복되는 복잡한 정산 작업이 엑셀 업로드 하나로 끝납니다.
+    </div>
+    <div class="pts">
+      <div class="pt" style="background:#FEF2F2;">
+        <div class="pt-ico">⚡</div>
+        <div>
+          <div class="pt-title" style="color:#991B1B;">실시간 기사별 카드 스트리밍 정산</div>
+          <div class="pt-desc">정산 개시 후 기사 카드가 하나씩 순서대로 나타나며 건수·보전액·환수액·실지급액이 실시간으로 카운팅됩니다. 우측 명세서 합계도 동시에 업데이트됩니다.</div>
+        </div>
+      </div>
+      <div class="pt" style="background:#EFF6FF;">
+        <div class="pt-ico">📊</div>
+        <div>
+          <div class="pt-title" style="color:#1D4ED8;">구간 트랙 단가 전체 소급 적용</div>
+          <div class="pt-desc">180·250·300·350건 이상 구간별 단가가 다르게 적용됩니다. 기사가 최종 구간에 도달하면 처음 건수부터 전체 소급 계산되어 공정하게 지급됩니다.</div>
+        </div>
+      </div>
+      <div class="pt" style="background:#F0FDF4;">
+        <div class="pt-ico">💰</div>
+        <div>
+          <div class="pt-title" style="color:#166534;">보전·환수 자동 판정 후 명세서 일괄 발송</div>
+          <div class="pt-desc">플랫폼 단가가 계약 단가보다 낮으면 보전, 높으면 환수를 자동 판정합니다. 시간대별(아침·점심피크·저녁피크 등) 단가 차등 설정도 가능합니다. 정산 완료 즉시 기사 앱으로 명세서 일괄 발송.</div>
+        </div>
+      </div>
+    </div>
+    <div class="ind-title">✅ 이런 업종에서 바로 사용 가능합니다</div>
+    <div class="inds">
+      <span class="ind" style="background:#FEF2F2;color:#991B1B;">배달대행 지역 업체</span>
+      <span class="ind" style="background:#FFF7ED;color:#C2410C;">배민·쿠팡이츠 총판</span>
+      <span class="ind" style="background:#F0FDF4;color:#166534;">음식배달 프랜차이즈 본사</span>
+      <span class="ind" style="background:#EFF6FF;color:#1D4ED8;">퀵커머스 허브 운영사</span>
+      <span class="ind" style="background:#F5F3FF;color:#7C3AED;">꽃·케이크·신선식품 배송</span>
+      <span class="ind" style="background:#ECFDF5;color:#065F46;">플랫폼 단가 ≠ 계약 단가인 모든 업종</span>
+    </div>
+  </div>
+  <div class="cp-side">
+    <div class="price-card" style="background:linear-gradient(160deg,#7F1D1D,#DC2626);">
+      <div class="pc-header">
+        <div class="pc-name" style="color:#fff;">🛵 배달대행 요금제</div>
+        <div class="pc-per">10명 단위 구간 · 인당 22,000원</div>
+      </div>
+      <div class="disc-banner">
+        <div>
+          <div class="disc-label">✂️ 계좌이체 결제 시</div>
+          <div style="font-size:16px;font-weight:900;color:#4ADE80;margin-top:2px;">3% 즉시 할인</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:9px;color:rgba(255,255,255,.5);">정가 대비</div>
+          <div style="font-size:18px;font-weight:900;color:#FBBF24;">↓ 절약</div>
+        </div>
+      </div>
+      <table class="tier-table">
+        <tr><td>1~10명</td><td><span class="ori">₩220,000</span>₩213,400</td></tr>
+        <tr><td>11~20명</td><td><span class="ori">₩440,000</span>₩426,800</td></tr>
+        <tr><td>21~30명</td><td><span class="ori">₩660,000</span>₩640,200</td></tr>
+        <tr><td>31~40명</td><td><span class="ori">₩880,000</span>₩853,600</td></tr>
+        <tr><td>41~50명</td><td><span class="ori">₩1,100,000</span>₩1,067,000</td></tr>
+        <tr class="highlight"><td>51~60명 ★</td><td><span class="ori">₩1,320,000</span>₩1,280,400</td></tr>
+      </table>
+      <div class="tier-note">
+        ★ 60명 기준 월 <strong style="color:#4ADE80;">₩39,600 절약</strong><br>
+        인원 초과 시 상위 구간 자동 적용
+      </div>
+    </div>
+  </div>
+</div>
+<div class="cp-footer">
+  <span>donway.ai.kr</span><span>|</span><span>고객센터 051-711-3103</span><span>|</span><span>7일 무료 체험 · 카드 등록 불필요</span>
+</div>
+</div>
+
+<!-- ══ PAGE 4: QR 근태 ══ -->
+<div class="page-block">
+<div class="cp-header" style="background:#3B0764;border-color:#7C3AED;">
+  <div class="cp-header-left">
+    <div class="cp-logo">DON<span>WAY</span></div>
+    <div class="cp-pg-title">🔐 QR 근태 관리</div>
+  </div>
+  <div class="cp-pg-num">04 / 05</div>
+</div>
+<div class="cp-body">
+  <div class="cp-main">
+    <div class="sec-chip" style="background:#F5F3FF;color:#7C3AED;">QR 근태</div>
+    <div class="sec-title">대리 출근,<br>원천 차단합니다</div>
+    <div class="sec-lead">
+      종이 출결·구두 확인·엑셀 수기 입력이 필요 없습니다. 스마트폰 하나로 출퇴근을 자동 기록하고
+      관리자는 실시간으로 현황을 확인합니다. 매장·사무실·물류센터 업종 구분 없이 사용 가능합니다.
+    </div>
+    <div class="pts">
+      <div class="pt" style="background:#F5F3FF;">
+        <div class="pt-ico">⚡</div>
+        <div>
+          <div class="pt-title" style="color:#5B21B6;">30초마다 바뀌는 동적 QR — 캡처·공유 무효</div>
+          <div class="pt-desc">QR코드가 30초마다 자동 갱신됩니다. 화면 캡처나 공유로 대리 출근하는 것이 원천 불가능합니다. 고정 정적 QR과 직원 개인 QR도 함께 지원합니다.</div>
+        </div>
+      </div>
+      <div class="pt" style="background:#F0FDF4;">
+        <div class="pt-ico">👆</div>
+        <div>
+          <div class="pt-title" style="color:#166534;">GPS 10m 반경 검증 + 스마트폰 지문 이중 인증</div>
+          <div class="pt-desc">현장 반경 10m 밖에서는 QR 스캔이 차단됩니다. WebAuthn 기반 지문 인증으로 본인 확인을 이중으로 처리합니다. 지문 미지원 기기는 자동 통과 처리됩니다.</div>
+        </div>
+      </div>
+      <div class="pt" style="background:#EFF6FF;">
+        <div class="pt-ico">📶</div>
+        <div>
+          <div class="pt-title" style="color:#1D4ED8;">WiFi 자동 출퇴근 + 점심 타이머 관리자 실시간 연동</div>
+          <div class="pt-desc">회사 공유기에 연결되면 자동 출근 처리됩니다. 직원이 점심 시작 버튼을 누르면 관리자 화면에 실시간으로 현황이 표시되고, 복귀 10분 전 자동 알림이 발송됩니다.</div>
+        </div>
+      </div>
+    </div>
+    <div class="ind-title">✅ 모든 업종 사용 가능 — 특히 효과적인 곳</div>
+    <div class="inds">
+      <span class="ind" style="background:#F5F3FF;color:#7C3AED;">매장·카페·음식점</span>
+      <span class="ind" style="background:#EFF6FF;color:#1D4ED8;">물류·유통 센터</span>
+      <span class="ind" style="background:#F0FDF4;color:#166534;">건설·현장 인력</span>
+      <span class="ind" style="background:#FFF7ED;color:#C2410C;">경비·청소 용역</span>
+      <span class="ind" style="background:#FEF2F2;color:#991B1B;">다수 지점 운영 사업장</span>
+      <span class="ind" style="background:#ECFDF5;color:#065F46;">재택·현장 혼합 근무</span>
+    </div>
+  </div>
+  <div class="cp-side">
+    <div class="price-card" style="background:linear-gradient(160deg,#3B0764,#7C3AED);">
+      <div class="pc-header">
+        <div class="pc-name" style="color:#fff;">🔐 QR 근태 요금제</div>
+        <div class="pc-per">10명 단위 구간 · 인당 15,000원</div>
+      </div>
+      <div class="disc-banner">
+        <div>
+          <div class="disc-label">✂️ 계좌이체 결제 시</div>
+          <div style="font-size:16px;font-weight:900;color:#4ADE80;margin-top:2px;">3% 즉시 할인</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:9px;color:rgba(255,255,255,.5);">정가 대비</div>
+          <div style="font-size:18px;font-weight:900;color:#FBBF24;">↓ 절약</div>
+        </div>
+      </div>
+      <table class="tier-table">
+        <tr><td>1~10명</td><td><span class="ori">₩150,000</span>₩145,500</td></tr>
+        <tr><td>11~20명</td><td><span class="ori">₩300,000</span>₩291,000</td></tr>
+        <tr class="highlight"><td>21~30명 ★</td><td><span class="ori">₩450,000</span>₩436,500</td></tr>
+      </table>
+      <div class="tier-note" style="margin-top:10px;">
+        ★ 30명 기준 월 <strong style="color:#4ADE80;">₩13,500 절약</strong>
+      </div>
+      <div style="background:rgba(255,255,255,.06);border-radius:10px;padding:12px;margin-top:14px;">
+        <div style="font-size:10px;font-weight:700;color:#00C8F8;margin-bottom:8px;">포함 기능</div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <div style="font-size:10px;color:rgba(255,255,255,.75);display:flex;gap:5px;"><span style="color:#4ADE80;">✓</span>동적·정적·직원 QR 3종</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.75);display:flex;gap:5px;"><span style="color:#4ADE80;">✓</span>GPS 10m + 지문 이중 인증</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.75);display:flex;gap:5px;"><span style="color:#4ADE80;">✓</span>WiFi 자동 출퇴근</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.75);display:flex;gap:5px;"><span style="color:#4ADE80;">✓</span>점심 타이머 관리자 연동</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.75);display:flex;gap:5px;"><span style="color:#4ADE80;">✓</span>출퇴근 현황 실시간 대시보드</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.75);display:flex;gap:5px;"><span style="color:#4ADE80;">✓</span>방문자 QR 등록</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="cp-footer">
+  <span>donway.ai.kr</span><span>|</span><span>고객센터 051-711-3103</span><span>|</span><span>7일 무료 체험 · 카드 등록 불필요</span>
+</div>
+</div>
+
+<!-- ══ PAGE 5: 급여·달력·세무사 ══ -->
+<div class="page-block">
+<div class="cp-header" style="background:#064E3B;border-color:#059669;">
+  <div class="cp-header-left">
+    <div class="cp-logo">DON<span>WAY</span></div>
+    <div class="cp-pg-title">💼 급여 · 📅 달력 · 📋 세무사 연동</div>
+  </div>
+  <div class="cp-pg-num">05 / 05</div>
+</div>
+<div class="cp-body">
+  <div class="cp-main">
+    <div class="sec-chip" style="background:#ECFDF5;color:#059669;">급여 · 달력 · 세무사</div>
+    <div class="sec-title">급여부터 세무까지<br>원스톱으로 끝</div>
+    <div class="sec-lead">
+      시급·일급·월급 근무 형태 모두 지원합니다. 계산 완료 즉시 전 직원 명세서를 앱으로 일괄 발송하고,
+      세무사에게는 링크 하나로 자료를 전달합니다. 매달 반복되는 세무 준비가 사라집니다.
+    </div>
+    <div class="pts">
+      <div class="pt" style="background:#ECFDF5;">
+        <div class="pt-ico">💼</div>
+        <div>
+          <div class="pt-title" style="color:#065F46;">4대보험·연장·야간수당 자동 계산 + 명세서 일괄 발송</div>
+          <div class="pt-desc">시급·일급·월급 모든 형태에 2026년 최신 4대보험 요율이 자동 적용됩니다. 연장근로 1.5배, 야간수당 0.5배 자동 산출. 계산 즉시 전 직원에게 급여 명세서가 앱으로 발송됩니다.</div>
+        </div>
+      </div>
+      <div class="pt" style="background:#FFF7ED;">
+        <div class="pt-ico">📅</div>
+        <div>
+          <div class="pt-title" style="color:#C2410C;">달력 정산 관리 + 가불 이자 자동 계산</div>
+          <div class="pt-desc">월별 정산 일정을 달력에서 한눈에 관리합니다. 특정 날짜에 가불을 등록하면 가불금액·이자(기본 5% 수정 가능)·실수령액이 즉시 자동 계산됩니다. 일정·메모·지급 내역도 날짜별 기록됩니다.</div>
+        </div>
+      </div>
+      <div class="pt" style="background:#EFF6FF;">
+        <div class="pt-ico">📋</div>
+        <div>
+          <div class="pt-title" style="color:#1D4ED8;">세무사 연동 90일 공유 링크 + OCR 서류 자동 인식</div>
+          <div class="pt-desc">정산 완료 후 90일 유효 공유 링크를 생성해 세무사에게 즉시 전달합니다. 사업자등록증·통장사본 등 서류는 카메라로 찍으면 AI OCR이 자동으로 인식·저장합니다. 매달 서류 정리가 사라집니다.</div>
+        </div>
+      </div>
+    </div>
+    <div class="ind-title">✅ 모든 업종 사용 가능 — 직원이 있는 모든 사업장</div>
+    <div class="inds">
+      <span class="ind" style="background:#ECFDF5;color:#065F46;">소상공인·자영업</span>
+      <span class="ind" style="background:#EFF6FF;color:#1D4ED8;">중소기업·스타트업</span>
+      <span class="ind" style="background:#FFF7ED;color:#C2410C;">프랜차이즈 본사·가맹점</span>
+      <span class="ind" style="background:#F5F3FF;color:#7C3AED;">서비스업 전반</span>
+      <span class="ind" style="background:#FEF2F2;color:#991B1B;">제조·생산 현장</span>
+      <span class="ind" style="background:#E6F1FB;color:#185FA5;">직원이 있는 모든 사업장</span>
+    </div>
+  </div>
+  <div class="cp-side">
+    <div class="price-card" style="background:linear-gradient(160deg,#064E3B,#059669);">
+      <div class="pc-header">
+        <div class="pc-name" style="color:#fff;">💼 급여 관리 요금제</div>
+        <div class="pc-per">10명 단위 구간 · 인당 15,000원</div>
+      </div>
+      <div class="disc-banner">
+        <div>
+          <div class="disc-label">✂️ 계좌이체 결제 시</div>
+          <div style="font-size:16px;font-weight:900;color:#4ADE80;margin-top:2px;">3% 즉시 할인</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:9px;color:rgba(255,255,255,.5);">정가 대비</div>
+          <div style="font-size:18px;font-weight:900;color:#FBBF24;">↓ 절약</div>
+        </div>
+      </div>
+      <table class="tier-table">
+        <tr><td>1~10명</td><td><span class="ori">₩150,000</span>₩145,500</td></tr>
+        <tr><td>11~20명</td><td><span class="ori">₩300,000</span>₩291,000</td></tr>
+        <tr class="highlight"><td>21~30명 ★</td><td><span class="ori">₩450,000</span>₩436,500</td></tr>
+      </table>
+      <div class="tier-note" style="margin-top:10px;">
+        ★ 30명 기준 월 <strong style="color:#4ADE80;">₩13,500 절약</strong>
+      </div>
+      <div style="background:rgba(255,255,255,.06);border-radius:10px;padding:12px;margin-top:14px;">
+        <div style="font-size:10px;font-weight:700;color:#00C8F8;margin-bottom:8px;">포함 기능</div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <div style="font-size:10px;color:rgba(255,255,255,.75);display:flex;gap:5px;"><span style="color:#4ADE80;">✓</span>시급·일급·월급 모두 지원</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.75);display:flex;gap:5px;"><span style="color:#4ADE80;">✓</span>4대보험 2026 요율 자동</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.75);display:flex;gap:5px;"><span style="color:#4ADE80;">✓</span>연장·야간수당 자동 산출</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.75);display:flex;gap:5px;"><span style="color:#4ADE80;">✓</span>달력 정산 + 가불 이자</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.75);display:flex;gap:5px;"><span style="color:#4ADE80;">✓</span>세무사 90일 공유 링크</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.75);display:flex;gap:5px;"><span style="color:#4ADE80;">✓</span>OCR 서류 자동 인식</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="cp-footer">
+  <span>donway.ai.kr</span><span>|</span><span>고객센터 051-711-3103</span><span>|</span><span>엠비티아이(유) 373-86-02536</span>
+</div>
+</div>
+
+</body>
+</html>
