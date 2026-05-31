@@ -886,6 +886,15 @@ html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#02
 <div class="s-body s-fit">
   <div class="stag r rv">업무 코스트</div>
   <h2 class="st rv">매달 이런 일 <span class="gr">반복</span>하고 계신가요?</h2>
+  
+  <!-- 구간 선택 -->
+  <div style="max-width:700px;margin:0 auto 16px;text-align:center">
+    <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:8px;">👥 직원 수 구간 선택</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center" id="landing-tier-btns">
+    </div>
+    <div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:6px">계좌이체 3% 할인 적용 금액</div>
+  </div>
+
   <div class="pgrid">
     <div class="pi rv d1"><span class="pi-ic">😩</span><div class="pi-t">정산에 하루가 사라진다</div><div class="pi-d">직원 30명이면 엑셀 계산만 4~6시간. 실수 하나면 분쟁으로 이어진다.</div></div>
     <div class="pi rv d2"><span class="pi-ic">📞</span><div class="pi-t">"이번 달 얼마예요?" 전화 폭탄</div><div class="pi-d">직원이 직접 확인할 방법이 없으니 월말만 되면 전화가 쏟아진다.</div></div>
@@ -1089,7 +1098,7 @@ html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#02
       <div style="font-size:10px;color:rgba(0,200,248,.6);text-align:center;margin-bottom:4px;letter-spacing:1px">🔐 QR · GPS · 방문자 등록 포함</div>
       <div class="pcnm">📷 QR 출퇴근</div>
       <div class="pcfor" id="pc-qr-for">소규모 매장 · ~10명</div>
-      <div class="pcprice" id="pc-qr-price">29,000<span>원</span></div>
+      <div class="pcprice" id="pc-qr-price">—<span>원</span></div>
       <div class="pcper">/ 월 · 인원구간 선택 가능</div>
       <ul class="pcfl">
         <li>30초 동적 QR + 6자리 코드</li>
@@ -1112,7 +1121,7 @@ html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#02
       <div style="font-size:10px;color:rgba(245,184,0,.6);text-align:center;margin-bottom:4px;letter-spacing:1px">📦 택배·AI 정산 포함</div>
       <div class="pcnm">📦 택배 정산</div>
       <div class="pcfor" id="pc-settle-for">모든 사업장 전용</div>
-      <div class="pcprice" id="pc-settle-price">59,000<span>원</span></div>
+      <div class="pcprice" id="pc-settle-price">—<span>원</span></div>
       <div class="pcper">/ 월 · 인원구간 선택 가능</div>
       <ul class="pcfl">
         <li>AI 자동 정산</li>
@@ -1132,7 +1141,7 @@ html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#02
       <div style="font-size:10px;color:rgba(168,85,247,.6);text-align:center;margin-bottom:4px;letter-spacing:1px">💼 4대보험·연차·수당 자동화 포함</div>
       <div class="pcnm">💼 급여 관리</div>
       <div class="pcfor" id="pc-payroll-for">시급·일급·월급·수수료</div>
-      <div class="pcprice" id="pc-payroll-price">49,000<span>원</span></div>
+      <div class="pcprice" id="pc-payroll-price">—<span>원</span></div>
       <div class="pcper">/ 월 · 인원구간 선택 가능</div>
       <ul class="pcfl">
         <li>시급·일급·월급·수수료</li>
@@ -1153,7 +1162,7 @@ html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#02
       <div style="font-size:10px;color:rgba(0,232,122,.6);text-align:center;margin-bottom:4px;letter-spacing:1px">🔐💼 QR출퇴근 + 급여관리 통합</div>
       <div class="pcnm">📷💼 QR + 급여</div>
       <div class="pcfor" id="pc-combo-for">출퇴근 + 급여 통합</div>
-      <div class="pcprice" id="pc-combo-price">69,000<span>원</span></div>
+      <div class="pcprice" id="pc-combo-price">—<span>원</span></div>
       <div class="pcper">/ 월 &nbsp;<span style="color:#00e87a;font-weight:700" id="pc-combo-disc">15% 할인</span></div>
       <ul class="pcfl">
         <li>QR 출퇴근 + 방문자 등록</li>
@@ -2749,6 +2758,54 @@ if(!_initTier()){document.addEventListener('DOMContentLoaded',_initTier);}
   });
 
   uUI();
+})();
+</script>
+
+
+<script>
+(function(){
+  var G1 = typeof DW_RATE_G1 !== 'undefined' ? DW_RATE_G1 : 22000;
+  var G2 = typeof DW_RATE_G2 !== 'undefined' ? DW_RATE_G2 : 15000;
+  var TIERS = typeof DW_TIERS !== 'undefined' ? DW_TIERS : [{label:'1~10명',max:10},{label:'11~20명',max:20},{label:'21~30명',max:30},{label:'31~40명',max:40},{label:'41~50명',max:50}];
+
+  var cards = {
+    'pc-qr-price':      function(n){ return Math.round(G2*n*0.97); },
+    'pc-payroll-price': function(n){ return Math.round(G2*n*0.97); },
+    'pc-settle-price':  function(n){ return Math.round(G1*n*0.97); },
+    'pc-combo-price':   function(n){ return Math.round(G1*n*0.97); }
+  };
+
+  function updatePrices(n){
+    Object.keys(cards).forEach(function(id){
+      var el = document.getElementById(id);
+      if(el) el.innerHTML = cards[id](n).toLocaleString('ko-KR') + '<span>원/월</span>';
+    });
+    // 버튼 활성화
+    document.querySelectorAll('.landing-tier-btn').forEach(function(btn){
+      var active = parseInt(btn.dataset.max) === n;
+      btn.style.background = active ? '#00c8f8' : 'rgba(255,255,255,.08)';
+      btn.style.color = active ? '#000' : '#fff';
+      btn.style.borderColor = active ? '#00c8f8' : 'rgba(255,255,255,.2)';
+    });
+  }
+
+  // 버튼 생성
+  var wrap = document.getElementById('landing-tier-btns');
+  if(wrap){
+    TIERS.forEach(function(t){
+      var btn = document.createElement('button');
+      btn.className = 'landing-tier-btn';
+      btn.dataset.max = t.max;
+      btn.textContent = t.label;
+      btn.style.cssText = 'padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;transition:.2s';
+      btn.onclick = function(){ updatePrices(t.max); };
+      wrap.appendChild(btn);
+    });
+  }
+
+  // 초기값 10명
+  document.addEventListener('DOMContentLoaded', function(){ updatePrices(10); });
+  setTimeout(function(){ updatePrices(10); }, 200);
 })();
 </script>
 
