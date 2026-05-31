@@ -8194,7 +8194,7 @@ window._dwVerifyExcel=function(){
 
 window._txsImgCache={};
 
-function _txsViewImg(src){var m=document.createElement('div');m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9999;display:flex;align-items:center;justify-content:center;';m.onclick=function(){m.remove();};var img=document.createElement('img');img.src=src;img.style.cssText='max-width:94vw;max-height:90vh;border-radius:10px;box-shadow:0 0 40px rgba(0,0,0,.5);';m.appendChild(img);document.body.appendChild(m);}
+function _txsViewImg(src){var m=document.createElement('div');m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';m.onclick=function(){m.remove();};var img=document.createElement('img');img.src=src;img.style.cssText='max-width:86vw;max-height:75vh;border-radius:12px;box-shadow:0 0 40px rgba(0,0,0,.5);object-fit:contain;';var close=document.createElement('div');close.textContent='×';close.style.cssText='position:absolute;top:16px;right:20px;color:#fff;font-size:32px;cursor:pointer;font-weight:300;line-height:1;';close.onclick=function(){m.remove();};m.appendChild(img);m.appendChild(close);document.body.appendChild(m);}
 window._txsViewImg=_txsViewImg;
 window._txsOpenImg=function(btn){
   var docId=btn.getAttribute('data-id');
