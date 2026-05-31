@@ -1810,6 +1810,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         })();
         lss('settlements',settlements);
         window._lastParsedSettlements = settlements;
+        window._lastDrvMap = drvMap;
         if(window._guardCheckDriverCount){
           var _pgIds=[]; var _pgSet={};settlements.forEach(function(s){var id=s.userId||s.driver||'';if(id&&!_pgSet[id]){_pgSet[id]=1;_pgIds.push(id);}});
           _guardCheckDriverCount(_pgIds.length);
