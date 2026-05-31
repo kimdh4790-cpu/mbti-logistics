@@ -9363,10 +9363,126 @@ function _downloadDouzoneCSV(ym){
   toast('\u2705 \ub354\uc874 CSV '+nonBizCnt+'\uba85 (\uc0ac\uc5c5\uc790 '+bizCnt+'\uba85 \uc81c\uc678)');
 }
 
+
+function _txsBulkShareAll(){
+  if(!_settleCache||!_settleCache.length){toast('❌ 정산 데이터 없음');return;}
+  if(!_CU||!_db){toast('❌ 로그인 필요');return;}
+  var did=_CU.dealerId||_CU.uid;
+  var taxEmail=_CU.taxEmail||'';
+
+  // 연동 월 선택
+  var months=[...new Set(_settleCache.map(function(s){return s.month||'';}).filter(Boolean))].sort().reverse();
+  var mo=document.createElement('div');
+  mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  mo.innerHTML='<div style="background:var(--bg);border-radius:16px;padding:24px;width:340px;max-width:94vw">'
+    +'<div style="font-size:16px;font-weight:800;margin-bottom:16px">📤 전체 연동</div>'
+    +'<div style="margin-bottom:12px"><label style="font-size:12px;color:var(--text3)">정산월</label>'
+    +'<select id="bulk-mo-sel" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);margin-top:4px;font-size:14px">'
+    +months.map(function(m){return '<option value="'+m+'">'+m+'</option>';}).join('')
+    +'</select></div>'
+    +'<div style="margin-bottom:12px"><label style="font-size:12px;color:var(--text3)">세무사 이메일</label>'
+    +'<input id="bulk-tax-email" type="email" value="'+(taxEmail||'')+'" placeholder="세무사 이메일" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);margin-top:4px;font-size:14px;box-sizing:border-box">'
+    +'</div>'
+    +'<div style="display:flex;gap:8px;margin-top:4px">'
+    +'<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">'
+    +'<input type="checkbox" id="bulk-excel-chk" checked> 엑셀도 함께 다운로드</label>'
+    +'</div>'
+    +'<div style="display:flex;gap:8px;margin-top:16px">'
+    +'<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);cursor:pointer;font-size:13px">취소</button>'
+    +'<button onclick="_txsBulkShareExec()" style="flex:1;padding:10px;border-radius:8px;background:linear-gradient(135deg,#059669,#0891b2);color:#fff;border:none;cursor:pointer;font-size:13px;font-weight:700">연동 실행</button>'
+    +'</div>'
+    +'</div>';
+  document.body.appendChild(mo);
+}
+
+function _txsBulkShareExec(){
+  var mo=document.querySelector('div[style*="position:fixed"][style*="z-index:9999"]');
+  var ym=(document.getElementById('bulk-mo-sel')||{}).value||'';
+  var email=(document.getElementById('bulk-tax-email')||{}).value||'';
+  var doExcel=(document.getElementById('bulk-excel-chk')||{}).checked;
+  if(mo)mo.remove();
+
+  if(!ym){toast('❌ 정산월 선택 필요');return;}
+  var did=_CU.dealerId||_CU.uid;
+  var targets=(_settleCache||[]).filter(function(s){return s.month===ym;});
+  if(!targets.length){toast('❌ 해당 월 정산 없음');return;}
+
+  toast('⏳ '+targets.length+'명 연동 중...');
+
+  // 엑셀 다운로드
+  if(doExcel) _txsBulkExcel(targets, ym);
+
+  // 세무사 공유링크 일괄 생성
+  if(email){
+    var batch=_db.batch();
+    var tokens=[];
+    targets.forEach(function(s){
+      var token='txs_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,6);
+      tokens.push(token);
+      var ref=_db.collection('taxShares').doc(token);
+      var cn=calcNet(s);
+      batch.set(ref,{
+        type:'tax_share', dealerId:did, driverId:s.userId||s.driver,
+        driverName:s.driver||s.userId, ym:ym, token:token,
+        email:email, companyName:_CU.companyName||'',
+        vatIncome:cn.income||cn.vatIncome||0, net:cn.net||0,
+        emp:cn.emp||0, work:cn.work||0,
+        supplyAmt:cn.supplyAmt||0, monthlyWage:cn.monthlyWage||0,
+        dcnt:s.dcnt||0, bizNum:s.bizNum||'', bizName:s.bizName||'',
+        expiresAt:new Date(Date.now()+90*24*3600*1000).toISOString(),
+        createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+        status:'pending', source:'bulk'
+      });
+    });
+    batch.commit().then(function(){
+      toast('✅ '+targets.length+'명 세무사 연동 완료!');
+      // 세무사 이메일 저장
+      if(email&&_CU.taxEmail!==email){
+        _db.collection('companies').doc(did).update({taxEmail:email}).catch(function(){});
+        _CU.taxEmail=email;
+      }
+    }).catch(function(e){toast('❌ 연동 실패: '+e.message);});
+  } else {
+    toast('✅ 엑셀 다운로드 완료!');
+  }
+}
+
+function _txsBulkExcel(targets, ym){
+  if(typeof XLSX==='undefined'){toast('❌ 엑셀 라이브러리 없음');return;}
+  var rows=[
+    ['구분','기사명','공급대가(①)','공급가액(②)','필요경비34.6%(③)','월보수액(④)','고용보험(⑤)','산재보험(⑥)','급여지급액(⑦)','사업자번호','정산월']
+  ];
+  targets.forEach(function(s,i){
+    var cn=calcNet(s);
+    var supply=cn.supplyAmt||s.supplyAmt||0;
+    var totalAmt=s.totalAmt||cn.income||0;
+    var expense=Math.round(supply*0.346);
+    var monthly=supply-expense;
+    var emp=cn.emp||s.emp||0;
+    var work=cn.work||s.work||0;
+    var net=totalAmt-emp-work;
+    rows.push([
+      i+1,
+      s.driver||s.userId||'',
+      totalAmt, supply, expense, monthly,
+      emp, work, net,
+      s.bizNum||'', ym
+    ]);
+  });
+  // 합계
+  var tot=function(col){return rows.slice(1).reduce(function(s,r){return s+(r[col]||0);},0);};
+  rows.push(['합계','',tot(2),tot(3),tot(4),tot(5),tot(6),tot(7),tot(8),'','']);
+
+  var ws=XLSX.utils.aoa_to_sheet(rows);
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,ym+' 정산');
+  XLSX.writeFile(wb,'엠비티아이_정산_'+ym+'.xlsx');
+}
 function pageTaxShare(){
   document.getElementById('page-title').textContent='🧾 세무사 연동';
   document.getElementById('topbar-right').innerHTML=
     '<button class="btn btn-sm" onclick="_downloadDouzoneCSV()" style="background:#1e40af;color:#fff;font-size:12px">💾 더존 CSV</button> '+
+    '<button class="btn btn-sm" onclick="_txsBulkShareAll()" style="background:linear-gradient(135deg,#059669,#0891b2);color:#fff;font-size:12px;font-weight:700">📤 전체 연동</button> '+
     '<button class="btn btn-sm" onclick="_generateTaxShareLink()" style="background:linear-gradient(135deg,#7c3aed,#185FA5);color:#fff;font-size:12px;font-weight:700">🔗 공유링크</button>';
   var el=document.getElementById('content');
   if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
