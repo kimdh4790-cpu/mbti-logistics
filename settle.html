@@ -1431,10 +1431,9 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         var rowDateRaw=row[rColDate];
         var rowDate='';
         if(rowDateRaw instanceof Date){
-          var _kst=new Date(rowDateRaw.getTime()+9*3600000);
-          var _y=_kst.getUTCFullYear();
-          var _m=String(_kst.getUTCMonth()+1).padStart(2,'0');
-          var _d=String(_kst.getUTCDate()).padStart(2,'0');
+          var _y=rowDateRaw.getFullYear();
+          var _m=String(rowDateRaw.getMonth()+1).padStart(2,'0');
+          var _d=String(rowDateRaw.getDate()).padStart(2,'0');
           rowDate=_y+'-'+_m+'-'+_d;
         } else if(typeof rowDateRaw==='number'&&rowDateRaw>40000){
           // Excel 날짜 시리얼 → JS Date
