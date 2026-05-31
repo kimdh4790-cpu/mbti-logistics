@@ -2075,7 +2075,8 @@ function _processQrAttend(){
     .where('userId','==',uid).where('date','==',today).limit(1).get()
     .then(function(snap){
       if(snap.empty){
-        // 출근 처리
+        // 지문 인증 후 출근 처리
+        _biometricVerify(uid, function(){
         return _db.collection('attendance').add({
           dealerId:p.dealerId, userId:uid,
           name:_CU.name||'', date:today,
@@ -2085,6 +2086,7 @@ function _processQrAttend(){
           createdAt:firebase.firestore.FieldValue.serverTimestamp()
         }).then(function(){
           toast('✅ 출근 완료! ('+today+')','#059669');
+        });
           goPage('my_qr');
         });
       } else {
@@ -10855,6 +10857,101 @@ function _saveWifiIp(){
     }).catch(function(e){toast('❌ '+e.message);});
 }
 window._saveWifiIp=_saveWifiIp;
+
+
+// ════════════════════════════════════════════════
+// 지문/생체 인증 (WebAuthn)
+// ════════════════════════════════════════════════
+
+// 지문 지원 여부 확인
+function _biometricSupported(){
+  return !!(window.PublicKeyCredential && navigator.credentials);
+}
+
+// 지문 등록 (직원 최초 1회)
+async function _biometricRegister(uid, name){
+  if(!_biometricSupported()){
+    toast('⚠️ 이 기기는 생체인증을 지원하지 않습니다');
+    return false;
+  }
+  try{
+    var challenge = new Uint8Array(32);
+    window.crypto.getRandomValues(challenge);
+    var options = {
+      challenge: challenge,
+      rp: { name: 'DONWAY', id: location.hostname },
+      user: {
+        id: new TextEncoder().encode(uid),
+        name: name,
+        displayName: name
+      },
+      pubKeyCredParams: [{ type: 'public-key', alg: -7 }],
+      authenticatorSelection: {
+        authenticatorAttachment: 'platform', // 기기 내장 지문센서
+        userVerification: 'required'
+      },
+      timeout: 60000
+    };
+    var credential = await navigator.credentials.create({ publicKey: options });
+    var credId = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
+    // Firestore에 저장
+    await _db.collection('biometrics').doc(uid).set({
+      uid: uid,
+      name: name,
+      credentialId: credId,
+      registered: new Date().toISOString()
+    });
+    toast('✅ 지문 등록 완료');
+    return true;
+  } catch(e){
+    if(e.name === 'NotAllowedError') toast('❌ 지문 인증 취소됨');
+    else toast('❌ 등록 실패: ' + e.message);
+    return false;
+  }
+}
+
+// 지문 인증 (출퇴근 시)
+async function _biometricVerify(uid, onSuccess){
+  if(!_biometricSupported()){
+    // 지원 안 하면 그냥 통과 (구형 기기 대응)
+    onSuccess();
+    return;
+  }
+  try{
+    // 등록된 credential 확인
+    var doc = await _db.collection('biometrics').doc(uid).get();
+    if(!doc.exists){
+      // 미등록이면 등록 먼저
+      var name = (_CU&&_CU.name)||uid;
+      var ok = await _biometricRegister(uid, name);
+      if(ok) onSuccess();
+      return;
+    }
+    var challenge = new Uint8Array(32);
+    window.crypto.getRandomValues(challenge);
+    var credId = doc.data().credentialId;
+    var credIdBytes = Uint8Array.from(atob(credId), function(c){ return c.charCodeAt(0); });
+    var options = {
+      challenge: challenge,
+      allowCredentials: [{ type: 'public-key', id: credIdBytes }],
+      userVerification: 'required',
+      timeout: 60000
+    };
+    await navigator.credentials.get({ publicKey: options });
+    toast('✅ 지문 인증 성공');
+    onSuccess();
+  } catch(e){
+    if(e.name === 'NotAllowedError') toast('❌ 지문 인증 취소 — 출퇴근 처리 안 됨', '#ef4444');
+    else {
+      // 인증 실패 시 그냥 통과 (기기 미지원 대응)
+      console.warn('WebAuthn 오류:', e.message);
+      onSuccess();
+    }
+  }
+}
+window._biometricVerify = _biometricVerify;
+window._biometricRegister = _biometricRegister;
+window._biometricSupported = _biometricSupported;
 
 function _openAdvanceModal(dateStr){
   var mo=document.createElement('div');mo.className='mo show';mo.id='mo-advance';
