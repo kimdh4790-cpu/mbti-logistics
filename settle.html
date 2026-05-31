@@ -6900,6 +6900,7 @@ function _dwRenderEngine(){
   wrap.appendChild(simWrap);
   el.appendChild(wrap);
   _dwRenderSimulator();
+  var _did=_CU&&_CU.dealerId;if(_did)setTimeout(function(){_dwLoadCfg(_did);},300);
 }
 
 // ★ 통합 로드 - 아래 업로드 섹션 파일 선택 시 시뮬레이터 자동 실행
@@ -11079,6 +11080,75 @@ function _lunchAdminView(did){
 window._lunchStart=_lunchStart;
 window._lunchEnd=_lunchEnd;
 window._lunchAdminView=_lunchAdminView;
+
+
+// ════════════════════════════════════════
+// 배달대행 트랙/슬롯 저장·불러오기
+// ════════════════════════════════════════
+function _dwSaveTracks(){
+  var did=_CU&&_CU.dealerId;
+  if(!did||!_db){toast('로그인 필요');return;}
+  var newTracks=[];
+  document.querySelectorAll('.dw-track-row').forEach(function(row){
+    var minEl=row.querySelector('.dw-track-min');
+    var priceEl=row.querySelector('.dw-track-price');
+    if(!minEl||!priceEl)return;
+    var min=parseInt(minEl.value)||0;
+    var price=parseInt(priceEl.value)||0;
+    if(price>0) newTracks.push({min:min,price:price});
+  });
+  // DW_TRACKS 전역 업데이트
+  if(newTracks.length>0){
+    window.DW_TRACKS=newTracks.sort(function(a,b){return b.min-a.min;});
+  }
+  // Firestore 저장
+  _db.collection('companies').doc(did).update({dwTracks:window.DW_TRACKS})
+    .then(function(){toast('✅ 트랙 단가 저장');})
+    .catch(function(e){toast('❌ '+e.message);});
+}
+
+function _dwSaveSlots(){
+  var did=_CU&&_CU.dealerId;
+  if(!did||!_db){toast('로그인 필요');return;}
+  var slotKeys=['morning','lunch_peak','lunch_off','dinner_peak','dinner_off'];
+  slotKeys.forEach(function(k){
+    var el=document.getElementById('dw-slot-'+k);
+    if(el&&window.DW_SLOTS&&window.DW_SLOTS[k]){
+      window.DW_SLOTS[k].price=parseInt(el.value)||0;
+    }
+  });
+  _db.collection('companies').doc(did).update({dwSlots:window.DW_SLOTS})
+    .then(function(){toast('✅ 시간대 단가 저장');})
+    .catch(function(e){toast('❌ '+e.message);});
+}
+
+function _dwLoadCfg(did){
+  if(!did||!_db)return;
+  _db.collection('companies').doc(did).get().then(function(doc){
+    if(!doc.exists)return;
+    var d=doc.data();
+    if(d.dwTracks&&d.dwTracks.length>0){
+      window.DW_TRACKS=d.dwTracks;
+      // UI 업데이트
+      d.dwTracks.forEach(function(t){
+        var el=document.querySelector('.dw-track-row[data-min="'+t.min+'"] .dw-track-price');
+        if(el) el.value=t.price;
+      });
+    }
+    if(d.dwSlots){
+      Object.keys(d.dwSlots).forEach(function(k){
+        if(window.DW_SLOTS&&window.DW_SLOTS[k]){
+          window.DW_SLOTS[k].price=d.dwSlots[k].price||0;
+        }
+        var el=document.getElementById('dw-slot-'+k);
+        if(el&&d.dwSlots[k]) el.value=d.dwSlots[k].price||0;
+      });
+    }
+  });
+}
+window._dwSaveTracks=_dwSaveTracks;
+window._dwSaveSlots=_dwSaveSlots;
+window._dwLoadCfg=_dwLoadCfg;
 
 function _openAdvanceModal(dateStr){
   var mo=document.createElement('div');mo.className='mo show';mo.id='mo-advance';
