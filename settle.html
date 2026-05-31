@@ -9558,16 +9558,15 @@ window._txsUpload=function(src){
             headers:{'Content-Type':'application/json','x-api-key':window.__AK||'','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
             body:JSON.stringify({
               model:'claude-haiku-4-5-20251001',
-              max_tokens:300,
+              max_tokens:400,
               messages:[{role:'user',content:[
                 {type:'image',source:{type:'base64',media_type:file.type,data:base64}},
-                {type:'text',text:'영수증/서류 분석 JSON만 출력. docType은 receipt/tax_invoice/contract/payslip/expense/other 중 하나. amount는 최종결제금액 숫자만. vendor는 상호명. desc는 품목 한줄요약. 예: {"docType":"receipt","amount":21200,"vendor":"맘스터치","desc":"식비-햄버거세트2개"}'}
-              ]}]
-            })
+                {type:'text',text:'이 영수증 이미지에서 정보 추출. JSON만 출력(설명없이). docType은 receipt/tax_invoice/contract/payslip/expense/other 중 하나. amount는 최종결제금액 숫자만. vendor는 가게/상호명. desc는 품목 한줄요약. 형식: {"docType":"receipt","amount":21200,"vendor":"상호명","desc":"품목설명"}'}
+              ]}]})
           }).then(function(r){return r.json();}).then(function(data){
             try{return JSON.parse((data.content[0].text||'{}').replace(/```json|```/g,'').trim());}
             catch(e){return {};}
-          }).catch(function(){return {};})
+          }).catch(function(){return {}})
           :Promise.resolve({});
 
         ocrPromise.then(function(ocr){
