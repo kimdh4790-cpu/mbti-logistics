@@ -107,8 +107,8 @@ tr:hover>td{background:var(--bg3)}
 .empty-icon{font-size:48px;margin-bottom:12px}
 .loading{text-align:center;padding:40px;color:var(--text3)}
 /* 로그인 */
-.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg);position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;overflow-y:auto}
-.login-card{background:var(--bg2);border-radius:20px;padding:32px 28px;width:360px;max-width:95vw;box-shadow:0 8px 32px rgba(0,0,0,.12)}
+.login-wrap{display:flex;align-items:flex-start;justify-content:center;min-height:100vh;background:var(--bg);position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;overflow-y:auto;padding:20px 0}
+.login-card{background:var(--bg2);border-radius:20px;padding:32px 28px;width:400px;max-width:95vw;box-shadow:0 8px 32px rgba(0,0,0,.12);margin:auto}
 /* 모바일 */
 .ham{display:none;width:36px;height:36px;align-items:center;justify-content:center;cursor:pointer;border-radius:8px;border:1px solid var(--border);font-size:18px;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none}
 @media(max-width:640px){
@@ -138,7 +138,7 @@ tr:hover>td{background:var(--bg3)}
 
 <!-- 로그인 -->
 <div id="login-screen" class="login-wrap">
-  <div class="login-card" style="width:400px;max-width:95vw">
+  <div class="login-card">
     <div style="text-align:center;margin-bottom:20px">
       <div style="width:52px;height:52px;border-radius:14px;background:var(--brand);display:inline-flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:8px">💰</div>
       <div style="font-size:22px;font-weight:900;color:var(--brand)">DONWAY</div>
@@ -148,9 +148,9 @@ tr:hover>td{background:var(--bg3)}
 
     <!-- 탭 -->
     <div style="display:flex;gap:4px;margin-bottom:20px;background:var(--bg3);border-radius:10px;padding:4px">
-      <button id="tab-login" onclick="switchTab('login')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:var(--brand);color:#fff;transition:.2s">로그인</button>
-      <button id="tab-register" onclick="switchTab('register')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);transition:.2s">회사 등록</button>
-      <button id="tab-join" onclick="switchTab('join')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);transition:.2s">직원 가입</button>
+      <button id="tab-login" onclick="var ts=['login','register','join'];ts.forEach(function(t){var b=document.getElementById('tab-'+t);var f=document.getElementById('form-'+t);if(t==='login'){b.style.background='var(--brand)';b.style.color='#fff';f.style.display='block';}else{b.style.background='transparent';b.style.color='var(--text3)';f.style.display='none';}});" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:var(--brand);color:#fff;transition:.2s">로그인</button>
+      <button id="tab-register" onclick="var ts=['login','register','join'];ts.forEach(function(t){var b=document.getElementById('tab-'+t);var f=document.getElementById('form-'+t);if(t==='register'){b.style.background='var(--brand)';b.style.color='#fff';f.style.display='block';}else{b.style.background='transparent';b.style.color='var(--text3)';f.style.display='none';}});" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);transition:.2s">회사 등록</button>
+      <button id="tab-join" onclick="var ts=['login','register','join'];ts.forEach(function(t){var b=document.getElementById('tab-'+t);var f=document.getElementById('form-'+t);if(t==='join'){b.style.background='var(--brand)';b.style.color='#fff';f.style.display='block';}else{b.style.background='transparent';b.style.color='var(--text3)';f.style.display='none';}});" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);transition:.2s">직원 가입</button>
     </div>
 
     <!-- 로그인 폼 -->
