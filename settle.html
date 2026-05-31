@@ -1776,9 +1776,17 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                 });
               });
               if(!tot)return;
+              // ★ 지원기사 etcPlus 합산
               ts.etcPlus=(ts.etcPlus||0)+tot;
               var prev=ts.etcPlusReason||'';
               ts.etcPlusReason=(prev?prev+' / ':'')+'아이디지원('+fromId+') '+pts.join('·');
+              // ★ 원래기사(fromId) etcMinus 차감 - 이중계산 방지
+              var fs=settlements.find(function(s){return (s.userId||s.driver)===fromId;});
+              if(fs){
+                fs.etcMinus=(fs.etcMinus||0)+tot;
+                var prevM=fs.etcMinusReason||'';
+                fs.etcMinusReason=(prevM?prevM+' / ':'')+'지원차감('+toId+') '+pts.join('·');
+              }
             });
           }
           var fbPromises=[];
