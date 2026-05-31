@@ -22283,8 +22283,9 @@ function _startDispatchListener(uid){
 </html>
 <script>document.addEventListener("DOMContentLoaded",function(){if(typeof initFirebase==="function")initFirebase();if(typeof _processJoinUrlParams==="function")_processJoinUrlParams();});
 
-// ── 보안: F12/우클릭/개발자도구 차단
-(function(){
+// ── 보안: F12/우클릭/개발자도구 차단 (임시 비활성화 - 디버깅용)
+(function(){ return; // 임시 비활성화
+
   document.addEventListener('contextmenu',function(e){e.preventDefault();});
   document.addEventListener('keydown',function(e){
     if(e.keyCode===123){e.preventDefault();return false;}
