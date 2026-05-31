@@ -11444,6 +11444,7 @@ function _calSelectDay(day){
   var y=window._calYear,m=window._calMonth;
   var mNames=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
   var area=document.getElementById('cal-memo-area');
+  var fullDay=y+'-'+String(m+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
   area.innerHTML='<div class="card">'
     +'<div style="font-size:14px;font-weight:700;margin-bottom:10px">'+y+'년 '+mNames[m]+' '+day+'일 메모</div>'
     +'<div id="cal-memo-list" style="margin-bottom:10px"></div>'
@@ -11452,7 +11453,7 @@ function _calSelectDay(day){
     +'<button onclick="_calAddMemo(this.dataset.day)" data-day="'+day+'" style="padding:8px 14px;background:var(--primary);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">등록</button>'
     +'</div>'
     +'<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;gap:8px">'
-    +'<button onclick="_openAdvanceModal(window._calYear+\'-\'+(window._calMonth+1<10?\'0\'+(window._calMonth+1):(window._calMonth+1))+\'-\'+(day<10?\'0\'+day:day))" style="flex:1;padding:8px;background:#f59e0b;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700">💸 가불</button>'
+    +'<button onclick="_openAdvanceModal(this.dataset.fd)" data-fd="'+fullDay+'" style="flex:1;padding:8px;background:#f59e0b;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700">💸 가불</button>'
     +'</div>'
     +'</div>';
   _calLoadMemos(day);
