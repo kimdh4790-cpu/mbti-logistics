@@ -6569,15 +6569,14 @@ window.dwRunLiveCalculations=function(){
             var totNet=Math.max(0,totPre-totTax);
             var totCnt=window._dwTotalCnt||0;
             function setEl(id,v){var e=document.getElementById(id);if(e)e.textContent=v;}
-            setEl('r-total-cnt', totCnt.toLocaleString()+'건');
-            setEl('r-total-pf',  '₩'+totPf.toLocaleString());
-            setEl('r-inj',       totInj>0?'+₩'+totInj.toLocaleString():'₩0');
-            setEl('r-ext',       totExt>0?'-₩'+totExt.toLocaleString():'₩0');
+            setEl('r-raw-sum',   '₩'+totPf.toLocaleString());
+            setEl('r-total-inj', totInj>0?'+₩'+totInj.toLocaleString():'+₩0');
+            setEl('r-total-ext', totExt>0?'-₩'+totExt.toLocaleString():'-₩0');
             setEl('r-pretax',    '₩'+totPre.toLocaleString());
-            setEl('r-tax33',     '-₩'+totTax.toLocaleString());
+            setEl('r-tax',       '-₩'+totTax.toLocaleString());
             setEl('r-net-pay',   '₩'+totNet.toLocaleString());
             var note=document.getElementById('dw-statement-note');
-            if(note) note.textContent=totCnt+'건 집계 중 • '+riderIdx+'/'+riderIds.length+'명 완료';
+            if(note) note.textContent=totCnt.toLocaleString()+'건 집계 중 • '+riderIdx+'/'+riderIds.length+'명 완료';
           })();
           setTimeout(processNextRider,200);
           return;
