@@ -1034,54 +1034,20 @@ html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#02
   <div class="rv" style="max-width:800px;margin:0 auto 8px">
     <div style="font-size:12px;color:rgba(107,128,153,1);text-align:center;margin-bottom:14px;letter-spacing:2px;font-weight:700">👥 직원 수 선택</div>
     <!-- 인원 구간 버튼 -->
-    <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap" id="tier-btns">
-      <button class="tier-btn active" data-tier="0" onclick="setTier(0)">
-        <span class="tier-icon">🏪</span>
-        <span class="tier-name">~20명</span>
-        <span class="tier-type">소규모</span>
-      </button>
-      <button class="tier-btn" data-tier="1" onclick="setTier(1)">
-        <span class="tier-icon">🏬</span>
-        <span class="tier-name">~40명</span>
-        <span class="tier-type">소형</span>
-      </button>
-      <button class="tier-btn" data-tier="2" onclick="setTier(2)">
-        <span class="tier-icon">🚚</span>
-        <span class="tier-name">~60명</span>
-        <span class="tier-type">중형</span>
-      </button>
-      <button class="tier-btn" data-tier="3" onclick="setTier(3)">
-        <span class="tier-icon">🏭</span>
-        <span class="tier-name">~80명</span>
-        <span class="tier-type">중규모</span>
-      </button>
-      <button class="tier-btn" data-tier="4" onclick="setTier(4)">
-        <span class="tier-icon">🏗</span>
-        <span class="tier-name">~100명</span>
-        <span class="tier-type">대규모</span>
-      </button>
-      <button class="tier-btn" data-tier="5" onclick="setTier(5)">
-        <span class="tier-icon">✏️</span>
-        <span class="tier-name">직접입력</span>
-        <span class="tier-type">맞춤</span>
-      </button>
+    <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrid="tier-btns">
+      <button class="tier-btn active" data-tier="0" onclick="setTier(0)"><span class="tier-name">1~10명</span></button>
+      <button class="tier-btn" data-tier="1" onclick="setTier(1)"><span class="tier-name">11~20명</span></button>
+      <button class="tier-btn" data-tier="2" onclick="setTier(2)"><span class="tier-name">21~30명</span></button>
+      <button class="tier-btn" data-tier="3" onclick="setTier(3)"><span class="tier-name">31~40명</span></button>
+      <button class="tier-btn" data-tier="4" onclick="setTier(4)"><span class="tier-name">41~50명</span></button>
+      <button class="tier-btn" data-tier="5" onclick="setTier(5)"><span class="tier-name">51~60명</span></button>
+      <button class="tier-btn" data-tier="6" onclick="setTier(6)"><span class="tier-name">61~70명</span></button>
+      <button class="tier-btn" data-tier="7" onclick="setTier(7)"><span class="tier-name">71~80명</span></button>
+      <button class="tier-btn" data-tier="8" onclick="setTier(8)"><span class="tier-name">81~90명</span></button>
+      <button class="tier-btn" data-tier="9" onclick="setTier(9)"><span class="tier-name">91~100명</span></button>
+      <button class="tier-btn" data-tier="10" onclick="setTier(10)"><span class="tier-name">✏️ 직접입력</span></button>
     </div>
-    <!-- 직접입력 인원수 -->
-    <div id="tier-custom-wrap" style="display:none;align-items:center;justify-content:center;gap:10px;margin-top:14px;flex-wrap:wrap">
-      <span style="font-size:13px;color:rgba(238,244,255,.7);font-weight:600">인원수 입력</span>
-      <div style="display:flex;align-items:center;gap:6px;background:rgba(0,200,248,.06);border:1.5px solid rgba(0,200,248,.4);border-radius:12px;padding:6px 14px">
-        <input id="tier-custom-n" type="number" min="1" max="99999" value="150"
-          style="width:80px;background:transparent;border:none;color:#fff;font-size:20px;font-weight:900;text-align:center;outline:none;font-family:'Syne',sans-serif"
-          oninput="_calcCustomTier(this.value)">
-        <span style="font-size:15px;color:rgba(238,244,255,.6);font-weight:600">명</span>
-      </div>
-      <div style="font-size:11px;color:rgba(0,200,248,.7);text-align:center;line-height:1.6">
-        그룹1 × 22,000원 &nbsp;|&nbsp; 그룹2 × 15,000원<br>
-        <span style="color:rgba(0,232,122,.8)">인원이 많아도 걱정없는 시스템</span>
-      </div>
-    </div>
-    <!-- 구간 설명 -->
-    <div id="tier-desc" style="text-align:center;margin-top:12px;font-size:12px;color:rgba(0,200,248,.75);font-weight:600;min-height:18px;letter-spacing:.3px"></div>
+    id="tier-desc" style="text-align:center;margin-top:12px;font-size:12px;color:rgba(0,200,248,.75);font-weight:600;min-height:18px;letter-spacing:.3px"></div>
   </div>
 
   <!-- 번들 추천 -->
@@ -2599,14 +2565,19 @@ if(!_initTier()){
 // ── 인당 단가 & 구간 설정
 var DW_RATE_G1 = 22000; // 그룹1: settle·combo·delivery·AI정산
 var DW_RATE_G2 = 15000; // 그룹2: qr·payroll
-// 구간: 20명 단위 (1~20 / 21~40 / 41~60 / 61~80 / 81~100 / 101명+)
+// 구간: 10명 단위
 var DW_TIERS = [
-  {label:'~20명',  max:20},
-  {label:'~40명',  max:40},
-  {label:'~60명',  max:60},
-  {label:'~80명',  max:80},
-  {label:'~100명', max:100},
-  {label:'직접입력', max:Infinity}
+  {label:'1~10명',   max:10},
+  {label:'11~20명',  max:20},
+  {label:'21~30명',  max:30},
+  {label:'31~40명',  max:40},
+  {label:'41~50명',  max:50},
+  {label:'51~60명',  max:60},
+  {label:'61~70명',  max:70},
+  {label:'71~80명',  max:80},
+  {label:'81~90명',  max:90},
+  {label:'91~100명', max:100},
+  {label:'직접입력',  max:Infinity}
 ];
 // 플랜별 그룹 (g1=22000, g2=15000)
 var DW_PLAN_GROUP = {
@@ -2630,7 +2601,7 @@ function setTier(i){
     b.classList.toggle('active', +b.dataset.tier===i);
   });
   var customWrap = document.getElementById('tier-custom-wrap');
-  if(i===5){
+  if(i===10){
     if(customWrap) customWrap.style.display='flex';
   } else {
     if(customWrap) customWrap.style.display='none';
