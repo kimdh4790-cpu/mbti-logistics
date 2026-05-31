@@ -4629,7 +4629,7 @@ function _attRenderSim(){
     +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
     +'<button onclick="_simGenQR()" class="btn btn-blue" style="font-size:11px;flex:1">🔄 QR 생성</button>'
     +'<select id="sim-iv-sel" style="flex:1;padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:11px">'
-    +'<option value="30">30초</option><option value="60">1분</option><option value="300">5분</option>'
+    +'<option value="10">30초</option><option value="60">1분</option><option value="300">5분</option>'
     +'</select>'
     +'</div>'
     +'</div>'
@@ -11035,7 +11035,7 @@ function _attOpenDeviceModal(type){
     +'<div style="margin-bottom:16px">'
     +'<label style="font-size:12px;color:var(--text3);display:block;margin-bottom:4px">갱신 주기</label>'
     +'<select id="dev-iv" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:13px">'
-    +'<option value="30">30초</option><option value="60">1분</option>'
+    +'<option value="10">30초</option><option value="60">1분</option>'
     +'<option value="120">2분</option><option value="300">5분</option>'
     +'</select></div>'
     +'<div style="background:var(--brand-l);border-radius:8px;padding:10px;margin-bottom:14px;font-size:11px;color:var(--brand)">'
@@ -16526,24 +16526,25 @@ function addRpCamp(cid){
 // ── 구간별 정액 요금 계산 (3% 계좌이체 할인 적용) ──
 // 그룹1: 17,000원/인 | 그룹2: 12,000원/인
 // 구간: 1~30명(×30) / 31~60명(×60) / 61~100명(×100)
-var SUB_TIERS=[
-  {cap:30,  label:'1~30명'},
-  {cap:60,  label:'31~60명'},
-  {cap:100, label:'61~100명'},
-];
-function _tierAmt(up, hc){
-  var cap=hc<=30?30:hc<=60?60:100;
-  return Math.round(up*cap*0.97); // 3% 계좌이체 할인
+// 10명 단위 구간 (그룹1: 22,000원/인, 그룹2: 15,000원/인)
+var DW_RATE={g1:22000,g2:15000};
+function _tierCap(hc){ return Math.ceil(hc/10)*10; }
+function _tierAmt(pkey, hc){
+  var cap=_tierCap(hc);
+  var rate=(['qr','payroll'].indexOf(pkey)>=0)?DW_RATE.g2:DW_RATE.g1;
+  return Math.round(rate*cap*0.97);
 }
 function _tierLabel(hc){
-  return hc<=30?'1~30명':hc<=60?'31~60명':'61~100명';
+  var hi=_tierCap(hc); return (hi-9)+'~'+hi+'명';
 }
+var SUB_TIERS=[{cap:10,label:'1~10명'},{cap:20,label:'11~20명'},{cap:30,label:'21~30명'},
+  {cap:40,label:'31~40명'},{cap:50,label:'41~50명'},{cap:60,label:'51~60명'},
+  {cap:70,label:'61~70명'},{cap:80,label:'71~80명'},{cap:90,label:'81~90명'},{cap:100,label:'91~100명'}];
 function _subPayClick(btn){
   var key=btn.dataset.pkey||'';
-  var up=parseInt(btn.dataset.uprice)||0;
-  var hc=parseInt((document.getElementById('sub-headcount')||{value:'30'}).value)||30;
-  if(!key||!up) return;
-  var amt=_tierAmt(up,hc);
+  var hc=parseInt((document.getElementById('sub-headcount')||{value:'10'}).value)||10;
+  if(!key) return;
+  var amt=_tierAmt(key,hc);
   // 계좌이체 신청 안내
   _showTransferGuide(key, amt, hc);
 }
@@ -16614,7 +16615,7 @@ function _showSubModal(){
     +'<div style="display:flex;flex-direction:column;gap:10px;padding:0 2px 12px">';
   plans.forEach(function(p){
     var cap=30;
-    var amt=_tierAmt(p.up,cap);
+    var amt=_tierAmt(p.key||'settle',cap);
     var badge=p.badge?'<span style="background:#00e87a;color:#000;font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;margin-left:6px">'+p.badge+'</span>':'';
     var grp=p.g===1?'<span style="font-size:9px;background:rgba(0,200,248,.15);color:#00c8f8;padding:1px 6px;border-radius:4px;margin-left:4px">그룹1</span>':'<span style="font-size:9px;background:rgba(0,232,122,.12);color:#00e87a;padding:1px 6px;border-radius:4px;margin-left:4px">그룹2</span>';
     html+='<div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px">'
@@ -16665,7 +16666,7 @@ function confirmSubPay(planKey){
   if(!plan){toast('❌ 플랜 없음: '+planKey);return;}
   var tierBtn=document.querySelector('[data-pkey="'+planKey+'"]');
   var cap=tierBtn?parseInt(tierBtn.dataset.selcap||30):30;
-  var amt=_tierAmt(plan.unitPrice||17000, cap);
+  var amt=_tierAmt(plan.key||'settle', cap);
   _showTransferGuide(planKey, amt, cap);
 }
 
