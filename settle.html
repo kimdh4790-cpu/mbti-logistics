@@ -1431,10 +1431,12 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         var rowDateRaw=row[rColDate];
         var rowDate='';
         if(rowDateRaw instanceof Date){
-          // XLSX.js raw:true → UTC 기준 Date. UTC 날짜로 읽어야 정확
-          var _y=rowDateRaw.getUTCFullYear();
-          var _m=String(rowDateRaw.getUTCMonth()+1).padStart(2,'0');
-          var _d=String(rowDateRaw.getUTCDate()).padStart(2,'0');
+          // XLSX.js 날짜 파싱 버그: 23:59:xx로 오는 경우 다음날로 보정
+          var _rd=new Date(rowDateRaw);
+          if(_rd.getHours()>=23&&_rd.getMinutes()>=58) _rd=new Date(_rd.getTime()+120000);
+          var _y=_rd.getFullYear();
+          var _m=String(_rd.getMonth()+1).padStart(2,'0');
+          var _d=String(_rd.getDate()).padStart(2,'0');
           rowDate=_y+'-'+_m+'-'+_d;
         } else if(typeof rowDateRaw==='number'&&rowDateRaw>40000){
           // Excel 날짜 시리얼 → JS Date
