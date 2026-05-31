@@ -6434,6 +6434,11 @@ window.dwRunLiveCalculations=function(){
 
   if(!simData.length&&!hasRiderMap){toast('먼저 1단계를 진행해주세요');return;}
 
+  // ★ 전역 누적값 초기화
+  window._dwTotalInj=0; window._dwTotalExt=0;
+  window._dwTotalCnt=0; window._dwTotalPf=0;
+  window._dwResults=[];
+
   btn.disabled=true; btn.textContent='⏳ 연산 중...'; btn.style.background='#64748b';
   con.innerHTML='';
   var resultsEl=document.getElementById('dw-results');
