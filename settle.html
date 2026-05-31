@@ -126,7 +126,46 @@ tr:hover>td{background:var(--bg3)}
 <body>
 <script>
 document.addEventListener("DOMContentLoaded",function(){var a=document.getElementById("app"),l=document.getElementById("login-screen");if(a)a.style.display="none";if(l)l.style.display="flex";});
-</script>
+
+var _bizDocFile=null;
+function onBizDocSelected(input){
+  var file=input.files&&input.files[0];if(!file)return;
+  if(file.size>5*1024*1024){alert('5MB 초과');return;}
+  _bizDocFile=file;
+  var prev=document.getElementById('r-bizdoc-preview');
+  var nm=document.getElementById('r-bizdoc-name');
+  var msg=document.getElementById('r-bizdoc-msg');
+  if(prev)prev.style.display='block';
+  if(nm)nm.textContent=file.name;
+  if(msg){msg.textContent='OCR 인식 중...';msg.style.color='#666';}
+  var ak=window.__AK||'';
+  if(!ak){if(msg){msg.textContent='파일 첨부 완료';msg.style.color='green';}return;}
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var b64=e.target.result.split(',')[1];
+    var mt=file.type==='application/pdf'?'application/pdf':file.type==='image/png'?'image/png':'image/jpeg';
+    fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':ak,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:600,
+        messages:[{role:'user',content:[
+          {type:mt==='application/pdf'?'document':'image',source:{type:'base64',media_type:mt,data:b64}},
+          {type:'text',text:'사업자등록증 정보 JSON: {bizNum,companyName,repName,bizAddr,bizType,bizItem}'}
+        ]}]})
+    }).then(function(r){return r.json();})
+    .then(function(data){
+      var text=(data.content&&data.content[0]&&data.content[0].text)||'';
+      try{
+        var info=JSON.parse(text.replace(/```json|```/g,'').trim());
+        var flds={bizNum:'r-biznum',companyName:'r-company',repName:'r-rep',bizAddr:'r-bizaddr',bizType:'r-biztype',bizItem:'r-bizitem'};
+        Object.keys(flds).forEach(function(k){if(info[k]){var el=document.getElementById(flds[k]);if(el&&!el.value)el.value=info[k];}});
+        if(msg){msg.textContent='OCR 완료';msg.style.color='green';}
+      }catch(e){if(msg){msg.textContent='파일 첨부 완료';msg.style.color='green';}}
+    }).catch(function(){if(msg){msg.textContent='파일 첨부 완료';msg.style.color='green';}});
+  };
+  reader.readAsDataURL(file);
+}
+window.onBizDocSelected=onBizDocSelected;</script>
 
 <!-- 로그인 -->
 <div id="login-screen" class="login-wrap">
@@ -2570,47 +2609,6 @@ function selectService(type){
   });
   document.getElementById('r-service').value=type;
 }
-
-var _bizDocFile=null;
-function onBizDocSelected(input){
-  var file=input.files&&input.files[0]; if(!file)return;
-  if(file.size>5*1024*1024){alert('5MB 초과');return;}
-  _bizDocFile=file;
-  var prev=document.getElementById('r-bizdoc-preview');
-  var name=document.getElementById('r-bizdoc-name');
-  var msg=document.getElementById('r-bizdoc-msg');
-  if(prev)prev.style.display='block';
-  if(name)name.textContent=file.name;
-  if(msg){msg.textContent='OCR 인식 중...';msg.style.color='var(--text3)';}
-  var ak=window.__AK||'';
-  if(!ak){if(msg){msg.textContent='파일 첨부 완료';msg.style.color='var(--green)';}return;}
-  var reader=new FileReader();
-  reader.onload=function(e){
-    var b64=e.target.result.split(',')[1];
-    var mt=file.type==='application/pdf'?'application/pdf':file.type==='image/png'?'image/png':'image/jpeg';
-    var prompt='{bizNum:사업자번호,companyName:상호,repName:대표자,bizAddr:주소,bizType:업태,bizItem:종목} JSON만 출력';
-    fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':ak,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:600,
-        messages:[{role:'user',content:[
-          {type:mt==='application/pdf'?'document':'image',source:{type:'base64',media_type:mt,data:b64}},
-          {type:'text',text:prompt}
-        ]}]})
-    }).then(function(r){return r.json();})
-    .then(function(data){
-      var text=(data.content&&data.content[0]&&data.content[0].text)||'';
-      try{
-        var info=JSON.parse(text.replace(/```json|```/g,'').trim());
-        var flds={bizNum:'r-biznum',companyName:'r-company',repName:'r-rep',bizAddr:'r-bizaddr',bizType:'r-biztype',bizItem:'r-bizitem'};
-        Object.keys(flds).forEach(function(k){if(info[k]){var el=document.getElementById(flds[k]);if(el&&!el.value)el.value=info[k];}});
-        if(msg){msg.textContent='OCR 완료 — 확인해 주세요';msg.style.color='var(--green)';}
-      }catch(e){if(msg){msg.textContent='파일 첨부 완료';msg.style.color='var(--green)';}}
-    }).catch(function(){if(msg){msg.textContent='파일 첨부 완료';msg.style.color='var(--green)';}});
-  };
-  reader.readAsDataURL(file);
-}
-window.onBizDocSelected=onBizDocSelected;
 function doRegister(){
   var company=document.getElementById('r-company').value.trim();
   var biz=document.getElementById('r-biznum').value.trim();
@@ -16412,6 +16410,7 @@ function pagePrices(tabMode){
     } else {
       rebuildAndRender();
     }
+    if(_CU&&_CU.dealerId) setTimeout(function(){_loadIdSupportSection(el,_CU.dealerId);},400);
   });
 }
 function _getRouteCamp(route){
