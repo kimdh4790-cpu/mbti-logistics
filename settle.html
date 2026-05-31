@@ -6946,11 +6946,6 @@ window.dwRunLiveCalculations=function(){
   var DWT=window.DW_TRACKS&&DW_TRACKS.length>1?DW_TRACKS:[
     {min:0,price:2900},{min:180,price:4200},{min:250,price:5100},{min:300,price:5300},{min:350,price:5500}
   ];
-  function _getTP(cnt){
-    var p=DWT[0].price;
-    for(var i=DWT.length-1;i>=0;i--){if(cnt>=(DWT[i].min||0)){p=DWT[i].price;break;}}
-    return p;
-  }
   // ━━ 우측 영수증 실시간 업데이트 함수 (매 틱 호출)
   function _updateReceipt(){
     var leaseFee=Math.floor((window._DW_LEASE||0)+(window._DW_PROG||0)+(window._DW_INS||0));
@@ -7659,7 +7654,7 @@ function _dwLoadSession(cb){
 function _dwCurrentPeriod(platform){
   // platform: 'baemin'=수~화, 'coupang'=일~토, 기본=26~25일
   var now=new Date();
-  function fmt(dt){return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');}
+  function fmtDate(dt){return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');}
 
   if(platform==='baemin'){
     // 배민: 수요일(3) 기준 주차
@@ -18860,7 +18855,7 @@ function saveCamp(oldName){
   var did=_CU&&_CU.dealerId;
   if(!did||!_db){toast('❌ Firebase 미연결');return;}
 
-  function doSave(lat,lng){
+  function _saveCampGps(lat,lng){
     if(!_campConfig[name])_campConfig[name]={};
     if(addr)_campConfig[name].addr=addr;
     if(lat)_campConfig[name].lat=lat;
