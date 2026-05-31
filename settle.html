@@ -2261,7 +2261,6 @@ var _db=null,_auth=null,_CU=null;
     var payload=JSON.parse(atob(qData));
     if(!payload||payload.v!==2)return;
     window._pendingQrAttend=payload;
-    console.log('[QR] 출퇴근 요청 감지:', payload.dealerId);
   }catch(e){}
 })();
 
@@ -6247,7 +6246,6 @@ var _dwPlatform='coupangEats';
 // ★ Firebase 주간 정산 마감 저장 + 기사 앱 알림
 function _dwSaveWeeklySettlement(result){
   if(!_db||!_CU){
-    console.log('[DW 정산 시뮬레이터 결과]', result);
     toast('ℹ️ 시뮬레이터 모드: DB 저장 생략 (실제 정산은 엑셀 업로드 후 정산 저장 버튼 사용)');
     return;
   }
@@ -6572,7 +6570,6 @@ function _dwParseRealExcel(file,btn1,btn2,con){
       if(!cancelKey) cancelKey=keys.find(function(k){return /취소|cancel/i.test(k);})||'';
       // 이벤트/비고
       var eventKey=keys.find(function(k){return /비고|할증|이벤트|event|remark/i.test(k);})||'';
-      console.log('[DONWAY Parser] 컬럼감지 → 라이더:'+riderKey+' | 금액:'+priceKey+' | 시간:'+timeKey+' | 취소:'+cancelKey);
 
       // ★ riderMap도 동시 생성 (기사별 카드 연동용)
       var _riderMapTemp={};
