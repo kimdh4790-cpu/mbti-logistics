@@ -148,9 +148,9 @@ tr:hover>td{background:var(--bg3)}
 
     <!-- 탭 -->
     <div style="display:flex;gap:4px;margin-bottom:20px;background:var(--bg3);border-radius:10px;padding:4px">
-      <button id="tab-login" onclick="typeof switchTab==='function'&&switchTab('login')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:var(--brand);color:#fff;transition:.2s">로그인</button>
-      <button id="tab-register" onclick="typeof switchTab==='function'&&switchTab('register')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);transition:.2s">회사 등록</button>
-      <button id="tab-join" onclick="typeof switchTab==='function'&&switchTab('join')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);transition:.2s">직원 가입</button>
+      <button id="tab-login" onclick="switchTab('login')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:var(--brand);color:#fff;transition:.2s">로그인</button>
+      <button id="tab-register" onclick="switchTab('register')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);transition:.2s">회사 등록</button>
+      <button id="tab-join" onclick="switchTab('join')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);transition:.2s">직원 가입</button>
     </div>
 
     <!-- 로그인 폼 -->
@@ -2612,6 +2612,7 @@ function switchTab(tab){
     }
   });
 }
+window.switchTab=switchTab;
 
 // ── 사업자번호 중복 확인 ──
 
@@ -2841,6 +2842,7 @@ function _switchJoinTab(tab){
   if(tq){tq.style.background=isQ?'var(--brand)':'transparent';tq.style.color=isQ?'#fff':'var(--text3)';}
   if(tf){tf.style.background=isQ?'transparent':'var(--brand)';tf.style.color=isQ?'var(--text3)':'#fff';}
 }
+window._switchJoinTab=_switchJoinTab;
 function _setBizType(isBiz){
   var bi=document.getElementById('j-biz-info');
   var yb=document.getElementById('j-biz-yes'),nb=document.getElementById('j-biz-no');
@@ -3497,6 +3499,7 @@ function _switchLoginTab(tab){
   if(eb){eb.style.background=isP?'transparent':'var(--brand)';eb.style.color=isP?'var(--text3)':'#fff';}
   if(pb){pb.style.background=isP?'var(--brand)':'transparent';pb.style.color=isP?'#fff':'var(--text3)';}
 }
+window._switchLoginTab=_switchLoginTab;
 function doPhoneLogin(){
   var phone=((document.getElementById('l-phone')||{}).value||'').replace(/[^0-9]/g,'');
   var pw=((document.getElementById('l-phone-pw')||{}).value||'');
