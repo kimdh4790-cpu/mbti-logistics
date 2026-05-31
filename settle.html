@@ -11590,11 +11590,21 @@ function _attLoadEmpQRList(did){
       var uid=d.userId||d.coupangId||doc.id;
       var box=document.getElementById('empqr-'+doc.id);
       if(!box||!window.QRCode)return;
-      var payload=JSON.stringify({v:2,type:'emp',dealerId:did,userId:uid,name:d.name||''});
+      var payload=JSON.stringify({v:2,type:'empqr',dealerId:did,userId:uid,name:d.name||'',ts:Date.now(),ivSec:window._attIvSec||30});
       try{new QRCode(box,{text:payload,width:110,height:110,correctLevel:QRCode.CorrectLevel.M});}
       catch(e){}
     });
   }).catch(function(e){if(list)list.innerHTML='<div class="empty">'+esc(e.message)+'</div>';});
+  // 30초 자동 갱신
+  if(window._empQrTimer)clearInterval(window._empQrTimer);
+  window._empQrTimer=setInterval(function(){
+    var area=document.getElementById('qrarea-empqr');
+    if(area&&area.style.display!=='none'){
+      _attLoadEmpQRList(did);
+    } else {
+      clearInterval(window._empQrTimer);window._empQrTimer=null;
+    }
+  },(window._attIvSec||30)*1000);
 }
 
 // 기본 갱신 주기: 30초
