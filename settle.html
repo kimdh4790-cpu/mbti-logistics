@@ -18874,13 +18874,13 @@ function saveCamp(oldName){
     var gc=new kakao.maps.services.Geocoder();
     gc.addressSearch(addr,function(res,status){
       if(status===kakao.maps.services.Status.OK&&res.length){
-        doSave(parseFloat(res[0].y),parseFloat(res[0].x));
+        _saveCampGps(parseFloat(res[0].y),parseFloat(res[0].x));
       } else {
-        doSave(null,null);
+        _saveCampGps(null,null);
       }
     });
   } else {
-    doSave(null,null);
+    _saveCampGps(null,null);
   }
 }
 
