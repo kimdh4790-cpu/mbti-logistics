@@ -9489,9 +9489,9 @@ window._txsUpload=function(src){
         var base64=ev.target.result.split(',')[1];
         // OCR 분석 (이미지인 경우)
         var ocrPromise=file.type.startsWith('image/')?
-          fetch('https://mbti-logistics.kimdh4790.workers.dev/claude-ocr',{
+          fetch('https://api.anthropic.com/v1/messages',{
             method:'POST',
-            headers:{'Content-Type':'application/json'},
+            headers:{'Content-Type':'application/json','x-api-key':window.__AK||'','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
             body:JSON.stringify({
               model:'claude-haiku-4-5-20251001',
               max_tokens:300,
@@ -15916,12 +15916,12 @@ function editDriver(id){
       +'<div class="fg" id="edr-monthly-f" style="'+(d.workType!=="monthly"?"display:none":"")+'">'
       +'<label>월 기본급 (원)</label><input id="edr-monthlyrate" type="number" value="'+(d.monthlyRate||2156880)+'"></div>'
       +'<div class="fg" id="edr-guarantee-f" style="'+(d.workType!=="commission"?"display:none":"")+'">'
-      +'<div class="fg" style="margin-top:6px">'
+      +'<label>최저보장액 (원)</label><input id="edr-guarantee" type="number" value="'+(d.baseGuarantee||0)+'"></div>'
+      +'</div>'
+      +'<div class="fg" style="margin-top:8px">'
       +'<label style="font-size:12px;font-weight:700"><span style="background:#fef3c7;color:#d97706;font-size:10px;padding:2px 8px;border-radius:10px">보장</span> 세금계산서 정산 보장금액 (원)</label>'
       +'<input id="edr-settle-guarantee" type="number" placeholder="예: 6500000" value="'+(d.settleGuarantee||0)+'" style="width:100%;padding:7px;border:1.5px solid #f59e0b;border-radius:8px;font-size:13px;background:var(--bg)">'
       +'<div style="font-size:10px;color:var(--text3);margin-top:3px">부족분 자동 기타(+) 채움 — 비워두면 미적용</div>'
-      +'</div>'
-      +'<label>최저보장액 (원)</label><input id="edr-guarantee" type="number" value="'+(d.baseGuarantee||0)+'"></div>'
       +'</div>'
       +'</div>'
       +'<div style="border-top:1px dashed var(--border);margin:8px 0;padding-top:8px">'
