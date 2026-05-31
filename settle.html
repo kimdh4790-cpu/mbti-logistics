@@ -17040,27 +17040,30 @@ function _showSubModal(){
 }
 function _selectTier(cap){
   // 버튼 스타일 갱신
-  [30,60,100].forEach(function(c){
-    var btn=document.getElementById('sub-tier-'+c);
+  [10,20,30,40,50,60,70,80,90,100].forEach(function(n){
+    var btn=document.getElementById('sub-tier-'+n);
     if(!btn) return;
-    if(c===cap){btn.style.background='var(--brand)';btn.style.color='#fff';btn.style.borderColor='var(--brand)';}
+    if(n===cap){btn.style.background='var(--brand)';btn.style.color='#fff';btn.style.borderColor='var(--brand)';}
     else{btn.style.background='var(--bg)';btn.style.color='var(--text)';btn.style.borderColor='var(--border)';}
   });
-  // 금액 갱신
-  var prices={settle:17000,qr_payroll:17000,qr:12000,payroll:12000,delivery:17000};
-  var tierLabel=cap<=30?'1~30명':cap<=60?'31~60명':'61~100명';
-  Object.keys(prices).forEach(function(k){
-    var amt=Math.round(prices[k]*cap*0.97);
-    document.querySelectorAll('.sub-amt-'+k).forEach(function(el){el.innerHTML=amt.toLocaleString()+'<span style="font-size:11px;font-weight:400">원/월</span>';});
-    document.querySelectorAll('.sub-btn-amt-'+k).forEach(function(el){el.textContent=amt.toLocaleString()+'원';});
-    document.querySelectorAll('.sub-tier-label-'+k).forEach(function(el){el.textContent=tierLabel+' × '+prices[k].toLocaleString()+'원 × 97%';});
-  });
-  // 버튼에 선택된 cap 저장
-  document.querySelectorAll('[data-pkey]').forEach(function(btn){
-    var up=parseInt(btn.dataset.uprice)||0;
-    btn.dataset.selcap=cap;
+  // 금액 갱신 - DW_RATE 기준
+  var g1=DW_RATE&&DW_RATE.g1||22000;
+  var g2=DW_RATE&&DW_RATE.g2||15000;
+  var groups={settle:g1,qr_payroll:g1,delivery:g1,qr:g2,payroll:g2};
+  var tierLabel=cap+'명 이하';
+  Object.keys(groups).forEach(function(k){
+    var amt=Math.round(groups[k]*cap*0.97);
+    document.querySelectorAll('.sub-amt-'+k).forEach(function(el){
+      el.innerHTML=amt.toLocaleString()+'<span style="font-size:11px;font-weight:400">원/월</span>';
+    });
+    document.querySelectorAll('[data-pkey="'+k+'"]').forEach(function(el){
+      el.dataset.selcap=cap;
+    });
+    var tl=document.querySelector('.sub-tier-label-'+k);
+    if(tl) tl.textContent=tierLabel;
   });
 }
+
 function _refreshSubCalc(){_selectTier(30);}
 function confirmSubPay(planKey){
   var plan=PLAN_INFO&&PLAN_INFO[planKey];
