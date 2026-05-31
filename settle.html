@@ -2338,7 +2338,6 @@ function _uploadToStorage(path, file){
   // 이미 초기화된 경우 앱 재사용
   if(firebase.apps&&firebase.apps.length>0){
     _db=firebase.firestore();
-    _db.settings({experimentalAutoDetectLongPolling:true, merge:true});
     window._db=_db;
     _auth=firebase.auth();
     
