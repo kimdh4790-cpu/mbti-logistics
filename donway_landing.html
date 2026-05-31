@@ -1088,8 +1088,17 @@ html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#02
       </div>
     </div>
     <div style="text-align:center;font-size:11px;color:rgba(238,244,255,.7)">
-      QR 플랜(그룹2 · 15,000원)으로 시작 →
-      <strong style="color:#00c8f8"> 콤보(그룹1 · 22,000원)로 업그레이드하면 전부 포함</strong>
+      QR 플랜(그룹2 · 12,000원)으로 시작 →
+      <strong style="color:#00c8f8"> 콤보(그룹1 · 35,000원)로 업그레이드하면 전부 포함</strong>
+    </div>
+  </div>
+
+  <!-- 런칭 특가 배너 -->
+  <div style="background:linear-gradient(135deg,rgba(5,150,105,.15),rgba(8,145,178,.15));border:1px solid rgba(5,150,105,.4);border-radius:14px;padding:14px 20px;margin:0 auto 20px;max-width:700px;text-align:center">
+    <div style="font-size:13px;font-weight:800;color:#10b981;margin-bottom:4px">🎉 런칭 특가 진행중</div>
+    <div style="font-size:12px;color:rgba(255,255,255,.8);line-height:1.6">
+      선착순 10개사 · 3개월 22,000원/인 → 이후 정상가 35,000원/인 자동 전환<br>
+      <strong style="color:#00c8f8">3개월 무이자 할부 가능 · 7일 무료 체험 후 결제</strong>
     </div>
   </div>
 
@@ -1115,7 +1124,7 @@ html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#02
         <li>캡처 차단 보안</li>
       </ul>
       <button class="pcbtn pcbg" onclick="location.href='https://donway.ai.kr/settle'">7일 무료 시작</button>
-      <button class="pcbtn" onclick="_dwShowPayModal('qr')" style="background:linear-gradient(135deg,#0ea5e9,#2563eb);color:#fff;border:none;margin-top:4px;font-weight:800">💳 이 플랜 결제하기</button>
+      <div style="background:rgba(0,200,248,.1);border:1px solid rgba(0,200,248,.3);border-radius:8px;padding:8px;text-align:center;margin-top:8px;font-size:12px;color:#00c8f8;font-weight:700">🔜 준비중 · 곧 오픈</div>
 <button class="pcbtn pcnav" onclick="gS(4)" style="background:rgba(0,200,248,.12);color:#00c8f8;border:1px solid rgba(0,200,248,.35);margin-top:4px">자세히 보기 →</button>
     </div>
 
@@ -1307,7 +1316,7 @@ html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#02
           <span style="font-size:10px;background:rgba(0,232,122,.1);color:#00e87a;padding:3px 8px;border-radius:4px">🔐 직원 QR 출퇴근</span>
           <span style="color:#475569;font-size:11px">+</span>
           <span style="font-size:10px;background:rgba(168,85,247,.1);color:#a855f7;padding:3px 8px;border-radius:4px">💼 급여 자동화</span>
-          <span style="font-size:10px;color:#00e87a;font-weight:700;margin-left:4px">= 그룹1 · 22,000원/인</span>
+          <span style="font-size:10px;color:#00e87a;font-weight:700;margin-left:4px">= 그룹1 · 35,000원/인</span>
         </div>
       </div>
     </div></div>
@@ -1916,7 +1925,7 @@ var SIM_DATA2 = {
   0: {
     url: 'donway.ai.kr — AI 정산',
     price: 220000,
-    sub: '10명 기준 · 인당 22,000원',
+    sub: '10명 기준 · 인당 35,000원',
     steps: ['데이터 업로드','AI 자동 분석','정산 완성','일괄 발송','세무 연동'],
     durations: [4200,4500,5000,4000,4500],
     btnBg: 'linear-gradient(135deg,#0ea5e9,#2563eb)',
@@ -2284,7 +2293,7 @@ var SIM_DATA2 = {
   3: {
     url: 'donway.ai.kr — 업무 정산',
     price: 220000,
-    sub: '10명 기준 · 인당 22,000원',
+    sub: '10명 기준 · 인당 35,000원',
     steps: ['업무 데이터 업로드','구간 실적 계산','보전·환수 판정','직원 명세서','세무 연동'],
     durations: [4000,4500,4500,5000,4500],
     btnBg: 'linear-gradient(135deg,#d97706,#f59e0b)',
@@ -2579,8 +2588,8 @@ if(!_initTier()){
 
 /* ══ 인원 구간별 가격 (10명 단위) ══ */
 // ── 인당 단가 & 구간 설정
-var DW_RATE_G1 = 22000; // 그룹1: settle·combo·delivery·AI정산
-var DW_RATE_G2 = 15000; // 그룹2: qr·payroll
+var DW_RATE_G1 = 35000; // 그룹1: settle·combo·delivery·AI정산 (정상가)
+var DW_RATE_G2 = 12000; // 그룹2: qr·payroll
 // 구간: 10명 단위
 var DW_TIERS = [
   {label:'1~10명',   max:10},
