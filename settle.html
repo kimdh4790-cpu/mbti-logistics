@@ -16449,6 +16449,15 @@ function pagePrices(tabMode){
     var _rpDiv=document.createElement('div');_rpDiv.id='rp-main-area';
     el.appendChild(_rpDiv);
 
+    // ★ 아이디 지원 섹션 미리 추가 (빈 상태)
+    var _idsWrap=document.createElement('div');
+    _idsWrap.id='id-support-wrap';
+    _idsWrap.className='card';
+    _idsWrap.style.cssText='margin-top:16px';
+    _idsWrap.innerHTML='<div style="font-size:13px;font-weight:800;margin-bottom:4px">?? 아이디 지원 관리</div>'
+      +'<div style="font-size:11px;color:var(--text3)">로딩 중...</div>';
+    el.appendChild(_idsWrap);
+
     function rebuildAndRender(){
       (_settleCache||[]).forEach(function(s){
         var camp=s.camp||_getSettleCamp(s);
@@ -16474,8 +16483,8 @@ function pagePrices(tabMode){
     } else {
       rebuildAndRender();
     }
-    // ★ 아이디 지원 섹션 - el에 직접 추가
-    if(_CU&&_CU.dealerId) setTimeout(function(){_loadIdSupportSection(el,_CU.dealerId);},400);
+    // ★ 아이디 지원 섹션 로드
+    if(_CU&&_CU.dealerId) _loadIdSupportSection(el,_CU.dealerId);
   });
 }
 function _getRouteCamp(route){
