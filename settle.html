@@ -2249,14 +2249,24 @@ function _processQrAttend(){
 }
 
 
-function _fbStorage(){
-  try{
-    if(typeof firebase!=='undefined'&&firebase.apps&&firebase.apps.length&&firebase.storage){
-      return firebase.storage();
-    }
-  }catch(e){}
-  return null;
+function _fbStorage(){ return null; }
+function _uploadToStorage(path, file){
+  return new Promise(function(resolve){
+    if(!_auth||!_auth.currentUser){resolve('');return;}
+    _auth.currentUser.getIdToken().then(function(token){
+      var bucket='mbti-logistics.firebasestorage.app';
+      var url='https://firebasestorage.googleapis.com/v0/b/'+bucket+'/o?uploadType=media&name='+encodeURIComponent(path);
+      return fetch(url,{method:'POST',headers:{'Content-Type':file.type||'application/octet-stream','Authorization':'Firebase '+token},body:file});
+    }).then(function(r){return r.json();})
+    .then(function(data){
+      if(data.name){
+        var dlUrl='https://firebasestorage.googleapis.com/v0/b/mbti-logistics.firebasestorage.app/o/'+encodeURIComponent(data.name)+'?alt=media&token='+(data.downloadTokens||'');
+        resolve(dlUrl);
+      } else { resolve(''); }
+    }).catch(function(){resolve('');});
+  });
 }
+window._uploadToStorage=_uploadToStorage;
 function _fbStorageReady(cb){
   if(_fbStorage()){cb(_fbStorage());return;}
   _loadStorageSDK(function(){
