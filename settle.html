@@ -7664,7 +7664,7 @@ function _dwCurrentPeriod(platform){
     var tue=new Date(wed); tue.setDate(wed.getDate()+6);
     // 입금일: 해당 주 금요일
     var fri=new Date(wed); fri.setDate(wed.getDate()+9);
-    return {start:fmt(wed),end:fmt(tue),payDate:fmt(fri),label:'배민 '+fmt(wed).slice(5)+'~'+fmt(tue).slice(5)};
+    return {start:fmtDate(wed),end:fmtDate(tue),payDate:fmtDate(fri),label:'배민 '+fmtDate(wed).slice(5)+'~'+fmtDate(tue).slice(5)};
   }
 
   if(platform==='coupang'||platform==='coupangEats'){
@@ -7674,7 +7674,7 @@ function _dwCurrentPeriod(platform){
     var sat=new Date(sun); sat.setDate(sun.getDate()+6);
     // 입금일: 다음주 금요일
     var nextFri=new Date(sun); nextFri.setDate(sun.getDate()+12);
-    return {start:fmt(sun),end:fmt(sat),payDate:fmt(nextFri),label:'쿠팡이츠 '+fmt(sun).slice(5)+'~'+fmt(sat).slice(5)};
+    return {start:fmtDate(sun),end:fmtDate(sat),payDate:fmtDate(nextFri),label:'쿠팡이츠 '+fmtDate(sun).slice(5)+'~'+fmtDate(sat).slice(5)};
   }
 
   // 기본: 26~25일 (월별)
