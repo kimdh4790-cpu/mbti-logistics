@@ -9579,16 +9579,10 @@ window._txsUpload=function(src){
             var dtMap={receipt:'receipt',tax_invoice:'tax_invoice',contract:'contract',payslip:'payslip',expense:'expense',other:'other'};
             var finalCat=ocr.docType&&dtMap[ocr.docType]?dtMap[ocr.docType]:cat;
             var storagePath='tax_docs/'+did+'/'+Date.now()+'_'+file.name;
-            return new Promise(function(res2){
-              _fbStorageReady(function(fbs){
-                var up=(fbs&&file.size<10*1024*1024)
-                  ?fbs.ref(storagePath).put(file)
-                    .then(function(snap){return snap.ref.getDownloadURL();})
-                    .catch(function(){return '';})
-                  :Promise.resolve('');
-                up.then(function(fileUrl){res2(fileUrl);});
-              });
-            }).then(function(fileUrl){
+            return (file.size<10*1024*1024
+              ? _uploadToStorage(storagePath, file)
+              : Promise.resolve('')
+            ).then(function(fileUrl){
               return _db.collection('tax_docs').add({
                 dealerId:did,ym:ym,category:finalCat,
                 memo:memo||ocr.desc||'',desc:ocr.desc||'',amount:ocr.amount||0,
