@@ -12218,8 +12218,7 @@ var MENUS_SETTLE = [
     {ic:'🗓',l:'라우트 근무표',   p:'roster',           plan_key:'settle'},
     {ic:'🧾',l:'세무사 공유',      p:'tax_share',        plan_key:'settle'},
     {ic:'⭐',l:'직원 평가',        p:'evaluation',       plan_key:'free'},
-    {ic:'💸',l:'경비 관리',        p:'expense',          plan_key:'free'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'any_paid'}
+        {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'any_paid'}
   ]},
   {s:'🛵 배달대행 정산', items:[
     {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',   plan_key:'any_paid'},
@@ -12285,7 +12284,7 @@ var MENUS_QR = [
     {ic:'📝',l:'위수탁 계약서',    p:'contract',         plan_key:'settle'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
     {ic:'⭐',l:'직원 평가',        p:'evaluation',       plan_key:'free'},
-    {ic:'💸',l:'경비 관리',        p:'expense',          plan_key:'free'}
+    
   ]},
   {s:'💼 급여 관리', items:[
     {ic:'💼',l:'급여 현황',        p:'hourly_settle',    plan_key:'payroll'}
@@ -12313,7 +12312,7 @@ var MENUS_FULL = [
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
     {ic:'🧾',l:'세무사 공유',      p:'tax_share',        plan_key:'settle'},
     {ic:'⭐',l:'직원 평가',        p:'evaluation',       plan_key:'free'},
-    {ic:'💸',l:'경비 관리',        p:'expense',          plan_key:'free'}
+    
   ]},
   {s:'🛵 배달대행 정산', items:[
     {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',   plan_key:'delivery'}
@@ -20103,7 +20102,6 @@ function _renderPaywall(feature){
     'attendance':{label:'출퇴근 현황',icon:'🔐',color:'#0891b2',pkg:'📷 QR 출퇴근 — ₩19,900/월',items:['실시간 출퇴근 현황','월별 기록 조회']},
     'leave':{label:'휴가·연차',icon:'🌴',color:'#059669',pkg:'💼 급여 관리 — ₩29,900/월',items:['연차·반차·병가 신청','관리자 승인/반려']},
     'vehicle':{label:'차량 관리',icon:'🚗',color:'#d97706',pkg:'🚀 ALL-IN-ONE — ₩59,900/월',items:['보험·검사 만료 경고','정비이력']},
-    'expense':{label:'경비 관리',icon:'💸',color:'#7c3aed',pkg:'🚀 ALL-IN-ONE — ₩59,900/월',items:['영수증 첨부','월별 집계']},
     'overtime':{label:'연장근로',icon:'⏰',color:'#dc2626',pkg:'💼 급여 관리 — ₩29,900/월',items:['직원 신청','관리자 승인']},
     'evaluation':{label:'직원 평가',icon:'⭐',color:'#f59e0b',pkg:'💼 급여 관리 — ₩29,900/월',items:['별점 평가','월별 기록']},
     'delivery_platform':{label:'배달대행 정산',icon:'🛵',color:'#ff6b35',pkg:'📦 택배 정산 — ₩29,900/월',items:['쿠팡이츠·배민·바로고','이벤트 수당 계산']},
