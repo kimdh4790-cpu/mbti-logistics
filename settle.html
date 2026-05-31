@@ -9543,7 +9543,7 @@ window._txsUpload=function(src){
             var dtMap={receipt:'receipt',tax_invoice:'tax_invoice',contract:'contract',payslip:'payslip',expense:'expense',other:'other'};
             var finalCat=ocr.docType&&dtMap[ocr.docType]?dtMap[ocr.docType]:cat;
             var storagePath='tax_docs/'+did+'/'+Date.now()+'_'+file.name;
-            var uploadP=(firebase.storage&&file.size<10*1024*1024)
+            var uploadP=(typeof firebase!=='undefined'&&firebase.storage&&file.size<10*1024*1024)
               ?firebase.storage().ref(storagePath).put(file)
                 .then(function(snap){return snap.ref.getDownloadURL();})
                 .catch(function(){return '';})
