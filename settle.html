@@ -1819,6 +1819,30 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             });
           }
           }
+          // ★ 정산 보장금액 자동 채움
+          if(_db&&_CU&&_CU.dealerId){
+            _db.collection('drivers').where('dealerId','==',_CU.dealerId).get()
+              .then(function(snap){
+                snap.forEach(function(doc){
+                  var drv=doc.data();
+                  var guarantee=drv.settleGuarantee||0;
+                  if(!guarantee)return;
+                  var uid=drv.userId||drv.id||'';
+                  var settle=settlements.find(function(s){return (s.userId||s.driver)===uid;});
+                  if(!settle)return;
+                  // calcNet으로 현재 세금계산서 금액 계산
+                  var cn=calcNet(settle);
+                  var currentAmt=cn.income||0;
+                  var diff=guarantee-currentAmt;
+                  if(diff>0){
+                    settle.etcPlus=(settle.etcPlus||0)+diff;
+                    var prev=settle.etcPlusReason||'';
+                    settle.etcPlusReason=(prev?prev+' / ':'')+'정산보장('+Math.round(guarantee/10000)+'만원 보장)';
+                    console.log('[settleGuarantee]',uid,'+₩'+diff.toLocaleString(),'(현재:'+currentAmt.toLocaleString()+' 목표:'+guarantee.toLocaleString()+')');
+                  }
+                });
+              }).catch(function(){});
+          }
           var fbPromises=[];
           settlements.filter(function(x){return x.month===month;}).forEach(function(x){
             var docId=x.fbId||(x.dealerId+'_'+x.userId+'_'+x.month);
@@ -16705,7 +16729,8 @@ function saveDriver(id){
     dailyRate:parseFloat(gvs('edr-dailyrate'))||82560,
     commissionRate:parseFloat(gvs('edr-commrate'))||10,
     monthlyRate:parseFloat(gvs('edr-monthlyrate'))||2156880,
-    baseGuarantee:parseFloat(gvs('edr-guarantee'))||0
+    baseGuarantee:parseFloat(gvs('edr-guarantee'))||0,
+    settleGuarantee:parseFloat(gvs('edr-settle-guarantee'))||0
   };
   _db.collection('drivers').doc(id).update(payload).then(function(){
     var mo=document.getElementById('mo-edit-dr');if(mo)mo.remove();
