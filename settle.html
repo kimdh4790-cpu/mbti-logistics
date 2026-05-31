@@ -9524,12 +9524,20 @@ window._txsUpload=function(src){
           ocrP.then(function(ocr){
             var dtMap={receipt:'receipt',tax_invoice:'tax_invoice',contract:'contract',payslip:'payslip',expense:'expense',other:'other'};
             var finalCat=ocr.docType&&dtMap[ocr.docType]?dtMap[ocr.docType]:cat;
-            return _db.collection('tax_docs').add({
-              dealerId:did,ym:ym,category:finalCat,
-              memo:memo||ocr.desc||'',desc:ocr.desc||'',amount:ocr.amount||0,
-              vendor:ocr.vendor||'',docType:ocr.docType||'',
-              fileUrl:'',filePath:'',fileType:file.type,
-              fileName:file.name,createdAt:new Date().toISOString(),uploadedBy:_CU.uid
+            var storagePath='tax_docs/'+did+'/'+Date.now()+'_'+file.name;
+            var uploadP=(firebase.storage&&file.size<5*1024*1024)
+              ?firebase.storage().ref(storagePath).put(file)
+                .then(function(snap){return snap.ref.getDownloadURL();})
+                .catch(function(){return '';})
+              :Promise.resolve('');
+            return uploadP.then(function(fileUrl){
+              return _db.collection('tax_docs').add({
+                dealerId:did,ym:ym,category:finalCat,
+                memo:memo||ocr.desc||'',desc:ocr.desc||'',amount:ocr.amount||0,
+                vendor:ocr.vendor||'',docType:ocr.docType||'',
+                fileUrl:fileUrl,filePath:storagePath,fileType:file.type,
+                fileName:file.name,createdAt:new Date().toISOString(),uploadedBy:_CU.uid
+              });
             });
           }).then(function(){resolve({ok:true,url:null});});
         }).catch(function(e){resolve({ok:false,err:e.message});});
