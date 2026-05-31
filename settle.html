@@ -1836,7 +1836,6 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               }
             });
           }
-          }
           // ★ 정산 보장금액 자동 채움
           if(_db&&_CU&&_CU.dealerId){
             _db.collection('drivers').where('dealerId','==',_CU.dealerId).get()
