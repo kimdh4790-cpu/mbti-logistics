@@ -3103,7 +3103,7 @@ function _renderTaxShareView(token){
     _db.collection('tax_docs').where('dealerId','==',dealerIdForDocs).where('ym','==',ymForDocs)
       .orderBy('createdAt','desc').get().then(function(docs){
       if(docs.empty)return;
-      var catLabels={tax_invoice:'세금계산서',receipt:'영수증',expense:'경비',contract:'계약서',payslip:'급여명세서',other:'기타'};
+      var catLabels={tax_invoice:'세금계산서',receipt:'영수증',contract:'계약서',payslip:'급여명세서',other:'기타'};
       var docHtml='<div style="max-width:860px;margin:0 auto 20px;padding:0 20px;font-family:sans-serif">'
         +'<div style="font-size:16px;font-weight:800;margin-bottom:12px">📁 등록 서류 ('+docs.size+'건)</div>'
         +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px">';
@@ -9102,7 +9102,6 @@ function pageTaxShare(){
   var TAX_CATS=[
     {key:'tax_invoice', label:'🧾 세금계산서', color:'#7c3aed'},
     {key:'receipt',     label:'🧾 영수증/지출증빙', color:'#0891b2'},
-    {key:'expense',     label:'💳 경비·비용', color:'#059669'},
     {key:'contract',    label:'📝 계약서', color:'#dc2626'},
     {key:'payslip',     label:'💰 급여명세서', color:'#f59e0b'},
     {key:'other',       label:'📁 기타서류', color:'#6b7280'},
@@ -9177,7 +9176,7 @@ window._taxSelectCat=function(key){
   window._taxCurrentCat=key;
   document.querySelectorAll('#tax-cat-btns button').forEach(function(btn){
     var isActive=btn.dataset.cat===key;
-    var colors={tax_invoice:'#7c3aed',receipt:'#0891b2',expense:'#059669',contract:'#dc2626',payslip:'#f59e0b',other:'#6b7280'};
+    var colors={tax_invoice:'#7c3aed',receipt:'#0891b2',contract:'#dc2626',payslip:'#f59e0b',other:'#6b7280'};
     var c=colors[btn.dataset.cat]||'var(--brand)';
     btn.style.borderColor=isActive?c:'var(--border)';
     btn.style.background=isActive?c:'transparent';
@@ -9215,8 +9214,8 @@ function _txsLoadDocs(did, ym){
         list.innerHTML='<div style="font-size:12px;color:var(--text3);text-align:center;padding:20px">📭 등록된 서류가 없습니다</div>';
         return;
       }
-      var catColors={tax_invoice:'#7c3aed',receipt:'#0891b2',expense:'#059669',contract:'#dc2626',payslip:'#f59e0b',other:'#6b7280'};
-      var catLabels={tax_invoice:'세금계산서',receipt:'영수증',expense:'경비',contract:'계약서',payslip:'급여명세서',other:'기타'};
+      var catColors={tax_invoice:'#7c3aed',receipt:'#0891b2',contract:'#dc2626',payslip:'#f59e0b',other:'#6b7280'};
+      var catLabels={tax_invoice:'세금계산서',receipt:'영수증',contract:'계약서',payslip:'급여명세서',other:'기타'};
       var html='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px">';
       snap.forEach(function(doc){
         var d=doc.data();
@@ -9249,7 +9248,7 @@ function _txsLoadDocs(did, ym){
 function _txsLoadChecklist(did, ym){
   var cl=document.getElementById('txs-checklist');
   if(!cl)return;
-  var cats={tax_invoice:'🧾 세금계산서',receipt:'🧾 영수증/지출증빙',expense:'💳 경비·비용',contract:'📝 계약서',payslip:'💰 급여명세서'};
+  var cats={tax_invoice:'🧾 세금계산서',receipt:'🧾 영수증/지출증빙',contract:'📝 계약서',payslip:'💰 급여명세서'};
   var promises=Object.keys(cats).map(function(cat){
     return _db.collection('tax_docs').where('dealerId','==',did).where('ym','==',ym).where('category','==',cat).limit(1).get()
       .then(function(snap){return {cat:cat,label:cats[cat],count:snap.size,has:!snap.empty};})
@@ -9315,14 +9314,14 @@ window._txsUpload=function(src){
                 body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:200,
                   messages:[{role:'user',content:[
                     {type:'image',source:{type:'base64',media_type:file.type,data:ev.target.result.split(',')[1]}},
-                    {type:'text',text:'이 서류 JSON만: {"docType":"receipt|tax_invoice|contract|payslip|expense|other","amount":숫자,"vendor":"거래처명","desc":"한줄설명"}'}
+                    {type:'text',text:'이 서류 JSON만: {"docType":"receipt|tax_invoice|contract|payslip|other","amount":숫자,"vendor":"거래처명","desc":"한줄설명"}'}
                   ]}]})
               }).then(function(r){return r.json();})
                 .then(function(r){var raw=(r.content&&r.content[0]&&r.content[0].text)||'{}';var m=raw.match(/\{[\s\S]*\}/);try{return JSON.parse(m?m[0]:'{}');}catch(e){return {};}})
                 .catch(function(){return {};})
             :Promise.resolve({});
           ocrP.then(function(ocr){
-            var dtMap={receipt:'receipt',tax_invoice:'tax_invoice',contract:'contract',payslip:'payslip',expense:'expense',other:'other'};
+            var dtMap={receipt:'receipt',tax_invoice:'tax_invoice',contract:'contract',payslip:'payslip',other:'other'};
             var finalCat=ocr.docType&&dtMap[ocr.docType]?dtMap[ocr.docType]:cat;
             return _db.collection('tax_docs').add({
               dealerId:did,ym:ym,category:finalCat,
