@@ -11496,6 +11496,10 @@ function _attSetQRMode(mode){
     if(window._attCountdown)clearInterval(window._attCountdown);
     _attGenQR(_CU.dealerId);
   }
+  if(mode==='empqr'){
+    var _eDid=_CU&&_CU.dealerId;
+    if(_eDid) setTimeout(function(){_attLoadEmpQR(_eDid);},100);
+  }
 }
 
 // 정적 QR 생성
