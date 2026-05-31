@@ -9528,7 +9528,7 @@ window._txsUpload=function(src){
               dealerId:did,ym:ym,category:finalCat,
               memo:memo||ocr.desc||'',desc:ocr.desc||'',amount:ocr.amount||0,
               vendor:ocr.vendor||'',docType:ocr.docType||'',
-              fileUrl:ev.target.result,filePath:'',fileType:file.type,
+              fileUrl:'',filePath:'',fileType:file.type,
               fileName:file.name,createdAt:new Date().toISOString(),uploadedBy:_CU.uid
             });
           }).then(function(){resolve({ok:true,url:file.type.startsWith('image/')?ev.target.result:null});});
@@ -21686,6 +21686,7 @@ function _showUploadResult(month,added,updated,newDrvCnt,routeCnt,newDrivers,lef
 }
 
 function _showWelcome(){
+  var _ex=document.getElementById('mo-welcome');if(_ex)_ex.remove();
   var name=(_CU&&_CU.name)||(_CU&&_CU.displayName)||'직원';
   var now=new Date();
   var h=now.getHours();
