@@ -2327,16 +2327,7 @@ function _uploadToStorage(path, file){
       } else { resolve(''); }
     }).catch(function(){resolve('');});
   });
-}
-function _loadStorageSDK(cb){
-  if(typeof firebase!=='undefined'&&firebase.storage){cb();return;}
-  var s=document.createElement('script');
-  s.src='https://www.gstatic.com/firebasejs/8.10.1/firebase-storage-compat.js';
-  s.onload=function(){cb();};
-  s.onerror=function(){cb();};
-  document.head.appendChild(s);
-}
-function initFirebase(){
+}function initFirebase(){
   if(typeof firebase==='undefined'){setTimeout(initFirebase,300);return;}
   // 이미 초기화된 경우 앱 재사용
   if(firebase.apps&&firebase.apps.length>0){
