@@ -1959,6 +1959,12 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           settlements.filter(function(x){return x.month===month;}).forEach(function(x){
             var docId=x.fbId||(x.dealerId+'_'+x.userId+'_'+x.month);
             x.fbId=docId;
+            // ★ calcNet 결과를 저장에 포함 (세무사연동/명세서에서 s.net 직접 사용)
+            var _cn=calcNet(x);
+            x.net=_cn.net||0;
+            x.tax=_cn.tax||0;
+            x.deduct=(_cn.emp||0)+(_cn.work||0)+(_cn.dmg||0)+(_cn.etcMinus||0)+(_cn.adv||0);
+            x.vatIncome=_cn.vatIncome||0;
             var clean=Object.assign({},x);
             Object.keys(clean).forEach(function(k){if(clean[k]===undefined)delete clean[k];});
             fbPromises.push(_db.collection('settlements').doc(docId).set(clean)
