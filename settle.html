@@ -6540,11 +6540,6 @@ window.dwRunLiveCalculations=function(){
       var timer=setInterval(function(){
         if(_idx>=orders.length){
           clearInterval(timer);
-          // 누적 합산
-          window._dwTotalInj+=_totalInj;
-          window._dwTotalExt+=_totalExt;
-          window._dwTotalCnt+=_validCnt;
-          window._dwTotalPf+=_pfSum;
           // 카드 헤더 색상 확정
           var tp=_getTP(_validCnt);
           var tc=tp>=5500?'#7c3aed':tp>=5100?'#2563eb':tp>=4200?'#059669':tp>=2900?'#d97706':'#6b7280';
@@ -6662,6 +6657,18 @@ window.dwRunLiveCalculations=function(){
         // ★ 콘솔 DOM 노드 제한 (최근 150건만 유지 - 성능)
         var rows=con.querySelectorAll('div[style*="grid-template-columns"]');
         if(rows.length>150) rows[0].remove();
+        // 카드 실시간 업데이트
+        (function(){
+          var ce=document.getElementById(cardId+'-cnt');  if(ce) ce.textContent=_validCnt+'건';
+          var pe=document.getElementById(cardId+'-pf');   if(pe) pe.textContent='₩'+_pfSum.toLocaleString();
+          var ie=document.getElementById(cardId+'-inj');  if(ie) ie.textContent='+₩'+_totalInj.toLocaleString();
+          var ee=document.getElementById(cardId+'-ext');  if(ee) ee.textContent='-₩'+_totalExt.toLocaleString();
+          var pre=Math.floor(_pfSum+_totalInj-_totalExt);
+          var tax=Math.floor(pre*0.033);
+          var ne=document.getElementById(cardId+'-net');  if(ne) ne.textContent='₩'+Math.max(0,pre-tax).toLocaleString();
+          var pree=document.getElementById(cardId+'-pre'); if(pree) pree.textContent='₩'+pre.toLocaleString();
+          var te=document.getElementById(cardId+'-tax');  if(te) te.textContent='-₩'+tax.toLocaleString();
+        })();
         _idx++;
       },60);
     }
