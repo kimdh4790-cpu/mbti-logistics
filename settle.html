@@ -1889,7 +1889,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               var pv=ts.etcPlusReason||'';
               ts.etcPlusReason=(pv?pv+' / ':'')+'아이디지원('+fid+') '+pts.join('·');
               if(!_fd[fid]) _fd[fid]=[];
-              _fd[fid].push({tot:tot,pts:pts,tDYM:tDYM,tR:tR,hasDateRoutes:hasDateRoutes});
+              _fd[fid].push({tot:tot,pts:pts,tDYM:tDYM,tDFull:tDFull,tR:tR,hasDateRoutes:hasDateRoutes});
             });
 
             Object.keys(_fd).forEach(function(fid){
@@ -1909,7 +1909,8 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                     if(fdm&&fdm.dateRoutes){
                       Object.keys(fdm.dateRoutes).forEach(function(dt){
                         var dtYM=_dateYM(dt);
-                        if(rule.tDYM.length&&rule.tDYM.indexOf(dtYM)<0)return;
+                        if(rule.tDFull&&rule.tDFull.length&&rule.tDFull.indexOf(dt)<0)return;
+                        else if((!rule.tDFull||!rule.tDFull.length)&&rule.tDYM.length&&rule.tDYM.indexOf(dtYM)<0)return;
                         Object.keys(fdm.dateRoutes[dt]).forEach(function(rt){
                           if(rule.tR.length&&rule.tR.indexOf(rt)<0)return;
                           var rd=fdm.dateRoutes[dt][rt];
