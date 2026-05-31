@@ -1400,6 +1400,13 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           drvMap[cleanId].routes[route].retAmt+=retAmt;
           drvMap[cleanId].routes[route].addInc+=addInc;
           if(unitPrc>0)drvMap[cleanId].routes[route].unitPrc=unitPrc;
+          if(rowDate){
+            if(!drvMap[cleanId].dateRoutes)drvMap[cleanId].dateRoutes={};
+            if(!drvMap[cleanId].dateRoutes[rowDate])drvMap[cleanId].dateRoutes[rowDate]={};
+            if(!drvMap[cleanId].dateRoutes[rowDate][route])drvMap[cleanId].dateRoutes[rowDate][route]={cnt:0,ret:0};
+            drvMap[cleanId].dateRoutes[rowDate][route].cnt+=dcnt;
+            drvMap[cleanId].dateRoutes[rowDate][route].ret+=rcnt;
+          }
 
           // 시즌 기간별 분리 집계
           if(rowDate&&SEASON_PRICES.length){
@@ -1748,6 +1755,32 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         if(_db){
           // ★ dealerId 강제 갱신 (다른 계정 데이터 혼입 방지) - fbPromises 전에 실행
           settlements.forEach(function(x){x.dealerId=_CU.dealerId;});
+          if(window._idSupportRules&&window._idSupportRules.length){
+            window._idSupportRules.forEach(function(rule){
+              var fromId=rule.fromId,toId=rule.toId;
+              var fd=drvMap[fromId]; if(!fd||!fd.dateRoutes)return;
+              var ts=settlements.find(function(s){return (s.userId||s.driver)===toId;});
+              if(!ts)return;
+              var tD=rule.dates||[],tR=rule.routes||[];
+              var tot=0,pts=[];
+              Object.keys(fd.dateRoutes).forEach(function(dt){
+                if(tD.length&&tD.indexOf(dt)<0)return;
+                Object.keys(fd.dateRoutes[dt]).forEach(function(rt){
+                  if(tR.length&&tR.indexOf(rt)<0)return;
+                  var rd=fd.dateRoutes[dt][rt];
+                  var up=RPRICE[rt]||0; if(!up)return;
+                  var amt=(rd.cnt||0)*up+(rd.ret||0)*up;
+                  if(!amt)return;
+                  tot+=amt;
+                  pts.push(rt+' '+(rd.cnt||0)+'건'+(rd.ret>0?' 반품'+(rd.ret)+'건':''));
+                });
+              });
+              if(!tot)return;
+              ts.etcPlus=(ts.etcPlus||0)+tot;
+              var prev=ts.etcPlusReason||'';
+              ts.etcPlusReason=(prev?prev+' / ':'')+'아이디지원('+fromId+') '+pts.join('·');
+            });
+          }
           var fbPromises=[];
           settlements.filter(function(x){return x.month===month;}).forEach(function(x){
             var docId=x.fbId||(x.dealerId+'_'+x.userId+'_'+x.month);
@@ -2240,6 +2273,12 @@ function _subRequest(planKey){
 }
 
 function showApp(){
+  // idSupport 규칙 사전 캐시
+  if(_db&&_CU&&_CU.dealerId){
+    _db.collection('idSupport').where('dealerId','==',_CU.dealerId).get()
+      .then(function(snap){var r=[];snap.forEach(function(d){r.push(Object.assign({_id:d.id},d.data()));});window._idSupportRules=r;})
+      .catch(function(){});
+  }
   // 구독 상태 확인 (슈퍼어드민은 제외)
   if(_CU&&!isSuperAdmin()&&_db){
     _db.collection('subscriptions').doc(_CU.dealerId||_CU.uid).get()
@@ -11147,6 +11186,70 @@ window._advCalc=_advCalc;
 window._saveAdvance=_saveAdvance;
 window._openAdvanceModal=_openAdvanceModal;
 
+
+function _loadIdSupportSection(container,did){
+  if(!container||!did||!_db)return;
+  _db.collection('idSupport').where('dealerId','==',did).get().then(function(snap){
+    var rules=[]; snap.forEach(function(doc){rules.push(Object.assign({_id:doc.id},doc.data()));});
+    window._idSupportRules=rules;
+    var old=document.getElementById('id-support-wrap'); if(old)old.remove();
+    var wrap=document.createElement('div'); wrap.id='id-support-wrap';
+    wrap.className='card'; wrap.style.marginTop='16px';
+    var listHtml=rules.map(function(r){
+      return '<div style="display:flex;align-items:center;gap:6px;padding:7px;background:var(--bg2);border-radius:8px;margin-bottom:5px;font-size:12px">'
+        +'<span style="font-weight:700;color:var(--brand)">'+esc(r.fromId)+'</span>'
+        +'<span style="color:var(--text3)">→</span>'
+        +'<span style="font-weight:700">'+esc(r.toId)+'</span>'
+        +(r.dates&&r.dates.length?'<span style="color:var(--text3);font-size:11px">'+r.dates.join(',')+'</span>':'')
+        +(r.routes&&r.routes.length?'<span style="background:var(--bg3);padding:1px 5px;border-radius:4px;font-size:11px">'+r.routes.join(' ')+'</span>':'')
+        +'<button data-rid="'+r._id+'" onclick="_delIdSupport(this.dataset.rid)" style="margin-left:auto;background:none;border:none;color:#ef4444;cursor:pointer;font-size:15px">×</button>'
+        +'</div>';
+    }).join('')||'<div style="font-size:12px;color:var(--text3)">등록된 지원 규칙 없음</div>';
+    wrap.innerHTML='<div style="font-size:13px;font-weight:800;margin-bottom:8px">?? 아이디 지원 관리</div>'
+      +'<div style="font-size:11px;color:var(--text3);margin-bottom:10px">엑셀 업로드 시 자동 적용 — 원래기사 날짜 라우트를 지원기사 기타(+)로 반영</div>'
+      +'<div id="ids-list">'+listHtml+'</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">'
+      +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">원래기사 ID</div>'
+      +'<input id="ids-from" placeholder="kycandksh" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg)"></div>'
+      +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">지원기사 ID</div>'
+      +'<input id="ids-to" placeholder="llch91" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg)"></div>'
+      +'</div>'
+      +'<div style="margin-top:8px"><div style="font-size:11px;color:var(--text3);margin-bottom:3px">날짜 (콤마구분, 2인이상 시 필수 — 비워두면 전체)</div>'
+      +'<input id="ids-dates" placeholder="2026-04-29, 2026-05-16" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg)"></div>'
+      +'<div style="margin-top:8px"><div style="font-size:11px;color:var(--text3);margin-bottom:3px">라우트 (콤마구분, 2인이상 시 필수 — 비워두면 전체)</div>'
+      +'<input id="ids-routes" placeholder="301A, 301B" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg)"></div>'
+      +'<button onclick="_saveIdSupport()" class="btn btn-blue" style="width:100%;margin-top:10px">?? 지원 규칙 등록</button>';
+    container.appendChild(wrap);
+  }).catch(function(){});
+}
+function _saveIdSupport(){
+  var did=_CU&&_CU.dealerId; if(!did||!_db){toast('로그인 필요');return;}
+  var from=(document.getElementById('ids-from')||{value:''}).value.trim();
+  var to=(document.getElementById('ids-to')||{value:''}).value.trim();
+  if(!from||!to){toast('원래/지원 ID 필수');return;}
+  var dRaw=(document.getElementById('ids-dates')||{value:''}).value.trim();
+  var rRaw=(document.getElementById('ids-routes')||{value:''}).value.trim();
+  var dates=dRaw?dRaw.split(',').map(function(s){return s.trim();}).filter(Boolean):[];
+  var routes=rRaw?rRaw.split(',').map(function(s){return s.trim();}).filter(Boolean):[];
+  _db.collection('idSupport').add({dealerId:did,fromId:from,toId:to,dates:dates,routes:routes,createdAt:new Date().toISOString()})
+    .then(function(){
+      toast('✅ 등록 완료');
+      ['ids-from','ids-to','ids-dates','ids-routes'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+      var cont=document.getElementById('content'); if(cont&&_CU)_loadIdSupportSection(cont,_CU.dealerId);
+      _db.collection('idSupport').where('dealerId','==',did).get().then(function(snap){var r=[];snap.forEach(function(d){r.push(Object.assign({_id:d.id},d.data()));});window._idSupportRules=r;});
+    }).catch(function(e){toast('❌ '+e.message);});
+}
+function _delIdSupport(docId){
+  if(!_db||!docId)return;
+  if(!confirm('이 규칙을 삭제하나요?'))return;
+  _db.collection('idSupport').doc(docId).delete().then(function(){
+    toast('✅ 삭제'); pagePrices();
+  }).catch(function(e){toast('❌ '+e.message);});
+}
+window._saveIdSupport=_saveIdSupport;
+window._delIdSupport=_delIdSupport;
+window._loadIdSupportSection=_loadIdSupportSection;
+
 function _openAdvanceModal(dateStr){
   var mo=document.createElement('div');mo.className='mo show';mo.id='mo-advance';
   mo.onclick=function(e){if(e.target===mo)mo.remove();};
@@ -16372,6 +16475,8 @@ function pagePrices(tabMode){
       rebuildAndRender();
     }
   });
+  var _ppCont=tabMode?document.getElementById('stab-content'):document.getElementById('content');
+  if(_ppCont&&_CU&&_CU.dealerId)setTimeout(function(){_loadIdSupportSection(_ppCont,_CU.dealerId);},300);
 }
 function _getRouteCamp(route){
   if(!route)return '기타';
