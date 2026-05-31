@@ -1873,9 +1873,10 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           }
           // 정산 보장금액 자동 채움 (동기)
           (function(){
-            var drvList=window._drvCache||fbDrivers||[];
+            var drvList=fbDrivers||window._drvCache||[];
             drvList.forEach(function(drv){
               var guarantee=drv.settleGuarantee||0;
+              console.log('[보장금액]',drv.userId||drv.id,'guarantee=',guarantee);
               if(!guarantee)return;
               var uid=drv.userId||drv.id||'';
               if(!uid)return;
