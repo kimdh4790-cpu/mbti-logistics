@@ -1431,9 +1431,10 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         var rowDateRaw=row[rColDate];
         var rowDate='';
         if(rowDateRaw instanceof Date){
-          var _y=rowDateRaw.getFullYear();
-          var _m=String(rowDateRaw.getMonth()+1).padStart(2,'0');
-          var _d=String(rowDateRaw.getDate()).padStart(2,'0');
+          var _kst=new Date(rowDateRaw.getTime()+9*3600000);
+          var _y=_kst.getUTCFullYear();
+          var _m=String(_kst.getUTCMonth()+1).padStart(2,'0');
+          var _d=String(_kst.getUTCDate()).padStart(2,'0');
           rowDate=_y+'-'+_m+'-'+_d;
         } else if(typeof rowDateRaw==='number'&&rowDateRaw>40000){
           // Excel 날짜 시리얼 → JS Date
@@ -1847,6 +1848,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               if(!ts)return;
               // 날짜 → yyyy-MM 변환 (월 기준)
               var tDYM=(rule.dates||[]).map(function(d){return _dateYM(d);}).filter(Boolean);
+              var tDFull=(rule.dates||[]).map(function(d){var p=String(d).trim().split('-');if(p.length<3)return '';return p[0]+'-'+(p[1].length<2?'0'+p[1]:p[1])+'-'+(p[2].length<2?'0'+p[2]:p[2]);}).filter(Boolean);
               var tR=rule.routes||[];
               var tot=0, pts=[];
 
@@ -1855,7 +1857,8 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                 Object.keys(fd.dateRoutes).forEach(function(dt){
                   var dtYM=_dateYM(dt);
                   // 날짜 조건: 비어있으면 전체, 있으면 같은 월만
-                  if(tDYM.length&&tDYM.indexOf(dtYM)<0)return;
+                  if(tDFull.length&&tDFull.indexOf(dt)<0)return;
+                  else if(!tDFull.length&&tDYM.length&&tDYM.indexOf(dtYM)<0)return;
                   Object.keys(fd.dateRoutes[dt]).forEach(function(rt){
                     if(tR.length&&tR.indexOf(rt)<0)return;
                     var rd=fd.dateRoutes[dt][rt];
