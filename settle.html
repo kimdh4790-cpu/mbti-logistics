@@ -1757,6 +1757,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             emp:empIns, work:workIns,
             status:'정산예정',
             routeDetails:routeDetails,
+            dateRoutes:dm.dateRoutes||{},
             updatedAt:new Date().toISOString(),
             createdAt:new Date().toISOString()
           };
