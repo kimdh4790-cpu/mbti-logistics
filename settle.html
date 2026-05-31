@@ -1435,8 +1435,17 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           var _m=String(rowDateRaw.getMonth()+1).padStart(2,'0');
           var _d=String(rowDateRaw.getDate()).padStart(2,'0');
           rowDate=_y+'-'+_m+'-'+_d;
+        } else if(typeof rowDateRaw==='number'&&rowDateRaw>40000){
+          // Excel 날짜 시리얼 → JS Date
+          var _xd=new Date(Math.round((rowDateRaw-25569)*86400*1000));
+          var _y=_xd.getUTCFullYear();
+          var _m=String(_xd.getUTCMonth()+1).padStart(2,'0');
+          var _d=String(_xd.getUTCDate()).padStart(2,'0');
+          rowDate=_y+'-'+_m+'-'+_d;
         } else if(rowDateRaw){
-          rowDate=String(rowDateRaw).trim().slice(0,10);
+          var _rs=String(rowDateRaw).trim();
+          // yyyy-mm-dd 또는 yyyy/mm/dd 처리
+          rowDate=_rs.replace(/\//g,'-').slice(0,10);
         }
 
         if(route){
