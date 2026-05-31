@@ -2,7 +2,7 @@
       +'<div class="fg" style="margin-top:6px">'
       +'<label style="font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px">'
       +'<span style="background:#fef3c7;color:#d97706;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:800">보장</span>세금계산서 정산 보장금액 (원)</label>'
-      +'<input id="edr-settle-guarantee" type="number" placeholder="예: 6500000" value="'+(d.settleGuarantee||'')+'"'
+      +'<input id="edr-settle-guarantee" type="number" placeholder="예: 6500000" value="'+(d.settleGuarantee||0)+'"'
       +' style="width:100%;padding:7px;border:1.5px solid #f59e0b;border-radius:8px;font-size:13px;background:var(--bg)">'
       +'<div style="font-size:10px;color:var(--text3);margin-top:3px">설정 시 부족분을 기타(+)에 자동 채움— 비워두면 미적용</div>'
       +'</div>'PE html>
@@ -11732,7 +11732,7 @@ function onBizDocSelected(input){
         messages:[{role:'user',content:[
           {type: mediaType==='application/pdf'?'document':'image',
            source:{type:'base64',media_type:mediaType,data:b64}},
-          {type:'text',text:'이 사업자등록증 이미지에서 정보를 추출해서 JSON으로만 답해줘. 다른 말은 하지 마.\n한글을 정확하게 인식해줘. 특히 상호명은 오탈자 없이 정확하게.\n{"bizNum":"사업자번호 숫자 10자리","companyName":"상호명(정확하게)","repName":"대표자성명","bizAddr":"사업장소재지","bizType":"업태","bizItem":"종목"}\nJSON만 출력.}
+          {type:'text',text:'사업자등록증에서 JSON으로만 답해줘. 한글 상호명 정확히.\n{"bizNum":"사업자번호숫자만","companyName":"상호명","repName":"대표자명","bizAddr":"주소","bizType":"업태","bizItem":"종목"}\nJSON만 출력.'}
         ]}]
       })
     })
