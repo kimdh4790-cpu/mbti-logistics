@@ -1829,8 +1829,15 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             function _normD(s){
               if(!s)return '';
               var p=String(s).trim().split('-');
-              if(p.length!==3)return s;
-              return p[0]+'-'+(p[1].length<2?'0'+p[1]:p[1])+'-'+(p[2].length<2?'0'+p[2]:p[2]);
+              if(p.length>=2) return p[0]+'-'+(p[1].length<2?'0'+p[1]:p[1]);
+              return s;
+            }
+            // 날짜 → yyyy-MM (월 기준 매칭)
+            function _dateYM(s){
+              if(!s)return '';
+              var p=String(s).trim().split('-');
+              if(p.length>=2) return p[0]+'-'+(p[1].length<2?'0'+p[1]:p[1]);
+              return '';
             }
             var _fd={};
             window._idSupportRules.forEach(function(rule){
@@ -1838,16 +1845,17 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               var fd=drvMap[fid]; if(!fd)return;
               var ts=settlements.find(function(s){return (s.userId||s.driver)===tid;});
               if(!ts)return;
-              var tD=(rule.dates||[]).map(_normD).filter(Boolean);
+              // 날짜 → yyyy-MM 변환 (월 기준)
+              var tDYM=(rule.dates||[]).map(function(d){return _dateYM(d);}).filter(Boolean);
               var tR=rule.routes||[];
               var tot=0, pts=[];
 
-              // dateRoutes 있으면 날짜 기준, 없으면 routeDetails 기준
               var hasDateRoutes=fd.dateRoutes&&Object.keys(fd.dateRoutes).length>0;
               if(hasDateRoutes){
                 Object.keys(fd.dateRoutes).forEach(function(dt){
-                  var normDt=_normD(dt);
-                  if(tD.length&&tD.indexOf(normDt)<0)return;
+                  var dtYM=_dateYM(dt);
+                  // 날짜 조건: 비어있으면 전체, 있으면 같은 월만
+                  if(tDYM.length&&tDYM.indexOf(dtYM)<0)return;
                   Object.keys(fd.dateRoutes[dt]).forEach(function(rt){
                     if(tR.length&&tR.indexOf(rt)<0)return;
                     var rd=fd.dateRoutes[dt][rt];
@@ -1858,7 +1866,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                   });
                 });
               } else {
-                // fallback: routeDetails 기준으로 계산
+                // fallback: routeDetails 기준
                 var fs2=settlements.find(function(s){return (s.userId||s.driver)===fid;});
                 if(fs2&&fs2.routeDetails){
                   fs2.routeDetails.forEach(function(rd){
@@ -1876,7 +1884,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               var pv=ts.etcPlusReason||'';
               ts.etcPlusReason=(pv?pv+' / ':'')+'아이디지원('+fid+') '+pts.join('·');
               if(!_fd[fid]) _fd[fid]=[];
-              _fd[fid].push({tot:tot,pts:pts,tD:tD,tR:tR,hasDateRoutes:hasDateRoutes});
+              _fd[fid].push({tot:tot,pts:pts,tDYM:tDYM,tR:tR,hasDateRoutes:hasDateRoutes});
             });
 
             Object.keys(_fd).forEach(function(fid){
@@ -1892,12 +1900,11 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               if(fs.routeDetails&&fs.routeDetails.length){
                 rules.forEach(function(rule){
                   if(rule.hasDateRoutes){
-                    // dateRoutes 기준 차감
                     var fdm=drvMap[fid];
                     if(fdm&&fdm.dateRoutes){
                       Object.keys(fdm.dateRoutes).forEach(function(dt){
-                        var normDt=_normD(dt);
-                        if(rule.tD.length&&rule.tD.indexOf(normDt)<0)return;
+                        var dtYM=_dateYM(dt);
+                        if(rule.tDYM.length&&rule.tDYM.indexOf(dtYM)<0)return;
                         Object.keys(fdm.dateRoutes[dt]).forEach(function(rt){
                           if(rule.tR.length&&rule.tR.indexOf(rt)<0)return;
                           var rd=fdm.dateRoutes[dt][rt];
@@ -1909,11 +1916,10 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                       });
                     }
                   } else {
-                    // fallback: pts에 있는 라우트만 차감
                     rule.pts.forEach(function(pt){
-                      var m=pt.match(/^(\S+)\s+(\d+)건/);
+                      var m=pt.match(/^(\S+)\s+(\d+)\uAC74/);
                       if(!m)return;
-                      var rt=m[1], cnt=parseInt(m[2]);
+                      var rt=m[1],cnt=parseInt(m[2]);
                       var ri=fs.routeDetails.findIndex(function(r){return r.route===rt;});
                       if(ri<0)return;
                       fs.routeDetails[ri].cnt=Math.max(0,(fs.routeDetails[ri].cnt||0)-cnt);
