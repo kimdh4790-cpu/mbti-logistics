@@ -2328,16 +2328,6 @@ function _uploadToStorage(path, file){
     }).catch(function(){resolve('');});
   });
 }
-window._uploadToStorage=_uploadToStorage;
-function _fbStorageReady(cb){
-  if(_fbStorage()){cb(_fbStorage());return;}
-  _loadStorageSDK(function(){
-    setTimeout(function(){
-      if(_fbStorage()) cb(_fbStorage());
-      else cb(null);
-    },300);
-  });
-}
 function _loadStorageSDK(cb){
   if(typeof firebase!=='undefined'&&firebase.storage){cb();return;}
   var s=document.createElement('script');
@@ -2376,16 +2366,7 @@ _auth.onAuthStateChanged(function(user){
   _db.settings({experimentalAutoDetectLongPolling:true, merge:true});
   window._db=_db;
   _auth=firebase.auth();
-  // ★ Storage 초기화 - SDK 동적 로드
-  (function(){
-    var sdkUrl='https://www.gstatic.com/firebasejs/8.10.1/firebase-storage-compat.js';
-    if(typeof firebase.storage==='function'){return;}
-    var s=document.createElement('script');
-    s.src=sdkUrl;
-    s.onload=function(){console.log('[Storage] SDK 로드 완료:', typeof firebase.storage);};
-    s.onerror=function(){console.warn('[Storage] SDK 로드 실패');};
-    document.head.appendChild(s);
-  })();
+
   _auth.onAuthStateChanged(function(user){
     if(new URLSearchParams(window.location.search).get('taxShare'))return;
     if(!user){
