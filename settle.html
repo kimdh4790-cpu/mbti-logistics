@@ -9561,7 +9561,7 @@ window._txsUpload=function(src){
               max_tokens:300,
               messages:[{role:'user',content:[
                 {type:'image',source:{type:'base64',media_type:file.type,data:base64}},
-                {type:'text',text:'이 서류에서 JSON만 반환(설명없이): {"docType":"종류","amount":금액숫자,"vendor":"거래처","desc":"한줄설명"}'}
+                {type:'text',text:'영수증/서류 분석 JSON만 출력. docType은 receipt/tax_invoice/contract/payslip/expense/other 중 하나. amount는 최종결제금액 숫자만. vendor는 상호명. desc는 품목 한줄요약. 예: {"docType":"receipt","amount":21200,"vendor":"맘스터치","desc":"식비-햄버거세트2개"}'}
               ]}]
             })
           }).then(function(r){return r.json();}).then(function(data){
@@ -9579,7 +9579,7 @@ window._txsUpload=function(src){
                 body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:200,
                   messages:[{role:'user',content:[
                     {type:'image',source:{type:'base64',media_type:file.type,data:ev.target.result.split(',')[1]}},
-                    {type:'text',text:'이 서류 JSON만: {"docType":"receipt|tax_invoice|contract|payslip|expense|other","amount":숫자,"vendor":"거래처명","desc":"한줄설명"}'}
+                    {type:'text',text:'영수증 분석하여 JSON만 출력. docType: receipt/tax_invoice/contract/payslip/expense/other. amount: 최종결제금액 숫자. vendor: 상호명. desc: 품목요약. {"docType":"receipt","amount":0,"vendor":"","desc":""}'}
                   ]}]})
               }).then(function(r){return r.json();})
                 .then(function(r){var raw=(r.content&&r.content[0]&&r.content[0].text)||'{}';var m=raw.match(/\{[\s\S]*\}/);try{return JSON.parse(m?m[0]:'{}');}catch(e){return {};}})
