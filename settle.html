@@ -10772,6 +10772,90 @@ function _advCalc(){
   if(pn)pn.textContent='₩'+net.toLocaleString()+'원';
 }
 
+
+// ── WiFi(내부IP) 자동 출퇴근 감지
+function _wifiAutoCheck(did){
+  if(!did)return;
+  // 회사 등록 IP 가져오기
+  _db.collection('companies').doc(did).get().then(function(doc){
+    if(!doc.exists)return;
+    var d=doc.data();
+    var compIp=d.wifiIpPrefix||'';  // 예: '192.168.1.'
+    if(!compIp)return;
+    // 현재 IP 확인 (WebRTC 방식)
+    _getLocalIP(function(ip){
+      if(!ip)return;
+      var match = ip.startsWith(compIp);
+      var statusEl = document.getElementById('wifi-status');
+      if(statusEl){
+        statusEl.innerHTML = match
+          ? '<span style="color:var(--green)">✅ 사내 WiFi 연결됨 ('+ip+')</span>'
+          : '<span style="color:var(--text3)">📵 외부 네트워크 ('+ip+')</span>';
+      }
+      // 자동 출근 처리
+      if(match && d.wifiAutoCheckin){
+        _wifiTriggerCheckin(did, ip);
+      }
+    });
+  });
+}
+
+function _getLocalIP(callback){
+  try{
+    var pc=new RTCPeerConnection({iceServers:[]});
+    pc.createDataChannel('');
+    pc.createOffer().then(function(offer){ return pc.setLocalDescription(offer); });
+    pc.onicecandidate=function(e){
+      if(!e||!e.candidate)return;
+      var m=e.candidate.candidate.match(/([0-9]{1,3}\.){3}[0-9]{1,3}/);
+      if(m){
+        var ip=m[0];
+        if(ip!=='0.0.0.0'&&!ip.startsWith('127.')){
+          pc.close();
+          callback(ip);
+        }
+      }
+    };
+  }catch(e){ callback(null); }
+}
+
+function _wifiTriggerCheckin(did, ip){
+  var uid=_CU&&_CU.uid;
+  var name=_CU&&(_CU.name||_CU.userId||'');
+  if(!uid||!name)return;
+  var today=new Date().toISOString().slice(0,10);
+  var now=new Date().toTimeString().slice(0,5);
+  var docId=did+'_'+uid+'_'+today;
+  _db.collection('attendance').doc(docId).get().then(function(doc){
+    if(doc.exists&&doc.data().checkIn)return; // 이미 출근
+    return _db.collection('attendance').doc(docId).set({
+      dealerId:did, userId:uid, name:name,
+      date:today, checkIn:now,
+      method:'wifi', wifiIp:ip,
+      createdAt:new Date().toISOString()
+    },{merge:true});
+  }).then(function(){
+    toast('✅ WiFi 자동 출근: '+now);
+  }).catch(function(){});
+}
+
+window._wifiAutoCheck=_wifiAutoCheck;
+window._getLocalIP=_getLocalIP;
+
+
+function _saveWifiIp(){
+  var did=_CU&&_CU.dealerId;
+  var ip=(document.getElementById('wifi-ip-input')||{value:''}).value.trim();
+  if(!did||!ip)return;
+  var autoOn=(document.getElementById('wifi-auto-toggle')||{checked:false}).checked;
+  _db.collection('companies').doc(did).update({wifiIpPrefix:ip, wifiAutoCheckin:true})
+    .then(function(){
+      toast('✅ WiFi IP 저장: '+ip);
+      _wifiAutoCheck(did);
+    }).catch(function(e){toast('❌ '+e.message);});
+}
+window._saveWifiIp=_saveWifiIp;
+
 function _openAdvanceModal(dateStr){
   var mo=document.createElement('div');mo.className='mo show';mo.id='mo-advance';
   mo.onclick=function(e){if(e.target===mo)mo.remove();};
@@ -10967,7 +11051,7 @@ function _attRenderQR(){
       +'<div style="display:flex;gap:6px;align-items:center">'
       +'<span style="font-size:12px;color:var(--text3)">허용 반경</span>'
       +'<select id="att-radius-sel" onchange="_attSaveRadius(this.value)" style="flex:1;padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px">'
-      +'<option value="50">50m (엄격)</option><option value="100" selected>100m (기본)</option>'
+      +'<option value="10" selected>10m (최소)</option><option value="20">20m</option><option value="30">30m</option><option value="50">50m</option>'
       +'<option value="200">200m (여유)</option><option value="500">500m (넓게)</option>'
       +'<option value="0">검증 안함</option></select></div>'
       +'</div>'
@@ -11423,7 +11507,7 @@ function _attGenStaticQR(did){
   // 정적: 날짜 + dealerId (시간 없음)
   var today=new Date().toISOString().slice(0,10);
   var gps=window._attCompanyGPS||{lat:0,lng:0};
-  var radius=parseInt((document.getElementById('att-radius-sel')||{}).value||'100');
+  var radius=parseInt((document.getElementById('att-radius-sel')||{}).value||'10');
   var payload=JSON.stringify({
     v:2, type:'static', dealerId:did,
     date:today, gpsLat:gps.lat, gpsLng:gps.lng, radius:radius
@@ -11521,7 +11605,7 @@ function _attGenQR(did){
   var now=Date.now();
   var ivSec=window._attIvSec||30;
   var gpsData=window._attCompanyGPS||{lat:0,lng:0};
-  var radius=parseInt((document.getElementById('att-radius-sel')||{}).value||'100');
+  var radius=parseInt((document.getElementById('att-radius-sel')||{}).value||'10');
   var payload=JSON.stringify({
     v:2, dealerId:did, ts:now, ivSec:ivSec,
     gpsLat:gpsData.lat, gpsLng:gpsData.lng, radius:radius
