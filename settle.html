@@ -1460,7 +1460,6 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           drvMap[cleanId].routes[route].retAmt+=retAmt;
           drvMap[cleanId].routes[route].addInc+=addInc;
           if(unitPrc>0)drvMap[cleanId].routes[route].unitPrc=unitPrc;
-          if(window._dbgDateLogged2!==true){console.log('[날짜debug2] rowDateRaw=',row[rColDate],'type=',typeof row[rColDate],'rowDate=',rowDate);window._dbgDateLogged2=true;}
           if(rowDate){
             if(!drvMap[cleanId].dateRoutes)drvMap[cleanId].dateRoutes={};
             if(!drvMap[cleanId].dateRoutes[rowDate])drvMap[cleanId].dateRoutes[rowDate]={};
@@ -1813,7 +1812,6 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         })();
         lss('settlements',settlements);
         window._lastParsedSettlements = settlements;
-        window._lastDrvMap = drvMap;
         if(window._guardCheckDriverCount){
           var _pgIds=[]; var _pgSet={};settlements.forEach(function(s){var id=s.userId||s.driver||'';if(id&&!_pgSet[id]){_pgSet[id]=1;_pgIds.push(id);}});
           _guardCheckDriverCount(_pgIds.length);
@@ -1942,7 +1940,6 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             var drvList=fbDrivers||window._drvCache||[];
             drvList.forEach(function(drv){
               var guarantee=drv.settleGuarantee||0;
-              console.log('[보장금액]',drv.userId||drv.id,'guarantee=',guarantee);
               if(!guarantee)return;
               var uid=drv.userId||drv.id||'';
               if(!uid)return;
