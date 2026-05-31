@@ -758,7 +758,8 @@ export default {
       const resp = await fetchAsset('/settle.html', request);
       const html = await resp.text();
       const key = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
-      const injected = html.replace('<head>', '<head><script>window.__AK=' + JSON.stringify(key) + ';</script>');
+      const storageTag = '<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage-compat.js"></script>';
+      const injected = html.replace('</head>', storageTag + '\n<script>window.__AK=' + JSON.stringify(key) + ';</script>\n</head>');
       return new Response(injected, { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store, no-cache, must-revalidate', 'Pragma': 'no-cache' } });
     }
 
