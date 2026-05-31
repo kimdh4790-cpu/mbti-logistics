@@ -16474,9 +16474,9 @@ function pagePrices(tabMode){
     } else {
       rebuildAndRender();
     }
+    // ★ 아이디 지원 섹션 - el에 직접 추가
+    if(_CU&&_CU.dealerId) setTimeout(function(){_loadIdSupportSection(el,_CU.dealerId);},400);
   });
-  var _ppCont=tabMode?document.getElementById('stab-content'):document.getElementById('content');
-  if(_ppCont&&_CU&&_CU.dealerId)setTimeout(function(){_loadIdSupportSection(_ppCont,_CU.dealerId);},300);
 }
 function _getRouteCamp(route){
   if(!route)return '기타';
