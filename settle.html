@@ -5,7 +5,7 @@
       +'<input id="edr-settle-guarantee" type="number" placeholder="예: 6500000" value="'+(d.settleGuarantee||0)+'"'
       +' style="width:100%;padding:7px;border:1.5px solid #f59e0b;border-radius:8px;font-size:13px;background:var(--bg)">'
       +'<div style="font-size:10px;color:var(--text3);margin-top:3px">설정 시 부족분을 기타(+)에 자동 채움— 비워두면 미적용</div>'
-      +'</div>'PE html>
+      +'</div>'
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -11732,7 +11732,7 @@ function onBizDocSelected(input){
         messages:[{role:'user',content:[
           {type: mediaType==='application/pdf'?'document':'image',
            source:{type:'base64',media_type:mediaType,data:b64}},
-          {type:'text',text:'사업자등록증에서 JSON으로만 답해줘. 한글 상호명 정확히.\n{"bizNum":"사업자번호숫자만","companyName":"상호명","repName":"대표자명","bizAddr":"주소","bizType":"업태","bizItem":"종목"}\nJSON만 출력.'}
+          {type:'text',text:'사업자등록증에서 JSON으로만 답해줘. 한글 상호명 정확히.\n{bizNum사업자번호,companyName상호명,repName대표자명,bizAddr주소,bizType업태,bizItem종목}\nJSON만 출력.'}
         ]}]
       })
     })
@@ -12443,7 +12443,7 @@ function _attPrintStaticQR(){
   var imgSrc=canvas?canvas.toDataURL('image/png'):'';
   var win=window.open('','_blank','width=400,height=500');
   if(!win)return;
-  win.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>출퇴근 QR</title>'
+  win.document.write('<!DOCTY<html><head><meta charset="utf-8"><title>출퇴근 QR</title>'
     +'<style>body{margin:30px;text-align:center;font-family:sans-serif}'
     +'h2{font-size:20px;margin-bottom:6px}p{color:#666;font-size:13px;margin-bottom:16px}'
     +'@media print{button{display:none}}</style></head><body>'
@@ -12464,7 +12464,7 @@ function _attPrintQR(){
   var imgSrc=canvas?canvas.toDataURL('image/png'):'';
   var win=window.open('','_blank','width=400,height:500');
   if(!win)return;
-  win.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>출퇴근 QR</title>'
+  win.document.write('<!DOCTY<html><head><meta charset="utf-8"><title>출퇴근 QR</title>'
     +'<style>body{margin:30px;text-align:center;font-family:sans-serif}'
     +'@media print{button{display:none}}</style></head><body>'
     +'<h2>⚡ 동적 출퇴근 QR</h2>'
@@ -13100,7 +13100,7 @@ function calcMonthlyPay(params){
 function _printPayslip(worker, result, ym){
   var w=worker; var r=result;
   var compName=(_CU&&_CU.companyName)||'회사명';
-  var html='<!DOCTYPE html><html><head><meta charset="utf-8">'
+  var html='<!DOCTY<html><head><meta charset="utf-8">'
     +'<title>급여명세서</title>'
     +'<style>body{font-family:Malgun Gothic,sans-serif;margin:30px;color:#1a1a1a;font-size:13px}'
     +'h2{font-size:18px;text-align:center;margin-bottom:4px}'
@@ -14729,7 +14729,7 @@ function printAllPayslips(allRows){
       +'</div>';
   }).join('');
 
-  var html2='<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>급여명세서_'+month+'</title>'
+  var html2='<!DOCTY<html lang="ko"><head><meta charset="UTF-8"><title>급여명세서_'+month+'</title>'
     +'<style>'
     +'*{box-sizing:border-box;margin:0;padding:0;font-family:"맑은 고딕","Malgun Gothic",sans-serif}'
     +'body{background:#f5f5f5}'
@@ -14993,7 +14993,7 @@ function printDoc(){
       +'</tr>';
   }).join('');
 
-  var html='<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">'
+  var html='<!DOCTY<html lang="ko"><head><meta charset="UTF-8">'
     +'<title>'+typeLabel+'_'+docNo+'</title>'
     +'<style>'
     +'*{box-sizing:border-box;margin:0;padding:0;font-family:"맑은 고딕","Malgun Gothic",sans-serif}'
@@ -18582,7 +18582,7 @@ function _psPrint(wid){
   var totalDeduct=advance+taxIncome+taxLocal+taxHealth+taxEmp+taxPension+etcDeduct;
   var netPay=Math.max(0,Math.round(r.totalPay||0)-totalDeduct);
   var compName=(_CU&&_CU.companyName)||'DONWAY';
-  var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>급여명세서</title>'
+  var html='<!DOCTY<html><head><meta charset="utf-8"><title>급여명세서</title>'
     +'<style>body{font-family:Malgun Gothic,sans-serif;margin:30px;color:#111;font-size:13px}'
     +'h2{font-size:18px;font-weight:900;text-align:center;margin-bottom:4px}'
     +'.sub{text-align:center;color:#666;font-size:12px;margin-bottom:20px}'
