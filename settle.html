@@ -3792,6 +3792,10 @@ function _calcPlanAmount(planKey,headcount){
 }
 
 async function _tossPay(planType, amount){
+  if(planType==='qr'||planType==='payroll'){
+    toast('🔜 QR·급여 플랜은 준비 중입니다. 곧 오픈됩니다!');
+    return;
+  }
   if(!_CU){toast('❌ 로그인 필요');return;}
   var plan=PLAN_INFO&&PLAN_INFO[planType];
   if(!plan){toast('❌ 플랜 없음: '+planType);return;}
