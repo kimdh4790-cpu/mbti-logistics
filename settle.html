@@ -1963,8 +1963,12 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             var _cn=calcNet(x);
             x.net=_cn.net||0;
             x.tax=_cn.tax||0;
+            x.emp=_cn.emp||0;
+            x.work=_cn.work||0;
             x.deduct=(_cn.emp||0)+(_cn.work||0)+(_cn.dmg||0)+(_cn.etcMinus||0)+(_cn.adv||0);
-            x.vatIncome=_cn.vatIncome||0;
+            x.vatIncome=_cn.income||_cn.vatIncome||0;
+            x.supplyAmt=_cn.supplyAmt||0;
+            x.monthlyWage=_cn.monthlyWage||0;
             var clean=Object.assign({},x);
             Object.keys(clean).forEach(function(k){if(clean[k]===undefined)delete clean[k];});
             fbPromises.push(_db.collection('settlements').doc(docId).set(clean)
