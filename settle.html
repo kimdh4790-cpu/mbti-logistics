@@ -17096,7 +17096,7 @@ function _closeSubModal(){var m=document.getElementById("mo-sub");if(m)m.remove(
 function _showSubModal(){
   var mo=document.getElementById('mo-sub');if(mo)mo.remove();
   var moEl=document.createElement('div');moEl.className='mo show';moEl.id='mo-sub';
-  var _hc=30;
+  var _hc=10;
   if(_db&&_CU&&_CU.dealerId){
     _db.collection('drivers').where('dealerId','==',_CU.dealerId).where('is_active','==',true)
       .get().then(function(s){_hc=Math.max(1,s.size);_refreshSubCalc();}).catch(function(){});
@@ -17134,7 +17134,7 @@ function _showSubModal(){
     +'</div>'
     +'<div style="display:flex;flex-direction:column;gap:10px;padding:0 2px 12px">';
   plans.forEach(function(p){
-    var cap=30;
+    var cap=10;
     var amt=_tierAmt(p.key||'settle',cap);
     var badge=p.badge?'<span style="background:#00e87a;color:#000;font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;margin-left:6px">'+p.badge+'</span>':'';
     var grp=p.g===1?'<span style="font-size:9px;background:rgba(0,200,248,.15);color:#00c8f8;padding:1px 6px;border-radius:4px;margin-left:4px">그룹1</span>':'<span style="font-size:9px;background:rgba(0,232,122,.12);color:#00e87a;padding:1px 6px;border-radius:4px;margin-left:4px">그룹2</span>';
@@ -17185,7 +17185,7 @@ function _selectTier(cap){
   });
 }
 
-function _refreshSubCalc(){_selectTier(30);}
+function _refreshSubCalc(){_selectTier(10);}
 function confirmSubPay(planKey){
   var plan=PLAN_INFO&&PLAN_INFO[planKey];
   if(!plan){toast('❌ 플랜 없음: '+planKey);return;}
