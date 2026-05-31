@@ -6550,6 +6550,35 @@ window.dwRunLiveCalculations=function(){
           var preTax=Math.floor(_pfSum+_totalInj-_totalExt);
           var tax=Math.floor(preTax*0.033);
           window._dwResults.push({riderId:rid,totalCount:_validCnt,pfSum:_pfSum,injected:_totalInj,extracted:_totalExt,preTax:preTax,totalTax:tax,net:Math.max(0,preTax-tax),targetPrice:tp});
+          // ★ 전체 누적 합산
+          if(!window._dwTotalInj) window._dwTotalInj=0;
+          if(!window._dwTotalExt) window._dwTotalExt=0;
+          if(!window._dwTotalCnt) window._dwTotalCnt=0;
+          if(!window._dwTotalPf)  window._dwTotalPf=0;
+          window._dwTotalInj+=_totalInj;
+          window._dwTotalExt+=_totalExt;
+          window._dwTotalCnt+=_validCnt;
+          window._dwTotalPf+=_pfSum;
+          // ★ 명세서 실시간 카운팅 업데이트
+          (function(){
+            var totPf=window._dwTotalPf||0;
+            var totInj=window._dwTotalInj||0;
+            var totExt=window._dwTotalExt||0;
+            var totPre=Math.floor(totPf+totInj-totExt);
+            var totTax=Math.floor(totPre*0.033);
+            var totNet=Math.max(0,totPre-totTax);
+            var totCnt=window._dwTotalCnt||0;
+            function setEl(id,v){var e=document.getElementById(id);if(e)e.textContent=v;}
+            setEl('r-total-cnt', totCnt.toLocaleString()+'건');
+            setEl('r-total-pf',  '₩'+totPf.toLocaleString());
+            setEl('r-inj',       totInj>0?'+₩'+totInj.toLocaleString():'₩0');
+            setEl('r-ext',       totExt>0?'-₩'+totExt.toLocaleString():'₩0');
+            setEl('r-pretax',    '₩'+totPre.toLocaleString());
+            setEl('r-tax33',     '-₩'+totTax.toLocaleString());
+            setEl('r-net-pay',   '₩'+totNet.toLocaleString());
+            var note=document.getElementById('dw-statement-note');
+            if(note) note.textContent=totCnt+'건 집계 중 • '+riderIdx+'/'+riderIds.length+'명 완료';
+          })();
           setTimeout(processNextRider,200);
           return;
         }
