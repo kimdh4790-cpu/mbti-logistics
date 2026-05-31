@@ -1293,7 +1293,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         console.error('[엑셀] 시트 목록:', sn);
         return;
       }
-      var raw=XLSX.utils.sheet_to_json(rawSheet,{header:1,raw:false,dateNF:'yyyy-mm-dd'});
+      var raw=XLSX.utils.sheet_to_json(rawSheet,{header:1,raw:true});
       var total=totalSheet?XLSX.utils.sheet_to_json(totalSheet,{header:1}):[];
       var dmgRows=dmgSheet?XLSX.utils.sheet_to_json(dmgSheet,{header:1}):[];
       if(raw.length<2){toast('❌ 데이터가 없습니다');return;}
