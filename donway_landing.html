@@ -877,10 +877,10 @@ html,body{margin:0;padding:0;overflow:hidden;height:100%;background:var(--bg,#02
   <a href="https://donway.ai.kr/settle" class="bp" style="margin-bottom:10px">7일 무료로 시작하기 →</a>
   <a href="/donway_brochure.html" download="돈웨이_서비스소개서.html" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;max-width:340px;padding:13px 24px;border-radius:12px;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.25);color:rgba(255,255,255,.85);font-size:13px;font-weight:700;text-decoration:none;margin-bottom:14px;transition:.2s" onmouseover="this.style.background='rgba(255,255,255,.15)'" onmouseout="this.style.background='rgba(255,255,255,.08)'">📄 서비스 소개서 다운로드 (PDF 인쇄 가능)</a>
   <div class="s-stats">
-    <div class="ss-item"><b class="gg-n">5분</b><span>30명 정산 완료</span></div>
-    <div class="ss-item"><b class="gc-n">0원</b><span>기기 구매 불필요</span></div>
-    <div class="ss-item"><b class="gp-n">98%</b><span>자동화율</span></div>
-    <div class="ss-item"><b class="go-n">3건</b><span>특허 출원 중</span></div>
+    <div class="ss-item"><b class="gg-n" id="cnt-min">0</b><span>분 · 30명 정산</span></div>
+    <div class="ss-item"><b class="gc-n"><span id="cnt-auto">0</span>%</b><span>자동화율</span></div>
+    <div class="ss-item"><b class="gp-n">+<span id="cnt-growth">0</span>%</b><span>매출 성장률</span></div>
+    <div class="ss-item"><b class="go-n" id="cnt-patent">0</b><span>건 특허 출원</span></div>
     <div class="ss-item"><b style="color:#a855f7;font-size:22px;font-weight:900">세무사</b><span>자동 연동</span></div>
   </div>
 </div>
@@ -2825,5 +2825,37 @@ if(!_initTier()){document.addEventListener('DOMContentLoaded',_initTier);}
 })();
 </script>
 
+
+<script>
+(function(){
+  function animCount(id, target, duration, suffix){
+    var el=document.getElementById(id);
+    if(!el)return;
+    var start=0, step=target/Math.ceil(duration/16);
+    var timer=setInterval(function(){
+      start+=step;
+      if(start>=target){start=target;clearInterval(timer);}
+      el.textContent=Math.round(start)+(suffix||'');
+    },16);
+  }
+  // IntersectionObserver로 보일 때 실행
+  var ran=false;
+  var obs=new IntersectionObserver(function(entries){
+    if(entries[0].isIntersecting&&!ran){
+      ran=true;
+      animCount('cnt-min',   5,   1200);
+      animCount('cnt-auto',  98,  1500);
+      animCount('cnt-growth',188, 1800);
+      animCount('cnt-patent',3,   800);
+    }
+  },{threshold:0.3});
+  var target=document.getElementById('slide-0');
+  if(target)obs.observe(target);
+  else window.addEventListener('load',function(){
+    var t=document.getElementById('slide-0');
+    if(t)obs.observe(t);
+  });
+})();
+</script>
 </body>
 </html>
