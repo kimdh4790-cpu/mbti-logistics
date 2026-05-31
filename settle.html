@@ -116,6 +116,8 @@ tr:hover>td{background:var(--bg3)}
 }
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(8px);background:#1a1a18;color:#fff;padding:10px 20px;border-radius:var(--r);font-size:13px;z-index:600;opacity:0;transition:.22s;pointer-events:none;white-space:nowrap}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@keyframes pricePop{0%{transform:scale(1);}50%{transform:scale(1.1);}100%{transform:scale(1);}}
+@keyframes badgePulse{0%,100%{opacity:1;}50%{opacity:.6;}}
 </style>
 <script src="https://js.tosspayments.com/v2/standard"></script>
 <script>
@@ -1438,6 +1440,13 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           drvMap[cleanId].routes[route].retAmt+=retAmt;
           drvMap[cleanId].routes[route].addInc+=addInc;
           if(unitPrc>0)drvMap[cleanId].routes[route].unitPrc=unitPrc;
+          if(rowDate){
+            if(!drvMap[cleanId].dateRoutes)drvMap[cleanId].dateRoutes={};
+            if(!drvMap[cleanId].dateRoutes[rowDate])drvMap[cleanId].dateRoutes[rowDate]={};
+            if(!drvMap[cleanId].dateRoutes[rowDate][route])drvMap[cleanId].dateRoutes[rowDate][route]={cnt:0,ret:0};
+            drvMap[cleanId].dateRoutes[rowDate][route].cnt+=dcnt;
+            drvMap[cleanId].dateRoutes[rowDate][route].ret+=rcnt;
+          }
 
           // 시즌 기간별 분리 집계
           if(rowDate&&SEASON_PRICES.length){
@@ -1781,11 +1790,93 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           }
         })();
         lss('settlements',settlements);
-        window._lastParsedSettlements = settlements; // 경험치 업데이트용
+        window._lastParsedSettlements = settlements;
+        if(window._guardCheckDriverCount){
+          var _pgIds=[]; var _pgSet={};settlements.forEach(function(s){var id=s.userId||s.driver||'';if(id&&!_pgSet[id]){_pgSet[id]=1;_pgIds.push(id);}});
+          _guardCheckDriverCount(_pgIds.length);
+          _guardCheckDateRange(settlements);
+          _guardCheckAmountSpike(settlements);
+          _guardMarkUpload();
+          var _pgRoutes={};settlements.forEach(function(s){(s.routeDetails||[]).forEach(function(r){_pgRoutes[r.route]=1;});});
+          _guardCheckRouteSpike(Object.keys(_pgRoutes).length);
+          _guardUpdateMonthlySeat(settlements,month);
+        }
         // Firebase 저장
         if(_db){
           // ★ dealerId 강제 갱신 (다른 계정 데이터 혼입 방지) - fbPromises 전에 실행
           settlements.forEach(function(x){x.dealerId=_CU.dealerId;});
+          if(window._idSupportRules&&window._idSupportRules.length){
+            var _fd={};
+            window._idSupportRules.forEach(function(rule){
+              var fid=rule.fromId,tid=rule.toId;
+              var fd=drvMap[fid]; if(!fd||!fd.dateRoutes)return;
+              var ts=settlements.find(function(s){return (s.userId||s.driver)===tid;});
+              if(!ts)return;
+              var tD=rule.dates||[],tR=rule.routes||[],tot=0,pts=[];
+              Object.keys(fd.dateRoutes).forEach(function(dt){
+                if(tD.length&&tD.indexOf(dt)<0)return;
+                Object.keys(fd.dateRoutes[dt]).forEach(function(rt){
+                  if(tR.length&&tR.indexOf(rt)<0)return;
+                  var rd=fd.dateRoutes[dt][rt];
+                  var up=RPRICE[rt]||0; if(!up)return;
+                  var amt=(rd.cnt||0)*up+(rd.ret||0)*up; if(!amt)return;
+                  tot+=amt;
+                  pts.push(rt+' '+(rd.cnt||0)+'건'+(rd.ret>0?' 반품'+(rd.ret)+'건':''));
+                });
+              });
+              if(!tot)return;
+              ts.etcPlus=(ts.etcPlus||0)+tot;
+              var pv=ts.etcPlusReason||'';
+              ts.etcPlusReason=(pv?pv+' / ':'')+'아이디지원('+fid+') '+pts.join('·');
+              if(!_fd[fid]) _fd[fid]={tot:0,pts:[]};
+              _fd[fid].tot+=tot;
+              _fd[fid].pts=_fd[fid].pts.concat(pts);
+            });
+            Object.keys(_fd).forEach(function(fid){
+              var dc=_fd[fid];
+              var fs=settlements.find(function(s){return (s.userId||s.driver)===fid;});
+              if(!fs)return;
+              fs.etcMinus=(fs.etcMinus||0)+dc.tot;
+              var pvm=fs.etcMinusReason||'';
+              fs.etcMinusReason=(pvm?pvm+' / ':'')+'지원차감 '+dc.pts.join('·');
+              var fdm=drvMap[fid];
+              if(fdm&&fdm.dateRoutes&&fs.routeDetails&&fs.routeDetails.length){
+                Object.keys(fdm.dateRoutes).forEach(function(dt){
+                  Object.keys(fdm.dateRoutes[dt]).forEach(function(rt){
+                    var rd=fdm.dateRoutes[dt][rt];
+                    var ri=fs.routeDetails.findIndex(function(r){return r.route===rt;});
+                    if(ri<0)return;
+                    fs.routeDetails[ri].cnt=Math.max(0,(fs.routeDetails[ri].cnt||0)-(rd.cnt||0));
+                    fs.routeDetails[ri].ret=Math.max(0,(fs.routeDetails[ri].ret||0)-(rd.ret||0));
+                  });
+                });
+                fs.dcnt=fs.routeDetails.reduce(function(s,r){return s+(r.cnt||0);},0);
+                fs.rcnt=fs.routeDetails.reduce(function(s,r){return s+(r.ret||0);},0);
+              }
+            });
+          }
+          // 정산 보장금액 자동 채움
+          if(_db&&_CU&&_CU.dealerId){
+            _db.collection('drivers').where('dealerId','==',_CU.dealerId).get()
+              .then(function(snap){
+                snap.forEach(function(doc){
+                  var drv=doc.data();
+                  var guarantee=drv.settleGuarantee||0;
+                  if(!guarantee)return;
+                  var uid=drv.userId||drv.id||'';
+                  var settle=settlements.find(function(s){return (s.userId||s.driver)===uid;});
+                  if(!settle)return;
+                  var cn=calcNet(settle);
+                  var currentAmt=cn.income||0;
+                  var diff=guarantee-currentAmt;
+                  if(diff>0){
+                    settle.etcPlus=(settle.etcPlus||0)+diff;
+                    var prev=settle.etcPlusReason||'';
+                    settle.etcPlusReason=(prev?prev+' / ':'')+'정산보장('+Math.round(guarantee/10000)+'만원 보장)';
+                  }
+                });
+              }).catch(function(){});
+          }
           var fbPromises=[];
           settlements.filter(function(x){return x.month===month;}).forEach(function(x){
             var docId=x.fbId||(x.dealerId+'_'+x.userId+'_'+x.month);
@@ -2278,6 +2369,12 @@ function _subRequest(planKey){
 }
 
 function showApp(){
+  setTimeout(function(){if(window._initPlanGuard)_initPlanGuard();},2000);
+  if(_db&&_CU&&_CU.dealerId){
+    _db.collection('idSupport').where('dealerId','==',_CU.dealerId).get()
+      .then(function(snap){var r=[];snap.forEach(function(d){r.push(Object.assign({_id:d.id},d.data()));});window._idSupportRules=r;})
+      .catch(function(){});
+  }
   // 구독 상태 확인 (슈퍼어드민은 제외)
   if(_CU&&!isSuperAdmin()&&_db){
     _db.collection('subscriptions').doc(_CU.dealerId||_CU.uid).get()
@@ -15819,6 +15916,11 @@ function editDriver(id){
       +'<div class="fg" id="edr-monthly-f" style="'+(d.workType!=="monthly"?"display:none":"")+'">'
       +'<label>월 기본급 (원)</label><input id="edr-monthlyrate" type="number" value="'+(d.monthlyRate||2156880)+'"></div>'
       +'<div class="fg" id="edr-guarantee-f" style="'+(d.workType!=="commission"?"display:none":"")+'">'
+      +'<div class="fg" style="margin-top:6px">'
+      +'<label style="font-size:12px;font-weight:700"><span style="background:#fef3c7;color:#d97706;font-size:10px;padding:2px 8px;border-radius:10px">보장</span> 세금계산서 정산 보장금액 (원)</label>'
+      +'<input id="edr-settle-guarantee" type="number" placeholder="예: 6500000" value="'+(d.settleGuarantee||0)+'" style="width:100%;padding:7px;border:1.5px solid #f59e0b;border-radius:8px;font-size:13px;background:var(--bg)">'
+      +'<div style="font-size:10px;color:var(--text3);margin-top:3px">부족분 자동 기타(+) 채움 — 비워두면 미적용</div>'
+      +'</div>'
       +'<label>최저보장액 (원)</label><input id="edr-guarantee" type="number" value="'+(d.baseGuarantee||0)+'"></div>'
       +'</div>'
       +'</div>'
@@ -16250,7 +16352,8 @@ function saveDriver(id){
     dailyRate:parseFloat(gvs('edr-dailyrate'))||82560,
     commissionRate:parseFloat(gvs('edr-commrate'))||10,
     monthlyRate:parseFloat(gvs('edr-monthlyrate'))||2156880,
-    baseGuarantee:parseFloat(gvs('edr-guarantee'))||0
+    baseGuarantee:parseFloat(gvs('edr-guarantee'))||0,
+    settleGuarantee:parseFloat(gvs('edr-settle-guarantee'))||0
   };
   _db.collection('drivers').doc(id).update(payload).then(function(){
     var mo=document.getElementById('mo-edit-dr');if(mo)mo.remove();
@@ -16398,6 +16501,61 @@ window._saveIdSupport=_saveIdSupport;
 window._delIdSupport=_delIdSupport;
 window._loadIdSupportSection=_loadIdSupportSection;
 
+
+function _donwayNotifySound(){
+  if(navigator.vibrate)navigator.vibrate([200,100,200,100,200,100,200,100,200,100,200]);
+  if(!window.speechSynthesis)return;
+  var count=0;
+  function say(){
+    var u=new SpeechSynthesisUtterance('돈웨이');
+    u.lang='ko-KR';u.rate=0.9;u.pitch=1.1;u.volume=1.0;
+    u.onend=function(){if(++count<3)setTimeout(say,400);};
+    window.speechSynthesis.speak(u);
+  }
+  window.speechSynthesis.cancel();
+  setTimeout(say,100);
+}
+window._donwayNotifySound=_donwayNotifySound;
+if(navigator.serviceWorker){
+  navigator.serviceWorker.addEventListener('message',function(e){
+    if(e.data&&e.data.type==='DONWAY_NOTIFY')_donwayNotifySound();
+  });
+}
+
+function _isGuardExempt(){return isSuperAdmin()||(SUPER_ADMIN_EMAILS.indexOf((_CU&&_CU.email)||'')>=0);}
+function _guardLog(type,detail,severity){
+  if(_isGuardExempt())return;
+  if(!_db||!_CU)return;
+  var did=_CU.dealerId||_CU.uid||'';
+  _db.collection('security_logs').add({dealerId:did,email:_CU.email||'',type:type,detail:detail,severity:severity||'warn',at:new Date().toISOString()}).catch(function(){});
+  if(severity==='critical'||severity==='high'){
+    fetch('/fcm/notify-admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:'?? 이상감지:'+type,body:((_CU&&_CU.email)||did)+' — '+detail,type:'guard'})}).catch(function(){});
+  }
+}
+window._cachedIP=null;
+function _getClientIP(cb){if(window._cachedIP){cb(window._cachedIP);return;}fetch('https://api.ipify.org?format=json').then(function(r){return r.json();}).then(function(d){window._cachedIP=d.ip;cb(d.ip);}).catch(function(){cb('unknown');});}
+function _guardCheckDriverCount(n){if(_isGuardExempt())return;if(!_CU||!_db)return;var did=_CU.dealerId;_db.collection('subscriptions').where('dealerId','==',did).where('status','==','active').limit(1).get().then(function(snap){if(snap.empty)return;var cap=snap.docs[0].data().headcount||10;if(n>cap)_guardLog('seat_exceed','엑셀기사수('+n+') > 구독('+cap+')','high');}).catch(function(){});}
+function _guardUpdateMonthlySeat(settlements,month){if(_isGuardExempt())return;}
+function _guardCheckRouteSpike(n){if(_isGuardExempt())return;}
+function _guardCheckDateRange(settlements){if(_isGuardExempt())return;var dates=settlements.map(function(s){return s.month||'';}).filter(Boolean);var unique=dates.filter(function(v,i,a){return a.indexOf(v)===i;});if(unique.length>2)_guardLog('date_range','단일업로드 '+unique.length+'개월','warn');}
+function _guardCheckAmountSpike(settlements){if(_isGuardExempt())return;}
+function _guardMarkUpload(){window._guardLastUploadAt=Date.now();}
+function _guardCheckQuickDelete(month){if(_isGuardExempt())return;if(window._guardLastUploadAt&&(Date.now()-window._guardLastUploadAt)<600000)_guardLog('quick_delete',month+' 업로드후즉시삭제','high');}
+function _guardLogMonthDelete(month){if(_isGuardExempt())return;_guardLog('month_delete',month+' 월삭제','warn');}
+function _guardLogReset(){if(_isGuardExempt())return;_guardLog('reset','전체초기화','warn');}
+function _guardLogManualEdit(id,field,before,after){if(_isGuardExempt())return;var pct=before>0?Math.round(Math.abs((after||0)-before)/before*100):0;if(pct>20)_guardLog('manual_edit',id+' '+field+' '+pct+'%수정',pct>50?'high':'warn');}
+function _initPlanGuard(){if(_isGuardExempt())return;_getClientIP(function(ip){_db&&_db.collection('security_logs').add({dealerId:(_CU&&_CU.dealerId)||'',email:(_CU&&_CU.email)||'',type:'login',ip:ip,at:new Date().toISOString(),severity:'info'}).catch(function(){});});}
+window._guardCheckDriverCount=_guardCheckDriverCount;
+window._guardUpdateMonthlySeat=_guardUpdateMonthlySeat;
+window._guardCheckRouteSpike=_guardCheckRouteSpike;
+window._guardCheckDateRange=_guardCheckDateRange;
+window._guardCheckAmountSpike=_guardCheckAmountSpike;
+window._guardMarkUpload=_guardMarkUpload;
+window._guardCheckQuickDelete=_guardCheckQuickDelete;
+window._guardLogMonthDelete=_guardLogMonthDelete;
+window._guardLogReset=_guardLogReset;
+window._guardLogManualEdit=_guardLogManualEdit;
+window._initPlanGuard=_initPlanGuard;
 function pagePrices(tabMode){
   var el=tabMode?document.getElementById('stab-content'):document.getElementById('content');
   if(!tabMode){document.getElementById('page-title').textContent='쿠팡 라우트 단가표';document.getElementById('topbar-right').innerHTML='';}
