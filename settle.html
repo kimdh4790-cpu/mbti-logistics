@@ -11264,6 +11264,29 @@ window._saveIdSupport=_saveIdSupport;
 window._delIdSupport=_delIdSupport;
 window._loadIdSupportSection=_loadIdSupportSection;
 
+
+// DONWAY 알림 TTS + 진동 ("돈웨이" 3번)
+function _donwayNotifySound(){
+  if(navigator.vibrate) navigator.vibrate([200,100,200,100,200,100,200,100,200,100,200]);
+  if(!window.speechSynthesis) return;
+  var count=0;
+  function say(){
+    var u=new SpeechSynthesisUtterance('돈웨이');
+    u.lang='ko-KR'; u.rate=0.9; u.pitch=1.1; u.volume=1.0;
+    u.onend=function(){ if(++count<3) setTimeout(say,400); };
+    window.speechSynthesis.speak(u);
+  }
+  window.speechSynthesis.cancel();
+  setTimeout(say, 100);
+}
+window._donwayNotifySound=_donwayNotifySound;
+// SW 백그라운드 알림 TTS 수신
+if(navigator.serviceWorker){
+  navigator.serviceWorker.addEventListener('message',function(e){
+    if(e.data&&e.data.type==='DONWAY_NOTIFY') _donwayNotifySound();
+  });
+}
+
 function _openAdvanceModal(dateStr){
   var mo=document.createElement('div');mo.className='mo show';mo.id='mo-advance';
   mo.onclick=function(e){if(e.target===mo)mo.remove();};
