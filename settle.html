@@ -1855,28 +1855,26 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               }
             });
           }
-          // 정산 보장금액 자동 채움
-          if(_db&&_CU&&_CU.dealerId){
-            _db.collection('drivers').where('dealerId','==',_CU.dealerId).get()
-              .then(function(snap){
-                snap.forEach(function(doc){
-                  var drv=doc.data();
-                  var guarantee=drv.settleGuarantee||0;
-                  if(!guarantee)return;
-                  var uid=drv.userId||drv.id||'';
-                  var settle=settlements.find(function(s){return (s.userId||s.driver)===uid;});
-                  if(!settle)return;
-                  var cn=calcNet(settle);
-                  var currentAmt=cn.totalAmt||cn.vatIncome||0;
-                  var diff=guarantee-currentAmt;
-                  if(diff>0){
-                    settle.etcPlus=(settle.etcPlus||0)+diff;
-                    var prev=settle.etcPlusReason||'';
-                    settle.etcPlusReason=(prev?prev+' / ':'')+'정산보장('+Math.round(guarantee/10000)+'만원 보장)';
-                  }
-                });
-              }).catch(function(){});
-          }
+          // 정산 보장금액 자동 채움 (동기)
+          (function(){
+            var drvList=window._drvCache||fbDrivers||[];
+            drvList.forEach(function(drv){
+              var guarantee=drv.settleGuarantee||0;
+              if(!guarantee)return;
+              var uid=drv.userId||drv.id||'';
+              if(!uid)return;
+              var settle=settlements.find(function(s){return (s.userId||s.driver)===uid;});
+              if(!settle)return;
+              var cn=calcNet(settle);
+              var currentAmt=cn.totalAmt||cn.vatIncome||0;
+              var diff=guarantee-currentAmt;
+              if(diff>0){
+                settle.etcPlus=(settle.etcPlus||0)+diff;
+                var prev=settle.etcPlusReason||'';
+                settle.etcPlusReason=(prev?prev+' / ':'')+'정산보장('+Math.round(guarantee/10000)+'만원 보장)';
+              }
+            });
+          })();
           var fbPromises=[];
           settlements.filter(function(x){return x.month===month;}).forEach(function(x){
             var docId=x.fbId||(x.dealerId+'_'+x.userId+'_'+x.month);
@@ -9429,7 +9427,7 @@ function _txsLoadDocs(did, ym){
         var isImg=d.fileType&&d.fileType.startsWith('image/');
         html+='<div style="border-radius:10px;border:1px solid var(--border);overflow:hidden;background:var(--bg3)">'
           +(isImg&&d.fileUrl
-            ?'<img src="'+d.fileUrl+'" style="width:100%;height:90px;object-fit:cover;display:block" loading="lazy">'
+            ?'<img src="'+d.fileUrl+'" style="width:100%;height:90px;object-fit:cover;display:block;cursor:pointer" loading="lazy" onclick="_txsViewImg(this.src)">'
             :'<div style="height:90px;display:flex;align-items:center;justify-content:center;background:var(--bg3);font-size:28px">'+(d.fileType==='application/pdf'?'📄':'📁')+'</div>')
           +'<div style="padding:6px">'
           +'<div style="font-size:9px;font-weight:800;color:'+color+';margin-bottom:2px">'+label+'</div>'
@@ -11328,7 +11326,7 @@ function _calSelectDay(day){
     +'<div id="cal-memo-list" style="margin-bottom:10px"></div>'
     +'<div style="display:flex;gap:8px">'
     +'<input id="cal-memo-input" placeholder="메모 입력..." style="flex:1;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text1);font-size:13px">'
-    +'<button onclick="_calAddMemo('+day+')" style="padding:8px 14px;background:var(--primary);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">등록</button>'
+    +'<button onclick="_calAddMemo(this.dataset.day)" data-day="'+day+'" style="padding:8px 14px;background:var(--primary);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">등록</button>'
     +'</div>'
     +'<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;gap:8px">'
     +'<button onclick="_openAdvanceModal(window._calYear+\'-\'+(window._calMonth+1<10?\'0\'+(window._calMonth+1):(window._calMonth+1))+\'-\'+(day<10?\'0\'+day:day))" style="flex:1;padding:8px;background:#f59e0b;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700">💸 가불</button>'
