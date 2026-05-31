@@ -3138,7 +3138,7 @@ function _renderTaxShareView(token){
         +'<td style="padding:8px;text-align:right;color:#dc2626">₩'+(s.tax||0).toLocaleString()+'</td>'
         +'<td style="padding:8px;text-align:right;font-weight:700;color:#185FA5">₩'+(s.net||0).toLocaleString()+'</td>'
         +'<td style="padding:8px;text-align:center">'
-        +(isBiz?'<span style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700">개인사업자</span>'
+        +(isBiz?'<span style="background:#dbeafe;color:var(--text);padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700">개인사업자</span>'
                :'<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700">원천징수</span>')
         +'</td>'
         +'</tr>';
@@ -3166,7 +3166,7 @@ function _renderTaxShareView(token){
         html+='<tr style="background:'+(i%2===0?'#fff':'#f8fafc')+'">'
           +'<td style="padding:8px 12px">'+e.date+'</td>'
           +'<td style="padding:8px">'+e.vendor+'</td>'
-          +'<td style="padding:8px"><span style="background:#eff6ff;color:#1d4ed8;padding:2px 6px;border-radius:4px;font-size:10px">'+e.category+'</span></td>'
+          +'<td style="padding:8px"><span style="background:#eff6ff;color:var(--text);padding:2px 6px;border-radius:4px;font-size:10px">'+e.category+'</span></td>'
           +'<td style="padding:8px;text-align:right;font-weight:600">₩'+e.amount.toLocaleString()+'</td>'
           +'<td style="padding:8px;color:#64748b">'+e.memo+'</td>'
           +'</tr>';
@@ -5936,7 +5936,7 @@ window._dwOpenSettings=function(){
         ?'<div style="font-size:12px;color:var(--text3)">기본 계약단가 사용</div>'
         :'<div style="display:flex;align-items:center;gap:4px">'
           +'<input id="dw-track-'+t.key+'" type="number" value="'+t.price+'" min="0" step="100"'
-          +' style="width:90px;padding:6px 8px;border:1.5px solid #3b82f6;border-radius:8px;font-size:13px;font-weight:700;color:#1d4ed8;text-align:right">'
+          +' style="width:90px;padding:6px 8px;border:1.5px solid var(--brand);border-radius:8px;font-size:13px;font-weight:700;color:var(--text);text-align:right;background:var(--bg)">'
           +'<span style="font-size:11px;color:var(--text3)">원/건</span>'
         +'</div>')
     +'</div>';
@@ -5956,7 +5956,7 @@ window._dwOpenSettings=function(){
         ?'<div style="font-size:11px;color:var(--text3)">심야 예외 (밸런싱 없음)</div>'
         :'<div style="display:flex;align-items:center;gap:4px">'
           +'<input id="dw-slot-'+k+'" type="number" value="'+s.price+'" min="0" step="100" placeholder="0=트랙단가"'
-          +' style="width:90px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:12px;text-align:right">'
+          +' style="width:90px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:12px;text-align:right;color:var(--text);background:var(--bg)">'
           +'<span style="font-size:11px;color:var(--text3)">원 (0=트랙)</span>'
         +'</div>')
     +'</div>';
@@ -5971,7 +5971,7 @@ window._dwOpenSettings=function(){
     +'<div style="padding:16px;max-height:75vh;overflow-y:auto">'
 
     // ── 섹션 1: 배달대행 건수별 트랙 단가
-    +'<div style="font-size:13px;font-weight:900;color:#1d4ed8;margin-bottom:8px;display:flex;align-items:center;gap:6px">'
+    +'<div style="font-size:13px;font-weight:900;color:var(--text);margin-bottom:8px;display:flex;align-items:center;gap:6px">'
       +'🛵 배달대행 — 건수별 최저단가 트랙'
     +'</div>'
     +'<div style="background:#eff6ff;border-radius:10px;padding:12px;margin-bottom:16px">'
@@ -6137,8 +6137,8 @@ function _dwRenderSimulator(){
         +'<div id="dw-sc-cnt" style="font-size:10px;color:var(--text3)">0건</div>'
       +'</div>'
       +'<div style="background:#dbeafe;border-radius:12px;padding:12px;text-align:center;border:1.5px solid #93c5fd">'
-        +'<div style="font-size:10px;color:#1d4ed8;font-weight:700">📥 보전 투입액</div>'
-        +'<div id="dw-sc-inj" style="font-size:20px;font-weight:900;color:#1d4ed8;margin-top:4px">₩0</div>'
+        +'<div style="font-size:10px;color:var(--text);font-weight:700">📥 보전 투입액</div>'
+        +'<div id="dw-sc-inj" style="font-size:20px;font-weight:900;color:var(--text);margin-top:4px">₩0</div>'
         +'<div style="height:4px;background:#bfdbfe;border-radius:4px;margin-top:6px"><div id="dw-bar-inj" style="height:100%;background:#3b82f6;border-radius:4px;width:0%;transition:width .3s"></div></div>'
       +'</div>'
       +'<div style="background:#fce7f3;border-radius:12px;padding:12px;text-align:center;border:1.5px solid #f9a8d4">'
@@ -6177,7 +6177,7 @@ function _dwRenderSimulator(){
             +'<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)">'
               +'<span style="color:var(--text3)">플랫폼 수령 합계</span><span id="r-raw-sum" style="font-weight:700">₩—</span></div>'
             +'<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)">'
-              +'<span style="color:#1d4ed8">+ 보전 투입</span><span id="r-total-inj" style="font-weight:700;color:#1d4ed8">+₩—</span></div>'
+              +'<span style="color:var(--text)">+ 보전 투입</span><span id="r-total-inj" style="font-weight:700;color:var(--text)">+₩—</span></div>'
             +'<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)">'
               +'<span style="color:#be185d">- 환수 차감</span><span id="r-total-ext" style="font-weight:700;color:#be185d">-₩—</span></div>'
             +'<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:2px solid var(--border)">'
@@ -7364,8 +7364,8 @@ window._dwShowStatement=function(idx){
         +(r.programFee?'<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:#6b7280">앱비·보험료</span><span style="color:#ef4444">-₩'+r.programFee.toLocaleString()+'</span></div>':'')
         +(r.insuranceFee?'<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:#6b7280">기타 공제</span><span style="color:#ef4444">-₩'+r.insuranceFee.toLocaleString()+'</span></div>':'')
         +'<div style="display:flex;justify-content:space-between;padding:7px 0;border-top:2px solid #3b82f6;margin-top:4px">'
-          +'<span style="font-size:14px;font-weight:900;color:#1d4ed8">💳 최종 실지급액</span>'
-          +'<span style="font-size:18px;font-weight:900;color:#1d4ed8">₩'+r.net.toLocaleString()+'</span>'
+          +'<span style="font-size:14px;font-weight:900;color:var(--text)">💳 최종 실지급액</span>'
+          +'<span style="font-size:18px;font-weight:900;color:var(--text)">₩'+r.net.toLocaleString()+'</span>'
         +'</div>'
       +'</div>'
     +'</div>'
@@ -13806,7 +13806,7 @@ function pageSettle(){
         var isFirst=(i===0);
         return '<tr style="'+(isFirst?'background:rgba(59,130,246,.06)':'')+'">'
           +'<td><strong style="color:'+(isFirst?'var(--blue)':'var(--text)')+'">'+m+'</strong>'
-          +(isFirst?'<span style="margin-left:6px;background:#dbeafe;color:#1d4ed8;padding:1px 6px;border-radius:10px;font-size:9px;font-weight:700">최신</span>':'')
+          +(isFirst?'<span style="margin-left:6px;background:#dbeafe;color:var(--text);padding:1px 6px;border-radius:10px;font-size:9px;font-weight:700">최신</span>':'')
           +'</td>'
           +'<td style="text-align:right">'+byMonth[m].cnt+'건</td>'
           +'<td style="text-align:right;font-weight:800;color:var(--blue)">₩'+fmt(byMonth[m].net)+'</td>'
@@ -17019,7 +17019,7 @@ function _openSeasonImportModal(){
     +'<div style="padding:16px;display:flex;flex-direction:column;gap:14px">'
     // 포맷 안내
     +'<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px;font-size:11px;line-height:1.8">'
-    +'<div style="font-weight:700;color:#1d4ed8;margin-bottom:6px">📋 지원 파일 형식</div>'
+    +'<div style="font-weight:700;color:var(--text);margin-bottom:6px">📋 지원 파일 형식</div>'
     +'<div><strong>엑셀 (.xlsx)</strong> — 각 시트 = 하나의 시즌 기간</div>'
     +'<div style="color:var(--text3)">시트명 형식: <code>기간명|YYYY-MM-DD~YYYY-MM-DD</code></div>'
     +'<div style="color:var(--text3)">예: <code>재계약1차|2026-05-26~2026-05-31</code></div>'
@@ -19761,7 +19761,7 @@ function pageStats(){
           var tot=d.totalVat; // 총매출(VAT포함) - 대시보드와 동일
           return '<tr style="border-bottom:1px solid var(--border);'+(isFirst?'background:rgba(59,130,246,.06)':'')+'">'
             +'<td style="padding:8px"><strong style="color:'+(isFirst?'var(--blue)':'var(--text)')+'">'+mo+'</strong>'
-            +(isFirst?'<span style="margin-left:4px;background:#dbeafe;color:#1d4ed8;padding:0 4px;border-radius:8px;font-size:9px">최신</span>':'')
+            +(isFirst?'<span style="margin-left:4px;background:#dbeafe;color:var(--text);padding:0 4px;border-radius:8px;font-size:9px">최신</span>':'')
             +'</td>'
             +'<td style="padding:8px;text-align:right">'
               +'<div style="font-weight:700;color:var(--green)">₩'+fmt(tot)+'</div>'
@@ -20666,7 +20666,7 @@ function openOneQueueSend(camp){
 
   // 안내문구
   var note=document.createElement('div');
-  note.style.cssText='padding:10px;background:#EFF6FF;border-radius:8px;font-size:11px;color:#1d4ed8;margin-bottom:12px;line-height:1.6';
+  note.style.cssText='padding:10px;background:#EFF6FF;border-radius:8px;font-size:11px;color:var(--text);margin-bottom:12px;line-height:1.6';
   note.innerHTML='📋 <strong>현재 기능:</strong> 명세서+세금계산서 전달완료 상태 일괄 변경<br>'
     +'🔜 <strong>예정 기능:</strong> 카카오 API 연동 → 기사에게 자동 발송';
   d.appendChild(note);
@@ -21528,7 +21528,7 @@ function _loadTrialExtendPanel(container){
   var TEST_ACCOUNTS=['test0@naver.com','test123@naver.com','test1@naver.com'];
 
   container.innerHTML='<div style="font-size:13px;font-weight:800;margin-bottom:12px">🔄 체험 기간 연장</div>'
-    +'<div style="background:#eff6ff;border-radius:10px;padding:12px;margin-bottom:16px;font-size:11px;color:#1d4ed8">'
+    +'<div style="background:#eff6ff;border-radius:10px;padding:12px;margin-bottom:16px;font-size:11px;color:var(--text)">'
       +'💡 이메일로 회사 문서를 찾아 무료 체험 기간을 연장합니다.<br>사업자번호 1회 제한을 우회하지 않고 <strong>만료일만 연장</strong>됩니다.'
     +'</div>'
 
