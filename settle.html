@@ -9481,6 +9481,7 @@ function _txsBulkExcel(targets, ym){
 function pageTaxShare(){
   document.getElementById('page-title').textContent='🧾 세무사 연동';
   document.getElementById('topbar-right').innerHTML=
+    '<button class="btn btn-sm" onclick="_txsBulkExcelDownload()" style="background:#059669;color:#fff;font-size:12px;font-weight:700">📥 정산 엑셀</button> '+
     '<button class="btn btn-sm" onclick="_downloadDouzoneCSV()" style="background:#1e40af;color:#fff;font-size:12px">💾 더존 CSV</button> '+
     '<button class="btn btn-sm" onclick="_txsBulkShareAll()" style="background:linear-gradient(135deg,#059669,#0891b2);color:#fff;font-size:12px;font-weight:700">📤 전체 연동</button> '+
     '<button class="btn btn-sm" onclick="_generateTaxShareLink()" style="background:linear-gradient(135deg,#7c3aed,#185FA5);color:#fff;font-size:12px;font-weight:700">🔗 공유링크</button>';
@@ -13551,6 +13552,11 @@ function pageSettle(){
   lbl.textContent='📂 쿠팡 엑셀 → 캠프별 정렬';
   lbl.appendChild((function(){var fi=document.createElement('input');fi.type='file';fi.accept='.xlsx,.xls';fi.style.display='none';fi.onchange=function(){if(this.files[0])parseCoupangExcel(this);};return fi;})());
   tr.appendChild(lbl);
+  var dlBtn=document.createElement('button');
+  dlBtn.textContent='📥 정산 엑셀';
+  dlBtn.style.cssText='margin-left:6px;padding:6px 14px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer';
+  dlBtn.onclick=function(){_txsBulkExcelDownload();};
+  tr.appendChild(dlBtn);
   var c=document.getElementById('content');
   c.innerHTML='<div class="loading">로딩 중...</div>';
   if(!_db){c.innerHTML='<div class="empty"><div class="empty-icon">📊</div>로그인 후 이용하세요</div>';return;}
