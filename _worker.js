@@ -49,8 +49,10 @@ async function fetchAsset(path, request) {
   const noCache = filePath.includes('settle.html');
   let resp;
   if (noCache) {
-    // backup 경로로 캐시 우회
-    resp = await fetch(GITHUB_RAW + '/backup/settle_latest.html');
+    // backup 경로로 캐시 우회 + 타임스탬프로 강제 갱신
+    resp = await fetch(GITHUB_RAW + '/backup/settle_latest.html?t=' + Date.now(), {
+      cf: { cacheEverything: false, cacheTtl: 0 }
+    });
   } else {
     resp = await fetch(GITHUB_RAW + encodedPath);
   }
