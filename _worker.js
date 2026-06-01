@@ -724,7 +724,7 @@ export default {
     // ── 회사별 전용 URL (/{slug}) ──
     // 예: /mbti → 엠비티아이 전용, /abc물류 → ABC물류 전용
     const knownPaths = new Set([
-      '/donway_landing','/test-apikey','/favicon.ico','/favicon.png',
+      '/donway_landing','/DONWAY_%EC%8B%9C%EB%AE%AC%EB%A0%88%EC%9D%B4%ED%84%B0.html','/test-apikey','/favicon.ico','/favicon.png',
       '/worker-test','/label-ocr','/claude-ocr','/get-label-key',
       '/test-inject','/truck-save','/scan-save',
       '/scan','/truck','/settle','/visitor','/checkin','/emergency','/portal','/join','/company-register',
@@ -735,6 +735,14 @@ export default {
       '/api','/cron-expire','/favicon.ico','/manifest.json',
       '/sw.js','/firebase-messaging-sw.js','/robots.txt'
     ]);
+    // .html 파일은 슬러그 라우팅 제외 (정적 파일 직접 서빙)
+    if (path.endsWith('.html') && method === 'GET') {
+      try {
+        const assetResp2 = await fetchAsset(url.pathname, request);
+        const isSimulator2 = url.pathname.includes('%EC%8B%9C%EB%AE%AC%EB%A0%88%EC%9D%B4%ED%84%B0') || url.pathname.includes('simulator');
+        return addSecurityHeaders(assetResp2, isSimulator2);
+      } catch(e) {}
+    }
     const slugMatch = path.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/?$/);
     if (slugMatch && !knownPaths.has(slugMatch[0].replace(/\/$/,'')) && method === 'GET') {
       const companySlug = slugMatch[1];
