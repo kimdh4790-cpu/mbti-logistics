@@ -19174,33 +19174,18 @@ function deleteCamp(campName){
 
 // ── FCM 토큰 조회 헬퍼 (users → drivers → members 순서)
 function _getFcmToken(did, uid, driverName){
-  // users 컬렉션에서 driverId로 직접 조회 (가장 확실)
-  return _db.collection('users').where('driverId','==',uid).limit(1).get()
+  var phoneNum=(uid.replace('drv_','').split('_')[0]||'');
+  var phone='010'+phoneNum;
+  // users 컬렉션을 dealerId로 전체 조회 후 JS 매칭 (인덱스 불필요)
+  return _db.collection('users').where('dealerId','==',did).get()
     .then(function(snap){
-      if(!snap.empty&&snap.docs[0].data().fcmToken) return snap.docs[0].data().fcmToken;
-      // users에서 phone으로 조회
-      var phoneNum=(uid.replace('drv_','').split('_')[0]||'');
-      var phone='010'+phoneNum;
-      if(phoneNum.length>=4){
-        return _db.collection('users').where('phone','==',phone).limit(1).get()
-          .then(function(ps){
-            if(!ps.empty&&ps.docs[0].data().fcmToken) return ps.docs[0].data().fcmToken;
-            // users에서 name으로 조회
-            if(driverName){
-              return _db.collection('users').where('name','==',driverName).where('dealerId','==',did).limit(1).get()
-                .then(function(ns){
-                  if(!ns.empty&&ns.docs[0].data().fcmToken) return ns.docs[0].data().fcmToken;
-                  return null;
-                });
-            }
-            return null;
-          });
-      }
-      if(driverName){
-        return _db.collection('users').where('name','==',driverName).where('dealerId','==',did).limit(1).get()
-          .then(function(ns){
-            return (!ns.empty&&ns.docs[0].data().fcmToken)||null;
-          });
+      for(var i=0;i<snap.docs.length;i++){
+        var d=snap.docs[i].data();
+        if(!d.fcmToken||d.fcmToken.length<20) continue;
+        if(d.driverId===uid) return d.fcmToken;
+        if(d.userId===uid) return d.fcmToken;
+        if(driverName&&d.name===driverName) return d.fcmToken;
+        if(phoneNum.length>=4&&d.phone&&d.phone.replace(/-/g,'')===phone) return d.fcmToken;
       }
       return null;
     });
