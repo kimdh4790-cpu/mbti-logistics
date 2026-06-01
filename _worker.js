@@ -1431,6 +1431,7 @@ export default {
         // Legacy FCM Server Key 방식
         const serverKey = env.FCM_SERVER_KEY || 'BHO3mU6K2VlLkYfUgsunV5zXsx6oOc_I4dIyE9ErYPBZE5AkBhPP-HUmQhqvHLDsbjcRgEDsMbXg0TYiSiKW93c';
         let sent = 0;
+        const errors = [];
         const targets = tokens.slice(0, 20);
         await Promise.all(targets.map(async (token) => {
           try {
@@ -1454,10 +1455,10 @@ export default {
             });
             const respText = await resp.text();
             if (resp.ok) sent++;
-            else console.error('FCM 오류:', resp.status, respText);
-          } catch(e) { console.error('FCM 예외:', e.message); }
+            else errors.push({status: resp.status, body: respText});
+          } catch(e) { errors.push({exception: e.message}); }
         }));
-        return new Response(JSON.stringify({ ok: true, sent, total: targets.length, debug: sent===0?'토큰만료또는키오류':'성공' }), {
+        return new Response(JSON.stringify({ ok: true, sent, total: targets.length, errors }), {
           headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
         });
       } catch(e) {
