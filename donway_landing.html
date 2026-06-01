@@ -235,14 +235,6 @@ footer{background:#0F172A;padding:44px 24px;font-size:12px;color:rgba(255,255,25
 .sec-page.on{display:block}
 
 
-/* ── 시뮬레이터 팝업 ── */
-.sim-modal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:none;align-items:center;justify-content:center;padding:16px}
-.sim-modal.show{display:flex}
-.sim-box{background:#fff;border-radius:16px;width:100%;max-width:1000px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(0,0,0,.4)}
-.sim-head{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border);flex-shrink:0}
-.sim-head h3{font-size:15px;font-weight:800;color:var(--text)}
-.sim-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--text3);line-height:1;padding:4px}
-.sim-frame{flex:1;border:none;width:100%;min-height:560px}
 
 /* ── 절감 계산기 ── */
 .calc-wrap{max-width:720px;margin:32px auto 0;background:linear-gradient(135deg,#0F172A,#1E3A5F);border-radius:20px;padding:32px;color:#fff}
@@ -615,12 +607,12 @@ html,body{height:100%;background:var(--bg);color:var(--white);font-family:'Malgu
   <!-- A) 시뮬레이터 체험 버튼 -->
   <div style="text-align:center;margin-top:40px">
     <p style="font-size:14px;color:var(--text3);margin-bottom:14px">실제 화면을 직접 체험해보세요</p>
-    <button onclick="document.getElementById('sim-modal').classList.add('show')" 
+    <button onclick="var btn=document.querySelector('.snav[onclick*=simulation]');showSec('simulation',btn);window.scrollTo({top:0,behavior:'smooth'})"
       style="padding:14px 36px;background:var(--text);color:#fff;border:none;border-radius:11px;font-size:15px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:10px;transition:.2s"
       onmouseover="this.style.background='#1E293B'" onmouseout="this.style.background='var(--text)'">
-      🖥️ 플랫폼 시뮬레이터 체험 →
+      🖥️ 플랫폼 시뮬레이션 탭으로 이동 →
     </button>
-    <p style="font-size:11px;color:var(--text3);margin-top:8px">설치 없이 브라우저에서 바로 체험</p>
+    <p style="font-size:11px;color:var(--text3);margin-top:8px">상단 탭에서 바로 체험 가능</p>
   </div>
 
   <!-- B) 절감 계산기 -->
@@ -1773,17 +1765,6 @@ window.addEventListener('load',function(){
   },400);
 });
 </script>
-
-<!-- 시뮬레이터 팝업 -->
-<div class="sim-modal" id="sim-modal" onclick="if(event.target===this)this.classList.remove('show')">
-  <div class="sim-box">
-    <div class="sim-head">
-      <h3>🖥️ DONWAY 플랫폼 시뮬레이터 — 실제 화면 체험</h3>
-      <button class="sim-close" onclick="document.getElementById('sim-modal').classList.remove('show')">✕</button>
-    </div>
-    <iframe class="sim-frame" src="https://donway.ai.kr/donway_simulator.html" loading="lazy"></iframe>
-  </div>
-</div>
 
 </body>
 </html>
