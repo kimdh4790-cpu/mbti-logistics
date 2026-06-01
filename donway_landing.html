@@ -600,12 +600,13 @@ footer{background:#0F172A;padding:44px 24px;font-size:12px;color:rgba(255,255,25
   </div>
 </section></div>
 
+<!-- ── 시뮬레이션 섹션 ── -->
 <div class="sec-page" id="page-simulation">
 <section style="padding:16px 12px;background:#050A14;min-height:80vh">
-<p class="sec-label" style="text-align:center;color:#00c8f8;margin-bottom:8px">PLATFORM DEMO</p>
-<h2 style="text-align:center;font-size:clamp(20px,4vw,32px);font-weight:900;color:#fff;letter-spacing:-1px;margin-bottom:4px">실제 플랫폼을 직접 체험하세요</h2>
-<p style="text-align:center;font-size:13px;color:rgba(255,255,255,.5);margin-bottom:16px">사이드바에서 메뉴를 선택해 각 기능을 확인하세요</p>
-<style>
+  <p style="font-size:11px;font-weight:700;color:#00c8f8;letter-spacing:2px;text-transform:uppercase;text-align:center;margin-bottom:8px">PLATFORM DEMO</p>
+  <h2 style="text-align:center;font-size:clamp(20px,4vw,32px);font-weight:900;color:#fff;letter-spacing:-1px;margin-bottom:4px">실제 플랫폼을 직접 체험하세요</h2>
+  <p style="text-align:center;font-size:13px;color:rgba(255,255,255,.5);margin-bottom:16px">사이드바에서 메뉴를 선택해 각 기능을 확인하세요</p>
+  <style>
 
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -716,9 +717,9 @@ html,body{height:100%;background:var(--bg);color:var(--white);font-family:'Malgu
 /* 반응형 */
 @media(max-width:700px){.g4{grid-template-columns:repeat(2,1fr)}.rg{grid-template-columns:repeat(3,1fr)}.sg{grid-template-columns:60px repeat(5,1fr)}.row{flex-direction:column}}
 
-.sim-wrap{height:70vh!important;min-height:480px;border-radius:12px;overflow:hidden;border:1px solid rgba(0,200,248,.2);max-width:1000px;margin:0 auto}
-</style>
-<div style="max-width:1000px;margin:0 auto">
+  .sim-wrap{height:72vh!important;min-height:480px;border-radius:12px;overflow:hidden;border:1px solid rgba(0,200,248,.2);max-width:1000px;margin:0 auto}
+  </style>
+  <div style="max-width:1000px;margin:0 auto">
 <div class="sim-wrap">
 
 <!-- 사이드바 -->
@@ -1414,9 +1415,10 @@ Object.keys(cats).forEach(function(cat){
 });
 document.getElementById('checks-container').innerHTML=html;
 </script>
-</div>
+  </div>
 </section>
 </div>
+
 
 <!-- ── CTA / FOOTER (항상 표시) ── -->
 <section class="cta">
@@ -1508,7 +1510,6 @@ window.addEventListener('load',function(){
 });
 </script>
 <script>
-// 시뮬레이터
 
 // ── 페이지 네비게이션
 var pageNames={landing:'🏠 홍보 랜딩페이지',dashboard:'📊 관리자 대시보드',settle:'💰 자동화 정산 플랫폼',drivers:'👥 기사 관리',schedule:'📅 근무 스케줄러',routes:'🗺️ 라우트 단가표',incentive:'🎯 기사별 인센티브',scan:'📦 간선차 스캔',attendance:'🔐 출퇴근 QR',contract:'📝 근로계약서',ocr:'📷 OCR 자동입력',report:'📈 정산 분석',notice:'🔔 공지·알림',crosscheck:'✅ 코드 교차검증'};
