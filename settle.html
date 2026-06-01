@@ -19173,14 +19173,41 @@ function deleteCamp(campName){
 
 function _sendPayslipPush(x,r,name,month,net,vatIncome,docId){
   var did=_CU.dealerId,uid=x.userId||x.driverId||'';
-  var docUrl='https://donway.ai.kr/view?type=payslip&did='+did+'&id='+docId;
+  var docUrl='https://donway.ai.kr/settle?taxShare=payslip_'+docId;
+  var title='💰 '+month+' 정산명세서 도착';
+  var body=name+'님 실지급액: ₩'+fmt(net);
+  // 1) driver_notifications 저장
   _db.collection('driver_notifications').add({
     dealerId:did,targetDriverId:uid,targetDriverName:name,type:'payslip',
-    title:'💰 '+month+' 정산명세서 도착',body:name+'님 실지급액: '+fmt(net)+'원',
-    docUrl:docUrl,imageUrl:'https://donway.ai.kr/api/payslip-img?did='+did+'&id='+docId,
+    title:title,body:body,docUrl:docUrl,
     net:net,vatIncome:vatIncome,month:month,isRead:false,
     createdAt:firebase.firestore.FieldValue.serverTimestamp()
-  }).then(function(){toast('✅ 앱 푸시 발송 — '+name+'님');}).catch(function(e){toast('❌ '+e.message);});
+  }).catch(function(){});
+  // 2) users 컬렉션에서 fcmToken 조회 → 실제 FCM 발송
+  _db.collection('users').where('dealerId','==',did).where('userId','==',uid).limit(1).get()
+    .then(function(snap){
+      if(snap.empty){
+        // drivers 컬렉션에서도 시도
+        return _db.collection('drivers').where('dealerId','==',did).where('userId','==',uid).limit(1).get()
+          .then(function(dSnap){
+            if(dSnap.empty)return null;
+            return dSnap.docs[0].data().fcmToken||null;
+          });
+      }
+      return snap.docs[0].data().fcmToken||null;
+    })
+    .then(function(fcmToken){
+      if(!fcmToken||fcmToken.length<20){
+        toast('⚠️ '+name+'님 앱 미설치 — 푸시 불가');return;
+      }
+      return fetch('/fcm/notify-drivers',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({tokens:[fcmToken],title:title,body:body,type:'payslip'})
+      }).then(function(res){return res.json();}).then(function(j){
+        if(j.sent>0) toast('✅ 앱 푸시 발송 — '+name+'님');
+        else toast('⚠️ '+name+'님 푸시 실패 (토큰 만료)');
+      });
+    }).catch(function(e){toast('❌ '+e.message);});
 }
 
 // ══════════════════════════════════════════════════
@@ -19302,14 +19329,36 @@ function _dwInitAutoClose(){
 
 function _sendTaxInvoicePush(x,r,name,month,vatIncome,docId){
   var did=_CU.dealerId,uid=x.userId||x.driverId||'';
-  var docUrl='https://donway.ai.kr/view?type=taxinvoice&did='+did+'&id='+docId;
+  var supply=fmt(Math.round(vatIncome/1.1));
+  var title='🧾 '+month+' 세금계산서 발행';
+  var body=name+'님 공급가액: ₩'+supply;
+  // 1) driver_notifications 저장
   _db.collection('driver_notifications').add({
     dealerId:did,targetDriverId:uid,targetDriverName:name,type:'tax_invoice',
-    title:'🧾 '+month+' 세금계산서 발행',body:name+'님 공급가액: '+fmt(Math.round(vatIncome/1.1))+'원',
-    docUrl:docUrl,imageUrl:'https://donway.ai.kr/api/taxinvoice-img?did='+did+'&id='+docId,
-    vatIncome:vatIncome,month:month,isRead:false,
+    title:title,body:body,vatIncome:vatIncome,month:month,isRead:false,
     createdAt:firebase.firestore.FieldValue.serverTimestamp()
-  }).then(function(){toast('✅ 세금계산서 앱 푸시 — '+name+'님');}).catch(function(e){toast('❌ '+e.message);});
+  }).catch(function(){});
+  // 2) users → drivers 순으로 fcmToken 조회 → FCM 발송
+  _db.collection('users').where('dealerId','==',did).where('userId','==',uid).limit(1).get()
+    .then(function(snap){
+      if(snap.empty){
+        return _db.collection('drivers').where('dealerId','==',did).where('userId','==',uid).limit(1).get()
+          .then(function(dSnap){return dSnap.empty?null:dSnap.docs[0].data().fcmToken||null;});
+      }
+      return snap.docs[0].data().fcmToken||null;
+    })
+    .then(function(fcmToken){
+      if(!fcmToken||fcmToken.length<20){
+        toast('⚠️ '+name+'님 앱 미설치 — 푸시 불가');return;
+      }
+      return fetch('/fcm/notify-drivers',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({tokens:[fcmToken],title:title,body:body,type:'tax_invoice'})
+      }).then(function(res){return res.json();}).then(function(j){
+        if(j.sent>0) toast('✅ 세금계산서 앱 푸시 — '+name+'님');
+        else toast('⚠️ '+name+'님 푸시 실패 (토큰 만료)');
+      });
+    }).catch(function(e){toast('❌ '+e.message);});
 }
 
 // 팀장 수수료
@@ -20864,18 +20913,57 @@ function openOneQueueSend(camp){
     var doBtn=document.createElement('button');doBtn.className='btn btn-blue';
     doBtn.textContent='✅ '+unsent.length+'명 전달완료 처리';
     doBtn.onclick=function(){
-      doBtn.textContent='처리 중...';doBtn.disabled=true;
+      doBtn.textContent='발송 중...';doBtn.disabled=true;
+      var did=_CU.dealerId||_CU.uid;
+      // 1) taxSent 상태 일괄 업데이트
       var promises=unsent.map(function(x){
         return _db.collection('settlements').doc(x.id).update({
           taxSent:true,taxSentAt:new Date().toISOString()
         }).then(function(){x.taxSent=true;}).catch(function(){});
       });
       Promise.all(promises).then(function(){
-        toast('✅ '+unsent.length+'명 전달완료');
-        mo.remove();
-        // TODO: 카카오 API 연동 시 여기에 발송 코드 추가
-        // unsent.forEach(function(x){ sendKakao(x); });
-        _settleCache=null;_reloadSettlePage();
+        // 2) 각 기사 fcmToken 조회 후 일괄 FCM 발송
+        var uidList=unsent.map(function(x){return x.userId||x.driver||'';}).filter(Boolean);
+        // users 컬렉션에서 토큰 수집
+        var tokenMap={};
+        var fetches=uidList.map(function(uid){
+          return _db.collection('users').where('dealerId','==',did).where('userId','==',uid).limit(1).get()
+            .then(function(snap){
+              if(!snap.empty&&snap.docs[0].data().fcmToken)
+                tokenMap[uid]=snap.docs[0].data().fcmToken;
+              else
+                return _db.collection('drivers').where('dealerId','==',did).where('userId','==',uid).limit(1).get()
+                  .then(function(ds){if(!ds.empty&&ds.docs[0].data().fcmToken)tokenMap[uid]=ds.docs[0].data().fcmToken;});
+            }).catch(function(){});
+        });
+        Promise.all(fetches).then(function(){
+          var tokens=Object.values(tokenMap).filter(function(t){return t&&t.length>20;});
+          var noToken=unsent.length-tokens.length;
+          if(!tokens.length){
+            toast('✅ '+unsent.length+'명 전달완료 (앱 미설치 — 푸시 불가)');
+            mo.remove();_settleCache=null;_reloadSettlePage();return;
+          }
+          // 20개씩 분할 발송
+          var chunks=[];
+          for(var i=0;i<tokens.length;i+=20) chunks.push(tokens.slice(i,i+20));
+          var ym=unsent[0]&&unsent[0].month||'';
+          var pushPromises=chunks.map(function(chunk){
+            return fetch('/fcm/notify-drivers',{
+              method:'POST',headers:{'Content-Type':'application/json'},
+              body:JSON.stringify({
+                tokens:chunk,
+                title:'💰 '+ym+' 정산명세서 도착',
+                body:'실지급액을 DONWAY 앱에서 확인하세요',
+                type:'payslip'
+              })
+            }).then(function(r){return r.json();}).catch(function(){return {sent:0};});
+          });
+          Promise.all(pushPromises).then(function(results){
+            var totalSent=results.reduce(function(s,r){return s+(r.sent||0);},0);
+            toast('✅ '+unsent.length+'명 전달완료 · 앱 푸시 '+totalSent+'명'+(noToken?' (미설치 '+noToken+'명)':''));
+            mo.remove();_settleCache=null;_reloadSettlePage();
+          });
+        });
       });
     };
     mdf.appendChild(doBtn);
