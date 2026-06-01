@@ -10604,6 +10604,9 @@ function pageEmpHome(){
     +'</div>'
     +'<div id="emp-leave-status"></div>'
     +'</div>'
+    +'<div style="margin-top:8px;text-align:center">'
+    +'<button onclick="_empWithdraw()" style="background:none;border:none;color:#94a3b8;font-size:12px;cursor:pointer;text-decoration:underline;padding:8px">서비스 탈퇴</button>'
+    +'</div>'
     +'</div>';
 
   _empHomeLoad(did, uid, today, ym);
@@ -10692,6 +10695,32 @@ function _getWeekStart(today){
   var day=d.getDay(); // 0=일
   d.setDate(d.getDate()-day);
   return d.toISOString().slice(0,10);
+}
+
+
+// ── 직원 탈퇴 ──
+function _empWithdraw(){
+  if(!confirm('서비스를 탈퇴하시겠습니까?\n\n탈퇴 후에는 앱 접속이 불가하며\n정산 내역은 관리자가 보관합니다.'))return;
+  if(!confirm('정말 탈퇴하시겠습니까?\n취소 후 재가입하려면 관리자에게 문의하세요.'))return;
+  var uid=_CU.uid||'';
+  var did=_CU.dealerId||'';
+  var name=_CU.name||'';
+  // users 문서 탈퇴 처리
+  var updates={is_active:false,status:'탈퇴',withdrawnAt:new Date().toISOString()};
+  _db.collection('users').doc(uid).update(updates)
+    .then(function(){
+      // members 문서도 탈퇴 처리
+      _db.collection('members').doc(uid).update(updates).catch(function(){});
+      // drivers 컬렉션도 퇴직 처리
+      _db.collection('drivers').where('dealerId','==',did).where('name','==',name).limit(1).get()
+        .then(function(snap){
+          if(!snap.empty) snap.docs[0].ref.update({is_active:false,status:'탈퇴'});
+        }).catch(function(){});
+      toast('✅ 탈퇴가 완료되었습니다');
+      setTimeout(function(){
+        firebase.auth().signOut().then(function(){ location.reload(); });
+      },1500);
+    }).catch(function(e){toast('❌ 오류: '+e.message);});
 }
 
 function _empQuickBtn(icon, label, page, color, sub){
@@ -16175,6 +16204,42 @@ function markTaxSent(id,val,btn){
     }).catch(function(e){toast('❌ '+e.message);});
 }
 var _drvCache=null,_drvCampFilter='all';
+
+// ── 퇴직/복직 처리 ──
+function _retireDriver(docId, name){
+  if(!confirm(name+'님을 퇴직 처리하시겠습니까?\n\n앱 접속이 제한됩니다.'))return;
+  var did=_CU.dealerId;
+  _db.collection('drivers').doc(docId).update({
+    is_active:false, status:'퇴직',
+    retiredAt:new Date().toISOString(), retiredBy:_CU.name||_CU.email
+  }).then(function(){
+    // users 컬렉션도 비활성화
+    _db.collection('users').where('dealerId','==',did).where('driverId','==',docId).limit(1).get()
+      .then(function(snap){
+        if(!snap.empty) snap.docs[0].ref.update({is_active:false,status:'퇴직'});
+      }).catch(function(){});
+    _drvCache=null;
+    toast('✅ '+name+'님 퇴직 처리 완료');
+    pageDrivers();
+  }).catch(function(e){toast('❌ 오류: '+e.message);});
+}
+function _reactivateDriver(docId, name){
+  if(!confirm(name+'님을 복직 처리하시겠습니까?'))return;
+  var did=_CU.dealerId;
+  _db.collection('drivers').doc(docId).update({
+    is_active:true, status:'재직',
+    reactivatedAt:new Date().toISOString()
+  }).then(function(){
+    _db.collection('users').where('dealerId','==',did).where('driverId','==',docId).limit(1).get()
+      .then(function(snap){
+        if(!snap.empty) snap.docs[0].ref.update({is_active:true,status:'재직'});
+      }).catch(function(){});
+    _drvCache=null;
+    toast('✅ '+name+'님 복직 처리 완료');
+    pageDrivers();
+  }).catch(function(e){toast('❌ 오류: '+e.message);});
+}
+
 function pageDrivers(){
   document.getElementById('page-title').textContent='기사 관리';
   var tr=document.getElementById('topbar-right');tr.innerHTML='';
@@ -16247,7 +16312,7 @@ function _renderDrivers(drivers,c){
         return '<tr><td><strong>'+esc(d.name||'')+'</strong></td>'
           +'<td><span style="font-family:monospace;font-size:12px;color:var(--text);font-weight:600">'+esc(d.userId||'')+'</span></td>'
           +'<td><span class="badge '+(d.is_active!==false?'b-green':'b-red')+'">'+(d.is_active!==false?'재직':'퇴직')+'</span></td>'
-          +'<td style="white-space:nowrap">'+'<button class="btn btn-sm" onclick="editDriver(\''+d.id+'\')">✏️ 수정</button> '+'<button class="btn btn-sm" data-did="'+d.id+'" data-name="'+esc(d.name||'')+'" '+'onclick="_openDriverDocs(this.dataset.did,this.dataset.name)" '+'style="background:var(--purple-l);color:var(--purple)">📎 서류</button>'+'</td></tr>';
+          +'<td style="white-space:nowrap">'+'<button class="btn btn-sm" onclick="editDriver(\''+d.id+'\')">✏️ 수정</button> '+'<button class="btn btn-sm" data-did="'+d.id+'" data-name="'+esc(d.name||'')+'" '+'onclick="_openDriverDocs(this.dataset.did,this.dataset.name)" '+'style="background:var(--purple-l);color:var(--purple)">📎 서류</button> '+(d.is_active!==false?'<button class="btn btn-sm" data-id="'+d.id+'" data-name="'+esc(d.name||'')+'" onclick="_retireDriver(this.dataset.id,this.dataset.name)" style="background:#FEE2E2;color:#DC2626;border:1px solid #FCA5A5">🚪 퇴직</button>':'<button class="btn btn-sm" data-id="'+d.id+'" data-name="'+esc(d.name||'')+'" onclick="_reactivateDriver(this.dataset.id,this.dataset.name)" style="background:#DCFCE7;color:#16A34A;border:1px solid #86EFAC">↩️ 복직</button>')+'</td></tr>';
       }).join('')
       +'</tbody></table></div></div></div>';
   }).join('');
