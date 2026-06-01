@@ -13490,8 +13490,15 @@ async function _registerFCM(){
   if(!_db||!_CU||!_CU.dealerId||_fcmRegFailed) return;
   try{
     if(!('Notification' in window)){return;}
-    var perm = await Notification.requestPermission();
+    var perm = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
     if(perm !== 'granted'){return;}
+    // firebase-messaging-sw.js 강제 등록
+    if('serviceWorker' in navigator){
+      try{
+        await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        await navigator.serviceWorker.ready;
+      }catch(swErr){console.warn('[FCM] SW 등록 실패:', swErr.message);}
+    }
     var messaging = firebase.messaging();
     var token = await messaging.getToken({vapidKey: VAPID_KEY});
     if(!token) return;
