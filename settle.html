@@ -8522,7 +8522,7 @@ window._sendAdminNotif=function(){
     var tokens=[];
     snap.forEach(function(doc){if(target!=='all'&&doc.id!==target)return;var tk=doc.data().fcmToken;if(tk&&tk.length>20)tokens.push(tk);});
     if(!tokens.length){if(st)st.textContent='✅ 저장 완료 (FCM 토큰 없음)';return;}
-    return fetch('https://mbti-logistics.kimdh4790.workers.dev/fcm/notify-drivers',{
+    return fetch('https://donway.ai.kr/fcm/notify-drivers',{
       method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tokens:tokens,title:title,body:body})
     }).then(function(r){return r.json();}).then(function(){
       if(st)st.textContent='✅ '+tokens.length+'명 발송 완료';toast('✅ 알림 발송 완료');setTimeout(pageNotifyHistory,500);
@@ -19421,7 +19421,7 @@ function _dwAutoSendPayslips(sessions, platform, periodInfo){
         if(dSnap.empty)return;
         var fcmToken=dSnap.docs[0].data().fcmToken;
         if(!fcmToken||fcmToken.length<20)return;
-        fetch('https://mbti-logistics.kimdh4790.workers.dev/fcm/notify-drivers',{
+        fetch('https://donway.ai.kr/fcm/notify-drivers',{
           method:'POST',
           headers:{'Content-Type':'application/json'},
           body:JSON.stringify({
@@ -21229,7 +21229,7 @@ function _saveNotice(){
       return Promise.all(memberPromises).then(function(){
         // FCM 푸시 발송 (토큰 있는 기사만)
         if(fcmTokens.length>0){
-          fetch('https://mbti-logistics.kimdh4790.workers.dev/fcm/notify-drivers',{
+          fetch('https://donway.ai.kr/fcm/notify-drivers',{
             method:'POST',
             headers:{'Content-Type':'application/json'},
             body:JSON.stringify({tokens:fcmTokens,title:title,body:body||'내용을 확인하세요',type:type})
