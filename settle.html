@@ -13172,8 +13172,7 @@ function pageMyStatements(){
     +'</div>';
   if(!_db||!_CU)return;
   _db.collection('driver_notifications')
-    .where('driverName','==',_CU.name||'')
-    .where('companyId','==',_CU.companyId||'')
+    .where('dealerId','==',_CU.dealerId||_CU.companyId||'')
     .orderBy('createdAt','desc').limit(30).get()
   .then(function(snap){
     var html='';
