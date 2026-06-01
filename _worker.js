@@ -1452,10 +1452,12 @@ export default {
                 data: { type: type || 'notice', click_action: 'FLUTTER_NOTIFICATION_CLICK' }
               })
             });
+            const respText = await resp.text();
             if (resp.ok) sent++;
-          } catch(e) {}
+            else console.error('FCM 오류:', resp.status, respText);
+          } catch(e) { console.error('FCM 예외:', e.message); }
         }));
-        return new Response(JSON.stringify({ ok: true, sent, total: targets.length }), {
+        return new Response(JSON.stringify({ ok: true, sent, total: targets.length, debug: sent===0?'토큰만료또는키오류':'성공' }), {
           headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
         });
       } catch(e) {
