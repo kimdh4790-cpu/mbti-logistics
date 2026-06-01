@@ -2752,7 +2752,7 @@ function showApp(){
   var _cn0=_CU.companyName||_CU.name||_CU.email||'?';
   document.getElementById('sb-av').textContent=_cn0[0].toUpperCase();
   document.getElementById('sb-name').textContent=_CU.companyName||_CU.name||_CU.email||'';
-  document.getElementById('sb-role').textContent=_CU.role==='admin'?'슈퍼관리자':(_CU.companyName?'대리점 관리자 · '+_CU.email:'대리점 관리자');
+  document.getElementById('sb-role').textContent=_CU.role==='admin'?'슈퍼관리자':(_CU.role==='driver'||_CU.role==='member')?('직원 · '+(_CU.companyName||'')):(_CU.companyName?'대리점 관리자 · '+_CU.email:'대리점 관리자');
   // ★ 로그인 즉시 사이드바 DONWAY · 회사명 표시
   if(_CU.companyName) _updateSidebarBrand(_CU.companyName);
   // 회사명 없으면 companies 컬렉션에서 로드
