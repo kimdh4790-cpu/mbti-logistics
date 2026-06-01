@@ -22513,6 +22513,8 @@ function _showWelcome(){
     notifArea.appendChild(notifBtn);
   } else {
     notifArea.innerHTML='<div style="font-size:11px;color:#86efac">✅ 알림 허용됨</div>';
+    // 이미 허용됐으면 바로 FCM 등록
+    setTimeout(_registerFCM, 500);
     setTimeout(function(){var m=document.getElementById('mo-welcome');if(m)m.remove();},4000);
   }
   var enterBtn=document.createElement('button');
