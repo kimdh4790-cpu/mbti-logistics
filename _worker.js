@@ -1429,33 +1429,36 @@ export default {
           });
         }
         // Legacy FCM Server Key 방식
-        const serverKey = env.FCM_SERVER_KEY || 'BHO3mU6K2VlLkYfUgsunV5zXsx6oOc_I4dIyE9ErYPBZE5AkBhPP-HUmQhqvHLDsbjcRgEDsMbXg0TYiSiKW93c';
+        // v1 API — SA_KEY로 OAuth 토큰 발급
+        const accessToken = await getAccessToken(env);
+        const PROJECT_ID_FCM = 'mbti-logistics';
         let sent = 0;
         const errors = [];
         const targets = tokens.slice(0, 20);
         await Promise.all(targets.map(async (token) => {
           try {
-            const resp = await fetch('https://fcm.googleapis.com/fcm/send', {
-              method: 'POST',
-              headers: {
-                'Authorization': `key=${serverKey}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                to: token,
-                priority: 'high',
-                notification: {
-                  title: title || 'DONWAY 알림',
-                  body: msgBody || '',
-                  sound: 'default',
-                  icon: '/icon-192.png'
+            const resp = await fetch(
+              `https://fcm.googleapis.com/v1/projects/${PROJECT_ID_FCM}/messages:send`,
+              {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${accessToken}`,
+                  'Content-Type': 'application/json'
                 },
-                data: { type: type || 'notice', click_action: 'FLUTTER_NOTIFICATION_CLICK' }
-              })
-            });
+                body: JSON.stringify({
+                  message: {
+                    token: token,
+                    notification: { title: title || 'DONWAY 알림', body: msgBody || '' },
+                    data: { type: type || 'notice' },
+                    android: { priority: 'high' },
+                    apns: { payload: { aps: { sound: 'default', badge: 1 } } }
+                  }
+                })
+              }
+            );
             const respText = await resp.text();
             if (resp.ok) sent++;
-            else errors.push({status: resp.status, body: respText});
+            else errors.push({status: resp.status, body: respText.slice(0,200)});
           } catch(e) { errors.push({exception: e.message}); }
         }));
         return new Response(JSON.stringify({ ok: true, sent, total: targets.length, errors }), {
