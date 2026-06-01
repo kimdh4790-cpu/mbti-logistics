@@ -752,6 +752,8 @@ export default {
         // slug + 보안헤더 주입 (</head> 앞에 삽입 - 가장 안전한 위치)
         const akKey = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
         const storageSDK = '<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage-compat.js"></script>';
+        // manifest 링크를 슬러그 기반으로 교체
+        html = html.replace('href="/manifest.json"', 'href="/' + companySlug + '/manifest.json"');
         const slugScript = '<script>window.__AK=' + JSON.stringify(akKey) + ';window._COMPANY_SLUG=' + JSON.stringify(companySlug) + ';window._SLUG_MODE=true;</script>';
         html = html.replace('</head>', storageSDK + '\n' + slugScript + '\n</head>');
         const slugHeaders = new Headers();
@@ -1601,6 +1603,21 @@ export default {
     }
 
     // ── manifest.json 인라인 서빙 ──
+    // /{slug}/manifest.json → 슬러그별 start_url 주입
+    const slugManifestMatch = path.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/manifest\.json$/);
+    if (slugManifestMatch) {
+      const slug = slugManifestMatch[1];
+      return new Response(JSON.stringify({
+        name:'DONWAY — 자동화 정산 플랫폼', short_name:'DONWAY',
+        description:'AI 자동 정산 · QR 출퇴근 · 급여 관리',
+        start_url:'/'+slug, scope:'/'+slug, display:'standalone',
+        orientation:'portrait', background_color:'#185FA5', theme_color:'#185FA5', lang:'ko',
+        icons:[
+          {src:'/icon-192.png',sizes:'192x192',type:'image/png',purpose:'any maskable'},
+          {src:'/icon-512.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}
+        ]
+      }), { status:200, headers:{'Content-Type':'application/manifest+json; charset=utf-8','Cache-Control':'no-cache'} });
+    }
     if (path === '/manifest.json') {
       return new Response(JSON.stringify({
         name:'DONWAY — 자동화 정산 플랫폼', short_name:'DONWAY',
