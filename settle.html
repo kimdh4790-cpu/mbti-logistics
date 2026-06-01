@@ -19182,28 +19182,24 @@ function _getFcmToken(did, uid){
       return _db.collection('drivers').where('dealerId','==',did).where('userId','==',uid).limit(1).get()
         .then(function(ds){
           if(!ds.empty&&ds.docs[0].data().fcmToken) return ds.docs[0].data().fcmToken;
-          // 3) members - driverId로 조회 (dealerId 무관)
-          return _db.collection('members').where('driverId','==',uid).limit(1).get()
-            .then(function(ms){
-              if(!ms.empty&&ms.docs[0].data().fcmToken) return ms.docs[0].data().fcmToken;
-              // 4) members - uid가 실제 Firebase UID일 경우 (doc id = uid)
-              return _db.collection('members').doc(uid).get()
-                .then(function(m){
-                  if(m.exists&&m.data()&&m.data().fcmToken) return m.data().fcmToken;
-                  // 5) members - phone 추출 (drv_5578_xxx → 01074635578)
-                  var phoneNum=uid.replace('drv_','').split('_')[0]||'';
-                  if(!phoneNum||phoneNum.length<4) return null;
-                  var phone='010'+phoneNum;
-                  return _db.collection('members').where('phone','==',phone).limit(1).get()
-                    .then(function(ps){
-                      if(!ps.empty&&ps.docs[0].data().fcmToken) return ps.docs[0].data().fcmToken;
-                      // 6) members - uid로 where 조회 (uid 필드)
-                      return _db.collection('members').where('uid','==',uid).limit(1).get()
-                        .then(function(us){
-                          return (!us.empty&&us.docs[0].data().fcmToken)||null;
-                        });
-                    });
-                });
+          // 3) members - dealerId로 전체 조회 후 JS에서 매칭 (인덱스 문제 우회)
+          return _db.collection('members').where('dealerId','==',did).get()
+            .then(function(all){
+              var phoneNum=(uid.replace('drv_','').split('_')[0]||'');
+              var phone='010'+phoneNum;
+              for(var i=0;i<all.docs.length;i++){
+                var d=all.docs[i].data();
+                if(!d.fcmToken) continue;
+                // driverId 매칭
+                if(d.driverId===uid) return d.fcmToken;
+                // userId 매칭
+                if(d.userId===uid) return d.fcmToken;
+                // phone 매칭
+                if(phoneNum.length>=4&&(d.phone===phone||d.phone==='010'+phoneNum)) return d.fcmToken;
+                // uid 매칭
+                if(d.uid===uid) return d.fcmToken;
+              }
+              return null;
             });
         });
     });
