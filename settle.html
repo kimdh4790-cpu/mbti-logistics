@@ -22494,20 +22494,51 @@ function _showWelcome(){
     var notifBtn=document.createElement('button');
     notifBtn.textContent='🔔 알림 허용하기 (필수)';
     notifBtn.style.cssText='background:#00e87a;color:#000;border:none;border-radius:100px;padding:12px 32px;font-size:13px;font-weight:800;cursor:pointer;width:100%;display:block;position:relative;z-index:10001';
-    notifBtn.onclick=function(){
-      Notification.requestPermission().then(function(perm){
-        if(perm==='granted'){
-          toast('✅ 알림이 허용되었습니다!');
-          setTimeout(_registerFCM,500);
-          notifBtn.style.background='#d1fae5';
-          notifBtn.style.color='#065f46';
-          notifBtn.textContent='✅ 알림 허용됨';
-          notifBtn.disabled=true;
-          setTimeout(function(){var m=document.getElementById('mo-welcome');if(m)m.remove();},2000);
-        } else {
-          toast('⚠️ 알림을 허용해야 푸시 알림을 받을 수 있어요');
+    notifBtn.onclick=async function(){
+      notifBtn.textContent='⏳ 허용 중...';
+      notifBtn.disabled=true;
+      try {
+        // SW 먼저 등록
+        if('serviceWorker' in navigator){
+          await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+          await navigator.serviceWorker.ready;
         }
-      });
+        var perm = await Notification.requestPermission();
+        if(perm==='granted'){
+          var messaging = firebase.messaging();
+          var token = await messaging.getToken({vapidKey: VAPID_KEY});
+          if(token){
+            // users + drivers 둘 다 저장
+            var uid = _CU.uid;
+            var did = _CU.dealerId;
+            _db.collection('users').doc(uid).update({fcmToken:token,fcmUpdatedAt:new Date().toISOString()}).catch(function(){});
+            _db.collection('drivers').where('userId','==',uid).limit(1).get().then(function(snap){
+              if(!snap.empty) snap.docs[0].ref.update({fcmToken:token,fcmUpdatedAt:new Date().toISOString()});
+              else _db.collection('drivers').where('userId','==',_CU.driverId||uid).limit(1).get().then(function(s2){
+                if(!s2.empty) s2.docs[0].ref.update({fcmToken:token,fcmUpdatedAt:new Date().toISOString()});
+              });
+            });
+            notifBtn.style.background='#d1fae5';
+            notifBtn.style.color='#065f46';
+            notifBtn.textContent='✅ 알림 허용됨';
+            toast('✅ 알림 설정 완료!');
+            setTimeout(function(){var m=document.getElementById('mo-welcome');if(m)m.remove();},2000);
+          } else {
+            notifBtn.disabled=false;
+            notifBtn.textContent='🔔 알림 허용하기 (필수)';
+            toast('⚠️ 토큰 발급 실패, 다시 시도해주세요');
+          }
+        } else {
+          notifBtn.disabled=false;
+          notifBtn.textContent='🔔 알림 허용하기 (필수)';
+          toast('⚠️ 알림을 허용해야 정산 알림을 받을 수 있어요');
+        }
+      } catch(e) {
+        notifBtn.disabled=false;
+        notifBtn.textContent='🔔 알림 허용하기 (필수)';
+        toast('⚠️ 오류: '+e.message);
+        console.warn('[FCM]', e);
+      }
     };
     notifArea.appendChild(notifBtn);
   } else {
