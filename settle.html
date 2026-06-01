@@ -2169,16 +2169,160 @@ function saveCampCp(){
 function saveAllCp(){
   var p=window._cpPending; if(!p) return;
   var all=[],total=0;
+  var savedPayloads=[]; // 저장된 정산 payload 수집 (세무사 연동용)
   Object.keys(_campColorCache).forEach(function(camp){
     if(p.byCamp[camp])p.byCamp[camp].forEach(function(dm,i){all.push({camp:camp,dm:dm,i:i});total++;});
   });
+  if(!total){toast('❌ 저장할 데이터 없음');return;}
   var n=0;
   all.forEach(function(item){
     var name=(document.getElementById('cpn-'+item.i)||{value:''}).value.trim()||item.dm.drvName||'';
+    // 세무사 연동용 payload 미리 구성
+    var dm=item.dm;
+    var damt=dm.delAmt||0,ramt=dm.retAmt||0,freshRaw=dm.freshAmt||0,finc=dm.addIncAmt||dm.freshIncAmt||0;
+    var income=damt+ramt+freshRaw+finc+(dm.nocontAmt||0);
+    var sa=Math.round(income/1.1),wage=Math.round(sa*(1-0.346));
+    var emp=wage>=800000?Math.floor(wage*0.008/10)*10:0,work=Math.floor(wage*0.0088/10)*10;
+    savedPayloads.push({
+      driver:dm.uid,driverName:name,camp:item.camp,month:p.month,
+      totalAmt:income,supplyAmt:sa,monthlyWage:wage,emp:emp,work:work,
+      net:income-(emp+work),dcnt:dm.dcnt||0,bizNum:dm.bizNum||''
+    });
     _saveCpDriver(item.camp,item.dm,name,p.month,function(){
-      n++;if(n===total){toast('✅ 전체 '+n+'명 저장 완료!');window._cpPending=null;goPage('settlements');}
+      n++;
+      if(n===total){
+        toast('✅ 전체 '+n+'명 저장 완료!');
+        window._cpPending=null;
+        // ── 저장 완료 후 세무사 연동 자동 실행
+        _autoTaxSyncAfterSave(savedPayloads, p.month, function(){
+          goPage('settlements');
+        });
+      }
     });
   });
+}
+
+// ── 전체 저장 후 세무사 자동 연동 + 링크 복사 + 엑셀
+function _autoTaxSyncAfterSave(payloads, ym, doneCb){
+  if(!_db||!_CU){if(doneCb)doneCb();return;}
+  var did=_CU.dealerId||_CU.uid;
+  _db.collection('companies').doc(did).get().then(function(snap){
+    var taxEmail=(snap.exists&&snap.data().taxEmail)||'';
+    var taxName=(snap.exists&&snap.data().taxName)||'세무사';
+    if(!taxEmail){
+      // 세무사 이메일 미등록 → 등록 팝업
+      var mo=document.createElement('div');
+      mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center';
+      mo.innerHTML='<div style="background:var(--bg);border-radius:16px;padding:24px;width:340px;max-width:94vw">'
+        +'<div style="font-size:16px;font-weight:800;margin-bottom:6px">📤 세무사 자동 연동</div>'
+        +'<div style="font-size:12px;color:var(--text3);margin-bottom:14px">정산 저장이 완료됐습니다.<br>세무사 이메일을 등록하면 다음부터 자동으로 연동됩니다.</div>'
+        +'<div style="font-size:11px;color:var(--text3);margin-bottom:4px">세무사 이름</div>'
+        +'<input id="ats-name" placeholder="홍길동 세무사" style="width:100%;padding:9px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);margin-bottom:10px">'
+        +'<div style="font-size:11px;color:var(--text3);margin-bottom:4px">세무사 이메일</div>'
+        +'<input id="ats-email" type="email" placeholder="tax@example.com" style="width:100%;padding:9px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);margin-bottom:16px">'
+        +'<div style="display:flex;gap:8px">'
+        +'<button onclick="this.closest(\'div[style*=fixed]\').remove();window._atsDoneCancel&&window._atsDoneCancel();" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);font-size:13px;cursor:pointer">나중에</button>'
+        +'<button id="ats-ok-btn" style="flex:1;padding:10px;border-radius:8px;background:linear-gradient(135deg,#059669,#0891b2);color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer">연동 시작</button>'
+        +'</div></div>';
+      document.body.appendChild(mo);
+      document.getElementById('ats-ok-btn').onclick=function(){
+        var em=(document.getElementById('ats-email')||{}).value.trim();
+        var nm=(document.getElementById('ats-name')||{}).value.trim();
+        mo.remove();
+        if(!em){if(doneCb)doneCb();return;}
+        _db.collection('companies').doc(did).update({taxEmail:em,taxName:nm||'세무사'}).catch(function(){});
+        _CU.taxEmail=em;
+        _execBulkTaxSync(payloads,ym,em,nm||'세무사',doneCb);
+      };
+      return;
+    }
+    // 이메일 있으면 바로 연동
+    _execBulkTaxSync(payloads,ym,taxEmail,taxName,doneCb);
+  }).catch(function(){if(doneCb)doneCb();});
+}
+
+// ── 실제 일괄 세무사 연동 (Firestore batch + 링크 복사 + 엑셀)
+function _execBulkTaxSync(payloads,ym,taxEmail,taxName,doneCb){
+  if(!_db||!_CU){if(doneCb)doneCb();return;}
+  var did=_CU.dealerId||_CU.uid;
+  var cName=(_CU&&(_CU.companyName||_CU.name))||'DONWAY';
+  var batch=_db.batch();
+  var allLinks=[];
+  payloads.forEach(function(s){
+    var token='txs_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,6);
+    var url=window.location.origin+window.location.pathname+'?taxShare='+token;
+    allLinks.push({name:s.driverName||s.driver,url:url,token:token});
+    var ref=_db.collection('taxShares').doc(token);
+    batch.set(ref,{
+      type:'tax_share',dealerId:did,
+      driverId:s.driver,driverName:s.driverName||s.driver,
+      ym:ym,token:token,email:taxEmail,companyName:cName,
+      vatIncome:s.totalAmt||0,supplyAmt:s.supplyAmt||0,
+      net:s.net||0,emp:s.emp||0,work:s.work||0,
+      dcnt:s.dcnt||0,bizNum:s.bizNum||'',
+      expiresAt:new Date(Date.now()+90*24*3600*1000).toISOString(),
+      createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+      status:'pending',source:'bulk_auto'
+    });
+  });
+  batch.commit().then(function(){
+    // ① 엑셀 자동 다운로드
+    if(typeof _txsBulkExcel==='function') _txsBulkExcel(payloads,ym);
+    // ② 전체 링크 클립보드 복사
+    var linkText=cName+' '+ym+' 정산 세무사 공유 링크\n\n'+
+      allLinks.map(function(l){return l.name+': '+l.url;}).join('\n');
+    if(navigator.clipboard){
+      navigator.clipboard.writeText(linkText).catch(function(){});
+    }
+    // ③ 결과 토스트 + 공유 링크 팝업
+    _showTaxSyncResult(allLinks,ym,taxEmail,doneCb);
+    // 이메일 있으면 mailto 자동 오픈
+    if(taxEmail){
+      var subj=encodeURIComponent('[DONWAY] '+cName+' '+ym+' 정산 자료 공유 ('+payloads.length+'명)');
+      var bodyText=taxName+'님 안녕하세요.\n\n'+ym+'월 정산 자료('+payloads.length+'명)를 공유드립니다.\n\n';
+      allLinks.forEach(function(l){bodyText+=l.name+': '+l.url+'\n';});
+      bodyText+='\n(각 링크 90일 유효)\n\nDONWAY 자동화 정산 시스템';
+      window.open('mailto:'+taxEmail+'?subject='+subj+'&body='+encodeURIComponent(bodyText));
+    }
+  }).catch(function(e){
+    toast('❌ 세무사 연동 실패: '+e.message);
+    if(doneCb)doneCb();
+  });
+}
+
+// ── 연동 완료 팝업 (링크 복사 버튼 포함)
+function _showTaxSyncResult(links,ym,taxEmail,doneCb){
+  var mo=document.createElement('div');
+  mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center';
+  var linkHtml=links.map(function(l){
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;background:var(--bg3);border-radius:7px;margin-bottom:4px">'
+      +'<span style="font-size:12px;font-weight:700">'+esc(l.name)+'</span>'
+      +'<button data-url="'+l.url+'" id="ats-lnk-'+l.token+'" style="font-size:10px;padding:3px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;white-space:nowrap">📋 링크복사</button>'
+      +'</div>';
+  }).join('');
+  var allText=links.map(function(l){return l.name+': '+l.url;}).join('\n');
+  window._atsDone=doneCb;
+  mo.innerHTML='<div style="background:var(--bg);border-radius:16px;padding:22px;width:380px;max-width:95vw;max-height:80vh;overflow-y:auto">'
+    +'<div style="font-size:16px;font-weight:800;margin-bottom:4px">✅ 세무사 연동 완료</div>'
+    +'<div style="font-size:12px;color:var(--text3);margin-bottom:14px">'+ym+' · '+links.length+'명 · 엑셀 다운로드됨'+(taxEmail?' · 이메일: '+taxEmail:'')+'</div>'
+    +'<div id="ats-links-area" style="margin-bottom:12px">'+linkHtml+'</div>'
+    +'<div style="display:flex;gap:8px">'
+    +'<button id="ats-copy-all-btn" style="flex:1;padding:10px;border-radius:8px;background:linear-gradient(135deg,#0891b2,#0e7490);color:#fff;border:none;font-size:12px;font-weight:700;cursor:pointer">📋 전체 링크 복사</button>'
+    +'<button id="ats-close-btn" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);font-size:13px;cursor:pointer">확인</button>'
+    +'</div></div>';
+  document.body.appendChild(mo);
+  // 개별 링크 복사 버튼 이벤트
+  links.forEach(function(l){
+    var btn=document.getElementById('ats-lnk-'+l.token);
+    if(btn) btn.onclick=function(){navigator.clipboard&&navigator.clipboard.writeText(l.url).then(function(){toast('📋 복사됨');});};
+  });
+  document.getElementById('ats-copy-all-btn').onclick=function(){
+    navigator.clipboard&&navigator.clipboard.writeText(allText).then(function(){toast('📋 전체 링크 복사됨');});
+  };
+  document.getElementById('ats-close-btn').onclick=function(){
+    mo.remove();
+    if(typeof window._atsDone==='function'){window._atsDone();window._atsDone=null;}
+  };
 }
 
 function cancelCp(){window._cpPending=null;goPage('settlements');}
