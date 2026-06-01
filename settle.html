@@ -15536,15 +15536,6 @@ function _showSEModal(s){
   // ── 하단 버튼
   var mdf=document.createElement('div');mdf.className='mdf';mdf.style.cssText='padding:10px 18px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px';
 
-  // 세무사 연동 섹션
-  var taxSyncRow=document.createElement('div');
-  taxSyncRow.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px';
-  taxSyncRow.innerHTML='<span style="font-size:13px">🧾</span>'
-    +'<div style="flex:1;font-size:11px;color:#166534">정산 완료 시 세무사에게 자동 공유</div>'
-    +'<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;font-weight:700;color:#166534">'
-    +'<input type="checkbox" id="se-tax-sync" onchange="_onTaxSyncToggle(this)" style="width:15px;height:15px;accent-color:#16a34a"> 연동</label>'
-    +'<button onclick="window._seCheckTaxInfo()" class="btn btn-sm" style="font-size:10px;background:#16a34a;color:#fff;border:none;padding:3px 8px">세무사 정보</button>';
-  mdf.appendChild(taxSyncRow);
 
   // 버튼 행
   var btnRow=document.createElement('div');btnRow.style.cssText='display:flex;gap:8px;justify-content:flex-end';
@@ -15753,9 +15744,7 @@ function _saveSECurrent(){
   p.then(function(docRef){
     var savedId=id||(docRef&&docRef.id)||'';
     toast('✅ 저장완료');
-    // ── 세무사 자동 연동 (체크박스 활성화 시)
-    var syncChk=document.getElementById('se-tax-sync');
-    // 세무사 자동 연동 (선택 없이 항상 실행)
+    // ── 세무사 자동 연동 (저장 시 항상 실행)
     if(typeof _seTaxSync==='function') _seTaxSync(savedId,payload);
     // ★ bizNum이 있으면 driver 프로필에도 사업자번호 연동 (이중검증 데이터 축적)
     if(bizNum&&driver&&_db&&_CU){
