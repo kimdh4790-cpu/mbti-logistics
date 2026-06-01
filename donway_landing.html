@@ -600,7 +600,7 @@ footer{background:#0F172A;padding:44px 24px;font-size:12px;color:rgba(255,255,25
   </div>
 </section></div>
 
-<!-- ── 시뮬레이션 섹션 ── -->
+<!-- ── 시뮬레이션 ── -->
 <div class="sec-page" id="page-simulation">
 <section style="padding:20px 16px;background:#050A14;min-height:80vh">
 <style>
@@ -653,519 +653,102 @@ footer{background:#0F172A;padding:44px 24px;font-size:12px;color:rgba(255,255,25
     </div>
     <div id="sim-content2" style="padding:18px;min-height:340px;overflow-y:auto;max-height:480px"></div>
 
-  </div>
+    </div>
   </div>
 </section>
 </div>
 
-    <span class="sb-ver">v1.0 · 플랫폼 시뮬레이터</span>
-  </div>
-  <div class="sb-section">메인</div>
-  <div class="sb-item active" data-page="landing">🏠 홍보 랜딩</div>
-  <div class="sb-item" data-page="dashboard">📊 대시보드</div>
-  <div class="sb-item" data-page="settle">💰 정산 플랫폼</div>
-  <div class="sb-section">운영</div>
-  <div class="sb-item" data-page="drivers">👥 기사 관리</div>
-  <div class="sb-item" data-page="schedule">📅 스케줄</div>
-  <div class="sb-item" data-page="routes">🗺️ 라우트 단가</div>
-  <div class="sb-item" data-page="incentive">🎯 인센티브</div>
-  <div class="sb-section">기능</div>
-  <div class="sb-item" data-page="scan">📦 간선차 스캔</div>
-  <div class="sb-item" data-page="attendance">🔐 출퇴근 QR</div>
-  <div class="sb-item" data-page="contract">📝 계약서</div>
-  <div class="sb-item" data-page="ocr">📷 OCR 자동입력</div>
-  <div class="sb-section">분석</div>
-  <div class="sb-item" data-page="report">📈 정산 분석</div>
-  <div class="sb-item" data-page="notice">🔔 공지·알림</div>
-  <div class="sb-section">검증</div>
-  <div class="sb-item" data-page="crosscheck">✅ 코드 교차검증</div>
-</div>
 
-<!-- 메인 -->
-<div class="main">
-  <div class="topbar">
-    <div class="topbar-left">
-      <span class="page-title" id="ptitle">🏠 홍보 랜딩페이지</span>
+<!-- ── CTA / FOOTER (항상 표시) ── -->
+<section class="cta">
+  <h2>지금 바로 시작하세요</h2>
+  <p>7일 무료 · 카드 등록 불필요 · 어떤 업종이든 바로 적용</p>
+  <div class="cta-btns">
+    <a href="https://donway.ai.kr/settle" class="btn-w">7일 무료로 시작하기 →</a>
+    <a href="tel:051-711-3103" class="btn-ow">📞 051-711-3103 도입 문의</a>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="foot-in">
+    <div>
+      <div class="foot-brand">DONWAY</div>
+      <div>유한회사 엠비티아이 · 사업자등록번호 373-86-02536</div>
+      <div style="margin-top:4px">부산시 수영구 수영로 668, 607호 · 051-711-3103</div>
     </div>
-    <div style="display:flex;gap:8px;align-items:center">
-      <span class="badge bg">● 배포 정상</span>
-      <span class="badge bc">donway.ai.kr</span>
-      <span class="badge by" id="clk-time">21:00</span>
+    <div class="foot-links">
+      <a href="https://donway.ai.kr/settle">서비스 시작</a>
+      <a href="/donway_brochure.html" target="_blank">소개서</a>
+      <a href="tel:051-711-3103">전화 문의</a>
     </div>
   </div>
-  <div class="page-content">
-
-    <!-- 랜딩 -->
-    <div class="page active" id="pg-landing">
-      <div style="background:linear-gradient(135deg,#050A14 0%,#0a1628 60%,#050A14 100%);border-radius:12px;padding:28px 24px;text-align:center;margin-bottom:12px;position:relative;overflow:hidden">
-        <div style="position:absolute;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(0,102,255,.12),transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none"></div>
-        <div style="font-size:9px;letter-spacing:.2em;color:var(--cyan);font-family:monospace;margin-bottom:10px">DONWAY AI PLATFORM · 특허 출원 중</div>
-        <h1 style="font-size:28px;font-weight:900;line-height:1.2;margin-bottom:10px">정산도 출퇴근도<br><span style="background:linear-gradient(135deg,var(--cyan),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent">DONWAY 하나로 끝납니다</span></h1>
-        <p style="font-size:12px;color:var(--gray);margin-bottom:16px">물류·배달대행·소상공인·용역·프리랜서 <strong style="color:var(--white)">5종 업종 × 16개 기능</strong></p>
-        <div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap">
-          <button class="btn bp">무료 시작 →</button>
-          <button class="btn bg2">기능 보기</button>
-        </div>
-        <div style="display:flex;justify-content:center;gap:6px;margin-top:14px;flex-wrap:wrap">
-          <span class="tag">🚚 쿠팡물류</span><span class="tag">🛵 배달대행</span><span class="tag">🏪 소상공인</span><span class="tag">🏗️ 용역</span>
-        </div>
-      </div>
-      <div class="kpi-grid g4">
-        <div class="kpi"><div class="kpi-label">가입 기업</div><div class="kpi-val" style="color:var(--cyan)">47+</div></div>
-        <div class="kpi"><div class="kpi-label">월 처리 정산</div><div class="kpi-val" style="color:var(--green)">3,200+</div></div>
-        <div class="kpi"><div class="kpi-label">누적 발송</div><div class="kpi-val" style="color:var(--yellow)">21만+</div></div>
-        <div class="kpi"><div class="kpi-label">OCR 정확도</div><div class="kpi-val" style="color:var(--purple)">99.8%</div></div>
-      </div>
-      <div class="row">
-        <div class="col card"><div class="sec-title">01 / AI SETTLEMENT</div>
-          <div style="font-size:15px;font-weight:800;margin-bottom:6px">엑셀 → 정산 완료 3분</div>
-          <div class="progress" style="margin-bottom:6px"><div class="pf" style="width:95%"></div></div>
-          <div style="font-size:10px;color:var(--gray)">5종 업종 자동 분기 · 공제 자동 계산</div>
-        </div>
-        <div class="col card"><div class="sec-title">03 / MULTI-CHANNEL</div>
-          <div style="display:flex;flex-direction:column;gap:5px">
-            <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;width:80px">💬 Kakao</span><div class="progress"><div class="pf" style="width:92%;background:linear-gradient(90deg,#f0a500,#ffe066)"></div></div><span class="tag ton">✓31</span></div>
-            <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;width:80px">📱 SMS</span><div class="progress"><div class="pf" style="width:78%"></div></div><span class="tag ton">✓발송</span></div>
-            <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;width:80px">✉️ E-mail</span><div class="progress"><div class="pf" style="width:60%"></div></div><span class="tag ton">✓발송</span></div>
-          </div>
-        </div>
-      </div>
-      <div class="ok-banner">✅ 랜딩 수정 완료 — canvas 파티클 + .reveal.active CSS + IntersectionObserver + FAQ 아코디언 추가됨</div>
-    </div>
-
-    <!-- 대시보드 -->
-    <div class="page" id="pg-dashboard">
-      <div class="kpi-grid g4">
-        <div class="kpi"><div class="kpi-label">이번달 정산</div><div class="kpi-val" style="color:var(--cyan)">₩2.1억</div><div class="kpi-sub">↑12% 전월비</div></div>
-        <div class="kpi"><div class="kpi-label">총 기사수</div><div class="kpi-val" style="color:var(--green)">31명</div><div class="kpi-sub">재직 28 / 휴직 3</div></div>
-        <div class="kpi"><div class="kpi-label">오늘 출근</div><div class="kpi-val" style="color:var(--yellow)">24명</div><div class="kpi-sub">오전 7:00 기준</div></div>
-        <div class="kpi"><div class="kpi-label">미확인 공지</div><div class="kpi-val" style="color:var(--red)">3건</div><div class="kpi-sub">긴급 1건 포함</div></div>
-      </div>
-      <div class="row">
-        <div class="col card"><div class="sec-title">월별 정산 추이</div>
-          <div class="chart-wrap">
-            <div class="bar" style="height:45%;background:rgba(0,102,255,.5)"></div><div class="bar" style="height:62%;background:rgba(0,102,255,.55)"></div>
-            <div class="bar" style="height:55%;background:rgba(0,102,255,.55)"></div><div class="bar" style="height:78%;background:rgba(0,150,255,.65)"></div>
-            <div class="bar" style="height:70%;background:rgba(0,180,255,.7)"></div><div class="bar" style="height:88%;background:rgba(0,212,255,.8)"></div>
-            <div class="bar" style="height:100%;background:linear-gradient(180deg,#00ff88,rgba(0,255,136,.3))"></div>
-          </div>
-          <div class="chart-labels"><div class="cl">11월</div><div class="cl">12월</div><div class="cl">1월</div><div class="cl">2월</div><div class="cl">3월</div><div class="cl">4월</div><div class="cl" style="color:var(--green);font-weight:700">5월</div></div>
-        </div>
-        <div class="col card"><div class="sec-title">캠프별 현황</div>
-          <div style="display:flex;flex-direction:column;gap:7px">
-            <div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;width:70px">🔵 부산1</span><div class="progress"><div class="pf" style="width:75%"></div></div><span style="font-size:10px;color:var(--gray)">9명</span></div>
-            <div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;width:70px">🟢 부산2</span><div class="progress"><div class="pf" style="width:60%;background:linear-gradient(90deg,var(--green),rgba(0,255,136,.3))"></div></div><span style="font-size:10px;color:var(--gray)">7명</span></div>
-            <div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;width:70px">🟡 대구2</span><div class="progress"><div class="pf" style="width:88%;background:linear-gradient(90deg,var(--yellow),rgba(245,158,11,.3))"></div></div><span style="font-size:10px;color:var(--gray)">11명</span></div>
-            <div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;width:70px">🟣 진주M</span><div class="progress"><div class="pf" style="width:35%;background:linear-gradient(90deg,var(--purple),rgba(139,92,246,.3))"></div></div><span style="font-size:10px;color:var(--gray)">4명</span></div>
-          </div>
-        </div>
-      </div>
-      <div class="card"><div class="sec-title">실시간 피드</div>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          <div style="display:flex;gap:10px"><span style="color:var(--green);font-size:10px;flex-shrink:0;width:40px">07:23</span><span style="font-size:11px">김민준 기사 출근 완료 · 부산1캠프 · GPS ±8m</span></div>
-          <div style="display:flex;gap:10px"><span style="color:var(--cyan);font-size:10px;flex-shrink:0;width:40px">07:18</span><span style="font-size:11px">5월 정산 업로드 완료 · 29건 등록</span></div>
-          <div style="display:flex;gap:10px"><span style="color:var(--yellow);font-size:10px;flex-shrink:0;width:40px">06:55</span><span style="font-size:11px">⚠️ 이희수 기사 서류 만료 예정 (D-7)</span></div>
-          <div style="display:flex;gap:10px"><span style="color:var(--gray);font-size:10px;flex-shrink:0;width:40px">어제</span><span style="font-size:11px">세금계산서 3건 발행 · 합계 ₩14,865,000</span></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 정산 -->
-    <div class="page" id="pg-settle">
-      <div class="tabs" id="settle-tabs">
-        <div class="tab active" data-target="st-upload">엑셀 업로드</div>
-        <div class="tab" data-target="st-calc">정산 계산</div>
-        <div class="tab" data-target="st-send">4채널 발송</div>
-        <div class="tab" data-target="st-tax">세금계산서</div>
-        <div class="tab" data-target="st-excel">📊 Excel 내보내기</div>
-      </div>
-      <div id="st-upload">
-        <div class="ok-banner" style="margin-bottom:10px">
-          <div style="font-weight:700;color:var(--green);margin-bottom:5px">✅ 2026-04 정산 업로드 완료</div>
-          <div class="kpi-grid g3" style="margin-bottom:0;margin-top:8px">
-            <div class="kpi"><div class="kpi-label">신규 등록</div><div class="kpi-val" style="font-size:16px;color:var(--green)">29건</div></div>
-            <div class="kpi"><div class="kpi-label">갱신</div><div class="kpi-val" style="font-size:16px">0건</div></div>
-            <div class="kpi"><div class="kpi-label">신규 기사</div><div class="kpi-val" style="font-size:16px;color:var(--cyan)">29명</div></div>
-          </div>
-        </div>
-        <div class="warn-banner">
-          <div style="font-weight:700;color:var(--yellow);margin-bottom:4px">⚠️ 엑셀 항목별 금액 불일치 감지 (0개 항목)</div>
-          <div style="font-size:10px;color:rgba(245,158,11,.8)">📌 왜 차이가 날까요? ① 반품/취소가 별도 시트에 집계 ② 날짜 범위 두 달 걸침 ③ 엑셀 수동 수정. 정산은 개별 행 기준으로 계산됩니다.</div>
-        </div>
-      </div>
-      <div id="st-calc" style="display:none">
-        <div class="card">
-          <div class="sec-title">캠프별 정산 집계</div>
-          <div style="display:flex;flex-direction:column;gap:6px">
-            <div style="display:flex;justify-content:space-between;padding:7px 10px;background:var(--bg3);border-radius:6px"><span style="font-weight:700">🔵 부산1캠프</span><span style="color:var(--cyan);font-weight:700">₩4,950,534</span></div>
-            <div style="display:flex;justify-content:space-between;padding:7px 10px;background:var(--bg3);border-radius:6px"><span style="font-weight:700">🟡 대구2캠프</span><span style="color:var(--yellow);font-weight:700">₩6,243,180</span></div>
-            <div style="display:flex;justify-content:space-between;padding:7px 10px;background:rgba(0,255,136,.06);border-radius:6px;border:1px solid rgba(0,255,136,.2)"><span style="font-weight:900;font-size:12px">합계 (공급가액)</span><span style="color:var(--green);font-weight:900;font-size:12px">₩17,284,650</span></div>
-          </div>
-        </div>
-        <div style="background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.25);border-radius:8px;padding:10px;font-size:11px">
-          <div style="font-weight:700;color:var(--red);margin-bottom:4px">⚠️ 엑셀 vs 계산값 불일치</div>
-          <div style="font-size:10px;color:rgba(239,68,68,.8)">💡 엑셀은 VAT포함 총액, 계산값은 공급가액(÷1.1) 기준. 고용·산재 공제 후 실지급액과는 다릅니다.</div>
-        </div>
-      </div>
-      <div id="st-send" style="display:none">
-        <div class="card">
-          <div class="sec-title">발송 채널 선택</div>
-          <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
-            <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer"><input type="checkbox" checked> 💬 카카오 알림톡 (31명)</label>
-            <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer"><input type="checkbox" checked> 📱 SMS (31명)</label>
-            <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer"><input type="checkbox"> ✉️ 이메일</label>
-            <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer"><input type="checkbox"> 📠 팩스</label>
-          </div>
-          <button class="btn bp bw" onclick="this.textContent='✅ 발송 완료!';this.style.background='#059669';setTimeout(()=>{this.textContent='📨 클릭 1회로 전체 발송';this.style.background=''},2000)">📨 클릭 1회로 전체 발송</button>
-        </div>
-      </div>
-      <div id="st-tax" style="display:none">
-        <div class="card">
-          <div class="sec-title">세금계산서</div>
-          <div style="background:var(--bg3);border-radius:8px;padding:12px;font-size:11px;margin-bottom:8px">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-              <div><div style="color:var(--gray);font-size:10px">공급자</div><div style="font-weight:700">엠비티아이(유)</div></div>
-              <div><div style="color:var(--gray);font-size:10px">공급받는자</div><div style="font-weight:700">조수용</div></div>
-              <div><div style="color:var(--gray);font-size:10px">공급가액</div><div style="font-weight:700;color:var(--cyan)">₩4,656,117</div></div>
-              <div><div style="color:var(--gray);font-size:10px">세액(10%)</div><div style="font-weight:700">₩465,612</div></div>
-            </div>
-            <div style="border-top:1px solid var(--border);padding-top:8px;display:flex;justify-content:space-between">
-              <span style="font-weight:700">합계금액</span>
-              <span style="font-size:15px;font-weight:900;color:var(--green)">₩5,121,729</span>
-            </div>
-            <div style="margin-top:6px;font-size:10px;color:var(--gray)">※ 고용보험 0.9% ₩6,590 · 산재 0.88% ₩26,790 → 실지급액 ₩5,040,549</div>
-          </div>
-          <div class="info-banner" style="font-size:10px">💡 엑셀 ₩5,335,909과 세금계산서의 차이 = VAT(10%) + 고용·산재 공제. <strong>정상입니다.</strong></div>
-        </div>
-      </div>
-      <div id="st-excel" style="display:none">
-        <div class="card">
-          <div class="sec-title">Excel 내보내기 (신규 추가)</div>
-          <div style="background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.25);border-radius:8px;padding:12px;margin-bottom:10px;font-size:11px">
-            <div style="font-weight:700;color:#22c55e;margin-bottom:6px">✅ exportSettleExcel() 함수 추가됨</div>
-            <div style="font-size:10px;color:rgba(34,197,94,.7)">XLSX.writeFile() 사용 · 기사ID/기사명/캠프/라우트/배송건/단가/배송금/프레시백/인센/공제/실지급 11개 컬럼 · DONWAY_정산_2026-05.xlsx 형식으로 저장</div>
-          </div>
-          <button class="btn bp" style="background:rgba(34,197,94,.8)" onclick="alert('✅ DONWAY_정산_2026-05.xlsx 다운로드 완료!\n\n실제 파일에서는 settle.html → 정산서 하단 [📊 Excel] 버튼을 사용하세요.')">📊 Excel 내보내기 (시뮬)</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 기사 관리 -->
-    <div class="page" id="pg-drivers">
-      <div class="kpi-grid g4" style="margin-bottom:10px">
-        <div class="kpi"><div class="kpi-label">전체</div><div class="kpi-val" style="font-size:18px">31</div></div>
-        <div class="kpi"><div class="kpi-label">재직</div><div class="kpi-val" style="font-size:18px;color:var(--green)">28</div></div>
-        <div class="kpi"><div class="kpi-label">휴직</div><div class="kpi-val" style="font-size:18px;color:var(--yellow)">2</div></div>
-        <div class="kpi"><div class="kpi-label">퇴직</div><div class="kpi-val" style="font-size:18px;color:var(--gray)">1</div></div>
-      </div>
-      <div class="drv-card"><div class="av">김형</div><div style="flex:1"><div style="font-weight:700;font-size:12px">김형수 <span class="tag ton">재직</span></div><div style="font-size:10px;color:var(--gray)">부산1캠프 · 508B · 010-1234-5678</div></div><div style="text-align:right"><div style="font-size:11px;color:var(--cyan);font-weight:700">₩4,950,000</div><div style="font-size:10px;color:var(--gray)">5월 정산</div></div></div>
-      <div class="drv-card"><div class="av">박민</div><div style="flex:1"><div style="font-weight:700;font-size:12px">박민준 <span class="tag ton">재직</span></div><div style="font-size:10px;color:var(--gray)">대구2캠프 · 213A · 010-2345-6789</div></div><div style="text-align:right"><div style="font-size:11px;color:var(--cyan);font-weight:700">₩5,240,000</div><div style="font-size:10px;color:var(--gray)">5월 정산</div></div></div>
-      <div class="drv-card"><div class="av" style="background:linear-gradient(135deg,#374151,#6b7280)">이준</div><div style="flex:1"><div style="font-weight:700;font-size:12px">이준혁 <span class="tag" style="background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3);color:var(--yellow)">휴직</span></div><div style="font-size:10px;color:var(--gray)">진주M캠프 · 부재 중</div></div><div style="text-align:right"><div style="font-size:11px;color:var(--gray)">-</div><div style="font-size:10px;color:var(--gray)">정산 없음</div></div></div>
-      <div style="text-align:center;padding:8px;font-size:10px;color:var(--gray)">… 28개 더 보기</div>
-      <button class="btn bp bw" style="width:100%" onclick="alert('기사 등록 모달: 이름/전화/캠프/라우트/업종/사업자 정보 입력 후 저장')">+ 신규 기사 등록</button>
-    </div>
-
-    <!-- 스케줄 -->
-    <div class="page" id="pg-schedule">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <button class="btn bg2">← 이전 주</button>
-        <span style="font-weight:700;font-size:12px">2026년 5월 18일 ~ 24일</span>
-        <button class="btn bg2">다음 주 →</button>
-      </div>
-      <div class="sg">
-        <div class="sc sh">기사</div><div class="sc sh">월18</div><div class="sc sh">화19</div><div class="sc sh">수20</div><div class="sc sh st" style="color:var(--cyan)">목21</div><div class="sc sh">금22</div><div class="sc sh">토23</div><div class="sc sh">일24</div>
-        <div class="sc" style="font-weight:700;font-size:10px">김형수</div>
-        <div class="sc"><div class="shift" style="background:rgba(0,212,255,.15);color:var(--cyan)">오전</div></div>
-        <div class="sc"><div class="shift" style="background:rgba(0,212,255,.15);color:var(--cyan)">오전</div></div>
-        <div class="sc"><div class="shift" style="background:rgba(0,212,255,.15);color:var(--cyan)">오전</div></div>
-        <div class="sc st"><div class="shift" style="background:rgba(0,212,255,.25);color:var(--cyan)">오전</div></div>
-        <div class="sc"><div class="shift" style="background:rgba(0,212,255,.15);color:var(--cyan)">오전</div></div>
-        <div class="sc" style="color:var(--gray);font-size:9px">휴무</div><div class="sc" style="color:var(--gray);font-size:9px">휴무</div>
-        <div class="sc" style="font-weight:700;font-size:10px">박민준</div>
-        <div class="sc"><div class="shift" style="background:rgba(0,255,136,.12);color:var(--green)">오후</div></div>
-        <div class="sc" style="color:var(--gray);font-size:9px">휴무</div>
-        <div class="sc"><div class="shift" style="background:rgba(0,255,136,.12);color:var(--green)">오후</div></div>
-        <div class="sc st"><div class="shift" style="background:rgba(0,255,136,.2);color:var(--green)">오후</div></div>
-        <div class="sc"><div class="shift" style="background:rgba(0,255,136,.12);color:var(--green)">오후</div></div>
-        <div class="sc"><div class="shift" style="background:rgba(0,255,136,.12);color:var(--green)">오후</div></div>
-        <div class="sc" style="color:var(--gray);font-size:9px">휴무</div>
-      </div>
-      <div style="display:flex;gap:6px;justify-content:flex-end;margin-top:10px">
-        <button class="btn bg2">지난 주 복사</button>
-        <button class="btn bg2">CSV 내보내기</button>
-        <button class="btn bp" onclick="alert('✅ 스케줄 저장 완료!')">배정 저장</button>
-      </div>
-    </div>
-
-    <!-- 라우트 단가 -->
-    <div class="page" id="pg-routes">
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
-        <span class="tag ton" style="cursor:pointer">🔵 부산1</span><span class="tag" style="cursor:pointer">🟢 부산2</span><span class="tag" style="cursor:pointer">🟡 대구2</span><span class="tag" style="cursor:pointer">🟣 진주M</span>
-      </div>
-      <div class="sec-title" style="margin-bottom:8px">🔵 부산1캠프 — 38개 라우트 (저장 즉시 정산 반영)</div>
-      <div class="rg">
-        <div class="rc"><div class="rid">101C</div><div class="rp">700</div><div class="ru">원/건</div></div>
-        <div class="rc"><div class="rid">101D</div><div class="rp">730</div><div class="ru">원/건</div></div>
-        <div class="rc"><div class="rid">109A</div><div class="rp" style="color:var(--cyan)">1,050</div><div class="ru">원/건</div></div>
-        <div class="rc"><div class="rid">109B</div><div class="rp" style="color:var(--cyan)">1,100</div><div class="ru">원/건</div></div>
-        <div class="rc"><div class="rid">213A</div><div class="rp">1,080</div><div class="ru">원/건</div></div>
-        <div class="rc"><div class="rid">213B</div><div class="rp">1,080</div><div class="ru">원/건</div></div>
-        <div class="rc"><div class="rid">508B</div><div class="rp" style="color:var(--yellow)">950</div><div class="ru">원/건</div></div>
-        <div class="rc"><div class="rid">608C</div><div class="rp">920</div><div class="ru">원/건</div></div>
-      </div>
-      <button class="btn bp bw" style="width:100%;margin-top:10px" onclick="alert('✅ 단가 저장 완료! 정산 시 즉시 반영됩니다.')">저장 (즉시 정산 반영)</button>
-    </div>
-
-    <!-- 인센티브 -->
-    <div class="page" id="pg-incentive">
-      <div class="card">
-        <div class="sec-title">캠프별 일괄 ON/OFF</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px" id="camp-btns">
-          <div class="camp-toggle" data-camp="대구2" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:100px;border:2px solid #3b82f6;background:rgba(59,130,246,.1)">
-            <span style="font-size:11px;font-weight:700;color:#93c5fd">대구2캠프</span>
-            <button class="inc-on" onclick="campToggle(this,'대구2')" style="padding:2px 9px;border-radius:100px;border:none;font-size:10px;font-weight:700;cursor:pointer;background:#3b82f6;color:#fff">ON</button>
-            <button class="inc-off" onclick="campToggle(this,'대구2')" style="padding:2px 9px;border-radius:100px;border:none;font-size:10px;font-weight:700;cursor:pointer;background:rgba(255,255,255,.1);color:#94a3b8">OFF</button>
-          </div>
-          <div class="camp-toggle" data-camp="부산1" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:100px;border:2px solid var(--green);background:rgba(0,255,136,.08)">
-            <span style="font-size:11px;font-weight:700;color:var(--green)">부산1캠프</span>
-            <button class="inc-on" onclick="campToggle(this,'부산1')" style="padding:2px 9px;border-radius:100px;border:none;font-size:10px;font-weight:700;cursor:pointer;background:var(--green);color:#000">ON</button>
-            <button class="inc-off" onclick="campToggle(this,'부산1')" style="padding:2px 9px;border-radius:100px;border:none;font-size:10px;font-weight:700;cursor:pointer;background:rgba(255,255,255,.1);color:#94a3b8">OFF</button>
-          </div>
-        </div>
-        <div class="ok-banner" style="font-size:10px">✅ 수정 완료: _getIncSetting()이 localStorage를 실제로 읽도록 수정됨. ON/OFF가 정산에 즉시 반영됩니다.</div>
-      </div>
-      <div class="card">
-        <div class="sec-title">기사별 인센티브</div>
-        <div style="display:grid;grid-template-columns:1fr 70px 90px;gap:6px;font-size:10px;color:var(--gray);border-bottom:1px solid var(--border);padding-bottom:5px;margin-bottom:8px"><div>기사/라우트</div><div>ON/OFF</div><div>단가 선택</div></div>
-        <div style="display:grid;grid-template-columns:1fr 70px 90px;gap:6px;align-items:center;margin-bottom:8px">
-          <div><div style="font-weight:700;font-size:11px">hyun83</div><div style="font-size:10px;color:var(--cyan)">508B</div></div>
-          <div><span class="tag ton" id="inc-hyun-badge">ON</span></div>
-          <div style="display:flex;gap:2px">
-            <button onclick="setRate(this,'x10')" style="padding:2px 5px;background:var(--bg3);border:1px solid var(--border);border-radius:3px;color:var(--gray);font-size:9px;cursor:pointer">×10</button>
-            <button onclick="setRate(this,'x15')" style="padding:2px 5px;background:var(--bg3);border:1px solid var(--border);border-radius:3px;color:var(--gray);font-size:9px;cursor:pointer">×15</button>
-            <button onclick="setRate(this,'x25')" style="padding:2px 5px;background:rgba(0,255,136,.15);border:1px solid rgba(0,255,136,.4);border-radius:3px;color:var(--green);font-size:9px;cursor:pointer;font-weight:700">×25</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 간선차 스캔 -->
-    <div class="page" id="pg-scan">
-      <div class="tabs" id="scan-tabs">
-        <div class="tab active" data-target="sc-recv">📦 수령 스캔</div>
-        <div class="tab" data-target="sc-load">🚚 적재 확인</div>
-      </div>
-      <div id="sc-recv">
-        <div class="row">
-          <div class="col card">
-            <div class="sec-title">QR / OCR 라벨 스캔</div>
-            <div style="background:#000;border-radius:8px;height:100px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;margin-bottom:8px">
-              <div class="scan-anim"></div>
-              <span style="font-size:10px;color:var(--cyan);letter-spacing:2px;z-index:1" class="pulse">📷 카메라 대기 중...</span>
-            </div>
-            <button class="btn bp bw" onclick="simulateScan()" style="width:100%">📷 스캔 시작 (시뮬)</button>
-          </div>
-          <div class="col card">
-            <div class="sec-title">오늘 수령 현황</div>
-            <div style="display:flex;flex-direction:column;gap:4px" id="scan-results">
-              <div style="display:flex;justify-content:space-between;padding:5px 8px;background:var(--bg3);border-radius:5px"><span style="font-weight:700;color:var(--cyan)">508B</span><span style="font-weight:900">42건</span></div>
-              <div style="display:flex;justify-content:space-between;padding:5px 8px;background:var(--bg3);border-radius:5px"><span style="font-weight:700;color:var(--green)">213A</span><span style="font-weight:900">38건</span></div>
-              <div style="display:flex;justify-content:space-between;padding:5px 8px;background:var(--bg3);border-radius:5px"><span style="font-weight:700;color:var(--yellow)">109B</span><span style="font-weight:900">21건</span></div>
-            </div>
-          </div>
-        </div>
-        <div class="ok-banner"><div style="font-weight:700;color:var(--green);margin-bottom:4px">✅ scan.html 수정 완료</div><div style="font-size:10px;color:rgba(0,255,136,.7)">btoa() 한글 crash → encodeURIComponent UTF-8 safe 변환 / /claude-ocr 프록시 경유로 변경</div></div>
-      </div>
-      <div id="sc-load" style="display:none">
-        <div class="card"><div class="sec-title">적재 vs 수령 비교</div>
-          <div class="rg" style="grid-template-columns:repeat(3,1fr)">
-            <div class="rc"><div class="rid">508B 수령</div><div class="rp">42</div><div class="ru">건</div></div>
-            <div class="rc"><div class="rid">508B 적재</div><div class="rp">40</div><div class="ru">건</div></div>
-            <div class="rc"><div class="rid">차이</div><div class="rp" style="color:var(--yellow)">+2</div><div class="ru">확인필요</div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 출퇴근 -->
-    <div class="page" id="pg-attendance">
-      <div class="tabs" id="att-tabs">
-        <div class="tab active" data-target="at-admin">👑 관리자 QR생성</div>
-        <div class="tab" data-target="at-driver">📱 기사 QR스캔</div>
-      </div>
-      <div id="at-admin">
-        <div class="row">
-          <div class="col card">
-            <div class="sec-title">동적 QR (30초 자동 갱신)</div>
-            <div class="qr-container" style="margin-bottom:8px">
-              <svg width="100" height="100" viewBox="0 0 7 7" xmlns="http://www.w3.org/2000/svg">
-                <rect width="7" height="7" fill="#000"/>
-                <rect x="1" y="1" width="2" height="2" fill="#fff"/><rect x="4" y="1" width="2" height="2" fill="#fff"/>
-                <rect x="1" y="4" width="2" height="2" fill="#fff"/><rect x="4" y="4" width="1" height="1" fill="#fff"/>
-                <rect x="3" y="3" width="1" height="1" fill="#fff"/><rect x="5" y="5" width="1" height="1" fill="#fff"/>
-                <rect x="3" y="1" width="1" height="1" fill="#fff"/><rect x="1" y="3" width="1" height="1" fill="#fff"/>
-              </svg>
-              <div style="font-size:9px;color:var(--cyan);letter-spacing:1px" id="qr-countdown">갱신까지 <span id="qr-sec">28</span>초</div>
-            </div>
-            <div style="font-size:10px;color:var(--gray);text-align:center">DONWAY 동적 QR · 30초마다 자동 갱신</div>
-          </div>
-          <div class="col card">
-            <div class="sec-title">오늘 출퇴근</div>
-            <div style="display:flex;flex-direction:column;gap:5px;font-size:11px">
-              <div>🟢 김형수 출근 07:23 · ±8m</div>
-              <div>🟢 박민준 출근 07:45 · ±12m</div>
-              <div>🔴 이준혁 퇴근 18:02 · ±5m</div>
-              <div style="color:var(--gray)">⚪ 최민서 미출근</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div id="at-driver" style="display:none">
-        <div class="card" style="text-align:center;padding:24px">
-          <div style="font-size:36px;margin-bottom:12px">📱</div>
-          <div style="font-weight:700;margin-bottom:6px;font-size:14px">QR 카메라 스캔</div>
-          <div style="font-size:11px;color:var(--gray);margin-bottom:16px">관리자 화면의 QR을 스캔하면<br>GPS 확인 후 출퇴근이 기록됩니다</div>
-          <button class="btn bp" onclick="alert('카메라 열기 → QR 스캔 → GPS 검증 → Firestore 기록')">📷 카메라 열기</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 계약서 -->
-    <div class="page" id="pg-contract">
-      <div class="tabs" id="cont-tabs">
-        <div class="tab active" data-target="ct-std">표준 위수탁</div>
-        <div class="tab" data-target="ct-quick">퀵플렉스</div>
-      </div>
-      <div id="ct-std">
-        <div class="row">
-          <div class="col">
-            <div class="fg"><label class="fl">기사 선택</label><select class="fi"><option>김형수 (부산1 · 508B)</option><option>박민준 (대구2 · 213A)</option></select></div>
-            <div class="fg"><label class="fl">계약 기간</label><input class="fi" value="2026.05.21 ~ 2027.05.20"></div>
-            <div class="fg"><label class="fl">기본 단가</label><input class="fi" value="950원/건"></div>
-            <div style="display:flex;gap:6px">
-              <button class="btn bp" style="flex:1" onclick="alert('🖨️ 인쇄 창 열기 → PDF 저장 가능')">🖨️ 인쇄/PDF</button>
-              <button class="btn bg2" style="flex:1" onclick="alert('✉️ 모두싸인 전자계약 발송\n기사 이메일로 서명 링크 전송')">✉️ 모두싸인</button>
-            </div>
-          </div>
-          <div class="col card">
-            <div class="sec-title">미리보기</div>
-            <div style="background:rgba(255,255,255,.03);border-radius:6px;padding:10px;font-size:10px;line-height:1.7">
-              <div style="text-align:center;font-weight:900;font-size:12px;margin-bottom:6px">영업점-택배기사 위수탁 계약서</div>
-              <div>공급자: <strong>엠비티아이(유)</strong></div>
-              <div>사업자: <strong>373-86-02536</strong></div>
-              <div>수탁자: <strong>김형수</strong></div>
-              <div>계약기간: 2026.05.21~2027.05.20</div>
-              <div>기본단가: <strong style="color:var(--cyan)">950원/건</strong></div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div id="ct-quick" style="display:none">
-        <div class="card" style="text-align:center;padding:20px;font-size:11px;color:var(--gray)">퀵플렉스 부속 합의서 — 기사 선택 후 자동 완성</div>
-      </div>
-    </div>
-
-    <!-- OCR -->
-    <div class="page" id="pg-ocr">
-      <div class="ocr-zone" onclick="document.getElementById('ocr-fake-input').click()" id="ocr-drop">
-        <div style="font-size:36px;margin-bottom:10px">📋</div>
-        <div style="font-size:13px;font-weight:700;margin-bottom:4px">파일을 여기에 드래그하거나 클릭</div>
-        <div style="font-size:11px;color:var(--gray)">JPG · PNG · PDF · HEIC 지원</div>
-        <input id="ocr-fake-input" type="file" accept="image/*" style="display:none" onchange="ocrPreview(this)">
-      </div>
-      <button class="btn bg2 bw" style="width:100%;margin:8px 0;border-color:rgba(0,212,255,.3);color:var(--cyan)" onclick="alert('getUserMedia() → 후면카메라 열기 → 촬영 → 미리보기')">📸 카메라로 바로 촬영</button>
-      <div id="ocr-preview-wrap" style="display:none;background:var(--bg3);border-radius:10px;overflow:hidden;margin-bottom:8px">
-        <div style="background:rgba(255,255,255,.05);padding:6px 10px;font-size:10px;color:var(--gray)" id="ocr-filename"></div>
-        <img id="ocr-preview-img" style="width:100%;max-height:160px;object-fit:contain;display:block;background:#000">
-      </div>
-      <button id="ocr-btn" class="btn bp bw" style="display:none;width:100%;padding:10px;margin-bottom:8px" onclick="simulateOCR()">🔍 AI 분석 시작</button>
-      <div id="ocr-status" style="display:none" class="ok-banner">
-        <div style="font-weight:700;color:var(--green);margin-bottom:6px">✅ 6개 항목 자동입력 완료!</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:10px">
-          <div><span style="color:var(--gray)">사업자번호</span> <strong>373-86-02536</strong></div>
-          <div><span style="color:var(--gray)">상호명</span> <strong>엠비티아이(유)</strong></div>
-          <div><span style="color:var(--gray)">대표자</span> <strong>김형우</strong></div>
-          <div><span style="color:var(--gray)">업태</span> <strong>서비스업</strong></div>
-        </div>
-      </div>
-      <div class="info-banner" style="margin-top:8px;font-size:10px">✅ OCR 수정: resp.ok 체크 + JSON 블록 추출 + 401/429/500 에러 구분 + 이미지 1200px 압축</div>
-    </div>
-
-    <!-- 분석 -->
-    <div class="page" id="pg-report">
-      <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
-        <button class="btn bg2">이번달</button>
-        <button class="btn bp">3개월</button>
-        <button class="btn bg2">6개월</button>
-        <button class="btn bg2">직접입력</button>
-      </div>
-      <div class="kpi-grid g4">
-        <div class="kpi"><div class="kpi-label">총 정산액</div><div class="kpi-val" style="color:var(--cyan)">₩6.4억</div></div>
-        <div class="kpi"><div class="kpi-label">평균 단가</div><div class="kpi-val" style="color:var(--green)">₩924</div></div>
-        <div class="kpi"><div class="kpi-label">총 배송건</div><div class="kpi-val" style="color:var(--yellow)">15,824</div></div>
-        <div class="kpi"><div class="kpi-label">1인 평균</div><div class="kpi-val" style="color:var(--purple)">512건</div></div>
-      </div>
-      <div class="card">
-        <div class="sec-title">월별 정산액 추이 (bc-col CSS 바 차트)</div>
-        <div style="display:flex;align-items:flex-end;gap:4px;height:80px;border-bottom:1px solid var(--border);padding-bottom:4px;margin-bottom:4px">
-          <div style="flex:1;height:65%;background:rgba(0,102,255,.5);border-radius:3px 3px 0 0"></div>
-          <div style="flex:1;height:78%;background:rgba(0,150,255,.65);border-radius:3px 3px 0 0"></div>
-          <div style="flex:1;height:100%;background:linear-gradient(180deg,var(--cyan),rgba(0,212,255,.3));border-radius:3px 3px 0 0;box-shadow:0 0 10px rgba(0,212,255,.3)"></div>
-        </div>
-        <div style="display:flex;gap:4px"><div style="flex:1;text-align:center;font-size:9px;color:var(--gray)">3월</div><div style="flex:1;text-align:center;font-size:9px;color:var(--gray)">4월</div><div style="flex:1;text-align:center;font-size:9px;color:var(--cyan);font-weight:700">5월</div></div>
-        <div class="ok-banner" style="margin-top:8px;font-size:10px">✅ report.html은 CSS div 바 차트 방식 (bc-col/bc-bar 클래스). Canvas/Chart.js 불필요 — 정상 동작.</div>
-      </div>
-      <div class="row">
-        <div class="col card"><div class="sec-title">캠프별 분포</div><div style="display:flex;flex-direction:column;gap:4px;font-size:11px"><div style="display:flex;justify-content:space-between"><span>대구2</span><span style="color:var(--cyan)">38%</span></div><div style="display:flex;justify-content:space-between"><span>부산1</span><span style="color:var(--green)">29%</span></div><div style="display:flex;justify-content:space-between"><span>부산2</span><span style="color:var(--yellow)">22%</span></div><div style="display:flex;justify-content:space-between"><span>진주M</span><span style="color:var(--purple)">11%</span></div></div></div>
-        <div class="col card"><div class="sec-title">TOP 3 기사</div><div style="display:flex;flex-direction:column;gap:4px;font-size:11px"><div style="display:flex;justify-content:space-between"><span>🥇 박민준</span><span style="color:var(--yellow)">₩5.8백만</span></div><div style="display:flex;justify-content:space-between"><span>🥈 김형수</span><span style="color:var(--gray)">₩5.2백만</span></div><div style="display:flex;justify-content:space-between"><span>🥉 이준석</span><span>₩4.9백만</span></div></div></div>
-      </div>
-    </div>
-
-    <!-- 공지 -->
-    <div class="page" id="pg-notice">
-      <div class="tabs" id="notice-tabs">
-        <div class="tab active" data-target="nt-send">공지 발송</div>
-        <div class="tab" data-target="nt-history">발송 내역</div>
-      </div>
-      <div id="nt-send">
-        <div class="fg"><label class="fl">공지 유형</label>
-          <div style="display:flex;gap:6px;flex-wrap:wrap" id="notice-types">
-            <span onclick="selectType(this)" style="cursor:pointer" class="tag ton">📢 일반 공지</span>
-            <span onclick="selectType(this)" style="cursor:pointer" class="tag">🚨 긴급 공지</span>
-            <span onclick="selectType(this)" style="cursor:pointer" class="tag">💰 정산 안내</span>
-          </div>
-        </div>
-        <div class="fg" style="margin-top:8px"><label class="fl">대상 캠프</label>
-          <div style="display:flex;gap:8px;flex-wrap:wrap"><label style="font-size:11px;cursor:pointer"><input type="checkbox" checked> 전체</label><label style="font-size:11px;cursor:pointer"><input type="checkbox"> 부산1</label><label style="font-size:11px;cursor:pointer"><input type="checkbox"> 대구2</label></div>
-        </div>
-        <div class="fg" style="margin-top:8px"><label class="fl">메시지</label>
-          <textarea class="fi" rows="3" style="resize:none">5월 정산이 완료되었습니다. 마이페이지에서 확인해 주세요.</textarea>
-        </div>
-        <div style="display:flex;gap:6px">
-          <button class="btn bp" style="flex:1" onclick="this.textContent='✅ 발송 완료!';setTimeout(()=>this.textContent='📨 전체 발송',2000)">📨 전체 발송</button>
-          <button class="btn bg2" style="flex:1">저장</button>
-        </div>
-      </div>
-      <div id="nt-history" style="display:none">
-        <div class="card"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-weight:700">5월 정산 완료 안내</span><span class="badge bg">발송완료</span></div><div style="font-size:10px;color:var(--gray)">2026-05-21 · 31명 · 카카오+SMS</div></div>
-        <div class="card"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-weight:700">🚨 배송 지연 안내</span><span class="badge br">긴급</span></div><div style="font-size:10px;color:var(--gray)">2026-05-19 · 9명 · 부산1캠프</div></div>
-      </div>
-    </div>
-
-    <!-- 코드 교차검증 -->
-    <div class="page" id="pg-crosscheck">
-      <div class="warn-banner" style="margin-bottom:12px">
-        <div style="font-weight:700;color:var(--yellow);margin-bottom:4px">⚠️ 교차검증 실행 결과 (2026-05-21)</div>
-        <div style="font-size:10px;color:rgba(245,158,11,.8)">코드 직접 파싱 결과 — 시뮬레이션이 아닌 실제 파일 기준</div>
-      </div>
-      <div id="checks-container"></div>
-    </div>
-
-  </div>
-</div>
-</div>
+  <div class="foot-copy">© 2026 DONWAY by 유한회사 엠비티아이. All rights reserved.</div>
+</footer>
 
 <script>
+
+function showSec(id, btn){
+  // 모든 페이지 숨기기
+  document.querySelectorAll('.sec-page').forEach(function(p){p.classList.remove('on');});
+  document.querySelectorAll('.snav').forEach(function(b){b.classList.remove('on');});
+  // 해당 페이지 표시
+  var page=document.getElementById('page-'+id);
+  if(page) page.classList.add('on');
+  if(btn) btn.classList.add('on');
+  // 탑으로 스크롤
+  window.scrollTo({top:0,behavior:'smooth'});
+  // 요금제 탭은 pricing 섹션 포함
+  if(id==='pricing'){
+    var priceSec=document.getElementById('page-pricing');
+    if(priceSec) priceSec.classList.add('on');
+  }
+}
+
+// 히어로 CTA 버튼들 → 해당 섹션으로 이동
+document.addEventListener('DOMContentLoaded',function(){
+  // href="#xxx" 링크를 showSec으로 교체
+  var secMap={
+    'industries':'industries','pain':'pain','features':'features',
+    'spotlight':'spotlight','pricing':'pricing','faq':'faq','howto':'pricing'
+  };
+  document.querySelectorAll('a[href^="#"]').forEach(function(a){
+    var target=a.getAttribute('href').replace('#','');
+    if(secMap[target]){
+      a.addEventListener('click',function(e){
+        e.preventDefault();
+        var btn=document.querySelector('.snav[onclick*="'+secMap[target]+'"]');
+        showSec(secMap[target],btn);
+      });
+    }
+  });
+});
+
+function tab(el,id){
+  document.querySelectorAll('.itab').forEach(function(t){t.classList.remove('on')});
+  document.querySelectorAll('.icontent').forEach(function(c){c.classList.remove('on')});
+  el.classList.add('on');
+  document.getElementById('tab-'+id).classList.add('on');
+}
+function faq(el){
+  el.parentElement.classList.toggle('open');
+}
+// 숫자 카운터
+function counter(el,to,suffix,dur){
+  var cur=0,inc=to/50;
+  var t=setInterval(function(){
+    cur=Math.min(cur+inc,to);
+    el.textContent=Math.round(cur)+suffix;
+    if(cur>=to)clearInterval(t);
+  },dur/50);
+}
+window.addEventListener('load',function(){
+  setTimeout(function(){
+    counter(document.querySelector('.kpi:nth-child(3) .kpi-n'),90,'%',1200);
+  },400);
+});
+
+// LIVE DEMO
 var SIM_DATA2 = {
 
   // ── 0: AI 정산 ─────────────────────────────────────
