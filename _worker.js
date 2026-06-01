@@ -42,17 +42,8 @@ function forbidden(msg = '접근이 거부되었습니다') {
 const PROJECT_ID = 'mbti-logistics';
 // ★ Pages 배포 URL (env.ASSETS 대체 - wrangler assets 이슈 우회)
 const GITHUB_RAW = 'https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main';
-async function fetchAsset(path, request, env) {
+async function fetchAsset(path, request) {
   const filePath = path.startsWith('/') ? path : '/' + path;
-  // ASSETS 바인딩으로 직접 서빙 (settle.html 등)
-  if (env && env.ASSETS) {
-    try {
-      const assetReq = new Request('https://assets.local' + filePath, request);
-      const assetResp = await env.ASSETS.fetch(assetReq);
-      if (assetResp.status !== 404) return assetResp;
-    } catch(e) {}
-  }
-  // fallback: GitHub Raw
   const encodedPath = filePath.split('/').map(seg => seg ? encodeURIComponent(seg) : '').join('/');
   const noCache = filePath.includes('settle.html');
   const assetUrl = GITHUB_RAW + encodedPath + (noCache ? '?t='+Date.now() : '');
@@ -783,7 +774,7 @@ export default {
     if (slugMatch && !knownPaths.has(slugMatch[0].replace(/\/$/,'')) && method === 'GET') {
       const companySlug = slugMatch[1];
       try {
-        const resp = await fetchAsset('/settle.html', request, env);
+        const resp = await fetchAsset('/settle.html', request);
         let html = await resp.text();
         // slug + 보안헤더 주입 (</head> 앞에 삽입 - 가장 안전한 위치)
         const akKey = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
@@ -804,7 +795,7 @@ export default {
     }
 
     if (path === '/settle' || path === '/settle/') {
-      const resp = await fetchAsset('/settle.html', request, env);
+      const resp = await fetchAsset('/settle.html', request);
       const html = await resp.text();
       const key = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
       const storageTag = '<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage-compat.js"></script>';
