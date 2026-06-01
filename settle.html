@@ -19317,7 +19317,7 @@ function _sendPayslipPush(x,r,name,month,net,vatIncome,docId){
         body:JSON.stringify({tokens:[fcmToken],title:title,body:body,type:'payslip'})
       }).then(function(res){return res.json();}).then(function(j){
         if(j.sent>0) toast('✅ 앱 푸시 발송 — '+name+'님');
-        else toast('⚠️ '+name+'님 푸시 실패 (토큰 만료)');
+        else toast('⚠️ '+name+'님 푸시 실패 — '+JSON.stringify(j));
       });
     }).catch(function(e){toast('❌ '+e.message);});
 }
@@ -19464,7 +19464,7 @@ function _sendTaxInvoicePush(x,r,name,month,vatIncome,docId){
         body:JSON.stringify({tokens:[fcmToken],title:title,body:body,type:'tax_invoice'})
       }).then(function(res){return res.json();}).then(function(j){
         if(j.sent>0) toast('✅ 세금계산서 앱 푸시 — '+name+'님');
-        else toast('⚠️ '+name+'님 푸시 실패 (토큰 만료)');
+        else toast('⚠️ '+name+'님 푸시 실패 — '+JSON.stringify(j));
       });
     }).catch(function(e){toast('❌ '+e.message);});
 }
