@@ -13225,6 +13225,11 @@ function _viewMyStatement(el){
       +'<div style="font-size:11px;color:var(--text3);text-align:center">엠비티아이 유한회사 · 051-711-3103</div>'
       +'</div>'
       +'<div class="mdf"><button class="btn" onclick="this.closest(\'.mo\').remove()">닫기</button></div>';
+    md.appendChild && md.innerHTML && true;
+    mo.appendChild(md);
+    document.body.appendChild(mo);
+  }).catch(function(){});
+}
 
 // ══ 메뉴 ══
 // 서비스 타입별 메뉴 정의
