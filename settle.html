@@ -3238,12 +3238,34 @@ function doQuickJoin(){
       toast('✅ 가입 완료! 전화번호로 로그인하세요');
       switchTab('login');
       if(typeof _switchLoginTab==='function')_switchLoginTab('phone');
+      setTimeout(_requestFcmAfterJoin, 1000);
     })
     .catch(function(e){
       if(btn){btn.disabled=false;btn.textContent='가입하기';}
       var msgs={'auth/email-already-in-use':'이미 등록된 연락처입니다','auth/weak-password':'비밀번호 6자 이상','auth/network-request-failed':'네트워크 오류 — 인터넷 연결 확인','auth/too-many-requests':'잠시 후 다시 시도하세요','auth/invalid-email':'이메일 형식 오류'};
       if(err){err.textContent=msgs[e.code]||e.message;err.style.display='';}
     });
+}
+
+
+// ── 가입 후 FCM 알림 허용 요청 ──
+function _requestFcmAfterJoin(){
+  if(!('Notification' in window)||!firebase||!firebase.messaging) return;
+  try{
+    var messaging=firebase.messaging();
+    Notification.requestPermission().then(function(perm){
+      if(perm!=='granted') return;
+      messaging.getToken({vapidKey:window._VAPID_KEY||''}).then(function(token){
+        if(!token||token.length<20) return;
+        var uid=firebase.auth().currentUser?firebase.auth().currentUser.uid:'';
+        if(!uid) return;
+        firebase.firestore().collection('users').doc(uid).update({
+          fcmToken:token, fcmUpdatedAt:new Date().toISOString()
+        }).catch(function(){});
+        toast('🔔 알림이 허용되었습니다');
+      }).catch(function(){});
+    }).catch(function(){});
+  }catch(e){}
 }
 
 // 앱 설치 유도
@@ -3790,6 +3812,7 @@ function doJoin(){
   }).then(function(){
     toast('✅ 가입 완료! 로그인해 주세요');
     switchTab('login');
+    setTimeout(_requestFcmAfterJoin, 1000);
     ['j-name','j-driverid','j-email','j-pw','j-code','j-biz-num','j-biz-name','j-biz-owner'].forEach(function(id){
       var el=document.getElementById(id);if(el)el.value='';
     });
