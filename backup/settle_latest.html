@@ -21017,6 +21017,16 @@ async function _doDeploySettlements(ids) {
         allTokens.push(u.fcmToken);
       }
     });
+    // drivers 컬렉션 토큰도 함께 수집
+    var drvSnap = await _db.collection('drivers')
+      .where('dealerId', '==', _did).get();
+    drvSnap.forEach(function(doc) {
+      var d = doc.data();
+      if (d.fcmToken && d.fcmToken.length > 20 && allTokens.indexOf(d.fcmToken) === -1) {
+        if (d.name) tokenMap[d.name] = d.fcmToken;
+        allTokens.push(d.fcmToken);
+      }
+    });
   } catch(e) {}
 
   var fcmTokens = allTokens.slice();
