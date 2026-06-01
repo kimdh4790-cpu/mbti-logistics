@@ -1,7 +1,7 @@
 // DONWAY Worker v20260531145518
-// MBTI Logistics + LogiNet ??Cloudflare Worker
+// MBTI Logistics + LogiNet — Cloudflare Worker
 
-// ?�?� 보안 ?�정 ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
+// ── 보안 설정 ──────────────────────────────────────────────────────────────
 const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'SAMEORIGIN',
@@ -10,7 +10,7 @@ const SECURITY_HEADERS = {
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=(self)',
 };
 
-// Rate Limiting (메모�?기반, Worker ?�시????초기??
+// Rate Limiting (메모리 기반, Worker 재시작 시 초기화)
 const rateLimitMap = new Map();
 function checkRateLimit(ip, limit = 60, windowMs = 60000) {
   const now = Date.now();
@@ -22,17 +22,17 @@ function checkRateLimit(ip, limit = 60, windowMs = 60000) {
   return timestamps.length <= limit;
 }
 
-// 보안 ?�더 ?�용 ?�퍼
+// 보안 헤더 적용 헬퍼
 function addSecurityHeaders(response, allowIframe = false) {
   const newHeaders = new Headers(response.headers);
   Object.entries(SECURITY_HEADERS).forEach(([k,v]) => newHeaders.set(k, v));
-  // iframe ?�용 ??X-Frame-Options ?�거 (?��??�이????
+  // iframe 허용 시 X-Frame-Options 제거 (시뮬레이터 등)
   if (allowIframe) newHeaders.delete('X-Frame-Options');
   return new Response(response.body, { status: response.status, headers: newHeaders });
 }
 
-// ?�근 거�? ?�퍼
-function forbidden(msg = '?�근??거�??�었?�니??) {
+// 접근 거부 헬퍼
+function forbidden(msg = '접근이 거부되었습니다') {
   return new Response(JSON.stringify({ error: msg }), {
     status: 403,
     headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS }
@@ -40,25 +40,25 @@ function forbidden(msg = '?�근??거�??�었?�니??) {
 }
 
 const PROJECT_ID = 'mbti-logistics';
-// ??Pages 배포 URL (env.ASSETS ?��?- wrangler assets ?�슈 ?�회)
+// ★ Pages 배포 URL (env.ASSETS 대체 - wrangler assets 이슈 우회)
 const GITHUB_RAW = 'https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main';
 async function fetchAsset(path, request) {
   const filePath = path.startsWith('/') ? path : '/' + path;
-  // ?��? ?�일�?URL ?�코??(?�비?�아??물류관�?v9.html ??
+  // 한글 파일명 URL 인코딩 (엠비티아이_물류관리_v9.html 등)
   const encodedPath = filePath.split('/').map(seg => seg ? encodeURIComponent(seg) : '').join('/');
   const assetUrl = GITHUB_RAW + encodedPath + (filePath.includes('settle.html') ? '?t='+Date.now() : '');
   const resp = await fetch(assetUrl, { cf: { cacheEverything: true, cacheTtl: 60 } });
   return resp;
 }
 
-// ?�?� ?�시 비�?번호 ?�성 (?�문+?�자 8?�리) ?�?�
+// ── 임시 비밀번호 생성 (영문+숫자 8자리) ──
 function generateTempPassword() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
   const bytes = crypto.getRandomValues(new Uint8Array(8));
   return Array.from(bytes).map(b => chars[b % chars.length]).join('');
 }
 
-// ?�?� ?�랜�??�속 URL 반환 ?�?�
+// ── 플랜별 접속 URL 반환 ──
 function getPlanUrl(planType, slug) {
   const base = 'https://donway.ai.kr';
   const slugPath = slug ? ('/' + slug) : '/settle';
@@ -73,7 +73,7 @@ function getPlanUrl(planType, slug) {
 }
 
 
-// ?�?� FCM ?�시 발송 (Cloud Function sendPush 경유) ?�?�
+// ── FCM 푸시 발송 (Cloud Function sendPush 경유) ──
 async function sendFCMPush(fcmToken, title, body, data = {}) {
   if (!fcmToken) return { sent: false, reason: 'no token' };
   try {
@@ -88,7 +88,7 @@ async function sendFCMPush(fcmToken, title, body, data = {}) {
   }
 }
 
-// ?�?� 관리자 FCM ?�시 발송 ?�?�
+// ── 관리자 FCM 푸시 발송 ──
 async function sendAdminFCM(env, token, { title, body, type }) {
   try {
     const accessToken = await getAccessToken(env);
@@ -119,17 +119,17 @@ async function sendAdminFCM(env, token, { title, body, type }) {
   }
 }
 
-// 관리자 ?�체 기기??FCM ?�시 발송
+// 관리자 전체 기기에 FCM 푸시 발송
 async function notifyAdmins(env, token, { title, body, type }) {
   try {
-    // admin_tokens 컬렉?�에??모든 관리자 ?�큰 조회
+    // admin_tokens 컬렉션에서 모든 관리자 토큰 조회
     const resp = await fetch(`${FS_BASE}/admin_tokens`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     if (!resp.ok) return;
     const data = await resp.json();
     const docs = data.documents || [];
-    // 병렬�?모든 관리자 기기??발송
+    // 병렬로 모든 관리자 기기에 발송
     await Promise.allSettled(
       docs.map(doc => {
         const fcmToken = doc.fields?.token?.stringValue;
@@ -141,16 +141,16 @@ async function notifyAdmins(env, token, { title, body, type }) {
   }
 }
 
-// ?�?� ?�영 ?�메??발송 (Gmail SMTP via Cloudflare Email) ?�?�
+// ── 환영 이메일 발송 (Gmail SMTP via Cloudflare Email) ──
 async function sendWelcomeEmail(env, { email, companyName, tempPassword, planType, loginUrl, planLabel }) {
-  // Cloudflare Email Workers ?�는 ?��? SMTP ?�비???�용
-  // ?�재??로그�??�기�?추후 ?�동 (EmailJS, Resend, SendGrid ??
+  // Cloudflare Email Workers 또는 외부 SMTP 서비스 사용
+  // 현재는 로그만 남기고 추후 연동 (EmailJS, Resend, SendGrid 등)
   const emailKey = env.EMAIL_API_KEY;
   if (!emailKey) {
-    console.log(`[Email] 미설????발송 ?�?? ${email}, ?�시PW: ${tempPassword}`);
-    return { sent: false, reason: 'EMAIL_API_KEY 미설?? };
+    console.log(`[Email] 미설정 — 발송 대상: ${email}, 임시PW: ${tempPassword}`);
+    return { sent: false, reason: 'EMAIL_API_KEY 미설정' };
   }
-  // Resend API ?�용 (env.EMAIL_API_KEY = re_xxxx)
+  // Resend API 사용 (env.EMAIL_API_KEY = re_xxxx)
   try {
     const resp = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -161,30 +161,31 @@ async function sendWelcomeEmail(env, { email, companyName, tempPassword, planTyp
       body: JSON.stringify({
         from: 'DONWAY <noreply@donway.ai.kr>',
         to: [email],
-        subject: `[DONWAY] ${companyName} 계정???�성?�습?�다`,
+        subject: `[DONWAY] ${companyName} 계정이 생성됐습니다`,
         html: `
           <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
             <div style="background:#0066ff;color:#fff;border-radius:12px 12px 0 0;padding:20px 24px">
-              <h1 style="margin:0;font-size:20px">DONWAY 가?�을 ?�영?�니?? ?��</h1>
+              <h1 style="margin:0;font-size:20px">DONWAY 가입을 환영합니다! 🎉</h1>
             </div>
             <div style="background:#f8faff;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px;padding:24px">
-              <p style="margin:0 0 16px;color:#334155">?�녕?�세?? <strong>${companyName}</strong>??/p>
-              <p style="margin:0 0 20px;color:#64748b">${planLabel} 결제가 ?�료?�습?�다. ?�래 ?�보�?로그?�하?�요.</p>
+              <p style="margin:0 0 16px;color:#334155">안녕하세요, <strong>${companyName}</strong>님</p>
+              <p style="margin:0 0 20px;color:#64748b">${planLabel} 결제가 완료됐습니다. 아래 정보로 로그인하세요.</p>
               <div style="background:#fff;border:1px solid #cbd5e1;border-radius:8px;padding:16px;margin-bottom:20px">
-                <div style="margin-bottom:10px"><span style="color:#64748b;font-size:13px">?�용 ?�속 URL</span><br>
+                <div style="margin-bottom:10px"><span style="color:#64748b;font-size:13px">전용 접속 URL</span><br>
                   <a href="${loginUrl}" style="color:#0066ff;font-weight:700;font-size:15px">${loginUrl}</a>
                 </div>
-                <div style="margin-bottom:10px"><span style="color:#64748b;font-size:13px">로그???�메??/span><br>
+                <div style="margin-bottom:10px"><span style="color:#64748b;font-size:13px">로그인 이메일</span><br>
                   <strong>${email}</strong>
                 </div>
-                <div style="margin-bottom:10px"><span style="color:#64748b;font-size:13px">?�랜</span><br>
-                  <strong>${planLabel}</strong> ??즉시 ?�성?�됨 ??                </div>
-                ${tempPassword ? '<div style="background:#fef9c3;border:1px solid #fde047;border-radius:6px;padding:12px;margin-top:8px"><span style="color:#854d0e;font-size:12px">?�� ?�시 비�?번호 (최초 로그?�용)</span><br><strong style="font-size:20px;letter-spacing:2px;color:#0f172a">' + tempPassword + '</strong><br><span style="color:#854d0e;font-size:11px">로그????반드??비�?번호�?변경하?�요</span></div>' : ''}
+                <div style="margin-bottom:10px"><span style="color:#64748b;font-size:13px">플랜</span><br>
+                  <strong>${planLabel}</strong> — 즉시 활성화됨 ✅
+                </div>
+                ${tempPassword ? '<div style="background:#fef9c3;border:1px solid #fde047;border-radius:6px;padding:12px;margin-top:8px"><span style="color:#854d0e;font-size:12px">🔑 임시 비밀번호 (최초 로그인용)</span><br><strong style="font-size:20px;letter-spacing:2px;color:#0f172a">' + tempPassword + '</strong><br><span style="color:#854d0e;font-size:11px">로그인 후 반드시 비밀번호를 변경하세요</span></div>' : ''}
               </div>
-              <p style="color:#ef4444;font-size:13px;margin:0 0 20px">?�️ 로그????반드??비�?번호�?변경해주세??/p>
-              <a href="${loginUrl}" style="display:block;background:#0066ff;color:#fff;text-align:center;padding:14px;border-radius:8px;text-decoration:none;font-weight:700">바로 ?�작?�기 ??/a>
+              <p style="color:#ef4444;font-size:13px;margin:0 0 20px">⚠️ 로그인 후 반드시 비밀번호를 변경해주세요</p>
+              <a href="${loginUrl}" style="display:block;background:#0066ff;color:#fff;text-align:center;padding:14px;border-radius:8px;text-decoration:none;font-weight:700">바로 시작하기 →</a>
               <p style="margin:20px 0 0;font-size:12px;color:#94a3b8;text-align:center">
-                문의: 051-711-3103 | donway.ai.kr<br>?�비?�아???�한?�사
+                문의: 051-711-3103 | donway.ai.kr<br>엠비티아이 유한회사
               </p>
             </div>
           </div>
@@ -197,7 +198,7 @@ async function sendWelcomeEmail(env, { email, companyName, tempPassword, planTyp
   }
 }
 
-// 16진수 문자????Uint8Array
+// 16진수 문자열 → Uint8Array
 function hexToBytes(hex) {
   const bytes = new Uint8Array(hex.length / 2);
   for (let i = 0; i < hex.length; i += 2) {
@@ -207,7 +208,7 @@ function hexToBytes(hex) {
 }
 const FS_BASE    = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
 
-// ?�?� Service Account JWT ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
+// ── Service Account JWT ───────────────────────────────────────────────────────
 async function importPrivateKey(pem) {
   const content = pem
     .replace('-----BEGIN PRIVATE KEY-----', '')
@@ -261,7 +262,7 @@ async function getAccessToken(env) {
   return data.access_token;
 }
 
-// ?�?� Firestore REST helpers ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
+// ── Firestore REST helpers ────────────────────────────────────────────────────
 async function fsQuery(token, collectionId, filters) {
   const res = await fetch(`${FS_BASE}:runQuery`, {
     method: 'POST',
@@ -300,7 +301,7 @@ async function fsGet(token, collectionId, docId) {
   return res.json();
 }
 
-// ?�?� Expire Job ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
+// ── Expire Job ────────────────────────────────────────────────────────────────
 async function runExpireJob(env) {
   const token = await getAccessToken(env);
   const now   = new Date().toISOString();
@@ -337,7 +338,7 @@ async function runExpireJob(env) {
   return { checked: rows.filter(r => r.document).length, expired };
 }
 
-// ?�?� Fetch Handler ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
+// ── Fetch Handler ─────────────────────────────────────────────────────────────
 export default {
   async fetch(request, env) {
     const url      = new URL(request.url);
@@ -345,17 +346,17 @@ export default {
     const method   = request.method;
     const hostname = url.hostname;
 
-    // ?�?� HTTPS 강제 리다?�렉??(HTTP ??HTTPS) ?�?�
+    // ── HTTPS 강제 리다이렉트 (HTTP → HTTPS) ──
     if (url.protocol === 'http:' && !hostname.includes('localhost') && !hostname.includes('workers.dev')) {
       return Response.redirect('https://' + hostname + url.pathname + url.search, 301);
     }
 
-    // ?�?� Rate Limiting (API ?�드?�인?�만) ?�?�
+    // ── Rate Limiting (API 엔드포인트만) ──
     const isApiPath = ['/claude-ocr','/label-ocr','/scan-save','/truck-save'].includes(path);
     if (isApiPath) {
       const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
       if (!checkRateLimit(ip, 30, 60000)) {
-        return new Response(JSON.stringify({ error: '?�청???�무 많습?�다. ?�시 ???�시 ?�도?�주?�요.' }), {
+        return new Response(JSON.stringify({ error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' }), {
           status: 429,
           headers: { 'Content-Type': 'application/json', 'Retry-After': '60', ...SECURITY_HEADERS }
         });
@@ -363,7 +364,7 @@ export default {
     }
 
 
-    // ?�?� firebase-messaging-sw.js 최우???�빙 ?�?�
+    // ── firebase-messaging-sw.js 최우선 서빙 ──
     if (path === '/firebase-messaging-sw.js') {
       const swContent = "importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');"
         + "importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');"
@@ -371,7 +372,7 @@ export default {
         + "const messaging=firebase.messaging();"
         + "messaging.onBackgroundMessage(function(payload){"
         + "  const data=payload.data||{};const type=data.type||'alert';"
-        + "  const title='DONWAY '+(payload.notification&&payload.notification.title||'?�림');"
+        + "  const title='DONWAY '+(payload.notification&&payload.notification.title||'알림');"
         + "  const body=(payload.notification&&payload.notification.body)||'';"
         + "  return self.registration.showNotification(title,{body:body,icon:'/icon-192.png',badge:'/icon-192.png',tag:'donway-'+type,renotify:true,vibrate:[200,100,200]});"
         + "});"
@@ -389,13 +390,13 @@ export default {
       });
     }
 
-    // ??루트 ?�속 ???�딩?�이지 리라?�트 (URL ?��?, workers.dev ?�외)
-    // ?�?� 루트 경로 처리 ?�?�
+    // ★ 루트 접속 → 랜딩페이지 리라이트 (URL 유지, workers.dev 제외)
+    // ── 루트 경로 처리 ──
     if (path === '/' || path === '' || path === '/donway_landing' || path === '/donway_landing/') {
-      // workers.dev = 물류?? �???= DONWAY ?�딩
+      // workers.dev = 물류앱, 그 외 = DONWAY 랜딩
       if (hostname.includes('workers.dev') || hostname.includes('kimdh4790')) {
-        // ??물류??메인 HTML ?�빙
-        const logisticsResp = await fetchAsset('/?�비?�아??물류관�?v9.html', request);
+        // ★ 물류앱 메인 HTML 서빙
+        const logisticsResp = await fetchAsset('/엠비티아이_물류관리_v9.html', request);
         const lh = new Headers();
         lh.set('Content-Type', 'text/html; charset=utf-8');
         lh.set('Cache-Control', 'no-cache');
@@ -412,7 +413,7 @@ export default {
     }
 
 
-    // API ???�스???�드?�인??(?�퍼?�드민만)
+    // API 키 테스트 엔드포인트 (슈퍼어드민만)
     if (path === '/test-apikey') {
       const testEmail = request.headers.get('X-Admin-Email') || '';
       if(!['kimdh4790@gmail.com','soungkyekim@naver.com'].includes(testEmail)){
@@ -424,10 +425,11 @@ export default {
           return new Response(JSON.stringify({ ok:false, reason:'NO_KEY' }), 
             { headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'} });
         }
-        // ???�식 검??        const isValidFormat = k.startsWith('sk-ant-');
+        // 키 형식 검사
+        const isValidFormat = k.startsWith('sk-ant-');
         const masked = k.substring(0,12)+'...'+k.substring(k.length-6);
         
-        // Anthropic API 직접 ?�출 (?�스?�만, ?��?지 ?�이)
+        // Anthropic API 직접 호출 (텍스트만, 이미지 없이)
         const testResp = await fetch('https://api.anthropic.com/v1/messages', {
           method:'POST',
           headers:{
@@ -462,7 +464,7 @@ export default {
     }
 
 
-    // favicon: ?�에??icon-192.png 기반?�로 ?�빙 (204 ?�거)
+    // favicon: 뒤에서 icon-192.png 기반으로 서빙 (204 제거)
 
     if (method === 'OPTIONS') {
       return new Response(null, {
@@ -475,7 +477,7 @@ export default {
     }
 
 
-    // ?�?� Firebase Storage ?�로???�록???�?�
+    // ── Firebase Storage 업로드 프록시 ──
     if (path === '/storage-upload' && method === 'POST') {
       try {
         const body = await request.json();
@@ -502,7 +504,7 @@ export default {
       }
     }
 
-    // ?�?� Firebase Storage ??�� ?�록???�?�
+    // ── Firebase Storage 삭제 프록시 ──
     if (path === '/storage-delete' && method === 'POST') {
       try {
         const body = await request.json();
@@ -536,7 +538,7 @@ export default {
         const body = await request.json();
         const apiKey = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
         if (!apiKey) {
-          return new Response(JSON.stringify({ error: { message: 'ANTHROPIC_API_KEY ?�경변??미설?? Cloudflare Workers ?�경변?��? ?�인?�세??' } }), {
+          return new Response(JSON.stringify({ error: { message: 'ANTHROPIC_API_KEY 환경변수 미설정. Cloudflare Workers 환경변수를 확인하세요.' } }), {
             status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
           });
         }
@@ -550,7 +552,7 @@ export default {
           body: JSON.stringify(body)
         });
         const data = await resp.json();
-        // Anthropic ?�답 그�?�??�달 (?�러 status code ?�함)
+        // Anthropic 응답 그대로 전달 (에러 status code 포함)
         return new Response(JSON.stringify(data), {
           status: resp.status,
           headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
@@ -568,11 +570,11 @@ export default {
         const body = await request.json();
         const apiKey = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
         if (!apiKey) {
-          return new Response(JSON.stringify({ error: { message: 'ANTHROPIC_API_KEY ?�경변??미설?? } }), {
+          return new Response(JSON.stringify({ error: { message: 'ANTHROPIC_API_KEY 환경변수 미설정' } }), {
             status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
           });
         }
-        // ??Claude API 직접 ?�출 (/label-ocr ?�일 방식)
+        // ★ Claude API 직접 호출 (/label-ocr 동일 방식)
         const resp = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: {
@@ -595,8 +597,8 @@ export default {
       }
     }
 
-    // ?�?� ?�캔 ?�션 ?�???�?�
-    // ?�?� 간선�?GPS ?�???�?�
+    // ── 스캔 세션 저장 ──
+    // ── 간선차 GPS 저장 ──
     if (path === '/get-label-key') {
       const k = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
       return new Response(JSON.stringify({ k }), {
@@ -640,7 +642,7 @@ export default {
       }
     }
 
-    // ?�?� 간선�?GPS 조회 ?�?�
+    // ── 간선차 GPS 조회 ──
     if (path.startsWith('/truck-get/') && request.method === 'GET') {
       try {
         const token = await getAccessToken(env);
@@ -698,7 +700,7 @@ export default {
       }
     }
 
-    // ?�?� ?�캔 ?�션 조회 ?�?�
+    // ── 스캔 세션 조회 ──
     if (path.startsWith('/scan-get/') && request.method === 'GET') {
       try {
         const token = await getAccessToken(env);
@@ -739,15 +741,15 @@ export default {
       return new Response(injected, { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
-    // ??간선�?GPS 공유
+    // ★ 간선차 GPS 공유
     if (path === '/truck' || path === '/truck/') {
       const resp = await fetchAsset('/truck.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
 
-    // ?�?� ?�사�??�용 URL (/{slug}) ?�?�
-    // ?? /mbti ???�비?�아???�용, /abc물류 ??ABC물류 ?�용
+    // ── 회사별 전용 URL (/{slug}) ──
+    // 예: /mbti → 엠비티아이 전용, /abc물류 → ABC물류 전용
     const knownPaths = new Set([
       '/donway_landing','/DONWAY_%EC%8B%9C%EB%AE%AC%EB%A0%88%EC%9D%B4%ED%84%B0.html','/test-apikey','/favicon.ico','/favicon.png',
       '/worker-test','/label-ocr','/claude-ocr','/get-label-key',
@@ -760,7 +762,7 @@ export default {
       '/api','/cron-expire','/favicon.ico','/manifest.json',
       '/sw.js','/firebase-messaging-sw.js','/robots.txt'
     ]);
-    // .html ?�일?� ?�러�??�우???�외 (?�적 ?�일 직접 ?�빙)
+    // .html 파일은 슬러그 라우팅 제외 (정적 파일 직접 서빙)
     if (path.endsWith('.html') && method === 'GET') {
       try {
         const assetResp2 = await fetchAsset(url.pathname, request);
@@ -768,16 +770,16 @@ export default {
         return addSecurityHeaders(assetResp2, isSimulator2);
       } catch(e) {}
     }
-    const slugMatch = path.match(/^\/([a-zA-Z0-9가-??-_]{1,30})\/?$/);
+    const slugMatch = path.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/?$/);
     if (slugMatch && !knownPaths.has(slugMatch[0].replace(/\/$/,'')) && method === 'GET') {
       const companySlug = slugMatch[1];
       try {
         const resp = await fetchAsset('/settle.html', request);
         let html = await resp.text();
-        // slug + 보안?�더 주입 (</head> ?�에 ?�입 - 가???�전???�치)
+        // slug + 보안헤더 주입 (</head> 앞에 삽입 - 가장 안전한 위치)
         const akKey = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
         const storageSDK = '<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage-compat.js"></script>';
-        // manifest 링크�??�러�?기반?�로 교체
+        // manifest 링크를 슬러그 기반으로 교체
         html = html.replace('href="/manifest.json"', 'href="/' + companySlug + '/manifest.json"');
         const slugScript = '<script>window.__AK=' + JSON.stringify(akKey) + ';window._COMPANY_SLUG=' + JSON.stringify(companySlug) + ';window._SLUG_MODE=true;</script>';
         html = html.replace('</head>', storageSDK + '\n' + slugScript + '\n</head>');
@@ -802,73 +804,79 @@ export default {
     }
 
 
-    // ?�?� Phase 2: ?�규 ?�우???�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
+    // ── Phase 2: 신규 라우트 ──────────────────────────────────────────────
 
-    // 기사 배송??
-    // ?�합 ?�털
+    // 기사 배송앱
+
+    // 통합 포털
     if (path === '/portal' || path === '/portal/') {
       const resp = await fetchAsset('/portal.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
-    // 기사 ?�체 가??    if (path === '/join' || path === '/join/') {
+    // 기사 자체 가입
+    if (path === '/join' || path === '/join/') {
       const resp = await fetchAsset('/join.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
-    // ?�사 ?�규 ?�록
+    // 회사 신규 등록
     if (path === '/company-register' || path === '/company-register/') {
       const resp = await fetchAsset('/company-register.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
-    // ??DONWAY 출퇴�?QR (모든 ?�종 공통)
+    // ★ DONWAY 출퇴근 QR (모든 업종 공통)
     if (path === '/attendance' || path === '/attendance/') {
       const resp = await fetchAsset('/attendance.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
-    // ??DONWAY ?�운??모듈
+    // ★ DONWAY 사운드 모듈
     if (path === '/donway-sound.js') {
       const resp = await fetchAsset('/donway-sound.js', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'public, max-age=86400' } });
     }
 
-    // ???�산 분석 리포??    if (path === '/report' || path === '/report/') {
+    // ★ 정산 분석 리포트
+    if (path === '/report' || path === '/report/') {
       const resp = await fetchAsset('/report.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
-    // ??근로계약??    if (path === '/contract' || path === '/contract/') {
+    // ★ 근로계약서
+    if (path === '/contract' || path === '/contract/') {
       const resp = await fetchAsset('/contract.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
-    // ??공�?·?�림
+    // ★ 공지·알림
     if (path === '/notice' || path === '/notice/') {
       const resp = await fetchAsset('/notice.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
-    // ???�스???�정
+    // ★ 시스템 설정
     if (path === '/settings' || path === '/settings/') {
       const resp = await fetchAsset('/settings.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
-    // ??근무 ?��?줄러
+    // ★ 근무 스케줄러
     if (path === '/schedule' || path === '/schedule/') {
       const resp = await fetchAsset('/schedule.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
-    // ??직원 관�?    if (path === '/drivers' || path === '/drivers/') {
+    // ★ 직원 관리
+    if (path === '/drivers' || path === '/drivers/') {
       const resp = await fetchAsset('/drivers.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
-    // ??관리자 종합 ?�?�보??    if (path === '/admin' || path === '/admin/') {
-      // ?�퍼?�드�??�근 로그 기록 (?�택??
+    // ★ 관리자 종합 대시보드
+    if (path === '/admin' || path === '/admin/') {
+      // 슈퍼어드민 접근 로그 기록 (선택적)
       const resp = await fetchAsset('/admin.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' } });
     }
@@ -878,36 +886,38 @@ export default {
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
-    // ??직원 마이?�이지
+    // ★ 직원 마이페이지
     if (path === '/my' || path === '/my/') {
       const resp = await fetchAsset('/my.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
-    // ??출퇴�?관리자 ?�?�보??    if (path === '/attendance-admin' || path === '/attendance-admin/') {
+    // ★ 출퇴근 관리자 대시보드
+    if (path === '/attendance-admin' || path === '/attendance-admin/') {
       const resp = await fetchAsset('/attendance-admin.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
-    // ??매장/?�사 QR ?�스?�레??(?�구 ?�면)
-    // ???�시 ?�치 (?�용 ????�� ?�정)
+    // ★ 매장/회사 QR 디스플레이 (입구 화면)
+    // ★ 임시 패치 (사용 후 삭제 예정)
     if (path === '/patch' || path === '/patch/') {
       const resp = await fetchAsset('/patch.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
-    // ??긴급배송
+    // ★ 긴급배송
     if (path === '/emergency' || path === '/emergency/') {
       const resp = await fetchAsset('/emergency.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
-    // ??직원 ?�??체크??    if (path === '/checkin' || path === '/checkin/') {
+    // ★ 직원 셀프 체크인
+    if (path === '/checkin' || path === '/checkin/') {
       const resp = await fetchAsset('/checkin.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
-    // ??방문???�록 ?�이지
+    // ★ 방문자 등록 페이지
     if (path === '/visitor' || path === '/visitor/') {
       const resp = await fetchAsset('/visitor.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
@@ -918,16 +928,16 @@ export default {
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
-    // ?�사 코드 검�?API (join.html ?�서 ?�출)
+    // 회사 코드 검증 API (join.html 에서 호출)
     if (path === '/company-get' && method === 'GET') {
       try {
         const code = url.searchParams.get('code') || '';
         if (!code) return new Response(JSON.stringify({ ok: false, error: 'code required' }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
-        // MBTI01 ?�드코딩 (기존 ?�비?�아??
+        // MBTI01 하드코딩 (기존 엠비티아이)
         if (code.toUpperCase() === 'MBTI01') {
           return new Response(JSON.stringify({
             ok: true,
-            company: { code: 'MBTI01', name: '?�비?�아????', camps: ['부??','부??','부??','?��?','진주M'], plan: 'pro' }
+            company: { code: 'MBTI01', name: '엠비티아이(유)', camps: ['부산1','부산2','부산3','대구2','진주M'], plan: 'pro' }
           }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
         }
         const token = await getAccessToken(env);
@@ -961,12 +971,12 @@ export default {
       }
     }
 
-    // 모두?�인 계약??발송 ?�록??(API ??보호)
+    // 모두싸인 계약서 발송 프록시 (API 키 보호)
     if (path === '/modusign-send' && method === 'POST') {
       try {
         const body = await request.json();
         const apiKey = env.MODUSIGN_API_KEY || '';
-        if(!apiKey) return new Response(JSON.stringify({error:'MODUSIGN_API_KEY 미설??}),{status:500,headers:{'Content-Type':'application/json'}});
+        if(!apiKey) return new Response(JSON.stringify({error:'MODUSIGN_API_KEY 미설정'}),{status:500,headers:{'Content-Type':'application/json'}});
         const encoded = btoa(apiKey + ':');
         const resp = await fetch('https://api.modusign.co.kr/documents/request-with-template', {
           method: 'POST',
@@ -996,13 +1006,13 @@ export default {
       }
     }
 
-    // ?�스?�이먼츠 결제 ?�인 + Firestore 구독 ?�데?�트
+    // 토스페이먼츠 결제 확인 + Firestore 구독 업데이트
     if (path === '/toss-confirm' && method === 'POST') {
       try {
         const body   = await request.json();
         const { paymentKey, orderId, amount } = body;
 
-        // 1. ?�스 결제 ?�인 API
+        // 1. 토스 결제 확인 API
         const encoded = btoa((env.TOSS_SECRET_KEY || '') + ':');
         const tossResp = await fetch('https://api.tosspayments.com/v1/payments/confirm', {
           method: 'POST',
@@ -1015,19 +1025,19 @@ export default {
         const tossData = await tossResp.json();
 
         if (tossData.status !== 'DONE') {
-          return new Response(JSON.stringify({ success: false, error: tossData.message || '결제 ?�인 ?�패' }), {
+          return new Response(JSON.stringify({ success: false, error: tossData.message || '결제 확인 실패' }), {
             status: 400, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
           });
         }
 
-        // 2. orderId ?�싱: LN-{uid8}-{timestamp}-{plan}
+        // 2. orderId 파싱: LN-{uid8}-{timestamp}-{plan}
         const parts  = orderId.split('-');
-        const plan   = parts[parts.length - 1] || 'basic'; // 마�?�??�트 = plan
-        const months = 1; // ?�간 고정
-        const uid    = body.uid || ''; // subscribe-success.html?�서 Firebase Auth uid ?�달
-        if (!uid) throw new Error('uid ?�락 ??로그?????�시 ?�도?�주?�요');
+        const plan   = parts[parts.length - 1] || 'basic'; // 마지막 파트 = plan
+        const months = 1; // 월간 고정
+        const uid    = body.uid || ''; // subscribe-success.html에서 Firebase Auth uid 전달
+        if (!uid) throw new Error('uid 누락 — 로그인 후 다시 시도해주세요');
 
-        // 3. Firestore 구독 ?�데?�트
+        // 3. Firestore 구독 업데이트
         const token  = await getAccessToken(env);
         const now    = new Date();
         const subDoc = await fsGet(token, 'subscriptions', uid);
@@ -1045,7 +1055,7 @@ export default {
           updatedAt:  { timestampValue: now.toISOString() }
         });
 
-        // 4. 결제 ?�역 기록
+        // 4. 결제 내역 기록
         await fsAdd(token, 'payments', {
           dealerId:   { stringValue: uid },
           type:       { stringValue: 'toss' },
@@ -1055,7 +1065,7 @@ export default {
           paymentKey: { stringValue: paymentKey },
           orderId:    { stringValue: orderId },
           expireDate: { timestampValue: newExpire.toISOString() },
-          note:       { stringValue: `?�스?�이먼츠 ${months}개월 결제` },
+          note:       { stringValue: `토스페이먼츠 ${months}개월 결제` },
           createdAt:  { timestampValue: now.toISOString() }
         });
 
@@ -1071,7 +1081,7 @@ export default {
       }
     }
 
-    // ?�═ Solapi SMS/?�림???�동발송 ?�═
+    // ══ Solapi SMS/알림톡 자동발송 ══
     if (path === '/api/send-sms' && method === 'POST') {
       const headers = {
         'Access-Control-Allow-Origin': '*',
@@ -1081,15 +1091,15 @@ export default {
         const body = await request.json();
         const { messages } = body; // [{to, text}]
         if (!messages || !messages.length) {
-          return new Response(JSON.stringify({error:'messages ?�음'}),{status:400,headers});
+          return new Response(JSON.stringify({error:'messages 없음'}),{status:400,headers});
         }
         const apiKey = env.SOLAPI_KEY;
         const apiSecret = env.SOLAPI_SECRET;
-        const from = '05171133103'; // 발신번호 (?�이???�거)
+        const from = '05171133103'; // 발신번호 (하이픈 제거)
         if (!apiKey || !apiSecret) {
-          return new Response(JSON.stringify({error:'API Key 미설??}),{status:500,headers});
+          return new Response(JSON.stringify({error:'API Key 미설정'}),{status:500,headers});
         }
-        // HMAC-SHA256 ?�증 ?�성
+        // HMAC-SHA256 인증 생성
         const date = new Date().toISOString();
         const salt = Math.random().toString(36).substring(2,14);
         const msg = date + salt;
@@ -1101,7 +1111,7 @@ export default {
         const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(msg));
         const sigHex = Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('');
         const authHeader = `HMAC-SHA256 apiKey=${apiKey}, date=${date}, salt=${salt}, signature=${sigHex}`;
-        // 발송 ?�청
+        // 발송 요청
         const payload = {
           messages: messages.map(function(m){
             return {
@@ -1133,7 +1143,8 @@ export default {
       }
     }
 
-    // Cron 만료처리 ???�동 ?�리�?    if (path === '/cron-expire' && method === 'POST') {
+    // Cron 만료처리 — 수동 트리거
+    if (path === '/cron-expire' && method === 'POST') {
       const secret = request.headers.get('X-Cron-Secret') || '';
       if (env.CRON_SECRET && secret !== env.CRON_SECRET) {
         return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -1153,30 +1164,31 @@ export default {
     }
 
 
-    // ?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═
-    // ?�스?�이먼츠 PG ?�동
-    // ?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═?�═
+    // ══════════════════════════════════════════════════════════════
+    // 토스페이먼츠 PG 연동
+    // ══════════════════════════════════════════════════════════════
 
-    // ?�?� 결제 주문 ?�성 (/toss/create-order) ?�?�
+    // ── 결제 주문 생성 (/toss/create-order) ──
     if (path === '/toss/create-order' && method === 'POST') {
       try {
         const body = await request.json();
         const { dealerId, companyName, email, planType, amount } = body;
         if (!dealerId || !planType || !amount) {
-          return new Response(JSON.stringify({ error: '?�수 ?�라미터 ?�락' }), {
+          return new Response(JSON.stringify({ error: '필수 파라미터 누락' }), {
             status: 400, headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS }
           });
         }
         const PLAN_LABELS = {
-          contract: '?�수??계약??,
-          roster: '근무??관�?,
-          qr: 'QR 출퇴�?,
-          full: '?�?�키지',
-          settle: 'AI ?�산'
+          contract: '위수탁 계약서',
+          roster: '근무표 관리',
+          qr: 'QR 출퇴근',
+          full: '풀패키지',
+          settle: 'AI 정산'
         };
-        // 주문 ID ?�성 (dealerId + timestamp)
+        // 주문 ID 생성 (dealerId + timestamp)
         const orderId = `DONWAY-${dealerId.slice(0,8)}-${Date.now()}`;
-        // Firestore??주문 기록 ?�??        const token = await getAccessToken(env);
+        // Firestore에 주문 기록 저장
+        const token = await getAccessToken(env);
         const orderDoc = {
           fields: {
             orderId:     { stringValue: orderId },
@@ -1186,7 +1198,8 @@ export default {
             planType:    { stringValue: planType },
             amount:      { integerValue: String(amount) },
             status:      { stringValue: 'pending' },
-            slug:        { stringValue: '' },   // confirm ??companies?�서 채워�?            createdAt:   { timestampValue: new Date().toISOString() }
+            slug:        { stringValue: '' },   // confirm 시 companies에서 채워짐
+            createdAt:   { timestampValue: new Date().toISOString() }
           }
         };
         await fetch(`${FS_BASE}/toss_orders?documentId=${orderId}`, {
@@ -1210,24 +1223,24 @@ export default {
       }
     }
 
-    // ?�?� 결제 ?�인 & 기능 ?�성??(/toss/confirm) ?�?�
+    // ── 결제 확인 & 기능 활성화 (/toss/confirm) ──
     if (path === '/toss/confirm' && method === 'POST') {
       try {
         const body = await request.json();
         const { paymentKey, orderId, amount } = body;
         if (!paymentKey || !orderId || !amount) {
-          return new Response(JSON.stringify({ error: '?�수 ?�라미터 ?�락' }), {
+          return new Response(JSON.stringify({ error: '필수 파라미터 누락' }), {
             status: 400, headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS }
           });
         }
         const secretKey = env.TOSS_SECRET_KEY;
         if (!secretKey) {
-          return new Response(JSON.stringify({ error: 'TOSS_SECRET_KEY 미설?? }), {
+          return new Response(JSON.stringify({ error: 'TOSS_SECRET_KEY 미설정' }), {
             status: 500, headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS }
           });
         }
 
-        // 1. ?�스 결제 ?�인 API ?�출
+        // 1. 토스 결제 승인 API 호출
         const tossResp = await fetch('https://api.tosspayments.com/v1/payments/confirm', {
           method: 'POST',
           headers: {
@@ -1238,18 +1251,18 @@ export default {
         });
         const tossData = await tossResp.json();
         if (!tossResp.ok) {
-          return new Response(JSON.stringify({ error: tossData.message || '결제 ?�인 ?�패', code: tossData.code }), {
+          return new Response(JSON.stringify({ error: tossData.message || '결제 승인 실패', code: tossData.code }), {
             status: 400, headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS }
           });
         }
 
-        // 2. Firestore?�서 주문 ?�보 조회
+        // 2. Firestore에서 주문 정보 조회
         const token = await getAccessToken(env);
         const orderResp = await fetch(`${FS_BASE}/toss_orders/${orderId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (!orderResp.ok) {
-          return new Response(JSON.stringify({ error: '주문 ?�보 ?�음' }), {
+          return new Response(JSON.stringify({ error: '주문 정보 없음' }), {
             status: 404, headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS }
           });
         }
@@ -1258,7 +1271,7 @@ export default {
         const dealerId = fields.dealerId?.stringValue;
         const planType = fields.planType?.stringValue;
 
-        // 3. ?�랜�??�성???�드 매핑
+        // 3. 플랜별 활성화 필드 매핑
         const PLAN_FIELDS = {
           contract: { contractPaid: { booleanValue: true } },
           roster:   { rosterPaid:   { booleanValue: true } },
@@ -1268,7 +1281,7 @@ export default {
         };
         const planFields = PLAN_FIELDS[planType] || {};
 
-        // 4. Firestore companies 문서 ?�데?�트 (기능 즉시 ?�성??
+        // 4. Firestore companies 문서 업데이트 (기능 즉시 활성화)
         if (dealerId && Object.keys(planFields).length) {
           const updateFields = {
             ...planFields,
@@ -1285,7 +1298,7 @@ export default {
           });
         }
 
-        // 5. 주문 ?�태 ?�료�??�데?�트
+        // 5. 주문 상태 완료로 업데이트
         await fetch(`${FS_BASE}/toss_orders/${orderId}?updateMask.fieldPaths=status&updateMask.fieldPaths=paidAt&updateMask.fieldPaths=paymentKey`, {
           method: 'PATCH',
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -1296,9 +1309,9 @@ export default {
           }})
         });
 
-        // 6. companies 문서?�서 slug + email 조회 (toss_orders?�는 slug ?�음)
+        // 6. companies 문서에서 slug + email 조회 (toss_orders에는 slug 없음)
         const email = fields.email?.stringValue || '';
-        const companyName = fields.companyName?.stringValue || '고객??;
+        const companyName = fields.companyName?.stringValue || '고객사';
         let slug = '';
         if (dealerId) {
           try {
@@ -1309,12 +1322,12 @@ export default {
               const compDoc = await compResp.json();
               slug = compDoc.fields?.slug?.stringValue || '';
             }
-          } catch(e) { /* slug ?�어??계속 진행 */ }
+          } catch(e) { /* slug 없어도 계속 진행 */ }
         }
-        // ?�시 비�?번호 ?�성 (기존 계정?�면 불필?�하지�?관리자 ?�인?�으�??�??
+        // 임시 비밀번호 생성 (기존 계정이면 불필요하지만 관리자 확인용으로 저장)
         const tempPassword = generateTempPassword();
 
-        // companies 문서???�시 비�?번호 ?�??(관리자 ?�인??
+        // companies 문서에 임시 비밀번호 저장 (관리자 확인용)
         if (dealerId) {
           await fetch(`${FS_BASE}/companies/${dealerId}?updateMask.fieldPaths=tempPassword&updateMask.fieldPaths=tempPasswordAt&updateMask.fieldPaths=needsPasswordChange`, {
             method: 'PATCH',
@@ -1327,18 +1340,18 @@ export default {
           });
         }
 
-        // 7. 관리자 FCM ?�시 ?�림 (결제 ?�료)
+        // 7. 관리자 FCM 푸시 알림 (결제 완료)
         await notifyAdmins(env, token, {
-          title: '?�� ??결제 ?�료!',
-          body: `${companyName} · ${planType} ?�랜 결제`,
+          title: '💳 새 결제 완료!',
+          body: `${companyName} · ${planType} 플랜 결제`,
           type: 'pay'
         });
 
-        // 8. ?�영 ?�메??발송
+        // 8. 환영 이메일 발송
         const PLAN_LABELS = {
-          contract:'?�수??계약??, roster:'근무??관�?, qr:'QR 출퇴�?,
-          full:'?�?�키지', settle:'AI ?�산',
-          starter:'Starter ?�랜', basic:'Basic ?�랜', pro:'Pro ?�랜',
+          contract:'위수탁 계약서', roster:'근무표 관리', qr:'QR 출퇴근',
+          full:'풀패키지', settle:'AI 정산',
+          starter:'Starter 플랜', basic:'Basic 플랜', pro:'Pro 플랜',
           starter3:'Starter 3개월', basic3:'Basic 3개월', pro3:'Pro 3개월'
         };
         const loginUrl = getPlanUrl(planType, slug);
@@ -1347,7 +1360,7 @@ export default {
           planLabel: PLAN_LABELS[planType] || planType
         });
 
-        // ??FCM ?�시 ?�림 발송 (?�이 ?�려 ?�으�?즉시 ?�신)
+        // ★ FCM 푸시 알림 발송 (앱이 열려 있으면 즉시 수신)
         let fcmResult = { sent: false };
         try {
           const compDocResp = await fetch(`${FS_BASE}/companies/${dealerId}`, {
@@ -1359,17 +1372,17 @@ export default {
             if (fcmToken) {
               fcmResult = await sendFCMPush(
                 fcmToken,
-                '?�� 결제 ?�료! 기능 ?�성?�됨',
-                `${PLAN_LABELS[planType]||planType} ?�용???�작?�세??,
+                '🎉 결제 완료! 기능 활성화됨',
+                `${PLAN_LABELS[planType]||planType} 이용을 시작하세요`,
                 { loginUrl, planType }
               );
             }
           }
-        } catch(e) { /* FCM ?�패?�도 결제???�공 */ }
+        } catch(e) { /* FCM 실패해도 결제는 성공 */ }
 
         return new Response(JSON.stringify({
           success: true,
-          message: '결제 ?�료! 기능??즉시 ?�성?�됐?�니??',
+          message: '결제 완료! 기능이 즉시 활성화됐습니다.',
           planType, dealerId, tempPassword,
           emailSent: emailResult.sent,
           fcmSent: fcmResult.sent,
@@ -1384,14 +1397,14 @@ export default {
       }
     }
 
-    // ?�?� 관리자 FCM ?�림 (/fcm/notify-admin) ?�?�
+    // ── 관리자 FCM 알림 (/fcm/notify-admin) ──
     if (path === '/fcm/notify-admin' && method === 'POST') {
       try {
         const body = await request.json();
         const { title, body: msgBody, type } = body;
         const token = await getAccessToken(env);
         await notifyAdmins(env, token, {
-          title: title || 'DONWAY ?�림',
+          title: title || 'DONWAY 알림',
           body: msgBody || '',
           type: type || 'alert'
         });
@@ -1405,7 +1418,7 @@ export default {
       }
     }
 
-    // ?�?� 기사 FCM ?�림 (/fcm/notify-drivers) ?�?�
+    // ── 기사 FCM 알림 (/fcm/notify-drivers) ──
     if (path === '/fcm/notify-drivers' && method === 'POST') {
       try {
         const body = await request.json();
@@ -1418,7 +1431,7 @@ export default {
         // Legacy FCM Server Key 방식
         const serverKey = env.FCM_SERVER_KEY;
         if (!serverKey) {
-          return new Response(JSON.stringify({ ok: false, error: 'FCM_SERVER_KEY 미설?? }), {
+          return new Response(JSON.stringify({ ok: false, error: 'FCM_SERVER_KEY 미설정' }), {
             headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
           });
         }
@@ -1436,7 +1449,7 @@ export default {
                 to: token,
                 priority: 'high',
                 notification: {
-                  title: title || 'DONWAY ?�림',
+                  title: title || 'DONWAY 알림',
                   body: msgBody || '',
                   sound: 'default',
                   icon: '/icon-192.png'
@@ -1457,10 +1470,11 @@ export default {
       }
     }
 
-    // ?�?� ?�스 ?�훅 ?�신 (/toss/webhook) ?�?�
+    // ── 토스 웹훅 수신 (/toss/webhook) ──
     if (path === '/toss/webhook' && method === 'POST') {
       try {
-        // ?�스 ?�훅 ?�명 검�?        const webhookSecret = env.TOSS_WEBHOOK_SECRET;
+        // 토스 웹훅 서명 검증
+        const webhookSecret = env.TOSS_WEBHOOK_SECRET;
         const signature = request.headers.get('TossPayments-Signature');
         const bodyText = await request.text();
         if (webhookSecret && signature) {
@@ -1477,11 +1491,11 @@ export default {
           }
         }
         const event = JSON.parse(bodyText);
-        // 결제 ?�료 ?�벤?�만 처리
+        // 결제 완료 이벤트만 처리
         if (event.eventType === 'PAYMENT_STATUS_CHANGED' && event.data?.status === 'DONE') {
           const orderId = event.data.orderId;
           const paymentKey = event.data.paymentKey;
-          // ??confirm 로직�??�일?�게 처리 (?�중 ?�전?�치)
+          // 위 confirm 로직과 동일하게 처리 (이중 안전장치)
           const token = await getAccessToken(env);
           const orderResp = await fetch(`${FS_BASE}/toss_orders/${orderId}`, {
             headers: { Authorization: `Bearer ${token}` }
@@ -1523,14 +1537,14 @@ export default {
       }
     }
 
-    // ?�?� ?�시 비�?번호 조회 (?�퍼?�드�??�용) /toss/temp-pw ?�?�
+    // ── 임시 비밀번호 조회 (슈퍼어드민 전용) /toss/temp-pw ──
     if (path === '/toss/temp-pw' && method === 'POST') {
       try {
         const body = await request.json();
         const { dealerId, adminEmail } = body;
         const ADMIN_EMAILS = ['kimdh4790@gmail.com','soungkyekim@naver.com'];
         if (!ADMIN_EMAILS.includes(adminEmail)) {
-          return new Response(JSON.stringify({ error: '권한 ?�음' }), {
+          return new Response(JSON.stringify({ error: '권한 없음' }), {
             status: 403, headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS }
           });
         }
@@ -1556,7 +1570,7 @@ export default {
     }
 
 
-    // ?�?� ?�이�??�일 ?�라???�빙 (GitHub ?�로??불필?? ?�?�
+    // ── 아이콘 파일 인라인 서빙 (GitHub 업로드 불필요) ──
     if (path === '/icon-192.png' || path === '/icon-512.png' || path === '/apple-touch-icon.png' || path === '/favicon.ico') {
       const ICONS = {
         '/icon-192.png': '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',
@@ -1575,7 +1589,7 @@ export default {
       });
     }
 
-    // ??sw.js ??Service Worker (MIME 명시)
+    // ★ sw.js — Service Worker (MIME 명시)
     if (path === '/sw.js') {
       const resp = await fetchAsset('/sw.js', request);
       const h = new Headers();
@@ -1586,14 +1600,14 @@ export default {
       return new Response(resp.body, { status: resp.status, headers: h });
     }
 
-    // ?�?� firebase-storage-compat.js ?�록???�?�
+    // ── firebase-storage-compat.js 프록시 ──
     if (path === '/firebase-storage-compat.js') {
       const r = await fetch('https://www.gstatic.com/firebasejs/8.10.1/firebase-storage-compat.js');
       const js = await r.text();
       return new Response(js, { headers: { 'Content-Type': 'application/javascript', 'Cache-Control': 'public, max-age=86400' } });
     }
 
-    // ?�?� firebase-messaging-sw.js ?�라???�빙 (404 방�?) ?�?�
+    // ── firebase-messaging-sw.js 인라인 서빙 (404 방지) ──
     if (path === '/firebase-messaging-sw.js') {
       const swContent = "importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');"
         + "importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');"
@@ -1601,7 +1615,7 @@ export default {
         + "const messaging=firebase.messaging();"
         + "messaging.onBackgroundMessage(function(payload){"
         + "  const data=payload.data||{};const type=data.type||'alert';"
-        + "  const title='DONWAY '+(payload.notification&&payload.notification.title||'?�림');"
+        + "  const title='DONWAY '+(payload.notification&&payload.notification.title||'알림');"
         + "  const body=(payload.notification&&payload.notification.body)||'';"
         + "  return self.registration.showNotification(title,{body:body,icon:'/icon-192.png',badge:'/icon-192.png',tag:'donway-'+type,renotify:true,vibrate:[200,100,200]});"
         + "});"
@@ -1618,14 +1632,14 @@ export default {
       });
     }
 
-    // ?�?� manifest.json ?�라???�빙 ?�?�
-    // /{slug}/manifest.json ???�러그별 start_url 주입
-    const slugManifestMatch = path.match(/^\/([a-zA-Z0-9가-??-_]{1,30})\/manifest\.json$/);
+    // ── manifest.json 인라인 서빙 ──
+    // /{slug}/manifest.json → 슬러그별 start_url 주입
+    const slugManifestMatch = path.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/manifest\.json$/);
     if (slugManifestMatch) {
       const slug = slugManifestMatch[1];
       return new Response(JSON.stringify({
-        name:'DONWAY ???�동???�산 ?�랫??, short_name:'DONWAY',
-        description:'AI ?�동 ?�산 · QR 출퇴�?· 급여 관�?,
+        name:'DONWAY — 자동화 정산 플랫폼', short_name:'DONWAY',
+        description:'AI 자동 정산 · QR 출퇴근 · 급여 관리',
         start_url:'/'+slug, scope:'/'+slug, display:'standalone',
         orientation:'portrait', background_color:'#185FA5', theme_color:'#185FA5', lang:'ko',
         icons:[
@@ -1636,8 +1650,8 @@ export default {
     }
     if (path === '/manifest.json') {
       return new Response(JSON.stringify({
-        name:'DONWAY ???�동???�산 ?�랫??, short_name:'DONWAY',
-        description:'AI ?�동 ?�산 · QR 출퇴�?· 급여 관�?,
+        name:'DONWAY — 자동화 정산 플랫폼', short_name:'DONWAY',
+        description:'AI 자동 정산 · QR 출퇴근 · 급여 관리',
         start_url:'/settle', scope:'/', display:'standalone',
         orientation:'portrait', background_color:'#185FA5', theme_color:'#185FA5', lang:'ko',
         icons:[
@@ -1647,7 +1661,7 @@ export default {
       }), { status:200, headers:{'Content-Type':'application/manifest+json; charset=utf-8','Cache-Control':'no-cache'} });
     }
 
-    // ?�?� donway_og.jpg / OG ?��?지 CORS ?�용 ?�?�
+    // ── donway_og.jpg / OG 이미지 CORS 허용 ──
     if (path === '/donway_og.jpg' || path === '/donway_og.png') {
       const resp = await fetchAsset(path, request);
       const h = new Headers(resp.headers);
@@ -1657,9 +1671,9 @@ export default {
       return new Response(resp.body, { status: resp.status, headers: h });
     }
 
-    // ?�적 ?�일 ?�빙 + 보안 ?�더 ?�용
+    // 정적 파일 서빙 + 보안 헤더 적용
     const assetResp = await fetchAsset(url.pathname, request);
-    // ??JS ?�일: application/javascript 강제 + GitHub Raw CSP ?�거
+    // ★ JS 파일: application/javascript 강제 + GitHub Raw CSP 제거
     if (url.pathname.endsWith('.js')) {
       const jsHeaders = new Headers();
       const copyKeys = ['cache-control','etag','last-modified','content-encoding'];
@@ -1670,12 +1684,12 @@ export default {
       jsHeaders.set('X-Frame-Options', 'SAMEORIGIN');
       return new Response(assetResp.body, { status: assetResp.status, headers: jsHeaders });
     }
-    // ???��??�이???�일?� iframe ?�용 (?�딩?�이지 ?�업??
-    const isSimulator = url.pathname.includes('?��??�이??) || url.pathname.includes('%EC%8B%9C%EB%AE%AC%EB%A0%88%EC%9D%B4%ED%84%B0');
+    // ★ 시뮬레이터 파일은 iframe 허용 (랜딩페이지 팝업용)
+    const isSimulator = url.pathname.includes('시뮬레이터') || url.pathname.includes('%EC%8B%9C%EB%AE%AC%EB%A0%88%EC%9D%B4%ED%84%B0');
     return addSecurityHeaders(assetResp, isSimulator);
   },
 
-  // Cloudflare Cron Trigger ??매일 01:00 UTC (?�국 10:00 KST)
+  // Cloudflare Cron Trigger — 매일 01:00 UTC (한국 10:00 KST)
   async scheduled(event, env, ctx) {
     ctx.waitUntil(
       runExpireJob(env).catch(e => console.error('[cron-expire]', e.message))
