@@ -20959,9 +20959,10 @@ async function deploySettlements() {
     + '</div>'
     + '<div style="display:flex;gap:8px;justify-content:center">'
     + '<button onclick="document.getElementById(\'mo-deploy\').remove()" style="padding:10px 24px;border-radius:8px;border:1px solid var(--border);background:var(--bg);font-size:13px;font-weight:700;cursor:pointer">취소</button>'
-    + '<button onclick="document.getElementById(\'mo-deploy\').remove();_doDeploySettlements(' + JSON.stringify(targets.map(function(x){return x.id;})) + ')" style="padding:10px 24px;border-radius:8px;border:none;background:linear-gradient(135deg,#0066ff,#7c3aed);color:#fff;font-size:13px;font-weight:800;cursor:pointer">배포 시작 →</button>'
+    + '<button onclick="window._deployIds&&_doDeploySettlements(window._deployIds);document.getElementById(\'mo-deploy\').remove()" style="padding:10px 24px;border-radius:8px;border:none;background:linear-gradient(135deg,#0066ff,#7c3aed);color:#fff;font-size:13px;font-weight:800;cursor:pointer">배포 시작 →</button>'
     + '</div></div>';
 
+  window._deployIds = targets.map(function(x){return x.id;});
   mo.appendChild(d); document.body.appendChild(mo);
 }
 
