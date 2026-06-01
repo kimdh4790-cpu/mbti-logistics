@@ -19173,30 +19173,34 @@ function deleteCamp(campName){
 
 
 // ── FCM 토큰 조회 헬퍼 (users → drivers → members 순서)
-function _getFcmToken(did, uid){
+function _getFcmToken(did, uid, driverName){
   // 1) users - dealerId+userId
   return _db.collection('users').where('dealerId','==',did).where('userId','==',uid).limit(1).get()
     .then(function(snap){
       if(!snap.empty&&snap.docs[0].data().fcmToken) return snap.docs[0].data().fcmToken;
-      // 2) drivers - dealerId+userId
-      return _db.collection('drivers').where('dealerId','==',did).where('userId','==',uid).limit(1).get()
+      // 2) drivers - dealerId로 전체조회 후 JS매칭 (userId/name/driverId 모두)
+      return _db.collection('drivers').where('dealerId','==',did).get()
         .then(function(ds){
-          if(!ds.empty&&ds.docs[0].data().fcmToken) return ds.docs[0].data().fcmToken;
-          // 3) members - dealerId로 전체 조회 후 JS에서 매칭 (인덱스 문제 우회)
+          var phoneNum=(uid.replace('drv_','').split('_')[0]||'');
+          var phone='010'+phoneNum;
+          for(var i=0;i<ds.docs.length;i++){
+            var d=ds.docs[i].data();
+            if(!d.fcmToken||d.fcmToken.length<20) continue;
+            if(d.userId===uid||d.driverId===uid) return d.fcmToken;
+            if(driverName&&d.name===driverName) return d.fcmToken;
+            if(phoneNum.length>=4&&d.phone&&(d.phone===phone||d.phone.replace(/-/g,'')===phone)) return d.fcmToken;
+          }
+          // 3) members - dealerId로 전체조회 후 JS매칭
           return _db.collection('members').where('dealerId','==',did).get()
             .then(function(all){
-              var phoneNum=(uid.replace('drv_','').split('_')[0]||'');
-              var phone='010'+phoneNum;
+              var phoneNum2=(uid.replace('drv_','').split('_')[0]||'');
+              var phone2='010'+phoneNum2;
               for(var i=0;i<all.docs.length;i++){
                 var d=all.docs[i].data();
-                if(!d.fcmToken) continue;
-                // driverId 매칭
-                if(d.driverId===uid) return d.fcmToken;
-                // userId 매칭
-                if(d.userId===uid) return d.fcmToken;
-                // phone 매칭
-                if(phoneNum.length>=4&&(d.phone===phone||d.phone==='010'+phoneNum)) return d.fcmToken;
-                // uid 매칭
+                if(!d.fcmToken||d.fcmToken.length<20) continue;
+                if(d.driverId===uid||d.userId===uid) return d.fcmToken;
+                if(driverName&&d.name===driverName) return d.fcmToken;
+                if(phoneNum2.length>=4&&d.phone&&(d.phone===phone2||d.phone.replace(/-/g,'')===phone2)) return d.fcmToken;
                 if(d.uid===uid) return d.fcmToken;
               }
               return null;
@@ -19217,7 +19221,7 @@ function _sendPayslipPush(x,r,name,month,net,vatIncome,docId){
     createdAt:firebase.firestore.FieldValue.serverTimestamp()
   }).catch(function(){});
   // 2) fcmToken 조회 (users → drivers → members 순)
-  _getFcmToken(did, uid)
+  _getFcmToken(did, uid, name)
     .then(function(fcmToken){
       if(!fcmToken||fcmToken.length<20){
         toast('⚠️ '+name+'님 앱 미설치 — 푸시 불가');return;
@@ -19361,7 +19365,7 @@ function _sendTaxInvoicePush(x,r,name,month,vatIncome,docId){
     createdAt:firebase.firestore.FieldValue.serverTimestamp()
   }).catch(function(){});
   // 2) fcmToken 조회 (users → drivers → members 순)
-  _getFcmToken(did, uid)
+  _getFcmToken(did, uid, name)
     .then(function(fcmToken){
       if(!fcmToken||fcmToken.length<20){
         toast('⚠️ '+name+'님 앱 미설치 — 푸시 불가');return;
