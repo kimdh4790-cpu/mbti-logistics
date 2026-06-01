@@ -3054,6 +3054,7 @@ function doRegister(){
       emailPrefix||uid.substring(0,8);
     return _db.collection('companies').doc(uid).set({
       companyName:company,
+      name:company,
       bizNumber:biz,
       email:email,
       plan:plan,
