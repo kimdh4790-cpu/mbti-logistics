@@ -2246,43 +2246,73 @@ function _execBulkTaxSync(payloads,ym,taxEmail,taxName,doneCb){
   if(!_db||!_CU){if(doneCb)doneCb();return;}
   var did=_CU.dealerId||_CU.uid;
   var cName=(_CU&&(_CU.companyName||_CU.name))||'DONWAY';
-  var batch=_db.batch();
-  var allLinks=[];
-  payloads.forEach(function(s){
-    var token='txs_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,6);
-    var url=window.location.origin+window.location.pathname+'?taxShare='+token;
-    allLinks.push({name:s.driverName||s.driver,url:url,token:token});
-    var ref=_db.collection('taxShares').doc(token);
-    batch.set(ref,{
-      type:'tax_share',dealerId:did,
-      driverId:s.driver,driverName:s.driverName||s.driver,
-      ym:ym,token:token,email:taxEmail,companyName:cName,
-      vatIncome:s.totalAmt||0,supplyAmt:s.supplyAmt||0,
-      net:s.net||0,emp:s.emp||0,work:s.work||0,
-      dcnt:s.dcnt||0,bizNum:s.bizNum||'',
-      expiresAt:new Date(Date.now()+90*24*3600*1000).toISOString(),
-      createdAt:firebase.firestore.FieldValue.serverTimestamp(),
-      status:'pending',source:'bulk_auto'
-    });
+  var bizNum=(_CU&&(_CU.bizNumber||_CU.bizNum))||'';
+
+  // ── 월별 통합 토큰 1개 생성 (_generateTaxShareLink 방식과 동일)
+  var token='txs_'+did.slice(0,6)+'_'+ym.replace('-','')+'_'+Date.now().toString(36);
+  var url=window.location.origin+window.location.pathname+'?taxShare='+token;
+
+  // settlements 배열 정규화 (calcNet 결과 포함)
+  var settlements=payloads.map(function(s){
+    var net=calcNet(s);
+    return {
+      driver:s.driver||s.driverName||'',
+      userId:s.driver||'',
+      month:ym,
+      dcnt:s.dcnt||0,
+      bizNum:s.bizNum||'',
+      ssn:s.ssn||'',
+      totalAmt:s.totalAmt||0,
+      supplyAmt:net.supplyAmt||s.supplyAmt||0,
+      emp:net.emp||s.emp||0,
+      work:net.work||s.work||0,
+      tax:net.tax||0,
+      net:net.net||s.net||0,
+      companyName:cName,
+      companyBizNum:bizNum
+    };
   });
-  batch.commit().then(function(){
+
+  // 경비 데이터 (캐시 있으면 포함)
+  var expenseData=[];
+  try{
+    var cachedExp=window._expenseCache||[];
+    expenseData=cachedExp.filter(function(e){return (e.date||'').startsWith(ym);}).map(function(e){
+      return {date:e.date,vendor:e.vendor||e.name||'',amount:e.amount||0,category:e.category||'기타',memo:e.memo||''};
+    });
+  }catch(ex){}
+
+  var shareData={
+    type:'tax_share_monthly',
+    dealerId:did,
+    companyName:cName,
+    bizNum:bizNum,
+    ym:ym,
+    token:token,
+    email:taxEmail,
+    taxName:taxName||'세무사',
+    settlements:settlements,
+    expenses:expenseData,
+    createdAt:new Date().toISOString(),
+    expiresAt:new Date(Date.now()+90*24*3600*1000).toISOString(),
+    status:'pending',
+    source:'bulk_auto'
+  };
+
+  _db.collection('taxShares').doc(token).set(shareData).then(function(){
     // ① 엑셀 자동 다운로드
     if(typeof _txsBulkExcel==='function') _txsBulkExcel(payloads,ym);
-    // ② 전체 링크 클립보드 복사
-    var linkText=cName+' '+ym+' 정산 세무사 공유 링크\n\n'+
-      allLinks.map(function(l){return l.name+': '+l.url;}).join('\n');
-    if(navigator.clipboard){
-      navigator.clipboard.writeText(linkText).catch(function(){});
-    }
-    // ③ 결과 토스트 + 공유 링크 팝업
-    _showTaxSyncResult(allLinks,ym,taxEmail,doneCb);
-    // 이메일 있으면 mailto 자동 오픈
+    // ② 클립보드 복사
+    if(navigator.clipboard) navigator.clipboard.writeText(url).catch(function(){});
+    // ③ 결과 팝업 (링크 1개)
+    _showTaxSyncResult([{name:'전체 기사 ('+payloads.length+'명)',url:url,token:token}],ym,taxEmail,doneCb);
+    // ④ 이메일 있으면 mailto 자동 오픈
     if(taxEmail){
       var subj=encodeURIComponent('[DONWAY] '+cName+' '+ym+' 정산 자료 공유 ('+payloads.length+'명)');
-      var bodyText=taxName+'님 안녕하세요.\n\n'+ym+'월 정산 자료('+payloads.length+'명)를 공유드립니다.\n\n';
-      allLinks.forEach(function(l){bodyText+=l.name+': '+l.url+'\n';});
-      bodyText+='\n(각 링크 90일 유효)\n\nDONWAY 자동화 정산 시스템';
-      window.open('mailto:'+taxEmail+'?subject='+subj+'&body='+encodeURIComponent(bodyText));
+      var body=taxName+'님 안녕하세요.\n\n'+ym+'월 정산 자료('+payloads.length+'명)를 공유드립니다.\n\n'
+        +'▶ 공유 링크 (90일 유효):\n'+url+'\n\n'
+        +'링크 접속 시 전체 기사 명세서·보험료·서류를 한 번에 확인하실 수 있습니다.\n\nDONWAY 자동화 정산 시스템';
+      window.open('mailto:'+taxEmail+'?subject='+subj+'&body='+encodeURIComponent(body));
     }
   }).catch(function(e){
     toast('❌ 세무사 연동 실패: '+e.message);
