@@ -46,8 +46,8 @@ async function fetchAsset(path, request) {
   const filePath = path.startsWith('/') ? path : '/' + path;
   const encodedPath = filePath.split('/').map(seg => seg ? encodeURIComponent(seg) : '').join('/');
   const noCache = filePath.includes('settle.html');
-  const assetUrl = GITHUB_RAW + encodedPath + (noCache ? '?sha=61d2e351&t='+Date.now() : '');
-  const resp = await fetch(assetUrl, { cache: 'no-store' });
+  const assetUrl = GITHUB_RAW + encodedPath + (noCache ? '?t='+Date.now() : '');
+  const resp = await fetch(assetUrl);
   return resp;
 }
 
