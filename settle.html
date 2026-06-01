@@ -1020,9 +1020,15 @@ var _COMPANY_CFG = null; // 회사 업종 설정 캐시
 
 function _loadCompanyCfg(dealerId){
   if(!_db||!dealerId) return;
-  _db.collection('companies').where('code','==',dealerId).limit(1).get()
-    .then(function(snap){
-      if(!snap.empty){ _COMPANY_CFG = snap.docs[0].data(); }
+  // dealerId로 직접 조회
+  _db.collection('companies').doc(dealerId).get()
+    .then(function(doc){
+      if(doc.exists){
+        _COMPANY_CFG = doc.data();
+        // 관리자 이름 설정
+        if(_CU && !_CU.name && doc.data().name) _CU.name = doc.data().name;
+        if(_CU && !_CU.name && doc.data().companyName) _CU.name = doc.data().companyName;
+      }
     }).catch(function(){});
 }
 
