@@ -21055,7 +21055,7 @@ async function _doDeploySettlements(ids) {
   }
 
   toast('✅ 정산 배포 완료! ' + done + '명 처리 · 알림 ' + fcmDone + '명 발송');
-  rSettle(_settleCache, document.getElementById('settle-content'));
+  _renderSettleList();
 }
 
 function syncFirebaseSettlements(){
