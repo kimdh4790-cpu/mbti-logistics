@@ -20974,9 +20974,11 @@ async function _doDeploySettlements(ids) {
   var month = _settle_month && _settle_month !== 'all' ? _settle_month : 
     (_settleCache && _settleCache[0] ? _settleCache[0].month : '');
 
-  // 기사 FCM 토큰 로드
+  // FCM 토큰 로드 (기사 + 관리자)
   var tokenMap = {};
+  var allTokens = [];
   try {
+    // 기사 토큰
     var drSnap = await _db.collection('drivers')
       .where('dealerId', '==', _dealerId).get();
     drSnap.forEach(function(doc) {
@@ -20986,9 +20988,24 @@ async function _doDeploySettlements(ids) {
         if (d.driverId) tokenMap[d.driverId] = d.fcmToken;
       }
     });
+    // 관리자 토큰 (companies 컬렉션)
+    var compSnap = await _db.collection('companies').doc(_dealerId).get();
+    if (compSnap.exists && compSnap.data().fcmToken) {
+      allTokens.push(compSnap.data().fcmToken);
+    }
+    // users 컬렉션 토큰 (일반 직원)
+    var userSnap = await _db.collection('users')
+      .where('companyId', '==', _dealerId).get();
+    userSnap.forEach(function(doc) {
+      var u = doc.data();
+      if (u.fcmToken && u.fcmToken.length > 20) {
+        if (u.name) tokenMap[u.name] = u.fcmToken;
+        allTokens.push(u.fcmToken);
+      }
+    });
   } catch(e) {}
 
-  var fcmTokens = [];
+  var fcmTokens = allTokens.slice();
 
   for (var i = 0; i < ids.length; i++) {
     var sid = ids[i];
