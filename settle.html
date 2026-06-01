@@ -16311,7 +16311,7 @@ function scrollToCamp(camp){
   else pageDrivers();
 }
 function _renderDrivers(drivers,c){
-  var act=drivers.filter(function(d){return d.is_active!==false&&d.status!=='탈퇴'&&d.status!=='거부';});
+  var act=drivers.filter(function(d){return d.is_active!==false&&d.status!=='탈퇴'&&d.status!=='퇴직'&&d.status!=='거부';});
   // 실제 기사 데이터 기반 동적 캠프
   var campSet={};
   act.forEach(function(d){var cc=_getDrvCamp(d);if(cc&&cc!=='미지정')campSet[cc]=_campColor(cc);});
