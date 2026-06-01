@@ -9382,9 +9382,7 @@ function _hsTaxShare(){
     +'<div style="margin-bottom:14px">'
     +'<div style="font-size:13px;font-weight:800;margin-bottom:8px">🔗 공유 방식</div>'
     +'<div style="display:flex;gap:8px">'
-    +'<button onclick="_taxShareLink()" class="btn btn-blue" style="flex:1;font-size:12px">🔗 공유 링크 생성</button>'
-    +'<button onclick="_taxShareEmail()" class="btn" style="flex:1;font-size:12px">📧 이메일 전송</button>'
-    +'<button onclick="_taxShareDownload()" class="btn" style="flex:1;font-size:12px">💾 파일 다운로드</button>'
+    +'<button onclick="_taxShareLink()" class="btn btn-blue" style="width:100%;font-size:12px">🔗 공유 링크 생성</button>'
     +'</div>'
     +'</div>'
     +'<div id="tax-share-result" style="min-height:20px"></div>'
@@ -9656,12 +9654,20 @@ function _txsBulkExcel(targets, ym){
   XLSX.utils.book_append_sheet(wb,ws,ym+' 정산');
   XLSX.writeFile(wb,'엠비티아이_정산_'+ym+'.xlsx');
 }
+
+// ── 세무사 페이지 엑셀 빠른 다운로드
+function _txsBulkExcelQuick(){
+  if(!_settleCache||!_settleCache.length){toast('❌ 정산 데이터 없음');return;}
+  var ym=(_settleCache[0]&&_settleCache[0].month)||new Date().toISOString().slice(0,7);
+  var rows=_settleCache.filter(function(s){return s.month===ym;});
+  if(!rows.length){toast('❌ '+ym+' 데이터 없음');return;}
+  _txsBulkExcel(rows,ym);
+}
 function pageTaxShare(){
   document.getElementById('page-title').textContent='🧾 세무사 연동';
   document.getElementById('topbar-right').innerHTML=
-    '<button class="btn btn-sm" onclick="_txsBulkExcelDownload()" style="background:#059669;color:#fff;font-size:12px;font-weight:700">📥 정산 엑셀</button> '+
+    '<button class="btn btn-sm" onclick="_txsBulkExcelQuick()" style="background:#059669;color:#fff;font-size:12px;font-weight:700">📥 정산 엑셀</button> '+
     '<button class="btn btn-sm" onclick="_downloadDouzoneCSV()" style="background:#1e40af;color:#fff;font-size:12px">💾 더존 CSV</button> '+
-    '<button class="btn btn-sm" onclick="_txsBulkShareAll()" style="background:linear-gradient(135deg,#059669,#0891b2);color:#fff;font-size:12px;font-weight:700">📤 전체 연동</button> '+
     '<button class="btn btn-sm" onclick="_generateTaxShareLink()" style="background:linear-gradient(135deg,#7c3aed,#185FA5);color:#fff;font-size:12px;font-weight:700">🔗 공유링크</button>';
   var el=document.getElementById('content');
   if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
