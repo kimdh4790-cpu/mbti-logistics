@@ -703,6 +703,12 @@ function showSec(id, btn){
     var priceSec=document.getElementById('page-pricing');
     if(priceSec) priceSec.classList.add('on');
   }
+  // 시뮬레이션 탭 클릭 시 LIVE DEMO 재시작
+  if(id==='simulation'){
+    setTimeout(function(){
+      if(typeof simGoTo==='function') simGoTo(0);
+    },100);
+  }
 }
 
 // 히어로 CTA 버튼들 → 해당 섹션으로 이동
