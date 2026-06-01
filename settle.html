@@ -13153,40 +13153,32 @@ function pageMySettle(){
 // ══ 기사 전용: 정산 내역 ══
 function pageMyStatements(){
   var content=document.getElementById('content');
-  content.innerHTML='<div style="max-width:600px;margin:0 auto;padding:16px">'
-    +'<div style="font-size:18px;font-weight:800;margin-bottom:16px">📋 정산 내역</div>'
-    +'<div id="my-stmt-list"><div style="text-align:center;padding:20px;color:var(--text3)">⏳ 로딩 중...</div></div>'
-    +'</div>';
+  content.innerHTML='<div style="max-width:600px;margin:0 auto;padding:16px">'    +'<div style="font-size:18px;font-weight:800;margin-bottom:16px">📋 정산 내역</div>'    +'<div id="my-stmt-list"><div style="text-align:center;padding:20px;color:var(--text3)">⏳ 로딩 중...</div></div>'    +'</div>';
   if(!_db||!_CU)return;
+  var _did=_CU.dealerId||_CU.companyId||'';
   _db.collection('driver_notifications')
-    .where('dealerId','==',_CU.dealerId||_CU.companyId||'')
-    .orderBy('createdAt','desc').limit(30).get()
+    .where('dealerId','==',_did).limit(50).get()
   .then(function(snap){
+    var items=[];
+    snap.forEach(function(doc){items.push({id:doc.id,data:doc.data()});});
+    // 날짜 내림차순 정렬
+    items.sort(function(a,b){
+      var ta=a.data.createdAt?a.data.createdAt.seconds:0;
+      var tb=b.data.createdAt?b.data.createdAt.seconds:0;
+      return tb-ta;
+    });
     var html='';
-    snap.forEach(function(doc){
-      var d=doc.data();
+    items.forEach(function(item){
+      var d=item.data;
       var date=d.createdAt?new Date(d.createdAt.seconds*1000).toLocaleDateString('ko-KR'):'';
       var isNew=!d.readAt;
-      html+='<div class="card" style="margin-bottom:8px;'+(isNew?'border-left:3px solid var(--primary)':'')+'" onclick="_viewMyStatement(this)" data-id="'+doc.id+'">'
-        +'<div style="display:flex;justify-content:space-between;align-items:center">'
-        +'<div>'
-        +(isNew?'<span style="background:var(--primary);color:#fff;font-size:9px;padding:2px 6px;border-radius:10px;margin-right:6px">NEW</span>':'')
-        +'<span style="font-size:13px;font-weight:700">'+esc(d.label||'정산명세서')+'</span>'
-        +'</div>'
-        +'<div style="font-size:11px;color:var(--text3)">'+date+'</div>'
-        +'</div>'
-        +'<div style="font-size:12px;color:var(--text2);margin-top:4px">'+esc(d.type==='tax'?'🧾 세금계산서':'📄 정산명세서')+'</div>'
-        +'</div>';
+      html+='<div class="card" style="margin-bottom:8px;'+(isNew?'border-left:3px solid var(--primary)':'')+'" onclick="_viewMyStatement(this)" data-id="'+item.id+'">'        +'<div style="display:flex;justify-content:space-between;align-items:center">'        +'<div>'        +(isNew?'<span style="background:var(--primary);color:#fff;font-size:9px;padding:2px 6px;border-radius:10px;margin-right:6px">NEW</span>':'')        +'<span style="font-size:13px;font-weight:700">'+esc(d.label||'정산명세서')+'</span>'        +'</div>'        +'<div style="font-size:11px;color:var(--text3)">'+date+'</div>'        +'</div>'        +'<div style="font-size:12px;color:var(--text2);margin-top:4px">'+(d.type==='tax'?'🧾 세금계산서':'📄 정산명세서')+'</div>'        +'</div>';
     });
     document.getElementById('my-stmt-list').innerHTML=html||'<div class="empty"><div class="empty-icon">📭</div>전달받은 내역이 없습니다</div>';
   }).catch(function(e){
     document.getElementById('my-stmt-list').innerHTML='<div class="empty"><div class="empty-icon">⚠️</div>데이터를 불러올 수 없습니다</div>';
+    console.warn('정산내역 오류:',e.message);
   });
-}
-function _viewMyStatement(el){var id=el.getAttribute('data-id');
-  if(!_db)return;
-  _db.collection('driver_notifications').doc(id).update({readAt:firebase.firestore.FieldValue.serverTimestamp()}).catch(function(){});
-  toast('📄 문서를 확인했습니다');
 }
 
 // ══ 메뉴 ══
