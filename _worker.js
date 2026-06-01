@@ -49,11 +49,8 @@ async function fetchAsset(path, request) {
   const noCache = filePath.includes('settle.html');
   let resp;
   if (noCache) {
-    // GitHub API로 직접 가져와서 캐시 우회
-    const apiResp = await fetch(GITHUB_API + encodedPath, {
-      headers: { 'Accept': 'application/vnd.github.v3.raw' }
-    });
-    return apiResp;
+    // backup 경로로 캐시 우회
+    resp = await fetch(GITHUB_RAW + '/backup/settle_latest.html');
   } else {
     resp = await fetch(GITHUB_RAW + encodedPath);
   }
