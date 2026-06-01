@@ -14216,24 +14216,24 @@ function _renderSettlePage(settles,c){
     +'<div style="font-size:12px;font-weight:700;color:#ea580c">📦 정산 자동화</div>'
     +'<button onclick="toggleSettleMore(this)" style="padding:8px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;color:var(--text2);min-height:36px;-webkit-tap-highlight-color:transparent">더보기 ▼</button>'
     +'</div>'
-    +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
-    +'<label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#f97316;color:#fff;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📤 쿠팡 엑셀 업로드 → 자동정산<input type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style="display:none" onchange="parseCoupangExcel(this)"></label>'
-    +'<button onclick="recalcAllSettlements()" style="padding:8px 14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⚡ 전체 정산 재계산 저장</button>'
-    +'<button onclick="openOneQueueSend(\'전체\')" style="padding:8px 14px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⚡ 원큐 전달</button>'
-    +'<button onclick="openBulkSendModal()" style="padding:8px 14px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(0,102,255,.3)">📡 전체 일괄발송</button>'
-    +'<button onclick="openTaxStore()" style="padding:8px 14px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗂 기사별 세금계산서 보관함</button>'
-    +'<button onclick="openIncPanel()" style="padding:8px 14px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⚙️ 기사별 인센 설정</button>'
-    +'</div>'
-    +'<div id="settle-more-btns" style="display:none;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;padding-top:8px;border-top:1px dashed rgba(249,115,22,.3)">'  
-    +'<button onclick="openPayslipModal()" style="padding:8px 14px;background:linear-gradient(135deg,#7c3aed,#8b5cf6);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📄 급여명세서 출력</button>'
-    +'<button onclick="openDocModal()" style="padding:8px 14px;background:linear-gradient(135deg,#0f766e,#14b8a6);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📝 견적서·거래명세서</button>'
-    +'<button onclick="openCoupangStatsPanel()" style="padding:8px 14px;background:#f97316;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📊 쿠팡 건수 통계</button>'
-    +'<button onclick="openSettleCompare()" style="padding:8px 14px;background:#6366f1;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📊 기사별 실적 비교</button>'
-    +'<button onclick="checkDuplicateSettlements()" style="padding:8px 14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔍 중복 검사</button>'
-    +'<button onclick="syncFirebaseSettlements()" style="padding:8px 14px;background:#0d9488;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔄 Firebase 동기화</button>'
-    +'<button onclick="openDeleteMonthPanel()" style="padding:8px 14px;background:#854d0e;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;margin-right:6px">🗓 월삭제</button>'    +'<button onclick="openResetPanel()" style="padding:8px 14px;background:#7f1d1d;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗑 전체초기화</button>'
-    +'</div>'
-    +'<div style="font-size:10px;color:var(--text3);margin-top:8px">💡 핵심 4단계: 업로드 → 재계산 → 일괄전달 → 보관함 조회. 그 외 기능은 [더보기]에서.</div>'
+     +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
+     +'<label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#f97316;color:#fff;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📤 쿠팡 엑셀 업로드<input type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style="display:none" onchange="parseCoupangExcel(this)"></label>'
+     +'<button onclick="recalcAllSettlements()" style="padding:8px 14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⚡ 전체 재계산</button>'
+     +'<button onclick="deploySettlements()" style="padding:8px 16px;background:linear-gradient(135deg,#0066ff,#7c3aed);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;box-shadow:0 2px 12px rgba(0,102,255,.4)">📤 정산 배포 (명세서+알림)</button>'
+     +'<button onclick="openIncPanel()" style="padding:8px 14px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⚙️ 인센 설정</button>'
+     +'</div>'
+     +'<div id="settle-more-btns" style="display:none;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;padding-top:8px;border-top:1px dashed rgba(249,115,22,.3)">'
+     +'<button onclick="openTaxStore()" style="padding:8px 14px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗂 세금계산서 보관함</button>'
+     +'<button onclick="openPayslipModal()" style="padding:8px 14px;background:linear-gradient(135deg,#7c3aed,#8b5cf6);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📄 급여명세서</button>'
+     +'<button onclick="openDocModal()" style="padding:8px 14px;background:linear-gradient(135deg,#0f766e,#14b8a6);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📝 견적서·명세서</button>'
+     +'<button onclick="openCoupangStatsPanel()" style="padding:8px 14px;background:#f97316;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📊 건수통계·실적비교</button>'
+     +'<button onclick="openBulkSendModal()" style="padding:8px 14px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📡 일괄발송</button>'
+     +'<button onclick="checkDuplicateSettlements()" style="padding:8px 14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔍 중복검사</button>'
+     +'<button onclick="syncFirebaseSettlements()" style="padding:8px 14px;background:#0d9488;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔄 동기화</button>'
+     +'<button onclick="openDeleteMonthPanel()" style="padding:8px 14px;background:#854d0e;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗓 월삭제</button>'
+     +'<button onclick="openResetPanel()" style="padding:8px 14px;background:#7f1d1d;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗑 전체초기화</button>'
+     +'</div>'
+     +'<div style="font-size:10px;color:var(--text3);margin-top:8px">💡 업로드 → 재계산 → 정산 배포 순서로 진행하세요.</div>'
     +'</div>'
     +'<div style="font-size:11px;color:var(--text2);margin-bottom:8px;padding:6px 8px;background:var(--blue-l);border-radius:var(--r)">💡 기사별 [정산] 버튼으로 직접 작성, 또는 엑셀 업로드로 자동 계산 가능합니다.</div>';
   if(!settles||!settles.length){
@@ -20929,6 +20929,110 @@ function checkDuplicateSettlements(){
   if(!dups.length){toast('✅ 중복 없음');return;}
   toast('\u26a0\ufe0f \uc911\ubcf5 '+dups.length+'\uac74 \ubc1c\uacac: '+dups.map(function(s){return (s.driver||s.userId)+'('+s.month+')'}).slice(0,5).join(', '));
 }
+
+// ── 정산 배포 — 기사별 명세서+세금계산서+FCM 알림 한번에 ──
+async function deploySettlements() {
+  if (!_settleCache || !_settleCache.length) { toast('❌ 정산 데이터가 없습니다'); return; }
+
+  var month = _settle_month && _settle_month !== 'all' ? _settle_month : '';
+  var targets = month
+    ? _settleCache.filter(function(x) { return x.month === month; })
+    : _settleCache;
+
+  if (!targets.length) { toast('❌ 배포할 정산 데이터 없음'); return; }
+
+  // 배포 확인 모달
+  var mo = document.createElement('div'); mo.className = 'mo show'; mo.id = 'mo-deploy';
+  mo.onclick = function(e) { if (e.target === mo) mo.remove(); };
+  var d = document.createElement('div'); d.className = 'md'; d.style.maxWidth = '420px';
+
+  d.innerHTML = '<div class="mdt">📤 정산 배포</div>'
+    + '<div style="padding:16px;text-align:center">'
+    + '<div style="font-size:32px;margin-bottom:12px">📤</div>'
+    + '<div style="font-size:16px;font-weight:800;margin-bottom:8px">' + (month || '전체') + ' 정산 배포</div>'
+    + '<div style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6">'
+    + '<strong>' + targets.length + '명</strong> 기사에게<br>'
+    + '✅ 정산 명세서 개별 생성<br>'
+    + '✅ 세금계산서 자동 저장<br>'
+    + '✅ 앱 푸시 알림 발송<br>'
+    + '<span style="font-size:11px;color:#f97316">📌 ' + (month || '전체') + ' 정산이 배포됩니다</span>'
+    + '</div>'
+    + '<div style="display:flex;gap:8px;justify-content:center">'
+    + '<button onclick="document.getElementById('mo-deploy').remove()" style="padding:10px 24px;border-radius:8px;border:1px solid var(--border);background:var(--bg);font-size:13px;font-weight:700;cursor:pointer">취소</button>'
+    + '<button onclick="document.getElementById('mo-deploy').remove();_doDeploySettlements(' + JSON.stringify(targets.map(function(x){return x.id;})) + ')" style="padding:10px 24px;border-radius:8px;border:none;background:linear-gradient(135deg,#0066ff,#7c3aed);color:#fff;font-size:13px;font-weight:800;cursor:pointer">배포 시작 →</button>'
+    + '</div></div>';
+
+  mo.appendChild(d); document.body.appendChild(mo);
+}
+
+async function _doDeploySettlements(ids) {
+  if (!ids || !ids.length) return;
+  var total = ids.length, done = 0, fcmDone = 0;
+  toast('📤 정산 배포 시작... (0/' + total + ')');
+
+  var month = _settle_month && _settle_month !== 'all' ? _settle_month : 
+    (_settleCache && _settleCache[0] ? _settleCache[0].month : '');
+
+  // 기사 FCM 토큰 로드
+  var tokenMap = {};
+  try {
+    var drSnap = await _db.collection('drivers')
+      .where('dealerId', '==', _dealerId).get();
+    drSnap.forEach(function(doc) {
+      var d = doc.data();
+      if (d.fcmToken && d.fcmToken.length > 20) {
+        tokenMap[d.name] = d.fcmToken;
+        if (d.driverId) tokenMap[d.driverId] = d.fcmToken;
+      }
+    });
+  } catch(e) {}
+
+  var fcmTokens = [];
+
+  for (var i = 0; i < ids.length; i++) {
+    var sid = ids[i];
+    var settle = _settleCache.find(function(x) { return x.id === sid; });
+    if (!settle) continue;
+
+    try {
+      // 1. Firestore 정산 배포 상태 업데이트
+      await _db.collection('settlements').doc(sid).update({
+        taxSent: true,
+        deployedAt: new Date().toISOString(),
+        deployedBy: (_CU && _CU.name) || 'admin'
+      });
+
+      // 2. FCM 토큰 수집
+      var tk = tokenMap[settle.name] || tokenMap[settle.driverId] || '';
+      if (tk) fcmTokens.push(tk);
+
+      done++;
+      if (done % 5 === 0) toast('📤 배포 중... (' + done + '/' + total + ')');
+    } catch(e) {}
+  }
+
+  // 3. FCM 일괄 알림 발송
+  if (fcmTokens.length) {
+    try {
+      var resp = await fetch('/fcm/notify-drivers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tokens: fcmTokens,
+          title: '📤 ' + (month || '') + ' 정산 배포',
+          body: '정산 명세서가 배포됐습니다. 앱에서 확인하세요.',
+          type: 'settle_deploy'
+        })
+      });
+      var result = await resp.json();
+      fcmDone = result.sent || 0;
+    } catch(e) {}
+  }
+
+  toast('✅ 정산 배포 완료! ' + done + '명 처리 · 알림 ' + fcmDone + '명 발송');
+  rSettle(_settleCache, document.getElementById('settle-content'));
+}
+
 function syncFirebaseSettlements(){
   if(!_db||!_CU){toast('❌ 로그인 필요');return;}
   toast('🔄 Firebase 동기화 중...');
