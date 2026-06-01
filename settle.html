@@ -2647,6 +2647,19 @@ function _subRequest(planKey){
 }
 
 function showApp(){
+  // 탈퇴/퇴직 기사 강제 로그아웃
+  if(_CU&&(_CU.role==='driver'||_CU.role==='member')&&_db){
+    _db.collection('users').doc(_CU.uid).get().then(function(snap){
+      if(snap.exists){
+        var d=snap.data();
+        if(d.is_active===false||d.status==='탈퇴'||d.status==='퇴직'){
+          toast('⚠️ 탈퇴된 계정입니다. 관리자에게 문의하세요.');
+          setTimeout(function(){firebase.auth().signOut().then(function(){location.reload();});},2000);
+          return;
+        }
+      }
+    }).catch(function(){});
+  }
   setTimeout(function(){if(window._initPlanGuard)_initPlanGuard();},2000);
   if(_db&&_CU&&_CU.dealerId){
     _db.collection('idSupport').where('dealerId','==',_CU.dealerId).get()
