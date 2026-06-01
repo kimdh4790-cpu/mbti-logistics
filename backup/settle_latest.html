@@ -21007,12 +21007,22 @@ async function _doDeploySettlements(ids) {
     if (compSnap.exists && compSnap.data().fcmToken) {
       allTokens.push(compSnap.data().fcmToken);
     }
-    // users 컬렉션 토큰 (일반 직원)
+    // users 컬렉션 — dealerId 있는 것 우선, 없으면 전체에서 fcmToken 있는 것
     var userSnap = await _db.collection('users')
       .where('dealerId', '==', _did).get();
     userSnap.forEach(function(doc) {
       var u = doc.data();
       if (u.fcmToken && u.fcmToken.length > 20) {
+        if (u.name) tokenMap[u.name] = u.fcmToken;
+        allTokens.push(u.fcmToken);
+      }
+    });
+    // dealerId 없는 users도 companyId로 찾기
+    var userSnap2 = await _db.collection('users')
+      .where('companyId', '==', _did).get();
+    userSnap2.forEach(function(doc) {
+      var u = doc.data();
+      if (u.fcmToken && u.fcmToken.length > 20 && allTokens.indexOf(u.fcmToken) === -1) {
         if (u.name) tokenMap[u.name] = u.fcmToken;
         allTokens.push(u.fcmToken);
       }
