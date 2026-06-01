@@ -2790,6 +2790,7 @@ function showApp(){
     _loadSlugCompany();
   }
   // FCM 푸시 알림 등록 (전체 — 관리자/대리점 + 기사 모두)
+  _fcmRegFailed = false;  // 로그인마다 FCM 재시도
   setTimeout(_registerFCM, 2000);
   if(_CU.role !== 'driver' && _CU.role !== 'member'){
     setTimeout(_initFCMReceiver, 1000);
@@ -13529,7 +13530,8 @@ async function _registerFCM(){
       }
     }
 } catch(e){
-    _fcmRegFailed = true;  // ★ VAPID 키 불일치 등 → 재시도 차단
+    // VAPID 오류는 재시도 차단하지 않음 (로그인마다 재시도)
+    // _fcmRegFailed = true;
     console.warn('[FCM] 등록 실패 (푸시 비활성화):', e.message);
   }
 }
