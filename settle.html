@@ -13129,33 +13129,20 @@ function toggleSettleGroup(el){
 // ══ 기사 전용: 내 정산 현황 ══
 function pageMySettle(){
   var content=document.getElementById('content');
-  content.innerHTML='<div style="max-width:600px;margin:0 auto;padding:16px">'
-    +'<div style="font-size:18px;font-weight:800;margin-bottom:4px">📊 내 정산 현황</div>'
-    +'<div style="font-size:12px;color:var(--text2);margin-bottom:16px">'+esc(_CU.name||'')+'님의 정산 내역</div>'
-    +'<div id="my-settle-list"><div style="text-align:center;padding:20px;color:var(--text3)">⏳ 로딩 중...</div></div>'
-    +'</div>';
+  content.innerHTML='<div style="max-width:600px;margin:0 auto;padding:16px">'    +'<div style="font-size:18px;font-weight:800;margin-bottom:4px">📊 내 정산 현황</div>'    +'<div style="font-size:12px;color:var(--text2);margin-bottom:16px">'+esc(_CU.name||'')+'님의 정산 내역</div>'    +'<div id="my-settle-list"><div style="text-align:center;padding:20px;color:var(--text3)">⏳ 로딩 중...</div></div>'    +'</div>';
   if(!_db||!_CU)return;
-  // 본인 userId 또는 이름으로 정산 조회
-  var _did=_CU.companyId||_CU.dealerId||'';
-  var _uid=_CU.uid||'';
+  var _did=_CU.dealerId||_CU.companyId||'';
+  var _driverId=_CU.driverId||'';
   var _uname=_CU.name||'';
-  _db.collection('settlements')
-    .where('dealerId','==',_did)
-    .where('userId','==',_uid)
-    .orderBy('createdAt','desc').limit(20).get()
+  _db.collection('settlements').where('dealerId','==',_did).get()
   .then(function(snap){
     var html='';
     snap.forEach(function(doc){
       var d=doc.data();
-      var date=d.createdAt?new Date(d.createdAt.seconds*1000).toLocaleDateString('ko-KR'):'';
-      var net=d.net||d.totalNet||0;
-      html+='<div class="card" style="margin-bottom:8px">'
-        +'<div style="display:flex;justify-content:space-between;align-items:center">'
-        +'<div><div style="font-size:13px;font-weight:700">'+esc(d.label||d.month||date)+'</div>'
-        +'<div style="font-size:11px;color:var(--text3)">'+date+'</div></div>'
-        +'<div style="font-size:16px;font-weight:800;color:var(--primary)">'+net.toLocaleString()+'원</div>'
-        +'</div>'
-        +'</div>';
+      if(d.driver!==_driverId&&d.userId!==_driverId&&d.name!==_uname) return;
+      var net=d.net||0;
+      var vatIncome=d.vatIncome||d.income||0;
+      html+='<div class="card" style="margin-bottom:8px;padding:14px">'        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'        +'<div style="font-size:13px;font-weight:700">'+esc(d.month||'')+'</div>'        +'<span style="font-size:10px;background:#e0f2fe;color:#0369a1;padding:2px 8px;border-radius:10px">'+esc(d.camp||'')+'</span>'        +'</div>'        +'<div style="display:flex;justify-content:space-between;font-size:12px">'        +'<span style="color:var(--text2)">총수익 '+vatIncome.toLocaleString()+'원</span>'        +'<span style="font-size:14px;font-weight:800;color:var(--primary)">실지급 '+net.toLocaleString()+'원</span>'        +'</div>'        +'</div>';
     });
     document.getElementById('my-settle-list').innerHTML=html||'<div class="empty"><div class="empty-icon">📭</div>정산 내역이 없습니다</div>';
   }).catch(function(e){
@@ -21077,21 +21064,21 @@ async function _doDeploySettlements(ids) {
     } catch(e) { console.warn('배포오류:', e.message); }
   }
 
-  // 3. FCM 일괄 알림 발송
-  if (fcmTokens.length) {
+  // 3. FCM 일괄 알림 발송 — Cloud Functions 방식
+  var _fcmUrl = 'https://us-central1-mbti-logistics.cloudfunctions.net/sendPush';
+  for (var fi = 0; fi < fcmTokens.length; fi++) {
     try {
-      var resp = await fetch('/fcm/notify-drivers', {
+      var fr = await fetch(_fcmUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          tokens: fcmTokens,
+          token: fcmTokens[fi],
           title: '📤 ' + (month || '') + ' 정산 배포',
           body: '정산 명세서가 배포됐습니다. 앱에서 확인하세요.',
           type: 'settle_deploy'
         })
       });
-      var result = await resp.json();
-      fcmDone = result.sent || 0;
+      if (fr.ok) fcmDone++;
     } catch(e) {}
   }
 
