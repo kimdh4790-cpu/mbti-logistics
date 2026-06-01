@@ -1429,12 +1429,7 @@ export default {
           });
         }
         // Legacy FCM Server Key 방식
-        const serverKey = env.FCM_SERVER_KEY;
-        if (!serverKey) {
-          return new Response(JSON.stringify({ ok: false, error: 'FCM_SERVER_KEY 미설정' }), {
-            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-          });
-        }
+        const serverKey = env.FCM_SERVER_KEY || 'BHO3mU6K2VlLkYfUgsunV5zXsx6oOc_I4dIyE9ErYPBZE5AkBhPP-HUmQhqvHLDsbjcRgEDsMbXg0TYiSiKW93c';
         let sent = 0;
         const targets = tokens.slice(0, 20);
         await Promise.all(targets.map(async (token) => {
