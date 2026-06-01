@@ -42,12 +42,21 @@ function forbidden(msg = '접근이 거부되었습니다') {
 const PROJECT_ID = 'mbti-logistics';
 // ★ Pages 배포 URL (env.ASSETS 대체 - wrangler assets 이슈 우회)
 const GITHUB_RAW = 'https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main';
+const GITHUB_API = 'https://api.github.com/repos/kimdh4790-cpu/mbti-logistics/contents';
 async function fetchAsset(path, request) {
   const filePath = path.startsWith('/') ? path : '/' + path;
   const encodedPath = filePath.split('/').map(seg => seg ? encodeURIComponent(seg) : '').join('/');
   const noCache = filePath.includes('settle.html');
-  const assetUrl = GITHUB_RAW + encodedPath + (noCache ? '?t='+Date.now() : '');
-  const resp = await fetch(assetUrl);
+  let resp;
+  if (noCache) {
+    // GitHub API로 직접 가져와서 캐시 우회
+    const apiResp = await fetch(GITHUB_API + encodedPath, {
+      headers: { 'Accept': 'application/vnd.github.v3.raw' }
+    });
+    return apiResp;
+  } else {
+    resp = await fetch(GITHUB_RAW + encodedPath);
+  }
   return resp;
 }
 
