@@ -41,7 +41,7 @@ function forbidden(msg = '접근이 거부되었습니다') {
 
 const PROJECT_ID = 'mbti-logistics';
 // ★ Pages 배포 URL (env.ASSETS 대체 - wrangler assets 이슈 우회)
-const GITHUB_RAW = 'https://cdn.jsdelivr.net/gh/kimdh4790-cpu/mbti-logistics@main';
+const GITHUB_RAW = 'https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main';
 async function fetchAsset(path, request) {
   const filePath = path.startsWith('/') ? path : '/' + path;
   // 한글 파일명 URL 인코딩 (엠비티아이_물류관리_v9.html 등)
