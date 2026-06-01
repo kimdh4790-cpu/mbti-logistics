@@ -13129,33 +13129,20 @@ function toggleSettleGroup(el){
 // ══ 기사 전용: 내 정산 현황 ══
 function pageMySettle(){
   var content=document.getElementById('content');
-  content.innerHTML='<div style="max-width:600px;margin:0 auto;padding:16px">'
-    +'<div style="font-size:18px;font-weight:800;margin-bottom:4px">📊 내 정산 현황</div>'
-    +'<div style="font-size:12px;color:var(--text2);margin-bottom:16px">'+esc(_CU.name||'')+'님의 정산 내역</div>'
-    +'<div id="my-settle-list"><div style="text-align:center;padding:20px;color:var(--text3)">⏳ 로딩 중...</div></div>'
-    +'</div>';
+  content.innerHTML='<div style="max-width:600px;margin:0 auto;padding:16px">'    +'<div style="font-size:18px;font-weight:800;margin-bottom:4px">📊 내 정산 현황</div>'    +'<div style="font-size:12px;color:var(--text2);margin-bottom:16px">'+esc(_CU.name||'')+'님의 정산 내역</div>'    +'<div id="my-settle-list"><div style="text-align:center;padding:20px;color:var(--text3)">⏳ 로딩 중...</div></div>'    +'</div>';
   if(!_db||!_CU)return;
-  // 본인 userId 또는 이름으로 정산 조회
-  var _did=_CU.companyId||_CU.dealerId||'';
-  var _uid=_CU.uid||'';
+  var _did=_CU.dealerId||_CU.companyId||'';
+  var _driverId=_CU.driverId||'';
   var _uname=_CU.name||'';
-  _db.collection('settlements')
-    .where('dealerId','==',_did)
-    .where('userId','==',_uid)
-    .orderBy('createdAt','desc').limit(20).get()
+  _db.collection('settlements').where('dealerId','==',_did).get()
   .then(function(snap){
     var html='';
     snap.forEach(function(doc){
       var d=doc.data();
-      var date=d.createdAt?new Date(d.createdAt.seconds*1000).toLocaleDateString('ko-KR'):'';
-      var net=d.net||d.totalNet||0;
-      html+='<div class="card" style="margin-bottom:8px">'
-        +'<div style="display:flex;justify-content:space-between;align-items:center">'
-        +'<div><div style="font-size:13px;font-weight:700">'+esc(d.label||d.month||date)+'</div>'
-        +'<div style="font-size:11px;color:var(--text3)">'+date+'</div></div>'
-        +'<div style="font-size:16px;font-weight:800;color:var(--primary)">'+net.toLocaleString()+'원</div>'
-        +'</div>'
-        +'</div>';
+      if(d.driver!==_driverId&&d.userId!==_driverId&&d.name!==_uname) return;
+      var net=d.net||0;
+      var vatIncome=d.vatIncome||d.income||0;
+      html+='<div class="card" style="margin-bottom:8px;padding:14px">'        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'        +'<div style="font-size:13px;font-weight:700">'+esc(d.month||'')+'</div>'        +'<span style="font-size:10px;background:#e0f2fe;color:#0369a1;padding:2px 8px;border-radius:10px">'+esc(d.camp||'')+'</span>'        +'</div>'        +'<div style="display:flex;justify-content:space-between;font-size:12px">'        +'<span style="color:var(--text2)">총수익 '+vatIncome.toLocaleString()+'원</span>'        +'<span style="font-size:14px;font-weight:800;color:var(--primary)">실지급 '+net.toLocaleString()+'원</span>'        +'</div>'        +'</div>';
     });
     document.getElementById('my-settle-list').innerHTML=html||'<div class="empty"><div class="empty-icon">📭</div>정산 내역이 없습니다</div>';
   }).catch(function(e){
@@ -13166,41 +13153,78 @@ function pageMySettle(){
 // ══ 기사 전용: 정산 내역 ══
 function pageMyStatements(){
   var content=document.getElementById('content');
-  content.innerHTML='<div style="max-width:600px;margin:0 auto;padding:16px">'
-    +'<div style="font-size:18px;font-weight:800;margin-bottom:16px">📋 정산 내역</div>'
-    +'<div id="my-stmt-list"><div style="text-align:center;padding:20px;color:var(--text3)">⏳ 로딩 중...</div></div>'
-    +'</div>';
+  content.innerHTML='<div style="max-width:600px;margin:0 auto;padding:16px">'    +'<div style="font-size:18px;font-weight:800;margin-bottom:16px">📋 정산 내역</div>'    +'<div id="my-stmt-list"><div style="text-align:center;padding:20px;color:var(--text3)">⏳ 로딩 중...</div></div>'    +'</div>';
   if(!_db||!_CU)return;
+  var _did=_CU.dealerId||_CU.companyId||'';
   _db.collection('driver_notifications')
-    .where('dealerId','==',_CU.dealerId||_CU.companyId||'')
-    .orderBy('createdAt','desc').limit(30).get()
+    .where('dealerId','==',_did).limit(50).get()
   .then(function(snap){
+    var items=[];
+    snap.forEach(function(doc){items.push({id:doc.id,data:doc.data()});});
+    // 날짜 내림차순 정렬
+    items.sort(function(a,b){
+      var ta=a.data.createdAt?a.data.createdAt.seconds:0;
+      var tb=b.data.createdAt?b.data.createdAt.seconds:0;
+      return tb-ta;
+    });
     var html='';
-    snap.forEach(function(doc){
-      var d=doc.data();
+    items.forEach(function(item){
+      var d=item.data;
       var date=d.createdAt?new Date(d.createdAt.seconds*1000).toLocaleDateString('ko-KR'):'';
       var isNew=!d.readAt;
-      html+='<div class="card" style="margin-bottom:8px;'+(isNew?'border-left:3px solid var(--primary)':'')+'" onclick="_viewMyStatement(this)" data-id="'+doc.id+'">'
-        +'<div style="display:flex;justify-content:space-between;align-items:center">'
-        +'<div>'
-        +(isNew?'<span style="background:var(--primary);color:#fff;font-size:9px;padding:2px 6px;border-radius:10px;margin-right:6px">NEW</span>':'')
-        +'<span style="font-size:13px;font-weight:700">'+esc(d.label||'정산명세서')+'</span>'
-        +'</div>'
-        +'<div style="font-size:11px;color:var(--text3)">'+date+'</div>'
-        +'</div>'
-        +'<div style="font-size:12px;color:var(--text2);margin-top:4px">'+esc(d.type==='tax'?'🧾 세금계산서':'📄 정산명세서')+'</div>'
-        +'</div>';
+      html+='<div class="card" style="margin-bottom:8px;'+(isNew?'border-left:3px solid var(--primary)':'')+'" onclick="_viewMyStatement(this)" data-id="'+item.id+'">'        +'<div style="display:flex;justify-content:space-between;align-items:center">'        +'<div>'        +(isNew?'<span style="background:var(--primary);color:#fff;font-size:9px;padding:2px 6px;border-radius:10px;margin-right:6px">NEW</span>':'')        +'<span style="font-size:13px;font-weight:700">'+esc(d.label||'정산명세서')+'</span>'        +'</div>'        +'<div style="font-size:11px;color:var(--text3)">'+date+'</div>'        +'</div>'        +'<div style="font-size:12px;color:var(--text2);margin-top:4px">'+(d.type==='tax'?'🧾 세금계산서':'📄 정산명세서')+'</div>'        +'</div>';
     });
     document.getElementById('my-stmt-list').innerHTML=html||'<div class="empty"><div class="empty-icon">📭</div>전달받은 내역이 없습니다</div>';
   }).catch(function(e){
     document.getElementById('my-stmt-list').innerHTML='<div class="empty"><div class="empty-icon">⚠️</div>데이터를 불러올 수 없습니다</div>';
+    console.warn('정산내역 오류:',e.message);
   });
 }
-function _viewMyStatement(el){var id=el.getAttribute('data-id');
+
+
+function _viewMyStatement(el){
+  var id=el.getAttribute('data-id');
   if(!_db)return;
-  _db.collection('driver_notifications').doc(id).update({readAt:firebase.firestore.FieldValue.serverTimestamp()}).catch(function(){});
-  toast('📄 문서를 확인했습니다');
-}
+  // 읽음 처리
+  _db.collection('driver_notifications').doc(id).update({
+    readAt:firebase.firestore.FieldValue.serverTimestamp()
+  }).catch(function(){});
+  // 상세 모달
+  _db.collection('driver_notifications').doc(id).get().then(function(doc){
+    if(!doc.exists)return;
+    var d=doc.data();
+    var mo=document.createElement('div');mo.className='mo show';
+    mo.onclick=function(e){if(e.target===mo)mo.remove();};
+    var md=document.createElement('div');md.className='md';md.style.maxWidth='420px';
+    var isTax=d.type==='tax';
+    var vatIncome=d.vatIncome||0;
+    var supplyAmt=Math.round(vatIncome/1.1);
+    var vatAmt=vatIncome-supplyAmt;
+    var net=d.net||0;
+    var emp=d.emp||0;
+    var bodyHtml;
+    if(isTax){
+      bodyHtml='<div style="display:grid;gap:8px;font-size:13px">'
+        +'<div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">공급가액</span><span style="font-weight:700">'+supplyAmt.toLocaleString()+'원</span></div>'
+        +'<div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">부가세(10%)</span><span style="font-weight:700">'+vatAmt.toLocaleString()+'원</span></div>'
+        +'<div style="border-top:1px solid var(--border);padding-top:8px;display:flex;justify-content:space-between"><span style="font-weight:700">합계금액</span><span style="font-size:18px;font-weight:900;color:var(--primary)">'+vatIncome.toLocaleString()+'원</span></div>'
+        +'</div>';
+    } else {
+      bodyHtml='<div style="display:grid;gap:8px;font-size:13px">'
+        +'<div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">총수익(VAT포함)</span><span style="font-weight:700">'+vatIncome.toLocaleString()+'원</span></div>'
+        +'<div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">공제합계</span><span style="font-weight:700;color:var(--red)">-'+emp.toLocaleString()+'원</span></div>'
+        +'<div style="border-top:1px solid var(--border);padding-top:8px;display:flex;justify-content:space-between"><span style="font-weight:700">실지급액</span><span style="font-size:18px;font-weight:900;color:var(--primary)">'+net.toLocaleString()+'원</span></div>'
+        +'</div>';
+    }
+    md.innerHTML='<div class="mdt">'+(isTax?'🧾 세금계산서':'📄 정산명세서')+'</div>'
+      +'<div style="padding:16px">'
+      +'<div style="background:var(--bg2);border-radius:12px;padding:16px;margin-bottom:12px">'
+      +'<div style="font-size:16px;font-weight:800;margin-bottom:12px">'+esc(d.month||'')+(isTax?' 세금계산서':' 정산명세서')+'</div>'
+      +bodyHtml
+      +'</div>'
+      +'<div style="font-size:11px;color:var(--text3);text-align:center">엠비티아이 유한회사 · 051-711-3103</div>'
+      +'</div>'
+      +'<div class="mdf"><button class="btn" onclick="this.closest(\'.mo\').remove()">닫기</button></div>';
 
 // ══ 메뉴 ══
 // 서비스 타입별 메뉴 정의
@@ -14234,6 +14258,7 @@ function _renderSettlePage(settles,c){
      +'<button onclick="recalcAllSettlements()" style="padding:8px 14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⚡ 전체 재계산</button>'
      +'<button onclick="deploySettlements()" style="padding:8px 16px;background:linear-gradient(135deg,#0066ff,#7c3aed);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;box-shadow:0 2px 12px rgba(0,102,255,.4)">📤 정산 배포 (명세서+알림)</button>'
      +'<button onclick="openIncPanel()" style="padding:8px 14px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⚙️ 인센 설정</button>'
+     +'<button onclick="_clearDriverNotifications()" style="padding:8px 14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗑 배포기록 초기화</button>'
      +'</div>'
      +'<div id="settle-more-btns" style="display:none;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;padding-top:8px;border-top:1px dashed rgba(249,115,22,.3)">'
      +'<button onclick="openTaxStore()" style="padding:8px 14px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗂 세금계산서 보관함</button>'
@@ -20944,6 +20969,23 @@ function checkDuplicateSettlements(){
 }
 
 // ── 정산 배포 — 기사별 명세서+세금계산서+FCM 알림 한번에 ──
+
+async function _clearDriverNotifications(){
+  if(!confirm('배포된 정산 알림 기록을 전부 삭제할까요?\n(직원 앱에서도 사라져요)')) return;
+  var _did = (_CU&&_CU.dealerId)||'';
+  if(!_did){toast('❌ dealerId 없음');return;}
+  toast('🗑 삭제 중...');
+  var snap = await _db.collection('driver_notifications').where('dealerId','==',_did).get();
+  var batch = _db.batch();
+  var cnt = 0;
+  snap.forEach(function(doc){
+    batch.delete(doc.ref);
+    cnt++;
+    if(cnt%490===0){batch.commit();batch=_db.batch();}
+  });
+  await batch.commit();
+  toast('✅ '+cnt+'건 삭제 완료');
+}
 async function deploySettlements() {
   if (!_settleCache || !_settleCache.length) { toast('❌ 정산 데이터가 없습니다'); return; }
 
@@ -21007,7 +21049,7 @@ async function _doDeploySettlements(ids) {
     if (compSnap.exists && compSnap.data().fcmToken) {
       allTokens.push(compSnap.data().fcmToken);
     }
-    // users 컬렉션 — dealerId 있는 것 우선, 없으면 전체에서 fcmToken 있는 것
+    // users 컬렉션 토큰 (일반 직원)
     var userSnap = await _db.collection('users')
       .where('dealerId', '==', _did).get();
     userSnap.forEach(function(doc) {
@@ -21015,26 +21057,6 @@ async function _doDeploySettlements(ids) {
       if (u.fcmToken && u.fcmToken.length > 20) {
         if (u.name) tokenMap[u.name] = u.fcmToken;
         allTokens.push(u.fcmToken);
-      }
-    });
-    // dealerId 없는 users도 companyId로 찾기
-    var userSnap2 = await _db.collection('users')
-      .where('companyId', '==', _did).get();
-    userSnap2.forEach(function(doc) {
-      var u = doc.data();
-      if (u.fcmToken && u.fcmToken.length > 20 && allTokens.indexOf(u.fcmToken) === -1) {
-        if (u.name) tokenMap[u.name] = u.fcmToken;
-        allTokens.push(u.fcmToken);
-      }
-    });
-    // drivers 컬렉션 토큰도 함께 수집
-    var drvSnap = await _db.collection('drivers')
-      .where('dealerId', '==', _did).get();
-    drvSnap.forEach(function(doc) {
-      var d = doc.data();
-      if (d.fcmToken && d.fcmToken.length > 20 && allTokens.indexOf(d.fcmToken) === -1) {
-        if (d.name) tokenMap[d.name] = d.fcmToken;
-        allTokens.push(d.fcmToken);
       }
     });
   } catch(e) {}
@@ -21097,21 +21119,21 @@ async function _doDeploySettlements(ids) {
     } catch(e) { console.warn('배포오류:', e.message); }
   }
 
-  // 3. FCM 일괄 알림 발송
-  if (fcmTokens.length) {
+  // 3. FCM 일괄 알림 발송 — Cloud Functions 방식
+  var _fcmUrl = 'https://us-central1-mbti-logistics.cloudfunctions.net/sendPush';
+  for (var fi = 0; fi < fcmTokens.length; fi++) {
     try {
-      var resp = await fetch('/fcm/notify-drivers', {
+      var fr = await fetch(_fcmUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          tokens: fcmTokens,
+          token: fcmTokens[fi],
           title: '📤 ' + (month || '') + ' 정산 배포',
           body: '정산 명세서가 배포됐습니다. 앱에서 확인하세요.',
           type: 'settle_deploy'
         })
       });
-      var result = await resp.json();
-      fcmDone = result.sent || 0;
+      if (fr.ok) fcmDone++;
     } catch(e) {}
   }
 
@@ -22729,16 +22751,13 @@ function _startDispatchListener(uid){
   }catch(e){console.warn('[트랙알림시작]',e);}
 }
 
-</script>
-</body>
-</html>
-<script>document.addEventListener("DOMContentLoaded",function(){if(typeof initFirebase==="function")initFirebase();if(typeof _processJoinUrlParams==="function")_processJoinUrlParams();});
-
-// ── 보안: F12/우클릭/개발자도구 차단
-(function(){ return; // 임시 비활성화
-
-  document.addEventListener('contextmenu',function(e){e.preventDefault();});
+// ── 보안: F12/우클릭/개발자도구 차단 (슈퍼어드민 제외)
+(function(){
+  var SA=['kimdh4790@gmail.com','soungkyekim@naver.com'];
+  function isSA(){try{var u=firebase.auth().currentUser;return u&&SA.includes(u.email);}catch(e){return false;}}
+  document.addEventListener('contextmenu',function(e){if(isSA())return;e.preventDefault();});
   document.addEventListener('keydown',function(e){
+    if(isSA())return;
     if(e.keyCode===123){e.preventDefault();return false;}
     if(e.ctrlKey&&e.shiftKey&&(e.keyCode===73||e.keyCode===74||e.keyCode===67)){e.preventDefault();return false;}
     if(e.ctrlKey&&e.keyCode===85){e.preventDefault();return false;}
