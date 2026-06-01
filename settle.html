@@ -21029,6 +21029,7 @@ async function _doDeploySettlements(ids) {
       });
 
       // 2. driver_notifications 저장 — 직원 앱 내 정산 확인용
+      var ts = firebase.firestore.FieldValue.serverTimestamp();
       var notifBase = {
         driverName: settle.name || '',
         driverId: settle.driverId || settle.userId || '',
@@ -21042,15 +21043,24 @@ async function _doDeploySettlements(ids) {
         emp: settle.emp || 0,
         work: settle.work || 0,
         settleId: sid,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        createdAt: ts,
         readAt: null
       };
       await _db.collection('driver_notifications').add(notifBase);
       // 세금계산서도 별도 저장
-      await _db.collection('driver_notifications').add(Object.assign({}, notifBase, {
+      await _db.collection('driver_notifications').add({
+        driverName: settle.name || '',
+        driverId: settle.driverId || settle.userId || '',
+        companyId: _did,
+        dealerId: _did,
+        month: settle.month || '',
         label: (settle.month || '') + ' 세금계산서',
-        type: 'tax'
-      }));
+        type: 'tax',
+        net: settle.net || 0,
+        settleId: sid,
+        createdAt: ts,
+        readAt: null
+      });
 
       // 3. FCM 토큰 수집
       var tk = tokenMap[settle.name] || tokenMap[settle.driverId] || '';
@@ -21058,7 +21068,7 @@ async function _doDeploySettlements(ids) {
 
       done++;
       if (done % 5 === 0) toast('📤 배포 중... (' + done + '/' + total + ')');
-    } catch(e) {}
+    } catch(e) { console.warn('배포오류:', e.message); }
   }
 
   // 3. FCM 일괄 알림 발송
