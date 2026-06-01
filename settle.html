@@ -22520,7 +22520,7 @@ function _showWelcome(){
   var enterBtn=document.createElement('button');
   enterBtn.textContent='입장하기 →';
   enterBtn.style.cssText='background:#fff;color:#1e3a8a;border:none;border-radius:100px;padding:10px 32px;font-size:14px;font-weight:800;cursor:pointer;width:100%';
-  enterBtn.onclick=function(){mo.remove();};
+  enterBtn.onclick=function(){mo.remove();setTimeout(_registerFCM,300);};
   enterArea.appendChild(enterBtn);
 }
 
