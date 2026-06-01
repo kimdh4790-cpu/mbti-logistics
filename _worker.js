@@ -23,9 +23,11 @@ function checkRateLimit(ip, limit = 60, windowMs = 60000) {
 }
 
 // 보안 헤더 적용 헬퍼
-function addSecurityHeaders(response) {
+function addSecurityHeaders(response, allowIframe = false) {
   const newHeaders = new Headers(response.headers);
   Object.entries(SECURITY_HEADERS).forEach(([k,v]) => newHeaders.set(k, v));
+  // iframe 허용 시 X-Frame-Options 제거 (시뮬레이터 등)
+  if (allowIframe) newHeaders.delete('X-Frame-Options');
   return new Response(response.body, { status: response.status, headers: newHeaders });
 }
 
@@ -1627,7 +1629,9 @@ export default {
       jsHeaders.set('X-Frame-Options', 'SAMEORIGIN');
       return new Response(assetResp.body, { status: assetResp.status, headers: jsHeaders });
     }
-    return addSecurityHeaders(assetResp);
+    // ★ 시뮬레이터 파일은 iframe 허용 (랜딩페이지 팝업용)
+    const isSimulator = url.pathname.includes('시뮬레이터') || url.pathname.includes('%EC%8B%9C%EB%AE%AC%EB%A0%88%EC%9D%B4%ED%84%B0');
+    return addSecurityHeaders(assetResp, isSimulator);
   },
 
   // Cloudflare Cron Trigger — 매일 01:00 UTC (한국 10:00 KST)
