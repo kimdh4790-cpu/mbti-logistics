@@ -796,7 +796,7 @@ export default {
       }
     }
 
-    if (path === '/settle' || path === '/settle/') {
+    if (path === '/settle.html' || path === '/settle' || path === '/settle/') {
       const resp = await fetchAsset('/settle.html', request);
       const html = await resp.text();
       const key = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
