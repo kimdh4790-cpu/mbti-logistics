@@ -703,12 +703,6 @@ function showSec(id, btn){
     var priceSec=document.getElementById('page-pricing');
     if(priceSec) priceSec.classList.add('on');
   }
-  // 시뮬레이션 탭 클릭 시 LIVE DEMO 재시작
-  if(id==='simulation'){
-    setTimeout(function(){
-      if(typeof simGoTo==='function') simGoTo(0);
-    },100);
-  }
 }
 
 // 히어로 CTA 버튼들 → 해당 섹션으로 이동
@@ -754,7 +748,33 @@ window.addEventListener('load',function(){
   },400);
 });
 
-// ── LIVE DEMO ──
+// ── LIVE DEMO SIM ──
+function _renderSteps(steps, cur){
+  var bar=document.getElementById('sim-step-bar');
+  if(!bar)return;
+  bar.innerHTML='';
+  steps.forEach(function(s,i){
+    var done=i<cur, active=i===cur;
+    var d=document.createElement('div');
+    d.style.cssText='flex:1;height:4px;border-radius:2px;background:'+(done?'#00c8f8':active?'rgba(0,200,248,.4)':'rgba(255,255,255,.08)')+';transition:background .3s';
+    bar.appendChild(d);
+  });
+}
+
+// ── 공통: 카운트업 숫자 애니메이션
+function _countUp(el, target, dur, prefix, comma){
+  if(!el)return;
+  var start=0, step=16, pf=prefix||'', cm=comma||false;
+  var t=setInterval(function(){
+    start+=Math.ceil(target/(dur/step));
+    if(start>=target){start=target;clearInterval(t);}
+    if(el) el.textContent=pf+(cm?start.toLocaleString():start.toLocaleString())+'원';
+  },step);
+}
+
+
+// ══════════════════════════════════════════════════
+// 시뮬레이션 데이터 (플랜별 5단계)
 var SIM_DATA2 = {
 
   // ── 0: AI 정산 ─────────────────────────────────────
@@ -1375,7 +1395,66 @@ function drawSimQR2(canvas,data,size){
 // 전역 함수 명시 노출
 window.simGoTo = simGoTo;
 window.simToggle = simToggle;
-window.addEventListener("load",function(){setTimeout(function(){if(typeof simGoTo==="function")simGoTo(0);},500);});
+
+// ── 결제 안내 모달
+function _dwShowPayModal(planKey){
+  var n = _dwTierN(_dwSelTier, _dwCustomN);
+  var fee = _dwMonthlyFee(planKey, n);
+  var planNames={qr:'📷 QR 출퇴근',settle:'📦 AI 정산',payroll:'💼 급여 관리',combo:'📷💼 QR+급여 통합',full:'🚀 ALL-IN-ONE'};
+  var existing=document.getElementById('dw-pay-modal');
+  if(existing) existing.remove();
+  var modal=document.createElement('div');
+  modal.id='dw-pay-modal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  modal.innerHTML='<div style="background:#0f172a;border:1px solid rgba(0,200,248,.3);border-radius:20px;padding:28px 24px;max-width:420px;width:100%;box-shadow:0 0 60px rgba(0,200,248,.15)">'
+    +'<div style="font-size:18px;font-weight:900;color:#fff;margin-bottom:4px">💳 플랜 결제 안내</div>'
+    +'<div style="font-size:12px;color:rgba(0,200,248,.7);margin-bottom:20px">토스페이먼츠 심사 완료 후 카드결제 오픈 예정</div>'
+    +'<div style="background:rgba(0,200,248,.06);border:1px solid rgba(0,200,248,.2);border-radius:12px;padding:16px;margin-bottom:16px">'
+      +'<div style="font-size:13px;color:rgba(238,244,255,.7);margin-bottom:6px">선택 플랜</div>'
+      +'<div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:12px">'+(planNames[planKey]||planKey)+'</div>'
+      +'<div style="font-size:12px;color:rgba(238,244,255,.6);margin-bottom:4px">적용 인원</div>'
+      +'<div style="font-size:22px;font-weight:900;color:#00c8f8;letter-spacing:-1px;margin-bottom:4px">'+n+'명</div>'
+      +'<div style="font-size:12px;color:rgba(238,244,255,.6);margin-bottom:4px">월 결제금액</div>'
+      +'<div style="font-size:28px;font-weight:900;color:#00e87a;letter-spacing:-1px">'+fee.toLocaleString()+'원</div>'
+      +'<div style="font-size:10px;color:rgba(238,244,255,.4);margin-top:4px">계좌이체 시 3% 추가 할인 적용</div>'
+    +'</div>'
+    +'<div style="margin-bottom:12px">'
+      +'<div style="font-size:12px;font-weight:700;color:#f5b800;margin-bottom:8px">🏦 지금 바로 계좌이체로 신청</div>'
+      +'<div style="background:rgba(245,184,0,.06);border:1px solid rgba(245,184,0,.2);border-radius:10px;padding:12px;font-size:12px;color:rgba(238,244,255,.8);line-height:1.8">'
+        +'입금 후 담당자 확인 → 즉시 활성화<br>'
+        +'<strong style="color:#f5b800">신한은행 140-014-788253</strong><br>'
+        +'예금주: (유)엠비티아이'
+      +'</div>'
+    +'</div>'
+    +'<div style="display:flex;gap:8px">'
+      +'<a href="tel:051-711-3103" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:12px;background:rgba(0,200,248,.12);border:1px solid rgba(0,200,248,.3);border-radius:10px;color:#00c8f8;font-weight:700;font-size:13px;text-decoration:none">📞 전화 문의</a>'
+      +'<a href="https://pf.kakao.com/_xnKxnxj" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:12px;background:rgba(254,229,0,.1);border:1px solid rgba(254,229,0,.3);border-radius:10px;color:#FFE000;font-weight:700;font-size:13px;text-decoration:none">💬 카카오 문의</a>'
+    +'</div>'
+    +'<button onclick="document.getElementById(\"dw-pay-modal\").remove()" style="width:100%;margin-top:10px;padding:10px;background:transparent;border:1px solid rgba(255,255,255,.1);border-radius:10px;color:rgba(238,244,255,.5);font-size:12px;cursor:pointer">닫기</button>'
+  +'</div>';
+  modal.onclick=function(e){if(e.target===modal)modal.remove();};
+  document.body.appendChild(modal);
+}
+
+window.setTier = setTier;
+window._dwShowPayModal = _dwShowPayModal;
+window._calcCustomTier = _calcCustomTier;
+window.tFaq = tFaq;
+window.tM = toggleM;
+window.closeM = closeM;
+
+function _initSim2(){
+  try{
+    if(document.getElementById('sim-content2') && typeof SIM_DATA2 !== 'undefined'){
+      showSim(0); return true;
+    }
+  }catch(e){ console.warn('initSim2 error:', e); }
+  return false;
+}
+if(!_initSim2()){
+  document.addEventListener('DOMContentLoaded', _initSim2);
+  window.addEventListener('load', _initSim2);
+}
 </script>
 </body>
 </html>
