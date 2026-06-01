@@ -21002,7 +21002,7 @@ async function _doDeploySettlements(ids) {
     }
     // users 컬렉션 토큰 (일반 직원)
     var userSnap = await _db.collection('users')
-      .where('companyId', '==', _dealerId).get();
+      .where('dealerId', '==', _dealerId).get();
     userSnap.forEach(function(doc) {
       var u = doc.data();
       if (u.fcmToken && u.fcmToken.length > 20) {
