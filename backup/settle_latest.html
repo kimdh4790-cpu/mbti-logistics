@@ -22754,10 +22754,26 @@ function _startDispatchListener(uid){
 // ── 보안: F12/우클릭/개발자도구 차단 (슈퍼어드민 제외)
 (function(){
   var SA=['kimdh4790@gmail.com','soungkyekim@naver.com'];
-  function isSA(){try{var u=firebase.auth().currentUser;return u&&SA.includes(u.email);}catch(e){return false;}}
-  document.addEventListener('contextmenu',function(e){if(isSA())return;e.preventDefault();});
+  function isSA(){
+    try{
+      if(typeof firebase==='undefined')return false;
+      var auth=firebase.auth&&firebase.auth();
+      if(!auth)return false;
+      var u=auth.currentUser;
+      return u&&SA.includes(u.email);
+    }catch(e){return false;}
+  }
+  // 로그인 화면에서는 차단 안 함 (로그인 버튼 동작 보장)
+  function isLoginScreen(){
+    var ls=document.getElementById('login-screen');
+    return ls&&ls.style.display!=='none';
+  }
+  document.addEventListener('contextmenu',function(e){
+    if(isLoginScreen()||isSA())return;
+    e.preventDefault();
+  });
   document.addEventListener('keydown',function(e){
-    if(isSA())return;
+    if(isLoginScreen()||isSA())return;
     if(e.keyCode===123){e.preventDefault();return false;}
     if(e.ctrlKey&&e.shiftKey&&(e.keyCode===73||e.keyCode===74||e.keyCode===67)){e.preventDefault();return false;}
     if(e.ctrlKey&&e.keyCode===85){e.preventDefault();return false;}
