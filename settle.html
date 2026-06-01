@@ -21784,6 +21784,19 @@ function openAdminPanel(){
       btn.onclick=(function(id){return function(){switchDealer(id);mo.remove();};})(item.id);
       td.appendChild(btn);
 
+      // ★ 삭제 버튼
+      var delBtn=document.createElement('button');
+      delBtn.className='btn btn-sm';
+      delBtn.style.cssText='background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;margin-left:4px;font-size:10px';
+      delBtn.textContent='🗑️';
+      delBtn.onclick=(function(id,nm){return function(){
+        if(!confirm(nm+' 회사를 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.'))return;
+        _db.collection('companies').doc(id).delete()
+          .then(function(){toast('✅ '+nm+' 삭제 완료');mo.remove();openAdminPanel();})
+          .catch(function(e){toast('❌ '+e.message);});
+      };})(item.id, item.name||item.id);
+      td.appendChild(delBtn);
+
       // ★ 체험 연장 버튼 (만료됐거나 trial 플랜인 경우)
       if(item.plan==='trial'&&!isExpired&&item.trialEnd&&item.trialEnd>=today){
         // 아직 유효 → 날짜 표시만 (버튼 없음)
