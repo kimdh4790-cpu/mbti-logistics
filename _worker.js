@@ -42,12 +42,13 @@ function forbidden(msg = '접근이 거부되었습니다') {
 const PROJECT_ID = 'mbti-logistics';
 // ★ Pages 배포 URL (env.ASSETS 대체 - wrangler assets 이슈 우회)
 const GITHUB_RAW = 'https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main';
+const PAGES_URL = 'https://donway-settle.pages.dev';
 async function fetchAsset(path, request) {
   const filePath = path.startsWith('/') ? path : '/' + path;
   // 한글 파일명 URL 인코딩 (엠비티아이_물류관리_v9.html 등)
   const encodedPath = filePath.split('/').map(seg => seg ? encodeURIComponent(seg) : '').join('/');
   const noCache = filePath.includes('settle.html');
-  const assetUrl = GITHUB_RAW + encodedPath + (noCache ? '?t='+Date.now() : '');
+  const assetUrl = (filePath.includes('settle.html') ? PAGES_URL + '/settle.html' : GITHUB_RAW + encodedPath) + (noCache ? '?t='+Date.now() : '');
   const resp = await fetch(assetUrl, { cf: { cacheEverything: !noCache, cacheTtl: noCache ? 0 : 300 } });
   return resp;
 }
