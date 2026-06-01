@@ -19174,59 +19174,35 @@ function deleteCamp(campName){
 
 // ── FCM 토큰 조회 헬퍼 (users → drivers → members 순서)
 function _getFcmToken(did, uid, driverName){
-  var phoneNum=(uid.replace('drv_','').split('_')[0]||'');
-  var phone='010'+phoneNum;
-
-  // settle.html은 users/{_uid}에 fcmToken 저장
-  // → drivers 컬렉션에서 driverId/userId 로 Firebase Auth UID 찾고 → users doc 직접 조회
-  return _db.collection('drivers').where('dealerId','==',did).get()
-    .then(function(ds){
-      var authUid=null;
-      for(var i=0;i<ds.docs.length;i++){
-        var d=ds.docs[i].data();
-        // fcmToken이 drivers에 직접 있으면 바로 반환
-        if(d.fcmToken&&d.fcmToken.length>20){
-          if(d.userId===uid||d.driverId===uid) return d.fcmToken;
-          if(driverName&&d.name===driverName) return d.fcmToken;
-          if(phoneNum.length>=4&&d.phone&&d.phone.replace(/-/g,'')===phone) return d.fcmToken;
-        }
-        // Firebase Auth UID 수집 (fbId 또는 doc.id)
-        if(d.userId===uid||d.driverId===uid){authUid=ds.docs[i].id;break;}
-        if(driverName&&d.name===driverName){authUid=ds.docs[i].id;break;}
-        if(phoneNum.length>=4&&d.phone&&d.phone.replace(/-/g,'')===phone){authUid=ds.docs[i].id;break;}
-      }
-      // users/{authUid} 직접 조회
-      if(authUid){
-        return _db.collection('users').doc(authUid).get()
-          .then(function(u){
-            if(u.exists&&u.data().fcmToken&&u.data().fcmToken.length>20) return u.data().fcmToken;
+  // users 컬렉션에서 driverId로 직접 조회 (가장 확실)
+  return _db.collection('users').where('driverId','==',uid).limit(1).get()
+    .then(function(snap){
+      if(!snap.empty&&snap.docs[0].data().fcmToken) return snap.docs[0].data().fcmToken;
+      // users에서 phone으로 조회
+      var phoneNum=(uid.replace('drv_','').split('_')[0]||'');
+      var phone='010'+phoneNum;
+      if(phoneNum.length>=4){
+        return _db.collection('users').where('phone','==',phone).limit(1).get()
+          .then(function(ps){
+            if(!ps.empty&&ps.docs[0].data().fcmToken) return ps.docs[0].data().fcmToken;
+            // users에서 name으로 조회
+            if(driverName){
+              return _db.collection('users').where('name','==',driverName).where('dealerId','==',did).limit(1).get()
+                .then(function(ns){
+                  if(!ns.empty&&ns.docs[0].data().fcmToken) return ns.docs[0].data().fcmToken;
+                  return null;
+                });
+            }
             return null;
           });
       }
-      // members 컬렉션에서도 조회
-      return _db.collection('members').where('dealerId','==',did).get()
-        .then(function(all){
-          for(var i=0;i<all.docs.length;i++){
-            var d=all.docs[i].data();
-            if(!d.fcmToken||d.fcmToken.length<20) continue;
-            if(d.driverId===uid||d.userId===uid) return d.fcmToken;
-            if(driverName&&d.name===driverName) return d.fcmToken;
-            if(phoneNum.length>=4&&d.phone&&d.phone.replace(/-/g,'')===phone) return d.fcmToken;
-          }
-          // members doc id로 직접 조회 (uid = Firebase Auth UID)
-          return _db.collection('members').doc(uid).get()
-            .then(function(m){
-              // members에서 Auth UID로 users 조회
-              if(m.exists&&m.data().fcmToken&&m.data().fcmToken.length>20) return m.data().fcmToken;
-              // members.uid → users doc 조회
-              var mUid=m.exists?m.data().uid:null;
-              if(mUid){
-                return _db.collection('users').doc(mUid).get()
-                  .then(function(u){return (u.exists&&u.data().fcmToken&&u.data().fcmToken.length>20)?u.data().fcmToken:null;});
-              }
-              return null;
-            });
-        });
+      if(driverName){
+        return _db.collection('users').where('name','==',driverName).where('dealerId','==',did).limit(1).get()
+          .then(function(ns){
+            return (!ns.empty&&ns.docs[0].data().fcmToken)||null;
+          });
+      }
+      return null;
     });
 }
 function _sendPayslipPush(x,r,name,month,net,vatIncome,docId){
