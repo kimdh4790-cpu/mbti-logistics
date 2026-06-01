@@ -13202,12 +13202,29 @@ function _viewMyStatement(el){
     var vatAmt=vatIncome-supplyAmt;
     var net=d.net||0;
     var emp=d.emp||0;
-    md.innerHTML='<div class="mdt">'+(isTax?'🧾 세금계산서':'📄 정산명세서')+'</div>'      +'<div style="padding:16px">'      +'<div style="background:var(--bg2);border-radius:12px;padding:16px;margin-bottom:12px">'      +'<div style="font-size:16px;font-weight:800;margin-bottom:12px">'+esc(d.month||'')+(isTax?' 세금계산서':' 정산명세서')+'</div>'      +(isTax
-        ? '<div style="display:grid;gap:8px;font-size:13px">'          +'<div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">공급가액</span><span style="font-weight:700">'+supplyAmt.toLocaleString()+'원</span></div>'          +'<div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">부가세(10%)</span><span style="font-weight:700">'+vatAmt.toLocaleString()+'원</span></div>'          +'<div style="border-top:1px solid var(--border);padding-top:8px;display:flex;justify-content:space-between"><span style="font-weight:700">합계금액</span><span style="font-size:18px;font-weight:900;color:var(--primary)">'+vatIncome.toLocaleString()+'원</span></div>'          +'</div>'
-        : '<div style="display:grid;gap:8px;font-size:13px">'          +'<div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">총수익(VAT포함)</span><span style="font-weight:700">'+vatIncome.toLocaleString()+'원</span></div>'          +'<div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">공제합계</span><span style="font-weight:700;color:var(--red)">-'+emp.toLocaleString()+'원</span></div>'          +'<div style="border-top:1px solid var(--border);padding-top:8px;display:flex;justify-content:space-between"><span style="font-weight:700">실지급액</span><span style="font-size:18px;font-weight:900;color:var(--primary)">'+net.toLocaleString()+'원</span></div>'          +'</div>')      +'</div>'      +'<div style="font-size:11px;color:var(--text3);text-align:center">엠비티아이 유한회사 · 051-711-3103</div>'      +'</div>'      +'<div class="mdf"><button class="btn" onclick="this.closest('.mo').remove()">닫기</button></div>';
-    mo.appendChild(md);document.body.appendChild(mo);
-  });
-}
+    var bodyHtml;
+    if(isTax){
+      bodyHtml='<div style="display:grid;gap:8px;font-size:13px">'
+        +'<div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">공급가액</span><span style="font-weight:700">'+supplyAmt.toLocaleString()+'원</span></div>'
+        +'<div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">부가세(10%)</span><span style="font-weight:700">'+vatAmt.toLocaleString()+'원</span></div>'
+        +'<div style="border-top:1px solid var(--border);padding-top:8px;display:flex;justify-content:space-between"><span style="font-weight:700">합계금액</span><span style="font-size:18px;font-weight:900;color:var(--primary)">'+vatIncome.toLocaleString()+'원</span></div>'
+        +'</div>';
+    } else {
+      bodyHtml='<div style="display:grid;gap:8px;font-size:13px">'
+        +'<div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">총수익(VAT포함)</span><span style="font-weight:700">'+vatIncome.toLocaleString()+'원</span></div>'
+        +'<div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">공제합계</span><span style="font-weight:700;color:var(--red)">-'+emp.toLocaleString()+'원</span></div>'
+        +'<div style="border-top:1px solid var(--border);padding-top:8px;display:flex;justify-content:space-between"><span style="font-weight:700">실지급액</span><span style="font-size:18px;font-weight:900;color:var(--primary)">'+net.toLocaleString()+'원</span></div>'
+        +'</div>';
+    }
+    md.innerHTML='<div class="mdt">'+(isTax?'🧾 세금계산서':'📄 정산명세서')+'</div>'
+      +'<div style="padding:16px">'
+      +'<div style="background:var(--bg2);border-radius:12px;padding:16px;margin-bottom:12px">'
+      +'<div style="font-size:16px;font-weight:800;margin-bottom:12px">'+esc(d.month||'')+(isTax?' 세금계산서':' 정산명세서')+'</div>'
+      +bodyHtml
+      +'</div>'
+      +'<div style="font-size:11px;color:var(--text3);text-align:center">엠비티아이 유한회사 · 051-711-3103</div>'
+      +'</div>'
+      +'<div class="mdf"><button class="btn" onclick="this.closest(\'.mo\').remove()">닫기</button></div>';
 
 // ══ 메뉴 ══
 // 서비스 타입별 메뉴 정의
