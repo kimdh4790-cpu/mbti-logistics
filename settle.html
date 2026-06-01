@@ -21002,7 +21002,31 @@ async function _doDeploySettlements(ids) {
         deployedBy: (_CU && _CU.name) || 'admin'
       });
 
-      // 2. FCM 토큰 수집
+      // 2. driver_notifications 저장 — 직원 앱 내 정산 확인용
+      var notifBase = {
+        driverName: settle.name || '',
+        driverId: settle.driverId || settle.userId || '',
+        companyId: _dealerId,
+        dealerId: _dealerId,
+        month: settle.month || '',
+        label: (settle.month || '') + ' 정산명세서',
+        type: 'payslip',
+        net: settle.net || 0,
+        vatIncome: settle.vatIncome || settle.income || 0,
+        emp: settle.emp || 0,
+        work: settle.work || 0,
+        settleId: sid,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        readAt: null
+      };
+      await _db.collection('driver_notifications').add(notifBase);
+      // 세금계산서도 별도 저장
+      await _db.collection('driver_notifications').add(Object.assign({}, notifBase, {
+        label: (settle.month || '') + ' 세금계산서',
+        type: 'tax'
+      }));
+
+      // 3. FCM 토큰 수집
       var tk = tokenMap[settle.name] || tokenMap[settle.driverId] || '';
       if (tk) fcmTokens.push(tk);
 
