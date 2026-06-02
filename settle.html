@@ -21569,11 +21569,15 @@ async function _doDeploySettlements(ids) {
       });
 
       // 3. 해당 기사 FCM 개별 발송
-      // driverId에서 phone prefix 추출해서 매핑 시도
-      // name(driver필드) 우선 → driverId → userId → phone prefix 순
-      var _driverName = settle.name || settle.driver || settle.driverName || '';
+      // settle.driver(이름) → settle.userId → driverId → phone 순
+      var _driverName = settle.driver || settle.name || settle.driverName || settle.userId || '';
       var _phonePrefix = _tDrvId.replace('drv_','').split('_')[0]||'';
-      var _tk = tokenMap[_driverName] || tokenMap[_tDrvId] || tokenMap[settle.driver||''] || tokenMap['drv_'+_phonePrefix] || '';
+      var _tk = tokenMap[_driverName]
+        || tokenMap[settle.userId||'']
+        || tokenMap[_tDrvId]
+        || tokenMap['drv_'+_phonePrefix]
+        || '';
+      console.log('[FCM]', _driverName, '_tDrvId:', _tDrvId, 'token:', _tk?'✅':'❌', 'tokenMapKeys:', Object.keys(tokenMap).slice(0,5));
       if (_tk) {
         try {
           var _fr = await fetch('/fcm/notify-drivers', {
