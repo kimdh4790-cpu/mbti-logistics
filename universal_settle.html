@@ -831,8 +831,10 @@ function _processCoupangSheet(wb, rawSheetName, lossSheetName){
   _settleState.results     = results;
   _settleState.step        = 3;
   window._pendingWb        = null;
+  // 인센 초기값 0으로 설정
+  results.forEach(function(r){ r.incen = 0; });
   _renderSettle();
-  toast('✅ 쿠팡 정산 완료 — '+results.length+'명');
+  toast('✅ 쿠팡 계산 완료 — 인센 설정 후 확정하세요');
 }
 
 function _processSheet(wb, sheetName){
@@ -1326,46 +1328,92 @@ function _renderStep3Multi(){
 }
 
 
-// ── 쿠팡 전용 결과 화면
+// ── 쿠팡 인센 옵션
+var INCEN_OPTIONS = [0, 10, 15, 25];
+
+// ── 인센 설정 함수
+function _setIncen(idx, val){
+  _settleState.results[idx].incen = parseInt(val,10)||0;
+  // 실지급 재계산
+  var r = _settleState.results[idx];
+  r.net = r.amount + r.fresh - r.lossAmt + (r.count * r.incen);
+  // 해당 행만 업데이트
+  var rows = document.querySelectorAll('.coupang-row');
+  if(rows[idx]){
+    var netCell = rows[idx].querySelector('.net-cell');
+    if(netCell) netCell.textContent = _fmt(r.net)+'원';
+  }
+  // 합계 업데이트
+  _updateCoupangTotals();
+}
+
+function _updateCoupangTotals(){
+  var res = _settleState.results;
+  var totalIncenAmt = res.reduce(function(s,r){return s+(r.count*(r.incen||0));},0);
+  var totalNet      = res.reduce(function(s,r){return s+r.net;},0);
+  var el1 = document.getElementById('total-incen-amt');
+  var el2 = document.getElementById('total-net-final');
+  if(el1) el1.textContent = _fmt(totalIncenAmt)+'원';
+  if(el2) el2.textContent = _fmt(totalNet)+'원';
+}
+
+// ── 쿠팡 전용 결과 화면 (인센 설정 포함)
 function _renderCoupangResult(){
   var res = _settleState.results;
-  var totalDel   = res.reduce(function(s,r){return s+r.count;},0);
-  var totalRet   = res.reduce(function(s,r){return s+(r.retCnt||0);},0);
-  var totalBase  = res.reduce(function(s,r){return s+(r.baseAmt||0);},0);
-  var totalFresh = res.reduce(function(s,r){return s+(r.fresh||0);},0);
-  var totalLoss  = res.reduce(function(s,r){return s+(r.lossAmt||0);},0);
-  var totalNet   = res.reduce(function(s,r){return s+r.net;},0);
+  var totalDel      = res.reduce(function(s,r){return s+r.count;},0);
+  var totalRet      = res.reduce(function(s,r){return s+(r.retCnt||0);},0);
+  var totalFresh    = res.reduce(function(s,r){return s+(r.fresh||0);},0);
+  var totalLoss     = res.reduce(function(s,r){return s+(r.lossAmt||0);},0);
+  var totalIncenAmt = res.reduce(function(s,r){return s+(r.count*(r.incen||0));},0);
+  var totalNet      = res.reduce(function(s,r){return s+r.net;},0);
 
   var html = '<div class="result-summary">'
     +'<div class="stat-card"><div class="stat-label">기사 수</div><div class="stat-val blue">'+res.length+'명</div></div>'
     +'<div class="stat-card"><div class="stat-label">배송건수</div><div class="stat-val">'+_fmt(totalDel)+'건</div></div>'
-    +'<div class="stat-card"><div class="stat-label">반품건수</div><div class="stat-val">'+_fmt(totalRet)+'건</div></div>'
     +'<div class="stat-card"><div class="stat-label">프레시백</div><div class="stat-val">'+_fmt(totalFresh)+'원</div></div>'
-    +'<div class="stat-card"><div class="stat-label">분실파손차감</div><div class="stat-val" style="color:var(--red)">-'+_fmt(totalLoss)+'원</div></div>'
-    +'<div class="stat-card"><div class="stat-label">실지급 합계</div><div class="stat-val green">'+_fmt(totalNet)+'원</div></div>'
+    +'<div class="stat-card"><div class="stat-label">분실파손</div><div class="stat-val" style="color:var(--red)">-'+_fmt(totalLoss)+'원</div></div>'
+    +'<div class="stat-card"><div class="stat-label">인센티브 합계</div><div class="stat-val blue" id="total-incen-amt">'+_fmt(totalIncenAmt)+'원</div></div>'
+    +'<div class="stat-card"><div class="stat-label">최종 실지급 합계</div><div class="stat-val green" id="total-net-final">'+_fmt(totalNet)+'원</div></div>'
     +'</div>'
 
-    +'<div class="card"><div class="card-title">📋 쿠팡 기사별 정산</div>'
+  // 인센 안내
+  +'<div style="background:rgba(79,126,255,.07);border:1px solid var(--acc);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;">'
+    +'<strong>⭐ 인센티브 설정</strong> — 기사별로 가중요인 단가(원/건)를 선택하세요.'
+    +'<span style="color:var(--text2);margin-left:8px">0원=해당없음 · 10원=1캠프 · 15원=1캠프(고율) · 25원=2캠프이상</span>'
+    +'</div>'
+
+  +'<div class="card"><div class="card-title">📋 쿠팡 기사별 정산 <span style="font-size:11px;font-weight:400;color:var(--text2)">인센 설정 후 엑셀 다운로드</span></div>'
     +'<div class="tbl-wrap"><table><thead><tr>'
-    +'<th>이름</th><th>ID</th><th>캠프</th>'
+    +'<th>이름</th><th>캠프</th>'
     +'<th class="num">배송건</th><th class="num">반품건</th>'
-    +'<th class="num">기본금액</th><th class="num">프레시백</th>'
+    +'<th class="num">총금액</th><th class="num">프레시백</th>'
     +'<th class="num" style="color:var(--red)">분실파손</th>'
-    +'<th class="num">총금액</th><th class="num" style="color:var(--green)">실지급액</th>'
+    +'<th style="min-width:130px">인센(원/건)</th>'
+    +'<th class="num">인센합계</th>'
+    +'<th class="num" style="color:var(--green)">실지급액</th>'
     +'</tr></thead><tbody>';
 
-  res.forEach(function(r){
-    html += '<tr>'
-      +'<td><strong>'+(r.name||r.id)+'</strong></td>'
-      +'<td style="font-size:10px;color:var(--text3)">'+r.id+'</td>'
+  res.forEach(function(r, idx){
+    var incenAmt = r.count * (r.incen||0);
+    var optHtml = INCEN_OPTIONS.map(function(v){
+      return '<option value="'+v+'"'+(r.incen===v?' selected':'')+'>'+v+'원</option>';
+    }).join('');
+    html += '<tr class="coupang-row">'
+      +'<td><strong>'+(r.name||r.id)+'</strong>'
+        +(r.name?'<div style="font-size:9px;color:var(--text3)">'+r.id+'</div>':'')+'</td>'
       +'<td>'+r.dept+'</td>'
       +'<td class="num">'+_fmt(r.count)+'</td>'
       +'<td class="num">'+(r.retCnt||0)+'</td>'
-      +'<td class="num">'+_fmt(r.baseAmt||0)+'</td>'
-      +'<td class="num" style="color:var(--blue)">'+_fmt(r.fresh||0)+'</td>'
-      +'<td class="num" style="color:var(--red)">'+(r.lossAmt ? '-'+_fmt(r.lossAmt) : '-')+'</td>'
       +'<td class="num">'+_fmt(r.amount||0)+'</td>'
-      +'<td class="num"><strong style="color:var(--green)">'+_fmt(r.net)+'</strong></td>'
+      +'<td class="num" style="color:var(--blue)">+'+_fmt(r.fresh||0)+'</td>'
+      +'<td class="num" style="color:var(--red)">'+(r.lossAmt?'-'+_fmt(r.lossAmt):'-')+'</td>'
+      +'<td>'
+        +'<select onchange="_setIncen('+idx+',this.value)" style="width:100%;border-radius:6px;padding:3px 6px;background:var(--bg3);color:var(--text1);border:1px solid var(--border2);font-size:12px">'
+        +optHtml
+        +'</select>'
+      +'</td>'
+      +'<td class="num" style="color:var(--acc)">'+_fmt(incenAmt)+'</td>'
+      +'<td class="num net-cell"><strong style="color:var(--green)">'+_fmt(r.net)+'</strong></td>'
       +'</tr>';
   });
 
@@ -1380,10 +1428,11 @@ function _renderCoupangResult(){
 
 function _downloadCoupangExcel(){
   var res = _settleState.results;
-  var rows = [['이름','ID','캠프','배송건수','반품건수','기본금액','프레시백','분실파손차감','총금액','실지급액']];
+  var rows = [['이름','ID','캠프','배송건수','반품건수','총금액','프레시백','분실파손차감','인센(원/건)','인센합계','실지급액']];
   res.forEach(function(r){
+    var incenAmt = r.count * (r.incen||0);
     rows.push([r.name||r.id, r.id, r.dept, r.count, r.retCnt||0,
-      r.baseAmt||0, r.fresh||0, r.lossAmt||0, r.amount||0, r.net]);
+      r.amount||0, r.fresh||0, r.lossAmt||0, r.incen||0, incenAmt, r.net]);
   });
   var ws = XLSX.utils.aoa_to_sheet(rows);
   var wb = XLSX.utils.book_new();
