@@ -24038,19 +24038,10 @@ window.addEventListener('load',function(){
     var _isProd = _host.includes('donway') || _host.includes('cloudflare') || _host.includes('workers.dev');
     if(_isProd){
       // 슬러그 모드면 슬러그 경로 SW 등록 (PWA 설치 가능하도록 scope 맞춤)
-      var _swPath = '/firebase-messaging-sw.js';
-      var _swOpts = {scope:'/'};
-      if(window._COMPANY_SLUG){
-        _swPath = '/'+window._COMPANY_SLUG+'/sw.js';
-        _swOpts = {scope:'/'+window._COMPANY_SLUG+'/'};
-      }
-      navigator.serviceWorker.register(_swPath, _swOpts)
+      // FCM 백그라운드 알림은 항상 루트 SW 사용 (슬러그 무관)
+      navigator.serviceWorker.register('/firebase-messaging-sw.js', {scope:'/'})
         .then(function(reg){ })
-        .catch(function(e){
-          // 슬러그 SW 실패 시 기본 SW로 fallback
-          navigator.serviceWorker.register('/firebase-messaging-sw.js')
-            .catch(function(){});
-        });
+        .catch(function(e){ });
     }
   }
   initFirebase(); // Firebase 즉시 초기화
