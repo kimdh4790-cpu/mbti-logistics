@@ -4917,11 +4917,11 @@ function _importRosterExcel(input){
           if(!uid&&!nm)return Promise.resolve();
 
           // ★ 다중 키 우선순위: coupangId > 이름+캠프 복합 > 이름 단독
+          var campShort=String(drv.camp||'').replace('캠프','').trim();
           var campKey=nmNorm+'@'+campShort;
           var docId=existMap[uidLow]
             ||existMap['nc:'+campKey]
             ||(nmNorm?existMap['n:'+nmNorm]:null);
-          var campShort=String(drv.camp||'').replace('캠프','').trim();
           var wv=drv.wave||((cfg2[campShort]||cfg2[drv.camp]||{}).wave||'');
 
           if(docId){
