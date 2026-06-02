@@ -9857,34 +9857,61 @@ function _txsBulkShareExec(){
 
 function _txsBulkExcel(targets, ym){
   if(typeof XLSX==='undefined'){toast('❌ 엑셀 라이브러리 없음');return;}
+  var compName=(_CU&&(_CU.companyName||_CU.name))||'엠비티아이 유한회사';
+  // 타이틀 행
   var rows=[
-    ['구분','기사명','공급대가(①)','공급가액(②)','필요경비34.6%(③)','월보수액(④)','고용보험(⑤)','산재보험(⑥)','급여지급액(⑦)','사업자번호','정산월']
+    ['[세금계산서] 특수고용직 고용·산재 계산표'],
+    ['('+compName+')','','','','','쿠팡세금계산서','','','','','','1. 고용 0.8%(1.6%), 산재 0.88%'],
+    ['구분','상호및캠프명','성명','입사일','주민번호','사업자 번호',
+     '①공급대가','②공급가액','부가세','③필요경비(34.6%)','④월보수액(②-③)',
+     '⑤고용보험(④×0.8%)','⑥산재보험(④×0.88%)','⑦급여지급액(①-⑤-⑥)']
   ];
+
+  // drivers 캐시에서 기사 정보 매핑
+  var drvMap={};
+  (_drvCache||[]).forEach(function(d){
+    if(d.userId)drvMap[d.userId]=d;
+    if(d.name)drvMap[d.name]=d;
+  });
+
   targets.forEach(function(s,i){
     var cn=calcNet(s);
-    var supply=cn.supplyAmt||s.supplyAmt||0;
-    var totalAmt=s.totalAmt||cn.income||0;
+    var uid=s.userId||s.driver||'';
+    var drvInfo=drvMap[uid]||drvMap[s.driver||'']||{};
+    var supply=Math.round((s.totalAmt||cn.totalAmt||cn.income||0)/1.1);
+    var totalAmt=s.totalAmt||cn.totalAmt||cn.income||0;
+    var vat=totalAmt-supply;
     var expense=Math.round(supply*0.346);
     var monthly=supply-expense;
     var emp=cn.emp||s.emp||0;
     var work=cn.work||s.work||0;
     var net=totalAmt-emp-work;
+    // 입사일 (엑셀 날짜 시리얼 또는 문자)
+    var joinDate=drvInfo.joinDate||s.joinDate||'';
     rows.push([
       i+1,
-      s.driver||s.userId||'',
-      totalAmt, supply, expense, monthly,
-      emp, work, net,
-      s.bizNum||'', ym
+      drvInfo.companyName||s.camp||'',   // 상호및캠프명
+      s.driver||drvInfo.name||uid,        // 성명
+      joinDate,                           // 입사일
+      drvInfo.ssn||s.ssn||'',            // 주민번호
+      s.bizNum||drvInfo.bizNum||'',       // 사업자번호
+      totalAmt, supply, vat, expense, monthly,
+      emp, work, net
     ]);
   });
+
   // 합계
-  var tot=function(col){return rows.slice(1).reduce(function(s,r){return s+(r[col]||0);},0);};
-  rows.push(['합계','',tot(2),tot(3),tot(4),tot(5),tot(6),tot(7),tot(8),'','']);
+  var tot=function(col){return rows.slice(3).reduce(function(s,r){return s+(Number(r[col])||0);},0);};
+  rows.push(['','합계','','','','',tot(6),tot(7),tot(8),tot(9),tot(10),tot(11),tot(12),tot(13)]);
 
   var ws=XLSX.utils.aoa_to_sheet(rows);
+  // 컬럼 너비 설정
+  ws['!cols']=[{wch:5},{wch:18},{wch:10},{wch:12},{wch:16},{wch:14},
+    {wch:13},{wch:13},{wch:12},{wch:14},{wch:14},{wch:12},{wch:12},{wch:14}];
   var wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,ws,ym+' 정산');
-  XLSX.writeFile(wb,'엠비티아이_정산_'+ym+'.xlsx');
+  XLSX.utils.book_append_sheet(wb,ws,'특고인 세금계산서');
+  XLSX.writeFile(wb,'엠비티아이_고용_산재_계산표_'+ym+'.xlsx');
+  toast('✅ 고용·산재 계산표 다운로드 완료');
 }
 
 // ── 세무사 페이지 엑셀 빠른 다운로드
