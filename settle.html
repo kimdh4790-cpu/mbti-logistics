@@ -16516,7 +16516,7 @@ function _saveSECurrent(){
       if(s2.on&&s2.rate>0)finc+=(rd.cnt||0)*s2.rate;
     });
   }
-  var taxBase=newDamt+newRamt+fresh+finc+nocont+etcPlus;
+  var taxBase=newDamt+newRamt+fresh+finc+nocont+etcPlus+(+(cached&&cached.etcPlusTL)||0);  // ★ 팀장수수료 포함
   var supplyAmt=Math.round(taxBase/1.1);
   var monthlyWage=Math.round(supplyAmt*0.654);
   var empIns=monthlyWage>=800000?Math.floor(monthlyWage*0.008/10)*10:0;
