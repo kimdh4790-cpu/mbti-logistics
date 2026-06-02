@@ -10204,7 +10204,10 @@ window._txsDeleteDoc=function(docId){
     var d=snap.data();
     var del=_db.collection('tax_docs').doc(docId).delete();
     if(d.filePath){
-      firebase.storage().ref(d.filePath).delete().catch(function(){});
+      try{
+        var _st=typeof firebase!=='undefined'&&firebase.storage?firebase.storage():null;
+        if(_st)_st.ref(d.filePath).delete().catch(function(){});
+      }catch(e){}
     }
     return del;
   }).then(function(){
