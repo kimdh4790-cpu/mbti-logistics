@@ -16107,6 +16107,12 @@ function updSECalc(){
       +'<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-top:1px solid var(--border);margin-top:4px;font-weight:700"><span>공제 합계</span><span style="color:var(--red)">-₩'+fmt(deduct)+'</span></div>'
       +'</div>';
   }
+  // 자동저장 디바운스
+  _debounce('se-autosave',function(){
+    if(window._currentSEData&&(window._currentSEData.id||window._currentSEData.fbId)){
+      _saveSECurrent();
+    }
+  },2000);
 }
 function gv(id){var el=document.getElementById(id);return el?+el.value||0:0;}
 // ★ 알림 허용 요청 (기사 웰컴 모달용)
@@ -16124,6 +16130,27 @@ function _reqNotifPerm(){
     }
   });
 }
+
+// ══ 자동저장 유틸 ══
+var _autoSaveTimers={};
+function _debounce(key, fn, delay){
+  clearTimeout(_autoSaveTimers[key]);
+  _autoSaveTimers[key]=setTimeout(fn, delay||2000);
+}
+function _showAutoSaved(label){
+  var el=document.getElementById('autosave-status');
+  if(!el){
+    el=document.createElement('div');
+    el.id='autosave-status';
+    el.style.cssText='position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:#059669;color:#fff;padding:6px 16px;border-radius:100px;font-size:12px;font-weight:700;z-index:9999;transition:opacity .4s;pointer-events:none';
+    document.body.appendChild(el);
+  }
+  el.textContent='✅ '+(label||'자동저장됨');
+  el.style.opacity='1';
+  clearTimeout(el._hideTimer);
+  el._hideTimer=setTimeout(function(){el.style.opacity='0';},2000);
+}
+
 function _saveSECurrent(){
     var id=(document.getElementById('se-id')||{value:''}).value.trim()||'';
   var driver=(document.getElementById('se-driver')||{value:''}).value.trim();
@@ -16195,7 +16222,7 @@ function _saveSECurrent(){
     :_db.collection('settlements').add(Object.assign(payload,{createdAt:new Date().toISOString()}));
   p.then(function(docRef){
     var savedId=id||(docRef&&docRef.id)||'';
-    toast('✅ 저장완료');
+    _showAutoSaved('정산 자동저장됨');
     // ── 세무사 자동 연동 (저장 시 항상 실행)
     if(typeof _seTaxSync==='function') _seTaxSync(savedId,payload);
     // ★ bizNum이 있으면 driver 프로필에도 사업자번호 연동 (이중검증 데이터 축적)
@@ -17512,6 +17539,12 @@ function pagePrices(tabMode){
         });
       });
       _renderPrices(_rpDiv);
+      // 라우트 단가 자동저장 - input 이벤트 위임
+      _rpDiv.addEventListener('input',function(e){
+        if(e.target&&e.target.id&&e.target.id.startsWith('rp-')){
+          _debounce('rp-autosave',function(){saveRprice();},1500);
+        }
+      });
       // ★ 팀장 수수료 섹션
       _loadTeamLeaderPrices(function(){
         _renderTeamLeaderSection(_rpDiv);
@@ -17950,7 +17983,7 @@ function saveNocontPrice(){
   if(_db&&_CU){
     var obj=Object.assign({},RPRICE);
     _db.collection('settings').doc(_CU.dealerId+'_routePrices').set(obj,{merge:true})
-      .then(function(){toast('✅ 미계약건 단가 저장 완료');})
+      .then(function(){_showAutoSaved('미계약 단가 저장됨');})
       .catch(function(e){toast('❌ '+e.message);});
   }
 }
@@ -20427,7 +20460,7 @@ function saveRprice(){
     _db.collection('settings').doc((_CU&&_CU.dealerId?_CU.dealerId:'shared')+'_routePrices').set(newPrices,{merge:false}),
     _db.collection('settings').doc((_CU&&_CU.dealerId?_CU.dealerId:'shared')+'_unitPrices').set({routePrices:newPrices},{merge:true})
   ]).then(function(){
-    toast('✅ 라우트 단가 저장 완료 ('+Object.keys(newPrices).length+'개 라우트)');
+    _showAutoSaved('라우트 단가 저장됨');
     var c=document.getElementById('content');_renderPrices(c);
     setTimeout(function(){if(_rpCampActive)showRpCampTab(_rpCampActive);},30);
   }).catch(function(e){toast('❌ '+e.message);});
