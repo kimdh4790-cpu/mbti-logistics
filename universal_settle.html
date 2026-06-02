@@ -1371,6 +1371,102 @@ function _renderStep3Multi(){
 
 
 
+
+// ── AI 파서 (Claude) - 불규칙 형식 텍스트/이미지 처리
+async function _aiParseRateFile(input, type, callback){
+  var ak = window.__AK;
+  if(!ak){ callback(null); return; }
+
+  var isImage = (type === 'image');
+
+  var systemPrompt = '당신은 물류 정산 데이터 파서입니다. 입력된 데이터에서 정보를 추출해 JSON만 반환하세요. 다른 텍스트 절대 금지.';
+
+  var userPrompt;
+  var messageContent;
+
+  if(isImage){
+    userPrompt = '이 이미지에서 라우트번호와 단가(원/건) 또는 팀장수수료 정보를 추출하세요.\n\n'
+      + '라우트단가표라면: {"type":"rate","data":{"612A":982,"612B":860,...}}\n'
+      + '팀장수수료라면: {"type":"teamfee","data":{"vmffkdl321@df":{"608B":60,"608C":60,...},...}}\n'
+      + '판단 불가시: {"type":"unknown","data":{}}';
+    messageContent = [
+      {type:'image', source:{type:'base64', media_type:input.mediaType, data:input.data}},
+      {type:'text', text:userPrompt}
+    ];
+  } else {
+    userPrompt = '다음 텍스트에서 라우트단가 또는 팀장수수료 정보를 추출하세요.\n\n'
+      + '【라우트단가 예시】\n608\nB 920\nC 920 → 608B=920, 608C=920\n\n'
+      + '【팀장수수료 예시】\n하현호(vmffkdl321)\n608\nB60 C60 → vmffkdl321@df의 608B=60, 608C=60\n\n'
+      + '라우트단가라면: {"type":"rate","data":{"612A":982,"612B":860,...}}\n'
+      + '팀장수수료라면: {"type":"teamfee","data":{"vmffkdl321@df":{"608B":60,...},...}}\n'
+      + 'ID에 @df 없으면 자동 추가.\n\n텍스트:\n' + input;
+    messageContent = [{type:'text', text:userPrompt}];
+  }
+
+  try{
+    var res = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key': ak,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages:[{role:'user', content:messageContent}]
+      })
+    });
+    var data = await res.json();
+    var text = (data.content&&data.content[0]&&data.content[0].text)||'';
+    var clean = text.replace(/```json|```/g,'').trim();
+    var parsed = JSON.parse(clean);
+    if(parsed.type && parsed.data) callback(parsed);
+    else callback(null);
+  }catch(e){
+    console.warn('AI 파싱 실패:', e);
+    callback(null);
+  }
+}
+
+// ── 이미지 파일 처리 (Vision)
+function _handleImageFile(file, reader){
+  var mediaType = file.type || 'image/jpeg';
+  var b64 = btoa(String.fromCharCode.apply(null, new Uint8Array(reader.result)));
+  toast('🤖 AI Vision으로 이미지 분석 중...');
+  _aiParseRateFile({data:b64, mediaType:mediaType}, 'image', function(parsed){
+    if(!parsed || Object.keys(parsed.data).length === 0){
+      toast('❌ 이미지에서 데이터를 찾지 못했습니다');
+      return;
+    }
+    _applyParsedRateData(parsed);
+  });
+}
+
+// ── 파싱 결과 적용
+function _applyParsedRateData(parsed){
+  var rtc = _settleState.routeToCamp || {};
+  if(parsed.type === 'teamfee'){
+    _settleState.coupangTeamFee = parsed.data;
+    var cnt = Object.keys(parsed.data).length;
+    var routeCount = Object.values(parsed.data).reduce(function(s,r){return s+Object.keys(r).length;},0);
+    toast('✅ 팀장수수료 로드 — '+cnt+'명 ('+routeCount+'개 라우트)');
+    _recalcCoupangNet();
+  } else {
+    _settleState.coupangRateTable = parsed.data;
+    var campSum = {};
+    Object.keys(parsed.data).forEach(function(route){
+      var c = rtc[route]||'미확인';
+      campSum[c] = (campSum[c]||0)+1;
+    });
+    var campMsg = Object.keys(campSum).map(function(c){return c+'('+campSum[c]+')';}).join(' · ');
+    toast('✅ 단가표 로드 — '+Object.keys(parsed.data).length+'개 라우트 | '+campMsg);
+  }
+  _renderSettle();
+}
+
 // ── 라우트/팀장 파일 파서
 // 지원 양식:
 //  [1] 고정.xlsx  : A열=캠프명또는라우트, C열=단가 (캠프명 행은 단가없음)
@@ -1465,15 +1561,21 @@ function _parseRateExcel(wb){
   return {type:'rate', data:rateMap};
 }
 
-// ── 파일 업로드 처리
+// ── 파일 업로드 처리 (텍스트/엑셀/이미지 + AI 폴백)
 function _loadRateTable(inp){
   var file = inp.files[0];
   if(!file){ return; }
   inp.value = '';
   var ext = file.name.split('.').pop().toLowerCase();
+  var isImage = ['jpg','jpeg','png','gif','webp','bmp'].indexOf(ext) >= 0;
   var reader = new FileReader();
 
   reader.onload = function(e){
+    // 이미지 → AI Vision
+    if(isImage){
+      _handleImageFile(file, reader);
+      return;
+    }
     try{
       var parsed;
       if(ext === 'txt' || ext === 'csv'){
@@ -1483,42 +1585,50 @@ function _loadRateTable(inp){
         parsed = _parseRateExcel(wb);
       }
 
-      if(!parsed || Object.keys(parsed.data).length === 0){
-        toast('⚠️ 인식 실패 — 양식 확인하세요');
+      // 파싱 성공 시 바로 적용
+      if(parsed && Object.keys(parsed.data).length > 0){
+        _applyParsedRateData(parsed);
         return;
       }
 
-      var rtc = _settleState.routeToCamp || {};
+      // 파싱 실패 → AI로 폴백
+      toast('🤖 AI로 재분석 중...');
+      var textContent = ext === 'txt' || ext === 'csv'
+        ? e.target.result
+        : null;
 
-      if(parsed.type === 'teamfee'){
-        // 팀장수수료 파일
-        _settleState.coupangTeamFee = parsed.data;
-        var names = Object.keys(parsed.data).map(function(id){
-          return id.replace('@df','');
-        }).join(', ');
-        var routeCount = Object.values(parsed.data).reduce(function(s,r){return s+Object.keys(r).length;},0);
-        toast('✅ 팀장수수료 로드 — '+Object.keys(parsed.data).length+'명 ('+routeCount+'개 라우트)');
-        // 팀장수수료로 실지급 재계산
-        _recalcCoupangNet();
-      } else {
-        // 라우트단가표
-        _settleState.coupangRateTable = parsed.data;
-        var campSum = {};
-        Object.keys(parsed.data).forEach(function(route){
-          var c = rtc[route] || '미확인';
-          campSum[c] = (campSum[c]||0) + 1;
+      if(textContent){
+        _aiParseRateFile(textContent, 'text', function(aiParsed){
+          if(aiParsed && Object.keys(aiParsed.data).length > 0){
+            _applyParsedRateData(aiParsed);
+          } else {
+            toast('❌ 인식 실패 — 파일 형식을 확인하세요');
+          }
         });
-        var campMsg = Object.keys(campSum).map(function(c){return c+'('+campSum[c]+')';}).join(' · ');
-        toast('✅ 단가표 로드 — '+Object.keys(parsed.data).length+'개 라우트 | '+campMsg);
+      } else {
+        toast('⚠️ 인식 실패 — 지원 형식: txt, csv, xlsx, jpg, png');
       }
-      _renderSettle();
 
     }catch(err){
-      toast('❌ 파일 읽기 실패: '+err.message);
+      // 에러 시도 AI 폴백
+      if(ext === 'txt' || ext === 'csv'){
+        toast('🤖 AI로 재분석 중...');
+        _aiParseRateFile(e.target.result, 'text', function(aiParsed){
+          if(aiParsed && Object.keys(aiParsed.data).length > 0){
+            _applyParsedRateData(aiParsed);
+          } else {
+            toast('❌ 파일 읽기 실패: '+err.message);
+          }
+        });
+      } else {
+        toast('❌ 파일 읽기 실패: '+err.message);
+      }
     }
   };
 
-  if(ext === 'txt' || ext === 'csv'){
+  if(isImage){
+    reader.readAsArrayBuffer(file);
+  } else if(ext === 'txt' || ext === 'csv'){
     reader.readAsText(file, 'utf-8');
   } else {
     reader.readAsArrayBuffer(file);
@@ -1648,19 +1758,20 @@ function _renderCoupangResult(){
     +'<div style="display:flex;gap:6px;margin-left:auto">'
     +'<label style="cursor:pointer;background:var(--acc);color:#fff;border-radius:6px;padding:4px 12px;font-size:11px;font-weight:600">'
     +'📊 단가표 업로드'
-    +'<input type="file" accept=".xlsx,.xls,.txt,.csv" style="display:none" onchange="_loadRateTable(this)">'
+    +'<input type="file" accept=".xlsx,.xls,.txt,.csv,.jpg,.jpeg,.png" style="display:none" onchange="_loadRateTable(this)">'
     +'</label>'
     +'<label style="cursor:pointer;background:var(--green);color:#fff;border-radius:6px;padding:4px 12px;font-size:11px;font-weight:600">'
     +'👑 팀장수수료 업로드'
-    +'<input type="file" accept=".txt,.csv" style="display:none" onchange="_loadRateTable(this)">'
+    +'<input type="file" accept=".txt,.csv,.jpg,.jpeg,.png" style="display:none" onchange="_loadRateTable(this)">'
     +'</label>'
     +'</div>'
     +'</div>'
     +'<div style="color:var(--text2);font-size:11px;line-height:1.6">'
-    +'업로드 가능 형식: <strong>.xlsx</strong> 또는 <strong>.txt/.csv</strong><br>'
-    +'• 엑셀: A열=라우트번호, B열=단가(원) — 헤더 1행 포함<br>'
-    +'• 텍스트: 한 줄에 <code>라우트번호,단가</code> 형식 (예: <code>612C,982</code>)<br>'
-    +'• 파일명 무관 — 형식만 맞으면 자동 인식'
+    +'업로드 가능 형식: <strong>.xlsx</strong> · <strong>.txt/.csv</strong> · <strong>.jpg/.png</strong> (사진)<br>'
+    +'• 엑셀: A열=라우트번호, B열=단가 — 또는 캠프그룹+라우트 형식<br>'
+    +'• 텍스트: <code>608\nB 920\nC 920</code> 형식 또는 <code>이름(ID)\n608\nB60</code> 팀장 형식<br>'
+    +'• 이미지/사진: AI Vision이 자동 인식 🤖<br>'
+    +'• 형식 불규칙해도 AI가 자동 파싱 — 파일명 무관'
     +'</div>'
     +'</div>'
 
