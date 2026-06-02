@@ -14374,7 +14374,7 @@ function _settleRow(x){
   }
   var r=calcNet(x);
   var net=r.net||0;
-  var vatIncome=r.totalAmt||0;  // ★ 기사 세금계산서 합계 (RPRICE 기반)
+  var vatIncome=r.totalAmt||r.income||x.totalAmt||x.vatIncome||x.income||0;  // ★ 기사 세금계산서 합계 (RPRICE 기반)
   var campCC=_getSettleCamp(x)||'기타';
   var col=_campColor(campCC)||'var(--purple)';
   var sent=x.taxSent;
@@ -19360,41 +19360,126 @@ function _uploadImgToStorage(base64Data, path){
   });
 }
 
+
+// ── 명세서 캡처용 HTML 생성 (관리자 화면과 동일한 레이아웃)
+function _buildPayslipCaptureHTML(x, r, name, month, net, vatIncome){
+  var compName=(_CU&&_CU.companyName)||'엠비티아이 유한회사';
+  var supply=Math.round(vatIncome/1.1);
+  var vat=vatIncome-supply;
+  var emp=(r.emp||0)+(r.work||0);
+  var routes=x.routeDetails||[];
+
+  // 라우트별 실적 rows
+  var routeRows='';
+  var totalDcnt=0,totalRcnt=0,totalAmt=0;
+  routes.forEach(function(rd){
+    var price=rd.unitPrice||RPRICE[rd.route]||0;
+    var dAmt=(rd.cnt||0)*price;
+    var rAmt=(rd.ret||0)*price;
+    totalDcnt+=(rd.cnt||0);totalRcnt+=(rd.ret||0);totalAmt+=dAmt+rAmt;
+    routeRows+='<tr><td style="padding:5px 8px;border-bottom:1px solid #eee;font-weight:600;color:#185FA5">'+rd.route+'</td>'
+      +'<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right">'+(rd.cnt||0)+'</td>'
+      +'<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right">'+(rd.ret||0)+'</td>'
+      +'<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right">'+price.toLocaleString()+'</td>'
+      +'<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;font-weight:700">₩'+(dAmt+rAmt).toLocaleString()+'</td>'
+      +'</tr>';
+  });
+
+  // 공제 항목
+  var deductRows='';
+  if(r.emp>0) deductRows+='<tr><td style="padding:4px 8px;font-size:11px">고용보험(0.8%,80만↑)</td><td style="padding:4px 8px;text-align:right;color:#dc2626;font-size:11px">-₩'+r.emp.toLocaleString()+'</td></tr>';
+  if(r.work>0) deductRows+='<tr><td style="padding:4px 8px;font-size:11px">산재보험(0.88%)</td><td style="padding:4px 8px;text-align:right;color:#dc2626;font-size:11px">-₩'+r.work.toLocaleString()+'</td></tr>';
+  if(r.etcMinus>0) deductRows+='<tr><td style="padding:4px 8px;font-size:11px">기타공제</td><td style="padding:4px 8px;text-align:right;color:#dc2626;font-size:11px">-₩'+r.etcMinus.toLocaleString()+'</td></tr>';
+
+  // 추가 항목
+  var addRows='';
+  if(r.fresh>0) addRows+='<tr><td style="padding:4px 8px;font-size:11px">③ 프레시백 회수금액</td><td style="padding:4px 8px;text-align:right;color:#059669;font-size:11px">+₩'+r.fresh.toLocaleString()+'</td></tr>';
+  if(r.finc>0) addRows+='<tr><td style="padding:4px 8px;font-size:11px">④ 프레시백 인센티브</td><td style="padding:4px 8px;text-align:right;color:#059669;font-size:11px">+₩'+r.finc.toLocaleString()+'</td></tr>';
+  if(r.etcPlus>0) addRows+='<tr><td style="padding:4px 8px;font-size:11px">⑦ 기타(+)</td><td style="padding:4px 8px;text-align:right;color:#059669;font-size:11px">+₩'+r.etcPlus.toLocaleString()+'</td></tr>';
+
+  return '<div style="background:#fff;width:600px;font-family:Malgun Gothic,sans-serif;font-size:13px;color:#1a1a1a">'
+    // 헤더
+    +'<div style="background:linear-gradient(135deg,#1e3a8a,#3b82f6);color:#fff;padding:18px 20px">'
+    +'<div style="font-size:10px;opacity:.7;margin-bottom:4px">OFFICIAL STATEMENT · '+compName+'</div>'
+    +'<div style="font-size:18px;font-weight:800;margin-bottom:2px">'+month.replace('-','년 ')+'월 정산 명세서</div>'
+    +'<div style="font-size:13px;opacity:.85">'+name+' &nbsp;<span style="opacity:.6">쿠팡</span></div>'
+    +'</div>'
+    // 요약 카드 3개
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:2px solid #e2e8f0">'
+    +'<div style="padding:12px;text-align:center;border-right:1px solid #e2e8f0">'
+    +'<div style="font-size:9px;color:#64748b;margin-bottom:4px">세금계산서 합계</div>'
+    +'<div style="font-size:14px;font-weight:800;color:#7c3aed">₩'+vatIncome.toLocaleString()+'</div>'
+    +'<div style="font-size:9px;color:#94a3b8">공급가 ₩'+supply.toLocaleString()+' + VAT ₩'+vat.toLocaleString()+'</div>'
+    +'</div>'
+    +'<div style="padding:12px;text-align:center;border-right:1px solid #e2e8f0">'
+    +'<div style="font-size:9px;color:#64748b;margin-bottom:4px">공제 합계</div>'
+    +'<div style="font-size:14px;font-weight:800;color:#dc2626">-₩'+emp.toLocaleString()+'</div>'
+    +'<div style="font-size:9px;color:#94a3b8">고용+산재+파손+기타(-)+가불</div>'
+    +'</div>'
+    +'<div style="padding:12px;text-align:center">'
+    +'<div style="font-size:9px;color:#64748b;margin-bottom:4px">실 지급액</div>'
+    +'<div style="font-size:14px;font-weight:800;color:#185FA5">₩'+net.toLocaleString()+'</div>'
+    +'</div>'
+    +'</div>'
+    // 라우트별 실적
+    +(routes.length?'<div style="padding:12px 14px">'
+    +'<div style="font-size:11px;font-weight:800;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid #e2e8f0">📊 라우트별 실적 (건수×단가 — 배송=반품 동일)</div>'
+    +'<table style="width:100%;border-collapse:collapse;font-size:11px">'
+    +'<thead><tr style="background:#f8fafc"><th style="padding:5px 8px;text-align:left">라우트</th><th style="padding:5px 8px;text-align:right">배송건</th><th style="padding:5px 8px;text-align:right">반품건</th><th style="padding:5px 8px;text-align:right">단가</th><th style="padding:5px 8px;text-align:right">소계</th></tr></thead>'
+    +'<tbody>'+routeRows+'</tbody>'
+    +'<tfoot><tr style="background:#eff6ff;font-weight:700"><td style="padding:6px 8px">합계</td><td style="padding:6px 8px;text-align:right">'+totalDcnt+'건</td><td style="padding:6px 8px;text-align:right">'+totalRcnt+'건</td><td></td><td style="padding:6px 8px;text-align:right;color:#185FA5">₩'+totalAmt.toLocaleString()+'</td></tr></tfoot>'
+    +'</table></div>':'')
+    // 추가/공제 항목
+    +((addRows||deductRows)?'<div style="padding:0 14px 12px">'
+    +'<table style="width:100%;border-collapse:collapse">'
+    +(addRows?addRows:'')
+    +(deductRows?deductRows:'')
+    +'</table></div>':'')
+    // 실지급 최종
+    +'<div style="margin:0 14px 14px;background:#eff6ff;border-radius:8px;padding:12px;display:flex;justify-content:space-between;align-items:center">'
+    +'<span style="font-weight:700">✅ 실지급액</span>'
+    +'<span style="font-size:20px;font-weight:900;color:#185FA5">₩'+net.toLocaleString()+'</span>'
+    +'</div>'
+    // 푸터
+    +'<div style="padding:10px 14px;border-top:1px solid #e2e8f0;font-size:10px;color:#94a3b8;text-align:center">'
+    +compName+' · 051-711-3103 · 사업자번호 373-86-02536'
+    +'</div>'
+    +'</div>';
+}
+
 function _sendPayslipPush(x,r,name,month,net,vatIncome,docId){
   var did=_CU.dealerId,uid=x.userId||x.driverId||'';
   var title='💰 '+month+' 정산명세서 도착';
   var body=name+'님 실지급액: ₩'+fmt(net);
 
-  // 1) 명세서 모달 열고 캡처
+  // 1) 명세서 캡처용 HTML 직접 생성 (모달 열려있지 않아도 동작)
   toast('📸 '+name+'님 명세서 이미지 생성 중...');
-  // 현재 열려있는 mo-se 모달 캡처 시도
-  var wrap=document.querySelector('#mo-se .stmt-capture-area')||document.querySelector('#mo-se');
-  if(typeof html2canvas==='undefined'||!wrap){
-    // html2canvas 없거나 모달 없으면 텍스트만 저장
+  if(typeof html2canvas==='undefined'){
     _sendPayslipNotification(did,uid,name,title,body,month,net,vatIncome,x,null);
     return;
   }
-  // 스크롤 영역 펼쳐서 전체 캡처
-  var bodyEl=wrap.querySelector('[style*="max-height"]');
-  var origMaxH='';
-  if(bodyEl){origMaxH=bodyEl.style.maxHeight;bodyEl.style.maxHeight='none';}
+  // 캡처용 임시 div 생성 (화면 밖에 배치)
+  var captureDiv=document.createElement('div');
+  captureDiv.style.cssText='position:fixed;left:-9999px;top:0;width:600px;background:#fff;font-family:sans-serif;padding:0';
+  captureDiv.innerHTML=_buildPayslipCaptureHTML(x,r,name,month,net,vatIncome);
+  document.body.appendChild(captureDiv);
   setTimeout(function(){
-    var wrapW=wrap.scrollWidth,wrapH=wrap.scrollHeight;
-    html2canvas(wrap,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false,
+    var wrapW=captureDiv.scrollWidth,wrapH=captureDiv.scrollHeight;
+    html2canvas(captureDiv,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false,
       width:wrapW,height:wrapH,windowWidth:wrapW,windowHeight:wrapH})
     .then(function(canvas){
-      if(bodyEl)bodyEl.style.maxHeight=origMaxH;
+      document.body.removeChild(captureDiv);
       var dataUrl=canvas.toDataURL('image/jpeg',0.9);
       if(dataUrl.length>900000) dataUrl=canvas.toDataURL('image/jpeg',0.75);
       var path='settlements/'+did+'/'+month+'_'+uid+'_stmt_'+Date.now()+'.jpg';
       _uploadImgToStorage(dataUrl,path).then(function(imgUrl){
         _sendPayslipNotification(did,uid,name,title,body,month,net,vatIncome,x,imgUrl);
       });
-    }).catch(function(e){
-      if(bodyEl)bodyEl.style.maxHeight=origMaxH;
+    }).catch(function(){
+      if(captureDiv.parentNode)document.body.removeChild(captureDiv);
       _sendPayslipNotification(did,uid,name,title,body,month,net,vatIncome,x,null);
     });
-  },400);
+  },300);
 }
 
 function _sendPayslipNotification(did,uid,name,title,body,month,net,vatIncome,x,imgUrl){
@@ -19537,52 +19622,169 @@ function _dwInitAutoClose(){
   setTimeout(_dwCheckAutoClose, 3000); // 로그인 3초 후 체크
 }
 
+
+// ── 세금계산서 캡처용 HTML 생성 (관리자 화면과 동일)
+function _buildTaxCaptureHTML(x, r, name, month, vatIncome){
+  var total=vatIncome||r.totalAmt||r.income||0;
+  var supply=Math.round(total/1.1);
+  var vat=total-supply;
+  var ym=month||'';var yr=ym.slice(0,4),mo2=ym.slice(5,7);
+  var moNum=parseInt(mo2,10);
+  var today2=new Date().toISOString().slice(0,10);
+  var serial=today2.replace(/-/g,'')+'-'+String(Math.floor(Math.random()*9999)+1).padStart(4,'0');
+  // 기사 정보
+  var _uid=x.userId||x.driver||'';
+  var _drvRec=(_drvCache||[]).find(function(d){return d.userId===_uid||d.driverId===_uid||d.id===_uid||d.name===_uid;});
+  var driverRealName=x.driverName||(_drvRec&&_drvRec.name)||x.driver||x.userId||name;
+  var bizNum=x.bizNum||(_drvRec&&_drvRec.bizNum)||'___-__-_____';
+  var bizName=x.bizName||(_drvRec&&_drvRec.bizName)||driverRealName;
+  var bizRep=x.bizRep||(_drvRec&&_drvRec.bizRep)||driverRealName;
+  var drvAddr=x.bizAddr||(_drvRec&&_drvRec.bizAddr)||'(주소 미입력)';
+  var bizType=x.bizType||(_drvRec&&_drvRec.bizType)||'서비스업';
+  var bizItem=x.bizItem||(_drvRec&&_drvRec.bizItem)||'기타물품운반원';
+  var compName=(_CU&&_CU.companyName)||'엠비티아이 유한회사';
+  var compBiz=(_CU&&_CU.bizNum)||'373-86-02536';
+  var compAddr=(_CU&&_CU.bizAddr)||'부산시 수영구 수영로 668, 607호';
+
+  return '<div id="tax-invoice-wrap" style="width:700px;background:#fff;border:2px solid #000;font-family:Malgun Gothic,Apple SD Gothic Neo,sans-serif;font-size:11px">'
+    +'<table style="width:100%;border-collapse:collapse">'
+    +'<tr>'
+    +'<td style="border:1px solid #000;width:14%;padding:3px 6px;font-size:9px">[별지 제11호 서식]</td>'
+    +'<td style="border:1px solid #000;text-align:center;font-size:20px;font-weight:900;letter-spacing:4px;padding:6px">세 금 계 산 서</td>'
+    +'<td style="border:1px solid #000;width:18%;text-align:center;padding:3px;font-size:10px"><div>(공급받는자</div><div style="font-weight:700">보&nbsp;관&nbsp;용)</div></td>'
+    +'<td style="border:1px solid #000;width:22%;font-size:9px;padding:3px"><div>책&nbsp;&nbsp;번&nbsp;&nbsp;호 : ______권 ______호</div><div style="margin-top:3px">일 련 번 호 : '+serial+'</div></td>'
+    +'</tr></table>'
+    +'<table style="width:100%;border-collapse:collapse;font-size:10.5px">'
+    +'<tr>'
+    +'<td rowspan="4" style="border:1px solid #000;text-align:center;writing-mode:vertical-rl;width:18px;font-weight:700;padding:3px;background:#f0f0f0">공<br>급<br>자</td>'
+    +'<td style="border:1px solid #000;background:#f0f0f0;padding:3px 6px;width:55px">등 록 번 호</td>'
+    +'<td colspan="3" style="border:1px solid #000;padding:3px 6px;font-weight:700;letter-spacing:2px">'+compBiz+'</td>'
+    +'<td rowspan="4" style="border:1px solid #000;text-align:center;writing-mode:vertical-rl;width:18px;font-weight:700;padding:3px;background:#f0f0f0">공<br>급<br>받<br>는<br>자</td>'
+    +'<td style="border:1px solid #000;background:#f0f0f0;padding:3px 6px;width:55px">등 록 번 호</td>'
+    +'<td colspan="3" style="border:1px solid #000;padding:3px 6px;font-weight:700;letter-spacing:2px">'+bizNum+'</td>'
+    +'</tr>'
+    +'<tr>'
+    +'<td style="border:1px solid #000;background:#f0f0f0;padding:3px 6px">상 호<br>(법인명)</td>'
+    +'<td style="border:1px solid #000;padding:3px 6px">'+compName+'</td>'
+    +'<td style="border:1px solid #000;background:#f0f0f0;padding:3px 6px">성명</td>'
+    +'<td style="border:1px solid #000;padding:3px 6px">관리자 <span style="font-size:9px">인</span></td>'
+    +'<td style="border:1px solid #000;background:#f0f0f0;padding:3px 6px">상 호<br>(법인명)</td>'
+    +'<td style="border:1px solid #000;padding:3px 6px">'+bizName+'</td>'
+    +'<td style="border:1px solid #000;background:#f0f0f0;padding:3px 6px">성명</td>'
+    +'<td style="border:1px solid #000;padding:3px 6px">'+bizRep+' <span style="font-size:9px">인</span></td>'
+    +'</tr>'
+    +'<tr>'
+    +'<td style="border:1px solid #000;background:#f0f0f0;padding:3px 6px">사업장<br>주 소</td>'
+    +'<td colspan="3" style="border:1px solid #000;padding:3px 6px">'+compAddr+'</td>'
+    +'<td style="border:1px solid #000;background:#f0f0f0;padding:3px 6px">사업장<br>주 소</td>'
+    +'<td colspan="3" style="border:1px solid #000;padding:3px 6px">'+drvAddr+'</td>'
+    +'</tr>'
+    +'<tr>'
+    +'<td style="border:1px solid #000;background:#f0f0f0;padding:3px 6px">업 태</td>'
+    +'<td style="border:1px solid #000;padding:3px 6px">서비스업</td>'
+    +'<td style="border:1px solid #000;background:#f0f0f0;padding:3px 6px">종목</td>'
+    +'<td style="border:1px solid #000;padding:3px 6px">택배</td>'
+    +'<td style="border:1px solid #000;background:#f0f0f0;padding:3px 6px">업 태</td>'
+    +'<td style="border:1px solid #000;padding:3px 6px">'+bizType+'</td>'
+    +'<td style="border:1px solid #000;background:#f0f0f0;padding:3px 6px">종목</td>'
+    +'<td style="border:1px solid #000;padding:3px 6px">'+bizItem+'</td>'
+    +'</tr></table>'
+    +'<table style="width:100%;border-collapse:collapse;font-size:10.5px">'
+    +'<tr style="background:#f0f0f0">'
+    +'<td style="border:1px solid #000;padding:3px 6px;text-align:center;width:12%">작 성</td>'
+    +'<td colspan="4" style="border:1px solid #000;padding:3px 6px;text-align:center">공 급 가 액</td>'
+    +'<td colspan="2" style="border:1px solid #000;padding:3px 6px;text-align:center">세 액</td>'
+    +'<td style="border:1px solid #000;padding:3px 6px;text-align:center">비고</td>'
+    +'</tr>'
+    +'<tr>'
+    +'<td style="border:1px solid #000;padding:3px 6px;text-align:center">'+yr+'년<br>'+moNum+'월 02일</td>'
+    +'<td colspan="4" style="border:1px solid #000;padding:6px;font-size:15px;font-weight:900;text-align:right">'+supply.toLocaleString()+'</td>'
+    +'<td colspan="2" style="border:1px solid #000;padding:6px;font-size:15px;font-weight:900;text-align:right">'+vat.toLocaleString()+'</td>'
+    +'<td style="border:1px solid #000;padding:3px"></td>'
+    +'</tr></table>'
+    +'<table style="width:100%;border-collapse:collapse;font-size:10px">'
+    +'<tr style="background:#f0f0f0">'
+    +'<td style="border:1px solid #000;padding:3px;text-align:center;width:4%">월</td>'
+    +'<td style="border:1px solid #000;padding:3px;text-align:center;width:4%">일</td>'
+    +'<td style="border:1px solid #000;padding:3px;text-align:center;width:28%">품 목</td>'
+    +'<td style="border:1px solid #000;padding:3px;text-align:center;width:6%">규격</td>'
+    +'<td style="border:1px solid #000;padding:3px;text-align:center;width:6%">수량</td>'
+    +'<td style="border:1px solid #000;padding:3px;text-align:center;width:6%">단가</td>'
+    +'<td style="border:1px solid #000;padding:3px;text-align:center">공급가액</td>'
+    +'<td style="border:1px solid #000;padding:3px;text-align:center">세액</td>'
+    +'<td style="border:1px solid #000;padding:3px;text-align:center;width:6%">비고</td>'
+    +'</tr>'
+    +'<tr>'
+    +'<td style="border:1px solid #000;padding:4px;text-align:center">'+moNum+'</td>'
+    +'<td style="border:1px solid #000;padding:4px;text-align:center">02</td>'
+    +'<td style="border:1px solid #000;padding:4px">'+mo2+'월 수수료정산</td>'
+    +'<td style="border:1px solid #000;padding:4px"></td>'
+    +'<td style="border:1px solid #000;padding:4px"></td>'
+    +'<td style="border:1px solid #000;padding:4px"></td>'
+    +'<td style="border:1px solid #000;padding:4px;text-align:right">'+supply.toLocaleString()+'</td>'
+    +'<td style="border:1px solid #000;padding:4px;text-align:right">'+vat.toLocaleString()+'</td>'
+    +'<td style="border:1px solid #000;padding:4px"></td>'
+    +'</tr>'
+    +'<tr><td style="border:1px solid #000;padding:4px" colspan="9">&nbsp;</td></tr>'
+    +'<tr><td style="border:1px solid #000;padding:4px" colspan="9">&nbsp;</td></tr>'
+    +'</table>'
+    +'<table style="width:100%;border-collapse:collapse;font-size:11px">'
+    +'<tr>'
+    +'<td style="border:1px solid #000;padding:5px 8px;font-weight:700;width:18%">합계금액</td>'
+    +'<td style="border:1px solid #000;padding:5px 8px;font-weight:900;font-size:16px;width:20%">'+total.toLocaleString()+'</td>'
+    +'<td style="border:1px solid #000;padding:5px 8px;text-align:center;width:15%">현 금</td>'
+    +'<td style="border:1px solid #000;padding:5px 8px;text-align:center;width:15%">수 표</td>'
+    +'<td style="border:1px solid #000;padding:5px 8px;text-align:center;width:15%">어 음</td>'
+    +'<td style="border:1px solid #000;padding:5px 8px;text-align:center;width:17%">외상미수금</td>'
+    +'<td style="border:1px solid #000;padding:5px 8px;text-align:right">이 금액을 영수 함</td>'
+    +'</tr>'
+    +'<tr>'
+    +'<td style="border:1px solid #000;padding:5px 8px;font-weight:700">'+total.toLocaleString()+'</td>'
+    +'<td style="border:1px solid #000;padding:5px 8px">'+total.toLocaleString()+'</td>'
+    +'<td style="border:1px solid #000;padding:5px 8px"></td>'
+    +'<td style="border:1px solid #000;padding:5px 8px"></td>'
+    +'<td style="border:1px solid #000;padding:5px 8px"></td>'
+    +'<td style="border:1px solid #000;padding:5px 8px"></td>'
+    +'<td style="border:1px solid #000;padding:5px 8px;font-size:9px;color:#555">공급가 ₩'+supply.toLocaleString()+' + 세액 '+vat.toLocaleString()+'</td>'
+    +'</tr></table>'
+    +'<div style="font-size:9px;color:#555;padding:4px 6px;border-top:1px solid #ddd">※ 정산 공제: 고용보험(0.8%,80만↑) ₩'+(r.emp||0).toLocaleString()+' · 산재(0.88%) ₩'+(r.work||0).toLocaleString()+' → <strong>실지급액 ₩'+(r.net||0).toLocaleString()+'</strong></div>'
+    +'</div>';
+}
+
 function _sendTaxInvoicePush(x,r,name,month,vatIncome,docId){
   var did=_CU.dealerId,uid=x.userId||x.driverId||'';
   var supply=fmt(Math.round(vatIncome/1.1));
   var title='🧾 '+month+' 세금계산서 발행';
   var body=name+'님 공급가액: ₩'+supply;
 
-  // 세금계산서 모달이 열려있으면 캡처, 없으면 자동으로 열고 캡처
+  // 세금계산서 캡처용 HTML 직접 생성 (모달 불필요)
   toast('📸 '+name+'님 세금계산서 이미지 생성 중...');
-  function _doTaxCapture(){
-    var wrap=document.getElementById('tax-invoice-wrap');
-    if(typeof html2canvas==='undefined'||!wrap){
-      _sendTaxNotification(did,uid,name,title,body,month,vatIncome,null);
-      return;
-    }
-    var wrapW=wrap.scrollWidth,wrapH=wrap.scrollHeight;
-    html2canvas(wrap,{scale:2.5,useCORS:true,backgroundColor:'#ffffff',logging:false,
+  if(typeof html2canvas==='undefined'){
+    _sendTaxNotification(did,uid,name,title,body,month,vatIncome,null);
+    return;
+  }
+  var captureDiv=document.createElement('div');
+  captureDiv.style.cssText='position:fixed;left:-9999px;top:0;width:700px;background:#fff';
+  captureDiv.innerHTML=_buildTaxCaptureHTML(x,r,name,month,vatIncome);
+  document.body.appendChild(captureDiv);
+  setTimeout(function(){
+    var wrapW=captureDiv.scrollWidth,wrapH=captureDiv.scrollHeight;
+    html2canvas(captureDiv,{scale:2.5,useCORS:true,backgroundColor:'#ffffff',logging:false,
       width:wrapW,height:wrapH,windowWidth:wrapW,windowHeight:wrapH})
     .then(function(canvas){
+      document.body.removeChild(captureDiv);
       var dataUrl=canvas.toDataURL('image/jpeg',0.95);
       if(dataUrl.length>900000) dataUrl=canvas.toDataURL('image/jpeg',0.85);
       if(dataUrl.length>900000) dataUrl=canvas.toDataURL('image/jpeg',0.75);
       var path='tax_invoices/'+did+'/'+month+'_'+uid+'_'+Date.now()+'.jpg';
       _uploadImgToStorage(dataUrl,path).then(function(imgUrl){
         _sendTaxNotification(did,uid,name,title,body,month,vatIncome,imgUrl);
-        // 자동 열린 모달이면 닫기
-        var autoMo=document.getElementById('mo-tax-auto');
-        if(autoMo)autoMo.remove();
       });
     }).catch(function(){
+      if(captureDiv.parentNode)document.body.removeChild(captureDiv);
       _sendTaxNotification(did,uid,name,title,body,month,vatIncome,null);
     });
-  }
-
-  var existWrap=document.getElementById('tax-invoice-wrap');
-  if(existWrap){
-    // 이미 모달 열려있음
-    setTimeout(_doTaxCapture,300);
-  } else {
-    // 자동으로 세금계산서 모달 열고 캡처
-    openTaxInvoice(x.id||x.fbId||docId);
-    setTimeout(function(){
-      var mo=document.querySelector('#mo-se ~ .mo')||document.querySelector('.mo:last-child');
-      if(mo)mo.id='mo-tax-auto';
-      _doTaxCapture();
-    },700);
-  }
+  },300);
 }
 
 function _sendTaxNotification(did,uid,name,title,body,month,vatIncome,imgUrl){
