@@ -14111,15 +14111,18 @@ async function _registerFCM(){
     if(!('Notification' in window)){return;}
     var perm = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
     if(perm !== 'granted'){return;}
-    // firebase-messaging-sw.js 강제 등록
+    // ★ 물류앱 방식: firebase-messaging-sw.js 등록 후 등록객체를 getToken에 전달
+    var _fcmSwReg = null;
     if('serviceWorker' in navigator){
       try{
-        await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-        await navigator.serviceWorker.ready;
-      }catch(swErr){console.warn('[FCM] SW 등록 실패:', swErr.message);}
+        _fcmSwReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {scope:'/'});
+        await _fcmSwReg.update();
+      }catch(swErr){
+        try{ _fcmSwReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js'); }catch(e2){}
+      }
     }
     var messaging = firebase.messaging();
-    var token = await messaging.getToken({vapidKey: VAPID_KEY});
+    var token = await messaging.getToken({vapidKey: VAPID_KEY, serviceWorkerRegistration: _fcmSwReg||undefined});
     if(!token) return;
     var isAdmin = isSuperAdmin();
     var isDriver = _CU.role==='driver'||_CU.role==='member';
