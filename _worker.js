@@ -409,8 +409,7 @@ export default {
       if (path === '/' || path === '' || path === '/app' || path === '/app/') {
         const resp = await fetchAsset('/universal_settle.html', request);
         const html = await resp.text();
-        const key = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[
-\s]+/g, '');
+        const key = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
         const injected = html.replace('</head>', '<script>window.__AK=' + JSON.stringify(key) + ';</script>
 </head>');
         return new Response(injected, { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
