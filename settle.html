@@ -8125,18 +8125,38 @@ function pageDeliverySettle(){
   if(!_db||!_CU){c.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
   c.innerHTML='<div class="loading">로딩 중...</div>';
   var did=_CU.dealerId;
-  var now=new Date();
-  var ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
   var _monthFilter=window._dwSettleMonth||'all';
 
-  _db.collection('delivery_sessions').where('dealerId','==',did).get().then(function(snap){
-    if(snap.empty){
+  // delivery_sessions + expenses + tax_docs(경비) + settings(고정비) 병렬
+  Promise.all([
+    _db.collection('delivery_sessions').where('dealerId','==',did).get(),
+    _db.collection('expenses').where('dealerId','==',did).get(),
+    _db.collection('settings').doc(did+'_fixedExpenses').get(),
+    _db.collection('tax_docs').where('dealerId','==',did).get()
+  ]).then(function(results){
+    var sesSnap=results[0], expSnap=results[1], fixSnap=results[2], taxDocSnap=results[3];
+    if(sesSnap.empty){
       c.innerHTML='<div class="empty" style="padding:60px 20px"><div style="font-size:48px;margin-bottom:12px">🛵</div>'
         +'<div style="font-size:17px;font-weight:800;margin-bottom:6px">배달대행 데이터가 없습니다</div>'
         +'<div style="font-size:13px;color:var(--text3)">배달대행 정산 탭에서 엑셀 업로드 후 정산 개시하면 표시됩니다</div></div>';
       return;
     }
-    var sessions=snap.docs.map(function(d){return Object.assign({sid:d.id},d.data());});
+    var sessions=sesSnap.docs.map(function(d){return Object.assign({sid:d.id},d.data());});
+
+    // 경비 월별 집계 (변동경비 + tax_docs 경비류)
+    var expByMonth={};
+    expSnap.forEach(function(d){
+      var e=d.data(); var mo=(e.date||e.ym||'').slice(0,7); if(!mo)return;
+      if(!expByMonth[mo])expByMonth[mo]=0; expByMonth[mo]+=(e.amount||0);
+    });
+    taxDocSnap.forEach(function(d){
+      var e=d.data();
+      if(e.category!=='expense'&&e.docType!=='경비·비용'&&e.type!=='expense')return;
+      var mo=(e.date||e.ym||e.month||'').slice(0,7); if(!mo)return;
+      if(!expByMonth[mo])expByMonth[mo]=0; expByMonth[mo]+=(e.amount||e.totalAmount||0);
+    });
+    var fixedMonthly=(fixSnap.exists?(fixSnap.data().items||[]):[]).reduce(function(s,i){return s+(i.amount||0);},0);
+
     // 월별 목록
     var allMonths=[...new Set(sessions.map(function(s){return (s.ym||s.month||'').slice(0,7);}).filter(Boolean))].sort().reverse();
     var filteredSessions=_monthFilter==='all'?sessions:sessions.filter(function(s){return (s.ym||s.month||'').startsWith(_monthFilter);});
@@ -8144,7 +8164,10 @@ function pageDeliverySettle(){
     // 집계
     var totRevenue=0,totCost=0,totInj=0,totExt=0,totCnt=0;
     var byDriver={};
+    var sessionMonths=new Set();
     filteredSessions.forEach(function(s){
+      var mo=(s.ym||s.month||'').slice(0,7);
+      if(mo) sessionMonths.add(mo);
       totRevenue+=(s.totalPf||s.pfSum||0);
       totCost+=(s.totalNet||s.netPay||0);
       totInj+=(s.bonusTotal||s.totalInj||0);
@@ -8152,15 +8175,24 @@ function pageDeliverySettle(){
       totCnt+=(s.totalCount||0);
       var rid=s.riderId||s.driverId||s.userId||'';
       if(!rid)return;
-      if(!byDriver[rid])byDriver[rid]={name:s.riderName||s.driverName||rid,revenue:0,cost:0,inj:0,ext:0,cnt:0};
+      if(!byDriver[rid])byDriver[rid]={name:s.riderName||s.driverName||rid,revenue:0,cost:0,cnt:0};
       byDriver[rid].revenue+=(s.totalPf||s.pfSum||0);
       byDriver[rid].cost+=(s.totalNet||s.netPay||0);
-      byDriver[rid].inj+=(s.bonusTotal||s.totalInj||0);
-      byDriver[rid].ext+=(s.deductTotal||s.totalExt||0);
       byDriver[rid].cnt+=(s.totalCount||0);
     });
-    var totProfit=totRevenue-totCost;
+
+    // 경비 합산
+    var totalExp=0;
+    if(_monthFilter==='all'){
+      sessionMonths.forEach(function(mo){totalExp+=(expByMonth[mo]||0)+fixedMonthly;});
+    } else {
+      totalExp=(expByMonth[_monthFilter]||0)+fixedMonthly;
+    }
+
+    var totProfit=totRevenue-totCost;               // 기사 지급 후 순수익
+    var totNetProfit=totProfit-totalExp;             // 경비 차감 실순수익
     var marginRate=totRevenue>0?((totProfit/totRevenue)*100).toFixed(1):0;
+    var netMarginRate=totRevenue>0?((totNetProfit/totRevenue)*100).toFixed(1):0;
     var monthLabel=_monthFilter==='all'?'전체 누적':_monthFilter;
 
     c.innerHTML='';
@@ -8178,38 +8210,56 @@ function pageDeliverySettle(){
     hero.style.cssText='background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 50%,#dc2626 100%);border-radius:16px;padding:24px;margin-bottom:16px;color:#fff;position:relative;overflow:hidden';
     hero.innerHTML='<div style="position:absolute;top:-30px;right:-30px;width:200px;height:200px;background:rgba(255,255,255,.04);border-radius:50%"></div>'
       +'<div style="font-size:11px;font-weight:600;letter-spacing:2px;opacity:.6;margin-bottom:14px">DONWAY · '+((_CU&&_CU.companyName)||'회사')+' · 배달대행 정산 현황 · '+monthLabel+'</div>'
+      // 상단 3개 카드
       +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">'
-        +'<div><div style="font-size:10px;opacity:.6;margin-bottom:3px">📊 플랫폼 매출</div>'
+        +'<div><div style="font-size:10px;opacity:.6;margin-bottom:3px">🏢 플랫폼 수령</div>'
           +'<div style="font-size:18px;font-weight:900;color:#4ade80">₩'+fmt(totRevenue)+'</div>'
           +'<div style="font-size:9px;opacity:.4">'+fmt(totCnt)+'건</div></div>'
-        +'<div><div style="font-size:10px;opacity:.6;margin-bottom:3px">💸 기사 지급액</div>'
+        +'<div><div style="font-size:10px;opacity:.6;margin-bottom:3px">💸 기사 지급</div>'
           +'<div style="font-size:18px;font-weight:900;color:#60a5fa">₩'+fmt(totCost)+'</div>'
-          +'<div style="font-size:9px;opacity:.4">고용·산재 공제 후</div></div>'
-        +'<div><div style="font-size:10px;opacity:.6;margin-bottom:3px">📈 DONWAY 마진</div>'
+          +'<div style="font-size:9px;opacity:.4">보전·환수 반영</div></div>'
+        +'<div><div style="font-size:10px;opacity:.6;margin-bottom:3px">📈 단가 마진</div>'
           +'<div style="font-size:18px;font-weight:900;color:#a78bfa">₩'+fmt(totExt-totInj)+'</div>'
-          +'<div style="font-size:9px;opacity:.4">환수 - 보전</div></div>'
+          +'<div style="font-size:9px;opacity:.4">환수 − 보전</div></div>'
       +'</div>'
-      +'<div style="border-top:1px solid rgba(255,255,255,.12);padding-top:10px;display:flex;align-items:center;justify-content:space-between">'
-        +'<div style="font-size:11px;opacity:.6">💰 실순수익 (매출 - 기사지급)</div>'
-        +'<div style="font-size:22px;font-weight:900;color:'+(totProfit>=0?'#4ade80':'#f87171')+'">'+(totProfit<0?'-':'')+'₩'+fmt(Math.abs(totProfit))+'</div>'
+      // 구분선 — 기사 지급 후 순수익
+      +'<div style="border-top:1px solid rgba(255,255,255,.12);padding-top:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">'
+        +'<div>'
+          +'<div style="font-size:11px;opacity:.6">💰 기사 지급 후 순수익 (경비 전)</div>'
+          +'<div style="font-size:9px;opacity:.4">플랫폼 수령 − 기사 지급</div>'
+        +'</div>'
+        +'<div style="text-align:right">'
+          +'<div style="font-size:20px;font-weight:900;color:'+(totProfit>=0?'#4ade80':'#f87171')+'">'+(totProfit<0?'−':'')+'₩'+fmt(Math.abs(totProfit))+'</div>'
+          +'<div style="font-size:10px;opacity:.5">마진율 '+marginRate+'%</div>'
+        +'</div>'
       +'</div>'
-      +'<div style="text-align:right;margin-top:4px;font-size:10px;opacity:.5">마진율 '+marginRate+'%</div>';
+      // 경비 차감 실순수익
+      +'<div style="background:rgba(0,0,0,.25);border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">'
+        +'<div>'
+          +'<div style="font-size:11px;opacity:.8;font-weight:700">🏢 실순수익 (경비 차감 후)</div>'
+          +'<div style="font-size:9px;opacity:.5">'+(totalExp>0?'경비 ₩'+fmt(totalExp)+' 차감 반영':'경비 미등록 — 경비 관리 탭에서 등록하세요')+'</div>'
+        +'</div>'
+        +'<div style="text-align:right">'
+          +'<div style="font-size:22px;font-weight:900;color:'+(totNetProfit>=0?'#4ade80':'#f87171')+'">'+(totNetProfit<0?'−':'')+'₩'+fmt(Math.abs(totNetProfit))+'</div>'
+          +'<div style="font-size:10px;opacity:.5">순마진율 '+netMarginRate+'%</div>'
+        +'</div>'
+      +'</div>';
     c.appendChild(hero);
 
     // 기사별 현황
     var driverKeys=Object.keys(byDriver).sort(function(a,b){return byDriver[b].revenue-byDriver[a].revenue;});
     if(driverKeys.length){
-      var sec=document.createElement('div');
-      sec.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:10px';
-      sec.innerHTML='<div style="font-size:13px;font-weight:800;color:var(--text)">🛵 기사별 현황</div>';
-      c.appendChild(sec);
+      var secDiv=document.createElement('div');
+      secDiv.style.cssText='font-size:13px;font-weight:800;color:var(--text);margin-bottom:10px';
+      secDiv.textContent='🛵 기사별 현황';
+      c.appendChild(secDiv);
       var grid=document.createElement('div');
       grid.style.cssText='display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px';
       driverKeys.forEach(function(rid){
         var dr=byDriver[rid];
         var profit=dr.revenue-dr.cost;
         var card=document.createElement('div');
-        card.style.cssText='background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:14px 16px';
+        card.style.cssText='background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:14px 16px;border-top:3px solid #dc2626';
         card.innerHTML='<div style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--text)">'+esc(dr.name)+'</div>'
           +'<div style="font-size:11px;color:var(--text3);margin-bottom:4px">📦 '+fmt(dr.cnt)+'건</div>'
           +'<div style="font-size:13px;font-weight:800;color:var(--green)">매출 ₩'+fmt(dr.revenue)+'</div>'
@@ -8222,6 +8272,7 @@ function pageDeliverySettle(){
     }
   }).catch(function(e){c.innerHTML='<div class="empty">오류: '+e.message+'</div>';});
 }
+
 
 function pageDeliveryInput(){
   // ★ 관리자면 엔진v2로, 기사면 기사 대시보드로
