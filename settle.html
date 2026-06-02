@@ -22793,12 +22793,13 @@ function pageNotices(){
       var bg=typeColor[n.type]||'#dbeafe';
       var tc=typeTxtColor[n.type]||'#1e40af';
       var lb=typeLabel[n.type]||n.type;
+      var delBtn=isDriver?'':'<button onclick="_deleteNotice(\''+doc.id+'\')" style="padding:3px 8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;cursor:pointer">🗑</button>';
       list+='<div class="card" style="border-left:4px solid '+tc+'">'
         +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">'
         +'<div style="display:flex;align-items:center;gap:8px">'
         +'<span style="background:'+bg+';color:'+tc+';padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700">'+ic+' '+lb+'</span>'
         +'<strong style="font-size:14px">'+esc(n.title||'')+'</strong></div>'
-        +'<span style="font-size:10px;color:var(--text3);white-space:nowrap">'+dt+'</span></div>'
+        +'<div style="display:flex;align-items:center;gap:6px"><span style="font-size:10px;color:var(--text3);white-space:nowrap">'+dt+'</span>'+delBtn+'</div>'
         +'<div style="font-size:13px;color:var(--text2);line-height:1.6;white-space:pre-wrap">'+esc(n.body||'')+'</div>'
         +(n.fileUrl?'<a href="'+n.fileUrl+'" target="_blank" style="display:inline-block;margin-top:8px;font-size:12px;color:var(--brand)">📎 첨부파일 보기</a>':'')+'</div>';
     });
@@ -22809,6 +22810,12 @@ function pageNotices(){
   });
 }
 
+function _deleteNotice(id){
+  if(!confirm('이 공지를 삭제하시겠습니까?'))return;
+  _db.collection('notices').doc(id).delete().then(function(){
+    toast('✅ 공지 삭제됨');pageNotices();
+  }).catch(function(e){toast('❌ '+e.message);});
+}
 function _saveNotice(){
   if(!_db||!_CU){toast('❌ 로그인 필요');return;}
   var title=((document.getElementById('n-title')||{}).value||'').trim();
