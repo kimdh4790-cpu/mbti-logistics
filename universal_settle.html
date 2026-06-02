@@ -732,6 +732,7 @@ function _processCoupangSheet(wb, rawSheetName, lossSheetName){
   }
   var CI = {
     id:       col('ID'),
+    route:    rawHeaders.findIndex(function(h){return h==='Route'||h==='route'||h==='라우트';}),
     camp:     col('캠프명'),
     date:     col('배송일자'),
     delCnt:   col('배송건수'),
@@ -742,6 +743,9 @@ function _processCoupangSheet(wb, rawSheetName, lossSheetName){
     fresh:    col('프레시백'),
     total:    col('총금액'),
   };
+
+  // 라우트→캠프 매핑 수집 (쿠팡 엑셀에서 자동 추출)
+  var routeToCamp = {};
 
   // ID→이름 매핑 (분실파손에서)
   var idToName = {};
@@ -762,17 +766,33 @@ function _processCoupangSheet(wb, rawSheetName, lossSheetName){
   // ID별 집계
   var byId = {};
   rawRows.forEach(function(r){
-    var id = String(r[CI.id]||'').trim();
+    var id    = String(r[CI.id]||'').trim();
+    var route = CI.route>=0 ? String(r[CI.route]||'').trim().toUpperCase() : '';
+    var camp  = CI.camp>=0  ? String(r[CI.camp]||'').trim() : '';
     if(!id || id === '영업점 수수료') return;
+
+    // 라우트→캠프 매핑 수집 (쿠팡 엑셀에서 자동 추출)
+    if(route && camp) routeToCamp[route] = camp;
+
     if(!byId[id]) byId[id] = {
       id:      id,
       name:    idToName[id] || '',
-      camp:    CI.camp>=0 ? String(r[CI.camp]||'').trim() : '',
+      camp:    camp,
+      routes:  {},   // 라우트별 건수/단가 집계
       delCnt:  0, retCnt: 0,
       baseAmt: 0, addInc: 0, fresh: 0, total: 0,
       dates:   [],
     };
     var g = byId[id];
+    // 캠프명 갱신 (빈 경우 채우기)
+    if(!g.camp && camp) g.camp = camp;
+    // 라우트별 집계 (단가표 검증용)
+    if(route){
+      if(!g.routes[route]) g.routes[route] = {del:0, ret:0, price:0};
+      g.routes[route].del   += _toNum(r[CI.delCnt]);
+      g.routes[route].ret   += _toNum(r[CI.retCnt]);
+      g.routes[route].price  = _toNum(r[CI.price]); // 단가 저장
+    }
     g.delCnt  += _toNum(r[CI.delCnt]);
     g.retCnt  += _toNum(r[CI.retCnt]);
     g.baseAmt += _toNum(r[CI.baseAmt]);
@@ -781,6 +801,9 @@ function _processCoupangSheet(wb, rawSheetName, lossSheetName){
     g.total   += _toNum(r[CI.total]);
     if(CI.date>=0 && r[CI.date]) g.dates.push(String(r[CI.date]).substring(0,10));
   });
+
+  // 라우트→캠프 매핑 전역 저장 (단가표 업로드 시 캠프 자동 인식에 활용)
+  _settleState.routeToCamp = routeToCamp;
 
   // 분실파손 차감
   var lossByID = {};
@@ -1390,8 +1413,16 @@ function _loadRateTable(inp){
       }
 
       _settleState.coupangRateTable = rateMap;
-      toast('✅ 라우트단가표 로드 완료 — '+Object.keys(rateMap).length+'개 라우트');
-      // 화면 갱신
+
+      // 라우트→캠프 자동 매핑 (쿠팡 엑셀 routeToCamp 활용)
+      var rtc = _settleState.routeToCamp || {};
+      var campSum = {};
+      Object.keys(rateMap).forEach(function(route){
+        var c = rtc[route] || '미확인';
+        campSum[c] = (campSum[c]||0) + 1;
+      });
+      var campMsg = Object.keys(campSum).map(function(c){return c+'('+campSum[c]+')';}).join(' · ');
+      toast('✅ 단가표 로드 — '+Object.keys(rateMap).length+'개 라우트 | '+campMsg);
       _renderSettle();
 
     }catch(err){
