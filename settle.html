@@ -14424,6 +14424,31 @@ function _showJoinBanner(title, body, type){
 })();
 
 // ── 앱 내 푸시 수신 처리 (포그라운드) ──
+
+// ── DONWAY TTS 알림음
+function _speakDonway(type, body){
+  if(!('speechSynthesis' in window)) return;
+  try{
+    window.speechSynthesis.cancel();
+    var typeText = {
+      'payslip':'정산 명세서가',
+      'tax_invoice':'세금계산서가',
+      'notice':'공지사항이',
+      'settlement':'정산이'
+    }[type] || '알림이';
+    var msg = new SpeechSynthesisUtterance('돈웨이. ' + typeText + ' 도착했습니다.');
+    msg.lang = 'ko-KR';
+    msg.rate = 0.9;
+    msg.pitch = 1.1;
+    msg.volume = 1.0;
+    // 한국어 음성 우선 선택
+    var voices = window.speechSynthesis.getVoices();
+    var koVoice = voices.find(function(v){return v.lang==='ko-KR';});
+    if(koVoice) msg.voice = koVoice;
+    window.speechSynthesis.speak(msg);
+  }catch(e){}
+}
+
 function _initFCMReceiver(){
   try{
     var messaging = firebase.messaging();
@@ -14432,6 +14457,8 @@ function _initFCMReceiver(){
       var body  = payload.notification?.body  || '';
       var data  = payload.data || {};
       var type  = data.type || 'alert';
+      // TTS 음성 알림
+      _speakDonway(type, body);
       // 소리 + 배너 + 브라우저 알림
       _showJoinBanner(title, body, type);
       if(Notification.permission==='granted'){
