@@ -547,40 +547,86 @@ function _onFilesSelected(files){
     return;
   }
   // 여러 파일: 큐에 쌓아서 순서대로 처리
-  _settleState.fileQueue = arr;
+  _settleState.fileQueue    = arr;
   _settleState.fileQueueIdx = 0;
-  _settleState.multiFiles = []; // 각 파일별 {fileName, headers, rows, mapping, results}
-  toast('📂 '+arr.length+'개 파일 로드 중...');
+  _settleState.multiFiles   = [];
+  _settleState.mixedFiles   = {coupang:[], delivery:[], normal:[]};
+  _settleState.mixedMode    = false;
+  toast('📂 '+arr.length+'개 파일 분석 중...');
   _loadNextFile();
 }
 
 function _loadNextFile(){
   var queue = _settleState.fileQueue;
-  var idx = _settleState.fileQueueIdx;
+  var idx   = _settleState.fileQueueIdx;
+
   if(idx >= queue.length){
-    // 모든 파일 로드 완료 → 첫 번째 파일 매핑으로
+    // 모든 파일 로드 완료
+    var mixed = _settleState.mixedFiles; // {coupang:[], delivery:[], normal:[]}
+    var hasCoupang  = mixed.coupang.length > 0;
+    var hasDelivery = mixed.delivery.length > 0;
+    var hasNormal   = mixed.normal.length > 0;
+
+    // 혼합 모드: 쿠팡+배달대행 또는 여러 종류
+    if((hasCoupang || hasDelivery) && (hasCoupang || hasDelivery)){
+      toast('✅ '+queue.length+'개 파일 인식 완료 — 쿠팡:'+mixed.coupang.length+'개 배달대행:'+mixed.delivery.length+'개');
+      _settleState.mixedMode = true;
+      _renderMixedResult();
+      return;
+    }
+
+    // 일반 멀티파일 처리
     toast('✅ '+queue.length+'개 파일 로드 완료');
     _settleState.multiMode = true;
-    _settleState.multiIdx = 0;
+    _settleState.multiIdx  = 0;
     _startMultiMapping();
     return;
   }
-  var file = queue[idx];
+
+  var file   = queue[idx];
   var reader = new FileReader();
   reader.onload = function(e){
     try{
       var wb = XLSX.read(e.target.result, {type:'array', cellDates:true});
+
+      // ── 쿠팡 감지
+      var hasRaw  = wb.SheetNames.indexOf('정산Raw') >= 0;
+      var hasLoss = wb.SheetNames.indexOf('분실파손List') >= 0;
+      if(hasRaw){
+        var rawRows = XLSX.utils.sheet_to_json(wb.Sheets['정산Raw'],{header:1,raw:false,defval:''});
+        var hI=0; for(var i=0;i<Math.min(rawRows.length,6);i++){if(rawRows[i].filter(function(c){return c!=='';}).length>=3){hI=i;break;}}
+        var hdrs = rawRows[hI].map(function(h){return String(h).replace(/
+/g,' ').trim();});
+        if(_isCoupangSheet(hdrs)){
+          _settleState.mixedFiles.coupang.push({wb:wb, fileName:file.name, hasLoss:hasLoss});
+          _settleState.fileQueueIdx++;
+          _loadNextFile();
+          return;
+        }
+      }
+
+      // ── 배달대행 감지
       var sheetName = wb.SheetNames[0];
-      var raw = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1, raw:false, defval:''});
+      var raw = XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{header:1,raw:false,defval:''});
       if(raw.length < 2){toast('⚠️ '+file.name+' 데이터 없음, 건너뜀');_settleState.fileQueueIdx++;_loadNextFile();return;}
-      var hdrIdx = 0;
-      for(var i=0;i<Math.min(raw.length,6);i++){if(raw[i].filter(function(c){return c!=='';}).length>=2){hdrIdx=i;break;}}
-      var headers = (raw[hdrIdx]||[]).map(function(h,i){return String(h||'열'+(i+1));});
-      var rows = raw.slice(hdrIdx+1).filter(function(r){return r.filter(function(c){return c!=='';}).length>0;});
+      var hdrIdx=0;
+      for(var j=0;j<Math.min(raw.length,6);j++){if(raw[j].filter(function(c){return c!=='';}).length>=2){hdrIdx=j;break;}}
+      var headers = (raw[hdrIdx]||[]).map(function(h,k){return String(h||'열'+(k+1));});
+      var rows    = raw.slice(hdrIdx+1).filter(function(r){return r.filter(function(c){return c!=='';}).length>0;});
+
+      if(_isDeliverySheet(headers)){
+        var dparsed = _parseDeliveryExcel(wb);
+        if(dparsed) _settleState.mixedFiles.delivery.push({parsed:dparsed, fileName:file.name});
+        _settleState.fileQueueIdx++;
+        _loadNextFile();
+        return;
+      }
+
+      // ── 일반 파일
       _settleState.multiFiles.push({fileName:file.name, headers:headers, rows:rows, mapping:{}, results:[]});
       _settleState.fileQueueIdx++;
       _loadNextFile();
-    }catch(err){toast('❌ '+file.name+' 읽기 실패');_settleState.fileQueueIdx++;_loadNextFile();}
+    }catch(err){toast('❌ '+file.name+' 읽기 실패: '+err.message);_settleState.fileQueueIdx++;_loadNextFile();}
   };
   reader.readAsArrayBuffer(file);
 }
@@ -2486,7 +2532,153 @@ function _downloadCoupangExcel(){
   toast('✅ 엑셀 다운로드 완료');
 }
 
+
+// ── 혼합 모드 결과 화면 (쿠팡 + 배달대행 동시)
+function _renderMixedResult(){
+  var mixed   = _settleState.mixedFiles;
+  var defCfg  = _settleState.deliveryCfg || {defaultPrice:2900, cancelPenalty:10000, isBiz:false};
+
+  // 쿠팡 파일들 처리
+  var coupangResults = [];
+  mixed.coupang.forEach(function(f){
+    _processCoupangSheet(f.wb, '정산Raw', f.hasLoss ? '분실파손List' : null);
+    // _processCoupangSheet가 _settleState.results를 세팅하므로 복사
+    var results = (_settleState.results||[]).map(function(r){
+      return Object.assign({},r,{_sourceFile:f.fileName, _type:'coupang'});
+    });
+    coupangResults = coupangResults.concat(results);
+  });
+
+  // 배달대행 파일들 처리
+  var deliveryResults = [];
+  mixed.delivery.forEach(function(f){
+    var riderMap   = f.parsed.riderMap;
+    var riderNames = f.parsed.riderNames;
+    Object.keys(riderMap).forEach(function(rid){
+      var r = _calcDeliverySettlement(riderMap[rid], defCfg);
+      if(r){
+        r.riderId    = rid;
+        r.riderName  = riderNames[rid]||rid;
+        r._sourceFile= f.fileName;
+        r._type      = 'delivery';
+        deliveryResults.push(r);
+      }
+    });
+  });
+
+  // 전체 합계
+  var totalCoupangNet  = coupangResults.reduce(function(s,r){return s+r.net;},0);
+  var totalDeliveryNet = deliveryResults.reduce(function(s,r){return s+r.net;},0);
+  var grandTotal       = totalCoupangNet + totalDeliveryNet;
+  var totalPeople      = coupangResults.length + deliveryResults.length;
+
+  var html = '<div class="result-summary">'
+    +'<div class="stat-card"><div class="stat-label">전체 인원</div><div class="stat-val blue">'+totalPeople+'명</div></div>'
+    +'<div class="stat-card"><div class="stat-label">쿠팡 인원</div><div class="stat-val">'+coupangResults.length+'명</div></div>'
+    +'<div class="stat-card"><div class="stat-label">배달대행 인원</div><div class="stat-val">'+deliveryResults.length+'명</div></div>'
+    +'<div class="stat-card"><div class="stat-label">쿠팡 실지급</div><div class="stat-val" style="color:var(--blue)">'+_fmt(totalCoupangNet)+'원</div></div>'
+    +'<div class="stat-card"><div class="stat-label">배달대행 실지급</div><div class="stat-val" style="color:var(--acc)">'+_fmt(totalDeliveryNet)+'원</div></div>'
+    +'<div class="stat-card"><div class="stat-label">전체 실지급</div><div class="stat-val green">'+_fmt(grandTotal)+'원</div></div>'
+    +'</div>';
+
+  // 쿠팡 섹션
+  if(coupangResults.length > 0){
+    html += '<div class="card">'
+      +'<div class="card-title">📦 쿠팡 정산 <span style="font-size:11px;font-weight:400;color:var(--text2)">'+coupangResults.length+'명 · '+_fmt(totalCoupangNet)+'원</span></div>'
+      +'<div class="tbl-wrap"><table><thead><tr>'
+      +'<th>이름</th><th>캠프</th><th class="num">배송건</th>'
+      +'<th class="num">총금액</th><th class="num">프레시백</th>'
+      +'<th class="num" style="color:var(--red)">분실파손</th>'
+      +'<th class="num" style="color:var(--green)">실지급액</th>'
+      +'</tr></thead><tbody>';
+
+    coupangResults.forEach(function(r){
+      html += '<tr>'
+        +'<td><strong>'+(r.name||r.id)+'</strong></td>'
+        +'<td>'+r.dept+'</td>'
+        +'<td class="num">'+_fmt(r.count)+'</td>'
+        +'<td class="num">'+_fmt(r.amount||0)+'</td>'
+        +'<td class="num" style="color:var(--blue)">+'+_fmt(r.fresh||0)+'</td>'
+        +'<td class="num" style="color:var(--red)">'+(r.lossAmt?'-'+_fmt(r.lossAmt):'-')+'</td>'
+        +'<td class="num"><strong style="color:var(--green)">'+_fmt(r.net)+'</strong></td>'
+        +'</tr>';
+    });
+    html += '</tbody></table></div></div>';
+  }
+
+  // 배달대행 섹션
+  if(deliveryResults.length > 0){
+    var totalInj = deliveryResults.reduce(function(s,r){return s+r.injected;},0);
+    var totalExt = deliveryResults.reduce(function(s,r){return s+r.extracted;},0);
+    html += '<div class="card">'
+      +'<div class="card-title">🛵 배달대행 정산 <span style="font-size:11px;font-weight:400;color:var(--text2)">'+deliveryResults.length+'명 · '+_fmt(totalDeliveryNet)+'원 | 보전:+'+_fmt(totalInj)+' 환수:-'+_fmt(totalExt)+'</span></div>'
+      +'<div class="tbl-wrap"><table><thead><tr>'
+      +'<th>이름</th><th>트랙</th><th class="num">건수</th>'
+      +'<th class="num">플랫폼수령</th>'
+      +'<th class="num" style="color:var(--blue)">보전</th>'
+      +'<th class="num" style="color:var(--red)">환수</th>'
+      +'<th class="num" style="color:var(--green)">실지급액</th>'
+      +'</tr></thead><tbody>';
+
+    deliveryResults.forEach(function(r){
+      html += '<tr>'
+        +'<td><strong>'+r.riderName+'</strong></td>'
+        +'<td style="font-size:11px">'+r.trackLabel+'</td>'
+        +'<td class="num">'+_fmt(r.totalCount)+'</td>'
+        +'<td class="num">'+_fmt(r.pfSum)+'</td>'
+        +'<td class="num" style="color:var(--blue)">+'+_fmt(r.injected)+'</td>'
+        +'<td class="num" style="color:var(--red)">-'+_fmt(r.extracted)+'</td>'
+        +'<td class="num"><strong style="color:var(--green)">'+_fmt(r.net)+'</strong></td>'
+        +'</tr>';
+    });
+    html += '</tbody></table></div></div>';
+  }
+
+  html += '<div style="margin-top:8px;display:flex;gap:8px;justify-content:space-between">'
+    +'<button class="btn btn-secondary" onclick="_goStep(1)">← 처음으로</button>'
+    +'<button class="btn btn-primary" onclick="_downloadMixedExcel()">📥 엑셀 다운로드</button>'
+    +'</div>';
+
+  // 상태 설정 후 렌더
+  _settleState.step = 3;
+  _settleState._mixedHtml = html;
+  _renderSettle();
+}
+
+function _downloadMixedExcel(){
+  var mixed  = _settleState.mixedFiles;
+  var defCfg = _settleState.deliveryCfg || {};
+
+  var wb2 = XLSX.utils.book_new();
+
+  // 쿠팡 시트
+  if(_settleState.results && _settleState.results.length){
+    var cRows = [['이름','ID','캠프','배송건','총금액','프레시백','분실파손','실지급액']];
+    _settleState.results.forEach(function(r){
+      cRows.push([r.name||r.id, r.id, r.dept, r.count, r.amount||0, r.fresh||0, r.lossAmt||0, r.net]);
+    });
+    XLSX.utils.book_append_sheet(wb2, XLSX.utils.aoa_to_sheet(cRows), '쿠팡정산');
+  }
+
+  // 배달대행 시트
+  var dRows = [['이름','ID','트랙','건수','플랫폼수령','보전','환수','실지급액']];
+  mixed.delivery.forEach(function(f){
+    Object.keys(f.parsed.riderMap).forEach(function(rid){
+      var r = _calcDeliverySettlement(f.parsed.riderMap[rid], defCfg);
+      if(r) dRows.push([f.parsed.riderNames[rid]||rid, rid, r.trackLabel, r.totalCount, r.pfSum, r.injected, r.extracted, r.net]);
+    });
+  });
+  if(dRows.length > 1) XLSX.utils.book_append_sheet(wb2, XLSX.utils.aoa_to_sheet(dRows), '배달대행정산');
+
+  XLSX.writeFile(wb2, '혼합정산_'+new Date().toISOString().substring(0,10)+'.xlsx');
+  toast('✅ 엑셀 다운로드 완료');
+}
+
 function _renderStep3(){
+  // 혼합 모드 (쿠팡 + 배달대행 동시)
+  if(_settleState.mixedMode && _settleState._mixedHtml){
+    return _settleState._mixedHtml;
+  }
   // 배달대행 결과 화면
   if(_settleState.deliveryMode){
     return _renderDeliveryResult();
