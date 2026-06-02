@@ -14419,9 +14419,11 @@ function _initFCMReceiver(){
 }
 
 function goPage(page){
+  window._currentPage=page;  // 현재 페이지 추적
   // 페이지 이동 시 실시간 리스너 해제
   if(window._dwAdminUnsub){try{window._dwAdminUnsub();}catch(e){}window._dwAdminUnsub=null;}
   if(window._dwDashUnsub&&page!=='delivery_input'){try{window._dwDashUnsub();}catch(e){}window._dwDashUnsub=null;}
+  if(window._drvUnsub&&page!=='drivers'){try{window._drvUnsub();}catch(e){}window._drvUnsub=null;}
 
   // 딜러가 admin 전용 페이지 접근 시 차단
   var adminOnlyPages=['admin','dealers','all_settlements','all_drivers','subscriptions','invoices','error_logs'];
@@ -17167,8 +17169,11 @@ function pageDrivers(){
   window._drvUnsub = _db.collection('drivers').where('dealerId','==',_CU.dealerId)
     .onSnapshot(function(snap){
       _drvCache=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
-      var cc=document.getElementById('content');
-      if(cc) _renderDrivers(_drvCache,cc);
+      // 현재 기사 관리 탭일 때만 렌더링
+      if(window._currentPage==='drivers'){
+        var cc=document.getElementById('content');
+        if(cc) _renderDrivers(_drvCache,cc);
+      }
     }, function(e){logError('기사관리',e.message);c.innerHTML='<div class="empty">⚠️ '+e.message+'</div>';});
 }
 function _getDrvCamp(d){
