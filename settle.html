@@ -13627,13 +13627,16 @@ function _printPayslip(worker, result, ym){
   if(win){win.document.write(html);win.document.close();}
 }
 
-function toggleSettleGroup(el){
-  var id=el.getAttribute('data-target');
-  var target=document.getElementById(id);
+function toggleSettleGroup(elOrId){
+  // el이 문자열(gid)로 올 수도 있고 DOM요소로 올 수도 있음
+  var gid=typeof elOrId==='string'?elOrId:(elOrId.getAttribute&&elOrId.getAttribute('data-gid'));
+  if(!gid)return;
+  var target=document.getElementById(gid);
   if(!target)return;
   var open=target.style.display!=='none';
-  target.style.display=open?'none':'';
-  el.textContent=open?'▶ 펼치기':'▼ 접기';
+  target.style.display=open?'none':'block';
+  var arrow=document.getElementById(gid+'_a');
+  if(arrow)arrow.textContent=open?'▶':'▼';
 }
 // ══ 기사 전용: 내 정산 현황 ══
 function pageMySettle(){
