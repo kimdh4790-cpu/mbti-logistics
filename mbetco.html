@@ -2980,7 +2980,7 @@ function showApp(){
         if(!mySlug)return;
         var slugPath='/'+mySlug;
         // /settle 이거나 다른 slug면 내 slug로 이동
-        if(_curPath==='/settle'||(_curPath!==slugPath&&!_curPath.startsWith('/settle?'))){
+        if(_curPath==='/settle'||_curPath==='/mbetco'||(_curPath!==slugPath&&!_curPath.startsWith('/settle?')&&!_curPath.startsWith('/mbetco'))){
           window.history.replaceState({},'',slugPath);
           document.title='DONWAY — '+(snap.data().companyName||mySlug);
         }
