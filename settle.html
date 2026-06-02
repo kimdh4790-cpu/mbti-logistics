@@ -6533,8 +6533,7 @@ function _dwRenderSimulator(){
         +'<div id="dw-sc-margin" style="font-size:20px;font-weight:900;color:#065f46;margin-top:4px">₩0</div>'
         +'<div id="dw-sc-margin-badge" style="font-size:9px;margin-top:4px;color:#065f46"></div>'
       +'</div>'
-    +'</div>'
-    // ━━ 트랙 점프 알림
+    +'</div>'    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">'      +'<div style="background:var(--bg2);border-radius:12px;padding:12px;text-align:center;border:1.5px solid var(--border)">'        +'<div style="font-size:10px;color:var(--text3);font-weight:700">📊 총 매출 (플랫폼 수령)</div>'        +'<div id="dw-sc-revenue" style="font-size:18px;font-weight:900;color:var(--brand);margin-top:4px">₩0</div>'      +'</div>'      +'<div style="background:var(--bg2);border-radius:12px;padding:12px;text-align:center;border:1.5px solid var(--border)">'        +'<div style="font-size:10px;color:var(--text3);font-weight:700">💸 총 매입 (기사 지급)</div>'        +'<div id="dw-sc-cost" style="font-size:18px;font-weight:900;color:var(--red);margin-top:4px">₩0</div>'      +'</div>'      +'<div style="background:var(--bg2);border-radius:12px;padding:12px;text-align:center;border:1.5px solid var(--border)">'        +'<div style="font-size:10px;color:var(--text3);font-weight:700">💰 순수익 (매출-매입)</div>'        +'<div id="dw-sc-profit" style="font-size:18px;font-weight:900;color:var(--green);margin-top:4px">₩0</div>'      +'</div>'    +'</div>'    // ━━ 트랙 점프 알림
     +'<div id="dw-track-alert" style="display:none;padding:10px 16px;border-radius:10px;margin-bottom:10px;text-align:center;font-weight:800;font-size:13px"></div>'
     // ━━ 2단계 스트림 + 3단계 명세서 나란히
     +'<div style="display:grid;grid-template-columns:1fr 320px;gap:10px;margin-bottom:10px">'
@@ -20465,15 +20464,29 @@ function pageStats(){
     _statRender(tab,_statData);
   }
   var _statData=null;
-  _db.collection('settlements').where('dealerId','==',_CU.dealerId).get()
-    .then(function(snap){
-      if(!snap||snap.empty){document.getElementById('stat-content').innerHTML='<div class="empty">데이터 없음</div>';return;}
-      var settles=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
-      _statData=settles;
-      document.getElementById('stat-content').innerHTML='';
-      // 월별 + 캠프별
-      var byMonth={};var byCamp={};
-      settles.forEach(function(s){
+  var _did2=_CU.dealerId;
+  // settlements + expenses 병렬 로딩
+  Promise.all([
+    _db.collection('settlements').where('dealerId','==',_did2).get(),
+    _db.collection('expenses').where('dealerId','==',_did2).get()
+  ]).then(function(results){
+    var snap=results[0], expSnap=results[1];
+    if(!snap||snap.empty){document.getElementById('stat-content').innerHTML='<div class="empty">데이터 없음</div>';return;}
+    var settles=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
+    // 경비 월별 합산
+    var byMonthExp={};
+    expSnap.forEach(function(d){
+      var e=d.data();
+      var mo=(e.date||e.ym||'').slice(0,7);
+      if(!mo)return;
+      if(!byMonthExp[mo])byMonthExp[mo]=0;
+      byMonthExp[mo]+=(e.amount||e.amt||0);
+    });
+    _statData=settles;
+    document.getElementById('stat-content').innerHTML='';
+    // 월별 + 캠프별
+    var byMonth={};var byCamp={};
+    settles.forEach(function(s){
         var mo=s.month||'';var cc=_getSettleCamp(s)||'기타';
         var r=calcNet(s);
         // 대시보드와 동일한 방식으로 총매출 계산
@@ -20488,7 +20501,7 @@ function pageStats(){
         var insComp=empComp+workComp;
         // 순수익 = 총매출(VAT포함) - 기사실지급(VAT포함) - 회사보험료
         var netProfit=totalVat-(r.net||0)-insComp;
-        if(!byMonth[mo])byMonth[mo]={cnt:0,dcnt:0,income:0,vat:0,totalVat:0,net:0,insComp:0,profit:0};
+        if(!byMonth[mo])byMonth[mo]={cnt:0,dcnt:0,income:0,vat:0,totalVat:0,net:0,insComp:0,expense:0,profit:0};
         byMonth[mo].cnt++;byMonth[mo].dcnt+=(s.dcnt||0);
         byMonth[mo].income+=supplyAmt;byMonth[mo].vat+=vat;byMonth[mo].totalVat+=totalVat;
         byMonth[mo].net+=r.net||0;byMonth[mo].insComp+=insComp;byMonth[mo].profit+=netProfit;
@@ -20496,6 +20509,12 @@ function pageStats(){
         byCamp[cc].cnt++;byCamp[cc].dcnt+=(s.dcnt||0);
         byCamp[cc].income+=supplyAmt;byCamp[cc].vat+=vat;byCamp[cc].totalVat+=totalVat;
         byCamp[cc].net+=r.net||0;byCamp[cc].insComp+=insComp;byCamp[cc].profit+=netProfit;
+      });
+      // 경비를 월별 profit에서 차감
+      Object.keys(byMonth).forEach(function(mo){
+        var exp=byMonthExp[mo]||0;
+        byMonth[mo].expense=exp;
+        byMonth[mo].profit=byMonth[mo].profit-exp;
       });
       var months=Object.keys(byMonth).sort().reverse();
       var camps=Object.keys(byCamp).sort();
@@ -20510,7 +20529,7 @@ function pageStats(){
         +'<th style="padding:8px">월</th>'
         +'<th style="padding:8px;text-align:right">총매출(VAT포함)</th>'
         +'<th style="padding:8px;text-align:right">기사실지급</th>'
-        +'<th style="padding:8px;text-align:right">회사보험료</th>'
+        +'<th style="padding:8px;text-align:right">보험료+경비</th>'
         +'<th style="padding:8px;text-align:right;color:#059669">🏢 순수익</th>'
         +'</tr></thead><tbody>'
         +months.map(function(mo,i){
@@ -20525,9 +20544,9 @@ function pageStats(){
               +'<div style="font-size:10px;color:var(--text3);margin-top:2px">'+fmt(d.dcnt)+'건</div>'
             +'</td>'
             +'<td style="padding:8px;text-align:right;color:var(--blue);font-weight:700">₩'+fmt(d.net)+'</td>'
-            +'<td style="padding:8px;text-align:right;color:#dc2626;font-weight:700">-₩'+fmt(d.insComp)+'</td>'
+            +'<td style="padding:8px;text-align:right;color:#dc2626;font-weight:700">-₩'+fmt(d.insComp)+(d.expense>0?'<br><span style="font-size:10px;color:#f97316">경비 -₩'+fmt(d.expense)+'</span>':'')+'</td>'
             +'<td style="padding:8px;text-align:right">'
-              +'<div style="background:#059669;color:#fff;font-weight:900;font-size:14px;padding:6px 10px;border-radius:8px;display:inline-block">₩'+fmt(d.profit)+'</div>'
+            +'<td style="padding:8px;text-align:right"><div style="background:'+(d.profit>=0?'#059669':'#dc2626')+';color:#fff;font-weight:900;font-size:14px;padding:6px 10px;border-radius:8px;display:inline-block">₩'+fmt(Math.abs(d.profit))+'</div>'+(d.expense>0?'<div style="font-size:9px;color:var(--text3);margin-top:3px">경비 반영</div>':'')+'</td>'
             +'</td>'
             +'</tr>';
         }).join('')+'</tbody></table></div>';
@@ -20540,7 +20559,7 @@ function pageStats(){
         +'<th style="padding:8px">캠프</th>'
         +'<th style="padding:8px;text-align:right">총매출(VAT포함)</th>'
         +'<th style="padding:8px;text-align:right">기사실지급</th>'
-        +'<th style="padding:8px;text-align:right">회사보험료</th>'
+        +'<th style="padding:8px;text-align:right">보험료+경비</th>'
         +'<th style="padding:8px;text-align:right;color:#059669">🏢 순수익</th>'
         +'</tr></thead><tbody>'
         +camps.map(function(cc){
@@ -20553,9 +20572,9 @@ function pageStats(){
               +'<div style="font-size:10px;color:var(--text3);margin-top:2px">'+fmt(d.dcnt)+'건</div>'
             +'</td>'
             +'<td style="padding:8px;text-align:right;color:var(--blue);font-weight:700">₩'+fmt(d.net)+'</td>'
-            +'<td style="padding:8px;text-align:right;color:#dc2626;font-weight:700">-₩'+fmt(d.insComp)+'</td>'
+            +'<td style="padding:8px;text-align:right;color:#dc2626;font-weight:700">-₩'+fmt(d.insComp)+(d.expense>0?'<br><span style="font-size:10px;color:#f97316">경비 -₩'+fmt(d.expense)+'</span>':'')+'</td>'
             +'<td style="padding:8px;text-align:right">'
-              +'<div style="background:#059669;color:#fff;font-weight:900;font-size:14px;padding:6px 10px;border-radius:8px;display:inline-block">₩'+fmt(d.profit)+'</div>'
+            +'<td style="padding:8px;text-align:right"><div style="background:'+(d.profit>=0?'#059669':'#dc2626')+';color:#fff;font-weight:900;font-size:14px;padding:6px 10px;border-radius:8px;display:inline-block">₩'+fmt(Math.abs(d.profit))+'</div>'+(d.expense>0?'<div style="font-size:9px;color:var(--text3);margin-top:3px">경비 반영</div>':'')+'</td>'
             +'</td>'
             +'</tr>';
         }).join('')+'</tbody></table></div>';
