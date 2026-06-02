@@ -2876,6 +2876,7 @@ function showApp(){
   _loadRouteCampMap();  // 라우트→캠프 매핑 로드
   _loadMySlug();  // 내 전용 URL 로드
   _loadSeasonPrices();  // 시즌 단가 로드
+  loadIncSettingsFromFB();  // ★ 인센 설정 복원 (Firestore → localStorage)
   // FCM 토큰 항상 갱신 시도 (알림 허용 상태면)
   if(typeof Notification!=='undefined'&&Notification.permission==='granted'){
     setTimeout(_registerFCM, 3000);
@@ -21503,6 +21504,8 @@ function _getCampForRoute(route){
 
 function openIncPanel(){
   if(!_db||!_CU){toast('❌ 로그인 후 이용하세요');return;}
+  // 패널 열 때마다 Firestore에서 최신 설정 로드
+  loadIncSettingsFromFB();
   var settle=_settleCache||[];
   if(!settle.length){
     toast('⏳ 정산 데이터 로딩 중...');
