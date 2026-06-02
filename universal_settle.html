@@ -622,11 +622,14 @@ function _renderStep2(){
   var headers = _settleState.headers;
   var mapping = _settleState.mapping;
 
-  // 헤더 옵션 HTML
-  var opts = '<option value="">— 선택 안 함 —</option>';
-  headers.forEach(function(h,i){
-    opts += '<option value="'+i+'">'+h+'</option>';
-  });
+  // 헤더 옵션 HTML (매핑값에 따라 selected 직접 삽입)
+  function makeOpts(mappedIdx){
+    var o = '<option value=""'+(mappedIdx===undefined?' selected':'')+'>— 선택 안 함 —</option>';
+    headers.forEach(function(h,i){
+      o += '<option value="'+i+'"'+(mappedIdx===i?' selected':'')+'>'+h+'</option>';
+    });
+    return o;
+  }
 
   var html = '<div class="card">'
     +'<div class="card-title">🔗 컬럼 매핑 <span class="badge">'+_settleState.rows.length+'행</span></div>'
@@ -637,12 +640,11 @@ function _renderStep2(){
     +'<div>항목</div><div></div><div>엑셀 열 선택</div></div>';
 
   SETTLE_FIELDS.forEach(function(f){
-    var sel = (mapping[f.key]!==undefined) ? ' value="'+mapping[f.key]+'"' : '';
     html += '<div class="mapping-grid">'
       +'<div class="map-field">'+f.icon+' '+f.label+(f.required?'<span class="map-required">★</span>':'<span class="map-optional">선택</span>')+'</div>'
       +'<div class="map-arrow">→</div>'
       +'<select class="map-select" onchange="_setMapping(\''+f.key+'\',this.value)">'
-        +opts.replace('value="'+mapping[f.key]+'"','value="'+mapping[f.key]+'" selected')
+        +makeOpts(mapping[f.key])
       +'</select>'
       +'</div>';
   });
@@ -671,17 +673,6 @@ function _renderStep2(){
         return '<tr>'+headers.map(function(_,i){return '<td>'+(r[i]||'')+'</td>';}).join('')+'</tr>';
       }).join('')
     +'</tbody></table></div></div>';
-
-  // select 값 직접 설정 (setTimeout으로)
-  setTimeout(function(){
-    SETTLE_FIELDS.forEach(function(f){
-      var selects = document.querySelectorAll('.map-select');
-      var idx = SETTLE_FIELDS.indexOf(f);
-      if(selects[idx] && mapping[f.key]!==undefined){
-        selects[idx].value = String(mapping[f.key]);
-      }
-    });
-  },50);
 
   return html;
 }
