@@ -16734,11 +16734,14 @@ function pageDrivers(){
   var c=document.getElementById('content');
   if(!_db){c.innerHTML='<div class="empty"><div class="empty-icon">👤</div>로그인 후 이용하세요</div>';return;}
   c.innerHTML='<div class="loading">로딩 중...</div>';
-  if(_drvCache){_renderDrivers(_drvCache,c);return;}
-  _db.collection('drivers').where('dealerId','==',_CU.dealerId).get().then(function(snap){
-    _drvCache=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
-    _renderDrivers(_drvCache,c);
-  }).catch(function(e){logError('기사관리',e.message);c.innerHTML='<div class="empty">⚠️ '+e.message+'</div>';});
+  // 실시간 리스너 (가입/수정 즉시 반영)
+  if(window._drvUnsub) window._drvUnsub();
+  window._drvUnsub = _db.collection('drivers').where('dealerId','==',_CU.dealerId)
+    .onSnapshot(function(snap){
+      _drvCache=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
+      var cc=document.getElementById('content');
+      if(cc) _renderDrivers(_drvCache,cc);
+    }, function(e){logError('기사관리',e.message);c.innerHTML='<div class="empty">⚠️ '+e.message+'</div>';});
 }
 function _getDrvCamp(d){
   if(!d)return '';
@@ -17300,6 +17303,7 @@ function saveDriver(id){
     bizType:gvs('edr-biztype')||'',
     bizItem:gvs('edr-bizitem')||'',
     bizKind:gvs('edr-bizitem')||'',
+    isBiz:!!(gvs('edr-biznum').replace(/-/g,'').replace(/\s/g,'')),
     workType:gvs('edr-worktype')||'coupang',
     hourlyRate:parseFloat(gvs('edr-hourlyrate'))||10320,
     dailyRate:parseFloat(gvs('edr-dailyrate'))||82560,
@@ -17311,6 +17315,25 @@ function saveDriver(id){
   _db.collection('drivers').doc(id).update(payload).then(function(){
     var mo=document.getElementById('mo-edit-dr');if(mo)mo.remove();
     _drvCache=null;
+    toast('✅ 저장됨');
+    // ★ settlements 사업자 정보 동기화 (calcNet 재계산에 반영)
+    if(payload.bizNum!==undefined && _db && _CU){
+      _db.collection('settlements')
+        .where('dealerId','==',_CU.dealerId)
+        .where('userId','==',payload.userId||'')
+        .get().then(function(sSnap){
+          if(sSnap.empty) return;
+          var batch=_db.batch();
+          sSnap.docs.forEach(function(sd){
+            batch.update(sd.ref,{
+              bizNum:payload.bizNum||'',
+              bizName:payload.bizName||'',
+              isBiz:payload.isBiz
+            });
+          });
+          batch.commit().catch(function(){});
+        }).catch(function(){});
+    }
     // ★ users 컬렉션도 동기화 (직원 앱에서 반영되도록)
     _db.collection('drivers').doc(id).get().then(function(snap){
       if(!snap.exists) return;
@@ -17321,6 +17344,7 @@ function saveDriver(id){
           bizNum:payload.bizNum,bizName:payload.bizName,
           bizRep:payload.bizRep,bizAddr:payload.bizAddr,
           bizType:payload.bizType,bizItem:payload.bizItem,bizKind:payload.bizItem,
+          isBiz:payload.isBiz,
           workType:payload.workType,camp:payload.camp
         }).catch(function(){});
       }
