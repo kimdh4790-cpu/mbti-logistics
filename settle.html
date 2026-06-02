@@ -13187,7 +13187,7 @@ function pageMyStatements(){
   if(!_db||!_CU)return;
   _loadMyStatements();
 }
-function _loadMyStatements(){
+window._loadMyStatements=function(){
   if(!_db||!_CU)return;
   var _did=_CU.dealerId||_CU.companyId||'';
   var _driverId=_CU.driverId||'';
@@ -13197,7 +13197,8 @@ function _loadMyStatements(){
     snap.forEach(function(doc){
       var d=doc.data();
       // 기사는 본인 것만 표시
-      if(_CU.role==='driver'&&d.targetDriverId&&d.targetDriverId!==_driverId)return;
+      var _myId=_CU.driverId||_CU.userId||_CU.uid||'';
+      if(_CU.role==='driver'&&d.targetDriverId&&d.targetDriverId!==_myId&&d.targetDriverId!==_CU.uid)return;
       items.push({id:doc.id,data:d});
     });
     items.sort(function(a,b){
@@ -13227,13 +13228,13 @@ function _loadMyStatements(){
     if(el)el.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div>데이터를 불러올 수 없습니다</div>';
   });
 }
-function _deleteMyStmt(id){
+window._deleteMyStmt=function(id){
   if(!confirm('이 알림을 삭제하시겠습니까?'))return;
   _db.collection('driver_notifications').doc(id).delete()
-    .then(function(){toast('✅ 삭제됨');_loadMyStatements();})
+    .then(function(){toast('✅ 삭제됨');window._loadMyStatements();})
     .catch(function(e){toast('❌ '+e.message);});
 }
-function _deleteAllMyStmts(){
+window._deleteAllMyStmts=function(){
   if(!confirm('내 정산 내역을 전부 삭제하시겠습니까?'))return;
   var _did=_CU.dealerId||'';
   var _driverId=_CU.driverId||'';
@@ -13245,7 +13246,7 @@ function _deleteAllMyStmts(){
     var batch=_db.batch();
     snap.forEach(function(doc){batch.delete(doc.ref);});
     return batch.commit();
-  }).then(function(){toast('✅ 전체 삭제 완료');_loadMyStatements();})
+  }).then(function(){toast('✅ 전체 삭제 완료');window._loadMyStatements();})
   .catch(function(e){toast('❌ '+e.message);});
 }
 
@@ -19599,7 +19600,7 @@ function _sendPayslipPush(x,r,name,month,net,vatIncome,docId){
   // 1) 명세서 캡처용 HTML 직접 생성 (모달 열려있지 않아도 동작)
   toast('📸 '+name+'님 명세서 이미지 생성 중...');
   if(typeof html2canvas==='undefined'){
-    _sendPayslipNotification(did,uid,name,title,body,month,net,vatIncome,x,null);
+    _sendPayslipNotification(did,uid,name,title,body,month,net,vatIncome,x,r,null);
     return;
   }
   // 캡처용 임시 div 생성 (화면 밖에 배치)
@@ -19617,16 +19618,16 @@ function _sendPayslipPush(x,r,name,month,net,vatIncome,docId){
       if(dataUrl.length>900000) dataUrl=canvas.toDataURL('image/jpeg',0.75);
       var path='settlements/'+did+'/'+month+'_'+uid+'_stmt_'+Date.now()+'.jpg';
       _uploadImgToStorage(dataUrl,path).then(function(imgUrl){
-        _sendPayslipNotification(did,uid,name,title,body,month,net,vatIncome,x,imgUrl);
+        _sendPayslipNotification(did,uid,name,title,body,month,net,vatIncome,x,r,imgUrl);
       });
     }).catch(function(){
       if(captureDiv.parentNode)document.body.removeChild(captureDiv);
-      _sendPayslipNotification(did,uid,name,title,body,month,net,vatIncome,x,null);
+      _sendPayslipNotification(did,uid,name,title,body,month,net,vatIncome,x,r,null);
     });
   },300);
 }
 
-function _sendPayslipNotification(did,uid,name,title,body,month,net,vatIncome,x,imgUrl){
+function _sendPayslipNotification(did,uid,name,title,body,month,net,vatIncome,x,r,imgUrl){
   // driver_notifications 저장
   var notifData={
     dealerId:did,targetDriverId:uid,targetDriverName:name,type:'payslip',
