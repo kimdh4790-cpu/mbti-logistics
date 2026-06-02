@@ -16566,11 +16566,16 @@ function _saveSECurrent(){
           }
         }).catch(function(){});
     }
-    var mo=document.getElementById('mo-se');if(mo)mo.remove();
+    // 자동저장 시엔 모달 유지 — 수동 닫기로만 닫힘
     try{var d2=_CU&&_CU.dealerId||'shared';
       localStorage.removeItem('dw_'+d2+'_settlements');
       localStorage.removeItem('settlements');}catch(e){}
-    _settleCache=null;_reloadSettlePage();
+    _settleCache=null;
+    // 정산 목록만 백그라운드 갱신 (모달 유지)
+    _db.collection('settlements').where('dealerId','==',_CU.dealerId||_CU.uid)
+      .get().then(function(snap){
+        _settleCache=snap.docs.map(function(d){return Object.assign({id:d.id,fbId:d.id},d.data());});
+      }).catch(function(){});
   }).catch(function(e){
     toast('❌ 저장실패: '+e.message);
     if(btn){btn.textContent='💾 저장 후 재계산';btn.disabled=false;}
