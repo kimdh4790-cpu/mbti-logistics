@@ -8763,7 +8763,15 @@ window._sendAdminNotif=function(){
     return q.get();
   }).then(function(snap){
     var tokens=[];
-    snap.forEach(function(doc){if(target!=='all'&&doc.id!==target)return;var tk=doc.data().fcmToken;if(tk&&tk.length>20)tokens.push(tk);});
+    snap.forEach(function(doc){
+      if(target!=='all'&&doc.id!==target)return;
+      var u=doc.data();
+      if(u.fcmTokens&&u.fcmTokens.length){
+        u.fcmTokens.forEach(function(t){if(t.token&&t.token.length>20&&tokens.indexOf(t.token)<0)tokens.push(t.token);});
+      } else if(u.fcmToken&&u.fcmToken.length>20&&tokens.indexOf(u.fcmToken)<0){
+        tokens.push(u.fcmToken);
+      }
+    });
     if(!tokens.length){if(st)st.textContent='✅ 저장 완료 (FCM 토큰 없음)';return;}
     return fetch('https://donway.ai.kr/fcm/notify-drivers',{
       method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tokens:tokens,title:title,body:body,url:window.location.origin+'/'})
@@ -14098,13 +14106,30 @@ async function _registerFCM(){
       var _uid = _CU.uid;
       var _did = _CU.dealerId;
       var _name = _CU.name||'';
-      // users 컬렉션 업데이트
-      _db.collection('users').doc(_uid).update({
-        fcmToken:token, fcmUpdatedAt:new Date().toISOString(), dealerId:_did
+      var _device = navigator.userAgent.includes('Mobile')?'mobile':'desktop';
+      // ★ 다중기기 지원: fcmTokens 배열에 추가 (중복 제거)
+      var _tokenEntry = {token:token, device:_device, updatedAt:new Date().toISOString()};
+      _db.collection('users').doc(_uid).get().then(function(uSnap){
+        var existing = uSnap.exists ? (uSnap.data().fcmTokens||[]) : [];
+        // 같은 토큰 제거 후 추가 (최대 5기기)
+        var filtered = existing.filter(function(t){ return t.token !== token; });
+        filtered.push(_tokenEntry);
+        if(filtered.length > 5) filtered = filtered.slice(-5);
+        var updateData = {
+          fcmToken: token,  // 호환성 유지
+          fcmTokens: filtered,
+          fcmUpdatedAt: new Date().toISOString(),
+          dealerId: _did, name: _name
+        };
+        if(uSnap.exists){
+          _db.collection('users').doc(_uid).update(updateData).catch(function(){});
+        } else {
+          _db.collection('users').doc(_uid).set(updateData, {merge:true}).catch(function(){});
+        }
       }).catch(function(){
-        // 문서 없으면 set
         _db.collection('users').doc(_uid).set({
-          fcmToken:token, fcmUpdatedAt:new Date().toISOString(), dealerId:_did, name:_name
+          fcmToken:token, fcmTokens:[_tokenEntry],
+          fcmUpdatedAt:new Date().toISOString(), dealerId:_did, name:_name
         },{merge:true}).catch(function(){});
       });
       // drivers 컬렉션 - userId 또는 name으로 매칭
@@ -14112,18 +14137,27 @@ async function _registerFCM(){
         .where('userId','==',_uid).limit(1).get()
         .then(function(snap){
           if(!snap.empty){
-            snap.docs[0].ref.update({fcmToken:token,fcmUpdatedAt:new Date().toISOString()});
+            var dSnap = snap.docs[0];
+            var dExisting = dSnap.data().fcmTokens||[];
+            var dFiltered = dExisting.filter(function(t){return t.token!==token;});
+            dFiltered.push(_tokenEntry);
+            if(dFiltered.length>5) dFiltered=dFiltered.slice(-5);
+            dSnap.ref.update({fcmToken:token, fcmTokens:dFiltered, fcmUpdatedAt:new Date().toISOString()});
           } else if(_name) {
-            // name으로 fallback 매칭
             return _db.collection('drivers').where('dealerId','==',_did)
               .where('name','==',_name).limit(1).get()
               .then(function(s2){
-                if(!s2.empty) s2.docs[0].ref.update({fcmToken:token,fcmUpdatedAt:new Date().toISOString()});
-                else {
-                  // 없으면 신규 생성
+                if(!s2.empty){
+                  var d2 = s2.docs[0];
+                  var d2Existing = d2.data().fcmTokens||[];
+                  var d2Filtered = d2Existing.filter(function(t){return t.token!==token;});
+                  d2Filtered.push(_tokenEntry);
+                  if(d2Filtered.length>5) d2Filtered=d2Filtered.slice(-5);
+                  d2.ref.update({fcmToken:token, fcmTokens:d2Filtered, fcmUpdatedAt:new Date().toISOString()});
+                } else {
                   _db.collection('drivers').doc(_uid).set({
-                    fcmToken:token,fcmUpdatedAt:new Date().toISOString(),
-                    dealerId:_did,userId:_uid,name:_name
+                    fcmToken:token, fcmTokens:[_tokenEntry], fcmUpdatedAt:new Date().toISOString(),
+                    dealerId:_did, userId:_uid, name:_name
                   },{merge:true}).catch(function(){});
                 }
               });
@@ -20760,7 +20794,38 @@ function saveRprice(){
     _showAutoSaved('라우트 단가 저장됨');
     var c=document.getElementById('content');_renderPrices(c);
     setTimeout(function(){if(_rpCampActive)showRpCampTab(_rpCampActive);},30);
+    // ★ 단가 변경 알림 발송
+    _sendPriceChangeNotif();
   }).catch(function(e){toast('❌ '+e.message);});
+}
+
+// 단가 변경 시 기사 알림
+function _sendPriceChangeNotif(){
+  var did=_CU&&_CU.dealerId;
+  if(!did||!_db)return;
+  _db.collection('users').where('dealerId','==',did).where('role','==','driver').get().then(function(snap){
+    var tokens=[];
+    snap.forEach(function(doc){
+      var u=doc.data();
+      if(u.fcmTokens&&u.fcmTokens.length){
+        u.fcmTokens.forEach(function(t){if(t.token&&t.token.length>20&&tokens.indexOf(t.token)<0)tokens.push(t.token);});
+      } else if(u.fcmToken&&u.fcmToken.length>20&&tokens.indexOf(u.fcmToken)<0){
+        tokens.push(u.fcmToken);
+      }
+    });
+    if(!tokens.length)return;
+    fetch('https://donway.ai.kr/fcm/notify-drivers',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        tokens:tokens,
+        title:'📋 배송 단가 변경 안내',
+        body:'라우트 단가가 업데이트됐습니다. 앱에서 확인하세요.',
+        type:'price_change',
+        url:window.location.origin+'/'
+      })
+    }).catch(function(){});
+  }).catch(function(){});
 }
 
 // ══ 라우트 단가 파일 일괄 등록 ══
@@ -22157,24 +22222,35 @@ async function _doDeploySettlements(ids) {
   var month = _settle_month && _settle_month !== 'all' ? _settle_month : 
     (_settleCache && _settleCache[0] ? _settleCache[0].month : '');
 
-  // FCM 토큰 로드 — users 컬렉션 기준 (driverId/name 매핑)
-  var tokenMap = {};
+  // FCM 토큰 로드 — users 컬렉션 기준 (다중기기 지원)
+  var tokenMap = {}; // key → 토큰 배열
+  function _addToken(key, tokens){
+    if(!key||!tokens||!tokens.length)return;
+    if(!tokenMap[key]) tokenMap[key]=[];
+    tokens.forEach(function(t){
+      if(tokenMap[key].indexOf(t)<0) tokenMap[key].push(t);
+    });
+  }
   try {
     var userSnap = await _db.collection('users')
       .where('dealerId', '==', _did).get();
     userSnap.forEach(function(doc) {
       var u = doc.data();
-      if (!u.fcmToken || u.fcmToken.length < 20) return;
-      if (u.driverId) tokenMap[u.driverId] = u.fcmToken;
-      if (u.userId) tokenMap[u.userId] = u.fcmToken;
-      if (u.name) tokenMap[u.name] = u.fcmToken;
-      // phone 기반 매핑 (drv_5578_4ge4 → 5578 → phone 010xxxx5578)
+      // 다중기기 토큰 수집
+      var tokens = [];
+      if(u.fcmTokens&&u.fcmTokens.length){
+        u.fcmTokens.forEach(function(t){ if(t.token&&t.token.length>20) tokens.push(t.token); });
+      }
+      if(u.fcmToken&&u.fcmToken.length>20&&tokens.indexOf(u.fcmToken)<0) tokens.push(u.fcmToken);
+      if(!tokens.length) return;
+      if (u.driverId) _addToken(u.driverId, tokens);
+      if (u.userId) _addToken(u.userId, tokens);
+      if (u.name) _addToken(u.name, tokens);
       if (u.phone) {
         var ph = u.phone.replace(/-/g,'');
-        tokenMap[ph] = u.fcmToken;
-        // drv_XXXX 형식에서 XXXX 추출
+        _addToken(ph, tokens);
         var m = ph.match(/\d{4}$/);
-        if (m) tokenMap['drv_'+m[0]] = u.fcmToken;
+        if (m) _addToken('drv_'+m[0], tokens);
       }
     });
   } catch(e) {}
@@ -22243,18 +22319,21 @@ async function _doDeploySettlements(ids) {
       // settle.driver(이름) → settle.userId → driverId → phone 순
       var _driverName = settle.driver || settle.name || settle.driverName || settle.userId || '';
       var _phonePrefix = _tDrvId.replace('drv_','').split('_')[0]||'';
-      var _tk = tokenMap[_driverName]
-        || tokenMap[settle.userId||'']
-        || tokenMap[_tDrvId]
-        || tokenMap['drv_'+_phonePrefix]
-        || '';
-      if (_tk) {
+      // 다중기기 토큰 배열 수집
+      var _tkArr = (tokenMap[_driverName]||[])
+        .concat(tokenMap[settle.userId||'']||[])
+        .concat(tokenMap[_tDrvId]||[])
+        .concat(tokenMap['drv_'+_phonePrefix]||[]);
+      // 중복 제거
+      var _tkSet = {}; var _tokens = [];
+      _tkArr.forEach(function(t){if(t&&!_tkSet[t]){_tkSet[t]=1;_tokens.push(t);}});
+      if (_tokens.length) {
         try {
           var _fr = await fetch('/fcm/notify-drivers', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              tokens: [_tk],
+              tokens: _tokens,
               title: '📤 ' + (settle.month||'') + ' 정산 배포',
               body: (settle.name||'') + '님 정산 명세서가 배포됐습니다.',
               url: window.location.origin + (window._COMPANY_SLUG ? '/'+window._COMPANY_SLUG : '/'),
@@ -22580,14 +22659,22 @@ function _saveNotice(){
           fileUrl:fileUrl||'',read:false,
           createdAt:firebase.firestore.FieldValue.serverTimestamp()
         });
-        // drivers 컬렉션에 토큰 있으면 바로 사용
-        if(d.fcmToken) fcmTokens.push(d.fcmToken);
-        else driverIds.push(doc.id);
+        // ★ 다중기기 토큰 수집
+        if(d.fcmTokens&&d.fcmTokens.length){
+          d.fcmTokens.forEach(function(t){if(t.token&&t.token.length>20&&fcmTokens.indexOf(t.token)<0)fcmTokens.push(t.token);});
+        } else if(d.fcmToken&&fcmTokens.indexOf(d.fcmToken)<0){
+          fcmTokens.push(d.fcmToken);
+        } else { driverIds.push(doc.id); }
       });
-      // drivers에 토큰 없는 기사는 members 컬렉션에서 보완
+      // users 컬렉션에서 보완 (다중기기)
       var memberPromises = driverIds.map(function(id){
-        return _db.collection('members').doc(id).get().then(function(m){
-          if(m.exists&&m.data().fcmToken) fcmTokens.push(m.data().fcmToken);
+        return _db.collection('users').where('dealerId','==',did).where('userId','==',id).limit(1).get().then(function(m){
+          if(!m.empty){
+            var ud=m.docs[0].data();
+            if(ud.fcmTokens&&ud.fcmTokens.length){
+              ud.fcmTokens.forEach(function(t){if(t.token&&fcmTokens.indexOf(t.token)<0)fcmTokens.push(t.token);});
+            } else if(ud.fcmToken&&fcmTokens.indexOf(ud.fcmToken)<0){ fcmTokens.push(ud.fcmToken); }
+          }
         }).catch(function(){});
       });
       return Promise.all(memberPromises).then(function(){
