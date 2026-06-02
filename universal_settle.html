@@ -426,8 +426,8 @@ function _renderSettle(){
       zone.addEventListener('dragleave',function(){zone.classList.remove('drag');});
       zone.addEventListener('drop',function(e){
         e.preventDefault(); zone.classList.remove('drag');
-        var f = e.dataTransfer.files[0];
-        if(f) _loadExcel(f);
+        var files = e.dataTransfer.files;
+        if(files.length) _onFilesSelected(files);
       });
     }
   }
@@ -444,10 +444,10 @@ function _renderStep1(){
     +'</div>'
     +'<div class="upload-zone" id="upload-zone" onclick="document.getElementById(\'excel-file\').click()">'
     +'<div class="upload-icon">📊</div>'
-    +'<div class="upload-title">엑셀 파일을 드래그하거나 클릭해서 업로드</div>'
+    +'<div class="upload-title">엑셀 파일을 드래그하거나 클릭해서 업로드 (여러 개 가능)</div>'
     +'<div class="upload-sub">CJ / 한진 / 롯데 / 쿠팡 / 배달대행 / 모든 .xlsx 지원</div>'
     +'</div>'
-    +'<input type="file" id="excel-file" accept=".xlsx,.xls" style="display:none" onchange="_onFileSelected(this)">'
+    +'<input type="file" id="excel-file" accept=".xlsx,.xls" style="display:none" multiple onchange="_onFileSelected(this)">'
     +'</div>';
 
   // 템플릿 비동기 로드
@@ -502,9 +502,67 @@ function _selectTemplate(id){
 }
 
 function _onFileSelected(inp){
-  var f = inp.files[0];
-  if(f) _loadExcel(f);
+  if(inp.files.length) _onFilesSelected(inp.files);
   inp.value = '';
+}
+
+function _onFilesSelected(files){
+  var arr = Array.from(files).filter(function(f){return f.name.match(/\.xlsx?$/i);});
+  if(!arr.length){toast('❌ xlsx 파일만 가능합니다');return;}
+  if(arr.length === 1){
+    _loadExcel(arr[0]);
+    return;
+  }
+  // 여러 파일: 큐에 쌓아서 순서대로 처리
+  _settleState.fileQueue = arr;
+  _settleState.fileQueueIdx = 0;
+  _settleState.multiFiles = []; // 각 파일별 {fileName, headers, rows, mapping, results}
+  toast('📂 '+arr.length+'개 파일 로드 중...');
+  _loadNextFile();
+}
+
+function _loadNextFile(){
+  var queue = _settleState.fileQueue;
+  var idx = _settleState.fileQueueIdx;
+  if(idx >= queue.length){
+    // 모든 파일 로드 완료 → 첫 번째 파일 매핑으로
+    toast('✅ '+queue.length+'개 파일 로드 완료');
+    _settleState.multiMode = true;
+    _settleState.multiIdx = 0;
+    _startMultiMapping();
+    return;
+  }
+  var file = queue[idx];
+  var reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      var wb = XLSX.read(e.target.result, {type:'array', cellDates:true});
+      var sheetName = wb.SheetNames[0];
+      var raw = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1, raw:false, defval:''});
+      if(raw.length < 2){toast('⚠️ '+file.name+' 데이터 없음, 건너뜀');_settleState.fileQueueIdx++;_loadNextFile();return;}
+      var hdrIdx = 0;
+      for(var i=0;i<Math.min(raw.length,6);i++){if(raw[i].filter(function(c){return c!=='';}).length>=2){hdrIdx=i;break;}}
+      var headers = (raw[hdrIdx]||[]).map(function(h,i){return String(h||'열'+(i+1));});
+      var rows = raw.slice(hdrIdx+1).filter(function(r){return r.filter(function(c){return c!=='';}).length>0;});
+      _settleState.multiFiles.push({fileName:file.name, headers:headers, rows:rows, mapping:{}, results:[]});
+      _settleState.fileQueueIdx++;
+      _loadNextFile();
+    }catch(err){toast('❌ '+file.name+' 읽기 실패');_settleState.fileQueueIdx++;_loadNextFile();}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function _startMultiMapping(){
+  var idx = _settleState.multiIdx;
+  var mf = _settleState.multiFiles[idx];
+  // 자동매핑 시도
+  _settleState.headers = mf.headers;
+  _settleState.rows = mf.rows;
+  _settleState.mapping = {};
+  _autoMap('__keyword');
+  mf.mapping = _settleState.mapping;
+  _settleState.step = 2;
+  _renderSettle();
 }
 
 function _loadExcel(file){
@@ -631,8 +689,22 @@ function _renderStep2(){
     return o;
   }
 
+  // 멀티파일 진행 표시
+  var multiBar = '';
+  if(_settleState.multiMode){
+    var mf = _settleState.multiFiles[_settleState.multiIdx];
+    var total = _settleState.multiFiles.length;
+    var cur = _settleState.multiIdx + 1;
+    multiBar = '<div style="background:var(--surface2);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;display:flex;align-items:center;gap:10px;">'
+      +'<span style="color:var(--primary);font-weight:700">파일 '+cur+'/'+total+'</span>'
+      +'<span style="color:var(--text2)"> '+mf.fileName+'</span>'
+      +'<span style="color:var(--text3);margin-left:auto">'+mf.rows.length+'행</span>'
+      +'</div>';
+  }
+
   var html = '<div class="card">'
     +'<div class="card-title">🔗 컬럼 매핑 <span class="badge">'+_settleState.rows.length+'행</span></div>'
+    +multiBar
     +'<div style="font-size:11px;color:var(--text2);margin-bottom:14px">엑셀의 어느 열이 어떤 항목인지 지정해 주세요. ★ 표시는 필수입니다.</div>'
 
     // 매핑 행
@@ -660,7 +732,12 @@ function _renderStep2(){
 
     +'<div style="margin-top:14px;display:flex;gap:8px;justify-content:space-between">'
     +'<button class="btn btn-secondary" onclick="_goStep(1)">← 이전</button>'
-    +'<button class="btn btn-primary" onclick="_goStep3()">다음: 데이터 확인 →</button>'
+    +(_settleState.multiMode
+      ? '<button class="btn btn-primary" onclick="_goStep3()">'+
+        (_settleState.multiIdx < _settleState.multiFiles.length-1
+          ? '다음 파일 매핑 →' : '데이터 확인 →')+'</button>'
+      : '<button class="btn btn-primary" onclick="_goStep3()">다음: 데이터 확인 →</button>'
+    )
     +'</div>'
     +'</div>'
 
@@ -705,8 +782,40 @@ function _goStep3(){
   var m = _settleState.mapping;
   if(m.name===undefined){toast('⚠️ 이름 열을 선택하세요');return;}
   if(m.count===undefined && m.amount===undefined){toast('⚠️ 건수 또는 금액 열을 선택하세요');return;}
+
+  // 멀티모드: 현재 파일 매핑 저장 후 다음 파일로
+  if(_settleState.multiMode){
+    var mf = _settleState.multiFiles[_settleState.multiIdx];
+    mf.mapping = Object.assign({}, _settleState.mapping);
+    // 다음 파일이 있으면 이동
+    if(_settleState.multiIdx < _settleState.multiFiles.length - 1){
+      _settleState.multiIdx++;
+      var next = _settleState.multiFiles[_settleState.multiIdx];
+      _settleState.headers = next.headers;
+      _settleState.rows = next.rows;
+      _settleState.mapping = {};
+      _autoMap('__keyword');
+      next.mapping = _settleState.mapping;
+      _renderSettle();
+      return;
+    }
+    // 마지막 파일 매핑 완료 → 전체 계산
+    toast('⏳ 계산 중...');
+    _settleState.workers = {};
+    _settleState.multiResults = [];
+    _settleState.multiFiles.forEach(function(f){
+      _settleState.headers = f.headers;
+      _settleState.rows = f.rows;
+      _settleState.mapping = f.mapping;
+      _calcResults();
+      f.results = _settleState.results.slice();
+    });
+    _settleState.step = 3;
+    _renderSettle();
+    return;
+  }
+
   toast('⏳ 인원 단가 로드 중...');
-  // workers 로드 후 계산
   _db.collection('mbetco_workers').where('dealerId','==',_dealerId).get()
     .then(function(snap){
       var workers = {};
@@ -815,7 +924,60 @@ function _toNum(v){
 }
 
 // ── STEP 3: 확인
+
+// ── 멀티파일 결과 화면
+function _renderStep3Multi(){
+  var files = _settleState.multiFiles;
+  var grandTotal = 0, grandCount = 0, grandPeople = 0;
+  files.forEach(function(f){
+    f.results.forEach(function(r){
+      grandTotal += r.net;
+      grandCount += r.count;
+    });
+    grandPeople += f.results.length;
+  });
+
+  var html = '<div class="result-summary">'
+    +'<div class="stat-card"><div class="stat-label">전체 파일</div><div class="stat-val blue">'+files.length+'개</div></div>'
+    +'<div class="stat-card"><div class="stat-label">전체 인원</div><div class="stat-val blue">'+grandPeople+'명</div></div>'
+    +'<div class="stat-card"><div class="stat-label">전체 건수</div><div class="stat-val">'+_fmt(grandCount)+'건</div></div>'
+    +'<div class="stat-card"><div class="stat-label">전체 실지급</div><div class="stat-val green">'+_fmt(grandTotal)+'원</div></div>'
+    +'</div>';
+
+  files.forEach(function(f, fi){
+    var fTotal = f.results.reduce(function(s,r){return s+r.net;},0);
+    var fCount = f.results.reduce(function(s,r){return s+r.count;},0);
+    html += '<div class="card">'
+      +'<div class="card-title">📄 '+f.fileName
+      +' <span style="font-size:11px;font-weight:400;color:var(--text2)">'+f.results.length+'명 · '+_fmt(fCount)+'건 · '+_fmt(fTotal)+'원</span></div>'
+      +'<div class="tbl-wrap"><table><thead><tr>'
+      +'<th>이름</th><th>부서/캠프</th><th>건수</th><th class="num">실지급</th><th class="num">원천세</th>'
+      +'</tr></thead><tbody>';
+    f.results.forEach(function(r){
+      html += '<tr>'
+        +'<td>'+r.name+'</td>'
+        +'<td>'+(r.dept||'-')+'</td>'
+        +'<td>'+_fmt(r.count)+'</td>'
+        +'<td class="num">'+_fmt(r.net)+'</td>'
+        +'<td class="num">'+_fmt(r.tax)+'</td>'
+        +'</tr>';
+    });
+    html += '</tbody></table></div></div>';
+  });
+
+  html += '<div style="display:flex;gap:8px;margin-top:8px;justify-content:space-between">'
+    +'<button class="btn btn-secondary" onclick="_goStep(2)">← 이전</button>'
+    +'<button class="btn btn-primary" onclick="_goStep(4)">정산 완료 →</button>'
+    +'</div>';
+  return html;
+}
+
 function _renderStep3(){
+  // 멀티모드: 파일별로 나눠서 표시
+  if(_settleState.multiMode){
+    return _renderStep3Multi();
+  }
+
   var res = _settleState.results;
   var totalNet   = res.reduce(function(s,r){return s+r.net;},0);
   var totalCount = res.reduce(function(s,r){return s+r.count;},0);
