@@ -10156,21 +10156,29 @@ function _txsBulkExcel(targets, ym){
     var net=totalAmt-emp-work;
     // 입사일 (엑셀 날짜 시리얼 또는 문자)
     var joinDate=drvInfo.joinDate||s.joinDate||'';
+    // 상호및캠프명: 상호명(캠프명) 형식
+    var _bizName=drvInfo.bizName||drvInfo.companyName||'';
+    var _camp=(drvInfo.camp||s.camp||'').replace('캠프','').trim();
+    var _campLabel=_camp?_camp+'캠프':'';
+    var _companyCell=_bizName?(_campLabel?_bizName+'('+_campLabel+')':_bizName):_campLabel;
+    // 금액 천단위 쉼표
+    var _fmt=function(n){return Number(n).toLocaleString('ko-KR');};
     rows.push([
       i+1,
-      drvInfo.companyName||s.camp||'',   // 상호및캠프명
-      s.driver||drvInfo.name||uid,        // 성명
-      joinDate,                           // 입사일
-      drvInfo.ssn||s.ssn||'',            // 주민번호
-      s.bizNum||drvInfo.bizNum||'',       // 사업자번호
-      totalAmt, supply, vat, expense, monthly,
-      emp, work, net
+      _companyCell,                        // 상호및캠프명
+      s.driver||drvInfo.name||uid,         // 성명
+      joinDate,                            // 입사일
+      drvInfo.ssn||s.ssn||'',             // 주민번호
+      s.bizNum||drvInfo.bizNum||'',        // 사업자번호
+      _fmt(totalAmt), _fmt(supply), _fmt(vat), _fmt(expense), _fmt(monthly),
+      _fmt(emp), _fmt(work), _fmt(net)
     ]);
   });
 
   // 합계
   var tot=function(col){return rows.slice(3).reduce(function(s,r){return s+(Number(r[col])||0);},0);};
-  rows.push(['','합계','','','','',tot(6),tot(7),tot(8),tot(9),tot(10),tot(11),tot(12),tot(13)]);
+  var _fmtT=function(n){return Number(n).toLocaleString('ko-KR');};
+  rows.push(['','합계','','','','',_fmtT(tot(6)),_fmtT(tot(7)),_fmtT(tot(8)),_fmtT(tot(9)),_fmtT(tot(10)),_fmtT(tot(11)),_fmtT(tot(12)),_fmtT(tot(13))]);
 
   var ws=XLSX.utils.aoa_to_sheet(rows);
   // 컬럼 너비 설정
