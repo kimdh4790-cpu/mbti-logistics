@@ -13186,51 +13186,128 @@ function pageMyStatements(){
 function _viewMyStatement(el){
   var id=el.getAttribute('data-id');
   if(!_db)return;
-  // 읽음 처리
   _db.collection('driver_notifications').doc(id).update({
     readAt:firebase.firestore.FieldValue.serverTimestamp()
   }).catch(function(){});
-  // 상세 모달
   _db.collection('driver_notifications').doc(id).get().then(function(doc){
     if(!doc.exists)return;
     var d=doc.data();
-    var mo=document.createElement('div');mo.className='mo show';
-    mo.onclick=function(e){if(e.target===mo)mo.remove();};
-    var md=document.createElement('div');md.className='md';md.style.maxWidth='420px';
     var isTax=(d.type==='tax'||d.type==='tax_invoice');
     var vatIncome=d.vatIncome||0;
     var supplyAmt=Math.round(vatIncome/1.1);
     var vatAmt=vatIncome-supplyAmt;
     var net=d.net||0;
     var emp=d.emp||0;
-    var bodyHtml;
+    var routes=d.routeDetails||[];
+
+    var mo=document.createElement('div');mo.className='mo show';
+    mo.onclick=function(e){if(e.target===mo)mo.remove();};
+    var md=document.createElement('div');md.className='md';
+    md.style.cssText='max-width:480px;width:96vw;max-height:90vh;display:flex;flex-direction:column;overflow:hidden';
+
+    var hdrHtml='<div class="mdt" style="flex-shrink:0">'+(isTax?'🧾 세금계산서':'📄 정산명세서')+'</div>';
+
     if(isTax){
-      bodyHtml='<div style="display:grid;gap:8px;font-size:13px">'
-        +'<div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">공급가액</span><span style="font-weight:700">'+supplyAmt.toLocaleString()+'원</span></div>'
-        +'<div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">부가세(10%)</span><span style="font-weight:700">'+vatAmt.toLocaleString()+'원</span></div>'
-        +'<div style="border-top:1px solid var(--border);padding-top:8px;display:flex;justify-content:space-between"><span style="font-weight:700">합계금액</span><span style="font-size:18px;font-weight:900;color:var(--primary)">'+vatIncome.toLocaleString()+'원</span></div>'
-        +'</div>';
+      // 세금계산서 → 이미지
+      var body2='<div style="flex:1;overflow-y:auto;padding:16px">';
+      if(d.img){
+        body2+='<div style="border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-bottom:12px">'
+          +'<img src="'+d.img+'" style="width:100%;display:block" loading="lazy"></div>';
+      } else {
+        body2+='<div style="background:var(--bg2);border-radius:12px;padding:16px;margin-bottom:12px">'
+          +'<div style="font-size:15px;font-weight:800;margin-bottom:12px">'+esc(d.month||'')+' 세금계산서</div>'
+          +'<div style="display:grid;gap:8px;font-size:13px">'
+          +'<div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">공급가액</span><span style="font-weight:700">'+supplyAmt.toLocaleString()+'원</span></div>'
+          +'<div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">부가세(10%)</span><span style="font-weight:700">'+vatAmt.toLocaleString()+'원</span></div>'
+          +'<div style="border-top:1px solid var(--border);padding-top:8px;display:flex;justify-content:space-between"><span style="font-weight:700">합계금액</span><span style="font-size:18px;font-weight:900;color:var(--primary)">'+vatIncome.toLocaleString()+'원</span></div>'
+          +'</div></div>';
+      }
+      body2+='<div style="font-size:11px;color:var(--text3);text-align:center">엠비티아이 유한회사 · 051-711-3103</div></div>';
+      md.innerHTML=hdrHtml+body2+'<div class="mdf" style="flex-shrink:0"><button class="btn" onclick="this.closest(\'.mo\').remove()">닫기</button></div>';
+
     } else {
-      bodyHtml='<div style="display:grid;gap:8px;font-size:13px">'
-        +'<div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">총수익(VAT포함)</span><span style="font-weight:700">'+vatIncome.toLocaleString()+'원</span></div>'
-        +'<div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">공제합계</span><span style="font-weight:700;color:var(--red)">-'+emp.toLocaleString()+'원</span></div>'
-        +'<div style="border-top:1px solid var(--border);padding-top:8px;display:flex;justify-content:space-between"><span style="font-weight:700">실지급액</span><span style="font-size:18px;font-weight:900;color:var(--primary)">'+net.toLocaleString()+'원</span></div>'
+      // 정산명세서 → 스크롤 상세뷰
+      var sumHtml='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:1px solid var(--border);flex-shrink:0">'
+        +'<div style="padding:10px 8px;text-align:center;border-right:1px solid var(--border)">'
+        +'<div style="font-size:9px;color:var(--text3);margin-bottom:3px">세금계산서 합계</div>'
+        +'<div style="font-size:12px;font-weight:800;color:var(--purple)">₩'+vatIncome.toLocaleString()+'</div>'
+        +'</div>'
+        +'<div style="padding:10px 8px;text-align:center;border-right:1px solid var(--border)">'
+        +'<div style="font-size:9px;color:var(--text3);margin-bottom:3px">공제 합계</div>'
+        +'<div style="font-size:12px;font-weight:800;color:var(--red)">-₩'+emp.toLocaleString()+'</div>'
+        +'</div>'
+        +'<div style="padding:10px 8px;text-align:center">'
+        +'<div style="font-size:9px;color:var(--text3);margin-bottom:3px">실 지급액</div>'
+        +'<div style="font-size:12px;font-weight:800;color:var(--brand)">₩'+net.toLocaleString()+'</div>'
+        +'</div></div>';
+
+      var scrollHtml='<div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px">';
+
+      // 라우트별 실적
+      if(routes.length){
+        scrollHtml+='<div style="font-size:11px;font-weight:800;margin-bottom:6px;padding-bottom:4px;border-bottom:2px solid var(--border)">📊 라우트별 실적</div>'
+          +'<div style="overflow-x:auto;margin-bottom:14px">'
+          +'<table style="width:100%;border-collapse:collapse;font-size:11px">'
+          +'<thead><tr style="background:var(--bg3)">'
+          +'<th style="padding:5px 6px;text-align:left">라우트</th>'
+          +'<th style="padding:5px 6px;text-align:right">배송</th>'
+          +'<th style="padding:5px 6px;text-align:right">반품</th>'
+          +'<th style="padding:5px 6px;text-align:right">단가</th>'
+          +'<th style="padding:5px 6px;text-align:right">소계</th>'
+          +'</tr></thead><tbody>';
+        var tDcnt=0,tAmt=0;
+        routes.forEach(function(rd){
+          var price=rd.unitPrice||0;
+          var amt=(rd.cnt||0)*price+(rd.ret||0)*price;
+          tDcnt+=(rd.cnt||0); tAmt+=amt;
+          scrollHtml+='<tr>'
+            +'<td style="padding:5px 6px;font-weight:600;color:var(--brand)">'+esc(rd.route||'')+'</td>'
+            +'<td style="padding:5px 6px;text-align:right">'+(rd.cnt||0)+'</td>'
+            +'<td style="padding:5px 6px;text-align:right;color:var(--text3)">'+(rd.ret||0)+'</td>'
+            +'<td style="padding:5px 6px;text-align:right">'+price.toLocaleString()+'</td>'
+            +'<td style="padding:5px 6px;text-align:right;font-weight:700">₩'+amt.toLocaleString()+'</td>'
+            +'</tr>';
+        });
+        scrollHtml+='<tr style="background:var(--bg3);font-weight:700">'
+          +'<td style="padding:5px 6px">합계</td>'
+          +'<td style="padding:5px 6px;text-align:right">'+tDcnt+'건</td>'
+          +'<td colspan="2"></td>'
+          +'<td style="padding:5px 6px;text-align:right;color:var(--brand)">₩'+tAmt.toLocaleString()+'</td>'
+          +'</tr></tbody></table></div>';
+      }
+
+      // 공제 항목
+      if(emp>0){
+        scrollHtml+='<div style="font-size:11px;font-weight:800;margin-bottom:6px;padding-bottom:4px;border-bottom:2px solid var(--border)">🏥 공제 항목</div>'
+          +'<div style="margin-bottom:14px">';
+        if(d.empAmt>0) scrollHtml+='<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px"><span style="color:var(--text2)">고용보험(0.8%)</span><span style="font-weight:700;color:var(--red)">-'+d.empAmt.toLocaleString()+'원</span></div>';
+        if(d.workAmt>0) scrollHtml+='<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px"><span style="color:var(--text2)">산재보험(0.88%)</span><span style="font-weight:700;color:var(--red)">-'+d.workAmt.toLocaleString()+'원</span></div>';
+        if(!d.empAmt&&!d.workAmt) scrollHtml+='<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px"><span style="color:var(--text2)">공제합계</span><span style="font-weight:700;color:var(--red)">-'+emp.toLocaleString()+'원</span></div>';
+        scrollHtml+='</div>';
+      }
+
+      // 명세서 이미지 (있으면 하단에)
+      if(d.img){
+        scrollHtml+='<div style="font-size:11px;font-weight:800;margin-bottom:6px;padding-bottom:4px;border-bottom:2px solid var(--border)">📄 명세서 원본</div>'
+          +'<div style="border-radius:8px;overflow:hidden;border:1px solid var(--border);margin-bottom:14px">'
+          +'<img src="'+d.img+'" style="width:100%;display:block" loading="lazy"></div>';
+      }
+
+      // 실지급 최종
+      scrollHtml+='<div style="background:var(--bg2);border-radius:10px;padding:12px;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+        +'<span style="font-weight:700">✅ 실지급액</span>'
+        +'<span style="font-size:20px;font-weight:900;color:var(--brand)">₩'+net.toLocaleString()+'</span>'
+        +'</div>'
+        +'<div style="font-size:11px;color:var(--text3);text-align:center;padding-bottom:4px">엠비티아이 유한회사 · 051-711-3103</div>'
         +'</div>';
+
+      md.innerHTML=hdrHtml+sumHtml+scrollHtml+'<div class="mdf" style="flex-shrink:0"><button class="btn" onclick="this.closest(\'.mo\').remove()">닫기</button></div>';
     }
-    var imgSection=d.img?'<div style="margin-bottom:12px;border-radius:10px;overflow:hidden;border:1px solid var(--border)"><img src="'+d.img+'" style="width:100%;display:block" loading="lazy"></div>':'';
-    md.innerHTML='<div class="mdt">'+(isTax?'🧾 세금계산서':'📄 정산명세서')+'</div>'
-      +'<div style="padding:16px">'
-      +imgSection
-      +(d.img?'':'<div style="background:var(--bg2);border-radius:12px;padding:16px;margin-bottom:12px"><div style="font-size:16px;font-weight:800;margin-bottom:12px">'+esc(d.month||'')+(isTax?' 세금계산서':' 정산명세서')+'</div>'+bodyHtml+'</div>')
-      +'<div style="font-size:11px;color:var(--text3);text-align:center">엠비티아이 유한회사 · 051-711-3103</div>'
-      +'</div>'
-      +'<div class="mdf"><button class="btn" onclick="this.closest(\'.mo\').remove()">닫기</button></div>';
-    md.appendChild && md.innerHTML && true;
+
     mo.appendChild(md);
     document.body.appendChild(mo);
   }).catch(function(){});
 }
-
 // ══ 메뉴 ══
 // 서비스 타입별 메뉴 정의
 // 쿠팡 정산 전용 (출퇴근X, 위수탁계약서O)
@@ -19487,7 +19564,10 @@ function _sendPayslipNotification(did,uid,name,title,body,month,net,vatIncome,x,
   var notifData={
     dealerId:did,targetDriverId:uid,targetDriverName:name,type:'payslip',
     title:title,body:body,
-    net:net,vatIncome:vatIncome,emp:(x.emp||0),month:month,isRead:false,
+    net:net,vatIncome:vatIncome,emp:(x.emp||0),
+    empAmt:(r.emp||0),workAmt:(r.work||0),
+    routeDetails:x.routeDetails||[],
+    month:month,isRead:false,
     createdAt:firebase.firestore.FieldValue.serverTimestamp()
   };
   if(imgUrl) notifData.img=imgUrl;
