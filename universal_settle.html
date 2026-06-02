@@ -1457,15 +1457,23 @@ function _renderCoupangResult(){
   // 라우트단가표 업로드 영역
   var rateTableInfo = _settleState.coupangRateTable
     ? '<span style="color:var(--green)">✅ 단가표 로드됨 ('+Object.keys(_settleState.coupangRateTable).length+'개 라우트)</span>'
-    : '<span style="color:var(--text3)">미등록 (총금액 그대로 사용)</span>';
+    : '<span style="color:var(--text3)">미등록</span>';
 
-  +'<div style="background:var(--surface2);border-radius:8px;padding:10px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px;font-size:12px;">'
+  +'<div style="background:var(--surface2);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:12px;">'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
     +'<span style="font-weight:700">📊 라우트단가표</span>'
     +rateTableInfo
-    +'<label style="margin-left:auto;cursor:pointer;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:4px 10px;font-size:11px">'
+    +'<label style="margin-left:auto;cursor:pointer;background:var(--acc);color:#fff;border-radius:6px;padding:4px 12px;font-size:11px;font-weight:600">'
     +'📂 파일 업로드'
     +'<input type="file" accept=".xlsx,.xls,.txt,.csv" style="display:none" onchange="_loadRateTable(this)">'
     +'</label>'
+    +'</div>'
+    +'<div style="color:var(--text2);font-size:11px;line-height:1.6">'
+    +'업로드 가능 형식: <strong>.xlsx</strong> 또는 <strong>.txt/.csv</strong><br>'
+    +'• 엑셀: A열=라우트번호, B열=단가(원) — 헤더 1행 포함<br>'
+    +'• 텍스트: 한 줄에 <code>라우트번호,단가</code> 형식 (예: <code>612C,982</code>)<br>'
+    +'• 파일명 무관 — 형식만 맞으면 자동 인식'
+    +'</div>'
     +'</div>'
 
   // 인센 안내
@@ -1478,7 +1486,7 @@ function _renderCoupangResult(){
     +'<div class="tbl-wrap"><table><thead><tr>'
     +'<th>이름</th><th>캠프</th>'
     +'<th class="num">배송건</th><th class="num">반품건</th><th class="num">합계건</th>'
-    +'<th class="num">기본금액</th><th class="num" style="color:var(--acc)">가중요인</th>'
+    +'<th class="num">쿠팡지급액</th>'
     +'<th class="num" style="color:var(--blue)">프레시백</th>'
     +'<th class="num" style="color:var(--red)">분실파손</th>'
     +'<th style="min-width:130px">대리점인센(원/건)</th>'
@@ -1498,8 +1506,7 @@ function _renderCoupangResult(){
       +'<td class="num">'+_fmt(r.count)+'</td>'
       +'<td class="num">'+(r.retCnt||0)+'</td>'
       +'<td class="num" style="font-weight:600">'+(r.totalCnt||r.count)+'</td>'
-      +'<td class="num">'+_fmt(r.baseAmt||0)+'</td>'
-      +'<td class="num" style="color:var(--acc)">+'+_fmt(r.addInc||0)+'</td>'
+      +'<td class="num">'+_fmt(r.amount||0)+'</td>'
       +'<td class="num" style="color:var(--blue)">+'+_fmt(r.fresh||0)+'</td>'
       +'<td class="num" style="color:var(--red)">'+(r.lossAmt?'-'+_fmt(r.lossAmt):'-')+'</td>'
       +'<td>'
