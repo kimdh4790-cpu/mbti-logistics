@@ -22794,7 +22794,7 @@ function pageNotices(){
       var tc=typeTxtColor[n.type]||'#1e40af';
       var lb=typeLabel[n.type]||n.type;
       var delBtn=isDriver?'':'<button onclick="_deleteNotice(\''+doc.id+'\')" style="padding:3px 8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;cursor:pointer">🗑</button>';
-      list+='<div class="card" style="border-left:4px solid '+tc+'">'
+      list+='<div class="card" style="border-left:4px solid '+tc+';'+(isDriver?'cursor:pointer':'')+';" '+(isDriver?'onclick="goPage(\'my_statements\')"':'')+'>'
         +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">'
         +'<div style="display:flex;align-items:center;gap:8px">'
         +'<span style="background:'+bg+';color:'+tc+';padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700">'+ic+' '+lb+'</span>'
