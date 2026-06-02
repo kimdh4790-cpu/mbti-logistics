@@ -14491,11 +14491,6 @@ function SP(pg,el){
 function pageSettle(){
   document.getElementById('page-title').textContent='정산 현황';
   var tr=document.getElementById('topbar-right');tr.innerHTML='';
-  var lbl=document.createElement('label');
-  lbl.style.cssText='display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:#f97316;color:#fff;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer';
-  lbl.textContent='📂 📂 쿠팡 엑셀 업로드';
-  lbl.appendChild((function(){var fi=document.createElement('input');fi.type='file';fi.accept='.xlsx,.xls';fi.style.display='none';fi.onchange=function(){if(this.files[0])parseCoupangExcel(this);};return fi;})());
-  tr.appendChild(lbl);
   var dlBtn=document.createElement('button');
   dlBtn.textContent='📥 정산 엑셀';
   dlBtn.style.cssText='margin-left:6px;padding:6px 14px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer';
