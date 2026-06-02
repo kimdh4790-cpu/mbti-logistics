@@ -1221,8 +1221,8 @@ function calcNet(x){
     supplyAmt  = Math.round(totalAmt / 1.1);
     expenseAmt = Math.round(supplyAmt * 0.346);
     monthlyWage= supplyAmt - expenseAmt;
-    empCalc    = monthlyWage >= 800000 ? Math.floor(monthlyWage * 0.008  / 10) * 10 : 0;
-    workCalc   = Math.floor(monthlyWage * 0.0088 / 10) * 10;
+    empCalc    = monthlyWage >= 800000 ? Math.floor(monthlyWage * 0.009  / 10) * 10 : 0;  // 기사 부담 고용 0.9%
+    workCalc   = Math.floor(monthlyWage * 0.0088 / 10) * 10;  // 산재 전액 회사 부담
   } else {
     // 주민번호(비사업자): VAT 없음, 고용·산재 없음 → 원천세 3.3%만
     supplyAmt  = totalAmt;  // VAT 없음
