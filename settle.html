@@ -4580,6 +4580,7 @@ function _renderRosterTable(drivers,rosterData,weekDays,dNames,fmt){
 
   var rc=document.getElementById('roster-content');
   if(rc)rc.innerHTML=html;
+  return html;  // 기사 앱에서도 사용
 }
 
 // 상태 토글 (출근↔휴무)
@@ -11198,41 +11199,26 @@ function _empLoadRoster(did, uid, today){
         if(status) status.textContent='미등록';
         return;
       }
-      // 날짜별 그룹핑 (출근/휴무 인원 목록)
-      var byDay={};
+      // 관리자 근무표와 동일한 구조로 렌더링
+      var _byDriver={};var _driverOrder=[];
       filteredDocs.forEach(function(doc){
-        var d=doc.data();var idx=d.dayIndex;
-        if(!byDay[idx])byDay[idx]={work:[],off:[]};
-        var nm=d.name||d.driverId||'';
-        var route=d.route||'';
-        if(d.status==='off') byDay[idx].off.push(nm);
-        else byDay[idx].work.push(nm+(route?' ('+route+')':''));
+        var d=doc.data();var drvId=d.driverId||'';
+        if(!_byDriver[drvId]){_byDriver[drvId]={name:d.name||drvId,camp:d.camp||''};_driverOrder.push(drvId);}
       });
-      var html='';
-      weekDays.forEach(function(dt,idx){
-        var isToday=dt===today;
-        var entry=byDay[idx]||{work:[],off:[]};
-        var dayLabel=days3[new Date(dt).getDay()]+' '+dt.slice(5);
-        html+='<div style="margin-bottom:8px;padding:8px 10px;border-radius:8px;border:1px solid '+(isToday?'var(--brand)':'var(--border)')+';background:'+(isToday?'rgba(0,102,255,.04)':'var(--bg2)')+'">';
-        html+='<div style="font-size:12px;font-weight:800;color:'+(isToday?'var(--brand)':'var(--text)')+';margin-bottom:6px">'+dayLabel+(isToday?' 🔵':'')+'</div>';
-        if(entry.work.length){
-          html+='<div style="margin-bottom:4px">';
-          html+='<span style="font-size:10px;font-weight:700;color:var(--green);margin-right:4px">출근 '+entry.work.length+'명</span>';
-          html+='<span style="font-size:11px;color:var(--text2)">'+entry.work.map(esc).join(', ')+'</span>';
-          html+='</div>';
-        }
-        if(entry.off.length){
-          html+='<div>';
-          html+='<span style="font-size:10px;font-weight:700;color:#ef4444;margin-right:4px">휴무 '+entry.off.length+'명</span>';
-          html+='<span style="font-size:11px;color:var(--text3)">'+entry.off.map(esc).join(', ')+'</span>';
-          html+='</div>';
-        }
-        if(!entry.work.length&&!entry.off.length){
-          html+='<div style="font-size:11px;color:var(--text3)">데이터 없음</div>';
-        }
-        html+='</div>';
+      // drivers 배열 구성
+      var _drivers=_driverOrder.map(function(id){return {id:id,driverId:id,name:_byDriver[id].name,camp:_byDriver[id].camp};});
+      // rosterData 구성
+      var _rosterData={};
+      filteredDocs.forEach(function(doc){
+        var d=doc.data();var drvId=d.driverId||'';
+        if(!_rosterData[drvId])_rosterData[drvId]={};
+        _rosterData[drvId][d.dayIndex]={status:d.status||'work',route:d.route||'',fbId:doc.id};
       });
-      grid.innerHTML=html;
+      var _weekDays=weekDays.map(function(dt){return new Date(dt);});
+      var _dNames=['일','월','화','수','목','금','토'];
+      var _fmt=function(n){return n.toLocaleString();};
+      var _html=_renderRosterTable(_drivers,_rosterData,_weekDays,_dNames,_fmt);
+      grid.innerHTML='<div style="font-size:12px;overflow-x:auto">'+(_html||'<div style="text-align:center;padding:10px;color:var(--text3)">이번주 근무표가 없습니다</div>')+'</div>';
       if(status) status.textContent='실시간 ✓';
       grid.innerHTML=html;
       if(status) status.textContent='실시간 ✓';
