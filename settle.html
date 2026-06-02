@@ -10123,8 +10123,11 @@ function _txsLoadDocs(did, ym){
         groups[cat].total+=(d.amount||0);
       });
       var catOrder=['tax_invoice','receipt','expense','contract','payslip','other'];
+      // 탭 필터 적용 - 'all'이 아니면 해당 카테고리만 표시
+      var _activeTab=window._taxCurrentTab||'all';
+      var filteredCatOrder=_activeTab==='all'?catOrder:[_activeTab];
       var html='';
-      catOrder.forEach(function(cat){
+      filteredCatOrder.forEach(function(cat){
         var g=groups[cat]; if(!g||!g.items.length)return;
         var color=catColors[cat]||'#6b7280';
         var label=catLabels[cat]||'기타';
@@ -14295,7 +14298,7 @@ function pageSettle(){
         +'<div><div style="font-size:10px;opacity:.5;margin-bottom:2px">📈 MBTI 단가 마진</div>'
           +'<div style="font-size:15px;font-weight:800;color:#a78bfa">₩'+fmt(totMargin)+'</div>'
           +'<div style="font-size:9px;opacity:.4">쿠팡수입 − 세금계산서</div></div>'
-        +'<div><div style="font-size:10px;opacity:.5;margin-bottom:2px">🔻 총 공제액</div>'
+          +'<div style="font-size:9px;opacity:.4">쿠팡수입 − 기사세금계산서 (보험료 전)</div></div>'
           +'<div style="font-size:15px;font-weight:800;color:#f87171">-₩'+fmt(totDeduct)+'</div>'
           +'<div style="font-size:9px;opacity:.4">고용·산재보험 합계</div></div>'
         +'<div><div style="font-size:10px;opacity:.5;margin-bottom:2px">📦 총 배송건수</div>'
@@ -14304,7 +14307,7 @@ function pageSettle(){
       +'</div>'
       // 순수익 행
       +'<div style="border-top:1px solid rgba(255,255,255,.12);margin-top:10px;padding-top:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">'
-      +'<div style="font-size:11px;opacity:.6">💰 실순수익 (마진 - 경비) · '+(_expTotal>0?'경비 ₩'+fmt(_expTotal)+' 차감':'경비 미등록')+'</div>'
+      +'<div style="font-size:11px;opacity:.6">💰 실순수익 · 단가마진 − 보험료 − 경비'+(_expTotal>0?' (경비 ₩'+fmt(_expTotal)+'차감)':' · 경비 미등록시 단가마진과 동일')+'</div>'
       +'<div style="font-size:20px;font-weight:900;color:'+(totNetProfit>=0?'#4ade80':'#f87171')+'">'+(totNetProfit<0?'-':'')+'₩'+fmt(Math.abs(totNetProfit))+'</div>'
       +'</div>';
     c.appendChild(hero);
