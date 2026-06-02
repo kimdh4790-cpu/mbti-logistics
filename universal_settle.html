@@ -629,6 +629,22 @@ function _loadExcel(file){
 }
 
 function _selectSheet(wb){
+  // 쿠팡 엑셀 자동 감지 — 정산Raw + 분실파손List 있으면 바로 쿠팡 전용 처리
+  var hasRaw  = wb.SheetNames.indexOf('정산Raw') >= 0;
+  var hasLoss = wb.SheetNames.indexOf('분실파손List') >= 0;
+  if(hasRaw){
+    // 헤더 확인
+    var rawRows = XLSX.utils.sheet_to_json(wb.Sheets['정산Raw'], {header:1, raw:false, defval:''});
+    var hdrIdx = 0;
+    for(var i=0;i<Math.min(rawRows.length,6);i++){if(rawRows[i].filter(function(c){return c!=='';}).length>=3){hdrIdx=i;break;}}
+    var headers = rawRows[hdrIdx].map(function(h){return String(h).replace(/
+/g,' ').trim();});
+    if(_isCoupangSheet(headers)){
+      _processCoupangSheet(wb, '정산Raw', hasLoss ? '분실파손List' : null);
+      return;
+    }
+  }
+
   var html = '<div class="card"><div class="card-title">📋 시트 선택</div>'
     +'<div style="font-size:12px;color:var(--text2);margin-bottom:10px">정산할 시트를 선택하거나 전체를 한꺼번에 처리하세요.</div>'
 
@@ -676,6 +692,147 @@ function _processAllSheets(wb){
   window._pendingWb = null;
   toast('✅ '+multiFiles.length+'개 시트 로드 완료');
   _startMultiMapping();
+}
+
+
+// ── 쿠팡 엑셀 감지
+function _isCoupangSheet(headers){
+  var h = headers.map(function(x){return x.replace(/\n/g,' ').toLowerCase();});
+  var coupangKeys = ['id','캠프명','배송건수','단가','총금액'];
+  var matched = coupangKeys.filter(function(k){
+    return h.some(function(hh){return hh.includes(k);});
+  });
+  return matched.length >= 4;
+}
+
+// ── 쿠팡 전용 정산 처리
+function _processCoupangSheet(wb, rawSheetName, lossSheetName){
+  toast('⚙️ 쿠팡 정산 처리 중...');
+
+  var raw  = XLSX.utils.sheet_to_json(wb.Sheets[rawSheetName],  {header:1, raw:false, defval:''});
+  var loss = lossSheetName && wb.Sheets[lossSheetName]
+    ? XLSX.utils.sheet_to_json(wb.Sheets[lossSheetName], {header:1, raw:false, defval:''})
+    : [];
+
+  // 헤더 행 찾기
+  function findHeader(rows){
+    for(var i=0;i<Math.min(rows.length,6);i++){
+      if(rows[i].filter(function(c){return c!=='';}).length>=3) return i;
+    }
+    return 0;
+  }
+
+  var rawHdrIdx  = findHeader(raw);
+  var rawHeaders = raw[rawHdrIdx].map(function(h){return String(h).replace(/\n/g,' ').trim();});
+  var rawRows    = raw.slice(rawHdrIdx+1).filter(function(r){return r.some(function(c){return c!=='';});});
+
+  // 컬럼 인덱스 찾기
+  function col(keyword){
+    return rawHeaders.findIndex(function(h){return h.replace(/\s/g,'').includes(keyword.replace(/\s/g,''));});
+  }
+  var CI = {
+    id:       col('ID'),
+    camp:     col('캠프명'),
+    date:     col('배송일자'),
+    delCnt:   col('배송건수'),
+    retCnt:   col('반품'),
+    price:    col('단가'),
+    baseAmt:  col('기본 배송단가 금액') >= 0 ? col('기본 배송단가 금액') : col('기본배송단가금액'),
+    addInc:   col('추가 인센티브 가중요인') >= 0 ? col('추가 인센티브 가중요인') : col('추가인센티브가중'),
+    fresh:    col('프레시백'),
+    total:    col('총금액'),
+  };
+
+  // ID→이름 매핑 (분실파손에서)
+  var idToName = {};
+  if(loss.length > 1){
+    var lHdrIdx = findHeader(loss);
+    var lHeaders = loss[lHdrIdx].map(function(h){return String(h).trim();});
+    var lRows    = loss.slice(lHdrIdx+1).filter(function(r){return r.some(function(c){return c!=='';});});
+    var lIdCol   = lHeaders.indexOf('ID');
+    var lNameCol = lHeaders.indexOf('이름');
+    var lAmtCol  = lHeaders.indexOf('차감금액');
+    lRows.forEach(function(r){
+      var lid  = String(r[lIdCol]||'').trim();
+      var name = String(r[lNameCol]||'').trim();
+      if(lid && name) idToName[lid] = name;
+    });
+  }
+
+  // ID별 집계
+  var byId = {};
+  rawRows.forEach(function(r){
+    var id = String(r[CI.id]||'').trim();
+    if(!id || id === '영업점 수수료') return;
+    if(!byId[id]) byId[id] = {
+      id:      id,
+      name:    idToName[id] || '',
+      camp:    CI.camp>=0 ? String(r[CI.camp]||'').trim() : '',
+      delCnt:  0, retCnt: 0,
+      baseAmt: 0, addInc: 0, fresh: 0, total: 0,
+      dates:   [],
+    };
+    var g = byId[id];
+    g.delCnt  += _toNum(r[CI.delCnt]);
+    g.retCnt  += _toNum(r[CI.retCnt]);
+    g.baseAmt += _toNum(r[CI.baseAmt]);
+    g.addInc  += _toNum(r[CI.addInc]);
+    g.fresh   += _toNum(r[CI.fresh]);
+    g.total   += _toNum(r[CI.total]);
+    if(CI.date>=0 && r[CI.date]) g.dates.push(String(r[CI.date]).substring(0,10));
+  });
+
+  // 분실파손 차감
+  var lossByID = {};
+  if(loss.length > 1){
+    var lHdrIdx2 = findHeader(loss);
+    var lH2      = loss[lHdrIdx2].map(function(h){return String(h).trim();});
+    var lRows2   = loss.slice(lHdrIdx2+1).filter(function(r){return r.some(function(c){return c!=='';});});
+    var liCol    = lH2.indexOf('ID');
+    var laCol    = lH2.indexOf('차감금액');
+    lRows2.forEach(function(r){
+      var lid = String(r[liCol]||'').trim();
+      if(!lid) return;
+      lossByID[lid] = (lossByID[lid]||0) + _toNum(r[laCol]);
+    });
+  }
+
+  // 최종 결과 생성
+  var results = Object.values(byId).map(function(g){
+    var lossAmt  = lossByID[g.id] || 0;
+    var netAmt   = g.total + g.fresh - lossAmt;
+    var dateRange = g.dates.length
+      ? g.dates[0] + (g.dates.length>1 ? '~'+g.dates[g.dates.length-1] : '')
+      : '';
+    return {
+      name:     g.name || g.id,
+      id:       g.id,
+      dept:     g.camp,
+      count:    g.delCnt,
+      retCnt:   g.retCnt,
+      baseAmt:  g.baseAmt,
+      addInc:   g.addInc,
+      fresh:    g.fresh,
+      lossAmt:  lossAmt,
+      amount:   g.total,
+      net:      netAmt,
+      tax:      0,
+      period:   dateRange,
+      revenue:  g.total,
+      margin:   0,
+      rowCount: 1,
+      isCoupang: true,
+    };
+  });
+
+  results.sort(function(a,b){return a.dept.localeCompare(b.dept)||a.name.localeCompare(b.name);});
+
+  _settleState.coupangMode = true;
+  _settleState.results     = results;
+  _settleState.step        = 3;
+  window._pendingWb        = null;
+  _renderSettle();
+  toast('✅ 쿠팡 정산 완료 — '+results.length+'명');
 }
 
 function _processSheet(wb, sheetName){
@@ -1168,7 +1325,78 @@ function _renderStep3Multi(){
   return html;
 }
 
+
+// ── 쿠팡 전용 결과 화면
+function _renderCoupangResult(){
+  var res = _settleState.results;
+  var totalDel   = res.reduce(function(s,r){return s+r.count;},0);
+  var totalRet   = res.reduce(function(s,r){return s+(r.retCnt||0);},0);
+  var totalBase  = res.reduce(function(s,r){return s+(r.baseAmt||0);},0);
+  var totalFresh = res.reduce(function(s,r){return s+(r.fresh||0);},0);
+  var totalLoss  = res.reduce(function(s,r){return s+(r.lossAmt||0);},0);
+  var totalNet   = res.reduce(function(s,r){return s+r.net;},0);
+
+  var html = '<div class="result-summary">'
+    +'<div class="stat-card"><div class="stat-label">기사 수</div><div class="stat-val blue">'+res.length+'명</div></div>'
+    +'<div class="stat-card"><div class="stat-label">배송건수</div><div class="stat-val">'+_fmt(totalDel)+'건</div></div>'
+    +'<div class="stat-card"><div class="stat-label">반품건수</div><div class="stat-val">'+_fmt(totalRet)+'건</div></div>'
+    +'<div class="stat-card"><div class="stat-label">프레시백</div><div class="stat-val">'+_fmt(totalFresh)+'원</div></div>'
+    +'<div class="stat-card"><div class="stat-label">분실파손차감</div><div class="stat-val" style="color:var(--red)">-'+_fmt(totalLoss)+'원</div></div>'
+    +'<div class="stat-card"><div class="stat-label">실지급 합계</div><div class="stat-val green">'+_fmt(totalNet)+'원</div></div>'
+    +'</div>'
+
+    +'<div class="card"><div class="card-title">📋 쿠팡 기사별 정산</div>'
+    +'<div class="tbl-wrap"><table><thead><tr>'
+    +'<th>이름</th><th>ID</th><th>캠프</th>'
+    +'<th class="num">배송건</th><th class="num">반품건</th>'
+    +'<th class="num">기본금액</th><th class="num">프레시백</th>'
+    +'<th class="num" style="color:var(--red)">분실파손</th>'
+    +'<th class="num">총금액</th><th class="num" style="color:var(--green)">실지급액</th>'
+    +'</tr></thead><tbody>';
+
+  res.forEach(function(r){
+    html += '<tr>'
+      +'<td><strong>'+(r.name||r.id)+'</strong></td>'
+      +'<td style="font-size:10px;color:var(--text3)">'+r.id+'</td>'
+      +'<td>'+r.dept+'</td>'
+      +'<td class="num">'+_fmt(r.count)+'</td>'
+      +'<td class="num">'+(r.retCnt||0)+'</td>'
+      +'<td class="num">'+_fmt(r.baseAmt||0)+'</td>'
+      +'<td class="num" style="color:var(--blue)">'+_fmt(r.fresh||0)+'</td>'
+      +'<td class="num" style="color:var(--red)">'+(r.lossAmt ? '-'+_fmt(r.lossAmt) : '-')+'</td>'
+      +'<td class="num">'+_fmt(r.amount||0)+'</td>'
+      +'<td class="num"><strong style="color:var(--green)">'+_fmt(r.net)+'</strong></td>'
+      +'</tr>';
+  });
+
+  html += '</tbody></table></div>'
+    +'<div style="margin-top:14px;display:flex;gap:8px;justify-content:space-between">'
+    +'<button class="btn btn-secondary" onclick="_goStep(1)">← 처음으로</button>'
+    +'<button class="btn btn-primary" onclick="_downloadCoupangExcel()">📥 엑셀 다운로드</button>'
+    +'</div></div>';
+
+  return html;
+}
+
+function _downloadCoupangExcel(){
+  var res = _settleState.results;
+  var rows = [['이름','ID','캠프','배송건수','반품건수','기본금액','프레시백','분실파손차감','총금액','실지급액']];
+  res.forEach(function(r){
+    rows.push([r.name||r.id, r.id, r.dept, r.count, r.retCnt||0,
+      r.baseAmt||0, r.fresh||0, r.lossAmt||0, r.amount||0, r.net]);
+  });
+  var ws = XLSX.utils.aoa_to_sheet(rows);
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '쿠팡정산결과');
+  XLSX.writeFile(wb, '쿠팡정산_'+new Date().toISOString().substring(0,10)+'.xlsx');
+  toast('✅ 엑셀 다운로드 완료');
+}
+
 function _renderStep3(){
+  // 쿠팡 전용 결과 화면
+  if(_settleState.coupangMode){
+    return _renderCoupangResult();
+  }
   // 멀티모드: 파일별로 나눠서 표시
   if(_settleState.multiMode){
     return _renderStep3Multi();
