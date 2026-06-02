@@ -13198,7 +13198,11 @@ window._loadMyStatements=function(){
       var d=doc.data();
       // 기사는 본인 것만 표시
       var _myId=_CU.driverId||_CU.userId||_CU.uid||'';
-      if(_CU.role==='driver'&&d.targetDriverId&&d.targetDriverId!==_myId&&d.targetDriverId!==_CU.uid)return;
+      if(_CU.role==='driver'){
+        // targetDriverId 또는 driverId 중 하나라도 일치하면 표시
+        var _tId=d.targetDriverId||d.driverId||'';
+        if(_tId && _tId!==_myId && _tId!==_CU.uid && _tId!==_CU.driverId) return;
+      }
       items.push({id:doc.id,data:d});
     });
     items.sort(function(a,b){
@@ -13238,8 +13242,9 @@ window._deleteAllMyStmts=function(){
   if(!confirm('내 정산 내역을 전부 삭제하시겠습니까?'))return;
   var _did=_CU.dealerId||'';
   var _driverId=_CU.driverId||'';
+  var _myId2=_CU.driverId||_CU.userId||_CU.uid||'';
   var q=_CU.role==='driver'
-    ?_db.collection('driver_notifications').where('dealerId','==',_did).where('targetDriverId','==',_driverId)
+    ?_db.collection('driver_notifications').where('dealerId','==',_did).where('targetDriverId','==',_myId2)
     :_db.collection('driver_notifications').where('dealerId','==',_did);
   q.get().then(function(snap){
     if(snap.empty){toast('삭제할 내역 없음');return;}
@@ -21525,19 +21530,26 @@ async function _doDeploySettlements(ids) {
 
       // 2. driver_notifications 저장 — 직원 앱 내 정산 확인용
       var ts = firebase.firestore.FieldValue.serverTimestamp();
+      var _tDrvId = settle.userId || settle.driverId || '';
+      var _cr = calcNet(settle);
       var notifBase = {
         driverName: settle.name || '',
-        driverId: settle.driverId || settle.userId || '',
+        driverId: _tDrvId,
+        targetDriverId: _tDrvId,
+        targetDriverName: settle.name || '',
         companyId: _did,
         dealerId: _did,
         month: settle.month || '',
         label: (settle.month || '') + ' 정산명세서',
         type: 'payslip',
-        net: settle.net || 0,
-        vatIncome: settle.vatIncome || settle.income || 0,
-        emp: settle.emp || 0,
-        work: settle.work || 0,
+        net: _cr.net || 0,
+        vatIncome: _cr.totalAmt || _cr.income || 0,
+        emp: (_cr.emp||0)+(_cr.work||0),
+        empAmt: _cr.emp || 0,
+        workAmt: _cr.work || 0,
+        routeDetails: settle.routeDetails || [],
         settleId: sid,
+        isRead: false,
         createdAt: ts,
         readAt: null
       };
@@ -21545,14 +21557,18 @@ async function _doDeploySettlements(ids) {
       // 세금계산서도 별도 저장
       await _db.collection('driver_notifications').add({
         driverName: settle.name || '',
-        driverId: settle.driverId || settle.userId || '',
+        driverId: _tDrvId,
+        targetDriverId: _tDrvId,
+        targetDriverName: settle.name || '',
         companyId: _did,
         dealerId: _did,
         month: settle.month || '',
         label: (settle.month || '') + ' 세금계산서',
-        type: 'tax',
-        net: settle.net || 0,
+        type: 'tax_invoice',
+        vatIncome: _cr.totalAmt || _cr.income || 0,
+        net: _cr.net || 0,
         settleId: sid,
+        isRead: false,
         createdAt: ts,
         readAt: null
       });
