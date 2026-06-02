@@ -4849,7 +4849,10 @@ function _importRosterExcel(input){
         toSave.push({
           name:(row[iName]||'').trim(),
           driverId:(row[iId]||'').trim(),
-          camp:(row[iCamp]||'').replace('캠프','').trim(),
+          camp:(function(c){
+            var m={'M_진주1':'진주M','진주1M':'진주M','진주M1':'진주M','M진주':'진주M'};
+            return m[c]||c;
+          })((row[iCamp]||'').replace('캠프','').trim()),
           wave:iWave>=0?(row[iWave]||'').trim():'',
           dayIndex:dayIndex,
           status:status,
