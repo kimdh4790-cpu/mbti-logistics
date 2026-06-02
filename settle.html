@@ -4754,24 +4754,25 @@ function _downloadRosterExcel(){
     });
 
     var cnt=0;
-    sortedDrivers.forEach(function(drv){
-      var camp=String(drv.camp||'');
-      var campShort=camp.replace('캠프','').trim();
-      var cfg=CAMP_CONFIG[camp]||CAMP_CONFIG[campShort]||{wave:'',rotation:''};
-      weekDays.forEach(function(dateObj,i){
-        var y=dateObj.getFullYear();
-        var m=String(dateObj.getMonth()+1).padStart(2,'0');
-        var d2=String(dateObj.getDate()).padStart(2,'0');
-        var dateStr=y+'-'+m+'-'+d2;
+    // ★ 날짜 기준 정렬 (쿠팡 형식: 같은 날짜 아래 모든 기사)
+    weekDays.forEach(function(dateObj,i){
+      var y=dateObj.getFullYear();
+      var m=String(dateObj.getMonth()+1).padStart(2,'0');
+      var d2=String(dateObj.getDate()).padStart(2,'0');
+      var dateStr=y+'-'+m+'-'+d2;
+      sortedDrivers.forEach(function(drv){
+        var camp=String(drv.camp||'');
+        var campShort=camp.replace('캠프','').trim();
+        var cfg=CAMP_CONFIG[camp]||CAMP_CONFIG[campShort]||{wave:'',rotation:''};
         var entry=(rosterData[drv.driverId||drv.id]&&rosterData[drv.driverId||drv.id][i])||(rosterData[drv.id]&&rosterData[drv.id][i])||{status:'work',route:''};
         var isWork=entry.status!=='off';
         var status=isWork?'출근':'휴무';
         var rotation=isWork?String(cfg.rotation||''):'';
         var route=isWork?String(entry.route||''):'';
-        ws.addRow([dateStr,vendorName,bizNum,campShort,
+        ws.addRow([String(dateStr),String(vendorName),String(bizNum),String(campShort),
           String(cfg.wave||''),String(drv.name||''),
           String(drv.driverId||drv.userId||''),
-          status,rotation,route]);
+          String(status),String(rotation),String(route)]);
         cnt++;
       });
     });
