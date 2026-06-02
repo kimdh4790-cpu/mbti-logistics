@@ -16825,9 +16825,10 @@ function recalcAllSettlements(){
     var adv=x.adv||0;
     var eq=x.eq||0;
     var etcPlus=x.etcPlus||0;
+    var etcPlusTL=x.etcPlusTL||0;
     var etcMinus=x.etcMinus||0;
-    // 세금계산서 기준 (etcMinus 제외)
-    var taxBase=newDamt+newRamt+freshRaw+fincVal+addInc+nocont+etcPlus; // 모두 VAT포함가
+    // 세금계산서 기준 (etcMinus 제외, 팀장수수료 포함)
+    var taxBase=newDamt+newRamt+freshRaw+fincVal+addInc+nocont+etcPlus+etcPlusTL; // 모두 VAT포함가
     var supplyAmt=Math.round(taxBase/1.1);
     var monthlyWage=Math.round(supplyAmt*0.654);
     var empIns=monthlyWage>=800000?Math.floor(monthlyWage*0.008/10)*10:0;
