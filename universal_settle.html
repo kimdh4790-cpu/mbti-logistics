@@ -376,15 +376,19 @@ var _settleState = {
 
 // 정산 필드 정의 (필수/선택)
 var SETTLE_FIELDS = [
-  {key:'name',   label:'이름/기사명',    required:true,  icon:'👤'},
-  {key:'count',  label:'건수/수량',      required:true,  icon:'📦'},
-  {key:'amount', label:'단가/금액',      required:true,  icon:'💰'},
-  {key:'id',     label:'사번/ID',        required:false, icon:'🔑'},
-  {key:'dept',   label:'부서/캠프',      required:false, icon:'🏢'},
-  {key:'base',   label:'기본급',         required:false, icon:'💵'},
-  {key:'bonus',  label:'인센티브/추가',  required:false, icon:'⭐'},
-  {key:'deduct', label:'공제/차감',      required:false, icon:'➖'},
-  {key:'note',   label:'비고',          required:false, icon:'📝'},
+  {key:'name',    label:'이름/기사명',   required:true,  icon:'👤'},
+  {key:'count',   label:'총 건수',       required:true,  icon:'📦'},
+  {key:'amount',  label:'단가/기본금액', required:true,  icon:'💰'},
+  {key:'id',      label:'사번/ID',       required:false, icon:'🔑'},
+  {key:'dept',    label:'부서/캠프/지점',required:false, icon:'🏢'},
+  {key:'period',  label:'정산기간',      required:false, icon:'📅'},
+  {key:'subtotal',label:'소계/합계수수료',required:false, icon:'🧾'},
+  {key:'bonus',   label:'수당/인센티브', required:false, icon:'⭐'},
+  {key:'total_pay',label:'총지급액',     required:false, icon:'💵'},
+  {key:'deduct',  label:'총공제액',      required:false, icon:'➖'},
+  {key:'net',     label:'실지급액/정산금액', required:false, icon:'✅'},
+  {key:'account', label:'계좌번호',      required:false, icon:'🏦'},
+  {key:'note',    label:'비고',          required:false, icon:'📝'},
 ];
 
 function _pageSettle(){
@@ -695,15 +699,44 @@ function _processSheet(wb, sheetName){
 
 // 자동 매핑 (헤더 키워드 기반)
 var AUTO_MAP_RULES = {
-  name:   ['이름','성명','기사','기사명','담당자','이름/기사','worker','name','성함'],
-  id:     ['아이디','id','사번','번호','쿠팡id','코드'],
-  dept:   ['캠프','부서','지점','팀','지역','camp','dept'],
-  count:  ['건수','수량','배달건','픽업건','count','qty','건','합계건'],
-  amount: ['단가','금액','요금','수당','pay','amount','가격','합계금액','지급액'],
-  base:   ['기본급','기본','기본금','base'],
-  bonus:  ['인센티브','추가','보너스','성과','bonus','incentive'],
-  deduct: ['공제','차감','반품','deduct','minus'],
-  note:   ['비고','메모','note','remark'],
+  // 이름/기사명 — CJ:기사명, 한진:담당자명, 바로고:라이더명
+  name:     ['기사명','담당자명','라이더명','이름','성명','기사','담당자','worker','name','성함','직원명'],
+
+  // 총건수 — CJ:합계건수, 한진:총배송건, 바로고:총배달건
+  count:    ['합계건수','총배송건','총배달건','배송건수','건수','수량','count','qty','총건'],
+
+  // 단가/기본금액 — CJ:기본단가, 한진:기본수수료, 바로고:배달총금액
+  amount:   ['기본단가','기본수수료','배달총금액','단가','기본금액','건당','amount','pay','요금'],
+
+  // 사번/ID — CJ:사번, 한진:직원번호, 바로고:라이더ID
+  id:       ['사번','직원번호','라이더id','아이디','id','코드','번호'],
+
+  // 부서/캠프/지점 — CJ:소속캠프, 한진:소속지점, 바로고:소속지점
+  dept:     ['소속캠프','소속지점','캠프','지점','부서','팀','지역','dept','camp'],
+
+  // 정산기간 — CJ:정산기간, 한진:정산월, 바로고:정산기간
+  period:   ['정산기간','정산월','정산일','기간','period','month'],
+
+  // 소계/합계수수료 — CJ:소계, 한진:합계수수료, 바로고:총수입
+  subtotal: ['소계','합계수수료','총수입','소계금액','subtotal'],
+
+  // 수당/인센티브 — CJ:기타수당, 한진:성과장려금, 바로고:거리추가금액
+  bonus:    ['성과장려금','기타수당','연장수당','야간수당','인센티브','보너스','수당','장려금','bonus'],
+
+  // 총지급액 — CJ:총지급액, 한진:총지급, 바로고:라이더수입
+  total_pay:['총지급액','총지급','라이더수입','총급여','지급합계','total'],
+
+  // 총공제액 — CJ:총공제액, 한진:총공제, 바로고:총공제
+  deduct:   ['총공제액','총공제','공제합계','4대보험합계','공제액','deduct'],
+
+  // 실지급액 — CJ:실지급액, 한진:차감지급액, 바로고:정산금액
+  net:      ['실지급액','차감지급액','정산금액','최종지급','실수령','net','실지급'],
+
+  // 계좌번호 — CJ:계좌번호, 한진:입금계좌, 바로고:계좌
+  account:  ['계좌번호','입금계좌','계좌','account','bank'],
+
+  // 비고 — CJ:비고, 한진:특이사항, 바로고:비고
+  note:     ['비고','특이사항','메모','note','remark'],
 };
 
 function _autoMap(templateId){
@@ -915,28 +948,39 @@ function _calcResults(){
     var name = String(r[m.name]||'').trim();
     if(!name) return;
     if(!byName[name]) byName[name] = {
-      name: name,
-      id:   m.id!==undefined    ? String(r[m.id]||'')   : '',
-      dept: m.dept!==undefined  ? String(r[m.dept]||'') : '',
+      name:   name,
+      id:     m.id!==undefined     ? String(r[m.id]||'')     : '',
+      dept:   m.dept!==undefined   ? String(r[m.dept]||'')   : '',
+      period: m.period!==undefined ? String(r[m.period]||'') : '',
       rows: []
     };
     byName[name].rows.push(r);
   });
 
   Object.values(byName).forEach(function(p){
-    var totalCount  = 0;
-    var totalAmount = 0;  // 엑셀 원본 금액 (매출)
-    var totalBase   = 0;
-    var totalBonus  = 0;
-    var totalDeduct = 0;
+    var totalCount    = 0;
+    var totalAmount   = 0;  // 엑셀 원본 금액 (매출)
+    var totalBase     = 0;
+    var totalBonus    = 0;
+    var totalDeduct   = 0;
+    var totalNet      = 0;  // 엑셀의 실지급액
+    var totalSubtotal = 0;
+    var totalTotalPay = 0;
 
     p.rows.forEach(function(r){
-      totalCount  += _toNum(r[m.count]);
-      totalAmount += _toNum(r[m.amount]);
-      totalBase   += _toNum(r[m.base]);
-      totalBonus  += _toNum(r[m.bonus]);
-      totalDeduct += _toNum(r[m.deduct]);
+      totalCount    += _toNum(r[m.count]);
+      totalAmount   += _toNum(r[m.amount]);
+      totalBase     += _toNum(r[m.base]);
+      totalBonus    += _toNum(r[m.bonus]);
+      totalDeduct   += _toNum(r[m.deduct]);
+      totalNet      += _toNum(r[m.net]);
+      totalSubtotal += _toNum(r[m.subtotal]);
+      totalTotalPay += _toNum(r[m.total_pay]);
     });
+    // 엑셀에 실지급액이 있으면 그걸 우선 사용
+    if(totalNet > 0){
+      var netFinalExcel = totalNet;
+    }
 
     // 회사 단가 적용 (workers에 등록된 단가 우선)
     var wk = workers[p.name] || workers[p.id] || null;
@@ -974,7 +1018,10 @@ function _calcResults(){
       net:         netFinal,
       revenue:     revenue,       // 매출
       margin:      margin,        // 마진
-      rowCount:    p.rows.length
+      rowCount:    p.rows.length,
+      period:      p.period,      // 정산기간
+      netExcel:    totalNet,      // 엑셀의 실지급액 (있으면)
+      account:     m.account!==undefined ? String(p.rows[0][m.account]||'') : '',
     });
   });
 
@@ -1012,8 +1059,11 @@ function _renderStep3Multi(){
   files.forEach(function(f, fi){
     var fTotal = f.results.reduce(function(s,r){return s+r.net;},0);
     var fCount = f.results.reduce(function(s,r){return s+r.count;},0);
+    // 정산기간 추출 (첫 번째 row에서)
+    var periodSample = f.results.length > 0 ? (f.results[0].period||'') : '';
     html += '<div class="card">'
       +'<div class="card-title">📄 '+f.fileName
+      +(periodSample ? ' <span style="font-size:11px;background:var(--surface2);padding:2px 8px;border-radius:4px;color:var(--text2)">'+periodSample+'</span>' : '')
       +' <span style="font-size:11px;font-weight:400;color:var(--text2)">'+f.results.length+'명 · '+_fmt(fCount)+'건 · '+_fmt(fTotal)+'원</span></div>'
       +'<div class="tbl-wrap"><table><thead><tr>'
       +'<th>이름</th><th>부서/캠프</th><th>건수</th><th class="num">실지급</th><th class="num">원천세</th>'
