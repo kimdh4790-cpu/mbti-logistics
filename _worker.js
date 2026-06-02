@@ -1652,6 +1652,34 @@ export default {
         ]
       }), { status:200, headers:{'Content-Type':'application/manifest+json; charset=utf-8','Cache-Control':'no-cache'} });
     }
+    // ── /{slug}/sw.js → 슬러그 scope용 SW 서빙 (PWA 설치 지원)
+    const slugSwMatch = path.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/sw\.js$/);
+    if (slugSwMatch) {
+      const slug = slugSwMatch[1];
+      const swContent = `importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');`
+        + `importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');`
+        + `firebase.initializeApp({apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.firebasestorage.app',messagingSenderId:'40761160761',appId:'1:40761160761:web:20545b610f03f534e949e8'});`
+        + `const messaging=firebase.messaging();`
+        + `messaging.onBackgroundMessage(function(payload){`
+        + `  const data=payload.data||{};`
+        + `  const title='DONWAY '+(payload.notification&&payload.notification.title||'알림');`
+        + `  const body=(payload.notification&&payload.notification.body)||'';`
+        + `  return self.registration.showNotification(title,{body:body,icon:'/icon-192.png',badge:'/icon-192.png',tag:'donway-push',renotify:true,vibrate:[200,100,200]});`
+        + `});`
+        + `self.addEventListener('notificationclick',function(e){e.notification.close();e.waitUntil(clients.matchAll({type:'window'}).then(function(cl){for(var c of cl){if('focus' in c)return c.focus();}if(clients.openWindow)return clients.openWindow('/'+e.notification.data&&e.notification.data.url||'${slug}');}));});`
+        + `self.addEventListener('install',function(){self.skipWaiting();});`
+        + `self.addEventListener('activate',function(e){e.waitUntil(clients.claim());});`;
+      return new Response(swContent, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/javascript; charset=utf-8',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Service-Worker-Allowed': '/'+slug+'/',
+          'Access-Control-Allow-Origin': '*'
+        }
+      });
+    }
+
     if (path === '/manifest.json') {
       return new Response(JSON.stringify({
         name:'DONWAY — 자동화 정산 플랫폼', short_name:'DONWAY',
