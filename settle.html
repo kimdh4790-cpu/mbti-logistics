@@ -13210,15 +13210,15 @@ window._loadMyStatements=function(){
       var date=d.createdAt?new Date(d.createdAt.seconds*1000).toLocaleDateString('ko-KR'):'';
       var isNew=!d.readAt;
       var typeLabel=d.type==='tax_invoice'||d.type==='tax'?'🧾 세금계산서':'📄 정산명세서';
-      html+='<div class="card" style="margin-bottom:8px;'+(isNew?'border-left:3px solid var(--primary)':'')+';display:flex;align-items:center;gap:8px">'
-        +'<div style="flex:1;cursor:pointer" onclick="_viewMyStatement(this.closest(\".card\"))" data-id="'+item.id+'">'
+      html+='<div class="card" style="margin-bottom:8px;'+(isNew?'border-left:3px solid var(--primary)':'')+';display:flex;align-items:center;gap:8px" data-id="'+item.id+'">'
+        +'<div style="flex:1;cursor:pointer;min-width:0" onclick="_viewMyStatement(this.parentElement)">'
         +'<div style="display:flex;justify-content:space-between;align-items:center">'
         +'<div>'+(isNew?'<span style="background:var(--primary);color:#fff;font-size:9px;padding:2px 6px;border-radius:10px;margin-right:6px">NEW</span>':'')
         +'<span style="font-size:13px;font-weight:700">'+esc(d.title||d.month||'정산명세서')+'</span>'
         +'</div><div style="font-size:11px;color:var(--text3)">'+date+'</div></div>'
         +'<div style="font-size:12px;color:var(--text2);margin-top:4px">'+typeLabel+'</div>'
         +'</div>'
-        +'<button onclick="_deleteMyStmt(\"'+item.id+'\")" style="flex-shrink:0;padding:6px 8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;cursor:pointer">🗑</button>'
+        +'<button onclick="window._deleteMyStmt(\''+item.id+'\');event.stopPropagation()" style="flex-shrink:0;padding:6px 8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;cursor:pointer">🗑</button>'
         +'</div>';
     });
     var el=document.getElementById('my-stmt-list');
@@ -13252,8 +13252,9 @@ window._deleteAllMyStmts=function(){
 
 
 function _viewMyStatement(el){
-  var id=el.getAttribute('data-id');
-  if(!_db)return;
+  // card div 자체 또는 부모 card에서 data-id 읽기
+  var id=el.getAttribute('data-id')||(el.closest&&el.closest('[data-id]')&&el.closest('[data-id]').getAttribute('data-id'))||'';
+  if(!id||!_db)return;
   _db.collection('driver_notifications').doc(id).update({
     readAt:firebase.firestore.FieldValue.serverTimestamp()
   }).catch(function(){});
