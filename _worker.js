@@ -46,12 +46,16 @@ const GITHUB_API = 'https://api.github.com/repos/kimdh4790-cpu/mbti-logistics/co
 async function fetchAsset(path, request) {
   const filePath = path.startsWith('/') ? path : '/' + path;
   const encodedPath = filePath.split('/').map(seg => seg ? encodeURIComponent(seg) : '').join('/');
-  const noCache = filePath.includes('settle.html') || filePath.includes('mbetco.html');
+  const noCache = filePath.includes('settle.html') || filePath.includes('mbetco.html') || filePath.includes('universal_settle.html');
   let resp;
   if (noCache) {
     // backup 경로로 캐시 우회 + 타임스탬프로 강제 갱신
     if (filePath.includes('mbetco.html')) {
       resp = await fetch(GITHUB_RAW + '/backup/mbetco_latest.html?t=' + Date.now(), {
+        cf: { cacheEverything: false, cacheTtl: 0 }
+      });
+    } else if (filePath.includes('universal_settle.html')) {
+      resp = await fetch(GITHUB_RAW + '/universal_settle.html?t=' + Date.now(), {
         cf: { cacheEverything: false, cacheTtl: 0 }
       });
     } else {
@@ -413,6 +417,15 @@ export default {
         status: mbResp.status,
         headers: { 'Content-Type': 'text/html;charset=utf-8', 'Cache-Control': 'no-store' }
       });
+    }
+
+    // ── mbtico.kr 도메인 → universal_settle.html 서빙 (모든 경로) ──
+    if (hostname.includes('mbtico.kr')) {
+      const resp = await fetchAsset('/universal_settle.html', request);
+      const html = await resp.text();
+      const key = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
+      const injected = html.replace('</head>', '<script>window.__AK=' + JSON.stringify(key) + ';</script>\n</head>');
+      return new Response(injected, { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
     }
 
     // ★ 루트 접속 → 랜딩페이지 리라이트 (URL 유지, workers.dev 제외)
