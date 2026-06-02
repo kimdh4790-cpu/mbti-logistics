@@ -10133,15 +10133,13 @@ function _txsBulkExcel(targets, ym){
     var cn=calcNet(s);
     var uid=s.userId||s.driver||'';
     var drvInfo=drvMap[uid]||drvMap[s.driver||'']||{};
-    // ★ 팀장수수료(etcPlusTL)는 쿠팡 수령액 아님 → 세금계산서 기준에서 제외
-    var _etcPlusTL=+s.etcPlusTL||0;
-    var totalAmt=(s.totalAmt||cn.totalAmt||cn.income||0)-_etcPlusTL;
+    var totalAmt=s.totalAmt||cn.totalAmt||cn.income||0;
     var supply=Math.round(totalAmt/1.1);
     var vat=totalAmt-supply;
     var expense=Math.round(supply*0.346);
     var monthly=supply-expense;
-    var emp=monthly>=800000?Math.floor(monthly*0.008/10)*10:0;
-    var work=Math.floor(monthly*0.0088/10)*10;
+    var emp=cn.emp||s.emp||(monthly>=800000?Math.floor(monthly*0.008/10)*10:0);
+    var work=cn.work||s.work||Math.floor(monthly*0.0088/10)*10;
     var net=totalAmt-emp-work;
     // 입사일 (엑셀 날짜 시리얼 또는 문자)
     var joinDate=drvInfo.joinDate||s.joinDate||'';
@@ -14513,16 +14511,16 @@ function pageSettle(){
     var allMonths=[...new Set(settles.map(function(s){return s.month||''}).filter(Boolean))].sort().reverse();
 
     // 집계 (필터 적용)
-    var totCoupang=0,totTaxBase=0,totNet=0,totDcnt=0,totDeduct=0,totInsComp=0;
+    var totCoupang=0,totTaxBase=0,totNet=0,totDcnt=0,totDeduct=0,totInsComp=0,totExtraOut=0;
     var byCamp={};
     filteredSettles.forEach(function(s){
       var r=calcNet(s);
       var ct=s.coupangTotal||(((s.damt||0)+(s.ramt||0)+(s.fresh||0)+(s.inc||0)+(s.nocont||0)))||0;
       totCoupang+=ct?Math.round(ct*1.1):(r.income||0);
-      // ★ 기사 세금계산서 = 순수 배송수익 기준 (팀장수수료 etcPlusTL 제외)
-      //   etcPlusTL은 회사 내부 분배 — 쿠팡수입과 비교 시 제외해야 마진 정확
-      var _taxIncome=(r.income||0)-(+s.etcPlusTL||0);
-      totTaxBase+=Math.round(_taxIncome*1.1);
+      // 기사 세금계산서 = 회사가 실제 발행하는 금액 전체 (팀장수수료/보장금액 포함)
+      totTaxBase+=Math.round((r.income||r.totalAmt||0)*1.1);
+      // 추가 지출 (팀장수수료 + 기타+ — 쿠팡수입 초과분)
+      totExtraOut+=(+s.etcPlusTL||0)+(+s.etcPlus||0);
       totNet+=r.net||0;
       totDeduct+=r.deduct||0;
       totDcnt+=(s.dcnt||0);
@@ -14584,7 +14582,7 @@ function pageSettle(){
         +'</div>'
         +'<div style="text-align:right">'
           +'<div style="font-size:20px;font-weight:900;color:#a78bfa">₩'+fmt(totMargin)+'</div>'
-          +'<div style="font-size:10px;opacity:.5">회사보험료 -₩'+fmt(totInsComp)+'</div>'
+          +'<div style="font-size:10px;opacity:.5">회사보험료 -₩'+fmt(totInsComp)+(totExtraOut>0?' · 추가지출(팀장/보장등) -₩'+fmt(totExtraOut):'')+'</div>'
         +'</div>'
       +'</div>'
       // 실순수익 박스
