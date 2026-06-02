@@ -13196,7 +13196,7 @@ function _viewMyStatement(el){
     var mo=document.createElement('div');mo.className='mo show';
     mo.onclick=function(e){if(e.target===mo)mo.remove();};
     var md=document.createElement('div');md.className='md';md.style.maxWidth='420px';
-    var isTax=d.type==='tax';
+    var isTax=(d.type==='tax'||d.type==='tax_invoice');
     var vatIncome=d.vatIncome||0;
     var supplyAmt=Math.round(vatIncome/1.1);
     var vatAmt=vatIncome-supplyAmt;
@@ -19345,14 +19345,11 @@ function _sendPayslipPush(x,r,name,month,net,vatIncome,docId){
   _db.collection('driver_notifications').add({
     dealerId:did,targetDriverId:uid,targetDriverName:name,type:'payslip',
     title:title,body:body,docUrl:docUrl,
-    net:net,vatIncome:vatIncome,month:month,isRead:false,
+    net:net,vatIncome:vatIncome,emp:(x.emp||r.emp||0),month:month,isRead:false,
     createdAt:firebase.firestore.FieldValue.serverTimestamp()
   }).catch(function(){});
   // 2) fcmToken 조회
-  // kycandksh 테스트용 토큰 직접 주입
-  var _knownTokens={'drv_5578_4ge4':'dt-Sb7yWLjlY-vPzseCwjw:APA91bGqM1nO_z9yGCm1I1I-ml4HE8qg-7ih9rywgGZSQYO5PV4q_U-xUCyRNJ9uxCS_p2d2bikgflL9XzWKZTZg853s1e5ZzFxBugGt4rGgdjtgvhokeRk'};
-  var _preToken=_knownTokens[uid]||null;
-  (_preToken?Promise.resolve(_preToken):_getFcmToken(did, uid, name))
+  _getFcmToken(did, uid, name)
     .then(function(fcmToken){
       if(!fcmToken||fcmToken.length<20){
         toast('⚠️ '+name+'님 앱 미설치 — 푸시 불가');return;
@@ -19496,10 +19493,7 @@ function _sendTaxInvoicePush(x,r,name,month,vatIncome,docId){
     createdAt:firebase.firestore.FieldValue.serverTimestamp()
   }).catch(function(){});
   // 2) fcmToken 조회
-  // kycandksh 테스트용 토큰 직접 주입
-  var _knownTokens={'drv_5578_4ge4':'dt-Sb7yWLjlY-vPzseCwjw:APA91bGqM1nO_z9yGCm1I1I-ml4HE8qg-7ih9rywgGZSQYO5PV4q_U-xUCyRNJ9uxCS_p2d2bikgflL9XzWKZTZg853s1e5ZzFxBugGt4rGgdjtgvhokeRk'};
-  var _preToken=_knownTokens[uid]||null;
-  (_preToken?Promise.resolve(_preToken):_getFcmToken(did, uid, name))
+  _getFcmToken(did, uid, name)
     .then(function(fcmToken){
       if(!fcmToken||fcmToken.length<20){
         toast('⚠️ '+name+'님 앱 미설치 — 푸시 불가');return;
