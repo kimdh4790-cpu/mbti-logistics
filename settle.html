@@ -10133,13 +10133,15 @@ function _txsBulkExcel(targets, ym){
     var cn=calcNet(s);
     var uid=s.userId||s.driver||'';
     var drvInfo=drvMap[uid]||drvMap[s.driver||'']||{};
-    var supply=Math.round((s.totalAmt||cn.totalAmt||cn.income||0)/1.1);
-    var totalAmt=s.totalAmt||cn.totalAmt||cn.income||0;
+    // ★ 팀장수수료(etcPlusTL)는 쿠팡 수령액 아님 → 세금계산서 기준에서 제외
+    var _etcPlusTL=+s.etcPlusTL||0;
+    var totalAmt=(s.totalAmt||cn.totalAmt||cn.income||0)-_etcPlusTL;
+    var supply=Math.round(totalAmt/1.1);
     var vat=totalAmt-supply;
     var expense=Math.round(supply*0.346);
     var monthly=supply-expense;
-    var emp=cn.emp||s.emp||0;
-    var work=cn.work||s.work||0;
+    var emp=monthly>=800000?Math.floor(monthly*0.008/10)*10:0;
+    var work=Math.floor(monthly*0.0088/10)*10;
     var net=totalAmt-emp-work;
     // 입사일 (엑셀 날짜 시리얼 또는 문자)
     var joinDate=drvInfo.joinDate||s.joinDate||'';
