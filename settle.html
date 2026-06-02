@@ -11177,9 +11177,17 @@ function _empLoadRoster(did, uid, today){
     weekDays.push(d.toISOString().slice(0,10));
   }
   // ★ drivers 컬렉션에서 userId==uid인 문서 ID를 먼저 찾아서 roster_week 조회
-  _db.collection('drivers').where('userId','==',uid).limit(1).get()
-    .then(function(dSnap){
-      var driverId = (!dSnap.empty ? dSnap.docs[0].id : null);
+  // uid(auth uid), driverId(_CU.driverId), userId 모두 시도
+  var _rosterDrvId = _CU.driverId||'';
+  var _rosterUserId = _CU.userId||uid;
+  Promise.all([
+    _db.collection('drivers').where('dealerId','==',did).where('userId','==',_rosterUserId).limit(1).get(),
+    _rosterDrvId ? _db.collection('drivers').doc(_rosterDrvId).get().then(function(d){return d.exists?{docs:[d],empty:false}:{docs:[],empty:true};}).catch(function(){return {docs:[],empty:true};}) : Promise.resolve({docs:[],empty:true})
+  ]).then(function(results){
+    var dSnap = results[0].empty ? results[1] : results[0];
+    return Promise.resolve(dSnap);
+  }).then(function(dSnap){
+      var driverId = (!dSnap.empty ? dSnap.docs[0].id : (_rosterDrvId||null));
       return _db.collection('roster_week')
         .where('dealerId','==',did)
         .where('weekStart','==',weekStart)
