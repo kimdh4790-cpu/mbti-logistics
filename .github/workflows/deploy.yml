@@ -15,7 +15,6 @@ jobs:
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CF_API_TOKEN }}
-          wranglerVersion: '4'
 
       - name: Sync settle.html to backup
         env:
