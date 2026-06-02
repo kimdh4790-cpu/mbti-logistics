@@ -8752,6 +8752,11 @@ function pageExpense(){
   var now=new Date();
   var ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
   el.innerHTML='<div style="max-width:900px;margin:0 auto">'
+    +'<div style="display:flex;gap:6px;margin-bottom:14px">'
+    +'<button id="exp-tab-var" class="btn btn-blue" onclick="window._expTab(\'var\')" style="font-size:12px">📝 변동경비</button>'
+    +'<button id="exp-tab-fix" class="btn" onclick="window._expTab(\'fix\')" style="font-size:12px">🏢 고정비 설정</button>'
+    +'</div>'
+    +'<div id="exp-var-area">'
     +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px">'
     +'<input type="month" id="exp-ym" value="'+ym+'" style="padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:13px">'
     +'<button onclick="_loadExpenses()" class="btn btn-blue" style="font-size:12px">🔍 조회</button>'
@@ -8759,7 +8764,20 @@ function pageExpense(){
     +'</div>'
     +'<div id="expense-summary" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-bottom:14px"></div>'
     +'<div id="expense-list"><div class="empty"><div class="empty-icon">💸</div>월을 선택 후 조회하세요</div></div>'
+    +'</div>'
+    +'<div id="exp-fix-area" style="display:none">'
+    +'<div style="background:var(--bg2);border-radius:12px;padding:14px;margin-bottom:12px;font-size:12px;color:var(--text3)">💡 매월 자동 반영되는 고정비를 등록하세요. 통계 탭 순수익에 자동 차감됩니다.</div>'
+    +'<div id="fix-list"><div class="empty">⏳ 로딩 중...</div></div>'
+    +'<button onclick="_fixedExpenseAddModal()" class="btn btn-blue" style="width:100%;margin-top:10px;font-size:13px">+ 고정비 항목 추가</button>'
+    +'</div>'
     +'</div>';
+  window._expTab=function(t){
+    document.getElementById('exp-var-area').style.display=t==='var'?'':'none';
+    document.getElementById('exp-fix-area').style.display=t==='fix'?'':'none';
+    document.getElementById('exp-tab-var').className='btn'+(t==='var'?' btn-blue':'');
+    document.getElementById('exp-tab-fix').className='btn'+(t==='fix'?' btn-blue':'');
+    if(t==='fix') _loadFixedExpenses(did);
+  };
   _loadExpenses(did,ym);
   });
 }
@@ -8947,6 +8965,104 @@ function _expenseDelete(id,did,ym){
 // ════════════════════════════════════════════════
 // ⏰ 연장근로 사전 승인
 // ════════════════════════════════════════════════
+// ══ 고정비 설정 ══
+var FIXED_EXPENSE_KEY = function(did){ return did+'_fixedExpenses'; };
+
+function _loadFixedExpenses(did){
+  var el=document.getElementById('fix-list');
+  if(!el||!_db)return;
+  _db.collection('settings').doc(FIXED_EXPENSE_KEY(did)).get().then(function(snap){
+    var items=snap.exists?(snap.data().items||[]):[];
+    if(!items.length){el.innerHTML='<div class="empty">등록된 고정비 없음</div>';return;}
+    var totalFixed=items.reduce(function(s,i){return s+(i.amount||0);},0);
+    var html='<div style="background:var(--bg2);border-radius:10px;padding:12px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">'
+      +'<span style="font-size:12px;font-weight:700;color:var(--text3)">월 고정비 합계</span>'
+      +'<span style="font-size:18px;font-weight:900;color:var(--red)">-₩'+totalFixed.toLocaleString()+'</span>'
+      +'</div>'
+      +'<div style="display:flex;flex-direction:column;gap:8px">';
+    items.forEach(function(item,idx){
+      var et=EXPENSE_TYPES[item.type]||{icon:'💰',label:item.type||'기타'};
+      html+='<div class="card" style="display:flex;align-items:center;gap:10px;padding:12px">'
+        +'<div style="font-size:20px">'+et.icon+'</div>'
+        +'<div style="flex:1">'
+        +'<div style="font-size:13px;font-weight:700">'+esc(item.label||et.label)+'</div>'
+        +'<div style="font-size:11px;color:var(--text3)">매월 고정 · '+et.label+'</div>'
+        +'</div>'
+        +'<div style="font-size:14px;font-weight:900;color:var(--red)">₩'+((item.amount||0)).toLocaleString()+'</div>'
+        +'<button onclick="window._fixedExpenseEdit(\''+did+'\','+idx+')" style="padding:4px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer">수정</button>'
+        +'<button onclick="window._fixedExpenseDelete(\''+did+'\','+idx+')" style="padding:4px 8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;cursor:pointer">🗑</button>'
+        +'</div>';
+    });
+    html+='</div>';
+    el.innerHTML=html;
+  }).catch(function(){el.innerHTML='<div class="empty">오류</div>';});
+}
+
+function _fixedExpenseAddModal(did2,editIdx,editData){
+  var did=did2||(_CU&&_CU.dealerId)||'';
+  var isEdit=editIdx!==undefined;
+  var mo=document.createElement('div');mo.className='mo show';mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  var md=document.createElement('div');md.className='md';md.style.maxWidth='380px';
+
+  var typeOpts=Object.entries(EXPENSE_TYPES).filter(function(e){
+    return ['rent','mgmt','internet','insurance','tax_service','bank','salary','util','other'].includes(e[0]);
+  }).map(function(e){
+    return '<option value="'+e[0]+'"'+(editData&&editData.type===e[0]?' selected':'')+'>'+e[1].icon+' '+e[1].label+'</option>';
+  }).join('');
+
+  md.innerHTML='<div class="mdt">'+(isEdit?'✏️ 고정비 수정':'🏢 고정비 항목 추가')+'</div>'
+    +'<div style="padding:16px;display:flex;flex-direction:column;gap:10px">'
+    +'<div class="fg"><label>종류</label>'
+    +'<select id="fix-type" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg)">'+typeOpts+'</select></div>'
+    +'<div class="fg"><label>항목명 (선택)</label>'
+    +'<input id="fix-label" type="text" placeholder="예: 사무실 월세" value="'+(editData?esc(editData.label||''):'')+'" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg)"></div>'
+    +'<div class="fg"><label>월 금액 (원)</label>'
+    +'<input id="fix-amount" type="number" placeholder="0" value="'+(editData?editData.amount||0:'')+'" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-weight:700;background:var(--bg)"></div>'
+    +'</div>'
+    +'<div class="mdf">'
+    +'<button class="btn" onclick="this.closest(\'.mo\').remove()">취소</button>'
+    +'<button class="btn btn-blue" onclick="window._fixedExpenseSave(\''+did+'\','+(isEdit?editIdx:'undefined')+');">저장</button>'
+    +'</div>';
+  mo.appendChild(md);document.body.appendChild(mo);
+}
+
+window._fixedExpenseEdit=function(did,idx){
+  _db.collection('settings').doc(FIXED_EXPENSE_KEY(did)).get().then(function(snap){
+    var items=snap.exists?(snap.data().items||[]):[];
+    if(items[idx]) _fixedExpenseAddModal(did,idx,items[idx]);
+  });
+};
+
+window._fixedExpenseSave=function(did,editIdx){
+  var type=(document.getElementById('fix-type')||{}).value||'other';
+  var label=(document.getElementById('fix-label')||{}).value.trim();
+  var amount=parseInt((document.getElementById('fix-amount')||{}).value||0);
+  if(!amount||amount<=0){toast('❌ 금액을 입력하세요');return;}
+  var et=EXPENSE_TYPES[type]||{label:type};
+  var item={type:type,label:label||et.label,amount:amount};
+  _db.collection('settings').doc(FIXED_EXPENSE_KEY(did)).get().then(function(snap){
+    var items=snap.exists?(snap.data().items||[]):[];
+    if(editIdx!==undefined) items[editIdx]=item;
+    else items.push(item);
+    return _db.collection('settings').doc(FIXED_EXPENSE_KEY(did)).set({items:items,updatedAt:new Date().toISOString()},{merge:false});
+  }).then(function(){
+    toast('✅ 고정비 저장됨');
+    document.querySelector('.mo.show')&&document.querySelector('.mo.show').remove();
+    _loadFixedExpenses(did);
+  }).catch(function(e){toast('❌ '+e.message);});
+};
+
+window._fixedExpenseDelete=function(did,idx){
+  if(!confirm('이 고정비 항목을 삭제할까요?'))return;
+  _db.collection('settings').doc(FIXED_EXPENSE_KEY(did)).get().then(function(snap){
+    var items=snap.exists?(snap.data().items||[]):[];
+    items.splice(idx,1);
+    return _db.collection('settings').doc(FIXED_EXPENSE_KEY(did)).set({items:items,updatedAt:new Date().toISOString()},{merge:false});
+  }).then(function(){toast('✅ 삭제됨');_loadFixedExpenses(did);})
+  .catch(function(e){toast('❌ '+e.message);});
+};
+
+
 function pageOvertime(){
   document.getElementById('page-title').textContent='⏰ 연장근로 승인';
   _requirePlan('overtime',function(){
@@ -20468,9 +20584,13 @@ function pageStats(){
   // settlements + expenses 병렬 로딩
   Promise.all([
     _db.collection('settlements').where('dealerId','==',_did2).get(),
-    _db.collection('expenses').where('dealerId','==',_did2).get()
+    _db.collection('expenses').where('dealerId','==',_did2).get(),
+    _db.collection('settings').doc(_did2+'_fixedExpenses').get()
   ]).then(function(results){
-    var snap=results[0], expSnap=results[1];
+    var snap=results[0], expSnap=results[1], fixSnap=results[2];
+    // 고정비 월 합계
+    var fixedMonthlyTotal=(fixSnap.exists?(fixSnap.data().items||[]):[])
+      .reduce(function(s,i){return s+(i.amount||0);},0);
     if(!snap||snap.empty){document.getElementById('stat-content').innerHTML='<div class="empty">데이터 없음</div>';return;}
     var settles=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
     // 경비 월별 합산
@@ -20510,11 +20630,13 @@ function pageStats(){
         byCamp[cc].income+=supplyAmt;byCamp[cc].vat+=vat;byCamp[cc].totalVat+=totalVat;
         byCamp[cc].net+=r.net||0;byCamp[cc].insComp+=insComp;byCamp[cc].profit+=netProfit;
       });
-      // 경비를 월별 profit에서 차감
+      // 경비(변동+고정)를 월별 profit에서 차감
       Object.keys(byMonth).forEach(function(mo){
-        var exp=byMonthExp[mo]||0;
-        byMonth[mo].expense=exp;
-        byMonth[mo].profit=byMonth[mo].profit-exp;
+        var varExp=byMonthExp[mo]||0;
+        var totalExp=varExp+fixedMonthlyTotal;
+        byMonth[mo].expense=totalExp;
+        byMonth[mo].fixedExp=fixedMonthlyTotal;
+        byMonth[mo].profit=byMonth[mo].profit-totalExp;
       });
       var months=Object.keys(byMonth).sort().reverse();
       var camps=Object.keys(byCamp).sort();
