@@ -22399,6 +22399,7 @@ async function _doDeploySettlements(ids) {
 
   // FCM 토큰 로드 — users 컬렉션 기준 (다중기기 지원)
   var tokenMap = {}; // key → 토큰 배열
+  var driverIdMap = {}; // userId/name → driverId
   function _addToken(key, tokens){
     if(!key||!tokens||!tokens.length)return;
     if(!tokenMap[key]) tokenMap[key]=[];
@@ -22411,6 +22412,9 @@ async function _doDeploySettlements(ids) {
       .where('dealerId', '==', _did).get();
     userSnap.forEach(function(doc) {
       var u = doc.data();
+      // userId → driverId 매핑 저장
+      if(u.userId && u.driverId) driverIdMap[u.userId] = u.driverId;
+      if(u.name && u.driverId) driverIdMap[u.name] = u.driverId;
       // 다중기기 토큰 수집
       var tokens = [];
       if(u.fcmTokens&&u.fcmTokens.length){
@@ -22448,12 +22452,14 @@ async function _doDeploySettlements(ids) {
       // 2. driver_notifications 저장 — 직원 앱 내 정산 확인용
       var ts = firebase.firestore.FieldValue.serverTimestamp();
       var _tDrvId = settle.userId || settle.driverId || '';
+      // users에서 매핑된 driverId (기사 앱 _CU.driverId와 매칭용)
+      var _tDrvIdReal = driverIdMap[_tDrvId] || driverIdMap[settle.driver||''] || _tDrvId;
       var _cr = calcNet(settle);
       var notifBase = {
         driverName: settle.name || '',
-        driverId: _tDrvId,
-        targetDriverId: _tDrvId,
-        targetDriverName: settle.name || '',
+        driverId: _tDrvIdReal,
+        targetDriverId: _tDrvIdReal,
+        targetDriverName: settle.driver || settle.name || '',
         companyId: _did,
         dealerId: _did||(_CU&&_CU.uid)||'',
         month: settle.month || '',
@@ -22474,9 +22480,9 @@ async function _doDeploySettlements(ids) {
       // 세금계산서도 별도 저장
       await _db.collection('driver_notifications').add({
         driverName: settle.name || '',
-        driverId: _tDrvId,
-        targetDriverId: _tDrvId,
-        targetDriverName: settle.name || '',
+        driverId: _tDrvIdReal,
+        targetDriverId: _tDrvIdReal,
+        targetDriverName: settle.driver || settle.name || '',
         companyId: _did,
         dealerId: _did,
         month: settle.month || '',
