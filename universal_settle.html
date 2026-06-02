@@ -700,6 +700,186 @@ function _processAllSheets(wb){
 // 🛵 배달대행 정산 엔진 (settle.html 이식)
 // ════════════════════════════════════════════════
 
+
+// ── 배달대행 구간단가표 파일 파싱
+function _loadDeliveryRateTable(inp){
+  var file = inp.files[0];
+  if(!file){ return; }
+  inp.value = '';
+  var ext = file.name.split('.').pop().toLowerCase();
+  var reader = new FileReader();
+
+  reader.onload = function(e){
+    try{
+      var wb = XLSX.read(e.target.result, {type:'array'});
+      var parsed = _parseDeliveryRateExcel(wb);
+      if(!parsed){
+        // AI 폴백
+        toast('🤖 AI로 구간단가표 분석 중...');
+        _aiParseDeliveryRate(file, function(result){
+          if(result) _applyDeliveryRateTable(result);
+          else toast('❌ 구간단가표 인식 실패');
+        });
+        return;
+      }
+      _applyDeliveryRateTable(parsed);
+    }catch(err){
+      toast('❌ 파일 읽기 실패: '+err.message);
+    }
+  };
+
+  if(ext==='txt'||ext==='csv'){
+    reader.readAsText(file,'utf-8');
+  } else {
+    reader.readAsArrayBuffer(file);
+  }
+}
+
+function _parseDeliveryRateExcel(wb){
+  var result = {tracks:[], slots:{}, settings:{}};
+  var found = false;
+
+  wb.SheetNames.forEach(function(sn){
+    var ws  = wb.Sheets[sn];
+    var rows = XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
+    var snL  = sn.toLowerCase().replace(/\s/g,'');
+
+    // 건수별 트랙 시트
+    if(snL.includes('트랙')||snL.includes('건수')||snL.includes('track')){
+      rows.slice(1).forEach(function(r){
+        var mn = parseInt(r[0])||0;
+        var mx = parseInt(r[1])||0;
+        var pr = parseInt(String(r[2]||'').replace(/[,원]/g,''))||0;
+        if(mn>=0 && pr>0){
+          result.tracks.push({min:mn, max:mx||Infinity, price:pr, label:String(r[3]||mn+'건+')});
+          found=true;
+        }
+      });
+    }
+
+    // 시간대별 슬롯 시트
+    if(snL.includes('슬롯')||snL.includes('시간대')||snL.includes('slot')){
+      var slotKeyMap = {
+        '아침':'morning','점심피크':'lunch_peak','점심노피크':'lunch_off',
+        '저녁피크':'dinner_peak','저녁노피크':'dinner_off','심야':'midnight'
+      };
+      rows.slice(2).forEach(function(r){
+        var name  = String(r[0]||'').trim();
+        var price = parseInt(String(r[3]||'').replace(/[,원]/g,''))||0;
+        Object.keys(slotKeyMap).forEach(function(k){
+          if(name.includes(k)){
+            result.slots[slotKeyMap[k]] = price;
+            found=true;
+          }
+        });
+      });
+    }
+
+    // 기본설정 시트
+    if(snL.includes('설정')||snL.includes('setting')||snL.includes('기본')){
+      rows.slice(2).forEach(function(r){
+        var key = String(r[0]||'').replace(/\s/g,'');
+        var val = String(r[1]||'').trim();
+        if(key.includes('기본계약단가'))   result.settings.defaultPrice  = parseInt(val.replace(/[,원]/g,''))||2900;
+        if(key.includes('취소패널티'))     result.settings.cancelPenalty = parseInt(val.replace(/[,원]/g,''))||10000;
+        if(key.includes('앱사용료'))       result.settings.programFee    = parseInt(val.replace(/[,원]/g,''))||0;
+        if(key.includes('리스')||key.includes('보험료')) result.settings.leaseFee = parseInt(val.replace(/[,원]/g,''))||0;
+        if(key.includes('세금방식'))       result.settings.isBiz = val.includes('사업자');
+      });
+      found=true;
+    }
+  });
+
+  return found ? result : null;
+}
+
+function _applyDeliveryRateTable(parsed){
+  // 트랙 단가 적용
+  if(parsed.tracks && parsed.tracks.length){
+    // 기존 트랙 단가 업데이트
+    parsed.tracks.forEach(function(pt){
+      DW_TRACKS.forEach(function(t){
+        if(pt.min===t.min) t.price=pt.price;
+      });
+    });
+  }
+  // 슬롯 단가 적용
+  if(parsed.slots){
+    Object.keys(parsed.slots).forEach(function(k){
+      if(DW_SLOTS[k]) DW_SLOTS[k].price = parsed.slots[k];
+    });
+  }
+  // 기본 설정 적용
+  if(parsed.settings){
+    _settleState.deliveryCfg = Object.assign(_settleState.deliveryCfg||{}, parsed.settings);
+  }
+
+  var trackInfo = DW_TRACKS.filter(function(t){return t.price>0;})
+    .map(function(t){return t.label+':'+_fmt(t.price)+'원';}).join(' · ');
+  toast('✅ 구간단가표 적용 — '+trackInfo);
+
+  // 재계산 (배달대행 모드면)
+  if(_settleState.deliveryMode && _settleState.deliveryRiderMap){
+    _dwApplyDeliverySettingsFromState();
+  }
+  _renderSettle();
+}
+
+function _dwApplyDeliverySettingsFromState(){
+  var cfg = _settleState.deliveryCfg || {};
+  var riderMap   = _settleState.deliveryRiderMap;
+  var riderNames = _settleState.deliveryRiderNames;
+  var results = [];
+  Object.keys(riderMap).forEach(function(rid){
+    var r = _calcDeliverySettlement(riderMap[rid], cfg);
+    if(r){ r.riderId=rid; r.riderName=riderNames[rid]||rid; results.push(r); }
+  });
+  results.sort(function(a,b){return a.riderName.localeCompare(b.riderName);});
+  _settleState.deliveryState = {results:results, cfg:cfg};
+}
+
+// ── AI 구간단가표 파싱 (불규칙 형식)
+async function _aiParseDeliveryRate(file, callback){
+  var ak = window.__AK;
+  if(!ak){ callback(null); return; }
+
+  var reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      var wb  = XLSX.read(e.target.result,{type:'array'});
+      var text = wb.SheetNames.map(function(sn){
+        var rows = XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:''});
+        return '['+sn+']\n'+rows.map(function(r){return r.join('\t');}).join('\n');
+      }).join('\n\n');
+
+      fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'x-api-key':ak,
+          'anthropic-version':'2023-06-01',
+          'anthropic-dangerous-direct-browser-access':'true'
+        },
+        body:JSON.stringify({
+          model:'claude-haiku-4-5-20251001',
+          max_tokens:600,
+          messages:[{role:'user',content:
+            '다음 배달대행 구간단가표에서 정보를 추출해 JSON만 반환:\n\n'+text+'\n\n'
+            +'{"tracks":[{"min":350,"max":999999,"price":5500},{"min":300,"max":350,"price":5200}...],'
+            +'"slots":{"morning":2900,"lunch_peak":3500,"lunch_off":3000,"dinner_peak":4000,"dinner_off":3000,"midnight":0},'
+            +'"settings":{"defaultPrice":2900,"cancelPenalty":10000,"programFee":3300,"leaseFee":8000,"isBiz":false}}'
+          }]
+        })
+      }).then(function(r){return r.json();}).then(function(data){
+        var text2=(data.content&&data.content[0]&&data.content[0].text)||'';
+        var clean=text2.replace(/```json|```/g,'').trim();
+        callback(JSON.parse(clean));
+      }).catch(function(){callback(null);});
+    }catch(e){callback(null);}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
 // ── 배달대행 엑셀 감지
 function _isDeliverySheet(headers){
   var h = headers.map(function(x){return String(x||'').toLowerCase().replace(/\s/g,'');});
@@ -912,16 +1092,28 @@ function _renderDeliveryResult(){
     +'</div>';
 
   // 설정 패널
+  var trackSummary = DW_TRACKS.filter(function(t){return t.price>0;})
+    .map(function(t){return t.label+' '+_fmt(t.price)+'원';}).join(' · ');
+
   html += '<div style="background:var(--surface2);border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:12px">'
     +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
     +'<strong>⚙️ 단가 설정</strong>'
-    +'<span style="color:var(--text3)">트랙 단가 및 세금 설정</span>'
-    +'<button onclick="_dwOpenDeliverySettings()" style="margin-left:auto;background:var(--acc);color:#fff;border:none;border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer">설정 변경</button>'
+    +'<span style="color:var(--text3)">구간단가표 또는 직접 설정</span>'
+    +'<div style="display:flex;gap:6px;margin-left:auto">'
+    +'<label style="cursor:pointer;background:#1d4ed8;color:#fff;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:600">'
+    +'📊 구간단가표 업로드'
+    +'<input type="file" accept=".xlsx,.xls,.txt,.csv" style="display:none" onchange="_loadDeliveryRateTable(this)">'
+    +'</label>'
+    +'<button onclick="_dwOpenDeliverySettings()" style="background:var(--acc);color:#fff;border:none;border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer">직접 설정</button>'
     +'</div>'
-    +'<div style="display:flex;gap:12px;font-size:11px;color:var(--text2)">'
+    +'</div>'
+    +'<div style="font-size:11px;color:var(--text2);line-height:1.8">'
+    +'<div>트랙: <strong>'+trackSummary+'</strong></div>'
+    +'<div style="display:flex;gap:12px">'
     +'<span>기본단가: <strong>'+_fmt(cfg.defaultPrice||2900)+'원/건</strong></span>'
     +'<span>취소패널티: <strong>'+_fmt(cfg.cancelPenalty||10000)+'원/건</strong></span>'
     +'<span>세금: <strong>'+(cfg.isBiz?'고용+산재':'3.3%원천세')+'</strong></span>'
+    +'</div>'
     +'</div>'
     +'</div>';
 
