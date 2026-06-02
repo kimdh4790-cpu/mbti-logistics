@@ -378,7 +378,7 @@ export default {
         + "  const body=(payload.notification&&payload.notification.body)||'';"
         + "  return self.registration.showNotification(title,{body:body,icon:'/icon-192.png',badge:'/icon-192.png',tag:'donway-'+type,renotify:true,vibrate:[200,100,200]});"
         + "});"
-        + "self.addEventListener('notificationclick',function(e){e.notification.close();if(e.action==='close')return;e.waitUntil(clients.openWindow('/settle'));});"
+        + "self.addEventListener('notificationclick',function(e){e.notification.close();if(e.action==='close')return;var url=e.notification.data&&e.notification.data.url?e.notification.data.url:'/';e.waitUntil(clients.matchAll({type:'window'}).then(function(cl){for(var c of cl){if(c.url.includes('donway')&&'focus' in c)return c.focus();}if(clients.openWindow)return clients.openWindow(url);}));});"
         + "self.addEventListener('install',function(){self.skipWaiting();});"
         + "self.addEventListener('activate',function(e){e.waitUntil(clients.claim());});";
       return new Response(swContent, {
@@ -1451,9 +1451,10 @@ export default {
                   message: {
                     token: token,
                     notification: { title: title || 'DONWAY 알림', body: msgBody || '' },
-                    data: { type: type || 'notice' },
-                    android: { priority: 'high' },
-                    apns: { payload: { aps: { sound: 'default', badge: 1 } } }
+                    data: { type: type || 'notice', url: url || '/' },
+                    android: { priority: 'high', notification: { sound: 'default', channel_id: 'donway_default' } },
+                    apns: { payload: { aps: { sound: 'default', badge: 1, 'content-available': 1 } } },
+                    webpush: { notification: { icon: '/icon-192.png', badge: '/icon-192.png', vibrate: [200,100,200], requireInteraction: false }, fcm_options: { link: url || '/' } }
                   }
                 })
               }
