@@ -168,7 +168,7 @@ tr:hover td{background:var(--bg3);}
 <div id="toast"></div>
 
 <!-- ── LOGIN ── -->
-<div id="login-screen" style="display:none">
+<div id="login-screen">
   <div class="login-wrap">
     <div class="login-box">
       <div class="login-logo">
@@ -275,29 +275,32 @@ function _initFirebase(){
 }
 
 function _loadDealer(user){
-  _db.collection('mbetco_companies').where('email','==',user.email).limit(1).get()
-    .then(function(snap){
-      if(snap.empty){
-        // super-admin 체크
-        _db.collection('admins').doc(user.email).get().then(function(adm){
-          if(adm.exists){
-            _dealerId = 'admin_'+user.email.split('@')[0];
-            _startApp(user, user.email.split('@')[0], true);
-          } else {
-            toast('❌ 등록되지 않은 계정입니다');
-            _auth.signOut();
-          }
-        });
+  // admins 먼저 체크 → 슈퍼어드민이면 바로 진입
+  _db.collection('admins').doc(user.email).get()
+    .then(function(adm){
+      if(adm.exists){
+        _dealerId = 'admin_'+user.email.split('@')[0];
+        _startApp(user, adm.data().companyName||user.email.split('@')[0], true);
         return;
       }
-      var d = snap.docs[0];
-      _dealerId = d.id;
-      _startApp(user, d.data().companyName||user.email, false);
+      // 일반 고객사 체크
+      return _db.collection('mbetco_companies').where('email','==',user.email).limit(1).get()
+        .then(function(snap){
+          if(snap.empty){
+            toast('❌ 등록되지 않은 계정입니다');
+            _auth.signOut();
+            return;
+          }
+          var d = snap.docs[0];
+          _dealerId = d.id;
+          _startApp(user, d.data().companyName||user.email, false);
+        });
     })
     .catch(function(e){
-      // companies 컬렉션 없으면 임시 처리
-      _dealerId = 'u_'+user.uid.slice(0,8);
-      _startApp(user, user.email.split('@')[0], false);
+      // 인증 실패 → 로그아웃 (보안)
+      console.error('[Auth] 권한 확인 실패:', e.message);
+      toast('❌ 접근 권한이 없습니다');
+      _auth.signOut();
     });
 }
 
@@ -710,9 +713,27 @@ function _goStep3(){
   var m = _settleState.mapping;
   if(m.name===undefined){toast('⚠️ 이름 열을 선택하세요');return;}
   if(m.count===undefined && m.amount===undefined){toast('⚠️ 건수 또는 금액 열을 선택하세요');return;}
-  _calcResults();
-  _settleState.step = 3;
-  _renderSettle();
+  toast('⏳ 인원 단가 로드 중...');
+  // workers 로드 후 계산
+  _db.collection('mbetco_workers').where('dealerId','==',_dealerId).get()
+    .then(function(snap){
+      var workers = {};
+      snap.forEach(function(d){
+        var w = d.data();
+        if(w.name) workers[w.name] = w;
+        if(w.workerId) workers[w.workerId] = w;
+      });
+      _settleState.workers = workers;
+      _calcResults();
+      _settleState.step = 3;
+      _renderSettle();
+    })
+    .catch(function(){
+      _settleState.workers = {};
+      _calcResults();
+      _settleState.step = 3;
+      _renderSettle();
+    });
 }
 
 // ── 정산 계산
@@ -720,6 +741,7 @@ function _calcResults(){
   var rows = _settleState.rows;
   var m    = _settleState.mapping;
   var results = [];
+  var workers = _settleState.workers || {};  // {id: {rate, retRate, dept}}
 
   // 이름 기준 집계
   var byName = {};
@@ -737,7 +759,7 @@ function _calcResults(){
 
   Object.values(byName).forEach(function(p){
     var totalCount  = 0;
-    var totalAmount = 0;
+    var totalAmount = 0;  // 엑셀 원본 금액 (매출)
     var totalBase   = 0;
     var totalBonus  = 0;
     var totalDeduct = 0;
@@ -750,30 +772,43 @@ function _calcResults(){
       totalDeduct += _toNum(r[m.deduct]);
     });
 
-    // amount가 단가인 경우 × 건수
-    var baseAmt = totalAmount > 0 ? totalAmount
-                : (totalCount > 0 && totalBase > 0) ? totalCount * totalBase
-                : totalCount * 0;
+    // 회사 단가 적용 (workers에 등록된 단가 우선)
+    var wk = workers[p.name] || workers[p.id] || null;
+    var workerRate = wk ? (wk.rate||0) : 0;
+    var dept = (wk && wk.dept) ? wk.dept : p.dept;
 
-    // 총지급 = 기본 + 인센 + 건수×단가 - 공제
-    var gross  = baseAmt + totalBase + totalBonus;
-    var net    = gross - totalDeduct;
-    var tax33  = Math.round(net * 0.033);  // 3.3% 원천세
+    // 지급액 계산
+    // 회사단가 있으면: 건수 × 단가
+    // 없으면: 엑셀 금액 그대로
+    var baseAmt = workerRate > 0
+      ? totalCount * workerRate
+      : (totalAmount > 0 ? totalAmount : totalCount * 0);
+
+    var gross    = baseAmt + totalBase + totalBonus;
+    var net      = gross - totalDeduct;
+    var tax33    = Math.round(net * 0.033);
     var netFinal = net - tax33;
 
+    // 마진 = 엑셀금액(매출) - 실지급
+    var revenue = totalAmount;
+    var margin  = revenue > 0 ? revenue - netFinal : 0;
+
     results.push({
-      name:       p.name,
-      id:         p.id,
-      dept:       p.dept,
-      count:      totalCount,
-      amount:     totalAmount,
-      base:       totalBase,
-      bonus:      totalBonus,
-      deduct:     totalDeduct,
-      gross:      gross,
-      tax:        tax33,
-      net:        netFinal,
-      rowCount:   p.rows.length
+      name:        p.name,
+      id:          p.id,
+      dept:        dept,
+      count:       totalCount,
+      amount:      totalAmount,   // 엑셀 원본 (매출)
+      workerRate:  workerRate,    // 적용 단가
+      base:        totalBase,
+      bonus:       totalBonus,
+      deduct:      totalDeduct,
+      gross:       gross,
+      tax:         tax33,
+      net:         netFinal,
+      revenue:     revenue,       // 매출
+      margin:      margin,        // 마진
+      rowCount:    p.rows.length
     });
   });
 
@@ -794,16 +829,19 @@ function _renderStep3(){
   var totalCount = res.reduce(function(s,r){return s+r.count;},0);
   var totalTax   = res.reduce(function(s,r){return s+r.tax;},0);
 
+  var totalRevenue = res.reduce(function(s,r){return s+(r.revenue||r.amount||0);},0);
+  var totalMargin  = res.reduce(function(s,r){return s+(r.margin||0);},0);
   var html = '<div class="result-summary">'
     +'<div class="stat-card"><div class="stat-label">대상 인원</div><div class="stat-val blue">'+res.length+'명</div></div>'
     +'<div class="stat-card"><div class="stat-label">총 건수</div><div class="stat-val">'+_fmt(totalCount)+'건</div></div>'
-    +'<div class="stat-card"><div class="stat-label">원천세 합계</div><div class="stat-val">'+_fmt(totalTax)+'원</div></div>'
+    +'<div class="stat-card"><div class="stat-label">매출 합계</div><div class="stat-val">'+_fmt(totalRevenue)+'원</div></div>'
     +'<div class="stat-card"><div class="stat-label">실지급 합계</div><div class="stat-val green">'+_fmt(totalNet)+'원</div></div>'
+    +'<div class="stat-card"><div class="stat-label">마진 합계</div><div class="stat-val blue">'+_fmt(totalMargin)+'원</div></div>'
     +'</div>'
 
     +'<div class="card"><div class="card-title">📋 정산 상세</div>'
     +'<div class="tbl-wrap"><table><thead><tr>'
-    +'<th>이름</th><th>부서/캠프</th><th>건수</th><th class="num">총액</th><th class="num">공제</th><th class="num">원천세(3.3%)</th><th class="num">실지급</th><th></th>'
+    +'<th>이름</th><th>부서/캠프</th><th>건수</th><th class="num">단가</th><th class="num">매출(엑셀)</th><th class="num">실지급</th><th class="num" style="color:var(--green)">마진</th><th class="num">원천세</th><th></th>'
     +'</tr></thead><tbody>';
 
   res.forEach(function(r,i){
@@ -811,10 +849,11 @@ function _renderStep3(){
       +'<td><strong>'+r.name+'</strong>'+(r.id?'<br><span style="color:var(--text3);font-size:10px">'+r.id+'</span>':'')+'</td>'
       +'<td><span class="chip chip-blue">'+( r.dept||'-')+'</span></td>'
       +'<td>'+_fmt(r.count)+'건</td>'
-      +'<td class="num">'+_fmt(r.gross)+'원</td>'
-      +'<td class="num" style="color:var(--red)">'+_fmt(r.deduct)+'원</td>'
-      +'<td class="num" style="color:var(--yellow)">'+_fmt(r.tax)+'원</td>'
+      +'<td class="num">'+(r.workerRate>0?_fmt(r.workerRate)+'원':'<span style="color:var(--text3)">엑셀</span>')+'</td>'
+      +'<td class="num" style="color:var(--text2)">'+_fmt(r.revenue||r.amount)+'원</td>'
       +'<td class="num"><strong style="color:var(--green)">'+_fmt(r.net)+'원</strong></td>'
+      +'<td class="num"><strong style="color:'+(r.margin>0?'var(--acc)':'var(--red)')+'">'+(r.margin>0?'+':'')+_fmt(r.margin)+'원</strong></td>'
+      +'<td class="num" style="color:var(--yellow)">'+_fmt(r.tax)+'원</td>'
       +'<td><button class="btn btn-secondary btn-sm" onclick="_editRow('+i+')">수정</button></td>'
       +'</tr>';
   });
@@ -1029,6 +1068,8 @@ function _addWorkerModal(){
     +'<div class="fg"><label>ID/사번</label><input id="wk-id" type="text" placeholder="hong001"></div>'
     +'<div class="fg"><label>부서/캠프</label><input id="wk-dept" type="text" placeholder="부산1캠프"></div>'
     +'<div class="fg"><label>연락처</label><input id="wk-phone" type="tel" placeholder="010-0000-0000"></div>'
+    +'<div class="fg"><label>건당 단가 (원)</label><input id="wk-rate" type="number" placeholder="1100" min="0"></div>'
+    +'<div class="fg"><label>반품 단가 (원)</label><input id="wk-retrate" type="number" placeholder="900" min="0"></div>'
     +'</div>'
     +'<button class="btn btn-primary" style="width:100%;justify-content:center" onclick="_saveWorker()">저장</button>'
     +'</div></div>';
@@ -1044,6 +1085,8 @@ function _saveWorker(){
     workerId:  (document.getElementById('wk-id')||{}).value||'',
     dept:      (document.getElementById('wk-dept')||{}).value||'',
     phone:     (document.getElementById('wk-phone')||{}).value||'',
+    rate:      parseFloat((document.getElementById('wk-rate')||{}).value||0)||0,
+    retRate:   parseFloat((document.getElementById('wk-retrate')||{}).value||0)||0,
     active:    true,
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   }).then(function(){
