@@ -10064,7 +10064,7 @@ function pageTaxShare(){
     +'</div>'
     +'<div style="display:flex;gap:8px">'
     +'<button class="btn btn-blue" onclick="window._txsGenLink()" style="flex:1">🔗 공유 링크 생성</button>'
-    +'<button class="btn" onclick="window._txsDownloadCsv()" style="flex:1">💾 CSV 다운로드</button>'
+    +'<button class="btn" onclick="window._txsDownloadCsv()" style="flex:1">💾 더존 CSV</button>'
     +'</div>'
     +'<div id="txs-result" style="margin-top:10px"></div>'
     +'</div>'
@@ -14213,7 +14213,7 @@ function pageSettle(){
   var tr=document.getElementById('topbar-right');tr.innerHTML='';
   var lbl=document.createElement('label');
   lbl.style.cssText='display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:#f97316;color:#fff;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer';
-  lbl.textContent='📂 쿠팡 엑셀 → 캠프별 정렬';
+  lbl.textContent='📂 📂 쿠팡 엑셀 업로드';
   lbl.appendChild((function(){var fi=document.createElement('input');fi.type='file';fi.accept='.xlsx,.xls';fi.style.display='none';fi.onchange=function(){if(this.files[0])parseCoupangExcel(this);};return fi;})());
   tr.appendChild(lbl);
   var dlBtn=document.createElement('button');
@@ -16070,9 +16070,8 @@ function _showSEModal(s){
     }
     openTaxInvoice(id);
   };
-  var saveBtn=document.createElement('button');saveBtn.className='btn btn-blue';
-  saveBtn.textContent='💾 저장 후 재계산';saveBtn.onclick=_saveSECurrent;
-  btnRow.appendChild(cancelBtn);btnRow.appendChild(taxBtn);btnRow.appendChild(saveBtn);
+  // 자동저장 적용으로 저장 버튼 제거
+  btnRow.appendChild(cancelBtn);btnRow.appendChild(taxBtn);
   mdf.appendChild(btnRow);
   wrap.appendChild(mdf);
 
