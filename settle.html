@@ -1973,9 +1973,20 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             });
           })();
           var fbPromises=[];
+          // ★ drivers에서 사업자 정보 미리 맵핑 (isBiz, bizNum 반영)
+          var _drvBizMap={};
+          (fbDrivers||window._drvCache||[]).forEach(function(drv){
+            var key=drv.userId||drv.id||'';
+            if(key) _drvBizMap[key]={isBiz:drv.isBiz,bizNum:drv.bizNum||'',bizName:drv.bizName||''};
+            if(drv.name) _drvBizMap[drv.name]={isBiz:drv.isBiz,bizNum:drv.bizNum||'',bizName:drv.bizName||''};
+          });
           settlements.filter(function(x){return x.month===month;}).forEach(function(x){
             var docId=x.fbId||(x.dealerId+'_'+x.userId+'_'+x.month);
             x.fbId=docId;
+            // ★ drivers 사업자 정보 병합 (엑셀 업로드 시마다 최신 isBiz 반영)
+            var _biz=_drvBizMap[x.userId||'']||_drvBizMap[x.driver||'']||{};
+            if(_biz.isBiz!==undefined && x.isBiz===undefined) x.isBiz=_biz.isBiz;
+            if(_biz.bizNum && !x.bizNum) x.bizNum=_biz.bizNum;
             // ★ calcNet 결과를 저장에 포함 (세무사연동/명세서에서 s.net 직접 사용)
             var _cn=calcNet(x);
             x.net=_cn.net||0;
