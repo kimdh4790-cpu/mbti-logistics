@@ -1992,9 +1992,16 @@ async function _aiParseRateFile(input, type, callback){
   var messageContent;
 
   if(isImage){
-    userPrompt = '이 이미지에서 라우트번호와 단가(원/건) 또는 팀장수수료 정보를 추출하세요.\n\n'
-      + '라우트단가표라면: {"type":"rate","data":{"612A":982,"612B":860,...}}\n'
-      + '팀장수수료라면: {"type":"teamfee","data":{"vmffkdl321@df":{"608B":60,"608C":60,...},...}}\n'
+    userPrompt = '이 이미지에서 정산 단가 정보를 추출하세요.\n\n'
+      + '【패턴1 - 배달대행 구간단가표】\n'
+      + '"180건 이상 4,200원", "250건 이상 5,100원" 같은 건수별 최저단가 보장표:\n'
+      + '→ {"type":"delivery_track","data":{"tracks":[{"min":180,"max":250,"price":4200},{"min":250,"max":300,"price":5100},{"min":300,"max":350,"price":5300},{"min":350,"max":999999,"price":5500}]}}\n\n'
+      + '【패턴2 - 라우트단가표】\n'
+      + '"612A=982원" 같은 라우트번호+단가:\n'
+      + '→ {"type":"rate","data":{"612A":982,"612B":860,...}}\n\n'
+      + '【패턴3 - 팀장수수료】\n'
+      + '"이름(ID), 608B=60원" 같은 기사별 라우트 수수료:\n'
+      + '→ {"type":"teamfee","data":{"vmffkdl321@df":{"608B":60,...},...}}\n\n'
       + '판단 불가시: {"type":"unknown","data":{}}';
     messageContent = [
       {type:'image', source:{type:'base64', media_type:input.mediaType, data:input.data}},
@@ -2055,6 +2062,15 @@ function _handleImageFile(file, reader){
 // ── 파싱 결과 적용
 function _applyParsedRateData(parsed){
   var rtc = _settleState.routeToCamp || {};
+
+  // 배달대행 구간단가표 (이미지 인식 포함)
+  if(parsed.type === 'delivery_track'){
+    if(parsed.data && parsed.data.tracks){
+      _applyDeliveryRateTable({tracks:parsed.data.tracks, slots:{}, settings:{}});
+    }
+    return;
+  }
+
   if(parsed.type === 'teamfee'){
     _settleState.coupangTeamFee = parsed.data;
     var cnt = Object.keys(parsed.data).length;
