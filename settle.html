@@ -11115,7 +11115,8 @@ function pageEmpHome(){
   var greetE=nowE.getHours()<12?'좋은 아침이에요':'수고하세요';
   // 알림 미허용 배너
   var _notifBanner='';
-  if(typeof Notification!=='undefined'&&Notification.permission!=='granted'){
+  var _notifGranted=(typeof Notification!=='undefined'&&Notification.permission==='granted')||localStorage.getItem('dw_notif_granted');
+  if(!_notifGranted){
     _notifBanner='<div onclick="_reqNotifFromBanner()" style="background:linear-gradient(135deg,#f97316,#ef4444);border-radius:12px;padding:14px 16px;margin-bottom:12px;color:#fff;display:flex;align-items:center;gap:10px;cursor:pointer">'
       +'<div style="font-size:24px">🔔</div>'
       +'<div style="flex:1"><div style="font-size:13px;font-weight:800">알림 허용이 필요해요!</div>'
@@ -11126,8 +11127,10 @@ function pageEmpHome(){
     try{
       if('serviceWorker' in navigator){await navigator.serviceWorker.register('/firebase-messaging-sw.js');await navigator.serviceWorker.ready;}
       var perm=await Notification.requestPermission();
-      if(perm==='granted'){toast('✅ 알림 허용됨!');setTimeout(_registerFCM,500);setTimeout(pageEmpHome,1500);}
-      else toast('⚠️ 브라우저 설정에서 알림을 허용해주세요');
+      if(perm==='granted'){
+        try{localStorage.setItem('dw_notif_granted','1');}catch(e){}
+        toast('✅ 알림 허용됨!');setTimeout(_registerFCM,500);setTimeout(pageEmpHome,1500);
+      } else toast('⚠️ 브라우저 설정에서 알림을 허용해주세요');
     }catch(e){toast('오류: '+e.message);}
   };
   el.innerHTML='<div style="max-width:620px;margin:0 auto">'+_notifBanner
