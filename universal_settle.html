@@ -297,9 +297,10 @@ function _loadDealer(user){
         });
     })
     .catch(function(e){
-      // admins 읽기 실패(rules 미배포)면 일단 진입 허용 — 개발/테스트용
-      _dealerId = 'u_'+user.uid.slice(0,8);
-      _startApp(user, user.email.split('@')[0], false);
+      // 인증 실패 → 로그아웃 (보안)
+      console.error('[Auth] 권한 확인 실패:', e.message);
+      toast('❌ 접근 권한이 없습니다');
+      _auth.signOut();
     });
 }
 
