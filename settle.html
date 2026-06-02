@@ -11176,27 +11176,23 @@ function _empLoadRoster(did, uid, today){
     var d=new Date(weekStart);d.setDate(d.getDate()+i);
     weekDays.push(d.toISOString().slice(0,10));
   }
-  // ★ drivers 컬렉션에서 userId==uid인 문서 ID를 먼저 찾아서 roster_week 조회
-  // roster_week.driverId = d.userId(쿠팡ID) 기준으로 저장됨
-  var _rosterUserId = _CU.userId || uid;  // 쿠팡ID 우선
+  // 본인 캠프 찾기 → 캠프 전체 근무표 표시
+  var _rosterUserId = _CU.userId || uid;
   _db.collection('drivers').where('dealerId','==',did).where('userId','==',_rosterUserId).limit(1).get()
   .then(function(dSnap){
-      // roster_week에서 driverId = userId(쿠팡ID) 또는 drivers doc.id
-      var driverId = (!dSnap.empty ? (dSnap.docs[0].data().userId||dSnap.docs[0].id) : _rosterUserId);
+      var mycamp = !dSnap.empty ? (dSnap.docs[0].data().camp||'') : '';
       return _db.collection('roster_week')
         .where('dealerId','==',did)
         .where('weekStart','==',weekStart)
         .onSnapshot(function(snap){
-          // driverId(doc.id) 또는 uid(userId) 양방향 매칭
+          // 캠프 필터 (본인 캠프 전체)
           snap = {
-            empty: !snap.docs.some(function(d){
-              var v=d.data();
-              return v.driverId===_rosterUserId||v.driverId===driverId||v.userId===_rosterUserId;
-            }),
+            empty: snap.empty,
             forEach: function(fn){
               snap.docs.filter(function(d){
                 var v=d.data();
-                return v.driverId===_rosterUserId||v.driverId===driverId||v.userId===_rosterUserId;
+                // 캠프 있으면 같은 캠프, 없으면 전체
+                return !mycamp || (v.camp===mycamp);
               }).forEach(fn);
             }
           };
@@ -11208,33 +11204,39 @@ function _empLoadRoster(did, uid, today){
         if(status) status.textContent='미등록';
         return;
       }
-      // 날짜별 데이터 정리
-      var byDay={};
+      // 기사별+날짜별 데이터 정리
+      var byDriver={};var driverOrder=[];
       snap.forEach(function(doc){
-        var d=doc.data();
-        byDay[d.dayIndex]=d;
+        var d=doc.data();var drvId=d.driverId||'';
+        if(!byDriver[drvId]){byDriver[drvId]={name:d.name||drvId,days:{}};driverOrder.push(drvId);}
+        byDriver[drvId].days[d.dayIndex]=d;
       });
-      var html='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center;font-size:11px">';
-      // 요일 헤더
+      var html='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">'
+        +'<thead><tr><th style="padding:4px;background:var(--bg3);border:1px solid var(--border);min-width:55px">기사</th>';
       weekDays.forEach(function(dt,idx){
         var isToday=dt===today;
-        html+='<div style="font-weight:700;padding:4px 2px;border-radius:6px;background:'+(isToday?'var(--brand)':'var(--bg3)')+';color:'+(isToday?'#fff':'var(--text3)')+'">'+days3[new Date(dt).getDay()]+'<br><span style="font-size:9px">'+dt.slice(5)+'</span></div>';
+        html+='<th style="padding:4px 2px;background:'+(isToday?'var(--brand)':'var(--bg3)')+';color:'+(isToday?'#fff':'var(--text)')+';border:1px solid var(--border);min-width:40px;text-align:center">'+days3[new Date(dt).getDay()]+'<br><span style="font-size:9px;font-weight:400">'+dt.slice(5)+'</span></th>';
       });
-      // 근무 내용
-      weekDays.forEach(function(dt,idx){
-        var d=byDay[idx]||null;
-        var isToday=dt===today;
-        var status=d?d.status:'off';
-        var route=d?d.route||'':'-';
-        var bg=status==='work'?'rgba(0,200,124,.15)':status==='off'?'var(--bg3)':'rgba(255,180,0,.15)';
-        var color=status==='work'?'var(--green)':status==='off'?'var(--text3)':'var(--amber)';
-        var label=status==='work'?'출근':status==='off'?'휴무':'기타';
-        html+='<div style="padding:5px 2px;border-radius:6px;background:'+bg+';border:'+(isToday?'1px solid var(--brand)':'1px solid transparent')+'">'
-          +'<div style="color:'+color+';font-weight:700;font-size:10px">'+label+'</div>'
-          +(route&&route!=='-'?'<div style="color:var(--text3);font-size:9px;margin-top:2px">'+esc(route)+'</div>':'')
-          +'</div>';
+      html+='</tr></thead><tbody>';
+      driverOrder.forEach(function(drvId){
+        var drv=byDriver[drvId];
+        html+='<tr><td style="padding:4px 6px;border:1px solid var(--border);font-weight:700;white-space:nowrap">'+esc(drv.name)+'</td>';
+        weekDays.forEach(function(dt,idx){
+          var d=drv.days[idx]||null;
+          var isToday=dt===today;
+          var st=d?d.status:'work';
+          var route=d?d.route||'':'';
+          var bg=st==='off'?'rgba(239,68,68,.08)':(isToday?'rgba(0,102,255,.08)':'');
+          var color=st==='off'?'#ef4444':'var(--green)';
+          var label=st==='off'?'휴무':'출근';
+          html+='<td style="padding:3px 2px;border:1px solid var(--border);text-align:center;background:'+bg+'">'
+            +'<div style="color:'+color+';font-weight:700;font-size:10px">'+label+'</div>'
+            +(route?'<div style="color:var(--text3);font-size:9px">'+esc(route)+'</div>':'')
+            +'</td>';
+        });
+        html+='</tr>';
       });
-      html+='</div>';
+      html+='</tbody></table></div>';
       grid.innerHTML=html;
       if(status) status.textContent='실시간 ✓';
     },function(){
