@@ -4961,13 +4961,18 @@ function _importRosterExcel(input){
           return existMap;
         });
       })
-      // Step2: 기존 근무표 삭제
+      // Step2: 이번 파일에 있는 기사만 삭제 (다른 캠프 데이터 보존)
       .then(function(driverMap){
+        var fileUserIds=Object.keys(driverSet).map(function(k){return String(k).toLowerCase();});
         return _db.collection('roster_week')
           .where('dealerId','==',cid).where('weekStart','==',ywStart).get()
           .then(function(snap){
             var batch=_db.batch();
-            snap.forEach(function(doc){batch.delete(doc.ref);});
+            snap.forEach(function(doc){
+              var d=doc.data();
+              var drvId=String(d.userId||d.driverId||'').toLowerCase();
+              if(fileUserIds.indexOf(drvId)>=0) batch.delete(doc.ref);
+            });
             return batch.commit().then(function(){return driverMap;});
           });
       })
