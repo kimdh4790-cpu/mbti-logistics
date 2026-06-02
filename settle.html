@@ -21482,38 +21482,21 @@ async function _doDeploySettlements(ids) {
   var month = _settle_month && _settle_month !== 'all' ? _settle_month : 
     (_settleCache && _settleCache[0] ? _settleCache[0].month : '');
 
-  // FCM 토큰 로드 (기사 + 관리자)
+  // FCM 토큰 로드 — users 컬렉션 기준 (driverId/name 매핑)
   var tokenMap = {};
-  var allTokens = [];
   try {
-    // 기사 토큰
-    var drSnap = await _db.collection('drivers')
-      .where('dealerId', '==', _did).get();
-    drSnap.forEach(function(doc) {
-      var d = doc.data();
-      if (d.fcmToken && d.fcmToken.length > 20) {
-        tokenMap[d.name] = d.fcmToken;
-        if (d.driverId) tokenMap[d.driverId] = d.fcmToken;
-      }
-    });
-    // 관리자 토큰 (companies 컬렉션)
-    var compSnap = await _db.collection('companies').doc(_did).get();
-    if (compSnap.exists && compSnap.data().fcmToken) {
-      allTokens.push(compSnap.data().fcmToken);
-    }
-    // users 컬렉션 토큰 (일반 직원)
     var userSnap = await _db.collection('users')
       .where('dealerId', '==', _did).get();
     userSnap.forEach(function(doc) {
       var u = doc.data();
-      if (u.fcmToken && u.fcmToken.length > 20) {
-        if (u.name) tokenMap[u.name] = u.fcmToken;
-        allTokens.push(u.fcmToken);
-      }
+      if (!u.fcmToken || u.fcmToken.length < 20) return;
+      if (u.driverId) tokenMap[u.driverId] = u.fcmToken;
+      if (u.userId) tokenMap[u.userId] = u.fcmToken;
+      if (u.name) tokenMap[u.name] = u.fcmToken;
     });
   } catch(e) {}
 
-  var fcmTokens = allTokens.slice();
+  var fcmTokens = [];
 
   for (var i = 0; i < ids.length; i++) {
     var sid = ids[i];
@@ -21573,17 +21556,32 @@ async function _doDeploySettlements(ids) {
         readAt: null
       });
 
-      // 3. FCM 토큰 수집
-      var tk = tokenMap[settle.name] || tokenMap[settle.driverId] || '';
-      if (tk) fcmTokens.push(tk);
+      // 3. 해당 기사 FCM 개별 발송
+      var _tk = tokenMap[_tDrvId] || tokenMap[settle.name] || '';
+      if (_tk) {
+        try {
+          var _fr = await fetch('/fcm/notify-drivers', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              tokens: [_tk],
+              title: '📤 ' + (settle.month||'') + ' 정산 배포',
+              body: (settle.name||'') + '님 정산 명세서가 배포됐습니다.',
+              type: 'settle_deploy'
+            })
+          });
+          var _fj = await _fr.json();
+          if (_fj.sent > 0) fcmDone++;
+        } catch(e2) {}
+      }
 
       done++;
       if (done % 5 === 0) toast('📤 배포 중... (' + done + '/' + total + ')');
     } catch(e) { console.warn('배포오류:', e.message); }
   }
 
-  // 3. FCM 일괄 알림 발송 — Worker notify-drivers 방식
-  if (fcmTokens.length > 0) {
+  // (일괄 발송 제거 — 위에서 개별 발송으로 처리)
+  if (false) {
     try {
       var fr = await fetch('/fcm/notify-drivers', {
         method: 'POST',
