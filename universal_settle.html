@@ -388,7 +388,7 @@ var SETTLE_FIELDS = [
 ];
 
 function _pageSettle(){
-  _settleState = {step:1, headers:[], rows:[], mapping:{}, template:null, results:[]};
+  _settleState = {step:1, headers:[], rows:[], mapping:{}, template:null, results:[], uploadMode:'single'};
   _renderSettle();
 }
 
@@ -435,23 +435,51 @@ function _renderSettle(){
 
 // ── STEP 1: 업로드
 function _renderStep1(){
-  return '<div class="card">'
+  var isMulti = _settleState.uploadMode === 'multi';
+  var html = '<div class="card">'
     +'<div class="card-title">📂 엑셀 파일 업로드</div>'
+
+    // 업로드 방식 선택
+    +'<div style="margin-bottom:16px">'
+    +'<div style="font-size:11px;color:var(--text2);font-weight:600;margin-bottom:8px">업로드 방식</div>'
+    +'<div style="display:flex;gap:10px">'
+
+    // 단일 파일
+    +'<div onclick="_setUploadMode(\'single\')" style="flex:1;border:2px solid '+(!isMulti?'var(--acc)':'var(--border2)')+';border-radius:10px;padding:12px 14px;cursor:pointer;background:'+(!isMulti?'rgba(79,126,255,.08)':'var(--bg3)')+';transition:all .2s">'
+    +'<div style="font-weight:700;font-size:13px;margin-bottom:4px">📄 단일 파일</div>'
+    +'<div style="font-size:11px;color:var(--text2)">엑셀 1개 업로드<br>시트 여러 개 지원</div>'
+    +'</div>'
+
+    // 여러 파일
+    +'<div onclick="_setUploadMode(\'multi\')" style="flex:1;border:2px solid '+(isMulti?'var(--acc)':'var(--border2)')+';border-radius:10px;padding:12px 14px;cursor:pointer;background:'+(isMulti?'rgba(79,126,255,.08)':'var(--bg3)')+';transition:all .2s">'
+    +'<div style="font-weight:700;font-size:13px;margin-bottom:4px">📂 여러 파일</div>'
+    +'<div style="font-size:11px;color:var(--text2)">회사별 엑셀 동시 업로드<br>각각 따로 매핑·정산</div>'
+    +'</div>'
+
+    +'</div></div>'
+
     // 템플릿 빠른 선택
     +'<div style="margin-bottom:14px">'
     +'<div style="font-size:11px;color:var(--text2);font-weight:600;margin-bottom:8px">저장된 템플릿으로 시작</div>'
     +'<div id="quick-templates">로딩 중...</div>'
     +'</div>'
+
     +'<div class="upload-zone" id="upload-zone" onclick="document.getElementById(\'excel-file\').click()">'
-    +'<div class="upload-icon">📊</div>'
-    +'<div class="upload-title">엑셀 파일을 드래그하거나 클릭해서 업로드 (여러 개 가능)</div>'
-    +'<div class="upload-sub">CJ / 한진 / 롯데 / 쿠팡 / 배달대행 / 모든 .xlsx 지원</div>'
+    +'<div class="upload-icon">'+(isMulti?'📂':'📊')+'</div>'
+    +'<div class="upload-title">'+(isMulti?'여러 파일을 드래그하거나 클릭해서 업로드':'엑셀 파일을 드래그하거나 클릭해서 업로드')+'</div>'
+    +'<div class="upload-sub">'+(isMulti?'Ctrl(⌘) 누르고 여러 파일 선택 가능':'CJ / 한진 / 롯데 / 쿠팡 / 배달대행 / 모든 .xlsx 지원')+'</div>'
     +'</div>'
-    +'<input type="file" id="excel-file" accept=".xlsx,.xls" style="display:none" multiple onchange="_onFileSelected(this)">'
+    +'<input type="file" id="excel-file" accept=".xlsx,.xls" style="display:none" '+(isMulti?'multiple ':'')+' onchange="_onFileSelected(this)">'
     +'</div>';
 
   // 템플릿 비동기 로드
   setTimeout(_loadQuickTemplates, 50);
+  return html;
+}
+
+function _setUploadMode(mode){
+  _settleState.uploadMode = mode;
+  _renderSettle();
 }
 
 function _loadQuickTemplates(){
@@ -509,7 +537,8 @@ function _onFileSelected(inp){
 function _onFilesSelected(files){
   var arr = Array.from(files).filter(function(f){return f.name.match(/\.xlsx?$/i);});
   if(!arr.length){toast('❌ xlsx 파일만 가능합니다');return;}
-  if(arr.length === 1){
+  // 단일 모드이거나 파일 1개면 기존 방식
+  if(_settleState.uploadMode !== 'multi' || arr.length === 1){
     _loadExcel(arr[0]);
     return;
   }
