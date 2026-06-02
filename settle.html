@@ -16393,7 +16393,7 @@ function updSECalc(){
   var banner=document.getElementById('se-mismatch-banner');
   if(banner) banner.style.display='none';
   var monthlyWage=Math.round(supplyAmt*0.654);
-  var empIns=monthlyWage>=800000?Math.floor(monthlyWage*0.008/10)*10:0;
+  var empIns=monthlyWage>=800000?Math.floor(monthlyWage*0.009/10)*10:0;  // 기사부담 0.9%
   var workIns=Math.floor(monthlyWage*0.0088/10)*10;
   var deduct=empIns+workIns+dmg+etcM+adv;  // 고용+산재+파손+기타(-)+가불
   var net=taxBase-deduct;
@@ -16424,7 +16424,7 @@ function updSECalc(){
       +'</div>'
       +'<div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:4px">📌 공제 항목</div>'
       +'<div style="font-size:11px;color:var(--text3);padding:2px 0">월보수액 ₩'+fmt(monthlyWage)+' (공급가 ₩'+fmt(supplyAmt)+' × 65.4%)</div>'
-      +'<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0"><span>고용보험 0.8% (80만↑)</span><span style="color:var(--red)">-₩'+fmt(empIns)+'</span></div>'
+      +'<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0"><span>고용보험 0.9% (80만↑)</span><span style="color:var(--red)">-₩'+fmt(empIns)+'</span></div>'
       +'<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0"><span>산재보험 0.88%</span><span style="color:var(--red)">-₩'+fmt(workIns)+'</span></div>'
       +(dmg>0?'<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0"><span>분실/파손</span><span style="color:var(--red)">-₩'+fmt(dmg)+'</span></div>':'')
       +'<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-top:1px solid var(--border);margin-top:4px;font-weight:700"><span>공제 합계</span><span style="color:var(--red)">-₩'+fmt(deduct)+'</span></div>'
