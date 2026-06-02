@@ -11186,27 +11186,21 @@ function _empLoadRoster(did, uid, today){
         .where('weekStart','==',weekStart)
         .onSnapshot(function(snap){
           // 캠프 필터 (본인 캠프 전체)
-          snap = {
-            empty: snap.empty,
-            forEach: function(fn){
-              snap.docs.filter(function(d){
-                var v=d.data();
-                // 캠프 있으면 같은 캠프, 없으면 전체
-                return !mycamp || (v.camp===mycamp);
-              }).forEach(fn);
-            }
-          };
+          var filteredDocs=snap.docs.filter(function(d){
+            var v=d.data();
+            return !mycamp||(v.camp===mycamp);
+          });
       var grid=document.getElementById('emp-roster-grid');
       var status=document.getElementById('emp-roster-status');
       if(!grid) return;
-      if(snap.empty){
+      if(!filteredDocs.length){
         grid.innerHTML='<div style="font-size:12px;color:var(--text3);text-align:center;padding:10px">이번주 근무표가 없습니다</div>';
         if(status) status.textContent='미등록';
         return;
       }
       // 기사별+날짜별 데이터 정리
       var byDriver={};var driverOrder=[];
-      snap.forEach(function(doc){
+      filteredDocs.forEach(function(doc){
         var d=doc.data();var drvId=d.driverId||'';
         if(!byDriver[drvId]){byDriver[drvId]={name:d.name||drvId,days:{}};driverOrder.push(drvId);}
         byDriver[drvId].days[d.dayIndex]=d;
