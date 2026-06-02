@@ -563,10 +563,8 @@ function _processSheet(wb, sheetName){
 
   toast('✅ '+_settleState.rows.length+'행 로드됨');
 
-  // 템플릿 선택된 경우 자동 매핑 시도
-  if(_settleState.template && _settleState.template !== '__custom'){
-    _autoMap(_settleState.template);
-  }
+  // 자동 매핑 항상 실행 (템플릿 있으면 preset 활용, 없으면 키워드만)
+  _autoMap(_settleState.template || '__keyword');
 
   _settleState.step = 2;
   _renderSettle();
