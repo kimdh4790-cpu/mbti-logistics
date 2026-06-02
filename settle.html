@@ -4762,7 +4762,7 @@ function _downloadRosterExcel(){
         var m=String(dateObj.getMonth()+1).padStart(2,'0');
         var d2=String(dateObj.getDate()).padStart(2,'0');
         var dateStr=y+'-'+m+'-'+d2;
-        var entry=(rosterData[drv.id]&&rosterData[drv.id][i])||{status:'work',route:''};
+        var entry=(rosterData[drv.driverId||drv.id]&&rosterData[drv.driverId||drv.id][i])||(rosterData[drv.id]&&rosterData[drv.id][i])||{status:'work',route:''};
         var isWork=entry.status!=='off';
         var status=isWork?'출근':'휴무';
         var rotation=isWork?String(cfg.rotation||''):'';
