@@ -2876,6 +2876,10 @@ function showApp(){
   _loadRouteCampMap();  // 라우트→캠프 매핑 로드
   _loadMySlug();  // 내 전용 URL 로드
   _loadSeasonPrices();  // 시즌 단가 로드
+  // FCM 토큰 항상 갱신 시도 (알림 허용 상태면)
+  if(typeof Notification!=='undefined'&&Notification.permission==='granted'){
+    setTimeout(_registerFCM, 3000);
+  }
   if(typeof _loadTeamLeaderPrices==="function")_loadTeamLeaderPrices(null);  // 팀장 수수료 로드
   _dwLoadSettings();    // ★ 배달대행 + 택배 계산 설정 로드
   // ★ RPRICE 로드 (로그인/리로드 후에도 단가표 유지)
@@ -8555,9 +8559,19 @@ function pageNotifyHistory(){
   +'</div>';
   _db.collection('users').where('dealerId','==',did).where('role','==','driver').get().then(function(snap){
     var sel=document.getElementById('notif-target');if(!sel)return;
-    snap.forEach(function(doc){var d=doc.data();var opt=document.createElement('option');
-      opt.value=doc.id;opt.textContent=(d.name||doc.id)+(d.fcmToken&&d.fcmToken.length>20?'':' (알림불가)');
-      sel.appendChild(opt);});
+    var total=0,hasToken=0;
+    snap.forEach(function(doc){
+      var d=doc.data();
+      var hasT=d.fcmToken&&d.fcmToken.length>20;
+      total++;if(hasT)hasToken++;
+      var opt=document.createElement('option');
+      opt.value=doc.id;
+      opt.textContent=(d.name||doc.id)+(hasT?' ✅':' ❌ 알림불가');
+      sel.appendChild(opt);
+    });
+    var st=document.getElementById('notif-status');
+    if(st)st.textContent='📊 가입 기사 '+total+'명 중 알림 가능 '+hasToken+'명 / 불가 '+(total-hasToken)+'명';
+    st.style.color=hasToken<total?'#f97316':'#059669';
   }).catch(function(){});
   _db.collection('admin_notifications').where('dealerId','==',did).orderBy('createdAt','desc').limit(50).get().then(function(snap){
     var el2=document.getElementById('notif-history');if(!el2)return;
@@ -8594,7 +8608,7 @@ window._sendAdminNotif=function(){
     snap.forEach(function(doc){if(target!=='all'&&doc.id!==target)return;var tk=doc.data().fcmToken;if(tk&&tk.length>20)tokens.push(tk);});
     if(!tokens.length){if(st)st.textContent='✅ 저장 완료 (FCM 토큰 없음)';return;}
     return fetch('https://donway.ai.kr/fcm/notify-drivers',{
-      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tokens:tokens,title:title,body:body})
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tokens:tokens,title:title,body:body,url:window.location.origin+'/'})
     }).then(function(r){return r.json();}).then(function(){
       if(st)st.textContent='✅ '+tokens.length+'명 발송 완료';toast('✅ 알림 발송 완료');setTimeout(pageNotifyHistory,500);
     });
@@ -10906,7 +10920,24 @@ function pageEmpHome(){
   var days3=['일','월','화','수','목','금','토'];
   var nowE=new Date();
   var greetE=nowE.getHours()<12?'좋은 아침이에요':'수고하세요';
-  el.innerHTML='<div style="max-width:620px;margin:0 auto">'
+  // 알림 미허용 배너
+  var _notifBanner='';
+  if(typeof Notification!=='undefined'&&Notification.permission!=='granted'){
+    _notifBanner='<div onclick="_reqNotifFromBanner()" style="background:linear-gradient(135deg,#f97316,#ef4444);border-radius:12px;padding:14px 16px;margin-bottom:12px;color:#fff;display:flex;align-items:center;gap:10px;cursor:pointer">'
+      +'<div style="font-size:24px">🔔</div>'
+      +'<div style="flex:1"><div style="font-size:13px;font-weight:800">알림 허용이 필요해요!</div>'
+      +'<div style="font-size:11px;opacity:.85">탭하면 허용할 수 있어요. 정산 배포 알림 수신 필수!</div></div>'
+      +'<div style="font-size:20px">→</div></div>';
+  }
+  window._reqNotifFromBanner=async function(){
+    try{
+      if('serviceWorker' in navigator){await navigator.serviceWorker.register('/firebase-messaging-sw.js');await navigator.serviceWorker.ready;}
+      var perm=await Notification.requestPermission();
+      if(perm==='granted'){toast('✅ 알림 허용됨!');setTimeout(_registerFCM,500);setTimeout(pageEmpHome,1500);}
+      else toast('⚠️ 브라우저 설정에서 알림을 허용해주세요');
+    }catch(e){toast('오류: '+e.message);}
+  };
+  el.innerHTML='<div style="max-width:620px;margin:0 auto">'+_notifBanner
     +'<div style="background:linear-gradient(135deg,#0f4c75,#1565c0,#4a148c);border-radius:18px;padding:20px 22px;margin-bottom:16px;color:#fff;position:relative;overflow:hidden">'
     +'<div style="position:absolute;top:-20px;right:-10px;width:100px;height:100px;background:rgba(255,255,255,.07);border-radius:50%"></div>'
     +'<div style="font-size:20px;font-weight:900;margin-bottom:3px">'+greetE+', '+esc(_CU.name||'직원')+'님 👋</div>'
@@ -13904,26 +13935,38 @@ async function _registerFCM(){
     var isAdmin = isSuperAdmin();
     var isDriver = _CU.role==='driver'||_CU.role==='member';
     if(isDriver){
-      // ★ 기사 FCM 토큰 → drivers 컬렉션에서 userId로 찾아서 저장
       var _uid = _CU.uid;
       var _did = _CU.dealerId;
-      _db.collection('users').doc(_uid).update({fcmToken:token,fcmUpdatedAt:new Date().toISOString()}).catch(function(){});
-      _db.collection('drivers')
-        .where('userId','==',_uid)
-        .limit(1).get()
+      var _name = _CU.name||'';
+      // users 컬렉션 업데이트
+      _db.collection('users').doc(_uid).update({
+        fcmToken:token, fcmUpdatedAt:new Date().toISOString(), dealerId:_did
+      }).catch(function(){
+        // 문서 없으면 set
+        _db.collection('users').doc(_uid).set({
+          fcmToken:token, fcmUpdatedAt:new Date().toISOString(), dealerId:_did, name:_name
+        },{merge:true}).catch(function(){});
+      });
+      // drivers 컬렉션 - userId 또는 name으로 매칭
+      _db.collection('drivers').where('dealerId','==',_did)
+        .where('userId','==',_uid).limit(1).get()
         .then(function(snap){
           if(!snap.empty){
-            snap.docs[0].ref.update({
-              fcmToken: token,
-              fcmUpdatedAt: new Date().toISOString()
-            });
-          } else {
-            // fallback: uid 기반 저장
-            _db.collection('drivers').doc(_uid).set({
-              fcmToken: token,
-              fcmUpdatedAt: new Date().toISOString(),
-              dealerId: _did
-            },{merge:true});
+            snap.docs[0].ref.update({fcmToken:token,fcmUpdatedAt:new Date().toISOString()});
+          } else if(_name) {
+            // name으로 fallback 매칭
+            return _db.collection('drivers').where('dealerId','==',_did)
+              .where('name','==',_name).limit(1).get()
+              .then(function(s2){
+                if(!s2.empty) s2.docs[0].ref.update({fcmToken:token,fcmUpdatedAt:new Date().toISOString()});
+                else {
+                  // 없으면 신규 생성
+                  _db.collection('drivers').doc(_uid).set({
+                    fcmToken:token,fcmUpdatedAt:new Date().toISOString(),
+                    dealerId:_did,userId:_uid,name:_name
+                  },{merge:true}).catch(function(){});
+                }
+              });
           }
         }).catch(function(e){ console.warn('[FCM] 기사 토큰 저장 실패:', e.message); });
     } else {
@@ -22046,6 +22089,7 @@ async function _doDeploySettlements(ids) {
               tokens: [_tk],
               title: '📤 ' + (settle.month||'') + ' 정산 배포',
               body: (settle.name||'') + '님 정산 명세서가 배포됐습니다.',
+              url: window.location.origin + (window._COMPANY_SLUG ? '/'+window._COMPANY_SLUG : '/'),
               type: 'settle_deploy'
             })
           });
