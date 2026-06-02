@@ -8883,52 +8883,101 @@ window._expOcrScan=function(src){
   var file=fileInput&&fileInput.files&&fileInput.files[0];
   if(!file){return;}
   var st=document.getElementById('exp-ocr-status');
-  if(st)st.innerHTML='⏳ AI 영수증 분석 중...';
+  if(st)st.innerHTML='<div style="text-align:center;padding:10px;color:var(--text3)">⏳ AI 영수증 분석 중...</div>';
   var reader=new FileReader();
   reader.onload=function(ev){
     var base64=ev.target.result.split(',')[1];
-    var _ak=window.__AK||'';
     fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':(window.__AK||''),'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
-        model:'claude-haiku-4-5-20251001',
-        max_tokens:500,
+        model:'claude-haiku-4-5-20251001',max_tokens:1000,
         messages:[{role:'user',content:[
           {type:'image',source:{type:'base64',media_type:file.type||'image/jpeg',data:base64}},
-          {type:'text',text:'이 영수증 이미지에서 다음 정보를 JSON으로 추출해주세요: {"date":"날짜(YYYY-MM-DD)","vendor":"상호명","amount":금액숫자,"category":"카테고리(식비/교통비/주유비/통신비/소모품/기타)","memo":"간단한 설명"}. JSON만 반환하고 다른 설명은 하지 마세요.'}
+          {type:'text',text:'이 영수증을 분석해서 JSON으로만 반환하세요.\n{"date":"YYYY-MM-DD","vendor":"상호명","items":[{"name":"항목명","amount":금액숫자,"category":"fuel/meal/toll/repair/supply/internet/other"}],"total":총금액숫자}\n항목이 여러개면 모두 추출. JSON만 반환.'}
         ]}]
       })
     }).then(function(r){return r.json();})
     .then(function(data){
       var txt=(data.content&&data.content[0]&&data.content[0].text)||'';
       try{
-        // Naver OCR 텍스트에서 직접 추출
         var clean=txt.replace(/```json|```/g,'').trim();
-        var parsed={};
-        // JSON 시도
         var jm=clean.match(/\{[\s\S]+\}/);
-        if(jm){try{parsed=JSON.parse(jm[0]);}catch(e){parsed={};}}
-        // 텍스트 직접 파싱
-        if(!parsed.amount){
-          var amtM=clean.match(/(\d{1,3}(?:,\d{3})*|\d+)\s*원/);
-          if(amtM)parsed.amount=parseInt(amtM[1].replace(/,/g,''));
-          var dateM=clean.match(/(\d{4})[.\-\/](\d{1,2})[.\-\/](\d{1,2})/);
-          if(dateM)parsed.date=dateM[1]+'-'+dateM[2].padStart(2,'0')+'-'+dateM[3].padStart(2,'0');
+        var parsed=jm?JSON.parse(jm[0]):{};
+        if(!parsed.items||!parsed.items.length){
+          var amtM=clean.match(/(\d{1,3}(?:,\d{3})*|\d+)원/);
+          var amt=amtM?parseInt(amtM[1].replace(/,/g,'')):0;
+          parsed.items=[{name:parsed.vendor||'영수증',amount:amt||parsed.total||0,category:'other'}];
+          parsed.total=parsed.total||amt;
         }
-        if(parsed.date){var d=document.getElementById('exp-date');if(d)d.value=parsed.date;}
-        if(parsed.desc){var dc=document.getElementById('exp-desc');if(dc)dc.value=parsed.desc;}
-        if(parsed.amount){var am=document.getElementById('exp-amount');if(am)am.value=parsed.amount;}
-        if(parsed.type){
-          var typeMap={'주유비':'fuel','식비':'food','통신비':'comm','기타':'other'};
-          var sel=document.getElementById('exp-type');
-          if(sel&&typeMap[parsed.type])sel.value=typeMap[parsed.type];
-        }
-        if(st)st.innerHTML='✅ 자동 입력 완료. 확인 후 저장하세요.';
-      }catch(e){if(st)st.innerHTML='⚠️ 수동으로 입력해 주세요.';}
-    }).catch(function(){if(st)st.innerHTML='⚠️ OCR 서버 오류. 수동으로 입력해 주세요.';});
+        if(parsed.date){var di=document.getElementById('exp-date');if(di)di.value=parsed.date;}
+        var catMap={fuel:'⛽ 주유비',meal:'🍱 식대',toll:'🛣 통행료',repair:'🔩 수리비',supply:'📦 소모품',internet:'📡 통신비',other:'💰 기타'};
+        var totalAmt=parsed.total||parsed.items.reduce(function(s,i){return s+(i.amount||0);},0);
+        var html='<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:8px">';
+        html+='<div style="background:var(--bg3);padding:8px 12px;font-size:11px;font-weight:700;color:var(--text2)">📋 인식된 항목 (저장할 항목 체크)</div>';
+        parsed.items.forEach(function(item,i){
+          html+='<div style="display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--border)">'
+            +'<input type="checkbox" id="ocr-chk-'+i+'" checked style="width:16px;height:16px;cursor:pointer">'
+            +'<span style="flex:1;font-size:12px;color:var(--text)">'+(catMap[item.category]||'💰 기타')+' <b>'+esc(item.name||'')+'</b></span>'
+            +'<input type="number" id="ocr-amt-'+i+'" value="'+(item.amount||0)+'" oninput="window._ocrUpdateTotal()" '
+            +'style="width:90px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-weight:700;text-align:right;background:var(--bg)"> 원'
+            +'</div>';
+        });
+        html+='<div style="padding:10px 12px;display:flex;justify-content:space-between;align-items:center;background:var(--bg2)">'
+          +'<span style="font-size:12px;font-weight:700;color:var(--text3)">합계</span>'
+          +'<span id="ocr-total-disp" style="font-size:18px;font-weight:900;color:var(--brand)">₩'+totalAmt.toLocaleString()+'</span>'
+          +'</div></div>';
+        html+='<button onclick="window._expOcrSaveAll('+JSON.stringify(parsed.items).replace(/</g,'\u003c')+')" '
+          +'class="btn btn-blue" style="width:100%;margin-top:8px;padding:12px;font-size:13px;font-weight:800">✅ 선택 항목 저장</button>';
+        if(st)st.innerHTML=html;
+        window._ocrItemCount=parsed.items.length;
+        window._ocrUpdateTotal=function(){
+          var tot=0;
+          for(var j=0;j<window._ocrItemCount;j++){
+            var chk=document.getElementById('ocr-chk-'+j);
+            var a=parseInt((document.getElementById('ocr-amt-'+j)||{}).value||0);
+            if(chk&&chk.checked)tot+=a;
+          }
+          var td=document.getElementById('ocr-total-disp');
+          if(td)td.textContent='₩'+tot.toLocaleString();
+        };
+        // 체크박스 토글 시 합계 갱신
+        parsed.items.forEach(function(_,i){
+          var chk=document.getElementById('ocr-chk-'+i);
+          if(chk)chk.addEventListener('change',window._ocrUpdateTotal);
+        });
+      }catch(e){if(st)st.innerHTML='<div style="color:var(--red);font-size:12px;padding:8px">⚠️ 인식 실패. 수동으로 입력해 주세요.</div>';}
+    }).catch(function(){if(st)st.innerHTML='<div style="color:var(--red);font-size:12px;padding:8px">⚠️ OCR 서버 오류.</div>';});
   };
   reader.readAsDataURL(file);
+};
+
+window._expOcrSaveAll=function(items){
+  var did=_CU&&_CU.dealerId||'';
+  var date=(document.getElementById('exp-date')||{}).value||new Date().toISOString().slice(0,10);
+  var ym=date.slice(0,7);
+  var toSave=[];
+  items.forEach(function(item,i){
+    var chk=document.getElementById('ocr-chk-'+i);
+    if(!chk||!chk.checked)return;
+    var amt=parseInt((document.getElementById('ocr-amt-'+i)||{}).value||0);
+    if(!amt)return;
+    toSave.push({dealerId:did,type:item.category||'other',date:date,ym:ym,
+      desc:item.name||'영수증',amount:amt,driverName:'',receiptUrl:'',
+      createdAt:new Date().toISOString()});
+  });
+  if(!toSave.length){toast('⚠️ 저장할 항목 없음');return;}
+  var done=0;
+  toSave.forEach(function(saveData){
+    _db.collection('expenses').add(saveData).then(function(){
+      done++;
+      if(done===toSave.length){
+        toast('✅ '+done+'개 항목 저장됨');
+        document.querySelector('.mo.show')&&document.querySelector('.mo.show').remove();
+        _loadExpenses(did,ym);
+      }
+    }).catch(function(e){toast('❌ '+e.message);});
+  });
 };
 
 function _expenseSave(did){
