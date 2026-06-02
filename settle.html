@@ -23199,9 +23199,17 @@ function _showUploadResult(month,added,updated,newDrvCnt,routeCnt,newDrivers,lef
   d.appendChild(tip);
 
   var mdf=document.createElement('div');mdf.className='mdf';
-  var cb=document.createElement('button');cb.className='btn';cb.textContent='확인';
-  cb.onclick=function(){mo.remove();goPage('settlements');};
-  mdf.appendChild(cb);d.appendChild(mdf);mo.appendChild(d);
+  var cb=document.createElement('button');cb.className='btn btn-blue';
+  cb.style.cssText='flex:1;font-size:14px;font-weight:800';
+  cb.textContent='💾 저장 & 세무사 엑셀 생성';
+  cb.onclick=function(){
+    mo.remove();
+    toast('⏳ 저장 중...');
+    saveAllCp();
+  };
+  var cb2=document.createElement('button');cb2.className='btn';cb2.textContent='나중에';
+  cb2.onclick=function(){mo.remove();goPage('settlements');};
+  mdf.appendChild(cb2);mdf.appendChild(cb);d.appendChild(mdf);mo.appendChild(d);
   document.getElementById('modals').appendChild(mo);
 }
 
