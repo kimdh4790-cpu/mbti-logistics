@@ -13684,6 +13684,9 @@ window._loadMyStatements=function(){
     var items=[];
     snap.forEach(function(doc){
       var d=doc.data();
+      // 정산 내역탭은 명세서/세금계산서 타입만 표시 (공지 제외)
+      var _validType=['payslip','tax_invoice','settlement','tax'];
+      if(_validType.indexOf(d.type)<0) return;
       // 기사는 본인 것만 표시
       var _myId=_CU.driverId||_CU.userId||_CU.uid||'';
       if(_CU.role==='driver'){
