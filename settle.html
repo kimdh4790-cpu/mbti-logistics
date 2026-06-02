@@ -22220,7 +22220,8 @@ async function _doDeploySettlements(ids) {
   var total = ids.length, done = 0, fcmDone = 0;
   toast('📤 정산 배포 시작... (0/' + total + ')');
 
-  var _did = (_CU && _CU.dealerId) || '';
+  // 슈퍼어드민은 uid가 dealerId, 일반 대리점은 dealerId
+  var _did = (_CU && (_CU.dealerId || _CU.uid)) || '';
   var month = _settle_month && _settle_month !== 'all' ? _settle_month : 
     (_settleCache && _settleCache[0] ? _settleCache[0].month : '');
 
@@ -22282,7 +22283,7 @@ async function _doDeploySettlements(ids) {
         targetDriverId: _tDrvId,
         targetDriverName: settle.name || '',
         companyId: _did,
-        dealerId: _did,
+        dealerId: _did||(_CU&&_CU.uid)||'',
         month: settle.month || '',
         label: (settle.month || '') + ' 정산명세서',
         type: 'payslip',
