@@ -51,7 +51,7 @@ async function fetchAsset(path, request) {
   if (noCache) {
     // backup 경로로 캐시 우회 + 타임스탬프로 강제 갱신
     if (filePath.includes('mbetco.html')) {
-      resp = await fetch(GITHUB_RAW + '/mbetco.html?t=' + Date.now(), {
+      resp = await fetch(GITHUB_RAW + '/backup/mbetco_latest.html?t=' + Date.now(), {
         cf: { cacheEverything: false, cacheTtl: 0 }
       });
     } else {
