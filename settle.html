@@ -4979,7 +4979,9 @@ function _importRosterExcel(input){
           var ref=_db.collection('roster_week').doc();
           batch2.set(ref,{
             dealerId:cid,weekStart:ywStart,
-            driverId:did,dayIndex:item.dayIndex,
+            driverId:did,
+            userId:String(item.driverId||''),  // ★ 쿠팡ID 별도 저장 (기사 앱 매칭용)
+            dayIndex:item.dayIndex,
             status:item.status,route:String(item.route||''),
             rotation:String(item.rotation||''),
             name:item.name,camp:item.camp,
@@ -11202,7 +11204,7 @@ function _empLoadRoster(did, uid, today){
       // 관리자 근무표와 동일한 구조로 렌더링
       var _byDriver={};var _driverOrder=[];
       filteredDocs.forEach(function(doc){
-        var d=doc.data();var drvId=d.driverId||'';
+        var d=doc.data();var drvId=d.userId||d.driverId||'';
         if(!_byDriver[drvId]){_byDriver[drvId]={name:d.name||drvId,camp:d.camp||''};_driverOrder.push(drvId);}
       });
       // drivers 배열 구성
@@ -11210,7 +11212,7 @@ function _empLoadRoster(did, uid, today){
       // rosterData 구성
       var _rosterData={};
       filteredDocs.forEach(function(doc){
-        var d=doc.data();var drvId=d.driverId||'';
+        var d=doc.data();var drvId=d.userId||d.driverId||'';
         if(!_rosterData[drvId])_rosterData[drvId]={};
         _rosterData[drvId][d.dayIndex]={status:d.status||'work',route:d.route||'',fbId:doc.id};
       });
