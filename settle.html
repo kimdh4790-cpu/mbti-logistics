@@ -3572,29 +3572,52 @@ function _renderTaxShareView(token){
     _db.collection('tax_docs').where('dealerId','==',dealerIdForDocs).where('ym','==',ymForDocs)
       .orderBy('createdAt','desc').get().then(function(docs){
       if(docs.empty)return;
-      var catLabels={tax_invoice:'세금계산서',receipt:'영수증',expense:'경비',contract:'계약서',payslip:'급여명세서',other:'기타'};
-      var docHtml='<div style="max-width:860px;margin:0 auto 20px;padding:0 20px;font-family:sans-serif">'
-        +'<div style="font-size:16px;font-weight:800;margin-bottom:12px">📁 등록 서류 ('+docs.size+'건)</div>'
-        +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px">';
+      var catColors={tax_invoice:'#7c3aed',receipt:'#0891b2',expense:'#059669',contract:'#dc2626',payslip:'#f59e0b',other:'#6b7280'};
+      var catLabels={tax_invoice:'🧾 세금계산서',receipt:'📄 영수증/지출증빙',expense:'💳 경비·비용',contract:'📝 계약서',payslip:'💰 급여명세서',other:'📁 기타서류'};
+      var catOrder=['tax_invoice','receipt','expense','contract','payslip','other'];
+      var groups={};
       docs.forEach(function(doc){
-        var dv=doc.data();
-        var label=catLabels[dv.category]||'기타';
-        var isImg=dv.fileType&&dv.fileType.startsWith('image/');
-        docHtml+='<div style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;background:#fff">'
-          +(isImg&&dv.fileUrl
-            ?'<img src="'+dv.fileUrl+'" style="width:100%;height:100px;object-fit:cover;display:block" onclick="_txsViewImg(this.src)" style="cursor:pointer">'
-            :'<div style="height:100px;display:flex;align-items:center;justify-content:center;font-size:32px;background:#f8f9fa">📄</div>')
-          +'<div style="padding:8px">'
-            +'<div style="font-size:10px;font-weight:800;color:#0891b2">'+label+'</div>'
-            +'<div style="font-size:11px;color:#374151;margin-top:2px">'+((dv.memo||dv.desc||'').slice(0,30))+'</div>'
-            +(dv.amount?'<div style="font-size:11px;font-weight:700;color:#7c3aed;margin-top:2px">₩'+Number(dv.amount).toLocaleString()+'</div>':'')
-            +(dv.fileUrl
-              ?'<a href="'+dv.fileUrl+'" download="'+label+'_'+(dv.fileName||'파일')+'" style="display:block;margin-top:6px;font-size:10px;background:#185FA5;color:#fff;padding:5px;border-radius:4px;text-align:center;text-decoration:none">⬇ 다운로드</a>'
-              :'')
-          +'</div>'
-        +'</div>';
+        var dv=doc.data(); dv._id=doc.id;
+        var cat=dv.category||'other';
+        if(!groups[cat])groups[cat]={items:[],total:0};
+        groups[cat].items.push(dv);
+        groups[cat].total+=(dv.amount||0);
       });
-      docHtml+='</div></div>';
+      var docHtml='<div style="max-width:860px;margin:0 auto 20px;padding:0 20px;font-family:sans-serif">'
+        +'<div style="font-size:16px;font-weight:800;margin-bottom:12px">📁 등록 서류 ('+docs.size+'건)</div>';
+      catOrder.forEach(function(cat){
+        var g=groups[cat]; if(!g||!g.items.length)return;
+        var color=catColors[cat]||'#6b7280';
+        var label=catLabels[cat]||'기타';
+        docHtml+='<div style="margin-bottom:16px">'
+          +'<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px;background:#f8fafc;border-radius:10px;margin-bottom:8px;border-left:3px solid '+color+'">'
+          +'<span style="font-size:13px;font-weight:800;color:'+color+'">'+label+'</span>'
+          +(g.total>0?'<span style="font-size:14px;font-weight:900;color:#1e293b">합계 ₩'+g.total.toLocaleString()+'</span>':'<span style="font-size:12px;color:#64748b">'+g.items.length+'건</span>')
+          +'</div>';
+        g.items.forEach(function(dv){
+          var isImg=dv.fileType&&dv.fileType.startsWith('image/');
+          var isPdf=dv.fileType==='application/pdf';
+          var ext=(dv.fileType||'').split('/')[1]||'jpg';
+          var fname=esc(dv.memo||dv.desc||label)+'_'+(dv.ym||ym)+'.'+ext;
+          docHtml+='<div style="display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:8px">'
+            +(isImg&&dv.fileUrl
+              ?'<img src="'+dv.fileUrl+'" onclick="_txsViewImg(\''+dv.fileUrl+'\')" style="width:64px;height:64px;object-fit:cover;border-radius:8px;flex-shrink:0;cursor:pointer;border:1px solid #e2e8f0">'
+              :'<div style="width:64px;height:64px;display:flex;align-items:center;justify-content:center;background:#f1f5f9;border-radius:8px;flex-shrink:0;font-size:28px">'+(isPdf?'📄':'📁')+'</div>')
+            +'<div style="flex:1;min-width:0">'
+            +'<div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:3px">'+esc(dv.memo||dv.desc||'서류')+'</div>'
+            +(dv.amount?'<div style="font-size:15px;font-weight:900;color:'+color+'">₩'+Number(dv.amount).toLocaleString()+'</div>':'')
+            +'<div style="font-size:11px;color:#94a3b8;margin-top:2px">'+(dv.ym||ym)+(dv.vendor?' · '+esc(dv.vendor):'')+'</div>'
+            +'</div>'
+            +'<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">'
+            +(dv.fileUrl?'<button onclick="_txsViewImg(\''+dv.fileUrl+'\')" style="font-size:11px;padding:5px 10px;background:#185FA5;color:#fff;border:none;border-radius:6px;cursor:pointer;white-space:nowrap">👁 보기</button>':'')
+            +(dv.fileUrl?'<a href="'+dv.fileUrl+'" download="'+fname+'" target="_blank" style="font-size:11px;padding:5px 10px;background:#059669;color:#fff;border-radius:6px;text-align:center;text-decoration:none;white-space:nowrap">⬇ 다운</a>':'')
+            +'</div>'
+            +'</div>';
+        });
+        docHtml+='</div>';
+      });
+      docHtml+='</div>';
+
       el.insertAdjacentHTML('beforeend',docHtml);
       // 이미지 클릭 확대
       if(!window._txsViewImg)window._txsViewImg=function(src){
