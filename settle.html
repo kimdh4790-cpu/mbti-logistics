@@ -11199,11 +11199,16 @@ function _empLoadRoster(did, uid, today){
     var d=new Date(weekStart);d.setDate(d.getDate()+i);
     weekDays.push(d.toISOString().slice(0,10));
   }
-  // 본인 캠프 찾기 → 캠프 전체 근무표 표시
+  // 본인 캠프 찾기 → userId 또는 이름으로 매칭
   var _rosterUserId = _CU.userId || uid;
-  _db.collection('drivers').where('dealerId','==',did).where('userId','==',_rosterUserId).limit(1).get()
+  var _rosterName = _CU.name || '';
+  _db.collection('drivers').where('dealerId','==',did).get()
   .then(function(dSnap){
-      var mycamp = !dSnap.empty ? (dSnap.docs[0].data().camp||'') : '';
+      var myDoc = dSnap.docs.find(function(d){
+        var v=d.data();
+        return v.userId===_rosterUserId || v.name===_rosterName || d.id===_rosterUserId;
+      });
+      var mycamp = myDoc ? (myDoc.data().camp||'') : '';
       return _db.collection('roster_week')
         .where('dealerId','==',did)
         .where('weekStart','==',weekStart)
