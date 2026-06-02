@@ -1525,18 +1525,49 @@ function _loadRateTable(inp){
   }
 }
 
-// ── 팀장수수료 반영 실지급 재계산
+// ── 고용산재 계산 (공급대가 기준)
+function _calcInsurance(taxTotal){
+  var supplyAmt  = taxTotal / 1.1;
+  var expense    = supplyAmt * 0.346;
+  var monthPay   = supplyAmt - expense;
+  var employment = monthPay < 800000 ? 0 : Math.round(monthPay * 0.008);
+  var accident   = Math.round(monthPay * 0.0088);
+  return {
+    supplyAmt:  Math.round(supplyAmt),
+    expense:    Math.round(expense),
+    monthPay:   Math.round(monthPay),
+    employment: employment,
+    accident:   accident,
+    total:      employment + accident,
+  };
+}
+
+// ── 실지급 재계산 (팀장수수료 + 고용산재 포함)
 function _recalcCoupangNet(){
   var teamFee  = _settleState.coupangTeamFee  || {};
-  var routeCnt = _settleState.coupangRouteCnt || {};  // 라우트별 전체 건수
+  var routeCnt = _settleState.coupangRouteCnt || {};
   var res = _settleState.results || [];
   res.forEach(function(r){
+    // 팀장수수료
     var fee = teamFee[r.id] || {};
     var teamTotal = Object.keys(fee).reduce(function(s, route){
       return s + (routeCnt[route]||0) * fee[route];
     }, 0);
-    r.teamFee    = teamTotal;
-    r.net        = r.amount + r.fresh - r.lossAmt + (r.count*(r.incen||0)) + teamTotal;
+    r.teamFee = teamTotal;
+
+    // 대리점 인센
+    var incenAmt = r.count * (r.incen||0);
+
+    // 세금계산서 합계 = 쿠팡총금액 + 프레시백 + 팀장수수료 + 대리점인센
+    var taxTotal = r.amount + r.fresh + teamTotal + incenAmt;
+    r.taxTotal = taxTotal;
+
+    // 고용산재
+    var ins = _calcInsurance(taxTotal);
+    r.insurance = ins;
+
+    // 실지급 = 세금계산서합계 - 고용산재 - 분실파손
+    r.net = taxTotal - ins.total - r.lossAmt;
   });
 }
 
@@ -1547,27 +1578,38 @@ var INCEN_OPTIONS = [0, 10, 15, 25];
 // ── 인센 설정 함수
 function _setIncen(idx, val){
   _settleState.results[idx].incen = parseInt(val,10)||0;
-  // 실지급 재계산
   var r = _settleState.results[idx];
-  r.net = r.amount + r.fresh - r.lossAmt + (r.count * r.incen);
-  // 해당 행만 업데이트
+  // 재계산
+  var incenAmt = r.count * (r.incen||0);
+  var taxTotal = r.amount + r.fresh + (r.teamFee||0) + incenAmt;
+  r.taxTotal = taxTotal;
+  var ins = _calcInsurance(taxTotal);
+  r.insurance = ins;
+  r.net = taxTotal - ins.total - r.lossAmt;
+  // 해당 행 업데이트
   var rows = document.querySelectorAll('.coupang-row');
   if(rows[idx]){
     var netCell = rows[idx].querySelector('.net-cell');
-    if(netCell) netCell.textContent = _fmt(r.net)+'원';
+    var insCell = rows[idx].querySelector('.ins-cell');
+    var taxCell = rows[idx].querySelector('.tax-cell');
+    if(netCell) netCell.textContent = _fmt(r.net);
+    if(insCell) insCell.textContent = '-'+_fmt(ins.total);
+    if(taxCell) taxCell.textContent = _fmt(taxTotal);
   }
-  // 합계 업데이트
   _updateCoupangTotals();
 }
 
 function _updateCoupangTotals(){
   var res = _settleState.results;
   var totalIncenAmt = res.reduce(function(s,r){return s+(r.count*(r.incen||0));},0);
+  var totalIns      = res.reduce(function(s,r){return s+((r.insurance&&r.insurance.total)||0);},0);
   var totalNet      = res.reduce(function(s,r){return s+r.net;},0);
   var el1 = document.getElementById('total-incen-amt');
   var el2 = document.getElementById('total-net-final');
+  var el3 = document.getElementById('total-ins-amt');
   if(el1) el1.textContent = _fmt(totalIncenAmt)+'원';
   if(el2) el2.textContent = _fmt(totalNet)+'원';
+  if(el3) el3.textContent = '-'+_fmt(totalIns)+'원';
 }
 
 // ── 쿠팡 전용 결과 화면 (인센 설정 포함)
@@ -1578,6 +1620,7 @@ function _renderCoupangResult(){
   var totalFresh    = res.reduce(function(s,r){return s+(r.fresh||0);},0);
   var totalLoss     = res.reduce(function(s,r){return s+(r.lossAmt||0);},0);
   var totalIncenAmt = res.reduce(function(s,r){return s+(r.count*(r.incen||0));},0);
+  var totalIns      = res.reduce(function(s,r){return s+((r.insurance&&r.insurance.total)||0);},0);
   var totalNet      = res.reduce(function(s,r){return s+r.net;},0);
 
   var html = '<div class="result-summary">'
@@ -1586,6 +1629,7 @@ function _renderCoupangResult(){
     +'<div class="stat-card"><div class="stat-label">프레시백</div><div class="stat-val">'+_fmt(totalFresh)+'원</div></div>'
     +'<div class="stat-card"><div class="stat-label">분실파손</div><div class="stat-val" style="color:var(--red)">-'+_fmt(totalLoss)+'원</div></div>'
     +'<div class="stat-card"><div class="stat-label">인센티브 합계</div><div class="stat-val blue" id="total-incen-amt">'+_fmt(totalIncenAmt)+'원</div></div>'
+    +'<div class="stat-card"><div class="stat-label">고용+산재 공제</div><div class="stat-val" style="color:var(--red)" id="total-ins-amt">-'+_fmt(totalIns)+'원</div></div>'
     +'<div class="stat-card"><div class="stat-label">최종 실지급 합계</div><div class="stat-val green" id="total-net-final">'+_fmt(totalNet)+'원</div></div>'
     +'</div>'
 
@@ -1636,6 +1680,8 @@ function _renderCoupangResult(){
     +'<th style="min-width:130px">대리점인센(원/건)</th>'
     +'<th class="num">인센합계</th>'
     +'<th class="num" style="color:var(--blue)">팀장수수료</th>'
+    +'<th class="num">세금계산서합계</th>'
+    +'<th class="num" style="color:var(--red)">고용+산재</th>'
     +'<th class="num" style="color:var(--green)">실지급액</th>'
     +'</tr></thead><tbody>';
 
@@ -1661,6 +1707,8 @@ function _renderCoupangResult(){
       +'</td>'
       +'<td class="num" style="color:var(--acc)">'+_fmt(incenAmt)+'</td>'
       +'<td class="num" style="color:var(--blue)">'+(r.teamFee?'+'+_fmt(r.teamFee):'-')+'</td>'
+      +'<td class="num tax-cell">'+_fmt(r.taxTotal||r.amount)+'</td>'
+      +'<td class="num ins-cell" style="color:var(--red)">-'+_fmt(r.insurance?r.insurance.total:0)+'</td>'
       +'<td class="num net-cell"><strong style="color:var(--green)">'+_fmt(r.net)+'</strong></td>'
       +'</tr>';
   });
@@ -1676,11 +1724,14 @@ function _renderCoupangResult(){
 
 function _downloadCoupangExcel(){
   var res = _settleState.results;
-  var rows = [['이름','ID','캠프','배송건수','반품건수','합계건수','쿠팡지급액','프레시백','분실파손차감','대리점인센(원/건)','인센합계','팀장수수료','실지급액']];
+  var rows = [['이름','ID','캠프','배송건','반품건','합계건','쿠팡지급액','프레시백','팀장수수료','대리점인센(원/건)','인센합계','세금계산서합계','고용보험','산재보험','고용+산재공제','분실파손차감','실지급액']];
   res.forEach(function(r){
     var incenAmt = r.count * (r.incen||0);
+    var ins = r.insurance || {employment:0, accident:0, total:0};
     rows.push([r.name||r.id, r.id, r.dept, r.count, r.retCnt||0, r.totalCnt||r.count,
-      r.amount||0, r.fresh||0, r.lossAmt||0, r.incen||0, incenAmt, r.teamFee||0, r.net]);
+      r.amount||0, r.fresh||0, r.teamFee||0, r.incen||0, incenAmt,
+      r.taxTotal||0, ins.employment, ins.accident, ins.total,
+      r.lossAmt||0, r.net]);
   });
   var ws = XLSX.utils.aoa_to_sheet(rows);
   var wb = XLSX.utils.book_new();
