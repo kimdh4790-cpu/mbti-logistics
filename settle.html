@@ -8116,6 +8116,113 @@ function _dwCheckTierNotifications(prevCount, newCount, opts){
 
 // ── ★ Phase 1 리빌드: 기사 앱 배달 대시보드 (수동 입력 폐지)
 // 기사는 입력 없이 실시간 세션 데이터만 확인
+
+// ══ 배달대행 정산 현황 ══
+function pageDeliverySettle(){
+  document.getElementById('page-title').textContent='🛵 배달대행 정산 현황';
+  document.getElementById('topbar-right').innerHTML='';
+  var c=document.getElementById('content');
+  if(!_db||!_CU){c.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
+  c.innerHTML='<div class="loading">로딩 중...</div>';
+  var did=_CU.dealerId;
+  var now=new Date();
+  var ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  var _monthFilter=window._dwSettleMonth||'all';
+
+  _db.collection('delivery_sessions').where('dealerId','==',did).get().then(function(snap){
+    if(snap.empty){
+      c.innerHTML='<div class="empty" style="padding:60px 20px"><div style="font-size:48px;margin-bottom:12px">🛵</div>'
+        +'<div style="font-size:17px;font-weight:800;margin-bottom:6px">배달대행 데이터가 없습니다</div>'
+        +'<div style="font-size:13px;color:var(--text3)">배달대행 정산 탭에서 엑셀 업로드 후 정산 개시하면 표시됩니다</div></div>';
+      return;
+    }
+    var sessions=snap.docs.map(function(d){return Object.assign({sid:d.id},d.data());});
+    // 월별 목록
+    var allMonths=[...new Set(sessions.map(function(s){return (s.ym||s.month||'').slice(0,7);}).filter(Boolean))].sort().reverse();
+    var filteredSessions=_monthFilter==='all'?sessions:sessions.filter(function(s){return (s.ym||s.month||'').startsWith(_monthFilter);});
+
+    // 집계
+    var totRevenue=0,totCost=0,totInj=0,totExt=0,totCnt=0;
+    var byDriver={};
+    filteredSessions.forEach(function(s){
+      totRevenue+=(s.totalPf||s.pfSum||0);
+      totCost+=(s.totalNet||s.netPay||0);
+      totInj+=(s.bonusTotal||s.totalInj||0);
+      totExt+=(s.deductTotal||s.totalExt||0);
+      totCnt+=(s.totalCount||0);
+      var rid=s.riderId||s.driverId||s.userId||'';
+      if(!rid)return;
+      if(!byDriver[rid])byDriver[rid]={name:s.riderName||s.driverName||rid,revenue:0,cost:0,inj:0,ext:0,cnt:0};
+      byDriver[rid].revenue+=(s.totalPf||s.pfSum||0);
+      byDriver[rid].cost+=(s.totalNet||s.netPay||0);
+      byDriver[rid].inj+=(s.bonusTotal||s.totalInj||0);
+      byDriver[rid].ext+=(s.deductTotal||s.totalExt||0);
+      byDriver[rid].cnt+=(s.totalCount||0);
+    });
+    var totProfit=totRevenue-totCost;
+    var marginRate=totRevenue>0?((totProfit/totRevenue)*100).toFixed(1):0;
+    var monthLabel=_monthFilter==='all'?'전체 누적':_monthFilter;
+
+    c.innerHTML='';
+
+    // 월 필터 탭
+    var tabEl=document.createElement('div');
+    tabEl.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;align-items:center';
+    tabEl.innerHTML='<span style="font-size:10px;color:var(--text3);font-weight:700">📅 기간</span>'
+      +'<button onclick="window._dwSettleMonth=&quot;all&quot;;pageDeliverySettle()" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(_monthFilter==='all'?'var(--blue)':'var(--border)')+';background:'+(_monthFilter==='all'?'var(--blue)':'var(--bg)')+';color:'+(_monthFilter==='all'?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">전체</button>'
+      +allMonths.map(function(m){var on=m===_monthFilter;return '<button onclick="window._dwSettleMonth=&quot;'+m+'&quot;;pageDeliverySettle()" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(on?'var(--blue)':'var(--border)')+';background:'+(on?'var(--blue)':'var(--bg)')+';color:'+(on?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">'+m+'</button>';}).join('');
+    c.appendChild(tabEl);
+
+    // Hero 카드
+    var hero=document.createElement('div');
+    hero.style.cssText='background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 50%,#dc2626 100%);border-radius:16px;padding:24px;margin-bottom:16px;color:#fff;position:relative;overflow:hidden';
+    hero.innerHTML='<div style="position:absolute;top:-30px;right:-30px;width:200px;height:200px;background:rgba(255,255,255,.04);border-radius:50%"></div>'
+      +'<div style="font-size:11px;font-weight:600;letter-spacing:2px;opacity:.6;margin-bottom:14px">DONWAY · '+((_CU&&_CU.companyName)||'회사')+' · 배달대행 정산 현황 · '+monthLabel+'</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">'
+        +'<div><div style="font-size:10px;opacity:.6;margin-bottom:3px">📊 플랫폼 매출</div>'
+          +'<div style="font-size:18px;font-weight:900;color:#4ade80">₩'+fmt(totRevenue)+'</div>'
+          +'<div style="font-size:9px;opacity:.4">'+fmt(totCnt)+'건</div></div>'
+        +'<div><div style="font-size:10px;opacity:.6;margin-bottom:3px">💸 기사 지급액</div>'
+          +'<div style="font-size:18px;font-weight:900;color:#60a5fa">₩'+fmt(totCost)+'</div>'
+          +'<div style="font-size:9px;opacity:.4">고용·산재 공제 후</div></div>'
+        +'<div><div style="font-size:10px;opacity:.6;margin-bottom:3px">📈 DONWAY 마진</div>'
+          +'<div style="font-size:18px;font-weight:900;color:#a78bfa">₩'+fmt(totExt-totInj)+'</div>'
+          +'<div style="font-size:9px;opacity:.4">환수 - 보전</div></div>'
+      +'</div>'
+      +'<div style="border-top:1px solid rgba(255,255,255,.12);padding-top:10px;display:flex;align-items:center;justify-content:space-between">'
+        +'<div style="font-size:11px;opacity:.6">💰 실순수익 (매출 - 기사지급)</div>'
+        +'<div style="font-size:22px;font-weight:900;color:'+(totProfit>=0?'#4ade80':'#f87171')+'">'+(totProfit<0?'-':'')+'₩'+fmt(Math.abs(totProfit))+'</div>'
+      +'</div>'
+      +'<div style="text-align:right;margin-top:4px;font-size:10px;opacity:.5">마진율 '+marginRate+'%</div>';
+    c.appendChild(hero);
+
+    // 기사별 현황
+    var driverKeys=Object.keys(byDriver).sort(function(a,b){return byDriver[b].revenue-byDriver[a].revenue;});
+    if(driverKeys.length){
+      var sec=document.createElement('div');
+      sec.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:10px';
+      sec.innerHTML='<div style="font-size:13px;font-weight:800;color:var(--text)">🛵 기사별 현황</div>';
+      c.appendChild(sec);
+      var grid=document.createElement('div');
+      grid.style.cssText='display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px';
+      driverKeys.forEach(function(rid){
+        var dr=byDriver[rid];
+        var profit=dr.revenue-dr.cost;
+        var card=document.createElement('div');
+        card.style.cssText='background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:14px 16px';
+        card.innerHTML='<div style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--text)">'+esc(dr.name)+'</div>'
+          +'<div style="font-size:11px;color:var(--text3);margin-bottom:4px">📦 '+fmt(dr.cnt)+'건</div>'
+          +'<div style="font-size:13px;font-weight:800;color:var(--green)">매출 ₩'+fmt(dr.revenue)+'</div>'
+          +'<div style="font-size:11px;color:var(--blue)">지급 ₩'+fmt(dr.cost)+'</div>'
+          +'<div style="font-size:12px;font-weight:700;color:'+(profit>=0?'#059669':'#dc2626')+';margin-top:4px;padding-top:4px;border-top:1px solid var(--border)">'
+          +'순 '+(profit>=0?'':'−')+'₩'+fmt(Math.abs(profit))+'</div>';
+        grid.appendChild(card);
+      });
+      c.appendChild(grid);
+    }
+  }).catch(function(e){c.innerHTML='<div class="empty">오류: '+e.message+'</div>';});
+}
+
 function pageDeliveryInput(){
   // ★ 관리자면 엔진v2로, 기사면 기사 대시보드로
   if(_CU&&_CU.role!=='driver'&&_CU.role!=='member'){
@@ -13654,6 +13761,7 @@ var MENUS_DELIVERY = [
     {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'}
   ]},
   {s:'🛵 배달대행 정산', items:[
+    {ic:'📊',l:'정산 현황',        p:'delivery_settle',  plan_key:'delivery'},
     {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',   plan_key:'delivery'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
     {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'delivery'}
@@ -13683,6 +13791,7 @@ var MENUS_SETTLE = [
         {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'any_paid'}
   ]},
   {s:'🛵 배달대행 정산', items:[
+    {ic:'📊',l:'정산 현황',        p:'delivery_settle',  plan_key:'any_paid'},
     {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',   plan_key:'any_paid'},
     {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'any_paid'}
   ]},
@@ -14239,7 +14348,7 @@ function goPage(page){
   document.getElementById('topbar-right').innerHTML='';
   document.getElementById('sidebar').classList.remove('open');
   var _bd=document.getElementById('sb-backdrop');if(_bd)_bd.style.display='none';
-  var pages={settle:pageSettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,emp_home:pageEmpHome,vehicle:pageVehicle,expense:pageExpense,overtime:pageOvertime,evaluation:pageEvaluation,delivery_report:pageDeliveryReport,delivery_platform:pageDeliveryPlatform,delivery_input:pageDeliveryInput,notify_history:pageNotifyHistory};
+  var pages={settle:pageSettle,delivery_settle:pageDeliverySettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,emp_home:pageEmpHome,vehicle:pageVehicle,expense:pageExpense,overtime:pageOvertime,evaluation:pageEvaluation,delivery_report:pageDeliveryReport,delivery_platform:pageDeliveryPlatform,delivery_input:pageDeliveryInput,notify_history:pageNotifyHistory};
   var fn=pages[page];
   if(fn)fn();
   else document.getElementById('content').innerHTML='<div class="empty"><div class="empty-icon">🚧</div>준비 중</div>';
