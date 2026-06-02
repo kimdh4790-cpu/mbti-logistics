@@ -14117,7 +14117,8 @@ var VAPID_KEY = 'BHO3mU6K2VlLkYfUgsunV5zXsx6oOc_I4dIyE9ErYPBZE5AkBhPP-HUmQhqvHLD
 
 var _fcmRegFailed = false;  // ★ VAPID 키 오류 시 재시도 방지
 async function _registerFCM(){
-  if(!_db||!_CU||!_CU.dealerId||_fcmRegFailed) return;
+  var _owner = _CU || _getDeviceOwner();
+  if(!_db||!_owner||!_owner.dealerId||_fcmRegFailed) return;
   try{
     if(!('Notification' in window)){return;}
     var perm = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
