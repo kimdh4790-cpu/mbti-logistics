@@ -588,14 +588,24 @@ function _loadNextFile(){
 function _startMultiMapping(){
   var idx = _settleState.multiIdx;
   var mf = _settleState.multiFiles[idx];
-  // 자동매핑 시도
   _settleState.headers = mf.headers;
   _settleState.rows = mf.rows;
   _settleState.mapping = {};
-  _autoMap('__keyword');
-  mf.mapping = _settleState.mapping;
-  _settleState.step = 2;
-  _renderSettle();
+  var total = _settleState.multiFiles.length;
+  toast('🤖 AI 분석 중... ('+( idx+1)+'/'+total+')');
+  _aiAutoMap(mf.headers, function(aiResult){
+    if(aiResult && Object.keys(aiResult).length > 0){
+      _settleState.mapping = aiResult;
+      mf.mapping = aiResult;
+      toast('✅ '+(idx+1)+'/'+total+' AI 자동매핑 완료');
+    } else {
+      _autoMap('__keyword');
+      mf.mapping = _settleState.mapping;
+      toast('✅ '+(idx+1)+'/'+total+' 키워드 매핑 완료');
+    }
+    _settleState.step = 2;
+    _renderSettle();
+  });
 }
 
 function _loadExcel(file){
@@ -688,13 +698,81 @@ function _processSheet(wb, sheetName){
   });
   window._pendingWb = null;  // 처리 완료 후 해제
 
-  toast('✅ '+_settleState.rows.length+'행 로드됨');
+  toast('🤖 AI가 헤더 분석 중...');
 
-  // 자동 매핑 항상 실행 (템플릿 있으면 preset 활용, 없으면 키워드만)
-  _autoMap(_settleState.template || '__keyword');
+  // AI 자동매핑 먼저 시도 → 실패시 키워드 룰로 폴백
+  _aiAutoMap(_settleState.headers, function(aiResult){
+    if(aiResult && Object.keys(aiResult).length > 0){
+      _settleState.mapping = aiResult;
+      toast('✅ '+_settleState.rows.length+'행 로드 · AI 자동매핑 완료');
+    } else {
+      _autoMap(_settleState.template || '__keyword');
+      toast('✅ '+_settleState.rows.length+'행 로드 · 키워드 매핑 완료');
+    }
+    _settleState.step = 2;
+    _renderSettle();
+  });
+}
 
-  _settleState.step = 2;
-  _renderSettle();
+
+// ── AI 자동매핑 (Claude)
+async function _aiAutoMap(headers, onDone){
+  var ak = window.__AK;
+  if(!ak){ onDone(false); return; }
+
+  var fieldDesc = [
+    'name: 기사/직원/라이더 이름 또는 ID (사람 식별자)',
+    'count: 배송건수/총건수/수량 (숫자)',
+    'amount: 단가/건당금액/기본요금',
+    'id: 사번/직원번호/고유코드',
+    'dept: 캠프/지점/부서/팀',
+    'period: 정산기간/날짜/월',
+    'subtotal: 소계/합계수수료/기본금액합',
+    'bonus: 수당/인센티브/추가금액',
+    'total_pay: 총지급액/총금액/지급합계',
+    'deduct: 공제액/차감/4대보험합계',
+    'net: 실지급액/정산금액/차감지급액',
+    'account: 계좌번호',
+    'note: 비고/특이사항/메모',
+  ].join('\n');
+
+  var prompt = '다음은 정산 엑셀의 헤더 목록입니다:\n'
+    + headers.map(function(h,i){return i+': '+h;}).join('\n')
+    + '\n\n각 헤더를 아래 필드 중 하나에 매핑해주세요:\n'
+    + fieldDesc
+    + '\n\n결과를 반드시 JSON만 반환하세요. 예: {"name":1,"count":7,"amount":9}\n'
+    + '매핑 불가한 헤더는 포함하지 마세요. JSON 외 텍스트 절대 금지.';
+
+  try{
+    var res = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key': ak,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body: JSON.stringify({
+        model:'claude-haiku-4-5-20251001',
+        max_tokens:300,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    var data = await res.json();
+    var text = (data.content&&data.content[0]&&data.content[0].text)||'';
+    var clean = text.replace(/```json|```/g,'').trim();
+    var mapped = JSON.parse(clean);
+    // 인덱스 숫자로 변환
+    var result = {};
+    Object.keys(mapped).forEach(function(k){
+      var v = parseInt(mapped[k],10);
+      if(!isNaN(v) && v>=0 && v<headers.length) result[k]=v;
+    });
+    onDone(result);
+  }catch(e){
+    console.warn('AI 매핑 실패, 키워드 룰로 대체:', e);
+    onDone(false);
+  }
 }
 
 // 자동 매핑 (헤더 키워드 기반)
