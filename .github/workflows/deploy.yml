@@ -18,14 +18,37 @@ jobs:
           wranglerVersion: '4'
 
       - name: Sync settle.html to backup
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
         run: |
-          SHA=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/contents/backup/settle_latest.html" \
-            | python3 -c "import json,sys; print(json.load(sys.stdin)['sha'])")
-          CONTENT=$(base64 -w 0 settle.html)
-          curl -s -X PUT \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            "https://api.github.com/repos/${{ github.repository }}/contents/backup/settle_latest.html" \
-            -d "{\"message\":\"auto: settle_latest.html sync\",\"content\":\"$CONTENT\",\"sha\":\"$SHA\"}"
-          echo "✅ backup 동기화 완료"
+          python3 << 'PYEOF'
+          import urllib.request, json, base64, os
+
+          TOKEN = os.environ['GH_TOKEN']
+          REPO = os.environ['REPO']
+
+          req = urllib.request.Request(
+              f"https://api.github.com/repos/{REPO}/contents/backup/settle_latest.html",
+              headers={"Authorization": f"Bearer {TOKEN}", "Accept": "application/vnd.github+json"}
+          )
+          with urllib.request.urlopen(req) as r:
+              sha = json.loads(r.read())['sha']
+
+          with open('settle.html', 'rb') as f:
+              content = base64.b64encode(f.read()).decode()
+
+          payload = json.dumps({
+              "message": "auto: settle_latest.html sync",
+              "content": content, "sha": sha
+          }).encode()
+
+          req2 = urllib.request.Request(
+              f"https://api.github.com/repos/{REPO}/contents/backup/settle_latest.html",
+              data=payload, method="PUT",
+              headers={"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json", "Accept": "application/vnd.github+json"}
+          )
+          with urllib.request.urlopen(req2) as r:
+              result = json.loads(r.read())
+              print(f"✅ backup 동기화 완료 → {result['commit']['sha'][:8]}")
+          PYEOF
