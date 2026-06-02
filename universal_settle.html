@@ -595,8 +595,7 @@ function _loadNextFile(){
       if(hasRaw){
         var rawRows = XLSX.utils.sheet_to_json(wb.Sheets['정산Raw'],{header:1,raw:false,defval:''});
         var hI=0; for(var i=0;i<Math.min(rawRows.length,6);i++){if(rawRows[i].filter(function(c){return c!=='';}).length>=3){hI=i;break;}}
-        var hdrs = rawRows[hI].map(function(h){return String(h).replace(/
-/g,' ').trim();});
+        var hdrs = rawRows[hI].map(function(h){return String(h).replace(/\n/g,' ').trim();});
         if(_isCoupangSheet(hdrs)){
           _settleState.mixedFiles.coupang.push({wb:wb, fileName:file.name, hasLoss:hasLoss});
           _settleState.fileQueueIdx++;
@@ -683,8 +682,7 @@ function _selectSheet(wb){
     var rawRows = XLSX.utils.sheet_to_json(wb.Sheets['정산Raw'], {header:1, raw:false, defval:''});
     var hdrIdx = 0;
     for(var i=0;i<Math.min(rawRows.length,6);i++){if(rawRows[i].filter(function(c){return c!=='';}).length>=3){hdrIdx=i;break;}}
-    var headers = rawRows[hdrIdx].map(function(h){return String(h).replace(/
-/g,' ').trim();});
+    var headers = rawRows[hdrIdx].map(function(h){return String(h).replace(/\n/g,' ').trim();});
     if(_isCoupangSheet(headers)){
       _processCoupangSheet(wb, '정산Raw', hasLoss ? '분실파손List' : null);
       return;
@@ -1267,7 +1265,7 @@ function _dwOpenDeliverySettings(){
     +'<div>'+slotRows+'</div>'
     +'</div>'
     +'<div class="mdf">'
-    +'<button class="btn btn-secondary" onclick="this.closest('.mo').remove()">취소</button>'
+    +'<button class="btn btn-secondary" onclick="this.closest(\'.mo\').remove()">취소</button>'
     +'<button class="btn btn-primary" onclick="_dwApplyDeliverySettings()">💾 적용 후 재계산</button>'
     +'</div>'
     +'</div>';
