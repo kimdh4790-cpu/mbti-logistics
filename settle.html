@@ -1236,6 +1236,10 @@ function calcNet(x){
   var emp  = (x.emp !== undefined && x.emp !== null && x.emp !== '' && +x.emp > 0) ? +x.emp : empCalc;
   var workStored = (x.work !== undefined && x.work !== null && x.work !== '' && +x.work > 0) ? +x.work : 0;
   var work = _isBiz ? ((workStored && workCalc > 0 && workStored >= workCalc * 0.5) ? workStored : workCalc) : 0;
+  // 회사 부담 보험료 (기사 공제분과 별개)
+  var empComp = _isBiz ? (monthlyWage >= 800000 ? Math.floor(monthlyWage * 0.009 / 10) * 10 : 0) : 0; // 고용 0.9%
+  var workComp = work; // 산재 전액 회사 부담 (= work와 동일 비율)
+  var insComp = empComp + workComp; // 회사 총 부담 보험료
   var eq   = +x.eq  || 0;
   var dmg  = +x.dmg || +x.damage || 0;
   var adv  = +x.adv || +x.advance || 0;
@@ -1243,7 +1247,7 @@ function calcNet(x){
   // ★ 원천세(tax)는 회사 납부 → 기사 실지급 공제 제외
   var deduct = emp + work + eq + dmg + adv + etcMinus;
   var net = totalAmt - deduct;
-  return{damt,ramt,fresh,finc,_fincPerUnit,inc,nocont,etcPlus,etcMinus,income,totalAmt,supplyAmt,monthlyWage,tax,emp,work,eq,dmg,adv,deduct,net,isYong,isCoupang,yDel,yRet};
+  return{damt,ramt,fresh,finc,_fincPerUnit,inc,nocont,etcPlus,etcMinus,income,totalAmt,supplyAmt,monthlyWage,tax,emp,work,empComp,workComp,insComp,eq,dmg,adv,deduct,net,isYong,isCoupang,yDel,yRet};
 }
 
 // ██ parseCoupangExcel v3.0 (자동화 완전판) ██
@@ -14517,9 +14521,8 @@ function pageSettle(){
       totNet+=r.net||0;
       totDeduct+=r.deduct||0;
       totDcnt+=(s.dcnt||0);
-      // 회사 부담 고용·산재보험 = calcNet이 이미 isBiz 구분해서 계산한 값 사용
-      // (비사업자는 calcNet에서 emp=0, work=0 반환하므로 자동 제외)
-      totInsComp+=(r.emp||0)+(r.work||0);
+      // 회사 부담 보험료 = empComp(고용0.9%) + workComp(산재0.88%) — 기사공제분과 구분
+      totInsComp+=(r.insComp||0);
       var cc=_getSettleCamp(s)||'기타';
       if(!byCamp[cc])byCamp[cc]={cnt:0,net:0,dcnt:0};
       byCamp[cc].cnt++;byCamp[cc].net+=r.net||0;byCamp[cc].dcnt+=(s.dcnt||0);
