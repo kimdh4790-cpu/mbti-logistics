@@ -14113,7 +14113,14 @@ function pageSettle(){
   var c=document.getElementById('content');
   c.innerHTML='<div class="loading">로딩 중...</div>';
   if(!_db){c.innerHTML='<div class="empty"><div class="empty-icon">📊</div>로그인 후 이용하세요</div>';return;}
-  _db.collection('settlements').where('dealerId','==',_CU.dealerId).get().then(function(snap){
+  var _did=_CU.dealerId;
+  Promise.all([
+    _db.collection('settlements').where('dealerId','==',_did).get(),
+    _db.collection('expenses').where('dealerId','==',_did).get(),
+    _db.collection('settings').doc(_did+'_fixedExpenses').get(),
+    _db.collection('tax_docs').where('dealerId','==',_did).get()
+  ]).then(function(results){
+    var snap=results[0],expSnap=results[1],fixSnap=results[2],taxDocSnap=results[3];
     if(snap.empty){
       c.innerHTML='<div class="empty" style="padding:60px 20px"><div style="font-size:48px;margin-bottom:12px">📊</div>'
         +'<div style="font-size:17px;font-weight:800;margin-bottom:6px">정산 데이터가 없습니다</div>'
@@ -14121,6 +14128,19 @@ function pageSettle(){
       return;
     }
     var settles=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
+    // 경비 월별 집계 (expenses + tax_docs 경비류)
+    var expByMonth={};
+    expSnap.forEach(function(d){
+      var e=d.data(); var mo=(e.date||e.ym||'').slice(0,7); if(!mo)return;
+      if(!expByMonth[mo])expByMonth[mo]=0; expByMonth[mo]+=(e.amount||0);
+    });
+    taxDocSnap.forEach(function(d){
+      var e=d.data();
+      if(e.category!=='expense'&&e.docType!=='경비·비용'&&e.type!=='expense')return;
+      var mo=(e.date||e.ym||e.month||'').slice(0,7); if(!mo)return;
+      if(!expByMonth[mo])expByMonth[mo]=0; expByMonth[mo]+=(e.amount||e.totalAmount||0);
+    });
+    var fixedMonthly=(fixSnap.exists?(fixSnap.data().items||[]):[]).reduce(function(s,i){return s+(i.amount||0);},0);
     // ★ 현재 선택된 월 필터 (settlements 탭의 _settle_month 공유)
     var curMonthFilter=_settle_month||'all';
     var filteredSettles=curMonthFilter==='all'?settles:settles.filter(function(s){return s.month===curMonthFilter;});
@@ -14161,6 +14181,15 @@ function pageSettle(){
     var hero=document.createElement('div');
     hero.style.cssText='background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 50%,#312e81 100%);border-radius:16px;padding:28px 24px;margin-bottom:16px;color:#fff;position:relative;overflow:hidden';
     var totMargin=totCoupang-totTaxBase;
+    // 경비 차감 실순수익
+    var _expTotal=0;
+    if(curMonthFilter==='all'){
+      Object.values(expByMonth).forEach(function(v){_expTotal+=v;});
+      _expTotal+=fixedMonthly*(allMonths.length||1);
+    } else {
+      _expTotal=(expByMonth[curMonthFilter]||0)+fixedMonthly;
+    }
+    var totNetProfit=totMargin-_expTotal;
     // 선택 월 표시
     var monthLabel=curMonthFilter==='all'?'전체 누적':curMonthFilter;
     hero.innerHTML='<div style="position:absolute;top:-30px;right:-30px;width:200px;height:200px;background:rgba(255,255,255,.04);border-radius:50%"></div>'
@@ -14187,6 +14216,11 @@ function pageSettle(){
         +'<div><div style="font-size:10px;opacity:.5;margin-bottom:2px">📦 총 배송건수</div>'
           +'<div style="font-size:15px;font-weight:800;color:#f9a8d4">'+fmt(totDcnt)+'건</div>'
           +'<div style="font-size:9px;opacity:.4">전체 기간 누적</div></div>'
+      +'</div>'
+      // 순수익 행
+      +'<div style="border-top:1px solid rgba(255,255,255,.12);margin-top:10px;padding-top:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">'
+      +'<div style="font-size:11px;opacity:.6">💰 실순수익 (마진 - 경비) · '+(_expTotal>0?'경비 ₩'+fmt(_expTotal)+' 차감':'경비 미등록')+'</div>'
+      +'<div style="font-size:20px;font-weight:900;color:'+(totNetProfit>=0?'#4ade80':'#f87171')+'">'+(totNetProfit<0?'-':'')+'₩'+fmt(Math.abs(totNetProfit))+'</div>'
       +'</div>';
     c.appendChild(hero);
 
