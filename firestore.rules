@@ -303,5 +303,31 @@ service cloud.firestore {
       allow read, write: if isAuth();
     }
 
+
+    // ── mbetco (범용 정산 플랫폼) ──
+    match /mbetco_companies/{docId} {
+      allow read: if isAuth() && (
+        resource.data.email == request.auth.token.email || isSuperAdmin()
+      );
+      allow create: if isSuperAdmin();
+      allow update, delete: if isSuperAdmin();
+    }
+    match /mbetco_mappings/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+    match /mbetco_settles/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+    match /mbetco_settle_details/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+    match /mbetco_workers/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
   }
 }
