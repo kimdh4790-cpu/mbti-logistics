@@ -14506,11 +14506,9 @@ function pageSettle(){
       totNet+=r.net||0;
       totDeduct+=r.deduct||0;
       totDcnt+=(s.dcnt||0);
-      // 회사 부담 고용·산재보험 (기사 공제분과 별개)
-      var mw=r.monthlyWage||0;
-      var empComp=mw>=800000?Math.floor(mw*0.009/10)*10:0;  // 고용 0.9%
-      var workComp=Math.floor(mw*0.0088/10)*10;              // 산재 0.88%
-      totInsComp+=empComp+workComp;
+      // 회사 부담 고용·산재보험 = calcNet이 이미 isBiz 구분해서 계산한 값 사용
+      // (비사업자는 calcNet에서 emp=0, work=0 반환하므로 자동 제외)
+      totInsComp+=(r.emp||0)+(r.work||0);
       var cc=_getSettleCamp(s)||'기타';
       if(!byCamp[cc])byCamp[cc]={cnt:0,net:0,dcnt:0};
       byCamp[cc].cnt++;byCamp[cc].net+=r.net||0;byCamp[cc].dcnt+=(s.dcnt||0);
