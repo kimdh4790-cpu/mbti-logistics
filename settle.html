@@ -16493,7 +16493,10 @@ function _saveSECurrent(){
   if(!month&&cached)month=cached.month||'';
   if(!driver||!month){toast('❌ 기사/월 정보 없음 id='+id);return;}
   var fresh=gv('se-fresh'),dmg=gv('se-dmg'),inc=gv('se-inc');
-  var etcPlus=gv('se-etc-plus'),etcMinus=gv('se-etc-minus'),adv=gv('se-adv');
+  var _etcPlusRaw=gv('se-etc-plus');
+  var _etcPlusTLVal=+(cached&&cached.etcPlusTL)||0;
+  var etcPlus=Math.max(0,_etcPlusRaw-_etcPlusTLVal);  // ★ 팀장수수료는 etcPlusTL로 별도 저장 → etcPlus에서 제거
+  var etcMinus=gv('se-etc-minus'),adv=gv('se-adv');
   var finc=gv('se-finc');
   var nocont=gv('se-nocont');
   var dcnt=cached?cached.dcnt||0:0;
