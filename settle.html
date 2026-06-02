@@ -11135,14 +11135,12 @@ function pageEmpHome(){
     +'<div id="emp-today-time" style="font-size:12px;color:var(--text3);margin-bottom:12px"></div>'
     +'<button onclick="goPage(\'my_qr\')" class="btn btn-blue" style="font-size:11px;padding:5px 12px;margin-top:4px">📷 QR 스캔</button>'
     +'</div>'
-    // 이번주 근무표 (실시간)
-    +'<div class="card" style="margin-bottom:14px">'
-    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'
-    +'<div style="font-size:14px;font-weight:800">📅 이번주 근무표</div>'
-    +'<div id="emp-roster-status" style="font-size:11px;color:var(--text3)">로딩 중...</div>'
-    +'</div>'
-    +'<div id="emp-roster-grid"></div>'
-    +'</div>'
+    // 이번달 근무 (링크)
+    +'<div class="card" style="margin-bottom:14px;cursor:pointer" onclick="goPage(\'my_roster\')">' 
+    +'<div style="display:flex;align-items:center;justify-content:space-between">'
+    +'<div style="font-size:14px;font-weight:800">📅 이번달 근무</div>'
+    +'<span style="font-size:12px;color:var(--brand);font-weight:700">보기 →</span>'
+    +'</div></div>'
     // 빠른 메뉴
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">'
     +_empQuickBtn('🌴','휴가 신청','leave','#059669','연차·반차·병가')
@@ -11174,6 +11172,17 @@ function pageEmpHome(){
 }
 
 // ★ 직원 이번주 근무표 실시간 로드
+function pageMyRoster(){
+  document.getElementById('page-title').textContent='근무표';
+  document.getElementById('topbar-right').innerHTML='';
+  var c=document.getElementById('content');
+  if(!_db||!_CU){c.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
+  var did=_CU.dealerId||_CU.companyId||'';
+  var uid=_CU.uid||_CU.userId||'';
+  var today=new Date().toISOString().slice(0,10);
+  c.innerHTML='<div style="max-width:700px;margin:0 auto;padding:16px">'    +'<div style="font-size:18px;font-weight:800;margin-bottom:16px">📅 이번주 근무표</div>'    +'<div id="emp-roster-grid"><div style="text-align:center;padding:20px;color:var(--text3)">⏳ 로딩 중...</div></div>'    +'</div>';
+  _empLoadRoster(did, uid, today);
+}
 function _empLoadRoster(did, uid, today){
   var weekStart = _getWeekStart(today);
   var days3=['일','월','화','수','목','금','토'];
@@ -14455,7 +14464,7 @@ function goPage(page){
   document.getElementById('topbar-right').innerHTML='';
   document.getElementById('sidebar').classList.remove('open');
   var _bd=document.getElementById('sb-backdrop');if(_bd)_bd.style.display='none';
-  var pages={settle:pageSettle,delivery_settle:pageDeliverySettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,emp_home:pageEmpHome,vehicle:pageVehicle,expense:pageExpense,overtime:pageOvertime,evaluation:pageEvaluation,delivery_report:pageDeliveryReport,delivery_platform:pageDeliveryPlatform,delivery_input:pageDeliveryInput,notify_history:pageNotifyHistory};
+  var pages={settle:pageSettle,delivery_settle:pageDeliverySettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,my_roster:pageMyRoster,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,emp_home:pageEmpHome,vehicle:pageVehicle,expense:pageExpense,overtime:pageOvertime,evaluation:pageEvaluation,delivery_report:pageDeliveryReport,delivery_platform:pageDeliveryPlatform,delivery_input:pageDeliveryInput,notify_history:pageNotifyHistory};
   var fn=pages[page];
   if(fn)fn();
   else document.getElementById('content').innerHTML='<div class="empty"><div class="empty-icon">🚧</div>준비 중</div>';
