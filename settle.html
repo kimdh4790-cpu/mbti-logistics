@@ -11198,39 +11198,42 @@ function _empLoadRoster(did, uid, today){
         if(status) status.textContent='미등록';
         return;
       }
-      // 기사별+날짜별 데이터 정리
-      var byDriver={};var driverOrder=[];
+      // 날짜별 그룹핑 (출근/휴무 인원 목록)
+      var byDay={};
       filteredDocs.forEach(function(doc){
-        var d=doc.data();var drvId=d.driverId||'';
-        if(!byDriver[drvId]){byDriver[drvId]={name:d.name||drvId,days:{}};driverOrder.push(drvId);}
-        byDriver[drvId].days[d.dayIndex]=d;
+        var d=doc.data();var idx=d.dayIndex;
+        if(!byDay[idx])byDay[idx]={work:[],off:[]};
+        var nm=d.name||d.driverId||'';
+        var route=d.route||'';
+        if(d.status==='off') byDay[idx].off.push(nm);
+        else byDay[idx].work.push(nm+(route?' ('+route+')':''));
       });
-      var html='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">'
-        +'<thead><tr><th style="padding:4px;background:var(--bg3);border:1px solid var(--border);min-width:55px">기사</th>';
+      var html='';
       weekDays.forEach(function(dt,idx){
         var isToday=dt===today;
-        html+='<th style="padding:4px 2px;background:'+(isToday?'var(--brand)':'var(--bg3)')+';color:'+(isToday?'#fff':'var(--text)')+';border:1px solid var(--border);min-width:40px;text-align:center">'+days3[new Date(dt).getDay()]+'<br><span style="font-size:9px;font-weight:400">'+dt.slice(5)+'</span></th>';
+        var entry=byDay[idx]||{work:[],off:[]};
+        var dayLabel=days3[new Date(dt).getDay()]+' '+dt.slice(5);
+        html+='<div style="margin-bottom:8px;padding:8px 10px;border-radius:8px;border:1px solid '+(isToday?'var(--brand)':'var(--border)')+';background:'+(isToday?'rgba(0,102,255,.04)':'var(--bg2)')+'">';
+        html+='<div style="font-size:12px;font-weight:800;color:'+(isToday?'var(--brand)':'var(--text)')+';margin-bottom:6px">'+dayLabel+(isToday?' 🔵':'')+'</div>';
+        if(entry.work.length){
+          html+='<div style="margin-bottom:4px">';
+          html+='<span style="font-size:10px;font-weight:700;color:var(--green);margin-right:4px">출근 '+entry.work.length+'명</span>';
+          html+='<span style="font-size:11px;color:var(--text2)">'+entry.work.map(esc).join(', ')+'</span>';
+          html+='</div>';
+        }
+        if(entry.off.length){
+          html+='<div>';
+          html+='<span style="font-size:10px;font-weight:700;color:#ef4444;margin-right:4px">휴무 '+entry.off.length+'명</span>';
+          html+='<span style="font-size:11px;color:var(--text3)">'+entry.off.map(esc).join(', ')+'</span>';
+          html+='</div>';
+        }
+        if(!entry.work.length&&!entry.off.length){
+          html+='<div style="font-size:11px;color:var(--text3)">데이터 없음</div>';
+        }
+        html+='</div>';
       });
-      html+='</tr></thead><tbody>';
-      driverOrder.forEach(function(drvId){
-        var drv=byDriver[drvId];
-        html+='<tr><td style="padding:4px 6px;border:1px solid var(--border);font-weight:700;white-space:nowrap">'+esc(drv.name)+'</td>';
-        weekDays.forEach(function(dt,idx){
-          var d=drv.days[idx]||null;
-          var isToday=dt===today;
-          var st=d?d.status:'work';
-          var route=d?d.route||'':'';
-          var bg=st==='off'?'rgba(239,68,68,.08)':(isToday?'rgba(0,102,255,.08)':'');
-          var color=st==='off'?'#ef4444':'var(--green)';
-          var label=st==='off'?'휴무':'출근';
-          html+='<td style="padding:3px 2px;border:1px solid var(--border);text-align:center;background:'+bg+'">'
-            +'<div style="color:'+color+';font-weight:700;font-size:10px">'+label+'</div>'
-            +(route?'<div style="color:var(--text3);font-size:9px">'+esc(route)+'</div>':'')
-            +'</td>';
-        });
-        html+='</tr>';
-      });
-      html+='</tbody></table></div>';
+      grid.innerHTML=html;
+      if(status) status.textContent='실시간 ✓';
       grid.innerHTML=html;
       if(status) status.textContent='실시간 ✓';
     },function(){
