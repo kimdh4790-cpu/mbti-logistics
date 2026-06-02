@@ -262,7 +262,6 @@ window.onBizDocSelected=onBizDocSelected;</script>
         </div>
 
 
-
       </div>
       <div class="fg"><label>관리자 이메일</label><input id="r-email" type="email" placeholder="admin@company.com"></div>
       <div class="fg"><label>비밀번호</label><input id="r-pw" type="password" placeholder="8자 이상"></div>
@@ -454,7 +453,7 @@ function updateDriverRouteExp(driverId, routeId, deliveryCount) {
       routeExp[routeId] = Math.min(10, Math.round((current + gained) * 10) / 10);
       return doc.ref.update({ routeExp: routeExp });
     })
-    .then(function(){ console.log('[배차] routeExp 업데이트:', driverId, routeId); })
+    .then(function(){ })
     .catch(function(e){ console.warn('[배차] routeExp 업데이트 실패:', e); });
 }
 
@@ -2803,7 +2802,7 @@ function showApp(){
   } else {
     var sType = _CU.serviceType||'full';
     // ★ sType 디버그 로그 (슈퍼어드민용)
-    if(isSuperAdmin()) console.log('[Nav] sType:', sType, '| dealerId:', _CU&&_CU.dealerId);
+    if(false){}
     if(isSuperAdmin())          MENUS=MENUS_SETTLE;
     else if(sType==='settle')   MENUS=MENUS_SETTLE;
     else if(sType==='delivery') MENUS=MENUS_DELIVERY;
@@ -6806,7 +6805,7 @@ function _dwParseRealExcel(file,btn1,btn2,con){
       if(dateKey&&rows[0]&&rows[0][dateKey]){
         var firstDate=String(rows[0][dateKey]||'').slice(0,10);
         var lastDate=String(rows[rows.length-1][dateKey]||'').slice(0,10);
-        if(firstDate&&lastDate) console.log('[DONWAY] 엑셀 날짜범위: '+firstDate+' ~ '+lastDate);
+        if(firstDate&&lastDate){}
       }
       var riderKey=keys.find(function(k){return /배달원id|라이더id|기사id/i.test(k);})||'';
       if(!riderKey) riderKey=keys.find(function(k){return /라이더사번|라이더코드|배달원코드|기사코드|기사번호|배달원번호|배달파트너id|파트너id|사번/i.test(k);})||'';
@@ -10635,7 +10634,6 @@ window._txsDownloadCsv=function(){
 };
 
 
-
 // 휴가 종류 정의
 var LEAVE_TYPES = {
   annual:   {label:'연차',    icon:'🌴', days:1,   color:'#059669'},
@@ -13837,15 +13835,20 @@ var MENUS_DELIVERY = [
   {s:'🛵 배달대행 정산', items:[
     {ic:'📊',l:'정산 현황',        p:'delivery_settle',  plan_key:'delivery'},
     {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',   plan_key:'delivery'},
+    {ic:'📈',l:'통계',             p:'stats',            plan_key:'delivery'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
     {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'delivery'}
+  ]},
+  {s:'💸 경비 관리', items:[
+    {ic:'💸',l:'경비 관리',        p:'expenses',         plan_key:'delivery'}
   ]},
   {s:'👤 직원 관리', items:[
     {ic:'👤',l:'직원 관리',        p:'drivers',          plan_key:'free'},
     {ic:'📝',l:'위수탁 계약서',    p:'contract',         plan_key:'settle'}
   ]},
-  {s:'📢 공지', items:[
-    {ic:'📢',l:'공지사항',         p:'notices',          plan_key:'free'}
+  {s:'📢 공지·알림', items:[
+    {ic:'📢',l:'공지사항',         p:'notices',          plan_key:'free'},
+    {ic:'🔔',l:'알림 발송',        p:'notify_history',   plan_key:'free'}
   ]}
 ];
 
@@ -16580,7 +16583,7 @@ function _saveSECurrent(){
       }).catch(function(){});
   }).catch(function(e){
     toast('❌ 저장실패: '+e.message);
-    if(btn){btn.textContent='💾 저장 후 재계산';btn.disabled=false;}
+    if(btn){btn.disabled=false;}
   });
 }
 
@@ -23272,7 +23275,6 @@ function _showPlanUpsell(planKey){
 })();
 
 
-
 function openAdminPanel(){
   if(!isSuperAdmin()){toast('❌ 접근 권한 없음');return;}
   if(!_db){toast('❌ Firebase 미연결');return;}
@@ -24031,7 +24033,7 @@ window.addEventListener('load',function(){
         _swOpts = {scope:'/'+window._COMPANY_SLUG+'/'};
       }
       navigator.serviceWorker.register(_swPath, _swOpts)
-        .then(function(reg){ console.log('[SW] 등록완료 scope:', reg.scope); })
+        .then(function(reg){ })
         .catch(function(e){
           // 슬러그 SW 실패 시 기본 SW로 fallback
           navigator.serviceWorker.register('/firebase-messaging-sw.js')
