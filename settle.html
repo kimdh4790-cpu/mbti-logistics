@@ -14517,8 +14517,10 @@ function pageSettle(){
       var r=calcNet(s);
       var ct=s.coupangTotal||(((s.damt||0)+(s.ramt||0)+(s.fresh||0)+(s.inc||0)+(s.nocont||0)))||0;
       totCoupang+=ct?Math.round(ct*1.1):(r.income||0);
-      // ★ 기사 세금계산서 = r.income(VAT제외) × 1.1 = VAT포함 (쿠팡수입과 단위 통일)
-      totTaxBase+=Math.round((r.income||r.totalAmt||0)*1.1);
+      // ★ 기사 세금계산서 = 순수 배송수익 기준 (팀장수수료 etcPlusTL 제외)
+      //   etcPlusTL은 회사 내부 분배 — 쿠팡수입과 비교 시 제외해야 마진 정확
+      var _taxIncome=(r.income||0)-(+s.etcPlusTL||0);
+      totTaxBase+=Math.round(_taxIncome*1.1);
       totNet+=r.net||0;
       totDeduct+=r.deduct||0;
       totDcnt+=(s.dcnt||0);
