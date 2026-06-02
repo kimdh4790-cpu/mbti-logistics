@@ -802,8 +802,19 @@ function _processCoupangSheet(wb, rawSheetName, lossSheetName){
     if(CI.date>=0 && r[CI.date]) g.dates.push(String(r[CI.date]).substring(0,10));
   });
 
-  // 라우트→캠프 매핑 전역 저장 (단가표 업로드 시 캠프 자동 인식에 활용)
+  // 라우트→캠프 매핑 전역 저장
   _settleState.routeToCamp = routeToCamp;
+
+  // 라우트별 전체 건수 저장 (팀장수수료 계산 기준)
+  var routeCntMap = {};
+  rawRows.forEach(function(r){
+    var route = CI.route>=0 ? String(r[CI.route]||'').trim().toUpperCase() : '';
+    if(!route) return;
+    var d = parseFloat(r[CI.delCnt]||0)||0;
+    var ret = parseFloat(r[CI.retCnt]||0)||0;
+    routeCntMap[route] = (routeCntMap[route]||0) + d + ret;
+  });
+  _settleState.coupangRouteCnt = routeCntMap;
 
   // 분실파손 차감
   var lossByID = {};
@@ -1360,7 +1371,101 @@ function _renderStep3Multi(){
 
 
 
-// ── 라우트단가표 파일 업로드 처리
+// ── 라우트/팀장 파일 파서
+// 지원 양식:
+//  [1] 고정.xlsx  : A열=캠프명또는라우트, C열=단가 (캠프명 행은 단가없음)
+//  [2] 고정.txt   : "608\nB 920\nC 920" 형식 (앞자리\n뒷자리+단가)
+//  [3] 팀장.txt   : "이름(ID)\n608\nB60 C60" 형식 (기사별 라우트별 수수료)
+
+function _parseRateText(text){
+  // 고정.txt 형식: 608 → B 920 형식
+  var rateMap = {};
+  var curPrefix = null;
+  var lines = text.split(/\r?\n/);
+  var isRateFormat = false;
+
+  // 먼저 팀장 형식인지 확인 (이름(ID) 패턴)
+  var hasPersonLine = lines.some(function(l){
+    return /^[^\d].*\(\w+\)/.test(l.trim());
+  });
+  if(hasPersonLine) return _parseTeamFeeText(text);
+
+  lines.forEach(function(line){
+    line = line.trim();
+    if(!line || line.startsWith('#')) return;
+    // 헤더행 스킵
+    if(/^라우트|^route/i.test(line)) return;
+    // 3자리 숫자 = 라우트 앞자리
+    if(/^\d{3}$/.test(line)){
+      curPrefix = line; isRateFormat = true; return;
+    }
+    // "B 920" 또는 "B920" 형식
+    var m = line.match(/^([A-Z])\s*(\d+)$/);
+    if(m && curPrefix){
+      rateMap[curPrefix+m[1]] = parseInt(m[2]);
+      return;
+    }
+    // "라우트번호,단가" 형식
+    var parts = line.split(/[,\t]+/);
+    if(parts.length >= 2){
+      var route = parts[0].trim().toUpperCase();
+      var price = parseFloat(parts[1].replace(/[,₩\s]/g,''));
+      if(route && !isNaN(price)) rateMap[route] = price;
+    }
+  });
+  return {type:'rate', data:rateMap};
+}
+
+function _parseTeamFeeText(text){
+  // 팀장.txt: 이름(ID)\n608\nB60 C60 형식
+  var teamFee = {};  // {id: {route: fee}}
+  var curId = null, curPrefix = null;
+  text.split(/\r?\n/).forEach(function(line){
+    line = line.trim();
+    if(!line) return;
+    // 사람 행: 이름(id) 또는 이름(id@df)
+    var pm = line.match(/^[^\d\s].*\((\w+)\)/);
+    if(pm){
+      var rawId = pm[1];
+      // @df 없으면 자동 추가
+      curId = rawId.includes('@') ? rawId : rawId + '@df';
+      teamFee[curId] = {};
+      curPrefix = null;
+      return;
+    }
+    // 3자리 숫자
+    if(/^\d{3}$/.test(line)){ curPrefix = line; return; }
+    // B60 C60 D60 형식 (붙어있거나 띄어있거나)
+    if(curPrefix && curId){
+      line.split(/\s+/).forEach(function(part){
+        var m = part.match(/^([A-Z])(\d+)$/);
+        if(m) teamFee[curId][curPrefix+m[1]] = parseInt(m[2]);
+      });
+    }
+  });
+  return {type:'teamfee', data:teamFee};
+}
+
+function _parseRateExcel(wb){
+  // 고정.xlsx: A열=캠프/라우트, C열=단가
+  var ws = wb.Sheets[wb.SheetNames[0]];
+  var rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:false, defval:''});
+  var rateMap = {};
+  rows.forEach(function(r){
+    var col0 = String(r[0]||'').trim();
+    var col2 = String(r[2]||'').trim();
+    if(!col0) return;
+    // 캠프명 행 (단가 없음) → 스킵
+    if(!col2 || isNaN(parseFloat(col2.replace(/,/g,'')))) return;
+    // 라우트 행
+    var route = col0.toUpperCase();
+    var price = parseFloat(col2.replace(/,/g,''));
+    if(route && !isNaN(price)) rateMap[route] = price;
+  });
+  return {type:'rate', data:rateMap};
+}
+
+// ── 파일 업로드 처리
 function _loadRateTable(inp){
   var file = inp.files[0];
   if(!file){ return; }
@@ -1369,64 +1474,47 @@ function _loadRateTable(inp){
   var reader = new FileReader();
 
   reader.onload = function(e){
-    var rateMap = {};
     try{
+      var parsed;
       if(ext === 'txt' || ext === 'csv'){
-        // 텍스트/CSV: "라우트번호,단가" 또는 탭/스페이스 구분
-        var lines = e.target.result.split(/\r?\n/);
-        lines.forEach(function(line){
-          line = line.trim();
-          if(!line) return;
-          var parts = line.split(/[,\t\s]+/);
-          if(parts.length >= 2){
-            var route = parts[0].trim().toUpperCase();
-            var price = parseFloat(parts[1].replace(/[,₩]/g,''));
-            if(route && !isNaN(price)) rateMap[route] = price;
-          }
-        });
+        parsed = _parseRateText(e.target.result);
       } else {
-        // 엑셀: 첫 번째 시트, 헤더 자동 감지
         var wb = XLSX.read(e.target.result, {type:'array'});
-        var ws = wb.Sheets[wb.SheetNames[0]];
-        var rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:false, defval:''});
-        // 헤더 찾기
-        var hdrIdx = 0;
-        for(var i=0;i<Math.min(rows.length,5);i++){
-          if(rows[i].filter(function(c){return c!=='';}).length >= 2){hdrIdx=i;break;}
-        }
-        var headers = rows[hdrIdx].map(function(h){return String(h).toLowerCase().replace(/\s/g,'');});
-        var routeCol = headers.findIndex(function(h){return h.includes('route')||h.includes('라우트')||h.includes('경로');});
-        var priceCol = headers.findIndex(function(h){return h.includes('단가')||h.includes('price')||h.includes('금액');});
-        // 헤더 못찾으면 첫번째=라우트, 두번째=단가로 가정
-        if(routeCol < 0) routeCol = 0;
-        if(priceCol < 0) priceCol = 1;
-        rows.slice(hdrIdx+1).forEach(function(r){
-          var route = String(r[routeCol]||'').trim().toUpperCase();
-          var price = parseFloat(String(r[priceCol]||'').replace(/[,₩]/g,''));
-          if(route && !isNaN(price)) rateMap[route] = price;
-        });
+        parsed = _parseRateExcel(wb);
       }
 
-      if(Object.keys(rateMap).length === 0){
-        toast('⚠️ 라우트단가 인식 실패 — 라우트번호,단가 형식인지 확인하세요');
+      if(!parsed || Object.keys(parsed.data).length === 0){
+        toast('⚠️ 인식 실패 — 양식 확인하세요');
         return;
       }
 
-      _settleState.coupangRateTable = rateMap;
-
-      // 라우트→캠프 자동 매핑 (쿠팡 엑셀 routeToCamp 활용)
       var rtc = _settleState.routeToCamp || {};
-      var campSum = {};
-      Object.keys(rateMap).forEach(function(route){
-        var c = rtc[route] || '미확인';
-        campSum[c] = (campSum[c]||0) + 1;
-      });
-      var campMsg = Object.keys(campSum).map(function(c){return c+'('+campSum[c]+')';}).join(' · ');
-      toast('✅ 단가표 로드 — '+Object.keys(rateMap).length+'개 라우트 | '+campMsg);
+
+      if(parsed.type === 'teamfee'){
+        // 팀장수수료 파일
+        _settleState.coupangTeamFee = parsed.data;
+        var names = Object.keys(parsed.data).map(function(id){
+          return id.replace('@df','');
+        }).join(', ');
+        var routeCount = Object.values(parsed.data).reduce(function(s,r){return s+Object.keys(r).length;},0);
+        toast('✅ 팀장수수료 로드 — '+Object.keys(parsed.data).length+'명 ('+routeCount+'개 라우트)');
+        // 팀장수수료로 실지급 재계산
+        _recalcCoupangNet();
+      } else {
+        // 라우트단가표
+        _settleState.coupangRateTable = parsed.data;
+        var campSum = {};
+        Object.keys(parsed.data).forEach(function(route){
+          var c = rtc[route] || '미확인';
+          campSum[c] = (campSum[c]||0) + 1;
+        });
+        var campMsg = Object.keys(campSum).map(function(c){return c+'('+campSum[c]+')';}).join(' · ');
+        toast('✅ 단가표 로드 — '+Object.keys(parsed.data).length+'개 라우트 | '+campMsg);
+      }
       _renderSettle();
 
     }catch(err){
-      toast('❌ 단가표 읽기 실패: '+err.message);
+      toast('❌ 파일 읽기 실패: '+err.message);
     }
   };
 
@@ -1436,6 +1524,22 @@ function _loadRateTable(inp){
     reader.readAsArrayBuffer(file);
   }
 }
+
+// ── 팀장수수료 반영 실지급 재계산
+function _recalcCoupangNet(){
+  var teamFee  = _settleState.coupangTeamFee  || {};
+  var routeCnt = _settleState.coupangRouteCnt || {};  // 라우트별 전체 건수
+  var res = _settleState.results || [];
+  res.forEach(function(r){
+    var fee = teamFee[r.id] || {};
+    var teamTotal = Object.keys(fee).reduce(function(s, route){
+      return s + (routeCnt[route]||0) * fee[route];
+    }, 0);
+    r.teamFee    = teamTotal;
+    r.net        = r.amount + r.fresh - r.lossAmt + (r.count*(r.incen||0)) + teamTotal;
+  });
+}
+
 
 // ── 쿠팡 인센 옵션
 var INCEN_OPTIONS = [0, 10, 15, 25];
@@ -1489,15 +1593,24 @@ function _renderCoupangResult(){
   var rateTableInfo = _settleState.coupangRateTable
     ? '<span style="color:var(--green)">✅ 단가표 로드됨 ('+Object.keys(_settleState.coupangRateTable).length+'개 라우트)</span>'
     : '<span style="color:var(--text3)">미등록</span>';
+  var teamFeeInfo = _settleState.coupangTeamFee
+    ? '<span style="color:var(--green)">✅ 팀장수수료 로드됨 ('+Object.keys(_settleState.coupangTeamFee).length+'명)</span>'
+    : '<span style="color:var(--text3)">미등록</span>';
 
   +'<div style="background:var(--surface2);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:12px;">'
     +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
-    +'<span style="font-weight:700">📊 라우트단가표</span>'
-    +rateTableInfo
-    +'<label style="margin-left:auto;cursor:pointer;background:var(--acc);color:#fff;border-radius:6px;padding:4px 12px;font-size:11px;font-weight:600">'
-    +'📂 파일 업로드'
+    +'<span style="font-weight:700">📊 단가표</span> '+rateTableInfo
+    +'&nbsp;&nbsp;|&nbsp;&nbsp;<span style="font-weight:700">👑 팀장수수료</span> '+teamFeeInfo
+    +'<div style="display:flex;gap:6px;margin-left:auto">'
+    +'<label style="cursor:pointer;background:var(--acc);color:#fff;border-radius:6px;padding:4px 12px;font-size:11px;font-weight:600">'
+    +'📊 단가표 업로드'
     +'<input type="file" accept=".xlsx,.xls,.txt,.csv" style="display:none" onchange="_loadRateTable(this)">'
     +'</label>'
+    +'<label style="cursor:pointer;background:var(--green);color:#fff;border-radius:6px;padding:4px 12px;font-size:11px;font-weight:600">'
+    +'👑 팀장수수료 업로드'
+    +'<input type="file" accept=".txt,.csv" style="display:none" onchange="_loadRateTable(this)">'
+    +'</label>'
+    +'</div>'
     +'</div>'
     +'<div style="color:var(--text2);font-size:11px;line-height:1.6">'
     +'업로드 가능 형식: <strong>.xlsx</strong> 또는 <strong>.txt/.csv</strong><br>'
@@ -1522,6 +1635,7 @@ function _renderCoupangResult(){
     +'<th class="num" style="color:var(--red)">분실파손</th>'
     +'<th style="min-width:130px">대리점인센(원/건)</th>'
     +'<th class="num">인센합계</th>'
+    +'<th class="num" style="color:var(--blue)">팀장수수료</th>'
     +'<th class="num" style="color:var(--green)">실지급액</th>'
     +'</tr></thead><tbody>';
 
@@ -1546,6 +1660,7 @@ function _renderCoupangResult(){
         +'</select>'
       +'</td>'
       +'<td class="num" style="color:var(--acc)">'+_fmt(incenAmt)+'</td>'
+      +'<td class="num" style="color:var(--blue)">'+(r.teamFee?'+'+_fmt(r.teamFee):'-')+'</td>'
       +'<td class="num net-cell"><strong style="color:var(--green)">'+_fmt(r.net)+'</strong></td>'
       +'</tr>';
   });
@@ -1561,11 +1676,11 @@ function _renderCoupangResult(){
 
 function _downloadCoupangExcel(){
   var res = _settleState.results;
-  var rows = [['이름','ID','캠프','배송건수','반품건수','총금액','프레시백','분실파손차감','인센(원/건)','인센합계','실지급액']];
+  var rows = [['이름','ID','캠프','배송건수','반품건수','합계건수','쿠팡지급액','프레시백','분실파손차감','대리점인센(원/건)','인센합계','팀장수수료','실지급액']];
   res.forEach(function(r){
     var incenAmt = r.count * (r.incen||0);
-    rows.push([r.name||r.id, r.id, r.dept, r.count, r.retCnt||0,
-      r.amount||0, r.fresh||0, r.lossAmt||0, r.incen||0, incenAmt, r.net]);
+    rows.push([r.name||r.id, r.id, r.dept, r.count, r.retCnt||0, r.totalCnt||r.count,
+      r.amount||0, r.fresh||0, r.lossAmt||0, r.incen||0, incenAmt, r.teamFee||0, r.net]);
   });
   var ws = XLSX.utils.aoa_to_sheet(rows);
   var wb = XLSX.utils.book_new();
