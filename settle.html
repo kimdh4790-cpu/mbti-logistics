@@ -14136,11 +14136,11 @@ async function _registerFCM(){
     var token = await messaging.getToken({vapidKey: VAPID_KEY, serviceWorkerRegistration: _fcmSwReg||undefined});
     if(!token) return;
     var isAdmin = isSuperAdmin();
-    var isDriver = _CU.role==='driver'||_CU.role==='member';
+    var isDriver = (_owner.role==='driver'||_owner.role==='member');
     if(isDriver){
-      var _uid = _CU.uid;
-      var _did = _CU.dealerId;
-      var _name = _CU.name||'';
+      var _uid = _owner.uid;
+      var _did = _owner.dealerId;
+      var _name = _owner.name||'';
       var _device = navigator.userAgent.includes('Mobile')?'mobile':'desktop';
       // ★ 다중기기 지원: fcmTokens 배열에 추가 (중복 제거)
       var _tokenEntry = {token:token, device:_device, updatedAt:new Date().toISOString()};
