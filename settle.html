@@ -11177,17 +11177,12 @@ function _empLoadRoster(did, uid, today){
     weekDays.push(d.toISOString().slice(0,10));
   }
   // ★ drivers 컬렉션에서 userId==uid인 문서 ID를 먼저 찾아서 roster_week 조회
-  // uid(auth uid), driverId(_CU.driverId), userId 모두 시도
-  var _rosterDrvId = _CU.driverId||'';
-  var _rosterUserId = _CU.userId||uid;
-  Promise.all([
-    _db.collection('drivers').where('dealerId','==',did).where('userId','==',_rosterUserId).limit(1).get(),
-    _rosterDrvId ? _db.collection('drivers').doc(_rosterDrvId).get().then(function(d){return d.exists?{docs:[d],empty:false}:{docs:[],empty:true};}).catch(function(){return {docs:[],empty:true};}) : Promise.resolve({docs:[],empty:true})
-  ]).then(function(results){
-    var dSnap = results[0].empty ? results[1] : results[0];
-    return Promise.resolve(dSnap);
-  }).then(function(dSnap){
-      var driverId = (!dSnap.empty ? dSnap.docs[0].id : (_rosterDrvId||null));
+  // roster_week.driverId = d.userId(쿠팡ID) 기준으로 저장됨
+  var _rosterUserId = _CU.userId || uid;  // 쿠팡ID 우선
+  _db.collection('drivers').where('dealerId','==',did).where('userId','==',_rosterUserId).limit(1).get()
+  .then(function(dSnap){
+      // roster_week에서 driverId = userId(쿠팡ID) 또는 drivers doc.id
+      var driverId = (!dSnap.empty ? (dSnap.docs[0].data().userId||dSnap.docs[0].id) : _rosterUserId);
       return _db.collection('roster_week')
         .where('dealerId','==',did)
         .where('weekStart','==',weekStart)
@@ -11196,12 +11191,12 @@ function _empLoadRoster(did, uid, today){
           snap = {
             empty: !snap.docs.some(function(d){
               var v=d.data();
-              return v.driverId===uid||v.driverId===driverId||v.userId===uid;
+              return v.driverId===_rosterUserId||v.driverId===driverId||v.userId===_rosterUserId;
             }),
             forEach: function(fn){
               snap.docs.filter(function(d){
                 var v=d.data();
-                return v.driverId===uid||v.driverId===driverId||v.userId===uid;
+                return v.driverId===_rosterUserId||v.driverId===driverId||v.userId===_rosterUserId;
               }).forEach(fn);
             }
           };
