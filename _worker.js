@@ -410,8 +410,7 @@ export default {
         const resp = await fetchAsset('/universal_settle.html', request);
         const html = await resp.text();
         const key = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
-        const injected = html.replace('</head>', '<script>window.__AK=' + JSON.stringify(key) + ';</script>
-</head>');
+        const injected = html.replace('</head>', '<script>window.__AK=' + JSON.stringify(key) + ';</script>\n</head>');
         return new Response(injected, { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
       }
       // mbtico.kr 나머지 경로는 아래 공통 처리로 fall-through
