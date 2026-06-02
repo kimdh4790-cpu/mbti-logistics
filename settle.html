@@ -17135,9 +17135,17 @@ window._bulkLoadBizExcel=function(inp){
       var cnt=0;
       rows.slice(3).forEach(function(r){
         var name=String(r[2]||'').trim();
+        var company=String(r[1]||'').trim();
+        var joinRaw=r[3];
+        var ssn=String(r[4]||'').trim();
         var biz=String(r[5]||'').trim();
-        if(name&&biz&&biz.length>5&&name!=='성명'){
-          window._bulkBizMap[name]=biz;
+        if(name&&name!=='성명'&&(biz.length>5||ssn)){
+          var joinDate='';
+          if(joinRaw&&typeof joinRaw==='number'&&joinRaw>40000){
+            var d=new Date(Math.round((joinRaw-25569)*86400000));
+            joinDate=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+          }else if(joinRaw){joinDate=String(joinRaw).slice(0,10);}
+          window._bulkBizMap[name]={bizNum:biz,bizName:company,ssn:ssn,joinDate:joinDate};
           cnt++;
         }
       });
@@ -17162,7 +17170,7 @@ function _bulkUpdatePreview(){
   var matched=[];var noMatch=[];
   Object.keys(sm).forEach(function(uid){
     var name=sm[uid];
-    if(bm[name]) matched.push({uid:uid,name:name,biz:(bm[name].bizNum||bm[name]),bizName:(bm[name].bizName||'')});
+    if(bm[name]){var _bm=bm[name];var _bmO=typeof _bm==='object'?_bm:{bizNum:_bm,bizName:'',ssn:'',joinDate:''};matched.push({uid:uid,name:name,biz:(_bmO.bizNum||''),bizName:(_bmO.bizName||''),ssn:(_bmO.ssn||''),joinDate:(_bmO.joinDate||'')});}
     else noMatch.push(name);
   });
   var html='<div style="background:var(--bg3);border-radius:8px;padding:10px;font-size:11px">'    +'<div style="font-weight:700;margin-bottom:6px;color:var(--green)">✅ 매칭 '+matched.length+'명</div>';
@@ -17200,14 +17208,11 @@ window._bulkApplyDrivers=function(){
     matched.forEach(function(m){
       var ref=docMap[m.uid]||docMap[m.name];
       if(ref){
-        batch.update(ref,{
-          name:m.name,
-          bizNum:m.biz,
-          bizName:m.bizName||'',
-          isBiz:true,
-          updatedAt:new Date().toISOString()
-        });
-        cnt++;
+          var _upd={name:m.name,bizNum:m.biz||'',bizName:m.bizName||'',isBiz:!!(m.biz&&m.biz.length>5),updatedAt:new Date().toISOString()};
+          if(m.ssn) _upd.ssn=m.ssn;
+          if(m.joinDate) _upd.joinDate=m.joinDate;
+          batch.update(ref,_upd);
+          cnt++;
       }
     });
     return batch.commit().then(function(){
