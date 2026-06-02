@@ -1212,20 +1212,30 @@ function calcNet(x){
   // ★ v9.25: 기타(+)만 세금계산서(income)에 포함 → 고용·산재 기준
   //           기타(-)는 세금계산서 제외, 실지급에서만 차감 (공제 항목)
   var income=damt+ramt+fresh+finc+nocont+etcPlus;  // ★ inc(추가인센)은 세금계산서 base 제외
-  // ★ 항상 routeDetails×unitPrice 기반 재계산 (명세서와 일치)
-  //   저장된 totalAmt는 참고용으로만 사용하지 않음
   var totalAmt=income;
-  var supplyAmt = Math.round(totalAmt / 1.1);
-  var expenseAmt = Math.round(supplyAmt * 0.346);
-  var monthlyWage = supplyAmt - expenseAmt;
-  var empCalc  = monthlyWage >= 800000 ? Math.floor(monthlyWage * 0.008  / 10) * 10 : 0;
-  var workCalc = Math.floor(monthlyWage * 0.0088 / 10) * 10;
-  var TAX_RATE = +x.taxRate || 0.033;
-  var tax  = +x.tax  || (x.taxFixed ? +x.taxFixed : Math.round(income * TAX_RATE));
+  // ★ 사업자 여부 구분 (isBiz: 사업자번호 있음 → VAT포함/고용산재, 없음 → 원천세 3.3%만)
+  var _isBiz = x.isBiz!==undefined ? !!x.isBiz : !!(x.bizNum||x.bizNumber||'').replace(/-/g,'').replace(/\s/g,'');
+  var supplyAmt, expenseAmt, monthlyWage, empCalc, workCalc;
+  if(_isBiz){
+    // 개인사업자: VAT포함, 고용·산재 적용
+    supplyAmt  = Math.round(totalAmt / 1.1);
+    expenseAmt = Math.round(supplyAmt * 0.346);
+    monthlyWage= supplyAmt - expenseAmt;
+    empCalc    = monthlyWage >= 800000 ? Math.floor(monthlyWage * 0.008  / 10) * 10 : 0;
+    workCalc   = Math.floor(monthlyWage * 0.0088 / 10) * 10;
+  } else {
+    // 주민번호(비사업자): VAT 없음, 고용·산재 없음 → 원천세 3.3%만
+    supplyAmt  = totalAmt;  // VAT 없음
+    expenseAmt = 0;
+    monthlyWage= totalAmt;
+    empCalc    = 0;
+    workCalc   = 0;
+  }
+  var TAX_RATE = +x.taxRate || (_isBiz ? 0 : 0.033);
+  var tax  = +x.tax  || (x.taxFixed ? +x.taxFixed : (_isBiz ? 0 : Math.round(income * TAX_RATE)));
   var emp  = (x.emp !== undefined && x.emp !== null && x.emp !== '' && +x.emp > 0) ? +x.emp : empCalc;
-  // ★ v9.25: 산재 저장값이 계산값의 50% 미만이면 비정상 → 자동 재계산
   var workStored = (x.work !== undefined && x.work !== null && x.work !== '' && +x.work > 0) ? +x.work : 0;
-  var work = (workStored && workCalc > 0 && workStored >= workCalc * 0.5) ? workStored : workCalc;
+  var work = _isBiz ? ((workStored && workCalc > 0 && workStored >= workCalc * 0.5) ? workStored : workCalc) : 0;
   var eq   = +x.eq  || 0;
   var dmg  = +x.dmg || +x.damage || 0;
   var adv  = +x.adv || +x.advance || 0;
@@ -20758,18 +20768,22 @@ function pageStats(){
   if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
   // 탭 UI
   el.innerHTML='<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">'
-    +'<button id="stat-tab-month" class="btn btn-blue" onclick="_statTab(\'month\')" style="font-size:12px">📅 월별 현황</button>'
-    +'<button id="stat-tab-total" class="btn" onclick="_statTab(\'total\')" style="font-size:12px">📊 총 합계</button>'
+    +'<button id="stat-tab-month" class="btn btn-blue" onclick="_statTab(\'month\')" style="font-size:12px">📅 AI정산 월별</button>'
+    +'<button id="stat-tab-total" class="btn" onclick="_statTab(\'total\')" style="font-size:12px">📊 AI정산 합계</button>'
     +'<button id="stat-tab-camp" class="btn" onclick="_statTab(\'camp\')" style="font-size:12px">🏕 캠프별</button>'
+    +'<button id="stat-tab-delivery" class="btn" onclick="_statTab(\'delivery\')" style="font-size:12px">🛵 배달대행</button>'
+    +'<button id="stat-tab-combined" class="btn" onclick="_statTab(\'combined\')" style="font-size:12px">💰 통합 순수익</button>'
     +'</div>'
     +'<div id="stat-content"><div class="loading">로딩 중...</div></div>';
   function _statTab(tab){
-    ['month','total','camp'].forEach(function(t){
+    ['month','total','camp','delivery','combined'].forEach(function(t){
       var btn=document.getElementById('stat-tab-'+t);
       if(btn)btn.className='btn'+(t===tab?' btn-blue':'');
     });
-    _statRender(tab,_statData);
+    if(tab==='delivery'){_statRenderDelivery();return;}
+    if(tab==='combined'){_statRenderCombined();return;}
   }
+    _statRender(tab,_statData);
   var _statData=null;
   var _did2=_CU.dealerId;
   // settlements + expenses 병렬 로딩
@@ -20961,6 +20975,122 @@ function pageStats(){
         }).join('')+'</tbody></table>';
       rankCard.appendChild(rtbl);el.appendChild(rankCard);
     }).catch(function(e){logError('통계',e.message);el.innerHTML='<div class="empty">❌ '+e.message+'</div>';});
+}
+
+
+// ══ 배달대행 통계 렌더 ══
+function _statRenderDelivery(){
+  var sc=document.getElementById('stat-content');
+  if(!sc||!_db||!_CU)return;
+  sc.innerHTML='<div class="loading">배달대행 데이터 로딩 중...</div>';
+  var did=_CU.dealerId;
+  _db.collection('delivery_sessions').where('dealerId','==',did).get()
+  .then(function(snap){
+    if(snap.empty){sc.innerHTML='<div class="empty">배달대행 데이터 없음</div>';return;}
+    var byMonth={};
+    snap.forEach(function(d){
+      var s=d.data();
+      var mo=(s.ym||s.month||s.yearWeek||'').slice(0,7);
+      if(!mo)return;
+      if(!byMonth[mo])byMonth[mo]={revenue:0,cost:0,inj:0,ext:0,cnt:0,sessions:0};
+      byMonth[mo].revenue+=(s.totalPf||s.pfSum||0);
+      byMonth[mo].cost+=(s.totalNet||s.netPay||0);
+      byMonth[mo].inj+=(s.bonusTotal||s.totalInj||0);
+      byMonth[mo].ext+=(s.deductTotal||s.totalExt||0);
+      byMonth[mo].cnt+=(s.totalCount||0);
+      byMonth[mo].sessions++;
+    });
+    var months=Object.keys(byMonth).sort().reverse();
+    if(!months.length){sc.innerHTML='<div class="empty">집계 데이터 없음</div>';return;}
+    var html='<div class="card" style="margin-bottom:14px">'      +'<div class="ch"><span class="ct">🛵 배달대행 월별 순수익</span></div>'      +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'      +'<thead><tr style="background:var(--bg3)">'      +'<th style="padding:8px">월</th>'      +'<th style="padding:8px;text-align:right">📊 플랫폼 매출</th>'      +'<th style="padding:8px;text-align:right">💸 기사 지급</th>'      +'<th style="padding:8px;text-align:right">📥 보전</th>'      +'<th style="padding:8px;text-align:right">📤 환수</th>'      +'<th style="padding:8px;text-align:right;color:#059669">💰 순수익</th>'      +'</tr></thead><tbody>';
+    months.forEach(function(mo,i){
+      var d=byMonth[mo];
+      var profit=d.revenue-d.cost;
+      var marginRate=d.revenue>0?((profit/d.revenue)*100).toFixed(1):0;
+      html+='<tr style="border-bottom:1px solid var(--border);'+(i===0?'background:rgba(59,130,246,.06)':'')+'">'
+        +'<td style="padding:8px"><strong>'+mo+'</strong>'+(i===0?'<span style="margin-left:4px;background:#dbeafe;color:#1d4ed8;padding:0 4px;border-radius:8px;font-size:9px">최신</span>':'')
+        +'<div style="font-size:10px;color:var(--text3)">'+d.cnt.toLocaleString()+'건 · '+d.sessions+'세션</div></td>'
+        +'<td style="padding:8px;text-align:right;font-weight:700;color:var(--green)">₩'+fmt(d.revenue)+'</td>'
+        +'<td style="padding:8px;text-align:right;color:var(--blue)">-₩'+fmt(d.cost)+'</td>'
+        +'<td style="padding:8px;text-align:right;color:#1d4ed8;font-size:11px">+₩'+fmt(d.inj)+'</td>'
+        +'<td style="padding:8px;text-align:right;color:#be185d;font-size:11px">-₩'+fmt(d.ext)+'</td>'
+        +'<td style="padding:8px;text-align:right">'
+        +'<div style="background:'+(profit>=0?'#059669':'#dc2626')+';color:#fff;font-weight:900;font-size:13px;padding:5px 8px;border-radius:8px;display:inline-block">₩'+fmt(Math.abs(profit))+'</div>'
+        +'<div style="font-size:10px;color:var(--text3);margin-top:2px">마진율 '+marginRate+'%</div>'
+        +'</td></tr>';
+    });
+    html+='</tbody></table></div></div>';
+    sc.innerHTML=html;
+  }).catch(function(e){sc.innerHTML='<div class="empty">오류: '+e.message+'</div>';});
+}
+
+// ══ 통합 순수익 (AI정산 + 배달대행) ══
+function _statRenderCombined(){
+  var sc=document.getElementById('stat-content');
+  if(!sc||!_db||!_CU)return;
+  sc.innerHTML='<div class="loading">데이터 로딩 중...</div>';
+  var did=_CU.dealerId;
+  Promise.all([
+    _db.collection('settlements').where('dealerId','==',did).get(),
+    _db.collection('delivery_sessions').where('dealerId','==',did).get(),
+    _db.collection('expenses').where('dealerId','==',did).get(),
+    _db.collection('settings').doc(did+'_fixedExpenses').get()
+  ]).then(function(results){
+    var settleSnap=results[0], dwSnap=results[1], expSnap=results[2], fixSnap=results[3];
+    var fixedMonthly=(fixSnap.exists?(fixSnap.data().items||[]):[]).reduce(function(s,i){return s+(i.amount||0);},0);
+    var expByMonth={};
+    expSnap.forEach(function(d){
+      var e=d.data(); var mo=(e.date||e.ym||'').slice(0,7); if(!mo)return;
+      if(!expByMonth[mo])expByMonth[mo]=0; expByMonth[mo]+=(e.amount||0);
+    });
+    // AI정산 월별 집계
+    var aiByMonth={};
+    settleSnap.forEach(function(d){
+      var s=d.data(); var mo=s.month||''; if(!mo)return;
+      var r=calcNet(s);
+      var ct=s.coupangTotal||(((s.damt||0)+(s.ramt||0)+(s.fresh||0)+(s.inc||0)+(s.nocont||0)))||0;
+      var totalVat=ct?Math.round(ct*1.1):(r.income||0);
+      var mw=r.monthlyWage||0;
+      var insComp=(mw>=800000?Math.floor(mw*0.009/10)*10:0)+Math.floor(mw*0.0088/10)*10;
+      if(!aiByMonth[mo])aiByMonth[mo]={revenue:0,cost:0,ins:0};
+      aiByMonth[mo].revenue+=totalVat;
+      aiByMonth[mo].cost+=(r.net||0);
+      aiByMonth[mo].ins+=insComp;
+    });
+    // 배달대행 월별 집계
+    var dwByMonth={};
+    dwSnap.forEach(function(d){
+      var s=d.data(); var mo=(s.ym||s.month||'').slice(0,7); if(!mo)return;
+      if(!dwByMonth[mo])dwByMonth[mo]={revenue:0,cost:0};
+      dwByMonth[mo].revenue+=(s.totalPf||s.pfSum||0);
+      dwByMonth[mo].cost+=(s.totalNet||s.netPay||0);
+    });
+    // 전체 월 합집합
+    var allMonths=[...new Set([...Object.keys(aiByMonth),...Object.keys(dwByMonth)])].sort().reverse();
+    if(!allMonths.length){sc.innerHTML='<div class="empty">데이터 없음</div>';return;}
+    var html='<div class="card">'      +'<div class="ch"><span class="ct">💰 통합 순수익 (AI정산 + 배달대행)</span></div>'      +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'      +'<thead><tr style="background:var(--bg3)">'      +'<th style="padding:8px">월</th>'      +'<th style="padding:8px;text-align:right">📦 AI정산 순수익</th>'      +'<th style="padding:8px;text-align:right">🛵 배달대행 순수익</th>'      +'<th style="padding:8px;text-align:right">📦 경비</th>'      +'<th style="padding:8px;text-align:right;color:#059669">💰 통합 순수익</th>'      +'</tr></thead><tbody>';
+    allMonths.forEach(function(mo,i){
+      var ai=aiByMonth[mo]||{revenue:0,cost:0,ins:0};
+      var dw=dwByMonth[mo]||{revenue:0,cost:0};
+      var exp=(expByMonth[mo]||0)+fixedMonthly;
+      var aiProfit=ai.revenue-ai.cost-ai.ins;
+      var dwProfit=dw.revenue-dw.cost;
+      var totalProfit=aiProfit+dwProfit-exp;
+      var totalRevenue=ai.revenue+dw.revenue;
+      var marginRate=totalRevenue>0?((totalProfit/totalRevenue)*100).toFixed(1):0;
+      html+='<tr style="border-bottom:1px solid var(--border);'+(i===0?'background:rgba(59,130,246,.06)':'')+'">'
+        +'<td style="padding:8px"><strong>'+mo+'</strong>'+(i===0?'<span style="margin-left:4px;background:#dbeafe;color:#1d4ed8;padding:0 4px;border-radius:8px;font-size:9px">최신</span>':'')+'</td>'
+        +'<td style="padding:8px;text-align:right;color:'+(aiProfit>=0?'#059669':'#dc2626')+';font-weight:700">'+(aiProfit>=0?'':'−')+'₩'+fmt(Math.abs(aiProfit))+'</td>'
+        +'<td style="padding:8px;text-align:right;color:'+(dwProfit>=0?'#059669':'#dc2626')+';font-weight:700">'+(dwProfit>=0?'':'−')+'₩'+fmt(Math.abs(dwProfit))+'</td>'
+        +'<td style="padding:8px;text-align:right;color:#7c3aed">-₩'+fmt(exp)+'</td>'
+        +'<td style="padding:8px;text-align:right">'
+        +'<div style="background:'+(totalProfit>=0?'#059669':'#dc2626')+';color:#fff;font-weight:900;font-size:13px;padding:5px 8px;border-radius:8px;display:inline-block">₩'+fmt(Math.abs(totalProfit))+'</div>'
+        +'<div style="font-size:10px;color:var(--text3);margin-top:2px">마진율 '+marginRate+'%</div>'
+        +'</td></tr>';
+    });
+    html+='</tbody></table></div></div>';
+    sc.innerHTML=html;
+  }).catch(function(e){sc.innerHTML='<div class="empty">오류: '+e.message+'</div>';});
 }
 
 function _renderStats(settles,c){
@@ -23389,8 +23519,7 @@ window.addEventListener('load',function(){
     var _isProd = _host.includes('donway') || _host.includes('cloudflare') || _host.includes('workers.dev');
     if(_isProd){
       navigator.serviceWorker.register('/firebase-messaging-sw.js')
-        .then(function(reg){
-})
+        .then(function(reg){ console.log('[SW] 등록완료'); })
         .catch(function(e){console.warn('[DONWAY] SW 등록 실패:',e.message);});
     }
   }
