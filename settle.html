@@ -20668,16 +20668,21 @@ function pageStats(){
         var empComp=mw>=800000?Math.floor(mw*0.009/10)*10:0;
         var workComp=Math.floor(mw*0.0088/10)*10;
         var insComp=empComp+workComp;
-        // 순수익 = 총매출(VAT포함) - 기사실지급(VAT포함) - 회사보험료
-        var netProfit=totalVat-(r.net||0)-insComp;
-        if(!byMonth[mo])byMonth[mo]={cnt:0,dcnt:0,income:0,vat:0,totalVat:0,net:0,insComp:0,expense:0,profit:0};
+        // 부가세 계산
+        var driverSupply=Math.round((r.net||0)/1.1);    // 기사 세금계산서 공급가(VAT제외)
+        var driverVat=(r.net||0)-driverSupply;           // 기사 VAT
+        var payVat=vat-driverVat;                        // 납부 부가세 = 매출VAT - 매입VAT
+        if(payVat<0)payVat=0;
+        // 순수익 = 총매출(VAT포함) - 기사실지급 - 회사보험료 - 납부부가세
+        var netProfit=totalVat-(r.net||0)-insComp-payVat;
+        if(!byMonth[mo])byMonth[mo]={cnt:0,dcnt:0,income:0,vat:0,totalVat:0,net:0,insComp:0,payVat:0,expense:0,profit:0};
         byMonth[mo].cnt++;byMonth[mo].dcnt+=(s.dcnt||0);
         byMonth[mo].income+=supplyAmt;byMonth[mo].vat+=vat;byMonth[mo].totalVat+=totalVat;
-        byMonth[mo].net+=r.net||0;byMonth[mo].insComp+=insComp;byMonth[mo].profit+=netProfit;
-        if(!byCamp[cc])byCamp[cc]={cnt:0,dcnt:0,income:0,vat:0,totalVat:0,net:0,insComp:0,profit:0};
+        byMonth[mo].net+=r.net||0;byMonth[mo].insComp+=insComp;byMonth[mo].payVat+=payVat;byMonth[mo].profit+=netProfit;
+        if(!byCamp[cc])byCamp[cc]={cnt:0,dcnt:0,income:0,vat:0,totalVat:0,net:0,insComp:0,payVat:0,profit:0};
         byCamp[cc].cnt++;byCamp[cc].dcnt+=(s.dcnt||0);
         byCamp[cc].income+=supplyAmt;byCamp[cc].vat+=vat;byCamp[cc].totalVat+=totalVat;
-        byCamp[cc].net+=r.net||0;byCamp[cc].insComp+=insComp;byCamp[cc].profit+=netProfit;
+        byCamp[cc].net+=r.net||0;byCamp[cc].insComp+=insComp;byCamp[cc].payVat+=payVat;byCamp[cc].profit+=netProfit;
       });
       // 경비(변동+고정)를 월별 profit에서 차감
       Object.keys(byMonth).forEach(function(mo){
@@ -20726,29 +20731,32 @@ function pageStats(){
       var cCard=document.createElement('div');cCard.className='card';
       cCard.innerHTML='<div class="ch"><span class="ct">🏕 캠프별 현황</span></div>'
         +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'
-        +'<thead><tr style="background:var(--bg3)">'
-        +'<th style="padding:8px">캠프</th>'
-        +'<th style="padding:8px;text-align:right">총매출(VAT포함)</th>'
-        +'<th style="padding:8px;text-align:right">기사실지급</th>'
-        +'<th style="padding:8px;text-align:right">보험료+경비</th>'
-        +'<th style="padding:8px;text-align:right;color:#059669">🏢 순수익</th>'
-        +'</tr></thead><tbody>'
+        +'<thead><tr style="background:var(--bg3)">'+
+        '<th style="padding:8px">캠프</th>'+
+        '<th style="padding:8px;text-align:right">📈 총매출</th>'+
+        '<th style="padding:8px;text-align:right">💸 기사실지급</th>'+
+        '<th style="padding:8px;text-align:right">🏥 보험료</th>'+
+        '<th style="padding:8px;text-align:right">🧾 납부부가세</th>'+
+        '<th style="padding:8px;text-align:right;color:#059669">🏢 순수익</th>'+
+        '</tr></thead><tbody>'
         +camps.map(function(cc){
           var d=byCamp[cc];var col=_campColor(cc);
-          var tot=d.totalVat; // 총매출(VAT포함) - 대시보드와 동일
+          var tot=d.totalVat;
+          var marginRate=tot>0?((d.profit/tot)*100).toFixed(1):0;
           return '<tr style="border-bottom:1px solid var(--border)">'
-            +'<td style="padding:8px"><span style="background:'+col+';color:#fff;padding:2px 8px;border-radius:100px;font-size:11px;font-weight:700">'+esc(cc)+'</span></td>'
+            +'<td style="padding:8px"><span style="background:'+col+';color:#fff;padding:2px 8px;border-radius:100px;font-size:11px;font-weight:700">'+esc(cc)+'</span>'
+            +'<div style="font-size:10px;color:var(--text3);margin-top:2px">'+fmt(d.dcnt)+'건</div></td>'
+            +'<td style="padding:8px;text-align:right;font-weight:700;color:var(--green)">₩'+fmt(tot)+'</td>'
+            +'<td style="padding:8px;text-align:right;color:var(--blue);font-weight:700">-₩'+fmt(d.net)+'</td>'
+            +'<td style="padding:8px;text-align:right;color:#dc2626">-₩'+fmt(d.insComp)+'</td>'
+            +'<td style="padding:8px;text-align:right;color:#f97316">-₩'+fmt(d.payVat||0)+'</td>'
             +'<td style="padding:8px;text-align:right">'
-              +'<div style="font-weight:700;color:var(--green)">₩'+fmt(tot)+'</div>'
-              +'<div style="font-size:10px;color:var(--text3);margin-top:2px">'+fmt(d.dcnt)+'건</div>'
-            +'</td>'
-            +'<td style="padding:8px;text-align:right;color:var(--blue);font-weight:700">₩'+fmt(d.net)+'</td>'
-            +'<td style="padding:8px;text-align:right;color:#dc2626;font-weight:700">-₩'+fmt(d.insComp)+(d.expense>0?'<br><span style="font-size:10px;color:#f97316">경비 -₩'+fmt(d.expense)+'</span>':'')+'</td>'
-            +'<td style="padding:8px;text-align:right">'
-            +'<td style="padding:8px;text-align:right"><div style="background:'+(d.profit>=0?'#059669':'#dc2626')+';color:#fff;font-weight:900;font-size:14px;padding:6px 10px;border-radius:8px;display:inline-block">₩'+fmt(Math.abs(d.profit))+'</div>'+(d.expense>0?'<div style="font-size:9px;color:var(--text3);margin-top:3px">경비 반영</div>':'')+'</td>'
+              +'<div style="background:'+(d.profit>=0?'#059669':'#dc2626')+';color:#fff;font-weight:900;font-size:13px;padding:5px 8px;border-radius:8px;display:inline-block">₩'+fmt(Math.abs(d.profit))+'</div>'
+              +'<div style="font-size:10px;color:var(--text3);margin-top:2px">마진율 '+marginRate+'%</div>'
             +'</td>'
             +'</tr>';
         }).join('')+'</tbody></table></div>';
+
       grid.appendChild(cCard);
       // _statRender 함수
       function _statRender(tab,data){
