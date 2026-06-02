@@ -14431,12 +14431,16 @@ function _speakDonway(type, body){
   try{
     window.speechSynthesis.cancel();
     var typeText = {
-      'payslip':'정산 명세서가',
-      'tax_invoice':'세금계산서가',
-      'notice':'공지사항이',
-      'settlement':'정산이'
-    }[type] || '알림이';
-    var msg = new SpeechSynthesisUtterance('돈웨이. ' + typeText + ' 도착했습니다.');
+      'payslip':'정산 명세서',
+      'tax_invoice':'세금계산서',
+      'notice':'공지사항',
+      'settlement':'정산'
+    }[type] || '알림';
+    // 공지 내용이 있으면 내용까지 읽어줌
+    var speakText = body
+      ? '돈웨이. ' + body
+      : '돈웨이. ' + typeText + '가 도착했습니다.';
+    var msg = new SpeechSynthesisUtterance(speakText);
     msg.lang = 'ko-KR';
     msg.rate = 0.9;
     msg.pitch = 1.1;
