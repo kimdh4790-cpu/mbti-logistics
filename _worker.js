@@ -404,16 +404,13 @@ export default {
       });
     }
 
-    // ── mbtico.kr 도메인 → universal_settle.html 서빙 ──
+    // ── mbtico.kr 도메인 → universal_settle.html 서빙 (모든 경로) ──
     if (hostname.includes('mbtico.kr')) {
-      if (path === '/' || path === '' || path === '/app' || path === '/app/') {
-        const resp = await fetchAsset('/universal_settle.html', request);
-        const html = await resp.text();
-        const key = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
-        const injected = html.replace('</head>', '<script>window.__AK=' + JSON.stringify(key) + ';</script>\n</head>');
-        return new Response(injected, { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
-      }
-      // mbtico.kr 나머지 경로는 아래 공통 처리로 fall-through
+      const resp = await fetchAsset('/universal_settle.html', request);
+      const html = await resp.text();
+      const key = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
+      const injected = html.replace('</head>', '<script>window.__AK=' + JSON.stringify(key) + ';</script>\n</head>');
+      return new Response(injected, { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
     }
 
     // ★ 루트 접속 → 랜딩페이지 리라이트 (URL 유지, workers.dev 제외)
