@@ -2809,9 +2809,8 @@ function showApp(){
   // FCM 푸시 알림 등록 (전체 — 관리자/대리점 + 기사 모두)
   _fcmRegFailed = false;  // 로그인마다 FCM 재시도
   setTimeout(_registerFCM, 2000);
-  if(_CU.role !== 'driver' && _CU.role !== 'member'){
-    setTimeout(_initFCMReceiver, 1000);
-  }
+  // 관리자/기사 모두 포그라운드 핸들러 등록
+  setTimeout(_initFCMReceiver, 1000);
   // ★ 구 localStorage 데이터 마이그레이션 (mbti_ → dw_{uid}_)
   if(_CU&&_CU.dealerId){
     var _did=_CU.dealerId;
