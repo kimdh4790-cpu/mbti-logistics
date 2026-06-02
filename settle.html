@@ -124,6 +124,7 @@ tr:hover>td{background:var(--bg3)}
 // 개발자도구 차단 해제 (개발중)
 </script>
 <script src="https://cdn.iamport.kr/v1/iamport.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
 <script>
@@ -13216,12 +13217,11 @@ function _viewMyStatement(el){
         +'<div style="border-top:1px solid var(--border);padding-top:8px;display:flex;justify-content:space-between"><span style="font-weight:700">실지급액</span><span style="font-size:18px;font-weight:900;color:var(--primary)">'+net.toLocaleString()+'원</span></div>'
         +'</div>';
     }
+    var imgSection=d.img?'<div style="margin-bottom:12px;border-radius:10px;overflow:hidden;border:1px solid var(--border)"><img src="'+d.img+'" style="width:100%;display:block" loading="lazy"></div>':'';
     md.innerHTML='<div class="mdt">'+(isTax?'🧾 세금계산서':'📄 정산명세서')+'</div>'
       +'<div style="padding:16px">'
-      +'<div style="background:var(--bg2);border-radius:12px;padding:16px;margin-bottom:12px">'
-      +'<div style="font-size:16px;font-weight:800;margin-bottom:12px">'+esc(d.month||'')+(isTax?' 세금계산서':' 정산명세서')+'</div>'
-      +bodyHtml
-      +'</div>'
+      +imgSection
+      +(d.img?'':'<div style="background:var(--bg2);border-radius:12px;padding:16px;margin-bottom:12px"><div style="font-size:16px;font-weight:800;margin-bottom:12px">'+esc(d.month||'')+(isTax?' 세금계산서':' 정산명세서')+'</div>'+bodyHtml+'</div>')
       +'<div style="font-size:11px;color:var(--text3);text-align:center">엠비티아이 유한회사 · 051-711-3103</div>'
       +'</div>'
       +'<div class="mdf"><button class="btn" onclick="this.closest(\'.mo\').remove()">닫기</button></div>';
@@ -19336,32 +19336,88 @@ function _getFcmToken(did, uid, driverName){
       return null;
     });
 }
+
+// ── Firebase Storage REST 업로드 (base64 → URL)
+function _uploadImgToStorage(base64Data, path){
+  return new Promise(function(resolve){
+    try{
+      var bucket='mbti-logistics.firebasestorage.app';
+      var url='https://firebasestorage.googleapis.com/v0/b/'+bucket+'/o?uploadType=media&name='+encodeURIComponent(path);
+      var byteStr=atob(base64Data.split(',')[1]);
+      var ab=new ArrayBuffer(byteStr.length);
+      var ia=new Uint8Array(ab);
+      for(var i=0;i<byteStr.length;i++)ia[i]=byteStr.charCodeAt(i);
+      var blob=new Blob([ab],{type:'image/jpeg'});
+      firebase.auth().currentUser.getIdToken().then(function(tk){
+        fetch(url,{method:'POST',headers:{'Authorization':'Bearer '+tk,'Content-Type':'image/jpeg'},body:blob})
+        .then(function(res){return res.json();})
+        .then(function(data){
+          var dlUrl='https://firebasestorage.googleapis.com/v0/b/'+bucket+'/o/'+encodeURIComponent(data.name)+'?alt=media&token='+(data.downloadTokens||'');
+          resolve(dlUrl);
+        }).catch(function(){resolve(base64Data);});
+      }).catch(function(){resolve(base64Data);});
+    }catch(e){resolve(base64Data);}
+  });
+}
+
 function _sendPayslipPush(x,r,name,month,net,vatIncome,docId){
   var did=_CU.dealerId,uid=x.userId||x.driverId||'';
-  var docUrl='https://donway.ai.kr/settle?taxShare=payslip_'+docId;
   var title='💰 '+month+' 정산명세서 도착';
   var body=name+'님 실지급액: ₩'+fmt(net);
-  // 1) driver_notifications 저장
-  _db.collection('driver_notifications').add({
-    dealerId:did,targetDriverId:uid,targetDriverName:name,type:'payslip',
-    title:title,body:body,docUrl:docUrl,
-    net:net,vatIncome:vatIncome,emp:(x.emp||r.emp||0),month:month,isRead:false,
-    createdAt:firebase.firestore.FieldValue.serverTimestamp()
-  }).catch(function(){});
-  // 2) fcmToken 조회
-  _getFcmToken(did, uid, name)
-    .then(function(fcmToken){
-      if(!fcmToken||fcmToken.length<20){
-        toast('⚠️ '+name+'님 앱 미설치 — 푸시 불가');return;
-      }
-      return fetch('/fcm/notify-drivers',{
-        method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({tokens:[fcmToken],title:title,body:body,type:'payslip'})
-      }).then(function(res){return res.json();}).then(function(j){
-        if(j.sent>0) toast('✅ 앱 푸시 발송 — '+name+'님');
-        else toast('⚠️ '+name+'님 푸시 실패 — '+JSON.stringify(j));
+
+  // 1) 명세서 모달 열고 캡처
+  toast('📸 '+name+'님 명세서 이미지 생성 중...');
+  // 현재 열려있는 mo-se 모달 캡처 시도
+  var wrap=document.querySelector('#mo-se .stmt-capture-area')||document.querySelector('#mo-se');
+  if(typeof html2canvas==='undefined'||!wrap){
+    // html2canvas 없거나 모달 없으면 텍스트만 저장
+    _sendPayslipNotification(did,uid,name,title,body,month,net,vatIncome,x,null);
+    return;
+  }
+  // 스크롤 영역 펼쳐서 전체 캡처
+  var bodyEl=wrap.querySelector('[style*="max-height"]');
+  var origMaxH='';
+  if(bodyEl){origMaxH=bodyEl.style.maxHeight;bodyEl.style.maxHeight='none';}
+  setTimeout(function(){
+    var wrapW=wrap.scrollWidth,wrapH=wrap.scrollHeight;
+    html2canvas(wrap,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false,
+      width:wrapW,height:wrapH,windowWidth:wrapW,windowHeight:wrapH})
+    .then(function(canvas){
+      if(bodyEl)bodyEl.style.maxHeight=origMaxH;
+      var dataUrl=canvas.toDataURL('image/jpeg',0.9);
+      if(dataUrl.length>900000) dataUrl=canvas.toDataURL('image/jpeg',0.75);
+      var path='settlements/'+did+'/'+month+'_'+uid+'_stmt_'+Date.now()+'.jpg';
+      _uploadImgToStorage(dataUrl,path).then(function(imgUrl){
+        _sendPayslipNotification(did,uid,name,title,body,month,net,vatIncome,x,imgUrl);
       });
-    }).catch(function(e){toast('❌ '+e.message);});
+    }).catch(function(e){
+      if(bodyEl)bodyEl.style.maxHeight=origMaxH;
+      _sendPayslipNotification(did,uid,name,title,body,month,net,vatIncome,x,null);
+    });
+  },400);
+}
+
+function _sendPayslipNotification(did,uid,name,title,body,month,net,vatIncome,x,imgUrl){
+  // driver_notifications 저장
+  var notifData={
+    dealerId:did,targetDriverId:uid,targetDriverName:name,type:'payslip',
+    title:title,body:body,
+    net:net,vatIncome:vatIncome,emp:(x.emp||0),month:month,isRead:false,
+    createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  };
+  if(imgUrl) notifData.img=imgUrl;
+  _db.collection('driver_notifications').add(notifData).catch(function(){});
+  // FCM 푸시
+  _getFcmToken(did,uid,name).then(function(fcmToken){
+    if(!fcmToken||fcmToken.length<20){toast('⚠️ '+name+'님 앱 미설치 — 푸시 불가');return;}
+    fetch('/fcm/notify-drivers',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({tokens:[fcmToken],title:title,body:body,type:'payslip'})
+    }).then(function(res){return res.json();}).then(function(j){
+      if(j.sent>0) toast('✅ 명세서 발송 완료 — '+name+'님'+(imgUrl?' (이미지 포함)':''));
+      else toast('⚠️ '+name+'님 푸시 실패 — 알림 등록 필요');
+    });
+  }).catch(function(e){toast('❌ '+e.message);});
 }
 
 // ══════════════════════════════════════════════════
@@ -19486,26 +19542,67 @@ function _sendTaxInvoicePush(x,r,name,month,vatIncome,docId){
   var supply=fmt(Math.round(vatIncome/1.1));
   var title='🧾 '+month+' 세금계산서 발행';
   var body=name+'님 공급가액: ₩'+supply;
-  // 1) driver_notifications 저장
-  _db.collection('driver_notifications').add({
+
+  // 세금계산서 모달이 열려있으면 캡처, 없으면 자동으로 열고 캡처
+  toast('📸 '+name+'님 세금계산서 이미지 생성 중...');
+  function _doTaxCapture(){
+    var wrap=document.getElementById('tax-invoice-wrap');
+    if(typeof html2canvas==='undefined'||!wrap){
+      _sendTaxNotification(did,uid,name,title,body,month,vatIncome,null);
+      return;
+    }
+    var wrapW=wrap.scrollWidth,wrapH=wrap.scrollHeight;
+    html2canvas(wrap,{scale:2.5,useCORS:true,backgroundColor:'#ffffff',logging:false,
+      width:wrapW,height:wrapH,windowWidth:wrapW,windowHeight:wrapH})
+    .then(function(canvas){
+      var dataUrl=canvas.toDataURL('image/jpeg',0.95);
+      if(dataUrl.length>900000) dataUrl=canvas.toDataURL('image/jpeg',0.85);
+      if(dataUrl.length>900000) dataUrl=canvas.toDataURL('image/jpeg',0.75);
+      var path='tax_invoices/'+did+'/'+month+'_'+uid+'_'+Date.now()+'.jpg';
+      _uploadImgToStorage(dataUrl,path).then(function(imgUrl){
+        _sendTaxNotification(did,uid,name,title,body,month,vatIncome,imgUrl);
+        // 자동 열린 모달이면 닫기
+        var autoMo=document.getElementById('mo-tax-auto');
+        if(autoMo)autoMo.remove();
+      });
+    }).catch(function(){
+      _sendTaxNotification(did,uid,name,title,body,month,vatIncome,null);
+    });
+  }
+
+  var existWrap=document.getElementById('tax-invoice-wrap');
+  if(existWrap){
+    // 이미 모달 열려있음
+    setTimeout(_doTaxCapture,300);
+  } else {
+    // 자동으로 세금계산서 모달 열고 캡처
+    openTaxInvoice(x.id||x.fbId||docId);
+    setTimeout(function(){
+      var mo=document.querySelector('#mo-se ~ .mo')||document.querySelector('.mo:last-child');
+      if(mo)mo.id='mo-tax-auto';
+      _doTaxCapture();
+    },700);
+  }
+}
+
+function _sendTaxNotification(did,uid,name,title,body,month,vatIncome,imgUrl){
+  var notifData={
     dealerId:did,targetDriverId:uid,targetDriverName:name,type:'tax_invoice',
     title:title,body:body,vatIncome:vatIncome,month:month,isRead:false,
     createdAt:firebase.firestore.FieldValue.serverTimestamp()
-  }).catch(function(){});
-  // 2) fcmToken 조회
-  _getFcmToken(did, uid, name)
-    .then(function(fcmToken){
-      if(!fcmToken||fcmToken.length<20){
-        toast('⚠️ '+name+'님 앱 미설치 — 푸시 불가');return;
-      }
-      return fetch('/fcm/notify-drivers',{
-        method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({tokens:[fcmToken],title:title,body:body,type:'tax_invoice'})
-      }).then(function(res){return res.json();}).then(function(j){
-        if(j.sent>0) toast('✅ 세금계산서 앱 푸시 — '+name+'님');
-        else toast('⚠️ '+name+'님 푸시 실패 — '+JSON.stringify(j));
-      });
-    }).catch(function(e){toast('❌ '+e.message);});
+  };
+  if(imgUrl) notifData.img=imgUrl;
+  _db.collection('driver_notifications').add(notifData).catch(function(){});
+  _getFcmToken(did,uid,name).then(function(fcmToken){
+    if(!fcmToken||fcmToken.length<20){toast('⚠️ '+name+'님 앱 미설치 — 푸시 불가');return;}
+    fetch('/fcm/notify-drivers',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({tokens:[fcmToken],title:title,body:body,type:'tax_invoice'})
+    }).then(function(res){return res.json();}).then(function(j){
+      if(j.sent>0) toast('✅ 세금계산서 발송 완료 — '+name+'님'+(imgUrl?' (이미지 포함)':''));
+      else toast('⚠️ '+name+'님 푸시 실패 — 알림 등록 필요');
+    });
+  }).catch(function(e){toast('❌ '+e.message);});
 }
 
 // 팀장 수수료
