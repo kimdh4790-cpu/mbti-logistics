@@ -23873,9 +23873,20 @@ window.addEventListener('load',function(){
     var _host = window.location.hostname;
     var _isProd = _host.includes('donway') || _host.includes('cloudflare') || _host.includes('workers.dev');
     if(_isProd){
-      navigator.serviceWorker.register('/firebase-messaging-sw.js')
-        .then(function(reg){ console.log('[SW] 등록완료'); })
-        .catch(function(e){console.warn('[DONWAY] SW 등록 실패:',e.message);});
+      // 슬러그 모드면 슬러그 경로 SW 등록 (PWA 설치 가능하도록 scope 맞춤)
+      var _swPath = '/firebase-messaging-sw.js';
+      var _swOpts = {scope:'/'};
+      if(window._COMPANY_SLUG){
+        _swPath = '/'+window._COMPANY_SLUG+'/sw.js';
+        _swOpts = {scope:'/'+window._COMPANY_SLUG+'/'};
+      }
+      navigator.serviceWorker.register(_swPath, _swOpts)
+        .then(function(reg){ console.log('[SW] 등록완료 scope:', reg.scope); })
+        .catch(function(e){
+          // 슬러그 SW 실패 시 기본 SW로 fallback
+          navigator.serviceWorker.register('/firebase-messaging-sw.js')
+            .catch(function(){});
+        });
     }
   }
   initFirebase(); // Firebase 즉시 초기화
