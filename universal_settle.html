@@ -794,14 +794,9 @@ function _parseDeliveryRateExcel(wb){
 }
 
 function _applyDeliveryRateTable(parsed){
-  // 트랙 단가 적용
+  // 트랙 단가 적용 — 파일 기준으로 완전 교체 (구간 개수/값 제한 없음)
   if(parsed.tracks && parsed.tracks.length){
-    // 기존 트랙 단가 업데이트
-    parsed.tracks.forEach(function(pt){
-      DW_TRACKS.forEach(function(t){
-        if(pt.min===t.min) t.price=pt.price;
-      });
-    });
+    _setDwTracks(parsed.tracks);
   }
   // 슬롯 단가 적용
   if(parsed.slots){
@@ -891,14 +886,27 @@ function _isDeliverySheet(headers){
   return hasRider && (hasFee || hasTime);
 }
 
-// ── 건수별 트랙 단가 (기본값)
+// ── 건수별 트랙 단가 (동적 — 파일 업로드로 완전 교체 가능)
 var DW_TRACKS = [
-  {min:350, max:Infinity, price:5500, label:'350건+ 트랙',    key:'t350'},
-  {min:300, max:350,      price:5200, label:'300~349건 트랙', key:'t300'},
-  {min:250, max:300,      price:5100, label:'250~299건 트랙', key:'t250'},
-  {min:180, max:250,      price:4200, label:'180~249건 트랙', key:'t180'},
-  {min:0,   max:180,      price:0,    label:'180건 미만',      key:'t0'}
+  {min:350, max:Infinity, price:5500, label:'350건+ 트랙'},
+  {min:300, max:350,      price:5300, label:'300~349건 트랙'},
+  {min:250, max:300,      price:5100, label:'250~299건 트랙'},
+  {min:180, max:250,      price:4200, label:'180~249건 트랙'},
+  {min:0,   max:180,      price:0,    label:'180건 미만(기본단가)'}
 ];
+
+// 트랙 완전 교체 (파일 업로드 시 구간/개수 제한 없이 그대로 적용)
+function _setDwTracks(arr){
+  DW_TRACKS = arr.map(function(t){
+    return {
+      min:   isFinite(+t.min)   ? +t.min   : 0,
+      max:   isFinite(+t.max)   ? +t.max   : Infinity,
+      price: +t.price || 0,
+      label: t.label || (+t.min+'건 이상')
+    };
+  });
+  DW_TRACKS.sort(function(a,b){return b.min-a.min;}); // 내림차순
+}
 
 // ── 시간대별 슬롯 단가 (기본값)
 var DW_SLOTS = {
@@ -1162,14 +1170,18 @@ function _dwOpenDeliverySettings(){
   mo.className='mo show';
   mo.onclick=function(e){if(e.target===mo)mo.remove();};
 
-  var trackRows = DW_TRACKS.map(function(t){
-    if(t.key==='t0') return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)"><span style="flex:1;font-size:12px;font-weight:700">'+t.label+'</span><span style="font-size:11px;color:var(--text3)">기본 계약단가 사용</span></div>';
+  var trackRows = DW_TRACKS.map(function(t, idx){
+    var isBase = t.price===0;
     return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">'
+      +'<span style="font-size:11px;color:var(--text3);min-width:80px">'+t.min+'건'+( isFinite(t.max)&&t.max<9999 ? '~'+(t.max-1)+'건' : '+ ' )+'</span>'
       +'<span style="flex:1;font-size:12px;font-weight:700">'+t.label+'</span>'
-      +'<input id="dw-t-'+t.key+'" type="number" value="'+t.price+'" min="0" step="100" style="width:90px;padding:5px 8px;border:1.5px solid var(--acc);border-radius:6px;font-size:13px;font-weight:700;text-align:right">'
-      +'<span style="font-size:11px;color:var(--text3)">원/건</span>'
+      +(isBase
+        ? '<span style="font-size:11px;color:var(--text3)">기본계약단가</span>'
+        : '<input class="dw-track-input" type="number" value="'+t.price+'" min="0" step="100" style="width:90px;padding:5px 8px;border:1.5px solid var(--acc);border-radius:6px;font-size:13px;font-weight:700;text-align:right">'
+          +'<span style="font-size:11px;color:var(--text3)">원/건</span>')
       +'</div>';
-  }).join('');
+  }).join('')
+  + '<div style="margin-top:8px;font-size:11px;color:var(--text3)">💡 구간단가표 파일 업로드 시 자동 교체됩니다 (구간 개수 제한 없음)</div>';
 
   var slotRows = Object.keys(DW_SLOTS).map(function(k){
     var s = DW_SLOTS[k];
@@ -1222,10 +1234,10 @@ function _dwApplyDeliverySettings(){
   var taxRadio = document.querySelector('input[name="dw-tax"]:checked');
   var isBiz = taxRadio ? taxRadio.value==='1' : false;
 
-  // 트랙 단가 업데이트
-  DW_TRACKS.forEach(function(t){
-    var el = document.getElementById('dw-t-'+t.key);
-    if(el) t.price = parseInt(el.value)||0;
+  // 트랙 단가 업데이트 (동적 - data-idx로 순서 매핑)
+  var trackInputs = document.querySelectorAll('.dw-track-input');
+  trackInputs.forEach(function(el, i){
+    if(DW_TRACKS[i]) DW_TRACKS[i].price = parseInt(el.value)||0;
   });
   // 슬롯 단가 업데이트
   Object.keys(DW_SLOTS).forEach(function(k){
