@@ -798,29 +798,37 @@ function _processCoupangSheet(wb, rawSheetName, lossSheetName){
   }
 
   // 최종 결과 생성
+  // ※ 쿠팡 총금액 = 기본배송금액(배송+반품 동일단가) + 가중요인금액 → 그대로 사용
+  // ※ 프레시백은 총금액에 미포함 → 별도 가산
+  // ※ 분실파손은 차감
+  // ※ 대리점 인센(incen)은 별도 추가 (기사별 설정)
   var results = Object.values(byId).map(function(g){
-    var lossAmt  = lossByID[g.id] || 0;
-    var netAmt   = g.total + g.fresh - lossAmt;
+    var lossAmt   = lossByID[g.id] || 0;
+    // 라우트단가표 있으면 단가 검증 가능 (추후 연동)
+    var netAmt    = g.total + g.fresh - lossAmt;  // 인센은 나중에 추가
+    var totalCnt  = g.delCnt + g.retCnt;  // 반품 = 배송과 동일 단가
     var dateRange = g.dates.length
       ? g.dates[0] + (g.dates.length>1 ? '~'+g.dates[g.dates.length-1] : '')
       : '';
     return {
-      name:     g.name || g.id,
-      id:       g.id,
-      dept:     g.camp,
-      count:    g.delCnt,
-      retCnt:   g.retCnt,
-      baseAmt:  g.baseAmt,
-      addInc:   g.addInc,
-      fresh:    g.fresh,
-      lossAmt:  lossAmt,
-      amount:   g.total,
-      net:      netAmt,
-      tax:      0,
-      period:   dateRange,
-      revenue:  g.total,
-      margin:   0,
-      rowCount: 1,
+      name:      g.name || g.id,
+      id:        g.id,
+      dept:      g.camp,
+      count:     g.delCnt,      // 배송건수
+      retCnt:    g.retCnt,      // 반품건수 (동일단가)
+      totalCnt:  totalCnt,      // 배송+반품 합계
+      baseAmt:   g.baseAmt,     // 기본배송단가금액 (반품포함)
+      addInc:    g.addInc,      // 쿠팡 가중요인 (총금액에 포함됨)
+      fresh:     g.fresh,       // 프레시백 인센티브
+      lossAmt:   lossAmt,       // 분실파손 차감
+      amount:    g.total,       // 쿠팡 총금액 (배송+반품+가중요인)
+      incen:     0,             // 대리점 추가 인센 (원/건, 기사별 설정)
+      net:       netAmt,        // 실지급액 (인센 설정 전)
+      tax:       0,
+      period:    dateRange,
+      revenue:   g.total,
+      margin:    0,
+      rowCount:  1,
       isCoupang: true,
     };
   });
@@ -1328,6 +1336,76 @@ function _renderStep3Multi(){
 }
 
 
+
+// ── 라우트단가표 파일 업로드 처리
+function _loadRateTable(inp){
+  var file = inp.files[0];
+  if(!file){ return; }
+  inp.value = '';
+  var ext = file.name.split('.').pop().toLowerCase();
+  var reader = new FileReader();
+
+  reader.onload = function(e){
+    var rateMap = {};
+    try{
+      if(ext === 'txt' || ext === 'csv'){
+        // 텍스트/CSV: "라우트번호,단가" 또는 탭/스페이스 구분
+        var lines = e.target.result.split(/\r?\n/);
+        lines.forEach(function(line){
+          line = line.trim();
+          if(!line) return;
+          var parts = line.split(/[,\t\s]+/);
+          if(parts.length >= 2){
+            var route = parts[0].trim().toUpperCase();
+            var price = parseFloat(parts[1].replace(/[,₩]/g,''));
+            if(route && !isNaN(price)) rateMap[route] = price;
+          }
+        });
+      } else {
+        // 엑셀: 첫 번째 시트, 헤더 자동 감지
+        var wb = XLSX.read(e.target.result, {type:'array'});
+        var ws = wb.Sheets[wb.SheetNames[0]];
+        var rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:false, defval:''});
+        // 헤더 찾기
+        var hdrIdx = 0;
+        for(var i=0;i<Math.min(rows.length,5);i++){
+          if(rows[i].filter(function(c){return c!=='';}).length >= 2){hdrIdx=i;break;}
+        }
+        var headers = rows[hdrIdx].map(function(h){return String(h).toLowerCase().replace(/\s/g,'');});
+        var routeCol = headers.findIndex(function(h){return h.includes('route')||h.includes('라우트')||h.includes('경로');});
+        var priceCol = headers.findIndex(function(h){return h.includes('단가')||h.includes('price')||h.includes('금액');});
+        // 헤더 못찾으면 첫번째=라우트, 두번째=단가로 가정
+        if(routeCol < 0) routeCol = 0;
+        if(priceCol < 0) priceCol = 1;
+        rows.slice(hdrIdx+1).forEach(function(r){
+          var route = String(r[routeCol]||'').trim().toUpperCase();
+          var price = parseFloat(String(r[priceCol]||'').replace(/[,₩]/g,''));
+          if(route && !isNaN(price)) rateMap[route] = price;
+        });
+      }
+
+      if(Object.keys(rateMap).length === 0){
+        toast('⚠️ 라우트단가 인식 실패 — 라우트번호,단가 형식인지 확인하세요');
+        return;
+      }
+
+      _settleState.coupangRateTable = rateMap;
+      toast('✅ 라우트단가표 로드 완료 — '+Object.keys(rateMap).length+'개 라우트');
+      // 화면 갱신
+      _renderSettle();
+
+    }catch(err){
+      toast('❌ 단가표 읽기 실패: '+err.message);
+    }
+  };
+
+  if(ext === 'txt' || ext === 'csv'){
+    reader.readAsText(file, 'utf-8');
+  } else {
+    reader.readAsArrayBuffer(file);
+  }
+}
+
 // ── 쿠팡 인센 옵션
 var INCEN_OPTIONS = [0, 10, 15, 25];
 
@@ -1376,6 +1454,20 @@ function _renderCoupangResult(){
     +'<div class="stat-card"><div class="stat-label">최종 실지급 합계</div><div class="stat-val green" id="total-net-final">'+_fmt(totalNet)+'원</div></div>'
     +'</div>'
 
+  // 라우트단가표 업로드 영역
+  var rateTableInfo = _settleState.coupangRateTable
+    ? '<span style="color:var(--green)">✅ 단가표 로드됨 ('+Object.keys(_settleState.coupangRateTable).length+'개 라우트)</span>'
+    : '<span style="color:var(--text3)">미등록 (총금액 그대로 사용)</span>';
+
+  +'<div style="background:var(--surface2);border-radius:8px;padding:10px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px;font-size:12px;">'
+    +'<span style="font-weight:700">📊 라우트단가표</span>'
+    +rateTableInfo
+    +'<label style="margin-left:auto;cursor:pointer;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:4px 10px;font-size:11px">'
+    +'📂 파일 업로드'
+    +'<input type="file" accept=".xlsx,.xls,.txt,.csv" style="display:none" onchange="_loadRateTable(this)">'
+    +'</label>'
+    +'</div>'
+
   // 인센 안내
   +'<div style="background:rgba(79,126,255,.07);border:1px solid var(--acc);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;">'
     +'<strong>⭐ 인센티브 설정</strong> — 기사별로 가중요인 단가(원/건)를 선택하세요.'
@@ -1385,10 +1477,11 @@ function _renderCoupangResult(){
   +'<div class="card"><div class="card-title">📋 쿠팡 기사별 정산 <span style="font-size:11px;font-weight:400;color:var(--text2)">인센 설정 후 엑셀 다운로드</span></div>'
     +'<div class="tbl-wrap"><table><thead><tr>'
     +'<th>이름</th><th>캠프</th>'
-    +'<th class="num">배송건</th><th class="num">반품건</th>'
-    +'<th class="num">총금액</th><th class="num">프레시백</th>'
+    +'<th class="num">배송건</th><th class="num">반품건</th><th class="num">합계건</th>'
+    +'<th class="num">기본금액</th><th class="num" style="color:var(--acc)">가중요인</th>'
+    +'<th class="num" style="color:var(--blue)">프레시백</th>'
     +'<th class="num" style="color:var(--red)">분실파손</th>'
-    +'<th style="min-width:130px">인센(원/건)</th>'
+    +'<th style="min-width:130px">대리점인센(원/건)</th>'
     +'<th class="num">인센합계</th>'
     +'<th class="num" style="color:var(--green)">실지급액</th>'
     +'</tr></thead><tbody>';
@@ -1404,7 +1497,9 @@ function _renderCoupangResult(){
       +'<td>'+r.dept+'</td>'
       +'<td class="num">'+_fmt(r.count)+'</td>'
       +'<td class="num">'+(r.retCnt||0)+'</td>'
-      +'<td class="num">'+_fmt(r.amount||0)+'</td>'
+      +'<td class="num" style="font-weight:600">'+(r.totalCnt||r.count)+'</td>'
+      +'<td class="num">'+_fmt(r.baseAmt||0)+'</td>'
+      +'<td class="num" style="color:var(--acc)">+'+_fmt(r.addInc||0)+'</td>'
       +'<td class="num" style="color:var(--blue)">+'+_fmt(r.fresh||0)+'</td>'
       +'<td class="num" style="color:var(--red)">'+(r.lossAmt?'-'+_fmt(r.lossAmt):'-')+'</td>'
       +'<td>'
