@@ -392,7 +392,7 @@ var SETTLE_FIELDS = [
 ];
 
 function _pageSettle(){
-  _settleState = {step:1, headers:[], rows:[], mapping:{}, template:null, results:[], uploadMode:'single'};
+  _settleState = {step:1, headers:[], rows:[], mapping:{}, template:null, results:[], uploadMode:'single', deliveryMode:false, coupangMode:false, multiMode:false};
   _renderSettle();
 }
 
@@ -695,6 +695,397 @@ function _processAllSheets(wb){
 }
 
 
+
+// ════════════════════════════════════════════════
+// 🛵 배달대행 정산 엔진 (settle.html 이식)
+// ════════════════════════════════════════════════
+
+// ── 배달대행 엑셀 감지
+function _isDeliverySheet(headers){
+  var h = headers.map(function(x){return String(x||'').toLowerCase().replace(/\s/g,'');});
+  var joined = h.join('|');
+  // 배달대행비 + 라이더ID/시간 조합이면 배달대행
+  var hasRider  = joined.includes('라이더') || joined.includes('rider') || joined.includes('배달원');
+  var hasFee    = joined.includes('배달대행비') || joined.includes('배달료') || joined.includes('정산금액');
+  var hasTime   = joined.includes('완료') || joined.includes('time') || joined.includes('시각');
+  return hasRider && (hasFee || hasTime);
+}
+
+// ── 건수별 트랙 단가 (기본값)
+var DW_TRACKS = [
+  {min:350, max:Infinity, price:5500, label:'350건+ 트랙',    key:'t350'},
+  {min:300, max:350,      price:5200, label:'300~349건 트랙', key:'t300'},
+  {min:250, max:300,      price:5100, label:'250~299건 트랙', key:'t250'},
+  {min:180, max:250,      price:4200, label:'180~249건 트랙', key:'t180'},
+  {min:0,   max:180,      price:0,    label:'180건 미만',      key:'t0'}
+];
+
+// ── 시간대별 슬롯 단가 (기본값)
+var DW_SLOTS = {
+  morning:     {label:'아침',       start:6,  end:11, price:0},
+  lunch_peak:  {label:'점심피크',   start:11, end:13, price:0},
+  lunch_off:   {label:'점심노피크', start:13, end:17, price:0},
+  dinner_peak: {label:'저녁피크',   start:17, end:21, price:0},
+  dinner_off:  {label:'저녁노피크', start:21, end:24, price:0},
+  midnight:    {label:'심야(예외)', start:0,  end:6,  price:0}
+};
+
+function _dwSlot(hour){
+  if(hour>=6  && hour<11) return 'morning';
+  if(hour>=11 && hour<13) return 'lunch_peak';
+  if(hour>=13 && hour<17) return 'lunch_off';
+  if(hour>=17 && hour<21) return 'dinner_peak';
+  if(hour>=21 && hour<24) return 'dinner_off';
+  return 'midnight';
+}
+
+function _dwTrack(cnt, defPrice){
+  for(var i=0;i<DW_TRACKS.length;i++){
+    var t=DW_TRACKS[i];
+    if(cnt>=t.min && cnt<t.max) return {price:t.price>0?t.price:(defPrice||2900), label:t.label, isDefault:t.price===0};
+  }
+  return {price:defPrice||2900, label:'기본계약단가', isDefault:true};
+}
+
+// ── 핵심 정산 계산 엔진
+function _calcDeliverySettlement(orders, cfg){
+  if(!orders||!orders.length) return null;
+  cfg = cfg || {};
+
+  // 취소건 제외한 유효 건수
+  var validOrders = orders.filter(function(o){ return (o.platformPrice||0) > 0; });
+  var cnt = validOrders.length;
+  var cancelCnt = orders.length - cnt;
+
+  var track   = _dwTrack(cnt, cfg.defaultPrice||2900);
+  var target  = track.price;
+  var pfSum=0, injected=0, extracted=0;
+
+  var details = orders.map(function(o){
+    var price = o.platformPrice||0;
+    if(price <= 0) return Object.assign({},o,{slot:'cancelled',inject:0,extract:0,cancelled:true});
+    pfSum += price;
+    var slot = _dwSlot(o.hour||0);
+    var slotPrice = DW_SLOTS[slot] && DW_SLOTS[slot].price > 0 ? DW_SLOTS[slot].price : target;
+    var inj=0, ext=0;
+    if(slot !== 'midnight'){
+      if(price < slotPrice){ inj = Math.floor(slotPrice-price); injected  += inj; }
+      else if(price > slotPrice){ ext = Math.floor(price-slotPrice); extracted += ext; }
+    }
+    return Object.assign({},o,{slot:slot,inject:inj,extract:ext});
+  });
+
+  var preTax   = Math.floor(pfSum + injected - extracted);
+  var cancelPenalty = cancelCnt * (cfg.cancelPenalty||0);
+
+  // 세금 처리 (개인사업자 vs 주민번호)
+  var isBiz = !!cfg.isBiz;
+  var emp=0, work=0, tax33=0;
+  if(isBiz){
+    // 개인사업자: 고용+산재
+    var supplyAmt  = Math.round(preTax / 1.1);
+    var expenseAmt = Math.round(supplyAmt * 0.346);
+    var monthPay   = supplyAmt - expenseAmt;
+    emp  = monthPay >= 800000 ? Math.round(monthPay * 0.008) : 0;
+    work = Math.round(monthPay * 0.0088);
+  } else {
+    // 주민번호: 3.3% 원천세
+    tax33 = Math.floor(preTax * 0.033);
+  }
+
+  var leaseFee    = cfg.leaseFee    || 0;
+  var programFee  = cfg.programFee  || 0;
+  var insuranceFee= cfg.insuranceFee|| 0;
+  var deduct = emp + work + tax33 + cancelPenalty + leaseFee + programFee + insuranceFee;
+  var net    = Math.max(0, Math.floor(preTax - deduct));
+
+  return {
+    trackLabel:   track.label,
+    targetPrice:  target,
+    isDefault:    track.isDefault,
+    totalCount:   cnt,
+    cancelCnt:    cancelCnt,
+    pfSum:        pfSum,
+    injected:     injected,
+    extracted:    extracted,
+    agencyMargin: extracted - injected,
+    preTax:       preTax,
+    cancelPenalty:cancelPenalty,
+    isBiz:        isBiz,
+    emp:          emp,
+    work:         work,
+    tax33:        tax33,
+    leaseFee:     leaseFee,
+    programFee:   programFee,
+    insuranceFee: insuranceFee,
+    deduct:       deduct,
+    net:          net,
+    details:      details
+  };
+}
+
+// ── 배달대행 엑셀 파싱
+function _parseDeliveryExcel(wb){
+  var ws = null;
+  for(var si=0;si<wb.SheetNames.length;si++){
+    var candidate = wb.Sheets[wb.SheetNames[si]];
+    var testRows  = XLSX.utils.sheet_to_json(candidate,{header:1,defval:null});
+    if(testRows && testRows.filter(function(r){return r&&r.some(function(c){return c!=null;});}).length > 1){
+      ws = candidate; break;
+    }
+  }
+  if(!ws) return null;
+
+  var rows = XLSX.utils.sheet_to_json(ws,{header:1,defval:null,raw:false,dateNF:'yyyy-mm-dd HH:MM:SS'});
+  if(rows.length < 2) return null;
+
+  // 헤더 탐색
+  var hIdx = -1;
+  for(var i=0;i<Math.min(rows.length,15);i++){
+    if(rows[i]&&rows[i].some(function(c){return c&&String(c).trim();})){hIdx=i;break;}
+  }
+  if(hIdx < 0) return null;
+
+  var headers = rows[hIdx].map(function(c){return String(c||'').trim();});
+  var colId=-1, colPrice=-1, colTime=-1, colName=-1, colCancel=-1;
+
+  headers.forEach(function(h,ci){
+    var hn = h.toLowerCase().replace(/\s/g,'');
+    if(colId<0   && (hn.includes('라이더id')||hn.includes('riderid')||hn.includes('배달원id')||hn.includes('기사id'))) colId=ci;
+    if(colName<0 && (hn.includes('라이더명')||hn.includes('이름')||hn.includes('기사명')||hn.includes('name')))       colName=ci;
+    if(colPrice<0&& (hn.includes('배달대행비')||hn.includes('정산금액')||hn.includes('지급액')||hn.includes('단가')))  colPrice=ci;
+    if(colTime<0 && (hn.includes('완료시각')||hn.includes('완료일시')||hn.includes('배달완료')||hn.includes('time')))  colTime=ci;
+    if(colCancel<0&&(hn.includes('취소여부')||hn.includes('cancel')||hn.includes('취소')))                            colCancel=ci;
+  });
+
+  if(colId<0 && colName>=0) colId=colName;
+  if(colId<0 || colPrice<0) return null;
+
+  var riderMap = {};
+  var riderNames = {};
+  rows.slice(hIdx+1).forEach(function(row){
+    if(!row) return;
+    var rid   = row[colId]!=null ? String(row[colId]).trim() : '';
+    var rname = colName>=0&&row[colName]!=null ? String(row[colName]).trim() : rid;
+    if(!rid||rid==='합계'||rid==='소계') return;
+
+    var price = parseFloat(String(row[colPrice]||'').replace(/[,₩원\s]/g,''))||0;
+
+    // 취소 건: 가격 0으로 처리
+    var isCancelled = colCancel>=0 && String(row[colCancel]||'').trim().toUpperCase()==='Y';
+    if(isCancelled) price = 0;
+
+    var hour = 0;
+    if(colTime>=0 && row[colTime]){
+      var hm = String(row[colTime]).match(/(\d{1,2}):(\d{2})/);
+      if(hm) hour = parseInt(hm[1]);
+    }
+
+    if(!riderMap[rid]) riderMap[rid] = [];
+    riderNames[rid] = rname;
+    riderMap[rid].push({riderId:rid, platformPrice:price, hour:hour, cancelled:isCancelled});
+  });
+
+  return {riderMap:riderMap, riderNames:riderNames, headers:headers};
+}
+
+// ── 배달대행 결과 화면 렌더링
+function _renderDeliveryResult(){
+  var state = _settleState.deliveryState;
+  if(!state) return '<div>데이터 없음</div>';
+
+  var results  = state.results;
+  var cfg      = state.cfg || {};
+  var totalInj = results.reduce(function(s,r){return s+r.injected;},0);
+  var totalExt = results.reduce(function(s,r){return s+r.extracted;},0);
+  var totalNet = results.reduce(function(s,r){return s+r.net;},0);
+  var totalCnt = results.reduce(function(s,r){return s+r.totalCount;},0);
+  var agencyMargin = totalExt - totalInj;
+
+  var html = '<div class="result-summary">'
+    +'<div class="stat-card"><div class="stat-label">라이더 수</div><div class="stat-val blue">'+results.length+'명</div></div>'
+    +'<div class="stat-card"><div class="stat-label">유효 건수</div><div class="stat-val">'+_fmt(totalCnt)+'건</div></div>'
+    +'<div class="stat-card"><div class="stat-label">보전 투입</div><div class="stat-val" style="color:var(--blue)">+'+_fmt(totalInj)+'원</div></div>'
+    +'<div class="stat-card"><div class="stat-label">환수 차감</div><div class="stat-val" style="color:var(--red)">-'+_fmt(totalExt)+'원</div></div>'
+    +'<div class="stat-card"><div class="stat-label">대리점 순마진</div><div class="stat-val" style="color:'+(agencyMargin>=0?'var(--green)':'var(--red)')+'">'+_fmt(agencyMargin)+'원</div></div>'
+    +'<div class="stat-card"><div class="stat-label">전체 실지급</div><div class="stat-val green">'+_fmt(totalNet)+'원</div></div>'
+    +'</div>';
+
+  // 설정 패널
+  html += '<div style="background:var(--surface2);border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:12px">'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+    +'<strong>⚙️ 단가 설정</strong>'
+    +'<span style="color:var(--text3)">트랙 단가 및 세금 설정</span>'
+    +'<button onclick="_dwOpenDeliverySettings()" style="margin-left:auto;background:var(--acc);color:#fff;border:none;border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer">설정 변경</button>'
+    +'</div>'
+    +'<div style="display:flex;gap:12px;font-size:11px;color:var(--text2)">'
+    +'<span>기본단가: <strong>'+_fmt(cfg.defaultPrice||2900)+'원/건</strong></span>'
+    +'<span>취소패널티: <strong>'+_fmt(cfg.cancelPenalty||10000)+'원/건</strong></span>'
+    +'<span>세금: <strong>'+(cfg.isBiz?'고용+산재':'3.3%원천세')+'</strong></span>'
+    +'</div>'
+    +'</div>';
+
+  // 라이더별 상세
+  results.forEach(function(r){
+    var isProfit = r.agencyMargin >= 0;
+    html += '<div class="card">'
+      +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'
+      +'<strong style="font-size:14px">🛵 '+r.riderName+'</strong>'
+      +'<span style="font-size:11px;color:var(--text3)">'+r.riderId+'</span>'
+      +'<span style="margin-left:auto;background:var(--bg3);border-radius:12px;padding:2px 10px;font-size:11px;font-weight:700">'+r.trackLabel+' · '+_fmt(r.totalCount)+'건</span>'
+      +'</div>'
+
+      +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:10px">'
+      +'<div style="background:var(--bg3);border-radius:8px;padding:8px;text-align:center"><div style="font-size:10px;color:var(--text3)">플랫폼 수령</div><div style="font-weight:700">'+_fmt(r.pfSum)+'원</div></div>'
+      +'<div style="background:rgba(59,130,246,.08);border-radius:8px;padding:8px;text-align:center"><div style="font-size:10px;color:var(--blue)">보전 투입</div><div style="font-weight:700;color:var(--blue)">+'+_fmt(r.injected)+'원</div></div>'
+      +'<div style="background:rgba(239,68,68,.08);border-radius:8px;padding:8px;text-align:center"><div style="font-size:10px;color:var(--red)">환수 차감</div><div style="font-weight:700;color:var(--red)">-'+_fmt(r.extracted)+'원</div></div>'
+      +'<div style="background:rgba(16,185,129,.15);border-radius:8px;padding:8px;text-align:center"><div style="font-size:10px;color:var(--green)">실지급액</div><div style="font-weight:700;font-size:15px;color:var(--green)">'+_fmt(r.net)+'원</div></div>'
+      +'</div>'
+
+      +'<div style="font-size:11px;color:var(--text2);display:flex;flex-wrap:wrap;gap:8px">'
+      +'<span>지급합계: '+_fmt(r.preTax)+'원</span>'
+      +(r.cancelCnt?'<span style="color:var(--red)">취소패널티: -'+_fmt(r.cancelPenalty)+'원('+r.cancelCnt+'건)</span>':'')
+      +(r.isBiz
+        ? '<span>고용: -'+_fmt(r.emp)+'원</span><span>산재: -'+_fmt(r.work)+'원</span>'
+        : '<span>원천세3.3%: -'+_fmt(r.tax33)+'원</span>')
+      +(r.leaseFee?'<span>리스: -'+_fmt(r.leaseFee)+'원</span>':'')
+      +(r.programFee?'<span>앱비: -'+_fmt(r.programFee)+'원</span>':'')
+      +'<span style="margin-left:auto;color:'+(r.agencyMargin>=0?'var(--green)':'var(--red)')+'">대리점: '+(r.agencyMargin>=0?'+':'')+_fmt(r.agencyMargin)+'원</span>'
+      +'</div>'
+      +'</div>';
+  });
+
+  html += '<div style="margin-top:8px;display:flex;gap:8px;justify-content:space-between">'
+    +'<button class="btn btn-secondary" onclick="_goStep(1)">← 처음으로</button>'
+    +'<button class="btn btn-primary" onclick="_downloadDeliveryExcel()">📥 엑셀 다운로드</button>'
+    +'</div>';
+
+  return html;
+}
+
+// ── 배달대행 설정 모달
+function _dwOpenDeliverySettings(){
+  var cfg = _settleState.deliveryCfg || {};
+  var mo = document.createElement('div');
+  mo.className='mo show';
+  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+
+  var trackRows = DW_TRACKS.map(function(t){
+    if(t.key==='t0') return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)"><span style="flex:1;font-size:12px;font-weight:700">'+t.label+'</span><span style="font-size:11px;color:var(--text3)">기본 계약단가 사용</span></div>';
+    return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">'
+      +'<span style="flex:1;font-size:12px;font-weight:700">'+t.label+'</span>'
+      +'<input id="dw-t-'+t.key+'" type="number" value="'+t.price+'" min="0" step="100" style="width:90px;padding:5px 8px;border:1.5px solid var(--acc);border-radius:6px;font-size:13px;font-weight:700;text-align:right">'
+      +'<span style="font-size:11px;color:var(--text3)">원/건</span>'
+      +'</div>';
+  }).join('');
+
+  var slotRows = Object.keys(DW_SLOTS).map(function(k){
+    var s = DW_SLOTS[k];
+    if(k==='midnight') return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0"><span style="flex:1;font-size:12px;font-weight:700">'+s.label+'</span><span style="font-size:11px;color:var(--text3)">심야 예외 (밸런싱 없음)</span></div>';
+    return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">'
+      +'<span style="flex:1;font-size:12px;font-weight:700">'+s.label+'<span style="font-size:10px;color:var(--text3);margin-left:4px">'+s.start+'~'+s.end+'시</span></span>'
+      +'<input id="dw-s-'+k+'" type="number" value="'+s.price+'" min="0" step="100" placeholder="0=트랙단가" style="width:90px;padding:5px 8px;border:1px solid var(--border2);border-radius:6px;font-size:12px;text-align:right">'
+      +'<span style="font-size:11px;color:var(--text3)">원 (0=트랙)</span>'
+      +'</div>';
+  }).join('');
+
+  mo.innerHTML = '<div class="md" style="max-width:500px">'
+    +'<div class="mdt">⚙️ 배달대행 정산 설정</div>'
+    +'<div style="padding:16px;max-height:75vh;overflow-y:auto">'
+
+    +'<div style="margin-bottom:14px">'
+    +'<div style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--acc)">기본 설정</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+    +'<div><label style="font-size:11px;color:var(--text3)">기본 계약단가 (원/건)</label><input id="dw-default-price" type="number" value="'+(cfg.defaultPrice||2900)+'" style="width:100%;padding:6px;border:1px solid var(--border2);border-radius:6px;font-size:13px;font-weight:700"></div>'
+    +'<div><label style="font-size:11px;color:var(--text3)">취소 패널티 (원/건)</label><input id="dw-cancel-penalty" type="number" value="'+(cfg.cancelPenalty||10000)+'" style="width:100%;padding:6px;border:1px solid var(--border2);border-radius:6px;font-size:13px;font-weight:700"></div>'
+    +'<div><label style="font-size:11px;color:var(--text3)">앱 사용료 (원/월)</label><input id="dw-program-fee" type="number" value="'+(cfg.programFee||0)+'" style="width:100%;padding:6px;border:1px solid var(--border2);border-radius:6px"></div>'
+    +'<div><label style="font-size:11px;color:var(--text3)">리스/보험료 (원/월)</label><input id="dw-lease-fee" type="number" value="'+(cfg.leaseFee||0)+'" style="width:100%;padding:6px;border:1px solid var(--border2);border-radius:6px"></div>'
+    +'</div>'
+    +'<div style="margin-top:8px;display:flex;align-items:center;gap:8px">'
+    +'<label style="font-size:12px;font-weight:700">세금 방식:</label>'
+    +'<label style="display:flex;align-items:center;gap:4px;font-size:12px"><input type="radio" name="dw-tax" value="0" '+(cfg.isBiz?'':'checked')+'>주민번호(3.3%원천세)</label>'
+    +'<label style="display:flex;align-items:center;gap:4px;font-size:12px"><input type="radio" name="dw-tax" value="1" '+(cfg.isBiz?'checked':'')+'>개인사업자(고용+산재)</label>'
+    +'</div>'
+    +'</div>'
+
+    +'<div style="font-size:12px;font-weight:700;margin-bottom:8px;color:#1d4ed8">🛤️ 건수별 트랙 단가</div>'
+    +'<div style="background:#eff6ff;border-radius:8px;padding:10px;margin-bottom:14px;font-size:11px;color:#2563eb;margin-bottom:8px">트랙 단가보다 낮은 콜 → 보전 / 높은 콜 → 환수</div>'
+    +'<div style="margin-bottom:14px">'+trackRows+'</div>'
+
+    +'<div style="font-size:12px;font-weight:700;margin-bottom:8px;color:#7c3aed">⏰ 시간대별 슬롯 단가</div>'
+    +'<div style="font-size:11px;color:#7c3aed;margin-bottom:6px">0원 = 트랙 단가 적용</div>'
+    +'<div>'+slotRows+'</div>'
+    +'</div>'
+    +'<div class="mdf">'
+    +'<button class="btn btn-secondary" onclick="this.closest('.mo').remove()">취소</button>'
+    +'<button class="btn btn-primary" onclick="_dwApplyDeliverySettings()">💾 적용 후 재계산</button>'
+    +'</div>'
+    +'</div>';
+
+  document.body.appendChild(mo);
+}
+
+function _dwApplyDeliverySettings(){
+  var g = function(id){return parseInt((document.getElementById(id)||{value:0}).value)||0;};
+  var taxRadio = document.querySelector('input[name="dw-tax"]:checked');
+  var isBiz = taxRadio ? taxRadio.value==='1' : false;
+
+  // 트랙 단가 업데이트
+  DW_TRACKS.forEach(function(t){
+    var el = document.getElementById('dw-t-'+t.key);
+    if(el) t.price = parseInt(el.value)||0;
+  });
+  // 슬롯 단가 업데이트
+  Object.keys(DW_SLOTS).forEach(function(k){
+    var el = document.getElementById('dw-s-'+k);
+    if(el) DW_SLOTS[k].price = parseInt(el.value)||0;
+  });
+
+  var cfg = {
+    defaultPrice:   g('dw-default-price') || 2900,
+    cancelPenalty:  g('dw-cancel-penalty') || 10000,
+    programFee:     g('dw-program-fee'),
+    leaseFee:       g('dw-lease-fee'),
+    isBiz:          isBiz
+  };
+  _settleState.deliveryCfg = cfg;
+
+  // 재계산
+  var riderMap   = _settleState.deliveryRiderMap;
+  var riderNames = _settleState.deliveryRiderNames;
+  if(riderMap){
+    var results = [];
+    Object.keys(riderMap).forEach(function(rid){
+      var orders = riderMap[rid];
+      var r = _calcDeliverySettlement(orders, Object.assign({},cfg,{defaultPrice:cfg.defaultPrice}));
+      if(r){ r.riderId=rid; r.riderName=riderNames[rid]||rid; results.push(r); }
+    });
+    results.sort(function(a,b){return a.riderName.localeCompare(b.riderName);});
+    _settleState.deliveryState = {results:results, cfg:cfg};
+  }
+
+  var mo = document.querySelector('.mo.show'); if(mo) mo.remove();
+  toast('✅ 설정 적용 완료 — 재계산됨');
+  _renderSettle();
+}
+
+// ── 배달대행 엑셀 다운로드
+function _downloadDeliveryExcel(){
+  var results = _settleState.deliveryState && _settleState.deliveryState.results;
+  if(!results) return;
+  var rows = [['라이더명','ID','트랙','유효건수','취소건수','플랫폼수령','보전투입','환수차감','세전합계','취소패널티','고용보험','산재보험','원천세3.3%','앱비','리스','실지급액','대리점마진']];
+  results.forEach(function(r){
+    rows.push([r.riderName, r.riderId, r.trackLabel, r.totalCount, r.cancelCnt,
+      r.pfSum, r.injected, r.extracted, r.preTax, r.cancelPenalty,
+      r.emp, r.work, r.tax33, r.programFee, r.leaseFee, r.net, r.agencyMargin]);
+  });
+  var ws = XLSX.utils.aoa_to_sheet(rows);
+  var wb2= XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb2, ws, '배달대행정산');
+  XLSX.writeFile(wb2, '배달대행정산_'+new Date().toISOString().substring(0,10)+'.xlsx');
+  toast('✅ 엑셀 다운로드 완료');
+}
+
 // ── 쿠팡 엑셀 감지
 function _isCoupangSheet(headers){
   var h = headers.map(function(x){return x.replace(/\n/g,' ').toLowerCase();});
@@ -897,7 +1288,31 @@ function _processSheet(wb, sheetName){
   _settleState.rows = raw.slice(hdrIdx+1).filter(function(r){
     return r.filter(function(c){return c!=='';}).length > 0;
   });
-  window._pendingWb = null;  // 처리 완료 후 해제
+  window._pendingWb = null;
+
+  // ── 배달대행 자동 감지
+  if(_isDeliverySheet(_settleState.headers)){
+    toast('🛵 배달대행 엑셀 감지 — 정산 계산 중...');
+    var parsed = _parseDeliveryExcel(wb||{SheetNames:[sheetName],Sheets:{[sheetName]:wb&&wb.Sheets&&wb.Sheets[sheetName]}});
+    if(parsed && Object.keys(parsed.riderMap).length > 0){
+      _settleState.deliveryMode  = true;
+      _settleState.deliveryRiderMap   = parsed.riderMap;
+      _settleState.deliveryRiderNames = parsed.riderNames;
+      var defCfg = _settleState.deliveryCfg || {defaultPrice:2900, cancelPenalty:10000, isBiz:false};
+      _settleState.deliveryCfg = defCfg;
+      var results = [];
+      Object.keys(parsed.riderMap).forEach(function(rid){
+        var r = _calcDeliverySettlement(parsed.riderMap[rid], defCfg);
+        if(r){ r.riderId=rid; r.riderName=parsed.riderNames[rid]||rid; results.push(r); }
+      });
+      results.sort(function(a,b){return a.riderName.localeCompare(b.riderName);});
+      _settleState.deliveryState = {results:results, cfg:defCfg};
+      _settleState.step = 3;
+      _renderSettle();
+      toast('✅ 배달대행 정산 완료 — '+results.length+'명 | ⚙️ 설정에서 단가/세금 변경 가능');
+      return;
+    }
+  }
 
   toast('🤖 AI가 헤더 분석 중...');
 
@@ -1852,6 +2267,10 @@ function _downloadCoupangExcel(){
 }
 
 function _renderStep3(){
+  // 배달대행 결과 화면
+  if(_settleState.deliveryMode){
+    return _renderDeliveryResult();
+  }
   // 쿠팡 전용 결과 화면
   if(_settleState.coupangMode){
     return _renderCoupangResult();
