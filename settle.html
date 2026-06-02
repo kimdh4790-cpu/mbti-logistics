@@ -21493,6 +21493,14 @@ async function _doDeploySettlements(ids) {
       if (u.driverId) tokenMap[u.driverId] = u.fcmToken;
       if (u.userId) tokenMap[u.userId] = u.fcmToken;
       if (u.name) tokenMap[u.name] = u.fcmToken;
+      // phone 기반 매핑 (drv_5578_4ge4 → 5578 → phone 010xxxx5578)
+      if (u.phone) {
+        var ph = u.phone.replace(/-/g,'');
+        tokenMap[ph] = u.fcmToken;
+        // drv_XXXX 형식에서 XXXX 추출
+        var m = ph.match(/\d{4}$/);
+        if (m) tokenMap['drv_'+m[0]] = u.fcmToken;
+      }
     });
   } catch(e) {}
 
@@ -21557,7 +21565,9 @@ async function _doDeploySettlements(ids) {
       });
 
       // 3. 해당 기사 FCM 개별 발송
-      var _tk = tokenMap[_tDrvId] || tokenMap[settle.name] || '';
+      // driverId에서 phone prefix 추출해서 매핑 시도
+      var _phonePrefix = _tDrvId.replace('drv_','').split('_')[0]||'';
+      var _tk = tokenMap[_tDrvId] || tokenMap[settle.name] || tokenMap['drv_'+_phonePrefix] || '';
       if (_tk) {
         try {
           var _fr = await fetch('/fcm/notify-drivers', {
@@ -22967,7 +22977,7 @@ function _showUploadResult(month,added,updated,newDrvCnt,routeCnt,newDrivers,lef
 
 function _showWelcome(){
   var _ex=document.getElementById('mo-welcome');if(_ex)_ex.remove();
-  var name=(_CU&&_CU.name)||(_CU&&_CU.displayName)||'직원';
+  var name=(_CU&&(_CU.name||_CU.displayName||_CU.companyName))||(_CU&&_CU.email&&_CU.email.split('@')[0])||'관리자';
   var now=new Date();
   var h=now.getHours();
   var greeting=h<6?'🌙 새벽에도 수고하세요':h<12?'🌅 좋은 아침이에요':h<18?'☀️ 좋은 오후예요':'🌙 수고하셨어요';
