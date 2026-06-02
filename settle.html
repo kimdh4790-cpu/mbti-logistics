@@ -21124,21 +21124,21 @@ async function _doDeploySettlements(ids) {
     } catch(e) { console.warn('배포오류:', e.message); }
   }
 
-  // 3. FCM 일괄 알림 발송 — Cloud Functions 방식
-  var _fcmUrl = 'https://us-central1-mbti-logistics.cloudfunctions.net/sendPush';
-  for (var fi = 0; fi < fcmTokens.length; fi++) {
+  // 3. FCM 일괄 알림 발송 — Worker notify-drivers 방식
+  if (fcmTokens.length > 0) {
     try {
-      var fr = await fetch(_fcmUrl, {
+      var fr = await fetch('/fcm/notify-drivers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          token: fcmTokens[fi],
+          tokens: fcmTokens,
           title: '📤 ' + (month || '') + ' 정산 배포',
           body: '정산 명세서가 배포됐습니다. 앱에서 확인하세요.',
           type: 'settle_deploy'
         })
       });
-      if (fr.ok) fcmDone++;
+      var frData = await fr.json();
+      fcmDone = frData.sent || 0;
     } catch(e) {}
   }
 
