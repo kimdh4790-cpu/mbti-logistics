@@ -10049,30 +10049,48 @@ function _txsLoadDocs(did, ym){
         return;
       }
       var catColors={tax_invoice:'#7c3aed',receipt:'#0891b2',expense:'#059669',contract:'#dc2626',payslip:'#f59e0b',other:'#6b7280'};
-      var catLabels={tax_invoice:'세금계산서',receipt:'영수증',expense:'경비',contract:'계약서',payslip:'급여명세서',other:'기타'};
-      var html='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px">';
+      var catLabels={tax_invoice:'🧾 세금계산서',receipt:'📄 영수증/지출증빙',expense:'💳 경비·비용',contract:'📝 계약서',payslip:'💰 급여명세서',other:'📁 기타서류'};
+      var groups={};
       snap.forEach(function(doc){
-        var d=doc.data();
+        var d=doc.data(); d._id=doc.id;
         var cat=d.category||'other';
+        if(!groups[cat])groups[cat]={items:[],total:0};
+        groups[cat].items.push(d);
+        groups[cat].total+=(d.amount||0);
+      });
+      var catOrder=['tax_invoice','receipt','expense','contract','payslip','other'];
+      var html='';
+      catOrder.forEach(function(cat){
+        var g=groups[cat]; if(!g||!g.items.length)return;
         var color=catColors[cat]||'#6b7280';
         var label=catLabels[cat]||'기타';
-        var isImg=d.fileType&&d.fileType.startsWith('image/');
-        html+='<div style="border-radius:10px;border:1px solid var(--border);overflow:hidden;background:var(--bg3)">'
-          +(isImg&&d.fileUrl
-            ?'<img src="'+d.fileUrl+'" style="width:100%;height:90px;object-fit:cover;display:block;cursor:pointer" loading="lazy" onclick="_txsViewImg(this.src)">'
-            :'<div style="height:90px;display:flex;align-items:center;justify-content:center;background:var(--bg3);font-size:28px">'+(d.fileType==='application/pdf'?'📄':'📁')+'</div>')
-          +'<div style="padding:6px">'
-          +'<div style="font-size:9px;font-weight:800;color:'+color+';margin-bottom:2px">'+label+'</div>'
-          +'<div style="font-size:10px;color:var(--text);line-height:1.3">'+esc(d.memo||d.desc||'서류')+'</div>'
-          +(d.amount?'<div style="font-size:10px;color:var(--text3);margin-top:2px">₩'+Number(d.amount).toLocaleString()+'</div>':'')
-          +'<div style="display:flex;gap:4px;margin-top:6px">'
-          +(d.fileUrl?'<button onclick="_txsOpenImg(this)" data-id="'+doc.id+'" style="flex:1;font-size:9px;padding:3px;background:var(--brand);color:#fff;border-radius:4px;border:none;cursor:pointer">보기</button>':'')
-          +'<button onclick="_txsDeleteDoc(&quot;'+doc.id+'&quot;)" style="font-size:9px;padding:3px 6px;background:var(--bg);border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text3)">삭제</button>'
-          +'</div>'
-          +'</div></div>';
+        html+='<div style="margin-bottom:16px">'
+          +'<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg2);border-radius:10px;margin-bottom:8px;border-left:3px solid '+color+'">'
+          +'<span style="font-size:12px;font-weight:800;color:'+color+'">'+label+'</span>'
+          +(g.total>0?'<span style="font-size:13px;font-weight:900;color:var(--text)">합계 ₩'+g.total.toLocaleString()+'</span>':'<span style="font-size:11px;color:var(--text3)">'+g.items.length+'건</span>')
+          +'</div>';
+        g.items.forEach(function(d){
+          var isImg=d.fileType&&d.fileType.startsWith('image/');
+          var imgHtml=isImg&&d.fileUrl
+            ?'<img src="'+d.fileUrl+'" style="width:56px;height:56px;object-fit:cover;border-radius:8px;flex-shrink:0;cursor:pointer" loading="lazy" onclick="_txsViewImg(\''+d.fileUrl+'\')">'
+            :'<div style="width:56px;height:56px;display:flex;align-items:center;justify-content:center;background:var(--bg2);border-radius:8px;flex-shrink:0;font-size:24px">'+(d.fileType==='application/pdf'?'📄':'📁')+'</div>';
+          html+='<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:10px;margin-bottom:6px">'
+            +imgHtml
+            +'<div style="flex:1;min-width:0">'
+            +'<div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:2px">'+esc(d.memo||d.desc||'서류')+'</div>'
+            +(d.amount?'<div style="font-size:14px;font-weight:900;color:'+color+'">₩'+Number(d.amount).toLocaleString()+'</div>':'')
+            +'<div style="font-size:10px;color:var(--text3);margin-top:2px">'+(d.ym||'')+' '+esc(d.vendor||d.vendorName||'')+'</div>'
+            +'</div>'
+            +'<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">'
+            +(d.fileUrl?'<button onclick="_txsOpenImg(this)" data-id="'+d._id+'" style="font-size:10px;padding:4px 8px;background:var(--brand);color:#fff;border-radius:6px;border:none;cursor:pointer">보기</button>':'')
+            +'<button onclick="_txsDeleteDoc(\''+d._id+'\')" style="font-size:10px;padding:4px 8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;cursor:pointer">삭제</button>'
+            +'</div>'
+            +'</div>';
+        });
+        html+='</div>';
       });
-      html+='</div>';
-      list.innerHTML=html;
+      list.innerHTML=html||'<div style="text-align:center;padding:20px;color:var(--text3)">📭 등록된 서류가 없습니다</div>';
+
     }).catch(function(e){
       list.innerHTML='<div style="font-size:12px;color:var(--red)">로딩 실패: '+e.message+'</div>';
     });
