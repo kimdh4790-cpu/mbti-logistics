@@ -21318,19 +21318,17 @@ function pageStats(){
     +'<button id="stat-tab-month" class="btn btn-blue" onclick="_statTab(\'month\')" style="font-size:12px">📅 AI정산 월별</button>'
     +'<button id="stat-tab-total" class="btn" onclick="_statTab(\'total\')" style="font-size:12px">📊 AI정산 합계</button>'
     +'<button id="stat-tab-camp" class="btn" onclick="_statTab(\'camp\')" style="font-size:12px">🏕 캠프별</button>'
-    +'<button id="stat-tab-delivery" class="btn" onclick="_statTab(\'delivery\')" style="font-size:12px">🛵 배달대행</button>'
     +'<button id="stat-tab-combined" class="btn" onclick="_statTab(\'combined\')" style="font-size:12px">💰 통합 순수익</button>'
     +'</div>'
     +'<div id="stat-content"><div class="loading">로딩 중...</div></div>';
   function _statTab(tab){
-    ['month','total','camp','delivery','combined'].forEach(function(t){
+    ['month','total','camp','combined'].forEach(function(t){
       var btn=document.getElementById('stat-tab-'+t);
       if(btn)btn.className='btn'+(t===tab?' btn-blue':'');
     });
-    if(tab==='delivery'){_statRenderDelivery();return;}
     if(tab==='combined'){_statRenderCombined();return;}
-  }
     _statRender(tab,_statData);
+  }
   var _statData=null;
   var _did2=_CU.dealerId;
   // settlements + expenses 병렬 로딩
