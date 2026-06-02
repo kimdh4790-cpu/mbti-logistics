@@ -8500,14 +8500,18 @@ function pageNotifyHistory(){
       opt.value=doc.id;opt.textContent=(d.name||doc.id)+(d.fcmToken&&d.fcmToken.length>20?'':' (알림불가)');
       sel.appendChild(opt);});
   }).catch(function(){});
-  _db.collection('admin_notifications').where('dealerId','==',did).orderBy('createdAt','desc').limit(20).get().then(function(snap){
+  _db.collection('admin_notifications').where('dealerId','==',did).orderBy('createdAt','desc').limit(50).get().then(function(snap){
     var el2=document.getElementById('notif-history');if(!el2)return;
     if(snap.empty){el2.innerHTML='<div style="font-size:12px;color:var(--text3)">발송 내역 없음</div>';return;}
-    var html='';
+    var html='<div style="display:flex;justify-content:flex-end;margin-bottom:8px">'
+      +'<button onclick="_deleteAllAdminNotifs()" style="padding:5px 10px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">🗑 전체 삭제</button></div>';
     snap.forEach(function(doc){var d=doc.data();
-      html+='<div style="padding:8px 0;border-bottom:1px solid var(--border)"><div style="font-size:12px;font-weight:700">'+esc(d.title||'')+'</div>'
+      html+='<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:8px">'
+        +'<div style="flex:1"><div style="font-size:12px;font-weight:700">'+esc(d.title||'')+'</div>'
         +'<div style="font-size:11px;color:var(--text3)">'+esc(d.body||'')+'</div>'
-        +'<div style="font-size:10px;color:var(--text3);margin-top:2px">'+(d.createdAt||'').slice(0,16)+' · '+(d.targetName||'전체')+'</div></div>';});
+        +'<div style="font-size:10px;color:var(--text3);margin-top:2px">'+(d.createdAt||'').slice(0,16)+' · '+(d.targetName||'전체')+'</div></div>'
+        +'<button onclick="_deleteAdminNotif(\"'+doc.id+'\")" style="flex-shrink:0;padding:4px 7px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:5px;font-size:10px;cursor:pointer">🗑</button>'
+        +'</div>';});
     el2.innerHTML=html;
   }).catch(function(){});
 }
@@ -8536,6 +8540,25 @@ window._sendAdminNotif=function(){
       if(st)st.textContent='✅ '+tokens.length+'명 발송 완료';toast('✅ 알림 발송 완료');setTimeout(pageNotifyHistory,500);
     });
   }).catch(function(e){if(st)st.textContent='❌ '+e.message;});
+};
+
+window._deleteAdminNotif=function(id){
+  if(!confirm('이 발송 내역을 삭제하시겠습니까?'))return;
+  _db.collection('admin_notifications').doc(id).delete()
+    .then(function(){toast('✅ 삭제됨');pageNotifyHistory();})
+    .catch(function(e){toast('❌ '+e.message);});
+};
+window._deleteAllAdminNotifs=function(){
+  if(!confirm('발송 내역을 전부 삭제하시겠습니까?\n(기사 정산배포함 내역도 함께 삭제됩니다)'))return;
+  var did=_CU.dealerId||_CU.uid;
+  var p1=_db.collection('admin_notifications').where('dealerId','==',did).get();
+  var p2=_db.collection('driver_notifications').where('dealerId','==',did).get();
+  Promise.all([p1,p2]).then(function(results){
+    var batch=_db.batch();
+    results.forEach(function(snap){snap.forEach(function(doc){batch.delete(doc.ref);});});
+    return batch.commit();
+  }).then(function(){toast('✅ 전체 삭제 완료');pageNotifyHistory();})
+  .catch(function(e){toast('❌ '+e.message);});
 };
 function pageVehicle(){
   document.getElementById('page-title').textContent='🚗 차량 관리';
@@ -13153,33 +13176,77 @@ function pageMySettle(){
 
 // ══ 기사 전용: 정산 내역 ══
 function pageMyStatements(){
-  var content=document.getElementById('content');
-  content.innerHTML='<div style="max-width:600px;margin:0 auto;padding:16px">'    +'<div style="font-size:18px;font-weight:800;margin-bottom:16px">📋 정산 내역</div>'    +'<div id="my-stmt-list"><div style="text-align:center;padding:20px;color:var(--text3)">⏳ 로딩 중...</div></div>'    +'</div>';
+  var cont=document.getElementById('content');
+  cont.innerHTML='<div style="max-width:600px;margin:0 auto;padding:16px">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'
+    +'<div style="font-size:18px;font-weight:800">📋 정산 내역</div>'
+    +'<button onclick="_deleteAllMyStmts()" style="padding:6px 12px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">🗑 전체 삭제</button>'
+    +'</div>'
+    +'<div id="my-stmt-list"><div style="text-align:center;padding:20px;color:var(--text3)">⏳ 로딩 중...</div></div>'
+    +'</div>';
+  if(!_db||!_CU)return;
+  _loadMyStatements();
+}
+function _loadMyStatements(){
   if(!_db||!_CU)return;
   var _did=_CU.dealerId||_CU.companyId||'';
-  _db.collection('driver_notifications')
-    .where('dealerId','==',_did).limit(50).get()
-  .then(function(snap){
+  var _driverId=_CU.driverId||'';
+  var q=_db.collection('driver_notifications').where('dealerId','==',_did).limit(100);
+  q.get().then(function(snap){
     var items=[];
-    snap.forEach(function(doc){items.push({id:doc.id,data:doc.data()});});
-    // 날짜 내림차순 정렬
+    snap.forEach(function(doc){
+      var d=doc.data();
+      // 기사는 본인 것만 표시
+      if(_CU.role==='driver'&&d.targetDriverId&&d.targetDriverId!==_driverId)return;
+      items.push({id:doc.id,data:d});
+    });
     items.sort(function(a,b){
-      var ta=a.data.createdAt?a.data.createdAt.seconds:0;
-      var tb=b.data.createdAt?b.data.createdAt.seconds:0;
-      return tb-ta;
+      return (b.data.createdAt?b.data.createdAt.seconds:0)-(a.data.createdAt?a.data.createdAt.seconds:0);
     });
     var html='';
     items.forEach(function(item){
       var d=item.data;
       var date=d.createdAt?new Date(d.createdAt.seconds*1000).toLocaleDateString('ko-KR'):'';
       var isNew=!d.readAt;
-      html+='<div class="card" style="margin-bottom:8px;'+(isNew?'border-left:3px solid var(--primary)':'')+'" onclick="_viewMyStatement(this)" data-id="'+item.id+'">'        +'<div style="display:flex;justify-content:space-between;align-items:center">'        +'<div>'        +(isNew?'<span style="background:var(--primary);color:#fff;font-size:9px;padding:2px 6px;border-radius:10px;margin-right:6px">NEW</span>':'')        +'<span style="font-size:13px;font-weight:700">'+esc(d.label||'정산명세서')+'</span>'        +'</div>'        +'<div style="font-size:11px;color:var(--text3)">'+date+'</div>'        +'</div>'        +'<div style="font-size:12px;color:var(--text2);margin-top:4px">'+(d.type==='tax'?'🧾 세금계산서':'📄 정산명세서')+'</div>'        +'</div>';
+      var typeLabel=d.type==='tax_invoice'||d.type==='tax'?'🧾 세금계산서':'📄 정산명세서';
+      html+='<div class="card" style="margin-bottom:8px;'+(isNew?'border-left:3px solid var(--primary)':'')+';display:flex;align-items:center;gap:8px">'
+        +'<div style="flex:1;cursor:pointer" onclick="_viewMyStatement(this.closest(\".card\"))" data-id="'+item.id+'">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center">'
+        +'<div>'+(isNew?'<span style="background:var(--primary);color:#fff;font-size:9px;padding:2px 6px;border-radius:10px;margin-right:6px">NEW</span>':'')
+        +'<span style="font-size:13px;font-weight:700">'+esc(d.title||d.month||'정산명세서')+'</span>'
+        +'</div><div style="font-size:11px;color:var(--text3)">'+date+'</div></div>'
+        +'<div style="font-size:12px;color:var(--text2);margin-top:4px">'+typeLabel+'</div>'
+        +'</div>'
+        +'<button onclick="_deleteMyStmt(\"'+item.id+'\")" style="flex-shrink:0;padding:6px 8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;cursor:pointer">🗑</button>'
+        +'</div>';
     });
-    document.getElementById('my-stmt-list').innerHTML=html||'<div class="empty"><div class="empty-icon">📭</div>전달받은 내역이 없습니다</div>';
+    var el=document.getElementById('my-stmt-list');
+    if(el)el.innerHTML=html||'<div class="empty"><div class="empty-icon">📭</div>전달받은 내역이 없습니다</div>';
   }).catch(function(e){
-    document.getElementById('my-stmt-list').innerHTML='<div class="empty"><div class="empty-icon">⚠️</div>데이터를 불러올 수 없습니다</div>';
-    console.warn('정산내역 오류:',e.message);
+    var el=document.getElementById('my-stmt-list');
+    if(el)el.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div>데이터를 불러올 수 없습니다</div>';
   });
+}
+function _deleteMyStmt(id){
+  if(!confirm('이 알림을 삭제하시겠습니까?'))return;
+  _db.collection('driver_notifications').doc(id).delete()
+    .then(function(){toast('✅ 삭제됨');_loadMyStatements();})
+    .catch(function(e){toast('❌ '+e.message);});
+}
+function _deleteAllMyStmts(){
+  if(!confirm('내 정산 내역을 전부 삭제하시겠습니까?'))return;
+  var _did=_CU.dealerId||'';
+  var _driverId=_CU.driverId||'';
+  var q=_CU.role==='driver'
+    ?_db.collection('driver_notifications').where('dealerId','==',_did).where('targetDriverId','==',_driverId)
+    :_db.collection('driver_notifications').where('dealerId','==',_did);
+  q.get().then(function(snap){
+    if(snap.empty){toast('삭제할 내역 없음');return;}
+    var batch=_db.batch();
+    snap.forEach(function(doc){batch.delete(doc.ref);});
+    return batch.commit();
+  }).then(function(){toast('✅ 전체 삭제 완료');_loadMyStatements();})
+  .catch(function(e){toast('❌ '+e.message);});
 }
 
 
