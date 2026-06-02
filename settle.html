@@ -1207,7 +1207,7 @@ function calcNet(x){
   var nocont=_nocontCnt>0
     ? (_nocontUnit>0 ? _nocontCnt*_nocontUnit : (+x.nocont||+x.nocontAmt||0))
     : (+x.nocont||+x.nocontAmt||0);
-  var etcPlus  = (+x.etcPlus||0) + (+x.etcPlusTL||0);  // ★ 기타(+) + 팀장수수료
+  var etcPlus  = (+x.etcPlus||0);  // ★ 기타(+) — etcPlusTL은 etcPlus 안에 이미 포함됨 (중복 가산 제거)
   var etcMinus = +x.etcMinus || 0;  // ★ 기타(-)
   // ★ v9.25: 기타(+)만 세금계산서(income)에 포함 → 고용·산재 기준
   //           기타(-)는 세금계산서 제외, 실지급에서만 차감 (공제 항목)
