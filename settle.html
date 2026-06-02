@@ -16583,8 +16583,7 @@ function _saveSECurrent(){
     try{var d2=_CU&&_CU.dealerId||'shared';
       localStorage.removeItem('dw_'+d2+'_settlements');
       localStorage.removeItem('settlements');}catch(e){}
-    _settleCache=null;
-    // 정산 목록만 백그라운드 갱신 (모달 유지)
+    // 정산 캐시 백그라운드 갱신 (모달 유지)
     _db.collection('settlements').where('dealerId','==',_CU.dealerId||_CU.uid)
       .get().then(function(snap){
         _settleCache=snap.docs.map(function(d){return Object.assign({id:d.id,fbId:d.id},d.data());});
