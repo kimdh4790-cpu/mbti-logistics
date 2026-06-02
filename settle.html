@@ -17010,10 +17010,151 @@ function _reactivateDriver(docId, name){
   }).catch(function(e){toast('❌ 오류: '+e.message);});
 }
 
+
+// ══ 기사 일괄 등록 (근무표 + 고용산재표) ══
+function _openBulkDriverRegister(){
+  var old=document.getElementById('mo-bulk-drv');if(old)old.remove();
+  var mo=document.createElement('div');mo.className='mo show';mo.id='mo-bulk-drv';
+  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  mo.innerHTML='<div class="md" style="max-width:480px"><div class="mdt">📂 기사 일괄 등록</div><div style="padding:16px;font-size:12px;color:var(--text3);margin-bottom:8px">근무표(쿠팡 schedule.xlsx)와 고용·산재 계산표를 올리면 이름 매칭 후 자동 등록됩니다.</div><div style="padding:0 16px"><div style="margin-bottom:12px"><div style="font-size:12px;font-weight:700;margin-bottom:6px">① 근무표 (이름+아이디)</div><label style="display:block;padding:10px;border:2px dashed var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)">📂 근무표 선택 (schedule xlsx)<input type="file" id="bulk-schedule-file" accept=".xlsx,.xls" style="display:none" onchange="_bulkLoadSchedule(this)"></label><div id="bulk-schedule-status" style="font-size:11px;color:var(--green);margin-top:4px"></div></div><div style="margin-bottom:16px"><div style="font-size:12px;font-weight:700;margin-bottom:6px">② 고용·산재 계산표 (이름+사업자번호)</div><label style="display:block;padding:10px;border:2px dashed var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)">📂 고용산재표 선택 (xls/xlsx)<input type="file" id="bulk-biz-file" accept=".xlsx,.xls" style="display:none" onchange="_bulkLoadBizExcel(this)"></label><div id="bulk-biz-status" style="font-size:11px;color:var(--green);margin-top:4px"></div></div><div id="bulk-preview" style="margin-bottom:12px"></div></div><div class="mdf"><button class="btn" onclick="this.closest(\'.mo\').remove()">취소</button><button class="btn btn-blue" id="bulk-apply-btn" onclick="_bulkApplyDrivers()" disabled>적용</button></div></div>';
+  document.getElementById('modals').appendChild(mo);
+  window._bulkScheduleMap={};  // userId→name
+  window._bulkBizMap={};       // name→bizNum
+}
+
+window._bulkLoadSchedule=function(inp){
+  var file=inp.files[0];if(!file)return;
+  var st=document.getElementById('bulk-schedule-status');
+  st.textContent='⏳ 읽는 중...';
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      var sh=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(sh,{header:1,defval:''});
+      window._bulkScheduleMap={};
+      var cnt=0;
+      rows.slice(1).forEach(function(r){
+        var name=String(r[5]||'').trim();
+        var uid=String(r[6]||'').trim();
+        if(name&&uid&&name!=='이름'){
+          window._bulkScheduleMap[uid]=name;
+          cnt++;
+        }
+      });
+      st.textContent='✅ '+cnt+'명 로드됨';
+      _bulkUpdatePreview();
+    }catch(e){st.textContent='❌ '+e.message;}
+  };
+  reader.readAsArrayBuffer(file);
+};
+
+window._bulkLoadBizExcel=function(inp){
+  var file=inp.files[0];if(!file)return;
+  var st=document.getElementById('bulk-biz-status');
+  st.textContent='⏳ 읽는 중...';
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      var sh=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(sh,{header:1,defval:''});
+      window._bulkBizMap={};
+      var cnt=0;
+      rows.slice(3).forEach(function(r){
+        var name=String(r[2]||'').trim();
+        var biz=String(r[5]||'').trim();
+        if(name&&biz&&biz.length>5&&name!=='성명'){
+          window._bulkBizMap[name]=biz;
+          cnt++;
+        }
+      });
+      st.textContent='✅ '+cnt+'명 로드됨';
+      _bulkUpdatePreview();
+    }catch(e){st.textContent='❌ '+e.message;}
+  };
+  reader.readAsArrayBuffer(file);
+};
+
+function _bulkUpdatePreview(){
+  var prev=document.getElementById('bulk-preview');
+  var applyBtn=document.getElementById('bulk-apply-btn');
+  if(!prev)return;
+  var sm=window._bulkScheduleMap||{};
+  var bm=window._bulkBizMap||{};
+  if(!Object.keys(sm).length||!Object.keys(bm).length){
+    prev.innerHTML='';
+    if(applyBtn)applyBtn.disabled=true;
+    return;
+  }
+  var matched=[];var noMatch=[];
+  Object.keys(sm).forEach(function(uid){
+    var name=sm[uid];
+    if(bm[name]) matched.push({uid:uid,name:name,biz:bm[name]});
+    else noMatch.push(name);
+  });
+  var html='<div style="background:var(--bg3);border-radius:8px;padding:10px;font-size:11px">'    +'<div style="font-weight:700;margin-bottom:6px;color:var(--green)">✅ 매칭 '+matched.length+'명</div>';
+  matched.forEach(function(m){
+    html+='<div style="padding:2px 0;color:var(--text2)">'+esc(m.name)+' ('+esc(m.uid)+') → '+esc(m.biz)+'</div>';
+  });
+  if(noMatch.length){
+    html+='<div style="font-weight:700;margin:6px 0 4px;color:var(--text3)">⚠️ 사업자번호 없음 '+noMatch.length+'명</div>';
+    html+='<div style="color:var(--text3)">'+noMatch.map(esc).join(', ')+'</div>';
+  }
+  html+='</div>';
+  prev.innerHTML=html;
+  if(applyBtn)applyBtn.disabled=matched.length===0;
+  window._bulkMatched=matched;
+}
+
+window._bulkApplyDrivers=function(){
+  var matched=window._bulkMatched||[];
+  if(!matched.length){toast('❌ 매칭된 기사 없음');return;}
+  var did=_CU.dealerId||_CU.uid;
+  var applyBtn=document.getElementById('bulk-apply-btn');
+  if(applyBtn){applyBtn.disabled=true;applyBtn.textContent='적용 중...';}
+  _db.collection('drivers').where('dealerId','==',did).get().then(function(snap){
+    var batch=_db.batch();
+    var cnt=0;
+    // userId→docRef 맵
+    var docMap={};
+    snap.docs.forEach(function(doc){
+      var d=doc.data();
+      var uid=d.userId||doc.id;
+      var name=d.name||'';
+      docMap[uid]=doc.ref;
+      if(name)docMap[name]=doc.ref;
+    });
+    matched.forEach(function(m){
+      var ref=docMap[m.uid]||docMap[m.name];
+      if(ref){
+        batch.update(ref,{
+          name:m.name,
+          bizNum:m.biz,
+          isBiz:true,
+          updatedAt:new Date().toISOString()
+        });
+        cnt++;
+      }
+    });
+    return batch.commit().then(function(){
+      toast('✅ '+cnt+'명 등록 완료');
+      var mo=document.getElementById('mo-bulk-drv');if(mo)mo.remove();
+      _drvCache=null;
+    });
+  }).catch(function(e){
+    toast('❌ '+e.message);
+    if(applyBtn){applyBtn.disabled=false;applyBtn.textContent='적용';}
+  });
+};
+
 function pageDrivers(){
   document.getElementById('page-title').textContent='기사 관리';
   var tr=document.getElementById('topbar-right');tr.innerHTML='';
   var btn=document.createElement('button');btn.className='btn btn-blue btn-sm';btn.textContent='+ 기사 추가';btn.onclick=openAddDriver;tr.appendChild(btn);
+  var btnBulk=document.createElement('button');btnBulk.className='btn btn-sm';
+  btnBulk.style.cssText='background:#7c3aed;color:#fff;font-size:11px';
+  btnBulk.textContent='📂 일괄 등록';btnBulk.onclick=_openBulkDriverRegister;tr.appendChild(btnBulk);
   var c=document.getElementById('content');
   if(!_db){c.innerHTML='<div class="empty"><div class="empty-icon">👤</div>로그인 후 이용하세요</div>';return;}
   c.innerHTML='<div class="loading">로딩 중...</div>';
