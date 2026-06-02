@@ -14496,17 +14496,21 @@ function pageSettle(){
     var allMonths=[...new Set(settles.map(function(s){return s.month||''}).filter(Boolean))].sort().reverse();
 
     // 집계 (필터 적용)
-    var totCoupang=0,totTaxBase=0,totNet=0,totDcnt=0,totDeduct=0;
+    var totCoupang=0,totTaxBase=0,totNet=0,totDcnt=0,totDeduct=0,totInsComp=0;
     var byCamp={};
     filteredSettles.forEach(function(s){
       var r=calcNet(s);
       var ct=s.coupangTotal||(((s.damt||0)+(s.ramt||0)+(s.fresh||0)+(s.inc||0)+(s.nocont||0)))||0;
-      // ★ coupangTotal = 엑셀 VAT별도 원본 → ×1.1 해야 VAT포함
       totCoupang+=ct?Math.round(ct*1.1):(r.income||0);
-      totTaxBase+=(r.totalAmt||r.income||0);   // ★ v9.26: 저장된 totalAmt 우선 (정산관리 행과 일치)
+      totTaxBase+=(r.totalAmt||r.income||0);
       totNet+=r.net||0;
       totDeduct+=r.deduct||0;
       totDcnt+=(s.dcnt||0);
+      // 회사 부담 고용·산재보험 (기사 공제분과 별개)
+      var mw=r.monthlyWage||0;
+      var empComp=mw>=800000?Math.floor(mw*0.009/10)*10:0;  // 고용 0.9%
+      var workComp=Math.floor(mw*0.0088/10)*10;              // 산재 0.88%
+      totInsComp+=empComp+workComp;
       var cc=_getSettleCamp(s)||'기타';
       if(!byCamp[cc])byCamp[cc]={cnt:0,net:0,dcnt:0};
       byCamp[cc].cnt++;byCamp[cc].net+=r.net||0;byCamp[cc].dcnt+=(s.dcnt||0);
@@ -14529,7 +14533,7 @@ function pageSettle(){
     var hero=document.createElement('div');
     hero.style.cssText='background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 50%,#312e81 100%);border-radius:16px;padding:28px 24px;margin-bottom:16px;color:#fff;position:relative;overflow:hidden';
     var totMargin=totCoupang-totTaxBase;
-    // 경비 차감 실순수익
+    // 경비 + 회사부담 보험료 차감 실순수익
     var _expTotal=0;
     if(curMonthFilter==='all'){
       Object.values(expByMonth).forEach(function(v){_expTotal+=v;});
@@ -14537,7 +14541,7 @@ function pageSettle(){
     } else {
       _expTotal=(expByMonth[curMonthFilter]||0)+fixedMonthly;
     }
-    var totNetProfit=totMargin-_expTotal;
+    var totNetProfit=totMargin-totInsComp-_expTotal;
     // 선택 월 표시
     var monthLabel=curMonthFilter==='all'?'전체 누적':curMonthFilter;
     hero.innerHTML='<div style="position:absolute;top:-30px;right:-30px;width:200px;height:200px;background:rgba(255,255,255,.04);border-radius:50%"></div>'
@@ -14563,14 +14567,14 @@ function pageSettle(){
         +'</div>'
         +'<div style="text-align:right">'
           +'<div style="font-size:20px;font-weight:900;color:#a78bfa">₩'+fmt(totMargin)+'</div>'
-          +'<div style="font-size:10px;opacity:.5">보험료 -₩'+fmt(totDeduct)+'</div>'
+          +'<div style="font-size:10px;opacity:.5">회사보험료 -₩'+fmt(totInsComp)+'</div>'
         +'</div>'
       +'</div>'
       // 실순수익 박스
       +'<div style="background:rgba(0,0,0,.25);border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">'
         +'<div>'
           +'<div style="font-size:11px;opacity:.8;font-weight:700">🏢 실순수익 (경비 차감 후)</div>'
-          +'<div style="font-size:9px;opacity:.5">'+(_expTotal>0?'경비 ₩'+fmt(_expTotal)+' 차감':'경비 미등록 — 경비 관리 탭에서 등록하세요')+'</div>'
+          +'<div style="font-size:9px;opacity:.5">단가마진 − 회사보험료(₩'+fmt(totInsComp)+') − 경비'+(_expTotal>0?' (₩'+fmt(_expTotal)+')':'')+'</div>'
         +'</div>'
         +'<div style="text-align:right">'
           +'<div style="font-size:22px;font-weight:900;color:'+(totNetProfit>=0?'#4ade80':'#f87171')+'">'+(totNetProfit<0?'−':'')+'₩'+fmt(Math.abs(totNetProfit))+'</div>'
