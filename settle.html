@@ -21487,12 +21487,10 @@ async function _doDeploySettlements(ids) {
     (_settleCache && _settleCache[0] ? _settleCache[0].month : '');
 
   // FCM 토큰 로드 — users 컬렉션 기준 (driverId/name 매핑)
-  console.log('[DEPLOY] 시작 did:', _did, 'ids:', ids.length);
   var tokenMap = {};
   try {
     var userSnap = await _db.collection('users')
       .where('dealerId', '==', _did).get();
-    console.log('[DEPLOY] users 조회:', userSnap.size, '명');
     userSnap.forEach(function(doc) {
       var u = doc.data();
       if (!u.fcmToken || u.fcmToken.length < 20) return;
@@ -21512,11 +21510,10 @@ async function _doDeploySettlements(ids) {
 
   var fcmTokens = [];
 
-  console.log('[DEPLOY] tokenMap keys:', Object.keys(tokenMap));
   for (var i = 0; i < ids.length; i++) {
     var sid = ids[i];
     var settle = _settleCache.find(function(x) { return x.id === sid; });
-    if (!settle){ console.log('[DEPLOY] settle 못찾음:', sid); continue; }
+    if (!settle) continue;
 
     try {
       // 1. Firestore 정산 배포 상태 업데이트
@@ -21580,7 +21577,6 @@ async function _doDeploySettlements(ids) {
         || tokenMap[_tDrvId]
         || tokenMap['drv_'+_phonePrefix]
         || '';
-      console.log('[FCM]', _driverName, '_tDrvId:', _tDrvId, 'token:', _tk?'✅':'❌', 'tokenMapKeys:', Object.keys(tokenMap).slice(0,5));
       if (_tk) {
         try {
           var _fr = await fetch('/fcm/notify-drivers', {
