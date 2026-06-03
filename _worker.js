@@ -46,26 +46,10 @@ const GITHUB_API = 'https://api.github.com/repos/kimdh4790-cpu/mbti-logistics/co
 async function fetchAsset(path, request) {
   const filePath = path.startsWith('/') ? path : '/' + path;
   const encodedPath = filePath.split('/').map(seg => seg ? encodeURIComponent(seg) : '').join('/');
-  const noCache = filePath.includes('settle.html') || filePath.includes('mbetco.html') || filePath.includes('universal_settle.html');
   let resp;
-  if (noCache) {
-    // backup 경로로 캐시 우회 + 타임스탬프로 강제 갱신
-    if (filePath.includes('mbetco.html')) {
-      resp = await fetch(GITHUB_RAW + '/backup/mbetco_latest.html?t=' + Date.now(), {
-        cf: { cacheEverything: false, cacheTtl: 0 }
-      });
-    } else if (filePath.includes('universal_settle.html')) {
-      resp = await fetch(GITHUB_RAW + '/universal_settle.html?t=' + Date.now(), {
-        cf: { cacheEverything: false, cacheTtl: 0 }
-      });
-    } else {
-      resp = await fetch(GITHUB_RAW + '/backup/settle_latest.html?t=' + Date.now(), {
-        cf: { cacheEverything: false, cacheTtl: 0 }
-      });
-    }
-  } else {
-    resp = await fetch(GITHUB_RAW + encodedPath);
-  }
+  resp = await fetch(GITHUB_RAW + encodedPath + '?t=' + Date.now(), {
+    cf: { cacheEverything: false, cacheTtl: 0 }
+  });
   return resp;
 }
 
@@ -394,7 +378,7 @@ export default {
         + "  const body=(payload.notification&&payload.notification.body)||'';"
         + "  return self.registration.showNotification(title,{body:body,icon:'/icon-192.png',badge:'/icon-192.png',tag:'donway-'+type,renotify:true,vibrate:[200,100,200]});"
         + "});"
-        + "self.addEventListener('notificationclick',function(e){e.notification.close();if(e.action==='close')return;e.waitUntil(clients.openWindow('/settle'));});"
+        + "self.addEventListener('notificationclick',function(e){e.notification.close();if(e.action==='close')return;var url=e.notification.data&&e.notification.data.url?e.notification.data.url:'/';e.waitUntil(clients.matchAll({type:'window'}).then(function(cl){for(var c of cl){if(c.url.includes('donway')&&'focus' in c)return c.focus();}if(clients.openWindow)return clients.openWindow(url);}));});"
         + "self.addEventListener('install',function(){self.skipWaiting();});"
         + "self.addEventListener('activate',function(e){e.waitUntil(clients.claim());});";
       return new Response(swContent, {
@@ -406,26 +390,6 @@ export default {
           'Access-Control-Allow-Origin': '*'
         }
       });
-    }
-
-    // ── mbetco.kr 도메인 처리 ──
-    if (hostname.includes('mbetco.kr')) {
-      const mbResp = await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/backup/mbetco_latest.html?t=' + Date.now(), {
-        cf: { cacheEverything: false, cacheTtl: 0 }
-      });
-      return new Response(mbResp.body, {
-        status: mbResp.status,
-        headers: { 'Content-Type': 'text/html;charset=utf-8', 'Cache-Control': 'no-store' }
-      });
-    }
-
-    // ── mbtico.kr 도메인 → universal_settle.html 서빙 (모든 경로) ──
-    if (hostname.includes('mbtico.kr')) {
-      const resp = await fetchAsset('/universal_settle.html', request);
-      const html = await resp.text();
-      const key = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
-      const injected = html.replace('</head>', '<script>window.__AK=' + JSON.stringify(key) + ';</script>\n</head>');
-      return new Response(injected, { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
     }
 
     // ★ 루트 접속 → 랜딩페이지 리라이트 (URL 유지, workers.dev 제외)
@@ -832,11 +796,7 @@ export default {
       }
     }
 
-    if (path === '/mbetco' || path === '/mbetco/') {
-      const resp = await fetchAsset('/mbetco.html', request);
-      return new Response(resp.body, { status: resp.status, headers: {'Content-Type':'text/html;charset=utf-8','Cache-Control':'no-store'} });
-    }
-    if (path === '/settle' || path === '/settle/') {
+    if (path === '/settle.html' || path === '/settle' || path === '/settle/') {
       const resp = await fetchAsset('/settle.html', request);
       const html = await resp.text();
       const key = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
@@ -1464,7 +1424,7 @@ export default {
     if (path === '/fcm/notify-drivers' && method === 'POST') {
       try {
         const body = await request.json();
-        const { tokens, title, body: msgBody, type } = body;
+        const { tokens, title, body: msgBody, type, url, data: extraData } = body;
         if (!tokens || !tokens.length) {
           return new Response(JSON.stringify({ ok: true, sent: 0 }), {
             headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
@@ -1491,9 +1451,10 @@ export default {
                   message: {
                     token: token,
                     notification: { title: title || 'DONWAY 알림', body: msgBody || '' },
-                    data: { type: type || 'notice' },
-                    android: { priority: 'high' },
-                    apns: { payload: { aps: { sound: 'default', badge: 1 } } }
+                    data: Object.assign({ type: type || 'notice', url: url || '/' }, extraData || {}),
+                    android: { priority: 'high', notification: { sound: 'default', channel_id: 'donway_default' } },
+                    apns: { payload: { aps: { sound: 'default', badge: 1, 'content-available': 1 } } },
+                    webpush: { notification: { icon: '/icon-192.png', badge: '/icon-192.png', vibrate: [200,100,200], requireInteraction: false }, fcm_options: { link: url || '/' } }
                   }
                 })
               }
@@ -1691,6 +1652,34 @@ export default {
         ]
       }), { status:200, headers:{'Content-Type':'application/manifest+json; charset=utf-8','Cache-Control':'no-cache'} });
     }
+    // ── /{slug}/sw.js → 슬러그 scope용 SW 서빙 (PWA 설치 지원)
+    const slugSwMatch = path.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/sw\.js$/);
+    if (slugSwMatch) {
+      const slug = slugSwMatch[1];
+      const swContent = `importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');`
+        + `importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');`
+        + `firebase.initializeApp({apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.firebasestorage.app',messagingSenderId:'40761160761',appId:'1:40761160761:web:20545b610f03f534e949e8'});`
+        + `const messaging=firebase.messaging();`
+        + `messaging.onBackgroundMessage(function(payload){`
+        + `  const data=payload.data||{};`
+        + `  const title='DONWAY '+(payload.notification&&payload.notification.title||'알림');`
+        + `  const body=(payload.notification&&payload.notification.body)||'';`
+        + `  return self.registration.showNotification(title,{body:body,icon:'/icon-192.png',badge:'/icon-192.png',tag:'donway-push',renotify:true,vibrate:[200,100,200]});`
+        + `});`
+        + `self.addEventListener('notificationclick',function(e){e.notification.close();e.waitUntil(clients.matchAll({type:'window'}).then(function(cl){for(var c of cl){if('focus' in c)return c.focus();}if(clients.openWindow)return clients.openWindow('/'+e.notification.data&&e.notification.data.url||'${slug}');}));});`
+        + `self.addEventListener('install',function(){self.skipWaiting();});`
+        + `self.addEventListener('activate',function(e){e.waitUntil(clients.claim());});`;
+      return new Response(swContent, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/javascript; charset=utf-8',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Service-Worker-Allowed': '/'+slug+'/',
+          'Access-Control-Allow-Origin': '*'
+        }
+      });
+    }
+
     if (path === '/manifest.json') {
       return new Response(JSON.stringify({
         name:'DONWAY — 자동화 정산 플랫폼', short_name:'DONWAY',
