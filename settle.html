@@ -11191,15 +11191,29 @@ function pageEmpHome(){
 }
 
 // ★ 직원 이번주 근무표 실시간 로드
-function pageMyRoster(){
+function pageMyRoster(offsetWeek){
   document.getElementById('page-title').textContent='근무표';
   document.getElementById('topbar-right').innerHTML='';
   var c=document.getElementById('content');
   if(!_db||!_CU){c.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
   var did=_CU.dealerId||_CU.companyId||'';
   var uid=_CU.uid||_CU.userId||'';
-  var today=new Date().toISOString().slice(0,10);
-  c.innerHTML='<div style="max-width:700px;margin:0 auto;padding:16px">'    +'<div style="font-size:18px;font-weight:800;margin-bottom:16px">📅 이번주 근무표</div>'    +'<div id="emp-roster-grid"><div style="text-align:center;padding:20px;color:var(--text3)">⏳ 로딩 중...</div></div>'    +'</div>';
+  var offset=(typeof offsetWeek==='number')?offsetWeek:0;
+  window._myRosterOffset=offset;
+  var base=new Date();
+  base.setDate(base.getDate()+offset*7);
+  var today=base.toISOString().slice(0,10);
+  var weekStart=_getWeekStart(today);
+  var weekEnd=new Date(weekStart);weekEnd.setDate(weekEnd.getDate()+6);
+  var wLabel=weekStart.slice(5).replace('-','/')+'~'+weekEnd.toISOString().slice(5,10).replace('-','/');
+  c.innerHTML='<div style="max-width:700px;margin:0 auto;padding:16px">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'
+    +'<button onclick="pageMyRoster('+(offset-1)+')" style="background:var(--bg3);border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:16px">‹</button>'
+    +'<div style="font-size:15px;font-weight:800">📅 '+wLabel+'</div>'
+    +'<button onclick="pageMyRoster('+(offset+1)+')" style="background:var(--bg3);border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:16px">›</button>'
+    +'</div>'
+    +'<div id="emp-roster-grid"><div style="text-align:center;padding:20px;color:var(--text3)">⏳ 로딩 중...</div></div>'
+    +'</div>';
   _empLoadRoster(did, uid, today);
 }
 function _empLoadRoster(did, uid, today){
