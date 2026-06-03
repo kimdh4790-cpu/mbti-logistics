@@ -73,6 +73,65 @@ function getPlanUrl(planType, slug) {
 }
 
 
+// ── 슈퍼어드민 Firestore 수정 엔드포인트 ──
+// POST /sa/firestore { collection, docId, fields: {key:value} }
+async function handleSAFirestore(request, env) {
+  try {
+    const body = await request.json();
+    const { collection, docId, fields } = body;
+    if (!collection || !docId || !fields) {
+      return new Response(JSON.stringify({error:'collection/docId/fields 필수'}), {status:400, headers:{'Content-Type':'application/json'}});
+    }
+    const SA_KEY = env.FIREBASE_SA_KEY ? JSON.parse(env.FIREBASE_SA_KEY) : null;
+    if (!SA_KEY) return new Response(JSON.stringify({error:'SA_KEY 없음'}), {status:500, headers:{'Content-Type':'application/json'}});
+
+    // Google OAuth2 token 발급
+    const now = Math.floor(Date.now()/1000);
+    const header = btoa(JSON.stringify({alg:'RS256',typ:'JWT'}));
+    const claim = btoa(JSON.stringify({
+      iss: SA_KEY.client_email,
+      scope: 'https://www.googleapis.com/auth/datastore',
+      aud: 'https://oauth2.googleapis.com/token',
+      exp: now+3600, iat: now
+    }));
+    // JWT 서명 (RSA는 Workers에서 crypto.subtle로)
+    const pemKey = SA_KEY.private_key;
+    const keyData = pemKey.replace(/-----.*?-----/g,'').replace(/\s/g,'');
+    const binaryKey = Uint8Array.from(atob(keyData), c=>c.charCodeAt(0));
+    const cryptoKey = await crypto.subtle.importKey(
+      'pkcs8', binaryKey.buffer,
+      {name:'RSASSA-PKCS1-v1_5', hash:'SHA-256'},
+      false, ['sign']
+    );
+    const sigInput = new TextEncoder().encode(header+'.'+claim);
+    const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', cryptoKey, sigInput);
+    const jwt = header+'.'+claim+'.'+btoa(String.fromCharCode(...new Uint8Array(sig)));
+
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:`grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
+    });
+    const {access_token} = await tokenRes.json();
+
+    // Firestore PATCH
+    const PROJECT = 'mbti-logistics';
+    const fieldMap = {};
+    for(const [k,v] of Object.entries(fields)) {
+      fieldMap[k] = typeof v==='number' ? {integerValue:v} : {stringValue:String(v)};
+    }
+    const fsRes = await fetch(
+      `https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents/${collection}/${docId}?updateMask.fieldPaths=${Object.keys(fields).join('&updateMask.fieldPaths=')}`,
+      {method:'PATCH', headers:{'Authorization':`Bearer ${access_token}`,'Content-Type':'application/json'},
+       body:JSON.stringify({fields:fieldMap})}
+    );
+    const result = await fsRes.json();
+    return new Response(JSON.stringify({ok:true, result}), {headers:{'Content-Type':'application/json'}});
+  } catch(e) {
+    return new Response(JSON.stringify({error:e.message}), {status:500, headers:{'Content-Type':'application/json'}});
+  }
+}
+
 // ── FCM 푸시 발송 (Cloud Function sendPush 경유) ──
 async function sendFCMPush(fcmToken, title, body, data = {}) {
   if (!fcmToken) return { sent: false, reason: 'no token' };
@@ -1395,6 +1454,11 @@ export default {
           status: 500, headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS }
         });
       }
+    }
+
+    // ★ 슈퍼어드민 Firestore 수정
+    if (path === '/sa/firestore' && method === 'POST') {
+      return handleSAFirestore(request, env);
     }
 
     // ── 관리자 FCM 알림 (/fcm/notify-admin) ──
