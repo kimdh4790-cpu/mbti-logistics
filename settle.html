@@ -20957,12 +20957,12 @@ function _sendTaxInvoicePush(x,r,name,month,vatIncome,docId){
     return;
   }
   var captureDiv=document.createElement('div');
-  captureDiv.style.cssText='position:fixed;left:-9999px;top:0;width:500px;background:#fff';
+  captureDiv.style.cssText='position:fixed;left:-9999px;top:0;width:360px;background:#fff';
   captureDiv.innerHTML=_buildTaxCaptureHTML(x,r,name,month,vatIncome);
   document.body.appendChild(captureDiv);
   setTimeout(function(){
     var wrapW=captureDiv.scrollWidth,wrapH=captureDiv.scrollHeight;
-    html2canvas(captureDiv,{scale:1.5,useCORS:true,backgroundColor:'#ffffff',logging:false,
+    html2canvas(captureDiv,{scale:1,useCORS:true,backgroundColor:'#ffffff',logging:false,
       width:wrapW,height:wrapH,windowWidth:wrapW,windowHeight:wrapH})
     .then(function(canvas){
       document.body.removeChild(captureDiv);
