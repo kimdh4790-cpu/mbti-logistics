@@ -3265,7 +3265,7 @@ function doRegister(){
     var emailPrefix=email.split('@')[0].replace(/[^a-zA-Z0-9]/g,'').toLowerCase();
     var slugVal=(document.getElementById('r-slug')||{value:''}).value.trim()||
       emailPrefix||uid.substring(0,8);
-    return _db.collection('companies').doc(uid).set({
+    var companyDoc={
       companyName:company,
       name:company,
       bizNumber:biz,
@@ -3283,7 +3283,19 @@ function doRegister(){
       kakaoId:_kakaoId||'',
       createdAt:firebase.firestore.FieldValue.serverTimestamp(),
       uid:uid
-    });
+    };
+    // ★ users 문서 동시 생성 (Firestore rules ownsDoc() 정상 동작 필수)
+    _db.collection('users').doc(uid).set({
+      uid:uid,
+      email:email,
+      name:company,
+      companyName:company,
+      role:'dealer',
+      dealerId:uid,
+      serviceType:serviceType,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(function(){});
+    return _db.collection('companies').doc(uid).set(companyDoc);
   }).then(function(){
     var myUrl=window.location.origin+'/'+slugVal;
     toast('✅ 등록 완료! 사업자등록증 업로드 중...');
