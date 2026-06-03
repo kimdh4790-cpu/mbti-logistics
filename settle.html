@@ -7696,8 +7696,22 @@ function _dwRenderEngine(){
   wrap.appendChild(simWrap);
   el.appendChild(wrap);
   _dwRenderSimulator();
-  setTimeout(function(){if(typeof _dwBindDefPrice==='function')_dwBindDefPrice();},100);
-  var _did=_CU&&_CU.dealerId;if(_did)setTimeout(function(){_dwLoadCfg(_did);},800);
+  // ★ 렌더 직후 Firestore 저장값으로 input 즉시 덮어쓰기
+  setTimeout(function(){
+    if(typeof _dwBindDefPrice==='function') _dwBindDefPrice();
+    if(window.DW_TRACKS){
+      DW_TRACKS.forEach(function(t){
+        var el=document.getElementById('dw-track-'+t.key)||document.getElementById('dw-track-'+t.min);
+        if(el) el.value=t.price;
+      });
+      var t0=DW_TRACKS.find(function(x){return x.min===0;});
+      if(t0){
+        var dp=document.getElementById('dw-def-price-2')||document.getElementById('dw-def-price');
+        if(dp) dp.value=t0.price||0;
+      }
+    }
+  },100);
+  var _did=_CU&&_CU.dealerId;if(_did)setTimeout(function(){_dwLoadCfg(_did);},400);
 }
 
 // ★ 통합 로드 - 아래 업로드 섹션 파일 선택 시 시뮬레이터 자동 실행
