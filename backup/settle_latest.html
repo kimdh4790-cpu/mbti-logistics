@@ -6934,7 +6934,7 @@ function _dwRenderSimulator(){
     +DW_TRACKS.filter(function(t){return t.min>0;}).map(function(t,i){
       return '<div>'
         +'<div style="font-size:10px;font-weight:700;color:var(--text3);margin-bottom:3px">'+(t.label||t.min+'건+')+'</div>'
-        +'<input id="dw-track2-'+(t.key||i)+'" type="number" value="'+t.price+'" min="0" step="100"'
+        +'<input id="dw-track-'+(t.key||t.min)+'" type="number" value="'+t.price+'" min="0" step="100"'
         +' style="width:100%;padding:6px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);text-align:right"'
         +' oninput="if(DW_TRACKS){var _k=this.getAttribute(\'data-key\');var tk=DW_TRACKS.find(function(x){return (x.key||x.min+\'\')===_k;});if(tk)tk.price=parseInt(this.value)||0;}" data-key="'+(t.key||t.min)+'">'
         +'</div>';
@@ -12482,7 +12482,7 @@ function _dwSaveTracks(){
   // DW_TRACKS id: dw-track-{t.key}
   if(window.DW_TRACKS){
     window.DW_TRACKS.forEach(function(t){
-      var el=document.getElementById('dw-track-'+t.key);
+      var el=document.getElementById('dw-track-'+t.key)||document.getElementById('dw-track-'+t.min);
       if(el) t.price=parseInt(el.value)||t.price;
     });
     // 180건 미만 기본단가
