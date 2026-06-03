@@ -6892,7 +6892,7 @@ function _dwRenderSimulator(){
         +'</div>';
       }).join('')
       +'<div><div style="font-size:10px;font-weight:700;color:var(--text3);margin-bottom:3px">180건 미만</div>'
-        +'<input type="number" id="dw-defprice-input" placeholder="기본단가"'        +' value="'+(window._dwCfgDefPrice||(_dwGetCfg&&_dwGetCfg().defaultPrice)||2900)+'"'        +' style="width:100%;padding:6px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);text-align:right"'        +' oninput="var v=parseInt(this.value)||0;window._dwCfgDefPrice=v;if(DW_TRACKS&&DW_TRACKS[0])DW_TRACKS[0].price=v;">'
+        +'<input type="number" id="dw-def-price" placeholder="기본단가"'        +' style="width:100%;padding:6px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);text-align:right"'        +' oninput="var v=parseInt(this.value)||0;window._dwCfgDefPrice=v;if(DW_TRACKS&&DW_TRACKS[0])DW_TRACKS[0].price=v;">'
       +'</div>'
       +'</div>'
       +'<div style="font-size:10px;color:var(--text3);margin-top:6px">💡 총 수행건수 기준 자동 트랙 적용 · 수정 즉시 반영</div>'
@@ -6937,7 +6937,7 @@ function _dwRenderSimulator(){
         +'</div>';
     }).join('')
     +'<div><div style="font-size:10px;font-weight:700;color:var(--text3);margin-bottom:3px">180건 미만</div>'
-      +'<input type="number" id="dw-defprice-input2" placeholder="기본단가"'      +' value="'+(window._dwCfgDefPrice||(_dwGetCfg&&_dwGetCfg().defaultPrice)||2900)+'"'      +' style="width:100%;padding:6px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);text-align:right"'      +' oninput="var v=parseInt(this.value)||0;window._dwCfgDefPrice=v;if(DW_TRACKS&&DW_TRACKS[0])DW_TRACKS[0].price=v;">'
+      +'<input type="number" id="dw-def-price-2" placeholder="기본단가"'      +' style="width:100%;padding:6px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);text-align:right"'      +' oninput="var v=parseInt(this.value)||0;window._dwCfgDefPrice=v;if(DW_TRACKS&&DW_TRACKS[0])DW_TRACKS[0].price=v;var el2=document.getElementById(\'dw-def-price\');if(el2)el2.value=this.value;">'
     +'</div>'
     +'</div>'
     +'<div style="font-size:10px;color:var(--text3);margin-top:6px">수정 후 저장 버튼 눌러야 업데이트</div>'
@@ -7753,7 +7753,7 @@ function _dwGetCfg(){
     slotPrices[k]=v;
   });
   return{
-    defaultPrice:g('dw-def-price'),
+    defaultPrice:g('dw-def-price')||g('dw-def-price-2')||2900,
     leaseFee:g('dw-lease'),
     programFee:g('dw-program'),
     insuranceFee:g('dw-insurance'),
