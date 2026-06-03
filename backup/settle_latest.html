@@ -7062,7 +7062,7 @@ window.dwRunLiveCalculations=function(){
 
       // ★ 1패스: 완료 건수 기준 최종 트랙 확정
       var _pass1cnt=0;
-      orders.forEach(function(o){var isMid=(o.hour>=0&&o.hour<6);if(!isMid&&o.platformPrice>0)_pass1cnt++;});
+      if(orders&&orders.length){orders.forEach(function(o){var isMid=(o.hour>=0&&o.hour<6);if(!isMid&&o.platformPrice>0)_pass1cnt++;});}
       var _finalTP=_getTP(_pass1cnt);
 
       var timer=setInterval(function(){
