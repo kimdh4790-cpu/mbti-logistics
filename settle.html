@@ -14661,8 +14661,8 @@ function _speakDonway(type, body){
     }[type] || '알림';
     // 공지 내용이 있으면 내용까지 읽어줌
     var speakText = body
-      ? '돈웨이. ' + body
-      : '돈웨이. ' + typeText + '가 도착했습니다.';
+      ? '돈웨이! ' + body
+      : '돈웨이! ' + typeText + '가 도착했습니다.';
     var msg = new SpeechSynthesisUtterance(speakText);
     msg.lang = 'ko-KR';
     msg.rate = 0.75;   // 느리게
@@ -20626,7 +20626,7 @@ function _buildPayslipCaptureHTML(x, r, name, month, net, vatIncome){
 function _sendPayslipPush(x,r,name,month,net,vatIncome,docId){
   var did=_CU.dealerId,uid=x.userId||x.driverId||'';
   var title='💰 '+month+' 정산명세서 도착';
-  var body=name+'님 실지급액: ₩'+fmt(net);
+  var body=(name||'기사')+'님 '+month+' 실지급액: ₩'+fmt(net);
 
   // 1) 명세서 캡처용 HTML 직접 생성 (모달 열려있지 않아도 동작)
   toast('📸 '+name+'님 명세서 이미지 생성 중...');
