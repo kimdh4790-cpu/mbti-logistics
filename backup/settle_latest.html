@@ -7145,14 +7145,7 @@ window.dwRunLiveCalculations=function(){
         var _inj=0,_ext=0;
         if(!isMid&&o.platformPrice>0){
           _validCnt++;_pfSum+=o.platformPrice;
-          tp=_getTP(_validCnt);
-          var slotKey=_dwSlot?_dwSlot(o.hour||12):'';
-          var slotKey=_dwSlot?_dwSlot(o.hour||12):'';
-          // ★ 트랙은 최종 확정값(_finalTP) 사용 (2패스)
-          var slotP=window.DW_SLOTS&&slotKey&&DW_SLOTS[slotKey]&&DW_SLOTS[slotKey].price>0?DW_SLOTS[slotKey].price:_finalTP;
-          slotP=isNaN(slotP)||slotP<=0?_finalTP:slotP;
-          if(o.platformPrice<finalT){_inj=Math.floor(finalT-o.platformPrice);_totalInj+=_inj;}
-          else if(o.platformPrice>finalT){_ext=Math.floor(o.platformPrice-finalT);_totalExt+=_ext;}
+          // 보전/환수는 라이더 완료 후 2패스에서 계산
         }
         // ★ 기사 카드 실시간 업데이트
         var preTax=Math.floor(_pfSum+_totalInj-_totalExt);
