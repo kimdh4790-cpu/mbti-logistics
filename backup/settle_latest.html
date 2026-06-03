@@ -6337,7 +6337,7 @@ function _dwCountUp(elId, toVal, prefix, suffix, duration){
 }
 var DW_TRACKS=[
   {min:350,  max:Infinity, price:5500, label:'350건+ 트랙',    key:'t350'},
-  {min:300,  max:350,      price:5300, label:'300~349건 트랙', key:'t300'},
+  {min:300,  max:350,      price:5200, label:'300~349건 트랙', key:'t300'},
   {min:250,  max:300,      price:5100, label:'250~299건 트랙', key:'t250'},
   {min:180,  max:250,      price:4200, label:'180~249건 트랙', key:'t180'},
   {min:0,    max:180,      price:0,    label:'180건 미만',      key:'t0'}
@@ -12539,11 +12539,17 @@ function _dwLoadCfg(did){
     var d=doc.data();
     if(d.dwTracks&&d.dwTracks.length>0){
       window.DW_TRACKS=d.dwTracks;
-      // UI 업데이트
+      // ★ input value 업데이트
       d.dwTracks.forEach(function(t){
-        var el=document.getElementById('dw-track-'+t.key);
+        var el=document.getElementById('dw-track-'+t.key)||document.getElementById('dw-track-'+t.min);
         if(el) el.value=t.price;
       });
+      // ★ 180건미만 input 업데이트
+      var t0=d.dwTracks.find(function(x){return x.min===0;});
+      if(t0){
+        var dp=document.getElementById('dw-def-price-2')||document.getElementById('dw-def-price');
+        if(dp) dp.value=t0.price||0;
+      }
       // 180건 미만 기본단가 input 채우기
       if(d.dwTracks[0]){
         var dp=document.getElementById('dw-def-price');
