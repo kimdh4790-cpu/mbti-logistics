@@ -22825,7 +22825,7 @@ async function _doDeploySettlements(ids) {
             body: JSON.stringify({
               tokens: _tokens,
               title: '📤 ' + (settle.month||'') + ' 정산 배포',
-              body: (settle.name||'') + '님 정산 명세서가 배포됐습니다.',
+              body: (settle.driver||settle.name||settle.driverName||'기사') + '님 정산 명세서가 배포됐습니다.',
               url: window.location.origin + (window._COMPANY_SLUG ? '/'+window._COMPANY_SLUG : '/'),
               type: 'settle_deploy'
             })
