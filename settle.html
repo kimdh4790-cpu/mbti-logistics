@@ -4514,7 +4514,7 @@ function _renderRosterTable(drivers,rosterData,weekDays,dNames,fmt){
       '<th style="padding:6px 10px;text-align:left;border:1px solid var(--border);min-width:90px">이름 / 회전</th>'+
       weekDays.map(function(d,i){
         var col2=i===0?'#ef4444':i===6?'#3b82f6':'inherit';
-        return '<th style="padding:4px 6px;text-align:center;border:1px solid var(--border);min-width:70px;color:'+col2+'">'+
+        return '<th style="padding:6px 4px;text-align:center;border:1px solid var(--border);min-width:76px;color:'+col2+'">'+
           fmt(d)+'<br><span style="font-size:9px">'+dNames[i]+'</span></th>';
       }).join('')+
       '<th style="padding:4px;text-align:center;border:1px solid var(--border);min-width:45px">근무일</th>'+
@@ -4544,7 +4544,7 @@ function _renderRosterTable(drivers,rosterData,weekDays,dNames,fmt){
         if(status==='work')workCnt++;
         var isOff=status==='off';
         var rtId='rt_'+drv.id.replace(/[^a-z0-9]/gi,'_')+'_'+i;
-        return '<td style="padding:3px;text-align:center;border:1px solid var(--border);min-width:72px">'+
+        return '<td style="padding:3px;text-align:center;border:1px solid var(--border);min-width:76px">'+
           '<button onclick="_toggleRosterStatus(this)" data-did="'+drv.id+'" data-day="'+i+'"'+
           ' style="display:block;width:100%;padding:2px 4px;border:none;border-radius:4px;cursor:pointer;font-size:10px;font-weight:700;margin-bottom:2px;'+
           'background:'+(isOff?'#f1f5f9':'#2563eb')+';color:'+(isOff?'#9ca3af':'#fff')+'">'+
