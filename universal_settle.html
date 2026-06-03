@@ -2391,11 +2391,13 @@ function _loadRateTable(inp){
 
 // ── 고용산재 계산 (공급대가 기준)
 function _calcInsurance(taxTotal){
-  var supplyAmt  = taxTotal / 1.1;
-  var expense    = supplyAmt * 0.346;
-  var monthPay   = supplyAmt - expense;
-  var employment = monthPay < 800000 ? 0 : Math.round(monthPay * 0.008);
-  var accident   = Math.round(monthPay * 0.0088);
+  // taxTotal = 공급대가(VAT포함) — 쿠팡 총금액은 이미 VAT포함
+  var supplyAmt  = taxTotal / 1.1;                          // 공급가액
+  var expense    = supplyAmt * 0.346;                       // 필요경비 34.6%
+  var monthPay   = supplyAmt - expense;                     // 월보수액
+  // ★ 스틸과 동일: 10의 자리 절사
+  var employment = monthPay < 800000 ? 0 : Math.floor(monthPay * 0.008  / 10) * 10;
+  var accident   = Math.floor(monthPay * 0.0088 / 10) * 10;
   return {
     supplyAmt:  Math.round(supplyAmt),
     expense:    Math.round(expense),
@@ -2488,8 +2490,11 @@ function _renderCoupangResult(){
   var totalNet      = res.reduce(function(s,r){return s+r.net;},0);
 
   // summary 계산
-  var totCoupang = res.reduce(function(s,r){return s+(r.amount||0);},0);
+  // 쿠팡수입 = 쿠팡이 대리점에 지급하는 원본금액 (배송+프레시백, VAT포함)
+  var totCoupang = res.reduce(function(s,r){return s+(r.amount||0)+(r.fresh||0);},0);
+  // 기사 세금계산서합계 = 대리점이 기사에게 발행 (배송+프레시백+팀장+인센)
   var totTaxBase = res.reduce(function(s,r){return s+(r.taxTotal||r.amount||0);},0);
+  // MBTI 단가마진 = 쿠팡수입 - 기사세금계산서 (음수면 팀장수수료 등 추가지출)
   var totMargin  = totCoupang - totTaxBase;
   var totTeamFee = res.reduce(function(s,r){return s+(r.teamFee||0);},0);
   function _f(n){return Math.round(n).toLocaleString();}
