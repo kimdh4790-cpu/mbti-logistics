@@ -1440,7 +1440,7 @@ function _saveUniversalSettlements(results, fbDrivers, month, did){
     });
     if(!drv) failed.push(r.driver);
     saved++;
-    return window._db.collection('settlements').doc(did+'_'+month+'_'+(drv.userId||drv.id))
+    return window._db.collection('settlements_universal').doc(did+'_'+month+'_'+uid)
       .set(doc,{merge:true});
   });
   Promise.all(promises).then(function(){
@@ -5999,8 +5999,19 @@ function _pfLoadStats(did, ym){
   var statsEl=document.getElementById('pf-stats');
   if(!statsEl)return;
   statsEl.innerHTML='<div class="empty"><div class="empty-icon">⏳</div>집계 중...</div>';
-  _db.collection('settlements').where('dealerId','==',did).orderBy('month','desc').limit(200).get()
-  .then(function(snap){
+  // 쿠팡 + 범용 두 컬렉션 합쳐서 로드
+  Promise.all([
+    _db.collection('settlements').where('dealerId','==',did).orderBy('month','desc').limit(200).get(),
+    _db.collection('settlements_universal').where('dealerId','==',did).orderBy('month','desc').limit(200).get().catch(function(){return {forEach:function(){}};})
+  ]).then(function(results){
+    var snap={forEach:function(fn){results[0].forEach(fn);results[1].forEach(fn);}};
+  }).then(function(){return null;});
+  Promise.all([
+    _db.collection('settlements').where('dealerId','==',did).orderBy('month','desc').limit(200).get(),
+    _db.collection('settlements_universal').where('dealerId','==',did).orderBy('month','desc').limit(200).get().catch(function(){return {docs:[]};})
+  ]).then(function(results){
+    var allDocs=[].concat(results[0].docs||[]).concat(results[1].docs||[]);
+    var snap={forEach:function(fn){allDocs.forEach(fn);}};
     var byPf={}; var total=0;
     snap.forEach(function(doc){
       var d=doc.data();
@@ -14749,18 +14760,20 @@ function pageSettle(){
   var _did=_CU.dealerId;
   Promise.all([
     _db.collection('settlements').where('dealerId','==',_did).get(),
+    _db.collection('settlements_universal').where('dealerId','==',_did).get().catch(function(){return {docs:[]};}),
     _db.collection('expenses').where('dealerId','==',_did).get(),
     _db.collection('settings').doc(_did+'_fixedExpenses').get(),
     _db.collection('tax_docs').where('dealerId','==',_did).get()
   ]).then(function(results){
-    var snap=results[0],expSnap=results[1],fixSnap=results[2],taxDocSnap=results[3];
-    if(snap.empty){
+    var snap=results[0],univSnap=results[1],expSnap=results[2],fixSnap=results[3],taxDocSnap=results[4];
+    var allDocs=[].concat(snap.docs||[]).concat(univSnap.docs||[]);
+    if(!allDocs.length){
       c.innerHTML='<div class="empty" style="padding:60px 20px"><div style="font-size:48px;margin-bottom:12px">📊</div>'
         +'<div style="font-size:17px;font-weight:800;margin-bottom:6px">정산 데이터가 없습니다</div>'
-        +'<div style="font-size:13px;color:var(--text3)">우측 상단의 쿠팡 엑셀을 업로드하면 자동으로 정렬됩니다</div></div>';
+        +'<div style="font-size:13px;color:var(--text3)">우측 상단의 엑셀을 업로드하면 자동으로 정렬됩니다</div></div>';
       return;
     }
-    var settles=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
+    var settles=allDocs.map(function(d){return Object.assign({id:d.id},d.data());});
     // 경비 월별 집계 (expenses + tax_docs 경비류)
     var expByMonth={};
     expSnap.forEach(function(d){
@@ -16850,6 +16863,10 @@ function _saveSECurrent(){
     _db.collection('settlements').where('dealerId','==',_CU.dealerId||_CU.uid)
       .get().then(function(snap){
         _settleCache=snap.docs.map(function(d){return Object.assign({id:d.id,fbId:d.id},d.data());});
+        // settlements_universal도 합치기
+        _db.collection('settlements_universal').where('dealerId','==',_CU.dealerId||_CU.uid).get()
+          .then(function(us){if(us&&us.docs&&us.docs.length)_settleCache=_settleCache.concat(us.docs.map(function(d){return Object.assign({id:d.id,fbId:d.id,_source:'universal'},d.data());}));})
+          .catch(function(){});
       }).catch(function(){});
   }).catch(function(e){
     toast('❌ 저장실패: '+e.message);
