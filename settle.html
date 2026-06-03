@@ -7159,8 +7159,8 @@ window.dwRunLiveCalculations=function(){
         var mg=_allExt-_allInj;
         if(scMg){scMg.textContent='₩'+Math.abs(mg).toLocaleString();scMg.style.color=mg>=0?'#065f46':'#9f1239';}
         // 매출/매입/순수익 카드 업데이트
-        var _allPf2=(window._dwTotalPf||0)+_pfSum;
-        var _allNet2=(window._dwTotalNet||0)+_net;
+        var _allPf2=_allPf;  // 이미 누적값
+        var _allNet2=(window._dwTotalNet||0)+Math.max(0,Math.floor((_pfSum+_inj-_ext)*0.967));
         var _profit=_allPf2-_allNet2;
         var scRev=document.getElementById('dw-sc-revenue');
         var scCost=document.getElementById('dw-sc-cost');
@@ -7183,7 +7183,7 @@ window.dwRunLiveCalculations=function(){
           scProfitBadge.style.color=_profit>=0?'#059669':'#dc2626';
         }
         // 누적 합산용
-        window._dwTotalPf=_allPf2;
+        window._dwTotalPf=(window._dwTotalPf||0)+_pfSum;  // 이번 라이더 pfSum만 추가
         window._dwTotalNet=_allNet2;
         // 콘솔 행
         var badge='',rowBg='transparent';
