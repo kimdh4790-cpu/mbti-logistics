@@ -12554,15 +12554,16 @@ function _dwLoadCfg(did){
         }
       },500);
       // 180건 미만 기본단가 input 채우기
-      if(d.dwTracks[0]){
+      // 180건 미만 기본단가 input 채우기 (min===0인 항목 찾기)
+      var _t0=d.dwTracks.find(function(x){return x.min===0;});
+      if(_t0){
         var dp=document.getElementById('dw-def-price');
         var dp2=document.getElementById('dw-def-price-2');
-        if(dp) dp.value=d.dwTracks[0].price||2900;
-        if(dp2) dp2.value=d.dwTracks[0].price||2900;
-        window._dwCfgDefPrice=d.dwTracks[0].price||2900;
+        if(dp) dp.value=_t0.price||0;
+        if(dp2) dp2.value=_t0.price||0;
+        window._dwCfgDefPrice=_t0.price||0;
         setTimeout(_dwBindDefPrice,50);
       }
-    }
     if(d.dwSlots){
       Object.keys(d.dwSlots).forEach(function(k){
         if(window.DW_SLOTS&&window.DW_SLOTS[k]){
