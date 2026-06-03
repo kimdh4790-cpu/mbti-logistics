@@ -6892,7 +6892,7 @@ function _dwRenderSimulator(){
         +'</div>';
       }).join('')
       +'<div><div style="font-size:10px;font-weight:700;color:var(--text3);margin-bottom:3px">180건 미만</div>'
-        +'<div style="padding:6px;border:1px solid var(--border);border-radius:8px;font-size:11px;background:var(--bg2);color:var(--text3)">기본 계약단가</div>'
+        +'<input type="number" id="dw-defprice-input" placeholder="기본단가"'        +' value="'+(window._dwCfgDefPrice||(_dwGetCfg&&_dwGetCfg().defaultPrice)||2900)+'"'        +' style="width:100%;padding:6px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);text-align:right"'        +' oninput="var v=parseInt(this.value)||0;window._dwCfgDefPrice=v;if(DW_TRACKS&&DW_TRACKS[0])DW_TRACKS[0].price=v;">'
       +'</div>'
       +'</div>'
       +'<div style="font-size:10px;color:var(--text3);margin-top:6px">💡 총 수행건수 기준 자동 트랙 적용 · 수정 즉시 반영</div>'
@@ -6937,7 +6937,7 @@ function _dwRenderSimulator(){
         +'</div>';
     }).join('')
     +'<div><div style="font-size:10px;font-weight:700;color:var(--text3);margin-bottom:3px">180건 미만</div>'
-      +'<div style="padding:6px;border:1px solid var(--border);border-radius:8px;font-size:11px;background:var(--bg2);color:var(--text3)">기본 계약단가</div>'
+      +'<input type="number" id="dw-defprice-input2" placeholder="기본단가"'      +' value="'+(window._dwCfgDefPrice||(_dwGetCfg&&_dwGetCfg().defaultPrice)||2900)+'"'      +' style="width:100%;padding:6px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);text-align:right"'      +' oninput="var v=parseInt(this.value)||0;window._dwCfgDefPrice=v;if(DW_TRACKS&&DW_TRACKS[0])DW_TRACKS[0].price=v;">'
     +'</div>'
     +'</div>'
     +'<div style="font-size:10px;color:var(--text3);margin-top:6px">수정 후 저장 버튼 눌러야 업데이트</div>'
@@ -7275,7 +7275,7 @@ window.dwRunLiveCalculations=function(){
 
       var _pfSum=0,_totalInj=0,_totalExt=0,_validCnt=0,_idx=0;
       var DWT=window.DW_TRACKS&&DW_TRACKS.length>1?DW_TRACKS:[
-        {min:0,price:cfg.defPrice||2900},{min:180,price:4200},{min:250,price:5100},{min:300,price:5300},{min:350,price:5500}
+        {min:0,price:window._dwCfgDefPrice||cfg.defPrice||2900},{min:180,price:4200},{min:250,price:5100},{min:300,price:5200},{min:350,price:5500}
       ];
       function _getTP(cnt){var p=DWT[0].price;for(var i=DWT.length-1;i>=0;i--){if(cnt>=(DWT[i].min||0)){p=DWT[i].price;break;}}return p;}
       if(!window._dwTotalInj) window._dwTotalInj=0;
