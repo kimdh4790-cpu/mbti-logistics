@@ -1426,18 +1426,19 @@ function _applyUniversalMapping(headers, rows, hIdx, savedKey){
 function _saveUniversalSettlements(results, fbDrivers, month, did){
   var saved=0, failed=[];
   var promises=results.map(function(r){
-    // 이름으로 기사 매핑
+    // 이름으로 기사 매핑 (없으면 이름 기준으로 저장)
     var drv=fbDrivers.find(function(d){
       return d.name===r.driver||d.userId===r.userId;
     });
-    if(!drv){failed.push(r.driver);return Promise.resolve();}
-    var calc=calcNet(Object.assign({},r,{userId:drv.userId||drv.id}));
+    var uid=drv?(drv.userId||drv.id):('univ_'+r.driver.replace(/\s/g,''));
+    var calc=calcNet(Object.assign({},r,{userId:uid}));
     var doc=Object.assign({},r,calc,{
-      dealerId:did,userId:drv.userId||drv.id,
-      driver:drv.name||r.driver,camp:drv.camp||'',
-      bizNum:drv.bizNum||'',month:month,
+      dealerId:did,userId:uid,
+      driver:r.driver,camp:drv?(drv.camp||''):'미배정',
+      bizNum:drv?(drv.bizNum||''):'',month:month,
       updatedAt:new Date().toISOString()
     });
+    if(!drv) failed.push(r.driver);
     saved++;
     return window._db.collection('settlements').doc(did+'_'+month+'_'+(drv.userId||drv.id))
       .set(doc,{merge:true});
