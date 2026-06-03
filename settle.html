@@ -6314,6 +6314,27 @@ window._dpDownloadTemplate=function(){
 
 // ── 수행 건수별 최저단가 보전 트랙
 // ── 건수별 트랙 (기본값 — Firestore 로드로 덮어씌움)
+
+// ── 전광판 카운팅 애니메이션
+var _dwCountUpTimers={};
+function _dwCountUp(elId, toVal, prefix, suffix, duration){
+  prefix=prefix||'₩'; suffix=suffix||''; duration=duration||600;
+  var el=document.getElementById(elId);
+  if(!el) return;
+  if(_dwCountUpTimers[elId]) cancelAnimationFrame(_dwCountUpTimers[elId]);
+  var fromVal=parseInt((el.textContent||'0').replace(/[^0-9]/g,''))||0;
+  var startTime=null;
+  function step(ts){
+    if(!startTime) startTime=ts;
+    var prog=Math.min((ts-startTime)/duration,1);
+    var ease=1-Math.pow(1-prog,3); // ease-out cubic
+    var cur=Math.round(fromVal+(toVal-fromVal)*ease);
+    el.textContent=prefix+cur.toLocaleString()+suffix;
+    if(prog<1) _dwCountUpTimers[elId]=requestAnimationFrame(step);
+    else el.textContent=prefix+toVal.toLocaleString()+suffix;
+  }
+  _dwCountUpTimers[elId]=requestAnimationFrame(step);
+}
 var DW_TRACKS=[
   {min:350,  max:Infinity, price:5500, label:'350건+ 트랙',    key:'t350'},
   {min:300,  max:350,      price:5300, label:'300~349건 트랙', key:'t300'},
@@ -7332,10 +7353,10 @@ window.dwRunLiveCalculations=function(){
             var scRev=document.getElementById('dw-sc-revenue');
             var scCost=document.getElementById('dw-sc-cost');
             var scProfit=document.getElementById('dw-sc-profit');
-            if(scRev) scRev.textContent='₩'+totPf.toLocaleString();
-            if(scCost) scCost.textContent='₩'+_totNet2.toLocaleString();
+            if(scRev) _dwCountUp('dw-sc-revenue',totPf,'₩','',700);
+            if(scCost) _dwCountUp('dw-sc-cost',_totNet2,'₩','',700);
             if(scProfit){
-              scProfit.textContent='₩'+Math.abs(_profit2).toLocaleString();
+              _dwCountUp('dw-sc-profit',Math.abs(_profit2),'₩','',700);
               scProfit.style.color=_profit2>=0?'var(--green)':'var(--red)';
               var spb=document.getElementById('dw-sc-profit-badge');
               if(!spb){spb=document.createElement('div');spb.id='dw-sc-profit-badge';spb.style.cssText='font-size:10px;margin-top:3px;font-weight:700';if(scProfit.parentNode)scProfit.parentNode.appendChild(spb);}
@@ -7389,11 +7410,11 @@ window.dwRunLiveCalculations=function(){
         var scExt=document.getElementById('dw-sc-ext');
         var scMg=document.getElementById('dw-sc-margin');
         var scCnt=document.getElementById('dw-sc-cnt');
-        if(scInj) scInj.textContent='₩'+_allInj.toLocaleString();
-        if(scExt) scExt.textContent='₩'+_allExt.toLocaleString();
-        if(scCnt) scCnt.textContent=((window._dwTotalCnt||0)+_validCnt)+'건';
+        if(scInj) _dwCountUp('dw-sc-inj',_allInj,'₩','',500);
+        if(scExt) _dwCountUp('dw-sc-ext',_allExt,'₩','',500);
+        if(scCnt) _dwCountUp('dw-sc-cnt',(window._dwTotalCnt||0)+_validCnt,'','건',400);
         var mg=_allExt-_allInj;
-        if(scMg){scMg.textContent='₩'+Math.abs(mg).toLocaleString();scMg.style.color=mg>=0?'#065f46':'#9f1239';}
+        if(scMg){_dwCountUp('dw-sc-margin',Math.abs(mg),'₩','',500);scMg.style.color=mg>=0?'#065f46':'#9f1239';}
         // 누적 합산용 (라이더 완료 시점에서만 처리, 여기선 화면 업데이트만)
         // 콘솔 행
         var badge='',rowBg='transparent';
