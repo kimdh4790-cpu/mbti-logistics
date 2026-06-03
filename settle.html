@@ -14649,6 +14649,17 @@ function _showJoinBanner(title, body, type){
 // ── 앱 내 푸시 수신 처리 (포그라운드) ──
 
 // ── DONWAY TTS 알림음
+// AudioContext 미리 unlock (첫 터치 시)
+window._globalAC=null;
+document.addEventListener('touchstart',function(){
+  if(!window._globalAC){
+    try{
+      window._globalAC=new (window.AudioContext||window.webkitAudioContext)();
+      window._globalAC.resume();
+    }catch(e){}
+  }
+},{once:false,passive:true});
+
 function _speakDonway(type, body){
   if(!('speechSynthesis' in window)) return;
   try{
@@ -14688,21 +14699,24 @@ function _initFCMReceiver(){
       var body  = payload.notification?.body  || '';
       var data  = payload.data || {};
       var type  = data.type || 'alert';
-      // 알림음 재생 (Web Audio API)
+      // 알림음 재생 (Web Audio API - globalAC 사용)
       try{
-        var ac=new (window.AudioContext||window.webkitAudioContext)();
+        var ac=window._globalAC||(new (window.AudioContext||window.webkitAudioContext)());
+        if(ac.state==='suspended')ac.resume();
         var osc=ac.createOscillator();var gain=ac.createGain();
         osc.connect(gain);gain.connect(ac.destination);
-        osc.frequency.value=880;gain.gain.value=0.3;
-        osc.start();gain.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+0.3);
-        osc.stop(ac.currentTime+0.3);
+        osc.frequency.value=880;gain.gain.value=0.4;
+        osc.start();gain.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+0.4);
+        osc.stop(ac.currentTime+0.4);
         setTimeout(function(){
-          var osc2=ac.createOscillator();var gain2=ac.createGain();
-          osc2.connect(gain2);gain2.connect(ac.destination);
-          osc2.frequency.value=1100;gain2.gain.value=0.3;
-          osc2.start();gain2.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+0.3);
-          osc2.stop(ac.currentTime+0.3);
-        },200);
+          try{
+            var osc2=ac.createOscillator();var gain2=ac.createGain();
+            osc2.connect(gain2);gain2.connect(ac.destination);
+            osc2.frequency.value=1100;gain2.gain.value=0.4;
+            osc2.start();gain2.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+0.4);
+            osc2.stop(ac.currentTime+0.4);
+          }catch(e){}
+        },250);
       }catch(e){}
       // TTS 음성 알림
       setTimeout(function(){_speakDonway(type, body);},500);
