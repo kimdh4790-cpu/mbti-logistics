@@ -2471,34 +2471,47 @@ function _calcInsurance(taxTotal){
   };
 }
 
-// ── 실지급 재계산 (쿠팡엑셀 총금액 기준 + 팀장수수료 + 고용산재)
+// ── 실지급 재계산 (라우트단가표 기준 + 팀장수수료 + 고용산재)
 function _recalcCoupangNet(){
-  var teamFee  = _settleState.coupangTeamFee  || {};
-  var routeCnt = _settleState.coupangRouteCnt || {};
+  var teamFee   = _settleState.coupangTeamFee  || {};
+  var routeCnt  = _settleState.coupangRouteCnt || {};
+  var rateTable = _settleState.coupangRateTable || {};
   var res = _settleState.results || [];
 
   res.forEach(function(r){
-    // 팀장수수료
+    // ① 배송수입 = 라우트단가표 × 건수 (단가표 없으면 쿠팡엑셀 총금액)
+    var baseAmt = r.amount; // fallback
+    if(Object.keys(rateTable).length > 0 && r.routes && Object.keys(r.routes).length > 0){
+      var calc = 0;
+      Object.keys(r.routes).forEach(function(rt){
+        var rd = r.routes[rt];
+        var unit = rateTable[rt] || rd.price || 0;
+        calc += ((rd.del||0) + (rd.ret||0)) * unit;
+      });
+      if(calc > 0) baseAmt = calc;
+    }
+
+    // ② 팀장수수료
     var fee = teamFee[r.id] || {};
     var teamTotal = Object.keys(fee).reduce(function(s, route){
       return s + (routeCnt[route]||0) * fee[route];
     }, 0);
     r.teamFee = teamTotal;
 
-    // 대리점 인센
+    // ③ 대리점 인센
     var incenAmt = r.count * (r.incen||0);
 
-    // 세금계산서합계 = 쿠팡엑셀총금액(VAT포함) + 프레시백 + 프레시백인센(25원×건수) + 팀장수수료 + 보장금액
-    var finc     = r.count * 25;  // 프레시백 인센티브 25원/건
-    var guaranteeAdd = r.guaranteeAdd || 0;  // 보장금액 부족분 추가
-    var taxTotal = r.amount + r.fresh + finc + teamTotal + incenAmt + guaranteeAdd;
+    // ④ 세금계산서합계 = 배송수입(단가표) + 프레시백 + finc(25원×건수) + 팀장수수료 + 인센 + 보장
+    var finc         = r.count * 25;
+    var guaranteeAdd = r.guaranteeAdd || 0;
+    var taxTotal = baseAmt + r.fresh + finc + teamTotal + incenAmt + guaranteeAdd;
     r.taxTotal   = taxTotal;
 
-    // 고용+산재
+    // ⑤ 고용+산재
     var ins = _calcInsurance(taxTotal);
-    r.insurance  = ins;
+    r.insurance = ins;
 
-    // 실지급 = 세금계산서합계 - 고용산재 - 분실파손
+    // ⑥ 실지급
     r.net = taxTotal - ins.total - r.lossAmt;
   });
 }
@@ -2717,6 +2730,23 @@ function _renderMixedResult(){
     +'</div>';
 
   // 쿠팡 섹션
+    var _tC = coupangResults.reduce(function(s,r){return s+Math.round(((r.amount||0)+(r.fresh||0))*1.1);},0);
+    var _tT = coupangResults.reduce(function(s,r){return s+(r.taxTotal||r.amount||0);},0);
+    var _tI = coupangResults.reduce(function(s,r){return s+((r.insurance&&r.insurance.total)||0);},0);
+    var _tD = coupangResults.reduce(function(s,r){return s+(r.count||0);},0);
+    function _fh(n){return Math.round(n).toLocaleString();}
+    html += '<div style="background:linear-gradient(135deg,#0f172a,#1e3a8a 60%,#312e81);border-radius:14px;padding:22px 20px;margin-bottom:14px;color:#fff">'
+      +'<div style="font-size:10px;font-weight:600;letter-spacing:2px;opacity:.5;margin-bottom:12px">DONWAY · 엠비티아이 · 쿠팡 정산 현황</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">'
+      +'<div><div style="font-size:10px;opacity:.6;margin-bottom:3px">🏢 쿠팡 수입</div><div style="font-size:18px;font-weight:900;color:#34d399">₩'+_fh(_tC)+'</div><div style="font-size:9px;opacity:.4">VAT포함</div></div>'
+      +'<div><div style="font-size:10px;opacity:.6;margin-bottom:3px">🧾 기사 세금계산서</div><div style="font-size:18px;font-weight:900;color:#fbbf24">₩'+_fh(_tT)+'</div><div style="font-size:9px;opacity:.4">MBTI→기사 발행금액</div></div>'
+      +'<div><div style="font-size:10px;opacity:.6;margin-bottom:3px">💰 기사 실지급액</div><div style="font-size:18px;font-weight:900;color:#60a5fa">₩'+_fh(totalCoupangNet)+'</div><div style="font-size:9px;opacity:.4">'+_fh(_tD)+'건 · 보험 공제 후</div></div>'
+      +'</div>'
+      +'<div style="border-top:1px solid rgba(255,255,255,.12);padding-top:10px;display:flex;align-items:center;justify-content:space-between">'
+      +'<div style="font-size:11px;opacity:.6">📈 MBTI 단가 마진 (경비 전)</div>'
+      +'<div style="text-align:right"><div style="font-size:19px;font-weight:900;color:#a78bfa">₩'+_fh(_tC-_tT)+'</div>'
+      +'<div style="font-size:10px;opacity:.5">회사보험료 -₩'+_fh(_tI)+'</div></div></div></div>';
+
   if(coupangResults.length > 0){
     html += '<div class="card">'
       +'<div class="card-title">📦 쿠팡 정산 <span style="font-size:11px;font-weight:400;color:var(--text2)">'+coupangResults.length+'명 · '+_fmt(totalCoupangNet)+'원</span></div>'
