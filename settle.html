@@ -2805,6 +2805,14 @@ _auth.onAuthStateChanged(function(user){
               window._trialActive=true;
             }
             window._cachedCompanyDoc=cd;
+          // ★ 슬러그 URL 리다이렉트 (루트 접속 시 자기 슬러그로 이동)
+          if(cd.slug && !window._COMPANY_SLUG && !isSuperAdmin()){
+            var targetUrl=window.location.origin+'/'+cd.slug;
+            if(window.location.href.indexOf('/'+cd.slug)<0){
+              window.location.href=targetUrl;
+              return;
+            }
+          }
           }
           showApp();
         }).catch(function(){showApp();});
@@ -3204,11 +3212,11 @@ function selectService(type){
     if(t===type){
       el.style.borderColor='var(--brand)';
       el.style.background='var(--brand-l)';
-      el.querySelector('div:nth-child(2)').style.color='var(--brand)';
+      var el2=el.querySelector('div:nth-child(2)');if(el2)el2.style.color='var(--brand)';
     } else {
       el.style.borderColor='var(--border)';
       el.style.background='';
-      el.querySelector('div:nth-child(2)').style.color='var(--text2)';
+      var el2=el.querySelector('div:nth-child(2)');if(el2)el2.style.color='var(--text2)';
     }
   });
   document.getElementById('r-service').value=type;
