@@ -1452,7 +1452,7 @@ export default {
                     token: token,
                     notification: { title: title || 'DONWAY 알림', body: msgBody || '' },
                     data: Object.assign({ type: type || 'notice', url: url || '/' }, extraData || {}),
-                    android: { priority: 'high', notification: { sound: 'default', channel_id: 'donway_default' } },
+                    android: { priority: 'high', notification: { sound: 'default', channel_id: 'donway_v2', defaultSound: true, defaultVibrateTimings: false, vibrateTimings: ['0.3s','0.1s','0.3s','0.1s','0.3s'] } },
                     apns: { payload: { aps: { sound: 'default', badge: 1, 'content-available': 1 } } },
                     webpush: { notification: { icon: '/icon-192.png', badge: '/icon-192.png', vibrate: [200,100,200], requireInteraction: false }, fcm_options: { link: url || '/' } }
                   }
