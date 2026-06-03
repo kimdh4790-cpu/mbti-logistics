@@ -7306,8 +7306,8 @@ window.dwRunLiveCalculations=function(){
             var isMid=(o.hour>=0&&o.hour<6);
             if(!isMid&&o.platformPrice>0){
               var slotK=_dwSlot?_dwSlot(o.hour||12):'';
-              var slotFinal=window.DW_SLOTS&&slotK&&DW_SLOTS[slotK]&&DW_SLOTS[slotK].price>0?DW_SLOTS[slotK].price:_finalTP;
-              slotFinal=isNaN(slotFinal)||slotFinal<=0?_finalTP:slotFinal;
+              var slotFinal=window.DW_SLOTS&&slotK&&DW_SLOTS[slotK]&&DW_SLOTS[slotK].price>0?DW_SLOTS[slotK].price:0;
+              slotFinal=Math.max(slotFinal,_finalTP);  // ★ 슬롯단가 vs 트랙단가 중 높은 값
               var fT=slotFinal+(o.event&&o.event.price||0);
               if(o.platformPrice<fT) _reInj+=Math.floor(fT-o.platformPrice);
               else if(o.platformPrice>fT) _reExt+=Math.floor(o.platformPrice-fT);
@@ -7381,8 +7381,8 @@ window.dwRunLiveCalculations=function(){
           // ★ 1패스 실시간 추정: 현재 건수 기준 임시 트랙으로 보전/환수 계산
           var _curTP=_getTP(_validCnt);
           var _slotK=_dwSlot?_dwSlot(o.hour||12):'';
-          var _slotP=window.DW_SLOTS&&_slotK&&DW_SLOTS[_slotK]&&DW_SLOTS[_slotK].price>0?DW_SLOTS[_slotK].price:_curTP;
-          _slotP=isNaN(_slotP)||_slotP<=0?_curTP:_slotP;
+          var _slotP=window.DW_SLOTS&&_slotK&&DW_SLOTS[_slotK]&&DW_SLOTS[_slotK].price>0?DW_SLOTS[_slotK].price:0;
+          _slotP=Math.max(_slotP,_curTP);  // ★ 슬롯단가 vs 트랙단가 중 높은 값
           var _fT=_slotP+(o.event&&o.event.price||0);
           if(o.platformPrice<_fT) _totalInj+=Math.floor(_fT-o.platformPrice);
           else if(o.platformPrice>_fT) _totalExt+=Math.floor(o.platformPrice-_fT);
