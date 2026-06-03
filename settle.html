@@ -3052,11 +3052,7 @@ function doRegister(){
   // ★ 핸드폰 본인인증 (현재 선택사항 - DANAL 계약 완료 후 필수 전환)
   var phoneVerified=document.getElementById('r-phone-display').dataset.verified;
   if(phoneVerified==='blocked'){err.textContent='이미 가입된 전화번호입니다';err.style.display='block';return;}
-  // 미인증 시 경고만 (차단 안 함)
-  if(!phoneVerified||phoneVerified!=='ok'){
-    var proceed=confirm('핸드폰 본인인증을 하지 않으면 중복 가입 방지가 어렵습니다.\n인증 없이 계속 진행하시겠습니까?');
-    if(!proceed) return;
-  }
+  // 미인증 시 경고만 (차단 안 함) - confirm 제거
 
   var isOwner=OWNER_BIZ.includes(biz)||OWNER_EMAIL.includes(email);
   var plan=isOwner?'OWNER':'trial';
