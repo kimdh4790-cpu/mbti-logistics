@@ -6895,7 +6895,7 @@ function _dwRenderSimulator(){
         +'</div>';
       }).join('')
       +'<div><div style="font-size:10px;font-weight:700;color:var(--text3);margin-bottom:3px">180건 미만</div>'
-        +'<input type="number" id="dw-def-price" placeholder="기본단가"'        +' style="width:100%;padding:6px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);text-align:right"'        +' oninput="var v=parseInt(this.value)||0;window._dwCfgDefPrice=v;if(DW_TRACKS&&DW_TRACKS[0])DW_TRACKS[0].price=v;">'
+        +'<input type="number" id="dw-def-price" placeholder="기본단가"'        +' style="width:100%;padding:6px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);text-align:right">'
       +'</div>'
       +'</div>'
       +'<div style="font-size:10px;color:var(--text3);margin-top:6px">💡 총 수행건수 기준 자동 트랙 적용 · 수정 즉시 반영</div>'
@@ -6940,7 +6940,7 @@ function _dwRenderSimulator(){
         +'</div>';
     }).join('')
     +'<div><div style="font-size:10px;font-weight:700;color:var(--text3);margin-bottom:3px">180건 미만</div>'
-      +'<input type="number" id="dw-def-price-2" placeholder="기본단가"'      +' style="width:100%;padding:6px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);text-align:right"'      +' oninput="var v=parseInt(this.value)||0;window._dwCfgDefPrice=v;if(DW_TRACKS&&DW_TRACKS[0])DW_TRACKS[0].price=v;var el2=document.getElementById(\'dw-def-price\');if(el2)el2.value=this.value;">'
+      +'<input type="number" id="dw-def-price-2" placeholder="기본단가"'      +' style="width:100%;padding:6px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);text-align:right">'
     +'</div>'
     +'</div>'
     +'<div style="font-size:10px;color:var(--text3);margin-top:6px">수정 후 저장 버튼 눌러야 업데이트</div>'
@@ -7690,6 +7690,7 @@ function _dwRenderEngine(){
   wrap.appendChild(simWrap);
   el.appendChild(wrap);
   _dwRenderSimulator();
+  setTimeout(function(){if(typeof _dwBindDefPrice==='function')_dwBindDefPrice();},100);
   var _did=_CU&&_CU.dealerId;if(_did)setTimeout(function(){_dwLoadCfg(_did);},300);
 }
 
@@ -12538,6 +12539,7 @@ function _dwLoadCfg(did){
         if(dp) dp.value=d.dwTracks[0].price||2900;
         if(dp2) dp2.value=d.dwTracks[0].price||2900;
         window._dwCfgDefPrice=d.dwTracks[0].price||2900;
+        setTimeout(_dwBindDefPrice,50);
       }
     }
     if(d.dwSlots){
@@ -12553,6 +12555,25 @@ function _dwLoadCfg(did){
 }
 window._dwSaveTracks=_dwSaveTracks;
 window._dwSaveSlots=_dwSaveSlots;
+
+// ★ 기본단가 input 이벤트 바인딩 (oninput 인코딩 우회)
+function _dwBindDefPrice(){
+  ['dw-def-price','dw-def-price-2'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el&&!el._bound){
+      el._bound=true;
+      el.addEventListener('input',function(){
+        var v=parseInt(this.value)||0;
+        window._dwCfgDefPrice=v;
+        if(window.DW_TRACKS&&DW_TRACKS[0]) DW_TRACKS[0].price=v;
+        // 배지 즉시 반영
+        var b=document.getElementById('dw-badge-track-0');
+        if(b&&b.children[0]) b.children[0].textContent=v>0?'₩'+v.toLocaleString():'₩?';
+      });
+    }
+  });
+}
+window._dwBindDefPrice=_dwBindDefPrice;
 window._dwLoadCfg=_dwLoadCfg;
 
 window._advCalc=_advCalc;
