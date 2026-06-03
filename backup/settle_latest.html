@@ -12577,6 +12577,36 @@ function _dwLoadCfg(did){
     }
   });
 }
+// ── 슈퍼어드민 DB 수정 함수
+function _saDbUpdate(){
+  var col=document.getElementById('sa-db-col').value.trim();
+  var doc=document.getElementById('sa-db-doc').value.trim();
+  var raw=document.getElementById('sa-db-fields').value.trim();
+  var res=document.getElementById('sa-db-result');
+  if(!col||!doc||!raw){res.textContent='❌ 필드 모두 입력';return;}
+  var fields={};
+  raw.split('
+').forEach(function(line){
+    var idx=line.indexOf(':');
+    if(idx>0){
+      var k=line.slice(0,idx).trim();
+      var v=line.slice(idx+1).trim();
+      fields[k]=v;
+    }
+  });
+  if(!Object.keys(fields).length){res.textContent='❌ 필드:값 형식 오류';return;}
+  res.textContent='저장 중...';
+  fetch('/sa/firestore',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({collection:col,docId:doc,fields:fields})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.ok) res.textContent='✅ 저장 완료';
+    else res.textContent='❌ '+d.error;
+  }).catch(function(e){res.textContent='❌ '+e.message;});
+}
+window._saDbUpdate=_saDbUpdate;
+
 window._dwSaveTracks=_dwSaveTracks;
 window._dwSaveSlots=_dwSaveSlots;
 
@@ -23749,7 +23779,7 @@ function openAdminPanel(){
   // ── 탭 바 ──
   var tabBar=document.createElement('div');
   tabBar.style.cssText='display:flex;border-bottom:1px solid var(--border);background:var(--bg2)';
-  ['🏢 대리점 목록','💳 결제 승인','⚙️ 기능 활성화','🔄 체험 연장'].forEach(function(t,i){
+  ['🏢 대리점 목록','💳 결제 승인','⚙️ 기능 활성화','🔄 체험 연장','🔧 DB 수정'].forEach(function(t,i){
     var tb=document.createElement('button');
     tb.style.cssText='flex:1;padding:10px 4px;border:none;background:transparent;font-size:12px;font-weight:700;cursor:pointer;color:'+(i===0?'var(--primary)':'var(--text3)')+';border-bottom:'+(i===0?'2px solid var(--primary)':'2px solid transparent');
     tb.textContent=t;
@@ -23761,6 +23791,7 @@ function openAdminPanel(){
       if(idx===1) _loadPaymentRequests(d.querySelector('#admin-tab-1'));
       if(idx===2) _loadFeaturePanel(d.querySelector('#admin-tab-2'));
       if(idx===3) _loadTrialExtendPanel(d.querySelector('#admin-tab-3'));
+      // 탭4는 정적 UI라 별도 로드 불필요
     };})(i);
     tb.className='admin-tab-btn';
     tabBar.appendChild(tb);
@@ -23786,6 +23817,19 @@ function openAdminPanel(){
   var trialTab=document.createElement('div');trialTab.className='admin-tab-content';trialTab.id='admin-tab-3';trialTab.style.cssText='padding:16px;display:none';
   trialTab.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">⏳ 로딩 중...</div>';
   d.appendChild(trialTab);
+
+  // 탭4 — DB 수정
+  var dbTab=document.createElement('div');dbTab.className='admin-tab-content';dbTab.id='admin-tab-4';dbTab.style.cssText='padding:16px;display:none';
+  dbTab.innerHTML=
+    '<div style="font-size:13px;font-weight:800;margin-bottom:12px">🔧 Firestore 직접 수정</div>'+
+    '<div style="display:grid;gap:8px">'+
+      '<div><label style="font-size:11px;color:var(--text3)">컬렉션</label><input id="sa-db-col" type="text" placeholder="companies" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--bg)"></div>'+
+      '<div><label style="font-size:11px;color:var(--text3)">문서 ID</label><input id="sa-db-doc" type="text" placeholder="dealerId 또는 uid" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--bg)"></div>'+
+      '<div><label style="font-size:11px;color:var(--text3)">필드:값 (한 줄에 하나, field:value)</label><textarea id="sa-db-fields" rows="5" placeholder="companyName:엠비티아이&#10;name:엠비티아이&#10;plan:full" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--bg);font-family:monospace"></textarea></div>'+
+      '<button onclick="_saDbUpdate()" style="padding:8px;background:#1e293b;color:#f59e0b;border:none;border-radius:6px;font-weight:700;cursor:pointer">✅ 저장</button>'+
+      '<div id="sa-db-result" style="font-size:11px;color:var(--text3)"></div>'+
+    '</div>';
+  d.appendChild(dbTab);
 
   if(window._adminViewDealerId){
     var notice=document.createElement('div');
