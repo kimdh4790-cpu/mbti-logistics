@@ -2408,31 +2408,54 @@ function _calcInsurance(taxTotal){
   };
 }
 
-// ── 실지급 재계산 (팀장수수료 + 고용산재 포함)
+// ── 실지급 재계산 (단가표 기준 재계산 + 팀장수수료 + 고용산재)
 function _recalcCoupangNet(){
-  var teamFee  = _settleState.coupangTeamFee  || {};
-  var routeCnt = _settleState.coupangRouteCnt || {};
+  var teamFee   = _settleState.coupangTeamFee  || {};
+  var routeCnt  = _settleState.coupangRouteCnt || {};
+  var rateTable = _settleState.coupangRateTable || {};  // 라우트단가표 (우리 단가)
   var res = _settleState.results || [];
+
   res.forEach(function(r){
-    // 팀장수수료
+    // ── 배송수입 재계산
+    // 단가표 있으면: 라우트별 건수 × 우리 단가 (기사에게 줄 금액)
+    // 단가표 없으면: 쿠팡엑셀 총금액 그대로
+    var baseAmt = r.amount;  // 기본값: 쿠팡엑셀 총금액
+    if(Object.keys(rateTable).length > 0 && r.routes && Object.keys(r.routes).length > 0){
+      var calcAmt = 0;
+      Object.keys(r.routes).forEach(function(route){
+        var rd = r.routes[route];
+        var unitPrice = rateTable[route] || 0;
+        if(unitPrice > 0){
+          calcAmt += ((rd.del||0) + (rd.ret||0)) * unitPrice;
+        } else {
+          // 단가표에 없는 라우트는 쿠팡 단가 사용
+          calcAmt += ((rd.del||0) * (rd.price||0)) + ((rd.ret||0) * (rd.price||0));
+        }
+      });
+      if(calcAmt > 0) baseAmt = calcAmt;
+    }
+    r.baseAmtCalc = baseAmt;  // 재계산된 배송수입 (기사 기준)
+
+    // ── 팀장수수료
     var fee = teamFee[r.id] || {};
     var teamTotal = Object.keys(fee).reduce(function(s, route){
       return s + (routeCnt[route]||0) * fee[route];
     }, 0);
     r.teamFee = teamTotal;
 
-    // 대리점 인센
+    // ── 대리점 인센 (프레시백 인센티브)
     var incenAmt = r.count * (r.incen||0);
 
-    // 세금계산서 합계 = 쿠팡총금액 + 프레시백 + 팀장수수료 + 대리점인센
-    var taxTotal = r.amount + r.fresh + teamTotal + incenAmt;
+    // ── 세금계산서 합계 (공급대가)
+    // = 기사 배송수입(단가표기준) + 프레시백 + 프레시백인센 + 팀장수수료
+    var taxTotal = baseAmt + r.fresh + incenAmt + teamTotal;
     r.taxTotal = taxTotal;
 
-    // 고용산재
+    // ── 고용+산재
     var ins = _calcInsurance(taxTotal);
     r.insurance = ins;
 
-    // 실지급 = 세금계산서합계 - 고용산재 - 분실파손
+    // ── 실지급 = 세금계산서합계 - 고용산재 - 분실파손
     r.net = taxTotal - ins.total - r.lossAmt;
   });
 }
@@ -2492,11 +2515,12 @@ function _renderCoupangResult(){
   // summary 계산
   // 쿠팡수입 = 쿠팡이 대리점에 지급하는 원본금액 (배송+프레시백, VAT포함)
   var totCoupang = res.reduce(function(s,r){return s+(r.amount||0)+(r.fresh||0);},0);
-  // 기사 세금계산서합계 = 대리점이 기사에게 발행 (배송+프레시백+팀장+인센)
+  // 기사 세금계산서합계 = 단가표 기준 재계산 (대리점→기사 발행)
   var totTaxBase = res.reduce(function(s,r){return s+(r.taxTotal||r.amount||0);},0);
-  // MBTI 단가마진 = 쿠팡수입 - 기사세금계산서 (음수면 팀장수수료 등 추가지출)
+  // MBTI 단가마진 = 쿠팡수입 - 기사세금계산서
   var totMargin  = totCoupang - totTaxBase;
   var totTeamFee = res.reduce(function(s,r){return s+(r.teamFee||0);},0);
+  var totDcnt    = res.reduce(function(s,r){return s+(r.count||0);},0);
   function _f(n){return Math.round(n).toLocaleString();}
 
   // Hero 박스
