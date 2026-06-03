@@ -40,17 +40,22 @@ function forbidden(msg = '접근이 거부되었습니다') {
 }
 
 const PROJECT_ID = 'mbti-logistics';
-// ★ Pages 배포 URL (env.ASSETS 대체 - wrangler assets 이슈 우회)
-const GITHUB_RAW = 'https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main';
-const GITHUB_API = 'https://api.github.com/repos/kimdh4790-cpu/mbti-logistics/contents';
-async function fetchAsset(path, request) {
+// ★ env.ASSETS 직접 서빙 (즉시 반영, 캐시 없음)
+let _env_ref = null;
+async function fetchAsset(path, request, env) {
+  const e = env || _env_ref;
   const filePath = path.startsWith('/') ? path : '/' + path;
+  if (e && e.ASSETS) {
+    const url = new URL(request ? request.url : 'https://donway.ai.kr');
+    url.pathname = filePath;
+    return await e.ASSETS.fetch(new Request(url.toString(), request || {}));
+  }
+  // fallback: GitHub Raw
+  const GITHUB_RAW = 'https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main';
   const encodedPath = filePath.split('/').map(seg => seg ? encodeURIComponent(seg) : '').join('/');
-  let resp;
-  resp = await fetch(GITHUB_RAW + encodedPath + '?t=' + Date.now(), {
+  return await fetch(GITHUB_RAW + encodedPath + '?t=' + Date.now(), {
     cf: { cacheEverything: false, cacheTtl: 0 }
   });
-  return resp;
 }
 
 // ── 임시 비밀번호 생성 (영문+숫자 8자리) ──
@@ -343,6 +348,7 @@ async function runExpireJob(env) {
 // ── Fetch Handler ─────────────────────────────────────────────────────────────
 export default {
   async fetch(request, env) {
+    _env_ref = env; // ★ env.ASSETS 참조
     const url      = new URL(request.url);
     const path     = url.pathname;
     const method   = request.method;
