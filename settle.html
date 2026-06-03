@@ -6780,15 +6780,20 @@ function _dwRenderSimulator(){
   var tracks=(DW_TRACKS&&DW_TRACKS.length>1)?DW_TRACKS:
     [{min:0,price:2900,label:'기본'},{min:180,price:4200,label:'180건+'},{min:250,price:5100,label:'250건+'},{min:300,price:5300,label:'300건+'},{min:350,price:5500,label:'350건+'}];
 
-  var trackBadges=tracks.map(function(t,i){
-    var cs=['#6b7280','#10b981','#f59e0b','#8b5cf6','#3b82f6'];var c=cs[i%cs.length];
-    var lbl=i===0?'180건 미만':t.label;
-    var priceStr=i===0?(t.price>0?'₩'+t.price.toLocaleString():'₩?'):'₩'+t.price.toLocaleString();
+  // 정렬: min>0 내림차순 → min:0(기본단가) 맨 뒤
+  var sortedTracks=tracks.slice().sort(function(a,b){return b.min-a.min;});
+  var _tcs=['#3b82f6','#8b5cf6','#f59e0b','#10b981','#6b7280'];
+  var trackBadges=sortedTracks.map(function(t,i){
+    var c=_tcs[i%_tcs.length];
+    var isDefault=(t.min===0);
+    var lbl=isDefault?'180건 미만':(t.label||t.min+'건+');
+    var priceStr=isDefault?(t.price>0?'\u20a9'+t.price.toLocaleString():'\u20a9?'):'\u20a9'+t.price.toLocaleString();
     return '<div id="dw-badge-track-'+i+'" style="text-align:center;padding:8px 6px;background:'+c+'22;border:1.5px solid '+c+'55;border-radius:10px;min-width:75px">'
       +'<div style="font-size:15px;font-weight:900;color:'+c+'">'+priceStr+'</div>'
       +'<div style="font-size:9px;font-weight:700;color:'+c+';margin-top:1px">'+lbl+'</div>'
       +'</div>';
   }).join('');
+
 
 
   el.innerHTML=
