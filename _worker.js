@@ -45,15 +45,18 @@ let _env_ref = null;
 async function fetchAsset(path, request, env) {
   const e = env || _env_ref;
   const filePath = path.startsWith('/') ? path : '/' + path;
+  // 1순위: env.ASSETS (Cloudflare Pages Assets - 즉시반영)
   if (e && e.ASSETS) {
-    const url = new URL(request ? request.url : 'https://donway.ai.kr');
-    url.pathname = filePath;
-    return await e.ASSETS.fetch(new Request(url.toString(), request || {}));
+    try {
+      const url = new URL(request ? request.url : 'https://donway.ai.kr');
+      url.pathname = filePath;
+      return await e.ASSETS.fetch(new Request(url.toString(), request || {}));
+    } catch(e2) {}
   }
-  // fallback: GitHub Raw
-  const GITHUB_RAW = 'https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main';
+  // 2순위: jsDelivr CDN (GitHub Raw보다 캐시 갱신 빠름, purge 가능)
+  const JSDELIVR = 'https://cdn.jsdelivr.net/gh/kimdh4790-cpu/mbti-logistics@main';
   const encodedPath = filePath.split('/').map(seg => seg ? encodeURIComponent(seg) : '').join('/');
-  return await fetch(GITHUB_RAW + encodedPath + '?t=' + Date.now(), {
+  return await fetch(JSDELIVR + encodedPath, {
     cf: { cacheEverything: false, cacheTtl: 0 }
   });
 }
