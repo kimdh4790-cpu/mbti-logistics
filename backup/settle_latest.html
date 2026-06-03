@@ -12484,16 +12484,24 @@ window._lunchAdminView=_lunchAdminView;
 function _dwSaveTracks(){
   var did=_CU&&_CU.dealerId;
   if(!did||!_db){toast('로그인 필요');return;}
-  // DW_TRACKS id: dw-track-{t.key}
-  if(window.DW_TRACKS){
-    window.DW_TRACKS.forEach(function(t){
-      var el=document.getElementById('dw-track-'+t.key)||document.getElementById('dw-track-'+t.min);
-      if(el) t.price=parseInt(el.value)||t.price;
-    });
-    // 180건 미만 기본단가
-    var defEl=document.getElementById('dw-def-price')||document.getElementById('dw-def-price-2');
-    if(defEl&&DW_TRACKS[0]) DW_TRACKS[0].price=parseInt(defEl.value)||DW_TRACKS[0].price;
-  }
+  // ★ input에서 직접 읽어서 새 배열 구성
+  var saved=[];
+  // 트랙 4개 (min>0)
+  var keys=['t350','t300','t250','t180'];
+  var defaults=[{key:'t350',min:350,max:null,label:'350건+ 트랙'},{key:'t300',min:300,max:350,label:'300~349건 트랙'},{key:'t250',min:250,max:300,label:'250~299건 트랙'},{key:'t180',min:180,max:250,label:'180~249건 트랙'}];
+  defaults.forEach(function(d){
+    var el=document.getElementById('dw-track-'+d.key);
+    var price=el?parseInt(el.value)||0:0;
+    // DW_TRACKS에서 기존 price 폴백
+    if(!price&&window.DW_TRACKS){var t=DW_TRACKS.find(function(x){return x.key===d.key;});if(t)price=t.price||0;}
+    saved.push({key:d.key,min:d.min,max:d.max,label:d.label,price:price});
+  });
+  // 180건 미만
+  var defEl=document.getElementById('dw-def-price-2')||document.getElementById('dw-def-price');
+  var defPrice=defEl?parseInt(defEl.value)||0:0;
+  if(!defPrice&&window.DW_TRACKS){var t0=DW_TRACKS.find(function(x){return x.min===0;});if(t0)defPrice=t0.price||0;}
+  saved.push({key:'t0',min:0,max:180,label:'180건 미만',price:defPrice});
+  window.DW_TRACKS=saved;
   _db.collection('companies').doc(did).update({dwTracks:window.DW_TRACKS})
     .then(function(){
       toast('✅ 트랙 단가 저장');
