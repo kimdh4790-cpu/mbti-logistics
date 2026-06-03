@@ -7353,6 +7353,13 @@ window.dwRunLiveCalculations=function(){
             var scRev=document.getElementById('dw-sc-revenue');
             var scCost=document.getElementById('dw-sc-cost');
             var scProfit=document.getElementById('dw-sc-profit');
+            // ★ 2패스 완료 후 전광판 보전/환수/건수/마진 최종값으로 업데이트
+            _dwCountUp('dw-sc-inj',totInj,'₩','',600);
+            _dwCountUp('dw-sc-ext',totExt,'₩','',600);
+            _dwCountUp('dw-sc-cnt',totCnt,'','건',400);
+            var _mg=totExt-totInj;
+            var scMg2=document.getElementById('dw-sc-margin');
+            if(scMg2){_dwCountUp('dw-sc-margin',Math.abs(_mg),'₩','',600);scMg2.style.color=_mg>=0?'#065f46':'#9f1239';}
             if(scRev) _dwCountUp('dw-sc-revenue',totPf,'₩','',700);
             if(scCost) _dwCountUp('dw-sc-cost',_totNet2,'₩','',700);
             if(scProfit){
