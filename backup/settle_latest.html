@@ -6780,13 +6780,16 @@ function _dwRenderSimulator(){
   var tracks=(DW_TRACKS&&DW_TRACKS.length>1)?DW_TRACKS:
     [{min:0,price:2900,label:'기본'},{min:180,price:4200,label:'180건+'},{min:250,price:5100,label:'250건+'},{min:300,price:5300,label:'300건+'},{min:350,price:5500,label:'350건+'}];
 
-  var trackBadges=tracks.slice(1).map(function(t,i){
-    var cs=['#3b82f6','#8b5cf6','#f59e0b','#10b981'];var c=cs[i%cs.length];
-    return '<div style="text-align:center;padding:8px 6px;background:'+c+'22;border:1.5px solid '+c+'55;border-radius:10px;min-width:75px">'
-      +'<div style="font-size:15px;font-weight:900;color:'+c+'">₩'+t.price.toLocaleString()+'</div>'
-      +'<div style="font-size:9px;font-weight:700;color:'+c+';margin-top:1px">'+t.label+'</div>'
+  var trackBadges=tracks.map(function(t,i){
+    var cs=['#6b7280','#10b981','#f59e0b','#8b5cf6','#3b82f6'];var c=cs[i%cs.length];
+    var lbl=i===0?'180건 미만':t.label;
+    var priceStr=i===0?(t.price>0?'₩'+t.price.toLocaleString():'₩?'):'₩'+t.price.toLocaleString();
+    return '<div id="dw-badge-track-'+i+'" style="text-align:center;padding:8px 6px;background:'+c+'22;border:1.5px solid '+c+'55;border-radius:10px;min-width:75px">'
+      +'<div style="font-size:15px;font-weight:900;color:'+c+'">'+priceStr+'</div>'
+      +'<div style="font-size:9px;font-weight:700;color:'+c+';margin-top:1px">'+lbl+'</div>'
       +'</div>';
   }).join('');
+
 
   el.innerHTML=
     // ━━ 헤더
@@ -12486,7 +12489,18 @@ function _dwSaveTracks(){
     if(defEl&&DW_TRACKS[0]) DW_TRACKS[0].price=parseInt(defEl.value)||DW_TRACKS[0].price;
   }
   _db.collection('companies').doc(did).update({dwTracks:window.DW_TRACKS})
-    .then(function(){toast('✅ 트랙 단가 저장');_dwRenderSimulator();})
+    .then(function(){
+      toast('✅ 트랙 단가 저장');
+      // 배지 즉시 업데이트
+      if(window.DW_TRACKS) window.DW_TRACKS.forEach(function(t,i){
+        var b=document.getElementById('dw-badge-track-'+i);
+        if(b){
+          var priceStr=i===0?(t.price>0?'₩'+t.price.toLocaleString():'₩?'):'₩'+t.price.toLocaleString();
+          b.children[0].textContent=priceStr;
+        }
+      });
+      _dwRenderSimulator();
+    })
     .catch(function(e){toast('❌ '+e.message);});
 }
 
