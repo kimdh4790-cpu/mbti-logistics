@@ -2463,54 +2463,34 @@ function _calcInsurance(taxTotal){
   };
 }
 
-// ── 실지급 재계산 (단가표 기준 재계산 + 팀장수수료 + 고용산재)
+// ── 실지급 재계산 (쿠팡엑셀 총금액 기준 + 팀장수수료 + 고용산재)
 function _recalcCoupangNet(){
-  var teamFee   = _settleState.coupangTeamFee  || {};
-  var routeCnt  = _settleState.coupangRouteCnt || {};
-  var rateTable = _settleState.coupangRateTable || {};  // 라우트단가표 (우리 단가)
+  var teamFee  = _settleState.coupangTeamFee  || {};
+  var routeCnt = _settleState.coupangRouteCnt || {};
   var res = _settleState.results || [];
 
   res.forEach(function(r){
-    // ── 배송수입 재계산
-    // 단가표 있으면: 라우트별 건수 × 우리 단가 (기사에게 줄 금액)
-    // 단가표 없으면: 쿠팡엑셀 총금액 그대로
-    var baseAmt = r.amount;  // 기본값: 쿠팡엑셀 총금액
-    if(Object.keys(rateTable).length > 0 && r.routes && Object.keys(r.routes).length > 0){
-      var calcAmt = 0;
-      Object.keys(r.routes).forEach(function(route){
-        var rd = r.routes[route];
-        var unitPrice = rateTable[route] || 0;
-        if(unitPrice > 0){
-          calcAmt += ((rd.del||0) + (rd.ret||0)) * unitPrice;
-        } else {
-          // 단가표에 없는 라우트는 쿠팡 단가 사용
-          calcAmt += ((rd.del||0) * (rd.price||0)) + ((rd.ret||0) * (rd.price||0));
-        }
-      });
-      if(calcAmt > 0) baseAmt = calcAmt;
-    }
-    r.baseAmtCalc = baseAmt;  // 재계산된 배송수입 (기사 기준)
-
-    // ── 팀장수수료
+    // 팀장수수료
     var fee = teamFee[r.id] || {};
     var teamTotal = Object.keys(fee).reduce(function(s, route){
       return s + (routeCnt[route]||0) * fee[route];
     }, 0);
     r.teamFee = teamTotal;
 
-    // ── 대리점 인센 (프레시백 인센티브)
+    // 대리점 인센
     var incenAmt = r.count * (r.incen||0);
 
-    // ── 세금계산서 합계 (공급대가)
-    // = 기사 배송수입(단가표기준) + 프레시백 + 프레시백인센 + 팀장수수료
-    var taxTotal = baseAmt + r.fresh + incenAmt + teamTotal;
-    r.taxTotal = taxTotal;
+    // 세금계산서합계 = 쿠팡엑셀총금액(VAT포함) + 프레시백 + 프레시백인센(25원×건수) + 팀장수수료 + 보장금액
+    var finc     = r.count * 25;  // 프레시백 인센티브 25원/건
+    var guaranteeAdd = r.guaranteeAdd || 0;  // 보장금액 부족분 추가
+    var taxTotal = r.amount + r.fresh + finc + teamTotal + incenAmt + guaranteeAdd;
+    r.taxTotal   = taxTotal;
 
-    // ── 고용+산재
+    // 고용+산재
     var ins = _calcInsurance(taxTotal);
-    r.insurance = ins;
+    r.insurance  = ins;
 
-    // ── 실지급 = 세금계산서합계 - 고용산재 - 분실파손
+    // 실지급 = 세금계산서합계 - 고용산재 - 분실파손
     r.net = taxTotal - ins.total - r.lossAmt;
   });
 }
@@ -2568,8 +2548,8 @@ function _renderCoupangResult(){
   var totalNet      = res.reduce(function(s,r){return s+r.net;},0);
 
   // summary 계산
-  // 쿠팡수입 = 쿠팡이 대리점에 지급하는 원본금액 (배송+프레시백, VAT포함)
-  var totCoupang = res.reduce(function(s,r){return s+(r.amount||0)+(r.fresh||0);},0);
+  // 쿠팡수입 = (배송+프레시백) × 1.1 → VAT포함 (스틸 coupangTotal×1.1 방식)
+  var totCoupang = res.reduce(function(s,r){return s+Math.round(((r.amount||0)+(r.fresh||0))*1.1);},0);
   // 기사 세금계산서합계 = 단가표 기준 재계산 (대리점→기사 발행)
   var totTaxBase = res.reduce(function(s,r){return s+(r.taxTotal||r.amount||0);},0);
   // MBTI 단가마진 = 쿠팡수입 - 기사세금계산서
@@ -2581,6 +2561,8 @@ function _renderCoupangResult(){
   // Hero 박스
   var html = '<div style="background:linear-gradient(135deg,#0f172a,#1e3a8a 60%,#312e81);border-radius:14px;padding:22px 20px;margin-bottom:14px;color:#fff;position:relative;overflow:hidden">'    +'<div style="position:absolute;top:-30px;right:-30px;width:160px;height:160px;background:rgba(255,255,255,.04);border-radius:50%"></div>'    +'<div style="font-size:10px;font-weight:600;letter-spacing:2px;opacity:.5;margin-bottom:12px">DONWAY · 엠비티아이 유한회사 · 정산 현황 · 전체 누적</div>'    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">'    +'<div><div style="font-size:10px;opacity:.6;margin-bottom:3px">🏢 쿠팡 수입</div>'    +'<div style="font-size:18px;font-weight:900;color:#34d399">₩'+_f(totCoupang)+'</div>'    +'<div style="font-size:9px;opacity:.4">VAT포함</div></div>'    +'<div><div style="font-size:10px;opacity:.6;margin-bottom:3px">🧾 기사 세금계산서</div>'    +'<div style="font-size:18px;font-weight:900;color:#fbbf24">₩'+_f(totTaxBase)+'</div>'    +'<div style="font-size:9px;opacity:.4">MBTI→기사 발행금액</div></div>'    +'<div><div style="font-size:10px;opacity:.6;margin-bottom:3px">💰 기사 실지급액</div>'    +'<div style="font-size:18px;font-weight:900;color:#60a5fa">₩'+_f(totalNet)+'</div>'    +'<div style="font-size:9px;opacity:.4">'+_f(totalDel)+'건 · 보험 공제 후</div></div>'    +'</div>'    +'<div style="border-top:1px solid rgba(255,255,255,.12);padding-top:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">'    +'<div><div style="font-size:11px;opacity:.6">📈 MBTI 단가 마진 (경비 전)</div>'    +'<div style="font-size:9px;opacity:.4">쿠팡수입 − 기사세금계산서</div></div>'    +'<div style="text-align:right">'    +'<div style="font-size:20px;font-weight:900;color:#a78bfa">₩'+_f(totMargin)+'</div>'    +'<div style="font-size:10px;opacity:.5">회사보험료 -₩'+_f(totalIns)+(totTeamFee>0?' · 팀장수수료 -₩'+_f(totTeamFee):'')+'</div>'    +'</div></div></div>'
 
+  // ── 2차 기능 버튼 툴바
+  html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">'    +'<button onclick="_openIncenPanel()" style="padding:6px 14px;border-radius:7px;border:1px solid var(--acc);background:var(--bg3);color:var(--text1);font-size:11px;font-weight:600;cursor:pointer">⚙️ 인센 설정</button>'    +'<button onclick="_openIdSupportPanel()" style="padding:6px 14px;border-radius:7px;border:1px solid var(--acc);background:var(--bg3);color:var(--text1);font-size:11px;font-weight:600;cursor:pointer">👥 아이디지원</button>'    +'<button onclick="_openGuaranteePanel()" style="padding:6px 14px;border-radius:7px;border:1px solid var(--acc);background:var(--bg3);color:var(--text1);font-size:11px;font-weight:600;cursor:pointer">💰 보장금액</button>'    +'<button onclick="_recalcCoupangNet();_renderSettle();toast(\'🔄 전체 재계산 완료\')" style="padding:6px 14px;border-radius:7px;border:none;background:var(--acc);color:#fff;font-size:11px;font-weight:600;cursor:pointer">🔄 전체재계산</button>'    +'</div>'
   html += '<div class="result-summary">'
     +'<div class="stat-card"><div class="stat-label">기사 수</div><div class="stat-val blue">'+res.length+'명</div></div>'
     +'<div class="stat-card"><div class="stat-label">배송건수</div><div class="stat-val">'+_fmt(totalDel)+'건</div></div>'
@@ -3201,3 +3183,193 @@ if(document.readyState==="loading"){
 </script>
 </body>
 </html>
+<script>
+// ── ⚙️ 인센 설정 패널
+function _openIncenPanel(){
+  var res = _settleState.results;
+  if(!res||!res.length){ toast('정산 데이터 없음'); return; }
+  var old = document.getElementById('_panel_incen'); if(old) old.remove();
+
+  // 캠프별 그룹
+  var camps = {};
+  res.forEach(function(r){ if(!camps[r.dept]) camps[r.dept]=[]; camps[r.dept].push(r); });
+
+  var campBtns = Object.keys(camps).sort().map(function(c){
+    return '<button onclick="_incenCampAll(\''+c+'\',this)" style="padding:3px 10px;border-radius:100px;border:1.5px solid #4f7eff;color:#4f7eff;background:transparent;font-size:11px;font-weight:700;cursor:pointer">'+c+'</button>';
+  }).join('');
+
+  var rows = res.map(function(r,i){
+    var opts = [0,10,15,25].map(function(v){
+      return '<option value="'+v+'"'+(r.incen===v?' selected':'')+'>'+v+'원</option>';
+    }).join('');
+    return '<tr><td style="padding:7px 10px;font-size:12px;font-weight:600">'+(r.name||r.id)+'<div style="font-size:10px;color:var(--text3)">'+r.id+'</div></td>'
+      +'<td style="padding:7px 10px;font-size:12px">'+r.dept+'</td>'
+      +'<td style="padding:7px 10px"><select onchange="_settleState.results['+i+'].incen=+this.value" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border2);background:var(--bg3);color:var(--text1);font-size:12px">'+opts+'</select></td></tr>';
+  }).join('');
+
+  var mo = document.createElement('div');
+  mo.id = '_panel_incen';
+  mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:900;display:flex;align-items:center;justify-content:center;padding:14px';
+  mo.innerHTML='<div style="background:var(--bg);border-radius:14px;width:500px;max-width:95vw;max-height:85vh;overflow:hidden;display:flex;flex-direction:column">'
+    +'<div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">'
+    +'<span style="font-weight:700;font-size:14px">⚙️ 인센 설정</span>'
+    +'<button onclick="document.getElementById(\'_panel_incen\').remove()" style="padding:4px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;cursor:pointer">닫기</button></div>'
+    +'<div style="padding:10px 14px;border-bottom:1px solid var(--border);background:var(--bg3)">'
+    +'<div style="font-size:11px;color:var(--text2);margin-bottom:6px">캠프별 일괄</div>'
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap">'+campBtns+'</div></div>'
+    +'<div style="overflow:auto;flex:1"><table style="width:100%;border-collapse:collapse">'
+    +'<thead><tr style="background:var(--bg3);font-size:11px;color:var(--text2)">'
+    +'<th style="padding:8px 10px;text-align:left">기사</th><th style="padding:8px 10px;text-align:left">캠프</th><th style="padding:8px 10px;text-align:left">인센(원/건)</th></tr></thead>'
+    +'<tbody>'+rows+'</tbody></table></div>'
+    +'<div style="padding:12px 14px;border-top:1px solid var(--border)">'
+    +'<button onclick="_recalcCoupangNet();_renderSettle();document.getElementById(\'_panel_incen\').remove();toast(\'✅ 인센 적용 완료\')" style="width:100%;padding:9px;background:var(--acc);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer">✅ 적용 후 재계산</button>'
+    +'</div></div>';
+  mo.addEventListener('click',function(e){if(e.target===mo)mo.remove();});
+  document.body.appendChild(mo);
+}
+
+function _incenCampAll(camp, btn){
+  var val = prompt(camp+' 캠프 전체 인센 단가 (원/건, 0=없음)', '0');
+  if(val===null) return;
+  var v = parseInt(val)||0;
+  _settleState.results.forEach(function(r){ if(r.dept===camp) r.incen=v; });
+  // select 업데이트
+  var rows = document.querySelectorAll('#_panel_incen tbody tr');
+  _settleState.results.forEach(function(r,i){
+    if(r.dept===camp && rows[i]){
+      var sel = rows[i].querySelector('select');
+      if(sel) sel.value = v;
+    }
+  });
+  toast(camp+' 캠프 인센 '+v+'원 일괄 적용');
+}
+
+// ── 👥 아이디지원 패널
+function _openIdSupportPanel(){
+  var rules = _settleState.idSupportRules || [];
+  var old = document.getElementById('_panel_ids'); if(old) old.remove();
+
+  var listHtml = rules.length ? rules.map(function(r,i){
+    return '<div style="display:flex;align-items:center;gap:6px;padding:7px;background:var(--bg3);border-radius:8px;margin-bottom:5px;font-size:12px">'
+      +'<span style="font-weight:700;color:var(--acc)">'+r.fromId+'</span>'
+      +'<span style="color:var(--text3)">→</span>'
+      +'<span style="font-weight:700">'+r.toId+'</span>'
+      +(r.routes&&r.routes.length?'<span style="background:var(--bg);padding:1px 6px;border-radius:4px;font-size:11px">'+r.routes.join(' ')+'</span>':'')
+      +'<button onclick="_delIdSupport('+i+')" style="margin-left:auto;background:none;border:none;color:#ef4444;cursor:pointer;font-size:16px">&times;</button></div>';
+  }).join('') : '<div style="font-size:12px;color:var(--text3)">등록된 규칙 없음</div>';
+
+  var mo = document.createElement('div');
+  mo.id = '_panel_ids';
+  mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:900;display:flex;align-items:center;justify-content:center;padding:14px';
+  mo.innerHTML='<div style="background:var(--bg);border-radius:14px;width:480px;max-width:95vw;max-height:85vh;overflow:auto;padding:20px">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'
+    +'<span style="font-weight:700;font-size:14px">👥 아이디 지원</span>'
+    +'<button onclick="document.getElementById(\'_panel_ids\').remove()" style="padding:4px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;cursor:pointer">닫기</button></div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-bottom:10px">원래 기사의 라우트 건수×단가를 지원 기사에게 이전합니다</div>'
+    +'<div id="_ids_list">'+listHtml+'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">'
+    +'<div><div style="font-size:11px;color:var(--text2);margin-bottom:3px">원래기사 ID</div>'
+    +'<input id="_ids_from" placeholder="kycandksh@df" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text1)"></div>'
+    +'<div><div style="font-size:11px;color:var(--text2);margin-bottom:3px">지원기사 ID</div>'
+    +'<input id="_ids_to" placeholder="llch91@df" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text1)"></div></div>'
+    +'<div style="margin-top:8px"><div style="font-size:11px;color:var(--text2);margin-bottom:3px">라우트 (콤마구분, 빈칸=전체)</div>'
+    +'<input id="_ids_routes" placeholder="109A, 109B" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text1)"></div>'
+    +'<button onclick="_saveIdSupport()" style="width:100%;margin-top:10px;padding:9px;background:var(--acc);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer">👥 규칙 등록 후 재계산</button>'
+    +'</div>';
+  mo.addEventListener('click',function(e){if(e.target===mo)mo.remove();});
+  document.body.appendChild(mo);
+}
+
+function _saveIdSupport(){
+  var from = (document.getElementById('_ids_from')||{}).value.trim();
+  var to   = (document.getElementById('_ids_to')||{}).value.trim();
+  if(!from||!to){ toast('원래/지원 ID 필수'); return; }
+  var rRaw = (document.getElementById('_ids_routes')||{}).value.trim();
+  var routes = rRaw ? rRaw.split(',').map(function(s){return s.trim();}).filter(Boolean) : [];
+  if(!_settleState.idSupportRules) _settleState.idSupportRules=[];
+  _settleState.idSupportRules.push({fromId:from, toId:to, routes:routes});
+  _applyIdSupport();
+  document.getElementById('_panel_ids').remove();
+  toast('✅ 아이디지원 등록 완료');
+}
+
+function _delIdSupport(idx){
+  _settleState.idSupportRules.splice(idx,1);
+  _applyIdSupport();
+  document.getElementById('_panel_ids').remove();
+  toast('✅ 삭제됨');
+}
+
+function _applyIdSupport(){
+  var rules  = _settleState.idSupportRules||[];
+  var rTable = _settleState.coupangRateTable||{};
+  var res    = _settleState.results||[];
+  // 먼저 기존 아이디지원 금액 초기화
+  res.forEach(function(r){ r.idSupportAmt=0; });
+  rules.forEach(function(rule){
+    var fromR = res.find(function(r){return r.id===rule.fromId;});
+    var toR   = res.find(function(r){return r.id===rule.toId;});
+    if(!fromR||!toR) return;
+    var routes = fromR.routes||{};
+    var tot=0;
+    Object.keys(routes).forEach(function(rt){
+      if(rule.routes.length && rule.routes.indexOf(rt)<0) return;
+      var rd = routes[rt];
+      var unit = rTable[rt]||rd.price||0;
+      tot += ((rd.del||0)+(rd.ret||0))*unit;
+    });
+    if(!tot) return;
+    fromR.idSupportAmt = (fromR.idSupportAmt||0) - tot;
+    toR.idSupportAmt   = (toR.idSupportAmt||0)   + tot;
+  });
+  _recalcCoupangNet();
+  _renderSettle();
+}
+
+// ── 💰 보장금액 패널
+function _openGuaranteePanel(){
+  var res = _settleState.results;
+  if(!res||!res.length){ toast('정산 데이터 없음'); return; }
+  var old = document.getElementById('_panel_guar'); if(old) old.remove();
+
+  var rows = res.map(function(r,i){
+    return '<tr><td style="padding:7px 10px;font-size:12px;font-weight:600">'+(r.name||r.id)+'</td>'
+      +'<td style="padding:7px 10px;font-size:12px">'+r.dept+'</td>'
+      +'<td style="padding:7px 4px"><input type="number" value="'+(r.guarantee||0)+'" placeholder="0" onchange="_settleState.results['+i+'].guarantee=+this.value||0" style="width:110px;padding:4px 7px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--bg);color:var(--text1)"></td>'
+      +'<td style="padding:7px 10px;font-size:11px;color:var(--text3)">현재 '+Math.round(r.taxTotal||0).toLocaleString()+'원</td></tr>';
+  }).join('');
+
+  var mo = document.createElement('div');
+  mo.id = '_panel_guar';
+  mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:900;display:flex;align-items:center;justify-content:center;padding:14px';
+  mo.innerHTML='<div style="background:var(--bg);border-radius:14px;width:520px;max-width:95vw;max-height:85vh;overflow:hidden;display:flex;flex-direction:column">'
+    +'<div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">'
+    +'<span style="font-weight:700;font-size:14px">💰 정산 보장금액</span>'
+    +'<button onclick="document.getElementById(\'_panel_guar\').remove()" style="padding:4px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;cursor:pointer">닫기</button></div>'
+    +'<div style="padding:8px 14px;background:#FEF3C7;font-size:11px;color:#92400E">💡 현재 세금계산서합계가 보장금액 미만이면 차액을 자동 추가합니다</div>'
+    +'<div style="overflow:auto;flex:1"><table style="width:100%;border-collapse:collapse">'
+    +'<thead><tr style="background:var(--bg3);font-size:11px;color:var(--text2)">'
+    +'<th style="padding:8px 10px;text-align:left">기사</th><th style="padding:8px 10px;text-align:left">캠프</th>'
+    +'<th style="padding:8px 10px;text-align:left">보장금액(원)</th><th style="padding:8px 10px;text-align:left">현재 정산액</th></tr></thead>'
+    +'<tbody>'+rows+'</tbody></table></div>'
+    +'<div style="padding:12px 14px;border-top:1px solid var(--border)">'
+    +'<button onclick="_applyGuarantee()" style="width:100%;padding:9px;background:var(--acc);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer">💰 보장금액 적용 후 재계산</button>'
+    +'</div></div>';
+  mo.addEventListener('click',function(e){if(e.target===mo)mo.remove();});
+  document.body.appendChild(mo);
+}
+
+function _applyGuarantee(){
+  var res = _settleState.results||[];
+  res.forEach(function(r){
+    var guar = r.guarantee||0;
+    if(!guar){ r.guaranteeAdd=0; return; }
+    var cur  = r.taxTotal||0;
+    r.guaranteeAdd = cur < guar ? (guar - cur) : 0;
+  });
+  _recalcCoupangNet();
+  _renderSettle();
+  var mo = document.getElementById('_panel_guar'); if(mo) mo.remove();
+  toast('💰 보장금액 적용 완료');
+}
+</script>
