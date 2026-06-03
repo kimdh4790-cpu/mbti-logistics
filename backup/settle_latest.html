@@ -7101,6 +7101,22 @@ window.dwRunLiveCalculations=function(){
             setEl('r-net-pay',   '₩'+totNet.toLocaleString());
             var note=document.getElementById('dw-statement-note');
             if(note) note.textContent=totCnt.toLocaleString()+'건 집계 중 • '+riderIdx+'/'+riderIds.length+'명 완료';
+            // 총 매출/매입/순수익 카드 (라이더 완료 시점)
+            var _totNet2=window._dwTotalNet||0;
+            var _profit2=totPf-_totNet2;
+            var scRev=document.getElementById('dw-sc-revenue');
+            var scCost=document.getElementById('dw-sc-cost');
+            var scProfit=document.getElementById('dw-sc-profit');
+            if(scRev) scRev.textContent='₩'+totPf.toLocaleString();
+            if(scCost) scCost.textContent='₩'+_totNet2.toLocaleString();
+            if(scProfit){
+              scProfit.textContent='₩'+Math.abs(_profit2).toLocaleString();
+              scProfit.style.color=_profit2>=0?'var(--green)':'var(--red)';
+              var spb=document.getElementById('dw-sc-profit-badge');
+              if(!spb){spb=document.createElement('div');spb.id='dw-sc-profit-badge';spb.style.cssText='font-size:10px;margin-top:3px;font-weight:700';if(scProfit.parentNode)scProfit.parentNode.appendChild(spb);}
+              spb.textContent='마진율 '+(totPf>0?((_profit2/totPf)*100).toFixed(1):0)+'%';
+              spb.style.color=_profit2>=0?'#059669':'#dc2626';
+            }
           })();
           setTimeout(processNextRider,200);
           return;
@@ -7159,30 +7175,6 @@ window.dwRunLiveCalculations=function(){
         if(scCnt) scCnt.textContent=((window._dwTotalCnt||0)+_validCnt)+'건';
         var mg=_allExt-_allInj;
         if(scMg){scMg.textContent='₩'+Math.abs(mg).toLocaleString();scMg.style.color=mg>=0?'#065f46':'#9f1239';}
-        // 매출/매입/순수익 카드 - 라이더 완료 누적값 기준
-        var _totPf=window._dwTotalPf||0;
-        var _totNet=window._dwTotalNet||0;
-        var _profit=_totPf-_totNet;
-        var scRev=document.getElementById('dw-sc-revenue');
-        var scCost=document.getElementById('dw-sc-cost');
-        var scProfit=document.getElementById('dw-sc-profit');
-        if(scRev) scRev.textContent='₩'+_totPf.toLocaleString();
-        if(scCost) scCost.textContent='₩'+_totNet.toLocaleString();
-        if(scProfit){
-          scProfit.textContent='₩'+Math.abs(_profit).toLocaleString();
-          scProfit.style.color=_profit>=0?'var(--green)':'var(--red)';
-          // 마진율 표시
-          var scProfitBadge=document.getElementById('dw-sc-profit-badge');
-          if(!scProfitBadge){
-            scProfitBadge=document.createElement('div');
-            scProfitBadge.id='dw-sc-profit-badge';
-            scProfitBadge.style.cssText='font-size:10px;margin-top:3px;font-weight:700';
-            if(scProfit.parentNode) scProfit.parentNode.appendChild(scProfitBadge);
-          }
-          var _marginRate=_allPf2>0?((_profit/_allPf2)*100).toFixed(1):0;
-          scProfitBadge.textContent='마진율 '+_marginRate+'%';
-          scProfitBadge.style.color=_profit>=0?'#059669':'#dc2626';
-        }
         // 누적 합산용 (라이더 완료 시점에서만 처리, 여기선 화면 업데이트만)
         // 콘솔 행
         var badge='',rowBg='transparent';
