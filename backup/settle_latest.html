@@ -23388,19 +23388,19 @@ function _hasSettle(d){
   if(d.settlePaid)return true;
   // ★ trial = settle 범위만 허용
   if(d.plan==='trial'&&d.trialEnd>=new Date().toISOString().slice(0,10))return true;
-  return ['settle_taxi','qr_payroll','full'].indexOf(d.plan||'')>=0;
+  return ['settle_taxi','qr_payroll','full','any_paid','trial','settle'].indexOf(d.plan||'')>=0;
 }
 function _hasQr(d){
   if(isSuperAdmin())return true;
   if(d.qrPaid||d.rosterPaid||d.qrPayrollPaid)return true;
   // ★ trial = QR 불허
-  return ['qr_only','qr_payroll','full'].indexOf(d.plan||'')>=0;
+  return ['qr_only','qr_payroll','full','any_paid'].indexOf(d.plan||'')>=0;
 }
 function _hasPayroll(d){
   if(isSuperAdmin())return true;
   if(d.payrollPaid||d.rosterPaid||d.qrPayrollPaid)return true;
   // ★ trial = 급여 불허
-  return ['payroll','qr_payroll','full'].indexOf(d.plan||'')>=0;
+  return ['payroll','qr_payroll','full','any_paid'].indexOf(d.plan||'')>=0;
 }
 function _hasDelivery(d){  // ★ 배달대행 - 택배와 완전 별개
   return isSuperAdmin()||(d.deliveryPaid)||(['delivery','full'].indexOf(d.plan||'')>=0);
