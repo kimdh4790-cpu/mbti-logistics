@@ -4,9 +4,18 @@ firebase.initializeApp({apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',authDom
 const messaging=firebase.messaging();
 messaging.onBackgroundMessage(function(payload){
   const data=payload.data||{};const type=data.type||'alert';
-  const title='DONWAY '+(payload.notification&&payload.notification.title||'알림');
+  const title=(payload.notification&&payload.notification.title)||'DONWAY 알림';
   const body=(payload.notification&&payload.notification.body)||'';
-  return self.registration.showNotification(title,{body:body,icon:'/icon-192.png',badge:'/icon-192.png',tag:'donway-'+type,renotify:true,vibrate:[200,100,200]});
+  return self.registration.showNotification(title,{
+    body:body,
+    icon:'/icon-192.png',
+    badge:'/icon-192.png',
+    tag:'donway-'+type,
+    renotify:true,
+    silent:false,
+    vibrate:[300,100,300,100,300],
+    requireInteraction:false
+  });
 });
 self.addEventListener('notificationclick',function(e){e.notification.close();if(e.action==='close')return;e.waitUntil(clients.openWindow('/settle'));});
 self.addEventListener('install',function(){self.skipWaiting();});
