@@ -12492,7 +12492,7 @@ function _dwSaveTracks(){
   _db.collection('companies').doc(did).update({dwTracks:window.DW_TRACKS})
     .then(function(){
       toast('✅ 트랙 단가 저장');
-      // 배지 즉시 업데이트
+      // 배지 즉시 업데이트 (re-render 없이)
       if(window.DW_TRACKS) window.DW_TRACKS.forEach(function(t,i){
         var b=document.getElementById('dw-badge-track-'+i);
         if(b){
@@ -12500,7 +12500,6 @@ function _dwSaveTracks(){
           b.children[0].textContent=priceStr;
         }
       });
-      _dwRenderSimulator();
     })
     .catch(function(e){toast('❌ '+e.message);});
 }
