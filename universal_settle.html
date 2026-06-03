@@ -1221,7 +1221,15 @@ function _renderDeliveryResult(){
   var totalCnt = results.reduce(function(s,r){return s+r.totalCount;},0);
   var agencyMargin = totalExt - totalInj;
 
-  var html = '<div class="result-summary">'
+
+  // 2차 버튼 툴바
+  var html = '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">'
+    +'<button onclick="_openIncenPanel()" style="padding:6px 14px;border-radius:7px;border:1px solid var(--acc);background:var(--bg3);color:var(--text1);font-size:11px;font-weight:600;cursor:pointer">⚙️ 인센 설정</button>'
+    +'<button onclick="_openIdSupportPanel()" style="padding:6px 14px;border-radius:7px;border:1px solid var(--acc);background:var(--bg3);color:var(--text1);font-size:11px;font-weight:600;cursor:pointer">👥 아이디지원</button>'
+    +'<button onclick="_openGuaranteePanel()" style="padding:6px 14px;border-radius:7px;border:1px solid var(--acc);background:var(--bg3);color:var(--text1);font-size:11px;font-weight:600;cursor:pointer">💰 보장금액</button>'
+    +'<button onclick="_recalcCoupangNet();_renderSettle();toast(\'🔄 전체 재계산 완료\')" style="padding:6px 14px;border-radius:7px;border:none;background:var(--acc);color:#fff;font-size:11px;font-weight:600;cursor:pointer">🔄 전체재계산</button>'
+    +'</div>';
+  html += '<div class="result-summary">'
     +'<div class="stat-card"><div class="stat-label">라이더 수</div><div class="stat-val blue">'+results.length+'명</div></div>'
     +'<div class="stat-card"><div class="stat-label">유효 건수</div><div class="stat-val">'+_fmt(totalCnt)+'건</div></div>'
     +'<div class="stat-card"><div class="stat-label">보전 투입</div><div class="stat-val" style="color:var(--blue)">+'+_fmt(totalInj)+'원</div></div>'
