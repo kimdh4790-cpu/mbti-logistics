@@ -939,11 +939,16 @@ function _loadRosterFile(inp){
           e.target.result.split(/\r?\n/).forEach(function(line){
             line = line.trim();
             if(!line||line.startsWith('#')) return;
-            var parts = line.split(/[,\t]+/);
+            // 앞에 붙는 prefix 제거 (예: VM31:6, ABC:1 같은 패턴)
+            line = line.replace(/^[A-Z0-9]+:[0-9]+\s*/i, '');
+            // 콤마/탭/공백 구분 모두 지원
+            var parts = line.split(/[,\t\s]+/).filter(Boolean);
             if(parts.length >= 2){
-              var id = parts[0].trim();
+              var id   = parts[0].trim();
+              var name = parts[1].trim();
+              var camp = parts[2] ? parts[2].trim().replace(/캠프$/, '') : '';
               if(id && !id.includes('@')) id = id + '@df';
-              if(id) parsed[id]={name:parts[1]?parts[1].trim():'', camp:parts[2]?parts[2].trim():'', isBiz:true};
+              if(id && name) parsed[id]={name:name, camp:camp, isBiz:true};
             }
           });
         } else {
