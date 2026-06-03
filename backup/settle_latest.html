@@ -1271,6 +1271,185 @@ function _extractMonthFromFilename(filename){
   if(m2)return m2[1]+'-'+m2[2];
   return null;
 }
+
+// ══════════════════════════════════════
+// ★ 범용 엑셀 정산 파싱 (매핑 UI)
+// ══════════════════════════════════════
+function parseUniversalExcel(inp){
+  var file=inp.files[0]; if(!file)return;
+  if(typeof XLSX==='undefined'){toast('⚠️ 엑셀 라이브러리 로딩 중...');return;}
+  inp.value='';
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var sn=wb.SheetNames;
+      // 시트 선택 or 첫 번째
+      var sh=wb.Sheets[sn[0]];
+      var rows=XLSX.utils.sheet_to_json(sh,{header:1,defval:''});
+      if(!rows.length){toast('❌ 빈 파일');return;}
+      // 헤더 찾기 (첫 5행 중 가장 많은 텍스트가 있는 행)
+      var hIdx=0;
+      var maxTxt=0;
+      for(var i=0;i<Math.min(5,rows.length);i++){
+        var cnt=rows[i].filter(function(c){return c&&String(c).trim();}).length;
+        if(cnt>maxTxt){maxTxt=cnt;hIdx=i;}
+      }
+      var headers=rows[hIdx].map(function(h){return String(h||'').trim();});
+      // 저장된 매핑 불러오기
+      var savedKey='dw_mapping_'+file.name.replace(/[^a-z0-9]/gi,'_').slice(0,30);
+      var savedMapping=null;
+      try{savedMapping=JSON.parse(localStorage.getItem(savedKey)||'null');}catch(e){}
+      _showMappingModal(headers, rows, hIdx, file.name, savedMapping, savedKey);
+    }catch(e){toast('❌ 파싱 오류: '+e.message);}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function _showMappingModal(headers, rows, hIdx, fileName, savedMapping, savedKey){
+  var mo=document.createElement('div');mo.className='mo show';
+  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+
+  var FIELDS=[
+    {key:'name',label:'기사명',required:true},
+    {key:'id',label:'기사ID/연락처',required:false},
+    {key:'dcnt',label:'배달건수',required:true},
+    {key:'unit',label:'단가(건당)',required:false},
+    {key:'bonus',label:'추가수당/인센티브',required:false},
+    {key:'deduct',label:'공제금액',required:false},
+    {key:'rcnt',label:'픽업/집화건수',required:false},
+  ];
+
+  // 자동 매핑 추정
+  function guessCol(field){
+    if(savedMapping&&savedMapping[field.key]!==undefined) return savedMapping[field.key];
+    var patterns={
+      name:['기사명','성명','라이더명','이름','driver','name'],
+      id:['id','사번','아이디','연락처','phone'],
+      dcnt:['배달건수','건수','count','배달','delivery'],
+      unit:['단가','건당단가','기본단가','unit','price'],
+      bonus:['추가수당','인센티브','수당','bonus'],
+      deduct:['공제','공제금액','deduct'],
+      rcnt:['픽업','집화','pickup','return','반품'],
+    };
+    var pats=patterns[field.key]||[];
+    for(var i=0;i<headers.length;i++){
+      var h=headers[i].toLowerCase();
+      for(var j=0;j<pats.length;j++){
+        if(h.includes(pats[j].toLowerCase())) return i;
+      }
+    }
+    return -1;
+  }
+
+  var opts='<option value="-1">— 선택 안함 —</option>'+headers.map(function(h,i){return '<option value="'+i+'">'+h+'</option>';}).join('');
+
+  var rows_html=FIELDS.map(function(f){
+    var guessed=guessCol(f);
+    var sel='<select id="map-'+f.key+'" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px">'+opts+'</select>';
+    return '<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:center;margin-bottom:8px">'
+      +'<label style="font-size:12px;font-weight:700">'+(f.required?'<span style="color:var(--red)">*</span> ':'')+f.label+'</label>'
+      +sel+'</div>';
+  }).join('');
+
+  var mdDiv=document.createElement('div');mdDiv.className='md';mdDiv.style.maxWidth='480px';
+  var mdtDiv=document.createElement('div');mdtDiv.className='mdt';mdtDiv.innerHTML='🗂️ 컬럼 매핑 설정 <button onclick="this.closest(\'.mo\').remove()" style="background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:6px;padding:2px 8px;cursor:pointer;margin-left:auto">✕</button>';
+  var bodyDiv=document.createElement('div');bodyDiv.style.padding='16px';
+  bodyDiv.innerHTML='<div style="font-size:12px;color:var(--text3);margin-bottom:12px">📄 '+esc(fileName)+' · 헤더: '+hIdx+'행 · '+headers.length+'개 컬럼</div>'+rows_html+'<label style="display:flex;align-items:center;gap:8px;font-size:12px;margin-top:8px;cursor:pointer"><input type="checkbox" id="map-save"> 이 파일명으로 매핑 저장 (다음번 자동 적용)</label>';
+  var footDiv=document.createElement('div');footDiv.className='mdf';
+  var cancelBtn=document.createElement('button');cancelBtn.className='btn';cancelBtn.textContent='취소';cancelBtn.onclick=function(){mo.remove();};
+  var applyBtn=document.createElement('button');applyBtn.className='btn btn-blue';applyBtn.textContent='정산 적용';
+  applyBtn.onclick=function(){_applyUniversalMapping(headers,rows,hIdx,savedKey);};
+  footDiv.appendChild(cancelBtn);footDiv.appendChild(applyBtn);
+  mdDiv.appendChild(mdtDiv);mdDiv.appendChild(bodyDiv);mdDiv.appendChild(footDiv);
+  mo.appendChild(mdDiv);
+  document.body.appendChild(mo);
+
+  // 자동 매핑 값 설정
+  FIELDS.forEach(function(f){
+    var sel=document.getElementById('map-'+f.key);
+    if(sel) sel.value=String(guessCol(f));
+  });
+}
+
+function _applyUniversalMapping(headers, rows, hIdx, savedKey){
+  var getCol=function(key){return parseInt(document.getElementById('map-'+key).value);};
+  var mapping={
+    name:getCol('name'),id:getCol('id'),dcnt:getCol('dcnt'),
+    unit:getCol('unit'),bonus:getCol('bonus'),deduct:getCol('deduct'),rcnt:getCol('rcnt')
+  };
+
+  // 저장 옵션
+  if(document.getElementById('map-save')&&document.getElementById('map-save').checked){
+    try{localStorage.setItem(savedKey,JSON.stringify(mapping));}catch(e){}
+    toast('✅ 매핑 저장됨');
+  }
+
+  if(mapping.name<0){toast('❌ 기사명 컬럼을 선택해주세요');return;}
+
+  // 데이터 파싱
+  var month=new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0');
+  var results=[];
+  rows.slice(hIdx+1).forEach(function(row){
+    var name=String(row[mapping.name]||'').trim();
+    if(!name||name==='합계'||name==='소계') return;
+    var dcnt=mapping.dcnt>=0?Math.abs(parseFloat(String(row[mapping.dcnt]||'').replace(/[,₩원]/g,''))||0):0;
+    var unit=mapping.unit>=0?Math.abs(parseFloat(String(row[mapping.unit]||'').replace(/[,₩원]/g,''))||0):0;
+    var bonus=mapping.bonus>=0?Math.abs(parseFloat(String(row[mapping.bonus]||'').replace(/[,₩원]/g,''))||0):0;
+    var deduct=mapping.deduct>=0?Math.abs(parseFloat(String(row[mapping.deduct]||'').replace(/[,₩원]/g,''))||0):0;
+    var rcnt=mapping.rcnt>=0?Math.abs(parseFloat(String(row[mapping.rcnt]||'').replace(/[,₩원]/g,''))||0):0;
+    var id=mapping.id>=0?String(row[mapping.id]||'').trim():'';
+    var damt=dcnt>0&&unit>0?dcnt*unit:0;
+    var ramt=rcnt>0&&unit>0?rcnt*unit:0;
+    results.push({
+      driver:name,userId:id||name,month:month,
+      dcnt:dcnt,rcnt:rcnt,damt:damt,ramt:ramt,
+      etcPlus:bonus,etcMinus:deduct,
+      _source:'universal'
+    });
+  });
+
+  if(!results.length){toast('❌ 파싱된 데이터 없음');return;}
+
+  document.querySelector('.mo.show')&&document.querySelector('.mo.show').remove();
+  toast('✅ '+results.length+'명 파싱 완료 → 정산 적용 중...');
+
+  // Firebase 기사 매핑 후 정산 저장
+  var did=_CU.dealerId;
+  window._db.collection('drivers').where('dealerId','==',did).get().then(function(snap){
+    var fbDrivers=[];
+    snap.forEach(function(d){fbDrivers.push(Object.assign({id:d.id},d.data()));});
+    _saveUniversalSettlements(results, fbDrivers, month, did);
+  });
+}
+
+function _saveUniversalSettlements(results, fbDrivers, month, did){
+  var saved=0, failed=[];
+  var promises=results.map(function(r){
+    // 이름으로 기사 매핑
+    var drv=fbDrivers.find(function(d){
+      return d.name===r.driver||d.userId===r.userId;
+    });
+    if(!drv){failed.push(r.driver);return Promise.resolve();}
+    var calc=calcNet(Object.assign({},r,{userId:drv.userId||drv.id}));
+    var doc=Object.assign({},r,calc,{
+      dealerId:did,userId:drv.userId||drv.id,
+      driver:drv.name||r.driver,camp:drv.camp||'',
+      bizNum:drv.bizNum||'',month:month,
+      updatedAt:new Date().toISOString()
+    });
+    saved++;
+    return window._db.collection('settlements').doc(did+'_'+month+'_'+(drv.userId||drv.id))
+      .set(doc,{merge:true});
+  });
+  Promise.all(promises).then(function(){
+    var msg='✅ '+saved+'명 정산 저장';
+    if(failed.length) msg+=' (미매칭: '+failed.join(', ')+')';
+    toast(msg);
+    if(typeof pageSettle==='function') pageSettle();
+  });
+}
+
 function parseCoupangExcel(inp){
   var file=inp.files[0]; if(!file)return;
   if(typeof XLSX==='undefined'){toast('⚠️ 엑셀 라이브러리 로딩 중...'); return;}
@@ -15019,6 +15198,7 @@ function _renderSettlePage(settles,c){
     +'</div>'
      +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
      +'<label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#f97316;color:#fff;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📤 쿠팡 엑셀 업로드<input type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style="display:none" onchange="parseCoupangExcel(this)"></label>'
++'<label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#6366f1;color:#fff;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;margin-left:6px">🗂️ 범용 엑셀 업로드<input type="file" accept=".xlsx,.xls" style="display:none" onchange="parseUniversalExcel(this)"></label>'
      +'<button onclick="recalcAllSettlements()" style="padding:8px 14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⚡ 전체 재계산</button>'
      +'<button onclick="deploySettlements()" style="padding:8px 16px;background:linear-gradient(135deg,#0066ff,#7c3aed);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;box-shadow:0 2px 12px rgba(0,102,255,.4)">📤 정산 배포 (명세서+알림)</button>'
      +'<button onclick="openIncPanel()" style="padding:8px 14px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⚙️ 인센 설정</button>'
