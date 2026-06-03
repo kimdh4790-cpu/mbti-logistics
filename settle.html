@@ -7791,53 +7791,37 @@ window._dwShowStatement=function(idx){
     +'</tr>';
   });
 
-  var html='<div class="md" style="max-width:520px" id="dw-stmt-box">'
-    +'<div class="mdt" style="background:'+trackColor+';color:#fff">'
-      +'🛵 배달대행 정산 명세서 — '+esc(r.riderId)
-      +'<button onclick="this.closest(\'.mo\').remove()" style="background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:6px;padding:2px 8px;cursor:pointer;margin-left:auto">✕</button>'
+  // 공제 항목
+  var deductRows='';
+  if(r.leaseFee)   deductRows+='<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9"><span>오토바이 리스료</span><span style="color:#ef4444">-₩'+r.leaseFee.toLocaleString()+'</span></div>';
+  if(r.programFee)  deductRows+='<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9"><span>시스템운영비</span><span style="color:#ef4444">-₩'+r.programFee.toLocaleString()+'</span></div>';
+  if(r.insuranceFee) deductRows+='<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9"><span>산재보험</span><span style="color:#ef4444">-₩'+r.insuranceFee.toLocaleString()+'</span></div>';
+  if(r.tax3)  deductRows+='<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9"><span>소득세 3%</span><span style="color:#ef4444">-₩'+r.tax3.toLocaleString()+'</span></div>';
+  if(r.tax03) deductRows+='<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9"><span>지방소득세 0.3%</span><span style="color:#ef4444">-₩'+r.tax03.toLocaleString()+'</span></div>';
+  var totalDeduct=(r.leaseFee||0)+(r.programFee||0)+(r.insuranceFee||0)+(r.tax3||0)+(r.tax03||0);
+  var html='<div class="md" style="max-width:400px" id="dw-stmt-box">'
+    +'<div class="mdt" style="background:#1d4ed8;color:#fff">'
+    +'🛵 정산 명세서'
+    +'<button onclick="this.closest(\'.mo\').remove()" style="background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:6px;padding:2px 8px;cursor:pointer;margin-left:auto">✕</button>'
     +'</div>'
-    +'<div style="padding:16px;font-size:12px">'
-      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px">'
-        +'<div><span style="color:#6b7280">라이더 ID</span> <strong>'+esc(r.riderId)+'</strong></div>'
-        +'<div><span style="color:#6b7280">정산 기간</span> <strong>'+(r.period||'—')+'</strong></div>'
-        +'<div><span style="color:#6b7280">적용 트랙</span> <strong style="color:'+trackColor+'">'+esc(r.trackLabel)+'</strong></div>'
-        +'<div><span style="color:#6b7280">목표 단가</span> <strong>'+(r.isDefault?'계약단가':'₩'+r.targetPrice.toLocaleString()+'/건')+'</strong></div>'
-      +'</div>'
-      // 시간대별 테이블
-      +'<table style="width:100%;border-collapse:collapse;margin-bottom:12px;font-size:11px">'
-        +'<thead><tr style="background:#f3f4f6">'
-          +'<th style="padding:6px 8px;text-align:left">구간</th><th style="padding:6px 8px">건수</th>'
-          +'<th style="padding:6px 8px;text-align:right">플랫폼</th>'
-          +'<th style="padding:6px 8px;text-align:right;color:#b45309">보전(투입)</th>'
-          +'<th style="padding:6px 8px;text-align:right;color:#047857">환수(차감)</th>'
-        +'</tr></thead><tbody>'+slotRows+'</tbody>'
-        +'<tfoot><tr style="background:#f9fafb;font-weight:700">'
-          +'<td style="padding:6px 8px">합계</td>'
-          +'<td style="padding:6px 8px;text-align:center">'+r.totalCount+'건</td>'
-          +'<td style="padding:6px 8px;text-align:right">₩'+r.pfSum.toLocaleString()+'</td>'
-          +'<td style="padding:6px 8px;text-align:right;color:#b45309">'+(r.injected>0?'-₩'+r.injected.toLocaleString():'—')+'</td>'
-          +'<td style="padding:6px 8px;text-align:right;color:#047857">'+(r.extracted>0?'+₩'+r.extracted.toLocaleString():'—')+'</td>'
-        +'</tr></tfoot>'
-      +'</table>'
-      // 공제/지급 내역
-      +'<div style="background:#f8fafc;border-radius:8px;padding:10px">'
-        +'<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:#6b7280">플랫폼 수령 합계</span><span>₩'+r.pfSum.toLocaleString()+'</span></div>'
-        +'<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:#b45309">대리점 보전(투입)</span><span style="color:#b45309">'+(r.injected?'+₩'+r.injected.toLocaleString():'₩0')+'</span></div>'
-        +'<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:#047857">대리점 환수(차감)</span><span style="color:#047857">'+(r.extracted?'-₩'+r.extracted.toLocaleString():'₩0')+'</span></div>'
-        +'<div style="display:flex;justify-content:space-between;padding:3px 0;border-top:1px solid #e5e7eb;margin-top:3px"><span style="font-weight:700">세전 수수료</span><span style="font-weight:700">₩'+r.preTax.toLocaleString()+'</span></div>'
-        +'<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:#ef4444">소득세 3%</span><span style="color:#ef4444">-₩'+r.tax3.toLocaleString()+'</span></div>'
-        +'<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:#ef4444">지방소득세 0.3%</span><span style="color:#ef4444">-₩'+r.tax03.toLocaleString()+'</span></div>'
-        +(r.leaseFee?'<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:#6b7280">오토바이 리스료</span><span style="color:#ef4444">-₩'+r.leaseFee.toLocaleString()+'</span></div>':'')
-        +(r.programFee?'<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:#6b7280">앱비·보험료</span><span style="color:#ef4444">-₩'+r.programFee.toLocaleString()+'</span></div>':'')
-        +(r.insuranceFee?'<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:#6b7280">기타 공제</span><span style="color:#ef4444">-₩'+r.insuranceFee.toLocaleString()+'</span></div>':'')
-        +'<div style="display:flex;justify-content:space-between;padding:7px 0;border-top:2px solid #3b82f6;margin-top:4px">'
-          +'<span style="font-size:14px;font-weight:900;color:#1d4ed8">💳 최종 실지급액</span>'
-          +'<span style="font-size:18px;font-weight:900;color:#1d4ed8">₩'+r.net.toLocaleString()+'</span>'
-        +'</div>'
-      +'</div>'
+    +'<div style="padding:20px;font-size:13px">'
+    +'<div style="color:#6b7280;font-size:12px;margin-bottom:16px">'+esc(r.riderId)+' · '+(r.period||'—')+'</div>'
+    +'<div style="background:#f0f9ff;border-radius:10px;padding:14px;margin-bottom:16px">'
+    +'<div style="display:flex;justify-content:space-between;margin-bottom:4px">'
+    +'<span style="color:#0369a1;font-weight:700">프로모션 합계</span>'
+    +'<span style="font-size:11px;color:#6b7280">'+r.totalCount+'건</span>'
+    +'</div>'
+    +'<div style="font-size:24px;font-weight:900;color:#0369a1">₩'+r.pfSum.toLocaleString()+'</div>'
+    +'</div>'
+    +(deductRows?'<div style="font-weight:700;margin-bottom:8px">— 공제</div>'+deductRows:'') 
+    +(deductRows?'<div style="display:flex;justify-content:space-between;padding:8px 0;font-weight:700;color:#ef4444"><span>공제 합계</span><span>-₩'+totalDeduct.toLocaleString()+'</span></div>':'')
+    +'<div style="display:flex;justify-content:space-between;padding:14px 0;border-top:2px solid #1d4ed8;margin-top:8px">'
+    +'<span style="font-size:15px;font-weight:900;color:#1d4ed8">지급 합계</span>'
+    +'<span style="font-size:24px;font-weight:900;color:#1d4ed8">₩'+r.net.toLocaleString()+'</span>'
+    +'</div>'
     +'</div>'
     +'<div class="mdf">'
-      +'<button class="btn" onclick="this.closest(\'.mo\').remove()">닫기</button>'
+    +'<button class="btn" onclick="this.closest(\'.mo\').remove()">닫기</button>'
     +'</div>'
   +'</div>';
   mo.innerHTML=html;
