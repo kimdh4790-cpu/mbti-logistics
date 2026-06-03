@@ -468,7 +468,7 @@ function _renderStep1(){
     +'<div id="quick-templates">로딩 중...</div>'
     +'</div>'
 
-        +'<div style="background:var(--bg3);border-radius:10px;padding:12px 14px;margin-bottom:14px">'    +'<div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px">⚙️ 사전 설정 파일 — 정산서 올리기 전에 먼저 올리세요 (선택)</div>'    +'<div style="display:flex;gap:8px;flex-wrap:wrap">'    +'<label style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;background:var(--acc);color:#fff;border-radius:7px;padding:6px 12px;font-size:11px;font-weight:600">'    +'📊 라우트단가표'    +'<input type="file" accept=".xlsx,.xls,.txt,.csv,.jpg,.jpeg,.png" style="display:none" onchange="_loadRateTable(this)">'    +'</label>'    +'<label style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;background:var(--green);color:#fff;border-radius:7px;padding:6px 12px;font-size:11px;font-weight:600">'    +'👑 팀장수수료'    +'<input type="file" accept=".txt,.csv,.jpg,.jpeg,.png" style="display:none" onchange="_loadRateTable(this)">'    +'</label>'    +'<label style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;background:#7c3aed;color:#fff;border-radius:7px;padding:6px 12px;font-size:11px;font-weight:600">'    +'🛵 배달대행 구간단가'    +'<input type="file" accept=".xlsx,.xls,.txt,.csv" style="display:none" onchange="_loadDeliveryRateTable(this)">'    +'</label>'    +'</div>'    +'<div style="margin-top:6px;font-size:10px;color:var(--text3)" id="preset-status">파일 없으면 쿠팡 총금액 기준으로 계산됩니다</div>'    +'</div>'
+        +'<div style="background:var(--bg3);border-radius:10px;padding:12px 14px;margin-bottom:14px">'    +'<div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px">⚙️ 사전 설정 파일 — 정산서 올리기 전에 먼저 올리세요 (선택)</div>'    +'<div style="display:flex;gap:8px;flex-wrap:wrap">'    +'<label style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;background:var(--acc);color:#fff;border-radius:7px;padding:6px 12px;font-size:11px;font-weight:600">'    +'📊 라우트단가표'    +'<input type="file" accept=".xlsx,.xls,.txt,.csv,.jpg,.jpeg,.png" style="display:none" onchange="_loadRateTable(this)">'    +'</label>'    +'<label style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;background:var(--green);color:#fff;border-radius:7px;padding:6px 12px;font-size:11px;font-weight:600">'    +'👑 팀장수수료'    +'<input type="file" accept=".txt,.csv,.jpg,.jpeg,.png" style="display:none" onchange="_loadRateTable(this)">'    +'</label>'    +'<label style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;background:#7c3aed;color:#fff;border-radius:7px;padding:6px 12px;font-size:11px;font-weight:600">'    +'🛵 배달대행 구간단가'    +'<input type="file" accept=".xlsx,.xls,.txt,.csv" style="display:none" onchange="_loadDeliveryRateTable(this)">'    +'</label>'    +'<label style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;background:#0369a1;color:#fff;border-radius:7px;padding:6px 12px;font-size:11px;font-weight:600">'    +'👤 기사 명단'    +'<input type="file" accept=".xlsx,.xls,.txt,.csv" style="display:none" onchange="_loadRosterFile(this)">'    +'</label>'    +'</div>'    +'<div style="margin-top:6px;font-size:10px;color:var(--text3)" id="preset-status">파일 없으면 쿠팡 총금액 기준으로 계산됩니다</div>'    +'</div>'
 +'<div class="upload-zone" id="upload-zone" onclick="document.getElementById(\'excel-file\').click()">'
     +'<div class="upload-icon">'+(isMulti?'📂':'📊')+'</div>'
     +'<div class="upload-title">'+(isMulti?'여러 파일을 드래그하거나 클릭해서 업로드':'엑셀 파일을 드래그하거나 클릭해서 업로드')+'</div>'
@@ -918,6 +918,71 @@ async function _aiParseDeliveryRate(file, callback){
     }catch(e){callback(null);}
   };
   reader.readAsArrayBuffer(file);
+}
+
+
+// ── 기사 명단 파일 파싱 (ID→이름/캐프/사업자여부 매핑)
+function _loadRosterFile(inp){
+  var file = inp.files[0];
+  if(!file) return;
+  inp.value = '';
+  var ext = file.name.split('.').pop().toLowerCase();
+  var reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      var rosterMap = {};
+      if(ext==='txt'||ext==='csv'){
+        e.target.result.split(/\r?\n/).forEach(function(line){
+          line = line.trim();
+          if(!line||line.startsWith('#')) return;
+          var parts = line.split(/[,\t]+/);
+          if(parts.length >= 2){
+            var id = parts[0].trim();
+            if(id && !id.includes('@')) id = id + '@df';
+            if(id) rosterMap[id] = {
+              name:  parts[1]?parts[1].trim():'',
+              camp:  parts[2]?parts[2].trim():'',
+              isBiz: parts[3]?parts[3].trim().toUpperCase()==='Y':true
+            };
+          }
+        });
+      } else {
+        var wb2 = XLSX.read(e.target.result,{type:'array'});
+        var ws2 = wb2.Sheets[wb2.SheetNames[0]];
+        var rows2 = XLSX.utils.sheet_to_json(ws2,{header:1,defval:''});
+        var hIdx=0;
+        for(var i=0;i<Math.min(rows2.length,5);i++){
+          if(rows2[i].some(function(c){return String(c).toUpperCase().includes('ID');})){hIdx=i;break;}
+        }
+        rows2.slice(hIdx+1).forEach(function(r){
+          var id = String(r[0]||'').trim();
+          if(!id) return;
+          if(!id.includes('@')) id = id + '@df';
+          rosterMap[id] = {
+            name:  String(r[1]||'').trim(),
+            camp:  String(r[2]||'').trim(),
+            isBiz: String(r[3]||'Y').trim().toUpperCase()==='Y'
+          };
+        });
+      }
+      if(!Object.keys(rosterMap).length){
+        toast('⚠️ 명단 인식 실패 — A열=쿠팡ID, B열=이름 형식인지 확인'); return;
+      }
+      _settleState.rosterMap = rosterMap;
+      var named = Object.values(rosterMap).filter(function(r){return r.name;}).length;
+      toast('✅ 기사 명단 로드 — '+Object.keys(rosterMap).length+'명 (이름 '+named+'명)');
+      if(_settleState.results&&_settleState.results.length){
+        _settleState.results.forEach(function(r){
+          var m=rosterMap[r.id]; if(m){if(m.name)r.name=m.name; if(m.camp)r.dept=m.camp;}
+        });
+        _recalcCoupangNet(); _renderSettle();
+      }
+      var ps=document.getElementById('preset-status');
+      if(ps) ps.textContent='기사 명단 로드됨 ('+Object.keys(rosterMap).length+'명)';
+    }catch(err){ toast('❌ 명단 파일 오류: '+err.message); }
+  };
+  if(ext==='txt'||ext==='csv') reader.readAsText(file,'utf-8');
+  else reader.readAsArrayBuffer(file);
 }
 
 // ── 배달대행 엑셀 감지
@@ -1505,6 +1570,13 @@ function _processCoupangSheet(wb, rawSheetName, lossSheetName){
       rowCount:  1,
       isCoupang: true,
     };
+  });
+
+  // 기사 명단 로드된 경우 이름/캐프 덮어쓰기
+  var rMap = _settleState.rosterMap || {};
+  results.forEach(function(r){
+    var m = rMap[r.id];
+    if(m){ if(m.name) r.name=m.name; if(m.camp) r.dept=m.camp; }
   });
 
   results.sort(function(a,b){return a.dept.localeCompare(b.dept)||a.name.localeCompare(b.name);});
