@@ -7082,6 +7082,7 @@ window.dwRunLiveCalculations=function(){
           window._dwTotalExt+=_totalExt;
           window._dwTotalCnt+=_validCnt;
           window._dwTotalPf+=_pfSum;
+          window._dwTotalNet+=(Math.max(0,Math.floor((_pfSum+_totalInj-_totalExt)*0.967)));
           // ★ 명세서 실시간 카운팅 업데이트
           (function(){
             var totPf=window._dwTotalPf||0;
@@ -7158,15 +7159,15 @@ window.dwRunLiveCalculations=function(){
         if(scCnt) scCnt.textContent=((window._dwTotalCnt||0)+_validCnt)+'건';
         var mg=_allExt-_allInj;
         if(scMg){scMg.textContent='₩'+Math.abs(mg).toLocaleString();scMg.style.color=mg>=0?'#065f46':'#9f1239';}
-        // 매출/매입/순수익 카드 업데이트
-        var _allPf2=_allPf;  // 이미 누적값
-        var _allNet2=(window._dwTotalNet||0)+Math.max(0,Math.floor((_pfSum+_inj-_ext)*0.967));
-        var _profit=_allPf2-_allNet2;
+        // 매출/매입/순수익 카드 - 라이더 완료 누적값 기준
+        var _totPf=window._dwTotalPf||0;
+        var _totNet=window._dwTotalNet||0;
+        var _profit=_totPf-_totNet;
         var scRev=document.getElementById('dw-sc-revenue');
         var scCost=document.getElementById('dw-sc-cost');
         var scProfit=document.getElementById('dw-sc-profit');
-        if(scRev) scRev.textContent='₩'+_allPf2.toLocaleString();
-        if(scCost) scCost.textContent='₩'+_allNet2.toLocaleString();
+        if(scRev) scRev.textContent='₩'+_totPf.toLocaleString();
+        if(scCost) scCost.textContent='₩'+_totNet.toLocaleString();
         if(scProfit){
           scProfit.textContent='₩'+Math.abs(_profit).toLocaleString();
           scProfit.style.color=_profit>=0?'var(--green)':'var(--red)';
@@ -7182,9 +7183,7 @@ window.dwRunLiveCalculations=function(){
           scProfitBadge.textContent='마진율 '+_marginRate+'%';
           scProfitBadge.style.color=_profit>=0?'#059669':'#dc2626';
         }
-        // 누적 합산용
-        window._dwTotalPf=(window._dwTotalPf||0)+_pfSum;  // 이번 라이더 pfSum만 추가
-        window._dwTotalNet=_allNet2;
+        // 누적 합산용 (라이더 완료 시점에서만 처리, 여기선 화면 업데이트만)
         // 콘솔 행
         var badge='',rowBg='transparent';
         if(isMid) badge='<span style="font-size:10px;background:#374151;color:#9ca3af;padding:2px 7px;border-radius:10px">🌙 심야</span>';
