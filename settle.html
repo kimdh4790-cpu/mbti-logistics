@@ -7060,6 +7060,11 @@ window.dwRunLiveCalculations=function(){
       if(!window._dwTotalCnt) window._dwTotalCnt=0;
       if(!window._dwTotalPf) window._dwTotalPf=0;
 
+      // ★ 1패스: 완료 건수 기준 최종 트랙 확정
+      var _pass1cnt=0;
+      orders.forEach(function(o){var isMid=(o.hour>=0&&o.hour<6);if(!isMid&&o.platformPrice>0)_pass1cnt++;});
+      var _finalTP=_getTP(_pass1cnt);
+
       var timer=setInterval(function(){
         if(_idx>=orders.length){
           clearInterval(timer);
@@ -7129,9 +7134,10 @@ window.dwRunLiveCalculations=function(){
           _validCnt++;_pfSum+=o.platformPrice;
           tp=_getTP(_validCnt);
           var slotKey=_dwSlot?_dwSlot(o.hour||12):'';
-          var slotP=window.DW_SLOTS&&slotKey&&DW_SLOTS[slotKey]&&DW_SLOTS[slotKey].price>0?DW_SLOTS[slotKey].price:tp;
-          slotP=isNaN(slotP)||slotP<=0?tp:slotP;
-          var finalT=slotP+(o.event&&o.event.price||0);
+          var slotKey=_dwSlot?_dwSlot(o.hour||12):'';
+          // ★ 트랙은 최종 확정값(_finalTP) 사용 (2패스)
+          var slotP=window.DW_SLOTS&&slotKey&&DW_SLOTS[slotKey]&&DW_SLOTS[slotKey].price>0?DW_SLOTS[slotKey].price:_finalTP;
+          slotP=isNaN(slotP)||slotP<=0?_finalTP:slotP;
           if(o.platformPrice<finalT){_inj=Math.floor(finalT-o.platformPrice);_totalInj+=_inj;}
           else if(o.platformPrice>finalT){_ext=Math.floor(o.platformPrice-finalT);_totalExt+=_ext;}
         }
