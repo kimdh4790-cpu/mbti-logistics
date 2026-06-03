@@ -14122,12 +14122,12 @@ var MENUS_SETTLE = [
     {ic:'📊',l:'정산 현황',        p:'settle',           plan_key:'settle'},
     {ic:'📋',l:'정산 관리',        p:'settlements',      plan_key:'settle'},
     {ic:'📈',l:'통계',             p:'stats',            plan_key:'settle'},
-    {ic:'👤',l:'기사 관리',        p:'drivers',          plan_key:'free'},
+    {ic:'👤',l:'기사 관리',        p:'drivers',          plan_key:'settle'},
     {ic:'📝',l:'위수탁 계약서',    p:'contract',         plan_key:'settle'},
-    {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
+    {ic:'📅',l:'달력',             p:'schedule',         plan_key:'settle'},
     {ic:'🗓',l:'라우트 근무표',   p:'roster',           plan_key:'settle'},
-    {ic:'⭐',l:'직원 평가',        p:'evaluation',       plan_key:'free'},
-        {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'any_paid'}
+    {ic:'⭐',l:'직원 평가',        p:'evaluation',       plan_key:'premium'},
+    {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'settle'}
   ]},
   {s:'🛵 배달대행 정산', items:[
     {ic:'📊',l:'정산 현황',        p:'delivery_settle',  plan_key:'any_paid'},
@@ -14135,14 +14135,14 @@ var MENUS_SETTLE = [
     {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'any_paid'}
   ]},
   {s:'🔐 QR 근태관리', items:[
-    {ic:'🔐',l:'QR 출퇴근',        p:'attendance',       plan_key:'qr'},
-    {ic:'🌴',l:'휴가 관리',        p:'leave',            plan_key:'payroll'},
-    {ic:'⏰',l:'연장 승인',        p:'overtime',         plan_key:'qr'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'any_paid'}
+    {ic:'🔐',l:'QR 출퇴근',        p:'attendance',       plan_key:'premium'},
+    {ic:'🌴',l:'휴가 관리',        p:'leave',            plan_key:'premium'},
+    {ic:'⏰',l:'연장 승인',        p:'overtime',         plan_key:'premium'},
+    {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'premium'}
   ]},
   {s:'💼 급여 관리', items:[
-    {ic:'💼',l:'급여 현황',        p:'hourly_settle',    plan_key:'payroll'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'any_paid'}
+    {ic:'💼',l:'급여 현황',        p:'hourly_settle',    plan_key:'premium'},
+    {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'premium'}
   ]},
   {s:'🚚 원스톱 물류', items:[
     {ic:'📦',l:'배달 실적',        p:'delivery_report',  plan_key:'settle'},
