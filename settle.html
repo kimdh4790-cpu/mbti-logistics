@@ -12481,6 +12481,9 @@ function _dwSaveTracks(){
       var el=document.getElementById('dw-track-'+t.key);
       if(el) t.price=parseInt(el.value)||t.price;
     });
+    // 180건 미만 기본단가
+    var defEl=document.getElementById('dw-def-price')||document.getElementById('dw-def-price-2');
+    if(defEl&&DW_TRACKS[0]) DW_TRACKS[0].price=parseInt(defEl.value)||DW_TRACKS[0].price;
   }
   _db.collection('companies').doc(did).update({dwTracks:window.DW_TRACKS})
     .then(function(){toast('✅ 트랙 단가 저장');_dwRenderSimulator();})
@@ -12514,6 +12517,14 @@ function _dwLoadCfg(did){
         var el=document.getElementById('dw-track-'+t.key);
         if(el) el.value=t.price;
       });
+      // 180건 미만 기본단가 input 채우기
+      if(d.dwTracks[0]){
+        var dp=document.getElementById('dw-def-price');
+        var dp2=document.getElementById('dw-def-price-2');
+        if(dp) dp.value=d.dwTracks[0].price||2900;
+        if(dp2) dp2.value=d.dwTracks[0].price||2900;
+        window._dwCfgDefPrice=d.dwTracks[0].price||2900;
+      }
     }
     if(d.dwSlots){
       Object.keys(d.dwSlots).forEach(function(k){
