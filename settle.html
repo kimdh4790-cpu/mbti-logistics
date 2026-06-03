@@ -13707,7 +13707,7 @@ window._loadMyStatements=function(){
     snap.forEach(function(doc){
       var d=doc.data();
       // 정산 내역탭은 명세서/세금계산서 타입만 표시 (공지 제외)
-      var _validType=['payslip','tax_invoice','settlement','tax'];
+      var _validType=['payslip','tax_invoice','settlement','tax','payslip_auto'];
       if(_validType.indexOf(d.type)<0) return;
       // 기사는 본인 것만 표시
       var _myId=_CU.driverId||_CU.userId||_CU.uid||'';
@@ -13787,8 +13787,13 @@ function _viewMyStatement(el){
     var isTax=(d.type==='tax_invoice'||d.type==='tax');
     var settleId=d.settleId||d.fbId||'';
 
+    // 배달대행 명세서 (payslip_auto)
+    if(d.type==='payslip_auto'){
+      _viewDeliveryStatementSimple(d);
+      return;
+    }
+
     if(!settleId){
-      // settleId 없으면 기존 텍스트 요약 표시
       _viewMyStatementFallback(d);
       return;
     }
@@ -13805,6 +13810,23 @@ function _viewMyStatement(el){
       }
     }).catch(function(){_viewMyStatementFallback(d);});
   }).catch(function(){});
+}
+
+
+function _viewDeliveryStatementSimple(d){
+  var mo=document.createElement('div');mo.className='mo show';
+  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  var deductRows='';
+  var totalDeduct=0;
+  if(d.leaseFee){deductRows+='<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9"><span>오토바이 리스료</span><span style="color:#ef4444">-₩'+(d.leaseFee||0).toLocaleString()+'</span></div>';totalDeduct+=d.leaseFee||0;}
+  if(d.programFee){deductRows+='<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9"><span>시스템운영비</span><span style="color:#ef4444">-₩'+(d.programFee||0).toLocaleString()+'</span></div>';totalDeduct+=d.programFee||0;}
+  if(d.insuranceFee){deductRows+='<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9"><span>산재보험</span><span style="color:#ef4444">-₩'+(d.insuranceFee||0).toLocaleString()+'</span></div>';totalDeduct+=d.insuranceFee||0;}
+  var tax3=Math.round((d.preTax||0)*0.03);
+  var tax03=Math.round((d.preTax||0)*0.003);
+  if(tax3){deductRows+='<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9"><span>소득세 3%</span><span style="color:#ef4444">-₩'+tax3.toLocaleString()+'</span></div>';totalDeduct+=tax3;}
+  if(tax03){deductRows+='<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9"><span>지방소득세 0.3%</span><span style="color:#ef4444">-₩'+tax03.toLocaleString()+'</span></div>';totalDeduct+=tax03;}
+  mo.innerHTML='<div class="md" style="max-width:400px">'    +'<div class="mdt" style="background:#1d4ed8;color:#fff">🛵 정산 명세서'    +'<button onclick="this.closest(\'.mo\').remove()" style="background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:6px;padding:2px 8px;cursor:pointer;margin-left:auto">✕</button></div>'    +'<div style="padding:20px;font-size:13px">'    +'<div style="color:#6b7280;font-size:12px;margin-bottom:16px">'+(d.targetDriverName||d.targetDriverId||'')+' · '+(d.period||d.month||'—')+'</div>'    +'<div style="background:#f0f9ff;border-radius:10px;padding:14px;margin-bottom:16px">'    +'<div style="display:flex;justify-content:space-between;margin-bottom:4px">'    +'<span style="color:#0369a1;font-weight:700">프로모션 합계</span>'    +'<span style="font-size:11px;color:#6b7280">'+(d.totalCount||0)+'건</span></div>'    +'<div style="font-size:24px;font-weight:900;color:#0369a1">₩'+(d.preTax||d.net||0).toLocaleString()+'</div></div>'    +(deductRows?'<div style="font-weight:700;margin-bottom:8px">— 공제</div>'+deductRows:'')      +(deductRows?'<div style="display:flex;justify-content:space-between;padding:8px 0;font-weight:700;color:#ef4444"><span>공제 합계</span><span>-₩'+totalDeduct.toLocaleString()+'</span></div>':'')    +'<div style="display:flex;justify-content:space-between;padding:14px 0;border-top:2px solid #1d4ed8;margin-top:8px">'    +'<span style="font-size:15px;font-weight:900;color:#1d4ed8">지급 합계</span>'    +'<span style="font-size:24px;font-weight:900;color:#1d4ed8">₩'+(d.net||0).toLocaleString()+'</span></div>'    +'</div>'    +'<div class="mdf"><button class="btn" onclick="this.closest(\'.mo\').remove()">닫기</button></div>'  +'</div>';
+  document.body.appendChild(mo);
 }
 
 function _viewMyStatementFallback(d){
