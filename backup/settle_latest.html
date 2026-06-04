@@ -8779,129 +8779,301 @@ function pageUniversalRules(){
   var c=document.getElementById('content');
   if(!_db||!_CU){c.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
   var did=_CU.dealerId||_CU.uid;
-
-  // Firestore에서 기존 규칙 불러오기
   _db.collection('universal_rules').doc(did).get().then(function(doc){
-    var r=doc.exists?doc.data():{};
-    _renderUniversalRules(c, r);
+    _renderUniversalRules(c, doc.exists?doc.data():{});
   }).catch(function(){_renderUniversalRules(c,{});});
 }
 
 function _renderUniversalRules(c, r){
-  var routes=r.routes||[{route:'',price:''}];
-  var routeRows=routes.map(function(rr,i){
-    return '<div style="display:flex;gap:8px;margin-bottom:6px" id="rrow-'+i+'">'+
-      '<input type="text" placeholder="라우트 (예: 812A)" value="'+esc(rr.route||'')+'" style="flex:1;padding:7px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px" id="r-route-'+i+'">'+
-      '<input type="number" placeholder="비사업자" value="'+(rr.price||'')+'" style="width:90px;padding:7px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px" id="r-price-'+i+'">'+
-      '<input type="number" placeholder="사업자(VAT)" value="'+(rr.priceVat||'')+'" style="width:90px;padding:7px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px;border-color:rgba(0,200,100,.4)" id="r-pricevat-'+i+'">'+
-      '<button onclick="_uRemoveRow(this)" style="padding:4px 8px;background:#fee2e2;border:none;border-radius:6px;cursor:pointer;font-size:12px;color:#dc2626">✕</button>'+
+  r=r||{};
+  var priceTables=r.priceTables||[{label:'기본 단가표',type:'basic',routes:[]}];
+
+  // 단가표 탭 HTML
+  function renderTableTabs(){
+    return priceTables.map(function(pt,ti){
+      return '<button onclick="_uSelectPriceTable('+ti+')" id="ptab-'+ti+'" style="padding:6px 12px;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;'+(ti===0?'background:var(--brand);color:#fff':'background:var(--bg3);color:var(--text2)')+'">'+esc(pt.label)+'</button>';
+    }).join('');
+  }
+
+  function renderRouteRows(routes, ti){
+    return (routes||[]).map(function(rr,i){
+      return '<div class="rrow" id="rrow-'+ti+'-'+i+'" style="display:grid;grid-template-columns:80px 80px 80px auto;gap:6px;margin-bottom:5px;align-items:center">'+
+        '<input type="text" placeholder="812A" value="'+esc(rr.route||'')+'" class="r-route" style="padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px;text-align:center">'+
+        '<input type="number" placeholder="비사업자" value="'+(rr.price||'')+'" class="r-price" style="padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px">'+
+        '<input type="number" placeholder="사업자VAT" value="'+(rr.priceVat||'')+'" class="r-pricevat" style="padding:6px;border:1px solid rgba(0,200,100,.4);border-radius:6px;background:var(--bg);font-size:12px">'+
+        '<button onclick="_uRemoveRRow(this)" style="padding:4px 8px;background:#fee2e2;border:none;border-radius:5px;cursor:pointer;font-size:11px;color:#dc2626;width:32px">✕</button>'+
+      '</div>';
+    }).join('');
+  }
+
+  function renderPriceTable(pt, ti){
+    return '<div id="ptable-'+ti+'" style="display:'+(ti===0?'block':'none')+'">'+
+      // 단가표 설정
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">'+
+        '<div><label style="font-size:10px;color:var(--text3);display:block;margin-bottom:3px">단가표 이름</label>'+
+          '<input type="text" class="pt-label" value="'+esc(pt.label||'')+'" placeholder="예) 기본/팀장/백업" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px"></div>'+
+        '<div><label style="font-size:10px;color:var(--text3);display:block;margin-bottom:3px">단가표 유형</label>'+
+          '<select class="pt-type" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px">'+
+            '<option value="basic" '+(pt.type==='basic'?'selected':'')+'>기본 (일반기사)</option>'+
+            '<option value="leader" '+(pt.type==='leader'?'selected':'')+'>팀장 수수료</option>'+
+            '<option value="backup" '+(pt.type==='backup'?'selected':'')+'>백업 (대체근무)</option>'+
+            '<option value="custom" '+(pt.type==='custom'?'selected':'')+'>개별 지정</option>'+
+          '</select></div>'+
+        '<div><label style="font-size:10px;color:var(--text3);display:block;margin-bottom:3px">적용 기사 ID (쉼표 구분)</label>'+
+          '<input type="text" class="pt-empids" value="'+esc((pt.empIds||[]).join(','))+'" placeholder="예) cionttl0425@df,..." style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px"></div>'+
+      '</div>'+
+      // 라우트 헤더
+      '<div style="display:grid;grid-template-columns:80px 80px 80px auto;gap:6px;margin-bottom:4px">'+
+        '<div style="font-size:10px;color:var(--text3);font-weight:700;text-align:center">라우트</div>'+
+        '<div style="font-size:10px;color:var(--text3);font-weight:700">비사업자</div>'+
+        '<div style="font-size:10px;color:#059669;font-weight:700">사업자VAT</div>'+
+        '<div></div>'+
+      '</div>'+
+      '<div class="route-rows">'+renderRouteRows(pt.routes,ti)+'</div>'+
+      '<div style="display:flex;gap:6px;margin-top:8px">'+
+        '<button onclick="_uAddRRow('+ti+')" style="padding:5px 10px;background:var(--brand);color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer">+ 행 추가</button>'+
+        '<label style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;background:#10b981;color:#fff;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">'+
+          '📤 파일업로드<input type="file" accept=".xlsx,.xls,.txt" style="display:none" onchange="_uBulkUploadRoutes(this,'+ti+')">'+
+        '</label>'+
+        (ti>0?'<button onclick="_uDelPriceTable('+ti+')" style="padding:5px 10px;background:#fee2e2;border:none;border-radius:6px;font-size:11px;cursor:pointer;color:#dc2626;margin-left:auto">🗑 이 단가표 삭제</button>':'')+'</div>'+
     '</div>';
-  }).join('');
+  }
+
+  var tablesHtml=priceTables.map(function(pt,ti){return renderPriceTable(pt,ti);}).join('');
 
   c.innerHTML=
-    '<div style="max-width:700px;margin:0 auto;padding:16px">'+
+    '<div style="max-width:720px;margin:0 auto;padding:16px">'+
     '<div style="background:linear-gradient(135deg,#1e3a5f,#7c3aed);border-radius:16px;padding:20px;color:#fff;margin-bottom:16px">'+
       '<div style="font-size:11px;font-weight:700;opacity:.6;letter-spacing:2px;margin-bottom:6px">DONWAY · 범용 정산</div>'+
       '<div style="font-size:20px;font-weight:900;margin-bottom:4px">⚙️ 계산 규칙 설정</div>'+
       '<div style="font-size:12px;opacity:.7">한번 등록하면 엑셀 업로드 시 자동 적용</div>'+
     '</div>'+
 
-    // 기본 설정
+    // 기본 계산 방식
     '<div style="background:var(--bg2);border-radius:12px;border:1px solid var(--border);padding:16px;margin-bottom:12px">'+
-      '<div style="font-size:13px;font-weight:800;margin-bottom:12px">📌 기본 계산 방식</div>'+
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'+
-        '<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">계산 방식</label>'+
+      '<div style="font-size:13px;font-weight:800;margin-bottom:12px">📌 기본 설정</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'+
+        '<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">계산 방식</label>'+
           '<select id="u-calc-type" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px">'+
             '<option value="route" '+(r.calcType==='route'?'selected':'')+'>라우트별 단가</option>'+
             '<option value="fixed" '+(r.calcType==='fixed'?'selected':'')+'>건당 고정단가</option>'+
             '<option value="hourly" '+(r.calcType==='hourly'?'selected':'')+'>시급제</option>'+
             '<option value="daily" '+(r.calcType==='daily'?'selected':'')+'>일당제</option>'+
             '<option value="direct" '+(r.calcType==='direct'?'selected':'')+'>실지급 직접입력</option>'+
-          '</select>'+
-        '</div>'+
-        '<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">기본 단가 (원)</label>'+
-          '<input type="number" id="u-base-price" value="'+(r.basePrice||'')+'" placeholder="예) 1200" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px">'+
-        '</div>'+
+          '</select></div>'+
+        '<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">기본 단가 (원)</label>'+
+          '<input type="number" id="u-base-price" value="'+(r.basePrice||'')+'" placeholder="예) 1200" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px"></div>'+
       '</div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
-        '<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">미계약 W2 단가 (부산)</label>'+
-          '<input type="number" id="u-nocont-w2" value="'+(r.nocontW2||600)+'" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px">'+
-        '</div>'+
-        '<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">미계약 W1 단가 (진주 등)</label>'+
-          '<input type="number" id="u-nocont-w1" value="'+(r.nocontW1||800)+'" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px">'+
-        '</div>'+
+        '<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">미계약 W2단가 (부산)</label>'+
+          '<input type="number" id="u-nocont-w2" value="'+(r.nocontW2||600)+'" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px"></div>'+
+        '<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">미계약 W1단가 (기타)</label>'+
+          '<input type="number" id="u-nocont-w1" value="'+(r.nocontW1||800)+'" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px"></div>'+
       '</div>'+
     '</div>'+
 
-    // 라우트별 단가표
+    // 단가표 (다중)
     '<div style="background:var(--bg2);border-radius:12px;border:1px solid var(--border);padding:16px;margin-bottom:12px">'+
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+
-        '<div style="font-size:13px;font-weight:800">📋 라우트별 단가표</div>'+
-        '<div style="display:flex;gap:6px">'+
-          '<label style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;background:#10b981;color:#fff;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">'+
-            '📤 일괄업로드<input type="file" accept=".xlsx,.xls,.txt" style="display:none" onchange="_uBulkUploadRoutes(this)">'+
-          '</label>'+
-          '<button onclick="_uAddRouteRow()" style="padding:5px 12px;background:var(--brand);color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer">+ 추가</button>'+
-        '</div>'+
+        '<div style="font-size:13px;font-weight:800">📋 단가표 관리</div>'+
+        '<button onclick="_uAddPriceTable()" style="padding:5px 12px;background:var(--brand);color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer">+ 단가표 추가</button>'+
       '</div>'+
-      '<div style="font-size:10px;color:var(--text3);margin-bottom:8px">txt: 라우트,단가 (한줄에 하나) | xlsx: A열=라우트, B열=단가</div>'+
-      '<div style="display:flex;gap:8px;margin-bottom:6px">'+
-        '<div style="flex:1;font-size:10px;color:var(--text3);font-weight:700">라우트</div>'+
-        '<div style="width:90px;font-size:10px;color:var(--text3);font-weight:700">비사업자 단가</div>'+
-        '<div style="width:90px;font-size:10px;color:var(--text3);font-weight:700">사업자 단가(VAT포함)</div>'+
-        '<div style="width:32px"></div>'+
-      '</div>'+
-      '<div id="u-route-rows">'+routeRows+'</div>'+
+      '<div id="price-table-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">'+renderTableTabs()+'</div>'+
+      '<div id="price-tables">'+tablesHtml+'</div>'+
     '</div>'+
 
     // 추가 규칙
     '<div style="background:var(--bg2);border-radius:12px;border:1px solid var(--border);padding:16px;margin-bottom:12px">'+
       '<div style="font-size:13px;font-weight:800;margin-bottom:12px">💡 추가 규칙</div>'+
-      '<div style="display:flex;flex-direction:column;gap:10px">'+
-        _uRuleToggle('프레시백 회수금 포함', 'u-fresh-on', r.freshOn)+
-        _uRuleInput('추가인센 단가 (원/건)', 'u-inc-rate', r.incRate||0, '캠프별 0~25원')+
-        _uRuleToggle('소득세 3.3% 공제 (비사업자)', 'u-tax-on', r.taxOn!==false)+
-        _uRuleToggle('고용보험 0.8% 공제 (사업자)', 'u-emp-on', r.empOn)+
-        _uRuleToggle('산재보험 0.88% (사업자)', 'u-work-on', r.workOn)+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'+
+        '<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">추가인센 (원/건)</label>'+
+          '<input type="number" id="u-inc-rate" value="'+(r.incRate||0)+'" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px"></div>'+
+        '<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">용차 배달단가</label>'+
+          '<input type="number" id="u-yong-del" value="'+(r.yongDel||900)+'" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px"></div>'+
+        '<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">용차 반품단가</label>'+
+          '<input type="number" id="u-yong-ret" value="'+(r.yongRet||900)+'" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px"></div>'+
       '</div>'+
-    '</div>'+
-
-    // 용차비
-    '<div style="background:var(--bg2);border-radius:12px;border:1px solid var(--border);padding:16px;margin-bottom:12px">'+
-      '<div style="font-size:13px;font-weight:800;margin-bottom:12px">🚚 용차비</div>'+
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
-        '<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">용차 배달 단가 (원/건)</label>'+
-          '<input type="number" id="u-yong-del" value="'+(r.yongDel||900)+'" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px">'+
-        '</div>'+
-        '<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">용차 반품 단가 (원/건)</label>'+
-          '<input type="number" id="u-yong-ret" value="'+(r.yongRet||900)+'" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px">'+
-        '</div>'+
+      '<div style="display:flex;flex-direction:column;gap:8px">'+
+        _uRuleToggle('프레시백 회수금 포함','u-fresh-on',r.freshOn)+
+        _uRuleToggle('소득세 3.3% (비사업자)','u-tax-on',r.taxOn!==false)+
+        _uRuleToggle('고용보험 0.8% (사업자)','u-emp-on',r.empOn)+
+        _uRuleToggle('산재보험 0.88% (사업자)','u-work-on',r.workOn)+
       '</div>'+
     '</div>'+
 
     // 아이디지원
     '<div style="background:var(--bg2);border-radius:12px;border:1px solid var(--border);padding:16px;margin-bottom:12px">'+
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+
-        '<div style="font-size:13px;font-weight:800">👤 아이디지원 규칙</div>'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
+        '<div style="font-size:13px;font-weight:800">👤 아이디지원</div>'+
         '<button onclick="_uAddIdSupport()" style="padding:5px 12px;background:var(--brand);color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer">+ 추가</button>'+
       '</div>'+
-      '<div style="font-size:11px;color:var(--text3);margin-bottom:10px">특정 ID의 건수를 다른 기사에게 이전 (날짜 범위 지정)</div>'+
+      '<div style="font-size:11px;color:var(--text3);margin-bottom:8px">특정 ID 건수를 다른 기사에게 이전 (날짜 범위)</div>'+
       '<div id="u-idsupport-rows">'+
-        ((r.idSupportRules||[]).map(function(rule,i){return _uIdSupportRow(i,rule);}).join('')||'')+
+        ((r.idSupportRules||[]).map(function(rule,i){return _uIdSupportRow(i,rule);}).join(''))+
       '</div>'+
     '</div>'+
 
-    // 저장
     '<button onclick="_uSaveRules()" style="width:100%;padding:14px;background:linear-gradient(135deg,#0066ff,#7c3aed);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">💾 규칙 저장</button>'+
     '</div>';
+
+  // 현재 단가표 인덱스 저장
+  window._uCurrentPT = 0;
+  window._uPriceTables = JSON.parse(JSON.stringify(priceTables));
+}
+
+function _uSelectPriceTable(ti){
+  window._uCurrentPT=ti;
+  // 탭 스타일
+  document.querySelectorAll('[id^="ptab-"]').forEach(function(btn,i){
+    btn.style.background=i===ti?'var(--brand)':'var(--bg3)';
+    btn.style.color=i===ti?'#fff':'var(--text2)';
+  });
+  // 테이블 표시
+  document.querySelectorAll('[id^="ptable-"]').forEach(function(div,i){
+    div.style.display=i===ti?'block':'none';
+  });
+}
+
+function _uAddPriceTable(){
+  var tabsEl=document.getElementById('price-table-tabs');
+  var tablesEl=document.getElementById('price-tables');
+  if(!tabsEl||!tablesEl)return;
+  var ti=document.querySelectorAll('[id^="ptab-"]').length;
+  // 새 탭 버튼
+  var btn=document.createElement('button');
+  btn.id='ptab-'+ti;
+  btn.setAttribute('onclick','_uSelectPriceTable('+ti+')');
+  btn.style.cssText='padding:6px 12px;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;background:var(--bg3);color:var(--text2)';
+  btn.textContent='단가표 '+(ti+1);
+  tabsEl.appendChild(btn);
+  // 새 테이블
+  var div=document.createElement('div');
+  div.id='ptable-'+ti;
+  div.style.display='none';
+  div.innerHTML=
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">'+
+      '<div><label style="font-size:10px;color:var(--text3);display:block;margin-bottom:3px">단가표 이름</label>'+
+        '<input type="text" class="pt-label" placeholder="예) 팀장/백업" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px"></div>'+
+      '<div><label style="font-size:10px;color:var(--text3);display:block;margin-bottom:3px">단가표 유형</label>'+
+        '<select class="pt-type" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px">'+
+          '<option value="basic">기본 (일반기사)</option>'+
+          '<option value="leader">팀장 수수료</option>'+
+          '<option value="backup">백업 (대체근무)</option>'+
+          '<option value="custom">개별 지정</option>'+
+        '</select></div>'+
+      '<div><label style="font-size:10px;color:var(--text3);display:block;margin-bottom:3px">적용 기사 ID</label>'+
+        '<input type="text" class="pt-empids" placeholder="쉼표로 구분" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px"></div>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:80px 80px 80px auto;gap:6px;margin-bottom:4px">'+
+      '<div style="font-size:10px;color:var(--text3);font-weight:700;text-align:center">라우트</div>'+
+      '<div style="font-size:10px;color:var(--text3);font-weight:700">비사업자</div>'+
+      '<div style="font-size:10px;color:#059669;font-weight:700">사업자VAT</div>'+
+      '<div></div>'+
+    '</div>'+
+    '<div class="route-rows"></div>'+
+    '<div style="display:flex;gap:6px;margin-top:8px">'+
+      '<button onclick="_uAddRRow('+ti+')" style="padding:5px 10px;background:var(--brand);color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer">+ 행 추가</button>'+
+      '<label style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;background:#10b981;color:#fff;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">'+
+        '📤 파일업로드<input type="file" accept=".xlsx,.xls,.txt" style="display:none" onchange="_uBulkUploadRoutes(this,'+ti+')">'+
+      '</label>'+
+      '<button onclick="_uDelPriceTable('+ti+')" style="padding:5px 10px;background:#fee2e2;border:none;border-radius:6px;font-size:11px;cursor:pointer;color:#dc2626;margin-left:auto">🗑 삭제</button>'+
+    '</div>';
+  tablesEl.appendChild(div);
+  _uSelectPriceTable(ti);
+}
+
+function _uDelPriceTable(ti){
+  if(!confirm('이 단가표를 삭제하시겠습니까?'))return;
+  var tab=document.getElementById('ptab-'+ti);
+  var tbl=document.getElementById('ptable-'+ti);
+  if(tab)tab.remove();
+  if(tbl)tbl.remove();
+  _uSelectPriceTable(0);
+}
+
+function _uAddRRow(ti){
+  var container=document.querySelector('#ptable-'+ti+' .route-rows');
+  if(!container)return;
+  var i=Date.now();
+  var div=document.createElement('div');
+  div.className='rrow';
+  div.style.cssText='display:grid;grid-template-columns:80px 80px 80px auto;gap:6px;margin-bottom:5px;align-items:center';
+  div.innerHTML=
+    '<input type="text" placeholder="812A" class="r-route" style="padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px;text-align:center">'+
+    '<input type="number" placeholder="비사업자" class="r-price" style="padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px">'+
+    '<input type="number" placeholder="사업자VAT" class="r-pricevat" style="padding:6px;border:1px solid rgba(0,200,100,.4);border-radius:6px;background:var(--bg);font-size:12px">'+
+    '<button onclick="_uRemoveRRow(this)" style="padding:4px 8px;background:#fee2e2;border:none;border-radius:5px;cursor:pointer;font-size:11px;color:#dc2626;width:32px">✕</button>';
+  container.appendChild(div);
+}
+
+function _uRemoveRRow(btn){btn.closest('.rrow').remove();}
+function _uRemoveRow(btn){btn.closest('.rrow, [id^="rrow-"]').remove();}
+
+function _uSaveRules(){
+  if(!_db||!_CU){toast('로그인 필요');return;}
+  var did=_CU.dealerId||_CU.uid;
+
+  // 다중 단가표 수집
+  var priceTables=[];
+  document.querySelectorAll('[id^="ptable-"]').forEach(function(tbl){
+    var label=(tbl.querySelector('.pt-label')||{}).value||'단가표';
+    var type=(tbl.querySelector('.pt-type')||{}).value||'basic';
+    var empIdsStr=(tbl.querySelector('.pt-empids')||{}).value||'';
+    var empIds=empIdsStr.split(',').map(function(s){return s.trim();}).filter(Boolean);
+    var routes=[];
+    tbl.querySelectorAll('.rrow').forEach(function(row){
+      var route=(row.querySelector('.r-route')||{}).value||'';
+      var price=parseInt((row.querySelector('.r-price')||{}).value||0);
+      var priceVat=parseInt((row.querySelector('.r-pricevat')||{}).value||0);
+      if(route&&price>0) routes.push({route:route.trim().toUpperCase(),price:price,priceVat:priceVat||0});
+    });
+    if(routes.length||label) priceTables.push({label:label,type:type,empIds:empIds,routes:routes});
+  });
+
+  // 아이디지원 수집
+  var idSupportRules=[];
+  document.querySelectorAll('.u-idsupport-row').forEach(function(row){
+    var fromId=(row.querySelector('.u-ids-from')||{}).value||'';
+    var toId=(row.querySelector('.u-ids-to')||{}).value||'';
+    var startDate=(row.querySelector('.u-ids-start')||{}).value||'';
+    var endDate=(row.querySelector('.u-ids-end')||{}).value||'';
+    if(fromId&&toId&&startDate) idSupportRules.push({fromId:fromId.trim(),toId:toId.trim(),startDate:startDate,endDate:endDate||''});
+  });
+
+  var rules={
+    calcType:(document.getElementById('u-calc-type')||{}).value||'route',
+    basePrice:parseInt((document.getElementById('u-base-price')||{}).value||0),
+    nocontW2:parseInt((document.getElementById('u-nocont-w2')||{}).value||600),
+    nocontW1:parseInt((document.getElementById('u-nocont-w1')||{}).value||800),
+    incRate:parseInt((document.getElementById('u-inc-rate')||{}).value||0),
+    yongDel:parseInt((document.getElementById('u-yong-del')||{}).value||900),
+    yongRet:parseInt((document.getElementById('u-yong-ret')||{}).value||900),
+    freshOn:!!(document.getElementById('u-fresh-on')||{}).checked,
+    taxOn:!!(document.getElementById('u-tax-on')||{}).checked,
+    empOn:!!(document.getElementById('u-emp-on')||{}).checked,
+    workOn:!!(document.getElementById('u-work-on')||{}).checked,
+    priceTables:priceTables,
+    idSupportRules:idSupportRules,
+    updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  _db.collection('universal_rules').doc(did).set(rules)
+    .then(function(){
+      var total=priceTables.reduce(function(s,pt){return s+pt.routes.length;},0);
+      toast('✅ 저장완료 — 단가표 '+priceTables.length+'개 / 라우트 '+total+'개 / 아이디지원 '+idSupportRules.length+'개');
+      // RPRICE 반영 (기본 단가표만)
+      var basic=priceTables.find(function(pt){return pt.type==='basic';});
+      if(basic&&typeof RPRICE!=='undefined') basic.routes.forEach(function(rr){RPRICE[rr.route]=rr.price;});
+    })
+    .catch(function(e){toast('❌ '+e.message);});
 }
 
 function _uRuleToggle(label, id, val){
-  return '<div style="display:flex;justify-content:space-between;align-items:center">'+
+  return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0">'+
     '<span style="font-size:12px;color:var(--text2)">'+label+'</span>'+
-    '<label style="position:relative;display:inline-block;width:40px;height:22px">'+
-      '<input type="checkbox" id="'+id+'" '+(val?'checked':'')+' style="opacity:0;width:0;height:0">'+
-      '<span style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:'+(val?'var(--brand)':'#ccc')+';border-radius:22px;transition:.3s" onclick="_uToggleBg(this,\''+id+'\')" ></span>'+
+    '<label style="display:flex;align-items:center;gap:6px;cursor:pointer">'+
+      '<input type="checkbox" id="'+id+'" '+(val?'checked':'')+'>'+
+      '<span style="font-size:11px;color:var(--text3)">'+(val?'ON':'OFF')+'</span>'+
     '</label>'+
   '</div>';
 }
@@ -8913,20 +9085,22 @@ function _uRuleInput(label, id, val, hint){
   '</div>';
 }
 
+function _uToggleBg(el,id){var cb=document.getElementById(id);if(cb){el.style.background=cb.checked?'var(--brand)':'#ccc';}}
+
 function _uIdSupportRow(i, rule){
   rule=rule||{};
   return '<div class="u-idsupport-row" style="background:var(--bg3);border-radius:8px;padding:10px;margin-bottom:8px">'+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">'+
-      '<div><label style="font-size:10px;color:var(--text3)">원본 ID (건수 제공자)</label>'+
-        '<input type="text" placeholder="예) kycandksh@df" value="'+(rule.fromId||'')+'" class="u-ids-from" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:11px"></div>'+
-      '<div><label style="font-size:10px;color:var(--text3)">대상 ID (건수 받는 기사)</label>'+
-        '<input type="text" placeholder="예) lifeisegg6@df" value="'+(rule.toId||'')+'" class="u-ids-to" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:11px"></div>'+
+      '<div><label style="font-size:10px;color:var(--text3)">원본 ID</label>'+
+        '<input type="text" placeholder="kycandksh@df" value="'+esc(rule.fromId||'')+'" class="u-ids-from" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:11px"></div>'+
+      '<div><label style="font-size:10px;color:var(--text3)">대상 ID</label>'+
+        '<input type="text" placeholder="lifeisegg6@df" value="'+esc(rule.toId||'')+'" class="u-ids-to" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:11px"></div>'+
     '</div>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr auto;gap:6px;align-items:end">'+
       '<div><label style="font-size:10px;color:var(--text3)">시작일</label>'+
-        '<input type="date" value="'+(rule.startDate||'')+'" class="u-ids-start" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:11px"></div>'+
-      '<div><label style="font-size:10px;color:var(--text3)">종료일 (없으면 미입력)</label>'+
-        '<input type="date" value="'+(rule.endDate||'')+'" class="u-ids-end" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:11px"></div>'+
+        '<input type="date" value="'+esc(rule.startDate||'')+'" class="u-ids-start" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:11px"></div>'+
+      '<div><label style="font-size:10px;color:var(--text3)">종료일</label>'+
+        '<input type="date" value="'+esc(rule.endDate||'')+'" class="u-ids-end" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:11px"></div>'+
       '<button onclick="this.closest(\'.u-idsupport-row\').remove()" style="padding:6px 10px;background:#fee2e2;border:none;border-radius:6px;cursor:pointer;font-size:12px;color:#dc2626;height:32px">✕</button>'+
     '</div>'+
   '</div>';
@@ -8937,239 +9111,6 @@ function _uAddIdSupport(){
   var div=document.createElement('div');
   div.innerHTML=_uIdSupportRow(Date.now(),{});
   container.appendChild(div.firstChild);
-}
-
-function _uToggleBg(el,id){var cb=document.getElementById(id);if(cb){el.style.background=cb.checked?'var(--brand)':'#ccc';}}
-
-// ★ 라우트 단가표 일괄 업로드
-window._uBulkUploadRoutes = function(input){
-  var file=input.files[0]; if(!file)return;
-  input.value='';
-  var ext=file.name.split('.').pop().toLowerCase();
-  var container=document.getElementById('u-route-rows');
-  if(!container){toast('페이지를 새로고침해주세요');return;}
-
-  function addRow(route, price, priceVat){
-    var i=Date.now()+Math.random();
-    var div=document.createElement('div');
-    div.id='rrow-'+i;
-    div.style.cssText='display:flex;gap:8px;margin-bottom:6px';
-    div.innerHTML=
-      '<input type="text" value="'+route+'" style="flex:1;padding:7px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px" id="r-route-'+i+'">'+
-      '<input type="number" value="'+price+'" style="width:90px;padding:7px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px" id="r-price-'+i+'">'+
-      '<input type="number" value="'+(priceVat||'')+'" placeholder="VAT" style="width:90px;padding:7px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px;border-color:rgba(0,200,100,.4)" id="r-pricevat-'+i+'">'+
-      '<button onclick="_uRemoveRow(this)" style="padding:4px 8px;background:#fee2e2;border:none;border-radius:6px;cursor:pointer;font-size:12px;color:#dc2626">✕</button>';
-    container.appendChild(div);
-  }
-
-  var reader=new FileReader();
-
-  if(ext==='txt'){
-    reader.onload=function(e){
-      var lines=e.target.result.split('\n');
-      var cnt=0;
-      // 기존 행 제거
-      container.innerHTML='';
-      lines.forEach(function(line){
-        line=line.trim(); if(!line)return;
-        // 형식: "812A 930" 또는 "812A,930"
-        var parts=line.split(/[,\s]+/);
-        if(parts.length>=2){
-          var route=parts[0].trim().toUpperCase();
-          var price=parseInt(parts[parts.length-1]);
-          if(route&&price>0){addRow(route,price);cnt++;}
-        }
-      });
-      toast('✅ '+cnt+'개 라우트 로드됨');
-    };
-    reader.readAsText(file);
-  } else {
-    reader.onload=function(e){
-      try{
-        if(typeof XLSX==='undefined'){toast('라이브러리 로딩 중...');return;}
-        var wb=XLSX.read(e.target.result,{type:'array'});
-        var ws=wb.Sheets[wb.SheetNames[0]];
-        var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-        container.innerHTML='';
-        var cnt=0;
-        var campMode=false; var currentCamp='';
-        rows.forEach(function(row){
-          var a=String(row[0]||'').trim();
-          var b=String(row[1]||'').trim();
-          var c=String(row[2]||'').trim();
-          // 캠프 헤더 행 감지 (부산1, 부산2 등)
-          if(a&&!b&&!c){currentCamp=a;campMode=true;return;}
-          // A=라우트, B또는C=단가
-          var route='', price=0;
-          if(a.match(/^[0-9]{3}[A-D]?$/i)){
-            route=a.toUpperCase();
-            price=parseInt(b)||parseInt(c)||0;
-          } else if(b.match(/^[0-9]{3}[A-D]?$/i)){
-            route=b.toUpperCase();
-            price=parseInt(c)||0;
-          }
-          if(route&&price>0){addRow(route,price);cnt++;}
-        });
-        toast('✅ '+cnt+'개 라우트 로드됨');
-      }catch(err){toast('❌ '+err.message);}
-    };
-    reader.readAsArrayBuffer(file);
-  }
-};
-
-function _uRemoveRow(btn){btn.closest('[id^="rrow-"]').remove();}
-function _uAddRouteRow(){
-  var container=document.getElementById('u-route-rows');
-  var i=Date.now();
-  var div=document.createElement('div');
-  div.id='rrow-'+i;
-  div.style.cssText='display:flex;gap:8px;margin-bottom:6px';
-  div.innerHTML=
-    '<input type="text" placeholder="라우트 (예: 812A)" style="flex:1;padding:7px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px" id="r-route-'+i+'">'+
-    '<input type="number" placeholder="비사업자" style="width:90px;padding:7px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px" id="r-price-'+i+'">'+
-    '<input type="number" placeholder="사업자(VAT)" style="width:90px;padding:7px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px;border-color:rgba(0,200,100,.4)" id="r-pricevat-'+i+'">'+
-    '<button onclick="_uRemoveRow(this)" style="padding:4px 8px;background:#fee2e2;border:none;border-radius:6px;cursor:pointer;font-size:12px;color:#dc2626">✕</button>';
-  container.appendChild(div);
-}
-
-function _uSaveRules(){
-  if(!_db||!_CU){toast('로그인 필요');return;}
-  var did=_CU.dealerId||_CU.uid;
-
-  // 라우트 단가 수집
-  var routes=[];
-  document.querySelectorAll('[id^="rrow-"]').forEach(function(row){
-    var id=row.id.replace('rrow-','');
-    var route=(document.getElementById('r-route-'+id)||{}).value||'';
-    var price=parseInt((document.getElementById('r-price-'+id)||{}).value||0);
-    var priceVat=parseInt((document.getElementById('r-pricevat-'+id)||{}).value||0);
-    if(route&&price>0) routes.push({route:route.trim().toUpperCase(),price:price,priceVat:priceVat||0});
-
-  var rules={
-    calcType:document.getElementById('u-calc-type').value,
-    basePrice:parseInt(document.getElementById('u-base-price').value||0),
-    nocontW2:parseInt(document.getElementById('u-nocont-w2').value||600),
-    nocontW1:parseInt(document.getElementById('u-nocont-w1').value||800),
-    freshOn:document.getElementById('u-fresh-on').checked,
-    incRate:parseInt(document.getElementById('u-inc-rate').value||0),
-    taxOn:document.getElementById('u-tax-on').checked,
-    empOn:document.getElementById('u-emp-on').checked,
-    workOn:document.getElementById('u-work-on').checked,
-    yongDel:parseInt(document.getElementById('u-yong-del').value||900),
-    yongRet:parseInt(document.getElementById('u-yong-ret').value||900),
-    routes:routes,
-    idSupportRules:idSupportRules,
-    updatedAt:firebase.firestore.FieldValue.serverTimestamp()
-  };
-
-  // 아이디지원 규칙 수집
-  var idSupportRules=[];
-  document.querySelectorAll('.u-idsupport-row').forEach(function(row){
-    var fromId=(row.querySelector('.u-ids-from')||{}).value||'';
-    var toId=(row.querySelector('.u-ids-to')||{}).value||'';
-    var startDate=(row.querySelector('.u-ids-start')||{}).value||'';
-    var endDate=(row.querySelector('.u-ids-end')||{}).value||'';
-    if(fromId&&toId&&startDate) idSupportRules.push({fromId:fromId.trim(),toId:toId.trim(),startDate:startDate,endDate:endDate});
-  });
-
-  _db.collection('universal_rules').doc(did).set(rules)
-    .then(function(){
-      toast('✅ 규칙 저장 완료 (라우트 '+routes.length+'개 / 아이디지원 '+idSupportRules.length+'개)');
-      // RPRICE에도 반영
-      rules.routes.forEach(function(rr){ if(typeof RPRICE!=='undefined') RPRICE[rr.route]=rr.price; });
-    })
-    .catch(function(e){toast('❌ '+e.message);});
-}
-
-// ══════════════════════════════════════════════════════
-// ★ 범용 직원 명단 등록
-// ══════════════════════════════════════════════════════
-function pageUniversalEmp(){
-  document.getElementById('page-title').textContent='👥 직원 명단 등록';
-  var c=document.getElementById('content');
-  if(!_db||!_CU){c.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
-  var did=_CU.dealerId||_CU.uid;
-
-  _db.collection('universal_employees').where('dealerId','==',did).orderBy('name').get()
-    .then(function(snap){
-      var emps=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
-      _renderUniversalEmp(c, emps, did);
-    }).catch(function(){_renderUniversalEmp(c,[],did);});
-}
-
-function _renderUniversalEmp(c, emps, did){
-  var rows=emps.map(function(e){
-    return '<tr style="border-bottom:1px solid var(--border)">'+
-      '<td style="padding:8px 12px;font-weight:700">'+esc(e.name)+'</td>'+
-      '<td style="padding:8px 12px;font-size:11px;color:var(--text3)">'+esc(e.empId||'—')+'</td>'+
-      '<td style="padding:8px 12px;font-size:11px">'+esc(e.camp||'—')+'</td>'+
-      '<td style="padding:8px 12px;font-size:11px">'+esc(e.contractType||'비사업자')+'</td>'+
-      '<td style="padding:8px 12px;text-align:right">'+
-        '<button onclick="_uDelEmp(\''+e.id+'\')" style="padding:3px 8px;background:#fee2e2;border:none;border-radius:4px;font-size:11px;cursor:pointer;color:#dc2626">삭제</button>'+
-      '</td>'+
-    '</tr>';
-  }).join('');
-
-  c.innerHTML=
-    '<div style="max-width:700px;margin:0 auto;padding:16px">'+
-    '<div style="background:linear-gradient(135deg,#1e3a5f,#7c3aed);border-radius:16px;padding:20px;color:#fff;margin-bottom:16px">'+
-      '<div style="font-size:20px;font-weight:900;margin-bottom:4px">👥 직원 명단 등록</div>'+
-      '<div style="font-size:12px;opacity:.7">엑셀 업로드 시 이름/ID로 자동 매칭</div>'+
-    '</div>'+
-
-    // ★ 양식 자동생성 섹션
-    '<div style="background:linear-gradient(135deg,rgba(0,102,255,.08),rgba(124,58,237,.08));border-radius:12px;border:1px solid rgba(0,102,255,.2);padding:16px;margin-bottom:12px">'+
-      '<div style="font-size:13px;font-weight:800;margin-bottom:6px;color:var(--brand)">🚀 빠른 등록 (추천)</div>'+
-      '<div style="font-size:11px;color:var(--text3);margin-bottom:12px">정산 엑셀 업로드 → ID 자동추출 → 양식 다운로드 → 이름/캠프 입력 → 재업로드</div>'+
-      '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
-        '<label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:var(--brand);color:#fff;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">'+
-          '📤 정산엑셀에서 ID추출<input type="file" accept=".xlsx,.xls" style="display:none" onchange="_uExtractIds(this)">'+
-        '</label>'+
-        '<label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#10b981;color:#fff;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">'+
-          '📥 완성 양식 업로드<input type="file" accept=".xlsx,.xls,.txt" style="display:none" onchange="_uBulkFromTemplate(this,\''+did+'\')">'+
-        '</label>'+
-      '</div>'+
-      '<div id="u-extract-status" style="margin-top:8px;font-size:11px;color:var(--text3)"></div>'+
-    '</div>'+
-
-    // 직접 추가
-    '<div style="background:var(--bg2);border-radius:12px;border:1px solid var(--border);padding:16px;margin-bottom:12px">'+
-      '<div style="font-size:13px;font-weight:800;margin-bottom:12px">➕ 직원 추가</div>'+
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'+
-        '<input id="ue-name" type="text" placeholder="이름 *" style="padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px">'+
-        '<input id="ue-empid" type="text" placeholder="ID/사번 (예: cionttl0425@df)" style="padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px">'+
-        '<input id="ue-camp" type="text" placeholder="캠프/지점" style="padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px">'+
-        '<select id="ue-type" style="padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px">'+
-          '<option value="비사업자">비사업자 (소득세 3.3%)</option>'+
-          '<option value="사업자">사업자 (VAT+고용산재)</option>'+
-        '</select>'+
-      '</div>'+
-      '<button onclick="_uAddEmp(\''+did+'\')" style="width:100%;padding:10px;background:var(--brand);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">직원 추가</button>'+
-    '</div>'+
-
-    // 일괄 txt 업로드
-    '<div style="background:var(--bg2);border-radius:12px;border:1px solid var(--border);padding:16px;margin-bottom:12px">'+
-      '<div style="font-size:13px;font-weight:800;margin-bottom:8px">📤 txt/xlsx 일괄 업로드</div>'+
-      '<div style="font-size:11px;color:var(--text3);margin-bottom:8px">형식: ID,이름,캠프 (한 줄에 한 명)</div>'+
-      '<label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer">'+
-        '📁 파일 선택<input type="file" accept=".txt,.xlsx,.xls" style="display:none" onchange="_uBulkUploadEmp(this,\''+did+'\')">'+
-      '</label>'+
-    '</div>'+
-
-    // 목록
-    '<div style="background:var(--bg2);border-radius:12px;border:1px solid var(--border);overflow:hidden">'+
-      '<div style="padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px;font-weight:800">'+
-        '등록된 직원 '+emps.length+'명'+
-      '</div>'+
-      (emps.length?
-        '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
-          '<tr style="background:var(--bg)"><th style="padding:8px 12px;text-align:left;font-size:11px;color:var(--text3)">이름</th><th style="padding:8px 12px;text-align:left;font-size:11px;color:var(--text3)">ID/사번</th><th style="padding:8px 12px;text-align:left;font-size:11px;color:var(--text3)">캠프</th><th style="padding:8px 12px;text-align:left;font-size:11px;color:var(--text3)">계약유형</th><th></th></tr>'+
-          rows+
-        '</table></div>':
-        '<div class="empty" style="padding:20px">등록된 직원이 없습니다</div>'
-      )+
-    '</div>'+
-    '</div>';
 }
 
 
