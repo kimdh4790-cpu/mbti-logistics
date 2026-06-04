@@ -9952,7 +9952,7 @@ function pageUniversalInput(){
         '<div style="font-size:13px;font-weight:700;color:var(--text2)">엑셀 파일 선택 (.xlsx, .csv)</div>'+
         '<div style="font-size:11px;color:var(--text3);margin-top:4px">직원명·금액·항목이 포함된 엑셀</div>'+
       '</div>'+
-      '<input id="u-file-input" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="_universalParseExcel(this)">'+
+      '<input id="u-file-input" type="file" accept=".xlsx,.xls,.csv" multiple style="display:none" onchange="_universalParseMulti(this)">'+
       '<div id="u-parse-status" style="margin-top:10px;font-size:12px;color:var(--text3)"></div>'+
       '<div style="margin-top:8px"><button onclick="_uOpenMapping()" style="padding:5px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;color:var(--text2)">⚙️ 컬럼 직접 지정</button><span style="font-size:10px;color:var(--text3);margin-left:8px">자동 인식 실패 시 사용</span></div>'+
     '</div>'+
@@ -10207,19 +10207,22 @@ function _buildUniversalPayslip(emp, month, compName){
       var hasDetails=details.length>0;
       var rows='';
 
-      if(hasDetails){
-        // 업종별 상세 행
+      // ★ 출처별(파일별) 상세 행 우선 표시
+      var sources=emp.sources||[];
+      if(sources.length>1){
+        sources.forEach(function(s){
+          rows+='<tr><td style="padding:5px 8px;border-bottom:1px solid #eee;font-weight:600;color:#185FA5">'+esc(s.label)+'</td>'+
+            '<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right">'+(s.cnt>0?s.cnt+'건':'—')+'</td>'+
+            '<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right">'+(s.price>0?'₩'+s.price.toLocaleString():'—')+'</td>'+
+            '<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;font-weight:700">₩'+Math.round(s.gross||0).toLocaleString()+'</td></tr>';
+        });
+      } else if(hasDetails){
         details.forEach(function(d){
-          if(d.num>0&&d.num>100){
-            rows+='<tr><td style="padding:5px 8px;border-bottom:1px solid #eee;font-weight:600;color:#185FA5">'+esc(d.label)+'</td>'+
+          if(d.num>100){
+            rows+='<tr><td style="padding:5px 8px;border-bottom:1px solid #eee;font-weight:600;color:#185FA5">'+esc(d.label||d.source||'정산')+'</td>'+
               '<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right">—</td>'+
               '<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right">—</td>'+
               '<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;font-weight:700">₩'+Math.round(d.num).toLocaleString()+'</td></tr>';
-          } else if(d.num>0&&d.num<=1000){
-            rows+='<tr><td style="padding:5px 8px;border-bottom:1px solid #eee;font-weight:600;color:#185FA5">'+esc(d.label)+'</td>'+
-              '<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right">'+d.num+'</td>'+
-              '<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right">—</td>'+
-              '<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right">—</td></tr>';
           }
         });
       }
@@ -10419,6 +10422,168 @@ window._uOpenMapping=function(){
     }catch(err){toast('❌ '+err.message);}
   };
   reader.readAsArrayBuffer(file);
+};
+
+
+// ══════════════════════════════════════════════════════
+// ★ 범용 다중 파일 합산 엔진
+// ══════════════════════════════════════════════════════
+window._universalParseMulti = function(input){
+  var files = Array.from(input.files);
+  input.value = '';
+  if(!files.length) return;
+
+  var status = document.getElementById('u-parse-status');
+  if(status) status.textContent = '⏳ '+files.length+'개 파일 처리 중...';
+
+  // 합산 맵: {name|empId → {name, empId, camp, details:[], totalGross, totalCnt}}
+  var mergeMap = {};
+
+  function getKey(name, empId){
+    if(empId && empId.length>2) return empId.replace('@df','').toLowerCase();
+    return (name||'').trim();
+  }
+
+  function mergePerson(name, empId, camp, gross, cnt, price, bonus, deduct, source, details){
+    var key = getKey(name, empId);
+    if(!key) return;
+    if(!mergeMap[key]){
+      mergeMap[key] = {
+        name:name, empId:empId, camp:camp,
+        gross:0, cnt:0, bonus:0, deduct:0,
+        sources:[], details:[]
+      };
+    }
+    var p = mergeMap[key];
+    if(!p.camp && camp) p.camp = camp;
+    p.gross += gross||0;
+    p.cnt += cnt||0;
+    p.bonus += bonus||0;
+    p.deduct += deduct||0;
+    p.sources.push({
+      label: source,
+      cnt: cnt||0,
+      price: price||0,
+      gross: gross||0,
+      bonus: bonus||0,
+      deduct: deduct||0
+    });
+    (details||[]).forEach(function(d){ p.details.push(d); });
+  }
+
+  var processed = 0;
+  function processFile(idx){
+    if(idx >= files.length){
+      // 합산 완료 → 결과 렌더링
+      var results = Object.values(mergeMap).filter(function(p){return p.name;});
+
+      // 직원 정보 매칭 (등록된 직원에서 캠프/계약유형 보완)
+      _db.collection('universal_employees')
+        .where('dealerId','==',_CU.dealerId||_CU.uid).get()
+        .then(function(snap){
+          var empMap = {};
+          snap.docs.forEach(function(d){
+            var e=d.data();
+            if(e.empId) empMap[e.empId.replace('@df','').toLowerCase()] = e;
+            if(e.name) empMap[e.name] = e;
+          });
+
+          results.forEach(function(r){
+            var key = getKey(r.name, r.empId);
+            var emp = empMap[key] || empMap[r.name];
+            if(emp){
+              if(!r.camp) r.camp = emp.camp||'';
+              r.contractType = emp.contractType||'비사업자';
+              if(!r.empId && emp.empId) r.empId = emp.empId;
+            }
+            // 인센 적용
+            var rules = window._uCurrentRules||{};
+            var incCamps = rules.incCamps||{};
+            var incRate = incCamps[r.camp||'']||incCamps['기본']||0;
+            r.inc = (r.cnt||0) * incRate;
+            r.net = Math.max(0, (r.gross||0) + (r.inc||0));
+          });
+
+          var totalCnt = results.length;
+          if(status){
+            var srcLabels = [...new Set(results.flatMap(function(r){return r.sources.map(function(s){return s.label;});}).filter(Boolean))];
+            status.textContent = '✅ '+files.length+'개 파일 · '+totalCnt+'명 합산 완료 — '+srcLabels.join(' + ');
+          }
+          _universalRenderResults(results);
+        }).catch(function(){
+          _universalRenderResults(results);
+        });
+      return;
+    }
+
+    var file = files[idx];
+    // 파일명에서 출처 라벨 추출
+    var source = file.name.replace(/\.[^.]+$/,'').replace(/정산|_엑셀|_data/gi,'').trim()||file.name;
+
+    // 단일 파일 파싱 (기존 엔진 활용)
+    var reader = new FileReader();
+    reader.onload = function(e){
+      try{
+        var wb = XLSX.read(e.target.result,{type:'array'});
+        wb.SheetNames.forEach(function(shName){
+          var ws = wb.Sheets[shName];
+          var rows = XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+          if(rows.length < 2) return;
+
+          // 헤더 탐색
+          var hdrRow=0, hdr=[];
+          for(var h=0;h<Math.min(10,rows.length);h++){
+            var row=rows[h].map(function(c){return String(c).trim();});
+            var isTitle=row.some(function(c){return c&&(c.indexOf('■')>=0||c.length>25);});
+            if(isTitle) continue;
+            var hasName=_uFindCol(row,_U_NAME_P)>=0;
+            var hasAmt=_uFindCol(row,_U_CNT_P)>=0||_uFindCol(row,_U_AMT_P)>=0;
+            if(hasName&&hasAmt){hdrRow=h;hdr=row;break;}
+          }
+          if(!hdr.length) return;
+
+          var ni=_uFindCol(hdr,_U_NAME_P);
+          var ii=_uFindCol(hdr,_U_ID_P);
+          var ci=_uFindCol(hdr,_U_CNT_P);
+          var pi=_uFindCol(hdr,_U_PRICE_P);
+          var bi=_uFindCol(hdr,_U_BONUS_P);
+          var di=_uFindCol(hdr,_U_DEDUCT_P);
+          var ai=_uFindCol(hdr,_U_AMT_P);
+          var cai=_uFindCol(hdr,_U_CAMP_P);
+          if(ni<0) return;
+
+          for(var i=hdrRow+1;i<rows.length;i++){
+            var row=rows[i];
+            var name=String(row[ni]||'').trim();
+            if(!name||name==='합계'||name==='소계'||name==='합 계') continue;
+            var empId=ii>=0?String(row[ii]||'').trim():'';
+            var cnt=ci>=0?parseInt(String(row[ci]||'0').replace(/[^0-9]/g,''))||0:0;
+            var price=pi>=0?parseFloat(String(row[pi]||'0').replace(/[^0-9.]/g,''))||0:0;
+            var bonus=bi>=0?parseFloat(String(row[bi]||'0').replace(/[^0-9.]/g,''))||0:0;
+            var deduct=di>=0?parseFloat(String(row[di]||'0').replace(/[^0-9.]/g,''))||0:0;
+            var directAmt=ai>=0?parseFloat(String(row[ai]||'0').replace(/[^0-9.]/g,''))||0:0;
+            var camp=cai>=0?String(row[cai]||'').trim():'';
+            var gross=directAmt>0?directAmt:(cnt*price+bonus-deduct);
+
+            // 상세
+            var details=[];
+            hdr.forEach(function(h2,ci2){
+              if(ci2===ni||ci2===ai) return;
+              var val=String(row[ci2]||'').trim();
+              if(!val||val==='0') return;
+              var num=parseFloat(val.replace(/[,₩원]/g,''));
+              if(!isNaN(num)&&num>100) details.push({label:h2,value:val,num:num,source:source});
+            });
+
+            mergePerson(name, empId, camp, gross, cnt, price, bonus, deduct, source, details);
+          }
+        });
+      }catch(err){console.warn('파일파싱오류',file.name,err);}
+      processFile(idx+1);
+    };
+    reader.readAsArrayBuffer(file);
+  }
+  processFile(0);
 };
 
 window._universalParseExcel=function(input){
@@ -10642,6 +10807,8 @@ window._universalSave=function(){
       name:name,empId:empId,camp:camp,
       cnt:cnt,rcnt:rcnt,gross:gross,inc:inc,net:net,
       sheet:String(r.sheet||''),month:String(r.month||month),
+      contractType:String(r.contractType||'비사업자'),
+      sources:(r.sources||[]).map(function(s){return {label:String(s.label||''),cnt:s.cnt||0,price:s.price||0,gross:s.gross||0};}),
       details:(r.details||[]).map(function(d){return {label:String(d.label||''),value:String(d.value||''),num:d.num||0};})
     };
   }).filter(function(r){return !!r.name;});
