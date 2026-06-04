@@ -7721,22 +7721,9 @@ function _dwRenderEngine(){
   wrap.appendChild(simWrap);
   el.appendChild(wrap);
   _dwRenderSimulator();
-  // ★ 렌더 직후 Firestore 저장값으로 input 즉시 덮어쓰기
-  setTimeout(function(){
-    if(typeof _dwBindDefPrice==='function') _dwBindDefPrice();
-    if(window.DW_TRACKS){
-      DW_TRACKS.forEach(function(t){
-        var el=document.getElementById('dw-track-'+t.key)||document.getElementById('dw-track-'+t.min);
-        if(el) el.value=t.price;
-      });
-      var t0=DW_TRACKS.find(function(x){return x.min===0;});
-      if(t0){
-        var dp=document.getElementById('dw-def-price-2')||document.getElementById('dw-def-price');
-        if(dp) dp.value=t0.price||0;
-      }
-    }
-  },100);
-  var _did=_CU&&_CU.dealerId;if(_did)setTimeout(function(){_dwLoadCfg(_did);},400);
+  // ★ Firestore에서 로드 후 input 업데이트 (단일 타이머)
+  var _did=_CU&&_CU.dealerId;
+  if(_did) _dwLoadCfg(_did);
 }
 
 // ★ 통합 로드 - 아래 업로드 섹션 파일 선택 시 시뮬레이터 자동 실행
@@ -12587,31 +12574,26 @@ function _dwLoadCfg(did){
     var d=doc.data();
     if(d.dwTracks&&d.dwTracks.length>0){
       window.DW_TRACKS=d.dwTracks;
-      // ★ input + 배지 업데이트 (렌더링 완료 후)
-      setTimeout(function(){
-        d.dwTracks.forEach(function(t){
-          var el=document.getElementById('dw-track-'+t.key)||document.getElementById('dw-track-'+t.min);
-          if(el) el.value=t.price;
-        });
-        var _t0=d.dwTracks.find(function(x){return x.min===0;});
-        if(_t0){
-          var dp=document.getElementById('dw-def-price-2')||document.getElementById('dw-def-price');
-          if(dp){dp.value=_t0.price||0;}
-          window._dwCfgDefPrice=_t0.price||0;
-          if(window.DW_TRACKS){var dt=DW_TRACKS.find(function(x){return x.min===0;});if(dt)dt.price=_t0.price||0;}
-          if(typeof _dwBindDefPrice==='function') _dwBindDefPrice();
+      // ★ input + 배지 즉시 업데이트
+      d.dwTracks.forEach(function(t){
+        var el=document.getElementById('dw-track-'+t.key)||document.getElementById('dw-track-'+t.min);
+        if(el) el.value=t.price;
+      });
+      var _t0=d.dwTracks.find(function(x){return x.min===0;});
+      if(_t0){
+        var dp=document.getElementById('dw-def-price-2')||document.getElementById('dw-def-price');
+        if(dp){dp.value=_t0.price||0;}
+        window._dwCfgDefPrice=_t0.price||0;
+        if(typeof _dwBindDefPrice==='function') _dwBindDefPrice();
+      }
+      // 배지 업데이트
+      var sorted=d.dwTracks.slice().sort(function(a,b){return b.min-a.min;});
+      sorted.forEach(function(t,i){
+        var b=document.getElementById('dw-badge-track-'+i);
+        if(b&&b.children[0]){
+          b.children[0].textContent=(t.min===0)?(t.price>0?'₩'+t.price.toLocaleString():'₩?'):'₩'+t.price.toLocaleString();
         }
-        // ★ 배지도 즉시 업데이트
-        if(window.DW_TRACKS){
-          var sorted=window.DW_TRACKS.slice().sort(function(a,b){return b.min-a.min;});
-          sorted.forEach(function(t,i){
-            var b=document.getElementById('dw-badge-track-'+i);
-            if(b&&b.children[0]){
-              b.children[0].textContent=(t.min===0)?(t.price>0?'₩'+t.price.toLocaleString():'₩?'):'₩'+t.price.toLocaleString();
-            }
-          });
-        }
-      },300);
+      });
     }
     if(d.dwSlots){
       Object.keys(d.dwSlots).forEach(function(k){
