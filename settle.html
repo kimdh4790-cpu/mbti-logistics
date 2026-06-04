@@ -23649,7 +23649,7 @@ function _buildNavRender(nav,cur,companyDoc){
   var hasLocked=Object.keys(lockByPlan).some(function(k){return lockByPlan[k].length>0;});
   var hasLocked=Object.keys(lockByPlan).some(function(k){return lockByPlan[k].length>0;});
   var _isTrialPlan=window._trialActive||(window._cachedCompanyDoc&&(['trial','any_paid'].indexOf((window._cachedCompanyDoc.plan)||'')>=0));
-  if(hasLocked && !_isTrialPlan){
+  if(hasLocked){
       +'<div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:1px;padding:0 4px 8px">💳 추가 구독 가능한 기능</div>';
     ['settle','delivery','qr','payroll','premium'].forEach(function(pk){
       var items=lockByPlan[pk];
@@ -23674,7 +23674,7 @@ function _buildNavRender(nav,cur,companyDoc){
   }
 
   // ── 잠긴 섹션 렌더링 (trial이면 숨김)
-  if(!_isTrialPlan) lockedSections.forEach(function(g){
+  lockedSections.forEach(function(g){
     var u=_PLAN_UPSELL[g.plan_key||'']||{};
     var lockColor=u.color||'#999';
     html+='<div class="ns" onclick="_showPlanUpsell(\''+g.plan_key+'\')" style="opacity:.6;cursor:pointer">'
