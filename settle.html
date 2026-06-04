@@ -10176,9 +10176,18 @@ function _buildUniversalPayslip(emp, month, compName){
     || details.some(function(d){return d.label&&/^[0-9]{3}[A-D]$/.test(d.label);});
 
   if(isCoupang){
-    // 라우트별 상세를 routeDetails 형식으로 변환
-    var routeDetails=details.filter(function(d){return /^[0-9]{3}[A-D]$/.test(d.label);})
-      .map(function(d){return {route:d.label,cnt:d.cnt||0,ret:d.ret||0,unitPrice:d.price||0};});
+    // 라우트별 상세 — details 또는 _routes에서 추출
+    var routeDetails=[];
+    if(emp._routes){
+      // 직접 저장된 routes 객체 사용 (가장 정확)
+      routeDetails=Object.keys(emp._routes).sort().map(function(r){
+        var rd=emp._routes[r];
+        return {route:r,cnt:rd.cnt||0,ret:rd.ret||0,unitPrice:rd.price||0};
+      });
+    } else {
+      routeDetails=details.filter(function(d){return /^[0-9]{3}[A-D]$/.test(d.label);})
+        .map(function(d){return {route:d.label,cnt:d.cnt||0,ret:d.ret||0,unitPrice:d.price||0};});
+    }
 
     // 프레시백/인센 분리
     var freshAmt=0, incAmt=0;
@@ -10683,14 +10692,25 @@ window._universalParseMulti = function(input){
             // 직원 이름 매칭 후 mergePerson
             Object.keys(idMap).forEach(function(empId){
               var p=idMap[empId];
-              var routeDetails=Object.keys(p.routes).map(function(r){
+              // 라우트별 집계 → details 형식
+              var routeDetails=Object.keys(p.routes).sort().map(function(r){
                 var rd=p.routes[r];
-                return {label:r,cnt:rd.cnt,ret:rd.ret||0,price:rd.price,num:rd.amt,source:source};
+                return {
+                  label:r,          // 라우트코드 (215A 등)
+                  cnt:rd.cnt||0,    // 배송건수
+                  ret:rd.ret||0,    // 반품건수
+                  price:rd.price||0,// 단가
+                  num:rd.amt||0,    // 금액
+                  source:source
+                };
               });
-              var merged=mergePerson(empId, empId, p.camp, p.gross, p.cnt, 0, p.inc+p.fresh, 0, source, routeDetails);
-              // 쿠팡Raw 표시용 플래그
+              mergePerson(empId, empId, p.camp, p.gross, p.cnt, 0, p.inc+p.fresh, 0, source, routeDetails);
               var key=getKey(empId,empId);
-              if(mergeMap[key]) mergeMap[key]._isCoupang=true;
+              if(mergeMap[key]){
+                mergeMap[key]._isCoupang=true;
+                // routes 직접 저장 (명세서 렌더링용)
+                mergeMap[key]._routes=p.routes;
+              }
             });
             processFile(idx+1);
             return;
@@ -10979,6 +10999,7 @@ window._universalSave=function(){
       contractType:String(r.contractType||'비사업자'),
       sources:(r.sources||[]).map(function(s){return {label:String(s.label||''),cnt:s.cnt||0,price:s.price||0,gross:s.gross||0};}),
       isCoupang:!!(r._isCoupang),
+      _routes:r._routes||null,
       details:(r.details||[]).map(function(d){return {label:String(d.label||''),value:String(d.value||''),num:d.num||0};})
     };
   }).filter(function(r){return !!r.name;});
