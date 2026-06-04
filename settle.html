@@ -12554,31 +12554,21 @@ function _dwLoadCfg(did){
     var d=doc.data();
     if(d.dwTracks&&d.dwTracks.length>0){
       window.DW_TRACKS=d.dwTracks;
-      // ★ input value 업데이트 (딜레이 줘서 렌더링 완료 후 덮어쓰기)
+      // ★ input 업데이트 (렌더링 완료 후)
       setTimeout(function(){
         d.dwTracks.forEach(function(t){
           var el=document.getElementById('dw-track-'+t.key)||document.getElementById('dw-track-'+t.min);
           if(el) el.value=t.price;
         });
-        // ★ 180건미만 input 강제 업데이트
-        var t0=d.dwTracks.find(function(x){return x.min===0;});
-        if(t0){
+        var _t0=d.dwTracks.find(function(x){return x.min===0;});
+        if(_t0){
           var dp=document.getElementById('dw-def-price-2')||document.getElementById('dw-def-price');
-          if(dp){dp.value=t0.price||0;window._dwCfgDefPrice=t0.price||0;}
-          if(window.DW_TRACKS){var dt=DW_TRACKS.find(function(x){return x.min===0;});if(dt)dt.price=t0.price||0;}
+          if(dp){dp.value=_t0.price||0;}
+          window._dwCfgDefPrice=_t0.price||0;
+          if(window.DW_TRACKS){var dt=DW_TRACKS.find(function(x){return x.min===0;});if(dt)dt.price=_t0.price||0;}
+          if(typeof _dwBindDefPrice==='function') _dwBindDefPrice();
         }
-      },500);
-      // 180건 미만 기본단가 input 채우기
-      // 180건 미만 기본단가 input 채우기 (min===0인 항목 찾기)
-      var _t0=d.dwTracks.find(function(x){return x.min===0;});
-      if(_t0){
-        var dp=document.getElementById('dw-def-price');
-        var dp2=document.getElementById('dw-def-price-2');
-        if(dp) dp.value=_t0.price||0;
-        if(dp2) dp2.value=_t0.price||0;
-        window._dwCfgDefPrice=_t0.price||0;
-        setTimeout(_dwBindDefPrice,50);
-      }
+      },300);
     }
     if(d.dwSlots){
       Object.keys(d.dwSlots).forEach(function(k){
