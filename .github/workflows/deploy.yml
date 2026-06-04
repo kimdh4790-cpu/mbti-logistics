@@ -74,20 +74,25 @@ jobs:
           TOKEN = os.environ['GH_TOKEN']
           REPO = os.environ['REPO']
 
-          req = urllib.request.Request(
-              f"https://api.github.com/repos/{REPO}/contents/backup/settle_latest.html",
-              headers={"Authorization": f"Bearer {TOKEN}", "Accept": "application/vnd.github+json"}
-          )
-          with urllib.request.urlopen(req) as r:
-              sha = json.loads(r.read())['sha']
+          # SHA 조회 (없으면 create)
+          sha = None
+          try:
+              req = urllib.request.Request(
+                  f"https://api.github.com/repos/{REPO}/contents/backup/settle_latest.html",
+                  headers={"Authorization": f"Bearer {TOKEN}", "Accept": "application/vnd.github+json"}
+              )
+              with urllib.request.urlopen(req) as r:
+                  sha = json.loads(r.read())['sha']
+          except Exception:
+              sha = None
 
           with open('settle.html', 'rb') as f:
               content = base64.b64encode(f.read()).decode()
 
-          payload = json.dumps({
-              "message": "auto: settle_latest.html sync",
-              "content": content, "sha": sha
-          }).encode()
+          body = {"message": "auto: settle_latest.html sync", "content": content}
+          if sha:
+              body["sha"] = sha
+          payload = json.dumps(body).encode()
 
           req2 = urllib.request.Request(
               f"https://api.github.com/repos/{REPO}/contents/backup/settle_latest.html",
