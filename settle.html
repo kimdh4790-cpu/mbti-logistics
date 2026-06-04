@@ -12556,6 +12556,11 @@ function _dwSaveTracks(){
           }
         });
       }
+      // ★ 저장 후 정산 개시 버튼 활성화 상태면 자동 재계산
+      var calcBtn=document.getElementById('dw-btn-calc');
+      if(calcBtn&&!calcBtn.disabled){
+        setTimeout(function(){dwRunLiveCalculations();},300);
+      }
     })
     .catch(function(e){toast('❌ '+e.message);});
 }
