@@ -12545,14 +12545,17 @@ function _dwSaveTracks(){
   _db.collection('companies').doc(did).update({dwTracks:window.DW_TRACKS})
     .then(function(){
       toast('✅ 트랙 단가 저장');
-      // 배지 즉시 업데이트 (re-render 없이)
-      if(window.DW_TRACKS) window.DW_TRACKS.forEach(function(t,i){
-        var b=document.getElementById('dw-badge-track-'+i);
-        if(b){
-          var priceStr=i===0?(t.price>0?'₩'+t.price.toLocaleString():'₩?'):'₩'+t.price.toLocaleString();
-          b.children[0].textContent=priceStr;
-        }
-      });
+      // 배지 즉시 업데이트 (sortedTracks 순서 기준)
+      if(window.DW_TRACKS){
+        var sorted=window.DW_TRACKS.slice().sort(function(a,b){return b.min-a.min;});
+        sorted.forEach(function(t,i){
+          var b=document.getElementById('dw-badge-track-'+i);
+          if(b){
+            var priceStr=(t.min===0)?(t.price>0?'₩'+t.price.toLocaleString():'₩?'):'₩'+t.price.toLocaleString();
+            b.children[0].textContent=priceStr;
+          }
+        });
+      }
     })
     .catch(function(e){toast('❌ '+e.message);});
 }
@@ -12579,7 +12582,7 @@ function _dwLoadCfg(did){
     var d=doc.data();
     if(d.dwTracks&&d.dwTracks.length>0){
       window.DW_TRACKS=d.dwTracks;
-      // ★ input 업데이트 (렌더링 완료 후)
+      // ★ input + 배지 업데이트 (렌더링 완료 후)
       setTimeout(function(){
         d.dwTracks.forEach(function(t){
           var el=document.getElementById('dw-track-'+t.key)||document.getElementById('dw-track-'+t.min);
@@ -12592,6 +12595,16 @@ function _dwLoadCfg(did){
           window._dwCfgDefPrice=_t0.price||0;
           if(window.DW_TRACKS){var dt=DW_TRACKS.find(function(x){return x.min===0;});if(dt)dt.price=_t0.price||0;}
           if(typeof _dwBindDefPrice==='function') _dwBindDefPrice();
+        }
+        // ★ 배지도 즉시 업데이트
+        if(window.DW_TRACKS){
+          var sorted=window.DW_TRACKS.slice().sort(function(a,b){return b.min-a.min;});
+          sorted.forEach(function(t,i){
+            var b=document.getElementById('dw-badge-track-'+i);
+            if(b&&b.children[0]){
+              b.children[0].textContent=(t.min===0)?(t.price>0?'₩'+t.price.toLocaleString():'₩?'):'₩'+t.price.toLocaleString();
+            }
+          });
         }
       },300);
     }
