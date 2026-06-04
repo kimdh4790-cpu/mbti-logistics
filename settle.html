@@ -7319,7 +7319,15 @@ window.dwRunLiveCalculations=function(){
           orders.forEach(function(o){
             var isMid=(o.hour>=0&&o.hour<6);
             if(!isMid&&o.platformPrice>0){
-              var fT=_finalTP+(o.event&&o.event.price||0); // ★ 트랙단가 기준 보전/환수
+              // ★ 트랙 달성(180건+)이면 트랙단가, 미달성이면 시간대 피크단가
+              var _baseP;
+              if(_finalTP>0&&_validCnt>=180){
+                _baseP=_finalTP; // 트랙단가
+              } else {
+                var slotK2=_dwSlot?_dwSlot(o.hour||12):'';
+                _baseP=(window.DW_SLOTS&&slotK2&&DW_SLOTS[slotK2]&&DW_SLOTS[slotK2].price>0)?DW_SLOTS[slotK2].price:(_finalTP||2900);
+              }
+              var fT=_baseP+(o.event&&o.event.price||0);
               if(o.platformPrice<fT) _reInj+=Math.floor(fT-o.platformPrice);
               else if(o.platformPrice>fT) _reExt+=Math.floor(o.platformPrice-fT);
             }
