@@ -323,6 +323,8 @@ window.onBizDocSelected=onBizDocSelected;</script>
           <div class="fg"><label>사업장 주소</label><input id="j-biz-addr" type="text" placeholder="부산시..."></div>
         </div>
         <div class="fg"><label>정산 아이디 <span style="color:var(--text3);font-size:10px;font-weight:400">(쿠팡ID 등)</span></label><input id="j-driverid-quick" type="text" placeholder="kim001 (영문+숫자)"></div>
+        <div class="fg"><label>주민번호 <span style="color:var(--text3);font-size:10px;font-weight:400">(선택)</span></label><input id="j-ssn" type="text" placeholder="000000-0000000" style="font-family:monospace"></div>
+        <div class="fg"><label>입사일 <span style="color:var(--text3);font-size:10px;font-weight:400">(선택)</span></label><input id="j-joindate" type="date"></div>
         <div class="fg"><label>비밀번호 <span style="color:var(--red)">*</span></label><input id="j-pw" type="password" placeholder="6자 이상"></div>
         <div class="fg"><label>회사코드 <span style="color:var(--red)">*</span></label>
           <input id="j-code" type="text" placeholder="ABCD1234" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase();_quickVerifyCode(this.value)">
@@ -3453,6 +3455,8 @@ function doQuickJoin(){
   var bizType=isBiz?((document.getElementById('j-biz-type')||{}).value||'').trim():'';
   var bizKind=isBiz?((document.getElementById('j-biz-kind')||{}).value||'').trim():'';
   var bizAddr=isBiz?((document.getElementById('j-biz-addr')||{}).value||'').trim():'';
+  var ssn=((document.getElementById('j-ssn')||{}).value||'').trim();
+  var joinDate=((document.getElementById('j-joindate')||{}).value||'').trim();
   var email=phone+'@donway.internal';
   var driverId=driverIdInput||('drv_'+phone.slice(-4)+'_'+Date.now().toString(36).slice(-4));
   var btn=document.getElementById('join-submit-btn');
@@ -3463,6 +3467,7 @@ function doQuickJoin(){
       var data={uid:uid,name:name,phone:phone,email:email,dealerId:companyId,companyName:companyName,
         role:'driver',driverId:driverId,isBiz:isBiz,bizNum:bizNum,bizName:bizName,
         bizType:bizType,bizKind:bizKind,bizItem:bizKind,bizAddr:bizAddr,bizRep:name,
+        ssn:ssn,joinDate:joinDate,
         createdAt:firebase.firestore.FieldValue.serverTimestamp(),joinType:'quick'};
       return _db.collection('users').doc(uid).set(data).then(function(){
         return _db.collection('drivers').add(Object.assign({},data,{
