@@ -6345,11 +6345,11 @@ function _dwCountUp(elId, toVal, prefix, suffix, duration){
   _dwCountUpTimers[elId]=requestAnimationFrame(step);
 }
 var DW_TRACKS=[
-  {min:350,  max:Infinity, price:5500, label:'350건+ 트랙',    key:'t350'},
-  {min:300,  max:350,      price:5200, label:'300~349건 트랙', key:'t300'},
-  {min:250,  max:300,      price:5100, label:'250~299건 트랙', key:'t250'},
-  {min:180,  max:250,      price:4200, label:'180~249건 트랙', key:'t180'},
-  {min:0,    max:180,      price:0,    label:'180건 미만',      key:'t0'}
+  {min:350,  max:Infinity, price:0, label:'350건+ 트랙',    key:'t350'},
+  {min:300,  max:350,      price:0, label:'300~349건 트랙', key:'t300'},
+  {min:250,  max:300,      price:0, label:'250~299건 트랙', key:'t250'},
+  {min:180,  max:250,      price:0, label:'180~249건 트랙', key:'t180'},
+  {min:0,    max:180,      price:0, label:'180건 미만',      key:'t0'}
 ];
 
 // ── 5대 시간대 구간 (기본값 — 슬롯별 단가 포함)
