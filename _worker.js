@@ -45,15 +45,20 @@ let _env_ref = null;
 async function fetchAsset(path, request, env) {
   const e = env || _env_ref;
   const filePath = path.startsWith('/') ? path : '/' + path;
-  // env.ASSETS로 직접 서빙 (즉시 반영)
-  if (e && e.ASSETS) {
+  const fileName = filePath.replace(/^\//, '');
+
+  // ★ 1순위: KV (배포 즉시 반영)
+  if (e && e.DONWAY_ASSETS) {
     try {
-      const url = new URL(request ? request.url : 'https://donway.ai.kr');
-      url.pathname = filePath;
-      const resp = await e.ASSETS.fetch(new Request(url.toString()));
-      return resp;
+      const val = await e.DONWAY_ASSETS.get(fileName, { type: 'arrayBuffer' });
+      if (val) {
+        const ext = fileName.split('.').pop().toLowerCase();
+        const types = { html:'text/html; charset=utf-8', js:'application/javascript', css:'text/css', json:'application/json', png:'image/png', jpg:'image/jpeg', pdf:'application/pdf' };
+        return new Response(val, { headers: { 'Content-Type': types[ext]||'text/plain', 'Cache-Control': 'no-cache' } });
+      }
     } catch(err) {}
   }
+
   // 폴백: GitHub Raw
   const GITHUB_RAW = 'https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main';
   const encodedPath = filePath.split('/').map(seg => seg ? encodeURIComponent(seg) : '').join('/');
