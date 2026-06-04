@@ -7710,7 +7710,11 @@ window._dwSimCalc=function(){
 function _dwRenderEngine(){
   var el=document.getElementById('content');
   if(!el)return;
-  // ★ content 완전 초기화 후 엔진만 렌더링
+  // ★ 이미 렌더링된 상태면 재렌더링 건너뜀 (데이터 보존)
+  if(document.getElementById('dw-engine-wrap')){
+    _dwLoadCfg(_CU&&_CU.dealerId);
+    return;
+  }
   el.innerHTML='';
   var wrap=document.createElement('div');
   wrap.id='dw-engine-wrap';
