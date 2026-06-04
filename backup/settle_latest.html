@@ -9105,11 +9105,23 @@ window._uImportPriceFiles = function(input){
             var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
             rows.forEach(function(row){
               if(!row) return;
+              // A열=라우트, C열=단가 (B열 null 구조 대응)
+              var a=normRoute(String(row[0]||''));
+              // C열 우선, 없으면 B열
+              var price=null;
+              for(var pi=1;pi<row.length;pi++){
+                if(row[pi]&&+row[pi]>50){price=+row[pi];break;}
+              }
+              if(isRoute(a)&&price){
+                _uPriceData[a]={price:Math.round(price),priceVat:0,type:type};
+                total++;return;
+              }
+              // 인접 쌍 스캔 (다른 포맷 대비)
               for(var ci=0;ci<row.length-1;ci++){
-                var a=normRoute(String(row[ci]||''));
-                var b=row[ci+1];
-                if(isRoute(a)&&b&&+b>50){
-                  _uPriceData[a]={price:Math.round(+b),priceVat:0,type:type};
+                var ra=normRoute(String(row[ci]||''));
+                var rb=row[ci+1];
+                if(isRoute(ra)&&rb&&+rb>50){
+                  _uPriceData[ra]={price:Math.round(+rb),priceVat:0,type:type};
                   total++;ci++;
                 }
               }
