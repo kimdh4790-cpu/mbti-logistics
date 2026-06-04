@@ -7319,10 +7319,7 @@ window.dwRunLiveCalculations=function(){
           orders.forEach(function(o){
             var isMid=(o.hour>=0&&o.hour<6);
             if(!isMid&&o.platformPrice>0){
-              var slotK=_dwSlot?_dwSlot(o.hour||12):'';
-              var slotFinal=window.DW_SLOTS&&slotK&&DW_SLOTS[slotK]&&DW_SLOTS[slotK].price>0?DW_SLOTS[slotK].price:0;
-              slotFinal=Math.max(slotFinal,_finalTP);  // ★ 슬롯단가 vs 트랙단가 중 높은 값
-              var fT=slotFinal+(o.event&&o.event.price||0);
+              var fT=_finalTP+(o.event&&o.event.price||0); // ★ 트랙단가 기준 보전/환수
               if(o.platformPrice<fT) _reInj+=Math.floor(fT-o.platformPrice);
               else if(o.platformPrice>fT) _reExt+=Math.floor(o.platformPrice-fT);
             }
