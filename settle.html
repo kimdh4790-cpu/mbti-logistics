@@ -10034,17 +10034,95 @@ function pageUniversalSettle(){
       var d=doc.data();
       var mo=(d.month||d.createdAt&&d.createdAt.toDate&&d.createdAt.toDate().toISOString().slice(0,7)||'');
       html+='<div style="background:var(--bg2);border-radius:12px;border:1px solid var(--border);padding:14px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">'+
-        '<div>'+
+        '<div style="flex:1;cursor:pointer" onclick="_uShowSettleDetail(\''+doc.id+'\')">'+
           '<div style="font-size:12px;font-weight:800">'+esc(d.title||'정산')+'</div>'+
           '<div style="font-size:11px;color:var(--text3)">'+mo+' · '+(d.totalCount||0)+'명 · 합계 ₩'+(d.totalNet||0).toLocaleString()+'</div>'+
         '</div>'+
-        '<button data-id="'+doc.id+'" onclick="_universalDeleteSettle(this.dataset.id)" style="padding:4px 10px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;cursor:pointer">삭제</button>'+
+        '<div style="display:flex;gap:6px">'+
+          '<button onclick="_uShowSettleDetail(\''+doc.id+'\')" style="padding:4px 10px;background:var(--brand);color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer">상세</button>'+
+          '<button data-id="'+doc.id+'" onclick="_universalDeleteSettle(this.dataset.id)" style="padding:4px 10px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;cursor:pointer">삭제</button>'+
+        '</div>'+
       '</div>';
     });
     html+='</div>';
     c.innerHTML=html;
   }).catch(function(e){c.innerHTML='<div class="empty">오류: '+e.message+'</div>';});
 }
+
+
+window._uShowSettleDetail = function(docId){
+  if(!_db) return;
+  _db.collection('universal_settlements').doc(docId).get().then(function(doc){
+    if(!doc.exists){toast('데이터 없음');return;}
+    var d=doc.data();
+    var rows=d.rows||[];
+
+    // 캠프별 그룹핑
+    var camps={};
+    rows.forEach(function(r){
+      var c=r.camp||'기타';
+      if(!camps[c]) camps[c]=[];
+      camps[c].push(r);
+    });
+
+    var html='<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:9999;overflow-y:auto;padding:16px" onclick="if(event.target===this)this.remove()">';
+    html+='<div style="max-width:700px;margin:0 auto;background:var(--bg);border-radius:16px;padding:20px">';
+    html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">';
+    html+='<div><div style="font-size:15px;font-weight:800">'+esc(d.title||'정산')+'</div>';
+    html+='<div style="font-size:11px;color:var(--text3)">'+(d.month||'')+' · '+rows.length+'명 · ₩'+(d.totalNet||0).toLocaleString()+'</div></div>';
+    html+='<button onclick="_uCloseConfirm(this)" style="padding:6px 12px;background:#dc2626;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px">✕</button>';
+    html+='</div>';
+
+    // 캠프 탭
+    var campNames=Object.keys(camps).sort();
+    if(campNames.length>1){
+      html+='<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px">';
+      campNames.forEach(function(camp,ci){
+        html+='<button onclick="_uDetailTab('+ci+')" id="udt-'+ci+'" style="padding:4px 12px;border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;background:'+(ci===0?'var(--brand)':'var(--bg3)')+';color:'+(ci===0?'#fff':'var(--text2)')+'">'+esc(camp)+' ('+camps[camp].length+')</button>';
+      });
+      html+='</div>';
+    }
+
+    campNames.forEach(function(camp,ci){
+      var campRows=camps[camp];
+      var campTotal=campRows.reduce(function(s,r){return s+(r.net||r.gross||0);},0);
+      html+='<div id="udtp-'+ci+'" style="display:'+(ci===0?'block':'none')+'">';
+      html+='<div style="font-size:11px;color:var(--text3);margin-bottom:8px;padding:6px 10px;background:var(--bg3);border-radius:6px">'+esc(camp)+' · '+campRows.length+'명 · ₩'+campTotal.toLocaleString()+'</div>';
+      html+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:400px">';
+      html+='<tr style="background:var(--bg2)"><th style="padding:7px 10px;text-align:left;font-size:11px;color:var(--text3)">이름</th>';
+      html+='<th style="padding:7px 10px;text-align:right;font-size:11px;color:var(--text3)">건수</th>';
+      html+='<th style="padding:7px 10px;text-align:right;font-size:11px;color:var(--text3)">단가</th>';
+      html+='<th style="padding:7px 10px;text-align:right;font-size:11px;color:#059669">추가</th>';
+      html+='<th style="padding:7px 10px;text-align:right;font-size:11px;color:#dc2626">공제</th>';
+      html+='<th style="padding:7px 10px;text-align:right;font-size:11px;color:var(--brand);font-weight:800">실지급</th></tr>';
+      campRows.forEach(function(r){
+        html+='<tr style="border-bottom:1px solid var(--border)">'+
+          '<td style="padding:7px 10px;font-weight:700;white-space:nowrap">'+esc(r.name)+'</td>'+
+          '<td style="padding:7px 10px;text-align:right;white-space:nowrap">'+(r.cnt>0?r.cnt+'건':'—')+'</td>'+
+          '<td style="padding:7px 10px;text-align:right;white-space:nowrap">'+(r.price>0?'₩'+r.price.toLocaleString():'—')+'</td>'+
+          '<td style="padding:7px 10px;text-align:right;color:#059669;white-space:nowrap">'+(r.inc>0?'+₩'+r.inc.toLocaleString():'—')+'</td>'+
+          '<td style="padding:7px 10px;text-align:right;color:#dc2626;white-space:nowrap">'+(r.deduct>0?'-₩'+r.deduct.toLocaleString():'—')+'</td>'+
+          '<td style="padding:7px 10px;text-align:right;font-weight:800;color:var(--brand);white-space:nowrap">₩'+(r.net||r.gross||0).toLocaleString()+'</td>'+
+        '</tr>';
+      });
+      html+='</table></div></div>';
+    });
+
+    html+='</div></div>';
+    var el=document.createElement('div'); el.innerHTML=html;
+    document.body.appendChild(el.firstChild);
+  }).catch(function(e){toast('❌ '+e.message);});
+};
+
+window._uDetailTab=function(ci){
+  document.querySelectorAll('[id^="udt-"]').forEach(function(b,i){
+    b.style.background=i===ci?'var(--brand)':'var(--bg3)';
+    b.style.color=i===ci?'#fff':'var(--text2)';
+  });
+  document.querySelectorAll('[id^="udtp-"]').forEach(function(p,i){
+    p.style.display=i===ci?'block':'none';
+  });
+};
 
 window._universalDeleteSettle=function(id){
   if(!confirm('삭제하시겠습니까?'))return;
@@ -10147,9 +10225,38 @@ window._universalParseExcel=function(input){
           var deduct=di>=0?parseFloat(String(row[di]||'0').replace(/[^0-9.]/g,''))||0:0;
           var directAmt=ai>=0?parseFloat(String(row[ai]||'0').replace(/[^0-9.]/g,''))||0:0;
           var camp=cai>=0?String(row[cai]||'').trim():'';
-          // 금액 계산: 직접 금액 있으면 우선, 없으면 건수×단가
-          var gross=directAmt>0?directAmt:(cnt*price+bonus-deduct);
-          shResults.push({name:name,cnt:cnt,price:price,bonus:bonus,deduct:deduct,gross:gross,camp:camp,sheet:shName,row:row,hdr:hdr});
+          // ★ 단가표 기준 재계산 (등록된 규칙 우선)
+          var calcPrice=price;
+          var calcGross=0;
+          var rules=window._uCurrentRules||{};
+          var priceData=window._uPriceData||{};
+
+          // 이름/ID로 직원 매칭해서 캠프 보완
+          var matchedEmp=null;
+          if(window._uEmpMap){
+            matchedEmp=window._uEmpMap[name]||window._uEmpMap[name.replace('@df','')];
+          }
+          var finalCamp=camp||(matchedEmp&&matchedEmp.camp)||'';
+
+          if(directAmt>0){
+            // 실지급 직접 입력 → 그대로 사용
+            calcGross=directAmt;
+          } else if(cnt>0){
+            // 건수 있으면 단가표 단가로 재계산
+            var rulePrice=rules.basePrice||0;
+            // 단가표에 해당 캠프 단가 있으면 사용
+            if(priceData&&Object.keys(priceData).length>0){
+              // 캠프 기준 첫 번째 라우트 단가 사용
+              var campRoutes=Object.keys(priceData).filter(function(r){return (priceData[r].camp||'')===(finalCamp||priceData[r].camp);});
+              if(campRoutes.length>0) rulePrice=priceData[campRoutes[0]].price||rulePrice;
+            }
+            calcPrice=rulePrice||price; // 단가표 없으면 엑셀 단가
+            calcGross=cnt*calcPrice+bonus-deduct;
+          } else {
+            calcGross=bonus-deduct;
+          }
+
+          shResults.push({name:name,cnt:cnt,price:calcPrice,bonus:bonus,deduct:deduct,gross:calcGross,camp:finalCamp,sheet:shName,row:row,hdr:hdr});
           allResults.push(shResults[shResults.length-1]);
         }
         if(shResults.length>0) sheetInfos.push({name:shName,count:shResults.length});
