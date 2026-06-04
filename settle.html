@@ -8686,7 +8686,7 @@ function pageDeliverySettle(){
             '<div><div style="font-size:9px;color:var(--text3)">건수</div><div style="font-weight:700">'+(s.totalCount||0)+'건</div></div>'+
             '<div><div style="font-size:9px;color:var(--text3)">실지급합계</div><div style="font-weight:700;color:var(--brand)">₩'+(s.net||s.netPay||0).toLocaleString()+'</div></div>'+
             '<div><div style="font-size:9px;color:var(--text3)">마진</div><div style="font-weight:700;color:'+(margin>=0?'#059669':'#ef4444')+'">'+(margin>=0?'+':'')+'₩'+margin.toLocaleString()+'</div></div>'+
-            '<button onclick="_dwDeleteSession(\"'+s.sid+'\",\"'+weekLabel+'\")" style="padding:3px 8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:5px;font-size:10px;cursor:pointer;white-space:nowrap">삭제</button>';
+            '<button data-sid="'+s.sid+'" data-label="'+weekLabel+'" onclick="var b=this;_dwDeleteSession(b.dataset.sid,b.dataset.label)" style="padding:3px 8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:5px;font-size:10px;cursor:pointer;white-space:nowrap">삭제</button>';
           moBody.appendChild(wRow);
         });
 
