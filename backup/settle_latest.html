@@ -10088,6 +10088,7 @@ function pageUniversalSettle(){
 
 window._uShowSettleDetail = function(docId){
   if(!_db) return;
+  window.uDetailDocId=docId;
   _db.collection('universal_settlements').doc(docId).get().then(function(doc){
     if(!doc.exists){toast('데이터 없음');return;}
     var d=doc.data();
@@ -10131,9 +10132,9 @@ window._uShowSettleDetail = function(docId){
       html+='<th style="padding:7px 10px;text-align:right;font-size:11px;color:#059669">추가</th>';
       html+='<th style="padding:7px 10px;text-align:right;font-size:11px;color:#dc2626">공제</th>';
       html+='<th style="padding:7px 10px;text-align:right;font-size:11px;color:var(--brand);font-weight:800">실지급</th></tr>';
-      campRows.forEach(function(r){
+      campRows.forEach(function(r,ri){
         html+='<tr style="border-bottom:1px solid var(--border)">'+
-          '<td style="padding:7px 10px;font-weight:700;white-space:nowrap">'+esc(r.name)+'</td>'+
+          '<td style="padding:7px 10px;font-weight:700;white-space:nowrap;cursor:pointer;color:var(--brand)" onclick="_uShowOnePayslip(uDetailDocId,'+ri+',\''+esc(camp)+'\')">'+esc(r.name)+'</td>'+
           '<td style="padding:7px 10px;text-align:right;white-space:nowrap">'+(r.cnt>0?r.cnt+'건':'—')+'</td>'+
           '<td style="padding:7px 10px;text-align:right;white-space:nowrap">'+(r.price>0?'₩'+r.price.toLocaleString():'—')+'</td>'+
           '<td style="padding:7px 10px;text-align:right;color:#059669;white-space:nowrap">'+(r.inc>0?'+₩'+r.inc.toLocaleString():'—')+'</td>'+
@@ -10365,18 +10366,30 @@ window._uDeploySettle = function(docId, month){
     html+='<button onclick="_uCloseConfirm(this)" style="padding:6px 12px;background:#dc2626;color:#fff;border:none;border-radius:6px;cursor:pointer">✕ 닫기</button>';
     html+='</div>';
 
-    rows.slice(0,3).forEach(function(emp){
-      html+='<div style="margin-bottom:12px;box-shadow:0 4px 20px rgba(0,0,0,.3);border-radius:8px;overflow:hidden">'+
+    // 캠프 탭 구성
+    var campMap={};
+    rows.forEach(function(emp){var c=emp.camp||'기타';if(!campMap[c])campMap[c]=[];campMap[c].push(emp);});
+    var campNames=Object.keys(campMap).sort();
+
+    // 상단 탭
+    html+='<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px" id="u-deploy-tabs">';
+    html+='<button onclick="_uDeployTab(\'ALL\')" id="udtab-ALL" style="padding:5px 12px;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;background:#0066ff;color:#fff">전체 ('+rows.length+')</button>';
+    campNames.forEach(function(c){
+      html+='<button onclick="_uDeployTab(\''+esc(c)+'\')" id="udtab-'+esc(c)+'" style="padding:5px 12px;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;background:var(--bg3);color:var(--text2)">'+esc(c)+' ('+campMap[c].length+')</button>';
+    });
+    html+='</div>';
+
+    // 명세서 스크롤 영역
+    html+='<div id="u-deploy-scroll" style="max-height:65vh;overflow-y:auto;display:flex;flex-direction:column;gap:12px">';
+    rows.forEach(function(emp){
+      html+='<div class="u-payslip-wrap" data-camp="'+esc(emp.camp||'기타')+'" style="box-shadow:0 4px 20px rgba(0,0,0,.3);border-radius:8px;overflow:hidden">'+
         _buildUniversalPayslip(emp, month, compName)+
       '</div>';
     });
+    html+='</div>';
 
-    if(rows.length>3){
-      html+='<div style="text-align:center;color:#fff;font-size:12px;margin:8px 0">... 외 '+(rows.length-3)+'명</div>';
-    }
-
-    html+='<div style="display:flex;gap:8px;justify-content:center;margin-top:16px">'+
-      '<button onclick="_uPrintAllPayslips(uConfirmDocId,uConfirmMonth)" style="padding:12px 24px;background:#0066ff;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer">🖨 PDF 인쇄</button>'+
+    html+='<div style="display:flex;gap:8px;justify-content:center;margin-top:12px">'+
+      '<button onclick="_uPrintAllPayslips(uConfirmDocId,uConfirmMonth)" style="padding:10px 20px;background:#0066ff;color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:800;cursor:pointer">🖨 PDF 전체 인쇄</button>'+
     '</div>';
     html+='</div></div>';
 
@@ -10386,6 +10399,40 @@ window._uDeploySettle = function(docId, month){
 };
 
 // PDF 인쇄
+
+// 개별 명세서 팝업
+window._uShowOnePayslip = function(docId, rowIdx, camp){
+  _db.collection('universal_settlements').doc(docId).get().then(function(doc){
+    if(!doc.exists) return;
+    var rows=(doc.data().rows||[]).filter(function(r){return (r.camp||'기타')===camp;});
+    var emp=rows[rowIdx];
+    if(!emp) return;
+    var month=doc.data().month||'';
+    var compName=(_CU&&_CU.companyName)||'';
+    var html='<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.8);z-index:10000;overflow-y:auto;padding:16px" onclick="if(event.target===this)this.remove()">';
+    html+='<div style="max-width:640px;margin:0 auto">';
+    html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">';
+    html+='<div style="color:#fff;font-size:13px;font-weight:800">'+esc(emp.name)+' 명세서</div>';
+    html+='<button onclick="_uCloseConfirm(this)" style="padding:6px 12px;background:#dc2626;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px">✕</button>';
+    html+='</div>';
+    html+='<div style="border-radius:8px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.5)">'+_buildUniversalPayslip(emp,month,compName)+'</div>';
+    html+='</div></div>';
+    var el=document.createElement('div'); el.innerHTML=html;
+    document.body.appendChild(el.firstChild);
+  });
+};
+
+window._uDeployTab = function(camp){
+  document.querySelectorAll('[id^="udtab-"]').forEach(function(b){
+    b.style.background='var(--bg3)'; b.style.color='var(--text2)';
+  });
+  var btn=document.getElementById('udtab-'+camp);
+  if(btn){btn.style.background='#0066ff';btn.style.color='#fff';}
+  document.querySelectorAll('.u-payslip-wrap').forEach(function(el){
+    el.style.display=(camp==='ALL'||el.dataset.camp===camp)?'block':'none';
+  });
+};
+
 window._uPrintAllPayslips = function(docId, month){
   _db.collection('universal_settlements').doc(docId).get().then(function(doc){
     if(!doc.exists) return;
