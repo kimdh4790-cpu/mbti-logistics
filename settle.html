@@ -10407,6 +10407,31 @@ window._uDeploySettle = function(docId, month){
 
 // 개별 명세서 팝업
 
+
+// 범용 명세서 이미지 캡처
+window._uCapturePayslip = function(){
+  var el = document.getElementById('u-one-payslip');
+  if(!el){toast('명세서를 먼저 열어주세요');return;}
+  if(typeof html2canvas==='undefined'){toast('라이브러리 로딩 중...');return;}
+  html2canvas(el,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false})
+    .then(function(canvas){
+      var link=document.createElement('a');
+      link.download='명세서.png';
+      link.href=canvas.toDataURL('image/png');
+      link.click();
+      toast('✅ 이미지 저장됨');
+    }).catch(function(e){toast('❌ '+e.message);});
+};
+
+window._uPrintOne = function(){
+  var el = document.getElementById('u-one-payslip');
+  if(!el) return;
+  var w=window.open('','_blank');
+  w.document.write('<html><head><meta charset="utf-8"><style>body{margin:0}</style></head><body>'+el.innerHTML+'</body></html>');
+  w.document.close();
+  setTimeout(function(){w.print();},400);
+};
+
 window._uRefreshPayslip = function(docId, rowIdx, camp){
   _db.collection('universal_settlements').doc(docId).get().then(function(doc){
     if(!doc.exists) return;
@@ -10454,6 +10479,10 @@ window._uShowOnePayslip = function(docId, rowIdx, camp){
     html+='<div style="display:flex;align-items:flex-end"><button onclick="_uRefreshPayslip(uDetailDocId,'+rowIdx+',\''+esc(camp)+'\')" style="width:100%;padding:7px;background:#0066ff;color:#fff;border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer">🔄 미리보기 갱신</button></div>';
     html+='</div></div>';
     html+='<div id="u-one-payslip" style="border-radius:8px;background:#fff;box-shadow:0 4px 20px rgba(0,0,0,.5)">'+_buildUniversalPayslip(emp,month,compName)+'</div>';
+    html+='<div style="display:flex;gap:8px;justify-content:center;margin-top:10px">'+
+      '<button onclick="_uCapturePayslip()" style="padding:8px 16px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📸 이미지 저장</button>'+
+      '<button onclick="_uPrintOne()" style="padding:8px 16px;background:#0066ff;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🖨 인쇄</button>'+
+    '</div>';
     html+='</div></div>';
     var el=document.createElement('div'); el.innerHTML=html;
     document.body.appendChild(el.firstChild);
@@ -10621,6 +10650,12 @@ window._universalParseMulti = function(input){
             if(e.name) empMap[e.name] = e;
           });
 
+          var rules = window._uCurrentRules||{};
+          var incCamps = rules.incCamps||{};
+          var leaderMap = window._uLeaderMap||{};
+          var leaderNames = window._uLeaderNames||{};
+          var idSupportRules = rules.idSupportRules||[];
+
           results.forEach(function(r){
             var key = getKey(r.name, r.empId);
             var emp = empMap[key] || empMap[r.name] || empMap[(r.empId||'').replace('@df','').toLowerCase()];
@@ -10628,15 +10663,52 @@ window._universalParseMulti = function(input){
               if(!r.camp) r.camp = emp.camp||'';
               r.contractType = emp.contractType||'비사업자';
               if(!r.empId && emp.empId) r.empId = emp.empId;
-              // ★ ID만 있으면 이름으로 교체
               if((!r.name || r.name.indexOf('@df')>=0) && emp.name) r.name = emp.name;
             }
             // 인센 적용
-            var rules = window._uCurrentRules||{};
-            var incCamps = rules.incCamps||{};
             var incRate = incCamps[r.camp||'']||incCamps['기본']||0;
-            r.inc = (r.cnt||0) * incRate;
-            r.net = Math.max(0, (r.gross||0) + (r.inc||0));
+            r._inc = (r._inc||0) + (r.cnt||0) * incRate;
+
+            // ★ 팀장수수료 계산 (leaderMap에서 라우트별 수수료)
+            var empIdClean = (r.empId||r.name||'').replace('@df','').toLowerCase();
+            if(leaderMap[empIdClean] && r._routes){
+              var leaderFee = 0;
+              Object.keys(r._routes).forEach(function(route){
+                var rd = r._routes[route];
+                var fee = leaderMap[empIdClean][route]||0;
+                leaderFee += (rd.cnt||0) * fee;
+              });
+              if(leaderFee > 0){
+                r._etcPlus = (r._etcPlus||0) + leaderFee;
+                r._leaderFee = leaderFee;
+              }
+            }
+
+            // ★ 아이디지원 — fromId 건수를 toId에 이전
+            idSupportRules.forEach(function(rule){
+              var fromClean = (rule.fromId||'').replace('@df','').toLowerCase();
+              var toClean = (rule.toId||'').replace('@df','').toLowerCase();
+              if(empIdClean === toClean){
+                // 이 기사가 지원받는 쪽
+                var fromResult = results.find(function(rr){
+                  return (rr.empId||'').replace('@df','').toLowerCase() === fromClean;
+                });
+                if(fromResult && fromResult._routes){
+                  // from의 라우트 데이터로 추가 계산
+                  var addGross = 0;
+                  Object.keys(fromResult._routes).forEach(function(route){
+                    var rd = fromResult._routes[route];
+                    // 단가표 기준 단가
+                    var price = rd.price||0;
+                    addGross += (rd.cnt||0) * price;
+                  });
+                  r._idSupportGross = (r._idSupportGross||0) + addGross;
+                  r._etcPlus = (r._etcPlus||0) + addGross;
+                }
+              }
+            });
+
+            r.net = Math.max(0, (r.gross||0) + (r._inc||0) + (r._etcPlus||0) - (r._etcMinus||0) - (r._adv||0));
           });
 
           var totalCnt = results.length;
@@ -11031,9 +11103,19 @@ window._universalSave=function(){
       contractType:String(r.contractType||'비사업자'),
       sources:(r.sources||[]).map(function(s){return {label:String(s.label||''),cnt:s.cnt||0,price:s.price||0,gross:s.gross||0};}),
       isCoupang:!!(r._isCoupang),
-      _routes:r._routes||null,
+      _routes:r._routes?(function(routes){
+        var out={};
+        Object.keys(routes).forEach(function(k){
+          var rd=routes[k];
+          out[k]={cnt:rd.cnt||0,ret:rd.ret||0,price:rd.price||0,amt:rd.amt||0};
+        });
+        return out;
+      })(r._routes):null,
       _fresh:r._fresh||0,
       _inc:r._inc||0,
+      _etcPlus:r._etcPlus||0,
+      _etcMinus:r._etcMinus||0,
+      _adv:r._adv||0,
       details:(r.details||[]).map(function(d){return {label:String(d.label||''),value:String(d.value||''),num:d.num||0};})
     };
   }).filter(function(r){return !!r.name;});
