@@ -6750,6 +6750,42 @@ var _dwPlatform='coupangEats';
 // ★ DONWAY 정산 시뮬레이터 (배달대행 정산 원리 설명)
 
 // ★ Firebase 주간 정산 마감 저장 + 기사 앱 알림
+function _dwSaveMonthly(){
+  if(!_db||!_CU){toast('로그인 필요');return;}
+  var monthEl=document.getElementById('dw-save-month');
+  var statusEl=document.getElementById('dw-save-status');
+  var month=monthEl?monthEl.value:new Date().toISOString().slice(0,7);
+  var result=window._dwFinalResult;
+  if(!result){toast('정산 결과 없음');return;}
+  var did=_CU.dealerId||_CU.uid;
+  statusEl.textContent='저장 중...';
+  _db.collection('delivery_sessions').doc(did+'_'+month).set({
+    dealerId:did,
+    month:month,
+    ym:month,
+    type:'monthly',
+    totalCount:result.totalCount||0,
+    rawTotal:result.rawTotal||0,
+    pfSum:result.rawTotal||0,
+    bonusTotal:result.injected||0,
+    deductTotal:result.extracted||0,
+    totalPf:result.rawTotal||0,
+    totalInj:result.injected||0,
+    totalExt:result.extracted||0,
+    preTax:result.preTax||0,
+    tax:result.tax||0,
+    net:result.net||0,
+    netPay:result.net||0,
+    riders:result.riders||[],
+    savedAt:firebase.firestore.FieldValue.serverTimestamp()
+  },{merge:true}).then(function(){
+    statusEl.textContent='✅ '+month+' 저장 완료';
+    toast('✅ '+month+' 배달대행 정산 저장');
+  }).catch(function(e){
+    statusEl.textContent='❌ '+e.message;
+  });
+}
+
 function _dwSaveWeeklySettlement(result){
   if(!_db||!_CU){
     toast('ℹ️ 시뮬레이터 모드: DB 저장 생략 (실제 정산은 엑셀 업로드 후 정산 저장 버튼 사용)');
@@ -7239,9 +7275,18 @@ window.dwRunLiveCalculations=function(){
         done.style.cssText='padding:12px 14px;text-align:center;background:#d1fae5;color:#065f46;font-weight:800;font-size:13px;border-top:2px solid #6ee7b7;margin-top:8px;border-radius:8px';
         done.innerHTML='✅ '+riderIds.length+'명 · '+totalCnt.toLocaleString()+'건 완료 | 보전 ₩'+finalInj.toLocaleString()+' | 환수 ₩'+finalExt.toLocaleString()+' | 실지급 ₩'+finalNet.toLocaleString();
         con.appendChild(done);
-        if(typeof _dwSaveWeeklySettlement==='function'){
-          _dwSaveWeeklySettlement({totalCount:totalCnt,rawTotal:finalPf,bonusTotal:finalInj,deductTotal:finalExt,preTaxTotal:finalPre,tax33:finalTax,netPay:finalNet});
-        }
+        // ★ 저장 버튼 추가
+        var saveRow=document.createElement('div');
+        saveRow.style.cssText='display:flex;align-items:center;gap:8px;padding:10px 14px;background:#0f172a;border-top:1px solid #21262d';
+        var ym=new Date();
+        var ymStr=ym.getFullYear()+'-'+String(ym.getMonth()+1).padStart(2,'0');
+        saveRow.innerHTML='<input id="dw-save-month" type="month" value="'+ymStr+'" style="padding:5px 8px;border-radius:6px;border:1px solid #374151;background:#1e293b;color:#fff;font-size:12px">'+
+          '<button onclick="_dwSaveMonthly()" style="padding:5px 14px;background:#10b981;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">💾 정산 저장</button>'+
+          '<span id="dw-save-status" style="font-size:11px;color:#6b7280"></span>';
+        con.appendChild(saveRow);
+        // 결과 저장용 전역
+        window._dwFinalResult={totalCount:totalCnt,rawTotal:finalPf,injected:finalInj,extracted:finalExt,preTax:finalPre,tax:finalTax,net:finalNet,
+          riders:window._dwResults?JSON.parse(JSON.stringify(window._dwResults)):[]};
         btn.disabled=false; btn.textContent='⚡ 다시 계산'; btn.style.background='#3b82f6';
         if(prog) prog.textContent='';
         return;
@@ -8430,6 +8475,14 @@ function pageDeliverySettle(){
     _db.collection('tax_docs').where('dealerId','==',did).get()
   ]).then(function(results){
     var sesSnap=results[0], expSnap=results[1], fixSnap=results[2], taxDocSnap=results[3];
+    // ★ 삭제 함수
+    window._dwDeleteMonth=function(docId, month){
+      if(!confirm(month+' 정산을 삭제하시겠습니까?'))return;
+      _db.collection('delivery_sessions').doc(docId).delete().then(function(){
+        toast('✅ '+month+' 삭제');
+        pageDeliverySettle();
+      }).catch(function(e){toast('❌ '+e.message);});
+    };
     if(sesSnap.empty){
       c.innerHTML='<div class="empty" style="padding:60px 20px"><div style="font-size:48px;margin-bottom:12px">🛵</div>'
         +'<div style="font-size:17px;font-weight:800;margin-bottom:6px">배달대행 데이터가 없습니다</div>'
@@ -8497,7 +8550,13 @@ function pageDeliverySettle(){
     tabEl.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;align-items:center';
     tabEl.innerHTML='<span style="font-size:10px;color:var(--text3);font-weight:700">📅 기간</span>'
       +'<button onclick="window._dwSettleMonth=&quot;all&quot;;pageDeliverySettle()" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(_monthFilter==='all'?'var(--blue)':'var(--border)')+';background:'+(_monthFilter==='all'?'var(--blue)':'var(--bg)')+';color:'+(_monthFilter==='all'?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">전체</button>'
-      +allMonths.map(function(m){var on=m===_monthFilter;return '<button onclick="window._dwSettleMonth=&quot;'+m+'&quot;;pageDeliverySettle()" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(on?'var(--blue)':'var(--border)')+';background:'+(on?'var(--blue)':'var(--bg)')+';color:'+(on?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">'+m+'</button>';}).join('');
+      +allMonths.map(function(m){
+        var on=m===_monthFilter;
+        // 해당 월 문서 ID 찾기
+        var mSess=sessions.find(function(s){return (s.ym||s.month||'').startsWith(m)&&s.type==='monthly';});
+        var delBtn=mSess?'<button onclick="_dwDeleteMonth(\''+mSess.sid+'\',\''+m+'\')" style="padding:2px 6px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:4px;font-size:9px;font-weight:700;cursor:pointer;margin-left:2px">삭제</button>':'';
+        return '<span style="display:inline-flex;align-items:center"><button onclick="window._dwSettleMonth=&quot;'+m+'&quot;;pageDeliverySettle()" style="padding:5px 12px;border-radius:100px;border:1.5px solid '+(on?'var(--blue)':'var(--border)')+';background:'+(on?'var(--blue)':'var(--bg)')+';color:'+(on?'#fff':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer">'+m+'</button>'+delBtn+'</span>';
+      }).join('');
     c.appendChild(tabEl);
 
     // Hero 카드
