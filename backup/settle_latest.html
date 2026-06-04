@@ -7299,6 +7299,7 @@ window.dwRunLiveCalculations=function(){
         // 결과 저장용 전역
         window._dwFinalResult={totalCount:totalCnt,rawTotal:finalPf,injected:finalInj,extracted:finalExt,preTax:finalPre,tax:finalTax,net:finalNet,
           riders:window._dwResults?JSON.parse(JSON.stringify(window._dwResults)):[]};
+        window._dwSettleComplete=true; // ★ 완료 플래그
         btn.disabled=false; btn.textContent='⚡ 다시 계산'; btn.style.background='#3b82f6';
         if(prog) prog.textContent='';
         return;
@@ -7774,6 +7775,23 @@ function _dwRenderEngine(){
     el.appendChild(existing);
     existing.style.display='';
     _dwLoadCfg(_CU&&_CU.dealerId);
+    // ★ 완료 상태면 저장 버튼 복원
+    if(window._dwSettleComplete&&window._dwFinalResult){
+      var _con=document.getElementById('dw-sim-console');
+      if(_con&&!document.getElementById('dw-save-month')){
+        var _sr=document.createElement('div');
+        _sr.style.cssText='display:flex;align-items:center;gap:8px;padding:10px 14px;background:#0f172a;border-top:1px solid #21262d';
+        var _now2=new Date();
+        var _ym=_now2.getFullYear()+'-'+String(_now2.getMonth()+1).padStart(2,'0');
+        var _d=_now2.getDay();var _s=new Date(_now2);_s.setDate(_now2.getDate()-_d);var _e=new Date(_s);_e.setDate(_s.getDate()+6);
+        var _f=function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+        _sr.innerHTML='<input id="dw-save-month" type="month" value="'+_ym+'" style="padding:5px 8px;border-radius:6px;border:1px solid #374151;background:#1e293b;color:#fff;font-size:12px">'
+          +'<input id="dw-save-week" type="text" value="'+_f(_s)+'~'+_f(_e)+'" style="padding:5px 8px;border-radius:6px;border:1px solid #374151;background:#1e293b;color:#fff;font-size:11px;width:190px">'
+          +'<button onclick="_dwSaveMonthly()" style="padding:5px 14px;background:#10b981;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">💾 저장</button>'
+          +'<span id="dw-save-status" style="font-size:11px;color:#6b7280"></span>';
+        _con.appendChild(_sr);
+      }
+    }
     return;
   }
   var wrap=document.createElement('div');
