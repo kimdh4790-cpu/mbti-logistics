@@ -8939,14 +8939,6 @@ window._universalParseExcel=function(input){
         if(shResults.length>0) sheetInfos.push({name:shName,count:shResults.length});
       });
 
-      // ★ 대용량 경고
-      if(allResults.length>10000){
-        var keep=allResults.slice(0,10000);
-        if(status)status.textContent='⚠️ '+allResults.length.toLocaleString()+'건 중 10,000건만 처리 (브라우저 한계). 분할 업로드 권장.';
-        _universalRenderResults(keep);
-        return;
-      }
-
       if(!allResults.length){
         // 자동 감지 실패 시 매핑 모달로 fallback
         var fbSheet=wb.SheetNames[0];
@@ -8971,9 +8963,14 @@ window._universalParseExcel=function(input){
         return;
       }
       var sheetMsg=sheetInfos.map(function(s){return s.name+'('+s.count+'명)';}).join(', ');
-      if(status)status.textContent='✅ '+allResults.length+'명 파싱 완료 — '+sheetMsg;
-      // 결과 확인 후 매핑 모달 옵션 제공
-      _universalRenderResults(allResults);
+      var totalCnt=allResults.length;
+      if(status)status.textContent='✅ '+totalCnt.toLocaleString()+'건 파싱 완료 — '+sheetMsg+(totalCnt>5000?' (대용량: 렌더링 중...)':'');
+      // 대용량이면 setTimeout으로 UI 블록 방지
+      if(totalCnt>5000){
+        setTimeout(function(){_universalRenderResults(allResults);},50);
+      } else {
+        _universalRenderResults(allResults);
+      }
     }catch(err){if(status)status.textContent='❌ '+err.message;console.error(err);}
   };
   reader.readAsArrayBuffer(file);
@@ -8985,6 +8982,7 @@ function _universalRenderResults(results){
   var total=results.reduce(function(s,r){return s+(r.gross||r.amount||0);},0);
   window._universalResults=results;
   window._universalTotal=total;
+  var isLarge=results.length>1000;
 
   // 시트별 그룹핑
   var sheets={};
@@ -8996,29 +8994,35 @@ function _universalRenderResults(results){
   var shNames=Object.keys(sheets);
 
   var html='<div style="background:var(--bg2);border-radius:12px;border:1px solid var(--border);overflow:hidden">'+
-    '<div style="padding:12px 16px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">'+
-      '<span style="font-weight:800;font-size:13px">📋 '+results.length+'명 · 합계 ₩'+total.toLocaleString()+'</span>'+
+    '<div style="padding:12px 16px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">'+
+      '<div>'+
+        '<span style="font-weight:800;font-size:13px">📋 '+results.length.toLocaleString()+'건 · 합계 ₩'+total.toLocaleString()+'</span>'+
+        (isLarge?'<span style="font-size:10px;color:var(--text3);margin-left:8px">상위 100건 미리보기</span>':'')+
+      '</div>'+
       '<button onclick="_universalSave()" style="padding:6px 16px;background:#10b981;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">💾 저장</button>'+
     '</div>';
 
   shNames.forEach(function(shName){
     var rows=sheets[shName];
     var shTotal=rows.reduce(function(s,r){return s+(r.gross||0);},0);
+    // 대용량이면 100건만 표시
+    var displayRows=isLarge?rows.slice(0,100):rows;
     html+='<div style="padding:8px 14px;background:var(--bg);border-bottom:1px solid var(--border);font-size:11px;font-weight:700;color:var(--text3)">'+
-      '📁 '+esc(shName)+' — '+rows.length+'명 / ₩'+shTotal.toLocaleString()+'</div>'+
+      '📁 '+esc(shName)+' — '+rows.length.toLocaleString()+'건 / ₩'+shTotal.toLocaleString()+(isLarge?' (상위 100건 표시)':'')+
+      '</div>'+
       '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
       '<tr style="background:var(--bg2)">'+
         '<th style="padding:7px 12px;text-align:left;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3)">이름</th>'+
         '<th style="padding:7px 12px;text-align:right;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3)">건수</th>'+
         '<th style="padding:7px 12px;text-align:right;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3)">단가</th>'+
-        '<th style="padding:7px 12px;text-align:right;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3)">추가수당</th>'+
+        '<th style="padding:7px 12px;text-align:right;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3)">추가</th>'+
         '<th style="padding:7px 12px;text-align:right;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3)">공제</th>'+
         '<th style="padding:7px 12px;text-align:right;border-bottom:1px solid var(--border);font-size:11px;color:var(--brand);font-weight:800">실지급</th>'+
       '</tr>';
-    rows.forEach(function(r){
+    displayRows.forEach(function(r){
       html+='<tr style="border-bottom:1px solid var(--border)">'+
         '<td style="padding:7px 12px;font-weight:700">'+esc(r.name)+'</td>'+
-        '<td style="padding:7px 12px;text-align:right">'+r.cnt+'건</td>'+
+        '<td style="padding:7px 12px;text-align:right">'+(r.cnt||0)+'건</td>'+
         '<td style="padding:7px 12px;text-align:right">₩'+(r.price||0).toLocaleString()+'</td>'+
         '<td style="padding:7px 12px;text-align:right;color:#059669">+'+(r.bonus?'₩'+r.bonus.toLocaleString():'0')+'</td>'+
         '<td style="padding:7px 12px;text-align:right;color:#dc2626">-'+(r.deduct?'₩'+r.deduct.toLocaleString():'0')+'</td>'+
