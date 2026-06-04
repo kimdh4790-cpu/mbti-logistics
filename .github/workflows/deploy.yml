@@ -25,6 +25,64 @@ jobs:
           sed -i "s/const CACHE = 'mbti-v9-[0-9]*/const CACHE = 'mbti-v9-$TS/" sw.js
           echo "Cache key updated: mbti-v9-$TS"
 
+      - name: Create KV namespace if not exists and upload settle.html
+        run: |
+          pip install requests -q
+          python3 << 'PYEOF'
+          import requests, os, json
+
+          TOKEN = "${{ secrets.CF_API_TOKEN }}"
+          ACCOUNT_ID = "02709cbec18d848913b4246015b9148f"
+          KV_TITLE = "donway-assets"
+          headers = {"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json"}
+
+          # KV 네임스페이스 목록 조회
+          r = requests.get(f"https://api.cloudflare.com/client/v4/accounts/{ACCOUNT_ID}/storage/kv/namespaces", headers=headers)
+          namespaces = r.json().get('result', [])
+          ns = next((n for n in namespaces if n['title'] == KV_TITLE), None)
+
+          if not ns:
+              # 생성
+              r2 = requests.post(f"https://api.cloudflare.com/client/v4/accounts/{ACCOUNT_ID}/storage/kv/namespaces",
+                  headers=headers, json={"title": KV_TITLE})
+              ns = r2.json()['result']
+              print(f"KV 생성: {ns['id']}")
+          else:
+              print(f"KV 기존: {ns['id']}")
+
+          ns_id = ns['id']
+
+          # settle.html 업로드
+          with open('settle.html', 'rb') as f:
+              content = f.read()
+
+          r3 = requests.put(
+              f"https://api.cloudflare.com/client/v4/accounts/{ACCOUNT_ID}/storage/kv/namespaces/{ns_id}/values/settle.html",
+              headers={"Authorization": f"Bearer {TOKEN}"},
+              data=content,
+              params={"expiration_ttl": 0}
+          )
+          print(f"settle.html 업로드: {r3.status_code}")
+
+          # ns_id를 파일로 저장 (wrangler.toml에 반영)
+          with open('kv_ns_id.txt', 'w') as f:
+              f.write(ns_id)
+          PYEOF
+
+      - name: Update wrangler.toml with KV binding
+        run: |
+          NS_ID=$(cat kv_ns_id.txt)
+          cat > wrangler.toml << EOF
+          name = "mbti-logistics"
+          main = "_worker.js"
+          compatibility_date = "2025-11-01"
+
+          [[kv_namespaces]]
+          binding = "DONWAY_ASSETS"
+          id = "$NS_ID"
+          EOF
+          echo "wrangler.toml updated with KV: $NS_ID"
+
       - name: Deploy to Cloudflare Workers
         run: wrangler deploy
         env:
