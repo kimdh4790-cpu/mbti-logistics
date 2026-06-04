@@ -8851,10 +8851,35 @@ function _renderUniversalRules(c, r){
       '<div style="font-size:13px;font-weight:800;margin-bottom:12px">💡 추가 규칙</div>'+
       '<div style="display:flex;flex-direction:column;gap:10px">'+
         _uRuleToggle('프레시백 회수금 포함', 'u-fresh-on', r.freshOn)+
-        _uRuleInput('추가인센 단가 (원/건)', 'u-inc-rate', r.incRate||0, '캠프별 0~25원 설정 가능')+
+        _uRuleInput('추가인센 단가 (원/건)', 'u-inc-rate', r.incRate||0, '캠프별 0~25원')+
         _uRuleToggle('소득세 3.3% 공제 (비사업자)', 'u-tax-on', r.taxOn!==false)+
         _uRuleToggle('고용보험 0.8% 공제 (사업자)', 'u-emp-on', r.empOn)+
         _uRuleToggle('산재보험 0.88% (사업자)', 'u-work-on', r.workOn)+
+      '</div>'+
+    '</div>'+
+
+    // 용차비
+    '<div style="background:var(--bg2);border-radius:12px;border:1px solid var(--border);padding:16px;margin-bottom:12px">'+
+      '<div style="font-size:13px;font-weight:800;margin-bottom:12px">🚚 용차비</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+        '<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">용차 배달 단가 (원/건)</label>'+
+          '<input type="number" id="u-yong-del" value="'+(r.yongDel||900)+'" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px">'+
+        '</div>'+
+        '<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">용차 반품 단가 (원/건)</label>'+
+          '<input type="number" id="u-yong-ret" value="'+(r.yongRet||900)+'" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px">'+
+        '</div>'+
+      '</div>'+
+    '</div>'+
+
+    // 아이디지원
+    '<div style="background:var(--bg2);border-radius:12px;border:1px solid var(--border);padding:16px;margin-bottom:12px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+
+        '<div style="font-size:13px;font-weight:800">👤 아이디지원 규칙</div>'+
+        '<button onclick="_uAddIdSupport()" style="padding:5px 12px;background:var(--brand);color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer">+ 추가</button>'+
+      '</div>'+
+      '<div style="font-size:11px;color:var(--text3);margin-bottom:10px">특정 ID의 건수를 다른 기사에게 이전 (날짜 범위 지정)</div>'+
+      '<div id="u-idsupport-rows">'+
+        ((r.idSupportRules||[]).map(function(rule,i){return _uIdSupportRow(i,rule);}).join('')||'')+
       '</div>'+
     '</div>'+
 
@@ -8878,6 +8903,32 @@ function _uRuleInput(label, id, val, hint){
     '<label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">'+label+(hint?'<span style="font-size:10px;margin-left:4px;opacity:.6">'+hint+'</span>':'')+' </label>'+
     '<input type="number" id="'+id+'" value="'+(val||0)+'" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px">'+
   '</div>';
+}
+
+function _uIdSupportRow(i, rule){
+  rule=rule||{};
+  return '<div class="u-idsupport-row" style="background:var(--bg3);border-radius:8px;padding:10px;margin-bottom:8px">'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">'+
+      '<div><label style="font-size:10px;color:var(--text3)">원본 ID (건수 제공자)</label>'+
+        '<input type="text" placeholder="예) kycandksh@df" value="'+(rule.fromId||'')+'" class="u-ids-from" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:11px"></div>'+
+      '<div><label style="font-size:10px;color:var(--text3)">대상 ID (건수 받는 기사)</label>'+
+        '<input type="text" placeholder="예) lifeisegg6@df" value="'+(rule.toId||'')+'" class="u-ids-to" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:11px"></div>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr auto;gap:6px;align-items:end">'+
+      '<div><label style="font-size:10px;color:var(--text3)">시작일</label>'+
+        '<input type="date" value="'+(rule.startDate||'')+'" class="u-ids-start" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:11px"></div>'+
+      '<div><label style="font-size:10px;color:var(--text3)">종료일 (없으면 미입력)</label>'+
+        '<input type="date" value="'+(rule.endDate||'')+'" class="u-ids-end" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:11px"></div>'+
+      '<button onclick="this.closest(\'.u-idsupport-row\').remove()" style="padding:6px 10px;background:#fee2e2;border:none;border-radius:6px;cursor:pointer;font-size:12px;color:#dc2626;height:32px">✕</button>'+
+    '</div>'+
+  '</div>';
+}
+
+function _uAddIdSupport(){
+  var container=document.getElementById('u-idsupport-rows');
+  var div=document.createElement('div');
+  div.innerHTML=_uIdSupportRow(Date.now(),{});
+  container.appendChild(div.firstChild);
 }
 
 function _uToggleBg(el,id){var cb=document.getElementById(id);if(cb){el.style.background=cb.checked?'var(--brand)':'#ccc';}}
@@ -8918,13 +8969,26 @@ function _uSaveRules(){
     taxOn:document.getElementById('u-tax-on').checked,
     empOn:document.getElementById('u-emp-on').checked,
     workOn:document.getElementById('u-work-on').checked,
+    yongDel:parseInt(document.getElementById('u-yong-del').value||900),
+    yongRet:parseInt(document.getElementById('u-yong-ret').value||900),
     routes:routes,
+    idSupportRules:idSupportRules,
     updatedAt:firebase.firestore.FieldValue.serverTimestamp()
   };
 
+  // 아이디지원 규칙 수집
+  var idSupportRules=[];
+  document.querySelectorAll('.u-idsupport-row').forEach(function(row){
+    var fromId=(row.querySelector('.u-ids-from')||{}).value||'';
+    var toId=(row.querySelector('.u-ids-to')||{}).value||'';
+    var startDate=(row.querySelector('.u-ids-start')||{}).value||'';
+    var endDate=(row.querySelector('.u-ids-end')||{}).value||'';
+    if(fromId&&toId&&startDate) idSupportRules.push({fromId:fromId.trim(),toId:toId.trim(),startDate:startDate,endDate:endDate});
+  });
+
   _db.collection('universal_rules').doc(did).set(rules)
     .then(function(){
-      toast('✅ 규칙 저장 완료 ('+routes.length+'개 라우트)');
+      toast('✅ 규칙 저장 완료 (라우트 '+routes.length+'개 / 아이디지원 '+idSupportRules.length+'개)');
       // RPRICE에도 반영
       rules.routes.forEach(function(rr){ if(typeof RPRICE!=='undefined') RPRICE[rr.route]=rr.price; });
     })
