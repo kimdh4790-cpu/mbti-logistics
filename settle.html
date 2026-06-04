@@ -8880,6 +8880,7 @@ function _renderUniversalRules(c, r){
           '<label style="display:inline-flex;align-items:center;gap:4px;padding:6px 12px;background:#7c3aed;color:#fff;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">'+
             '📥 파일 일괄 등록<input type="file" multiple accept=".xlsx,.xls,.txt" style="display:none" onchange="_uImportPriceFiles(this)">'+
           '</label>'+
+          '<button onclick="_uShowPriceConfirm()" style="padding:6px 12px;background:#7c3aed;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">📋 확인</button>'+
           '<button onclick="_uSaveRules()" style="padding:6px 12px;background:#10b981;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">💾 저장</button>'+
         '</div>'+
       '</div>'+
@@ -8936,6 +8937,7 @@ function _renderUniversalRules(c, r){
 
   // _uPriceData 초기화 (저장된 단가표 로드)
   window._uPriceData = {};
+  window._uLeaderMap = r.leaderMap||{};
   (r.priceTables||[]).forEach(function(pt){
     (pt.routes||[]).forEach(function(rr){
       if(rr.route&&rr.price) _uPriceData[rr.route]={price:rr.price,priceVat:rr.priceVat||0,type:pt.type||'basic'};
@@ -9040,7 +9042,9 @@ window._uImportPriceFiles = function(input){
   function processFile(idx){
     if(idx>=files.length){
       _uRenderPricePanels();
-      toast('✅ '+total+'개 라우트 등록됨');
+      var lkeys2=Object.keys(window._uLeaderMap||{});
+      var lCnt=lkeys2.reduce(function(s,k){return s+Object.keys(window._uLeaderMap[k]).length;},0);
+      toast('✅ 기본:'+Object.keys(_uPriceData||{}).length+'개'+(lCnt?' / 팀장:'+lkeys2.length+'명 '+lCnt+'건':''));
       return;
     }
     var file=files[idx];
@@ -9051,29 +9055,39 @@ window._uImportPriceFiles = function(input){
     if(ext==='txt'){
       reader.onload=function(e){
         var currentRoute='';
+        var currentEmpId=null; // 팀장별 ID 추적
+        if(!window._uLeaderMap) window._uLeaderMap={};
+
         e.target.result.split('\n').forEach(function(line){
           line=line.trim(); if(!line) return;
-          // 라우트 번호만 (608, 612 등) — 뒤에 공백 있어도 인식
+          // 이름(ID) 행 — 한글+괄호 패턴 "하현호(vmffkdl321)"
+          var mName=line.match(/[가-힣].+\(([^)]+)\)/);
+          if(mName){
+            currentEmpId=mName[1].trim();
+            if(!window._uLeaderMap[currentEmpId]) window._uLeaderMap[currentEmpId]={};
+            return;
+          }
+          // 라우트 번호 (608, 612 등)
           if(/^\d{3}\s*$/.test(line)){currentRoute=line.trim();return;}
-          // 이름 행 스킵 (한글 포함)
-          if(/[가-힣]/.test(line)) return;
-          // "B60 C60 D60" 형식 — 한 줄에 여러 라우트 (팀장 수수료)
+          // 한 줄에 여러개 "B60 C60 D60" or "A 930"
           var multi=line.match(/([A-D])\s*(\d+)/gi);
-          if(multi&&multi.length>1){
+          if(multi&&multi.length>=1){
             multi.forEach(function(m){
               var mm=m.match(/([A-D])\s*(\d+)/i);
-              if(mm&&currentRoute){
-                var r=normRoute(currentRoute+mm[1]);
-                _uPriceData[r]={price:parseInt(mm[2]),priceVat:0,type:type};total++;
+              if(!mm||!currentRoute) return;
+              var r=normRoute(currentRoute+mm[1]);
+              var p=parseInt(mm[2]);
+              if(currentEmpId&&type==='leader'){
+                // 팀장별 저장
+                window._uLeaderMap[currentEmpId][r]=p;
+                total++;
+              } else {
+                // 일반 단가
+                _uPriceData[r]={price:p,priceVat:0,type:type};total++;
               }
             });
             return;
           }
-          // "A 930" 또는 "A60" 형식 (단일)
-          var m1=line.match(/^([A-D])\s+(\d+)/i);
-          if(m1&&currentRoute){var r=normRoute(currentRoute+m1[1]);_uPriceData[r]={price:parseInt(m1[2]),priceVat:0,type:type};total++;return;}
-          var m2=line.match(/^([A-D])(\d+)/i);
-          if(m2&&currentRoute){var r2=normRoute(currentRoute+m2[1]);_uPriceData[r2]={price:parseInt(m2[2]),priceVat:0,type:type};total++;return;}
           // "812A 930" 형식
           var m3=line.match(/([0-9]{3}[A-Za-z]?)\s*[,\s]\s*(\d+)/);
           if(m3&&parseInt(m3[2])>50){_uPriceData[normRoute(m3[1])]={price:parseInt(m3[2]),priceVat:0,type:type};total++;}
@@ -9109,6 +9123,66 @@ window._uImportPriceFiles = function(input){
   }
   processFile(0);
 };
+
+// ★ 등록 확인 화면
+function _uCloseConfirm(btn){var el=btn;while(el&&el.style&&!el.style.position.includes('fixed'))el=el.parentElement;if(el)el.remove();}
+function _uShowPriceConfirm(){
+  var basic=[], leaderMap=window._uLeaderMap||{};
+  Object.keys(_uPriceData||{}).sort().forEach(function(r){
+    var d=_uPriceData[r];
+    if(d.type==='basic'||d.type==='backup') basic.push({r:r,p:d.price,v:d.priceVat||0,t:d.type});
+  });
+
+  var html='<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:9999;overflow-y:auto;padding:20px" onclick="if(event.target===this)this.remove()">';
+  html+='<div style="max-width:600px;margin:0 auto;background:var(--bg);border-radius:16px;padding:20px">';
+  html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">';
+  html+='<div style="font-size:15px;font-weight:800">📋 등록 단가표 확인</div>';
+  html+='<button onclick="_uCloseConfirm(this)" style="padding:6px 12px;background:#dc2626;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px">✕</button>';
+  html+='</div>';
+
+  if(basic.length){
+    var byType={basic:[],backup:[]};
+    basic.forEach(function(b){(byType[b.t]||byType.basic).push(b);});
+    ['basic','backup'].forEach(function(t){
+      var arr=byType[t]; if(!arr||!arr.length) return;
+      var label=t==='basic'?'📦 기본 단가':'🔄 백업 단가';
+      var col=t==='basic'?'#0066ff':'#f97316';
+      html+='<div style="font-size:12px;font-weight:800;color:'+col+';margin-bottom:6px">'+label+' ('+arr.length+'개)</div>';
+      html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(75px,1fr));gap:4px;margin-bottom:14px">';
+      arr.forEach(function(b){
+        html+='<div style="background:rgba(0,0,0,.04);border:1px solid '+col+'33;border-radius:7px;padding:6px;text-align:center">';
+        html+='<div style="font-size:10px;font-weight:700;color:'+col+'">'+b.r+'</div>';
+        html+='<div style="font-size:12px;font-weight:800">'+b.p.toLocaleString()+'</div>';
+        if(b.v) html+='<div style="font-size:9px;color:#059669">VAT:'+b.v.toLocaleString()+'</div>';
+        html+='</div>';
+      });
+      html+='</div>';
+    });
+  }
+
+  var lkeys=Object.keys(leaderMap);
+  if(lkeys.length){
+    html+='<div style="font-size:12px;font-weight:800;color:#7c3aed;margin-bottom:8px">👑 팀장 수수료 ('+lkeys.length+'명)</div>';
+    lkeys.forEach(function(empId){
+      var routes=leaderMap[empId];
+      var rkeys=Object.keys(routes).sort();
+      html+='<div style="background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.2);border-radius:8px;padding:10px;margin-bottom:8px">';
+      html+='<div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:6px">'+esc(empId)+' · '+rkeys.length+'개 라우트</div>';
+      html+='<div style="display:flex;flex-wrap:wrap;gap:4px">';
+      rkeys.forEach(function(r){
+        html+='<span style="background:var(--bg3);border-radius:5px;padding:3px 7px;font-size:10px"><b style="color:#7c3aed">'+r+'</b>:'+routes[r]+'</span>';
+      });
+      html+='</div></div>';
+    });
+  }
+
+  if(!basic.length&&!lkeys.length){
+    html+='<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px">등록된 단가 없음</div>';
+  }
+  html+='</div></div>';
+  var el=document.createElement('div'); el.innerHTML=html;
+  document.body.appendChild(el.firstChild);
+}
 
 function _uSelectPriceTable(ti){
   window._uCurrentPT=ti;
@@ -9320,6 +9394,7 @@ function _uSaveRules(){
     empOn:!!(document.getElementById('u-emp-on')||{}).checked,
     workOn:!!(document.getElementById('u-work-on')||{}).checked,
     priceTables:priceTables,
+    leaderMap:window._uLeaderMap||{},
     idSupportRules:idSupportRules,
     updatedAt:firebase.firestore.FieldValue.serverTimestamp()
   };
@@ -9431,9 +9506,14 @@ window._uMultiPriceUpload = function(input){
       results.forEach(function(res){
         _uApplyParsedRoutes(res.typeInfo, res.routes, res.filename);
       });
-      if(status){
-        var totalRoutes=results.reduce(function(s,r){return s+r.routes.length;},0);
-        status.innerHTML='✅ <strong>'+files.length+'개 파일</strong> 처리완료 — 라우트 총 <strong>'+totalRoutes+'개</strong> 등록';
+      _uRenderPricePanels();
+      var lkeys=Object.keys(window._uLeaderMap||{});
+      var basicCnt=Object.keys(_uPriceData||{}).length;
+      var leaderCnt=lkeys.reduce(function(s,k){return s+Object.keys(window._uLeaderMap[k]).length;},0);
+      var statusEl=document.getElementById('u-multi-upload-status');
+      if(statusEl){
+        statusEl.innerHTML='✅ 기본단가 <b>'+basicCnt+'개</b>'+(leaderCnt?' / 팀장수수료 <b>'+lkeys.length+'명·'+leaderCnt+'건</b>':'')+
+          ' &nbsp;<button onclick="_uShowPriceConfirm()" style="padding:3px 10px;background:#7c3aed;color:#fff;border:none;border-radius:5px;font-size:11px;cursor:pointer;font-weight:700">📋 확인</button>';
       }
       return;
     }
