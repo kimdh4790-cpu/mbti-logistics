@@ -9031,6 +9031,21 @@ function _renderUniversalEmp(c, emps, did){
       '<div style="font-size:12px;opacity:.7">엑셀 업로드 시 이름/ID로 자동 매칭</div>'+
     '</div>'+
 
+    // ★ 양식 자동생성 섹션
+    '<div style="background:linear-gradient(135deg,rgba(0,102,255,.08),rgba(124,58,237,.08));border-radius:12px;border:1px solid rgba(0,102,255,.2);padding:16px;margin-bottom:12px">'+
+      '<div style="font-size:13px;font-weight:800;margin-bottom:6px;color:var(--brand)">🚀 빠른 등록 (추천)</div>'+
+      '<div style="font-size:11px;color:var(--text3);margin-bottom:12px">정산 엑셀 업로드 → ID 자동추출 → 양식 다운로드 → 이름/캠프 입력 → 재업로드</div>'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+        '<label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:var(--brand);color:#fff;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">'+
+          '📤 정산엑셀에서 ID추출<input type="file" accept=".xlsx,.xls" style="display:none" onchange="_uExtractIds(this)">'+
+        '</label>'+
+        '<label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#10b981;color:#fff;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">'+
+          '📥 완성 양식 업로드<input type="file" accept=".xlsx,.xls,.txt" style="display:none" onchange="_uBulkFromTemplate(this,\''+did+'\')">'+
+        '</label>'+
+      '</div>'+
+      '<div id="u-extract-status" style="margin-top:8px;font-size:11px;color:var(--text3)"></div>'+
+    '</div>'+
+
     // 직접 추가
     '<div style="background:var(--bg2);border-radius:12px;border:1px solid var(--border);padding:16px;margin-bottom:12px">'+
       '<div style="font-size:13px;font-weight:800;margin-bottom:12px">➕ 직원 추가</div>'+
@@ -9070,6 +9085,136 @@ function _renderUniversalEmp(c, emps, did){
     '</div>'+
     '</div>';
 }
+
+
+// ★ 정산 엑셀에서 ID 자동 추출 → 양식 다운로드
+window._uExtractIds = function(input){
+  var file=input.files[0]; if(!file)return;
+  input.value='';
+  var status=document.getElementById('u-extract-status');
+  if(status)status.textContent='⏳ 분석 중...';
+  if(typeof XLSX==='undefined'){if(status)status.textContent='❌ 라이브러리 로딩 중...';return;}
+
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var allIds={};
+
+      // 모든 시트에서 ID 패턴 탐색 (@df 포함 또는 ID 컬럼)
+      wb.SheetNames.forEach(function(shName){
+        var ws=wb.Sheets[shName];
+        var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+        if(!rows.length)return;
+
+        // 헤더에서 ID 컬럼 찾기
+        var hdr=rows[0].map(function(h){return String(h).trim().toLowerCase();});
+        var idCol=-1;
+        for(var hi=0;hi<hdr.length;hi++){
+          if(hdr[hi].includes('id')||hdr[hi].includes('아이디')||hdr[hi].includes('사번')){idCol=hi;break;}
+        }
+
+        rows.slice(1).forEach(function(row){
+          // ID 컬럼 우선
+          if(idCol>=0){
+            var v=String(row[idCol]||'').trim();
+            if(v&&v.length>2&&!v.includes('합계'))allIds[v]=allIds[v]||{name:'',camp:''};
+          }
+          // @df 패턴 전체 스캔
+          row.forEach(function(cell){
+            var s=String(cell||'').trim();
+            if(s.includes('@df')&&s.length>4)allIds[s]=allIds[s]||{name:'',camp:''};
+          });
+        });
+      });
+
+      var ids=Object.keys(allIds);
+      if(!ids.length){if(status)status.textContent='❌ ID를 찾지 못했습니다. ID 컬럼이 있는지 확인하세요.';return;}
+
+      if(status)status.textContent='✅ '+ids.length+'개 ID 추출 완료 — 양식 다운로드 중...';
+
+      // 양식 엑셀 생성
+      var outWb=XLSX.utils.book_new();
+      var outData=[['ID (수정금지)','이름 *','캠프/지점 *','계약유형 (비사업자/사업자)','비고']];
+      ids.forEach(function(id){ outData.push([id,'','','비사업자','']); });
+      var ws2=XLSX.utils.aoa_to_sheet(outData);
+      ws2['!cols']=[{wch:25},{wch:12},{wch:15},{wch:18},{wch:20}];
+      XLSX.utils.book_append_sheet(outWb,ws2,'직원등록양식');
+
+      // 다운로드
+      XLSX.writeFile(outWb,'직원등록양식_'+ids.length+'명.xlsx');
+      if(status)status.innerHTML='✅ <strong>'+ids.length+'명</strong> 양식 다운로드됨 — 이름/캠프 입력 후 "완성 양식 업로드" 클릭';
+
+    }catch(err){if(status)status.textContent='❌ '+err.message;}
+  };
+  reader.readAsArrayBuffer(file);
+};
+
+// ★ 완성된 양식 업로드 → 일괄 등록
+window._uBulkFromTemplate = function(input, did){
+  var file=input.files[0]; if(!file)return;
+  input.value='';
+  var status=document.getElementById('u-extract-status');
+  if(status)status.textContent='⏳ 업로드 중...';
+  if(typeof XLSX==='undefined'){if(status)status.textContent='❌ 라이브러리 로딩 중...';return;}
+
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+
+      // 헤더 찾기
+      var hdr=rows[0].map(function(h){return String(h).trim();});
+      var idCol=0, nameCol=1, campCol=2, typeCol=3;
+      hdr.forEach(function(h,i){
+        var hl=h.toLowerCase();
+        if(hl.includes('id')||hl.includes('아이디'))idCol=i;
+        else if(hl.includes('이름')||hl.includes('성명'))nameCol=i;
+        else if(hl.includes('캠프')||hl.includes('지점'))campCol=i;
+        else if(hl.includes('계약')||hl.includes('유형'))typeCol=i;
+      });
+
+      var valid=[];
+      rows.slice(1).forEach(function(row){
+        var empId=String(row[idCol]||'').trim();
+        var name=String(row[nameCol]||'').trim();
+        var camp=String(row[campCol]||'').trim();
+        var ctype=String(row[typeCol]||'비사업자').trim();
+        if(!name||!empId)return;
+        if(name==='이름 *'||empId==='ID (수정금지)')return;
+        valid.push({dealerId:did,empId:empId,name:name,camp:camp,contractType:ctype,createdAt:new Date()});
+      });
+
+      if(!valid.length){if(status)status.textContent='❌ 유효한 데이터 없음';return;}
+
+      // 배치 저장 (500개씩)
+      var chunks=[];
+      for(var i=0;i<valid.length;i+=500)chunks.push(valid.slice(i,i+500));
+
+      var saved=0;
+      function saveChunk(idx){
+        if(idx>=chunks.length){
+          if(status)status.textContent='✅ '+saved+'명 등록 완료!';
+          setTimeout(function(){pageUniversalEmp();},800);
+          return;
+        }
+        var batch=_db.batch();
+        chunks[idx].forEach(function(emp){
+          batch.set(_db.collection('universal_employees').doc(),emp);
+          saved++;
+        });
+        batch.commit().then(function(){saveChunk(idx+1);})
+          .catch(function(e){if(status)status.textContent='❌ '+e.message;});
+      }
+      saveChunk(0);
+      if(status)status.textContent='⏳ '+valid.length+'명 저장 중...';
+
+    }catch(err){if(status)status.textContent='❌ '+err.message;}
+  };
+  reader.readAsArrayBuffer(file);
+};
 
 function _uAddEmp(did){
   var name=(document.getElementById('ue-name').value||'').trim();
