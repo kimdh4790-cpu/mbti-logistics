@@ -9217,8 +9217,9 @@ function _uShowPriceConfirm(){
     lkeys.forEach(function(empId){
       var routes=leaderMap[empId];
       var rkeys=Object.keys(routes).sort();
+      var displayName=(window._uLeaderNames&&window._uLeaderNames[empId])||empId;
       html+='<div style="background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.2);border-radius:8px;padding:10px;margin-bottom:8px">';
-      html+='<div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:6px">'+esc(empId)+' · '+rkeys.length+'개 라우트</div>';
+      html+='<div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:6px">'+esc(displayName)+'(팀장) · '+rkeys.length+'개 라우트</div>';
       html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:4px">';
       rkeys.forEach(function(r){
         html+='<div style="background:var(--bg3);border-radius:5px;padding:5px;text-align:center">'+
