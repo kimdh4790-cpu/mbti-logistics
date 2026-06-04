@@ -27241,6 +27241,8 @@ function _startDispatchListener(uid){
   var SA=['kimdh4790@gmail.com','soungkyekim@naver.com'];
   function _isSA(){
     try{
+      // _CU 전역변수 우선 (로그인 완료 후 세팅됨)
+      if(window._CU&&window._CU.email) return SA.indexOf(window._CU.email)>=0;
       var u=firebase&&firebase.auth&&firebase.auth().currentUser;
       return u&&SA.indexOf(u.email)>=0;
     }catch(e){return false;}
