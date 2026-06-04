@@ -10490,11 +10490,13 @@ window._universalParseMulti = function(input){
 
           results.forEach(function(r){
             var key = getKey(r.name, r.empId);
-            var emp = empMap[key] || empMap[r.name];
+            var emp = empMap[key] || empMap[r.name] || empMap[(r.empId||'').replace('@df','').toLowerCase()];
             if(emp){
               if(!r.camp) r.camp = emp.camp||'';
               r.contractType = emp.contractType||'비사업자';
               if(!r.empId && emp.empId) r.empId = emp.empId;
+              // ★ ID만 있으면 이름으로 교체
+              if((!r.name || r.name.indexOf('@df')>=0) && emp.name) r.name = emp.name;
             }
             // 인센 적용
             var rules = window._uCurrentRules||{};
@@ -10525,12 +10527,77 @@ window._universalParseMulti = function(input){
     reader.onload = function(e){
       try{
         var wb = XLSX.read(e.target.result,{type:'array'});
+
+        // ★ 쿠팡 Raw 시트 감지 (ID+Route+건수+단가 구조)
+        var rawSheet = wb.SheetNames.find(function(s){return s.indexOf('Raw')>=0||s.indexOf('raw')>=0;});
+        if(rawSheet){
+          var ws=wb.Sheets[rawSheet];
+          var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+          // 헤더행 찾기
+          var hdr=[]; var hdrRow=0;
+          for(var h=0;h<Math.min(5,rows.length);h++){
+            var r0=rows[h].map(function(c){return String(c).replace(/\n/g,'').trim();});
+            // ID컬럼 + Route컬럼 + 건수컬럼 있으면 쿠팡Raw
+            var hasId=r0.some(function(c){return c.toLowerCase()==='id';});
+            var hasRoute=r0.some(function(c){return c==='Route'||c==='route';});
+            if(hasId&&hasRoute){hdr=r0;hdrRow=h;break;}
+          }
+          if(hdr.length){
+            var idCol=hdr.indexOf('ID');
+            var routeCol=hdr.findIndex(function(h){return h==='Route'||h==='route';});
+            var campCol=hdr.findIndex(function(h){return h.includes('캠프');});
+            var cntCol=hdr.findIndex(function(h){return h.includes('배송건수')||h.includes('건수');});
+            var retCol=hdr.findIndex(function(h){return h.includes('반품');});
+            var priceCol=hdr.findIndex(function(h){return h.includes('단가');});
+            var incCol=hdr.findIndex(function(h){return h.includes('인센')||h.includes('추가');});
+            var freshCol=hdr.findIndex(function(h){return h.includes('프레시백')||h.includes('fresh');});
+            var totalCol=hdr.findIndex(function(h){return h.includes('총금액')||h.includes('기본금액');});
+
+            // ID별 집계
+            var idMap={};
+            for(var ri=hdrRow+1;ri<rows.length;ri++){
+              var row=rows[ri];
+              var empId=String(row[idCol]||'').trim();
+              if(!empId||empId.indexOf('@df')<0) continue;
+              var camp=campCol>=0?String(row[campCol]||'').trim():'';
+              var cnt=cntCol>=0?parseInt(row[cntCol])||0:0;
+              var ret=retCol>=0?parseInt(row[retCol])||0:0;
+              var price=priceCol>=0?parseFloat(row[priceCol])||0:0;
+              var inc=incCol>=0?parseFloat(row[incCol])||0:0;
+              var fresh=freshCol>=0?parseFloat(row[freshCol])||0:0;
+              var total=totalCol>=0?parseFloat(row[totalCol])||0:cnt*price;
+              var route=routeCol>=0?String(row[routeCol]||'').trim():'';
+
+              if(!idMap[empId]){idMap[empId]={empId:empId,camp:camp,cnt:0,ret:0,gross:0,inc:0,fresh:0,routes:{}};}
+              var p=idMap[empId];
+              if(!p.camp&&camp) p.camp=camp;
+              p.cnt+=cnt; p.ret+=ret; p.gross+=total; p.inc+=inc; p.fresh+=fresh;
+              if(route){
+                if(!p.routes[route]) p.routes[route]={cnt:0,ret:0,price:price,amt:0};
+                p.routes[route].cnt+=cnt; p.routes[route].ret+=ret; p.routes[route].amt+=total;
+              }
+            }
+
+            // 직원 이름 매칭 후 mergePerson
+            Object.keys(idMap).forEach(function(empId){
+              var p=idMap[empId];
+              var routeDetails=Object.keys(p.routes).map(function(r){
+                var rd=p.routes[r];
+                return {label:r,cnt:rd.cnt,price:rd.price,num:rd.amt,source:source};
+              });
+              mergePerson(empId, empId, p.camp, p.gross, p.cnt, 0, p.inc+p.fresh, 0, source, routeDetails);
+            });
+            processFile(idx+1);
+            return;
+          }
+        }
+
+        // 일반 엑셀 처리
         wb.SheetNames.forEach(function(shName){
           var ws = wb.Sheets[shName];
           var rows = XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
           if(rows.length < 2) return;
 
-          // 헤더 탐색
           var hdrRow=0, hdr=[];
           for(var h=0;h<Math.min(10,rows.length);h++){
             var row=rows[h].map(function(c){return String(c).trim();});
@@ -10564,8 +10631,6 @@ window._universalParseMulti = function(input){
             var directAmt=ai>=0?parseFloat(String(row[ai]||'0').replace(/[^0-9.]/g,''))||0:0;
             var camp=cai>=0?String(row[cai]||'').trim():'';
             var gross=directAmt>0?directAmt:(cnt*price+bonus-deduct);
-
-            // 상세
             var details=[];
             hdr.forEach(function(h2,ci2){
               if(ci2===ni||ci2===ai) return;
@@ -10574,7 +10639,6 @@ window._universalParseMulti = function(input){
               var num=parseFloat(val.replace(/[,₩원]/g,''));
               if(!isNaN(num)&&num>100) details.push({label:h2,value:val,num:num,source:source});
             });
-
             mergePerson(name, empId, camp, gross, cnt, price, bonus, deduct, source, details);
           }
         });
