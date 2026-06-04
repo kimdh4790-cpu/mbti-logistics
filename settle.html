@@ -3332,11 +3332,23 @@ function doRegister(){
         type:'join'
       })
     }).catch(function(){});
-    // ★ Firestore 이벤트 로그 (가입)
+    // ★ Firestore 이벤트 로그 + 슈퍼어드민 알림
     if(_db){
-      _db.collection('admin_events').add({
+      var _joinData={
         type:'join', companyName:company, bizNumber:biz,
         email:email, plan:plan, companyCode:companyCode,
+        uid:uid,
+        createdAt:firebase.firestore.FieldValue.serverTimestamp()
+      };
+      _db.collection('admin_events').add(_joinData).catch(function(){});
+      // ★ 슈퍼어드민 알림 컬렉션 (앱에서 실시간 수신)
+      _db.collection('admin_notifications').add({
+        type:'new_company',
+        title:'🎉 신규 회사 등록',
+        body:company+' | '+biz+' | 코드: '+companyCode,
+        companyName:company, bizNumber:biz, email:email,
+        uid:uid, plan:plan,
+        read:false,
         createdAt:firebase.firestore.FieldValue.serverTimestamp()
       }).catch(function(){});
     }
@@ -9308,7 +9320,7 @@ function _loadVehicles(did){
         +'</div>'
         +'<div style="display:flex;gap:6px">'
         +'<button data-id="'+vid+'" onclick="_vehicleEdit(this.dataset.id)" class="btn" style="flex:1;font-size:11px">✏️ 수정</button>'
-        +'<button data-id="'+vid+'" onclick="_vehicleMaintLog(this.dataset.id,\''+esc(d.plateNo||'')+'\')\" class="btn" style="flex:1;font-size:11px">🔧 정비이력</button>'
+        +'<button data-id="'+vid+'" data-plate="'+esc(d.plateNo||'')+'" onclick="_vehicleMaintLog(this.dataset.id,this.dataset.plate)" class="btn" style="flex:1;font-size:11px">🔧 정비이력</button>'
         +'<button data-id="'+vid+'" onclick="_vehicleDelete(this.dataset.id)" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:16px;padding:4px">🗑</button>'
         +'</div></div>';
     });
@@ -14830,13 +14842,32 @@ function _startSuperAdminListener(){
       snap.docChanges().forEach(function(change){
         if(change.type !== 'added') return;
         var d = change.doc.data();
-        // 이미 본 것 제외 (리스너 시작 전 기존 데이터)
         var ts = d.createdAt&&d.createdAt.toMillis ? d.createdAt.toMillis() : 0;
-        // ★ ts=0(서버타임스탬프 pending) 또는 최근 이벤트 허용
         if(ts !== 0 && ts < lastSeen - 5000) return;
         _onSuperAdminEvent(d);
       });
     }, function(e){ console.warn('[SA Listener]', e); });
+
+  // ★ admin_notifications 컬렉션도 실시간 감지 (신규 회사 등록 등)
+  _db.collection('admin_notifications')
+    .where('read','==',false)
+    .orderBy('createdAt','desc').limit(20)
+    .onSnapshot(function(snap){
+      snap.docChanges().forEach(function(change){
+        if(change.type !== 'added') return;
+        var d = change.doc.data();
+        var ts = d.createdAt&&d.createdAt.toMillis ? d.createdAt.toMillis() : 0;
+        if(ts !== 0 && ts < lastSeen - 5000) return;
+        // new_company → join 타입으로 변환해서 기존 알림 함수 재사용
+        if(d.type === 'new_company'){
+          _onSuperAdminEvent(Object.assign({},d,{type:'join'}));
+          // 읽음 처리
+          _db.collection('admin_notifications').doc(change.doc.id).update({read:true}).catch(function(){});
+        } else {
+          _onSuperAdminEvent(d);
+        }
+      });
+    }, function(e){ console.warn('[SA Notif Listener]', e); });
 }
 
 function _onSuperAdminEvent(d){
