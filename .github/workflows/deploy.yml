@@ -30,9 +30,9 @@ jobs:
           NS_ID="7f0e90efaea64f3ab08ff00f8970b28b"
           echo $NS_ID > kv_ns_id.txt
           echo "settle.html 크기: $(wc -c < settle.html) bytes"
-          wrangler kv key put --namespace-id="7f0e90efaea64f3ab08ff00f8970b28b" "settle.html" --path=settle.html --account-id=02709cbec18d848913b4246015b9148f
+          wrangler kv:key put --namespace-id="7f0e90efaea64f3ab08ff00f8970b28b" "settle.html" --path=settle.html --account-id=02709cbec18d848913b4246015b9148f || wrangler kv key put --namespace-id="7f0e90efaea64f3ab08ff00f8970b28b" "settle.html" --path=settle.html --account-id=02709cbec18d848913b4246015b9148f
           echo "KV 업로드 완료"
-          wrangler kv key list --namespace-id="7f0e90efaea64f3ab08ff00f8970b28b" --account-id=02709cbec18d848913b4246015b9148f
+          wrangler kv:key list --namespace-id="7f0e90efaea64f3ab08ff00f8970b28b" --account-id=02709cbec18d848913b4246015b9148f || true
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_KV_TOKEN }}
 
