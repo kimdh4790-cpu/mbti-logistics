@@ -19,6 +19,12 @@ jobs:
       - name: Install Wrangler
         run: npm install -g wrangler
 
+      - name: Update sw.js cache key
+        run: |
+          TS=$(date +"%Y%m%d%H%M")
+          sed -i "s/const CACHE = 'mbti-v9-[0-9]*/const CACHE = 'mbti-v9-$TS/" sw.js
+          echo "Cache key updated: mbti-v9-$TS"
+
       - name: Deploy to Cloudflare Workers
         run: wrangler deploy
         env:
