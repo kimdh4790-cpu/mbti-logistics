@@ -23647,8 +23647,9 @@ function _buildNavRender(nav,cur,companyDoc){
 
   // ── 미결제 플랜별 구매 유도 (순서: settle → delivery → qr → payroll → premium)
   var hasLocked=Object.keys(lockByPlan).some(function(k){return lockByPlan[k].length>0;});
-  if(hasLocked){
-    html+='<div style="margin:10px 8px 0;border-top:2px dashed var(--border);padding-top:10px">'
+  var hasLocked=Object.keys(lockByPlan).some(function(k){return lockByPlan[k].length>0;});
+  var _isTrialPlan=window._trialActive||(window._cachedCompanyDoc&&(['trial','any_paid'].indexOf((window._cachedCompanyDoc.plan)||'')>=0));
+  if(hasLocked && !_isTrialPlan){
       +'<div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:1px;padding:0 4px 8px">💳 추가 구독 가능한 기능</div>';
     ['settle','delivery','qr','payroll','premium'].forEach(function(pk){
       var items=lockByPlan[pk];
@@ -23672,8 +23673,8 @@ function _buildNavRender(nav,cur,companyDoc){
     html+='</div>';
   }
 
-  // ── 잠긴 섹션 렌더링 (입구부터 🔒)
-  lockedSections.forEach(function(g){
+  // ── 잠긴 섹션 렌더링 (trial이면 숨김)
+  if(!_isTrialPlan) lockedSections.forEach(function(g){
     var u=_PLAN_UPSELL[g.plan_key||'']||{};
     var lockColor=u.color||'#999';
     html+='<div class="ns" onclick="_showPlanUpsell(\''+g.plan_key+'\')" style="opacity:.6;cursor:pointer">'
@@ -23681,6 +23682,13 @@ function _buildNavRender(nav,cur,companyDoc){
       +'<span style="font-size:11px;color:'+lockColor+';font-weight:700;margin-right:4px">🔒</span>'
       +'</div>';
   });
+
+  // trial이면 하단에 심플 구독 유도 버튼만
+  if(_isTrialPlan && hasLocked){
+    html+='<div style="margin:10px 8px 0;border-top:1px solid var(--border);padding-top:10px">'
+      +'<button onclick="_showSubModal()" style="width:100%;padding:8px;background:var(--brand);color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">💳 플랜 업그레이드</button>'
+      +'</div>';
+  }
 
   nav.innerHTML=html;
   if(!anyOpen&&openSections.length){
