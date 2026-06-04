@@ -9010,23 +9010,25 @@ function _universalRenderResults(results){
     html+='<div style="padding:8px 14px;background:var(--bg);border-bottom:1px solid var(--border);font-size:11px;font-weight:700;color:var(--text3)">'+
       '📁 '+esc(shName)+' — '+rows.length.toLocaleString()+'건 / ₩'+shTotal.toLocaleString()+(isLarge?' (상위 100건 표시)':'')+
       '</div>'+
-      '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
+      '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:500px">'+
       '<tr style="background:var(--bg2)">'+
-        '<th style="padding:7px 12px;text-align:left;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3)">이름</th>'+
-        '<th style="padding:7px 12px;text-align:right;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3)">건수</th>'+
-        '<th style="padding:7px 12px;text-align:right;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3)">단가</th>'+
-        '<th style="padding:7px 12px;text-align:right;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3)">추가</th>'+
-        '<th style="padding:7px 12px;text-align:right;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3)">공제</th>'+
-        '<th style="padding:7px 12px;text-align:right;border-bottom:1px solid var(--border);font-size:11px;color:var(--brand);font-weight:800">실지급</th>'+
+        '<th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3);white-space:nowrap">이름</th>'+
+        '<th style="padding:8px 10px;text-align:right;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3);white-space:nowrap">배달건수</th>'+
+        '<th style="padding:8px 10px;text-align:right;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3);white-space:nowrap">픽업건수</th>'+
+        '<th style="padding:8px 10px;text-align:right;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3);white-space:nowrap">단가</th>'+
+        '<th style="padding:8px 10px;text-align:right;border-bottom:1px solid var(--border);font-size:11px;color:#059669;white-space:nowrap">추가수당</th>'+
+        '<th style="padding:8px 10px;text-align:right;border-bottom:1px solid var(--border);font-size:11px;color:#dc2626;white-space:nowrap">공제</th>'+
+        '<th style="padding:8px 10px;text-align:right;border-bottom:1px solid var(--border);font-size:11px;color:var(--brand);font-weight:800;white-space:nowrap">실지급</th>'+
       '</tr>';
     displayRows.forEach(function(r){
       html+='<tr style="border-bottom:1px solid var(--border)">'+
-        '<td style="padding:7px 12px;font-weight:700">'+esc(r.name)+'</td>'+
-        '<td style="padding:7px 12px;text-align:right">'+(r.cnt||0)+'건</td>'+
-        '<td style="padding:7px 12px;text-align:right">₩'+(r.price||0).toLocaleString()+'</td>'+
-        '<td style="padding:7px 12px;text-align:right;color:#059669">+'+(r.bonus?'₩'+r.bonus.toLocaleString():'0')+'</td>'+
-        '<td style="padding:7px 12px;text-align:right;color:#dc2626">-'+(r.deduct?'₩'+r.deduct.toLocaleString():'0')+'</td>'+
-        '<td style="padding:7px 12px;text-align:right;font-weight:800;color:var(--brand)">₩'+(r.gross||0).toLocaleString()+'</td>'+
+        '<td style="padding:8px 10px;font-weight:700;white-space:nowrap">'+esc(r.name)+'</td>'+
+        '<td style="padding:8px 10px;text-align:right;white-space:nowrap">'+(r.cnt>0?r.cnt+'건':'—')+'</td>'+
+        '<td style="padding:8px 10px;text-align:right;white-space:nowrap">'+(r.rcnt>0?r.rcnt+'건':'—')+'</td>'+
+        '<td style="padding:8px 10px;text-align:right;white-space:nowrap">'+(r.price>0?'₩'+r.price.toLocaleString():'—')+'</td>'+
+        '<td style="padding:8px 10px;text-align:right;color:#059669;white-space:nowrap">'+(r.bonus>0?'+₩'+r.bonus.toLocaleString():'—')+'</td>'+
+        '<td style="padding:8px 10px;text-align:right;color:#dc2626;white-space:nowrap">'+(r.deduct>0?'-₩'+r.deduct.toLocaleString():'—')+'</td>'+
+        '<td style="padding:8px 10px;text-align:right;font-weight:800;color:var(--brand);white-space:nowrap">₩'+(r.gross||0).toLocaleString()+'</td>'+
       '</tr>';
     });
     html+='</table></div>';
