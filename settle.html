@@ -9114,16 +9114,30 @@ window._uExtractIds = function(input){
           if(hdr[hi].includes('id')||hdr[hi].includes('아이디')||hdr[hi].includes('사번')){idCol=hi;break;}
         }
 
+        // 캠프 컬럼 찾기
+        var campCol=-1;
+        for(var ci=0;ci<hdr.length;ci++){
+          if(hdr[ci].includes('캠프')||hdr[ci].includes('camp')){campCol=ci;break;}
+        }
+
         rows.slice(1).forEach(function(row){
+          var campVal=campCol>=0?String(row[campCol]||'').trim():'';
           // ID 컬럼 우선
           if(idCol>=0){
             var v=String(row[idCol]||'').trim();
-            if(v&&v.length>2&&!v.includes('합계'))allIds[v]=allIds[v]||{name:'',camp:''};
+            if(v&&v.length>2&&!v.includes('합계')){
+              if(!allIds[v])allIds[v]={camp:campVal};
+              else if(!allIds[v].camp&&campVal)allIds[v].camp=campVal;
+            }
           }
           // @df 패턴 전체 스캔
-          row.forEach(function(cell){
+          row.forEach(function(cell,ci2){
             var s=String(cell||'').trim();
-            if(s.includes('@df')&&s.length>4)allIds[s]=allIds[s]||{name:'',camp:''};
+            if(s.includes('@df')&&s.length>4){
+              var campV=campCol>=0?String(row[campCol]||'').trim():'';
+              if(!allIds[s])allIds[s]={camp:campV};
+              else if(!allIds[s].camp&&campV)allIds[s].camp=campV;
+            }
           });
         });
       });
@@ -9133,10 +9147,13 @@ window._uExtractIds = function(input){
 
       if(status)status.textContent='✅ '+ids.length+'개 ID 추출 완료 — 양식 다운로드 중...';
 
-      // 양식 엑셀 생성
+      // 양식 엑셀 생성 — ID+캠프 자동입력, 이름만 입력하면 됨
       var outWb=XLSX.utils.book_new();
-      var outData=[['ID (수정금지)','이름 *','캠프/지점 *','계약유형 (비사업자/사업자)','비고']];
-      ids.forEach(function(id){ outData.push([id,'','','비사업자','']); });
+      var outData=[['ID (수정금지)','캠프 (자동입력)','이름만 입력하세요 ★','계약유형 (비사업자/사업자)']];
+      ids.forEach(function(id){
+        var info=allIds[id]||{};
+        outData.push([id, info.camp||'', '', '비사업자']);
+      });
       var ws2=XLSX.utils.aoa_to_sheet(outData);
       ws2['!cols']=[{wch:25},{wch:12},{wch:15},{wch:18},{wch:20}];
       XLSX.utils.book_append_sheet(outWb,ws2,'직원등록양식');
@@ -9167,12 +9184,12 @@ window._uBulkFromTemplate = function(input, did){
 
       // 헤더 찾기
       var hdr=rows[0].map(function(h){return String(h).trim();});
-      var idCol=0, nameCol=1, campCol=2, typeCol=3;
+      var idCol=0, campCol=1, nameCol=2, typeCol=3;
       hdr.forEach(function(h,i){
         var hl=h.toLowerCase();
-        if(hl.includes('id')||hl.includes('아이디'))idCol=i;
-        else if(hl.includes('이름')||hl.includes('성명'))nameCol=i;
-        else if(hl.includes('캠프')||hl.includes('지점'))campCol=i;
+        if(hl.includes('id')||hl.includes('수정금지'))idCol=i;
+        else if(hl.includes('캠프')||hl.includes('지점')||hl.includes('자동입력'))campCol=i;
+        else if(hl.includes('이름')||hl.includes('성명')||hl.includes('입력'))nameCol=i;
         else if(hl.includes('계약')||hl.includes('유형'))typeCol=i;
       });
 
