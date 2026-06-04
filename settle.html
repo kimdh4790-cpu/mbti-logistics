@@ -9034,8 +9034,15 @@ window._uImportPriceFiles = function(input){
 
   function normRoute(s){ return String(s||'').trim().toUpperCase().replace(/_/g,''); }
   function isRoute(s){
-    s=normRoute(s);
-    return /^[0-9]{3}[A-Z]$/.test(s)||/^[A-Z][0-9]{1,2}$/.test(s)||/^[0-9A-Z]{2,6}$/.test(s)&&!/^\d+$/.test(s);
+    var orig=String(s||'');
+    // 한글 포함이면 무조건 false
+    if(/[가-힣]/.test(orig)) return false;
+    s=normRoute(orig);
+    // 숫자3자리+알파벳1자 (608B, 812A 등) — 핵심
+    if(/^[0-9]{3}[A-Z]$/.test(s)) return true;
+    // 알파벳+숫자 (D1, F3)
+    if(/^[A-Z][0-9]{1,2}$/.test(s)) return true;
+    return false;
   }
 
   var total=0;
@@ -9182,7 +9189,7 @@ function _uShowPriceConfirm(){
       html+='<div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:6px">'+esc(empId)+' · '+rkeys.length+'개 라우트</div>';
       html+='<div style="display:flex;flex-wrap:wrap;gap:4px">';
       rkeys.forEach(function(r){
-        html+='<span style="background:var(--bg3);border-radius:5px;padding:3px 7px;font-size:10px"><b style="color:#7c3aed">'+r+'</b>:'+routes[r]+'</span>';
+        html+='<span style="background:var(--bg3);border-radius:5px;padding:3px 7px;font-size:10px;display:inline-block;margin:1px"><b style="color:#7c3aed">'+r+'</b> <span style="font-weight:800">'+routes[r]+'원</span></span>';
       });
       html+='</div></div>';
     });
