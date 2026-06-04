@@ -12589,8 +12589,7 @@ function _saDbUpdate(){
   var res=document.getElementById('sa-db-result');
   if(!col||!doc||!raw){res.textContent='❌ 필드 모두 입력';return;}
   var fields={};
-  raw.split('
-').forEach(function(line){
+  raw.split('\n').forEach(function(line){
     var idx=line.indexOf(':');
     if(idx>0){
       var k=line.slice(0,idx).trim();
