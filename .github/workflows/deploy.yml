@@ -31,7 +31,7 @@ jobs:
           python3 << 'PYEOF'
           import requests, os, json
 
-          TOKEN = "${{ secrets.CF_API_TOKEN }}"
+          TOKEN = "${{ secrets.CF_KV_TOKEN }}"
           ACCOUNT_ID = "02709cbec18d848913b4246015b9148f"
           KV_TITLE = "donway-assets"
           headers = {"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json"}
