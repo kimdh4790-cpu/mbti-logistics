@@ -90,47 +90,56 @@ service cloud.firestore {
 
     // ── 핵심 정산 데이터 (dealerId 격리) ──
     match /settlements/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow read: if isAuth();
+      allow write: if ownsDoc() || ownsNewDoc();
       allow create: if ownsNewDoc();
     }
 
     match /drivers/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow read: if isAuth();
+      allow write: if ownsDoc() || ownsNewDoc();
       allow create: if ownsNewDoc();
     }
 
     match /members/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow read: if isAuth();
+      allow write: if ownsDoc() || ownsNewDoc();
       allow create: if ownsNewDoc();
     }
 
     match /tax_docs/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow read: if isAuth();
+      allow write: if ownsDoc() || ownsNewDoc();
       allow create: if ownsNewDoc();
     }
 
     match /idSupport/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow read: if isAuth();
+      allow write: if ownsDoc() || ownsNewDoc();
       allow create: if ownsNewDoc();
     }
 
     match /cal_memos/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow read: if isAuth();
+      allow write: if ownsDoc() || ownsNewDoc();
       allow create: if ownsNewDoc();
     }
 
     match /attendance/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow read: if isAuth();
+      allow write: if ownsDoc() || ownsNewDoc();
       allow create: if ownsNewDoc();
     }
 
     match /driver_settlements/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow read: if isAuth();
+      allow write: if ownsDoc() || ownsNewDoc();
       allow create: if ownsNewDoc();
     }
 
     match /delivery_sessions/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow read: if isAuth();
+      allow write: if ownsDoc() || ownsNewDoc();
       allow create: if ownsNewDoc();
     }
 
@@ -140,17 +149,20 @@ service cloud.firestore {
     }
 
     match /hourly_settlements/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow read: if isAuth();
+      allow write: if ownsDoc() || ownsNewDoc();
       allow create: if ownsNewDoc();
     }
 
     match /contracts/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow read: if isAuth();
+      allow write: if ownsDoc() || ownsNewDoc();
       allow create: if ownsNewDoc();
     }
 
     match /leaves/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow read: if isAuth();
+      allow write: if ownsDoc() || ownsNewDoc();
       allow create: if ownsNewDoc();
     }
 
@@ -165,17 +177,20 @@ service cloud.firestore {
     }
 
     match /overtimes/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow read: if isAuth();
+      allow write: if ownsDoc() || ownsNewDoc();
       allow create: if ownsNewDoc();
     }
 
     match /evaluations/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow read: if isAuth();
+      allow write: if ownsDoc() || ownsNewDoc();
       allow create: if ownsNewDoc();
     }
 
     match /notices/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow read: if isAuth();
+      allow write: if ownsDoc() || ownsNewDoc();
       allow create: if ownsNewDoc();
     }
 
@@ -205,7 +220,8 @@ service cloud.firestore {
     }
 
     match /roster_week/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow read: if isAuth();
+      allow write: if ownsDoc() || ownsNewDoc();
       allow create: if ownsNewDoc();
     }
 
@@ -220,12 +236,14 @@ service cloud.firestore {
     }
 
     match /expenses/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow read: if isAuth();
+      allow write: if ownsDoc() || ownsNewDoc();
       allow create: if ownsNewDoc();
     }
 
     match /documents/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow read: if isAuth();
+      allow write: if ownsDoc() || ownsNewDoc();
       allow create: if ownsNewDoc();
     }
 
@@ -262,7 +280,8 @@ service cloud.firestore {
     }
 
     match /settings/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow read: if isAuth();
+      allow write: if ownsDoc() || ownsNewDoc();
       allow create: if ownsNewDoc();
     }
 
