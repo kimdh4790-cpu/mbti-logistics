@@ -7279,23 +7279,33 @@ window.dwRunLiveCalculations=function(){
         done.style.cssText='padding:12px 14px;text-align:center;background:#d1fae5;color:#065f46;font-weight:800;font-size:13px;border-top:2px solid #6ee7b7;margin-top:8px;border-radius:8px';
         done.innerHTML='✅ '+riderIds.length+'명 · '+totalCnt.toLocaleString()+'건 완료 | 보전 ₩'+finalInj.toLocaleString()+' | 환수 ₩'+finalExt.toLocaleString()+' | 실지급 ₩'+finalNet.toLocaleString();
         con.appendChild(done);
-        // ★ 저장 버튼 추가
-        var saveRow=document.createElement('div');
-        saveRow.style.cssText='display:flex;align-items:center;gap:8px;padding:10px 14px;background:#0f172a;border-top:1px solid #21262d';
+        // ★ 저장 버튼 - 스트림 위 고정 영역에 표시
         var _now=new Date();
         var ymStr=_now.getFullYear()+'-'+String(_now.getMonth()+1).padStart(2,'0');
-        // 이번주 일~토 계산
-        var _day=_now.getDay(); // 0=일
+        var _day=_now.getDay();
         var _sun=new Date(_now); _sun.setDate(_now.getDate()-_day);
         var _sat=new Date(_sun); _sat.setDate(_sun.getDate()+6);
         var _fmt=function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
         var _weekStr=_fmt(_sun)+'~'+_fmt(_sat);
+        // 기존 저장 버튼 제거 후 재생성
+        var _oldSave=document.getElementById('dw-save-bar');
+        if(_oldSave)_oldSave.remove();
+        var saveRow=document.createElement('div');
+        saveRow.id='dw-save-bar';
+        saveRow.style.cssText='display:flex;align-items:center;gap:8px;padding:12px 16px;background:#064e3b;border-radius:10px;margin-top:10px;flex-wrap:wrap';
         saveRow.innerHTML=
-          '<input id="dw-save-month" type="month" value="'+ymStr+'" style="padding:5px 8px;border-radius:6px;border:1px solid #374151;background:#1e293b;color:#fff;font-size:12px">'+
-          '<input id="dw-save-week" type="text" value="'+_weekStr+'" placeholder="YYYY-MM-DD~YYYY-MM-DD" style="padding:5px 8px;border-radius:6px;border:1px solid #374151;background:#1e293b;color:#fff;font-size:11px;width:190px">'+
-          '<button onclick="_dwSaveMonthly()" style="padding:5px 14px;background:#10b981;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">💾 저장</button>'+
-          '<span id="dw-save-status" style="font-size:11px;color:#6b7280"></span>';
-        con.appendChild(saveRow);
+          '<span style="font-size:12px;font-weight:800;color:#6ee7b7">💾 정산 저장</span>'+
+          '<input id="dw-save-month" type="month" value="'+ymStr+'" style="padding:5px 8px;border-radius:6px;border:1px solid #065f46;background:#065f46;color:#fff;font-size:12px">'+
+          '<input id="dw-save-week" type="text" value="'+_weekStr+'" style="padding:5px 8px;border-radius:6px;border:1px solid #065f46;background:#065f46;color:#fff;font-size:11px;width:180px">'+
+          '<button onclick="_dwSaveMonthly()" style="padding:6px 18px;background:#10b981;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer">저장</button>'+
+          '<span id="dw-save-status" style="font-size:11px;color:#6ee7b7"></span>';
+        // results 영역 상단에 삽입
+        var resultsEl=document.getElementById('dw-results');
+        if(resultsEl&&resultsEl.parentNode){
+          resultsEl.parentNode.insertBefore(saveRow, resultsEl);
+        } else {
+          con.appendChild(saveRow);
+        }
         // 결과 저장용 전역
         window._dwFinalResult={totalCount:totalCnt,rawTotal:finalPf,injected:finalInj,extracted:finalExt,preTax:finalPre,tax:finalTax,net:finalNet,
           riders:window._dwResults?JSON.parse(JSON.stringify(window._dwResults)):[]};
