@@ -15978,7 +15978,7 @@ function _startSuperAdminListener(){
   // ★ admin_notifications 컬렉션도 실시간 감지 (신규 회사 등록 등)
   _db.collection('admin_notifications')
     .where('read','==',false)
-    .orderBy('createdAt','desc').limit(20)
+    .limit(20)
     .onSnapshot(function(snap){
       snap.docChanges().forEach(function(change){
         if(change.type !== 'added') return;
