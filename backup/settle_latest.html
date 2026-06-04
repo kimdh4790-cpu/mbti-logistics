@@ -16003,7 +16003,7 @@ function _renderSettlePage(settles,c){
     +'</div>'
      +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
      +'<label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#f97316;color:#fff;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📤 쿠팡 엑셀 업로드<input type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style="display:none" onchange="parseCoupangExcel(this)"></label>'
-+(isSuperAdmin()?'<label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#6366f1;color:#fff;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;margin-left:6px">🗂️ 범용 엑셀 업로드<input type="file" accept=".xlsx,.xls" style="display:none" onchange="parseUniversalExcel(this)"></label>':'')
+
      +'<button onclick="recalcAllSettlements()" style="padding:8px 14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⚡ 전체 재계산</button>'
      +'<button onclick="deploySettlements()" style="padding:8px 16px;background:linear-gradient(135deg,#0066ff,#7c3aed);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;box-shadow:0 2px 12px rgba(0,102,255,.4)">📤 정산 배포 (명세서+알림)</button>'
      +'<button onclick="openIncPanel()" style="padding:8px 14px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⚙️ 인센 설정</button>'
