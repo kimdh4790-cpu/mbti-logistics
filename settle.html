@@ -9919,11 +9919,20 @@ function _uBulkUploadEmp(input, did){
 
 function pageUniversalInput(){
   document.getElementById('page-title').textContent='📋 범용 엑셀 정산';
-  // 규칙 미리 로드
-  if(_db&&_CU&&!window._uCurrentRules){
+  // 규칙 항상 최신으로 로드
+  if(_db&&_CU){
     var _did=_CU.dealerId||_CU.uid;
     _db.collection('universal_rules').doc(_did).get().then(function(doc){
-      if(doc.exists) window._uCurrentRules=doc.data();
+      if(doc.exists){
+        window._uCurrentRules=doc.data();
+        window._uPriceData={};
+        window._uLeaderMap=doc.data().leaderMap||{};
+        ((doc.data().priceTables)||[]).forEach(function(pt){
+          (pt.routes||[]).forEach(function(rr){
+            if(rr.route&&rr.price) window._uPriceData[rr.route]={price:rr.price,priceVat:rr.priceVat||0,type:pt.type||'basic',camp:rr.camp||''};
+          });
+        });
+      }
     }).catch(function(){});
   }
   document.getElementById('topbar-right').innerHTML='';
@@ -10052,7 +10061,10 @@ function pageUniversalSettle(){
         '<div style="font-size:13px;color:var(--text3)">범용 엑셀 정산 탭에서 업로드 후 저장하세요</div></div>';
       return;
     }
-    var html='<div style="max-width:700px;margin:0 auto;padding:16px">';
+    var html='<div style="max-width:700px;margin:0 auto;padding:16px">'+
+      '<div style="display:flex;justify-content:flex-end;margin-bottom:8px">'+
+        '<button onclick="_uDeleteAllSettles(\''+did+'\')" style="padding:5px 12px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;cursor:pointer">🗑 전체삭제</button>'+
+      '</div>';
     snap.forEach(function(doc){
       var d=doc.data();
       var mo=(d.month||d.createdAt&&d.createdAt.toDate&&d.createdAt.toDate().toISOString().slice(0,7)||'');
@@ -10339,6 +10351,22 @@ window._uPrintAllPayslips = function(docId, month){
     w.document.close();
     setTimeout(function(){w.print();},500);
   });
+};
+
+window._uDeleteAllSettles=function(did){
+  if(!confirm('범용 정산 전체를 삭제하시겠습니까?'))return;
+  _db.collection('universal_settlements').where('dealerId','==',did).get()
+    .then(function(snap){
+      var chunks=[];
+      for(var i=0;i<snap.docs.length;i+=500)chunks.push(snap.docs.slice(i,i+500));
+      function delChunk(idx){
+        if(idx>=chunks.length){toast('✅ 전체 삭제 완료');pageUniversalSettle();return;}
+        var batch=_db.batch();
+        chunks[idx].forEach(function(d){batch.delete(d.ref);});
+        batch.commit().then(function(){delChunk(idx+1);});
+      }
+      delChunk(0);
+    });
 };
 
 window._universalDeleteSettle=function(id){
