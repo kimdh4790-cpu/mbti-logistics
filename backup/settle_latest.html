@@ -8955,56 +8955,80 @@ function _uRenderPricePanels(){
   var panels=document.getElementById('u-price-panels');
   if(!tabs||!panels) return;
 
-  // 타입별 그룹핑
-  var groups={basic:{label:'기본 단가',color:'#0066ff',routes:[]},leader:{label:'팀장 수수료',color:'#7c3aed',routes:[]},backup:{label:'백업 단가',color:'#f97316',routes:[]}};
-  Object.keys(_uPriceData).sort().forEach(function(r){
-    var t=(_uPriceData[r]&&_uPriceData[r].type)||'basic';
-    if(!groups[t]) groups[t]={label:t,color:'#6b7280',routes:[]};
-    groups[t].routes.push(r);
+  // 캠프별 그룹핑
+  var campGroups={};
+  var colors=['#0066ff','#059669','#f97316','#7c3aed','#dc2626','#0891b2','#65a30d','#db2777'];
+  var colorIdx=0;
+
+  Object.keys(_uPriceData||{}).sort().forEach(function(r){
+    var d=_uPriceData[r]||{};
+    var camp=d.camp||'기본';
+    if(!campGroups[camp]){campGroups[camp]={color:colors[colorIdx%colors.length],routes:[],type:d.type||'basic'};colorIdx++;}
+    campGroups[camp].routes.push(r);
   });
 
-  var tabHtml=''; var panelHtml=''; var first=true;
-  Object.keys(groups).forEach(function(type){
-    var g=groups[type];
-    if(!g.routes.length) return;
-    var gid='upanel-'+type;
-    tabHtml+='<button id="utab-'+type+'" onclick="_uShowPriceTab(\''+type+'\')" style="padding:5px 14px;border:2px solid '+g.color+';border-radius:8px;background:'+(first?g.color:'transparent')+';color:'+(first?'#fff':g.color)+';font-size:11px;font-weight:700;cursor:pointer">'+g.label+' ('+g.routes.length+')</button>';
-    panelHtml+='<div id="'+gid+'" style="display:'+(first?'block':'none')+'">'+
-      '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:6px;margin-bottom:8px">';
-    g.routes.forEach(function(r){
-      var d=_uPriceData[r]||{};
+  // 팀장 그룹
+  Object.keys(window._uLeaderMap||{}).forEach(function(empId){
+    var key='팀장-'+empId;
+    if(!campGroups[key]){campGroups[key]={color:'#7c3aed',routes:Object.keys(window._uLeaderMap[empId]),type:'leader',empId:empId};colorIdx++;}
+  });
+
+  var campNames=Object.keys(campGroups);
+  if(!campNames.length){
+    tabs.innerHTML='<span style="font-size:12px;color:var(--text3)">등록된 단가 없음 — 파일 업로드 또는 직접 추가</span>';
+    panels.innerHTML=''; return;
+  }
+
+  var tabHtml=''; var panelHtml='';
+  campNames.forEach(function(camp,ci){
+    var g=campGroups[camp];
+    var isFirst=ci===0;
+    var isLeader=g.type==='leader';
+    tabHtml+='<button id="utab-'+ci+'" onclick="_uShowPriceTab('+ci+')" style="padding:5px 12px;border:2px solid '+g.color+';border-radius:8px;background:'+(isFirst?g.color:'transparent')+';color:'+(isFirst?'#fff':g.color)+';font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">'+
+      esc(camp)+' ('+g.routes.length+')</button>';
+
+    panelHtml+='<div id="upanel-'+ci+'" style="display:'+(isFirst?'block':'none')+'">'+
+      '<div style="font-size:11px;color:var(--text3);margin-bottom:8px;padding:6px 10px;background:var(--bg3);border-radius:6px">'+
+        esc(camp)+' &middot; '+g.routes.length+'개'+(isLeader?' &middot; 팀장 수수료':'')+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:6px">';
+
+    g.routes.sort().forEach(function(r){
+      var price=isLeader?((window._uLeaderMap[g.empId]||{})[r]||0):((_uPriceData[r]||{}).price||0);
+      var priceVat=isLeader?0:((_uPriceData[r]||{}).priceVat||0);
       panelHtml+='<div style="display:flex;flex-direction:column;align-items:center;background:var(--bg3);border-radius:8px;padding:8px 4px;border:1px solid '+g.color+'44;position:relative">'+
-        '<div style="font-size:10px;font-weight:700;color:'+g.color+';margin-bottom:2px">'+r+'</div>'+
-        '<input id="up-'+type+'-'+r+'" type="number" value="'+(d.price||0)+'" style="width:100%;text-align:center;padding:4px;border:1px solid var(--border);border-radius:5px;font-size:13px;font-weight:700;background:var(--bg);color:var(--teal)" oninput="_uSetPrice(\''+r+'\',this.value)">'+
-        (type==='basic'?'<input id="upv-'+r+'" type="number" value="'+(d.priceVat||'')+'" placeholder="VAT" style="width:100%;text-align:center;padding:3px;border:1px solid rgba(0,200,100,.3);border-radius:5px;font-size:10px;background:var(--bg);color:#059669;margin-top:2px" oninput="_uSetPriceVat(\''+r+'\',this.value)">':'')+
-        '<button onclick="_uDelRoute(\''+r+'\')" style="position:absolute;top:2px;right:2px;background:none;border:none;cursor:pointer;font-size:10px;color:#dc2626;line-height:1">✕</button>'+
+        '<div style="font-size:10px;font-weight:700;color:'+g.color+';margin-bottom:2px">'+esc(r)+'</div>'+
+        '<input type="number" value="'+price+'" style="width:100%;text-align:center;padding:4px;border:1px solid var(--border);border-radius:5px;font-size:13px;font-weight:700;background:var(--bg);color:var(--teal)" oninput="_uSetPrice(\''+esc(r)+'\',this.value,\''+esc(camp)+'\','+isLeader+')">'+
+        (!isLeader?'<input type="number" value="'+(priceVat||'')+'" placeholder="VAT" style="width:100%;text-align:center;padding:3px;border:1px solid rgba(0,200,100,.3);border-radius:5px;font-size:10px;background:var(--bg);color:#059669;margin-top:2px" oninput="_uSetPriceVat(\''+esc(r)+'\',this.value)">':'')+
+        '<button onclick="_uDelRoute(\''+esc(r)+'\',\''+esc(camp)+'\','+isLeader+')" style="position:absolute;top:2px;right:2px;background:none;border:none;cursor:pointer;font-size:10px;color:#dc2626;line-height:1">✕</button>'+
       '</div>';
     });
     panelHtml+='</div></div>';
-    first=false;
   });
 
-  if(!tabHtml) tabHtml='<span style="font-size:12px;color:var(--text3)">등록된 단가 없음 — 파일 업로드 또는 직접 추가</span>';
   tabs.innerHTML=tabHtml;
   panels.innerHTML=panelHtml;
 }
 
-function _uSetPrice(r,v){if(_uPriceData[r])_uPriceData[r].price=parseInt(v)||0;}
+function _uSetPrice(r,v,camp,isLeader){
+  if(isLeader&&camp){var empId=camp.replace('팀장-','');if(window._uLeaderMap&&window._uLeaderMap[empId])window._uLeaderMap[empId][r]=parseInt(v)||0;}
+  else if(_uPriceData[r])_uPriceData[r].price=parseInt(v)||0;
+}
 function _uSetPriceVat(r,v){if(_uPriceData[r])_uPriceData[r].priceVat=parseInt(v)||0;}
-function _uShowPriceTab(type){
-  document.querySelectorAll('[id^="utab-"]').forEach(function(b){
-    var t=b.id.replace('utab-','');
-    var g={basic:'#0066ff',leader:'#7c3aed',backup:'#f97316'}[t]||'#6b7280';
-    b.style.background=t===type?g:'transparent';
-    b.style.color=t===type?'#fff':g;
+function _uShowPriceTab(ci){
+  var tabs=document.querySelectorAll('[id^="utab-"]');
+  var panels=document.querySelectorAll('[id^="upanel-"]');
+  tabs.forEach(function(b,i){
+    var col=b.style.borderColor||b.style.color||'#0066ff';
+    b.style.background=i===ci?col:'transparent';
+    b.style.color=i===ci?'#fff':col;
   });
-  document.querySelectorAll('[id^="upanel-"]').forEach(function(p){
-    p.style.display=p.id==='upanel-'+type?'block':'none';
-  });
+  panels.forEach(function(p,i){p.style.display=i===ci?'block':'none';});
 }
 
-function _uDelRoute(route){
-  delete _uPriceData[route];
+function _uDelRoute(route,camp,isLeader){
+  if(isLeader&&camp){var empId=camp.replace('팀장-','');if(window._uLeaderMap&&window._uLeaderMap[empId])delete window._uLeaderMap[empId][route];}
+  else delete _uPriceData[route];
   _uRenderPricePanels();
 }
 
@@ -9085,12 +9109,11 @@ window._uImportPriceFiles = function(input){
               var r=normRoute(currentRoute+mm[1]);
               var p=parseInt(mm[2]);
               if(currentEmpId&&type==='leader'){
-                // 팀장별 저장
                 window._uLeaderMap[currentEmpId][r]=p;
                 total++;
               } else {
-                // 일반 단가
-                _uPriceData[r]={price:p,priceVat:0,type:type};total++;
+                var txtCamp=file.name.replace(/\.[^.]+$/,'');
+                _uPriceData[r]={price:p,priceVat:0,type:type,camp:txtCamp};total++;
               }
             });
             return;
@@ -9110,25 +9133,29 @@ window._uImportPriceFiles = function(input){
           wb.SheetNames.forEach(function(sn){
             var ws=wb.Sheets[sn];
             var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+            var currentCamp=file.name.replace(/\.[^.]+$/,''); // 파일명 기본값
             rows.forEach(function(row){
               if(!row) return;
-              // A열=라우트, C열=단가 (B열 null 구조 대응)
               var a=normRoute(String(row[0]||''));
-              // C열 우선, 없으면 B열
+              // 캠프 헤더 감지 — 한글 포함 + 단가 없음
+              var hasKor=/[가-힣]/.test(String(row[0]||''));
+              var allNull=row.slice(1).every(function(v){return !v;});
+              if(hasKor&&allNull){currentCamp=String(row[0]||'').trim();return;}
+              // A열=라우트, C열=단가
               var price=null;
               for(var pi=1;pi<row.length;pi++){
                 if(row[pi]&&+row[pi]>50){price=+row[pi];break;}
               }
               if(isRoute(a)&&price){
-                _uPriceData[a]={price:Math.round(price),priceVat:0,type:type};
+                _uPriceData[a]={price:Math.round(price),priceVat:0,type:type,camp:currentCamp};
                 total++;return;
               }
-              // 인접 쌍 스캔 (다른 포맷 대비)
+              // 인접 쌍 스캔
               for(var ci=0;ci<row.length-1;ci++){
                 var ra=normRoute(String(row[ci]||''));
                 var rb=row[ci+1];
                 if(isRoute(ra)&&rb&&+rb>50){
-                  _uPriceData[ra]={price:Math.round(+rb),priceVat:0,type:type};
+                  _uPriceData[ra]={price:Math.round(+rb),priceVat:0,type:type,camp:currentCamp};
                   total++;ci++;
                 }
               }
