@@ -8780,7 +8780,9 @@ function pageUniversalRules(){
   if(!_db||!_CU){c.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
   var did=_CU.dealerId||_CU.uid;
   _db.collection('universal_rules').doc(did).get().then(function(doc){
-    _renderUniversalRules(c, doc.exists?doc.data():{});
+    var r=doc.exists?doc.data():{};
+    window._uCurrentRules=r; // 전역 저장
+    _renderUniversalRules(c, r);
   }).catch(function(){_renderUniversalRules(c,{});});
 }
 
@@ -9897,6 +9899,13 @@ function _uBulkUploadEmp(input, did){
 
 function pageUniversalInput(){
   document.getElementById('page-title').textContent='📋 범용 엑셀 정산';
+  // 규칙 미리 로드
+  if(_db&&_CU&&!window._uCurrentRules){
+    var _did=_CU.dealerId||_CU.uid;
+    _db.collection('universal_rules').doc(_did).get().then(function(doc){
+      if(doc.exists) window._uCurrentRules=doc.data();
+    }).catch(function(){});
+  }
   document.getElementById('topbar-right').innerHTML='';
   var c=document.getElementById('content');
   if(!_db||!_CU){c.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
@@ -10248,13 +10257,34 @@ window._universalSave=function(){
   if(!results||!results.length){toast('데이터 없음');return;}
   var did=_CU.dealerId||_CU.uid;
   var month=new Date().toISOString().slice(0,7);
+  var incCamps=(window._uCurrentRules&&window._uCurrentRules.incCamps)||{};
+
+  var processedRows=results.map(function(r){
+    var name=String(r.name||r.driver||'');
+    var empId=String(r.userId||r.id||r.empId||'');
+    var camp=String(r.camp||'');
+    var cnt=parseInt(r.cnt||r.dcnt||0)||0;
+    var rcnt=parseInt(r.rcnt||0)||0;
+    var gross=parseFloat(r.gross||r.net||r.amount||r.damt||0)||0;
+    var incRate=parseInt(incCamps[camp]||incCamps['기본']||0)||0;
+    var inc=cnt*incRate;
+    var net=Math.max(0,gross+inc);
+    return {
+      name:name,empId:empId,camp:camp,
+      cnt:cnt,rcnt:rcnt,gross:gross,inc:inc,net:net,
+      sheet:String(r.sheet||''),month:String(r.month||month)
+    };
+  }).filter(function(r){return !!r.name;});
+
+  var totalNet=processedRows.reduce(function(s,r){return s+(r.net||0);},0);
   _db.collection('universal_settlements').add({
-    dealerId:did,month:month,title:month+' 정산',
-    totalCount:results.length,totalNet:window._universalTotal||0,
-    rows:results.map(function(r){return {name:r.name,amount:r.amount};}),
+    dealerId:did,month:month,title:month+' 범용 정산',
+    totalCount:processedRows.length,totalNet:totalNet,
+    rows:processedRows,
     createdAt:firebase.firestore.FieldValue.serverTimestamp()
-  }).then(function(){toast('✅ 저장 완료');})
-  .catch(function(e){toast('❌ '+e.message);});
+  }).then(function(){
+    toast('✅ '+processedRows.length+'건 저장 완료 · ₩'+totalNet.toLocaleString());
+  }).catch(function(e){toast('❌ '+e.message);});
 };
 
 function pageDeliveryInput(){
