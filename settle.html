@@ -14751,17 +14751,26 @@ var MENUS_SETTLE = [
 // QR 전용
 
 var MENUS_UNIVERSAL = [
-  {s:'🏠 홈', items:[{ic:'🏠',l:'대시보드',p:'home',plan_key:'free'}]},
-  {s:'📊 범용 정산', items:[
+  {s:'🏠 홈', items:[
+    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'}
+  ]},
+  {s:'📋 범용 정산', items:[
     {ic:'📊',l:'정산 현황',        p:'universal_settle', plan_key:'universal'},
     {ic:'📋',l:'범용 엑셀 정산',   p:'universal_input',  plan_key:'universal'},
+    {ic:'📈',l:'통계',             p:'stats',            plan_key:'universal'},
     {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'universal'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'}
   ]},
   {s:'👤 직원 관리', items:[
-    {ic:'👤',l:'직원 관리',        p:'drivers',          plan_key:'free'},
+    {ic:'👤',l:'기사·직원 관리',   p:'drivers',          plan_key:'free'},
     {ic:'📝',l:'위수탁 계약서',    p:'contract',         plan_key:'universal'},
+    {ic:'⭐',l:'직원 평가',        p:'evaluation',       plan_key:'universal'},
     {ic:'💸',l:'경비 관리',        p:'expense',          plan_key:'universal'}
+  ]},
+  {s:'🚚 원스톱 물류', items:[
+    {ic:'🚗',l:'차량 관리',        p:'vehicle',          plan_key:'universal'},
+    {ic:'🖨',l:'라벨 출력',        p:'ext_label',        plan_key:'universal'},
+    {ic:'📷',l:'수령 스캔',        p:'ext_scan',         plan_key:'universal'}
   ]},
   {s:'📢 공지·알림', items:[
     {ic:'📢',l:'공지사항',         p:'notices',          plan_key:'free'},
@@ -24007,7 +24016,7 @@ function _isPlanAllowed(d,feature){
     return false;
   }
   if(d.settlePaid&&(!feature||['settle','settlements','stats','prices','season','contract','roster','tax_share'].indexOf(feature)>=0))return true;
-  if(d.universalPaid&&(!feature||['universal','universal_settle','settlements','stats','prices','season','contract','roster','tax_share','drivers','expense','vehicle','schedule','evaluation'].indexOf(feature)>=0))return true;
+  if(d.universalPaid&&(!feature||['universal','universal_settle','universal_input','settlements','stats','prices','season','contract','roster','tax_share','drivers','expense','vehicle','schedule','evaluation','notify_history','notices'].indexOf(feature)>=0))return true;
   var fn=feature&&_PLAN_FEATURE_MAP[feature];
   if(fn)return !!fn(d);
   return !!(d.settlePaid||d.deliveryPaid||d.qrPaid||d.payrollPaid||d.rosterPaid);
