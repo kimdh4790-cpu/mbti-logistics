@@ -26,18 +26,24 @@ jobs:
           echo "Cache key updated: mbti-v9-$TS"
 
       - name: Upload settle.html to KV
+        env:
+          CF_KV_TOKEN: ${{ secrets.CF_KV_TOKEN }}
         run: |
           NS_ID="7f0e90efaea64f3ab08ff00f8970b28b"
           echo $NS_ID > kv_ns_id.txt
           echo "settle.html 크기: $(wc -c < settle.html) bytes"
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+          RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
             -X PUT \
             "https://api.cloudflare.com/client/v4/accounts/02709cbec18d848913b4246015b9148f/storage/kv/namespaces/$NS_ID/values/settle.html" \
             -H "Authorization: Bearer $CF_KV_TOKEN" \
             --data-binary @settle.html)
-          echo "KV 업로드 HTTP 상태: $HTTP_STATUS"
-        env:
-          CF_KV_TOKEN: ${{ secrets.CF_KV_TOKEN }}
+          echo "응답: $RESPONSE"
+          if echo "$RESPONSE" | grep -q "HTTP_STATUS:200"; then
+            echo "✅ KV 업로드 성공"
+          else
+            echo "❌ KV 업로드 실패"
+            exit 1
+          fi
 
       - name: Update wrangler.toml with KV binding
         run: |
