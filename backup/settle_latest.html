@@ -23999,8 +23999,8 @@ var _PLAN_FEATURE_MAP={
   'leave':function(d){return d.payrollPaid;},
   'overtime':function(d){return d.qrPaid||d.payrollPaid;},
   'free':function(d){return true;},
-  'universal':function(d){return d.universalPaid||d.settlePaid;},
-  'universal_settle':function(d){return d.universalPaid;},
+  'universal':function(d){return isSuperAdmin()||!!(d.universalPaid);},
+  'universal_settle':function(d){return isSuperAdmin()||!!(d.universalPaid);},
   'visitor':function(d){return d.qrPaid||d.payrollPaid||d.settlePaid;},
   'survey':function(d){return d.qrPaid||d.payrollPaid||d.settlePaid;},
   'vehicle':function(d){return d.settlePaid||d.payrollPaid;},
@@ -24084,8 +24084,9 @@ function _hasDelivery(d){  // ★ 배달대행 - 택배와 완전 별개
 function _hasPremium(d){   // ALL-IN-ONE 고급기능 (차량·배차 등)
   return isSuperAdmin()||(d.premiumPaid)||(d.plan==='full');
 }
-function _hasUniversal(d){ // ★ 범용 정산
-  return isSuperAdmin()||(d.universalPaid)||(['universal','full'].indexOf(d.plan||'')>=0);
+function _hasUniversal(d){ // ★ 범용 정산 — 슈퍼어드민 또는 결제 완료만
+  if(isSuperAdmin()) return true;
+  return !!(d.universalPaid);
 }
 function _hasAnyPaid(d){   // 세무사 연동 - 하나라도 결제하면 허용
   return isSuperAdmin()||_hasSettle(d)||_hasQr(d)||_hasPayroll(d)||_hasDelivery(d)||_hasPremium(d)||_hasUniversal(d);
