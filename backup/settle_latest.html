@@ -8938,6 +8938,7 @@ function _renderUniversalRules(c, r){
   // _uPriceData 초기화 (저장된 단가표 로드)
   window._uPriceData = {};
   window._uLeaderMap = r.leaderMap||{};
+  window._uLeaderNames = r.leaderNames||{};
   (r.priceTables||[]).forEach(function(pt){
     (pt.routes||[]).forEach(function(rr){
       if(rr.route&&rr.price) _uPriceData[rr.route]={price:rr.price,priceVat:rr.priceVat||0,type:pt.type||'basic'};
@@ -8969,8 +8970,8 @@ function _uRenderPricePanels(){
 
   // 팀장 그룹
   Object.keys(window._uLeaderMap||{}).forEach(function(empId){
-    var key='팀장-'+empId;
-    if(!campGroups[key]){campGroups[key]={color:'#7c3aed',routes:Object.keys(window._uLeaderMap[empId]),type:'leader',empId:empId};colorIdx++;}
+    var leaderName=(window._uLeaderNames&&window._uLeaderNames[empId])||empId;
+    var key=leaderName+'(팀장)';
   });
 
   var campNames=Object.keys(campGroups);
@@ -9092,10 +9093,14 @@ window._uImportPriceFiles = function(input){
         e.target.result.split('\n').forEach(function(line){
           line=line.trim(); if(!line) return;
           // 이름(ID) 행 — 한글+괄호 패턴 "하현호(vmffkdl321)"
-          var mName=line.match(/[가-힣].+\(([^)]+)\)/);
+          var mName=line.match(/([가-힣]+[^(]*)\(([^)]+)\)/);
           if(mName){
-            currentEmpId=mName[1].trim();
+            var leaderKorName=mName[1].trim();
+            currentEmpId=mName[2].trim();
+            if(!window._uLeaderMap) window._uLeaderMap={};
+            if(!window._uLeaderNames) window._uLeaderNames={};
             if(!window._uLeaderMap[currentEmpId]) window._uLeaderMap[currentEmpId]={};
+            window._uLeaderNames[currentEmpId]=leaderKorName; // 이름 저장
             return;
           }
           // 라우트 번호 (608, 612 등)
@@ -9444,6 +9449,7 @@ function _uSaveRules(){
     workOn:!!(document.getElementById('u-work-on')||{}).checked,
     priceTables:priceTables,
     leaderMap:window._uLeaderMap||{},
+    leaderNames:window._uLeaderNames||{},
     idSupportRules:idSupportRules,
     updatedAt:firebase.firestore.FieldValue.serverTimestamp()
   };
