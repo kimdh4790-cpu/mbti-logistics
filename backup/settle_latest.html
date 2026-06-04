@@ -8878,6 +8878,12 @@ function _renderUniversalRules(c, r){
         '<div style="font-size:13px;font-weight:800">📋 단가표 관리</div>'+
         '<button onclick="_uAddPriceTable()" style="padding:5px 12px;background:var(--brand);color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer">+ 단가표 추가</button>'+
       '</div>'+
+      // 다중 파일 일괄 업로드
+      '<label style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;background:linear-gradient(135deg,rgba(0,102,255,.06),rgba(124,58,237,.06));border:2px dashed rgba(0,102,255,.3);border-radius:10px;cursor:pointer;margin-bottom:12px;font-size:12px;font-weight:700;color:var(--brand)">'+
+        '📂 단가 파일 여러 개 한번에 선택'+
+        '<input type="file" multiple accept=".xlsx,.xls,.txt" style="display:none" onchange="_uMultiPriceUpload(this)">'+
+      '</label>'+
+      '<div id="u-multi-upload-status" style="font-size:11px;color:var(--text3);margin-bottom:8px"></div>'+
       '<div id="price-table-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">'+renderTableTabs()+'</div>'+
       '<div id="price-tables">'+tablesHtml+'</div>'+
     '</div>'+
@@ -9113,6 +9119,157 @@ function _uAddIdSupport(){
   container.appendChild(div.firstChild);
 }
 
+
+
+// ★ 다중 단가 파일 업로드 — 파일명으로 유형 자동 감지
+window._uMultiPriceUpload = function(input){
+  var files = Array.from(input.files);
+  input.value='';
+  if(!files.length) return;
+
+  var status = document.getElementById('u-multi-upload-status');
+  if(status) status.textContent = '⏳ '+files.length+'개 파일 처리 중...';
+
+  // 파일명 → 단가표 유형 감지
+  function detectType(filename){
+    var f = filename.toLowerCase();
+    if(f.includes('팀장')||f.includes('leader')||f.includes('tl')) return {type:'leader',label:'팀장 수수료'};
+    if(f.includes('백업')||f.includes('backup')||f.includes('대체')||f.includes('휴무')) return {type:'backup',label:'백업 단가'};
+    if(f.includes('개별')||f.includes('custom')||f.includes('특별')) return {type:'custom',label:'개별 단가'};
+    return {type:'basic',label:'기본 단가'};
+  }
+
+  function parseRoutes(content, ext){
+    var routes = [];
+    if(ext==='txt'){
+      var currentRoute='';
+      content.split('\n').forEach(function(line){
+        line=line.trim(); if(!line)return;
+        if(/^\d{3}$/.test(line)){currentRoute=line;return;}
+        // "A 930" 또는 "A60" 형식
+        var m1=line.match(/^([A-D])\s+(\d+)/);
+        var m2=line.match(/^([A-D])(\d+)/);
+        if(m1) routes.push({route:currentRoute+m1[1],price:parseInt(m1[2]),priceVat:0});
+        else if(m2) routes.push({route:currentRoute+m2[1],price:parseInt(m2[2]),priceVat:0});
+        else {
+          // "812A 930" 또는 "812A,930"
+          var m3=line.match(/([0-9]{3}[A-D]?)\s*[,\s]\s*(\d+)/);
+          if(m3) routes.push({route:m3[1].toUpperCase(),price:parseInt(m3[2]),priceVat:0});
+        }
+      });
+    }
+    return routes;
+  }
+
+  var processed=0;
+  var results=[];
+
+  function processNext(idx){
+    if(idx>=files.length){
+      // 모든 파일 처리 완료 → 단가표에 반영
+      results.forEach(function(res){
+        _uApplyParsedRoutes(res.typeInfo, res.routes, res.filename);
+      });
+      if(status){
+        var totalRoutes=results.reduce(function(s,r){return s+r.routes.length;},0);
+        status.innerHTML='✅ <strong>'+files.length+'개 파일</strong> 처리완료 — 라우트 총 <strong>'+totalRoutes+'개</strong> 등록';
+      }
+      return;
+    }
+
+    var file=files[idx];
+    var ext=file.name.split('.').pop().toLowerCase();
+    var typeInfo=detectType(file.name);
+    var reader=new FileReader();
+
+    if(ext==='txt'){
+      reader.onload=function(e){
+        var routes=parseRoutes(e.target.result, 'txt');
+        results.push({typeInfo:typeInfo, routes:routes, filename:file.name});
+        processNext(idx+1);
+      };
+      reader.readAsText(file);
+    } else {
+      reader.onload=function(e){
+        try{
+          if(typeof XLSX==='undefined'){processNext(idx+1);return;}
+          var wb=XLSX.read(e.target.result,{type:'array'});
+          var allRoutes=[];
+          wb.SheetNames.forEach(function(shName){
+            var ws=wb.Sheets[shName];
+            var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+            var campMode=false;
+            rows.forEach(function(row){
+              var a=String(row[0]||'').trim();
+              var b=String(row[1]||'').trim();
+              var c2=String(row[2]||'').trim();
+              // 캠프 헤더 (부산1 등) 스킵
+              if(a&&!b&&!c2&&isNaN(a)){return;}
+              var route='', price=0, priceVat=0;
+              if(/^[0-9]{3}[A-D]$/i.test(a)){
+                route=a.toUpperCase();
+                price=parseInt(b)||parseInt(c2)||0;
+                priceVat=parseInt(c2)||0;
+              } else if(/^[0-9]{3}[A-D]$/i.test(b)){
+                route=b.toUpperCase();
+                price=parseInt(c2)||0;
+              }
+              if(route&&price>0) allRoutes.push({route:route,price:price,priceVat:priceVat>price?priceVat:0});
+            });
+          });
+          results.push({typeInfo:typeInfo, routes:allRoutes, filename:file.name});
+        }catch(e2){}
+        processNext(idx+1);
+      };
+      reader.readAsArrayBuffer(file);
+    }
+  }
+  processNext(0);
+};
+
+// 파싱된 라우트를 해당 단가표 탭에 적용
+function _uApplyParsedRoutes(typeInfo, routes, filename){
+  if(!routes.length) return;
+
+  // 같은 유형 탭 찾기
+  var found=-1;
+  document.querySelectorAll('[id^="ptable-"]').forEach(function(tbl,ti){
+    var t=(tbl.querySelector('.pt-type')||{}).value||'basic';
+    if(t===typeInfo.type && found<0) found=ti;
+  });
+
+  if(found<0){
+    // 없으면 새 단가표 생성
+    _uAddPriceTable();
+    found=document.querySelectorAll('[id^="ptable-"]').length-1;
+    var newTbl=document.getElementById('ptable-'+found);
+    if(newTbl){
+      var lbl=newTbl.querySelector('.pt-label');
+      var typ=newTbl.querySelector('.pt-type');
+      if(lbl) lbl.value=typeInfo.label+' ('+filename+')';
+      if(typ) typ.value=typeInfo.type;
+    }
+  }
+
+  // 라우트 행 추가
+  var tbl=document.getElementById('ptable-'+found);
+  if(!tbl) return;
+  var container=tbl.querySelector('.route-rows');
+  if(!container) return;
+  container.innerHTML=''; // 기존 초기화
+  routes.forEach(function(rr){
+    var div=document.createElement('div');
+    div.className='rrow';
+    div.style.cssText='display:grid;grid-template-columns:80px 80px 80px auto;gap:6px;margin-bottom:5px;align-items:center';
+    div.innerHTML=
+      '<input type="text" value="'+esc(rr.route)+'" class="r-route" style="padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px;text-align:center">'+
+      '<input type="number" value="'+(rr.price||'')+'" class="r-price" style="padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px">'+
+      '<input type="number" value="'+(rr.priceVat||'')+'" class="r-pricevat" style="padding:6px;border:1px solid rgba(0,200,100,.4);border-radius:6px;background:var(--bg);font-size:12px">'+
+      '<button onclick="_uRemoveRRow(this)" style="padding:4px 8px;background:#fee2e2;border:none;border-radius:5px;cursor:pointer;font-size:11px;color:#dc2626;width:32px">✕</button>';
+    container.appendChild(div);
+  });
+  _uSelectPriceTable(found);
+}
 
 // ★ 정산 엑셀에서 ID 자동 추출 → 양식 다운로드
 window._uExtractIds = function(input){
