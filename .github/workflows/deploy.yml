@@ -72,16 +72,15 @@ jobs:
       - name: Update wrangler.toml with KV binding
         run: |
           NS_ID=$(cat kv_ns_id.txt)
-          cat > wrangler.toml << EOF
-          name = "mbti-logistics"
-          main = "_worker.js"
-          compatibility_date = "2025-11-01"
-
-          [[kv_namespaces]]
-          binding = "DONWAY_ASSETS"
-          id = "$NS_ID"
-          EOF
-          echo "wrangler.toml updated with KV: $NS_ID"
+          echo "KV NS_ID: $NS_ID"
+          echo 'name = "mbti-logistics"' > wrangler.toml
+          echo 'main = "_worker.js"' >> wrangler.toml
+          echo 'compatibility_date = "2025-11-01"' >> wrangler.toml
+          echo '' >> wrangler.toml
+          echo '[[kv_namespaces]]' >> wrangler.toml
+          echo 'binding = "DONWAY_ASSETS"' >> wrangler.toml
+          echo "id = \"$NS_ID\"" >> wrangler.toml
+          cat wrangler.toml
 
       - name: Deploy to Cloudflare Workers
         run: wrangler deploy
