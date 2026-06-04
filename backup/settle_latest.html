@@ -7710,22 +7710,23 @@ window._dwSimCalc=function(){
 function _dwRenderEngine(){
   var el=document.getElementById('content');
   if(!el)return;
-  // ★ 이미 렌더링된 상태면 재렌더링 건너뜀 (데이터 보존)
-  if(document.getElementById('dw-engine-wrap')){
+  // ★ dw-engine-wrap을 body에 숨겨두고 content에 이동 (데이터 보존)
+  var existing=document.getElementById('dw-engine-wrap');
+  el.innerHTML='';
+  if(existing){
+    el.appendChild(existing);
+    existing.style.display='';
     _dwLoadCfg(_CU&&_CU.dealerId);
     return;
   }
-  el.innerHTML='';
   var wrap=document.createElement('div');
   wrap.id='dw-engine-wrap';
   wrap.style.cssText='max-width:960px;margin:0 auto 20px';
-  // dw-simulator-wrap 생성
   var simWrap=document.createElement('div');
   simWrap.id='dw-simulator-wrap';
   wrap.appendChild(simWrap);
   el.appendChild(wrap);
   _dwRenderSimulator();
-  // ★ Firestore에서 로드 후 input 업데이트 (단일 타이머)
   var _did=_CU&&_CU.dealerId;
   if(_did) _dwLoadCfg(_did);
 }
@@ -14912,6 +14913,14 @@ function _initFCMReceiver(){
 
 function goPage(page){
   window._currentPage=page;  // 현재 페이지 추적
+  // ★ 배달대행 탭 떠날 때 dw-engine-wrap 보존 (body로 이동)
+  if(page!=='delivery_input'){
+    var dwWrap=document.getElementById('dw-engine-wrap');
+    if(dwWrap&&dwWrap.parentElement){
+      dwWrap.style.display='none';
+      document.body.appendChild(dwWrap);
+    }
+  }
   // 페이지 이동 시 실시간 리스너 해제
   if(window._dwAdminUnsub){try{window._dwAdminUnsub();}catch(e){}window._dwAdminUnsub=null;}
   if(window._dwDashUnsub&&page!=='delivery_input'){try{window._dwDashUnsub();}catch(e){}window._dwDashUnsub=null;}
