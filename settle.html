@@ -14917,6 +14917,22 @@ function goPage(page){
   document.getElementById('sidebar').classList.remove('open');
   var _bd=document.getElementById('sb-backdrop');if(_bd)_bd.style.display='none';
   var pages={settle:pageSettle,delivery_settle:pageDeliverySettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,my_roster:pageMyRoster,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,emp_home:pageEmpHome,vehicle:pageVehicle,expense:pageExpense,overtime:pageOvertime,evaluation:pageEvaluation,delivery_report:pageDeliveryReport,delivery_platform:pageDeliveryPlatform,delivery_input:pageDeliveryInput,notify_history:pageNotifyHistory};
+  // ★ 플랜 체크
+  var cd=window._cachedCompanyDoc||{};
+  var planGate={
+    'attendance':'qr','roster':'qr','leave':'payroll','overtime':'qr',
+    'hourly_settle':'payroll','dispatch':'premium','vehicle':'premium','expense':'premium',
+    'delivery_settle':'delivery','delivery_input':'delivery','delivery_report':'delivery','delivery_platform':'delivery'
+  };
+  var requiredPlan=planGate[page];
+  if(requiredPlan&&!isSuperAdmin()){
+    var allowed=false;
+    if(requiredPlan==='qr')      allowed=_hasQr(cd);
+    if(requiredPlan==='payroll') allowed=_hasPayroll(cd);
+    if(requiredPlan==='delivery')allowed=_hasDelivery(cd);
+    if(requiredPlan==='premium') allowed=_hasPremium(cd);
+    if(!allowed){_renderPaywall(page);return;}
+  }
   var fn=pages[page];
   if(fn)fn();
   else document.getElementById('content').innerHTML='<div class="empty"><div class="empty-icon">🚧</div>준비 중</div>';
