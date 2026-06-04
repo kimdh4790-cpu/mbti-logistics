@@ -47,7 +47,8 @@ async function fetchAsset(path, request) {
   const filePath = path.startsWith('/') ? path : '/' + path;
   const encodedPath = filePath.split('/').map(seg => seg ? encodeURIComponent(seg) : '').join('/');
   return await fetch(GITHUB_RAW + encodedPath + '?t=' + Date.now(), {
-    cf: { cacheEverything: false, cacheTtl: 0 }
+    headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
+    cf: { cacheEverything: false, cacheTtl: 0, bypassCache: true }
   });
 }
 
