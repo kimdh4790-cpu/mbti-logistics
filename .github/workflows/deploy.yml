@@ -30,11 +30,14 @@ jobs:
           NS_ID="7f0e90efaea64f3ab08ff00f8970b28b"
           echo $NS_ID > kv_ns_id.txt
           echo "settle.html 크기: $(wc -c < settle.html) bytes"
-          wrangler kv:key put --namespace-id="7f0e90efaea64f3ab08ff00f8970b28b" "settle.html" --path=settle.html --account-id=02709cbec18d848913b4246015b9148f || wrangler kv key put --namespace-id="7f0e90efaea64f3ab08ff00f8970b28b" "settle.html" --path=settle.html --account-id=02709cbec18d848913b4246015b9148f
-          echo "KV 업로드 완료"
-          wrangler kv:key list --namespace-id="7f0e90efaea64f3ab08ff00f8970b28b" --account-id=02709cbec18d848913b4246015b9148f || true
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X PUT \
+            "https://api.cloudflare.com/client/v4/accounts/02709cbec18d848913b4246015b9148f/storage/kv/namespaces/$NS_ID/values/settle.html" \
+            -H "Authorization: Bearer $CF_KV_TOKEN" \
+            --data-binary @settle.html)
+          echo "KV 업로드 HTTP 상태: $HTTP_STATUS"
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_KV_TOKEN }}
+          CF_KV_TOKEN: ${{ secrets.CF_KV_TOKEN }}
 
       - name: Update wrangler.toml with KV binding
         run: |
