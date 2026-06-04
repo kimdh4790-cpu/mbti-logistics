@@ -14997,7 +14997,7 @@ function pageSettle(){
     var allMonths=[...new Set(settles.map(function(s){return s.month||''}).filter(Boolean))].sort().reverse();
 
     // 집계 (필터 적용)
-    var totCoupang=0,totTaxBase=0,totNet=0,totDcnt=0,totDeduct=0,totInsComp=0,totExtraOut=0;
+    var totCoupang=0,totTaxBase=0,totNet=0,totDcnt=0,totDeduct=0,totInsComp=0,totExtraOut=0,totEmpComp=0,totWorkComp=0,totEmpDrv=0,totWorkDrv=0;
     var byCamp={};
     filteredSettles.forEach(function(s){
       var r=calcNet(s);
@@ -15012,6 +15012,10 @@ function pageSettle(){
       totDcnt+=(s.dcnt||0);
       // 회사 부담 보험료 = empComp(고용0.9%) + workComp(산재0.88%) — 기사공제분과 구분
       totInsComp+=(r.insComp||0);
+      totEmpComp+=(r.empComp||0);   // 회사부담 고용
+      totWorkComp+=(r.workComp||0); // 회사부담 산재
+      totEmpDrv+=(r.emp||0);        // 기사부담 고용
+      totWorkDrv+=(r.work||0);      // 기사부담 산재
       var cc=_getSettleCamp(s)||'기타';
       if(!byCamp[cc])byCamp[cc]={cnt:0,net:0,dcnt:0};
       byCamp[cc].cnt++;byCamp[cc].net+=r.net||0;byCamp[cc].dcnt+=(s.dcnt||0);
@@ -15068,7 +15072,7 @@ function pageSettle(){
         +'</div>'
         +'<div style="text-align:right">'
           +'<div style="font-size:20px;font-weight:900;color:#a78bfa">₩'+fmt(totMargin)+'</div>'
-          +'<div style="font-size:10px;opacity:.5">회사보험료 -₩'+fmt(totInsComp)+(totExtraOut>0?' · 추가지출(팀장/보장등) -₩'+fmt(totExtraOut):'')+'</div>'
+          +'<div style="font-size:10px;opacity:.5">'            +'회사: 고용 -₩'+fmt(totEmpComp)+' · 산재 -₩'+fmt(totWorkComp)            +(totExtraOut>0?' · 추가지출 -₩'+fmt(totExtraOut):'')            +'</div>'          +'<div style="font-size:10px;opacity:.5">'            +'기사: 고용 -₩'+fmt(totEmpDrv)+' · 산재 -₩'+fmt(totWorkDrv)          +'</div>'
         +'</div>'
       +'</div>'
       // 실순수익 박스
