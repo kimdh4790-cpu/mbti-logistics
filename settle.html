@@ -15070,7 +15070,8 @@ async function _registerFCM(){
       });
       // ★ 슈퍼어드민은 admin_tokens 컬렉션에도 저장 (결제알림 수신용)
       if(isAdmin){
-        await _db.collection('admin_tokens').doc(_CU.dealerId).set({
+        var _adminTokenId=_CU.dealerId||_CU.uid||_auth.currentUser.uid;
+        await _db.collection('admin_tokens').doc(_adminTokenId).set({
           token: token,
           email: _CU.email||'',
           updatedAt: new Date().toISOString(),
