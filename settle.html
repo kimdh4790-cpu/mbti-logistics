@@ -10189,28 +10189,53 @@ function _buildUniversalPayslip(emp, month, compName){
       '<div style="font-size:13px;opacity:.85">'+esc(name)+(camp?' &nbsp;<span style="opacity:.6">'+esc(camp)+'</span>':'')+'</div>'+
     '</div>'+
 
-    // 실적 테이블
-    '<div style="padding:16px 20px 0">'+
-      '<div style="font-size:11px;font-weight:700;color:#185FA5;margin-bottom:6px;padding-bottom:4px;border-bottom:2px solid #185FA5">① 정산 실적</div>'+
-      '<table style="width:100%;border-collapse:collapse">'+
-        '<tr style="background:#f0f4ff">'+
-          '<th style="padding:6px 8px;text-align:left;font-size:11px;color:#185FA5">항목</th>'+
-          '<th style="padding:6px 8px;text-align:right;font-size:11px;color:#185FA5">건수/수량</th>'+
-          '<th style="padding:6px 8px;text-align:right;font-size:11px;color:#185FA5">단가</th>'+
-          '<th style="padding:6px 8px;text-align:right;font-size:11px;color:#185FA5">금액</th>'+
-        '</tr>'+
-        '<tr><td style="padding:5px 8px;border-bottom:1px solid #eee;font-weight:600;color:#185FA5">정산</td>'+
-          '<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right">'+(cnt>0?cnt+'건':'—')+'</td>'+
-          '<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right">'+(price>0?'₩'+price.toLocaleString():'—')+'</td>'+
-          '<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;font-weight:700">₩'+gross.toLocaleString()+'</td>'+
-        '</tr>'+
-        (bonus>0?'<tr><td style="padding:5px 8px;border-bottom:1px solid #eee">추가수당/인센</td>'+
-          '<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right">—</td>'+
-          '<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right">—</td>'+
-          '<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;color:#059669;font-weight:700">+₩'+bonus.toLocaleString()+'</td>'+
-        '</tr>':'')+
-      '</table>'+
-    '</div>'+
+    // ★ 상세 실적 테이블 (업종별 행 데이터)
+    (function(){
+      var details=emp.details||[];
+      var hasDetails=details.length>0;
+      var rows='';
+
+      if(hasDetails){
+        // 업종별 상세 행
+        details.forEach(function(d){
+          if(d.num>0&&d.num>100){
+            rows+='<tr><td style="padding:5px 8px;border-bottom:1px solid #eee;font-weight:600;color:#185FA5">'+esc(d.label)+'</td>'+
+              '<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right">—</td>'+
+              '<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right">—</td>'+
+              '<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;font-weight:700">₩'+Math.round(d.num).toLocaleString()+'</td></tr>';
+          } else if(d.num>0&&d.num<=1000){
+            rows+='<tr><td style="padding:5px 8px;border-bottom:1px solid #eee;font-weight:600;color:#185FA5">'+esc(d.label)+'</td>'+
+              '<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right">'+d.num+'</td>'+
+              '<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right">—</td>'+
+              '<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right">—</td></tr>';
+          }
+        });
+      }
+
+      // 기본 합계 행
+      rows+='<tr style="background:#f0f4ff"><td style="padding:5px 8px;font-weight:700;color:#185FA5">소계</td>'+
+        '<td style="padding:5px 8px;text-align:right">'+(cnt>0?cnt+'건':'—')+'</td>'+
+        '<td style="padding:5px 8px;text-align:right">'+(price>0?'₩'+price.toLocaleString():'—')+'</td>'+
+        '<td style="padding:5px 8px;text-align:right;font-weight:800">₩'+gross.toLocaleString()+'</td></tr>';
+
+      if(bonus>0){
+        rows+='<tr><td style="padding:5px 8px;border-bottom:1px solid #eee;color:#059669">추가수당/인센</td>'+
+          '<td colspan="2" style="padding:5px 8px;border-bottom:1px solid #eee"></td>'+
+          '<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;color:#059669;font-weight:700">+₩'+bonus.toLocaleString()+'</td></tr>';
+      }
+
+      return '<div style="padding:16px 20px 0">'+
+        '<div style="font-size:11px;font-weight:700;color:#185FA5;margin-bottom:6px;padding-bottom:4px;border-bottom:2px solid #185FA5">① 정산 실적</div>'+
+        '<table style="width:100%;border-collapse:collapse">'+
+          '<tr style="background:#f0f4ff">'+
+            '<th style="padding:6px 8px;text-align:left;font-size:11px;color:#185FA5">항목</th>'+
+            '<th style="padding:6px 8px;text-align:right;font-size:11px;color:#185FA5">건수/수량</th>'+
+            '<th style="padding:6px 8px;text-align:right;font-size:11px;color:#185FA5">단가</th>'+
+            '<th style="padding:6px 8px;text-align:right;font-size:11px;color:#185FA5">금액</th>'+
+          '</tr>'+rows+
+        '</table>'+
+      '</div>';
+    })()+
 
     // 세금계산서 (사업자)
     (isBiz?
@@ -10448,7 +10473,22 @@ window._universalParseExcel=function(input){
             calcGross=bonus-deduct;
           }
 
-          shResults.push({name:name,cnt:cnt,price:calcPrice,bonus:bonus,deduct:deduct,gross:calcGross,camp:finalCamp,sheet:shName,row:row,hdr:hdr});
+          // ★ 상세 항목 구성 (업종별 행 데이터)
+          var details=[];
+          // 컬럼별로 의미있는 데이터 추출
+          hdr.forEach(function(h,ci){
+            if(ci===ni||ci===ai) return; // 이름/최종금액 제외
+            var val=String(row[ci]||'').trim();
+            if(!val||val==='0'||val==='nan') return;
+            var num=parseFloat(val.replace(/[,₩원]/g,''));
+            if(!isNaN(num)&&num>0){
+              details.push({label:h,value:val,num:num});
+            } else if(val&&val.length>0&&val.length<20){
+              details.push({label:h,value:val,num:0});
+            }
+          });
+
+          shResults.push({name:name,cnt:cnt,price:calcPrice,bonus:bonus,deduct:deduct,gross:calcGross,camp:finalCamp,sheet:shName,details:details});
           allResults.push(shResults[shResults.length-1]);
         }
         if(shResults.length>0) sheetInfos.push({name:shName,count:shResults.length});
@@ -10573,7 +10613,8 @@ window._universalSave=function(){
     return {
       name:name,empId:empId,camp:camp,
       cnt:cnt,rcnt:rcnt,gross:gross,inc:inc,net:net,
-      sheet:String(r.sheet||''),month:String(r.month||month)
+      sheet:String(r.sheet||''),month:String(r.month||month),
+      details:(r.details||[]).map(function(d){return {label:String(d.label||''),value:String(d.value||''),num:d.num||0};})
     };
   }).filter(function(r){return !!r.name;});
 
