@@ -18023,6 +18023,7 @@ function editDriver(id){
       +'<span>📷</span><span>OCR 자동입력</span>'
       +'</button>'
       +'<span id="edr-ocr-status" style="font-size:10px;color:var(--cyan)"></span>'
+      +'<div class="gr">'      +'<div class="fg"><label>주민번호</label><input id="edr-ssn" value="'+esc(d.ssn||'')+'" placeholder="000000-0000000" style="font-family:monospace"></div>'      +'<div class="fg"><label>입사일</label><input id="edr-joindate" type="date" value="'+(d.joinDate||'')+'"></div>'      +'</div>'
       +'</div>'
       +'<div class="gr"><div class="fg"><label>사업자번호</label><input id="edr-biznum" value="'+esc(d.bizNum||'')+'" placeholder="000-00-00000"></div>'
       +'<div class="fg"><label>상호명</label><input id="edr-bizname" value="'+esc(d.bizName||'')+'"></div></div>'
@@ -18432,6 +18433,8 @@ function saveDriver(id){
     phone:gvs('edr-phone')||'',
     email:gvs('edr-email')||'',
     is_active:(document.getElementById('edr-active')||{value:'true'}).value!=='false',
+    ssn:gvs('edr-ssn')||'',
+    joinDate:gvs('edr-joindate')||'',
     bizNum:gvs('edr-biznum')||'',
     bizName:gvs('edr-bizname')||'',
     bizRep:gvs('edr-bizrep')||'',
