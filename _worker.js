@@ -41,14 +41,24 @@ function forbidden(msg = '접근이 거부되었습니다') {
 
 const PROJECT_ID = 'mbti-logistics';
 // ★ GitHub Raw 직접 서빙
-const GITHUB_RAW = 'https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main';
 let _env_ref = null;
-async function fetchAsset(path, request) {
+async function fetchAsset(path, request, env) {
+  const e = env || _env_ref;
   const filePath = path.startsWith('/') ? path : '/' + path;
+  // env.ASSETS로 직접 서빙 (즉시 반영)
+  if (e && e.ASSETS) {
+    try {
+      const url = new URL(request ? request.url : 'https://donway.ai.kr');
+      url.pathname = filePath;
+      const resp = await e.ASSETS.fetch(new Request(url.toString()));
+      return resp;
+    } catch(err) {}
+  }
+  // 폴백: GitHub Raw
+  const GITHUB_RAW = 'https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main';
   const encodedPath = filePath.split('/').map(seg => seg ? encodeURIComponent(seg) : '').join('/');
   return await fetch(GITHUB_RAW + encodedPath + '?t=' + Date.now(), {
-    headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
-    cf: { cacheEverything: false, cacheTtl: 0, bypassCache: true }
+    cf: { cacheEverything: false, cacheTtl: 0 }
   });
 }
 
@@ -401,6 +411,7 @@ async function runExpireJob(env) {
 // ── Fetch Handler ─────────────────────────────────────────────────────────────
 export default {
   async fetch(request, env) {
+    _env_ref = env;
     const url      = new URL(request.url);
     const path     = url.pathname;
     const method   = request.method;
@@ -456,14 +467,14 @@ export default {
       // workers.dev = 물류앱, 그 외 = DONWAY 랜딩
       if (hostname.includes('workers.dev') || hostname.includes('kimdh4790')) {
         // ★ 물류앱 메인 HTML 서빙
-        const logisticsResp = await fetchAsset('/엠비티아이_물류관리_v9.html', request);
+        const logisticsResp = await fetchAsset('/엠비티아이_물류관리_v9.html', request, env);
         const lh = new Headers();
         lh.set('Content-Type', 'text/html; charset=utf-8');
         lh.set('Cache-Control', 'no-cache');
         Object.entries(SECURITY_HEADERS).forEach(([k,v]) => lh.set(k,v));
         return new Response(logisticsResp.body, { status: logisticsResp.status, headers: lh });
       } else {
-        const landingResp = await fetchAsset('/donway_landing.html', request);
+        const landingResp = await fetchAsset('/donway_landing.html', request, env);
         const landingHeaders = new Headers();
         landingHeaders.set('Content-Type', 'text/html; charset=utf-8');
         landingHeaders.set('Cache-Control', 'no-cache');
@@ -794,7 +805,7 @@ export default {
 
     if (path === '/scan' || path === '/scan/') {
       const req  = new Request(new URL('/scan.html', url).toString(), { method: 'GET', headers: request.headers });
-      const resp = await fetchAsset(new URL(req.url).pathname, request);
+      const resp = await fetchAsset(new URL(req.url).pathname, request, env);
       const html = await resp.text();
       const key  = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
       const injected = html.replace('<head>', '<head><script>window.__AK=' + JSON.stringify(key) + ';</script>');
@@ -825,7 +836,7 @@ export default {
     // .html 파일은 슬러그 라우팅 제외 (정적 파일 직접 서빙)
     if (path.endsWith('.html') && method === 'GET') {
       try {
-        const assetResp2 = await fetchAsset(url.pathname, request);
+        const assetResp2 = await fetchAsset(url.pathname, request, env);
         const isSimulator2 = url.pathname.includes('%EC%8B%9C%EB%AE%AC%EB%A0%88%EC%9D%B4%ED%84%B0') || url.pathname.includes('simulator');
         return addSecurityHeaders(assetResp2, isSimulator2);
       } catch(e) {}
@@ -834,7 +845,7 @@ export default {
     if (slugMatch && !knownPaths.has(slugMatch[0].replace(/\/$/,'')) && method === 'GET') {
       const companySlug = slugMatch[1];
       try {
-        const resp = await fetchAsset('/settle.html', request);
+        const resp = await fetchAsset('/settle.html', request, env);
         let html = await resp.text();
         // slug + 보안헤더 주입 (</head> 앞에 삽입 - 가장 안전한 위치)
         const akKey = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
@@ -855,7 +866,7 @@ export default {
     }
 
     if (path === '/settle.html' || path === '/settle' || path === '/settle/') {
-      const resp = await fetchAsset('/settle.html', request);
+      const resp = await fetchAsset('/settle.html', request, env);
       const html = await resp.text();
       const key = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
       const storageTag = '<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage-compat.js"></script>';
@@ -1767,7 +1778,7 @@ export default {
     }
 
     // 정적 파일 서빙 + 보안 헤더 적용
-    const assetResp = await fetchAsset(url.pathname, request);
+    const assetResp = await fetchAsset(url.pathname, request, env);
     // ★ JS 파일: application/javascript 강제 + GitHub Raw CSP 제거
     if (url.pathname.endsWith('.js')) {
       const jsHeaders = new Headers();
