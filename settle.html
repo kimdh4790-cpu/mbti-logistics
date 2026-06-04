@@ -10591,11 +10591,23 @@ function _txsBulkExcel(targets, ym){
 
 // ── 세무사 페이지 엑셀 빠른 다운로드
 function _txsBulkExcelQuick(){
-  if(!_settleCache||!_settleCache.length){toast('❌ 정산 데이터 없음');return;}
-  var ym=(_settleCache[0]&&_settleCache[0].month)||new Date().toISOString().slice(0,7);
-  var rows=_settleCache.filter(function(s){return s.month===ym;});
-  if(!rows.length){toast('❌ '+ym+' 데이터 없음');return;}
-  _txsBulkExcel(rows,ym);
+  if(_settleCache&&_settleCache.length){
+    var ym=(_settleCache[0]&&_settleCache[0].month)||new Date().toISOString().slice(0,7);
+    var rows=_settleCache.filter(function(s){return s.month===ym;});
+    if(rows.length){_txsBulkExcel(rows,ym);return;}
+  }
+  // ★ _settleCache 없으면 Firestore에서 직접 로드
+  if(!_db||!_CU){toast('❌ 로그인 필요');return;}
+  toast('⏳ 정산 데이터 로딩 중...');
+  var did=_CU.dealerId||_CU.uid;
+  _db.collection('settlements').where('dealerId','==',did).get().then(function(snap){
+    if(snap.empty){toast('❌ 정산 데이터 없음');return;}
+    var rows=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
+    _settleCache=rows;
+    var ym=(rows[0]&&rows[0].month)||new Date().toISOString().slice(0,7);
+    var filtered=rows.filter(function(s){return s.month===ym;});
+    _txsBulkExcel(filtered.length?filtered:rows, ym);
+  }).catch(function(e){toast('❌ '+e.message);});
 }
 function pageTaxShare(){
   document.getElementById('page-title').textContent='🧾 세무사 연동';
