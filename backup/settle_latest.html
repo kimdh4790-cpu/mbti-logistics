@@ -2177,6 +2177,9 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             x.tax=_cn.tax||0;
             x.emp=_cn.emp||0;
             x.work=_cn.work||0;
+            x.empComp=_cn.empComp||0;   // 회사부담 고용
+            x.workComp=_cn.workComp||0; // 회사부담 산재
+            x.insComp=_cn.insComp||0;   // 회사부담 합계
             x.deduct=(_cn.emp||0)+(_cn.work||0)+(_cn.dmg||0)+(_cn.etcMinus||0)+(_cn.adv||0);
             x.vatIncome=_cn.income||_cn.vatIncome||0;
             x.supplyAmt=_cn.supplyAmt||0;
