@@ -15548,13 +15548,12 @@ function pageSettle(){
   var _did=_CU.dealerId;
   Promise.all([
     _db.collection('settlements').where('dealerId','==',_did).get(),
-    _db.collection('settlements_universal').where('dealerId','==',_did).get().catch(function(){return {docs:[]};}),
     _db.collection('expenses').where('dealerId','==',_did).get(),
     _db.collection('settings').doc(_did+'_fixedExpenses').get(),
     _db.collection('tax_docs').where('dealerId','==',_did).get()
   ]).then(function(results){
-    var snap=results[0],univSnap=results[1],expSnap=results[2],fixSnap=results[3],taxDocSnap=results[4];
-    var allDocs=[].concat(snap.docs||[]).concat(univSnap.docs||[]);
+    var snap=results[0],expSnap=results[1],fixSnap=results[2],taxDocSnap=results[3];
+    var allDocs=[].concat(snap.docs||[]);
     if(!allDocs.length){
       c.innerHTML='<div class="empty" style="padding:60px 20px"><div style="font-size:48px;margin-bottom:12px">📊</div>'
         +'<div style="font-size:17px;font-weight:800;margin-bottom:6px">정산 데이터가 없습니다</div>'
@@ -17655,10 +17654,6 @@ function _saveSECurrent(){
     _db.collection('settlements').where('dealerId','==',_CU.dealerId||_CU.uid)
       .get().then(function(snap){
         _settleCache=snap.docs.map(function(d){return Object.assign({id:d.id,fbId:d.id},d.data());});
-        // settlements_universal도 합치기
-        _db.collection('settlements_universal').where('dealerId','==',_CU.dealerId||_CU.uid).get()
-          .then(function(us){if(us&&us.docs&&us.docs.length)_settleCache=_settleCache.concat(us.docs.map(function(d){return Object.assign({id:d.id,fbId:d.id,_source:'universal'},d.data());}));})
-          .catch(function(){});
       }).catch(function(){});
   }).catch(function(e){
     toast('❌ 저장실패: '+e.message);
