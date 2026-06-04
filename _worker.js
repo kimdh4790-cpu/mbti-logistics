@@ -148,6 +148,68 @@ async function handleSAFirestore(request, env) {
   }
 }
 
+// ── 기사 배치 업데이트 (이름 기준 ssn/joinDate/bizNum) ──
+async function handleDriversBatch(request, env) {
+  try {
+    const body = await request.json();
+    const { dealerId, drivers } = body;
+    if (!dealerId || !drivers) return new Response(JSON.stringify({error:'dealerId/drivers 필수'}), {status:400, headers:{'Content-Type':'application/json'}});
+
+    const SA_KEY = env.FIREBASE_SA_KEY ? JSON.parse(env.FIREBASE_SA_KEY) : null;
+    if (!SA_KEY) return new Response(JSON.stringify({error:'SA_KEY 없음'}), {status:500, headers:{'Content-Type':'application/json'}});
+
+    const now = Math.floor(Date.now()/1000);
+    const pemKey = SA_KEY.private_key;
+    const keyData = pemKey.replace(/-----.*?-----/g,'').replace(/\s/g,'');
+    const binaryKey = Uint8Array.from(atob(keyData), c=>c.charCodeAt(0));
+    const cryptoKey = await crypto.subtle.importKey('pkcs8', binaryKey.buffer, {name:'RSASSA-PKCS1-v1_5', hash:'SHA-256'}, false, ['sign']);
+    const header = btoa(JSON.stringify({alg:'RS256',typ:'JWT'}));
+    const claim = btoa(JSON.stringify({iss:SA_KEY.client_email, scope:'https://www.googleapis.com/auth/datastore', aud:'https://oauth2.googleapis.com/token', exp:now+3600, iat:now}));
+    const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', cryptoKey, new TextEncoder().encode(header+'.'+claim));
+    const jwt = header+'.'+claim+'.'+btoa(String.fromCharCode(...new Uint8Array(sig)));
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:`grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`});
+    const {access_token} = await tokenRes.json();
+
+    const PROJECT = 'mbti-logistics';
+    // drivers 컬렉션 전체 조회
+    const listRes = await fetch(`https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents/drivers?pageSize=200`, {headers:{'Authorization':`Bearer ${access_token}`}});
+    const listData = await listRes.json();
+    const docs = listData.documents || [];
+
+    // 이름→docId 맵
+    const nameMap = {};
+    for (const doc of docs) {
+      const f = doc.fields || {};
+      const dId = f.dealerId?.stringValue || '';
+      if (dId !== dealerId) continue;
+      const name = f.name?.stringValue || '';
+      if (name) nameMap[name] = doc.name;
+    }
+
+    let updated = 0, notFound = [];
+    for (const drv of drivers) {
+      const docPath = nameMap[drv.name];
+      if (!docPath) { notFound.push(drv.name); continue; }
+
+      const fields = {};
+      if (drv.ssn) fields.ssn = {stringValue: drv.ssn};
+      if (drv.joinDate) fields.joinDate = {stringValue: drv.joinDate};
+      if (drv.bizNum) { fields.bizNum = {stringValue: drv.bizNum}; fields.isBiz = {booleanValue: true}; }
+
+      const mask = Object.keys(fields).map(k=>`updateMask.fieldPaths=${k}`).join('&');
+      await fetch(`https://firestore.googleapis.com/v1/${docPath}?${mask}`, {
+        method:'PATCH', headers:{'Authorization':`Bearer ${access_token}`,'Content-Type':'application/json'},
+        body: JSON.stringify({fields})
+      });
+      updated++;
+    }
+
+    return new Response(JSON.stringify({ok:true, updated, notFound}), {headers:{'Content-Type':'application/json'}});
+  } catch(e) {
+    return new Response(JSON.stringify({error:e.message}), {status:500, headers:{'Content-Type':'application/json'}});
+  }
+}
+
 // ── FCM 푸시 발송 (Cloud Function sendPush 경유) ──
 async function sendFCMPush(fcmToken, title, body, data = {}) {
   if (!fcmToken) return { sent: false, reason: 'no token' };
@@ -1476,6 +1538,11 @@ export default {
     // ★ 슈퍼어드민 Firestore 수정
     if (path === '/sa/firestore' && method === 'POST') {
       return handleSAFirestore(request, env);
+    }
+
+    // ★ 기사 배치 업데이트 (이름 기준)
+    if (path === '/sa/drivers-batch' && method === 'POST') {
+      return handleDriversBatch(request, env);
     }
 
     // ── 관리자 FCM 알림 (/fcm/notify-admin) ──
