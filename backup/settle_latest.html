@@ -12587,26 +12587,25 @@ function _saDbUpdate(){
   var doc=document.getElementById('sa-db-doc').value.trim();
   var raw=document.getElementById('sa-db-fields').value.trim();
   var res=document.getElementById('sa-db-result');
-  if(!col||!doc||!raw){res.textContent='❌ 필드 모두 입력';return;}
+  if(!col||!doc||!raw){res.textContent='필드 모두 입력';return;}
   var fields={};
-  raw.split('\n').forEach(function(line){
+  var lines=raw.split(String.fromCharCode(10));
+  for(var li=0;li<lines.length;li++){
+    var line=lines[li];
     var idx=line.indexOf(':');
     if(idx>0){
-      var k=line.slice(0,idx).trim();
-      var v=line.slice(idx+1).trim();
-      fields[k]=v;
+      fields[line.slice(0,idx).trim()]=line.slice(idx+1).trim();
     }
-  });
-  if(!Object.keys(fields).length){res.textContent='❌ 필드:값 형식 오류';return;}
+  }
+  if(!Object.keys(fields).length){res.textContent='필드:값 형식 오류';return;}
   res.textContent='저장 중...';
   fetch('/sa/firestore',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({collection:col,docId:doc,fields:fields})
   }).then(function(r){return r.json();}).then(function(d){
-    if(d.ok) res.textContent='✅ 저장 완료';
-    else res.textContent='❌ '+d.error;
-  }).catch(function(e){res.textContent='❌ '+e.message;});
+    res.textContent=d.ok?'저장 완료':'오류: '+d.error;
+  }).catch(function(e){res.textContent='오류: '+e.message;});
 }
 window._saDbUpdate=_saDbUpdate;
 
