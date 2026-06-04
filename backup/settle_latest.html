@@ -8905,8 +8905,12 @@ function _renderUniversalRules(c, r){
     '<div style="background:var(--bg2);border-radius:12px;border:1px solid var(--border);padding:16px;margin-bottom:12px">'+
       '<div style="font-size:13px;font-weight:800;margin-bottom:12px">💡 추가 규칙</div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'+
-        '<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">추가인센 (원/건)</label>'+
-          '<input type="number" id="u-inc-rate" value="'+(r.incRate||0)+'" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px"></div>'+
+        '<div style="grid-column:1/-1"><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:6px">추가인센 (원/건) — 캠프별 설정</label>'+
+          '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:6px">'+
+            _uIncCampRow(r.incCamps||{})+
+          '</div>'+
+          '<div style="font-size:10px;color:var(--text3);margin-top:4px">선택값: 0 / 10 / 15 / 25원</div>'+
+        '</div>'+
         '<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">용차 배달단가</label>'+
           '<input type="number" id="u-yong-del" value="'+(r.yongDel||900)+'" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px"></div>'+
         '<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">용차 반품단가</label>'+
@@ -9441,7 +9445,8 @@ function _uSaveRules(){
     basePrice:parseInt((document.getElementById('u-base-price')||{}).value||0),
     nocontW2:parseInt((document.getElementById('u-nocont-w2')||{}).value||600),
     nocontW1:parseInt((document.getElementById('u-nocont-w1')||{}).value||800),
-    incRate:parseInt((document.getElementById('u-inc-rate')||{}).value||0),
+    incRate:0, // 하위호환
+    incCamps:(function(){var m={};document.querySelectorAll('.u-inc-camp').forEach(function(s){m[s.dataset.camp]=parseInt(s.value)||0;});return m;})(),
     yongDel:parseInt((document.getElementById('u-yong-del')||{}).value||900),
     yongRet:parseInt((document.getElementById('u-yong-ret')||{}).value||900),
     freshOn:!!(document.getElementById('u-fresh-on')||{}).checked,
@@ -9464,6 +9469,28 @@ function _uSaveRules(){
       if(basic&&typeof RPRICE!=='undefined') basic.routes.forEach(function(rr){RPRICE[rr.route]=rr.price;});
     })
     .catch(function(e){toast('❌ '+e.message);});
+}
+
+
+function _uIncCampRow(incCamps){
+  // 등록된 캠프 목록 + 기본 캠프
+  var camps=[];
+  Object.keys(_uPriceData||{}).forEach(function(r){
+    var c=(_uPriceData[r]||{}).camp||'기본';
+    if(camps.indexOf(c)<0) camps.push(c);
+  });
+  if(!camps.length) camps=['부산1','부산2','부산3','대구2','진주M'];
+  camps.sort();
+
+  return camps.map(function(camp){
+    var val=incCamps[camp]||0;
+    return '<div style="background:var(--bg3);border-radius:6px;padding:6px;text-align:center">'+
+      '<div style="font-size:9px;color:var(--text3);margin-bottom:4px">'+esc(camp)+'</div>'+
+      '<select class="u-inc-camp" data-camp="'+esc(camp)+'" style="width:100%;padding:4px;border:1px solid var(--border);border-radius:5px;font-size:12px;font-weight:700;background:var(--bg);text-align:center">'+
+        [0,10,15,25].map(function(v){return '<option value="'+v+'"'+(val===v?' selected':'')+'>'+v+'원</option>';}).join('')+
+      '</select>'+
+    '</div>';
+  }).join('');
 }
 
 function _uRuleToggle(label, id, val){
