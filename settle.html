@@ -7283,9 +7283,9 @@ window.dwRunLiveCalculations=function(){
       con.appendChild(hdr);
 
       var _pfSum=0,_totalInj=0,_totalExt=0,_validCnt=0,_idx=0;
-      var DWT=window.DW_TRACKS&&DW_TRACKS.length>1?DW_TRACKS:[
+      var DWT=(window.DW_TRACKS&&DW_TRACKS.length>1?DW_TRACKS:[
         {min:0,price:window._dwCfgDefPrice||cfg.defPrice||2900},{min:180,price:4200},{min:250,price:5100},{min:300,price:5200},{min:350,price:5500}
-      ];
+      ]).slice().sort(function(a,b){return a.min-b.min;}); // ★ 오름차순 정렬 필수
       function _getTP(cnt){var p=DWT[0].price;for(var i=DWT.length-1;i>=0;i--){if(cnt>=(DWT[i].min||0)){p=DWT[i].price;break;}}return p;}
       if(!window._dwTotalInj) window._dwTotalInj=0;
       if(!window._dwTotalExt) window._dwTotalExt=0;
