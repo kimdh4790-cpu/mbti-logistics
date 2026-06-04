@@ -9053,11 +9053,28 @@ window._uImportPriceFiles = function(input){
         var currentRoute='';
         e.target.result.split('\n').forEach(function(line){
           line=line.trim(); if(!line) return;
-          if(/^\d{3}$/.test(line)){currentRoute=line;return;}
+          // 라우트 번호만 (608, 612 등) — 뒤에 공백 있어도 인식
+          if(/^\d{3}\s*$/.test(line)){currentRoute=line.trim();return;}
+          // 이름 행 스킵 (한글 포함)
+          if(/[가-힣]/.test(line)) return;
+          // "B60 C60 D60" 형식 — 한 줄에 여러 라우트 (팀장 수수료)
+          var multi=line.match(/([A-D])\s*(\d+)/gi);
+          if(multi&&multi.length>1){
+            multi.forEach(function(m){
+              var mm=m.match(/([A-D])\s*(\d+)/i);
+              if(mm&&currentRoute){
+                var r=normRoute(currentRoute+mm[1]);
+                _uPriceData[r]={price:parseInt(mm[2]),priceVat:0,type:type};total++;
+              }
+            });
+            return;
+          }
+          // "A 930" 또는 "A60" 형식 (단일)
           var m1=line.match(/^([A-D])\s+(\d+)/i);
-          if(m1){var r=normRoute(currentRoute+m1[1]);_uPriceData[r]={price:parseInt(m1[2]),priceVat:0,type:type};total++;return;}
+          if(m1&&currentRoute){var r=normRoute(currentRoute+m1[1]);_uPriceData[r]={price:parseInt(m1[2]),priceVat:0,type:type};total++;return;}
           var m2=line.match(/^([A-D])(\d+)/i);
-          if(m2){var r2=normRoute(currentRoute+m2[1]);_uPriceData[r2]={price:parseInt(m2[2]),priceVat:0,type:type};total++;return;}
+          if(m2&&currentRoute){var r2=normRoute(currentRoute+m2[1]);_uPriceData[r2]={price:parseInt(m2[2]),priceVat:0,type:type};total++;return;}
+          // "812A 930" 형식
           var m3=line.match(/([0-9]{3}[A-Za-z]?)\s*[,\s]\s*(\d+)/);
           if(m3&&parseInt(m3[2])>50){_uPriceData[normRoute(m3[1])]={price:parseInt(m3[2]),priceVat:0,type:type};total++;}
         });
