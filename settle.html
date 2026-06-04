@@ -9012,6 +9012,88 @@ function _uAddRRow(ti){
   container.appendChild(div);
 }
 
+
+// ★ 단가표 파일 업로드 (단일 탭용)
+window._uBulkUploadRoutes = function(input, ti){
+  var file=input.files[0]; if(!file)return;
+  input.value='';
+  var ext=file.name.split('.').pop().toLowerCase();
+  var container=document.querySelector('#ptable-'+ti+' .route-rows');
+  if(!container){toast('단가표를 먼저 선택해주세요');return;}
+
+  function addRow(route, price, priceVat){
+    var div=document.createElement('div');
+    div.className='rrow';
+    div.style.cssText='display:grid;grid-template-columns:80px 80px 80px auto;gap:6px;margin-bottom:5px;align-items:center';
+    div.innerHTML=
+      '<input type="text" value="'+route+'" class="r-route" style="padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px;text-align:center">'+
+      '<input type="number" value="'+(price||'')+'" class="r-price" style="padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px">'+
+      '<input type="number" value="'+(priceVat||'')+'" class="r-pricevat" style="padding:6px;border:1px solid rgba(0,200,100,.4);border-radius:6px;background:var(--bg);font-size:12px">'+
+      '<button onclick="_uRemoveRRow(this)" style="padding:4px 8px;background:#fee2e2;border:none;border-radius:5px;cursor:pointer;font-size:11px;color:#dc2626;width:32px">✕</button>';
+    container.appendChild(div);
+  }
+
+  var reader=new FileReader();
+
+  if(ext==='txt'){
+    reader.onload=function(e){
+      container.innerHTML='';
+      var currentRoute='';
+      var cnt=0;
+      e.target.result.split('\n').forEach(function(line){
+        line=line.trim(); if(!line)return;
+        // 캠프명 행 (부산1, 부산2 등) 스킵
+        if(/^[가-힣A-Za-z_]+\d*$/.test(line)&&line.length<=6){return;}
+        // 라우트 번호만 (608, 612 등)
+        if(/^\d{3}$/.test(line)){currentRoute=line;return;}
+        // "A 930" 또는 "B 860" 형식
+        var m1=line.match(/^([A-D])\s+(\d+)/i);
+        if(m1){addRow(currentRoute+m1[1].toUpperCase(),parseInt(m1[2]),0);cnt++;return;}
+        // "A60" 형식 (팀장수수료)
+        var m2=line.match(/^([A-D])(\d+)/i);
+        if(m2){addRow(currentRoute+m2[1].toUpperCase(),parseInt(m2[2]),0);cnt++;return;}
+        // "812A 930" 또는 "812A,930" 형식
+        var m3=line.match(/([0-9]{3}[A-D]?)\s*[,\s]\s*(\d+)/i);
+        if(m3){addRow(m3[1].toUpperCase(),parseInt(m3[2]),0);cnt++;return;}
+      });
+      toast('✅ '+cnt+'개 라우트 로드됨');
+    };
+    reader.readAsText(file,'utf-8');
+  } else {
+    reader.onload=function(e){
+      try{
+        if(typeof XLSX==='undefined'){toast('라이브러리 로딩 중...');return;}
+        var wb=XLSX.read(e.target.result,{type:'array'});
+        container.innerHTML='';
+        var cnt=0;
+        wb.SheetNames.forEach(function(shName){
+          var ws=wb.Sheets[shName];
+          var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+          rows.forEach(function(row){
+            var a=String(row[0]||'').trim();
+            var b=String(row[1]||'').trim();
+            var c2=String(row[2]||'').trim();
+            // 캠프 헤더 스킵
+            if(a&&!b&&!c2)return;
+            var route='',price=0,priceVat=0;
+            if(/^[0-9]{3}[A-D]$/i.test(a)){
+              route=a.toUpperCase();
+              price=parseInt(c2)||parseInt(b)||0;
+              priceVat=c2&&parseInt(c2)>0?parseInt(c2):0;
+            } else if(/^[0-9]{3}[A-D]$/i.test(b)){
+              route=b.toUpperCase();
+              price=parseInt(c2)||0;
+            }
+            if(route&&price>0){addRow(route,price,priceVat>price?priceVat:0);cnt++;}
+          });
+        });
+        toast('✅ '+cnt+'개 라우트 로드됨');
+      }catch(err){toast('❌ '+err.message);}
+    };
+    reader.readAsArrayBuffer(file);
+  }
+};
+
 function _uRemoveRRow(btn){btn.closest('.rrow').remove();}
 function _uRemoveRow(btn){btn.closest('.rrow, [id^="rrow-"]').remove();}
 
