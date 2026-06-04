@@ -10167,6 +10167,38 @@ window._uDetailTab=function(ci){
 
 // 범용 명세서 HTML 생성
 function _buildUniversalPayslip(emp, month, compName){
+  // ★ 쿠팡Raw 데이터면 AI정산 명세서 함수 활용
+  var sources = emp.sources||[];
+  var details = emp.details||[];
+  var isCoupang = !!(emp.isCoupang)
+    || sources.some(function(s){return s.label&&(s.label.indexOf('정산서')>=0||s.label.indexOf('정산Raw')>=0||s.label.indexOf('쿠팡')>=0);})
+    || details.some(function(d){return d.label&&/^[0-9]{3}[A-D]$/.test(d.label);});
+
+  if(isCoupang){
+    // 라우트별 상세를 routeDetails 형식으로 변환
+    var routeDetails=details.filter(function(d){return /^[0-9]{3}[A-D]$/.test(d.label);})
+      .map(function(d){return {route:d.label,cnt:d.cnt||0,ret:d.ret||0,unitPrice:d.price||0};});
+
+    // AI정산 명세서 함수 호출용 데이터 구성
+    var x={routeDetails:routeDetails,camp:emp.camp||''};
+    var r={
+      emp: isBizEmployee(emp)?Math.round((emp.gross||0)*0.346*0.008):0,
+      work: isBizEmployee(emp)?Math.round((emp.gross||0)*0.346*0.0088):0,
+      fresh: 0, finc: (emp.inc||0), etcPlus: 0, etcMinus: 0, adv: 0
+    };
+    var vatIncome = emp.gross||0;
+    return _buildPayslipCaptureHTML(x, r, emp.name||'', month||'', emp.net||vatIncome, vatIncome);
+  }
+
+  // 일반 범용 명세서 (하단 기존 함수 내용)
+  return _buildUniversalPayslipGeneric(emp, month, compName);
+}
+
+function isBizEmployee(emp){
+  return emp.contractType&&emp.contractType.includes('사업자');
+}
+
+function _buildUniversalPayslipGeneric(emp, month, compName){
   var name=emp.name||'';
   var cnt=emp.cnt||0;
   var price=emp.price||0;
@@ -10192,6 +10224,7 @@ function _buildUniversalPayslip(emp, month, compName){
   var compInfo=compName||(_CU&&_CU.companyName)||'';
   var bizNo=(_CU&&_CU.bizNo)||'';
 
+  compName=compName||(_CU&&_CU.companyName)||'';
   return '<div style="background:#fff;width:600px;font-family:Malgun Gothic,sans-serif;font-size:13px;color:#1a1a1a">'+
 
     // 헤더
@@ -10583,9 +10616,12 @@ window._universalParseMulti = function(input){
               var p=idMap[empId];
               var routeDetails=Object.keys(p.routes).map(function(r){
                 var rd=p.routes[r];
-                return {label:r,cnt:rd.cnt,price:rd.price,num:rd.amt,source:source};
+                return {label:r,cnt:rd.cnt,ret:rd.ret||0,price:rd.price,num:rd.amt,source:source};
               });
-              mergePerson(empId, empId, p.camp, p.gross, p.cnt, 0, p.inc+p.fresh, 0, source, routeDetails);
+              var merged=mergePerson(empId, empId, p.camp, p.gross, p.cnt, 0, p.inc+p.fresh, 0, source, routeDetails);
+              // 쿠팡Raw 표시용 플래그
+              var key=getKey(empId,empId);
+              if(mergeMap[key]) mergeMap[key]._isCoupang=true;
             });
             processFile(idx+1);
             return;
@@ -10873,6 +10909,7 @@ window._universalSave=function(){
       sheet:String(r.sheet||''),month:String(r.month||month),
       contractType:String(r.contractType||'비사업자'),
       sources:(r.sources||[]).map(function(s){return {label:String(s.label||''),cnt:s.cnt||0,price:s.price||0,gross:s.gross||0};}),
+      isCoupang:!!(r._isCoupang),
       details:(r.details||[]).map(function(d){return {label:String(d.label||''),value:String(d.value||''),num:d.num||0};})
     };
   }).filter(function(r){return !!r.name;});
