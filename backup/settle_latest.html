@@ -4421,7 +4421,7 @@ function uploadContract(input){
 
 // ══ 근무표 관리 ══
 function pageRoster(){
-  if(!isSuperAdmin()&&window._cachedHasPaid===false&&!window._trialActive){_renderPaywall('roster');return;}
+  // trial도 roster 허용
   if(!_db||!_CU){_renderRosterPaywall();return;}
   var cid=_CU.dealerId||_CU.companyId;
   _db.collection('companies').doc(cid).get().then(function(snap){
@@ -14920,7 +14920,7 @@ function goPage(page){
   // ★ 플랜 체크
   var cd=window._cachedCompanyDoc||{};
   var planGate={
-    'attendance':'qr','roster':'qr','leave':'payroll','overtime':'qr',
+    'attendance':'qr','leave':'payroll','overtime':'qr',
     'hourly_settle':'payroll','dispatch':'premium','vehicle':'premium','expense':'premium',
     'delivery_settle':'delivery','delivery_input':'delivery','delivery_report':'delivery','delivery_platform':'delivery'
   };
@@ -23442,7 +23442,7 @@ function _requirePlan(feature,callback){
   if(isSuperAdmin()){callback();return;}
   // ★ trial = settle 범위만 허용 (delivery/qr/payroll 제외)
   if(window._trialActive){
-    var _trialOkFeatures=['settle','settlements','stats','prices','season','contract','tax_share','roster','free',''];
+    var _trialOkFeatures=['settle','settlements','stats','prices','season','contract','tax_share','roster','evaluation','drivers','free',''];
     if(!feature||_trialOkFeatures.indexOf(feature)>=0){callback();return;}
     else{_renderPaywall(feature);return;}
   }
@@ -23484,7 +23484,7 @@ function _isPlanAllowed(d,feature){
   var isTrial=window._trialActive||(d.plan==='trial'&&d.trialEnd&&d.trialEnd>=new Date().toISOString().slice(0,10));
   if(isTrial){
     // ★ trial = AI 택배정산(settle) 범위만 허용
-    var trialOk=['settle','settlements','stats','prices','season','contract','tax_share','roster','free',''];
+    var trialOk=['settle','settlements','stats','prices','season','contract','tax_share','roster','evaluation','drivers','free',''];
     if(!feature||trialOk.indexOf(feature)>=0)return true;
     return false;
   }
