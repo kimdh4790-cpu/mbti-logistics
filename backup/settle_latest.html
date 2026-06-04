@@ -15072,7 +15072,7 @@ function pageSettle(){
         +'</div>'
         +'<div style="text-align:right">'
           +'<div style="font-size:20px;font-weight:900;color:#a78bfa">₩'+fmt(totMargin)+'</div>'
-          +'<div style="font-size:10px;opacity:.5">'            +'회사: 고용 -₩'+fmt(totEmpComp)+' · 산재 -₩'+fmt(totWorkComp)            +(totExtraOut>0?' · 추가지출 -₩'+fmt(totExtraOut):'')            +'</div>'          +'<div style="font-size:10px;opacity:.5">'            +'기사: 고용 -₩'+fmt(totEmpDrv)+' · 산재 -₩'+fmt(totWorkDrv)          +'</div>'
+          +'<div style="font-size:10px;opacity:.5">'            +(totEmpComp||totWorkComp?'회사: 고용 -₩'+fmt(totEmpComp)+' · 산재 -₩'+fmt(totWorkComp)+(totExtraOut>0?' · 추가지출 -₩'+fmt(totExtraOut):''):'')            +'기사: 고용 -₩'+fmt(totEmpDrv)+' · 산재 -₩'+fmt(totWorkDrv)          +'</div>'
         +'</div>'
       +'</div>'
       // 실순수익 박스
