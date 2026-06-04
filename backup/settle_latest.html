@@ -9815,33 +9815,53 @@ window._uBulkFromTemplate = function(input, did){
       });
 
       if(!valid.length){if(status)status.textContent='❌ 유효한 데이터 없음';return;}
+      if(!valid.length){if(status)status.textContent='❌ 유효한 데이터 없음';return;}
+      if(status)status.textContent='⏳ 중복 확인 중...';
 
-      // 배치 저장 (500개씩)
-      var chunks=[];
-      for(var i=0;i<valid.length;i+=500)chunks.push(valid.slice(i,i+500));
-
-      var saved=0;
-      function saveChunk(idx){
-        if(idx>=chunks.length){
-          if(status)status.textContent='✅ '+saved+'명 등록 완료!';
-          setTimeout(function(){pageUniversalEmp();},800);
-          return;
-        }
-        var batch=_db.batch();
-        chunks[idx].forEach(function(emp){
-          batch.set(_db.collection('universal_employees').doc(),emp);
-          saved++;
+      // 기존 empId 조회 → 중복 제거
+      _db.collection('universal_employees').where('dealerId','==',did).get()
+        .then(function(snap){
+          var existingIds={};
+          snap.docs.forEach(function(d){var id=(d.data().empId||'').trim();if(id)existingIds[id]=true;});
+          var deduped=valid.filter(function(v){return !existingIds[v.empId];});
+          var skipped=valid.length-deduped.length;
+          if(!deduped.length){if(status)status.textContent='⚠️ 전원 이미 등록됨 ('+skipped+'명 중복)';return;}
+          var chunks=[];
+          for(var i=0;i<deduped.length;i+=500)chunks.push(deduped.slice(i,i+500));
+          var saved=0;
+          function saveChunk(idx){
+            if(idx>=chunks.length){
+              if(status)status.textContent='✅ '+saved+'명 신규 등록'+(skipped?' ('+skipped+'명 중복 스킵)':'');
+              setTimeout(function(){pageUniversalEmp();},800);return;
+            }
+            var batch=_db.batch();
+            chunks[idx].forEach(function(emp){batch.set(_db.collection('universal_employees').doc(),emp);saved++;});
+            batch.commit().then(function(){saveChunk(idx+1);}).catch(function(e){if(status)status.textContent='❌ '+e.message;});
+          }
+          saveChunk(0);
+          if(status)status.textContent='⏳ '+deduped.length+'명 저장 중...';
         });
-        batch.commit().then(function(){saveChunk(idx+1);})
-          .catch(function(e){if(status)status.textContent='❌ '+e.message;});
-      }
-      saveChunk(0);
-      if(status)status.textContent='⏳ '+valid.length+'명 저장 중...';
 
     }catch(err){if(status)status.textContent='❌ '+err.message;}
   };
   reader.readAsArrayBuffer(file);
 };
+
+function _uDeleteAllEmps(did){
+  if(!confirm('직원 명단 전체를 삭제하시겠습니까?'))return;
+  _db.collection('universal_employees').where('dealerId','==',did).get()
+    .then(function(snap){
+      var chunks=[];
+      for(var i=0;i<snap.docs.length;i+=500) chunks.push(snap.docs.slice(i,i+500));
+      function delChunk(idx){
+        if(idx>=chunks.length){toast('✅ 전체 삭제 완료');pageUniversalEmp();return;}
+        var batch=_db.batch();
+        chunks[idx].forEach(function(d){batch.delete(d.ref);});
+        batch.commit().then(function(){delChunk(idx+1);}).catch(function(e){toast('❌ '+e.message);});
+      }
+      delChunk(0);
+    });
+}
 
 function _uAddEmp(did){
   var name=(document.getElementById('ue-name').value||'').trim();
@@ -10001,7 +10021,10 @@ function _renderUniversalEmp(c, emps, did){
 
     // 목록
     '<div style="background:var(--bg2);border-radius:12px;border:1px solid var(--border);overflow:hidden">'+
-      '<div style="padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px;font-weight:800">등록된 직원 '+emps.length+'명</div>'+
+      '<div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">'+
+        '<span style="font-size:13px;font-weight:800">등록된 직원 '+emps.length+'명</span>'+
+        (emps.length?'<button onclick="_uDeleteAllEmps(\''+did+'\')" style="padding:4px 10px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;cursor:pointer">🗑 전체삭제</button>':'')+
+      '</div>'+
       (emps.length?
         '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
           '<tr style="background:var(--bg)"><th style="padding:8px 10px;text-align:left;font-size:11px;color:var(--text3)">이름</th><th style="padding:8px 10px;text-align:left;font-size:11px;color:var(--text3)">ID/사번</th><th style="padding:8px 10px;text-align:left;font-size:11px;color:var(--text3)">캠프</th><th style="padding:8px 10px;text-align:left;font-size:11px;color:var(--text3)">계약유형</th><th></th></tr>'+
