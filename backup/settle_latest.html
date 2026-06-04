@@ -23440,10 +23440,13 @@ function _loadAdminStatus(){
 function _requirePlan(feature,callback){
   if(!_db||!_CU){toast('❌ 로그인 필요');return;}
   if(isSuperAdmin()){callback();return;}
-  // ★ trial = settle 범위만 허용 (delivery/qr/payroll 제외)
-  if(window._trialActive){
-    var _trialOkFeatures=['settle','settlements','stats','prices','season','contract','tax_share','roster','evaluation','drivers','free',''];
-    if(!feature||_trialOkFeatures.indexOf(feature)>=0){callback();return;}
+  var _settleOkFeatures=['settle','settlements','stats','prices','season','contract','tax_share','roster','evaluation','drivers','free',''];
+  // ★ trial 또는 any_paid = settle 범위 허용
+  var _cd=window._cachedCompanyDoc||{};
+  var _plan=_cd.plan||'';
+  var _isTrialOrAnyPaid=window._trialActive||_plan==='any_paid'||_plan==='trial';
+  if(_isTrialOrAnyPaid){
+    if(!feature||_settleOkFeatures.indexOf(feature)>=0){callback();return;}
     else{_renderPaywall(feature);return;}
   }
   var did=_CU.uid||_CU.dealerId||_CU.companyId||'';
