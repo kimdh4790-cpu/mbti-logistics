@@ -8792,7 +8792,8 @@ function _renderUniversalRules(c, r){
   var routeRows=routes.map(function(rr,i){
     return '<div style="display:flex;gap:8px;margin-bottom:6px" id="rrow-'+i+'">'+
       '<input type="text" placeholder="라우트 (예: 812A)" value="'+esc(rr.route||'')+'" style="flex:1;padding:7px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px" id="r-route-'+i+'">'+
-      '<input type="number" placeholder="단가 (원)" value="'+(rr.price||'')+'" style="width:100px;padding:7px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px" id="r-price-'+i+'">'+
+      '<input type="number" placeholder="비사업자" value="'+(rr.price||'')+'" style="width:90px;padding:7px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px" id="r-price-'+i+'">'+
+      '<input type="number" placeholder="사업자(VAT)" value="'+(rr.priceVat||'')+'" style="width:90px;padding:7px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px;border-color:rgba(0,200,100,.4)" id="r-pricevat-'+i+'">'+
       '<button onclick="_uRemoveRow(this)" style="padding:4px 8px;background:#fee2e2;border:none;border-radius:6px;cursor:pointer;font-size:12px;color:#dc2626">✕</button>'+
     '</div>';
   }).join('');
@@ -8846,7 +8847,8 @@ function _renderUniversalRules(c, r){
       '<div style="font-size:10px;color:var(--text3);margin-bottom:8px">txt: 라우트,단가 (한줄에 하나) | xlsx: A열=라우트, B열=단가</div>'+
       '<div style="display:flex;gap:8px;margin-bottom:6px">'+
         '<div style="flex:1;font-size:10px;color:var(--text3);font-weight:700">라우트</div>'+
-        '<div style="width:100px;font-size:10px;color:var(--text3);font-weight:700">단가(원)</div>'+
+        '<div style="width:90px;font-size:10px;color:var(--text3);font-weight:700">비사업자 단가</div>'+
+        '<div style="width:90px;font-size:10px;color:var(--text3);font-weight:700">사업자 단가(VAT포함)</div>'+
         '<div style="width:32px"></div>'+
       '</div>'+
       '<div id="u-route-rows">'+routeRows+'</div>'+
@@ -8947,14 +8949,15 @@ window._uBulkUploadRoutes = function(input){
   var container=document.getElementById('u-route-rows');
   if(!container){toast('페이지를 새로고침해주세요');return;}
 
-  function addRow(route, price){
+  function addRow(route, price, priceVat){
     var i=Date.now()+Math.random();
     var div=document.createElement('div');
     div.id='rrow-'+i;
     div.style.cssText='display:flex;gap:8px;margin-bottom:6px';
     div.innerHTML=
       '<input type="text" value="'+route+'" style="flex:1;padding:7px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px" id="r-route-'+i+'">'+
-      '<input type="number" value="'+price+'" style="width:100px;padding:7px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px" id="r-price-'+i+'">'+
+      '<input type="number" value="'+price+'" style="width:90px;padding:7px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px" id="r-price-'+i+'">'+
+      '<input type="number" value="'+(priceVat||'')+'" placeholder="VAT" style="width:90px;padding:7px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px;border-color:rgba(0,200,100,.4)" id="r-pricevat-'+i+'">'+
       '<button onclick="_uRemoveRow(this)" style="padding:4px 8px;background:#fee2e2;border:none;border-radius:6px;cursor:pointer;font-size:12px;color:#dc2626">✕</button>';
     container.appendChild(div);
   }
@@ -9023,7 +9026,8 @@ function _uAddRouteRow(){
   div.style.cssText='display:flex;gap:8px;margin-bottom:6px';
   div.innerHTML=
     '<input type="text" placeholder="라우트 (예: 812A)" style="flex:1;padding:7px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px" id="r-route-'+i+'">'+
-    '<input type="number" placeholder="단가 (원)" style="width:100px;padding:7px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px" id="r-price-'+i+'">'+
+    '<input type="number" placeholder="비사업자" style="width:90px;padding:7px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px" id="r-price-'+i+'">'+
+    '<input type="number" placeholder="사업자(VAT)" style="width:90px;padding:7px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px;border-color:rgba(0,200,100,.4)" id="r-pricevat-'+i+'">'+
     '<button onclick="_uRemoveRow(this)" style="padding:4px 8px;background:#fee2e2;border:none;border-radius:6px;cursor:pointer;font-size:12px;color:#dc2626">✕</button>';
   container.appendChild(div);
 }
@@ -9038,8 +9042,8 @@ function _uSaveRules(){
     var id=row.id.replace('rrow-','');
     var route=(document.getElementById('r-route-'+id)||{}).value||'';
     var price=parseInt((document.getElementById('r-price-'+id)||{}).value||0);
-    if(route&&price>0) routes.push({route:route.trim().toUpperCase(),price:price});
-  });
+    var priceVat=parseInt((document.getElementById('r-pricevat-'+id)||{}).value||0);
+    if(route&&price>0) routes.push({route:route.trim().toUpperCase(),price:price,priceVat:priceVat||0});
 
   var rules={
     calcType:document.getElementById('u-calc-type').value,
