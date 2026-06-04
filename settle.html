@@ -1318,26 +1318,30 @@ function _showMappingModal(headers, rows, hIdx, fileName, savedMapping, savedKey
   mo.onclick=function(e){if(e.target===mo)mo.remove();};
 
   var FIELDS=[
-    {key:'name',label:'기사명',required:true},
-    {key:'id',label:'기사ID/연락처',required:false},
-    {key:'dcnt',label:'배달건수',required:true},
-    {key:'unit',label:'단가(건당)',required:false},
-    {key:'bonus',label:'추가수당/인센티브',required:false},
-    {key:'deduct',label:'공제금액',required:false},
-    {key:'rcnt',label:'픽업/집화건수',required:false},
+    {key:'name', label:'이름/업체명',       required:true},
+    {key:'net',  label:'실지급/청구액(직접)',required:false},
+    {key:'dcnt', label:'건수/수량/일수',     required:false},
+    {key:'unit', label:'단가/시급/일당',     required:false},
+    {key:'bonus',label:'추가수당/인센티브',  required:false},
+    {key:'deduct',label:'공제/차감',         required:false},
+    {key:'id',   label:'ID/사번/연락처',     required:false},
+    {key:'camp', label:'캠프/지점/소속',     required:false},
+    {key:'rcnt', label:'픽업/집화/추가건수', required:false},
   ];
 
   // 자동 매핑 추정
   function guessCol(field){
     if(savedMapping&&savedMapping[field.key]!==undefined) return savedMapping[field.key];
     var patterns={
-      name:['기사명','성명','라이더명','이름','driver','name'],
-      id:['id','사번','아이디','연락처','phone'],
-      dcnt:['배달건수','건수','count','배달','delivery'],
-      unit:['단가','건당단가','기본단가','unit','price'],
-      bonus:['추가수당','인센티브','수당','bonus'],
-      deduct:['공제','공제금액','deduct'],
-      rcnt:['픽업','집화','pickup','return','반품'],
+      name:['기사명','성명','라이더명','이름','driver','name','직원명','담당자','거래처','업체명','고객사','근로자','강사명','디자이너','목공수','현장원','미용사','대표자','가맹점','파견처','발주사','화주'],
+      net: ['실지급액','정산금액','최종 정산','최종 실지급','청구액','지급 총액','최종 지급','정산청구액','지급대금','결제대금','차인실지급'],
+      dcnt:['배달건수','건수','count','배달','delivery','수량','일수','공수','출역','출근','시간','처리건','완료건'],
+      unit:['단가','건당단가','기본단가','unit','price','시급','일당','수수료','보관료'],
+      bonus:['추가수당','인센티브','수당','bonus','성과','장려금','명절','특별'],
+      deduct:['공제','공제금액','deduct','차감','총공제','소득세','4대보험'],
+      id:['id','사번','아이디','연락처','phone','코드','직원코드'],
+      camp:['캠프','지점','소속','구역','담당','현장','지역'],
+      rcnt:['픽업','집화','pickup','return','반품','추가건'],
     };
     var pats=patterns[field.key]||[];
     for(var i=0;i<headers.length;i++){
@@ -1380,10 +1384,11 @@ function _showMappingModal(headers, rows, hIdx, fileName, savedMapping, savedKey
 }
 
 function _applyUniversalMapping(headers, rows, hIdx, savedKey){
-  var getCol=function(key){return parseInt(document.getElementById('map-'+key).value);};
+  var getCol=function(key){var el=document.getElementById('map-'+key);return el?parseInt(el.value):-1;};
   var mapping={
-    name:getCol('name'),id:getCol('id'),dcnt:getCol('dcnt'),
-    unit:getCol('unit'),bonus:getCol('bonus'),deduct:getCol('deduct'),rcnt:getCol('rcnt')
+    name:getCol('name'),net:getCol('net'),id:getCol('id'),camp:getCol('camp'),
+    dcnt:getCol('dcnt'),unit:getCol('unit'),bonus:getCol('bonus'),
+    deduct:getCol('deduct'),rcnt:getCol('rcnt')
   };
 
   // 저장 옵션
@@ -1406,12 +1411,15 @@ function _applyUniversalMapping(headers, rows, hIdx, savedKey){
     var deduct=mapping.deduct>=0?Math.abs(parseFloat(String(row[mapping.deduct]||'').replace(/[,₩원]/g,''))||0):0;
     var rcnt=mapping.rcnt>=0?Math.abs(parseFloat(String(row[mapping.rcnt]||'').replace(/[,₩원]/g,''))||0):0;
     var id=mapping.id>=0?String(row[mapping.id]||'').trim():'';
-    var damt=dcnt>0&&unit>0?dcnt*unit:0;
+    var directNet=mapping.net>=0?Math.abs(parseFloat(String(row[mapping.net]||'').replace(/[,₩원]/g,''))||0):0;
+    var damt=directNet>0?directNet:(dcnt>0&&unit>0?dcnt*unit:0);
     var ramt=rcnt>0&&unit>0?rcnt*unit:0;
+    var camp=mapping.camp>=0?String(row[mapping.camp]||'').trim():'';
     results.push({
-      driver:name,userId:id||name,month:month,
+      driver:name,userId:id||name,month:month,camp:camp,
       dcnt:dcnt,rcnt:rcnt,damt:damt,ramt:ramt,
       etcPlus:bonus,etcMinus:deduct,
+      net:Math.max(0,damt+ramt+bonus-deduct),
       _source:'universal'
     });
   });
