@@ -8939,6 +8939,14 @@ window._universalParseExcel=function(input){
         if(shResults.length>0) sheetInfos.push({name:shName,count:shResults.length});
       });
 
+      // ★ 대용량 경고
+      if(allResults.length>10000){
+        var keep=allResults.slice(0,10000);
+        if(status)status.textContent='⚠️ '+allResults.length.toLocaleString()+'건 중 10,000건만 처리 (브라우저 한계). 분할 업로드 권장.';
+        _universalRenderResults(keep);
+        return;
+      }
+
       if(!allResults.length){
         // 자동 감지 실패 시 매핑 모달로 fallback
         var fbSheet=wb.SheetNames[0];
