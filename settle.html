@@ -2805,6 +2805,7 @@ _auth.onAuthStateChanged(function(user){
             if(cd.serviceType)_CU.serviceType=cd.serviceType;
             if(!_CU.serviceType||_CU.serviceType==='full'){
               if(cd.deliveryPaid&&!cd.settlePaid&&!cd.qrPaid)_CU.serviceType='delivery';
+              if(cd.universalPaid&&!cd.settlePaid&&!cd.deliveryPaid&&!cd.qrPaid)_CU.serviceType='universal';
               else if(cd.payrollPaid&&!cd.settlePaid)_CU.serviceType='payroll';
               else if(cd.qrPaid&&!cd.settlePaid&&!cd.payrollPaid)_CU.serviceType='qr';
               else if(cd.settlePaid)_CU.serviceType='settle';
@@ -4272,6 +4273,7 @@ var PLAN_INFO={
   payroll:     {label:'💼 급여관리',      unitPrice:12000, amount:360000, group:2, field:'payrollPaid',     desc:'급여·4대보험'},
   qr_payroll:  {label:'🔐💼 QR+급여',    unitPrice:17000, amount:510000, group:1, field:'qrPayrollPaid',   desc:'QR출퇴근+급여 통합'},
   delivery:    {label:'🛵 배달대행',      unitPrice:17000, amount:510000, group:1, field:'deliveryPaid',    desc:'배달대행 정산'},
+  universal:   {label:'📋 범용 정산',     unitPrice:25000, amount:750000, group:1, field:'universalPaid',   desc:'업종무관 엑셀 정산'},
   customer_g1: {label:'🛍️ 고객관리 G1', unitPrice:8500,  amount:255000, group:1, field:'customerG1Paid',  desc:'고객방문·알림·VIP'},
   customer_g2: {label:'🛍️ 고객관리 G2', unitPrice:6000,  amount:180000, group:2, field:'customerG2Paid',  desc:'고객방문·알림·VIP'},
   contract:    {label:'위수탁 계약서',    unitPrice:0,     amount:9900,   group:0, field:'contractPaid',    desc:'계약서 관리'},
@@ -6504,7 +6506,9 @@ function _dwDetectPlatform(headers){
   var h=headers.map(function(c){return String(c||'').toLowerCase();});
   var joined=h.join('|');
   if(joined.includes('배달원')&&joined.includes('지급액')) return 'coupangEats';
-  if(joined.includes('사번')||joined.includes('라이더id')||(joined.includes('라이더')&&joined.includes('정산'))) return 'baemin';
+  if(joined.includes('라이더id')&&joined.includes('배달대행비')) return 'orderDetail'; // ★ 건별 주문내역 포맷
+  if(joined.includes('주문번호')&&joined.includes('라이더')) return 'orderDetail';
+  if(joined.includes('사번')||(joined.includes('라이더')&&joined.includes('정산'))) return 'baemin';
   if(joined.includes('rider')&&joined.includes('amount')) return 'coupangEats';
   return 'unknown';
 }
@@ -6596,6 +6600,10 @@ function _dwParseExcel(file, cb){
         if(!row)return;
         var rid=row[colId]!=null?String(row[colId]).trim():'';
         if(!rid||rid==='-'||rid==='합계'||rid==='소계'||rid==='total')return;
+
+        // ★ 취소건 자동 제외 (취소여부=Y 컬럼)
+        var cancelIdx=headers.findIndex(function(h){return String(h||'').includes('취소여부');});
+        if(cancelIdx>=0&&String(row[cancelIdx]||'').trim().toUpperCase()==='Y')return;
 
         // 금액 파싱 (건수×단가 or 직접 금액)
         var price=0;
@@ -8820,7 +8828,25 @@ window._universalDeleteSettle=function(id){
   });
 };
 
-// 범용 엑셀 파싱 (이름+금액 컬럼 자동 감지)
+// 범용 엑셀 파서 — 다중시트 + 컬럼명 자동 감지
+var _U_NAME_P   = ['기사명','성명','이름','name','직원명','담당자','운전자'];
+var _U_ID_P     = ['ID','사번','직원코드','아이디','쿠팡id','id'];
+var _U_CNT_P    = ['배달건수','배달수량','건수','count','수량'];
+var _U_PRICE_P  = ['단가','기본단가','단가(원)','price','단가금액'];
+var _U_BONUS_P  = ['추가수당','인센티브','보너스','추가금액','bonus'];
+var _U_DEDUCT_P = ['공제','공제금액','벌금/공제','차감','deduct'];
+var _U_CAMP_P   = ['캠프','담당구역','지역','구역','camp'];
+var _U_AMT_P    = ['금액','지급액','지급금액','급여','pay','amount','합계'];
+
+function _uFindCol(hdrs, patterns){
+  for(var p=0;p<patterns.length;p++){
+    for(var i=0;i<hdrs.length;i++){
+      if(hdrs[i].toLowerCase().indexOf(patterns[p].toLowerCase())>=0) return i;
+    }
+  }
+  return -1;
+}
+
 window._universalParseExcel=function(input){
   var file=input.files[0];if(!file)return;
   var status=document.getElementById('u-parse-status');
@@ -8829,54 +8855,111 @@ window._universalParseExcel=function(input){
   reader.onload=function(e){
     try{
       var wb=XLSX.read(e.target.result,{type:'array'});
-      var ws=wb.Sheets[wb.SheetNames[0]];
-      var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-      if(rows.length<2){if(status)status.textContent='❌ 데이터 없음';return;}
-      // 헤더 자동 감지
-      var hdr=rows[0].map(function(h){return String(h).trim();});
-      var nameIdx=hdr.findIndex(function(h){return /이름|성명|직원|name/i.test(h);});
-      var amtIdx=hdr.findIndex(function(h){return /금액|지급|급여|pay|amount/i.test(h);});
-      if(nameIdx<0)nameIdx=0;
-      if(amtIdx<0)amtIdx=1;
-      var results=[];
-      for(var i=1;i<rows.length;i++){
-        var row=rows[i];
-        var name=String(row[nameIdx]||'').trim();
-        var amt=parseFloat(String(row[amtIdx]||'0').replace(/[^0-9.-]/g,''))||0;
-        if(!name)continue;
-        results.push({name:name,amount:amt,row:row,hdr:hdr});
-      }
-      if(status)status.textContent='✅ '+results.length+'명 파싱 완료';
-      _universalRenderResults(results,hdr,nameIdx,amtIdx);
-    }catch(err){if(status)status.textContent='❌ '+err.message;}
+      var allResults=[], sheetInfos=[];
+
+      wb.SheetNames.forEach(function(shName){
+        var ws=wb.Sheets[shName];
+        var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+        if(rows.length<2) return;
+
+        // 헤더 행 찾기 (최대 5행 탐색)
+        var hdrRow=0;
+        var hdr=[];
+        for(var h=0;h<Math.min(5,rows.length);h++){
+          var row=rows[h].map(function(c){return String(c).trim();});
+          var hasName=_uFindCol(row,_U_NAME_P)>=0;
+          var hasCntOrAmt=_uFindCol(row,_U_CNT_P)>=0||_uFindCol(row,_U_AMT_P)>=0;
+          if(hasName&&hasCntOrAmt){hdrRow=h;hdr=row;break;}
+        }
+        if(!hdr.length) return;
+
+        var ni=_uFindCol(hdr,_U_NAME_P);
+        var ci=_uFindCol(hdr,_U_CNT_P);
+        var pi=_uFindCol(hdr,_U_PRICE_P);
+        var bi=_uFindCol(hdr,_U_BONUS_P);
+        var di=_uFindCol(hdr,_U_DEDUCT_P);
+        var ai=_uFindCol(hdr,_U_AMT_P); // 직접 금액
+        var cai=_uFindCol(hdr,_U_CAMP_P);
+        if(ni<0) return;
+
+        var shResults=[];
+        for(var i=hdrRow+1;i<rows.length;i++){
+          var row=rows[i];
+          var name=String(row[ni]||'').trim();
+          if(!name||name==='합계'||name==='소계'||name==='합 계') continue;
+          var cnt=ci>=0?parseInt(String(row[ci]||'0').replace(/[^0-9]/g,''))||0:0;
+          var price=pi>=0?parseFloat(String(row[pi]||'0').replace(/[^0-9.]/g,''))||0:0;
+          var bonus=bi>=0?parseFloat(String(row[bi]||'0').replace(/[^0-9.]/g,''))||0:0;
+          var deduct=di>=0?parseFloat(String(row[di]||'0').replace(/[^0-9.]/g,''))||0:0;
+          var directAmt=ai>=0?parseFloat(String(row[ai]||'0').replace(/[^0-9.]/g,''))||0:0;
+          var camp=cai>=0?String(row[cai]||'').trim():'';
+          // 금액 계산: 직접 금액 있으면 우선, 없으면 건수×단가
+          var gross=directAmt>0?directAmt:(cnt*price+bonus-deduct);
+          shResults.push({name:name,cnt:cnt,price:price,bonus:bonus,deduct:deduct,gross:gross,camp:camp,sheet:shName,row:row,hdr:hdr});
+          allResults.push(shResults[shResults.length-1]);
+        }
+        if(shResults.length>0) sheetInfos.push({name:shName,count:shResults.length});
+      });
+
+      if(!allResults.length){if(status)status.textContent='❌ 파싱된 데이터 없음';return;}
+      var sheetMsg=sheetInfos.map(function(s){return s.name+'('+s.count+'명)';}).join(', ');
+      if(status)status.textContent='✅ '+allResults.length+'명 파싱 완료 — '+sheetMsg;
+      _universalRenderResults(allResults);
+    }catch(err){if(status)status.textContent='❌ '+err.message;console.error(err);}
   };
   reader.readAsArrayBuffer(file);
 };
 
-function _universalRenderResults(results,hdr,nameIdx,amtIdx){
+function _universalRenderResults(results){
   var el=document.getElementById('u-results');if(!el)return;
   if(!results.length){el.innerHTML='<div class="empty">데이터 없음</div>';return;}
-  var total=results.reduce(function(s,r){return s+r.amount;},0);
+  var total=results.reduce(function(s,r){return s+(r.gross||r.amount||0);},0);
+  window._universalResults=results;
+  window._universalTotal=total;
+
+  // 시트별 그룹핑
+  var sheets={};
+  results.forEach(function(r){
+    var sh=r.sheet||'기본';
+    if(!sheets[sh])sheets[sh]=[];
+    sheets[sh].push(r);
+  });
+  var shNames=Object.keys(sheets);
+
   var html='<div style="background:var(--bg2);border-radius:12px;border:1px solid var(--border);overflow:hidden">'+
     '<div style="padding:12px 16px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">'+
       '<span style="font-weight:800;font-size:13px">📋 '+results.length+'명 · 합계 ₩'+total.toLocaleString()+'</span>'+
       '<button onclick="_universalSave()" style="padding:6px 16px;background:#10b981;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">💾 저장</button>'+
-    '</div>'+
-    '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
-    '<tr style="background:var(--bg)">'+hdr.map(function(h){return '<th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3)">'+esc(h)+'</th>';}).join('')+'</tr>';
-  results.forEach(function(r){
-    html+='<tr style="border-bottom:1px solid var(--border)">';
-    hdr.forEach(function(h,i){
-      var val=String(r.row[i]||'');
-      var isAmt=(i===amtIdx);
-      html+='<td style="padding:8px 12px;'+(isAmt?'font-weight:700;color:var(--brand)':'')+'">'+esc(isAmt?'₩'+Number(r.row[i]||0).toLocaleString():val)+'</td>';
+    '</div>';
+
+  shNames.forEach(function(shName){
+    var rows=sheets[shName];
+    var shTotal=rows.reduce(function(s,r){return s+(r.gross||0);},0);
+    html+='<div style="padding:8px 14px;background:var(--bg);border-bottom:1px solid var(--border);font-size:11px;font-weight:700;color:var(--text3)">'+
+      '📁 '+esc(shName)+' — '+rows.length+'명 / ₩'+shTotal.toLocaleString()+'</div>'+
+      '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
+      '<tr style="background:var(--bg2)">'+
+        '<th style="padding:7px 12px;text-align:left;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3)">이름</th>'+
+        '<th style="padding:7px 12px;text-align:right;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3)">건수</th>'+
+        '<th style="padding:7px 12px;text-align:right;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3)">단가</th>'+
+        '<th style="padding:7px 12px;text-align:right;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3)">추가수당</th>'+
+        '<th style="padding:7px 12px;text-align:right;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3)">공제</th>'+
+        '<th style="padding:7px 12px;text-align:right;border-bottom:1px solid var(--border);font-size:11px;color:var(--brand);font-weight:800">실지급</th>'+
+      '</tr>';
+    rows.forEach(function(r){
+      html+='<tr style="border-bottom:1px solid var(--border)">'+
+        '<td style="padding:7px 12px;font-weight:700">'+esc(r.name)+'</td>'+
+        '<td style="padding:7px 12px;text-align:right">'+r.cnt+'건</td>'+
+        '<td style="padding:7px 12px;text-align:right">₩'+(r.price||0).toLocaleString()+'</td>'+
+        '<td style="padding:7px 12px;text-align:right;color:#059669">+'+(r.bonus?'₩'+r.bonus.toLocaleString():'0')+'</td>'+
+        '<td style="padding:7px 12px;text-align:right;color:#dc2626">-'+(r.deduct?'₩'+r.deduct.toLocaleString():'0')+'</td>'+
+        '<td style="padding:7px 12px;text-align:right;font-weight:800;color:var(--brand)">₩'+(r.gross||0).toLocaleString()+'</td>'+
+      '</tr>';
     });
-    html+='</tr>';
+    html+='</table></div>';
   });
-  html+='</table></div></div>';
+  html+='</div>';
   el.innerHTML=html;
-  window._universalResults=results;
-  window._universalTotal=total;
 }
 
 window._universalSave=function(){
@@ -19585,6 +19668,9 @@ function _showSubModal(){
     {key:'delivery', ic:'🛵',nm:'배달대행 정산',   up:22000,g:1,color:'#dc2626',
      tl:'플랫폼 차액 자동 보전·회수',
      ft:['협력사 엑셀 자동 인식','구간 단가 소급 적용','보전·환수 자동 판정','직원 명세서']},
+    {key:'universal',ic:'📋',nm:'범용 정산',         up:25000,g:1,color:'#7c3aed',badge:'NEW',
+     tl:'어떤 업종이든 엑셀만 있으면 OK',
+     ft:['다중 시트·다중 택배사 지원','컬럼명 자동 감지·매핑','시트별 그룹 정산','세무사 연동·직원관리 포함','경비·달력·위수탁 계약서']},
   ];
   var html='<div class="md" style="max-width:660px;max-height:92vh;overflow-y:auto">'
     +'<div class="mdt" style="position:sticky;top:0;background:var(--bg2);border-radius:12px 12px 0 0;z-index:2;display:flex;align-items:center">💳 구독 플랜 선택'
@@ -24580,7 +24666,7 @@ function _loadPaymentRequests(container){
 
     var TYPE_LABEL={settle:'📦 AI 택배정산',qr:'🔐 QR 근태관리',payroll:'💼 급여관리',delivery:'🛵 배달대행',contract:'📝 위수탁 계약서',roster:'🗓 근무표',full:'⚡ ALL-IN-ONE'};
     var TYPE_PRICE={settle:89000,qr:49000,payroll:79000,delivery:89000,contract:9900,roster:9900,full:179000};
-    var TYPE_FIELD={settle:{settlePaid:true},qr:{qrPaid:true},payroll:{payrollPaid:true},delivery:{deliveryPaid:true},contract:{contractPaid:true},roster:{rosterPaid:true},full:{settlePaid:true,qrPaid:true,payrollPaid:true,deliveryPaid:true,contractPaid:true,rosterPaid:true}};
+    var TYPE_FIELD={settle:{settlePaid:true},qr:{qrPaid:true},payroll:{payrollPaid:true},delivery:{deliveryPaid:true},universal:{universalPaid:true},contract:{contractPaid:true},roster:{rosterPaid:true},full:{settlePaid:true,qrPaid:true,payrollPaid:true,deliveryPaid:true,universalPaid:true,contractPaid:true,rosterPaid:true}};
     var STATUS_COLOR={pending:'#f59e0b',approved:'#10b981',rejected:'#ef4444'};
 
     var html='';
