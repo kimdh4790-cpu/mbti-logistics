@@ -59,11 +59,13 @@ async function fetchAsset(path, request, env) {
     } catch(err) {}
   }
 
-  // 폴백: GitHub Raw
+  // 폴백: GitHub Raw (캐시 완전 우회)
   const GITHUB_RAW = 'https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main';
   const encodedPath = filePath.split('/').map(seg => seg ? encodeURIComponent(seg) : '').join('/');
-  return await fetch(GITHUB_RAW + encodedPath + '?t=' + Date.now(), {
-    cf: { cacheEverything: false, cacheTtl: 0 }
+  const bust = Date.now() + Math.random().toString(36).slice(2);
+  return await fetch(GITHUB_RAW + encodedPath + '?bust=' + bust, {
+    cf: { cacheEverything: false, cacheTtl: 0, bypassCache: true },
+    headers: { 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' }
   });
 }
 
