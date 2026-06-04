@@ -10179,14 +10179,29 @@ function _buildUniversalPayslip(emp, month, compName){
     var routeDetails=details.filter(function(d){return /^[0-9]{3}[A-D]$/.test(d.label);})
       .map(function(d){return {route:d.label,cnt:d.cnt||0,ret:d.ret||0,unitPrice:d.price||0};});
 
-    // AI정산 명세서 함수 호출용 데이터 구성
+    // 프레시백/인센 분리
+    var freshAmt=0, incAmt=0;
+    (emp.sources||[]).forEach(function(s){
+      // sources에 fresh/inc 저장 안 되어 있으면 details에서 추출
+    });
+    // bonus에 인센+프레시백 합산돼 있음 — details에서 분리
+    var bonusTotal=emp.bonus||0;
+    // 단순히 bonus를 finc으로 처리
+    incAmt = bonusTotal;
+
+    var isBiz=isBizEmployee(emp);
+    var vatIncome=emp.gross||0;
+    var supply=isBiz?Math.round(vatIncome/1.1):vatIncome;
     var x={routeDetails:routeDetails,camp:emp.camp||''};
     var r={
-      emp: isBizEmployee(emp)?Math.round((emp.gross||0)*0.346*0.008):0,
-      work: isBizEmployee(emp)?Math.round((emp.gross||0)*0.346*0.0088):0,
-      fresh: 0, finc: (emp.inc||0), etcPlus: 0, etcMinus: 0, adv: 0
+      emp: isBiz?Math.round(supply*0.346*0.008):0,
+      work: isBiz?Math.round(supply*0.346*0.0088):0,
+      fresh: 0,
+      finc: incAmt,
+      etcPlus: 0,
+      etcMinus: 0,
+      adv: 0
     };
-    var vatIncome = emp.gross||0;
     return _buildPayslipCaptureHTML(x, r, emp.name||'', month||'', emp.net||vatIncome, vatIncome);
   }
 
@@ -10569,22 +10584,29 @@ window._universalParseMulti = function(input){
           // 헤더행 찾기
           var hdr=[]; var hdrRow=0;
           for(var h=0;h<Math.min(5,rows.length);h++){
-            var r0=rows[h].map(function(c){return String(c).replace(/\n/g,'').trim();});
-            // ID컬럼 + Route컬럼 + 건수컬럼 있으면 쿠팡Raw
+            // 줄바꿈 제거
+            var r0=rows[h].map(function(c){return String(c||'').replace(/[\n\r]/g,'').trim();});
             var hasId=r0.some(function(c){return c.toLowerCase()==='id';});
-            var hasRoute=r0.some(function(c){return c==='Route'||c==='route';});
+            var hasRoute=r0.some(function(c){return c.toLowerCase()==='route';});
             if(hasId&&hasRoute){hdr=r0;hdrRow=h;break;}
           }
           if(hdr.length){
-            var idCol=hdr.indexOf('ID');
-            var routeCol=hdr.findIndex(function(h){return h==='Route'||h==='route';});
+            var idCol=hdr.findIndex(function(h){return h.toLowerCase()==='id';});
+            var routeCol=hdr.findIndex(function(h){return h.toLowerCase()==='route';});
             var campCol=hdr.findIndex(function(h){return h.includes('캠프');});
-            var cntCol=hdr.findIndex(function(h){return h.includes('배송건수')||h.includes('건수');});
+            // 배송건수 — "배송건수(파슬)" 형태 포함
+            var cntCol=hdr.findIndex(function(h){return h.includes('배송건수');});
             var retCol=hdr.findIndex(function(h){return h.includes('반품');});
-            var priceCol=hdr.findIndex(function(h){return h.includes('단가');});
-            var incCol=hdr.findIndex(function(h){return h.includes('인센')||h.includes('추가');});
-            var freshCol=hdr.findIndex(function(h){return h.includes('프레시백')||h.includes('fresh');});
-            var totalCol=hdr.findIndex(function(h){return h.includes('총금액')||h.includes('기본금액');});
+            // 단가 — "단가(반품동일)" 형태
+            var priceCol=hdr.findIndex(function(h){return h.includes('단가')&&!h.includes('금액');});
+            // 추가 인센티브 — "추가 인센티브" (공백 포함)
+            var incCol=hdr.findIndex(function(h){return h.includes('인센티브')&&!h.includes('가중')&&!h.includes('프레시');});
+            // 프레시백
+            var freshCol=hdr.findIndex(function(h){return h.includes('프레시백');});
+            // 총금액
+            var totalCol=hdr.findIndex(function(h){return h.includes('총금액');});
+            // 기본 배송단가 금액
+            var baseAmtCol=hdr.findIndex(function(h){return h.includes('기본 배송단가 금액')||h.includes('기본배송단가');});
 
             // ID별 집계
             var idMap={};
@@ -10597,8 +10619,8 @@ window._universalParseMulti = function(input){
               var ret=retCol>=0?parseInt(row[retCol])||0:0;
               var price=priceCol>=0?parseFloat(row[priceCol])||0:0;
               var inc=incCol>=0?parseFloat(row[incCol])||0:0;
-              var fresh=freshCol>=0?parseFloat(row[freshCol])||0:0;
-              var total=totalCol>=0?parseFloat(row[totalCol])||0:cnt*price;
+              var fresh=freshCol>=0?parseFloat(String(row[freshCol]||'0').replace(/[^0-9.]/g,''))||0:0;
+              var total=totalCol>=0?parseFloat(row[totalCol])||0:(baseAmtCol>=0?parseFloat(row[baseAmtCol])||0:cnt*price);
               var route=routeCol>=0?String(row[routeCol]||'').trim():'';
 
               if(!idMap[empId]){idMap[empId]={empId:empId,camp:camp,cnt:0,ret:0,gross:0,inc:0,fresh:0,routes:{}};}
