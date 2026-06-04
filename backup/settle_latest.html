@@ -8829,14 +8829,14 @@ window._universalDeleteSettle=function(id){
 };
 
 // 범용 엑셀 파서 — 다중시트 + 컬럼명 자동 감지
-var _U_NAME_P   = ['기사명','성명','이름','name','직원명','담당자','운전자'];
+var _U_NAME_P   = ['기사명','성명','이름','name','직원명','담당자','운전자','라이더명','담당자명','사원명'];
 var _U_ID_P     = ['ID','사번','직원코드','아이디','쿠팡id','id'];
-var _U_CNT_P    = ['배달건수','배달수량','건수','count','수량'];
+var _U_CNT_P    = ['배달건수','배달수량','건수','count','수량(건','합계건수','총배달건','총배송건','수량'];
 var _U_PRICE_P  = ['단가','기본단가','단가(원)','price','단가금액'];
 var _U_BONUS_P  = ['추가수당','인센티브','보너스','추가금액','bonus'];
 var _U_DEDUCT_P = ['공제','공제금액','벌금/공제','차감','deduct'];
 var _U_CAMP_P   = ['캠프','담당구역','지역','구역','camp'];
-var _U_AMT_P    = ['금액','지급액','지급금액','급여','pay','amount','합계'];
+var _U_AMT_P    = ['실지급액','정산금액','차감지급액','실수령','금액','지급액','지급금액','급여','pay','amount','합계','정산 금액'];
 
 function _uFindCol(hdrs, patterns){
   for(var p=0;p<patterns.length;p++){
@@ -8865,7 +8865,7 @@ window._universalParseExcel=function(input){
         // 헤더 행 찾기 (최대 5행 탐색)
         var hdrRow=0;
         var hdr=[];
-        for(var h=0;h<Math.min(5,rows.length);h++){
+        for(var h=0;h<Math.min(10,rows.length);h++){
           var row=rows[h].map(function(c){return String(c).trim();});
           var hasName=_uFindCol(row,_U_NAME_P)>=0;
           var hasCntOrAmt=_uFindCol(row,_U_CNT_P)>=0||_uFindCol(row,_U_AMT_P)>=0;
