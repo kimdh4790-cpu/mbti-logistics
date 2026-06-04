@@ -8783,6 +8783,7 @@ function pageUniversalInput(){
       '</div>'+
       '<input id="u-file-input" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="_universalParseExcel(this)">'+
       '<div id="u-parse-status" style="margin-top:10px;font-size:12px;color:var(--text3)"></div>'+
+      '<div style="margin-top:8px"><button onclick="_uOpenMapping()" style="padding:5px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;color:var(--text2)">⚙️ 컬럼 직접 지정</button><span style="font-size:10px;color:var(--text3);margin-left:8px">자동 인식 실패 시 사용</span></div>'+
     '</div>'+
     '<div id="u-results" style="margin-top:12px"></div>'+
     '</div>';
@@ -8847,6 +8848,32 @@ function _uFindCol(hdrs, patterns){
   return -1;
 }
 
+// 범용 파서 - 수동 컬럼 지정
+window._uOpenMapping=function(){
+  var fi=document.getElementById('u-file-input');
+  if(!fi||!fi.files||!fi.files[0]){toast('파일을 먼저 선택해주세요');return;}
+  var file=fi.files[0];
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      var hIdx=0;
+      for(var h=0;h<Math.min(10,rows.length);h++){
+        var r=rows[h].filter(function(c){return c&&String(c).trim();});
+        if(r.length>=3){hIdx=h;break;}
+      }
+      var hdrs=rows[hIdx].map(function(h){return String(h||'').trim();});
+      var savedKey='u_mapping_'+file.name.replace(/[^a-z0-9]/gi,'_').slice(0,30);
+      var savedMapping=null;
+      try{savedMapping=JSON.parse(localStorage.getItem(savedKey)||'null');}catch(e){}
+      _showMappingModal(hdrs,rows,hIdx,file.name,savedMapping,savedKey);
+    }catch(err){toast('❌ '+err.message);}
+  };
+  reader.readAsArrayBuffer(file);
+};
+
 window._universalParseExcel=function(input){
   var file=input.files[0];if(!file)return;
   var status=document.getElementById('u-parse-status');
@@ -8901,9 +8928,32 @@ window._universalParseExcel=function(input){
         if(shResults.length>0) sheetInfos.push({name:shName,count:shResults.length});
       });
 
-      if(!allResults.length){if(status)status.textContent='❌ 파싱된 데이터 없음';return;}
+      if(!allResults.length){
+        // 자동 감지 실패 시 매핑 모달로 fallback
+        var fbSheet=wb.SheetNames[0];
+        var fbWs=wb.Sheets[fbSheet];
+        var fbRows=XLSX.utils.sheet_to_json(fbWs,{header:1,defval:''});
+        if(fbRows.length>1){
+          var savedKey='u_mapping_'+file.name.replace(/[^a-z0-9]/gi,'_').slice(0,30);
+          var savedMapping=null;
+          try{savedMapping=JSON.parse(localStorage.getItem(savedKey)||'null');}catch(e){}
+          // 헤더 행 탐색
+          var hIdx=0;
+          for(var hh=0;hh<Math.min(10,fbRows.length);hh++){
+            var rr=fbRows[hh].filter(function(c){return c&&String(c).trim();});
+            if(rr.length>=3){hIdx=hh;break;}
+          }
+          var hdrs=fbRows[hIdx].map(function(h){return String(h||'').trim();});
+          if(status)status.textContent='⚠️ 자동 인식 실패 — 컬럼 직접 지정해주세요';
+          _showMappingModal(hdrs,fbRows,hIdx,file.name,savedMapping,savedKey);
+        } else {
+          if(status)status.textContent='❌ 파싱된 데이터 없음';
+        }
+        return;
+      }
       var sheetMsg=sheetInfos.map(function(s){return s.name+'('+s.count+'명)';}).join(', ');
       if(status)status.textContent='✅ '+allResults.length+'명 파싱 완료 — '+sheetMsg;
+      // 결과 확인 후 매핑 모달 옵션 제공
       _universalRenderResults(allResults);
     }catch(err){if(status)status.textContent='❌ '+err.message;console.error(err);}
   };
