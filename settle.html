@@ -9940,9 +9940,10 @@ function pageUniversalEmp(){
   var c=document.getElementById('content');
   if(!_db||!_CU){c.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
   var did=_CU.dealerId||_CU.uid;
-  _db.collection('universal_employees').where('dealerId','==',did).orderBy('name').get()
+  _db.collection('universal_employees').where('dealerId','==',did).get()
     .then(function(snap){
       var emps=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
+      emps.sort(function(a,b){return (a.camp||'').localeCompare(b.camp||'')||(a.name||'').localeCompare(b.name||'');});
       _renderUniversalEmp(c, emps, did);
     }).catch(function(){_renderUniversalEmp(c,[],did);});
 }
@@ -9991,7 +9992,8 @@ function _renderUniversalEmp(c, emps, did){
         '<input id="ue-camp" type="text" placeholder="캠프/지점" style="padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px">'+
         '<select id="ue-type" style="padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px">'+
           '<option value="비사업자">비사업자 (소득세 3.3%)</option>'+
-          '<option value="사업자">사업자 (VAT+고용산재)</option>'+
+          '<option value="사업자_VAT포함">사업자 VAT포함 (공급대가)</option>'+
+          '<option value="사업자_VAT별도">사업자 VAT별도 (공급가액)</option>'+
         '</select>'+
       '</div>'+
       '<button onclick="_uAddEmp(\''+did+'\')" style="width:100%;padding:10px;background:var(--brand);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">직원 추가</button>'+
