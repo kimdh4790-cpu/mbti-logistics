@@ -10076,6 +10076,7 @@ function pageUniversalSettle(){
         '<div style="display:flex;gap:6px">'+
           '<button onclick="_uShowSettleDetail(\''+doc.id+'\')" style="padding:4px 10px;background:var(--brand);color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer">상세</button>'+
           '<button onclick="_uDeploySettle(\''+doc.id+'\',\''+mo+'\')" style="padding:4px 10px;background:#10b981;color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer">📤 배포</button>'+
+          '<button onclick="_uDownloadDouzoneCSV(\''+doc.id+'\',\''+mo+'\')" style="padding:4px 10px;background:#1e40af;color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer">💾 더존</button>'+
           '<button data-id="'+doc.id+'" onclick="_universalDeleteSettle(this.dataset.id)" style="padding:4px 10px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;cursor:pointer">삭제</button>'+
         '</div>'+
       '</div>';
@@ -10486,6 +10487,74 @@ window._uShowOnePayslip = function(docId, rowIdx, camp){
     html+='</div></div>';
     var el=document.createElement('div'); el.innerHTML=html;
     document.body.appendChild(el.firstChild);
+  });
+};
+
+
+// ══════════════════════════════════════════════════════
+// ★ 범용 세무사 연동 — 더존 CSV + 세무사 공유
+// ══════════════════════════════════════════════════════
+
+window._uDownloadDouzoneCSV = function(docId, month){
+  _db.collection('universal_settlements').doc(docId).get().then(function(doc){
+    if(!doc.exists){toast('데이터 없음');return;}
+    var rows=(doc.data().rows||[]);
+    var cName=(_CU&&(_CU.companyName||_CU.name))||'';
+    var cBiz=(_CU&&(_CU.bizNum||_CU.bizNumber))||'';
+    var payDate=(month||'').replace('-','');
+
+    var lines=[['거래처명','사업자번호','성명','주민등록번호','지급연월','공급가액','소득세(3.3%)','주민세','기타공제','차인지급액'].join(',')];
+
+    rows.forEach(function(r){
+      if(!r.name) return;
+      var isBiz=(r.contractType||'').includes('사업자');
+      if(isBiz) return; // 사업자는 세금계산서 → 제외
+
+      var net=r.net||r.gross||0;
+      var tax=Math.round(net*0.033);
+      var localTax=Math.round(tax*0.1);
+      var etcDeduct=(r.deduct||0);
+      var netPay=net-tax-localTax-etcDeduct;
+      var ssn=r.ssn||'';
+
+      lines.push(['"'+cName+'"','"'+cBiz+'"','"'+(r.name||'')+'"','"'+ssn+'"','"'+payDate+'"',net,tax,localTax,etcDeduct,netPay].join(','));
+    });
+
+    // 사업자 별도 시트
+    var bizLines=[['성명','사업자번호','공급가액','부가세','공급대가','지급월'].join(',')];
+    rows.forEach(function(r){
+      var isBiz=(r.contractType||'').includes('사업자');
+      if(!isBiz) return;
+      var vatIncome=r.gross||0;
+      var supply=Math.round(vatIncome/1.1);
+      var vat=vatIncome-supply;
+      bizLines.push(['"'+(r.name||'')+'"','"'+(r.bizNum||'')+'"',supply,vat,vatIncome,'"'+(month||'')+'"'].join(','));
+    });
+
+    var nonBizCnt=lines.length-1;
+    var bizCnt=bizLines.length-1;
+
+    // 비사업자 CSV
+    if(nonBizCnt>0){
+      var blob=new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
+      var url=URL.createObjectURL(blob);
+      var a=document.createElement('a');a.href=url;a.download='더존_원천징수_'+(month||'')+'.csv';
+      document.body.appendChild(a);a.click();
+      setTimeout(function(){URL.revokeObjectURL(url);},1000);
+    }
+
+    // 사업자 CSV
+    if(bizCnt>0){
+      setTimeout(function(){
+        var blob2=new Blob(['\uFEFF'+bizLines.join('\n')],{type:'text/csv;charset=utf-8'});
+        var url2=URL.createObjectURL(blob2);
+        var a2=document.createElement('a');a2.href=url2;a2.download='세금계산서_목록_'+(month||'')+'.csv';
+        document.body.appendChild(a2);a2.click();
+        setTimeout(function(){URL.revokeObjectURL(url2);},1000);
+      },500);
+    }
+
+    toast('✅ 더존CSV '+nonBizCnt+'명 + 세금계산서목록 '+bizCnt+'명');
   });
 };
 
