@@ -9502,7 +9502,8 @@ function _uSaveRules(){
   _db.collection('universal_rules').doc(did).set(rules)
     .then(function(){
       var total=priceTables.reduce(function(s,pt){return s+pt.routes.length;},0);
-      toast('✅ 저장완료 — 단가표 '+priceTables.length+'개 / 라우트 '+total+'개 / 아이디지원 '+idSupportRules.length+'개');
+      var incStr=JSON.stringify(rules.incCamps||{});
+      toast('✅ 저장완료 — 라우트 '+total+'개 / 인센: '+incStr);
       // RPRICE 반영 (기본 단가표만)
       var basic=priceTables.find(function(pt){return pt.type==='basic';});
       if(basic&&typeof RPRICE!=='undefined') basic.routes.forEach(function(rr){RPRICE[rr.route]=rr.price;});
