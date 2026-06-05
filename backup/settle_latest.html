@@ -9461,18 +9461,18 @@ function _uSaveRules(){
   if(!_db||!_CU){toast('로그인 필요');return;}
   var did=_CU.dealerId||_CU.uid;
 
-  // _uPriceData → priceTables 변환
-  var typeGroups={basic:[],leader:[],backup:[]};
+  // _uPriceData → priceTables 변환 (캠프별 그룹핑)
+  var campGroups={};
   Object.keys(_uPriceData||{}).forEach(function(r){
     var d=_uPriceData[r];
+    var camp=d.camp||'기본 단가';
     var t=d.type||'basic';
-    if(!typeGroups[t]) typeGroups[t]=[];
-    typeGroups[t].push({route:r,price:d.price||0,priceVat:d.priceVat||0});
+    var key=camp+'__'+t;
+    if(!campGroups[key]) campGroups[key]={label:camp,type:t,empIds:[],routes:[]};
+    campGroups[key].routes.push({route:r,price:d.price||0,priceVat:d.priceVat||0,camp:camp});
   });
-  var typeLabels={basic:'기본 단가',leader:'팀장 수수료',backup:'백업 단가'};
-  var priceTables=Object.keys(typeGroups).filter(function(t){return typeGroups[t].length;}).map(function(t){
-    return {label:typeLabels[t]||t,type:t,empIds:[],routes:typeGroups[t]};
-  });
+  var priceTables=Object.keys(campGroups).filter(function(k){return campGroups[k].routes.length;}).map(function(k){return campGroups[k];});
+  // 팀장은 leaderMap에서 별도 저장되니 basic/backup만
 
   // 아이디지원 수집
   var idSupportRules=[];
