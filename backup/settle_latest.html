@@ -11073,6 +11073,13 @@ window._uDoParseMulti = function(files, status){
               // ★ 단가표 기준으로 라우트별 재계산
               var calcGross=0;
               var _pd=window._uPriceData||{}; // 항상 최신 참조
+              // 디버그: 첫번째 기사 단가 확인
+              if(!window._uPriceDebugShown){
+                window._uPriceDebugShown=true;
+                var sampleRoute=Object.keys(p.routes)[0]||'';
+                var sampleRule=_pd[sampleRoute];
+                toast('단가체크: '+sampleRoute+'→'+(sampleRule?sampleRule.price+'원(규칙)':'없음(엑셀)'));
+              }
               Object.keys(p.routes).forEach(function(route){
                 var rd=p.routes[route];
                 var rulePrice=(_pd[route]&&_pd[route].price)||rd.price||0;
