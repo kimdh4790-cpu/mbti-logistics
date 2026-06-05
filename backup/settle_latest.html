@@ -11090,7 +11090,7 @@ window._uDoParseMulti = function(files, status){
               });
 
               // 단가표 있으면 재계산, 없으면 엑셀 금액
-              var finalGross=Object.keys(priceData).length>0 ? calcGross : p.gross;
+              var finalGross=Object.keys(_pd).length>0 ? calcGross : p.gross;
 
               var routeDetails=Object.keys(p.routes).sort().map(function(r){
                 var rd=p.routes[r];
