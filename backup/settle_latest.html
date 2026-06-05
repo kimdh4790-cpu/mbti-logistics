@@ -9481,6 +9481,11 @@ function _uIncCampRow(incCamps){
     var c=(_uPriceData[r]||{}).camp||'기본';
     if(camps.indexOf(c)<0) camps.push(c);
   });
+  // 규칙에서 캠프 목록 보완
+  if(!camps.length&&window._uCurrentRules){
+    var ic=window._uCurrentRules.incCamps||{};
+    Object.keys(ic).forEach(function(c){if(camps.indexOf(c)<0)camps.push(c);});
+  }
   if(!camps.length) camps=['부산1','부산2','부산3','대구2','진주M'];
   camps.sort();
 
@@ -10063,6 +10068,25 @@ function _renderUniversalEmp(c, emps, did){
 
 function pageUniversalSettle(){
   document.getElementById('page-title').textContent='📊 범용 정산 현황';
+  // 규칙 로드
+  if(_db&&_CU&&!window._uRulesReady){
+    var _did2=_CU.dealerId||_CU.uid;
+    _db.collection('universal_rules').doc(_did2).get().then(function(doc){
+      if(doc.exists){
+        var r=doc.data();
+        window._uCurrentRules=r;
+        window._uLeaderMap=r.leaderMap||{};
+        window._uLeaderNames=r.leaderNames||{};
+        window._uPriceData={};
+        (r.priceTables||[]).forEach(function(pt){
+          (pt.routes||[]).forEach(function(rr){
+            if(rr.route&&rr.price) window._uPriceData[rr.route]={price:rr.price,priceVat:rr.priceVat||0,type:pt.type||'basic',camp:rr.camp||''};
+          });
+        });
+        window._uRulesReady=true;
+      }
+    }).catch(function(){});
+  }
   document.getElementById('topbar-right').innerHTML='';
   var c=document.getElementById('content');
   if(!_db||!_CU){c.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
@@ -10501,11 +10525,10 @@ window._uShowOnePayslip = function(docId, rowIdx, camp){
     html+='<div><label style="color:#94a3b8;font-size:10px">➕ 기타(+) (원)</label><input type="number" id="ue-etcplus" value="'+(emp._etcPlus||0)+'" style="width:100%;padding:6px;border-radius:5px;border:none;font-size:12px;background:rgba(255,255,255,.9)"></div>';
     html+='<div><label style="color:#94a3b8;font-size:10px">➖ 기타(-)/분실파손 (원)</label><input type="number" id="ue-etcminus" value="'+(emp._etcMinus||0)+'" style="width:100%;padding:6px;border-radius:5px;border:none;font-size:12px;background:rgba(255,255,255,.9)"></div>';
     html+='<div><label style="color:#94a3b8;font-size:10px">💸 가불 (원)</label><input type="number" id="ue-adv" value="'+(emp._adv||0)+'" style="width:100%;padding:6px;border-radius:5px;border:none;font-size:12px;background:rgba(255,255,255,.9)"></div>';
-    // docId 전역 저장 (갱신 버튼용)
     window._uOnePayslipDocId=docId;
     window._uOnePayslipRowIdx=rowIdx;
     window._uOnePayslipCamp=camp;
-    html+='<div style="display:flex;align-items:flex-end"><button onclick="_uRefreshPayslip(window._uOnePayslipDocId,window._uOnePayslipRowIdx,window._uOnePayslipCamp)" style="width:100%;padding:7px;background:#0066ff;color:#fff;border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer">🔄 미리보기 갱신</button></div>';
+    html+='<div style="display:flex;align-items:flex-end"><button id="u-refresh-btn" style="width:100%;padding:7px;background:#0066ff;color:#fff;border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer">🔄 미리보기 갱신</button></div>';
     html+='</div></div>';
     html+='<div id="u-one-payslip" style="border-radius:8px;background:#fff;box-shadow:0 4px 20px rgba(0,0,0,.5)">'+_buildUniversalPayslip(emp,month,compName)+'</div>';
     html+='<div style="display:flex;gap:8px;justify-content:center;margin-top:10px">'+
@@ -10515,6 +10538,13 @@ window._uShowOnePayslip = function(docId, rowIdx, camp){
     html+='</div></div>';
     var el=document.createElement('div'); el.innerHTML=html;
     document.body.appendChild(el.firstChild);
+    // 버튼 이벤트 리스너
+    setTimeout(function(){
+      var btn=document.getElementById('u-refresh-btn');
+      if(btn) btn.addEventListener('click',function(){
+        _uRefreshPayslip(window._uOnePayslipDocId,window._uOnePayslipRowIdx,window._uOnePayslipCamp);
+      });
+    },100);
   });
 };
 
