@@ -2884,8 +2884,31 @@ function _subRequest(planKey){
   else toast('구독 문의: 051-711-3103 또는 카카오채널 돈웨이');
 }
 
+function _loadUniversalRules(){
+  if(!_db||!_CU) return;
+  var did=_CU.dealerId||_CU.uid;
+  _db.collection('universal_rules').doc(did).get().then(function(doc){
+    if(!doc.exists) return;
+    var r=doc.data();
+    window._uCurrentRules=r;
+    window._uLeaderMap=r.leaderMap||{};
+    window._uLeaderNames=r.leaderNames||{};
+    window._uPriceData={};
+    (r.priceTables||[]).forEach(function(pt){
+      (pt.routes||[]).forEach(function(rr){
+        if(rr.route&&rr.price) window._uPriceData[rr.route]={price:rr.price,priceVat:rr.priceVat||0,type:pt.type||'basic',camp:rr.camp||''};
+      });
+    });
+    window._uRulesReady=true;
+    var ptCnt=Object.keys(window._uPriceData).length;
+    var lmCnt=Object.keys(window._uLeaderMap).length;
+    if(ptCnt>0) console.log('[DONWAY] 규칙 로드 — 단가'+ptCnt+'개/팀장'+lmCnt+'명');
+  }).catch(function(){});
+}
+
 function showApp(){
   // 탈퇴/퇴직 기사 강제 로그아웃
+  setTimeout(_loadUniversalRules, 800); // 범용 규칙 백그라운드 로드
   if(_CU&&(_CU.role==='driver'||_CU.role==='member')&&_db){
     _db.collection('users').doc(_CU.uid).get().then(function(snap){
       if(snap.exists){
