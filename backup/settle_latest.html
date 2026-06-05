@@ -11376,6 +11376,14 @@ window._universalSave=function(){
   var month=new Date().toISOString().slice(0,7);
   var incCamps=(window._uCurrentRules&&window._uCurrentRules.incCamps)||{};
 
+  // 디버그: 저장 전 첫 기사 단가 확인
+  if(results.length>0){
+    var _r0=results[0];
+    var _routes0=_r0._routes||{};
+    var _rk=Object.keys(_routes0)[0];
+    if(_rk) toast('저장전 '+(_r0.name||_r0.empId||'?')+' '+_rk+': rulePrice='+(_routes0[_rk].rulePrice||'없음')+' rdPrice='+(_routes0[_rk].price||'없음'));
+  }
+
   var processedRows=results.map(function(r){
     var name=String(r.name||r.driver||'');
     var empId=String(r.userId||r.id||r.empId||'');
