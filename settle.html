@@ -8802,9 +8802,20 @@ function pageUniversalRules(){
   var c=document.getElementById('content');
   if(!_db||!_CU){c.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
   var did=_CU.dealerId||_CU.uid;
+  c.innerHTML='<div class="empty">⏳ 로딩 중...</div>';
   _db.collection('universal_rules').doc(did).get().then(function(doc){
     var r=doc.exists?doc.data():{};
-    window._uCurrentRules=r; // 전역 저장
+    window._uCurrentRules=r;
+    window._uLeaderMap=r.leaderMap||{};
+    window._uLeaderNames=r.leaderNames||{};
+    // 단가표에서 캠프 목록 추출
+    window._uPriceData={};
+    (r.priceTables||[]).forEach(function(pt){
+      (pt.routes||[]).forEach(function(rr){
+        if(rr.route&&rr.price) window._uPriceData[rr.route]={price:rr.price,priceVat:rr.priceVat||0,type:pt.type||'basic',camp:rr.camp||''};
+      });
+    });
+    window._uRulesReady=true;
     _renderUniversalRules(c, r);
   }).catch(function(){_renderUniversalRules(c,{});});
 }
@@ -9504,8 +9515,11 @@ function _uIncCampRow(incCamps){
     var c=(_uPriceData[r]||{}).camp||'기본';
     if(camps.indexOf(c)<0) camps.push(c);
   });
+  // 기존 incCamps에 저장된 캠프도 포함
+  var existingIncCamps=Object.keys(incCamps||{});
+  existingIncCamps.forEach(function(c){if(camps.indexOf(c)<0)camps.push(c);});
   // 규칙에서 캠프 목록 보완
-  if(!camps.length&&window._uCurrentRules){
+  if(window._uCurrentRules){
     var ic=window._uCurrentRules.incCamps||{};
     Object.keys(ic).forEach(function(c){if(camps.indexOf(c)<0)camps.push(c);});
   }
