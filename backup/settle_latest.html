@@ -9192,8 +9192,11 @@ window._uImportPriceFiles = function(input){
               var a=normRoute(String(row[0]||''));
               // 캠프 헤더 감지 — 한글 포함 + 단가 없음
               var hasKor=/[가-힣]/.test(String(row[0]||''));
-              var allNull=row.slice(1).every(function(v){return !v;});
+              var allNull=row.slice(1).every(function(v){return v===null||v===undefined||v===''||v===0;});
+              // 캠프 헤더: 한글 + 나머지 모두 비어있음
               if(hasKor&&allNull){currentCamp=String(row[0]||'').trim();return;}
+              // 숫자만 있는 행도 캠프일 수 있음 (부산1, 대구2 등)
+              if(hasKor&&row.length<=3&&(!row[1]&&!row[2])){currentCamp=String(row[0]||'').trim();return;}
               // A열=라우트, C열=단가
               var price=null;
               for(var pi=1;pi<row.length;pi++){
