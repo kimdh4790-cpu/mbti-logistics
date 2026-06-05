@@ -2884,28 +2884,40 @@ function _subRequest(planKey){
   else toast('구독 문의: 051-711-3103 또는 카카오채널 돈웨이');
 }
 
-function _loadUniversalRules(){
-  if(!_db||!_CU) return;
+function _loadUniversalRules(callback){
+  if(!_db||!_CU){if(callback)callback();return;}
   var did=_CU.dealerId||_CU.uid;
-  _db.collection('universal_rules').doc(did).get().then(function(doc){
-    if(!doc.exists) return;
-    var r=doc.data();
-    window._uCurrentRules=r;
-    window._uLeaderMap=r.leaderMap||{};
-    window._uLeaderNames=r.leaderNames||{};
-    window._uPriceData={};
-    (r.priceTables||[]).forEach(function(pt){
-      // pt.label이 캠프명 (부산1, 부산2 등)
-      var ptCamp=pt.label&&!['기본 단가','팀장 수수료','백업 단가'].includes(pt.label)?pt.label:(rr&&rr.camp||'');
-      (pt.routes||[]).forEach(function(rr){
-        if(rr.route&&rr.price) window._uPriceData[rr.route]={price:rr.price,priceVat:rr.priceVat||0,type:pt.type||'basic',camp:rr.camp||pt.label||''};
-      });
+  return _db.collection('universal_rules').doc(did).get().then(function(doc){
+    if(!doc.exists){if(callback)callback();return;}
+    _applyUniversalRules(doc.data());
+    if(callback)callback();
+  }).catch(function(){if(callback)callback();});
+}
+
+function _applyUniversalRules(r){
+  if(!r) return;
+  window._uCurrentRules=r;
+  window._uLeaderMap=r.leaderMap||{};
+  window._uLeaderNames=r.leaderNames||{};
+  window._uPriceData={};
+  // priceTables → _uPriceData (camp은 pt.label 또는 rr.camp)
+  (r.priceTables||[]).forEach(function(pt){
+    var ptLabel=pt.label||'기본';
+    (pt.routes||[]).forEach(function(rr){
+      if(rr.route&&rr.price){
+        window._uPriceData[rr.route]={
+          price:rr.price,
+          priceVat:rr.priceVat||0,
+          type:pt.type||'basic',
+          camp:rr.camp||ptLabel
+        };
+      }
     });
-    window._uRulesReady=true;
-    var ptCnt=Object.keys(window._uPriceData).length;
-    var lmCnt=Object.keys(window._uLeaderMap).length;
-    if(ptCnt>0) console.log('[DONWAY] 규칙 로드 — 단가'+ptCnt+'개/팀장'+lmCnt+'명');
-  }).catch(function(){});
+  });
+  window._uRulesReady=true;
+  var ptCnt=Object.keys(window._uPriceData).length;
+  var lmCnt=Object.keys(window._uLeaderMap).length;
+  console.log('[DONWAY] 규칙 적용 — 단가'+ptCnt+'개/팀장'+lmCnt+'명');
 }
 
 function showApp(){
@@ -8804,24 +8816,9 @@ function pageUniversalRules(){
   var c=document.getElementById('content');
   if(!_db||!_CU){c.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
   var did=_CU.dealerId||_CU.uid;
-  c.innerHTML='<div class="empty">⏳ 로딩 중...</div>';
-  _db.collection('universal_rules').doc(did).get().then(function(doc){
-    var r=doc.exists?doc.data():{};
-    window._uCurrentRules=r;
-    window._uLeaderMap=r.leaderMap||{};
-    window._uLeaderNames=r.leaderNames||{};
-    // 단가표에서 캠프 목록 추출
-    window._uPriceData={};
-    (r.priceTables||[]).forEach(function(pt){
-      // pt.label이 캠프명 (부산1, 부산2 등)
-      var ptCamp=pt.label&&!['기본 단가','팀장 수수료','백업 단가'].includes(pt.label)?pt.label:(rr&&rr.camp||'');
-      (pt.routes||[]).forEach(function(rr){
-        if(rr.route&&rr.price) window._uPriceData[rr.route]={price:rr.price,priceVat:rr.priceVat||0,type:pt.type||'basic',camp:rr.camp||pt.label||''};
-      });
-    });
-    window._uRulesReady=true;
-    _renderUniversalRules(c, r);
-  }).catch(function(){_renderUniversalRules(c,{});});
+  _loadUniversalRules(function(){
+    _renderUniversalRules(c, window._uCurrentRules||{});
+  });
 }
 
 function _renderUniversalRules(c, r){
@@ -8986,15 +8983,7 @@ function _renderUniversalRules(c, r){
     '<button onclick="_uSaveRules()" style="width:100%;padding:14px;background:linear-gradient(135deg,#0066ff,#7c3aed);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">💾 규칙 저장</button>'+
     '</div>';
 
-  // _uPriceData 초기화 (저장된 단가표 로드)
-  window._uPriceData = {};
-  window._uLeaderMap = r.leaderMap||{};
-  window._uLeaderNames = r.leaderNames||{};
-  (r.priceTables||[]).forEach(function(pt){
-    (pt.routes||[]).forEach(function(rr){
-      if(rr.route&&rr.price) _uPriceData[rr.route]={price:rr.price,priceVat:rr.priceVat||0,type:pt.type||'basic'};
-    });
-  });
+  // 이미 _loadUniversalRules에서 로드됨 — _uPriceData 그대로 사용
   setTimeout(function(){ _uRenderPricePanels(); }, 50);
 }
 
@@ -9998,38 +9987,14 @@ function _uBulkUploadEmp(input, did){
 
 function pageUniversalInput(){
   document.getElementById('page-title').textContent='📋 범용 엑셀 정산';
-  // 규칙 항상 최신으로 로드 (Promise 저장)
-  window._uRulesReady = false;
-  if(_db&&_CU){
-    var _did=_CU.dealerId||_CU.uid;
-    window._uRulesPromise = _db.collection('universal_rules').doc(_did).get().then(function(doc){
-      if(doc.exists){
-        var r=doc.data();
-        window._uCurrentRules=r;
-        window._uLeaderMap=r.leaderMap||{};
-        window._uLeaderNames=r.leaderNames||{};
-        // 단가 맵 구성 — route → {price, priceVat, camp}
-        window._uPriceData={};
-        (r.priceTables||[]).forEach(function(pt){
-          (pt.routes||[]).forEach(function(rr){
-            if(rr.route&&rr.price){
-              window._uPriceData[rr.route]={
-                price:rr.price,
-                priceVat:rr.priceVat||0,
-                type:pt.type||'basic',
-                camp:rr.camp||''
-              };
-            }
-          });
-        });
-        window._uRulesReady=true;
-        var ptCnt=Object.keys(window._uPriceData||{}).length;
-        var lmCnt=Object.keys(window._uLeaderMap||{}).length;
-        var incCnt=Object.keys((r.incCamps)||{}).filter(function(k){return r.incCamps[k]>0;}).length;
-        toast('✅ 규칙 로드 — 단가 '+ptCnt+'개 / 팀장 '+lmCnt+'명 / 인센캠프 '+incCnt+'개');
-      }
-    }).catch(function(e){toast('❌ 규칙 로드 실패: '+e.message);});
-  }
+  // 규칙 로드 (공통함수 사용)
+  window._uRulesPromise = _loadUniversalRules(function(){
+    var r=window._uCurrentRules||{};
+    var ptCnt=Object.keys(window._uPriceData||{}).length;
+    var lmCnt=Object.keys(window._uLeaderMap||{}).length;
+    var incCnt=Object.keys((r.incCamps)||{}).filter(function(k){return (r.incCamps||{})[k]>0;}).length;
+    toast('✅ 규칙 로드 — 단가 '+ptCnt+'개 / 팀장 '+lmCnt+'명 / 인센캠프 '+incCnt+'개');
+  });
   document.getElementById('topbar-right').innerHTML='';
   var c=document.getElementById('content');
   if(!_db||!_CU){c.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
@@ -10142,25 +10107,8 @@ function _renderUniversalEmp(c, emps, did){
 
 function pageUniversalSettle(){
   document.getElementById('page-title').textContent='📊 범용 정산 현황';
-  // 규칙 로드
-  if(_db&&_CU&&!window._uRulesReady){
-    var _did2=_CU.dealerId||_CU.uid;
-    _db.collection('universal_rules').doc(_did2).get().then(function(doc){
-      if(doc.exists){
-        var r=doc.data();
-        window._uCurrentRules=r;
-        window._uLeaderMap=r.leaderMap||{};
-        window._uLeaderNames=r.leaderNames||{};
-        window._uPriceData={};
-        (r.priceTables||[]).forEach(function(pt){
-          (pt.routes||[]).forEach(function(rr){
-            if(rr.route&&rr.price) window._uPriceData[rr.route]={price:rr.price,priceVat:rr.priceVat||0,type:pt.type||'basic',camp:rr.camp||''};
-          });
-        });
-        window._uRulesReady=true;
-      }
-    }).catch(function(){});
-  }
+  // 규칙 미로드 시 로드
+  if(!window._uRulesReady) _loadUniversalRules();
   document.getElementById('topbar-right').innerHTML='';
   var c=document.getElementById('content');
   if(!_db||!_CU){c.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
@@ -10911,6 +10859,10 @@ window._universalParseMulti = function(input){
 };
 
 window._uDoParseMulti = function(files, status){
+  // 규칙 최신화 확인
+  var priceData=window._uPriceData||{};
+  var hasPrices=Object.keys(priceData).length>0;
+  if(!hasPrices) console.warn('[DONWAY] 단가표 없음 — 엑셀 단가 사용');
 
   // 합산 맵: {name|empId → {name, empId, camp, details:[], totalGross, totalCnt}}
   var mergeMap = {};
