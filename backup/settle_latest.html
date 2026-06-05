@@ -9944,8 +9944,12 @@ function pageUniversalInput(){
           });
         });
         window._uRulesReady=true;
+        var ptCnt=Object.keys(window._uPriceData||{}).length;
+        var lmCnt=Object.keys(window._uLeaderMap||{}).length;
+        var incCnt=Object.keys((r.incCamps)||{}).filter(function(k){return r.incCamps[k]>0;}).length;
+        toast('✅ 규칙 로드 — 단가 '+ptCnt+'개 / 팀장 '+lmCnt+'명 / 인센캠프 '+incCnt+'개');
       }
-    }).catch(function(){});
+    }).catch(function(e){toast('❌ 규칙 로드 실패: '+e.message);});
   }
   document.getElementById('topbar-right').innerHTML='';
   var c=document.getElementById('content');
