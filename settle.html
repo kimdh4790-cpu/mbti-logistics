@@ -2895,8 +2895,10 @@ function _loadUniversalRules(){
     window._uLeaderNames=r.leaderNames||{};
     window._uPriceData={};
     (r.priceTables||[]).forEach(function(pt){
+      // pt.label이 캠프명 (부산1, 부산2 등)
+      var ptCamp=pt.label&&!['기본 단가','팀장 수수료','백업 단가'].includes(pt.label)?pt.label:(rr&&rr.camp||'');
       (pt.routes||[]).forEach(function(rr){
-        if(rr.route&&rr.price) window._uPriceData[rr.route]={price:rr.price,priceVat:rr.priceVat||0,type:pt.type||'basic',camp:rr.camp||''};
+        if(rr.route&&rr.price) window._uPriceData[rr.route]={price:rr.price,priceVat:rr.priceVat||0,type:pt.type||'basic',camp:rr.camp||pt.label||''};
       });
     });
     window._uRulesReady=true;
@@ -8811,8 +8813,10 @@ function pageUniversalRules(){
     // 단가표에서 캠프 목록 추출
     window._uPriceData={};
     (r.priceTables||[]).forEach(function(pt){
+      // pt.label이 캠프명 (부산1, 부산2 등)
+      var ptCamp=pt.label&&!['기본 단가','팀장 수수료','백업 단가'].includes(pt.label)?pt.label:(rr&&rr.camp||'');
       (pt.routes||[]).forEach(function(rr){
-        if(rr.route&&rr.price) window._uPriceData[rr.route]={price:rr.price,priceVat:rr.priceVat||0,type:pt.type||'basic',camp:rr.camp||''};
+        if(rr.route&&rr.price) window._uPriceData[rr.route]={price:rr.price,priceVat:rr.priceVat||0,type:pt.type||'basic',camp:rr.camp||pt.label||''};
       });
     });
     window._uRulesReady=true;
