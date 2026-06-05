@@ -10497,7 +10497,11 @@ window._uShowOnePayslip = function(docId, rowIdx, camp){
     html+='<div><label style="color:#94a3b8;font-size:10px">➕ 기타(+) (원)</label><input type="number" id="ue-etcplus" value="'+(emp._etcPlus||0)+'" style="width:100%;padding:6px;border-radius:5px;border:none;font-size:12px;background:rgba(255,255,255,.9)"></div>';
     html+='<div><label style="color:#94a3b8;font-size:10px">➖ 기타(-)/분실파손 (원)</label><input type="number" id="ue-etcminus" value="'+(emp._etcMinus||0)+'" style="width:100%;padding:6px;border-radius:5px;border:none;font-size:12px;background:rgba(255,255,255,.9)"></div>';
     html+='<div><label style="color:#94a3b8;font-size:10px">💸 가불 (원)</label><input type="number" id="ue-adv" value="'+(emp._adv||0)+'" style="width:100%;padding:6px;border-radius:5px;border:none;font-size:12px;background:rgba(255,255,255,.9)"></div>';
-    html+='<div style="display:flex;align-items:flex-end"><button onclick="_uRefreshPayslip(uDetailDocId,'+rowIdx+',\''+esc(camp)+'\')" style="width:100%;padding:7px;background:#0066ff;color:#fff;border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer">🔄 미리보기 갱신</button></div>';
+    // docId 전역 저장 (갱신 버튼용)
+    window._uOnePayslipDocId=docId;
+    window._uOnePayslipRowIdx=rowIdx;
+    window._uOnePayslipCamp=camp;
+    html+='<div style="display:flex;align-items:flex-end"><button onclick="_uRefreshPayslip(window._uOnePayslipDocId,window._uOnePayslipRowIdx,window._uOnePayslipCamp)" style="width:100%;padding:7px;background:#0066ff;color:#fff;border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer">🔄 미리보기 갱신</button></div>';
     html+='</div></div>';
     html+='<div id="u-one-payslip" style="border-radius:8px;background:#fff;box-shadow:0 4px 20px rgba(0,0,0,.5)">'+_buildUniversalPayslip(emp,month,compName)+'</div>';
     html+='<div style="display:flex;gap:8px;justify-content:center;margin-top:10px">'+
