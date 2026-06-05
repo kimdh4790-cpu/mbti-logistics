@@ -10264,7 +10264,7 @@ function _buildUniversalPayslipGeneric(emp, month, compName){
   var bizNo=(_CU&&_CU.bizNo)||'';
 
   compName=compName||(_CU&&_CU.companyName)||'';
-  return '<div style="background:#fff;width:600px;font-family:Malgun Gothic,sans-serif;font-size:13px;color:#1a1a1a">'+
+  return '<div style="background:#fff;width:100%;max-width:480px;font-family:Malgun Gothic,sans-serif;font-size:12px;color:#1a1a1a">'+
 
     // 헤더
     '<div style="background:linear-gradient(135deg,#1e3a8a,#3b82f6);color:#fff;padding:18px 20px">'+
@@ -10457,12 +10457,15 @@ window._uRefreshPayslip = function(docId, rowIdx, camp){
     var emp=JSON.parse(JSON.stringify(rows[rowIdx]||{}));
     if(!emp) return;
 
-    // 수정값 적용
-    emp._fresh=parseInt(document.getElementById('ue-fresh').value)||0;
-    emp._inc=parseInt(document.getElementById('ue-inc').value)||0;
-    emp._etcPlus=parseInt(document.getElementById('ue-etcplus').value)||0;
-    emp._etcMinus=parseInt(document.getElementById('ue-etcminus').value)||0;
-    emp._adv=parseInt(document.getElementById('ue-adv').value)||0;
+    // ★ 입력값으로 덮어쓰기
+    emp._fresh=parseInt((document.getElementById('ue-fresh')||{}).value)||0;
+    emp._inc=parseInt((document.getElementById('ue-inc')||{}).value)||0;
+    emp._etcPlusManual=parseInt((document.getElementById('ue-etcplus')||{}).value)||0;
+    emp._etcPlus=(emp._leaderFee||0)+(emp._idSupportGross||0)+emp._etcPlusManual;
+    emp._etcMinus=parseInt((document.getElementById('ue-etcminus')||{}).value)||0;
+    emp._adv=parseInt((document.getElementById('ue-adv')||{}).value)||0;
+    // 실지급 재계산
+    emp.net=Math.max(0,(emp.gross||0)+(emp._fresh||0)+(emp._inc||0)+(emp._etcPlus||0)-(emp._etcMinus||0)-(emp._adv||0));
 
     var month=doc.data().month||'';
     var compName=(_CU&&_CU.companyName)||'';
