@@ -9179,7 +9179,7 @@ window._uImportPriceFiles = function(input){
     }
   }
   processFile(0);
-};
+}; // _uDoParseMulti 끝
 
 // ★ 등록 확인 화면
 function _uCloseConfirm(btn){var el=btn;while(el&&el.style&&!el.style.position.includes('fixed'))el=el.parentElement;if(el)el.remove();}
@@ -9919,19 +9919,31 @@ function _uBulkUploadEmp(input, did){
 
 function pageUniversalInput(){
   document.getElementById('page-title').textContent='📋 범용 엑셀 정산';
-  // 규칙 항상 최신으로 로드
+  // 규칙 항상 최신으로 로드 (Promise 저장)
+  window._uRulesReady = false;
   if(_db&&_CU){
     var _did=_CU.dealerId||_CU.uid;
-    _db.collection('universal_rules').doc(_did).get().then(function(doc){
+    window._uRulesPromise = _db.collection('universal_rules').doc(_did).get().then(function(doc){
       if(doc.exists){
-        window._uCurrentRules=doc.data();
+        var r=doc.data();
+        window._uCurrentRules=r;
+        window._uLeaderMap=r.leaderMap||{};
+        window._uLeaderNames=r.leaderNames||{};
+        // 단가 맵 구성 — route → {price, priceVat, camp}
         window._uPriceData={};
-        window._uLeaderMap=doc.data().leaderMap||{};
-        ((doc.data().priceTables)||[]).forEach(function(pt){
+        (r.priceTables||[]).forEach(function(pt){
           (pt.routes||[]).forEach(function(rr){
-            if(rr.route&&rr.price) window._uPriceData[rr.route]={price:rr.price,priceVat:rr.priceVat||0,type:pt.type||'basic',camp:rr.camp||''};
+            if(rr.route&&rr.price){
+              window._uPriceData[rr.route]={
+                price:rr.price,
+                priceVat:rr.priceVat||0,
+                type:pt.type||'basic',
+                camp:rr.camp||''
+              };
+            }
           });
         });
+        window._uRulesReady=true;
       }
     }).catch(function(){});
   }
@@ -10191,13 +10203,17 @@ function _buildUniversalPayslip(emp, month, compName){
     }
 
     var isBiz=isBizEmployee(emp);
-    // 프레시백/인센 — _fresh/_inc 우선, 없으면 bonus
     var freshAmt=emp._fresh||0;
-    var incAmt=emp._inc||0;
+    var incAmt=(emp._inc||0)+(emp._incFromRules||0);
     if(!freshAmt&&!incAmt) incAmt=emp.bonus||emp.inc||0;
 
-    // vatIncome = 총금액(gross) + 프레시백 + 인센
-    var vatIncome=(emp.gross||0);
+    var leaderFee=emp._leaderFee||0;
+    var idSupportAmt=emp._idSupportGross||0;
+    var etcPlus=(emp._etcPlus||0); // leaderFee + idSupport 포함됨
+    var etcMinus=emp._etcMinus||0;
+    var adv=emp._adv||0;
+
+    var vatIncome=(emp.gross||0)+(freshAmt||0)+(incAmt||0)+(etcPlus||0)-(etcMinus||0)-(adv||0);
     var supply=isBiz?Math.round(vatIncome/1.1):vatIncome;
     var x={routeDetails:routeDetails,camp:emp.camp||''};
     var r={
@@ -10205,11 +10221,12 @@ function _buildUniversalPayslip(emp, month, compName){
       work: isBiz?Math.round(supply*0.346*0.0088):0,
       fresh: freshAmt,
       finc: incAmt,
-      etcPlus: emp._etcPlus||0,
-      etcMinus: emp._etcMinus||0,
-      adv: emp._adv||0
+      etcPlus: leaderFee+idSupportAmt+(emp._etcPlusManual||0),
+      etcMinus: etcMinus,
+      adv: adv
     };
-    return _buildPayslipCaptureHTML(x, r, emp.name||'', month||'', emp.net||vatIncome, vatIncome);
+    var finalNet=emp.net||vatIncome;
+    return _buildPayslipCaptureHTML(x, r, emp.name||'', month||'', finalNet, vatIncome);
   }
 
   // 일반 범용 명세서 (하단 기존 함수 내용)
@@ -10665,7 +10682,17 @@ window._universalParseMulti = function(input){
   if(!files.length) return;
 
   var status = document.getElementById('u-parse-status');
-  if(status) status.textContent = '⏳ '+files.length+'개 파일 처리 중...';
+  if(status) status.textContent = '⏳ 규칙 로드 중...';
+
+  // 규칙 로드 완료 후 파싱 시작
+  var rulesPromise = window._uRulesPromise || Promise.resolve();
+  rulesPromise.then(function(){
+    if(status) status.textContent = '⏳ '+files.length+'개 파일 처리 중...';
+    _uDoParseMulti(files, status);
+  });
+};
+
+window._uDoParseMulti = function(files, status){
 
   // 합산 맵: {name|empId → {name, empId, camp, details:[], totalGross, totalCnt}}
   var mergeMap = {};
@@ -10722,62 +10749,69 @@ window._universalParseMulti = function(input){
           var rules = window._uCurrentRules||{};
           var incCamps = rules.incCamps||{};
           var leaderMap = window._uLeaderMap||{};
-          var leaderNames = window._uLeaderNames||{};
           var idSupportRules = rules.idSupportRules||[];
+          var priceData = window._uPriceData||{};
+          var hasPriceTable = Object.keys(priceData).length>0;
 
+          // 1차: 이름/캠프/계약유형 매칭
           results.forEach(function(r){
             var key = getKey(r.name, r.empId);
-            var emp = empMap[key] || empMap[r.name] || empMap[(r.empId||'').replace('@df','').toLowerCase()];
+            var emp = empMap[key]||empMap[r.name]||empMap[(r.empId||'').replace('@df','').toLowerCase()];
             if(emp){
-              if(!r.camp) r.camp = emp.camp||'';
-              r.contractType = emp.contractType||'비사업자';
-              if(!r.empId && emp.empId) r.empId = emp.empId;
-              if((!r.name || r.name.indexOf('@df')>=0) && emp.name) r.name = emp.name;
+              if(!r.camp) r.camp=emp.camp||'';
+              r.contractType=emp.contractType||'비사업자';
+              if(!r.empId&&emp.empId) r.empId=emp.empId;
+              if((!r.name||r.name.indexOf('@df')>=0)&&emp.name) r.name=emp.name;
             }
-            // 인센 적용
-            var incRate = incCamps[r.camp||'']||incCamps['기본']||0;
-            r._inc = (r._inc||0) + (r.cnt||0) * incRate;
+          });
 
-            // ★ 팀장수수료 계산 (leaderMap에서 라우트별 수수료)
-            var empIdClean = (r.empId||r.name||'').replace('@df','').toLowerCase();
-            if(leaderMap[empIdClean] && r._routes){
-              var leaderFee = 0;
-              Object.keys(r._routes).forEach(function(route){
-                var rd = r._routes[route];
-                var fee = leaderMap[empIdClean][route]||0;
-                leaderFee += (rd.cnt||0) * fee;
+          // 2차: 인센/팀장수수료/아이디지원 계산
+          results.forEach(function(r){
+            var empIdClean=(r.empId||'').replace('@df','').toLowerCase();
+
+            // ★ 캠프별 인센 (incCamps)
+            var incRate=parseInt(incCamps[r.camp||'']||incCamps['기본']||0)||0;
+            var incFromRules=(r.cnt||0)*incRate;
+            r._inc=(r._fresh?r._inc||0:(r._inc||0)); // 이미 엑셀에서 추출된 인센 유지
+            if(incFromRules>0) r._incFromRules=incFromRules; // 규칙 인센 별도 저장
+
+            // ★ 팀장수수료 (leaderMap)
+            var empIdForLeader=empIdClean||r.name||'';
+            var leaderRoutes=leaderMap[empIdForLeader];
+            if(!leaderRoutes){
+              // @df 없는 ID로도 시도
+              Object.keys(leaderMap).forEach(function(lid){
+                if(empIdClean&&empIdClean.indexOf(lid)>=0) leaderRoutes=leaderMap[lid];
               });
-              if(leaderFee > 0){
-                r._etcPlus = (r._etcPlus||0) + leaderFee;
-                r._leaderFee = leaderFee;
-              }
+            }
+            if(leaderRoutes&&r._routes){
+              var leaderFee=0;
+              Object.keys(r._routes).forEach(function(route){
+                var rd=r._routes[route];
+                var fee=leaderRoutes[route]||0;
+                leaderFee+=(rd.cnt||0)*fee+(rd.ret||0)*fee;
+              });
+              if(leaderFee>0){r._leaderFee=leaderFee;r._etcPlus=(r._etcPlus||0)+leaderFee;}
             }
 
-            // ★ 아이디지원 — fromId 건수를 toId에 이전
+            // ★ 아이디지원
             idSupportRules.forEach(function(rule){
-              var fromClean = (rule.fromId||'').replace('@df','').toLowerCase();
-              var toClean = (rule.toId||'').replace('@df','').toLowerCase();
-              if(empIdClean === toClean){
-                // 이 기사가 지원받는 쪽
-                var fromResult = results.find(function(rr){
-                  return (rr.empId||'').replace('@df','').toLowerCase() === fromClean;
-                });
-                if(fromResult && fromResult._routes){
-                  // from의 라우트 데이터로 추가 계산
-                  var addGross = 0;
-                  Object.keys(fromResult._routes).forEach(function(route){
-                    var rd = fromResult._routes[route];
-                    // 단가표 기준 단가
-                    var price = rd.price||0;
-                    addGross += (rd.cnt||0) * price;
-                  });
-                  r._idSupportGross = (r._idSupportGross||0) + addGross;
-                  r._etcPlus = (r._etcPlus||0) + addGross;
-                }
-              }
+              var fromClean=(rule.fromId||'').replace('@df','').toLowerCase();
+              var toClean=(rule.toId||'').replace('@df','').toLowerCase();
+              if(!empIdClean||empIdClean!==toClean) return;
+              var fromR=results.find(function(rr){return (rr.empId||'').replace('@df','').toLowerCase()===fromClean;});
+              if(!fromR||!fromR._routes) return;
+              var addGross=0;
+              Object.keys(fromR._routes).forEach(function(route){
+                var rd=fromR._routes[route];
+                var price=(priceData[route]&&priceData[route].price)||rd.rulePrice||rd.price||0;
+                addGross+=(rd.cnt||0)*price+(rd.ret||0)*price;
+              });
+              if(addGross>0){r._idSupportGross=(r._idSupportGross||0)+addGross;r._etcPlus=(r._etcPlus||0)+addGross;}
             });
 
-            r.net = Math.max(0, (r.gross||0) + (r._inc||0) + (r._etcPlus||0) - (r._etcMinus||0) - (r._adv||0));
+            // 최종 실지급
+            r.net=Math.max(0,(r.gross||0)+(r._inc||0)+(r._incFromRules||0)+(r._etcPlus||0)-(r._etcMinus||0)-(r._adv||0));
           });
 
           var totalCnt = results.length;
@@ -10864,19 +10898,28 @@ window._universalParseMulti = function(input){
             // 직원 이름 매칭 후 mergePerson
             Object.keys(idMap).forEach(function(empId){
               var p=idMap[empId];
-              // 라우트별 집계 → details 형식
+              var priceData=window._uPriceData||{};
+
+              // ★ 단가표 기준으로 라우트별 재계산
+              var calcGross=0;
+              Object.keys(p.routes).forEach(function(route){
+                var rd=p.routes[route];
+                var rulePrice=(priceData[route]&&priceData[route].price)||rd.price||0;
+                rd.rulePrice=rulePrice; // 단가표 단가 저장
+                var amt=(rd.cnt||0)*rulePrice + (rd.ret||0)*rulePrice;
+                rd.ruleAmt=amt;
+                calcGross+=amt;
+              });
+
+              // 단가표 있으면 재계산, 없으면 엑셀 금액
+              var finalGross=Object.keys(priceData).length>0 ? calcGross : p.gross;
+
               var routeDetails=Object.keys(p.routes).sort().map(function(r){
                 var rd=p.routes[r];
-                return {
-                  label:r,          // 라우트코드 (215A 등)
-                  cnt:rd.cnt||0,    // 배송건수
-                  ret:rd.ret||0,    // 반품건수
-                  price:rd.price||0,// 단가
-                  num:rd.amt||0,    // 금액
-                  source:source
-                };
+                return {label:r,cnt:rd.cnt||0,ret:rd.ret||0,price:rd.rulePrice||rd.price||0,num:rd.ruleAmt||rd.amt||0,source:source};
               });
-              mergePerson(empId, empId, p.camp, p.gross, p.cnt, 0, p.inc+p.fresh, 0, source, routeDetails);
+
+              mergePerson(empId, empId, p.camp, finalGross, p.cnt, 0, p.inc+p.fresh, 0, source, routeDetails);
               var key=getKey(empId,empId);
               if(mergeMap[key]){
                 mergeMap[key]._isCoupang=true;
