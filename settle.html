@@ -10922,6 +10922,9 @@ window._uDoParseMulti = function(files, status){
           var idSupportRules = rules.idSupportRules||[];
           var priceData = window._uPriceData||{};
           var hasPriceTable = Object.keys(priceData).length>0;
+          // 디버그: incCamps 확인
+          console.log('[DONWAY] incCamps:', JSON.stringify(incCamps));
+          toast('인센캠프: '+JSON.stringify(incCamps).slice(0,80));
 
           // 1차: 이름/캠프/계약유형 매칭
           results.forEach(function(r){
