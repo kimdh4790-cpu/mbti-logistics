@@ -10924,7 +10924,6 @@ window._uDoParseMulti = function(files, status){
           var hasPriceTable = Object.keys(priceData).length>0;
           // 디버그: incCamps 확인
           console.log('[DONWAY] incCamps:', JSON.stringify(incCamps));
-          toast('인센캠프: '+JSON.stringify(incCamps).slice(0,80));
 
           // 1차: 이름/캠프/계약유형 매칭
           results.forEach(function(r){
@@ -10945,8 +10944,10 @@ window._uDoParseMulti = function(files, status){
             // ★ 캠프별 인센 (incCamps)
             var incRate=parseInt(incCamps[r.camp||'']||incCamps['기본']||0)||0;
             var incFromRules=(r.cnt||0)*incRate;
-            r._inc=(r._fresh?r._inc||0:(r._inc||0)); // 이미 엑셀에서 추출된 인센 유지
-            if(incFromRules>0) r._incFromRules=incFromRules; // 규칙 인센 별도 저장
+            r._inc=(r._fresh?r._inc||0:(r._inc||0));
+            if(incFromRules>0) r._incFromRules=incFromRules;
+            // 디버그: 첫 기사만
+            if(!window._uIncDebugShown){window._uIncDebugShown=true;toast('인센디버그: '+r.name+' camp='+r.camp+' rate='+incRate+' inc='+incFromRules);}
 
             // ★ 팀장수수료 (leaderMap)
             var empIdForLeader=empIdClean||r.name||'';
