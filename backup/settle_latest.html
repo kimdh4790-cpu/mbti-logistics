@@ -8916,11 +8916,14 @@ function _renderUniversalRules(c, r){
     '<div style="background:var(--bg2);border-radius:12px;border:1px solid var(--border);padding:16px;margin-bottom:12px">'+
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
         '<div style="font-size:13px;font-weight:800">📋 단가표</div>'+
-        '<div style="display:flex;gap:6px">'+
+        '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
           '<label style="display:inline-flex;align-items:center;gap:4px;padding:6px 12px;background:#7c3aed;color:#fff;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">'+
             '📥 파일 일괄 등록<input type="file" multiple accept=".xlsx,.xls,.txt" style="display:none" onchange="_uImportPriceFiles(this)">'+
           '</label>'+
-          '<button onclick="_uShowPriceConfirm()" style="padding:6px 12px;background:#7c3aed;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">📋 확인</button>'+
+          '<label style="display:inline-flex;align-items:center;gap:4px;padding:6px 12px;background:#f97316;color:#fff;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">'+
+            '🔄 캠프 자동매칭<input type="file" accept=".xlsx,.xls" style="display:none" onchange="_uAutoMatchCamps(this.files[0]);this.value=\'\'" >'+
+          '</label>'+
+          '<button onclick="_uShowPriceConfirm()" style="padding:6px 12px;background:#0891b2;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">📋 확인</button>'+
           '<button onclick="_uSaveRules()" style="padding:6px 12px;background:#10b981;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">💾 저장</button>'+
         '</div>'+
       '</div>'+
@@ -10691,6 +10694,103 @@ window._uDownloadDouzoneCSV = function(docId, month){
 
     toast('✅ 더존CSV '+nonBizCnt+'명 + 세금계산서목록 '+bizCnt+'명');
   });
+};
+
+
+// ★ 정산Raw에서 캠프-라우트 맵 추출 → 단가표 캠프명 자동 치환 + 재계산
+window._uAutoMatchCamps = function(rawFile){
+  if(!rawFile||typeof XLSX==='undefined') return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var rawSheet=wb.SheetNames.find(function(s){return s.indexOf('Raw')>=0||s.indexOf('raw')>=0;});
+      if(!rawSheet){toast('❌ 정산Raw 시트 없음');return;}
+      var ws=wb.Sheets[rawSheet];
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+
+      // 헤더 찾기
+      var hdr=[],hdrRow=0;
+      for(var h=0;h<Math.min(5,rows.length);h++){
+        var r0=rows[h].map(function(c){return String(c||'').replace(/[\n\r]/g,'').trim();});
+        if(r0.some(function(c){return c.toLowerCase()==='id';})&&r0.some(function(c){return c.toLowerCase()==='route';})){hdr=r0;hdrRow=h;break;}
+      }
+      if(!hdr.length){toast('❌ ID/Route 컬럼 없음');return;}
+
+      var idCol=hdr.findIndex(function(h){return h.toLowerCase()==='id';});
+      var routeCol=hdr.findIndex(function(h){return h.toLowerCase()==='route';});
+      var campCol=hdr.findIndex(function(h){return h.includes('캠프');});
+
+      // 캠프별 라우트 집합
+      var campRouteMap={};
+      for(var ri=hdrRow+1;ri<rows.length;ri++){
+        var row=rows[ri];
+        var camp=campCol>=0?String(row[campCol]||'').trim():'';
+        var route=String(row[routeCol]||'').trim().toUpperCase();
+        if(camp&&route&&/^[0-9]{3}[A-Z]$/.test(route)){
+          if(!campRouteMap[camp]) campRouteMap[camp]=new Set?new Set():{};
+          if(campRouteMap[camp].add) campRouteMap[camp].add(route);
+          else campRouteMap[camp][route]=1;
+        }
+      }
+
+      // 단가표 탭과 캠프 매칭 — 라우트 겹치는 수 기준
+      var priceData=window._uPriceData||{};
+      var tabCamps={};
+      Object.keys(priceData).forEach(function(route){
+        var tab=priceData[route].camp||'기본';
+        if(!tabCamps[tab]) tabCamps[tab]=[];
+        tabCamps[tab].push(route);
+      });
+
+      var matched={};
+      Object.keys(campRouteMap).forEach(function(camp){
+        var campRoutes=campRouteMap[camp];
+        var campRoutesArr=campRoutes.add?Array.from(campRoutes):Object.keys(campRoutes);
+        var bestTab='',bestScore=0;
+        Object.keys(tabCamps).forEach(function(tab){
+          var score=0;
+          campRoutesArr.forEach(function(r){if(tabCamps[tab].indexOf(r)>=0)score++;});
+          if(score>bestScore){bestScore=score;bestTab=tab;}
+        });
+        if(bestTab&&bestScore>0) matched[bestTab]=camp;
+      });
+
+      // 단가표 캠프명 치환
+      var changed=0;
+      Object.keys(matched).forEach(function(oldCamp){
+        var newCamp=matched[oldCamp];
+        Object.keys(priceData).forEach(function(route){
+          if((priceData[route].camp||'기본')===oldCamp){
+            priceData[route].camp=newCamp;
+            changed++;
+          }
+        });
+      });
+
+      // 인센 캠프 자동 생성
+      var rules=window._uCurrentRules||{};
+      var incCamps=rules.incCamps||{};
+      Object.keys(campRouteMap).forEach(function(camp){
+        if(!incCamps[camp]) incCamps[camp]=0; // 기본 0원
+      });
+      if(rules) rules.incCamps=incCamps;
+
+      // UI 갱신
+      _uRenderPricePanels();
+
+      var matchStr=Object.keys(matched).map(function(k){return k+'→'+matched[k];}).join(', ');
+      toast('✅ 캠프 매칭: '+matchStr+' ('+changed+'개 라우트 업데이트)');
+
+      // 인센 UI도 갱신
+      var incGrid=document.getElementById('u-inc-camps-grid');
+      if(incGrid&&window._uIncCampRow){
+        incGrid.innerHTML=_uIncCampRow(incCamps);
+      }
+
+    }catch(err){toast('❌ '+err.message);console.error(err);}
+  };
+  reader.readAsArrayBuffer(rawFile);
 };
 
 window._uDeployTab = function(camp){
