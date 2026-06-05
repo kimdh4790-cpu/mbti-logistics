@@ -8946,8 +8946,12 @@ function _renderUniversalRules(c, r){
       '<div style="font-size:13px;font-weight:800;margin-bottom:12px">💡 추가 규칙</div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'+
         '<div style="grid-column:1/-1"><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:6px">추가인센 (원/건) — 캠프별 설정</label>'+
-          '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:6px">'+
+          '<div id="u-inc-camps-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:6px">'+
             _uIncCampRow(r.incCamps||{})+
+          '</div>'+
+          '<div style="display:flex;gap:6px;margin-top:6px;align-items:center">'+
+            '<input id="u-new-camp" type="text" placeholder="캠프명 추가" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:11px;background:var(--bg)">'+
+            '<button onclick="_uAddIncCamp()" style="padding:5px 10px;background:var(--brand);color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer">+ 추가</button>'+
           '</div>'+
           '<div style="font-size:10px;color:var(--text3);margin-top:4px">선택값: 0 / 10 / 15 / 25원</div>'+
         '</div>'+
@@ -9541,6 +9545,24 @@ function _uIncCampRow(incCamps){
   }).join('');
 }
 
+
+function _uAddIncCamp(){
+  var inp=document.getElementById('u-new-camp');
+  if(!inp) return;
+  var camp=inp.value.trim();
+  if(!camp){toast('캠프명을 입력하세요');return;}
+  inp.value='';
+  var grid=document.getElementById('u-inc-camps-grid');
+  if(!grid) return;
+  var div=document.createElement('div');
+  div.style.cssText='background:var(--bg3);border-radius:6px;padding:6px;text-align:center';
+  div.innerHTML='<div style="font-size:9px;color:var(--text3);margin-bottom:4px">'+esc(camp)+'</div>'+
+    '<select class="u-inc-camp" data-camp="'+esc(camp)+'" style="width:100%;padding:4px;border:1px solid var(--border);border-radius:5px;font-size:12px;font-weight:700;background:var(--bg);text-align:center">'+
+    [0,10,15,25].map(function(v){return '<option value="'+v+'">'+v+'원</option>';}).join('')+
+    '</select>';
+  grid.appendChild(div);
+}
+
 function _uRuleToggle(label, id, val){
   return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0">'+
     '<span style="font-size:12px;color:var(--text2)">'+label+'</span>'+
@@ -9854,7 +9876,12 @@ window._uBulkFromTemplate = function(input, did){
         var empId=String(row[idCol]||'').trim();
         var name=String(row[nameCol]||'').trim();
         var camp=String(row[campCol]||'').trim();
-        var ctype=String(row[typeCol]||'비사업자').trim();
+        var ctypeRaw=String(row[typeCol]||'비사업자').trim();
+        // 계약유형 정규화
+        var ctype='비사업자';
+        if(ctypeRaw.includes('VAT포함')||ctypeRaw.includes('vat포함')||ctypeRaw==='사업자') ctype='사업자_VAT포함';
+        else if(ctypeRaw.includes('VAT별도')||ctypeRaw.includes('vat별도')) ctype='사업자_VAT별도';
+        else if(ctypeRaw.includes('사업자')) ctype='사업자_VAT포함';
         if(!name||!empId)return;
         if(name==='이름 *'||empId==='ID (수정금지)')return;
         valid.push({dealerId:did,empId:empId,name:name,camp:camp,contractType:ctype,createdAt:new Date()});
