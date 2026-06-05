@@ -10850,19 +10850,19 @@ window._universalParseMulti = function(input){
   var status = document.getElementById('u-parse-status');
   if(status) status.textContent = '⏳ 규칙 로드 중...';
 
-  // 규칙 로드 완료 후 파싱 시작
-  var rulesPromise = window._uRulesPromise || Promise.resolve();
-  rulesPromise.then(function(){
-    if(status) status.textContent = '⏳ '+files.length+'개 파일 처리 중...';
+  // 규칙 항상 최신으로 로드 후 파싱
+  if(status) status.textContent = '⏳ 규칙 로드 중...';
+  _loadUniversalRules(function(){
+    var ptCnt=Object.keys(window._uPriceData||{}).length;
+    if(status) status.textContent = '⏳ '+files.length+'개 파일 처리 중... (단가 '+ptCnt+'개)';
     _uDoParseMulti(files, status);
   });
 };
 
 window._uDoParseMulti = function(files, status){
-  // 규칙 최신화 확인
-  var priceData=window._uPriceData||{};
-  var hasPrices=Object.keys(priceData).length>0;
-  if(!hasPrices) console.warn('[DONWAY] 단가표 없음 — 엑셀 단가 사용');
+  // 규칙 최신화 확인 — window._uPriceData 직접 참조 (클로저 캡처 금지)
+  var hasPrices=Object.keys(window._uPriceData||{}).length>0;
+  if(status) status.textContent=(status.textContent||'')+(hasPrices?' [단가'+Object.keys(window._uPriceData).length+'개]':'[단가없음]');
 
   // 합산 맵: {name|empId → {name, empId, camp, details:[], totalGross, totalCnt}}
   var mergeMap = {};
@@ -11072,9 +11072,10 @@ window._uDoParseMulti = function(files, status){
 
               // ★ 단가표 기준으로 라우트별 재계산
               var calcGross=0;
+              var _pd=window._uPriceData||{}; // 항상 최신 참조
               Object.keys(p.routes).forEach(function(route){
                 var rd=p.routes[route];
-                var rulePrice=(priceData[route]&&priceData[route].price)||rd.price||0;
+                var rulePrice=(_pd[route]&&_pd[route].price)||rd.price||0;
                 rd.rulePrice=rulePrice; // 단가표 단가 저장
                 var amt=(rd.cnt||0)*rulePrice + (rd.ret||0)*rulePrice;
                 rd.ruleAmt=amt;
