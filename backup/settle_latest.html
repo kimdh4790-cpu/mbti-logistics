@@ -11405,7 +11405,7 @@ window._universalSave=function(){
         var out={};
         Object.keys(routes).forEach(function(k){
           var rd=routes[k];
-          out[k]={cnt:rd.cnt||0,ret:rd.ret||0,price:rd.price||0,amt:rd.amt||0};
+          out[k]={cnt:rd.cnt||0,ret:rd.ret||0,price:rd.rulePrice||rd.price||0,amt:rd.ruleAmt||rd.amt||0};
         });
         return out;
       })(r._routes):null,
