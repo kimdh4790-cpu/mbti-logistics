@@ -11389,22 +11389,25 @@ window._universalSave=function(){
     if(_rk) toast('저장전 '+(_r0.name||_r0.empId||'?')+' '+_rk+': rulePrice='+(_routes0[_rk].rulePrice||'없음')+' rdPrice='+(_routes0[_rk].price||'없음'));
   }
 
-  var processedRows=results.map(function(r){
-    var name=String(r.name||r.driver||'');
-    var empId=String(r.userId||r.id||r.empId||'');
-    var camp=String(r.camp||'');
-    var cnt=parseInt(r.cnt||r.dcnt||0)||0;
-    var rcnt=parseInt(r.rcnt||0)||0;
-    var gross=parseFloat(r.gross||r.net||r.amount||r.damt||0)||0;
-    var incRate=parseInt(incCamps[camp]||incCamps['기본']||0)||0;
-    var inc=cnt*incRate;
-    var net=Math.max(0,gross+inc);
+   // ★ mergeMap 결과 그대로 저장 — 재계산 금지
+  var processedRows=results.filter(function(r){return !!r.name;}).map(function(r){
     return {
-      name:name,empId:empId,camp:camp,
-      cnt:cnt,rcnt:rcnt,gross:gross,inc:inc,net:net,
-      sheet:String(r.sheet||''),month:String(r.month||month),
+      name:String(r.name||''),
+      empId:String(r.empId||''),
+      camp:String(r.camp||''),
+      cnt:r.cnt||0,
+      rcnt:r.rcnt||0,
+      gross:r.gross||0,
+      net:r.net||r.gross||0,
       contractType:String(r.contractType||'비사업자'),
-      sources:(r.sources||[]).map(function(s){return {label:String(s.label||''),cnt:s.cnt||0,price:s.price||0,gross:s.gross||0};}),
+      _inc:r._inc||0,
+      _incFromRules:r._incFromRules||0,
+      _fresh:r._fresh||0,
+      _leaderFee:r._leaderFee||0,
+      _idSupportGross:r._idSupportGross||0,
+      _etcPlus:r._etcPlus||0,
+      _etcMinus:r._etcMinus||0,
+      _adv:r._adv||0,
       isCoupang:!!(r._isCoupang),
       _routes:r._routes?(function(routes){
         var out={};
@@ -11414,14 +11417,11 @@ window._universalSave=function(){
         });
         return out;
       })(r._routes):null,
-      _fresh:r._fresh||0,
-      _inc:r._inc||0,
-      _etcPlus:r._etcPlus||0,
-      _etcMinus:r._etcMinus||0,
-      _adv:r._adv||0,
-      details:(r.details||[]).map(function(d){return {label:String(d.label||''),value:String(d.value||''),num:d.num||0};})
+      sheet:String(r.sheet||''),
+      month:String(r.month||month),
+      sources:(r.sources||[]).map(function(s){return {label:String(s.label||''),cnt:s.cnt||0,price:s.price||0,gross:s.gross||0};}),
     };
-  }).filter(function(r){return !!r.name;});
+  });
 
   var totalNet=processedRows.reduce(function(s,r){return s+(r.net||0);},0);
   _db.collection('universal_settlements').add({
