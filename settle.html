@@ -10992,7 +10992,7 @@ window._uDoParseMulti = function(files, status){
                 memberFee+=(rd.cnt||0)*fee+(rd.ret||0)*fee;
               });
               if(memberFee>0){
-                member._etcMinus=(member._etcMinus||0)+memberFee; // 기사에서 차감
+                // ★ 기사에서 차감하지 않음 — 대리점이 팀장에게 추가 지급
                 totalFee+=memberFee;
               }
             });
