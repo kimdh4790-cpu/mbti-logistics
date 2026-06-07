@@ -10976,7 +10976,11 @@ window._uDoParseMulti = function(files, status){
                 leaderFee+=(rd.cnt||0)*fee+(rd.ret||0)*fee;
               });
               if(leaderFee>0){r._leaderFee=leaderFee;r._etcPlus=(r._etcPlus||0)+leaderFee;}
-              else if(empIdClean==='dhkim7909') alert('팀장fee=0\n'+JSON.stringify(r._routes));
+              else if(empIdClean==='dhkim7909'){
+                var sample=Object.keys(r._routes)[0];
+                var rd2=r._routes[sample];
+                alert('팀장fee=0\n라우트:'+sample+'\ncnt:'+rd2.cnt+' fee:'+leaderRoutes[sample]+'\n전체:'+JSON.stringify(rd2));
+              }
             }
 
             // ★ 아이디지원
