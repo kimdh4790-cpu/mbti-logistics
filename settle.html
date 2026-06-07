@@ -9477,7 +9477,7 @@ function _uSaveRules(){
     var startRaw=(row.querySelector('.u-ids-start')||{}).value||'';
     var endRaw=(row.querySelector('.u-ids-end')||{}).value||'';
     // 날짜 정규화 "2026. 04. 29." → "2026-04-29"
-    function _nd(d){if(!d)return '';d=String(d).trim().replace(/[.]\s*/g,'-').replace(/-+$/,'').trim();var p=d.split('-');if(p.length>=3)return p[0]+'-'+(p[1].length<2?'0'+p[1]:p[1])+'-'+(p[2].length<2?'0'+p[2]:p[2]);return d;}
+    function _nd(d){if(!d)return '';d=String(d).trim().replace(/[.]\s*/g,'-').replace(/-+$/,'').trim();d=d.split(' ')[0].split('T')[0];var p=d.split('-');if(p.length>=3){var m=p[1].replace(/^0+/,'')||'0',dd=p[2].replace(/^0+/,'')||'0';return p[0]+'-'+(m.length<2?'0'+m:m)+'-'+(dd.length<2?'0'+dd:dd);}return d;}
     var startDate=_nd(startRaw);
     var endDate=_nd(endRaw)||startDate;
     if(fromId&&toId&&startDate) idSupportRules.push({fromId:fromId.trim(),toId:toId.trim(),startDate:startDate,endDate:endDate,dates:[startDate,endDate].filter(function(d,i,a){return d&&a.indexOf(d)===i;})});
@@ -10961,10 +10961,15 @@ window._uDoParseMulti = function(files, status){
             if(idSupportRules.length){
               function _normDateU(s){
                 if(!s) return '';
-                s=String(s).trim().replace(/[.]\s*/g,'-').replace(/-+$/,'');
+                s=String(s).trim();
+                // "2026. 04. 29." → "2026-04-29"
+                s=s.replace(/[.]\s*/g,'-').replace(/-+$/,'').trim();
                 s=s.split(' ')[0].split('T')[0];
                 var p=s.split('-');
-                if(p.length>=3) return p[0]+'-'+(p[1].length<2?'0'+p[1]:p[1])+'-'+(p[2].length<2?'0'+p[2]:p[2]);
+                if(p.length>=3){
+                  var y=p[0], m=p[1].replace(/^0+/,'')||'0', d=p[2].replace(/^0+/,'')||'0';
+                  return y+'-'+(m.length<2?'0'+m:m)+'-'+(d.length<2?'0'+d:d);
+                }
                 return s;
               }
               var _uIdFd={};
@@ -11151,6 +11156,8 @@ window._uDoParseMulti = function(files, status){
                 var _dateRawVal=dateCol2>=0?row[dateCol2]:null;
                 var dateStr='';
                 if(_dateRawVal!==null&&_dateRawVal!==undefined&&_dateRawVal!==''){
+                  // 디버그: 첫 번째 날짜값 확인
+                  if(!window._dateDebugShown&&empId&&empId.indexOf('kycandksh')>=0){window._dateDebugShown=true;alert('dateRawVal: '+JSON.stringify(_dateRawVal)+' type:'+typeof _dateRawVal);}
                   if(typeof _dateRawVal==='number'&&_dateRawVal>40000){
                     // Excel 시리얼 날짜 → yyyy-MM-dd
                     var _ep=new Date(1899,11,30);
