@@ -10959,9 +10959,10 @@ window._uDoParseMulti = function(files, status){
 
             // ★ 아이디지원 — AI정산 방식 (dateRoutes + 날짜 배열)
             if(idSupportRules.length){
-              // 디버그: results empId 목록
-              var _allEmpIds=results.map(function(r){return r.empId||'';}).join(',');
-              alert('results empIds: '+_allEmpIds.slice(0,100));
+              // 디버그: results empId + kycandksh 확인
+              var _kycR2=results.find(function(r){return (r.empId||'').replace('@df','').toLowerCase()==='kycandksh';});
+              var _empSample=results.slice(0,3).map(function(r){return (r.empId||'').replace('@df','');}).join('|');
+              toast('kycandksh:'+ (_kycR2?'있음 DR'+Object.keys(_kycR2._dateRoutes||{}).length+'일':'없음') +' / 샘플:'+_empSample);
               function _normDateU(s){
                 if(!s) return '';
                 s=String(s).trim();
@@ -10982,10 +10983,10 @@ window._uDoParseMulti = function(files, status){
                 var _kDates=Object.keys(_kycR._dateRoutes||{});
                 var _r0=idSupportRules[0];
                 var _rD=_r0?(_r0.dates||[_r0.startDate]):[];
-                alert('DR: '+_kDates.slice(0,5).join('|')+'\nRule: '+_rD.join('|'));
+                toast('DR:'+_kDates.slice(0,3).join('|')+' Rule:'+_rD[0]);
               } else {
                 var _allIds=results.map(function(r){return (r.empId||'').replace('@df','');}).slice(0,5).join(',');
-                alert('kycandksh없음\nIDs:'+_allIds);
+                toast('kycandksh없음 IDs:'+_allIds.slice(0,30));
               }
 
               idSupportRules.forEach(function(rule){
