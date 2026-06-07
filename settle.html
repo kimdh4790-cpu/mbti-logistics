@@ -10968,8 +10968,10 @@ window._uDoParseMulti = function(files, status){
                 return s;
               }
               var _uIdFd={};
-              // 디버그: 첫 번째 규칙 확인
-              if(idSupportRules[0]) toast('아이디지원규칙: from='+idSupportRules[0].fromId+' dates='+JSON.stringify(idSupportRules[0].dates||[])+' start='+idSupportRules[0].startDate);
+              // 디버그: kycandksh dateRoutes 확인
+              var _kycR=results.find(function(rr){return (rr.empId||'').replace('@df','').toLowerCase()==='kycandksh';});
+              if(_kycR) toast('kycandksh dateRoutes: '+Object.keys(_kycR._dateRoutes||{}).slice(0,3).join(',')+'(총'+Object.keys(_kycR._dateRoutes||{}).length+'일)');
+              else toast('kycandksh 없음');
               idSupportRules.forEach(function(rule){
                 var fromClean=(rule.fromId||'').replace('@df','').toLowerCase();
                 var toClean=(rule.toId||'').replace('@df','').toLowerCase();
