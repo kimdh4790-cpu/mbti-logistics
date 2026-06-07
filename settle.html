@@ -10951,36 +10951,8 @@ window._uDoParseMulti = function(files, status){
             // 디버그: 첫 기사만
             if(!window._uIncDebugShown){window._uIncDebugShown=true;toast('인센디버그: '+r.name+' camp='+r.camp+' rate='+incRate+' inc='+incFromRules);}
 
-            // ★ 팀장수수료 (leaderMap)
-            var empIdForLeader=empIdClean||r.name||'';
-            var leaderRoutes=leaderMap[empIdForLeader];
-            // 디버그: 팀장 매칭 확인 (dhkim7909만)
-            if(empIdClean==='dhkim7909'){
-              toast('팀장디버그: empId='+empIdClean+' routes='+(r._routes?Object.keys(r._routes).length+'개':'없음')+' leaderRoutes='+(leaderRoutes?'있음':'없음'));
-            }
-            if(!leaderRoutes){
-              // @df 없는 ID로도 시도
-              Object.keys(leaderMap).forEach(function(lid){
-                if(empIdClean&&empIdClean.indexOf(lid)>=0) leaderRoutes=leaderMap[lid];
-              });
-            }
-            if(leaderRoutes&&r._routes){
-              var leaderFee=0;
-              var routeKeys=Object.keys(r._routes);
-              var leaderKeys=Object.keys(leaderRoutes);
-              // 디버그: dhkim7909만
-              if(empIdClean==='dhkim7909') alert('팀장계산\n_routes: '+routeKeys.join(',')+'\nleaderKeys: '+leaderKeys.join(','));
-              routeKeys.forEach(function(route){
-                var rd=r._routes[route];
-                var fee=leaderRoutes[route]||leaderRoutes[route.toUpperCase()]||0;
-                leaderFee+=(rd.cnt||0)*fee+(rd.ret||0)*fee;
-              });
-              if(leaderFee>0){r._leaderFee=leaderFee;r._etcPlus=(r._etcPlus||0)+leaderFee;}
-              else if(empIdClean==='dhkim7909'){
-                var sample=Object.keys(r._routes)[0];
-                alert('leaderRoutes: '+JSON.stringify(leaderRoutes).slice(0,100));
-              }
-            }
+            // ★ 팀장수수료 — 이 기사가 팀장이면 스킵 (3차 패스에서 처리)
+            // 이 기사의 라우트로 leaderMap 탐색 (본인 라우트 기준 아님)
 
             // ★ 아이디지원
             idSupportRules.forEach(function(rule){
@@ -10999,6 +10971,46 @@ window._uDoParseMulti = function(files, status){
             });
 
             // 최종 실지급
+            r.net=Math.max(0,(r.gross||0)+(r._inc||0)+(r._incFromRules||0)+(r._etcPlus||0)-(r._etcMinus||0)-(r._adv||0));
+          });
+
+          // ★ 3차 패스: 팀장수수료 계산
+          // leaderMap의 각 팀장에 대해 — 모든 기사의 _routes에서 수수료 계산
+          Object.keys(leaderMap).forEach(function(leaderId){
+            var leaderRoutes=leaderMap[leaderId];
+            var totalFee=0;
+
+            // 모든 기사 라우트에서 팀장 수수료 계산 (차감 + 팀장에게 지급)
+            results.forEach(function(member){
+              var memberClean=(member.empId||'').replace('@df','').toLowerCase();
+              if(memberClean===leaderId) return; // 팀장 본인 제외
+              if(!member._routes) return;
+              var memberFee=0;
+              Object.keys(member._routes).forEach(function(route){
+                var rd=member._routes[route];
+                var fee=leaderRoutes[route]||0;
+                memberFee+=(rd.cnt||0)*fee+(rd.ret||0)*fee;
+              });
+              if(memberFee>0){
+                member._etcMinus=(member._etcMinus||0)+memberFee; // 기사에서 차감
+                totalFee+=memberFee;
+              }
+            });
+
+            // 팀장에게 수수료 추가
+            if(totalFee>0){
+              var leaderResult=results.find(function(rr){
+                return (rr.empId||'').replace('@df','').toLowerCase()===leaderId;
+              });
+              if(leaderResult){
+                leaderResult._leaderFee=(leaderResult._leaderFee||0)+totalFee;
+                leaderResult._etcPlus=(leaderResult._etcPlus||0)+totalFee;
+              }
+            }
+          });
+
+          // net 재계산 (팀장수수료 반영)
+          results.forEach(function(r){
             r.net=Math.max(0,(r.gross||0)+(r._inc||0)+(r._incFromRules||0)+(r._etcPlus||0)-(r._etcMinus||0)-(r._adv||0));
           });
 
