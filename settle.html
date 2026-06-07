@@ -10954,6 +10954,10 @@ window._uDoParseMulti = function(files, status){
             // ★ 팀장수수료 (leaderMap)
             var empIdForLeader=empIdClean||r.name||'';
             var leaderRoutes=leaderMap[empIdForLeader];
+            // 디버그: 팀장 매칭 확인 (dhkim7909만)
+            if(empIdClean==='dhkim7909'){
+              toast('팀장디버그: empId='+empIdClean+' routes='+(r._routes?Object.keys(r._routes).length+'개':'없음')+' leaderRoutes='+(leaderRoutes?'있음':'없음'));
+            }
             if(!leaderRoutes){
               // @df 없는 ID로도 시도
               Object.keys(leaderMap).forEach(function(lid){
