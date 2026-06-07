@@ -10967,13 +10967,20 @@ window._uDoParseMulti = function(files, status){
                   (rule.startDate?[rule.startDate]:[]);
                 if(rule.endDate&&rule.endDate!==rule.startDate) ruleDates.push(rule.endDate);
                 var ruleRoutes=rule.routes||[];
+                // 디버그: ruleDates 확인
+                if(!window._rdShown){window._rdShown=true;toast('ruleDates:'+JSON.stringify(ruleDates)+' from:'+fromClean);}
                 var toR=results.find(function(rr){return (rr.empId||'').replace('@df','').toLowerCase()===toClean;});
                 var fromR=results.find(function(rr){return (rr.empId||'').replace('@df','').toLowerCase()===fromClean;});
                 if(!toR||!fromR||!fromR._dateRoutes) return;
                 var tot=0;
                 Object.keys(fromR._dateRoutes).forEach(function(dt){
-                  // dt는 이미 yyyy-MM-dd 형식, ruleDates도 정규화됨
-                  if(ruleDates.length&&ruleDates.indexOf(dt)<0) return;
+                  // 날짜 매칭 — dt와 ruleDates 비교 (부분 포함도 허용)
+                  if(ruleDates.length){
+                    var matched=ruleDates.some(function(rd){
+                      return dt===rd||dt.indexOf(rd)>=0||rd.indexOf(dt)>=0;
+                    });
+                    if(!matched) return;
+                  }
                   Object.keys(fromR._dateRoutes[dt]).forEach(function(route){
                     if(ruleRoutes.length&&ruleRoutes.indexOf(route)<0) return;
                     var rd=fromR._dateRoutes[dt][route];
