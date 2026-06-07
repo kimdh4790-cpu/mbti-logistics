@@ -10927,7 +10927,8 @@ window._uDoParseMulti = function(files, status){
           var rules = window._uCurrentRules||{};
           var incCamps = rules.incCamps||{};
           var leaderMap = window._uLeaderMap||{};
-          var idSupportRules = rules.idSupportRules||[];
+          // ★ Firestore 저장값 직접 사용 (UI 렌더링값 X)
+          var idSupportRules = (window._uCurrentRules&&window._uCurrentRules.idSupportRules)||rules.idSupportRules||[];
           var priceData = window._uPriceData||{};
           var hasPriceTable = Object.keys(priceData).length>0;
           
