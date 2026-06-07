@@ -10968,8 +10968,17 @@ window._uDoParseMulti = function(files, status){
                 return s;
               }
               var _uIdFd={};
-              // 디버그: kycandksh dateRoutes 확인
+              // 디버그
               var _kycR=results.find(function(rr){return (rr.empId||'').replace('@df','').toLowerCase()==='kycandksh';});
+              if(_kycR){
+                var _kDates=Object.keys(_kycR._dateRoutes||{});
+                var _r0=idSupportRules[0];
+                var _rD=_r0?(_r0.dates||[_r0.startDate]):[];
+                alert('DR: '+_kDates.slice(0,5).join('|')+'\nRule: '+_rD.join('|'));
+              } else {
+                var _allIds=results.map(function(r){return (r.empId||'').replace('@df','');}).slice(0,5).join(',');
+                alert('kycandksh없음\nIDs:'+_allIds);
+              }
 
               idSupportRules.forEach(function(rule){
                 var fromClean=(rule.fromId||'').replace('@df','').toLowerCase();
