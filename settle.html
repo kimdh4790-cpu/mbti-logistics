@@ -10953,20 +10953,41 @@ window._uDoParseMulti = function(files, status){
             // ★ 팀장수수료 — 이 기사가 팀장이면 스킵 (3차 패스에서 처리)
             // 이 기사의 라우트로 leaderMap 탐색 (본인 라우트 기준 아님)
 
-            // ★ 아이디지원
+            // ★ 아이디지원 — dateRoutes 기반 (날짜별 건수 이전)
             idSupportRules.forEach(function(rule){
               var fromClean=(rule.fromId||'').replace('@df','').toLowerCase();
               var toClean=(rule.toId||'').replace('@df','').toLowerCase();
-              if(!empIdClean||empIdClean!==toClean) return;
-              var fromR=results.find(function(rr){return (rr.empId||'').replace('@df','').toLowerCase()===fromClean;});
-              if(!fromR||!fromR._routes) return;
-              var addGross=0;
-              Object.keys(fromR._routes).forEach(function(route){
-                var rd=fromR._routes[route];
-                var price=(priceData[route]&&priceData[route].price)||rd.rulePrice||rd.price||0;
-                addGross+=(rd.cnt||0)*price+(rd.ret||0)*price;
-              });
-              if(addGross>0){r._idSupportGross=(r._idSupportGross||0)+addGross;r._etcPlus=(r._etcPlus||0)+addGross;}
+              var startDate=(rule.startDate||'').split('T')[0].split(' ')[0];
+              var endDate=(rule.endDate||rule.startDate||'').split('T')[0].split(' ')[0]||startDate;
+
+              // 받는 쪽(toId) 기사일 때
+              if(empIdClean===toClean){
+                var fromR=results.find(function(rr){return (rr.empId||'').replace('@df','').toLowerCase()===fromClean;});
+                if(!fromR||!fromR._dateRoutes) return;
+                var addGross=0; var addCnt=0;
+                // 날짜 범위 내 fromR.dateRoutes에서 건수 추출
+                Object.keys(fromR._dateRoutes).forEach(function(dt){
+                  if(dt<startDate||dt>endDate) return;
+                  Object.keys(fromR._dateRoutes[dt]).forEach(function(route){
+                    var rd=fromR._dateRoutes[dt][route];
+                    var price=(window._uPriceData[route]&&window._uPriceData[route].price)||(fromR._routes[route]&&fromR._routes[route].price)||0;
+                    var amt=(rd.cnt||0)*price+(rd.ret||0)*price;
+                    addGross+=amt; addCnt+=(rd.cnt||0);
+                    // fromR에서 차감
+                    if(fromR._routes[route]){
+                      fromR._routes[route].cnt=Math.max(0,(fromR._routes[route].cnt||0)-(rd.cnt||0));
+                      fromR._routes[route].ret=Math.max(0,(fromR._routes[route].ret||0)-(rd.ret||0));
+                    }
+                  });
+                });
+                if(addGross>0){
+                  r._idSupportGross=(r._idSupportGross||0)+addGross;
+                  r._etcPlus=(r._etcPlus||0)+addGross;
+                  // fromR gross/cnt/net 차감
+                  fromR.gross=Math.max(0,(fromR.gross||0)-addGross);
+                  fromR.cnt=Math.max(0,(fromR.cnt||0)-addCnt);
+                }
+              }
             });
 
             // 최종 실지급
@@ -11082,7 +11103,7 @@ window._uDoParseMulti = function(files, status){
               var total=totalCol>=0?parseFloat(row[totalCol])||0:(baseAmtCol>=0?parseFloat(row[baseAmtCol])||0:cnt*price);
               var route=routeCol>=0?String(row[routeCol]||'').trim():'';
 
-              if(!idMap[empId]){idMap[empId]={empId:empId,camp:camp,cnt:0,ret:0,gross:0,inc:0,fresh:0,routes:{}};}
+              if(!idMap[empId]){idMap[empId]={empId:empId,camp:camp,cnt:0,ret:0,gross:0,inc:0,fresh:0,routes:{},dateRoutes:{}};}
               var p=idMap[empId];
               if(!p.camp&&camp) p.camp=camp;
               p.cnt+=cnt; p.ret+=ret; p.gross+=total;
@@ -11091,6 +11112,16 @@ window._uDoParseMulti = function(files, status){
               if(route){
                 if(!p.routes[route]) p.routes[route]={cnt:0,ret:0,price:price,amt:0};
                 p.routes[route].cnt+=cnt; p.routes[route].ret+=ret; p.routes[route].amt+=total;
+                // ★ dateRoutes 저장 (아이디지원용)
+                var dateCol2=hdr.findIndex(function(h){return h.includes('배송일자');});
+                var dateRaw=dateCol2>=0?String(row[dateCol2]||'').trim():'';
+                var dateStr=dateRaw.split(' ')[0].split('T')[0]; // yyyy-MM-dd
+                if(dateStr&&dateStr.length>=8){
+                  if(!p.dateRoutes[dateStr]) p.dateRoutes[dateStr]={};
+                  if(!p.dateRoutes[dateStr][route]) p.dateRoutes[dateStr][route]={cnt:0,ret:0};
+                  p.dateRoutes[dateStr][route].cnt+=cnt;
+                  p.dateRoutes[dateStr][route].ret+=ret;
+                }
               }
             }
 
@@ -11128,6 +11159,7 @@ window._uDoParseMulti = function(files, status){
               if(mergeMap[key]){
                 mergeMap[key]._isCoupang=true;
                 mergeMap[key]._routes=p.routes;
+                mergeMap[key]._dateRoutes=p.dateRoutes||{};
                 mergeMap[key]._fresh=(mergeMap[key]._fresh||0)+p.fresh;
                 mergeMap[key]._inc=(mergeMap[key]._inc||0)+p.inc;
               }
