@@ -10970,8 +10970,12 @@ window._uDoParseMulti = function(files, status){
               var _uIdFd={};
               // 디버그: kycandksh dateRoutes 확인
               var _kycR=results.find(function(rr){return (rr.empId||'').replace('@df','').toLowerCase()==='kycandksh';});
-              if(_kycR) toast('kycandksh dateRoutes: '+Object.keys(_kycR._dateRoutes||{}).slice(0,3).join(',')+'(총'+Object.keys(_kycR._dateRoutes||{}).length+'일)');
-              else toast('kycandksh 없음');
+              if(_kycR){
+                var _kDates=Object.keys(_kycR._dateRoutes||{});
+                var _rule0=idSupportRules[0];
+                var _rDates=_rule0?(_rule0.dates||[_rule0.startDate]):[];
+                alert('dateRoutes날짜: '+_kDates.slice(0,3).join('|')+'\n규칙날짜: '+_rDates.join('|'));
+              }
               idSupportRules.forEach(function(rule){
                 var fromClean=(rule.fromId||'').replace('@df','').toLowerCase();
                 var toClean=(rule.toId||'').replace('@df','').toLowerCase();
