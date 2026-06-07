@@ -9455,6 +9455,7 @@ function _uRemoveRow(btn){btn.closest('.rrow, [id^="rrow-"]').remove();}
 function _uSaveRules(){
   if(!_db||!_CU){toast('로그인 필요');return;}
   var did=_CU.dealerId||_CU.uid;
+  toast('저장 시작...');
 
   // _uPriceData → priceTables 변환 (캠프별 그룹핑)
   var campGroups={};
