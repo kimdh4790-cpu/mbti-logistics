@@ -10957,8 +10957,18 @@ window._uDoParseMulti = function(files, status){
             idSupportRules.forEach(function(rule){
               var fromClean=(rule.fromId||'').replace('@df','').toLowerCase();
               var toClean=(rule.toId||'').replace('@df','').toLowerCase();
-              var startDate=(rule.startDate||'').split('T')[0].split(' ')[0];
-              var endDate=(rule.endDate||rule.startDate||'').split('T')[0].split(' ')[0]||startDate;
+              // 날짜 정규화 — 다양한 형식 처리
+              function _normDate(d){
+                if(!d) return '';
+                d=String(d).trim();
+                // "2026. 04. 29." → "2026-04-29"
+                d=d.replace(/\.\s*/g,'-').replace(/-$/,'').trim();
+                // "2026-04-29 00:00:00" → "2026-04-29"
+                d=d.split(' ')[0].split('T')[0];
+                return d;
+              }
+              var startDate=_normDate(rule.startDate);
+              var endDate=_normDate(rule.endDate)||startDate;
 
               // 받는 쪽(toId) 기사일 때
               if(empIdClean===toClean){
@@ -11115,7 +11125,7 @@ window._uDoParseMulti = function(files, status){
                 // ★ dateRoutes 저장 (아이디지원용)
                 var dateCol2=hdr.findIndex(function(h){return h.includes('배송일자');});
                 var dateRaw=dateCol2>=0?String(row[dateCol2]||'').trim():'';
-                var dateStr=dateRaw.split(' ')[0].split('T')[0]; // yyyy-MM-dd
+                var dateStr=dateRaw.split(' ')[0].split('T')[0].replace(/\.\s*/g,'-').replace(/-$/,''); // yyyy-MM-dd
                 if(dateStr&&dateStr.length>=8){
                   if(!p.dateRoutes[dateStr]) p.dateRoutes[dateStr]={};
                   if(!p.dateRoutes[dateStr][route]) p.dateRoutes[dateStr][route]={cnt:0,ret:0};
