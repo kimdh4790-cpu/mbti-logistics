@@ -10967,8 +10967,13 @@ window._uDoParseMulti = function(files, status){
                   (rule.startDate?[rule.startDate]:[]);
                 if(rule.endDate&&rule.endDate!==rule.startDate) ruleDates.push(rule.endDate);
                 var ruleRoutes=rule.routes||[];
-                // 디버그: ruleDates 확인
-                if(!window._rdShown){window._rdShown=true;toast('ruleDates:'+JSON.stringify(ruleDates)+' from:'+fromClean);}
+                // 디버그: dt vs ruleDates 비교
+                if(!window._rdShown){
+                  window._rdShown=true;
+                  var _fr=results.find(function(r){return (r.empId||'').replace('@df','').toLowerCase()===fromClean;});
+                  var _dts=_fr?Object.keys(_fr._dateRoutes||{}).slice(0,3):[];
+                  toast('ruleDates:'+JSON.stringify(ruleDates)+' dt샘플:'+_dts.join('|'));
+                }
                 var toR=results.find(function(rr){return (rr.empId||'').replace('@df','').toLowerCase()===toClean;});
                 var fromR=results.find(function(rr){return (rr.empId||'').replace('@df','').toLowerCase()===fromClean;});
                 if(!toR||!fromR||!fromR._dateRoutes) return;
