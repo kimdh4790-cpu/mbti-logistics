@@ -11156,13 +11156,13 @@ window._uDoParseMulti = function(files, status){
                 var _dateRawVal=dateCol2>=0?row[dateCol2]:null;
                 var dateStr='';
                 if(_dateRawVal!==null&&_dateRawVal!==undefined&&_dateRawVal!==''){
-                  // 디버그: 첫 번째 날짜값 확인
-                  if(!window._dateDebugShown&&empId&&empId.indexOf('kycandksh')>=0){window._dateDebugShown=true;alert('dateRawVal: '+JSON.stringify(_dateRawVal)+' type:'+typeof _dateRawVal);}
+
                   if(typeof _dateRawVal==='number'&&_dateRawVal>40000){
-                    // Excel 시리얼 날짜 → yyyy-MM-dd
+                    // Excel 시리얼 날짜 → yyyy-MM-dd (padStart 없이)
                     var _ep=new Date(1899,11,30);
                     var _dd=new Date(_ep.getTime()+Math.floor(_dateRawVal)*86400000);
-                    dateStr=_dd.getFullYear()+'-'+String(_dd.getMonth()+1).padStart(2,'0')+'-'+String(_dd.getDate()).padStart(2,'0');
+                    var _m=_dd.getMonth()+1; var _d=_dd.getDate();
+                    dateStr=_dd.getFullYear()+'-'+(_m<10?'0'+_m:_m)+'-'+(_d<10?'0'+_d:_d);
                   } else {
                     var _ds=String(_dateRawVal).trim().split(' ')[0].split('T')[0];
                     var _dp=_ds.split('-');
