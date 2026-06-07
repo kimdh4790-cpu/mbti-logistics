@@ -10927,8 +10927,23 @@ window._uDoParseMulti = function(files, status){
           var rules = window._uCurrentRules||{};
           var incCamps = rules.incCamps||{};
           var leaderMap = window._uLeaderMap||{};
-          // ★ Firestore 저장값 직접 사용 (UI 렌더링값 X)
-          var idSupportRules = (window._uCurrentRules&&window._uCurrentRules.idSupportRules)||rules.idSupportRules||[];
+          // ★ Firestore 저장값 직접 사용 + 날짜 자동 정규화
+          var _rawIdRules=(window._uCurrentRules&&window._uCurrentRules.idSupportRules)||rules.idSupportRules||[];
+          var idSupportRules=_rawIdRules.map(function(rule){
+            function _fixDate(d){
+              if(!d) return '';
+              // "2026. 04. 29." → "2026-04-29"
+              var s=String(d).trim().replace(/[.]+/g,'-').replace(/-\s*/g,'-').replace(/\s*-/g,'-').replace(/-+$/,'').trim();
+              var p=s.split('-').map(function(x){return x.trim();}).filter(Boolean);
+              if(p.length>=3) return p[0]+'-'+(p[1].length<2?'0'+p[1]:p[1])+'-'+(p[2].length<2?'0'+p[2]:p[2]);
+              return s;
+            }
+            var sd=_fixDate(rule.startDate);
+            var ed=_fixDate(rule.endDate)||sd;
+            var dates=(rule.dates&&rule.dates.length)?rule.dates.map(_fixDate).filter(Boolean):[sd];
+            if(ed&&ed!==sd&&dates.indexOf(ed)<0) dates.push(ed);
+            return {fromId:rule.fromId,toId:rule.toId,startDate:sd,endDate:ed,dates:dates,routes:rule.routes||[]};
+          });
           var priceData = window._uPriceData||{};
           var hasPriceTable = Object.keys(priceData).length>0;
           
