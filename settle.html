@@ -9474,9 +9474,13 @@ function _uSaveRules(){
   document.querySelectorAll('.u-idsupport-row').forEach(function(row){
     var fromId=(row.querySelector('.u-ids-from')||{}).value||'';
     var toId=(row.querySelector('.u-ids-to')||{}).value||'';
-    var startDate=(row.querySelector('.u-ids-start')||{}).value||'';
-    var endDate=(row.querySelector('.u-ids-end')||{}).value||'';
-    if(fromId&&toId&&startDate) idSupportRules.push({fromId:fromId.trim(),toId:toId.trim(),startDate:startDate,endDate:endDate||''});
+    var startRaw=(row.querySelector('.u-ids-start')||{}).value||'';
+    var endRaw=(row.querySelector('.u-ids-end')||{}).value||'';
+    // 날짜 정규화 "2026. 04. 29." → "2026-04-29"
+    function _nd(d){if(!d)return '';d=String(d).trim().replace(/[.]\s*/g,'-').replace(/-+$/,'').trim();var p=d.split('-');if(p.length>=3)return p[0]+'-'+(p[1].length<2?'0'+p[1]:p[1])+'-'+(p[2].length<2?'0'+p[2]:p[2]);return d;}
+    var startDate=_nd(startRaw);
+    var endDate=_nd(endRaw)||startDate;
+    if(fromId&&toId&&startDate) idSupportRules.push({fromId:fromId.trim(),toId:toId.trim(),startDate:startDate,endDate:endDate,dates:[startDate,endDate].filter(function(d,i,a){return d&&a.indexOf(d)===i;})});
   });
 
   var rules={
