@@ -133,7 +133,7 @@ document.addEventListener("DOMContentLoaded",function(){var a=document.getElemen
 var _bizDocFile=null;
 function onBizDocSelected(input){
   var file=input.files&&input.files[0];if(!file)return;
-  if(file.size>5*1024*1024){alert('5MB 초과');return;}
+  if(file.size>5*1024*1024){return;}
   _bizDocFile=file;
   var prev=document.getElementById('r-bizdoc-preview');
   var nm=document.getElementById('r-bizdoc-name');
@@ -10928,7 +10928,6 @@ window._uDoParseMulti = function(files, status){
           var idSupportRules = rules.idSupportRules||[];
           var priceData = window._uPriceData||{};
           var hasPriceTable = Object.keys(priceData).length>0;
-          // 디버그: leaderMap 키 확인
           
 
           // 1차: 이름/캠프/계약유형 매칭
@@ -10959,10 +10958,6 @@ window._uDoParseMulti = function(files, status){
 
             // ★ 아이디지원 — AI정산 방식 (dateRoutes + 날짜 배열)
             if(idSupportRules.length){
-              // 디버그: results empId + kycandksh 확인
-              var _kycR2=results.find(function(r){return (r.empId||'').replace('@df','').toLowerCase()==='kycandksh';});
-              var _empSample=results.slice(0,3).map(function(r){return (r.empId||'').replace('@df','');}).join('|');
-              toast('kycandksh:'+ (_kycR2?'있음 DR'+Object.keys(_kycR2._dateRoutes||{}).length+'일':'없음') +' / 샘플:'+_empSample);
               function _normDateU(s){
                 if(!s) return '';
                 s=String(s).trim();
@@ -10977,18 +10972,6 @@ window._uDoParseMulti = function(files, status){
                 return s;
               }
               var _uIdFd={};
-              // 디버그
-              var _kycR=results.find(function(rr){return (rr.empId||'').replace('@df','').toLowerCase()==='kycandksh';});
-              if(_kycR){
-                var _kDates=Object.keys(_kycR._dateRoutes||{});
-                var _r0=idSupportRules[0];
-                var _rD=_r0?(_r0.dates||[_r0.startDate]):[];
-                toast('DR:'+_kDates.slice(0,3).join('|')+' Rule:'+_rD[0]);
-              } else {
-                var _allIds=results.map(function(r){return (r.empId||'').replace('@df','');}).slice(0,5).join(',');
-                toast('kycandksh없음 IDs:'+_allIds.slice(0,30));
-              }
-
               idSupportRules.forEach(function(rule){
                 var fromClean=(rule.fromId||'').replace('@df','').toLowerCase();
                 var toClean=(rule.toId||'').replace('@df','').toLowerCase();
@@ -13964,7 +13947,7 @@ async function runDealerPatch(){
     }catch(e){console.warn(cols[i],e.message);}
   }
   toast('🎉 패치 완료! 총 '+patched+'개 문서 dealerId 추가');
-  alert('패치 완료! 총 '+patched+'개 문서에 dealerId 추가됨\n\n이제 Rules 강화 요청해주세요!');
+  
 }
 
 // ── 슈퍼어드민 dealerId 패치 ──
@@ -19437,7 +19420,7 @@ function bsPreview(){
   if(!sample)return;
   var net=calcNet(sample).net||0;
   var msg=tmpl.replace('{이름}',sample.driver||sample.userId||'').replace('{금액}',fmt(net));
-  alert('[미리보기]\n수신: '+sample._phone+'\n\n'+msg);
+  
 }
 function bsDoSend(allData){
   var tmpl=(document.getElementById('bs-msg-tmpl')||{}).value||'';
