@@ -9502,8 +9502,9 @@ function _uSaveRules(){
   _db.collection('universal_rules').doc(did).set(rules)
     .then(function(){
       var total=priceTables.reduce(function(s,pt){return s+pt.routes.length;},0);
-      var incStr=JSON.stringify(rules.incCamps||{});
-      toast('✅ 저장완료 — 라우트 '+total+'개 / 인센: '+incStr);
+      var lmCnt=Object.keys(window._uLeaderMap||{}).length;
+      var incCnt=Object.keys(rules.incCamps||{}).filter(function(k){return (rules.incCamps||{})[k]>0;}).length;
+      toast('✅ 저장완료 — 단가 '+total+'개 / 팀장 '+lmCnt+'명 / 인센캠프 '+incCnt+'개');
       // RPRICE 반영 (기본 단가표만)
       var basic=priceTables.find(function(pt){return pt.type==='basic';});
       if(basic&&typeof RPRICE!=='undefined') basic.routes.forEach(function(rr){RPRICE[rr.route]=rr.price;});
@@ -10924,8 +10925,7 @@ window._uDoParseMulti = function(files, status){
           var priceData = window._uPriceData||{};
           var hasPriceTable = Object.keys(priceData).length>0;
           // 디버그: leaderMap 키 확인
-          console.log('[DONWAY] leaderMap keys:', Object.keys(leaderMap));
-          toast('팀장맵: '+Object.keys(leaderMap).join(','));
+          
 
           // 1차: 이름/캠프/계약유형 매칭
           results.forEach(function(r){
@@ -10948,8 +10948,7 @@ window._uDoParseMulti = function(files, status){
             var incFromRules=(r.cnt||0)*incRate;
             r._inc=(r._fresh?r._inc||0:(r._inc||0));
             if(incFromRules>0) r._incFromRules=incFromRules;
-            // 디버그: 첫 기사만
-            if(!window._uIncDebugShown){window._uIncDebugShown=true;toast('인센디버그: '+r.name+' camp='+r.camp+' rate='+incRate+' inc='+incFromRules);}
+            
 
             // ★ 팀장수수료 — 이 기사가 팀장이면 스킵 (3차 패스에서 처리)
             // 이 기사의 라우트로 leaderMap 탐색 (본인 라우트 기준 아님)
@@ -11105,10 +11104,7 @@ window._uDoParseMulti = function(files, status){
               var _pd=window._uPriceData||{}; // 항상 최신 참조
               // 디버그: 첫번째 기사 단가 확인
               if(!window._uPriceDebugShown){
-                window._uPriceDebugShown=true;
-                var sampleRoute=Object.keys(p.routes)[0]||'';
-                var sampleRule=_pd[sampleRoute];
-                toast('단가체크: '+sampleRoute+'→'+(sampleRule?sampleRule.price+'원(규칙)':'없음(엑셀)'));
+                
               }
               Object.keys(p.routes).forEach(function(route){
                 var rd=p.routes[route];
@@ -11405,14 +11401,6 @@ window._universalSave=function(){
   var did=_CU.dealerId||_CU.uid;
   var month=new Date().toISOString().slice(0,7);
   var incCamps=(window._uCurrentRules&&window._uCurrentRules.incCamps)||{};
-
-  // 디버그: 저장 전 첫 기사 단가 확인
-  if(results.length>0){
-    var _r0=results[0];
-    var _routes0=_r0._routes||{};
-    var _rk=Object.keys(_routes0)[0];
-    if(_rk) toast('저장전 '+(_r0.name||_r0.empId||'?')+' '+_rk+': rulePrice='+(_routes0[_rk].rulePrice||'없음')+' rdPrice='+(_routes0[_rk].price||'없음'));
-  }
 
    // ★ mergeMap 결과 그대로 저장 — 재계산 금지
   var processedRows=results.filter(function(r){return !!r.name;}).map(function(r){
