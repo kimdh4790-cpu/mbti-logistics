@@ -10988,8 +10988,8 @@ window._uDoParseMulti = function(files, status){
                 if(!toR||!fromR||!fromR._dateRoutes) return;
                 var tot=0;
                 Object.keys(fromR._dateRoutes).forEach(function(dt){
-                  var dtNorm=_normDateU(dt);
-                  if(ruleDates.length&&ruleDates.indexOf(dtNorm)<0) return;
+                  // dt는 이미 yyyy-MM-dd 형식, ruleDates도 정규화됨
+                  if(ruleDates.length&&ruleDates.indexOf(dt)<0) return;
                   Object.keys(fromR._dateRoutes[dt]).forEach(function(route){
                     if(ruleRoutes.length&&ruleRoutes.indexOf(route)<0) return;
                     var rd=fromR._dateRoutes[dt][route];
