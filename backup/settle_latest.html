@@ -10953,55 +10953,63 @@ window._uDoParseMulti = function(files, status){
             // ★ 팀장수수료 — 이 기사가 팀장이면 스킵 (3차 패스에서 처리)
             // 이 기사의 라우트로 leaderMap 탐색 (본인 라우트 기준 아님)
 
-            // ★ 아이디지원 — dateRoutes 기반 (날짜별 건수 이전)
-            idSupportRules.forEach(function(rule){
-              var fromClean=(rule.fromId||'').replace('@df','').toLowerCase();
-              var toClean=(rule.toId||'').replace('@df','').toLowerCase();
-              // 날짜 정규화 — 다양한 형식 처리
-              function _normDate(d){
-                if(!d) return '';
-                d=String(d).trim();
-                // "2026. 04. 29." → "2026-04-29"
-                d=d.replace(/\.\s*/g,'-').replace(/-$/,'').trim();
-                // "2026-04-29 00:00:00" → "2026-04-29"
-                d=d.split(' ')[0].split('T')[0];
-                return d;
+            // ★ 아이디지원 — AI정산 방식 (dateRoutes + 날짜 배열)
+            if(idSupportRules.length){
+              function _normDateU(s){
+                if(!s) return '';
+                s=String(s).trim().replace(/[.]\s*/g,'-').replace(/-+$/,'');
+                s=s.split(' ')[0].split('T')[0];
+                var p=s.split('-');
+                if(p.length>=3) return p[0]+'-'+(p[1].length<2?'0'+p[1]:p[1])+'-'+(p[2].length<2?'0'+p[2]:p[2]);
+                return s;
               }
-              var startDate=_normDate(rule.startDate);
-              var endDate=_normDate(rule.endDate)||startDate;
-
-              // 받는 쪽(toId) 기사일 때
-              if(empIdClean===toClean){
+              var _uIdFd={};
+              idSupportRules.forEach(function(rule){
+                var fromClean=(rule.fromId||'').replace('@df','').toLowerCase();
+                var toClean=(rule.toId||'').replace('@df','').toLowerCase();
+                var ruleDates=[];
+                if(rule.dates&&rule.dates.length){
+                  ruleDates=rule.dates.map(function(d){return _normDateU(d);}).filter(Boolean);
+                } else {
+                  var sd=_normDateU(rule.startDate), ed=_normDateU(rule.endDate||rule.startDate);
+                  if(sd) ruleDates=[sd];
+                  if(ed&&ed!==sd) ruleDates.push(ed);
+                }
+                var ruleRoutes=rule.routes||[];
+                var toR=results.find(function(rr){return (rr.empId||'').replace('@df','').toLowerCase()===toClean;});
                 var fromR=results.find(function(rr){return (rr.empId||'').replace('@df','').toLowerCase()===fromClean;});
-                if(!fromR||!fromR._dateRoutes) return;
-                var addGross=0; var addCnt=0;
-                // 날짜 범위 내 fromR.dateRoutes에서 건수 추출
+                if(!toR||!fromR||!fromR._dateRoutes) return;
+                var tot=0;
                 Object.keys(fromR._dateRoutes).forEach(function(dt){
-                  if(dt<startDate||dt>endDate) return;
+                  var dtNorm=_normDateU(dt);
+                  if(ruleDates.length&&ruleDates.indexOf(dtNorm)<0) return;
                   Object.keys(fromR._dateRoutes[dt]).forEach(function(route){
+                    if(ruleRoutes.length&&ruleRoutes.indexOf(route)<0) return;
                     var rd=fromR._dateRoutes[dt][route];
                     var price=(window._uPriceData[route]&&window._uPriceData[route].price)||(fromR._routes[route]&&fromR._routes[route].price)||0;
+                    if(!price) return;
                     var amt=(rd.cnt||0)*price+(rd.ret||0)*price;
-                    addGross+=amt; addCnt+=(rd.cnt||0);
-                    // fromR에서 차감
+                    if(!amt) return;
+                    tot+=amt;
                     if(fromR._routes[route]){
                       fromR._routes[route].cnt=Math.max(0,(fromR._routes[route].cnt||0)-(rd.cnt||0));
                       fromR._routes[route].ret=Math.max(0,(fromR._routes[route].ret||0)-(rd.ret||0));
                     }
                   });
                 });
-                if(addGross>0){
-                  r._idSupportGross=(r._idSupportGross||0)+addGross;
-                  r._etcPlus=(r._etcPlus||0)+addGross;
-                  // fromR gross/cnt/net 차감
-                  fromR.gross=Math.max(0,(fromR.gross||0)-addGross);
-                  fromR.cnt=Math.max(0,(fromR.cnt||0)-addCnt);
-                }
-              }
-            });
+                if(!tot) return;
+                toR._idSupportGross=(toR._idSupportGross||0)+tot;
+                toR._etcPlus=(toR._etcPlus||0)+tot;
+                if(!_uIdFd[fromClean]) _uIdFd[fromClean]=0;
+                _uIdFd[fromClean]+=tot;
+                fromR.gross=Math.max(0,(fromR.gross||0)-tot);
+              });
+              Object.keys(_uIdFd).forEach(function(fid){
+                var fromR=results.find(function(rr){return (rr.empId||'').replace('@df','').toLowerCase()===fid;});
+                if(fromR) fromR._etcMinus=(fromR._etcMinus||0)+_uIdFd[fid];
+              });
+            }
 
-            // 최종 실지급
-            r.net=Math.max(0,(r.gross||0)+(r._inc||0)+(r._incFromRules||0)+(r._etcPlus||0)-(r._etcMinus||0)-(r._adv||0));
           });
 
           // ★ 3차 패스: 팀장수수료 계산
