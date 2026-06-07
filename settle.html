@@ -10970,12 +10970,7 @@ window._uDoParseMulti = function(files, status){
               var _uIdFd={};
               // 디버그: kycandksh dateRoutes 확인
               var _kycR=results.find(function(rr){return (rr.empId||'').replace('@df','').toLowerCase()==='kycandksh';});
-              if(_kycR){
-                var _kDates=Object.keys(_kycR._dateRoutes||{});
-                var _rule0=idSupportRules[0];
-                var _rDates=_rule0?(_rule0.dates||[_rule0.startDate]):[];
-                alert('dateRoutes날짜: '+_kDates.slice(0,3).join('|')+'\n규칙날짜: '+_rDates.join('|'));
-              }
+
               idSupportRules.forEach(function(rule){
                 var fromClean=(rule.fromId||'').replace('@df','').toLowerCase();
                 var toClean=(rule.toId||'').replace('@df','').toLowerCase();
@@ -11144,8 +11139,21 @@ window._uDoParseMulti = function(files, status){
                 p.routes[route].cnt+=cnt; p.routes[route].ret+=ret; p.routes[route].amt+=total;
                 // ★ dateRoutes 저장 (아이디지원용)
                 var dateCol2=hdr.findIndex(function(h){return h.includes('배송일자');});
-                var dateRaw=dateCol2>=0?String(row[dateCol2]||'').trim():'';
-                var dateStr=dateRaw.split(' ')[0].split('T')[0].replace(/\.\s*/g,'-').replace(/-$/,''); // yyyy-MM-dd
+                var _dateRawVal=dateCol2>=0?row[dateCol2]:null;
+                var dateStr='';
+                if(_dateRawVal!==null&&_dateRawVal!==undefined&&_dateRawVal!==''){
+                  if(typeof _dateRawVal==='number'&&_dateRawVal>40000){
+                    // Excel 시리얼 날짜 → yyyy-MM-dd
+                    var _ep=new Date(1899,11,30);
+                    var _dd=new Date(_ep.getTime()+Math.floor(_dateRawVal)*86400000);
+                    dateStr=_dd.getFullYear()+'-'+String(_dd.getMonth()+1).padStart(2,'0')+'-'+String(_dd.getDate()).padStart(2,'0');
+                  } else {
+                    var _ds=String(_dateRawVal).trim().split(' ')[0].split('T')[0];
+                    var _dp=_ds.split('-');
+                    if(_dp.length>=3) dateStr=_dp[0]+'-'+(_dp[1].length<2?'0'+_dp[1]:_dp[1])+'-'+(_dp[2].length<2?'0'+_dp[2]:_dp[2]);
+                    else dateStr=_ds;
+                  }
+                }
                 if(dateStr&&dateStr.length>=8){
                   if(!p.dateRoutes[dateStr]) p.dateRoutes[dateStr]={};
                   if(!p.dateRoutes[dateStr][route]) p.dateRoutes[dateStr][route]={cnt:0,ret:0};
