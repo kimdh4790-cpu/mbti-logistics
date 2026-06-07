@@ -10956,59 +10956,72 @@ window._uDoParseMulti = function(files, status){
             // ★ 팀장수수료 — 이 기사가 팀장이면 스킵 (3차 패스에서 처리)
             // 이 기사의 라우트로 leaderMap 탐색 (본인 라우트 기준 아님)
 
-            // ★ 아이디지원 — AI정산 방식 (dateRoutes + 날짜 배열)
+            // ★ 아이디지원 — AI정산 코드 직접 이식
             if(idSupportRules.length){
+              function _uDateYM(s){
+                if(!s) return '';
+                var p=String(s).trim().split('-');
+                if(p.length>=2) return p[0]+'-'+(p[1].length<2?'0'+p[1]:p[1]);
+                return '';
+              }
               var _uIdFd={};
               idSupportRules.forEach(function(rule){
-                var fromClean=(rule.fromId||'').replace('@df','').toLowerCase();
-                var toClean=(rule.toId||'').replace('@df','').toLowerCase();
-                // ruleDates: 이미 저장 시 정규화됨 (2026-04-29 형식)
-                var ruleDates=(rule.dates&&rule.dates.length)?rule.dates:
-                  (rule.startDate?[rule.startDate]:[]);
-                if(rule.endDate&&rule.endDate!==rule.startDate) ruleDates.push(rule.endDate);
-                var ruleRoutes=rule.routes||[];
-                // 디버그: dt vs ruleDates 비교
-                if(!window._rdShown){
-                  window._rdShown=true;
-                  var _fr=results.find(function(r){return (r.empId||'').replace('@df','').toLowerCase()===fromClean;});
-                  var _dts=_fr?Object.keys(_fr._dateRoutes||{}).slice(0,3):[];
-                  toast('ruleDates:'+JSON.stringify(ruleDates)+' dt샘플:'+_dts.join('|'));
+                var fid=(rule.fromId||'').replace('@df','').toLowerCase();
+                var tid=(rule.toId||'').replace('@df','').toLowerCase();
+                var fromR=results.find(function(r){return (r.empId||'').replace('@df','').toLowerCase()===fid;});
+                var toR=results.find(function(r){return (r.empId||'').replace('@df','').toLowerCase()===tid;});
+                if(!fromR||!toR) return;
+
+                // dates 배열 구성
+                var tDFull=(rule.dates||[]).map(function(d){
+                  var p=String(d).trim().split('-');
+                  if(p.length<3) return '';
+                  return p[0]+'-'+(p[1].length<2?'0'+p[1]:p[1])+'-'+(p[2].length<2?'0'+p[2]:p[2]);
+                }).filter(Boolean);
+                // startDate/endDate fallback
+                if(!tDFull.length&&rule.startDate){
+                  var sd=String(rule.startDate).trim();
+                  var ed=String(rule.endDate||rule.startDate).trim();
+                  tDFull=[sd];
+                  if(ed&&ed!==sd) tDFull.push(ed);
                 }
-                var toR=results.find(function(rr){return (rr.empId||'').replace('@df','').toLowerCase()===toClean;});
-                var fromR=results.find(function(rr){return (rr.empId||'').replace('@df','').toLowerCase()===fromClean;});
-                if(!toR||!fromR||!fromR._dateRoutes) return;
+                var tDYM=tDFull.map(function(d){return _uDateYM(d);}).filter(Boolean);
+                var tR=rule.routes||[];
                 var tot=0;
-                Object.keys(fromR._dateRoutes).forEach(function(dt){
-                  // 날짜 매칭 — dt와 ruleDates 비교 (부분 포함도 허용)
-                  if(ruleDates.length){
-                    var matched=ruleDates.some(function(rd){
-                      return dt===rd||dt.indexOf(rd)>=0||rd.indexOf(dt)>=0;
-                    });
-                    if(!matched) return;
-                  }
-                  Object.keys(fromR._dateRoutes[dt]).forEach(function(route){
-                    if(ruleRoutes.length&&ruleRoutes.indexOf(route)<0) return;
-                    var rd=fromR._dateRoutes[dt][route];
-                    var price=(window._uPriceData[route]&&window._uPriceData[route].price)||(fromR._routes[route]&&fromR._routes[route].price)||0;
+
+                var dr=fromR._dateRoutes||{};
+                Object.keys(dr).forEach(function(dt){
+                  var dtYM=_uDateYM(dt);
+                  // AI정산 방식 날짜 필터
+                  if(tDFull.length&&tDFull.indexOf(dt)<0) return;
+                  else if(!tDFull.length&&tDYM.length&&tDYM.indexOf(dtYM)<0) return;
+                  Object.keys(dr[dt]).forEach(function(route){
+                    if(tR.length&&tR.indexOf(route)<0) return;
+                    var rd=dr[dt][route];
+                    var price=(window._uPriceData[route]&&window._uPriceData[route].price)||
+                              (fromR._routes&&fromR._routes[route]&&fromR._routes[route].price)||0;
                     if(!price) return;
                     var amt=(rd.cnt||0)*price+(rd.ret||0)*price;
                     if(!amt) return;
                     tot+=amt;
-                    if(fromR._routes[route]){
+                    // fromR 라우트 차감
+                    if(fromR._routes&&fromR._routes[route]){
                       fromR._routes[route].cnt=Math.max(0,(fromR._routes[route].cnt||0)-(rd.cnt||0));
                       fromR._routes[route].ret=Math.max(0,(fromR._routes[route].ret||0)-(rd.ret||0));
                     }
                   });
                 });
+
                 if(!tot) return;
                 toR._idSupportGross=(toR._idSupportGross||0)+tot;
                 toR._etcPlus=(toR._etcPlus||0)+tot;
-                if(!_uIdFd[fromClean]) _uIdFd[fromClean]=0;
-                _uIdFd[fromClean]+=tot;
+                if(!_uIdFd[fid]) _uIdFd[fid]=0;
+                _uIdFd[fid]+=tot;
                 fromR.gross=Math.max(0,(fromR.gross||0)-tot);
               });
+              // fromId 차감
               Object.keys(_uIdFd).forEach(function(fid){
-                var fromR=results.find(function(rr){return (rr.empId||'').replace('@df','').toLowerCase()===fid;});
+                var fromR=results.find(function(r){return (r.empId||'').replace('@df','').toLowerCase()===fid;});
                 if(fromR) fromR._etcMinus=(fromR._etcMinus||0)+_uIdFd[fid];
               });
             }
