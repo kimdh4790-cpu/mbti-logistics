@@ -10966,12 +10966,17 @@ window._uDoParseMulti = function(files, status){
             }
             if(leaderRoutes&&r._routes){
               var leaderFee=0;
-              Object.keys(r._routes).forEach(function(route){
+              var routeKeys=Object.keys(r._routes);
+              var leaderKeys=Object.keys(leaderRoutes);
+              // 디버그: dhkim7909만
+              if(empIdClean==='dhkim7909') toast('팀장계산: _routes='+routeKeys.slice(0,3).join(',')+' leaderKeys='+leaderKeys.slice(0,3).join(','));
+              routeKeys.forEach(function(route){
                 var rd=r._routes[route];
-                var fee=leaderRoutes[route]||0;
+                var fee=leaderRoutes[route]||leaderRoutes[route.toUpperCase()]||0;
                 leaderFee+=(rd.cnt||0)*fee+(rd.ret||0)*fee;
               });
               if(leaderFee>0){r._leaderFee=leaderFee;r._etcPlus=(r._etcPlus||0)+leaderFee;}
+              else if(empIdClean==='dhkim7909') toast('팀장계산결과: fee=0 routes='+JSON.stringify(r._routes).slice(0,50));
             }
 
             // ★ 아이디지원
