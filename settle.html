@@ -10958,31 +10958,14 @@ window._uDoParseMulti = function(files, status){
 
             // ★ 아이디지원 — AI정산 방식 (dateRoutes + 날짜 배열)
             if(idSupportRules.length){
-              function _normDateU(s){
-                if(!s) return '';
-                s=String(s).trim();
-                // "2026. 04. 29." → "2026-04-29"
-                s=s.replace(/[.]\s*/g,'-').replace(/-+$/,'').trim();
-                s=s.split(' ')[0].split('T')[0];
-                var p=s.split('-');
-                if(p.length>=3){
-                  var y=p[0], m=p[1].replace(/^0+/,'')||'0', d=p[2].replace(/^0+/,'')||'0';
-                  return y+'-'+(m.length<2?'0'+m:m)+'-'+(d.length<2?'0'+d:d);
-                }
-                return s;
-              }
               var _uIdFd={};
               idSupportRules.forEach(function(rule){
                 var fromClean=(rule.fromId||'').replace('@df','').toLowerCase();
                 var toClean=(rule.toId||'').replace('@df','').toLowerCase();
-                var ruleDates=[];
-                if(rule.dates&&rule.dates.length){
-                  ruleDates=rule.dates.map(function(d){return _normDateU(d);}).filter(Boolean);
-                } else {
-                  var sd=_normDateU(rule.startDate), ed=_normDateU(rule.endDate||rule.startDate);
-                  if(sd) ruleDates=[sd];
-                  if(ed&&ed!==sd) ruleDates.push(ed);
-                }
+                // ruleDates: 이미 저장 시 정규화됨 (2026-04-29 형식)
+                var ruleDates=(rule.dates&&rule.dates.length)?rule.dates:
+                  (rule.startDate?[rule.startDate]:[]);
+                if(rule.endDate&&rule.endDate!==rule.startDate) ruleDates.push(rule.endDate);
                 var ruleRoutes=rule.routes||[];
                 var toR=results.find(function(rr){return (rr.empId||'').replace('@df','').toLowerCase()===toClean;});
                 var fromR=results.find(function(rr){return (rr.empId||'').replace('@df','').toLowerCase()===fromClean;});
