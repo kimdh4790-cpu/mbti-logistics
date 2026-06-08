@@ -9336,9 +9336,18 @@ function pageUniversalRules(){
   document.getElementById('page-title').textContent='⚙️ 계산 규칙 설정';
   var c=document.getElementById('content');
   if(!_db||!_CU){c.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
+  c.innerHTML='<div class="loading">⏳ 규칙 로드 중...</div>';
   var did=_CU.dealerId||_CU.uid;
-  _loadUniversalRules(function(){
-    var r=window._uCurrentRules||{};
+  // 직접 Firestore에서 로드
+  _db.collection('universal_rules').doc(did).get().then(function(doc){
+    var r=doc.exists?doc.data():{};
+    window._uCurrentRules=r;
+    _applyUniversalRules(r);
+    var industry=(_COMPANY_CFG&&_COMPANY_CFG.industryType)||'other';
+    _renderUniversalRules(c, r, industry);
+  }).catch(function(e){
+    // 로드 실패해도 빈 규칙으로 렌더
+    var r={};
     var industry=(_COMPANY_CFG&&_COMPANY_CFG.industryType)||'other';
     _renderUniversalRules(c, r, industry);
   });
