@@ -3377,10 +3377,15 @@ function _applyUniversalRules(r){
       }
     });
   });
+  // serviceMenu 단가 (미용 시술별 단가)
+  window._uServiceMenu=r.serviceMenu||[];
+  window._uCommissionRate=r.commissionRate||0;
+  window._uBaseWage=r.baseWage||0;
+
   window._uRulesReady=true;
   var ptCnt=Object.keys(window._uPriceData).length;
   var lmCnt=Object.keys(window._uLeaderMap).length;
-  console.log('[DONWAY] 규칙 적용 — 단가'+ptCnt+'개/팀장'+lmCnt+'명');
+  console.log('[DONWAY] 규칙 적용 — 단가'+ptCnt+'개/팀장'+lmCnt+'명/시술'+window._uServiceMenu.length+'개');
 }
 
 function showApp(){
@@ -9496,6 +9501,41 @@ function _renderUniversalRules(c, r){
       '</div>'+
     '</div>'+
 
+    // ── 시술 단가표 (뷰티·미용 업종) ──
+    '<div style="background:var(--bg2);border-radius:14px;border:1px solid var(--border);padding:18px 20px;margin-bottom:14px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
+        '<div>'+
+          '<div style="font-size:13px;font-weight:800">💇 시술 단가표</div>'+
+          '<div style="font-size:10px;color:var(--text3);margin-top:2px">뷰티·미용업 전용 — 시술건수×단가 자동 계산</div>'+
+        '</div>'+
+        '<button id="u-add-service-btn" style="padding:5px 12px;background:var(--brand);color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer">+ 시술 추가</button>'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'+
+        '<div>'+
+          '<label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">수수료율 (%)</label>'+
+          '<input id="u-commission-rate" type="number" placeholder="40" value="'+(r.commissionRate||'')+'" min="0" max="100" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);font-size:13px">'+
+        '</div>'+
+        '<div>'+
+          '<label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">기본급 (원)</label>'+
+          '<input id="u-base-wage" type="number" placeholder="1000000" value="'+(r.baseWage||'')+'" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);font-size:13px">'+
+        '</div>'+
+      '</div>'+
+      '<div id="u-service-menu-rows">'+
+        ((r.serviceMenu||[]).map(function(s,i){
+          return '<div class="u-svc-row" style="display:grid;grid-template-columns:1fr 100px 80px auto;gap:6px;margin-bottom:5px;align-items:center">'+
+            '<input type="text" placeholder="컷트" value="'+esc(s.name||'')+'" class="svc-name" style="padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px">'+
+            '<input type="number" placeholder="15000" value="'+(s.price||'')+'" class="svc-price" style="padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px">'+
+            '<select class="svc-type" style="padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:11px">'+
+              '<option value="service"'+(s.type==='service'?' selected':'')+'>시술</option>'+
+              '<option value="product"'+(s.type==='product'?' selected':'')+'>제품</option>'+
+            '</select>'+
+            '<button class="u-svc-del" style="padding:4px 8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;cursor:pointer">✕</button>'+
+          '</div>';
+        }).join(''))+
+      '</div>'+
+      '<div style="font-size:10px;color:var(--text3);margin-top:8px">💡 엑셀 컬럼명 = 시술명과 동일하게 작성하세요 (예: 컷트, 파마, 염색)</div>'+
+    '</div>'+
+
     '<div style="display:flex;gap:8px">'+
       '<button onclick="_uSaveRules()" style="flex:1;padding:14px;background:linear-gradient(135deg,#0066ff,#7c3aed);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">💾 규칙 저장</button>'+
       '<button onclick="_uResetRules()" style="padding:14px 18px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">🗑 전체 초기화</button>'+
@@ -9503,7 +9543,32 @@ function _renderUniversalRules(c, r){
     '</div>';
 
   // 이미 _loadUniversalRules에서 로드됨 — _uPriceData 그대로 사용
-  setTimeout(function(){ _uRenderPricePanels(); }, 50);
+  setTimeout(function(){
+    _uRenderPricePanels();
+    // 시술 추가 버튼
+    // 기존 삭제 버튼 이벤트
+    document.querySelectorAll('.u-svc-del').forEach(function(btn){
+      btn.addEventListener('click',function(){btn.closest('.u-svc-row').remove();});
+    });
+    var addSvcBtn=document.getElementById('u-add-service-btn');
+    if(addSvcBtn) addSvcBtn.addEventListener('click',function(){
+      var container=document.getElementById('u-service-menu-rows');
+      if(!container) return;
+      var row=document.createElement('div');
+      row.className='u-svc-row';
+      row.style.cssText='display:grid;grid-template-columns:1fr 100px 80px auto;gap:6px;margin-bottom:5px;align-items:center';
+      row.innerHTML=
+        '<input type="text" placeholder="시술명 (예: 컷트)" class="svc-name" style="padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px">'+
+        '<input type="number" placeholder="단가" class="svc-price" style="padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px">'+
+        '<select class="svc-type" style="padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:11px">'+
+          '<option value="service">시술</option>'+
+          '<option value="product">제품</option>'+
+        '</select>'+
+        '<button style="padding:4px 8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;cursor:pointer">✕</button>';
+      row.querySelector('button').addEventListener('click',function(){row.remove();});
+      container.appendChild(row);
+    });
+  }, 50);
 }
 
 
@@ -10034,6 +10099,20 @@ function _uSaveRules(){
     leaderMap:window._uLeaderMap||{},
     leaderNames:window._uLeaderNames||{},
     idSupportRules:idSupportRules,
+    // 시술 단가표
+    serviceMenu:(function(){
+      var rows=document.querySelectorAll('.u-svc-row');
+      var menu=[];
+      rows.forEach(function(row){
+        var name=(row.querySelector('.svc-name')||{}).value||'';
+        var price=parseInt((row.querySelector('.svc-price')||{}).value||0)||0;
+        var type=(row.querySelector('.svc-type')||{}).value||'service';
+        if(name&&price) menu.push({name:name.trim(),price:price,type:type});
+      });
+      return menu;
+    })(),
+    commissionRate:parseFloat((document.getElementById('u-commission-rate')||{}).value||0)||0,
+    baseWage:parseInt((document.getElementById('u-base-wage')||{}).value||0)||0,
     updatedAt:firebase.firestore.FieldValue.serverTimestamp()
   };
 
@@ -11732,6 +11811,47 @@ window._uDoParseMulti = function(files, status){
     if(idx >= files.length){
       // 합산 완료 → 결과 렌더링
       var results = Object.values(mergeMap).filter(function(p){return p.name;});
+
+      // 시술 단가표 적용 (뷰티·미용 업종)
+      var serviceMenu=window._uServiceMenu||[];
+      var commRate=window._uCommissionRate||0;
+      var baseWage=window._uBaseWage||0;
+      if(serviceMenu.length>0){
+        results.forEach(function(emp){
+          var salesTotal=0;
+          var svcDetails=[];
+          serviceMenu.forEach(function(svc){
+            // details에서 시술명 매칭
+            var cnt=0;
+            (emp.details||[]).forEach(function(d){
+              if(d.label&&(d.label===svc.name||d.label.includes(svc.name))){
+                cnt+=parseFloat(d.value)||0;
+              }
+            });
+            if(cnt>0){
+              var amt=Math.round(cnt*svc.price);
+              salesTotal+=amt;
+              svcDetails.push({label:svc.name+' '+cnt+'건 × ₩'+svc.price.toLocaleString(),value:amt});
+            }
+          });
+          if(salesTotal>0){
+            var incentive=Math.round(salesTotal*(commRate/100));
+            emp.gross=baseWage+incentive;
+            emp.bonus=(emp.bonus||0);
+            emp.deduct=(emp.deduct||0);
+            emp.net=emp.gross-emp.deduct;
+            emp._salesTotal=salesTotal;
+            svcDetails.push(
+              {label:'─────────',value:''},
+              {label:'총 매출',value:salesTotal},
+              {label:'수수료율 '+commRate+'%',value:incentive},
+              {label:'기본급',value:baseWage},
+              {label:'실지급',value:emp.net}
+            );
+            emp.details=svcDetails;
+          }
+        });
+      }
 
       // 직원 정보 매칭 (등록된 직원에서 캠프/계약유형 보완)
       _db.collection('universal_employees')
