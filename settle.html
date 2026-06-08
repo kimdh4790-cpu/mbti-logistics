@@ -11188,6 +11188,11 @@ window._uDoParseMulti = function(files, status){
                   if(!p.dateRoutes[dateStr][route]) p.dateRoutes[dateStr][route]={cnt:0,ret:0};
                   p.dateRoutes[dateStr][route].cnt+=cnt;
                   p.dateRoutes[dateStr][route].ret+=ret;
+                  // 디버그: kycandksh 첫 날짜 확인
+                  if(!window._drDbg&&empId&&empId.indexOf('kycandksh')>=0){
+                    window._drDbg=true;
+                    toast('dateStr:'+dateStr+' raw:'+String(_dateRawVal).slice(0,20)+' type:'+typeof _dateRawVal);
+                  }
                 }
               }
             }
