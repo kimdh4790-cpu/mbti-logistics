@@ -28020,6 +28020,7 @@ function pageInventory(){
     '<div id="inv-tabs" style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">'+
       '<button id="itab-dash" style="padding:6px 14px;background:var(--bg3);color:var(--text2);border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📈 대시보드</button>'+
       '<button id="itab-monthly" style="padding:6px 14px;background:var(--bg3);color:var(--text2);border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📅 월별통계</button>'+
+      '<button id="itab-daily" style="padding:6px 14px;background:var(--bg3);color:var(--text2);border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📆 일별조회</button>'+
       '<button id="itab-stock" style="padding:6px 14px;background:var(--acc);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📦 재고현황</button>'+
       '<button id="itab-in" style="padding:6px 14px;background:var(--bg3);color:var(--text2);border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📥 입고원장</button>'+
       '<button id="itab-out" style="padding:6px 14px;background:var(--bg3);color:var(--text2);border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📤 출고원장</button>'+
@@ -28037,9 +28038,11 @@ function pageInventory(){
     var btn_o=document.getElementById('itab-out');
     var btn_d=document.getElementById('itab-dash');
     var btn_mon=document.getElementById('itab-monthly');
+    var btn_day=document.getElementById('itab-daily');
     var btn_ret=document.getElementById('itab-return');
     if(btn_d) btn_d.addEventListener('click',function(){_invTab(btn_d,'dash');});
     if(btn_mon) btn_mon.addEventListener('click',function(){_invTab(btn_mon,'monthly');});
+    if(btn_day) btn_day.addEventListener('click',function(){_invTab(btn_day,'daily');});
     if(btn_s) btn_s.addEventListener('click',function(){_invTab(btn_s,'stock');});
     if(btn_i) btn_i.addEventListener('click',function(){_invTab(btn_i,'in');});
     if(btn_o) btn_o.addEventListener('click',function(){_invTab(btn_o,'out');});
@@ -28135,6 +28138,7 @@ function _invTab(btn, tab){
 
   if(tab==='dash') _invLoadDash(did);
   else if(tab==='monthly') _invLoadMonthly(did);
+  else if(tab==='daily') _invLoadDaily(did);
   else if(tab==='stock') _invLoadStock(did,'');
   else if(tab==='in') _invLoadLedger(did,'in');
   else if(tab==='out') _invLoadLedger(did,'out');
@@ -28427,6 +28431,141 @@ function _invDashCard(label, val, color){
   '</div>';
 }
 
+
+
+// ── 📆 일별 조회 ──
+function _invLoadDaily(did){
+  var c=document.getElementById('inv-content');
+  document.getElementById('inv-filter').innerHTML='';
+
+  var today=new Date().toISOString().split('T')[0];
+
+  // 날짜 선택 UI
+  c.innerHTML=
+    '<div style="margin-bottom:14px">'+
+      '<div style="font-size:12px;font-weight:800;margin-bottom:8px">📆 날짜 선택</div>'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'+
+        '<input id="inv-daily-date" type="date" value="'+today+'" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg3);color:var(--text)">'+
+        '<button id="inv-daily-search" style="padding:8px 16px;background:var(--acc);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔍 조회</button>'+
+        '<div style="display:flex;gap:4px">'+
+          '<button class="inv-day-quick" data-offset="0" style="padding:5px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer">오늘</button>'+
+          '<button class="inv-day-quick" data-offset="-1" style="padding:5px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer">어제</button>'+
+          '<button class="inv-day-quick" data-offset="-2" style="padding:5px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer">2일전</button>'+
+          '<button class="inv-day-quick" data-offset="-6" style="padding:5px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer">7일전</button>'+
+        '</div>'+
+      '</div>'+
+    '</div>'+
+    '<div id="inv-daily-result"><div class="loading">날짜를 선택하고 조회하세요</div></div>';
+
+  // 퀵 버튼 이벤트
+  setTimeout(function(){
+    c.querySelectorAll('.inv-day-quick').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var d=new Date(); d.setDate(d.getDate()+parseInt(btn.dataset.offset));
+        var sel=d.toISOString().split('T')[0];
+        document.getElementById('inv-daily-date').value=sel;
+        _invLoadDayData(did, sel);
+      });
+    });
+    var sb=document.getElementById('inv-daily-search');
+    if(sb) sb.addEventListener('click',function(){
+      var sel=document.getElementById('inv-daily-date').value||today;
+      _invLoadDayData(did, sel);
+    });
+    // 오늘 자동 조회
+    _invLoadDayData(did, today);
+  },50);
+}
+
+function _invLoadDayData(did, date){
+  var r=document.getElementById('inv-daily-result');
+  if(r) r.innerHTML='<div class="loading">⏳ 조회 중...</div>';
+
+  Promise.all([
+    _db.collection('inventory_in').where('dealerId','==',did).where('date','==',date).get(),
+    _db.collection('inventory_out').where('dealerId','==',did).where('date','==',date).get()
+  ]).then(function(res){
+    var ins=[]; res[0].forEach(function(doc){ins.push(Object.assign({id:doc.id},doc.data()));});
+    var outs=[]; res[1].forEach(function(doc){outs.push(Object.assign({id:doc.id},doc.data()));});
+
+    if(!ins.length && !outs.length){
+      r.innerHTML='<div class="empty" style="padding:30px">📆 '+date+' 등록된 입출고 없음</div>';
+      return;
+    }
+
+    // 요약 카드
+    var totalIn=ins.reduce(function(s,d){return s+(d.qty||0);},0);
+    var totalOut=outs.filter(function(d){return d.outType==='일반출고';}).reduce(function(s,d){return s+(d.qty||0);},0);
+    var totalDmg=outs.reduce(function(s,d){return s+(d.dmgQty||0);},0);
+    var totalReturn=outs.filter(function(d){return d.outType==='반품';}).length;
+
+    var html='<div style="font-size:12px;font-weight:800;margin-bottom:10px;color:var(--acc)">'+date+' 입출고 현황</div>';
+    html+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px">';
+    html+=_invDashCard('입고',totalIn+'박스','#10b981');
+    html+=_invDashCard('출고',totalOut+'박스','#3b82f6');
+    html+=_invDashCard('파손',totalDmg+'박스','#dc2626');
+    html+=_invDashCard('반품',totalReturn+'건','#f59e0b');
+    html+='</div>';
+
+    // 입고 목록
+    if(ins.length){
+      html+='<div style="font-size:12px;font-weight:800;margin-bottom:8px;color:#10b981">📥 입고 ('+ins.length+'건)</div>'+
+        '<div style="overflow-x:auto;margin-bottom:14px"><table style="width:100%;border-collapse:collapse;font-size:11px">'+
+        '<thead><tr style="background:#f0fdf4">'+
+          '<th style="padding:6px 8px;text-align:left">전표번호</th>'+
+          '<th style="padding:6px 8px;text-align:left">상품명</th>'+
+          '<th style="padding:6px 8px;text-align:left">유형</th>'+
+          '<th style="padding:6px 8px;text-align:right;color:#10b981">수량</th>'+
+          '<th style="padding:6px 8px">상태</th>'+
+          '<th style="padding:6px 8px">비고</th>'+
+        '</tr></thead><tbody>';
+      ins.forEach(function(d){
+        html+='<tr style="border-bottom:1px solid var(--border)">'+
+          '<td style="padding:6px 8px;font-weight:700;color:#10b981">'+esc(d.txnId||'-')+'</td>'+
+          '<td style="padding:6px 8px;font-weight:600">'+esc(d.name||'-')+'</td>'+
+          '<td style="padding:6px 8px;color:var(--text3)">'+esc(d.outType||'일반입고')+'</td>'+
+          '<td style="padding:6px 8px;text-align:right;font-weight:800;color:#10b981">'+(d.qty||0)+'</td>'+
+          '<td style="padding:6px 8px;font-size:10px">'+esc(d.status||'-')+'</td>'+
+          '<td style="padding:6px 8px;color:var(--text3);font-size:10px">'+esc(d.note||'-')+'</td>'+
+        '</tr>';
+      });
+      html+='</tbody></table></div>';
+    }
+
+    // 출고 목록
+    if(outs.length){
+      html+='<div style="font-size:12px;font-weight:800;margin-bottom:8px;color:#f59e0b">📤 출고 ('+outs.length+'건)</div>'+
+        '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">'+
+        '<thead><tr style="background:#fffbeb">'+
+          '<th style="padding:6px 8px;text-align:left">전표번호</th>'+
+          '<th style="padding:6px 8px;text-align:left">상품명</th>'+
+          '<th style="padding:6px 8px;text-align:left">유형</th>'+
+          '<th style="padding:6px 8px">매장</th>'+
+          '<th style="padding:6px 8px">기사</th>'+
+          '<th style="padding:6px 8px;text-align:right">실처리</th>'+
+          '<th style="padding:6px 8px;text-align:right;color:#dc2626">파손</th>'+
+          '<th style="padding:6px 8px">상태</th>'+
+        '</tr></thead><tbody>';
+      var typeColors={'일반출고':'','파손폐기':'background:#fff5f5','반품':'background:#f0f8ff','기타':'background:#fffbeb'};
+      outs.forEach(function(d){
+        var bg=typeColors[d.outType]||'';
+        html+='<tr style="border-bottom:1px solid var(--border);'+bg+'">'+
+          '<td style="padding:6px 8px;font-weight:700;color:#f59e0b">'+esc(d.txnId||'-')+'</td>'+
+          '<td style="padding:6px 8px;font-weight:600">'+esc(d.name||'-')+'</td>'+
+          '<td style="padding:6px 8px;font-size:10px;color:'+(d.outType==='파손폐기'?'#dc2626':d.outType==='반품'?'#3b82f6':'var(--text3)')+'">'+esc(d.outType||'-')+'</td>'+
+          '<td style="padding:6px 8px;color:var(--text3)">'+esc(d.store||'-')+'</td>'+
+          '<td style="padding:6px 8px;color:var(--text3)">'+esc(d.route||'-')+'</td>'+
+          '<td style="padding:6px 8px;text-align:right">'+(d.actQty||d.qty||0)+'</td>'+
+          '<td style="padding:6px 8px;text-align:right;color:#dc2626;font-weight:700">'+(d.dmgQty||'-')+'</td>'+
+          '<td style="padding:6px 8px;font-size:10px">'+esc(d.status||'-')+'</td>'+
+        '</tr>';
+      });
+      html+='</tbody></table></div>';
+    }
+
+    r.innerHTML=html;
+  }).catch(function(e){r.innerHTML='<div class="empty">오류: '+e.message+'</div>';});
+}
 
 // ── 📅 월별 통계 ──
 function _invLoadMonthly(did){
