@@ -347,6 +347,15 @@ service cloud.firestore {
       allow read, write: if ownsDoc() || ownsNewDoc();
       allow create: if ownsNewDoc();
     }
+    // 재고관리
+    match /inventory_in/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+    match /inventory_out/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
 
   }
 }
