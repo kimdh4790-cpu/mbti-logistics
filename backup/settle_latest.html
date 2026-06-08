@@ -9338,13 +9338,28 @@ function pageUniversalRules(){
   if(!_db||!_CU){c.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
   var did=_CU.dealerId||_CU.uid;
   _loadUniversalRules(function(){
-    _renderUniversalRules(c, window._uCurrentRules||{});
+    var r=window._uCurrentRules||{};
+    var industry=(_COMPANY_CFG&&_COMPANY_CFG.industryType)||'other';
+    _renderUniversalRules(c, r, industry);
   });
 }
 
-function _renderUniversalRules(c, r){
-  r=r||{};
+function _renderUniversalRules(c, r, industry){
+  r=r||{}; industry=industry||'other';
   var priceTables=r.priceTables||[{label:'기본 단가표',type:'basic',routes:[]}];
+
+  // 업종별 안내 배너
+  var industryLabels={
+    beauty:'💇 뷰티·미용',cleaning:'🧹 청소·파견',
+    insurance:'🛡️ 보험설계사',construction:'🏗️ 건설·일용직',quick:'🚗 퀵·대리운전'
+  };
+  var industryHints={
+    beauty:'시술 단가표와 수수료율을 설정하세요. 엑셀 컬럼명 = 시술명으로 자동 계산됩니다.',
+    cleaning:'현장별 시급/일당을 단가표에 등록하세요. 연장·야간수당은 자동 계산됩니다.',
+    insurance:'팀장 수수료 설정 시 팀원 실적에서 자동 배분됩니다.',
+    construction:'현장별 일당을 단가표에 등록하세요. 주민번호 원천징수 신고에 활용됩니다.',
+    quick:'기사별 콜단가와 팀장 수수료를 설정하세요.'
+  };
 
   // 단가표 탭 HTML
   function renderTableTabs(){
@@ -9407,6 +9422,7 @@ function _renderUniversalRules(c, r){
       '<div style="font-size:12px;opacity:.7">한번 등록하면 엑셀 업로드 시 자동 적용</div>'+
     '</div>'+
 
+    industryBanner+
     // 기본 계산 방식
     '<div style="background:var(--bg2);border-radius:12px;border:1px solid var(--border);padding:16px;margin-bottom:12px">'+
       '<div style="font-size:13px;font-weight:800;margin-bottom:12px">📌 기본 설정</div>'+
@@ -10922,13 +10938,278 @@ function pageUniversalEmp(){
   var c=document.getElementById('content');
   if(!_db||!_CU){c.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
   var did=_CU.dealerId||_CU.uid;
+  // 업종 확인
+  var industry=(_COMPANY_CFG&&_COMPANY_CFG.industryType)||'other';
   _db.collection('universal_employees').where('dealerId','==',did).get()
     .then(function(snap){
       var emps=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
       emps.sort(function(a,b){return (a.camp||'').localeCompare(b.camp||'')||(a.name||'').localeCompare(b.name||'');});
-      _renderUniversalEmp(c, emps, did);
-    }).catch(function(){_renderUniversalEmp(c,[],did);});
+      _renderUniversalEmpByIndustry(c, emps, did, industry);
+    }).catch(function(){_renderUniversalEmpByIndustry(c,[],did,industry);});
 }
+
+// 업종별 직원 등록 UI
+function _renderUniversalEmpByIndustry(c, emps, did, industry){
+  // 업종별 설정
+  var cfg={
+    beauty:{
+      label:'💇 뷰티·미용',
+      fields:[
+        {id:'ue-name',     label:'실명 *',       placeholder:'홍길동',          type:'text'},
+        {id:'ue-nickname', label:'닉네임',        placeholder:'홍디자이너',       type:'text'},
+        {id:'ue-empid',    label:'사번/코드',      placeholder:'D001',           type:'text'},
+        {id:'ue-camp',     label:'지점/매장',      placeholder:'강남점',          type:'text'},
+        {id:'ue-role',     label:'직급',          placeholder:'',               type:'select',
+         options:['디자이너','원장','실장','인턴','스탭']},
+        {id:'ue-wagetype', label:'급여유형',       placeholder:'',               type:'select',
+         options:['인센티브제','월급+인센','월급제','임대(프리랜서)']},
+        {id:'ue-commrate', label:'수수료율(%)',    placeholder:'40',             type:'number'},
+        {id:'ue-basewage', label:'기본급(원)',     placeholder:'1000000',        type:'number'},
+        {id:'ue-type',     label:'계약유형',       placeholder:'',               type:'select',
+         options:['비사업자','사업자_VAT포함','사업자_VAT별도']},
+      ],
+      listCols:['실명','닉네임','직급','급여유형','수수료율','지점'],
+      listKeys:['name','nickname','role','wagetype','commrate','camp'],
+      hint:'💡 엑셀에 닉네임 사용 시 닉네임으로 자동 매칭됩니다',
+      template:'실명	닉네임	직급	컷트	파마	염색	이성	남성	재료비	카드수수료'
+    },
+    cleaning:{
+      label:'🧹 청소·파견',
+      fields:[
+        {id:'ue-name',   label:'이름 *',      placeholder:'홍길동',   type:'text'},
+        {id:'ue-empid',  label:'사번',         placeholder:'C001',    type:'text'},
+        {id:'ue-camp',   label:'현장/캠프 *',  placeholder:'A현장',   type:'text'},
+        {id:'ue-rate',   label:'시급(원)',     placeholder:'10030',   type:'number'},
+        {id:'ue-emptype',label:'고용형태',     placeholder:'',        type:'select',
+         options:['일용직','상용직','파견']},
+        {id:'ue-insure', label:'4대보험',      placeholder:'',        type:'select',
+         options:['미가입','고용보험만','4대보험전체']},
+        {id:'ue-type',   label:'계약유형',     placeholder:'',        type:'select',
+         options:['비사업자','사업자_VAT포함','사업자_VAT별도']},
+      ],
+      listCols:['이름','사번','현장','시급','고용형태'],
+      listKeys:['name','empId','camp','rate','emptype'],
+      hint:'💡 현장별 시급이 다른 경우 현장명을 정확히 입력하세요',
+      template:'이름	사번	현장	출근일수	시급	연장시간	야간시간	지각분	식대'
+    },
+    insurance:{
+      label:'🛡️ 보험설계사',
+      fields:[
+        {id:'ue-name',   label:'이름 *',      placeholder:'홍길동',   type:'text'},
+        {id:'ue-empid',  label:'설계사코드',   placeholder:'I001',    type:'text'},
+        {id:'ue-camp',   label:'팀',          placeholder:'1팀',     type:'text'},
+        {id:'ue-role',   label:'직급',        placeholder:'',        type:'select',
+         options:['설계사','팀장','부지점장','지점장']},
+        {id:'ue-commrate',label:'수수료율(%)', placeholder:'10',      type:'number'},
+        {id:'ue-type',   label:'위촉유형',    placeholder:'',        type:'select',
+         options:['비사업자','사업자_VAT포함','사업자_VAT별도']},
+      ],
+      listCols:['이름','코드','팀','직급','수수료율'],
+      listKeys:['name','empId','camp','role','commrate'],
+      hint:'💡 팀장 직급 설정 시 팀원 실적의 수수료가 자동 배분됩니다',
+      template:'이름	설계사코드	팀	신계약건수	신계약수수료	유지건수	유지수수료	승진수당	차감'
+    },
+    construction:{
+      label:'🏗️ 건설·일용직',
+      fields:[
+        {id:'ue-name',   label:'이름 *',      placeholder:'홍길동',   type:'text'},
+        {id:'ue-empid',  label:'주민번호앞6', placeholder:'800101',   type:'text'},
+        {id:'ue-camp',   label:'현장명',      placeholder:'A공사',   type:'text'},
+        {id:'ue-role',   label:'직종',        placeholder:'',        type:'select',
+         options:['일반공','철근공','형틀공','용접공','전기공','기타']},
+        {id:'ue-rate',   label:'일당(원)',    placeholder:'150000',  type:'number'},
+        {id:'ue-type',   label:'계약유형',    placeholder:'',        type:'select',
+         options:['비사업자','사업자_VAT포함','사업자_VAT별도']},
+      ],
+      listCols:['이름','현장','직종','일당'],
+      listKeys:['name','camp','role','rate'],
+      hint:'💡 주민번호 앞 6자리는 원천징수 신고에 사용됩니다',
+      template:'이름	주민번호앞6	현장	직종	출근일수	일당	연장시간	야간수당	위험수당	공제'
+    },
+    quick:{
+      label:'🚗 퀵·대리운전',
+      fields:[
+        {id:'ue-name',   label:'이름 *',      placeholder:'홍길동',   type:'text'},
+        {id:'ue-empid',  label:'기사코드',    placeholder:'Q001',    type:'text'},
+        {id:'ue-camp',   label:'팀/권역',     placeholder:'1팀',     type:'text'},
+        {id:'ue-vehicle',label:'차량번호',    placeholder:'12가3456', type:'text'},
+        {id:'ue-rate',   label:'콜단가(원)',  placeholder:'4500',    type:'number'},
+        {id:'ue-type',   label:'계약유형',    placeholder:'',        type:'select',
+         options:['비사업자','사업자_VAT포함','사업자_VAT별도']},
+      ],
+      listCols:['이름','코드','팀','차량번호','콜단가'],
+      listKeys:['name','empId','camp','vehicle','rate'],
+      hint:'💡 기사코드가 엑셀의 ID 컬럼과 일치해야 자동 매칭됩니다',
+      template:'이름	기사코드	팀	콜건수	건당단가	장거리수당	야간수당	수수료차감'
+    }
+  };
+
+  // 기본(other) - 기존 UI 유지
+  var industryKey=Object.keys(cfg).indexOf(industry)>=0?industry:'other';
+  if(industryKey==='other'){
+    _renderUniversalEmp(c,emps,did);
+    return;
+  }
+
+  var ic=cfg[industryKey];
+
+  // 필드 렌더링
+  function renderFields(){
+    return ic.fields.map(function(f){
+      if(f.type==='select'){
+        return '<div>'+
+          '<label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">'+f.label+'</label>'+
+          '<select id="'+f.id+'" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px">'+
+          f.options.map(function(o){return '<option value="'+o+'">'+o+'</option>';}).join('')+
+          '</select></div>';
+      }
+      return '<div>'+
+        '<label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">'+f.label+'</label>'+
+        '<input id="'+f.id+'" type="'+f.type+'" placeholder="'+f.placeholder+'" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px">'+
+      '</div>';
+    }).join('');
+  }
+
+  // 목록 렌더링
+  function renderList(){
+    if(!emps.length) return '<div class="empty" style="padding:20px;text-align:center">등록된 직원 없음</div>';
+    var thead='<tr style="background:var(--bg3)">'+
+      ic.listCols.map(function(col){return '<th style="padding:7px 10px;text-align:left;font-size:11px">'+col+'</th>';}).join('')+
+      '<th style="padding:7px 10px"></th></tr>';
+    var tbody=emps.map(function(e){
+      return '<tr style="border-bottom:1px solid var(--border)">'+
+        ic.listKeys.map(function(k){
+          return '<td style="padding:7px 10px;font-size:12px'+(k==='name'?';font-weight:700':'')+'">'+esc(e[k]||'—')+'</td>';
+        }).join('')+
+        '<td style="padding:7px 10px">'+
+          '<button data-id="'+e.id+'" class="u-del-emp-btn" style="padding:3px 8px;background:#fee2e2;border:none;border-radius:4px;font-size:10px;cursor:pointer;color:#dc2626">삭제</button>'+
+        '</td>'+
+      '</tr>';
+    }).join('');
+    return '<table style="width:100%;border-collapse:collapse;font-size:12px"><thead>'+thead+'</thead><tbody>'+tbody+'</tbody></table>';
+  }
+
+  c.innerHTML=
+    '<div style="max-width:700px;margin:0 auto;padding:16px">'+
+    '<div style="background:linear-gradient(135deg,#1e3a5f,#7c3aed);border-radius:16px;padding:16px 20px;color:#fff;margin-bottom:14px">'+
+      '<div style="font-size:18px;font-weight:900;margin-bottom:4px">'+ic.label+' 직원 등록</div>'+
+      '<div style="font-size:11px;opacity:.7">'+ic.hint+'</div>'+
+    '</div>'+
+
+    // 양식 다운로드
+    '<div style="background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:10px;padding:12px 14px;margin-bottom:12px">'+
+      '<div style="font-size:11px;font-weight:700;color:var(--acc);margin-bottom:8px">📥 엑셀 양식 다운로드</div>'+
+      '<div style="font-size:10px;color:var(--text3);margin-bottom:8px">아래 양식으로 작성 후 업로드하세요</div>'+
+      '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
+        '<button id="u-download-template-btn" style="padding:6px 12px;background:var(--acc);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">📥 직원 양식 다운로드</button>'+
+        '<label style="display:inline-flex;align-items:center;gap:4px;padding:6px 12px;background:#10b981;color:#fff;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">'+
+          '📤 양식 업로드<input type="file" id="u-bulk-upload-input" accept=".xlsx,.xls,.txt,.csv" style="display:none">'+
+        '</label>'+
+      '</div>'+
+    '</div>'+
+
+    // 직접 추가
+    '<div style="background:var(--bg2);border-radius:12px;border:1px solid var(--border);padding:16px;margin-bottom:12px">'+
+      '<div style="font-size:13px;font-weight:800;margin-bottom:12px">➕ 직원 추가</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'+
+        renderFields()+
+      '</div>'+
+      '<button id="u-add-emp-btn" style="width:100%;padding:10px;background:var(--brand);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">직원 추가</button>'+
+    '</div>'+
+
+    // 목록
+    '<div style="background:var(--bg2);border-radius:12px;border:1px solid var(--border);overflow:hidden">'+
+      '<div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">'+
+        '<span style="font-size:13px;font-weight:800">등록된 직원 '+emps.length+'명</span>'+
+        (emps.length?'<button id="u-del-all-emp-btn" style="padding:4px 10px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;cursor:pointer">🗑 전체삭제</button>':'')+
+      '</div>'+
+      renderList()+
+    '</div>'+
+  '</div>';
+
+  // 이벤트 등록
+  setTimeout(function(){
+    // 양식 다운로드
+    var bulkInput=document.getElementById('u-bulk-upload-input');
+    if(bulkInput) bulkInput.addEventListener('change',function(){
+      window._uIndustryBulkUpload(this,did,industryKey);
+    });
+    var dlBtn=document.getElementById('u-download-template-btn');
+    if(dlBtn) dlBtn.addEventListener('click',function(){
+      var blob=new Blob([ic.template],{type:'text/plain;charset=utf-8'});
+      var a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download=ic.label.replace(/[💇🧹🛡️🏗️🚗 ]/g,'')+'_직원양식.txt';
+      a.click();
+    });
+
+    // 직원 추가
+    var addBtn=document.getElementById('u-add-emp-btn');
+    if(addBtn) addBtn.addEventListener('click',function(){
+      var data={dealerId:did, industryType:industryKey};
+      ic.fields.forEach(function(f){
+        var el=document.getElementById(f.id);
+        if(el) data[f.id.replace('ue-','')]=el.value||'';
+      });
+      // 필수 체크
+      if(!data.name){toast('이름을 입력하세요');return;}
+      _db.collection('universal_employees').add(data).then(function(){
+        toast('✅ 등록됨');
+        pageUniversalEmp();
+      }).catch(function(e){toast('❌ '+e.message);});
+    });
+
+    // 삭제 버튼
+    document.querySelectorAll('.u-del-emp-btn').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        if(!confirm('삭제하시겠습니까?')) return;
+        _db.collection('universal_employees').doc(btn.dataset.id).delete()
+          .then(function(){toast('삭제됨');pageUniversalEmp();});
+      });
+    });
+
+    // 전체삭제
+    var delAllBtn=document.getElementById('u-del-all-emp-btn');
+    if(delAllBtn) delAllBtn.addEventListener('click',function(){
+      _uDeleteAllEmps(did);
+    });
+  },50);
+}
+
+// 업종별 일괄 업로드
+window._uIndustryBulkUpload=function(input, did, industry){
+  var file=input.files[0]; input.value='';
+  if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var text=e.target.result;
+      var lines=text.split('\n').filter(function(l){return l.trim();});
+      var sep=lines[0].indexOf('\t')>=0?'\t':',';
+      var headers=lines[0].split(sep).map(function(h){return h.trim().replace(/"/g,'');});
+      var saved=0;
+      var batch=_db.batch();
+      lines.slice(1).forEach(function(line){
+        var cols=line.split(sep).map(function(c){return c.trim().replace(/"/g,'');});
+        var name=cols[0]||''; if(!name) return;
+        var data={dealerId:did,industryType:industry,createdAt:new Date().toISOString()};
+        headers.forEach(function(h,i){if(cols[i]) data[h]=cols[i];});
+        // 공통 필드 매핑
+        data.name=data['실명']||data['이름']||data['name']||name;
+        data.nickname=data['닉네임']||'';
+        data.empId=data['사번']||data['기사코드']||data['설계사코드']||data['ID']||'';
+        data.camp=data['지점']||data['현장']||data['팀']||data['캠프']||'';
+        batch.set(_db.collection('universal_employees').doc(),data);
+        saved++;
+      });
+      batch.commit().then(function(){
+        toast('✅ '+saved+'명 등록됨');
+        pageUniversalEmp();
+      });
+    }catch(err){toast('❌ 업로드 오류: '+err.message);}
+  };
+  reader.readAsText(file,'utf-8');
+};
 
 function _renderUniversalEmp(c, emps, did){
   var rows=emps.map(function(e){
