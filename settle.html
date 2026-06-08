@@ -28065,6 +28065,10 @@ function _invLoadStock(did, filterSup){
     var list=Object.values(items);
     if(!list.length){c.innerHTML='<div class="empty">📦 등록된 재고 없음<br><small>엑셀 업로드로 등록하세요</small></div>';return;}
 
+    // 분류 필터
+    var subcats=[...new Set(list.map(function(i){return i.subcat||'기타';}))].sort();
+    var origins=[...new Set(list.map(function(i){return i.origin||'';}).filter(Boolean))].sort();
+
     // 거래처 필터
     var sups=[...new Set(list.map(function(i){return i.supplier||'기타';}))].sort();
     var fhtml='<span style="font-size:11px;color:var(--text3)">거래처:</span>';
@@ -28073,13 +28077,46 @@ function _invLoadStock(did, filterSup){
       var act=filterSup===s;
       fhtml+='<button class="inv-sup-btn" data-sup="'+esc(s)+'" style="padding:3px 10px;border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;background:'+(act?'var(--acc)':'var(--bg3)')+';color:'+(act?'#fff':'var(--text2)')+'">'+esc(s)+'</button>';
     });
+    // 소분류 필터 추가
+    fhtml+='<span style="font-size:11px;color:var(--text3);padding:4px 0 0 8px">주종:</span>';
+    fhtml+='<button class="inv-cat-btn" data-cat="" style="padding:3px 10px;border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;background:var(--bg3);color:var(--text2)">전체</button>';
+    subcats.forEach(function(s){
+      fhtml+='<button class="inv-cat-btn" data-cat="'+esc(s)+'" style="padding:3px 10px;border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;background:var(--bg3);color:var(--text2)">'+esc(s)+'</button>';
+    });
+    // 원산지 필터
+    fhtml+='<span style="font-size:11px;color:var(--text3);padding:4px 0 0 8px">원산지:</span>';
+    origins.forEach(function(o){
+      var color=o==='국산'?'#10b981':'#3b82f6';
+      fhtml+='<button class="inv-ori-btn" data-ori="'+esc(o)+'" style="padding:3px 10px;border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;background:var(--bg3);color:'+color+'">'+esc(o)+'</button>';
+    });
+
     var fEl=document.getElementById('inv-filter');
     fEl.innerHTML=fhtml;
     fEl.querySelectorAll('.inv-sup-btn').forEach(function(btn){
       btn.addEventListener('click',function(){_invLoadStock(did, btn.dataset.sup||'');});
     });
+    fEl.querySelectorAll('.inv-cat-btn').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        fEl.querySelectorAll('.inv-cat-btn').forEach(function(b){b.style.background='var(--bg3)';b.style.color='var(--text2)';});
+        btn.style.background='var(--acc)';btn.style.color='#fff';
+        window._invFilterCat=btn.dataset.cat||'';
+        _invLoadStock(did,filterSup);
+      });
+    });
+    fEl.querySelectorAll('.inv-ori-btn').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var active=window._invFilterOri===btn.dataset.ori;
+        window._invFilterOri=active?'':btn.dataset.ori;
+        fEl.querySelectorAll('.inv-ori-btn').forEach(function(b){b.style.fontWeight='700';b.style.opacity='1';});
+        if(!active){btn.style.background=btn.dataset.ori==='국산'?'#10b981':'#3b82f6';btn.style.color='#fff';}
+        _invLoadStock(did,filterSup);
+      });
+    });
 
-    var filtered=filterSup?list.filter(function(i){return i.supplier===filterSup;}):list;
+    var filtered=list;
+    if(filterSup) filtered=filtered.filter(function(i){return i.supplier===filterSup;});
+    if(window._invFilterCat) filtered=filtered.filter(function(i){return i.subcat===window._invFilterCat;});
+    if(window._invFilterOri) filtered=filtered.filter(function(i){return i.origin===window._invFilterOri;});
 
     // 현재고 계산
     filtered.forEach(function(i){
@@ -28103,7 +28140,9 @@ function _invLoadStock(did, filterSup){
         '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">'+
         '<thead><tr style="background:var(--bg3)">'+
           '<th style="padding:6px 8px;text-align:left">품목명</th>'+
-          '<th style="padding:6px 8px;text-align:left">분류</th>'+
+          '<th style="padding:6px 8px;text-align:left">주종</th>'+
+          '<th style="padding:6px 8px;text-align:center">원산지</th>'+
+          '<th style="padding:6px 8px;text-align:left">제조사</th>'+
           '<th style="padding:6px 8px;text-align:left">용량</th>'+
           '<th style="padding:6px 8px;text-align:right">기초</th>'+
           '<th style="padding:6px 8px;text-align:right;color:#10b981">입고</th>'+
@@ -28121,7 +28160,11 @@ function _invLoadStock(did, filterSup){
         var bg=i._cur<(i.safeQty||0)?'background:#fffbeb':'';
         html+='<tr style="border-bottom:1px solid var(--border);'+bg+'">'+
           '<td style="padding:6px 8px;font-weight:600">'+esc(i.name||'')+'</td>'+
-          '<td style="padding:6px 8px;color:var(--text3)">'+esc((i.category||'')+(i.subcat?' / '+i.subcat:''))+'</td>'+
+          '<td style="padding:6px 8px;color:var(--text3)">'+esc(i.subcat||i.category||'')+'</td>'+
+          '<td style="padding:6px 8px;text-align:center">'+
+            (i.origin==='외국산'?'<span style="color:#3b82f6;font-size:10px;font-weight:700">외국산</span>':'<span style="color:#10b981;font-size:10px;font-weight:700">국산</span>')+
+          '</td>'+
+          '<td style="padding:6px 8px;color:var(--text3);font-size:10px">'+esc(i.maker||'')+'</td>'+
           '<td style="padding:6px 8px;color:var(--text3)">'+esc(i.volume||'')+'</td>'+
           '<td style="padding:6px 8px;text-align:right">'+i._cur?''+(i.baseQty||0):'0'+'</td>'+
           '<td style="padding:6px 8px;text-align:right;color:#10b981">'+i._in+'</td>'+
@@ -28501,6 +28544,18 @@ function _invParsemaster(wb, did){
   if(hdrRow<0){toast('❌ 재고종합마감 헤더 없음');return;}
   var hdr=rows[hdrRow];
   var iCode=0,iSup=1,iCat=2,iSub=3,iName=4,iVol=5,iBase=6,iSafe=10;
+  // 원산지/제조사 컬럼 자동 감지 (새 마스터 형식)
+  var iOrigin=hdr.findIndex(function(h){return String(h).includes('원산지');});
+  var iMaker=hdr.findIndex(function(h){return String(h).includes('제조사');});
+  // 새 마스터: 소분류가 인덱스3이 아닐 수 있으므로 컬럼명 기반으로 재매핑
+  if(iOrigin>=0){
+    iCat=hdr.findIndex(function(h){return String(h).includes('대분류');});
+    iSub=hdr.findIndex(function(h){return String(h).includes('소분류')||String(h).includes('주종');});
+    iName=hdr.findIndex(function(h){return String(h).includes('상품명');});
+    iVol=hdr.findIndex(function(h){return String(h).includes('용량');});
+    iBase=hdr.findIndex(function(h){return String(h).includes('기초재고')||String(h).includes('현재고');});
+    iSafe=hdr.findIndex(function(h){return String(h).includes('안전재고');});
+  }
 
   var items=[];
   for(var r=hdrRow+1;r<rows.length;r++){
