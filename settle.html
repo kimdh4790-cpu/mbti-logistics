@@ -23307,21 +23307,29 @@ function addRpCamp(cid){
 
 // ── 구간별 정액 요금 계산 (3% 계좌이체 할인 적용) ──
 // 그룹1: 35,000원/인 | 그룹2: 25,000원/인
-// 구간: 1~30명(×30) / 31~60명(×60) / 61~100명(×100)
-// 10명 단위 구간 (그룹1: 35,000원/인, 그룹2: 25,000원/인)
-var DW_RATE={g1:35000,g2:25000};
-function _tierCap(hc){ return Math.ceil(hc/10)*10; }
+// 구간: 50/100/200/300/400/500명 고정 (AI정산·배달대행: 9,000원/인)
+var DW_RATE={g1:9000,g2:9000};
+var SUB_TIERS=[
+  {cap:50, label:'~50명'},
+  {cap:100,label:'~100명'},
+  {cap:200,label:'~200명'},
+  {cap:300,label:'~300명'},
+  {cap:400,label:'~400명'},
+  {cap:500,label:'~500명'},
+];
+function _tierCap(hc){
+  var caps=[50,100,200,300,400,500];
+  for(var i=0;i<caps.length;i++){if(hc<=caps[i])return caps[i];}
+  return 500;
+}
 function _tierAmt(pkey, hc){
   var cap=_tierCap(hc);
-  var rate=(['qr','payroll'].indexOf(pkey)>=0)?DW_RATE.g2:DW_RATE.g1;
-  return Math.round(rate*cap*0.97);
+  var rate=DW_RATE.g1; // 9,000원/인
+  return rate*cap;
 }
 function _tierLabel(hc){
-  var hi=_tierCap(hc); return (hi-9)+'~'+hi+'명';
+  return '~'+_tierCap(hc)+'명';
 }
-var SUB_TIERS=[{cap:10,label:'1~10명'},{cap:20,label:'11~20명'},{cap:30,label:'21~30명'},
-  {cap:40,label:'31~40명'},{cap:50,label:'41~50명'},{cap:60,label:'51~60명'},
-  {cap:70,label:'61~70명'},{cap:80,label:'71~80명'},{cap:90,label:'81~90명'},{cap:100,label:'91~100명'}];
 function _subPayClick(btn){
   var key=btn.dataset.pkey||'';
   var hc=parseInt((document.getElementById('sub-headcount')||{value:'10'}).value)||10;
@@ -23389,19 +23397,19 @@ function _showSubModal(){
     +'<div class="mdt" style="position:sticky;top:0;background:var(--bg2);border-radius:12px 12px 0 0;z-index:2;display:flex;align-items:center">💳 구독 플랜 선택'
     +'<button onclick="_closeSubModal()" style="background:none;border:none;cursor:pointer;font-size:20px;margin-left:auto">✕</button></div>'
     +'<div style="background:var(--bg3);border-radius:10px;padding:10px 14px;margin:10px 0">'
-    +'<div style="font-size:13px;font-weight:700;margin-bottom:8px">👥 직원 수 구간 선택 (10명 단위)</div>'
+    +'<div style="font-size:13px;font-weight:700;margin-bottom:8px">👥 기사/직원 수 구간 선택</div>'
     +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
-    +[10,20,30,40,50,60,70,80,90,100].map(function(n){
-      var lo=n-9;
-      var active=n===10;
-      return '<button id="sub-tier-'+n+'" onclick="_selectTier('+n+')" style="padding:6px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:2px solid '+(active?'var(--brand)':'var(--border)')+';background:'+(active?'var(--brand)':'var(--bg)')+';color:'+(active?'#fff':'var(--text)')+'">'+lo+'~'+n+'명</button>';
+    +[50,100,200,300,400,500].map(function(n,i){
+      var active=i===0;
+      return '<button id="sub-tier-'+n+'" onclick="_selectTier('+n+')" style="padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:2px solid '+(active?'var(--brand)':'var(--border)')+';background:'+(active?'var(--brand)':'var(--bg)')+';color:'+(active?'#fff':'var(--text)')+'">~'+n+'명</button>';
     }).join('')
+    +'<div style="font-size:11px;color:var(--text3);margin-top:6px">💡 1개월 무료 체험 + 11개월 결제 = 12개월 사용</div>'
     +'</div>'
     +'<div style="font-size:11px;color:var(--text3);margin-top:6px">💡 계좌이체 3% 할인 적용 금액입니다</div>'
     +'</div>'
     +'<div style="display:flex;flex-direction:column;gap:10px;padding:0 2px 12px">';
   plans.forEach(function(p){
-    var cap=30;
+    var cap=50;
     var amt=_tierAmt(p.key||'settle',cap);
     var badge=p.badge?'<span style="background:#00e87a;color:#000;font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;margin-left:6px">'+p.badge+'</span>':'';
     var grp=p.g===1?'<span style="font-size:9px;background:rgba(0,200,248,.15);color:#00c8f8;padding:1px 6px;border-radius:4px;margin-left:4px">그룹1</span>':'<span style="font-size:9px;background:rgba(0,232,122,.12);color:#00e87a;padding:1px 6px;border-radius:4px;margin-left:4px">그룹2</span>';
@@ -23410,7 +23418,7 @@ function _showSubModal(){
       +'<span style="font-size:24px">'+p.ic+'</span>'
       +'<div style="flex:1"><div style="font-size:14px;font-weight:800">'+p.nm+badge+grp+'</div><div style="font-size:11px;color:var(--text3)">'+p.tl+'</div></div>'
       +'<div style="text-align:right">'
-      +'<div class="sub-tier-label-'+p.key+'" style="font-size:11px;color:var(--text3)">1~30명 × '+p.up.toLocaleString()+'원 × 97%</div>'
+      +'<div class="sub-tier-label-'+p.key+'" style="font-size:11px;color:var(--text3)">~'+cap+'명 × '+p.up.toLocaleString()+'원</div>'
       +'<div class="sub-amt-'+p.key+'" style="font-size:19px;font-weight:900;color:'+p.color+'">'+amt.toLocaleString()+'<span style="font-size:11px;font-weight:400">원/월</span></div>'
       +'</div></div>'
       +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-bottom:8px">'
@@ -23426,19 +23434,18 @@ function _showSubModal(){
 }
 function _selectTier(cap){
   // 버튼 스타일 갱신
-  [10,20,30,40,50,60,70,80,90,100].forEach(function(n){
+  [50,100,200,300,400,500].forEach(function(n){
     var btn=document.getElementById('sub-tier-'+n);
     if(!btn) return;
     if(n===cap){btn.style.background='var(--brand)';btn.style.color='#fff';btn.style.borderColor='var(--brand)';}
     else{btn.style.background='var(--bg)';btn.style.color='var(--text)';btn.style.borderColor='var(--border)';}
   });
-  // 금액 갱신 - DW_RATE 기준
-  var g1=DW_RATE&&DW_RATE.g1||22000;
-  var g2=DW_RATE&&DW_RATE.g2||15000;
-  var groups={settle:g1,qr_payroll:g1,delivery:g1,qr:g2,payroll:g2};
-  var tierLabel=cap+'명 이하';
+  // 금액 갱신 — 9,000원/인
+  var rate=9000;
+  var groups={settle:rate,delivery:rate};
+  var tierLabel='~'+cap+'명';
   Object.keys(groups).forEach(function(k){
-    var amt=Math.round(groups[k]*cap*0.97);
+    var amt=groups[k]*cap;
     document.querySelectorAll('.sub-amt-'+k).forEach(function(el){
       el.innerHTML=amt.toLocaleString()+'<span style="font-size:11px;font-weight:400">원/월</span>';
     });
@@ -23446,11 +23453,11 @@ function _selectTier(cap){
       el.dataset.selcap=cap;
     });
     var tl=document.querySelector('.sub-tier-label-'+k);
-    if(tl) tl.textContent=tierLabel;
+    if(tl) tl.textContent='~'+cap+'명 × '+rate.toLocaleString()+'원';
   });
 }
 
-function _refreshSubCalc(){_selectTier(30);}
+function _refreshSubCalc(){_selectTier(50);}
 function confirmSubPay(planKey){
   var plan=PLAN_INFO&&PLAN_INFO[planKey];
   if(!plan){toast('❌ 플랜 없음: '+planKey);return;}
