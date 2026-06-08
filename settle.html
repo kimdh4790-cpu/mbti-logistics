@@ -9994,6 +9994,233 @@ function _uBulkUploadEmp(input, did){
   }
 }
 
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 📊 범용정산 추가 기능
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// 1. txt 파일 파서 지원 — _uDoParseMulti에 통합
+window._uParseTxtFile = function(file, status, onDone){
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var text=e.target.result;
+      var lines=text.split('\n').filter(function(l){return l.trim();});
+      if(!lines.length){toast('❌ 내용 없음');return;}
+      var sep=lines[0].indexOf('\t')>=0?'\t':',';
+      var headers=lines[0].split(sep).map(function(h){return h.trim().replace(/"/g,'');});
+
+      // 이름/직원명 컬럼 찾기
+      var iName=headers.findIndex(function(h){return h.includes('이름')||h.includes('성명')||h.includes('직원');});
+      var iAmt=headers.findIndex(function(h){return h.includes('금액')||h.includes('합계')||h.includes('지급');});
+      var iCamp=headers.findIndex(function(h){return h.includes('캠프')||h.includes('팀')||h.includes('부서');});
+      var iCnt=headers.findIndex(function(h){return h.includes('건수')||h.includes('수량');});
+      var iId=headers.findIndex(function(h){return h.includes('ID')||h.includes('아이디')||h.includes('사번');});
+
+      if(iName<0){toast('❌ 이름/성명 컬럼 없음');return;}
+
+      var results=[];
+      lines.slice(1).forEach(function(line){
+        var cols=line.split(sep).map(function(c){return c.trim().replace(/"/g,'');});
+        var name=cols[iName]||'';
+        if(!name) return;
+        var gross=iAmt>=0?(parseInt(String(cols[iAmt]).replace(/,/g,''))||0):0;
+        results.push({
+          name:name,
+          empId:iId>=0?cols[iId]:'',
+          camp:iCamp>=0?cols[iCamp]:'',
+          cnt:iCnt>=0?(parseInt(cols[iCnt])||0):0,
+          gross:gross,
+          sources:[{label:file.name,gross:gross,cnt:iCnt>=0?(parseInt(cols[iCnt])||0):0}],
+          details:headers.map(function(h,i){return {label:h,value:cols[i]||''};})
+        });
+      });
+      if(status) status.textContent='✅ txt 파싱 완료 — '+results.length+'명';
+      onDone(results);
+    }catch(err){toast('❌ txt 파싱 오류: '+err.message);}
+  };
+  reader.readAsText(file,'utf-8');
+};
+
+// 2. 업종 템플릿 모달
+window._uOpenTemplate = function(){
+  var templates=[
+    {icon:'🧹',name:'청소/파견',cols:'이름\t캠프\t출근일수\t시급\t연장시간\t야간시간\t지각공제\t식대',
+     desc:'청소·파견·용역업체 전용'},
+    {icon:'📦',name:'택배/물류',cols:'이름\t캠프\t집배건수\t단가\t반품건수\t반품단가\t유류비\t식대',
+     desc:'택배 대리점·물류 배송'},
+    {icon:'🛡️',name:'보험설계사',cols:'이름\t팀\t신계약건수\t수수료율\t유지건수\t유지수수료\t승진수당\t차감',
+     desc:'보험사·GA 설계사'},
+    {icon:'🍾',name:'주류/식품',cols:'이름\t권역\t배송건수\t박스단가\t반품건수\t파손차감\t유류비\t식대',
+     desc:'주류·식음료 도매 배송'},
+    {icon:'🏗️',name:'건설/일용직',cols:'이름\t현장\t출근일수\t일당\t연장시간\t야간수당\t위험수당\t공제',
+     desc:'건설·일용직 인력사무소'},
+    {icon:'🏪',name:'프랜차이즈',cols:'이름\t매장\t매출액\t수수료율\t고정급\t성과급\t차감\t합계',
+     desc:'프랜차이즈 본사·가맹점'},
+    {icon:'🚗',name:'대리운전',cols:'이름\t팀\t콜건수\t건당단가\t장거리수당\t야간수당\t수수료차감\t합계',
+     desc:'대리운전 업체'},
+    {icon:'📋',name:'직접 입력',cols:'',
+     desc:'컬럼 직접 설정'},
+  ];
+
+  var html='<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:9000;overflow-y:auto;padding:16px" onclick="if(event.target===this)this.remove()">'+
+    '<div style="background:var(--bg);border-radius:14px;padding:20px;max-width:500px;margin:0 auto">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
+        '<div style="font-size:14px;font-weight:800">🏭 업종 템플릿 선택</div>'+
+        '<button id="u-tmpl-close" style="background:none;border:none;font-size:20px;cursor:pointer">✕</button>'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+
+  templates.forEach(function(t,ti){
+    html+='<div data-ti="'+ti+'" class="u-tmpl-item" style="background:var(--bg3);border-radius:10px;padding:12px;cursor:pointer;border:1px solid var(--border)">'+
+      '<div style="font-size:24px;margin-bottom:4px">'+t.icon+'</div>'+
+      '<div style="font-size:12px;font-weight:800">'+t.name+'</div>'+
+      '<div style="font-size:10px;color:var(--text3);margin-top:2px">'+t.desc+'</div>'+
+    '</div>';
+  });
+
+  html+='</div></div></div>';
+  var el=document.createElement('div'); el.innerHTML=html;
+  var pop=el.firstChild; document.body.appendChild(pop);
+  // 닫기 버튼
+  var cb=pop.querySelector('#u-tmpl-close');
+  if(cb) cb.addEventListener('click',function(){pop.remove();});
+  // 항목 클릭
+  pop.querySelectorAll('.u-tmpl-item').forEach(function(item){
+    item.addEventListener('click',function(){
+      var ti=parseInt(item.dataset.ti);
+      var t=templates[ti];
+      pop.remove();
+      _uApplyTemplate(t.name, t.cols);
+    });
+  });
+};
+
+window._uApplyTemplate = function(name, cols){
+  document.querySelector('[style*="position:fixed"]').remove();
+  if(!cols){_uOpenMapping();return;}
+  toast('✅ '+name+' 템플릿 적용됨');
+  // 샘플 다운로드
+  var lines=[cols];
+  lines.push(cols.split('\t').map(function(h,i){
+    if(h.includes('이름')) return '홍길동';
+    if(h.includes('건수')||h.includes('일수')) return '100';
+    if(h.includes('단가')||h.includes('시급')||h.includes('일당')) return '3000';
+    if(h.includes('금액')||h.includes('수수료')||h.includes('합계')) return '300000';
+    return '';
+  }).join('\t'));
+  var blob=new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=name+'_정산양식.txt';
+  a.click();
+  toast('📥 '+name+' 양식 다운로드됨 — 작성 후 업로드하세요');
+};
+
+// 3. 엑셀 다운로드
+window._uExportExcel = function(docId){
+  if(!docId){
+    // 현재 화면 결과 다운로드
+    var rows=window._uLastResults;
+    if(!rows||!rows.length){toast('❌ 정산 결과 없음');return;}
+    _uBuildExcelDownload(rows);
+    return;
+  }
+  _db.collection('universal_settlements').doc(docId).get().then(function(doc){
+    if(!doc.exists){toast('❌ 데이터 없음');return;}
+    var d=doc.data();
+    _uBuildExcelDownload(d.employees||[], d.month||'');
+  });
+};
+
+window._uBuildExcelDownload = function(emps, month){
+  try{
+    if(!emps||!emps.length){toast('❌ 데이터 없음');return;}
+    // SheetJS로 엑셀 생성
+    var headers=['이름','캠프','건수','지급액(원)','공제액','실지급액'];
+    var rows=[headers];
+    emps.forEach(function(e){
+      rows.push([
+        e.name||'', e.camp||'', e.cnt||0,
+        e.gross||0, e.deduct||0, e.net||0
+      ]);
+    });
+    // 합계행
+    rows.push(['합계','','',
+      emps.reduce(function(s,e){return s+(e.gross||0);},0),
+      emps.reduce(function(s,e){return s+(e.deduct||0);},0),
+      emps.reduce(function(s,e){return s+(e.net||0);},0)
+    ]);
+
+    var ws=XLSX.utils.aoa_to_sheet(rows);
+    var wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,'정산결과',ws);
+    XLSX.writeFile(wb,(month||'정산결과')+'_범용정산.xlsx');
+    toast('✅ 엑셀 다운로드 완료');
+  }catch(e){toast('❌ '+e.message);}
+};
+
+// 4. 기간별 누적 통계
+window._uShowPeriodStats = function(did){
+  var c=document.getElementById('content');
+  c.innerHTML='<div style="max-width:700px;margin:0 auto;padding:16px"><div class="loading">⏳ 집계 중...</div></div>';
+
+  _db.collection('universal_settlements').where('dealerId','==',did)
+    .orderBy('createdAt','desc').limit(100).get()
+    .then(function(snap){
+      var monthMap={};
+      snap.forEach(function(doc){
+        var d=doc.data();
+        var mo=d.month||(d.createdAt&&d.createdAt.toDate?d.createdAt.toDate().toISOString().slice(0,7):'기타');
+        if(!monthMap[mo]) monthMap[mo]={month:mo,cnt:0,totalNet:0,totalGross:0,docs:0};
+        monthMap[mo].docs++;
+        monthMap[mo].cnt+=(d.totalCount||0);
+        monthMap[mo].totalNet+=(d.totalNet||0);
+        monthMap[mo].totalGross+=(d.totalGross||0);
+      });
+
+      var months=Object.values(monthMap).sort(function(a,b){return b.month.localeCompare(a.month);});
+      if(!months.length){c.innerHTML='<div class="empty">집계 데이터 없음</div>';return;}
+
+      var html='<div style="max-width:700px;margin:0 auto;padding:16px">'+
+        '<div style="font-size:14px;font-weight:800;margin-bottom:12px">📊 기간별 누적 정산 현황</div>'+
+        '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
+        '<thead><tr style="background:var(--bg3)">'+
+          '<th style="padding:8px;text-align:left">월</th>'+
+          '<th style="padding:8px;text-align:right">정산수</th>'+
+          '<th style="padding:8px;text-align:right">인원</th>'+
+          '<th style="padding:8px;text-align:right;color:#10b981">총지급액</th>'+
+          '<th style="padding:8px;text-align:right;color:#3b82f6">실지급액</th>'+
+        '</tr></thead><tbody>';
+
+      months.forEach(function(m){
+        html+='<tr style="border-bottom:1px solid var(--border)">'+
+          '<td style="padding:8px;font-weight:700">'+m.month+'</td>'+
+          '<td style="padding:8px;text-align:right">'+m.docs+'건</td>'+
+          '<td style="padding:8px;text-align:right">'+m.cnt+'명</td>'+
+          '<td style="padding:8px;text-align:right;color:#10b981">₩'+m.totalGross.toLocaleString()+'</td>'+
+          '<td style="padding:8px;text-align:right;font-weight:800;color:#3b82f6">₩'+m.totalNet.toLocaleString()+'</td>'+
+        '</tr>';
+      });
+
+      // 전체 합계
+      var totG=months.reduce(function(s,m){return s+m.totalGross;},0);
+      var totN=months.reduce(function(s,m){return s+m.totalNet;},0);
+      var totC=months.reduce(function(s,m){return s+m.cnt;},0);
+      html+='<tr style="background:var(--bg3);font-weight:800">'+
+        '<td style="padding:8px">전체 합계</td>'+
+        '<td style="padding:8px;text-align:right">'+months.length+'개월</td>'+
+        '<td style="padding:8px;text-align:right">'+totC+'명</td>'+
+        '<td style="padding:8px;text-align:right;color:#10b981">₩'+totG.toLocaleString()+'</td>'+
+        '<td style="padding:8px;text-align:right;color:#3b82f6">₩'+totN.toLocaleString()+'</td>'+
+      '</tr>';
+      html+='</tbody></table></div>'+
+        '<button onclick="pageUniversalSettle()" style="margin-top:12px;padding:8px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer">← 목록으로</button>'+
+      '</div>';
+      c.innerHTML=html;
+    }).catch(function(e){c.innerHTML='<div class="empty">오류: '+e.message+'</div>';});
+};
+
 function pageUniversalInput(){
   document.getElementById('page-title').textContent='📋 범용 엑셀 정산';
   // 규칙 로드 (공통함수 사용)
@@ -10018,12 +10245,16 @@ function pageUniversalInput(){
       '<div style="font-size:13px;font-weight:800;margin-bottom:12px;color:var(--text)">📂 1단계: 정산 엑셀 업로드</div>'+
       '<div style="border:2px dashed var(--border);border-radius:10px;padding:24px;text-align:center;cursor:pointer" onclick="document.getElementById(\'u-file-input\').click()">'+
         '<div style="font-size:32px;margin-bottom:8px">📄</div>'+
-        '<div style="font-size:13px;font-weight:700;color:var(--text2)">엑셀 파일 선택 (.xlsx, .csv)</div>'+
-        '<div style="font-size:11px;color:var(--text3);margin-top:4px">직원명·금액·항목이 포함된 엑셀</div>'+
+        '<div style="font-size:13px;font-weight:700;color:var(--text2)">파일 선택 (.xlsx, .csv, .txt)</div>'+
+        '<div style="font-size:11px;color:var(--text3);margin-top:4px">직원명·금액·항목이 포함된 엑셀 또는 메모장</div>'+
       '</div>'+
-      '<input id="u-file-input" type="file" accept=".xlsx,.xls,.csv" multiple style="display:none" onchange="_universalParseMulti(this)">'+
+      '<input id="u-file-input" type="file" accept=".xlsx,.xls,.csv,.txt" multiple style="display:none" onchange="_universalParseMulti(this)">'+
       '<div id="u-parse-status" style="margin-top:10px;font-size:12px;color:var(--text3)"></div>'+
-      '<div style="margin-top:8px"><button onclick="_uOpenMapping()" style="padding:5px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;color:var(--text2)">⚙️ 컬럼 직접 지정</button><span style="font-size:10px;color:var(--text3);margin-left:8px">자동 인식 실패 시 사용</span></div>'+
+      '<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">'+
+      '<button onclick="_uOpenMapping()" style="padding:5px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;color:var(--text2)">⚙️ 컬럼 직접 지정</button>'+
+      '<button onclick="_uOpenTemplate()" style="padding:5px 12px;background:#7c3aed;color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer;font-weight:700">🏭 업종 템플릿</button>'+
+      '<span style="font-size:10px;color:var(--text3)">자동 인식 실패 시 사용</span>'+
+    '</div>'+
     '</div>'+
     '<div id="u-results" style="margin-top:12px"></div>'+
     '</div>';
@@ -10134,7 +10365,10 @@ function pageUniversalSettle(){
     }
     var html='<div style="max-width:700px;margin:0 auto;padding:16px">'+
       '<div style="display:flex;justify-content:flex-end;margin-bottom:8px">'+
+        '<div style="display:flex;gap:6px">'+
+        '<button onclick="_uShowPeriodStats(\''+did+'\')" style="padding:5px 12px;background:#7c3aed;color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer;font-weight:700">📊 기간별 통계</button>'+
         '<button onclick="_uDeleteAllSettles(\''+did+'\')" style="padding:5px 12px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;cursor:pointer">🗑 전체삭제</button>'+
+      '</div>'+
       '</div>';
     snap.forEach(function(doc){
       var d=doc.data();
@@ -10147,6 +10381,7 @@ function pageUniversalSettle(){
         '<div style="display:flex;gap:6px">'+
           '<button onclick="_uShowSettleDetail(\''+doc.id+'\')" style="padding:4px 10px;background:var(--brand);color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer">상세</button>'+
           '<button onclick="_uDeploySettle(\''+doc.id+'\',\''+mo+'\')" style="padding:4px 10px;background:#10b981;color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer">📤 배포</button>'+
+          '<button onclick="_uExportExcel(\''+doc.id+'\')" style="padding:4px 10px;background:#059669;color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer;font-weight:700">📊 엑셀</button>'+
           '<button onclick="_uDownloadDouzoneCSV(\''+doc.id+'\',\''+mo+'\')" style="padding:4px 10px;background:#1e40af;color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer">💾 더존</button>'+
           '<button data-id="'+doc.id+'" onclick="_universalDeleteSettle(this.dataset.id)" style="padding:4px 10px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;cursor:pointer">삭제</button>'+
         '</div>'+
@@ -10907,6 +11142,19 @@ window._uDoParseMulti = function(files, status){
 
   var processed = 0;
   function processFile(idx){
+    if(idx>=files.length){
+      // 합산 완료 → 결과 렌더링 (아래 기존 코드로 흐름)
+    }
+    if(idx<files.length && (files[idx].name.endsWith('.txt')||files[idx].name.endsWith('.csv'))){
+      _uParseTxtFile(files[idx], status, function(results){
+        results.forEach(function(r){
+          mergePerson(r.name, r.empId, r.camp, r.gross, r.cnt, 0, 0, 0, files[idx].name, r.details);
+        });
+        processed++;
+        processFile(idx+1);
+      });
+      return;
+    }
     if(idx >= files.length){
       // 합산 완료 → 결과 렌더링
       var results = Object.values(mergeMap).filter(function(p){return p.name;});
