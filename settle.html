@@ -28548,9 +28548,9 @@ window._invPickFile = function(){
 };
 
 window._invUploadExcel = function(input, did){
-  var file=input.files[0]; input.value='';
+  var file=input.files[0];
   if(!file){return;}
-  toast('⏳ 엑셀 파싱 중...');
+  toast('⏳ 엑셀 파싱 중... '+file.name);
   var reader=new FileReader();
   reader.onload=function(e){
     try{
