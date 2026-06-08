@@ -27803,6 +27803,26 @@ function _invLoadDash(did){
     // ━━━ 4️⃣ 확인요망 ━━━
     var pending=outs.filter(function(d){return d.status&&(d.status.includes('확인요망')||d.status.includes('배송중')||d.status.includes('반품회수'));});
 
+    // ━━━ 5️⃣ 공병회수량 집계 ━━━
+    var bottleByDriver={};
+    outs.forEach(function(d){
+      if(!(d.bottleReturn>0)) return;
+      var dr=d.route||d.worker||'미배정';
+      if(!bottleByDriver[dr]) bottleByDriver[dr]={cnt:0,store:[]};
+      bottleByDriver[dr].cnt+=d.bottleReturn;
+      if(d.store&&bottleByDriver[dr].store.indexOf(d.store)<0) bottleByDriver[dr].store.push(d.store);
+    });
+
+    // ━━━ 6️⃣ 용도구분 집계 ━━━
+    var usageMap={};
+    outs.concat(ins).forEach(function(d){
+      if(!d.usage) return;
+      var u=d.usage;
+      if(!usageMap[u]) usageMap[u]={in:0,out:0};
+      if(d.outType&&d.outType.includes('입고')) usageMap[u].in+=(d.qty||0);
+      else usageMap[u].out+=(d.qty||0);
+    });
+
     // ━━━ 렌더링 ━━━
     var html='';
 
@@ -27901,6 +27921,45 @@ function _invLoadDash(did){
       '</tr>';
     });
     html+='</tbody></table></div></div>';
+
+    // 5️⃣ 공병 회수 현황
+    var bottleDrivers=Object.keys(bottleByDriver);
+    if(bottleDrivers.length){
+      html+='<div style="margin-bottom:16px">'+
+        '<div style="font-size:12px;font-weight:800;margin-bottom:8px">5️⃣ 🍶 공병 회수 현황 (기사별)</div>'+
+        '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">'+
+        '<thead><tr style="background:var(--bg3)">'+
+          '<th style="padding:6px 8px;text-align:left">기사</th>'+
+          '<th style="padding:6px 8px;text-align:right">회수량</th>'+
+          '<th style="padding:6px 8px;text-align:left">담당매장</th>'+
+        '</tr></thead><tbody>';
+      bottleDrivers.sort(function(a,b){return bottleByDriver[b].cnt-bottleByDriver[a].cnt;}).forEach(function(dr){
+        var b=bottleByDriver[dr];
+        html+='<tr style="border-bottom:1px solid var(--border)">'+
+          '<td style="padding:6px 8px;font-weight:600">'+esc(dr)+'</td>'+
+          '<td style="padding:6px 8px;text-align:right;font-weight:800;color:#7c3aed">'+b.cnt+'개</td>'+
+          '<td style="padding:6px 8px;color:var(--text3);font-size:10px">'+b.store.join(', ')+'</td>'+
+        '</tr>';
+      });
+      html+='</tbody></table></div></div>';
+    }
+
+    // 6️⃣ 용도구분
+    var usageKeys=Object.keys(usageMap);
+    if(usageKeys.length){
+      html+='<div style="margin-bottom:16px">'+
+        '<div style="font-size:12px;font-weight:800;margin-bottom:8px">6️⃣ 📋 용도구분 현황 (유흥용/가정용/면세)</div>'+
+        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">';
+      var uColors={'유흥용':'#7c3aed','가정용':'#10b981','면세주류':'#3b82f6','면세':'#3b82f6'};
+      usageKeys.forEach(function(u){
+        var color=uColors[u]||'#6b7280';
+        html+='<div style="background:var(--bg3);border-radius:8px;padding:10px;border-left:3px solid '+color+'">'+
+          '<div style="font-size:11px;font-weight:700;color:'+color+'">'+esc(u)+'</div>'+
+          '<div style="font-size:10px;color:var(--text3);margin-top:4px">출고 '+usageMap[u].out+'박스</div>'+
+        '</div>';
+      });
+      html+='</div></div>';
+    }
 
     // 4️⃣ 확인요망
     html+='<div style="margin-bottom:16px">'+
@@ -28061,7 +28120,7 @@ function _invLoadLedger(did, type){
           '<th style="padding:6px 8px">상품명</th>'+
           '<th style="padding:6px 8px;text-align:right">수량</th>'+
           (type==='in'?'<th style="padding:6px 8px">담당자</th><th style="padding:6px 8px">비고</th>':
-                       '<th style="padding:6px 8px">유형</th><th style="padding:6px 8px">권역</th><th style="padding:6px 8px">매장</th><th style="padding:6px 8px">기사</th><th style="padding:6px 8px;text-align:right">지시</th><th style="padding:6px 8px;text-align:right">실처리</th><th style="padding:6px 8px;text-align:right;color:#dc2626">파손</th><th style="padding:6px 8px">상태</th>')+
+                       '<th style="padding:6px 8px">유형</th><th style="padding:6px 8px">용도</th><th style="padding:6px 8px">권역</th><th style="padding:6px 8px">매장</th><th style="padding:6px 8px">기사</th><th style="padding:6px 8px;text-align:right">지시</th><th style="padding:6px 8px;text-align:right">실처리</th><th style="padding:6px 8px;text-align:right;color:#dc2626">파손</th><th style="padding:6px 8px;text-align:right;color:#7c3aed">공병</th><th style="padding:6px 8px">상태</th>')+
         '</tr></thead><tbody>';
       snap.forEach(function(doc){
         var d=doc.data();
@@ -28075,12 +28134,14 @@ function _invLoadLedger(did, type){
           (type==='in'?
             ('<td style="padding:6px 8px">'+esc(d.worker||'')+'</td><td style="padding:6px 8px;color:var(--text3)">'+esc(d.note||'')+'</td>'):
             ('<td style="padding:6px 8px;font-weight:700">'+esc(d.outType||'일반출고')+'</td>'+
+            '<td style="padding:6px 8px;color:#7c3aed;font-size:10px">'+esc(d.usage||'')+'</td>'+
             '<td style="padding:6px 8px;color:var(--text3)">'+esc(d.region||'')+'</td>'+
             '<td style="padding:6px 8px;color:var(--text3)">'+esc(d.store||'')+'</td>'+
             '<td style="padding:6px 8px;color:var(--text3)">'+esc(d.route||d.worker||'')+'</td>'+
             '<td style="padding:6px 8px;text-align:right">'+(d.dirQty||d.qty||0)+'</td>'+
             '<td style="padding:6px 8px;text-align:right">'+(d.actQty||d.qty||0)+'</td>'+
             '<td style="padding:6px 8px;text-align:right;color:#dc2626">'+(d.dmgQty||0)+'</td>'+
+            '<td style="padding:6px 8px;text-align:right;color:#7c3aed;font-weight:700">'+(d.bottleReturn||'-')+'</td>'+
             '<td style="padding:6px 8px;font-size:10px">'+esc(d.status||'')+'</td>'))+
         '</tr>';
       });
@@ -28441,6 +28502,8 @@ function _invParseIntegrated(ws, did){
   var iRegion=h.findIndex(function(x){return x.includes('권역');});
   var iRoute=h.findIndex(function(x){return x.includes('노선')||x.includes('기사');});
   var iStore=h.findIndex(function(x){return x.includes('매장')||x.includes('배송매장');});
+  var iUsage=h.findIndex(function(x){return x.includes('용도');});
+  var iBottle=h.findIndex(function(x){return x.includes('공병');});
   var iCode=h.findIndex(function(x){return x.includes('상품코드');});
   var iSup=h.findIndex(function(x){return x.includes('납품업체');});
   var iName=h.findIndex(function(x){return x.includes('상품명');});
