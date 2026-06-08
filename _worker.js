@@ -533,6 +533,15 @@ export default {
     // ★ 루트 접속 → 랜딩페이지 리라이트 (URL 유지, workers.dev 제외)
     // ── 루트 경로 처리 ──
     if (path === '/' || path === '' || path === '/donway_landing' || path === '/donway_landing/') {
+      // mbetco.kr → universal_settle.html
+      if (hostname.includes('mbetco') || hostname.includes('mbtico')) {
+        const mbResp = await fetchAsset('/universal_settle.html', request, env);
+        const mbH = new Headers();
+        mbH.set('Content-Type', 'text/html; charset=utf-8');
+        mbH.set('Cache-Control', 'no-cache');
+        Object.entries(SECURITY_HEADERS).forEach(([k,v]) => mbH.set(k,v));
+        return new Response(mbResp.body, { status: mbResp.status, headers: mbH });
+      }
       // workers.dev = 물류앱, 그 외 = DONWAY 랜딩
       if (hostname.includes('workers.dev') || hostname.includes('kimdh4790')) {
         // ★ 물류앱 메인 HTML 서빙
