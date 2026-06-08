@@ -268,34 +268,91 @@ window.onBizDocSelected=onBizDocSelected;</script>
       <div class="fg"><label>비밀번호 확인</label><input id="r-pw2" type="password" placeholder="비밀번호 재입력"></div>
       <!-- 서비스 선택 -->
       <div class="fg" style="margin-bottom:14px">
-        <label style="font-size:13px;font-weight:700;margin-bottom:8px;display:block">사용할 서비스를 선택하세요</label>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <label id="svc-settle-label" onclick="selectService('settle')" style="border:2px solid var(--brand);border-radius:10px;padding:12px;cursor:pointer;text-align:center;transition:.2s;background:var(--brand-l)">
-            <div style="font-size:20px;margin-bottom:4px">📦</div>
-            <div style="font-size:12px;font-weight:700;color:var(--brand)">AI 정산</div>
-            <div style="font-size:10px;color:var(--text3);margin-top:2px">물류·택배</div>
-            <div style="font-size:10px;color:var(--brand);font-weight:700;margin-top:3px">350,000원/10명</div>
-          </label>
-          <label id="svc-delivery-label" onclick="selectService('delivery')" style="border:2px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;text-align:center;transition:.2s">
-            <div style="font-size:20px;margin-bottom:4px">🛵</div>
-            <div style="font-size:12px;font-weight:700;color:var(--text2)">배달대행</div>
-            <div style="font-size:10px;color:var(--text3);margin-top:2px">배달대행</div>
-            <div style="font-size:10px;color:var(--text3);font-weight:700;margin-top:3px">350,000원/10명</div>
-          </label>
-          <label id="svc-universal-label" onclick="selectService('universal')" style="border:2px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;text-align:center;transition:.2s">
-            <div style="font-size:20px;margin-bottom:4px">📋</div>
-            <div style="font-size:12px;font-weight:700;color:var(--text2)">범용 정산</div>
-            <div style="font-size:10px;color:var(--text3);margin-top:2px">모든 업종 엑셀</div>
-            <div style="font-size:10px;color:var(--text3);font-weight:700;margin-top:3px">500,000원/10명</div>
-          </label>
-          <label id="svc-qr-label" onclick="selectService('qr_payroll')" style="border:2px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;text-align:center;transition:.2s">
-            <div style="font-size:20px;margin-bottom:4px">🔐</div>
-            <div style="font-size:12px;font-weight:700;color:var(--text2)">QR근태+급여</div>
-            <div style="font-size:10px;color:var(--text3);margin-top:2px">시급·일급·월급</div>
-            <div style="font-size:10px;color:var(--text3);font-weight:700;margin-top:3px">220,000원/10명</div>
-          </label>
+        <label style="font-size:13px;font-weight:700;margin-bottom:4px;display:block">사용할 서비스 선택 <span style="font-size:10px;color:var(--text3);font-weight:400">(복수 선택 가능)</span></label>
+        <div style="font-size:10px;color:var(--text3);margin-bottom:10px">1개월 무료 체험 · 이후 11개월 결제 = 12개월 사용</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+
+          <!-- AI정산 -->
+          <div id="svc-settle-card" onclick="_toggleSvc('settle')" style="border:2px solid var(--brand);border-radius:10px;padding:12px;cursor:pointer;background:rgba(0,200,248,.05)">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:20px">🤖</span>
+                <div>
+                  <div style="font-size:12px;font-weight:700;color:var(--brand)">AI 정산</div>
+                  <div style="font-size:10px;color:var(--text3)">복잡한 계산이 필요한 업종 — 인당 9,000원/월</div>
+                </div>
+              </div>
+              <div id="svc-settle-check" style="width:18px;height:18px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff">✓</div>
+            </div>
+            <!-- 업종 선택 -->
+            <div id="svc-settle-industry" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px">
+              <div style="font-size:10px;color:var(--text3);width:100%;margin-bottom:2px">업종 선택:</div>
+              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="settle-industry" value="coupang" checked> 🚚 쿠팡 대리점</label>
+              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="settle-industry" value="cleaning"> 🧹 청소·파견</label>
+              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="settle-industry" value="insurance"> 🛡️ 보험설계사</label>
+              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="settle-industry" value="construction"> 🏗️ 건설·일용직</label>
+              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="settle-industry" value="quick"> 🚗 퀵·대리운전</label>
+              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="settle-industry" value="other"> 📋 직접설정</label>
+            </div>
+          </div>
+
+          <!-- 배달대행 -->
+          <div id="svc-delivery-card" onclick="_toggleSvc('delivery')" style="border:2px solid var(--border);border-radius:10px;padding:12px;cursor:pointer">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:20px">🛵</span>
+                <div>
+                  <div style="font-size:12px;font-weight:700;color:var(--text2)">배달대행 정산</div>
+                  <div style="font-size:10px;color:var(--text3)">배민·쿠팡이츠 전용 — 인당 9,000원/월</div>
+                </div>
+              </div>
+              <div id="svc-delivery-check" style="width:18px;height:18px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;color:transparent">✓</div>
+            </div>
+          </div>
+
+          <!-- 범용정산 -->
+          <div id="svc-universal-card" onclick="_toggleSvc('universal')" style="border:2px solid var(--border);border-radius:10px;padding:12px;cursor:pointer">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:20px">📋</span>
+                <div>
+                  <div style="font-size:12px;font-weight:700;color:var(--text2)">범용 정산</div>
+                  <div style="font-size:10px;color:var(--text3)">단순계산 다업체 — 99,000원/월 무제한</div>
+                </div>
+              </div>
+              <div id="svc-universal-check" style="width:18px;height:18px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;color:transparent">✓</div>
+            </div>
+          </div>
+
+          <!-- 재고관리 -->
+          <div id="svc-inventory-card" onclick="_toggleSvc('inventory')" style="border:2px solid var(--border);border-radius:10px;padding:12px;cursor:pointer">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:20px">📦</span>
+                <div>
+                  <div style="font-size:12px;font-weight:700;color:var(--text2)">재고관리</div>
+                  <div style="font-size:10px;color:var(--text3)">모든 도매·유통업종 — 99,000원/월</div>
+                </div>
+              </div>
+              <div id="svc-inventory-check" style="width:18px;height:18px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;color:transparent">✓</div>
+            </div>
+            <!-- 재고 업종 선택 -->
+            <div id="svc-inventory-industry" style="margin-top:10px;display:none;flex-wrap:wrap;gap:6px">
+              <div style="font-size:10px;color:var(--text3);width:100%;margin-bottom:2px">업종 선택:</div>
+              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="inv-industry" value="liquor" checked> 🍶 주류·식품</label>
+              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="inv-industry" value="pharma"> 💊 의약품</label>
+              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="inv-industry" value="fashion"> 👕 의류·잡화</label>
+              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="inv-industry" value="food"> 🥩 식자재</label>
+              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="inv-industry" value="parts"> 🔧 공구·자재</label>
+              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="inv-industry" value="other"> 📋 기타</label>
+            </div>
+          </div>
+
         </div>
         <input type="hidden" id="r-service" value="settle">
+        <input type="hidden" id="r-services" value="settle">
+        <input type="hidden" id="r-settle-industry" value="coupang">
+        <input type="hidden" id="r-inv-industry" value="liquor">
       </div>
       <div id="r-err" style="color:var(--red);font-size:12px;margin-bottom:8px;display:none"></div>
       <button class="btn btn-blue" style="width:100%;padding:11px;font-size:14px;font-weight:700" onclick="doRegister()">7일 무료 체험 시작</button>
@@ -1142,6 +1199,12 @@ function calcNetByIndustry(x){
   var cfg = _COMPANY_CFG&&_COMPANY_CFG.industryConfig;
   if(!cfg) return null; // 쿠팡 기본 엔진 사용
   var type = cfg.type||(_COMPANY_CFG&&_COMPANY_CFG.industryType)||'coupang';
+  // 업종별 파서 라우팅
+  // coupang: 쿠팡 전용 파서 (기존)
+  // cleaning: 청소·파견 → 출근일수×시급
+  // insurance: 보험설계사 → 계약건수×수수료
+  // construction: 건설·일용직 → 출근일수×일당
+  // quick: 퀵·대리운전 → 콜건수×단가
   if(type==='delivery')   return calcNet_delivery(x, cfg);
   if(type==='smallbiz')   return calcNet_smallbiz(x, cfg);
   if(type==='service')    return calcNet_service(x, cfg);
@@ -3047,14 +3110,24 @@ function showApp(){
     var sType = _CU.serviceType||'full';
     // ★ sType 디버그 로그 (슈퍼어드민용)
     if(false){}
-    if(isSuperAdmin())          MENUS=MENUS_SETTLE;
-    else if(sType==='settle')   MENUS=MENUS_SETTLE;
-    else if(sType==='delivery')  MENUS=MENUS_DELIVERY;
-    else if(sType==='universal') MENUS=MENUS_UNIVERSAL;
-    else if(sType==='qr')        MENUS=MENUS_QR;
-    else if(sType==='qr_payroll') MENUS=MENUS_QR_PAYROLL;
-    else if(sType==='payroll'||sType==='hourly') MENUS=MENUS_HOURLY;
-    else                        MENUS=MENUS_FULL;
+    if(isSuperAdmin()){
+      MENUS=MENUS_SETTLE;
+    } else {
+      // ★ services 배열 기반 메뉴 필터링
+      var cfg=_COMPANY_CFG||{};
+      var services=cfg.services||[sType||'settle'];
+      // 기존 호환성 유지
+      if(!cfg.services){
+        if(sType==='delivery') services=['delivery'];
+        else if(sType==='universal') services=['universal'];
+        else if(sType==='qr') services=['qr'];
+        else if(sType==='qr_payroll') services=['qr','payroll'];
+        else if(sType==='payroll'||sType==='hourly') services=['payroll'];
+        else services=['settle'];
+      }
+      // services 기반으로 MENUS_SETTLE 필터링
+      MENUS=_filterMenusByServices(MENUS_SETTLE);
+    }
   }
   buildNav();
   _checkDeviceMode();
@@ -3262,6 +3335,41 @@ function generateCompanyCode(){
 
 // ── 회사 등록 ──
 
+// 서비스 토글 (복수 선택)
+function _toggleSvc(svc){
+  var selEl=document.getElementById('r-services');
+  var selectedSvcs=selEl.value?selEl.value.split(',').filter(Boolean):['settle'];
+  var card=document.getElementById('svc-'+svc+'-card');
+  var check=document.getElementById('svc-'+svc+'-check');
+  var industryDiv=document.getElementById('svc-'+svc+'-industry');
+  var idx=selectedSvcs.indexOf(svc);
+  var colors={settle:'var(--brand)',delivery:'#dc2626',universal:'#7c3aed',inventory:'#10b981'};
+
+  if(idx>=0){
+    selectedSvcs.splice(idx,1);
+    card.style.border='2px solid var(--border)';
+    card.style.background='';
+    check.style.background='var(--border)';
+    check.style.color='transparent';
+    if(industryDiv) industryDiv.style.display='none';
+  } else {
+    selectedSvcs.push(svc);
+    card.style.border='2px solid '+(colors[svc]||'var(--brand)');
+    card.style.background='rgba(0,200,248,.03)';
+    check.style.background=colors[svc]||'var(--brand)';
+    check.style.color='#fff';
+    if(industryDiv) industryDiv.style.display='flex';
+  }
+  selEl.value=selectedSvcs.join(',');
+  document.getElementById('r-service').value=selectedSvcs[0]||'settle';
+  document.querySelectorAll('input[name="settle-industry"]').forEach(function(r){
+    r.onchange=function(){document.getElementById('r-settle-industry').value=r.value;};
+  });
+  document.querySelectorAll('input[name="inv-industry"]').forEach(function(r){
+    r.onchange=function(){document.getElementById('r-inv-industry').value=r.value;};
+  });
+}
+
 function selectService(type){
   ['settle','delivery','universal','qr','qr_payroll','full','hourly'].forEach(function(t){
     var el=document.getElementById('svc-'+t+'-label');
@@ -3318,6 +3426,10 @@ function doRegister(){
     _auth.createUserWithEmailAndPassword(email,pw).then(function(cred){
     var uid=cred.user.uid;
     var serviceType=(document.getElementById('r-service')||{value:'full'}).value||'full';
+    var servicesStr=(document.getElementById('r-services')||{value:'settle'}).value||'settle';
+    var services=servicesStr.split(',').filter(Boolean);
+    var settleIndustry=(document.getElementById('r-settle-industry')||{value:'coupang'}).value||'coupang';
+    var invIndustry=(document.getElementById('r-inv-industry')||{value:'liquor'}).value||'liquor';
     // ★ slug: 이메일 @ 앞부분 → 영문+숫자만 추출 (URL 안전)
     var emailPrefix=email.split('@')[0].replace(/[^a-zA-Z0-9]/g,'').toLowerCase();
     var slugVal=(document.getElementById('r-slug')||{value:''}).value.trim()||
@@ -3331,6 +3443,9 @@ function doRegister(){
       slug:slugVal,
       companyCode:companyCode,
       serviceType:serviceType,
+      services:services,
+      industryType:settleIndustry,
+      invIndustryType:invIndustry,
       trialStart:now.toISOString().slice(0,10),
       trialEnd:isOwner?'9999-12-31':trialEnd.toISOString().slice(0,10),
       trialUsed:true,
@@ -17405,6 +17520,38 @@ function _viewMyStatementFallback(d){
 // 쿠팡 정산 전용 (출퇴근X, 위수탁계약서O)
 // 쿠팡 택배 전용
 // ══ 플랜별 기능 정의 ══
+// ── 서비스별 메뉴 필터링 ──
+function _filterMenusByServices(menus){
+  var cfg=_COMPANY_CFG||{};
+  var services=cfg.services||[cfg.serviceType||'settle'];
+  // 슈퍼어드민은 전체 허용
+  if(SUPER_ADMIN_EMAILS.includes(_CU&&_CU.email)) return menus;
+
+  var svcPlanMap={
+    settle:['settle','any_paid','free'],
+    delivery:['delivery','any_paid','free'],
+    universal:['universal','any_paid','free'],
+    inventory:['inventory','free'],
+    qr:['qr','qr_payroll','any_paid','free'],
+    payroll:['payroll','qr_payroll','any_paid','free'],
+  };
+
+  // 허용된 plan_key 목록 생성
+  var allowed=new Set(['free']);
+  services.forEach(function(s){
+    (svcPlanMap[s]||[]).forEach(function(p){allowed.add(p);});
+  });
+
+  return menus.map(function(section){
+    return {
+      s:section.s,
+      items:section.items.filter(function(item){
+        return allowed.has(item.plan_key||'free');
+      })
+    };
+  }).filter(function(section){return section.items.length>0;});
+}
+
 // plan_key: 'settle'=택배정산 / 'qr'=QR출퇴근 / 'payroll'=급여관리 / 'free'=항상 허용
 
 // ══ 플랜별 기능 정의 (plan_key 기준) ══════════════════
