@@ -10062,20 +10062,30 @@ window._uParseTxtFile = function(file, status, onDone){
 // 2. 업종 템플릿 모달
 window._uOpenTemplate = function(){
   var templates=[
-    {icon:'🧹',name:'청소/파견',cols:'이름\t캠프\t출근일수\t시급\t연장시간\t야간시간\t지각공제\t식대',
-     desc:'청소·파견·용역업체 전용'},
-    {icon:'📦',name:'택배/물류',cols:'이름\t캠프\t집배건수\t단가\t반품건수\t반품단가\t유류비\t식대',
-     desc:'택배 대리점·물류 배송'},
-    {icon:'🛡️',name:'보험설계사',cols:'이름\t팀\t신계약건수\t수수료율\t유지건수\t유지수수료\t승진수당\t차감',
-     desc:'보험사·GA 설계사'},
-    {icon:'🍾',name:'주류/식품',cols:'이름\t권역\t배송건수\t박스단가\t반품건수\t파손차감\t유류비\t식대',
-     desc:'주류·식음료 도매 배송'},
-    {icon:'🏗️',name:'건설/일용직',cols:'이름\t현장\t출근일수\t일당\t연장시간\t야간수당\t위험수당\t공제',
-     desc:'건설·일용직 인력사무소'},
-    {icon:'🏪',name:'프랜차이즈',cols:'이름\t매장\t매출액\t수수료율\t고정급\t성과급\t차감\t합계',
-     desc:'프랜차이즈 본사·가맹점'},
-    {icon:'🚗',name:'대리운전',cols:'이름\t팀\t콜건수\t건당단가\t장거리수당\t야간수당\t수수료차감\t합계',
-     desc:'대리운전 업체'},
+    {icon:'🧹',name:'청소/파견',
+     cols:'이름\t캠프\t출근일수\t시급\t연장시간\t야간시간\t지각공제\t식대',
+     desc:'출근일수·시급 기반 자동 계산'},
+    {icon:'📦',name:'택배/물류',
+     cols:'이름\t캠프\t집배건수\t단가\t반품건수\t반품단가\t유류비\t식대',
+     desc:'건수×단가 자동 합산'},
+    {icon:'🛡️',name:'보험설계사',
+     cols:'이름\t팀\t신계약건수\t수수료율\t유지건수\t유지수수료\t승진수당\t차감',
+     desc:'계약건수·수수료율 자동 적용'},
+    {icon:'🍾',name:'주류/식품',
+     cols:'이름\t권역\t배송건수\t박스단가\t반품건수\t파손차감\t유류비\t식대',
+     desc:'배송건수·박스단가 자동 계산'},
+    {icon:'🏗️',name:'건설/일용직',
+     cols:'이름\t현장\t출근일수\t일당\t연장시간\t야간수당\t위험수당\t공제',
+     desc:'일당·연장수당 자동 산출'},
+    {icon:'🏪',name:'프랜차이즈',
+     cols:'이름\t매장\t매출액\t수수료율\t고정급\t성과급\t차감\t합계',
+     desc:'매출×수수료율 자동 계산'},
+    {icon:'🚗',name:'대리운전',
+     cols:'이름\t팀\t콜건수\t건당단가\t장거리수당\t야간수당\t수수료차감\t합계',
+     desc:'콜건수×단가 자동 합산'},
+    {icon:'💇',name:'뷰티/서비스',
+     cols:'이름\t매장\t매출액\t수수료율\t추가수당\t공제\t합계',
+     desc:'매출 수수료 자동 계산'},
     {icon:'📋',name:'직접 입력',cols:'',
      desc:'컬럼 직접 설정'},
   ];
@@ -10090,40 +10100,72 @@ window._uOpenTemplate = function(){
 
   templates.forEach(function(t,ti){
     html+='<div data-ti="'+ti+'" class="u-tmpl-item" style="background:var(--bg3);border-radius:10px;padding:12px;cursor:pointer;border:1px solid var(--border)">'+
-      '<div style="font-size:24px;margin-bottom:4px">'+t.icon+'</div>'+
+      '<div style="font-size:22px;margin-bottom:4px">'+t.icon+'</div>'+
       '<div style="font-size:12px;font-weight:800">'+t.name+'</div>'+
       '<div style="font-size:10px;color:var(--text3);margin-top:2px">'+t.desc+'</div>'+
+      (t.cols?'<div style="font-size:9px;color:var(--acc);margin-top:4px;font-weight:700">'+t.cols.split('\t').slice(0,4).join(' · ')+'...</div>':'')+
     '</div>';
   });
 
   html+='</div></div></div>';
   var el=document.createElement('div'); el.innerHTML=html;
-  var pop=el.firstChild; document.body.appendChild(pop);
-  // 닫기 버튼
+  var pop=el.firstChild;
+  pop.classList.add('u-tmpl-pop');
+  document.body.appendChild(pop);
   var cb=pop.querySelector('#u-tmpl-close');
   if(cb) cb.addEventListener('click',function(){pop.remove();});
-  // 항목 클릭
   pop.querySelectorAll('.u-tmpl-item').forEach(function(item){
     item.addEventListener('click',function(){
       var ti=parseInt(item.dataset.ti);
       var t=templates[ti];
-      pop.remove();
-      _uApplyTemplate(t.name, t.cols);
+      _uApplyTemplate(t.name, t.cols, t.mapping||null);
     });
   });
 };
 
-window._uApplyTemplate = function(name, cols){
-  document.querySelector('[style*="position:fixed"]').remove();
+window._uApplyTemplate = function(name, cols, mapping){
+  // 팝업 닫기
+  var pop=document.querySelector('.u-tmpl-pop');
+  if(pop) pop.remove();
+
   if(!cols){_uOpenMapping();return;}
-  toast('✅ '+name+' 템플릿 적용됨');
-  // 샘플 다운로드
+
+  // 1. 컬럼 매핑 자동 적용
+  if(mapping && window._uCurrentMapping!==undefined){
+    window._uCurrentMapping=mapping;
+    toast('✅ '+name+' 템플릿 적용 — 파일 업로드하세요');
+  } else {
+    toast('✅ '+name+' 템플릿 적용됨');
+  }
+
+  // 2. 선택 완료 안내 + 업로드 유도
+  var status=document.getElementById('u-parse-status');
+  if(status){
+    status.innerHTML='<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px;margin-top:8px">'+
+      '<div style="font-size:12px;font-weight:700;color:#059669;margin-bottom:6px">✅ '+name+' 템플릿 적용됨</div>'+
+      '<div style="font-size:11px;color:#065f46;margin-bottom:8px">인식 컬럼: <span style="font-weight:700">'+cols.replace(/	/g,' · ')+'</span></div>'+
+      '<div style="display:flex;gap:6px">'+
+        '<button id="u-tmpl-upload-btn" style="padding:6px 14px;background:#059669;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">📂 파일 업로드</button>'+
+        '<button id="u-tmpl-dl-btn" style="padding:6px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer">📥 양식 다운로드</button>'+
+      '</div>'+
+    '</div>';
+  }
+    setTimeout(function(){
+      var ub=document.getElementById('u-tmpl-upload-btn');
+      if(ub) ub.addEventListener('click',function(){document.getElementById('u-file-input').click();});
+      var db=document.getElementById('u-tmpl-dl-btn');
+      if(db) db.addEventListener('click',function(){_uDownloadTemplate(name,cols);});
+    },50);
+};
+
+window._uDownloadTemplate = function(name, cols){
   var lines=[cols];
-  lines.push(cols.split('\t').map(function(h,i){
-    if(h.includes('이름')) return '홍길동';
-    if(h.includes('건수')||h.includes('일수')) return '100';
+  lines.push(cols.split('\t').map(function(h){
+    if(h.includes('이름')||h.includes('성명')) return '홍길동';
+    if(h.includes('건수')||h.includes('일수')||h.includes('수량')) return '100';
     if(h.includes('단가')||h.includes('시급')||h.includes('일당')) return '3000';
-    if(h.includes('금액')||h.includes('수수료')||h.includes('합계')) return '300000';
+    if(h.includes('금액')||h.includes('수수료')||h.includes('합계')||h.includes('지급')) return '300000';
+    if(h.includes('캠프')||h.includes('팀')||h.includes('부서')) return '부산1팀';
     return '';
   }).join('\t'));
   var blob=new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8'});
@@ -10131,7 +10173,7 @@ window._uApplyTemplate = function(name, cols){
   a.href=URL.createObjectURL(blob);
   a.download=name+'_정산양식.txt';
   a.click();
-  toast('📥 '+name+' 양식 다운로드됨 — 작성 후 업로드하세요');
+  toast('📥 양식 저장됨 — 작성 후 업로드하세요');
 };
 
 // 3. 엑셀 다운로드
