@@ -702,40 +702,73 @@ footer{
 <section class="industries reveal" id="industries">
   <p class="sec-label">ALL INDUSTRIES</p>
   <h2 class="sec-title" style="font-size:clamp(24px,5vw,38px)">우리 업종에도 맞을까요?<br><span style="color:var(--acc)">맞습니다.</span></h2>
-  <p class="sec-sub">직원이 있고 파일이 있다면 — DONWAY는 바로 작동합니다</p>
+  <p class="sec-sub">서비스별로 지원 업종이 다릅니다 — 해당 없으면 문의주세요</p>
 
-  <div class="ind-grid">
-    <div class="ind-card">
-      <div class="ind-card-icon">📦</div>
-      <div class="ind-card-name">쿠팡 대리점</div>
-      <div class="ind-card-desc">정산 엑셀 자동 파싱<br>아이디 지원 분배</div>
-    </div>
-    <div class="ind-card">
-      <div class="ind-card-icon">🛵</div>
-      <div class="ind-card-name">배달대행</div>
-      <div class="ind-card-desc">배민·이츠 차액<br>자동 보전</div>
-    </div>
-    <div class="ind-card">
-      <div class="ind-card-icon">🍶</div>
-      <div class="ind-card-name">주류·식품 도매</div>
-      <div class="ind-card-desc">재고관리·배송<br>기사 정산</div>
-    </div>
-    <div class="ind-card">
-      <div class="ind-card-icon">🧹</div>
-      <div class="ind-card-name">청소·파견</div>
-      <div class="ind-card-desc">출근일수·시급<br>자동 계산</div>
+  <!-- 서비스별 업종 탭 -->
+  <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:24px">
+    <button class="ind-svc-tab active" onclick="switchIndTab(this,'ai')" style="padding:8px 18px;border-radius:20px;border:2px solid var(--acc);background:var(--acc);color:#fff;font-size:12px;font-weight:700;cursor:pointer">🤖 AI정산</button>
+    <button class="ind-svc-tab" onclick="switchIndTab(this,'delivery')" style="padding:8px 18px;border-radius:20px;border:2px solid var(--border);background:transparent;color:var(--text2);font-size:12px;font-weight:700;cursor:pointer">🛵 배달대행</button>
+    <button class="ind-svc-tab" onclick="switchIndTab(this,'universal')" style="padding:8px 18px;border-radius:20px;border:2px solid var(--border);background:transparent;color:var(--text2);font-size:12px;font-weight:700;cursor:pointer">📋 범용정산</button>
+    <button class="ind-svc-tab" onclick="switchIndTab(this,'inventory')" style="padding:8px 18px;border-radius:20px;border:2px solid var(--border);background:transparent;color:var(--text2);font-size:12px;font-weight:700;cursor:pointer">📦 재고관리</button>
+  </div>
+
+  <!-- AI정산 -->
+  <div id="ind-ai" class="ind-tab-content" style="display:block">
+    <p style="font-size:12px;color:var(--text2);margin-bottom:16px;text-align:center">복잡한 계산·개인별 추적이 필요한 업종</p>
+    <div class="ind-grid">
+      <div class="ind-card"><div class="ind-card-icon">🚚</div><div class="ind-card-name">쿠팡 대리점</div><div class="ind-card-desc">라우트별·아이디지원<br>미계약 자동 처리</div></div>
+      <div class="ind-card"><div class="ind-card-icon">🧹</div><div class="ind-card-name">청소·파견</div><div class="ind-card-desc">현장별 단가·출근일수<br>연장·야간 자동 계산</div></div>
+      <div class="ind-card"><div class="ind-card-icon">🛡️</div><div class="ind-card-name">보험설계사</div><div class="ind-card-desc">계약별·유지별<br>팀장수수료 자동 배분</div></div>
+      <div class="ind-card"><div class="ind-card-icon">🏗️</div><div class="ind-card-name">건설·일용직</div><div class="ind-card-desc">현장별·직종별 일당<br>원천징수 자동</div></div>
+      <div class="ind-card"><div class="ind-card-icon">🚗</div><div class="ind-card-name">퀵·대리운전</div><div class="ind-card-desc">콜별·구간별 단가<br>팀장수수료 자동</div></div>
+      <div class="ind-card"><div class="ind-card-icon">💇</div><div class="ind-card-name">뷰티·미용</div><div class="ind-card-desc">시술별 단가·수수료율<br>닉네임 자동 매칭</div></div>
     </div>
   </div>
 
-  <div class="ind-more">
-    <span class="ind-more-pill">🏗️ 건설·일용직</span>
-    <span class="ind-more-pill">🛡️ 보험설계사</span>
-    <span class="ind-more-pill">🚗 대리운전</span>
-    <span class="ind-more-pill">🏪 프랜차이즈</span>
-    <span class="ind-more-pill">💇 뷰티·서비스</span>
-    <span class="ind-more-pill">🏭 제조·공장</span>
-    <span class="ind-more-pill">🏢 일반 기업</span>
-    <span class="ind-more-pill">+ 모든 업종</span>
+  <!-- 배달대행 -->
+  <div id="ind-delivery" class="ind-tab-content" style="display:none">
+    <p style="font-size:12px;color:var(--text2);margin-bottom:16px;text-align:center">플랫폼 정산서 업로드 → 구간 차액 자동 보전·환수</p>
+    <div class="ind-grid" style="grid-template-columns:repeat(3,1fr)">
+      <div class="ind-card"><div class="ind-card-icon">🟡</div><div class="ind-card-name">배달의민족</div><div class="ind-card-desc">정산서 자동 파싱<br>차액 자동 보전</div></div>
+      <div class="ind-card"><div class="ind-card-icon">🔴</div><div class="ind-card-name">쿠팡이츠</div><div class="ind-card-desc">정산서 자동 파싱<br>차액 자동 보전</div></div>
+      <div class="ind-card"><div class="ind-card-icon">🔵</div><div class="ind-card-name">바로고·생각대로</div><div class="ind-card-desc">구간단가 차액<br>자동 계산</div></div>
+    </div>
+  </div>
+
+  <!-- 범용정산 -->
+  <div id="ind-universal" class="ind-tab-content" style="display:none">
+    <p style="font-size:12px;color:var(--text2);margin-bottom:16px;text-align:center">단순 계산 + 여러 업체 명세서 — 엑셀·txt 업로드로 끝</p>
+    <div class="ind-grid">
+      <div class="ind-card"><div class="ind-card-icon">📦</div><div class="ind-card-name">CJ·한진·로젠</div><div class="ind-card-desc">건수×단가 단순계산<br>명세서 일괄 발송</div></div>
+      <div class="ind-card"><div class="ind-card-icon">🏪</div><div class="ind-card-name">프랜차이즈</div><div class="ind-card-desc">매출×수수료율<br>가맹점별 명세서</div></div>
+      <div class="ind-card"><div class="ind-card-icon">🌿</div><div class="ind-card-name">농산물·축산</div><div class="ind-card-desc">중량×단가<br>거래처별 명세서</div></div>
+      <div class="ind-card"><div class="ind-card-icon">🏢</div><div class="ind-card-name">용역·인력</div><div class="ind-card-desc">인원×단가<br>현장별 명세서</div></div>
+      <div class="ind-card"><div class="ind-card-icon">🧴</div><div class="ind-card-name">화장품·도매배송</div><div class="ind-card-desc">건수×단가<br>담당자별 명세서</div></div>
+      <div class="ind-card"><div class="ind-card-icon">📋</div><div class="ind-card-name">2개이상 업종</div><div class="ind-card-desc">엑셀 합산 정산<br>통합 명세서</div></div>
+    </div>
+  </div>
+
+  <!-- 재고관리 -->
+  <div id="ind-inventory" class="ind-tab-content" style="display:none">
+    <p style="font-size:12px;color:var(--text2);margin-bottom:16px;text-align:center">입출고 파악이 필요한 모든 도매·유통 업종</p>
+    <div class="ind-grid">
+      <div class="ind-card"><div class="ind-card-icon">🍶</div><div class="ind-card-name">주류·식품 도매</div><div class="ind-card-desc">공병·여신·파손<br>주류카드 관리</div></div>
+      <div class="ind-card"><div class="ind-card-icon">💊</div><div class="ind-card-name">의약품 도매</div><div class="ind-card-desc">유통기한·냉장<br>로트번호 관리</div></div>
+      <div class="ind-card"><div class="ind-card-icon">👕</div><div class="ind-card-name">의류·잡화</div><div class="ind-card-desc">사이즈·색상<br>시즌별 관리</div></div>
+      <div class="ind-card"><div class="ind-card-icon">🥩</div><div class="ind-card-name">식자재 도매</div><div class="ind-card-desc">선입선출<br>유통기한 관리</div></div>
+      <div class="ind-card"><div class="ind-card-icon">🔧</div><div class="ind-card-name">공구·자재</div><div class="ind-card-desc">규격·중량<br>단위 관리</div></div>
+      <div class="ind-card"><div class="ind-card-icon">🏗️</div><div class="ind-card-name">건자재 도매</div><div class="ind-card-desc">수량·중량·규격<br>현장별 출고</div></div>
+    </div>
+  </div>
+
+  <!-- 문의 CTA -->
+  <div style="margin-top:28px;background:linear-gradient(135deg,rgba(0,212,255,.08),rgba(123,47,255,.08));border:1px solid rgba(0,212,255,.2);border-radius:16px;padding:24px;text-align:center">
+    <div style="font-size:16px;font-weight:900;margin-bottom:8px">우리 업종이 목록에 없다면?</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:16px">문의주시면 맞춤 견적 드립니다<br>대부분의 업종은 커스터마이징으로 적용 가능합니다</div>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <a href="https://pf.kakao.com/_xkuxabX/chat" target="_blank" style="padding:10px 24px;background:var(--acc);color:#fff;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none">💬 카카오톡 문의</a>
+      <a href="tel:051-711-3103" style="padding:10px 24px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:var(--text);border-radius:10px;font-size:13px;font-weight:700;text-decoration:none">📞 051-711-3103</a>
+    </div>
   </div>
 </section>
 
@@ -942,6 +975,23 @@ var numObs=new IntersectionObserver(function(entries){
   });
 },{threshold:.5});
 document.querySelectorAll('.hero-numbers').forEach(function(el){numObs.observe(el);});
+
+function switchIndTab(btn, tab){
+  document.querySelectorAll('.ind-svc-tab').forEach(function(b){
+    b.style.background='transparent';
+    b.style.borderColor='var(--border)';
+    b.style.color='var(--text2)';
+  });
+  btn.style.background='var(--acc)';
+  btn.style.borderColor='var(--acc)';
+  btn.style.color='#fff';
+  document.querySelectorAll('.ind-tab-content').forEach(function(el){
+    el.style.display='none';
+  });
+  var target=document.getElementById('ind-'+tab);
+  if(target) target.style.display='block';
+}
+
 </script>
 </body>
 </html>
