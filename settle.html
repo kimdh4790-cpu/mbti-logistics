@@ -27803,6 +27803,17 @@ function _invLoadDash(did){
     // ━━━ 4️⃣ 확인요망 ━━━
     var pending=outs.filter(function(d){return d.status&&(d.status.includes('확인요망')||d.status.includes('배송중')||d.status.includes('반품회수'));});
 
+    // ━━━ 0️⃣ 여신 초과 매장 ━━━
+    var creditWarn=[];
+    outs.forEach(function(d){
+      if((d.creditBalance||0)>0&&d.store){
+        var exist=creditWarn.find(function(x){return x.store===d.store;});
+        if(exist){if(d.creditBalance>exist.balance)exist.balance=d.creditBalance;}
+        else creditWarn.push({store:d.store,balance:d.creditBalance,route:d.route||''});
+      }
+    });
+    creditWarn.sort(function(a,b){return b.balance-a.balance;});
+
     // ━━━ 5️⃣ 공병회수량 집계 ━━━
     var bottleByDriver={};
     outs.forEach(function(d){
@@ -27921,6 +27932,32 @@ function _invLoadDash(did){
       '</tr>';
     });
     html+='</tbody></table></div></div>';
+
+    // 0️⃣ 여신 경고
+    if(creditWarn.length){
+      html+='<div style="margin-bottom:16px">'+
+        '<div style="font-size:12px;font-weight:800;margin-bottom:8px">💳 거래처 여신 현황 (잔액 높은 순)</div>'+
+        '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">'+
+        '<thead><tr style="background:var(--bg3)">'+
+          '<th style="padding:6px 8px;text-align:left">매장</th>'+
+          '<th style="padding:6px 8px;text-align:right">여신잔액</th>'+
+          '<th style="padding:6px 8px;text-align:left">담당기사</th>'+
+          '<th style="padding:6px 8px;text-align:center">위험도</th>'+
+        '</tr></thead><tbody>';
+      creditWarn.forEach(function(w){
+        var risk=w.balance>=5000000?'<span style="color:#dc2626;font-weight:700">🔴 고위험</span>':
+                 w.balance>=3000000?'<span style="color:#f59e0b;font-weight:700">🟡 주의</span>':
+                 '<span style="color:#6b7280">🔵 일반</span>';
+        var bg=w.balance>=5000000?'background:#fef2f2':w.balance>=3000000?'background:#fffbeb':'';
+        html+='<tr style="border-bottom:1px solid var(--border);'+bg+'">'+
+          '<td style="padding:6px 8px;font-weight:600">'+esc(w.store)+'</td>'+
+          '<td style="padding:6px 8px;text-align:right;font-weight:800">₩'+w.balance.toLocaleString()+'</td>'+
+          '<td style="padding:6px 8px;color:var(--text3)">'+esc(w.route)+'</td>'+
+          '<td style="padding:6px 8px;text-align:center">'+risk+'</td>'+
+        '</tr>';
+      });
+      html+='</tbody></table></div></div>';
+    }
 
     // 5️⃣ 공병 회수 현황
     var bottleDrivers=Object.keys(bottleByDriver);
@@ -28358,6 +28395,67 @@ function _invConfirmByActual(did, results){
   }).catch(function(e){toast('❌ '+e.message);});
 }
 
+
+// ── 입출고 상세 팝업 ──
+function _invDetailPopup(d, docId, type){
+  var col=type==='in'?'inventory_in':'inventory_out';
+  var fields=[
+    {k:'txnId',l:'전표번호'},{k:'outType',l:'유형'},{k:'usage',l:'용도구분'},
+    {k:'date',l:'날짜'},{k:'name',l:'상품명'},{k:'itemCode',l:'상품코드'},
+    {k:'barcode',l:'바코드'},{k:'liquorCode',l:'주류코드'},{k:'unitCount',l:'본수'},
+    {k:'location',l:'창고로케이션'},{k:'supplier',l:'거래처'},
+    {k:'region',l:'권역'},{k:'store',l:'배송매장'},{k:'route',l:'담당기사'},
+    {k:'vehicle',l:'차량번호'},{k:'cardNo',l:'주류카드번호'},
+    {k:'creditBalance',l:'여신잔액'},{k:'receiver',l:'인수자'},
+    {k:'dirQty',l:'지시수량'},{k:'actQty',l:'실제처리량'},{k:'dmgQty',l:'파손폐기량'},
+    {k:'bottleReturn',l:'공병회수량'},{k:'pboxReturn',l:'PBOX회수'},
+    {k:'kegId',l:'케그번호'},{k:'status',l:'처리상태'},{k:'note',l:'비고'}
+  ];
+  var hasVal=fields.filter(function(f){var v=d[f.k];return v!==undefined&&v!==null&&v!==''&&v!==0&&v!=='-';});
+  var noVal=fields.filter(function(f){var v=d[f.k];return v===undefined||v===null||v===''||v===0||v==='-';});
+
+  var html='<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:9000;overflow-y:auto;padding:16px" onclick="if(event.target===this)this.remove()">'+
+    '<div style="background:var(--bg);border-radius:14px;padding:20px;max-width:480px;margin:0 auto">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
+        '<div style="font-size:13px;font-weight:800">📋 '+esc(d.txnId||'상세보기')+'</div>'+
+        '<button id="inv-det-close" style="background:none;border:none;font-size:20px;cursor:pointer">✕</button>'+
+      '</div>'+
+      '<div style="font-size:11px;font-weight:700;color:var(--acc);margin-bottom:6px">✅ 등록된 항목 ('+hasVal.length+'개)</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:14px">';
+  hasVal.forEach(function(f){
+    html+='<div style="background:var(--bg3);border-radius:6px;padding:6px 8px">'+
+      '<div style="font-size:9px;color:var(--text3)">'+f.l+'</div>'+
+      '<div style="font-size:11px;font-weight:700;word-break:break-all">'+esc(String(d[f.k]))+'</div>'+
+    '</div>';
+  });
+  html+='</div>';
+  if(noVal.length){
+    html+='<div style="font-size:11px;color:var(--text3);margin-bottom:8px">⬜ 미등록 ('+noVal.length+'개)</div>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:12px">';
+    noVal.forEach(function(f){html+='<span style="background:var(--bg3);border-radius:4px;padding:2px 7px;font-size:10px;color:var(--text3)">'+f.l+'</span>';});
+    html+='</div>';
+  }
+  html+='<div style="border-top:1px solid var(--border);padding-top:12px">'+
+    '<button id="inv-det-del" style="width:100%;padding:10px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700">🗑 이 전표 삭제</button>'+
+  '</div></div></div>';
+
+  var el=document.createElement('div');el.innerHTML=html;document.body.appendChild(el.firstChild);
+  setTimeout(function(){
+    var cb=document.getElementById('inv-det-close');
+    var db=document.getElementById('inv-det-del');
+    if(cb) cb.addEventListener('click',function(){document.querySelector('[style*="overflow-y:auto"][style*="fixed"]').remove();});
+    if(db) db.addEventListener('click',function(){
+      if(!confirm('삭제하시겠습니까?')) return;
+      var did=_CU.dealerId||_CU.uid;
+      _db.collection(col).doc(docId).delete().then(function(){
+        toast('✅ 삭제됨: '+(d.txnId||docId));
+        document.querySelector('[style*="overflow-y:auto"][style*="fixed"]').remove();
+        _invLoadLedger(did,type);
+      }).catch(function(e){toast('❌ '+e.message);});
+    });
+  },50);
+}
+
 window._invPickFile = function(){
   var inp=document.createElement('input');
   inp.type='file'; inp.accept='.xlsx,.xls';
@@ -28525,6 +28623,8 @@ function _invParseIntegrated(ws, did){
   var iKegId=h.findIndex(function(x){return x.includes('케그')||x.includes('Keg')||x.includes('keg');});
   var iCardNo=h.findIndex(function(x){return x.includes('카드번호')||x.includes('주류카드');});
   var iVehicle=h.findIndex(function(x){return x.includes('차량')||x.includes('번호판');});
+  var iLocation=h.findIndex(function(x){return x.includes('로케이션')||x.includes('Location');});
+  var iCredit=h.findIndex(function(x){return x.includes('여신');});
   var iReceiver=h.findIndex(function(x){return x.includes('인수자')||x.includes('수령자');});
   var iCode=h.findIndex(function(x){return x.includes('상품코드');});
   var iSup=h.findIndex(function(x){return x.includes('납품업체');});
@@ -28569,6 +28669,8 @@ function _invParseIntegrated(ws, did){
       cardNo:iCardNo>=0?String(row[iCardNo]||'').trim():'',
       vehicle:iVehicle>=0?String(row[iVehicle]||'').trim():'',
       receiver:iReceiver>=0?String(row[iReceiver]||'').trim():'',
+      location:iLocation>=0?String(row[iLocation]||'').trim():'',
+      creditBalance:iCredit>=0?(parseInt(row[iCredit])||0):0,
       status:iStat>=0?String(row[iStat]||'').trim():'',
       note:iNote>=0?String(row[iNote]||'').trim():'',
       date:today,
