@@ -28896,7 +28896,7 @@ function _invParseBySheet(wb, did){
         volume:iVol>=0?String(row[iVol]||'').trim():'',
         baseQty:iBase>=0?(parseInt(row[iBase])||0):0,
         safeQty:iSafe>=0?(parseInt(row[iSafe])||0):0,
-        updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+        updatedAt:new Date().toISOString()
       });
     }
   });
@@ -28920,8 +28920,14 @@ function _invBatchSave(did, items, inItems, outItems){
       function next(){
         if(idx>=chunks.length){cb();return;}
         var b=_db.batch();
-        chunks[idx].forEach(function(item){b.set(_db.collection(col).doc(),item);});
-        b.commit().then(function(){idx++;next();});
+        chunks[idx].forEach(function(item){
+          // serverTimestamp 제거하고 ISO 문자열로 대체
+          var clean=Object.assign({},item);
+          if(clean.updatedAt&&typeof clean.updatedAt!=='string') clean.updatedAt=new Date().toISOString();
+          if(clean.createdAt&&typeof clean.createdAt!=='string') clean.createdAt=new Date().toISOString();
+          b.set(_db.collection(col).doc(),clean);
+        });
+        b.commit().then(function(){idx++;next();}).catch(function(e){toast('❌ batch오류:'+e.message);});
       }
       next();
     }
