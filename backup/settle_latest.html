@@ -28083,8 +28083,11 @@ function _invLoadStock(did, filterSup){
 
     var list=Object.values(items);
     if(!list.length){c.innerHTML='<div class="empty">📦 등록된 재고 없음<br><small>엑셀 업로드로 등록하세요</small></div>';return;}
-    // 디버그: 첫 번째 item 확인
-    if(list[0]) toast('첫item name:['+list[0].name+'] supplier:['+list[0].supplier+']');
+    // name 없는 item 필터 + 디버그
+    var noName=list.filter(function(i){return !i.name;}).length;
+    var hasName=list.filter(function(i){return !!i.name;}).length;
+    toast('전체:'+list.length+' name있음:'+hasName+' name없음:'+noName);
+    list=list.filter(function(i){return !!i.name;});
 
     // 분류 필터
     var subcats=[...new Set(list.map(function(i){return i.subcat||'기타';}))].sort();
