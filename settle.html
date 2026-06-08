@@ -27719,10 +27719,12 @@ function pageInventory(){
     '</div>'+
     '<div id="inv-tabs" style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">'+
       '<button id="itab-dash" style="padding:6px 14px;background:var(--bg3);color:var(--text2);border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📈 대시보드</button>'+
+      '<button id="itab-monthly" style="padding:6px 14px;background:var(--bg3);color:var(--text2);border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📅 월별통계</button>'+
       '<button id="itab-stock" style="padding:6px 14px;background:var(--acc);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📦 재고현황</button>'+
       '<button id="itab-in" style="padding:6px 14px;background:var(--bg3);color:var(--text2);border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📥 입고원장</button>'+
       '<button id="itab-out" style="padding:6px 14px;background:var(--bg3);color:var(--text2);border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📤 출고원장</button>'+
 
+      '<button id="itab-return" style="padding:6px 14px;background:var(--bg3);color:var(--text2);border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">🔄 반품/불량</button>'+
     '</div>'+
     '<div id="inv-filter" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>'+
     '<div id="inv-content"><div class="loading">⏳ 로딩 중...</div></div>';
@@ -27734,10 +27736,14 @@ function pageInventory(){
     var btn_i=document.getElementById('itab-in');
     var btn_o=document.getElementById('itab-out');
     var btn_d=document.getElementById('itab-dash');
+    var btn_mon=document.getElementById('itab-monthly');
+    var btn_ret=document.getElementById('itab-return');
     if(btn_d) btn_d.addEventListener('click',function(){_invTab(btn_d,'dash');});
+    if(btn_mon) btn_mon.addEventListener('click',function(){_invTab(btn_mon,'monthly');});
     if(btn_s) btn_s.addEventListener('click',function(){_invTab(btn_s,'stock');});
     if(btn_i) btn_i.addEventListener('click',function(){_invTab(btn_i,'in');});
     if(btn_o) btn_o.addEventListener('click',function(){_invTab(btn_o,'out');});
+    if(btn_ret) btn_ret.addEventListener('click',function(){_invTab(btn_ret,'return');});
     // 📦 품목 마스터 등록
     var btn_m=document.getElementById('inv-master-btn');
     if(btn_m) btn_m.addEventListener('click',function(){_invPickFileType('master');});
@@ -27784,9 +27790,11 @@ function _invTab(btn, tab){
   btn.style.background='var(--acc)'; btn.style.color='#fff';
   var did=_CU.dealerId||_CU.uid;
   if(tab==='dash') _invLoadDash(did);
+  else if(tab==='monthly') _invLoadMonthly(did);
   else if(tab==='stock') _invLoadStock(did,'');
   else if(tab==='in') _invLoadLedger(did,'in');
   else if(tab==='out') _invLoadLedger(did,'out');
+  else if(tab==='return') _invLoadReturn(did);
 }
 
 
@@ -28073,6 +28081,226 @@ function _invDashCard(label, val, color){
     '<div style="font-size:18px;font-weight:800;color:'+color+'">'+val+'</div>'+
     '<div style="font-size:10px;color:var(--text3);margin-top:2px">'+label+'</div>'+
   '</div>';
+}
+
+
+// ── 📅 월별 통계 ──
+function _invLoadMonthly(did){
+  var c=document.getElementById('inv-content');
+  document.getElementById('inv-filter').innerHTML='';
+  var now=new Date();
+  var curY=now.getFullYear(), curM=now.getMonth()+1;
+
+  // 월 선택 UI
+  var months=[];
+  for(var i=0;i<6;i++){
+    var d=new Date(curY,curM-1-i,1);
+    months.push({y:d.getFullYear(),m:d.getMonth()+1,label:(d.getFullYear()+'년 '+(d.getMonth()+1)+'월')});
+  }
+  var selHtml='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">';
+  months.forEach(function(mo,idx){
+    selHtml+='<button class="inv-mon-btn" data-y="'+mo.y+'" data-m="'+mo.m+'" style="padding:5px 12px;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;background:'+(idx===0?'var(--acc)':'var(--bg3)')+';color:'+(idx===0?'#fff':'var(--text2)')+'">'+mo.label+'</button>';
+  });
+  selHtml+='</div>';
+  c.innerHTML=selHtml+'<div id="inv-monthly-body"><div class="loading">⏳ 로딩 중...</div></div>';
+
+  function loadMonth(y,m){
+    var start=y+'-'+(String(m).padStart(2,'0'))+'-01';
+    var end=y+'-'+(String(m).padStart(2,'0'))+'-31';
+    Promise.all([
+      _db.collection('inventory_in').where('dealerId','==',did).where('date','>=',start).where('date','<=',end).get(),
+      _db.collection('inventory_out').where('dealerId','==',did).where('date','>=',start).where('date','<=',end).get()
+    ]).then(function(res){
+      var ins=[]; res[0].forEach(function(doc){ins.push(doc.data());});
+      var outs=[]; res[1].forEach(function(doc){outs.push(doc.data());});
+
+      var totalIn=ins.reduce(function(s,d){return s+(d.qty||0);},0);
+      var totalOut=outs.filter(function(d){return d.outType==='일반출고';}).reduce(function(s,d){return s+(d.qty||0);},0);
+      var totalDmg=outs.reduce(function(s,d){return s+(d.dmgQty||0);},0);
+      var totalReturn=outs.filter(function(d){return d.outType==='반품';}).length;
+      var totalBottle=outs.reduce(function(s,d){return s+(d.bottleReturn||0);},0);
+
+      // 품목별 집계
+      var itemMap={};
+      ins.forEach(function(d){
+        var k=d.name||d.itemCode||'미분류';
+        if(!itemMap[k]) itemMap[k]={name:k,in:0,out:0,dmg:0,ret:0};
+        itemMap[k].in+=(d.qty||0);
+      });
+      outs.forEach(function(d){
+        var k=d.name||d.itemCode||'미분류';
+        if(!itemMap[k]) itemMap[k]={name:k,in:0,out:0,dmg:0,ret:0};
+        if(d.outType==='일반출고'||d.outType==='기타') itemMap[k].out+=(d.qty||0);
+        if(d.outType==='파손폐기') itemMap[k].dmg+=(d.dmgQty||0);
+        if(d.outType==='반품') itemMap[k].ret+=1;
+      });
+
+      var html='';
+      // 요약 카드
+      html+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px">';
+      html+=_invDashCard('총 입고량',totalIn+'박스','#10b981');
+      html+=_invDashCard('총 출고량',totalOut+'박스','#3b82f6');
+      html+=_invDashCard('파손/폐기',totalDmg+'박스','#dc2626');
+      html+=_invDashCard('반품건수',totalReturn+'건','#f59e0b');
+      html+='</div>';
+      html+='<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:16px">';
+      html+=_invDashCard('공병 회수',totalBottle+'개','#7c3aed');
+      html+=_invDashCard('입고건수',ins.length+'건','#6b7280');
+      html+='</div>';
+
+      // 품목별 월간 집계 테이블
+      var itemArr=Object.values(itemMap).sort(function(a,b){return (b.out+b.dmg)-(a.out+a.dmg);});
+      if(itemArr.length){
+        html+='<div style="font-size:12px;font-weight:800;margin-bottom:8px">품목별 월간 집계</div>'+
+          '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">'+
+          '<thead><tr style="background:var(--bg3)">'+
+            '<th style="padding:6px 8px;text-align:left">품목명</th>'+
+            '<th style="padding:6px 8px;text-align:right;color:#10b981">입고</th>'+
+            '<th style="padding:6px 8px;text-align:right;color:#3b82f6">출고</th>'+
+            '<th style="padding:6px 8px;text-align:right;color:#dc2626">파손</th>'+
+            '<th style="padding:6px 8px;text-align:right;color:#f59e0b">반품</th>'+
+          '</tr></thead><tbody>';
+        itemArr.forEach(function(i){
+          html+='<tr style="border-bottom:1px solid var(--border)">'+
+            '<td style="padding:6px 8px;font-weight:600">'+esc(i.name)+'</td>'+
+            '<td style="padding:6px 8px;text-align:right;color:#10b981">'+(i.in||'-')+'</td>'+
+            '<td style="padding:6px 8px;text-align:right;color:#3b82f6">'+(i.out||'-')+'</td>'+
+            '<td style="padding:6px 8px;text-align:right;color:#dc2626">'+(i.dmg||'-')+'</td>'+
+            '<td style="padding:6px 8px;text-align:right;color:#f59e0b">'+(i.ret||'-')+'</td>'+
+          '</tr>';
+        });
+        html+='</tbody></table></div>';
+      } else {
+        html+='<div class="empty">📅 '+y+'년 '+m+'월 데이터 없음</div>';
+      }
+      document.getElementById('inv-monthly-body').innerHTML=html;
+    }).catch(function(e){document.getElementById('inv-monthly-body').innerHTML='<div class="empty">오류: '+e.message+'</div>';});
+  }
+
+  // 버튼 이벤트
+  setTimeout(function(){
+    c.querySelectorAll('.inv-mon-btn').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        c.querySelectorAll('.inv-mon-btn').forEach(function(b){b.style.background='var(--bg3)';b.style.color='var(--text2)';});
+        btn.style.background='var(--acc)'; btn.style.color='#fff';
+        loadMonth(parseInt(btn.dataset.y),parseInt(btn.dataset.m));
+      });
+    });
+    loadMonth(curY,curM);
+  },50);
+}
+
+// ── 🔄 반품/불량 현황 ──
+function _invLoadReturn(did){
+  var c=document.getElementById('inv-content');
+  document.getElementById('inv-filter').innerHTML='';
+  c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
+
+  Promise.all([
+    _db.collection('inventory_out').where('dealerId','==',did).where('outType','==','반품').get(),
+    _db.collection('inventory_out').where('dealerId','==',did).where('outType','==','파손폐기').get(),
+    _db.collection('inventory_in').where('dealerId','==',did).get()
+  ]).then(function(res){
+    var returns=[]; res[0].forEach(function(doc){returns.push(doc.data());});
+    var damages=[]; res[1].forEach(function(doc){damages.push(doc.data());});
+    var ins=[]; res[2].forEach(function(doc){ins.push(doc.data());});
+    // 입고 시 불량 (inType이 불량/파손인 경우)
+    var inDefects=ins.filter(function(d){return d.outType==='불량'||d.outType==='파손입고'||(d.dmgQty&&d.dmgQty>0);});
+
+    var html='';
+
+    // 요약
+    html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">';
+    html+=_invDashCard('매장 반품',returns.length+'건','#3b82f6');
+    html+=_invDashCard('파손/폐기',damages.length+'건','#dc2626');
+    html+=_invDashCard('입고 불량',inDefects.length+'건','#f59e0b');
+    html+='</div>';
+
+    // 매장 반품 목록
+    html+='<div style="font-size:12px;font-weight:800;margin-bottom:8px;color:#3b82f6">🔵 매장 반품 ('+returns.length+'건)</div>';
+    if(returns.length){
+      html+='<div style="overflow-x:auto;margin-bottom:16px"><table style="width:100%;border-collapse:collapse;font-size:11px">'+
+        '<thead><tr style="background:#eff6ff">'+
+          '<th style="padding:6px 8px">전표번호</th>'+
+          '<th style="padding:6px 8px">일자</th>'+
+          '<th style="padding:6px 8px">상품명</th>'+
+          '<th style="padding:6px 8px">매장</th>'+
+          '<th style="padding:6px 8px">기사</th>'+
+          '<th style="padding:6px 8px">상태</th>'+
+          '<th style="padding:6px 8px">비고</th>'+
+        '</tr></thead><tbody>';
+      returns.forEach(function(d){
+        html+='<tr style="border-bottom:1px solid var(--border);background:#f0f8ff">'+
+          '<td style="padding:6px 8px;font-weight:700;color:#3b82f6">'+esc(d.txnId||'-')+'</td>'+
+          '<td style="padding:6px 8px;color:var(--text3)">'+esc(d.date||'-')+'</td>'+
+          '<td style="padding:6px 8px;font-weight:600">'+esc(d.name||'-')+'</td>'+
+          '<td style="padding:6px 8px">'+esc(d.store||d.region||'-')+'</td>'+
+          '<td style="padding:6px 8px">'+esc(d.route||'-')+'</td>'+
+          '<td style="padding:6px 8px">'+esc(d.status||'-')+'</td>'+
+          '<td style="padding:6px 8px;color:var(--text3);font-size:10px">'+esc(d.note||'-')+'</td>'+
+        '</tr>';
+      });
+      html+='</tbody></table></div>';
+    } else {
+      html+='<div style="padding:10px;background:#f0f8ff;border-radius:8px;color:#3b82f6;font-size:12px;margin-bottom:16px">반품 내역 없음</div>';
+    }
+
+    // 파손/폐기 목록
+    html+='<div style="font-size:12px;font-weight:800;margin-bottom:8px;color:#dc2626">🔴 파손/폐기 ('+damages.length+'건)</div>';
+    if(damages.length){
+      html+='<div style="overflow-x:auto;margin-bottom:16px"><table style="width:100%;border-collapse:collapse;font-size:11px">'+
+        '<thead><tr style="background:#fef2f2">'+
+          '<th style="padding:6px 8px">전표번호</th>'+
+          '<th style="padding:6px 8px">일자</th>'+
+          '<th style="padding:6px 8px">상품명</th>'+
+          '<th style="padding:6px 8px;text-align:right;color:#dc2626">파손량</th>'+
+          '<th style="padding:6px 8px">매장</th>'+
+          '<th style="padding:6px 8px">기사</th>'+
+          '<th style="padding:6px 8px">비고</th>'+
+        '</tr></thead><tbody>';
+      damages.forEach(function(d){
+        html+='<tr style="border-bottom:1px solid var(--border);background:#fff5f5">'+
+          '<td style="padding:6px 8px;font-weight:700;color:#dc2626">'+esc(d.txnId||'-')+'</td>'+
+          '<td style="padding:6px 8px;color:var(--text3)">'+esc(d.date||'-')+'</td>'+
+          '<td style="padding:6px 8px;font-weight:600">'+esc(d.name||'-')+'</td>'+
+          '<td style="padding:6px 8px;text-align:right;font-weight:800;color:#dc2626">'+(d.dmgQty||0)+'박스</td>'+
+          '<td style="padding:6px 8px">'+esc(d.store||d.region||'-')+'</td>'+
+          '<td style="padding:6px 8px">'+esc(d.route||'-')+'</td>'+
+          '<td style="padding:6px 8px;color:var(--text3);font-size:10px">'+esc(d.note||'-')+'</td>'+
+        '</tr>';
+      });
+      html+='</tbody></table></div>';
+    } else {
+      html+='<div style="padding:10px;background:#fef2f2;border-radius:8px;color:#dc2626;font-size:12px;margin-bottom:16px">파손/폐기 내역 없음</div>';
+    }
+
+    // 입고 불량
+    html+='<div style="font-size:12px;font-weight:800;margin-bottom:8px;color:#f59e0b">🟡 입고 불량 ('+inDefects.length+'건)</div>';
+    if(inDefects.length){
+      html+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">'+
+        '<thead><tr style="background:#fffbeb">'+
+          '<th style="padding:6px 8px">전표번호</th>'+
+          '<th style="padding:6px 8px">일자</th>'+
+          '<th style="padding:6px 8px">상품명</th>'+
+          '<th style="padding:6px 8px;text-align:right">불량수량</th>'+
+          '<th style="padding:6px 8px">비고</th>'+
+        '</tr></thead><tbody>';
+      inDefects.forEach(function(d){
+        html+='<tr style="border-bottom:1px solid var(--border);background:#fffbeb">'+
+          '<td style="padding:6px 8px;font-weight:700;color:#f59e0b">'+esc(d.txnId||'-')+'</td>'+
+          '<td style="padding:6px 8px;color:var(--text3)">'+esc(d.date||'-')+'</td>'+
+          '<td style="padding:6px 8px;font-weight:600">'+esc(d.name||'-')+'</td>'+
+          '<td style="padding:6px 8px;text-align:right;font-weight:800;color:#f59e0b">'+(d.dmgQty||0)+'박스</td>'+
+          '<td style="padding:6px 8px;color:var(--text3);font-size:10px">'+esc(d.note||'-')+'</td>'+
+        '</tr>';
+      });
+      html+='</tbody></table></div>';
+    } else {
+      html+='<div style="padding:10px;background:#fffbeb;border-radius:8px;color:#f59e0b;font-size:12px">입고 불량 내역 없음</div>';
+    }
+
+    c.innerHTML=html;
+  }).catch(function(e){c.innerHTML='<div class="empty">오류: '+e.message+'</div>';});
 }
 
 // ── 재고현황 (기초+입고-출고=현재고) ──
@@ -28556,26 +28784,47 @@ function _invDetailPopup(d, docId, type){
 }
 
 
-// 파일 타입별 업로드 분기
+// 파일 타입별 업로드 분기 — 날짜 지정 팝업
 window._invPickFileType = function(type){
-  var inp=document.createElement('input');
-  inp.type='file'; inp.accept='.xlsx,.xls,.txt,.csv';
-  inp.onchange=function(){
-    if(!inp.files[0]) return;
-    var file=inp.files[0];
-    var did=_CU.dealerId||_CU.uid;
-    var isTxt=file.name.endsWith('.txt')||file.name.endsWith('.csv');
-    if(isTxt){
-      _invUploadTextTyped(file, did, type);
-    } else {
-      _invUploadExcelTyped(inp, did, type);
-    }
+  var today=new Date().toISOString().split('T')[0];
+  var label=type==='master'?'하차 명세서':type==='in'?'입고 실사':'출고 실사';
+
+  // 날짜 선택 팝업
+  var pop=document.createElement('div');
+  pop.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px';
+  pop.innerHTML='<div style="background:var(--bg);border-radius:14px;padding:20px;width:100%;max-width:360px">'+
+    '<div style="font-size:14px;font-weight:800;margin-bottom:14px">📅 '+label+' 날짜 선택</div>'+
+    '<input id="inv-upload-date" type="date" value="'+today+'" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:14px;margin-bottom:14px;box-sizing:border-box">'+
+    '<div style="display:flex;gap:8px">'+
+      '<button id="inv-date-cancel" style="flex:1;padding:10px;background:var(--bg3);border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700">취소</button>'+
+      '<button id="inv-date-ok" style="flex:2;padding:10px;background:var(--acc);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700">파일 선택</button>'+
+    '</div>'+
+  '</div>';
+  document.body.appendChild(pop);
+
+  document.getElementById('inv-date-cancel').onclick=function(){pop.remove();};
+  document.getElementById('inv-date-ok').onclick=function(){
+    var selDate=document.getElementById('inv-upload-date').value||today;
+    pop.remove();
+    var inp=document.createElement('input');
+    inp.type='file'; inp.accept='.xlsx,.xls,.txt,.csv';
+    inp.onchange=function(){
+      if(!inp.files[0]) return;
+      var file=inp.files[0];
+      var did=_CU.dealerId||_CU.uid;
+      var isTxt=file.name.endsWith('.txt')||file.name.endsWith('.csv');
+      if(isTxt){
+        _invUploadTextTyped(file, did, type, selDate);
+      } else {
+        _invUploadExcelTyped(inp, did, type, selDate);
+      }
+    };
+    inp.click();
   };
-  inp.click();
 };
 
 // 엑셀 — 타입 지정 버전
-window._invUploadExcelTyped = function(input, did, type){
+window._invUploadExcelTyped = function(input, did, type, selDate){
   var file=input.files[0];
   if(!file) return;
   toast('⏳ 파싱 중... '+file.name);
@@ -28585,13 +28834,11 @@ window._invUploadExcelTyped = function(input, did, type){
       var wb=XLSX.read(e.target.result,{type:'array',raw:false,defval:''});
       var sn=wb.SheetNames;
       if(type==='master'){
-        // 품목 마스터 — 재고종합마감 or 거래처별 시트
         if(sn.indexOf('재고종합마감')>=0) _invParsemaster(wb, did);
         else _invParseBySheet(wb, did);
       } else {
-        // 입고/출고 원장
         var ws=wb.Sheets[sn[0]];
-        _invParseLedgerSheet(ws, did, type);
+        _invParseLedgerSheet(ws, did, type, selDate);
       }
     }catch(err){toast('❌ '+err.message);}
   };
@@ -28599,7 +28846,7 @@ window._invUploadExcelTyped = function(input, did, type){
 };
 
 // 텍스트 — 타입 지정 버전
-window._invUploadTextTyped = function(file, did, type){
+window._invUploadTextTyped = function(file, did, type, selDate){
   toast('⏳ 텍스트 파싱 중...');
   var reader=new FileReader();
   reader.onload=function(e){
@@ -28613,7 +28860,7 @@ window._invUploadTextTyped = function(file, did, type){
       if(type==='master'){
         _invParseTextMaster(lines, headers, sep, did);
       } else {
-        _invParseTextLedger(lines, headers, sep, did, type);
+        _invParseTextLedger(lines, headers, sep, did, type, selDate);
       }
     }catch(err){toast('❌ '+err.message);}
   };
@@ -28621,7 +28868,7 @@ window._invUploadTextTyped = function(file, did, type){
 };
 
 // 원장 시트 파서 (입고/출고 구분)
-function _invParseLedgerSheet(ws, did, forceType){
+function _invParseLedgerSheet(ws, did, forceType, selDate){
   var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
   var hdrRow=rows.findIndex(function(r){
     return r.some(function(c){return String(c).includes('전표번호')||String(c).includes('상품명');});
@@ -28683,7 +28930,7 @@ function _invParseLedgerSheet(ws, did, forceType){
       pboxReturn:iPbox>=0?(parseInt(row[iPbox])||0):0,
       status:iStat>=0?String(row[iStat]||'').trim():'',
       note:iNote>=0?String(row[iNote]||'').trim():'',
-      date:today, updatedAt:new Date().toISOString()
+      date:selDate||today, updatedAt:new Date().toISOString()
     };
 
     // 강제 타입 or 자동 감지
@@ -28746,7 +28993,7 @@ function _invParseTextMaster(lines, headers, sep, did){
 }
 
 // 텍스트 원장 파서
-function _invParseTextLedger(lines, headers, sep, did, forceType){
+function _invParseTextLedger(lines, headers, sep, did, forceType, selDate){
   var iTxn=headers.findIndex(function(h){return h.includes('전표');});
   var iDiv=headers.findIndex(function(h){return h==='구분';});
   var iType=headers.findIndex(function(h){return h.includes('유형');});
@@ -28786,7 +29033,7 @@ function _invParseTextLedger(lines, headers, sep, did, forceType){
       outType:outType, actQty:actQty, dmgQty:dmgQty,
       bottleReturn:iBottle>=0?(parseInt(cols[iBottle])||0):0,
       status:iStat>=0?cols[iStat]:'', note:iNote>=0?cols[iNote]:'',
-      date:today, updatedAt:new Date().toISOString()
+      date:selDate||today, updatedAt:new Date().toISOString()
     };
     var isIn=forceType==='in'||(forceType!=='out'&&(div==='입고'||txn.startsWith('IN-')));
     if(isIn) inItems.push(Object.assign({},base,{qty:actQty}));
