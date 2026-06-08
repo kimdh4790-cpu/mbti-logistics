@@ -9455,7 +9455,7 @@ function _uRemoveRow(btn){btn.closest('.rrow, [id^="rrow-"]').remove();}
 function _uSaveRules(){
   if(!_db||!_CU){toast('로그인 필요');return;}
   var did=_CU.dealerId||_CU.uid;
-  toast('저장 시작...');
+  
 
   // _uPriceData → priceTables 변환 (캠프별 그룹핑)
   var campGroups={};
@@ -9510,7 +9510,7 @@ function _uSaveRules(){
       var lmCnt=Object.keys(window._uLeaderMap||{}).length;
       var incCnt=Object.keys(rules.incCamps||{}).filter(function(k){return (rules.incCamps||{})[k]>0;}).length;
       var idStr=JSON.stringify((rules.idSupportRules||[]).map(function(r){return {from:r.fromId,dates:r.dates,start:r.startDate};}));
-      toast('✅ 저장완료 — 단가 '+total+'개 / 팀장 '+lmCnt+'명 / 인센 '+incCnt+'개 / ID:'+idStr.slice(0,60));
+      toast('✅ 저장완료 — 단가 '+total+'개 / 팀장 '+lmCnt+'명 / 인센캠프 '+incCnt+'개');
       // RPRICE 반영 (기본 단가표만)
       var basic=priceTables.find(function(pt){return pt.type==='basic';});
       if(basic&&typeof RPRICE!=='undefined') basic.routes.forEach(function(rr){RPRICE[rr.route]=rr.price;});
@@ -11105,132 +11105,6 @@ window._uDoParseMulti = function(files, status){
       try{
         var wb = XLSX.read(e.target.result,{type:'array'});
 
-        // ★ 쿠팡 Raw 시트 감지 (ID+Route+건수+단가 구조)
-        var rawSheet = wb.SheetNames.find(function(s){return s.indexOf('Raw')>=0||s.indexOf('raw')>=0;});
-        if(rawSheet){
-          var ws=wb.Sheets[rawSheet];
-          var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-          // 헤더행 찾기
-          var hdr=[]; var hdrRow=0;
-          for(var h=0;h<Math.min(5,rows.length);h++){
-            // 줄바꿈 제거
-            var r0=rows[h].map(function(c){return String(c||'').replace(/[\n\r]/g,'').trim();});
-            var hasId=r0.some(function(c){return c.toLowerCase()==='id';});
-            var hasRoute=r0.some(function(c){return c.toLowerCase()==='route';});
-            if(hasId&&hasRoute){hdr=r0;hdrRow=h;break;}
-          }
-          if(hdr.length){
-            var idCol=hdr.findIndex(function(h){return h.toLowerCase()==='id';});
-            var routeCol=hdr.findIndex(function(h){return h.toLowerCase()==='route';});
-            var campCol=hdr.findIndex(function(h){return h.includes('캠프');});
-            // 배송건수 — "배송건수(파슬)" 형태 포함
-            var cntCol=hdr.findIndex(function(h){return h.includes('배송건수');});
-            var retCol=hdr.findIndex(function(h){return h.includes('반품');});
-            // 단가 — "단가(반품동일)" 형태
-            var priceCol=hdr.findIndex(function(h){return h.includes('단가')&&!h.includes('금액');});
-            // 추가 인센티브 — "추가 인센티브" (공백 포함)
-            var incCol=hdr.findIndex(function(h){return h.includes('인센티브')&&!h.includes('가중')&&!h.includes('프레시');});
-            // 프레시백
-            var freshCol=hdr.findIndex(function(h){return h.includes('프레시백');});
-            // 총금액
-            var totalCol=hdr.findIndex(function(h){return h.includes('총금액');});
-            // 기본 배송단가 금액
-            var baseAmtCol=hdr.findIndex(function(h){return h.includes('기본 배송단가 금액')||h.includes('기본배송단가');});
-
-            // ID별 집계
-            var idMap={};
-            for(var ri=hdrRow+1;ri<rows.length;ri++){
-              var row=rows[ri];
-              var empId=String(row[idCol]||'').trim();
-              if(!empId||empId.indexOf('@df')<0) continue;
-              var camp=campCol>=0?String(row[campCol]||'').trim():'';
-              var cnt=cntCol>=0?parseInt(row[cntCol])||0:0;
-              var ret=retCol>=0?parseInt(row[retCol])||0:0;
-              var price=priceCol>=0?parseFloat(row[priceCol])||0:0;
-              var inc=incCol>=0?parseFloat(row[incCol])||0:0;
-              var fresh=freshCol>=0?parseFloat(String(row[freshCol]||'0').replace(/[^0-9.]/g,''))||0:0;
-              var total=totalCol>=0?parseFloat(row[totalCol])||0:(baseAmtCol>=0?parseFloat(row[baseAmtCol])||0:cnt*price);
-              var route=routeCol>=0?String(row[routeCol]||'').trim():'';
-
-              if(!idMap[empId]){idMap[empId]={empId:empId,camp:camp,cnt:0,ret:0,gross:0,inc:0,fresh:0,routes:{},dateRoutes:{}};}
-              var p=idMap[empId];
-              if(!p.camp&&camp) p.camp=camp;
-              p.cnt+=cnt; p.ret+=ret; p.gross+=total;
-              p.inc+=isNaN(inc)?0:inc;
-              p.fresh+=isNaN(fresh)?0:fresh;
-              if(route){
-                if(!p.routes[route]) p.routes[route]={cnt:0,ret:0,price:price,amt:0};
-                p.routes[route].cnt+=cnt; p.routes[route].ret+=ret; p.routes[route].amt+=total;
-                // ★ dateRoutes 저장 (아이디지원용)
-                var dateCol2=hdr.findIndex(function(h){return h.includes('배송일자');});
-                var _dateRawVal=dateCol2>=0?row[dateCol2]:null;
-                var dateStr='';
-                if(_dateRawVal!==null&&_dateRawVal!==undefined&&_dateRawVal!==''){
-
-                  if(typeof _dateRawVal==='number'&&_dateRawVal>40000){
-                    // Excel 시리얼 날짜 → yyyy-MM-dd (padStart 없이)
-                    var _ep=new Date(1899,11,30);
-                    var _dd=new Date(_ep.getTime()+Math.floor(_dateRawVal)*86400000);
-                    var _m=_dd.getMonth()+1; var _d=_dd.getDate();
-                    dateStr=_dd.getFullYear()+'-'+(_m<10?'0'+_m:_m)+'-'+(_d<10?'0'+_d:_d);
-                  } else {
-                    var _ds=String(_dateRawVal).trim().split(' ')[0].split('T')[0];
-                    var _dp=_ds.split('-');
-                    if(_dp.length>=3) dateStr=_dp[0]+'-'+(_dp[1].length<2?'0'+_dp[1]:_dp[1])+'-'+(_dp[2].length<2?'0'+_dp[2]:_dp[2]);
-                    else dateStr=_ds;
-                  }
-                }
-                if(dateStr&&dateStr.length>=8){
-                  if(!p.dateRoutes[dateStr]) p.dateRoutes[dateStr]={};
-                  if(!p.dateRoutes[dateStr][route]) p.dateRoutes[dateStr][route]={cnt:0,ret:0};
-                  p.dateRoutes[dateStr][route].cnt+=cnt;
-                  p.dateRoutes[dateStr][route].ret+=ret;}
-              }
-            }
-
-            // 직원 이름 매칭 후 mergePerson
-            Object.keys(idMap).forEach(function(empId){
-              var p=idMap[empId];
-              var priceData=window._uPriceData||{};
-
-              // ★ 단가표 기준으로 라우트별 재계산
-              var calcGross=0;
-              var _pd=window._uPriceData||{}; // 항상 최신 참조
-              // 디버그: 첫번째 기사 단가 확인
-              if(!window._uPriceDebugShown){
-                
-              }
-              Object.keys(p.routes).forEach(function(route){
-                var rd=p.routes[route];
-                var rulePrice=(_pd[route]&&_pd[route].price)||rd.price||0;
-                rd.rulePrice=rulePrice; // 단가표 단가 저장
-                var amt=(rd.cnt||0)*rulePrice + (rd.ret||0)*rulePrice;
-                rd.ruleAmt=amt;
-                calcGross+=amt;
-              });
-
-              // 단가표 있으면 재계산, 없으면 엑셀 금액
-              var finalGross=Object.keys(_pd).length>0 ? calcGross : p.gross;
-
-              var routeDetails=Object.keys(p.routes).sort().map(function(r){
-                var rd=p.routes[r];
-                return {label:r,cnt:rd.cnt||0,ret:rd.ret||0,price:rd.rulePrice||rd.price||0,num:rd.ruleAmt||rd.amt||0,source:source};
-              });
-
-              mergePerson(empId, empId, p.camp, finalGross, p.cnt, 0, p.inc+p.fresh, 0, source, routeDetails);
-              var key=getKey(empId,empId);
-              if(mergeMap[key]){
-                mergeMap[key]._isCoupang=true;
-                mergeMap[key]._routes=p.routes;
-                mergeMap[key]._dateRoutes=p.dateRoutes||{};
-                mergeMap[key]._fresh=(mergeMap[key]._fresh||0)+p.fresh;
-                mergeMap[key]._inc=(mergeMap[key]._inc||0)+p.inc;
-              }
-            });
-            processFile(idx+1);
-            return;
-          }
-        }
 
         // 일반 엑셀 처리
         wb.SheetNames.forEach(function(shName){
