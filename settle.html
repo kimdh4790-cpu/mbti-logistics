@@ -17160,6 +17160,7 @@ var MENUS_SETTLE = [
     {ic:'📋',l:'범용 엑셀 정산',   p:'universal_input',  plan_key:'universal'},
     {ic:'⚙️',l:'계산 규칙 설정',   p:'universal_rules',  plan_key:'universal'},
     {ic:'👥',l:'직원 명단 등록',   p:'universal_emp',    plan_key:'universal'},
+    {ic:'📦',l:'재고관리',         p:'inventory',        plan_key:'universal'},
     {ic:'📈',l:'통계',             p:'stats',            plan_key:'universal'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
     {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'universal'}
@@ -17872,7 +17873,7 @@ function goPage(page){
   document.getElementById('topbar-right').innerHTML='';
   document.getElementById('sidebar').classList.remove('open');
   var _bd=document.getElementById('sb-backdrop');if(_bd)_bd.style.display='none';
-  var pages={settle:pageSettle,delivery_settle:pageDeliverySettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,my_roster:pageMyRoster,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,emp_home:pageEmpHome,vehicle:pageVehicle,expense:pageExpense,overtime:pageOvertime,evaluation:pageEvaluation,delivery_report:pageDeliveryReport,delivery_platform:pageDeliveryPlatform,delivery_input:pageDeliveryInput,notify_history:pageNotifyHistory,universal_input:pageUniversalInput,universal_settle:pageUniversalSettle,universal_rules:pageUniversalRules,universal_emp:pageUniversalEmp};
+  var pages={settle:pageSettle,delivery_settle:pageDeliverySettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,my_roster:pageMyRoster,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,emp_home:pageEmpHome,vehicle:pageVehicle,expense:pageExpense,overtime:pageOvertime,evaluation:pageEvaluation,delivery_report:pageDeliveryReport,delivery_platform:pageDeliveryPlatform,delivery_input:pageDeliveryInput,notify_history:pageNotifyHistory,universal_input:pageUniversalInput,universal_settle:pageUniversalSettle,universal_rules:pageUniversalRules,universal_emp:pageUniversalEmp,inventory:pageInventory};
   // ★ 플랜 체크
   var cd=window._cachedCompanyDoc||{};
   var planGate={
@@ -27690,6 +27691,306 @@ function _startDispatchListener(uid){
     if(e.ctrlKey&&e.keyCode===85){e.preventDefault();return false;}
   });
 })();
+// ════════════════════════════════════════════════════
+// 📦 재고관리
+// ════════════════════════════════════════════════════
+function pageInventory(){
+  document.getElementById('page-title').textContent='📦 재고관리';
+  var c=document.getElementById('content');
+  if(!_db||!_CU){c.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
+  var did=_CU.dealerId||_CU.uid;
+
+  c.innerHTML=
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
+      '<div style="font-size:15px;font-weight:800">📦 재고관리</div>'+
+      '<div style="display:flex;gap:8px">'+
+        '<button onclick="pageInventoryIn()" style="padding:7px 14px;background:var(--acc);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📥 입고등록</button>'+
+        '<button onclick="pageInventoryOut()" style="padding:7px 14px;background:#10b981;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📤 출고등록</button>'+
+      '</div>'+
+    '</div>'+
+    // 재고 현황 탭
+    '<div style="display:flex;gap:8px;margin-bottom:12px">'+
+      '<button onclick="_invTab(this,\'stock\')" id="inv-tab-stock" style="padding:6px 14px;background:var(--acc);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📊 재고현황</button>'+
+      '<button onclick="_invTab(this,\'in\')" id="inv-tab-in" style="padding:6px 14px;background:var(--bg3);color:var(--text2);border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📥 입고내역</button>'+
+      '<button onclick="_invTab(this,\'out\')" id="inv-tab-out" style="padding:6px 14px;background:var(--bg3);color:var(--text2);border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📤 출고내역</button>'+
+    '</div>'+
+    '<div id="inv-content"><div class="loading">⏳ 로딩 중...</div></div>';
+
+  _loadInventoryStock(did);
+}
+
+function _invClosePopup(el){
+  var p=el.closest('div');
+  while(p&&!p.style.position.includes('fixed')) p=p.parentElement;
+  if(p) p.remove();
+}
+
+function _invTab(btn, tab){
+  document.querySelectorAll('[id^="inv-tab-"]').forEach(function(b){
+    b.style.background='var(--bg3)'; b.style.color='var(--text2)';
+  });
+  btn.style.background='var(--acc)'; btn.style.color='#fff';
+  var did=_CU.dealerId||_CU.uid;
+  if(tab==='stock') _loadInventoryStock(did);
+  else if(tab==='in') _loadInventoryIn(did);
+  else if(tab==='out') _loadInventoryOut(did);
+}
+
+function _loadInventoryStock(did){
+  var c=document.getElementById('inv-content');
+  c.innerHTML='<div class="loading">⏳ 재고 계산 중...</div>';
+
+  // 입고 - 출고 = 현재고
+  Promise.all([
+    _db.collection('inventory_in').where('dealerId','==',did).get(),
+    _db.collection('inventory_out').where('dealerId','==',did).get()
+  ]).then(function(results){
+    var inDocs=results[0], outDocs=results[1];
+    var stock={}; // {itemCode: {name, category, qty, unitCost}}
+
+    inDocs.forEach(function(doc){
+      var d=doc.data();
+      var k=d.itemCode||d.itemName||'기타';
+      if(!stock[k]) stock[k]={name:d.itemName||k,category:d.category||'미분류',qty:0,unitCost:d.unitCost||0};
+      stock[k].qty+=d.qty||0;
+      if(d.unitCost) stock[k].unitCost=d.unitCost;
+    });
+
+    outDocs.forEach(function(doc){
+      var d=doc.data();
+      var k=d.itemCode||d.itemName||'기타';
+      if(!stock[k]) stock[k]={name:d.itemName||k,category:d.category||'미분류',qty:0,unitCost:0};
+      stock[k].qty-=d.qty||0;
+    });
+
+    var items=Object.keys(stock);
+    if(!items.length){
+      c.innerHTML='<div class="empty">📦 입고된 재고가 없습니다<br><small>입고등록 버튼으로 재고를 추가하세요</small></div>';
+      return;
+    }
+
+    // 카테고리별 그룹핑
+    var cats={};
+    items.forEach(function(k){
+      var cat=stock[k].category||'미분류';
+      if(!cats[cat]) cats[cat]=[];
+      cats[cat].push(k);
+    });
+
+    var html='<div style="overflow-x:auto">';
+    Object.keys(cats).sort().forEach(function(cat){
+      html+='<div style="margin-bottom:16px">'+
+        '<div style="font-size:12px;font-weight:800;color:var(--acc);margin-bottom:6px;padding:4px 8px;background:var(--bg3);border-radius:6px">'+esc(cat)+'</div>'+
+        '<table style="width:100%;border-collapse:collapse;font-size:12px">'+
+        '<thead><tr style="background:var(--bg3)">'+
+          '<th style="padding:7px 10px;text-align:left">품목명</th>'+
+          '<th style="padding:7px 10px;text-align:right">현재고</th>'+
+          '<th style="padding:7px 10px;text-align:right">단가</th>'+
+          '<th style="padding:7px 10px;text-align:right">재고금액</th>'+
+          '<th style="padding:7px 10px;text-align:center">상태</th>'+
+        '</tr></thead><tbody>';
+
+      cats[cat].forEach(function(k){
+        var s=stock[k];
+        var total=(s.qty||0)*(s.unitCost||0);
+        var status=s.qty<=0?'<span style="color:#dc2626;font-weight:700">품절</span>':
+                   s.qty<=10?'<span style="color:#f59e0b;font-weight:700">부족</span>':
+                   '<span style="color:#10b981;font-weight:700">정상</span>';
+        html+='<tr style="border-bottom:1px solid var(--border)">'+
+          '<td style="padding:7px 10px;font-weight:600">'+esc(s.name)+'</td>'+
+          '<td style="padding:7px 10px;text-align:right;font-weight:700">'+s.qty.toLocaleString()+'</td>'+
+          '<td style="padding:7px 10px;text-align:right">₩'+s.unitCost.toLocaleString()+'</td>'+
+          '<td style="padding:7px 10px;text-align:right">₩'+total.toLocaleString()+'</td>'+
+          '<td style="padding:7px 10px;text-align:center">'+status+'</td>'+
+        '</tr>';
+      });
+
+      html+='</tbody></table></div>';
+    });
+    html+='</div>';
+    c.innerHTML=html;
+  }).catch(function(e){c.innerHTML='<div class="empty">오류: '+e.message+'</div>';});
+}
+
+function _loadInventoryIn(did){
+  var c=document.getElementById('inv-content');
+  c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
+  _db.collection('inventory_in').where('dealerId','==',did).orderBy('createdAt','desc').limit(100).get()
+    .then(function(snap){
+      if(snap.empty){c.innerHTML='<div class="empty">입고 내역이 없습니다</div>';return;}
+      var html='<table style="width:100%;border-collapse:collapse;font-size:12px">'+
+        '<thead><tr style="background:var(--bg3)">'+
+          '<th style="padding:7px 10px;text-align:left">날짜</th>'+
+          '<th style="padding:7px 10px;text-align:left">품목</th>'+
+          '<th style="padding:7px 10px;text-align:left">카테고리</th>'+
+          '<th style="padding:7px 10px;text-align:right">수량</th>'+
+          '<th style="padding:7px 10px;text-align:right">단가</th>'+
+          '<th style="padding:7px 10px;text-align:left">거래처</th>'+
+        '</tr></thead><tbody>';
+      snap.forEach(function(doc){
+        var d=doc.data();
+        var dt=d.date||'';
+        html+='<tr style="border-bottom:1px solid var(--border)">'+
+          '<td style="padding:7px 10px">'+esc(dt)+'</td>'+
+          '<td style="padding:7px 10px;font-weight:600">'+esc(d.itemName||'')+'</td>'+
+          '<td style="padding:7px 10px">'+esc(d.category||'')+'</td>'+
+          '<td style="padding:7px 10px;text-align:right">'+((d.qty||0).toLocaleString())+'</td>'+
+          '<td style="padding:7px 10px;text-align:right">₩'+((d.unitCost||0).toLocaleString())+'</td>'+
+          '<td style="padding:7px 10px">'+esc(d.supplier||'')+'</td>'+
+        '</tr>';
+      });
+      html+='</tbody></table>';
+      c.innerHTML=html;
+    }).catch(function(e){c.innerHTML='<div class="empty">오류: '+e.message+'</div>';});
+}
+
+function _loadInventoryOut(did){
+  var c=document.getElementById('inv-content');
+  c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
+  _db.collection('inventory_out').where('dealerId','==',did).orderBy('createdAt','desc').limit(100).get()
+    .then(function(snap){
+      if(snap.empty){c.innerHTML='<div class="empty">출고 내역이 없습니다</div>';return;}
+      var html='<table style="width:100%;border-collapse:collapse;font-size:12px">'+
+        '<thead><tr style="background:var(--bg3)">'+
+          '<th style="padding:7px 10px;text-align:left">날짜</th>'+
+          '<th style="padding:7px 10px;text-align:left">품목</th>'+
+          '<th style="padding:7px 10px;text-align:right">수량</th>'+
+          '<th style="padding:7px 10px;text-align:left">담당자</th>'+
+          '<th style="padding:7px 10px;text-align:left">비고</th>'+
+        '</tr></thead><tbody>';
+      snap.forEach(function(doc){
+        var d=doc.data();
+        html+='<tr style="border-bottom:1px solid var(--border)">'+
+          '<td style="padding:7px 10px">'+esc(d.date||'')+'</td>'+
+          '<td style="padding:7px 10px;font-weight:600">'+esc(d.itemName||'')+'</td>'+
+          '<td style="padding:7px 10px;text-align:right">'+((d.qty||0).toLocaleString())+'</td>'+
+          '<td style="padding:7px 10px">'+esc(d.worker||'')+'</td>'+
+          '<td style="padding:7px 10px">'+esc(d.note||'')+'</td>'+
+        '</tr>';
+      });
+      html+='</tbody></table>';
+      c.innerHTML=html;
+    }).catch(function(e){c.innerHTML='<div class="empty">오류: '+e.message+'</div>';});
+}
+
+function pageInventoryIn(){
+  var did=_CU.dealerId||_CU.uid;
+  var html=
+    '<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px">'+
+    '<div style="background:var(--bg);border-radius:14px;padding:20px;width:100%;max-width:480px;max-height:80vh;overflow-y:auto">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
+        '<div style="font-size:14px;font-weight:800">📥 입고등록</div>'+
+        '<button onclick="_invClosePopup(this)" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2)">✕</button>'+
+      '</div>'+
+      '<div style="display:grid;gap:10px">'+
+        _invField('품목명 *','inv-item-name','text','예: 카스500캔')+
+        _invField('품목코드','inv-item-code','text','예: K001')+
+        _invField('카테고리','inv-category','text','예: 국산맥주')+
+        _invField('수량 *','inv-qty','number','0')+
+        _invField('단가(원)','inv-unit-cost','number','0')+
+        _invField('거래처','inv-supplier','text','예: OB맥주')+
+        _invField('입고일','inv-date','date','')+
+        _invField('비고','inv-note','text','')+
+      '</div>'+
+      '<button onclick="_saveInventoryIn()" style="width:100%;margin-top:16px;padding:12px;background:var(--acc);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer">💾 입고 저장</button>'+
+    '</div></div>';
+  var el=document.createElement('div'); el.innerHTML=html;
+  document.body.appendChild(el.firstChild);
+}
+
+function _invField(label,id,type,placeholder){
+  return '<div>'+
+    '<label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px">'+label+'</label>'+
+    '<input id="'+id+'" type="'+type+'" placeholder="'+placeholder+'" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--text);font-size:12px">'+
+  '</div>';
+}
+
+function _saveInventoryIn(){
+  var did=_CU.dealerId||_CU.uid;
+  var name=(document.getElementById('inv-item-name')||{}).value||'';
+  var qty=parseInt((document.getElementById('inv-qty')||{}).value)||0;
+  if(!name||!qty){toast('품목명과 수량은 필수입니다');return;}
+
+  var data={
+    dealerId:did,
+    itemName:name,
+    itemCode:(document.getElementById('inv-item-code')||{}).value||'',
+    category:(document.getElementById('inv-category')||{}).value||'미분류',
+    qty:qty,
+    unitCost:parseInt((document.getElementById('inv-unit-cost')||{}).value)||0,
+    supplier:(document.getElementById('inv-supplier')||{}).value||'',
+    date:(document.getElementById('inv-date')||{}).value||new Date().toISOString().split('T')[0],
+    note:(document.getElementById('inv-note')||{}).value||'',
+    createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  _db.collection('inventory_in').add(data).then(function(){
+    toast('✅ 입고 저장됨: '+name+' '+qty+'개');
+    document.querySelector('div[style*="fixed"]').remove();
+    pageInventory();
+  }).catch(function(e){toast('❌ '+e.message);});
+}
+
+function pageInventoryOut(){
+  var did=_CU.dealerId||_CU.uid;
+  // 품목 목록 먼저 로드
+  _db.collection('inventory_in').where('dealerId','==',did).get().then(function(snap){
+    var items={};
+    snap.forEach(function(doc){
+      var d=doc.data();
+      var k=d.itemCode||d.itemName;
+      items[k]=d.itemName||k;
+    });
+    var itemOptions=Object.keys(items).map(function(k){
+      return '<option value="'+esc(k)+'">'+esc(items[k])+'</option>';
+    }).join('');
+
+    var html=
+      '<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px">'+
+      '<div style="background:var(--bg);border-radius:14px;padding:20px;width:100%;max-width:480px">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
+          '<div style="font-size:14px;font-weight:800">📤 출고등록</div>'+
+          '<button onclick="_invClosePopup(this)" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2)">✕</button>'+
+        '</div>'+
+        '<div style="display:grid;gap:10px">'+
+          '<div><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px">품목 *</label>'+
+          '<select id="inv-out-item" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--text);font-size:12px">'+itemOptions+'</select></div>'+
+          _invField('수량 *','inv-out-qty','number','0')+
+          _invField('담당자','inv-out-worker','text','')+
+          _invField('출고일','inv-out-date','date','')+
+          _invField('비고','inv-out-note','text','')+
+        '</div>'+
+        '<button onclick="_saveInventoryOut()" style="width:100%;margin-top:16px;padding:12px;background:#10b981;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer">💾 출고 저장</button>'+
+      '</div></div>';
+    var el=document.createElement('div'); el.innerHTML=html;
+    document.body.appendChild(el.firstChild);
+  });
+}
+
+function _saveInventoryOut(){
+  var did=_CU.dealerId||_CU.uid;
+  var itemCode=(document.getElementById('inv-out-item')||{}).value||'';
+  var qty=parseInt((document.getElementById('inv-out-qty')||{}).value)||0;
+  if(!itemCode||!qty){toast('품목과 수량은 필수입니다');return;}
+
+  var data={
+    dealerId:did,
+    itemCode:itemCode,
+    itemName:itemCode,
+    qty:qty,
+    worker:(document.getElementById('inv-out-worker')||{}).value||'',
+    date:(document.getElementById('inv-out-date')||{}).value||new Date().toISOString().split('T')[0],
+    note:(document.getElementById('inv-out-note')||{}).value||'',
+    createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  _db.collection('inventory_out').add(data).then(function(){
+    toast('✅ 출고 저장됨: '+qty+'개');
+    _invClosePopup(document.querySelector('[style*="position:fixed"]')||document.body);
+    pageInventory();
+  }).catch(function(e){toast('❌ '+e.message);});
+}
+
 </script>
 </body>
 </html>
