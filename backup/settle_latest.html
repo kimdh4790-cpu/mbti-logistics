@@ -27867,7 +27867,7 @@ function _invLoadLedger(did, type){
           '<th style="padding:6px 8px">상품명</th>'+
           '<th style="padding:6px 8px;text-align:right">수량</th>'+
           (type==='in'?'<th style="padding:6px 8px">담당자</th><th style="padding:6px 8px">비고</th>':
-                       '<th style="padding:6px 8px">유형</th><th style="padding:6px 8px">권역</th><th style="padding:6px 8px">기사/노선</th><th style="padding:6px 8px;text-align:right">지시</th><th style="padding:6px 8px;text-align:right">실처리</th><th style="padding:6px 8px;text-align:right;color:#dc2626">파손</th><th style="padding:6px 8px">상태</th>')+
+                       '<th style="padding:6px 8px">유형</th><th style="padding:6px 8px">권역</th><th style="padding:6px 8px">매장</th><th style="padding:6px 8px">기사</th><th style="padding:6px 8px;text-align:right">지시</th><th style="padding:6px 8px;text-align:right">실처리</th><th style="padding:6px 8px;text-align:right;color:#dc2626">파손</th><th style="padding:6px 8px">상태</th>')+
         '</tr></thead><tbody>';
       snap.forEach(function(doc){
         var d=doc.data();
@@ -27882,6 +27882,7 @@ function _invLoadLedger(did, type){
             ('<td style="padding:6px 8px">'+esc(d.worker||'')+'</td><td style="padding:6px 8px;color:var(--text3)">'+esc(d.note||'')+'</td>'):
             ('<td style="padding:6px 8px;font-weight:700">'+esc(d.outType||'일반출고')+'</td>'+
             '<td style="padding:6px 8px;color:var(--text3)">'+esc(d.region||'')+'</td>'+
+            '<td style="padding:6px 8px;color:var(--text3)">'+esc(d.store||'')+'</td>'+
             '<td style="padding:6px 8px;color:var(--text3)">'+esc(d.route||d.worker||'')+'</td>'+
             '<td style="padding:6px 8px;text-align:right">'+(d.dirQty||d.qty||0)+'</td>'+
             '<td style="padding:6px 8px;text-align:right">'+(d.actQty||d.qty||0)+'</td>'+
@@ -28245,6 +28246,7 @@ function _invParseIntegrated(ws, did){
   var iType=h.findIndex(function(x){return x.includes('유형');});
   var iRegion=h.findIndex(function(x){return x.includes('권역');});
   var iRoute=h.findIndex(function(x){return x.includes('노선')||x.includes('기사');});
+  var iStore=h.findIndex(function(x){return x.includes('매장')||x.includes('배송매장');});
   var iCode=h.findIndex(function(x){return x.includes('상품코드');});
   var iSup=h.findIndex(function(x){return x.includes('납품업체');});
   var iName=h.findIndex(function(x){return x.includes('상품명');});
