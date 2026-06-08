@@ -1533,15 +1533,23 @@ function parseCoupangExcel(inp){
   var file=inp.files[0]; if(!file)return;
   if(typeof XLSX==='undefined'){toast('⚠️ 엑셀 라이브러리 로딩 중...'); return;}
   inp.value='';
-  // 파일명에서 월 추출
   var month=_extractMonthFromFilename(file.name);
   if(!month){
     var _now=new Date();
     var _prev=new Date(_now.getFullYear(),_now.getMonth()-1,1);
     month=_prev.getFullYear()+'-'+String(_prev.getMonth()+1).padStart(2,'0');
   }
-  toast('📂 '+month+' 정산 업로드 중...');
-  // Firebase 기사 로드 후 파싱
+
+  // ★ 업종별 파서 라우팅
+  var industry=(_COMPANY_CFG&&_COMPANY_CFG.industryType)||'coupang';
+  toast('📂 '+month+' 정산 업로드 중... ['+industry+']');
+
+  if(industry==='cleaning'){_parseCleaningExcel(file,month);return;}
+  if(industry==='insurance'){_parseInsuranceExcel(file,month);return;}
+  if(industry==='construction'){_parseConstructionExcel(file,month);return;}
+  if(industry==='quick'){_parseQuickExcel(file,month);return;}
+
+  // 기본: 쿠팡 파서
   var fbPromise=(window._db&&window._CU)
     ?window._db.collection('drivers').where('dealerId','==',window._CU.dealerId).get()
       .then(function(snap){var arr=[];snap.forEach(function(d){arr.push(Object.assign({id:d.id},d.data()));});return arr;})
@@ -1551,6 +1559,398 @@ function parseCoupangExcel(inp){
     _parseCoupangExcelInner(file,fbDrivers,month);
   });
 }
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ██ 업종별 AI정산 파서 ██
+// 공통 결과 구조: {name, empId, camp, gross, deduct, net, details}
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// ── 공통: 결과 렌더링 ──
+function _renderIndustrySettle(results, month, industryLabel){
+  var did=_CU.dealerId||_CU.uid;
+  var c=document.getElementById('content');
+  if(!results||!results.length){toast('❌ 파싱 결과 없음');return;}
+
+  var totalGross=results.reduce(function(s,r){return s+(r.gross||0);},0);
+  var totalNet=results.reduce(function(s,r){return s+(r.net||0);},0);
+
+  var html='<div style="max-width:800px;margin:0 auto;padding:16px">'+
+    '<div style="background:linear-gradient(135deg,#1e3a5f,#7c3aed);border-radius:14px;padding:16px 20px;color:#fff;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">'+
+      '<div>'+
+        '<div style="font-size:11px;opacity:.6;margin-bottom:4px">'+industryLabel+' · '+month+'</div>'+
+        '<div style="font-size:18px;font-weight:900">'+results.length+'명 정산 완료</div>'+
+      '</div>'+
+      '<div style="text-align:right">'+
+        '<div style="font-size:10px;opacity:.6">총 지급액</div>'+
+        '<div style="font-size:20px;font-weight:900">₩'+totalNet.toLocaleString()+'</div>'+
+      '</div>'+
+    '</div>'+
+    '<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">'+
+      '<button id="ind-save-btn" style="padding:9px 18px;background:#10b981;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">💾 저장 + 명세서 발송</button>'+
+      '<button id="ind-excel-btn" style="padding:9px 18px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📊 엑셀 다운로드</button>'+
+    '</div>'+
+    '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
+    '<thead><tr style="background:var(--bg3)">'+
+      '<th style="padding:8px;text-align:left">이름</th>'+
+      '<th style="padding:8px;text-align:left">캠프/현장</th>'+
+      '<th style="padding:8px;text-align:right;color:#10b981">지급액</th>'+
+      '<th style="padding:8px;text-align:right;color:#dc2626">공제액</th>'+
+      '<th style="padding:8px;text-align:right;color:#3b82f6">실지급</th>'+
+      '<th style="padding:8px">상세</th>'+
+    '</tr></thead><tbody>';
+
+  results.forEach(function(r,i){
+    html+='<tr style="border-bottom:1px solid var(--border)">'+
+      '<td style="padding:8px;font-weight:700">'+esc(r.name||'-')+'</td>'+
+      '<td style="padding:8px;color:var(--text3)">'+esc(r.camp||'-')+'</td>'+
+      '<td style="padding:8px;text-align:right;color:#10b981">₩'+(r.gross||0).toLocaleString()+'</td>'+
+      '<td style="padding:8px;text-align:right;color:#dc2626">₩'+(r.deduct||0).toLocaleString()+'</td>'+
+      '<td style="padding:8px;text-align:right;font-weight:800;color:#3b82f6">₩'+(r.net||0).toLocaleString()+'</td>'+
+      '<td style="padding:8px">'+
+        '<button onclick="_showIndustryDetail('+i+')" style="padding:3px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;font-size:10px;cursor:pointer">상세</button>'+
+      '</td>'+
+    '</tr>';
+  });
+
+  html+='<tr style="background:var(--bg3);font-weight:800">'+
+    '<td colspan="2" style="padding:8px">합계</td>'+
+    '<td style="padding:8px;text-align:right;color:#10b981">₩'+totalGross.toLocaleString()+'</td>'+
+    '<td style="padding:8px;text-align:right;color:#dc2626">₩'+results.reduce(function(s,r){return s+(r.deduct||0);},0).toLocaleString()+'</td>'+
+    '<td style="padding:8px;text-align:right;color:#3b82f6">₩'+totalNet.toLocaleString()+'</td>'+
+    '<td></td>'+
+  '</tr>';
+  html+='</tbody></table></div></div>';
+
+  c.innerHTML=html;
+  window._industryResults=results;
+  window._industryMonth=month;
+  window._industryLabel=industryLabel;
+  window._industryDid=did;
+  setTimeout(function(){
+    var sb=document.getElementById('ind-save-btn');
+    if(sb) sb.addEventListener('click',function(){
+      _industrySettleSaveAll(window._industryDid, window._industryResults, window._industryMonth, window._industryLabel);
+    });
+    var eb=document.getElementById('ind-excel-btn');
+    if(eb) eb.addEventListener('click',function(){
+      _uBuildExcelDownload(window._industryResults, window._industryMonth);
+    });
+  },50);
+}
+
+// 상세 팝업
+function _showIndustryDetail(idx){
+  var r=window._industryResults[idx];
+  if(!r) return;
+  var html='<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:9000;overflow-y:auto;padding:16px" onclick="if(event.target===this)this.remove()">'+
+    '<div style="background:var(--bg);border-radius:14px;padding:20px;max-width:400px;margin:0 auto">'+
+      '<div style="font-size:14px;font-weight:800;margin-bottom:14px">'+esc(r.name)+' 상세</div>'+
+      '<table style="width:100%;font-size:12px;border-collapse:collapse">';
+  (r.details||[]).forEach(function(d){
+    html+='<tr style="border-bottom:1px solid var(--border)">'+
+      '<td style="padding:6px;color:var(--text3)">'+esc(d.label)+'</td>'+
+      '<td style="padding:6px;text-align:right;font-weight:700">'+
+        (typeof d.value==='number'?'₩'+d.value.toLocaleString():esc(String(d.value||'-')))+
+      '</td></tr>';
+  });
+  html+='<tr style="background:var(--bg3);font-weight:800">'+
+    '<td style="padding:6px">실지급액</td>'+
+    '<td style="padding:6px;text-align:right;color:#3b82f6">₩'+(r.net||0).toLocaleString()+'</td>'+
+  '</tr>';
+  html+='</table><button id="ind-detail-close" style="margin-top:14px;width:100%;padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;cursor:pointer">닫기</button></div></div>';
+  var el=document.createElement('div'); el.innerHTML=html;
+  var pop=el.firstChild; document.body.appendChild(pop);
+  var cb=pop.querySelector('#ind-detail-close');
+  if(cb) cb.addEventListener('click',function(){pop.remove();});
+}
+
+// 저장 + 명세서 발송
+function _industrySettleSaveAll(did, results, month, label){
+  if(!confirm(results.length+'명 정산을 저장하고 명세서를 발송하시겠습니까?')) return;
+  var batch=_db.batch();
+  var settleRef=_db.collection('universal_settlements').doc();
+  batch.set(settleRef,{
+    dealerId:did, month:month, title:label+' '+month,
+    totalCount:results.length,
+    totalGross:results.reduce(function(s,r){return s+(r.gross||0);},0),
+    totalNet:results.reduce(function(s,r){return s+(r.net||0);},0),
+    employees:results, createdAt:new Date().toISOString()
+  });
+  batch.commit().then(function(){
+    toast('✅ 저장 완료 — 명세서 발송 준비 중...');
+    setTimeout(function(){toast('📱 명세서 발송은 정산현황에서 진행하세요');},1500);
+  }).catch(function(e){toast('❌ '+e.message);});
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🧹 청소·파견 파서
+// 컬럼: 이름, 캠프/현장, 출근일수, 시급, 연장시간, 야간시간, 지각공제, 식대
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _parseCleaningExcel(file, month){
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
+      if(!rows.length){toast('❌ 데이터 없음');return;}
+
+      var headers=rows[0].map(function(h){return String(h||'').trim();});
+      function col(keywords){
+        var idx=headers.findIndex(function(h){return keywords.some(function(k){return h.includes(k);});});
+        return idx;
+      }
+
+      var iName=col(['이름','성명','직원']);
+      var iCamp=col(['캠프','현장','팀','부서']);
+      var iDays=col(['출근','일수','근무일']);
+      var iRate=col(['시급','일당','단가']);
+      var iOver=col(['연장','초과']);
+      var iNight=col(['야간']);
+      var iLate=col(['지각','공제']);
+      var iMeal=col(['식대','식비']);
+      var iId=col(['ID','아이디','사번']);
+
+      if(iName<0){toast('❌ 이름 컬럼 없음. 헤더: '+headers.slice(0,5).join(', '));return;}
+
+      var results=[];
+      rows.slice(1).forEach(function(row){
+        var name=String(row[iName]||'').trim(); if(!name) return;
+        var camp=iCamp>=0?String(row[iCamp]||'').trim():'';
+        var days=iDays>=0?parseFloat(row[iDays])||0:0;
+        var rate=iRate>=0?parseFloat(String(row[iRate]||'').replace(/,/g,''))||0:0;
+        var over=iOver>=0?parseFloat(row[iOver])||0:0;
+        var night=iNight>=0?parseFloat(row[iNight])||0:0;
+        var late=iLate>=0?parseFloat(String(row[iLate]||'').replace(/,/g,''))||0:0;
+        var meal=iMeal>=0?parseFloat(String(row[iMeal]||'').replace(/,/g,''))||0:0;
+
+        // 계산
+        var basePay=Math.round(days*rate);
+        var overPay=Math.round(over*rate*1.5);
+        var nightPay=Math.round(night*rate*0.5);
+        var gross=basePay+overPay+nightPay+meal;
+        var deduct=Math.round(late);
+        var net=gross-deduct;
+
+        results.push({
+          name:name, empId:iId>=0?String(row[iId]||''):'', camp:camp,
+          gross:gross, deduct:deduct, net:net,
+          details:[
+            {label:'출근일수',value:days+'일'},
+            {label:'시급/일당',value:rate},
+            {label:'기본급',value:basePay},
+            {label:'연장수당 (×1.5)',value:overPay},
+            {label:'야간수당 (×0.5)',value:nightPay},
+            {label:'식대',value:meal},
+            {label:'지각공제',value:-deduct},
+          ]
+        });
+      });
+
+      if(!results.length){toast('❌ 파싱된 직원 없음');return;}
+      toast('✅ 청소·파견 파싱 완료 — '+results.length+'명');
+      _renderIndustrySettle(results, month, '🧹 청소·파견');
+    }catch(err){toast('❌ 파싱 오류: '+err.message);}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🛡️ 보험설계사 파서
+// 컬럼: 이름, 팀, 신계약건수, 수수료율, 유지건수, 유지수수료, 승진수당, 차감
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _parseInsuranceExcel(file, month){
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
+      if(!rows.length){toast('❌ 데이터 없음');return;}
+
+      var headers=rows[0].map(function(h){return String(h||'').trim();});
+      function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
+
+      var iName=col(['이름','성명']);
+      var iTeam=col(['팀','소속','부서']);
+      var iNewCnt=col(['신계약','신규계약','신건']);
+      var iNewRate=col(['신계약수수료','수수료율','신건단가']);
+      var iKeepCnt=col(['유지','유지건']);
+      var iKeepAmt=col(['유지수수료','유지금액']);
+      var iBonus=col(['승진','특별','인센티브','수당']);
+      var iDeduct=col(['차감','공제']);
+
+      if(iName<0){toast('❌ 이름 컬럼 없음');return;}
+
+      var results=[];
+      rows.slice(1).forEach(function(row){
+        var name=String(row[iName]||'').trim(); if(!name) return;
+        var team=iTeam>=0?String(row[iTeam]||''):'';
+        var newCnt=iNewCnt>=0?parseFloat(row[iNewCnt])||0:0;
+        var newRate=iNewRate>=0?parseFloat(String(row[iNewRate]||'').replace(/,/g,''))||0:0;
+        var keepCnt=iKeepCnt>=0?parseFloat(row[iKeepCnt])||0:0;
+        var keepAmt=iKeepAmt>=0?parseFloat(String(row[iKeepAmt]||'').replace(/,/g,''))||0:0;
+        var bonus=iBonus>=0?parseFloat(String(row[iBonus]||'').replace(/,/g,''))||0:0;
+        var deduct=iDeduct>=0?parseFloat(String(row[iDeduct]||'').replace(/,/g,''))||0:0;
+
+        var newPay=Math.round(newCnt*newRate);
+        var gross=newPay+keepAmt+bonus;
+        var net=gross-deduct;
+
+        results.push({
+          name:name, empId:'', camp:team,
+          gross:gross, deduct:deduct, net:net,
+          details:[
+            {label:'신계약 건수',value:newCnt+'건'},
+            {label:'신계약 수수료율',value:newRate},
+            {label:'신계약 수수료',value:newPay},
+            {label:'유지 건수',value:keepCnt+'건'},
+            {label:'유지 수수료',value:keepAmt},
+            {label:'승진/인센티브',value:bonus},
+            {label:'차감',value:-deduct},
+          ]
+        });
+      });
+
+      if(!results.length){toast('❌ 파싱된 직원 없음');return;}
+      toast('✅ 보험설계사 파싱 완료 — '+results.length+'명');
+      _renderIndustrySettle(results, month, '🛡️ 보험설계사');
+    }catch(err){toast('❌ 파싱 오류: '+err.message);}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🏗️ 건설·일용직 파서
+// 컬럼: 이름, 현장, 출근일수, 일당, 연장시간, 야간수당, 위험수당, 공제
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _parseConstructionExcel(file, month){
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
+      if(!rows.length){toast('❌ 데이터 없음');return;}
+
+      var headers=rows[0].map(function(h){return String(h||'').trim();});
+      function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
+
+      var iName=col(['이름','성명']);
+      var iSite=col(['현장','공사','사이트','작업장']);
+      var iDays=col(['출근','일수','근무일']);
+      var iDay=col(['일당','단가','일급']);
+      var iOver=col(['연장','초과시간']);
+      var iNight=col(['야간','야간수당']);
+      var iRisk=col(['위험','특수','위험수당']);
+      var iDeduct=col(['공제','차감']);
+
+      if(iName<0){toast('❌ 이름 컬럼 없음');return;}
+
+      var results=[];
+      rows.slice(1).forEach(function(row){
+        var name=String(row[iName]||'').trim(); if(!name) return;
+        var site=iSite>=0?String(row[iSite]||''):'';
+        var days=iDays>=0?parseFloat(row[iDays])||0:0;
+        var dayRate=iDay>=0?parseFloat(String(row[iDay]||'').replace(/,/g,''))||0:0;
+        var over=iOver>=0?parseFloat(row[iOver])||0:0;
+        var nightAmt=iNight>=0?parseFloat(String(row[iNight]||'').replace(/,/g,''))||0:0;
+        var riskAmt=iRisk>=0?parseFloat(String(row[iRisk]||'').replace(/,/g,''))||0:0;
+        var deduct=iDeduct>=0?parseFloat(String(row[iDeduct]||'').replace(/,/g,''))||0:0;
+
+        var basePay=Math.round(days*dayRate);
+        var overPay=Math.round(over*dayRate/8*1.5);
+        var gross=basePay+overPay+nightAmt+riskAmt;
+        var net=gross-deduct;
+
+        results.push({
+          name:name, empId:'', camp:site,
+          gross:gross, deduct:deduct, net:net,
+          details:[
+            {label:'현장',value:site||'-'},
+            {label:'출근일수',value:days+'일'},
+            {label:'일당',value:dayRate},
+            {label:'기본급',value:basePay},
+            {label:'연장수당',value:overPay},
+            {label:'야간수당',value:nightAmt},
+            {label:'위험수당',value:riskAmt},
+            {label:'공제',value:-deduct},
+          ]
+        });
+      });
+
+      if(!results.length){toast('❌ 파싱된 직원 없음');return;}
+      toast('✅ 건설·일용직 파싱 완료 — '+results.length+'명');
+      _renderIndustrySettle(results, month, '🏗️ 건설·일용직');
+    }catch(err){toast('❌ 파싱 오류: '+err.message);}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🚗 퀵·대리운전 파서
+// 컬럼: 이름, 팀, 콜건수, 건당단가, 장거리수당, 야간수당, 수수료차감
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _parseQuickExcel(file, month){
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
+      if(!rows.length){toast('❌ 데이터 없음');return;}
+
+      var headers=rows[0].map(function(h){return String(h||'').trim();});
+      function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
+
+      var iName=col(['이름','성명','기사']);
+      var iTeam=col(['팀','소속','권역']);
+      var iCall=col(['콜','건수','운행건']);
+      var iRate=col(['건당','단가','콜단가']);
+      var iLong=col(['장거리','특수']);
+      var iNight=col(['야간','심야']);
+      var iComm=col(['수수료','차감','공제']);
+      var iId=col(['ID','아이디']);
+
+      if(iName<0){toast('❌ 이름 컬럼 없음');return;}
+
+      var results=[];
+      rows.slice(1).forEach(function(row){
+        var name=String(row[iName]||'').trim(); if(!name) return;
+        var team=iTeam>=0?String(row[iTeam]||''):'';
+        var calls=iCall>=0?parseFloat(row[iCall])||0:0;
+        var rate=iRate>=0?parseFloat(String(row[iRate]||'').replace(/,/g,''))||0:0;
+        var longAmt=iLong>=0?parseFloat(String(row[iLong]||'').replace(/,/g,''))||0:0;
+        var nightAmt=iNight>=0?parseFloat(String(row[iNight]||'').replace(/,/g,''))||0:0;
+        var comm=iComm>=0?parseFloat(String(row[iComm]||'').replace(/,/g,''))||0:0;
+
+        var callPay=Math.round(calls*rate);
+        var gross=callPay+longAmt+nightAmt;
+        var deduct=Math.round(comm);
+        var net=gross-deduct;
+
+        results.push({
+          name:name, empId:iId>=0?String(row[iId]||''):'', camp:team,
+          gross:gross, deduct:deduct, net:net,
+          details:[
+            {label:'콜 건수',value:calls+'건'},
+            {label:'건당 단가',value:rate},
+            {label:'콜 수입',value:callPay},
+            {label:'장거리 수당',value:longAmt},
+            {label:'야간 수당',value:nightAmt},
+            {label:'수수료 차감',value:-deduct},
+          ]
+        });
+      });
+
+      if(!results.length){toast('❌ 파싱된 직원 없음');return;}
+      toast('✅ 퀵·대리운전 파싱 완료 — '+results.length+'명');
+      _renderIndustrySettle(results, month, '🚗 퀵·대리운전');
+    }catch(err){toast('❌ 파싱 오류: '+err.message);}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
 function _parseCoupangExcelInner(file,fbDrivers,month){
   var reader=new FileReader();
   reader.onload=function(e){
