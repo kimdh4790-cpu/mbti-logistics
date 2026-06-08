@@ -27708,10 +27708,9 @@ function pageInventory(){
   c.innerHTML=
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
       '<div style="font-size:15px;font-weight:800">📦 재고관리</div>'+
-      '<button id="inv-upload-btn" style="padding:7px 14px;background:var(--acc);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📥 엑셀 업로드</button>'+
-      '<label style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#7c3aed;color:#fff;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer" onclick="_invPickCompare()">'+
-        '🔍 입고 대조검수'+
-      '</label>'+
+      '<button id="inv-upload-btn" style="padding:7px 14px;background:var(--acc);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📥 파일 업로드</button>'+
+      '<button id="inv-compare-btn" style="padding:7px 14px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔍 입고 대조검수</button>'+
+      '<button id="inv-add-item-btn" style="padding:7px 14px;background:#10b981;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">➕ 품목 추가</button>'+
       '<button id="inv-delete-all-btn" style="padding:7px 14px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗑 전체삭제</button>'+
     '</div>'+
     '<div id="inv-tabs" style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">'+
@@ -27719,8 +27718,7 @@ function pageInventory(){
       '<button id="itab-stock" style="padding:6px 14px;background:var(--acc);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📦 재고현황</button>'+
       '<button id="itab-in" style="padding:6px 14px;background:var(--bg3);color:var(--text2);border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📥 입고원장</button>'+
       '<button id="itab-out" style="padding:6px 14px;background:var(--bg3);color:var(--text2);border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📤 출고원장</button>'+
-      '<button id="itab-reg-in" style="padding:6px 14px;background:#10b981;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">+ 입고</button>'+
-      '<button id="itab-reg-out" style="padding:6px 14px;background:#f59e0b;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">+ 출고</button>'+
+
     '</div>'+
     '<div id="inv-filter" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>'+
     '<div id="inv-content"><div class="loading">⏳ 로딩 중...</div></div>';
@@ -27731,15 +27729,15 @@ function pageInventory(){
     var btn_s=document.getElementById('itab-stock');
     var btn_i=document.getElementById('itab-in');
     var btn_o=document.getElementById('itab-out');
-    var btn_ri=document.getElementById('itab-reg-in');
-    var btn_ro=document.getElementById('itab-reg-out');
     var btn_d=document.getElementById('itab-dash');
     if(btn_d) btn_d.addEventListener('click',function(){_invTab(btn_d,'dash');});
     if(btn_s) btn_s.addEventListener('click',function(){_invTab(btn_s,'stock');});
     if(btn_i) btn_i.addEventListener('click',function(){_invTab(btn_i,'in');});
     if(btn_o) btn_o.addEventListener('click',function(){_invTab(btn_o,'out');});
-    if(btn_ri) btn_ri.addEventListener('click',function(){_invRegIn(did);});
-    if(btn_ro) btn_ro.addEventListener('click',function(){_invRegOut(did);});
+    var btn_cmp=document.getElementById('inv-compare-btn');
+    if(btn_cmp) btn_cmp.addEventListener('click',function(){_invPickCompare();});
+    var btn_add=document.getElementById('inv-add-item-btn');
+    if(btn_add) btn_add.addEventListener('click',function(){_invRegisterItem(did);});
   },100);
     var btn_up=document.getElementById('inv-upload-btn');
     if(btn_up) btn_up.addEventListener('click',function(){_invPickFile();});
@@ -28544,11 +28542,151 @@ function _invDetailPopup(d, docId, type){
 
 window._invPickFile = function(){
   var inp=document.createElement('input');
-  inp.type='file'; inp.accept='.xlsx,.xls';
+  inp.type='file'; inp.accept='.xlsx,.xls,.txt,.csv';
   inp.onchange=function(){
-    if(inp.files[0]) _invUploadExcel(inp, (_CU.dealerId||_CU.uid));
+    if(!inp.files[0]) return;
+    var file=inp.files[0];
+    var did=_CU.dealerId||_CU.uid;
+    if(file.name.endsWith('.txt')||file.name.endsWith('.csv')){
+      _invUploadText(file, did);
+    } else {
+      _invUploadExcel(inp, did);
+    }
   };
   inp.click();
+};
+
+// txt/csv 파서 — 탭/쉼표 구분, 헤더 자동 감지
+window._invUploadText = function(file, did){
+  toast('⏳ 텍스트 파싱 중...');
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var text=e.target.result;
+      var lines=text.split('\n').filter(function(l){return l.trim();});
+      if(!lines.length){toast('❌ 내용 없음');return;}
+
+      // 구분자 자동 감지 (탭 or 쉼표)
+      var sep=lines[0].indexOf('	')>=0?'	':',';
+      var headers=lines[0].split(sep).map(function(h){return h.trim().replace(/"/g,'');});
+
+      // 헤더 인덱스
+      var iCode=headers.findIndex(function(h){return h.includes('상품코드')||h.includes('코드');});
+      var iSup=headers.findIndex(function(h){return h.includes('납품업체')||h.includes('거래처');});
+      var iCat=headers.findIndex(function(h){return h.includes('대분류');});
+      var iSub=headers.findIndex(function(h){return h.includes('소분류')||h.includes('주종');});
+      var iName=headers.findIndex(function(h){return h.includes('상품명')||h.includes('품목명');});
+      var iVol=headers.findIndex(function(h){return h.includes('용량');});
+      var iBase=headers.findIndex(function(h){return h.includes('현재고')||h.includes('기초재고');});
+      var iSafe=headers.findIndex(function(h){return h.includes('안전재고');});
+      var iOri=headers.findIndex(function(h){return h.includes('원산지');});
+      var iMaker=headers.findIndex(function(h){return h.includes('제조사');});
+
+      // 입출고 구분 확인
+      var iDiv=headers.findIndex(function(h){return h==='구분';});
+      var iType=headers.findIndex(function(h){return h.includes('유형');});
+      var iTxn=headers.findIndex(function(h){return h.includes('전표');});
+
+      var isLedger=iDiv>=0||iTxn>=0;
+
+      if(isLedger){
+        // 통합 입출고 원장
+        var iRegion=headers.findIndex(function(h){return h.includes('권역');});
+        var iStore=headers.findIndex(function(h){return h.includes('매장');});
+        var iRoute=headers.findIndex(function(h){return h.includes('기사')||h.includes('노선');});
+        var iDir=headers.findIndex(function(h){return h.includes('지시수량');});
+        var iAct=headers.findIndex(function(h){return h.includes('실제처리');});
+        var iDmg=headers.findIndex(function(h){return h.includes('파손')||h.includes('폐기량');});
+        var iBottle=headers.findIndex(function(h){return h.includes('공병');});
+        var iStat=headers.findIndex(function(h){return h.includes('처리상태');});
+        var iNote=headers.findIndex(function(h){return h.includes('비고');});
+
+        var inItems=[], outItems=[];
+        var today=new Date().toISOString().split('T')[0];
+
+        lines.slice(1).forEach(function(line){
+          var cols=line.split(sep).map(function(c){return c.trim().replace(/"/g,'');});
+          var txn=iTxn>=0?cols[iTxn]:'';
+          var div=iDiv>=0?cols[iDiv]:'';
+          var code=iCode>=0?cols[iCode]:'';
+          if(!txn&&!code) return;
+
+          var outType=iType>=0?cols[iType]:'일반출고';
+          var dirQty=iDir>=0?(parseInt(cols[iDir])||0):0;
+          var actQty=iAct>=0?(parseInt(cols[iAct])||0):0;
+          var dmgQty=iDmg>=0?(parseInt(cols[iDmg])||0):0;
+          var deductQty=outType==='파손폐기'?dmgQty:outType==='반품'?0:outType==='기타'?(actQty+dmgQty):actQty;
+
+          var base={
+            dealerId:did, txnId:txn, itemCode:code,
+            name:iName>=0?cols[iName]:code,
+            supplier:iSup>=0?cols[iSup]:'',
+            region:iRegion>=0?cols[iRegion]:'',
+            store:iStore>=0?cols[iStore]:'',
+            route:iRoute>=0?cols[iRoute]:'',
+            outType:outType,
+            dirQty:dirQty, actQty:actQty, dmgQty:dmgQty,
+            bottleReturn:iBottle>=0?(parseInt(cols[iBottle])||0):0,
+            status:iStat>=0?cols[iStat]:'',
+            note:iNote>=0?cols[iNote]:'',
+            date:today,
+            updatedAt:new Date().toISOString()
+          };
+
+          var isIn=div==='입고'||(txn&&txn.startsWith('IN-'));
+          if(isIn){
+            inItems.push(Object.assign({},base,{qty:actQty||dirQty}));
+          } else {
+            outItems.push(Object.assign({},base,{qty:deductQty}));
+          }
+        });
+        toast('⏳ 입고 '+inItems.length+'건 / 출고 '+outItems.length+'건 저장 중...');
+        _invBatchSave(did, [], inItems, outItems);
+
+      } else {
+        // 품목 마스터
+        var MAKERS=[
+          {k:'테라',cat:'맥주',ori:'국산',maker:'하이트진로'},{k:'켈리',cat:'맥주',ori:'국산',maker:'하이트진로'},
+          {k:'참이슬',cat:'소주',ori:'국산',maker:'하이트진로'},{k:'진로',cat:'소주',ori:'국산',maker:'하이트진로'},
+          {k:'카스',cat:'맥주',ori:'국산',maker:'OB맥주'},{k:'처음처럼',cat:'소주',ori:'국산',maker:'롯데주류'},
+          {k:'칠성',cat:'탄산음료',ori:'국산',maker:'롯데칠성'},{k:'코카콜라',cat:'탄산음료',ori:'외국산',maker:'Coca-Cola'},
+          {k:'스프라이트',cat:'탄산음료',ori:'외국산',maker:'Coca-Cola'},{k:'하이네켄',cat:'맥주',ori:'외국산',maker:'Heineken'},
+          {k:'아사히',cat:'맥주',ori:'외국산',maker:'Asahi'},{k:'조니워커',cat:'양주/위스키',ori:'외국산',maker:'Diageo'},
+          {k:'발렌타인',cat:'양주/위스키',ori:'외국산',maker:'Pernod Ricard'},{k:'몬테스',cat:'와인',ori:'외국산',maker:'Montes'},
+          {k:'토닉',cat:'탄산음료',ori:'외국산',maker:'Schweppes'},{k:'포카리',cat:'이온음료',ori:'외국산',maker:'오츠카(일본)'},
+        ];
+        function autoClassify(name){
+          for(var i=0;i<MAKERS.length;i++) if(name.indexOf(MAKERS[i].k)>=0) return MAKERS[i];
+          return {cat:'기타',ori:'국산',maker:'기타'};
+        }
+
+        var items=[];
+        lines.slice(1).forEach(function(line){
+          var cols=line.split(sep).map(function(c){return c.trim().replace(/"/g,'');});
+          var name=iName>=0?cols[iName]:'';
+          if(!name) return;
+          var auto=autoClassify(name);
+          items.push({
+            dealerId:did,
+            itemCode:iCode>=0?cols[iCode]:(did.slice(0,3)+'-'+items.length),
+            supplier:iSup>=0?cols[iSup]:'',
+            category:iCat>=0?cols[iCat]:'주류',
+            subcat:iSub>=0?cols[iSub]:auto.cat,
+            origin:iOri>=0?cols[iOri]:auto.ori,
+            maker:iMaker>=0?cols[iMaker]:auto.maker,
+            name:name,
+            volume:iVol>=0?cols[iVol]:'',
+            baseQty:iBase>=0?(parseInt(cols[iBase])||0):0,
+            safeQty:iSafe>=0?(parseInt(cols[iSafe])||0):0,
+            updatedAt:new Date().toISOString()
+          });
+        });
+        toast('⏳ '+items.length+'종 저장 중...');
+        _invBatchSave(did, items, [], []);
+      }
+    }catch(err){toast('❌ '+err.message);}
+  };
+  reader.readAsText(file,'utf-8');
 };
 
 window._invUploadExcel = function(input, did){
