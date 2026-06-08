@@ -28900,6 +28900,7 @@ function _invParseBySheet(wb, did){
       });
     }
   });
+  if(items.length>0) toast('첫품목: ['+JSON.stringify(items[0].name)+'] code:['+items[0].itemCode+']');
   toast('⏳ '+items.length+'종 저장 중...');
   _invBatchSave(did, items, [], []);
 }
