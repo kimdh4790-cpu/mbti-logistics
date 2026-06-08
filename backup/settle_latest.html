@@ -27708,9 +27708,7 @@ function pageInventory(){
   c.innerHTML=
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
       '<div style="font-size:15px;font-weight:800">📦 재고관리</div>'+
-      '<label style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:var(--acc);color:#fff;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer" onclick="_invPickFile()">'+
-        '📥 엑셀 업로드'+
-      '</label>'+
+      '<button id="inv-upload-btn" style="padding:7px 14px;background:var(--acc);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📥 엑셀 업로드</button>'+
       '<label style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#7c3aed;color:#fff;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer" onclick="_invPickCompare()">'+
         '🔍 입고 대조검수'+
       '</label>'+
@@ -27743,6 +27741,8 @@ function pageInventory(){
     if(btn_ri) btn_ri.addEventListener('click',function(){_invRegIn(did);});
     if(btn_ro) btn_ro.addEventListener('click',function(){_invRegOut(did);});
   },100);
+    var btn_up=document.getElementById('inv-upload-btn');
+    if(btn_up) btn_up.addEventListener('click',function(){toast('클릭됨');_invPickFile();});
     var btn_del=document.getElementById('inv-delete-all-btn');
     if(btn_del) btn_del.addEventListener('click',function(){
       if(!confirm('재고 데이터를 전체 삭제하시겠습니까?\n(품목마스터+입고+출고 전부)')) return;
