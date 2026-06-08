@@ -27708,13 +27708,9 @@ function pageInventory(){
   c.innerHTML=
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
       '<div style="font-size:15px;font-weight:800">📦 재고관리</div>'+
-      '<div style="display:flex;flex-wrap:wrap;gap:6px">'+
-      '<button id="inv-master-btn" style="padding:7px 14px;background:#6366f1;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📋 하차 명세서 등록</button>'+
-      '<button id="inv-in-btn" style="padding:7px 14px;background:#10b981;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📥 입고 실사 등록</button>'+
-      '<button id="inv-out-btn" style="padding:7px 14px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📤 출고 실사 등록</button>'+
-      '<button id="inv-compare-btn" style="padding:7px 14px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔍 입고 대조검수</button>'+
-      '<button id="inv-add-item-btn" style="padding:7px 14px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">➕ 품목 추가</button>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">'+
       '<button id="inv-delete-all-btn" style="padding:7px 14px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗑 전체삭제</button>'+
+      '<span id="inv-realtime-badge" style="font-size:10px;color:#10b981;font-weight:700">● 실시간 동기화 중</span>'+
     '</div>'+
     '</div>'+
     '<div id="inv-tabs" style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">'+
@@ -27762,6 +27758,26 @@ function pageInventory(){
   },100);
     var btn_up=document.getElementById('inv-upload-btn');
     if(btn_up) btn_up.addEventListener('click',function(){_invPickFile();});
+    // 실시간 동기화 — inventory 변경 감지
+    if(window._invUnsubscribe) window._invUnsubscribe();
+    window._invUnsubscribe = _db.collection('inventory')
+      .where('dealerId','==',did).limit(1)
+      .onSnapshot(function(){
+        var activeTab=document.querySelector('[id^="itab-"][style*="var(--acc)"]');
+        if(activeTab){
+          var tabId=activeTab.id.replace('itab-','');
+          if(tabId==='stock') _invLoadStock(did,'');
+          else if(tabId==='in') _invLoadLedger(did,'in');
+          else if(tabId==='out') _invLoadLedger(did,'out');
+          else if(tabId==='dash') _invLoadDash(did);
+        }
+        var badge=document.getElementById('inv-realtime-badge');
+        if(badge){badge.textContent='● '+new Date().toLocaleTimeString()+' 동기화됨';setTimeout(function(){if(badge)badge.textContent='● 실시간 동기화 중';},3000);}
+      },function(){
+        var badge=document.getElementById('inv-realtime-badge');
+        if(badge){badge.textContent='⚠️ 연결 끊김';badge.style.color='#dc2626';}
+      });
+
     var btn_del=document.getElementById('inv-delete-all-btn');
     if(btn_del) btn_del.addEventListener('click',function(){
       if(!confirm('재고 데이터를 전체 삭제하시겠습니까?\n(품목마스터+입고+출고 전부)')) return;
@@ -27789,6 +27805,30 @@ function _invTab(btn, tab){
   document.querySelectorAll('[id^="itab-"]').forEach(function(b){b.style.background='var(--bg3)';b.style.color='var(--text2)';});
   btn.style.background='var(--acc)'; btn.style.color='#fff';
   var did=_CU.dealerId||_CU.uid;
+
+  // 탭별 버튼 렌더링
+  var fEl=document.getElementById('inv-filter');
+  var tabBtns={
+    stock:[
+      {id:'tb-master',label:'📋 하차 명세서 등록',color:'#6366f1',action:function(){_invPickFileType('master');}},
+      {id:'tb-additem',label:'➕ 품목 추가',color:'var(--bg3)',tc:'var(--text)',bd:'1px solid var(--border)',action:function(){_invRegisterItem(did);}}
+    ],
+    in:[
+      {id:'tb-in',label:'📥 입고 실사 등록',color:'#10b981',action:function(){_invPickFileType('in');}},
+      {id:'tb-compare',label:'🔍 입고 대조검수',color:'#7c3aed',action:function(){_invPickCompare();}}
+    ],
+    out:[
+      {id:'tb-out',label:'📤 출고 실사 등록',color:'#f59e0b',action:function(){_invPickFileType('out');}}
+    ],
+    return:[], monthly:[], dash:[]
+  };
+  var defs=tabBtns[tab]||[];
+  var bh='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">';
+  defs.forEach(function(b){bh+='<button id="'+b.id+'" style="padding:7px 14px;background:'+b.color+';color:'+(b.tc||'#fff')+';border:'+(b.bd||'none')+';border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">'+b.label+'</button>';});
+  bh+='</div>';
+  fEl.innerHTML=bh;
+  defs.forEach(function(b){var el=document.getElementById(b.id);if(el)el.addEventListener('click',b.action);});
+
   if(tab==='dash') _invLoadDash(did);
   else if(tab==='monthly') _invLoadMonthly(did);
   else if(tab==='stock') _invLoadStock(did,'');
