@@ -8981,7 +8981,10 @@ function _renderUniversalRules(c, r){
       '</div>'+
     '</div>'+
 
-    '<button onclick="_uSaveRules()" style="width:100%;padding:14px;background:linear-gradient(135deg,#0066ff,#7c3aed);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">💾 규칙 저장</button>'+
+    '<div style="display:flex;gap:8px">'+
+      '<button onclick="_uSaveRules()" style="flex:1;padding:14px;background:linear-gradient(135deg,#0066ff,#7c3aed);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">💾 규칙 저장</button>'+
+      '<button onclick="_uResetRules()" style="padding:14px 18px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">🗑 전체 초기화</button>'+
+    '</div>'+
     '</div>';
 
   // 이미 _loadUniversalRules에서 로드됨 — _uPriceData 그대로 사용
@@ -9452,6 +9455,20 @@ window._uBulkUploadRoutes = function(input, ti){
 
 function _uRemoveRRow(btn){btn.closest('.rrow').remove();}
 function _uRemoveRow(btn){btn.closest('.rrow, [id^="rrow-"]').remove();}
+
+function _uResetRules(){
+  if(!confirm('모든 규칙(단가표·팀장수수료·아이디지원·인센설정)을 초기화하시겠습니까?\n되돌릴 수 없습니다.')) return;
+  var did=_CU.dealerId||_CU.uid;
+  _db.collection('universal_rules').doc(did).delete()
+    .then(function(){
+      window._uCurrentRules=null;
+      window._uPriceData={};
+      window._uLeaderMap={};
+      window._uRulesReady=false;
+      toast('✅ 규칙 초기화 완료');
+      pageUniversalRules();
+    }).catch(function(e){toast('❌ '+e.message);});
+}
 
 function _uSaveRules(){
   if(!_db||!_CU){toast('로그인 필요');return;}
