@@ -273,13 +273,13 @@ window.onBizDocSelected=onBizDocSelected;</script>
           <label id="svc-settle-label" onclick="selectService('settle')" style="border:2px solid var(--brand);border-radius:10px;padding:12px;cursor:pointer;text-align:center;transition:.2s;background:var(--brand-l)">
             <div style="font-size:20px;margin-bottom:4px">📦</div>
             <div style="font-size:12px;font-weight:700;color:var(--brand)">AI 정산</div>
-            <div style="font-size:10px;color:var(--text3);margin-top:2px">쿠팡·물류·택배</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:2px">물류·택배</div>
             <div style="font-size:10px;color:var(--brand);font-weight:700;margin-top:3px">350,000원/10명</div>
           </label>
           <label id="svc-delivery-label" onclick="selectService('delivery')" style="border:2px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;text-align:center;transition:.2s">
             <div style="font-size:20px;margin-bottom:4px">🛵</div>
             <div style="font-size:12px;font-weight:700;color:var(--text2)">배달대행</div>
-            <div style="font-size:10px;color:var(--text3);margin-top:2px">배민·쿠팡이츠</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:2px">배달대행</div>
             <div style="font-size:10px;color:var(--text3);font-weight:700;margin-top:3px">350,000원/10명</div>
           </label>
           <label id="svc-universal-label" onclick="selectService('universal')" style="border:2px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;text-align:center;transition:.2s">
@@ -326,7 +326,7 @@ window.onBizDocSelected=onBizDocSelected;</script>
             <div style="display:flex;gap:6px"><input id="j-biz-type" type="text" placeholder="운수" style="flex:1"><input id="j-biz-kind" type="text" placeholder="택배운반" style="flex:1"></div></div>
           <div class="fg"><label>사업장 주소</label><input id="j-biz-addr" type="text" placeholder="부산시..."></div>
         </div>
-        <div class="fg"><label>정산 아이디 <span style="color:var(--text3);font-size:10px;font-weight:400">(쿠팡ID 등)</span></label><input id="j-driverid-quick" type="text" placeholder="kim001 (영문+숫자)"></div>
+        <div class="fg"><label>정산 아이디 <span style="color:var(--text3);font-size:10px;font-weight:400">(직원ID)</span></label><input id="j-driverid-quick" type="text" placeholder="kim001 (영문+숫자)"></div>
         <div class="fg"><label>주민번호 <span style="color:var(--text3);font-size:10px;font-weight:400">(선택)</span></label><input id="j-ssn" type="text" placeholder="000000-0000000" style="font-family:monospace"></div>
         <div class="fg"><label>입사일 <span style="color:var(--text3);font-size:10px;font-weight:400">(선택)</span></label><input id="j-joindate" type="date"></div>
         <div class="fg"><label>비밀번호 <span style="color:var(--red)">*</span></label><input id="j-pw" type="password" placeholder="6자 이상"></div>
@@ -10240,14 +10240,11 @@ window._uDetailTab=function(ci){
 
 // 범용 명세서 HTML 생성
 function _buildUniversalPayslip(emp, month, compName){
-  // ★ 쿠팡Raw 데이터면 AI정산 명세서 함수 활용
   var sources = emp.sources||[];
   var details = emp.details||[];
-  var isCoupang = !!(emp.isCoupang)
-    || sources.some(function(s){return s.label&&(s.label.indexOf('정산서')>=0||s.label.indexOf('정산Raw')>=0||s.label.indexOf('쿠팡')>=0);})
-    || details.some(function(d){return d.label&&/^[0-9]{3}[A-D]$/.test(d.label);});
+  var isCoupang = false; // 범용정산에서 쿠팡 분기 제거
 
-  if(isCoupang){
+  if(false){// 쿠팡 분기 비활성화
     // 라우트별 상세 — details 또는 _routes에서 추출
     var routeDetails=[];
     if(emp._routes){
@@ -11391,7 +11388,7 @@ window._universalSave=function(){
       _etcPlus:r._etcPlus||0,
       _etcMinus:r._etcMinus||0,
       _adv:r._adv||0,
-      isCoupang:!!(r._isCoupang),
+      isCoupang:false,
       _routes:r._routes?(function(routes){
         var out={};
         Object.keys(routes).forEach(function(k){
