@@ -10991,18 +10991,15 @@ window._uDoParseMulti = function(files, status){
                 if(!fromR||!toR) return;
 
                 // dates 배열 구성
-                var tDFull=(rule.dates||[]).map(function(d){
-                  var p=String(d).trim().split('-');
-                  if(p.length<3) return '';
-                  return p[0]+'-'+(p[1].length<2?'0'+p[1]:p[1])+'-'+(p[2].length<2?'0'+p[2]:p[2]);
-                }).filter(Boolean);
-                // startDate/endDate fallback
-                if(!tDFull.length&&rule.startDate){
-                  var sd=String(rule.startDate).trim();
-                  var ed=String(rule.endDate||rule.startDate).trim();
-                  tDFull=[sd];
-                  if(ed&&ed!==sd) tDFull.push(ed);
-                }
+                // dates + startDate/endDate 모두 합산
+                var tDFull=[];
+                (rule.dates||[]).forEach(function(d){
+                  if(d) tDFull.push(String(d).trim());
+                });
+                if(rule.startDate&&tDFull.indexOf(String(rule.startDate).trim())<0) tDFull.push(String(rule.startDate).trim());
+                if(rule.endDate&&tDFull.indexOf(String(rule.endDate).trim())<0) tDFull.push(String(rule.endDate).trim());
+                // 빈 값 제거
+                tDFull=tDFull.filter(function(d){return d&&d.length>=8;});
                 var tDYM=tDFull.map(function(d){return _uDateYM(d);}).filter(Boolean);
                 var tR=rule.routes||[];
                 var tot=0;
@@ -11187,13 +11184,7 @@ window._uDoParseMulti = function(files, status){
                   if(!p.dateRoutes[dateStr]) p.dateRoutes[dateStr]={};
                   if(!p.dateRoutes[dateStr][route]) p.dateRoutes[dateStr][route]={cnt:0,ret:0};
                   p.dateRoutes[dateStr][route].cnt+=cnt;
-                  p.dateRoutes[dateStr][route].ret+=ret;
-                  // 디버그: kycandksh 첫 날짜 확인
-                  if(!window._drDbg&&empId&&empId.indexOf('kycandksh')>=0){
-                    window._drDbg=true;
-                    toast('dateStr:'+dateStr+' raw:'+String(_dateRawVal).slice(0,20)+' type:'+typeof _dateRawVal);
-                  }
-                }
+                  p.dateRoutes[dateStr][route].ret+=ret;}
               }
             }
 
