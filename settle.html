@@ -27750,15 +27750,19 @@ function pageInventory(){
       toast('⏳ 삭제 중...');
       var cols=['inventory','inventory_in','inventory_out'];
       var ci=0;
-      function delNext(){
-        if(ci>=cols.length){window._invDbg=false;toast('✅ 전체 삭제 완료');pageInventory();return;}
-        _db.collection(cols[ci]).where('dealerId','==',did2).get().then(function(snap){
-          if(snap.empty){ci++;delNext();return;}
-          var b=_db.batch(); snap.forEach(function(d){b.delete(d.ref);}); 
-          return b.commit();
-        }).then(function(){ci++;delNext();}).catch(function(e){toast('❌ '+e.message);});
+      function delCol(){
+        if(ci>=cols.length){toast('✅ 전체 삭제 완료');pageInventory();return;}
+        function delBatch(){
+          _db.collection(cols[ci]).where('dealerId','==',did2).limit(200).get().then(function(snap){
+            if(snap.empty){ci++;delCol();return;}
+            var b=_db.batch();
+            snap.forEach(function(d){b.delete(d.ref);});
+            b.commit().then(function(){delBatch();});
+          }).catch(function(e){toast('❌ '+e.message);});
+        }
+        delBatch();
       }
-      delNext();
+      delCol();
     });
 }
 
@@ -28844,10 +28848,10 @@ function _invParseBySheet(wb, did){
   var items=[];
   wb.SheetNames.forEach(function(sn){
     var ws=wb.Sheets[sn];
-    var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-    // 헤더행 찾기 (순번 또는 상품명 컬럼)
+    var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
+    // 헤더행 찾기 (상품명 컬럼)
     var hdrRow=rows.findIndex(function(r){
-      return r.some(function(c){return String(c).includes('상품명');});
+      return r.some(function(c){return String(c||'').includes('상품명');});
     });
     if(hdrRow<0) return;
     var hdr=rows[hdrRow].map(function(c){return String(c||'').trim();});
