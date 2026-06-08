@@ -911,6 +911,33 @@ export default {
       '/api','/cron-expire','/favicon.ico','/manifest.json',
       '/sw.js','/firebase-messaging-sw.js','/robots.txt'
     ]);
+    // ── robots.txt 직접 반환 ──
+    if (path === '/robots.txt') {
+      return new Response(
+`User-agent: *
+Allow: /
+
+User-agent: Yeti
+Allow: /
+Crawl-delay: 1
+
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 1
+
+User-agent: Daumoa
+Allow: /
+Crawl-delay: 1
+
+User-agent: bingbot
+Allow: /
+Crawl-delay: 1
+
+Sitemap: https://donway.ai.kr/sitemap.xml`,
+        { headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'public, max-age=86400' } }
+      );
+    }
+
     // .html 파일은 슬러그 라우팅 제외 (정적 파일 직접 서빙)
     if (path.endsWith('.html') && method === 'GET') {
       try {
