@@ -28123,17 +28123,20 @@ function _invLoadLedger(did, type){
                        '<th style="padding:6px 8px">유형</th><th style="padding:6px 8px">용도</th><th style="padding:6px 8px">권역</th><th style="padding:6px 8px">매장</th><th style="padding:6px 8px">기사</th><th style="padding:6px 8px;text-align:right">지시</th><th style="padding:6px 8px;text-align:right">실처리</th><th style="padding:6px 8px;text-align:right;color:#dc2626">파손</th><th style="padding:6px 8px;text-align:right;color:#7c3aed">공병</th><th style="padding:6px 8px">상태</th>')+
         '</tr></thead><tbody>';
       snap.forEach(function(doc){
-        var d=doc.data();
-        html+='<tr style="border-bottom:1px solid var(--border)">'+
+        var d=doc.data(); var docId=doc.id;
+        // 출고 유형 색상
+        var typeColor=d.outType==='파손폐기'?'#dc2626':d.outType==='반품'?'#3b82f6':d.outType==='기타'?'#f59e0b':'var(--text)';
+        var rowBg=d.outType==='파손폐기'?'#fff5f5':d.outType==='반품'?'#f0f8ff':d.outType==='기타'?'#fffbeb':'';
+        html+='<tr style="border-bottom:1px solid var(--border);cursor:pointer;'+rowBg+'" data-docid="'+docId+'" data-type="'+type+'">'+
           '<td style="padding:6px 8px">'+esc(d.date||'')+'</td>'+
-          '<td style="padding:6px 8px">'+esc(d.supplier||'')+'</td>'+
+          '<td style="padding:6px 8px">'+esc(d.supplier||d.name||'')+'</td>'+
           '<td style="padding:6px 8px">'+esc(d.category||'')+'</td>'+
           '<td style="padding:6px 8px;color:var(--text3)">'+esc(d.itemCode||'')+'</td>'+
           '<td style="padding:6px 8px;font-weight:600">'+esc(d.name||'')+'</td>'+
           '<td style="padding:6px 8px;text-align:right;font-weight:700;color:'+(type==='in'?'#10b981':'#f59e0b')+'">'+((d.qty||0))+'</td>'+
           (type==='in'?
             ('<td style="padding:6px 8px">'+esc(d.worker||'')+'</td><td style="padding:6px 8px;color:var(--text3)">'+esc(d.note||'')+'</td>'):
-            ('<td style="padding:6px 8px;font-weight:700">'+esc(d.outType||'일반출고')+'</td>'+
+            ('<td style="padding:6px 8px;font-weight:700;color:'+typeColor+'">'+esc(d.outType||'일반출고')+'</td>'+
             '<td style="padding:6px 8px;color:#7c3aed;font-size:10px">'+esc(d.usage||'')+'</td>'+
             '<td style="padding:6px 8px;color:var(--text3)">'+esc(d.region||'')+'</td>'+
             '<td style="padding:6px 8px;color:var(--text3)">'+esc(d.store||'')+'</td>'+
@@ -28147,6 +28150,17 @@ function _invLoadLedger(did, type){
       });
       html+='</tbody></table></div>';
       c.innerHTML=html;
+      // 행 클릭 이벤트 위임
+      var tbl=c.querySelector('table');
+      if(tbl) tbl.addEventListener('click',function(ev){
+        var tr=ev.target.closest('tr[data-docid]');
+        if(!tr) return;
+        var dId=tr.dataset.docid; var tp=tr.dataset.type;
+        var col=tp==='in'?'inventory_in':'inventory_out';
+        _db.collection(col).doc(dId).get().then(function(doc){
+          if(doc.exists) _invDetailPopup(doc.data(), dId, tp);
+        });
+      });
     }).catch(function(e){c.innerHTML='<div class="empty">오류: '+e.message+'</div>';});
 }
 
@@ -28504,6 +28518,14 @@ function _invParseIntegrated(ws, did){
   var iStore=h.findIndex(function(x){return x.includes('매장')||x.includes('배송매장');});
   var iUsage=h.findIndex(function(x){return x.includes('용도');});
   var iBottle=h.findIndex(function(x){return x.includes('공병');});
+  var iBarcode=h.findIndex(function(x){return x.includes('바코드')||x.includes('EAN');});
+  var iLiquorCode=h.findIndex(function(x){return x.includes('주류코드')||x.includes('통합코드');});
+  var iUnitCount=h.findIndex(function(x){return x.includes('본수')||x.includes('박스당');});
+  var iPbox=h.findIndex(function(x){return x.includes('PBOX')||x.includes('공상자')||x.includes('크레이트');});
+  var iKegId=h.findIndex(function(x){return x.includes('케그')||x.includes('Keg')||x.includes('keg');});
+  var iCardNo=h.findIndex(function(x){return x.includes('카드번호')||x.includes('주류카드');});
+  var iVehicle=h.findIndex(function(x){return x.includes('차량')||x.includes('번호판');});
+  var iReceiver=h.findIndex(function(x){return x.includes('인수자')||x.includes('수령자');});
   var iCode=h.findIndex(function(x){return x.includes('상품코드');});
   var iSup=h.findIndex(function(x){return x.includes('납품업체');});
   var iName=h.findIndex(function(x){return x.includes('상품명');});
@@ -28536,6 +28558,17 @@ function _invParseIntegrated(ws, did){
       region:iRegion>=0?String(row[iRegion]||'').trim():'',
       route:iRoute>=0?String(row[iRoute]||'').trim():'',
       dirQty:dirQty, actQty:actQty, dmgQty:dmgQty,
+      store:iStore>=0?String(row[iStore]||'').trim():'',
+      usage:iUsage>=0?String(row[iUsage]||'').trim():'',
+      bottleReturn:iBottle>=0?(parseInt(row[iBottle])||0):0,
+      pboxReturn:iPbox>=0?(parseInt(row[iPbox])||0):0,
+      barcode:iBarcode>=0?String(row[iBarcode]||'').trim():'',
+      liquorCode:iLiquorCode>=0?String(row[iLiquorCode]||'').trim():'',
+      unitCount:iUnitCount>=0?String(row[iUnitCount]||'').trim():'',
+      kegId:iKegId>=0?String(row[iKegId]||'').trim():'',
+      cardNo:iCardNo>=0?String(row[iCardNo]||'').trim():'',
+      vehicle:iVehicle>=0?String(row[iVehicle]||'').trim():'',
+      receiver:iReceiver>=0?String(row[iReceiver]||'').trim():'',
       status:iStat>=0?String(row[iStat]||'').trim():'',
       note:iNote>=0?String(row[iNote]||'').trim():'',
       date:today,
