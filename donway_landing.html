@@ -340,6 +340,8 @@ footer{background:#0F172A;padding:44px 24px;font-size:12px;color:rgba(255,255,25
     <button class="itab" onclick="tab(this,'factory')">🏭 제조·공장</button>
     <button class="itab" onclick="tab(this,'company')">🏢 일반 기업</button>
     <button class="itab" onclick="tab(this,'quick')">⚡ 퀵·대리</button>
+    <button class="itab" onclick="tab(this,'liquor')">🍶 주류·식품</button>
+    <button class="itab" onclick="tab(this,'inventory')">📦 재고관리</button>
   </div>
 
   <!-- 택배 -->
@@ -399,6 +401,26 @@ footer{background:#0F172A;padding:44px 24px;font-size:12px;color:rgba(255,255,25
       <div class="icard star"><div class="ic-icon">📋</div><div><h3>위수탁 계약서 자동화</h3><p>기사별 계약서 자동 생성·ModuSign 전자서명·보관까지 자동</p></div></div>
       <div class="icard"><div class="ic-icon">💸</div><div><h3>가불 이자 자동 계산</h3><p>가불 등록 시 이자 자동 산출. 정산 시 자동 공제. 분쟁 원천 차단</p></div></div>
       <div class="icard"><div class="ic-icon">📱</div><div><h3>기사 전용 앱</h3><p>명세서·세금계산서·공지를 기사 앱으로 즉시 발송. SMS 비용 0원</p></div></div>
+    </div>
+  </div>
+
+  <!-- 주류·식품 -->
+  <div class="icontent" id="tab-liquor">
+    <div class="ind-inner">
+      <div class="icard star"><div class="ic-icon">🍶</div><div><h3>배송기사 급여 자동 정산</h3><p>배송건수·박스단가 기반 자동 계산. 권역별·기사별 명세서 발행</p></div></div>
+      <div class="icard star"><div class="ic-icon">📦</div><div><h3>입출고 실시간 재고관리</h3><p>하차 명세서 업로드 → 재고 자동 반영. 현장 실사와 사무실 실시간 공유</p></div></div>
+      <div class="icard"><div class="ic-icon">🔍</div><div><h3>입고 대조검수 자동화</h3><p>공급사 납품 명세서 vs 현장 실사 수량 오차 자동 분석·확정</p></div></div>
+      <div class="icard"><div class="ic-icon">📊</div><div><h3>파손·반품·공병 대시보드</h3><p>매장별 위험도, 기사별 배송수율, 공병회수량 한눈에 집계</p></div></div>
+    </div>
+  </div>
+
+  <!-- 재고관리 -->
+  <div class="icontent" id="tab-inventory">
+    <div class="ind-inner">
+      <div class="icard star"><div class="ic-icon">📋</div><div><h3>하차 명세서 자동 등록</h3><p>공급사 납품 명세서 엑셀 업로드 → 품목·수량 자동 분류. 국산/외국산/제조사 자동 태깅</p></div></div>
+      <div class="icard star"><div class="ic-icon">📡</div><div><h3>현장↔사무실 실시간 공유</h3><p>현장 담당자가 업로드하는 순간 사무실 화면 자동 갱신. Firebase 실시간 동기화</p></div></div>
+      <div class="icard"><div class="ic-icon">📅</div><div><h3>월별 입출고 통계</h3><p>월별 입고량·출고량·파손·반품 누적 집계. 품목별 월간 변동 추적</p></div></div>
+      <div class="icard"><div class="ic-icon">💳</div><div><h3>여신·공병 관리</h3><p>매장별 외상 여신 잔액 경고. 기사별 공병 회수량 집계. 주류카드 번호 연동</p></div></div>
     </div>
   </div>
 </section></div>
