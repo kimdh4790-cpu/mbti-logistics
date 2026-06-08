@@ -4319,6 +4319,7 @@ var PLAN_INFO={
   qr_payroll:  {label:'🔐💼 QR+급여',    unitPrice:17000, amount:510000, group:1, field:'qrPayrollPaid',   desc:'QR출퇴근+급여 통합'},
   delivery:    {label:'🛵 배달대행',      unitPrice:17000, amount:510000, group:1, field:'deliveryPaid',    desc:'배달대행 정산'},
   universal:   {label:'📋 범용 정산',     unitPrice:25000, amount:750000, group:1, field:'universalPaid',   desc:'업종무관 엑셀 정산'},
+  inventory:   {label:'📦 재고관리',      unitPrice:15000, amount:150000, group:1, field:'inventoryPaid',   desc:'입고/출고/재고현황 관리'},
   customer_g1: {label:'🛍️ 고객관리 G1', unitPrice:8500,  amount:255000, group:1, field:'customerG1Paid',  desc:'고객방문·알림·VIP'},
   customer_g2: {label:'🛍️ 고객관리 G2', unitPrice:6000,  amount:180000, group:2, field:'customerG2Paid',  desc:'고객방문·알림·VIP'},
   contract:    {label:'위수탁 계약서',    unitPrice:0,     amount:9900,   group:0, field:'contractPaid',    desc:'계약서 관리'},
@@ -17160,10 +17161,14 @@ var MENUS_SETTLE = [
     {ic:'📋',l:'범용 엑셀 정산',   p:'universal_input',  plan_key:'universal'},
     {ic:'⚙️',l:'계산 규칙 설정',   p:'universal_rules',  plan_key:'universal'},
     {ic:'👥',l:'직원 명단 등록',   p:'universal_emp',    plan_key:'universal'},
-    {ic:'📦',l:'재고관리',         p:'inventory',        plan_key:'universal'},
     {ic:'📈',l:'통계',             p:'stats',            plan_key:'universal'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
     {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'universal'}
+  ]},
+  {s:'📦 재고관리', items:[
+    {ic:'📦',l:'재고 현황',        p:'inventory',        plan_key:'inventory'},
+    {ic:'📥',l:'입고 등록',        p:'inventory',        plan_key:'inventory'},
+    {ic:'📤',l:'출고 등록',        p:'inventory',        plan_key:'inventory'},
   ]},
   {s:'🔐 QR 근태관리', items:[
     {ic:'🔐',l:'QR 출퇴근',        p:'attendance',       plan_key:'premium'},
