@@ -28177,9 +28177,9 @@ function _invLoadStock(did, filterSup){
     filtered.forEach(function(i){var s=i.supplier||'기타';if(!groups[s])groups[s]=[];groups[s].push(i);});
 
     Object.keys(groups).sort().forEach(function(sup){
-      var rows=groups[sup];
+      var supItems=groups[sup];
       html+='<div style="margin-bottom:18px">'+
-        '<div style="font-size:12px;font-weight:800;color:var(--acc);padding:5px 10px;background:var(--bg3);border-radius:7px;margin-bottom:6px">'+esc(sup)+' <span style="font-weight:400;color:var(--text3)">('+rows.length+'종)</span></div>'+
+        '<div style="font-size:12px;font-weight:800;color:var(--acc);padding:5px 10px;background:var(--bg3);border-radius:7px;margin-bottom:6px">'+esc(sup)+' <span style="font-weight:400;color:var(--text3)">('+supItems.length+'종)</span></div>'+
         '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">'+
         '<thead><tr style="background:var(--bg3)">'+
           '<th style="padding:6px 8px;text-align:left">품목명</th>'+
@@ -28196,7 +28196,7 @@ function _invLoadStock(did, filterSup){
           '<th style="padding:6px 8px;text-align:center">상태</th>'+
         '</tr></thead><tbody>';
 
-      rows.forEach(function(i){
+      supItems.forEach(function(i){
         var status=i._cur<=0?'<span style="color:#dc2626;font-weight:700">품절</span>':
                    i._cur<(i.safeQty||0)?'<span style="color:#f59e0b;font-weight:700">부족</span>':
                    '<span style="color:#10b981">정상</span>';
