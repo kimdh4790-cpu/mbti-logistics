@@ -28770,31 +28770,108 @@ function _invParseIntegrated(ws, did){
 
 // 거래처별 시트 파서
 function _invParseBySheet(wb, did){
+  // 제조사 자동 분류
+  var MAKERS=[
+    {k:'테라',cat:'맥주',ori:'국산',maker:'하이트진로'},
+    {k:'켈리',cat:'맥주',ori:'국산',maker:'하이트진로'},
+    {k:'하이트',cat:'맥주',ori:'국산',maker:'하이트진로'},
+    {k:'필라이트',cat:'맥주',ori:'국산',maker:'하이트진로'},
+    {k:'참이슬',cat:'소주',ori:'국산',maker:'하이트진로'},
+    {k:'진로',cat:'소주',ori:'국산',maker:'하이트진로'},
+    {k:'카스',cat:'맥주',ori:'국산',maker:'OB맥주'},
+    {k:'한맥',cat:'맥주',ori:'국산',maker:'OB맥주'},
+    {k:'피츠',cat:'맥주',ori:'국산',maker:'OB맥주'},
+    {k:'처음처럼',cat:'소주',ori:'국산',maker:'롯데주류'},
+    {k:'클라우드',cat:'맥주',ori:'국산',maker:'롯데주류'},
+    {k:'좋은데이',cat:'소주',ori:'국산',maker:'무학'},
+    {k:'시원',cat:'소주',ori:'국산',maker:'대선주조'},
+    {k:'칠성',cat:'탄산음료',ori:'국산',maker:'롯데칠성'},
+    {k:'코카콜라',cat:'탄산음료',ori:'외국산',maker:'Coca-Cola'},
+    {k:'스프라이트',cat:'탄산음료',ori:'외국산',maker:'Coca-Cola'},
+    {k:'환타',cat:'탄산음료',ori:'외국산',maker:'Coca-Cola'},
+    {k:'하이네켄',cat:'맥주',ori:'외국산',maker:'Heineken'},
+    {k:'아사히',cat:'맥주',ori:'외국산',maker:'Asahi'},
+    {k:'삿포로',cat:'맥주',ori:'외국산',maker:'Sapporo'},
+    {k:'기네스',cat:'맥주',ori:'외국산',maker:'Diageo'},
+    {k:'버드와이저',cat:'맥주',ori:'외국산',maker:'AB InBev'},
+    {k:'코로나',cat:'맥주',ori:'외국산',maker:'AB InBev'},
+    {k:'칭따오',cat:'맥주',ori:'외국산',maker:'Tsingtao'},
+    {k:'조니워커',cat:'양주/위스키',ori:'외국산',maker:'Diageo'},
+    {k:'발렌타인',cat:'양주/위스키',ori:'외국산',maker:'Pernod Ricard'},
+    {k:'글렌피딕',cat:'양주/위스키',ori:'외국산',maker:'William Grant'},
+    {k:'잭다니엘',cat:'양주/위스키',ori:'외국산',maker:'Brown-Forman'},
+    {k:'몬테스',cat:'와인',ori:'외국산',maker:'Montes'},
+    {k:'옐로우테일',cat:'와인',ori:'외국산',maker:'Casella'},
+    {k:'1865',cat:'와인',ori:'외국산',maker:'1865 Winery'},
+    {k:'산타리타',cat:'와인',ori:'외국산',maker:'Santa Rita'},
+    {k:'토닉',cat:'탄산음료',ori:'외국산',maker:'Schweppes'},
+    {k:'포카리',cat:'이온음료',ori:'외국산',maker:'오츠카(일본)'},
+    {k:'게토레이',cat:'이온음료',ori:'외국산',maker:'PepsiCo'},
+  ];
+  function autoClassify(name){
+    for(var i=0;i<MAKERS.length;i++){
+      if(name.indexOf(MAKERS[i].k)>=0) return MAKERS[i];
+    }
+    // 소분류 기반 추정
+    if(name.includes('소주')) return {cat:'소주',ori:'국산',maker:'기타'};
+    if(name.includes('맥주')||name.includes('캔')||name.includes('병')) return {cat:'맥주',ori:'국산',maker:'기타'};
+    if(name.includes('와인')) return {cat:'와인',ori:'외국산',maker:'기타'};
+    if(name.includes('위스키')||name.includes('양주')) return {cat:'양주/위스키',ori:'외국산',maker:'기타'};
+    if(name.includes('사이다')||name.includes('콜라')||name.includes('음료')) return {cat:'탄산음료',ori:'국산',maker:'기타'};
+    return {cat:'기타',ori:'국산',maker:'기타'};
+  }
+
   var items=[];
   wb.SheetNames.forEach(function(sn){
     var ws=wb.Sheets[sn];
     var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-    var hdrRow=rows.findIndex(function(r){return String(r[0]).includes('순번')||String(r[2]).includes('소분류');});
+    // 헤더행 찾기 (순번 또는 상품명 컬럼)
+    var hdrRow=rows.findIndex(function(r){
+      return r.some(function(c){return String(c).includes('상품명');});
+    });
     if(hdrRow<0) return;
-    var hdr=rows[hdrRow];
-    var iCat=hdr.findIndex(function(h){return String(h).includes('대분류');});
-    var iSub=hdr.findIndex(function(h){return String(h).includes('소분류');});
-    var iName=hdr.findIndex(function(h){return String(h).includes('상품명');});
-    var iVol=hdr.findIndex(function(h){return String(h).includes('용량');});
-    var iBase=hdr.findIndex(function(h){return String(h).includes('이월재고')||String(h).includes('기초재고')||String(h).includes('현재고');});
-    var iSafe=hdr.findIndex(function(h){return String(h).includes('안전재고');});
+    var hdr=rows[hdrRow].map(function(c){return String(c||'').trim();});
+    var iSup=hdr.findIndex(function(h){return h.includes('납품업체');});
+    var iCat=hdr.findIndex(function(h){return h.includes('대분류');});
+    var iSub=hdr.findIndex(function(h){return h.includes('소분류');});
+    var iName=hdr.findIndex(function(h){return h.includes('상품명');});
+    var iVol=hdr.findIndex(function(h){return h.includes('용량');});
+    var iBase=hdr.findIndex(function(h){return h.includes('현재고')||h.includes('기초재고')||h.includes('이월재고');});
+    var iSafe=hdr.findIndex(function(h){return h.includes('안전재고');});
+    var iSeq=hdr.findIndex(function(h){return h.includes('순번');});
+
+    if(iName<0) return;
+
     for(var r=hdrRow+1;r<rows.length;r++){
       var row=rows[r];
-      var name=String(row[iName>=0?iName:3]||'').trim();
-      if(!name||isNaN(rows[r][0])&&!name) continue;
+      var name=String(row[iName]||'').trim();
+      if(!name) continue;
+      // 순번 있으면 숫자여야 함
+      if(iSeq>=0&&row[iSeq]!==''&&isNaN(Number(row[iSeq]))) continue;
+
+      var supplier=iSup>=0?String(row[iSup]||sn).trim():sn;
+      var subcat=iSub>=0?String(row[iSub]||'').trim():'';
+      var auto=autoClassify(name);
+      var cat=subcat||auto.cat;
+      var origin=auto.ori;
+      var maker=auto.maker;
+
+      // 품목번호 추출 (품번-001 형태)
+      var codeMatch=name.match(/품번-(\d+)/);
+      var itemCode=codeMatch?supplier.replace(/[()]/g,'').slice(0,2)+'-'+codeMatch[1]:sn.slice(0,3)+'-'+String(r).padStart(3,'0');
+
       items.push({
-        dealerId:did, supplier:sn,
-        category:String(row[iCat>=0?iCat:1]||'').trim(),
-        subcat:String(row[iSub>=0?iSub:2]||'').trim(),
-        name:name, volume:String(row[iVol>=0?iVol:4]||'').trim(),
-        baseQty:parseInt(row[iBase>=0?iBase:5])||0,
-        safeQty:parseInt(row[iSafe>=0?iSafe:7])||0,
-        itemCode:sn.slice(0,3)+'-'+String(r).padStart(3,'0'),
+        dealerId:did,
+        itemCode:itemCode,
+        supplier:supplier,
+        category:iCat>=0?String(row[iCat]||'').trim():'주류',
+        subcat:cat,
+        origin:origin,
+        maker:maker,
+        name:name,
+        volume:iVol>=0?String(row[iVol]||'').trim():'',
+        baseQty:iBase>=0?(parseInt(row[iBase])||0):0,
+        safeQty:iSafe>=0?(parseInt(row[iSafe])||0):0,
         updatedAt:firebase.firestore.FieldValue.serverTimestamp()
       });
     }
