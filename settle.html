@@ -27714,6 +27714,7 @@ function pageInventory(){
       '<label style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#7c3aed;color:#fff;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer" onclick="_invPickCompare()">'+
         '🔍 입고 대조검수'+
       '</label>'+
+      '<button id="inv-delete-all-btn" style="padding:7px 14px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗑 전체삭제</button>'+
     '</div>'+
     '<div id="inv-tabs" style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">'+
       '<button id="itab-dash" style="padding:6px 14px;background:var(--bg3);color:var(--text2);border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📈 대시보드</button>'+
@@ -27742,6 +27743,25 @@ function pageInventory(){
     if(btn_ri) btn_ri.addEventListener('click',function(){_invRegIn(did);});
     if(btn_ro) btn_ro.addEventListener('click',function(){_invRegOut(did);});
   },100);
+    var btn_del=document.getElementById('inv-delete-all-btn');
+    if(btn_del) btn_del.addEventListener('click',function(){
+      if(!confirm('재고 데이터를 전체 삭제하시겠습니까?\n(품목마스터+입고+출고 전부)')) return;
+      var did2=_CU.dealerId||_CU.uid;
+      toast('⏳ 삭제 중...');
+      Promise.all([
+        _db.collection('inventory').where('dealerId','==',did2).get(),
+        _db.collection('inventory_in').where('dealerId','==',did2).get(),
+        _db.collection('inventory_out').where('dealerId','==',did2).get()
+      ]).then(function(res){
+        var b=_db.batch();
+        res.forEach(function(snap){snap.forEach(function(doc){b.delete(doc.ref);});});
+        return b.commit();
+      }).then(function(){
+        window._invDbg=false;
+        toast('✅ 전체 삭제 완료');
+        pageInventory();
+      }).catch(function(e){toast('❌ '+e.message);});
+    });
 }
 
 function _invTab(btn, tab){
