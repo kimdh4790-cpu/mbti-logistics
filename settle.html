@@ -27715,8 +27715,9 @@ function pageInventory(){
         '🔍 입고 대조검수'+
       '</label>'+
     '</div>'+
-    '<div id="inv-tabs" style="display:flex;gap:6px;margin-bottom:12px">'+
-      '<button id="itab-stock" style="padding:6px 14px;background:var(--acc);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📊 재고현황</button>'+
+    '<div id="inv-tabs" style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">'+
+      '<button id="itab-dash" style="padding:6px 14px;background:var(--bg3);color:var(--text2);border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📈 대시보드</button>'+
+      '<button id="itab-stock" style="padding:6px 14px;background:var(--acc);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📦 재고현황</button>'+
       '<button id="itab-in" style="padding:6px 14px;background:var(--bg3);color:var(--text2);border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📥 입고원장</button>'+
       '<button id="itab-out" style="padding:6px 14px;background:var(--bg3);color:var(--text2);border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📤 출고원장</button>'+
       '<button id="itab-reg-in" style="padding:6px 14px;background:#10b981;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">+ 입고</button>'+
@@ -27733,6 +27734,8 @@ function pageInventory(){
     var btn_o=document.getElementById('itab-out');
     var btn_ri=document.getElementById('itab-reg-in');
     var btn_ro=document.getElementById('itab-reg-out');
+    var btn_d=document.getElementById('itab-dash');
+    if(btn_d) btn_d.addEventListener('click',function(){_invTab(btn_d,'dash');});
     if(btn_s) btn_s.addEventListener('click',function(){_invTab(btn_s,'stock');});
     if(btn_i) btn_i.addEventListener('click',function(){_invTab(btn_i,'in');});
     if(btn_o) btn_o.addEventListener('click',function(){_invTab(btn_o,'out');});
@@ -27745,9 +27748,200 @@ function _invTab(btn, tab){
   document.querySelectorAll('[id^="itab-"]').forEach(function(b){b.style.background='var(--bg3)';b.style.color='var(--text2)';});
   btn.style.background='var(--acc)'; btn.style.color='#fff';
   var did=_CU.dealerId||_CU.uid;
-  if(tab==='stock') _invLoadStock(did,'');
+  if(tab==='dash') _invLoadDash(did);
+  else if(tab==='stock') _invLoadStock(did,'');
   else if(tab==='in') _invLoadLedger(did,'in');
   else if(tab==='out') _invLoadLedger(did,'out');
+}
+
+
+// ── 📈 종합 대시보드 ──
+function _invLoadDash(did){
+  var c=document.getElementById('inv-content');
+  document.getElementById('inv-filter').innerHTML='';
+  c.innerHTML='<div class="loading">⏳ 분석 중...</div>';
+
+  Promise.all([
+    _db.collection('inventory_out').where('dealerId','==',did).get(),
+    _db.collection('inventory_in').where('dealerId','==',did).get()
+  ]).then(function(res){
+    var outs=[]; res[0].forEach(function(doc){outs.push(doc.data());});
+    var ins=[];  res[1].forEach(function(doc){ins.push(doc.data());});
+
+    // ━━━ 1️⃣ 유형별 손실 집계 ━━━
+    var typeMap={};
+    outs.forEach(function(d){
+      var t=d.outType||'일반출고';
+      if(!typeMap[t]) typeMap[t]={cnt:0,dmg:0,qty:0};
+      typeMap[t].cnt++;
+      typeMap[t].dmg+=(d.dmgQty||0);
+      typeMap[t].qty+=(d.qty||0);
+    });
+
+    // ━━━ 2️⃣ 매장별 이상 집계 ━━━
+    var storeMap={};
+    outs.forEach(function(d){
+      var s=d.store||d.region||'미분류';
+      if(!storeMap[s]) storeMap[s]={total:0,loss:0,return:0,etc:0};
+      storeMap[s].total++;
+      if(d.outType==='파손폐기') storeMap[s].loss++;
+      else if(d.outType==='반품') storeMap[s].return++;
+      else if(d.outType==='기타') storeMap[s].etc++;
+    });
+
+    // ━━━ 3️⃣ 기사별 배송수율 ━━━
+    var driverMap={};
+    outs.forEach(function(d){
+      var dr=d.route||d.worker||'미배정';
+      if(!driverMap[dr]) driverMap[dr]={dir:0,act:0,dmg:0,cnt:0};
+      driverMap[dr].dir+=(d.dirQty||0);
+      driverMap[dr].act+=(d.actQty||d.qty||0);
+      driverMap[dr].dmg+=(d.dmgQty||0);
+      driverMap[dr].cnt++;
+    });
+
+    // ━━━ 4️⃣ 확인요망 ━━━
+    var pending=outs.filter(function(d){return d.status&&(d.status.includes('확인요망')||d.status.includes('배송중')||d.status.includes('반품회수'));});
+
+    // ━━━ 렌더링 ━━━
+    var html='';
+
+    // 요약 카드
+    var totalOut=outs.length;
+    var totalLoss=outs.filter(function(d){return d.outType!=='일반출고'&&d.outType!=='일반입고';}).length;
+    var totalDmg=outs.reduce(function(s,d){return s+(d.dmgQty||0);},0);
+    var pendingCnt=pending.length;
+
+    html+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px">';
+    html+=_invDashCard('전체 출고건',totalOut+'건','#6b7280');
+    html+=_invDashCard('손실 건수',totalLoss+'건','#dc2626');
+    html+=_invDashCard('파손 수량',totalDmg+'박스','#f59e0b');
+    html+=_invDashCard('⚠️ 확인요망',pendingCnt+'건','#7c3aed');
+    html+='</div>';
+
+    // 1️⃣ 유형별
+    html+='<div style="margin-bottom:16px">'+
+      '<div style="font-size:12px;font-weight:800;margin-bottom:8px">1️⃣ 유형별 구분 — 정상 vs 손실</div>'+
+      '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">';
+    var typeColors={'일반출고':'#10b981','일반입고':'#3b82f6','파손폐기':'#dc2626','반품':'#3b82f6','기타':'#f59e0b'};
+    Object.keys(typeMap).forEach(function(t){
+      var color=typeColors[t]||'#6b7280';
+      var isLoss=(t==='파손폐기'||t==='반품'||t==='기타');
+      html+='<div style="background:'+(isLoss?'#fef2f2':'var(--bg3)')+';border-radius:8px;padding:10px;border-left:3px solid '+color+'">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center">'+
+          '<span style="font-size:11px;font-weight:700;color:'+color+'">'+esc(t)+'</span>'+
+          '<span style="font-size:16px;font-weight:800">'+typeMap[t].cnt+'건</span>'+
+        '</div>'+
+        (typeMap[t].dmg>0?'<div style="font-size:10px;color:#dc2626;margin-top:2px">파손 '+typeMap[t].dmg+'박스</div>':'')+
+      '</div>';
+    });
+    html+='</div></div>';
+
+    // 2️⃣ 매장별 블랙리스트
+    var storeArr=Object.keys(storeMap).map(function(s){
+      var d=storeMap[s];
+      return {store:s,total:d.total,score:d.loss+d.return+d.etc,loss:d.loss,ret:d.return,etc:d.etc};
+    }).sort(function(a,b){return b.score-a.score;});
+
+    html+='<div style="margin-bottom:16px">'+
+      '<div style="font-size:12px;font-weight:800;margin-bottom:8px">2️⃣ 매장별 이상 현황 <span style="font-size:10px;color:var(--text3);font-weight:400">(파손+반품+기타 합계 순)</span></div>'+
+      '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">'+
+      '<thead><tr style="background:var(--bg3)">'+
+        '<th style="padding:6px 8px;text-align:left">매장</th>'+
+        '<th style="padding:6px 8px;text-align:right">전체</th>'+
+        '<th style="padding:6px 8px;text-align:right;color:#dc2626">파손</th>'+
+        '<th style="padding:6px 8px;text-align:right;color:#3b82f6">반품</th>'+
+        '<th style="padding:6px 8px;text-align:right;color:#f59e0b">기타</th>'+
+        '<th style="padding:6px 8px;text-align:center">위험도</th>'+
+      '</tr></thead><tbody>';
+    storeArr.forEach(function(s){
+      var risk=s.score===0?'<span style="color:#10b981">정상</span>':
+               s.score>=3?'<span style="color:#dc2626;font-weight:700">🔴 주의</span>':
+               s.score>=2?'<span style="color:#f59e0b;font-weight:700">🟡 관찰</span>':
+               '<span style="color:#6b7280">🔵 미미</span>';
+      html+='<tr style="border-bottom:1px solid var(--border)'+(s.score>=3?';background:#fef9f0':'')+'">'+
+        '<td style="padding:6px 8px;font-weight:600">'+esc(s.store)+'</td>'+
+        '<td style="padding:6px 8px;text-align:right">'+s.total+'</td>'+
+        '<td style="padding:6px 8px;text-align:right;color:#dc2626">'+(s.loss||'-')+'</td>'+
+        '<td style="padding:6px 8px;text-align:right;color:#3b82f6">'+(s.ret||'-')+'</td>'+
+        '<td style="padding:6px 8px;text-align:right;color:#f59e0b">'+(s.etc||'-')+'</td>'+
+        '<td style="padding:6px 8px;text-align:center">'+risk+'</td>'+
+      '</tr>';
+    });
+    html+='</tbody></table></div></div>';
+
+    // 3️⃣ 기사별 배송수율
+    var driverArr=Object.keys(driverMap).map(function(dr){
+      var d=driverMap[dr];
+      var rate=d.dir>0?Math.round(d.act/d.dir*100):100;
+      return {dr:dr,dir:d.dir,act:d.act,dmg:d.dmg,cnt:d.cnt,rate:rate};
+    }).sort(function(a,b){return a.rate-b.rate;});
+
+    html+='<div style="margin-bottom:16px">'+
+      '<div style="font-size:12px;font-weight:800;margin-bottom:8px">3️⃣ 기사별 배송 수율</div>'+
+      '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">'+
+      '<thead><tr style="background:var(--bg3)">'+
+        '<th style="padding:6px 8px;text-align:left">기사/노선</th>'+
+        '<th style="padding:6px 8px;text-align:right">건수</th>'+
+        '<th style="padding:6px 8px;text-align:right">지시</th>'+
+        '<th style="padding:6px 8px;text-align:right">실처리</th>'+
+        '<th style="padding:6px 8px;text-align:right;color:#dc2626">파손</th>'+
+        '<th style="padding:6px 8px;text-align:right;font-weight:800">수율</th>'+
+      '</tr></thead><tbody>';
+    driverArr.forEach(function(d){
+      var rateColor=d.rate>=100?'#10b981':d.rate>=95?'#f59e0b':'#dc2626';
+      var bg=d.rate<95?'background:#fef2f2':'';
+      html+='<tr style="border-bottom:1px solid var(--border);'+bg+'">'+
+        '<td style="padding:6px 8px;font-weight:600">'+esc(d.dr)+'</td>'+
+        '<td style="padding:6px 8px;text-align:right">'+d.cnt+'</td>'+
+        '<td style="padding:6px 8px;text-align:right">'+d.dir+'</td>'+
+        '<td style="padding:6px 8px;text-align:right">'+d.act+'</td>'+
+        '<td style="padding:6px 8px;text-align:right;color:#dc2626">'+(d.dmg||'-')+'</td>'+
+        '<td style="padding:6px 8px;text-align:right;font-weight:800;color:'+rateColor+'">'+d.rate+'%</td>'+
+      '</tr>';
+    });
+    html+='</tbody></table></div></div>';
+
+    // 4️⃣ 확인요망
+    html+='<div style="margin-bottom:16px">'+
+      '<div style="font-size:12px;font-weight:800;margin-bottom:8px">4️⃣ ⚠️ 즉시 처리 필요 ('+pending.length+'건)</div>';
+    if(!pending.length){
+      html+='<div style="padding:12px;background:#f0fdf4;border-radius:8px;font-size:12px;color:#10b981;font-weight:700">✅ 현재 확인요망 건 없음</div>';
+    } else {
+      html+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">'+
+        '<thead><tr style="background:#fef9f0">'+
+          '<th style="padding:6px 8px">전표번호</th>'+
+          '<th style="padding:6px 8px">상품명</th>'+
+          '<th style="padding:6px 8px">권역</th>'+
+          '<th style="padding:6px 8px">매장</th>'+
+          '<th style="padding:6px 8px">기사</th>'+
+          '<th style="padding:6px 8px">상태</th>'+
+          '<th style="padding:6px 8px">비고</th>'+
+        '</tr></thead><tbody>';
+      pending.forEach(function(d){
+        html+='<tr style="border-bottom:1px solid var(--border);background:#fffbeb">'+
+          '<td style="padding:6px 8px;font-weight:700;color:#f59e0b">'+esc(d.txnId||'')+'</td>'+
+          '<td style="padding:6px 8px">'+esc(d.name||'')+'</td>'+
+          '<td style="padding:6px 8px">'+esc(d.region||'')+'</td>'+
+          '<td style="padding:6px 8px">'+esc(d.store||'')+'</td>'+
+          '<td style="padding:6px 8px">'+esc(d.route||'')+'</td>'+
+          '<td style="padding:6px 8px;font-weight:700;color:#dc2626">'+esc(d.status||'')+'</td>'+
+          '<td style="padding:6px 8px;color:var(--text3);font-size:10px">'+esc(d.note||'')+'</td>'+
+        '</tr>';
+      });
+      html+='</tbody></table></div>';
+    }
+    html+='</div>';
+
+    c.innerHTML=html;
+  }).catch(function(e){c.innerHTML='<div class="empty">오류: '+e.message+'</div>';});
+}
+
+function _invDashCard(label, val, color){
+  return '<div style="background:var(--bg3);border-radius:8px;padding:10px;text-align:center;border-top:3px solid '+color+'">'+
+    '<div style="font-size:18px;font-weight:800;color:'+color+'">'+val+'</div>'+
+    '<div style="font-size:10px;color:var(--text3);margin-top:2px">'+label+'</div>'+
+  '</div>';
 }
 
 // ── 재고현황 (기초+입고-출고=현재고) ──
