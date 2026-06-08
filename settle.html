@@ -9338,19 +9338,21 @@ function pageUniversalRules(){
   if(!_db||!_CU){c.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
   c.innerHTML='<div class="loading">⏳ 규칙 로드 중...</div>';
   var did=_CU.dealerId||_CU.uid;
-  // 직접 Firestore에서 로드
-  _db.collection('universal_rules').doc(did).get().then(function(doc){
-    var r=doc.exists?doc.data():{};
+  // 직접 Firestore에서 로드 (3초 타임아웃)
+  var _rendered=false;
+  function _doRender(r){
+    if(_rendered) return; _rendered=true;
+    r=r||{};
     window._uCurrentRules=r;
     _applyUniversalRules(r);
     var industry=(_COMPANY_CFG&&_COMPANY_CFG.industryType)||'other';
     _renderUniversalRules(c, r, industry);
-  }).catch(function(e){
-    // 로드 실패해도 빈 규칙으로 렌더
-    var r={};
-    var industry=(_COMPANY_CFG&&_COMPANY_CFG.industryType)||'other';
-    _renderUniversalRules(c, r, industry);
-  });
+  }
+  // 타임아웃 3초
+  setTimeout(function(){_doRender({});},3000);
+  _db.collection('universal_rules').doc(did).get()
+    .then(function(doc){_doRender(doc.exists?doc.data():{});})
+    .catch(function(){_doRender({});});
 }
 
 function _renderUniversalRules(c, r, industry){
