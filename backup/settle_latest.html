@@ -28557,6 +28557,8 @@ window._invUploadExcel = function(input, did){
       var wb=XLSX.read(e.target.result,{type:'array'});
       var sn=wb.SheetNames;
 
+      // 디버그: 시트명 확인
+      toast('시트:'+sn.slice(0,3).join(','));
       // ── 형식 1: 재고종합마감 + 입고/출고 원장 ──
       if(sn.indexOf('재고종합마감')>=0){
         _invParsemaster(wb, did);
