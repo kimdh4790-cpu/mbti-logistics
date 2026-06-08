@@ -28860,9 +28860,9 @@ function _invParseBySheet(wb, did){
     var iSafe=hdr.findIndex(function(h){return h.includes('안전재고');});
     var iSeq=hdr.findIndex(function(h){return h.includes('순번');});
 
+    // 디버그 (항상 출력)
+    toast('hdrRow:'+hdrRow+' iName:'+iName+' 첫값:['+String(rows[hdrRow+1]?rows[hdrRow+1][iName]:'?')+']');
     if(iName<0) return;
-    // 디버그
-    if(!window._invDbg){window._invDbg=true;toast('hdrRow:'+hdrRow+' iName:'+iName+' iBase:'+iBase+' iSafe:'+iSafe+' 첫값:'+String(rows[hdrRow+1]?rows[hdrRow+1][iName]:'?'));}
 
     for(var r=hdrRow+1;r<rows.length;r++){
       var row=rows[r];
