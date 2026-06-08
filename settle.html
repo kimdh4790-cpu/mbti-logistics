@@ -27704,7 +27704,6 @@ function pageInventory(){
   var c=document.getElementById('content');
   if(!_db||!_CU){c.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
   var did=_CU.dealerId||_CU.uid;
-  toast('pageInventory 실행됨 did:'+did.slice(0,8));
 
   c.innerHTML=
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
@@ -28083,10 +28082,7 @@ function _invLoadStock(did, filterSup){
 
     var list=Object.values(items);
     if(!list.length){c.innerHTML='<div class="empty">📦 등록된 재고 없음<br><small>엑셀 업로드로 등록하세요</small></div>';return;}
-    // name 없는 item 필터 + 디버그
-    var noName=list.filter(function(i){return !i.name;}).length;
-    var hasName=list.filter(function(i){return !!i.name;}).length;
-    toast('전체:'+list.length+' name있음:'+hasName+' name없음:'+noName);
+    // name 없는 item 필터
     list=list.filter(function(i){return !!i.name;});
 
     // 분류 필터
