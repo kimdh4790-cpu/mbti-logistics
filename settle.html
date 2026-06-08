@@ -29091,6 +29091,19 @@ function _invTab(btn, tab){
   fEl.innerHTML=bh;
   defs.forEach(function(b){var el=document.getElementById(b.id);if(el)el.addEventListener('click',b.action);});
 
+  // 탭별 페이지 타이틀
+  var titles={
+    stock:'📦 재고현황',
+    in:'📥 입고원장',
+    out:'📤 출고원장',
+    dash:'📈 대시보드',
+    monthly:'📅 월별통계',
+    daily:'📆 일별조회',
+    return:'🔄 반품/불량'
+  };
+  var ptEl=document.getElementById('page-title');
+  if(ptEl) ptEl.textContent='재고관리 · '+(titles[tab]||tab);
+
   if(tab==='dash') _invLoadDash(did);
   else if(tab==='monthly') _invLoadMonthly(did);
   else if(tab==='daily') _invLoadDaily(did);
@@ -29104,7 +29117,6 @@ function _invTab(btn, tab){
 // ── 📈 종합 대시보드 ──
 function _invLoadDash(did){
   var c=document.getElementById('inv-content');
-  document.getElementById('inv-filter').innerHTML='';
   c.innerHTML='<div class="loading">⏳ 분석 중...</div>';
 
   Promise.all([
@@ -29525,7 +29537,6 @@ function _invLoadDayData(did, date){
 // ── 📅 월별 통계 ──
 function _invLoadMonthly(did){
   var c=document.getElementById('inv-content');
-  document.getElementById('inv-filter').innerHTML='';
   var now=new Date();
   var curY=now.getFullYear(), curM=now.getMonth()+1;
 
@@ -29631,7 +29642,6 @@ function _invLoadMonthly(did){
 // ── 🔄 반품/불량 현황 ──
 function _invLoadReturn(did){
   var c=document.getElementById('inv-content');
-  document.getElementById('inv-filter').innerHTML='';
   c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
 
   Promise.all([
@@ -29906,7 +29916,7 @@ function _invLoadStock(did, filterSup){
 // ── 입/출고 원장 ──
 function _invLoadLedger(did, type){
   var c=document.getElementById('inv-content');
-  document.getElementById('inv-filter').innerHTML='';
+  // inv-filter는 _invTab에서 탭별 버튼 관리 — 여기서 초기화 안 함
   c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
   var col=type==='in'?'inventory_in':'inventory_out';
   var dateCol=type==='in'?'inDate':'outDate';
