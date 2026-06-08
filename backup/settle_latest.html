@@ -27711,6 +27711,9 @@ function pageInventory(){
       '<label style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:var(--acc);color:#fff;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer" onclick="_invPickFile()">'+
         '📥 엑셀 업로드'+
       '</label>'+
+      '<label style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#7c3aed;color:#fff;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer" onclick="_invPickCompare()">'+
+        '🔍 입고 대조검수'+
+      '</label>'+
     '</div>'+
     '<div id="inv-tabs" style="display:flex;gap:6px;margin-bottom:12px">'+
       '<button id="itab-stock" style="padding:6px 14px;background:var(--acc);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📊 재고현황</button>'+
@@ -27877,6 +27880,199 @@ function _invLoadLedger(did, type){
 }
 
 // ── 엑셀 업로드 파서 ──
+
+// 입고 대조검수 — 송장 vs 실사 비교
+window._invPickCompare = function(){
+  var inp=document.createElement('input');
+  inp.type='file'; inp.accept='.xlsx,.xls';
+  inp.onchange=function(){
+    if(inp.files[0]) _invCompareExcel(inp.files[0], (_CU.dealerId||_CU.uid));
+  };
+  inp.click();
+};
+
+window._invCompareExcel = function(file, did){
+  toast('⏳ 대조 분석 중...');
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var sn=wb.SheetNames;
+
+      // 타회사_입고문서 시트
+      var wsA=wb.Sheets[sn.find(function(s){return s.includes('타회사')||s.includes('송장');})||sn[0]];
+      // 담당자_실사문서 시트
+      var wsB=wb.Sheets[sn.find(function(s){return s.includes('실사')||s.includes('담당자');})||sn[1]];
+
+      if(!wsA||!wsB){toast('❌ 송장/실사 시트를 찾을 수 없습니다');return;}
+
+      var rowsA=XLSX.utils.sheet_to_json(wsA,{header:1,defval:''});
+      var rowsB=XLSX.utils.sheet_to_json(wsB,{header:1,defval:''});
+
+      // 헤더행 찾기
+      var hdrA=rowsA.findIndex(function(r){return String(r[0]).includes('상품코드');});
+      var hdrB=rowsB.findIndex(function(r){return String(r[0]).includes('상품코드');});
+      if(hdrA<0||hdrB<0){toast('❌ 상품코드 헤더 없음');return;}
+
+      // 데이터 맵 구성
+      var aMap={}, bMap={};
+      for(var i=hdrA+1;i<rowsA.length;i++){
+        var r=rowsA[i];
+        var code=String(r[0]||'').trim();
+        if(!code) continue;
+        aMap[code]={supplier:String(r[1]||''),name:String(r[2]||''),qty:parseInt(r[3])||0,status:String(r[4]||'')};
+      }
+      for(var j=hdrB+1;j<rowsB.length;j++){
+        var r=rowsB[j];
+        var code=String(r[0]||'').trim();
+        if(!code) continue;
+        bMap[code]={qty:parseInt(r[3])||0,checker:String(r[4]||'')};
+      }
+
+      // 대조 분석
+      var results=[];
+      Object.keys(aMap).forEach(function(code){
+        var a=aMap[code];
+        var b=bMap[code]||{qty:0,checker:'없음'};
+        var diff=a.qty-b.qty;
+        results.push({
+          code:code, supplier:a.supplier, name:a.name,
+          aqty:a.qty, bqty:b.qty, diff:diff,
+          checker:b.checker,
+          status:diff===0?'정상':diff>0?'부족':'과다'
+        });
+      });
+
+      // 누락 품목 (B에만 있는 것)
+      Object.keys(bMap).forEach(function(code){
+        if(!aMap[code]){
+          var b=bMap[code];
+          results.push({code:code,supplier:'',name:'(송장미기재)',aqty:0,bqty:b.qty,diff:-b.qty,checker:b.checker,status:'과다'});
+        }
+      });
+
+      var total=results.length;
+      var ok=results.filter(function(r){return r.diff===0;}).length;
+      var shortage=results.filter(function(r){return r.diff>0;}).length;
+      var excess=results.filter(function(r){return r.diff<0;}).length;
+
+      // 결과 화면 표시
+      var c=document.getElementById('content');
+      var html=
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
+          '<div style="font-size:15px;font-weight:800">🔍 입고 대조검수 결과</div>'+
+          '<button onclick="pageInventory()" style="padding:6px 14px;background:var(--bg3);border:none;border-radius:7px;font-size:12px;cursor:pointer">← 재고관리로</button>'+
+        '</div>'+
+        // 요약 카드
+        '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">'+
+          _invStatCard('전체 품목',total,'#6b7280')+
+          _invStatCard('✅ 정상',ok,'#10b981')+
+          _invStatCard('⚠️ 부족',shortage,'#f59e0b')+
+          _invStatCard('📦 과다',excess,'#3b82f6')+
+        '</div>';
+
+      // 오차 항목만 먼저
+      var diffs=results.filter(function(r){return r.diff!==0;});
+      if(diffs.length){
+        html+='<div style="font-size:12px;font-weight:800;color:#dc2626;margin-bottom:8px">★ 오차 발생 '+diffs.length+'건</div>'+
+          '<div style="overflow-x:auto;margin-bottom:16px"><table style="width:100%;border-collapse:collapse;font-size:11px">'+
+          '<thead><tr style="background:#fef2f2">'+
+            '<th style="padding:6px 8px;text-align:left">상품코드</th>'+
+            '<th style="padding:6px 8px;text-align:left">거래처</th>'+
+            '<th style="padding:6px 8px;text-align:left">상품명</th>'+
+            '<th style="padding:6px 8px;text-align:right">송장(A)</th>'+
+            '<th style="padding:6px 8px;text-align:right">실사(B)</th>'+
+            '<th style="padding:6px 8px;text-align:right;font-weight:800">차이(A-B)</th>'+
+            '<th style="padding:6px 8px;text-align:center">검수자</th>'+
+            '<th style="padding:6px 8px;text-align:center">조치</th>'+
+          '</tr></thead><tbody>';
+        diffs.forEach(function(r){
+          var bg=r.diff>0?'#fffbeb':'#eff6ff';
+          var action=r.diff>0?'재요청':'반품처리';
+          var diffColor=r.diff>0?'#f59e0b':'#3b82f6';
+          html+='<tr style="border-bottom:1px solid var(--border);background:'+bg+'">'+
+            '<td style="padding:6px 8px;font-weight:600">'+esc(r.code)+'</td>'+
+            '<td style="padding:6px 8px">'+esc(r.supplier)+'</td>'+
+            '<td style="padding:6px 8px">'+esc(r.name)+'</td>'+
+            '<td style="padding:6px 8px;text-align:right">'+r.aqty+'</td>'+
+            '<td style="padding:6px 8px;text-align:right">'+r.bqty+'</td>'+
+            '<td style="padding:6px 8px;text-align:right;font-weight:800;color:'+diffColor+'">'+r.diff+'</td>'+
+            '<td style="padding:6px 8px;text-align:center">'+esc(r.checker)+'</td>'+
+            '<td style="padding:6px 8px;text-align:center;font-size:10px;color:'+diffColor+';font-weight:700">'+action+'</td>'+
+          '</tr>';
+        });
+        html+='</tbody></table></div>';
+      }
+
+      // 정상 항목
+      html+='<div style="font-size:12px;font-weight:800;color:#10b981;margin-bottom:8px">✅ 정상 입고 '+ok+'건</div>'+
+        '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">'+
+        '<thead><tr style="background:var(--bg3)">'+
+          '<th style="padding:6px 8px;text-align:left">상품코드</th>'+
+          '<th style="padding:6px 8px;text-align:left">거래처</th>'+
+          '<th style="padding:6px 8px;text-align:left">상품명</th>'+
+          '<th style="padding:6px 8px;text-align:right">수량</th>'+
+          '<th style="padding:6px 8px;text-align:center">검수자</th>'+
+        '</tr></thead><tbody>';
+      results.filter(function(r){return r.diff===0;}).forEach(function(r){
+        html+='<tr style="border-bottom:1px solid var(--border)">'+
+          '<td style="padding:6px 8px">'+esc(r.code)+'</td>'+
+          '<td style="padding:6px 8px">'+esc(r.supplier)+'</td>'+
+          '<td style="padding:6px 8px">'+esc(r.name)+'</td>'+
+          '<td style="padding:6px 8px;text-align:right;font-weight:700">'+r.aqty+'</td>'+
+          '<td style="padding:6px 8px;text-align:center">'+esc(r.checker)+'</td>'+
+        '</tr>';
+      });
+      html+='</tbody></table></div>';
+
+      // 실사 기준으로 재고 반영 버튼
+      html+='<div style="margin-top:16px;padding:14px;background:var(--bg3);border-radius:10px">'+
+        '<div style="font-size:12px;font-weight:700;margin-bottom:8px">💾 실사 기준으로 입고 반영</div>'+
+        '<div style="font-size:11px;color:var(--text3);margin-bottom:10px">정상+과다 품목의 실사 수량을 입고 처리합니다 (부족 제외)</div>'+
+        '<button id="inv-confirm-btn" style="padding:10px 20px;background:var(--acc);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">✅ 실사 기준 입고 확정</button>'+
+      '</div>';
+
+      c.innerHTML=html;
+
+      // 확정 버튼 리스너
+      setTimeout(function(){
+        var btn=document.getElementById('inv-confirm-btn');
+        if(btn) btn.addEventListener('click',function(){
+          _invConfirmByActual(did, results);
+        });
+      },100);
+
+    }catch(err){toast('❌ '+err.message); console.error(err);}
+  };
+  reader.readAsArrayBuffer(file);
+};
+
+function _invStatCard(label, val, color){
+  return '<div style="background:var(--bg3);border-radius:8px;padding:10px;text-align:center">'+
+    '<div style="font-size:18px;font-weight:800;color:'+color+'">'+val+'</div>'+
+    '<div style="font-size:10px;color:var(--text3)">'+label+'</div>'+
+  '</div>';
+}
+
+function _invConfirmByActual(did, results){
+  var toSave=results.filter(function(r){return r.bqty>0;});
+  var today=new Date().toISOString().split('T')[0];
+  var batch=_db.batch();
+  toSave.forEach(function(r){
+    batch.set(_db.collection('inventory_in').doc(),{
+      dealerId:did, itemCode:r.code, name:r.name,
+      supplier:r.supplier, category:'',
+      date:today, qty:r.bqty,
+      worker:r.checker, note:'대조검수 확정',
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+  });
+  batch.commit().then(function(){
+    toast('✅ '+toSave.length+'건 입고 확정 완료!');
+    pageInventory();
+  }).catch(function(e){toast('❌ '+e.message);});
+}
+
 window._invPickFile = function(){
   var inp=document.createElement('input');
   inp.type='file'; inp.accept='.xlsx,.xls';
