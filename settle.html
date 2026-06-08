@@ -28077,6 +28077,16 @@ function _invLoadStock(did, filterSup){
       var act=filterSup===s;
       fhtml+='<button class="inv-sup-btn" data-sup="'+esc(s)+'" style="padding:3px 10px;border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;background:'+(act?'var(--acc)':'var(--bg3)')+';color:'+(act?'#fff':'var(--text2)')+'">'+esc(s)+'</button>';
     });
+    // 제조사 필터
+    var makers=[...new Set(list.map(function(i){return i.maker||'';}).filter(Boolean))].sort();
+    if(makers.length){
+      fhtml+='<span style="font-size:11px;color:var(--text3);padding:4px 0 0 8px">제조사:</span>';
+      fhtml+='<button class="inv-mkr-btn" data-mkr="" style="padding:3px 10px;border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;background:var(--bg3);color:var(--text2)">전체</button>';
+      makers.forEach(function(m){
+        fhtml+='<button class="inv-mkr-btn" data-mkr="'+esc(m)+'" style="padding:3px 10px;border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;background:var(--bg3);color:var(--text2)">'+esc(m)+'</button>';
+      });
+    }
+
     // 소분류 필터 추가
     fhtml+='<span style="font-size:11px;color:var(--text3);padding:4px 0 0 8px">주종:</span>';
     fhtml+='<button class="inv-cat-btn" data-cat="" style="padding:3px 10px;border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;background:var(--bg3);color:var(--text2)">전체</button>';
@@ -28103,6 +28113,14 @@ function _invLoadStock(did, filterSup){
         _invLoadStock(did,filterSup);
       });
     });
+    fEl.querySelectorAll('.inv-mkr-btn').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        fEl.querySelectorAll('.inv-mkr-btn').forEach(function(b){b.style.background='var(--bg3)';b.style.color='var(--text2)';});
+        if(btn.dataset.mkr){btn.style.background='#7c3aed';btn.style.color='#fff';}
+        window._invFilterMaker=btn.dataset.mkr||'';
+        _invLoadStock(did,filterSup);
+      });
+    });
     fEl.querySelectorAll('.inv-ori-btn').forEach(function(btn){
       btn.addEventListener('click',function(){
         var active=window._invFilterOri===btn.dataset.ori;
@@ -28117,6 +28135,7 @@ function _invLoadStock(did, filterSup){
     if(filterSup) filtered=filtered.filter(function(i){return i.supplier===filterSup;});
     if(window._invFilterCat) filtered=filtered.filter(function(i){return i.subcat===window._invFilterCat;});
     if(window._invFilterOri) filtered=filtered.filter(function(i){return i.origin===window._invFilterOri;});
+    if(window._invFilterMaker) filtered=filtered.filter(function(i){return i.maker===window._invFilterMaker;});
 
     // 현재고 계산
     filtered.forEach(function(i){
