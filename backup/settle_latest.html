@@ -27742,25 +27742,23 @@ function pageInventory(){
     if(btn_ro) btn_ro.addEventListener('click',function(){_invRegOut(did);});
   },100);
     var btn_up=document.getElementById('inv-upload-btn');
-    if(btn_up) btn_up.addEventListener('click',function(){toast('클릭됨');_invPickFile();});
+    if(btn_up) btn_up.addEventListener('click',function(){_invPickFile();});
     var btn_del=document.getElementById('inv-delete-all-btn');
     if(btn_del) btn_del.addEventListener('click',function(){
       if(!confirm('재고 데이터를 전체 삭제하시겠습니까?\n(품목마스터+입고+출고 전부)')) return;
       var did2=_CU.dealerId||_CU.uid;
       toast('⏳ 삭제 중...');
-      Promise.all([
-        _db.collection('inventory').where('dealerId','==',did2).get(),
-        _db.collection('inventory_in').where('dealerId','==',did2).get(),
-        _db.collection('inventory_out').where('dealerId','==',did2).get()
-      ]).then(function(res){
-        var b=_db.batch();
-        res.forEach(function(snap){snap.forEach(function(doc){b.delete(doc.ref);});});
-        return b.commit();
-      }).then(function(){
-        window._invDbg=false;
-        toast('✅ 전체 삭제 완료');
-        pageInventory();
-      }).catch(function(e){toast('❌ '+e.message);});
+      var cols=['inventory','inventory_in','inventory_out'];
+      var ci=0;
+      function delNext(){
+        if(ci>=cols.length){window._invDbg=false;toast('✅ 전체 삭제 완료');pageInventory();return;}
+        _db.collection(cols[ci]).where('dealerId','==',did2).get().then(function(snap){
+          if(snap.empty){ci++;delNext();return;}
+          var b=_db.batch(); snap.forEach(function(d){b.delete(d.ref);}); 
+          return b.commit();
+        }).then(function(){ci++;delNext();}).catch(function(e){toast('❌ '+e.message);});
+      }
+      delNext();
     });
 }
 
@@ -28557,8 +28555,6 @@ window._invUploadExcel = function(input, did){
       var wb=XLSX.read(e.target.result,{type:'array'});
       var sn=wb.SheetNames;
 
-      // 디버그: 시트명 확인
-      toast('시트:'+sn.slice(0,3).join(','));
       // ── 형식 1: 재고종합마감 + 입고/출고 원장 ──
       if(sn.indexOf('재고종합마감')>=0){
         _invParsemaster(wb, did);
@@ -28862,8 +28858,6 @@ function _invParseBySheet(wb, did){
     var iSafe=hdr.findIndex(function(h){return h.includes('안전재고');});
     var iSeq=hdr.findIndex(function(h){return h.includes('순번');});
 
-    // 디버그 (항상 출력)
-    toast('hdrRow:'+hdrRow+' iName:'+iName+' 첫값:['+String(rows[hdrRow+1]?rows[hdrRow+1][iName]:'?')+']');
     if(iName<0) return;
 
     for(var r=hdrRow+1;r<rows.length;r++){
@@ -28900,47 +28894,44 @@ function _invParseBySheet(wb, did){
       });
     }
   });
-  if(items.length>0) alert('첫품목name:['+items[0].name+']\nitemCode:['+items[0].itemCode+']\nsubcat:['+items[0].subcat+']\norigin:['+items[0].origin+']');
+
   toast('⏳ '+items.length+'종 저장 중...');
   _invBatchSave(did, items, [], []);
 }
 
 // Batch 저장
 function _invBatchSave(did, items, inItems, outItems){
-  // 기존 품목 삭제 후 저장
-  _db.collection('inventory').where('dealerId','==',did).get().then(function(snap){
-    var b=_db.batch();
-    snap.forEach(function(doc){b.delete(doc.ref);});
-    return b.commit();
-  }).then(function(){
-    function saveChunks(col, arr, cb){
-      if(!arr.length){cb();return;}
-      var chunks=[];
-      for(var i=0;i<arr.length;i+=400) chunks.push(arr.slice(i,i+400));
-      var idx=0;
-      function next(){
-        if(idx>=chunks.length){cb();return;}
-        var b=_db.batch();
-        chunks[idx].forEach(function(item){
-          // serverTimestamp 제거하고 ISO 문자열로 대체
-          var clean=Object.assign({},item);
-          if(clean.updatedAt&&typeof clean.updatedAt!=='string') clean.updatedAt=new Date().toISOString();
-          if(clean.createdAt&&typeof clean.createdAt!=='string') clean.createdAt=new Date().toISOString();
-          b.set(_db.collection(col).doc(),clean);
+  function saveChunks(col, arr, cb){
+    if(!arr.length){cb();return;}
+    var chunks=[];
+    for(var i=0;i<arr.length;i+=200) chunks.push(arr.slice(i,i+200));
+    var idx=0;
+    function next(){
+      if(idx>=chunks.length){cb();return;}
+      var batch=_db.batch();
+      chunks[idx].forEach(function(item){
+        var clean={};
+        Object.keys(item).forEach(function(k){
+          var v=item[k];
+          // serverTimestamp 객체 제거
+          if(v&&typeof v==='object'&&v.constructor&&v.constructor.name==='FieldValue') return;
+          clean[k]=v;
         });
-        b.commit().then(function(){idx++;next();}).catch(function(e){toast('❌ batch오류:'+e.message);});
-      }
-      next();
+        clean.updatedAt=new Date().toISOString();
+        batch.set(_db.collection(col).doc(), clean);
+      });
+      batch.commit().then(function(){idx++;next();}).catch(function(e){toast('❌ '+e.message);});
     }
-    saveChunks('inventory', items, function(){
-      saveChunks('inventory_in', inItems, function(){
-        saveChunks('inventory_out', outItems, function(){
-          toast('✅ 품목 '+items.length+'종 / 입고 '+inItems.length+'건 / 출고 '+outItems.length+'건 등록 완료!');
-          pageInventory();
-        });
+    next();
+  }
+  saveChunks('inventory', items, function(){
+    saveChunks('inventory_in', inItems, function(){
+      saveChunks('inventory_out', outItems, function(){
+        toast('✅ 품목 '+items.length+'종 / 입고 '+inItems.length+'건 / 출고 '+outItems.length+'건 등록 완료!');
+        pageInventory();
       });
     });
-  }).catch(function(e){toast('❌ '+e.message);});
+  });
 }
 
 // ── 입고 등록 팝업 ──
