@@ -29036,10 +29036,7 @@ function _invTab(btn, tab){
   // 탭별 버튼 렌더링
   var fEl=document.getElementById('inv-filter');
   var tabBtns={
-    stock:[
-      {id:'tb-master',label:'📋 하차 명세서 등록',color:'#6366f1',action:function(){_invPickFileType('master');}},
-      {id:'tb-additem',label:'➕ 품목 추가',color:'var(--bg3)',tc:'var(--text)',bd:'1px solid var(--border)',action:function(){_invRegisterItem(did);}}
-    ],
+    stock:[],
     in:[
       {id:'tb-in',label:'📥 입고 실사 등록',color:'#10b981',action:function(){_invPickFileType('in');}},
       {id:'tb-compare',label:'🔍 입고 대조검수',color:'#7c3aed',action:function(){_invPickCompare();}}
