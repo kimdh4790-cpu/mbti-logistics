@@ -29001,9 +29001,6 @@ function pageInventory(){
     var btn_i=document.getElementById('itab-in');
     var btn_o=document.getElementById('itab-out');
     var btn_d=document.getElementById('itab-dash');
-    var btn_s=document.getElementById('itab-stock');
-    var btn_i=document.getElementById('itab-in');
-    var btn_o=document.getElementById('itab-out');
     var btn_mon=document.getElementById('itab-monthly');
     var btn_day=document.getElementById('itab-daily');
     var btn_ret=document.getElementById('itab-return');
@@ -29030,11 +29027,11 @@ function pageInventory(){
     var btn_add=document.getElementById('inv-add-item-btn');
     if(btn_add) btn_add.addEventListener('click',function(){_invRegisterItem(did);});
   },100);
-    var btn_up=document.getElementById('inv-upload-btn');
-    if(btn_up) btn_up.addEventListener('click',function(){_invPickFile();});
-    // 실시간 동기화 제거 — 탭 전환 문제 원인
+  // 실시간 동기화 배지 숨김
+  setTimeout(function(){
     var badge=document.getElementById('inv-realtime-badge');
     if(badge) badge.style.display='none';
+  },110);
 
     var btn_del=document.getElementById('inv-delete-all-btn');
     if(btn_del) btn_del.addEventListener('click',function(){
