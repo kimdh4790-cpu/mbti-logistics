@@ -28169,7 +28169,7 @@ async function deploySettlements() {
     + '<strong>' + targets.length + '명</strong> 기사에게<br>'
     + '✅ 정산 명세서 개별 생성<br>'
     + '✅ 세금계산서 자동 저장<br>'
-    + '✅ 앱 푸시 알림 발송<br>'
+    + '✅ 앱 푸시 알림 발송<br>'    + '✅ 이메일 명세서 발송 (이메일 등록 시)<br>'
     + '<span style="font-size:11px;color:#f97316">📌 ' + (month || '전체') + ' 정산이 배포됩니다</span>'
     + '</div>'
     + '<div style="display:flex;gap:8px;justify-content:center">'
@@ -28318,6 +28318,34 @@ async function _doDeploySettlements(ids) {
           if (_fj.sent > 0) fcmDone++;
         } catch(e2) {}
       }
+
+      // 이메일 발송 (카카오 실패 시 대체 또는 추가 발송)
+      try {
+        var _email = settle.email || '';
+        if(_email) {
+          var _netPay = _cr.net || 0;
+          var _monthLabel = settle.month || month || '';
+          var _driverLabel = settle.driver || settle.name || '';
+          // 라우트 상세 HTML
+          var _detailHtml = '';
+          if(settle.routeDetails && settle.routeDetails.length) {
+            _detailHtml = '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+            settle.routeDetails.forEach(function(r){
+              _detailHtml += '<tr style="border-bottom:1px solid #eee">'+
+                '<td style="padding:6px 8px">'+esc(r.route||r.label||'-')+'</td>'+
+                '<td style="padding:6px 8px;text-align:right;color:#0077b6;font-weight:700">'+Number(r.amt||r.amount||0).toLocaleString()+'원</td>'+
+              '</tr>';
+            });
+            _detailHtml += '</table>';
+          }
+          await _sendStatementEmail(
+            {email:_email, name:_driverLabel},
+            _monthLabel,
+            _netPay,
+            _detailHtml
+          );
+        }
+      } catch(e3) {}
 
       done++;
       if (done % 5 === 0) toast('📤 배포 중... (' + done + '/' + total + ')');
