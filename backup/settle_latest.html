@@ -384,6 +384,8 @@ window.onBizDocSelected=onBizDocSelected;</script>
           <div class="fg"><label>사업장 주소</label><input id="j-biz-addr" type="text" placeholder="부산시..."></div>
         </div>
         <div class="fg"><label>정산 아이디 <span style="color:var(--text3);font-size:10px;font-weight:400">(직원ID)</span></label><input id="j-driverid-quick" type="text" placeholder="kim001 (영문+숫자)"></div>
+        <div class="fg"><label>역할</label><select id="j-role" onchange="document.getElementById('j-store-wrap').style.display=this.value==='manager'?'block':'none'" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:13px"><option value="driver">기사/직원</option><option value="manager">과장 (재고 담당)</option></select></div>
+        <div class="fg" id="j-store-wrap" style="display:none"><label>담당 매장</label><input id="j-store" type="text" placeholder="예) 강남점" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:13px"></div>
         <div class="fg"><label>주민번호 <span style="color:var(--text3);font-size:10px;font-weight:400">(선택)</span></label><input id="j-ssn" type="text" placeholder="000000-0000000" style="font-family:monospace"></div>
         <div class="fg"><label>입사일 <span style="color:var(--text3);font-size:10px;font-weight:400">(선택)</span></label><input id="j-joindate" type="date"></div>
         <div class="fg"><label>비밀번호 <span style="color:var(--red)">*</span></label><input id="j-pw" type="password" placeholder="6자 이상"></div>
@@ -3690,7 +3692,7 @@ function _uploadToStorage(path, file){
 _auth.onAuthStateChanged(function(user){
       if(new URLSearchParams(window.location.search).get('taxShare'))return;
       if(!user){document.getElementById('login-screen').style.display='flex';document.getElementById('app').style.display='none';_CU=null;window._CU=null;}
-      else{_db.doc('users/'+user.uid).get().then(function(snap){var d=snap.exists?snap.data():{};var _isSA=(SUPER_ADMIN_EMAILS.indexOf(user.email)>=0);_CU={uid:user.uid,email:user.email,name:_isSA?'엠비티아이':(d.name||''),companyName:_isSA?'엠비티아이':(d.companyName||d.name||''),role:_isSA?'admin':(d.role||'dealer'),dealerId:d.dealerId||user.uid,termsVersion:d.termsVersion||''};window._CU=_CU;_loadCompanyCfg(_CU.dealerId||_CU.companyCode||_CU.uid);_loadAdminStatus();showApp();}).catch(function(){_CU={uid:user.uid,email:user.email,name:'',role:'dealer',dealerId:user.uid,termsVersion:''};window._CU=_CU;showApp();});}
+      else{_db.doc('users/'+user.uid).get().then(function(snap){var d=snap.exists?snap.data():{};var _isSA=(SUPER_ADMIN_EMAILS.indexOf(user.email)>=0);_CU={uid:user.uid,email:user.email,name:_isSA?'엠비티아이':(d.name||''),companyName:_isSA?'엠비티아이':(d.companyName||d.name||''),role:_isSA?'admin':(d.role||'dealer'),dealerId:d.dealerId||user.uid,termsVersion:d.termsVersion||'',store:d.store||''};window._CU=_CU;_loadCompanyCfg(_CU.dealerId||_CU.companyCode||_CU.uid);_loadAdminStatus();showApp();}).catch(function(){_CU={uid:user.uid,email:user.email,name:'',role:'dealer',dealerId:user.uid,termsVersion:''};window._CU=_CU;showApp();});}
     });return;
   }
   if(!firebase.apps.length){
@@ -3985,7 +3987,9 @@ function showApp(){
     }).catch(function(){});
   }
   // role이 driver/member면 기사 전용 메뉴
-  if(_CU.role==='driver'||_CU.role==='member'){
+  if(_CU.role==='manager'){
+    MENUS=MENUS_MANAGER;
+  } else if(_CU.role==='driver'||_CU.role==='member'){
     MENUS=MENUS_DRIVER;
   } else {
     var sType = _CU.serviceType||'full';
@@ -5095,6 +5099,8 @@ function doJoin(){
   var bizNum=(document.getElementById('j-biz-num')||{}).value||'';
   var bizName=(document.getElementById('j-biz-name')||{}).value||'';
   var bizOwner=(document.getElementById('j-biz-owner')||{}).value||'';
+  var joinRole=(document.getElementById('j-role')||{value:'driver'}).value||'driver';
+  var joinStore=(document.getElementById('j-store')||{value:''}).value||'';
   var err=document.getElementById('j-err');err.style.display='none';
 
   if(!name||!driverId||!email||!pw||!code){err.textContent='이름, 정산 아이디, 이메일, 비밀번호, 회사코드를 입력하세요';err.style.display='block';return;}
@@ -5107,7 +5113,8 @@ function doJoin(){
     var userDoc={
       name:name,driverId:driverId,email:email,
       companyId:companyId,dealerId:companyId,companyName:companyName,
-      role:'driver',
+      role:joinRole,
+      store:joinStore,
       bizNum:bizNum,bizName:bizName,bizOwner:bizOwner,
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
     };
@@ -18903,9 +18910,9 @@ var MENUS_SETTLE = [
     {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'universal'}
   ]},
   {s:'📦 재고관리', items:[
-    {ic:'📦',l:'재고 현황',        p:'inventory',        plan_key:'inventory'},
-    {ic:'📥',l:'입고 등록',        p:'inventory',        plan_key:'inventory'},
-    {ic:'📤',l:'출고 등록',        p:'inventory',        plan_key:'inventory'},
+    {ic:'📦',l:'재고관리',          p:'inventory',        plan_key:'inventory'},
+    {ic:'📊',l:'과장별 취합',        p:'inv_summary',      plan_key:'inventory'},
+    {ic:'📋',l:'수정 이력',          p:'inv_edit_log',     plan_key:'inventory'},
   ]},
   {s:'🔐 QR 근태관리', items:[
     {ic:'🔐',l:'QR 출퇴근',        p:'attendance',       plan_key:'premium'},
@@ -19071,6 +19078,360 @@ var MENUS_HOURLY = [
 ];
 
 // 기사/직원 전용 (플랜 무관)
+
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 📊 과장별 취합 + 수정 이력
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// 과장별 취합 (관리자용)
+function pageInvSummary(){
+  document.getElementById('page-title').textContent='📊 과장별 취합';
+  var c=document.getElementById('content');
+  var did=_CU.dealerId||_CU.uid;
+  c.innerHTML='<div class="loading">⏳ 취합 중...</div>';
+
+  var today=new Date().toISOString().split('T')[0];
+  var ym=today.slice(0,7);
+
+  Promise.all([
+    _db.collection('inventory_in').where('dealerId','==',did).get(),
+    _db.collection('inventory_out').where('dealerId','==',did).get(),
+    _db.collection('users').where('dealerId','==',did).where('role','==','manager').get()
+  ]).then(function(res){
+    var ins=[]; res[0].forEach(function(d){ins.push(d.data());});
+    var outs=[]; res[1].forEach(function(d){outs.push(d.data());});
+    var managers=[]; res[2].forEach(function(d){managers.push(d.data());});
+
+    // 전체 집계
+    var totalIn=ins.reduce(function(s,d){return s+(d.qty||0);},0);
+    var totalOut=outs.filter(function(d){return d.outType!=='반품';}).reduce(function(s,d){return s+(d.qty||0);},0);
+    var totalReturn=outs.filter(function(d){return d.outType==='반품';}).reduce(function(s,d){return s+(d.qty||0);},0);
+    var todayIn=ins.filter(function(d){return d.date===today;}).reduce(function(s,d){return s+(d.qty||0);},0);
+    var todayOut=outs.filter(function(d){return d.date===today;}).reduce(function(s,d){return s+(d.qty||0);},0);
+
+    var html='<div style="max-width:800px;margin:0 auto;padding:16px">';
+
+    // 전체 요약 카드
+    html+='<div style="font-size:13px;font-weight:800;margin-bottom:10px;color:var(--acc)">📊 전체 취합</div>';
+    html+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px">';
+    html+=_invDashCard('전체 입고',totalIn+'박스','#10b981');
+    html+=_invDashCard('전체 출고',totalOut+'박스','#f59e0b');
+    html+=_invDashCard('전체 반품',totalReturn+'박스','#dc2626');
+    html+=_invDashCard('오늘 입고',todayIn+' · 출고'+todayOut,'#3b82f6');
+    html+='</div>';
+
+    // 과장별 취합
+    html+='<div style="font-size:13px;font-weight:800;margin-bottom:10px">👷 과장별 취합</div>';
+
+    if(!managers.length){
+      html+='<div class="empty">등록된 과장 없음 — 직원 가입 시 역할을 과장으로 설정하세요</div>';
+    } else {
+      managers.forEach(function(mgr){
+        var store=mgr.store||mgr.name||'미지정';
+        var mgrIn=ins.filter(function(d){return d.store===store||d.editBy===mgr.name;});
+        var mgrOut=outs.filter(function(d){return d.store===store||d.editBy===mgr.name;});
+        var mgrInQty=mgrIn.reduce(function(s,d){return s+(d.qty||0);},0);
+        var mgrOutQty=mgrOut.filter(function(d){return d.outType!=='반품';}).reduce(function(s,d){return s+(d.qty||0);},0);
+        var mgrRetQty=mgrOut.filter(function(d){return d.outType==='반품';}).reduce(function(s,d){return s+(d.qty||0);},0);
+        var mgrTodayIn=mgrIn.filter(function(d){return d.date===today;}).reduce(function(s,d){return s+(d.qty||0);},0);
+
+        html+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">'+
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
+            '<div>'+
+              '<div style="font-size:13px;font-weight:800">'+esc(mgr.name||'이름없음')+'</div>'+
+              '<div style="font-size:11px;color:var(--text3)">담당매장: '+esc(store)+'</div>'+
+            '</div>'+
+            '<div style="font-size:10px;color:var(--text3)">오늘 입고 '+mgrTodayIn+'박스</div>'+
+          '</div>'+
+          '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">'+
+            '<div style="background:rgba(16,185,129,.1);border-radius:8px;padding:8px;text-align:center">'+
+              '<div style="font-size:18px;font-weight:800;color:#10b981">'+mgrInQty+'</div>'+
+              '<div style="font-size:10px;color:var(--text3)">총 입고</div>'+
+            '</div>'+
+            '<div style="background:rgba(245,158,11,.1);border-radius:8px;padding:8px;text-align:center">'+
+              '<div style="font-size:18px;font-weight:800;color:#f59e0b">'+mgrOutQty+'</div>'+
+              '<div style="font-size:10px;color:var(--text3)">총 출고</div>'+
+            '</div>'+
+            '<div style="background:rgba(220,38,38,.1);border-radius:8px;padding:8px;text-align:center">'+
+              '<div style="font-size:18px;font-weight:800;color:#dc2626">'+mgrRetQty+'</div>'+
+              '<div style="font-size:10px;color:var(--text3)">총 반품</div>'+
+            '</div>'+
+          '</div>'+
+        '</div>';
+      });
+    }
+
+    html+='</div>';
+    c.innerHTML=html;
+  }).catch(function(e){c.innerHTML='<div class="empty">오류: '+e.message+'</div>';});
+}
+
+// 수정 이력 (장난 방지)
+function pageInvEditLog(){
+  document.getElementById('page-title').textContent='📋 수정 이력';
+  var c=document.getElementById('content');
+  var did=_CU.dealerId||_CU.uid;
+  c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
+
+  _db.collection('inv_edit_log').where('dealerId','==',did)
+    .orderBy('createdAt','desc').limit(100).get()
+    .then(function(snap){
+      if(snap.empty){
+        c.innerHTML='<div class="empty" style="padding:40px">수정 이력 없음</div>';
+        return;
+      }
+
+      var html='<div style="max-width:800px;margin:0 auto;padding:16px">'+
+        '<div style="font-size:13px;font-weight:800;margin-bottom:12px">📋 수정 이력 (최근 100건)</div>'+
+        '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
+        '<thead><tr style="background:var(--bg3)">'+
+          '<th style="padding:8px;text-align:left">수정자</th>'+
+          '<th style="padding:8px;text-align:left">매장</th>'+
+          '<th style="padding:8px;text-align:left">품목</th>'+
+          '<th style="padding:8px;text-align:right;color:#dc2626">이전</th>'+
+          '<th style="padding:8px;text-align:right;color:#10b981">수정후</th>'+
+          '<th style="padding:8px">사유</th>'+
+          '<th style="padding:8px">일시</th>'+
+        '</tr></thead><tbody>';
+
+      snap.forEach(function(doc){
+        var d=doc.data();
+        var diff=d.newQty-d.oldQty;
+        var diffColor=diff>0?'#10b981':diff<0?'#dc2626':'var(--text3)';
+        var time=d.createdAt?new Date(d.createdAt).toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'-';
+        html+='<tr style="border-bottom:1px solid var(--border)'+(Math.abs(diff)>10?' background:rgba(220,38,38,.04)':'')+'">' +
+          '<td style="padding:8px;font-weight:700">'+esc(d.editBy||'-')+'</td>'+
+          '<td style="padding:8px;color:var(--text3)">'+esc(d.store||'-')+'</td>'+
+          '<td style="padding:8px">'+esc(d.name||'-')+'</td>'+
+          '<td style="padding:8px;text-align:right;color:#dc2626">'+d.oldQty+'</td>'+
+          '<td style="padding:8px;text-align:right;font-weight:800;color:'+diffColor+'">'+d.newQty+' ('+(diff>0?'+':'')+diff+')</td>'+
+          '<td style="padding:8px;color:var(--text3);font-size:11px">'+esc(d.reason||'-')+'</td>'+
+          '<td style="padding:8px;color:var(--text3);font-size:11px">'+time+'</td>'+
+        '</tr>';
+      });
+
+      html+='</tbody></table></div></div>';
+      c.innerHTML=html;
+    }).catch(function(e){c.innerHTML='<div class="empty">오류: '+e.message+'</div>';});
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 👷 과장(manager) 메뉴
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+var MENUS_MANAGER=[
+  {s:'🏠 홈', items:[
+    {ic:'🏠',l:'대시보드',p:'home',plan_key:'free'}
+  ]},
+  {s:'📦 재고 관리', items:[
+    {ic:'📦',l:'재고현황',p:'inv_manager_stock',plan_key:'free'},
+    {ic:'📥',l:'입고 등록',p:'inv_manager_in',plan_key:'free'},
+    {ic:'📤',l:'출고 등록',p:'inv_manager_out',plan_key:'free'},
+    {ic:'🔄',l:'반품/공병',p:'inv_manager_return',plan_key:'free'},
+  ]}
+];
+
+// 과장 - 재고현황 (본인 매장만)
+function pageInvManagerStock(){
+  document.getElementById('page-title').textContent='📦 재고현황';
+  var c=document.getElementById('content');
+  var did=_CU.dealerId||_CU.uid;
+  var store=_CU.store||'';
+  _invLoadStock(did,'');
+}
+
+// 과장 - 입고 등록
+function pageInvManagerIn(){
+  document.getElementById('page-title').textContent='📥 입고 등록';
+  var c=document.getElementById('content');
+  var did=_CU.dealerId||_CU.uid;
+  var store=_CU.store||'';
+
+  c.innerHTML=
+    '<div style="max-width:600px;margin:0 auto;padding:16px">'+
+    '<div style="background:linear-gradient(135deg,#10b981,#059669);border-radius:14px;padding:14px 18px;color:#fff;margin-bottom:14px">'+
+      '<div style="font-size:14px;font-weight:800">📥 입고 등록</div>'+
+      '<div style="font-size:11px;opacity:.7;margin-top:2px">담당 매장: '+esc(store||'전체')+'</div>'+
+    '</div>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">'+
+      '<button id="mgr-scanner-btn" style="padding:9px 16px;background:#0077b6;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⌨️ 스캐너 입력</button>'+
+      '<button id="mgr-camera-btn" style="padding:9px 16px;background:#0096c7;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📷 카메라 스캔</button>'+
+      '<button id="mgr-file-btn" style="padding:9px 16px;background:#10b981;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📂 파일 업로드</button>'+
+    '</div>'+
+    '<div id="mgr-in-log" style="background:var(--bg2);border-radius:12px;border:1px solid var(--border);padding:14px">'+
+      '<div style="font-size:12px;font-weight:700;margin-bottom:8px">오늘 입고 내역</div>'+
+      '<div id="mgr-in-list"><div class="loading">⏳ 로딩 중...</div></div>'+
+    '</div>'+
+    '</div>';
+
+  setTimeout(function(){
+    var scannerBtn=document.getElementById('mgr-scanner-btn');
+    var cameraBtn=document.getElementById('mgr-camera-btn');
+    var fileBtn=document.getElementById('mgr-file-btn');
+    if(scannerBtn) scannerBtn.addEventListener('click',function(){_invScannerInput(did);});
+    if(cameraBtn) cameraBtn.addEventListener('click',function(){_invBarcodeScanner(did);});
+    if(fileBtn) fileBtn.addEventListener('click',function(){_invPickFileType('in');});
+    _mgrLoadTodayIn(did, store);
+  },50);
+}
+
+function _mgrLoadTodayIn(did, store){
+  var today=new Date().toISOString().split('T')[0];
+  var list=document.getElementById('mgr-in-list');
+  if(!list) return;
+  var query=_db.collection('inventory_in').where('dealerId','==',did).where('date','==',today);
+  if(store) query=query.where('store','==',store);
+  query.orderBy('createdAt','desc').get().then(function(snap){
+    if(snap.empty){list.innerHTML='<div class="empty">오늘 입고 없음</div>';return;}
+    var html='<table style="width:100%;border-collapse:collapse;font-size:12px">'+
+      '<thead><tr style="background:var(--bg3)">'+
+        '<th style="padding:7px 10px;text-align:left">품목</th>'+
+        '<th style="padding:7px 10px;text-align:right;color:#10b981">수량</th>'+
+        '<th style="padding:7px 10px;text-align:left">유형</th>'+
+        '<th style="padding:7px 10px;text-align:left">시간</th>'+
+        '<th style="padding:7px 10px">수정</th>'+
+      '</tr></thead><tbody>';
+    snap.forEach(function(doc){
+      var d=doc.data();
+      var time=d.createdAt?new Date(d.createdAt).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}):'-';
+      html+='<tr style="border-bottom:1px solid var(--border)">'+
+        '<td style="padding:7px 10px;font-weight:700">'+esc(d.name||'-')+'</td>'+
+        '<td style="padding:7px 10px;text-align:right;font-weight:800;color:#10b981">'+d.qty+'</td>'+
+        '<td style="padding:7px 10px;color:var(--text3)">'+esc(d.outType||'-')+'</td>'+
+        '<td style="padding:7px 10px;color:var(--text3)">'+time+'</td>'+
+        '<td style="padding:7px 10px">'+
+          '<button data-id="'+doc.id+'" data-qty="'+d.qty+'" data-name="'+esc(d.name||'')+'" class="mgr-edit-btn" '+
+            'style="padding:3px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;font-size:10px;cursor:pointer">수정</button>'+
+        '</td>'+
+      '</tr>';
+    });
+    html+='</tbody></table>';
+    list.innerHTML=html;
+
+    // 수정 버튼
+    list.querySelectorAll('.mgr-edit-btn').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var id=btn.dataset.id;
+        var oldQty=parseInt(btn.dataset.qty)||0;
+        var name=btn.dataset.name;
+        var newQty=prompt(name+' 수량 수정 (현재: '+oldQty+'개) 새 수량:',oldQty);
+        if(!newQty||isNaN(parseInt(newQty))) return;
+        var reason=prompt('수정 사유를 입력하세요:','');
+        if(reason===null) return;
+        var now=new Date().toISOString();
+        _db.collection('inventory_in').doc(id).update({
+          qty:parseInt(newQty),
+          lastEditAt:now,
+          lastEditBy:_CU.name||_CU.email,
+          lastEditReason:reason||'사유없음'
+        }).then(function(){
+          // 수정 이력 저장
+          _db.collection('inv_edit_log').add({
+            dealerId:did,
+            docId:id,
+            collection:'inventory_in',
+            name:name,
+            oldQty:oldQty,
+            newQty:parseInt(newQty),
+            editBy:_CU.name||_CU.email,
+            editByUid:_CU.uid,
+            store:_CU.store||'',
+            reason:reason||'사유없음',
+            createdAt:now
+          }).then(function(){
+            toast('✅ 수정됨 (이력 저장됨)');
+            _mgrLoadTodayIn(did, store);
+          });
+        }).catch(function(e){toast('❌ '+e.message);});
+      });
+    });
+  }).catch(function(e){list.innerHTML='<div class="empty">오류: '+e.message+'</div>';});
+}
+
+// 과장 - 출고 등록
+function pageInvManagerOut(){
+  document.getElementById('page-title').textContent='📤 출고 등록';
+  var c=document.getElementById('content');
+  var did=_CU.dealerId||_CU.uid;
+  var store=_CU.store||'';
+
+  c.innerHTML=
+    '<div style="max-width:600px;margin:0 auto;padding:16px">'+
+    '<div style="background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:14px;padding:14px 18px;color:#fff;margin-bottom:14px">'+
+      '<div style="font-size:14px;font-weight:800">📤 출고 등록</div>'+
+      '<div style="font-size:11px;opacity:.7;margin-top:2px">담당 매장: '+esc(store||'전체')+'</div>'+
+    '</div>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">'+
+      '<button id="mgr-out-scanner-btn" style="padding:9px 16px;background:#0077b6;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⌨️ 스캐너 입력</button>'+
+      '<button id="mgr-out-file-btn" style="padding:9px 16px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📂 파일 업로드</button>'+
+    '</div>'+
+    '<div id="mgr-out-log" style="background:var(--bg2);border-radius:12px;border:1px solid var(--border);padding:14px">'+
+      '<div style="font-size:12px;font-weight:700;margin-bottom:8px">오늘 출고 내역</div>'+
+      '<div id="mgr-out-list"><div class="loading">⏳ 로딩 중...</div></div>'+
+    '</div>'+
+    '</div>';
+
+  setTimeout(function(){
+    var sBtn=document.getElementById('mgr-out-scanner-btn');
+    var fBtn=document.getElementById('mgr-out-file-btn');
+    if(sBtn) sBtn.addEventListener('click',function(){_invScannerInput(did);});
+    if(fBtn) fBtn.addEventListener('click',function(){_invPickFileType('out');});
+    // 오늘 출고 로드
+    var today=new Date().toISOString().split('T')[0];
+    var list=document.getElementById('mgr-out-list');
+    var query=_db.collection('inventory_out').where('dealerId','==',did).where('date','==',today);
+    if(store) query=query.where('store','==',store);
+    query.get().then(function(snap){
+      if(snap.empty){list.innerHTML='<div class="empty">오늘 출고 없음</div>';return;}
+      var html='<table style="width:100%;border-collapse:collapse;font-size:12px">'+
+        '<thead><tr style="background:var(--bg3)">'+
+          '<th style="padding:7px;text-align:left">품목</th>'+
+          '<th style="padding:7px;text-align:right;color:#f59e0b">수량</th>'+
+          '<th style="padding:7px">유형</th>'+
+          '<th style="padding:7px">수정</th>'+
+        '</tr></thead><tbody>';
+      snap.forEach(function(doc){
+        var d=doc.data();
+        html+='<tr style="border-bottom:1px solid var(--border)">'+
+          '<td style="padding:7px;font-weight:700">'+esc(d.name||'-')+'</td>'+
+          '<td style="padding:7px;text-align:right;font-weight:800;color:#f59e0b">'+d.qty+'</td>'+
+          '<td style="padding:7px;color:var(--text3)">'+esc(d.outType||'-')+'</td>'+
+          '<td style="padding:7px">'+
+            '<button data-id="'+doc.id+'" data-qty="'+d.qty+'" data-name="'+esc(d.name||'')+'" class="mgr-out-edit-btn" '+
+              'style="padding:3px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;font-size:10px;cursor:pointer">수정</button>'+
+          '</td>'+
+        '</tr>';
+      });
+      html+='</tbody></table>';
+      list.innerHTML=html;
+      list.querySelectorAll('.mgr-out-edit-btn').forEach(function(btn){
+        btn.addEventListener('click',function(){
+          var id=btn.dataset.id; var oldQty=parseInt(btn.dataset.qty)||0; var name=btn.dataset.name;
+          var newQty=prompt(name+' 수량 수정 (현재: '+oldQty+'개) 새 수량:',oldQty);
+          if(!newQty||isNaN(parseInt(newQty))) return;
+          var reason=prompt('수정 사유:','');
+          if(reason===null) return;
+          var now=new Date().toISOString();
+          _db.collection('inventory_out').doc(id).update({qty:parseInt(newQty),lastEditAt:now,lastEditBy:_CU.name||_CU.email,lastEditReason:reason||'사유없음'})
+          .then(function(){
+            _db.collection('inv_edit_log').add({dealerId:did,docId:id,collection:'inventory_out',name:name,oldQty:oldQty,newQty:parseInt(newQty),editBy:_CU.name||_CU.email,editByUid:_CU.uid,store:_CU.store||'',reason:reason||'사유없음',createdAt:now});
+            toast('✅ 수정됨'); pageInvManagerOut();
+          });
+        });
+      });
+    });
+  },50);
+}
+
+// 과장 - 반품/공병
+function pageInvManagerReturn(){
+  document.getElementById('page-title').textContent='🔄 반품/공병';
+  var c=document.getElementById('content');
+  var did=_CU.dealerId||_CU.uid;
+  c.innerHTML='<div style="max-width:600px;margin:0 auto;padding:16px"><div class="loading">⏳ 로딩 중...</div></div>';
+  _invLoadReturn(did);
+}
+
 var MENUS_DRIVER = [
   {s:'🏠 홈',    items:[{ic:'🏠',l:'내 홈',p:'emp_home',plan_key:'free'}]},
   {s:'출퇴근',items:[
@@ -19615,7 +19976,7 @@ function goPage(page){
   document.getElementById('topbar-right').innerHTML='';
   document.getElementById('sidebar').classList.remove('open');
   var _bd=document.getElementById('sb-backdrop');if(_bd)_bd.style.display='none';
-  var pages={settle:pageSettle,delivery_settle:pageDeliverySettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,my_roster:pageMyRoster,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,emp_home:pageEmpHome,vehicle:pageVehicle,expense:pageExpense,overtime:pageOvertime,evaluation:pageEvaluation,delivery_report:pageDeliveryReport,delivery_platform:pageDeliveryPlatform,delivery_input:pageDeliveryInput,notify_history:pageNotifyHistory,universal_input:pageUniversalInput,universal_settle:pageUniversalSettle,universal_rules:pageUniversalRules,universal_emp:pageUniversalEmp,inventory:pageInventory};
+  var pages={settle:pageSettle,delivery_settle:pageDeliverySettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,my_roster:pageMyRoster,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,emp_home:pageEmpHome,vehicle:pageVehicle,expense:pageExpense,overtime:pageOvertime,evaluation:pageEvaluation,delivery_report:pageDeliveryReport,delivery_platform:pageDeliveryPlatform,delivery_input:pageDeliveryInput,notify_history:pageNotifyHistory,universal_input:pageUniversalInput,universal_settle:pageUniversalSettle,universal_rules:pageUniversalRules,universal_emp:pageUniversalEmp,inventory:pageInventory,inv_summary:pageInvSummary,inv_edit_log:pageInvEditLog,inv_manager_stock:pageInvManagerStock,inv_manager_in:pageInvManagerIn,inv_manager_out:pageInvManagerOut,inv_manager_return:pageInvManagerReturn};
   // ★ 플랜 체크
   var cd=window._cachedCompanyDoc||{};
   var planGate={
