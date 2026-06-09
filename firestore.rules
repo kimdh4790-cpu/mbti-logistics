@@ -360,6 +360,10 @@ service cloud.firestore {
       allow read, write: if ownsDoc() || ownsNewDoc();
       allow create: if ownsNewDoc();
     }
+    match /inv_edit_log/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if isAuth();
+    }
 
   }
 }
