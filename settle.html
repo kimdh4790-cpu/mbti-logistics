@@ -28987,7 +28987,8 @@ function pageInventory(){
       '<button id="itab-daily"   style="padding:6px 14px;background:var(--bg3);color:var(--text2);border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📆 일별조회</button>'+
       '<button id="itab-dash"    style="padding:6px 14px;background:var(--bg3);color:var(--text2);border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📈 대시보드</button>'+
     '</div>'+
-    '<div id="inv-filter" style="margin-bottom:8px"></div>'+
+    '<div id="inv-filter" style="margin-bottom:6px"></div>'+
+    '<div id="inv-stock-filter" style="margin-bottom:8px"></div>'+
     '<div id="inv-content"><div class="loading">⏳ 로딩 중...</div></div>';
 
   setTimeout(function(){
@@ -29067,6 +29068,10 @@ function _invTab(btn, tab){
   };
   var ptEl=document.getElementById('page-title');
   if(ptEl) ptEl.textContent='재고관리 · '+(titles[tab]||tab);
+
+  // stock 아닌 탭 전환 시 stock 필터 숨김
+  var sf=document.getElementById('inv-stock-filter');
+  if(sf) sf.innerHTML='';
 
   if(tab==='dash') _invLoadDash(did);
   else if(tab==='monthly') _invLoadMonthly(did);
@@ -29777,7 +29782,8 @@ function _invLoadStock(did, filterSup){
       fhtml+='<button class="inv-ori-btn" data-ori="'+esc(o)+'" style="padding:3px 10px;border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;background:var(--bg3);color:'+color+'">'+esc(o)+'</button>';
     });
 
-    var fEl=document.getElementById('inv-filter');
+    var fEl=document.getElementById('inv-stock-filter');
+    if(!fEl){fEl=document.getElementById('inv-filter');}
     fEl.innerHTML=fhtml;
     fEl.querySelectorAll('.inv-sup-btn').forEach(function(btn){
       btn.addEventListener('click',function(){_invLoadStock(did, btn.dataset.sup||'');});
