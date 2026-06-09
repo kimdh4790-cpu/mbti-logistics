@@ -1574,8 +1574,6 @@ function parseCoupangExcel(inp){
 }
 
 
-
-
 // 업로드 변경이력 페이지
 function pageInvChangeLog(){
   document.getElementById('page-title').textContent='🕐 업로드 변경이력';
@@ -4035,7 +4033,6 @@ function _applyUniversalRules(r){
   window._uRulesReady=true;
   var ptCnt=Object.keys(window._uPriceData).length;
   var lmCnt=Object.keys(window._uLeaderMap).length;
-  console.log('[DONWAY] 규칙 적용 — 단가'+ptCnt+'개/팀장'+lmCnt+'명/시술'+window._uServiceMenu.length+'개');
 }
 
 function showApp(){
@@ -4176,7 +4173,6 @@ function showApp(){
   } else {
     var sType = _CU.serviceType||'full';
     // ★ sType 디버그 로그 (슈퍼어드민용)
-    if(false){}
     if(isSuperAdmin()){
       MENUS=MENUS_SETTLE;
     } else {
@@ -8107,7 +8103,6 @@ function _dwRenderSimulator(){
   }).join('');
 
 
-
   el.innerHTML=
     // ━━ 헤더
     '<div style="background:linear-gradient(135deg,#0f172a,#1e3a5f);border-radius:16px;padding:18px 20px;margin-bottom:12px;color:#fff">'
@@ -10916,7 +10911,6 @@ function _uAddIdSupport(){
 }
 
 
-
 // ★ 다중 단가 파일 업로드 — 파일명으로 유형 자동 감지
 window._uMultiPriceUpload = function(input){
   var files = Array.from(input.files);
@@ -12088,53 +12082,6 @@ function _buildUniversalPayslip(emp, month, compName){
   var sources = emp.sources||[];
   var details = emp.details||[];
   var isCoupang = false; // 범용정산에서 쿠팡 분기 제거
-
-  if(false){// 쿠팡 분기 비활성화
-    // 라우트별 상세 — details 또는 _routes에서 추출
-    var routeDetails=[];
-    if(emp._routes){
-      // 직접 저장된 routes 객체 사용 (가장 정확)
-      routeDetails=Object.keys(emp._routes).sort().map(function(r){
-        var rd=emp._routes[r];
-        return {route:r,cnt:rd.cnt||0,ret:rd.ret||0,unitPrice:rd.price||0};
-      });
-    } else {
-      routeDetails=details.filter(function(d){return /^[0-9]{3}[A-D]$/.test(d.label);})
-        .map(function(d){return {route:d.label,cnt:d.cnt||0,ret:d.ret||0,unitPrice:d.price||0};});
-    }
-
-    var isBiz=isBizEmployee(emp);
-    var freshAmt=emp._fresh||0;
-    // 인센 — 규칙 인센(건수×캠프단가) 우선, 없으면 엑셀 인센
-    var incFromRules=emp._incFromRules||0;
-    var incFromExcel=emp._inc||0;
-    // 엑셀 인센이 규칙 인센과 같거나 작으면 규칙 인센 사용
-    var incAmt=incFromRules>0?incFromRules:incFromExcel;
-    if(!freshAmt&&!incAmt) incAmt=emp.bonus||emp.inc||0;
-    // 인센 건수/단가 정보 (명세서 표시용)
-    var incRate=incFromRules>0?((window._uCurrentRules&&window._uCurrentRules.incCamps&&window._uCurrentRules.incCamps[emp.camp||''])||0):0;
-
-    var leaderFee=emp._leaderFee||0;
-    var idSupportAmt=emp._idSupportGross||0;
-    var etcPlus=(emp._etcPlus||0); // leaderFee + idSupport 포함됨
-    var etcMinus=emp._etcMinus||0;
-    var adv=emp._adv||0;
-
-    var vatIncome=(emp.gross||0)+(freshAmt||0)+(incAmt||0)+(etcPlus||0)-(etcMinus||0)-(adv||0);
-    var supply=isBiz?Math.round(vatIncome/1.1):vatIncome;
-    var x={routeDetails:routeDetails,camp:emp.camp||'',incCnt:emp.cnt||0,incRate:incRate};
-    var r={
-      emp: isBiz?Math.round(supply*0.346*0.008):0,
-      work: isBiz?Math.round(supply*0.346*0.0088):0,
-      fresh: freshAmt,
-      finc: incAmt,
-      etcPlus: leaderFee+idSupportAmt+(emp._etcPlusManual||0),
-      etcMinus: etcMinus,
-      adv: adv
-    };
-    var finalNet=emp.net||vatIncome;
-    return _buildPayslipCaptureHTML(x, r, emp.name||'', month||'', finalNet, vatIncome);
-  }
 
   // 일반 범용 명세서 (하단 기존 함수 내용)
   return _buildUniversalPayslipGeneric(emp, month, compName);
@@ -28272,7 +28219,6 @@ async function _doDeploySettlements(ids) {
       };
       await _db.collection('driver_notifications').add(notifBase);
       // 세금계산서도 별도 저장
-      // await _db.collection('driver_notifications').add({
       // driverName: settle.name || '',
       // driverId: _tDrvIdReal,
       // targetDriverId: _tDrvIdReal,
@@ -28353,23 +28299,6 @@ async function _doDeploySettlements(ids) {
   }
 
   // (일괄 발송 제거 — 위에서 개별 발송으로 처리)
-  if (false) {
-    try {
-      var fr = await fetch('/fcm/notify-drivers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tokens: fcmTokens,
-          title: '📤 ' + (month || '') + ' 정산 배포',
-          body: '정산 명세서가 배포됐습니다. 앱에서 확인하세요.',
-          type: 'settle_deploy'
-        })
-      });
-      var frData = await fr.json();
-      fcmDone = frData.sent || 0;
-    } catch(e) {}
-  }
-
   toast('✅ 정산 배포 완료! ' + done + '명 처리 · 알림 ' + fcmDone + '명 발송');
   _renderSettleList();
 }
@@ -30469,7 +30398,6 @@ function _invDashCard(label, val, color){
     '<div style="font-size:10px;color:var(--text3);margin-top:2px">'+label+'</div>'+
   '</div>';
 }
-
 
 
 // ── 📆 일별 조회 ──
