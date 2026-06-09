@@ -1575,6 +1575,101 @@ function parseCoupangExcel(inp){
 
 
 
+
+// 업로드 변경이력 페이지
+function pageInvChangeLog(){
+  document.getElementById('page-title').textContent='🕐 업로드 변경이력';
+  var c=document.getElementById('content');
+  var did=_CU.dealerId||_CU.uid;
+  c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
+
+  _db.collection('inv_change_log').where('dealerId','==',did)
+    .orderBy('uploadAt','desc').limit(200).get()
+    .then(function(snap){
+      if(snap.empty){
+        c.innerHTML='<div class="empty" style="padding:40px">업로드 이력 없음</div>';
+        return;
+      }
+
+      // 날짜별 그룹
+      var groups={};
+      snap.forEach(function(doc){
+        var d=doc.data();
+        var date=d.uploadAt?d.uploadAt.split('T')[0]:'기타';
+        if(!groups[date]) groups[date]=[];
+        groups[date].push(d);
+      });
+
+      var html='<div style="max-width:800px;margin:0 auto;padding:16px">';
+
+      // 요약 카드
+      var totalUploads=snap.size;
+      var uploaders={};
+      snap.forEach(function(doc){
+        var by=doc.data().uploadBy||'unknown';
+        uploaders[by]=(uploaders[by]||0)+1;
+      });
+      html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">';
+      html+='<div style="background:var(--bg2);border-radius:10px;padding:12px;border:1px solid var(--border)">'+
+        '<div style="font-size:11px;color:var(--text3)">총 업로드 횟수</div>'+
+        '<div style="font-size:24px;font-weight:900;color:var(--acc)">'+totalUploads+'회</div>'+
+      '</div>';
+      html+='<div style="background:var(--bg2);border-radius:10px;padding:12px;border:1px solid var(--border)">'+
+        '<div style="font-size:11px;color:var(--text3);margin-bottom:6px">업로더별</div>';
+      Object.keys(uploaders).forEach(function(by){
+        html+='<div style="font-size:11px;display:flex;justify-content:space-between"><span>'+esc(by)+'</span><span style="color:var(--acc);font-weight:700">'+uploaders[by]+'회</span></div>';
+      });
+      html+='</div></div>';
+
+      // 날짜별 이력
+      Object.keys(groups).sort().reverse().forEach(function(date){
+        html+='<div style="font-size:12px;font-weight:800;color:var(--acc);margin:14px 0 8px">📅 '+date+'</div>';
+        html+='<table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:8px">'+
+          '<thead><tr style="background:var(--bg3)">'+
+            '<th style="padding:7px 10px;text-align:left">업로더</th>'+
+            '<th style="padding:7px 10px;text-align:left">매장</th>'+
+            '<th style="padding:7px 10px;text-align:right;color:#10b981">입고</th>'+
+            '<th style="padding:7px 10px;text-align:right;color:#f59e0b">출고</th>'+
+            '<th style="padding:7px 10px;text-align:left">시간</th>'+
+            '<th style="padding:7px 10px">내역</th>'+
+          '</tr></thead><tbody>';
+
+        groups[date].forEach(function(d){
+          var time=d.uploadAt?new Date(d.uploadAt).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}):'-';
+          var hasIn=d.inCount>0;
+          var hasOut=d.outCount>0;
+          html+='<tr style="border-bottom:1px solid var(--border)">'+
+            '<td style="padding:7px 10px;font-weight:700">'+esc(d.uploadBy||'-')+'</td>'+
+            '<td style="padding:7px 10px;color:var(--text3)">'+esc(d.uploadStore||'-')+'</td>'+
+            '<td style="padding:7px 10px;text-align:right;font-weight:700;color:'+(hasIn?'#10b981':'var(--text3)')+'">'+d.inCount+'건</td>'+
+            '<td style="padding:7px 10px;text-align:right;font-weight:700;color:'+(hasOut?'#f59e0b':'var(--text3)')+'">'+d.outCount+'건</td>'+
+            '<td style="padding:7px 10px;color:var(--text3)">'+time+'</td>'+
+            '<td style="padding:7px 10px">'+
+              (d.inSnapshot&&d.inSnapshot.length?
+                '<button class="cl-detail-btn" style="padding:2px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;font-size:10px;cursor:pointer" data-idx="'+groups[date].indexOf(d)+'_'+date+'">내역보기</button>':'-')+
+            '</td>'+
+          '</tr>';
+        });
+        html+='</tbody></table>';
+      });
+
+      html+='</div>';
+      c.innerHTML=html;
+
+      // 내역보기 버튼 — 인덱스 기반으로 변경
+      var allDocs=[];
+      snap.forEach(function(doc){allDocs.push(doc.data());});
+      c.querySelectorAll('.cl-detail-btn').forEach(function(btn,bi){
+        btn.addEventListener('click',function(){
+          var d=allDocs[bi];
+          var snap=(d&&d.inSnapshot)||[];
+          if(!snap.length){toast('내역 없음');return;}
+          var detail=snap.map(function(s){return (s.name||'-')+' '+s.qty+'건 ('+s.date+')';}).join('\n');
+          alert('입고 내역 ('+snap.length+'건):\n'+detail);
+        });
+      });
+    }).catch(function(e){c.innerHTML='<div class="empty">오류: '+e.message+'</div>';});
+}
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // ⌨️ 바코드 스캐너 입력 (USB/블루투스 기계)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -18940,6 +19035,7 @@ var MENUS_SETTLE = [
     {ic:'📦',l:'재고관리',          p:'inventory',        plan_key:'inventory'},
     {ic:'📊',l:'과장별 취합',        p:'inv_summary',      plan_key:'inventory'},
     {ic:'📋',l:'수정 이력',          p:'inv_edit_log',     plan_key:'inventory'},
+    {ic:'🕐',l:'업로드 변경이력',    p:'inv_change_log',   plan_key:'inventory'},
   ]},
   {s:'🔐 QR 근태관리', items:[
     {ic:'🔐',l:'QR 출퇴근',        p:'attendance',       plan_key:'premium'},
@@ -20052,7 +20148,7 @@ function goPage(page){
   document.getElementById('topbar-right').innerHTML='';
   document.getElementById('sidebar').classList.remove('open');
   var _bd=document.getElementById('sb-backdrop');if(_bd)_bd.style.display='none';
-  var pages={settle:pageSettle,delivery_settle:pageDeliverySettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,my_roster:pageMyRoster,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,emp_home:pageEmpHome,vehicle:pageVehicle,expense:pageExpense,overtime:pageOvertime,evaluation:pageEvaluation,delivery_report:pageDeliveryReport,delivery_platform:pageDeliveryPlatform,delivery_input:pageDeliveryInput,notify_history:pageNotifyHistory,universal_input:pageUniversalInput,universal_settle:pageUniversalSettle,universal_rules:pageUniversalRules,universal_emp:pageUniversalEmp,inventory:pageInventory,inv_summary:pageInvSummary,inv_edit_log:pageInvEditLog,inv_manager_stock:pageInvManagerStock,inv_manager_in:pageInvManagerIn,inv_manager_out:pageInvManagerOut,inv_manager_return:pageInvManagerReturn};
+  var pages={settle:pageSettle,delivery_settle:pageDeliverySettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,my_roster:pageMyRoster,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,emp_home:pageEmpHome,vehicle:pageVehicle,expense:pageExpense,overtime:pageOvertime,evaluation:pageEvaluation,delivery_report:pageDeliveryReport,delivery_platform:pageDeliveryPlatform,delivery_input:pageDeliveryInput,notify_history:pageNotifyHistory,universal_input:pageUniversalInput,universal_settle:pageUniversalSettle,universal_rules:pageUniversalRules,universal_emp:pageUniversalEmp,inventory:pageInventory,inv_summary:pageInvSummary,inv_edit_log:pageInvEditLog,inv_change_log:pageInvChangeLog,inv_manager_stock:pageInvManagerStock,inv_manager_in:pageInvManagerIn,inv_manager_out:pageInvManagerOut,inv_manager_return:pageInvManagerReturn};
   // ★ 플랜 체크
   var cd=window._cachedCompanyDoc||{};
   var planGate={
@@ -31895,6 +31991,10 @@ function _invParseBySheet(wb, did){
 
 // Batch 저장
 function _invBatchSave(did, items, inItems, outItems){
+  var now=new Date().toISOString();
+  var uploadBy=(_CU&&(_CU.name||_CU.email))||'unknown';
+  var uploadStore=(_CU&&_CU.store)||'';
+
   function saveChunks(col, arr, cb){
     if(!arr.length){cb();return;}
     var chunks=[];
@@ -31907,20 +32007,39 @@ function _invBatchSave(did, items, inItems, outItems){
         var clean={};
         Object.keys(item).forEach(function(k){
           var v=item[k];
-          // serverTimestamp 객체 제거
           if(v&&typeof v==='object'&&v.constructor&&v.constructor.name==='FieldValue') return;
           clean[k]=v;
         });
-        clean.updatedAt=new Date().toISOString();
+        clean.updatedAt=now;
+        clean.uploadBy=uploadBy;
+        clean.uploadStore=uploadStore;
         batch.set(_db.collection(col).doc(), clean);
       });
       batch.commit().then(function(){idx++;next();}).catch(function(e){toast('❌ '+e.message);});
     }
     next();
   }
+
+  // 변경 이력 로그 저장
+  function _saveChangeLog(inCnt, outCnt, itemCnt){
+    if(!inCnt&&!outCnt&&!itemCnt) return;
+    _db.collection('inv_change_log').add({
+      dealerId:did,
+      uploadBy:uploadBy,
+      uploadStore:uploadStore,
+      uploadAt:now,
+      inCount:inCnt,
+      outCount:outCnt,
+      itemCount:itemCnt,
+      // 입고 스냅샷 (품목명+수량)
+      inSnapshot:(inItems||[]).slice(0,50).map(function(i){return {name:i.name||'',qty:i.qty||0,date:i.date||''};})
+    }).catch(function(){});
+  }
+
   saveChunks('inventory', items, function(){
     saveChunks('inventory_in', inItems, function(){
       saveChunks('inventory_out', outItems, function(){
+        _saveChangeLog(inItems.length, outItems.length, items.length);
         toast('✅ 품목 '+items.length+'종 / 입고 '+inItems.length+'건 / 출고 '+outItems.length+'건 등록 완료!');
         pageInventory();
       });
