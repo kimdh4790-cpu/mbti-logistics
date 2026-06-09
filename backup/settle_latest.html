@@ -1670,6 +1670,68 @@ function pageInvChangeLog(){
       });
     }).catch(function(e){c.innerHTML='<div class="empty">오류: '+e.message+'</div>';});
 }
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 📧 Resend 이메일 발송
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _sendEmail(to, subject, html){
+  return fetch('/send-email',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({to:to, subject:subject, html:html})
+  }).then(function(r){return r.json();});
+}
+
+// 명세서 이메일 발송 (카카오 실패 시 대체)
+function _sendStatementEmail(driver, monthLabel, netPay, details){
+  if(!driver.email) return Promise.resolve({ok:false,reason:'이메일 없음'});
+
+  var html=
+    '<div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#f8f9fc;padding:20px">'+
+    '<div style="background:linear-gradient(135deg,#0077b6,#7c3aed);border-radius:14px;padding:24px;color:#fff;margin-bottom:20px;text-align:center">'+
+      '<div style="font-size:11px;opacity:.7;margin-bottom:6px">DONWAY 정산 명세서</div>'+
+      '<div style="font-size:22px;font-weight:900;margin-bottom:4px">'+monthLabel+' 정산 안내</div>'+
+      '<div style="font-size:13px;opacity:.8">'+esc(driver.name||'')+'님</div>'+
+    '</div>'+
+    '<div style="background:#fff;border-radius:12px;padding:20px;margin-bottom:16px">'+
+      '<div style="font-size:12px;color:#888;margin-bottom:6px">실지급액</div>'+
+      '<div style="font-size:32px;font-weight:900;color:#0077b6">'+Number(netPay).toLocaleString()+'원</div>'+
+    '</div>'+
+    (details?
+    '<div style="background:#fff;border-radius:12px;padding:20px;margin-bottom:16px">'+
+      '<div style="font-size:12px;font-weight:700;margin-bottom:12px">상세 내역</div>'+
+      details+
+    '</div>':'') +
+    '<div style="text-align:center;font-size:11px;color:#aaa;margin-top:16px">'+
+      'DONWAY · 엠비티아이 유한회사 · donway.ai.kr<br>'+
+      '문의: 051-711-3103'+
+    '</div>'+
+    '</div>';
+
+  return _sendEmail(driver.email, '[DONWAY] '+monthLabel+' 정산 명세서 - '+esc(driver.name||''), html);
+}
+
+// 카카오 발송 → 실패 시 이메일 자동 대체
+function _sendWithFallback(driver, monthLabel, netPay, details, kakaoFn){
+  // 카카오 먼저 시도
+  return kakaoFn().then(function(result){
+    if(result&&result.ok){
+      return {ok:true, channel:'kakao'};
+    }
+    // 카카오 실패 → 이메일 시도
+    return _sendStatementEmail(driver, monthLabel, netPay, details)
+      .then(function(r){
+        return {ok:r&&r.ok, channel:'email', reason:r&&r.reason};
+      });
+  }).catch(function(){
+    // 카카오 오류 → 이메일 시도
+    return _sendStatementEmail(driver, monthLabel, netPay, details)
+      .then(function(r){
+        return {ok:r&&r.ok, channel:'email'};
+      });
+  });
+}
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // ⌨️ 바코드 스캐너 입력 (USB/블루투스 기계)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
