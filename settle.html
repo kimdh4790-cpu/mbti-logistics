@@ -426,7 +426,11 @@ window.onBizDocSelected=onBizDocSelected;</script>
     </div>
     <div style="padding:8px 13px;display:flex;align-items:center;gap:7px;border-bottom:1px solid var(--border)">
       <div style="width:26px;height:26px;border-radius:50%;background:var(--brand-l);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--brand)" id="sb-av">관</div>
-      <div><div style="font-size:12px;font-weight:600" id="sb-name">로딩중</div><div style="font-size:10px;color:var(--text3)" id="sb-role"></div></div>
+      <div>
+        <div style="font-size:12px;font-weight:600" id="sb-name">로딩중</div>
+        <div style="font-size:10px;color:var(--text3)" id="sb-role"></div>
+        <div style="font-size:10px;color:var(--acc);font-weight:700;margin-top:2px;cursor:pointer" id="sb-company-code" onclick="_copyCompanyCode(this)"></div>
+      </div>
     </div>
     <nav class="snav" id="snav"></nav>
     <div class="sb-bot">
@@ -3979,6 +3983,16 @@ function showApp(){
   document.getElementById('sb-av').textContent=_cn0[0].toUpperCase();
   document.getElementById('sb-name').textContent=_CU.companyName||_CU.name||_CU.email||'';
   document.getElementById('sb-role').textContent=_CU.role==='admin'?'슈퍼관리자':(_CU.role==='driver'||_CU.role==='member')?('직원 · '+(_CU.companyName||'')):(_CU.companyName?'대리점 관리자 · '+_CU.email:'대리점 관리자');
+  // 회사코드 표시 (관리자만)
+  if(_CU.role!=='driver'&&_CU.role!=='member'){
+    _db.collection('companies').doc(_CU.dealerId||_CU.uid).get().then(function(doc){
+      if(doc.exists){
+        var code=doc.data().companyCode||'';
+        var codeEl=document.getElementById('sb-company-code');
+        if(codeEl&&code) codeEl.textContent='회사코드: '+code;
+      }
+    }).catch(function(){});
+  }
   // ★ 로그인 즉시 사이드바 DONWAY · 회사명 표시
   if(_CU.companyName) _updateSidebarBrand(_CU.companyName);
   // 회사명 없으면 companies 컬렉션에서 로드
@@ -19493,6 +19507,18 @@ var MENUS_DRIVER = [
   {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices',plan_key:'free'}]}
 ];
 var MENUS = MENUS_SETTLE; // 기본값
+function _copyCompanyCode(el){
+  var code=el.textContent.replace('회사코드: ','');
+  if(!code) return;
+  navigator.clipboard.writeText(code).then(function(){
+    var orig=el.textContent;
+    el.textContent='✅ 복사됨!';
+    setTimeout(function(){el.textContent=orig;},1500);
+  }).catch(function(){
+    toast('회사코드: '+code);
+  });
+}
+
 function buildNav(){
   var nav=document.getElementById('snav');
   if(!nav)return;
