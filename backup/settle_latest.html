@@ -1560,6 +1560,280 @@ function parseCoupangExcel(inp){
   });
 }
 
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 📷 바코드 스캔 — 재고 입고 등록
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _invBarcodeScanner(did){
+  // 팝업 생성
+  var pop=document.createElement('div');
+  pop.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.9);z-index:9000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px';
+  pop.innerHTML=
+    '<div style="width:100%;max-width:400px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+
+        '<div style="font-size:14px;font-weight:800;color:#fff">📷 바코드 스캔</div>'+
+        '<button id="bc-close" style="background:none;border:none;color:#fff;font-size:24px;cursor:pointer">✕</button>'+
+      '</div>'+
+      // 카메라 뷰
+      '<div style="position:relative;width:100%;background:#000;border-radius:12px;overflow:hidden;margin-bottom:12px">'+
+        '<video id="bc-video" autoplay playsinline style="width:100%;display:block"></video>'+
+        '<canvas id="bc-canvas" style="display:none"></canvas>'+
+        // 스캔 가이드
+        '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">'+
+          '<div style="width:240px;height:120px;border:2px solid #00D4FF;border-radius:8px;box-shadow:0 0 0 2000px rgba(0,0,0,.4)">'+
+            '<div style="position:absolute;top:0;left:0;width:20px;height:20px;border-top:3px solid #00D4FF;border-left:3px solid #00D4FF;border-radius:2px 0 0 0"></div>'+
+            '<div style="position:absolute;top:0;right:0;width:20px;height:20px;border-top:3px solid #00D4FF;border-right:3px solid #00D4FF;border-radius:0 2px 0 0"></div>'+
+            '<div style="position:absolute;bottom:0;left:0;width:20px;height:20px;border-bottom:3px solid #00D4FF;border-left:3px solid #00D4FF;border-radius:0 0 0 2px"></div>'+
+            '<div style="position:absolute;bottom:0;right:0;width:20px;height:20px;border-bottom:3px solid #00D4FF;border-right:3px solid #00D4FF;border-radius:0 0 2px 0"></div>'+
+          '</div>'+
+        '</div>'+
+        '<div id="bc-scan-line" style="position:absolute;left:10%;right:10%;height:2px;background:linear-gradient(90deg,transparent,#00D4FF,transparent);top:50%;animation:bcScan 2s linear infinite"></div>'+
+      '</div>'+
+      '<div id="bc-status" style="font-size:12px;color:rgba(255,255,255,.6);text-align:center;margin-bottom:12px">바코드를 네모 안에 맞춰주세요</div>'+
+      // 인식 결과
+      '<div id="bc-result" style="display:none;background:var(--bg2);border-radius:12px;padding:14px;margin-bottom:12px">'+
+        '<div style="font-size:11px;color:var(--text3);margin-bottom:6px">인식된 품목</div>'+
+        '<div id="bc-item-name" style="font-size:14px;font-weight:800;margin-bottom:8px"></div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'+
+          '<div>'+
+            '<div style="font-size:10px;color:var(--text3);margin-bottom:3px">바코드</div>'+
+            '<div id="bc-barcode-val" style="font-size:12px;font-weight:700;color:var(--acc)"></div>'+
+          '</div>'+
+          '<div>'+
+            '<div style="font-size:10px;color:var(--text3);margin-bottom:3px">수량 입력</div>'+
+            '<input id="bc-qty" type="number" min="1" value="1" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:14px;font-weight:700;text-align:center">'+
+          '</div>'+
+        '</div>'+
+        '<div style="display:flex;gap:8px">'+
+          '<button id="bc-save-btn" style="flex:1;padding:10px;background:linear-gradient(135deg,#00D4FF,#7B2FFF);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">✅ 저장</button>'+
+          '<button id="bc-rescan-btn" style="padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer">🔄 재스캔</button>'+
+        '</div>'+
+      '</div>'+
+      // 수동 입력
+      '<div style="text-align:center">'+
+        '<button id="bc-manual-btn" style="padding:8px 16px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:8px;font-size:11px;color:rgba(255,255,255,.6);cursor:pointer">✏️ 바코드 직접 입력</button>'+
+      '</div>'+
+    '</div>';
+
+  // CSS 애니메이션
+  if(!document.getElementById('bc-style')){
+    var s=document.createElement('style');
+    s.id='bc-style';
+    s.textContent='@keyframes bcScan{0%{top:20%}50%{top:80%}100%{top:20%}}';
+    document.head.appendChild(s);
+  }
+
+  document.body.appendChild(pop);
+
+  var stream=null;
+  var scanning=true;
+  var currentBarcode='';
+  var scanInterval=null;
+
+  // 카메라 시작
+  navigator.mediaDevices.getUserMedia({
+    video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}
+  }).then(function(s){
+    stream=s;
+    var video=document.getElementById('bc-video');
+    video.srcObject=s;
+    video.play();
+    // 스캔 시작
+    scanInterval=setInterval(_bcDoScan,300);
+  }).catch(function(e){
+    document.getElementById('bc-status').textContent='❌ 카메라 접근 실패: '+e.message;
+  });
+
+  // 바코드 스캔 (BarcodeDetector API)
+  function _bcDoScan(){
+    if(!scanning) return;
+    var video=document.getElementById('bc-video');
+    if(!video||!video.videoWidth) return;
+    var canvas=document.getElementById('bc-canvas');
+    canvas.width=video.videoWidth;
+    canvas.height=video.videoHeight;
+    var ctx=canvas.getContext('2d');
+    ctx.drawImage(video,0,0);
+
+    if('BarcodeDetector' in window){
+      var detector=new BarcodeDetector({formats:['ean_13','ean_8','code_128','code_39','qr_code','upc_a','upc_e']});
+      detector.detect(canvas).then(function(codes){
+        if(codes.length>0){
+          var code=codes[0].rawValue;
+          if(code!==currentBarcode){
+            currentBarcode=code;
+            scanning=false;
+            clearInterval(scanInterval);
+            _bcOnDetected(code, did);
+          }
+        }
+      }).catch(function(){});
+    } else {
+      // BarcodeDetector 미지원 시 안내
+      document.getElementById('bc-status').textContent='⚠️ 이 브라우저는 자동 스캔 미지원 — 직접 입력 사용';
+      clearInterval(scanInterval);
+    }
+  }
+
+  // 바코드 인식 후 처리
+  function _bcOnDetected(code, did){
+    var status=document.getElementById('bc-status');
+    status.textContent='✅ 인식: '+code+' — 품목 조회 중...';
+
+    // Firestore에서 품목 조회
+    _db.collection('inventory').where('dealerId','==',did).where('barcode','==',code).limit(1).get()
+      .then(function(snap){
+        var result=document.getElementById('bc-result');
+        var nameEl=document.getElementById('bc-item-name');
+        var barcodeEl=document.getElementById('bc-barcode-val');
+        result.style.display='block';
+        barcodeEl.textContent=code;
+
+        if(!snap.empty){
+          var item=snap.docs[0].data();
+          nameEl.textContent=item.name||'품목명 없음';
+          nameEl.dataset.itemId=snap.docs[0].id;
+          nameEl.dataset.itemCode=item.itemCode||code;
+          status.textContent='✅ 품목 확인됨 — 수량을 입력하세요';
+        } else {
+          nameEl.textContent='⚠️ 미등록 품목 ('+code+')';
+          nameEl.dataset.itemId='';
+          nameEl.dataset.itemCode=code;
+          status.textContent='⚠️ 등록되지 않은 바코드 — 수량 입력 후 저장 시 신규 등록됩니다';
+        }
+        // 수량 포커스
+        setTimeout(function(){
+          var qEl=document.getElementById('bc-qty');
+          if(qEl){qEl.focus();qEl.select();}
+        },200);
+      }).catch(function(e){
+        document.getElementById('bc-status').textContent='❌ 조회 오류: '+e.message;
+      });
+  }
+
+  // 저장
+  function _bcSave(){
+    var nameEl=document.getElementById('bc-item-name');
+    var qty=parseInt(document.getElementById('bc-qty').value)||1;
+    var barcode=currentBarcode;
+    var itemCode=nameEl.dataset.itemCode||barcode;
+    var itemName=nameEl.textContent||'미등록품목';
+
+    if(!barcode){toast('❌ 바코드 없음');return;}
+
+    var now=new Date().toISOString();
+    var data={
+      dealerId:did,
+      barcode:barcode,
+      itemCode:itemCode,
+      name:itemName,
+      qty:qty,
+      date:now.split('T')[0],
+      outType:'바코드스캔',
+      createdAt:now,
+      source:'barcode'
+    };
+
+    _db.collection('inventory_in').add(data).then(function(){
+      toast('✅ 입고 저장됨 — '+itemName+' '+qty+'개');
+      // 계속 스캔
+      currentBarcode='';
+      scanning=true;
+      document.getElementById('bc-result').style.display='none';
+      document.getElementById('bc-status').textContent='✅ 저장 완료! 다음 바코드를 스캔하세요';
+      scanInterval=setInterval(_bcDoScan,300);
+    }).catch(function(e){toast('❌ '+e.message);});
+  }
+
+  // 팝업 닫기
+  function _bcClose(){
+    if(stream) stream.getTracks().forEach(function(t){t.stop();});
+    if(scanInterval) clearInterval(scanInterval);
+    pop.remove();
+  }
+
+  // 이벤트
+  setTimeout(function(){
+    var closeBtn=document.getElementById('bc-close');
+    if(closeBtn) closeBtn.addEventListener('click',_bcClose);
+    var saveBtn=document.getElementById('bc-save-btn');
+    if(saveBtn) saveBtn.addEventListener('click',_bcSave);
+    var rescanBtn=document.getElementById('bc-rescan-btn');
+    if(rescanBtn) rescanBtn.addEventListener('click',function(){
+      currentBarcode='';
+      scanning=true;
+      document.getElementById('bc-result').style.display='none';
+      document.getElementById('bc-status').textContent='바코드를 네모 안에 맞춰주세요';
+      scanInterval=setInterval(_bcDoScan,300);
+    });
+    var manualBtn=document.getElementById('bc-manual-btn');
+    if(manualBtn) manualBtn.addEventListener('click',function(){
+      var code=prompt('바코드 번호를 입력하세요:');
+      if(code){
+        currentBarcode=code;
+        scanning=false;
+        clearInterval(scanInterval);
+        _bcOnDetected(code, did);
+      }
+    });
+    // 수량 입력 시 엔터 → 저장
+    var qEl=document.getElementById('bc-qty');
+    if(qEl) qEl.addEventListener('keydown',function(e){
+      if(e.key==='Enter') _bcSave();
+    });
+  },100);
+}
+
+// OCR 촬영 (종이 납품서)
+function _invOcrCapture(did){
+  var input=document.createElement('input');
+  input.type='file';
+  input.accept='image/*';
+  input.capture='environment';
+  input.addEventListener('change',function(){
+    var file=input.files[0];
+    if(!file) return;
+    toast('📸 OCR 분석 중...');
+    var reader=new FileReader();
+    reader.onload=function(e){
+      var base64=e.target.result.split(',')[1];
+      var ak=window.__AK;
+      if(!ak){toast('❌ API 키 없음');return;}
+      fetch('/claude-ocr',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          image:base64,
+          prompt:'이 납품서/거래명세서에서 품목명과 수량을 추출해주세요. JSON 배열로만 응답하세요: [{"name":"품목명","qty":수량}]'
+        })
+      }).then(function(r){return r.json();})
+      .then(function(data){
+        var text=data.content&&data.content[0]&&data.content[0].text||'';
+        try{
+          var clean=text.replace(/```json|```/g,'').trim();
+          var items=JSON.parse(clean);
+          if(!items.length){toast('❌ 품목 인식 실패');return;}
+          toast('✅ '+items.length+'개 품목 인식 — 저장 중...');
+          var batch=_db.batch();
+          var now=new Date().toISOString();
+          items.forEach(function(item){
+            batch.set(_db.collection('inventory_in').doc(),{
+              dealerId:did,name:item.name,qty:item.qty||1,
+              date:now.split('T')[0],outType:'OCR',createdAt:now,source:'ocr'
+            });
+          });
+          batch.commit().then(function(){
+            toast('✅ OCR 입고 저장 완료 ('+items.length+'건)');
+            _invTab(document.getElementById('itab-in'),'in');
+          });
+        }catch(e){toast('❌ JSON 파싱 오류: '+e.message);}
+      }).catch(function(e){toast('❌ OCR 오류: '+e.message);});
+    };
+    reader.readAsDataURL(file);
+  });
+  input.click();
+}
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // ██ 업종별 AI정산 파서 ██
 // 공통 결과 구조: {name, empId, camp, gross, deduct, net, details}
@@ -29038,8 +29312,10 @@ function _invTab(btn, tab){
   var tabBtns={
     stock:[],
     in:[
-      {id:'tb-in',label:'📥 입고 실사 등록',color:'#10b981',action:function(){_invPickFileType('in');}},
-      {id:'tb-compare',label:'🔍 입고 대조검수',color:'#7c3aed',action:function(){_invPickCompare();}}
+      {id:'tb-barcode',label:'📷 바코드 스캔',color:'#0077b6',action:function(){_invBarcodeScanner(did);}},
+      {id:'tb-in',label:'📂 파일 업로드',color:'#10b981',action:function(){_invPickFileType('in');}},
+      {id:'tb-ocr',label:'📸 OCR 촬영',color:'#7c3aed',action:function(){_invOcrCapture(did);}},
+      {id:'tb-compare',label:'🔍 대조검수',color:'#f59e0b',action:function(){_invPickCompare();}}
     ],
     out:[
       {id:'tb-out',label:'📤 출고 실사 등록',color:'#f59e0b',action:function(){_invPickFileType('out');}}
