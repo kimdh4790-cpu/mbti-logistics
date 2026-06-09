@@ -31302,6 +31302,10 @@ function _invParseTextMaster(lines, headers, sep, did){
   var iSafe=headers.findIndex(function(h){return h.includes('안전재고');});
   var iOri=headers.findIndex(function(h){return h.includes('원산지');});
   var iMaker=headers.findIndex(function(h){return h.includes('제조사');});
+  var iBarcodeTxt=headers.findIndex(function(h){
+    var s=h.toLowerCase();
+    return s.includes('바코드')||s.includes('barcode')||s.includes('ean')||s.includes('upc');
+  });
 
   var items=[];
   lines.slice(1).forEach(function(line){
@@ -31320,6 +31324,7 @@ function _invParseTextMaster(lines, headers, sep, did){
       volume:iVol>=0?cols[iVol]:'',
       baseQty:iBase>=0?(parseInt(cols[iBase])||0):0,
       safeQty:iSafe>=0?(parseInt(cols[iSafe])||0):0,
+      barcode:iBarcodeTxt>=0?cols[iBarcodeTxt]:'',
       updatedAt:new Date().toISOString()
     });
   });
@@ -31563,9 +31568,13 @@ function _invParsemaster(wb, did){
   if(hdrRow<0){toast('❌ 재고종합마감 헤더 없음');return;}
   var hdr=rows[hdrRow];
   var iCode=0,iSup=1,iCat=2,iSub=3,iName=4,iVol=5,iBase=6,iSafe=10;
-  // 원산지/제조사 컬럼 자동 감지 (새 마스터 형식)
+  // 원산지/제조사/바코드 컬럼 자동 감지
   var iOrigin=hdr.findIndex(function(h){return String(h).includes('원산지');});
   var iMaker=hdr.findIndex(function(h){return String(h).includes('제조사');});
+  var iBarcode=hdr.findIndex(function(h){
+    var s=String(h).toLowerCase();
+    return s.includes('바코드')||s.includes('barcode')||s.includes('ean')||s.includes('upc');
+  });
   // 새 마스터: 소분류가 인덱스3이 아닐 수 있으므로 컬럼명 기반으로 재매핑
   if(iOrigin>=0){
     iCat=hdr.findIndex(function(h){return String(h).includes('대분류');});
@@ -31590,6 +31599,7 @@ function _invParsemaster(wb, did){
       name:name, volume:String(row[iVol]||'').trim(),
       baseQty:parseInt(row[iBase])||0,
       safeQty:parseInt(row[iSafe])||0,
+      barcode:iBarcode>=0?String(row[iBarcode]||'').trim():'',
       updatedAt:firebase.firestore.FieldValue.serverTimestamp()
     });
   }
@@ -31839,6 +31849,7 @@ function _invParseBySheet(wb, did){
     var iBase=hdr.findIndex(function(h){return h.includes('현재고')||h.includes('기초재고')||h.includes('이월재고');});
     var iSafe=hdr.findIndex(function(h){return h.includes('안전재고');});
     var iSeq=hdr.findIndex(function(h){return h.includes('순번');});
+    var iBc=hdr.findIndex(function(h){var s=h.toLowerCase();return s.includes('바코드')||s.includes('barcode')||s.includes('ean')||s.includes('upc');});
 
     if(iName<0) return;
 
@@ -31872,6 +31883,7 @@ function _invParseBySheet(wb, did){
         volume:iVol>=0?String(row[iVol]||'').trim():'',
         baseQty:iBase>=0?(parseInt(row[iBase])||0):0,
         safeQty:iSafe>=0?(parseInt(row[iSafe])||0):0,
+        barcode:iBc>=0?String(row[iBc]||'').trim():'',
         updatedAt:new Date().toISOString()
       });
     }
