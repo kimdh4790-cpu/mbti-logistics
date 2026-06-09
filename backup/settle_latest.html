@@ -1685,7 +1685,9 @@ function _invScannerInput(did){
       outType:type,
       date:now.split('T')[0],
       createdAt:now,
-      source:'scanner'
+      source:'scanner',
+      store:(_CU&&_CU.store)||'',
+      registeredBy:(_CU&&(_CU.name||_CU.email))||''
     }).then(function(){
       // 로그 추가
       logCount++;
@@ -1935,7 +1937,9 @@ function _invBarcodeScanner(did){
       date:now.split('T')[0],
       outType:'바코드스캔',
       createdAt:now,
-      source:'barcode'
+      source:'barcode',
+      store:(_CU&&_CU.store)||'',
+      registeredBy:(_CU&&(_CU.name||_CU.email))||''
     };
 
     _db.collection('inventory_in').add(data).then(function(){
