@@ -4545,6 +4545,8 @@ function doQuickJoin(){
   var bizAddr=isBiz?((document.getElementById('j-biz-addr')||{}).value||'').trim():'';
   var ssn=((document.getElementById('j-ssn')||{}).value||'').trim();
   var joinDate=((document.getElementById('j-joindate')||{}).value||'').trim();
+  var joinRoleQ=(document.getElementById('j-role')||{value:'driver'}).value||'driver';
+  var joinStoreQ=(document.getElementById('j-store')||{value:''}).value||'';
   var email=phone+'@donway.internal';
   var driverId=driverIdInput||('drv_'+phone.slice(-4)+'_'+Date.now().toString(36).slice(-4));
   var btn=document.getElementById('join-submit-btn');
@@ -4553,7 +4555,7 @@ function doQuickJoin(){
     .then(function(cred){
       var uid=cred.user.uid;
       var data={uid:uid,name:name,phone:phone,email:email,dealerId:companyId,companyName:companyName,
-        role:'driver',driverId:driverId,isBiz:isBiz,bizNum:bizNum,bizName:bizName,
+        role:joinRoleQ,store:joinStoreQ,driverId:driverId,isBiz:isBiz,bizNum:bizNum,bizName:bizName,
         bizType:bizType,bizKind:bizKind,bizItem:bizKind,bizAddr:bizAddr,bizRep:name,
         ssn:ssn,joinDate:joinDate,
         createdAt:firebase.firestore.FieldValue.serverTimestamp(),joinType:'quick'};
