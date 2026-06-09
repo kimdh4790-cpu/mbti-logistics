@@ -28976,84 +28976,55 @@ function pageInventory(){
   c.innerHTML=
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
       '<div style="font-size:15px;font-weight:800">📦 재고관리</div>'+
-      '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">'+
       '<button id="inv-delete-all-btn" style="padding:7px 14px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗑 전체삭제</button>'+
-      '<span id="inv-realtime-badge" style="font-size:10px;color:#10b981;font-weight:700">● 실시간 동기화 중</span>'+
-    '</div>'+
     '</div>'+
     '<div id="inv-tabs" style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">'+
-      '<button id="itab-dash" style="padding:6px 14px;background:var(--bg3);color:var(--text2);border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📈 대시보드</button>'+
+      '<button id="itab-stock"   style="padding:6px 14px;background:var(--acc);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📦 재고현황</button>'+
+      '<button id="itab-in"      style="padding:6px 14px;background:var(--bg3);color:var(--text2);border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📥 입고원장</button>'+
+      '<button id="itab-out"     style="padding:6px 14px;background:var(--bg3);color:var(--text2);border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📤 출고원장</button>'+
+      '<button id="itab-return"  style="padding:6px 14px;background:var(--bg3);color:var(--text2);border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">🔄 반품/불량</button>'+
       '<button id="itab-monthly" style="padding:6px 14px;background:var(--bg3);color:var(--text2);border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📅 월별통계</button>'+
-      '<button id="itab-daily" style="padding:6px 14px;background:var(--bg3);color:var(--text2);border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📆 일별조회</button>'+
-      '<button id="itab-stock" style="padding:6px 14px;background:var(--acc);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📦 재고현황</button>'+
-      '<button id="itab-in" style="padding:6px 14px;background:var(--bg3);color:var(--text2);border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📥 입고원장</button>'+
-      '<button id="itab-out" style="padding:6px 14px;background:var(--bg3);color:var(--text2);border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📤 출고원장</button>'+
-
-      '<button id="itab-return" style="padding:6px 14px;background:var(--bg3);color:var(--text2);border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">🔄 반품/불량</button>'+
+      '<button id="itab-daily"   style="padding:6px 14px;background:var(--bg3);color:var(--text2);border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📆 일별조회</button>'+
+      '<button id="itab-dash"    style="padding:6px 14px;background:var(--bg3);color:var(--text2);border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📈 대시보드</button>'+
     '</div>'+
-    '<div id="inv-filter" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>'+
+    '<div id="inv-filter" style="margin-bottom:8px"></div>'+
     '<div id="inv-content"><div class="loading">⏳ 로딩 중...</div></div>';
 
-  _invLoadStock(did, '');
-  // 탭 이벤트 리스너 (setTimeout으로 DOM 생성 후)
   setTimeout(function(){
-    var btn_s=document.getElementById('itab-stock');
-    var btn_i=document.getElementById('itab-in');
-    var btn_o=document.getElementById('itab-out');
-    var btn_d=document.getElementById('itab-dash');
-    var btn_mon=document.getElementById('itab-monthly');
-    var btn_day=document.getElementById('itab-daily');
-    var btn_ret=document.getElementById('itab-return');
-    if(btn_d) btn_d.addEventListener('click',function(){_invTab(btn_d,'dash');});
-    if(btn_mon) btn_mon.addEventListener('click',function(){_invTab(btn_mon,'monthly');});
-    if(btn_day) btn_day.addEventListener('click',function(){_invTab(btn_day,'daily');});
-    if(btn_s) btn_s.addEventListener('click',function(){_invTab(btn_s,'stock');});
-    if(btn_i) btn_i.addEventListener('click',function(){_invTab(btn_i,'in');});
-    if(btn_o) btn_o.addEventListener('click',function(){_invTab(btn_o,'out');});
-    if(btn_ret) btn_ret.addEventListener('click',function(){_invTab(btn_ret,'return');});
-    // 📦 품목 마스터 등록
-    var btn_m=document.getElementById('inv-master-btn');
-    if(btn_m) btn_m.addEventListener('click',function(){_invPickFileType('master');});
-    // 📥 입고 파일 등록
-    var btn_in=document.getElementById('inv-in-btn');
-    if(btn_in) btn_in.addEventListener('click',function(){_invPickFileType('in');});
-    // 📤 출고 파일 등록
-    var btn_out=document.getElementById('inv-out-btn');
-    if(btn_out) btn_out.addEventListener('click',function(){_invPickFileType('out');});
-    // 🔍 대조검수
-    var btn_cmp=document.getElementById('inv-compare-btn');
-    if(btn_cmp) btn_cmp.addEventListener('click',function(){_invPickCompare();});
-    // ➕ 품목 추가
-    var btn_add=document.getElementById('inv-add-item-btn');
-    if(btn_add) btn_add.addEventListener('click',function(){_invRegisterItem(did);});
-  },100);
-  // 실시간 동기화 배지 숨김
-  setTimeout(function(){
-    var badge=document.getElementById('inv-realtime-badge');
-    if(badge) badge.style.display='none';
-  },110);
-
-    var btn_del=document.getElementById('inv-delete-all-btn');
-    if(btn_del) btn_del.addEventListener('click',function(){
-      if(!confirm('재고 데이터를 전체 삭제하시겠습니까?\n(품목마스터+입고+출고 전부)')) return;
-      var did2=_CU.dealerId||_CU.uid;
-      toast('⏳ 삭제 중...');
-      var cols=['inventory','inventory_in','inventory_out'];
-      var ci=0;
-      function delCol(){
-        if(ci>=cols.length){toast('✅ 전체 삭제 완료');pageInventory();return;}
-        function delBatch(){
-          _db.collection(cols[ci]).where('dealerId','==',did2).limit(200).get().then(function(snap){
-            if(snap.empty){ci++;delCol();return;}
-            var b=_db.batch();
-            snap.forEach(function(d){b.delete(d.ref);});
-            b.commit().then(function(){delBatch();});
-          }).catch(function(e){toast('❌ '+e.message);});
-        }
-        delBatch();
-      }
-      delCol();
+    // 탭 버튼 이벤트
+    var tabs={stock:'stock',in:'in',out:'out',return:'return',monthly:'monthly',daily:'daily',dash:'dash'};
+    Object.keys(tabs).forEach(function(key){
+      var btn=document.getElementById('itab-'+key);
+      if(btn) btn.addEventListener('click',function(){_invTab(btn, key);});
     });
+
+    // 전체삭제
+    var delBtn=document.getElementById('inv-delete-all-btn');
+    if(delBtn) delBtn.addEventListener('click',function(){
+      if(!confirm('모든 재고 데이터를 삭제하시겠습니까?')) return;
+      var batch=_db.batch();
+      var cnt=0;
+      function delCol(colName, cb){
+        _db.collection(colName).where('dealerId','==',did).limit(200).get().then(function(snap){
+          if(!snap.size){cb();return;}
+          var b=_db.batch();
+          snap.forEach(function(doc){b.delete(doc.ref);cnt++;});
+          b.commit().then(function(){delCol(colName,cb);});
+        });
+      }
+      delCol('inventory',function(){
+        delCol('inventory_in',function(){
+          delCol('inventory_out',function(){
+            toast('✅ 전체 삭제 완료 ('+cnt+'건)');
+            pageInventory();
+          });
+        });
+      });
+    });
+
+    // 기본 탭 로드
+    _invTab(document.getElementById('itab-stock'), 'stock');
+  }, 100);
 }
 
 function _invTab(btn, tab){
