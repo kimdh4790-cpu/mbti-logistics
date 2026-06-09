@@ -19098,6 +19098,22 @@ function pageInvSummary(){
   var today=new Date().toISOString().split('T')[0];
   var ym=today.slice(0,7);
 
+  // 실시간 리스너 — 과장 스캔 즉시 반영
+  if(window._invSummaryUnsub) window._invSummaryUnsub();
+
+  // 관리자 화면 상단 실시간 배지
+  c.innerHTML='<div style="max-width:800px;margin:0 auto;padding:16px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
+      '<div style="font-size:15px;font-weight:800">📊 과장별 취합</div>'+
+      '<span id="inv-summary-badge" style="font-size:10px;color:#10b981;font-weight:700">● 실시간 연결 중...</span>'+
+    '</div>'+
+    '<div id="inv-summary-content"><div class="loading">⏳ 로딩 중...</div></div>'+
+  '</div>';
+
+  function _loadSummaryData(){
+    var summaryEl=document.getElementById('inv-summary-content');
+    if(!summaryEl) return;
+
   Promise.all([
     _db.collection('inventory_in').where('dealerId','==',did).get(),
     _db.collection('inventory_out').where('dealerId','==',did).get(),
@@ -19167,8 +19183,29 @@ function pageInvSummary(){
     }
 
     html+='</div>';
-    c.innerHTML=html;
-  }).catch(function(e){c.innerHTML='<div class="empty">오류: '+e.message+'</div>';});
+    summaryEl.innerHTML=html;
+    var badge=document.getElementById('inv-summary-badge');
+    if(badge){
+      badge.textContent='● '+new Date().toLocaleTimeString()+' 업데이트됨';
+      setTimeout(function(){if(badge)badge.textContent='● 실시간 연결됨';},2000);
+    }
+  }).catch(function(e){
+    if(summaryEl) summaryEl.innerHTML='<div class="empty">오류: '+e.message+'</div>';
+  });
+  } // end _loadSummaryData
+
+  // 최초 로드
+  _loadSummaryData();
+
+  // onSnapshot — inventory_in 변경 시 자동 갱신
+  window._invSummaryUnsub=_db.collection('inventory_in')
+    .where('dealerId','==',did).limit(1)
+    .onSnapshot(function(){
+      _loadSummaryData();
+    },function(){
+      var badge=document.getElementById('inv-summary-badge');
+      if(badge){badge.textContent='⚠️ 연결 끊김';badge.style.color='#dc2626';}
+    });
 }
 
 // 수정 이력 (장난 방지)
