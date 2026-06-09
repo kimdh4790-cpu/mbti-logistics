@@ -1257,6 +1257,65 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
       }
     }
 
+
+    // ── 카카오 알림톡 (/api/send-alimtalk) ──
+    if (path === '/api/send-alimtalk' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const { to, templateCode, variables, fallbackText } = body;
+        const apiKey    = env.SOLAPI_KEY;
+        const apiSecret = env.SOLAPI_SECRET;
+        const pfId      = env.KAKAO_PF_ID; // 카카오 채널 ID
+        if (!apiKey || !apiSecret) {
+          return new Response(JSON.stringify({ error: 'SOLAPI 키 없음' }), {
+            status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+          });
+        }
+        // HMAC 인증
+        const date = new Date().toISOString();
+        const salt = Math.random().toString(36).slice(2);
+        const encoder = new TextEncoder();
+        const keyData = encoder.encode(apiSecret);
+        const msgData = encoder.encode(date + salt);
+        const cryptoKey = await crypto.subtle.importKey('raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+        const sig = await crypto.subtle.sign('HMAC', cryptoKey, msgData);
+        const signature = Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('');
+        const authHeader = `HMAC-SHA256 apiKey=${apiKey}, date=${date}, salt=${salt}, signature=${signature}`;
+
+        const payload = {
+          messages: [{
+            to: to.replace(/[^0-9]/g,''),
+            from: '05171133103',
+            kakaoOptions: {
+              pfId: pfId || '',
+              templateCode: templateCode,
+              variables: variables || {}
+            },
+            type: 'ATA', // 알림톡
+            ...(fallbackText ? {
+              text: fallbackText,
+              type: 'ATA'
+            } : {})
+          }]
+        };
+
+        const solapiRes = await fetch('https://api.solapi.com/messages/v4/send-many/detail', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+          body: JSON.stringify(payload)
+        });
+        const result = await solapiRes.json();
+        const ok = (result.results||[]).some(r=>r.statusCode==='2000');
+        return new Response(JSON.stringify({ ok, result }), {
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        });
+      } catch(e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), {
+          status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        });
+      }
+    }
+
     // ══ Solapi SMS/알림톡 자동발송 ══
     if (path === '/api/send-sms' && method === 'POST') {
       const headers = {
