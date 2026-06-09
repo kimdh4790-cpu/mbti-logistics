@@ -397,6 +397,13 @@ window.onBizDocSelected=onBizDocSelected;</script>
         <div style="background:rgba(212,160,23,.08);border:1px solid rgba(212,160,23,.2);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:var(--text2)">🔑 관리자에게 <strong>회사코드</strong>를 받아 입력하세요</div>
         <div class="fg"><label>이름</label><input id="j-name-full" type="text" placeholder="홍길동"></div>
         <div class="fg"><label>정산 아이디</label><input id="j-driverid" type="text" placeholder="kim001 (영문+숫자)"></div>
+        <div class="fg"><label>역할</label>
+          <select id="j-role-full" onchange="document.getElementById('j-store-wrap-full').style.display=this.value==='manager'?'block':'none'" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:13px">
+            <option value="driver">기사/직원</option>
+            <option value="manager">과장 (재고 담당)</option>
+          </select>
+        </div>
+        <div class="fg" id="j-store-wrap-full" style="display:none"><label>담당 매장</label><input id="j-store-full" type="text" placeholder="예) 강남점" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:13px"></div>
         <div class="fg"><label>이메일</label><input id="j-email" type="email" placeholder="example@email.com"></div>
         <div class="fg"><label>비밀번호</label><input id="j-pw-full" type="password" placeholder="8자 이상"></div>
         <div class="fg"><label>회사코드</label><input id="j-code-full" type="text" placeholder="ABCD1234" style="text-transform:uppercase"></div>
@@ -5103,8 +5110,8 @@ function doJoin(){
   var bizNum=(document.getElementById('j-biz-num')||{}).value||'';
   var bizName=(document.getElementById('j-biz-name')||{}).value||'';
   var bizOwner=(document.getElementById('j-biz-owner')||{}).value||'';
-  var joinRole=(document.getElementById('j-role')||{value:'driver'}).value||'driver';
-  var joinStore=(document.getElementById('j-store')||{value:''}).value||'';
+  var joinRole=(document.getElementById('j-role-full')||document.getElementById('j-role')||{value:'driver'}).value||'driver';
+  var joinStore=(document.getElementById('j-store-full')||document.getElementById('j-store')||{value:''}).value||'';
   var err=document.getElementById('j-err');err.style.display='none';
 
   if(!name||!driverId||!email||!pw||!code){err.textContent='이름, 정산 아이디, 이메일, 비밀번호, 회사코드를 입력하세요';err.style.display='block';return;}
