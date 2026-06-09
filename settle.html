@@ -30627,13 +30627,12 @@ function _invLoadReturn(did){
   c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
 
   Promise.all([
-    _db.collection('inventory_out').where('dealerId','==',did).where('outType','==','반품').get(),
-    _db.collection('inventory_out').where('dealerId','==',did).where('outType','==','파손폐기').get(),
+    _db.collection('inventory_out').where('dealerId','==',did).get(),
     _db.collection('inventory_in').where('dealerId','==',did).get()
   ]).then(function(res){
-    var returns=[]; res[0].forEach(function(doc){returns.push(doc.data());});
-    var damages=[]; res[1].forEach(function(doc){damages.push(doc.data());});
-    var ins=[]; res[2].forEach(function(doc){ins.push(doc.data());});
+    var returns=[]; res[0].forEach(function(doc){var d=doc.data();if(d.outType==='반품')returns.push(d);});
+    var damages=[]; res[0].forEach(function(doc){var d=doc.data();if(d.outType==='파손폐기'||d.outType==='파손')damages.push(d);});
+    var ins=[]; res[1].forEach(function(doc){ins.push(doc.data());});
     // 입고 시 불량 (inType이 불량/파손인 경우)
     var inDefects=ins.filter(function(d){return d.outType==='불량'||d.outType==='파손입고'||(d.dmgQty&&d.dmgQty>0);});
 
