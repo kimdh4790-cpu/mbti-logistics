@@ -298,7 +298,7 @@ async function sendWelcomeEmail(env, { email, companyName, tempPassword, planTyp
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        from: 'DONWAY <noreply@donway.ai.kr>',
+        from: 'DONWAY <all@donway.ai.kr>',
         to: [email],
         subject: `[DONWAY] ${companyName} 계정이 생성됐습니다`,
         html: `
