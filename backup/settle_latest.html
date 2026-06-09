@@ -20034,6 +20034,7 @@ function goPage(page){
     if(requiredPlan==='delivery')  allowed=_hasDelivery(cd);
     if(requiredPlan==='premium')   allowed=_hasPremium(cd);
     if(requiredPlan==='universal') allowed=_hasUniversal(cd);
+    if(requiredPlan==='inventory') allowed=isSuperAdmin()||!!(cd.inventoryPaid);
     if(!allowed){_renderPaywall(requiredPlan);return;}
   }
   var fn=pages[page];
@@ -28687,6 +28688,9 @@ function _hasPremium(d){   // ALL-IN-ONE 고급기능 (차량·배차 등)
 function _hasUniversal(d){ // ★ 범용 정산 — 슈퍼어드민 또는 결제 완료만
   if(isSuperAdmin()) return true;
   return !!(d.universalPaid);
+}
+function _hasInventoryAdmin(){ // 슈퍼어드민은 재고관리 항상 허용
+  return isSuperAdmin();
 }
 function _hasAnyPaid(d){   // 세무사 연동 - 하나라도 결제하면 허용
   return isSuperAdmin()||_hasSettle(d)||_hasQr(d)||_hasPayroll(d)||_hasDelivery(d)||_hasPremium(d)||_hasUniversal(d);
