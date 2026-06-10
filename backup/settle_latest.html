@@ -4153,6 +4153,16 @@ function _applyUniversalRules(r){
 }
 
 function showApp(){
+  // ★ 슈퍼어드민 최우선 처리 — 모든 체크 전
+  if(_CU && _CU.email && SUPER_ADMIN_EMAILS && SUPER_ADMIN_EMAILS.indexOf(_CU.email) >= 0){
+    MENUS = JSON.parse(JSON.stringify(MENUS_SETTLE));
+    document.getElementById('app').style.display = 'flex';
+    document.getElementById('login-screen').style.display = 'none';
+    buildNav();
+    _checkDeviceMode();
+    setTimeout(_checkOnboarding, 1500);
+    return;
+  }
   // 탈퇴/퇴직 기사 강제 로그아웃
   setTimeout(_loadUniversalRules, 800); // 범용 규칙 백그라운드 로드
   if(_CU&&(_CU.role==='driver'||_CU.role==='member')&&_db){
