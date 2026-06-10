@@ -1265,7 +1265,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         const { to, templateCode, variables, fallbackText } = body;
         const apiKey    = env.SOLAPI_KEY;
         const apiSecret = env.SOLAPI_SECRET;
-        const pfId      = env.KAKAO_PF_ID; // 카카오 채널 ID
+        const pfId      = env.KAKAO_PF_ID || 'KA01PF260520195942036aXUy629GdrA';
         if (!apiKey || !apiSecret) {
           return new Response(JSON.stringify({ error: 'SOLAPI 키 없음' }), {
             status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
@@ -1287,8 +1287,8 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
             to: to.replace(/[^0-9]/g,''),
             from: '05171133103',
             kakaoOptions: {
-              pfId: pfId || '',
-              templateCode: templateCode,
+              pfId: pfId || 'KA01PF260520195942036aXUy629GdrA',
+              templateCode: templateCode || 'KA01TP2605202011489862wFDonmS7ny',
               variables: variables || {}
             },
             type: 'ATA', // 알림톡
