@@ -694,6 +694,8 @@ async function _loadSlugCompany(){
           _CU.dealerId = _slugCompany._id;
           _CU.companyName = _slugCompany.companyName||_slugCompany.name||_companySlug;
           window._CU = _CU;
+          // ★ dealerId 전환 시 단가 초기화 (이전 대리점 단가 노출 방지)
+          RPRICE = {}; RPRICE_ADJ = {}; SEASON_PRICES = [];
 }
       } else {
         // 일반 대리점: 자기 회사 슬러그와 URL 슬러그가 다르면 접근 차단
