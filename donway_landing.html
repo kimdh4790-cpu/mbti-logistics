@@ -550,15 +550,53 @@ body{font-family:'Noto Sans KR',sans-serif;color:var(--text)}
       </div>
     </div>
 
-    <div class="anim-5" style="display:flex;flex-wrap:wrap;gap:8px">
-      <div style="background:rgba(0,255,148,.06);border:1px solid rgba(0,255,148,.2);border-radius:10px;padding:10px 16px;font-size:11px;flex:1;min-width:140px;text-align:center">
+    <!-- 오픈기념 카운터 -->
+    <div class="anim-5" style="background:linear-gradient(135deg,rgba(220,38,38,.1),rgba(220,38,38,.05));border:1px solid rgba(220,38,38,.3);border-radius:12px;padding:14px 16px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+        <div>
+          <span style="font-size:13px;font-weight:900;color:#ef4444">🔥 오픈기념 특가</span>
+          <span style="font-size:11px;color:var(--text2);margin-left:8px">선착순 30개사 한정 · 6,750원/인</span>
+        </div>
+        <div style="font-size:11px;color:#ef4444;font-weight:700">정가 9,000원 → 25%↓</div>
+      </div>
+      <!-- 진행바 -->
+      <div style="background:var(--bg3);border-radius:6px;height:8px;margin-bottom:6px;overflow:hidden">
+        <div id="open-bar" style="background:linear-gradient(90deg,#ef4444,#f97316);height:100%;border-radius:6px;transition:width .5s;width:0%"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3)">
+        <span id="open-count-text">로딩 중...</span>
+        <span id="open-remain-text"></span>
+      </div>
+    </div>
+
+    <!-- 이벤트 일정 -->
+    <div class="anim-5" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px">
+      <div style="background:linear-gradient(135deg,rgba(220,38,38,.08),rgba(220,38,38,.03));border:1px solid rgba(220,38,38,.2);border-radius:8px;padding:8px 10px;text-align:center">
+        <div style="font-size:10px;font-weight:800;color:#ef4444;margin-bottom:2px">🔥 오픈기념</div>
+        <div style="font-size:9px;color:var(--text3)">선착순 30개사</div>
+        <div style="font-size:11px;font-weight:800;color:#ef4444;margin-top:3px">6,750원</div>
+      </div>
+      <div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;padding:8px 10px;text-align:center">
+        <div style="font-size:10px;font-weight:800;color:var(--text2);margin-bottom:2px">☀️ 상반기 이벤트</div>
+        <div style="font-size:9px;color:var(--text3)">매년 상반기</div>
+        <div style="font-size:11px;font-weight:800;color:var(--acc);margin-top:3px">추후 공개</div>
+      </div>
+      <div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;padding:8px 10px;text-align:center">
+        <div style="font-size:10px;font-weight:800;color:var(--text2);margin-bottom:2px">❄️ 하반기 이벤트</div>
+        <div style="font-size:9px;color:var(--text3)">매년 하반기</div>
+        <div style="font-size:11px;font-weight:800;color:var(--acc);margin-top:3px">추후 공개</div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:6px">
+      <div style="background:rgba(0,255,148,.06);border:1px solid rgba(0,255,148,.2);border-radius:8px;padding:8px 12px;font-size:11px;flex:1;min-width:120px;text-align:center">
         <span style="color:var(--green);font-weight:700">🎁 7일 무료 체험</span>
       </div>
-      <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:10px 16px;font-size:11px;flex:1;min-width:140px;text-align:center">
+      <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:11px;flex:1;min-width:120px;text-align:center">
         <span style="color:var(--acc);font-weight:700">추가 기능 → 문의</span>
       </div>
-      <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:10px 16px;font-size:11px;flex:1;min-width:140px;text-align:center">
-        <span style="color:var(--acc);font-weight:700">단체 20개사+ 할인</span>
+      <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:11px;flex:1;min-width:120px;text-align:center">
+        <span style="color:var(--acc);font-weight:700">단체 20개사+ 협의</span>
       </div>
     </div>
   </div>
@@ -721,6 +759,42 @@ function switchIndTab(btn,tab){
 }
 
 updateNav();
+</script>
+
+<script>
+// 오픈기념 카운터 실시간 로드
+(function(){
+  function loadCounter(){
+    if(!window.firebase||!window.db) return setTimeout(loadCounter,1000);
+    var db=window.db||firebase.firestore();
+    db.collection('open_event').doc('counter')
+      .onSnapshot(function(snap){
+        var cnt=snap.exists?(snap.data().count||0):0;
+        var total=30;
+        var remain=total-cnt;
+        var pct=Math.min(100,Math.round(cnt/total*100));
+        var bar=document.getElementById('open-bar');
+        var txt=document.getElementById('open-count-text');
+        var rem=document.getElementById('open-remain-text');
+        if(bar) bar.style.width=pct+'%';
+        if(txt) txt.textContent=cnt+'개사 계약 완료 ('+pct+'%)';
+        if(rem){
+          if(remain<=0){
+            rem.textContent='마감되었습니다';
+            rem.style.color='#ef4444';
+          } else {
+            rem.textContent='남은 자리: '+remain+'개사';
+            rem.style.color='#ef4444';
+            rem.style.fontWeight='700';
+          }
+        }
+      },function(){
+        var txt=document.getElementById('open-count-text');
+        if(txt) txt.textContent='곧 오픈 예정';
+      });
+  }
+  loadCounter();
+})();
 </script>
 </body>
 </html>
