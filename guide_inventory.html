@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>실시간 재고관리 - DONWAY 영업 가이드</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=Oswald:wght@600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',sans-serif;background:#f0f2f5;color:#1a1a2e}
+.page{width:210mm;min-height:297mm;margin:0 auto;background:#fff;overflow:hidden}
+@media print{body{background:#fff}.no-print{display:none}}
+
+.header{background:linear-gradient(135deg,#059669,#047857);padding:26px 32px 20px;position:relative;overflow:hidden;color:#fff}
+.header::after{content:'';position:absolute;right:-40px;top:-40px;width:180px;height:180px;background:rgba(255,255,255,.06);border-radius:50%}
+.h-badge{display:inline-block;background:rgba(255,255,255,.15);border-radius:20px;padding:3px 10px;font-size:10px;font-weight:700;letter-spacing:1px;margin-bottom:8px}
+.h-title{font-family:'Oswald',sans-serif;font-size:26px;font-weight:700;margin-bottom:4px;position:relative;z-index:1}
+.h-sub{font-size:12px;opacity:.75;margin-bottom:14px}
+.h-icon{position:absolute;right:32px;top:18px;font-size:52px;opacity:.15}
+.h-tags{display:flex;flex-wrap:wrap;gap:6px}
+.h-tag{background:rgba(255,255,255,.15);border-radius:6px;padding:4px 10px;font-size:10px;font-weight:700}
+
+.body{padding:20px 28px}
+.sec{margin-bottom:16px}
+.sec-title{font-size:12px;font-weight:900;color:#1a1a2e;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.sec-title::before{content:'';display:inline-block;width:3px;height:12px;background:#059669;border-radius:2px}
+
+.target-box{background:linear-gradient(135deg,rgba(0,0,0,.03),rgba(0,0,0,.06));border-radius:10px;padding:12px 14px;margin-bottom:14px;border-left:3px solid #059669}
+.target-list{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.target-item{background:#fff;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+
+.feat-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px}
+.feat-card{background:#f8f9fc;border-radius:8px;padding:10px 12px;border-left:3px solid #059669}
+.feat-icon{font-size:16px;margin-bottom:3px}
+.feat-name{font-size:11px;font-weight:800;margin-bottom:2px}
+.feat-desc{font-size:10px;color:#666;line-height:1.5}
+
+/* 타사 비교 */
+.compare-wrap{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.compare-col{border-radius:10px;padding:12px 14px}
+.compare-before{background:rgba(220,38,38,.05);border:1px solid rgba(220,38,38,.2)}
+.compare-after{background:rgba(5,150,105,.05);border:1px solid rgba(5,150,105,.2)}
+.compare-col-title{font-size:11px;font-weight:800;margin-bottom:8px}
+.c-item{display:flex;align-items:flex-start;gap:5px;font-size:10px;color:#555;margin-bottom:5px;line-height:1.4}
+.c-x{color:#dc2626;font-weight:900;flex-shrink:0}
+.c-o{color:#059669;font-weight:900;flex-shrink:0}
+
+.pitch-box{background:linear-gradient(135deg,#1e3a5f,#2d1b4e);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+.pitch-title{font-size:10px;font-weight:700;color:rgba(255,255,255,.5);letter-spacing:1px;margin-bottom:8px}
+.pitch-item{display:flex;align-items:flex-start;gap:6px;margin-bottom:6px;color:#fff}
+.pitch-num{background:#059669;min-width:18px;height:18px;border-radius:50%;font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.pitch-text{font-size:10px;line-height:1.5}
+
+.ind-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:12px}
+.ind-item{background:#f8f9fc;border-radius:6px;padding:5px 6px;text-align:center;border:1px solid #e8eaf0}
+.ind-icon{font-size:14px;margin-bottom:2px}
+.ind-name{font-size:9px;font-weight:700;line-height:1.3}
+
+.price-box{background:linear-gradient(135deg,#1a1a2e,#2d2d4e);border-radius:10px;padding:12px 14px;margin-bottom:10px;color:#fff}
+.price-title{font-size:10px;font-weight:700;color:rgba(255,255,255,.5);margin-bottom:8px}
+.price-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.price-plan{font-size:11px;font-weight:700}
+.price-amt{font-size:14px;font-weight:900;color:#059669}
+.price-unit{font-size:9px;color:rgba(255,255,255,.4);margin-left:2px}
+.price-note{font-size:9px;color:rgba(255,255,255,.4);margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.1)}
+
+.cta{background:linear-gradient(135deg,rgba(0,0,0,.04),rgba(0,0,0,.08));border-radius:10px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center}
+.cta-info .cta-label{font-size:9px;color:#888;margin-bottom:2px}
+.cta-info .cta-val{font-size:12px;font-weight:700}
+.cta-kakao{background:#FEE500;color:#1a1a2e;font-size:10px;font-weight:700;padding:5px 12px;border-radius:14px;text-decoration:none;display:inline-block}
+
+.highlight{background:rgba(0,0,0,.03);border-radius:8px;padding:8px 12px;font-size:10px;color:#555;line-height:1.6;margin-bottom:10px;border-left:3px solid #059669}
+
+.print-btn{position:fixed;bottom:20px;right:20px;background:#059669;color:#fff;border:none;padding:10px 18px;border-radius:40px;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.2)}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div class="h-badge">DONWAY · 재고관리</div>
+    <div class="h-title">실시간 재고관리</div>
+    <div class="h-sub">입출고 파일 업로드 → 현장·사무실 실시간 공유 → 변경이력 자동 기록</div>
+    <div class="h-icon">📦</div>
+    <div class="h-tags">
+      <div class="h-tag">주류·식품 도매</div><div class="h-tag">의약품 도매</div><div class="h-tag">의류·잡화 도매</div><div class="h-tag">식자재 도매</div>
+    </div>
+  </div>
+  <div class="body">
+
+    <!-- 타겟 -->
+    <div class="target-box">
+      <div style="font-size:11px;font-weight:700;color:#059669">🎯 주요 고객사</div>
+      <div class="target-list"><div class="target-item">주류·식품 도매</div><div class="target-item">의약품 도매</div><div class="target-item">의류·잡화 도매</div><div class="target-item">식자재 도매</div><div class="target-item">공구·자재 도매</div></div>
+    </div>
+
+    <!-- 핵심 기능 -->
+    <div class="sec">
+      <div class="sec-title">핵심 기능</div>
+      <div class="feat-grid">
+        <div class="feat-card">
+          <div class="feat-icon">📋</div>
+          <div class="feat-name">하차 명세서 자동 등록</div>
+          <div class="feat-desc">납품서 업로드 → 재고 자동 반영</div>
+        </div>
+        <div class="feat-card">
+          <div class="feat-icon">📡</div>
+          <div class="feat-name">현장↔사무실 실시간</div>
+          <div class="feat-desc">업로드 즉시 사무실 화면 갱신</div>
+        </div>
+        <div class="feat-card">
+          <div class="feat-icon">⌨️</div>
+          <div class="feat-name">바코드 스캔 입고</div>
+          <div class="feat-desc">USB·블루투스 스캐너 연동</div>
+        </div>
+        <div class="feat-card">
+          <div class="feat-icon">🔍</div>
+          <div class="feat-name">입고 대조검수</div>
+          <div class="feat-desc">명세서 vs 실사 오차 자동 분석</div>
+        </div>
+        <div class="feat-card">
+          <div class="feat-icon">📋</div>
+          <div class="feat-name">변경이력 자동 기록</div>
+          <div class="feat-desc">수정 시 사유 입력·이력 저장</div>
+        </div>
+        <div class="feat-card">
+          <div class="feat-icon">👷</div>
+          <div class="feat-name">과장별 취합</div>
+          <div class="feat-desc">매장별 입출고 집계 실시간</div>
+        </div>
+        <div class="feat-card">
+          <div class="feat-icon">📈</div>
+          <div class="feat-name">대시보드</div>
+          <div class="feat-desc">파손·반품·공병 한눈에</div>
+        </div>
+        <div class="feat-card">
+          <div class="feat-icon">🔒</div>
+          <div class="feat-name">장난 방지</div>
+          <div class="feat-desc">모든 수정 이력 자동 저장</div>
+        </div></div>
+    </div>
+
+    <!-- 타사 비교 -->
+    <div class="sec">
+      <div class="sec-title">기존 방식 vs DONWAY</div>
+      <div class="compare-wrap">
+        <div class="compare-col compare-before">
+          <div class="compare-col-title" style="color:#dc2626">❌ 기존 방식</div>
+          <div class="c-item"><span class="c-x">✗</span>재고 실사를 수기로 작성</div><div class="c-item"><span class="c-x">✗</span>납품 수량 오차 파악 어려움</div><div class="c-item"><span class="c-x">✗</span>수정 이력 없어 책임 불명확</div><div class="c-item"><span class="c-x">✗</span>사무실에서 현황 파악 불가</div><div class="c-item"><span class="c-x">✗</span>장부와 실재고 차이 발생</div><div class="c-item"><span class="c-x">✗</span>담당자 야근·스트레스</div>
+        </div>
+        <div class="compare-col compare-after">
+          <div class="compare-col-title" style="color:#059669">✅ DONWAY</div>
+          <div class="c-item"><span class="c-o">✓</span>현장 업로드 → 사무실 즉시</div><div class="c-item"><span class="c-o">✓</span>명세서 vs 실사 자동 대조</div><div class="c-item"><span class="c-o">✓</span>누가·언제·얼마→얼마 자동 기록</div><div class="c-item"><span class="c-o">✓</span>실시간 재고 현황 조회</div><div class="c-item"><span class="c-o">✓</span>바코드 스캔 → 오차 최소화</div><div class="c-item"><span class="c-o">✓</span>정시 퇴근 · 다른 업무 집중</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 영업 포인트 -->
+    <div class="pitch-box">
+      <div class="pitch-title">💬 영업 핵심 멘트</div>
+      <div class="pitch-item"><div class="pitch-num">1</div><div class="pitch-text">"지금 재고 실사를 수기로 하세요? 현장에서 업로드하면 사무실에서 바로 보입니다."</div></div><div class="pitch-item"><div class="pitch-num">2</div><div class="pitch-text">"납품 수량이랑 실사 수량 차이 자동으로 잡아줍니다. 손실 줄어들어요."</div></div><div class="pitch-item"><div class="pitch-num">3</div><div class="pitch-text">"과장들이 수량 바꿔도 전부 이력이 남아요. 누가 언제 뭘 바꿨는지 다 보여요."</div></div><div class="pitch-item"><div class="pitch-num">4</div><div class="pitch-text">"바코드 스캐너 연결하면 찍는 순간 자동 입고 등록됩니다."</div></div>
+    </div>
+
+    <!-- 지원 업종 -->
+    <div class="sec">
+      <div class="sec-title">지원 업종</div>
+      <div class="ind-grid"><div class="ind-item"><div class="ind-icon">🍶</div><div class="ind-name">주류·식품</div></div><div class="ind-item"><div class="ind-icon">💊</div><div class="ind-name">의약품</div></div><div class="ind-item"><div class="ind-icon">👕</div><div class="ind-name">의류·잡화</div></div><div class="ind-item"><div class="ind-icon">🥩</div><div class="ind-name">식자재</div></div><div class="ind-item"><div class="ind-icon">🔧</div><div class="ind-name">공구·자재</div></div><div class="ind-item"><div class="ind-icon">🏗️</div><div class="ind-name">건자재</div></div><div class="ind-item"><div class="ind-icon">💄</div><div class="ind-name">화장품</div></div><div class="ind-item"><div class="ind-icon">❓</div><div class="ind-name">기타 문의</div></div></div>
+    </div>
+
+    <!-- 요금제 -->
+    <div class="price-box">
+      <div class="price-title">💰 요금제 (계좌이체 · VAT 별도)</div>
+      
+      <div class="price-row"><span class="price-plan">월납</span><span class="price-amt">99,000<span class="price-unit">원/월 고정</span></span></div>
+      <div class="price-row"><span class="price-plan">6개월</span><span class="price-amt">90,000<span class="price-unit">원/월 (9%↓)</span></span></div>
+      <div class="price-row"><span class="price-plan">12개월</span><span class="price-amt">85,000<span class="price-unit">원/월 (14%↓)</span></span></div>
+      <div class="price-row" style="margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,.1)"><span class="price-plan" style="font-size:10px;color:rgba(255,255,255,.5)">인원·품목 무제한</span><span style="font-size:11px;color:#aaa">연간 1,020,000원</span></div>
+      <div class="price-note">* 1개월 무료 체험 · 단체 20개사 이상 별도 할인 · 목록 외 업종 문의</div>
+    </div>
+
+    <!-- CTA -->
+    <div class="cta">
+      <div class="cta-info">
+        <div class="cta-label">문의·견적</div>
+        <div class="cta-val">📞 051-711-3103</div>
+        <div style="font-size:9px;color:#888;margin-top:1px">donway.ai.kr · all@donway.ai.kr</div>
+      </div>
+      <div>
+        <div style="font-size:9px;color:#888;margin-bottom:3px;text-align:right">카카오 상담</div>
+        <a href="https://pf.kakao.com/_xkuxabX/chat" class="cta-kakao">💬 DONWAY 채널</a>
+      </div>
+    </div>
+
+  </div>
+</div>
+<button class="print-btn no-print" onclick="window.print()">🖨️ PDF 저장</button>
+</body>
+</html>
