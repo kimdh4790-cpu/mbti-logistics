@@ -27270,13 +27270,13 @@ function pageStats(){
   if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
   // 탭 UI
   el.innerHTML='<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">'
-    +'<button id="stat-tab-month" class="btn btn-blue" onclick="_statTab(\'month\')" style="font-size:12px">📅 AI정산 월별</button>'
-    +'<button id="stat-tab-total" class="btn" onclick="_statTab(\'total\')" style="font-size:12px">📊 AI정산 합계</button>'
-    +'<button id="stat-tab-camp" class="btn" onclick="_statTab(\'camp\')" style="font-size:12px">🏕 캠프별</button>'
-    +'<button id="stat-tab-combined" class="btn" onclick="_statTab(\'combined\')" style="font-size:12px">💰 통합 순수익</button>'
+    +'<button id="stat-tab-month" class="btn btn-blue" onclick="window._statTab(\'month\')"  style="font-size:12px">📅 AI정산 월별</button>'
+    +'<button id="stat-tab-total" class="btn" onclick="window._statTab(\'total\')" style="font-size:12px">📊 AI정산 합계</button>'
+    +'<button id="stat-tab-camp" class="btn" onclick="window._statTab(\'camp\')" style="font-size:12px">🏕 캠프별</button>'
+    +'<button id="stat-tab-combined" class="btn" onclick="window._statTab(\'combined\')" style="font-size:12px">💰 통합 순수익</button>'
     +'</div>'
     +'<div id="stat-content"><div class="loading">로딩 중...</div></div>';
-  function _statTab(tab){
+  window._statTab=function(tab){
     ['month','total','camp','combined'].forEach(function(t){
       var btn=document.getElementById('stat-tab-'+t);
       if(btn)btn.className='btn'+(t===tab?' btn-blue':'');
@@ -27284,7 +27284,8 @@ function pageStats(){
     if(tab==='combined'){_statRenderCombined();return;}
     if(window._statRenderFn) window._statRenderFn(tab, window._statData);
     else toast('⏳ 데이터 로딩 중...');
-  }
+  };
+  function _statTab(tab){window._statTab(tab);}
   var _statData=null;
   var _did2=_CU.dealerId;
   // settlements + expenses 병렬 로딩
