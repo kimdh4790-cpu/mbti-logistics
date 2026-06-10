@@ -4713,6 +4713,13 @@ function doRegister(){
   }).then(function(){
     var myUrl=window.location.origin+'/'+slugVal;
     toast('✅ 등록 완료! 사업자등록증 업로드 중...');
+    // 오픈기념 카운터 +1 (Firestore increment)
+    try{
+      _db.collection('open_event').doc('counter').set(
+        {count: firebase.firestore.FieldValue.increment(1), updatedAt: new Date().toISOString()},
+        {merge: true}
+      );
+    }catch(e){}
     // ★ 사업자등록증 Firebase Storage 업로드
     if(_bizDocFile && _fbStorage()){
       var storageRef=_fbStorage().ref('biz_docs/'+uid+'/'+_bizDocFile.name);
