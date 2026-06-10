@@ -4333,11 +4333,6 @@ function showApp(){
     // ★ sType 디버그 로그 (슈퍼어드민용)
     if(isSuperAdmin()){
       MENUS=JSON.parse(JSON.stringify(MENUS_SETTLE));
-      buildNav();
-      _checkDeviceMode();
-      setTimeout(_checkOnboarding,1500);
-      if(window._pendingQrAttend){setTimeout(_processQrAttend,500);}
-      return;
     } else {
       // ★ services 배열 기반 메뉴 필터링
       var cfg=_COMPANY_CFG||{};
