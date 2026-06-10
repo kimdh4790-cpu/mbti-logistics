@@ -1686,7 +1686,7 @@ function _sendAlimtalk(phone, name, month, gross, deduct, net){
         '#{공제}': Number(deduct||0).toLocaleString(),
         '#{실지급}': Number(net||0).toLocaleString()
       },
-      fallbackText: '[DONWAY] '+name+'님 '+month+' 정산: 실지급 '+Number(net||0).toLocaleString()+'원'
+      fallbackText: '['+((_CU&&_CU.companyName)||'DONWAY')+'] '+name+'님 '+month+' 정산: 실지급 '+Number(net||0).toLocaleString()+'원'
     })
   }).then(function(r){return r.json();})
   .catch(function(e){return {ok:false,error:e.message};});
@@ -1695,11 +1695,11 @@ function _sendAlimtalk(phone, name, month, gross, deduct, net){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 📧 Resend 이메일 발송
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function _sendEmail(to, subject, html){
+function _sendEmail(to, subject, html, from){
   return fetch('/send-email',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({to:to, subject:subject, html:html})
+    body:JSON.stringify({to:to, subject:subject, html:html, from:from||'DONWAY <all@donway.ai.kr>'})
   }).then(function(r){return r.json();});
 }
 
@@ -1857,7 +1857,8 @@ function _sendStatementEmail(driver, monthLabel, netPay, details, settle){
     '</div>'+
     '</div></body></html>';
 
-  return _sendEmail(driver.email, '[DONWAY] '+esc(monthLabel)+' 정산 명세서 - '+esc(driver.name||''), html);
+  var fromName=compName||'DONWAY';
+  return _sendEmail(driver.email, '['+fromName+'] '+esc(monthLabel)+' 정산 명세서 - '+esc(driver.name||''), html, 'DONWAY <all@donway.ai.kr>');
 }
 
 // 카카오 발송 → 실패 시 이메일 자동 대체
