@@ -10034,6 +10034,19 @@ function _renderUniversalRules(c, r, industry){
     quick:'기사별 콜단가와 팀장 수수료를 설정하세요.'
   };
 
+  // 업종별 배너 생성
+  var industryBanner='';
+  if(industryLabels[industry]){
+    industryBanner=
+      '<div style="background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:10px;padding:12px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px">'+
+        '<div style="font-size:20px">'+industryLabels[industry].split(' ')[0]+'</div>'+
+        '<div>'+
+          '<div style="font-size:12px;font-weight:700;color:var(--acc)">'+industryLabels[industry]+' 규칙 설정</div>'+
+          '<div style="font-size:10px;color:var(--text3);margin-top:2px">'+(industryHints[industry]||'')+'</div>'+
+        '</div>'+
+      '</div>';
+  }
+
   // 단가표 탭 HTML
   function renderTableTabs(){
     return priceTables.map(function(pt,ti){
