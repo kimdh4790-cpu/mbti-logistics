@@ -169,305 +169,272 @@ function onBizDocSelected(input){
   reader.readAsDataURL(file);
 }
 window.onBizDocSelected=onBizDocSelected;</script>
-
-<!-- 로그인 -->
 <div id="login-screen" class="login-wrap">
-  <div class="login-card" style="width:400px;max-width:95vw">
-    <div style="text-align:center;margin-bottom:20px">
-      <div style="width:52px;height:52px;border-radius:14px;background:var(--brand);display:inline-flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:8px">💰</div>
-      <div style="font-size:22px;font-weight:900;color:var(--brand)">DONWAY</div>
-      <div id="login-subtitle" style="font-size:11px;color:var(--text3);margin-top:2px">돈의 방향을 자동화합니다</div>
-      <div id="login-brand-name" style="font-size:13px;font-weight:700;color:var(--brand);margin-top:4px;display:none"></div>
-    </div>
-
-    <!-- 탭 -->
-    <div style="display:flex;gap:4px;margin-bottom:20px;background:var(--bg3);border-radius:10px;padding:4px">
-      <button id="tab-login" onclick="(function(t){['login','register','join'].forEach(function(x){var b=document.getElementById('tab-'+x),f=document.getElementById('form-'+x);if(x===t){b.style.background='var(--brand)';b.style.color='#fff';f.style.display='block';}else{b.style.background='transparent';b.style.color='var(--text3)';f.style.display='none';}});})('login')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:var(--brand);color:#fff;transition:.2s">로그인</button>
-      <button id="tab-register" onclick="(function(t){['login','register','join'].forEach(function(x){var b=document.getElementById('tab-'+x),f=document.getElementById('form-'+x);if(x===t){b.style.background='var(--brand)';b.style.color='#fff';f.style.display='block';}else{b.style.background='transparent';b.style.color='var(--text3)';f.style.display='none';}});})('register')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);transition:.2s">회사 등록</button>
-      <button id="tab-join" onclick="(function(t){['login','register','join'].forEach(function(x){var b=document.getElementById('tab-'+x),f=document.getElementById('form-'+x);if(x===t){b.style.background='var(--brand)';b.style.color='#fff';f.style.display='block';}else{b.style.background='transparent';b.style.color='var(--text3)';f.style.display='none';}});})('join')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);transition:.2s">직원 가입</button>
-    </div>
-
-    <!-- 로그인 폼 -->
-    <div id="form-login">
-      <div style="display:flex;gap:4px;margin-bottom:16px;background:var(--bg3);border-radius:10px;padding:4px">
-        <button id="login-tab-email" onclick="_switchLoginTab('email')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:var(--brand);color:#fff;transition:.2s">🪪 아이디·이메일</button>
-        <button id="login-tab-phone" onclick="_switchLoginTab('phone')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);transition:.2s">📱 전화번호</button>
-      </div>
-      <div id="login-email-form">
-        <div style="background:rgba(0,200,248,.06);border:1px solid rgba(0,200,248,.15);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:11px;color:var(--text3)">
-          💡 <strong style="color:var(--brand)">이메일</strong> 또는 가입 시 등록한 <strong style="color:var(--brand)">정산 아이디·전화번호</strong>로 로그인
-        </div>
-        <div class="fg"><label>이메일 또는 아이디</label>
-          <input id="l-email" type="text" placeholder="예) kim001 · 01012345678 · kim@email.com" onkeydown="if(event.key==='Enter')doLogin()" autocomplete="username">
-        </div>
-        <div class="fg"><label>비밀번호</label>
-          <div style="position:relative">
-            <input id="l-pw" type="password" placeholder="비밀번호 입력" onkeydown="if(event.key==='Enter')doLogin()" style="width:100%;padding-right:40px">
-            <button type="button" onclick="_togglePw('l-pw',this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px">👁</button>
-          </div>
-        </div>
-      </div>
-      <div id="login-phone-form" style="display:none">
-        <div style="background:rgba(0,200,248,.06);border:1px solid rgba(0,200,248,.15);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:11px;color:var(--text3)">
-          💡 QR 스캔으로 가입한 직원은 <strong style="color:var(--brand)">전화번호 + 가입 시 비밀번호</strong>로 로그인
-        </div>
-        <div class="fg"><label>전화번호</label>
-          <input id="l-phone" type="tel" placeholder="예) 01012345678 (- 없이)" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeydown="if(event.key==='Enter')doPhoneLogin()">
-        </div>
-        <div class="fg"><label>비밀번호</label>
-          <div style="position:relative">
-            <input id="l-phone-pw" type="password" placeholder="가입 시 설정한 비밀번호" onkeydown="if(event.key==='Enter')doPhoneLogin()" style="width:100%;padding-right:40px">
-            <button type="button" onclick="_togglePw('l-phone-pw',this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px">👁</button>
-          </div>
-        </div>
-      </div>
-      <div id="l-err" style="color:var(--red);font-size:12px;margin-bottom:8px;display:none"></div>
-      <button id="btn-login-submit" class="btn btn-blue login-submit-btn" style="width:100%;padding:12px;font-size:14px;font-weight:800;margin-bottom:10px"
-        onclick="document.getElementById('login-phone-form').style.display==='none'?doLogin():doPhoneLogin()">로그인</button>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <button onclick="_showFindPw()" style="background:none;border:none;font-size:11px;color:var(--text3);cursor:pointer;padding:0">🔑 비밀번호 찾기</button>
-        <button onclick="toggleDark()" style="background:none;border:none;font-size:11px;color:var(--text3);cursor:pointer;padding:0">🌙 다크모드</button>
-      </div>
-    </div>
-
-    <!-- 회사 등록 폼 -->
-    <div id="form-register" style="display:none">
-      <div style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:8px;padding:10px 12px;margin-bottom:16px;font-size:11px;color:var(--text2)">
-        🎁 <strong>7일 무료 체험</strong> — 카드 등록 불필요 · 사업자번호 1회 한정
-      </div>
-      <div class="fg"><label>회사명</label><input id="r-company" type="text" placeholder="엠비티아이 유한회사"></div>
-      <div class="fg"><label>사업자등록번호</label>
-        <div style="display:flex;gap:8px">
-          <input id="r-biznum" type="text" placeholder="000-00-00000" style="flex:1" oninput="this.value=this.value.replace(/[^0-9-]/g,'')">
-          <button class="btn btn-sm btn-blue" onclick="checkBizNum()" style="white-space:nowrap">중복확인</button>
-        </div>
-        <div id="r-biznum-msg" style="font-size:11px;margin-top:4px;display:none"></div>
-        <!-- ★ 사업자등록증 업로드 -->
-        <div style="margin-top:12px">
-          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">사업자등록증 <span style="color:var(--red)">*</span></label>
-          <div id="r-bizdoc-area" onclick="document.getElementById('r-bizdoc-input').click()"
-            style="border:2px dashed var(--border);border-radius:8px;padding:16px;text-align:center;cursor:pointer;transition:.2s"
-            onmouseover="this.style.borderColor='#00c8f8'" onmouseout="this.style.borderColor='var(--border)'">
-            <div id="r-bizdoc-placeholder">
-              <div style="font-size:24px;margin-bottom:4px">📄</div>
-              <div style="font-size:12px;color:var(--text3)">클릭하여 사업자등록증 업로드<br><span style="font-size:10px">JPG, PNG, PDF (최대 5MB)</span></div>
-            </div>
-            <div id="r-bizdoc-preview" style="display:none">
-              <div style="font-size:20px">✅</div>
-              <div id="r-bizdoc-name" style="font-size:12px;color:var(--green);margin-top:4px"></div>
-            </div>
-          </div>
-          <input id="r-bizdoc-input" type="file" accept="image/*,.pdf" style="display:none" onchange="onBizDocSelected(this)">
-          <div id="r-bizdoc-msg" style="font-size:11px;margin-top:4px"></div>
-        </div>
-
-
-      </div>
-      <div class="fg"><label>관리자 이메일</label><input id="r-email" type="email" placeholder="admin@company.com"></div>
-      <div class="fg"><label>비밀번호</label><input id="r-pw" type="password" placeholder="8자 이상"></div>
-      <div class="fg"><label>비밀번호 확인</label><input id="r-pw2" type="password" placeholder="비밀번호 재입력"></div>
-      <!-- 서비스 선택 -->
-      <div class="fg" style="margin-bottom:14px">
-        <label style="font-size:13px;font-weight:700;margin-bottom:4px;display:block">사용할 서비스 선택 <span style="font-size:10px;color:var(--text3);font-weight:400">(복수 선택 가능)</span></label>
-        <div style="font-size:10px;color:var(--text3);margin-bottom:10px">7일 무료 체험 · 이후 6개월·12개월 장기 할인 사용</div>
-        <div style="display:flex;flex-direction:column;gap:8px">
-
-          <!-- AI정산 -->
-          <div id="svc-settle-card" onclick="_toggleSvc('settle')" style="border:2px solid var(--brand);border-radius:10px;padding:12px;cursor:pointer;background:rgba(0,200,248,.05)">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <div style="display:flex;align-items:center;gap:8px">
-                <span style="font-size:20px">🤖</span>
-                <div>
-                  <div style="font-size:12px;font-weight:700;color:var(--brand)">AI 정산</div>
-                  <div style="font-size:10px;color:var(--text3)">복잡한 계산이 필요한 업종 — 인당 9,000원/월</div>
-                </div>
-              </div>
-              <div id="svc-settle-check" style="width:18px;height:18px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff">✓</div>
-            </div>
-            <!-- 업종 선택 -->
-            <div id="svc-settle-industry" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px">
-              <div style="font-size:10px;color:var(--text3);width:100%;margin-bottom:2px">업종 선택:</div>
-              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="settle-industry" value="coupang" checked onchange="_onIndustryChange(this)"> 🚚 쿠팡 대리점</label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="settle-industry" value="cleaning" onchange="_onIndustryChange(this)"> 🧹 청소·파견</label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="settle-industry" value="insurance" onchange="_onIndustryChange(this)"> 🛡️ 보험설계사</label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="settle-industry" value="construction" onchange="_onIndustryChange(this)"> 🏗️ 건설·일용직</label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="settle-industry" value="quick" onchange="_onIndustryChange(this)"> 🚗 퀵·대리운전</label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="settle-industry" value="beauty" onchange="_onIndustryChange(this)"> 💇 뷰티·미용</label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="settle-industry" value="other" onchange="_onIndustryChange(this)"> 📋 직접설정</label>
-            </div>
-            <!-- 업종별 추천 조합 안내 -->
-            <div id="svc-recommend-box" style="margin-top:8px;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:8px;padding:8px 12px;font-size:11px;display:none">
-              <span style="color:var(--acc);font-weight:700">💡 추천:</span>
-              <span id="svc-recommend-text" style="color:var(--text2)"></span>
-            </div>
-          </div>
-
-          <!-- 배달대행 -->
-          <div id="svc-delivery-card" onclick="_toggleSvc('delivery')" style="border:2px solid var(--border);border-radius:10px;padding:12px;cursor:pointer">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <div style="display:flex;align-items:center;gap:8px">
-                <span style="font-size:20px">🛵</span>
-                <div>
-                  <div style="font-size:12px;font-weight:700;color:var(--text2)">배달대행 정산</div>
-                  <div style="font-size:10px;color:var(--text3)">배민·쿠팡이츠 전용 — 인당 9,000원/월</div>
-                </div>
-              </div>
-              <div id="svc-delivery-check" style="width:18px;height:18px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;color:transparent">✓</div>
-            </div>
-          </div>
-
-          <!-- 범용정산 -->
-          <div id="svc-universal-card" onclick="_toggleSvc('universal')" style="border:2px solid var(--border);border-radius:10px;padding:12px;cursor:pointer">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <div style="display:flex;align-items:center;gap:8px">
-                <span style="font-size:20px">📋</span>
-                <div>
-                  <div style="font-size:12px;font-weight:700;color:var(--text2)">범용 정산</div>
-                  <div style="font-size:10px;color:var(--text3)">단순계산 다업체 — 99,000원/월 무제한</div>
-                </div>
-              </div>
-              <div id="svc-universal-check" style="width:18px;height:18px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;color:transparent">✓</div>
-            </div>
-          </div>
-
-          <!-- 재고관리 -->
-          <div id="svc-inventory-card" onclick="_toggleSvc('inventory')" style="border:2px solid var(--border);border-radius:10px;padding:12px;cursor:pointer">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <div style="display:flex;align-items:center;gap:8px">
-                <span style="font-size:20px">📦</span>
-                <div>
-                  <div style="font-size:12px;font-weight:700;color:var(--text2)">재고관리</div>
-                  <div style="font-size:10px;color:var(--text3)">모든 도매·유통업종 — 99,000원/월</div>
-                </div>
-              </div>
-              <div id="svc-inventory-check" style="width:18px;height:18px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;color:transparent">✓</div>
-            </div>
-            <!-- 재고 업종 선택 -->
-            <div id="svc-inventory-industry" style="margin-top:10px;display:none;flex-wrap:wrap;gap:6px">
-              <div style="font-size:10px;color:var(--text3);width:100%;margin-bottom:2px">업종 선택:</div>
-              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="inv-industry" value="liquor" checked> 🍶 주류·식품</label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="inv-industry" value="pharma"> 💊 의약품</label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="inv-industry" value="fashion"> 👕 의류·잡화</label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="inv-industry" value="food"> 🥩 식자재</label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="inv-industry" value="parts"> 🔧 공구·자재</label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="inv-industry" value="other"> 📋 기타</label>
-            </div>
-          </div>
-
-        </div>
-        <input type="hidden" id="r-service" value="settle">
-        <input type="hidden" id="r-services" value="settle">
-        <input type="hidden" id="r-settle-industry" value="coupang">
-        <input type="hidden" id="r-inv-industry" value="liquor">
-      </div>
-      <div id="r-err" style="color:var(--red);font-size:12px;margin-bottom:8px;display:none"></div>
-      <button class="btn btn-blue" style="width:100%;padding:11px;font-size:14px;font-weight:700" onclick="doRegister()">7일 무료 체험 시작</button>
-    </div>
-
-    <!-- 직원 가입 폼 -->
-    <div id="form-join" style="display:none">
-      <div style="display:flex;gap:4px;margin-bottom:14px;background:var(--bg3);border-radius:8px;padding:4px">
-        <button id="join-tab-quick" onclick="_switchJoinTab('quick')" style="flex:1;padding:7px;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;background:var(--brand);color:#fff">⚡ 빠른 가입</button>
-        <button id="join-tab-full"  onclick="_switchJoinTab('full')"  style="flex:1;padding:7px;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3)">📝 일반 가입</button>
-      </div>
-      <div id="join-quick-form">
-        <div style="background:rgba(0,200,248,.08);border:1px solid rgba(0,200,248,.2);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:var(--text2)">🔑 QR 스캔 또는 회사코드 → 이름·연락처·비번 → 가입 완료</div>
-        <div class="fg"><label>이름 <span style="color:var(--red)">*</span></label><input id="j-name" type="text" placeholder="홍길동"></div>
-        <div class="fg"><label>연락처 <span style="color:var(--red)">*</span></label><input id="j-phone" type="tel" placeholder="01012345678" oninput="this.value=this.value.replace(/[^0-9-]/g,'')"></div>
-        <div class="fg">
-          <label>사업자이신가요?</label>
-          <div style="display:flex;gap:8px">
-            <button id="j-biz-yes" type="button" onclick="_setBizType(true)"  style="flex:1;padding:8px;border:2px solid var(--border);border-radius:8px;background:transparent;color:var(--text);font-size:12px;font-weight:700;cursor:pointer">✅ 네 (사업자)</button>
-            <button id="j-biz-no"  type="button" onclick="_setBizType(false)" style="flex:1;padding:8px;border:2px solid var(--brand);border-radius:8px;background:rgba(0,200,248,.1);color:var(--brand);font-size:12px;font-weight:700;cursor:pointer">👤 아니요</button>
-          </div>
-        </div>
-        <div id="j-biz-info" style="display:none;border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:12px;background:rgba(245,158,11,.04);margin-bottom:8px">
-          <div style="font-size:11px;font-weight:700;color:#f59e0b;margin-bottom:8px">🧾 사업자 정보</div>
-          <div class="fg"><label>사업자등록번호</label><input id="j-biz-num" type="text" placeholder="000-00-00000" oninput="this.value=this.value.replace(/[^0-9-]/g,'')"></div>
-          <div class="fg"><label>상호명</label><input id="j-biz-cname" type="text" placeholder="홍길동 개인사업자"></div>
-          <div class="fg"><label>업태 / 업종</label>
-            <div style="display:flex;gap:6px"><input id="j-biz-type" type="text" placeholder="운수" style="flex:1"><input id="j-biz-kind" type="text" placeholder="택배운반" style="flex:1"></div></div>
-          <div class="fg"><label>사업장 주소</label><input id="j-biz-addr" type="text" placeholder="부산시..."></div>
-        </div>
-        <div class="fg"><label>정산 아이디 <span style="color:var(--text3);font-size:10px;font-weight:400">(직원ID)</span></label><input id="j-driverid-quick" type="text" placeholder="kim001 (영문+숫자)"></div>
-        <div class="fg"><label>역할</label><select id="j-role" onchange="document.getElementById('j-store-wrap').style.display=this.value==='manager'?'block':'none'" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:13px"><option value="driver">기사/직원</option><option value="manager">과장 (재고 담당)</option></select></div>
-        <div class="fg" id="j-store-wrap" style="display:none"><label>담당 매장</label><input id="j-store" type="text" placeholder="예) 강남점" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:13px"></div>
-        <div class="fg"><label>주민번호 <span style="color:var(--text3);font-size:10px;font-weight:400">(선택)</span></label><input id="j-ssn" type="text" placeholder="000000-0000000" style="font-family:monospace"></div>
-        <div class="fg"><label>입사일 <span style="color:var(--text3);font-size:10px;font-weight:400">(선택)</span></label><input id="j-joindate" type="date"></div>
-        <div class="fg"><label>비밀번호 <span style="color:var(--red)">*</span></label><input id="j-pw" type="password" placeholder="6자 이상"></div>
-        <div class="fg"><label>회사코드 <span style="color:var(--red)">*</span></label>
-          <input id="j-code" type="text" placeholder="ABCD1234" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase();_quickVerifyCode(this.value)">
-          <div id="j-code-msg" style="font-size:11px;margin-top:4px"></div></div>
-      </div>
-      <div id="join-full-form" style="display:none">
-        <div style="background:rgba(212,160,23,.08);border:1px solid rgba(212,160,23,.2);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:var(--text2)">🔑 관리자에게 <strong>회사코드</strong>를 받아 입력하세요</div>
-        <div class="fg"><label>이름</label><input id="j-name-full" type="text" placeholder="홍길동"></div>
-        <div class="fg"><label>정산 아이디</label><input id="j-driverid" type="text" placeholder="kim001 (영문+숫자)"></div>
-        <div class="fg"><label>역할</label>
-          <select id="j-role-full" onchange="document.getElementById('j-store-wrap-full').style.display=this.value==='manager'?'block':'none'" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:13px">
-            <option value="driver">기사/직원</option>
-            <option value="manager">과장 (재고 담당)</option>
-          </select>
-        </div>
-        <div class="fg" id="j-store-wrap-full" style="display:none"><label>담당 매장</label><input id="j-store-full" type="text" placeholder="예) 강남점" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:13px"></div>
-        <div class="fg"><label>이메일</label><input id="j-email" type="email" placeholder="example@email.com"></div>
-        <div class="fg"><label>비밀번호</label><input id="j-pw-full" type="password" placeholder="8자 이상"></div>
-        <div class="fg"><label>회사코드</label><input id="j-code-full" type="text" placeholder="ABCD1234" style="text-transform:uppercase"></div>
-      </div>
-      <div id="j-err" style="color:var(--red);font-size:12px;margin-bottom:8px;display:none"></div>
-      <button id="join-submit-btn" class="btn btn-blue" style="width:100%;padding:11px;font-size:14px;font-weight:700"
-        onclick="document.getElementById('join-full-form').style.display!=='none'?doJoin():doQuickJoin()">가입하기</button>
-    </div>
-  </div>
+ <div class="login-card" style="width:400px;max-width:95vw">
+ <div style="text-align:center;margin-bottom:20px">
+ <div style="width:52px;height:52px;border-radius:14px;background:var(--brand);display:inline-flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:8px">💰</div>
+ <div style="font-size:22px;font-weight:900;color:var(--brand)">DONWAY</div>
+ <div id="login-subtitle" style="font-size:11px;color:var(--text3);margin-top:2px">돈의 방향을 자동화합니다</div>
+ <div id="login-brand-name" style="font-size:13px;font-weight:700;color:var(--brand);margin-top:4px;display:none"></div>
+ </div>
+ <div style="display:flex;gap:4px;margin-bottom:20px;background:var(--bg3);border-radius:10px;padding:4px">
+ <button id="tab-login" onclick="(function(t){['login','register','join'].forEach(function(x){var b=document.getElementById('tab-'+x),f=document.getElementById('form-'+x);if(x===t){b.style.background='var(--brand)';b.style.color='#fff';f.style.display='block';}else{b.style.background='transparent';b.style.color='var(--text3)';f.style.display='none';}});})('login')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:var(--brand);color:#fff;transition:.2s">로그인</button>
+ <button id="tab-register" onclick="(function(t){['login','register','join'].forEach(function(x){var b=document.getElementById('tab-'+x),f=document.getElementById('form-'+x);if(x===t){b.style.background='var(--brand)';b.style.color='#fff';f.style.display='block';}else{b.style.background='transparent';b.style.color='var(--text3)';f.style.display='none';}});})('register')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);transition:.2s">회사 등록</button>
+ <button id="tab-join" onclick="(function(t){['login','register','join'].forEach(function(x){var b=document.getElementById('tab-'+x),f=document.getElementById('form-'+x);if(x===t){b.style.background='var(--brand)';b.style.color='#fff';f.style.display='block';}else{b.style.background='transparent';b.style.color='var(--text3)';f.style.display='none';}});})('join')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);transition:.2s">직원 가입</button>
+ </div>
+ <div id="form-login">
+ <div style="display:flex;gap:4px;margin-bottom:16px;background:var(--bg3);border-radius:10px;padding:4px">
+ <button id="login-tab-email" onclick="_switchLoginTab('email')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:var(--brand);color:#fff;transition:.2s">🪪 아이디·이메일</button>
+ <button id="login-tab-phone" onclick="_switchLoginTab('phone')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);transition:.2s">📱 전화번호</button>
+ </div>
+ <div id="login-email-form">
+ <div style="background:rgba(0,200,248,.06);border:1px solid rgba(0,200,248,.15);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:11px;color:var(--text3)">
+ 💡 <strong style="color:var(--brand)">이메일</strong> 또는 가입 시 등록한 <strong style="color:var(--brand)">정산 아이디·전화번호</strong>로 로그인
+ </div>
+ <div class="fg"><label>이메일 또는 아이디</label>
+ <input id="l-email" type="text" placeholder="예) kim001 · 01012345678 · kim@email.com" onkeydown="if(event.key==='Enter')doLogin()" autocomplete="username">
+ </div>
+ <div class="fg"><label>비밀번호</label>
+ <div style="position:relative">
+ <input id="l-pw" type="password" placeholder="비밀번호 입력" onkeydown="if(event.key==='Enter')doLogin()" style="width:100%;padding-right:40px">
+ <button type="button" onclick="_togglePw('l-pw',this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px">👁</button>
+ </div>
+ </div>
+ </div>
+ <div id="login-phone-form" style="display:none">
+ <div style="background:rgba(0,200,248,.06);border:1px solid rgba(0,200,248,.15);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:11px;color:var(--text3)">
+ 💡 QR 스캔으로 가입한 직원은 <strong style="color:var(--brand)">전화번호 + 가입 시 비밀번호</strong>로 로그인
+ </div>
+ <div class="fg"><label>전화번호</label>
+ <input id="l-phone" type="tel" placeholder="예) 01012345678 (- 없이)" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeydown="if(event.key==='Enter')doPhoneLogin()">
+ </div>
+ <div class="fg"><label>비밀번호</label>
+ <div style="position:relative">
+ <input id="l-phone-pw" type="password" placeholder="가입 시 설정한 비밀번호" onkeydown="if(event.key==='Enter')doPhoneLogin()" style="width:100%;padding-right:40px">
+ <button type="button" onclick="_togglePw('l-phone-pw',this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px">👁</button>
+ </div>
+ </div>
+ </div>
+ <div id="l-err" style="color:var(--red);font-size:12px;margin-bottom:8px;display:none"></div>
+ <button id="btn-login-submit" class="btn btn-blue login-submit-btn" style="width:100%;padding:12px;font-size:14px;font-weight:800;margin-bottom:10px"
+ onclick="document.getElementById('login-phone-form').style.display==='none'?doLogin():doPhoneLogin()">로그인</button>
+ <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+ <button onclick="_showFindPw()" style="background:none;border:none;font-size:11px;color:var(--text3);cursor:pointer;padding:0">🔑 비밀번호 찾기</button>
+ <button onclick="toggleDark()" style="background:none;border:none;font-size:11px;color:var(--text3);cursor:pointer;padding:0">🌙 다크모드</button>
+ </div>
+ </div>
+ <div id="form-register" style="display:none">
+ <div style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:8px;padding:10px 12px;margin-bottom:16px;font-size:11px;color:var(--text2)">
+ 🎁 <strong>7일 무료 체험</strong> — 카드 등록 불필요 · 사업자번호 1회 한정
+ </div>
+ <div class="fg"><label>회사명</label><input id="r-company" type="text" placeholder="엠비티아이 유한회사"></div>
+ <div class="fg"><label>사업자등록번호</label>
+ <div style="display:flex;gap:8px">
+ <input id="r-biznum" type="text" placeholder="000-00-00000" style="flex:1" oninput="this.value=this.value.replace(/[^0-9-]/g,'')">
+ <button class="btn btn-sm btn-blue" onclick="checkBizNum()" style="white-space:nowrap">중복확인</button>
+ </div>
+ <div id="r-biznum-msg" style="font-size:11px;margin-top:4px;display:none"></div>
+ <div style="margin-top:12px">
+ <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">사업자등록증 <span style="color:var(--red)">*</span></label>
+ <div id="r-bizdoc-area" onclick="document.getElementById('r-bizdoc-input').click()"
+ style="border:2px dashed var(--border);border-radius:8px;padding:16px;text-align:center;cursor:pointer;transition:.2s"
+ onmouseover="this.style.borderColor='#00c8f8'" onmouseout="this.style.borderColor='var(--border)'">
+ <div id="r-bizdoc-placeholder">
+ <div style="font-size:24px;margin-bottom:4px">📄</div>
+ <div style="font-size:12px;color:var(--text3)">클릭하여 사업자등록증 업로드<br><span style="font-size:10px">JPG, PNG, PDF (최대 5MB)</span></div>
+ </div>
+ <div id="r-bizdoc-preview" style="display:none">
+ <div style="font-size:20px">✅</div>
+ <div id="r-bizdoc-name" style="font-size:12px;color:var(--green);margin-top:4px"></div>
+ </div>
+ </div>
+ <input id="r-bizdoc-input" type="file" accept="image/*,.pdf" style="display:none" onchange="onBizDocSelected(this)">
+ <div id="r-bizdoc-msg" style="font-size:11px;margin-top:4px"></div>
+ </div>
+ </div>
+ <div class="fg"><label>관리자 이메일</label><input id="r-email" type="email" placeholder="admin@company.com"></div>
+ <div class="fg"><label>비밀번호</label><input id="r-pw" type="password" placeholder="8자 이상"></div>
+ <div class="fg"><label>비밀번호 확인</label><input id="r-pw2" type="password" placeholder="비밀번호 재입력"></div>
+ <div class="fg" style="margin-bottom:14px">
+ <label style="font-size:13px;font-weight:700;margin-bottom:4px;display:block">사용할 서비스 선택 <span style="font-size:10px;color:var(--text3);font-weight:400">(복수 선택 가능)</span></label>
+ <div style="font-size:10px;color:var(--text3);margin-bottom:10px">7일 무료 체험 · 이후 6개월·12개월 장기 할인 사용</div>
+ <div style="display:flex;flex-direction:column;gap:8px">
+ <div id="svc-settle-card" onclick="_toggleSvc('settle')" style="border:2px solid var(--brand);border-radius:10px;padding:12px;cursor:pointer;background:rgba(0,200,248,.05)">
+ <div style="display:flex;justify-content:space-between;align-items:center">
+ <div style="display:flex;align-items:center;gap:8px">
+ <span style="font-size:20px">🤖</span>
+ <div>
+ <div style="font-size:12px;font-weight:700;color:var(--brand)">AI 정산</div>
+ <div style="font-size:10px;color:var(--text3)">복잡한 계산이 필요한 업종 — 인당 9,000원/월</div>
+ </div>
+ </div>
+ <div id="svc-settle-check" style="width:18px;height:18px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff">✓</div>
+ </div>
+ <div id="svc-settle-industry" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px">
+ <div style="font-size:10px;color:var(--text3);width:100%;margin-bottom:2px">업종 선택:</div>
+ <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="settle-industry" value="coupang" checked onchange="_onIndustryChange(this)"> 🚚 쿠팡 대리점</label>
+ <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="settle-industry" value="cleaning" onchange="_onIndustryChange(this)"> 🧹 청소·파견</label>
+ <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="settle-industry" value="insurance" onchange="_onIndustryChange(this)"> 🛡️ 보험설계사</label>
+ <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="settle-industry" value="construction" onchange="_onIndustryChange(this)"> 🏗️ 건설·일용직</label>
+ <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="settle-industry" value="quick" onchange="_onIndustryChange(this)"> 🚗 퀵·대리운전</label>
+ <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="settle-industry" value="beauty" onchange="_onIndustryChange(this)"> 💇 뷰티·미용</label>
+ <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="settle-industry" value="other" onchange="_onIndustryChange(this)"> 📋 직접설정</label>
+ </div>
+ <div id="svc-recommend-box" style="margin-top:8px;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:8px;padding:8px 12px;font-size:11px;display:none">
+ <span style="color:var(--acc);font-weight:700">💡 추천:</span>
+ <span id="svc-recommend-text" style="color:var(--text2)"></span>
+ </div>
+ </div>
+ <div id="svc-delivery-card" onclick="_toggleSvc('delivery')" style="border:2px solid var(--border);border-radius:10px;padding:12px;cursor:pointer">
+ <div style="display:flex;justify-content:space-between;align-items:center">
+ <div style="display:flex;align-items:center;gap:8px">
+ <span style="font-size:20px">🛵</span>
+ <div>
+ <div style="font-size:12px;font-weight:700;color:var(--text2)">배달대행 정산</div>
+ <div style="font-size:10px;color:var(--text3)">배민·쿠팡이츠 전용 — 인당 9,000원/월</div>
+ </div>
+ </div>
+ <div id="svc-delivery-check" style="width:18px;height:18px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;color:transparent">✓</div>
+ </div>
+ </div>
+ <div id="svc-universal-card" onclick="_toggleSvc('universal')" style="border:2px solid var(--border);border-radius:10px;padding:12px;cursor:pointer">
+ <div style="display:flex;justify-content:space-between;align-items:center">
+ <div style="display:flex;align-items:center;gap:8px">
+ <span style="font-size:20px">📋</span>
+ <div>
+ <div style="font-size:12px;font-weight:700;color:var(--text2)">범용 정산</div>
+ <div style="font-size:10px;color:var(--text3)">단순계산 다업체 — 99,000원/월 무제한</div>
+ </div>
+ </div>
+ <div id="svc-universal-check" style="width:18px;height:18px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;color:transparent">✓</div>
+ </div>
+ </div>
+ <div id="svc-inventory-card" onclick="_toggleSvc('inventory')" style="border:2px solid var(--border);border-radius:10px;padding:12px;cursor:pointer">
+ <div style="display:flex;justify-content:space-between;align-items:center">
+ <div style="display:flex;align-items:center;gap:8px">
+ <span style="font-size:20px">📦</span>
+ <div>
+ <div style="font-size:12px;font-weight:700;color:var(--text2)">재고관리</div>
+ <div style="font-size:10px;color:var(--text3)">모든 도매·유통업종 — 99,000원/월</div>
+ </div>
+ </div>
+ <div id="svc-inventory-check" style="width:18px;height:18px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;color:transparent">✓</div>
+ </div>
+ <div id="svc-inventory-industry" style="margin-top:10px;display:none;flex-wrap:wrap;gap:6px">
+ <div style="font-size:10px;color:var(--text3);width:100%;margin-bottom:2px">업종 선택:</div>
+ <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="inv-industry" value="liquor" checked> 🍶 주류·식품</label>
+ <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="inv-industry" value="pharma"> 💊 의약품</label>
+ <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="inv-industry" value="fashion"> 👕 의류·잡화</label>
+ <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="inv-industry" value="food"> 🥩 식자재</label>
+ <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="inv-industry" value="parts"> 🔧 공구·자재</label>
+ <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="inv-industry" value="other"> 📋 기타</label>
+ </div>
+ </div>
+ </div>
+ <input type="hidden" id="r-service" value="settle">
+ <input type="hidden" id="r-services" value="settle">
+ <input type="hidden" id="r-settle-industry" value="coupang">
+ <input type="hidden" id="r-inv-industry" value="liquor">
+ </div>
+ <div id="r-err" style="color:var(--red);font-size:12px;margin-bottom:8px;display:none"></div>
+ <button class="btn btn-blue" style="width:100%;padding:11px;font-size:14px;font-weight:700" onclick="doRegister()">7일 무료 체험 시작</button>
+ </div>
+ <div id="form-join" style="display:none">
+ <div style="display:flex;gap:4px;margin-bottom:14px;background:var(--bg3);border-radius:8px;padding:4px">
+ <button id="join-tab-quick" onclick="_switchJoinTab('quick')" style="flex:1;padding:7px;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;background:var(--brand);color:#fff">⚡ 빠른 가입</button>
+ <button id="join-tab-full" onclick="_switchJoinTab('full')" style="flex:1;padding:7px;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3)">📝 일반 가입</button>
+ </div>
+ <div id="join-quick-form">
+ <div style="background:rgba(0,200,248,.08);border:1px solid rgba(0,200,248,.2);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:var(--text2)">🔑 QR 스캔 또는 회사코드 → 이름·연락처·비번 → 가입 완료</div>
+ <div class="fg"><label>이름 <span style="color:var(--red)">*</span></label><input id="j-name" type="text" placeholder="홍길동"></div>
+ <div class="fg"><label>연락처 <span style="color:var(--red)">*</span></label><input id="j-phone" type="tel" placeholder="01012345678" oninput="this.value=this.value.replace(/[^0-9-]/g,'')"></div>
+ <div class="fg">
+ <label>사업자이신가요?</label>
+ <div style="display:flex;gap:8px">
+ <button id="j-biz-yes" type="button" onclick="_setBizType(true)" style="flex:1;padding:8px;border:2px solid var(--border);border-radius:8px;background:transparent;color:var(--text);font-size:12px;font-weight:700;cursor:pointer">✅ 네 (사업자)</button>
+ <button id="j-biz-no" type="button" onclick="_setBizType(false)" style="flex:1;padding:8px;border:2px solid var(--brand);border-radius:8px;background:rgba(0,200,248,.1);color:var(--brand);font-size:12px;font-weight:700;cursor:pointer">👤 아니요</button>
+ </div>
+ </div>
+ <div id="j-biz-info" style="display:none;border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:12px;background:rgba(245,158,11,.04);margin-bottom:8px">
+ <div style="font-size:11px;font-weight:700;color:#f59e0b;margin-bottom:8px">🧾 사업자 정보</div>
+ <div class="fg"><label>사업자등록번호</label><input id="j-biz-num" type="text" placeholder="000-00-00000" oninput="this.value=this.value.replace(/[^0-9-]/g,'')"></div>
+ <div class="fg"><label>상호명</label><input id="j-biz-cname" type="text" placeholder="홍길동 개인사업자"></div>
+ <div class="fg"><label>업태 / 업종</label>
+ <div style="display:flex;gap:6px"><input id="j-biz-type" type="text" placeholder="운수" style="flex:1"><input id="j-biz-kind" type="text" placeholder="택배운반" style="flex:1"></div></div>
+ <div class="fg"><label>사업장 주소</label><input id="j-biz-addr" type="text" placeholder="부산시..."></div>
+ </div>
+ <div class="fg"><label>정산 아이디 <span style="color:var(--text3);font-size:10px;font-weight:400">(직원ID)</span></label><input id="j-driverid-quick" type="text" placeholder="kim001 (영문+숫자)"></div>
+ <div class="fg"><label>역할</label><select id="j-role" onchange="document.getElementById('j-store-wrap').style.display=this.value==='manager'?'block':'none'" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:13px"><option value="driver">기사/직원</option><option value="manager">과장 (재고 담당)</option></select></div>
+ <div class="fg" id="j-store-wrap" style="display:none"><label>담당 매장</label><input id="j-store" type="text" placeholder="예) 강남점" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:13px"></div>
+ <div class="fg"><label>주민번호 <span style="color:var(--text3);font-size:10px;font-weight:400">(선택)</span></label><input id="j-ssn" type="text" placeholder="000000-0000000" style="font-family:monospace"></div>
+ <div class="fg"><label>입사일 <span style="color:var(--text3);font-size:10px;font-weight:400">(선택)</span></label><input id="j-joindate" type="date"></div>
+ <div class="fg"><label>비밀번호 <span style="color:var(--red)">*</span></label><input id="j-pw" type="password" placeholder="6자 이상"></div>
+ <div class="fg"><label>회사코드 <span style="color:var(--red)">*</span></label>
+ <input id="j-code" type="text" placeholder="ABCD1234" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase();_quickVerifyCode(this.value)">
+ <div id="j-code-msg" style="font-size:11px;margin-top:4px"></div></div>
+ </div>
+ <div id="join-full-form" style="display:none">
+ <div style="background:rgba(212,160,23,.08);border:1px solid rgba(212,160,23,.2);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:var(--text2)">🔑 관리자에게 <strong>회사코드</strong>를 받아 입력하세요</div>
+ <div class="fg"><label>이름</label><input id="j-name-full" type="text" placeholder="홍길동"></div>
+ <div class="fg"><label>정산 아이디</label><input id="j-driverid" type="text" placeholder="kim001 (영문+숫자)"></div>
+ <div class="fg"><label>역할</label>
+ <select id="j-role-full" onchange="document.getElementById('j-store-wrap-full').style.display=this.value==='manager'?'block':'none'" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:13px">
+ <option value="driver">기사/직원</option>
+ <option value="manager">과장 (재고 담당)</option>
+ </select>
+ </div>
+ <div class="fg" id="j-store-wrap-full" style="display:none"><label>담당 매장</label><input id="j-store-full" type="text" placeholder="예) 강남점" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:13px"></div>
+ <div class="fg"><label>이메일</label><input id="j-email" type="email" placeholder="example@email.com"></div>
+ <div class="fg"><label>비밀번호</label><input id="j-pw-full" type="password" placeholder="8자 이상"></div>
+ <div class="fg"><label>회사코드</label><input id="j-code-full" type="text" placeholder="ABCD1234" style="text-transform:uppercase"></div>
+ </div>
+ <div id="j-err" style="color:var(--red);font-size:12px;margin-bottom:8px;display:none"></div>
+ <button id="join-submit-btn" class="btn btn-blue" style="width:100%;padding:11px;font-size:14px;font-weight:700"
+ onclick="document.getElementById('join-full-form').style.display!=='none'?doJoin():doQuickJoin()">가입하기</button>
+ </div>
+ </div>
 </div>
-
-<!-- 앱 -->
 <div id="app" style="display:none">
-  <!-- 모바일 사이드바 backdrop -->
-  <div id="sb-backdrop" onclick="document.getElementById('sidebar').classList.remove('open');this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99;-webkit-tap-highlight-color:transparent"></div>
-  <div class="sidebar" id="sidebar">
-    <div class="sl">
-      <div class="sl-icon">💰</div>
-      <div><div class="sl-text">DONWAY</div><span class="sl-ver">v1.0 · 돈의 방향</span></div>
-    </div>
-    <div style="padding:8px 13px;display:flex;align-items:center;gap:7px;border-bottom:1px solid var(--border)">
-      <div style="width:26px;height:26px;border-radius:50%;background:var(--brand-l);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--brand)" id="sb-av">관</div>
-      <div>
-        <div style="font-size:12px;font-weight:600" id="sb-name">로딩중</div>
-        <div style="font-size:10px;color:var(--text3)" id="sb-role"></div>
-        <div style="font-size:10px;color:var(--acc);font-weight:700;margin-top:2px;cursor:pointer" id="sb-company-code" onclick="_copyCompanyCode(this)"></div>
-      </div>
-    </div>
-    <nav class="snav" id="snav"></nav>
-    <div class="sb-bot">
-      <button class="btn" style="width:100%;font-size:11px;margin-bottom:4px" onclick="toggleDark()">🌙 다크모드</button>
-      <button class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:var(--bg3);color:var(--text2)" onclick="openChangePw()">🔑 비밀번호 변경</button>
-      <button id="btn-init-admin" class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:#7c3aed;color:#fff;display:none" onclick="_initSuperAdminDocs()">🛠️ 슈퍼어드민 초기화</button>
-      <button id="btn-init-admin" class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:#7c3aed;color:#fff;display:none" onclick="_initSuperAdminDocs()">🛠️ 슈퍼어드민 초기화</button>
-      <button id="admin-btn" class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:#1e293b;color:#f59e0b;display:none" onclick="openAdminPanel()">👑 슈퍼 어드민</button>
-      <button class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:linear-gradient(135deg,#185FA5,#7C3AED);color:#fff;border:none" onclick="_showSubModal()">💳 구독 / 갱신</button>
-      <button class="btn" id="my-url-btn" style="width:100%;font-size:10px;margin-bottom:4px;background:var(--brand-l);color:var(--brand);border:1px solid var(--brand);display:none" onclick="_showMyUrl()">🔗 내 전용 URL</button>
-      <button class="btn btn-red" style="width:100%;font-size:11px" onclick="doLogout()">로그아웃</button>
-    </div>
-  </div>
-  <div class="main">
-    <div class="topbar">
-      <div style="display:flex;align-items:center;gap:10px">
-        <button class="ham" onclick="_toggleSidebar()" ontouchstart="_toggleSidebar()">☰</button>
-        <div class="topbar-title" id="page-title">대시보드</div>
-      </div>
-      <div class="topbar-right" id="topbar-right"></div>
-    </div>
-    <div class="content" id="content"></div>
-  </div>
+ <div id="sb-backdrop" onclick="document.getElementById('sidebar').classList.remove('open');this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99;-webkit-tap-highlight-color:transparent"></div>
+ <div class="sidebar" id="sidebar">
+ <div class="sl">
+ <div class="sl-icon">💰</div>
+ <div><div class="sl-text">DONWAY</div><span class="sl-ver">v1.0 · 돈의 방향</span></div>
+ </div>
+ <div style="padding:8px 13px;display:flex;align-items:center;gap:7px;border-bottom:1px solid var(--border)">
+ <div style="width:26px;height:26px;border-radius:50%;background:var(--brand-l);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--brand)" id="sb-av">관</div>
+ <div>
+ <div style="font-size:12px;font-weight:600" id="sb-name">로딩중</div>
+ <div style="font-size:10px;color:var(--text3)" id="sb-role"></div>
+ <div style="font-size:10px;color:var(--acc);font-weight:700;margin-top:2px;cursor:pointer" id="sb-company-code" onclick="_copyCompanyCode(this)"></div>
+ </div>
+ </div>
+ <nav class="snav" id="snav"></nav>
+ <div class="sb-bot">
+ <button class="btn" style="width:100%;font-size:11px;margin-bottom:4px" onclick="toggleDark()">🌙 다크모드</button>
+ <button class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:var(--bg3);color:var(--text2)" onclick="openChangePw()">🔑 비밀번호 변경</button>
+ <button id="btn-init-admin" class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:#7c3aed;color:#fff;display:none" onclick="_initSuperAdminDocs()">🛠️ 슈퍼어드민 초기화</button>
+ <button id="btn-init-admin" class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:#7c3aed;color:#fff;display:none" onclick="_initSuperAdminDocs()">🛠️ 슈퍼어드민 초기화</button>
+ <button id="admin-btn" class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:#1e293b;color:#f59e0b;display:none" onclick="openAdminPanel()">👑 슈퍼 어드민</button>
+ <button class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:linear-gradient(135deg,#185FA5,#7C3AED);color:#fff;border:none" onclick="_showSubModal()">💳 구독 / 갱신</button>
+ <button class="btn" id="my-url-btn" style="width:100%;font-size:10px;margin-bottom:4px;background:var(--brand-l);color:var(--brand);border:1px solid var(--brand);display:none" onclick="_showMyUrl()">🔗 내 전용 URL</button>
+ <button class="btn btn-red" style="width:100%;font-size:11px" onclick="doLogout()">로그아웃</button>
+ </div>
+ </div>
+ <div class="main">
+ <div class="topbar">
+ <div style="display:flex;align-items:center;gap:10px">
+ <button class="ham" onclick="_toggleSidebar()" ontouchstart="_toggleSidebar()">☰</button>
+ <div class="topbar-title" id="page-title">대시보드</div>
+ </div>
+ <div class="topbar-right" id="topbar-right"></div>
+ </div>
+ <div class="content" id="content"></div>
+ </div>
 </div>
-
 <div id="modals"></div>
 <div id="toast"></div>
-
-<!-- ★ 고정 파일 입력 (항상 존재) -->
 <input type="file" id="excel-input" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style="display:none">
-
 <script>
 // ██ 유틸 ██
 function fmt(n){return Math.round(n||0).toLocaleString('ko-KR');}
@@ -536,7 +503,7 @@ function updateDriverRouteExp(driverId, routeId, deliveryCount) {
       return doc.ref.update({ routeExp: routeExp });
     })
     .then(function(){ })
-    .catch(function(e){ console.warn('[배차] routeExp 업데이트 실패:', e); });
+    .catch(function(e){ });
 }
 
 // 정산 시트에서 배차 경험치 일괄 업데이트
@@ -704,7 +671,6 @@ async function _loadSlugCompany(){
       } else {
         // 일반 대리점: 자기 회사 슬러그와 URL 슬러그가 다르면 접근 차단
         if(_CU && _slugCompany._id !== _CU.dealerId){
-          console.warn('[SLUG] 접근 차단: 다른 대리점 URL');
           document.getElementById('app').style.display='none';
           var msg=document.createElement('div');
           msg.style.cssText='position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);flex-direction:column;gap:12px;z-index:9999';
@@ -1579,7 +1545,6 @@ function parseCoupangExcel(inp){
   });
 }
 
-
 // 업로드 변경이력 페이지
 function pageInvChangeLog(){
   document.getElementById('page-title').textContent='🕐 업로드 변경이력';
@@ -1674,7 +1639,6 @@ function pageInvChangeLog(){
       });
     }).catch(function(e){c.innerHTML='<div class="empty">오류: '+e.message+'</div>';});
 }
-
 
 // ── 카카오 알림톡 발송 ──
 function _sendAlimtalk(phone, name, month, gross, deduct, net){
@@ -3519,8 +3483,6 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
 // _parseCoupangExcelInner 끝
 
 </script>
-
-<!-- Firebase v8 SDK -->
 <script src="/firebase-app-compat.js"></script>
 <script src="/firebase-auth-compat.js"></script>
 <script src="/firebase-firestore-compat.js"></script>
@@ -3933,7 +3895,6 @@ function _saveCpDriver(camp,dm,name,month,cb){
 // ══ Firebase + 앱 로직 ══
 var _db=null,_auth=null,_CU=null;
 
-
 // ★ QR 스캔 URL 처리 (/attend?q=... 접속 시 자동 출퇴근)
 (function(){
   var params=new URLSearchParams(location.search);
@@ -3945,7 +3906,6 @@ var _db=null,_auth=null,_CU=null;
     window._pendingQrAttend=payload;
   }catch(e){}
 })();
-
 
 // ★ QR 스캔 출퇴근 자동 처리
 function _processQrAttend(){
@@ -3991,7 +3951,6 @@ function _processQrAttend(){
       }
     }).catch(function(e){toast('❌ 출퇴근 처리 실패: '+e.message);});
 }
-
 
 function _fbStorage(){ return null; }
 function _uploadToStorage(path, file){
@@ -4330,8 +4289,9 @@ function showApp(){
     MENUS=MENUS_DRIVER;
   } else {
     var sType = _CU.serviceType||'full';
-    // ★ sType 디버그 로그 (슈퍼어드민용)
-    if(isSuperAdmin()){
+    // 슈퍼어드민 체크 — email 직접 비교 (isSuperAdmin 캐시 문제 방지)
+    var _isSANow = !!(SUPER_ADMIN_EMAILS&&_CU&&_CU.email&&SUPER_ADMIN_EMAILS.indexOf(_CU.email)>=0);
+    if(_isSANow||isSuperAdmin()){
       MENUS=JSON.parse(JSON.stringify(MENUS_SETTLE));
     } else {
       // ★ services 배열 기반 메뉴 필터링
@@ -4917,7 +4877,6 @@ function doQuickJoin(){
       if(err){err.textContent=msgs[e.code]||e.message;err.style.display='';}
     });
 }
-
 
 // ── 가입 후 FCM 알림 허용 요청 ──
 function _requestFcmAfterJoin(){
@@ -5521,7 +5480,6 @@ function doJoin(){
     err.style.display='block';
   });
 }
-
 
 function _switchLoginTab(tab){
   var ef=document.getElementById('login-email-form');
@@ -6580,7 +6538,7 @@ function _importRosterExcel(input){
               existMap[uidLow]=docId;
               existMap['n:'+nmNorm]=docId;
               existMap['nc:'+campKey]=docId;
-            }).catch(function(e){console.warn('upd:'+nm,e.message);});
+            }).catch(function(e){});
           }else{
             newCount++;
             return _db.collection('drivers').add({
@@ -6594,7 +6552,7 @@ function _importRosterExcel(input){
               existMap[uidLow]=ref.id;
               existMap['n:'+nmNorm]=ref.id;
               existMap['nc:'+campKey]=ref.id;
-            }).catch(function(e){console.warn('add:'+nm,e.message);});
+            }).catch(function(e){});
           }
         });
 
@@ -8263,8 +8221,7 @@ function _dwSaveWeeklySettlement(result){
   },{merge:true}).then(function(){
     toast('💾 시뮬레이터 결과 Firestore 저장 완료 ('+yearWeek+')');
   }).catch(function(e){
-    console.warn('[DW 저장 실패]',e.message);
-  });
+    });
 }
 
 function _dwRenderSimulator(){
@@ -8287,7 +8244,6 @@ function _dwRenderSimulator(){
       +'<div style="font-size:9px;font-weight:700;color:'+c+';margin-top:1px">'+lbl+'</div>'
       +'</div>';
   }).join('');
-
 
   el.innerHTML=
     // ━━ 헤더
@@ -8657,7 +8613,6 @@ function _dwPrintLoadLog(btn1,btn2,con,label,cnt){
     con.appendChild(row); con.scrollTop=con.scrollHeight; li2++;
   },280);
 }
-
 
 window.dwRunLiveCalculations=function(){
   var btn=document.getElementById('dw-btn-calc');
@@ -9184,7 +9139,6 @@ window.dwRunLiveCalculations=function(){
   },280);
 };
 window.dwStartLiveSimulation=function(){dwLoadVirtualExcel();};
-
 
 window._dwSimCalc=function(){
   var cnt=parseInt(document.getElementById('sim-cnt').value)||0;
@@ -9835,7 +9789,7 @@ function _dwSaveSession(s, cb){
   s.updatedAt=new Date().toISOString();
   _db.collection('delivery_sessions').doc(s.sid).set(s)
     .then(function(){if(cb)cb();})
-    .catch(function(e){console.warn('[DW]',e);});
+    .catch(function(e){});
 }
 
 // 배달 건 추가 → 세션 업데이트 → Firestore 저장
@@ -9884,7 +9838,7 @@ function _dwSendTrackAlert(alertType, opts){
     createdAt:firebase.firestore.FieldValue.serverTimestamp()
   };
   _db.collection('driver_notifications').add(payload)
-    .catch(function(e){console.warn('[트랙알림발송]',e);});
+    .catch(function(e){});
 }
 
 // 건수 변화 → 알림 트리거 (심야 필터 적용 후 유효 건수 기준)
@@ -10172,7 +10126,6 @@ function pageDeliverySettle(){
   }).catch(function(e){c.innerHTML='<div class="empty">오류: '+e.message+'</div>';});
 }
 
-
 // ══════════════════════════════════════════
 // ★ 범용 정산 페이지
 // ══════════════════════════════════════════
@@ -10456,7 +10409,6 @@ function _renderUniversalRules(c, r, industry){
     });
   }, 50);
 }
-
 
 // ★ 범용 단가표 — AI정산 방식 렌더링
 var _uPriceData = {}; // {route: {price, priceVat, type:'basic'|'leader'|'backup'}}
@@ -10837,7 +10789,6 @@ function _uAddRRow(ti){
   container.appendChild(div);
 }
 
-
 // ★ 단가표 파일 업로드 (단일 탭용)
 window._uBulkUploadRoutes = function(input, ti){
   var file=input.files[0]; if(!file)return;
@@ -11016,7 +10967,6 @@ function _uSaveRules(){
     .catch(function(e){toast('❌ '+e.message);});
 }
 
-
 function _uIncCampRow(incCamps){
   // 등록된 캠프 목록 + 기본 캠프
   var camps=[];
@@ -11045,7 +10995,6 @@ function _uIncCampRow(incCamps){
     '</div>';
   }).join('');
 }
-
 
 function _uAddIncCamp(){
   var inp=document.getElementById('u-new-camp');
@@ -11108,7 +11057,6 @@ function _uAddIdSupport(){
   div.innerHTML=_uIdSupportRow(Date.now(),{});
   container.appendChild(div.firstChild);
 }
-
 
 // ★ 다중 단가 파일 업로드 — 파일명으로 유형 자동 감지
 window._uMultiPriceUpload = function(input){
@@ -11490,7 +11438,6 @@ function _uBulkUploadEmp(input, did){
   }
 }
 
-
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 📊 범용정산 추가 기능
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -11797,7 +11744,6 @@ function pageUniversalInput(){
     '<div id="u-results" style="margin-top:12px"></div>'+
     '</div>';
 }
-
 
 // ══════════════════════════════════════════════════════
 // ★ 범용 직원 명단 등록
@@ -12195,7 +12141,6 @@ function pageUniversalSettle(){
   }).catch(function(e){c.innerHTML='<div class="empty">오류: '+e.message+'</div>';});
 }
 
-
 window._uShowSettleDetail = function(docId){
   if(!_db) return;
   window.uDetailDocId=docId;
@@ -12270,7 +12215,6 @@ window._uDetailTab=function(ci){
     p.style.display=i===ci?'block':'none';
   });
 };
-
 
 // ══════════════════════════════════════════════════════
 // ★ 범용 명세서 생성 + 배포
@@ -12478,7 +12422,6 @@ window._uDeploySettle = function(docId, month){
 
 // 개별 명세서 팝업
 
-
 // 범용 명세서 이미지 캡처
 window._uCapturePayslip = function(){
   var el = document.getElementById('u-one-payslip');
@@ -12573,7 +12516,6 @@ window._uShowOnePayslip = function(docId, rowIdx, camp){
   });
 };
 
-
 // ══════════════════════════════════════════════════════
 // ★ 범용 세무사 연동 — 더존 CSV + 세무사 공유
 // ══════════════════════════════════════════════════════
@@ -12640,7 +12582,6 @@ window._uDownloadDouzoneCSV = function(docId, month){
     toast('✅ 더존CSV '+nonBizCnt+'명 + 세금계산서목록 '+bizCnt+'명');
   });
 };
-
 
 // ★ 정산Raw에서 캠프-라우트 맵 추출 → 단가표 캠프명 자동 치환 + 재계산
 window._uAutoMatchCamps = function(rawFile){
@@ -12834,7 +12775,6 @@ window._uOpenMapping=function(){
   };
   reader.readAsArrayBuffer(file);
 };
-
 
 // ══════════════════════════════════════════════════════
 // ★ 범용 다중 파일 합산 엔진
@@ -13148,7 +13088,6 @@ window._uDoParseMulti = function(files, status){
       try{
         var wb = XLSX.read(e.target.result,{type:'array'});
 
-
         // 일반 엑셀 처리
         wb.SheetNames.forEach(function(shName){
           var ws = wb.Sheets[shName];
@@ -13199,7 +13138,7 @@ window._uDoParseMulti = function(files, status){
             mergePerson(name, empId, camp, gross, cnt, price, bonus, deduct, source, details);
           }
         });
-      }catch(err){console.warn('파일파싱오류',file.name,err);}
+      }catch(err){}
       processFile(idx+1);
     };
     reader.readAsArrayBuffer(file);
@@ -14536,7 +14475,6 @@ window._fixedExpenseDelete=function(did,idx){
   .catch(function(e){toast('❌ '+e.message);});
 };
 
-
 function pageOvertime(){
   document.getElementById('page-title').textContent='⏰ 연장근로 승인';
   _requirePlan('overtime',function(){
@@ -15099,7 +15037,6 @@ function _taxShareLink(){
   }
 }
 
-
 // ── 정산 현황 전체 엑셀 다운로드 ──
 function _downloadSettleAllExcel(){
   var data=window._settleCache||[];
@@ -15253,7 +15190,6 @@ function _taxShareEmail(){_taxShareLink();}
 
 // ── 세무사 공유 페이지 (pageTaxShare)
 
-
 // ══════════════════════════════════════════
 // 더존 HiPlus 원천징수 CSV 생성
 // 포맷: 성명,지급일,지급액,소득세(3.3%),지방세,기타공제,실지급액
@@ -15303,7 +15239,6 @@ function _downloadDouzoneCSV(ym){
   var nonBizCnt=rows.length-bizCnt;
   toast('\u2705 \ub354\uc874 CSV '+nonBizCnt+'\uba85 (\uc0ac\uc5c5\uc790 '+bizCnt+'\uba85 \uc81c\uc678)');
 }
-
 
 function _txsBulkShareAll(){
   if(!_settleCache||!_settleCache.length){toast('❌ 정산 데이터 없음');return;}
@@ -15932,7 +15867,6 @@ window._txsDownloadCsv=function(){
   toast('✅ CSV 다운로드');
 };
 
-
 // 휴가 종류 정의
 var LEAVE_TYPES = {
   annual:   {label:'연차',    icon:'🌴', days:1,   color:'#059669'},
@@ -15991,7 +15925,7 @@ async function runDealerPatch(){
       }
       total+=snap.size; patched+=noPatch.length;
       toast('✅ '+cols[i]+': '+noPatch.length+'개 패치');
-    }catch(e){console.warn(cols[i],e.message);}
+    }catch(e){}
   }
   toast('🎉 패치 완료! 총 '+patched+'개 문서 dealerId 추가');
   
@@ -16031,7 +15965,7 @@ function drawQR(canvas, url, size){
           ctx.drawImage(qrImg, 0, 0, canvas.width, canvas.height);
         };
       }
-    }catch(e){ console.warn('[QR]', e); }
+    }catch(e){ }
     finally{ setTimeout(function(){if(tmp.parentNode)tmp.parentNode.removeChild(tmp);}, 1000); }
   }
 }
@@ -16204,7 +16138,6 @@ function pageHome(){
   _homeLoadTodo(did, today);
   setTimeout(_renderHomeJoinQR, 400);  // 직원 가입 QR
 }
-
 
 function _homeLoadWeather(){
   var el=document.getElementById('home-weather');
@@ -16564,7 +16497,6 @@ function _getWeekStart(today){
   d.setDate(d.getDate()-day);
   return d.toISOString().slice(0,10);
 }
-
 
 // ── 직원 탈퇴 ──
 function _empWithdraw(){
@@ -17252,7 +17184,6 @@ function _advCalc(){
   if(pn)pn.textContent='₩'+net.toLocaleString()+'원';
 }
 
-
 // ── WiFi(내부IP) 자동 출퇴근 감지
 function _wifiAutoCheck(did){
   if(!did)return;
@@ -17322,7 +17253,6 @@ function _wifiTriggerCheckin(did, ip){
 window._wifiAutoCheck=_wifiAutoCheck;
 window._getLocalIP=_getLocalIP;
 
-
 function _saveWifiIp(){
   var did=_CU&&_CU.dealerId;
   var ip=(document.getElementById('wifi-ip-input')||{value:''}).value.trim();
@@ -17335,7 +17265,6 @@ function _saveWifiIp(){
     }).catch(function(e){toast('❌ '+e.message);});
 }
 window._saveWifiIp=_saveWifiIp;
-
 
 // ════════════════════════════════════════════════
 // 지문/생체 인증 (WebAuthn)
@@ -17422,7 +17351,6 @@ async function _biometricVerify(uid, onSuccess){
     if(e.name === 'NotAllowedError') toast('❌ 지문 인증 취소 — 출퇴근 처리 안 됨', '#ef4444');
     else {
       // 인증 실패 시 그냥 통과 (기기 미지원 대응)
-      console.warn('WebAuthn 오류:', e.message);
       onSuccess();
     }
   }
@@ -17430,7 +17358,6 @@ async function _biometricVerify(uid, onSuccess){
 window._biometricVerify = _biometricVerify;
 window._biometricRegister = _biometricRegister;
 window._biometricSupported = _biometricSupported;
-
 
 // 점심시간 타이머
 var _lunchTimer=null;
@@ -17518,7 +17445,6 @@ function _lunchAdminView(did){
 window._lunchStart=_lunchStart;
 window._lunchEnd=_lunchEnd;
 window._lunchAdminView=_lunchAdminView;
-
 
 // ════════════════════════════════════════
 // 배달대행 트랙/슬롯 저장·불러오기
@@ -19156,7 +19082,6 @@ window._deleteAllMyStmts=function(){
   .catch(function(e){toast('❌ '+e.message);});
 }
 
-
 function _viewMyStatement(el){
   var id=el.getAttribute('data-id');
   if(!id||!_db)return;
@@ -19195,7 +19120,6 @@ function _viewMyStatement(el){
     }).catch(function(){_viewMyStatementFallback(d);});
   }).catch(function(){});
 }
-
 
 function _viewDeliveryStatementSimple(d){
   var mo=document.createElement('div');mo.className='mo show';
@@ -19294,7 +19218,6 @@ function _filterMenusByServices(menus){
 
   return filtered;
 }
-
 
 function pageInvSummary(){
   document.getElementById('page-title').textContent='📊 과장별 취합';
@@ -19768,7 +19691,7 @@ function showSecurityAlert(type, detail){
         userAgent:navigator.userAgent,
         url:location.href
       });
-    }catch(e){console.warn('보안 로그 기록 실패:',e);}
+    }catch(e){}
   }
 }
 
@@ -19870,7 +19793,7 @@ async function _registerFCM(){
                 }
               });
           }
-        }).catch(function(e){ console.warn('[FCM] 기사 토큰 저장 실패:', e.message); });
+        }).catch(function(e){ });
     } else {
       // 대리점 FCM 토큰 저장
       await _db.collection('companies').doc(_CU.dealerId).update({
@@ -19891,8 +19814,7 @@ async function _registerFCM(){
 } catch(e){
     // VAPID 오류는 재시도 차단하지 않음 (로그인마다 재시도)
     // _fcmRegFailed = true;
-    console.warn('[FCM] 등록 실패 (푸시 비활성화):', e.message);
-  }
+    }
 }
 
 // ── 알림 소리 재생 (Web Audio API - 외부 파일 불필요) ──
@@ -19920,7 +19842,7 @@ function _startSuperAdminListener(){
         if(ts !== 0 && ts < lastSeen - 5000) return;
         _onSuperAdminEvent(d);
       });
-    }, function(e){ console.warn('[SA Listener]', e); });
+    }, function(e){ });
 
   // ★ admin_notifications 컬렉션도 실시간 감지 (신규 회사 등록 등)
   _db.collection('admin_notifications')
@@ -19941,7 +19863,7 @@ function _startSuperAdminListener(){
           _onSuperAdminEvent(d);
         }
       });
-    }, function(e){ console.warn('[SA Notif Listener]', e); });
+    }, function(e){ });
 }
 
 function _onSuperAdminEvent(d){
@@ -20404,7 +20326,6 @@ function pageSettle(){
         +'</div>'
       +'</div>';
     c.appendChild(hero);
-
 
     // ── 캠프별 현황
     var campSec=document.createElement('div');campSec.style.marginBottom='16px';
@@ -22123,7 +22044,6 @@ function _showSEModal(s){
   // ── 하단 버튼
   var mdf=document.createElement('div');mdf.className='mdf';mdf.style.cssText='padding:10px 18px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px';
 
-
   // 버튼 행
   var btnRow=document.createElement('div');btnRow.style.cssText='display:flex;gap:8px;justify-content:flex-end';
   var cancelBtn=document.createElement('button');cancelBtn.className='btn';cancelBtn.textContent='취소';cancelBtn.onclick=function(){mo.remove();};
@@ -22564,7 +22484,6 @@ window._seTaxSyncById=function(id){
   }).catch(function(e){toast('❌ '+e.message);});
 };
 
-
 function _saveSE(id){
   var driver=document.getElementById('se-driver').value.trim();
   var month=document.getElementById('se-month').value.trim();
@@ -22645,7 +22564,7 @@ function recalcAllSettlements(){
       updatedAt:new Date().toISOString()
     };
     promises.push(_db.collection('settlements').doc(x.id).update(update)
-      .then(function(){changed++;Object.assign(x,update);}).catch(function(e){console.warn(e);}));
+      .then(function(){changed++;Object.assign(x,update);}).catch(function(e){}));
   });
   Promise.all(promises).then(function(){
     toast('✅ 재계산 완료 ('+changed+'건)\n단가표 기준으로 정산서가 갱신되었습니다.');
@@ -22820,7 +22739,6 @@ function _reactivateDriver(docId, name){
     pageDrivers();
   }).catch(function(e){toast('❌ 오류: '+e.message);});
 }
-
 
 // ══ 기사 일괄 등록 (근무표 + 고용산재표) ══
 function _openBulkDriverRegister(){
@@ -23154,7 +23072,7 @@ function _openOcrModal(){
   mo.onclick=function(e){if(e.target===mo)mo.remove();};
   mo.innerHTML=`
 <div class="md" style="max-width:460px;width:95vw;border-radius:16px;overflow:hidden;padding:0;display:flex;flex-direction:column;max-height:90vh">
-  <!-- 헤더 (고정) -->
+  
   <div style="background:linear-gradient(135deg,#1e3a5f,#0a1628);padding:16px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
     <div>
       <div style="font-size:10px;letter-spacing:.15em;color:var(--cyan);font-family:monospace;font-weight:700;margin-bottom:3px">DOCUMENT OCR</div>
@@ -23162,20 +23080,20 @@ function _openOcrModal(){
     </div>
     <button onclick="document.getElementById('mo-ocr-upload').remove()" style="background:rgba(255,255,255,.1);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0">✕</button>
   </div>
-  <!-- 스크롤 가능한 본문 -->
+  
   <div style="overflow-y:auto;flex:1;padding:16px;background:var(--bg)">
-    <!-- 드래그앤드롭 -->
+    
     <div id="ocr-drop-zone" onclick="document.getElementById('ocr-file-input').click()" style="border:2px dashed rgba(0,212,255,.3);border-radius:12px;padding:24px 16px;text-align:center;cursor:pointer;transition:.3s;background:rgba(0,212,255,.03)" ondragover="event.preventDefault();this.style.borderColor='var(--cyan)';this.style.background='rgba(0,212,255,.08)'" ondragleave="this.style.borderColor='rgba(0,212,255,.3)';this.style.background='rgba(0,212,255,.03)'" ondrop="_ocrHandleDrop(event)">
       <div style="font-size:32px;margin-bottom:8px">📋</div>
       <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:4px">파일을 여기에 드래그하거나 클릭</div>
       <div style="font-size:11px;color:var(--text3)">JPG · PNG · PDF · HEIC 지원</div>
       <input id="ocr-file-input" type="file" accept="image/*,.pdf" style="display:none" onchange="_ocrHandleFile(this.files[0])">
     </div>
-    <!-- 카메라 -->
+    
     <button onclick="_ocrOpenCamera()" style="width:100%;margin-top:8px;padding:10px;background:linear-gradient(135deg,rgba(0,102,255,.15),rgba(0,212,255,.15));border:1px solid rgba(0,212,255,.25);border-radius:10px;color:var(--cyan);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
       <span>📸</span> 카메라로 바로 촬영
     </button>
-    <!-- 미리보기 (이미지 높이 제한) -->
+    
     <div id="ocr-preview-wrap" style="display:none;margin-top:12px;border-radius:10px;overflow:hidden;border:1px solid var(--border)">
       <img id="ocr-preview-img" style="width:100%;max-height:160px;object-fit:contain;display:block;background:#000">
       <div style="padding:8px 10px;background:var(--bg2);display:flex;align-items:center;justify-content:space-between">
@@ -23183,7 +23101,7 @@ function _openOcrModal(){
         <button onclick="document.getElementById('ocr-preview-wrap').style.display='none';document.getElementById('ocr-analyze-btn').style.display='none'" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px">✕ 취소</button>
       </div>
     </div>
-    <!-- 카메라 뷰 -->
+    
     <div id="ocr-camera-wrap" style="display:none;margin-top:12px;border-radius:10px;overflow:hidden;border:1px solid var(--border)">
       <video id="ocr-camera-video" autoplay playsinline style="width:100%;max-height:180px;display:block;background:#000"></video>
       <div style="padding:8px;background:var(--bg2);display:flex;gap:6px">
@@ -23191,10 +23109,10 @@ function _openOcrModal(){
         <button onclick="_ocrStopCamera()" style="padding:9px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:7px;color:var(--text2);font-size:12px;cursor:pointer">취소</button>
       </div>
     </div>
-    <!-- 상태 표시 -->
+    
     <div id="ocr-modal-status" style="display:none;margin-top:10px;padding:10px;border-radius:8px;font-size:12px;text-align:center"></div>
   </div>
-  <!-- 자동 분석 상태 표시 (하단 고정) -->
+  
   <div style="padding:12px 16px;background:var(--bg);border-top:1px solid var(--border);flex-shrink:0">
     <div id="ocr-analyze-placeholder" style="text-align:center;font-size:12px;color:var(--text3);padding:4px 0">📂 이미지 업로드 즉시 자동 분석됩니다</div>
     <button id="ocr-analyze-btn" onclick="_ocrAnalyze()" style="display:none;width:100%;padding:13px;background:linear-gradient(135deg,#0066ff,#00d4ff);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:.03em">
@@ -23724,7 +23642,6 @@ function _delIdSupport(docId){
 window._saveIdSupport=_saveIdSupport;
 window._delIdSupport=_delIdSupport;
 window._loadIdSupportSection=_loadIdSupportSection;
-
 
 function _donwayNotifySound(){
   if(navigator.vibrate)navigator.vibrate([200,100,200,100,200,100,200,100,200,100,200]);
@@ -24597,7 +24514,7 @@ async function notifyDispatchToDrivers(dispatchResult, routes){
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       count++;
-    }catch(e){ console.warn('[배차알림] 실패:', driverId, e); }
+    }catch(e){ }
   }
   if(count>0) toast('📱 '+count+'명 기사에게 배차 알림 전송 완료');
 }
@@ -24853,7 +24770,6 @@ async function saveDispatchResult(){
     toast('❌ 저장 실패: '+e.message);
   }
 }
-
 
 function pageHourlySettle(){
   _requirePlan('payroll',function(){
@@ -25506,7 +25422,6 @@ function _hsSendAll(){
   if(!sent&&!fail)toast('⚠️ 연락처 있는 직원 없음');
 }
 
-
 function _hwTab(btn, type){
   document.querySelectorAll("[data-tab]").forEach(function(b){
     b.style.background='';b.style.color='';b.style.borderColor='';
@@ -25993,7 +25908,6 @@ function deleteCamp(campName){
     .catch(function(e){toast('❌ '+e.message);});
 }
 
-
 // ── FCM 토큰 조회 헬퍼 (users → drivers → members 순서)
 function _getFcmToken(did, uid, driverName){
   var phoneNum=(uid.replace('drv_','').split('_')[0]||'');
@@ -26035,7 +25949,6 @@ function _uploadImgToStorage(base64Data, path){
     }catch(e){resolve(base64Data);}
   });
 }
-
 
 // ── 명세서 캡처용 HTML 생성 (관리자 화면과 동일한 레이아웃)
 function _buildPayslipCaptureHTML(x, r, name, month, net, vatIncome){
@@ -26307,7 +26220,6 @@ function _dwAutoSendPayslips(sessions, platform, periodInfo){
 function _dwInitAutoClose(){
   setTimeout(_dwCheckAutoClose, 3000); // 로그인 3초 후 체크
 }
-
 
 // ── 세금계산서 캡처용 HTML 생성 (관리자 화면과 동일)
 function _buildTaxCaptureHTML(x, r, name, month, vatIncome){
@@ -26637,7 +26549,6 @@ function _parseTLLinesFromBinary(buf){
   var lines=str.split('\n').map(function(l){return l.trim();}).filter(Boolean);
   return _parseTLLines(lines);
 }
-
 
 // ══════════════════════════════════════
 // ★ 팀장 수수료 재계산 (엑셀 재업로드 불필요)
@@ -27281,7 +27192,6 @@ function pageStats(){
     }).catch(function(e){logError('통계',e.message);el.innerHTML='<div class="empty">❌ '+e.message+'</div>';});
 }
 
-
 // ══ 배달대행 통계 렌더 ══
 function _statRenderDelivery(){
   var sc=document.getElementById('stat-content');
@@ -27739,7 +27649,6 @@ function _incCampAll2(prefixes,onVal){
   });
   _incCampRoutes(routes,onVal);
 }
-
 
 // ★ 월삭제 (정산만 삭제, 단가·캠프·기사 보존)
 function openDeleteMonthPanel(){
@@ -28373,7 +28282,7 @@ async function _doDeploySettlements(ids) {
 
       done++;
       if (done % 5 === 0) toast('📤 배포 중... (' + done + '/' + total + ')');
-    } catch(e) { console.warn('배포오류:', e.message); }
+    } catch(e) { }
   }
 
   // (일괄 발송 제거 — 위에서 개별 발송으로 처리)
@@ -28806,7 +28715,7 @@ function _requirePlan(feature,callback){
     var d=snap.exists?snap.data():{};
     if(_isPlanAllowed(d,feature)){callback();}
     else{_renderPaywall(feature);}
-  }).catch(function(e){console.warn('_requirePlan 오류',e);_renderPaywall(feature);});
+  }).catch(function(e){_renderPaywall(feature);});
 }
 
 // ★ 기능별 플랜 허용 맵
@@ -29150,7 +29059,6 @@ function _showPlanUpsell(planKey){
   }
   setTimeout(doActivate,800);
 })();
-
 
 function openAdminPanel(){
   if(!isSuperAdmin()){toast('❌ 접근 권한 없음');return;}
@@ -29876,8 +29784,7 @@ function _showWelcome(){
         notifBtn.disabled=false;
         notifBtn.textContent='🔔 알림 허용하기 (필수)';
         toast('⚠️ 오류: '+e.message);
-        console.warn('[FCM]', e);
-      }
+        }
     };
     notifArea.appendChild(notifBtn);
   } else {
@@ -29930,43 +29837,38 @@ window.addEventListener('load',function(){
   }
 });
 </script>
-
-<!-- 약관 동의 모달 -->
 <div class="mo" id="mo-terms-agree" style="z-index:9999;background:rgba(0,0,0,.7)">
-  <div class="md" style="max-width:520px;width:100%;max-height:92vh;overflow-y:auto">
-    <div style="text-align:center;padding:8px 0 18px">
-      <div style="font-size:38px;margin-bottom:8px">📋</div>
-      <div style="font-size:17px;font-weight:800">서비스 이용약관 안내</div>
-      <div style="font-size:12px;color:var(--text3);margin-top:5px">DONWAY를 계속 이용하려면 아래 약관에 동의해 주세요</div>
-    </div>
-    <div style="background:var(--brand-l);border-radius:8px;padding:10px 14px;font-size:11px;color:var(--brand);margin-bottom:14px;line-height:1.6">
-      ℹ️ 서비스 운영 및 기술지원 목적의 데이터 접근 관련 조항(제2조④)이 추가되었습니다.
-    </div>
-    <!-- 이용약관 -->
-    <div style="margin-bottom:14px">
-      <div style="font-size:12px;font-weight:700;margin-bottom:6px;color:var(--text)">📄 서비스 이용약관</div>
-      <div id="ta-terms-body" style="height:150px;overflow-y:auto;border:1.5px solid var(--border);border-radius:8px;padding:12px;font-size:11px;color:var(--text2);line-height:1.8;background:var(--bg3)"></div>
-      <label style="display:flex;align-items:center;gap:8px;margin-top:8px;cursor:pointer;padding:6px 0">
-        <input type="checkbox" id="ta-chk-terms" style="width:16px;height:16px;accent-color:var(--brand);flex-shrink:0">
-        <span style="font-size:12px;font-weight:600">[필수] 서비스 이용약관에 동의합니다</span>
-      </label>
-    </div>
-    <!-- 개인정보 처리방침 -->
-    <div style="margin-bottom:18px">
-      <div style="font-size:12px;font-weight:700;margin-bottom:6px;color:var(--text)"> 개인정보 처리방침</div>
-      <div id="ta-privacy-body" style="height:150px;overflow-y:auto;border:1.5px solid var(--border);border-radius:8px;padding:12px;font-size:11px;color:var(--text2);line-height:1.8;background:var(--bg3)"></div>
-      <label style="display:flex;align-items:center;gap:8px;margin-top:8px;cursor:pointer;padding:6px 0">
-        <input type="checkbox" id="ta-chk-privacy" style="width:16px;height:16px;accent-color:var(--brand);flex-shrink:0">
-        <span style="font-size:12px;font-weight:600">[필수] 개인정보 처리방침에 동의합니다</span>
-      </label>
-    </div>
-    <div class="mdf">
-      <button class="btn" onclick="doLogout()" style="color:var(--text3);font-size:11px">동의하지 않음 (로그아웃)</button>
-      <button id="ta-agree-btn" class="btn btn-blue" style="font-size:13px;font-weight:700;padding:10px 24px" onclick="agreeTerms()">동의하고 시작하기 →</button>
-    </div>
-  </div>
+ <div class="md" style="max-width:520px;width:100%;max-height:92vh;overflow-y:auto">
+ <div style="text-align:center;padding:8px 0 18px">
+ <div style="font-size:38px;margin-bottom:8px">📋</div>
+ <div style="font-size:17px;font-weight:800">서비스 이용약관 안내</div>
+ <div style="font-size:12px;color:var(--text3);margin-top:5px">DONWAY를 계속 이용하려면 아래 약관에 동의해 주세요</div>
+ </div>
+ <div style="background:var(--brand-l);border-radius:8px;padding:10px 14px;font-size:11px;color:var(--brand);margin-bottom:14px;line-height:1.6">
+ ℹ️ 서비스 운영 및 기술지원 목적의 데이터 접근 관련 조항(제2조④)이 추가되었습니다.
+ </div>
+ <div style="margin-bottom:14px">
+ <div style="font-size:12px;font-weight:700;margin-bottom:6px;color:var(--text)">📄 서비스 이용약관</div>
+ <div id="ta-terms-body" style="height:150px;overflow-y:auto;border:1.5px solid var(--border);border-radius:8px;padding:12px;font-size:11px;color:var(--text2);line-height:1.8;background:var(--bg3)"></div>
+ <label style="display:flex;align-items:center;gap:8px;margin-top:8px;cursor:pointer;padding:6px 0">
+ <input type="checkbox" id="ta-chk-terms" style="width:16px;height:16px;accent-color:var(--brand);flex-shrink:0">
+ <span style="font-size:12px;font-weight:600">[필수] 서비스 이용약관에 동의합니다</span>
+ </label>
+ </div>
+ <div style="margin-bottom:18px">
+ <div style="font-size:12px;font-weight:700;margin-bottom:6px;color:var(--text)"> 개인정보 처리방침</div>
+ <div id="ta-privacy-body" style="height:150px;overflow-y:auto;border:1.5px solid var(--border);border-radius:8px;padding:12px;font-size:11px;color:var(--text2);line-height:1.8;background:var(--bg3)"></div>
+ <label style="display:flex;align-items:center;gap:8px;margin-top:8px;cursor:pointer;padding:6px 0">
+ <input type="checkbox" id="ta-chk-privacy" style="width:16px;height:16px;accent-color:var(--brand);flex-shrink:0">
+ <span style="font-size:12px;font-weight:600">[필수] 개인정보 처리방침에 동의합니다</span>
+ </label>
+ </div>
+ <div class="mdf">
+ <button class="btn" onclick="doLogout()" style="color:var(--text3);font-size:11px">동의하지 않음 (로그아웃)</button>
+ <button id="ta-agree-btn" class="btn btn-blue" style="font-size:13px;font-weight:700;padding:10px 24px" onclick="agreeTerms()">동의하고 시작하기 →</button>
+ </div>
+ </div>
 </div>
-
 <script>
 
 function _startDispatchListener(uid){
@@ -29990,8 +29892,8 @@ function _startDispatchListener(uid){
           if(navigator.vibrate)navigator.vibrate([200,100,200]);
           setTimeout(function(){if(bn.parentNode)bn.remove();},10000);
         });
-      },function(e){console.warn('[배차알림]',e);});
-  }catch(e){console.warn('[배차알림시작]',e);}
+      },function(e){});
+  }catch(e){}
 
   // ── ★ 배달대행 트랙 알림 (settle_alert)
   try{
@@ -30045,8 +29947,8 @@ function _startDispatchListener(uid){
           // 달성 완료는 15초, 예정 알림은 10초
           setTimeout(function(){if(bn.parentNode){bn.style.transform='translateX(-50%) scale(0.8)';setTimeout(function(){bn.remove();},200);}},isAchieved?15000:10000);
         });
-      },function(e){console.warn('[트랙알림]',e);});
-  }catch(e){console.warn('[트랙알림시작]',e);}
+      },function(e){});
+  }catch(e){}
 }
 
 // ── 보안: F12/우클릭 차단 (슈퍼어드민 제외)
@@ -30191,7 +30093,6 @@ function _invTab(btn, tab){
   else if(tab==='out') _invLoadLedger(did,'out');
   else if(tab==='return') _invLoadReturn(did);
 }
-
 
 // ── 📈 종합 대시보드 ──
 function _invLoadDash(did){
@@ -30476,7 +30377,6 @@ function _invDashCard(label, val, color){
     '<div style="font-size:10px;color:var(--text3);margin-top:2px">'+label+'</div>'+
   '</div>';
 }
-
 
 // ── 📆 일별 조회 ──
 function _invLoadDaily(did){
@@ -31248,7 +31148,6 @@ function _invConfirmByActual(did, results){
   }).catch(function(e){toast('❌ '+e.message);});
 }
 
-
 // ── 입출고 상세 팝업 ──
 function _invDetailPopup(d, docId, type){
   var col=type==='in'?'inventory_in':'inventory_out';
@@ -31308,7 +31207,6 @@ function _invDetailPopup(d, docId, type){
     });
   },50);
 }
-
 
 // 파일 타입별 업로드 분기 — 날짜 지정 팝업
 window._invPickFileType = function(type){
@@ -31873,7 +31771,6 @@ function _invParsemaster(wb, did){
   _invBatchSave(did, items, inItems, outItems);
 }
 
-
 // 통합 입출고 원장 파서 (입고+출고 한 시트)
 function _invParseIntegrated(ws, did){
   var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
@@ -32248,7 +32145,6 @@ function _invSaveOut(did){
     pageInventory();
   }).catch(function(e){toast('❌ '+e.message);});
 }
-
 
 </script>
 </body>
