@@ -1767,19 +1767,87 @@ function _sendStatementEmail(driver, monthLabel, netPay, details, settle){
       '</table>'+
     '</div>')+
 
-    // 세금계산서 (사업자인 경우)
-    (isBiz?
-    '<div class="tax-box">'+
-      '<div style="font-size:12px;font-weight:700;margin-bottom:10px">🧾 세금계산서 정보</div>'+
-      '<table>'+
-        '<tr><td style="color:#888">상호(법인명)</td><td style="font-weight:700">'+esc(bizName)+'</td></tr>'+
-        (bizNum?'<tr><td style="color:#888">사업자번호</td><td>'+esc(bizNum)+'</td></tr>':'')+
-        '<tr><td style="color:#888">공급가액</td><td style="font-weight:700">'+Math.round(netPay/1.1).toLocaleString()+'원</td></tr>'+
-        '<tr><td style="color:#888">부가세(10%)</td><td>'+Math.round(netPay-netPay/1.1).toLocaleString()+'원</td></tr>'+
-        '<tr><td style="color:#888">합계금액</td><td style="font-weight:700;color:#0077b6">'+Number(netPay).toLocaleString()+'원</td></tr>'+
-      '</table>'+
-      '<div style="font-size:10px;color:#aaa;margin-top:8px">* 세금계산서는 별도 발행됩니다. 문의: 051-711-3103</div>'+
-    '</div>':'') +
+    // 세금계산서 (사업자인 경우) — 실제 양식으로 표시
+    (isBiz?(function(){
+      var supply=Math.round(netPay/1.1);
+      var vat=netPay-supply;
+      var today=new Date();
+      var serial=today.toISOString().slice(0,10).replace(/-/g,'')+'-'+String(Math.floor(Math.random()*9999)+1).padStart(4,'0');
+      var yr=monthLabel?monthLabel.slice(0,4):'';
+      var mo=monthLabel?monthLabel.slice(5,7):'';
+      var compAddr='부산시 수영구 수영로 668, 607호';
+      var compBizNum='373-86-02536';
+      return '<div style="margin-top:16px">'+
+        '<div style="font-size:12px;font-weight:700;margin-bottom:8px">🧾 세금계산서</div>'+
+        '<div style="background:#fff;border:2px solid #000;font-family:Malgun Gothic,sans-serif;font-size:10px;width:100%">'+
+          '<table style="width:100%;border-collapse:collapse">'+
+            '<tr>'+
+              '<td style="border:1px solid #000;width:14%;padding:2px 4px;font-size:8px">[별지 제11호 서식]</td>'+
+              '<td style="border:1px solid #000;text-align:center;font-size:16px;font-weight:900;letter-spacing:3px;padding:4px">세 금 계 산 서</td>'+
+              '<td style="border:1px solid #000;width:18%;text-align:center;padding:2px;font-size:9px"><div>(공급받는자</div><div style="font-weight:700">보&nbsp;관&nbsp;용)</div></td>'+
+              '<td style="border:1px solid #000;width:22%;font-size:8px;padding:2px">일련번호: '+serial+'</td>'+
+            '</tr>'+
+          '</table>'+
+          '<table style="width:100%;border-collapse:collapse;font-size:10px">'+
+            '<tr>'+
+              '<td rowspan="4" style="border:1px solid #000;padding:2px;width:4%;writing-mode:vertical-lr;text-align:center;font-weight:700">공<br>급<br>자</td>'+
+              '<td style="border:1px solid #000;padding:2px;width:10%">등록번호</td>'+
+              '<td style="border:1px solid #000;padding:2px;font-weight:700">'+esc(bizNum)+'</td>'+
+              '<td rowspan="4" style="border:1px solid #000;padding:2px;width:4%;writing-mode:vertical-lr;text-align:center;font-weight:700">공<br>급<br>받<br>는<br>자</td>'+
+              '<td style="border:1px solid #000;padding:2px;width:10%">등록번호</td>'+
+              '<td style="border:1px solid #000;padding:2px;font-weight:700">'+compBizNum+'</td>'+
+            '</tr>'+
+            '<tr>'+
+              '<td style="border:1px solid #000;padding:2px">상호</td>'+
+              '<td style="border:1px solid #000;padding:2px">'+esc(bizName)+'</td>'+
+              '<td style="border:1px solid #000;padding:2px">상호</td>'+
+              '<td style="border:1px solid #000;padding:2px">엠비티아이유한회사</td>'+
+            '</tr>'+
+            '<tr>'+
+              '<td style="border:1px solid #000;padding:2px">업태</td>'+
+              '<td style="border:1px solid #000;padding:2px">서비스업</td>'+
+              '<td style="border:1px solid #000;padding:2px">업태</td>'+
+              '<td style="border:1px solid #000;padding:2px">서비스업</td>'+
+            '</tr>'+
+            '<tr>'+
+              '<td style="border:1px solid #000;padding:2px">주소</td>'+
+              '<td style="border:1px solid #000;padding:2px;font-size:9px">'+esc(s.bizAddr||'미입력')+'</td>'+
+              '<td style="border:1px solid #000;padding:2px">주소</td>'+
+              '<td style="border:1px solid #000;padding:2px;font-size:9px">'+compAddr+'</td>'+
+            '</tr>'+
+          '</table>'+
+          '<table style="width:100%;border-collapse:collapse;font-size:10px">'+
+            '<tr style="background:#f5f5f5">'+
+              '<td style="border:1px solid #000;padding:2px;text-align:center">작성</td>'+
+              '<td style="border:1px solid #000;padding:2px;text-align:center">공급가액</td>'+
+              '<td style="border:1px solid #000;padding:2px;text-align:center">세액</td>'+
+            '</tr>'+
+            '<tr>'+
+              '<td style="border:1px solid #000;padding:2px;text-align:center">'+yr+'년 '+mo+'월</td>'+
+              '<td style="border:1px solid #000;padding:2px;text-align:right;font-weight:700">'+supply.toLocaleString()+'</td>'+
+              '<td style="border:1px solid #000;padding:2px;text-align:right">'+vat.toLocaleString()+'</td>'+
+            '</tr>'+
+            '<tr style="background:#f5f5f5">'+
+              '<td style="border:1px solid #000;padding:2px;text-align:center">품목</td>'+
+              '<td style="border:1px solid #000;padding:2px;text-align:center">공급가액</td>'+
+              '<td style="border:1px solid #000;padding:2px;text-align:center">세액</td>'+
+            '</tr>'+
+            '<tr>'+
+              '<td style="border:1px solid #000;padding:2px">'+mo+'월 수수료정산</td>'+
+              '<td style="border:1px solid #000;padding:2px;text-align:right">'+supply.toLocaleString()+'</td>'+
+              '<td style="border:1px solid #000;padding:2px;text-align:right">'+vat.toLocaleString()+'</td>'+
+            '</tr>'+
+          '</table>'+
+          '<table style="width:100%;border-collapse:collapse;font-size:10px">'+
+            '<tr>'+
+              '<td style="border:1px solid #000;padding:3px;font-weight:700">합계금액</td>'+
+              '<td style="border:1px solid #000;padding:3px;text-align:right;font-weight:700;font-size:12px">'+Number(netPay).toLocaleString()+'원</td>'+
+              '<td style="border:1px solid #000;padding:3px;font-size:9px">공급가 '+supply.toLocaleString()+' + 세액 '+vat.toLocaleString()+'</td>'+
+            '</tr>'+
+          '</table>'+
+        '</div>'+
+      '</div>';
+    })():'') +
 
     // 푸터
     '<div class="footer">'+
