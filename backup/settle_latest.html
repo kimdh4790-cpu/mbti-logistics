@@ -1102,7 +1102,7 @@ var _COMPANY_CFG = null; // 회사 업종 설정 캐시
 
 function _loadCompanyCfg(dealerId){
   if(!_db||!dealerId) return;
-  if(_CU&&SUPER_ADMIN_EMAILS&&SUPER_ADMIN_EMAILS.indexOf(_CU.email)>=0) return;
+  // 슈퍼어드민도 자기 회사 CFG 로드 (메뉴·데이터 정상 표시 위해)
   // dealerId로 직접 조회
   _db.collection('companies').doc(dealerId).get()
     .then(function(doc){
@@ -4332,7 +4332,12 @@ function showApp(){
     var sType = _CU.serviceType||'full';
     // ★ sType 디버그 로그 (슈퍼어드민용)
     if(isSuperAdmin()){
-      MENUS=MENUS_SETTLE;
+      MENUS=JSON.parse(JSON.stringify(MENUS_SETTLE));
+      buildNav();
+      _checkDeviceMode();
+      setTimeout(_checkOnboarding,1500);
+      if(window._pendingQrAttend){setTimeout(_processQrAttend,500);}
+      return;
     } else {
       // ★ services 배열 기반 메뉴 필터링
       var cfg=_COMPANY_CFG||{};
