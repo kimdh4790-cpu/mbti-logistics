@@ -15070,6 +15070,32 @@ function _taxShareLink(){
 function _downloadSettleAllExcel(){
   var data=window._settleCache||[];
   if(!data.length){toast('❌ 정산 데이터 없음');return;}
+  // drivers 컬렉션에서 bizName 보완
+  var did=(_CU&&(_CU.dealerId||_CU.uid))||'';
+  if(did&&_db){
+    _db.collection('drivers').where('dealerId','==',did).get().then(function(snap){
+      var drvMap={};
+      snap.docs.forEach(function(doc){
+        var d=doc.data();
+        var key=d.userId||d.name||'';
+        if(key) drvMap[key]=d;
+      });
+      // _settleCache에 bizName/bizNum 보완
+      data.forEach(function(s){
+        var uid=s.userId||s.driver||'';
+        var drv=drvMap[uid]||drvMap[s.driver]||null;
+        if(drv){
+          if(!s.bizName&&drv.bizName) s.bizName=drv.bizName;
+          if(!s.bizNum&&drv.bizNum) s.bizNum=drv.bizNum;
+        }
+      });
+      _doDownloadSettleExcel(data);
+    }).catch(function(){_doDownloadSettleExcel(data);});
+  } else {
+    _doDownloadSettleExcel(data);
+  }
+}
+function _doDownloadSettleExcel(data){
 
   // 현재 월 필터 적용
   var month=window._settle_month||'';
@@ -15138,7 +15164,7 @@ function _downloadSettleAllExcel(){
   a.download=compName+'_'+ym+'_정산전체.csv';
   a.click();
   toast('✅ '+filtered.length+'명 정산 엑셀 다운로드');
-}
+} // _doDownloadSettleExcel 끝
 
 function _taxShareDownload(){
   var st=window._hsState;
