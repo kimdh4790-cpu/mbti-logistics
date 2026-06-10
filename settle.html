@@ -15118,21 +15118,22 @@ function _doDownloadSettleExcel(data){
 
   filtered.forEach(function(s){
     var deducts=s.deductions||{};
+    var cr=calcNet(s);
     rows.push([
       s.driver||s.name||'',
       s.camp||'',
       s.month||'',
-      s.gross||s.totalAmt||0,
-      s.deduct||0,
-      s.net||0,
-      deducts.employ||0,
-      deducts.accident||0,
-      deducts.damage||0,
-      deducts.etc||0,
-      deducts.advance||0,
-      s.deliveryCnt||s.totalCnt||0,
-      s.returnCnt||0,
-      (s.deliveryCnt||s.totalCnt||0)+(s.returnCnt||0),
+      Math.round(cr.totalAmt||cr.vatIncome||s.totalAmt||0),
+      Math.round(cr.deduct||s.deduct||0),
+      Math.round(cr.net||s.net||0),
+      Math.round(cr.emp||0),
+      Math.round(cr.work||0),
+      Math.round(cr.dmg||0),
+      Math.round(cr.etcMinus||0),
+      Math.round(cr.adv||0),
+      cr.dcnt||s.dcnt||0,
+      cr.rcnt||s.rcnt||0,
+      (cr.dcnt||s.dcnt||0)+(cr.rcnt||s.rcnt||0),
       s.bizNum||'',
       s.bizName||s.driver||'',
       s.status||''
@@ -15141,10 +15142,16 @@ function _doDownloadSettleExcel(data){
 
   // 합계 행
   var totals=['합계','','',
-    filtered.reduce(function(a,s){return a+(s.gross||s.totalAmt||0);},0),
-    filtered.reduce(function(a,s){return a+(s.deduct||0);},0),
-    filtered.reduce(function(a,s){return a+(s.net||0);},0),
-    '','','','','','','','','','',''
+    filtered.reduce(function(a,s){var r=calcNet(s);return a+Math.round(r.totalAmt||r.vatIncome||s.totalAmt||0);},0),
+    filtered.reduce(function(a,s){var r=calcNet(s);return a+Math.round(r.deduct||s.deduct||0);},0),
+    filtered.reduce(function(a,s){var r=calcNet(s);return a+Math.round(r.net||s.net||0);},0),
+    filtered.reduce(function(a,s){return a+Math.round(calcNet(s).emp||0);},0),
+    filtered.reduce(function(a,s){return a+Math.round(calcNet(s).work||0);},0),
+    filtered.reduce(function(a,s){return a+Math.round(calcNet(s).dmg||0);},0),
+    '','',
+    filtered.reduce(function(a,s){return a+(calcNet(s).dcnt||s.dcnt||0);},0),
+    filtered.reduce(function(a,s){return a+(calcNet(s).rcnt||s.rcnt||0);},0),
+    '','','',''
   ];
   rows.push(totals);
 
