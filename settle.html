@@ -27282,7 +27282,8 @@ function pageStats(){
       if(btn)btn.className='btn'+(t===tab?' btn-blue':'');
     });
     if(tab==='combined'){_statRenderCombined();return;}
-    _statRender(tab,_statData);
+    if(window._statRenderFn) window._statRenderFn(tab, window._statData);
+    else toast('⏳ 데이터 로딩 중...');
   }
   var _statData=null;
   var _did2=_CU.dealerId;
@@ -27307,7 +27308,7 @@ function pageStats(){
       if(!byMonthExp[mo])byMonthExp[mo]=0;
       byMonthExp[mo]+=(e.amount||e.amt||0);
     });
-    _statData=settles;
+    _statData=settles; window._statData=settles;
     document.getElementById('stat-content').innerHTML='';
     // 월별 + 캠프별
     var byMonth={};var byCamp={};
@@ -27422,6 +27423,8 @@ function pageStats(){
         else if(tab==='total'){sc.innerHTML='';sc.appendChild(_statBuildTotal(byMonth,settles));}
         else if(tab==='camp'){sc.innerHTML='';sc.appendChild(cCard.cloneNode?cCard.cloneNode(true):cCard);}
       }
+      // window에 노출 — _statTab에서 접근 가능
+      window._statRenderFn=_statRender;
       // 기본 월별
       document.getElementById('stat-content').innerHTML='';
       document.getElementById('stat-content').appendChild(mCard);
