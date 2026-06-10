@@ -15065,6 +15065,81 @@ function _taxShareLink(){
   }
 }
 
+
+// ── 정산 현황 전체 엑셀 다운로드 ──
+function _downloadSettleAllExcel(){
+  var data=window._settleCache||[];
+  if(!data.length){toast('❌ 정산 데이터 없음');return;}
+
+  // 현재 월 필터 적용
+  var month=window._settle_month||'';
+  var filtered=month&&month!=='all'
+    ?data.filter(function(s){return s.month===month;})
+    :data;
+  filtered=filtered.filter(function(s){return !s._driverOnly;});
+
+  if(!filtered.length){toast('❌ 해당 월 정산 없음');return;}
+
+  var compName=(_CU&&_CU.companyName)||'회사명';
+  var ym=month&&month!=='all'?month:new Date().toISOString().slice(0,7);
+
+  // 헤더
+  var rows=[
+    ['이름','캠프','정산월','지급합계','공제합계','실지급액',
+     '고용보험','산재보험','분실파손','기타공제','가불',
+     '배송건수','반품건수','총건수','사업자번호','상호명','상태']
+  ];
+
+  filtered.forEach(function(s){
+    var deducts=s.deductions||{};
+    rows.push([
+      s.driver||s.name||'',
+      s.camp||'',
+      s.month||'',
+      s.gross||s.totalAmt||0,
+      s.deduct||0,
+      s.net||0,
+      deducts.employ||0,
+      deducts.accident||0,
+      deducts.damage||0,
+      deducts.etc||0,
+      deducts.advance||0,
+      s.deliveryCnt||s.totalCnt||0,
+      s.returnCnt||0,
+      (s.deliveryCnt||s.totalCnt||0)+(s.returnCnt||0),
+      s.bizNum||'',
+      s.bizName||s.driver||'',
+      s.status||''
+    ]);
+  });
+
+  // 합계 행
+  var totals=['합계','','',
+    filtered.reduce(function(a,s){return a+(s.gross||s.totalAmt||0);},0),
+    filtered.reduce(function(a,s){return a+(s.deduct||0);},0),
+    filtered.reduce(function(a,s){return a+(s.net||0);},0),
+    '','','','','','','','','','',''
+  ];
+  rows.push(totals);
+
+  // CSV 생성
+  var csv=rows.map(function(row){
+    return row.map(function(cell){
+      var v=String(cell||'');
+      if(v.includes(',')||v.includes('"')||v.includes('\n'))
+        return '"'+v.replace(/"/g,'""')+'"';
+      return v;
+    }).join(',');
+  }).join('\n');
+
+  var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=compName+'_'+ym+'_정산전체.csv';
+  a.click();
+  toast('✅ '+filtered.length+'명 정산 엑셀 다운로드');
+}
+
 function _taxShareDownload(){
   var st=window._hsState;
   var ym=st&&st.ym||'';
@@ -20832,7 +20907,7 @@ function _renderSettlePage(settles,c){
      +'<button onclick="openTaxStore()" style="padding:8px 14px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗂 세금계산서 보관함</button>'
      +'<button onclick="openPayslipModal()" style="padding:8px 14px;background:linear-gradient(135deg,#7c3aed,#8b5cf6);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📄 급여명세서</button>'
      +'<button onclick="openDocModal()" style="padding:8px 14px;background:linear-gradient(135deg,#0f766e,#14b8a6);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📝 견적서·명세서</button>'
-     +'<button onclick="openCoupangStatsPanel()" style="padding:8px 14px;background:#f97316;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📊 건수통계·실적비교</button>'     +'<button onclick="_taxShareDownload()" style="padding:8px 14px;background:#0f766e;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📥 정산 엑셀 (세무사)</button>'
+     +'<button onclick="openCoupangStatsPanel()" style="padding:8px 14px;background:#f97316;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📊 건수통계·실적비교</button>'     +'<button onclick="_downloadSettleAllExcel()" style="padding:8px 14px;background:#0f766e;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📥 정산 전체 저장</button>'     +'<button onclick="_taxShareDownload()" style="padding:8px 14px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🧾 세무사 급여자료</button>'
      +'<button onclick="openBulkSendModal()" style="padding:8px 14px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📡 일괄발송</button>'
      +'<button onclick="checkDuplicateSettlements()" style="padding:8px 14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔍 중복검사</button>'
      +'<button onclick="syncFirebaseSettlements()" style="padding:8px 14px;background:#0d9488;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔄 동기화</button>'
