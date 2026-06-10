@@ -1669,6 +1669,29 @@ function pageInvChangeLog(){
     }).catch(function(e){c.innerHTML='<div class="empty">오류: '+e.message+'</div>';});
 }
 
+
+// ── 카카오 알림톡 발송 ──
+function _sendAlimtalk(phone, name, month, gross, deduct, net){
+  if(!phone) return Promise.resolve({ok:false,reason:'번호없음'});
+  return fetch('/api/send-alimtalk',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      to: phone.replace(/[^0-9]/g,''),
+      templateCode: 'KA01TP2605202011489862wFDonmS7ny',
+      variables: {
+        '#{이름}': name||'',
+        '#{월}': month||'',
+        '#{총수익}': Number(gross||0).toLocaleString(),
+        '#{공제}': Number(deduct||0).toLocaleString(),
+        '#{실지급}': Number(net||0).toLocaleString()
+      },
+      fallbackText: '[DONWAY] '+name+'님 '+month+' 정산: 실지급 '+Number(net||0).toLocaleString()+'원'
+    })
+  }).then(function(r){return r.json();})
+  .catch(function(e){return {ok:false,error:e.message};});
+}
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 📧 Resend 이메일 발송
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -28278,13 +28301,25 @@ async function _doDeploySettlements(ids) {
         } catch(e2) {}
       }
 
-      // 이메일 발송 (카카오 실패 시 대체 또는 추가 발송)
+      // 카카오 알림톡 발송 → 실패 시 이메일 대체
       try {
+        var _phone = settle.phone || settle.driverPhone || '';
+        var _netPay = _cr.net || 0;
+        var _grossPay = _cr.gross || 0;
+        var _deductPay = _cr.deduct || 0;
+        var _monthLabel = settle.month || month || '';
+        var _driverLabel = settle.driver || settle.name || '';
+        var _kakaoSent = false;
+
+        if(_phone){
+          var _kakaoResult = await _sendAlimtalk(
+            _phone, _driverLabel, _monthLabel, _grossPay, _deductPay, _netPay
+          );
+          _kakaoSent = _kakaoResult && _kakaoResult.ok;
+        }
+
         var _email = settle.email || '';
-        if(_email) {
-          var _netPay = _cr.net || 0;
-          var _monthLabel = settle.month || month || '';
-          var _driverLabel = settle.driver || settle.name || '';
+        if(!_kakaoSent && _email) {
           // 라우트 상세 HTML
           var _detailHtml = '';
           if(settle.routeDetails && settle.routeDetails.length) {
