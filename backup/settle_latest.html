@@ -269,7 +269,7 @@ window.onBizDocSelected=onBizDocSelected;</script>
       <!-- 서비스 선택 -->
       <div class="fg" style="margin-bottom:14px">
         <label style="font-size:13px;font-weight:700;margin-bottom:4px;display:block">사용할 서비스 선택 <span style="font-size:10px;color:var(--text3);font-weight:400">(복수 선택 가능)</span></label>
-        <div style="font-size:10px;color:var(--text3);margin-bottom:10px">1개월 무료 체험 · 이후 11개월 결제 = 12개월 사용</div>
+        <div style="font-size:10px;color:var(--text3);margin-bottom:10px">7일 무료 체험 · 이후 6개월·12개월 장기 할인 사용</div>
         <div style="display:flex;flex-direction:column;gap:8px">
 
           <!-- AI정산 -->
@@ -702,7 +702,7 @@ async function _loadSlugCompany(){
           document.getElementById('app').style.display='none';
           var msg=document.createElement('div');
           msg.style.cssText='position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);flex-direction:column;gap:12px;z-index:9999';
-          msg.innerHTML='<div style="font-size:40px">🔒</div><div style="font-size:16px;font-weight:800">접근 권한 없음</div><div style="font-size:13px;color:var(--text3)">해당 대리점 URL에 접근할 수 없습니다</div>';
+          msg.innerHTML='<div style="font-size:40px"></div><div style="font-size:16px;font-weight:800">접근 권한 없음</div><div style="font-size:13px;color:var(--text3)">해당 대리점 URL에 접근할 수 없습니다</div>';
           document.body.appendChild(msg);
           return;
         }
@@ -4060,7 +4060,7 @@ _auth.onAuthStateChanged(function(user){
           if(cs.exists){_campConfig=cs.data()||{};_syncCampColors();}
         }).catch(function(){});
 
-        // ★ companies 읽어서 plan/trialEnd _CU에 추가 → 기능잠금 동기적 처리
+        // ★ companies 읽어서 plan/trialEnd _CU에 추가 → 기능 동기적 처리
         _db.collection('companies').doc(_dealerId).get().then(function(cSnap){
           if(cSnap.exists){
             var cd=cSnap.data();
@@ -4230,7 +4230,7 @@ function showApp(){
             var body=document.body;
             body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f0f4f8">'
               +'<div style="text-align:center;padding:40px;background:#fff;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.1);max-width:360px">'
-              +'<div style="font-size:48px;margin-bottom:12px">🔒</div>'
+              +'<div style="font-size:48px;margin-bottom:12px"></div>'
               +'<div style="font-size:18px;font-weight:800;margin-bottom:8px">구독이 만료되었습니다</div>'
               +'<div style="font-size:13px;color:#718096;margin-bottom:20px">'
                 +(exp?'만료일: '+exp.toLocaleDateString('ko-KR'):'')+'<br>계속 이용하려면 구독을 갱신해 주세요.</div>'
@@ -4266,7 +4266,7 @@ function showApp(){
   }
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='flex';
-  // ★ trial 기간 즉시 체크 → 기능 잠금 해제
+  // ★ trial 기간 즉시 체크 → 기능  해제
   if(_CU&&!isSuperAdmin()&&_db){
     var _trialDid=_CU.dealerId||_CU.uid;
     _db.collection('companies').doc(_trialDid).get().then(function(snap){
@@ -5725,7 +5725,7 @@ function _renderContractPaywall(){
     // 샘플 계약서 미리보기
     +'<div class="card" style="margin-bottom:16px;position:relative;overflow:hidden">'
     +'<div style="position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;backdrop-filter:blur(2px)">'
-    +'<div style="font-size:28px;margin-bottom:8px">🔒</div>'
+    +'<div style="font-size:28px;margin-bottom:8px"></div>'
     +'<div style="color:#fff;font-size:15px;font-weight:800;margin-bottom:4px">결제 후 이용 가능</div>'
     +'<div style="color:rgba(255,255,255,.7);font-size:11px">월 9,900원으로 기사별 계약서 자동 생성</div>'
     +'</div>'
@@ -5868,7 +5868,7 @@ function _renderRosterPaywall(){
     // 데모 미리보기
     +'<div class="card" style="margin-bottom:16px;position:relative;overflow:hidden">'
     +'<div style="position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;backdrop-filter:blur(2px)">'
-    +'<div style="font-size:28px;margin-bottom:8px">🔒</div>'
+    +'<div style="font-size:28px;margin-bottom:8px"></div>'
     +'<div style="color:#fff;font-size:15px;font-weight:800;margin-bottom:4px">결제 후 이용 가능</div>'
     +'<div style="color:rgba(255,255,255,.7);font-size:11px">월 9,900원으로 모든 기능 무제한 사용</div>'
     +'</div>'
@@ -24636,31 +24636,14 @@ function _subPayClick(btn){
   _showTransferGuide(key, amt, hc);
 }
 function _showTransferGuide(planKey, amt, hc){
-  var mo=document.getElementById('mo-transfer');if(mo)mo.remove();
-  var moEl=document.createElement('div');moEl.className='mo show';moEl.id='mo-transfer';
-  var tierLabel=_tierLabel(hc);
-  var planNames={settle:'AI 정산',qr_payroll:'QR+급여 통합',qr:'QR 근태',payroll:'급여 관리',delivery:'배달대행 정산'};
-  moEl.innerHTML='<div class="md" style="max-width:420px;padding:28px 24px">'
-    +'<div style="font-size:18px;font-weight:800;margin-bottom:4px">💳 계좌이체 신청</div>'
-    +'<div style="font-size:12px;color:var(--text3);margin-bottom:18px">카드결제 준비 중 — 계좌이체로 신청해주세요 (3% 할인 적용)</div>'
-    +'<div style="background:var(--bg3);border-radius:10px;padding:14px;margin-bottom:16px;font-size:13px;line-height:2">'
-    +'<div><b>플랜</b> : '+(planNames[planKey]||planKey)+'</div>'
-    +'<div><b>인원 구간</b> : '+tierLabel+'</div>'
-    +'<div><b>결제 금액</b> : <span style="font-size:17px;font-weight:900;color:var(--brand)">'+amt.toLocaleString()+'원/월</span></div>'
-    +'<div style="font-size:11px;color:var(--text3)">(정가의 3% 할인 적용)</div>'
-    +'</div>'
-    +'<div style="background:#fff8e1;border-radius:10px;padding:14px;margin-bottom:16px;font-size:13px;line-height:1.9">'
-    +'<div style="font-weight:800;margin-bottom:4px">📬 신청 방법</div>'
-    +'<div>① 아래 카카오채널로 신청 메시지 전송</div>'
-    +'<div>② 입금 확인 후 당일 활성화</div>'
-    +'<div style="margin-top:8px;font-size:12px;color:#888">입금 계좌는 신청 후 안내드립니다</div>'
-    +'</div>'
-    +'<a href="https://pf.kakao.com/_xkuxabX/chat" target="_blank" onclick="document.getElementById(&quot;mo-transfer&quot;).remove()" style="display:block;width:100%;padding:13px;background:#FEE500;color:#000;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;text-align:center;text-decoration:none;margin-bottom:8px">💬 카카오채널로 신청하기</a>'
-    +'<button onclick="document.getElementById(&quot;mo-transfer&quot;).remove()" style="width:100%;padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;font-size:13px;cursor:pointer;color:var(--text)">닫기</button>'
-    +'</div>';
-  document.body.appendChild(moEl);
-  moEl.onclick=function(e){if(e.target===moEl)moEl.remove();};
+  // 카카오 채널로 바로 연결
+  var planNames={settle:'AI 정산',qr_payroll:'QR+급여 통합',qr:'QR 근태',payroll:'급여 관리',delivery:'배달대행 정산',universal:'범용 정산',inventory:'재고관리'};
+  var pname=planNames[planKey]||planKey;
+  var msg=encodeURIComponent('[DONWAY 구독 문의] '+pname+' / '+hc+'명 / 월 '+amt.toLocaleString()+'원 (VAT별도)');
+  window.open('https://pf.kakao.com/_xkuxabX/chat','_blank');
+  toast('💬 카카오 채널로 문의해주세요! \n'+pname+' '+hc+'명 기준 월 '+amt.toLocaleString()+'원 (VAT별도)');
 }
+
 function _closeSubModal(){var m=document.getElementById("mo-sub");if(m)m.remove();}
 function _showSubModal(){
   var mo=document.getElementById('mo-sub');if(mo)mo.remove();
@@ -24671,22 +24654,22 @@ function _showSubModal(){
       .get().then(function(s){_hc=Math.max(1,s.size);_refreshSubCalc();}).catch(function(){});
   }
   var plans=[
-    {key:'settle',   ic:'📦',nm:'AI 정산',       up:22000,g:1,color:'#0891b2',badge:'가장 인기',
+    {key:'settle',   ic:'📦',nm:'AI 정산',       up:9000,g:1,color:'#0891b2',badge:'가장 인기',
      tl:'쿠팡 대리점 전용 — 엑셀 올리면 끝',
      ft:['쿠팡 정산 엑셀 자동 파싱','세금계산서·고용산재 자동 계산','주민번호·입사일 자동 등록','세무사 자동 연동','아이디 지원 자동 분배','기사 앱 명세서·푸시 발송','근무표 실시간 연동','TTS 음성·진동 알림']},
-    {key:'qr_payroll',ic:'🔐💼',nm:'QR+급여 통합',up:22000,g:1,color:'#7c3aed',badge:'추천',
+    {key:'qr_payroll',ic:'🔐💼',nm:'QR+급여 통합',up:9000,g:1,color:'#7c3aed',badge:'추천',
      tl:'출퇴근부터 급여까지 원스톱',
      ft:['동적 QR 출퇴근 (위변조 방지)','GPS 출근 검증','시급·일급·월급 자동 계산','4대보험 자동 공제','연장수당 자동 산출','급여 명세서 앱 발송']},
-    {key:'qr',       ic:'🔐',nm:'QR 근태',        up:15000,g:2,color:'#059669',
+    {key:'qr',       ic:'🔐',nm:'QR 근태',        up:9000,g:2,color:'#059669',
      tl:'QR 하나로 출퇴근 자동화',
      ft:['동적 QR 출퇴근','GPS 위치 검증','근무표 자동 관리','출퇴근 현황 조회']},
-    {key:'payroll',  ic:'💼',nm:'급여 관리',       up:15000,g:2,color:'#8b5cf6',
+    {key:'payroll',  ic:'💼',nm:'급여 관리',       up:9000,g:2,color:'#8b5cf6',
      tl:'급여 계산·명세서 자동화',
      ft:['시급·일급·월급·건당 계산','4대보험 자동 공제','연장수당 자동 산출','급여 명세서 앱 발송']},
-    {key:'delivery', ic:'🛵',nm:'배달대행 정산',   up:22000,g:1,color:'#dc2626',
+    {key:'delivery', ic:'🛵',nm:'배달대행 정산',   up:9000,g:1,color:'#dc2626',
      tl:'배민·쿠팡이츠 전용 차액 자동 보전',
      ft:['배민·이츠 엑셀 자동 인식','구간 단가 소급 적용','보전·환수 자동 판정','직원 명세서']},
-    {key:'universal',ic:'📋',nm:'범용 정산',         up:25000,g:1,color:'#7c3aed',badge:'NEW',
+    {key:'universal',ic:'📋',nm:'범용 정산',         up:9000,g:1,color:'#7c3aed',badge:'NEW',
      tl:'쿠팡 외 타업종 / 복합업종 정산',
      ft:['엑셀·텍스트 파일 자동 파싱','청소·파견·보험·주류 등 모든 업종','2개 이상 업종 운영 업체 적합','컬럼명 자동 감지·매핑','세무사 연동·직원관리 포함']},
   ];
@@ -24700,7 +24683,7 @@ function _showSubModal(){
       var active=i===0;
       return '<button id="sub-tier-'+n+'" onclick="_selectTier('+n+')" style="padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:2px solid '+(active?'var(--brand)':'var(--border)')+';background:'+(active?'var(--brand)':'var(--bg)')+';color:'+(active?'#fff':'var(--text)')+'">~'+n+'명</button>';
     }).join('')
-    +'<div style="font-size:11px;color:var(--text3);margin-top:6px">💡 1개월 무료 체험 + 11개월 결제 = 12개월 사용</div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-top:6px">💡 7일 무료 체험 + 6개월·12개월 장기 할인 사용</div>'
     +'</div>'
     +'<div style="font-size:11px;color:var(--text3);margin-top:6px">💡 계좌이체 3% 할인 적용 금액입니다</div>'
     +'</div>'
@@ -26111,7 +26094,7 @@ function pageCamps(){
       +'<div style="font-size:12px;color:var(--brand);line-height:1.9">'
       +'✅ 캠프명·색상은 엑셀 업로드 시 <b>자동 생성</b>됩니다<br>'
       +'📍 GPS 주소만 입력하면 기사 앱 네비게이션 작동<br>'
-      +'🔒 내 캠프 정보는 다른 대리점에 공개되지 않습니다'
+      +' 내 캠프 정보는 다른 대리점에 공개되지 않습니다'
       +'</div></div>';
     el.innerHTML=html;
   }
@@ -29072,14 +29055,14 @@ function _renderPaywall(feature){
     'hourly_settle':{label:'급여 관리',icon:'💼',color:'#7c3aed',pkg:'💼 급여 관리 — ₩29,900/월',items:['시급/일급/주급/월급','4대보험 자동계산','급여명세서']},
     'roster':{label:'🗓 근무표',icon:'🗓',color:'#185FA5',pkg:'📷 QR 출퇴근 — ₩19,900/월',items:['주간 근무표','직원별 배정']}
   };
-  var pv=PV[feature]||{label:feature,icon:'🔒',color:'#6b7280',pkg:'💳 구독하기',items:[]};
+  var pv=PV[feature]||{label:feature,icon:'',color:'#6b7280',pkg:'💳 구독하기',items:[]};
   el.innerHTML=''
     +'<div style="background:linear-gradient(135deg,'+pv.color+'18,'+pv.color+'05);border:2px solid '+pv.color+'33;border-radius:16px;padding:20px;margin-bottom:14px;position:relative">'
-    +'<div style="position:absolute;top:50%;right:16px;transform:translateY(-50%);font-size:72px;opacity:.06">🔒</div>'
+    +'<div style="position:absolute;top:50%;right:16px;transform:translateY(-50%);font-size:72px;opacity:.06"></div>'
     +'<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">'
     +'<span style="font-size:32px">'+pv.icon+'</span>'
     +'<div><div style="font-size:18px;font-weight:900;color:'+pv.color+'">'+pv.label+'</div>'
-    +'<span style="background:'+pv.color+';color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">🔒 유료 기능</span>'
+    +'<span style="background:'+pv.color+';color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px"> 유료 기능</span>'
     +'</div></div></div>'
     +'<div style="margin-bottom:14px">'
     +'<div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:8px">✨ 이런 기능을 사용할 수 있어요</div>'
@@ -29175,11 +29158,11 @@ function _buildNavRender(nav,cur,companyDoc){
       var pk=m.plan_key||'free';
       if(!_isAllowed(pk)&&lockByPlan[pk])lockByPlan[pk].push(m);
     });
-    // ★ B안: 허용 항목만 섹션에 포함 (잠긴 섹션은 섹션 자체에 🔒)
+    // ★ B안: 허용 항목만 섹션에 포함 (잠긴 섹션은 섹션 자체에 )
     if(allowed.length){
       openSections.push({s:g.s,items:allowed,gi:gi});
     } else if(locked.length){
-      // 모든 항목이 잠긴 섹션 → 섹션 자체를 잠금으로 표시
+      // 모든 항목이 잠긴 섹션 → 섹션 자체를 으로 표시
       var pk=locked[0].plan_key||'';
       lockedSections.push({s:g.s,plan_key:pk,gi:gi});
     }
@@ -29199,7 +29182,7 @@ function _buildNavRender(nav,cur,companyDoc){
       if(m._locked){
         var u=_PLAN_UPSELL[m.plan_key||'']||{};
         var lockColor=u.color||'#888';
-        html+='<div class="ni" data-p="'+m.p+'" onclick="_showPlanUpsell(\''+( m.plan_key||'')+'\')" style="opacity:.55;cursor:pointer"><span style="font-size:14px">'+m.ic+'</span><span style="flex:1">'+m.l+'</span><span style="font-size:10px;color:'+lockColor+';font-weight:700">🔒</span></div>';
+        html+='<div class="ni" data-p="'+m.p+'" onclick="_showPlanUpsell(\''+( m.plan_key||'')+'\')" style="opacity:.55;cursor:pointer"><span style="font-size:14px">'+m.ic+'</span><span style="flex:1">'+m.l+'</span><span style="font-size:10px;color:'+lockColor+';font-weight:700"></span></div>';
       } else {
         html+='<div class="ni'+(m.p===cur?' on':'')+'" id="nav-'+m.p+'" data-p="'+m.p+'" onclick="goPage(this.dataset.p)">'
           +'<span style="font-size:14px">'+m.ic+'</span><span style="flex:1">'+m.l+'</span></div>';
@@ -29227,7 +29210,7 @@ function _buildNavRender(nav,cur,companyDoc){
           return '<div class="ni" data-p="'+m.p+'" onclick="_showPlanUpsell(\''+pk+'\')" style="opacity:.6;padding:4px 8px;cursor:pointer">'
             +'<span style="font-size:13px">'+m.ic+'</span>'
             +'<span style="flex:1;font-size:11px">'+m.l+'</span>'
-            +'<span style="font-size:9px;color:'+u.color+';font-weight:700">🔒</span>'
+            +'<span style="font-size:9px;color:'+u.color+';font-weight:700"></span>'
           +'</div>';
         }).join('')
         +'<button onclick="_showPlanUpsell(\''+pk+'\')" style="width:100%;margin-top:5px;padding:5px;background:'+u.color+';color:#fff;border:none;border-radius:7px;font-size:10px;font-weight:800;cursor:pointer">'+u.icon+' 구독하기 →</button>'
@@ -29242,7 +29225,7 @@ function _buildNavRender(nav,cur,companyDoc){
     var lockColor=u.color||'#999';
     html+='<div class="ns" onclick="_showPlanUpsell(\''+g.plan_key+'\')" style="opacity:.6;cursor:pointer">'
       +'<span style="flex:1">'+g.s+'</span>'
-      +'<span style="font-size:11px;color:'+lockColor+';font-weight:700;margin-right:4px">🔒</span>'
+      +'<span style="font-size:11px;color:'+lockColor+';font-weight:700;margin-right:4px"></span>'
       +'</div>';
   });
 
@@ -29347,7 +29330,7 @@ function _showPlanUpsell(planKey){
         }
       })();
 
-      // 잠금 해제 후 사이드바 즉시 갱신
+      //  해제 후 사이드바 즉시 갱신
       setTimeout(function(){
         buildNav();
         // 현재 페이지 새로고침
@@ -30160,7 +30143,7 @@ window.addEventListener('load',function(){
     </div>
     <!-- 개인정보 처리방침 -->
     <div style="margin-bottom:18px">
-      <div style="font-size:12px;font-weight:700;margin-bottom:6px;color:var(--text)">🔒 개인정보 처리방침</div>
+      <div style="font-size:12px;font-weight:700;margin-bottom:6px;color:var(--text)"> 개인정보 처리방침</div>
       <div id="ta-privacy-body" style="height:150px;overflow-y:auto;border:1.5px solid var(--border);border-radius:8px;padding:12px;font-size:11px;color:var(--text2);line-height:1.8;background:var(--bg3)"></div>
       <label style="display:flex;align-items:center;gap:8px;margin-top:8px;cursor:pointer;padding:6px 0">
         <input type="checkbox" id="ta-chk-privacy" style="width:16px;height:16px;accent-color:var(--brand);flex-shrink:0">
