@@ -11380,7 +11380,7 @@ window._uBulkFromTemplate = function(input, did){
         // 계약유형 정규화
         var ctype='비사업자';
         if(ctypeRaw.includes('VAT포함')||ctypeRaw.includes('vat포함')||ctypeRaw==='사업자') ctype='사업자_VAT포함';
-        else if(ctypeRaw.includes('VAT별도')||ctypeRaw.includes('vat별도')) ctype='사업자_VAT별도';
+        else if(ctypeRaw.includes('VAT포함')||ctypeRaw.includes('vat별도')) ctype='사업자_VAT포함';
         else if(ctypeRaw.includes('사업자')) ctype='사업자_VAT포함';
         if(!name||!empId)return;
         if(name==='이름 *'||empId==='ID (수정금지)')return;
@@ -11835,7 +11835,7 @@ function _renderUniversalEmpByIndustry(c, emps, did, industry){
         {id:'ue-commrate', label:'수수료율(%)',    placeholder:'40',             type:'number'},
         {id:'ue-basewage', label:'기본급(원)',     placeholder:'1000000',        type:'number'},
         {id:'ue-type',     label:'계약유형',       placeholder:'',               type:'select',
-         options:['비사업자','사업자_VAT포함','사업자_VAT별도']},
+         options:['비사업자','사업자_VAT포함','사업자_VAT포함']},
       ],
       listCols:['실명','닉네임','직급','급여유형','수수료율','지점'],
       listKeys:['name','nickname','role','wagetype','commrate','camp'],
@@ -11854,7 +11854,7 @@ function _renderUniversalEmpByIndustry(c, emps, did, industry){
         {id:'ue-insure', label:'4대보험',      placeholder:'',        type:'select',
          options:['미가입','고용보험만','4대보험전체']},
         {id:'ue-type',   label:'계약유형',     placeholder:'',        type:'select',
-         options:['비사업자','사업자_VAT포함','사업자_VAT별도']},
+         options:['비사업자','사업자_VAT포함','사업자_VAT포함']},
       ],
       listCols:['이름','사번','현장','시급','고용형태'],
       listKeys:['name','empId','camp','rate','emptype'],
@@ -11871,7 +11871,7 @@ function _renderUniversalEmpByIndustry(c, emps, did, industry){
          options:['설계사','팀장','부지점장','지점장']},
         {id:'ue-commrate',label:'수수료율(%)', placeholder:'10',      type:'number'},
         {id:'ue-type',   label:'위촉유형',    placeholder:'',        type:'select',
-         options:['비사업자','사업자_VAT포함','사업자_VAT별도']},
+         options:['비사업자','사업자_VAT포함','사업자_VAT포함']},
       ],
       listCols:['이름','코드','팀','직급','수수료율'],
       listKeys:['name','empId','camp','role','commrate'],
@@ -11888,7 +11888,7 @@ function _renderUniversalEmpByIndustry(c, emps, did, industry){
          options:['일반공','철근공','형틀공','용접공','전기공','기타']},
         {id:'ue-rate',   label:'일당(원)',    placeholder:'150000',  type:'number'},
         {id:'ue-type',   label:'계약유형',    placeholder:'',        type:'select',
-         options:['비사업자','사업자_VAT포함','사업자_VAT별도']},
+         options:['비사업자','사업자_VAT포함','사업자_VAT포함']},
       ],
       listCols:['이름','현장','직종','일당'],
       listKeys:['name','camp','role','rate'],
@@ -11904,7 +11904,7 @@ function _renderUniversalEmpByIndustry(c, emps, did, industry){
         {id:'ue-vehicle',label:'차량번호',    placeholder:'12가3456', type:'text'},
         {id:'ue-rate',   label:'콜단가(원)',  placeholder:'4500',    type:'number'},
         {id:'ue-type',   label:'계약유형',    placeholder:'',        type:'select',
-         options:['비사업자','사업자_VAT포함','사업자_VAT별도']},
+         options:['비사업자','사업자_VAT포함','사업자_VAT포함']},
       ],
       listCols:['이름','코드','팀','차량번호','콜단가'],
       listKeys:['name','empId','camp','vehicle','rate'],
@@ -12125,7 +12125,7 @@ function _renderUniversalEmp(c, emps, did){
         '<select id="ue-type" style="padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px">'+
           '<option value="비사업자">비사업자 (소득세 3.3%)</option>'+
           '<option value="사업자_VAT포함">사업자 VAT포함 (공급대가)</option>'+
-          '<option value="사업자_VAT별도">사업자 VAT별도 (공급가액)</option>'+
+          '<option value="사업자_VAT포함">사업자 VAT포함 (공급가액)</option>'+
         '</select>'+
       '</div>'+
       '<button onclick="_uAddEmp(\''+did+'\')" style="width:100%;padding:10px;background:var(--brand);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">직원 추가</button>'+
@@ -24449,9 +24449,9 @@ function _showTransferGuide(planKey, amt, hc){
   // 카카오 채널로 바로 연결
   var planNames={settle:'AI 정산',qr_payroll:'QR+급여 통합',qr:'QR 근태',payroll:'급여 관리',delivery:'배달대행 정산',universal:'범용 정산',inventory:'재고관리'};
   var pname=planNames[planKey]||planKey;
-  var msg=encodeURIComponent('[DONWAY 구독 문의] '+pname+' / '+hc+'명 / 월 '+amt.toLocaleString()+'원 (VAT별도)');
+  var msg=encodeURIComponent('[DONWAY 구독 문의] '+pname+' / '+hc+'명 / 월 '+amt.toLocaleString()+'원 (VAT포함)');
   window.open('https://pf.kakao.com/_xkuxabX/chat','_blank');
-  toast('💬 카카오 채널로 문의해주세요! \n'+pname+' '+hc+'명 기준 월 '+amt.toLocaleString()+'원 (VAT별도)');
+  toast('💬 카카오 채널로 문의해주세요! \n'+pname+' '+hc+'명 기준 월 '+amt.toLocaleString()+'원 (VAT포함)');
 }
 
 function _closeSubModal(){var m=document.getElementById("mo-sub");if(m)m.remove();}
