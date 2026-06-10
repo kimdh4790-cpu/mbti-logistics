@@ -19255,8 +19255,8 @@ function _viewMyStatementFallback(d){
 function _filterMenusByServices(menus){
   var cfg=_COMPANY_CFG||{};
 
-  // 슈퍼어드민 — 전체 보임
-  if(isSuperAdmin()) return menus;
+  // 슈퍼어드민 — email 직접 비교로 전체 보임
+  if(_CU&&_CU.email&&SUPER_ADMIN_EMAILS&&SUPER_ADMIN_EMAILS.indexOf(_CU.email)>=0) return menus;
 
   var services=cfg.services||[cfg.serviceType||'settle'];
 
