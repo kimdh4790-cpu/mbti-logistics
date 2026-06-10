@@ -311,6 +311,109 @@ body{font-family:'Noto Sans KR',sans-serif;color:var(--text)}
   </div>
 </div>
 
+
+<!-- S5: AI정산 작동 방식 -->
+<div class="slide" id="s4b">
+  <div class="slide-bg">
+    <div class="grid-bg"></div>
+    <div class="glow" style="width:350px;height:350px;background:var(--acc);bottom:-80px;left:-60px"></div>
+  </div>
+  <div class="slide-inner">
+    <div class="sec-label anim-1">05 · HOW IT WORKS</div>
+    <div class="sec-title anim-2">AI정산 — 이렇게 작동합니다</div>
+    <div class="sec-sub anim-3" style="margin-bottom:16px">어떤 업종이든 · 어떤 엑셀이든 · 3분 완료</div>
+
+    <!-- 4단계 흐름 -->
+    <div class="anim-3" style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:16px;justify-content:center">
+      <div style="background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;border-radius:10px;padding:10px 16px;text-align:center;min-width:120px">
+        <div style="font-size:20px;margin-bottom:4px">📂</div>
+        <div style="font-size:12px;font-weight:800">① 엑셀 업로드</div>
+        <div style="font-size:10px;opacity:.7;margin-top:2px">어떤 형식이든 OK</div>
+      </div>
+      <div style="font-size:20px;color:var(--acc);font-weight:900">→</div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 16px;text-align:center;min-width:120px">
+        <div style="font-size:20px;margin-bottom:4px">⚙️</div>
+        <div style="font-size:12px;font-weight:800">② 자동 계산</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">업종별 엔진 적용</div>
+      </div>
+      <div style="font-size:20px;color:var(--acc);font-weight:900">→</div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 16px;text-align:center;min-width:120px">
+        <div style="font-size:20px;margin-bottom:4px">📋</div>
+        <div style="font-size:12px;font-weight:800">③ 명세서 생성</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">개인별 상세 내역</div>
+      </div>
+      <div style="font-size:20px;color:var(--acc);font-weight:900">→</div>
+      <div style="background:rgba(0,255,148,.1);border:1px solid rgba(0,255,148,.3);border-radius:10px;padding:10px 16px;text-align:center;min-width:120px">
+        <div style="font-size:20px;margin-bottom:4px">💬</div>
+        <div style="font-size:12px;font-weight:800;color:var(--green)">④ 자동 발송</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">카카오·이메일</div>
+      </div>
+    </div>
+
+    <!-- 업종별 계산 방식 -->
+    <div class="card-grid g3 anim-4">
+      <div class="card" style="border-top:3px solid var(--acc)">
+        <div style="font-size:13px;font-weight:800;margin-bottom:8px">🚚 쿠팡 대리점</div>
+        <div style="font-size:11px;color:var(--text2);line-height:1.7">
+          라우트별 건수 × 단가<br>
+          아이디지원 자동 차감<br>
+          팀장수수료 자동 배분<br>
+          캠프별 자동 분리
+        </div>
+      </div>
+      <div class="card" style="border-top:3px solid #10b981">
+        <div style="font-size:13px;font-weight:800;margin-bottom:8px">🧹 청소·파견</div>
+        <div style="font-size:11px;color:var(--text2);line-height:1.7">
+          현장별 시급·일당 계산<br>
+          연장·야간수당 자동<br>
+          팀장 수수료 배분<br>
+          원천세 자동 공제
+        </div>
+      </div>
+      <div class="card" style="border-top:3px solid #f59e0b">
+        <div style="font-size:13px;font-weight:800;margin-bottom:8px">💇 뷰티·미용</div>
+        <div style="font-size:11px;color:var(--text2);line-height:1.7">
+          시술별 단가 자동 매핑<br>
+          수수료율 개별 설정<br>
+          기본급 자동 적용<br>
+          재료비 공제 자동
+        </div>
+      </div>
+      <div class="card" style="border-top:3px solid #8b5cf6">
+        <div style="font-size:13px;font-weight:800;margin-bottom:8px">🛡️ 보험설계사</div>
+        <div style="font-size:11px;color:var(--text2);line-height:1.7">
+          실적별 수수료 계산<br>
+          팀장 수수료 배분<br>
+          초회·유지 구분<br>
+          환수금 자동 차감
+        </div>
+      </div>
+      <div class="card" style="border-top:3px solid #ef4444">
+        <div style="font-size:13px;font-weight:800;margin-bottom:8px">🏗️ 건설·일용직</div>
+        <div style="font-size:11px;color:var(--text2);line-height:1.7">
+          현장별 일당 계산<br>
+          주민번호 원천세<br>
+          일용직 소득세 자동<br>
+          신고자료 자동 생성
+        </div>
+      </div>
+      <div class="card" style="border-top:3px solid #06b6d4">
+        <div style="font-size:13px;font-weight:800;margin-bottom:8px">🚗 퀵·대리운전</div>
+        <div style="font-size:11px;color:var(--text2);line-height:1.7">
+          콜단가 자동 계산<br>
+          팀장 수수료 배분<br>
+          플랫폼별 정산 통합<br>
+          시간대별 가중치 적용
+        </div>
+      </div>
+    </div>
+
+    <div class="anim-5" style="margin-top:12px;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:10px;padding:10px 20px;text-align:center;font-size:12px;color:var(--text2)">
+      목록에 없는 업종도 <strong style="color:var(--acc)">문의주시면 맞춤 적용</strong> 가능합니다 · 051-711-3103
+    </div>
+  </div>
+</div>
+
 <!-- S5: 지원 업종 -->
 <div class="slide" id="s4">
   <div class="slide-bg">
