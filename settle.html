@@ -1704,32 +1704,92 @@ function _sendEmail(to, subject, html){
 }
 
 // 명세서 이메일 발송 (카카오 실패 시 대체)
-function _sendStatementEmail(driver, monthLabel, netPay, details){
+function _sendStatementEmail(driver, monthLabel, netPay, details, settle){
   if(!driver.email) return Promise.resolve({ok:false,reason:'이메일 없음'});
 
-  var html=
-    '<div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#f8f9fc;padding:20px">'+
-    '<div style="background:linear-gradient(135deg,#0077b6,#7c3aed);border-radius:14px;padding:24px;color:#fff;margin-bottom:20px;text-align:center">'+
-      '<div style="font-size:11px;opacity:.7;margin-bottom:6px">DONWAY 정산 명세서</div>'+
-      '<div style="font-size:22px;font-weight:900;margin-bottom:4px">'+monthLabel+' 정산 안내</div>'+
-      '<div style="font-size:13px;opacity:.8">'+esc(driver.name||'')+'님</div>'+
-    '</div>'+
-    '<div style="background:#fff;border-radius:12px;padding:20px;margin-bottom:16px">'+
-      '<div style="font-size:12px;color:#888;margin-bottom:6px">실지급액</div>'+
-      '<div style="font-size:32px;font-weight:900;color:#0077b6">'+Number(netPay).toLocaleString()+'원</div>'+
-    '</div>'+
-    (details?
-    '<div style="background:#fff;border-radius:12px;padding:20px;margin-bottom:16px">'+
-      '<div style="font-size:12px;font-weight:700;margin-bottom:12px">상세 내역</div>'+
-      details+
-    '</div>':'') +
-    '<div style="text-align:center;font-size:11px;color:#aaa;margin-top:16px">'+
-      'DONWAY · 엠비티아이 유한회사 · donway.ai.kr<br>'+
-      '문의: 051-711-3103'+
-    '</div>'+
-    '</div>';
+  var s=settle||{};
+  var gross=s.gross||s.totalPay||netPay;
+  var deduct=(gross-netPay)||0;
+  var compName=(_CU&&_CU.companyName)||'엠비티아이 유한회사';
+  var isBiz=s.isBiz||false;
+  var bizName=s.bizName||driver.name||'';
+  var bizNum=s.bizNum||'';
 
-  return _sendEmail(driver.email, '[DONWAY] '+monthLabel+' 정산 명세서 - '+esc(driver.name||''), html);
+  var html=
+    '<!DOCTYPE html><html><head><meta charset="utf-8">'+
+    '<style>body{font-family:Apple SD Gothic Neo,Malgun Gothic,sans-serif;background:#f0f2f5;margin:0;padding:20px}'+
+    '.wrap{max-width:600px;margin:0 auto}'+
+    '.header{background:linear-gradient(135deg,#0077b6,#7c3aed);border-radius:14px;padding:24px;color:#fff;text-align:center;margin-bottom:16px}'+
+    '.card{background:#fff;border-radius:12px;padding:20px;margin-bottom:12px;border:1px solid #e8eaf0}'+
+    '.card-title{font-size:12px;font-weight:700;color:#555;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #f0f2f5}'+
+    'table{width:100%;border-collapse:collapse;font-size:13px}'+
+    'td{padding:7px 10px;border-bottom:1px solid #f5f5f5}'+
+    '.pay{color:#059669;font-weight:700;text-align:right}'+
+    '.deduct{color:#dc2626;font-weight:700;text-align:right}'+
+    '.net-row{background:#1e3a5f;color:#fff;font-weight:900}'+
+    '.net-row td{padding:12px 10px;color:#fff}'+
+    '.net-amt{font-size:18px;text-align:right}'+
+    '.tax-box{background:#f8f9fc;border:1px solid #e8eaf0;border-radius:10px;padding:16px;margin-bottom:12px}'+
+    '.footer{text-align:center;font-size:11px;color:#aaa;margin-top:16px}'+
+    '</style></head><body><div class="wrap">'+
+
+    // 헤더
+    '<div class="header">'+
+      '<div style="font-size:11px;opacity:.6;margin-bottom:6px">DONWAY 정산 명세서</div>'+
+      '<div style="font-size:22px;font-weight:900;margin-bottom:4px">'+esc(monthLabel)+' 정산 안내</div>'+
+      '<div style="font-size:14px;opacity:.8">'+esc(driver.name||'')+'님</div>'+
+    '</div>'+
+
+    // 실지급액
+    '<div class="card">'+
+      '<div style="text-align:center">'+
+        '<div style="font-size:12px;color:#888;margin-bottom:8px">💰 실 지급액</div>'+
+        '<div style="font-size:36px;font-weight:900;color:#0077b6">'+Number(netPay).toLocaleString()+'<span style="font-size:16px">원</span></div>'+
+        '<div style="font-size:12px;color:#888;margin-top:4px">'+esc(compName)+' · '+esc(monthLabel)+'</div>'+
+      '</div>'+
+    '</div>'+
+
+    // 지급/공제 내역
+    (details?
+    '<div class="card">'+
+      '<div class="card-title">📋 정산 상세 내역</div>'+
+      details+
+      '<table style="margin-top:8px">'+
+        '<tr><td style="font-weight:700">지급 합계</td><td class="pay">+'+Number(gross).toLocaleString()+'원</td></tr>'+
+        (deduct>0?'<tr><td style="font-weight:700">공제 합계</td><td class="deduct">-'+Number(deduct).toLocaleString()+'원</td></tr>':'')+
+        '<tr class="net-row"><td>💳 실 지급액</td><td class="net-amt">'+Number(netPay).toLocaleString()+'원</td></tr>'+
+      '</table>'+
+    '</div>':'<div class="card">'+
+      '<table>'+
+        '<tr><td>지급 합계</td><td class="pay">+'+Number(gross).toLocaleString()+'원</td></tr>'+
+        (deduct>0?'<tr><td>공제 합계</td><td class="deduct">-'+Number(deduct).toLocaleString()+'원</td></tr>':'')+
+        '<tr class="net-row"><td>💳 실 지급액</td><td class="net-amt">'+Number(netPay).toLocaleString()+'원</td></tr>'+
+      '</table>'+
+    '</div>')+
+
+    // 세금계산서 (사업자인 경우)
+    (isBiz?
+    '<div class="tax-box">'+
+      '<div style="font-size:12px;font-weight:700;margin-bottom:10px">🧾 세금계산서 정보</div>'+
+      '<table>'+
+        '<tr><td style="color:#888">상호(법인명)</td><td style="font-weight:700">'+esc(bizName)+'</td></tr>'+
+        (bizNum?'<tr><td style="color:#888">사업자번호</td><td>'+esc(bizNum)+'</td></tr>':'')+
+        '<tr><td style="color:#888">공급가액</td><td style="font-weight:700">'+Math.round(netPay/1.1).toLocaleString()+'원</td></tr>'+
+        '<tr><td style="color:#888">부가세(10%)</td><td>'+Math.round(netPay-netPay/1.1).toLocaleString()+'원</td></tr>'+
+        '<tr><td style="color:#888">합계금액</td><td style="font-weight:700;color:#0077b6">'+Number(netPay).toLocaleString()+'원</td></tr>'+
+      '</table>'+
+      '<div style="font-size:10px;color:#aaa;margin-top:8px">* 세금계산서는 별도 발행됩니다. 문의: 051-711-3103</div>'+
+    '</div>':'') +
+
+    // 푸터
+    '<div class="footer">'+
+      'DONWAY · '+esc(compName)+' · donway.ai.kr<br>'+
+      '문의: 051-711-3103 · all@donway.ai.kr<br>'+
+      '본 명세서는 전자 발행되었습니다 · '+new Date().toLocaleDateString('ko-KR')+
+    '</div>'+
+    '</div></body></html>';
+
+  return _sendEmail(driver.email, '[DONWAY] '+esc(monthLabel)+' 정산 명세서 - '+esc(driver.name||''), html);
 }
 
 // 카카오 발송 → 실패 시 이메일 자동 대체
