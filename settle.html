@@ -19748,12 +19748,22 @@ function pageCleanPricing(){
         '<button id="cp-import-btn" style="flex:1;padding:10px;background:var(--bg3);color:var(--text1);border:1px solid var(--border);border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">📥 엑셀로 단가 업로드</button>'+
         '<button onclick="_exportCleanPricing()" style="flex:1;padding:10px;background:var(--bg3);color:var(--text1);border:1px solid var(--border);border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">📤 단가표 내보내기</button>'+
       '</div>'+
-      '<input type="file" id="cp-excel-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="_importCleanPricing(this)">'+
+
       '<button onclick="_saveCleanPricing()" style="width:100%;padding:12px;background:var(--acc);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">💾 단가 저장</button>'+
     '</div>';
 
     // ★ 버튼 이벤트 등록 (innerHTML 완료 후)
     setTimeout(function(){
+      // 파일 input 동적 생성
+      var existInput=document.getElementById('cp-excel-input');
+      if(!existInput){
+        var inp=document.createElement('input');
+        inp.type='file'; inp.id='cp-excel-input';
+        inp.accept='.xlsx,.xls,.csv';
+        inp.style.display='none';
+        inp.onchange=function(){_importCleanPricing(this);};
+        document.body.appendChild(inp);
+      }
       var importBtn=document.getElementById('cp-import-btn');
       if(importBtn) importBtn.onclick=function(){
         document.getElementById('cp-excel-input').click();
