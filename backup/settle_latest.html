@@ -19744,6 +19744,11 @@ function pageCleanPricing(){
         _cleanPriceRow('waitFeePerHour','대기 시간당 요금','원',p.waitFeePerHour||30000)+
       '</div>'+
 
+      '<div style="display:flex;gap:8px;margin-bottom:8px">'+
+        '<button id="cp-import-btn" style="flex:1;padding:10px;background:var(--bg3);color:var(--text1);border:1px solid var(--border);border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">📥 엑셀로 단가 업로드</button>'+
+        '<button onclick="_exportCleanPricing()" style="flex:1;padding:10px;background:var(--bg3);color:var(--text1);border:1px solid var(--border);border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">📤 단가표 내보내기</button>'+
+      '</div>'+
+      '<input type="file" id="cp-excel-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="_importCleanPricing(this)">'+
       '<button onclick="_saveCleanPricing()" style="width:100%;padding:12px;background:var(--acc);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">💾 단가 저장</button>'+
     '</div>';
   });
@@ -19755,6 +19760,120 @@ function _cleanPriceRow(id,label,unit,val){
     '<input id="cp-'+id+'" type="number" value="'+val+'" style="width:100px;padding:5px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text1);font-size:11px;text-align:right">'+
     '<div style="font-size:10px;color:var(--text3);width:40px">'+unit+'</div>'+
   '</div>';
+}
+
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 📥 청소업 단가 엑셀 업로드 / 📤 내보내기
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _importCleanPricing(inp){
+  var file=inp.files[0]; if(!file) return;
+  inp.value='';
+  if(typeof XLSX==='undefined'){toast('⚠️ 엑셀 라이브러리 로딩 중');return;}
+
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
+
+      var updated=0;
+      rows.forEach(function(row){
+        if(!row||row.length<2) return;
+        var key=String(row[0]||'').trim();
+        var val=parseFloat(String(row[1]||'').replace(/,/g,''))||0;
+        if(!key||val<=0) return;
+
+        // 평수 단가
+        var areaMap={'20평이하':'p20','21-25평':'p25','26-30평':'p30','31-35평':'p35',
+          '36-40평':'p40','41-50평':'p50','51-60평':'p60','초과평당':'pExtra'};
+        // 할증
+        var surMap={'계단층당':'surFloor','전체확장':'surExpand','곰팡이':'surMold',
+          '니코틴':'surNicotine','반려동물':'surPet','쓰레기집':'surJunk','준공':'surNewbuild'};
+        // 옵션
+        var optMap={'냉장고':'optFridge','에어컨벽걸이':'optAirwall','에어컨시스템':'optAirsys',
+          '세탁기':'optWasher','오븐':'optOven','스팀살균':'optSteam','피톤치드':'optPhyton'};
+        // 기타
+        var etcMap={'최소수주':'minOrder','배차제한':'distLimit','유류비km당':'transFeePerKm','대기시간당':'waitFeePerHour'};
+        // 취소
+        var cxMap={'24시간전':'cancel24','12시간전':'cancel12','현장도착후':'cancelNoshow','매니저보전율':'cancelManagerComp'};
+
+        var allMap=Object.assign({},areaMap,surMap,optMap,etcMap,cxMap);
+
+        // 코드 직접 매핑 (EQ-001 등)
+        var eqMatch=CLEAN_EQ_DEFAULTS&&CLEAN_EQ_DEFAULTS.find(function(eq){
+          return key===eq.code||key===eq.name||key.includes(eq.name.slice(0,4));
+        });
+        if(eqMatch){
+          var el=document.getElementById('cp-eq-'+eqMatch.code);
+          if(el){el.value=val;updated++;}
+          return;
+        }
+
+        // 이름 매핑
+        var keyClean=key.replace(/[\s\/\(\)（）]/g,'');
+        Object.keys(allMap).forEach(function(k){
+          if(keyClean.includes(k.replace(/[\s\/]/g,''))){
+            var el=document.getElementById('cp-'+allMap[k]);
+            if(el){el.value=val;updated++;}
+          }
+        });
+      });
+
+      toast('✅ 단가 업로드 완료 ('+updated+'개 항목) — 저장 버튼을 눌러주세요');
+    }catch(err){toast('❌ 오류: '+err.message);}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function _exportCleanPricing(){
+  var did=_CU.dealerId||_CU.uid;
+  var fields=[
+    {id:'p20',label:'20평이하'},{id:'p25',label:'21-25평'},
+    {id:'p30',label:'26-30평'},{id:'p35',label:'31-35평'},
+    {id:'p40',label:'36-40평'},{id:'p50',label:'41-50평'},
+    {id:'p60',label:'51-60평'},{id:'pExtra',label:'초과평당'},
+    {id:'surFloor',label:'계단층당'},{id:'surExpand',label:'전체확장'},
+    {id:'surMold',label:'곰팡이'},{id:'surNicotine',label:'니코틴'},
+    {id:'surPet',label:'반려동물'},{id:'surJunk',label:'쓰레기집'},
+    {id:'surNewbuild',label:'준공'},
+    {id:'optFridge',label:'냉장고'},{id:'optAirwall',label:'에어컨벽걸이'},
+    {id:'optAirsys',label:'에어컨시스템'},{id:'optWasher',label:'세탁기'},
+    {id:'optOven',label:'오븐'},{id:'optSteam',label:'스팀살균'},
+    {id:'optPhyton',label:'피톤치드'},
+    {id:'cancel24',label:'24시간전'},{id:'cancel12',label:'12시간전'},
+    {id:'cancelNoshow',label:'현장도착후'},{id:'cancelManagerComp',label:'매니저보전율'},
+    {id:'minOrder',label:'최소수주'},{id:'distLimit',label:'배차제한'},
+    {id:'transFeePerKm',label:'유류비km당'},{id:'waitFeePerHour',label:'대기시간당'},
+  ];
+
+  // 장비/약품 추가
+  if(CLEAN_EQ_DEFAULTS){
+    CLEAN_EQ_DEFAULTS.forEach(function(eq){
+      fields.push({id:'eq-'+eq.code, label:eq.name, code:eq.code});
+    });
+  }
+
+  var rows=[['항목','단가(원)','단위','비고']];
+  fields.forEach(function(f){
+    var el=document.getElementById('cp-'+(f.code||f.id));
+    var val=el?parseFloat(el.value)||0:0;
+    rows.push([f.label, val, '', f.code||'']);
+  });
+
+  var csvLines=[];
+  rows.forEach(function(r){
+    csvLines.push(r.map(function(v){return '"'+String(v||'').replace(/"/g,'""')+'"';}).join(','));
+  });
+  var csv=csvLines.join('\r\n');
+  var blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url; a.download='청소업_단가표_'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+  toast('✅ 단가표 내보내기 완료');
 }
 
 function _saveCleanPricing(){
