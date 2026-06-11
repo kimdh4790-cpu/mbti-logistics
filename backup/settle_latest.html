@@ -19713,6 +19713,19 @@ var MENUS_SETTLE = [
     {ic:'👤',l:'기사 관리',        p:'drivers',          plan_key:'settle'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'settle'},
   ]},
+  {s:'📂 업종별 정산', items:[
+    {ic:'🏗️',l:'건설·일용직',      p:'ind_construction', plan_key:'settle'},
+    {ic:'🛡️',l:'보험설계사',        p:'ind_insurance',    plan_key:'settle'},
+    {ic:'🚗',l:'배달대행·퀵',       p:'ind_delivery',     plan_key:'settle'},
+    {ic:'💄',l:'뷰티·미용',         p:'ind_beauty',       plan_key:'settle'},
+    {ic:'🏥',l:'요양·돌봄',         p:'ind_care',         plan_key:'settle'},
+    {ic:'🎓',l:'학원·교육',         p:'ind_academy',      plan_key:'settle'},
+    {ic:'📦',l:'물류창고',          p:'ind_warehouse',    plan_key:'settle'},
+    {ic:'🎪',l:'행사·이벤트',       p:'ind_event',        plan_key:'settle'},
+    {ic:'💼',l:'영업직',            p:'ind_sales',        plan_key:'settle'},
+    {ic:'🖥️',l:'프리랜서',          p:'ind_freelance',    plan_key:'settle'},
+    {ic:'🍽️',l:'음식점·카페',       p:'ind_restaurant',   plan_key:'settle'},
+  ]},
   {s:'🛵 배달대행 정산', items:[
     {ic:'📊',l:'정산 현황',        p:'delivery_settle',  plan_key:'any_paid'},
     {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',   plan_key:'any_paid'},
@@ -22341,7 +22354,18 @@ function goPage(page){
   document.getElementById('topbar-right').innerHTML='';
   document.getElementById('sidebar').classList.remove('open');
   var _bd=document.getElementById('sb-backdrop');if(_bd)_bd.style.display='none';
-  var pages={settle:pageSettle,delivery_settle:pageDeliverySettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,my_roster:pageMyRoster,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,clean_order:pageCleanOrder,clean_pricing:pageCleanPricing,clean_workers:pageCleanWorkers,clean_dispatch:pageCleanDispatch,clean_settle:pageCleanSettle,emp_home:pageEmpHome,vehicle:pageVehicle,expense:pageExpense,overtime:pageOvertime,evaluation:pageEvaluation,delivery_report:pageDeliveryReport,delivery_platform:pageDeliveryPlatform,delivery_input:pageDeliveryInput,notify_history:pageNotifyHistory,universal_input:pageUniversalInput,universal_settle:pageUniversalSettle,universal_rules:pageUniversalRules,universal_emp:pageUniversalEmp,inventory:pageInventory,inv_summary:pageInvSummary,inv_monthly:pageInvMonthly,inv_order:pageInvOrder,inv_edit_log:pageInvEditLog,inv_change_log:pageInvChangeLog,inv_manager_stock:pageInvManagerStock,inv_manager_in:pageInvManagerIn,inv_manager_out:pageInvManagerOut,inv_manager_return:pageInvManagerReturn};
+  var pages={settle:pageSettle,delivery_settle:pageDeliverySettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,my_roster:pageMyRoster,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,ind_construction:function(){pageIndustry('construction','🏗️ 건설·일용직');},
+  ind_insurance:function(){pageIndustry('insurance','🛡️ 보험설계사');},
+  ind_delivery:function(){pageIndustry('quick','🚗 배달대행·퀵');},
+  ind_beauty:function(){pageIndustry('beauty','💄 뷰티·미용');},
+  ind_care:function(){pageIndustry('care','🏥 요양·돌봄');},
+  ind_academy:function(){pageIndustry('academy','🎓 학원·교육');},
+  ind_warehouse:function(){pageIndustry('warehouse','📦 물류창고');},
+  ind_event:function(){pageIndustry('event','🎪 행사·이벤트');},
+  ind_sales:function(){pageIndustry('sales','💼 영업직');},
+  ind_freelance:function(){pageIndustry('freelance','🖥️ 프리랜서');},
+  ind_restaurant:function(){pageIndustry('restaurant','🍽️ 음식점·카페');},
+  clean_order:pageCleanOrder,clean_pricing:pageCleanPricing,clean_workers:pageCleanWorkers,clean_dispatch:pageCleanDispatch,clean_settle:pageCleanSettle,emp_home:pageEmpHome,vehicle:pageVehicle,expense:pageExpense,overtime:pageOvertime,evaluation:pageEvaluation,delivery_report:pageDeliveryReport,delivery_platform:pageDeliveryPlatform,delivery_input:pageDeliveryInput,notify_history:pageNotifyHistory,universal_input:pageUniversalInput,universal_settle:pageUniversalSettle,universal_rules:pageUniversalRules,universal_emp:pageUniversalEmp,inventory:pageInventory,inv_summary:pageInvSummary,inv_monthly:pageInvMonthly,inv_order:pageInvOrder,inv_edit_log:pageInvEditLog,inv_change_log:pageInvChangeLog,inv_manager_stock:pageInvManagerStock,inv_manager_in:pageInvManagerIn,inv_manager_out:pageInvManagerOut,inv_manager_return:pageInvManagerReturn};
   // ★ 플랜 체크
   var cd=window._cachedCompanyDoc||{};
   var planGate={
@@ -34446,4 +34470,267 @@ function _invSaveOut(did){
 
 </script>
 </body>
-</html>
+</html
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 📂 업종별 정산 페이지 (공통)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+var _IND_INFO = {
+  construction: {
+    icon:'🏗️', name:'건설·일용직',
+    tip:'출역일수·일당·연장·야간·위험수당·중식비 컬럼 인식',
+    cols:'이름 / 현장명 / 생년월일 / 출역일수 / 일당 / 연장시간 / 야간수당 / 위험수당 / 중식비 / 교통비 / 공제',
+    tax:'일당 10만원 비과세 · 연장 1.5배 · 60세↑ 국민연금 면제 · 65세↑ 고용보험 면제',
+    color:'#f59e0b'
+  },
+  insurance: {
+    icon:'🛡️', name:'보험설계사',
+    tip:'신계약건수·단가·유지수수료·시책·환수금 컬럼 인식',
+    cols:'이름 / 소속팀 / 신계약건수 / 신계약단가 / 유지건수 / 유지수수료 / 시책 / 환수금 / 차감',
+    tax:'3.3% 원천징수 · 환수금 자동 차감',
+    color:'#3b82f6'
+  },
+  quick: {
+    icon:'🚗', name:'배달대행·퀵',
+    tip:'콜건수·기본단가·각종할증·프로모션·장비비 컬럼 인식',
+    cols:'이름 / 소속센터 / 콜건수 / 기본단가 / 장거리할증 / 야간할증 / 우천할증 / 프로모션 / 장비비차감',
+    tax:'3.3% 원천징수',
+    color:'#f97316'
+  },
+  beauty: {
+    icon:'💄', name:'뷰티·미용',
+    tip:'시술매출·수수료율·재료비·소모품·교육비 컬럼 인식',
+    cols:'이름 / 소속 / 고용형태 / 시술매출 / 수수료율(%) / 기본급 / 팁 / 재료비 / 소모품 / 교육비 / 공제',
+    tax:'프리랜서 3.3% · 정규직 고용보험 0.9%',
+    color:'#ec4899'
+  },
+  care: {
+    icon:'🏥', name:'요양·돌봄',
+    tip:'서비스시간·시급·목욕급여·주휴수당·4대보험 컬럼 인식',
+    cols:'이름 / 소속센터 / 방문일수 / 시급 / 근무시간 / 주휴수당 / 목욕횟수 / 목욕단가 / 야간수당 / 교통비 / 고용보험 / 건강보험',
+    tax:'고용보험 0.9% · 건강보험 · 국민연금',
+    color:'#10b981'
+  },
+  academy: {
+    icon:'🎓', name:'학원·교육',
+    tip:'수업시간·시급·수강생수·인센티브·교재비 컬럼 인식',
+    cols:'이름 / 소속학원 / 고용형태 / 수업시간 / 시급 / 수강생수 / 인센티브 / 교재비 / 공제',
+    tax:'프리랜서 3.3% · 일용직 세금',
+    color:'#8b5cf6'
+  },
+  warehouse: {
+    icon:'📦', name:'물류창고',
+    tip:'출근일수·일당·연장·야간·위험·식대 컬럼 인식',
+    cols:'이름 / 소속 / 출근일수 / 일당 / 연장수당 / 야간수당 / 위험수당 / 식대 / 공제',
+    tax:'일용직 세금 · 고용보험 0.9%',
+    color:'#6366f1'
+  },
+  event: {
+    icon:'🎪', name:'행사·이벤트',
+    tip:'행사명·근무일수·일당·야간·식대·교통비 컬럼 인식',
+    cols:'이름 / 소속 / 행사명 / 근무일수 / 일당 / 야간수당 / 식대 / 교통비 / 공제',
+    tax:'일용직 세금 · 고용보험 0.9%',
+    color:'#f59e0b'
+  },
+  sales: {
+    icon:'💼', name:'영업직',
+    tip:'기본급·영업건수·건당단가·달성률·인센티브 컬럼 인식',
+    cols:'이름 / 소속팀 / 고용형태 / 기본급 / 영업건수 / 건당단가 / 달성률(%) / 인센티브 / 차감',
+    tax:'3.3% or 고용보험',
+    color:'#0ea5e9'
+  },
+  freelance: {
+    icon:'🖥️', name:'프리랜서',
+    tip:'프로젝트명·계약금액·추가작업·수정비 컬럼 인식',
+    cols:'이름 / 소속 / 프로젝트명 / 계약금액 / 추가작업 / 수정/AS비 / 공제',
+    tax:'3.3% 원천징수',
+    color:'#7c3aed'
+  },
+  restaurant: {
+    icon:'🍽️', name:'음식점·카페',
+    tip:'근무시간·시급·야간수당·직원식대 컬럼 인식',
+    cols:'이름 / 소속매장 / 고용형태 / 근무일수 / 시급 / 근무시간 / 야간수당 / 직원식대 / 공제',
+    tax:'최저시급 자동 체크 · 일용직 세금',
+    color:'#ef4444'
+  }
+};
+
+function pageIndustry(type, title){
+  document.getElementById('page-title').textContent=title;
+  var c=document.getElementById('content');
+  var info=_IND_INFO[type]||{icon:'📂',name:title,tip:'',cols:'',tax:'',color:'#6b7280'};
+  var did=_CU.dealerId||_CU.uid;
+  var curMonth=new Date().toISOString().slice(0,7);
+
+  // topbar 업로드 버튼
+  var tr=document.getElementById('topbar-right');
+  if(tr){
+    tr.innerHTML='';
+    var ub=document.createElement('button');
+    ub.textContent='📥 정산 엑셀 업로드';
+    ub.style.cssText='padding:6px 14px;background:'+info.color+';color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer';
+    ub.onclick=function(){
+      if(!_COMPANY_CFG) _COMPANY_CFG={};
+      _COMPANY_CFG.industryType=type;
+      document.getElementById('excel-input').click();
+    };
+    tr.appendChild(ub);
+  }
+
+  // 저장된 정산 이력 로드
+  c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
+
+  _db.collection('settlements')
+    .where('dealerId','==',did)
+    .where('industryType','==',type)
+    .orderBy('month','desc').limit(12).get()
+  .then(function(snap){
+    var history=[];
+    snap.forEach(function(d){history.push(Object.assign({id:d.id},d.data()));});
+
+    var histHtml='';
+    if(history.length){
+      histHtml='<div class="card" style="margin-top:12px">'+
+        '<div style="font-size:11px;font-weight:700;margin-bottom:8px">📋 정산 이력</div>'+
+        history.map(function(h){
+          return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="_loadIndustrySavedSettle(''+h.id+'',''+type+'')">'+
+            '<div>'+
+              '<div style="font-size:12px;font-weight:700">'+esc(h.month||'')+'</div>'+
+              '<div style="font-size:10px;color:var(--text3)">'+(h.totalCount||0)+'명 · 총 실지급 ₩'+(h.totalNet||0).toLocaleString()+'</div>'+
+            '</div>'+
+            '<span style="font-size:10px;color:var(--acc)">조회 ▶</span>'+
+          '</div>';
+        }).join('')+
+      '</div>';
+    }
+
+    c.innerHTML=
+      '<div style="max-width:700px;margin:0 auto;padding:16px">'+
+        // 헤더
+        '<div style="background:linear-gradient(135deg,var(--bg2),var(--bg3));border:1px solid '+info.color+';border-radius:14px;padding:16px 20px;margin-bottom:14px">'+
+          '<div style="font-size:24px;margin-bottom:6px">'+info.icon+'</div>'+
+          '<div style="font-size:16px;font-weight:900;margin-bottom:8px">'+esc(info.name)+' 정산</div>'+
+          // 인식 컬럼 안내
+          '<div style="background:rgba(0,0,0,.2);border-radius:8px;padding:10px;margin-bottom:8px">'+
+            '<div style="font-size:10px;color:var(--text3);margin-bottom:4px">📋 인식 컬럼</div>'+
+            '<div style="font-size:11px;color:var(--text2);line-height:1.6">'+esc(info.cols)+'</div>'+
+          '</div>'+
+          '<div style="background:rgba(0,0,0,.2);border-radius:8px;padding:10px">'+
+            '<div style="font-size:10px;color:var(--text3);margin-bottom:4px">💰 세금 처리</div>'+
+            '<div style="font-size:11px;color:var(--text2)">'+esc(info.tax)+'</div>'+
+          '</div>'+
+        '</div>'+
+        // 업로드 버튼 (큰 버튼)
+        '<button onclick="(function(){if(!_COMPANY_CFG)_COMPANY_CFG={};_COMPANY_CFG.industryType=''+type+'';document.getElementById('excel-input').click();})()" '+
+          'style="width:100%;padding:16px;background:'+info.color+';color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:14px">'+
+          '📥 '+esc(info.name)+' 정산 엑셀 업로드'+
+        '</button>'+
+        // 샘플 다운로드
+        '<button onclick="_downloadIndustrySample(''+type+'')" '+
+          'style="width:100%;padding:10px;background:var(--bg3);color:var(--text2);border:none;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:14px">'+
+          '📄 샘플 엑셀 양식 다운로드'+
+        '</button>'+
+        histHtml+
+      '</div>';
+  }).catch(function(){
+    // 정산이력 없어도 페이지 표시
+    c.innerHTML=
+      '<div style="max-width:700px;margin:0 auto;padding:16px">'+
+        '<div style="background:linear-gradient(135deg,var(--bg2),var(--bg3));border:1px solid '+info.color+';border-radius:14px;padding:16px 20px;margin-bottom:14px">'+
+          '<div style="font-size:24px;margin-bottom:6px">'+info.icon+'</div>'+
+          '<div style="font-size:16px;font-weight:900;margin-bottom:8px">'+esc(info.name)+' 정산</div>'+
+          '<div style="background:rgba(0,0,0,.2);border-radius:8px;padding:10px;margin-bottom:8px">'+
+            '<div style="font-size:10px;color:var(--text3);margin-bottom:4px">📋 인식 컬럼</div>'+
+            '<div style="font-size:11px;color:var(--text2);line-height:1.6">'+esc(info.cols)+'</div>'+
+          '</div>'+
+          '<div style="background:rgba(0,0,0,.2);border-radius:8px;padding:10px">'+
+            '<div style="font-size:10px;color:var(--text3);margin-bottom:4px">💰 세금 처리</div>'+
+            '<div style="font-size:11px;color:var(--text2)">'+esc(info.tax)+'</div>'+
+          '</div>'+
+        '</div>'+
+        '<button onclick="(function(){if(!_COMPANY_CFG)_COMPANY_CFG={};_COMPANY_CFG.industryType=''+type+'';document.getElementById('excel-input').click();})()" '+
+          'style="width:100%;padding:16px;background:'+info.color+';color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:14px">'+
+          '📥 '+esc(info.name)+' 정산 엑셀 업로드'+
+        '</button>'+
+        '<button onclick="_downloadIndustrySample(''+type+'')" '+
+          'style="width:100%;padding:10px;background:var(--bg3);color:var(--text2);border:none;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer">'+
+          '📄 샘플 엑셀 양식 다운로드'+
+        '</button>'+
+      '</div>';
+  });
+  window._currentIndustryType=type;
+}
+
+function _loadIndustrySavedSettle(settleId, type){
+  var did=_CU.dealerId||_CU.uid;
+  _db.collection('settlements').doc(settleId).get().then(function(snap){
+    if(!snap.exists) return;
+    var data=snap.data();
+    var results=data.results||[];
+    var info=_IND_INFO[type]||{name:type};
+    _renderIndustrySettle(results, data.month, info.icon+' '+info.name);
+  });
+}
+
+// 샘플 엑셀 다운로드
+function _downloadIndustrySample(type){
+  var samples={
+    construction:[
+      ['이름','현장명','생년월일','직종','출역일수','일당','연장시간','야간수당','위험수당','중식비','교통비','공제'],
+      ['홍길동','A아파트 신축','850315','철근공',22,200000,2,0,0,0,0,0],
+      ['김철수','A아파트 신축','600101','잡부',18,160000,0,0,0,0,0,0],
+    ],
+    insurance:[
+      ['이름','소속팀','신계약건수','신계약단가','유지건수','유지수수료','시책','환수금','차감'],
+      ['홍설계','드림팀',5,800000,120,350000,200000,0,0],
+    ],
+    quick:[
+      ['이름','소속센터','콜건수','기본단가','장거리할증','야간할증','우천할증','프로모션','장비비차감'],
+      ['홍라이더','부산센터',280,3500,45000,30000,15000,50000,-15000],
+    ],
+    beauty:[
+      ['이름','소속','고용형태','시술매출','수수료율(%)','기본급','팁','재료비','소모품','교육비','공제'],
+      ['홍디자이너','A헤어','FREELANCER_3.3',1850000,60,0,50000,45000,12000,0,0],
+    ],
+    care:[
+      ['이름','소속센터','방문일수','시급','근무시간','주휴수당','목욕횟수','목욕단가','야간수당','교통비','고용보험','건강보험'],
+      ['홍요양사','해피케어',22,12050,66,28917,4,35000,0,50000,0,0],
+    ],
+    academy:[
+      ['이름','소속학원','고용형태','수업시간','시급','수강생수','인센티브','교재비','공제'],
+      ['홍강사','영어마스터','FREELANCER_3.3',80,25000,35,200000,0,0],
+    ],
+    warehouse:[
+      ['이름','소속','출근일수','일당','연장수당','야간수당','위험수당','식대','공제'],
+      ['홍창고','A물류',22,160000,0,0,0,200000,0],
+    ],
+    event:[
+      ['이름','소속','행사명','근무일수','일당','야간수당','식대','교통비','공제'],
+      ['홍스태프','A이벤트','OO행사',3,150000,0,0,30000,0],
+    ],
+    sales:[
+      ['이름','소속팀','고용형태','기본급','영업건수','건당단가','달성률(%)','인센티브','차감'],
+      ['홍영업','A팀','FREELANCER_3.3',0,25,80000,105,200000,0],
+    ],
+    freelance:[
+      ['이름','소속','프로젝트명','계약금액','추가작업','수정/AS비','공제'],
+      ['홍프리','독립','앱개발 프로젝트',3000000,500000,0,0],
+    ],
+    restaurant:[
+      ['이름','소속매장','고용형태','근무일수','시급','근무시간','야간수당','직원식대','공제'],
+      ['홍알바','OO식당','DAILY_INDIRECT',22,10030,176,0,100000,0],
+    ],
+  };
+
+  var rows=samples[type]||[['이름','금액'],['샘플',100000]];
+  var csv=rows.map(function(r){return r.map(function(v){return '"'+String(v||'')+'"';}).join(',');}).join('\r\n');
+  var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  var info=_IND_INFO[type]||{name:type};
+  a.href=url; a.download=info.name+'_샘플양식.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('✅ 샘플 양식 다운로드 완료');
+}
+
+>
