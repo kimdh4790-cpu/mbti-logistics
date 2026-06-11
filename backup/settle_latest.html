@@ -19483,6 +19483,7 @@ var MENUS_SETTLE = [
   {s:'🧹 청소업 관리', items:[
     {ic:'📝',l:'의뢰서 작성',       p:'clean_order',      plan_key:'settle'},
     {ic:'💰',l:'단가 설정',          p:'clean_pricing',    plan_key:'settle'},
+    {ic:'🔧',l:'현장 출고 컨펌',    p:'clean_dispatch',   plan_key:'settle'},
     {ic:'📊',l:'정산 현황',          p:'clean_settle',     plan_key:'settle'},
   ]},
   {s:'📦 재고관리', items:[
@@ -19743,35 +19744,9 @@ function pageCleanPricing(){
         _cleanPriceRow('waitFeePerHour','대기 시간당 요금','원',p.waitFeePerHour||30000)+
       '</div>'+
 
-      // 장비/약품 기본 단가표
-      '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">'+
-        '<div style="font-size:12px;font-weight:800;margin-bottom:4px">🔧 장비/약품 기본 단가표 <span style="font-size:10px;color:var(--text3);font-weight:400">(1/N 자동 차감 기준값)</span></div>'+
-        '<div style="font-size:10px;color:var(--acc);margin-bottom:8px">💡 AI정산 업로드 시 이 단가로 팀별 인당 자동 차감됩니다</div>'+
-        _renderEqDefaults(p)+
-      '</div>'+
-
       '<button onclick="_saveCleanPricing()" style="width:100%;padding:12px;background:var(--acc);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">💾 단가 저장</button>'+
     '</div>';
   });
-}
-
-function _renderEqDefaults(p){
-  var cats={기계:'🔧 기계류',약품:'🧪 약품류',소모품:'📦 소모품'};
-  var html='';
-  var lastCat='';
-  CLEAN_EQ_DEFAULTS.forEach(function(eq){
-    if(eq.category!==lastCat){
-      if(lastCat) html+='</div>';
-      html+='<div style="font-size:10px;font-weight:700;color:var(--text3);margin:8px 0 4px">'+cats[eq.category]+'</div><div>';
-      lastCat=eq.category;
-    }
-    var val=p['eq_'+eq.code]||eq.default;
-    html+=_cleanPriceRow('eq_'+eq.code,
-      eq.name+' <span style="font-size:9px;color:var(--text3)">('+eq.min.toLocaleString()+'~'+eq.max.toLocaleString()+'원/'+eq.unit+')</span>',
-      '원', val);
-  });
-  if(lastCat) html+='</div>';
-  return html;
 }
 
 function _cleanPriceRow(id,label,unit,val){
@@ -19782,39 +19757,15 @@ function _cleanPriceRow(id,label,unit,val){
   '</div>';
 }
 
-// 장비/약품 마스터 기본 단가 (DB 기본값)
-var CLEAN_EQ_DEFAULTS = [
-  // 기계류
-  {code:'EQ-001', name:'마루광택기(돌돌이 16인치)', category:'기계', unit:'일/대', min:30000, max:40000, default:35000},
-  {code:'EQ-002', name:'건습식청소기(3모터)', category:'기계', unit:'일/대', min:25000, max:35000, default:30000},
-  {code:'EQ-003', name:'고압세척기(엔진형250바+)', category:'기계', unit:'일/대', min:70000, max:100000, default:80000},
-  {code:'EQ-004', name:'바닥스크러버(보행식)', category:'기계', unit:'일/대', min:15000, max:20000, default:17000},
-  {code:'EQ-005', name:'피톤치드연무기/오존살균기', category:'기계', unit:'일/대', min:20000, max:30000, default:25000},
-  {code:'EQ-006', name:'대형송풍기(바닥건조용)', category:'기계', unit:'일/대', min:10000, max:10000, default:10000},
-  // 약품
-  {code:'CH-001', name:'바닥고급왁스(1말통)', category:'약품', unit:'통', min:45000, max:65000, default:55000},
-  {code:'CH-002', name:'박리제(왁스제거 1말통)', category:'약품', unit:'통', min:35000, max:50000, default:42000},
-  {code:'CH-003', name:'외벽백화제거제(1말통)', category:'약품', unit:'통', min:40000, max:60000, default:50000},
-  {code:'CH-004', name:'화재그을음분해제(1말통)', category:'약품', unit:'통', min:55000, max:75000, default:65000},
-  {code:'CH-005', name:'오렌지오일다목적세제(1말통)', category:'약품', unit:'통', min:30000, max:45000, default:37000},
-  {code:'CH-006', name:'유지분해제(주방기름때 1말통)', category:'약품', unit:'통', min:35000, max:45000, default:40000},
-  // 소모품
-  {code:'SP-001', name:'바닥패드(블랙/레드/화이트 1장)', category:'소모품', unit:'장', min:7000, max:10000, default:8000},
-  {code:'SP-002', name:'스크래퍼칼날(헤라리필 10개입)', category:'소모품', unit:'통', min:4000, max:5000, default:4500},
-  {code:'SP-003', name:'극세사타월(10장 묶음)', category:'소모품', unit:'묶음', min:6000, max:8000, default:7000},
-  {code:'SP-004', name:'종량제봉투/마대(100L 묶음)', category:'소모품', unit:'묶음', min:5000, max:8000, default:6000},
-];
-
 function _saveCleanPricing(){
   var did=_CU.dealerId||_CU.uid;
-  var eqFields=CLEAN_EQ_DEFAULTS.map(function(eq){return 'eq_'+eq.code;});
   var fields=['p20','p25','p30','p35','p40','p50','p60','pExtra',
     'surFloor','surExpand','surMold','surNicotine','surPet','surJunk','surNewbuild',
     'optFridge','optAirwall','optAirsys','optWasher','optOven','optSteam','optPhyton',
     'cancel24','cancel12','cancelNoshow','cancelManagerComp',
     'minOrder','distLimit','transFeePerKm','waitFeePerHour'];
   var obj={updatedAt:new Date().toISOString()};
-  fields.concat(eqFields).forEach(function(f){
+  fields.forEach(function(f){
     var el=document.getElementById('cp-'+f);
     if(el) obj[f]=parseFloat(el.value)||0;
   });
@@ -19826,6 +19777,197 @@ function _saveCleanPricing(){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 🧹 청소업 의뢰서 작성
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🔧 현장 출고 컨펌 & 반납 관리
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function pageCleanDispatch(){
+  document.getElementById('page-title').textContent='🔧 현장 출고 컨펌';
+  var c=document.getElementById('content');
+  var did=_CU.dealerId||_CU.uid;
+
+  // 단가 설정 + 기존 출고 기록 로드
+  Promise.all([
+    _db.collection('settings').doc(did+'_cleanPricing').get(),
+    _db.collection('clean_dispatch').where('dealerId','==',did)
+       .orderBy('dispatchDate','desc').limit(20).get()
+  ]).then(function(res){
+    var p=res[0].exists?res[0].data():{};
+    var today=new Date().toISOString().slice(0,10);
+
+    // 출고 기록 목록
+    var histHtml='';
+    res[1].forEach(function(d){
+      var dr=d.data();
+      var totalAmt=dr.totalAmt||0;
+      var perAmt=dr.perPersonAmt||0;
+      var returned=dr.returned||false;
+      histHtml+=
+        '<div style="background:var(--bg3);border-radius:8px;padding:10px;margin-bottom:6px;display:flex;align-items:center;gap:8px">'+
+          '<div style="flex:1">'+
+            '<div style="font-size:11px;font-weight:700">'+esc(dr.teamName||'')+'  |  '+esc(dr.dispatchDate||'')+'</div>'+
+            '<div style="font-size:10px;color:var(--text3)">'+esc(dr.itemSummary||'')+'</div>'+
+            '<div style="font-size:10px">총 '+totalAmt.toLocaleString()+'원 / 인당 '+perAmt.toLocaleString()+'원 ('+( dr.headCount||0)+'명)</div>'+
+          '</div>'+
+          '<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">'+
+            '<span style="font-size:9px;font-weight:700;color:'+(returned?'#10b981':'#f59e0b')+'">'+(returned?'✅ 반납완료':'⏳ 미반납')+'</span>'+
+            (!returned?'<button data-did="'+d.id+'" class="return-btn" style="padding:3px 8px;background:#10b981;color:#fff;border:none;border-radius:4px;font-size:9px;cursor:pointer">반납확인</button>':'')+
+          '</div>'+
+        '</div>';
+    });
+
+    c.innerHTML=
+      '<div style="max-width:620px;margin:0 auto;padding:16px">'+
+
+      // 새 출고 등록
+      '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px">'+
+        '<div style="font-size:12px;font-weight:800;margin-bottom:10px">📦 당일 출고 등록</div>'+
+        '<div style="display:flex;gap:6px;margin-bottom:8px">'+
+          '<input id="dc-team" placeholder="팀명 (예: A팀 외벽)" style="flex:1;'+_coInput()+'">'+
+          '<input id="dc-date" type="date" value="'+today+'" style="width:130px;'+_coInput()+'">'+
+        '</div>'+
+        '<input id="dc-site" placeholder="현장명 (예: OO아파트 준공)" style="width:100%;margin-bottom:8px;'+_coInput()+'">'+
+        '<div style="font-size:11px;font-weight:700;margin-bottom:6px">투입 장비/약품 체크</div>'+
+        '<div id="dc-eq-list" style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:10px">'+
+          _renderDispatchItems(p)+
+        '</div>'+
+        '<div style="background:var(--bg3);border-radius:8px;padding:10px;margin-bottom:10px">'+
+          '<div style="font-size:11px;font-weight:800;margin-bottom:6px">👷 출근 인원 (결근 제외)</div>'+
+          '<div style="display:flex;gap:8px;align-items:center">'+
+            '<input id="dc-headcount" type="number" min="1" value="1" onchange="_calcDispatchTotal()" style="width:80px;'+_coInput()+'">'+
+            '<span style="font-size:11px;color:var(--text3)">명 출근 (결근자 제외한 실출근 인원)</span>'+
+          '</div>'+
+        '</div>'+
+        '<div id="dc-total-box" style="background:linear-gradient(135deg,rgba(0,119,182,.08),rgba(124,58,237,.05));border:1px solid rgba(0,119,182,.2);border-radius:10px;padding:12px;margin-bottom:10px">'+
+          '<div style="font-size:11px;color:var(--text3);margin-bottom:4px">출고 합계</div>'+
+          '<div id="dc-total-display" style="font-size:16px;font-weight:800;color:var(--acc)">0원</div>'+
+          '<div id="dc-per-display" style="font-size:11px;color:var(--text2);margin-top:2px">인당 차감: 0원</div>'+
+          '<div id="dc-remainder" style="font-size:10px;color:#f59e0b;margin-top:2px"></div>'+
+        '</div>'+
+        '<div style="display:flex;gap:6px">'+
+          '<input id="dc-returnable" type="checkbox" checked style="margin:0"> '+
+          '<label style="font-size:11px;color:var(--text2)">반납 가능 장비 포함 (미반납 시 자동 추가 차감)</label>'+
+        '</div>'+
+        '<button onclick="_saveDispatch()" style="width:100%;margin-top:10px;padding:12px;background:var(--acc);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">✅ 출고 확정 & 정산 반영</button>'+
+      '</div>'+
+
+      // 출고 기록
+      '<div style="font-size:12px;font-weight:800;margin-bottom:8px">📋 출고 기록 (최근 20건)</div>'+
+      (histHtml||'<div class="empty">출고 기록 없음</div>')+
+      '</div>';
+
+    // 반납 버튼 이벤트
+    c.querySelectorAll('.return-btn').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var docId=this.dataset.did;
+        _db.collection('clean_dispatch').doc(docId).update({
+          returned:true, returnedAt:new Date().toISOString()
+        }).then(function(){toast('✅ 반납 확인 완료');pageCleanDispatch();});
+      });
+    });
+
+    // 초기 계산
+    setTimeout(_calcDispatchTotal,100);
+  });
+}
+
+function _renderDispatchItems(p){
+  var html='';
+  CLEAN_EQ_DEFAULTS.forEach(function(eq){
+    var price=p['eq_'+eq.code]||eq.default;
+    html+=
+      '<label style="display:flex;align-items:center;gap:5px;background:var(--bg3);border-radius:6px;padding:6px 8px;cursor:pointer">'+
+        '<input type="checkbox" class="dc-eq-check" data-code="'+eq.code+'" data-price="'+price+'" onchange="_calcDispatchTotal()" style="margin:0">'+
+        '<div style="flex:1">'+
+          '<div style="font-size:10px;font-weight:600">'+esc(eq.name)+'</div>'+
+          '<div style="display:flex;align-items:center;gap:4px">'+
+            '<input type="number" min="1" value="1" class="dc-eq-qty" data-code="'+eq.code+'" onchange="_calcDispatchTotal()" '+
+              'style="width:36px;padding:2px 4px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;font-size:10px;text-align:center">'+
+            '<span style="font-size:9px;color:var(--text3)">×'+price.toLocaleString()+'원</span>'+
+          '</div>'+
+        '</div>'+
+      '</label>';
+  });
+  return html;
+}
+
+function _calcDispatchTotal(){
+  var total=0;
+  var items=[];
+  document.querySelectorAll('.dc-eq-check:checked').forEach(function(chk){
+    var qtyEl=document.querySelector('.dc-eq-qty[data-code="'+chk.dataset.code+'"]');
+    var qty=parseInt(qtyEl?qtyEl.value:1)||1;
+    var price=parseInt(chk.dataset.price)||0;
+    var amt=price*qty;
+    total+=amt;
+    // 이름 찾기
+    var eq=CLEAN_EQ_DEFAULTS.find(function(e){return e.code===chk.dataset.code;});
+    if(eq) items.push(eq.name+'×'+qty);
+  });
+
+  var headCount=parseInt(document.getElementById('dc-headcount')?document.getElementById('dc-headcount').value:1)||1;
+  var perPerson=Math.floor(total/headCount);   // 버림
+  var remainder=total-(perPerson*headCount);    // 낙전
+
+  var totalEl=document.getElementById('dc-total-display');
+  var perEl=document.getElementById('dc-per-display');
+  var remEl=document.getElementById('dc-remainder');
+
+  if(totalEl) totalEl.textContent=total.toLocaleString()+'원';
+  if(perEl) perEl.textContent='인당 차감: '+perPerson.toLocaleString()+'원 × '+headCount+'명';
+  if(remEl && remainder>0){
+    remEl.textContent='낙전 '+remainder.toLocaleString()+'원 → 팀장에게 +α 처리';
+  } else if(remEl){
+    remEl.textContent='';
+  }
+
+  window._dcCalc={total:total, perPerson:perPerson, remainder:remainder, items:items, headCount:headCount};
+}
+
+function _saveDispatch(){
+  var did=_CU.dealerId||_CU.uid;
+  var calc=window._dcCalc||{total:0,perPerson:0,remainder:0,items:[],headCount:1};
+  if(calc.total<=0){toast('출고 항목을 선택하세요');return;}
+
+  var teamName=document.getElementById('dc-team')?document.getElementById('dc-team').value:'';
+  var dispatchDate=document.getElementById('dc-date')?document.getElementById('dc-date').value:'';
+  var siteName=document.getElementById('dc-site')?document.getElementById('dc-site').value:'';
+  var returnable=document.getElementById('dc-returnable')?document.getElementById('dc-returnable').checked:true;
+
+  var record={
+    dealerId:did,
+    teamName:teamName,
+    siteName:siteName,
+    dispatchDate:dispatchDate,
+    headCount:calc.headCount,
+    totalAmt:calc.total,
+    perPersonAmt:calc.perPerson,
+    remainder:calc.remainder,
+    itemSummary:calc.items.join(', '),
+    returnable:returnable,
+    returned:!returnable,
+    createdAt:new Date().toISOString(),
+    createdBy:_CU.name||_CU.email||'',
+    status:'CONFIRMED'
+  };
+
+  // 상세 항목 저장
+  var details=[];
+  document.querySelectorAll('.dc-eq-check:checked').forEach(function(chk){
+    var qtyEl=document.querySelector('.dc-eq-qty[data-code="'+chk.dataset.code+'"]');
+    var qty=parseInt(qtyEl?qtyEl.value:1)||1;
+    var price=parseInt(chk.dataset.price)||0;
+    var eq=CLEAN_EQ_DEFAULTS.find(function(e){return e.code===chk.dataset.code;});
+    details.push({code:chk.dataset.code, name:eq?eq.name:'', qty:qty, unitPrice:price, total:price*qty, category:eq?eq.category:''});
+  });
+  record.details=details;
+
+  _db.collection('clean_dispatch').add(record).then(function(ref){
+    toast('✅ 출고 확정! 팀 '+teamName+' / 인당 '+calc.perPerson.toLocaleString()+'원 차감'+(calc.remainder>0?' / 낙전 '+calc.remainder+'원 팀장 처리':''));
+    pageCleanDispatch();
+  }).catch(function(e){toast('❌ 저장 실패: '+e.message);});
+}
+
 function pageCleanOrder(){
   document.getElementById('page-title').textContent='📝 의뢰서 작성';
   var c=document.getElementById('content');
@@ -21558,7 +21700,7 @@ function goPage(page){
   document.getElementById('topbar-right').innerHTML='';
   document.getElementById('sidebar').classList.remove('open');
   var _bd=document.getElementById('sb-backdrop');if(_bd)_bd.style.display='none';
-  var pages={settle:pageSettle,delivery_settle:pageDeliverySettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,my_roster:pageMyRoster,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,clean_order:pageCleanOrder,clean_pricing:pageCleanPricing,clean_settle:pageCleanSettle,emp_home:pageEmpHome,vehicle:pageVehicle,expense:pageExpense,overtime:pageOvertime,evaluation:pageEvaluation,delivery_report:pageDeliveryReport,delivery_platform:pageDeliveryPlatform,delivery_input:pageDeliveryInput,notify_history:pageNotifyHistory,universal_input:pageUniversalInput,universal_settle:pageUniversalSettle,universal_rules:pageUniversalRules,universal_emp:pageUniversalEmp,inventory:pageInventory,inv_summary:pageInvSummary,inv_monthly:pageInvMonthly,inv_order:pageInvOrder,inv_edit_log:pageInvEditLog,inv_change_log:pageInvChangeLog,inv_manager_stock:pageInvManagerStock,inv_manager_in:pageInvManagerIn,inv_manager_out:pageInvManagerOut,inv_manager_return:pageInvManagerReturn};
+  var pages={settle:pageSettle,delivery_settle:pageDeliverySettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,my_roster:pageMyRoster,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,clean_order:pageCleanOrder,clean_pricing:pageCleanPricing,clean_dispatch:pageCleanDispatch,clean_settle:pageCleanSettle,emp_home:pageEmpHome,vehicle:pageVehicle,expense:pageExpense,overtime:pageOvertime,evaluation:pageEvaluation,delivery_report:pageDeliveryReport,delivery_platform:pageDeliveryPlatform,delivery_input:pageDeliveryInput,notify_history:pageNotifyHistory,universal_input:pageUniversalInput,universal_settle:pageUniversalSettle,universal_rules:pageUniversalRules,universal_emp:pageUniversalEmp,inventory:pageInventory,inv_summary:pageInvSummary,inv_monthly:pageInvMonthly,inv_order:pageInvOrder,inv_edit_log:pageInvEditLog,inv_change_log:pageInvChangeLog,inv_manager_stock:pageInvManagerStock,inv_manager_in:pageInvManagerIn,inv_manager_out:pageInvManagerOut,inv_manager_return:pageInvManagerReturn};
   // ★ 플랜 체크
   var cd=window._cachedCompanyDoc||{};
   var planGate={
