@@ -2449,7 +2449,7 @@ function _showIndustryDetail(idx){
     '<div style="background:var(--bg);border-radius:14px;padding:20px;max-width:400px;margin:0 auto">'+
       '<div style="font-size:14px;font-weight:800;margin-bottom:14px">'+esc(r.name)+' 상세</div>'+
       '<table style="width:100%;font-size:12px;border-collapse:collapse">';
-  (r.details||r.extras||[]).forEach(function(d){
+  (r.extras||r.details||[]).forEach(function(d){
     html+='<tr style="border-bottom:1px solid var(--border)">'+
       '<td style="padding:6px;color:var(--text3)">'+esc(d.label)+'</td>'+
       '<td style="padding:6px;text-align:right;font-weight:700">'+
@@ -2919,18 +2919,16 @@ function _parseInsuranceExcel(file, month){
         var gross=newPay+keepAmt+bonus;
         var net=gross-deduct;
 
+        var taxIns=Math.round(gross*0.033);
         results.push({
-          name:name, empId:'', camp:team,
-          gross:gross, deduct:deduct, net:net,
-          details:[
-            {label:'신계약 건수',value:newCnt+'건'},
-            {label:'신계약 수수료율',value:newRate},
-            {label:'신계약 수수료',value:newPay},
-            {label:'유지 건수',value:keepCnt+'건'},
-            {label:'유지 수수료',value:keepAmt},
-            {label:'승진/인센티브',value:bonus},
-            {label:'차감',value:-deduct},
-          ]
+          name:name, camp:team, gross:gross,
+          tax33:taxIns, net:gross-taxIns-deduct,
+          extras:[
+            {label:'신계약 '+newCnt+'건×'+newRate.toLocaleString()+'원',value:newPay},
+            keepAmt>0&&{label:'유지수수료 '+keepCnt+'건',value:keepAmt},
+            bonus>0&&{label:'승진/인센티브',value:bonus},
+            deduct>0&&{label:'차감',value:-deduct},
+          ].filter(Boolean), industryType:'insurance'
         });
       });
 
@@ -2986,18 +2984,18 @@ function _parseConstructionExcel(file, month){
         var net=gross-deduct;
 
         results.push({
-          name:name, empId:'', camp:site,
-          gross:gross, deduct:deduct, net:net,
-          details:[
-            {label:'현장',value:site||'-'},
-            {label:'출근일수',value:days+'일'},
-            {label:'일당',value:dayRate},
-            {label:'기본급',value:basePay},
-            {label:'연장수당',value:overPay},
-            {label:'야간수당',value:nightAmt},
-            {label:'위험수당',value:riskAmt},
-            {label:'공제',value:-deduct},
-          ]
+          name:name, camp:site,
+          gross:gross, tax33:Math.round(gross*0.0297), empIns:Math.round(gross*0.009),
+          net:gross-Math.round(gross*0.0297)-Math.round(gross*0.009)-deduct,
+          extras:[
+            site&&{label:'📍 현장',value:site},
+            days>0&&{label:'📅 '+days+'일×'+dayRate.toLocaleString()+'원',value:basePay},
+            overPay>0&&{label:'연장수당',value:overPay},
+            nightAmt>0&&{label:'야간수당',value:nightAmt},
+            riskAmt>0&&{label:'위험수당',value:riskAmt},
+            mealAmt>0&&{label:'식대',value:mealAmt},
+            deduct>0&&{label:'공제',value:-deduct},
+          ].filter(Boolean), industryType:'construction'
         });
       });
 
@@ -3052,16 +3050,15 @@ function _parseQuickExcel(file, month){
         var net=gross-deduct;
 
         results.push({
-          name:name, empId:iId>=0?String(row[iId]||''):'', camp:team,
-          gross:gross, deduct:deduct, net:net,
-          details:[
-            {label:'콜 건수',value:calls+'건'},
-            {label:'건당 단가',value:rate},
-            {label:'콜 수입',value:callPay},
-            {label:'장거리 수당',value:longAmt},
-            {label:'야간 수당',value:nightAmt},
-            {label:'수수료 차감',value:-deduct},
-          ]
+          name:name, camp:team,
+          gross:gross, tax33:Math.round(gross*0.033), net:gross-Math.round(gross*0.033)-deduct,
+          extras:[
+            calls>0&&{label:'콜 '+calls+'건×'+rate.toLocaleString()+'원',value:callPay},
+            typeof longPay!=='undefined'&&longPay>0&&{label:'장거리수당',value:longPay},
+            typeof nightPay!=='undefined'&&nightPay>0&&{label:'야간수당',value:nightPay},
+            typeof incAmt!=='undefined'&&incAmt>0&&{label:'인센티브',value:incAmt},
+            deduct>0&&{label:'공제',value:-deduct},
+          ].filter(Boolean), industryType:'quick'
         });
       });
 
