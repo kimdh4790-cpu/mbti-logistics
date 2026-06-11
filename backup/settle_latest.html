@@ -2619,12 +2619,30 @@ function _parseCleaningExcel(file, month){
       if(iName<0){toast('❌ 이름 컬럼 없음. 헤더: '+headers.slice(0,6).join(', '));return;}
 
       // ── 방식 자동 감지 ──
+      // ★ 작업항목별 컬럼 감지
+      var iItemName = col(['작업항목','항목명','작업내용','작업명','항목']);
+      var iItemQty  = col(['수량','건수','횟수']);
+      var iItemPrice= col(['단가','단위단가']);
+      var iItemAmt  = col(['금액','작업금액','항목금액']);
+      // 복수 항목 컬럼 (항목1/금액1, 항목2/금액2...)
+      var itemCols=[];
+      for(var hi2=0;hi2<headers.length;hi2++){
+        if(headers[hi2].includes('작업항목')||headers[hi2].includes('항목')){
+          var nextIdx=hi2+1;
+          if(nextIdx<headers.length&&(headers[nextIdx].includes('금액')||headers[nextIdx].includes('단가'))){
+            itemCols.push({labelIdx:hi2,amtIdx:nextIdx});
+          }
+        }
+      }
+
+      var hasItemized = iItemName>=0&&(iItemAmt>=0||iItemPrice>=0);
+      var hasItemCols = itemCols.length>0;
       var hasHourly  = (iHours>=0||iDays>=0)&&iRate>=0;
       var hasPerCase = iBase>=0||iGross>=0||iNet>=0;
       var hasTeam    = iTeam>=0||iEqTeam>=0||iRole>=0||iSite>=0;
       var hasPenalty = iPenalty>=0||iHold>=0;
 
-      var mode = hasHourly?'hourly': hasTeam?'team':'percase';
+      var mode = (hasItemized||hasItemCols)?'itemized': hasHourly?'hourly': hasTeam?'team':'percase';
 
       // 기간 감지
       var period = 'monthly';
@@ -2690,35 +2708,7 @@ function _parseCleaningExcel(file, month){
         var taxDirect   = v(iTax);
         holdAmt = Math.abs(v(iHold));
 
-        if(mode==='itemized'){
-          // 작업항목별 합산
-          var itemTotal=0;
-          if(iItemName>=0){
-            // 단일행: 이름, 항목, 수량, 단가, 금액
-            var qty=iItemQty>=0?v(iItemQty):1;
-            var price=iItemPrice>=0?v(iItemPrice):0;
-            var amt=iItemAmt>=0?v(iItemAmt):(qty*price);
-            if(amt>0){
-              var itemLabel=iItemName>=0?String(row[iItemName]||'').trim():'작업';
-              extras.push({label:itemLabel+(qty>1?' ×'+qty:''),value:amt});
-              itemTotal+=amt;
-            }
-          }
-          // 복수 항목 컬럼 (항목1/금액1, 항목2/금액2...)
-          itemCols.forEach(function(ic){
-            var lbl=String(row[ic.labelIdx]||'').trim();
-            var amt2=v(ic.amtIdx);
-            if(lbl&&amt2>0){extras.push({label:lbl,value:amt2});itemTotal+=amt2;}
-          });
-          // 추가 수당
-          if(overAmt>0) extras.push({label:'연장수당',value:overAmt});
-          if(v(col(['위험','고소']))>0) extras.push({label:'위험수당',value:v(col(['위험','고소']))});
-          if(mealAmt>0) extras.push({label:'식대',value:mealAmt});
-          if(eqTeam<0) extras.push({label:'[팀]장비차감',value:eqTeam});
-          if(eqPers<0) extras.push({label:'[개인]공제',value:eqPers});
-          gross=itemTotal+overAmt+mealAmt+eqTeam+supAmt+eqPers;
-
-        } else if(mode==='hourly'){
+        if(mode==='hourly'){
           var hours=v(iHours); var days=v(iDays); var rate=v(iRate);
           var base=hours>0?hours*rate : days>0?days*rate : baseAmt;
           gross=base+overAmt+weekAmt+incAmt+mealAmt+transAmt+eqTeam+supAmt+eqPers+eqRent+eqMasterAmt-penAmt-deductAmt;
@@ -2792,24 +2782,6 @@ function _parseCleaningExcel(file, month){
           status:status
         });
       });
-
-      // ★ itemized 모드: 같은 이름 여러 행 합산
-      if(mode==='itemized'){
-        var merged={};
-        results.forEach(function(r){
-          var key=r.name+(r.camp||'');
-          if(!merged[key]){
-            merged[key]=JSON.parse(JSON.stringify(r));
-          } else {
-            merged[key].gross+=r.gross;
-            merged[key].net+=r.net;
-            merged[key].tax33+=r.tax33;
-            merged[key].empIns+=r.empIns;
-            (r.extras||[]).forEach(function(e){merged[key].extras.push(e);});
-          }
-        });
-        results=Object.values(merged);
-      }
 
       if(!results.length){toast('❌ 파싱된 직원 없음');return;}
 
