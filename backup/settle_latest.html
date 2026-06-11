@@ -492,6 +492,7 @@ var G_PRICES = Object.assign({}, DEFAULT_UNIT_PRICES);
 var SUPER_ADMIN_EMAILS = ['kimdh4790@gmail.com','soungkyekim@naver.com'];
 var SUPER_ADMIN_EMAIL  = SUPER_ADMIN_EMAILS[0];
 var _SUPER_ADMIN_CACHE = null;
+var _SA_TEST_INDUSTRY = null; // 슈퍼어드민 테스트 업종 오버라이드
 
 // ════════════════════════════════════════════════════════
 // ★★★ DONWAY 지능형 배차 엔진 v1.0 (특허 출원) ★★★
@@ -1555,8 +1556,8 @@ function parseCoupangExcel(inp){
     month=_prev.getFullYear()+'-'+String(_prev.getMonth()+1).padStart(2,'0');
   }
 
-  // ★ 업종별 파서 라우팅
-  var industry=(_COMPANY_CFG&&_COMPANY_CFG.industryType)||'coupang';
+  // ★ 업종별 파서 라우팅 (슈퍼어드민 테스트 오버라이드 우선)
+  var industry=_SA_TEST_INDUSTRY||(_COMPANY_CFG&&_COMPANY_CFG.industryType)||'coupang';
   toast('📂 '+month+' 정산 업로드 중... ['+industry+']');
 
   if(industry==='cleaning'){_parseCleaningExcel(file,month);return;}
@@ -20832,41 +20833,39 @@ function pageSettle(){
   dlBtn.onclick=function(){_txsBulkExcelDownload();};
   tr.appendChild(dlBtn);
 
-  // ★ 슈퍼어드민 전용 — 자기 방에서만 업종 테스트 드롭다운
-  var _mySuperDid = (SUPER_ADMIN_EMAILS && _CU && SUPER_ADMIN_EMAILS.indexOf(_CU.email)>=0);
-  var _isMyRoom = _CU && (_CU.dealerId === _CU.uid || _CU.email === 'kimdh4790@gmail.com' || _CU.email === 'soungkyekim@naver.com');
-  if(_mySuperDid && _isMyRoom){
+  // ★ 슈퍼어드민 전용 업종 테스트 드롭다운 (자기 방에서만)
+  var _isSAOwn = (SUPER_ADMIN_EMAILS&&_CU&&SUPER_ADMIN_EMAILS.indexOf(_CU.email)>=0);
+  if(_isSAOwn){
     var saLabel=document.createElement('span');
-    saLabel.textContent='🧪 테스트 업종:';
-    saLabel.style.cssText='margin-left:10px;font-size:11px;color:var(--text3);font-weight:700';
+    saLabel.textContent='🧪 업종:';
+    saLabel.style.cssText='margin-left:8px;font-size:11px;color:var(--acc);font-weight:700';
     tr.appendChild(saLabel);
 
     var saSelect=document.createElement('select');
     saSelect.id='sa-industry-select';
     saSelect.style.cssText='margin-left:4px;padding:5px 8px;background:var(--bg3);color:var(--text1);border:1px solid var(--acc);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer';
     saSelect.innerHTML=
-      '<option value="">-- 업종 선택 --</option>'+
-      '<option value="coupang">🚚 쿠팡 대리점</option>'+
+      '<option value="coupang">🚚 쿠팡</option>'+
       '<option value="delivery">🛵 배달대행</option>'+
       '<option value="cleaning">🧹 청소·파견</option>'+
-      '<option value="insurance">🛡️ 보험설계사</option>'+
-      '<option value="construction">🏗️ 건설·일용직</option>'+
-      '<option value="quick">🚗 퀵·대리운전</option>'+
-      '<option value="beauty">💇 뷰티·미용</option>'+
-      '<option value="universal">📋 범용정산</option>';
+      '<option value="insurance">🛡️ 보험</option>'+
+      '<option value="construction">🏗️ 건설</option>'+
+      '<option value="quick">🚗 퀵</option>'+
+      '<option value="beauty">💇 뷰티</option>'+
+      '<option value="universal">📋 범용</option>';
 
-    // 현재 업종 기본값
-    var curIndustry=(_COMPANY_CFG&&_COMPANY_CFG.industryType)||'coupang';
-    saSelect.value=curIndustry;
+    var curInd=(_COMPANY_CFG&&_COMPANY_CFG.industryType)||_SA_TEST_INDUSTRY||'coupang';
+    saSelect.value=curInd;
 
     saSelect.onchange=function(){
-      if(!this.value) return;
+      _SA_TEST_INDUSTRY=this.value;
       if(!_COMPANY_CFG) _COMPANY_CFG={};
       _COMPANY_CFG.industryType=this.value;
-      toast('🧪 테스트 업종: '+this.options[this.selectedIndex].text);
+      toast('🧪 업종 전환: '+this.options[this.selectedIndex].text);
     };
     tr.appendChild(saSelect);
   }
+
   var c=document.getElementById('content');
   c.innerHTML='<div class="loading">로딩 중...</div>';
   if(!_db){c.innerHTML='<div class="empty"><div class="empty-icon">📊</div>로그인 후 이용하세요</div>';return;}
