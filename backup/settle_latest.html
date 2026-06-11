@@ -2504,64 +2504,110 @@ function _parseCleaningExcel(file, month){
         return idx;
       }
 
-      var iName=col(['이름','성명','직원']);
-      var iCamp=col(['캠프','현장','팀','부서']);
+      // ★ 자동 방식 감지
+      var iName=col(['이름','성명','직원','팀장','매니저','담당자']);
       var iDays=col(['출근','일수','근무일']);
-      var iRate=col(['시급','일당','단가']);
-      var iOver=col(['연장','초과']);
-      var iNight=col(['야간']);
-      var iLate=col(['지각','공제']);
+      var iRate=col(['시급','일당','단가','요율']);
+      var iSales=col(['고객결제','매출','청구','결제금액','수입']);
+      var iRatio=col(['배분율','지급율','수수료율','비율']);
+      var iBase=col(['기본수당','기본급','기본지급']);
+      var iExtra=col(['추가수당','추가작업','현장추가','할증']);
+      var iTrans=col(['유류비','교통비','출장비','이동비']);
+      var iDeduct=col(['공제','지각','차감']);
       var iMeal=col(['식대','식비']);
       var iId=col(['ID','아이디','사번']);
+      var iCamp=col(['캠프','현장','팀','부서','지점']);
+      var iTax=col(['3.3','원천','소득세','세금']);
+      var iGross=col(['세전','총지급','지급총액','지급액(세전)']);
+      var iNet=col(['실지급','최종','계좌','이체']);
 
-      if(iName<0){toast('❌ 이름 컬럼 없음. 헤더: '+headers.slice(0,5).join(', '));return;}
+      if(iName<0){toast('❌ 이름 컬럼 없음. 헤더: '+headers.slice(0,6).join(', '));return;}
+
+      // 방식 판단
+      var isHourly=(iDays>=0&&iRate>=0);           // 시간제
+      var isPerCase=(iSales>=0||iBase>=0||iGross>=0); // 건당/금액제
+      var mode=isHourly?'hourly':'percase';
+      toast('📂 '+month+' 청소·파견 파싱 중... ['+(mode==='hourly'?'시간제':'건당/금액제')+']');
 
       var results=[];
       rows.slice(1).forEach(function(row){
         var name=String(row[iName]||'').trim(); if(!name) return;
         var camp=iCamp>=0?String(row[iCamp]||'').trim():'';
-        var days=iDays>=0?parseFloat(row[iDays])||0:0;
-        var rate=iRate>=0?parseFloat(String(row[iRate]||'').replace(/,/g,''))||0:0;
-        var over=iOver>=0?parseFloat(row[iOver])||0:0;
-        var night=iNight>=0?parseFloat(row[iNight])||0:0;
-        var late=iLate>=0?parseFloat(String(row[iLate]||'').replace(/,/g,''))||0:0;
-        var meal=iMeal>=0?parseFloat(String(row[iMeal]||'').replace(/,/g,''))||0:0;
+        var id=iId>=0?String(row[iId]||'').trim():'';
+        var gross=0, tax=0, net=0, extras=[];
 
-        // 계산
-        var basePay=Math.round(days*rate);
-        var overPay=Math.round(over*rate*1.5);
-        var nightPay=Math.round(night*rate*0.5);
-        var gross=basePay+overPay+nightPay+meal;
-        var deduct=Math.round(late);
-        var net=gross-deduct;
+        if(mode==='hourly'){
+          // 시간제: 출근일수 × 시급
+          var days=iDays>=0?parseFloat(row[iDays])||0:0;
+          var rate=iRate>=0?parseFloat(String(row[iRate]||'').replace(/,/g,''))||0:0;
+          var over=col(['연장','초과'])>=0?parseFloat(row[col(['연장','초과'])])||0:0;
+          var night=col(['야간'])>=0?parseFloat(row[col(['야간'])])||0:0;
+          var deduct=iDeduct>=0?parseFloat(String(row[iDeduct]||'').replace(/,/g,''))||0:0;
+          var meal=iMeal>=0?parseFloat(String(row[iMeal]||'').replace(/,/g,''))||0:0;
+          gross=(days*rate)+(over*rate*0.5)+(night*rate*0.3)+meal-deduct;
+          tax=Math.round(gross*0.033);
+          net=gross-tax;
+          if(days>0) extras.push({label:'근무'+days+'일×'+rate.toLocaleString()+'원',value:days*rate});
+          if(meal>0) extras.push({label:'식대',value:meal});
+          if(deduct>0) extras.push({label:'공제',value:-deduct});
+        } else {
+          // 건당/금액제
+          var salesAmt=iSales>=0?parseFloat(String(row[iSales]||'').replace(/,/g,''))||0:0;
+          var ratio=iRatio>=0?parseFloat(String(row[iRatio]||'').replace(/,/g,'').replace('%',''))||0:0;
+          var baseAmt=iBase>=0?parseFloat(String(row[iBase]||'').replace(/,/g,''))||0:0;
+          var extraAmt=iExtra>=0?parseFloat(String(row[iExtra]||'').replace(/,/g,''))||0:0;
+          var transAmt=iTrans>=0?parseFloat(String(row[iTrans]||'').replace(/,/g,''))||0:0;
+          var deductAmt=iDeduct>=0?parseFloat(String(row[iDeduct]||'').replace(/,/g,''))||0:0;
+          var grossDirect=iGross>=0?parseFloat(String(row[iGross]||'').replace(/,/g,''))||0:0;
+          var netDirect=iNet>=0?parseFloat(String(row[iNet]||'').replace(/,/g,''))||0:0;
+          var taxDirect=iTax>=0?parseFloat(String(row[iTax]||'').replace(/,/g,''))||0:0;
+
+          if(grossDirect>0){
+            gross=grossDirect;
+          } else if(salesAmt>0&&ratio>0){
+            gross=Math.round(salesAmt*(ratio/100))+extraAmt+transAmt-deductAmt;
+          } else {
+            gross=baseAmt+extraAmt+transAmt-deductAmt;
+          }
+
+          if(netDirect>0){
+            net=netDirect;
+            tax=taxDirect>0?taxDirect:gross-net;
+          } else if(taxDirect>0){
+            tax=taxDirect;
+            net=gross-tax;
+          } else {
+            tax=Math.round(gross*0.033);
+            net=gross-tax;
+          }
+
+          if(salesAmt>0) extras.push({label:'매출',value:salesAmt});
+          if(baseAmt>0) extras.push({label:'기본수당',value:baseAmt});
+          if(extraAmt>0) extras.push({label:'추가수당',value:extraAmt});
+          if(transAmt>0) extras.push({label:'유류비',value:transAmt});
+          if(deductAmt>0) extras.push({label:'공제',value:-deductAmt});
+        }
+
+        if(iTax>=0&&taxDirect>0) tax=taxDirect;
+        tax=tax||Math.round(gross*0.033);
+        net=gross-tax;
 
         results.push({
-          name:name, empId:iId>=0?String(row[iId]||''):'', camp:camp,
-          gross:gross, deduct:deduct, net:net,
-          details:[
-            {label:'출근일수',value:days+'일'},
-            {label:'시급/일당',value:rate},
-            {label:'기본급',value:basePay},
-            {label:'연장수당 (×1.5)',value:overPay},
-            {label:'야간수당 (×0.5)',value:nightPay},
-            {label:'식대',value:meal},
-            {label:'지각공제',value:-deduct},
-          ]
+          name:name, camp:camp, id:id,
+          gross:gross, tax33:tax, net:net,
+          extras:extras, industryType:'cleaning'
         });
       });
 
       if(!results.length){toast('❌ 파싱된 직원 없음');return;}
-      toast('✅ 청소·파견 파싱 완료 — '+results.length+'명');
+      toast('✅ 청소·파견 파싱 완료 — '+results.length+'명 ['+mode+']');
       _renderIndustrySettle(results, month, '🧹 청소·파견');
-    }catch(err){toast('❌ 파싱 오류: '+err.message);}
+    }catch(err){toast('❌ 파싱 오류: '+err.message);console.error(err);}
   };
   reader.readAsArrayBuffer(file);
 }
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 🛡️ 보험설계사 파서
-// 컬럼: 이름, 팀, 신계약건수, 수수료율, 유지건수, 유지수수료, 승진수당, 차감
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 function _parseInsuranceExcel(file, month){
   var reader=new FileReader();
   reader.onload=function(e){
