@@ -2657,7 +2657,20 @@ function _parseCleaningExcel(file, month){
           var hours=v(iHours); var days=v(iDays); var rate=v(iRate);
           var base=hours>0?hours*rate : days>0?days*rate : baseAmt;
           gross=base+overAmt+weekAmt+incAmt+mealAmt+transAmt+eqTeam+supAmt+eqPers+eqRent+eqMasterAmt-penAmt-deductAmt;
-          if(base>0) extras.push({label:(hours>0?hours+'시간':''+days+'일')+'×'+Math.round(rate).toLocaleString(),value:base});
+          if(base>0) extras.push({label:(hours>0?hours+'시간':days+'일')+'×'+rate.toLocaleString()+'원',value:base});
+          if(overAmt>0)  extras.push({label:'연장수당',value:overAmt});
+          if(weekAmt>0)  extras.push({label:'주휴수당',value:weekAmt});
+          if(incAmt>0)   extras.push({label:'인센티브',value:incAmt});
+          if(mealAmt>0)  extras.push({label:'식대',value:mealAmt});
+          if(transAmt>0) extras.push({label:'교통비',value:transAmt});
+          var riskIdx=col(['위험','고소','위험수당']);
+          if(riskIdx>=0&&v(riskIdx)>0) extras.push({label:'위험수당',value:v(riskIdx)});
+          if(eqTeam<0)   extras.push({label:'[팀]장비차감',value:eqTeam});
+          if(supAmt<0)   extras.push({label:'[팀]소모품차감',value:supAmt});
+          if(eqPers<0)   extras.push({label:'[개인]지각/파손',value:eqPers});
+          if(eqRent<0)   extras.push({label:'장비대여료',value:eqRent});
+          if(penAmt>0)   extras.push({label:'패널티',value:-penAmt});
+          if(deductAmt>0) extras.push({label:'기타공제',value:-deductAmt});
         } else if(grossDirect>0){
           gross=grossDirect+eqTeam+supAmt+eqPers+eqRent+eqMasterAmt;
         } else {
