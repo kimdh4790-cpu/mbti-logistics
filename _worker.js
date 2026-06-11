@@ -535,6 +535,11 @@ export default {
     if (path === '/' || path === '' || path === '/donway_landing' || path === '/donway_landing/') {
       // mbetco.kr → universal_settle.html
       if (hostname.includes('mbetco') || hostname.includes('mbtico')) {
+        // /liquor 경로 → 주류 재고관리
+        if (url.pathname === '/liquor' || url.pathname === '/liquor.html') {
+          const liqResp = await fetchAsset('/mbetco_liquor.html', request, env);
+          return liqResp;
+        }
         const mbResp = await fetchAsset('/universal_settle.html', request, env);
         const mbH = new Headers();
         mbH.set('Content-Type', 'text/html; charset=utf-8');
