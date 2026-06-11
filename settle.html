@@ -2447,7 +2447,9 @@ function _showIndustryDetail(idx){
   if(!r) return;
   var html='<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:9000;overflow-y:auto;padding:16px" onclick="if(event.target===this)this.remove()">'+
     '<div style="background:var(--bg);border-radius:14px;padding:20px;max-width:400px;margin:0 auto">'+
-      '<div style="font-size:14px;font-weight:800;margin-bottom:14px">'+esc(r.name)+' 상세</div>'+
+      '<div style="font-size:14px;font-weight:800;margin-bottom:4px">'+esc(r.name)+'</div>'+
+      (r.camp?'<div style="font-size:11px;color:var(--acc);font-weight:600;margin-bottom:3px">📍 '+esc(r.camp)+'</div>':'')+
+      (r.role?'<div style="font-size:10px;color:var(--text3);margin-bottom:10px">'+esc(r.role)+(r.empType?' · '+esc(r.empType):'')+'</div>':'<div style="margin-bottom:10px"></div>')+
       '<table style="width:100%;font-size:12px;border-collapse:collapse">';
   (r.details||r.extras||[]).forEach(function(d){
     html+='<tr style="border-bottom:1px solid var(--border)">'+
@@ -2692,22 +2694,23 @@ function _parseCleaningExcel(file, month){
         else { net=gross-tax33-empIns-holdAmt; }
 
         // extras 구성
-        // 공통 extras — hourly는 위에서 이미 추가했으므로 제외
-        if(mode!=='hourly'){
-          if(baseAmt>0) extras.push({label:'기본수당',value:baseAmt});
-          if(overAmt>0) extras.push({label:'연장/야간수당',value:overAmt});
-          if(weekAmt>0) extras.push({label:'주휴수당',value:weekAmt});
-          if(incAmt>0)  extras.push({label:'인센티브',value:incAmt});
-          if(mealAmt>0) extras.push({label:'식대',value:mealAmt});
-          if(transAmt>0) extras.push({label:'유류비',value:transAmt});
-          if(eqTeam<0)  extras.push({label:'[팀]장비차감'+(team?'('+team+')':''),value:eqTeam});
-          if(supAmt<0)  extras.push({label:'[팀]소모품차감',value:supAmt});
-          if(eqPers<0)  extras.push({label:'[개인]지각/파손',value:eqPers});
-          if(eqRent<0)  extras.push({label:'장비대여료',value:eqRent});
-        }
+        if(baseAmt>0&&mode!=='hourly') extras.push({label:'기본수당',value:baseAmt});
+        if(overAmt>0) extras.push({label:'연장/야간수당',value:overAmt});
+        if(weekAmt>0) extras.push({label:'주휴수당',value:weekAmt});
+        if(incAmt>0)  extras.push({label:'인센티브',value:incAmt});
+        if(mealAmt>0) extras.push({label:'식대',value:mealAmt});
+        if(transAmt>0) extras.push({label:'유류비',value:transAmt});
+        if(eqTeam<0)  extras.push({label:'[팀]장비차감('+team+')',value:eqTeam});
+        if(supAmt<0)  extras.push({label:'[팀]소모품차감',value:supAmt});
+        if(eqPers<0)  extras.push({label:'[개인]장비차감',value:eqPers});
+        if(eqRent<0)  extras.push({label:'장비대여료',value:eqRent});
         if(penAmt>0)  extras.push({label:'패널티'+(iPenRsn>=0&&row[iPenRsn]?'('+String(row[iPenRsn]||'')+')':""),value:-penAmt});
         if(holdAmt>0) extras.push({label:'분쟁유보금',value:-holdAmt});
-        if(mode!=='hourly') eqMasterExtras.forEach(function(eq){extras.push(eq);});
+        eqMasterExtras.forEach(function(eq){extras.push(eq);});
+        if(team)      extras.push({label:'소속팀',value:team});
+        if(role)      extras.push({label:'역할',value:role});
+        if(ts)        extras.push({label:'이체시각',value:ts});
+        if(period!=='monthly') extras.push({label:'정산기간',value:period==='daily'?'일당':'주간'});
 
         if(Math.abs(gross)<=0&&Math.abs(net)<=0) return;
 
@@ -2720,7 +2723,7 @@ function _parseCleaningExcel(file, month){
           holdAmt:holdAmt,
           extras:extras,
           industryType:'cleaning',
-          role:role, team:team, site:site,
+          role:role, team:team, empType:emp, site:site,
           empType:emp, period:period,
           isHold:isHold,
           status:status
