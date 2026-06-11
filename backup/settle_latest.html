@@ -1564,14 +1564,6 @@ function parseCoupangExcel(inp){
   if(industry==='insurance'){_parseInsuranceExcel(file,month);return;}
   if(industry==='construction'){_parseConstructionExcel(file,month);return;}
   if(industry==='quick'){_parseQuickExcel(file,month);return;}
-  if(industry==='beauty'){_parseBeautyExcel(file,month);return;}
-  if(industry==='academy'){_parseAcademyExcel(file,month);return;}
-  if(industry==='care'){_parseCareExcel(file,month);return;}
-  if(industry==='event'){_parseEventExcel(file,month);return;}
-  if(industry==='warehouse'){_parseWarehouseExcel(file,month);return;}
-  if(industry==='sales'){_parseSalesExcel(file,month);return;}
-  if(industry==='freelance'){_parseFreelanceExcel(file,month);return;}
-  if(industry==='restaurant'){_parseRestaurantExcel(file,month);return;}
 
   // 기본: 쿠팡 파서
   var fbPromise=(window._db&&window._CU)
@@ -2538,317 +2530,30 @@ function _industrySettleSaveAll(did, results, month, label){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 👷 청소업 기사 자동 등록/업데이트
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 공통 파서 유틸
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function _baseParser(file, month, label, industryType, mapFn){
-  var reader=new FileReader();
-  reader.onload=function(e){
-    try{
-      var wb=XLSX.read(e.target.result,{type:'array'});
-      var ws=wb.Sheets[wb.SheetNames[0]];
-      var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
-      if(!rows.length){toast('❌ 데이터 없음');return;}
-      // 헤더 감지 (5행)
-      var headerRow=0;
-      for(var hi=0;hi<Math.min(5,rows.length);hi++){
-        if(rows[hi]&&rows[hi].some(function(v){
-          var s=String(v||'').trim();
-          return s==='이름'||s==='성명'||s.includes('직원')||s.includes('강사')||s.includes('매니저');
-        })){headerRow=hi;break;}
-      }
-      var headers=rows[headerRow].map(function(h){return String(h||'').trim();});
-      function col(kws){
-        return headers.findIndex(function(h){
-          return kws.some(function(k){return h.replace(/[\s\[\]()]/g,'').includes(k.replace(/[\s\[\]()]/g,''));});
-        });
-      }
-      function rv(row,i){
-        if(i<0) return 0;
-        return parseFloat(String(row[i]||'').replace(/,/g,'').replace(/%/g,''))||0;
-      }
-      var iName=col(['이름','성명','직원','강사','매니저','담당자']);
-      var iCamp=col(['캠프','소속','부서','지점','팀']);
-      if(iName<0){toast('❌ 이름 컬럼 없음');return;}
-      var results=[];
-      rows.slice(headerRow+1).forEach(function(row){
-        var name=String(row[iName]||'').trim(); if(!name) return;
-        var camp=iCamp>=0?String(row[iCamp]||'').trim():'';
-        var r=mapFn(row,headers,col,rv,name,camp,industryType);
-        if(r&&(r.gross>0||r.net>0)) results.push(r);
-      });
-      if(!results.length){toast('❌ 파싱된 직원 없음');return;}
-      toast('✅ '+label+' 파싱 완료 — '+results.length+'명');
-      _renderIndustrySettle(results, month, label);
-    }catch(err){toast('❌ 파싱 오류: '+err.message);console.error(err);}
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 💄 뷰티·미용실 파서
-// 컬럼: 이름, 소속, 시술건수, 시술매출, 수수료율, 팁, 재료비차감, 지각공제
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function _parseBeautyExcel(file,month){
-  _baseParser(file,month,'💄 뷰티·미용','beauty',function(row,headers,col,rv,name,camp){
-    var iSales=col(['시술매출','매출','수입','총매출']);
-    var iRate=col(['수수료율','커미션율','배분율']);
-    var iTip=col(['팁','봉사료']);
-    var iMat=col(['재료비','재료차감','소모품']);
-    var iDeduct=col(['공제','차감','지각']);
-    var iBase=col(['기본급','기본수당','기본급여']);
-    var sales=rv(row,iSales), rate=rv(row,iRate)||60;
-    var tip=rv(row,iTip), mat=rv(row,iMat), deduct=rv(row,iDeduct);
-    var base=rv(row,iBase);
-    var comm=base>0?base:Math.round(sales*(rate/100));
-    var gross=comm+tip-mat-deduct;
-    var tax=Math.round(gross*0.033);
-    return {name:name,camp:camp,gross:gross,tax33:tax,net:gross-tax,
-      extras:[
-        sales>0&&{label:'시술매출 '+sales.toLocaleString()+'원 × '+rate+'%',value:comm},
-        tip>0&&{label:'팁/봉사료',value:tip},
-        mat>0&&{label:'재료비차감',value:-mat},
-        deduct>0&&{label:'공제',value:-deduct},
-      ].filter(Boolean),industryType:'beauty'};
-  });
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 🎓 학원 강사 파서
-// 컬럼: 이름, 소속, 수업시간, 시급, 수강생수, 인센티브, 교재비차감
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function _parseAcademyExcel(file,month){
-  _baseParser(file,month,'🎓 학원·교육','academy',function(row,headers,col,rv,name,camp){
-    var iHours=col(['수업시간','강의시간','근무시간','시간']);
-    var iRate=col(['시급','강의단가','시간당']);
-    var iStudents=col(['수강생','학생수','수강인원']);
-    var iBonus=col(['인센','보너스','성과']);
-    var iDeduct=col(['차감','공제','교재비']);
-    var iBase=col(['기본급','기본수당']);
-    var hours=rv(row,iHours), rate=rv(row,iRate);
-    var bonus=rv(row,iBonus), deduct=rv(row,iDeduct);
-    var base=rv(row,iBase);
-    var pay=base>0?base:(hours*rate);
-    var gross=pay+bonus-deduct;
-    var tax=Math.round(gross*0.033);
-    return {name:name,camp:camp,gross:gross,tax33:tax,net:gross-tax,
-      extras:[
-        hours>0&&{label:'수업 '+hours+'시간×'+rate.toLocaleString()+'원',value:pay},
-        bonus>0&&{label:'인센티브',value:bonus},
-        deduct>0&&{label:'차감',value:-deduct},
-      ].filter(Boolean),industryType:'academy'};
-  });
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 🏥 요양·돌봄 파서
-// 컬럼: 이름, 소속, 서비스시간, 시급, 야간수당, 특수수당, 교통비, 공제
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function _parseCareExcel(file,month){
-  _baseParser(file,month,'🏥 요양·돌봄','care',function(row,headers,col,rv,name,camp){
-    var iHours=col(['서비스시간','방문시간','근무시간','시간']);
-    var iRate=col(['시급','서비스단가','시간당']);
-    var iNight=col(['야간','심야수당']);
-    var iSpecial=col(['특수','위험','중증수당']);
-    var iTrans=col(['교통비','출장비','이동비']);
-    var iDeduct=col(['공제','차감']);
-    var iDays=col(['방문일수','출근일수','일수']);
-    var hours=rv(row,iHours), rate=rv(row,iRate);
-    var days=rv(row,iDays);
-    var pay=hours>0&&rate>0?hours*rate:days*rate;
-    var night=rv(row,iNight), special=rv(row,iSpecial);
-    var trans=rv(row,iTrans), deduct=rv(row,iDeduct);
-    var gross=pay+night+special+trans-deduct;
-    var empIns=Math.round(gross*0.009);
-    var tax=Math.round(Math.max(0,rate-150000)*0.0297)*(days||1);
-    return {name:name,camp:camp,gross:gross,tax33:tax,empIns:empIns,net:gross-tax-empIns,
-      extras:[
-        pay>0&&{label:(hours>0?hours+'시간':days+'일')+'×'+rate.toLocaleString()+'원',value:pay},
-        night>0&&{label:'야간/심야수당',value:night},
-        special>0&&{label:'특수/중증수당',value:special},
-        trans>0&&{label:'교통비',value:trans},
-        deduct>0&&{label:'공제',value:-deduct},
-      ].filter(Boolean),industryType:'care'};
-  });
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 🎪 행사·이벤트 스태프 파서
-// 컬럼: 이름, 소속, 행사명, 근무일수, 일당, 야간수당, 식대, 교통비, 공제
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function _parseEventExcel(file,month){
-  _baseParser(file,month,'🎪 행사·이벤트','event',function(row,headers,col,rv,name,camp){
-    var iSite=col(['행사명','현장','작업지','이벤트']);
-    var iDays=col(['근무일수','출근일','일수']);
-    var iRate=col(['일당','단가','시급']);
-    var iHours=col(['시간','근무시간']);
-    var iNight=col(['야간','심야']);
-    var iMeal=col(['식대','식비']);
-    var iTrans=col(['교통비','유류비']);
-    var iDeduct=col(['공제','차감','지각']);
-    var site=iSite>=0?String(row[iSite]||'').trim():'';
-    var days=rv(row,iDays), rate=rv(row,iRate), hours=rv(row,iHours);
-    var pay=days>0&&rate>0?days*rate:hours>0&&rate>0?hours*rate:0;
-    var night=rv(row,iNight), meal=rv(row,iMeal);
-    var trans=rv(row,iTrans), deduct=rv(row,iDeduct);
-    var gross=pay+night+meal+trans-deduct;
-    var empIns=Math.round(gross*0.009);
-    return {name:name,camp:camp||site,gross:gross,empIns:empIns,tax33:0,net:gross-empIns,
-      extras:[
-        site&&{label:'📍 행사',value:site},
-        pay>0&&{label:(days>0?days+'일':hours+'시간')+'×'+rate.toLocaleString()+'원',value:pay},
-        night>0&&{label:'야간수당',value:night},
-        meal>0&&{label:'식대',value:meal},
-        trans>0&&{label:'교통비',value:trans},
-        deduct>0&&{label:'공제',value:-deduct},
-      ].filter(Boolean),industryType:'event'};
-  });
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 📦 물류창고 일용직 파서
-// 컬럼: 이름, 소속, 출근일수, 일당, 연장, 야간, 위험, 식대, 공제
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function _parseWarehouseExcel(file,month){
-  _baseParser(file,month,'📦 물류창고','warehouse',function(row,headers,col,rv,name,camp){
-    var iDays=col(['출근일수','근무일','일수']);
-    var iRate=col(['일당','단가','시급']);
-    var iOver=col(['연장','초과수당']);
-    var iNight=col(['야간']);
-    var iRisk=col(['위험','고소','중량']);
-    var iMeal=col(['식대','식비']);
-    var iDeduct=col(['공제','차감','지각']);
-    var days=rv(row,iDays), rate=rv(row,iRate);
-    var pay=days*rate;
-    var over=rv(row,iOver), night=rv(row,iNight);
-    var risk=rv(row,iRisk), meal=rv(row,iMeal), deduct=rv(row,iDeduct);
-    var gross=pay+over+night+risk+meal-deduct;
-    var empIns=Math.round(gross*0.009);
-    var dailyExcess=Math.max(0,rate-150000);
-    var tax=Math.round(dailyExcess*days*0.0297);
-    return {name:name,camp:camp,gross:gross,tax33:tax,empIns:empIns,net:gross-tax-empIns,
-      extras:[
-        pay>0&&{label:days+'일×'+rate.toLocaleString()+'원',value:pay},
-        over>0&&{label:'연장수당',value:over},
-        night>0&&{label:'야간수당',value:night},
-        risk>0&&{label:'위험수당',value:risk},
-        meal>0&&{label:'식대',value:meal},
-        deduct>0&&{label:'공제',value:-deduct},
-      ].filter(Boolean),industryType:'warehouse'};
-  });
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 💼 영업직 인센티브 파서
-// 컬럼: 이름, 소속, 기본급, 영업건수, 건당단가, 달성률, 인센티브, 차감
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function _parseSalesExcel(file,month){
-  _baseParser(file,month,'💼 영업직','sales',function(row,headers,col,rv,name,camp){
-    var iBase=col(['기본급','기본급여','기본수당']);
-    var iCnt=col(['영업건수','계약건수','건수']);
-    var iRate=col(['건당단가','건당','단가']);
-    var iAchieve=col(['달성률','달성']);
-    var iBonus=col(['인센티브','성과급','보너스']);
-    var iDeduct=col(['차감','공제']);
-    var base=rv(row,iBase), cnt=rv(row,iCnt), rate=rv(row,iRate);
-    var bonus=rv(row,iBonus), deduct=rv(row,iDeduct);
-    var salesPay=cnt*rate;
-    var gross=base+salesPay+bonus-deduct;
-    var tax=Math.round(gross*0.033);
-    return {name:name,camp:camp,gross:gross,tax33:tax,net:gross-tax,
-      extras:[
-        base>0&&{label:'기본급',value:base},
-        salesPay>0&&{label:'영업 '+cnt+'건×'+rate.toLocaleString()+'원',value:salesPay},
-        bonus>0&&{label:'인센티브',value:bonus},
-        deduct>0&&{label:'차감',value:-deduct},
-      ].filter(Boolean),industryType:'sales'};
-  });
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 🖥️ 프리랜서 파서 (디자이너·개발자·작가 등)
-// 컬럼: 이름, 소속, 프로젝트명, 계약금액, 추가작업, 수정비용, 공제
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function _parseFreelanceExcel(file,month){
-  _baseParser(file,month,'🖥️ 프리랜서','freelance',function(row,headers,col,rv,name,camp){
-    var iProject=col(['프로젝트','작업명','의뢰명','프로젝트명']);
-    var iContract=col(['계약금액','프로젝트금액','용역비','수수료']);
-    var iExtra=col(['추가작업','추가금액','추가비용']);
-    var iRevision=col(['수정비','수정비용','A/S']);
-    var iDeduct=col(['공제','차감','위약금']);
-    var project=iProject>=0?String(row[iProject]||'').trim():'';
-    var contract=rv(row,iContract), extra=rv(row,iExtra);
-    var revision=rv(row,iRevision), deduct=rv(row,iDeduct);
-    var gross=contract+extra+revision-deduct;
-    var tax=Math.round(gross*0.033);
-    return {name:name,camp:camp,gross:gross,tax33:tax,net:gross-tax,
-      extras:[
-        project&&{label:'📁 프로젝트',value:project},
-        contract>0&&{label:'계약금액',value:contract},
-        extra>0&&{label:'추가작업',value:extra},
-        revision>0&&{label:'수정/A/S',value:revision},
-        deduct>0&&{label:'공제/위약금',value:-deduct},
-      ].filter(Boolean),industryType:'freelance'};
-  });
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 🍽️ 음식점·카페 알바 파서
-// 컬럼: 이름, 소속, 출근일수, 시급, 근무시간, 야간수당, 식대, 공제
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function _parseRestaurantExcel(file,month){
-  _baseParser(file,month,'🍽️ 음식점·카페','restaurant',function(row,headers,col,rv,name,camp){
-    var iHours=col(['근무시간','시간','총시간']);
-    var iDays=col(['출근일수','근무일','일수']);
-    var iRate=col(['시급','단가','시간당']);
-    var iNight=col(['야간','심야수당']);
-    var iMeal=col(['식대','식비','직원식']);
-    var iDeduct=col(['공제','차감','지각']);
-    var hours=rv(row,iHours), days=rv(row,iDays), rate=rv(row,iRate);
-    var pay=hours>0&&rate>0?hours*rate:days*rate*8;
-    var night=rv(row,iNight), meal=rv(row,iMeal), deduct=rv(row,iDeduct);
-    var gross=pay+night+meal-deduct;
-    var empIns=Math.round(gross*0.009);
-    var dailyRate=hours>0&&days>0?pay/days:rate*8;
-    var tax=Math.round(Math.max(0,dailyRate-150000)*0.0297*(days||Math.ceil(hours/8)));
-    return {name:name,camp:camp,gross:gross,tax33:tax,empIns:empIns,net:gross-tax-empIns,
-      extras:[
-        pay>0&&{label:(hours>0?hours+'시간':days+'일')+'×'+rate.toLocaleString()+'원',value:pay},
-        night>0&&{label:'야간/심야수당',value:night},
-        meal>0&&{label:'식대',value:meal},
-        deduct>0&&{label:'공제',value:-deduct},
-      ].filter(Boolean),industryType:'restaurant'};
-  });
-}
-
 function _autoRegisterCleanWorkers(results){
   var did=_CU.dealerId||_CU.uid;
   if(!did||!results||!results.length) return;
 
-  // 기존 기사 목록 로드
-  _db.collection('drivers').where('dealerId','==',did).get().then(function(snap){
+  // ★ drivers(쿠팡) 아닌 clean_workers(청소) 전용
+  _db.collection('clean_workers').where('dealerId','==',did).get().then(function(snap){
     var existing={};
     snap.forEach(function(d){
-      var dr=d.data();
-      var key=(dr.name||'').trim().toLowerCase();
-      existing[key]={id:d.id, data:dr};
-      // 별명도 인덱싱
-      (dr.aliases||[]).forEach(function(a){
-        existing[a.trim().toLowerCase()]={id:d.id, data:dr};
+      var w=d.data();
+      var key=(w.name||'').trim().toLowerCase();
+      existing[key]={id:d.id,data:w};
+      (w.aliases||[]).forEach(function(a){
+        if(a) existing[a.trim().toLowerCase()]={id:d.id,data:w};
       });
     });
 
-    var newCount=0, updateCount=0;
-    var promises=[];
+    var newCount=0,updateCount=0,promises=[];
 
     results.forEach(function(r){
       if(!r.name) return;
-      var nameKey=r.name.trim().toLowerCase();
-      var found=existing[nameKey];
+      var key=r.name.trim().toLowerCase();
+      var found=existing[key];
 
       if(found){
-        // 기존 기사 업데이트 — 마지막 현장·고용형태 갱신
         var updates={
           lastSite:r.camp||r.site||'',
           lastWorkDate:new Date().toISOString().slice(0,10),
@@ -2859,13 +2564,13 @@ function _autoRegisterCleanWorkers(results){
         promises.push(_db.collection('clean_workers').doc(found.id).update(updates));
         updateCount++;
       } else {
-        // 신규 기사 등록
-        var newDriver={
+        promises.push(_db.collection('clean_workers').add({
           dealerId:did,
           name:r.name,
-          userId:'CLEAN-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),
+          userId:'CW-'+Date.now()+'-'+Math.random().toString(36).slice(2,5),
           camp:r.camp||r.team||'',
           empType:r.empType||'DAILY_INDIRECT',
+          level:r.level||'',
           role:r.role||'member',
           leaderName:r.leaderName||'',
           aliases:[],
@@ -2874,19 +2579,19 @@ function _autoRegisterCleanWorkers(results){
           lastSite:r.camp||r.site||'',
           lastWorkDate:new Date().toISOString().slice(0,10),
           createdAt:new Date().toISOString(),
-        };
-        promises.push(_db.collection('clean_workers').add(newDriver));
+        }));
         newCount++;
       }
     });
 
     Promise.all(promises).then(function(){
       if(newCount>0||updateCount>0){
-        toast('👷 기사관리 자동 등록: 신규 '+newCount+'명 / 업데이트 '+updateCount+'명');
+        toast('👷 청소 인력 등록: 신규 '+newCount+'명 / 업데이트 '+updateCount+'명');
       }
-    }).catch(function(e){console.warn('기사 등록 오류:',e.message);});
+    }).catch(function(e){console.warn('청소 인력 등록 오류:',e.message);});
   });
 }
+
 
 function _parseCleaningExcel(file, month){
   var reader=new FileReader();
