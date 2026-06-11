@@ -2447,9 +2447,7 @@ function _showIndustryDetail(idx){
   if(!r) return;
   var html='<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:9000;overflow-y:auto;padding:16px" onclick="if(event.target===this)this.remove()">'+
     '<div style="background:var(--bg);border-radius:14px;padding:20px;max-width:400px;margin:0 auto">'+
-      '<div style="font-size:14px;font-weight:800;margin-bottom:4px">'+esc(r.name)+'</div>'+
-      (r.camp?'<div style="font-size:11px;color:var(--acc);font-weight:600;margin-bottom:3px">📍 '+esc(r.camp)+'</div>':'')+
-      (r.role?'<div style="font-size:10px;color:var(--text3);margin-bottom:10px">'+esc(r.role)+(r.empType?' · '+esc(r.empType):'')+'</div>':'<div style="margin-bottom:10px"></div>')+
+      '<div style="font-size:14px;font-weight:800;margin-bottom:14px">'+esc(r.name)+' 상세</div>'+
       '<table style="width:100%;font-size:12px;border-collapse:collapse">';
   (r.details||r.extras||[]).forEach(function(d){
     html+='<tr style="border-bottom:1px solid var(--border)">'+
@@ -2482,8 +2480,45 @@ function _industrySettleSaveAll(did, results, month, label){
     employees:results, createdAt:new Date().toISOString()
   });
   batch.commit().then(function(){
-    toast('✅ 저장 완료 — 명세서 발송 준비 중...');
-    setTimeout(function(){toast('📱 명세서 발송은 정산현황에서 진행하세요');},1500);
+    toast('✅ 저장 완료 — 명세서 발송 중...');
+    var sent=0, total=results.length;
+    results.forEach(function(r){
+      // 카카오/이메일 발송용 메시지 구성
+      var lines=['[DONWAY 정산 명세서]',label+' '+month,''];
+      lines.push('👤 '+r.name+(r.camp?' | '+r.camp:''));
+      if(r.role) lines.push('직책: '+r.role+(r.empType?' ('+r.empType+')':''));
+      lines.push('');
+      lines.push('■ 지급 내역');
+      (r.extras||r.details||[]).forEach(function(d){
+        if(typeof d.value==='number'){
+          var sign=d.value>=0?'+':'-';
+          lines.push(sign+' '+d.label+': '+Math.abs(d.value).toLocaleString()+'원');
+        } else if(d.value) {
+          lines.push('- '+d.label+': '+d.value);
+        }
+      });
+      lines.push('');
+      lines.push('━━━━━━━━━━━━━━');
+      lines.push('✅ 실지급액: '+Math.round(r.net||0).toLocaleString()+'원');
+      if(r.holdAmt>0) lines.push('⚠️ 보류금: '+r.holdAmt.toLocaleString()+'원');
+      lines.push('');
+      lines.push('문의: 051-711-3103');
+
+      var msg=lines.join('\n');
+
+      // drivers/members에서 연락처 찾아서 발송
+      var q=_db.collection('drivers').where('dealerId','==',did).where('name','==',r.name).limit(1);
+      q.get().then(function(snap){
+        if(!snap.empty){
+          var d=snap.docs[0].data();
+          if(d.phone||d.kakaoId){
+            _sendKakaoMsg(d, msg);
+          }
+        }
+        sent++;
+        if(sent===total) toast('✅ 명세서 발송 완료 ('+total+'명)');
+      }).catch(function(){sent++;});
+    });
   }).catch(function(e){toast('❌ '+e.message);});
 }
 
@@ -2723,7 +2758,7 @@ function _parseCleaningExcel(file, month){
           holdAmt:holdAmt,
           extras:extras,
           industryType:'cleaning',
-          role:role, team:team, empType:emp, site:site,
+          role:role, team:team, site:site,
           empType:emp, period:period,
           isHold:isHold,
           status:status
