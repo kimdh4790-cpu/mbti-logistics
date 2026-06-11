@@ -19784,6 +19784,25 @@ function _cleanPriceRow(id,label,unit,val){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 📥 청소업 단가 엑셀 업로드 / 📤 내보내기
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+var CLEAN_EQ_DEFAULTS = [
+  {code:'EQ-001', name:'마루광택기(돌돌이 16인치)', category:'기계', unit:'일/대', min:30000, max:40000, default:35000},
+  {code:'EQ-002', name:'건습식청소기(3모터)', category:'기계', unit:'일/대', min:25000, max:35000, default:30000},
+  {code:'EQ-003', name:'고압세척기(엔진형250바+)', category:'기계', unit:'일/대', min:70000, max:100000, default:80000},
+  {code:'EQ-004', name:'바닥스크러버(보행식)', category:'기계', unit:'일/대', min:15000, max:20000, default:17000},
+  {code:'EQ-005', name:'피톤치드연무기/오존살균기', category:'기계', unit:'일/대', min:20000, max:30000, default:25000},
+  {code:'EQ-006', name:'대형송풍기(바닥건조용)', category:'기계', unit:'일/대', min:10000, max:10000, default:10000},
+  {code:'CH-001', name:'바닥고급왁스(1말통)', category:'약품', unit:'통', min:45000, max:65000, default:55000},
+  {code:'CH-002', name:'박리제(왁스제거 1말통)', category:'약품', unit:'통', min:35000, max:50000, default:42000},
+  {code:'CH-003', name:'외벽백화제거제(1말통)', category:'약품', unit:'통', min:40000, max:60000, default:50000},
+  {code:'CH-004', name:'화재그을음분해제(1말통)', category:'약품', unit:'통', min:55000, max:75000, default:65000},
+  {code:'CH-005', name:'오렌지오일다목적세제(1말통)', category:'약품', unit:'통', min:30000, max:45000, default:37000},
+  {code:'CH-006', name:'유지분해제(주방기름때 1말통)', category:'약품', unit:'통', min:35000, max:45000, default:40000},
+  {code:'SP-001', name:'바닥패드(블랙/레드/화이트 1장)', category:'소모품', unit:'장', min:7000, max:10000, default:8000},
+  {code:'SP-002', name:'스크래퍼칼날(헤라리필 10개입)', category:'소모품', unit:'통', min:4000, max:5000, default:4500},
+  {code:'SP-003', name:'극세사타월(10장 묶음)', category:'소모품', unit:'묶음', min:6000, max:8000, default:7000},
+  {code:'SP-004', name:'종량제봉투/마대(100L 묶음)', category:'소모품', unit:'묶음', min:5000, max:8000, default:6000},
+];
+
 function _importCleanPricing(inp){
   var file=inp.files[0]; if(!file) return;
   inp.value='';
