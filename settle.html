@@ -2692,23 +2692,22 @@ function _parseCleaningExcel(file, month){
         else { net=gross-tax33-empIns-holdAmt; }
 
         // extras 구성
-        if(baseAmt>0&&mode!=='hourly') extras.push({label:'기본수당',value:baseAmt});
-        if(overAmt>0) extras.push({label:'연장/야간수당',value:overAmt});
-        if(weekAmt>0) extras.push({label:'주휴수당',value:weekAmt});
-        if(incAmt>0)  extras.push({label:'인센티브',value:incAmt});
-        if(mealAmt>0) extras.push({label:'식대',value:mealAmt});
-        if(transAmt>0) extras.push({label:'유류비',value:transAmt});
-        if(eqTeam<0)  extras.push({label:'[팀]장비차감('+team+')',value:eqTeam});
-        if(supAmt<0)  extras.push({label:'[팀]소모품차감',value:supAmt});
-        if(eqPers<0)  extras.push({label:'[개인]장비차감',value:eqPers});
-        if(eqRent<0)  extras.push({label:'장비대여료',value:eqRent});
+        // 공통 extras — hourly는 위에서 이미 추가했으므로 제외
+        if(mode!=='hourly'){
+          if(baseAmt>0) extras.push({label:'기본수당',value:baseAmt});
+          if(overAmt>0) extras.push({label:'연장/야간수당',value:overAmt});
+          if(weekAmt>0) extras.push({label:'주휴수당',value:weekAmt});
+          if(incAmt>0)  extras.push({label:'인센티브',value:incAmt});
+          if(mealAmt>0) extras.push({label:'식대',value:mealAmt});
+          if(transAmt>0) extras.push({label:'유류비',value:transAmt});
+          if(eqTeam<0)  extras.push({label:'[팀]장비차감'+(team?'('+team+')':''),value:eqTeam});
+          if(supAmt<0)  extras.push({label:'[팀]소모품차감',value:supAmt});
+          if(eqPers<0)  extras.push({label:'[개인]지각/파손',value:eqPers});
+          if(eqRent<0)  extras.push({label:'장비대여료',value:eqRent});
+        }
         if(penAmt>0)  extras.push({label:'패널티'+(iPenRsn>=0&&row[iPenRsn]?'('+String(row[iPenRsn]||'')+')':""),value:-penAmt});
         if(holdAmt>0) extras.push({label:'분쟁유보금',value:-holdAmt});
-        eqMasterExtras.forEach(function(eq){extras.push(eq);});
-        if(team)      extras.push({label:'소속팀',value:team});
-        if(role)      extras.push({label:'역할',value:role});
-        if(ts)        extras.push({label:'이체시각',value:ts});
-        if(period!=='monthly') extras.push({label:'정산기간',value:period==='daily'?'일당':'주간'});
+        if(mode!=='hourly') eqMasterExtras.forEach(function(eq){extras.push(eq);});
 
         if(Math.abs(gross)<=0&&Math.abs(net)<=0) return;
 
