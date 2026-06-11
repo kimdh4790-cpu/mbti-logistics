@@ -369,5 +369,21 @@ service cloud.firestore {
       allow create: if isAuth();
     }
 
+    // ── 청소업 관리 ──
+    match /clean_orders/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+    match /clean_dispatch/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
+    // ── 오픈 이벤트 카운터 ──
+    match /open_event/{docId} {
+      allow read: if true;
+      allow write: if isAuth();
+    }
+
   }
 }
