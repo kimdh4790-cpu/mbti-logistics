@@ -20196,28 +20196,47 @@ function pageCleanWorkers(){
   var did=_CU.dealerId||_CU.uid;
   c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
 
-  _db.collection('clean_workers').where('dealerId','==',did)
-    .limit(200).get()
-  .then(function(snap){
-    // 팀장별 그룹핑
+  // dealerId OR uid 둘 다 체크
+  var queries=[
+    _db.collection('clean_workers').where('dealerId','==',did).limit(200).get(),
+  ];
+  if(_CU.uid!==did){
+    queries.push(_db.collection('clean_workers').where('dealerId','==',_CU.uid).limit(200).get());
+  }
+  Promise.all(queries)
+  .then(function(results){
+    var snap={docs:[]};
+    results.forEach(function(r){r.forEach(function(d){snap.docs.push(d);});});
+
+    // 팀장별 그룹핑 (leaderName 기준)
     var leaders={};
     var all=[];
-    snap.forEach(function(d){
+    var seen={};
+    snap.docs.forEach(function(d){
+      if(seen[d.id]) return;
+      seen[d.id]=true;
       var w=Object.assign({id:d.id},d.data());
       all.push(w);
-      if(w.role==='leader'||w.role==='팀장'){
-        if(!leaders[w.name]) leaders[w.name]={leader:w, members:[]};
+      // 팀장 감지: role이 leader/팀장 OR leaderName이 비어있고 이름에 팀장 포함
+      var isLeader=w.role==='leader'||w.role==='팀장'||
+                   (!w.leaderName&&(w.name||'').includes('팀장'));
+      if(isLeader){
+        if(!leaders[w.name]) leaders[w.name]={leader:w,members:[]};
       }
     });
-    // 팀원 배정
+    // 팀원 → 팀장에 배정
     all.forEach(function(w){
-      if(w.role!=='leader'&&w.role!=='팀장'&&w.leaderName){
-        if(leaders[w.leaderName]) leaders[w.leaderName].members.push(w);
+      var isLeader=w.role==='leader'||w.role==='팀장'||
+                   (!w.leaderName&&(w.name||'').includes('팀장'));
+      if(!isLeader&&w.leaderName&&leaders[w.leaderName]){
+        leaders[w.leaderName].members.push(w);
       }
     });
-    // 팀 없는 인원
+    // 미배정
     var unassigned=all.filter(function(w){
-      return !w.leaderName&&w.role!=='leader'&&w.role!=='팀장';
+      var isLeader=w.role==='leader'||w.role==='팀장'||
+                   (!w.leaderName&&(w.name||'').includes('팀장'));
+      return !isLeader&&(!w.leaderName||!leaders[w.leaderName]);
     });
 
     var levelColor={
@@ -20301,7 +20320,7 @@ function pageCleanWorkers(){
         };
       });
     },100);
-  }).catch(function(e){c.innerHTML='<div class="empty">오류: '+e.message+'</div>';});
+  }).catch(function(e){c.innerHTML='<div class="empty">오류: '+e.message+'</div>';console.error(e);});
 }
 
 function _openCleanWorkerForm(worker){
@@ -25084,32 +25103,6 @@ function pageDrivers(){
   document.getElementById('page-title').textContent='기사 관리';
   var tr=document.getElementById('topbar-right');tr.innerHTML='';
   var btn=document.createElement('button');btn.className='btn btn-blue btn-sm';btn.textContent='+ 기사 추가';btn.onclick=openAddDriver;tr.appendChild(btn);
-  if(_CU&&SUPER_ADMIN_EMAILS.includes(_CU.email)){
-    var cleanBtn=document.createElement('button');
-    cleanBtn.style.cssText='margin-left:6px;background:#dc2626;color:#fff;border:none;padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer';
-    cleanBtn.textContent='🧹 청소인력 분리';
-    cleanBtn.onclick=function(){
-      if(!confirm('청소·파견 인력을 clean_workers로 이동합니다')) return;
-      var did=_CU.dealerId||_CU.uid;
-      _db.collection('drivers').where('dealerId','==',did)
-        .where('jobsub','==','청소·파견').get()
-      .then(function(snap){
-        if(snap.empty){toast('청소·파견 인력 없음');return;}
-        var cnt=snap.size, done=0;
-        snap.forEach(function(d){
-          _db.collection('clean_workers').add(
-            Object.assign({},d.data(),{migratedAt:new Date().toISOString()})
-          ).then(function(){
-            return _db.collection('drivers').doc(d.id).delete();
-          }).then(function(){
-            done++;
-            if(done===cnt){toast('✅ '+cnt+'명 이동 완료');pageDrivers();}
-          });
-        });
-      }).catch(function(e){toast('❌ '+e.message);});
-    };
-    tr.appendChild(cleanBtn);
-  }
   var btnBulk=document.createElement('button');btnBulk.className='btn btn-sm';
   btnBulk.style.cssText='background:#7c3aed;color:#fff;font-size:11px';
   btnBulk.textContent='📂 일괄 등록';btnBulk.onclick=_openBulkDriverRegister;tr.appendChild(btnBulk);
