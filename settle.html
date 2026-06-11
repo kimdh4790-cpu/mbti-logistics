@@ -34454,4 +34454,46 @@ function _invSaveOut(did){
 
 </script>
 </body>
-</html>
+</html
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🧹 drivers → clean_workers 자동 정리 (1회)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _migrateCleanWorkersFromDrivers(){
+  var did=_CU&&(_CU.dealerId||_CU.uid);
+  if(!did) return;
+  // 이미 완료됐으면 스킵
+  var key='cw_migrated_'+did;
+  if(localStorage.getItem(key)) return;
+
+  _db.collection('drivers').where('dealerId','==',did)
+    .where('jobsub','==','청소·파견').get()
+  .then(function(snap){
+    if(snap.empty){
+      localStorage.setItem(key,'1');
+      return;
+    }
+    var batch=_db.batch();
+    var moveCount=0;
+    snap.forEach(function(d){
+      var data=d.data();
+      // clean_workers에 추가
+      var newRef=_db.collection('clean_workers').doc();
+      batch.set(newRef,Object.assign({},data,{
+        migratedFrom:'drivers',
+        migratedAt:new Date().toISOString()
+      }));
+      // drivers에서 삭제
+      batch.delete(d.ref);
+      moveCount++;
+    });
+    batch.commit().then(function(){
+      localStorage.setItem(key,'1');
+      console.log('✅ 청소 인력 이동 완료: '+moveCount+'명');
+      toast('👷 청소 인력 '+moveCount+'명 → 청소 인력관리로 이동 완료');
+    }).catch(function(e){
+      console.warn('마이그레이션 오류:',e.message);
+    });
+  }).catch(function(){});
+}
+
+>
