@@ -19724,17 +19724,6 @@ function pageCleanPricing(){
   var did=_CU.dealerId||_CU.uid;
 
   // 기존 단가 로드
-  // 상단 현장출고 이동 버튼
-  var tr2=document.getElementById('topbar-right');
-  if(tr2){
-    tr2.innerHTML='';
-    var db2=document.createElement('button');
-    db2.textContent='🔧 현장 출고 컨펌';
-    db2.style.cssText='padding:6px 14px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;margin-left:6px';
-    db2.onclick=function(){navigate('clean_dispatch');};
-    tr2.appendChild(db2);
-  }
-
   _db.collection('settings').doc(did+'_cleanPricing').get().then(function(snap){
     var p=snap.exists?snap.data():{};
 
@@ -19979,7 +19968,7 @@ function pageCleanDispatch(){
   Promise.all([
     _db.collection('settings').doc(did+'_cleanPricing').get(),
     _db.collection('clean_dispatch').where('dealerId','==',did)
-       .orderBy('dispatchDate','desc').limit(20).get()
+       .limit(20).get()
   ]).then(function(res){
     var p=res[0].exists?res[0].data():{};
     var today=new Date().toISOString().slice(0,10);
@@ -20482,22 +20471,6 @@ function pageCleanSettle(){
   var c=document.getElementById('content');
   var did=_CU.dealerId||_CU.uid;
   c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
-
-  // 상단 업로드 버튼
-  var tr=document.getElementById('topbar-right');
-  if(tr){
-    tr.innerHTML='';
-    var ub=document.createElement('button');
-    ub.textContent='📥 정산 엑셀 업로드';
-    ub.style.cssText='padding:6px 14px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;margin-left:6px';
-    ub.onclick=function(){
-      if(!_COMPANY_CFG) _COMPANY_CFG={};
-      _COMPANY_CFG.industryType='cleaning';
-      _SA_TEST_INDUSTRY='cleaning';
-      document.getElementById('excel-input').click();
-    };
-    tr.appendChild(ub);
-  }
 
   _db.collection('clean_orders').where('dealerId','==',did)
     .orderBy('createdAt','desc').limit(50).get()
