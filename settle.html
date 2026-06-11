@@ -22360,38 +22360,6 @@ function pageSettle(){
   dlBtn.onclick=function(){_txsBulkExcelDownload();};
   tr.appendChild(dlBtn);
 
-  // ★ 슈퍼어드민 전용 업종 테스트 드롭다운 (자기 방에서만)
-  var _isSAOwn = (SUPER_ADMIN_EMAILS&&_CU&&SUPER_ADMIN_EMAILS.indexOf(_CU.email)>=0);
-  if(_isSAOwn){
-    var saLabel=document.createElement('span');
-    saLabel.textContent='🧪 업종:';
-    saLabel.style.cssText='margin-left:8px;font-size:11px;color:var(--acc);font-weight:700';
-    tr.appendChild(saLabel);
-
-    var saSelect=document.createElement('select');
-    saSelect.id='sa-industry-select';
-    saSelect.style.cssText='margin-left:4px;padding:5px 8px;background:var(--bg3);color:var(--text1);border:1px solid var(--acc);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer';
-    saSelect.innerHTML=
-      '<option value="coupang">🚚 쿠팡</option>'+
-      '<option value="delivery">🛵 배달대행</option>'+
-      '<option value="cleaning">🧹 청소·파견</option>'+
-      '<option value="insurance">🛡️ 보험</option>'+
-      '<option value="construction">🏗️ 건설</option>'+
-      '<option value="quick">🚗 퀵</option>'+
-      '<option value="beauty">💇 뷰티</option>'+
-      '<option value="universal">📋 범용</option>';
-
-    var curInd=(_COMPANY_CFG&&_COMPANY_CFG.industryType)||_SA_TEST_INDUSTRY||'coupang';
-    saSelect.value=curInd;
-
-    saSelect.onchange=function(){
-      _SA_TEST_INDUSTRY=this.value;
-      if(!_COMPANY_CFG) _COMPANY_CFG={};
-      _COMPANY_CFG.industryType=this.value;
-      toast('🧪 업종 전환: '+this.options[this.selectedIndex].text);
-    };
-    tr.appendChild(saSelect);
-  }
 
   var c=document.getElementById('content');
   c.innerHTML='<div class="loading">로딩 중...</div>';
