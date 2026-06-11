@@ -19751,6 +19751,14 @@ function pageCleanPricing(){
       '<input type="file" id="cp-excel-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="_importCleanPricing(this)">'+
       '<button onclick="_saveCleanPricing()" style="width:100%;padding:12px;background:var(--acc);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">💾 단가 저장</button>'+
     '</div>';
+
+    // ★ 버튼 이벤트 등록 (innerHTML 완료 후)
+    setTimeout(function(){
+      var importBtn=document.getElementById('cp-import-btn');
+      if(importBtn) importBtn.onclick=function(){
+        document.getElementById('cp-excel-input').click();
+      };
+    }, 100);
   });
 }
 
@@ -20413,23 +20421,6 @@ function pageCleanSettle(){
   var did=_CU.dealerId||_CU.uid;
   c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
 
-  // 상단 액션 버튼
-  var tr=document.getElementById('topbar-right');
-  if(tr){
-    tr.innerHTML='';
-    var uploadBtn=document.createElement('button');
-    uploadBtn.textContent='📥 정산 엑셀 업로드';
-    uploadBtn.style.cssText='padding:6px 14px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;margin-left:6px';
-    uploadBtn.onclick=function(){
-      // 업종 강제 청소로 설정
-      if(!_COMPANY_CFG) _COMPANY_CFG={};
-      _COMPANY_CFG.industryType='cleaning';
-      _SA_TEST_INDUSTRY='cleaning';
-      document.getElementById('excel-input').click();
-    };
-    tr.appendChild(uploadBtn);
-  }
-
   _db.collection('clean_orders').where('dealerId','==',did)
     .orderBy('createdAt','desc').limit(50).get()
   .then(function(snap){
@@ -20440,9 +20431,6 @@ function pageCleanSettle(){
 
     var statusMap={READY:'준비',HOLD:'보류',DONE:'완료',CANCEL:'취소'};
     var statusColor={READY:'#3b82f6',HOLD:'#f59e0b',DONE:'#10b981',CANCEL:'#ef4444'};
-    var typeMap={'B2C_MOVE':'B2C 이사청소','B2C_NEW':'B2C 준공청소',
-      'B2B_OFFICE':'B2B 사무실','B2B_SPECIAL':'B2B 특수청소',
-      'cleaning':'청소·파견','team':'팀단위'};
 
     var totalBilling=0,totalMargin=0,totalPayout=0;
     var rows='';
