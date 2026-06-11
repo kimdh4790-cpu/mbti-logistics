@@ -34936,7 +34936,7 @@ function pageIndustry(type, title){
   _db.collection('settlements')
     .where('dealerId','==',did)
     .where('industryType','==',type)
-    .orderBy('month','desc').limit(12).get()
+    .limit(12).get()
   .then(function(snap){
     var history=[];
     snap.forEach(function(d){history.push(Object.assign({id:d.id},d.data()));});
@@ -34985,7 +34985,8 @@ function pageIndustry(type, title){
         '</button>'+
         histHtml+
       '</div>';
-  }).catch(function(){
+  }).catch(function(e){
+    console.warn('정산이력 로드 실패(정상):', e.message);
     // 정산이력 없어도 페이지 표시
     c.innerHTML=
       '<div style="max-width:700px;margin:0 auto;padding:16px">'+
