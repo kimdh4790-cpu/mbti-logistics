@@ -25084,6 +25084,32 @@ function pageDrivers(){
   document.getElementById('page-title').textContent='기사 관리';
   var tr=document.getElementById('topbar-right');tr.innerHTML='';
   var btn=document.createElement('button');btn.className='btn btn-blue btn-sm';btn.textContent='+ 기사 추가';btn.onclick=openAddDriver;tr.appendChild(btn);
+  if(_CU&&SUPER_ADMIN_EMAILS.includes(_CU.email)){
+    var cleanBtn=document.createElement('button');
+    cleanBtn.style.cssText='margin-left:6px;background:#dc2626;color:#fff;border:none;padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer';
+    cleanBtn.textContent='🧹 청소인력 분리';
+    cleanBtn.onclick=function(){
+      if(!confirm('청소·파견 인력을 clean_workers로 이동합니다')) return;
+      var did=_CU.dealerId||_CU.uid;
+      _db.collection('drivers').where('dealerId','==',did)
+        .where('jobsub','==','청소·파견').get()
+      .then(function(snap){
+        if(snap.empty){toast('청소·파견 인력 없음');return;}
+        var cnt=snap.size, done=0;
+        snap.forEach(function(d){
+          _db.collection('clean_workers').add(
+            Object.assign({},d.data(),{migratedAt:new Date().toISOString()})
+          ).then(function(){
+            return _db.collection('drivers').doc(d.id).delete();
+          }).then(function(){
+            done++;
+            if(done===cnt){toast('✅ '+cnt+'명 이동 완료');pageDrivers();}
+          });
+        });
+      }).catch(function(e){toast('❌ '+e.message);});
+    };
+    tr.appendChild(cleanBtn);
+  }
   var btnBulk=document.createElement('button');btnBulk.className='btn btn-sm';
   btnBulk.style.cssText='background:#7c3aed;color:#fff;font-size:11px';
   btnBulk.textContent='📂 일괄 등록';btnBulk.onclick=_openBulkDriverRegister;tr.appendChild(btnBulk);
