@@ -20475,8 +20475,21 @@ function pageCleanSettle(){
   _db.collection('clean_orders').where('dealerId','==',did)
     .orderBy('createdAt','desc').limit(50).get()
   .then(function(snap){
+    var uploadBtnHtml=
+      '<div style="display:flex;gap:8px;margin-bottom:12px">'+
+        '<button id="clean-excel-upload-btn" style="padding:8px 16px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📥 정산 엑셀 업로드</button>'+
+        '<button onclick="navigate('clean_order')" style="padding:8px 16px;background:var(--acc);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">+ 새 의뢰 작성</button>'+
+      '</div>';
+
     if(snap.empty){
-      c.innerHTML='<div class="empty">📝 등록된 의뢰 없음<br><small>의뢰서 작성에서 추가하세요</small></div>';
+      c.innerHTML=uploadBtnHtml+'<div class="empty">📝 등록된 의뢰 없음</div>';
+      var btn=document.getElementById('clean-excel-upload-btn');
+      if(btn) btn.onclick=function(){
+        if(!_COMPANY_CFG) _COMPANY_CFG={};
+        _COMPANY_CFG.industryType='cleaning';
+        _SA_TEST_INDUSTRY='cleaning';
+        document.getElementById('excel-input').click();
+      };
       return;
     }
 
@@ -20506,6 +20519,9 @@ function pageCleanSettle(){
 
     c.innerHTML=
       '<div style="max-width:700px;margin:0 auto;padding:16px">'+
+        '<div style="display:flex;gap:8px;margin-bottom:12px">'+
+          '<button id="clean-excel-upload-btn" style="padding:8px 16px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📥 정산 엑셀 업로드</button>'+
+        '</div>'+
         '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">'+
           '<div style="background:var(--bg2);border-radius:10px;padding:12px;text-align:center">'+
             '<div style="font-size:10px;color:var(--text3)">총 청구</div>'+
@@ -20537,6 +20553,13 @@ function pageCleanSettle(){
       '</div>';
     var newBtn=document.getElementById('clean-new-btn');
     if(newBtn) newBtn.onclick=function(){navigate('clean_order');};
+    var uploadBtn=document.getElementById('clean-excel-upload-btn');
+    if(uploadBtn) uploadBtn.onclick=function(){
+      if(!_COMPANY_CFG) _COMPANY_CFG={};
+      _COMPANY_CFG.industryType='cleaning';
+      _SA_TEST_INDUSTRY='cleaning';
+      document.getElementById('excel-input').click();
+    };
   }).catch(function(e){c.innerHTML='<div class="empty">오류: '+e.message+'</div>';});
 }
 
