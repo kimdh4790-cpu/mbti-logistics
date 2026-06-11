@@ -2498,155 +2498,188 @@ function _parseCleaningExcel(file, month){
       var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
       if(!rows.length){toast('❌ 데이터 없음');return;}
 
-      // 헤더 찾기 (최대 5행 스캔)
+      // ★ 헤더 자동 감지 (최대 5행 스캔)
       var headerRow=0;
       for(var hi=0;hi<Math.min(5,rows.length);hi++){
         var r=rows[hi];
-        if(r&&r.some(function(v){var s=String(v||'');return s.includes('이름')||s.includes('성명')||s.includes('팀장')||s.includes('직원');})){
-          headerRow=hi; break;
-        }
+        if(r&&r.some(function(v){
+          var s=String(v||'').trim();
+          return s==='이름'||s==='성명'||s.includes('직원')||s.includes('팀장')||s.includes('매니저')||s==='사원ID'||s==='사원 ID';
+        })){headerRow=hi;break;}
       }
       var headers=rows[headerRow].map(function(h){return String(h||'').trim();});
 
       function col(keywords){
         return headers.findIndex(function(h){
-          return keywords.some(function(k){return h.includes(k);});
+          return keywords.some(function(k){return h.replace(/[\s\/\[\]()（）]/g,'').includes(k.replace(/[\s\/\[\]()（）]/g,''));});
         });
       }
 
-      // 컬럼 매핑 — 최대한 포괄적
-      var iName   = col(['이름','성명','직원','팀장','매니저','담당자','작업자']);
-      var iRole   = col(['역할','구분','직책','포지션']);
-      var iSite   = col(['현장','현장명','프로젝트','작업지']);
-      var iCamp   = col(['캠프','부서','팀','지점','소속']);
-      var iId     = col(['ID','아이디','사번','코드']);
-      // 금액 계산
-      var iDays   = col(['출근','일수','근무일','작업일수']);
-      var iRate   = col(['시급','일당','단가','시간당']);
-      var iHours  = col(['시간','작업시간','근무시간']);
-      var iSales  = col(['고객결제','매출','청구','계약금','수입','청구금']);
-      var iRatio  = col(['배분율','지급율','수수료율','비율(%)','배분(%)']);
-      var iBase   = col(['기본수당','기본급','기본지급','기본페이']);
-      var iExtra  = col(['추가수당','추가작업','현장추가','할증','인센']);
-      var iTrans  = col(['유류비','교통비','출장비','이동비','차비']);
-      var iPenalty= col(['패널티','벌금','감점공제','불량공제']);
-      var iPenaltyReason = col(['패널티사유','불량사유','공제사유','사유']);
-      var iDeduct = col(['공제','지각','차감','기타공제']);
-      var iMeal   = col(['식대','식비','식사비']);
-      var iGross  = col(['세전','총지급','지급총액','지급액(세전)','총액']);
-      var iTax    = col(['3.3','원천','소득세','세금','공제세']);
-      var iNet    = col(['실지급','최종','계좌','이체','순지급','최종지급']);
+      // ── 컬럼 매핑 (최대 포괄) ──
+      var iId     = col(['사원ID','사원id','ID']);
+      var iName   = col(['이름','성명','직원','팀장','매니저','담당자','작업자','성명']);
+      var iTeam   = col(['소속팀','팀명','팀','소속']);
+      var iRole   = col(['직책','역할','구분','포지션']);
+      var iSite   = col(['현장','현장명','프로젝트','작업지','근무지']);
+      var iCamp   = col(['캠프','부서','지점','소속캠프']);
+      var iEmp    = col(['고용형태','고용','형태','계약']);
+      // 기간
+      var iDate   = col(['출근여부','당일출근','출근']);
+      var iDays   = col(['출근일수','일수','근무일','주간출근일','주간누적출근일']);
+      var iHours  = col(['근무시간','작업시간','시간','당일실근무','월누적시간']);
+      // 금액
+      var iRate   = col(['시급','일당단가','기본일당','일당','단가','시간당']);
+      var iBase   = col(['기본급','기본수당','기본수수료','기본용역','기본급여','수수료']);
+      var iOver   = col(['연장수당','야간수당','연장야간','연장/야간','초과수당']);
+      var iWeekly = col(['주휴수당','주휴']);
+      var iInc    = col(['인센','인센티브','성과','보너스','팀장인센']);
+      // 차감
+      var iEqTeam = col(['팀별공동차감','장비대여','공동장비','팀장비','고압세척기']);
+      var iSup    = col(['소모품비','약품비','소모품','약품']);
+      var iEqPers = col(['개인차감','장비파손','지각','개인공제']);
+      var iEqRent = col(['장비대여료','장비차감','장비상각','본사장비']);
+      var iPenalty= col(['패널티','벌금','불량공제']);
+      var iPenRsn = col(['패널티사유','불량사유','공제사유']);
+      var iDeduct = col(['공제','차감','기타공제','기타차감']);
+      var iMeal   = col(['식대','식비']);
+      var iTrans  = col(['유류비','교통비','출장비','이동비']);
+      // 세금
+      var iGross  = col(['세전총액','총지급액','지급총액','세전합계','당일세전','월총지급']);
+      var iEmpIns = col(['고용보험','고용(0.9%)','0.9%']);
+      var iTax    = col(['사업소득세','3.3%','원천징수','소득세']);
+      var iHold   = col(['유보금','보류금','분쟁유보','배상차감','당일분쟁','당일유보']);
+      var iNet    = col(['최종이체','실지급','계좌이체액','최종실지급','최종계좌']);
+      var iStatus = col(['지급상태','상태','지급']);
+      var iTs     = col(['타임스탬프','이체완료','시간']);
 
-      if(iName<0){toast('❌ 이름/직원 컬럼 없음. 헤더: '+headers.slice(0,6).join(', '));return;}
+      if(iName<0){toast('❌ 이름 컬럼 없음. 헤더: '+headers.slice(0,6).join(', '));return;}
 
-      // 방식 자동 감지
-      var isHourly  = (iDays>=0 && (iRate>=0||iHours>=0));
-      var isPerCase = (iSales>=0 || iBase>=0 || iGross>=0 || iNet>=0);
-      var isTeam    = (iRole>=0 || iSite>=0 || iPenalty>=0);
-      var mode = isHourly?'hourly': isTeam?'team':'percase';
-      toast('📂 '+month+' 청소·파견 파싱 중... ['+(mode==='hourly'?'시간제':mode==='team'?'팀단위':'건당/금액제')+']');
+      // ── 방식 자동 감지 ──
+      var hasHourly  = (iHours>=0||iDays>=0)&&iRate>=0;
+      var hasPerCase = iBase>=0||iGross>=0||iNet>=0;
+      var hasTeam    = iTeam>=0||iEqTeam>=0||iRole>=0||iSite>=0;
+      var hasPenalty = iPenalty>=0||iHold>=0;
+
+      var mode = hasHourly?'hourly': hasTeam?'team':'percase';
+
+      // 기간 감지
+      var period = 'monthly';
+      if(headers.some(function(h){return h.includes('당일')||h.includes('일당')||h.includes('타임스탬프');})) period='daily';
+      else if(headers.some(function(h){return h.includes('주간')||h.includes('주차');})) period='weekly';
+
+      toast('📂 '+month+' 청소·파견 ['+mode+'/'+period+'] 파싱 중...');
 
       var results=[];
       rows.slice(headerRow+1).forEach(function(row){
         var name=String(row[iName]||'').trim(); if(!name) return;
-        var camp=iCamp>=0?String(row[iCamp]||'').trim():'';
-        var site=iSite>=0?String(row[iSite]||'').trim():'';
-        var role=iRole>=0?String(row[iRole]||'').trim():'';
-        var id=iId>=0?String(row[iId]||'').trim():'';
-        var gross=0, tax=0, net=0, extras=[];
-        var penaltyAmt=0, penaltyReason='';
 
-        var v=function(i){return i>=0?parseFloat(String(row[i]||'').replace(/,/g,'').replace(/%/g,''))||0:0;};
+        // 결근·휴무·배제 스킵
+        var status=iStatus>=0?String(row[iStatus]||'').trim():'';
+        if(status.includes('결근')||status.includes('배제')||status.includes('휴무')) return;
+
+        var id    = iId>=0?String(row[iId]||'').trim():'';
+        var team  = iTeam>=0?String(row[iTeam]||'').trim():'';
+        var role  = iRole>=0?String(row[iRole]||'').trim():'';
+        var site  = iSite>=0?String(row[iSite]||'').trim():'';
+        var camp  = iCamp>=0?String(row[iCamp]||'').trim():(team||site);
+        var emp   = iEmp>=0?String(row[iEmp]||'').trim():'';
+        var ts    = iTs>=0?String(row[iTs]||'').trim():'';
+        var isHold= status.includes('HOLD')||status.includes('보류')||status.includes('유보');
+
+        var v=function(i){
+          if(i<0) return 0;
+          var raw=String(row[i]||'').replace(/,/g,'').replace(/%/g,'').trim();
+          return parseFloat(raw)||0;
+        };
+
+        var gross=0, empIns=0, tax33=0, holdAmt=0, net=0;
+        var extras=[];
+
+        // ── 금액 계산 ──
+        var baseAmt  = v(iBase);
+        var overAmt  = v(iOver);
+        var weekAmt  = v(iWeekly);
+        var incAmt   = v(iInc);
+        var eqTeam   = v(iEqTeam);  // 팀별 장비차감 (음수)
+        var supAmt   = v(iSup);     // 소모품비 (음수)
+        var eqPers   = v(iEqPers);  // 개인장비차감 (음수)
+        var eqRent   = v(iEqRent);  // 장비대여료 (음수)
+        var penAmt   = v(iPenalty);
+        var deductAmt= v(iDeduct);
+        var mealAmt  = v(iMeal);
+        var transAmt = v(iTrans);
+        var grossDirect = v(iGross);
+        var netDirect   = v(iNet);
+        var empInsDirect= v(iEmpIns);
+        var taxDirect   = v(iTax);
+        holdAmt = Math.abs(v(iHold));
 
         if(mode==='hourly'){
-          // 시간제
-          var days=v(iDays), rate=v(iRate), hrs=v(iHours);
-          var deduct=v(iDeduct), meal=v(iMeal);
-          if(hrs>0&&rate>0) gross=hrs*rate;
-          else gross=days*rate;
-          gross+=meal-deduct;
-          if(days>0||hrs>0) extras.push({label:(days>0?'근무'+days+'일':'작업'+hrs+'시간')+'×'+rate.toLocaleString()+'원',value:days>0?days*rate:hrs*rate});
-          if(meal>0) extras.push({label:'식대',value:meal});
-          if(deduct>0) extras.push({label:'공제',value:-deduct});
-
-        } else if(mode==='team'){
-          // 팀단위/건당 혼합
-          penaltyAmt=v(iPenalty);
-          penaltyReason=iPenaltyReason>=0?String(row[iPenaltyReason]||'').trim():'';
-          var baseAmt=v(iBase), extraAmt=v(iExtra), transAmt=v(iTrans);
-          var grossDirect=v(iGross), netDirect=v(iNet);
-          var salesAmt=v(iSales), ratio=v(iRatio);
-
-          if(netDirect>0){
-            net=netDirect;
-            gross=grossDirect>0?grossDirect:net+penaltyAmt;
-          } else if(grossDirect>0){
-            gross=grossDirect-penaltyAmt;
-          } else if(salesAmt>0&&ratio>0){
-            gross=Math.round(salesAmt*(ratio/100))+extraAmt+transAmt-penaltyAmt;
-          } else {
-            gross=baseAmt+extraAmt+transAmt-penaltyAmt;
-          }
-
-          if(baseAmt>0) extras.push({label:'기본수당',value:baseAmt});
-          if(extraAmt>0) extras.push({label:'추가수당',value:extraAmt});
-          if(transAmt>0) extras.push({label:'유류비',value:transAmt});
-          if(penaltyAmt>0) extras.push({label:'패널티'+(penaltyReason?'('+penaltyReason+')':''),value:-penaltyAmt});
-          if(role) extras.push({label:'역할',value:role});
-          if(site) extras.push({label:'현장',value:site});
-
+          var hours=v(iHours); var days=v(iDays); var rate=v(iRate);
+          var base=hours>0?hours*rate : days>0?days*rate : baseAmt;
+          gross=base+overAmt+weekAmt+incAmt+mealAmt+transAmt+eqTeam+supAmt+eqPers+eqRent-penAmt-deductAmt;
+          if(base>0) extras.push({label:(hours>0?hours+'시간':''+days+'일')+'×'+Math.round(rate).toLocaleString(),value:base});
+        } else if(grossDirect>0){
+          gross=grossDirect+eqTeam+supAmt+eqPers+eqRent;
         } else {
-          // 건당/금액제
-          var salesAmt=v(iSales), ratio=v(iRatio);
-          var baseAmt=v(iBase), extraAmt=v(iExtra), transAmt=v(iTrans);
-          var deductAmt=v(iDeduct), mealAmt=v(iMeal);
-          var grossDirect=v(iGross), netDirect=v(iNet), taxDirect=v(iTax);
-
-          if(netDirect>0&&grossDirect>0){
-            gross=grossDirect; net=netDirect; tax=gross-net;
-          } else if(grossDirect>0){
-            gross=grossDirect;
-          } else if(salesAmt>0&&ratio>0){
-            gross=Math.round(salesAmt*(ratio/100))+extraAmt+transAmt+mealAmt-deductAmt;
-          } else {
-            gross=baseAmt+extraAmt+transAmt+mealAmt-deductAmt;
-          }
-
-          if(salesAmt>0) extras.push({label:'매출',value:salesAmt});
-          if(baseAmt>0) extras.push({label:'기본수당',value:baseAmt});
-          if(extraAmt>0) extras.push({label:'추가수당',value:extraAmt});
-          if(transAmt>0) extras.push({label:'유류비',value:transAmt});
-          if(mealAmt>0) extras.push({label:'식대',value:mealAmt});
-          if(deductAmt>0) extras.push({label:'공제',value:-deductAmt});
+          gross=baseAmt+overAmt+weekAmt+incAmt+mealAmt+transAmt+eqTeam+supAmt+eqPers+eqRent-penAmt-deductAmt;
         }
 
-        // 세금 계산 (직접 입력 우선)
-        var taxDirect=v(iTax), netDirect2=v(iNet);
-        if(taxDirect>0){
-          tax=taxDirect; net=gross-tax;
-        } else if(netDirect2>0&&mode!=='team'){
-          net=netDirect2; tax=gross-net;
-        } else if(net===0){
-          tax=Math.round(gross*0.033); net=gross-tax;
+        // 세금
+        if(taxDirect>0){ tax33=taxDirect; }
+        else if(emp.includes('3.3')||emp.toUpperCase().includes('FREELANCER')||id.toUpperCase().includes('FREELANCER')){
+          tax33=Math.round(Math.abs(gross)*0.033);
+        }
+        if(empInsDirect>0){ empIns=empInsDirect; }
+        else if(emp.includes('DAILY')||emp.includes('일용')){
+          empIns=Math.round(Math.abs(gross)*0.009);
         }
 
-        if(gross<=0&&net<=0) return; // 빈 행 스킵
+        // 실지급
+        if(netDirect>0){ net=netDirect; }
+        else { net=gross-tax33-empIns-holdAmt; }
+
+        // extras 구성
+        if(baseAmt>0&&mode!=='hourly') extras.push({label:'기본수당',value:baseAmt});
+        if(overAmt>0) extras.push({label:'연장/야간수당',value:overAmt});
+        if(weekAmt>0) extras.push({label:'주휴수당',value:weekAmt});
+        if(incAmt>0)  extras.push({label:'인센티브',value:incAmt});
+        if(mealAmt>0) extras.push({label:'식대',value:mealAmt});
+        if(transAmt>0) extras.push({label:'유류비',value:transAmt});
+        if(eqTeam<0)  extras.push({label:'[팀]장비차감('+team+')',value:eqTeam});
+        if(supAmt<0)  extras.push({label:'[팀]소모품차감',value:supAmt});
+        if(eqPers<0)  extras.push({label:'[개인]장비차감',value:eqPers});
+        if(eqRent<0)  extras.push({label:'장비대여료',value:eqRent});
+        if(penAmt>0)  extras.push({label:'패널티'+(iPenRsn>=0&&row[iPenRsn]?'('+String(row[iPenRsn]||'')+')':""),value:-penAmt});
+        if(holdAmt>0) extras.push({label:'분쟁유보금',value:-holdAmt});
+        if(team)      extras.push({label:'소속팀',value:team});
+        if(role)      extras.push({label:'역할',value:role});
+        if(ts)        extras.push({label:'이체시각',value:ts});
+        if(period!=='monthly') extras.push({label:'정산기간',value:period==='daily'?'일당':'주간'});
+
+        if(Math.abs(gross)<=0&&Math.abs(net)<=0) return;
 
         results.push({
-          name:name, camp:camp||site, id:id,
-          gross:Math.max(0,gross),
-          tax33:Math.max(0,tax),
-          net:Math.max(0,net),
+          name:name, camp:camp||site||team, id:id,
+          gross:Math.round(gross),
+          tax33:tax33,
+          empIns:empIns,
+          net:Math.round(net),
+          holdAmt:holdAmt,
           extras:extras,
           industryType:'cleaning',
-          role:role,
-          site:site
+          role:role, team:team, site:site,
+          empType:emp, period:period,
+          isHold:isHold,
+          status:status
         });
       });
 
       if(!results.length){toast('❌ 파싱된 직원 없음');return;}
-      toast('✅ 청소·파견 파싱 완료 — '+results.length+'명 ['+mode+']');
-      _renderIndustrySettle(results, month, '🧹 청소·파견');
+
+      var holdCnt=results.filter(function(r){return r.isHold;}).length;
+      toast('✅ 청소·파견 파싱 완료 — '+results.length+'명 ['+mode+'/'+period+']'+(holdCnt>0?' ⚠️HOLD '+holdCnt+'명':''));
+      _renderIndustrySettle(results, month, '🧹 청소·파견 ('+period+')');
     }catch(err){toast('❌ 파싱 오류: '+err.message);console.error(err);}
   };
   reader.readAsArrayBuffer(file);
