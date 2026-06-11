@@ -4659,6 +4659,7 @@ function showApp(){
   }
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='flex';
+  setTimeout(_migrateCleanWorkersFromDrivers,3000);
   // ★ trial 기간 즉시 체크 → 기능  해제
   if(_CU&&!isSuperAdmin()&&_db){
     var _trialDid=_CU.dealerId||_CU.uid;
