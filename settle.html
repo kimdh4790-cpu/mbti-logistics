@@ -19743,9 +19743,35 @@ function pageCleanPricing(){
         _cleanPriceRow('waitFeePerHour','대기 시간당 요금','원',p.waitFeePerHour||30000)+
       '</div>'+
 
+      // 장비/약품 기본 단가표
+      '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">'+
+        '<div style="font-size:12px;font-weight:800;margin-bottom:4px">🔧 장비/약품 기본 단가표 <span style="font-size:10px;color:var(--text3);font-weight:400">(1/N 자동 차감 기준값)</span></div>'+
+        '<div style="font-size:10px;color:var(--acc);margin-bottom:8px">💡 AI정산 업로드 시 이 단가로 팀별 인당 자동 차감됩니다</div>'+
+        _renderEqDefaults(p)+
+      '</div>'+
+
       '<button onclick="_saveCleanPricing()" style="width:100%;padding:12px;background:var(--acc);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">💾 단가 저장</button>'+
     '</div>';
   });
+}
+
+function _renderEqDefaults(p){
+  var cats={기계:'🔧 기계류',약품:'🧪 약품류',소모품:'📦 소모품'};
+  var html='';
+  var lastCat='';
+  CLEAN_EQ_DEFAULTS.forEach(function(eq){
+    if(eq.category!==lastCat){
+      if(lastCat) html+='</div>';
+      html+='<div style="font-size:10px;font-weight:700;color:var(--text3);margin:8px 0 4px">'+cats[eq.category]+'</div><div>';
+      lastCat=eq.category;
+    }
+    var val=p['eq_'+eq.code]||eq.default;
+    html+=_cleanPriceRow('eq_'+eq.code,
+      eq.name+' <span style="font-size:9px;color:var(--text3)">('+eq.min.toLocaleString()+'~'+eq.max.toLocaleString()+'원/'+eq.unit+')</span>',
+      '원', val);
+  });
+  if(lastCat) html+='</div>';
+  return html;
 }
 
 function _cleanPriceRow(id,label,unit,val){
@@ -19756,15 +19782,39 @@ function _cleanPriceRow(id,label,unit,val){
   '</div>';
 }
 
+// 장비/약품 마스터 기본 단가 (DB 기본값)
+var CLEAN_EQ_DEFAULTS = [
+  // 기계류
+  {code:'EQ-001', name:'마루광택기(돌돌이 16인치)', category:'기계', unit:'일/대', min:30000, max:40000, default:35000},
+  {code:'EQ-002', name:'건습식청소기(3모터)', category:'기계', unit:'일/대', min:25000, max:35000, default:30000},
+  {code:'EQ-003', name:'고압세척기(엔진형250바+)', category:'기계', unit:'일/대', min:70000, max:100000, default:80000},
+  {code:'EQ-004', name:'바닥스크러버(보행식)', category:'기계', unit:'일/대', min:15000, max:20000, default:17000},
+  {code:'EQ-005', name:'피톤치드연무기/오존살균기', category:'기계', unit:'일/대', min:20000, max:30000, default:25000},
+  {code:'EQ-006', name:'대형송풍기(바닥건조용)', category:'기계', unit:'일/대', min:10000, max:10000, default:10000},
+  // 약품
+  {code:'CH-001', name:'바닥고급왁스(1말통)', category:'약품', unit:'통', min:45000, max:65000, default:55000},
+  {code:'CH-002', name:'박리제(왁스제거 1말통)', category:'약품', unit:'통', min:35000, max:50000, default:42000},
+  {code:'CH-003', name:'외벽백화제거제(1말통)', category:'약품', unit:'통', min:40000, max:60000, default:50000},
+  {code:'CH-004', name:'화재그을음분해제(1말통)', category:'약품', unit:'통', min:55000, max:75000, default:65000},
+  {code:'CH-005', name:'오렌지오일다목적세제(1말통)', category:'약품', unit:'통', min:30000, max:45000, default:37000},
+  {code:'CH-006', name:'유지분해제(주방기름때 1말통)', category:'약품', unit:'통', min:35000, max:45000, default:40000},
+  // 소모품
+  {code:'SP-001', name:'바닥패드(블랙/레드/화이트 1장)', category:'소모품', unit:'장', min:7000, max:10000, default:8000},
+  {code:'SP-002', name:'스크래퍼칼날(헤라리필 10개입)', category:'소모품', unit:'통', min:4000, max:5000, default:4500},
+  {code:'SP-003', name:'극세사타월(10장 묶음)', category:'소모품', unit:'묶음', min:6000, max:8000, default:7000},
+  {code:'SP-004', name:'종량제봉투/마대(100L 묶음)', category:'소모품', unit:'묶음', min:5000, max:8000, default:6000},
+];
+
 function _saveCleanPricing(){
   var did=_CU.dealerId||_CU.uid;
+  var eqFields=CLEAN_EQ_DEFAULTS.map(function(eq){return 'eq_'+eq.code;});
   var fields=['p20','p25','p30','p35','p40','p50','p60','pExtra',
     'surFloor','surExpand','surMold','surNicotine','surPet','surJunk','surNewbuild',
     'optFridge','optAirwall','optAirsys','optWasher','optOven','optSteam','optPhyton',
     'cancel24','cancel12','cancelNoshow','cancelManagerComp',
     'minOrder','distLimit','transFeePerKm','waitFeePerHour'];
   var obj={updatedAt:new Date().toISOString()};
-  fields.forEach(function(f){
+  fields.concat(eqFields).forEach(function(f){
     var el=document.getElementById('cp-'+f);
     if(el) obj[f]=parseFloat(el.value)||0;
   });
