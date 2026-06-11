@@ -19626,7 +19626,6 @@ function _filterMenusByServices(menus){
     delivery:['delivery','any_paid','free'],
     universal:['universal','any_paid','free'],
     inventory:['inventory','free'],
-    sa_only:[],  // 슈퍼어드민 전용 — 일반 고객 노출 안 함
     qr:['qr','qr_payroll','any_paid','free'],
     payroll:['payroll','qr_payroll','any_paid','free'],
   };
@@ -19708,11 +19707,11 @@ var MENUS_SETTLE = [
     {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'universal'}
   ]},
   {s:'🧹 청소업 관리', items:[
-    {ic:'📝',l:'의뢰서 작성',       p:'clean_order',      plan_key:'sa_only'},
-    {ic:'💰',l:'단가 설정',          p:'clean_pricing',    plan_key:'sa_only'},
-    {ic:'👷',l:'인력 관리',          p:'clean_workers',    plan_key:'sa_only'},
-    {ic:'🔧',l:'현장 출고 컨펌',    p:'clean_dispatch',   plan_key:'sa_only'},
-    {ic:'📊',l:'정산 현황',          p:'clean_settle',     plan_key:'sa_only'},
+    {ic:'📝',l:'의뢰서 작성',       p:'clean_order',      plan_key:'settle'},
+    {ic:'💰',l:'단가 설정',          p:'clean_pricing',    plan_key:'settle'},
+    {ic:'👷',l:'인력 관리',          p:'clean_workers',    plan_key:'settle'},
+    {ic:'🔧',l:'현장 출고 컨펌',    p:'clean_dispatch',   plan_key:'settle'},
+    {ic:'📊',l:'정산 현황',          p:'clean_settle',     plan_key:'settle'},
   ]},
   {s:'📦 재고관리', items:[
     {ic:'📦',l:'재고관리',          p:'inventory',        plan_key:'inventory'},
