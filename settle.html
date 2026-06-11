@@ -19320,6 +19320,7 @@ var MENUS_SETTLE = [
     {ic:'📊',l:'과장별 취합',        p:'inv_summary',      plan_key:'inventory'},
     {ic:'📋',l:'수정 이력',          p:'inv_edit_log',     plan_key:'inventory'},
     {ic:'🕐',l:'업로드 변경이력',    p:'inv_change_log',   plan_key:'inventory'},
+    {ic:'📅',l:'월별 통계',           p:'inv_monthly',       plan_key:'inventory'},
   ]},
   {s:'🔐 QR 근태관리', items:[
     {ic:'🔐',l:'QR 출퇴근',        p:'attendance',       plan_key:'premium'},
@@ -19492,6 +19493,131 @@ var MENUS_HOURLY = [
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 // 과장별 취합 (관리자용)
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 📅 재고 월별 입출고 통계
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function pageInvMonthly(){
+  document.getElementById('page-title').textContent='📅 월별 입출고 통계';
+  var c=document.getElementById('content');
+  var did=_CU.dealerId||_CU.uid;
+
+  // 월 선택
+  var now=new Date();
+  var selYear=now.getFullYear();
+  var selMonth=now.getMonth()+1;
+
+  function render(){
+    var ym=selYear+'-'+String(selMonth).padStart(2,'0');
+    var ymStart=new Date(selYear,selMonth-1,1);
+    var ymEnd=new Date(selYear,selMonth,1);
+
+    c.innerHTML='<div style="max-width:700px;margin:0 auto;padding:16px">'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">'+
+        '<button onclick="_invMonthPrev()" style="padding:6px 12px;background:var(--bg3);border:none;border-radius:8px;color:var(--text1);cursor:pointer;font-size:14px">◀</button>'+
+        '<div style="flex:1;text-align:center;font-size:15px;font-weight:800">'+selYear+'년 '+selMonth+'월 입출고 통계</div>'+
+        '<button onclick="_invMonthNext()" style="padding:6px 12px;background:var(--bg3);border:none;border-radius:8px;color:var(--text1);cursor:pointer;font-size:14px">▶</button>'+
+      '</div>'+
+      '<div id="inv-monthly-content" style="background:var(--bg2);border-radius:12px;padding:16px">'+
+        '<div class="loading">⏳ 집계 중...</div>'+
+      '</div>'+
+    '</div>';
+
+    window._invMonthPrev=function(){
+      selMonth--;
+      if(selMonth<1){selMonth=12;selYear--;}
+      render();
+    };
+    window._invMonthNext=function(){
+      selMonth++;
+      if(selMonth>12){selMonth=1;selYear++;}
+      render();
+    };
+
+    Promise.all([
+      _db.collection('inventory_in').where('dealerId','==',did).get(),
+      _db.collection('inventory_out').where('dealerId','==',did).get()
+    ]).then(function(res){
+      var mc=document.getElementById('inv-monthly-content');
+      if(!mc) return;
+
+      // 월별 필터
+      var inData={}, outData={};
+      res[0].forEach(function(d){
+        var dd=d.data();
+        var dt=dd.date||dd.createdAt||'';
+        if(dt.slice(0,7)===ym){
+          var key=dd.itemName||dd.itemCode||'미분류';
+          if(!inData[key]) inData[key]={qty:0,amount:0};
+          inData[key].qty+=(dd.qty||0);
+          inData[key].amount+=(dd.qty||0)*(dd.price||0);
+        }
+      });
+      res[1].forEach(function(d){
+        var dd=d.data();
+        var dt=dd.date||dd.createdAt||'';
+        if(dt.slice(0,7)===ym){
+          var key=dd.itemName||dd.itemCode||'미분류';
+          if(!outData[key]) outData[key]={qty:0};
+          outData[key].qty+=(dd.qty||0);
+        }
+      });
+
+      var allKeys=[...new Set([...Object.keys(inData),...Object.keys(outData)])].sort();
+
+      if(!allKeys.length){
+        mc.innerHTML='<div class="empty">해당 월 입출고 데이터 없음</div>';
+        return;
+      }
+
+      var totalIn=0,totalOut=0;
+      Object.values(inData).forEach(function(v){totalIn+=v.qty;});
+      Object.values(outData).forEach(function(v){totalOut+=v.qty;});
+
+      var html=
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">'+
+          '<div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:8px;padding:12px;text-align:center">'+
+            '<div style="font-size:11px;color:var(--text3)">총 입고</div>'+
+            '<div style="font-size:20px;font-weight:800;color:#10b981">'+totalIn.toLocaleString()+'</div>'+
+          '</div>'+
+          '<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:12px;text-align:center">'+
+            '<div style="font-size:11px;color:var(--text3)">총 출고</div>'+
+            '<div style="font-size:20px;font-weight:800;color:#ef4444">'+totalOut.toLocaleString()+'</div>'+
+          '</div>'+
+        '</div>'+
+        '<div style="overflow-x:auto">'+
+        '<table style="width:100%;border-collapse:collapse;font-size:11px">'+
+          '<thead><tr style="background:var(--bg3)">'+
+            '<th style="padding:7px 10px;text-align:left">품목명</th>'+
+            '<th style="padding:7px 10px;text-align:right;color:#10b981">입고</th>'+
+            '<th style="padding:7px 10px;text-align:right;color:#ef4444">출고</th>'+
+            '<th style="padding:7px 10px;text-align:right">회전율</th>'+
+          '</tr></thead><tbody>';
+
+      allKeys.forEach(function(key){
+        var inv=inData[key]||{qty:0};
+        var out=outData[key]||{qty:0};
+        var rate=inv.qty>0?Math.round(out.qty/inv.qty*100):0;
+        var rateColor=rate>=80?'#10b981':rate>=50?'#f59e0b':'#ef4444';
+        html+='<tr style="border-bottom:1px solid var(--border)">'+
+          '<td style="padding:7px 10px;font-weight:600">'+esc(key)+'</td>'+
+          '<td style="padding:7px 10px;text-align:right;color:#10b981;font-weight:700">'+inv.qty.toLocaleString()+'</td>'+
+          '<td style="padding:7px 10px;text-align:right;color:#ef4444;font-weight:700">'+out.qty.toLocaleString()+'</td>'+
+          '<td style="padding:7px 10px;text-align:right;font-weight:700;color:'+rateColor+'">'+rate+'%</td>'+
+        '</tr>';
+      });
+
+      html+='</tbody></table></div>';
+      mc.innerHTML=html;
+    }).catch(function(e){
+      var mc=document.getElementById('inv-monthly-content');
+      if(mc) mc.innerHTML='<div class="empty">오류: '+e.message+'</div>';
+    });
+  }
+
+  render();
+}
+
 function pageInvSummary(){
   document.getElementById('page-title').textContent='📊 과장별 취합';
   var c=document.getElementById('content');
@@ -20432,7 +20558,7 @@ function goPage(page){
   document.getElementById('topbar-right').innerHTML='';
   document.getElementById('sidebar').classList.remove('open');
   var _bd=document.getElementById('sb-backdrop');if(_bd)_bd.style.display='none';
-  var pages={settle:pageSettle,delivery_settle:pageDeliverySettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,my_roster:pageMyRoster,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,emp_home:pageEmpHome,vehicle:pageVehicle,expense:pageExpense,overtime:pageOvertime,evaluation:pageEvaluation,delivery_report:pageDeliveryReport,delivery_platform:pageDeliveryPlatform,delivery_input:pageDeliveryInput,notify_history:pageNotifyHistory,universal_input:pageUniversalInput,universal_settle:pageUniversalSettle,universal_rules:pageUniversalRules,universal_emp:pageUniversalEmp,inventory:pageInventory,inv_summary:pageInvSummary,inv_edit_log:pageInvEditLog,inv_change_log:pageInvChangeLog,inv_manager_stock:pageInvManagerStock,inv_manager_in:pageInvManagerIn,inv_manager_out:pageInvManagerOut,inv_manager_return:pageInvManagerReturn};
+  var pages={settle:pageSettle,delivery_settle:pageDeliverySettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,my_roster:pageMyRoster,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,emp_home:pageEmpHome,vehicle:pageVehicle,expense:pageExpense,overtime:pageOvertime,evaluation:pageEvaluation,delivery_report:pageDeliveryReport,delivery_platform:pageDeliveryPlatform,delivery_input:pageDeliveryInput,notify_history:pageNotifyHistory,universal_input:pageUniversalInput,universal_settle:pageUniversalSettle,universal_rules:pageUniversalRules,universal_emp:pageUniversalEmp,inventory:pageInventory,inv_summary:pageInvSummary,inv_monthly:pageInvMonthly,inv_edit_log:pageInvEditLog,inv_change_log:pageInvChangeLog,inv_manager_stock:pageInvManagerStock,inv_manager_in:pageInvManagerIn,inv_manager_out:pageInvManagerOut,inv_manager_return:pageInvManagerReturn};
   // ★ 플랜 체크
   var cd=window._cachedCompanyDoc||{};
   var planGate={
@@ -30349,45 +30475,6 @@ function _invExcelExport(){
   .catch(function(e){toast('❌ 오류: '+e.message);});
 }
 
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 📦 재고 최소재고 설정 팝업
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function _invEditSafeQty(itemId, itemName, currentSafe){
-  var did=_CU.dealerId||_CU.uid;
-  var pop=document.createElement('div');
-  pop.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
-  pop.innerHTML=
-    '<div style="background:var(--bg2);border-radius:16px;padding:22px;width:100%;max-width:340px;box-shadow:0 20px 60px rgba(0,0,0,.4)">'+
-      '<div style="font-size:14px;font-weight:800;margin-bottom:6px">📦 최소재고 설정</div>'+
-      '<div style="font-size:12px;color:var(--text3);margin-bottom:16px">'+esc(itemName)+'</div>'+
-      '<div style="margin-bottom:16px">'+
-        '<label style="font-size:11px;color:var(--text3);margin-bottom:4px;display:block">최소재고 수량</label>'+
-        '<input id="safe-qty-input" type="number" min="0" value="'+currentSafe+'" style="width:100%;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text1);font-size:14px;font-weight:700">'+
-        '<div style="font-size:10px;color:var(--text3);margin-top:4px">현재고가 이 수량 미만이면 ⚠️ 부족 표시</div>'+
-      '</div>'+
-      '<div style="display:flex;gap:8px">'+
-        '<button id="safe-cancel-btn" style="flex:1;padding:10px;background:var(--bg3);color:var(--text2);border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">취소</button>'+
-        '<button id="safe-save-btn" style="flex:1;padding:10px;background:var(--acc);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">저장</button>'+
-      '</div>'+
-    '</div>';
-  document.body.appendChild(pop);
-
-  document.getElementById('safe-cancel-btn').onclick=function(){document.body.removeChild(pop);};
-  pop.onclick=function(e){if(e.target===pop)document.body.removeChild(pop);};
-
-  document.getElementById('safe-save-btn').onclick=function(){
-    var val=parseInt(document.getElementById('safe-qty-input').value)||0;
-    _db.collection('inventory').doc(itemId).update({safeQty:val,updatedAt:new Date().toISOString()})
-    .then(function(){
-      toast('✅ 최소재고 '+val+'으로 설정');
-      document.body.removeChild(pop);
-      _invLoadStock(did,'');
-    })
-    .catch(function(e){toast('❌ 저장 실패: '+e.message);});
-  };
-}
-
 function pageInventory(){
   document.getElementById('page-title').textContent='📦 재고관리';
   var c=document.getElementById('content');
@@ -30673,7 +30760,7 @@ function _invLoadDash(did){
     driverArr.forEach(function(d){
       var rateColor=d.rate>=100?'#10b981':d.rate>=95?'#f59e0b':'#dc2626';
       var bg=d.rate<95?'background:#fef2f2':'';
-      html+='<tr style="border-bottom:1px solid var(--border);'+bg+';cursor:pointer" onclick="_invEditSafeQty(\'' + i.id + '\',\'' + esc(i.name||'') + '\',' + (i.safeQty||0) + ')" title="클릭: 최소재고 설정">'+
+      html+='<tr style="border-bottom:1px solid var(--border);'+bg+'">'+
         '<td style="padding:6px 8px;font-weight:600">'+esc(d.dr)+'</td>'+
         '<td style="padding:6px 8px;text-align:right">'+d.cnt+'</td>'+
         '<td style="padding:6px 8px;text-align:right">'+d.dir+'</td>'+
