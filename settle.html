@@ -2607,6 +2607,227 @@ function _parseCareExcel(file,month){
   });
 }
 
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🍽️ 음식점·카페 파서 (주휴수당 자동)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _parseRestaurantExcel(file,month){
+  _baseParser(file,month,'🍽️ 음식점·카페','restaurant',function(row,headers,col,rv,name,camp){
+    var iHours =col(['근무시간','시간','총시간']);
+    var iDays  =col(['출근일수','근무일','일수']);
+    var iRate  =col(['시급','단가','시간당']);
+    var iNight =col(['야간','심야수당']);
+    var iMeal  =col(['식대','직원식','직원식대']);
+    var iWeekly=col(['주휴수당','주휴']);
+    var iDeduct=col(['공제','차감','지각']);
+    var hours=rv(row,iHours),days=rv(row,iDays),rate=rv(row,iRate)||10030;
+    var night=rv(row,iNight),meal=rv(row,iMeal),deduct=rv(row,iDeduct);
+    var weeklyD=rv(row,iWeekly);
+    var MIN_WAGE=10030;
+    if(rate<MIN_WAGE) rate=MIN_WAGE;
+    var pay=hours>0?Math.round(hours*rate):Math.round(days*rate*8);
+    var weeklyAvgH=hours>0?hours/4.345:(days*8)/4.345;
+    var weeklyPay=weeklyD>0?weeklyD:(weeklyAvgH>=15?Math.round(weeklyAvgH/5*rate):0);
+    var weeklyNote=weeklyD>0?'':(weeklyAvgH>=15?'자동':'주'+Math.round(weeklyAvgH*10)/10+'h (15h미만)');
+    var gross=pay+weeklyPay+night+meal-deduct;
+    var dailyR=days>0?pay/days:(hours>0?pay/(hours/8):0);
+    var tax33=Math.round(Math.max(0,dailyR-100000)*0.033*(days||Math.ceil(hours/8)));
+    if(tax33<1000) tax33=0;
+    var empIns=Math.round(gross*0.009); if(empIns<1000) empIns=0;
+    return {name:name,camp:camp,gross:gross,tax33:tax33,empIns:empIns,net:gross-tax33-empIns,
+      extras:[
+        pay>0&&{label:(hours>0?hours+'시간':days+'일')+'×'+rate.toLocaleString()+'원',value:pay},
+        weeklyPay>0&&{label:'주휴수당 (주평균'+Math.round(weeklyAvgH*10)/10+'h) '+weeklyNote,value:weeklyPay},
+        !weeklyPay&&weeklyNote&&{label:'⚠️ 주휴 '+weeklyNote,value:'제외'},
+        night>0&&{label:'야간수당',value:night},
+        meal>0&&{label:'직원식대',value:meal},
+        deduct>0&&{label:'공제',value:-deduct},
+        tax33>0&&{label:'소득세(3.3%)',value:-tax33},
+        empIns>0&&{label:'고용보험(0.9%)',value:-empIns},
+      ].filter(Boolean),industryType:'restaurant',weeklyAvgH:Math.round(weeklyAvgH*10)/10};
+  });
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 💼 영업직 파서 (슬라이딩 수수료율)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _parseSalesExcel(file,month){
+  _baseParser(file,month,'💼 영업직','sales',function(row,headers,col,rv,name,camp){
+    var iBase   =col(['기본급','기본급여','기본수당','고정급']);
+    var iSales  =col(['영업매출','매출액','영업금액','계약금액']);
+    var iCnt    =col(['영업건수','계약건수','건수']);
+    var iRate   =col(['건당단가','건당','단가','수수료율']);
+    var iBonus  =col(['인센티브','성과급','보너스','시상금']);
+    var iShare  =col(['분할비율','공동비율','지분율']);
+    var iDeduct =col(['차감','공제','환수']);
+    var base=rv(row,iBase),salesAmt=rv(row,iSales),cnt=rv(row,iCnt);
+    var rate=rv(row,iRate),bonus=rv(row,iBonus),share=rv(row,iShare)||100,deduct=rv(row,iDeduct);
+    var salesPay=cnt>0&&rate>0?Math.round(cnt*rate):
+                 salesAmt>0&&rate>0&&rate<=100?Math.round(salesAmt*(rate/100)):0;
+    // 슬라이딩 (단가 없을 때)
+    if(salesAmt>0&&rate===0){
+      salesPay=Math.round(Math.min(salesAmt,10000000)*0.05+Math.max(0,Math.min(salesAmt,20000000)-10000000)*0.07+Math.max(0,salesAmt-20000000)*0.10);
+    }
+    var f=share/100;
+    salesPay=Math.round(salesPay*f); bonus=Math.round(bonus*f);
+    var gross=base+salesPay+bonus-deduct;
+    var tax33=Math.round(Math.max(0,gross)*0.033);
+    var empIns=base>0?Math.round(gross*0.009):0;
+    return {name:name,camp:camp,gross:Math.max(0,gross),tax33:tax33,empIns:empIns,net:Math.max(0,gross)-tax33-empIns,
+      extras:[
+        base>0&&{label:'기본급',value:base},
+        salesPay>0&&cnt>0&&{label:'영업 '+cnt+'건'+(share<100?' ('+share+'%)':''),value:salesPay},
+        salesPay>0&&cnt===0&&{label:'매출수수료'+(share<100?' ('+share+'%)':''),value:salesPay},
+        bonus>0&&{label:'인센티브/시상',value:bonus},
+        deduct>0&&{label:'차감/환수',value:-deduct},
+        tax33>0&&{label:'소득세(3.3%)',value:-tax33},
+        empIns>0&&{label:'고용보험(0.9%)',value:-empIns},
+      ].filter(Boolean),industryType:'sales'};
+  });
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🖥️ 프리랜서 파서 (지체상금)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _parseFreelanceExcel(file,month){
+  _baseParser(file,month,'🖥️ 프리랜서','freelance',function(row,headers,col,rv,name,camp){
+    var iProject =col(['프로젝트','작업명','의뢰명','프로젝트명']);
+    var iContract=col(['계약금액','프로젝트금액','용역비','수수료','계약액']);
+    var iExtra   =col(['추가작업','추가금액','추가비용','추가']);
+    var iRevision=col(['수정비','수정비용','AS비','수정']);
+    var iDelay   =col(['지체상금','납기지연','지연페널티']);
+    var iDeduct  =col(['공제','차감','위약금']);
+    var project  =iProject>=0?String(row[iProject]||'').trim():'';
+    var contract =rv(row,iContract),extra=rv(row,iExtra),revision=rv(row,iRevision);
+    var delay    =rv(row,iDelay),deduct=rv(row,iDeduct);
+    // 지체상금 음수처리
+    if(delay>0) delay=-delay;
+    var gross=contract+extra+revision+delay-deduct;
+    var tax33=Math.round(Math.max(0,gross)*0.033);
+    return {name:name,camp:camp,gross:Math.max(0,gross),tax33:tax33,net:Math.max(0,gross)-tax33,
+      extras:[
+        project&&{label:'📁 프로젝트',value:project},
+        contract>0&&{label:'계약금액',value:contract},
+        extra>0&&{label:'추가작업',value:extra},
+        revision>0&&{label:'수정/A/S',value:revision},
+        delay<0&&{label:'지체상금 (납기지연)',value:delay},
+        deduct>0&&{label:'공제/위약금',value:-deduct},
+        tax33>0&&{label:'소득세(3.3%)',value:-tax33},
+      ].filter(Boolean),industryType:'freelance'};
+  });
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 📦 물류창고 파서 (화주사별, 파레트)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _parseWarehouseExcel(file,month){
+  _baseParser(file,month,'📦 물류창고','warehouse',function(row,headers,col,rv,name,camp){
+    var iDays  =col(['출근일수','근무일','일수']);
+    var iRate  =col(['일당','단가','시급']);
+    var iHours =col(['근무시간','시간']);
+    var iOver  =col(['연장','초과수당']);
+    var iNight =col(['야간']);
+    var iRisk  =col(['위험','중량','고소']);
+    var iMeal  =col(['식대','식비']);
+    var iPen   =col(['오배송','파손','페널티차감']);
+    var iDeduct=col(['공제','차감']);
+    var days=rv(row,iDays),rate=rv(row,iRate),hours=rv(row,iHours);
+    var pay=days>0&&rate>0?Math.round(days*rate):hours>0?Math.round(hours*rate):0;
+    var over=rv(row,iOver),night=rv(row,iNight),risk=rv(row,iRisk);
+    var meal=rv(row,iMeal),pen=rv(row,iPen),deduct=rv(row,iDeduct);
+    var gross=pay+over+night+risk+meal-pen-deduct;
+    var dailyR=days>0?rate:0;
+    var tax33=Math.round(Math.max(0,dailyR-100000)*0.033*(days||Math.ceil(hours/8)));
+    if(tax33<1000) tax33=0;
+    var empIns=Math.round(gross*0.009); if(empIns<1000) empIns=0;
+    return {name:name,camp:camp,gross:gross,tax33:tax33,empIns:empIns,net:gross-tax33-empIns,
+      extras:[
+        pay>0&&{label:(days>0?days+'일':hours+'시간')+'×'+rate.toLocaleString()+'원',value:pay},
+        over>0&&{label:'연장수당',value:over},
+        night>0&&{label:'야간수당',value:night},
+        risk>0&&{label:'위험/중량수당',value:risk},
+        meal>0&&{label:'식대',value:meal},
+        pen>0&&{label:'오배송/파손 차감',value:-pen},
+        deduct>0&&{label:'기타공제',value:-deduct},
+        tax33>0&&{label:'소득세(3.3%)',value:-tax33},
+        empIns>0&&{label:'고용보험(0.9%)',value:-empIns},
+      ].filter(Boolean),industryType:'warehouse'};
+  });
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🎪 행사·이벤트 파서 (직무별, 실비합산)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _parseEventExcel(file,month){
+  _baseParser(file,month,'🎪 행사·이벤트','event',function(row,headers,col,rv,name,camp){
+    var iSite  =col(['행사명','현장','작업지','이벤트']);
+    var iJob   =col(['직무','직무코드','역할','포지션']);
+    var iDays  =col(['근무일수','출근일','일수']);
+    var iRate  =col(['일당','단가','시급']);
+    var iHours =col(['시간','근무시간']);
+    var iOver  =col(['연장','초과시간','초과수당']);
+    var iNight =col(['야간','심야수당']);
+    var iMeal  =col(['식대','식비','실비식대']);  // 세금없이 합산
+    var iTrans =col(['교통비','야간교통','실비교통']);  // 세금없이 합산
+    var iDeduct=col(['공제','차감']);
+    var site =iSite>=0?String(row[iSite]||'').trim():'';
+    var job  =iJob>=0?String(row[iJob]||'').trim():'';
+    var days =rv(row,iDays),rate=rv(row,iRate),hours=rv(row,iHours);
+    var pay  =days>0&&rate>0?Math.round(days*rate):hours>0?Math.round(hours*rate):0;
+    var over =rv(row,iOver),night=rv(row,iNight);
+    var meal =rv(row,iMeal),trans=rv(row,iTrans),deduct=rv(row,iDeduct);
+    // 실비(식대,교통)는 세금 없이 합산
+    var taxableAmt=pay+over+night-deduct;
+    var tax33=Math.round(Math.max(0,taxableAmt)*0.033); if(tax33<1000) tax33=0;
+    var gross=taxableAmt+meal+trans;
+    return {name:name,camp:camp||site,gross:gross,tax33:tax33,net:gross-tax33,
+      extras:[
+        site&&{label:'📍 행사',value:site},
+        job&&{label:'🎭 직무',value:job},
+        pay>0&&{label:(days>0?days+'일':hours+'시간')+'×'+rate.toLocaleString()+'원',value:pay},
+        over>0&&{label:'연장수당',value:over},
+        night>0&&{label:'야간수당',value:night},
+        meal>0&&{label:'식대 (실비·세금없음)',value:meal},
+        trans>0&&{label:'교통비 (실비·세금없음)',value:trans},
+        deduct>0&&{label:'공제',value:-deduct},
+        tax33>0&&{label:'소득세(3.3%) ※실비제외',value:-tax33},
+      ].filter(Boolean),industryType:'event'};
+  });
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🎓 학원·교육 파서 (일할계산, 교재비 제외)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _parseAcademyExcel(file,month){
+  _baseParser(file,month,'🎓 학원·교육','academy',function(row,headers,col,rv,name,camp){
+    var iHours  =col(['수업시간','강의시간','시간']);
+    var iRate   =col(['시급','강의단가','시간당','수업단가']);
+    var iTuition=col(['수강료','강사비율','수강매출']);  // 수강료×비율
+    var iRatio  =col(['비율','강사비율','수수료율','%']);
+    var iStudents=col(['수강생','학생수','수강인원']);
+    var iBonus  =col(['인센','보너스','성과']);
+    var iBooks  =col(['교재비','재료비','교재']);  // 제외
+    var iDeduct =col(['차감','공제']);
+    var hours=rv(row,iHours),rate=rv(row,iRate);
+    var tuition=rv(row,iTuition),ratio=rv(row,iRatio)||0;
+    var bonus=rv(row,iBonus),books=rv(row,iBooks),deduct=rv(row,iDeduct);
+    // 시급제 or 비율제
+    var pay=hours>0&&rate>0?Math.round(hours*rate):
+            tuition>0&&ratio>0?Math.round(tuition*(ratio/100)):0;
+    var gross=pay+bonus-books-deduct;
+    var tax33=Math.round(Math.max(0,gross)*0.033);
+    return {name:name,camp:camp,gross:Math.max(0,gross),tax33:tax33,net:Math.max(0,gross)-tax33,
+      extras:[
+        hours>0&&rate>0&&{label:hours+'시간×'+rate.toLocaleString()+'원',value:pay},
+        tuition>0&&ratio>0&&{label:'수강료 '+tuition.toLocaleString()+'×'+ratio+'%',value:pay},
+        bonus>0&&{label:'인센티브',value:bonus},
+        books>0&&{label:'교재비 차감',value:-books},
+        deduct>0&&{label:'기타차감',value:-deduct},
+        tax33>0&&{label:'소득세(3.3%)',value:-tax33},
+      ].filter(Boolean),industryType:'academy'};
+  });
+}
+
 function _autoRegisterCleanWorkers(results){
   var did=_CU.dealerId||_CU.uid;
   if(!did||!results||!results.length) return;
@@ -3028,27 +3249,22 @@ function _parseInsuranceExcel(file, month){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function _parseConstructionExcel(file, month){
   _baseParser(file,month,'🏗️ 건설·일용직','construction',function(row,headers,col,rv,name,camp){
-    var iSite   = col(['현장명','현장','공사명','작업장','현장코드']);
-    var iDate   = col(['날짜','작업일','출근일자']);
-    var iUnit   = col(['공수','단위공수','근무공수']);  // 0.5공수, 1공수, 1.5공수
-    var iDays   = col(['출역일수','출근일수','일수','출역']);
-    var iHours  = col(['근무시간','총시간','월근무시간']);
-    var iDay    = col(['노무비단가','일당','일급','단가']);
-    var iOver   = col(['연장시간','초과시간','연장']);
+    var iSite   = col(['현장명','현장','공사명','작업장','사이트']);
+    var iDays   = col(['출역일수','출근일수','일수','출역','근무일']);
+    var iDay    = col(['노무비단가','일당','일급','단가','노무단가']);
+    var iOver   = col(['연장시간','연장근무','초과시간','연장']);
     var iNight  = col(['야간수당','야간시간','야간']);
-    var iRisk   = col(['위험수당','특수작업','위험','고소']);
-    var iMeal   = col(['중식비','식대','식비']);
-    var iTrans  = col(['교통비','통근비']);
-    var iAge    = col(['생년월일','주민등록번호','나이','연령']);
+    var iRisk   = col(['위험수당','특수작업','위험','고소수당']);
+    var iMeal   = col(['식대','식비','중식비']);
+    var iTrans  = col(['교통비','통근비','출장비']);
+    var iAge    = col(['생년월일','나이','연령','주민등록']);
     var iDeduct = col(['공제','차감','기타공제']);
-    var iNatPen = col(['국민연금','연금부담금']);
-    var iHealth = col(['건강보험','건강보험료']);
-    var iEmpIns = col(['고용보험','고용보험료']);
+    var iMeal4  = col(['국민연금','연금']);
+    var iHealth = col(['건강보험','건강']);
+    var iEmpIns = col(['고용보험']);
 
     var site    = iSite>=0?String(row[iSite]||'').trim():'';
     var days    = rv(row,iDays);
-    var hours   = rv(row,iHours);
-    var unit    = iUnit>=0?parseFloat(String(row[iUnit]||'').replace(/공수/g,''))||0:0;
     var dayRate = rv(row,iDay);
     var overH   = rv(row,iOver);
     var nightAmt= rv(row,iNight);
@@ -3057,303 +3273,60 @@ function _parseConstructionExcel(file, month){
     var transAmt= rv(row,iTrans);
     var deduct  = rv(row,iDeduct);
 
-    // 공수 계산 (0.5공수 = 반나절, 1공수 = 1일, 1.5공수 = 연장 포함)
-    if(unit>0 && days===0) days = unit;
-
-    // 연령 파악
+    // 연령 파악 (60세↑ 국민연금 면제, 65세↑ 고용보험 면제)
     var ageVal  = iAge>=0?String(row[iAge]||'').trim():'';
     var age=0;
-    if(ageVal.length>=6){
-      var yr=parseInt(ageVal.slice(0,2));
-      var century=yr<=25?2000:1900;
-      age=new Date().getFullYear()-(century+yr);
+    if(ageVal){
+      var yr=ageVal.length>=6?parseInt(ageVal.slice(0,2)):parseInt(ageVal);
+      if(yr) age=new Date().getFullYear()-(yr>25?1900+yr:2000+yr);
     }
 
     var basePay = Math.round(days*dayRate);
     var overPay = Math.round(overH*dayRate/8*1.5);
     var gross   = basePay+overPay+nightAmt+riskAmt+mealAmt+transAmt;
 
-    // ★ 8일/60시간 기준 4대보험 스위칭
-    var totalHours = hours>0?hours:(days*8);
-    var is4ins = (days>=8 || totalHours>=60);
+    // 일용직 세금: (일당-10만)×6%×55% = 3.3% → 비과세 10만원
+    var dailyTaxBase = Math.max(0, dayRate - 100000);
+    var tax33 = Math.round(dailyTaxBase * days * 0.033);
 
-    // 소득세: (일당-10만)×6%×55% = 3.3% (비과세 10만원)
-    var dailyTaxBase = Math.max(0, dayRate-100000);
-    var tax33 = Math.round(dailyTaxBase*days*0.033);
-    // 소액부징수: 1,000원 미만 버림
-    if(tax33<1000) tax33=0;
+    // 고용보험: 65세 이상 면제
+    var empIns = (age>0&&age>=65) ? 0 : Math.round(gross*0.009);
+    // 국민연금: 60세 이상 면제
+    var pension = iMeal4>=0?rv(row,iMeal4):(age>0&&age>=60)?0:Math.round(gross*0.045);
+    var health  = iHealth>=0?rv(row,iHealth):0;
+    var empInsD = iEmpIns>=0?rv(row,iEmpIns):empIns;
 
-    var natPen=0,healthIns=0,empIns=0;
-    if(is4ins){
-      // 4대보험 적용
-      natPen  = iNatPen>=0?rv(row,iNatPen):(age>0&&age>=60?0:Math.round(gross*0.045));
-      healthIns=iHealth>=0?rv(row,iHealth):Math.round(gross*0.03545);
-      empIns  = iEmpIns>=0?rv(row,iEmpIns):(age>=65?0:Math.round(gross*0.009));
-    } else {
-      // 8일 미만: 고용보험+산재만
-      empIns  = iEmpIns>=0?rv(row,iEmpIns):(age>=65?0:Math.round(gross*0.009));
-    }
-    if(natPen<1000) natPen=0;
-    if(healthIns<1000) healthIns=0;
-    if(empIns<1000) empIns=0;
-
-    var totalDeduct = tax33+natPen+healthIns+empIns+deduct;
+    var totalDeduct = tax33+empInsD+health+pension+deduct;
     var net = gross - totalDeduct;
 
     return {
       name:name, camp:camp||site,
-      gross:gross, tax33:tax33, empIns:empIns,
+      gross:gross, tax33:tax33, empIns:empInsD,
       net:net,
       extras:[
         site&&{label:'📍 현장',value:site},
-        days>0&&{label:'📅 '+days+(unit>0?'공수':'일')+'×'+dayRate.toLocaleString()+'원',value:basePay},
-        overPay>0&&{label:'연장 '+overH+'h×1.5배',value:overPay},
+        days>0&&{label:'📅 '+days+'일×'+dayRate.toLocaleString()+'원',value:basePay},
+        overPay>0&&{label:'연장수당 ('+overH+'h×1.5)',value:overPay},
         nightAmt>0&&{label:'야간수당',value:nightAmt},
         riskAmt>0&&{label:'위험/특수수당',value:riskAmt},
         mealAmt>0&&{label:'중식비',value:mealAmt},
         transAmt>0&&{label:'교통비',value:transAmt},
-        {label:is4ins?'4대보험 적용 ('+days+'일)':'단기 (고용보험만)',value:is4ins?'○':'△'},
-        tax33>0&&{label:'소득세 (3.3%)',value:-tax33},
-        empIns>0&&{label:'고용보험 (0.9%)'+(age>=65?' [65세↑면제]':''),value:-empIns},
-        healthIns>0&&{label:'건강보험 (3.545%)',value:-healthIns},
-        natPen>0&&{label:'국민연금 (4.5%)'+(age>=60?' [60세↑면제]':''),value:-natPen},
+        tax33>0&&{label:'소득세(3.3%)',value:-tax33},
+        empInsD>0&&{label:'고용보험(0.9%)'+(age>=65?'[면제]':''),value:-empInsD},
+        health>0&&{label:'건강보험',value:-health},
+        pension>0&&{label:'국민연금(4.5%)'+(age>=60?'[면제]':''),value:-pension},
         deduct>0&&{label:'기타공제',value:-deduct},
       ].filter(Boolean),
       industryType:'construction',
-      age:age, site:site, is4ins:is4ins, days:days
+      age:age, site:site
     };
   });
-}
-
-
-function _parseQuickExcel(file, month){
-  _baseParser(file,month,'🚗 배달대행·퀵','quick',function(row,headers,col,rv,name,camp){
-    var iCalls   = col(['콜건수','콜수','배달건수','건수']);
-    var iRate    = col(['기본단가','건당단가','콜단가','단가']);
-    var iDist    = col(['장거리할증','거리할증','장거리수당']);
-    var iNight   = col(['야간할증','야간수당','심야할증']);
-    var iRain    = col(['우천할증','우천수당','날씨할증']);
-    var iPromo   = col(['프로모션','프로모','이벤트수당','보너스']);
-    var iEquip   = col(['장비비차감','장비비','프로그램비','앱사용료']);
-    var iInsDay  = col(['보험차감','이륜차보험','출근일보험']);
-    var iWorkDays= col(['출근일수','근무일수','일수']);
-    var iOther   = col(['기타차감','차감','공제']);
-
-    var calls    = rv(row,iCalls);
-    var rate     = rv(row,iRate)||3500;
-    var dist     = rv(row,iDist);
-    var night    = rv(row,iNight);
-    var rain     = rv(row,iRain);
-    var promo    = rv(row,iPromo);
-    var equip    = rv(row,iEquip);   // 음수 or 양수
-    var insDay   = rv(row,iInsDay);
-    var workDays = rv(row,iWorkDays);
-    var other    = rv(row,iOther);
-
-    // 기본 콜 수입
-    var callPay = Math.round(calls*rate);
-
-    // 장비비: 음수 처리
-    if(equip>0) equip=-equip;
-    if(insDay>0) insDay=-insDay;
-    if(other>0) other=-other;
-
-    var gross = callPay+dist+night+rain+promo+equip+insDay+other;
-    var tax33 = Math.round(Math.max(0,gross)*0.033);
-    var net   = Math.max(0,gross)-tax33;
-
-    return {
-      name:name, camp:camp,
-      gross:Math.max(0,gross), tax33:tax33, net:net,
-      extras:[
-        callPay>0&&{label:'콜 '+calls+'건×'+rate.toLocaleString()+'원',value:callPay},
-        dist>0&&{label:'장거리 할증',value:dist},
-        night>0&&{label:'야간/심야 할증',value:night},
-        rain>0&&{label:'우천 할증',value:rain},
-        promo>0&&{label:'프로모션',value:promo},
-        equip<0&&{label:'장비비/프로그램비 차감',value:equip},
-        insDay<0&&{label:'이륜차 보험 차감 (출근일 기준)',value:insDay},
-        other<0&&{label:'기타 차감',value:other},
-        tax33>0&&{label:'소득세 (3.3%)',value:-tax33},
-      ].filter(Boolean),
-      industryType:'quick',
-      calls:calls, workDays:workDays
-    };
-  });
-}
-
-
-function _parseInsuranceExcel(file, month){
-  var reader=new FileReader();
-  reader.onload=function(e){
-    try{
-      var wb=XLSX.read(e.target.result,{type:'array'});
-      var ws=wb.Sheets[wb.SheetNames[0]];
-      var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
-      if(!rows.length){toast('❌ 데이터 없음');return;}
-
-      var headers=rows[0].map(function(h){return String(h||'').trim();});
-      function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
-
-      var iName=col(['이름','성명']);
-      var iTeam=col(['팀','소속','부서']);
-      var iNewCnt=col(['신계약','신규계약','신건']);
-      var iNewRate=col(['신계약수수료','수수료율','신건단가']);
-      var iKeepCnt=col(['유지','유지건']);
-      var iKeepAmt=col(['유지수수료','유지금액']);
-      var iBonus=col(['승진','특별','인센티브','수당']);
-      var iDeduct=col(['차감','공제']);
-
-      if(iName<0){toast('❌ 이름 컬럼 없음');return;}
-
-      var results=[];
-      rows.slice(1).forEach(function(row){
-        var name=String(row[iName]||'').trim(); if(!name) return;
-        var team=iTeam>=0?String(row[iTeam]||''):'';
-        var newCnt=iNewCnt>=0?parseFloat(row[iNewCnt])||0:0;
-        var newRate=iNewRate>=0?parseFloat(String(row[iNewRate]||'').replace(/,/g,''))||0:0;
-        var keepCnt=iKeepCnt>=0?parseFloat(row[iKeepCnt])||0:0;
-        var keepAmt=iKeepAmt>=0?parseFloat(String(row[iKeepAmt]||'').replace(/,/g,''))||0:0;
-        var bonus=iBonus>=0?parseFloat(String(row[iBonus]||'').replace(/,/g,''))||0:0;
-        var deduct=iDeduct>=0?parseFloat(String(row[iDeduct]||'').replace(/,/g,''))||0:0;
-
-        var newPay=Math.round(newCnt*newRate);
-        var gross=newPay+keepAmt+bonus;
-        var net=gross-deduct;
-
-        // 보험: 신계약수수료 + 유지수수료 + 시책 - 환수금
-        var iRefund = col(['환수','환수금','미유지환수','차감환수']);
-        var iSicheck = col(['시책','시책수수료','인센티브','특별수당']);
-        var refund = iRefund>=0?parseFloat(String(row[iRefund]||'').replace(/,/g,''))||0:0;
-        var sicheck = iSicheck>=0?parseFloat(String(row[iSicheck]||'').replace(/,/g,''))||0:0;
-        var grossAdj = newPay+keepAmt+bonus+sicheck-refund-deduct;
-        var taxIns = Math.round(Math.max(0,grossAdj)*0.033);
-        results.push({
-          name:name, camp:team, gross:Math.max(0,grossAdj),
-          tax33:taxIns, net:Math.max(0,grossAdj)-taxIns,
-          extras:[
-            newPay>0&&{label:'신계약 '+newCnt+'건×'+newRate.toLocaleString()+'원',value:newPay},
-            keepAmt>0&&{label:'유지수수료 '+keepCnt+'건',value:keepAmt},
-            sicheck>0&&{label:'시책/인센티브',value:sicheck},
-            bonus>0&&{label:'승진수당',value:bonus},
-            refund>0&&{label:'환수금(미유지)',value:-refund},
-            deduct>0&&{label:'기타차감',value:-deduct},
-          ].filter(Boolean), industryType:'insurance'
-        });
-      });
-
-      if(!results.length){toast('❌ 파싱된 직원 없음');return;}
-      toast('✅ 보험설계사 파싱 완료 — '+results.length+'명');
-      _renderIndustrySettle(results, month, '🛡️ 보험설계사');
-    }catch(err){toast('❌ 파싱 오류: '+err.message);}
-  };
-  reader.readAsArrayBuffer(file);
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 🏗️ 건설·일용직 파서
-// 컬럼: 이름, 현장, 출근일수, 일당, 연장시간, 야간수당, 위험수당, 공제
+// 🚗 퀵·대리운전 파서
+// 컬럼: 이름, 팀, 콜건수, 건당단가, 장거리수당, 야간수당, 수수료차감
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function _parseConstructionExcel(file, month){
-  _baseParser(file,month,'🏗️ 건설·일용직','construction',function(row,headers,col,rv,name,camp){
-    var iSite   = col(['현장명','현장','공사명','작업장','현장코드']);
-    var iDate   = col(['날짜','작업일','출근일자']);
-    var iUnit   = col(['공수','단위공수','근무공수']);  // 0.5공수, 1공수, 1.5공수
-    var iDays   = col(['출역일수','출근일수','일수','출역']);
-    var iHours  = col(['근무시간','총시간','월근무시간']);
-    var iDay    = col(['노무비단가','일당','일급','단가']);
-    var iOver   = col(['연장시간','초과시간','연장']);
-    var iNight  = col(['야간수당','야간시간','야간']);
-    var iRisk   = col(['위험수당','특수작업','위험','고소']);
-    var iMeal   = col(['중식비','식대','식비']);
-    var iTrans  = col(['교통비','통근비']);
-    var iAge    = col(['생년월일','주민등록번호','나이','연령']);
-    var iDeduct = col(['공제','차감','기타공제']);
-    var iNatPen = col(['국민연금','연금부담금']);
-    var iHealth = col(['건강보험','건강보험료']);
-    var iEmpIns = col(['고용보험','고용보험료']);
-
-    var site    = iSite>=0?String(row[iSite]||'').trim():'';
-    var days    = rv(row,iDays);
-    var hours   = rv(row,iHours);
-    var unit    = iUnit>=0?parseFloat(String(row[iUnit]||'').replace(/공수/g,''))||0:0;
-    var dayRate = rv(row,iDay);
-    var overH   = rv(row,iOver);
-    var nightAmt= rv(row,iNight);
-    var riskAmt = rv(row,iRisk);
-    var mealAmt = rv(row,iMeal);
-    var transAmt= rv(row,iTrans);
-    var deduct  = rv(row,iDeduct);
-
-    // 공수 계산 (0.5공수 = 반나절, 1공수 = 1일, 1.5공수 = 연장 포함)
-    if(unit>0 && days===0) days = unit;
-
-    // 연령 파악
-    var ageVal  = iAge>=0?String(row[iAge]||'').trim():'';
-    var age=0;
-    if(ageVal.length>=6){
-      var yr=parseInt(ageVal.slice(0,2));
-      var century=yr<=25?2000:1900;
-      age=new Date().getFullYear()-(century+yr);
-    }
-
-    var basePay = Math.round(days*dayRate);
-    var overPay = Math.round(overH*dayRate/8*1.5);
-    var gross   = basePay+overPay+nightAmt+riskAmt+mealAmt+transAmt;
-
-    // ★ 8일/60시간 기준 4대보험 스위칭
-    var totalHours = hours>0?hours:(days*8);
-    var is4ins = (days>=8 || totalHours>=60);
-
-    // 소득세: (일당-10만)×6%×55% = 3.3% (비과세 10만원)
-    var dailyTaxBase = Math.max(0, dayRate-100000);
-    var tax33 = Math.round(dailyTaxBase*days*0.033);
-    // 소액부징수: 1,000원 미만 버림
-    if(tax33<1000) tax33=0;
-
-    var natPen=0,healthIns=0,empIns=0;
-    if(is4ins){
-      // 4대보험 적용
-      natPen  = iNatPen>=0?rv(row,iNatPen):(age>0&&age>=60?0:Math.round(gross*0.045));
-      healthIns=iHealth>=0?rv(row,iHealth):Math.round(gross*0.03545);
-      empIns  = iEmpIns>=0?rv(row,iEmpIns):(age>=65?0:Math.round(gross*0.009));
-    } else {
-      // 8일 미만: 고용보험+산재만
-      empIns  = iEmpIns>=0?rv(row,iEmpIns):(age>=65?0:Math.round(gross*0.009));
-    }
-    if(natPen<1000) natPen=0;
-    if(healthIns<1000) healthIns=0;
-    if(empIns<1000) empIns=0;
-
-    var totalDeduct = tax33+natPen+healthIns+empIns+deduct;
-    var net = gross - totalDeduct;
-
-    return {
-      name:name, camp:camp||site,
-      gross:gross, tax33:tax33, empIns:empIns,
-      net:net,
-      extras:[
-        site&&{label:'📍 현장',value:site},
-        days>0&&{label:'📅 '+days+(unit>0?'공수':'일')+'×'+dayRate.toLocaleString()+'원',value:basePay},
-        overPay>0&&{label:'연장 '+overH+'h×1.5배',value:overPay},
-        nightAmt>0&&{label:'야간수당',value:nightAmt},
-        riskAmt>0&&{label:'위험/특수수당',value:riskAmt},
-        mealAmt>0&&{label:'중식비',value:mealAmt},
-        transAmt>0&&{label:'교통비',value:transAmt},
-        {label:is4ins?'4대보험 적용 ('+days+'일)':'단기 (고용보험만)',value:is4ins?'○':'△'},
-        tax33>0&&{label:'소득세 (3.3%)',value:-tax33},
-        empIns>0&&{label:'고용보험 (0.9%)'+(age>=65?' [65세↑면제]':''),value:-empIns},
-        healthIns>0&&{label:'건강보험 (3.545%)',value:-healthIns},
-        natPen>0&&{label:'국민연금 (4.5%)'+(age>=60?' [60세↑면제]':''),value:-natPen},
-        deduct>0&&{label:'기타공제',value:-deduct},
-      ].filter(Boolean),
-      industryType:'construction',
-      age:age, site:site, is4ins:is4ins, days:days
-    };
-  });
-}
-
-
 function _parseQuickExcel(file, month){
   var reader=new FileReader();
   reader.onload=function(e){
