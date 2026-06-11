@@ -19321,6 +19321,7 @@ var MENUS_SETTLE = [
     {ic:'📋',l:'수정 이력',          p:'inv_edit_log',     plan_key:'inventory'},
     {ic:'🕐',l:'업로드 변경이력',    p:'inv_change_log',   plan_key:'inventory'},
     {ic:'📅',l:'월별 통계',           p:'inv_monthly',       plan_key:'inventory'},
+    {ic:'🛒',l:'발주 관리',           p:'inv_order',         plan_key:'inventory'},
   ]},
   {s:'🔐 QR 근태관리', items:[
     {ic:'🔐',l:'QR 출퇴근',        p:'attendance',       plan_key:'premium'},
@@ -19497,6 +19498,239 @@ var MENUS_HOURLY = [
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 📅 재고 월별 입출고 통계
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🛒 발주 관리
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function pageInvOrder(){
+  document.getElementById('page-title').textContent='🛒 발주 관리';
+  var c=document.getElementById('content');
+  var did=_CU.dealerId||_CU.uid;
+  c.innerHTML='<div class="loading">⏳ 재고 부족 품목 확인 중...</div>';
+
+  Promise.all([
+    _db.collection('inventory').where('dealerId','==',did).get(),
+    _db.collection('inventory_in').where('dealerId','==',did).get(),
+    _db.collection('inventory_out').where('dealerId','==',did).get()
+  ]).then(function(res){
+    var items={}, inMap={}, outMap={};
+    res[0].forEach(function(d){items[d.id]=Object.assign({id:d.id},d.data());});
+    res[1].forEach(function(d){var dd=d.data();inMap[dd.itemCode]=(inMap[dd.itemCode]||0)+(dd.qty||0);});
+    res[2].forEach(function(d){var dd=d.data();if(dd.outType!=='반품')outMap[dd.itemCode]=(outMap[dd.itemCode]||0)+(dd.qty||0);});
+
+    var list=Object.values(items).filter(function(i){return !!i.name;});
+    list.forEach(function(i){
+      i._cur=(i.baseQty||0)+(inMap[i.itemCode]||0)-(outMap[i.itemCode]||0);
+      i._need=Math.max(0,(i.safeQty||0)-i._cur);
+    });
+
+    // 거래처별 그룹
+    var groups={};
+    list.forEach(function(i){
+      var sup=i.supplier||'기타';
+      if(!groups[sup]) groups[sup]=[];
+      groups[sup].push(i);
+    });
+
+    var shortageList=list.filter(function(i){return i._need>0;});
+
+    var html='<div style="max-width:700px;margin:0 auto;padding:16px">';
+
+    // 부족 현황 배너
+    if(shortageList.length>0){
+      html+='<div style="background:linear-gradient(135deg,rgba(239,68,68,.1),rgba(239,68,68,.05));border:1px solid rgba(239,68,68,.3);border-radius:12px;padding:12px 16px;margin-bottom:14px">'+
+        '<div style="font-size:13px;font-weight:800;color:#ef4444;margin-bottom:4px">⚠️ 발주 필요 '+shortageList.length+'개 품목</div>'+
+        '<div style="font-size:11px;color:var(--text3)">최소재고 미달 품목이 있습니다. 발주 수량을 확인하세요.</div>'+
+        '<button onclick="_invAutoOrder()" style="margin-top:8px;padding:7px 14px;background:#ef4444;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">📋 부족 품목 자동 발주서 생성</button>'+
+      '</div>';
+    }
+
+    // 거래처별 발주 입력
+    html+='<div style="font-size:13px;font-weight:800;margin-bottom:10px">거래처별 발주 입력</div>';
+
+    Object.keys(groups).sort().forEach(function(sup){
+      var supItems=groups[sup];
+      html+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">'+
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
+          '<div style="font-size:12px;font-weight:800;color:var(--acc)">🏢 '+esc(sup)+'</div>'+
+          '<div style="display:flex;gap:6px">'+
+            ('<button class="inv-order-excel-btn" data-sup="' + esc(sup) + '" style="padding:5px 10px;background:var(--bg3);color:var(--text2);border:1px solid var(--border);border-radius:6px;font-size:10px;font-weight:700;cursor:pointer">📥 엑셀</button>' +
+            '<button class="inv-order-send-btn" data-sup="' + esc(sup) + '" style="padding:5px 10px;background:#FEE500;color:#1a1a2e;border:none;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer">💬 발송</button>')
+          '</div>'+
+        '</div>'+
+        '<table style="width:100%;border-collapse:collapse;font-size:11px">'+
+          '<thead><tr style="background:var(--bg3)">'+
+            '<th style="padding:6px 8px;text-align:left">품목명</th>'+
+            '<th style="padding:6px 8px;text-align:right">현재고</th>'+
+            '<th style="padding:6px 8px;text-align:right">최소재고</th>'+
+            '<th style="padding:6px 8px;text-align:right">발주수량</th>'+
+          '</tr></thead><tbody>';
+
+      supItems.forEach(function(i){
+        var rowBg=i._need>0?'background:#fef2f2':'';
+        html+='<tr style="border-bottom:1px solid var(--border);'+rowBg+'">'+
+          '<td style="padding:6px 8px;font-weight:600">'+esc(i.name||'')+'</td>'+
+          '<td style="padding:6px 8px;text-align:right;color:'+(i._need>0?'#ef4444':'#10b981')+';font-weight:700">'+i._cur+'</td>'+
+          '<td style="padding:6px 8px;text-align:right;color:var(--text3)">'+(i.safeQty||0)+'</td>'+
+          '<td style="padding:6px 8px;text-align:right">'+
+            '<input type="number" min="0" value="'+i._need+'" data-id="'+i.id+'" data-name="'+esc(i.name||'')+'" data-sup="'+esc(sup)+'" class="order-qty-input" style="width:60px;padding:4px 6px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text1);font-size:11px;text-align:right">'+
+          '</td>'+
+        '</tr>';
+      });
+
+      html+='</tbody></table></div>';
+    });
+
+    html+='</div>';
+    c.innerHTML=html;
+
+    // 버튼 이벤트 리스너
+    c.querySelectorAll('.inv-order-excel-btn').forEach(function(btn){
+      btn.addEventListener('click',function(){_invOrderExcel(this.dataset.sup);});
+    });
+    c.querySelectorAll('.inv-order-send-btn').forEach(function(btn){
+      btn.addEventListener('click',function(){_invOrderSend(this.dataset.sup);});
+    });
+
+  }).catch(function(e){c.innerHTML='<div class="empty">오류: '+e.message+'</div>';});
+}
+
+// 자동 발주서 생성 (부족 품목 전체)
+function _invAutoOrder(){
+  var today=new Date();
+  var ds=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  var inputs=document.querySelectorAll('.order-qty-input');
+  var rows=[['거래처','품목명','현재고','최소재고','발주수량','발주일']];
+  inputs.forEach(function(inp){
+    var qty=parseInt(inp.value)||0;
+    if(qty>0){
+      var tr=inp.closest('tr');
+      var cells=tr.querySelectorAll('td');
+      rows.push([
+        inp.dataset.sup,
+        inp.dataset.name,
+        cells[1]?cells[1].textContent.trim():'',
+        cells[2]?cells[2].textContent.trim():'',
+        qty,
+        ds
+      ]);
+    }
+  });
+
+  if(rows.length<=1){toast('발주 수량이 없습니다');return;}
+
+  var csvLines=[];
+  rows.forEach(function(r){
+    csvLines.push(r.map(function(v){return '"'+String(v).replace(/"/g,'""')+'"';}).join(','));
+  });
+  var csv=csvLines.join('\r\n');
+  var bom='﻿';
+  var blob=new Blob([bom+csv],{type:'text/csv;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url; a.download='발주서_'+ds+'.csv';
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+  toast('✅ 발주서 다운로드 완료');
+}
+
+// 거래처별 엑셀 발주서
+function _invOrderExcel(sup){
+  var today=new Date();
+  var ds=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  var inputs=document.querySelectorAll('.order-qty-input[data-sup="'+sup+'"]');
+  var rows=[['품목명','현재고','최소재고','발주수량','발주일']];
+  inputs.forEach(function(inp){
+    var qty=parseInt(inp.value)||0;
+    var tr=inp.closest('tr');
+    var cells=tr.querySelectorAll('td');
+    rows.push([
+      inp.dataset.name,
+      cells[1]?cells[1].textContent.trim():'',
+      cells[2]?cells[2].textContent.trim():'',
+      qty,
+      ds
+    ]);
+  });
+
+  var csvLines=[];
+  rows.forEach(function(r){
+    csvLines.push(r.map(function(v){return '"'+String(v).replace(/"/g,'""')+'"';}).join(','));
+  });
+  var csv=csvLines.join('\r\n');
+  var blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url; a.download='발주서_'+sup+'_'+ds+'.csv';
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+  toast('✅ '+sup+' 발주서 다운로드');
+}
+
+// 카카오/이메일 발주서 발송
+function _invOrderSend(sup){
+  var inputs=document.querySelectorAll('.order-qty-input[data-sup="'+sup+'"]');
+  var lines=['[발주 요청]','거래처: '+sup,'','품목 목록:'];
+  var hasQty=false;
+  inputs.forEach(function(inp){
+    var qty=parseInt(inp.value)||0;
+    if(qty>0){
+      lines.push('- '+inp.dataset.name+' '+qty+'개');
+      hasQty=true;
+    }
+  });
+  if(!hasQty){toast('발주 수량을 입력하세요');return;}
+
+  var today=new Date();
+  var ds=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  lines.push('','발주일: '+ds);
+  lines.push('발주처: '+(_CU.companyName||''));
+
+  var msg=lines.join('\r\n');
+
+  // 공유 팝업
+  var pop=document.createElement('div');
+  pop.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  pop.innerHTML=
+    '<div style="background:var(--bg2);border-radius:16px;padding:22px;width:100%;max-width:360px">'+
+      '<div style="font-size:14px;font-weight:800;margin-bottom:12px">💬 발주서 발송 — '+esc(sup)+'</div>'+
+      '<textarea readonly style="width:100%;height:140px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:11px;color:var(--text1);resize:none;margin-bottom:12px">'+msg+'</textarea>'+
+      '<div style="display:flex;gap:8px;margin-bottom:8px">'+
+        '<button id="inv-kakao-btn" style="flex:1;padding:10px;background:#FEE500;color:#1a1a2e;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">💬 카카오</button>'+
+        '<button id="inv-email-btn" style="flex:1;padding:10px;background:#0077b6;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📧 이메일</button>'+
+      '</div>'+
+      '<button id="inv-order-close-btn" style="width:100%;padding:10px;background:var(--bg3);color:var(--text2);border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">닫기</button>'+
+    '</div>';
+  document.body.appendChild(pop);
+  pop.onclick=function(e){if(e.target===pop)document.body.removeChild(pop);};
+
+  var closeBtn=document.getElementById('inv-order-close-btn');
+  if(closeBtn) closeBtn.onclick=function(){document.body.removeChild(pop);};
+  var kakaoBtn=document.getElementById('inv-kakao-btn');
+  var emailBtn=document.getElementById('inv-email-btn');
+  if(kakaoBtn) kakaoBtn.onclick=function(){_invOrderKakao(encodeURIComponent(msg));};
+  if(emailBtn) emailBtn.onclick=function(){_invOrderEmail(sup,encodeURIComponent(msg));};
+}
+
+function _invOrderKakao(encodedMsg){
+  var msg=decodeURIComponent(encodedMsg);
+  if(navigator.share){
+    navigator.share({title:'발주서',text:msg}).catch(function(){});
+  } else {
+    var ta=document.createElement('textarea');
+    ta.value=msg;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+    toast('✅ 복사됨! 카카오톡에 붙여넣기 하세요');
+    window.open('https://pf.kakao.com/_xkuxabX/chat','_blank');
+  }
+}
+
+function _invOrderEmail(sup, encodedMsg){
+  var msg=decodeURIComponent(encodedMsg);
+  var subject=encodeURIComponent('[발주 요청] '+sup);
+  var body=encodeURIComponent(msg);
+  window.open('mailto:?subject='+subject+'&body='+body,'_blank');
+}
+
 function pageInvMonthly(){
   document.getElementById('page-title').textContent='📅 월별 입출고 통계';
   var c=document.getElementById('content');
@@ -20558,7 +20792,7 @@ function goPage(page){
   document.getElementById('topbar-right').innerHTML='';
   document.getElementById('sidebar').classList.remove('open');
   var _bd=document.getElementById('sb-backdrop');if(_bd)_bd.style.display='none';
-  var pages={settle:pageSettle,delivery_settle:pageDeliverySettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,my_roster:pageMyRoster,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,emp_home:pageEmpHome,vehicle:pageVehicle,expense:pageExpense,overtime:pageOvertime,evaluation:pageEvaluation,delivery_report:pageDeliveryReport,delivery_platform:pageDeliveryPlatform,delivery_input:pageDeliveryInput,notify_history:pageNotifyHistory,universal_input:pageUniversalInput,universal_settle:pageUniversalSettle,universal_rules:pageUniversalRules,universal_emp:pageUniversalEmp,inventory:pageInventory,inv_summary:pageInvSummary,inv_monthly:pageInvMonthly,inv_edit_log:pageInvEditLog,inv_change_log:pageInvChangeLog,inv_manager_stock:pageInvManagerStock,inv_manager_in:pageInvManagerIn,inv_manager_out:pageInvManagerOut,inv_manager_return:pageInvManagerReturn};
+  var pages={settle:pageSettle,delivery_settle:pageDeliverySettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,my_roster:pageMyRoster,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,emp_home:pageEmpHome,vehicle:pageVehicle,expense:pageExpense,overtime:pageOvertime,evaluation:pageEvaluation,delivery_report:pageDeliveryReport,delivery_platform:pageDeliveryPlatform,delivery_input:pageDeliveryInput,notify_history:pageNotifyHistory,universal_input:pageUniversalInput,universal_settle:pageUniversalSettle,universal_rules:pageUniversalRules,universal_emp:pageUniversalEmp,inventory:pageInventory,inv_summary:pageInvSummary,inv_monthly:pageInvMonthly,inv_order:pageInvOrder,inv_edit_log:pageInvEditLog,inv_change_log:pageInvChangeLog,inv_manager_stock:pageInvManagerStock,inv_manager_in:pageInvManagerIn,inv_manager_out:pageInvManagerOut,inv_manager_return:pageInvManagerReturn};
   // ★ 플랜 체크
   var cd=window._cachedCompanyDoc||{};
   var planGate={
