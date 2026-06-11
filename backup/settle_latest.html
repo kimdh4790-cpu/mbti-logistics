@@ -34985,8 +34985,7 @@ function pageIndustry(type, title){
         '</button>'+
         histHtml+
       '</div>';
-  }).catch(function(e){
-    console.warn('정산이력 로드 실패(정상):', e.message);
+  }).catch(function(){
     // 정산이력 없어도 페이지 표시
     c.innerHTML=
       '<div style="max-width:700px;margin:0 auto;padding:16px">'+
@@ -35391,7 +35390,7 @@ function pagePayout(){
   c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
 
   Promise.all([
-    _db.collection('payout_sessions').where('dealerId','==',did).orderBy('createdAt','desc').limit(10).get(),
+    _db.collection('payout_sessions').where('dealerId','==',did).limit(10).get(),
     _db.collection('settings').doc(did+'_wallet').get(),
   ]).then(function(results){
     var sessions=[]; results[0].forEach(function(d){sessions.push(Object.assign({id:d.id},d.data()));});
@@ -35456,7 +35455,7 @@ function pagePayoutNew(){
   // 미송금 정산 데이터 로드 (status: CALCULATED 또는 APPROVED)
   _db.collection('settlements').where('dealerId','==',did)
     .where('payoutStatus','in',['CALCULATED','APPROVED'])
-    .orderBy('month','desc').limit(5).get()
+    .limit(5).get()
   .then(function(snap){
     var settles=[];
     snap.forEach(function(d){settles.push(Object.assign({id:d.id},d.data()));});
