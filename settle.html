@@ -1664,7 +1664,7 @@ function pageInvChangeLog(){
           var d=allDocs[bi];
           var snap=(d&&d.inSnapshot)||[];
           if(!snap.length){toast('내역 없음');return;}
-          var detail=snap.map(function(s){return (s.name||'-')+' '+s.qty+'건 ('+s.date+')';}).join('\n');
+          var detail=snap.map(function(s){return (s.name||'-')+' '+s.qty+'건 ('+s.date+')';}).join('\r\n');
           alert('입고 내역 ('+snap.length+'건):\n'+detail);
         });
       });
@@ -3824,7 +3824,7 @@ function _showTaxSyncResult(links,ym,taxEmail,doneCb){
       +'<button data-url="'+l.url+'" id="ats-lnk-'+l.token+'" style="font-size:10px;padding:3px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;white-space:nowrap">📋 링크복사</button>'
       +'</div>';
   }).join('');
-  var allText=links.map(function(l){return l.name+': '+l.url;}).join('\n');
+  var allText=links.map(function(l){return l.name+': '+l.url;}).join('\r\n');
   window._atsDone=doneCb;
   mo.innerHTML='<div style="background:var(--bg);border-radius:16px;padding:22px;width:380px;max-width:95vw;max-height:80vh;overflow-y:auto">'
     +'<div style="font-size:16px;font-weight:800;margin-bottom:4px">✅ 세무사 연동 완료</div>'
@@ -15169,7 +15169,7 @@ function _doDownloadSettleExcel(data){
         return '"'+v.replace(/"/g,'""')+'"';
       return v;
     }).join(',');
-  }).join('\n');
+  }).join('\r\n');
 
   var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
   var a=document.createElement('a');
@@ -30273,6 +30273,82 @@ function _startDispatchListener(uid){
 // ════════════════════════════════════════════════════
 // 📦 재고관리 — 입고/출고 원장 + 재고종합마감
 // ════════════════════════════════════════════════════
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 📥 재고 엑셀 내보내기
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _invExcelExport(){
+  if(!_db||!_CU){toast('❌ 로그인 필요');return;}
+  var did=_CU.dealerId||_CU.uid;
+  toast('📥 재고 데이터 불러오는 중...');
+
+  _db.collection('inventory').where('dealerId','==',did).get()
+  .then(function(snap){
+    if(snap.empty){toast('재고 데이터 없음');return;}
+
+    // 입출고 원장도 함께 가져오기
+    return Promise.all([
+      Promise.resolve(snap),
+      _db.collection('inventory_in').where('dealerId','==',did).get(),
+      _db.collection('inventory_out').where('dealerId','==',did).get()
+    ]);
+  })
+  .then(function(results){
+    if(!results) return;
+    var invSnap=results[0], inSnap=results[1], outSnap=results[2];
+
+    // 입출고 집계
+    var inMap={}, outMap={};
+    inSnap.forEach(function(d){
+      var dd=d.data();
+      var key=dd.itemCode||dd.itemName||'';
+      inMap[key]=(inMap[key]||0)+(dd.qty||0);
+    });
+    outSnap.forEach(function(d){
+      var dd=d.data();
+      var key=dd.itemCode||dd.itemName||'';
+      outMap[key]=(outMap[key]||0)+(dd.qty||0);
+    });
+
+    // CSV 생성
+    var rows=[['품목코드','품목명','거래처','분류','원산지','현재고','총입고','총출고','단위','비고']];
+    invSnap.forEach(function(d){
+      var dd=d.data();
+      var key=dd.itemCode||dd.itemName||'';
+      rows.push([
+        dd.itemCode||'',
+        dd.itemName||'',
+        dd.supplier||'',
+        dd.category||'',
+        dd.origin||'',
+        dd.stock||0,
+        inMap[key]||0,
+        outMap[key]||0,
+        dd.unit||'',
+        dd.memo||''
+      ]);
+    });
+
+    var csv=rows.map(function(r){
+      return r.map(function(v){
+        return '"'+String(v).replace(/"/g,'""')+'"';
+      }).join(',');
+    }).join('\r\n');
+
+    var bom='﻿';
+    var blob=new Blob([bom+csv],{type:'text/csv;charset=utf-8'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');
+    var today=new Date();
+    var ds=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+    a.href=url; a.download='재고현황_'+ds+'.csv';
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+    toast('✅ 재고 엑셀 다운로드 완료 ('+invSnap.size+'개 품목)');
+  })
+  .catch(function(e){toast('❌ 오류: '+e.message);});
+}
+
 function pageInventory(){
   document.getElementById('page-title').textContent='📦 재고관리';
   var c=document.getElementById('content');
@@ -30282,7 +30358,10 @@ function pageInventory(){
   c.innerHTML=
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
       '<div style="font-size:15px;font-weight:800">📦 재고관리</div>'+
+      '<div style="display:flex;gap:6px">'+
+      '<button onclick="_invExcelExport()" style="padding:7px 14px;background:#f0fdf4;color:#059669;border:1px solid #6ee7b7;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📥 엑셀 내보내기</button>'+
       '<button id="inv-delete-all-btn" style="padding:7px 14px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗑 전체삭제</button>'+
+      '</div>'+
     '</div>'+
     '<div id="inv-tabs" style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">'+
       '<button id="itab-stock"   style="padding:6px 14px;background:var(--acc);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">📦 재고현황</button>'+
