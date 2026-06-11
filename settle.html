@@ -2498,104 +2498,149 @@ function _parseCleaningExcel(file, month){
       var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
       if(!rows.length){toast('❌ 데이터 없음');return;}
 
-      var headers=rows[0].map(function(h){return String(h||'').trim();});
+      // 헤더 찾기 (최대 5행 스캔)
+      var headerRow=0;
+      for(var hi=0;hi<Math.min(5,rows.length);hi++){
+        var r=rows[hi];
+        if(r&&r.some(function(v){var s=String(v||'');return s.includes('이름')||s.includes('성명')||s.includes('팀장')||s.includes('직원');})){
+          headerRow=hi; break;
+        }
+      }
+      var headers=rows[headerRow].map(function(h){return String(h||'').trim();});
+
       function col(keywords){
-        var idx=headers.findIndex(function(h){return keywords.some(function(k){return h.includes(k);});});
-        return idx;
+        return headers.findIndex(function(h){
+          return keywords.some(function(k){return h.includes(k);});
+        });
       }
 
-      // ★ 자동 방식 감지
-      var iName=col(['이름','성명','직원','팀장','매니저','담당자']);
-      var iDays=col(['출근','일수','근무일']);
-      var iRate=col(['시급','일당','단가','요율']);
-      var iSales=col(['고객결제','매출','청구','결제금액','수입']);
-      var iRatio=col(['배분율','지급율','수수료율','비율']);
-      var iBase=col(['기본수당','기본급','기본지급']);
-      var iExtra=col(['추가수당','추가작업','현장추가','할증']);
-      var iTrans=col(['유류비','교통비','출장비','이동비']);
-      var iDeduct=col(['공제','지각','차감']);
-      var iMeal=col(['식대','식비']);
-      var iId=col(['ID','아이디','사번']);
-      var iCamp=col(['캠프','현장','팀','부서','지점']);
-      var iTax=col(['3.3','원천','소득세','세금']);
-      var iGross=col(['세전','총지급','지급총액','지급액(세전)']);
-      var iNet=col(['실지급','최종','계좌','이체']);
+      // 컬럼 매핑 — 최대한 포괄적
+      var iName   = col(['이름','성명','직원','팀장','매니저','담당자','작업자']);
+      var iRole   = col(['역할','구분','직책','포지션']);
+      var iSite   = col(['현장','현장명','프로젝트','작업지']);
+      var iCamp   = col(['캠프','부서','팀','지점','소속']);
+      var iId     = col(['ID','아이디','사번','코드']);
+      // 금액 계산
+      var iDays   = col(['출근','일수','근무일','작업일수']);
+      var iRate   = col(['시급','일당','단가','시간당']);
+      var iHours  = col(['시간','작업시간','근무시간']);
+      var iSales  = col(['고객결제','매출','청구','계약금','수입','청구금']);
+      var iRatio  = col(['배분율','지급율','수수료율','비율(%)','배분(%)']);
+      var iBase   = col(['기본수당','기본급','기본지급','기본페이']);
+      var iExtra  = col(['추가수당','추가작업','현장추가','할증','인센']);
+      var iTrans  = col(['유류비','교통비','출장비','이동비','차비']);
+      var iPenalty= col(['패널티','벌금','감점공제','불량공제']);
+      var iPenaltyReason = col(['패널티사유','불량사유','공제사유','사유']);
+      var iDeduct = col(['공제','지각','차감','기타공제']);
+      var iMeal   = col(['식대','식비','식사비']);
+      var iGross  = col(['세전','총지급','지급총액','지급액(세전)','총액']);
+      var iTax    = col(['3.3','원천','소득세','세금','공제세']);
+      var iNet    = col(['실지급','최종','계좌','이체','순지급','최종지급']);
 
-      if(iName<0){toast('❌ 이름 컬럼 없음. 헤더: '+headers.slice(0,6).join(', '));return;}
+      if(iName<0){toast('❌ 이름/직원 컬럼 없음. 헤더: '+headers.slice(0,6).join(', '));return;}
 
-      // 방식 판단
-      var isHourly=(iDays>=0&&iRate>=0);           // 시간제
-      var isPerCase=(iSales>=0||iBase>=0||iGross>=0); // 건당/금액제
-      var mode=isHourly?'hourly':'percase';
-      toast('📂 '+month+' 청소·파견 파싱 중... ['+(mode==='hourly'?'시간제':'건당/금액제')+']');
+      // 방식 자동 감지
+      var isHourly  = (iDays>=0 && (iRate>=0||iHours>=0));
+      var isPerCase = (iSales>=0 || iBase>=0 || iGross>=0 || iNet>=0);
+      var isTeam    = (iRole>=0 || iSite>=0 || iPenalty>=0);
+      var mode = isHourly?'hourly': isTeam?'team':'percase';
+      toast('📂 '+month+' 청소·파견 파싱 중... ['+(mode==='hourly'?'시간제':mode==='team'?'팀단위':'건당/금액제')+']');
 
       var results=[];
-      rows.slice(1).forEach(function(row){
+      rows.slice(headerRow+1).forEach(function(row){
         var name=String(row[iName]||'').trim(); if(!name) return;
         var camp=iCamp>=0?String(row[iCamp]||'').trim():'';
+        var site=iSite>=0?String(row[iSite]||'').trim():'';
+        var role=iRole>=0?String(row[iRole]||'').trim():'';
         var id=iId>=0?String(row[iId]||'').trim():'';
         var gross=0, tax=0, net=0, extras=[];
+        var penaltyAmt=0, penaltyReason='';
+
+        var v=function(i){return i>=0?parseFloat(String(row[i]||'').replace(/,/g,'').replace(/%/g,''))||0:0;};
 
         if(mode==='hourly'){
-          // 시간제: 출근일수 × 시급
-          var days=iDays>=0?parseFloat(row[iDays])||0:0;
-          var rate=iRate>=0?parseFloat(String(row[iRate]||'').replace(/,/g,''))||0:0;
-          var over=col(['연장','초과'])>=0?parseFloat(row[col(['연장','초과'])])||0:0;
-          var night=col(['야간'])>=0?parseFloat(row[col(['야간'])])||0:0;
-          var deduct=iDeduct>=0?parseFloat(String(row[iDeduct]||'').replace(/,/g,''))||0:0;
-          var meal=iMeal>=0?parseFloat(String(row[iMeal]||'').replace(/,/g,''))||0:0;
-          gross=(days*rate)+(over*rate*0.5)+(night*rate*0.3)+meal-deduct;
-          tax=Math.round(gross*0.033);
-          net=gross-tax;
-          if(days>0) extras.push({label:'근무'+days+'일×'+rate.toLocaleString()+'원',value:days*rate});
+          // 시간제
+          var days=v(iDays), rate=v(iRate), hrs=v(iHours);
+          var deduct=v(iDeduct), meal=v(iMeal);
+          if(hrs>0&&rate>0) gross=hrs*rate;
+          else gross=days*rate;
+          gross+=meal-deduct;
+          if(days>0||hrs>0) extras.push({label:(days>0?'근무'+days+'일':'작업'+hrs+'시간')+'×'+rate.toLocaleString()+'원',value:days>0?days*rate:hrs*rate});
           if(meal>0) extras.push({label:'식대',value:meal});
           if(deduct>0) extras.push({label:'공제',value:-deduct});
-        } else {
-          // 건당/금액제
-          var salesAmt=iSales>=0?parseFloat(String(row[iSales]||'').replace(/,/g,''))||0:0;
-          var ratio=iRatio>=0?parseFloat(String(row[iRatio]||'').replace(/,/g,'').replace('%',''))||0:0;
-          var baseAmt=iBase>=0?parseFloat(String(row[iBase]||'').replace(/,/g,''))||0:0;
-          var extraAmt=iExtra>=0?parseFloat(String(row[iExtra]||'').replace(/,/g,''))||0:0;
-          var transAmt=iTrans>=0?parseFloat(String(row[iTrans]||'').replace(/,/g,''))||0:0;
-          var deductAmt=iDeduct>=0?parseFloat(String(row[iDeduct]||'').replace(/,/g,''))||0:0;
-          var grossDirect=iGross>=0?parseFloat(String(row[iGross]||'').replace(/,/g,''))||0:0;
-          var netDirect=iNet>=0?parseFloat(String(row[iNet]||'').replace(/,/g,''))||0:0;
-          var taxDirect=iTax>=0?parseFloat(String(row[iTax]||'').replace(/,/g,''))||0:0;
 
-          if(grossDirect>0){
-            gross=grossDirect;
-          } else if(salesAmt>0&&ratio>0){
-            gross=Math.round(salesAmt*(ratio/100))+extraAmt+transAmt-deductAmt;
-          } else {
-            gross=baseAmt+extraAmt+transAmt-deductAmt;
-          }
+        } else if(mode==='team'){
+          // 팀단위/건당 혼합
+          penaltyAmt=v(iPenalty);
+          penaltyReason=iPenaltyReason>=0?String(row[iPenaltyReason]||'').trim():'';
+          var baseAmt=v(iBase), extraAmt=v(iExtra), transAmt=v(iTrans);
+          var grossDirect=v(iGross), netDirect=v(iNet);
+          var salesAmt=v(iSales), ratio=v(iRatio);
 
           if(netDirect>0){
             net=netDirect;
-            tax=taxDirect>0?taxDirect:gross-net;
-          } else if(taxDirect>0){
-            tax=taxDirect;
-            net=gross-tax;
+            gross=grossDirect>0?grossDirect:net+penaltyAmt;
+          } else if(grossDirect>0){
+            gross=grossDirect-penaltyAmt;
+          } else if(salesAmt>0&&ratio>0){
+            gross=Math.round(salesAmt*(ratio/100))+extraAmt+transAmt-penaltyAmt;
           } else {
-            tax=Math.round(gross*0.033);
-            net=gross-tax;
+            gross=baseAmt+extraAmt+transAmt-penaltyAmt;
+          }
+
+          if(baseAmt>0) extras.push({label:'기본수당',value:baseAmt});
+          if(extraAmt>0) extras.push({label:'추가수당',value:extraAmt});
+          if(transAmt>0) extras.push({label:'유류비',value:transAmt});
+          if(penaltyAmt>0) extras.push({label:'패널티'+(penaltyReason?'('+penaltyReason+')':''),value:-penaltyAmt});
+          if(role) extras.push({label:'역할',value:role});
+          if(site) extras.push({label:'현장',value:site});
+
+        } else {
+          // 건당/금액제
+          var salesAmt=v(iSales), ratio=v(iRatio);
+          var baseAmt=v(iBase), extraAmt=v(iExtra), transAmt=v(iTrans);
+          var deductAmt=v(iDeduct), mealAmt=v(iMeal);
+          var grossDirect=v(iGross), netDirect=v(iNet), taxDirect=v(iTax);
+
+          if(netDirect>0&&grossDirect>0){
+            gross=grossDirect; net=netDirect; tax=gross-net;
+          } else if(grossDirect>0){
+            gross=grossDirect;
+          } else if(salesAmt>0&&ratio>0){
+            gross=Math.round(salesAmt*(ratio/100))+extraAmt+transAmt+mealAmt-deductAmt;
+          } else {
+            gross=baseAmt+extraAmt+transAmt+mealAmt-deductAmt;
           }
 
           if(salesAmt>0) extras.push({label:'매출',value:salesAmt});
           if(baseAmt>0) extras.push({label:'기본수당',value:baseAmt});
           if(extraAmt>0) extras.push({label:'추가수당',value:extraAmt});
           if(transAmt>0) extras.push({label:'유류비',value:transAmt});
+          if(mealAmt>0) extras.push({label:'식대',value:mealAmt});
           if(deductAmt>0) extras.push({label:'공제',value:-deductAmt});
         }
 
-        if(iTax>=0&&taxDirect>0) tax=taxDirect;
-        tax=tax||Math.round(gross*0.033);
-        net=gross-tax;
+        // 세금 계산 (직접 입력 우선)
+        var taxDirect=v(iTax), netDirect2=v(iNet);
+        if(taxDirect>0){
+          tax=taxDirect; net=gross-tax;
+        } else if(netDirect2>0&&mode!=='team'){
+          net=netDirect2; tax=gross-net;
+        } else if(net===0){
+          tax=Math.round(gross*0.033); net=gross-tax;
+        }
+
+        if(gross<=0&&net<=0) return; // 빈 행 스킵
 
         results.push({
-          name:name, camp:camp, id:id,
-          gross:gross, tax33:tax, net:net,
-          extras:extras, industryType:'cleaning'
+          name:name, camp:camp||site, id:id,
+          gross:Math.max(0,gross),
+          tax33:Math.max(0,tax),
+          net:Math.max(0,net),
+          extras:extras,
+          industryType:'cleaning',
+          role:role,
+          site:site
         });
       });
 
