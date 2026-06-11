@@ -491,89 +491,84 @@ body{font-family:'Noto Sans KR',sans-serif;color:var(--text)}
 
     <!-- AI정산 배달대행 준비중 -->
     <div class="anim-3" style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin-bottom:10px;opacity:.75">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
         <div>
           <div style="font-size:13px;font-weight:800">🤖 AI정산 · 🛵 배달대행</div>
           <div style="font-size:10px;color:var(--text3);margin-top:2px">복잡한 계산이 필요한 모든 업종</div>
         </div>
         <div style="background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;padding:5px 12px;font-size:11px;font-weight:700;color:var(--text3)">🔜 6월 오픈 예정</div>
       </div>
-      <!-- 개인 단가표 -->
-      <div style="font-size:10px;color:var(--text3);margin-bottom:5px;font-weight:700">개인 (VAT별도)</div>
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:3px;margin-bottom:8px">
-        <div style="background:var(--bg3);border-radius:6px;padding:6px 3px;text-align:center">
-          <div style="font-size:8px;color:var(--text3)">~50명</div>
-          <div style="font-size:11px;font-weight:800;color:var(--acc)">7,200원</div>
+
+      <!-- 개인 요금표 -->
+      <div style="font-size:10px;font-weight:700;color:var(--text2);margin-bottom:5px">개인 <span style="color:var(--text3);font-weight:400">(VAT별도)</span></div>
+      <div style="background:var(--bg3);border-radius:10px;overflow:hidden;margin-bottom:8px">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;padding:5px 10px;font-size:9px;color:var(--text3);font-weight:700;border-bottom:1px solid var(--border)">
+          <span>월 정액</span><span style="text-align:center">인원 기준</span><span style="text-align:right">인당</span>
         </div>
-        <div style="background:var(--bg3);border-radius:6px;padding:6px 3px;text-align:center">
-          <div style="font-size:8px;color:var(--text3)">~150명</div>
-          <div style="font-size:11px;font-weight:800;color:var(--acc)">4,800원</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;padding:5px 10px;font-size:11px;border-bottom:1px solid var(--border)">
+          <span style="font-weight:800;color:var(--acc)">300,000원</span><span style="text-align:center;color:var(--text3)">~50명</span><span style="text-align:right;color:var(--text3);font-size:10px">7,200원</span>
         </div>
-        <div style="background:var(--bg3);border-radius:6px;padding:6px 3px;text-align:center">
-          <div style="font-size:8px;color:var(--text3)">~300명</div>
-          <div style="font-size:11px;font-weight:800;color:var(--acc)">3,600원</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;padding:5px 10px;font-size:11px;border-bottom:1px solid var(--border)">
+          <span style="font-weight:800;color:var(--acc)">600,000원</span><span style="text-align:center;color:var(--text3)">~150명</span><span style="text-align:right;color:var(--text3);font-size:10px">4,800원</span>
         </div>
-        <div style="background:var(--bg3);border-radius:6px;padding:6px 3px;text-align:center">
-          <div style="font-size:8px;color:var(--text3)">~500명</div>
-          <div style="font-size:11px;font-weight:800;color:var(--acc)">3,600원</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;padding:5px 10px;font-size:11px;border-bottom:1px solid var(--border)">
+          <span style="font-weight:800;color:var(--acc)">900,000원</span><span style="text-align:center;color:var(--text3)">~300명</span><span style="text-align:right;color:var(--text3);font-size:10px">3,600원</span>
         </div>
-        <div style="background:var(--bg3);border-radius:6px;padding:6px 3px;text-align:center">
-          <div style="font-size:8px;color:var(--text3)">~1000명</div>
-          <div style="font-size:11px;font-weight:800;color:var(--acc)">2,400원</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;padding:5px 10px;font-size:11px;border-bottom:1px solid var(--border)">
+          <span style="font-weight:800;color:var(--acc)">1,500,000원</span><span style="text-align:center;color:var(--text3)">~500명</span><span style="text-align:right;color:var(--text3);font-size:10px">3,600원</span>
         </div>
-      </div>
-      <!-- 단체 단가표 -->
-      <div style="font-size:10px;color:#FEE500;margin-bottom:5px;font-weight:700">단체 20개사+ (VAT별도)</div>
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:3px;margin-bottom:8px">
-        <div style="background:rgba(254,229,0,.06);border:1px solid rgba(254,229,0,.2);border-radius:6px;padding:6px 3px;text-align:center">
-          <div style="font-size:8px;color:var(--text3)">~50명</div>
-          <div style="font-size:11px;font-weight:800;color:#FEE500">6,000원</div>
-        </div>
-        <div style="background:rgba(254,229,0,.06);border:1px solid rgba(254,229,0,.2);border-radius:6px;padding:6px 3px;text-align:center">
-          <div style="font-size:8px;color:var(--text3)">~150명</div>
-          <div style="font-size:11px;font-weight:800;color:#FEE500">4,000원</div>
-        </div>
-        <div style="background:rgba(254,229,0,.06);border:1px solid rgba(254,229,0,.2);border-radius:6px;padding:6px 3px;text-align:center">
-          <div style="font-size:8px;color:var(--text3)">~300명</div>
-          <div style="font-size:11px;font-weight:800;color:#FEE500">3,000원</div>
-        </div>
-        <div style="background:rgba(254,229,0,.06);border:1px solid rgba(254,229,0,.2);border-radius:6px;padding:6px 3px;text-align:center">
-          <div style="font-size:8px;color:var(--text3)">~500명</div>
-          <div style="font-size:11px;font-weight:800;color:#FEE500">3,000원</div>
-        </div>
-        <div style="background:rgba(254,229,0,.06);border:1px solid rgba(254,229,0,.2);border-radius:6px;padding:6px 3px;text-align:center">
-          <div style="font-size:8px;color:var(--text3)">~1000명</div>
-          <div style="font-size:11px;font-weight:800;color:#FEE500">2,000원</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;padding:5px 10px;font-size:11px">
+          <span style="font-weight:800;color:var(--acc)">2,000,000원</span><span style="text-align:center;color:var(--text3)">~1000명</span><span style="text-align:right;color:var(--text3);font-size:10px">2,400원</span>
         </div>
       </div>
+
+      <!-- 단체 요금표 -->
+      <div style="font-size:10px;font-weight:700;color:#FEE500;margin-bottom:5px">단체 20개사+ <span style="color:var(--text3);font-weight:400">(VAT별도)</span></div>
+      <div style="background:rgba(254,229,0,.05);border:1px solid rgba(254,229,0,.15);border-radius:10px;overflow:hidden;margin-bottom:10px">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;padding:5px 10px;font-size:9px;color:var(--text3);font-weight:700;border-bottom:1px solid rgba(254,229,0,.1)">
+          <span>월 정액</span><span style="text-align:center">인원 기준</span><span style="text-align:right">인당</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;padding:5px 10px;font-size:11px;border-bottom:1px solid rgba(254,229,0,.1)">
+          <span style="font-weight:800;color:#FEE500">250,000원</span><span style="text-align:center;color:var(--text3)">~50명</span><span style="text-align:right;color:var(--text3);font-size:10px">6,000원</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;padding:5px 10px;font-size:11px;border-bottom:1px solid rgba(254,229,0,.1)">
+          <span style="font-weight:800;color:#FEE500">500,000원</span><span style="text-align:center;color:var(--text3)">~150명</span><span style="text-align:right;color:var(--text3);font-size:10px">4,000원</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;padding:5px 10px;font-size:11px;border-bottom:1px solid rgba(254,229,0,.1)">
+          <span style="font-weight:800;color:#FEE500">750,000원</span><span style="text-align:center;color:var(--text3)">~300명</span><span style="text-align:right;color:var(--text3);font-size:10px">3,000원</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;padding:5px 10px;font-size:11px;border-bottom:1px solid rgba(254,229,0,.1)">
+          <span style="font-weight:800;color:#FEE500">1,250,000원</span><span style="text-align:center;color:var(--text3)">~500명</span><span style="text-align:right;color:var(--text3);font-size:10px">3,000원</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;padding:5px 10px;font-size:11px">
+          <span style="font-weight:800;color:#FEE500">1,666,000원</span><span style="text-align:center;color:var(--text3)">~1000명</span><span style="text-align:right;color:var(--text3);font-size:10px">2,000원</span>
+        </div>
+      </div>
+
       <div style="background:var(--bg3);border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
         <div style="font-size:11px;color:var(--text2)">요금 확정 중 · 사전 문의 시 <strong style="color:var(--acc)">오픈기념 특가</strong> 안내</div>
         <a href="https://pf.kakao.com/_xkuxabX/chat" target="_blank" style="background:#FEE500;color:#1a1a2e;padding:7px 14px;border-radius:8px;font-size:11px;font-weight:700;text-decoration:none">💬 사전 문의</a>
       </div>
     </div>
 
-    <!-- 범용정산 재고관리 오픈 -->
+    <!-- 범용정산 재고관리 -->
     <div class="anim-4" style="background:var(--bg2);border:2px solid rgba(0,255,148,.3);border-radius:14px;padding:16px 20px;margin-bottom:10px;position:relative;overflow:hidden">
       <div style="position:absolute;top:12px;right:12px;background:#059669;color:#fff;font-size:9px;font-weight:800;padding:3px 8px;border-radius:6px">✅ 지금 바로</div>
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
-        <div>
-          <div style="font-size:13px;font-weight:800">📋 범용정산 · 📦 재고관리</div>
-          <div style="font-size:10px;color:var(--text3);margin-top:2px">인원·품목 무제한 고정 요금</div>
+      <div style="font-size:13px;font-weight:800;margin-bottom:12px">📋 범용정산 · 📦 재고관리</div>
+      <div style="background:var(--bg3);border-radius:10px;overflow:hidden;margin-bottom:4px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;padding:5px 10px;font-size:9px;color:var(--text3);font-weight:700;border-bottom:1px solid var(--border)">
+          <span>구분</span><span style="text-align:right">월 정액 (인원 무제한)</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;padding:8px 10px;font-size:12px;border-bottom:1px solid var(--border)">
+          <span style="color:var(--text2)">개인 <span style="font-size:9px;color:var(--text3)">(VAT별도)</span></span>
+          <span style="text-align:right;font-weight:800;color:var(--green)">150,000원</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;padding:8px 10px;font-size:12px">
+          <span style="color:#FEE500;font-weight:700">단체 20개사+ <span style="font-size:9px;color:var(--text3)">(VAT별도)</span></span>
+          <span style="text-align:right;font-weight:800;color:#FEE500">135,000원</span>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-        <div style="background:var(--bg3);border-radius:8px;padding:10px;text-align:center">
-          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">개인 (VAT별도)</div>
-          <div style="font-size:15px;font-weight:800;color:var(--green)">150,000원</div>
-          <div style="font-size:9px;color:var(--text3);margin-top:2px">월납 · 인원 무제한</div>
-        </div>
-        <div style="background:rgba(254,229,0,.06);border:1px solid rgba(254,229,0,.2);border-radius:8px;padding:10px;text-align:center">
-          <div style="font-size:10px;color:#FEE500;margin-bottom:3px;font-weight:700">단체 20개사+ (VAT별도)</div>
-          <div style="font-size:15px;font-weight:800;color:#FEE500">135,000원</div>
-          <div style="font-size:9px;color:var(--text3);margin-top:2px">10% 할인</div>
-        </div>
-      </div>
-      <div style="font-size:10px;color:var(--text3)">* 7일 무료 체험 · 추가 기능 필요 시 문의</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:6px">* 7일 무료 체험 · 추가 기능 필요 시 문의</div>
     </div>
 
     <div class="anim-5" style="display:flex;flex-wrap:wrap;gap:6px">
