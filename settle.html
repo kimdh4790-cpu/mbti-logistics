@@ -2552,6 +2552,33 @@ function _parseCleaningExcel(file, month){
       var iStatus = col(['지급상태','상태','지급']);
       var iTs     = col(['타임스탬프','이체완료','시간']);
 
+      // ★ 장비/약품 마스터 코드 인식
+      var EQ_MASTER=[
+        {key:'고압세척기',    kw:['고압세척기','엔진세척','고압']},
+        {key:'스크러버',      kw:['스크러버','바닥스크러버','탑승식']},
+        {key:'광택기/연마기', kw:['광택기','돌돌이','마루광택','연마기','샌딩기']},
+        {key:'산업용청소기',  kw:['청소기','건습식','산업용청소']},
+        {key:'오존살균기',    kw:['오존','살균기','피톤치드','연무기']},
+        {key:'열풍기/송풍기', kw:['열풍기','송풍기','대형팬']},
+        {key:'왁스/박리제',   kw:['왁스','박리제','바닥왁스']},
+        {key:'외벽세제',      kw:['외벽세제','외벽약품','백화제거']},
+        {key:'화재세제',      kw:['화재세제','그을음','탄내제거']},
+        {key:'시멘트제거제',  kw:['시멘트','백화제','메디제거']},
+        {key:'디그리셔',      kw:['디그리셔','기름때','탈지제']},
+        {key:'스티커제거제',  kw:['스티커제거','타르제거','친환경세제']},
+        {key:'스퀴지',        kw:['스퀴지','물기제거']},
+        {key:'마프/걸레',     kw:['마프','걸레','밀대','리스킹']},
+        {key:'극세사타월',    kw:['극세사','타월','극세사타월']},
+        {key:'바닥패드',      kw:['패드','블루패드','블랙패드','화이트패드']},
+        {key:'스크래퍼',      kw:['스크래퍼','칼헤라','껌칼']},
+        {key:'안전장비',      kw:['안전모','안전벨트','우마','발판']},
+      ];
+      EQ_MASTER.forEach(function(eq){
+        eq.colIdx=headers.findIndex(function(h){
+          return eq.kw.some(function(k){return h.replace(/[\s\[\]()]/g,'').includes(k.replace(/[\s\[\]()]/g,''));});
+        });
+      });
+
       if(iName<0){toast('❌ 이름 컬럼 없음. 헤더: '+headers.slice(0,6).join(', '));return;}
 
       // ── 방식 자동 감지 ──
@@ -2604,6 +2631,18 @@ function _parseCleaningExcel(file, month){
         var supAmt   = v(iSup);     // 소모품비 (음수)
         var eqPers   = v(iEqPers);  // 개인장비차감 (음수)
         var eqRent   = v(iEqRent);  // 장비대여료 (음수)
+        // 장비/약품 마스터 차감 합산
+        var eqMasterAmt=0; var eqMasterExtras=[];
+        EQ_MASTER.forEach(function(eq){
+          if(eq.colIdx>=0){
+            var amt=v(eq.colIdx);
+            if(amt!==0){
+              eqMasterAmt+=amt;
+              eqMasterExtras.push({label:'[장비]'+eq.key, value:amt});
+            }
+          }
+        });
+
         var penAmt   = v(iPenalty);
         var deductAmt= v(iDeduct);
         var mealAmt  = v(iMeal);
@@ -2617,12 +2656,12 @@ function _parseCleaningExcel(file, month){
         if(mode==='hourly'){
           var hours=v(iHours); var days=v(iDays); var rate=v(iRate);
           var base=hours>0?hours*rate : days>0?days*rate : baseAmt;
-          gross=base+overAmt+weekAmt+incAmt+mealAmt+transAmt+eqTeam+supAmt+eqPers+eqRent-penAmt-deductAmt;
+          gross=base+overAmt+weekAmt+incAmt+mealAmt+transAmt+eqTeam+supAmt+eqPers+eqRent+eqMasterAmt-penAmt-deductAmt;
           if(base>0) extras.push({label:(hours>0?hours+'시간':''+days+'일')+'×'+Math.round(rate).toLocaleString(),value:base});
         } else if(grossDirect>0){
-          gross=grossDirect+eqTeam+supAmt+eqPers+eqRent;
+          gross=grossDirect+eqTeam+supAmt+eqPers+eqRent+eqMasterAmt;
         } else {
-          gross=baseAmt+overAmt+weekAmt+incAmt+mealAmt+transAmt+eqTeam+supAmt+eqPers+eqRent-penAmt-deductAmt;
+          gross=baseAmt+overAmt+weekAmt+incAmt+mealAmt+transAmt+eqTeam+supAmt+eqPers+eqRent+eqMasterAmt-penAmt-deductAmt;
         }
 
         // 세금
@@ -2652,6 +2691,7 @@ function _parseCleaningExcel(file, month){
         if(eqRent<0)  extras.push({label:'장비대여료',value:eqRent});
         if(penAmt>0)  extras.push({label:'패널티'+(iPenRsn>=0&&row[iPenRsn]?'('+String(row[iPenRsn]||'')+')':""),value:-penAmt});
         if(holdAmt>0) extras.push({label:'분쟁유보금',value:-holdAmt});
+        eqMasterExtras.forEach(function(eq){extras.push(eq);});
         if(team)      extras.push({label:'소속팀',value:team});
         if(role)      extras.push({label:'역할',value:role});
         if(ts)        extras.push({label:'이체시각',value:ts});
