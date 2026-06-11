@@ -2530,6 +2530,83 @@ function _industrySettleSaveAll(did, results, month, label){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 👷 청소업 기사 자동 등록/업데이트
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+function _parseBeautyExcel(file,month){
+  _baseParser(file,month,'💄 뷰티·미용','beauty',function(row,headers,col,rv,name,camp){
+    var iSales=col(['시술매출','매출','수입','총매출','시술금액']);
+    var iRate=col(['수수료율','커미션율','배분율','커미션']);
+    var iBase=col(['기본급','기본수당','기본급여','고정급']);
+    var iTip=col(['팁','봉사료']);
+    var iMat=col(['재료비','약품비','염색약','파마약','재료차감']);
+    var iSupply=col(['소모품','타월','장갑','소모품비']);
+    var iEdu=col(['교육비','교육차감']);
+    var iDeduct=col(['공제','차감','지각']);
+    var iEmpType=col(['고용형태','고용']);
+    var sales=rv(row,iSales),rate=rv(row,iRate)||60;
+    var base=rv(row,iBase),tip=rv(row,iTip);
+    var mat=rv(row,iMat),supply=rv(row,iSupply);
+    var edu=rv(row,iEdu),deduct=rv(row,iDeduct);
+    var emp=iEmpType>=0?String(row[iEmpType]||'').trim():'FREELANCER_3.3';
+    var comm=base>0?base:Math.round(sales*(rate/100));
+    var gross=comm+tip-mat-supply-edu-deduct;
+    var isFree=emp.includes('3.3')||emp.includes('프리')||!emp;
+    var tax=isFree?Math.round(gross*0.033):0;
+    var empIns=!isFree?Math.round(gross*0.009):0;
+    return {name:name,camp:camp,gross:gross,tax33:tax,empIns:empIns,net:gross-tax-empIns,
+      extras:[
+        sales>0?{label:'시술매출 '+sales.toLocaleString()+'원×'+rate+'%',value:comm}:
+                base>0?{label:'기본급',value:base}:null,
+        tip>0&&{label:'팁/봉사료',value:tip},
+        mat>0&&{label:'재료비차감(염색·파마)',value:-mat},
+        supply>0&&{label:'소모품차감(타월·장갑)',value:-supply},
+        edu>0&&{label:'교육비차감',value:-edu},
+        deduct>0&&{label:'기타공제',value:-deduct},
+      ].filter(Boolean),industryType:'beauty'};
+  });
+}
+
+function _parseCareExcel(file,month){
+  _baseParser(file,month,'🏥 요양·돌봄','care',function(row,headers,col,rv,name,camp){
+    var iHours=col(['서비스시간','방문시간','근무시간','시간','총시간']);
+    var iDays=col(['방문일수','출근일수','일수','근무일']);
+    var iRate=col(['시급','서비스단가','시간당','수가']);
+    var iWeekly=col(['주휴수당','주휴']);
+    var iBath=col(['목욕급여','목욕횟수','목욕건수','목욕']);
+    var iBathRate=col(['목욕단가','목욕수가']);
+    var iNight=col(['야간','심야수당','야간수당']);
+    var iSpecial=col(['특수','중증','가산수당']);
+    var iTrans=col(['교통비','출장비','이동비']);
+    var iHealth=col(['건강보험','건강보험료']);
+    var iPension=col(['국민연금','연금']);
+    var iEmpIns=col(['고용보험','고용보험료']);
+    var iDeduct=col(['공제','차감','기타공제']);
+    var hours=rv(row,iHours),days=rv(row,iDays),rate=rv(row,iRate);
+    var pay=hours>0&&rate>0?hours*rate:days>0&&rate>0?days*rate:0;
+    var weeklyPay=rv(row,iWeekly)||(hours>=15?Math.round(pay/5):0);
+    var bathCnt=rv(row,iBath),bathRate=rv(row,iBathRate)||35000;
+    var bathPay=bathCnt>0?bathCnt*bathRate:0;
+    var night=rv(row,iNight),special=rv(row,iSpecial),trans=rv(row,iTrans);
+    var health=rv(row,iHealth),pension=rv(row,iPension);
+    var empIns=rv(row,iEmpIns)||Math.round(pay*0.009);
+    var deduct=rv(row,iDeduct);
+    var gross=pay+weeklyPay+bathPay+night+special+trans;
+    var net=gross-empIns-health-pension-deduct;
+    return {name:name,camp:camp,gross:gross,tax33:0,empIns:empIns,net:net,
+      extras:[
+        pay>0&&{label:(hours>0?hours+'시간':days+'일')+'×'+rate.toLocaleString()+'원',value:pay},
+        weeklyPay>0&&{label:'주휴수당',value:weeklyPay},
+        bathPay>0&&{label:'목욕급여 '+bathCnt+'회×'+bathRate.toLocaleString()+'원',value:bathPay},
+        night>0&&{label:'야간수당',value:night},
+        special>0&&{label:'중증/가산수당',value:special},
+        trans>0&&{label:'교통비',value:trans},
+        empIns>0&&{label:'고용보험(0.9%)',value:-empIns},
+        health>0&&{label:'건강보험',value:-health},
+        pension>0&&{label:'국민연금',value:-pension},
+        deduct>0&&{label:'기타공제',value:-deduct},
+      ].filter(Boolean),industryType:'care'};
+  });
+}
+
 function _autoRegisterCleanWorkers(results){
   var did=_CU.dealerId||_CU.uid;
   if(!did||!results||!results.length) return;
