@@ -23963,11 +23963,12 @@ function _getSettleCamp(x){
   return '기타';
 }
 function _buildDynCamps(settles){
-  // 정산 데이터에서 캠프 목록 동적 구성
+  // 정산 데이터에서 캠프 목록 동적 구성 (청소 캠프 제외)
   var seen={};
+  var EXCLUDE_CAMPS=['청소','청소·파견','cleaning'];
   (settles||[]).forEach(function(x){
     var cc=_getSettleCamp(x);
-    if(cc&&cc!=='기타')seen[cc]=1;
+    if(cc&&cc!=='기타'&&EXCLUDE_CAMPS.indexOf(cc)<0) seen[cc]=1;
   });
   CAMP_LIST_S=Object.keys(seen).sort();
   CAMP_COL_S={};
