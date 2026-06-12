@@ -23027,7 +23027,12 @@ function buildNav(){
       window._cachedHasPaid=_isPlanAllowed(d);
       _buildNavRender(nav,cur,d);
     }).catch(function(){_buildNavRender(nav,cur,{});});
-    _buildNavRender(nav,cur,{}); // 로딩 중엔 free만
+    // SA면 로딩 중에도 전체 메뉴 표시
+    if(isSuperAdmin()){
+      _buildNavRender(nav,cur,window._cachedCompanyDoc||{});
+    } else {
+      _buildNavRender(nav,cur,{}); // 로딩 중엔 free만
+    }
     return;
   }
   _buildNavRender(nav,cur,window._cachedCompanyDoc||{});
