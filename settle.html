@@ -2541,75 +2541,6 @@ function _industrySettleSaveAll(did, results, month, label){
 // 👷 청소업 기사 자동 등록/업데이트
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 📦 _baseParser — 업종별 파서 공통 엔진
-// 각 row를 콜백으로 처리 → results 배열 → 렌더링
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function _baseParser(file, month, title, industryType, rowCb){
-  if(!file) return;
-  var reader=new FileReader();
-  reader.onload=function(e){
-    try{
-      var wb=XLSX.read(e.target.result,{type:'array'});
-      var ws=wb.Sheets[wb.SheetNames[0]];
-      var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
-      if(!rows.length){toast('❌ 데이터 없음');return;}
-
-      var headers=rows[0].map(function(h){return String(h||'').trim();});
-
-      // 컬럼 인덱스 찾기 (키워드 배열 중 하나라도 포함)
-      function col(kws){
-        return headers.findIndex(function(h){
-          return kws.some(function(k){return h.includes(k);});
-        });
-      }
-
-      // 숫자값 추출 (콤마·공백 제거)
-      function rv(row,i){
-        if(i<0||i>=row.length) return 0;
-        var v=row[i]; if(v===null||v===undefined||v==='') return 0;
-        return parseFloat(String(v).replace(/[,\s]/g,''))||0;
-      }
-
-      // 이름·캠프 컬럼
-      var iName=col(['이름','성명','기사명','직원명','강사명','라이더','설계사','요양사','스태프']);
-      var iCamp=col(['캠프','소속','팀','센터','지점','권역','매장','학원']);
-
-      if(iName<0){toast('❌ 이름 컬럼 없음 (헤더: '+headers.slice(0,6).join(',')+')');return;}
-
-      var results=[];
-      rows.slice(1).forEach(function(row){
-        var name=String(row[iName]||'').trim();
-        if(!name) return;
-        var camp=iCamp>=0?String(row[iCamp]||'').trim():'';
-
-        // 각 업종 콜백 → result 객체 반환
-        var result=rowCb(row,headers,col,rv,name,camp);
-        if(!result) return;
-        if(!result.name)  result.name=name;
-        if(!result.camp)  result.camp=camp;
-        if(!result.month) result.month=month;
-        result.industryType=result.industryType||industryType;
-        results.push(result);
-      });
-
-      if(!results.length){toast('❌ 파싱된 직원 없음');return;}
-      toast('✅ '+title+' 파싱 완료 — '+results.length+'명');
-
-      // 직원 자동 등록 (ind_workers)
-      _autoRegisterIndWorkers(results, industryType);
-
-      // 결과 렌더링 및 저장
-      _renderIndustrySettle(results, month, title);
-
-    }catch(err){
-      console.error('[_baseParser]', err);
-      toast('❌ 파싱 오류: '+err.message);
-    }
-  };
-  reader.readAsArrayBuffer(file);
-}
-
 function _parseBeautyExcel(file,month){
   _baseParser(file,month,'💄 뷰티·미용','beauty',function(row,headers,col,rv,name,camp){
     var iSales=col(['시술매출','매출','수입','총매출','시술금액']);
@@ -5350,7 +5281,40 @@ function showApp(){
   }
   // 파일 입력 연결 (영구적)
   var fi=document.getElementById('excel-input');
-  fi.onchange=function(){if(this.files[0])parseCoupangExcel(this);};
+  fi.onchange=function(){
+    if(!this.files[0]) return;
+    var file=this.files[0];
+    var indType=(_COMPANY_CFG&&_COMPANY_CFG.industryType)||'';
+    var ym=document.getElementById('sel-month')?document.getElementById('sel-month').value:'';
+    if(!ym){
+      var now=new Date();
+      ym=(now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0'));
+    }
+    // 업종별 파서 라우팅
+    var parserMap={
+      'construction': _parseConstructionExcel,
+      'insurance':    _parseInsuranceExcel,
+      'quick':        _parseQuickExcel,
+      'beauty':       _parseBeautyExcel,
+      'care':         _parseCareExcel,
+      'academy':      _parseAcademyExcel,
+      'warehouse':    _parseWarehouseExcel,
+      'event':        _parseEventExcel,
+      'sales':        _parseSalesExcel,
+      'freelance':    _parseFreelanceExcel,
+      'restaurant':   _parseRestaurantExcel,
+      'cleaning':     _parseCleaningExcel,
+    };
+    var parser=parserMap[indType];
+    if(parser){
+      parser(file, ym);
+    } else {
+      // 기본: 쿠팡 파서
+      parseCoupangExcel(this);
+    }
+    // 같은 파일 재업로드 가능하도록 초기화
+    this.value='';
+  };
   // 약관 동의 확인 후 진입
   checkTermsAgreement();
 }
