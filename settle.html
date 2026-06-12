@@ -35283,6 +35283,137 @@ function _deleteIndSettle(sid, type){
 }
 
 // 3. 직원 관리 (해당 업종 직원 목록)
+// ★ 정산 파싱 후 ind_workers 자동 등록 (drivers 절대 미접촉)
+function _autoRegisterIndWorkers(results, type){
+  if(!results||!results.length||!_CU) return;
+  var did=_CU.dealerId||_CU.uid;
+  _db.collection('ind_workers')
+    .where('dealerId','==',did).where('industryType','==',type).get()
+  .then(function(snap){
+    var existing={};
+    snap.forEach(function(d){existing[d.data().name||'']=true;});
+    var batch=_db.batch(); var cnt=0;
+    results.forEach(function(r){
+      var name=r.name||''; if(!name||existing[name]) return;
+      batch.set(_db.collection('ind_workers').doc(),{
+        dealerId:did, industryType:type, name:name, camp:r.camp||'',
+        phone:'', bankCode:'', accountNumber:'', memo:'',
+        createdAt:new Date().toISOString()
+      });
+      cnt++;
+    });
+    if(cnt>0) batch.commit().catch(function(){});
+  }).catch(function(){});
+}
+
+// 📥 엑셀로 직원 등록
+function _openIndWorkerExcelImport(type, did, info, cb){
+  var inp=document.createElement('input');
+  inp.type='file'; inp.accept='.xlsx,.xls,.csv';
+  inp.style.display='none';
+  document.body.appendChild(inp);
+  inp.onchange=function(){
+    var file=inp.files[0]; if(!file){inp.remove();return;}
+    var reader=new FileReader();
+    reader.onload=function(e){
+      try{
+        var wb=XLSX.read(e.target.result,{type:'array'});
+        var ws=wb.Sheets[wb.SheetNames[0]];
+        var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
+        if(!rows.length){toast('❌ 데이터 없음');return;}
+        var headers=rows[0].map(function(h){return String(h||'').trim();});
+        function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
+        var iName =col(['이름','성명','직원명']);
+        var iPhone=col(['전화','연락처','휴대폰','phone']);
+        var iCamp =col(['소속','팀','캠프','부서']);
+        var iBank =col(['은행','bankCode']);
+        var iAcct =col(['계좌번호','계좌']);
+        var iMemo =col(['메모','비고']);
+        if(iName<0){toast('❌ 이름 컬럼 없음');inp.remove();return;}
+        var batch=_db.batch(); var cnt=0;
+        rows.slice(1).forEach(function(row){
+          var name=String(row[iName]||'').trim(); if(!name) return;
+          batch.set(_db.collection('ind_workers').doc(),{
+            dealerId:did, industryType:type, name:name,
+            phone:   iPhone>=0?String(row[iPhone]||'').trim():'',
+            camp:    iCamp>=0 ?String(row[iCamp]||'').trim():'',
+            bankCode:iBank>=0 ?String(row[iBank]||'').trim():'',
+            accountNumber:iAcct>=0?String(row[iAcct]||'').trim():'',
+            memo:    iMemo>=0 ?String(row[iMemo]||'').trim():'',
+            createdAt:new Date().toISOString()
+          });
+          cnt++;
+        });
+        batch.commit().then(function(){
+          toast('✅ '+cnt+'명 등록 완료');
+          inp.remove(); if(cb)cb();
+        }).catch(function(e){toast('❌ '+e.message);inp.remove();});
+      }catch(err){toast('❌ '+err.message);inp.remove();}
+    };
+    reader.readAsArrayBuffer(file);
+  };
+  inp.click();
+}
+
+// 📝 텍스트로 직원 등록
+function _openIndWorkerTextImport(type, did, info, cb){
+  var pop=document.createElement('div');
+  pop.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  var box=document.createElement('div');
+  box.style.cssText='background:var(--bg2);border-radius:14px;padding:20px;width:100%;max-width:440px';
+  box.innerHTML=
+    '<div style="font-size:14px;font-weight:800;margin-bottom:6px">📝 텍스트로 직원 등록</div>'+
+    '<div style="font-size:11px;color:var(--text3);margin-bottom:10px">한 줄에 한 명 · 쉼표 구분<br>형식: 이름 / 이름,연락처 / 이름,연락처,소속</div>'+
+    '<textarea id="iwt-input" rows="10" placeholder="홍길동&#10;김철수,010-1234-5678&#10;이영희,010-9876-5432,A팀" style="width:100%;padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text1);font-size:12px;resize:vertical;box-sizing:border-box"></textarea>'+
+    '<div id="iwt-preview" style="font-size:10px;color:var(--text3);margin-top:6px"></div>';
+
+  var ta=box.querySelector('#iwt-input');
+  var preview=box.querySelector('#iwt-preview');
+  ta.oninput=function(){
+    var lines=ta.value.split('\n').filter(function(l){return l.trim();});
+    preview.textContent=lines.length+'명 인식됨';
+  };
+
+  var br=document.createElement('div');
+  br.style.cssText='display:flex;gap:8px;margin-top:12px';
+
+  var cancelBtn=document.createElement('button');
+  cancelBtn.style.cssText='flex:1;padding:10px;background:var(--bg3);color:var(--text2);border:none;border-radius:8px;font-weight:700;cursor:pointer';
+  cancelBtn.textContent='취소';
+  cancelBtn.onclick=function(){pop.remove();};
+
+  var saveBtn=document.createElement('button');
+  saveBtn.style.cssText='flex:2;padding:10px;background:'+(info.color||'var(--acc)')+';color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer';
+  saveBtn.textContent='등록';
+  saveBtn.onclick=function(){
+    var lines=ta.value.split('\n').filter(function(l){return l.trim();});
+    if(!lines.length){toast('내용을 입력하세요');return;}
+    var batch=_db.batch(); var cnt=0;
+    lines.forEach(function(line){
+      var parts=line.split(/[,，\t]/).map(function(p){return p.trim();});
+      var name=parts[0]; if(!name) return;
+      batch.set(_db.collection('ind_workers').doc(),{
+        dealerId:did, industryType:type,
+        name:name, phone:parts[1]||'', camp:parts[2]||'',
+        bankCode:'', accountNumber:'', memo:'',
+        createdAt:new Date().toISOString()
+      });
+      cnt++;
+    });
+    batch.commit().then(function(){
+      toast('✅ '+cnt+'명 등록 완료');
+      pop.remove(); if(cb)cb();
+    }).catch(function(e){toast('❌ '+e.message);});
+  };
+
+  br.appendChild(cancelBtn);
+  br.appendChild(saveBtn);
+  box.appendChild(br);
+  pop.appendChild(box);
+  document.body.appendChild(pop);
+  pop.onclick=function(e){if(e.target===pop)pop.remove();};
+}
+
 function pageIndWorkers(type,title){
   document.getElementById('page-title').textContent=title+' 직원 관리';
   var c=document.getElementById('content');
