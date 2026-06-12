@@ -2706,47 +2706,176 @@ function _getBeautyRate(sales, rule){
 }
 
 
-function _parseCareExcel(file,month){
-  _baseParser(file,month,'🏥 요양·돌봄','care',function(row,headers,col,rv,name,camp){
-    var iHours=col(['서비스시간','방문시간','근무시간','시간','총시간']);
-    var iDays=col(['방문일수','출근일수','일수','근무일']);
-    var iRate=col(['시급','서비스단가','시간당','수가']);
-    var iWeekly=col(['주휴수당','주휴']);
-    var iBath=col(['목욕급여','목욕횟수','목욕건수','목욕']);
-    var iBathRate=col(['목욕단가','목욕수가']);
-    var iNight=col(['야간','심야수당','야간수당']);
-    var iSpecial=col(['특수','중증','가산수당']);
-    var iTrans=col(['교통비','출장비','이동비']);
-    var iHealth=col(['건강보험','건강보험료']);
-    var iPension=col(['국민연금','연금']);
-    var iEmpIns=col(['고용보험','고용보험료']);
-    var iDeduct=col(['공제','차감','기타공제']);
-    var hours=rv(row,iHours),days=rv(row,iDays),rate=rv(row,iRate);
-    var pay=hours>0&&rate>0?hours*rate:days>0&&rate>0?days*rate:0;
-    var weeklyPay=rv(row,iWeekly)||(hours>=15?Math.round(pay/5):0);
-    var bathCnt=rv(row,iBath),bathRate=rv(row,iBathRate)||35000;
-    var bathPay=bathCnt>0?bathCnt*bathRate:0;
-    var night=rv(row,iNight),special=rv(row,iSpecial),trans=rv(row,iTrans);
-    var health=rv(row,iHealth),pension=rv(row,iPension);
-    var empIns=rv(row,iEmpIns)||Math.round(pay*0.009);
-    var deduct=rv(row,iDeduct);
-    var gross=pay+weeklyPay+bathPay+night+special+trans;
-    var net=gross-empIns-health-pension-deduct;
-    return {name:name,camp:camp,gross:gross,tax33:0,empIns:empIns,net:net,
-      extras:[
-        pay>0&&{label:(hours>0?hours+'시간':days+'일')+'×'+rate.toLocaleString()+'원',value:pay},
-        weeklyPay>0&&{label:'주휴수당',value:weeklyPay},
-        bathPay>0&&{label:'목욕급여 '+bathCnt+'회×'+bathRate.toLocaleString()+'원',value:bathPay},
-        night>0&&{label:'야간수당',value:night},
-        special>0&&{label:'중증/가산수당',value:special},
-        trans>0&&{label:'교통비',value:trans},
-        empIns>0&&{label:'고용보험(0.9%)',value:-empIns},
-        health>0&&{label:'건강보험',value:-health},
-        pension>0&&{label:'국민연금',value:-pension},
-        deduct>0&&{label:'기타공제',value:-deduct},
-      ].filter(Boolean),industryType:'care'};
-  });
+function _parseCareExcel(file, month){
+  // 요양·돌봄 파서 — 요양사 사번별 다중 서비스행 집계
+  // 컬럼: 요양사사번, 요양사명, 대상어르신, 서비스유형, 근무일수, 일일근무시간, 시간당수가, 처우개선비대상
+  if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
+      if(!rows.length){toast('❌ 데이터 없음');return;}
+
+      var headers=rows[0].map(function(h){return String(h||'').trim();});
+      function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
+      function rv(row,i){if(i<0) return 0; var v=row[i]; if(!v&&v!==0) return 0; return parseFloat(String(v).replace(/,/g,''))||0;}
+
+      var iId      = col(['요양사사번','사번','ID','직원번호']);
+      var iName    = col(['요양사명','이름','성명','담당자']);
+      var iClient  = col(['대상어르신','어르신','수급자','대상자']);
+      var iType    = col(['서비스유형','서비스','유형','구분']);
+      var iDays    = col(['근무일수','방문일수','출근일수','일수']);
+      var iHours   = col(['일일근무시간','일일시간','근무시간','시간']);
+      var iWage    = col(['시간당수가','수가','시급','시간당']);
+      var iImprove = col(['처우개선비대상','처우개선','처우']);
+      var iCamp    = col(['센터','소속','기관']);
+
+      if(iName<0&&iId<0){toast('❌ 요양사명/사번 컬럼 없음');return;}
+
+      var rule = _getRule('care');
+      var publicRate  = (rule.publicPayRate||85)/100;   // 공단 청구 비율
+      var bathFee     = rule.bathFee||35000;             // 목욕 1회 단가
+      var nightRate   = (rule.nightRate||50)/100;        // 야간 가산율
+      var familyRate  = (rule.familyPayRate||60)/100;    // 가족요양 지급율
+      var IMPROVE_RATE = 0.155;                          // 처우개선비 15.5% (요양보호사)
+
+      var personMap={};
+      var personOrder=[];
+
+      rows.slice(1).forEach(function(row){
+        var rawId   = iId>=0   ? String(row[iId]||'').trim() : '';
+        var rawName = iName>=0 ? String(row[iName]||'').trim() : '';
+        var key = rawId||rawName;
+        if(!key) return;
+
+        if(!personMap[key]){
+          personMap[key]={
+            id:rawId, name:rawName||rawId,
+            camp: iCamp>=0?String(row[iCamp]||'').trim():'',
+            services:[],
+            totalHours:0,
+            totalPay:0,
+            improvePay:0,
+            isFamily:false
+          };
+          personOrder.push(key);
+        }
+        var p=personMap[key];
+        if(!p.name&&rawName) p.name=rawName;
+        if(p.name===p.id&&rawName) p.name=rawName;
+
+        var client   = iClient>=0 ? String(row[iClient]||'').trim() : '';
+        var svcType  = iType>=0   ? String(row[iType]||'').trim() : '';
+        var days     = rv(row,iDays);
+        var hpd      = rv(row,iHours);   // 일일 근무시간
+        var wage     = rv(row,iWage);
+        var isImprove= iImprove>=0 ? String(row[iImprove]||'').trim().toUpperCase()==='Y' : false;
+        var isFamily = svcType.includes('가족');
+
+        var totalH   = days*hpd;
+        var isBath   = svcType.includes('목욕');
+
+        // 서비스별 급여 계산
+        var svcPay=0;
+        if(isBath){
+          // 목욕: 일수 × 목욕단가 (시간당 수가 별도)
+          svcPay = days*bathFee + Math.round(totalH*wage);
+        } else if(isFamily){
+          // 가족요양: 일반의 familyRate(60%)
+          svcPay = Math.round(totalH*wage*familyRate);
+        } else {
+          // 일반 방문요양: 시간×수가
+          svcPay = Math.round(totalH*wage);
+        }
+
+        // 처우개선비 (처우개선비대상=Y인 경우)
+        var improvePay = isImprove ? Math.round(svcPay*IMPROVE_RATE) : 0;
+
+        p.services.push({
+          client:client, type:svcType,
+          days:days, hours:totalH,
+          wage:wage, pay:svcPay,
+          improvePay:improvePay,
+          isFamily:isFamily, isBath:isBath
+        });
+        p.totalHours += totalH;
+        p.totalPay   += svcPay;
+        p.improvePay += improvePay;
+        if(isFamily) p.isFamily=true;
+      });
+
+      var results=[];
+      personOrder.forEach(function(key){
+        var p=personMap[key];
+        if(!p.name||p.totalPay===0) return;
+
+        var gross = p.totalPay + p.improvePay;
+
+        // 주휴수당 (주 15시간 이상 → 발생)
+        // 월 총 시간 / 4주 → 주당 시간 추정
+        var weeklyH = p.totalHours/4.3;
+        var weeklyHoliPay = weeklyH>=15
+          ? Math.round((weeklyH/40)*8*(p.totalPay/p.totalHours||0)*4)
+          : 0;
+        gross += weeklyHoliPay;
+
+        // 고용보험 (0.9%)
+        var empIns = Math.round(gross*0.009);
+        if(empIns<1000) empIns=0;
+
+        // 소득세 3.3% (요양보호사는 통상 비과세 많음 — 간이세액 적용)
+        var tax33 = Math.round(gross*0.033);
+        if(tax33<1000) tax33=0;
+
+        var net = gross-empIns-tax33;
+
+        // 서비스 유형별 요약
+        var svcSummary={};
+        p.services.forEach(function(s){
+          var k=s.type||'방문요양';
+          if(!svcSummary[k]) svcSummary[k]={h:0,pay:0};
+          svcSummary[k].h+=s.hours;
+          svcSummary[k].pay+=s.pay;
+        });
+
+        var extras=[
+          {label:'총 서비스시간 '+p.totalHours+'h / '+p.services.length+'건',value:''},
+        ].concat(
+          Object.keys(svcSummary).map(function(k){
+            var s=svcSummary[k];
+            return {label:k+' ('+s.h+'h)',value:s.pay};
+          })
+        ).concat([
+          p.improvePay>0&&{label:'처우개선비 (15.5%)',value:p.improvePay},
+          weeklyHoliPay>0&&{label:'주휴수당 (주'+Math.round(weeklyH)+'h≥15h)',value:weeklyHoliPay},
+          p.isFamily&&{label:'⚠️ 가족요양 포함 ('+Math.round(familyRate*100)+'% 적용)',value:''},
+          empIns>0&&{label:'고용보험 0.9%',value:-empIns},
+          tax33>0&&{label:'소득세 3.3%',value:-tax33},
+        ].filter(Boolean));
+
+        results.push({
+          name:p.name, id:p.id, camp:p.camp,
+          gross:gross, tax33:tax33, empIns:empIns,
+          net:net, totalHours:p.totalHours,
+          extras:extras,
+          industryType:'care'
+        });
+      });
+
+      if(!results.length){toast('❌ 파싱된 직원 없음');return;}
+      toast('✅ 요양·돌봄 파싱 완료 — '+results.length+'명');
+      _autoRegisterIndWorkers(results,'care');
+      _renderIndustrySettle(results, month, '🏥 요양·돌봄');
+    }catch(err){
+      console.error('[_parseCareExcel]',err);
+      toast('❌ 파싱 오류: '+err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
 }
+
 
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
