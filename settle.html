@@ -20065,20 +20065,76 @@ var MENUS_SETTLE = [
     {ic:'💸',l:'송금 관리',        p:'payout',           plan_key:'settle'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'settle'},
   ]},
-  {s:'📂 업종별 정산', items:[
-    {ic:'⚙️',l:'정산 규칙 설정',    p:'ind_rules',        plan_key:'settle'},
-    {ic:'🏗️',l:'건설·일용직',      p:'ind_construction', plan_key:'settle'},
-    {ic:'🛡️',l:'보험설계사',        p:'ind_insurance',    plan_key:'settle'},
-    {ic:'🚗',l:'배달대행·퀵',       p:'ind_delivery',     plan_key:'settle'},
-    {ic:'💄',l:'뷰티·미용',         p:'ind_beauty',       plan_key:'settle'},
-    {ic:'🏥',l:'요양·돌봄',         p:'ind_care',         plan_key:'settle'},
-    {ic:'🎓',l:'학원·교육',         p:'ind_academy',      plan_key:'settle'},
-    {ic:'📦',l:'물류창고',          p:'ind_warehouse',    plan_key:'settle'},
-    {ic:'🎪',l:'행사·이벤트',       p:'ind_event',        plan_key:'settle'},
-    {ic:'💼',l:'영업직',            p:'ind_sales',        plan_key:'settle'},
-    {ic:'🖥️',l:'프리랜서',          p:'ind_freelance',    plan_key:'settle'},
-    {ic:'🍽️',l:'음식점·카페',       p:'ind_restaurant',   plan_key:'settle'},
+  {s:'⚙️ 정산 규칙 설정', items:[
+    {ic:'⚙️',l:'규칙 설정',          p:'ind_rules',           plan_key:'settle'},
   ]},
+  {s:'🏗️ 건설·일용직', items:[
+    {ic:'📊',l:'정산 현황',       p:'ind_construction_settle',    plan_key:'settle'},
+    {ic:'📋',l:'정산 관리',       p:'ind_construction_list',      plan_key:'settle'},
+    {ic:'👤',l:'직원 관리',       p:'ind_construction_workers',   plan_key:'settle'},
+    {ic:'💸',l:'송금',            p:'payout',              plan_key:'settle'},
+  ]},
+  {s:'🛡️ 보험설계사', items:[
+    {ic:'📊',l:'정산 현황',       p:'ind_insurance_settle',    plan_key:'settle'},
+    {ic:'📋',l:'정산 관리',       p:'ind_insurance_list',      plan_key:'settle'},
+    {ic:'👤',l:'직원 관리',       p:'ind_insurance_workers',   plan_key:'settle'},
+    {ic:'💸',l:'송금',            p:'payout',              plan_key:'settle'},
+  ]},
+  {s:'🚗 배달대행·퀵', items:[
+    {ic:'📊',l:'정산 현황',       p:'ind_delivery_settle',    plan_key:'settle'},
+    {ic:'📋',l:'정산 관리',       p:'ind_delivery_list',      plan_key:'settle'},
+    {ic:'👤',l:'직원 관리',       p:'ind_delivery_workers',   plan_key:'settle'},
+    {ic:'💸',l:'송금',            p:'payout',              plan_key:'settle'},
+  ]},
+  {s:'💄 뷰티·미용', items:[
+    {ic:'📊',l:'정산 현황',       p:'ind_beauty_settle',    plan_key:'settle'},
+    {ic:'📋',l:'정산 관리',       p:'ind_beauty_list',      plan_key:'settle'},
+    {ic:'👤',l:'직원 관리',       p:'ind_beauty_workers',   plan_key:'settle'},
+    {ic:'💸',l:'송금',            p:'payout',              plan_key:'settle'},
+  ]},
+  {s:'🏥 요양·돌봄', items:[
+    {ic:'📊',l:'정산 현황',       p:'ind_care_settle',    plan_key:'settle'},
+    {ic:'📋',l:'정산 관리',       p:'ind_care_list',      plan_key:'settle'},
+    {ic:'👤',l:'직원 관리',       p:'ind_care_workers',   plan_key:'settle'},
+    {ic:'💸',l:'송금',            p:'payout',              plan_key:'settle'},
+  ]},
+  {s:'🎓 학원·교육', items:[
+    {ic:'📊',l:'정산 현황',       p:'ind_academy_settle',    plan_key:'settle'},
+    {ic:'📋',l:'정산 관리',       p:'ind_academy_list',      plan_key:'settle'},
+    {ic:'👤',l:'직원 관리',       p:'ind_academy_workers',   plan_key:'settle'},
+    {ic:'💸',l:'송금',            p:'payout',              plan_key:'settle'},
+  ]},
+  {s:'📦 물류창고', items:[
+    {ic:'📊',l:'정산 현황',       p:'ind_warehouse_settle',    plan_key:'settle'},
+    {ic:'📋',l:'정산 관리',       p:'ind_warehouse_list',      plan_key:'settle'},
+    {ic:'👤',l:'직원 관리',       p:'ind_warehouse_workers',   plan_key:'settle'},
+    {ic:'💸',l:'송금',            p:'payout',              plan_key:'settle'},
+  ]},
+  {s:'🎪 행사·이벤트', items:[
+    {ic:'📊',l:'정산 현황',       p:'ind_event_settle',    plan_key:'settle'},
+    {ic:'📋',l:'정산 관리',       p:'ind_event_list',      plan_key:'settle'},
+    {ic:'👤',l:'직원 관리',       p:'ind_event_workers',   plan_key:'settle'},
+    {ic:'💸',l:'송금',            p:'payout',              plan_key:'settle'},
+  ]},
+  {s:'💼 영업직', items:[
+    {ic:'📊',l:'정산 현황',       p:'ind_sales_settle',    plan_key:'settle'},
+    {ic:'📋',l:'정산 관리',       p:'ind_sales_list',      plan_key:'settle'},
+    {ic:'👤',l:'직원 관리',       p:'ind_sales_workers',   plan_key:'settle'},
+    {ic:'💸',l:'송금',            p:'payout',              plan_key:'settle'},
+  ]},
+  {s:'🖥️ 프리랜서', items:[
+    {ic:'📊',l:'정산 현황',       p:'ind_freelance_settle',    plan_key:'settle'},
+    {ic:'📋',l:'정산 관리',       p:'ind_freelance_list',      plan_key:'settle'},
+    {ic:'👤',l:'직원 관리',       p:'ind_freelance_workers',   plan_key:'settle'},
+    {ic:'💸',l:'송금',            p:'payout',              plan_key:'settle'},
+  ]},
+  {s:'🍽️ 음식점·카페', items:[
+    {ic:'📊',l:'정산 현황',       p:'ind_restaurant_settle',    plan_key:'settle'},
+    {ic:'📋',l:'정산 관리',       p:'ind_restaurant_list',      plan_key:'settle'},
+    {ic:'👤',l:'직원 관리',       p:'ind_restaurant_workers',   plan_key:'settle'},
+    {ic:'💸',l:'송금',            p:'payout',              plan_key:'settle'},
+  ]},
+
   {s:'🛵 배달대행 정산', items:[
     {ic:'📊',l:'정산 현황',        p:'delivery_settle',  plan_key:'any_paid'},
     {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',   plan_key:'any_paid'},
@@ -22708,7 +22764,53 @@ function goPage(page){
   document.getElementById('sidebar').classList.remove('open');
   var _bd=document.getElementById('sb-backdrop');if(_bd)_bd.style.display='none';
   var pages={settle:pageSettle,delivery_settle:pageDeliverySettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,my_roster:pageMyRoster,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,payout:pagePayout,ind_rules:pageIndustryRules,
-  ind_construction:function(){pageIndustry('construction','🏗️ 건설·일용직');},
+  ind_construction_settle: function(){pageIndSettle('construction','🏗️ 건설·일용직');},
+  ind_construction_list:   function(){pageIndList('construction','🏗️ 건설·일용직');},
+  ind_construction_workers:function(){pageIndWorkers('construction','🏗️ 건설·일용직');},
+  ind_construction:        function(){pageIndSettle('construction','🏗️ 건설·일용직');},
+  ind_insurance_settle: function(){pageIndSettle('insurance','🛡️ 보험설계사');},
+  ind_insurance_list:   function(){pageIndList('insurance','🛡️ 보험설계사');},
+  ind_insurance_workers:function(){pageIndWorkers('insurance','🛡️ 보험설계사');},
+  ind_insurance:        function(){pageIndSettle('insurance','🛡️ 보험설계사');},
+  ind_delivery_settle: function(){pageIndSettle('delivery','🚗 배달대행·퀵');},
+  ind_delivery_list:   function(){pageIndList('delivery','🚗 배달대행·퀵');},
+  ind_delivery_workers:function(){pageIndWorkers('delivery','🚗 배달대행·퀵');},
+  ind_delivery:        function(){pageIndSettle('delivery','🚗 배달대행·퀵');},
+  ind_beauty_settle: function(){pageIndSettle('beauty','💄 뷰티·미용');},
+  ind_beauty_list:   function(){pageIndList('beauty','💄 뷰티·미용');},
+  ind_beauty_workers:function(){pageIndWorkers('beauty','💄 뷰티·미용');},
+  ind_beauty:        function(){pageIndSettle('beauty','💄 뷰티·미용');},
+  ind_care_settle: function(){pageIndSettle('care','🏥 요양·돌봄');},
+  ind_care_list:   function(){pageIndList('care','🏥 요양·돌봄');},
+  ind_care_workers:function(){pageIndWorkers('care','🏥 요양·돌봄');},
+  ind_care:        function(){pageIndSettle('care','🏥 요양·돌봄');},
+  ind_academy_settle: function(){pageIndSettle('academy','🎓 학원·교육');},
+  ind_academy_list:   function(){pageIndList('academy','🎓 학원·교육');},
+  ind_academy_workers:function(){pageIndWorkers('academy','🎓 학원·교육');},
+  ind_academy:        function(){pageIndSettle('academy','🎓 학원·교육');},
+  ind_warehouse_settle: function(){pageIndSettle('warehouse','📦 물류창고');},
+  ind_warehouse_list:   function(){pageIndList('warehouse','📦 물류창고');},
+  ind_warehouse_workers:function(){pageIndWorkers('warehouse','📦 물류창고');},
+  ind_warehouse:        function(){pageIndSettle('warehouse','📦 물류창고');},
+  ind_event_settle: function(){pageIndSettle('event','🎪 행사·이벤트');},
+  ind_event_list:   function(){pageIndList('event','🎪 행사·이벤트');},
+  ind_event_workers:function(){pageIndWorkers('event','🎪 행사·이벤트');},
+  ind_event:        function(){pageIndSettle('event','🎪 행사·이벤트');},
+  ind_sales_settle: function(){pageIndSettle('sales','💼 영업직');},
+  ind_sales_list:   function(){pageIndList('sales','💼 영업직');},
+  ind_sales_workers:function(){pageIndWorkers('sales','💼 영업직');},
+  ind_sales:        function(){pageIndSettle('sales','💼 영업직');},
+  ind_freelance_settle: function(){pageIndSettle('freelance','🖥️ 프리랜서');},
+  ind_freelance_list:   function(){pageIndList('freelance','🖥️ 프리랜서');},
+  ind_freelance_workers:function(){pageIndWorkers('freelance','🖥️ 프리랜서');},
+  ind_freelance:        function(){pageIndSettle('freelance','🖥️ 프리랜서');},
+  ind_restaurant_settle: function(){pageIndSettle('restaurant','🍽️ 음식점·카페');},
+  ind_restaurant_list:   function(){pageIndList('restaurant','🍽️ 음식점·카페');},
+  ind_restaurant_workers:function(){pageIndWorkers('restaurant','🍽️ 음식점·카페');},
+  ind_restaurant:        function(){pageIndSettle('restaurant','🍽️ 음식점·카페');},
+
+  // 구 라우팅 호환
+  ind_construction:function(){pageIndSettle('construction','🏗️ 건설·일용직');},
   ind_insurance:function(){pageIndustry('insurance','🛡️ 보험설계사');},
   ind_delivery:function(){pageIndustry('quick','🚗 배달대행·퀵');},
   ind_beauty:function(){pageIndustry('beauty','💄 뷰티·미용');},
@@ -34826,6 +34928,255 @@ function _invSaveOut(did){
 
 
 
+
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 📂 업종별 공통 3페이지
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// 1. 정산 현황 (업로드 + 최근 이력)
+function pageIndSettle(type, title){
+  document.getElementById('page-title').textContent=title+' 정산 현황';
+  var c=document.getElementById('content');
+  var info=_IND_INFO[type]||{icon:'📂',name:title,color:'#6b7280',cols:'',tax:''};
+  var did=_CU.dealerId||_CU.uid;
+
+  // 상단 업로드 버튼
+  var tr=document.getElementById('topbar-right');
+  if(tr){
+    tr.innerHTML='';
+    var ub=document.createElement('button');
+    ub.textContent='📥 엑셀 업로드';
+    ub.style.cssText='padding:6px 14px;background:'+info.color+';color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer';
+    ub.onclick=function(){
+      if(!_COMPANY_CFG) _COMPANY_CFG={};
+      _COMPANY_CFG.industryType=type;
+      document.getElementById('excel-input').click();
+    };
+    tr.appendChild(ub);
+  }
+
+  c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
+
+  _db.collection('settlements')
+    .where('dealerId','==',did)
+    .where('industryType','==',type)
+    .limit(20).get()
+  .then(function(snap){
+    var list=[];
+    snap.forEach(function(d){list.push(Object.assign({id:d.id},d.data()));});
+    // 월별 정렬
+    list.sort(function(a,b){return (b.month||'').localeCompare(a.month||'');});
+
+    var el=document.createElement('div');
+    el.style.cssText='max-width:720px;margin:0 auto;padding:16px';
+
+    // 정보 헤더
+    var hdr=document.createElement('div');
+    hdr.style.cssText='background:linear-gradient(135deg,var(--bg2),var(--bg3));border:1px solid '+info.color+';border-radius:12px;padding:14px 16px;margin-bottom:12px;display:flex;align-items:center;gap:12px';
+    hdr.innerHTML=
+      '<span style="font-size:28px">'+info.icon+'</span>'+
+      '<div style="flex:1">'+
+        '<div style="font-size:14px;font-weight:900">'+esc(info.name)+' 정산</div>'+
+        '<div style="font-size:10px;color:var(--text3);margin-top:2px">'+esc(info.tax)+'</div>'+
+      '</div>'+
+      '<div style="text-align:right">'+
+        '<div style="font-size:18px;font-weight:900;color:'+info.color+'">'+list.length+'건</div>'+
+        '<div style="font-size:9px;color:var(--text3)">정산 이력</div>'+
+      '</div>';
+    el.appendChild(hdr);
+
+    // 업로드 버튼
+    var uploadBtn=document.createElement('button');
+    uploadBtn.style.cssText='width:100%;padding:14px;background:'+info.color+';color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:10px';
+    uploadBtn.textContent='📥 '+info.name+' 정산 엑셀 업로드';
+    uploadBtn.onclick=function(){
+      if(!_COMPANY_CFG) _COMPANY_CFG={};
+      _COMPANY_CFG.industryType=type;
+      document.getElementById('excel-input').click();
+    };
+    el.appendChild(uploadBtn);
+
+    // 샘플 다운로드
+    var sampleBtn=document.createElement('button');
+    sampleBtn.style.cssText='width:100%;padding:9px;background:var(--bg3);color:var(--text2);border:none;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;margin-bottom:14px';
+    sampleBtn.textContent='📄 샘플 엑셀 양식 다운로드';
+    sampleBtn.onclick=function(){_downloadIndustrySample(type);};
+    el.appendChild(sampleBtn);
+
+    if(!list.length){
+      var empty=document.createElement('div');
+      empty.style.cssText='text-align:center;padding:40px;color:var(--text3);font-size:13px';
+      empty.innerHTML='아직 정산 데이터 없음<br><small>엑셀 업로드 후 저장하면 여기에 표시됩니다</small>';
+      el.appendChild(empty);
+    } else {
+      var listDiv=document.createElement('div');
+      listDiv.innerHTML='<div style="font-size:11px;font-weight:700;margin-bottom:8px">📋 정산 이력</div>'+
+        list.map(function(h){
+          var totalNet=h.totalNet||0;
+          var cnt=h.totalCount||0;
+          return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:6px;cursor:pointer;display:flex;justify-content:space-between;align-items:center" data-sid="'+h.id+'" data-stype="'+type+'" onclick="_loadIndustrySavedSettle(this.dataset.sid,this.dataset.stype)">'+
+            '<div>'+
+              '<div style="font-size:13px;font-weight:700">'+esc(h.month||'')+'</div>'+
+              '<div style="font-size:10px;color:var(--text3)">'+cnt+'명</div>'+
+            '</div>'+
+            '<div style="text-align:right">'+
+              '<div style="font-size:13px;font-weight:700;color:#10b981">₩'+totalNet.toLocaleString()+'</div>'+
+              '<div style="font-size:9px;color:var(--text3)">실지급 합계</div>'+
+            '</div>'+
+          '</div>';
+        }).join('');
+      el.appendChild(listDiv);
+    }
+
+    c.innerHTML=''; c.appendChild(el);
+  }).catch(function(){
+    // 오류여도 업로드 버튼은 표시
+    var el=document.createElement('div');
+    el.style.cssText='max-width:720px;margin:0 auto;padding:16px';
+    var uploadBtn=document.createElement('button');
+    uploadBtn.style.cssText='width:100%;padding:14px;background:'+info.color+';color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer';
+    uploadBtn.textContent='📥 '+info.name+' 정산 엑셀 업로드';
+    uploadBtn.onclick=function(){
+      if(!_COMPANY_CFG) _COMPANY_CFG={};
+      _COMPANY_CFG.industryType=type;
+      document.getElementById('excel-input').click();
+    };
+    el.appendChild(uploadBtn);
+    c.innerHTML=''; c.appendChild(el);
+  });
+  window._currentIndustryType=type;
+}
+
+// 2. 정산 관리 (저장된 정산 목록 + 상세)
+function pageIndList(type, title){
+  document.getElementById('page-title').textContent=title+' 정산 관리';
+  var c=document.getElementById('content');
+  var info=_IND_INFO[type]||{icon:'📂',name:title,color:'#6b7280'};
+  var did=_CU.dealerId||_CU.uid;
+  c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
+
+  _db.collection('settlements')
+    .where('dealerId','==',did)
+    .where('industryType','==',type)
+    .limit(50).get()
+  .then(function(snap){
+    var list=[];
+    snap.forEach(function(d){list.push(Object.assign({id:d.id},d.data()));});
+    list.sort(function(a,b){return (b.month||'').localeCompare(a.month||'');});
+
+    if(!list.length){
+      c.innerHTML='<div style="max-width:720px;margin:0 auto;padding:16px"><div style="text-align:center;padding:60px;color:var(--text3)">'+info.icon+'<br>저장된 정산 없음</div></div>';
+      return;
+    }
+
+    var rows=list.map(function(h){
+      var payStatus=h.payoutStatus==='PAID'
+        ?'<span style="color:#10b981;font-weight:700;font-size:10px">✅ 지급완료</span>'
+        :'<span style="color:var(--acc);font-weight:700;font-size:10px">⏳ 미지급</span>';
+      return '<tr style="cursor:pointer" data-sid="'+h.id+'" data-stype="'+type+'" onclick="_loadIndustrySavedSettle(this.dataset.sid,this.dataset.stype)">'+
+        '<td style="font-weight:700">'+esc(h.month||'')+'</td>'+
+        '<td style="text-align:center">'+(h.totalCount||0)+'명</td>'+
+        '<td style="text-align:right;color:#10b981;font-weight:700">₩'+(h.totalNet||0).toLocaleString()+'</td>'+
+        '<td style="text-align:right;color:var(--text3)">₩'+(h.totalGross||0).toLocaleString()+'</td>'+
+        '<td style="text-align:center">'+payStatus+'</td>'+
+        '<td style="text-align:center"><button data-dsid="'+h.id+'" data-dtype="'+type+'" onclick="event.stopPropagation();_deleteIndSettle(this.dataset.dsid,this.dataset.dtype)" style="padding:2px 8px;background:#ef4444;color:#fff;border:none;border-radius:4px;font-size:9px;cursor:pointer">삭제</button></td>'+
+      '</tr>';
+    }).join('');
+
+    c.innerHTML=
+      '<div style="max-width:720px;margin:0 auto;padding:16px">'+
+        '<div style="font-size:12px;font-weight:700;margin-bottom:10px">'+info.icon+' '+esc(info.name)+' 정산 관리 — '+list.length+'건</div>'+
+        '<div style="background:var(--bg2);border-radius:12px;overflow:hidden">'+
+          '<table style="width:100%;border-collapse:collapse;font-size:11px">'+
+            '<thead><tr style="background:var(--bg3)">'+
+              '<th style="padding:8px;text-align:left">월</th>'+
+              '<th style="padding:8px;text-align:center">인원</th>'+
+              '<th style="padding:8px;text-align:right">실지급</th>'+
+              '<th style="padding:8px;text-align:right">총지급</th>'+
+              '<th style="padding:8px;text-align:center">상태</th>'+
+              '<th style="padding:8px"></th>'+
+            '</tr></thead>'+
+            '<tbody>'+rows+'</tbody>'+
+          '</table>'+
+        '</div>'+
+      '</div>';
+  }).catch(function(e){
+    c.innerHTML='<div class="empty">오류: '+esc(e.message)+'</div>';
+  });
+}
+
+function _deleteIndSettle(sid, type){
+  if(!confirm('이 정산을 삭제하시겠습니까?')) return;
+  _db.collection('settlements').doc(sid).delete()
+    .then(function(){toast('✅ 삭제 완료'); pageIndList(type, (_IND_INFO[type]||{}).name||type);})
+    .catch(function(e){toast('❌ '+e.message);});
+}
+
+// 3. 직원 관리 (해당 업종 직원 목록)
+function pageIndWorkers(type, title){
+  document.getElementById('page-title').textContent=title+' 직원 관리';
+  var c=document.getElementById('content');
+  var info=_IND_INFO[type]||{icon:'📂',name:title,color:'#6b7280'};
+  var did=_CU.dealerId||_CU.uid;
+  c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
+
+  // settlements에서 직원명 추출
+  _db.collection('settlements')
+    .where('dealerId','==',did)
+    .where('industryType','==',type)
+    .limit(20).get()
+  .then(function(snap){
+    var workerMap={};
+    snap.forEach(function(d){
+      var data=d.data();
+      var results=data.results||[];
+      results.forEach(function(r){
+        var name=r.name||'';
+        if(!name) return;
+        if(!workerMap[name]) workerMap[name]={name:name,months:0,totalNet:0,camp:r.camp||''};
+        workerMap[name].months++;
+        workerMap[name].totalNet+=(r.net||0);
+      });
+    });
+
+    var workers=Object.values(workerMap).sort(function(a,b){return b.totalNet-a.totalNet;});
+
+    if(!workers.length){
+      c.innerHTML='<div style="max-width:720px;margin:0 auto;padding:16px"><div style="text-align:center;padding:60px;color:var(--text3)">'+info.icon+'<br>등록된 직원 없음<br><small>정산 엑셀을 업로드하면 직원이 자동 등록됩니다</small></div></div>';
+      return;
+    }
+
+    var rows=workers.map(function(w){
+      return '<tr>'+
+        '<td style="font-weight:700">'+esc(w.name)+'</td>'+
+        '<td style="text-align:center;color:var(--text3)">'+esc(w.camp||'-')+'</td>'+
+        '<td style="text-align:center">'+(w.months)+'회</td>'+
+        '<td style="text-align:right;color:#10b981;font-weight:700">₩'+w.totalNet.toLocaleString()+'</td>'+
+        '<td style="text-align:right;color:var(--text3)">₩'+Math.round(w.totalNet/w.months).toLocaleString()+'</td>'+
+      '</tr>';
+    }).join('');
+
+    c.innerHTML=
+      '<div style="max-width:720px;margin:0 auto;padding:16px">'+
+        '<div style="font-size:12px;font-weight:700;margin-bottom:10px">'+info.icon+' '+esc(info.name)+' 직원 — '+workers.length+'명</div>'+
+        '<div style="background:var(--bg2);border-radius:12px;overflow:hidden">'+
+          '<table style="width:100%;border-collapse:collapse;font-size:11px">'+
+            '<thead><tr style="background:var(--bg3)">'+
+              '<th style="padding:8px;text-align:left">이름</th>'+
+              '<th style="padding:8px;text-align:center">소속/팀</th>'+
+              '<th style="padding:8px;text-align:center">정산횟수</th>'+
+              '<th style="padding:8px;text-align:right">누적 실지급</th>'+
+              '<th style="padding:8px;text-align:right">평균 월급여</th>'+
+            '</tr></thead>'+
+            '<tbody>'+rows+'</tbody>'+
+          '</table>'+
+        '</div>'+
+      '</div>';
+  }).catch(function(e){
+    c.innerHTML='<div class="empty">오류: '+esc(e.message)+'</div>';
+  });
+}
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 📂 업종별 정산 페이지 (공통)
