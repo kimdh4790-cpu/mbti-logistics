@@ -2881,42 +2881,204 @@ function _parseCareExcel(file, month){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 🍽️ 음식점·카페 파서 (주휴수당 자동)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function _parseRestaurantExcel(file,month){
-  _baseParser(file,month,'🍽️ 음식점·카페','restaurant',function(row,headers,col,rv,name,camp){
-    var iHours =col(['근무시간','시간','총시간']);
-    var iDays  =col(['출근일수','근무일','일수']);
-    var iRate  =col(['시급','단가','시간당']);
-    var iNight =col(['야간','심야수당']);
-    var iMeal  =col(['식대','직원식','직원식대']);
-    var iWeekly=col(['주휴수당','주휴']);
-    var iDeduct=col(['공제','차감','지각']);
-    var hours=rv(row,iHours),days=rv(row,iDays),rate=rv(row,iRate)||10030;
-    var night=rv(row,iNight),meal=rv(row,iMeal),deduct=rv(row,iDeduct);
-    var weeklyD=rv(row,iWeekly);
-    var MIN_WAGE=10030;
-    if(rate<MIN_WAGE) rate=MIN_WAGE;
-    var pay=hours>0?Math.round(hours*rate):Math.round(days*rate*8);
-    var weeklyAvgH=hours>0?hours/4.345:(days*8)/4.345;
-    var weeklyPay=weeklyD>0?weeklyD:(weeklyAvgH>=15?Math.round(weeklyAvgH/5*rate):0);
-    var weeklyNote=weeklyD>0?'':(weeklyAvgH>=15?'자동':'주'+Math.round(weeklyAvgH*10)/10+'h (15h미만)');
-    var gross=pay+weeklyPay+night+meal-deduct;
-    var dailyR=days>0?pay/days:(hours>0?pay/(hours/8):0);
-    var tax33=Math.round(Math.max(0,dailyR-100000)*0.033*(days||Math.ceil(hours/8)));
-    if(tax33<1000) tax33=0;
-    var empIns=Math.round(gross*0.009); if(empIns<1000) empIns=0;
-    return {name:name,camp:camp,gross:gross,tax33:tax33,empIns:empIns,net:gross-tax33-empIns,
-      extras:[
-        pay>0&&{label:(hours>0?hours+'시간':days+'일')+'×'+rate.toLocaleString()+'원',value:pay},
-        weeklyPay>0&&{label:'주휴수당 (주평균'+Math.round(weeklyAvgH*10)/10+'h) '+weeklyNote,value:weeklyPay},
-        !weeklyPay&&weeklyNote&&{label:'⚠️ 주휴 '+weeklyNote,value:'제외'},
-        night>0&&{label:'야간수당',value:night},
-        meal>0&&{label:'직원식대',value:meal},
-        deduct>0&&{label:'공제',value:-deduct},
-        tax33>0&&{label:'소득세(3.3%)',value:-tax33},
-        empIns>0&&{label:'고용보험(0.9%)',value:-empIns},
-      ].filter(Boolean),industryType:'restaurant',weeklyAvgH:Math.round(weeklyAvgH*10)/10};
-  });
+function _parseRestaurantExcel(file, month){
+  // 음식점·카페 파서 — 알바ID별 주차별 타임시트 집계
+  // 컬럼: 알바ID, 근무자명, 정산주차, 적용시급, 주중근무시간, 주말근무시간, 연장근무시간, 무단결근여부
+  if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
+      if(!rows.length){toast('❌ 데이터 없음');return;}
+
+      var headers=rows[0].map(function(h){return String(h||'').trim();});
+      function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
+      function rv(row,i){if(i<0) return 0; var v=row[i]; if(!v&&v!==0) return 0; return parseFloat(String(v).replace(/,/g,''))||0;}
+      function yesno(row,i){if(i<0) return false; var v=String(row[i]||'').trim().toUpperCase(); return v==='Y'||v==='YES'||v==='1';}
+
+      var iId      = col(['알바ID','ID','사번','직원번호']);
+      var iName    = col(['근무자명','이름','성명','알바명']);
+      var iWeek    = col(['정산주차','주차','주']);
+      var iWage    = col(['적용시급','시급','임금']);
+      var iWeekday = col(['주중근무시간','주중시간','평일시간','주중']);
+      var iWeekend = col(['주말근무시간','주말시간','휴일시간','주말']);
+      var iOver    = col(['연장근무시간','연장시간','연장','OT']);
+      var iAbsent  = col(['무단결근여부','무단결근','결근']);
+      var iNight   = col(['야간시간','야간근무','야간']);
+      var iMeal    = col(['식대','중식비']);
+      var iCamp    = col(['매장','소속','지점']);
+
+      if(iName<0&&iId<0){toast('❌ 근무자명/ID 컬럼 없음');return;}
+
+      var rule = _getRule('restaurant');
+      var minWage    = rule.minWage||10030;
+      var weeklyThreshold = rule.weeklyHourThreshold||15;  // 주휴 기준시간
+      var nightRate  = 0.5;   // 야간 가산 50%
+      var overRate   = 0.5;   // 연장 가산 50%
+
+      var personMap={};
+      var personOrder=[];
+
+      rows.slice(1).forEach(function(row){
+        var rawId   = iId>=0   ? String(row[iId]||'').trim() : '';
+        var rawName = iName>=0 ? String(row[iName]||'').trim() : '';
+        var key = rawId||rawName;
+        if(!key) return;
+
+        if(!personMap[key]){
+          personMap[key]={
+            id:rawId, name:rawName||rawId,
+            camp: iCamp>=0?String(row[iCamp]||'').trim():'',
+            weeks:[],
+            wage:0
+          };
+          personOrder.push(key);
+        }
+        var p=personMap[key];
+        if(!p.name&&rawName) p.name=rawName;
+        if(p.name===p.id&&rawName) p.name=rawName;
+
+        var weekLabel= iWeek>=0   ? String(row[iWeek]||'').trim() : '';
+        var wage     = rv(row,iWage)||minWage;
+        var weekday  = rv(row,iWeekday);
+        var weekend  = rv(row,iWeekend);
+        var over     = rv(row,iOver);
+        var absent   = yesno(row,iAbsent);
+        var night    = rv(row,iNight);
+        var meal     = rv(row,iMeal);
+
+        // 최고 시급 저장
+        if(wage>p.wage) p.wage=wage;
+
+        // 주총 근무시간 (연장 포함)
+        var totalWeekH = weekday+weekend+over;
+
+        // 주휴 발생 여부 (15h 이상 + 무단결근 없음)
+        var hasWeeklyHoli = totalWeekH>=weeklyThreshold && !absent;
+
+        // 주휴수당 = (주총근무/40) × 8 × 시급
+        var weeklyHoliPay = hasWeeklyHoli
+          ? Math.round((totalWeekH/40)*8*wage)
+          : 0;
+
+        // 기본급 = (주중+주말) × 시급
+        var basicPay = Math.round((weekday+weekend)*wage);
+
+        // 연장수당 = 연장시간 × 시급 × 1.5
+        var overPay = Math.round(over*wage*1.5);
+
+        // 야간수당 = 야간시간 × 시급 × 0.5 (추가)
+        var nightPay = night>0 ? Math.round(night*wage*nightRate) : 0;
+
+        // 무단결근 차감 (결근 1일 = 8시간 공제)
+        var absentDeduct = absent ? Math.round(8*wage) : 0;
+
+        p.weeks.push({
+          label:weekLabel,
+          wage:wage,
+          weekday:weekday, weekend:weekend, over:over, night:night,
+          totalWeekH:totalWeekH,
+          basicPay:basicPay, overPay:overPay, nightPay:nightPay,
+          weeklyHoliPay:weeklyHoliPay,
+          absentDeduct:absentDeduct,
+          absent:absent, meal:meal,
+          hasWeeklyHoli:hasWeeklyHoli
+        });
+      });
+
+      var results=[];
+      personOrder.forEach(function(key){
+        var p=personMap[key];
+        if(!p.name||p.weeks.length===0) return;
+
+        var wage=p.wage;
+        var totalBasic=0, totalOver=0, totalNight=0;
+        var totalHoliPay=0, totalAbsent=0, totalMeal=0;
+        var holiWeeks=0, noHoliWeeks=0;
+        var totalHours=0;
+
+        p.weeks.forEach(function(w){
+          totalBasic   += w.basicPay;
+          totalOver    += w.overPay;
+          totalNight   += w.nightPay;
+          totalHoliPay += w.weeklyHoliPay;
+          totalAbsent  += w.absentDeduct;
+          totalMeal    += w.meal;
+          totalHours   += w.totalWeekH;
+          if(w.hasWeeklyHoli) holiWeeks++;
+          else noHoliWeeks++;
+        });
+
+        // 최저임금 체크
+        var actualWage = wage;
+        var minWageCheck = actualWage<minWage;
+
+        var gross = totalBasic+totalOver+totalNight+totalHoliPay+totalMeal-totalAbsent;
+        if(gross<0) gross=0;
+
+        // 4대보험 (월 60시간 이상)
+        var is4ins = totalHours>=60;
+        var empIns=0, healthIns=0, natPen=0, ltcIns=0;
+        if(is4ins){
+          empIns    = Math.round(gross*0.009);
+          healthIns = Math.round(gross*0.03545);
+          ltcIns    = Math.round(healthIns*0.1295);
+          natPen    = Math.round(gross*0.045);
+          if(empIns<1000)    empIns=0;
+          if(healthIns<1000) healthIns=0;
+          if(ltcIns<1000)    ltcIns=0;
+          if(natPen<1000)    natPen=0;
+        }
+
+        var net = gross-empIns-healthIns-ltcIns-natPen;
+
+        // 주차별 상세
+        var weekExtras=p.weeks.map(function(w){
+          return {
+            label: (w.label||'주차')
+              +' '+(w.weekday+w.weekend)+'h'
+              +(w.over>0?'+연장'+w.over+'h':'')
+              +(w.hasWeeklyHoli?' ✅주휴':' ❌주휴없음')
+              +(w.absent?' ⚠️결근':''),
+            value: w.basicPay+w.overPay+w.nightPay+w.weeklyHoliPay-w.absentDeduct
+          };
+        });
+
+        results.push({
+          name:p.name, id:p.id, camp:p.camp,
+          gross:gross, net:net,
+          totalHours:totalHours, wage:wage,
+          extras:[
+            {label:'총 '+totalHours+'h / '+p.weeks.length+'주 (주휴발생 '+holiWeeks+'주)',value:''},
+            minWageCheck&&{label:'⚠️ 최저시급 미달! ('+wage.toLocaleString()+' < '+minWage.toLocaleString()+')',value:''},
+          ].concat(weekExtras).concat([
+            totalHoliPay>0&&{label:'주휴수당 합계 ('+holiWeeks+'주)',value:totalHoliPay},
+            totalMeal>0&&{label:'식대',value:totalMeal},
+            totalAbsent>0&&{label:'무단결근 공제',value:-totalAbsent},
+            {label:is4ins?'✅ 4대보험 적용 ('+totalHours+'h≥60h)':'⚠️ 단기 (60h 미만)',value:''},
+            empIns>0&&{label:'고용보험 0.9%',value:-empIns},
+            healthIns>0&&{label:'건강보험 3.545%',value:-healthIns},
+            ltcIns>0&&{label:'장기요양 12.95%',value:-ltcIns},
+            natPen>0&&{label:'국민연금 4.5%',value:-natPen},
+          ].filter(Boolean)),
+          industryType:'restaurant'
+        });
+      });
+
+      if(!results.length){toast('❌ 파싱된 직원 없음');return;}
+      toast('✅ 음식점·카페 파싱 완료 — '+results.length+'명');
+      _autoRegisterIndWorkers(results,'restaurant');
+      _renderIndustrySettle(results, month, '🍽️ 음식점·카페');
+    }catch(err){
+      console.error('[_parseRestaurantExcel]',err);
+      toast('❌ 파싱 오류: '+err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
 }
+
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 💼 영업직 파서 (슬라이딩 수수료율)
