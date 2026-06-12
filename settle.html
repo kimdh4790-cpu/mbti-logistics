@@ -22987,136 +22987,18 @@ function _mgrLoadTodayIn(did, store){
 
 // 과장 - 반품/공병
 
-var MENUS_SETTLE = [
-  {s:'🏠 홈', items:[
-    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'}
+var MENUS_MANAGER = [
+  {s:'🏠 홈', items:[{ic:'🏠',l:'대시보드',p:'home',plan_key:'free'}]},
+  {s:'📊 정산', items:[
+    {ic:'📊',l:'정산 현황',p:'settle',plan_key:'settle'},
+    {ic:'📋',l:'정산 관리',p:'settlements',plan_key:'settle'},
+    {ic:'👤',l:'기사 관리',p:'drivers',plan_key:'settle'},
+    {ic:'💸',l:'송금 관리',p:'payout',plan_key:'settle'},
   ]},
-  {s:'🤖 AI 정산', items:[
-    {ic:'📊',l:'정산 현황',        p:'settle',           plan_key:'settle'},
-    {ic:'📋',l:'정산 관리',        p:'settlements',      plan_key:'settle'},
-    {ic:'📈',l:'통계',             p:'stats',            plan_key:'settle'},
-    {ic:'👤',l:'기사 관리',        p:'drivers',          plan_key:'settle'},
-    {ic:'💸',l:'송금 관리',        p:'payout',           plan_key:'settle'},
-    {ic:'📅',l:'달력',             p:'schedule',         plan_key:'settle'},
-    {ic:'📋',l:'근무표',           p:'roster',           plan_key:'settle'},
-    {ic:'🌴',l:'연차 관리',        p:'leave',            plan_key:'settle'},
-    {ic:'🚚',l:'배차 현황',        p:'dispatch',         plan_key:'settle'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'settle'},
+  {s:'📢 공지', items:[
+    {ic:'📢',l:'공지사항',p:'notices',plan_key:'free'},
   ]},
-  {s:'🛵 배달대행 정산', items:[
-    {ic:'📊',l:'정산 현황',        p:'delivery_settle',  plan_key:'delivery'},
-    {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',   plan_key:'delivery'},
-    {ic:'📈',l:'통계',             p:'stats',            plan_key:'delivery'},
-    {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'delivery'},
-  ]},
-  {s:'🏗️ 건설·일용직', items:[
-    {ic:'📊',l:'정산 현황',       p:'ind_construction_settle',    plan_key:'ind_construction'},
-    {ic:'📋',l:'정산 관리',       p:'ind_construction_list',      plan_key:'ind_construction'},
-    {ic:'👤',l:'직원 관리',       p:'ind_construction_workers',   plan_key:'ind_construction'},
-    {ic:'💸',l:'송금',            p:'payout',              plan_key:'ind_construction'},
-    {ic:'📋',l:'📋 출역일지',  p:'ind_construction_roster',  plan_key:'ind_construction'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',           plan_key:'ind_construction'},
-  ]},
-  {s:'🛡️ 보험설계사', items:[
-    {ic:'📊',l:'정산 현황',       p:'ind_insurance_settle',    plan_key:'ind_insurance'},
-    {ic:'📋',l:'정산 관리',       p:'ind_insurance_list',      plan_key:'ind_insurance'},
-    {ic:'👤',l:'직원 관리',       p:'ind_insurance_workers',   plan_key:'ind_insurance'},
-    {ic:'💸',l:'송금',            p:'payout',              plan_key:'ind_insurance'},
-    {ic:'📋',l:'📋 실적표',  p:'ind_insurance_roster',  plan_key:'ind_insurance'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',           plan_key:'ind_insurance'},
-  ]},
-  
-  {s:'💄 뷰티·미용', items:[
-    {ic:'📊',l:'정산 현황',       p:'ind_beauty_settle',    plan_key:'ind_beauty'},
-    {ic:'📋',l:'정산 관리',       p:'ind_beauty_list',      plan_key:'ind_beauty'},
-    {ic:'👤',l:'직원 관리',       p:'ind_beauty_workers',   plan_key:'ind_beauty'},
-    {ic:'💸',l:'송금',            p:'payout',              plan_key:'ind_beauty'},
-    {ic:'📋',l:'📋 시술 매출표',  p:'ind_beauty_roster',  plan_key:'ind_beauty'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',           plan_key:'ind_beauty'},
-  ]},
-  {s:'🏥 요양·돌봄', items:[
-    {ic:'📊',l:'정산 현황',       p:'ind_care_settle',    plan_key:'ind_care'},
-    {ic:'📋',l:'정산 관리',       p:'ind_care_list',      plan_key:'ind_care'},
-    {ic:'👤',l:'직원 관리',       p:'ind_care_workers',   plan_key:'ind_care'},
-    {ic:'💸',l:'송금',            p:'payout',              plan_key:'ind_care'},
-    {ic:'📋',l:'📋 방문 일지',  p:'ind_care_roster',  plan_key:'ind_care'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',           plan_key:'ind_care'},
-  ]},
-  {s:'🎓 학원·교육', items:[
-    {ic:'📊',l:'정산 현황',       p:'ind_academy_settle',    plan_key:'ind_academy'},
-    {ic:'📋',l:'정산 관리',       p:'ind_academy_list',      plan_key:'ind_academy'},
-    {ic:'👤',l:'직원 관리',       p:'ind_academy_workers',   plan_key:'ind_academy'},
-    {ic:'💸',l:'송금',            p:'payout',              plan_key:'ind_academy'},
-    {ic:'📋',l:'📋 강의 스케줄',  p:'ind_academy_roster',  plan_key:'ind_academy'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',           plan_key:'ind_academy'},
-  ]},
-  {s:'📦 물류창고', items:[
-    {ic:'📊',l:'정산 현황',       p:'ind_warehouse_settle',    plan_key:'ind_warehouse'},
-    {ic:'📋',l:'정산 관리',       p:'ind_warehouse_list',      plan_key:'ind_warehouse'},
-    {ic:'👤',l:'직원 관리',       p:'ind_warehouse_workers',   plan_key:'ind_warehouse'},
-    {ic:'💸',l:'송금',            p:'payout',              plan_key:'ind_warehouse'},
-    {ic:'📋',l:'📋 작업 실적표',  p:'ind_warehouse_roster',  plan_key:'ind_warehouse'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',           plan_key:'ind_warehouse'},
-  ]},
-  {s:'🎪 행사·이벤트', items:[
-    {ic:'📊',l:'정산 현황',       p:'ind_event_settle',    plan_key:'ind_event'},
-    {ic:'📋',l:'정산 관리',       p:'ind_event_list',      plan_key:'ind_event'},
-    {ic:'👤',l:'직원 관리',       p:'ind_event_workers',   plan_key:'ind_event'},
-    {ic:'💸',l:'송금',            p:'payout',              plan_key:'ind_event'},
-    {ic:'📋',l:'📋 투입 현황',  p:'ind_event_roster',  plan_key:'ind_event'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',           plan_key:'ind_event'},
-  ]},
-  {s:'💼 영업직', items:[
-    {ic:'📊',l:'정산 현황',       p:'ind_sales_settle',    plan_key:'ind_sales'},
-    {ic:'📋',l:'정산 관리',       p:'ind_sales_list',      plan_key:'ind_sales'},
-    {ic:'👤',l:'직원 관리',       p:'ind_sales_workers',   plan_key:'ind_sales'},
-    {ic:'💸',l:'송금',            p:'payout',              plan_key:'ind_sales'},
-    {ic:'📋',l:'📋 영업 실적표',  p:'ind_sales_roster',  plan_key:'ind_sales'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',           plan_key:'ind_sales'},
-  ]},
-  {s:'🖥️ 프리랜서', items:[
-    {ic:'📊',l:'정산 현황',       p:'ind_freelance_settle',    plan_key:'ind_freelance'},
-    {ic:'📋',l:'정산 관리',       p:'ind_freelance_list',      plan_key:'ind_freelance'},
-    {ic:'👤',l:'직원 관리',       p:'ind_freelance_workers',   plan_key:'ind_freelance'},
-    {ic:'💸',l:'송금',            p:'payout',              plan_key:'ind_freelance'},
-    {ic:'📋',l:'📋 프로젝트 현황',  p:'ind_freelance_roster',  plan_key:'ind_freelance'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',           plan_key:'ind_freelance'},
-  ]},
-  {s:'🍽️ 음식점·카페', items:[
-    {ic:'📊',l:'정산 현황',       p:'ind_restaurant_settle',    plan_key:'ind_restaurant'},
-    {ic:'📋',l:'정산 관리',       p:'ind_restaurant_list',      plan_key:'ind_restaurant'},
-    {ic:'👤',l:'직원 관리',       p:'ind_restaurant_workers',   plan_key:'ind_restaurant'},
-    {ic:'💸',l:'송금',            p:'payout',              plan_key:'ind_restaurant'},
-    {ic:'📋',l:'📋 근무 스케줄',  p:'ind_restaurant_roster',  plan_key:'ind_restaurant'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',           plan_key:'ind_restaurant'},
-  ]},
-  {s:'📋 범용 정산', items:[
-    {ic:'📊',l:'정산 현황',        p:'universal_settle',  plan_key:'universal'},
-    {ic:'📥',l:'엑셀 업로드 정산', p:'universal_input',   plan_key:'universal'},
-    {ic:'⚙️',l:'규칙 설정',        p:'universal_rules',   plan_key:'universal'},
-    {ic:'👥',l:'직원 명단',        p:'universal_emp',     plan_key:'universal'},
-    {ic:'💸',l:'송금',             p:'payout',            plan_key:'universal'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',         plan_key:'universal'},
-    {ic:'🔗',l:'재고관리 연동',    p:'goto_mbtico',       plan_key:'universal'},
-  ]},
-  {s:'🧹 청소업 관리', items:[
-    {ic:'📝',l:'의뢰서 작성',       p:'clean_order',      plan_key:'cleaning'},
-    {ic:'💰',l:'단가 설정',          p:'clean_pricing',    plan_key:'cleaning'},
-    {ic:'👷',l:'인력 관리',          p:'clean_workers',    plan_key:'cleaning'},
-    {ic:'🔧',l:'현장 출고 컨펌',    p:'clean_dispatch',   plan_key:'cleaning'},
-    {ic:'📊',l:'정산 현황',          p:'clean_settle',     plan_key:'cleaning'},
-  ]},
-  
-  
-  
-  
-  {s:'📢 공지·알림', items:[
-    {ic:'📢',l:'공지사항',         p:'notices',          plan_key:'free'},
-    {ic:'🔔',l:'알림 발송',        p:'notify_history',   plan_key:'free'}
-  ]}
 ];
-
 var MENUS_DRIVER = [
   {s:'🏠 홈',    items:[{ic:'🏠',l:'내 홈',p:'emp_home',plan_key:'free'}]},
   {s:'출퇴근',items:[
