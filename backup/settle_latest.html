@@ -22898,7 +22898,11 @@ function pageSettle(){
     _db.collection('tax_docs').where('dealerId','==',_did).get()
   ]).then(function(results){
     var snap=results[0],expSnap=results[1],fixSnap=results[2],taxDocSnap=results[3];
-    var allDocs=[].concat(snap.docs||[]);
+    // ★ AI정산(쿠팡)에는 업종별 정산 제외 (industryType 없거나 'coupang'만)
+    var allDocs=(snap.docs||[]).filter(function(d){
+      var it=d.data().industryType||'';
+      return !it||it==='coupang';
+    });
     if(!allDocs.length){
       c.innerHTML='<div class="empty" style="padding:60px 20px"><div style="font-size:48px;margin-bottom:12px">📊</div>'
         +'<div style="font-size:17px;font-weight:800;margin-bottom:6px">정산 데이터가 없습니다</div>'
