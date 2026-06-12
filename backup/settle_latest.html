@@ -2448,6 +2448,15 @@ function _industrySettleSaveAll(did, results, month, label){
 // 👷 청소업 기사 자동 등록/업데이트
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 📦 업종별 파서 공통 헬퍼
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _colIdx(headers,kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
+function _rvNum(row,i){if(i<0||i>=row.length) return 0; var v=row[i]; if(v===null||v===undefined||v==='') return 0; return parseFloat(String(v).replace(/[,%]/g,'').trim())||0;}
+function _rvBool(row,i){if(i<0) return false; var v=String(row[i]||'').trim().toUpperCase(); return v==='Y'||v==='YES'||v==='1'||v==='TRUE';}
+function _rvRate(row,i){if(i<0) return 0; return (parseFloat(String(row[i]||'0').replace('%','').trim())||0)/100;}
+
 function _parseBeautyExcel(file, month){
   // 뷰티 파서 — 사번별 다중행 집계 방식
   // 컬럼: 사번, 담당자(이름), 시술명, 시술금액, 부자재값, 인센티브비율, 제품판매액, 제품수수료율
