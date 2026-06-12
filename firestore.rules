@@ -369,6 +369,20 @@ service cloud.firestore {
       allow create: if isAuth();
     }
 
+    // ── 업종별 정산 직원 (AI정산 전용, drivers와 완전 분리) ──
+    match /ind_workers/{docId} {
+      allow read: if isAuth() && (ownsDoc() || isSuperAdmin());
+      allow write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
+    // ── 송금 관리 ──
+    match /payout_sessions/{docId} {
+      allow read: if isAuth() && (ownsDoc() || isSuperAdmin());
+      allow write: if ownsDoc() || ownsNewDoc();
+      allow create: if ownsNewDoc();
+    }
+
     // ── 청소업 관리 ──
     match /clean_orders/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
