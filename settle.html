@@ -21372,9 +21372,10 @@ var MENUS_SETTLE = [
   {s:'💄 뷰티·미용', items:[
     {ic:'📊',l:'정산 현황',       p:'ind_beauty_settle',    plan_key:'ind_beauty'},
     {ic:'📋',l:'정산 관리',       p:'ind_beauty_list',      plan_key:'ind_beauty'},
+    {ic:'💆',l:'시술 입력',       p:'beauty_kiosk',         plan_key:'ind_beauty'},
     {ic:'👤',l:'직원 관리',       p:'ind_beauty_workers',   plan_key:'ind_beauty'},
     {ic:'💸',l:'송금',            p:'payout',              plan_key:'ind_beauty'},
-    {ic:'📋',l:'📋 시술 매출표',  p:'ind_beauty_roster',  plan_key:'ind_beauty'},
+    {ic:'📋',l:'📋 시술 매출표',  p:'ind_beauty_roster',   plan_key:'ind_beauty'},
     {ic:'🧾',l:'세무사 연동',      p:'tax_share',           plan_key:'ind_beauty'},
   ]},
   {s:'🏥 요양·돌봄', items:[
@@ -23662,7 +23663,7 @@ function goPage(page){
   ind_sales:function(){pageIndustry('sales','💼 영업직');},
   ind_freelance:function(){pageIndustry('freelance','🖥️ 프리랜서');},
   ind_restaurant:function(){pageIndustry('restaurant','🍽️ 음식점·카페');},
-  clean_order:pageCleanOrder,clean_pricing:pageCleanPricing,clean_workers:pageCleanWorkers,clean_dispatch:pageCleanDispatch,clean_settle:pageCleanSettle,emp_home:pageEmpHome,vehicle:pageVehicle,expense:pageExpense,overtime:pageOvertime,evaluation:pageEvaluation,delivery_report:pageDeliveryReport,delivery_platform:pageDeliveryPlatform,delivery_input:pageDeliveryInput,notify_history:pageNotifyHistory,universal_input:pageUniversalInput,universal_settle:pageUniversalSettle,universal_rules:pageUniversalRules,universal_emp:pageUniversalEmp,inventory:pageInventory,inv_summary:pageInvSummary,inv_monthly:pageInvMonthly,inv_order:pageInvOrder,inv_edit_log:pageInvEditLog,inv_change_log:pageInvChangeLog,inv_manager_stock:pageInvManagerStock,inv_manager_in:pageInvManagerIn,inv_manager_out:pageInvManagerOut,inv_manager_return:pageInvManagerReturn};
+  beauty_kiosk:pageBeautyKiosk,clean_order:pageCleanOrder,clean_pricing:pageCleanPricing,clean_workers:pageCleanWorkers,clean_dispatch:pageCleanDispatch,clean_settle:pageCleanSettle,emp_home:pageEmpHome,vehicle:pageVehicle,expense:pageExpense,overtime:pageOvertime,evaluation:pageEvaluation,delivery_report:pageDeliveryReport,delivery_platform:pageDeliveryPlatform,delivery_input:pageDeliveryInput,notify_history:pageNotifyHistory,universal_input:pageUniversalInput,universal_settle:pageUniversalSettle,universal_rules:pageUniversalRules,universal_emp:pageUniversalEmp,inventory:pageInventory,inv_summary:pageInvSummary,inv_monthly:pageInvMonthly,inv_order:pageInvOrder,inv_edit_log:pageInvEditLog,inv_change_log:pageInvChangeLog,inv_manager_stock:pageInvManagerStock,inv_manager_in:pageInvManagerIn,inv_manager_out:pageInvManagerOut,inv_manager_return:pageInvManagerReturn};
   // ★ 플랜 체크
   var cd=window._cachedCompanyDoc||{};
   var planGate={
