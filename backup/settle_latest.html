@@ -20085,6 +20085,7 @@ function _filterMenusByServices(menus){
     ind_sales:['ind_sales','any_paid','free'],
     ind_freelance:['ind_freelance','any_paid','free'],
     ind_restaurant:['ind_restaurant','any_paid','free'],
+    cleaning:['cleaning','any_paid','free'],
   };
 
   // 허용된 plan_key 목록 생성
@@ -20262,11 +20263,11 @@ var MENUS_SETTLE = [
     {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'universal'}
   ]},
   {s:'🧹 청소업 관리', items:[
-    {ic:'📝',l:'의뢰서 작성',       p:'clean_order',      plan_key:'settle'},
-    {ic:'💰',l:'단가 설정',          p:'clean_pricing',    plan_key:'settle'},
-    {ic:'👷',l:'인력 관리',          p:'clean_workers',    plan_key:'settle'},
-    {ic:'🔧',l:'현장 출고 컨펌',    p:'clean_dispatch',   plan_key:'settle'},
-    {ic:'📊',l:'정산 현황',          p:'clean_settle',     plan_key:'settle'},
+    {ic:'📝',l:'의뢰서 작성',       p:'clean_order',      plan_key:'cleaning'},
+    {ic:'💰',l:'단가 설정',          p:'clean_pricing',    plan_key:'cleaning'},
+    {ic:'👷',l:'인력 관리',          p:'clean_workers',    plan_key:'cleaning'},
+    {ic:'🔧',l:'현장 출고 컨펌',    p:'clean_dispatch',   plan_key:'cleaning'},
+    {ic:'📊',l:'정산 현황',          p:'clean_settle',     plan_key:'cleaning'},
   ]},
   
   
@@ -22953,6 +22954,8 @@ function goPage(page){
     'ind_sales_settle':'ind_sales','ind_sales_list':'ind_sales','ind_sales_workers':'ind_sales',
     'ind_freelance_settle':'ind_freelance','ind_freelance_list':'ind_freelance','ind_freelance_workers':'ind_freelance',
     'ind_restaurant_settle':'ind_restaurant','ind_restaurant_list':'ind_restaurant','ind_restaurant_workers':'ind_restaurant',
+    'clean_order':'cleaning','clean_pricing':'cleaning',
+    'clean_workers':'cleaning','clean_dispatch':'cleaning','clean_settle':'cleaning',
     'attendance':'qr','leave':'payroll','overtime':'qr',
     'hourly_settle':'payroll','dispatch':'premium','vehicle':'premium','expense':'premium',
     'delivery_settle':'delivery','delivery_input':'delivery','delivery_report':'delivery','delivery_platform':'delivery',
@@ -31740,6 +31743,7 @@ function _buildNavRender(nav,cur,companyDoc){
     if(plan_key==='premium')     return hasPremium;
     if(plan_key==='any_paid')    return hasAnyPaid;
     // 업종별 정산 — companies.services 배열에 해당 plan_key 있으면 허용
+    if(plan_key==='cleaning')    return isSuperAdmin()||!!(d.cleaningPaid||d.settlePaid);
     if(plan_key.startsWith('ind_')) return _hasIndPlan(d,plan_key);
     return false;
   }
