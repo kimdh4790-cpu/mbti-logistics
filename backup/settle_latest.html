@@ -2541,39 +2541,170 @@ function _industrySettleSaveAll(did, results, month, label){
 // 👷 청소업 기사 자동 등록/업데이트
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-function _parseBeautyExcel(file,month){
-  _baseParser(file,month,'💄 뷰티·미용','beauty',function(row,headers,col,rv,name,camp){
-    var iSales=col(['시술매출','매출','수입','총매출','시술금액']);
-    var iRate=col(['수수료율','커미션율','배분율','커미션']);
-    var iBase=col(['기본급','기본수당','기본급여','고정급']);
-    var iTip=col(['팁','봉사료']);
-    var iMat=col(['재료비','약품비','염색약','파마약','재료차감']);
-    var iSupply=col(['소모품','타월','장갑','소모품비']);
-    var iEdu=col(['교육비','교육차감']);
-    var iDeduct=col(['공제','차감','지각']);
-    var iEmpType=col(['고용형태','고용']);
-    var sales=rv(row,iSales),rate=rv(row,iRate)||60;
-    var base=rv(row,iBase),tip=rv(row,iTip);
-    var mat=rv(row,iMat),supply=rv(row,iSupply);
-    var edu=rv(row,iEdu),deduct=rv(row,iDeduct);
-    var emp=iEmpType>=0?String(row[iEmpType]||'').trim():'FREELANCER_3.3';
-    var comm=base>0?base:Math.round(sales*(rate/100));
-    var gross=comm+tip-mat-supply-edu-deduct;
-    var isFree=emp.includes('3.3')||emp.includes('프리')||!emp;
-    var tax=isFree?Math.round(gross*0.033):0;
-    var empIns=!isFree?Math.round(gross*0.009):0;
-    return {name:name,camp:camp,gross:gross,tax33:tax,empIns:empIns,net:gross-tax-empIns,
-      extras:[
-        sales>0?{label:'시술매출 '+sales.toLocaleString()+'원×'+rate+'%',value:comm}:
-                base>0?{label:'기본급',value:base}:null,
-        tip>0&&{label:'팁/봉사료',value:tip},
-        mat>0&&{label:'재료비차감(염색·파마)',value:-mat},
-        supply>0&&{label:'소모품차감(타월·장갑)',value:-supply},
-        edu>0&&{label:'교육비차감',value:-edu},
-        deduct>0&&{label:'기타공제',value:-deduct},
-      ].filter(Boolean),industryType:'beauty'};
-  });
+function _parseBeautyExcel(file, month){
+  // 뷰티 파서 — 사번별 다중행 집계 방식
+  // 컬럼: 사번, 담당자(이름), 시술명, 시술금액, 부자재값, 인센티브비율, 제품판매액, 제품수수료율
+  if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
+      if(!rows.length){toast('❌ 데이터 없음');return;}
+
+      var headers=rows[0].map(function(h){return String(h||'').trim();});
+      function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
+
+      var iId    = col(['사번','ID','사원번호','직원번호']);
+      var iName  = col(['이름','담당자','성명','디자이너','직원명']);
+      var iMenu  = col(['시술명','메뉴','서비스명','시술']);
+      var iSales = col(['시술금액','금액','매출','시술매출']);
+      var iMat   = col(['부자재','재료비','약재비','자재']);
+      var iRate  = col(['인센티브비율','수수료율','비율','커미션율']);
+      var iProd  = col(['제품판매액','제품','판매액']);
+      var iPRate = col(['제품수수료율','제품비율','제품수수료']);
+      var iCamp  = col(['소속','캠프','지점','매장']);
+
+      if(iName<0&&iId<0){toast('❌ 이름/사번 컬럼 없음');return;}
+
+      var rule = _getRule('beauty');
+      var defaultRate = (rule.baseDeductionRate||11)/100;
+
+      // 사번 또는 이름으로 그룹핑
+      var personMap={};
+      var personOrder=[];
+
+      rows.slice(1).forEach(function(row){
+        var rawId   = iId>=0   ? String(row[iId]||'').trim() : '';
+        var rawName = iName>=0 ? String(row[iName]||'').trim() : '';
+        var key = rawId||rawName;
+        if(!key) return;
+
+        if(!personMap[key]){
+          personMap[key]={
+            id:rawId, name:rawName||rawId,
+            camp: iCamp>=0?String(row[iCamp]||'').trim():'',
+            services:[], totalSales:0, totalMat:0,
+            totalProd:0, totalProdFee:0
+          };
+          personOrder.push(key);
+        }
+        var p=personMap[key];
+        // 이름 보충 (첫 행에서)
+        if(!p.name&&rawName) p.name=rawName;
+        if(p.name===p.id&&rawName&&rawName!==rawId) p.name=rawName;
+
+        var menuName = iMenu>=0 ? String(row[iMenu]||'').trim() : '';
+        var sales    = iSales>=0 ? parseFloat(String(row[iSales]||'0').replace(/[,%]/g,''))||0 : 0;
+        var mat      = iMat>=0  ? parseFloat(String(row[iMat]||'0').replace(/[,%]/g,''))||0 : 0;
+        var rateStr  = iRate>=0 ? String(row[iRate]||'0').replace('%','').trim() : '0';
+        var rate     = (parseFloat(rateStr)||0)/100;
+        var prod     = iProd>=0  ? parseFloat(String(row[iProd]||'0').replace(/[,%]/g,''))||0 : 0;
+        var pRateStr = iPRate>=0 ? String(row[iPRate]||'0').replace('%','').trim() : '0';
+        var pRate    = (parseFloat(pRateStr)||0)/100;
+
+        // 시술 행
+        if(sales>0||mat>0){
+          p.services.push({menu:menuName,sales:sales,mat:mat,rate:rate});
+          p.totalSales+=sales;
+          p.totalMat+=mat;
+        }
+        // 제품 행
+        if(prod>0){
+          p.totalProd+=prod;
+          p.totalProdFee+=Math.round(prod*(pRate||(rule.productRate||10)/100));
+        }
+      });
+
+      var results=[];
+      personOrder.forEach(function(key){
+        var p=personMap[key];
+        if(!p.name) return;
+
+        // 시술별 인센 계산 (시술금액 - 부자재) × 비율
+        var serviceIncome=0;
+        var serviceExtras=[];
+        p.services.forEach(function(s){
+          var r = s.rate || (rule.slidingRate ? _getBeautyRate(s.sales,rule) : 0.35);
+          var income = Math.round((s.sales - s.mat) * r);
+          serviceIncome += income;
+          if(s.menu&&s.menu!=='0'){
+            serviceExtras.push({
+              label: s.menu+' ('+Math.round(r*100)+'%)',
+              value: income,
+              detail: '₩'+s.sales.toLocaleString()+' - 부자재₩'+s.mat.toLocaleString()
+            });
+          }
+        });
+
+        // 슬라이딩 요율 적용 (총 시술매출 기준 재계산)
+        if(rule.slidingScale&&rule.slidingScale.length){
+          var totalRate=_getBeautyRate(p.totalSales,rule);
+          serviceIncome=Math.round((p.totalSales-p.totalMat)*totalRate);
+          serviceExtras=[{
+            label:'시술 합계 (슬라이딩 '+Math.round(totalRate*100)+'%)',
+            value:serviceIncome,
+            detail:'매출₩'+p.totalSales.toLocaleString()+' - 부자재₩'+p.totalMat.toLocaleString()
+          }];
+        }
+
+        var prodIncome = p.totalProdFee;
+        var gross = serviceIncome + prodIncome;
+
+        // 카드+부가세 선공제 (기본 11%)
+        var cardFee = Math.round(p.totalSales * defaultRate);
+
+        // 3.3% 소득세
+        var tax33 = Math.round(gross * 0.033);
+
+        var net = gross - cardFee - tax33;
+
+        var extras=[
+          p.services.length>0&&{label:'📋 시술 건수: '+p.services.length+'건', value:''},
+          {label:'시술매출 합계', value:p.totalSales},
+          p.totalMat>0&&{label:'부자재 합계', value:-p.totalMat},
+          serviceExtras.length>0&&serviceExtras[0],
+          p.totalProd>0&&{label:'제품판매 ('+((rule.productRate||10))+'%)', value:prodIncome},
+          cardFee>0&&{label:'카드+부가세 ('+((rule.baseDeductionRate||11))+'%)', value:-cardFee},
+          tax33>0&&{label:'소득세 3.3%', value:-tax33},
+        ].filter(Boolean);
+
+        results.push({
+          name:p.name, id:p.id, camp:p.camp,
+          gross:gross, tax33:tax33,
+          totalSales:p.totalSales, totalMat:p.totalMat,
+          serviceIncome:serviceIncome, prodIncome:prodIncome,
+          net:net, extras:extras,
+          industryType:'beauty'
+        });
+      });
+
+      if(!results.length){toast('❌ 파싱된 직원 없음');return;}
+      toast('✅ 뷰티·미용 파싱 완료 — '+results.length+'명');
+      _autoRegisterIndWorkers(results,'beauty');
+      _renderIndustrySettle(results, month, '💄 뷰티·미용');
+    }catch(err){
+      console.error('[_parseBeautyExcel]',err);
+      toast('❌ 파싱 오류: '+err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
 }
+
+// 뷰티 슬라이딩 요율 계산
+function _getBeautyRate(sales, rule){
+  var scale = rule.slidingScale||[
+    {min:0,max:5000000,rate:35},
+    {min:5000001,max:10000000,rate:40},
+    {min:10000001,max:999999999,rate:45}
+  ];
+  for(var i=0;i<scale.length;i++){
+    if(sales>=scale[i].min&&sales<=scale[i].max) return scale[i].rate/100;
+  }
+  return scale[scale.length-1].rate/100;
+}
+
 
 function _parseCareExcel(file,month){
   _baseParser(file,month,'🏥 요양·돌봄','care',function(row,headers,col,rv,name,camp){
