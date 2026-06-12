@@ -1,3 +1,7 @@
 name = "mbti-logistics"
 main = "_worker.js"
 compatibility_date = "2025-11-01"
+
+[[routes]]
+pattern = "donway.ai.kr/*"
+zone_name = "donway.ai.kr"
