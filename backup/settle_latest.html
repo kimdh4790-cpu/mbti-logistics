@@ -13483,6 +13483,1545 @@ function _uBulkUploadEmp(input, did){
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 📊 범용정산 추가 기능
+
+// QR 전용
+
+// QR 전용
+
+var MENUS_UNIVERSAL = [
+  {s:'🏠 홈', items:[
+    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'}
+  ]},
+  {s:'📋 범용 정산', items:[
+    {ic:'📊',l:'정산 현황',        p:'universal_settle', plan_key:'universal'},
+    {ic:'📋',l:'범용 엑셀 정산',   p:'universal_input',  plan_key:'universal'},
+    {ic:'⚙️',l:'계산 규칙 설정',   p:'universal_rules',  plan_key:'universal'},
+    {ic:'👥',l:'직원 명단 등록',   p:'universal_emp',    plan_key:'universal'},
+    {ic:'📈',l:'통계',             p:'stats',            plan_key:'universal'},
+    {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'universal'},
+    {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'}
+  ]},
+  {s:'👤 직원 관리', items:[
+    {ic:'👤',l:'기사·직원 관리',   p:'drivers',          plan_key:'free'},
+    {ic:'📝',l:'위수탁 계약서',    p:'contract',         plan_key:'universal'},
+    {ic:'⭐',l:'직원 평가',        p:'evaluation',       plan_key:'universal'},
+    {ic:'💸',l:'경비 관리',        p:'expense',          plan_key:'universal'}
+  ]},
+  {s:'🚚 원스톱 물류', items:[
+    {ic:'🚗',l:'차량 관리',        p:'vehicle',          plan_key:'universal'},
+    {ic:'🖨',l:'라벨 출력',        p:'ext_label',        plan_key:'universal'},
+    {ic:'📷',l:'수령 스캔',        p:'ext_scan',         plan_key:'universal'}
+  ]},
+  {s:'📢 공지·알림', items:[
+    {ic:'📢',l:'공지사항',         p:'notices',          plan_key:'free'},
+    {ic:'🔔',l:'알림 발송',        p:'notify_history',   plan_key:'free'}
+  ]}
+];
+
+var MENUS_QR_PAYROLL = [
+  {s:'🏠 홈', items:[{ic:'🏠',l:'대시보드',p:'home',plan_key:'free'}]},
+  {s:'🔐 QR 근태관리', items:[
+    {ic:'🔐',l:'QR 출퇴근',p:'attendance',plan_key:'qr'},
+    {ic:'🗓',l:'근무표',p:'roster',plan_key:'qr'},
+    {ic:'🌴',l:'휴가 관리',p:'leave',plan_key:'payroll'},
+    {ic:'⏰',l:'연장 승인',p:'overtime',plan_key:'qr'}]},
+  {s:'💼 급여 관리', items:[
+    {ic:'💼',l:'급여 현황',p:'hourly_settle',plan_key:'payroll'},
+    {ic:'🧾',l:'세무사 연동',p:'tax_share',plan_key:'any_paid'}]},
+  {s:'👤 직원 관리', items:[
+    {ic:'👤',l:'직원 관리',p:'drivers',plan_key:'free'},
+    {ic:'📝',l:'위수탁 계약서',p:'contract',plan_key:'settle'},
+    {ic:'📅',l:'달력',p:'schedule',plan_key:'free'}]},
+  {s:'📢 공지', items:[{ic:'📢',l:'공지',p:'notices',plan_key:'free'}]}
+];
+var MENUS_QR = [
+  {s:'🏠 홈', items:[
+    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'}
+  ]},
+  {s:'🔐 QR 근태관리', items:[
+    {ic:'🔐',l:'QR 출퇴근',        p:'attendance',       plan_key:'qr'},
+    {ic:'🗓',l:'근무표',           p:'roster',           plan_key:'qr'},
+    {ic:'🌴',l:'휴가 관리',        p:'leave',            plan_key:'payroll'},
+    {ic:'⏰',l:'연장 승인',        p:'overtime',         plan_key:'qr'}
+  ]},
+  {s:'👤 직원 관리', items:[
+    {ic:'👤',l:'직원 관리',        p:'drivers',          plan_key:'free'},
+    {ic:'📝',l:'위수탁 계약서',    p:'contract',         plan_key:'settle'},
+    {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
+    {ic:'⭐',l:'직원 평가',        p:'evaluation',       plan_key:'free'},
+    
+  ]},
+  {s:'💼 급여 관리', items:[
+    {ic:'💼',l:'급여 현황',        p:'hourly_settle',    plan_key:'payroll'}
+  ]},
+  {s:'🚚 원스톱 물류', items:[
+    {ic:'🖨',l:'라벨 출력',        p:'ext_label',        plan_key:'free'},
+    {ic:'📷',l:'수령 스캔',        p:'ext_scan',         plan_key:'free'},
+    {ic:'🚛',l:'간선차 GPS',       p:'ext_truck',        plan_key:'free'}
+  ]}
+];
+
+// ALL-IN-ONE
+
+// ALL-IN-ONE (풀패키지)
+var MENUS_FULL = [
+  {s:'🏠 홈', items:[
+    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'}
+  ]},
+  {s:'🤖 AI 정산', items:[
+    {ic:'📊',l:'정산 현황',        p:'settle',           plan_key:'settle'},
+    {ic:'📋',l:'정산 관리',        p:'settlements',      plan_key:'settle'},
+    {ic:'📈',l:'통계',             p:'stats',            plan_key:'settle'},
+    {ic:'👤',l:'기사 관리',        p:'drivers',          plan_key:'free'},
+    {ic:'📝',l:'위수탁 계약서',    p:'contract',         plan_key:'settle'},
+    {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
+    {ic:'⭐',l:'직원 평가',        p:'evaluation',       plan_key:'free'},
+    
+  ]},
+  {s:'🛵 배달대행 정산', items:[
+    {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',   plan_key:'delivery'}
+  ]},
+  {s:'🔐 QR 근태관리', items:[
+    {ic:'🔐',l:'QR 출퇴근',        p:'attendance',       plan_key:'qr'},
+        {ic:'🌴',l:'휴가 관리',        p:'leave',            plan_key:'payroll'},
+    {ic:'⏰',l:'연장 승인',        p:'overtime',         plan_key:'qr'}
+  ]},
+  {s:'💼 급여 관리', items:[
+    {ic:'💼',l:'급여 현황',        p:'hourly_settle',    plan_key:'payroll'}
+  ]},
+  {s:'🚚 원스톱 물류', items:[
+    {ic:'📦',l:'배달 실적',        p:'delivery_report',  plan_key:'settle'},
+    {ic:'🚗',l:'차량 관리',        p:'vehicle',          plan_key:'free'},
+    {ic:'🚦',l:'배차 관리',        p:'dispatch',         plan_key:'free'},
+    {ic:'📋',l:'배차 히스토리',    p:'dispatch_history', plan_key:'free'},
+    {ic:'🖨',l:'라벨 출력',        p:'ext_label',        plan_key:'free'},
+    {ic:'📷',l:'수령 스캔',        p:'ext_scan',         plan_key:'free'},
+    {ic:'🚛',l:'간선차 GPS',       p:'ext_truck',        plan_key:'free'}
+  ]}
+];
+
+// 소상공인/사장님 전용 (급여 위주)
+var MENUS_HOURLY = [
+  {s:'메인', items:[
+    {ic:'💼',l:'급여 현황',        p:'hourly_settle', plan_key:'payroll'},
+    {ic:'🔐',l:'출퇴근 현황',      p:'attendance',    plan_key:'qr'},
+    {ic:'📅',l:'달력',             p:'schedule',      plan_key:'free'}
+  ]},
+  {s:'👤 직원 관리', items:[
+    {ic:'👤',l:'직원 관리',        p:'drivers',  plan_key:'free'},
+    {ic:'🌴',l:'휴가 관리',        p:'leave',    plan_key:'payroll'},
+    {ic:'⏰',l:'연장 승인',        p:'overtime', plan_key:'payroll'},
+    {ic:'🗓',l:'근무표',           p:'roster',   plan_key:'payroll'}
+  ]},
+  {s:'🛵 배달대행 정산', items:[
+    {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',    plan_key:'delivery'}
+  ]},
+  {s:'공통', items:[
+    {ic:'🧾',l:'세무사 연동',      p:'tax_share', plan_key:'any_paid'},
+    {ic:'📢',l:'공지',             p:'notices',   plan_key:'free'}
+  ]}
+];
+
+// 기사/직원 전용 (플랜 무관)
+
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 📊 과장별 취합 + 수정 이력
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// 과장별 취합 (관리자용)
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 📅 재고 월별 입출고 통계
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🛒 발주 관리
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🧹 청소업 단가 설정
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🔧 청소업 장비/약품 마스터 단가표
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+var CLEAN_EQ_DEFAULTS=[
+  {code:'EQ-001',name:'마루광택기(돌돌이 16인치)',category:'기계',unit:'일/대',min:30000,max:40000,default:35000},
+  {code:'EQ-002',name:'건습식청소기(3모터)',category:'기계',unit:'일/대',min:25000,max:35000,default:30000},
+  {code:'EQ-003',name:'고압세척기(엔진형250바+)',category:'기계',unit:'일/대',min:70000,max:100000,default:80000},
+  {code:'EQ-004',name:'바닥스크러버(보행식)',category:'기계',unit:'일/대',min:15000,max:20000,default:17000},
+  {code:'EQ-005',name:'피톤치드연무기/오존살균기',category:'기계',unit:'일/대',min:20000,max:30000,default:25000},
+  {code:'EQ-006',name:'대형송풍기(바닥건조용)',category:'기계',unit:'일/대',min:10000,max:10000,default:10000},
+  {code:'CH-001',name:'바닥고급왁스(1말통)',category:'약품',unit:'통',min:45000,max:65000,default:55000},
+  {code:'CH-002',name:'박리제(왁스제거 1말통)',category:'약품',unit:'통',min:35000,max:50000,default:42000},
+  {code:'CH-003',name:'외벽백화제거제(1말통)',category:'약품',unit:'통',min:40000,max:60000,default:50000},
+  {code:'CH-004',name:'화재그을음분해제(1말통)',category:'약품',unit:'통',min:55000,max:75000,default:65000},
+  {code:'CH-005',name:'오렌지오일다목적세제(1말통)',category:'약품',unit:'통',min:30000,max:45000,default:37000},
+  {code:'CH-006',name:'유지분해제(주방기름때 1말통)',category:'약품',unit:'통',min:35000,max:45000,default:40000},
+  {code:'SP-001',name:'바닥패드(블랙/레드/화이트 1장)',category:'소모품',unit:'장',min:7000,max:10000,default:8000},
+  {code:'SP-002',name:'스크래퍼칼날(헤라리필 10개입)',category:'소모품',unit:'통',min:4000,max:5000,default:4500},
+  {code:'SP-003',name:'극세사타월(10장 묶음)',category:'소모품',unit:'묶음',min:6000,max:8000,default:7000},
+  {code:'SP-004',name:'종량제봉투/마대(100L 묶음)',category:'소모품',unit:'묶음',min:5000,max:8000,default:6000},
+];
+
+function _renderEqDefaults(p){
+  var cats={기계:'🔧 기계류',약품:'🧪 약품류',소모품:'📦 소모품'};
+  var html='';
+  var lastCat='';
+  CLEAN_EQ_DEFAULTS.forEach(function(eq){
+    if(eq.category!==lastCat){
+      if(lastCat) html+='</div>';
+      html+='<div style="font-size:10px;font-weight:700;color:var(--text3);margin:8px 0 4px">'+cats[eq.category]+'</div><div>';
+      lastCat=eq.category;
+    }
+    var val=p['eq_'+eq.code]||eq.default;
+    html+=_cleanPriceRow('eq_'+eq.code,
+      eq.name+' <span style="font-size:9px;color:var(--text3)">('+eq.min.toLocaleString()+'~'+eq.max.toLocaleString()+'원/'+eq.unit+')</span>',
+      '원', val);
+  });
+  if(lastCat) html+='</div>';
+  return html;
+}
+
+function pageCleanPricing(){
+  document.getElementById('page-title').textContent='💰 청소업 단가 설정';
+  var c=document.getElementById('content');
+  var did=_CU.dealerId||_CU.uid;
+
+  // 기존 단가 로드
+  _db.collection('settings').doc(did+'_cleanPricing').get().then(function(snap){
+    var p=snap.exists?snap.data():{};
+
+    c.innerHTML='<div style="max-width:600px;margin:0 auto;padding:16px">'+
+      '<div style="font-size:13px;font-weight:800;margin-bottom:14px">🧹 청소업 단가 설정</div>'+
+
+      // 평수별 기본단가
+      '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">'+
+        '<div style="font-size:12px;font-weight:800;margin-bottom:10px">📐 평수별 기본 단가 (B2C)</div>'+
+        _cleanPriceRow('p20','20평 이하','원',p.p20||150000)+
+        _cleanPriceRow('p25','21~25평','원',p.p25||180000)+
+        _cleanPriceRow('p30','26~30평','원',p.p30||220000)+
+        _cleanPriceRow('p35','31~35평','원',p.p35||260000)+
+        _cleanPriceRow('p40','36~40평','원',p.p40||300000)+
+        _cleanPriceRow('p50','41~50평','원',p.p50||360000)+
+        _cleanPriceRow('p60','51~60평','원',p.p60||420000)+
+        _cleanPriceRow('pExtra','초과(평당)','원/평',p.pExtra||8000)+
+      '</div>'+
+
+      // 할증
+      '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">'+
+        '<div style="font-size:12px;font-weight:800;margin-bottom:10px">➕ 할증 단가</div>'+
+        _cleanPriceRow('surFloor','계단 층당 할증(3층~)','원/층',p.surFloor||3000)+
+        _cleanPriceRow('surExpand','전체확장 할증','원',p.surExpand||30000)+
+        _cleanPriceRow('surMold','곰팡이 할증','원',p.surMold||50000)+
+        _cleanPriceRow('surNicotine','니코틴 할증','원',p.surNicotine||80000)+
+        _cleanPriceRow('surPet','반려동물 할증','원',p.surPet||60000)+
+        _cleanPriceRow('surJunk','쓰레기집 할증','원~',p.surJunk||150000)+
+        _cleanPriceRow('surNewbuild','준공청소 할증','원',p.surNewbuild||50000)+
+      '</div>'+
+
+      // 옵션
+      '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">'+
+        '<div style="font-size:12px;font-weight:800;margin-bottom:10px">🛠️ 부가 옵션 단가</div>'+
+        _cleanPriceRow('optFridge','냉장고 내부','원',p.optFridge||30000)+
+        _cleanPriceRow('optAirwall','에어컨(벽걸이)','원/대',p.optAirwall||40000)+
+        _cleanPriceRow('optAirsys','에어컨(시스템)','원/대',p.optAirsys||80000)+
+        _cleanPriceRow('optWasher','세탁기 내부','원',p.optWasher||30000)+
+        _cleanPriceRow('optOven','오븐','원',p.optOven||25000)+
+        _cleanPriceRow('optSteam','고온 스팀 살균','원',p.optSteam||50000)+
+        _cleanPriceRow('optPhyton','피톤치드 공정','원',p.optPhyton||40000)+
+      '</div>'+
+
+      // 취소 위약금
+      '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">'+
+        '<div style="font-size:12px;font-weight:800;margin-bottom:10px">⚠️ 취소 위약금 규칙</div>'+
+        _cleanPriceRow('cancel24','24시간 전 취소','%',p.cancel24||0)+
+        _cleanPriceRow('cancel12','12시간 전 취소','%',p.cancel12||30)+
+        _cleanPriceRow('cancelNoshow','현장도착 후 취소','%',p.cancelNoshow||100)+
+        _cleanPriceRow('cancelManagerComp','취소 시 매니저 보전율','%',p.cancelManagerComp||50)+
+      '</div>'+
+
+      // 기타
+      '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px">'+
+        '<div style="font-size:12px;font-weight:800;margin-bottom:10px">🚗 기타 설정</div>'+
+        _cleanPriceRow('minOrder','최소 수주 금액','원',p.minOrder||150000)+
+        _cleanPriceRow('distLimit','배차 제한 반경','km',p.distLimit||30)+
+        _cleanPriceRow('transFeePerKm','거리 유류비(km당)','원',p.transFeePerKm||500)+
+        _cleanPriceRow('waitFeePerHour','대기 시간당 요금','원',p.waitFeePerHour||30000)+
+      '</div>'+
+
+      '<div style="display:flex;gap:8px;margin-bottom:8px">'+
+        '<button id="cp-import-btn" style="flex:1;padding:10px;background:var(--bg3);color:var(--text1);border:1px solid var(--border);border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">📥 엑셀로 단가 업로드</button>'+
+        '<button onclick="_exportCleanPricing()" style="flex:1;padding:10px;background:var(--bg3);color:var(--text1);border:1px solid var(--border);border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">📤 단가표 내보내기</button>'+
+      '</div>'+
+
+      '<button onclick="_saveCleanPricing()" style="width:100%;padding:12px;background:var(--acc);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">💾 단가 저장</button>'+
+    '</div>';
+
+    // ★ 버튼 이벤트 등록 (innerHTML 완료 후)
+    setTimeout(function(){
+      // 파일 input 동적 생성
+      var existInput=document.getElementById('cp-excel-input');
+      if(!existInput){
+        var inp=document.createElement('input');
+        inp.type='file'; inp.id='cp-excel-input';
+        inp.accept='.xlsx,.xls,.csv';
+        inp.style.display='none';
+        inp.onchange=function(){_importCleanPricing(this);};
+        document.body.appendChild(inp);
+      }
+      var importBtn=document.getElementById('cp-import-btn');
+      if(importBtn) importBtn.onclick=function(){
+        document.getElementById('cp-excel-input').click();
+      };
+    }, 100);
+  });
+}
+
+function _cleanPriceRow(id,label,unit,val){
+  return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'+
+    '<div style="flex:1;font-size:11px;color:var(--text2)">'+label+'</div>'+
+    '<input id="cp-'+id+'" type="number" value="'+val+'" style="width:100px;padding:5px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text1);font-size:11px;text-align:right">'+
+    '<div style="font-size:10px;color:var(--text3);width:40px">'+unit+'</div>'+
+  '</div>';
+}
+
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 📥 청소업 단가 엑셀 업로드 / 📤 내보내기
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _importCleanPricing(inp){
+  var file=inp.files[0]; if(!file) return;
+  inp.value='';
+  if(typeof XLSX==='undefined'){toast('⚠️ 엑셀 라이브러리 로딩 중');return;}
+
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
+
+      var updated=0;
+      rows.forEach(function(row){
+        if(!row||row.length<2) return;
+        var key=String(row[0]||'').trim();
+        var val=parseFloat(String(row[1]||'').replace(/,/g,''))||0;
+        if(!key||val<=0) return;
+
+        // 평수 단가
+        var areaMap={'20평이하':'p20','21-25평':'p25','26-30평':'p30','31-35평':'p35',
+          '36-40평':'p40','41-50평':'p50','51-60평':'p60','초과평당':'pExtra'};
+        // 할증
+        var surMap={'계단층당':'surFloor','전체확장':'surExpand','곰팡이':'surMold',
+          '니코틴':'surNicotine','반려동물':'surPet','쓰레기집':'surJunk','준공':'surNewbuild'};
+        // 옵션
+        var optMap={'냉장고':'optFridge','에어컨벽걸이':'optAirwall','에어컨시스템':'optAirsys',
+          '세탁기':'optWasher','오븐':'optOven','스팀살균':'optSteam','피톤치드':'optPhyton'};
+        // 기타
+        var etcMap={'최소수주':'minOrder','배차제한':'distLimit','유류비km당':'transFeePerKm','대기시간당':'waitFeePerHour'};
+        // 취소
+        var cxMap={'24시간전':'cancel24','12시간전':'cancel12','현장도착후':'cancelNoshow','매니저보전율':'cancelManagerComp'};
+
+        var allMap=Object.assign({},areaMap,surMap,optMap,etcMap,cxMap);
+
+        // 코드 직접 매핑 (EQ-001 등)
+        var eqMatch=CLEAN_EQ_DEFAULTS&&CLEAN_EQ_DEFAULTS.find(function(eq){
+          return key===eq.code||key===eq.name||key.includes(eq.name.slice(0,4));
+        });
+        if(eqMatch){
+          var el=document.getElementById('cp-eq-'+eqMatch.code);
+          if(el){el.value=val;updated++;}
+          return;
+        }
+
+        // 이름 매핑
+        var keyClean=key.replace(/[\s\/\(\)（）]/g,'');
+        Object.keys(allMap).forEach(function(k){
+          if(keyClean.includes(k.replace(/[\s\/]/g,''))){
+            var el=document.getElementById('cp-'+allMap[k]);
+            if(el){el.value=val;updated++;}
+          }
+        });
+      });
+
+      toast('✅ 단가 업로드 완료 ('+updated+'개 항목) — 저장 버튼을 눌러주세요');
+    }catch(err){toast('❌ 오류: '+err.message);}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function _exportCleanPricing(){
+  var did=_CU.dealerId||_CU.uid;
+  var fields=[
+    {id:'p20',label:'20평이하'},{id:'p25',label:'21-25평'},
+    {id:'p30',label:'26-30평'},{id:'p35',label:'31-35평'},
+    {id:'p40',label:'36-40평'},{id:'p50',label:'41-50평'},
+    {id:'p60',label:'51-60평'},{id:'pExtra',label:'초과평당'},
+    {id:'surFloor',label:'계단층당'},{id:'surExpand',label:'전체확장'},
+    {id:'surMold',label:'곰팡이'},{id:'surNicotine',label:'니코틴'},
+    {id:'surPet',label:'반려동물'},{id:'surJunk',label:'쓰레기집'},
+    {id:'surNewbuild',label:'준공'},
+    {id:'optFridge',label:'냉장고'},{id:'optAirwall',label:'에어컨벽걸이'},
+    {id:'optAirsys',label:'에어컨시스템'},{id:'optWasher',label:'세탁기'},
+    {id:'optOven',label:'오븐'},{id:'optSteam',label:'스팀살균'},
+    {id:'optPhyton',label:'피톤치드'},
+    {id:'cancel24',label:'24시간전'},{id:'cancel12',label:'12시간전'},
+    {id:'cancelNoshow',label:'현장도착후'},{id:'cancelManagerComp',label:'매니저보전율'},
+    {id:'minOrder',label:'최소수주'},{id:'distLimit',label:'배차제한'},
+    {id:'transFeePerKm',label:'유류비km당'},{id:'waitFeePerHour',label:'대기시간당'},
+  ];
+
+  // 장비/약품 추가
+  if(CLEAN_EQ_DEFAULTS){
+    CLEAN_EQ_DEFAULTS.forEach(function(eq){
+      fields.push({id:'eq-'+eq.code, label:eq.name, code:eq.code});
+    });
+  }
+
+  var rows=[['항목','단가(원)','단위','비고']];
+  fields.forEach(function(f){
+    var el=document.getElementById('cp-'+(f.code||f.id));
+    var val=el?parseFloat(el.value)||0:0;
+    rows.push([f.label, val, '', f.code||'']);
+  });
+
+  var csvLines=[];
+  rows.forEach(function(r){
+    csvLines.push(r.map(function(v){return '"'+String(v||'').replace(/"/g,'""')+'"';}).join(','));
+  });
+  var csv=csvLines.join('\r\n');
+  var blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url; a.download='청소업_단가표_'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+  toast('✅ 단가표 내보내기 완료');
+}
+
+function _saveCleanPricing(){
+  var did=_CU.dealerId||_CU.uid;
+  var fields=['p20','p25','p30','p35','p40','p50','p60','pExtra',
+    'surFloor','surExpand','surMold','surNicotine','surPet','surJunk','surNewbuild',
+    'optFridge','optAirwall','optAirsys','optWasher','optOven','optSteam','optPhyton',
+    'cancel24','cancel12','cancelNoshow','cancelManagerComp',
+    'minOrder','distLimit','transFeePerKm','waitFeePerHour'];
+  var obj={updatedAt:new Date().toISOString()};
+  fields.forEach(function(f){
+    var el=document.getElementById('cp-'+f);
+    if(el) obj[f]=parseFloat(el.value)||0;
+  });
+  _db.collection('settings').doc(did+'_cleanPricing').set(obj,{merge:true})
+  .then(function(){toast('✅ 단가 저장 완료');})
+  .catch(function(e){toast('❌ 저장 실패: '+e.message);});
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🧹 청소업 의뢰서 작성
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🔧 현장 출고 컨펌 & 반납 관리
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 👷 청소업 인력 관리
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function pageCleanWorkers(){
+  document.getElementById('page-title').textContent='👷 청소 인력 관리';
+  var c=document.getElementById('content');
+  var did=_CU.dealerId||_CU.uid;
+  c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
+
+  // dealerId OR uid 둘 다 체크
+  var queries=[
+    _db.collection('clean_workers').where('dealerId','==',did).limit(200).get(),
+  ];
+  if(_CU.uid!==did){
+    queries.push(_db.collection('clean_workers').where('dealerId','==',_CU.uid).limit(200).get());
+  }
+  Promise.all(queries)
+  .then(function(results){
+    var snap={docs:[]};
+    results.forEach(function(r){r.forEach(function(d){snap.docs.push(d);});});
+
+    // 팀장별 그룹핑 (leaderName 기준)
+    var leaders={};
+    var all=[];
+    var seen={};
+    snap.docs.forEach(function(d){
+      if(seen[d.id]) return;
+      seen[d.id]=true;
+      var w=Object.assign({id:d.id},d.data());
+      all.push(w);
+      // 팀장 감지: role이 leader/팀장 OR leaderName이 비어있고 이름에 팀장 포함
+      var isLeader=w.role==='leader'||w.role==='팀장'||
+                   (!w.leaderName&&(w.name||'').includes('팀장'));
+      if(isLeader){
+        if(!leaders[w.name]) leaders[w.name]={leader:w,members:[]};
+      }
+    });
+    // 팀원 → 팀장에 배정
+    all.forEach(function(w){
+      var isLeader=w.role==='leader'||w.role==='팀장'||
+                   (!w.leaderName&&(w.name||'').includes('팀장'));
+      if(!isLeader&&w.leaderName&&leaders[w.leaderName]){
+        leaders[w.leaderName].members.push(w);
+      }
+    });
+    // 미배정
+    var unassigned=all.filter(function(w){
+      var isLeader=w.role==='leader'||w.role==='팀장'||
+                   (!w.leaderName&&(w.name||'').includes('팀장'));
+      return !isLeader&&(!w.leaderName||!leaders[w.leaderName]);
+    });
+
+    var levelColor={
+      '팀장':'#2563EB','고급팀원':'#059669','중급팀원':'#16a34a',
+      '초급팀원':'#4ade80','특수고소':'#d97706','프리랜서A':'#7c3aed',
+      '프리랜서B':'#9333ea','알바(단기)':'#ca8a04','freelancer':'#7c3aed',
+      'leader':'#2563EB','member':'#059669'
+    };
+    var empLabel={
+      'DAILY_INDIRECT':'일용직','FREELANCER_3.3':'프리랜서 3.3%',
+      'PARTTIME':'알바','REGULAR':'정규직'
+    };
+
+    function workerCard(w){
+      var lc=levelColor[w.role]||levelColor[w.level]||'#6b7280';
+      var aliases=(w.aliases||[]).join(', ');
+      return '<div style="background:var(--bg3);border-radius:8px;padding:8px 10px;margin-bottom:4px;display:flex;align-items:center;gap:8px">'+
+        '<div style="width:6px;height:6px;border-radius:50%;background:'+lc+';flex-shrink:0"></div>'+
+        '<div style="flex:1">'+
+          '<div style="font-size:11px;font-weight:700">'+esc(w.name||'')+
+            '<span style="font-size:9px;color:'+lc+';margin-left:6px;font-weight:600">'+esc(w.level||w.role||'')+'</span>'+
+          '</div>'+
+          '<div style="font-size:9px;color:var(--text3)">'+
+            esc(empLabel[w.empType]||w.empType||'')+
+            (w.lastSite?' · 최근: '+esc(w.lastSite):'')+'</div>'+
+          (aliases?'<div style="font-size:9px;color:var(--acc)">별명: '+esc(aliases)+'</div>':'')+
+        '</div>'+
+        '<button data-wid="'+w.id+'" class="cw-edit-btn" style="padding:3px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;font-size:9px;cursor:pointer">수정</button>'+
+      '</div>';
+    }
+
+    var teamsHtml='';
+    Object.values(leaders).forEach(function(t){
+      teamsHtml+=
+        '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:10px">'+
+          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'+
+            '<div style="font-size:12px;font-weight:800">👑 '+esc(t.leader.name)+'</div>'+
+            '<span style="font-size:9px;color:#2563EB;font-weight:600">팀장</span>'+
+            '<span style="font-size:9px;color:var(--text3)">· 팀원 '+t.members.length+'명</span>'+
+            (t.leader.lastSite?'<span style="font-size:9px;color:var(--text3)">· '+esc(t.leader.lastSite)+'</span>':'')+
+          '</div>'+
+          workerCard(t.leader)+
+          t.members.map(workerCard).join('')+
+        '</div>';
+    });
+
+    if(unassigned.length){
+      teamsHtml+=
+        '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:10px">'+
+          '<div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:8px">📋 미배정 인원 ('+unassigned.length+'명)</div>'+
+          unassigned.map(workerCard).join('')+
+        '</div>';
+    }
+
+    c.innerHTML=
+      '<div style="max-width:620px;margin:0 auto;padding:16px">'+
+        '<div style="display:flex;gap:8px;margin-bottom:12px">'+
+          '<button id="cw-add-btn" style="flex:1;padding:10px;background:var(--acc);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">+ 인력 추가</button>'+
+          '<button id="cw-excel-btn" style="flex:1;padding:10px;background:#059669;color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">📥 엑셀 일괄등록</button>'+
+        '</div>'+
+        '<div style="font-size:11px;color:var(--text3);margin-bottom:10px">전체 '+all.length+'명 · 팀 '+Object.keys(leaders).length+'개</div>'+
+        (all.length?teamsHtml:'<div class="empty">👷 등록된 인력 없음<br><small>정산 엑셀 업로드 시 자동 등록됩니다</small></div>')+
+      '</div>';
+
+    // 이벤트
+    setTimeout(function(){
+      var addBtn=document.getElementById('cw-add-btn');
+      if(addBtn) addBtn.onclick=function(){_openCleanWorkerForm(null);};
+      var excelBtn=document.getElementById('cw-excel-btn');
+      if(excelBtn) excelBtn.onclick=function(){
+        if(!_COMPANY_CFG) _COMPANY_CFG={};
+        _COMPANY_CFG.industryType='cleaning';
+        _SA_TEST_INDUSTRY='cleaning';
+        document.getElementById('excel-input').click();
+      };
+      document.querySelectorAll('.cw-edit-btn').forEach(function(btn){
+        btn.onclick=function(){
+          var wid=this.dataset.wid;
+          var worker=all.find(function(w){return w.id===wid;});
+          if(worker) _openCleanWorkerForm(worker);
+        };
+      });
+    },100);
+  }).catch(function(e){c.innerHTML='<div class="empty">오류: '+e.message+'</div>';console.error(e);});
+}
+
+function _openCleanWorkerForm(worker){
+  var isEdit=!!worker;
+  var w=worker||{};
+  var pop=document.createElement('div');
+  pop.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+
+  pop.innerHTML=
+    '<div style="background:var(--bg2);border-radius:16px;padding:20px;width:100%;max-width:380px;max-height:88vh;overflow-y:auto">'+
+      '<div style="font-size:14px;font-weight:800;margin-bottom:14px">'+(isEdit?'✏️ 인력 수정':'👷 인력 추가')+'</div>'+
+      '<div style="display:flex;flex-direction:column;gap:8px">'+
+        _cwField('cw-name','실명 (필수)',w.name||'','text','홍길동')+
+        _cwField('cw-aliases','별명/닉네임 (쉼표 구분)',( w.aliases||[]).join(', '),'text','강팀장, 강씨, 강길동')+
+        '<div><label style="font-size:11px;color:var(--text3)">레벨</label>'+
+          '<select id="cw-level" style="width:100%;margin-top:3px;padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text1);font-size:12px">'+
+            ['팀장','고급팀원','중급팀원','초급팀원','특수고소','프리랜서A','프리랜서B','알바(단기)'].map(function(l){
+              return '<option value="'+l+'"'+(w.level===l?' selected':'')+'>'+l+'</option>';
+            }).join('')+
+          '</select>'+
+        '</div>'+
+        '<div><label style="font-size:11px;color:var(--text3)">고용형태</label>'+
+          '<select id="cw-emp" style="width:100%;margin-top:3px;padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text1);font-size:12px">'+
+            [['DAILY_INDIRECT','일용직'],['FREELANCER_3.3','프리랜서 3.3%'],['PARTTIME','알바'],['REGULAR','정규직']].map(function(e){
+              return '<option value="'+e[0]+'"'+(w.empType===e[0]?' selected':'')+'>'+e[1]+'</option>';
+            }).join('')+
+          '</select>'+
+        '</div>'+
+        _cwField('cw-leader','소속 팀장',w.leaderName||'','text','팀장 이름 (팀원인 경우)')+
+        _cwField('cw-phone','연락처',w.phone||'','tel','010-0000-0000')+
+      '</div>'+
+      '<div style="display:flex;gap:8px;margin-top:14px">'+
+        '<button id="cw-cancel" style="flex:1;padding:10px;background:var(--bg3);color:var(--text2);border:none;border-radius:8px;font-weight:700;cursor:pointer">취소</button>'+
+        '<button id="cw-save" style="flex:2;padding:10px;background:var(--acc);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer">저장</button>'+
+      '</div>'+
+    '</div>';
+
+  document.body.appendChild(pop);
+  pop.querySelector('#cw-cancel').onclick=function(){document.body.removeChild(pop);};
+  pop.querySelector('#cw-save').onclick=function(){
+    var name=(pop.querySelector('#cw-name')||{}).value||'';
+    if(!name.trim()){toast('실명을 입력하세요');return;}
+    var did=_CU.dealerId||_CU.uid;
+    var data={
+      dealerId:did,
+      name:name.trim(),
+      aliases:(pop.querySelector('#cw-aliases')||{value:''}).value.split(',').map(function(s){return s.trim();}).filter(Boolean),
+      level:(pop.querySelector('#cw-level')||{value:'중급팀원'}).value,
+      empType:(pop.querySelector('#cw-emp')||{value:'DAILY_INDIRECT'}).value,
+      leaderName:(pop.querySelector('#cw-leader')||{value:''}).value.trim(),
+      phone:(pop.querySelector('#cw-phone')||{value:''}).value.trim(),
+      role:(pop.querySelector('#cw-level')||{value:''}).value==='팀장'?'leader':'member',
+      updatedAt:new Date().toISOString(),
+    };
+    var p=isEdit?
+      _db.collection('clean_workers').doc(worker.id).update(data):
+      _db.collection('clean_workers').add(Object.assign(data,{createdAt:new Date().toISOString(),jobsub:'청소·파견',is_active:true}));
+    p.then(function(){
+      toast('✅ '+(isEdit?'수정':'등록')+' 완료: '+name);
+      document.body.removeChild(pop);
+      pageCleanWorkers();
+    }).catch(function(e){toast('❌ 오류: '+e.message);});
+  };
+}
+
+function _cwField(id,label,val,type,ph){
+  return '<div><label style="font-size:11px;color:var(--text3)">'+label+'</label>'+
+    '<input id="'+id+'" type="'+(type||'text')+'" value="'+esc(val||'')+'" placeholder="'+esc(ph||'')+'" '+
+    'style="width:100%;margin-top:3px;padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text1);font-size:12px;box-sizing:border-box">'+
+    '</div>';
+}
+
+function pageCleanDispatch(){
+  document.getElementById('page-title').textContent='🔧 현장 출고 컨펌';
+  var c=document.getElementById('content');
+  var did=_CU.dealerId||_CU.uid;
+
+  // 단가 설정 + 기존 출고 기록 로드
+  Promise.all([
+    _db.collection('settings').doc(did+'_cleanPricing').get(),
+    _db.collection('clean_dispatch').where('dealerId','==',did)
+       .limit(20).get()
+  ]).then(function(res){
+    var p=res[0].exists?res[0].data():{};
+    var today=new Date().toISOString().slice(0,10);
+
+    // 출고 기록 목록
+    var histHtml='';
+    res[1].forEach(function(d){
+      var dr=d.data();
+      var totalAmt=dr.totalAmt||0;
+      var perAmt=dr.perPersonAmt||0;
+      var returned=dr.returned||false;
+      histHtml+=
+        '<div style="background:var(--bg3);border-radius:8px;padding:10px;margin-bottom:6px;display:flex;align-items:center;gap:8px">'+
+          '<div style="flex:1">'+
+            '<div style="font-size:11px;font-weight:700">'+esc(dr.teamName||'')+'  |  '+esc(dr.dispatchDate||'')+'</div>'+
+            '<div style="font-size:10px;color:var(--text3)">'+esc(dr.itemSummary||'')+'</div>'+
+            '<div style="font-size:10px">총 '+totalAmt.toLocaleString()+'원 / 인당 '+perAmt.toLocaleString()+'원 ('+( dr.headCount||0)+'명)</div>'+
+          '</div>'+
+          '<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">'+
+            '<span style="font-size:9px;font-weight:700;color:'+(returned?'#10b981':'#f59e0b')+'">'+(returned?'✅ 반납완료':'⏳ 미반납')+'</span>'+
+            (!returned?'<button data-did="'+d.id+'" class="return-btn" style="padding:3px 8px;background:#10b981;color:#fff;border:none;border-radius:4px;font-size:9px;cursor:pointer">반납확인</button>':'')+
+          '</div>'+
+        '</div>';
+    });
+
+    c.innerHTML=
+      '<div style="max-width:620px;margin:0 auto;padding:16px">'+
+
+      // 새 출고 등록
+      '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px">'+
+        '<div style="font-size:12px;font-weight:800;margin-bottom:10px">📦 당일 출고 등록</div>'+
+        '<div style="display:flex;gap:6px;margin-bottom:8px">'+
+          '<input id="dc-team" placeholder="팀명 (예: A팀 외벽)" style="flex:1;'+_coInput()+'">'+
+          '<input id="dc-date" type="date" value="'+today+'" style="width:130px;'+_coInput()+'">'+
+        '</div>'+
+        '<input id="dc-site" placeholder="현장명 (예: OO아파트 준공)" style="width:100%;margin-bottom:8px;'+_coInput()+'">'+
+        '<div style="font-size:11px;font-weight:700;margin-bottom:6px">투입 장비/약품 체크</div>'+
+        '<div id="dc-eq-list" style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:10px">'+
+          _renderDispatchItems(p)+
+        '</div>'+
+        '<div style="background:var(--bg3);border-radius:8px;padding:10px;margin-bottom:10px">'+
+          '<div style="font-size:11px;font-weight:800;margin-bottom:6px">👷 출근 인원 (결근 제외)</div>'+
+          '<div style="display:flex;gap:8px;align-items:center">'+
+            '<input id="dc-headcount" type="number" min="1" value="1" onchange="_calcDispatchTotal()" style="width:80px;'+_coInput()+'">'+
+            '<span style="font-size:11px;color:var(--text3)">명 출근 (결근자 제외한 실출근 인원)</span>'+
+          '</div>'+
+        '</div>'+
+        '<div id="dc-total-box" style="background:linear-gradient(135deg,rgba(0,119,182,.08),rgba(124,58,237,.05));border:1px solid rgba(0,119,182,.2);border-radius:10px;padding:12px;margin-bottom:10px">'+
+          '<div style="font-size:11px;color:var(--text3);margin-bottom:4px">출고 합계</div>'+
+          '<div id="dc-total-display" style="font-size:16px;font-weight:800;color:var(--acc)">0원</div>'+
+          '<div id="dc-per-display" style="font-size:11px;color:var(--text2);margin-top:2px">인당 차감: 0원</div>'+
+          '<div id="dc-remainder" style="font-size:10px;color:#f59e0b;margin-top:2px"></div>'+
+        '</div>'+
+        '<div style="display:flex;gap:6px">'+
+          '<input id="dc-returnable" type="checkbox" checked style="margin:0"> '+
+          '<label style="font-size:11px;color:var(--text2)">반납 가능 장비 포함 (미반납 시 자동 추가 차감)</label>'+
+        '</div>'+
+        '<button onclick="_saveDispatch()" style="width:100%;margin-top:10px;padding:12px;background:var(--acc);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">✅ 출고 확정 & 정산 반영</button>'+
+      '</div>'+
+
+      // 출고 기록
+      '<div style="font-size:12px;font-weight:800;margin-bottom:8px">📋 출고 기록 (최근 20건)</div>'+
+      (histHtml||'<div class="empty">출고 기록 없음</div>')+
+      '</div>';
+
+    // 반납 버튼 이벤트
+    c.querySelectorAll('.return-btn').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var docId=this.dataset.did;
+        _db.collection('clean_dispatch').doc(docId).update({
+          returned:true, returnedAt:new Date().toISOString()
+        }).then(function(){toast('✅ 반납 확인 완료');pageCleanDispatch();});
+      });
+    });
+
+    // 초기 계산
+    setTimeout(_calcDispatchTotal,100);
+  });
+}
+
+function _renderDispatchItems(p){
+  var html='';
+  CLEAN_EQ_DEFAULTS.forEach(function(eq){
+    var price=p['eq_'+eq.code]||eq.default;
+    html+=
+      '<label style="display:flex;align-items:center;gap:5px;background:var(--bg3);border-radius:6px;padding:6px 8px;cursor:pointer">'+
+        '<input type="checkbox" class="dc-eq-check" data-code="'+eq.code+'" data-price="'+price+'" onchange="_calcDispatchTotal()" style="margin:0">'+
+        '<div style="flex:1">'+
+          '<div style="font-size:10px;font-weight:600">'+esc(eq.name)+'</div>'+
+          '<div style="display:flex;align-items:center;gap:4px">'+
+            '<input type="number" min="1" value="1" class="dc-eq-qty" data-code="'+eq.code+'" onchange="_calcDispatchTotal()" '+
+              'style="width:36px;padding:2px 4px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;font-size:10px;text-align:center">'+
+            '<span style="font-size:9px;color:var(--text3)">×'+price.toLocaleString()+'원</span>'+
+          '</div>'+
+        '</div>'+
+      '</label>';
+  });
+  return html;
+}
+
+function _calcDispatchTotal(){
+  var total=0;
+  var items=[];
+  document.querySelectorAll('.dc-eq-check:checked').forEach(function(chk){
+    var qtyEl=document.querySelector('.dc-eq-qty[data-code="'+chk.dataset.code+'"]');
+    var qty=parseInt(qtyEl?qtyEl.value:1)||1;
+    var price=parseInt(chk.dataset.price)||0;
+    var amt=price*qty;
+    total+=amt;
+    // 이름 찾기
+    var eq=CLEAN_EQ_DEFAULTS.find(function(e){return e.code===chk.dataset.code;});
+    if(eq) items.push(eq.name+'×'+qty);
+  });
+
+  var headCount=parseInt(document.getElementById('dc-headcount')?document.getElementById('dc-headcount').value:1)||1;
+  var perPerson=Math.floor(total/headCount);   // 버림
+  var remainder=total-(perPerson*headCount);    // 낙전
+
+  var totalEl=document.getElementById('dc-total-display');
+  var perEl=document.getElementById('dc-per-display');
+  var remEl=document.getElementById('dc-remainder');
+
+  if(totalEl) totalEl.textContent=total.toLocaleString()+'원';
+  if(perEl) perEl.textContent='인당 차감: '+perPerson.toLocaleString()+'원 × '+headCount+'명';
+  if(remEl && remainder>0){
+    remEl.textContent='낙전 '+remainder.toLocaleString()+'원 → 팀장에게 +α 처리';
+  } else if(remEl){
+    remEl.textContent='';
+  }
+
+  window._dcCalc={total:total, perPerson:perPerson, remainder:remainder, items:items, headCount:headCount};
+}
+
+function _saveDispatch(){
+  var did=_CU.dealerId||_CU.uid;
+  var calc=window._dcCalc||{total:0,perPerson:0,remainder:0,items:[],headCount:1};
+  if(calc.total<=0){toast('출고 항목을 선택하세요');return;}
+
+  var teamName=document.getElementById('dc-team')?document.getElementById('dc-team').value:'';
+  var dispatchDate=document.getElementById('dc-date')?document.getElementById('dc-date').value:'';
+  var siteName=document.getElementById('dc-site')?document.getElementById('dc-site').value:'';
+  var returnable=document.getElementById('dc-returnable')?document.getElementById('dc-returnable').checked:true;
+
+  var record={
+    dealerId:did,
+    teamName:teamName,
+    siteName:siteName,
+    dispatchDate:dispatchDate,
+    headCount:calc.headCount,
+    totalAmt:calc.total,
+    perPersonAmt:calc.perPerson,
+    remainder:calc.remainder,
+    itemSummary:calc.items.join(', '),
+    returnable:returnable,
+    returned:!returnable,
+    createdAt:new Date().toISOString(),
+    createdBy:_CU.name||_CU.email||'',
+    status:'CONFIRMED'
+  };
+
+  // 상세 항목 저장
+  var details=[];
+  document.querySelectorAll('.dc-eq-check:checked').forEach(function(chk){
+    var qtyEl=document.querySelector('.dc-eq-qty[data-code="'+chk.dataset.code+'"]');
+    var qty=parseInt(qtyEl?qtyEl.value:1)||1;
+    var price=parseInt(chk.dataset.price)||0;
+    var eq=CLEAN_EQ_DEFAULTS.find(function(e){return e.code===chk.dataset.code;});
+    details.push({code:chk.dataset.code, name:eq?eq.name:'', qty:qty, unitPrice:price, total:price*qty, category:eq?eq.category:''});
+  });
+  record.details=details;
+
+  _db.collection('clean_dispatch').add(record).then(function(ref){
+    toast('✅ 출고 확정! 팀 '+teamName+' / 인당 '+calc.perPerson.toLocaleString()+'원 차감'+(calc.remainder>0?' / 낙전 '+calc.remainder+'원 팀장 처리':''));
+    pageCleanDispatch();
+  }).catch(function(e){toast('❌ 저장 실패: '+e.message);});
+}
+
+function pageCleanOrder(){
+  document.getElementById('page-title').textContent='📝 의뢰서 작성';
+  var c=document.getElementById('content');
+  var did=_CU.dealerId||_CU.uid;
+
+  _db.collection('settings').doc(did+'_cleanPricing').get().then(function(snap){
+    var p=snap.exists?snap.data():{
+      p20:150000,p25:180000,p30:220000,p35:260000,p40:300000,p50:360000,p60:420000,pExtra:8000,
+      surFloor:3000,surExpand:30000,surMold:50000,surNicotine:80000,surPet:60000,surJunk:150000,surNewbuild:50000,
+      optFridge:30000,optAirwall:40000,optAirsys:80000,optWasher:30000,optOven:25000,optSteam:50000,optPhyton:40000,
+      cancel12:30,cancelNoshow:100,cancelManagerComp:50,minOrder:150000,waitFeePerHour:30000
+    };
+    window._cleanP=p;
+
+    c.innerHTML='<div style="max-width:600px;margin:0 auto;padding:16px">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'+
+        '<div style="font-size:13px;font-weight:800">📝 청소 의뢰서 작성</div>'+
+        '<div style="font-size:11px;color:var(--acc);font-weight:700" id="co-total">견적: 계산 중...</div>'+
+      '</div>'+
+
+      // 기본정보
+      '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">'+
+        '<div style="font-size:12px;font-weight:800;margin-bottom:10px">📋 기본 정보</div>'+
+        _coRow('고객명','<input id="co-client" placeholder="홍길동 또는 (주)회사명" style="'+_coInput()+'">')+
+        _coRow('서비스 유형',
+          '<select id="co-type" onchange="_calcCleanTotal()" style="'+_coInput()+'">'+
+          '<option value="B2C_MOVE">B2C 이사청소</option>'+
+          '<option value="B2C_NEW">B2C 준공청소</option>'+
+          '<option value="B2B_OFFICE">B2B 사무실 정기</option>'+
+          '<option value="B2B_SPECIAL">B2B 특수청소</option>'+
+          '</select>')+
+        _coRow('주거형태',
+          '<select id="co-house" style="'+_coInput()+'">'+
+          '<option value="아파트">아파트</option>'+
+          '<option value="빌라">빌라</option>'+
+          '<option value="단독주택">단독주택</option>'+
+          '<option value="오피스텔">오피스텔</option>'+
+          '<option value="사무실">사무실</option>'+
+          '<option value="기타">기타</option>'+
+          '</select>')+
+        _coRow('평수(공급)',
+          '<input id="co-area" type="number" placeholder="예: 30" onchange="_calcCleanTotal()" style="'+_coInput()+'"> <span style="font-size:11px;color:var(--text3)">평</span>')+
+        _coRow('확장여부',
+          '<select id="co-expand" onchange="_calcCleanTotal()" style="'+_coInput()+'">'+
+          '<option value="none">비확장</option>'+
+          '<option value="living">거실 확장</option>'+
+          '<option value="full">전체 확장</option>'+
+          '</select>')+
+        _coRow('엘리베이터',
+          '<select id="co-elev" style="'+_coInput()+'">'+
+          '<option value="yes">있음</option>'+
+          '<option value="no">없음</option>'+
+          '</select>')+
+        _coRow('층수(엘리없을때)',
+          '<input id="co-floor" type="number" placeholder="예: 5" onchange="_calcCleanTotal()" style="'+_coInput()+'">')+
+      '</div>'+
+
+      // 오염도
+      '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">'+
+        '<div style="font-size:12px;font-weight:800;margin-bottom:10px">🔍 현장 상태</div>'+
+        _coRow('특이오염',
+          '<select id="co-dirty" onchange="_calcCleanTotal()" style="'+_coInput()+'">'+
+          '<option value="none">없음</option>'+
+          '<option value="mold">곰팡이 심함</option>'+
+          '<option value="nicotine">니코틴 때</option>'+
+          '<option value="pet">반려동물 오염</option>'+
+          '<option value="junk">쓰레기집</option>'+
+          '</select>')+
+      '</div>'+
+
+      // 옵션
+      '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">'+
+        '<div style="font-size:12px;font-weight:800;margin-bottom:8px">🛠️ 부가 옵션</div>'+
+        _coCheck('optFridge','냉장고 내부','optFridge')+
+        _coCheck('optAirwall','에어컨 벽걸이','optAirwall')+
+        _coCheck('optAirsys','에어컨 시스템','optAirsys')+
+        _coCheck('optWasher','세탁기 내부','optWasher')+
+        _coCheck('optOven','오븐','optOven')+
+        _coCheck('optSteam','고온 스팀 살균','optSteam')+
+        _coCheck('optPhyton','피톤치드 공정','optPhyton')+
+      '</div>'+
+
+      // 매니저 설정
+      '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">'+
+        '<div style="font-size:12px;font-weight:800;margin-bottom:8px">👷 매니저 배정</div>'+
+        _coRow('매니저명','<input id="co-manager" placeholder="홍길동" style="'+_coInput()+'">')+
+        _coRow('고용형태',
+          '<select id="co-emptype" onchange="_calcCleanTotal()" style="'+_coInput()+'">'+
+          '<option value="3.3">프리랜서 3.3%</option>'+
+          '<option value="daily">일용직 고용보험</option>'+
+          '<option value="direct">직접 입력</option>'+
+          '</select>')+
+        _coRow('지급 배분율',
+          '<input id="co-ratio" type="number" value="65" onchange="_calcCleanTotal()" style="'+_coInput()+'"> <span style="font-size:11px;color:var(--text3)">%</span>')+
+        _coRow('추가수당',
+          '<input id="co-extra" type="number" value="0" onchange="_calcCleanTotal()" style="'+_coInput()+'"> <span style="font-size:11px;color:var(--text3)">원</span>')+
+        _coRow('유류비',
+          '<input id="co-trans" type="number" value="0" onchange="_calcCleanTotal()" style="'+_coInput()+'"> <span style="font-size:11px;color:var(--text3)">원</span>')+
+        _coRow('패널티 차감',
+          '<input id="co-penalty" type="number" value="0" onchange="_calcCleanTotal()" style="'+_coInput()+'"> <span style="font-size:11px;color:var(--text3)">원</span>')+
+      '</div>'+
+
+      // 결제
+      '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">'+
+        '<div style="font-size:12px;font-weight:800;margin-bottom:8px">💳 결제 정보</div>'+
+        _coRow('결제방식',
+          '<select id="co-pay" style="'+_coInput()+'">'+
+          '<option value="card">신용카드</option>'+
+          '<option value="cash">현금영수증</option>'+
+          '<option value="transfer">계좌이체</option>'+
+          '<option value="invoice">세금계산서(B2B)</option>'+
+          '<option value="unpaid">미수금</option>'+
+          '</select>')+
+        _coRow('B2B VAT',
+          '<select id="co-vat" onchange="_calcCleanTotal()" style="'+_coInput()+'">'+
+          '<option value="0">없음(B2C)</option>'+
+          '<option value="10">VAT 10% 별도(B2B)</option>'+
+          '</select>')+
+        _coRow('작업일',
+          '<input id="co-date" type="date" value="'+new Date().toISOString().slice(0,10)+'" style="'+_coInput()+'">')+
+      '</div>'+
+
+      // 견적 요약
+      '<div id="co-summary" style="background:linear-gradient(135deg,rgba(0,119,182,.1),rgba(124,58,237,.05));border:1px solid rgba(0,119,182,.2);border-radius:12px;padding:14px;margin-bottom:14px">'+
+        '<div style="font-size:12px;font-weight:800;margin-bottom:8px">📊 견적 요약</div>'+
+        '<div id="co-summary-content">금액을 입력하면 자동 계산됩니다.</div>'+
+      '</div>'+
+
+      '<div style="display:flex;gap:8px">'+
+        '<button onclick="_saveCleanOrder()" style="flex:2;padding:12px;background:var(--acc);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">📝 의뢰 저장</button>'+
+        '<button onclick="_saveCleanOrderAndSettle()" style="flex:1;padding:12px;background:#059669;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">💰 바로 정산</button>'+
+      '</div>'+
+    '</div>';
+
+    // 초기 계산
+    setTimeout(_calcCleanTotal, 100);
+  });
+}
+
+function _coInput(){
+  return 'width:100%;padding:6px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text1);font-size:12px';
+}
+function _coRow(label,input){
+  return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'+
+    '<div style="width:90px;font-size:11px;color:var(--text3);flex-shrink:0">'+label+'</div>'+
+    '<div style="flex:1">'+input+'</div>'+
+  '</div>';
+}
+function _coCheck(id,label,priceKey){
+  return '<label style="display:flex;align-items:center;gap:6px;margin-bottom:5px;cursor:pointer">'+
+    '<input type="checkbox" id="co-'+id+'" onchange="_calcCleanTotal()">'+
+    '<span style="font-size:11px">'+label+'</span>'+
+    '<span style="font-size:10px;color:var(--text3)" id="co-'+id+'-price"></span>'+
+  '</label>';
+}
+
+function _calcCleanTotal(){
+  var p=window._cleanP||{};
+  var area=parseFloat(document.getElementById('co-area')?document.getElementById('co-area').value:0)||0;
+  var expand=document.getElementById('co-expand')?document.getElementById('co-expand').value:'none';
+  var elev=document.getElementById('co-elev')?document.getElementById('co-elev').value:'yes';
+  var floor=parseFloat(document.getElementById('co-floor')?document.getElementById('co-floor').value:0)||0;
+  var dirty=document.getElementById('co-dirty')?document.getElementById('co-dirty').value:'none';
+  var type=document.getElementById('co-type')?document.getElementById('co-type').value:'B2C_MOVE';
+  var vatRate=parseFloat(document.getElementById('co-vat')?document.getElementById('co-vat').value:0)||0;
+  var ratio=parseFloat(document.getElementById('co-ratio')?document.getElementById('co-ratio').value:65)||65;
+  var extra=parseFloat(document.getElementById('co-extra')?document.getElementById('co-extra').value:0)||0;
+  var trans=parseFloat(document.getElementById('co-trans')?document.getElementById('co-trans').value:0)||0;
+  var penalty=parseFloat(document.getElementById('co-penalty')?document.getElementById('co-penalty').value:0)||0;
+  var emptype=document.getElementById('co-emptype')?document.getElementById('co-emptype').value:'3.3';
+
+  // 기본 단가
+  var basePrice=0;
+  if(area<=20) basePrice=p.p20||150000;
+  else if(area<=25) basePrice=p.p25||180000;
+  else if(area<=30) basePrice=p.p30||220000;
+  else if(area<=35) basePrice=p.p35||260000;
+  else if(area<=40) basePrice=p.p40||300000;
+  else if(area<=50) basePrice=p.p50||360000;
+  else if(area<=60) basePrice=p.p60||420000;
+  else basePrice=(p.p60||420000)+Math.round((area-60)*(p.pExtra||8000));
+
+  // 할증
+  var surcharge=0;
+  if(type==='B2C_NEW') surcharge+=p.surNewbuild||50000;
+  if(expand==='full') surcharge+=p.surExpand||30000;
+  else if(expand==='living') surcharge+=Math.round((p.surExpand||30000)*0.5);
+  if(elev==='no'&&floor>2) surcharge+=(floor-2)*(p.surFloor||3000);
+  if(dirty==='mold') surcharge+=p.surMold||50000;
+  else if(dirty==='nicotine') surcharge+=p.surNicotine||80000;
+  else if(dirty==='pet') surcharge+=p.surPet||60000;
+  else if(dirty==='junk') surcharge+=p.surJunk||150000;
+
+  // 옵션
+  var optTotal=0;
+  var opts=['optFridge','optAirwall','optAirsys','optWasher','optOven','optSteam','optPhyton'];
+  opts.forEach(function(opt){
+    var el=document.getElementById('co-'+opt);
+    var priceEl=document.getElementById('co-'+opt+'-price');
+    var optPrice=p[opt]||0;
+    if(priceEl) priceEl.textContent='('+optPrice.toLocaleString()+'원)';
+    if(el&&el.checked) optTotal+=optPrice;
+  });
+
+  var subtotal=basePrice+surcharge+optTotal;
+  var vat=Math.round(subtotal*(vatRate/100));
+  var totalBilling=subtotal+vat;
+
+  // 매니저 지급
+  var managerGross=Math.round(subtotal*(ratio/100))+extra+trans-penalty;
+  var tax=0;
+  if(emptype==='3.3') tax=Math.round(managerGross*0.033);
+  else if(emptype==='daily') tax=Math.round(managerGross*0.009);
+  var managerNet=managerGross-tax;
+  var companyMargin=subtotal-managerGross;
+
+  // 화면 업데이트
+  var totalEl=document.getElementById('co-total');
+  if(totalEl) totalEl.textContent='견적: '+totalBilling.toLocaleString()+'원';
+
+  var summary=document.getElementById('co-summary-content');
+  if(summary&&area>0){
+    summary.innerHTML=
+      '<div style="font-size:11px">'+
+      '<div style="display:flex;justify-content:space-between;margin-bottom:3px"><span>기본단가</span><span>'+basePrice.toLocaleString()+'원</span></div>'+
+      (surcharge>0?'<div style="display:flex;justify-content:space-between;margin-bottom:3px"><span>할증</span><span>+'+surcharge.toLocaleString()+'원</span></div>':'')+
+      (optTotal>0?'<div style="display:flex;justify-content:space-between;margin-bottom:3px"><span>옵션</span><span>+'+optTotal.toLocaleString()+'원</span></div>':'')+
+      (vat>0?'<div style="display:flex;justify-content:space-between;margin-bottom:3px"><span>VAT '+vatRate+'%</span><span>+'+vat.toLocaleString()+'원</span></div>':'')+
+      '<div style="display:flex;justify-content:space-between;margin-bottom:6px;font-weight:800;color:var(--acc);border-top:1px solid var(--border);padding-top:6px"><span>고객 청구 총액</span><span>'+totalBilling.toLocaleString()+'원</span></div>'+
+      '<div style="display:flex;justify-content:space-between;margin-bottom:3px"><span>매니저 지급(세전)</span><span>'+managerGross.toLocaleString()+'원</span></div>'+
+      (tax>0?'<div style="display:flex;justify-content:space-between;margin-bottom:3px"><span>세금공제</span><span>-'+tax.toLocaleString()+'원</span></div>':'')+
+      '<div style="display:flex;justify-content:space-between;margin-bottom:6px;font-weight:700;color:#059669"><span>매니저 실지급</span><span>'+managerNet.toLocaleString()+'원</span></div>'+
+      '<div style="display:flex;justify-content:space-between;font-weight:800;color:var(--acc2)"><span>회사 마진</span><span>'+companyMargin.toLocaleString()+'원 ('+Math.round(companyMargin/subtotal*100)+'%)</span></div>'+
+      '</div>';
+  }
+
+  window._cleanCalc={basePrice,surcharge,optTotal,subtotal,vat,totalBilling,managerGross,tax,managerNet,companyMargin,ratio};
+}
+
+function _saveCleanOrder(andSettle){
+  var did=_CU.dealerId||_CU.uid;
+  var calc=window._cleanCalc||{};
+  var g=function(id){var el=document.getElementById(id);return el?el.value:'';};
+
+  var order={
+    dealerId:did,
+    orderId:'CO-'+Date.now(),
+    createdAt:new Date().toISOString(),
+    jobDate:g('co-date'),
+    clientName:g('co-client'),
+    serviceType:g('co-type'),
+    houseType:g('co-house'),
+    area:parseFloat(g('co-area'))||0,
+    expand:g('co-expand'),
+    elevator:g('co-elev'),
+    floor:parseFloat(g('co-floor'))||0,
+    dirtyLevel:g('co-dirty'),
+    managerName:g('co-manager'),
+    empType:g('co-emptype'),
+    ratio:parseFloat(g('co-ratio'))||65,
+    extra:parseFloat(g('co-extra'))||0,
+    trans:parseFloat(g('co-trans'))||0,
+    penalty:parseFloat(g('co-penalty'))||0,
+    payMethod:g('co-pay'),
+    vatRate:parseFloat(g('co-vat'))||0,
+    status:'READY',
+    basePrice:calc.basePrice||0,
+    surcharge:calc.surcharge||0,
+    optTotal:calc.optTotal||0,
+    subtotal:calc.subtotal||0,
+    vat:calc.vat||0,
+    totalBilling:calc.totalBilling||0,
+    managerGross:calc.managerGross||0,
+    tax:calc.tax||0,
+    managerNet:calc.managerNet||0,
+    companyMargin:calc.companyMargin||0,
+  };
+
+  _db.collection('clean_orders').add(order).then(function(ref){
+    toast('✅ 의뢰 저장 완료 ('+ref.id+')');
+    if(andSettle) _cleanOrderToSettle(order, ref.id);
+    else navigate('clean_settle');
+  }).catch(function(e){toast('❌ 저장 실패: '+e.message);});
+}
+
+function _saveCleanOrderAndSettle(){_saveCleanOrder(true);}
+
+function _cleanOrderToSettle(order, orderId){
+  // 정산 데이터 생성
+  var did=order.dealerId;
+  var month=order.jobDate?order.jobDate.slice(0,7):new Date().toISOString().slice(0,7);
+  var settlement={
+    dealerId:did,
+    month:month,
+    name:order.managerName||'미배정',
+    camp:'청소',
+    industryType:'cleaning',
+    gross:order.managerGross,
+    tax33:order.empType==='3.3'?order.tax:0,
+    taxIns:order.empType==='daily'?order.tax:0,
+    net:order.managerNet,
+    extras:[
+      {label:'청소수당('+order.serviceType+')',value:order.managerGross-order.extra-order.trans+order.penalty},
+      order.extra>0?{label:'추가수당',value:order.extra}:null,
+      order.trans>0?{label:'유류비',value:order.trans}:null,
+      order.penalty>0?{label:'패널티',value:-order.penalty}:null,
+    ].filter(Boolean),
+    sourceOrderId:orderId,
+    createdAt:new Date().toISOString(),
+    status:'READY'
+  };
+  _db.collection('settlements').add(settlement).then(function(){
+    toast('✅ 정산 생성 완료');
+    navigate('clean_settle');
+  });
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🧹 청소업 정산 현황
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function pageCleanSettle(){
+  document.getElementById('page-title').textContent='📊 청소 정산 현황';
+  var c=document.getElementById('content');
+  var did=_CU.dealerId||_CU.uid;
+  c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
+
+  _db.collection('clean_orders').where('dealerId','==',did)
+    .orderBy('createdAt','desc').limit(50).get()
+  .then(function(snap){
+    if(snap.empty){
+      c.innerHTML=
+        '<div style="display:flex;gap:8px;margin-bottom:12px">'+
+          '<button id="cs-upload-btn" style="padding:8px 16px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📥 정산 엑셀 업로드</button>'+
+          '<button id="cs-new-btn" style="padding:8px 16px;background:var(--acc);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">+ 새 의뢰 작성</button>'+
+        '</div>'+
+        '<div class="empty">📝 등록된 의뢰 없음</div>';
+      var ub=document.getElementById('cs-upload-btn');
+      if(ub) ub.onclick=function(){
+        if(!_COMPANY_CFG) _COMPANY_CFG={};
+        _COMPANY_CFG.industryType='cleaning';
+        _SA_TEST_INDUSTRY='cleaning';
+        document.getElementById('excel-input').click();
+      };
+      var nb=document.getElementById('cs-new-btn');
+      if(nb) nb.onclick=function(){navigate('clean_order');};
+      return;
+    }
+
+    var statusMap={READY:'준비',HOLD:'보류',DONE:'완료',CANCEL:'취소'};
+    var statusColor={READY:'#3b82f6',HOLD:'#f59e0b',DONE:'#10b981',CANCEL:'#ef4444'};
+
+    var totalBilling=0,totalMargin=0,totalPayout=0;
+    var rows='';
+    snap.forEach(function(d){
+      var o=d.data();
+      totalBilling+=(o.totalBilling||0);
+      totalMargin+=(o.companyMargin||0);
+      totalPayout+=(o.managerNet||0);
+      var st=o.status||'READY';
+      rows+='<tr style="border-bottom:1px solid var(--border);cursor:pointer" data-coid="'+d.id+'">'+
+        '<td style="padding:7px 8px;font-size:11px">'+esc(o.jobDate||'')+'</td>'+
+        '<td style="padding:7px 8px;font-size:11px;font-weight:600">'+esc(o.clientName||'')+'</td>'+
+        '<td style="padding:7px 8px;font-size:11px">'+esc(o.serviceType||'')+'</td>'+
+        '<td style="padding:7px 8px;font-size:11px">'+esc(o.managerName||'미배정')+'</td>'+
+        '<td style="padding:7px 8px;font-size:11px;text-align:right;font-weight:700">'+((o.totalBilling||0).toLocaleString())+'</td>'+
+        '<td style="padding:7px 8px;font-size:11px;text-align:right;color:#10b981">'+((o.companyMargin||0).toLocaleString())+'</td>'+
+        '<td style="padding:7px 8px;text-align:center">'+
+          '<span style="font-size:10px;font-weight:700;color:'+statusColor[st]+'">'+statusMap[st]+'</span>'+
+        '</td>'+
+      '</tr>';
+    });
+
+    c.innerHTML=
+      '<div style="max-width:700px;margin:0 auto;padding:16px">'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">'+
+          '<div style="background:var(--bg2);border-radius:10px;padding:12px;text-align:center">'+
+            '<div style="font-size:10px;color:var(--text3)">총 청구</div>'+
+            '<div style="font-size:15px;font-weight:800;color:var(--acc)">'+totalBilling.toLocaleString()+'</div>'+
+          '</div>'+
+          '<div style="background:var(--bg2);border-radius:10px;padding:12px;text-align:center">'+
+            '<div style="font-size:10px;color:var(--text3)">회사 마진</div>'+
+            '<div style="font-size:15px;font-weight:800;color:var(--acc2)">'+totalMargin.toLocaleString()+'</div>'+
+          '</div>'+
+          '<div style="background:var(--bg2);border-radius:10px;padding:12px;text-align:center">'+
+            '<div style="font-size:10px;color:var(--text3)">매니저 실지급</div>'+
+            '<div style="font-size:15px;font-weight:800;color:#10b981">'+totalPayout.toLocaleString()+'</div>'+
+          '</div>'+
+        '</div>'+
+        '<div style="display:flex;gap:8px;margin-bottom:10px">'+
+          '<button id="cs-upload-btn" style="flex:1;padding:10px;background:#059669;color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">📥 정산 엑셀 업로드</button>'+
+          '<button id="clean-new-btn" style="flex:1;padding:10px;background:var(--acc);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">+ 새 의뢰 작성</button>'+
+        '</div>'+
+        '<div style="background:var(--bg2);border-radius:12px;overflow:hidden">'+          '<table style="width:100%;border-collapse:collapse;font-size:11px">'+
+            '<thead><tr style="background:var(--bg3)">'+
+              '<th style="padding:7px 8px;text-align:left">작업일</th>'+
+              '<th style="padding:7px 8px;text-align:left">고객</th>'+
+              '<th style="padding:7px 8px;text-align:left">유형</th>'+
+              '<th style="padding:7px 8px;text-align:left">매니저</th>'+
+              '<th style="padding:7px 8px;text-align:right">청구액</th>'+
+              '<th style="padding:7px 8px;text-align:right">마진</th>'+
+              '<th style="padding:7px 8px;text-align:center">상태</th>'+
+            '</tr></thead>'+
+            '<tbody>'+rows+'</tbody>'+
+          '</table>'+
+        '</div>'+
+      '</div>';
+    var newBtn=document.getElementById('clean-new-btn');
+    if(newBtn) newBtn.onclick=function(){navigate('clean_order');};
+    var uploadBtn2=document.getElementById('cs-upload-btn');
+    if(uploadBtn2) uploadBtn2.onclick=function(){
+      if(!_COMPANY_CFG) _COMPANY_CFG={};
+      _COMPANY_CFG.industryType='cleaning';
+      _SA_TEST_INDUSTRY='cleaning';
+      document.getElementById('excel-input').click();
+    };
+  }).catch(function(e){c.innerHTML='<div class="empty">오류: '+e.message+'</div>';});
+}
+
+function _cleanOrderDetail(orderId){
+  var did=_CU.dealerId||_CU.uid;
+  _db.collection('clean_orders').doc(orderId).get().then(function(snap){
+    if(!snap.exists) return;
+    var o=snap.data();
+    var statusOpts=['READY','HOLD','DONE','CANCEL'];
+    var statusLabel={READY:'준비',HOLD:'보류',DONE:'완료',CANCEL:'취소'};
+    var pop=document.createElement('div');
+    pop.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+    var opts=statusOpts.map(function(s){return '<option value="'+s+'"'+(o.status===s?' selected':'')+'>'+statusLabel[s]+'</option>';}).join('');
+    pop.innerHTML=
+      '<div style="background:var(--bg2);border-radius:16px;padding:20px;width:100%;max-width:380px;max-height:85vh;overflow-y:auto">'+
+        '<div style="font-size:14px;font-weight:800;margin-bottom:12px">📋 '+esc(o.clientName||'')+'</div>'+
+        '<div style="font-size:11px;color:var(--text3);margin-bottom:10px">'+esc(o.serviceType||'')+' · '+esc(o.jobDate||'')+'</div>'+
+        _detRow('작업 유형',o.serviceType)+
+        _detRow('평수',o.area+'평 '+o.houseType)+
+        _detRow('오염',o.dirtyLevel)+
+        _detRow('매니저',o.managerName+'('+o.empType+')')+
+        _detRow('고객 청구',(o.totalBilling||0).toLocaleString()+'원')+
+        _detRow('매니저 실지급',(o.managerNet||0).toLocaleString()+'원')+
+        _detRow('회사 마진',(o.companyMargin||0).toLocaleString()+'원')+
+        '<div style="margin:10px 0">'+
+          '<label style="font-size:11px;color:var(--text3)">상태 변경</label>'+
+          '<select id="detail-status" style="width:100%;margin-top:4px;padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text1)">'+opts+'</select>'+
+        '</div>'+
+        '<div style="display:flex;gap:8px;margin-top:12px">'+
+          '<button id="detail-close" style="flex:1;padding:10px;background:var(--bg3);color:var(--text2);border:none;border-radius:8px;font-weight:700;cursor:pointer">닫기</button>'+
+          '<button id="detail-save" style="flex:1;padding:10px;background:var(--acc);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer">저장</button>'+
+        '</div>'+
+      '</div>';
+    document.body.appendChild(pop);
+    pop.onclick=function(e){if(e.target===pop)document.body.removeChild(pop);};
+    document.getElementById('detail-close').onclick=function(){document.body.removeChild(pop);};
+    document.getElementById('detail-save').onclick=function(){
+      var st=document.getElementById('detail-status').value;
+      _db.collection('clean_orders').doc(orderId).update({status:st,updatedAt:new Date().toISOString()})
+      .then(function(){toast('✅ 상태 변경: '+statusLabel[st]);document.body.removeChild(pop);pageCleanSettle();});
+    };
+  });
+}
+
+function _detRow(label,val){
+  return '<div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:11px">'+
+    '<span style="color:var(--text3)">'+label+'</span>'+
+    '<span style="font-weight:600">'+esc(String(val||''))+'</span>'+
+  '</div>';
+}
+
+
+// 자동 발주서 생성 (부족 품목 전체)
+function _invAutoOrder(){
+  var today=new Date();
+  var ds=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  var inputs=document.querySelectorAll('.order-qty-input');
+  var rows=[['거래처','품목명','현재고','최소재고','발주수량','발주일']];
+  inputs.forEach(function(inp){
+    var qty=parseInt(inp.value)||0;
+    if(qty>0){
+      var tr=inp.closest('tr');
+      var cells=tr.querySelectorAll('td');
+      rows.push([
+        inp.dataset.sup,
+        inp.dataset.name,
+        cells[1]?cells[1].textContent.trim():'',
+        cells[2]?cells[2].textContent.trim():'',
+        qty,
+        ds
+      ]);
+    }
+  });
+
+  if(rows.length<=1){toast('발주 수량이 없습니다');return;}
+
+  var csvLines=[];
+  rows.forEach(function(r){
+    csvLines.push(r.map(function(v){return '"'+String(v).replace(/"/g,'""')+'"';}).join(','));
+  });
+  var csv=csvLines.join('\r\n');
+  var bom='﻿';
+  var blob=new Blob([bom+csv],{type:'text/csv;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url; a.download='발주서_'+ds+'.csv';
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+  toast('✅ 발주서 다운로드 완료');
+}
+
+// 거래처별 엑셀 발주서
+function _invOrderExcel(sup){
+  var today=new Date();
+  var ds=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  var inputs=document.querySelectorAll('.order-qty-input[data-sup="'+sup+'"]');
+  var rows=[['품목명','현재고','최소재고','발주수량','발주일']];
+  inputs.forEach(function(inp){
+    var qty=parseInt(inp.value)||0;
+    var tr=inp.closest('tr');
+    var cells=tr.querySelectorAll('td');
+    rows.push([
+      inp.dataset.name,
+      cells[1]?cells[1].textContent.trim():'',
+      cells[2]?cells[2].textContent.trim():'',
+      qty,
+      ds
+    ]);
+  });
+
+  var csvLines=[];
+  rows.forEach(function(r){
+    csvLines.push(r.map(function(v){return '"'+String(v).replace(/"/g,'""')+'"';}).join(','));
+  });
+  var csv=csvLines.join('\r\n');
+  var blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url; a.download='발주서_'+sup+'_'+ds+'.csv';
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+  toast('✅ '+sup+' 발주서 다운로드');
+}
+
+// 카카오/이메일 발주서 발송
+function _invOrderSend(sup){
+  var inputs=document.querySelectorAll('.order-qty-input[data-sup="'+sup+'"]');
+  var lines=['[발주 요청]','거래처: '+sup,'','품목 목록:'];
+  var hasQty=false;
+  inputs.forEach(function(inp){
+    var qty=parseInt(inp.value)||0;
+    if(qty>0){
+      lines.push('- '+inp.dataset.name+' '+qty+'개');
+      hasQty=true;
+    }
+  });
+  if(!hasQty){toast('발주 수량을 입력하세요');return;}
+
+  var today=new Date();
+  var ds=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  lines.push('','발주일: '+ds);
+  lines.push('발주처: '+(_CU.companyName||''));
+
+  var msg=lines.join('\r\n');
+
+  // 공유 팝업
+  var pop=document.createElement('div');
+  pop.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  pop.innerHTML=
+    '<div style="background:var(--bg2);border-radius:16px;padding:22px;width:100%;max-width:360px">'+
+      '<div style="font-size:14px;font-weight:800;margin-bottom:12px">💬 발주서 발송 — '+esc(sup)+'</div>'+
+      '<textarea readonly style="width:100%;height:140px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:11px;color:var(--text1);resize:none;margin-bottom:12px">'+msg+'</textarea>'+
+      '<div style="display:flex;gap:8px;margin-bottom:8px">'+
+        '<button id="inv-kakao-btn" style="flex:1;padding:10px;background:#FEE500;color:#1a1a2e;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">💬 카카오</button>'+
+        '<button id="inv-email-btn" style="flex:1;padding:10px;background:#0077b6;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📧 이메일</button>'+
+      '</div>'+
+      '<button id="inv-order-close-btn" style="width:100%;padding:10px;background:var(--bg3);color:var(--text2);border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">닫기</button>'+
+    '</div>';
+  document.body.appendChild(pop);
+  pop.onclick=function(e){if(e.target===pop)document.body.removeChild(pop);};
+
+  var closeBtn=document.getElementById('inv-order-close-btn');
+  if(closeBtn) closeBtn.onclick=function(){document.body.removeChild(pop);};
+  var kakaoBtn=document.getElementById('inv-kakao-btn');
+  var emailBtn=document.getElementById('inv-email-btn');
+  if(kakaoBtn) kakaoBtn.onclick=function(){_invOrderKakao(encodeURIComponent(msg));};
+  if(emailBtn) emailBtn.onclick=function(){_invOrderEmail(sup,encodeURIComponent(msg));};
+}
+
+function _invOrderKakao(encodedMsg){
+  var msg=decodeURIComponent(encodedMsg);
+  if(navigator.share){
+    navigator.share({title:'발주서',text:msg}).catch(function(){});
+  } else {
+    var ta=document.createElement('textarea');
+    ta.value=msg;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+    toast('✅ 복사됨! 카카오톡에 붙여넣기 하세요');
+    window.open('https://pf.kakao.com/_xkuxabX/chat','_blank');
+  }
+}
+
+function _invOrderEmail(sup, encodedMsg){
+  var msg=decodeURIComponent(encodedMsg);
+  var subject=encodeURIComponent('[발주 요청] '+sup);
+  var body=encodeURIComponent(msg);
+  window.open('mailto:?subject='+subject+'&body='+body,'_blank');
+}
+
+
+
+// 수정 이력 (장난 방지)
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 👷 과장(manager) 메뉴
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+var MENUS_MANAGER=[
+  {s:'🏠 홈', items:[
+    {ic:'🏠',l:'대시보드',p:'home',plan_key:'free'}
+  ]},
+  {s:'📦 재고 관리', items:[
+    {ic:'📦',l:'재고현황',p:'inv_manager_stock',plan_key:'free'},
+    {ic:'📥',l:'입고 등록',p:'inv_manager_in',plan_key:'free'},
+    {ic:'📤',l:'출고 등록',p:'inv_manager_out',plan_key:'free'},
+    {ic:'🔄',l:'반품/공병',p:'inv_manager_return',plan_key:'free'},
+  ]}
+];
+
+// 과장 - 재고현황 (본인 매장만)
+
+// 과장 - 입고 등록
+
+function _mgrLoadTodayIn(did, store){
+  var today=new Date().toISOString().split('T')[0];
+  var list=document.getElementById('mgr-in-list');
+  if(!list) return;
+  var query=_db.collection('inventory_in').where('dealerId','==',did).where('date','==',today);
+  if(store) query=query.where('store','==',store);
+  query.orderBy('createdAt','desc').get().then(function(snap){
+    if(snap.empty){list.innerHTML='<div class="empty">오늘 입고 없음</div>';return;}
+    var html='<table style="width:100%;border-collapse:collapse;font-size:12px">'+
+      '<thead><tr style="background:var(--bg3)">'+
+        '<th style="padding:7px 10px;text-align:left">품목</th>'+
+        '<th style="padding:7px 10px;text-align:right;color:#10b981">수량</th>'+
+        '<th style="padding:7px 10px;text-align:left">유형</th>'+
+        '<th style="padding:7px 10px;text-align:left">시간</th>'+
+        '<th style="padding:7px 10px">수정</th>'+
+      '</tr></thead><tbody>';
+    snap.forEach(function(doc){
+      var d=doc.data();
+      var time=d.createdAt?new Date(d.createdAt).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}):'-';
+      html+='<tr style="border-bottom:1px solid var(--border)">'+
+        '<td style="padding:7px 10px;font-weight:700">'+esc(d.name||'-')+'</td>'+
+        '<td style="padding:7px 10px;text-align:right;font-weight:800;color:#10b981">'+d.qty+'</td>'+
+        '<td style="padding:7px 10px;color:var(--text3)">'+esc(d.outType||'-')+'</td>'+
+        '<td style="padding:7px 10px;color:var(--text3)">'+time+'</td>'+
+        '<td style="padding:7px 10px">'+
+          '<button data-id="'+doc.id+'" data-qty="'+d.qty+'" data-name="'+esc(d.name||'')+'" class="mgr-edit-btn" '+
+            'style="padding:3px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;font-size:10px;cursor:pointer">수정</button>'+
+        '</td>'+
+      '</tr>';
+    });
+    html+='</tbody></table>';
+    list.innerHTML=html;
+
+    // 수정 버튼
+    list.querySelectorAll('.mgr-edit-btn').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var id=btn.dataset.id;
+        var oldQty=parseInt(btn.dataset.qty)||0;
+        var name=btn.dataset.name;
+        var newQty=prompt(name+' 수량 수정 (현재: '+oldQty+'개) 새 수량:',oldQty);
+        if(!newQty||isNaN(parseInt(newQty))) return;
+        var reason=prompt('수정 사유를 입력하세요:','');
+        if(reason===null) return;
+        var now=new Date().toISOString();
+        _db.collection('inventory_in').doc(id).update({
+          qty:parseInt(newQty),
+          lastEditAt:now,
+          lastEditBy:_CU.name||_CU.email,
+          lastEditReason:reason||'사유없음'
+        }).then(function(){
+          // 수정 이력 저장
+          _db.collection('inv_edit_log').add({
+            dealerId:did,
+            docId:id,
+            collection:'inventory_in',
+            name:name,
+            oldQty:oldQty,
+            newQty:parseInt(newQty),
+            editBy:_CU.name||_CU.email,
+            editByUid:_CU.uid,
+            store:_CU.store||'',
+            reason:reason||'사유없음',
+            createdAt:now
+          }).then(function(){
+            toast('✅ 수정됨 (이력 저장됨)');
+            _mgrLoadTodayIn(did, store);
+          });
+        }).catch(function(e){toast('❌ '+e.message);});
+      });
+    });
+  }).catch(function(e){list.innerHTML='<div class="empty">오류: '+e.message+'</div>';});
+}
+
+// 과장 - 출고 등록
+
+// 과장 - 반품/공병
+
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 // 1. txt 파일 파서 지원 — _uDoParseMulti에 통합
@@ -21449,1543 +22988,6 @@ var MENUS_SETTLE = [
     {ic:'🔔',l:'알림 발송',        p:'notify_history',   plan_key:'free'}
   ]}
 ];
-
-// QR 전용
-
-// QR 전용
-
-var MENUS_UNIVERSAL = [
-  {s:'🏠 홈', items:[
-    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'}
-  ]},
-  {s:'📋 범용 정산', items:[
-    {ic:'📊',l:'정산 현황',        p:'universal_settle', plan_key:'universal'},
-    {ic:'📋',l:'범용 엑셀 정산',   p:'universal_input',  plan_key:'universal'},
-    {ic:'⚙️',l:'계산 규칙 설정',   p:'universal_rules',  plan_key:'universal'},
-    {ic:'👥',l:'직원 명단 등록',   p:'universal_emp',    plan_key:'universal'},
-    {ic:'📈',l:'통계',             p:'stats',            plan_key:'universal'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'universal'},
-    {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'}
-  ]},
-  {s:'👤 직원 관리', items:[
-    {ic:'👤',l:'기사·직원 관리',   p:'drivers',          plan_key:'free'},
-    {ic:'📝',l:'위수탁 계약서',    p:'contract',         plan_key:'universal'},
-    {ic:'⭐',l:'직원 평가',        p:'evaluation',       plan_key:'universal'},
-    {ic:'💸',l:'경비 관리',        p:'expense',          plan_key:'universal'}
-  ]},
-  {s:'🚚 원스톱 물류', items:[
-    {ic:'🚗',l:'차량 관리',        p:'vehicle',          plan_key:'universal'},
-    {ic:'🖨',l:'라벨 출력',        p:'ext_label',        plan_key:'universal'},
-    {ic:'📷',l:'수령 스캔',        p:'ext_scan',         plan_key:'universal'}
-  ]},
-  {s:'📢 공지·알림', items:[
-    {ic:'📢',l:'공지사항',         p:'notices',          plan_key:'free'},
-    {ic:'🔔',l:'알림 발송',        p:'notify_history',   plan_key:'free'}
-  ]}
-];
-
-var MENUS_QR_PAYROLL = [
-  {s:'🏠 홈', items:[{ic:'🏠',l:'대시보드',p:'home',plan_key:'free'}]},
-  {s:'🔐 QR 근태관리', items:[
-    {ic:'🔐',l:'QR 출퇴근',p:'attendance',plan_key:'qr'},
-    {ic:'🗓',l:'근무표',p:'roster',plan_key:'qr'},
-    {ic:'🌴',l:'휴가 관리',p:'leave',plan_key:'payroll'},
-    {ic:'⏰',l:'연장 승인',p:'overtime',plan_key:'qr'}]},
-  {s:'💼 급여 관리', items:[
-    {ic:'💼',l:'급여 현황',p:'hourly_settle',plan_key:'payroll'},
-    {ic:'🧾',l:'세무사 연동',p:'tax_share',plan_key:'any_paid'}]},
-  {s:'👤 직원 관리', items:[
-    {ic:'👤',l:'직원 관리',p:'drivers',plan_key:'free'},
-    {ic:'📝',l:'위수탁 계약서',p:'contract',plan_key:'settle'},
-    {ic:'📅',l:'달력',p:'schedule',plan_key:'free'}]},
-  {s:'📢 공지', items:[{ic:'📢',l:'공지',p:'notices',plan_key:'free'}]}
-];
-var MENUS_QR = [
-  {s:'🏠 홈', items:[
-    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'}
-  ]},
-  {s:'🔐 QR 근태관리', items:[
-    {ic:'🔐',l:'QR 출퇴근',        p:'attendance',       plan_key:'qr'},
-    {ic:'🗓',l:'근무표',           p:'roster',           plan_key:'qr'},
-    {ic:'🌴',l:'휴가 관리',        p:'leave',            plan_key:'payroll'},
-    {ic:'⏰',l:'연장 승인',        p:'overtime',         plan_key:'qr'}
-  ]},
-  {s:'👤 직원 관리', items:[
-    {ic:'👤',l:'직원 관리',        p:'drivers',          plan_key:'free'},
-    {ic:'📝',l:'위수탁 계약서',    p:'contract',         plan_key:'settle'},
-    {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
-    {ic:'⭐',l:'직원 평가',        p:'evaluation',       plan_key:'free'},
-    
-  ]},
-  {s:'💼 급여 관리', items:[
-    {ic:'💼',l:'급여 현황',        p:'hourly_settle',    plan_key:'payroll'}
-  ]},
-  {s:'🚚 원스톱 물류', items:[
-    {ic:'🖨',l:'라벨 출력',        p:'ext_label',        plan_key:'free'},
-    {ic:'📷',l:'수령 스캔',        p:'ext_scan',         plan_key:'free'},
-    {ic:'🚛',l:'간선차 GPS',       p:'ext_truck',        plan_key:'free'}
-  ]}
-];
-
-// ALL-IN-ONE
-
-// ALL-IN-ONE (풀패키지)
-var MENUS_FULL = [
-  {s:'🏠 홈', items:[
-    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'}
-  ]},
-  {s:'🤖 AI 정산', items:[
-    {ic:'📊',l:'정산 현황',        p:'settle',           plan_key:'settle'},
-    {ic:'📋',l:'정산 관리',        p:'settlements',      plan_key:'settle'},
-    {ic:'📈',l:'통계',             p:'stats',            plan_key:'settle'},
-    {ic:'👤',l:'기사 관리',        p:'drivers',          plan_key:'free'},
-    {ic:'📝',l:'위수탁 계약서',    p:'contract',         plan_key:'settle'},
-    {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
-    {ic:'⭐',l:'직원 평가',        p:'evaluation',       plan_key:'free'},
-    
-  ]},
-  {s:'🛵 배달대행 정산', items:[
-    {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',   plan_key:'delivery'}
-  ]},
-  {s:'🔐 QR 근태관리', items:[
-    {ic:'🔐',l:'QR 출퇴근',        p:'attendance',       plan_key:'qr'},
-        {ic:'🌴',l:'휴가 관리',        p:'leave',            plan_key:'payroll'},
-    {ic:'⏰',l:'연장 승인',        p:'overtime',         plan_key:'qr'}
-  ]},
-  {s:'💼 급여 관리', items:[
-    {ic:'💼',l:'급여 현황',        p:'hourly_settle',    plan_key:'payroll'}
-  ]},
-  {s:'🚚 원스톱 물류', items:[
-    {ic:'📦',l:'배달 실적',        p:'delivery_report',  plan_key:'settle'},
-    {ic:'🚗',l:'차량 관리',        p:'vehicle',          plan_key:'free'},
-    {ic:'🚦',l:'배차 관리',        p:'dispatch',         plan_key:'free'},
-    {ic:'📋',l:'배차 히스토리',    p:'dispatch_history', plan_key:'free'},
-    {ic:'🖨',l:'라벨 출력',        p:'ext_label',        plan_key:'free'},
-    {ic:'📷',l:'수령 스캔',        p:'ext_scan',         plan_key:'free'},
-    {ic:'🚛',l:'간선차 GPS',       p:'ext_truck',        plan_key:'free'}
-  ]}
-];
-
-// 소상공인/사장님 전용 (급여 위주)
-var MENUS_HOURLY = [
-  {s:'메인', items:[
-    {ic:'💼',l:'급여 현황',        p:'hourly_settle', plan_key:'payroll'},
-    {ic:'🔐',l:'출퇴근 현황',      p:'attendance',    plan_key:'qr'},
-    {ic:'📅',l:'달력',             p:'schedule',      plan_key:'free'}
-  ]},
-  {s:'👤 직원 관리', items:[
-    {ic:'👤',l:'직원 관리',        p:'drivers',  plan_key:'free'},
-    {ic:'🌴',l:'휴가 관리',        p:'leave',    plan_key:'payroll'},
-    {ic:'⏰',l:'연장 승인',        p:'overtime', plan_key:'payroll'},
-    {ic:'🗓',l:'근무표',           p:'roster',   plan_key:'payroll'}
-  ]},
-  {s:'🛵 배달대행 정산', items:[
-    {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',    plan_key:'delivery'}
-  ]},
-  {s:'공통', items:[
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share', plan_key:'any_paid'},
-    {ic:'📢',l:'공지',             p:'notices',   plan_key:'free'}
-  ]}
-];
-
-// 기사/직원 전용 (플랜 무관)
-
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 📊 과장별 취합 + 수정 이력
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-// 과장별 취합 (관리자용)
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 📅 재고 월별 입출고 통계
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 🛒 발주 관리
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 🧹 청소업 단가 설정
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 🔧 청소업 장비/약품 마스터 단가표
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-var CLEAN_EQ_DEFAULTS=[
-  {code:'EQ-001',name:'마루광택기(돌돌이 16인치)',category:'기계',unit:'일/대',min:30000,max:40000,default:35000},
-  {code:'EQ-002',name:'건습식청소기(3모터)',category:'기계',unit:'일/대',min:25000,max:35000,default:30000},
-  {code:'EQ-003',name:'고압세척기(엔진형250바+)',category:'기계',unit:'일/대',min:70000,max:100000,default:80000},
-  {code:'EQ-004',name:'바닥스크러버(보행식)',category:'기계',unit:'일/대',min:15000,max:20000,default:17000},
-  {code:'EQ-005',name:'피톤치드연무기/오존살균기',category:'기계',unit:'일/대',min:20000,max:30000,default:25000},
-  {code:'EQ-006',name:'대형송풍기(바닥건조용)',category:'기계',unit:'일/대',min:10000,max:10000,default:10000},
-  {code:'CH-001',name:'바닥고급왁스(1말통)',category:'약품',unit:'통',min:45000,max:65000,default:55000},
-  {code:'CH-002',name:'박리제(왁스제거 1말통)',category:'약품',unit:'통',min:35000,max:50000,default:42000},
-  {code:'CH-003',name:'외벽백화제거제(1말통)',category:'약품',unit:'통',min:40000,max:60000,default:50000},
-  {code:'CH-004',name:'화재그을음분해제(1말통)',category:'약품',unit:'통',min:55000,max:75000,default:65000},
-  {code:'CH-005',name:'오렌지오일다목적세제(1말통)',category:'약품',unit:'통',min:30000,max:45000,default:37000},
-  {code:'CH-006',name:'유지분해제(주방기름때 1말통)',category:'약품',unit:'통',min:35000,max:45000,default:40000},
-  {code:'SP-001',name:'바닥패드(블랙/레드/화이트 1장)',category:'소모품',unit:'장',min:7000,max:10000,default:8000},
-  {code:'SP-002',name:'스크래퍼칼날(헤라리필 10개입)',category:'소모품',unit:'통',min:4000,max:5000,default:4500},
-  {code:'SP-003',name:'극세사타월(10장 묶음)',category:'소모품',unit:'묶음',min:6000,max:8000,default:7000},
-  {code:'SP-004',name:'종량제봉투/마대(100L 묶음)',category:'소모품',unit:'묶음',min:5000,max:8000,default:6000},
-];
-
-function _renderEqDefaults(p){
-  var cats={기계:'🔧 기계류',약품:'🧪 약품류',소모품:'📦 소모품'};
-  var html='';
-  var lastCat='';
-  CLEAN_EQ_DEFAULTS.forEach(function(eq){
-    if(eq.category!==lastCat){
-      if(lastCat) html+='</div>';
-      html+='<div style="font-size:10px;font-weight:700;color:var(--text3);margin:8px 0 4px">'+cats[eq.category]+'</div><div>';
-      lastCat=eq.category;
-    }
-    var val=p['eq_'+eq.code]||eq.default;
-    html+=_cleanPriceRow('eq_'+eq.code,
-      eq.name+' <span style="font-size:9px;color:var(--text3)">('+eq.min.toLocaleString()+'~'+eq.max.toLocaleString()+'원/'+eq.unit+')</span>',
-      '원', val);
-  });
-  if(lastCat) html+='</div>';
-  return html;
-}
-
-function pageCleanPricing(){
-  document.getElementById('page-title').textContent='💰 청소업 단가 설정';
-  var c=document.getElementById('content');
-  var did=_CU.dealerId||_CU.uid;
-
-  // 기존 단가 로드
-  _db.collection('settings').doc(did+'_cleanPricing').get().then(function(snap){
-    var p=snap.exists?snap.data():{};
-
-    c.innerHTML='<div style="max-width:600px;margin:0 auto;padding:16px">'+
-      '<div style="font-size:13px;font-weight:800;margin-bottom:14px">🧹 청소업 단가 설정</div>'+
-
-      // 평수별 기본단가
-      '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">'+
-        '<div style="font-size:12px;font-weight:800;margin-bottom:10px">📐 평수별 기본 단가 (B2C)</div>'+
-        _cleanPriceRow('p20','20평 이하','원',p.p20||150000)+
-        _cleanPriceRow('p25','21~25평','원',p.p25||180000)+
-        _cleanPriceRow('p30','26~30평','원',p.p30||220000)+
-        _cleanPriceRow('p35','31~35평','원',p.p35||260000)+
-        _cleanPriceRow('p40','36~40평','원',p.p40||300000)+
-        _cleanPriceRow('p50','41~50평','원',p.p50||360000)+
-        _cleanPriceRow('p60','51~60평','원',p.p60||420000)+
-        _cleanPriceRow('pExtra','초과(평당)','원/평',p.pExtra||8000)+
-      '</div>'+
-
-      // 할증
-      '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">'+
-        '<div style="font-size:12px;font-weight:800;margin-bottom:10px">➕ 할증 단가</div>'+
-        _cleanPriceRow('surFloor','계단 층당 할증(3층~)','원/층',p.surFloor||3000)+
-        _cleanPriceRow('surExpand','전체확장 할증','원',p.surExpand||30000)+
-        _cleanPriceRow('surMold','곰팡이 할증','원',p.surMold||50000)+
-        _cleanPriceRow('surNicotine','니코틴 할증','원',p.surNicotine||80000)+
-        _cleanPriceRow('surPet','반려동물 할증','원',p.surPet||60000)+
-        _cleanPriceRow('surJunk','쓰레기집 할증','원~',p.surJunk||150000)+
-        _cleanPriceRow('surNewbuild','준공청소 할증','원',p.surNewbuild||50000)+
-      '</div>'+
-
-      // 옵션
-      '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">'+
-        '<div style="font-size:12px;font-weight:800;margin-bottom:10px">🛠️ 부가 옵션 단가</div>'+
-        _cleanPriceRow('optFridge','냉장고 내부','원',p.optFridge||30000)+
-        _cleanPriceRow('optAirwall','에어컨(벽걸이)','원/대',p.optAirwall||40000)+
-        _cleanPriceRow('optAirsys','에어컨(시스템)','원/대',p.optAirsys||80000)+
-        _cleanPriceRow('optWasher','세탁기 내부','원',p.optWasher||30000)+
-        _cleanPriceRow('optOven','오븐','원',p.optOven||25000)+
-        _cleanPriceRow('optSteam','고온 스팀 살균','원',p.optSteam||50000)+
-        _cleanPriceRow('optPhyton','피톤치드 공정','원',p.optPhyton||40000)+
-      '</div>'+
-
-      // 취소 위약금
-      '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">'+
-        '<div style="font-size:12px;font-weight:800;margin-bottom:10px">⚠️ 취소 위약금 규칙</div>'+
-        _cleanPriceRow('cancel24','24시간 전 취소','%',p.cancel24||0)+
-        _cleanPriceRow('cancel12','12시간 전 취소','%',p.cancel12||30)+
-        _cleanPriceRow('cancelNoshow','현장도착 후 취소','%',p.cancelNoshow||100)+
-        _cleanPriceRow('cancelManagerComp','취소 시 매니저 보전율','%',p.cancelManagerComp||50)+
-      '</div>'+
-
-      // 기타
-      '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px">'+
-        '<div style="font-size:12px;font-weight:800;margin-bottom:10px">🚗 기타 설정</div>'+
-        _cleanPriceRow('minOrder','최소 수주 금액','원',p.minOrder||150000)+
-        _cleanPriceRow('distLimit','배차 제한 반경','km',p.distLimit||30)+
-        _cleanPriceRow('transFeePerKm','거리 유류비(km당)','원',p.transFeePerKm||500)+
-        _cleanPriceRow('waitFeePerHour','대기 시간당 요금','원',p.waitFeePerHour||30000)+
-      '</div>'+
-
-      '<div style="display:flex;gap:8px;margin-bottom:8px">'+
-        '<button id="cp-import-btn" style="flex:1;padding:10px;background:var(--bg3);color:var(--text1);border:1px solid var(--border);border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">📥 엑셀로 단가 업로드</button>'+
-        '<button onclick="_exportCleanPricing()" style="flex:1;padding:10px;background:var(--bg3);color:var(--text1);border:1px solid var(--border);border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">📤 단가표 내보내기</button>'+
-      '</div>'+
-
-      '<button onclick="_saveCleanPricing()" style="width:100%;padding:12px;background:var(--acc);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">💾 단가 저장</button>'+
-    '</div>';
-
-    // ★ 버튼 이벤트 등록 (innerHTML 완료 후)
-    setTimeout(function(){
-      // 파일 input 동적 생성
-      var existInput=document.getElementById('cp-excel-input');
-      if(!existInput){
-        var inp=document.createElement('input');
-        inp.type='file'; inp.id='cp-excel-input';
-        inp.accept='.xlsx,.xls,.csv';
-        inp.style.display='none';
-        inp.onchange=function(){_importCleanPricing(this);};
-        document.body.appendChild(inp);
-      }
-      var importBtn=document.getElementById('cp-import-btn');
-      if(importBtn) importBtn.onclick=function(){
-        document.getElementById('cp-excel-input').click();
-      };
-    }, 100);
-  });
-}
-
-function _cleanPriceRow(id,label,unit,val){
-  return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'+
-    '<div style="flex:1;font-size:11px;color:var(--text2)">'+label+'</div>'+
-    '<input id="cp-'+id+'" type="number" value="'+val+'" style="width:100px;padding:5px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text1);font-size:11px;text-align:right">'+
-    '<div style="font-size:10px;color:var(--text3);width:40px">'+unit+'</div>'+
-  '</div>';
-}
-
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 📥 청소업 단가 엑셀 업로드 / 📤 내보내기
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function _importCleanPricing(inp){
-  var file=inp.files[0]; if(!file) return;
-  inp.value='';
-  if(typeof XLSX==='undefined'){toast('⚠️ 엑셀 라이브러리 로딩 중');return;}
-
-  var reader=new FileReader();
-  reader.onload=function(e){
-    try{
-      var wb=XLSX.read(e.target.result,{type:'array'});
-      var ws=wb.Sheets[wb.SheetNames[0]];
-      var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
-
-      var updated=0;
-      rows.forEach(function(row){
-        if(!row||row.length<2) return;
-        var key=String(row[0]||'').trim();
-        var val=parseFloat(String(row[1]||'').replace(/,/g,''))||0;
-        if(!key||val<=0) return;
-
-        // 평수 단가
-        var areaMap={'20평이하':'p20','21-25평':'p25','26-30평':'p30','31-35평':'p35',
-          '36-40평':'p40','41-50평':'p50','51-60평':'p60','초과평당':'pExtra'};
-        // 할증
-        var surMap={'계단층당':'surFloor','전체확장':'surExpand','곰팡이':'surMold',
-          '니코틴':'surNicotine','반려동물':'surPet','쓰레기집':'surJunk','준공':'surNewbuild'};
-        // 옵션
-        var optMap={'냉장고':'optFridge','에어컨벽걸이':'optAirwall','에어컨시스템':'optAirsys',
-          '세탁기':'optWasher','오븐':'optOven','스팀살균':'optSteam','피톤치드':'optPhyton'};
-        // 기타
-        var etcMap={'최소수주':'minOrder','배차제한':'distLimit','유류비km당':'transFeePerKm','대기시간당':'waitFeePerHour'};
-        // 취소
-        var cxMap={'24시간전':'cancel24','12시간전':'cancel12','현장도착후':'cancelNoshow','매니저보전율':'cancelManagerComp'};
-
-        var allMap=Object.assign({},areaMap,surMap,optMap,etcMap,cxMap);
-
-        // 코드 직접 매핑 (EQ-001 등)
-        var eqMatch=CLEAN_EQ_DEFAULTS&&CLEAN_EQ_DEFAULTS.find(function(eq){
-          return key===eq.code||key===eq.name||key.includes(eq.name.slice(0,4));
-        });
-        if(eqMatch){
-          var el=document.getElementById('cp-eq-'+eqMatch.code);
-          if(el){el.value=val;updated++;}
-          return;
-        }
-
-        // 이름 매핑
-        var keyClean=key.replace(/[\s\/\(\)（）]/g,'');
-        Object.keys(allMap).forEach(function(k){
-          if(keyClean.includes(k.replace(/[\s\/]/g,''))){
-            var el=document.getElementById('cp-'+allMap[k]);
-            if(el){el.value=val;updated++;}
-          }
-        });
-      });
-
-      toast('✅ 단가 업로드 완료 ('+updated+'개 항목) — 저장 버튼을 눌러주세요');
-    }catch(err){toast('❌ 오류: '+err.message);}
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-function _exportCleanPricing(){
-  var did=_CU.dealerId||_CU.uid;
-  var fields=[
-    {id:'p20',label:'20평이하'},{id:'p25',label:'21-25평'},
-    {id:'p30',label:'26-30평'},{id:'p35',label:'31-35평'},
-    {id:'p40',label:'36-40평'},{id:'p50',label:'41-50평'},
-    {id:'p60',label:'51-60평'},{id:'pExtra',label:'초과평당'},
-    {id:'surFloor',label:'계단층당'},{id:'surExpand',label:'전체확장'},
-    {id:'surMold',label:'곰팡이'},{id:'surNicotine',label:'니코틴'},
-    {id:'surPet',label:'반려동물'},{id:'surJunk',label:'쓰레기집'},
-    {id:'surNewbuild',label:'준공'},
-    {id:'optFridge',label:'냉장고'},{id:'optAirwall',label:'에어컨벽걸이'},
-    {id:'optAirsys',label:'에어컨시스템'},{id:'optWasher',label:'세탁기'},
-    {id:'optOven',label:'오븐'},{id:'optSteam',label:'스팀살균'},
-    {id:'optPhyton',label:'피톤치드'},
-    {id:'cancel24',label:'24시간전'},{id:'cancel12',label:'12시간전'},
-    {id:'cancelNoshow',label:'현장도착후'},{id:'cancelManagerComp',label:'매니저보전율'},
-    {id:'minOrder',label:'최소수주'},{id:'distLimit',label:'배차제한'},
-    {id:'transFeePerKm',label:'유류비km당'},{id:'waitFeePerHour',label:'대기시간당'},
-  ];
-
-  // 장비/약품 추가
-  if(CLEAN_EQ_DEFAULTS){
-    CLEAN_EQ_DEFAULTS.forEach(function(eq){
-      fields.push({id:'eq-'+eq.code, label:eq.name, code:eq.code});
-    });
-  }
-
-  var rows=[['항목','단가(원)','단위','비고']];
-  fields.forEach(function(f){
-    var el=document.getElementById('cp-'+(f.code||f.id));
-    var val=el?parseFloat(el.value)||0:0;
-    rows.push([f.label, val, '', f.code||'']);
-  });
-
-  var csvLines=[];
-  rows.forEach(function(r){
-    csvLines.push(r.map(function(v){return '"'+String(v||'').replace(/"/g,'""')+'"';}).join(','));
-  });
-  var csv=csvLines.join('\r\n');
-  var blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
-  var url=URL.createObjectURL(blob);
-  var a=document.createElement('a');
-  a.href=url; a.download='청소업_단가표_'+new Date().toISOString().slice(0,10)+'.csv';
-  document.body.appendChild(a); a.click();
-  document.body.removeChild(a); URL.revokeObjectURL(url);
-  toast('✅ 단가표 내보내기 완료');
-}
-
-function _saveCleanPricing(){
-  var did=_CU.dealerId||_CU.uid;
-  var fields=['p20','p25','p30','p35','p40','p50','p60','pExtra',
-    'surFloor','surExpand','surMold','surNicotine','surPet','surJunk','surNewbuild',
-    'optFridge','optAirwall','optAirsys','optWasher','optOven','optSteam','optPhyton',
-    'cancel24','cancel12','cancelNoshow','cancelManagerComp',
-    'minOrder','distLimit','transFeePerKm','waitFeePerHour'];
-  var obj={updatedAt:new Date().toISOString()};
-  fields.forEach(function(f){
-    var el=document.getElementById('cp-'+f);
-    if(el) obj[f]=parseFloat(el.value)||0;
-  });
-  _db.collection('settings').doc(did+'_cleanPricing').set(obj,{merge:true})
-  .then(function(){toast('✅ 단가 저장 완료');})
-  .catch(function(e){toast('❌ 저장 실패: '+e.message);});
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 🧹 청소업 의뢰서 작성
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 🔧 현장 출고 컨펌 & 반납 관리
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 👷 청소업 인력 관리
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function pageCleanWorkers(){
-  document.getElementById('page-title').textContent='👷 청소 인력 관리';
-  var c=document.getElementById('content');
-  var did=_CU.dealerId||_CU.uid;
-  c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
-
-  // dealerId OR uid 둘 다 체크
-  var queries=[
-    _db.collection('clean_workers').where('dealerId','==',did).limit(200).get(),
-  ];
-  if(_CU.uid!==did){
-    queries.push(_db.collection('clean_workers').where('dealerId','==',_CU.uid).limit(200).get());
-  }
-  Promise.all(queries)
-  .then(function(results){
-    var snap={docs:[]};
-    results.forEach(function(r){r.forEach(function(d){snap.docs.push(d);});});
-
-    // 팀장별 그룹핑 (leaderName 기준)
-    var leaders={};
-    var all=[];
-    var seen={};
-    snap.docs.forEach(function(d){
-      if(seen[d.id]) return;
-      seen[d.id]=true;
-      var w=Object.assign({id:d.id},d.data());
-      all.push(w);
-      // 팀장 감지: role이 leader/팀장 OR leaderName이 비어있고 이름에 팀장 포함
-      var isLeader=w.role==='leader'||w.role==='팀장'||
-                   (!w.leaderName&&(w.name||'').includes('팀장'));
-      if(isLeader){
-        if(!leaders[w.name]) leaders[w.name]={leader:w,members:[]};
-      }
-    });
-    // 팀원 → 팀장에 배정
-    all.forEach(function(w){
-      var isLeader=w.role==='leader'||w.role==='팀장'||
-                   (!w.leaderName&&(w.name||'').includes('팀장'));
-      if(!isLeader&&w.leaderName&&leaders[w.leaderName]){
-        leaders[w.leaderName].members.push(w);
-      }
-    });
-    // 미배정
-    var unassigned=all.filter(function(w){
-      var isLeader=w.role==='leader'||w.role==='팀장'||
-                   (!w.leaderName&&(w.name||'').includes('팀장'));
-      return !isLeader&&(!w.leaderName||!leaders[w.leaderName]);
-    });
-
-    var levelColor={
-      '팀장':'#2563EB','고급팀원':'#059669','중급팀원':'#16a34a',
-      '초급팀원':'#4ade80','특수고소':'#d97706','프리랜서A':'#7c3aed',
-      '프리랜서B':'#9333ea','알바(단기)':'#ca8a04','freelancer':'#7c3aed',
-      'leader':'#2563EB','member':'#059669'
-    };
-    var empLabel={
-      'DAILY_INDIRECT':'일용직','FREELANCER_3.3':'프리랜서 3.3%',
-      'PARTTIME':'알바','REGULAR':'정규직'
-    };
-
-    function workerCard(w){
-      var lc=levelColor[w.role]||levelColor[w.level]||'#6b7280';
-      var aliases=(w.aliases||[]).join(', ');
-      return '<div style="background:var(--bg3);border-radius:8px;padding:8px 10px;margin-bottom:4px;display:flex;align-items:center;gap:8px">'+
-        '<div style="width:6px;height:6px;border-radius:50%;background:'+lc+';flex-shrink:0"></div>'+
-        '<div style="flex:1">'+
-          '<div style="font-size:11px;font-weight:700">'+esc(w.name||'')+
-            '<span style="font-size:9px;color:'+lc+';margin-left:6px;font-weight:600">'+esc(w.level||w.role||'')+'</span>'+
-          '</div>'+
-          '<div style="font-size:9px;color:var(--text3)">'+
-            esc(empLabel[w.empType]||w.empType||'')+
-            (w.lastSite?' · 최근: '+esc(w.lastSite):'')+'</div>'+
-          (aliases?'<div style="font-size:9px;color:var(--acc)">별명: '+esc(aliases)+'</div>':'')+
-        '</div>'+
-        '<button data-wid="'+w.id+'" class="cw-edit-btn" style="padding:3px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;font-size:9px;cursor:pointer">수정</button>'+
-      '</div>';
-    }
-
-    var teamsHtml='';
-    Object.values(leaders).forEach(function(t){
-      teamsHtml+=
-        '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:10px">'+
-          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'+
-            '<div style="font-size:12px;font-weight:800">👑 '+esc(t.leader.name)+'</div>'+
-            '<span style="font-size:9px;color:#2563EB;font-weight:600">팀장</span>'+
-            '<span style="font-size:9px;color:var(--text3)">· 팀원 '+t.members.length+'명</span>'+
-            (t.leader.lastSite?'<span style="font-size:9px;color:var(--text3)">· '+esc(t.leader.lastSite)+'</span>':'')+
-          '</div>'+
-          workerCard(t.leader)+
-          t.members.map(workerCard).join('')+
-        '</div>';
-    });
-
-    if(unassigned.length){
-      teamsHtml+=
-        '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:10px">'+
-          '<div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:8px">📋 미배정 인원 ('+unassigned.length+'명)</div>'+
-          unassigned.map(workerCard).join('')+
-        '</div>';
-    }
-
-    c.innerHTML=
-      '<div style="max-width:620px;margin:0 auto;padding:16px">'+
-        '<div style="display:flex;gap:8px;margin-bottom:12px">'+
-          '<button id="cw-add-btn" style="flex:1;padding:10px;background:var(--acc);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">+ 인력 추가</button>'+
-          '<button id="cw-excel-btn" style="flex:1;padding:10px;background:#059669;color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">📥 엑셀 일괄등록</button>'+
-        '</div>'+
-        '<div style="font-size:11px;color:var(--text3);margin-bottom:10px">전체 '+all.length+'명 · 팀 '+Object.keys(leaders).length+'개</div>'+
-        (all.length?teamsHtml:'<div class="empty">👷 등록된 인력 없음<br><small>정산 엑셀 업로드 시 자동 등록됩니다</small></div>')+
-      '</div>';
-
-    // 이벤트
-    setTimeout(function(){
-      var addBtn=document.getElementById('cw-add-btn');
-      if(addBtn) addBtn.onclick=function(){_openCleanWorkerForm(null);};
-      var excelBtn=document.getElementById('cw-excel-btn');
-      if(excelBtn) excelBtn.onclick=function(){
-        if(!_COMPANY_CFG) _COMPANY_CFG={};
-        _COMPANY_CFG.industryType='cleaning';
-        _SA_TEST_INDUSTRY='cleaning';
-        document.getElementById('excel-input').click();
-      };
-      document.querySelectorAll('.cw-edit-btn').forEach(function(btn){
-        btn.onclick=function(){
-          var wid=this.dataset.wid;
-          var worker=all.find(function(w){return w.id===wid;});
-          if(worker) _openCleanWorkerForm(worker);
-        };
-      });
-    },100);
-  }).catch(function(e){c.innerHTML='<div class="empty">오류: '+e.message+'</div>';console.error(e);});
-}
-
-function _openCleanWorkerForm(worker){
-  var isEdit=!!worker;
-  var w=worker||{};
-  var pop=document.createElement('div');
-  pop.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
-
-  pop.innerHTML=
-    '<div style="background:var(--bg2);border-radius:16px;padding:20px;width:100%;max-width:380px;max-height:88vh;overflow-y:auto">'+
-      '<div style="font-size:14px;font-weight:800;margin-bottom:14px">'+(isEdit?'✏️ 인력 수정':'👷 인력 추가')+'</div>'+
-      '<div style="display:flex;flex-direction:column;gap:8px">'+
-        _cwField('cw-name','실명 (필수)',w.name||'','text','홍길동')+
-        _cwField('cw-aliases','별명/닉네임 (쉼표 구분)',( w.aliases||[]).join(', '),'text','강팀장, 강씨, 강길동')+
-        '<div><label style="font-size:11px;color:var(--text3)">레벨</label>'+
-          '<select id="cw-level" style="width:100%;margin-top:3px;padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text1);font-size:12px">'+
-            ['팀장','고급팀원','중급팀원','초급팀원','특수고소','프리랜서A','프리랜서B','알바(단기)'].map(function(l){
-              return '<option value="'+l+'"'+(w.level===l?' selected':'')+'>'+l+'</option>';
-            }).join('')+
-          '</select>'+
-        '</div>'+
-        '<div><label style="font-size:11px;color:var(--text3)">고용형태</label>'+
-          '<select id="cw-emp" style="width:100%;margin-top:3px;padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text1);font-size:12px">'+
-            [['DAILY_INDIRECT','일용직'],['FREELANCER_3.3','프리랜서 3.3%'],['PARTTIME','알바'],['REGULAR','정규직']].map(function(e){
-              return '<option value="'+e[0]+'"'+(w.empType===e[0]?' selected':'')+'>'+e[1]+'</option>';
-            }).join('')+
-          '</select>'+
-        '</div>'+
-        _cwField('cw-leader','소속 팀장',w.leaderName||'','text','팀장 이름 (팀원인 경우)')+
-        _cwField('cw-phone','연락처',w.phone||'','tel','010-0000-0000')+
-      '</div>'+
-      '<div style="display:flex;gap:8px;margin-top:14px">'+
-        '<button id="cw-cancel" style="flex:1;padding:10px;background:var(--bg3);color:var(--text2);border:none;border-radius:8px;font-weight:700;cursor:pointer">취소</button>'+
-        '<button id="cw-save" style="flex:2;padding:10px;background:var(--acc);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer">저장</button>'+
-      '</div>'+
-    '</div>';
-
-  document.body.appendChild(pop);
-  pop.querySelector('#cw-cancel').onclick=function(){document.body.removeChild(pop);};
-  pop.querySelector('#cw-save').onclick=function(){
-    var name=(pop.querySelector('#cw-name')||{}).value||'';
-    if(!name.trim()){toast('실명을 입력하세요');return;}
-    var did=_CU.dealerId||_CU.uid;
-    var data={
-      dealerId:did,
-      name:name.trim(),
-      aliases:(pop.querySelector('#cw-aliases')||{value:''}).value.split(',').map(function(s){return s.trim();}).filter(Boolean),
-      level:(pop.querySelector('#cw-level')||{value:'중급팀원'}).value,
-      empType:(pop.querySelector('#cw-emp')||{value:'DAILY_INDIRECT'}).value,
-      leaderName:(pop.querySelector('#cw-leader')||{value:''}).value.trim(),
-      phone:(pop.querySelector('#cw-phone')||{value:''}).value.trim(),
-      role:(pop.querySelector('#cw-level')||{value:''}).value==='팀장'?'leader':'member',
-      updatedAt:new Date().toISOString(),
-    };
-    var p=isEdit?
-      _db.collection('clean_workers').doc(worker.id).update(data):
-      _db.collection('clean_workers').add(Object.assign(data,{createdAt:new Date().toISOString(),jobsub:'청소·파견',is_active:true}));
-    p.then(function(){
-      toast('✅ '+(isEdit?'수정':'등록')+' 완료: '+name);
-      document.body.removeChild(pop);
-      pageCleanWorkers();
-    }).catch(function(e){toast('❌ 오류: '+e.message);});
-  };
-}
-
-function _cwField(id,label,val,type,ph){
-  return '<div><label style="font-size:11px;color:var(--text3)">'+label+'</label>'+
-    '<input id="'+id+'" type="'+(type||'text')+'" value="'+esc(val||'')+'" placeholder="'+esc(ph||'')+'" '+
-    'style="width:100%;margin-top:3px;padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text1);font-size:12px;box-sizing:border-box">'+
-    '</div>';
-}
-
-function pageCleanDispatch(){
-  document.getElementById('page-title').textContent='🔧 현장 출고 컨펌';
-  var c=document.getElementById('content');
-  var did=_CU.dealerId||_CU.uid;
-
-  // 단가 설정 + 기존 출고 기록 로드
-  Promise.all([
-    _db.collection('settings').doc(did+'_cleanPricing').get(),
-    _db.collection('clean_dispatch').where('dealerId','==',did)
-       .limit(20).get()
-  ]).then(function(res){
-    var p=res[0].exists?res[0].data():{};
-    var today=new Date().toISOString().slice(0,10);
-
-    // 출고 기록 목록
-    var histHtml='';
-    res[1].forEach(function(d){
-      var dr=d.data();
-      var totalAmt=dr.totalAmt||0;
-      var perAmt=dr.perPersonAmt||0;
-      var returned=dr.returned||false;
-      histHtml+=
-        '<div style="background:var(--bg3);border-radius:8px;padding:10px;margin-bottom:6px;display:flex;align-items:center;gap:8px">'+
-          '<div style="flex:1">'+
-            '<div style="font-size:11px;font-weight:700">'+esc(dr.teamName||'')+'  |  '+esc(dr.dispatchDate||'')+'</div>'+
-            '<div style="font-size:10px;color:var(--text3)">'+esc(dr.itemSummary||'')+'</div>'+
-            '<div style="font-size:10px">총 '+totalAmt.toLocaleString()+'원 / 인당 '+perAmt.toLocaleString()+'원 ('+( dr.headCount||0)+'명)</div>'+
-          '</div>'+
-          '<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">'+
-            '<span style="font-size:9px;font-weight:700;color:'+(returned?'#10b981':'#f59e0b')+'">'+(returned?'✅ 반납완료':'⏳ 미반납')+'</span>'+
-            (!returned?'<button data-did="'+d.id+'" class="return-btn" style="padding:3px 8px;background:#10b981;color:#fff;border:none;border-radius:4px;font-size:9px;cursor:pointer">반납확인</button>':'')+
-          '</div>'+
-        '</div>';
-    });
-
-    c.innerHTML=
-      '<div style="max-width:620px;margin:0 auto;padding:16px">'+
-
-      // 새 출고 등록
-      '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px">'+
-        '<div style="font-size:12px;font-weight:800;margin-bottom:10px">📦 당일 출고 등록</div>'+
-        '<div style="display:flex;gap:6px;margin-bottom:8px">'+
-          '<input id="dc-team" placeholder="팀명 (예: A팀 외벽)" style="flex:1;'+_coInput()+'">'+
-          '<input id="dc-date" type="date" value="'+today+'" style="width:130px;'+_coInput()+'">'+
-        '</div>'+
-        '<input id="dc-site" placeholder="현장명 (예: OO아파트 준공)" style="width:100%;margin-bottom:8px;'+_coInput()+'">'+
-        '<div style="font-size:11px;font-weight:700;margin-bottom:6px">투입 장비/약품 체크</div>'+
-        '<div id="dc-eq-list" style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:10px">'+
-          _renderDispatchItems(p)+
-        '</div>'+
-        '<div style="background:var(--bg3);border-radius:8px;padding:10px;margin-bottom:10px">'+
-          '<div style="font-size:11px;font-weight:800;margin-bottom:6px">👷 출근 인원 (결근 제외)</div>'+
-          '<div style="display:flex;gap:8px;align-items:center">'+
-            '<input id="dc-headcount" type="number" min="1" value="1" onchange="_calcDispatchTotal()" style="width:80px;'+_coInput()+'">'+
-            '<span style="font-size:11px;color:var(--text3)">명 출근 (결근자 제외한 실출근 인원)</span>'+
-          '</div>'+
-        '</div>'+
-        '<div id="dc-total-box" style="background:linear-gradient(135deg,rgba(0,119,182,.08),rgba(124,58,237,.05));border:1px solid rgba(0,119,182,.2);border-radius:10px;padding:12px;margin-bottom:10px">'+
-          '<div style="font-size:11px;color:var(--text3);margin-bottom:4px">출고 합계</div>'+
-          '<div id="dc-total-display" style="font-size:16px;font-weight:800;color:var(--acc)">0원</div>'+
-          '<div id="dc-per-display" style="font-size:11px;color:var(--text2);margin-top:2px">인당 차감: 0원</div>'+
-          '<div id="dc-remainder" style="font-size:10px;color:#f59e0b;margin-top:2px"></div>'+
-        '</div>'+
-        '<div style="display:flex;gap:6px">'+
-          '<input id="dc-returnable" type="checkbox" checked style="margin:0"> '+
-          '<label style="font-size:11px;color:var(--text2)">반납 가능 장비 포함 (미반납 시 자동 추가 차감)</label>'+
-        '</div>'+
-        '<button onclick="_saveDispatch()" style="width:100%;margin-top:10px;padding:12px;background:var(--acc);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">✅ 출고 확정 & 정산 반영</button>'+
-      '</div>'+
-
-      // 출고 기록
-      '<div style="font-size:12px;font-weight:800;margin-bottom:8px">📋 출고 기록 (최근 20건)</div>'+
-      (histHtml||'<div class="empty">출고 기록 없음</div>')+
-      '</div>';
-
-    // 반납 버튼 이벤트
-    c.querySelectorAll('.return-btn').forEach(function(btn){
-      btn.addEventListener('click',function(){
-        var docId=this.dataset.did;
-        _db.collection('clean_dispatch').doc(docId).update({
-          returned:true, returnedAt:new Date().toISOString()
-        }).then(function(){toast('✅ 반납 확인 완료');pageCleanDispatch();});
-      });
-    });
-
-    // 초기 계산
-    setTimeout(_calcDispatchTotal,100);
-  });
-}
-
-function _renderDispatchItems(p){
-  var html='';
-  CLEAN_EQ_DEFAULTS.forEach(function(eq){
-    var price=p['eq_'+eq.code]||eq.default;
-    html+=
-      '<label style="display:flex;align-items:center;gap:5px;background:var(--bg3);border-radius:6px;padding:6px 8px;cursor:pointer">'+
-        '<input type="checkbox" class="dc-eq-check" data-code="'+eq.code+'" data-price="'+price+'" onchange="_calcDispatchTotal()" style="margin:0">'+
-        '<div style="flex:1">'+
-          '<div style="font-size:10px;font-weight:600">'+esc(eq.name)+'</div>'+
-          '<div style="display:flex;align-items:center;gap:4px">'+
-            '<input type="number" min="1" value="1" class="dc-eq-qty" data-code="'+eq.code+'" onchange="_calcDispatchTotal()" '+
-              'style="width:36px;padding:2px 4px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;font-size:10px;text-align:center">'+
-            '<span style="font-size:9px;color:var(--text3)">×'+price.toLocaleString()+'원</span>'+
-          '</div>'+
-        '</div>'+
-      '</label>';
-  });
-  return html;
-}
-
-function _calcDispatchTotal(){
-  var total=0;
-  var items=[];
-  document.querySelectorAll('.dc-eq-check:checked').forEach(function(chk){
-    var qtyEl=document.querySelector('.dc-eq-qty[data-code="'+chk.dataset.code+'"]');
-    var qty=parseInt(qtyEl?qtyEl.value:1)||1;
-    var price=parseInt(chk.dataset.price)||0;
-    var amt=price*qty;
-    total+=amt;
-    // 이름 찾기
-    var eq=CLEAN_EQ_DEFAULTS.find(function(e){return e.code===chk.dataset.code;});
-    if(eq) items.push(eq.name+'×'+qty);
-  });
-
-  var headCount=parseInt(document.getElementById('dc-headcount')?document.getElementById('dc-headcount').value:1)||1;
-  var perPerson=Math.floor(total/headCount);   // 버림
-  var remainder=total-(perPerson*headCount);    // 낙전
-
-  var totalEl=document.getElementById('dc-total-display');
-  var perEl=document.getElementById('dc-per-display');
-  var remEl=document.getElementById('dc-remainder');
-
-  if(totalEl) totalEl.textContent=total.toLocaleString()+'원';
-  if(perEl) perEl.textContent='인당 차감: '+perPerson.toLocaleString()+'원 × '+headCount+'명';
-  if(remEl && remainder>0){
-    remEl.textContent='낙전 '+remainder.toLocaleString()+'원 → 팀장에게 +α 처리';
-  } else if(remEl){
-    remEl.textContent='';
-  }
-
-  window._dcCalc={total:total, perPerson:perPerson, remainder:remainder, items:items, headCount:headCount};
-}
-
-function _saveDispatch(){
-  var did=_CU.dealerId||_CU.uid;
-  var calc=window._dcCalc||{total:0,perPerson:0,remainder:0,items:[],headCount:1};
-  if(calc.total<=0){toast('출고 항목을 선택하세요');return;}
-
-  var teamName=document.getElementById('dc-team')?document.getElementById('dc-team').value:'';
-  var dispatchDate=document.getElementById('dc-date')?document.getElementById('dc-date').value:'';
-  var siteName=document.getElementById('dc-site')?document.getElementById('dc-site').value:'';
-  var returnable=document.getElementById('dc-returnable')?document.getElementById('dc-returnable').checked:true;
-
-  var record={
-    dealerId:did,
-    teamName:teamName,
-    siteName:siteName,
-    dispatchDate:dispatchDate,
-    headCount:calc.headCount,
-    totalAmt:calc.total,
-    perPersonAmt:calc.perPerson,
-    remainder:calc.remainder,
-    itemSummary:calc.items.join(', '),
-    returnable:returnable,
-    returned:!returnable,
-    createdAt:new Date().toISOString(),
-    createdBy:_CU.name||_CU.email||'',
-    status:'CONFIRMED'
-  };
-
-  // 상세 항목 저장
-  var details=[];
-  document.querySelectorAll('.dc-eq-check:checked').forEach(function(chk){
-    var qtyEl=document.querySelector('.dc-eq-qty[data-code="'+chk.dataset.code+'"]');
-    var qty=parseInt(qtyEl?qtyEl.value:1)||1;
-    var price=parseInt(chk.dataset.price)||0;
-    var eq=CLEAN_EQ_DEFAULTS.find(function(e){return e.code===chk.dataset.code;});
-    details.push({code:chk.dataset.code, name:eq?eq.name:'', qty:qty, unitPrice:price, total:price*qty, category:eq?eq.category:''});
-  });
-  record.details=details;
-
-  _db.collection('clean_dispatch').add(record).then(function(ref){
-    toast('✅ 출고 확정! 팀 '+teamName+' / 인당 '+calc.perPerson.toLocaleString()+'원 차감'+(calc.remainder>0?' / 낙전 '+calc.remainder+'원 팀장 처리':''));
-    pageCleanDispatch();
-  }).catch(function(e){toast('❌ 저장 실패: '+e.message);});
-}
-
-function pageCleanOrder(){
-  document.getElementById('page-title').textContent='📝 의뢰서 작성';
-  var c=document.getElementById('content');
-  var did=_CU.dealerId||_CU.uid;
-
-  _db.collection('settings').doc(did+'_cleanPricing').get().then(function(snap){
-    var p=snap.exists?snap.data():{
-      p20:150000,p25:180000,p30:220000,p35:260000,p40:300000,p50:360000,p60:420000,pExtra:8000,
-      surFloor:3000,surExpand:30000,surMold:50000,surNicotine:80000,surPet:60000,surJunk:150000,surNewbuild:50000,
-      optFridge:30000,optAirwall:40000,optAirsys:80000,optWasher:30000,optOven:25000,optSteam:50000,optPhyton:40000,
-      cancel12:30,cancelNoshow:100,cancelManagerComp:50,minOrder:150000,waitFeePerHour:30000
-    };
-    window._cleanP=p;
-
-    c.innerHTML='<div style="max-width:600px;margin:0 auto;padding:16px">'+
-      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'+
-        '<div style="font-size:13px;font-weight:800">📝 청소 의뢰서 작성</div>'+
-        '<div style="font-size:11px;color:var(--acc);font-weight:700" id="co-total">견적: 계산 중...</div>'+
-      '</div>'+
-
-      // 기본정보
-      '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">'+
-        '<div style="font-size:12px;font-weight:800;margin-bottom:10px">📋 기본 정보</div>'+
-        _coRow('고객명','<input id="co-client" placeholder="홍길동 또는 (주)회사명" style="'+_coInput()+'">')+
-        _coRow('서비스 유형',
-          '<select id="co-type" onchange="_calcCleanTotal()" style="'+_coInput()+'">'+
-          '<option value="B2C_MOVE">B2C 이사청소</option>'+
-          '<option value="B2C_NEW">B2C 준공청소</option>'+
-          '<option value="B2B_OFFICE">B2B 사무실 정기</option>'+
-          '<option value="B2B_SPECIAL">B2B 특수청소</option>'+
-          '</select>')+
-        _coRow('주거형태',
-          '<select id="co-house" style="'+_coInput()+'">'+
-          '<option value="아파트">아파트</option>'+
-          '<option value="빌라">빌라</option>'+
-          '<option value="단독주택">단독주택</option>'+
-          '<option value="오피스텔">오피스텔</option>'+
-          '<option value="사무실">사무실</option>'+
-          '<option value="기타">기타</option>'+
-          '</select>')+
-        _coRow('평수(공급)',
-          '<input id="co-area" type="number" placeholder="예: 30" onchange="_calcCleanTotal()" style="'+_coInput()+'"> <span style="font-size:11px;color:var(--text3)">평</span>')+
-        _coRow('확장여부',
-          '<select id="co-expand" onchange="_calcCleanTotal()" style="'+_coInput()+'">'+
-          '<option value="none">비확장</option>'+
-          '<option value="living">거실 확장</option>'+
-          '<option value="full">전체 확장</option>'+
-          '</select>')+
-        _coRow('엘리베이터',
-          '<select id="co-elev" style="'+_coInput()+'">'+
-          '<option value="yes">있음</option>'+
-          '<option value="no">없음</option>'+
-          '</select>')+
-        _coRow('층수(엘리없을때)',
-          '<input id="co-floor" type="number" placeholder="예: 5" onchange="_calcCleanTotal()" style="'+_coInput()+'">')+
-      '</div>'+
-
-      // 오염도
-      '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">'+
-        '<div style="font-size:12px;font-weight:800;margin-bottom:10px">🔍 현장 상태</div>'+
-        _coRow('특이오염',
-          '<select id="co-dirty" onchange="_calcCleanTotal()" style="'+_coInput()+'">'+
-          '<option value="none">없음</option>'+
-          '<option value="mold">곰팡이 심함</option>'+
-          '<option value="nicotine">니코틴 때</option>'+
-          '<option value="pet">반려동물 오염</option>'+
-          '<option value="junk">쓰레기집</option>'+
-          '</select>')+
-      '</div>'+
-
-      // 옵션
-      '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">'+
-        '<div style="font-size:12px;font-weight:800;margin-bottom:8px">🛠️ 부가 옵션</div>'+
-        _coCheck('optFridge','냉장고 내부','optFridge')+
-        _coCheck('optAirwall','에어컨 벽걸이','optAirwall')+
-        _coCheck('optAirsys','에어컨 시스템','optAirsys')+
-        _coCheck('optWasher','세탁기 내부','optWasher')+
-        _coCheck('optOven','오븐','optOven')+
-        _coCheck('optSteam','고온 스팀 살균','optSteam')+
-        _coCheck('optPhyton','피톤치드 공정','optPhyton')+
-      '</div>'+
-
-      // 매니저 설정
-      '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">'+
-        '<div style="font-size:12px;font-weight:800;margin-bottom:8px">👷 매니저 배정</div>'+
-        _coRow('매니저명','<input id="co-manager" placeholder="홍길동" style="'+_coInput()+'">')+
-        _coRow('고용형태',
-          '<select id="co-emptype" onchange="_calcCleanTotal()" style="'+_coInput()+'">'+
-          '<option value="3.3">프리랜서 3.3%</option>'+
-          '<option value="daily">일용직 고용보험</option>'+
-          '<option value="direct">직접 입력</option>'+
-          '</select>')+
-        _coRow('지급 배분율',
-          '<input id="co-ratio" type="number" value="65" onchange="_calcCleanTotal()" style="'+_coInput()+'"> <span style="font-size:11px;color:var(--text3)">%</span>')+
-        _coRow('추가수당',
-          '<input id="co-extra" type="number" value="0" onchange="_calcCleanTotal()" style="'+_coInput()+'"> <span style="font-size:11px;color:var(--text3)">원</span>')+
-        _coRow('유류비',
-          '<input id="co-trans" type="number" value="0" onchange="_calcCleanTotal()" style="'+_coInput()+'"> <span style="font-size:11px;color:var(--text3)">원</span>')+
-        _coRow('패널티 차감',
-          '<input id="co-penalty" type="number" value="0" onchange="_calcCleanTotal()" style="'+_coInput()+'"> <span style="font-size:11px;color:var(--text3)">원</span>')+
-      '</div>'+
-
-      // 결제
-      '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">'+
-        '<div style="font-size:12px;font-weight:800;margin-bottom:8px">💳 결제 정보</div>'+
-        _coRow('결제방식',
-          '<select id="co-pay" style="'+_coInput()+'">'+
-          '<option value="card">신용카드</option>'+
-          '<option value="cash">현금영수증</option>'+
-          '<option value="transfer">계좌이체</option>'+
-          '<option value="invoice">세금계산서(B2B)</option>'+
-          '<option value="unpaid">미수금</option>'+
-          '</select>')+
-        _coRow('B2B VAT',
-          '<select id="co-vat" onchange="_calcCleanTotal()" style="'+_coInput()+'">'+
-          '<option value="0">없음(B2C)</option>'+
-          '<option value="10">VAT 10% 별도(B2B)</option>'+
-          '</select>')+
-        _coRow('작업일',
-          '<input id="co-date" type="date" value="'+new Date().toISOString().slice(0,10)+'" style="'+_coInput()+'">')+
-      '</div>'+
-
-      // 견적 요약
-      '<div id="co-summary" style="background:linear-gradient(135deg,rgba(0,119,182,.1),rgba(124,58,237,.05));border:1px solid rgba(0,119,182,.2);border-radius:12px;padding:14px;margin-bottom:14px">'+
-        '<div style="font-size:12px;font-weight:800;margin-bottom:8px">📊 견적 요약</div>'+
-        '<div id="co-summary-content">금액을 입력하면 자동 계산됩니다.</div>'+
-      '</div>'+
-
-      '<div style="display:flex;gap:8px">'+
-        '<button onclick="_saveCleanOrder()" style="flex:2;padding:12px;background:var(--acc);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">📝 의뢰 저장</button>'+
-        '<button onclick="_saveCleanOrderAndSettle()" style="flex:1;padding:12px;background:#059669;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">💰 바로 정산</button>'+
-      '</div>'+
-    '</div>';
-
-    // 초기 계산
-    setTimeout(_calcCleanTotal, 100);
-  });
-}
-
-function _coInput(){
-  return 'width:100%;padding:6px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text1);font-size:12px';
-}
-function _coRow(label,input){
-  return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'+
-    '<div style="width:90px;font-size:11px;color:var(--text3);flex-shrink:0">'+label+'</div>'+
-    '<div style="flex:1">'+input+'</div>'+
-  '</div>';
-}
-function _coCheck(id,label,priceKey){
-  return '<label style="display:flex;align-items:center;gap:6px;margin-bottom:5px;cursor:pointer">'+
-    '<input type="checkbox" id="co-'+id+'" onchange="_calcCleanTotal()">'+
-    '<span style="font-size:11px">'+label+'</span>'+
-    '<span style="font-size:10px;color:var(--text3)" id="co-'+id+'-price"></span>'+
-  '</label>';
-}
-
-function _calcCleanTotal(){
-  var p=window._cleanP||{};
-  var area=parseFloat(document.getElementById('co-area')?document.getElementById('co-area').value:0)||0;
-  var expand=document.getElementById('co-expand')?document.getElementById('co-expand').value:'none';
-  var elev=document.getElementById('co-elev')?document.getElementById('co-elev').value:'yes';
-  var floor=parseFloat(document.getElementById('co-floor')?document.getElementById('co-floor').value:0)||0;
-  var dirty=document.getElementById('co-dirty')?document.getElementById('co-dirty').value:'none';
-  var type=document.getElementById('co-type')?document.getElementById('co-type').value:'B2C_MOVE';
-  var vatRate=parseFloat(document.getElementById('co-vat')?document.getElementById('co-vat').value:0)||0;
-  var ratio=parseFloat(document.getElementById('co-ratio')?document.getElementById('co-ratio').value:65)||65;
-  var extra=parseFloat(document.getElementById('co-extra')?document.getElementById('co-extra').value:0)||0;
-  var trans=parseFloat(document.getElementById('co-trans')?document.getElementById('co-trans').value:0)||0;
-  var penalty=parseFloat(document.getElementById('co-penalty')?document.getElementById('co-penalty').value:0)||0;
-  var emptype=document.getElementById('co-emptype')?document.getElementById('co-emptype').value:'3.3';
-
-  // 기본 단가
-  var basePrice=0;
-  if(area<=20) basePrice=p.p20||150000;
-  else if(area<=25) basePrice=p.p25||180000;
-  else if(area<=30) basePrice=p.p30||220000;
-  else if(area<=35) basePrice=p.p35||260000;
-  else if(area<=40) basePrice=p.p40||300000;
-  else if(area<=50) basePrice=p.p50||360000;
-  else if(area<=60) basePrice=p.p60||420000;
-  else basePrice=(p.p60||420000)+Math.round((area-60)*(p.pExtra||8000));
-
-  // 할증
-  var surcharge=0;
-  if(type==='B2C_NEW') surcharge+=p.surNewbuild||50000;
-  if(expand==='full') surcharge+=p.surExpand||30000;
-  else if(expand==='living') surcharge+=Math.round((p.surExpand||30000)*0.5);
-  if(elev==='no'&&floor>2) surcharge+=(floor-2)*(p.surFloor||3000);
-  if(dirty==='mold') surcharge+=p.surMold||50000;
-  else if(dirty==='nicotine') surcharge+=p.surNicotine||80000;
-  else if(dirty==='pet') surcharge+=p.surPet||60000;
-  else if(dirty==='junk') surcharge+=p.surJunk||150000;
-
-  // 옵션
-  var optTotal=0;
-  var opts=['optFridge','optAirwall','optAirsys','optWasher','optOven','optSteam','optPhyton'];
-  opts.forEach(function(opt){
-    var el=document.getElementById('co-'+opt);
-    var priceEl=document.getElementById('co-'+opt+'-price');
-    var optPrice=p[opt]||0;
-    if(priceEl) priceEl.textContent='('+optPrice.toLocaleString()+'원)';
-    if(el&&el.checked) optTotal+=optPrice;
-  });
-
-  var subtotal=basePrice+surcharge+optTotal;
-  var vat=Math.round(subtotal*(vatRate/100));
-  var totalBilling=subtotal+vat;
-
-  // 매니저 지급
-  var managerGross=Math.round(subtotal*(ratio/100))+extra+trans-penalty;
-  var tax=0;
-  if(emptype==='3.3') tax=Math.round(managerGross*0.033);
-  else if(emptype==='daily') tax=Math.round(managerGross*0.009);
-  var managerNet=managerGross-tax;
-  var companyMargin=subtotal-managerGross;
-
-  // 화면 업데이트
-  var totalEl=document.getElementById('co-total');
-  if(totalEl) totalEl.textContent='견적: '+totalBilling.toLocaleString()+'원';
-
-  var summary=document.getElementById('co-summary-content');
-  if(summary&&area>0){
-    summary.innerHTML=
-      '<div style="font-size:11px">'+
-      '<div style="display:flex;justify-content:space-between;margin-bottom:3px"><span>기본단가</span><span>'+basePrice.toLocaleString()+'원</span></div>'+
-      (surcharge>0?'<div style="display:flex;justify-content:space-between;margin-bottom:3px"><span>할증</span><span>+'+surcharge.toLocaleString()+'원</span></div>':'')+
-      (optTotal>0?'<div style="display:flex;justify-content:space-between;margin-bottom:3px"><span>옵션</span><span>+'+optTotal.toLocaleString()+'원</span></div>':'')+
-      (vat>0?'<div style="display:flex;justify-content:space-between;margin-bottom:3px"><span>VAT '+vatRate+'%</span><span>+'+vat.toLocaleString()+'원</span></div>':'')+
-      '<div style="display:flex;justify-content:space-between;margin-bottom:6px;font-weight:800;color:var(--acc);border-top:1px solid var(--border);padding-top:6px"><span>고객 청구 총액</span><span>'+totalBilling.toLocaleString()+'원</span></div>'+
-      '<div style="display:flex;justify-content:space-between;margin-bottom:3px"><span>매니저 지급(세전)</span><span>'+managerGross.toLocaleString()+'원</span></div>'+
-      (tax>0?'<div style="display:flex;justify-content:space-between;margin-bottom:3px"><span>세금공제</span><span>-'+tax.toLocaleString()+'원</span></div>':'')+
-      '<div style="display:flex;justify-content:space-between;margin-bottom:6px;font-weight:700;color:#059669"><span>매니저 실지급</span><span>'+managerNet.toLocaleString()+'원</span></div>'+
-      '<div style="display:flex;justify-content:space-between;font-weight:800;color:var(--acc2)"><span>회사 마진</span><span>'+companyMargin.toLocaleString()+'원 ('+Math.round(companyMargin/subtotal*100)+'%)</span></div>'+
-      '</div>';
-  }
-
-  window._cleanCalc={basePrice,surcharge,optTotal,subtotal,vat,totalBilling,managerGross,tax,managerNet,companyMargin,ratio};
-}
-
-function _saveCleanOrder(andSettle){
-  var did=_CU.dealerId||_CU.uid;
-  var calc=window._cleanCalc||{};
-  var g=function(id){var el=document.getElementById(id);return el?el.value:'';};
-
-  var order={
-    dealerId:did,
-    orderId:'CO-'+Date.now(),
-    createdAt:new Date().toISOString(),
-    jobDate:g('co-date'),
-    clientName:g('co-client'),
-    serviceType:g('co-type'),
-    houseType:g('co-house'),
-    area:parseFloat(g('co-area'))||0,
-    expand:g('co-expand'),
-    elevator:g('co-elev'),
-    floor:parseFloat(g('co-floor'))||0,
-    dirtyLevel:g('co-dirty'),
-    managerName:g('co-manager'),
-    empType:g('co-emptype'),
-    ratio:parseFloat(g('co-ratio'))||65,
-    extra:parseFloat(g('co-extra'))||0,
-    trans:parseFloat(g('co-trans'))||0,
-    penalty:parseFloat(g('co-penalty'))||0,
-    payMethod:g('co-pay'),
-    vatRate:parseFloat(g('co-vat'))||0,
-    status:'READY',
-    basePrice:calc.basePrice||0,
-    surcharge:calc.surcharge||0,
-    optTotal:calc.optTotal||0,
-    subtotal:calc.subtotal||0,
-    vat:calc.vat||0,
-    totalBilling:calc.totalBilling||0,
-    managerGross:calc.managerGross||0,
-    tax:calc.tax||0,
-    managerNet:calc.managerNet||0,
-    companyMargin:calc.companyMargin||0,
-  };
-
-  _db.collection('clean_orders').add(order).then(function(ref){
-    toast('✅ 의뢰 저장 완료 ('+ref.id+')');
-    if(andSettle) _cleanOrderToSettle(order, ref.id);
-    else navigate('clean_settle');
-  }).catch(function(e){toast('❌ 저장 실패: '+e.message);});
-}
-
-function _saveCleanOrderAndSettle(){_saveCleanOrder(true);}
-
-function _cleanOrderToSettle(order, orderId){
-  // 정산 데이터 생성
-  var did=order.dealerId;
-  var month=order.jobDate?order.jobDate.slice(0,7):new Date().toISOString().slice(0,7);
-  var settlement={
-    dealerId:did,
-    month:month,
-    name:order.managerName||'미배정',
-    camp:'청소',
-    industryType:'cleaning',
-    gross:order.managerGross,
-    tax33:order.empType==='3.3'?order.tax:0,
-    taxIns:order.empType==='daily'?order.tax:0,
-    net:order.managerNet,
-    extras:[
-      {label:'청소수당('+order.serviceType+')',value:order.managerGross-order.extra-order.trans+order.penalty},
-      order.extra>0?{label:'추가수당',value:order.extra}:null,
-      order.trans>0?{label:'유류비',value:order.trans}:null,
-      order.penalty>0?{label:'패널티',value:-order.penalty}:null,
-    ].filter(Boolean),
-    sourceOrderId:orderId,
-    createdAt:new Date().toISOString(),
-    status:'READY'
-  };
-  _db.collection('settlements').add(settlement).then(function(){
-    toast('✅ 정산 생성 완료');
-    navigate('clean_settle');
-  });
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 🧹 청소업 정산 현황
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function pageCleanSettle(){
-  document.getElementById('page-title').textContent='📊 청소 정산 현황';
-  var c=document.getElementById('content');
-  var did=_CU.dealerId||_CU.uid;
-  c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
-
-  _db.collection('clean_orders').where('dealerId','==',did)
-    .orderBy('createdAt','desc').limit(50).get()
-  .then(function(snap){
-    if(snap.empty){
-      c.innerHTML=
-        '<div style="display:flex;gap:8px;margin-bottom:12px">'+
-          '<button id="cs-upload-btn" style="padding:8px 16px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📥 정산 엑셀 업로드</button>'+
-          '<button id="cs-new-btn" style="padding:8px 16px;background:var(--acc);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">+ 새 의뢰 작성</button>'+
-        '</div>'+
-        '<div class="empty">📝 등록된 의뢰 없음</div>';
-      var ub=document.getElementById('cs-upload-btn');
-      if(ub) ub.onclick=function(){
-        if(!_COMPANY_CFG) _COMPANY_CFG={};
-        _COMPANY_CFG.industryType='cleaning';
-        _SA_TEST_INDUSTRY='cleaning';
-        document.getElementById('excel-input').click();
-      };
-      var nb=document.getElementById('cs-new-btn');
-      if(nb) nb.onclick=function(){navigate('clean_order');};
-      return;
-    }
-
-    var statusMap={READY:'준비',HOLD:'보류',DONE:'완료',CANCEL:'취소'};
-    var statusColor={READY:'#3b82f6',HOLD:'#f59e0b',DONE:'#10b981',CANCEL:'#ef4444'};
-
-    var totalBilling=0,totalMargin=0,totalPayout=0;
-    var rows='';
-    snap.forEach(function(d){
-      var o=d.data();
-      totalBilling+=(o.totalBilling||0);
-      totalMargin+=(o.companyMargin||0);
-      totalPayout+=(o.managerNet||0);
-      var st=o.status||'READY';
-      rows+='<tr style="border-bottom:1px solid var(--border);cursor:pointer" data-coid="'+d.id+'">'+
-        '<td style="padding:7px 8px;font-size:11px">'+esc(o.jobDate||'')+'</td>'+
-        '<td style="padding:7px 8px;font-size:11px;font-weight:600">'+esc(o.clientName||'')+'</td>'+
-        '<td style="padding:7px 8px;font-size:11px">'+esc(o.serviceType||'')+'</td>'+
-        '<td style="padding:7px 8px;font-size:11px">'+esc(o.managerName||'미배정')+'</td>'+
-        '<td style="padding:7px 8px;font-size:11px;text-align:right;font-weight:700">'+((o.totalBilling||0).toLocaleString())+'</td>'+
-        '<td style="padding:7px 8px;font-size:11px;text-align:right;color:#10b981">'+((o.companyMargin||0).toLocaleString())+'</td>'+
-        '<td style="padding:7px 8px;text-align:center">'+
-          '<span style="font-size:10px;font-weight:700;color:'+statusColor[st]+'">'+statusMap[st]+'</span>'+
-        '</td>'+
-      '</tr>';
-    });
-
-    c.innerHTML=
-      '<div style="max-width:700px;margin:0 auto;padding:16px">'+
-        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">'+
-          '<div style="background:var(--bg2);border-radius:10px;padding:12px;text-align:center">'+
-            '<div style="font-size:10px;color:var(--text3)">총 청구</div>'+
-            '<div style="font-size:15px;font-weight:800;color:var(--acc)">'+totalBilling.toLocaleString()+'</div>'+
-          '</div>'+
-          '<div style="background:var(--bg2);border-radius:10px;padding:12px;text-align:center">'+
-            '<div style="font-size:10px;color:var(--text3)">회사 마진</div>'+
-            '<div style="font-size:15px;font-weight:800;color:var(--acc2)">'+totalMargin.toLocaleString()+'</div>'+
-          '</div>'+
-          '<div style="background:var(--bg2);border-radius:10px;padding:12px;text-align:center">'+
-            '<div style="font-size:10px;color:var(--text3)">매니저 실지급</div>'+
-            '<div style="font-size:15px;font-weight:800;color:#10b981">'+totalPayout.toLocaleString()+'</div>'+
-          '</div>'+
-        '</div>'+
-        '<div style="display:flex;gap:8px;margin-bottom:10px">'+
-          '<button id="cs-upload-btn" style="flex:1;padding:10px;background:#059669;color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">📥 정산 엑셀 업로드</button>'+
-          '<button id="clean-new-btn" style="flex:1;padding:10px;background:var(--acc);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">+ 새 의뢰 작성</button>'+
-        '</div>'+
-        '<div style="background:var(--bg2);border-radius:12px;overflow:hidden">'+          '<table style="width:100%;border-collapse:collapse;font-size:11px">'+
-            '<thead><tr style="background:var(--bg3)">'+
-              '<th style="padding:7px 8px;text-align:left">작업일</th>'+
-              '<th style="padding:7px 8px;text-align:left">고객</th>'+
-              '<th style="padding:7px 8px;text-align:left">유형</th>'+
-              '<th style="padding:7px 8px;text-align:left">매니저</th>'+
-              '<th style="padding:7px 8px;text-align:right">청구액</th>'+
-              '<th style="padding:7px 8px;text-align:right">마진</th>'+
-              '<th style="padding:7px 8px;text-align:center">상태</th>'+
-            '</tr></thead>'+
-            '<tbody>'+rows+'</tbody>'+
-          '</table>'+
-        '</div>'+
-      '</div>';
-    var newBtn=document.getElementById('clean-new-btn');
-    if(newBtn) newBtn.onclick=function(){navigate('clean_order');};
-    var uploadBtn2=document.getElementById('cs-upload-btn');
-    if(uploadBtn2) uploadBtn2.onclick=function(){
-      if(!_COMPANY_CFG) _COMPANY_CFG={};
-      _COMPANY_CFG.industryType='cleaning';
-      _SA_TEST_INDUSTRY='cleaning';
-      document.getElementById('excel-input').click();
-    };
-  }).catch(function(e){c.innerHTML='<div class="empty">오류: '+e.message+'</div>';});
-}
-
-function _cleanOrderDetail(orderId){
-  var did=_CU.dealerId||_CU.uid;
-  _db.collection('clean_orders').doc(orderId).get().then(function(snap){
-    if(!snap.exists) return;
-    var o=snap.data();
-    var statusOpts=['READY','HOLD','DONE','CANCEL'];
-    var statusLabel={READY:'준비',HOLD:'보류',DONE:'완료',CANCEL:'취소'};
-    var pop=document.createElement('div');
-    pop.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
-    var opts=statusOpts.map(function(s){return '<option value="'+s+'"'+(o.status===s?' selected':'')+'>'+statusLabel[s]+'</option>';}).join('');
-    pop.innerHTML=
-      '<div style="background:var(--bg2);border-radius:16px;padding:20px;width:100%;max-width:380px;max-height:85vh;overflow-y:auto">'+
-        '<div style="font-size:14px;font-weight:800;margin-bottom:12px">📋 '+esc(o.clientName||'')+'</div>'+
-        '<div style="font-size:11px;color:var(--text3);margin-bottom:10px">'+esc(o.serviceType||'')+' · '+esc(o.jobDate||'')+'</div>'+
-        _detRow('작업 유형',o.serviceType)+
-        _detRow('평수',o.area+'평 '+o.houseType)+
-        _detRow('오염',o.dirtyLevel)+
-        _detRow('매니저',o.managerName+'('+o.empType+')')+
-        _detRow('고객 청구',(o.totalBilling||0).toLocaleString()+'원')+
-        _detRow('매니저 실지급',(o.managerNet||0).toLocaleString()+'원')+
-        _detRow('회사 마진',(o.companyMargin||0).toLocaleString()+'원')+
-        '<div style="margin:10px 0">'+
-          '<label style="font-size:11px;color:var(--text3)">상태 변경</label>'+
-          '<select id="detail-status" style="width:100%;margin-top:4px;padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text1)">'+opts+'</select>'+
-        '</div>'+
-        '<div style="display:flex;gap:8px;margin-top:12px">'+
-          '<button id="detail-close" style="flex:1;padding:10px;background:var(--bg3);color:var(--text2);border:none;border-radius:8px;font-weight:700;cursor:pointer">닫기</button>'+
-          '<button id="detail-save" style="flex:1;padding:10px;background:var(--acc);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer">저장</button>'+
-        '</div>'+
-      '</div>';
-    document.body.appendChild(pop);
-    pop.onclick=function(e){if(e.target===pop)document.body.removeChild(pop);};
-    document.getElementById('detail-close').onclick=function(){document.body.removeChild(pop);};
-    document.getElementById('detail-save').onclick=function(){
-      var st=document.getElementById('detail-status').value;
-      _db.collection('clean_orders').doc(orderId).update({status:st,updatedAt:new Date().toISOString()})
-      .then(function(){toast('✅ 상태 변경: '+statusLabel[st]);document.body.removeChild(pop);pageCleanSettle();});
-    };
-  });
-}
-
-function _detRow(label,val){
-  return '<div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:11px">'+
-    '<span style="color:var(--text3)">'+label+'</span>'+
-    '<span style="font-weight:600">'+esc(String(val||''))+'</span>'+
-  '</div>';
-}
-
-
-// 자동 발주서 생성 (부족 품목 전체)
-function _invAutoOrder(){
-  var today=new Date();
-  var ds=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
-  var inputs=document.querySelectorAll('.order-qty-input');
-  var rows=[['거래처','품목명','현재고','최소재고','발주수량','발주일']];
-  inputs.forEach(function(inp){
-    var qty=parseInt(inp.value)||0;
-    if(qty>0){
-      var tr=inp.closest('tr');
-      var cells=tr.querySelectorAll('td');
-      rows.push([
-        inp.dataset.sup,
-        inp.dataset.name,
-        cells[1]?cells[1].textContent.trim():'',
-        cells[2]?cells[2].textContent.trim():'',
-        qty,
-        ds
-      ]);
-    }
-  });
-
-  if(rows.length<=1){toast('발주 수량이 없습니다');return;}
-
-  var csvLines=[];
-  rows.forEach(function(r){
-    csvLines.push(r.map(function(v){return '"'+String(v).replace(/"/g,'""')+'"';}).join(','));
-  });
-  var csv=csvLines.join('\r\n');
-  var bom='﻿';
-  var blob=new Blob([bom+csv],{type:'text/csv;charset=utf-8'});
-  var url=URL.createObjectURL(blob);
-  var a=document.createElement('a');
-  a.href=url; a.download='발주서_'+ds+'.csv';
-  document.body.appendChild(a); a.click();
-  document.body.removeChild(a); URL.revokeObjectURL(url);
-  toast('✅ 발주서 다운로드 완료');
-}
-
-// 거래처별 엑셀 발주서
-function _invOrderExcel(sup){
-  var today=new Date();
-  var ds=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
-  var inputs=document.querySelectorAll('.order-qty-input[data-sup="'+sup+'"]');
-  var rows=[['품목명','현재고','최소재고','발주수량','발주일']];
-  inputs.forEach(function(inp){
-    var qty=parseInt(inp.value)||0;
-    var tr=inp.closest('tr');
-    var cells=tr.querySelectorAll('td');
-    rows.push([
-      inp.dataset.name,
-      cells[1]?cells[1].textContent.trim():'',
-      cells[2]?cells[2].textContent.trim():'',
-      qty,
-      ds
-    ]);
-  });
-
-  var csvLines=[];
-  rows.forEach(function(r){
-    csvLines.push(r.map(function(v){return '"'+String(v).replace(/"/g,'""')+'"';}).join(','));
-  });
-  var csv=csvLines.join('\r\n');
-  var blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
-  var url=URL.createObjectURL(blob);
-  var a=document.createElement('a');
-  a.href=url; a.download='발주서_'+sup+'_'+ds+'.csv';
-  document.body.appendChild(a); a.click();
-  document.body.removeChild(a); URL.revokeObjectURL(url);
-  toast('✅ '+sup+' 발주서 다운로드');
-}
-
-// 카카오/이메일 발주서 발송
-function _invOrderSend(sup){
-  var inputs=document.querySelectorAll('.order-qty-input[data-sup="'+sup+'"]');
-  var lines=['[발주 요청]','거래처: '+sup,'','품목 목록:'];
-  var hasQty=false;
-  inputs.forEach(function(inp){
-    var qty=parseInt(inp.value)||0;
-    if(qty>0){
-      lines.push('- '+inp.dataset.name+' '+qty+'개');
-      hasQty=true;
-    }
-  });
-  if(!hasQty){toast('발주 수량을 입력하세요');return;}
-
-  var today=new Date();
-  var ds=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
-  lines.push('','발주일: '+ds);
-  lines.push('발주처: '+(_CU.companyName||''));
-
-  var msg=lines.join('\r\n');
-
-  // 공유 팝업
-  var pop=document.createElement('div');
-  pop.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
-  pop.innerHTML=
-    '<div style="background:var(--bg2);border-radius:16px;padding:22px;width:100%;max-width:360px">'+
-      '<div style="font-size:14px;font-weight:800;margin-bottom:12px">💬 발주서 발송 — '+esc(sup)+'</div>'+
-      '<textarea readonly style="width:100%;height:140px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:11px;color:var(--text1);resize:none;margin-bottom:12px">'+msg+'</textarea>'+
-      '<div style="display:flex;gap:8px;margin-bottom:8px">'+
-        '<button id="inv-kakao-btn" style="flex:1;padding:10px;background:#FEE500;color:#1a1a2e;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">💬 카카오</button>'+
-        '<button id="inv-email-btn" style="flex:1;padding:10px;background:#0077b6;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📧 이메일</button>'+
-      '</div>'+
-      '<button id="inv-order-close-btn" style="width:100%;padding:10px;background:var(--bg3);color:var(--text2);border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">닫기</button>'+
-    '</div>';
-  document.body.appendChild(pop);
-  pop.onclick=function(e){if(e.target===pop)document.body.removeChild(pop);};
-
-  var closeBtn=document.getElementById('inv-order-close-btn');
-  if(closeBtn) closeBtn.onclick=function(){document.body.removeChild(pop);};
-  var kakaoBtn=document.getElementById('inv-kakao-btn');
-  var emailBtn=document.getElementById('inv-email-btn');
-  if(kakaoBtn) kakaoBtn.onclick=function(){_invOrderKakao(encodeURIComponent(msg));};
-  if(emailBtn) emailBtn.onclick=function(){_invOrderEmail(sup,encodeURIComponent(msg));};
-}
-
-function _invOrderKakao(encodedMsg){
-  var msg=decodeURIComponent(encodedMsg);
-  if(navigator.share){
-    navigator.share({title:'발주서',text:msg}).catch(function(){});
-  } else {
-    var ta=document.createElement('textarea');
-    ta.value=msg;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
-    toast('✅ 복사됨! 카카오톡에 붙여넣기 하세요');
-    window.open('https://pf.kakao.com/_xkuxabX/chat','_blank');
-  }
-}
-
-function _invOrderEmail(sup, encodedMsg){
-  var msg=decodeURIComponent(encodedMsg);
-  var subject=encodeURIComponent('[발주 요청] '+sup);
-  var body=encodeURIComponent(msg);
-  window.open('mailto:?subject='+subject+'&body='+body,'_blank');
-}
-
-
-
-// 수정 이력 (장난 방지)
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 👷 과장(manager) 메뉴
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-var MENUS_MANAGER=[
-  {s:'🏠 홈', items:[
-    {ic:'🏠',l:'대시보드',p:'home',plan_key:'free'}
-  ]},
-  {s:'📦 재고 관리', items:[
-    {ic:'📦',l:'재고현황',p:'inv_manager_stock',plan_key:'free'},
-    {ic:'📥',l:'입고 등록',p:'inv_manager_in',plan_key:'free'},
-    {ic:'📤',l:'출고 등록',p:'inv_manager_out',plan_key:'free'},
-    {ic:'🔄',l:'반품/공병',p:'inv_manager_return',plan_key:'free'},
-  ]}
-];
-
-// 과장 - 재고현황 (본인 매장만)
-
-// 과장 - 입고 등록
-
-function _mgrLoadTodayIn(did, store){
-  var today=new Date().toISOString().split('T')[0];
-  var list=document.getElementById('mgr-in-list');
-  if(!list) return;
-  var query=_db.collection('inventory_in').where('dealerId','==',did).where('date','==',today);
-  if(store) query=query.where('store','==',store);
-  query.orderBy('createdAt','desc').get().then(function(snap){
-    if(snap.empty){list.innerHTML='<div class="empty">오늘 입고 없음</div>';return;}
-    var html='<table style="width:100%;border-collapse:collapse;font-size:12px">'+
-      '<thead><tr style="background:var(--bg3)">'+
-        '<th style="padding:7px 10px;text-align:left">품목</th>'+
-        '<th style="padding:7px 10px;text-align:right;color:#10b981">수량</th>'+
-        '<th style="padding:7px 10px;text-align:left">유형</th>'+
-        '<th style="padding:7px 10px;text-align:left">시간</th>'+
-        '<th style="padding:7px 10px">수정</th>'+
-      '</tr></thead><tbody>';
-    snap.forEach(function(doc){
-      var d=doc.data();
-      var time=d.createdAt?new Date(d.createdAt).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}):'-';
-      html+='<tr style="border-bottom:1px solid var(--border)">'+
-        '<td style="padding:7px 10px;font-weight:700">'+esc(d.name||'-')+'</td>'+
-        '<td style="padding:7px 10px;text-align:right;font-weight:800;color:#10b981">'+d.qty+'</td>'+
-        '<td style="padding:7px 10px;color:var(--text3)">'+esc(d.outType||'-')+'</td>'+
-        '<td style="padding:7px 10px;color:var(--text3)">'+time+'</td>'+
-        '<td style="padding:7px 10px">'+
-          '<button data-id="'+doc.id+'" data-qty="'+d.qty+'" data-name="'+esc(d.name||'')+'" class="mgr-edit-btn" '+
-            'style="padding:3px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;font-size:10px;cursor:pointer">수정</button>'+
-        '</td>'+
-      '</tr>';
-    });
-    html+='</tbody></table>';
-    list.innerHTML=html;
-
-    // 수정 버튼
-    list.querySelectorAll('.mgr-edit-btn').forEach(function(btn){
-      btn.addEventListener('click',function(){
-        var id=btn.dataset.id;
-        var oldQty=parseInt(btn.dataset.qty)||0;
-        var name=btn.dataset.name;
-        var newQty=prompt(name+' 수량 수정 (현재: '+oldQty+'개) 새 수량:',oldQty);
-        if(!newQty||isNaN(parseInt(newQty))) return;
-        var reason=prompt('수정 사유를 입력하세요:','');
-        if(reason===null) return;
-        var now=new Date().toISOString();
-        _db.collection('inventory_in').doc(id).update({
-          qty:parseInt(newQty),
-          lastEditAt:now,
-          lastEditBy:_CU.name||_CU.email,
-          lastEditReason:reason||'사유없음'
-        }).then(function(){
-          // 수정 이력 저장
-          _db.collection('inv_edit_log').add({
-            dealerId:did,
-            docId:id,
-            collection:'inventory_in',
-            name:name,
-            oldQty:oldQty,
-            newQty:parseInt(newQty),
-            editBy:_CU.name||_CU.email,
-            editByUid:_CU.uid,
-            store:_CU.store||'',
-            reason:reason||'사유없음',
-            createdAt:now
-          }).then(function(){
-            toast('✅ 수정됨 (이력 저장됨)');
-            _mgrLoadTodayIn(did, store);
-          });
-        }).catch(function(e){toast('❌ '+e.message);});
-      });
-    });
-  }).catch(function(e){list.innerHTML='<div class="empty">오류: '+e.message+'</div>';});
-}
-
-// 과장 - 출고 등록
-
-// 과장 - 반품/공병
 
 var MENUS_DRIVER = [
   {s:'🏠 홈',    items:[{ic:'🏠',l:'내 홈',p:'emp_home',plan_key:'free'}]},
