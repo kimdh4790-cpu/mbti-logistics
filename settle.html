@@ -2368,6 +2368,29 @@ function _invOcrCapture(did){
 // 공통 결과 구조: {name, empId, camp, gross, deduct, net, details}
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+// ★ 정산 파싱 후 ind_workers 자동 등록 (drivers 절대 미접촉)
+function _autoRegisterIndWorkers(results,type){
+  if(!results||!results.length||!_CU) return;
+  var did=_CU.dealerId||_CU.uid;
+  _db.collection('ind_workers')
+    .where('dealerId','==',did).where('industryType','==',type).get()
+  .then(function(snap){
+    var existing={};
+    snap.forEach(function(d){existing[d.data().name||'']=true;});
+    var batch=_db.batch(); var cnt=0;
+    results.forEach(function(r){
+      var name=r.name||''; if(!name||existing[name]) return;
+      batch.set(_db.collection('ind_workers').doc(),{
+        dealerId:did,industryType:type,name:name,camp:r.camp||'',
+        phone:'',bankCode:'',accountNumber:'',memo:'',
+        createdAt:new Date().toISOString()
+      });
+      cnt++;
+    });
+    if(cnt>0) batch.commit().catch(function(){});
+  }).catch(function(){});
+}
+
 // ── 공통: 결과 렌더링 ──
 function _renderIndustrySettle(results, month, industryLabel){
   var did=_CU.dealerId||_CU.uid;
@@ -35188,114 +35211,124 @@ function _deleteIndSettle(sid, type){
 }
 
 // 3. 직원 관리 (해당 업종 직원 목록)
-function pageIndWorkers(type, title){
+function pageIndWorkers(type,title){
   document.getElementById('page-title').textContent=title+' 직원 관리';
   var c=document.getElementById('content');
   var info=_IND_INFO[type]||{icon:'📂',name:title,color:'#6b7280'};
   var did=_CU.dealerId||_CU.uid;
   c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
 
-  // settlements + drivers 동시 로드
+  // ★ 완전 분리 원칙:
+  // ind_workers: AI정산 전용 직원 (읽기/쓰기)
+  // drivers: 물류앱 쿠팡 기사 전용 (phone 읽기만 — 절대 수정 안 함)
   Promise.all([
-    _db.collection('settlements')
-      .where('dealerId','==',did)
-      .where('industryType','==',type)
-      .limit(20).get(),
-    _db.collection('drivers')
-      .where('dealerId','==',did).get()
+    _db.collection('ind_workers').where('dealerId','==',did).where('industryType','==',type).get(),
+    _db.collection('drivers').where('dealerId','==',did).get()
   ]).then(function(res){
-    // 정산에서 직원명 추출
-    var workerMap={};
+    var workers=[];
     res[0].forEach(function(d){
-      var data=d.data();
-      (data.results||[]).forEach(function(r){
-        var name=r.name||''; if(!name) return;
-        if(!workerMap[name]) workerMap[name]={
-          name:name, months:0, totalNet:0, camp:r.camp||'',
-          phone:'', bankCode:'', account:''
-        };
-        workerMap[name].months++;
-        workerMap[name].totalNet+=(r.net||0);
-      });
+      var w=d.data();
+      workers.push({id:d.id,name:w.name||'',phone:w.phone||'',
+        bankCode:w.bankCode||'',account:w.accountNumber||'',
+        camp:w.camp||'',memo:w.memo||''});
     });
 
-    // drivers에서 phone/계좌 매핑
+    // ★ drivers에서 phone 읽기만 (공백 무시 매칭, 쓰기 절대 금지)
+    function normName(n){return String(n||'').replace(/\s/g,'').toLowerCase();}
+    var dMap={};
     res[1].forEach(function(d){
       var w=d.data();
-      var name=w.name||''; if(!name) return;
-      if(workerMap[name]){
-        workerMap[name].phone     = w.phone||w.tel||'';
-        workerMap[name].bankCode  = w.bankCode||'';
-        workerMap[name].account   = w.accountNumber||'';
-        workerMap[name].driverId  = d.id;
-      }
+      if(w.name) dMap[normName(w.name)]={
+        phone:w.phone||w.tel||'',
+        bankCode:w.bankCode||'',
+        account:w.accountNumber||''
+      };
+    });
+    workers.forEach(function(w){
+      var key=normName(w.name);
+      if(!w.phone&&dMap[key])    w.phone   =dMap[key].phone;
+      if(!w.account&&dMap[key]){ w.bankCode=dMap[key].bankCode; w.account=dMap[key].account; }
     });
 
-    var workers=Object.values(workerMap).sort(function(a,b){return b.totalNet-a.totalNet;});
-
-    if(!workers.length){
-      c.innerHTML='<div style="max-width:720px;margin:0 auto;padding:16px">'+
-        '<div style="text-align:center;padding:60px;color:var(--text3);background:var(--bg2);border-radius:12px">'+
-        info.icon+'<br><br>등록된 직원 없음<br><small>정산 엑셀 업로드 시 자동 등록됩니다</small></div></div>';
-      return;
-    }
-
-    var noPhone = workers.filter(function(w){return !w.phone;}).length;
-    var noAccount= workers.filter(function(w){return !w.account;}).length;
-
-    var rows=workers.map(function(w){
-      var phoneHtml = w.phone
-        ? '<a href="tel:'+w.phone+'" style="color:#3b82f6;font-size:11px">'+w.phone+'</a>'
-        : '<span style="color:#ef4444;font-size:10px">미등록</span>';
-      var acctHtml = w.account
-        ? '<span style="color:#10b981;font-size:10px">✅ '+esc(BANK_CODES[w.bankCode]||w.bankCode||'')+'</span>'
-        : '<span style="color:#ef4444;font-size:10px">미등록</span>';
-      return '<tr>'+
-        '<td style="font-weight:700">'+esc(w.name)+'</td>'+
-        '<td style="text-align:center;color:var(--text3);font-size:10px">'+esc(w.camp||'-')+'</td>'+
-        '<td style="text-align:center">'+phoneHtml+'</td>'+
-        '<td style="text-align:center">'+acctHtml+'</td>'+
-        '<td style="text-align:center;font-size:10px">'+w.months+'회</td>'+
-        '<td style="text-align:right;color:#10b981;font-weight:700;font-size:11px">₩'+w.totalNet.toLocaleString()+'</td>'+
-      '</tr>';
-    }).join('');
+    var noPhone=workers.filter(function(w){return !w.phone;}).length;
+    var noAcct =workers.filter(function(w){return !w.account;}).length;
 
     var el=document.createElement('div');
     el.style.cssText='max-width:720px;margin:0 auto;padding:16px';
 
-    // 경고 배너
-    if(noPhone>0||noAccount>0){
+    function mkBtn(txt,bg,fg,fn){
+      var b=document.createElement('button');
+      b.style.cssText='flex:1;padding:10px;background:'+bg+';color:'+fg+';border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer';
+      b.textContent=txt; b.onclick=fn; return b;
+    }
+    var br=document.createElement('div');
+    br.style.cssText='display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap';
+    br.appendChild(mkBtn('📥 엑셀 등록',info.color,'#fff',function(){_openIndWorkerExcelImport(type,did,info,function(){pageIndWorkers(type,title);});}));
+    br.appendChild(mkBtn('📝 텍스트 등록','var(--bg3)','var(--text1)',function(){_openIndWorkerTextImport(type,did,info,function(){pageIndWorkers(type,title);});}));
+    br.appendChild(mkBtn('+ 직접 추가','var(--bg3)','var(--text1)',function(){_openIndWorkerForm(null,type,did,info,function(){pageIndWorkers(type,title);});}));
+    el.appendChild(br);
+
+    if(workers.length>0&&(noPhone||noAcct)){
       var warn=document.createElement('div');
-      warn.style.cssText='background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:11px;color:var(--acc)';
-      warn.innerHTML='⚠️ 연락처 미등록 '+noPhone+'명 · 계좌 미등록 '+noAccount+'명 — 물류관리 앱에서 등록하거나 직접 입력하세요.';
+      warn.style.cssText='background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:var(--acc)';
+      warn.textContent='⚠️ 연락처 미등록 '+noPhone+'명 · 계좌 미등록 '+noAcct+'명';
       el.appendChild(warn);
     }
 
-    var hdr=document.createElement('div');
-    hdr.style.cssText='font-size:12px;font-weight:700;margin-bottom:8px;color:var(--text2)';
-    hdr.textContent=info.icon+' '+info.name+' 직원 — '+workers.length+'명';
-    el.appendChild(hdr);
+    if(!workers.length){
+      var emp=document.createElement('div');
+      emp.style.cssText='text-align:center;padding:50px;color:var(--text3);background:var(--bg2);border-radius:12px';
+      emp.innerHTML=info.icon+'<br><br>등록된 직원 없음<br><small>엑셀 또는 텍스트로 등록하세요</small>';
+      el.appendChild(emp);
+    } else {
+      var hd=document.createElement('div');
+      hd.style.cssText='font-size:12px;font-weight:700;margin-bottom:8px;color:var(--text2)';
+      hd.textContent=info.icon+' '+info.name+' 직원 — '+workers.length+'명';
+      el.appendChild(hd);
 
-    var tableDiv=document.createElement('div');
-    tableDiv.style.cssText='background:var(--bg2);border-radius:12px;overflow:hidden';
-    tableDiv.innerHTML=
-      '<table style="width:100%;border-collapse:collapse;font-size:11px">'+
+      var rows=workers.map(function(w,wi){
+        var ph=w.phone?'<a href="tel:'+esc(w.phone)+'" style="color:#3b82f6;font-size:11px">'+esc(w.phone)+'</a>':'<span style="color:#ef4444;font-size:10px">미등록</span>';
+        var ac=w.account?'<span style="color:#10b981;font-size:10px">✅ '+esc(BANK_CODES[w.bankCode]||'등록됨')+'</span>':'<span style="color:#ef4444;font-size:10px">미등록</span>';
+        return '<tr data-wi="'+wi+'">'+
+          '<td class="iw-edit" data-wi="'+wi+'" style="font-weight:700;cursor:pointer">'+esc(w.name)+' ✏️</td>'+
+          '<td style="font-size:10px;color:var(--text3);text-align:center">'+esc(w.camp||'-')+'</td>'+
+          '<td style="text-align:center">'+ph+'</td>'+
+          '<td style="text-align:center">'+ac+'</td>'+
+          '<td style="text-align:center"><button class="iw-del" data-wi="'+wi+'" style="padding:2px 8px;background:#ef4444;color:#fff;border:none;border-radius:4px;font-size:9px;cursor:pointer">삭제</button></td>'+
+        '</tr>';
+      }).join('');
+
+      var td=document.createElement('div');
+      td.style.cssText='background:var(--bg2);border-radius:12px;overflow:hidden';
+      td.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:11px">'+
         '<thead><tr style="background:var(--bg3)">'+
           '<th style="padding:8px;text-align:left">이름</th>'+
           '<th style="padding:8px;text-align:center">소속</th>'+
           '<th style="padding:8px;text-align:center">연락처</th>'+
           '<th style="padding:8px;text-align:center">계좌</th>'+
-          '<th style="padding:8px;text-align:center">정산횟수</th>'+
-          '<th style="padding:8px;text-align:right">누적실지급</th>'+
-        '</tr></thead>'+
-        '<tbody>'+rows+'</tbody>'+
-      '</table>';
-    el.appendChild(tableDiv);
+          '<th style="padding:8px"></th>'+
+        '</tr></thead><tbody>'+rows+'</tbody></table>';
+      el.appendChild(td);
 
+      setTimeout(function(){
+        var tb=td.querySelector('tbody');
+        if(!tb) return;
+        tb.addEventListener('click',function(e){
+          var edit=e.target.closest('.iw-edit');
+          var del=e.target.closest('.iw-del');
+          if(edit){
+            var w=workers[parseInt(edit.dataset.wi)];
+            if(w) _openIndWorkerForm({id:w.id},type,did,info,function(){pageIndWorkers(type,title);});
+          } else if(del){
+            e.stopPropagation();
+            var w=workers[parseInt(del.dataset.wi)];
+            if(w) _deleteIndWorker(w.id,type,did,function(){pageIndWorkers(type,title);});
+          }
+        });
+      },100);
+    }
     c.innerHTML=''; c.appendChild(el);
-  }).catch(function(e){
-    c.innerHTML='<div class="empty">오류: '+esc(e.message)+'</div>';
-  });
+  }).catch(function(e){c.innerHTML='<div class="empty">오류: '+esc(e.message)+'</div>';});
 }
 
 
