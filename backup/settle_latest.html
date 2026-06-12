@@ -22870,6 +22870,16 @@ function goPage(page){
   document.getElementById('sidebar').classList.remove('open');
   var _bd=document.getElementById('sb-backdrop');if(_bd)_bd.style.display='none';
   var pages={settle:pageSettle,delivery_settle:pageDeliverySettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,my_roster:pageMyRoster,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,payout:pagePayout,ind_rules:pageIndustryRules,
+  ind_construction_rules:function(){pageIndRules('construction','🏗️ 건설·일용직');},
+  ind_insurance_rules:function(){pageIndRules('insurance','🛡️ 보험설계사');},
+  ind_beauty_rules:function(){pageIndRules('beauty','💄 뷰티·미용');},
+  ind_care_rules:function(){pageIndRules('care','🏥 요양·돌봄');},
+  ind_academy_rules:function(){pageIndRules('academy','🎓 학원·교육');},
+  ind_warehouse_rules:function(){pageIndRules('warehouse','📦 물류창고');},
+  ind_event_rules:function(){pageIndRules('event','🎪 행사·이벤트');},
+  ind_sales_rules:function(){pageIndRules('sales','💼 영업직');},
+  ind_freelance_rules:function(){pageIndRules('freelance','🖥️ 프리랜서');},
+  ind_restaurant_rules:function(){pageIndRules('restaurant','🍽️ 음식점·카페');},
   ind_construction_settle: function(){pageIndSettle('construction','🏗️ 건설·일용직');},
   ind_construction_list:   function(){pageIndList('construction','🏗️ 건설·일용직');},
   ind_construction_workers:function(){pageIndWorkers('construction','🏗️ 건설·일용직');},
