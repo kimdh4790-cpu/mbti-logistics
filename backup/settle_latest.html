@@ -3060,33 +3060,145 @@ function _parseSalesExcel(file, month){
 
 
 
-function _parseFreelanceExcel(file,month){
-  _baseParser(file,month,'🖥️ 프리랜서','freelance',function(row,headers,col,rv,name,camp){
-    var iProject =col(['프로젝트','작업명','의뢰명','프로젝트명']);
-    var iContract=col(['계약금액','프로젝트금액','용역비','수수료','계약액']);
-    var iExtra   =col(['추가작업','추가금액','추가비용','추가']);
-    var iRevision=col(['수정비','수정비용','AS비','수정']);
-    var iDelay   =col(['지체상금','납기지연','지연페널티']);
-    var iDeduct  =col(['공제','차감','위약금']);
-    var project  =iProject>=0?String(row[iProject]||'').trim():'';
-    var contract =rv(row,iContract),extra=rv(row,iExtra),revision=rv(row,iRevision);
-    var delay    =rv(row,iDelay),deduct=rv(row,iDeduct);
-    // 지체상금 음수처리
-    if(delay>0) delay=-delay;
-    var gross=contract+extra+revision+delay-deduct;
-    var tax33=Math.round(Math.max(0,gross)*0.033);
-    return {name:name,camp:camp,gross:Math.max(0,gross),tax33:tax33,net:Math.max(0,gross)-tax33,
-      extras:[
-        project&&{label:'📁 프로젝트',value:project},
-        contract>0&&{label:'계약금액',value:contract},
-        extra>0&&{label:'추가작업',value:extra},
-        revision>0&&{label:'수정/A/S',value:revision},
-        delay<0&&{label:'지체상금 (납기지연)',value:delay},
-        deduct>0&&{label:'공제/위약금',value:-deduct},
-        tax33>0&&{label:'소득세(3.3%)',value:-tax33},
-      ].filter(Boolean),industryType:'freelance'};
-  });
+function _parseFreelanceExcel(file, month){
+  // 프리랜서 파서 — 프리코드별 다중 프로젝트 청구행 집계
+  // 컬럼: 프리코드, 프리랜서명, 용역프로젝트명, 청구회차, 총계약금액, 당월청구공급가, 부가세유무, 원천징수여부(3.3%)
+  if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
+      if(!rows.length){toast('❌ 데이터 없음');return;}
+
+      var headers=rows[0].map(function(h){return String(h||'').trim();});
+      function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
+      function rv(row,i){if(i<0) return 0; var v=row[i]; if(!v&&v!==0) return 0; return parseFloat(String(v).replace(/,/g,''))||0;}
+      function yesno(row,i){if(i<0) return false; var v=String(row[i]||'').trim().toUpperCase(); return v==='Y'||v==='YES'||v==='1'||v==='TRUE';}
+
+      var iId      = col(['프리코드','사번','ID','코드']);
+      var iName    = col(['프리랜서명','이름','성명','담당자']);
+      var iProject = col(['용역프로젝트명','프로젝트명','프로젝트','용역명']);
+      var iPhase   = col(['청구회차','회차','단계','구분']);
+      var iTotal   = col(['총계약금액','계약금액','총액']);
+      var iClaim   = col(['당월청구공급가','청구공급가','공급가액','청구금액','당월청구']);
+      var iVat     = col(['부가세유무','부가세','VAT']);
+      var iWith    = col(['원천징수여부','원천징수','3.3%','원천']);
+      var iDelay   = col(['지체상금','지체','지연']);
+      var iCamp    = col(['소속','팀','회사']);
+
+      if(iName<0&&iId<0){toast('❌ 프리랜서명/코드 컬럼 없음');return;}
+
+      var rule = _getRule('freelance');
+      var delayRate = (rule.delayRate||0.1)/100;
+
+      var personMap={};
+      var personOrder=[];
+
+      rows.slice(1).forEach(function(row){
+        var rawId   = iId>=0   ? String(row[iId]||'').trim() : '';
+        var rawName = iName>=0 ? String(row[iName]||'').trim() : '';
+        var key = rawId||rawName;
+        if(!key) return;
+
+        if(!personMap[key]){
+          personMap[key]={
+            id:rawId, name:rawName||rawId,
+            camp: iCamp>=0?String(row[iCamp]||'').trim():'',
+            projects:[],
+            // 계약 유형별 합계
+            totalClaim:0,       // 공급가 합계
+            totalVat:0,         // 부가세 합계 (부가세 있는 건)
+            totalWith:0,        // 원천징수 합계 (3.3% 건)
+            totalDelay:0        // 지체상금
+          };
+          personOrder.push(key);
+        }
+        var p=personMap[key];
+        if(!p.name&&rawName) p.name=rawName;
+        if(p.name===p.id&&rawName) p.name=rawName;
+
+        var project  = iProject>=0 ? String(row[iProject]||'').trim() : '';
+        var phase    = iPhase>=0   ? String(row[iPhase]||'').trim()   : '';
+        var total    = rv(row,iTotal);
+        var claim    = rv(row,iClaim);
+        var hasVat   = yesno(row,iVat);
+        var hasWith  = yesno(row,iWith);
+        var delay    = rv(row,iDelay);
+
+        // 부가세 계산 (공급가의 10%)
+        var vatAmt  = hasVat  ? Math.round(claim*0.1) : 0;
+        // 원천징수 계산 (공급가의 3.3%)
+        var withAmt = hasWith ? Math.round(claim*0.033) : 0;
+
+        // 실수령 = 공급가 + 부가세 - 원천징수
+        var netClaim = claim + vatAmt - withAmt - delay;
+
+        p.projects.push({
+          project:project, phase:phase,
+          total:total, claim:claim,
+          hasVat:hasVat, hasWith:hasWith,
+          vatAmt:vatAmt, withAmt:withAmt,
+          delay:delay, netClaim:netClaim
+        });
+        p.totalClaim += claim;
+        p.totalVat   += vatAmt;
+        p.totalWith  += withAmt;
+        p.totalDelay += delay;
+      });
+
+      var results=[];
+      personOrder.forEach(function(key){
+        var p=personMap[key];
+        if(!p.name||p.totalClaim===0) return;
+
+        var gross = p.totalClaim + p.totalVat;
+        var net   = gross - p.totalWith - p.totalDelay;
+
+        // 프로젝트별 내역
+        var projExtras = p.projects.map(function(pr){
+          var tags=[];
+          if(pr.hasVat)  tags.push('부가세');
+          if(pr.hasWith) tags.push('3.3%원천');
+          if(pr.phase)   tags.push(pr.phase);
+          return {
+            label: pr.project+(tags.length?' ['+tags.join('/')+']':''),
+            value: pr.claim,
+            detail: pr.total>0?'계약총액 ₩'+pr.total.toLocaleString():''
+          };
+        });
+
+        results.push({
+          name:p.name, id:p.id, camp:p.camp,
+          gross:gross, tax33:p.totalWith, net:net,
+          projectCount:p.projects.length,
+          extras:[
+            {label:'프로젝트 '+p.projects.length+'건',value:''},
+          ].concat(projExtras).concat([
+            p.totalVat>0&&{label:'부가세 (10%) — 법인계약',value:p.totalVat},
+            p.totalWith>0&&{label:'원천징수 (3.3%) — 개인계약',value:-p.totalWith},
+            p.totalDelay>0&&{label:'지체상금',value:-p.totalDelay},
+          ].filter(Boolean)),
+          industryType:'freelance',
+          // 계약 유형 요약
+          vatCount:  p.projects.filter(function(pr){return pr.hasVat;}).length,
+          withCount: p.projects.filter(function(pr){return pr.hasWith;}).length,
+        });
+      });
+
+      if(!results.length){toast('❌ 파싱된 직원 없음');return;}
+      toast('✅ 프리랜서 파싱 완료 — '+results.length+'명');
+      _autoRegisterIndWorkers(results,'freelance');
+      _renderIndustrySettle(results, month, '🖥️ 프리랜서');
+    }catch(err){
+      console.error('[_parseFreelanceExcel]',err);
+      toast('❌ 파싱 오류: '+err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
 }
+
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 📦 물류창고 파서 (화주사별, 파레트)
