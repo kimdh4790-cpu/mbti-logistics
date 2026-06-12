@@ -2732,6 +2732,431 @@ function _parseLandscapeExcel(file,month){
   reader.readAsArrayBuffer(file);
 }
 
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 📚 업종별 실제 정산 항목 DB (검색 기반)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+var IND_DB = {
+
+  // ━━ 💄 뷰티·미용 ━━
+  // 헤어/메이크업/네일/속눈썹/피부
+  beauty: {
+    menus: [
+      // 헤어 시술
+      {cat:'헤어·펌', items:[
+        {name:'시그니처펌', avgPrice:150000, matRate:0.15},
+        {name:'볼륨매직', avgPrice:180000, matRate:0.18},
+        {name:'복구매직', avgPrice:200000, matRate:0.20},
+        {name:'디지털펌', avgPrice:160000, matRate:0.15},
+        {name:'가르마펌', avgPrice:130000, matRate:0.12},
+        {name:'히피펌', avgPrice:140000, matRate:0.13},
+        {name:'애즈펌', avgPrice:120000, matRate:0.12},
+      ]},
+      {cat:'헤어·컷', items:[
+        {name:'디자인컷', avgPrice:35000, matRate:0},
+        {name:'허쉬컷', avgPrice:40000, matRate:0},
+        {name:'레이어컷', avgPrice:35000, matRate:0},
+        {name:'남성커트', avgPrice:15000, matRate:0},
+      ]},
+      {cat:'헤어·염색', items:[
+        {name:'뿌리염색', avgPrice:80000, matRate:0.25},
+        {name:'전체염색', avgPrice:120000, matRate:0.30},
+        {name:'발레아쥬', avgPrice:180000, matRate:0.35},
+        {name:'탈색', avgPrice:100000, matRate:0.40},
+        {name:'그라데이션', avgPrice:150000, matRate:0.35},
+      ]},
+      {cat:'헤어·클리닉', items:[
+        {name:'두피스케일링', avgPrice:60000, matRate:0.20},
+        {name:'본드케어', avgPrice:80000, matRate:0.25},
+        {name:'단백질트리트먼트', avgPrice:50000, matRate:0.20},
+      ]},
+      // 메이크업
+      {cat:'메이크업', items:[
+        {name:'웨딩메이크업', avgPrice:200000, matRate:0.10},
+        {name:'일반메이크업', avgPrice:80000, matRate:0.10},
+        {name:'피부메이크업', avgPrice:60000, matRate:0.08},
+      ]},
+      // 네일
+      {cat:'네일', items:[
+        {name:'젤네일(손)', avgPrice:60000, matRate:0.20},
+        {name:'젤네일(발)', avgPrice:50000, matRate:0.20},
+        {name:'젤제거', avgPrice:20000, matRate:0.10},
+        {name:'아트(1개당)', avgPrice:3000, matRate:0.05},
+      ]},
+      // 속눈썹
+      {cat:'속눈썹', items:[
+        {name:'속눈썹연장(클래식)', avgPrice:70000, matRate:0.25},
+        {name:'속눈썹연장(볼륨)', avgPrice:90000, matRate:0.30},
+        {name:'속눈썹제거', avgPrice:20000, matRate:0.05},
+        {name:'눈썹왁싱', avgPrice:15000, matRate:0.10},
+      ]},
+      // 제품 판매
+      {cat:'제품판매', items:[
+        {name:'샴푸', avgPrice:30000, matRate:0.70},
+        {name:'트리트먼트', avgPrice:25000, matRate:0.70},
+        {name:'스타일링제', avgPrice:20000, matRate:0.70},
+      ]}
+    ],
+    commissionRates: [
+      {min:0,      max:2000000,  rate:0.35, label:'~200만'},
+      {min:2000000,max:3000000,  rate:0.40, label:'200~300만'},
+      {min:3000000,max:5000000,  rate:0.45, label:'300~500만'},
+      {min:5000000,max:null,     rate:0.50, label:'500만+'},
+    ],
+    deductions: {
+      cardFeeRate: 0.11,   // 카드수수료+부가세
+      productCommRate: 0.15, // 제품판매 수수료율
+      tax33Rate: 0.033,
+    }
+  },
+
+  // ━━ 🛡️ 보험설계사 ━━
+  // 2025~2026 수수료 개편 반영 (1200%룰 GA 확대)
+  insurance: {
+    products: [
+      // 생명보험
+      {cat:'생명보험', items:[
+        {name:'종신보험',     rate1:0.80, rate2:0.10, rateMaint:0.02, label:'초회80%/2차10%/유지2%'},
+        {name:'정기보험',     rate1:0.60, rate2:0.08, rateMaint:0.02, label:'초회60%/2차8%'},
+        {name:'CI보험',       rate1:0.70, rate2:0.09, rateMaint:0.02, label:'초회70%'},
+        {name:'암보험',       rate1:0.65, rate2:0.08, rateMaint:0.015,label:'초회65%'},
+        {name:'건강보험',     rate1:0.55, rate2:0.07, rateMaint:0.015,label:'초회55%'},
+        {name:'어린이보험',   rate1:0.60, rate2:0.08, rateMaint:0.02, label:'초회60%'},
+      ]},
+      // 손해보험
+      {cat:'손해보험', items:[
+        {name:'실손의료비',   rate1:0.25, rate2:0.05, rateMaint:0.01, label:'초회25% (저수수료)'},
+        {name:'자동차보험',   rate1:0.12, rate2:0,    rateMaint:0,    label:'초회12% (단기)'},
+        {name:'운전자보험',   rate1:0.45, rate2:0.06, rateMaint:0.015,label:'초회45%'},
+        {name:'화재보험',     rate1:0.20, rate2:0.03, rateMaint:0.01, label:'초회20%'},
+        {name:'여행자보험',   rate1:0.15, rate2:0,    rateMaint:0,    label:'단기'},
+      ]},
+      // 연금/저축
+      {cat:'연금·저축', items:[
+        {name:'연금보험',     rate1:0.50, rate2:0.07, rateMaint:0.015,label:'초회50%'},
+        {name:'저축보험',     rate1:0.30, rate2:0.05, rateMaint:0.01, label:'초회30%'},
+        {name:'변액보험',     rate1:0.60, rate2:0.08, rateMaint:0.02, label:'초회60%'},
+      ]},
+    ],
+    // 시책/인센티브 구조
+    incentives: [
+      {name:'우수설계사시책',   type:'monthly', label:'월 실적 기준 추가지급'},
+      {name:'계약유지보너스',   type:'contract',label:'13회차 유지 시 추가'},
+      {name:'환수',             type:'minus',   label:'13회차 이내 해지 시 환수'},
+      {name:'교육수당',         type:'fixed',   label:'월 정액'},
+      {name:'법인활동비',       type:'fixed',   label:'GA 법인 활동비'},
+    ],
+    deductions: {
+      tax33Rate: 0.033,   // 3.3% 사업소득세
+      empInsRate: 0.009,  // 고용보험 (위촉이면 해당X, 고용이면 적용)
+    }
+  },
+
+  // ━━ 🎓 학원·교육 ━━
+  care: {
+    serviceTypes: [
+      {name:'방문요양 30분', unit:'회', rate2026:8680,  careWorkerRate:0.75},
+      {name:'방문요양 60분', unit:'회', rate2026:16190, careWorkerRate:0.75},
+      {name:'방문요양 90분', unit:'회', rate2026:22760, careWorkerRate:0.75},
+      {name:'방문요양 120분',unit:'회', rate2026:28160, careWorkerRate:0.75},
+      {name:'방문요양 150분',unit:'회', rate2026:33260, careWorkerRate:0.75},
+      {name:'방문요양 180분',unit:'회', rate2026:38260, careWorkerRate:0.75},
+      {name:'방문목욕 방문목욕',unit:'회',rate2026:86020, careWorkerRate:0.75},
+      {name:'주야간보호 8시간',unit:'일', rate2026:68360, careWorkerRate:0.75},
+      {name:'단기보호 1일',    unit:'일', rate2026:68530, careWorkerRate:0.75},
+    ],
+    // 처우개선비 (2026년 기준)
+    welfareImprovements: [
+      {name:'처우개선비A',      amount:65000,  label:'방문요양 월정액'},
+      {name:'처우개선비B',      amount:45000,  label:'방문목욕 월정액'},
+      {name:'장기근속장려금',   amount:70000,  label:'5년이상 근속'},
+      {name:'명절수당',         amount:100000, label:'설·추석'},
+    ],
+    deductions: {
+      empInsRate: 0.009,   // 고용보험
+      healthInsRate: 0.035, // 건강보험 (월급제)
+      nationPensionRate: 0.045, // 국민연금
+    }
+  },
+
+  // ━━ 🎓 학원·교육 강사 ━━
+  academy: {
+    subjects: [
+      {cat:'입시·보습', items:[
+        {name:'수학',     avgPerStudent:120000, lectureFeeRate:0.50},
+        {name:'영어',     avgPerStudent:130000, lectureFeeRate:0.50},
+        {name:'국어',     avgPerStudent:100000, lectureFeeRate:0.48},
+        {name:'과학',     avgPerStudent:110000, lectureFeeRate:0.48},
+        {name:'사회',     avgPerStudent:90000,  lectureFeeRate:0.45},
+      ]},
+      {cat:'예체능', items:[
+        {name:'피아노',   avgPerStudent:150000, lectureFeeRate:0.55},
+        {name:'미술',     avgPerStudent:120000, lectureFeeRate:0.55},
+        {name:'태권도',   avgPerStudent:80000,  lectureFeeRate:0.60},
+        {name:'수영',     avgPerStudent:120000, lectureFeeRate:0.45},
+        {name:'발레',     avgPerStudent:130000, lectureFeeRate:0.55},
+      ]},
+      {cat:'어학', items:[
+        {name:'영어회화', avgPerStudent:150000, lectureFeeRate:0.50},
+        {name:'중국어',   avgPerStudent:140000, lectureFeeRate:0.50},
+        {name:'일본어',   avgPerStudent:130000, lectureFeeRate:0.50},
+        {name:'한국어',   avgPerStudent:120000, lectureFeeRate:0.48},
+      ]},
+      {cat:'코딩·IT', items:[
+        {name:'코딩(초중)',avgPerStudent:180000, lectureFeeRate:0.55},
+        {name:'로봇과학', avgPerStudent:200000, lectureFeeRate:0.55},
+        {name:'컴퓨터',   avgPerStudent:100000, lectureFeeRate:0.50},
+      ]},
+    ],
+    // 강사 정산 항목
+    settleItems: [
+      {name:'수강료수입',    calc:'students × perStudentFee × lectureRate'},
+      {name:'교재비수입',    calc:'students × textbookFee × textbookRate'},
+      {name:'특강수당',      calc:'별도 지급'},
+      {name:'시험감독수당',  calc:'회당 지급'},
+      {name:'교재비차감',    calc:'강사 부담분'},
+    ],
+    deductions: {
+      tax33Rate: 0.033,
+      empInsRate: 0.009,
+    }
+  },
+
+  // ━━ 📦 물류창고 ━━
+  warehouse: {
+    shiftTypes: [
+      {name:'주간(09-18)', baseHourlyRate:10030, nightBonus:0},
+      {name:'오후(14-23)', baseHourlyRate:10030, nightBonus:0.25},
+      {name:'야간(22-07)', baseHourlyRate:10030, nightBonus:0.50},
+      {name:'주말특근',    baseHourlyRate:10030, nightBonus:0.50},
+    ],
+    allowances: [
+      {name:'생산장려금',  calc:'건당 단가 × 건수'},
+      {name:'정근수당',    calc:'개근 시 월정액'},
+      {name:'식대',        amount:200000, taxFree:true},
+      {name:'교통비',      amount:100000, taxFree:true},
+    ],
+    deductions: {
+      empInsRate: 0.009,
+      healthInsRate: 0.035,
+      nationPensionRate: 0.045,
+    }
+  },
+
+  // ━━ 🎪 행사·이벤트 ━━
+  event: {
+    roles: [
+      {name:'행사MC',         dailyRate:300000, type:'프리랜서'},
+      {name:'무대감독',       dailyRate:250000, type:'프리랜서'},
+      {name:'무대스태프',     dailyRate:150000, type:'일용직'},
+      {name:'음향감독',       dailyRate:250000, type:'프리랜서'},
+      {name:'조명감독',       dailyRate:250000, type:'프리랜서'},
+      {name:'카메라감독',     dailyRate:300000, type:'프리랜서'},
+      {name:'사진작가',       dailyRate:200000, type:'프리랜서'},
+      {name:'의전/안내',      dailyRate:100000, type:'일용직'},
+      {name:'경호원',         dailyRate:150000, type:'일용직'},
+      {name:'설치/철거팀',    dailyRate:130000, type:'일용직'},
+    ],
+    allowances: [
+      {name:'식대',       amount:15000, perMeal:true, taxFree:true},
+      {name:'교통비실비', type:'actual', taxFree:true},
+      {name:'야간수당',   rate:0.50},
+      {name:'우천수당',   rate:0.20},
+    ],
+    deductions: {
+      tax33Rate: 0.033,  // 프리랜서
+      empInsRate: 0.009, // 일용직
+    }
+  },
+
+  // ━━ 🏗️ 건설·일용직 ━━
+  construction: {
+    // 2025년 상반기 노임단가 (대한건설협회)
+    trades: [
+      {name:'특별인부',    dailyRate:165000},
+      {name:'보통인부',    dailyRate:152000},
+      {name:'형틀목수',    dailyRate:248000},
+      {name:'철근공',      dailyRate:230000},
+      {name:'콘크리트공',  dailyRate:220000},
+      {name:'미장공',      dailyRate:220000},
+      {name:'타일공',      dailyRate:235000},
+      {name:'도배공',      dailyRate:195000},
+      {name:'도장공',      dailyRate:200000},
+      {name:'전기공',      dailyRate:230000},
+      {name:'배관공',      dailyRate:225000},
+      {name:'용접공',      dailyRate:248000},
+      {name:'비계공',      dailyRate:235000},
+      {name:'방수공',      dailyRate:220000},
+      {name:'석공',        dailyRate:240000},
+    ],
+    allowances: [
+      {name:'위험수당',   type:'per_day', amount:20000},
+      {name:'고소작업',   type:'per_day', amount:30000},
+      {name:'식대',       amount:13000, taxFree:true},
+      {name:'원거리수당', type:'per_day', amount:15000},
+    ],
+    deductions: {
+      empInsRate: 0.009,   // 고용보험
+      workInsRate: 0.0088, // 산재보험
+    }
+  },
+
+  // ━━ 💼 영업직 ━━
+  sales: {
+    commissionTypes: [
+      {name:'매출액기준',    rate:0.05, label:'매출의 5%'},
+      {name:'마진기준',      rate:0.10, label:'마진의 10%'},
+      {name:'계약건수',      perContract:50000, label:'건당 5만'},
+      {name:'신규고객',      perNew:100000, label:'신규 10만'},
+    ],
+    incentives: [
+      {name:'월목표달성',    rate:0.02, threshold:1.0},
+      {name:'초과달성보너스',rate:0.03, threshold:1.2},
+      {name:'분기인센',      type:'quarterly'},
+    ],
+    deductions: {
+      tax33Rate: 0.033,
+      empInsRate: 0.009,
+    }
+  },
+
+  // ━━ 🏌️ 골프장캐디 ━━
+  golf: {
+    fees: [
+      {name:'18홀 캐디피', amount:120000, unit:'라운드'},
+      {name:'9홀 캐디피',  amount:65000,  unit:'라운드'},
+      {name:'카트피',      amount:0,      unit:'별도'},
+      {name:'팁',          amount:0,      unit:'자율'},
+    ],
+    cancelPolicy: {
+      rainCancel: 0.50,   // 우천취소 50% 지급
+      earlyEnd:   0.70,   // 조기종료 70% 지급
+    },
+    deductions: {
+      tax33Rate: 0.033,
+    }
+  },
+
+  // ━━ 🖥️ 프리랜서 ━━
+  freelance: {
+    projectTypes: [
+      {name:'웹개발',       avgMonthly:3500000},
+      {name:'앱개발',       avgMonthly:4000000},
+      {name:'디자인',       avgMonthly:2500000},
+      {name:'영상편집',     avgMonthly:2500000},
+      {name:'번역',         perPage:15000},
+      {name:'카피라이팅',   perPage:30000},
+      {name:'강의',         perHour:50000},
+    ],
+    deductions: {
+      tax33Rate:  0.033,   // 3.3% = 소득세3% + 지방세0.3%
+      vat:        0.10,    // 사업자 등록 시 부가세 10%
+    }
+  },
+
+  // ━━ 🍽️ 음식점·카페 ━━
+  restaurant: {
+    positions: [
+      {name:'홀서빙',   hourlyRate:10030},
+      {name:'주방보조', hourlyRate:10030},
+      {name:'카운터',   hourlyRate:10030},
+      {name:'배달',     hourlyRate:10030},
+      {name:'청소',     hourlyRate:10030},
+    ],
+    allowances: [
+      {name:'식대',     amount:100000, taxFree:true, label:'월'},
+      {name:'교통비',   amount:100000, taxFree:true, label:'월'},
+    ],
+    deductions: {
+      empInsRate: 0.009,
+      healthInsRate: 0.035,
+      nationPensionRate: 0.045,
+    }
+  },
+};
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// IND_DB 활용 헬퍼 함수들
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// 업종별 시술/항목 메뉴 HTML 생성
+function _indGetMenuItems(industryType){
+  var db=IND_DB[industryType];
+  if(!db)return [];
+  if(db.menus)return db.menus;
+  if(db.subjects)return db.subjects;
+  if(db.serviceTypes)return db.serviceTypes;
+  if(db.products)return db.products;
+  if(db.roles)return db.roles;
+  if(db.trades)return db.trades;
+  return [];
+}
+
+// 업종별 빠른선택 버튼 HTML
+function _indQuickMenuHTML(industryType, onSelectFn){
+  var db=IND_DB[industryType];
+  if(!db)return '';
+  var html='';
+  var cats=_indGetMenuItems(industryType);
+  if(!cats.length)return '';
+  cats.slice(0,4).forEach(function(cat){
+    var items=cat.items||[];
+    if(!items.length)return;
+    html+='<div style="font-size:11px;font-weight:700;color:var(--text3);margin:6px 0 3px">'+esc(cat.cat||cat.name||'')+'</div>';
+    html+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">';
+    items.slice(0,6).forEach(function(item){
+      var name=item.name||'';
+      var price=item.avgPrice||item.avgMonthly||item.amount||item.dailyRate||0;
+      html+='<button data-name="'+esc(name)+'" data-price="'+price+'" '+
+        'onclick="'+onSelectFn+'(this)" '+
+        'style="padding:5px 10px;border:1px solid var(--border);border-radius:16px;'+
+        'background:var(--bg);font-size:11px;cursor:pointer">'+
+        esc(name)+(price?'<span style="color:var(--text3);margin-left:3px">₩'+Math.round(price/1000)+'k</span>':'')+'</button>';
+    });
+    html+='</div>';
+  });
+  return html;
+}
+
+// 보험 상품별 수수료 계산
+function _calcInsuranceComm(productName, monthlyPremium, isFirstYear, maintMonths){
+  var db=IND_DB.insurance;
+  var found=null;
+  (db.products||[]).forEach(function(cat){
+    (cat.items||[]).forEach(function(p){
+      if(p.name===productName)found=p;
+    });
+  });
+  if(!found)return {comm:0,tax33:0,net:0};
+  var rate=isFirstYear?found.rate1:(maintMonths>12?found.rateMaint:found.rate2);
+  var comm=Math.round(monthlyPremium*rate);
+  var tax33=Math.round(comm*0.033);
+  return {comm:comm,tax33:tax33,net:comm-tax33};
+}
+
+// 요양 수가 계산 (2026년 기준)
+function _calcCareServiceFee(serviceType, count){
+  var db=IND_DB.care;
+  var found=(db.serviceTypes||[]).find(function(s){return s.name===serviceType;});
+  if(!found)return 0;
+  return Math.round(found.rate2026*count*found.careWorkerRate);
+}
+
+// 학원 강사 정산 계산
+function _calcAcademyFee(subject, students, perStudentFee, textbookFee){
+  var db=IND_DB.academy;
+  var found=null;
+  (db.subjects||[]).forEach(function(cat){
+    (cat.items||[]).forEach(function(s){
+      if(s.name===subject)found=s;
+    });
+  });
+  var rate=found?found.lectureFeeRate:0.50;
+  var fee=Math.round(students*perStudentFee*rate);
+  var textbook=textbookFee?Math.round(students*textbookFee*0.30):0;
+  return {fee:fee,textbook:textbook,total:fee+textbook};
+}
+
 function _colIdx(headers,kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
 function _rvNum(row,i){if(i<0||i>=row.length) return 0; var v=row[i]; if(v===null||v===undefined||v==='') return 0; return parseFloat(String(v).replace(/[,%]/g,'').trim())||0;}
 function _rvBool(row,i){if(i<0) return false; var v=String(row[i]||'').trim().toUpperCase(); return v==='Y'||v==='YES'||v==='1'||v==='TRUE';}
@@ -23478,6 +23903,15 @@ function _bkQuickMenu(name){
   if(el){el.value=name;el.focus();}
 }
 window._bkQuickMenu=_bkQuickMenu;
+function _bkQuickMenuDB(btn){
+  var nameEl=document.getElementById('bk-menu-name');
+  var salesEl=document.getElementById('bk-sales');
+  var matEl=document.getElementById('bk-mat');
+  if(nameEl)nameEl.value=btn.dataset.m||'';
+  if(salesEl&&btn.dataset.price>0)salesEl.value=btn.dataset.price;
+  if(matEl&&btn.dataset.mat>0)matEl.value=btn.dataset.mat;
+}
+window._bkQuickMenuDB=_bkQuickMenuDB;
 
 function _bkAddService(){
   if(!window._bkSelectedDesigner){toast('❌ 디자이너를 먼저 선택하세요');return;}
