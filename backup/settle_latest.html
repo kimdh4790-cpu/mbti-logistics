@@ -35188,114 +35188,163 @@ function _deleteIndSettle(sid, type){
 }
 
 // 3. 직원 관리 (해당 업종 직원 목록)
-function pageIndWorkers(type, title){
+function pageIndWorkers(type,title){
   document.getElementById('page-title').textContent=title+' 직원 관리';
   var c=document.getElementById('content');
-  var info=_IND_INFO[type]||{icon:'📂',name:title,color:'#6b7280'};
+  var info=_IND_INFO[type]||{icon:'\u{1F4C2}',name:title,color:'#6b7280'};
   var did=_CU.dealerId||_CU.uid;
-  c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
+  c.innerHTML='<div class="loading">\u23F3 \uB85C\uB529 \uC911...</div>';
 
-  // settlements + drivers 동시 로드
+  // \u2605 \uC644\uC804 \uBD84\uB9AC: ind_workers(\uC77D\uAE30/\uC4F0\uAE30) + drivers(phone \uC77D\uAE30\uB9CC)
   Promise.all([
-    _db.collection('settlements')
-      .where('dealerId','==',did)
-      .where('industryType','==',type)
-      .limit(20).get(),
-    _db.collection('drivers')
-      .where('dealerId','==',did).get()
+    _db.collection('ind_workers').where('dealerId','==',did).where('industryType','==',type).get(),
+    _db.collection('drivers').where('dealerId','==',did).get()
   ]).then(function(res){
-    // 정산에서 직원명 추출
-    var workerMap={};
+    var workers=[];
     res[0].forEach(function(d){
-      var data=d.data();
-      (data.results||[]).forEach(function(r){
-        var name=r.name||''; if(!name) return;
-        if(!workerMap[name]) workerMap[name]={
-          name:name, months:0, totalNet:0, camp:r.camp||'',
-          phone:'', bankCode:'', account:''
-        };
-        workerMap[name].months++;
-        workerMap[name].totalNet+=(r.net||0);
-      });
+      var w=d.data();
+      workers.push({id:d.id,name:w.name||'',phone:w.phone||'',
+        bankCode:w.bankCode||'',account:w.accountNumber||'',
+        camp:w.camp||'',memo:w.memo||''});
     });
 
-    // drivers에서 phone/계좌 매핑
+    // drivers phone \uC77D\uAE30\uB9CC (\uACF5\uBC31 \uBB34\uC2DC \uB9E4\uCE6D, \uC4F0\uAE30 \uC808\uB300 \uAE08\uC9C0)
+    function normName(n){return String(n||'').replace(/\s/g,'').toLowerCase();}
+    var dMap={};
     res[1].forEach(function(d){
       var w=d.data();
-      var name=w.name||''; if(!name) return;
-      if(workerMap[name]){
-        workerMap[name].phone     = w.phone||w.tel||'';
-        workerMap[name].bankCode  = w.bankCode||'';
-        workerMap[name].account   = w.accountNumber||'';
-        workerMap[name].driverId  = d.id;
-      }
+      if(w.name) dMap[normName(w.name)]={
+        phone:w.phone||w.tel||'',bankCode:w.bankCode||'',account:w.accountNumber||''};
+    });
+    workers.forEach(function(w){
+      var key=normName(w.name);
+      if(!w.phone&&dMap[key])    w.phone=dMap[key].phone;
+      if(!w.account&&dMap[key]){ w.bankCode=dMap[key].bankCode; w.account=dMap[key].account; }
     });
 
-    var workers=Object.values(workerMap).sort(function(a,b){return b.totalNet-a.totalNet;});
-
-    if(!workers.length){
-      c.innerHTML='<div style="max-width:720px;margin:0 auto;padding:16px">'+
-        '<div style="text-align:center;padding:60px;color:var(--text3);background:var(--bg2);border-radius:12px">'+
-        info.icon+'<br><br>등록된 직원 없음<br><small>정산 엑셀 업로드 시 자동 등록됩니다</small></div></div>';
-      return;
-    }
-
-    var noPhone = workers.filter(function(w){return !w.phone;}).length;
-    var noAccount= workers.filter(function(w){return !w.account;}).length;
-
-    var rows=workers.map(function(w){
-      var phoneHtml = w.phone
-        ? '<a href="tel:'+w.phone+'" style="color:#3b82f6;font-size:11px">'+w.phone+'</a>'
-        : '<span style="color:#ef4444;font-size:10px">미등록</span>';
-      var acctHtml = w.account
-        ? '<span style="color:#10b981;font-size:10px">✅ '+esc(BANK_CODES[w.bankCode]||w.bankCode||'')+'</span>'
-        : '<span style="color:#ef4444;font-size:10px">미등록</span>';
-      return '<tr>'+
-        '<td style="font-weight:700">'+esc(w.name)+'</td>'+
-        '<td style="text-align:center;color:var(--text3);font-size:10px">'+esc(w.camp||'-')+'</td>'+
-        '<td style="text-align:center">'+phoneHtml+'</td>'+
-        '<td style="text-align:center">'+acctHtml+'</td>'+
-        '<td style="text-align:center;font-size:10px">'+w.months+'회</td>'+
-        '<td style="text-align:right;color:#10b981;font-weight:700;font-size:11px">₩'+w.totalNet.toLocaleString()+'</td>'+
-      '</tr>';
-    }).join('');
+    var noPhone=workers.filter(function(w){return !w.phone;}).length;
+    var noAcct=workers.filter(function(w){return !w.account;}).length;
 
     var el=document.createElement('div');
     el.style.cssText='max-width:720px;margin:0 auto;padding:16px';
 
-    // 경고 배너
-    if(noPhone>0||noAccount>0){
+    function mkBtn(txt,bg,fg,fn){
+      var b=document.createElement('button');
+      b.style.cssText='flex:1;padding:10px;background:'+bg+';color:'+fg+';border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer';
+      b.textContent=txt; b.onclick=fn; return b;
+    }
+    var br=document.createElement('div');
+    br.style.cssText='display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap';
+    br.appendChild(mkBtn('\uD83D\uDCE5 \uC5D1\uC140 \uB4F1\uB85D',info.color,'#fff',function(){_openIndWorkerExcelImport(type,did,info,function(){pageIndWorkers(type,title);});}));
+    br.appendChild(mkBtn('\uD83D\uDCDD \uD14D\uC2A4\uD2B8 \uB4F1\uB85D','var(--bg3)','var(--text1)',function(){_openIndWorkerTextImport(type,did,info,function(){pageIndWorkers(type,title);});}));
+    br.appendChild(mkBtn('+ \uC9C1\uC811 \uCD94\uAC00','var(--bg3)','var(--text1)',function(){_openIndWorkerForm(null,type,did,info,function(){pageIndWorkers(type,title);});}));
+    if(isSuperAdmin()){
+      var sb=document.createElement('button');
+      sb.style.cssText='padding:10px 12px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer';
+      sb.textContent='\uD83D\uDD04 \uC5F0\uB77D\uCC98 \uB3D9\uAE30\uD654';
+      sb.onclick=function(){_syncPhoneFromDrivers(type,did,workers,function(){pageIndWorkers(type,title);});};
+      br.appendChild(sb);
+    }
+    el.appendChild(br);
+
+    if(workers.length>0&&(noPhone||noAcct)){
       var warn=document.createElement('div');
-      warn.style.cssText='background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:11px;color:var(--acc)';
-      warn.innerHTML='⚠️ 연락처 미등록 '+noPhone+'명 · 계좌 미등록 '+noAccount+'명 — 물류관리 앱에서 등록하거나 직접 입력하세요.';
+      warn.style.cssText='background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:var(--acc)';
+      warn.textContent='\u26A0\uFE0F \uC5F0\uB77D\uCC98 \uBBF8\uB4F1\uB85D '+noPhone+'\uBA85 \u00B7 \uACC4\uC88C \uBBF8\uB4F1\uB85D '+noAcct+'\uBA85';
       el.appendChild(warn);
     }
 
-    var hdr=document.createElement('div');
-    hdr.style.cssText='font-size:12px;font-weight:700;margin-bottom:8px;color:var(--text2)';
-    hdr.textContent=info.icon+' '+info.name+' 직원 — '+workers.length+'명';
-    el.appendChild(hdr);
+    if(!workers.length){
+      var emp=document.createElement('div');
+      emp.style.cssText='text-align:center;padding:50px;color:var(--text3);background:var(--bg2);border-radius:12px';
+      emp.innerHTML=info.icon+'<br><br>\uB4F1\uB85D\uB41C \uC9C1\uC6D0 \uC5C6\uC74C<br><small>\uC5D1\uC140 \uB610\uB294 \uD14D\uC2A4\uD2B8\uB85C \uB4F1\uB85D\uD558\uC138\uC694</small>';
+      el.appendChild(emp);
+    } else {
+      var hd=document.createElement('div');
+      hd.style.cssText='font-size:12px;font-weight:700;margin-bottom:8px;color:var(--text2)';
+      hd.textContent=info.icon+' '+info.name+' \uC9C1\uC6D0 \u2014 '+workers.length+'\uBA85';
+      el.appendChild(hd);
 
-    var tableDiv=document.createElement('div');
-    tableDiv.style.cssText='background:var(--bg2);border-radius:12px;overflow:hidden';
-    tableDiv.innerHTML=
-      '<table style="width:100%;border-collapse:collapse;font-size:11px">'+
+      var rows=workers.map(function(w,wi){
+        var ph=w.phone?'<a href="tel:'+esc(w.phone)+'" style="color:#3b82f6;font-size:11px">'+esc(w.phone)+'</a>':'<span style="color:#ef4444;font-size:10px">\uBBF8\uB4F1\uB85D</span>';
+        var ac=w.account?'<span style="color:#10b981;font-size:10px">\u2705 '+esc(BANK_CODES[w.bankCode]||'\uB4F1\uB85D\uB428')+'</span>':'<span style="color:#ef4444;font-size:10px">\uBBF8\uB4F1\uB85D</span>';
+        return '<tr data-wi="'+wi+'">'+
+          '<td class="iw-edit" data-wi="'+wi+'" style="font-weight:700;cursor:pointer">'+esc(w.name)+' \u270F\uFE0F</td>'+
+          '<td style="font-size:10px;color:var(--text3);text-align:center">'+esc(w.camp||'-')+'</td>'+
+          '<td style="text-align:center">'+ph+'</td>'+
+          '<td style="text-align:center">'+ac+'</td>'+
+          '<td style="text-align:center"><button class="iw-del" data-wi="'+wi+'" style="padding:2px 8px;background:#ef4444;color:#fff;border:none;border-radius:4px;font-size:9px;cursor:pointer">\uC0AD\uC81C</button></td>'+
+        '</tr>';
+      }).join('');
+
+      var td=document.createElement('div');
+      td.style.cssText='background:var(--bg2);border-radius:12px;overflow:hidden';
+      td.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:11px">'+
         '<thead><tr style="background:var(--bg3)">'+
-          '<th style="padding:8px;text-align:left">이름</th>'+
-          '<th style="padding:8px;text-align:center">소속</th>'+
-          '<th style="padding:8px;text-align:center">연락처</th>'+
-          '<th style="padding:8px;text-align:center">계좌</th>'+
-          '<th style="padding:8px;text-align:center">정산횟수</th>'+
-          '<th style="padding:8px;text-align:right">누적실지급</th>'+
-        '</tr></thead>'+
-        '<tbody>'+rows+'</tbody>'+
-      '</table>';
-    el.appendChild(tableDiv);
+          '<th style="padding:8px;text-align:left">\uC774\uB984</th>'+
+          '<th style="padding:8px;text-align:center">\uC18C\uC18D</th>'+
+          '<th style="padding:8px;text-align:center">\uC5F0\uB77D\uCC98</th>'+
+          '<th style="padding:8px;text-align:center">\uACC4\uC88C</th>'+
+          '<th style="padding:8px"></th>'+
+        '</tr></thead><tbody>'+rows+'</tbody></table>';
+      el.appendChild(td);
 
+      setTimeout(function(){
+        var tb=td.querySelector('tbody');
+        if(!tb) return;
+        tb.addEventListener('click',function(e){
+          var edit=e.target.closest('.iw-edit');
+          var del=e.target.closest('.iw-del');
+          if(edit){
+            var w=workers[parseInt(edit.dataset.wi)];
+            if(w) _openIndWorkerForm({id:w.id},type,did,info,function(){pageIndWorkers(type,title);});
+          } else if(del){
+            e.stopPropagation();
+            var w=workers[parseInt(del.dataset.wi)];
+            if(w) _deleteIndWorker(w.id,type,did,function(){pageIndWorkers(type,title);});
+          }
+        });
+      },100);
+    }
     c.innerHTML=''; c.appendChild(el);
-  }).catch(function(e){
-    c.innerHTML='<div class="empty">오류: '+esc(e.message)+'</div>';
-  });
+  }).catch(function(e){c.innerHTML='<div class="empty">\uC624\uB958: '+esc(e.message)+'</div>';});
+}
+
+// \uD83D\uDD04 drivers \uC5F0\uB77D\uCC98 \u2192 ind_workers \uB3D9\uAE30\uD654 (\uC77D\uAE30\uB9CC, drivers \uC808\uB300 \uBBF8\uC218\uC815)
+function _syncPhoneFromDrivers(type,did,currentWorkers,cb){
+  if(!confirm('\uBB3C\uB958\uC571 \uAE30\uC0AC \uB370\uC774\uD130\uC5D0\uC11C \uC5F0\uB77D\uCC98\uB97C \uAC00\uC838\uC640 ind_workers\uC5D0 \uC800\uC7A5\uD569\uB2C8\uB2E4.\n(drivers \uC6D0\uBCF8\uC740 \uC808\uB300 \uC218\uC815\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4)')) return;
+  toast('\uD83D\uDD04 \uC5F0\uB77D\uCC98 \uB3D9\uAE30\uD654 \uC911...');
+
+  _db.collection('drivers').where('dealerId','==',did).get()
+  .then(function(snap){
+    function normName(n){return String(n||'').replace(/\s/g,'').toLowerCase();}
+    var dMap={};
+    snap.forEach(function(d){
+      var w=d.data();
+      if(w.name&&(w.phone||w.tel)) dMap[normName(w.name)]={
+        phone:w.phone||w.tel||'',bankCode:w.bankCode||'',account:w.accountNumber||''
+      };
+    });
+
+    var batch=_db.batch(); var cnt=0;
+    currentWorkers.forEach(function(w){
+      if(!w.id) return;
+      var key=normName(w.name);
+      var drv=dMap[key]; if(!drv) return;
+      var upd={};
+      if(!w.phone&&drv.phone)        upd.phone=drv.phone;
+      if(!w.account&&drv.account){ upd.bankCode=drv.bankCode; upd.accountNumber=drv.account; }
+      if(Object.keys(upd).length>0){
+        batch.update(_db.collection('ind_workers').doc(w.id),upd);
+        cnt++;
+      }
+    });
+
+    if(cnt===0){ toast('\uB9E4\uCE6D\uB41C \uC5F0\uB77D\uCC98 \uC5C6\uC74C (\uC774\uB984 \uD655\uC778 \uD544\uC694)'); return; }
+    batch.commit()
+      .then(function(){ toast('\u2705 '+cnt+'\uBA85 \uC5F0\uB77D\uCC98 \uB3D9\uAE30\uD654 \uC644\uB8CC'); if(cb)cb(); })
+      .catch(function(e){ toast('\u274C '+e.message); });
+  }).catch(function(e){ toast('\u274C '+e.message); });
 }
 
 
