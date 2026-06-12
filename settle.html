@@ -20160,6 +20160,7 @@ var MENUS_SETTLE = [
     {ic:'👤',l:'직원 관리',       p:'ind_construction_workers',   plan_key:'ind_construction'},
     {ic:'⚙️',l:'규칙 설정',       p:'ind_rules',                  plan_key:'ind_construction'},
     {ic:'💸',l:'송금',            p:'payout',              plan_key:'ind_construction'},
+    {ic:'📋',l:'📋 출역일지',  p:'ind_construction_roster',  plan_key:'ind_construction'},
     {ic:'🧾',l:'세무사 연동',      p:'tax_share',           plan_key:'ind_construction'},
   ]},
   {s:'🛡️ 보험설계사', items:[
@@ -20168,6 +20169,7 @@ var MENUS_SETTLE = [
     {ic:'👤',l:'직원 관리',       p:'ind_insurance_workers',   plan_key:'ind_insurance'},
     {ic:'⚙️',l:'규칙 설정',       p:'ind_rules',                  plan_key:'ind_insurance'},
     {ic:'💸',l:'송금',            p:'payout',              plan_key:'ind_insurance'},
+    {ic:'📋',l:'📋 실적표',  p:'ind_insurance_roster',  plan_key:'ind_insurance'},
     {ic:'🧾',l:'세무사 연동',      p:'tax_share',           plan_key:'ind_insurance'},
   ]},
   {s:'🚗 배달대행·퀵', items:[
@@ -20176,6 +20178,7 @@ var MENUS_SETTLE = [
     {ic:'👤',l:'직원 관리',       p:'ind_delivery_workers',   plan_key:'ind_quick'},
     {ic:'⚙️',l:'규칙 설정',       p:'ind_rules',                  plan_key:'ind_quick'},
     {ic:'💸',l:'송금',            p:'payout',              plan_key:'ind_quick'},
+    {ic:'📋',l:'📋 콜 실적표',  p:'ind_delivery_roster',  plan_key:'ind_quick'},
     {ic:'🧾',l:'세무사 연동',      p:'tax_share',           plan_key:'ind_quick'},
   ]},
   {s:'💄 뷰티·미용', items:[
@@ -20184,6 +20187,7 @@ var MENUS_SETTLE = [
     {ic:'👤',l:'직원 관리',       p:'ind_beauty_workers',   plan_key:'ind_beauty'},
     {ic:'⚙️',l:'규칙 설정',       p:'ind_rules',                  plan_key:'ind_beauty'},
     {ic:'💸',l:'송금',            p:'payout',              plan_key:'ind_beauty'},
+    {ic:'📋',l:'📋 시술 매출표',  p:'ind_beauty_roster',  plan_key:'ind_beauty'},
     {ic:'🧾',l:'세무사 연동',      p:'tax_share',           plan_key:'ind_beauty'},
   ]},
   {s:'🏥 요양·돌봄', items:[
@@ -20192,6 +20196,7 @@ var MENUS_SETTLE = [
     {ic:'👤',l:'직원 관리',       p:'ind_care_workers',   plan_key:'ind_care'},
     {ic:'⚙️',l:'규칙 설정',       p:'ind_rules',                  plan_key:'ind_care'},
     {ic:'💸',l:'송금',            p:'payout',              plan_key:'ind_care'},
+    {ic:'📋',l:'📋 방문 일지',  p:'ind_care_roster',  plan_key:'ind_care'},
     {ic:'🧾',l:'세무사 연동',      p:'tax_share',           plan_key:'ind_care'},
   ]},
   {s:'🎓 학원·교육', items:[
@@ -20200,6 +20205,7 @@ var MENUS_SETTLE = [
     {ic:'👤',l:'직원 관리',       p:'ind_academy_workers',   plan_key:'ind_academy'},
     {ic:'⚙️',l:'규칙 설정',       p:'ind_rules',                  plan_key:'ind_academy'},
     {ic:'💸',l:'송금',            p:'payout',              plan_key:'ind_academy'},
+    {ic:'📋',l:'📋 강의 스케줄',  p:'ind_academy_roster',  plan_key:'ind_academy'},
     {ic:'🧾',l:'세무사 연동',      p:'tax_share',           plan_key:'ind_academy'},
   ]},
   {s:'📦 물류창고', items:[
@@ -20208,6 +20214,7 @@ var MENUS_SETTLE = [
     {ic:'👤',l:'직원 관리',       p:'ind_warehouse_workers',   plan_key:'ind_warehouse'},
     {ic:'⚙️',l:'규칙 설정',       p:'ind_rules',                  plan_key:'ind_warehouse'},
     {ic:'💸',l:'송금',            p:'payout',              plan_key:'ind_warehouse'},
+    {ic:'📋',l:'📋 작업 실적표',  p:'ind_warehouse_roster',  plan_key:'ind_warehouse'},
     {ic:'🧾',l:'세무사 연동',      p:'tax_share',           plan_key:'ind_warehouse'},
   ]},
   {s:'🎪 행사·이벤트', items:[
@@ -20216,6 +20223,7 @@ var MENUS_SETTLE = [
     {ic:'👤',l:'직원 관리',       p:'ind_event_workers',   plan_key:'ind_event'},
     {ic:'⚙️',l:'규칙 설정',       p:'ind_rules',                  plan_key:'ind_event'},
     {ic:'💸',l:'송금',            p:'payout',              plan_key:'ind_event'},
+    {ic:'📋',l:'📋 투입 현황',  p:'ind_event_roster',  plan_key:'ind_event'},
     {ic:'🧾',l:'세무사 연동',      p:'tax_share',           plan_key:'ind_event'},
   ]},
   {s:'💼 영업직', items:[
@@ -20224,6 +20232,7 @@ var MENUS_SETTLE = [
     {ic:'👤',l:'직원 관리',       p:'ind_sales_workers',   plan_key:'ind_sales'},
     {ic:'⚙️',l:'규칙 설정',       p:'ind_rules',                  plan_key:'ind_sales'},
     {ic:'💸',l:'송금',            p:'payout',              plan_key:'ind_sales'},
+    {ic:'📋',l:'📋 영업 실적표',  p:'ind_sales_roster',  plan_key:'ind_sales'},
     {ic:'🧾',l:'세무사 연동',      p:'tax_share',           plan_key:'ind_sales'},
   ]},
   {s:'🖥️ 프리랜서', items:[
@@ -20232,6 +20241,7 @@ var MENUS_SETTLE = [
     {ic:'👤',l:'직원 관리',       p:'ind_freelance_workers',   plan_key:'ind_freelance'},
     {ic:'⚙️',l:'규칙 설정',       p:'ind_rules',                  plan_key:'ind_freelance'},
     {ic:'💸',l:'송금',            p:'payout',              plan_key:'ind_freelance'},
+    {ic:'📋',l:'📋 프로젝트 현황',  p:'ind_freelance_roster',  plan_key:'ind_freelance'},
     {ic:'🧾',l:'세무사 연동',      p:'tax_share',           plan_key:'ind_freelance'},
   ]},
   {s:'🍽️ 음식점·카페', items:[
@@ -20240,6 +20250,7 @@ var MENUS_SETTLE = [
     {ic:'👤',l:'직원 관리',       p:'ind_restaurant_workers',   plan_key:'ind_restaurant'},
     {ic:'⚙️',l:'규칙 설정',       p:'ind_rules',                  plan_key:'ind_restaurant'},
     {ic:'💸',l:'송금',            p:'payout',              plan_key:'ind_restaurant'},
+    {ic:'📋',l:'📋 근무 스케줄',  p:'ind_restaurant_roster',  plan_key:'ind_restaurant'},
     {ic:'🧾',l:'세무사 연동',      p:'tax_share',           plan_key:'ind_restaurant'},
   ]},
   {s:'📋 범용 정산', items:[
@@ -20258,7 +20269,14 @@ var MENUS_SETTLE = [
     {ic:'🔧',l:'현장 출고 컨펌',    p:'clean_dispatch',   plan_key:'settle'},
     {ic:'📊',l:'정산 현황',          p:'clean_settle',     plan_key:'settle'},
   ]},
-
+  {s:'📦 재고관리', items:[
+    {ic:'📦',l:'재고관리',          p:'inventory',        plan_key:'inventory'},
+    {ic:'📊',l:'과장별 취합',        p:'inv_summary',      plan_key:'inventory'},
+    {ic:'📋',l:'수정 이력',          p:'inv_edit_log',     plan_key:'inventory'},
+    {ic:'🕐',l:'업로드 변경이력',    p:'inv_change_log',   plan_key:'inventory'},
+    {ic:'📅',l:'월별 통계',           p:'inv_monthly',       plan_key:'inventory'},
+    {ic:'🛒',l:'발주 관리',           p:'inv_order',         plan_key:'inventory'},
+  ]},
   
   
   
@@ -22862,6 +22880,18 @@ function goPage(page){
   ind_construction_settle: function(){pageIndSettle('construction','🏗️ 건설·일용직');},
   ind_construction_list:   function(){pageIndList('construction','🏗️ 건설·일용직');},
   ind_construction_workers:function(){pageIndWorkers('construction','🏗️ 건설·일용직');},
+  // 업종별 근무표
+  ind_construction_roster: function(){pageIndRoster('construction','🏗️ 건설·일용직');},
+  ind_insurance_roster:    function(){pageIndRoster('insurance','🛡️ 보험설계사');},
+  ind_delivery_roster:     function(){pageIndRoster('delivery','🚗 배달대행·퀵');},
+  ind_beauty_roster:       function(){pageIndRoster('beauty','💄 뷰티·미용');},
+  ind_care_roster:         function(){pageIndRoster('care','🏥 요양·돌봄');},
+  ind_academy_roster:      function(){pageIndRoster('academy','🎓 학원·교육');},
+  ind_warehouse_roster:    function(){pageIndRoster('warehouse','📦 물류창고');},
+  ind_event_roster:        function(){pageIndRoster('event','🎪 행사·이벤트');},
+  ind_sales_roster:        function(){pageIndRoster('sales','💼 영업직');},
+  ind_freelance_roster:    function(){pageIndRoster('freelance','🖥️ 프리랜서');},
+  ind_restaurant_roster:   function(){pageIndRoster('restaurant','🍽️ 음식점·카페');},
   ind_construction:        function(){pageIndSettle('construction','🏗️ 건설·일용직');},
   ind_insurance_settle: function(){pageIndSettle('insurance','🛡️ 보험설계사');},
   ind_insurance_list:   function(){pageIndList('insurance','🛡️ 보험설계사');},
@@ -35453,6 +35483,186 @@ function _openIndWorkerTextImport(type, did, info, cb){
   pop.appendChild(box);
   document.body.appendChild(pop);
   pop.onclick=function(e){if(e.target===pop)pop.remove();};
+}
+
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 📋 업종별 근무표 (공통)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+var _IND_ROSTER_CFG = {"construction": {"label": "출역일지", "icon": "🏗️", "cols": ["현장명", "직종", "출역일수", "일당", "특기사항"], "tip": "현장별·직종별 출역 현황을 관리합니다."}, "insurance": {"label": "실적표", "icon": "🛡️", "cols": ["소속팀", "신계약건", "유지건", "시책", "이월금"], "tip": "월별 계약·유지 실적을 관리합니다."}, "quick": {"label": "콜 실적표", "icon": "🚗", "cols": ["센터", "콜건수", "장거리", "심야", "미션"], "tip": "일별·라이더별 콜 실적을 관리합니다."}, "beauty": {"label": "시술 매출표", "icon": "💄", "cols": ["직급", "시술매출", "수수료율", "팁", "재료비"], "tip": "디자이너별 시술 매출 현황을 관리합니다."}, "care": {"label": "방문 일지", "icon": "🏥", "cols": ["서비스구분", "방문일수", "서비스시간", "목욕횟수", "특이사항"], "tip": "요양보호사별 방문·서비스 현황을 관리합니다."}, "academy": {"label": "강의 스케줄", "icon": "🎓", "cols": ["담당과목", "수업시간", "수강생수", "교재비", "비고"], "tip": "강사별 강의 스케줄·수강생 현황을 관리합니다."}, "warehouse": {"label": "작업 실적표", "icon": "📦", "cols": ["작업구분", "출근일수", "피킹건", "패킹건", "오배송"], "tip": "직원별 작업 실적·페널티 현황을 관리합니다."}, "event": {"label": "투입 현황", "icon": "🎪", "cols": ["행사명", "직무", "근무일수", "식대", "교통비"], "tip": "행사별·직무별 인력 투입 현황을 관리합니다."}, "sales": {"label": "영업 실적표", "icon": "💼", "cols": ["팀", "영업건수", "계약금액", "달성률", "인센"], "tip": "영업사원별 실적·달성률을 관리합니다."}, "freelance": {"label": "프로젝트 현황", "icon": "🖥️", "cols": ["프로젝트명", "계약금액", "진행단계", "마감일", "지연여부"], "tip": "프리랜서별 프로젝트 진행 현황을 관리합니다."}, "restaurant": {"label": "근무 스케줄", "icon": "🍽️", "cols": ["포지션", "근무일수", "근무시간", "주휴여부", "비고"], "tip": "직원별 근무 스케줄·주휴수당 현황을 관리합니다."}};
+
+function pageIndRoster(type, title){
+  document.getElementById('page-title').textContent=title+' 근무표';
+  var c=document.getElementById('content');
+  var info=_IND_INFO[type]||{icon:'📋',name:title,color:'#6b7280'};
+  var cfg=_IND_ROSTER_CFG[type]||{label:'근무표',cols:[],tip:''};
+  var did=_CU.dealerId||_CU.uid;
+
+  // topbar — 엑셀 다운로드
+  var tr=document.getElementById('topbar-right');
+  if(tr){
+    tr.innerHTML='';
+    var dlBtn=document.createElement('button');
+    dlBtn.textContent='📥 양식 다운로드';
+    dlBtn.style.cssText='padding:6px 14px;background:var(--bg3);color:var(--text1);border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer';
+    dlBtn.onclick=function(){_downloadRosterTemplate(type,cfg);};
+    tr.appendChild(dlBtn);
+  }
+
+  c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
+
+  // ind_workers에서 직원 목록
+  _db.collection('ind_workers')
+    .where('dealerId','==',did)
+    .where('industryType','==',type).get()
+  .then(function(snap){
+    var workers=[];
+    snap.forEach(function(d){workers.push(Object.assign({id:d.id},d.data()));});
+
+    var el=document.createElement('div');
+    el.style.cssText='max-width:800px;margin:0 auto;padding:16px';
+
+    // 헤더 정보
+    var hdr=document.createElement('div');
+    hdr.style.cssText='background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 16px;margin-bottom:12px';
+    hdr.innerHTML=
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">'+
+        '<span style="font-size:20px">'+info.icon+'</span>'+
+        '<span style="font-size:14px;font-weight:800">'+esc(info.name)+' '+cfg.label+'</span>'+
+        '<span style="font-size:10px;color:var(--text3);flex:1">'+esc(cfg.tip)+'</span>'+
+      '</div>'+
+      '<div style="font-size:11px;color:var(--text3)">인식 컬럼: '+cfg.cols.join(' · ')+'</div>';
+    el.appendChild(hdr);
+
+    if(!workers.length){
+      // 직원 없으면 등록 안내
+      var empty=document.createElement('div');
+      empty.style.cssText='text-align:center;padding:50px;background:var(--bg2);border-radius:12px;color:var(--text3)';
+      empty.innerHTML=
+        '👤<br><br>등록된 직원 없음<br>'+
+        '<small>직원 관리에서 직원을 먼저 등록하세요</small><br><br>';
+      var goBtn=document.createElement('button');
+      goBtn.style.cssText='padding:10px 20px;background:'+info.color+';color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer';
+      goBtn.textContent='👤 직원 관리로 이동';
+      goBtn.onclick=function(){goPage('ind_'+type+'_workers');};
+      empty.appendChild(goBtn);
+      el.appendChild(empty);
+    } else {
+      // 월 선택
+      var now=new Date();
+      var ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+
+      var monthRow=document.createElement('div');
+      monthRow.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:12px';
+      var monthSel=document.createElement('input');
+      monthSel.type='month'; monthSel.value=ym;
+      monthSel.style.cssText='padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text1);font-size:13px';
+      var loadBtn=document.createElement('button');
+      loadBtn.style.cssText='padding:8px 16px;background:'+info.color+';color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer';
+      loadBtn.textContent='조회';
+      loadBtn.onclick=function(){_loadIndRosterData(type,did,workers,monthSel.value,cfg,tableDiv,info);};
+      monthRow.appendChild(monthSel);
+      monthRow.appendChild(loadBtn);
+      el.appendChild(monthRow);
+
+      // 정산 이력에서 해당 월 데이터 표시
+      var tableDiv=document.createElement('div');
+      el.appendChild(tableDiv);
+      _loadIndRosterData(type,did,workers,ym,cfg,tableDiv,info);
+    }
+
+    c.innerHTML=''; c.appendChild(el);
+  }).catch(function(e){c.innerHTML='<div class="empty">오류: '+esc(e.message)+'</div>';});
+}
+
+function _loadIndRosterData(type,did,workers,ym,cfg,tableDiv,info){
+  tableDiv.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
+
+  // 해당 월 settlements 조회
+  _db.collection('settlements')
+    .where('dealerId','==',did)
+    .where('industryType','==',type)
+    .where('month','==',ym).get()
+  .then(function(snap){
+    var settleMap={};
+    snap.forEach(function(d){
+      var data=d.data();
+      (data.results||[]).forEach(function(r){
+        if(r.name) settleMap[r.name]=r;
+      });
+    });
+
+    var rows=workers.map(function(w){
+      var r=settleMap[w.name]||{};
+      var extras=r.extras||[];
+
+      // 업종별 컬럼 값 추출
+      var colVals=cfg.cols.map(function(col){
+        // extras에서 관련 항목 찾기
+        var match=extras.find(function(ex){
+          return ex&&ex.label&&(ex.label.includes(col)||col.includes(ex.label.split(' ')[0]));
+        });
+        if(match) return match.value!=null?
+          (match.value<0?'▼'+Math.abs(match.value).toLocaleString():'▲'+match.value.toLocaleString())
+          :'-';
+        // 기본 필드
+        if(col.includes('일수')||col.includes('건수')||col.includes('시간')) return r.days||r.calls||r.hours||'-';
+        if(col.includes('매출')||col.includes('금액')) return r.gross?(r.gross).toLocaleString():'-';
+        return '-';
+      });
+
+      var hasData=Object.keys(settleMap).includes(w.name);
+      return '<tr style="'+(hasData?'':'opacity:.5')+'">' +
+        '<td style="font-weight:700">'+esc(w.name)+'</td>'+
+        '<td style="font-size:10px;color:var(--text3);text-align:center">'+esc(w.camp||'-')+'</td>'+
+        colVals.map(function(v){return '<td style="text-align:center;font-size:11px">'+v+'</td>';}).join('')+
+        '<td style="text-align:right;color:'+(hasData?'#10b981':'var(--text3)')+';font-weight:700">'+
+          (hasData?'₩'+(r.net||0).toLocaleString():'미정산')+'</td>'+
+      '</tr>';
+    }).join('');
+
+    tableDiv.innerHTML=
+      '<div style="font-size:11px;color:var(--text3);margin-bottom:6px">'+ym+' · '+workers.length+'명 중 '+Object.keys(settleMap).length+'명 정산완료</div>'+
+      '<div style="background:var(--bg2);border-radius:12px;overflow:hidden">'+
+        '<table style="width:100%;border-collapse:collapse;font-size:11px">'+
+          '<thead><tr style="background:var(--bg3)">'+
+            '<th style="padding:8px;text-align:left">이름</th>'+
+            '<th style="padding:8px;text-align:center">소속</th>'+
+            cfg.cols.map(function(col){return '<th style="padding:8px;text-align:center">'+col+'</th>';}).join('')+
+            '<th style="padding:8px;text-align:right">실지급</th>'+
+          '</tr></thead>'+
+          '<tbody>'+rows+'</tbody>'+
+        '</table>'+
+      '</div>';
+  }).catch(function(e){
+    tableDiv.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3)">정산 데이터 없음 — 엑셀 업로드 후 조회하세요</div>';
+  });
+}
+
+// 근무표 양식 다운로드
+function _downloadRosterTemplate(type,cfg){
+  var workers_=[];
+  var did=_CU&&(_CU.dealerId||_CU.uid);
+  if(!did){toast('로그인 필요');return;}
+  _db.collection('ind_workers').where('dealerId','==',did).where('industryType','==',type).get()
+  .then(function(snap){
+    snap.forEach(function(d){workers_.push(d.data().name||'');});
+    var headers=['이름','소속'].concat(cfg.cols);
+    var rows=[headers];
+    if(workers_.length){
+      workers_.forEach(function(name){rows.push([name,''].concat(cfg.cols.map(function(){return '';})));});
+    } else {
+      rows.push(['홍길동','A팀'].concat(cfg.cols.map(function(){return '';})));
+    }
+    var csv=rows.map(function(r){return r.map(function(v){return '"'+String(v)+'"';}).join(',');}).join('\r\n');
+    var blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');
+    a.href=url; a.download=cfg.label+'_양식.csv';
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+    toast('✅ 양식 다운로드 완료');
+  });
 }
 
 function pageIndWorkers(type,title){
