@@ -35083,6 +35083,22 @@ function pageIndList(type, title){
   var c=document.getElementById('content');
   var info=_IND_INFO[type]||{icon:'📂',name:title,color:'#6b7280'};
   var did=_CU.dealerId||_CU.uid;
+
+  // topbar 업로드 버튼
+  var tr=document.getElementById('topbar-right');
+  if(tr){
+    tr.innerHTML='';
+    var ub=document.createElement('button');
+    ub.textContent='📥 정산 엑셀 업로드';
+    ub.style.cssText='padding:6px 14px;background:'+info.color+';color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer';
+    ub.onclick=function(){
+      if(!_COMPANY_CFG) _COMPANY_CFG={};
+      _COMPANY_CFG.industryType=type;
+      document.getElementById('excel-input').click();
+    };
+    tr.appendChild(ub);
+  }
+
   c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
 
   _db.collection('settlements')
@@ -35094,46 +35110,75 @@ function pageIndList(type, title){
     snap.forEach(function(d){list.push(Object.assign({id:d.id},d.data()));});
     list.sort(function(a,b){return (b.month||'').localeCompare(a.month||'');});
 
+    var el=document.createElement('div');
+    el.style.cssText='max-width:720px;margin:0 auto;padding:16px';
+
+    // 업로드 버튼 (페이지 내)
+    var uploadBtn=document.createElement('button');
+    uploadBtn.style.cssText='width:100%;padding:12px;background:'+info.color+';color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:12px';
+    uploadBtn.textContent='📥 '+info.name+' 정산 엑셀 업로드';
+    uploadBtn.onclick=function(){
+      if(!_COMPANY_CFG) _COMPANY_CFG={};
+      _COMPANY_CFG.industryType=type;
+      document.getElementById('excel-input').click();
+    };
+    el.appendChild(uploadBtn);
+
+    // 샘플 다운로드
+    var sampleBtn=document.createElement('button');
+    sampleBtn.style.cssText='width:100%;padding:8px;background:var(--bg3);color:var(--text2);border:none;border-radius:8px;font-size:11px;cursor:pointer;margin-bottom:14px';
+    sampleBtn.textContent='📄 샘플 양식 다운로드';
+    sampleBtn.onclick=function(){_downloadIndustrySample(type);};
+    el.appendChild(sampleBtn);
+
     if(!list.length){
-      c.innerHTML='<div style="max-width:720px;margin:0 auto;padding:16px"><div style="text-align:center;padding:60px;color:var(--text3)">'+info.icon+'<br>저장된 정산 없음</div></div>';
-      return;
+      var empty=document.createElement('div');
+      empty.style.cssText='text-align:center;padding:40px;color:var(--text3);font-size:13px;background:var(--bg2);border-radius:12px';
+      empty.innerHTML=info.icon+'<br><br>저장된 정산 없음<br><small style="font-size:11px">엑셀 업로드 후 저장하면 여기에 표시됩니다</small>';
+      el.appendChild(empty);
+    } else {
+      var hdr=document.createElement('div');
+      hdr.style.cssText='font-size:12px;font-weight:700;margin-bottom:8px;color:var(--text2)';
+      hdr.textContent=info.icon+' '+info.name+' 정산 목록 — '+list.length+'건';
+      el.appendChild(hdr);
+
+      var rows=list.map(function(h){
+        var payStatus=h.payoutStatus==='PAID'
+          ?'<span style="color:#10b981;font-weight:700;font-size:10px">✅ 지급완료</span>'
+          :'<span style="color:var(--acc);font-weight:700;font-size:10px">⏳ 미지급</span>';
+        return '<tr style="cursor:pointer" data-sid="'+h.id+'" data-stype="'+type+'" onclick="_loadIndustrySavedSettle(this.dataset.sid,this.dataset.stype)">'+
+          '<td style="font-weight:700">'+esc(h.month||'')+'</td>'+
+          '<td style="text-align:center">'+(h.totalCount||0)+'명</td>'+
+          '<td style="text-align:right;color:#10b981;font-weight:700">₩'+(h.totalNet||0).toLocaleString()+'</td>'+
+          '<td style="text-align:right;color:var(--text3)">₩'+(h.totalGross||0).toLocaleString()+'</td>'+
+          '<td style="text-align:center">'+payStatus+'</td>'+
+          '<td style="text-align:center"><button data-dsid="'+h.id+'" data-dtype="'+type+'" onclick="event.stopPropagation();_deleteIndSettle(this.dataset.dsid,this.dataset.dtype)" style="padding:2px 8px;background:#ef4444;color:#fff;border:none;border-radius:4px;font-size:9px;cursor:pointer">삭제</button></td>'+
+        '</tr>';
+      }).join('');
+
+      var tableDiv=document.createElement('div');
+      tableDiv.style.cssText='background:var(--bg2);border-radius:12px;overflow:hidden';
+      tableDiv.innerHTML=
+        '<table style="width:100%;border-collapse:collapse;font-size:11px">'+
+          '<thead><tr style="background:var(--bg3)">'+
+            '<th style="padding:8px;text-align:left">월</th>'+
+            '<th style="padding:8px;text-align:center">인원</th>'+
+            '<th style="padding:8px;text-align:right">실지급</th>'+
+            '<th style="padding:8px;text-align:right">총지급</th>'+
+            '<th style="padding:8px;text-align:center">상태</th>'+
+            '<th style="padding:8px"></th>'+
+          '</tr></thead>'+
+          '<tbody>'+rows+'</tbody>'+
+        '</table>';
+      el.appendChild(tableDiv);
     }
 
-    var rows=list.map(function(h){
-      var payStatus=h.payoutStatus==='PAID'
-        ?'<span style="color:#10b981;font-weight:700;font-size:10px">✅ 지급완료</span>'
-        :'<span style="color:var(--acc);font-weight:700;font-size:10px">⏳ 미지급</span>';
-      return '<tr style="cursor:pointer" data-sid="'+h.id+'" data-stype="'+type+'" onclick="_loadIndustrySavedSettle(this.dataset.sid,this.dataset.stype)">'+
-        '<td style="font-weight:700">'+esc(h.month||'')+'</td>'+
-        '<td style="text-align:center">'+(h.totalCount||0)+'명</td>'+
-        '<td style="text-align:right;color:#10b981;font-weight:700">₩'+(h.totalNet||0).toLocaleString()+'</td>'+
-        '<td style="text-align:right;color:var(--text3)">₩'+(h.totalGross||0).toLocaleString()+'</td>'+
-        '<td style="text-align:center">'+payStatus+'</td>'+
-        '<td style="text-align:center"><button data-dsid="'+h.id+'" data-dtype="'+type+'" onclick="event.stopPropagation();_deleteIndSettle(this.dataset.dsid,this.dataset.dtype)" style="padding:2px 8px;background:#ef4444;color:#fff;border:none;border-radius:4px;font-size:9px;cursor:pointer">삭제</button></td>'+
-      '</tr>';
-    }).join('');
-
-    c.innerHTML=
-      '<div style="max-width:720px;margin:0 auto;padding:16px">'+
-        '<div style="font-size:12px;font-weight:700;margin-bottom:10px">'+info.icon+' '+esc(info.name)+' 정산 관리 — '+list.length+'건</div>'+
-        '<div style="background:var(--bg2);border-radius:12px;overflow:hidden">'+
-          '<table style="width:100%;border-collapse:collapse;font-size:11px">'+
-            '<thead><tr style="background:var(--bg3)">'+
-              '<th style="padding:8px;text-align:left">월</th>'+
-              '<th style="padding:8px;text-align:center">인원</th>'+
-              '<th style="padding:8px;text-align:right">실지급</th>'+
-              '<th style="padding:8px;text-align:right">총지급</th>'+
-              '<th style="padding:8px;text-align:center">상태</th>'+
-              '<th style="padding:8px"></th>'+
-            '</tr></thead>'+
-            '<tbody>'+rows+'</tbody>'+
-          '</table>'+
-        '</div>'+
-      '</div>';
+    c.innerHTML=''; c.appendChild(el);
   }).catch(function(e){
     c.innerHTML='<div class="empty">오류: '+esc(e.message)+'</div>';
   });
 }
+
 
 function _deleteIndSettle(sid, type){
   if(!confirm('이 정산을 삭제하시겠습니까?')) return;
