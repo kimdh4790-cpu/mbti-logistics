@@ -23507,6 +23507,7 @@ function _renderSettlePage(settles,c){
     +'<span style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:0.5px;margin-right:4px">🏕️ 캠프</span>'
     +_campTabHTML('전체',campCount.all,(filterCamp==='all'),'settle','all')
     +CAMP_LIST_S.map(function(cc){var on=(cc===filterCamp);var cnt=campCount[cc]||0;
+      if(cnt===0&&!on) return '';  // ★ count=0 캠프 탭 숨김
       return _campTabHTML(cc,cnt,on,'settle',cc);
     }).join('')  +'</div>';
   var filtered=filterMonth==='all'?settles:settles.filter(function(x){return x.month===filterMonth;});
