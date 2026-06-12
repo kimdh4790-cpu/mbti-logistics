@@ -2457,6 +2457,229 @@ function _rvNum(row,i){if(i<0||i>=row.length) return 0; var v=row[i]; if(v===nul
 function _rvBool(row,i){if(i<0) return false; var v=String(row[i]||'').trim().toUpperCase(); return v==='Y'||v==='YES'||v==='1'||v==='TRUE';}
 function _rvRate(row,i){if(i<0) return 0; return (parseFloat(String(row[i]||'0').replace('%','').trim())||0)/100;}
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🌐 범용(Universal) 파서 엔진
+// 7단계 오픈형 구조: Key / Volume / Rate / Base / Plus / Minus / Tax
+// 어떤 엑셀 컬럼명이 오든 키워드 사전으로 자동 매핑
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// 키워드 사전 (Synonym Map)
+var _KEYWORD_MAP = {
+  // 1. 대상자 키
+  KEY:    ['사번','이름','성명','담당자','스태프ID','라이더명','설계사코드','강사명',
+           '근무자','작업자','대상자','프리코드','알바ID','요양사사번','직원번호',
+           '이름','Name','name'],
+
+  // 2. 근무 기준값 (수량)
+  VOLUME: ['근무공수','공수','근무시간','시간','수강생수','시술건수','투입일수',
+           '배송건수','건수','일수','출역공수','출역일수','실적건수','기준수량',
+           '평수','인원','방문일수'],
+
+  // 3. 단가/요율
+  RATE:   ['일당단가','기본시급','시급','일당','단가','인센티브비율','수수료율',
+           '배분율','강사배분율','시간당수가','적용단가요율','요율','커미션율',
+           '비율','단가요율'],
+
+  // 4. 기본 지급액
+  BASE:   ['기본급','공수총액','시술금액','공급가액','기본대행료','당월실적액',
+           '계약금액','당월청구공급가','기본급여','총계약금액','시술매출'],
+
+  // 5. 추가 가산액
+  PLUS:   ['연장수당','야간수당','야간가산','주휴수당','시상금','교통비','식대',
+           '인센티브','보너스','처우개선비','특근수당','가산수당금액','추가수당',
+           '식대지원금','교통비실비'],
+
+  // 6. 차감/공제액
+  MINUS:  ['부자재값','약값','환수금','교재비','소모품비','지입료','보증금',
+           '재료비','약품비','교재비차감','차량렌탈료','현장차감금액','차감금액',
+           '공제금액','페널티','지체상금','환수발생액'],
+
+  // 7. 세금 구분
+  TAX:    ['세금공제여부','원천징수','소득세','고용보험','4대보험','3.3%',
+           '세금','공제여부','원천']
+};
+
+// 헤더에서 7단계 컬럼 인덱스 자동 탐지
+function _detectColumns(headers){
+  var result={};
+  Object.keys(_KEYWORD_MAP).forEach(function(stage){
+    var kws=_KEYWORD_MAP[stage];
+    var idx=headers.findIndex(function(h){
+      return kws.some(function(k){return h.includes(k);});
+    });
+    result[stage]=idx;
+  });
+  return result;
+}
+
+// 세금 구분 파싱 (3.3% / 4대보험 / 고용보험 / 없음)
+function _parseTaxType(val){
+  var v=String(val||'').trim();
+  if(v.includes('4대')) return '4ins';
+  if(v.includes('3.3')||v.includes('사업소득')) return '3.3';
+  if(v.includes('고용')) return 'emp';
+  if(v===''||v==='N'||v==='없음') return 'none';
+  return '3.3';  // 기본값
+}
+
+// 범용 파서 메인 — 어떤 엑셀이든 흡수
+function _parseUniversalExcel(file, month, industryType, title){
+  if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
+      if(!rows.length){toast('❌ 데이터 없음');return;}
+
+      var headers=rows[0].map(function(h){return String(h||'').trim();});
+      var cols=_detectColumns(headers);
+
+      // 대상자 키가 없으면 실패
+      if(cols.KEY<0){
+        // 첫 컬럼을 키로 시도
+        if(headers.length>0) cols.KEY=0;
+        else{toast('❌ 대상자 컬럼 없음 (이름/사번 등)');return;}
+      }
+
+      // 사람별 그룹핑
+      var personMap={};
+      var personOrder=[];
+
+      rows.slice(1).forEach(function(row){
+        var key=String(row[cols.KEY]||'').trim();
+        if(!key) return;
+
+        // 이름 정제 (괄호 업종 표시 제거: "린(미용)" → "린")
+        var cleanName=key.replace(/\s*\([^)]*\)\s*/g,'').trim()||key;
+
+        if(!personMap[key]){
+          personMap[key]={
+            name:cleanName, rawKey:key,
+            items:[]
+          };
+          personOrder.push(key);
+        }
+
+        var itemName = cols.VOLUME>=0
+          ? String(row[cols.VOLUME]||'').trim()
+          : (headers[2]?String(row[2]||'').trim():'항목');
+
+        // 정산항목명 컬럼 별도 존재 시 우선
+        var itemNameCol = headers.findIndex(function(h){
+          return ['정산항목명','항목명','항목','내역','서비스명','시술명','프로젝트명'].some(function(k){return h.includes(k);});
+        });
+        if(itemNameCol>=0) itemName=String(row[itemNameCol]||'').trim();
+
+        var volume  = _rvNum(row, cols.VOLUME);
+        var rateRaw = cols.RATE>=0 ? String(row[cols.RATE]||'0').trim() : '0';
+        var rate    = rateRaw.includes('%')
+          ? parseFloat(rateRaw)/100
+          : parseFloat(rateRaw)||0;
+
+        var base    = _rvNum(row, cols.BASE);
+        var plus    = _rvNum(row, cols.PLUS);
+        var minus   = _rvNum(row, cols.MINUS);
+        var taxType = cols.TAX>=0 ? _parseTaxType(row[cols.TAX]) : '3.3';
+
+        // 기본지급액 자동 계산 (base가 없으면 volume×rate)
+        var computed=base;
+        if(computed===0&&volume>0&&rate>0){
+          if(rate<1) computed=Math.round(volume*rate);  // 비율제
+          else       computed=Math.round(volume*rate);  // 단가제
+        }
+
+        personMap[key].items.push({
+          name:itemName,
+          volume:volume, rate:rate,
+          base:computed, plus:plus, minus:minus,
+          taxType:taxType,
+          raw:{volume:volume,rate:rateRaw,base:base,plus:plus,minus:minus}
+        });
+      });
+
+      // 인별 정산 계산
+      var results=[];
+      personOrder.forEach(function(key){
+        var p=personMap[key];
+        var totalBase=0, totalPlus=0, totalMinus=0;
+        var has4ins=false, has33=false, hasEmp=false;
+
+        p.items.forEach(function(it){
+          totalBase +=it.base;
+          totalPlus +=it.plus;
+          totalMinus+=it.minus;
+          if(it.taxType==='4ins') has4ins=true;
+          if(it.taxType==='3.3')  has33=true;
+          if(it.taxType==='emp')  hasEmp=true;
+        });
+
+        var gross=totalBase+totalPlus-totalMinus;
+        if(gross<0) gross=0;
+
+        // 세금 계산
+        var tax33=0, empIns=0, healthIns=0, natPen=0, ltcIns=0;
+        if(has33){
+          tax33=Math.round(gross*0.033);
+          if(tax33<1000) tax33=0;
+        }
+        if(has4ins){
+          empIns    =Math.round(gross*0.009);
+          healthIns =Math.round(gross*0.03545);
+          ltcIns    =Math.round(healthIns*0.1295);
+          natPen    =Math.round(gross*0.045);
+          if(empIns<1000)    empIns=0;
+          if(healthIns<1000) healthIns=0;
+          if(ltcIns<1000)    ltcIns=0;
+          if(natPen<1000)    natPen=0;
+        } else if(hasEmp){
+          empIns=Math.round(gross*0.009);
+          if(empIns<1000) empIns=0;
+        }
+
+        var net=gross-tax33-empIns-healthIns-ltcIns-natPen;
+
+        // 항목별 extras
+        var itemExtras=p.items.map(function(it){
+          var label=it.name;
+          if(it.volume>0&&it.rate>0){
+            if(it.rate<1) label+=' ('+it.volume+'×'+Math.round(it.rate*100)+'%)';
+            else          label+=' ('+it.volume+'×₩'+it.rate.toLocaleString()+')';
+          }
+          return {label:label, value:it.base};
+        });
+
+        results.push({
+          name:p.name, rawKey:p.rawKey,
+          gross:gross, tax33:tax33, net:net,
+          extras:[
+            {label:'항목 '+p.items.length+'건',value:''},
+          ].concat(itemExtras).concat([
+            totalPlus>0  &&{label:'추가 가산액',value:totalPlus},
+            totalMinus>0 &&{label:'차감 공제액',value:-totalMinus},
+            tax33>0      &&{label:'소득세 3.3%',value:-tax33},
+            empIns>0     &&{label:'고용보험 0.9%',value:-empIns},
+            healthIns>0  &&{label:'건강보험 3.545%',value:-healthIns},
+            ltcIns>0     &&{label:'장기요양 12.95%',value:-ltcIns},
+            natPen>0     &&{label:'국민연금 4.5%',value:-natPen},
+          ].filter(Boolean)),
+          industryType:industryType||'universal'
+        });
+      });
+
+      if(!results.length){toast('❌ 파싱된 직원 없음');return;}
+      toast('✅ 범용 파싱 완료 — '+results.length+'명');
+      _autoRegisterIndWorkers(results, industryType||'universal');
+      _renderIndustrySettle(results, month, title||'📋 범용 정산');
+    }catch(err){
+      console.error('[_parseUniversalExcel]',err);
+      toast('❌ 파싱 오류: '+err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
 function _parseBeautyExcel(file, month){
   // 뷰티 파서 — 사번별 다중행 집계 방식
   // 컬럼: 사번, 담당자(이름), 시술명, 시술금액, 부자재값, 인센티브비율, 제품판매액, 제품수수료율
@@ -6247,6 +6470,9 @@ function showApp(){
     }
     // 업종별 파서 라우팅
     var parserMap={
+      'universal':   function(f,m){_parseUniversalExcel(f,m,'universal','📋 범용 정산');},
+      'coworking':   function(f,m){_parseUniversalExcel(f,m,'coworking','🏢 공유오피스');},
+      'creator':     function(f,m){_parseUniversalExcel(f,m,'creator','🎬 크리에이터');},
       'construction': _parseConstructionExcel,
       'insurance':    _parseInsuranceExcel,
       'quick':        _parseQuickExcel,
