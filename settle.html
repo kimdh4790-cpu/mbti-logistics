@@ -23024,6 +23024,19 @@ function _copyCompanyCode(el){
   });
 }
 
+
+// 재고관리 → mbtico.kr로 이전 (스텁)
+function pageInventory(){window.open('https://mbtico.kr','_blank');toast('🔗 재고관리는 mbtico.kr에서 이용하세요');}
+function pageInvSummary(){pageInventory();}
+function pageInvMonthly(){pageInventory();}
+function pageInvOrder(){pageInventory();}
+function pageInvEditLog(){pageInventory();}
+function pageInvChangeLog(){pageInventory();}
+function pageInvManagerStock(){pageInventory();}
+function pageInvManagerIn(){pageInventory();}
+function pageInvManagerOut(){pageInventory();}
+function pageInvManagerReturn(){pageInventory();}
+
 function buildNav(){
   var nav=document.getElementById('snav');
   if(!nav)return;
