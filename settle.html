@@ -23015,6 +23015,7 @@ function _copyCompanyCode(el){
 function buildNav(){
   var nav=document.getElementById('snav');
   if(!nav)return;
+  var MENUS=MENUS_SETTLE;  // ★ MENUS_SETTLE 사용
   if(!MENUS||!MENUS.length){nav.innerHTML='';return;}
   var cur=(typeof _curPage!=='undefined')?(_curPage||''):'';
   var did=_CU&&(_CU.dealerId||_CU.companyId||'');
