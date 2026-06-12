@@ -3644,97 +3644,181 @@ function _parseInsuranceExcel(file, month){
 
 
 function _parseConstructionExcel(file, month){
-  _baseParser(file,month,'🏗️ 건설·일용직','construction',function(row,headers,col,rv,name,camp){
-    var iSite   = col(['현장명','현장','공사명','작업장','현장코드']);
-    var iUnit   = col(['공수','단위공수','근무공수']);
-    var iDays   = col(['출역일수','출근일수','일수','출역','근무일']);
-    var iHours  = col(['근무시간','총시간','월근무시간']);
-    var iDay    = col(['노무비단가','일당','일급','단가']);
-    var iOver   = col(['연장시간','연장근무','초과시간','연장']);
-    var iNight  = col(['야간수당','야간시간','야간']);
-    var iRisk   = col(['위험수당','특수작업','위험','고소수당']);
-    var iMeal   = col(['중식비','식대','식비']);
-    var iTrans  = col(['교통비','통근비','출장비']);
-    var iAge    = col(['생년월일','주민등록번호','나이','연령']);
-    var iNatPen = col(['국민연금','연금부담금']);
-    var iHealth = col(['건강보험','건강보험료']);
-    var iEmpIns = col(['고용보험','고용보험료']);
-    var iDeduct = col(['공제','차감','기타공제']);
+  // 건설·일용직 파서 — 날짜별 다중행 → 주민번호/이름 키로 집계
+  // 컬럼: 작업일자, 주민등록번호, 성명, 현장명, 일당단가, 출역공수, 연장공수, 식대지급액, 메모
+  if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
+      if(!rows.length){toast('❌ 데이터 없음');return;}
 
-    var site    = iSite>=0?String(row[iSite]||'').trim():'';
-    var unit    = iUnit>=0?parseFloat(String(row[iUnit]||'').replace(/공수/g,''))||0:0;
-    var days    = rv(row,iDays)||(unit>0?unit:0);
-    var hours   = rv(row,iHours);
-    var dayRate = rv(row,iDay);
-    var overH   = rv(row,iOver);
-    var nightAmt= rv(row,iNight);
-    var riskAmt = rv(row,iRisk);
-    var mealAmt = rv(row,iMeal);
-    var transAmt= rv(row,iTrans);
-    var deduct  = rv(row,iDeduct);
+      var headers=rows[0].map(function(h){return String(h||'').trim();});
+      function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
 
-    // 연령 파악
-    var ageVal=iAge>=0?String(row[iAge]||'').trim():'';
-    var age=0;
-    if(ageVal.length>=6){
-      var yr=parseInt(ageVal.slice(0,2));
-      age=new Date().getFullYear()-(yr<=25?2000+yr:1900+yr);
+      var iDate  = col(['작업일자','날짜','일자','근무일']);
+      var iRrn   = col(['주민등록번호','주민번호','생년월일','RRN','생년']);
+      var iName  = col(['성명','이름','성명']);
+      var iSite  = col(['현장명','현장','공사명','작업장']);
+      var iRate  = col(['일당단가','일당','단가','일급']);
+      var iUnit  = col(['출역공수','공수','출역일수','출역']);
+      var iOver  = col(['연장공수','연장시간','연장','OT']);
+      var iMeal  = col(['식대','중식비','식비']);
+      var iMemo  = col(['메모','비고','특이사항']);
+      var iCamp  = col(['소속','캠프','팀']);
+
+      if(iName<0&&iRrn<0){toast('❌ 성명/주민번호 컬럼 없음');return;}
+
+      var rule = _getRule('construction');
+      var threshold = rule.threshold4ins||8;
+      var taxFreeDaily = rule.taxFreeDaily||100000;
+      var minDeduction = rule.minDeduction||1000;
+
+      // 주민번호 또는 이름으로 그룹핑
+      var personMap={};
+      var personOrder=[];
+
+      rows.slice(1).forEach(function(row){
+        var rrn    = iRrn>=0  ? String(row[iRrn]||'').trim().replace(/-/g,'') : '';
+        var name   = iName>=0 ? String(row[iName]||'').trim() : '';
+        var key    = rrn||name;
+        if(!key) return;
+
+        if(!personMap[key]){
+          // 연령 계산 (주민번호 앞 6자리)
+          var age=0;
+          if(rrn.length>=6){
+            var yr=parseInt(rrn.slice(0,2));
+            var genderDigit=rrn.length>=7?parseInt(rrn[6]):0;
+            var fullYr = (genderDigit<=2)?1900+yr:2000+yr;
+            age = new Date().getFullYear()-fullYr;
+          }
+          personMap[key]={
+            rrn:rrn, name:name,
+            camp: iCamp>=0?String(row[iCamp]||'').trim():'',
+            age:age,
+            sites:{},        // 현장별 집계
+            totalUnit:0,     // 총 공수
+            totalOver:0,     // 총 연장공수
+            totalMeal:0,     // 총 식대
+            totalBasePay:0,  // 총 기본급
+            workDates:[]
+          };
+          personOrder.push(key);
+        }
+        var p=personMap[key];
+        if(!p.name&&name) p.name=name;
+
+        var dateStr = iDate>=0 ? String(row[iDate]||'').trim() : '';
+        var site    = iSite>=0 ? String(row[iSite]||'').trim() : '미지정';
+        var rate    = iRate>=0 ? parseFloat(String(row[iRate]||'0').replace(/,/g,''))||0 : 0;
+        var unit    = iUnit>=0 ? parseFloat(String(row[iUnit]||'0').replace(/,/g,''))||0 : 0;
+        var overU   = iOver>=0 ? parseFloat(String(row[iOver]||'0').replace(/,/g,''))||0 : 0;
+        var meal    = iMeal>=0 ? parseFloat(String(row[iMeal]||'0').replace(/,/g,''))||0 : 0;
+
+        if(!p.sites[site]) p.sites[site]={rate:0,unit:0,overU:0,pay:0};
+        var s=p.sites[site];
+        if(rate>s.rate) s.rate=rate;   // 현장 최고단가 사용
+        s.unit+=unit;
+        s.overU+=overU;
+        var dayPay=Math.round(rate*unit);
+        var overPay=Math.round(rate*overU*1.5);
+        s.pay+=dayPay+overPay;
+        p.totalBasePay+=dayPay+overPay;
+
+        p.totalUnit+=unit;
+        p.totalOver+=overU;
+        p.totalMeal+=meal;
+        if(dateStr) p.workDates.push(dateStr);
+      });
+
+      var results=[];
+      personOrder.forEach(function(key){
+        var p=personMap[key];
+        if(!p.name||p.totalUnit===0) return;
+
+        var age=p.age;
+        var gross=p.totalBasePay+p.totalMeal;
+
+        // 실제 출역일수 (공수 합산, 0.5단위)
+        var totalDays=p.totalUnit;
+        var is4ins=(totalDays>=threshold);
+
+        // 소득세 (일당별 비과세 10만원 초과분 × 3.3%)
+        // 현장별로 (단가-비과세) × 공수 합산
+        var taxBase=0;
+        Object.keys(p.sites).forEach(function(site){
+          var s=p.sites[site];
+          var overRate=Math.max(0,s.rate-taxFreeDaily);
+          taxBase+=Math.round(overRate*s.unit);
+        });
+        var tax33=Math.round(taxBase*0.033);
+        if(tax33<minDeduction) tax33=0;
+
+        // 4대보험
+        var natPen=0,healthIns=0,ltcIns=0,empIns=0;
+        if(is4ins){
+          natPen    = age>=60?0:Math.round(gross*0.045);
+          healthIns = Math.round(gross*0.03545);
+          ltcIns    = Math.round(healthIns*0.1295);
+          empIns    = age>=65?0:Math.round(gross*0.009);
+          if(natPen<minDeduction)    natPen=0;
+          if(healthIns<minDeduction) healthIns=0;
+          if(ltcIns<minDeduction)    ltcIns=0;
+          if(empIns<minDeduction)    empIns=0;
+        } else {
+          // 단기: 고용보험만
+          empIns = age>=65?0:Math.round(gross*0.009);
+          if(empIns<minDeduction) empIns=0;
+        }
+
+        var totalDeduct=tax33+natPen+healthIns+ltcIns+empIns;
+        var net=gross-totalDeduct;
+        var workDays=[...new Set(p.workDates)].length;
+
+        // 현장별 내역
+        var siteExtras=Object.keys(p.sites).map(function(site){
+          var s=p.sites[site];
+          return {
+            label:'📍'+site+' ('+s.unit+'공수 × ₩'+s.rate.toLocaleString()+')',
+            value:s.pay
+          };
+        });
+
+        results.push({
+          name:p.name, rrn:p.rrn, camp:p.camp,
+          gross:gross, tax33:tax33, empIns:empIns, net:net,
+          totalUnit:totalDays, workDays:workDays,
+          extras:[
+            {label:'총 '+totalDays+'공수 (출근 '+workDays+'일)',value:''},
+          ].concat(siteExtras).concat([
+            p.totalMeal>0&&{label:'식대',value:p.totalMeal},
+            {label:is4ins?'✅ 4대보험 적용 ('+totalDays+'공수≥'+threshold+'일)':'⚠️ 단기 (고용보험만)',value:''},
+            tax33>0&&{label:'소득세 (비과세 '+taxFreeDaily.toLocaleString()+'원 초과분 3.3%)',value:-tax33},
+            empIns>0&&{label:'고용보험 0.9%'+(age>=65?' [65세↑면제]':''),value:-empIns},
+            healthIns>0&&{label:'건강보험 3.545%',value:-healthIns},
+            ltcIns>0&&{label:'장기요양 12.95%',value:-ltcIns},
+            natPen>0&&{label:'국민연금 4.5%'+(age>=60?' [60세↑면제]':''),value:-natPen},
+          ].filter(Boolean)),
+          industryType:'construction',
+          age:age, is4ins:is4ins
+        });
+      });
+
+      if(!results.length){toast('❌ 파싱된 직원 없음');return;}
+      toast('✅ 건설·일용직 파싱 완료 — '+results.length+'명');
+      _autoRegisterIndWorkers(results,'construction');
+      _renderIndustrySettle(results, month, '🏗️ 건설·일용직');
+    }catch(err){
+      console.error('[_parseConstructionExcel]',err);
+      toast('❌ 파싱 오류: '+err.message);
     }
-
-    var basePay = Math.round(days*dayRate);
-    var overPay = Math.round(overH*dayRate/8*1.5);
-    var gross   = basePay+overPay+nightAmt+riskAmt+mealAmt+transAmt;
-
-    // ★ 8일/60시간 기준 4대보험 스위칭
-    var totalH  = hours>0?hours:(days*8);
-    var is4ins  = (days>=8||totalH>=60);
-
-    // 소득세: (일당-10만)×6%×55% 비과세 10만원
-    var taxBase = Math.max(0,dayRate-100000);
-    var tax33   = Math.round(taxBase*days*0.033);
-    if(tax33<1000) tax33=0;
-
-    var natPen=0, healthIns=0, ltcIns=0, empIns=0;
-    if(is4ins){
-      natPen   = iNatPen>=0?rv(row,iNatPen):(age>=60?0:Math.round(gross*0.045));
-      healthIns= iHealth>=0?rv(row,iHealth):Math.round(gross*0.03545);
-      ltcIns   = Math.round(healthIns*0.1295); // ★ 장기요양(건강보험료×12.95%)
-      empIns   = iEmpIns>=0?rv(row,iEmpIns):(age>=65?0:Math.round(gross*0.009));
-    } else {
-      empIns   = iEmpIns>=0?rv(row,iEmpIns):(age>=65?0:Math.round(gross*0.009));
-    }
-    if(natPen<1000) natPen=0;
-    if(healthIns<1000) healthIns=0;
-    if(ltcIns<1000) ltcIns=0;
-    if(empIns<1000) empIns=0;
-
-    var totalDeduct = tax33+natPen+healthIns+ltcIns+empIns+deduct;
-    var net = gross-totalDeduct;
-
-    return {
-      name:name, camp:camp||site,
-      gross:gross, tax33:tax33, empIns:empIns, net:net,
-      extras:[
-        site&&{label:'📍 현장',value:site},
-        days>0&&{label:'📅 '+days+(unit>0?'공수':'일')+'×'+dayRate.toLocaleString()+'원',value:basePay},
-        overPay>0&&{label:'연장 '+overH+'h×1.5배',value:overPay},
-        nightAmt>0&&{label:'야간수당',value:nightAmt},
-        riskAmt>0&&{label:'위험/특수수당',value:riskAmt},
-        mealAmt>0&&{label:'중식비',value:mealAmt},
-        transAmt>0&&{label:'교통비',value:transAmt},
-        {label:is4ins?'✅ 4대보험 적용 ('+days+'일/'+totalH+'h)':'⚠️ 단기 (고용보험만)',value:''},
-        tax33>0&&{label:'소득세 (3.3% 일당비과세10만)',value:-tax33},
-        empIns>0&&{label:'고용보험 (0.9%)'+(age>=65?' [65세↑면제]':''),value:-empIns},
-        healthIns>0&&{label:'건강보험 (3.545%)',value:-healthIns},
-        ltcIns>0&&{label:'장기요양 (건강보험×12.95%)',value:-ltcIns},
-        natPen>0&&{label:'국민연금 (4.5%)'+(age>=60?' [60세↑면제]':''),value:-natPen},
-        deduct>0&&{label:'기타공제',value:-deduct},
-      ].filter(Boolean),
-      industryType:'construction',
-      age:age, site:site, is4ins:is4ins, days:days
-    };
-  });
+  };
+  reader.readAsArrayBuffer(file);
 }
+
 
 
 function _parseQuickExcel(file, month){
