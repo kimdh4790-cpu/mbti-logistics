@@ -8,6 +8,33 @@
 // ════════════════════════════════════════════════════
 // 📦 재고관리
 // ════════════════════════════════════════════════════
+
+// DONWAY 연동 안내 페이지
+function pageDonwayConnect(){
+  document.getElementById('page-title').textContent='DONWAY 정산 연동';
+  var c=document.getElementById('content')||document.body;
+  c.innerHTML=
+    '<div style="max-width:500px;margin:40px auto;padding:20px;text-align:center">'+
+      '<div style="font-size:48px;margin-bottom:16px">💰</div>'+
+      '<div style="font-size:18px;font-weight:800;margin-bottom:8px">DONWAY 정산 시스템</div>'+
+      '<div style="font-size:13px;color:#666;margin-bottom:24px;line-height:1.6">'+
+        '급여 정산·업종별 자동 계산·명세서 발송<br>'+
+        '건설/뷰티/요양/학원/창고/행사/보험/영업/프리랜서/음식점<br>'+
+        'AI 정산·쿠팡 배달대행 전용 엔진 포함'+
+      '</div>'+
+      '<div style="display:flex;flex-direction:column;gap:10px">'+
+        '<button onclick="window.open('https://donway.ai.kr','_blank')" style="'+
+          'padding:14px;background:#185FA5;color:#fff;border:none;border-radius:10px;'+
+          'font-size:14px;font-weight:700;cursor:pointer">'+
+          '🚀 DONWAY 정산 시작하기'+
+        '</button>'+
+        '<div style="font-size:11px;color:#999">'+
+          '두 서비스를 함께 구독하면 직원 명단·송금 정보가 자동 연동됩니다'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+}
+
 function pageInventory(){
   var c=document.getElementById('main-content');
   if(!_db||!_CU){c.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
@@ -458,6 +485,20 @@ tr:hover td{background:var(--bg3);}
 </style>
 </head>
 <body>
+    <!-- DONWAY 연동 배너 -->
+    <div id="donway-link-banner" style="
+      background:linear-gradient(135deg,#185FA5,#0ea5e9);
+      color:#fff;padding:10px 16px;
+      display:flex;align-items:center;justify-content:space-between;
+      font-size:12px;cursor:pointer;
+      " onclick="window.open('https://donway.ai.kr','_blank')">
+      <div>
+        <div style="font-weight:800;font-size:13px">💰 DONWAY 정산 시스템 연동</div>
+        <div style="opacity:.8;font-size:11px">급여정산·업종별계산·명세서발송 → donway.ai.kr</div>
+      </div>
+      <div style="font-size:18px">→</div>
+    </div>
+
 
 <div id="toast"></div>
 
