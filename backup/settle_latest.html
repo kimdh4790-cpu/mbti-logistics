@@ -3268,42 +3268,143 @@ function _parseWarehouseExcel(file, month){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 🎪 행사·이벤트 파서 (직무별, 실비합산)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function _parseEventExcel(file,month){
-  _baseParser(file,month,'🎪 행사·이벤트','event',function(row,headers,col,rv,name,camp){
-    var iSite  =col(['행사명','현장','작업지','이벤트']);
-    var iJob   =col(['직무','직무코드','역할','포지션']);
-    var iDays  =col(['근무일수','출근일','일수']);
-    var iRate  =col(['일당','단가','시급']);
-    var iHours =col(['시간','근무시간']);
-    var iOver  =col(['연장','초과시간','초과수당']);
-    var iNight =col(['야간','심야수당']);
-    var iMeal  =col(['식대','식비','실비식대']);  // 세금없이 합산
-    var iTrans =col(['교통비','야간교통','실비교통']);  // 세금없이 합산
-    var iDeduct=col(['공제','차감']);
-    var site =iSite>=0?String(row[iSite]||'').trim():'';
-    var job  =iJob>=0?String(row[iJob]||'').trim():'';
-    var days =rv(row,iDays),rate=rv(row,iRate),hours=rv(row,iHours);
-    var pay  =days>0&&rate>0?Math.round(days*rate):hours>0?Math.round(hours*rate):0;
-    var over =rv(row,iOver),night=rv(row,iNight);
-    var meal =rv(row,iMeal),trans=rv(row,iTrans),deduct=rv(row,iDeduct);
-    // 실비(식대,교통)는 세금 없이 합산
-    var taxableAmt=pay+over+night-deduct;
-    var tax33=Math.round(Math.max(0,taxableAmt)*0.033); if(tax33<1000) tax33=0;
-    var gross=taxableAmt+meal+trans;
-    return {name:name,camp:camp||site,gross:gross,tax33:tax33,net:gross-tax33,
-      extras:[
-        site&&{label:'📍 행사',value:site},
-        job&&{label:'🎭 직무',value:job},
-        pay>0&&{label:(days>0?days+'일':hours+'시간')+'×'+rate.toLocaleString()+'원',value:pay},
-        over>0&&{label:'연장수당',value:over},
-        night>0&&{label:'야간수당',value:night},
-        meal>0&&{label:'식대 (실비·세금없음)',value:meal},
-        trans>0&&{label:'교통비 (실비·세금없음)',value:trans},
-        deduct>0&&{label:'공제',value:-deduct},
-        tax33>0&&{label:'소득세(3.3%) ※실비제외',value:-tax33},
-      ].filter(Boolean),industryType:'event'};
-  });
+function _parseEventExcel(file, month){
+  // 행사·이벤트 파서 — 스태프별 다중 행사행 집계
+  // 컬럼: 스태프ID, 성명, 참여행사명, 수행역할, 투입일수, 일당단가, 식대지원금, 교통비실비청구
+  if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
+      if(!rows.length){toast('❌ 데이터 없음');return;}
+
+      var headers=rows[0].map(function(h){return String(h||'').trim();});
+      function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
+      function rv(row,i){if(i<0) return 0; var v=row[i]; if(!v&&v!==0) return 0; return parseFloat(String(v).replace(/,/g,''))||0;}
+
+      var iId     = col(['스태프ID','ID','사번','직원번호']);
+      var iName   = col(['성명','이름','담당자','스태프명']);
+      var iEvent  = col(['참여행사명','행사명','행사','이벤트']);
+      var iRole   = col(['수행역할','역할','직무','포지션']);
+      var iDays   = col(['투입일수','근무일수','출근일수','일수']);
+      var iRate   = col(['일당단가','일당','단가','일급']);
+      var iMeal   = col(['식대지원금','식대','식비','중식비']);
+      var iTrans  = col(['교통비실비청구','교통비','실비','교통']);
+      var iOver   = col(['연장시간','연장','OT']);
+      var iAccom  = col(['숙박비','숙박','숙소']);
+      var iCamp   = col(['소속','팀','업체']);
+
+      if(iName<0&&iId<0){toast('❌ 성명/ID 컬럼 없음');return;}
+
+      var rule = _getRule('event');
+      var taxRate = (rule.taxRate||3.3)/100;
+
+      var personMap={};
+      var personOrder=[];
+
+      rows.slice(1).forEach(function(row){
+        var rawId   = iId>=0   ? String(row[iId]||'').trim() : '';
+        var rawName = iName>=0 ? String(row[iName]||'').trim() : '';
+        var key = rawId||rawName;
+        if(!key) return;
+
+        if(!personMap[key]){
+          personMap[key]={
+            id:rawId, name:rawName||rawId,
+            camp: iCamp>=0?String(row[iCamp]||'').trim():'',
+            events:[],
+            totalPay:0,    // 일당 합계 (과세)
+            totalMeal:0,   // 식대 (비과세)
+            totalTrans:0,  // 교통비 실비 (비과세)
+            totalAccom:0,  // 숙박비 (비과세)
+            totalDays:0
+          };
+          personOrder.push(key);
+        }
+        var p=personMap[key];
+        if(!p.name&&rawName) p.name=rawName;
+        if(p.name===p.id&&rawName) p.name=rawName;
+
+        var eventName = iEvent>=0 ? String(row[iEvent]||'').trim() : '';
+        var role      = iRole>=0  ? String(row[iRole]||'').trim()  : '';
+        var days      = rv(row,iDays);
+        var rate      = rv(row,iRate);
+        var meal      = rv(row,iMeal);
+        var trans     = rv(row,iTrans);
+        var overH     = rv(row,iOver);
+        var accom     = rv(row,iAccom);
+
+        var pay = Math.round(days*rate);
+        var overPay = overH>0 ? Math.round(overH*(rate/8)*1.5) : 0;
+
+        p.events.push({
+          name:eventName, role:role,
+          days:days, rate:rate,
+          pay:pay+overPay,
+          meal:meal, trans:trans
+        });
+        p.totalPay   += pay+overPay;
+        p.totalMeal  += meal;
+        p.totalTrans += trans;
+        p.totalAccom += accom;
+        p.totalDays  += days;
+      });
+
+      var results=[];
+      personOrder.forEach(function(key){
+        var p=personMap[key];
+        if(!p.name||p.totalPay===0) return;
+
+        // 과세: 일당 합계
+        // 비과세: 식대 + 교통비실비 + 숙박비 (영수증 실비는 세금 없음)
+        var taxableGross = p.totalPay;
+        var nonTaxable   = p.totalMeal+p.totalTrans+p.totalAccom;
+
+        var tax33 = Math.round(taxableGross*taxRate);
+        if(tax33<1000) tax33=0;
+
+        var net = taxableGross+nonTaxable-tax33;
+
+        // 행사별 내역
+        var eventExtras=p.events.map(function(ev){
+          return {
+            label: ev.name+(ev.role?' ['+ev.role+']':'')+' '+ev.days+'일×₩'+ev.rate.toLocaleString(),
+            value: ev.pay
+          };
+        });
+
+        results.push({
+          name:p.name, id:p.id, camp:p.camp,
+          gross:taxableGross+nonTaxable,
+          tax33:tax33, net:net,
+          totalDays:p.totalDays,
+          eventCount:p.events.length,
+          extras:[
+            {label:'참여 행사 '+p.events.length+'건 / 총 '+p.totalDays+'일',value:''},
+          ].concat(eventExtras).concat([
+            p.totalMeal>0&&{label:'식대 (비과세)',value:p.totalMeal},
+            p.totalTrans>0&&{label:'교통비 실비 (비과세)',value:p.totalTrans},
+            p.totalAccom>0&&{label:'숙박비 실비 (비과세)',value:p.totalAccom},
+            tax33>0&&{label:'소득세 '+Math.round(taxRate*100)+'% (일당만 과세)',value:-tax33},
+          ].filter(Boolean)),
+          industryType:'event'
+        });
+      });
+
+      if(!results.length){toast('❌ 파싱된 직원 없음');return;}
+      toast('✅ 행사·이벤트 파싱 완료 — '+results.length+'명');
+      _autoRegisterIndWorkers(results,'event');
+      _renderIndustrySettle(results, month, '🎪 행사·이벤트');
+    }catch(err){
+      console.error('[_parseEventExcel]',err);
+      toast('❌ 파싱 오류: '+err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
 }
+
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 🎓 학원·교육 파서 (일할계산, 교재비 제외)
