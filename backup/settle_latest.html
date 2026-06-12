@@ -35195,62 +35195,109 @@ function pageIndWorkers(type, title){
   var did=_CU.dealerId||_CU.uid;
   c.innerHTML='<div class="loading">⏳ 로딩 중...</div>';
 
-  // settlements에서 직원명 추출
-  _db.collection('settlements')
-    .where('dealerId','==',did)
-    .where('industryType','==',type)
-    .limit(20).get()
-  .then(function(snap){
+  // settlements + drivers 동시 로드
+  Promise.all([
+    _db.collection('settlements')
+      .where('dealerId','==',did)
+      .where('industryType','==',type)
+      .limit(20).get(),
+    _db.collection('drivers')
+      .where('dealerId','==',did).get()
+  ]).then(function(res){
+    // 정산에서 직원명 추출
     var workerMap={};
-    snap.forEach(function(d){
+    res[0].forEach(function(d){
       var data=d.data();
-      var results=data.results||[];
-      results.forEach(function(r){
-        var name=r.name||'';
-        if(!name) return;
-        if(!workerMap[name]) workerMap[name]={name:name,months:0,totalNet:0,camp:r.camp||''};
+      (data.results||[]).forEach(function(r){
+        var name=r.name||''; if(!name) return;
+        if(!workerMap[name]) workerMap[name]={
+          name:name, months:0, totalNet:0, camp:r.camp||'',
+          phone:'', bankCode:'', account:''
+        };
         workerMap[name].months++;
         workerMap[name].totalNet+=(r.net||0);
       });
     });
 
+    // drivers에서 phone/계좌 매핑
+    res[1].forEach(function(d){
+      var w=d.data();
+      var name=w.name||''; if(!name) return;
+      if(workerMap[name]){
+        workerMap[name].phone     = w.phone||w.tel||'';
+        workerMap[name].bankCode  = w.bankCode||'';
+        workerMap[name].account   = w.accountNumber||'';
+        workerMap[name].driverId  = d.id;
+      }
+    });
+
     var workers=Object.values(workerMap).sort(function(a,b){return b.totalNet-a.totalNet;});
 
     if(!workers.length){
-      c.innerHTML='<div style="max-width:720px;margin:0 auto;padding:16px"><div style="text-align:center;padding:60px;color:var(--text3)">'+info.icon+'<br>등록된 직원 없음<br><small>정산 엑셀을 업로드하면 직원이 자동 등록됩니다</small></div></div>';
+      c.innerHTML='<div style="max-width:720px;margin:0 auto;padding:16px">'+
+        '<div style="text-align:center;padding:60px;color:var(--text3);background:var(--bg2);border-radius:12px">'+
+        info.icon+'<br><br>등록된 직원 없음<br><small>정산 엑셀 업로드 시 자동 등록됩니다</small></div></div>';
       return;
     }
 
+    var noPhone = workers.filter(function(w){return !w.phone;}).length;
+    var noAccount= workers.filter(function(w){return !w.account;}).length;
+
     var rows=workers.map(function(w){
+      var phoneHtml = w.phone
+        ? '<a href="tel:'+w.phone+'" style="color:#3b82f6;font-size:11px">'+w.phone+'</a>'
+        : '<span style="color:#ef4444;font-size:10px">미등록</span>';
+      var acctHtml = w.account
+        ? '<span style="color:#10b981;font-size:10px">✅ '+esc(BANK_CODES[w.bankCode]||w.bankCode||'')+'</span>'
+        : '<span style="color:#ef4444;font-size:10px">미등록</span>';
       return '<tr>'+
         '<td style="font-weight:700">'+esc(w.name)+'</td>'+
-        '<td style="text-align:center;color:var(--text3)">'+esc(w.camp||'-')+'</td>'+
-        '<td style="text-align:center">'+(w.months)+'회</td>'+
-        '<td style="text-align:right;color:#10b981;font-weight:700">₩'+w.totalNet.toLocaleString()+'</td>'+
-        '<td style="text-align:right;color:var(--text3)">₩'+Math.round(w.totalNet/w.months).toLocaleString()+'</td>'+
+        '<td style="text-align:center;color:var(--text3);font-size:10px">'+esc(w.camp||'-')+'</td>'+
+        '<td style="text-align:center">'+phoneHtml+'</td>'+
+        '<td style="text-align:center">'+acctHtml+'</td>'+
+        '<td style="text-align:center;font-size:10px">'+w.months+'회</td>'+
+        '<td style="text-align:right;color:#10b981;font-weight:700;font-size:11px">₩'+w.totalNet.toLocaleString()+'</td>'+
       '</tr>';
     }).join('');
 
-    c.innerHTML=
-      '<div style="max-width:720px;margin:0 auto;padding:16px">'+
-        '<div style="font-size:12px;font-weight:700;margin-bottom:10px">'+info.icon+' '+esc(info.name)+' 직원 — '+workers.length+'명</div>'+
-        '<div style="background:var(--bg2);border-radius:12px;overflow:hidden">'+
-          '<table style="width:100%;border-collapse:collapse;font-size:11px">'+
-            '<thead><tr style="background:var(--bg3)">'+
-              '<th style="padding:8px;text-align:left">이름</th>'+
-              '<th style="padding:8px;text-align:center">소속/팀</th>'+
-              '<th style="padding:8px;text-align:center">정산횟수</th>'+
-              '<th style="padding:8px;text-align:right">누적 실지급</th>'+
-              '<th style="padding:8px;text-align:right">평균 월급여</th>'+
-            '</tr></thead>'+
-            '<tbody>'+rows+'</tbody>'+
-          '</table>'+
-        '</div>'+
-      '</div>';
+    var el=document.createElement('div');
+    el.style.cssText='max-width:720px;margin:0 auto;padding:16px';
+
+    // 경고 배너
+    if(noPhone>0||noAccount>0){
+      var warn=document.createElement('div');
+      warn.style.cssText='background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:11px;color:var(--acc)';
+      warn.innerHTML='⚠️ 연락처 미등록 '+noPhone+'명 · 계좌 미등록 '+noAccount+'명 — 물류관리 앱에서 등록하거나 직접 입력하세요.';
+      el.appendChild(warn);
+    }
+
+    var hdr=document.createElement('div');
+    hdr.style.cssText='font-size:12px;font-weight:700;margin-bottom:8px;color:var(--text2)';
+    hdr.textContent=info.icon+' '+info.name+' 직원 — '+workers.length+'명';
+    el.appendChild(hdr);
+
+    var tableDiv=document.createElement('div');
+    tableDiv.style.cssText='background:var(--bg2);border-radius:12px;overflow:hidden';
+    tableDiv.innerHTML=
+      '<table style="width:100%;border-collapse:collapse;font-size:11px">'+
+        '<thead><tr style="background:var(--bg3)">'+
+          '<th style="padding:8px;text-align:left">이름</th>'+
+          '<th style="padding:8px;text-align:center">소속</th>'+
+          '<th style="padding:8px;text-align:center">연락처</th>'+
+          '<th style="padding:8px;text-align:center">계좌</th>'+
+          '<th style="padding:8px;text-align:center">정산횟수</th>'+
+          '<th style="padding:8px;text-align:right">누적실지급</th>'+
+        '</tr></thead>'+
+        '<tbody>'+rows+'</tbody>'+
+      '</table>';
+    el.appendChild(tableDiv);
+
+    c.innerHTML=''; c.appendChild(el);
   }).catch(function(e){
     c.innerHTML='<div class="empty">오류: '+esc(e.message)+'</div>';
   });
 }
+
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 📂 업종별 정산 페이지 (공통)
@@ -36070,7 +36117,7 @@ function _renderPayoutPreview(settle){
           '<div style="text-align:center;flex:1"><div style="font-size:18px;font-weight:900;color:#10b981">₩'+totalAmt.toLocaleString()+'</div><div style="font-size:9px;color:var(--text3)">정산 총액</div></div>'+
           '<div style="text-align:center;flex:1"><div style="font-size:18px;font-weight:900;color:var(--acc)">₩'+totalNeeded.toLocaleString()+'</div><div style="font-size:9px;color:var(--text3)">필요 예치금</div></div>'+
         '</div>'+
-        (missingCount>0?'<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:10px;color:#ef4444">⚠️ 계좌 미등록 '+missingCount+'명 — 등록 후 송금 가능</div>':'')+
+        (missingCount>0?'<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:10px;color:#ef4444">⚠️ 계좌 미등록 '+missingCount+'명 — 직원 관리에서 연락처 확인 후 계좌 등록하세요</div>':'')+
         '<div style="overflow-x:auto">'+
           '<table style="width:100%;border-collapse:collapse;font-size:11px">'+
             '<thead><tr style="background:var(--bg3)">'+
