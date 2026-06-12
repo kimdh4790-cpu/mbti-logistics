@@ -23007,8 +23007,13 @@ function pageSettle(){
     var snap=results[0],expSnap=results[1],fixSnap=results[2],taxDocSnap=results[3];
     // ★ 쿠팡 정산만 표시 — 업종별 정산(청소/건설 등) 제외
     var allDocs=(snap.docs||[]).filter(function(d){
-      var it=d.data().industryType||'';
-      return !it||it==='coupang';
+      var data=d.data();
+      var it=data.industryType||'';
+      var camp=data.camp||'';
+      // 쿠팡 정산만 — industryType 없거나 coupang, 단 청소 캠프 제외
+      if(it&&it!=='coupang') return false;
+      if(camp==='청소'||camp==='청소·파견') return false;
+      return true;
     });
     if(!allDocs.length){
       c.innerHTML='<div class="empty" style="padding:60px 20px"><div style="font-size:48px;margin-bottom:12px">📊</div>'
