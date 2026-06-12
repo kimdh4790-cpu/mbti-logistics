@@ -2792,7 +2792,10 @@ function _parseRestaurantExcel(file,month){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 💼 영업직 파서 (슬라이딩 수수료율)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function _parseSalesExcel(file,month){
+function _parseSalesExcel(file, month){
+  // 영업직 파서 — 사번별 다중 계약행 집계 (보험설계사와 유사 구조)
+  // 컬럼: 사번, 영업자명, 계약번호, 상품명, 당월실적액, 수수료율, 시상금, 환수발생액
+  if(!file) return;
   var reader=new FileReader();
   reader.onload=function(e){
     try{
@@ -2802,103 +2805,130 @@ function _parseSalesExcel(file,month){
       if(!rows.length){toast('❌ 데이터 없음');return;}
 
       var headers=rows[0].map(function(h){return String(h||'').trim();});
-      function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.replace(/[\s\[\]()]/g,'').includes(k.replace(/[\s\[\]()]/g,''));});});}
-      function rv(row,i){if(i<0)return 0;return parseFloat(String(row[i]||'').replace(/,/g,'').replace(/%/g,''))||0;}
+      function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
+      function rv(row,i){if(i<0) return 0; var v=row[i]; if(!v&&v!==0) return 0; return parseFloat(String(v).replace(/[,%]/g,'').trim())||0;}
 
-      var iName    = col(['이름','성명','영업사원']);
-      var iTeam    = col(['팀','소속','지점']);
-      var iBase    = col(['기본급','고정급','기본급여']);
-      var iSales   = col(['매출액','영업매출','계약금액','수주금액']);
-      var iCost    = col(['원가','매입원가','원가금액']);  // 마진 기준
-      var iMargin  = col(['마진','영업이익','순이익']);    // 직접 입력 시
-      var iCnt     = col(['영업건수','계약건수','건수']);
-      var iRate    = col(['수수료율','건당단가','단가','%','율']);
-      var iBonus   = col(['팀인센티브','팀보너스','팀시상']);
-      var iShareA  = col(['공동비율A','기여도A','분할A']);  // 공동영업
-      var iShareAmt= col(['공동분할','split분할','공동정산']);
-      var iCollected=col(['수금완료','수금','입금확인','실수금']);  // 수금 기준
-      var iPending = col(['미수금','수금대기','수금예정']);
-      var iDeduct  = col(['차감','공제','환수']);
+      var iId     = col(['사번','ID','직원번호','사원번호']);
+      var iName   = col(['영업자명','이름','성명','담당자']);
+      var iItem   = col(['상품명','품목','계약번호','거래처']);
+      var iSales  = col(['당월실적액','실적액','매출액','계약금액','매출']);
+      var iCost   = col(['원가','매입가','비용']);
+      var iRate   = col(['수수료율','커미션율','비율']);
+      var iBonus  = col(['시상금','인센티브','보너스','시책']);
+      var iRefund = col(['환수발생액','환수금','환수','반품','차감']);
+      var iTeam   = col(['팀','소속팀','조직']);
 
-      if(iName<0){toast('❌ 이름 컬럼 없음');return;}
+      if(iName<0&&iId<0){toast('❌ 이름/사번 컬럼 없음');return;}
+
+      var rule = _getRule('sales');
+      var sliding = rule.slidingScale||[
+        {min:0,max:10000000,rate:3},
+        {min:10000001,max:30000000,rate:5},
+        {min:30000001,max:999999999,rate:8}
+      ];
+      var calcBase = rule.calcBase||'revenue';
+
+      var personMap={};
+      var personOrder=[];
+
+      rows.slice(1).forEach(function(row){
+        var rawId   = iId>=0   ? String(row[iId]||'').trim() : '';
+        var rawName = iName>=0 ? String(row[iName]||'').trim() : '';
+        var key = rawId||rawName;
+        if(!key) return;
+
+        if(!personMap[key]){
+          personMap[key]={
+            id:rawId, name:rawName||rawId,
+            team: iTeam>=0?String(row[iTeam]||'').trim():'',
+            items:[], totalSales:0, totalCost:0,
+            totalBonus:0, totalRefund:0
+          };
+          personOrder.push(key);
+        }
+        var p=personMap[key];
+        if(!p.name&&rawName) p.name=rawName;
+        if(p.name===p.id&&rawName) p.name=rawName;
+
+        var item    = iItem>=0   ? String(row[iItem]||'').trim() : '';
+        var sales   = rv(row,iSales);
+        var cost    = rv(row,iCost);
+        var rateStr = iRate>=0 ? String(row[iRate]||'0').replace('%','').trim() : '0';
+        var rate    = parseFloat(rateStr)||0;  // % 단위 저장
+        var bonus   = rv(row,iBonus);
+        var refund  = rv(row,iRefund);
+        var refundAmt = refund<0?Math.abs(refund):refund;
+
+        p.totalSales  += sales;
+        p.totalCost   += cost;
+        p.totalBonus  += bonus;
+        p.totalRefund += refundAmt;
+        if(sales>0||refundAmt>0) p.items.push({item:item,sales:sales,cost:cost,rate:rate,refund:refundAmt});
+      });
 
       var results=[];
-      rows.slice(1).forEach(function(row){
-        var name    = String(row[iName]||'').trim(); if(!name) return;
-        var team    = iTeam>=0?String(row[iTeam]||'').trim():'';
-        var base    = rv(row,iBase);
-        var salesAmt= rv(row,iSales);
-        var cost    = rv(row,iCost);
-        var margin  = rv(row,iMargin)||(salesAmt>0&&cost>0?salesAmt-cost:0);
-        var cnt     = rv(row,iCnt);
-        var rate    = rv(row,iRate);
-        var bonus   = rv(row,iBonus);
-        var shareAmt= rv(row,iShareAmt);  // 공동영업 분할 금액
-        var collected=rv(row,iCollected); // 수금 완료액
-        var pending  =rv(row,iPending);   // 미수금
-        var deduct  = rv(row,iDeduct);
+      personOrder.forEach(function(key){
+        var p=personMap[key];
+        if(!p.name) return;
+        if(p.totalSales===0&&p.totalBonus===0) return;
 
-        // 수금 기준 정산: 수금완료 컬럼 있으면 그 금액 기준
-        var baseSales = collected>0 ? collected : salesAmt;
-
-        // 정산 기준: 매출 or 마진
-        var calcBase = margin>0 ? margin : baseSales;
-
-        // 건당 단가 계산
-        var salesPay = 0;
-        if(cnt>0 && rate>0){
-          salesPay = Math.round(cnt*rate);
-        } else if(calcBase>0 && rate>0 && rate<=100){
-          // 비율 적용
-          salesPay = Math.round(calcBase*(rate/100));
-        } else if(calcBase>0 && rate===0){
-          // ★ 슬라이딩 수수료율 (구간별 누진)
-          var s1 = Math.min(calcBase,30000000)*0.03;
-          var s2 = Math.max(0,Math.min(calcBase,50000000)-30000000)*0.05;
-          var s3 = Math.max(0,calcBase-50000000)*0.08;
-          salesPay = Math.round(s1+s2+s3);
+        // 슬라이딩 요율 적용 (매출 또는 마진 기준)
+        var base = calcBase==='margin' ? (p.totalSales-p.totalCost) : p.totalSales;
+        var slideRate=sliding[sliding.length-1].rate/100;
+        for(var i=0;i<sliding.length;i++){
+          if(base>=sliding[i].min&&base<=sliding[i].max){
+            slideRate=sliding[i].rate/100; break;
+          }
         }
 
-        // 공동영업 분할
-        if(shareAmt>0) salesPay=Math.round(shareAmt);
-
-        var gross   = base + salesPay + bonus - deduct;
-        var isFree  = base===0;
-        var tax33   = Math.round(Math.max(0,gross)*0.033);
-        var empIns  = isFree?0:Math.round(gross*0.009);
-        var net     = Math.max(0,gross)-tax33-empIns;
-
-        var extras=[];
-        if(base>0)      extras.push({label:'기본급',value:base});
-        if(salesPay>0&&cnt>0) extras.push({label:'영업 '+cnt+'건 수수료',value:salesPay});
-        if(salesPay>0&&cnt===0&&baseSales>0){
-          var rateStr=rate>0?rate+'%':'슬라이딩';
-          extras.push({label:(margin>0?'마진 '+margin.toLocaleString():'매출 '+baseSales.toLocaleString())+'원 × '+rateStr,value:salesPay});
+        // 수수료 계산 (행별 rate 있으면 우선, 없으면 슬라이딩)
+        var commission=0;
+        var hasRowRate=p.items.some(function(it){return it.rate>0;});
+        if(hasRowRate){
+          p.items.forEach(function(it){
+            if(it.rate>0) commission+=Math.round(it.sales*(it.rate/100));
+          });
+        } else {
+          commission=Math.round(base*slideRate);
         }
-        if(pending>0)   extras.push({label:'⏳ 미수금 (수금 후 정산)',value:'₩'+pending.toLocaleString()});
-        if(shareAmt>0)  extras.push({label:'공동영업 분할',value:shareAmt});
-        if(bonus>0)     extras.push({label:'팀 인센티브',value:bonus});
-        if(deduct>0)    extras.push({label:'차감/환수',value:-deduct});
-        if(tax33>0)     extras.push({label:'소득세 (3.3%)',value:-tax33});
-        if(empIns>0)    extras.push({label:'고용보험 (0.9%)',value:-empIns});
+
+        var afterRefund = commission-p.totalRefund;
+        if(afterRefund<0) afterRefund=0;
+
+        var gross = afterRefund+p.totalBonus;
+        var tax33 = Math.round(gross*0.033);
+        var net = gross-tax33;
 
         results.push({
-          name:name, camp:team,
-          gross:Math.max(0,gross), tax33:tax33, empIns:empIns, net:net,
-          extras:extras,
-          industryType:'sales',
-          salesAmt:baseSales, margin:margin, pending:pending
+          name:p.name, id:p.id, camp:p.team,
+          gross:gross, tax33:tax33, net:net,
+          extras:[
+            {label:'계약/거래 '+p.items.length+'건',value:''},
+            {label:'매출 합계',value:p.totalSales},
+            p.totalCost>0&&{label:'원가 합계',value:-p.totalCost},
+            hasRowRate
+              ?{label:'수수료 (건별 요율)',value:commission}
+              :{label:'수수료 (슬라이딩 '+Math.round(slideRate*100)+'%)',value:commission},
+            p.totalRefund>0&&{label:'▼ 환수/반품 차감',value:-p.totalRefund},
+            p.totalBonus>0&&{label:'시상금/인센티브',value:p.totalBonus},
+            {label:'소득세 3.3%',value:-tax33},
+          ].filter(Boolean),
+          industryType:'sales'
         });
       });
 
       if(!results.length){toast('❌ 파싱된 직원 없음');return;}
-      var pendingTotal=results.reduce(function(s,r){return s+(r.pending||0);},0);
-      toast('✅ 영업직 '+results.length+'명'+(pendingTotal>0?' | 미수금 ₩'+pendingTotal.toLocaleString()+'원 별도':''));
+      toast('✅ 영업직 파싱 완료 — '+results.length+'명');
+      _autoRegisterIndWorkers(results,'sales');
       _renderIndustrySettle(results, month, '💼 영업직');
-    }catch(err){toast('❌ 파싱 오류: '+err.message);console.error(err);}
+    }catch(err){
+      console.error('[_parseSalesExcel]',err);
+      toast('❌ 파싱 오류: '+err.message);
+    }
   };
   reader.readAsArrayBuffer(file);
 }
+
 
 
 function _parseFreelanceExcel(file,month){
@@ -3528,6 +3558,9 @@ function _parseCleaningExcel(file, month){
 
 
 function _parseInsuranceExcel(file, month){
+  // 보험설계사 파서 — 사번별 다중 계약행 집계
+  // 컬럼: 사번, 영업자명, 계약번호, 상품명, 당월실적액, 수수료율, 시상금, 환수발생액
+  if(!file) return;
   var reader=new FileReader();
   reader.onload=function(e){
     try{
@@ -3537,110 +3570,141 @@ function _parseInsuranceExcel(file, month){
       if(!rows.length){toast('❌ 데이터 없음');return;}
 
       var headers=rows[0].map(function(h){return String(h||'').trim();});
-      function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.replace(/[\s\[\]()]/g,'').includes(k.replace(/[\s\[\]()]/g,''));});});}
-      function rv(row,i){if(i<0)return 0;return parseFloat(String(row[i]||'').replace(/,/g,'').replace(/%/g,''))||0;}
+      function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
+      function rv(row,i){if(i<0) return 0; var v=row[i]; if(!v&&v!==0) return 0; return parseFloat(String(v).replace(/[,%]/g,'').trim())||0;}
 
-      var iName    = col(['이름','성명','설계사']);
-      var iTeam    = col(['팀','소속','지점']);
-      var iGrade   = col(['직급','등급','직책']);   // 설계사/팀장/지점장
-      var iNewPrem = col(['초회보험료','신계약보험료','월보험료','보험료']);
-      var iNewRate = col(['수수료율','신계약수수료율','지급률']);
-      var iKeepAmt = col(['유지수수료','유지수당','지속수당']);
-      var iKeepCnt = col(['유지건수','유지계약수']);
-      var iOr      = col(['OR수당','관리자수당','오버라이딩','조직수당']);
-      var iSettle  = col(['정착지원금','초기수당','정착수당']);
-      var iSicheck = col(['시책','시책수수료','프로모션','인센티브']);
-      var iRefund  = col(['환수금','환수','클로백','미유지환수','마이너스']);
-      var iPrev    = col(['전월이월','이월환수','이월마이너스']);  // 전월 마이너스 이월
-      var iCollat  = col(['담보금','지급보류','담보적립']);       // 10% 적립
-      var iDeduct  = col(['기타차감','차감','공제']);
+      var iId      = col(['사번','ID','직원번호','설계사번호','영업사번']);
+      var iName    = col(['영업자명','이름','성명','설계사명','담당자']);
+      var iContract= col(['계약번호','계약']);
+      var iProduct = col(['상품명','상품','보험명','보험종류']);
+      var iSales   = col(['당월실적액','실적액','실적','매출','당월매출','계약금액']);
+      var iRate    = col(['수수료율','커미션율','비율','수수료']);
+      var iBonus   = col(['시상금','인센티브','시책','보너스']);
+      var iRefund  = col(['환수발생액','환수금','환수','해약환수','차감액']);
+      var iTeam    = col(['팀','소속팀','조직']);
+      var iCamp    = col(['캠프','소속','지점']);
 
-      if(iName<0){toast('❌ 이름 컬럼 없음');return;}
+      if(iName<0&&iId<0){toast('❌ 이름/사번 컬럼 없음');return;}
+
+      var rule = _getRule('insurance');
+      var maxRate = (rule.maxFirstYearRate||1200)/100;  // 1200%
+      var reserveRate = (rule.clawbackReserve||10)/100; // 10%
+      var carryover = rule.carryoverEnabled!==false;
+
+      var personMap={};
+      var personOrder=[];
+
+      rows.slice(1).forEach(function(row){
+        var rawId   = iId>=0   ? String(row[iId]||'').trim() : '';
+        var rawName = iName>=0 ? String(row[iName]||'').trim() : '';
+        var key = rawId||rawName;
+        if(!key) return;
+
+        if(!personMap[key]){
+          personMap[key]={
+            id:rawId, name:rawName||rawId,
+            team: iTeam>=0?String(row[iTeam]||'').trim():'',
+            camp: iCamp>=0?String(row[iCamp]||'').trim():'',
+            contracts:[],
+            totalSales:0, totalCommission:0,
+            totalBonus:0, totalRefund:0
+          };
+          personOrder.push(key);
+        }
+        var p=personMap[key];
+        if(!p.name&&rawName) p.name=rawName;
+        if(p.name===p.id&&rawName) p.name=rawName;
+
+        var product  = iProduct>=0 ? String(row[iProduct]||'').trim() : '';
+        var sales    = rv(row,iSales);
+        var rateStr  = iRate>=0 ? String(row[iRate]||'0').replace('%','').trim() : '0';
+        var rate     = (parseFloat(rateStr)||0)/100;
+        var bonus    = rv(row,iBonus);
+        var refund   = rv(row,iRefund);  // 환수는 이미 음수로 들어오거나 양수
+
+        var commission = Math.round(sales*rate);
+
+        // 환수는 절대값으로 처리 (마이너스든 양수든 차감)
+        var refundAmt = refund<0 ? Math.abs(refund) : refund;
+
+        if(sales>0||commission>0||refundAmt>0||bonus>0){
+          p.contracts.push({
+            product:product, sales:sales, rate:rate,
+            commission:commission, bonus:bonus, refund:refundAmt
+          });
+        }
+        p.totalSales     += sales;
+        p.totalCommission+= commission;
+        p.totalBonus     += bonus;
+        p.totalRefund    += refundAmt;
+      });
 
       var results=[];
-      rows.slice(1).forEach(function(row){
-        var name=String(row[iName]||'').trim(); if(!name) return;
-        var team   = iTeam>=0?String(row[iTeam]||'').trim():'';
-        var grade  = iGrade>=0?String(row[iGrade]||'').trim():'설계사';
-        var newPrem= rv(row,iNewPrem);
-        var newRate= rv(row,iNewRate);
-        var keepAmt= rv(row,iKeepAmt);
-        var keepCnt= rv(row,iKeepCnt);
-        var orAmt  = rv(row,iOr);
-        var settle = rv(row,iSettle);
-        var sicheck= rv(row,iSicheck);
-        var refund = rv(row,iRefund);
-        var prevCarry= rv(row,iPrev);   // 전월 이월 마이너스
-        var collatD= rv(row,iCollat);
-        var deduct = rv(row,iDeduct);
+      personOrder.forEach(function(key){
+        var p=personMap[key];
+        if(!p.name) return;
+        if(p.totalCommission===0&&p.totalBonus===0&&p.totalRefund===0) return;
 
-        // 1. 신계약 수수료 (1200% 룰 내에서 계산)
-        var newComm = newRate>0 ? Math.round(newPrem*(newRate/100)) : 0;
+        // 1200% 룰 체크 (수수료 ≤ 실적의 12배)
+        var maxCommission = Math.round(p.totalSales*maxRate);
+        var commission = Math.min(p.totalCommission, maxCommission);
+        var capped = commission<p.totalCommission;
 
-        // 1200% 룰 체크: 최대 = 월보험료×12
-        var maxFirstYear = newPrem * 12;
-        if(newComm > maxFirstYear) newComm = maxFirstYear;
+        // 담보금 적립 (수수료의 10%)
+        var reserve = Math.round(commission*reserveRate);
 
-        // 2. 정착지원금 + 시책
-        var support = settle + sicheck;
+        // 환수 차감
+        var afterRefund = commission-p.totalRefund;
 
-        // 3. OR 수당 (조직원 실적 기반)
-        var orPay = orAmt;
+        // 마이너스 처리 (차월 이월 여부)
+        var carryoverAmt = 0;
+        if(afterRefund<0){
+          if(carryover){
+            carryoverAmt = afterRefund;  // 다음달 이월
+            afterRefund = 0;
+          } else {
+            afterRefund = 0;  // 0으로 처리
+          }
+        }
 
-        // 4. 총 수입
-        var grossIncome = newComm + keepAmt + support + orPay;
-
-        // 5. 환수 처리 (전월 이월 포함)
-        var totalRefund = refund + prevCarry;
-
-        // 6. 담보금 10% 적립 (신계약 수수료 기준)
-        var collateral = collatD > 0 ? collatD : Math.round(newComm * 0.10);
-
-        // 7. 순 정산 금액
-        var netSettle = grossIncome - totalRefund - collateral - deduct;
-
-        // 마이너스 정산 처리
-        var isNegative = netSettle < 0;
-        var carryOver  = isNegative ? Math.abs(netSettle) : 0; // 다음달 이월
-
-        var gross = Math.max(0, netSettle);
-        var tax33 = Math.round(gross * 0.033);
-        var net   = gross - tax33;
-
-        var extras = [];
-        if(newComm>0)   extras.push({label:'신계약 수수료 ('+newRate+'%)',value:newComm});
-        if(newPrem>0&&newRate===0) extras.push({label:'신계약보험료',value:newPrem});
-        if(keepAmt>0)   extras.push({label:'유지수수료 '+(keepCnt>0?keepCnt+'건':''),value:keepAmt});
-        if(orPay>0)     extras.push({label:'OR수당 (조직관리)',value:orPay});
-        if(settle>0)    extras.push({label:'정착지원금',value:settle});
-        if(sicheck>0)   extras.push({label:'시책/프로모션',value:sicheck});
-        if(totalRefund>0) extras.push({label:'환수금'+(prevCarry>0?' (전월이월 '+prevCarry.toLocaleString()+'포함)':''),value:-totalRefund});
-        if(collateral>0) extras.push({label:'담보금 적립 (10%)',value:-collateral});
-        if(deduct>0)    extras.push({label:'기타차감',value:-deduct});
-        if(isNegative)  extras.push({label:'⚠️ 마이너스 → 다음달 이월',value:-carryOver});
-        if(tax33>0)     extras.push({label:'소득세 (3.3%)',value:-tax33});
+        var gross = afterRefund+p.totalBonus-reserve;
+        var tax33 = Math.round(gross*0.033);
+        if(tax33<0) tax33=0;
+        var net = gross-tax33;
 
         results.push({
-          name:name, camp:team,
+          name:p.name, id:p.id,
+          camp:p.team||p.camp,
           gross:gross, tax33:tax33, net:net,
-          extras:extras,
+          contractCount:p.contracts.length,
+          extras:[
+            {label:'계약 '+p.contracts.length+'건',value:''},
+            {label:'실적 합계',value:p.totalSales},
+            {label:'수수료 합계',value:p.totalCommission},
+            capped&&{label:'⚠️ 1200%룰 적용 캡',value:commission-p.totalCommission},
+            p.totalRefund>0&&{label:'▼ 환수금 차감',value:-p.totalRefund},
+            reserve>0&&{label:'담보금 적립 ('+Math.round(reserveRate*100)+'%)',value:-reserve},
+            p.totalBonus>0&&{label:'시상금/시책',value:p.totalBonus},
+            carryoverAmt<0&&{label:'⚠️ 차월 이월',value:carryoverAmt},
+            {label:'소득세 3.3%',value:-tax33},
+          ].filter(Boolean),
           industryType:'insurance',
-          grade:grade, isNegative:isNegative, carryOver:carryOver,
-          collateral:collateral
+          carryoverAmt:carryoverAmt
         });
       });
 
       if(!results.length){toast('❌ 파싱된 직원 없음');return;}
-
-      // 마이너스 정산자 경고
-      var negCnt=results.filter(function(r){return r.isNegative;}).length;
-      var totalCollat=results.reduce(function(s,r){return s+(r.collateral||0);},0);
-      toast('✅ 보험설계사 '+results.length+'명'+(negCnt>0?' ⚠️마이너스'+negCnt+'명':'')+(totalCollat>0?' | 담보금 ₩'+totalCollat.toLocaleString():''));
+      toast('✅ 보험설계사 파싱 완료 — '+results.length+'명');
+      _autoRegisterIndWorkers(results,'insurance');
       _renderIndustrySettle(results, month, '🛡️ 보험설계사');
-    }catch(err){toast('❌ 파싱 오류: '+err.message);console.error(err);}
+    }catch(err){
+      console.error('[_parseInsuranceExcel]',err);
+      toast('❌ 파싱 오류: '+err.message);
+    }
   };
   reader.readAsArrayBuffer(file);
 }
+
 
 
 function _parseConstructionExcel(file, month){
