@@ -35401,7 +35401,7 @@ function pagePayout(){
 
     var sessionHtml=sessions.length?sessions.map(function(s){
       var statusColor={'COMPLETED':'#10b981','PARTIAL':'#f59e0b','FAILED':'#ef4444','PENDING':'#6b7280'}[s.status]||'#6b7280';
-      return '<div style="background:var(--bg3);border-radius:10px;padding:10px 12px;margin-bottom:6px;cursor:pointer" onclick="pagePayoutDetail(''+s.id+'')">'+
+      return '<div style="background:var(--bg3);border-radius:10px;padding:10px 12px;margin-bottom:6px;cursor:pointer" data-sid="'+s.id+'" onclick="pagePayoutDetail(this.dataset.sid)">'+
         '<div style="display:flex;justify-content:space-between;align-items:center">'+
           '<div>'+
             '<div style="font-size:12px;font-weight:700">'+esc(s.month||'')+'월 정산 송금</div>'+
