@@ -23327,7 +23327,8 @@ function deleteMonthSettlements(month){
 var SEASON_PRICES = [];  // [{id,label,start,end,prices:{route:price}}]
 function _loadSeasonPrices(){
   if(!_db||!_CU)return;
-  _db.collection('settings').doc(_CU.dealerId+'_seasonPrices').get()
+  var _sDid=window._adminViewDealerId||_CU.dealerId;
+  _db.collection('settings').doc(_sDid+'_seasonPrices').get()
     .then(function(snap){
       if(snap.exists){var d=snap.data();SEASON_PRICES=d.periods||[];}
     }).catch(function(){});
@@ -26563,7 +26564,8 @@ function pagePrices(tabMode){
   if(!tabMode){document.getElementById('page-title').textContent='쿠팡 라우트 단가표';document.getElementById('topbar-right').innerHTML='';}
   if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
   el.innerHTML='<div class="loading">로딩 중...</div>';
-  var did=_CU.dealerId;
+  // ★ SA 열람 시 _adminViewDealerId 우선
+  var did=window._adminViewDealerId||_CU.dealerId;
   // 단가표 + routeCampMap 동시 로드
   Promise.all([
     _db.collection('settings').doc(did+'_routePrices').get().catch(function(){return null;}),
@@ -32449,10 +32451,14 @@ function switchDealer(dealerId){
   if(!isSuperAdmin()){toast('❌ 권한 없음');return;}
   window._adminViewDealerId=dealerId;
   _CU.dealerId=dealerId;  // 임시로 dealerId 전환
-  _settleCache=null;_drvCache=null;
+  // ★ 모든 캐시 초기화 — 단가표/시즌단가/기사 포함
+  _settleCache=null; _drvCache=null;
   Object.keys(RPRICE).forEach(function(k){delete RPRICE[k];});
+  if(typeof SEASON_PRICES !== 'undefined') SEASON_PRICES=[];
+  window._priceCache=null;
+  window._campMapCache=null;
   var mo=document.getElementById('mo-admin');if(mo)mo.remove();
-  toast('🔍 '+dealerId+' 대리점 데이터 열람 중');
+  toast('🔍 '+dealerId+' 대리점 열람 중 — 모든 캐시 초기화');
   _reloadSettlePage();
 }
 
