@@ -34945,7 +34945,7 @@ function pageIndustry(type, title){
       histHtml='<div class="card" style="margin-top:12px">'+
         '<div style="font-size:11px;font-weight:700;margin-bottom:8px">📋 정산 이력</div>'+
         history.map(function(h){
-          return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="_loadIndustrySavedSettle(''+h.id+'',''+type+'')">'+
+          return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="_loadIndustrySavedSettle(this.dataset.id,this.dataset.type)" data-id="'+h.id+'" data-type="'+type+'">'+
             '<div>'+
               '<div style="font-size:12px;font-weight:700">'+esc(h.month||'')+'</div>'+
               '<div style="font-size:10px;color:var(--text3)">'+(h.totalCount||0)+'명 · 총 실지급 ₩'+(h.totalNet||0).toLocaleString()+'</div>'+
@@ -35401,7 +35401,7 @@ function pagePayout(){
 
     var sessionHtml=sessions.length?sessions.map(function(s){
       var statusColor={'COMPLETED':'#10b981','PARTIAL':'#f59e0b','FAILED':'#ef4444','PENDING':'#6b7280'}[s.status]||'#6b7280';
-      return '<div style="background:var(--bg3);border-radius:10px;padding:10px 12px;margin-bottom:6px;cursor:pointer" data-sid="'+s.id+'" onclick="pagePayoutDetail(this.dataset.sid)">'+
+      return '<div style="background:var(--bg3);border-radius:10px;padding:10px 12px;margin-bottom:6px;cursor:pointer" onclick="pagePayoutDetail(''+s.id+'')">'+
         '<div style="display:flex;justify-content:space-between;align-items:center">'+
           '<div>'+
             '<div style="font-size:12px;font-weight:700">'+esc(s.month||'')+'월 정산 송금</div>'+
