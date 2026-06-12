@@ -22890,11 +22890,7 @@ function pageSettle(){
     _db.collection('tax_docs').where('dealerId','==',_did).get()
   ]).then(function(results){
     var snap=results[0],expSnap=results[1],fixSnap=results[2],taxDocSnap=results[3];
-    // ★ AI정산(쿠팡)에는 업종별 정산 데이터 제외 — industryType 없거나 'coupang'만
-    var allDocs=(snap.docs||[]).filter(function(d){
-      var it=d.data().industryType||'';
-      return !it||it==='coupang';
-    });
+    var allDocs=[].concat(snap.docs||[]);
     if(!allDocs.length){
       c.innerHTML='<div class="empty" style="padding:60px 20px"><div style="font-size:48px;margin-bottom:12px">📊</div>'
         +'<div style="font-size:17px;font-weight:800;margin-bottom:6px">정산 데이터가 없습니다</div>'
@@ -25617,7 +25613,15 @@ function scrollToCamp(camp){
   else pageDrivers();
 }
 function _renderDrivers(drivers,c){
-  var act=drivers.filter(function(d){return d.is_active!==false&&d.status!=='탈퇴'&&d.status!=='퇴직'&&d.status!=='거부';});
+  // ★ 기사 관리: 쿠팡 기사만 표시 (청소·파견 등 업종별 직원 제외)
+  var act=drivers.filter(function(d){
+    if(d.is_active===false) return false;
+    if(['탈퇴','퇴직','거부'].indexOf(d.status||'')>=0) return false;
+    // jobsub이 청소·파견이면 제외 (ind_workers에서 관리)
+    var js=d.jobsub||'';
+    if(js&&js!=='쿠팡'&&js.indexOf('쿠팡')<0&&js!=='') return false;
+    return true;
+  });
   // 실제 기사 데이터 기반 동적 캠프
   var campSet={};
   act.forEach(function(d){var cc=_getDrvCamp(d);if(cc&&cc!=='미지정')campSet[cc]=_campColor(cc);});
