@@ -36253,12 +36253,42 @@ function pageIndRules(type, title){
     if(hasRule){
       var summary=document.createElement('div');
       summary.style.cssText='background:var(--bg3);border-radius:10px;padding:12px 14px;font-size:11px;color:var(--text2);line-height:1.8';
+      // 필드명 한글 매핑
+      var FIELD_LABELS={
+        threshold4ins:'4대보험 기준 일수',thresholdHours:'4대보험 기준 시간',
+        taxFreeDaily:'일당 비과세 한도(원)',minDeduction:'소액부징수 기준(원)',
+        baseDeductionRate:'카드+부가세 공제율(%)',fixedMonthlyDeduction:'고정 월 공제(원)',
+        productRate:'제품판매 정산율(%)',membershipRetroactive:'회원권 원가역산',
+        slidingScale:'슬라이딩 요율',itemDeductions:'메뉴별 약재비',
+        maxFirstYearRate:'초년도 수수료 한도(%)',clawbackReserve:'담보금 적립률(%)',
+        carryoverEnabled:'마이너스 차월 이월',
+        baseRatePerCall:'기본 콜단가(원)',longDistBase:'장거리 기준(m)',
+        longDistRate:'장거리 추가단가(원/100m)',nightSurchargeRate:'야간 할증률(%)',
+        rainSurchargeRate:'우천 할증률(%)',dailyEquipFee:'일일 장비비(원)',
+        insurancePerWorkDay:'출근일 보험료(원)',platformFeeRate:'플랫폼 수수료률(%)',
+        taxRate:'소득세율(%)',
+        publicPayRate:'공단 청구 비율(%)',bathFee:'목욕급여 단가(원)',
+        nightRate:'야간·휴일 가산율(%)',dementiaBonus:'치매가산 수당(원)',
+        familyPayRate:'가족요양 지급율(%)',
+        bookExclude:'교재비 제외',teacherRate:'강사 비율(%)',
+        palletDailyFee:'파레트 일일 보관단가(원)',pickFee:'피킹 단가(원)',
+        packFee:'패킹 단가(원)',penaltyRate:'오배송 페널티율(%)',
+        jobRates:'직무별 일당',delayRate:'지체상율(%/일)',
+        minWage:'최저시급(원)',weeklyHourThreshold:'주휴 기준시간',
+        fiveOrMoreWorkers:'5인 이상 사업장',calcBase:'정산 기준',
+      };
       summary.innerHTML='<div style="font-weight:700;margin-bottom:6px">📋 현재 설정값</div>'+
         Object.entries(rule).map(function(e){
+          var label=FIELD_LABELS[e[0]]||e[0];
           var val=e[1];
           if(Array.isArray(val)) val=val.map(function(s){return s.label+' '+s.rate+'%';}).join(' / ');
-          if(typeof val==='object') val=JSON.stringify(val);
-          return '<div>'+e[0]+': <b>'+val+'</b></div>';
+          else if(typeof val==='object'&&val!==null) val=JSON.stringify(val);
+          else if(typeof val==='boolean') val=val?'✅':'❌';
+          else if(typeof val==='number'&&val>999) val=val.toLocaleString();
+          return '<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)">'+
+            '<span style="color:var(--text3)">'+label+'</span>'+
+            '<b>'+val+'</b>'+
+          '</div>';
         }).join('');
       el.appendChild(summary);
     }
