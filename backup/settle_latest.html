@@ -2452,6 +2452,286 @@ function _industrySettleSaveAll(did, results, month, label){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 📦 업종별 파서 공통 헬퍼
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🏌️ 골프·🔧 시설·🚛 이삿짐·⚡ 전기·🌿 조경 파서
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _parseGolfExcel(file,month){
+  if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
+      if(!rows.length){toast('데이터 없음');return;}
+      var headers=rows[0].map(function(h){return String(h||'').trim();});
+      function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
+      function rv(row,i){if(i<0)return 0;var v=row[i];if(!v&&v!==0)return 0;return parseFloat(String(v).replace(/,/g,''))||0;}
+      function yn(row,i){if(i<0)return false;var v=String(row[i]||'').trim().toUpperCase();return v==='Y'||v==='예'||v==='1';}
+      var iId=col(['사번','ID']);var iName=col(['캐디명','이름','성명']);
+      var iFee=col(['캐디피','캐디비','단가']);var iHole=col(['홀수','홀']);
+      var iCart=col(['카트피','카트비']);var iTip=col(['팁','봉사료']);
+      var iCancel=col(['우천취소','취소']);var iCamp=col(['소속','팀']);
+      if(iName<0&&iId<0){toast('캐디명 없음');return;}
+      var personMap={};var personOrder=[];
+      rows.slice(1).forEach(function(row){
+        var rawId=iId>=0?String(row[iId]||'').trim():'';
+        var rawName=iName>=0?String(row[iName]||'').trim():'';
+        var key=rawId||rawName;if(!key)return;
+        if(!personMap[key]){personMap[key]={id:rawId,name:rawName||rawId,camp:iCamp>=0?String(row[iCamp]||'').trim():'',totalFee:0,totalCart:0,totalTip:0,cancelCnt:0,roundCnt:0};personOrder.push(key);}
+        var p=personMap[key];if(!p.name&&rawName)p.name=rawName;
+        var fee=rv(row,iFee);var cart=rv(row,iCart);var tip=rv(row,iTip);
+        var cancel=yn(row,iCancel);var actualFee=cancel?Math.round(fee*0.5):fee;
+        p.totalFee+=actualFee;p.totalCart+=cart;p.totalTip+=tip;
+        if(cancel)p.cancelCnt++;else p.roundCnt++;
+      });
+      var results=[];
+      personOrder.forEach(function(key){
+        var p=personMap[key];if(!p.name||(!p.totalFee&&!p.totalTip))return;
+        var gross=p.totalFee+p.totalCart+p.totalTip;
+        var tax33=Math.round(gross*0.033);if(tax33<1000)tax33=0;
+        var net=gross-tax33;
+        results.push({name:p.name,id:p.id,camp:p.camp,gross:gross,tax33:tax33,net:net,
+          extras:[{label:'라운드 '+p.roundCnt+'회(취소 '+p.cancelCnt+'회)',value:''},
+            {label:'캐디피',value:p.totalFee},
+            p.totalCart>0&&{label:'카트피',value:p.totalCart},
+            p.totalTip>0&&{label:'팁/봉사료(비과세)',value:p.totalTip},
+            tax33>0&&{label:'소득세 3.3%',value:-tax33}].filter(Boolean),
+          industryType:'golf'});
+      });
+      if(!results.length){toast('파싱된 캐디 없음');return;}
+      toast('골프장 캐디 '+results.length+'명');
+      _autoRegisterIndWorkers(results,'golf');
+      _renderIndustrySettle(results,month,'🏌️ 골프장·캐디');
+    }catch(err){toast('파싱오류: '+err.message);}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function _parseFacilityExcel(file,month){
+  if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
+      if(!rows.length){toast('데이터 없음');return;}
+      var headers=rows[0].map(function(h){return String(h||'').trim();});
+      function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
+      function rv(row,i){if(i<0)return 0;var v=row[i];if(!v&&v!==0)return 0;return parseFloat(String(v).replace(/,/g,''))||0;}
+      var iId=col(['사번','ID']);var iName=col(['작업자','이름','성명']);
+      var iType=col(['작업유형','작업종류','유형']);var iSite=col(['현장명','현장','장소']);
+      var iArea=col(['면적','수량','평수','용량','대수']);var iRate=col(['단가','단위단가']);
+      var iRisk=col(['위험수당','위험','특수수당']);var iMeal=col(['식대']);
+      var iTrans=col(['교통비','이동비']);var iCamp=col(['소속','팀']);
+      if(iName<0&&iId<0){toast('작업자명 없음');return;}
+      var personMap={};var personOrder=[];
+      rows.slice(1).forEach(function(row){
+        var rawId=iId>=0?String(row[iId]||'').trim():'';
+        var rawName=iName>=0?String(row[iName]||'').trim():'';
+        var key=rawId||rawName;if(!key)return;
+        if(!personMap[key]){personMap[key]={id:rawId,name:rawName||rawId,camp:iCamp>=0?String(row[iCamp]||'').trim():'',jobs:[],totalPay:0,totalRisk:0,totalMeal:0,totalTrans:0};personOrder.push(key);}
+        var p=personMap[key];if(!p.name&&rawName)p.name=rawName;
+        var jobType=iType>=0?String(row[iType]||'').trim():'';
+        var site=iSite>=0?String(row[iSite]||'').trim():'';
+        var area=rv(row,iArea);var rate=rv(row,iRate);
+        var pay=area>0&&rate>0?Math.round(area*rate):rate;
+        p.jobs.push({type:jobType,site:site,area:area,pay:pay});
+        p.totalPay+=pay;p.totalRisk+=rv(row,iRisk);
+        p.totalMeal+=rv(row,iMeal);p.totalTrans+=rv(row,iTrans);
+      });
+      var results=[];
+      personOrder.forEach(function(key){
+        var p=personMap[key];if(!p.name||p.totalPay===0)return;
+        var taxBase=p.totalPay+p.totalRisk;var nonTax=p.totalMeal+p.totalTrans;
+        var gross=taxBase+nonTax;
+        var empIns=Math.round(taxBase*0.009);if(empIns<1000)empIns=0;
+        var tax33=Math.round(taxBase*0.033);if(tax33<1000)tax33=0;
+        var net=gross-empIns-tax33;
+        results.push({name:p.name,id:p.id,camp:p.camp,gross:gross,tax33:tax33,net:net,
+          extras:[{label:'작업 '+p.jobs.length+'건',value:''}]
+            .concat(p.jobs.map(function(j){return {label:(j.type||'작업')+(j.site?' '+j.site:'')+(j.area>0?' '+j.area+'단위':''),value:j.pay};}))
+            .concat([p.totalRisk>0&&{label:'위험수당',value:p.totalRisk},p.totalMeal>0&&{label:'식대(비과세)',value:p.totalMeal},p.totalTrans>0&&{label:'교통비(비과세)',value:p.totalTrans},empIns>0&&{label:'고용보험',value:-empIns},tax33>0&&{label:'소득세3.3%',value:-tax33}].filter(Boolean)),
+          industryType:'facility'});
+      });
+      if(!results.length){toast('파싱된 작업자 없음');return;}
+      toast('시설관리 '+results.length+'명');
+      _autoRegisterIndWorkers(results,'facility');
+      _renderIndustrySettle(results,month,'🔧 시설관리·청소');
+    }catch(err){toast('파싱오류: '+err.message);}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function _parseMovingExcel(file,month){
+  if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
+      if(!rows.length){toast('데이터 없음');return;}
+      var headers=rows[0].map(function(h){return String(h||'').trim();});
+      function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
+      function rv(row,i){if(i<0)return 0;var v=row[i];if(!v&&v!==0)return 0;return parseFloat(String(v).replace(/,/g,''))||0;}
+      var iId=col(['사번','ID']);var iName=col(['작업자','이름','성명']);
+      var iType=col(['구분','유형','작업종류']);var iFloor=col(['사다리층수','층수','층']);
+      var iBase=col(['기본급','일당','단가']);var iExtra=col(['추가수당','추가','사다리비']);
+      var iMeal=col(['식대']);var iTrans=col(['교통비']);var iCamp=col(['소속','팀']);
+      if(iName<0&&iId<0){toast('작업자명 없음');return;}
+      var ladderPerFloor=5000;
+      var personMap={};var personOrder=[];
+      rows.slice(1).forEach(function(row){
+        var rawId=iId>=0?String(row[iId]||'').trim():'';
+        var rawName=iName>=0?String(row[iName]||'').trim():'';
+        var key=rawId||rawName;if(!key)return;
+        if(!personMap[key]){personMap[key]={id:rawId,name:rawName||rawId,camp:iCamp>=0?String(row[iCamp]||'').trim():'',jobs:[],totalBase:0,totalExtra:0,totalMeal:0,totalTrans:0};personOrder.push(key);}
+        var p=personMap[key];if(!p.name&&rawName)p.name=rawName;
+        var floor=rv(row,iFloor);var base=rv(row,iBase);var extra=rv(row,iExtra);
+        var ladderFee=floor>0?Math.round(floor*ladderPerFloor):0;
+        var type=iType>=0?String(row[iType]||'').trim():'';
+        p.jobs.push({type:type,floor:floor,base:base,extra:extra,ladderFee:ladderFee});
+        p.totalBase+=base;p.totalExtra+=extra+ladderFee;
+        p.totalMeal+=rv(row,iMeal);p.totalTrans+=rv(row,iTrans);
+      });
+      var results=[];
+      personOrder.forEach(function(key){
+        var p=personMap[key];if(!p.name||p.totalBase===0)return;
+        var taxBase=p.totalBase+p.totalExtra;var nonTax=p.totalMeal+p.totalTrans;
+        var gross=taxBase+nonTax;
+        var empIns=Math.round(taxBase*0.009);if(empIns<1000)empIns=0;
+        var tax33=Math.round(taxBase*0.033);if(tax33<1000)tax33=0;
+        var net=gross-empIns-tax33;
+        results.push({name:p.name,id:p.id,camp:p.camp,gross:gross,tax33:tax33,net:net,
+          extras:[{label:'작업 '+p.jobs.length+'건',value:''}]
+            .concat(p.jobs.map(function(j){return {label:(j.type||'이사')+(j.floor>0?' '+j.floor+'층':''),value:j.base+(j.ladderFee||j.extra)};}))
+            .concat([p.totalMeal>0&&{label:'식대(비과세)',value:p.totalMeal},p.totalTrans>0&&{label:'교통비(비과세)',value:p.totalTrans},empIns>0&&{label:'고용보험',value:-empIns},tax33>0&&{label:'소득세3.3%',value:-tax33}].filter(Boolean)),
+          industryType:'moving'});
+      });
+      if(!results.length){toast('파싱된 작업자 없음');return;}
+      toast('이삿짐 '+results.length+'명');
+      _autoRegisterIndWorkers(results,'moving');
+      _renderIndustrySettle(results,month,'🚛 이삿짐·운반');
+    }catch(err){toast('파싱오류: '+err.message);}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function _parseElecExcel(file,month){
+  if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
+      if(!rows.length){toast('데이터 없음');return;}
+      var headers=rows[0].map(function(h){return String(h||'').trim();});
+      function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
+      function rv(row,i){if(i<0)return 0;var v=row[i];if(!v&&v!==0)return 0;return parseFloat(String(v).replace(/,/g,''))||0;}
+      var iId=col(['사번','ID']);var iName=col(['작업자','이름','성명','기사']);
+      var iWork=col(['공종','작업종류','구분']);var iSite=col(['현장','현장명','장소']);
+      var iUnit=col(['공수','일수','출역']);var iRate=col(['일당','단가','일급']);
+      var iMat=col(['자재비','재료비']);var iRisk=col(['위험수당','고압수당']);
+      var iMeal=col(['식대']);var iCamp=col(['소속','팀']);
+      if(iName<0&&iId<0){toast('작업자명 없음');return;}
+      var personMap={};var personOrder=[];
+      rows.slice(1).forEach(function(row){
+        var rawId=iId>=0?String(row[iId]||'').trim():'';
+        var rawName=iName>=0?String(row[iName]||'').trim():'';
+        var key=rawId||rawName;if(!key)return;
+        if(!personMap[key]){personMap[key]={id:rawId,name:rawName||rawId,camp:iCamp>=0?String(row[iCamp]||'').trim():'',jobs:[],totalPay:0,totalMat:0,totalRisk:0,totalMeal:0};personOrder.push(key);}
+        var p=personMap[key];if(!p.name&&rawName)p.name=rawName;
+        var work=iWork>=0?String(row[iWork]||'').trim():'';
+        var site=iSite>=0?String(row[iSite]||'').trim():'';
+        var unit=rv(row,iUnit)||1;var rate=rv(row,iRate);
+        var pay=Math.round(unit*rate);
+        p.jobs.push({work:work,site:site,unit:unit,pay:pay});
+        p.totalPay+=pay;p.totalMat+=rv(row,iMat);
+        p.totalRisk+=rv(row,iRisk);p.totalMeal+=rv(row,iMeal);
+      });
+      var results=[];
+      personOrder.forEach(function(key){
+        var p=personMap[key];if(!p.name||p.totalPay===0)return;
+        var taxBase=p.totalPay+p.totalRisk;
+        var gross=taxBase+p.totalMeal-p.totalMat;if(gross<0)gross=0;
+        var empIns=Math.round(taxBase*0.009);if(empIns<1000)empIns=0;
+        var tax33=Math.round(taxBase*0.033);if(tax33<1000)tax33=0;
+        var net=gross-empIns-tax33;
+        results.push({name:p.name,id:p.id,camp:p.camp,gross:gross,tax33:tax33,net:net,
+          extras:[{label:'작업 '+p.jobs.length+'건',value:''}]
+            .concat(p.jobs.map(function(j){return {label:(j.work||'공사')+(j.site?' '+j.site:'')+(j.unit>1?' '+j.unit+'공수':''),value:j.pay};}))
+            .concat([p.totalMat>0&&{label:'자재비차감',value:-p.totalMat},p.totalRisk>0&&{label:'위험수당',value:p.totalRisk},p.totalMeal>0&&{label:'식대(비과세)',value:p.totalMeal},empIns>0&&{label:'고용보험',value:-empIns},tax33>0&&{label:'소득세3.3%',value:-tax33}].filter(Boolean)),
+          industryType:'elec'});
+      });
+      if(!results.length){toast('파싱된 작업자 없음');return;}
+      toast('전기·설비 '+results.length+'명');
+      _autoRegisterIndWorkers(results,'elec');
+      _renderIndustrySettle(results,month,'⚡ 전기·설비');
+    }catch(err){toast('파싱오류: '+err.message);}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function _parseLandscapeExcel(file,month){
+  if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
+      if(!rows.length){toast('데이터 없음');return;}
+      var headers=rows[0].map(function(h){return String(h||'').trim();});
+      function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
+      function rv(row,i){if(i<0)return 0;var v=row[i];if(!v&&v!==0)return 0;return parseFloat(String(v).replace(/,/g,''))||0;}
+      var iId=col(['사번','ID']);var iName=col(['작업자','이름','성명','인부']);
+      var iWork=col(['작업종류','작업','구분']);var iSite=col(['현장','농장','장소']);
+      var iUnit=col(['공수','일수','출역']);var iRate=col(['일당','단가','일급']);
+      var iOver=col(['야간','연장','특근']);var iMeal=col(['식대']);
+      var iTrans=col(['교통비','차비']);var iCamp=col(['소속','팀']);
+      if(iName<0&&iId<0){toast('작업자명 없음');return;}
+      var personMap={};var personOrder=[];
+      rows.slice(1).forEach(function(row){
+        var rawId=iId>=0?String(row[iId]||'').trim():'';
+        var rawName=iName>=0?String(row[iName]||'').trim():'';
+        var key=rawId||rawName;if(!key)return;
+        if(!personMap[key]){personMap[key]={id:rawId,name:rawName||rawId,camp:iCamp>=0?String(row[iCamp]||'').trim():'',jobs:[],totalPay:0,totalOver:0,totalMeal:0,totalTrans:0};personOrder.push(key);}
+        var p=personMap[key];if(!p.name&&rawName)p.name=rawName;
+        var work=iWork>=0?String(row[iWork]||'').trim():'';
+        var site=iSite>=0?String(row[iSite]||'').trim():'';
+        var unit=rv(row,iUnit)||1;var rate=rv(row,iRate);
+        var pay=Math.round(unit*rate);
+        p.jobs.push({work:work,site:site,unit:unit,pay:pay});
+        p.totalPay+=pay;p.totalOver+=rv(row,iOver);
+        p.totalMeal+=rv(row,iMeal);p.totalTrans+=rv(row,iTrans);
+      });
+      var results=[];
+      personOrder.forEach(function(key){
+        var p=personMap[key];if(!p.name||p.totalPay===0)return;
+        var taxBase=p.totalPay+p.totalOver;var nonTax=p.totalMeal+p.totalTrans;
+        var gross=taxBase+nonTax;
+        var empIns=Math.round(taxBase*0.009);if(empIns<1000)empIns=0;
+        var tax33=Math.round(taxBase*0.033);if(tax33<1000)tax33=0;
+        var net=gross-empIns-tax33;
+        results.push({name:p.name,id:p.id,camp:p.camp,gross:gross,tax33:tax33,net:net,
+          extras:[{label:'작업 '+p.jobs.length+'건',value:''}]
+            .concat(p.jobs.map(function(j){return {label:(j.work||'작업')+(j.site?' '+j.site:'')+(j.unit>1?' '+j.unit+'일':''),value:j.pay};}))
+            .concat([p.totalOver>0&&{label:'야간/특근',value:p.totalOver},p.totalMeal>0&&{label:'식대(비과세)',value:p.totalMeal},p.totalTrans>0&&{label:'교통비(비과세)',value:p.totalTrans},empIns>0&&{label:'고용보험',value:-empIns},tax33>0&&{label:'소득세3.3%',value:-tax33}].filter(Boolean)),
+          industryType:'landscape'});
+      });
+      if(!results.length){toast('파싱된 작업자 없음');return;}
+      toast('조경·농업 '+results.length+'명');
+      _autoRegisterIndWorkers(results,'landscape');
+      _renderIndustrySettle(results,month,'🌿 조경·농업');
+    }catch(err){toast('파싱오류: '+err.message);}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
 function _colIdx(headers,kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
 function _rvNum(row,i){if(i<0||i>=row.length) return 0; var v=row[i]; if(v===null||v===undefined||v==='') return 0; return parseFloat(String(v).replace(/[,%]/g,'').trim())||0;}
 function _rvBool(row,i){if(i<0) return false; var v=String(row[i]||'').trim().toUpperCase(); return v==='Y'||v==='YES'||v==='1'||v==='TRUE';}
