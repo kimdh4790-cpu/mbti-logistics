@@ -3479,48 +3479,79 @@ function _parseQuickExcel(file, month){
       var headers=rows[0].map(function(h){return String(h||'').trim();});
       function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
 
-      var iName=col(['이름','성명','기사']);
-      var iTeam=col(['팀','소속','권역']);
-      var iCall=col(['콜','건수','운행건']);
-      var iRate=col(['건당','단가','콜단가']);
-      var iLong=col(['장거리','특수']);
-      var iNight=col(['야간','심야']);
-      var iComm=col(['수수료','차감','공제']);
-      var iId=col(['ID','아이디']);
+      var iName   = col(['이름','성명','기사명','라이더']);
+      var iTeam   = col(['팀','소속','센터','권역','캠프']);
+      var iCalls  = col(['건수','주간건수','콜건수','운행건']);
+      var iActual = col(['앱실수령','실수령','앱수령','실제수령','앱금액']);
+      var iNight  = col(['심야','야간건수','심야건수']);
+      var iMission= col(['미션','미션수당','이벤트','프로모션']);
+      var iEvent  = col(['이벤트수당','특별수당','행사']);
+      var iProgFee= col(['프로그램비','관리비','수수료']);
 
       if(iName<0){toast('❌ 이름 컬럼 없음');return;}
+
+      // Rule Engine 설정 로드
+      var rule = _getRule('quick');
+      var did  = _CU.dealerId||_CU.uid;
+
+      // 단가표에서 라우트 단가 가져오기 (RPRICE)
+      var defaultTiers = rule.tiers||[];
+      var basePrice    = rule.baseRatePerCall||3500;
+      var nightSurch   = rule.nightSurchargeRate ? Math.round(basePrice * rule.nightSurchargeRate/100) : 0;
+      var programFee   = rule.dailyEquipFee||0;
 
       var results=[];
       rows.slice(1).forEach(function(row){
         var name=String(row[iName]||'').trim(); if(!name) return;
-        var team=iTeam>=0?String(row[iTeam]||''):'';
-        var calls=iCall>=0?parseFloat(row[iCall])||0:0;
-        var rate=iRate>=0?parseFloat(String(row[iRate]||'').replace(/,/g,''))||0:0;
-        var longAmt=iLong>=0?parseFloat(String(row[iLong]||'').replace(/,/g,''))||0:0;
-        var nightAmt=iNight>=0?parseFloat(String(row[iNight]||'').replace(/,/g,''))||0:0;
-        var comm=iComm>=0?parseFloat(String(row[iComm]||'').replace(/,/g,''))||0:0;
+        var team   = iTeam>=0   ? String(row[iTeam]||'').trim() : '';
+        var calls  = iCalls>=0  ? parseFloat(String(row[iCalls]||'').replace(/,/g,''))||0 : 0;
+        var actual = iActual>=0 ? parseFloat(String(row[iActual]||'').replace(/,/g,''))||0 : 0;
+        var night  = iNight>=0  ? parseFloat(String(row[iNight]||'').replace(/,/g,''))||0 : 0;
+        var mission= iMission>=0? parseFloat(String(row[iMission]||'').replace(/,/g,''))||0 : 0;
+        var event  = iEvent>=0  ? parseFloat(String(row[iEvent]||'').replace(/,/g,''))||0 : 0;
+        var pfee   = iProgFee>=0? parseFloat(String(row[iProgFee]||'').replace(/,/g,''))||programFee : programFee;
 
-        var callPay=Math.round(calls*rate);
-        var gross=callPay+longAmt+nightAmt;
-        var deduct=Math.round(comm);
-        var net=gross-deduct;
+        var x={
+          weekTotal:calls, actualEarnings:actual,
+          nightCnt:night, missionAmt:mission, eventAmt:event
+        };
+        var cfg={
+          tiers:defaultTiers, callPrice:basePrice,
+          nightSurcharge:nightSurch, programFee:pfee,
+          withhold: rule.taxRate>0 ? '3.3' : 'none'
+        };
+
+        var calc = calcNet_delivery(x, cfg);
+
+        var extras=[
+          {label:'콜 '+calls+'건 × ₩'+calc.fixedPrice.toLocaleString()+'/건', value:calc.driverGuarantee},
+        ];
+        if(calc.nightAddAmt>0)  extras.push({label:'심야수당', value:calc.nightAddAmt});
+        if(mission>0)           extras.push({label:'미션수당', value:mission});
+        if(event>0)             extras.push({label:'이벤트수당', value:event});
+        if(calc.tax>0)          extras.push({label:'소득세(3.3%)', value:-calc.tax});
+        if(pfee>0)              extras.push({label:'프로그램비', value:-pfee});
+        // 보전/환수
+        if(calc.topUpAmt>0)     extras.push({label:'▲ 대리점 보전', value:calc.topUpAmt});
+        if(calc.recoveryAmt>0)  extras.push({label:'▼ 대리점 회수', value:-calc.recoveryAmt});
 
         results.push({
           name:name, camp:team,
-          gross:gross, tax33:Math.round(gross*0.033), net:gross-Math.round(gross*0.033)-deduct,
-          extras:[
-            calls>0&&{label:'콜 '+calls+'건×'+rate.toLocaleString()+'원',value:callPay},
-            typeof longPay!=='undefined'&&longPay>0&&{label:'장거리수당',value:longPay},
-            typeof nightPay!=='undefined'&&nightPay>0&&{label:'야간수당',value:nightPay},
-            typeof incAmt!=='undefined'&&incAmt>0&&{label:'인센티브',value:incAmt},
-            deduct>0&&{label:'공제',value:-deduct},
-          ].filter(Boolean), industryType:'quick'
+          gross:calc.gross, tax33:calc.tax,
+          topUpAmt:calc.topUpAmt, recoveryAmt:calc.recoveryAmt,
+          agencyMargin:calc.agencyMargin,
+          actualEarnings:actual,
+          net:calc.net,
+          extras:extras,
+          label:calc.label,
+          industryType:'quick'
         });
       });
 
       if(!results.length){toast('❌ 파싱된 직원 없음');return;}
-      toast('✅ 퀵·대리운전 파싱 완료 — '+results.length+'명');
-      _renderIndustrySettle(results, month, '🚗 퀵·대리운전');
+      toast('✅ 배달대행·퀵 파싱 완료 — '+results.length+'명');
+      _autoRegisterIndWorkers(results,'quick');
+      _renderIndustrySettle(results, month, '🚗 배달대행·퀵');
     }catch(err){toast('❌ 파싱 오류: '+err.message);}
   };
   reader.readAsArrayBuffer(file);
