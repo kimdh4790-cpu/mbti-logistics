@@ -12,6 +12,17 @@
 <meta name="msapplication-TileColor" content="#185FA5">
 <meta name="msapplication-TileImage" content="/icon-192.png">
 <title>DONWAY — 자동화 정산 플랫폼</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="DONWAY">
+<meta property="og:title" content="DONWAY — 정산 담당자의 3시간을 돌려드립니다">
+<meta property="og:description" content="엑셀 하나 올리면 전 직원 정산·명세서 자동 완성. 어떤 업종이든 DONWAY 하나면 끝.">
+<meta property="og:url" content="https://donway.ai.kr">
+<meta property="og:image" content="https://donway.ai.kr/donway_og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="DONWAY — 정산 담당자의 3시간을 돌려드립니다">
+<meta name="twitter:image" content="https://donway.ai.kr/donway_og.jpg">
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon.ico">
@@ -22898,11 +22909,7 @@ function pageSettle(){
     _db.collection('tax_docs').where('dealerId','==',_did).get()
   ]).then(function(results){
     var snap=results[0],expSnap=results[1],fixSnap=results[2],taxDocSnap=results[3];
-    // ★ AI정산(쿠팡)에는 업종별 정산 제외 (industryType 없거나 'coupang'만)
-    var allDocs=(snap.docs||[]).filter(function(d){
-      var it=d.data().industryType||'';
-      return !it||it==='coupang';
-    });
+    var allDocs=[].concat(snap.docs||[]);
     if(!allDocs.length){
       c.innerHTML='<div class="empty" style="padding:60px 20px"><div style="font-size:48px;margin-bottom:12px">📊</div>'
         +'<div style="font-size:17px;font-weight:800;margin-bottom:6px">정산 데이터가 없습니다</div>'
