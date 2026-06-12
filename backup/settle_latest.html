@@ -35145,8 +35145,14 @@ var _IND_RULE_DEFAULTS = {
   },
   quick: {
     taxRate: 3.3,
-    dailyEquipFee: 1000,    // 일일 고정 장비비
-    insurancePerWorkDay: 0  // 출근일 보험
+    baseRatePerCall: 3500,     // 기본 콜당 단가 (원)
+    longDistBase: 2000,        // 장거리 기준 거리 (m)
+    longDistRate: 100,         // 거리당 추가단가 (원/100m)
+    nightSurchargeRate: 20,    // 야간 할증율 (%)
+    rainSurchargeRate: 10,     // 우천 할증율 (%)
+    dailyEquipFee: 1000,       // 일일 고정 장비비 (출근 여부 무관)
+    insurancePerWorkDay: 0,    // 출근일 이륜차 보험료 (원/일)
+    platformFeeRate: 0,        // 플랫폼 수수료율 (%)
   },
   restaurant: {
     minWage: 10030,
@@ -35185,6 +35191,11 @@ function pageIndustryRules(){
       {key:'construction',icon:'🏗️',name:'건설·일용직'},
       {key:'insurance',icon:'🛡️',name:'보험설계사'},
       {key:'quick',icon:'🚗',name:'배달대행·퀵'},
+      {key:'care',icon:'🏥',name:'요양·돌봄'},
+      {key:'academy',icon:'🎓',name:'학원·교육'},
+      {key:'warehouse',icon:'📦',name:'물류창고'},
+      {key:'event',icon:'🎪',name:'행사·이벤트'},
+      {key:'freelance',icon:'🖥️',name:'프리랜서'},
       {key:'restaurant',icon:'🍽️',name:'음식점·카페'},
       {key:'sales',icon:'💼',name:'영업직'},
     ];
@@ -35221,6 +35232,8 @@ function _renderRuleCard(t,rule){
     summaryHtml=rule.slidingScale.map(function(s){
       return '<span style="background:var(--bg3);padding:2px 8px;border-radius:4px;font-size:9px;margin-right:4px">'+s.label+' '+s.rate+'%</span>';
     }).join('');
+  } else if(t.key==='quick'){
+    summaryHtml='<span style="font-size:10px;color:var(--text3)">콜단가: '+(rule.baseRatePerCall||3500).toLocaleString()+'원 · 야간: '+(rule.nightSurchargeRate||20)+'% · 장비비: '+(rule.dailyEquipFee||1000).toLocaleString()+'원/일</span>';
   } else if(t.key==='construction'){
     summaryHtml='<span style="font-size:10px;color:var(--text3)">4대보험: '+( rule.threshold4ins||8)+'일+ · 비과세: '+(rule.taxFreeDaily||100000).toLocaleString()+'원</span>';
   } else if(t.key==='restaurant'){
@@ -35328,10 +35341,41 @@ function _buildRuleForm(type,rule){
       '<textarea id="r-sliding" rows="4" style="width:100%;padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:7px;color:var(--text1);font-size:11px;font-family:monospace">'+
         JSON.stringify(rule.slidingScale||_IND_RULE_DEFAULTS.sales.slidingScale,null,2)+
       '</textarea></div>';
+  } else if(type==='care'){
+    html+=inp('r-pubrate','공단 청구 비율 (%)',rule.publicPayRate||85,'number','85');
+    html+=inp('r-bathfee','목욕급여 1회 단가 (원)',rule.bathFee||35000,'number','35000');
+    html+=inp('r-nightrate','야간·휴일 가산율 (%)',rule.nightRate||50,'number','50');
+    html+=inp('r-dementiabonus','치매전문 가산수당 (원/월)',rule.dementiaBonus||50000,'number','50000');
+    html+=inp('r-familyrate','가족요양 지급율 (%)',rule.familyPayRate||60,'number','60');
+  } else if(type==='academy'){
+    html+=inp('r-bookexclude','교재비 제외 여부','ON','text','ON/OFF');
+    html+=inp('r-productrate','강사 비율 (%)',rule.teacherRate||40,'number','40');
+    html+=inp('r-taxrate','소득세율 (%)',rule.taxRate||3.3,'number','3.3');
+  } else if(type==='warehouse'){
+    html+=inp('r-palletfee','파레트 일일 보관단가 (원)',rule.palletDailyFee||500,'number','500');
+    html+=inp('r-pickfee','피킹 건당 단가 (원)',rule.pickFee||200,'number','200');
+    html+=inp('r-packfee','패킹 건당 단가 (원)',rule.packFee||150,'number','150');
+    html+=inp('r-penaltyrate','오배송 페널티율 (%)',rule.penaltyRate||100,'number','100');
+  } else if(type==='event'){
+    html+='<div style="margin-bottom:8px"><label style="font-size:11px;color:var(--text3)">직무별 일당 단가 (JSON)</label>'+
+      '<textarea id="r-jobrates" rows="4" style="width:100%;padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:7px;color:var(--text1);font-size:11px;font-family:monospace">'+
+        JSON.stringify(rule.jobRates||{"스태프":150000,"진행":180000,"통역":250000,"경호":200000},null,2)+
+      '</textarea></div>';
+    html+=inp('r-taxrate','소득세율 (실비 제외, %)',rule.taxRate||3.3,'number','3.3');
+  } else if(type==='freelance'){
+    html+=inp('r-delayrate','지체상율 (일, %)',rule.delayRate||0.1,'number','0.1');
+    html+=inp('r-taxrate','소득세율 (%)',rule.taxRate||3.3,'number','3.3');
   } else if(type==='quick'){
-    html+=inp('r-dailyfee','일일 고정 장비비 (원)',rule.dailyEquipFee||1000,'number','1000');
-    html+=inp('r-inspd','출근일 보험료 (원/일)',rule.insurancePerWorkDay||0,'number','0');
-    html+=inp('r-taxrate','세금율 (%)',rule.taxRate||3.3,'number','3.3');
+    html+='<div style="background:var(--bg3);border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:10px;color:var(--text3)">엑셀 업로드 시 컬럼이 없는 항목에 자동 적용됩니다.</div>';
+    html+=inp('r-baserate','기본 콜당 단가 (원)',rule.baseRatePerCall||3500,'number','3500');
+    html+=inp('r-ldbase','장거리 기준 거리 (m)',rule.longDistBase||2000,'number','2000');
+    html+=inp('r-ldrate','장거리 거리당 추가단가 (원/100m)',rule.longDistRate||100,'number','100');
+    html+=inp('r-nightrate','야간 할증율 (%)',rule.nightSurchargeRate||20,'number','20');
+    html+=inp('r-rainrate','우천 할증율 (%)',rule.rainSurchargeRate||10,'number','10');
+    html+=inp('r-dailyfee','일일 고정 장비비 (원, 출근 무관)',rule.dailyEquipFee||1000,'number','1000');
+    html+=inp('r-inspd','출근일 이륜차 보험료 (원/일)',rule.insurancePerWorkDay||0,'number','0');
+    html+=inp('r-platform','플랫폼 수수료율 (%)',rule.platformFeeRate||0,'number','0');
+    html+=inp('r-taxrate','소득세율 (%)',rule.taxRate||3.3,'number','3.3');
   }
   return html;
 }
@@ -35367,11 +35411,35 @@ function _saveRule(type,pop,cb){
     var sl2=gj('r-sliding'); if(!sl2) return;
     rule={calcBase:gv('r-base')||'revenue', slidingScale:sl2};
   } else if(type==='quick'){
-    rule={dailyEquipFee:parseInt(gv('r-dailyfee'))||1000,
-          insurancePerWorkDay:parseInt(gv('r-inspd'))||0,
-          taxRate:parseFloat(gv('r-taxrate'))||3.3};
+    rule={
+      baseRatePerCall:parseInt(gv('r-baserate'))||3500,
+      longDistBase:parseInt(gv('r-ldbase'))||2000,
+      longDistRate:parseInt(gv('r-ldrate'))||100,
+      nightSurchargeRate:parseFloat(gv('r-nightrate'))||20,
+      rainSurchargeRate:parseFloat(gv('r-rainrate'))||10,
+      dailyEquipFee:parseInt(gv('r-dailyfee'))||1000,
+      insurancePerWorkDay:parseInt(gv('r-inspd'))||0,
+      platformFeeRate:parseFloat(gv('r-platform'))||0,
+      taxRate:parseFloat(gv('r-taxrate'))||3.3
+    };
   }
 
+  // 추가 업종 저장
+  if(type==='care'){
+    rule={publicPayRate:parseInt(gv('r-pubrate'))||85,bathFee:parseInt(gv('r-bathfee'))||35000,
+          nightRate:parseFloat(gv('r-nightrate'))||50,dementiaBonus:parseInt(gv('r-dementiabonus'))||0,
+          familyPayRate:parseFloat(gv('r-familyrate'))||60};
+  } else if(type==='academy'){
+    rule={bookExclude:gv('r-bookexclude')==='ON',teacherRate:parseFloat(gv('r-productrate'))||40,taxRate:parseFloat(gv('r-taxrate'))||3.3};
+  } else if(type==='warehouse'){
+    rule={palletDailyFee:parseInt(gv('r-palletfee'))||500,pickFee:parseInt(gv('r-pickfee'))||200,
+          packFee:parseInt(gv('r-packfee'))||150,penaltyRate:parseFloat(gv('r-penaltyrate'))||100};
+  } else if(type==='event'){
+    var jr=gj('r-jobrates'); if(!jr) return;
+    rule={jobRates:jr,taxRate:parseFloat(gv('r-taxrate'))||3.3};
+  } else if(type==='freelance'){
+    rule={delayRate:parseFloat(gv('r-delayrate'))||0.1,taxRate:parseFloat(gv('r-taxrate'))||3.3};
+  }
   _loadedRules[type]=rule;
   var did=_CU.dealerId||_CU.uid;
   _db.collection('settings').doc(did+'_ind_rules').set({rules:_loadedRules},{merge:true})
