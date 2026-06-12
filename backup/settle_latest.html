@@ -2781,11 +2781,15 @@ function _parseBeautyExcel(file, month){
         if(rule.slidingScale&&rule.slidingScale.length){
           var totalRate=_getBeautyRate(p.totalSales,rule);
           serviceIncome=Math.round((p.totalSales-p.totalMat)*totalRate);
-          serviceExtras=[{
-            label:'시술 합계 (슬라이딩 '+Math.round(totalRate*100)+'%)',
-            value:serviceIncome,
-            detail:'매출₩'+p.totalSales.toLocaleString()+' - 부자재₩'+p.totalMat.toLocaleString()
-          }];
+          // 개별 시술 내역 유지 (슬라이딩 요율 적용)
+          serviceExtras=p.services.filter(function(s){return s.menu&&s.menu!=='0'&&s.menu!=='(제품)';}).map(function(s){
+            var income=Math.round((s.sales-s.mat)*totalRate);
+            return {
+              label:s.menu+' ('+Math.round(totalRate*100)+'%)',
+              value:income,
+              detail:'₩'+s.sales.toLocaleString()+(s.mat>0?' - 부자재₩'+s.mat.toLocaleString():'')
+            };
+          });
         }
 
         var prodIncome = p.totalProdFee;
@@ -2799,15 +2803,20 @@ function _parseBeautyExcel(file, month){
 
         var net = gross - cardFee - tax33;
 
+        // 시술별 개별 내역 + 합계 구성
         var extras=[
           p.services.length>0&&{label:'📋 시술 건수: '+p.services.length+'건', value:''},
           {label:'시술매출 합계', value:p.totalSales},
           p.totalMat>0&&{label:'부자재 합계', value:-p.totalMat},
-          serviceExtras.length>0&&serviceExtras[0],
+        ].filter(Boolean);
+        // 개별 시술 항목 추가
+        serviceExtras.forEach(function(se){ if(se) extras.push(se); });
+        // 제품/공제/세금
+        [
           p.totalProd>0&&{label:'제품판매 ('+((rule.productRate||10))+'%)', value:prodIncome},
           cardFee>0&&{label:'카드+부가세 ('+((rule.baseDeductionRate||11))+'%)', value:-cardFee},
           tax33>0&&{label:'소득세 3.3%', value:-tax33},
-        ].filter(Boolean);
+        ].filter(Boolean).forEach(function(e){ extras.push(e); });
 
         results.push({
           name:p.name, id:p.id, camp:p.camp,
