@@ -32441,6 +32441,7 @@ function _buildNavRender(nav,cur,companyDoc){
   var openSections=[], lockedSections=[], anyOpen=false;
   var lockByPlan={settle:[],delivery:[],qr:[],payroll:[],premium:[]};
 
+  var MENUS=MENUS_SETTLE;  // ★ 항상 MENUS_SETTLE 사용
   MENUS.forEach(function(g,gi){
     if(!g||!g.items)return;
     // ★ 슈퍼어드민은 모든 섹션 무조건 표시
