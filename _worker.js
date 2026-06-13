@@ -551,6 +551,15 @@ export default {
     if (path === '/' || path === '' || path === '/donway_landing' || path === '/donway_landing/') {
       // mbetco.kr → universal_settle.html
       if (hostname.includes('mbetco') || hostname.includes('mbtico')) {
+        // /order 경로 → QR 예약·결제·평가 페이지
+        if (url.pathname === '/order' || url.pathname === '/order.html') {
+          const orderResp = await fetchAsset('/order.html', request, env);
+          const orderH = new Headers();
+          orderH.set('Content-Type', 'text/html; charset=utf-8');
+          orderH.set('Cache-Control', 'no-cache');
+          Object.entries(SECURITY_HEADERS).forEach(([k,v]) => orderH.set(k,v));
+          return new Response(orderResp.body, { status: orderResp.status, headers: orderH });
+        }
         // /liquor 경로 → 주류 재고관리
         if (url.pathname === '/liquor' || url.pathname === '/liquor.html') {
           const liqResp = await fetchAsset('/mbetco_liquor.html', request, env);
