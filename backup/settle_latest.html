@@ -1591,7 +1591,7 @@ function parseCoupangExcel(inp){
 
 
 // ── 카카오 알림톡 발송 ──
-function _sendAlimtalk(phone, name, month, gross, deduct, net){
+function _sendAlimtalk_orig(phone, name, month, gross, deduct, net){
   if(!phone) return Promise.resolve({ok:false,reason:'번호없음'});
   return fetch('/api/send-alimtalk',{
     method:'POST',
@@ -3240,6 +3240,40 @@ function _calcAcademyFee(subject, students, perStudentFee, textbookFee){
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 💳 DONWAY 요금제 정의
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🔒 체험 만료 기능 잠금
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// 잠금 필요한 기능인지 체크
+function _isLocked(feature){
+  if(isSuperAdmin()) return false;
+  if(window._trialActive) return false;
+  if(window._cachedHasPaid) return false;
+  if(window._trialExpired) return true;
+  // companies 구독 체크
+  if(_SUBS && _subActive('donway')) return false;
+  // 아직 로드 안됐으면 허용
+  if(_SUBS === null) return false;
+  return true;
+}
+
+// 잠금 팝업
+function _showLockPopup(featureName){
+  _showTrialExpiredPopup();
+}
+
+// 잠금 래퍼 — 핵심 함수들에 적용
+function _guardFn(fn, featureName){
+  return function(){
+    if(_isLocked(featureName)){
+      _showLockPopup(featureName);
+      return;
+    }
+    return fn.apply(this, arguments);
+  };
+}
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 var PLAN_DEF = {
   free: {
@@ -6967,7 +7001,7 @@ function saveCampCp(){
   });
 }
 
-function saveAllCp(){
+function saveAllCp_orig(){
   var p=window._cpPending; if(!p) return;
   var all=[],total=0;
   var savedPayloads=[]; // 저장된 정산 payload 수집 (세무사 연동용)
@@ -7454,6 +7488,29 @@ function _showTrialBanner(dLeft){
   left.textContent='\u23F0 '+msg;
   banner.appendChild(left);banner.appendChild(right);
   document.body.prepend(banner);
+}
+
+
+// ━━━ 기능 잠금 래퍼 ━━━
+function saveAllCp(){
+  if(_isLocked('settle')){_showLockPopup('정산 저장');return;}
+  return saveAllCp_orig.apply(this,arguments);
+}
+function _downloadSettleAllExcel(){
+  if(_isLocked('download')){_showLockPopup('엑셀 다운로드');return;}
+  return _downloadSettleAllExcel_orig.apply(this,arguments);
+}
+function _doExcelDownload(){
+  if(_isLocked('download')){_showLockPopup('엑셀 다운로드');return;}
+  return _doExcelDownload_orig.apply(this,arguments);
+}
+function _sendAlimtalk(){
+  if(_isLocked('alimtalk')){_showLockPopup('알림톡 발송');return;}
+  return _sendAlimtalk_orig.apply(this,arguments);
+}
+function calcDonWaySettlement(){
+  if(_isLocked('settle')){_showLockPopup('정산 계산');return null;}
+  return calcDonWaySettlement_orig.apply(this,arguments);
 }
 
 function _showTrialExpiredPopup(){
@@ -9720,7 +9777,7 @@ function _downloadRosterExcel(){
   if(!drivers.length){toast('⚠️ 기사 데이터 없음');return;}
 
   // ★ 물류앱과 동일: ExcelJS 동적 로드
-  function _doExcelDownload(ExcelJS){
+  function _doExcelDownload_orig(ExcelJS){
     var wb=new ExcelJS.Workbook();
     var ws=wb.addWorksheet('Sheet0');
     var weekDays=_getWeekDays(weekStart);
@@ -11210,7 +11267,7 @@ function _dwTrack(cnt, defPrice){
 }
 
 // ── 핵심 정산 계산 엔진
-function calcDonWaySettlement(orders, cfg){
+function calcDonWaySettlement_orig(orders, cfg){
   if(!orders||!orders.length) return null;
   // ★ [방어2] 주차 필터 락: periodStart~periodEnd 범위 외 데이터 제외
   var ps=cfg&&cfg.periodStart?new Date(cfg.periodStart):null;
@@ -18450,7 +18507,7 @@ function _taxShareLink(){
 
 
 // ── 정산 현황 전체 엑셀 다운로드 ──
-function _downloadSettleAllExcel(){
+function _downloadSettleAllExcel_orig(){
   var data=window._settleCache||[];
   if(!data.length){toast('❌ 정산 데이터 없음');return;}
   // drivers 컬렉션에서 bizName 보완
