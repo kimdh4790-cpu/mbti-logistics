@@ -7468,18 +7468,54 @@ _auth.onAuthStateChanged(function(user){
 // ★ 체험 만료 결제 유도 팝업
 
 
-// mbtico.kr 페이지 새 탭으로 열기 (Firebase Auth 자동 공유)
-function _openMbtico(page){
-  var did=_CU?(_CU.dealerId||_CU.uid):'';
-  var urls={
-    qr:      'https://mbtico.kr/qr',
-    kiosk:   'https://mbtico.kr/kiosk',
-    inventory:'https://mbtico.kr/inventory',
-  };
-  var url=(urls[page]||'https://mbtico.kr')+(did?'?d='+encodeURIComponent(did):'');
-  window.open(url,'_blank');
-  // settle.html에서 안내 토스트
-  toast('🔲 QR 관리가 새 탭에서 열립니다 (mbtico.kr)');
+// ━━━ 재고 원가 → 정산 반영 ━━━
+function _loadInventoryCost(dealerId, ym, cb){
+  if(!_db||!dealerId){cb({total:0,items:[]});return;}
+  _db.collection('inventory_out')
+    .where('dealerId','==',dealerId)
+    .where('ym','==',ym)
+    .get()
+  .then(function(snap){
+    var total=0; var items=[];
+    snap.forEach(function(d){
+      var v=d.data();
+      var cost=(v.totalCost||0) || ((v.unitCost||0)*(v.qty||0));
+      total+=cost;
+      if(cost>0) items.push({
+        name:v.itemName||v.itemCode||'',
+        qty:v.qty||0,
+        unitCost:v.unitCost||0,
+        total:cost,
+        date:v.date||'',
+      });
+    });
+    cb({total:total,items:items});
+  }).catch(function(){cb({total:0,items:[]});});
+}
+
+// 정산 화면에 재고 원가 섹션 추가
+function _renderInventoryCostSection(dealerId, ym, container){
+  if(!container)return;
+  _loadInventoryCost(dealerId, ym, function(data){
+    if(!data.total) return; // 원가 없으면 표시 안 함
+    var html='<div style="background:var(--bg2);border:1px solid rgba(255,77,109,.3);border-radius:12px;padding:14px;margin-top:12px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
+        '<div style="font-size:12px;font-weight:800;color:var(--red)">📦 재고 원가 ('+ym+')</div>'+
+        '<div style="font-size:14px;font-weight:900;color:var(--red)">-₩'+data.total.toLocaleString()+'</div>'+
+      '</div>'+
+      (data.items.length?
+        '<div style="font-size:11px;color:var(--text3);display:flex;flex-direction:column;gap:3px">'+
+          data.items.slice(0,5).map(function(it){
+            return '<div style="display:flex;justify-content:space-between">'+
+              '<span>'+esc(it.name)+'×'+it.qty+'</span>'+
+              '<span>-₩'+it.total.toLocaleString()+'</span>'+
+            '</div>';
+          }).join('')+
+          (data.items.length>5?'<div style="color:var(--text3)">외 '+(data.items.length-5)+'건...</div>':'')+
+        '</div>':'')+
+    '</div>';
+    container.insertAdjacentHTML('beforeend',html);
+  });
 }
 
 function _showTrialBanner(dLeft){
@@ -19564,7 +19600,7 @@ function pageHome(){
     +'</div>'
     // 빠른 실행 버튼
     +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-bottom:18px">'
-    +_homeQuickBtn('📺','QR 관리','attendance','#3b82f6','#eff6ff')
+    +_homeQuickBtn('📺','QR 표시','attendance','#3b82f6','#eff6ff')
     +_homeQuickBtn('📋','출퇴근','attendance','#059669','#f0fdf4')
     +_homeQuickBtn('💼','급여 계산','hourly_settle','#7c3aed','#faf5ff')
     +_homeQuickBtn('🌴','휴가 승인','leave','#d97706','#fffbeb')
@@ -25387,7 +25423,7 @@ function goPage(page){
   document.getElementById('topbar-right').innerHTML='';
   document.getElementById('sidebar').classList.remove('open');
   var _bd=document.getElementById('sb-backdrop');if(_bd)_bd.style.display='none';
-  var pages={settle:pageSettle,delivery_settle:pageDeliverySettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:function(){_openMbtico('qr');},attendance_orig:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:function(){_openMbtico('qr');},my_qr_orig:pageMyQR,my_roster:pageMyRoster,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,payout:pagePayout,ind_rules:pageIndustryRules,
+  var pages={settle:pageSettle,delivery_settle:pageDeliverySettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,my_roster:pageMyRoster,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,payout:pagePayout,ind_rules:pageIndustryRules,
   ind_construction_rules:function(){pageIndRules('construction','🏗️ 건설·일용직');},
   ind_insurance_rules:function(){pageIndRules('insurance','🛡️ 보험설계사');},
   ind_beauty_rules:function(){pageIndRules('beauty','💄 뷰티·미용');},
@@ -25528,6 +25564,13 @@ function SP(pg,el){
 
 // ══ 정산 현황 ══
 function pageSettle(){
+  // 재고 원가 체크
+  var _did=_CU?(_CU.dealerId||_CU.uid):'';
+  var _ym=new Date().toISOString().slice(0,7);
+  setTimeout(function(){
+    var costContainer=document.getElementById('settle-cost-section');
+    if(costContainer&&_did) _renderInventoryCostSection(_did,_ym,costContainer);
+  },1500);
   document.getElementById('page-title').textContent='정산 현황';
   var tr=document.getElementById('topbar-right');tr.innerHTML='';
   var dlBtn=document.createElement('button');
