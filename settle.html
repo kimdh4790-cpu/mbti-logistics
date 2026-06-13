@@ -2733,6 +2733,86 @@ function _parseLandscapeExcel(file,month){
 }
 
 
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🏷️ 업종별 용어 매핑
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+var IND_TERMS = {
+  ai_settle:  {camp:'캠프',  worker:'기사',    attend:'출퇴근', rate:'건단가', unit:'건',  site:'캠프'},
+  delivery:   {camp:'캠프',  worker:'라이더',  attend:'출퇴근', rate:'건단가', unit:'건',  site:'캠프'},
+  construction:{camp:'현장', worker:'인부',    attend:'출역',   rate:'일당',   unit:'일',  site:'현장'},
+  beauty:     {camp:'지점',  worker:'디자이너',attend:'출근',   rate:'시술료', unit:'건',  site:'지점'},
+  insurance:  {camp:'지사',  worker:'설계사',  attend:'출근',   rate:'수수료', unit:'건',  site:'지사'},
+  care:       {camp:'센터',  worker:'요양사',  attend:'방문',   rate:'수가',   unit:'회',  site:'센터'},
+  academy:    {camp:'지점',  worker:'강사',    attend:'출강',   rate:'수강료', unit:'명',  site:'지점'},
+  warehouse:  {camp:'창고',  worker:'직원',    attend:'출근',   rate:'시급',   unit:'시간',site:'창고'},
+  event:      {camp:'행사장',worker:'스태프',  attend:'투입',   rate:'일당',   unit:'일',  site:'행사장'},
+  sales:      {camp:'지사',  worker:'영업사원',attend:'출근',   rate:'수수료', unit:'건',  site:'지사'},
+  freelance:  {camp:'',      worker:'프리랜서',attend:'',       rate:'프로젝트비',unit:'건',site:''},
+  restaurant: {camp:'매장',  worker:'알바',    attend:'출근',   rate:'시급',   unit:'시간',site:'매장'},
+  golf:       {camp:'코스',  worker:'캐디',    attend:'출근',   rate:'캐디피', unit:'홀',  site:'코스'},
+  facility:   {camp:'현장',  worker:'작업자',  attend:'출역',   rate:'작업단가',unit:'건', site:'현장'},
+  moving:     {camp:'지점',  worker:'직원',    attend:'출근',   rate:'건단가', unit:'건',  site:'지점'},
+  elec:       {camp:'현장',  worker:'기사',    attend:'출역',   rate:'일당',   unit:'일',  site:'현장'},
+  landscape:  {camp:'농장',  worker:'작업자',  attend:'출역',   rate:'일당',   unit:'일',  site:'농장'},
+  cleaning:   {camp:'현장',  worker:'직원',    attend:'출역',   rate:'건단가', unit:'건',  site:'현장'},
+  universal:  {camp:'지점',  worker:'직원',    attend:'출근',   rate:'단가',   unit:'건',  site:'지점'},
+};
+
+// 현재 업종 용어 가져오기
+function _getTerm(key){
+  var dealer=window._dealerData||{};
+  var ind=dealer.industryType||dealer.plan_key||'universal';
+  // 메뉴에서 현재 업종 파악
+  var curPage=window._curPage||'';
+  if(curPage.indexOf('beauty')>=0)     ind='beauty';
+  else if(curPage.indexOf('delivery')>=0) ind='delivery';
+  else if(curPage.indexOf('construct')>=0) ind='construction';
+  else if(curPage.indexOf('insur')>=0) ind='insurance';
+  else if(curPage.indexOf('care')>=0)  ind='care';
+  else if(curPage.indexOf('academy')>=0) ind='academy';
+  else if(curPage.indexOf('warehouse')>=0) ind='warehouse';
+  else if(curPage.indexOf('event')>=0) ind='event';
+  else if(curPage.indexOf('sales')>=0) ind='sales';
+  else if(curPage.indexOf('freelance')>=0) ind='freelance';
+  else if(curPage.indexOf('restaurant')>=0) ind='restaurant';
+  else if(curPage.indexOf('golf')>=0)  ind='golf';
+  else if(curPage.indexOf('facility')>=0) ind='facility';
+  else if(curPage.indexOf('moving')>=0) ind='moving';
+  else if(curPage.indexOf('elec')>=0)  ind='elec';
+  else if(curPage.indexOf('landscape')>=0) ind='landscape';
+  else if(curPage.indexOf('clean')>=0) ind='cleaning';
+  else if(curPage.indexOf('ai_settle')>=0||curPage.indexOf('settle')>=0) ind='ai_settle';
+  var terms=IND_TERMS[ind]||IND_TERMS.universal;
+  return terms[key]||key;
+}
+
+// 업종 코드로 직접 조회
+function _getTermByInd(ind, key){
+  var terms=IND_TERMS[ind]||IND_TERMS.universal;
+  return terms[key]||key;
+}
+
+// 메뉴 레이블 동적 변경
+function _applyIndTerms(industryKey){
+  var terms=IND_TERMS[industryKey]||IND_TERMS.universal;
+  // 사이드바 메뉴 레이블 업데이트
+  var mappings={
+    '캠프 관리':   terms.site+' 관리',
+    '기사 관리':   terms.worker+' 관리',
+    '출퇴근 관리': terms.attend+' 관리',
+    '직원 관리':   terms.worker+' 관리',
+    '현장 관리':   terms.site+' 관리',
+  };
+  document.querySelectorAll('.nav-label').forEach(function(el){
+    var orig=el.dataset.orig||el.textContent;
+    el.dataset.orig=orig;
+    Object.keys(mappings).forEach(function(k){
+      if(orig===k) el.textContent=mappings[k];
+    });
+  });
+}
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 📚 업종별 실제 정산 항목 DB (검색 기반)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -3354,6 +3434,29 @@ function _goUpgrade(planKey){
 function pageSubscription(){
   document.getElementById('page-title').textContent='구독 / 요금제';
   var el=document.getElementById('content');
+  // 업종별 용어 적용
+  var indKey='universal';
+  if(p.indexOf('beauty')>=0)     indKey='beauty';
+  else if(p.indexOf('delivery')>=0) indKey='delivery';
+  else if(p.indexOf('construct')>=0) indKey='construction';
+  else if(p.indexOf('insur')>=0) indKey='insurance';
+  else if(p.indexOf('care')>=0&&p.indexOf('career')<0) indKey='care';
+  else if(p.indexOf('academy')>=0) indKey='academy';
+  else if(p.indexOf('warehouse')>=0) indKey='warehouse';
+  else if(p.indexOf('event')>=0) indKey='event';
+  else if(p.indexOf('golf')>=0)  indKey='golf';
+  else if(p.indexOf('facility')>=0) indKey='facility';
+  else if(p.indexOf('moving')>=0) indKey='moving';
+  else if(p.indexOf('elec')>=0)  indKey='elec';
+  else if(p.indexOf('landscape')>=0) indKey='landscape';
+  else if(p.indexOf('clean')>=0) indKey='cleaning';
+  else if(p.indexOf('ai_settle')>=0||p==='settle') indKey='ai_settle';
+  else if(p.indexOf('sales')>=0) indKey='sales';
+  else if(p.indexOf('freelance')>=0) indKey='freelance';
+  else if(p.indexOf('restaurant')>=0) indKey='restaurant';
+  window._curIndKey=indKey;
+  // 페이지 타이틀 업종 용어 반영
+  setTimeout(function(){_applyIndTermsToUI(indKey);},100);
   var dealer=window._dealerData||{};
   var curPlan=_getPlan();
   var ppc=dealer.personCount||dealer.workerCount||1;
@@ -3609,6 +3712,46 @@ function _guardSettleCount(fn){
   fn();
 }
 
+
+
+// UI 전체 업종 용어 적용
+function _applyIndTermsToUI(indKey){
+  var terms=IND_TERMS[indKey]||IND_TERMS.universal;
+  if(!terms.worker)return;
+  // page-title 내 용어 교체
+  var title=document.getElementById('page-title');
+  if(title){
+    var t=title.textContent;
+    t=t.replace(/기사/g,terms.worker)
+      .replace(/캠프/g,(terms.camp||terms.site||'지점'))
+      .replace(/출퇴근/g,terms.attend||'출근')
+      .replace(/건단가|일당|시급|시술료|수수료|수가|수강료|프로젝트비|캐디피|작업단가/g,terms.rate||'단가');
+    title.textContent=t;
+  }
+  // content 내 주요 레이블 교체
+  var content=document.getElementById('content');
+  if(!content)return;
+  var replaceMap={
+    '기사명':terms.worker+'명',
+    '기사 등록':terms.worker+' 등록',
+    '기사 관리':terms.worker+' 관리',
+    '캠프':terms.camp||terms.site||'지점',
+    '출퇴근':terms.attend||'출근',
+    '건수':terms.unit+'수',
+  };
+  // th, td, label, div 텍스트 교체 (깊이 탐색)
+  var walker=document.createTreeWalker(content,NodeFilter.SHOW_TEXT);
+  var nodes=[];
+  while(walker.nextNode()) nodes.push(walker.currentNode);
+  nodes.forEach(function(node){
+    if(node.parentElement&&['SCRIPT','STYLE'].indexOf(node.parentElement.tagName)>=0)return;
+    var txt=node.nodeValue;
+    Object.keys(replaceMap).forEach(function(k){
+      txt=txt.replace(new RegExp(k,'g'),replaceMap[k]);
+    });
+    node.nodeValue=txt;
+  });
+}
 
 function _closeModal(el){
   var p=el;
