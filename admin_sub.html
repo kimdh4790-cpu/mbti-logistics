@@ -11,61 +11,60 @@
 :root{--bg:#0f1117;--bg2:#171a24;--bg3:#1e2130;--border:#2e3250;--text:#e8eaf6;--text2:#9da3c8;--text3:#5a5f7a;--acc:#00d4ff;--green:#00ff94;--red:#ff4d6d;--yellow:#ffd700;}
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:"Apple SD Gothic Neo","Noto Sans KR",sans-serif;min-height:100vh}
-.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;gap:12px}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100}
 .logo{font-size:16px;font-weight:900;color:var(--acc)}
 .logo-sub{font-size:11px;color:var(--text3)}
 .wrap{max-width:900px;margin:0 auto;padding:20px 16px}
-/* 검색 */
-.search-box{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:20px}
-.search-row{display:flex;gap:8px}
-.inp{flex:1;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px}
+.inp{width:100%;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px}
 .inp:focus{outline:none;border-color:var(--acc)}
-.btn{padding:10px 20px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:700}
+.btn{padding:10px 20px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:700;transition:all .15s}
 .btn-acc{background:var(--acc);color:#000}
 .btn-green{background:var(--green);color:#000}
-.btn-red{background:var(--red);color:#fff}
 .btn-gray{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}
-/* 업체 카드 */
-.company-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px}
-.company-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
-.company-name{font-size:15px;font-weight:900}
-.company-info{font-size:11px;color:var(--text3);margin-top:2px}
-.company-code{font-size:11px;color:var(--acc);font-family:monospace}
-/* 구독 그리드 */
-.sub-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-@media(max-width:600px){.sub-grid{grid-template-columns:1fr}}
-.sub-item{background:var(--bg3);border:2px solid var(--border);border-radius:12px;padding:14px;transition:all .2s}
-.sub-item.active{border-color:var(--green)}
-.sub-item.inactive{border-color:var(--border);opacity:.7}
-.sub-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-.sub-name{font-size:13px;font-weight:800}
-.sub-badge{font-size:10px;padding:3px 8px;border-radius:20px;font-weight:700}
-.badge-on{background:rgba(0,255,148,.15);color:var(--green)}
-.badge-off{background:rgba(255,77,109,.15);color:var(--red)}
-.sub-toggle{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-.toggle{width:44px;height:24px;border-radius:12px;background:var(--border);cursor:pointer;position:relative;transition:background .2s;flex-shrink:0;border:none}
-.toggle.on{background:var(--green)}
-.toggle::after{content:'';position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:3px;left:3px;transition:left .2s}
-.toggle.on::after{left:23px}
-.sub-detail{display:flex;flex-direction:column;gap:6px;font-size:11px}
-.sub-row{display:flex;align-items:center;gap:6px}
-.sub-label{color:var(--text3);width:60px;flex-shrink:0}
-.sub-inp{flex:1;padding:5px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px}
-.sub-inp:focus{outline:none;border-color:var(--acc)}
-/* 검색 결과 */
-.result-list{display:flex;flex-direction:column;gap:6px;margin-top:12px}
-.result-item{padding:10px 14px;background:var(--bg3);border-radius:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:12px;border:1px solid transparent;transition:all .15s}
+/* 결과 리스트 */
+.result-item{padding:10px 14px;background:var(--bg3);border-radius:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:12px;border:1px solid transparent;transition:all .15s;margin-bottom:4px}
 .result-item:hover{border-color:var(--acc)}
+/* 상품 카드 */
+.product-card{background:var(--bg2);border:2px solid var(--border);border-radius:14px;margin-bottom:10px;overflow:hidden;transition:border-color .2s}
+.product-card.active{border-color:var(--green)}
+.product-header{display:flex;align-items:center;gap:10px;padding:14px 16px;cursor:pointer;user-select:none}
+.product-icon{font-size:20px;width:28px;text-align:center}
+.product-name{font-size:14px;font-weight:800;flex:1}
+.product-badge{font-size:10px;padding:3px 10px;border-radius:20px;font-weight:700}
+.badge-on{background:rgba(0,255,148,.15);color:var(--green)}
+.badge-off{background:rgba(255,77,109,.1);color:var(--red)}
+.product-arrow{font-size:12px;color:var(--text3);transition:transform .2s}
+.product-arrow.open{transform:rotate(180deg)}
+/* 토글 */
+.toggle-wrap{display:flex;align-items:center;gap:8px;margin-right:8px}
+.toggle{width:40px;height:22px;border-radius:11px;background:var(--border);cursor:pointer;position:relative;transition:background .2s;flex-shrink:0;border:none;outline:none}
+.toggle.on{background:var(--green)}
+.toggle::after{content:'';position:absolute;width:16px;height:16px;border-radius:50%;background:#fff;top:3px;left:3px;transition:left .2s}
+.toggle.on::after{left:21px}
+/* 드롭다운 내용 */
+.product-body{display:none;border-top:1px solid var(--border);padding:12px 16px;background:var(--bg3)}
+.product-body.open{display:block}
+/* 서브 항목 */
+.sub-row{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg2);border-radius:8px;margin-bottom:6px}
+.sub-icon{font-size:14px;width:20px;text-align:center}
+.sub-name{flex:1;font-size:12px;font-weight:600}
+.sub-toggle{width:34px;height:18px;border-radius:9px;background:var(--border);cursor:pointer;position:relative;transition:background .2s;flex-shrink:0;border:none;outline:none}
+.sub-toggle.on{background:var(--green)}
+.sub-toggle::after{content:'';position:absolute;width:12px;height:12px;border-radius:50%;background:#fff;top:3px;left:3px;transition:left .2s}
+.sub-toggle.on::after{left:17px}
+/* 설정 필드 */
+.field-row{display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.field-label{font-size:11px;color:var(--text3);width:60px;flex-shrink:0}
+.field-inp{flex:1;padding:7px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px}
+.field-inp:focus{outline:none;border-color:var(--acc)}
+/* 로그 */
+.log-item{padding:10px 14px;background:var(--bg2);border-radius:10px;font-size:12px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
 /* 토스트 */
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 20px;font-size:13px;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
 #toast.show{opacity:1}
-/* 로그인 */
-.login-wrap{display:flex;align-items:center;justify-content:center;height:100vh}
-.login-box{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:32px;width:320px;text-align:center}
 </style>
 </head>
 <body>
-
 <div class="topbar">
   <div>
     <div class="logo">⚙️ DONWAY 구독 어드민</div>
@@ -80,7 +79,6 @@ body{background:var(--bg);color:var(--text);font-family:"Apple SD Gothic Neo","N
 <div class="wrap" id="main-wrap">
   <div style="text-align:center;padding:40px;color:var(--text3)">⏳ 로딩 중...</div>
 </div>
-
 <div id="toast"></div>
 
 <script>
@@ -90,27 +88,23 @@ firebase.initializeApp({
   projectId:'mbti-logistics',
   storageBucket:'mbti-logistics.firebasestorage.app',
   messagingSenderId:'424881832661',
-  appId:'1:424881832661:web:abc123def456'
+  appId:'1:424881832661:web:abc123'
 });
 var _db=firebase.firestore();
 var _auth=firebase.auth();
 var _cu=null;
-
-// 슈퍼어드민 이메일
 var SUPER_ADMINS=['kimdh4790@gmail.com','soungkyekim@naver.com'];
 
-function toast(msg,dur){
-  var t=document.getElementById('toast');
-  t.textContent=msg;t.classList.add('show');
-  setTimeout(function(){t.classList.remove('show');},dur||2500);
-}
+function toast(msg,dur){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},dur||2500);}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function _logout(){_auth.signOut().then(function(){location.reload();});}
 
-// 구독 상품 정의
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 상품 정의
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 var PRODUCTS=[
   {
-    id:'donway',icon:'💰',name:'DONWAY 정산',
+    id:'donway', icon:'💰', name:'DONWAY 정산',
     fields:[
       {id:'plan',label:'요금제',type:'select',opts:[
         {v:'individual_50',  l:'개인 ~50명  (390,000원/월)'},
@@ -128,25 +122,52 @@ var PRODUCTS=[
       ]},
       {id:'maxPerson',label:'인원',type:'number',placeholder:'예) 50'},
       {id:'expiry',label:'만료일',type:'date'},
+    ],
+    subs:[
+      {id:'ai_settle',  icon:'🤖', name:'쿠팡 AI정산'},
+      {id:'delivery',   icon:'🛵', name:'배달대행'},
+      {id:'construction',icon:'🏗️',name:'건설·일용직'},
+      {id:'beauty',     icon:'💄', name:'뷰티·미용'},
+      {id:'insurance',  icon:'🛡️', name:'보험설계사'},
+      {id:'care',       icon:'🏥', name:'요양·돌봄'},
+      {id:'academy',    icon:'🎓', name:'학원·교육'},
+      {id:'warehouse',  icon:'📦', name:'물류창고'},
+      {id:'event',      icon:'🎪', name:'행사·이벤트'},
+      {id:'sales',      icon:'💼', name:'영업직'},
+      {id:'freelance',  icon:'🖥️', name:'프리랜서'},
+      {id:'restaurant', icon:'🍽️', name:'음식점·카페'},
+      {id:'golf',       icon:'🏌️', name:'골프장·캐디'},
+      {id:'facility',   icon:'🔧', name:'시설관리·청소'},
+      {id:'moving',     icon:'🚛', name:'이삿짐·운반'},
+      {id:'elec',       icon:'⚡', name:'전기·설비'},
+      {id:'landscape',  icon:'🌿', name:'조경·농업'},
+      {id:'universal',  icon:'📋', name:'범용 정산'},
     ]
   },
   {
-    id:'qr',icon:'🔲',name:'QR 패키지',
+    id:'qr', icon:'🔲', name:'QR 패키지',
     fields:[
       {id:'persons',label:'인원',type:'number',placeholder:'예) 30'},
       {id:'expiry',label:'만료일',type:'date'},
+    ],
+    subs:[
+      {id:'qr_attend',  icon:'⏰', name:'QR 출퇴근'},
+      {id:'qr_booking', icon:'📅', name:'QR 예약·결제'},
+      {id:'qr_pos',     icon:'🔲', name:'QR POS'},
     ]
   },
   {
-    id:'inventory',icon:'📦',name:'재고관리',
-    fields:[
-      {id:'expiry',label:'만료일',type:'date'},
-    ]
+    id:'inventory', icon:'📦', name:'재고관리',
+    fields:[{id:'expiry',label:'만료일',type:'date'}],
+    subs:[]
   },
   {
-    id:'kiosk',icon:'🖥️',name:'키오스크·POS',
-    fields:[
-      {id:'expiry',label:'만료일',type:'date'},
+    id:'kiosk', icon:'🖥️', name:'키오스크·POS',
+    fields:[{id:'expiry',label:'만료일',type:'date'}],
+    subs:[
+      {id:'kiosk_input',   icon:'✍️', name:'시술 입력'},
+      {id:'kiosk_customer',icon:'🗂', name:'고객 DB'},
+      {id:'kiosk_tax',     icon:'🧾', name:'세무사 연동'},
     ]
   },
 ];
@@ -166,282 +187,292 @@ _auth.onAuthStateChanged(function(user){
 });
 
 function _showLogin(){
-  document.body.innerHTML='<div class="login-wrap"><div class="login-box">'+
-    '<div style="font-size:32px;margin-bottom:8px">⚙️</div>'+
-    '<div style="font-size:18px;font-weight:900;color:var(--acc);margin-bottom:24px">DONWAY 어드민</div>'+
-    '<input id="le" type="email" placeholder="슈퍼어드민 이메일" style="width:100%;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;margin-bottom:8px;display:block">'+
-    '<input id="lp" type="password" placeholder="비밀번호" style="width:100%;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;margin-bottom:16px;display:block">'+
-    '<button id="lbtn" style="width:100%;padding:12px;background:var(--acc);color:#000;border:none;border-radius:8px;font-size:14px;font-weight:900;cursor:pointer">로그인</button>'+
-    '<div id="lerr" style="color:var(--red);font-size:11px;margin-top:8px"></div>'+
-  '</div></div>';
-  document.getElementById('lbtn').addEventListener('click',function(){
-    var e=document.getElementById('le').value;
-    var p=document.getElementById('lp').value;
-    if(!e||!p){document.getElementById('lerr').textContent='이메일과 비밀번호를 입력하세요';return;}
-    firebase.auth().signInWithEmailAndPassword(e,p).catch(function(err){
-      document.getElementById('lerr').textContent=err.message;
-    });
+  var wrap=document.createElement('div');
+  wrap.style.cssText='display:flex;align-items:center;justify-content:center;height:100vh';
+  document.body.innerHTML='';
+  document.body.appendChild(wrap);
+  var box=document.createElement('div');
+  box.style.cssText='background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:32px;width:320px;text-align:center';
+  box.innerHTML='<div style="font-size:32px;margin-bottom:8px">⚙️</div><div style="font-size:18px;font-weight:900;color:var(--acc);margin-bottom:24px">DONWAY 어드민</div>';
+  var ei=document.createElement('input');ei.type='email';ei.placeholder='슈퍼어드민 이메일';
+  ei.style.cssText='width:100%;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;margin-bottom:8px;display:block';
+  var pi=document.createElement('input');pi.type='password';pi.placeholder='비밀번호';
+  pi.style.cssText='width:100%;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;margin-bottom:16px;display:block';
+  var btn=document.createElement('button');btn.textContent='로그인';
+  btn.style.cssText='width:100%;padding:12px;background:var(--acc);color:#000;border:none;border-radius:8px;font-size:14px;font-weight:900;cursor:pointer';
+  var err=document.createElement('div');err.style.cssText='color:var(--red);font-size:11px;margin-top:8px';
+  btn.addEventListener('click',function(){
+    firebase.auth().signInWithEmailAndPassword(ei.value,pi.value).catch(function(e){err.textContent=e.message;});
   });
+  box.appendChild(ei);box.appendChild(pi);box.appendChild(btn);box.appendChild(err);
+  wrap.appendChild(box);
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 메인 화면
+// 메인
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function _renderMain(){
   var wrap=document.getElementById('main-wrap');
   wrap.innerHTML=
     '<div style="font-size:15px;font-weight:900;margin-bottom:16px">🏢 업체 구독 관리</div>'+
-    // 검색
-    '<div class="search-box">'+
-      '<div class="search-row">'+
-        '<input id="search-inp" class="inp" placeholder="업체명 또는 이메일로 검색..." onkeydown="if(event.key===\'Enter\')_searchCompany()">'+
-        '<button class="btn btn-acc" onclick="_searchCompany()">검색</button>'+
+    '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:20px">'+
+      '<div style="display:flex;gap:8px;margin-bottom:12px">'+
+        '<input id="search-inp" class="inp" style="flex:1" placeholder="업체명 또는 이메일로 검색..." onkeydown="if(event.key===\'Enter\')_search()">'+
+        '<button class="btn btn-acc" onclick="_search()">검색</button>'+
         '<button class="btn btn-gray" onclick="_loadAll()">전체</button>'+
       '</div>'+
-      '<div id="search-result" class="result-list"></div>'+
+      '<div id="search-result"></div>'+
     '</div>'+
-    // 선택된 업체
     '<div id="company-detail"></div>'+
-    // 최근 구독 변경 내역
-    '<div style="font-size:13px;font-weight:800;margin-bottom:10px;margin-top:20px">📋 최근 구독 변경 내역</div>'+
+    '<div style="font-size:13px;font-weight:800;margin-bottom:10px">📋 최근 구독 변경 내역</div>'+
     '<div id="recent-logs"></div>';
-  _loadRecentLogs();
+  _loadLogs();
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 업체 검색
+// 검색
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function _searchCompany(){
+function _search(){
   var q=(document.getElementById('search-inp')||{}).value||'';
   if(!q){_loadAll();return;}
-  var result=document.getElementById('search-result');
-  result.innerHTML='<div style="color:var(--text3);font-size:12px;padding:8px">⏳ 검색 중...</div>';
-
-  // 이름으로 검색
+  var el=document.getElementById('search-result');
+  el.innerHTML='<div style="color:var(--text3);font-size:12px;padding:8px">⏳ 검색 중...</div>';
   Promise.all([
     _db.collection('companies').where('companyName','>=',q).where('companyName','<=',q+'\uf8ff').limit(10).get(),
     _db.collection('companies').where('adminEmail','==',q).limit(5).get(),
   ]).then(function(results){
     var seen={};var items=[];
-    results.forEach(function(snap){
-      snap.forEach(function(d){
-        if(!seen[d.id]){seen[d.id]=true;items.push(Object.assign({id:d.id},d.data()));}
-      });
-    });
-    if(!items.length){result.innerHTML='<div style="color:var(--text3);font-size:12px;padding:8px">검색 결과 없음</div>';return;}
-    result.innerHTML=items.map(function(c){
-      return '<div class="result-item" data-id="'+c.id+'" onclick="_selectCompany(\''+c.id+'\')">'+
-        '<div>'+
-          '<div style="font-weight:700">'+esc(c.companyName||c.name||'이름없음')+'</div>'+
-          '<div style="color:var(--text3);font-size:10px">'+esc(c.adminEmail||c.email||'')+'</div>'+
-        '</div>'+
-        '<div style="font-size:10px;color:var(--acc);font-family:monospace">'+c.id.slice(0,8)+'</div>'+
-      '</div>';
-    }).join('');
-  }).catch(function(e){result.innerHTML='<div style="color:var(--red);font-size:12px">'+esc(e.message)+'</div>';});
+    results.forEach(function(snap){snap.forEach(function(d){if(!seen[d.id]){seen[d.id]=true;items.push(Object.assign({id:d.id},d.data()));}});});
+    _renderResults(items);
+  }).catch(function(e){el.innerHTML='<div style="color:var(--red);font-size:12px">'+esc(e.message)+'</div>';});
 }
 
 function _loadAll(){
-  var result=document.getElementById('search-result');
-  result.innerHTML='<div style="color:var(--text3);font-size:12px;padding:8px">⏳ 로딩 중...</div>';
-  _db.collection('companies').orderBy('createdAt','desc').limit(20).get()
+  var el=document.getElementById('search-result');
+  el.innerHTML='<div style="color:var(--text3);font-size:12px;padding:8px">⏳ 로딩 중...</div>';
+  _db.collection('companies').orderBy('createdAt','desc').limit(30).get()
   .then(function(snap){
-    var items=[];
-    snap.forEach(function(d){items.push(Object.assign({id:d.id},d.data()));});
-    if(!items.length){result.innerHTML='<div style="color:var(--text3);font-size:12px;padding:8px">등록된 업체 없음</div>';return;}
-    result.innerHTML=items.map(function(c){
-      return '<div class="result-item" onclick="_selectCompany(\''+c.id+'\')">'+
-        '<div>'+
-          '<div style="font-weight:700">'+esc(c.companyName||c.name||'이름없음')+'</div>'+
-          '<div style="color:var(--text3);font-size:10px">'+esc(c.adminEmail||c.email||'')+'</div>'+
-        '</div>'+
-        '<div style="font-size:10px;color:var(--acc);font-family:monospace">'+c.id.slice(0,8)+'</div>'+
-      '</div>';
-    }).join('');
-  }).catch(function(e){result.innerHTML='<div style="color:var(--red);font-size:12px">'+esc(e.message)+'</div>';});
+    var items=[];snap.forEach(function(d){items.push(Object.assign({id:d.id},d.data()));});
+    _renderResults(items);
+  }).catch(function(e){el.innerHTML='<div style="color:var(--red);font-size:12px">'+esc(e.message)+'</div>';});
+}
+
+function _renderResults(items){
+  var el=document.getElementById('search-result');
+  if(!items.length){el.innerHTML='<div style="color:var(--text3);font-size:12px;padding:8px">검색 결과 없음</div>';return;}
+  el.innerHTML=items.map(function(c){
+    return '<div class="result-item" data-id="'+c.id+'" onclick="_select(\''+c.id+'\')">'+
+      '<div><div style="font-weight:700">'+esc(c.companyName||c.name||'이름없음')+'</div>'+
+      '<div style="color:var(--text3);font-size:10px">'+esc(c.adminEmail||c.email||'')+'</div></div>'+
+      '<div style="font-size:10px;color:var(--acc);font-family:monospace">'+c.id.slice(0,8)+'</div>'+
+    '</div>';
+  }).join('');
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 업체 선택 → 구독 관리
+// 업체 선택
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-var _selectedCompany=null;
+var _selCo=null;
 
-function _selectCompany(id){
-  _db.collection('companies').doc(id).get()
-  .then(function(d){
-    if(!d.exists){toast('업체를 찾을 수 없음');return;}
-    _selectedCompany=Object.assign({id:d.id},d.data());
-    _renderCompanyDetail(_selectedCompany);
-    // 검색결과 닫기
+function _select(id){
+  _db.collection('companies').doc(id).get().then(function(d){
+    if(!d.exists){toast('업체 없음');return;}
+    _selCo=Object.assign({id:d.id},d.data());
+    _renderDetail();
     document.getElementById('search-result').innerHTML='';
     document.getElementById('search-inp').value='';
+    document.getElementById('company-detail').scrollIntoView({behavior:'smooth'});
   });
 }
 
-function _renderCompanyDetail(c){
+function _renderDetail(){
+  var c=_selCo;
   var subs=c.subscriptions||{};
-  var detail=document.getElementById('company-detail');
+  var today=new Date();today.setMonth(today.getMonth()+1);
+  var defExpiry=today.toISOString().slice(0,10);
 
-  var subCards=PRODUCTS.map(function(p){
+  var cards=PRODUCTS.map(function(p){
     var s=subs[p.id]||{};
     var isOn=!!(s.active);
-    var expiry=s.expiry||'';
-    var today=new Date().toISOString().slice(0,10);
-    var expired=expiry&&expiry<today;
 
+    // 필드 렌더링
     var fieldsHtml=p.fields.map(function(f){
       var val=s[f.id]||'';
       var inp='';
       if(f.type==='select'){
-        inp='<select id="f_'+p.id+'_'+f.id+'" class="sub-inp">'+
-          f.opts.map(function(o){
-            var v=typeof o==='object'?o.v:o;
-            var l=typeof o==='object'?o.l:o;
-            return '<option value="'+v+'"'+(val===v?' selected':'')+'>'+l+'</option>';
-          }).join('')+
+        inp='<select id="f_'+p.id+'_'+f.id+'" class="field-inp">'+
+          f.opts.map(function(o){return '<option value="'+o.v+'"'+(val===o.v?' selected':'')+'>'+o.l+'</option>';}).join('')+
         '</select>';
       } else if(f.type==='date'){
-        // 기본값: 오늘부터 1달 후
-        if(!val){
-          var d=new Date();d.setMonth(d.getMonth()+1);
-          val=d.toISOString().slice(0,10);
-        }
-        inp='<input type="date" id="f_'+p.id+'_'+f.id+'" class="sub-inp" value="'+val+'">';
+        inp='<input type="date" id="f_'+p.id+'_'+f.id+'" class="field-inp" value="'+(val||defExpiry)+'">';
       } else {
-        inp='<input type="'+f.type+'" id="f_'+p.id+'_'+f.id+'" class="sub-inp" value="'+esc(String(val))+'" placeholder="'+esc(f.placeholder||'')+'">';
+        inp='<input type="'+f.type+'" id="f_'+p.id+'_'+f.id+'" class="field-inp" value="'+esc(String(val))+'" placeholder="'+esc(f.placeholder||'')+'">';
       }
-      return '<div class="sub-row"><div class="sub-label">'+f.label+'</div>'+inp+'</div>';
+      return '<div class="field-row"><div class="field-label">'+f.label+'</div>'+inp+'</div>';
     }).join('');
 
-    return '<div class="sub-item '+(isOn?'active':'inactive')+'" id="sub_'+p.id+'">'+
-      '<div class="sub-header">'+
-        '<div class="sub-name">'+p.icon+' '+p.name+'</div>'+
-        '<span class="sub-badge '+(isOn?'badge-on':'badge-off')+'">'+(isOn?(expired?'만료':'활성'):'미구독')+'</span>'+
+    // 서브항목 렌더링
+    var subsHtml='';
+    if(p.subs&&p.subs.length){
+      var subItems=p.subs.map(function(sub){
+        var subOn=!!(s.features&&s.features[sub.id]);
+        return '<div class="sub-row">'+
+          '<span class="sub-icon">'+sub.icon+'</span>'+
+          '<span class="sub-name">'+sub.name+'</span>'+
+          '<button class="sub-toggle '+(subOn?'on':'')+'" id="st_'+p.id+'_'+sub.id+'" data-pid="'+p.id+'" data-sid="'+sub.id+'" onclick="_toggleSubItem(this)"></button>'+
+        '</div>';
+      }).join('');
+      subsHtml='<div style="margin-bottom:8px">'+
+        '<div style="font-size:10px;font-weight:700;color:var(--text3);margin-bottom:6px">세부 기능</div>'+
+        subItems+
+      '</div>';
+    }
+
+    return '<div class="product-card '+(isOn?'active':'')+'" id="pc_'+p.id+'">'+
+      '<div class="product-header" onclick="_toggleBody(\''+p.id+'\')">'+
+        '<span class="product-icon">'+p.icon+'</span>'+
+        '<span class="product-name">'+p.name+'</span>'+
+        '<div class="toggle-wrap" onclick="event.stopPropagation()">'+
+          '<button class="toggle '+(isOn?'on':'')+'" id="pt_'+p.id+'" data-pid="'+p.id+'" onclick="_toggleProduct(this)"></button>'+
+        '</div>'+
+        '<span class="product-badge '+(isOn?'badge-on':'badge-off')+'" id="pb_'+p.id+'">'+(isOn?'활성':'미구독')+'</span>'+
+        '<span class="product-arrow" id="pa_'+p.id+'">▼</span>'+
       '</div>'+
-      '<div class="sub-toggle">'+
-        '<button class="toggle '+(isOn?'on':'')+'" id="toggle_'+p.id+'" data-pid="'+p.id+'" onclick="_toggleSub(this)"></button>'+
-        '<span style="font-size:11px;color:var(--text3)">'+(isOn?'구독 중':'미구독')+'</span>'+
+      '<div class="product-body" id="pb_body_'+p.id+'">'+
+        subsHtml+
+        fieldsHtml+
       '</div>'+
-      '<div class="sub-detail">'+fieldsHtml+'</div>'+
     '</div>';
   }).join('');
 
-  detail.innerHTML=
-    '<div class="company-card">'+
-      '<div class="company-header">'+
+  document.getElementById('company-detail').innerHTML=
+    '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:20px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
         '<div>'+
-          '<div class="company-name">'+esc(c.companyName||c.name||'이름없음')+'</div>'+
-          '<div class="company-info">'+esc(c.adminEmail||c.email||'')+'</div>'+
-          '<div class="company-code">ID: '+c.id+'</div>'+
+          '<div style="font-size:15px;font-weight:900">'+esc(c.companyName||c.name||'이름없음')+'</div>'+
+          '<div style="font-size:11px;color:var(--text3)">'+esc(c.adminEmail||c.email||'')+'</div>'+
+          '<div style="font-size:10px;color:var(--acc);font-family:monospace;margin-top:2px">'+c.id+'</div>'+
         '</div>'+
         '<div style="display:flex;gap:8px">'+
-          '<button class="btn btn-green" onclick="_saveSubs()">💾 저장</button>'+
-          '<button class="btn btn-gray" onclick="_closeDetail()">닫기</button>'+
+          '<button class="btn btn-green" onclick="_save()">💾 저장</button>'+
+          '<button class="btn btn-gray" onclick="_close()">닫기</button>'+
         '</div>'+
       '</div>'+
-      '<div class="sub-grid">'+subCards+'</div>'+
+      cards+
     '</div>';
 }
 
-function _toggleSub(btn){
+function _toggleBody(pid){
+  var body=document.getElementById('pb_body_'+pid);
+  var arrow=document.getElementById('pa_'+pid);
+  if(!body)return;
+  var isOpen=body.classList.contains('open');
+  body.classList.toggle('open',!isOpen);
+  if(arrow)arrow.classList.toggle('open',!isOpen);
+}
+
+function _toggleProduct(btn){
   var pid=btn.dataset.pid;
   var isOn=btn.classList.contains('on');
+  btn.classList.toggle('on',!isOn);
+  var card=document.getElementById('pc_'+pid);
+  var badge=document.getElementById('pb_'+pid);
+  if(card)card.classList.toggle('active',!isOn);
+  if(badge){badge.className='product-badge '+(isOn?'badge-off':'badge-on');badge.textContent=isOn?'미구독':'활성';}
+  // 켜면 드롭다운 자동 열기
+  if(!isOn){
+    var body=document.getElementById('pb_body_'+pid);
+    var arrow=document.getElementById('pa_'+pid);
+    if(body)body.classList.add('open');
+    if(arrow)arrow.classList.add('open');
+  }
+}
+
+function _toggleSubItem(btn){
   btn.classList.toggle('on');
-  var item=document.getElementById('sub_'+pid);
-  if(item){
-    item.className='sub-item '+(isOn?'inactive':'active');
-  }
-  var badge=item?item.querySelector('.sub-badge'):null;
-  if(badge){
-    badge.className='sub-badge '+(isOn?'badge-off':'badge-on');
-    badge.textContent=isOn?'미구독':'활성';
-  }
-  var toggleLabel=btn.nextElementSibling;
-  if(toggleLabel)toggleLabel.textContent=isOn?'미구독':'구독 중';
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 구독 저장
+// 저장
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function _saveSubs(){
-  if(!_selectedCompany){toast('업체를 선택하세요');return;}
+function _save(){
+  if(!_selCo){toast('업체를 선택하세요');return;}
   var newSubs={};
   PRODUCTS.forEach(function(p){
-    var toggle=document.getElementById('toggle_'+p.id);
+    var toggle=document.getElementById('pt_'+p.id);
     var isOn=toggle?toggle.classList.contains('on'):false;
     var data={active:isOn,updatedAt:new Date().toISOString()};
+    // 필드 값
     p.fields.forEach(function(f){
       var el=document.getElementById('f_'+p.id+'_'+f.id);
-      if(el){
-        var val=el.value;
-        if(f.type==='number') val=parseFloat(val)||0;
-        data[f.id]=val;
-      }
+      if(el){var v=el.value;if(f.type==='number')v=parseFloat(v)||0;data[f.id]=v;}
     });
+    // 서브항목 features
+    if(p.subs&&p.subs.length){
+      data.features={};
+      p.subs.forEach(function(sub){
+        var st=document.getElementById('st_'+p.id+'_'+sub.id);
+        data.features[sub.id]=st?st.classList.contains('on'):false;
+      });
+    }
     newSubs[p.id]=data;
   });
 
   var btn=document.querySelector('.btn-green');
   if(btn){btn.textContent='⏳ 저장 중...';btn.disabled=true;}
 
-  // Firebase 저장
-  _db.collection('companies').doc(_selectedCompany.id).update({
+  _db.collection('companies').doc(_selCo.id).update({
     subscriptions:newSubs,
     subsUpdatedAt:new Date().toISOString(),
     subsUpdatedBy:_cu.email,
   }).then(function(){
-    // 변경 로그 기록
     return _db.collection('subscription_logs').add({
-      companyId:_selectedCompany.id,
-      companyName:_selectedCompany.companyName||_selectedCompany.name||'',
+      companyId:_selCo.id,
+      companyName:_selCo.companyName||_selCo.name||'',
       subscriptions:newSubs,
       updatedBy:_cu.email,
       createdAt:new Date().toISOString(),
     });
   }).then(function(){
-    toast('✅ '+(_selectedCompany.companyName||'업체')+' 구독 저장 완료!');
+    toast('✅ 저장 완료!');
     if(btn){btn.textContent='💾 저장';btn.disabled=false;}
-    _selectedCompany.subscriptions=newSubs;
-    _loadRecentLogs();
+    _selCo.subscriptions=newSubs;
+    _loadLogs();
   }).catch(function(e){
     toast('❌ '+e.message);
     if(btn){btn.textContent='💾 저장';btn.disabled=false;}
   });
 }
 
-function _closeDetail(){
+function _close(){
   document.getElementById('company-detail').innerHTML='';
-  _selectedCompany=null;
+  _selCo=null;
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 최근 변경 내역
+// 변경 내역
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function _loadRecentLogs(){
+function _loadLogs(){
   var el=document.getElementById('recent-logs');
   if(!el)return;
   _db.collection('subscription_logs').orderBy('createdAt','desc').limit(20).get()
   .then(function(snap){
     if(snap.empty){el.innerHTML='<div style="color:var(--text3);font-size:12px;padding:12px">변경 내역 없음</div>';return;}
-    el.innerHTML='<div style="display:flex;flex-direction:column;gap:6px">'+
-      snap.docs.map(function(d){
-        var v=d.data();
-        var subs=v.subscriptions||{};
-        var activeList=Object.keys(subs).filter(function(k){return subs[k]&&subs[k].active;});
-        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg2);border-radius:10px;font-size:12px">'+
-          '<div>'+
-            '<div style="font-weight:700">'+esc(v.companyName||'')+'</div>'+
-            '<div style="color:var(--text3);font-size:10px">'+(v.createdAt||'').slice(0,16).replace('T',' ')+' · '+esc(v.updatedBy||'')+'</div>'+
-          '</div>'+
-          '<div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">'+
-            activeList.map(function(k){
-              var icons={donway:'💰',qr:'🔲',inventory:'📦',kiosk:'🖥️'};
-              return '<span style="padding:2px 7px;background:rgba(0,255,148,.1);border-radius:10px;font-size:10px;color:var(--green)">'+(icons[k]||k)+'</span>';
-            }).join('')+
-          '</div>'+
-        '</div>';
-      }).join('')+
-    '</div>';
+    el.innerHTML=snap.docs.map(function(d){
+      var v=d.data();
+      var subs=v.subscriptions||{};
+      var activeList=Object.keys(subs).filter(function(k){return subs[k]&&subs[k].active;});
+      var icons={donway:'💰',qr:'🔲',inventory:'📦',kiosk:'🖥️'};
+      return '<div class="log-item">'+
+        '<div>'+
+          '<div style="font-weight:700">'+esc(v.companyName||'')+'</div>'+
+          '<div style="color:var(--text3);font-size:10px">'+(v.createdAt||'').slice(0,16).replace('T',' ')+' · '+esc(v.updatedBy||'')+'</div>'+
+        '</div>'+
+        '<div style="display:flex;gap:4px;flex-wrap:wrap">'+
+          activeList.map(function(k){return '<span style="padding:2px 7px;background:rgba(0,255,148,.1);border-radius:10px;font-size:10px;color:var(--green)">'+(icons[k]||k)+'</span>';}).join('')+
+        '</div>'+
+      '</div>';
+    }).join('');
   }).catch(function(){});
 }
 </script>
