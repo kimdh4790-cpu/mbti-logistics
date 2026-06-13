@@ -3432,39 +3432,92 @@ function _goUpgrade(planKey){
 // 구독 관리 페이지
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function pageSubscription(){
-  document.getElementById('page-title').textContent='\uD83D\uDCB3 \uAD6C\uB3C5 / \uC694\uAE08\uC81C';
+  document.getElementById('page-title').textContent='구독 / 요금제';
   var el=document.getElementById('content');
+  // 업종별 용어 적용
+  var indKey='universal';
+  if(p.indexOf('beauty')>=0)     indKey='beauty';
+  else if(p.indexOf('delivery')>=0) indKey='delivery';
+  else if(p.indexOf('construct')>=0) indKey='construction';
+  else if(p.indexOf('insur')>=0) indKey='insurance';
+  else if(p.indexOf('care')>=0&&p.indexOf('career')<0) indKey='care';
+  else if(p.indexOf('academy')>=0) indKey='academy';
+  else if(p.indexOf('warehouse')>=0) indKey='warehouse';
+  else if(p.indexOf('event')>=0) indKey='event';
+  else if(p.indexOf('golf')>=0)  indKey='golf';
+  else if(p.indexOf('facility')>=0) indKey='facility';
+  else if(p.indexOf('moving')>=0) indKey='moving';
+  else if(p.indexOf('elec')>=0)  indKey='elec';
+  else if(p.indexOf('landscape')>=0) indKey='landscape';
+  else if(p.indexOf('clean')>=0) indKey='cleaning';
+  else if(p.indexOf('ai_settle')>=0||p==='settle') indKey='ai_settle';
+  else if(p.indexOf('sales')>=0) indKey='sales';
+  else if(p.indexOf('freelance')>=0) indKey='freelance';
+  else if(p.indexOf('restaurant')>=0) indKey='restaurant';
+  window._curIndKey=indKey;
+  // 페이지 타이틀 업종 용어 반영
+  setTimeout(function(){_applyIndTermsToUI(indKey);},100);
   var dealer=window._dealerData||{};
   var curPlan=_getPlan();
   var ppc=dealer.personCount||dealer.workerCount||1;
 
+  function planCard(pk){
+    var p=PLAN_DEF[pk];
+    if(!p||pk==='enterprise')return '';
+    var isCur=curPlan.name===p.name;
+    var f=p.features;
+    var rows=[
+      ['정산',f.settleLimit>=999?'무제한':'월 '+f.settleLimit+'회'],
+      ['업종',f.allIndustries?'전체':''+( (f.industries||[]).length)+'개'],
+      ['QR예약',f.qrBooking?'✅':'🔒'],
+      ['QR POS',f.qrPos?'✅':'🔒'],
+      ['알림톡',f.alimtalk>=999?'무제한':''+( f.alimtalk||0)+'건'],
+      ['세무',f.taxShare?'✅':'🔒'],
+      ['키오스크',f.beautyKiosk?'✅':'🔒'],
+      ['재고',f.inventory?'✅':'🔒'],
+    ];
+    var btn='';
+    if(isCur){btn='<span style="font-size:11px;color:var(--text3)">이용중</span>';}
+    else if(pk==='free'){btn='<button data-pk="free" onclick="_startDowngradeFlow()" style="padding:8px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;font-size:11px;cursor:pointer">다운</button>';}
+    else{btn='<button data-pk="'+pk+'" onclick="_startUpgradeFlow(this.dataset.pk)" style="padding:8px 16px;background:'+p.color+';color:#000;border:none;border-radius:8px;font-size:11px;font-weight:900;cursor:pointer">업그레이드</button>';}
+    return '<div style="background:var(--bg2);border:2px solid '+(isCur?p.color:'var(--border)')+';border-radius:14px;padding:14px;margin-bottom:10px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
+        '<div>'+
+          '<div style="font-size:14px;font-weight:900;color:'+p.color+'">'+p.label+(isCur?' <span style="font-size:9px;background:'+p.color+';color:#000;padding:2px 7px;border-radius:20px">현재</span>':'')+'</div>'+
+          '<div style="font-size:11px;color:var(--text3)">'+(p.pricePerPerson>0?p.pricePerPerson.toLocaleString()+'원/인/월':'무료')+' · 최대 '+(p.maxPerson>=9999?'무제한':p.maxPerson+'명')+'</div>'+
+        '</div>'+btn+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:3px;font-size:10px">'+
+      rows.map(function(row){
+        return '<div style="padding:4px;background:var(--bg3);border-radius:6px;text-align:center">'+
+          '<div style="color:var(--text3)">'+row[0]+'</div>'+
+          '<div style="font-weight:700;color:'+(row[1]==='🔒'?'var(--text3)':'#00ff94')+'">'+row[1]+'</div>'+
+        '</div>';
+      }).join('')+
+      '</div>'+
+    '</div>';
+  }
+
   el.innerHTML='<div style="max-width:600px;margin:0 auto;padding:16px">'+
-    // 현재 상태
     '<div style="background:linear-gradient(135deg,'+curPlan.color+'22,'+curPlan.color+'11);border:1px solid '+curPlan.color+'44;border-radius:16px;padding:18px;margin-bottom:20px">'+
-      '<div style="font-size:11px;color:var(--text3);margin-bottom:4px">\uD604\uC7AC \uC694\uAE08\uC81C</div>'+
+      '<div style="font-size:11px;color:var(--text3);margin-bottom:4px">현재 요금제</div>'+
       '<div style="display:flex;justify-content:space-between;align-items:center">'+
         '<div>'+
           '<div style="font-size:22px;font-weight:900;color:'+curPlan.color+'">'+curPlan.label+'</div>'+
-          '<div style="font-size:12px;color:var(--text2)">'+(dealer.planExpiry?'\uB9CC\uB8CC: '+dealer.planExpiry:'\uBB34\uB8CC \uCCB4\uD5D8 \uC911')+'</div>'+
+          '<div style="font-size:12px;color:var(--text2)">'+(curPlan.pricePerPerson>0?ppc+'명 × '+curPlan.pricePerPerson.toLocaleString()+'원 = <b>'+(ppc*curPlan.pricePerPerson).toLocaleString()+'원/월</b>':'무료')+'</div>'+
         '</div>'+
-        (dealer.trialExpiry?'<div style="text-align:right"><div style="font-size:10px;color:var(--text3)">\uCCB4\uD5D8 \uB9CC\uB8CC</div><div style="font-size:13px;font-weight:700;color:var(--yellow)">'+dealer.trialExpiry+'</div></div>':'')+'</div>'+
-    '</div>'+
-    // 요금제 준비 중
-    '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:28px;text-align:center;margin-bottom:16px">'+
-      '<div style="font-size:32px;margin-bottom:12px">\uD83D\uDCB3</div>'+
-      '<div style="font-size:15px;font-weight:900;margin-bottom:8px">\uC694\uAE08\uC81C \uC900\uBE44 \uC911</div>'+
-      '<div style="font-size:12px;color:var(--text3);line-height:1.7;margin-bottom:20px">'+
-        '\uD604\uC7AC \uB3C4\uC785 \uBB38\uC758\uB97C \uD1B5\uD574 \uAD6C\uB3C5\uC744 \uC2DC\uC791\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.<br>'+
-        '7\uC77C \uBB34\uB8CC \uCCB4\uD5D8 \u2192 \uC0C1\uB2F4 \u2192 \uACCC\uC815\uC5D0 \uB9DE\uB294 \uC694\uAE08\uC81C \uC548\uB0B4'+
-      '</div>'+
-      '<div style="display:flex;flex-direction:column;gap:8px;align-items:center">'+
-        '<a href="tel:051-711-3103" style="display:inline-block;padding:12px 32px;background:var(--acc);color:#000;border-radius:10px;font-size:14px;font-weight:900;text-decoration:none">\uD83D\uDCDE 051-711-3103</a>'+
-        '<a href="mailto:kimdh4790@gmail.com" style="display:inline-block;padding:10px 24px;background:var(--bg3);color:var(--text2);border:1px solid var(--border);border-radius:10px;font-size:12px;text-decoration:none">\uD3B8\uC9C0 \uBB38\uC758</a>'+
+        '<div style="text-align:right"><div style="font-size:10px;color:var(--text3)">기한</div><div style="font-size:13px;font-weight:700">'+(dealer.planExpiry||'-')+'</div></div>'+
       '</div>'+
     '</div>'+
-    // 구독 내역
-    '<div style="font-size:13px;font-weight:800;margin-bottom:12px">\uD83E\uDDFE \uAD6C\uB3C5 \uB0B4\uC5ED</div>'+
-    '<div id="sub-history">\u23F3 \uB85C\uB529 \uC911...</div>'+
+    '<div style="font-size:13px;font-weight:800;margin-bottom:12px">📦 요금제 선택</div>'+
+    planCard('free')+planCard('starter')+planCard('pro')+planCard('business')+
+    '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;text-align:center;margin-bottom:24px">'+
+      '<div style="font-size:14px;font-weight:900;color:#ff5555;margin-bottom:4px">🏢 ENTERPRISE</div>'+
+      '<div style="font-size:11px;color:var(--text3);margin-bottom:12px">200명 이상 · 커스텀 파서 · 세금계산서</div>'+
+      '<a href="tel:051-711-3103" style="display:inline-block;padding:10px 24px;background:rgba(255,85,85,.15);border:1px solid rgba(255,85,85,.3);border-radius:10px;color:#ff5555;font-size:12px;font-weight:800;text-decoration:none">📞 도입 문의 051-711-3103</a>'+
+    '</div>'+
+    '<div style="font-size:13px;font-weight:800;margin-bottom:12px">🧾 구독 내역</div>'+
+    '<div id="sub-history">⏳ 로딩 중...</div>'+
   '</div>';
 
   if(_db&&_CU){
@@ -3472,13 +3525,13 @@ function pageSubscription(){
     _db.collection('subscriptions').where('dealerId','==',did).orderBy('createdAt','desc').limit(10).get()
     .then(function(snap){
       var h=document.getElementById('sub-history');if(!h)return;
-      if(snap.empty){h.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3);font-size:12px">\uAD6C\uB3C5 \uB0B4\uC5ED \uC5C6\uC74C</div>';return;}
+      if(snap.empty){h.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3);font-size:12px">구독 내역 없음</div>';return;}
       h.innerHTML='<div style="display:flex;flex-direction:column;gap:6px">'+
         snap.docs.map(function(d){
           var v=d.data();
           return '<div style="display:flex;justify-content:space-between;padding:10px 14px;background:var(--bg2);border-radius:10px;font-size:12px">'+
             '<div><div style="font-weight:700">'+(v.planName||v.plan||'')+'</div><div style="color:var(--text3);font-size:10px">'+(v.period||'')+'</div></div>'+
-            '<div style="font-weight:800;color:var(--acc)">\u20A9'+(v.amount||0).toLocaleString()+'</div>'+
+            '<div style="font-weight:800;color:var(--acc)">₩'+(v.amount||0).toLocaleString()+'</div>'+
           '</div>';
         }).join('')+
       '</div>';
@@ -7338,6 +7391,22 @@ _auth.onAuthStateChanged(function(user){
               else if(cd.settlePaid)_CU.serviceType='settle';
             }
             var _today=new Date().toISOString().slice(0,10);
+            var trialExp=cd.trialExpiry||cd.trialEnd||'';
+            if(trialExp&&trialExp>=_today&&(cd.plan==='trial'||cd.status==='trial')){
+              window._cachedHasPaid=true;
+              window._trialActive=true;
+              window._trialExpiry=trialExp;
+              var dDiff=Math.ceil((new Date(trialExp)-new Date(_today))/(1000*60*60*24));
+              if(dDiff<=3){setTimeout(function(){_showTrialBanner(dDiff);},1000);}
+            } else if((cd.plan==='trial'||cd.status==='trial')&&trialExp&&trialExp<_today){
+              window._cachedHasPaid=false;
+              window._trialActive=false;
+              window._trialExpired=true;
+              setTimeout(function(){_showTrialExpiredPopup();},1500);
+            } else if(cd.subscriptions&&cd.subscriptions.donway&&cd.subscriptions.donway.active){
+              var subExp=cd.subscriptions.donway.expiry||'';
+              if(!subExp||subExp>=_today){window._cachedHasPaid=true;}
+            }
             if(cd.plan==='trial'&&cd.trialEnd&&cd.trialEnd>=_today){
               window._cachedHasPaid=true;
               window._trialActive=true;
@@ -7363,41 +7432,54 @@ _auth.onAuthStateChanged(function(user){
 }
 
 // ★ 체험 만료 결제 유도 팝업
+
+function _showTrialBanner(dLeft){
+  if(document.getElementById('trial-banner')) return;
+  var banner=document.createElement('div');
+  banner.id='trial-banner';
+  banner.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9998;background:linear-gradient(90deg,#ff4d6d,#7b2fff);color:#fff;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:700';
+  var msg=dLeft<=0?'\uC624\uB298\uC774 \uBB34\uB8CC \uCCB4\uD5D8 \uB9C8\uC9C0\uB9C9 \uB0A0\uC785\uB2C8\uB2E4!':'\uBB34\uB8CC \uCCB4\uD5D8 D-'+dLeft+' · \uACC4\uC18D \uC774\uC6A9\uD558\uC2DC\uB824\uBA74 \uAD6C\uB3C5\uC774 \uD544\uC694\uD569\uB2C8\uB2E4';
+  var closeBtn=document.createElement('button');
+  closeBtn.textContent='\u00D7';
+  closeBtn.style.cssText='background:none;border:none;color:rgba(255,255,255,.7);font-size:20px;cursor:pointer;padding:0 4px;margin-left:8px';
+  closeBtn.addEventListener('click',function(){banner.remove();});
+  var link=document.createElement('a');
+  link.href='tel:051-711-3103';
+  link.textContent='\uD83D\uDCDE \uC0C1\uB2F4';
+  link.style.cssText='background:#fff;color:#7b2fff;padding:5px 12px;border-radius:20px;font-size:11px;text-decoration:none;font-weight:900';
+  var right=document.createElement('div');
+  right.style.cssText='display:flex;gap:8px;align-items:center';
+  right.appendChild(link);right.appendChild(closeBtn);
+  var left=document.createElement('span');
+  left.textContent='\u23F0 '+msg;
+  banner.appendChild(left);banner.appendChild(right);
+  document.body.prepend(banner);
+}
+
 function _showTrialExpiredPopup(){
   if(document.getElementById('trial-expired-popup')) return;
   var mo=document.createElement('div');
   mo.id='trial-expired-popup';
-  mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
-  var PLANS=[
-    {key:'settle',  label:'📦 AI 택배정산',price:'89,000원/월',desc:'정산현황·관리·통계'},
-    {key:'qr',     label:'🔐 QR 근태관리',price:'49,000원/월',desc:'QR출퇴근·근무표'},
-    {key:'payroll',label:'💼 급여관리',   price:'79,000원/월',desc:'급여현황'},
-    {key:'delivery',label:'🛵 배달대행', price:'89,000원/월',desc:'배민·이츠 배달대행 정산'},
-  ];
-  var cards=PLANS.map(function(p){
-    return '<div class="sp-card" data-plan="'+p.key+'" style="background:#1a2744;border:1px solid rgba(0,200,248,.3);border-radius:12px;padding:16px;cursor:pointer">'
-      +'<div style="font-weight:800;font-size:15px;color:#00c8f8;margin-bottom:4px">'+p.label+'</div>'
-      +'<div style="font-size:18px;font-weight:900;color:#fff;margin-bottom:6px">'+p.price+'</div>'
-      +'<div style="font-size:11px;color:#94a3b8">'+p.desc+'</div>'
-      +'<div style="margin-top:10px;background:#00c8f8;color:#000;font-weight:700;font-size:12px;padding:8px;border-radius:8px;text-align:center">선택하기 →</div>'
-      +'</div>';
-  }).join('');
-  mo.innerHTML='<div style="background:#0d1b3e;border-radius:20px;padding:28px 24px;max-width:480px;width:90%;color:#fff">'
-    +'<div style="font-size:28px;text-align:center;margin-bottom:8px">⏰</div>'
-    +'<h2 style="text-align:center;margin-bottom:4px;font-size:20px">7일 무료 체험이 종료됐습니다</h2>'
-    +'<p style="text-align:center;color:#94a3b8;font-size:13px;margin-bottom:20px">요금제를 선택하고 계속 이용하세요</p>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">'+cards+'</div>'
-    +'<div style="text-align:center;font-size:11px;color:#64748b">카드 자동결제 · 언제든 해지 가능<br>'
-    +'문의: <a href="tel:051-711-3103" style="color:#00c8f8">051-711-3103</a> · <a href="https://pf.kakao.com/_xkuxabX/chat" style="color:#00c8f8">카카오 돈웨이</a></div>'
-    +'</div>';
+  mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  var inner=document.createElement('div');
+  inner.style.cssText='background:#0d1b3e;border:1px solid rgba(0,212,255,.3);border-radius:20px;padding:32px 24px;max-width:420px;width:100%;color:#fff;text-align:center';
+  inner.innerHTML=
+    '<div style="font-size:48px;margin-bottom:12px">\u23F0</div>'+
+    '<div style="font-size:20px;font-weight:900;margin-bottom:8px">7\uC77C \uBB34\uB8CC \uCCB4\uD5D8\uC774 \uC885\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4</div>'+
+    '<div style="font-size:13px;color:#94a3b8;margin-bottom:24px;line-height:1.6">\uACC4\uC18D \uC774\uC6A9\uD558\uC2DC\uB824\uBA74 \uAD6C\uB3C5 \uC2E0\uCCAD\uC774 \uD544\uC694\uD569\uB2C8\uB2E4.<br>\uB2F4\uB2F9\uC790\uAC00 \uB9DE\uCDA4 \uC694\uAE08\uC81C\uB97C \uC548\uB0B4\uD574\uB4DC\uB9BD\uB2C8\uB2E4.</div>'+
+    '<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">'+
+      '<a href="tel:051-711-3103" style="display:block;padding:14px;background:linear-gradient(90deg,#00d4ff,#7b2fff);color:#fff;border-radius:12px;font-size:15px;font-weight:900;text-decoration:none">\uD83D\uDCDE 051-711-3103 \uC804\uD654 \uC0C1\uB2F4</a>'+
+      '<a href="mailto:kimdh4790@gmail.com" style="display:block;padding:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.15);color:#fff;border-radius:12px;font-size:13px;text-decoration:none">\uD3B8\uC9C0 \uBB38\uC758</a>'+
+    '</div>'+
+    '<div style="font-size:11px;color:#5a5f7a;margin-bottom:16px">\uC601\uC5C5\uC2DC\uAC04: \uD3C9\uC77C 09:00~18:00 · VAT \uBCC4\uB3C4</div>';
+  var closeBtn=document.createElement('button');
+  closeBtn.textContent='\uB098\uC911\uC5D0 \uD558\uAE30 (\uAE30\uB2A5 \uC81C\uD55C)';
+  closeBtn.style.cssText='background:none;border:none;color:#5a5f7a;font-size:12px;cursor:pointer';
+  closeBtn.addEventListener('click',function(){mo.remove();});
+  inner.appendChild(closeBtn);
+  mo.appendChild(inner);
   document.body.appendChild(mo);
-  mo.querySelectorAll('.sp-card').forEach(function(c){
-    c.addEventListener('click',function(){window._subRequest(c.dataset.plan);});
-    c.addEventListener('mouseover',function(){c.style.borderColor='#00c8f8';});
-    c.addEventListener('mouseout',function(){c.style.borderColor='rgba(0,200,248,.3)';});
-  });
-}
-function _subRequest(planKey){
+}function _subRequest(planKey){
   document.getElementById('trial-expired-popup').remove();
   if(typeof _showSubModal==='function') _showSubModal(planKey);
   else toast('구독 문의: 051-711-3103 또는 카카오채널 돈웨이');
