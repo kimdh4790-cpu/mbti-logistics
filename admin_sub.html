@@ -112,7 +112,20 @@ var PRODUCTS=[
   {
     id:'donway',icon:'💰',name:'DONWAY 정산',
     fields:[
-      {id:'plan',label:'요금제',type:'select',opts:['individual_50','individual_150','individual_300','individual_500','individual_700','individual_1000','group_50','group_150','group_300','group_500','group_700','group_1000']},
+      {id:'plan',label:'요금제',type:'select',opts:[
+        {v:'individual_50',  l:'개인 ~50명  (390,000원/월)'},
+        {v:'individual_150', l:'개인 ~150명 (650,000원/월)'},
+        {v:'individual_300', l:'개인 ~300명 (975,000원/월)'},
+        {v:'individual_500', l:'개인 ~500명 (1,625,000원/월)'},
+        {v:'individual_700', l:'개인 ~700명 (2,275,000원/월)'},
+        {v:'individual_1000',l:'개인 ~1000명 (2,600,000원/월)'},
+        {v:'group_50',       l:'단체 ~50명  (300,000원/월)'},
+        {v:'group_150',      l:'단체 ~150명 (500,000원/월)'},
+        {v:'group_300',      l:'단체 ~300명 (750,000원/월)'},
+        {v:'group_500',      l:'단체 ~500명 (1,250,000원/월)'},
+        {v:'group_700',      l:'단체 ~700명 (1,750,000원/월)'},
+        {v:'group_1000',     l:'단체 ~1000명 (2,000,000원/월)'},
+      ]},
       {id:'maxPerson',label:'인원',type:'number',placeholder:'예) 50'},
       {id:'expiry',label:'만료일',type:'date'},
     ]
@@ -281,7 +294,11 @@ function _renderCompanyDetail(c){
       var inp='';
       if(f.type==='select'){
         inp='<select id="f_'+p.id+'_'+f.id+'" class="sub-inp">'+
-          f.opts.map(function(o){return '<option value="'+o+'"'+(val===o?' selected':'')+'>'+o+'</option>';}).join('')+
+          f.opts.map(function(o){
+            var v=typeof o==='object'?o.v:o;
+            var l=typeof o==='object'?o.l:o;
+            return '<option value="'+v+'"'+(val===v?' selected':'')+'>'+l+'</option>';
+          }).join('')+
         '</select>';
       } else if(f.type==='date'){
         // 기본값: 오늘부터 1달 후
