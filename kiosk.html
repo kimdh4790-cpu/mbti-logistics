@@ -67,6 +67,77 @@ function _closeTopModal(){
   modals.forEach(function(m){if((m.style.zIndex||0)>=9999)m.remove();});
 }
 
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 💳 구독 체크 모듈
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+var _SUBS = null; // 캐시
+
+function _loadSubs(dealerId, cb){
+  if(_SUBS){cb(_SUBS);return;}
+  _db.collection('companies').doc(dealerId).get()
+  .then(function(d){
+    _SUBS = d.exists ? (d.data().subscriptions||{}) : {};
+    cb(_SUBS);
+  }).catch(function(){_SUBS={};cb({});});
+}
+
+function _subActive(product){
+  if(!_SUBS) return false;
+  var s=_SUBS[product];
+  if(!s||!s.active) return false;
+  if(s.expiry && s.expiry < new Date().toISOString().slice(0,10)) return false;
+  return true;
+}
+
+function _subPersons(product){
+  if(!_SUBS) return 0;
+  var s=_SUBS[product];
+  return s?(s.persons||s.maxPerson||0):0;
+}
+
+// 구독 안내 화면
+function _showSubRequired(product, c){
+  var labels={
+    donway:'DONWAY 정산',
+    qr:'QR 패키지',
+    inventory:'재고관리',
+    kiosk:'키오스크·POS',
+  };
+  var prices={
+    qr:'1,500원/인/월',
+    inventory:'130,000원/월',
+    kiosk:'50,000원/월',
+  };
+  var icons={donway:'💰',qr:'🔲',inventory:'📦',kiosk:'🖥️'};
+  var name=labels[product]||product;
+  var price=prices[product]||'';
+  var icon=icons[product]||'📦';
+  (c||document.getElementById('content')||document.getElementById('main-content')).innerHTML=
+    '<div style="display:flex;align-items:center;justify-content:center;min-height:60vh">'+
+    '<div style="text-align:center;max-width:320px;padding:32px">'+
+      '<div style="font-size:48px;margin-bottom:16px">'+icon+'</div>'+
+      '<div style="font-size:18px;font-weight:900;margin-bottom:8px">'+name+'</div>'+
+      '<div style="font-size:13px;color:var(--text2);margin-bottom:8px">이 기능은 구독이 필요합니다</div>'+
+      (price?'<div style="font-size:15px;font-weight:800;color:var(--acc);margin-bottom:20px">'+price+'</div>':'')+
+      '<div style="background:var(--bg3);border-radius:12px;padding:14px;font-size:12px;color:var(--text3);margin-bottom:20px">'+
+        '구독 문의: 051-711-3103<br>이메일: kimdh4790@gmail.com'+
+      '</div>'+
+      '<a href="https://donway.ai.kr" style="display:inline-block;padding:12px 28px;background:var(--acc);color:#000;border-radius:10px;font-size:13px;font-weight:900;text-decoration:none">도입 문의 →</a>'+
+    '</div></div>';
+}
+
+// Firestore Rules 가이드 (각 컬렉션에 dealerId 필터 강제)
+// rules_version = '2';
+// service cloud.firestore {
+//   match /databases/{database}/documents {
+//     match /{collection}/{doc} {
+//       allow read, write: if request.auth != null
+//         && resource.data.dealerId == request.auth.uid;
+//     }
+//   }
+// }
+
 function toast(msg){var t=document.getElementById('toast');if(!t)return;t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2500);}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
@@ -7517,7 +7588,7 @@ function _parseTLLines(lines){
     var line=lines[i];
     if(!line){curRoute=null;continue;}
     // 이름(아이디) — 전각 괄호 포함
-    var nm=line.match(/^(.+?)\s*[\(\（]([^\)\）]+)[\)\）]\s*$/);
+    var nm=line.match(/^(.+?)\s*[\(\(]([^\)\)]+)[\)\)]\s*$/);
     if(nm){cur={name:nm[1].trim(),id:nm[2].trim(),routes:{}};leaders.push(cur);curRoute=null;continue;}
     if(!cur)continue;
     // 라우트번호만 (3~4자리)
@@ -15259,13 +15330,20 @@ function _nav(el){
 }
 
 function _initApp(){
-  window._bkDid=_dealerData?_dealerData.id:'';
+  var did=_dealerData?_dealerData.id:(_CU?_CU.uid:'');
+  _loadSubs(did,function(subs){
+    if(!_subActive('kiosk')){
+      _showSubRequired('kiosk',document.getElementById('content'));
+      return;
+    }
+    window._bkDid=_dealerData?_dealerData.id:'';
   window._bkToday=new Date().toISOString().slice(0,10);
   window._bkYm=window._bkToday.slice(0,7);
   window._bkDesigners=[];
   _db.collection('ind_workers').where('dealerId','==',window._bkDid).get()
   .then(function(snap){var d=[];snap.forEach(function(s){d.push(Object.assign({id:s.id},s.data()));});window._bkDesigners=d;}).catch(function(){});
-  pageBeautyKiosk();
+    pageBeautyKiosk();
+  });
 }
 </script>
 </body></html>
