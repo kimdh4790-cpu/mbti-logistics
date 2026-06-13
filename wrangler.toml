@@ -5,3 +5,11 @@ compatibility_date = "2025-11-01"
 [[routes]]
 pattern = "donway.ai.kr/*"
 zone_name = "donway.ai.kr"
+
+[[routes]]
+pattern = "mbtico.kr/*"
+zone_name = "mbtico.kr"
+
+[[routes]]
+pattern = "mbetco.kr/*"
+zone_name = "mbetco.kr"
