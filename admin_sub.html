@@ -301,19 +301,18 @@ function _approve(btn){
   var id=btn.dataset.id;
   var email=btn.dataset.email;
   var name=btn.dataset.name;
-  if(!confirm(name+' 승인하시겠습니까?\n\n승인 시 Firebase Auth 계정 생성 및 7일 무료 체험이 시작됩니다.'))return;
+  if(!confirm(name+' 승인하시겠습니까?'))return;
   btn.textContent='⏳ 처리 중...';btn.disabled=true;
 
   var trialExpiry=new Date();trialExpiry.setDate(trialExpiry.getDate()+7);
   var trialStr=trialExpiry.toISOString().slice(0,10);
   var now=new Date().toISOString();
+  var newCompanyId='';
 
-  // join_requests 상태 업데이트
   _db.collection('join_requests').doc(id).get()
   .then(function(d){
     if(!d.exists)throw new Error('신청 데이터 없음');
     var v=d.data();
-    // companies 컬렉션에 등록
     return _db.collection('companies').add({
       companyName:v.companyName,
       repName:v.repName,
@@ -324,36 +323,48 @@ function _approve(btn){
       status:'trial',
       plan:'trial',
       trialExpiry:trialStr,
-      subscriptions:{
-        donway:{active:true,plan:'trial',expiry:trialStr},
-      },
+      subscriptions:{donway:{active:true,plan:'trial',expiry:trialStr}},
       createdAt:now,
       approvedAt:now,
       approvedBy:_cu.email,
       joinRequestId:id,
     });
   }).then(function(ref){
-    // join_request 상태 변경
+    newCompanyId=ref.id;
     return _db.collection('join_requests').doc(id).update({
       status:'approved',
       processedAt:now,
       processedBy:_cu.email,
-      companyId:ref.id,
+      companyId:newCompanyId,
       trialExpiry:trialStr,
     });
   }).then(function(){
-    // 알림 큐 (이메일/알림톡)
+    // alimtalk 큐
     return _db.collection('alimtalk_queue').add({
-      type:'join_approved',
-      email:email,
-      companyName:name,
-      trialExpiry:trialStr,
-      loginUrl:'https://donway.ai.kr/settle',
-      status:'pending',
-      createdAt:now,
+      type:'join_approved',email:email,companyName:name,
+      trialExpiry:trialStr,loginUrl:'https://donway.ai.kr/settle',
+      status:'pending',createdAt:now,
     });
   }).then(function(){
-    toast('✅ '+name+' 승인 완료! 이메일 발송 대기 중');
+    // ★ Firebase Auth 계정 자동 생성 + 이메일 발송
+    return fetch('/api/create-account',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        email:email,
+        companyName:name,
+        companyId:newCompanyId,
+        trialExpiry:trialStr,
+      })
+    });
+  }).then(function(res){return res.json();})
+  .then(function(data){
+    if(data&&data.ok){
+      toast('✅ '+name+' 승인 완료! 계정 생성 + 이메일 자동 발송됨',3500);
+    } else {
+      toast('✅ '+name+' 승인 완료 (이메일 수동 발송 필요: '+(data&&data.reason||'unknown')+')',4000);
+    }
+    btn.textContent='✅ 승인';btn.disabled=false;
     _renderRequests();
   }).catch(function(e){
     toast('❌ '+e.message);
