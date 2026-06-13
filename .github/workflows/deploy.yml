@@ -82,6 +82,40 @@ jobs:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
 
+      - name: Register Cloudflare Worker Routes
+        run: |
+          ACCOUNT_ID="02709cbec18d848913b4246015b9148f"
+          
+          # mbtico.kr zone ID 조회
+          MBTICO_ZONE=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones?name=mbtico.kr" \
+            -H "Authorization: Bearer $CF_API_TOKEN" \
+            -H "Content-Type: application/json" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['result'][0]['id'] if d.get('result') else '')")
+          
+          echo "mbtico.kr Zone ID: $MBTICO_ZONE"
+          
+          if [ -n "$MBTICO_ZONE" ]; then
+            # 기존 라우트 확인
+            EXISTING=$(curl -s "https://api.cloudflare.com/client/v4/zones/$MBTICO_ZONE/workers/routes" \
+              -H "Authorization: Bearer $CF_API_TOKEN" | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d.get('result',[])))") 
+            echo "기존 라우트: $EXISTING개"
+            
+            if [ "$EXISTING" = "0" ]; then
+              # mbtico.kr/* 라우트 등록
+              curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$MBTICO_ZONE/workers/routes" \
+                -H "Authorization: Bearer $CF_API_TOKEN" \
+                -H "Content-Type: application/json" \
+                --data '{"pattern":"mbtico.kr/*","script":"mbti-logistics"}' \
+                | python3 -c "import sys,json; d=json.load(sys.stdin); print('Route OK' if d.get('success') else d.get('errors','fail'))"
+              echo "✅ mbtico.kr/* 라우트 등록 완료"
+            else
+              echo "✅ 라우트 이미 존재"
+            fi
+          else
+            echo "⚠️ mbtico.kr zone 없음 — Cloudflare에 도메인 등록 필요"
+          fi
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+
       - name: Deploy Firestore Rules
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
