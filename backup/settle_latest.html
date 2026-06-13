@@ -3157,6 +3157,474 @@ function _calcAcademyFee(subject, students, perStudentFee, textbookFee){
   return {fee:fee,textbook:textbook,total:fee+textbook};
 }
 
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 💳 DONWAY 요금제 정의
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+var PLAN_DEF = {
+  free: {
+    name:'FREE', label:'무료', color:'#666',
+    pricePerPerson:0, maxPerson:5,
+    features:{
+      settleLimit:3,        // 월 정산 횟수
+      industries:['ai_settle','delivery'], // 사용 가능 업종
+      allIndustries:false,
+      qrBooking:false,
+      qrPos:false,
+      alimtalk:0,           // 월 알림톡 건수
+      taxShare:false,
+      beautyKiosk:false,
+      customerDb:false,
+      multiCamp:false,
+      inventory:false,
+      excelDownload:false,
+      customParser:false,
+    }
+  },
+  starter: {
+    name:'STARTER', label:'스타터', color:'#00d4ff',
+    pricePerPerson:9000, maxPerson:20,
+    features:{
+      settleLimit:999,
+      industries:['ai_settle','delivery','construction','insurance','beauty',
+                  'care','academy','warehouse','event','sales'],
+      allIndustries:false,
+      qrBooking:true,
+      qrPos:false,
+      alimtalk:100,
+      taxShare:false,
+      beautyKiosk:false,
+      customerDb:false,
+      multiCamp:false,
+      inventory:false,
+      excelDownload:true,
+      customParser:false,
+    }
+  },
+  pro: {
+    name:'PRO', label:'프로', color:'#7b2fff',
+    pricePerPerson:8000, maxPerson:50,
+    features:{
+      settleLimit:999,
+      industries:['all'],
+      allIndustries:true,
+      qrBooking:true,
+      qrPos:true,
+      alimtalk:999,
+      taxShare:true,
+      beautyKiosk:true,
+      customerDb:true,
+      multiCamp:false,
+      inventory:false,
+      excelDownload:true,
+      customParser:false,
+    }
+  },
+  business: {
+    name:'BUSINESS', label:'비즈니스', color:'#ff9500',
+    pricePerPerson:7000, maxPerson:200,
+    features:{
+      settleLimit:999,
+      industries:['all'],
+      allIndustries:true,
+      qrBooking:true,
+      qrPos:true,
+      alimtalk:999,
+      taxShare:true,
+      beautyKiosk:true,
+      customerDb:true,
+      multiCamp:true,
+      inventory:true,
+      excelDownload:true,
+      customParser:true,
+    }
+  },
+  enterprise: {
+    name:'ENTERPRISE', label:'엔터프라이즈', color:'#ff5555',
+    pricePerPerson:0, maxPerson:9999,
+    features:{
+      settleLimit:999,
+      industries:['all'],
+      allIndustries:true,
+      qrBooking:true,
+      qrPos:true,
+      alimtalk:999,
+      taxShare:true,
+      beautyKiosk:true,
+      customerDb:true,
+      multiCamp:true,
+      inventory:true,
+      excelDownload:true,
+      customParser:true,
+    }
+  }
+};
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 현재 플랜 가져오기
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _getPlan(){
+  var dealer=window._dealerData||{};
+  var planKey=(dealer.plan||dealer.planId||'free').toLowerCase();
+  return PLAN_DEF[planKey]||PLAN_DEF.free;
+}
+
+// 기능 사용 가능 여부
+function _canUse(feature){
+  var plan=_getPlan();
+  return !!(plan.features[feature]);
+}
+
+// 업종 사용 가능 여부
+function _canUseIndustry(industryKey){
+  var plan=_getPlan();
+  if(plan.features.allIndustries) return true;
+  return (plan.features.industries||[]).indexOf(industryKey)>=0;
+}
+
+// 정산 횟수 체크
+function _checkSettleLimit(){
+  var plan=_getPlan();
+  var limit=plan.features.settleLimit||3;
+  if(limit>=999) return true;
+  var dealer=window._dealerData||{};
+  var used=dealer.monthlySettleCount||0;
+  return used<limit;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 잠금 UI — 업그레이드 유도 팝업
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _showUpgradeModal(feature, requiredPlan){
+  var planInfo={
+    starter:{name:'STARTER',color:'#00d4ff',price:'9,000원/인/월'},
+    pro:{name:'PRO',color:'#7b2fff',price:'8,000원/인/월'},
+    business:{name:'BUSINESS',color:'#ff9500',price:'7,000원/인/월'},
+  };
+  var info=planInfo[requiredPlan]||planInfo.pro;
+  var featureNames={
+    qrBooking:'QR 예약',qrPos:'QR POS',alimtalk:'카카오 알림톡',
+    taxShare:'세무사 연동',beautyKiosk:'뷰티 키오스크',customerDb:'고객 DB',
+    multiCamp:'멀티캠프',inventory:'재고관리',excelDownload:'엑셀 다운로드',
+    customParser:'커스텀 파서',allIndustries:'전체 업종',
+  };
+  var fname=featureNames[feature]||feature;
+
+  var modal=document.createElement('div');
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML=
+    '<div style="background:var(--bg2);border:1px solid '+info.color+';border-radius:20px;padding:28px;max-width:360px;width:100%;text-align:center;position:relative">'+
+      '<button onclick="_closeModal(this)" style="position:absolute;top:12px;right:16px;background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer">×</button>'+
+      '<div style="font-size:40px;margin-bottom:12px">🔒</div>'+
+      '<div style="font-size:16px;font-weight:900;margin-bottom:6px">'+fname+'</div>'+
+      '<div style="font-size:12px;color:var(--text3);margin-bottom:20px">'+
+        '<span style="color:'+info.color+';font-weight:800">'+info.name+'</span> 이상에서 사용 가능합니다'+
+      '</div>'+
+      // 현재 플랜 표시
+      '<div style="background:var(--bg3);border-radius:10px;padding:10px;margin-bottom:16px;font-size:11px;color:var(--text3)">'+
+        '현재 플랜: <b style="color:var(--text)">'+_getPlan().label+'</b>'+
+      '</div>'+
+      // 업그레이드 버튼들
+      '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">'+
+        Object.keys(planInfo).map(function(pk){
+          var pi=planInfo[pk];
+          var isReq=pk===requiredPlan;
+          return '<button data-pk="'+(pk)+'" onclick="_goUpgrade(this.dataset.pk)" '+
+            'style="padding:12px;border-radius:10px;border:1px solid '+pi.color+';'+
+            'background:'+(isReq?pi.color+'22':'var(--bg3)')+';'+
+            'color:'+(isReq?pi.color:'var(--text2)')+';font-size:12px;font-weight:'+(isReq?'900':'600')+';cursor:pointer">'+
+            (isReq?'⚡ ':'')+pi.name+' — '+pi.price+
+          '</button>';
+        }).join('')+
+      '</div>'+
+      '<div style="font-size:10px;color:var(--text3)">구독 관리 → 왼쪽 메뉴 하단</div>'+
+    '</div>';
+  document.body.appendChild(modal);
+}
+
+// 업그레이드 페이지로 이동
+function _goUpgrade(planKey){
+  _closeTopModal();
+  goPage('subscription');
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 구독 관리 페이지
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function pageSubscription(){
+  document.getElementById('page-title').textContent='구독 / 요금제';
+  var el=document.getElementById('content');
+  var dealer=window._dealerData||{};
+  var curPlan=_getPlan();
+  var ppc=dealer.personCount||dealer.workerCount||1;
+
+  function planCard(pk){
+    var p=PLAN_DEF[pk];
+    if(!p||pk==='enterprise')return '';
+    var isCur=curPlan.name===p.name;
+    var f=p.features;
+    var rows=[
+      ['정산',f.settleLimit>=999?'무제한':'월 '+f.settleLimit+'회'],
+      ['업종',f.allIndustries?'전체':''+( (f.industries||[]).length)+'개'],
+      ['QR예약',f.qrBooking?'✅':'🔒'],
+      ['QR POS',f.qrPos?'✅':'🔒'],
+      ['알림톡',f.alimtalk>=999?'무제한':''+( f.alimtalk||0)+'건'],
+      ['세무',f.taxShare?'✅':'🔒'],
+      ['키오스크',f.beautyKiosk?'✅':'🔒'],
+      ['재고',f.inventory?'✅':'🔒'],
+    ];
+    var btn='';
+    if(isCur){btn='<span style="font-size:11px;color:var(--text3)">이용중</span>';}
+    else if(pk==='free'){btn='<button data-pk="free" onclick="_startDowngradeFlow()" style="padding:8px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;font-size:11px;cursor:pointer">다운</button>';}
+    else{btn='<button data-pk="'+pk+'" onclick="_startUpgradeFlow(this.dataset.pk)" style="padding:8px 16px;background:'+p.color+';color:#000;border:none;border-radius:8px;font-size:11px;font-weight:900;cursor:pointer">업그레이드</button>';}
+    return '<div style="background:var(--bg2);border:2px solid '+(isCur?p.color:'var(--border)')+';border-radius:14px;padding:14px;margin-bottom:10px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
+        '<div>'+
+          '<div style="font-size:14px;font-weight:900;color:'+p.color+'">'+p.label+(isCur?' <span style="font-size:9px;background:'+p.color+';color:#000;padding:2px 7px;border-radius:20px">현재</span>':'')+'</div>'+
+          '<div style="font-size:11px;color:var(--text3)">'+(p.pricePerPerson>0?p.pricePerPerson.toLocaleString()+'원/인/월':'무료')+' · 최대 '+(p.maxPerson>=9999?'무제한':p.maxPerson+'명')+'</div>'+
+        '</div>'+btn+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:3px;font-size:10px">'+
+      rows.map(function(row){
+        return '<div style="padding:4px;background:var(--bg3);border-radius:6px;text-align:center">'+
+          '<div style="color:var(--text3)">'+row[0]+'</div>'+
+          '<div style="font-weight:700;color:'+(row[1]==='🔒'?'var(--text3)':'#00ff94')+'">'+row[1]+'</div>'+
+        '</div>';
+      }).join('')+
+      '</div>'+
+    '</div>';
+  }
+
+  el.innerHTML='<div style="max-width:600px;margin:0 auto;padding:16px">'+
+    '<div style="background:linear-gradient(135deg,'+curPlan.color+'22,'+curPlan.color+'11);border:1px solid '+curPlan.color+'44;border-radius:16px;padding:18px;margin-bottom:20px">'+
+      '<div style="font-size:11px;color:var(--text3);margin-bottom:4px">현재 요금제</div>'+
+      '<div style="display:flex;justify-content:space-between;align-items:center">'+
+        '<div>'+
+          '<div style="font-size:22px;font-weight:900;color:'+curPlan.color+'">'+curPlan.label+'</div>'+
+          '<div style="font-size:12px;color:var(--text2)">'+(curPlan.pricePerPerson>0?ppc+'명 × '+curPlan.pricePerPerson.toLocaleString()+'원 = <b>'+(ppc*curPlan.pricePerPerson).toLocaleString()+'원/월</b>':'무료')+'</div>'+
+        '</div>'+
+        '<div style="text-align:right"><div style="font-size:10px;color:var(--text3)">기한</div><div style="font-size:13px;font-weight:700">'+(dealer.planExpiry||'-')+'</div></div>'+
+      '</div>'+
+    '</div>'+
+    '<div style="font-size:13px;font-weight:800;margin-bottom:12px">📦 요금제 선택</div>'+
+    planCard('free')+planCard('starter')+planCard('pro')+planCard('business')+
+    '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;text-align:center;margin-bottom:24px">'+
+      '<div style="font-size:14px;font-weight:900;color:#ff5555;margin-bottom:4px">🏢 ENTERPRISE</div>'+
+      '<div style="font-size:11px;color:var(--text3);margin-bottom:12px">200명 이상 · 커스텀 파서 · 세금계산서</div>'+
+      '<a href="tel:051-711-3103" style="display:inline-block;padding:10px 24px;background:rgba(255,85,85,.15);border:1px solid rgba(255,85,85,.3);border-radius:10px;color:#ff5555;font-size:12px;font-weight:800;text-decoration:none">📞 도입 문의 051-711-3103</a>'+
+    '</div>'+
+    '<div style="font-size:13px;font-weight:800;margin-bottom:12px">🧾 구독 내역</div>'+
+    '<div id="sub-history">⏳ 로딩 중...</div>'+
+  '</div>';
+
+  if(_db&&_CU){
+    var did=_CU.dealerId||_CU.uid;
+    _db.collection('subscriptions').where('dealerId','==',did).orderBy('createdAt','desc').limit(10).get()
+    .then(function(snap){
+      var h=document.getElementById('sub-history');if(!h)return;
+      if(snap.empty){h.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3);font-size:12px">구독 내역 없음</div>';return;}
+      h.innerHTML='<div style="display:flex;flex-direction:column;gap:6px">'+
+        snap.docs.map(function(d){
+          var v=d.data();
+          return '<div style="display:flex;justify-content:space-between;padding:10px 14px;background:var(--bg2);border-radius:10px;font-size:12px">'+
+            '<div><div style="font-weight:700">'+(v.planName||v.plan||'')+'</div><div style="color:var(--text3);font-size:10px">'+(v.period||'')+'</div></div>'+
+            '<div style="font-weight:800;color:var(--acc)">₩'+(v.amount||0).toLocaleString()+'</div>'+
+          '</div>';
+        }).join('')+
+      '</div>';
+    }).catch(function(){});
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 업그레이드 결제 플로우 (토스 연동)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _startUpgradeFlow(planKey){
+  window._upgradePlanKey=planKey;
+  window._upgradePeriod=1;
+  var plan=PLAN_DEF[planKey];
+  if(!plan)return;
+  var dealer=window._dealerData||{};
+  var personCount=dealer.personCount||dealer.workerCount||5;
+  var monthly=plan.pricePerPerson*personCount;
+
+  var modal=document.createElement('div');
+  modal.id='upgrade-modal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML=
+    '<div style="background:var(--bg2);border:1px solid '+plan.color+';border-radius:20px;padding:24px;max-width:340px;width:100%;position:relative">'+
+      '<button onclick="_closeTopModal()" style="position:absolute;top:12px;right:16px;background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer">×</button>'+
+      '<div style="font-size:15px;font-weight:900;color:'+plan.color+';margin-bottom:16px">'+plan.label+' 업그레이드</div>'+
+      '<div style="margin-bottom:16px">'+
+        '<div style="font-size:12px;color:var(--text3);margin-bottom:6px">직원 수 (최대 '+plan.maxPerson+'명)</div>'+
+        '<div style="display:flex;align-items:center;gap:8px">'+
+          '<button onclick="_upPersonAdj(-1)" style="width:36px;height:36px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:18px;cursor:pointer">-</button>'+
+          '<input id="up-person" type="number" value="'+personCount+'" min="1" max="'+plan.maxPerson+'" oninput="_calcUpgrade()" style="flex:1;padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;font-weight:800;text-align:center">'+
+          '<button onclick="_upPersonAdj(1)" style="width:36px;height:36px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:18px;cursor:pointer">+</button>'+
+        '</div>'+
+      '</div>'+
+      '<div style="margin-bottom:16px">'+
+        '<div style="font-size:12px;color:var(--text3);margin-bottom:6px">결제 기간</div>'+
+        '<div style="display:flex;gap:6px">'+
+          '<button id="up-p1" onclick="_setPeriod(1)" style="flex:1;padding:9px 4px;background:var(--acc)22;border:2px solid var(--acc);border-radius:8px;color:var(--acc);font-size:11px;font-weight:800;cursor:pointer">1개월</button>'+
+          '<button id="up-p6" onclick="_setPeriod(6)" style="flex:1;padding:9px 4px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text2);font-size:11px;cursor:pointer">6개월<br>5%↓</button>'+
+          '<button id="up-p12" onclick="_setPeriod(12)" style="flex:1;padding:9px 4px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text2);font-size:11px;cursor:pointer">12개월<br>10%↓</button>'+
+        '</div>'+
+      '</div>'+
+      '<div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:16px;text-align:center">'+
+        '<div style="font-size:11px;color:var(--text3)">월 결제</div>'+
+        '<div id="up-monthly" style="font-size:22px;font-weight:900;color:'+plan.color+'">₩'+monthly.toLocaleString()+'</div>'+
+        '<div id="up-total" style="font-size:11px;color:var(--text3)">총 ₩'+monthly.toLocaleString()+' (1개월)</div>'+
+      '</div>'+
+      '<button onclick="_processUpgradePayment()" style="width:100%;padding:14px;background:'+plan.color+';color:#000;border:none;border-radius:10px;font-size:14px;font-weight:900;cursor:pointer">💳 토스로 결제하기</button>'+
+    '</div>';
+  document.body.appendChild(modal);
+}
+
+function _upPersonAdj(delta){
+  var el=document.getElementById('up-person');
+  if(!el)return;
+  var plan=PLAN_DEF[window._upgradePlanKey||'pro'];
+  var max=plan?plan.maxPerson:200;
+  el.value=Math.max(1,Math.min(max,parseInt(el.value||1)+delta));
+  _calcUpgrade();
+}
+
+function _setPeriod(months){
+  window._upgradePeriod=months;
+  [1,6,12].forEach(function(m){
+    var btn=document.getElementById('up-period-'+m);
+    if(!btn)return;
+    if(m===months){
+      btn.style.background='var(--acc)22';
+      btn.style.border='2px solid var(--acc)';
+      btn.style.color='var(--acc)';
+    } else {
+      btn.style.background='var(--bg3)';
+      btn.style.border='1px solid var(--border)';
+      btn.style.color='var(--text2)';
+    }
+  });
+  _calcUpgrade(window._upgradePlanKey||'pro');
+}
+
+function _calcUpgrade(){
+  var planKey=window._upgradePlanKey||'pro';
+  var plan=PLAN_DEF[planKey];
+  if(!plan)return;
+  var persons=parseInt((document.getElementById('up-person')||{}).value)||1;
+  var months=window._upgradePeriod||1;
+  var discount=months>=12?0.10:months>=6?0.05:0;
+  var monthly=Math.round(plan.pricePerPerson*persons*(1-discount));
+  var total=monthly*months;
+  var el1=document.getElementById('up-monthly');
+  var el2=document.getElementById('up-total');
+  if(el1)el1.textContent='₩'+monthly.toLocaleString();
+  if(el2)el2.textContent='총 ₩'+total.toLocaleString()+' ('+months+'개월'+(discount>0?' · '+Math.round(discount*100)+'%할인':'')+')';
+}
+
+function _processUpgradePayment(){
+  var planKey=window._upgradePlanKey||'pro';
+  var plan=PLAN_DEF[planKey];
+  if(!plan)return;
+  var persons=parseInt((document.getElementById('up-person')||{}).value)||1;
+  var months=window._upgradePeriod||1;
+  var discount=months>=12?0.10:months>=6?0.05:0;
+  var monthly=Math.round(plan.pricePerPerson*persons*(1-discount));
+  var total=monthly*months;
+  if(!_CU||!_db){toast('로그인 후 이용하세요');return;}
+  var did=_CU.dealerId||_CU.uid;
+  if(!confirm(plan.label+' '+persons+'명 × '+months+'개월\n총 ₩'+total.toLocaleString()+'원\n\n구독 신청하시겠습니까?'))return;
+  var expiry=new Date();
+  expiry.setMonth(expiry.getMonth()+months);
+  _db.collection('companies').doc(did).update({
+    plan:planKey,planName:plan.label,personCount:persons,
+    planExpiry:expiry.toISOString().slice(0,10),
+    planUpdatedAt:new Date().toISOString(),
+  }).then(function(){
+    return _db.collection('subscriptions').add({
+      dealerId:did,plan:planKey,planName:plan.label,
+      personCount:persons,months:months,amount:total,status:'active',
+      period:new Date().toISOString().slice(0,7)+' ~ '+expiry.toISOString().slice(0,7),
+      createdAt:new Date().toISOString(),
+    });
+  }).then(function(){
+    _closeTopModal();
+    if(window._dealerData)window._dealerData.plan=planKey;
+    toast('✅ '+plan.label+' 구독 완료!');
+    setTimeout(function(){location.reload();},1500);
+  }).catch(function(e){toast('❌ '+e.message);});
+}
+
+function _startDowngradeFlow(){
+  if(!confirm('FREE \uD50C\uB7AC\uC73C\uB85C \uB2E4\uC6B4\uADF8\uB808\uC774\uB4DC\uD558\uBA74 \uC77C\uBD80 \uAE30\uB2A5\uC774 \uC81C\uD55C\uB429\uB2C8\uB2E4. \uACC4\uC18D\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?'))return;
+  var did=_CU.dealerId||_CU.uid;
+  _db.collection('companies').doc(did).update({
+    plan:'free',planName:'FREE',planExpiry:'',
+  }).then(function(){
+    if(window._dealerData)window._dealerData.plan='free';
+    toast('FREE 플랜으로 변경됨');
+    setTimeout(function(){location.reload();},1000);
+  }).catch(function(e){toast('❌ '+e.message);});
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 기능 잠금 래퍼들 — 기존 함수 앞에 체크 추가
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// QR 예약 체크
+function _guardQrBooking(fn){
+  if(!_canUse('qrBooking')){_showUpgradeModal('qrBooking','starter');return;}
+  fn();
+}
+// QR POS 체크
+function _guardQrPos(fn){
+  if(!_canUse('qrPos')){_showUpgradeModal('qrPos','pro');return;}
+  fn();
+}
+// 세무 연동 체크
+function _guardTaxShare(fn){
+  if(!_canUse('taxShare')){_showUpgradeModal('taxShare','pro');return;}
+  fn();
+}
+// 키오스크 체크
+function _guardBeautyKiosk(fn){
+  if(!_canUse('beautyKiosk')){_showUpgradeModal('beautyKiosk','pro');return;}
+  fn();
+}
+// 재고관리 체크
+function _guardInventory(fn){
+  if(!_canUse('inventory')){_showUpgradeModal('inventory','business');return;}
+  fn();
+}
+// 업종 체크
+function _guardIndustry(industryKey, fn){
+  if(!_canUseIndustry(industryKey)){_showUpgradeModal('allIndustries','starter');return;}
+  fn();
+}
+// 정산 횟수 체크
+function _guardSettleCount(fn){
+  if(!_checkSettleLimit()){
+    _showUpgradeModal('settleLimit','starter');return;
+  }
+  fn();
+}
+
+
+function _closeModal(el){
+  var p=el;
+  for(var i=0;i<10;i++){
+    if(!p)break;
+    if(p.style&&p.style.position==='fixed'){p.remove();return;}
+    p=p.parentElement;
+  }
+}
+function _closeTopModal(){
+  var modals=document.querySelectorAll('[style*="position: fixed"], [style*="position:fixed"]');
+  modals.forEach(function(m){
+    if(parseInt(m.style.zIndex)>=9999) m.remove();
+  });
+}
+
 function _colIdx(headers,kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
 function _rvNum(row,i){if(i<0||i>=row.length) return 0; var v=row[i]; if(v===null||v===undefined||v==='') return 0; return parseFloat(String(v).replace(/[,%]/g,'').trim())||0;}
 function _rvBool(row,i){if(i<0) return false; var v=String(row[i]||'').trim().toUpperCase(); return v==='Y'||v==='YES'||v==='1'||v==='TRUE';}
@@ -24755,7 +25223,7 @@ function goPage(page){
   ind_sales:function(){pageIndustry('sales','💼 영업직');},
   ind_freelance:function(){pageIndustry('freelance','🖥️ 프리랜서');},
   ind_restaurant:function(){pageIndustry('restaurant','🍽️ 음식점·카페');},
-  beauty_kiosk:pageBeautyKiosk,
+  subscription:pageSubscription,beauty_kiosk:pageBeautyKiosk,
   ind_golf_settle:    function(){pageIndSettle('golf','🏌️ 골프장·캐디');},
   ind_golf_list:      function(){pageIndList('golf','🏌️ 골프장·캐디');},
   ind_golf_workers:   function(){pageIndWorkers('golf','🏌️ 골프장·캐디');},
