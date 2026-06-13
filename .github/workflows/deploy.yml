@@ -59,6 +59,13 @@ jobs:
           cat wrangler.toml
 
       - name: Deploy to Cloudflare Workers
+        continue-on-error: true
+        run: wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+
+      - name: Deploy to Cloudflare Workers (retry)
+        if: failure()
         run: wrangler deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
