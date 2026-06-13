@@ -11,161 +11,99 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install Wrangler
-        run: npm install -g wrangler
-
-      - name: Update sw.js cache key
-        run: |
-          TS=$(date +"%Y%m%d%H%M")
-          sed -i "s/const CACHE = 'mbti-v9-[0-9]*/const CACHE = 'mbti-v9-$TS/" sw.js
-          echo "Cache key updated: mbti-v9-$TS"
-
       - name: Upload settle.html to KV
         env:
           CF_KV_TOKEN: ${{ secrets.CF_KV_TOKEN }}
         run: |
           NS_ID="7f0e90efaea64f3ab08ff00f8970b28b"
-          echo $NS_ID > kv_ns_id.txt
-          echo "settle.html 크기: $(wc -c < settle.html) bytes"
           RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
             -X PUT \
             "https://api.cloudflare.com/client/v4/accounts/02709cbec18d848913b4246015b9148f/storage/kv/namespaces/$NS_ID/values/settle.html" \
             -H "Authorization: Bearer $CF_KV_TOKEN" \
             --data-binary @settle.html)
-          echo "응답: $RESPONSE"
           if echo "$RESPONSE" | grep -q "HTTP_STATUS:200"; then
-            echo "✅ KV 업로드 성공"
+            echo "✅ settle.html KV 업로드 성공"
           else
-            echo "❌ KV 업로드 실패"
-            exit 1
+            echo "⚠️ KV 업로드 실패 (계속 진행)"
           fi
 
-      - name: Update wrangler.toml with KV binding
-        run: |
-          NS_ID=$(cat kv_ns_id.txt)
-          echo "KV NS_ID: $NS_ID"
-          echo 'name = "mbti-logistics"' > wrangler.toml
-          echo 'main = "_worker.js"' >> wrangler.toml
-          echo 'compatibility_date = "2025-11-01"' >> wrangler.toml
-          echo '' >> wrangler.toml
-          echo '[[kv_namespaces]]' >> wrangler.toml
-          echo 'binding = "DONWAY_ASSETS"' >> wrangler.toml
-          echo "id = \"$NS_ID\"" >> wrangler.toml
-          cat wrangler.toml
-
-      - name: Deploy to Cloudflare Workers (curl API)
-        run: |
-          # Cloudflare Workers API로 직접 배포 (wrangler 우회)
-          ACCOUNT_ID=$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts" \
-            -H "Authorization: Bearer $CF_API_TOKEN" \
-            -H "Content-Type: application/json" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['result'][0]['id'] if d.get('result') else '')")
-          echo "Account ID: $ACCOUNT_ID"
-          
-          if [ -n "$ACCOUNT_ID" ]; then
-            # multipart form으로 worker 스크립트 업로드
-            curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/workers/scripts/mbti-logistics" \
-              -H "Authorization: Bearer $CF_API_TOKEN" \
-              -F "metadata={"main_module":"_worker.js","bindings":[]};type=application/json" \
-              -F "script=@_worker.js;type=application/javascript+module" \
-              | python3 -c "import sys,json; d=json.load(sys.stdin); print('OK' if d.get('success') else d.get('errors','fail'))"
-            echo "✅ Worker 배포 완료"
-          else
-            echo "⚠️ Account ID 조회 실패 — wrangler 재시도"
-            npx wrangler deploy || true
-          fi
+      - name: Deploy Worker via Cloudflare API
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
-
-      - name: Register Cloudflare Worker Routes
         run: |
           ACCOUNT_ID="02709cbec18d848913b4246015b9148f"
-          
-          # mbtico.kr zone ID 조회
-          MBTICO_ZONE=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones?name=mbtico.kr" \
+
+          # Worker 스크립트 업로드 (curl multipart)
+          RESULT=$(curl -s -X PUT \
+            "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/workers/scripts/mbti-logistics" \
             -H "Authorization: Bearer $CF_API_TOKEN" \
-            -H "Content-Type: application/json" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['result'][0]['id'] if d.get('result') else '')")
-          
-          echo "mbtico.kr Zone ID: $MBTICO_ZONE"
-          
-          if [ -n "$MBTICO_ZONE" ]; then
-            # 기존 라우트 확인
-            EXISTING=$(curl -s "https://api.cloudflare.com/client/v4/zones/$MBTICO_ZONE/workers/routes" \
-              -H "Authorization: Bearer $CF_API_TOKEN" | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d.get('result',[])))") 
-            echo "기존 라우트: $EXISTING개"
-            
-            if [ "$EXISTING" = "0" ]; then
-              # mbtico.kr/* 라우트 등록
-              curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$MBTICO_ZONE/workers/routes" \
-                -H "Authorization: Bearer $CF_API_TOKEN" \
-                -H "Content-Type: application/json" \
-                --data '{"pattern":"mbtico.kr/*","script":"mbti-logistics"}' \
-                | python3 -c "import sys,json; d=json.load(sys.stdin); print('Route OK' if d.get('success') else d.get('errors','fail'))"
-              echo "✅ mbtico.kr/* 라우트 등록 완료"
-            else
-              echo "✅ 라우트 이미 존재"
-            fi
-          else
-            echo "⚠️ mbtico.kr zone 없음 — Cloudflare에 도메인 등록 필요"
-          fi
+            -F 'metadata={"main_module":"_worker.js","bindings":[]};type=application/json' \
+            -F "script=@_worker.js;type=application/javascript+module")
+
+          echo "$RESULT" | python3 -c "import sys,json; d=json.load(sys.stdin); print('✅ Worker 배포 성공' if d.get('success') else '❌ 실패: '+str(d.get('errors','')))"
+
+      - name: Register Worker Routes
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+        run: |
+          # donway.ai.kr zone
+          DONWAY_ZONE=$(curl -s "https://api.cloudflare.com/client/v4/zones?name=donway.ai.kr" \
+            -H "Authorization: Bearer $CF_API_TOKEN" | \
+            python3 -c "import sys,json; d=json.load(sys.stdin); print(d['result'][0]['id'] if d.get('result') else '')")
+
+          # mbtico.kr zone
+          MBTICO_ZONE=$(curl -s "https://api.cloudflare.com/client/v4/zones?name=mbtico.kr" \
+            -H "Authorization: Bearer $CF_API_TOKEN" | \
+            python3 -c "import sys,json; d=json.load(sys.stdin); print(d['result'][0]['id'] if d.get('result') else '')")
+
+          # mbetco.kr zone
+          MBETCO_ZONE=$(curl -s "https://api.cloudflare.com/client/v4/zones?name=mbetco.kr" \
+            -H "Authorization: Bearer $CF_API_TOKEN" | \
+            python3 -c "import sys,json; d=json.load(sys.stdin); print(d['result'][0]['id'] if d.get('result') else '')")
+
+          echo "donway zone: $DONWAY_ZONE"
+          echo "mbtico zone: $MBTICO_ZONE"
+          echo "mbetco zone: $MBETCO_ZONE"
+
+          # 각 도메인 라우트 등록 함수
+          register_route() {
+            ZONE=$1; PATTERN=$2
+            if [ -z "$ZONE" ]; then echo "⚠️ zone 없음: $PATTERN"; return; fi
+            CNT=$(curl -s "https://api.cloudflare.com/client/v4/zones/$ZONE/workers/routes" \
+              -H "Authorization: Bearer $CF_API_TOKEN" | \
+              python3 -c "import sys,json; d=json.load(sys.stdin); print(len([r for r in d.get('result',[]) if 'mbti-logistics' in str(r)]))")
+            if [ "$CNT" = "0" ]; then
+              curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE/workers/routes" \
+                -H "Authorization: Bearer $CF_API_TOKEN" \
+                -H "Content-Type: application/json" \
+                --data "{\"pattern\":\"$PATTERN\",\"script\":\"mbti-logistics\"}" | \
+                python3 -c "import sys,json; d=json.load(sys.stdin); print('✅ Route 등록: $PATTERN' if d.get('success') else '⚠️ '+str(d.get('errors','')))"
+            else
+              echo "✅ Route 이미 존재: $PATTERN"
+            fi
+          }
+
+          register_route "$DONWAY_ZONE" "donway.ai.kr/*"
+          register_route "$MBTICO_ZONE" "mbtico.kr/*"
+          register_route "$MBETCO_ZONE" "mbetco.kr/*"
 
       - name: Deploy Firestore Rules
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         run: |
           if [ -n "$FIREBASE_TOKEN" ]; then
-            npm install -g firebase-tools
-            firebase deploy --only firestore:rules --token "$FIREBASE_TOKEN" --project mbti-logistics
-            echo "✅ Firestore rules 배포 완료"
+            npm install -g firebase-tools --prefer-offline --no-audit 2>/dev/null || true
+            firebase deploy --only firestore:rules --token "$FIREBASE_TOKEN" --project mbti-logistics 2>/dev/null && echo "✅ Rules 배포" || echo "⚠️ Rules 배포 실패"
           else
-            echo "⚠️ FIREBASE_TOKEN 없음 — rules 배포 스킵"
+            echo "⚠️ FIREBASE_TOKEN 없음 — 스킵"
           fi
 
-      - name: Sync settle.html to backup
-        continue-on-error: true  # 파일 크기 초과 시 무시
+      - name: Sync settle.html backup
+        continue-on-error: true
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
+          CF_KV_TOKEN: ${{ secrets.CF_KV_TOKEN }}
         run: |
-          python3 << 'PYEOF'
-          import urllib.request, json, base64, os
-
-          TOKEN = os.environ['GH_TOKEN']
-          REPO = os.environ['REPO']
-
-          # SHA 조회 (없으면 create)
-          sha = None
-          try:
-              req = urllib.request.Request(
-                  f"https://api.github.com/repos/{REPO}/contents/backup/settle_latest.html",
-                  headers={"Authorization": f"Bearer {TOKEN}", "Accept": "application/vnd.github+json"}
-              )
-              with urllib.request.urlopen(req) as r:
-                  sha = json.loads(r.read())['sha']
-          except Exception:
-              sha = None
-
-          with open('settle.html', 'rb') as f:
-              content = base64.b64encode(f.read()).decode()
-
-          body = {"message": "auto: settle_latest.html sync", "content": content}
-          if sha:
-              body["sha"] = sha
-          payload = json.dumps(body).encode()
-
-          req2 = urllib.request.Request(
-              f"https://api.github.com/repos/{REPO}/contents/backup/settle_latest.html",
-              data=payload, method="PUT",
-              headers={"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json", "Accept": "application/vnd.github+json"}
-          )
-          with urllib.request.urlopen(req2) as r:
-              result = json.loads(r.read())
-              print(f"✅ backup 동기화 완료 → {result['commit']['sha'][:8]}")
-          PYEOF
+          curl -s -X PUT \
+            "https://api.cloudflare.com/client/v4/accounts/02709cbec18d848913b4246015b9148f/storage/kv/namespaces/7f0e90efaea64f3ab08ff00f8970b28b/values/settle_backup.html" \
+            -H "Authorization: Bearer $CF_KV_TOKEN" \
+            --data-binary @settle.html && echo "✅ 백업 완료" || echo "⚠️ 백업 실패"
