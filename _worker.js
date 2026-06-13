@@ -282,72 +282,79 @@ async function notifyAdmins(env, token, { title, body, type }) {
 
 // ── 환영 이메일 발송 (Gmail SMTP via Cloudflare Email) ──
 async function sendWelcomeEmail(env, { email, companyName, tempPassword, planType, loginUrl, planLabel }) {
-  // Cloudflare Email Workers 또는 외부 SMTP 서비스 사용
-  // 현재는 로그만 남기고 추후 연동 (EmailJS, Resend, SendGrid 등)
-  const emailKey = env.EMAIL_API_KEY;
+  const emailKey = env.EMAIL_API_KEY || env.RESEND_API_KEY;
   if (!emailKey) {
-    console.log(`[Email] 미설정 — 발송 대상: ${email}, 임시PW: ${tempPassword}`);
-    return { sent: false, reason: 'EMAIL_API_KEY 미설정' };
+    console.log('[Email] API키 없음 — 발송 스킵:', email);
+    return Promise.resolve({ok:false,reason:'no_key'});
   }
-  // Resend API 사용 (env.EMAIL_API_KEY = re_xxxx)
-  try {
-    const resp = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${emailKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        from: 'DONWAY <all@donway.ai.kr>',
-        to: [email],
-        subject: `[DONWAY] ${companyName} 계정이 생성됐습니다`,
-        html: `
-          <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
-            <div style="background:#0066ff;color:#fff;border-radius:12px 12px 0 0;padding:20px 24px">
-              <h1 style="margin:0;font-size:20px">DONWAY 가입을 환영합니다! 🎉</h1>
-            </div>
-            <div style="background:#f8faff;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px;padding:24px">
-              <p style="margin:0 0 16px;color:#334155">안녕하세요, <strong>${companyName}</strong>님</p>
-              <p style="margin:0 0 20px;color:#64748b">${planLabel} 결제가 완료됐습니다. 아래 정보로 로그인하세요.</p>
-              <div style="background:#fff;border:1px solid #cbd5e1;border-radius:8px;padding:16px;margin-bottom:20px">
-                <div style="margin-bottom:10px"><span style="color:#64748b;font-size:13px">전용 접속 URL</span><br>
-                  <a href="${loginUrl}" style="color:#0066ff;font-weight:700;font-size:15px">${loginUrl}</a>
-                </div>
-                <div style="margin-bottom:10px"><span style="color:#64748b;font-size:13px">로그인 이메일</span><br>
-                  <strong>${email}</strong>
-                </div>
-                <div style="margin-bottom:10px"><span style="color:#64748b;font-size:13px">플랜</span><br>
-                  <strong>${planLabel}</strong> — 즉시 활성화됨 ✅
-                </div>
-                ${tempPassword ? '<div style="background:#fef9c3;border:1px solid #fde047;border-radius:6px;padding:12px;margin-top:8px"><span style="color:#854d0e;font-size:12px">🔑 임시 비밀번호 (최초 로그인용)</span><br><strong style="font-size:20px;letter-spacing:2px;color:#0f172a">' + tempPassword + '</strong><br><span style="color:#854d0e;font-size:11px">로그인 후 반드시 비밀번호를 변경하세요</span></div>' : ''}
-              </div>
-              <p style="color:#ef4444;font-size:13px;margin:0 0 20px">⚠️ 로그인 후 반드시 비밀번호를 변경해주세요</p>
-              <a href="${loginUrl}" style="display:block;background:#0066ff;color:#fff;text-align:center;padding:14px;border-radius:8px;text-decoration:none;font-weight:700">바로 시작하기 →</a>
-              <p style="margin:20px 0 0;font-size:12px;color:#94a3b8;text-align:center">
-                문의: 051-711-3103 | donway.ai.kr<br>엠비티아이 유한회사
-              </p>
-            </div>
-          </div>
-        `
-      })
-    });
-    return resp.ok ? { sent: true } : { sent: false, reason: await resp.text() };
-  } catch(e) {
-    return { sent: false, reason: e.message };
-  }
+  const signupUrl = loginUrl || 'https://donway.ai.kr/settle';
+  const html = `
+<!DOCTYPE html>
+<html lang="ko">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f0f4ff;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif">
+<div style="max-width:480px;margin:40px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.1)">
+  <div style="background:linear-gradient(135deg,#0066ff,#00d4ff);padding:32px 24px;text-align:center">
+    <div style="font-size:32px;margin-bottom:8px">🎉</div>
+    <div style="color:#fff;font-size:22px;font-weight:900">DONWAY 승인 완료!</div>
+    <div style="color:rgba(255,255,255,.8);font-size:13px;margin-top:6px">7일 무료 체험이 시작됩니다</div>
+  </div>
+  <div style="padding:28px 24px">
+    <p style="font-size:15px;font-weight:700;color:#1a1a2e;margin-bottom:16px">안녕하세요, <b>${companyName}</b> 대표님!</p>
+    <p style="font-size:13px;color:#555;line-height:1.7;margin-bottom:24px">
+      DONWAY 도입 신청이 승인되었습니다.<br>
+      지금 바로 <b>7일 무료 체험</b>을 시작하세요!
+    </p>
+    <div style="background:#f8faff;border:1px solid #e0e8ff;border-radius:12px;padding:16px;margin-bottom:24px">
+      <div style="font-size:12px;color:#888;margin-bottom:8px">로그인 정보</div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee;font-size:13px">
+        <span style="color:#888">이메일</span>
+        <span style="font-weight:700;color:#1a1a2e">${email}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:13px">
+        <span style="color:#888">임시 비밀번호</span>
+        <span style="font-weight:700;color:#0066ff;font-family:monospace;font-size:15px">${tempPassword}</span>
+      </div>
+    </div>
+    <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px;font-size:12px;color:#92400e;margin-bottom:24px">
+      ⚠️ 최초 로그인 후 반드시 비밀번호를 변경해주세요.
+    </div>
+    <a href="${signupUrl}" style="display:block;text-align:center;background:linear-gradient(90deg,#0066ff,#00d4ff);color:#fff;padding:15px;border-radius:12px;font-size:15px;font-weight:900;text-decoration:none;margin-bottom:16px">
+      🚀 DONWAY 시작하기 →
+    </a>
+    <div style="text-align:center;font-size:11px;color:#aaa">
+      문의: 051-711-3103 · 평일 09:00~18:00
+    </div>
+  </div>
+  <div style="background:#f8faff;padding:16px 24px;text-align:center;font-size:11px;color:#aaa">
+    © 2026 (유)엠비티아이 · DONWAY · donway.ai.kr
+  </div>
+</div>
+</body>
+</html>`;
+
+  return fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${emailKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      from: 'DONWAY <all@donway.ai.kr>',
+      to: [email],
+      subject: `[DONWAY] ${companyName} 계정 승인 완료 — 7일 무료 체험 시작!`,
+      html: html
+    })
+  }).then(function(res){
+    console.log('[Email] 발송 결과:', res.status, email);
+    return res;
+  }).catch(function(e){
+    console.error('[Email] 발송 오류:', e.message);
+    return {ok:false,reason:e.message};
+  });
 }
 
-// 16진수 문자열 → Uint8Array
-function hexToBytes(hex) {
-  const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < hex.length; i += 2) {
-    bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
-  }
-  return bytes;
-}
-const FS_BASE    = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
 
-// ── Service Account JWT ───────────────────────────────────────────────────────
 async function importPrivateKey(pem) {
   const content = pem
     .replace('-----BEGIN PRIVATE KEY-----', '')
@@ -1003,6 +1010,27 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         const isSimulator2 = url.pathname.includes('%EC%8B%9C%EB%AE%AC%EB%A0%88%EC%9D%B4%ED%84%B0') || url.pathname.includes('simulator');
         return addSecurityHeaders(assetResp2, isSimulator2);
       } catch(e) {}
+    }
+    // /api/send-email → 승인 이메일 발송 (admin_sub에서 호출)
+    if (path === '/api/send-email') {
+      if (method !== 'POST') return new Response('Method Not Allowed', {status:405});
+      try {
+        const body = await request.json();
+        const { email, companyName, tempPassword, loginUrl } = body;
+        if (!email || !companyName) return new Response(JSON.stringify({ok:false,reason:'missing_params'}), {status:400, headers:{'Content-Type':'application/json'}});
+        const result = await sendWelcomeEmail(env, {
+          email, companyName,
+          tempPassword: tempPassword || 'donway2026!',
+          loginUrl: loginUrl || 'https://donway.ai.kr/settle',
+          planType: 'trial', planLabel: '7일 무료 체험'
+        });
+        const ok = result && (result.ok !== false);
+        return new Response(JSON.stringify({ok, status: result?.status}), {
+          headers: {'Content-Type':'application/json', 'Access-Control-Allow-Origin':'*'}
+        });
+      } catch(e) {
+        return new Response(JSON.stringify({ok:false,reason:e.message}), {status:500, headers:{'Content-Type':'application/json'}});
+      }
     }
     // /admin_sub → 구독 어드민 (donway.ai.kr)
     if (path === '/admin_sub' || path === '/admin_sub.html') {
