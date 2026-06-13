@@ -1,21 +1,4 @@
-if (path === '/cron-expire') {
-      // GitHub Actions 또는 Cloudflare Cron 양쪽에서 호출 가능
-      const authHeader = request.headers.get('Authorization') || '';
-      const cronSecret = env.CRON_SECRET || '';
-      if (cronSecret && !authHeader.includes(cronSecret)) {
-        return new Response('Unauthorized', { status: 401 });
-      }
-      try {
-        const result = await runExpireJob(env);
-        return new Response(JSON.stringify({ ok: true, ...result }), {
-          headers: { 'Content-Type': 'application/json' }
-        });
-      } catch(e) {
-        return new Response(JSON.stringify({ ok: false, reason: e.message }), {
-          status: 500, headers: { 'Content-Type': 'application/json' }
-        });
-      }
-    }// DONWAY Worker v20260531145518
+// DONWAY Worker v20260531145518
 // MBTI Logistics + LogiNet — Cloudflare Worker
 
 // ── 보안 설정 ──────────────────────────────────────────────────────────────
@@ -622,5 +605,3 @@ async function runExpireJob(env) {
 
   return { expired, warned, renewed };
 }
-
-
