@@ -551,6 +551,27 @@ export default {
     if (path === '/' || path === '' || path === '/donway_landing' || path === '/donway_landing/') {
       // mbetco.kr → universal_settle.html
       if (hostname.includes('mbetco') || hostname.includes('mbtico')) {
+        // /inventory → 재고관리
+        if (url.pathname === '/inventory' || url.pathname === '/inventory.html') {
+          const r = await fetchAsset('/inventory.html', request, env);
+          const h = new Headers(); h.set('Content-Type','text/html; charset=utf-8'); h.set('Cache-Control','no-cache');
+          Object.entries(SECURITY_HEADERS).forEach(([k,v]) => h.set(k,v));
+          return new Response(r.body, {status:r.status, headers:h});
+        }
+        // /qr → QR POS
+        if (url.pathname === '/qr' || url.pathname === '/qrpos' || url.pathname === '/qrpos.html') {
+          const r = await fetchAsset('/qrpos.html', request, env);
+          const h = new Headers(); h.set('Content-Type','text/html; charset=utf-8'); h.set('Cache-Control','no-cache');
+          Object.entries(SECURITY_HEADERS).forEach(([k,v]) => h.set(k,v));
+          return new Response(r.body, {status:r.status, headers:h});
+        }
+        // /kiosk → 키오스크·POS
+        if (url.pathname === '/kiosk' || url.pathname === '/kiosk.html') {
+          const r = await fetchAsset('/kiosk.html', request, env);
+          const h = new Headers(); h.set('Content-Type','text/html; charset=utf-8'); h.set('Cache-Control','no-cache');
+          Object.entries(SECURITY_HEADERS).forEach(([k,v]) => h.set(k,v));
+          return new Response(r.body, {status:r.status, headers:h});
+        }
         // /order 경로 → QR 예약·결제·평가 페이지
         if (url.pathname === '/order' || url.pathname === '/order.html') {
           const orderResp = await fetchAsset('/order.html', request, env);
