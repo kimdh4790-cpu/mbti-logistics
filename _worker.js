@@ -1,4 +1,4 @@
-// DONWAY Worker v20260531145518
+// DONWAY Worker v20260613184445
 // MBTI Logistics + LogiNet — Cloudflare Worker
 
 // ── 보안 설정 ──────────────────────────────────────────────────────────────
@@ -573,8 +573,16 @@ export default {
     if (path === '/' || path === '' || path === '/donway_landing' || path === '/donway_landing/') {
       // mbetco.kr → universal_settle.html
       if (hostname.includes('mbetco') || hostname.includes('mbtico')) {
-        if (url.pathname === '/' || url.pathname === '') {
-          return Response.redirect('https://donway.ai.kr', 301);
+        // mbtico.kr 루트 → donway.ai.kr 리다이렉트
+        if (url.pathname === '/' || url.pathname === '' || url.pathname === '/index.html') {
+          return new Response('', {
+            status: 302,
+            headers: {
+              'Location': 'https://donway.ai.kr',
+              'Cache-Control': 'no-store, no-cache',
+              'Pragma': 'no-cache'
+            }
+          });
         }
         // /admin_sub → 구독 어드민
         if (url.pathname === '/admin_sub' || url.pathname === '/admin_sub.html') {
