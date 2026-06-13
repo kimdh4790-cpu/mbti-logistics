@@ -1,4 +1,4 @@
-// DONWAY Worker v20260613184445
+// DONWAY Worker v20260613185004
 // MBTI Logistics + LogiNet — Cloudflare Worker
 
 // ── 보안 설정 ──────────────────────────────────────────────────────────────
