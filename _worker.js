@@ -1032,6 +1032,105 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         return new Response(JSON.stringify({ok:false,reason:e.message}), {status:500, headers:{'Content-Type':'application/json'}});
       }
     }
+
+    // /api/create-account → Firebase Auth 계정 자동 생성 + 이메일 발송
+    if (path === '/api/create-account') {
+      if (method !== 'POST') return new Response('Method Not Allowed', {status:405});
+      try {
+        const body = await request.json();
+        const { email, companyName, companyId, trialExpiry } = body;
+        if (!email || !companyName || !companyId) {
+          return new Response(JSON.stringify({ok:false,reason:'missing_params'}), {
+            status:400, headers:{'Content-Type':'application/json'}
+          });
+        }
+
+        // 임시 비밀번호 생성
+        const tempPw = 'Donway' + Math.floor(1000 + Math.random() * 9000) + '!';
+
+        // Firebase Auth REST API로 계정 생성
+        const PROJECT_ID = 'mbti-logistics';
+        const accessToken = await getAccessToken(env);
+
+        // 기존 계정 확인
+        let uid = null;
+        const lookupRes = await fetch(
+          `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${env.FIREBASE_WEB_API_KEY || 'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0'}`,
+          {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({email})
+          }
+        );
+        const lookupData = await lookupRes.json();
+
+        if (lookupData.users && lookupData.users.length > 0) {
+          // 이미 계정 있음 → 비밀번호만 업데이트
+          uid = lookupData.users[0].localId;
+          await fetch(
+            `https://identitytoolkit.googleapis.com/v1/accounts:update?key=${env.FIREBASE_WEB_API_KEY || 'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0'}`,
+            {
+              method: 'POST',
+              headers: {'Content-Type':'application/json'},
+              body: JSON.stringify({idToken: '', localId: uid, password: tempPw})
+            }
+          );
+        } else {
+          // 신규 계정 생성
+          const createRes = await fetch(
+            `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${env.FIREBASE_WEB_API_KEY || 'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0'}`,
+            {
+              method: 'POST',
+              headers: {'Content-Type':'application/json'},
+              body: JSON.stringify({
+                email, password: tempPw,
+                displayName: companyName,
+                returnSecureToken: false
+              })
+            }
+          );
+          const createData = await createRes.json();
+          if (createData.error) throw new Error(createData.error.message);
+          uid = createData.localId;
+        }
+
+        // Firestore companies 문서에 uid 연결
+        const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/companies/${companyId}`;
+        await fetch(firestoreUrl + '?updateMask.fieldPaths=uid&updateMask.fieldPaths=status', {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            fields: {
+              uid: {stringValue: uid},
+              status: {stringValue: 'trial'}
+            }
+          })
+        });
+
+        // 이메일 발송
+        await sendWelcomeEmail(env, {
+          email, companyName,
+          tempPassword: tempPw,
+          loginUrl: 'https://donway.ai.kr/settle',
+          planType: 'trial',
+          planLabel: '7일 무료 체험'
+        });
+
+        return new Response(JSON.stringify({ok:true, uid, tempPw}), {
+          headers: {'Content-Type':'application/json', 'Access-Control-Allow-Origin':'*'}
+        });
+
+      } catch(e) {
+        console.error('[create-account]', e.message);
+        return new Response(JSON.stringify({ok:false, reason:e.message}), {
+          status:500, headers:{'Content-Type':'application/json'}
+        });
+      }
+    }
+
     // /admin_sub → 구독 어드민 (donway.ai.kr)
     if (path === '/admin_sub' || path === '/admin_sub.html') {
       const adResp = await fetchAsset('/admin_sub.html', request, env);
