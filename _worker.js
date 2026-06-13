@@ -1004,6 +1004,15 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         return addSecurityHeaders(assetResp2, isSimulator2);
       } catch(e) {}
     }
+    // /admin_sub → 구독 어드민 (donway.ai.kr)
+    if (path === '/admin_sub' || path === '/admin_sub.html') {
+      const adResp = await fetchAsset('/admin_sub.html', request, env);
+      const adH = new Headers();
+      adH.set('Content-Type', 'text/html; charset=utf-8');
+      adH.set('Cache-Control', 'no-cache');
+      Object.entries(SECURITY_HEADERS).forEach(([k,v]) => adH.set(k,v));
+      return new Response(adResp.body, { status: adResp.status, headers: adH });
+    }
     const slugMatch = path.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/?$/);
     if (slugMatch && !knownPaths.has(slugMatch[0].replace(/\/$/,'')) && method === 'GET') {
       const companySlug = slugMatch[1];
