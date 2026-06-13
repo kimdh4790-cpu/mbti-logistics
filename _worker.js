@@ -551,6 +551,13 @@ export default {
     if (path === '/' || path === '' || path === '/donway_landing' || path === '/donway_landing/') {
       // mbetco.kr → universal_settle.html
       if (hostname.includes('mbetco') || hostname.includes('mbtico')) {
+        // /admin_sub → 구독 어드민
+        if (url.pathname === '/admin_sub' || url.pathname === '/admin_sub.html') {
+          const r = await fetchAsset('/admin_sub.html', request, env);
+          const h = new Headers(); h.set('Content-Type','text/html; charset=utf-8'); h.set('Cache-Control','no-cache');
+          Object.entries(SECURITY_HEADERS).forEach(([k,v]) => h.set(k,v));
+          return new Response(r.body, {status:r.status, headers:h});
+        }
         // /inventory → 재고관리
         if (url.pathname === '/inventory' || url.pathname === '/inventory.html') {
           const r = await fetchAsset('/inventory.html', request, env);
