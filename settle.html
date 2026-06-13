@@ -3245,23 +3245,92 @@ function _calcAcademyFee(subject, students, perStudentFee, textbookFee){
 // 🔒 체험 만료 기능 잠금
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-// 잠금 필요한 기능인지 체크
+// ━━━ 상품별 기능 매핑 ━━━
+var FEATURE_PRODUCT_MAP = {
+  // DONWAY 정산
+  'settle':      'donway',
+  'download':    'donway',
+  'alimtalk':    'donway',
+  'taxsync':     'donway',
+  'settle_run':  'donway',
+  'excel_download':'donway',
+  'send_all':    'donway',
+
+  // QR 패키지
+  'qr':          'qr',
+  'qr_attend':   'qr',
+  'qr_booking':  'qr',
+  'qr_pos':      'qr',
+
+  // 키오스크
+  'kiosk':       'kiosk',
+  'beauty_kiosk':'kiosk',
+  'kiosk_input': 'kiosk',
+  'customer_db': 'kiosk',
+
+  // 재고
+  'inventory':   'inventory',
+};
+
+// 체험 중이거나 해당 상품 구독 중이면 허용
 function _isLocked(feature){
   if(isSuperAdmin()) return false;
+
+  // 체험 기간 중 → 모든 기능 허용
   if(window._trialActive) return false;
-  if(window._cachedHasPaid) return false;
-  if(window._trialExpired) return true;
-  // companies 구독 체크
-  if(_SUBS && _subActive('donway')) return false;
-  // 아직 로드 안됐으면 허용
+
+  // 구독 정보 아직 로드 안됨 → 허용 (로딩 중)
   if(_SUBS === null) return false;
+
+  // 어떤 상품이 필요한지 확인
+  var product = FEATURE_PRODUCT_MAP[feature] || 'donway';
+
+  // 해당 상품 구독 중이면 허용
+  if(_subActive(product)) return false;
+
+  // 세부 기능 체크 (features 내)
+  if(_SUBS[product] && _SUBS[product].features){
+    var featKey = feature.replace(product+'_','');
+    if(_SUBS[product].features[feature]===true) return false;
+    if(_SUBS[product].features[featKey]===true) return false;
+  }
+
+  // 만료됐거나 미구독
   return true;
 }
 
-// 잠금 팝업
+// 잠금 팝업 — 상품별 안내
 function _showLockPopup(featureName){
-  _showTrialExpiredPopup();
+  var product = FEATURE_PRODUCT_MAP[featureName] || 'donway';
+  var labels = {donway:'DONWAY 정산',qr:'QR 패키지',kiosk:'키오스크·POS',inventory:'재고관리'};
+  var prices = {donway:'9,000원/인/월~',qr:'1,500원/인/월',kiosk:'50,000원/월',inventory:'130,000원/월'};
+  var icons  = {donway:'💰',qr:'🔲',kiosk:'🖥️',inventory:'📦'};
+
+  if(document.getElementById('lock-popup')) return;
+  var mo=document.createElement('div');
+  mo.id='lock-popup';
+  mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  var inner=document.createElement('div');
+  inner.style.cssText='background:#0d1b3e;border:1px solid rgba(0,212,255,.3);border-radius:20px;padding:28px 24px;max-width:380px;width:100%;color:#fff;text-align:center';
+  inner.innerHTML=
+    '<div style="font-size:40px;margin-bottom:10px">'+(icons[product]||'🔒')+'</div>'+
+    '<div style="font-size:17px;font-weight:900;margin-bottom:6px">'+(labels[product]||product)+' 구독 필요</div>'+
+    '<div style="font-size:13px;color:#94a3b8;margin-bottom:6px">이 기능은 구독 후 사용 가능합니다</div>'+
+    '<div style="font-size:18px;font-weight:900;color:#00d4ff;margin-bottom:20px">'+(prices[product]||'')+'</div>'+
+    '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">'+
+      '<a href="tel:051-711-3103" style="display:block;padding:12px;background:linear-gradient(90deg,#00d4ff,#7b2fff);color:#fff;border-radius:10px;font-size:14px;font-weight:900;text-decoration:none">📞 051-711-3103 상담</a>'+
+      '<a href="https://donway.ai.kr/join" style="display:block;padding:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.15);color:#fff;border-radius:10px;font-size:12px;text-decoration:none">도입 신청 →</a>'+
+    '</div>';
+  var closeBtn=document.createElement('button');
+  closeBtn.textContent='닫기';
+  closeBtn.style.cssText='background:none;border:none;color:#5a5f7a;font-size:12px;cursor:pointer';
+  closeBtn.addEventListener('click',function(){mo.remove();});
+  inner.appendChild(closeBtn);
+  mo.appendChild(inner);
+  document.body.appendChild(mo);
 }
+
+
 
 // 잠금 래퍼 — 핵심 함수들에 적용
 function _guardFn(fn, featureName){
