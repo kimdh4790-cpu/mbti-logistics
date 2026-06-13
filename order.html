@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>예약 · 결제</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{
+  --bg:#0a0a0f;--bg2:#12121a;--bg3:#1a1a26;
+  --border:rgba(255,255,255,.08);
+  --text:#f0f4ff;--text2:rgba(240,244,255,.65);--text3:rgba(240,244,255,.35);
+  --acc:#00d4ff;--acc2:#7b2fff;--green:#00ff94;--red:#ff5555;--pink:#e91e63;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg);color:var(--text);font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;min-height:100vh}
+
+/* 스텝 헤더 */
+.step-bar{position:sticky;top:0;z-index:100;background:var(--bg);border-bottom:1px solid var(--border);padding:12px 16px}
+.step-dots{display:flex;gap:6px;justify-content:center;margin-bottom:8px}
+.step-dot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:all .3s}
+.step-dot.done{background:var(--green)}
+.step-dot.active{background:var(--acc);width:24px;border-radius:4px}
+.step-label{text-align:center;font-size:11px;color:var(--text3)}
+
+/* 메인 */
+.page{display:none;padding:20px 16px 100px;max-width:480px;margin:0 auto;animation:fadeUp .3s ease}
+.page.show{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+/* 샵 헤더 */
+.shop-header{text-align:center;padding:24px 0 20px}
+.shop-logo{width:72px;height:72px;border-radius:20px;background:linear-gradient(135deg,var(--pink),#c2185b);
+  display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 12px}
+.shop-name{font-size:20px;font-weight:900;margin-bottom:4px}
+.shop-sub{font-size:12px;color:var(--text3)}
+
+/* 섹션 */
+.sec-title{font-size:13px;font-weight:800;color:var(--text2);margin-bottom:12px;
+  display:flex;align-items:center;gap:6px}
+
+/* 디자이너 카드 */
+.designer-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px}
+.designer-card{background:var(--bg2);border:2px solid var(--border);border-radius:16px;
+  padding:16px 12px;text-align:center;cursor:pointer;transition:all .2s;position:relative}
+.designer-card:active{transform:scale(.97)}
+.designer-card.selected{border-color:var(--pink);background:rgba(233,30,99,.08)}
+.designer-card.selected::after{content:'✓';position:absolute;top:8px;right:10px;
+  color:var(--pink);font-weight:900;font-size:14px}
+.designer-avatar{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--acc2),var(--pink));
+  display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 8px}
+.designer-name{font-size:13px;font-weight:800;margin-bottom:2px}
+.designer-role{font-size:10px;color:var(--text3)}
+.designer-rating{font-size:11px;color:#ffd700;margin-top:4px}
+
+/* 시술 카테고리 탭 */
+.cat-tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;margin-bottom:12px;
+  scrollbar-width:none}
+.cat-tabs::-webkit-scrollbar{display:none}
+.cat-tab{flex-shrink:0;padding:7px 14px;border-radius:20px;font-size:12px;font-weight:700;
+  border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer;transition:all .2s}
+.cat-tab.active{background:var(--pink);border-color:var(--pink);color:#fff}
+
+/* 시술 목록 */
+.service-list{display:flex;flex-direction:column;gap:8px;margin-bottom:24px}
+.service-item{display:flex;align-items:center;gap:12px;padding:14px;
+  background:var(--bg2);border:2px solid var(--border);border-radius:14px;cursor:pointer;transition:all .2s}
+.service-item:active{transform:scale(.98)}
+.service-item.selected{border-color:var(--pink);background:rgba(233,30,99,.06)}
+.service-icon{width:40px;height:40px;border-radius:12px;background:var(--bg3);
+  display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.service-info{flex:1}
+.service-name{font-size:13px;font-weight:800;margin-bottom:2px}
+.service-duration{font-size:10px;color:var(--text3)}
+.service-price{font-size:14px;font-weight:900;color:var(--pink)}
+
+/* 달력 */
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.cal-title{font-size:14px;font-weight:800}
+.cal-nav{width:32px;height:32px;border-radius:50%;background:var(--bg3);border:none;
+  color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:20px}
+.cal-day-label{text-align:center;font-size:10px;color:var(--text3);padding:4px 0}
+.cal-day{aspect-ratio:1;border-radius:10px;display:flex;align-items:center;justify-content:center;
+  font-size:12px;cursor:pointer;transition:all .2s;border:1px solid transparent}
+.cal-day:empty{background:transparent;cursor:default}
+.cal-day.today{border-color:var(--acc);color:var(--acc);font-weight:800}
+.cal-day.selected{background:var(--pink);color:#fff;font-weight:900}
+.cal-day.past{color:var(--text3);cursor:not-allowed}
+.cal-day:not(.past):not(:empty):not(.selected):hover{background:var(--bg3)}
+
+/* 시간 슬롯 */
+.time-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:24px}
+.time-slot{padding:10px 6px;background:var(--bg2);border:2px solid var(--border);
+  border-radius:10px;text-align:center;cursor:pointer;transition:all .2s}
+.time-slot.selected{border-color:var(--pink);background:rgba(233,30,99,.1);color:var(--pink);font-weight:800}
+.time-slot.booked{border-color:transparent;background:var(--bg3);color:var(--text3);cursor:not-allowed}
+.time-slot-time{font-size:12px;font-weight:700}
+.time-slot-left{font-size:10px;color:var(--text3);margin-top:2px}
+
+/* 요약 카드 */
+.summary-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:16px}
+.summary-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;
+  border-bottom:1px solid var(--border);font-size:13px}
+.summary-row:last-child{border-bottom:none;font-weight:900;font-size:15px;color:var(--pink)}
+.summary-label{color:var(--text2)}
+
+/* 결제 버튼 */
+.pay-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.pay-btn{padding:14px;border-radius:14px;border:2px solid var(--border);background:var(--bg2);
+  cursor:pointer;text-align:center;transition:all .2s}
+.pay-btn.selected{border-color:var(--pink)}
+.pay-btn:active{transform:scale(.97)}
+.pay-icon{font-size:24px;margin-bottom:4px}
+.pay-name{font-size:11px;font-weight:700;color:var(--text2)}
+
+/* 평가 */
+.stars{display:flex;gap:8px;justify-content:center;margin:16px 0}
+.star{font-size:36px;cursor:pointer;transition:transform .1s;filter:grayscale(1)}
+.star.on{filter:none;transform:scale(1.1)}
+.review-input{width:100%;padding:12px;background:var(--bg2);border:1px solid var(--border);
+  border-radius:12px;color:var(--text);font-size:13px;resize:none;line-height:1.6}
+.review-input:focus{outline:none;border-color:var(--pink)}
+
+/* 태그 */
+.tag-grid{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 20px}
+.review-tag{padding:8px 14px;border-radius:20px;border:1px solid var(--border);
+  background:var(--bg2);font-size:12px;cursor:pointer;transition:all .2s;color:var(--text2)}
+.review-tag.selected{border-color:var(--pink);background:rgba(233,30,99,.1);color:var(--pink);font-weight:700}
+
+/* 완료 화면 */
+.success-wrap{text-align:center;padding:40px 20px}
+.success-icon{font-size:64px;margin-bottom:16px;animation:pop .4s ease}
+@keyframes pop{0%{transform:scale(0)}80%{transform:scale(1.2)}100%{transform:scale(1)}}
+.success-title{font-size:22px;font-weight:900;margin-bottom:8px}
+.success-sub{font-size:13px;color:var(--text2);line-height:1.6}
+.booking-code{display:inline-block;margin:16px 0;padding:12px 24px;
+  background:var(--bg2);border:1px solid var(--border);border-radius:12px;
+  font-family:monospace;font-size:16px;font-weight:900;color:var(--acc);letter-spacing:2px}
+
+/* 하단 버튼 */
+.bottom-bar{position:fixed;bottom:0;left:0;right:0;padding:12px 16px;
+  background:var(--bg);border-top:1px solid var(--border);z-index:100}
+.btn-main{width:100%;padding:16px;border-radius:14px;border:none;
+  background:linear-gradient(90deg,var(--pink),#c2185b);
+  color:#fff;font-size:15px;font-weight:900;cursor:pointer;transition:all .2s}
+.btn-main:active{transform:scale(.98)}
+.btn-main:disabled{opacity:.4;cursor:not-allowed}
+.btn-back{background:none;border:none;color:var(--text3);font-size:13px;cursor:pointer;
+  display:flex;align-items:center;gap:4px;margin-bottom:6px}
+
+/* 토스트 */
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);
+  background:rgba(30,30,50,.95);border:1px solid var(--border);border-radius:12px;
+  padding:10px 20px;font-size:13px;z-index:999;opacity:0;transition:opacity .3s;
+  white-space:nowrap;pointer-events:none}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<!-- 스텝 진행바 -->
+<div class="step-bar">
+  <div class="step-dots">
+    <div class="step-dot active" id="dot0"></div>
+    <div class="step-dot" id="dot1"></div>
+    <div class="step-dot" id="dot2"></div>
+    <div class="step-dot" id="dot3"></div>
+    <div class="step-dot" id="dot4"></div>
+  </div>
+  <div class="step-label" id="step-label">담당자 선택</div>
+</div>
+
+<!-- STEP 0: 디자이너 선택 -->
+<div class="page show" id="page0">
+  <div class="shop-header">
+    <div class="shop-logo" id="shop-logo">💄</div>
+    <div class="shop-name" id="shop-name">로딩 중...</div>
+    <div class="shop-sub" id="shop-sub">담당자를 선택해주세요</div>
+  </div>
+  <div class="sec-title">👤 담당자 선택</div>
+  <div class="designer-grid" id="designer-grid">
+    <div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3)">⏳ 로딩 중...</div>
+  </div>
+</div>
+
+<!-- STEP 1: 시술 선택 -->
+<div class="page" id="page1">
+  <div class="sec-title" style="margin-bottom:8px">💆 시술 선택</div>
+  <div class="cat-tabs" id="cat-tabs"></div>
+  <div class="service-list" id="service-list"></div>
+</div>
+
+<!-- STEP 2: 날짜·시간 선택 -->
+<div class="page" id="page2">
+  <div class="sec-title">📅 날짜 선택</div>
+  <div class="cal-header">
+    <button class="cal-nav" onclick="_calPrev()">‹</button>
+    <div class="cal-title" id="cal-title"></div>
+    <button class="cal-nav" onclick="_calNext()">›</button>
+  </div>
+  <div class="cal-grid" id="cal-grid"></div>
+  <div class="sec-title" id="time-title" style="display:none">🕐 시간 선택</div>
+  <div class="time-grid" id="time-grid"></div>
+</div>
+
+<!-- STEP 3: 결제 -->
+<div class="page" id="page3">
+  <div class="sec-title">🧾 예약 확인</div>
+  <div class="summary-card" id="summary-card"></div>
+  <div class="sec-title">💳 결제 방법</div>
+  <div class="pay-grid" id="pay-grid">
+    <div class="pay-btn selected" data-type="card" onclick="_selectPay(this)">
+      <div class="pay-icon">💳</div><div class="pay-name">카드</div>
+    </div>
+    <div class="pay-btn" data-type="kakao" onclick="_selectPay(this)">
+      <div class="pay-icon">💛</div><div class="pay-name">카카오페이</div>
+    </div>
+    <div class="pay-btn" data-type="naver" onclick="_selectPay(this)">
+      <div class="pay-icon">🟢</div><div class="pay-name">네이버페이</div>
+    </div>
+    <div class="pay-btn" data-type="cash" onclick="_selectPay(this)">
+      <div class="pay-icon">💵</div><div class="pay-name">현금</div>
+    </div>
+  </div>
+  <!-- 고객 이름 (선택) -->
+  <div style="margin-bottom:16px">
+    <div class="sec-title">👤 고객 정보 (선택)</div>
+    <input id="cust-name" placeholder="이름 (선택)" style="width:100%;padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;margin-bottom:8px">
+    <input id="cust-phone" placeholder="연락처 (선택)" type="tel" style="width:100%;padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px">
+  </div>
+</div>
+
+<!-- STEP 4: 평가 -->
+<div class="page" id="page4">
+  <div style="text-align:center;padding:20px 0 16px">
+    <div style="font-size:40px;margin-bottom:8px">🌟</div>
+    <div style="font-size:17px;font-weight:900;margin-bottom:4px">시술은 만족스러우셨나요?</div>
+    <div style="font-size:12px;color:var(--text3)" id="review-designer-name"></div>
+  </div>
+  <!-- 별점 -->
+  <div class="stars" id="stars">
+    <span class="star" data-v="1" onclick="_setStar(1)">⭐</span>
+    <span class="star" data-v="2" onclick="_setStar(2)">⭐</span>
+    <span class="star" data-v="3" onclick="_setStar(3)">⭐</span>
+    <span class="star" data-v="4" onclick="_setStar(4)">⭐</span>
+    <span class="star" data-v="5" onclick="_setStar(5)">⭐</span>
+  </div>
+  <!-- 빠른 태그 -->
+  <div class="sec-title">👍 이런 점이 좋았어요</div>
+  <div class="tag-grid" id="good-tags">
+    <div class="review-tag" onclick="_toggleTag(this,'good')">손이 빨라요</div>
+    <div class="review-tag" onclick="_toggleTag(this,'good')">실력이 뛰어나요</div>
+    <div class="review-tag" onclick="_toggleTag(this,'good')">친절해요</div>
+    <div class="review-tag" onclick="_toggleTag(this,'good')">위생적이에요</div>
+    <div class="review-tag" onclick="_toggleTag(this,'good')">설명을 잘해줘요</div>
+    <div class="review-tag" onclick="_toggleTag(this,'good')">재방문 의사 있어요</div>
+  </div>
+  <!-- 리뷰 텍스트 -->
+  <div class="sec-title">✍️ 한마디 (선택)</div>
+  <textarea class="review-input" id="review-text" rows="3" placeholder="솔직한 후기를 남겨주세요 😊"></textarea>
+  <!-- 완료 / 건너뛰기 -->
+  <div style="display:flex;gap:8px;margin-top:16px;padding-bottom:80px">
+    <button onclick="_skipReview()" style="flex:1;padding:14px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;color:var(--text2);font-size:13px;cursor:pointer">건너뛰기</button>
+    <button onclick="_submitReview()" style="flex:2;padding:14px;background:linear-gradient(90deg,var(--pink),#c2185b);border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:900;cursor:pointer">평가 완료</button>
+  </div>
+</div>
+
+<!-- STEP 5: 완료 -->
+<div class="page" id="page5">
+  <div class="success-wrap">
+    <div class="success-icon">✅</div>
+    <div class="success-title">예약 완료!</div>
+    <div class="success-sub" id="success-detail"></div>
+    <div class="booking-code" id="booking-code"></div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:24px">예약 코드를 저장해두세요</div>
+    <button onclick="location.reload()" style="padding:12px 28px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;color:var(--text2);font-size:13px;cursor:pointer">처음으로</button>
+  </div>
+</div>
+
+<!-- 하단 버튼 -->
+<div class="bottom-bar" id="bottom-bar">
+  <button class="btn-back" id="btn-back" onclick="_goBack()" style="display:none">← 이전</button>
+  <button class="btn-main" id="btn-next" onclick="_goNext()" disabled>다음</button>
+</div>
+
+<!-- 토스트 -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Firebase 초기화
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+firebase.initializeApp({
+  apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',
+  authDomain:'mbti-logistics.firebaseapp.com',
+  projectId:'mbti-logistics',
+  storageBucket:'mbti-logistics.firebasestorage.app',
+  messagingSenderId:'424881832661',
+  appId:'1:424881832661:web:abcdef1234567890'
+});
+var _db=firebase.firestore();
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 상태
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+var _state={
+  step:0,
+  dealerId:'',
+  shopName:'',
+  shopEmoji:'💄',
+  designer:null,    // {id,name,role,emoji,commRate}
+  service:null,     // {id,name,price,duration,cat,emoji}
+  date:'',          // YYYY-MM-DD
+  time:'',          // HH:MM
+  payType:'card',
+  custName:'',
+  custPhone:'',
+  star:0,
+  goodTags:[],
+  reviewText:'',
+  bookingId:'',
+};
+
+var STEPS=[
+  {label:'담당자 선택'},
+  {label:'시술 선택'},
+  {label:'날짜·시간'},
+  {label:'결제'},
+  {label:'평가'},
+];
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 초기화
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+(function(){
+  var params=new URLSearchParams(location.search);
+  _state.dealerId=params.get('d')||'';
+  if(!_state.dealerId){
+    document.getElementById('shop-name').textContent='잘못된 QR 코드';
+    document.getElementById('shop-sub').textContent='올바른 QR을 스캔해주세요';
+    return;
+  }
+  _loadShop();
+})();
+
+function _loadShop(){
+  var did=_state.dealerId;
+  // 회사 정보 로드
+  _db.collection('companies').doc(did).get().then(function(d){
+    if(d.exists){
+      var data=d.data();
+      _state.shopName=data.companyName||data.name||'우리 매장';
+      _state.shopEmoji=data.emoji||'💄';
+      document.getElementById('shop-name').textContent=_state.shopName;
+      document.getElementById('shop-logo').textContent=_state.shopEmoji;
+      document.title=_state.shopName+' · 예약';
+    }
+  }).catch(function(){});
+
+  // 디자이너 로드
+  _db.collection('ind_workers')
+    .where('dealerId','==',did)
+    .where('status','!=','퇴직')
+    .get()
+  .then(function(snap){
+    var designers=[];
+    snap.forEach(function(d){designers.push(Object.assign({id:d.id},d.data()));});
+    if(!designers.length){
+      // mbetco_workers도 시도
+      _db.collection('mbetco_workers').where('dealerId','==',did).get()
+      .then(function(s2){
+        s2.forEach(function(d){designers.push(Object.assign({id:d.id},d.data()));});
+        _renderDesigners(designers);
+      });
+    } else {
+      _renderDesigners(designers);
+    }
+  }).catch(function(e){
+    document.getElementById('designer-grid').innerHTML=
+      '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--red)">'+e.message+'</div>';
+  });
+}
+
+function _renderDesigners(list){
+  var grid=document.getElementById('designer-grid');
+  if(!list.length){
+    grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3)">등록된 직원 없음</div>';
+    return;
+  }
+  grid.innerHTML=list.map(function(d){
+    var emoji=d.emoji||['💇','💆','✂️','💅','👁️'][Math.floor(Math.random()*5)];
+    var role=d.role||d.position||d.industryType||'디자이너';
+    var rating=d.avgRating?'★ '+d.avgRating.toFixed(1)+' ('+d.reviewCount+')':(d.reviewCount?'★ ('+d.reviewCount+'건)':'신규');
+    return '<div class="designer-card" data-id="'+d.id+'" data-name="'+(d.name||'')+'" '+
+      'data-role="'+role+'" data-emoji="'+emoji+'" data-rate="'+(d.commissionRate||35)+'" '+
+      'onclick="_selectDesigner(this)">'+
+      '<div class="designer-avatar">'+emoji+'</div>'+
+      '<div class="designer-name">'+(d.name||'담당자')+'</div>'+
+      '<div class="designer-role">'+role+'</div>'+
+      '<div class="designer-rating">'+rating+'</div>'+
+    '</div>';
+  }).join('');
+}
+
+function _selectDesigner(el){
+  document.querySelectorAll('.designer-card').forEach(function(c){c.classList.remove('selected');});
+  el.classList.add('selected');
+  _state.designer={
+    id:el.dataset.id,
+    name:el.dataset.name,
+    role:el.dataset.role,
+    emoji:el.dataset.emoji,
+    commRate:parseFloat(el.dataset.rate)||35
+  };
+  document.getElementById('btn-next').disabled=false;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// STEP 1: 시술 선택
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+var _svcCat='전체';
+function _loadServices(){
+  var did=_state.dealerId;
+  _db.collection('mbetco_services').where('dealerId','==',did).get()
+  .then(function(snap){
+    var svcs=[];
+    snap.forEach(function(d){svcs.push(Object.assign({id:d.id},d.data()));});
+    if(!svcs.length){
+      // 기본 뷰티 서비스
+      svcs=[
+        {id:'s1',name:'시그니처펌',price:150000,duration:120,cat:'펌',emoji:'💫'},
+        {id:'s2',name:'볼륨매직',price:180000,duration:150,cat:'펌',emoji:'✨'},
+        {id:'s3',name:'디자인컷',price:35000,duration:40,cat:'컷',emoji:'✂️'},
+        {id:'s4',name:'뿌리염색',price:80000,duration:90,cat:'염색',emoji:'🎨'},
+        {id:'s5',name:'전체염색',price:120000,duration:120,cat:'염색',emoji:'🎨'},
+        {id:'s6',name:'두피스케일링',price:60000,duration:60,cat:'케어',emoji:'🌿'},
+        {id:'s7',name:'젤네일',price:60000,duration:60,cat:'네일',emoji:'💅'},
+        {id:'s8',name:'속눈썹연장',price:70000,duration:90,cat:'속눈썹',emoji:'👁️'},
+      ];
+    }
+    _renderServices(svcs);
+  }).catch(function(){
+    // 기본값
+    var svcs=[
+      {id:'s1',name:'시그니처펌',price:150000,duration:120,cat:'펌',emoji:'💫'},
+      {id:'s2',name:'디자인컷',price:35000,duration:40,cat:'컷',emoji:'✂️'},
+      {id:'s3',name:'뿌리염색',price:80000,duration:90,cat:'염색',emoji:'🎨'},
+    ];
+    _renderServices(svcs);
+  });
+}
+
+function _renderServices(list){
+  window._allServices=list;
+  // 카테고리 탭
+  var cats=['전체'].concat([...new Set(list.map(function(s){return s.cat||'기타';}))]);
+  document.getElementById('cat-tabs').innerHTML=cats.map(function(c){
+    return '<div class="cat-tab'+(c==='전체'?' active':'')+'" data-cat="'+c+'" onclick="_setCat(this)">'+c+'</div>';
+  }).join('');
+  _renderServiceList(list);
+}
+
+function _setCat(el){
+  document.querySelectorAll('.cat-tab').forEach(function(t){t.classList.remove('active');});
+  el.classList.add('active');
+  _svcCat=el.dataset.cat;
+  var filtered=_svcCat==='전체'?window._allServices:
+    window._allServices.filter(function(s){return (s.cat||'기타')===_svcCat;});
+  _renderServiceList(filtered);
+}
+
+function _renderServiceList(list){
+  var sel=document.getElementById('service-list');
+  sel.innerHTML=list.map(function(s){
+    var dur=s.duration?s.duration+'분':'';
+    return '<div class="service-item" data-id="'+s.id+'" data-name="'+(s.name||'')+'" '+
+      'data-price="'+(s.price||0)+'" data-duration="'+(s.duration||60)+'" '+
+      'data-cat="'+(s.cat||'')+'" data-emoji="'+(s.emoji||'💆')+'" '+
+      'onclick="_selectService(this)">'+
+      '<div class="service-icon">'+(s.emoji||'💆')+'</div>'+
+      '<div class="service-info">'+
+        '<div class="service-name">'+(s.name||'')+'</div>'+
+        '<div class="service-duration">'+(dur||'')+'</div>'+
+      '</div>'+
+      '<div class="service-price">₩'+(s.price||0).toLocaleString()+'</div>'+
+    '</div>';
+  }).join('');
+}
+
+function _selectService(el){
+  document.querySelectorAll('.service-item').forEach(function(i){i.classList.remove('selected');});
+  el.classList.add('selected');
+  _state.service={
+    id:el.dataset.id,name:el.dataset.name,
+    price:parseInt(el.dataset.price)||0,
+    duration:parseInt(el.dataset.duration)||60,
+    cat:el.dataset.cat,emoji:el.dataset.emoji
+  };
+  document.getElementById('btn-next').disabled=false;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// STEP 2: 달력
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+var _calYear,_calMonth;
+function _initCal(){
+  var now=new Date();
+  _calYear=now.getFullYear();
+  _calMonth=now.getMonth();
+  _renderCal();
+}
+
+function _renderCal(){
+  var title=_calYear+'년 '+(_calMonth+1)+'월';
+  document.getElementById('cal-title').textContent=title;
+  var grid=document.getElementById('cal-grid');
+  var days=['일','월','화','수','목','금','토'];
+  var html=days.map(function(d){return '<div class="cal-day-label">'+d+'</div>';}).join('');
+  var first=new Date(_calYear,_calMonth,1).getDay();
+  var last=new Date(_calYear,_calMonth+1,0).getDate();
+  var today=new Date();
+  var todayStr=today.toISOString().slice(0,10);
+  for(var i=0;i<first;i++) html+='<div class="cal-day"></div>';
+  for(var d=1;d<=last;d++){
+    var dateStr=_calYear+'-'+String(_calMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    var isPast=dateStr<todayStr;
+    var isToday=dateStr===todayStr;
+    var isSel=dateStr===_state.date;
+    var cls='cal-day'+(isPast?' past':'')+(isToday?' today':'')+(isSel?' selected':'');
+    html+='<div class="'+cls+'" data-date="'+dateStr+'" '+
+      (isPast?'':' onclick="_selectDate(this)"')+'>'+d+'</div>';
+  }
+  grid.innerHTML=html;
+}
+
+function _calPrev(){
+  _calMonth--;
+  if(_calMonth<0){_calMonth=11;_calYear--;}
+  _renderCal();
+}
+function _calNext(){
+  _calMonth++;
+  if(_calMonth>11){_calMonth=0;_calYear++;}
+  _renderCal();
+}
+
+function _selectDate(el){
+  document.querySelectorAll('.cal-day').forEach(function(d){d.classList.remove('selected');});
+  el.classList.add('selected');
+  _state.date=el.dataset.date;
+  _state.time='';
+  document.getElementById('btn-next').disabled=true;
+  _loadTimeSlots(el.dataset.date);
+}
+
+function _loadTimeSlots(date){
+  var tTitle=document.getElementById('time-title');
+  var tGrid=document.getElementById('time-grid');
+  tTitle.style.display='flex';
+  tGrid.innerHTML='<div style="grid-column:1/-1;text-align:center;color:var(--text3);font-size:12px">⏳ 로딩 중...</div>';
+
+  // 해당 날짜 예약된 시간 조회
+  _db.collection('mbetco_bookings')
+    .where('dealerId','==',_state.dealerId)
+    .where('date','==',date)
+    .where('designerId','==',_state.designer.id)
+    .get()
+  .then(function(snap){
+    var booked={};
+    snap.forEach(function(d){
+      var v=d.data();
+      if(v.time) booked[v.time]=true;
+    });
+    // 09:00 ~ 19:00 30분 단위
+    var slots=[];
+    for(var h=9;h<=19;h++){
+      slots.push(String(h).padStart(2,'0')+':00');
+      if(h<19) slots.push(String(h).padStart(2,'0')+':30');
+    }
+    tGrid.innerHTML=slots.map(function(t){
+      var isBooked=booked[t];
+      return '<div class="time-slot'+(isBooked?' booked':'')+'" data-time="'+t+'" '+
+        (isBooked?'':' onclick="_selectTime(this)"')+'>'+
+        '<div class="time-slot-time">'+t+'</div>'+
+        '<div class="time-slot-left">'+(isBooked?'예약됨':'가능')+'</div>'+
+      '</div>';
+    }).join('');
+  }).catch(function(){
+    // 오류시 기본 슬롯
+    var slots=['09:00','09:30','10:00','10:30','11:00','11:30','13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30','17:00','17:30','18:00'];
+    tGrid.innerHTML=slots.map(function(t){
+      return '<div class="time-slot" data-time="'+t+'" onclick="_selectTime(this)">'+
+        '<div class="time-slot-time">'+t+'</div>'+
+        '<div class="time-slot-left">가능</div>'+
+      '</div>';
+    }).join('');
+  });
+}
+
+function _selectTime(el){
+  document.querySelectorAll('.time-slot').forEach(function(s){s.classList.remove('selected');});
+  el.classList.add('selected');
+  _state.time=el.dataset.time;
+  document.getElementById('btn-next').disabled=false;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// STEP 3: 결제 요약
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _renderSummary(){
+  var s=_state;
+  var card=document.getElementById('summary-card');
+  card.innerHTML=
+    '<div class="summary-row"><span class="summary-label">담당자</span><span>'+s.designer.emoji+' '+s.designer.name+'</span></div>'+
+    '<div class="summary-row"><span class="summary-label">시술</span><span>'+s.service.emoji+' '+s.service.name+'</span></div>'+
+    '<div class="summary-row"><span class="summary-label">예약일</span><span>'+s.date+'</span></div>'+
+    '<div class="summary-row"><span class="summary-label">시간</span><span>'+s.time+' ('+s.service.duration+'분)</span></div>'+
+    '<div class="summary-row"><span class="summary-label">결제금액</span><span>₩'+s.service.price.toLocaleString()+'</span></div>';
+}
+
+function _selectPay(el){
+  document.querySelectorAll('.pay-btn').forEach(function(b){b.classList.remove('selected');});
+  el.classList.add('selected');
+  _state.payType=el.dataset.type;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 결제 처리
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _processPayment(){
+  var s=_state;
+  s.custName=(document.getElementById('cust-name')||{}).value||'';
+  s.custPhone=(document.getElementById('cust-phone')||{}).value||'';
+
+  var btn=document.getElementById('btn-next');
+  btn.disabled=true;
+  btn.textContent='처리 중...';
+
+  var now=new Date();
+  var bookingId='BK'+now.getTime().toString(36).toUpperCase();
+  _state.bookingId=bookingId;
+
+  // 예약 저장
+  var bookingData={
+    dealerId:s.dealerId,
+    bookingId:bookingId,
+    designerId:s.designer.id,
+    designerName:s.designer.name,
+    serviceName:s.service.name,
+    servicePrice:s.service.price,
+    serviceDuration:s.service.duration,
+    date:s.date,
+    time:s.time,
+    payType:s.payType,
+    custName:s.custName,
+    custPhone:s.custPhone,
+    status:'confirmed',
+    createdAt:now.toISOString(),
+    ym:s.date.slice(0,7),
+  };
+
+  _db.collection('mbetco_bookings').add(bookingData).then(function(){
+    // 매출 데이터도 저장
+    return _db.collection('mbetco_sales').add({
+      dealerId:s.dealerId,
+      bookingId:bookingId,
+      worker:s.designer.name,
+      workerId:s.designer.id,
+      serviceName:s.service.name,
+      amount:s.service.price,
+      payType:s.payType,
+      date:s.date,
+      ym:s.date.slice(0,7),
+      custName:s.custName,
+      source:'qr_booking',
+      createdAt:now.toISOString(),
+    });
+  }).then(function(){
+    // 세무사 연동 자동 등록
+    return _db.collection('tax_docs').add({
+      dealerId:s.dealerId,
+      docType:'매출',
+      category:'서비스',
+      date:s.date,
+      ym:s.date.slice(0,7),
+      amount:s.service.price,
+      supplyAmount:Math.round(s.service.price/1.1),
+      vatAmount:Math.round(s.service.price-s.service.price/1.1),
+      description:s.designer.name+' '+s.service.name,
+      payType:s.payType,
+      source:'qr_booking',
+      bookingId:bookingId,
+      createdAt:now.toISOString(),
+    });
+  }).then(function(){
+    _goStep(4);
+  }).catch(function(e){
+    btn.disabled=false;
+    btn.textContent='결제하기';
+    toast('❌ '+e.message);
+  });
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// STEP 4: 평가
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _setStar(v){
+  _state.star=v;
+  document.querySelectorAll('.star').forEach(function(s){
+    var sv=parseInt(s.dataset.v);
+    s.classList.toggle('on',sv<=v);
+  });
+}
+
+function _toggleTag(el,type){
+  el.classList.toggle('selected');
+  var tag=el.textContent;
+  var arr=_state.goodTags;
+  var idx=arr.indexOf(tag);
+  if(idx>=0) arr.splice(idx,1);
+  else arr.push(tag);
+}
+
+function _submitReview(){
+  var s=_state;
+  if(!s.star){toast('별점을 선택해주세요');return;}
+  var reviewText=(document.getElementById('review-text')||{}).value||'';
+  _db.collection('mbetco_reviews').add({
+    dealerId:s.dealerId,
+    bookingId:s.bookingId,
+    designerId:s.designer.id,
+    designerName:s.designer.name,
+    star:s.star,
+    goodTags:s.goodTags,
+    text:reviewText,
+    date:s.date,
+    ym:s.date.slice(0,7),
+    createdAt:new Date().toISOString(),
+  }).then(function(){
+    // 디자이너 평균 평점 업데이트
+    _db.collection('mbetco_reviews')
+      .where('designerId','==',s.designer.id).get()
+    .then(function(snap){
+      var total=0;var cnt=0;
+      snap.forEach(function(d){total+=d.data().star||0;cnt++;});
+      var avg=cnt?Math.round(total/cnt*10)/10:0;
+      _db.collection('ind_workers').doc(s.designer.id).update({
+        avgRating:avg,reviewCount:cnt
+      }).catch(function(){});
+      _db.collection('mbetco_workers').doc(s.designer.id).update({
+        avgRating:avg,reviewCount:cnt
+      }).catch(function(){});
+    });
+    _showComplete();
+  }).catch(function(){_showComplete();});
+}
+
+function _skipReview(){_showComplete();}
+
+function _showComplete(){
+  var s=_state;
+  document.getElementById('success-detail').innerHTML=
+    s.designer.emoji+' <b>'+s.designer.name+'</b>님 · '+s.service.name+'<br>'+
+    s.date+' '+s.time+'<br>₩'+s.service.price.toLocaleString()+' ('+_payLabel(s.payType)+')';
+  document.getElementById('booking-code').textContent=s.bookingId;
+  _goStep(5);
+}
+
+function _payLabel(t){
+  return {card:'카드',cash:'현금',kakao:'카카오페이',naver:'네이버페이',transfer:'계좌이체'}[t]||t;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 스텝 이동
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _goStep(n){
+  document.querySelectorAll('.page').forEach(function(p,i){
+    p.classList.toggle('show',i===n);
+  });
+  // dots
+  for(var i=0;i<5;i++){
+    var dot=document.getElementById('dot'+i);
+    if(!dot)continue;
+    dot.classList.remove('active','done');
+    if(i<n) dot.classList.add('done');
+    else if(i===n) dot.classList.add('active');
+  }
+  document.getElementById('step-label').textContent=(STEPS[n]||{label:''}).label;
+  var backBtn=document.getElementById('btn-back');
+  var nextBtn=document.getElementById('btn-next');
+  var bottomBar=document.getElementById('bottom-bar');
+
+  if(n===0){
+    backBtn.style.display='none';
+    nextBtn.textContent='다음';
+    nextBtn.disabled=!_state.designer;
+    bottomBar.style.display='block';
+  } else if(n===1){
+    backBtn.style.display='flex';
+    nextBtn.textContent='다음';
+    nextBtn.disabled=!_state.service;
+    bottomBar.style.display='block';
+  } else if(n===2){
+    backBtn.style.display='flex';
+    nextBtn.textContent='다음';
+    nextBtn.disabled=!(_state.date&&_state.time);
+    bottomBar.style.display='block';
+  } else if(n===3){
+    backBtn.style.display='flex';
+    nextBtn.textContent='결제하기 💳';
+    nextBtn.disabled=false;
+    bottomBar.style.display='block';
+    _renderSummary();
+  } else if(n===4){
+    bottomBar.style.display='none';
+    document.getElementById('review-designer-name').textContent=
+      _state.designer.emoji+' '+_state.designer.name+'님의 시술';
+  } else if(n===5){
+    bottomBar.style.display='none';
+  }
+  _state.step=n;
+  window.scrollTo(0,0);
+}
+
+function _goNext(){
+  var n=_state.step;
+  if(n===0){
+    if(!_state.designer){toast('담당자를 선택해주세요');return;}
+    _loadServices();
+    _goStep(1);
+  } else if(n===1){
+    if(!_state.service){toast('시술을 선택해주세요');return;}
+    _initCal();
+    _goStep(2);
+  } else if(n===2){
+    if(!_state.date){toast('날짜를 선택해주세요');return;}
+    if(!_state.time){toast('시간을 선택해주세요');return;}
+    _goStep(3);
+  } else if(n===3){
+    _processPayment();
+  }
+}
+
+function _goBack(){
+  if(_state.step>0) _goStep(_state.step-1);
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 유틸
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function toast(msg){
+  var t=document.getElementById('toast');
+  t.textContent=msg;
+  t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},2500);
+}
+</script>
+</body>
+</html>
