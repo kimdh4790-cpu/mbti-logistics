@@ -650,7 +650,14 @@ function _renderPage(page){
 }
 
 function _initApp(){
-  _renderPage('stock');
+  var did=_dealer?_dealer.id:(_cu?_cu.uid:'');
+  _loadSubs(did,function(subs){
+    if(!_subActive('inventory')){
+      _showSubRequired('inventory',document.getElementById('main-content'));
+      return;
+    }
+    _renderPage('stock');
+  });
 }
 </script>
 <script>
