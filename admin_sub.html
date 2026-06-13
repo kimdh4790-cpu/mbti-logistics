@@ -353,7 +353,20 @@ function _approve(btn){
       createdAt:now,
     });
   }).then(function(){
-    toast('✅ '+name+' 승인 완료! 이메일 발송 대기 중');
+    // 이메일 자동 발송
+    return fetch('/api/send-email', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        email:email,
+        companyName:name,
+        tempPassword:'Donway'+Math.floor(1000+Math.random()*9000)+'!',
+        loginUrl:'https://donway.ai.kr/settle'
+      })
+    });
+  }).then(function(res){
+    var msg=res&&res.ok?'✅ '+name+' 승인 + 이메일 발송 완료!':'✅ '+name+' 승인 완료 (이메일 수동 발송 필요)';
+    toast(msg,3000);
     _renderRequests();
   }).catch(function(e){
     toast('❌ '+e.message);
