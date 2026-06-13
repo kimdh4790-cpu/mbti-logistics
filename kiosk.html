@@ -44,6 +44,7 @@ body{background:var(--bg);color:var(--text);font-family:"Apple SD Gothic Neo","N
     <div class="nav-item" data-page="staff" onclick="_nav(this)">👤 직원별 현황</div>
     <div class="nav-item" data-page="menu" onclick="_nav(this)">💆 서비스 메뉴</div>
     <div class="nav-item" data-page="customer" onclick="_nav(this)">🗂 고객 DB</div>
+    <div class="nav-item" data-page="bookings" onclick="_nav(this)" id="nav-bookings">📅 오늘 예약 <span id="booking-count" style="background:var(--red);color:#fff;border-radius:20px;padding:1px 6px;font-size:10px;margin-left:4px;display:none">0</span></div>
   </div>
   <div class="sidebar-bottom">
     <div style="font-size:11px;color:var(--text3);margin-bottom:8px" id="user-email"></div>
@@ -15273,6 +15274,168 @@ function pagePayoutDetail(sessionId){
 </body>
 </htm
 
+
+// ━━━ 오늘 예약 현황 ━━━
+function _pageBookings(c){
+  if(!c)c=document.getElementById('content');
+  var did=_dealerData?_dealerData.id:'';
+  var today=new Date().toISOString().slice(0,10);
+
+  c.innerHTML=
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
+      '<div>'+
+        '<div style="font-size:14px;font-weight:900">📅 오늘 예약 현황</div>'+
+        '<div style="font-size:11px;color:var(--text3)">'+today+'</div>'+
+      '</div>'+
+      '<button class="btn" onclick="_pageBookings()" style="font-size:11px">🔄 새로고침</button>'+
+    '</div>'+
+    '<div id="booking-list"><div style="text-align:center;padding:30px;color:var(--text3)">⏳ 로딩 중...</div></div>';
+
+  _db.collection('mbetco_bookings')
+    .where('dealerId','==',did)
+    .where('date','==',today)
+    .orderBy('time','asc')
+    .get()
+  .then(function(snap){
+    var el=document.getElementById('booking-list');
+    if(!el)return;
+
+    // 배지 업데이트
+    var badge=document.getElementById('booking-count');
+    if(badge){
+      badge.textContent=snap.size;
+      badge.style.display=snap.size>0?'inline':'none';
+    }
+
+    if(snap.empty){
+      el.innerHTML='<div style="text-align:center;padding:40px;color:var(--text3)">'+
+        '<div style="font-size:32px;margin-bottom:8px">📅</div>'+
+        '<div>오늘 예약 없음</div>'+
+        '<div style="font-size:11px;margin-top:6px">QR 예약 링크를 고객에게 공유하세요</div>'+
+      '</div>';
+      return;
+    }
+
+    // 상태별 분류
+    var waiting=[],done=[],cancel=[];
+    snap.forEach(function(d){
+      var v=Object.assign({id:d.id},d.data());
+      if(v.status==='done') done.push(v);
+      else if(v.status==='cancel') cancel.push(v);
+      else waiting.push(v);
+    });
+
+    var html='';
+
+    // 대기 중
+    if(waiting.length){
+      html+='<div style="font-size:12px;font-weight:800;color:var(--acc);margin-bottom:8px">⏰ 대기 ('+waiting.length+'명)</div>';
+      html+=waiting.map(function(v){return _bookingCard(v);}).join('');
+    }
+
+    // 완료
+    if(done.length){
+      html+='<div style="font-size:12px;font-weight:800;color:var(--green);margin:14px 0 8px">✅ 완료 ('+done.length+'명)</div>';
+      html+=done.map(function(v){return _bookingCard(v);}).join('');
+    }
+
+    // 취소
+    if(cancel.length){
+      html+='<div style="font-size:12px;font-weight:800;color:var(--red);margin:14px 0 8px">❌ 취소 ('+cancel.length+'명)</div>';
+      html+=cancel.map(function(v){return _bookingCard(v);}).join('');
+    }
+
+    el.innerHTML=html;
+  }).catch(function(e){
+    var el=document.getElementById('booking-list');
+    if(el)el.innerHTML='<div style="color:var(--red);font-size:12px;padding:16px">'+esc(e.message)+'</div>';
+  });
+}
+
+function _bookingCard(v){
+  var status=v.status||'waiting';
+  var statusColor={waiting:'var(--acc)',done:'var(--green)',cancel:'var(--red)'};
+  var statusLabel={waiting:'대기',done:'완료',cancel:'취소'};
+  var color=statusColor[status]||'var(--text3)';
+
+  return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:8px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'+
+      '<div>'+
+        '<div style="font-size:14px;font-weight:900">'+esc(v.time||'')+'</div>'+
+        '<div style="font-size:13px;font-weight:700;margin-top:2px">'+esc(v.custName||'이름없음')+'</div>'+
+        '<div style="font-size:11px;color:var(--text3)">'+esc(v.custPhone||'')+'</div>'+
+      '</div>'+
+      '<span style="font-size:10px;padding:3px 10px;border-radius:20px;background:'+color+'22;color:'+color+';font-weight:700">'+statusLabel[status]+'</span>'+
+    '</div>'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px">'+
+      '<div>'+
+        '<span style="color:var(--text3)">👤 '+esc(v.designerName||'미배정')+'</span>'+
+        '<span style="margin:0 6px;color:var(--border)">|</span>'+
+        '<span style="color:var(--text2)">'+esc(v.serviceName||'')+'</span>'+
+        '<span style="margin:0 6px;color:var(--border)">|</span>'+
+        '<span style="color:var(--acc);font-weight:700">₩'+(v.finalPrice||v.servicePrice||0).toLocaleString()+'</span>'+
+      '</div>'+
+    '</div>'+
+    (status==='waiting'?
+      '<div style="display:flex;gap:6px;margin-top:10px">'+
+        '<button data-id="'+v.id+'" onclick="_bookingDone(this)" class="btn" style="flex:1;background:var(--green);color:#000;font-weight:700;font-size:12px;padding:8px">✅ 완료</button>'+
+        '<button data-id="'+v.id+'" onclick="_bookingCancel(this)" class="btn" style="padding:8px 12px;font-size:12px">취소</button>'+
+      '</div>':'')+
+  '</div>';
+}
+
+function _bookingDone(btn){
+  var id=btn.dataset.id;
+  _db.collection('mbetco_bookings').doc(id).update({
+    status:'done',
+    doneAt:new Date().toISOString()
+  }).then(function(){
+    toast('✅ 완료 처리됨');
+    _pageBookings();
+  }).catch(function(e){toast('❌ '+e.message);});
+}
+
+function _bookingCancel(btn){
+  if(!confirm('예약을 취소하시겠습니까?'))return;
+  var id=btn.dataset.id;
+  _db.collection('mbetco_bookings').doc(id).update({
+    status:'cancel',
+    cancelAt:new Date().toISOString()
+  }).then(function(){
+    toast('취소 처리됨');
+    _pageBookings();
+  }).catch(function(e){toast('❌ '+e.message);});
+}
+
+// 실시간 예약 알림 (새 예약 들어오면 배지 업데이트)
+function _startBookingListener(){
+  var did=_dealerData?_dealerData.id:'';
+  var today=new Date().toISOString().slice(0,10);
+  if(!did)return;
+
+  window._bookingUnsub=_db.collection('mbetco_bookings')
+    .where('dealerId','==',did)
+    .where('date','==',today)
+    .where('status','==','waiting')
+    .onSnapshot(function(snap){
+      var badge=document.getElementById('booking-count');
+      if(badge){
+        badge.textContent=snap.size;
+        badge.style.display=snap.size>0?'inline':'none';
+      }
+      // 새 예약 알림
+      if(snap.docChanges){
+        snap.docChanges().forEach(function(change){
+          if(change.type==='added'&&window._bookingListening){
+            var v=change.doc.data();
+            toast('🔔 새 예약! '+(v.custName||'')+'님 '+(v.time||''),4000);
+          }
+        });
+        window._bookingListening=true;
+      }
+    });
+}
+
 function _pageCustomer(c){
   var did=_dealerData?_dealerData.id:'';
   c.innerHTML='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px"><div style="font-size:13px;font-weight:800;margin-bottom:12px">🗂 고객 DB</div><div id="cust-list">⏳ 로딩 중...</div></div>';
@@ -15318,7 +15481,7 @@ function _nav(el){
   document.querySelectorAll('.nav-item').forEach(function(i){i.classList.remove('active');});
   el.classList.add('active');
   var page=el.dataset.page;
-  var titles={input:'✍️ 시술 입력',today:'📊 오늘 매출',staff:'👤 직원별 현황',menu:'💆 서비스 메뉴',customer:'🗂 고객 DB'};
+  var titles={input:'✍️ 시술 입력',bookings:'📅 오늘 예약',today:'📊 오늘 매출',staff:'👤 직원별 현황',menu:'💆 서비스 메뉴',customer:'🗂 고객 DB'};
   document.getElementById('page-title').textContent=titles[page]||page;
   var c=document.getElementById('content');
   c.innerHTML='';
@@ -15327,6 +15490,7 @@ function _nav(el){
   else if(page==='staff')   _bkRenderStaff(c);
   else if(page==='menu')    _pageMenuMgr(c);
   else if(page==='customer') _pageCustomer(c);
+  else if(page==='bookings') _pageBookings(c);
 }
 
 function _initApp(){
