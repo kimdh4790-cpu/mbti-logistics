@@ -1,13 +1,13 @@
 {
-  "name": "DONWAY - 자동화 정산",
+  "name": "DONWAY - AI 정산 자동화",
   "short_name": "DONWAY",
   "description": "AI 자동 정산 · 배달대행 · 세무사 연동 | DONWAY",
   "start_url": "/settle",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#185FA5",
-  "theme_color": "#185FA5",
+  "background_color": "#0066ff",
+  "theme_color": "#0066ff",
   "lang": "ko",
   "categories": [
     "business",
@@ -35,10 +35,9 @@
   ],
   "shortcuts": [
     {
-      "name": "정산 현황",
+      "name": "AI 정산",
       "short_name": "정산",
-      "description": "정산 현황 바로가기",
-      "url": "/settle?page=settle",
+      "url": "/settle",
       "icons": [
         {
           "src": "/icon-192.png",
@@ -47,10 +46,20 @@
       ]
     },
     {
-      "name": "기사 관리",
-      "short_name": "기사",
-      "description": "기사/직원 관리",
+      "name": "직원 관리",
+      "short_name": "직원",
       "url": "/settle?page=drivers",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "도입 신청",
+      "short_name": "신청",
+      "url": "/join",
       "icons": [
         {
           "src": "/icon-192.png",
