@@ -555,6 +555,229 @@ body{font-family:'Noto Sans KR',sans-serif;color:var(--text)}
 </div>
 
 
+<!-- S7: 업종별 고민 해결 -->
+<div class="slide" id="s7">
+  <div class="slide-bg">
+    <div class="grid-bg"></div>
+    <div class="glow" style="width:400px;height:400px;background:var(--acc);top:-100px;right:-100px;opacity:.06"></div>
+  </div>
+  <div class="slide-content" style="padding:40px 24px 32px;max-width:600px;margin:0 auto">
+    <div class="tag" style="margin-bottom:16px">업종별 맞춤 정산</div>
+    <h2 style="font-size:22px;font-weight:900;line-height:1.4;margin-bottom:8px">
+      대표님의 정산 고민,<br>업종별로 해결해 드립니다
+    </h2>
+    <p style="font-size:13px;color:var(--text3);margin-bottom:28px">
+      어떤 업종을 운영하고 계신가요?
+    </p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" id="ind-cards">
+
+      <!-- 물류·배송 -->
+      <div class="ind-card" onclick="_selInd(this,'logistics')">
+        <div class="ind-icon">🤖</div>
+        <div class="ind-name">물류·배송</div>
+        <div class="ind-desc">쿠팡·배달대행 기사별 정산</div>
+      </div>
+
+      <!-- 뷰티·미용 -->
+      <div class="ind-card" onclick="_selInd(this,'beauty')">
+        <div class="ind-icon">💄</div>
+        <div class="ind-name">뷰티·미용</div>
+        <div class="ind-desc">디자이너별 인센티브 계산</div>
+      </div>
+
+      <!-- 건설·현장 -->
+      <div class="ind-card" onclick="_selInd(this,'construction')">
+        <div class="ind-icon">🏗️</div>
+        <div class="ind-name">건설·현장</div>
+        <div class="ind-desc">현장별 인부 일당 정산</div>
+      </div>
+
+      <!-- 보험·영업 -->
+      <div class="ind-card" onclick="_selInd(this,'insurance')">
+        <div class="ind-icon">🛡️</div>
+        <div class="ind-name">보험·영업</div>
+        <div class="ind-desc">설계사별 수수료 자동 계산</div>
+      </div>
+
+      <!-- 요양·돌봄 -->
+      <div class="ind-card" onclick="_selInd(this,'care')">
+        <div class="ind-icon">🏥</div>
+        <div class="ind-name">요양·돌봄</div>
+        <div class="ind-desc">요양사별 방문 수가 정산</div>
+      </div>
+
+      <!-- 학원·교육 -->
+      <div class="ind-card" onclick="_selInd(this,'academy')">
+        <div class="ind-icon">🎓</div>
+        <div class="ind-name">학원·교육</div>
+        <div class="ind-desc">강사별 수강료 정산</div>
+      </div>
+
+      <!-- 골프장 -->
+      <div class="ind-card" onclick="_selInd(this,'golf')">
+        <div class="ind-icon">🏌️</div>
+        <div class="ind-name">골프장·캐디</div>
+        <div class="ind-desc">캐디별 캐디피 자동 정산</div>
+      </div>
+
+      <!-- 기타 -->
+      <div class="ind-card" onclick="_selInd(this,'etc')">
+        <div class="ind-icon">📋</div>
+        <div class="ind-name">그 외 업종</div>
+        <div class="ind-desc">18개 업종 모두 지원</div>
+      </div>
+
+    </div>
+
+    <!-- 업종별 고민 설명 -->
+    <div id="ind-detail" style="display:none;margin-top:20px;background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.2);border-radius:16px;padding:20px;transition:all .3s">
+      <div id="ind-detail-content"></div>
+      <a href="/join" style="display:block;margin-top:16px;padding:13px;background:linear-gradient(90deg,var(--acc),var(--pink));color:#fff;border-radius:12px;font-size:14px;font-weight:900;text-align:center;text-decoration:none">
+        이 고민 해결하기 →
+      </a>
+    </div>
+
+  </div>
+</div>
+
+<style>
+.ind-card{
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:16px 14px;
+  cursor:pointer;
+  transition:all .2s;
+  text-align:center;
+}
+.ind-card:hover,.ind-card.selected{
+  border-color:var(--acc);
+  background:rgba(0,212,255,.08);
+}
+.ind-icon{font-size:24px;margin-bottom:6px}
+.ind-name{font-size:13px;font-weight:800;margin-bottom:4px}
+.ind-desc{font-size:10px;color:var(--text3);line-height:1.4}
+</style>
+
+<script>
+var IND_STORIES={
+  logistics:{
+    icon:'🤖', name:'물류·배송',
+    pain:'기사 30명 정산에 매달 3시간씩 걸리시나요?',
+    problems:[
+      '기사별 배송 건수 집계가 엑셀로 한계',
+      '쿠팡·배달대행 단가 계산이 복잡',
+      '수당·공제 항목이 기사마다 달라 실수 빈번',
+      '명세서 발송에 추가 1~2시간 소요'
+    ],
+    solution:'AI가 엑셀 업로드 한 번으로 기사별 정산을 자동 완료. 카카오 명세서 자동 발송까지.'
+  },
+  beauty:{
+    icon:'💄', name:'뷰티·미용',
+    pain:'급여날 디자이너 인센티브 계산에 하루가 통째로 날아가나요?',
+    problems:[
+      '시술별 단가·인센티브 구성이 디자이너마다 달라 계산 복잡',
+      '컷트·펌·염색 구성 다른데 매출 합산으로 계산하면 분쟁 발생',
+      '프리랜서 3.3% vs 직원 4대보험 처리 혼재',
+      '카드·네이버페이 정산 주기 달라 입금액 헷갈림'
+    ],
+    solution:'시술별 단가 기준 인센티브 자동 계산. 디자이너별 명세서 카카오 자동 발송.'
+  },
+  construction:{
+    icon:'🏗️', name:'건설·현장',
+    pain:'현장별 인부 일당 정산이 매달 복잡하고 실수가 생기나요?',
+    problems:[
+      '현장별·직종별 일당이 달라 수기 계산 오류',
+      '출역 일수 집계가 엑셀로 한계',
+      '4대보험·원천세 공제 계산이 복잡',
+      '인부별 명세서 발송 시간 과다'
+    ],
+    solution:'현장별 출역 일수 × 일당 자동 계산. 직종별 단가 설정으로 오류 제로.'
+  },
+  insurance:{
+    icon:'🛡️', name:'보험·영업',
+    pain:'설계사별 수수료 계산이 매달 분쟁의 시작이 되나요?',
+    problems:[
+      '상품별·설계사별 수수료율이 달라 계산 복잡',
+      '초회·유지·재발 수수료 구분 어려움',
+      '설계사 수십 명 명세서 개별 발송 번거로움',
+      '수수료 기준 불투명으로 분쟁 발생'
+    ],
+    solution:'설계사별 수수료율 설정 후 자동 계산. 명확한 기준으로 분쟁 원천 차단.'
+  },
+  care:{
+    icon:'🏥', name:'요양·돌봄',
+    pain:'요양사별 방문 수가 정산이 매달 헷갈리시나요?',
+    problems:[
+      '방문 횟수·시간별 수가 계산이 복잡',
+      '국민건강보험 청구액과 실지급액 차이 관리',
+      '요양사별 방문 일정 집계 누락',
+      '공단 청구 데이터와 내부 정산 불일치'
+    ],
+    solution:'방문 수가 자동 계산. 요양사별 명세서로 투명한 급여 지급.'
+  },
+  academy:{
+    icon:'🎓', name:'학원·교육',
+    pain:'강사별 수강료 정산이 매달 복잡하게 얽히나요?',
+    problems:[
+      '과목별·시간별 강사료 계산 기준 다양',
+      '수강생 수에 따른 인센티브 구조 복잡',
+      '프리랜서 강사 3.3% 공제 누락 리스크',
+      '강사별 출강 일수 집계 번거로움'
+    ],
+    solution:'과목별 강사료 × 출강 횟수 자동 계산. 강사별 명세서 즉시 발송.'
+  },
+  golf:{
+    icon:'🏌️', name:'골프장·캐디',
+    pain:'캐디별 캐디피 정산이 매달 머리 아프신가요?',
+    problems:[
+      '18홀·9홀 구분 캐디피 계산 복잡',
+      '캐디별 라운드 수 집계 누락',
+      '팁·추가 수당 처리 기준 불명확',
+      '캐디 명세서 발송 시간 과다'
+    ],
+    solution:'라운드 수 × 캐디피 자동 계산. 캐디별 명세서 카카오 자동 발송.'
+  },
+  etc:{
+    icon:'📋', name:'그 외 업종',
+    pain:'인건비 정산이 매달 반복적으로 힘드신가요?',
+    problems:[
+      '직원·프리랜서 혼재로 공제 항목 복잡',
+      '엑셀 수기 계산으로 실수 빈번',
+      '명세서 개별 발송 시간 낭비',
+      '정산 기준 불명확으로 직원 분쟁'
+    ],
+    solution:'18개 업종 지원. 어떤 업종이든 엑셀 업로드 한 번으로 자동 정산.'
+  }
+};
+
+function _selInd(el, key){
+  document.querySelectorAll('.ind-card').forEach(function(c){c.classList.remove('selected');});
+  el.classList.add('selected');
+  var data=IND_STORIES[key];
+  if(!data)return;
+  var detail=document.getElementById('ind-detail');
+  var dc=document.getElementById('ind-detail-content');
+  dc.innerHTML=
+    '<div style="font-size:13px;font-weight:900;color:var(--acc);margin-bottom:8px">'+data.icon+' '+data.name+'</div>'+
+    '<div style="font-size:14px;font-weight:800;margin-bottom:12px;color:var(--text)">'+data.pain+'</div>'+
+    '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">'+
+      data.problems.map(function(p){
+        return '<div style="display:flex;gap:8px;font-size:12px;color:var(--text2)">'+
+          '<span style="color:var(--red);flex-shrink:0">✗</span>'+
+          '<span>'+p+'</span>'+
+        '</div>';
+      }).join('')+
+    '</div>'+
+    '<div style="display:flex;gap:8px;font-size:12px;color:var(--green);font-weight:700">'+
+      '<span>✓</span><span>'+data.solution+'</span>'+
+    '</div>';
+  detail.style.display='block';
+}
+</script>
+
+
 <!-- S8: CTA -->
 <div class="slide" id="s7">
   <div class="slide-bg">
