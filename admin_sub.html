@@ -211,10 +211,171 @@ function _showLogin(){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 메인
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _tabSwitch(el,tab){
+  document.querySelectorAll('.btn-acc,.btn-gray').forEach(function(b){
+    b.className=b.className.replace('btn-acc','btn-gray');
+  });
+  el.className=el.className.replace('btn-gray','btn-acc');
+  if(tab==='requests') _renderRequests();
+  else _renderManage();
+}
+
 function _renderMain(){
   var wrap=document.getElementById('main-wrap');
   wrap.innerHTML=
-    '<div style="font-size:15px;font-weight:900;margin-bottom:16px">🏢 업체 구독 관리</div>'+
+    '<div style="display:flex;gap:8px;margin-bottom:20px">'+
+      '<button id="tab-requests" class="btn btn-acc" onclick="_tabSwitch(this,\'requests\')">'+
+        '📋 신청 대기 <span id="pending-count" style="background:var(--red);color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;margin-left:4px">0</span>'+
+      '</button>'+
+      '<button id="tab-manage" class="btn btn-gray" onclick="_tabSwitch(this,\'manage\')">🏢 구독 관리</button>'+
+    '</div>'+
+    '<div id="tab-content"></div>';
+  _renderRequests();
+}
+
+function _renderRequests(){
+  var el=document.getElementById('tab-content');
+  el.innerHTML='<div style="color:var(--text3);font-size:12px;padding:16px;text-align:center">⏳ 로딩 중...</div>';
+  _db.collection('join_requests').orderBy('createdAt','desc').limit(50).get()
+  .then(function(snap){
+    var pending=[];var approved=[];var rejected=[];
+    snap.forEach(function(d){
+      var v=Object.assign({id:d.id},d.data());
+      if(v.status==='pending')pending.push(v);
+      else if(v.status==='approved')approved.push(v);
+      else rejected.push(v);
+    });
+    // pending count badge
+    var badge=document.getElementById('pending-count');
+    if(badge)badge.textContent=pending.length;
+
+    var html='';
+    if(pending.length){
+      html+='<div style="font-size:13px;font-weight:800;margin-bottom:10px;color:var(--yellow)">⏳ 승인 대기 ('+pending.length+'건)</div>';
+      html+=pending.map(function(v){return _reqCard(v,'pending');}).join('');
+    }
+    if(approved.length){
+      html+='<div style="font-size:13px;font-weight:800;margin:16px 0 10px;color:var(--green)">✅ 승인 완료 ('+approved.length+'건)</div>';
+      html+=approved.map(function(v){return _reqCard(v,'approved');}).join('');
+    }
+    if(rejected.length){
+      html+='<div style="font-size:13px;font-weight:800;margin:16px 0 10px;color:var(--red)">❌ 반려 ('+rejected.length+'건)</div>';
+      html+=rejected.map(function(v){return _reqCard(v,'rejected');}).join('');
+    }
+    if(!html)html='<div style="text-align:center;padding:40px;color:var(--text3)">신청 내역 없음</div>';
+    el.innerHTML=html;
+  }).catch(function(e){el.innerHTML='<div style="color:var(--red);padding:16px">'+esc(e.message)+'</div>';});
+}
+
+function _reqCard(v,status){
+  var ind={ai_settle:'🤖',delivery:'🛵',beauty:'💄',construction:'🏗️',insurance:'🛡️',care:'🏥',academy:'🎓',restaurant:'🍽️',golf:'🏌️',warehouse:'📦',freelance:'🖥️',etc:'📋'};
+  var colors={pending:'var(--yellow)',approved:'var(--green)',rejected:'var(--red)'};
+  var labels={pending:'대기',approved:'승인',rejected:'반려'};
+  return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:8px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">'+
+      '<div>'+
+        '<div style="font-size:14px;font-weight:900">'+esc(v.companyName||'')+'</div>'+
+        '<div style="font-size:11px;color:var(--text3)">'+esc(v.repName||'')+' · '+esc(v.phone||'')+'</div>'+
+        '<div style="font-size:11px;color:var(--acc)">'+esc(v.email||'')+'</div>'+
+      '</div>'+
+      '<span style="font-size:10px;padding:3px 8px;border-radius:20px;background:'+colors[status]+'22;color:'+colors[status]+';font-weight:700">'+labels[status]+'</span>'+
+    '</div>'+
+    '<div style="display:flex;gap:8px;margin-bottom:10px;font-size:11px;color:var(--text3)">'+
+      '<span>'+(ind[v.industry]||'📋')+' '+(v.industry||'')+'</span>'+
+      '<span>·</span>'+
+      '<span>👥 '+(v.personCount||0)+'명 이하</span>'+
+      '<span>·</span>'+
+      '<span>'+(v.createdAt||'').slice(0,10)+'</span>'+
+    '</div>'+
+    (v.memo?'<div style="font-size:11px;color:var(--text2);background:var(--bg3);padding:8px;border-radius:8px;margin-bottom:10px">💬 '+esc(v.memo)+'</div>':'')+
+    (status==='pending'?
+      '<div style="display:flex;gap:6px">'+
+        '<button data-id="'+v.id+'" data-email="'+esc(v.email)+'" data-name="'+esc(v.companyName)+'" onclick="_approve(this)" class="btn btn-green" style="flex:1;padding:8px">✅ 승인 (7일 체험 시작)</button>'+
+        '<button data-id="'+v.id+'" onclick="_reject(this)" class="btn btn-gray" style="padding:8px 14px">❌ 반려</button>'+
+      '</div>':
+      '<div style="font-size:11px;color:var(--text3)">처리일: '+(v.processedAt||'').slice(0,10)+' · 처리자: '+esc(v.processedBy||'')+'</div>')+
+  '</div>';
+}
+
+function _approve(btn){
+  var id=btn.dataset.id;
+  var email=btn.dataset.email;
+  var name=btn.dataset.name;
+  if(!confirm(name+' 승인하시겠습니까?\n\n승인 시 Firebase Auth 계정 생성 및 7일 무료 체험이 시작됩니다.'))return;
+  btn.textContent='⏳ 처리 중...';btn.disabled=true;
+
+  var trialExpiry=new Date();trialExpiry.setDate(trialExpiry.getDate()+7);
+  var trialStr=trialExpiry.toISOString().slice(0,10);
+  var now=new Date().toISOString();
+
+  // join_requests 상태 업데이트
+  _db.collection('join_requests').doc(id).get()
+  .then(function(d){
+    if(!d.exists)throw new Error('신청 데이터 없음');
+    var v=d.data();
+    // companies 컬렉션에 등록
+    return _db.collection('companies').add({
+      companyName:v.companyName,
+      repName:v.repName,
+      adminEmail:v.email,
+      phone:v.phone,
+      industryType:v.industry,
+      personCount:v.personCount||0,
+      status:'trial',
+      plan:'trial',
+      trialExpiry:trialStr,
+      subscriptions:{
+        donway:{active:true,plan:'trial',expiry:trialStr},
+      },
+      createdAt:now,
+      approvedAt:now,
+      approvedBy:_cu.email,
+      joinRequestId:id,
+    });
+  }).then(function(ref){
+    // join_request 상태 변경
+    return _db.collection('join_requests').doc(id).update({
+      status:'approved',
+      processedAt:now,
+      processedBy:_cu.email,
+      companyId:ref.id,
+      trialExpiry:trialStr,
+    });
+  }).then(function(){
+    // 알림 큐 (이메일/알림톡)
+    return _db.collection('alimtalk_queue').add({
+      type:'join_approved',
+      email:email,
+      companyName:name,
+      trialExpiry:trialStr,
+      loginUrl:'https://donway.ai.kr/settle',
+      status:'pending',
+      createdAt:now,
+    });
+  }).then(function(){
+    toast('✅ '+name+' 승인 완료! 이메일 발송 대기 중');
+    _renderRequests();
+  }).catch(function(e){
+    toast('❌ '+e.message);
+    btn.textContent='✅ 승인';btn.disabled=false;
+  });
+}
+
+function _reject(btn){
+  var id=btn.dataset.id;
+  if(!confirm('반려하시겠습니까?'))return;
+  _db.collection('join_requests').doc(id).update({
+    status:'rejected',
+    processedAt:new Date().toISOString(),
+    processedBy:_cu.email,
+  }).then(function(){
+    toast('반려 처리됨');_renderRequests();
+  }).catch(function(e){toast('❌ '+e.message);});
+}
+
+function _renderManage(){
+  var el=document.getElementById('tab-content');
+  el.innerHTML=
     '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:20px">'+
       '<div style="display:flex;gap:8px;margin-bottom:12px">'+
         '<input id="search-inp" class="inp" style="flex:1" placeholder="업체명 또는 이메일로 검색..." onkeydown="if(event.key===\'Enter\')_search()">'+
