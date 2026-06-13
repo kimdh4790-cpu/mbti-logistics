@@ -493,14 +493,27 @@ function _saveInventoryOut(){
   var qty=parseInt((document.getElementById('inv-out-qty')||{}).value)||0;
   if(!itemCode||!qty){toast('품목과 수량은 필수입니다');return;}
 
+  // 단가 조회
+  var unitCost=0;
+  var itemName=itemCode;
+  var outDate=(document.getElementById('inv-out-date')||{}).value||new Date().toISOString().slice(0,10);
+  // 재고에서 단가 가져오기
+  var invItems=window._invItemsCache||[];
+  var found=invItems.find(function(it){return it.itemCode===itemCode||it.name===itemCode;});
+  if(found){unitCost=found.unitCost||found.price||0;itemName=found.itemName||found.name||itemCode;}
+
   var data={
     dealerId:did,
     itemCode:itemCode,
-    itemName:itemCode,
+    itemName:itemName,
     qty:qty,
+    unitCost:unitCost,
+    totalCost:unitCost*qty,
     worker:(document.getElementById('inv-out-worker')||{}).value||'',
-    date:(document.getElementById('inv-out-date')||{}).value||new Date().toISOString().split('T')[0],
+    date:outDate,
+    ym:outDate.slice(0,7),
     note:(document.getElementById('inv-out-note')||{}).value||'',
+    source:'inventory',
     createdAt:firebase.firestore.FieldValue.serverTimestamp()
   };
 
