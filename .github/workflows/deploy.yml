@@ -76,6 +76,7 @@ jobs:
           fi
 
       - name: Sync settle.html to backup
+        continue-on-error: true  # 파일 크기 초과 시 무시
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
