@@ -2,530 +2,321 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<meta name="theme-color" content="#030912">
-<title>DONWAY — 직원 가입</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>도입 신청 — DONWAY</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <style>
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-:root{
-  --bg:#030912;--bg2:#060f1f;--bg3:#0a1628;
-  --blue:#0066ff;--cyan:#00d4ff;--green:#00ff88;
-  --red:#ef4444;--yellow:#f59e0b;--gray:#5a7299;
-  --white:#e8f4ff;--border:rgba(0,212,255,.12);--border2:rgba(0,102,255,.18);
-}
-body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun Gothic',sans-serif;min-height:100vh;overflow-x:hidden}
-
-/* ── 단계 표시 ── */
-.steps{display:flex;align-items:center;justify-content:center;padding:24px 32px 0;gap:0}
-.step{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;position:relative}
-.step-dot{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;border:2px solid var(--border2);color:var(--gray);background:var(--bg2);transition:.3s;position:relative;z-index:1}
-.step-dot.on{border-color:var(--cyan);color:var(--cyan);background:rgba(0,212,255,.1);box-shadow:0 0 16px rgba(0,212,255,.2)}
-.step-dot.done{border-color:var(--green);color:var(--bg);background:var(--green)}
-.step-lbl{font-size:9px;font-weight:700;color:var(--gray);letter-spacing:.08em}
-.step-lbl.on{color:var(--cyan)}.step-lbl.done{color:var(--green)}
-.step-line{flex:1;height:2px;background:var(--border2);margin-top:-17px;z-index:0;transition:.3s}
-.step-line.done{background:var(--green)}
-
-/* ── 스크린 ── */
-.screens{overflow:hidden}
-.screen{display:none;padding:28px 20px;max-width:440px;margin:0 auto;animation:fadeUp .3s ease}
-.screen.on{display:block}
-@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-
-/* ── 로고 ── */
-.logo-area{text-align:center;margin-bottom:28px}
-.logo{font-size:20px;font-weight:900;letter-spacing:4px}
-.logo span{color:var(--cyan)}
-.logo-sub{font-size:12px;color:var(--gray);margin-top:6px;line-height:1.6}
-
-/* ── 필드 ── */
-.field{margin-bottom:14px}
-.field-label{font-size:11px;font-weight:700;color:var(--gray);letter-spacing:.08em;margin-bottom:6px;display:flex;align-items:center;gap:5px}
-.req{color:var(--cyan);font-size:12px}
-.field-inp{width:100%;padding:13px 15px;background:var(--bg2);border:1.5px solid var(--border2);border-radius:11px;color:var(--white);font-size:14px;font-weight:600;outline:none;transition:.2s}
-.field-inp:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,212,255,.07)}
-.field-inp.ok{border-color:var(--green)}
-.field-inp.err{border-color:var(--red)}
-.field-inp::placeholder{color:var(--gray);font-weight:400}
-.field-hint{font-size:11px;margin-top:5px;line-height:1.5}
-.field-hint.ok{color:var(--green)}
-.field-hint.err{color:var(--red)}
-.field-hint.gray{color:var(--gray)}
-
-/* ── 회사 카드 ── */
-.company-card{background:rgba(0,212,255,.05);border:1.5px solid rgba(0,212,255,.2);border-radius:12px;padding:14px 16px;display:none;margin-bottom:14px;animation:fadeUp .3s ease}
-.company-name{font-size:16px;font-weight:800;margin-bottom:4px}
-.company-meta{font-size:11px;color:var(--gray);line-height:1.8}
-.company-badge{display:inline-block;padding:2px 8px;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);border-radius:20px;font-size:10px;color:var(--cyan);font-family:monospace;letter-spacing:1px;margin-left:6px}
-
-/* ── 업종 배지 ── */
-.industry-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(0,102,255,.08);border:1px solid rgba(0,102,255,.2);border-radius:20px;font-size:11px;font-weight:700;color:var(--cyan);margin-bottom:14px}
-
-/* ── 거점 선택 ── */
-.loc-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
-.loc-btn{padding:9px 18px;border-radius:20px;border:1.5px solid var(--border2);background:var(--bg2);color:var(--gray);font-size:13px;font-weight:700;cursor:pointer;transition:.2s}
-.loc-btn.sel{border-color:var(--cyan);color:var(--cyan);background:rgba(0,212,255,.08)}
-
-/* ── 버튼 ── */
-.btn-main{width:100%;padding:16px;background:linear-gradient(135deg,var(--blue),var(--cyan));border:none;border-radius:12px;color:var(--bg);font-size:16px;font-weight:900;cursor:pointer;margin-top:8px;transition:.3s;letter-spacing:.5px}
-.btn-main:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,102,255,.4)}
-.btn-main:disabled{background:var(--bg2);color:var(--gray);cursor:not-allowed;transform:none;box-shadow:none}
-.btn-back{background:none;border:none;color:var(--gray);font-size:13px;cursor:pointer;padding:10px 0;display:flex;align-items:center;gap:4px;margin-bottom:8px}
-.btn-back:hover{color:var(--cyan)}
-
-/* ── 완료 화면 ── */
-.done-box{text-align:center;padding:20px 0}
-.done-icon{font-size:64px;margin-bottom:16px;animation:popIn .5s ease}
-@keyframes popIn{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
-.done-title{font-size:22px;font-weight:900;margin-bottom:8px}
-.done-sub{font-size:13px;color:var(--gray);line-height:1.8;margin-bottom:24px}
-.done-info{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:16px;text-align:left;margin-bottom:20px}
-.done-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(0,212,255,.06);font-size:13px}
-.done-row:last-child{border-bottom:none}
-.done-key{color:var(--gray)}
-.done-val{font-weight:700;color:var(--white)}
-
-/* ── 토스트 ── */
-#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg2);border:1px solid var(--border2);color:var(--white);padding:10px 20px;border-radius:99px;font-size:12px;font-weight:700;opacity:0;transition:.3s;pointer-events:none;z-index:9999;white-space:nowrap}
-#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-#toast.ok{border-color:var(--green);color:var(--green)}
-#toast.err{border-color:var(--red);color:var(--red)}
-
-@keyframes spin{to{transform:rotate(360deg)}}
-.spin{width:14px;height:14px;border:2px solid rgba(0,212,255,.2);border-top-color:var(--cyan);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:middle}
-
-.divider{display:flex;align-items:center;gap:10px;margin:16px 0;color:var(--gray);font-size:11px}
-.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border2)}
+:root{--bg:#0f1117;--bg2:#171a24;--bg3:#1e2130;--border:#2e3250;--text:#e8eaf6;--text2:#9da3c8;--text3:#5a5f7a;--acc:#00d4ff;--green:#00ff94;--red:#ff4d6d;--pink:#e91e63;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:"Apple SD Gothic Neo","Noto Sans KR",sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.wrap{width:100%;max-width:480px}
+.logo{text-align:center;margin-bottom:32px}
+.logo-title{font-size:28px;font-weight:900;background:linear-gradient(90deg,var(--acc),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px}
+.logo-sub{font-size:13px;color:var(--text3)}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:28px}
+.step-bar{display:flex;gap:6px;margin-bottom:24px}
+.step-dot{flex:1;height:4px;border-radius:2px;background:var(--border);transition:background .3s}
+.step-dot.done{background:var(--green)}
+.step-dot.active{background:var(--acc)}
+.step-title{font-size:16px;font-weight:900;margin-bottom:6px}
+.step-sub{font-size:12px;color:var(--text3);margin-bottom:24px}
+.field{margin-bottom:16px}
+.field-label{font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;display:block}
+.field-req{color:var(--acc);margin-left:2px}
+.inp{width:100%;padding:13px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;transition:border-color .2s}
+.inp:focus{outline:none;border-color:var(--acc)}
+.inp.error{border-color:var(--red)}
+.inp-hint{font-size:11px;color:var(--text3);margin-top:4px}
+.inp-hint.err{color:var(--red)}
+select.inp{cursor:pointer}
+.industry-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:16px}
+.ind-btn{padding:10px 6px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text2);font-size:11px;text-align:center;cursor:pointer;transition:all .2s}
+.ind-btn.selected{background:rgba(0,212,255,.1);border-color:var(--acc);color:var(--acc);font-weight:700}
+.btn-main{width:100%;padding:15px;border-radius:12px;border:none;background:linear-gradient(90deg,var(--acc),var(--pink));color:#fff;font-size:15px;font-weight:900;cursor:pointer;transition:all .2s;margin-top:8px}
+.btn-main:disabled{opacity:.4;cursor:not-allowed}
+.btn-main:active{transform:scale(.98)}
+.btn-back{width:100%;padding:12px;border-radius:12px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:13px;cursor:pointer;margin-top:8px}
+.success-wrap{text-align:center;padding:20px 0}
+.success-icon{font-size:64px;margin-bottom:16px;animation:pop .4s ease}
+@keyframes pop{0%{transform:scale(0)}80%{transform:scale(1.2)}100%{transform:scale(1)}}
+.success-title{font-size:20px;font-weight:900;margin-bottom:10px}
+.success-sub{font-size:13px;color:var(--text2);line-height:1.7}
+.info-box{background:var(--bg3);border-radius:12px;padding:14px;font-size:12px;color:var(--text3);line-height:1.7;margin:16px 0}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 20px;font-size:13px;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+#toast.show{opacity:1}
 </style>
 </head>
 <body>
+<div class="wrap">
+  <div class="logo">
+    <div class="logo-title">DONWAY</div>
+    <div class="logo-sub">정산 자동화 · 도입 신청</div>
+  </div>
+  <div class="card" id="card">
+    <div class="step-bar">
+      <div class="step-dot active" id="dot0"></div>
+      <div class="step-dot" id="dot1"></div>
+      <div class="step-dot" id="dot2"></div>
+    </div>
+    <div id="step-content"></div>
+  </div>
+  <div style="text-align:center;margin-top:16px;font-size:12px;color:var(--text3)">
+    이미 계정이 있으신가요?
+    <a href="https://donway.ai.kr/settle" style="color:var(--acc);text-decoration:none;font-weight:700">로그인 →</a>
+  </div>
+</div>
 <div id="toast"></div>
 
-<!-- 단계 표시 -->
-<div class="steps" id="steps">
-  <div class="step">
-    <div class="step-dot on" id="dot1">1</div>
-    <div class="step-lbl on" id="lbl1">회사확인</div>
-  </div>
-  <div class="step-line" id="line1"></div>
-  <div class="step">
-    <div class="step-dot" id="dot2">2</div>
-    <div class="step-lbl" id="lbl2">정보입력</div>
-  </div>
-  <div class="step-line" id="line2"></div>
-  <div class="step">
-    <div class="step-dot" id="dot3">3</div>
-    <div class="step-lbl" id="lbl3">가입완료</div>
-  </div>
-</div>
-
-<div class="screens">
-
-  <!-- ══ STEP 1: 회사 코드 확인 ══ -->
-  <div class="screen on" id="screen1">
-    <div class="logo-area">
-      <div class="logo"><span>D</span>ONWAY</div>
-      <div class="logo-sub">직원·기사 가입<br>회사 코드를 입력하면 자동으로 회사가 연결됩니다</div>
-    </div>
-
-    <div class="field">
-      <div class="field-label">회사 코드 <span class="req">*</span></div>
-      <input class="field-inp" id="inp-code" placeholder="예: MBTI01, ABC12" maxlength="10"
-        style="font-family:monospace;letter-spacing:3px;font-size:18px;text-align:center;text-transform:uppercase"
-        oninput="onCodeInput(this)">
-      <div class="field-hint gray" id="hint-code">관리자에게 코드를 받으세요</div>
-    </div>
-
-    <!-- 회사 정보 카드 -->
-    <div class="company-card" id="company-card">
-      <div style="display:flex;align-items:center;gap:12px">
-        <span style="font-size:32px">🏢</span>
-        <div>
-          <div class="company-name" id="card-name">회사명</div>
-          <div class="company-meta">
-            <span id="card-industry"></span>
-            <span class="company-badge" id="card-code"></span>
-          </div>
-          <div class="company-meta" id="card-camps" style="margin-top:4px"></div>
-        </div>
-      </div>
-    </div>
-
-    <button class="btn-main" id="btn-step1" disabled onclick="goStep2()">
-      다음 →
-    </button>
-
-    <div class="divider">이미 가입하셨나요?</div>
-    <button onclick="location.href='/settle'" style="width:100%;padding:13px;background:transparent;border:1.5px solid var(--border2);border-radius:12px;color:var(--gray);font-size:14px;font-weight:700;cursor:pointer">로그인하기</button>
-  </div>
-
-  <!-- ══ STEP 2: 정보 입력 ══ -->
-  <div class="screen" id="screen2">
-    <button class="btn-back" onclick="goBack(1)">← 뒤로</button>
-
-    <div class="logo-area" style="margin-bottom:18px">
-      <div class="logo"><span>D</span>ONWAY</div>
-      <div class="logo-sub">직원 정보를 입력해주세요</div>
-    </div>
-
-    <!-- 회사 미니 카드 -->
-    <div id="company-mini" style="margin-bottom:16px"></div>
-
-    <!-- 업종 배지 -->
-    <div class="industry-badge" id="industry-badge" style="display:none">
-      <span id="industry-icon"></span>
-      <span id="industry-name"></span>
-    </div>
-
-    <!-- 거점/캠프 선택 -->
-    <div id="loc-section" style="display:none;margin-bottom:14px">
-      <div class="field-label" style="margin-bottom:8px">거점 / 캠프 선택 <span class="req">*</span></div>
-      <div class="loc-grid" id="loc-grid"></div>
-      <div class="field-hint gray">소속 거점을 선택하세요</div>
-    </div>
-
-    <!-- 기본 정보 -->
-    <div class="field">
-      <div class="field-label">이름 <span class="req">*</span></div>
-      <input class="field-inp" id="inp-name" placeholder="홍길동" oninput="checkStep2()">
-    </div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="field">
-        <div class="field-label">전화번호 <span class="req">*</span></div>
-        <input class="field-inp" id="inp-phone" placeholder="010-0000-0000"
-          oninput="formatPhone(this);checkDupPhone();checkStep2()" type="tel">
-        <div class="field-hint" id="hint-phone"></div>
-      </div>
-      <div class="field">
-        <div class="field-label">이메일</div>
-        <input class="field-inp" id="inp-email" placeholder="me@email.com" type="email" oninput="checkStep2()">
-      </div>
-    </div>
-
-    <!-- 비밀번호 -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="field">
-        <div class="field-label">비밀번호 <span class="req">*</span></div>
-        <input class="field-inp" id="inp-pw" type="password" placeholder="6자 이상" oninput="checkStep2()">
-      </div>
-      <div class="field">
-        <div class="field-label">비밀번호 확인</div>
-        <input class="field-inp" id="inp-pw2" type="password" placeholder="동일하게 입력" oninput="checkPW2()">
-        <div class="field-hint" id="hint-pw2"></div>
-      </div>
-    </div>
-
-    <!-- 업종별 추가 필드 -->
-    <div id="extra-fields"></div>
-
-    <button class="btn-main" id="btn-step2" disabled onclick="doJoin()">
-      가입 완료
-    </button>
-  </div>
-
-  <!-- ══ STEP 3: 완료 ══ -->
-  <div class="screen" id="screen3">
-    <div class="done-box">
-      <div class="done-icon">🎉</div>
-      <div class="done-title">가입 완료!</div>
-      <div class="done-sub" id="done-sub">DONWAY에 가입되었습니다.<br>아래 정보로 로그인하세요.</div>
-
-      <div class="done-info" id="done-info"></div>
-
-      <button class="btn-main" onclick="location.href='/settle'">
-        로그인 하러 가기 →
-      </button>
-      <button onclick="location.href='/attendance'" style="width:100%;padding:13px;background:transparent;border:1.5px solid var(--border2);border-radius:12px;color:var(--gray);font-size:13px;font-weight:700;cursor:pointer;margin-top:10px">
-        출퇴근 QR 스캔하기
-      </button>
-    </div>
-  </div>
-
-</div>
-
 <script>
-// ── Firebase ──
-var _fk=['AIzaSyDQmEFf','LczgCuPQidu','nbBXqaHWgs3','9VMg0'].join('');
-var _db=null, _auth=null, _company=null, _selLoc='', _dupPhone=false, _dupTimer=null;
+firebase.initializeApp({
+  apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',
+  authDomain:'mbti-logistics.firebaseapp.com',
+  projectId:'mbti-logistics',
+  storageBucket:'mbti-logistics.firebasestorage.app',
+  messagingSenderId:'424881832661',
+  appId:'1:424881832661:web:abc123'
+});
+var _db=firebase.firestore();
 
-(function initFB(){
-  if(typeof firebase==='undefined'){setTimeout(initFB,300);return;}
-  try{
-    var app;try{app=firebase.app('join');}catch(e){
-      app=firebase.initializeApp({apiKey:_fk,authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.firebasestorage.app',messagingSenderId:'40761160761',appId:'1:40761160761:web:20545b610f03f534e949e8'},'join');
-    }
-    _db=app.firestore();
-    _auth=app.auth();
-  }catch(e){console.warn('FB:',e);}
-})();
-
-function toast(msg,type){var t=document.getElementById('toast');t.textContent=msg;t.className='show'+(type?' '+type:'');clearTimeout(t._t);t._t=setTimeout(function(){t.className='';},3000);}
+function toast(msg,dur){
+  var t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},dur||2500);
+}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function formatPhone(el){var v=el.value.replace(/\D/g,'');if(v.length<=3)el.value=v;else if(v.length<=7)el.value=v.slice(0,3)+'-'+v.slice(3);else el.value=v.slice(0,3)+'-'+v.slice(3,7)+'-'+v.slice(7,11);}
 
-// ── 업종 라벨 ──
-var INDUSTRY_LABELS={
-  coupang:'🚚 쿠팡 물류 대리점',delivery:'🛵 배달대행',
-  smallbiz:'🏪 소상공인',service:'🏗️ 용역업체',freelance:'👨‍💼 프리랜서 / 위탁'
-};
+// 상태
+var _state={step:0,companyName:'',repName:'',email:'',phone:'',industry:'',personCount:'',memo:''};
 
-// ─────────────────────────────────
-// STEP 1: 회사 코드 확인
-// ─────────────────────────────────
-var _codeTimer=null;
-function onCodeInput(el){
-  el.value=el.value.toUpperCase().replace(/[^A-Z0-9]/g,'');
-  clearTimeout(_codeTimer);
-  var code=el.value.trim();
-  var hint=document.getElementById('hint-code');
-  var card=document.getElementById('company-card');
-  var btn=document.getElementById('btn-step1');
-  _company=null; btn.disabled=true; card.style.display='none';
-  el.className='field-inp';
-  if(code.length<4){hint.textContent='4자 이상 입력하세요';hint.className='field-hint gray';return;}
-  hint.innerHTML='<span class="spin"></span> 확인 중...';hint.className='field-hint';
-  _codeTimer=setTimeout(function(){_checkCode(code,el,hint,card,btn);},600);
-}
+var INDUSTRIES=[
+  {id:'ai_settle',icon:'🤖',name:'쿠팡·물류'},
+  {id:'delivery', icon:'🛵',name:'배달대행'},
+  {id:'beauty',   icon:'💄',name:'뷰티·미용'},
+  {id:'construction',icon:'🏗️',name:'건설·현장'},
+  {id:'insurance',icon:'🛡️',name:'보험'},
+  {id:'care',     icon:'🏥',name:'요양·돌봄'},
+  {id:'academy',  icon:'🎓',name:'학원·교육'},
+  {id:'restaurant',icon:'🍽️',name:'음식점·카페'},
+  {id:'golf',     icon:'🏌️',name:'골프장'},
+  {id:'warehouse',icon:'📦',name:'물류창고'},
+  {id:'freelance',icon:'🖥️',name:'프리랜서'},
+  {id:'etc',      icon:'📋',name:'기타'},
+];
 
-async function _checkCode(code,el,hint,card,btn){
-  // 1) Worker API
-  try{
-    var r=await fetch('/company-get?code='+encodeURIComponent(code));
-    var d=await r.json();
-    if(d.ok&&d.company){_company=d.company;_showCompany(el,hint,card,btn);return;}
-  }catch(e){}
-  // 2) MBTI01 하드코딩
-  if(code==='MBTI01'){
-    _company={code:'MBTI01',name:'엠비티아이(유)',camps:['부산1','부산2','부산3','대구2','진주M'],plan:'pro',industryType:'coupang'};
-    _showCompany(el,hint,card,btn);return;
-  }
-  // 3) Firestore 직접
-  if(_db){
-    try{
-      var snap=await _db.collection('companies').where('code','==',code).limit(1).get();
-      if(!snap.empty){snap.forEach(function(d){_company=Object.assign({docId:d.id},d.data());});_showCompany(el,hint,card,btn);return;}
-    }catch(e){}
-  }
-  // 실패
-  el.className='field-inp err';
-  hint.className='field-hint err';
-  hint.textContent='등록되지 않은 회사 코드입니다';
-}
-
-function _showCompany(el,hint,card,btn){
-  el.className='field-inp ok';
-  hint.className='field-hint ok';
-  hint.textContent='✓ 회사 확인됨';
-  card.style.display='block';
-  var industry=INDUSTRY_LABELS[_company.industryType||'coupang']||'';
-  var camps=(_company.camps||[]).join(' · ')||'없음';
-  document.getElementById('card-name').textContent=_company.name||_company.code||'';
-  document.getElementById('card-code').textContent=_company.code||'';
-  document.getElementById('card-industry').textContent=industry;
-  document.getElementById('card-camps').textContent='거점: '+camps;
-  btn.disabled=false;
-}
-
-function goStep2(){
-  if(!_company)return;
-  // 단계 업데이트
-  _setStep(2);
-  // 회사 미니 카드
-  document.getElementById('company-mini').innerHTML=
-    '<div style="background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.15);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;margin-bottom:0">'
-    +'<span style="font-size:20px">🏢</span>'
-    +'<div><div style="font-size:14px;font-weight:800">'+esc(_company.name||'')+'</div>'
-    +'<div style="font-size:10px;color:var(--gray)">'+esc(INDUSTRY_LABELS[_company.industryType||'']||'')+'</div></div></div>';
-  // 업종 배지
-  var indLabel=INDUSTRY_LABELS[_company.industryType||'']||'';
-  if(indLabel){
-    document.getElementById('industry-badge').style.display='inline-flex';
-    document.getElementById('industry-name').textContent=indLabel;
-  }
-  // 거점 버튼
-  var camps=_company.camps||[];
-  var locSec=document.getElementById('loc-section');
-  var locGrid=document.getElementById('loc-grid');
-  if(camps.length>0){
-    locSec.style.display='block';
-    locGrid.innerHTML=camps.map(function(c){
-      return '<button type="button" class="loc-btn" onclick="selLoc(this,\''+c.replace(/'/g,"\\'")+'\'">'+esc(c)+'</button>';
-    }).join('');
-  } else {
-    locSec.style.display='none';
-    _selLoc='기타';
-  }
-  // 업종별 추가 필드
-  _renderExtraFields(_company.industryType);
-  checkStep2();
-}
-
-// ─────────────────────────────────
-// STEP 2: 정보 입력
-// ─────────────────────────────────
-function selLoc(btn,loc){
-  _selLoc=loc;
-  document.querySelectorAll('.loc-btn').forEach(function(b){b.classList.remove('sel');});
-  btn.classList.add('sel');
-  checkStep2();
-}
-
-function _renderExtraFields(industryType){
-  var el=document.getElementById('extra-fields');
-  var html='';
-  if(industryType==='coupang'||industryType==='delivery'){
-    html='<div class="field"><div class="field-label">라이더/기사 ID</div>'
-      +'<input class="field-inp" id="inp-uid" placeholder="플랫폼 계정 ID (선택)" style="font-family:monospace">'
-      +'<div class="field-hint gray">쿠팡/배달 플랫폼 ID (선택사항)</div></div>';
-  } else if(industryType==='smallbiz'){
-    html='<div class="field"><div class="field-label">담당 업무</div>'
-      +'<input class="field-inp" id="inp-role" placeholder="예: 점장, 알바, 주방" oninput="checkStep2()"></div>';
-  } else if(industryType==='service'){
-    html='<div class="field"><div class="field-label">근무 형태</div>'
-      +'<select class="field-inp" id="inp-work-type"><option value="full">정규직</option><option value="part">파트타임</option><option value="contract">계약직</option></select></div>';
-  } else if(industryType==='freelance'){
-    html='<div class="field"><div class="field-label">전문 분야</div>'
-      +'<input class="field-inp" id="inp-specialty" placeholder="예: 디자인, 개발, 번역" oninput="checkStep2()"></div>';
-  }
-  el.innerHTML=html;
-}
-
-// ── 전화번호 중복 확인 (재가입 방지) ──
-function checkDupPhone(){
-  var phone=document.getElementById('inp-phone').value.replace(/\D/g,'');
-  var hint=document.getElementById('hint-phone');
-  var inp=document.getElementById('inp-phone');
-  _dupPhone=false;
-  if(phone.length<10){hint.textContent='';hint.className='field-hint';return;}
-  clearTimeout(_dupTimer);
-  hint.innerHTML='<span class="spin"></span> 확인 중...';
-  _dupTimer=setTimeout(async function(){
-    if(!_db){_dupPhone=false;checkStep2();return;}
-    try{
-      var snap=await _db.collection('drivers').where('phone','==',phone).limit(1).get();
-      if(!snap.empty){
-        // 같은 회사 내 중복인지 확인
-        var same=false;
-        snap.forEach(function(d){if(d.data().dealerId===(_company&&_company.code))same=true;});
-        if(same){
-          inp.className='field-inp err';
-          hint.className='field-hint err';
-          hint.textContent='이미 가입된 전화번호입니다 (재가입 불가)';
-          _dupPhone=true;checkStep2();return;
-        }
-      }
-      inp.className='field-inp ok';
-      hint.className='field-hint ok';
-      hint.textContent='✓ 사용 가능한 번호입니다';
-      _dupPhone=false;checkStep2();
-    }catch(e){_dupPhone=false;checkStep2();}
-  },700);
-}
-
-function checkPW2(){
-  var pw=document.getElementById('inp-pw').value;
-  var pw2=document.getElementById('inp-pw2').value;
-  var hint=document.getElementById('hint-pw2');
-  var inp2=document.getElementById('inp-pw2');
-  if(!pw2){hint.textContent='';return;}
-  if(pw===pw2){inp2.className='field-inp ok';hint.className='field-hint ok';hint.textContent='✓ 일치';}
-  else{inp2.className='field-inp err';hint.className='field-hint err';hint.textContent='비밀번호가 다릅니다';}
-  checkStep2();
-}
-
-function checkStep2(){
-  var name=document.getElementById('inp-name').value.trim();
-  var phone=document.getElementById('inp-phone').value.replace(/\D/g,'');
-  var pw=document.getElementById('inp-pw').value;
-  var pw2=document.getElementById('inp-pw2').value;
-  var camps=_company&&(_company.camps||[]);
-  var locOk = !camps||camps.length===0||_selLoc!=='';
-  var ok=name&&phone.length>=10&&pw.length>=6&&pw===pw2&&!_dupPhone&&locOk;
-  document.getElementById('btn-step2').disabled=!ok;
-}
-
-// ─────────────────────────────────
-// 가입 실행
-// ─────────────────────────────────
-async function doJoin(){
-  var btn=document.getElementById('btn-step2');
-  btn.disabled=true;btn.innerHTML='<span class="spin"></span> 가입 중...';
-
-  var name=document.getElementById('inp-name').value.trim();
-  var phone=document.getElementById('inp-phone').value.trim();
-  var email=document.getElementById('inp-email').value.trim();
-  var pw=document.getElementById('inp-pw').value;
-  var loc=_selLoc||'기타';
-  var uid=(document.getElementById('inp-uid')||{}).value||'';
-  var role=(document.getElementById('inp-role')||{}).value||'';
-  var workType=(document.getElementById('inp-work-type')||{}).value||'';
-  var specialty=(document.getElementById('inp-specialty')||{}).value||'';
-  var companyCode=_company.code||'';
-  var dealerId=_company.docId||companyCode;
-
-  try{
-    // 1) Firebase Auth 계정 생성
-    var loginEmail=email||phone.replace(/[^0-9]/g,'')+'@donway.kr';
-    var cred=await _auth.createUserWithEmailAndPassword(loginEmail,pw);
-    await cred.user.updateProfile({displayName:name});
-
-    // 2) Firestore drivers 컬렉션에 저장
-    var driverData={
-      name:name,phone:phone.replace(/\D/g,''),email:email||'',
-      camp:loc,loc:loc,
-      userId:uid||cred.user.uid,
-      dealerId:dealerId,companyCode:companyCode,
-      industryType:_company.industryType||'',
-      role:role,workType:workType,specialty:specialty,
-      is_active:true,status:'재직',
-      joinedAt:new Date().toISOString(),
-      authUid:cred.user.uid,loginEmail:loginEmail
-    };
-    await _db.collection('drivers').add(driverData);
-
-    // 3) 완료 화면
-    _setStep(3);
-    document.getElementById('done-sub').textContent=name+'님, 가입이 완료되었습니다!\n아래 정보로 로그인하세요.';
-    document.getElementById('done-info').innerHTML=
-      '<div class="done-row"><span class="done-key">이름</span><span class="done-val">'+esc(name)+'</span></div>'
-      +'<div class="done-row"><span class="done-key">소속</span><span class="done-val">'+esc(_company.name||companyCode)+'</span></div>'
-      +'<div class="done-row"><span class="done-key">거점</span><span class="done-val">'+esc(loc)+'</span></div>'
-      +'<div class="done-row"><span class="done-key">로그인 ID</span><span class="done-val" style="font-family:monospace;font-size:12px">'+esc(loginEmail)+'</span></div>';
-
-  }catch(e){
-    var msg=e.message||'오류가 발생했습니다';
-    if(e.code==='auth/email-already-in-use')msg='이미 가입된 계정입니다';
-    if(e.code==='auth/weak-password')msg='비밀번호는 6자 이상이어야 합니다';
-    toast('❌ '+msg,'err');
-    btn.disabled=false;btn.textContent='가입 완료';
+function _setDots(step){
+  for(var i=0;i<3;i++){
+    var d=document.getElementById('dot'+i);
+    if(!d)continue;
+    d.className='step-dot'+(i<step?' done':i===step?' active':'');
   }
 }
 
-// ─────────────────────────────────
-// 단계 전환
-// ─────────────────────────────────
-function _setStep(n){
-  for(var i=1;i<=3;i++){
-    var screen=document.getElementById('screen'+i);
-    var dot=document.getElementById('dot'+i);
-    var lbl=document.getElementById('lbl'+i);
-    if(!screen)continue;
-    screen.className='screen'+(i===n?' on':'');
-    dot.className='step-dot'+(i<n?' done':i===n?' on':'');
-    lbl.className='step-lbl'+(i<n?' done':i===n?' on':'');
-  }
-  var line1=document.getElementById('line1');
-  var line2=document.getElementById('line2');
-  if(line1)line1.className='step-line'+(n>1?' done':'');
-  if(line2)line2.className='step-line'+(n>2?' done':'');
-  window.scrollTo(0,0);
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// STEP 0 — 회사 정보
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _step0(){
+  _state.step=0;_setDots(0);
+  document.getElementById('step-content').innerHTML=
+    '<div class="step-title">회사 정보</div>'+
+    '<div class="step-sub">서비스 도입을 위한 기본 정보를 입력해주세요</div>'+
+    '<div class="field">'+
+      '<label class="field-label">회사명 <span class="field-req">*</span></label>'+
+      '<input class="inp" id="f-company" placeholder="예) (주)엠비티아이" value="'+esc(_state.companyName)+'">'+
+    '</div>'+
+    '<div class="field">'+
+      '<label class="field-label">대표자명 <span class="field-req">*</span></label>'+
+      '<input class="inp" id="f-rep" placeholder="예) 김형우" value="'+esc(_state.repName)+'">'+
+    '</div>'+
+    '<div class="field">'+
+      '<label class="field-label">연락처 <span class="field-req">*</span></label>'+
+      '<input class="inp" id="f-phone" type="tel" placeholder="010-0000-0000" value="'+esc(_state.phone)+'">'+
+    '</div>'+
+    '<div class="field">'+
+      '<label class="field-label">이메일 <span class="field-req">*</span></label>'+
+      '<input class="inp" id="f-email" type="email" placeholder="업무용 이메일 주소" value="'+esc(_state.email)+'">'+
+      '<div class="inp-hint">승인 후 이 이메일로 로그인 안내가 발송됩니다</div>'+
+    '</div>'+
+    '<button class="btn-main" onclick="_next0()">다음 →</button>';
 }
 
-function goBack(n){_setStep(n);}
+function _next0(){
+  var company=(document.getElementById('f-company')||{}).value||'';
+  var rep=(document.getElementById('f-rep')||{}).value||'';
+  var phone=(document.getElementById('f-phone')||{}).value||'';
+  var email=(document.getElementById('f-email')||{}).value||'';
+  if(!company){toast('회사명을 입력하세요');return;}
+  if(!rep){toast('대표자명을 입력하세요');return;}
+  if(!phone){toast('연락처를 입력하세요');return;}
+  if(!email||email.indexOf('@')<0){toast('이메일을 올바르게 입력하세요');return;}
+  _state.companyName=company;_state.repName=rep;
+  _state.phone=phone;_state.email=email;
+  _step1();
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// STEP 1 — 업종·인원
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _step1(){
+  _state.step=1;_setDots(1);
+  var indGrid=INDUSTRIES.map(function(ind){
+    return '<div class="ind-btn'+(ind.id===_state.industry?' selected':'')+'" data-id="'+ind.id+'" onclick="_selInd(this)">'+
+      '<div style="font-size:18px;margin-bottom:4px">'+ind.icon+'</div>'+
+      '<div>'+ind.name+'</div>'+
+    '</div>';
+  }).join('');
+
+  document.getElementById('step-content').innerHTML=
+    '<div class="step-title">업종 · 인원</div>'+
+    '<div class="step-sub">업종에 맞는 기능을 안내해드립니다</div>'+
+    '<div class="field">'+
+      '<label class="field-label">업종 선택 <span class="field-req">*</span></label>'+
+      '<div class="industry-grid">'+indGrid+'</div>'+
+    '</div>'+
+    '<div class="field">'+
+      '<label class="field-label">직원 수 <span class="field-req">*</span></label>'+
+      '<select class="inp" id="f-person">'+
+        '<option value="">인원 선택</option>'+
+        '<option value="10" '  +(_state.personCount==='10'?'selected':'')+'>~10명</option>'+
+        '<option value="50" '  +(_state.personCount==='50'?'selected':'')+'>~50명</option>'+
+        '<option value="150" ' +(_state.personCount==='150'?'selected':'')+'>~150명</option>'+
+        '<option value="300" ' +(_state.personCount==='300'?'selected':'')+'>~300명</option>'+
+        '<option value="500" ' +(_state.personCount==='500'?'selected':'')+'>~500명</option>'+
+        '<option value="700" ' +(_state.personCount==='700'?'selected':'')+'>~700명</option>'+
+        '<option value="1000" '+(_state.personCount==='1000'?'selected':'')+'>~1000명</option>'+
+      '</select>'+
+    '</div>'+
+    '<div class="field">'+
+      '<label class="field-label">문의 사항 (선택)</label>'+
+      '<textarea class="inp" id="f-memo" rows="3" placeholder="도입 목적, 현재 사용 중인 툴, 궁금한 점 등" style="resize:none">'+esc(_state.memo)+'</textarea>'+
+    '</div>'+
+    '<button class="btn-main" onclick="_next1()">다음 →</button>'+
+    '<button class="btn-back" onclick="_step0()">← 이전</button>';
+}
+
+function _selInd(el){
+  document.querySelectorAll('.ind-btn').forEach(function(b){b.classList.remove('selected');});
+  el.classList.add('selected');
+  _state.industry=el.dataset.id;
+}
+
+function _next1(){
+  var person=(document.getElementById('f-person')||{}).value||'';
+  var memo=(document.getElementById('f-memo')||{}).value||'';
+  if(!_state.industry){toast('업종을 선택하세요');return;}
+  if(!person){toast('인원을 선택하세요');return;}
+  _state.personCount=person;_state.memo=memo;
+  _step2();
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// STEP 2 — 확인 · 신청
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _step2(){
+  _state.step=2;_setDots(2);
+  var ind=INDUSTRIES.find(function(i){return i.id===_state.industry;})||{icon:'📋',name:_state.industry};
+  document.getElementById('step-content').innerHTML=
+    '<div class="step-title">신청 확인</div>'+
+    '<div class="step-sub">아래 내용으로 도입 신청하시겠습니까?</div>'+
+    '<div class="info-box">'+
+      '<div style="display:flex;flex-direction:column;gap:8px">'+
+        _row('🏢 회사명', _state.companyName)+
+        _row('👤 대표자', _state.repName)+
+        _row('📞 연락처', _state.phone)+
+        _row('📧 이메일', _state.email)+
+        _row('🏷️ 업종', ind.icon+' '+ind.name)+
+        _row('👥 인원', _state.personCount+'명 이하')+
+        (_state.memo?_row('💬 문의', _state.memo):'')+
+      '</div>'+
+    '</div>'+
+    '<div style="background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.2);border-radius:12px;padding:14px;font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:16px">'+
+      '📋 <b>신청 후 절차</b><br>'+
+      '① 담당자 확인 후 1영업일 내 연락드립니다<br>'+
+      '② 승인 완료 시 이메일로 로그인 안내 발송<br>'+
+      '③ <b>7일 무료 체험</b> 즉시 시작'+
+    '</div>'+
+    '<button class="btn-main" id="submit-btn" onclick="_submit()">✅ 도입 신청하기</button>'+
+    '<button class="btn-back" onclick="_step1()">← 이전</button>';
+}
+
+function _row(label, value){
+  return '<div style="display:flex;gap:8px"><span style="width:80px;flex-shrink:0">'+label+'</span><span style="font-weight:700;color:var(--text)">'+esc(value)+'</span></div>';
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 신청 제출
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _submit(){
+  var btn=document.getElementById('submit-btn');
+  if(btn){btn.textContent='⏳ 신청 중...';btn.disabled=true;}
+
+  // 중복 이메일 체크
+  _db.collection('join_requests').where('email','==',_state.email).limit(1).get()
+  .then(function(snap){
+    if(!snap.empty){
+      toast('이미 신청된 이메일입니다');
+      if(btn){btn.textContent='✅ 도입 신청하기';btn.disabled=false;}
+      return;
+    }
+    // 신청 저장
+    return _db.collection('join_requests').add({
+      companyName: _state.companyName,
+      repName:     _state.repName,
+      email:       _state.email,
+      phone:       _state.phone,
+      industry:    _state.industry,
+      personCount: parseInt(_state.personCount)||0,
+      memo:        _state.memo,
+      status:      'pending',  // pending → approved → rejected
+      createdAt:   new Date().toISOString(),
+      source:      'join_form',
+    });
+  }).then(function(ref){
+    if(!ref)return;
+    // 슈퍼어드민 알림 (alimtalk_queue)
+    _db.collection('alimtalk_queue').add({
+      type:'new_join_request',
+      to:'admin',
+      companyName:_state.companyName,
+      email:_state.email,
+      phone:_state.phone,
+      industry:_state.industry,
+      personCount:_state.personCount,
+      status:'pending',
+      createdAt:new Date().toISOString(),
+    }).catch(function(){});
+    _showSuccess();
+  }).catch(function(e){
+    toast('❌ '+e.message);
+    if(btn){btn.textContent='✅ 도입 신청하기';btn.disabled=false;}
+  });
+}
+
+function _showSuccess(){
+  document.getElementById('step-content').innerHTML=
+    '<div class="success-wrap">'+
+      '<div class="success-icon">🎉</div>'+
+      '<div class="success-title">도입 신청 완료!</div>'+
+      '<div class="success-sub">'+
+        '<b>'+esc(_state.companyName)+'</b> 신청이 접수되었습니다.<br><br>'+
+        '담당자 확인 후 <b>1영업일 내</b>에<br>'+
+        '<b>'+esc(_state.email)+'</b>로 안내드리겠습니다.'+
+      '</div>'+
+      '<div class="info-box" style="margin-top:16px;text-align:left">'+
+        '📞 문의: 051-711-3103<br>'+
+        '📧 이메일: kimdh4790@gmail.com<br>'+
+        '⏰ 영업시간: 평일 09:00~18:00'+
+      '</div>'+
+    '</div>';
+  // dots 모두 done
+  for(var i=0;i<3;i++){
+    var d=document.getElementById('dot'+i);
+    if(d)d.className='step-dot done';
+  }
+}
+
+// 시작
+_step0();
 </script>
 </body>
 </html>
