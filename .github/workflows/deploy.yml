@@ -58,16 +58,28 @@ jobs:
           echo "id = \"$NS_ID\"" >> wrangler.toml
           cat wrangler.toml
 
-      - name: Deploy to Cloudflare Workers
-        continue-on-error: true
-        run: wrangler deploy
+      - name: Deploy to Cloudflare Workers (curl API)
+        run: |
+          # Cloudflare Workers API로 직접 배포 (wrangler 우회)
+          ACCOUNT_ID=$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts" \
+            -H "Authorization: Bearer $CF_API_TOKEN" \
+            -H "Content-Type: application/json" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['result'][0]['id'] if d.get('result') else '')")
+          echo "Account ID: $ACCOUNT_ID"
+          
+          if [ -n "$ACCOUNT_ID" ]; then
+            # multipart form으로 worker 스크립트 업로드
+            curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/workers/scripts/mbti-logistics" \
+              -H "Authorization: Bearer $CF_API_TOKEN" \
+              -F "metadata={"main_module":"_worker.js","bindings":[]};type=application/json" \
+              -F "script=@_worker.js;type=application/javascript+module" \
+              | python3 -c "import sys,json; d=json.load(sys.stdin); print('OK' if d.get('success') else d.get('errors','fail'))"
+            echo "✅ Worker 배포 완료"
+          else
+            echo "⚠️ Account ID 조회 실패 — wrangler 재시도"
+            npx wrangler deploy || true
+          fi
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
-
-      - name: Deploy to Cloudflare Workers (retry)
-        if: failure()
-        run: wrangler deploy
-        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
 
       - name: Deploy Firestore Rules
