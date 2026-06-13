@@ -2051,6 +2051,16 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
     }
 
     if (path === '/manifest.json') {
+      // mbtico.kr → mbtico manifest 서빙
+      if (hostname.includes('mbetco') || hostname.includes('mbtico')) {
+        const mResp = await fetchAsset('/mbtico_manifest.json', request, env);
+        const mH = new Headers();
+        mH.set('Content-Type', 'application/manifest+json');
+        mH.set('Cache-Control', 'no-cache');
+        return new Response(mResp.body, {status: mResp.status, headers: mH});
+      }
+    }
+    if (path === '/manifest_donway.json' || path === '/manifest.json') {
       return new Response(JSON.stringify({
         name:'DONWAY — 자동화 정산 플랫폼', short_name:'DONWAY',
         description:'AI 자동 정산 · QR 출퇴근 · 급여 관리',
