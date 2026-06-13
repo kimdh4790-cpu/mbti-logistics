@@ -500,7 +500,14 @@ function _renderPage(page){
 }
 
 function _initApp(){
-  _pageQrPos();
+  var did=_dealer?_dealer.id:(_cu?_cu.uid:'');
+  _loadSubs(did,function(subs){
+    if(!_subActive('qr')){
+      _showSubRequired('qr',document.getElementById('main-content'));
+      return;
+    }
+    _pageQrPos();
+  });
 }
 </script>
 <script>
