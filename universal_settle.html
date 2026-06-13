@@ -10,6 +10,348 @@
 // ════════════════════════════════════════════════════
 
 // DONWAY 연동 안내 페이지
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🔲 QR POS — 매장/출장 실시간 결제·정산 연동
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _pageQrPos(){
+  var c=document.getElementById('main-content');
+  var db=window._db; var cu=window._cu;
+  if(!db||!cu){c.innerHTML='<div style="padding:40px;text-align:center;color:var(--text3)">로그인 후 이용하세요</div>';return;}
+  var did=cu.dealerId||cu.uid;
+  var today=new Date().toISOString().slice(0,10);
+  var ym=today.slice(0,7);
+
+  c.innerHTML=
+    '<div style="max-width:720px;margin:0 auto;padding:16px">'+
+    // 헤더
+    '<div style="background:linear-gradient(135deg,#1a1a2e,#16213e);border:1px solid rgba(0,212,255,.2);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center">'+
+      '<div style="font-size:32px;margin-bottom:8px">🔲</div>'+
+      '<div style="font-size:18px;font-weight:900;color:var(--acc)">QR POS</div>'+
+      '<div style="font-size:12px;color:var(--text3);margin-top:4px">매장·출장 실시간 결제 → 자동 정산 연동</div>'+
+    '</div>'+
+    // 탭
+    '<div style="display:flex;gap:6px;margin-bottom:16px">'+
+      '<button id="qr-tab-gen" onclick="_qrTab('gen')" style="flex:1;padding:10px;background:var(--acc);color:#000;border:none;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer">🔲 QR 생성</button>'+
+      '<button id="qr-tab-today" onclick="_qrTab('today')" style="flex:1;padding:10px;background:var(--bg3);color:var(--text2);border:1px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📊 오늘 매출</button>'+
+      '<button id="qr-tab-history" onclick="_qrTab('history')" style="flex:1;padding:10px;background:var(--bg3);color:var(--text2);border:1px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📋 내역</button>'+
+    '</div>'+
+    '<div id="qr-content"></div>'+
+    '</div>';
+
+  window._qrDid=did; window._qrToday=today; window._qrYm=ym;
+  window._qrCu=cu;
+  _qrTab('gen');
+}
+
+function _qrTab(tab){
+  ['gen','today','history'].forEach(function(t){
+    var btn=document.getElementById('qr-tab-'+t);
+    if(!btn)return;
+    if(t===tab){
+      btn.style.background='var(--acc)';btn.style.color='#000';
+      btn.style.border='none';
+    }else{
+      btn.style.background='var(--bg3)';btn.style.color='var(--text2)';
+      btn.style.border='1px solid var(--border)';
+    }
+  });
+  var c=document.getElementById('qr-content');
+  if(!c)return;
+  if(tab==='gen')     _qrRenderGen(c);
+  else if(tab==='today')   _qrRenderToday(c);
+  else if(tab==='history') _qrRenderHistory(c);
+}
+
+// ── QR 생성 탭
+function _qrRenderGen(c){
+  var did=window._qrDid;
+  var cu=window._qrCu;
+  // 회사 서비스 목록 로드
+  _db.collection('mbetco_services').where('dealerId','==',did).get()
+  .then(function(snap){
+    var services=[];
+    snap.forEach(function(d){services.push(Object.assign({id:d.id},d.data()));});
+
+    c.innerHTML=
+      // QR URL 설정
+      '<div style="background:var(--bg3);border-radius:12px;padding:16px;margin-bottom:12px">'+
+        '<div style="font-size:12px;font-weight:800;margin-bottom:10px;color:var(--acc)">📋 서비스 항목 등록</div>'+
+        '<div style="display:flex;flex-direction:column;gap:8px">'+
+          '<input id="qr-svc-name" placeholder="서비스명 (예: 시그니처펌, 에어컨청소, 방문요양 1시간)" '+
+            'style="padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px">'+
+          '<div style="display:flex;gap:8px">'+
+            '<input id="qr-svc-price" type="number" placeholder="금액" '+
+              'style="flex:1;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px">'+
+            '<select id="qr-svc-worker" '+
+              'style="flex:1;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px">'+
+              '<option value="">담당자 선택</option>'+
+              (services.length?'':'<option value="default">기본</option>')+
+            '</select>'+
+          '</div>'+
+          '<div style="display:flex;gap:8px">'+
+            '<select id="qr-pay-type" style="flex:1;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px">'+
+              '<option value="card">💳 카드</option>'+
+              '<option value="cash">💵 현금</option>'+
+              '<option value="transfer">🏦 계좌이체</option>'+
+              '<option value="kakao">💛 카카오페이</option>'+
+              '<option value="naver">🟢 네이버페이</option>'+
+            '</select>'+
+            '<button onclick="_qrSaveService()" '+
+              'style="flex:1;padding:10px;background:var(--acc);color:#000;border:none;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer">+ 등록</button>'+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+      // QR 생성
+      '<div style="background:var(--bg3);border-radius:12px;padding:16px;margin-bottom:12px">'+
+        '<div style="font-size:12px;font-weight:800;margin-bottom:10px;color:var(--acc)">🔲 QR 코드 생성</div>'+
+        '<div style="display:flex;flex-direction:column;gap:8px">'+
+          '<input id="qr-label" placeholder="QR 라벨 (예: 1번 테이블, 출장용, 카운터)" '+
+            'style="padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px">'+
+          '<button onclick="_qrGenerate()" '+
+            'style="padding:12px;background:linear-gradient(90deg,var(--acc),var(--acc2));color:#000;border:none;border-radius:8px;font-size:13px;font-weight:900;cursor:pointer">🔲 QR 코드 생성</button>'+
+        '</div>'+
+        '<div id="qr-output" style="margin-top:12px;text-align:center"></div>'+
+      '</div>'+
+      // 등록된 서비스 목록
+      (services.length?
+        '<div style="background:var(--bg3);border-radius:12px;padding:16px">'+
+          '<div style="font-size:12px;font-weight:800;margin-bottom:10px">등록된 서비스 ('+services.length+'개)</div>'+
+          '<div style="display:flex;flex-direction:column;gap:6px">'+
+          services.map(function(s){
+            return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg);border-radius:8px">'+
+              '<div>'+
+                '<div style="font-size:12px;font-weight:700">'+_esc(s.name||'')+'</div>'+
+                '<div style="font-size:10px;color:var(--text3)">₩'+(s.price||0).toLocaleString()+(s.worker?' · '+_esc(s.worker):'')+'</div>'+
+              '</div>'+
+              '<button data-id="'+s.id+'" onclick="_qrDeleteService(this.dataset.id)" '+
+                'style="background:none;border:none;color:var(--red);cursor:pointer;font-size:16px">×</button>'+
+            '</div>';
+          }).join('')+
+          '</div>'+
+        '</div>'
+      :'');
+
+    // 담당자 목록 로드
+    _db.collection('mbetco_workers').where('dealerId','==',did).get()
+    .then(function(wsnap){
+      var sel=document.getElementById('qr-svc-worker');
+      if(!sel)return;
+      sel.innerHTML='<option value="">담당자 선택</option>';
+      wsnap.forEach(function(d){
+        var w=d.data();
+        sel.innerHTML+='<option value="'+_esc(w.name||d.id)+'">'+_esc(w.name||d.id)+'</option>';
+      });
+    }).catch(function(){});
+  }).catch(function(e){
+    c.innerHTML='<div style="padding:20px;color:var(--text3)">'+_esc(e.message)+'</div>';
+  });
+}
+
+function _qrSaveService(){
+  var name=(document.getElementById('qr-svc-name')||{}).value||'';
+  var price=parseFloat((document.getElementById('qr-svc-price')||{}).value)||0;
+  var worker=(document.getElementById('qr-svc-worker')||{}).value||'';
+  if(!name||!price){toast('서비스명과 금액을 입력하세요');return;}
+  var did=window._qrDid;
+  _db.collection('mbetco_services').add({
+    dealerId:did,name:name,price:price,worker:worker,
+    createdAt:new Date().toISOString()
+  }).then(function(){
+    toast('✅ '+name+' 등록됨');
+    _qrTab('gen');
+  }).catch(function(e){toast('❌ '+e.message);});
+}
+
+function _qrDeleteService(id){
+  if(!confirm('삭제할까요?'))return;
+  _db.collection('mbetco_services').doc(id).delete()
+  .then(function(){toast('삭제됨');_qrTab('gen');})
+  .catch(function(e){toast('❌ '+e.message);});
+}
+
+function _qrGenerate(){
+  var label=(document.getElementById('qr-label')||{}).value||'주문';
+  var did=window._qrDid;
+  // QR URL: mbtico.kr/order?d=dealerId&l=label
+  var baseUrl='https://mbtico.kr/order';
+  var qrUrl=baseUrl+'?d='+encodeURIComponent(did)+'&l='+encodeURIComponent(label);
+  var out=document.getElementById('qr-output');
+  if(!out)return;
+
+  // QRCode.js CDN 사용
+  out.innerHTML=
+    '<div style="background:#fff;border-radius:12px;padding:16px;display:inline-block;margin-bottom:12px">'+
+      '<div id="qr-canvas"></div>'+
+    '</div>'+
+    '<div style="font-size:11px;color:var(--text3);margin-bottom:8px">'+_esc(label)+'</div>'+
+    '<div style="display:flex;gap:8px;justify-content:center">'+
+      '<button onclick="_qrPrint()" style="padding:8px 16px;background:var(--acc);color:#000;border:none;border-radius:8px;font-size:11px;font-weight:800;cursor:pointer">🖨️ 인쇄</button>'+
+      '<button onclick="navigator.clipboard.writeText(''+qrUrl+'').then(function(){toast('링크 복사됨');})" '+
+        'style="padding:8px 16px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:11px;cursor:pointer">🔗 링크 복사</button>'+
+    '</div>';
+
+  window._qrCurrentUrl=qrUrl;
+  window._qrCurrentLabel=label;
+
+  // QRCode 라이브러리 로드 후 생성
+  if(typeof QRCode!=='undefined'){
+    new QRCode(document.getElementById('qr-canvas'),{
+      text:qrUrl,width:200,height:200,
+      colorDark:'#000000',colorLight:'#ffffff',
+      correctLevel:QRCode.CorrectLevel.H
+    });
+  } else {
+    // 라이브러리 동적 로드
+    var sc=document.createElement('script');
+    sc.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+    sc.onload=function(){
+      new QRCode(document.getElementById('qr-canvas'),{
+        text:qrUrl,width:200,height:200,
+        colorDark:'#000000',colorLight:'#ffffff',
+        correctLevel:QRCode.CorrectLevel.H
+      });
+    };
+    document.head.appendChild(sc);
+  }
+}
+
+function _qrPrint(){
+  var url=window._qrCurrentUrl||'';
+  var label=window._qrCurrentLabel||'QR POS';
+  var canvas=document.querySelector('#qr-canvas canvas')||document.querySelector('#qr-canvas img');
+  var imgSrc=canvas?(canvas.toDataURL?canvas.toDataURL():canvas.src):'';
+  var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>QR - '+label+'</title>'+
+    '<style>body{font-family:sans-serif;text-align:center;padding:20px}'+
+    'img{width:200px;height:200px}@media print{button{display:none}}</style></head><body>'+
+    '<h3 style="margin-bottom:8px">'+label+'</h3>'+
+    (imgSrc?'<img src="'+imgSrc+'" />':'<p>'+url+'</p>')+
+    '<p style="font-size:11px;color:#666;margin-top:8px">'+url+'</p>'+
+    '<br><button onclick="window.print()">🖨️ 인쇄</button>'+
+    '</body></html>';
+  var win=window.open('','_blank','width=320,height=400');
+  if(win){win.document.write(html);win.document.close();}
+}
+
+// ── 오늘 매출
+function _qrRenderToday(c){
+  var did=window._qrDid;
+  var today=window._qrToday;
+  c.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3)">⏳ 로딩 중...</div>';
+  _db.collection('mbetco_sales').where('dealerId','==',did).where('date','==',today)
+  .orderBy('createdAt','desc').get()
+  .then(function(snap){
+    if(snap.empty){
+      c.innerHTML='<div style="padding:40px;text-align:center;color:var(--text3)"><div style="font-size:32px;margin-bottom:8px">📊</div>오늘 매출 없음</div>';
+      return;
+    }
+    var byWorker={};var totalAmt=0;var cnt=0;
+    snap.forEach(function(d){
+      var v=d.data();
+      var w=v.worker||'미지정';
+      if(!byWorker[w])byWorker[w]={total:0,cnt:0,items:[]};
+      byWorker[w].total+=v.amount||0;
+      byWorker[w].cnt++;
+      byWorker[w].items.push(v);
+      totalAmt+=v.amount||0;cnt++;
+    });
+    var html=
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">'+
+        '<div style="background:linear-gradient(135deg,var(--acc),var(--acc2));border-radius:12px;padding:14px;text-align:center">'+
+          '<div style="font-size:10px;opacity:.7;color:#000">총 매출</div>'+
+          '<div style="font-size:20px;font-weight:900;color:#000">₩'+totalAmt.toLocaleString()+'</div>'+
+        '</div>'+
+        '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center">'+
+          '<div style="font-size:10px;color:var(--text3)">건수</div>'+
+          '<div style="font-size:20px;font-weight:900">'+cnt+'건</div>'+
+        '</div>'+
+      '</div>';
+    Object.keys(byWorker).forEach(function(w){
+      var d=byWorker[w];
+      html+='<div style="background:var(--bg3);border-radius:12px;padding:12px;margin-bottom:8px">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
+          '<div style="font-size:13px;font-weight:800">'+_esc(w)+'</div>'+
+          '<div style="font-size:14px;font-weight:900;color:var(--acc)">₩'+d.total.toLocaleString()+'</div>'+
+        '</div>'+
+        '<div style="display:flex;flex-direction:column;gap:4px">'+
+        d.items.map(function(item){
+          return '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2)">'+
+            '<span>'+_esc(item.serviceName||'')+'</span>'+
+            '<span>₩'+(item.amount||0).toLocaleString()+' ('+_esc(item.payType||'')+')</span>'+
+          '</div>';
+        }).join('')+
+        '</div>'+
+        '<button onclick="_qrExportWorker(''+_esc(w)+'')" '+
+          'style="width:100%;margin-top:8px;padding:7px;background:rgba(0,212,255,.1);color:var(--acc);'+
+          'border:1px solid rgba(0,212,255,.2);border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">'+
+          '📊 정산으로 내보내기</button>'+
+      '</div>';
+    });
+    c.innerHTML=html;
+  }).catch(function(e){c.innerHTML='<div style="padding:20px;color:var(--red)">'+_esc(e.message)+'</div>';});
+}
+
+// ── 내역
+function _qrRenderHistory(c){
+  var did=window._qrDid;
+  var ym=window._qrYm;
+  c.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3)">⏳ 로딩 중...</div>';
+  _db.collection('mbetco_sales').where('dealerId','==',did).where('ym','==',ym)
+  .orderBy('createdAt','desc').limit(50).get()
+  .then(function(snap){
+    if(snap.empty){
+      c.innerHTML='<div style="padding:40px;text-align:center;color:var(--text3)">이번달 내역 없음</div>';
+      return;
+    }
+    var html='<div style="font-size:11px;color:var(--text3);margin-bottom:8px">'+ym+' 결제 내역</div>'+
+      '<div style="display:flex;flex-direction:column;gap:6px">';
+    snap.forEach(function(d){
+      var v=d.data();
+      html+='<div style="display:flex;justify-content:space-between;align-items:center;'+
+        'padding:10px 12px;background:var(--bg3);border-radius:8px">'+
+        '<div>'+
+          '<div style="font-size:12px;font-weight:700">'+_esc(v.serviceName||'')+'</div>'+
+          '<div style="font-size:10px;color:var(--text3)">'+(v.date||'')+' · '+_esc(v.worker||'미지정')+' · '+_esc(v.payType||'')+'</div>'+
+        '</div>'+
+        '<div style="font-size:13px;font-weight:800;color:var(--acc)">₩'+(v.amount||0).toLocaleString()+'</div>'+
+      '</div>';
+    });
+    html+='</div>';
+    c.innerHTML=html;
+  }).catch(function(e){c.innerHTML='<div style="padding:20px;color:var(--red)">'+_esc(e.message)+'</div>';});
+}
+
+// 정산으로 내보내기
+function _qrExportWorker(workerName){
+  var did=window._qrDid;var ym=window._qrYm;
+  if(!confirm(workerName+'님의 '+ym+' 정산을 생성할까요?'))return;
+  _db.collection('mbetco_sales').where('dealerId','==',did).where('ym','==',ym)
+  .where('worker','==',workerName).get()
+  .then(function(snap){
+    if(snap.empty){toast('데이터 없음');return;}
+    var total=0;var items=[];
+    snap.forEach(function(d){
+      var v=d.data();
+      total+=v.amount||0;
+      items.push({name:v.serviceName||'',amount:v.amount||0,date:v.date||''});
+    });
+    var tax33=Math.round(total*0.033);if(tax33<1000)tax33=0;
+    var net=total-tax33;
+    _db.collection('mbetco_settlements').add({
+      dealerId:did,month:ym,name:workerName,
+      gross:total,tax33:tax33,net:net,
+      items:items,itemCount:items.length,
+      source:'qr_pos',createdAt:new Date().toISOString(),status:'READY'
+    }).then(function(){toast('✅ '+workerName+' 정산 생성 완료!');})
+    .catch(function(e){toast('❌ '+e.message);});
+  });
+}
+
+// esc 헬퍼 (universal_settle용)
+function _esc(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 function pageDonwayConnect(){
   document.getElementById('page-title').textContent='DONWAY 정산 연동';
   var c=document.getElementById('content')||document.body;
@@ -678,7 +1020,7 @@ function _nav(el, page){
   _renderPage(page);
 }
 function _renderPage(page){
-  var titles={settle:'정산 처리',templates:'매핑 템플릿',workers:'인원 관리',history:'정산 내역',settings:'설정',inventory:'📦 재고관리'};
+  var titles={settle:'정산 처리',templates:'매핑 템플릿',workers:'인원 관리',history:'정산 내역',settings:'설정',inventory:'📦 재고관리',qrpos:'🔲 QR POS'};
   document.getElementById('page-title').textContent = titles[page]||page;
   document.getElementById('topbar-actions').innerHTML = '';
   document.getElementById('main-content').innerHTML = '';
@@ -688,6 +1030,7 @@ function _renderPage(page){
   else if(page==='history')   _pageHistory();
   else if(page==='settings')  _pageSettings();
   else if(page==='inventory') pageInventory();
+  else if(page==='qrpos')     _pageQrPos();
 }
 
 // ══════════════════════════════════════════
