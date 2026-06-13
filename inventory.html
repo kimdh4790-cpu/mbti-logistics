@@ -48,6 +48,147 @@ body{background:var(--bg);color:var(--text);font-family:"Apple SD Gothic Neo","N
   .main{width:100%}
 }
 </style>
+<script>
+var INVENTORY_DB={
+  beauty:{label:'💄 뷰티·미용',categories:[
+    {name:'시술재료',icon:'🧴',items:[
+      {name:'샴푸(일반)',unit:'L',minQty:5,price:15000},
+      {name:'샴푸(손상모)',unit:'L',minQty:3,price:18000},
+      {name:'트리트먼트',unit:'L',minQty:3,price:20000},
+      {name:'염색약(흑색)',unit:'개',minQty:10,price:8000},
+      {name:'염색약(컬러)',unit:'개',minQty:20,price:9000},
+      {name:'파마약1제',unit:'개',minQty:10,price:12000},
+      {name:'파마약2제',unit:'개',minQty:10,price:10000},
+      {name:'매직약',unit:'세트',minQty:5,price:25000},
+      {name:'탈색제',unit:'개',minQty:5,price:15000},
+      {name:'산화제3%',unit:'L',minQty:3,price:8000},
+      {name:'산화제6%',unit:'L',minQty:3,price:8000},
+    ]},
+    {name:'소모품',icon:'🧤',items:[
+      {name:'일회용장갑',unit:'박스',minQty:3,price:5000},
+      {name:'염색가운',unit:'장',minQty:20,price:2000},
+      {name:'파마롤',unit:'세트',minQty:3,price:15000},
+      {name:'파마캡',unit:'개',minQty:50,price:500},
+      {name:'알루미늄호일',unit:'롤',minQty:5,price:3000},
+      {name:'타월',unit:'장',minQty:30,price:3000},
+      {name:'케이프',unit:'장',minQty:10,price:5000},
+    ]},
+    {name:'판매상품',icon:'🛍️',items:[
+      {name:'홈케어샴푸',unit:'개',minQty:5,price:25000},
+      {name:'홈케어트리트먼트',unit:'개',minQty:5,price:28000},
+      {name:'헤어에센스',unit:'개',minQty:5,price:20000},
+    ]}
+  ]},
+  cafe:{label:'☕ 카페',categories:[
+    {name:'원재료',icon:'🫘',items:[
+      {name:'원두(에스프레소)',unit:'kg',minQty:3,price:25000},
+      {name:'원두(드립용)',unit:'kg',minQty:2,price:30000},
+      {name:'우유',unit:'L',minQty:20,price:2000},
+      {name:'오트밀크',unit:'L',minQty:5,price:3500},
+      {name:'두유',unit:'L',minQty:5,price:2500},
+      {name:'생크림',unit:'L',minQty:3,price:8000},
+      {name:'바닐라시럽',unit:'병',minQty:3,price:12000},
+      {name:'카라멜시럽',unit:'병',minQty:3,price:12000},
+      {name:'헤이즐넛시럽',unit:'병',minQty:2,price:12000},
+      {name:'초콜릿소스',unit:'병',minQty:2,price:10000},
+      {name:'말차파우더',unit:'kg',minQty:1,price:35000},
+      {name:'얼음',unit:'봉',minQty:10,price:1500},
+    ]},
+    {name:'포장재',icon:'🥤',items:[
+      {name:'아이스컵12oz',unit:'개',minQty:200,price:80},
+      {name:'아이스컵16oz',unit:'개',minQty:200,price:100},
+      {name:'핫컵12oz',unit:'개',minQty:100,price:90},
+      {name:'컵뚜껑',unit:'개',minQty:200,price:50},
+      {name:'빨대',unit:'개',minQty:300,price:30},
+      {name:'컵캐리어',unit:'개',minQty:100,price:150},
+      {name:'냅킨',unit:'묶음',minQty:10,price:3000},
+    ]}
+  ]},
+  liquor:{label:'🍺 주류',categories:[
+    {name:'소주·맥주',icon:'🍶',items:[
+      {name:'소주(참이슬)',unit:'병',minQty:60,price:1100},
+      {name:'소주(처음처럼)',unit:'병',minQty:30,price:1100},
+      {name:'맥주(테라)',unit:'병',minQty:60,price:1500},
+      {name:'맥주(카스)',unit:'병',minQty:60,price:1500},
+      {name:'맥주(하이네켄캔)',unit:'캔',minQty:24,price:2200},
+      {name:'막걸리',unit:'병',minQty:20,price:1500},
+    ]},
+    {name:'와인·양주',icon:'🍷',items:[
+      {name:'레드와인',unit:'병',minQty:6,price:15000},
+      {name:'화이트와인',unit:'병',minQty:6,price:15000},
+      {name:'위스키(발렌타인17)',unit:'병',minQty:3,price:85000},
+      {name:'위스키(조니워커)',unit:'병',minQty:3,price:70000},
+      {name:'보드카',unit:'병',minQty:2,price:30000},
+      {name:'진',unit:'병',minQty:2,price:35000},
+    ]},
+    {name:'음료·믹서',icon:'🥤',items:[
+      {name:'콜라(1.5L)',unit:'병',minQty:10,price:1800},
+      {name:'사이다(1.5L)',unit:'병',minQty:10,price:1800},
+      {name:'토닉워터',unit:'캔',minQty:24,price:1200},
+      {name:'오렌지주스',unit:'L',minQty:5,price:3000},
+      {name:'레몬즙',unit:'병',minQty:3,price:8000},
+    ]},
+    {name:'바소모품',icon:'🫙',items:[
+      {name:'얼음',unit:'봉',minQty:10,price:1500},
+      {name:'빨대(긴것)',unit:'개',minQty:100,price:50},
+      {name:'냅킨',unit:'묶음',minQty:5,price:3000},
+    ]}
+  ]},
+  restaurant:{label:'🍽️ 음식점',categories:[
+    {name:'식재료',icon:'🥬',items:[
+      {name:'쌀',unit:'kg',minQty:20,price:2500},
+      {name:'돼지고기',unit:'kg',minQty:10,price:12000},
+      {name:'소고기',unit:'kg',minQty:5,price:35000},
+      {name:'채소류',unit:'kg',minQty:5,price:3000},
+      {name:'김치',unit:'kg',minQty:5,price:8000},
+    ]},
+    {name:'소모품',icon:'🥢',items:[
+      {name:'일회용장갑',unit:'박스',minQty:3,price:5000},
+      {name:'냅킨',unit:'묶음',minQty:10,price:3000},
+      {name:'포장용기',unit:'개',minQty:100,price:200},
+      {name:'이쑤시개',unit:'통',minQty:5,price:1000},
+    ]}
+  ]},
+  esthetic:{label:'💆 피부·에스테틱',categories:[
+    {name:'시술재료',icon:'✨',items:[
+      {name:'클렌징폼',unit:'개',minQty:3,price:25000},
+      {name:'앰플(수분)',unit:'개',minQty:5,price:30000},
+      {name:'앰플(미백)',unit:'개',minQty:5,price:35000},
+      {name:'마스크팩',unit:'장',minQty:50,price:2000},
+      {name:'스크럽',unit:'개',minQty:3,price:20000},
+    ]},
+    {name:'소모품',icon:'🧻',items:[
+      {name:'일회용시트',unit:'장',minQty:100,price:300},
+      {name:'면봉',unit:'박스',minQty:3,price:2000},
+      {name:'화장솜',unit:'개',minQty:200,price:100},
+      {name:'일회용장갑',unit:'박스',minQty:3,price:5000},
+    ]}
+  ]},
+  retail:{label:'🏪 소매·점포',categories:[
+    {name:'상품재고',icon:'📦',items:[
+      {name:'주력상품A',unit:'개',minQty:10,price:0},
+      {name:'주력상품B',unit:'개',minQty:10,price:0},
+    ]},
+    {name:'소모품',icon:'🎁',items:[
+      {name:'쇼핑백(소)',unit:'장',minQty:100,price:200},
+      {name:'쇼핑백(대)',unit:'장',minQty:50,price:400},
+      {name:'영수증용지',unit:'롤',minQty:5,price:3000},
+    ]}
+  ]}
+};
+var _curInvIndustry='beauty';
+function _getDefaultItems(ind){
+  var db=INVENTORY_DB[ind];
+  if(!db)return[];
+  var items=[];
+  db.categories.forEach(function(cat){
+    cat.items.forEach(function(item){
+      items.push(Object.assign({category:cat.name,categoryIcon:cat.icon||'📦'},item));
+    });
+  });
+  return items;
+}
+</script>
 </head>
 <body>
 <div class="sidebar" id="sidebar">
@@ -631,6 +772,52 @@ tr:hover td{background:var(--bg3);}
 // ══════════════════════════════════════════
 var _db, _auth, _CU, _dealerId;
 
+
+function _pageIndustry(c){
+  if(!c)c=document.getElementById('main-content');
+  var html='<div style="margin-bottom:16px"><div style="font-size:14px;font-weight:900;margin-bottom:4px">🏷️ 업종 설정</div>'+
+    '<div style="font-size:12px;color:var(--text3)">업종에 맞는 기본 재고 항목을 자동으로 추가합니다</div></div>'+
+    '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:20px">';
+  Object.keys(INVENTORY_DB).forEach(function(key){
+    var db=INVENTORY_DB[key];
+    var isCur=(key===_curInvIndustry);
+    html+='<div style="background:var(--bg2);border:2px solid '+(isCur?'var(--acc)':'var(--border)')+';border-radius:12px;padding:14px;cursor:pointer" onclick="_setInvIndustry('+JSON.stringify(key)+')">'+
+      '<div style="font-size:20px;margin-bottom:6px">'+db.label.split(' ')[0]+'</div>'+
+      '<div style="font-size:12px;font-weight:700;color:'+(isCur?'var(--acc)':'var(--text)')+'">'+db.label.split(' ').slice(1).join(' ')+'</div>'+
+      '<div style="font-size:10px;color:var(--text3);margin-top:4px">'+db.categories.length+'개 카테고리</div>'+
+      (isCur?'<div style="font-size:10px;color:var(--acc);font-weight:700;margin-top:4px">✅ 선택됨</div>':'')+
+    '</div>';
+  });
+  html+='</div><button class="btn btn-acc" onclick="_addDefaultItems()" style="width:100%;padding:13px;font-size:13px;font-weight:800">📦 '+
+    INVENTORY_DB[_curInvIndustry].label+' 기본 품목 추가</button>'+
+    '<div style="font-size:11px;color:var(--text3);margin-top:8px;text-align:center">기존 품목은 유지되고 새 품목만 추가됩니다</div>';
+  c.innerHTML=html;
+}
+function _setInvIndustry(key){
+  if(!INVENTORY_DB[key])return;
+  _curInvIndustry=key;
+  _pageIndustry();
+}
+function _addDefaultItems(){
+  var did=_dealer?_dealer.id:(_cu?_cu.uid:'');
+  if(!did){toast('로그인 필요');return;}
+  var items=_getDefaultItems(_curInvIndustry);
+  if(!items.length){toast('품목 없음');return;}
+  var now=new Date().toISOString();
+  var batch=items.map(function(item){
+    return _db.collection('inventory').add({
+      dealerId:did,name:item.name,category:item.category,
+      categoryIcon:item.categoryIcon||'📦',unit:item.unit||'개',
+      minQty:item.minQty||0,price:item.price||0,qty:0,
+      industry:_curInvIndustry,createdAt:now,source:'default_template'
+    });
+  });
+  Promise.all(batch).then(function(){
+    toast('✅ '+items.length+'개 기본 품목 추가!',3000);
+    setTimeout(function(){_renderPage('master');},1000);
+  }).catch(function(e){toast('❌ '+e.message);});
+}
+
 function _nav(el,page){
   document.querySelectorAll('.nav-item').forEach(function(i){i.classList.remove('active');});
   el.classList.add('active');
@@ -638,7 +825,7 @@ function _nav(el,page){
 }
 
 function _renderPage(page){
-  var titles={stock:'📦 재고 현황',in:'📥 입고 관리',out:'📤 출고 관리',master:'📋 품목 마스터',dashboard:'📊 대시보드'};
+  var titles={stock:'📦 재고 현황 · '+(INVENTORY_DB[_curInvIndustry]?INVENTORY_DB[_curInvIndustry].label:''),in:'📥 입고 관리',out:'📤 출고 관리',master:'📋 품목 마스터',dashboard:'📊 대시보드'};
   document.getElementById('page-title').textContent=titles[page]||page;
   document.getElementById('main-content').innerHTML='';
   document.getElementById('topbar-actions').innerHTML='';
@@ -647,6 +834,7 @@ function _renderPage(page){
   else if(page==='out') pageInventoryOut();
   else if(page==='master') pageInventory();
   else if(page==='dashboard') pageInventory();
+  else if(page==='industry') _pageIndustry();
 }
 
 function _initApp(){
