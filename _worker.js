@@ -47,8 +47,9 @@ async function fetchAsset(path, request, env) {
   const filePath = path.startsWith('/') ? path : '/' + path;
   const fileName = filePath.replace(/^\//, '');
 
-  // ★ 1순위: KV (배포 즉시 반영)
-  if (e && e.DONWAY_ASSETS) {
+  // ★ 1순위: KV — settle.html만 (나머지는 GitHub Raw)
+  const KV_ONLY = ['settle.html'];
+  if (e && e.DONWAY_ASSETS && KV_ONLY.includes(fileName)) {
     try {
       const val = await e.DONWAY_ASSETS.get(fileName, { type: 'arrayBuffer' });
       if (val) {
