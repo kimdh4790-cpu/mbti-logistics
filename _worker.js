@@ -446,7 +446,40 @@ async function runExpireJob(env) {
 
 
 // ── Fetch Handler ─────────────────────────────────────────────────────────────
+
+// ── Cron: GitHub → KV 자동 동기화 ─────────────────────────────────────────
+async function syncKVFromGitHub(env) {
+  const e = env || _env_ref;
+  if (!e || !e.DONWAY_ASSETS) return { ok: false, reason: 'no KV' };
+  
+  const GITHUB_RAW = 'https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main';
+  const FILES = [
+    'settle.html', 'inventory.html', 'qrpos.html', 'kiosk.html',
+    'mbtico_hub.html', 'join.html', 'admin_sub.html', 'order.html', 'donway_landing.html'
+  ];
+  
+  const results = [];
+  for (const file of FILES) {
+    try {
+      const resp = await fetch(`${GITHUB_RAW}/${file}?v=${Date.now()}`, {
+        headers: { 'Cache-Control': 'no-cache' }
+      });
+      if (!resp.ok) { results.push({ file, ok: false, status: resp.status }); continue; }
+      const text = await resp.text();
+      await e.DONWAY_ASSETS.put(file, text);
+      results.push({ file, ok: true, size: text.length });
+    } catch(err) {
+      results.push({ file, ok: false, error: err.message });
+    }
+  }
+  console.log('[Cron] KV 동기화:', JSON.stringify(results.map(r => r.file + ':' + (r.ok ? '✅' : '❌'))));
+  return { ok: true, results };
+}
+
 export default {
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(syncKVFromGitHub(env));
+  },
   async fetch(request, env) {
     _env_ref = env;
     const url      = new URL(request.url);
