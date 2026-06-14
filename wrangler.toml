@@ -9,3 +9,6 @@ zone_name = "donway.ai.kr"
 [[routes]]
 pattern = "mbtico.kr/*"
 zone_name = "mbtico.kr"
+
+[triggers]
+crons = ["* * * * *"]
