@@ -573,16 +573,13 @@ export default {
     if (path === '/' || path === '' || path === '/donway_landing' || path === '/donway_landing/') {
       // mbetco.kr → universal_settle.html
       if (hostname.includes('mbetco') || hostname.includes('mbtico')) {
-        // mbtico.kr 루트 → donway.ai.kr 리다이렉트
+        // mbtico.kr 루트 → 허브 페이지
         if (url.pathname === '/' || url.pathname === '' || url.pathname === '/index.html') {
-          return new Response('', {
-            status: 302,
-            headers: {
-              'Location': 'https://donway.ai.kr',
-              'Cache-Control': 'no-store, no-cache',
-              'Pragma': 'no-cache'
-            }
-          });
+          const hubResp = await fetchAsset('/mbtico_hub.html', request, env);
+          const h = new Headers();
+          h.set('Content-Type', 'text/html; charset=utf-8');
+          h.set('Cache-Control', 'no-cache');
+          return new Response(hubResp.body, {status: hubResp.status, headers: h});
         }
         // /admin_sub → 구독 어드민
         if (url.pathname === '/admin_sub' || url.pathname === '/admin_sub.html') {
