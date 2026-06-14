@@ -1021,7 +1021,7 @@ export default {
       '/donway_landing','/DONWAY_%EC%8B%9C%EB%AE%AC%EB%A0%88%EC%9D%B4%ED%84%B0.html','/test-apikey','/favicon.ico','/favicon.png',
       '/worker-test','/label-ocr','/claude-ocr','/get-label-key',
       '/test-inject','/truck-save','/scan-save',
-      '/scan','/truck','/settle','/visitor','/checkin','/emergency','/portal','/join','/company-register','/inventory','/qr','/kiosk','/order','/admin_sub','/mbtico_hub',
+      '/scan','/truck','/settle','/visitor','/checkin','/emergency','/portal','/join','/company-register','/inventory','/qr','/kiosk','/order','/admin_sub','/mbtico_hub','/sync-kv',
       '/attendance','/donway-sound.js','/report','/contract',
       '/notice','/settings','/schedule','/drivers','/dashboard',
       '/my','/attendance-admin','/attendance-display',
@@ -1107,6 +1107,25 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
       adH.set('Cache-Control', 'no-cache');
       Object.entries(SECURITY_HEADERS).forEach(([k,v]) => adH.set(k,v));
       return new Response(adResp.body, { status: adResp.status, headers: adH });
+    }
+    // /sync-kv — GitHub 최신 파일 KV 저장 (터미널 없이 배포)
+    if (path === '/sync-kv') {
+      const secret = url.searchParams.get('s');
+      if (secret !== 'donway2026') return new Response('unauthorized',{status:401});
+      const files=['kiosk.html','inventory.html','qrpos.html','mbtico_hub.html','join.html','admin_sub.html','order.html','donway_landing.html'];
+      const e2=env||_env_ref;
+      const out=[];
+      for(const f of files){
+        try{
+          const res=await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/'+f+'?v='+Date.now());
+          if(res.ok&&e2&&e2.DONWAY_ASSETS){
+            const txt=await res.text();
+            await e2.DONWAY_ASSETS.put(f,txt);
+            out.push('OK: '+f+' ('+txt.length+')');
+          }else out.push('FAIL: '+f);
+        }catch(ex){out.push('ERR: '+f+' '+ex.message);}
+      }
+      return new Response(out.join('\n'),{headers:{'Content-Type':'text/plain;charset=utf-8'}});
     }
     const slugMatch = path.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/?$/);
     if (slugMatch && !knownPaths.has(slugMatch[0].replace(/\/$/,'')) && method === 'GET') {
@@ -2132,23 +2151,4 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
       runExpireJob(env).catch(e => console.error('[cron-expire]', e.message))
     );
   }
-};    // /sync-kv — GitHub에서 최신 파일 KV에 저장 (터미널 없이 배포)
-    if (path === '/sync-kv') {
-      const secret = url.searchParams.get('s');
-      if (secret !== 'donway2026') return new Response('unauthorized',{status:401});
-      const files=['kiosk.html','inventory.html','qrpos.html','mbtico_hub.html','join.html','admin_sub.html','order.html','donway_landing.html'];
-      const e2=env||_env_ref;
-      const out=[];
-      for(const f of files){
-        try{
-          const res=await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/'+f+'?v='+Date.now());
-          if(res.ok&&e2&&e2.DONWAY_ASSETS){
-            const txt=await res.text();
-            await e2.DONWAY_ASSETS.put(f,txt);
-            out.push('OK: '+f+' ('+txt.length+')');
-          }else out.push('FAIL: '+f);
-        }catch(ex){out.push('ERR: '+f+' '+ex.message);}
-      }
-      return new Response(out.join('\n'),{headers:{'Content-Type':'text/plain;charset=utf-8'}});
-    }
-
+};
