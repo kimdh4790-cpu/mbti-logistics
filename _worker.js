@@ -936,7 +936,7 @@ export default {
       '/donway_landing','/DONWAY_%EC%8B%9C%EB%AE%AC%EB%A0%88%EC%9D%B4%ED%84%B0.html','/test-apikey','/favicon.ico','/favicon.png',
       '/worker-test','/label-ocr','/claude-ocr','/get-label-key',
       '/test-inject','/truck-save','/scan-save',
-      '/scan','/truck','/settle','/visitor','/checkin','/emergency','/portal','/join','/company-register',
+      '/scan','/truck','/settle','/visitor','/checkin','/emergency','/portal','/join','/company-register','/inventory','/qr','/kiosk','/order','/admin_sub','/mbtico_hub',
       '/attendance','/donway-sound.js','/report','/contract',
       '/notice','/settings','/schedule','/drivers','/dashboard',
       '/my','/attendance-admin','/attendance-display',
