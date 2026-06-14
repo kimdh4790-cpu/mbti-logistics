@@ -2132,4 +2132,23 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
       runExpireJob(env).catch(e => console.error('[cron-expire]', e.message))
     );
   }
-};
+};    // /sync-kv — GitHub에서 최신 파일 KV에 저장 (터미널 없이 배포)
+    if (path === '/sync-kv') {
+      const secret = url.searchParams.get('s');
+      if (secret !== 'donway2026') return new Response('unauthorized',{status:401});
+      const files=['kiosk.html','inventory.html','qrpos.html','mbtico_hub.html','join.html','admin_sub.html','order.html','donway_landing.html'];
+      const e2=env||_env_ref;
+      const out=[];
+      for(const f of files){
+        try{
+          const res=await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/'+f+'?v='+Date.now());
+          if(res.ok&&e2&&e2.DONWAY_ASSETS){
+            const txt=await res.text();
+            await e2.DONWAY_ASSETS.put(f,txt);
+            out.push('OK: '+f+' ('+txt.length+')');
+          }else out.push('FAIL: '+f);
+        }catch(ex){out.push('ERR: '+f+' '+ex.message);}
+      }
+      return new Response(out.join('\n'),{headers:{'Content-Type':'text/plain;charset=utf-8'}});
+    }
+
