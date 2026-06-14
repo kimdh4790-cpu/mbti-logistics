@@ -506,10 +506,12 @@ export default {
         const kv = e && e.DONWAY_ASSETS ? await e.DONWAY_ASSETS.get('qrpos.html',{type:'text'}) : null;
         if (kv) return new Response(kv, {headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache'}});
       }
-      // 키오스크 - GitHub Raw 직접 (KV 무시)
+      // 키오스크
       if (path === '/kiosk' || path === '/kiosk.html') {
-        const ghKR = await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/kiosk.html?v='+Date.now(),
-          {headers:{'Cache-Control':'no-cache','Pragma':'no-cache'}});
+        const kvK = e && e.DONWAY_ASSETS ? await e.DONWAY_ASSETS.get('kiosk.html',{type:'text'}) : null;
+        if (kvK) return new Response(kvK, {headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache'}});
+        // KV 없으면 GitHub Raw
+        const ghKR = await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/kiosk.html?v='+Date.now(),{headers:{'Cache-Control':'no-cache'}});
         if (ghKR.ok) return new Response(ghKR.body,{headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache'}});
       }
       // 예약
