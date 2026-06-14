@@ -451,7 +451,7 @@ window.onBizDocSelected=onBizDocSelected;</script>
       <button id="admin-btn" class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:#1e293b;color:#f59e0b;display:none" onclick="openAdminPanel()">👑 슈퍼 어드민</button>
       <button class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:linear-gradient(135deg,#185FA5,#7C3AED);color:#fff;border:none" onclick="_showSubModal()">💳 구독 / 갱신</button>
       <button class="btn" id="my-url-btn" style="width:100%;font-size:10px;margin-bottom:4px;background:var(--brand-l);color:var(--brand);border:1px solid var(--brand);display:none" onclick="_showMyUrl()">🔗 내 전용 URL</button>
-      <button class="btn btn-red" style="width:100%;font-size:11px" onclick="doLogout()">로그아웃</button>
+      <div id="sb-mbtico-btns" style="border-top:1px solid var(--border);margin-bottom:6px"></div><button class="btn btn-red" style="width:100%;font-size:11px" onclick="doLogout()">로그아웃</button>
     </div>
   </div>
   <div class="main">
@@ -7446,6 +7446,7 @@ _auth.onAuthStateChanged(function(user){
               window._trialActive=true;
             }
             window._cachedCompanyDoc=cd;
+            setTimeout(_renderMbticoButtons,500);
           // ★ 슬러그 URL 리다이렉트 (루트 접속 시 자기 슬러그로 이동)
           if(cd.slug && !window._COMPANY_SLUG && !isSuperAdmin()){
             var targetUrl=window.location.origin+'/'+cd.slug;
@@ -7466,57 +7467,6 @@ _auth.onAuthStateChanged(function(user){
 }
 
 // ★ 체험 만료 결제 유도 팝업
-
-
-// ━━━ 재고 원가 → 정산 반영 ━━━
-function _loadInventoryCost(dealerId, ym, cb){
-  if(!_db||!dealerId){cb({total:0,items:[]});return;}
-  _db.collection('inventory_out')
-    .where('dealerId','==',dealerId)
-    .where('ym','==',ym)
-    .get()
-  .then(function(snap){
-    var total=0; var items=[];
-    snap.forEach(function(d){
-      var v=d.data();
-      var cost=(v.totalCost||0) || ((v.unitCost||0)*(v.qty||0));
-      total+=cost;
-      if(cost>0) items.push({
-        name:v.itemName||v.itemCode||'',
-        qty:v.qty||0,
-        unitCost:v.unitCost||0,
-        total:cost,
-        date:v.date||'',
-      });
-    });
-    cb({total:total,items:items});
-  }).catch(function(){cb({total:0,items:[]});});
-}
-
-// 정산 화면에 재고 원가 섹션 추가
-function _renderInventoryCostSection(dealerId, ym, container){
-  if(!container)return;
-  _loadInventoryCost(dealerId, ym, function(data){
-    if(!data.total) return; // 원가 없으면 표시 안 함
-    var html='<div style="background:var(--bg2);border:1px solid rgba(255,77,109,.3);border-radius:12px;padding:14px;margin-top:12px">'+
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
-        '<div style="font-size:12px;font-weight:800;color:var(--red)">📦 재고 원가 ('+ym+')</div>'+
-        '<div style="font-size:14px;font-weight:900;color:var(--red)">-₩'+data.total.toLocaleString()+'</div>'+
-      '</div>'+
-      (data.items.length?
-        '<div style="font-size:11px;color:var(--text3);display:flex;flex-direction:column;gap:3px">'+
-          data.items.slice(0,5).map(function(it){
-            return '<div style="display:flex;justify-content:space-between">'+
-              '<span>'+esc(it.name)+'×'+it.qty+'</span>'+
-              '<span>-₩'+it.total.toLocaleString()+'</span>'+
-            '</div>';
-          }).join('')+
-          (data.items.length>5?'<div style="color:var(--text3)">외 '+(data.items.length-5)+'건...</div>':'')+
-        '</div>':'')+
-    '</div>';
-    container.insertAdjacentHTML('beforeend',html);
-  });
-}
 
 function _showTrialBanner(dLeft){
   if(document.getElementById('trial-banner')) return;
@@ -7631,6 +7581,46 @@ function _applyUniversalRules(r){
   window._uRulesReady=true;
   var ptCnt=Object.keys(window._uPriceData).length;
   var lmCnt=Object.keys(window._uLeaderMap).length;
+}
+
+
+function _renderMbticoButtons(){
+  var container=document.getElementById('sb-mbtico-btns');
+  if(!container)return;
+  var subs=_SUBS||{};
+  var trial=window._trialActive;
+  var btns=[];
+  if(trial||(subs.inventory&&subs.inventory.active))
+    btns.push({icon:'📦',label:'재고관리',url:'https://mbtico.kr/inventory',color:'#f59e0b'});
+  if(trial||(subs.qr&&subs.qr.active))
+    btns.push({icon:'🔲',label:'QR 관리',url:'https://mbtico.kr/qr',color:'#00d4ff'});
+  if(trial||(subs.kiosk&&subs.kiosk.active))
+    btns.push({icon:'🖥️',label:'키오스크',url:'https://mbtico.kr/kiosk',color:'#a78bfa'});
+
+  container.innerHTML='';
+  if(!btns.length){
+    var a=document.createElement('a');
+    a.href='https://mbtico.kr';a.target='_blank';
+    a.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 12px;color:var(--text3);text-decoration:none;font-size:11px';
+    a.innerHTML='<span>🔗</span><span>재고·QR·키오스크</span>';
+    container.appendChild(a);
+    return;
+  }
+  var title=document.createElement('div');
+  title.style.cssText='padding:6px 12px 2px;font-size:10px;color:var(--text3);font-weight:700';
+  title.textContent='mbtico.kr';
+  container.appendChild(title);
+  btns.forEach(function(b){
+    var a=document.createElement('a');
+    a.href=b.url;a.target='_blank';
+    a.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 12px;color:var(--text2);text-decoration:none;font-size:12px;border-left:3px solid transparent;transition:all .15s';
+    a.innerHTML='<span style="font-size:14px;width:20px;text-align:center">'+b.icon+'</span><span>'+b.label+'</span><span style="margin-left:auto;font-size:10px;opacity:.5">→</span>';
+    (function(btn,el){
+      el.addEventListener('mouseover',function(){this.style.background='var(--bg3)';this.style.borderLeftColor=btn.color;this.style.color=btn.color;});
+      el.addEventListener('mouseout',function(){this.style.background='';this.style.borderLeftColor='transparent';this.style.color='var(--text2)';});
+    })(b,a);
+    container.appendChild(a);
+  });
 }
 
 function showApp(){
@@ -25564,13 +25554,6 @@ function SP(pg,el){
 
 // ══ 정산 현황 ══
 function pageSettle(){
-  // 재고 원가 체크
-  var _did=_CU?(_CU.dealerId||_CU.uid):'';
-  var _ym=new Date().toISOString().slice(0,7);
-  setTimeout(function(){
-    var costContainer=document.getElementById('settle-cost-section');
-    if(costContainer&&_did) _renderInventoryCostSection(_did,_ym,costContainer);
-  },1500);
   document.getElementById('page-title').textContent='정산 현황';
   var tr=document.getElementById('topbar-right');tr.innerHTML='';
   var dlBtn=document.createElement('button');
