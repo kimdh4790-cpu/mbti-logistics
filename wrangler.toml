@@ -9,7 +9,3 @@ zone_name = "donway.ai.kr"
 [[routes]]
 pattern = "mbtico.kr/*"
 zone_name = "mbtico.kr"
-
-[[routes]]
-pattern = "mbetco.kr/*"
-zone_name = "mbetco.kr"
