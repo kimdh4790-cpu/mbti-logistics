@@ -11,123 +11,49 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Upload settle.html to KV
+      - name: Upload all HTML files to KV
         env:
-          CF_KV_TOKEN: ${{ secrets.CF_KV_TOKEN }}
-        run: |
-          NS_ID="7f0e90efaea64f3ab08ff00f8970b28b"
-          RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
-            -X PUT \
-            "https://api.cloudflare.com/client/v4/accounts/02709cbec18d848913b4246015b9148f/storage/kv/namespaces/$NS_ID/values/settle.html" \
-            -H "Authorization: Bearer $CF_KV_TOKEN" \
-            --data-binary @settle.html)
-          if echo "$RESPONSE" | grep -q "HTTP_STATUS:200"; then
-            echo "✅ settle.html KV 업로드 성공"
-          else
-            echo "⚠️ KV 업로드 실패 (계속 진행)"
-          fi
-
-      - name: Upload mbtico HTML files to KV
-        env:
-          CF_KV_TOKEN: ${{ secrets.CF_KV_TOKEN }}
+          CF_EMAIL: kimdh4790@gmail.com
+          CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
         run: |
           NS_ID="7f0e90efaea64f3ab08ff00f8970b28b"
           ACCOUNT="02709cbec18d848913b4246015b9148f"
-          FILES="inventory.html qrpos.html kiosk.html mbtico_hub.html join.html admin_sub.html order.html donway_landing.html"
+          FILES="settle.html inventory.html qrpos.html kiosk.html mbtico_hub.html join.html admin_sub.html order.html donway_landing.html"
           for FILE in $FILES; do
             if [ -f "$FILE" ]; then
               RESP=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
                 -X PUT \
                 "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/$FILE" \
-                -H "Authorization: Bearer $CF_KV_TOKEN" \
+                -H "X-Auth-Email: $CF_EMAIL" \
+                -H "X-Auth-Key: $CF_KEY" \
                 --data-binary @$FILE)
               if echo "$RESP" | grep -q "HTTP_STATUS:200"; then
-                echo "✅ $FILE KV 업로드 성공"
+                echo "✅ $FILE 업로드 성공"
               else
-                echo "⚠️ $FILE KV 업로드 실패"
+                echo "⚠️ $FILE 업로드 실패: $RESP"
               fi
-            else
-              echo "⚠️ $FILE 파일 없음"
             fi
           done
 
-      - name: Deploy Worker via Cloudflare API
+      - name: Deploy Worker via CF API
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
         run: |
           ACCOUNT_ID="02709cbec18d848913b4246015b9148f"
-
-          # Worker 스크립트 업로드 (curl multipart)
           RESULT=$(curl -s -X PUT \
             "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/workers/scripts/mbti-logistics" \
             -H "Authorization: Bearer $CF_API_TOKEN" \
-            -F 'metadata={"main_module":"_worker.js","bindings":[]};type=application/json' \
+            -F 'metadata={"main_module":"_worker.js","bindings":[{"type":"kv_namespace","name":"DONWAY_ASSETS","namespace_id":"7f0e90efaea64f3ab08ff00f8970b28b"}]};type=application/json' \
             -F "script=@_worker.js;type=application/javascript+module")
-
-          echo "$RESULT" | python3 -c "import sys,json; d=json.load(sys.stdin); print('✅ Worker 배포 성공' if d.get('success') else '❌ 실패: '+str(d.get('errors','')))"
-
-      - name: Register Worker Routes
-        env:
-          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
-        run: |
-          # donway.ai.kr zone
-          DONWAY_ZONE=$(curl -s "https://api.cloudflare.com/client/v4/zones?name=donway.ai.kr" \
-            -H "Authorization: Bearer $CF_API_TOKEN" | \
-            python3 -c "import sys,json; d=json.load(sys.stdin); print(d['result'][0]['id'] if d.get('result') else '')")
-
-          # mbtico.kr zone
-          MBTICO_ZONE=$(curl -s "https://api.cloudflare.com/client/v4/zones?name=mbtico.kr" \
-            -H "Authorization: Bearer $CF_API_TOKEN" | \
-            python3 -c "import sys,json; d=json.load(sys.stdin); print(d['result'][0]['id'] if d.get('result') else '')")
-
-          # mbetco.kr zone
-          MBETCO_ZONE=$(curl -s "https://api.cloudflare.com/client/v4/zones?name=mbetco.kr" \
-            -H "Authorization: Bearer $CF_API_TOKEN" | \
-            python3 -c "import sys,json; d=json.load(sys.stdin); print(d['result'][0]['id'] if d.get('result') else '')")
-
-          echo "donway zone: $DONWAY_ZONE"
-          echo "mbtico zone: $MBTICO_ZONE"
-          echo "mbetco zone: $MBETCO_ZONE"
-
-          # 각 도메인 라우트 등록 함수
-          register_route() {
-            ZONE=$1; PATTERN=$2
-            if [ -z "$ZONE" ]; then echo "⚠️ zone 없음: $PATTERN"; return; fi
-            CNT=$(curl -s "https://api.cloudflare.com/client/v4/zones/$ZONE/workers/routes" \
-              -H "Authorization: Bearer $CF_API_TOKEN" | \
-              python3 -c "import sys,json; d=json.load(sys.stdin); print(len([r for r in d.get('result',[]) if 'mbti-logistics' in str(r)]))")
-            if [ "$CNT" = "0" ]; then
-              curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE/workers/routes" \
-                -H "Authorization: Bearer $CF_API_TOKEN" \
-                -H "Content-Type: application/json" \
-                --data "{\"pattern\":\"$PATTERN\",\"script\":\"mbti-logistics\"}" | \
-                python3 -c "import sys,json; d=json.load(sys.stdin); print('✅ Route 등록: $PATTERN' if d.get('success') else '⚠️ '+str(d.get('errors','')))"
-            else
-              echo "✅ Route 이미 존재: $PATTERN"
-            fi
-          }
-
-          register_route "$DONWAY_ZONE" "donway.ai.kr/*"
-          register_route "$MBTICO_ZONE" "mbtico.kr/*"
-          register_route "$MBETCO_ZONE" "mbetco.kr/*"
+          echo "$RESULT" | python3 -c "import sys,json; d=json.load(sys.stdin); print('✅ Worker 배포 성공' if d.get('success') else '❌: '+str(d.get('errors','')))"
 
       - name: Deploy Firestore Rules
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         run: |
           if [ -n "$FIREBASE_TOKEN" ]; then
-            npm install -g firebase-tools --prefer-offline --no-audit 2>/dev/null || true
-            firebase deploy --only firestore:rules --token "$FIREBASE_TOKEN" --project mbti-logistics 2>/dev/null && echo "✅ Rules 배포" || echo "⚠️ Rules 배포 실패"
+            npm install -g firebase-tools
+            firebase deploy --only firestore:rules --token "$FIREBASE_TOKEN" --project mbti-logistics
           else
-            echo "⚠️ FIREBASE_TOKEN 없음 — 스킵"
+            echo "⚠️ FIREBASE_TOKEN 없음 — rules 배포 스킵"
           fi
-
-      - name: Sync settle.html backup
-        continue-on-error: true
-        env:
-          CF_KV_TOKEN: ${{ secrets.CF_KV_TOKEN }}
-        run: |
-          curl -s -X PUT \
-            "https://api.cloudflare.com/client/v4/accounts/02709cbec18d848913b4246015b9148f/storage/kv/namespaces/7f0e90efaea64f3ab08ff00f8970b28b/values/settle_backup.html" \
-            -H "Authorization: Bearer $CF_KV_TOKEN" \
-            --data-binary @settle.html && echo "✅ 백업 완료" || echo "⚠️ 백업 실패"
