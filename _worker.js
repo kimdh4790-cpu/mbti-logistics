@@ -451,6 +451,7 @@ export default {
     const url      = new URL(request.url);
     const path     = url.pathname;
     const method   = request.method;
+    const hostname = url.hostname;
     // ★ mbtico.kr 최우선 처리 (slugMatch 오인식 방지)
     if (hostname === 'mbtico.kr' || hostname === 'www.mbtico.kr' ||
         hostname === 'mbetco.kr' || hostname === 'www.mbetco.kr') {
