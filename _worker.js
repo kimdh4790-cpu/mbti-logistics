@@ -503,7 +503,7 @@ export default {
     }
 
 
-    const hostname = url.hostname;
+
 
     // ── HTTPS 강제 리다이렉트 (HTTP → HTTPS) ──
     if (url.protocol === 'http:' && !hostname.includes('localhost') && !hostname.includes('workers.dev')) {
