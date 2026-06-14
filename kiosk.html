@@ -11024,7 +11024,7 @@ window.addEventListener('load',function(){
         .catch(function(e){ });
     }
   }
-  initFirebase(); // Firebase 즉시 초기화
+  // Firebase는 이미 초기화됨
   if(window._COMPANY_SLUG){
     var bn=document.getElementById('login-brand-name');
     if(bn){bn.textContent=window._COMPANY_SLUG.toUpperCase()+' 전용';bn.style.display='block';}
