@@ -1638,8 +1638,6 @@ function parseCoupangExcel(inp){
       .catch(function(){return[];})
     :Promise.resolve([]);
   fbPromise.then(function(fbDrivers){
-    // ★ fbDrivers를 _drvCache에 저장 — _saveCpDriver에서 priceOverride 참조용
-    if(fbDrivers&&fbDrivers.length) window._drvCache=fbDrivers;
     _parseCoupangExcelInner(file,fbDrivers,month);
   });
 }
@@ -28057,89 +28055,91 @@ function _saveSE(id){
 function recalcAllSettlements(){
   if(!_settleCache||!_settleCache.length){toast('❌ 정산 데이터 없음');return;}
   var unset=Object.keys(RPRICE).length===0;
-  if(unset&&!confirm('⚠️ 단가표가 비어있습니다.\n단가표 설정 후 재계산하면 기사 지급액이 계산됩니다.\n\n계속 진행하시겠습니까?'))return;
-  if(!unset&&!confirm('⚡ 전체 정산 재계산\n\n총 '+_settleCache.length+'건을 단가표(RPRICE) 기준으로 재계산합니다.\n\n※ 라우트 단가가 0원인 경우 엑셀 원본 금액이 유지됩니다.\n\n계속하시겠습니까?'))return;
-  var changed=0;var promises=[];
-  _settleCache.forEach(function(x){
-    if(!x.id)return;
-    // routeDetails 기준 재계산
-    var rds=x.routeDetails||[];
-    var newDamt=0,newRamt=0;
-    // 시즌 단가 적용 여부 확인 (정산월 기준)
-    var seasonPeriods=_getOverlappingSeasons(x.month||'');
-    // ★ 기사별 priceOverride 가져오기
-    var _xuid=(x.userId||x.driver||x.driverName||'').trim();
-    var _xOv={};
-    if(_xuid&&window._drvCache){
-      var _xDrv=window._drvCache.find(function(dv){
-        return (dv.userId||'').trim()===_xuid||
-               (dv.name||'').trim()===_xuid||
-               dv.id===_xuid;
-      });
-      if(_xDrv&&_xDrv.priceOverride) _xOv=_xDrv.priceOverride;
-    }
-    var newRds=rds.map(function(rd){
-      // ★ 기사 개별 단가 > 시즌 단가 > RPRICE 순
-      if(_xOv[rd.route]){
-        var usePrice=_xOv[rd.route];
-        var dAmt=(rd.cnt||0)*usePrice;
-        var rAmt=(rd.ret||0)*usePrice;
-        newDamt+=dAmt;newRamt+=rAmt;
-        return Object.assign({},rd,{unitPrice:usePrice,amt:dAmt,retAmt:rAmt});
-      }
-      var rprice=RPRICE[rd.route]||0;
-      // 시즌 단가 우선 적용 (겹치는 기간의 단가)
-      if(seasonPeriods.length){
-        for(var si=0;si<seasonPeriods.length;si++){
-          if(seasonPeriods[si].prices&&seasonPeriods[si].prices[rd.route]!==undefined){
-            rprice=seasonPeriods[si].prices[rd.route];break;
+  if(unset&&!confirm('⚠️ 단가표가 비어있습니다.\n계속하시겠습니까?'))return;
+  if(!unset&&!confirm('⚡ 전체 정산 재계산\n\n총 '+_settleCache.length+'건 재계산합니다.\n\n계속하시겠습니까?'))return;
+
+  // ★ Firestore에서 drivers 직접 로드 후 priceOverride 맵 구성
+  var _did=_CU&&_CU.dealerId||'';
+  _db.collection('drivers').where('dealerId','==',_did).get().then(function(dSnap){
+    // priceOverride 맵: userId → override, name → override
+    var _ovMap={};
+    dSnap.docs.forEach(function(dd){
+      var ddata=dd.data();
+      if(!ddata.priceOverride||!Object.keys(ddata.priceOverride).length) return;
+      var ov=ddata.priceOverride;
+      var uid=(ddata.userId||'').replace(/@df$/i,'').trim();
+      var nm=(ddata.name||'').trim();
+      if(uid) _ovMap[uid]=ov;
+      if(nm)  _ovMap[nm]=ov;
+    });
+
+    var changed=0; var promises=[];
+    _settleCache.forEach(function(x){
+      if(!x.id)return;
+      var rds=x.routeDetails||[];
+      var newDamt=0,newRamt=0;
+      var seasonPeriods=_getOverlappingSeasons(x.month||'');
+
+      // ★ priceOverride 찾기 — userId, driver, driverName 순으로 매칭
+      var _uid=(x.userId||x.driver||x.driverName||'').replace(/@df$/i,'').trim();
+      var _xOv=_ovMap[_uid]||{};
+
+      var newRds=rds.map(function(rd){
+        // 기사 개별 단가 > 시즌 단가 > RPRICE > 엑셀 원본
+        if(_xOv[rd.route]){
+          var u=_xOv[rd.route];
+          var da=(rd.cnt||0)*u, ra=(rd.ret||0)*u;
+          newDamt+=da; newRamt+=ra;
+          return Object.assign({},rd,{unitPrice:u,amt:da,retAmt:ra});
+        }
+        var rprice=RPRICE[rd.route]||0;
+        if(seasonPeriods.length){
+          for(var si=0;si<seasonPeriods.length;si++){
+            if(seasonPeriods[si].prices&&seasonPeriods[si].prices[rd.route]!==undefined){
+              rprice=seasonPeriods[si].prices[rd.route];break;
+            }
           }
         }
-      }
-      var usePrice=rprice>0?rprice:(rd.excelUnitPrice||rd.unitPrice||0);
-      var dAmt=(rd.cnt||0)*usePrice;
-      var rAmt=(rd.ret||0)*usePrice;
-      newDamt+=dAmt;newRamt+=rAmt;
-      return Object.assign({},rd,{unitPrice:usePrice,amt:dAmt,retAmt:rAmt,isSeason:seasonPeriods.length>0});
+        var usePrice=rprice>0?rprice:(rd.excelUnitPrice||rd.unitPrice||0);
+        var dAmt=(rd.cnt||0)*usePrice, rAmt=(rd.ret||0)*usePrice;
+        newDamt+=dAmt; newRamt+=rAmt;
+        return Object.assign({},rd,{unitPrice:usePrice,amt:dAmt,retAmt:rAmt,isSeason:seasonPeriods.length>0});
+      });
+
+      // 인센 재계산
+      var fincVal=0;
+      rds.forEach(function(rd){
+        var s=_getIncSetting(x.userId||x.driver,rd.route);
+        if(s.on&&s.rate>0)fincVal+=(rd.cnt||0)*s.rate;
+      });
+
+      var taxBase=newDamt+newRamt+(x.fresh||0)+fincVal+(x.inc||0)+(x.nocont||0)+(x.etcPlus||0)+(x.etcPlusTL||0);
+      var supplyAmt=Math.round(taxBase/1.1);
+      var monthlyWage=Math.round(supplyAmt*0.654);
+      var empIns=monthlyWage>=800000?Math.floor(monthlyWage*0.008/10)*10:0;
+      var workIns=Math.floor(monthlyWage*0.0088/10)*10;
+      var deductTotal=(x.dmg||0)+empIns+workIns+(x.adv||0)+(x.eq||0)+(x.etcMinus||0);
+      var net=taxBase-deductTotal;
+
+      var update={
+        routeDetails:newRds, damt:newDamt, ramt:newRamt, finc:fincVal,
+        totalAmt:taxBase, supplyAmt:supplyAmt, monthlyWage:monthlyWage,
+        emp:empIns, work:workIns, deduct:deductTotal, net:net,
+        updatedAt:new Date().toISOString()
+      };
+      if(Object.keys(_xOv).length) update.priceOverride=_xOv;
+
+      promises.push(_db.collection('settlements').doc(x.id).update(update)
+        .then(function(){changed++;Object.assign(x,update);}).catch(function(e){console.warn(e);}));
     });
-    // 인센 재계산 (기사별 설정)
-    var fincVal=0;
-    rds.forEach(function(rd){
-      var s=_getIncSetting(x.userId||x.driver,rd.route);
-      if(s.on&&s.rate>0)fincVal+=(rd.cnt||0)*s.rate;
+
+    Promise.all(promises).then(function(){
+      toast('✅ 재계산 완료 ('+changed+'건)');
+      _reloadSettlePage();
     });
-    var freshRaw=x.fresh||0;
-    var addInc=x.inc||0;
-    var nocont=x.nocont||0;
-    var dmg=x.dmg||0;
-    var adv=x.adv||0;
-    var eq=x.eq||0;
-    var etcPlus=x.etcPlus||0;
-    var etcPlusTL=x.etcPlusTL||0;
-    var etcMinus=x.etcMinus||0;
-    // 세금계산서 기준 (etcMinus 제외, 팀장수수료 포함)
-    var taxBase=newDamt+newRamt+freshRaw+fincVal+addInc+nocont+etcPlus+etcPlusTL; // 모두 VAT포함가
-    var supplyAmt=Math.round(taxBase/1.1);
-    var monthlyWage=Math.round(supplyAmt*0.654);
-    var empIns=monthlyWage>=800000?Math.floor(monthlyWage*0.008/10)*10:0;
-    var workIns=Math.floor(monthlyWage*0.0088/10)*10;
-    var deductTotal=dmg+empIns+workIns+adv+eq+etcMinus;
-    var net=taxBase-deductTotal;
-    var update={
-      routeDetails:newRds,
-      damt:newDamt,ramt:newRamt,finc:fincVal,
-      totalAmt:taxBase,supplyAmt:supplyAmt,monthlyWage:monthlyWage,
-      emp:empIns,work:workIns,deduct:deductTotal,net:net,
-      updatedAt:new Date().toISOString()
-    };
-    promises.push(_db.collection('settlements').doc(x.id).update(update)
-      .then(function(){changed++;Object.assign(x,update);}).catch(function(e){console.warn(e);}));
-  });
-  Promise.all(promises).then(function(){
-    toast('✅ 재계산 완료 ('+changed+'건)\n단가표 기준으로 정산서가 갱신되었습니다.');
-    _reloadSettlePage();
-  });
+  }).catch(function(e){toast('❌ 기사 정보 로딩 실패: '+e.message);});
 }
+
 function doBulkSend(targets){
   if(!_db)return;
   if(!targets)targets=_settleCache||[];
