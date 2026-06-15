@@ -434,21 +434,37 @@ function _pageAttend(c){
   _loadAttendToday();
 }
 
+var _qrTimer=null, _qrSec=30;
+function _renderQR(url){
+  var canvas=document.getElementById('attend-qr-canvas');
+  if(!canvas)return;
+  canvas.innerHTML='';
+  var makeQR=function(){new QRCode(canvas,{text:url,width:150,height:150,colorDark:'#000',colorLight:'#fff'});};
+  if(typeof QRCode!=='undefined'){makeQR();}
+  else{var sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';sc.onload=makeQR;document.head.appendChild(sc);}
+}
 function _genAttendQR(){
   var did=_dealer?_dealer.id:'demo';
-  var url='https://donway.ai.kr/settle?qr_attend=1&d='+encodeURIComponent(did);
   var out=document.getElementById('attend-qr-output');
   if(!out)return;
   out.innerHTML='<div style="background:#fff;border-radius:12px;padding:12px;display:inline-block;margin-bottom:8px"><div id="attend-qr-canvas"></div></div>'+
+    '<div id="qr-cd" style="font-size:13px;font-weight:700;color:var(--acc);margin-bottom:4px">30초 후 갱신</div>'+
     '<div style="font-size:11px;color:var(--text3)">직원이 스캔하면 출퇴근 자동 기록</div>';
-  if(typeof QRCode!=='undefined'){
-    new QRCode(document.getElementById('attend-qr-canvas'),{text:url,width:150,height:150,colorDark:'#000',colorLight:'#fff'});
-  } else {
-    var sc=document.createElement('script');
-    sc.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
-    sc.onload=function(){new QRCode(document.getElementById('attend-qr-canvas'),{text:url,width:150,height:150,colorDark:'#000',colorLight:'#fff'});};
-    document.head.appendChild(sc);
+  if(_qrTimer)clearInterval(_qrTimer);
+  _qrSec=30;
+  function refresh(){
+    var token=Math.floor(Date.now()/30000);
+    var url='https://donway.ai.kr/settle?qr_attend=1&d='+encodeURIComponent(did)+'&t='+token;
+    _renderQR(url);
+    _qrSec=30;
   }
+  refresh();
+  _qrTimer=setInterval(function(){
+    _qrSec--;
+    var cd=document.getElementById('qr-cd');
+    if(cd){cd.textContent=_qrSec+'초 후 갱신';cd.style.color=_qrSec<=5?'var(--red)':'var(--acc)';}
+    if(_qrSec<=0)refresh();
+  },1000);
 }
 
 function _loadAttendToday(){
