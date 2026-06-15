@@ -499,12 +499,19 @@ export default {
       if (path === '/inventory' || path === '/inventory.html') {
         const kv = e && e.DONWAY_ASSETS ? await e.DONWAY_ASSETS.get('inventory.html',{type:'text'}) : null;
         if (kv) return new Response(kv, {headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache'}});
-        return new Response('inventory.html not in KV', {status:500});
+        // KV miss → GitHub Raw fallback
+        const gh = await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/inventory.html?v='+Date.now(),{headers:{'Cache-Control':'no-cache'}});
+        if (gh.ok) return new Response(await gh.text(), {headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache'}});
+        return new Response('inventory.html not found', {status:500});
       }
       // QR
       if (path === '/qr' || path === '/qrpos' || path === '/qrpos.html') {
         const kv = e && e.DONWAY_ASSETS ? await e.DONWAY_ASSETS.get('qrpos.html',{type:'text'}) : null;
         if (kv) return new Response(kv, {headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache'}});
+        // KV miss → GitHub Raw fallback
+        const gh = await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/qrpos.html?v='+Date.now(),{headers:{'Cache-Control':'no-cache'}});
+        if (gh.ok) return new Response(await gh.text(), {headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache'}});
+        return new Response('qrpos.html not found', {status:500});
       }
       // 키오스크
       if (path === '/kiosk' || path === '/kiosk.html') {
