@@ -32424,11 +32424,12 @@ function pageStats(){
       +'<div id="stat-content"><div class="loading">로딩 중...</div></div>';
   }
   window._statTab=function(tab){
-    ['month','total','camp','combined'].forEach(function(t){
+    ['month','total','camp','combined','rank'].forEach(function(t){
       var btn=document.getElementById('stat-tab-'+t);
       if(btn)btn.className='btn'+(t===tab?' btn-blue':'');
     });
     if(tab==='combined'){_statRenderCombined();return;}
+    if(tab==='rank'){if(window._statRankCard){var sc=document.getElementById('stat-content');if(sc){sc.innerHTML='';sc.appendChild(window._statRankCard);}}return;}
     if(window._statRenderFn) window._statRenderFn(tab, window._statData);
     else toast('⏳ 데이터 로딩 중...');
   };
@@ -32576,8 +32577,8 @@ function pageStats(){
       // 기본 월별
       document.getElementById('stat-content').innerHTML='';
       document.getElementById('stat-content').appendChild(mCard);
-      // 기사별 순위
-      var rankCard=document.createElement('div');rankCard.className='card';rankCard.style.marginTop='14px';
+      // 기사별 순위 — 별도 탭으로 분리
+      var rankCard=document.createElement('div');rankCard.className='card';rankCard.style.marginTop='0';
       var by={};
       settles.forEach(function(s){
         var n=s.driver||s.userId||'';var cc=_getSettleCamp(s)||'기타';
