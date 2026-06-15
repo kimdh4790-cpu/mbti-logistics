@@ -22864,7 +22864,7 @@ var MENUS_SETTLE = [
   {s:'🛵 배달대행 정산', items:[
     {ic:'📊',l:'정산 현황',        p:'delivery_settle',  plan_key:'delivery'},
     {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',   plan_key:'delivery'},
-    {ic:'📈',l:'통계',             p:'stats',            plan_key:'delivery'},
+    {ic:'📈',l:'통계',             p:'delivery_stats',   plan_key:'delivery'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
     {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'delivery'},
   ]},
@@ -32532,7 +32532,88 @@ function _statBuildTotal(byMonth,settles){
 
 function pageDeliveryStats2(){
   window._CU_INDUSTRY='delivery';
-  pageStats();
+  document.getElementById('page-title').textContent='🛵 배달대행 통계';
+  document.getElementById('topbar-right').innerHTML='';
+  var el=document.getElementById('content');
+  if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
+  el.innerHTML='<div class="loading">로딩 중...</div>';
+  var did=_CU.dealerId;
+
+  Promise.all([
+    _db.collection('delivery_sessions').where('dealerId','==',did).get(),
+    _db.collection('expenses').where('dealerId','==',did).get(),
+    _db.collection('settings').doc(did+'_fixedExpenses').get()
+  ]).then(function(results){
+    var sesSnap=results[0], expSnap=results[1], fixSnap=results[2];
+
+    if(sesSnap.empty){
+      el.innerHTML='<div class="empty" style="padding:60px 20px"><div style="font-size:48px;margin-bottom:12px">📈</div>'+
+        '<div style="font-size:17px;font-weight:800;margin-bottom:6px">통계 데이터가 없습니다</div>'+
+        '<div style="font-size:13px;color:var(--text3)">배달대행 정산을 등록하면 통계가 생성됩니다</div></div>';
+      return;
+    }
+
+    var fixedTotal=(fixSnap.exists?(fixSnap.data().items||[]):[])      .reduce(function(s,i){return s+(i.amount||0);},0);
+
+    // 경비 월별
+    var expByMonth={};
+    expSnap.forEach(function(d){
+      var e=d.data(); var mo=(e.date||e.ym||'').slice(0,7); if(!mo)return;
+      if(!expByMonth[mo])expByMonth[mo]=0; expByMonth[mo]+=(e.amount||0);
+    });
+
+    var sessions=sesSnap.docs.map(function(d){return Object.assign({sid:d.id},d.data());});
+    var byMonth={};
+    sessions.forEach(function(s){
+      var mo=(s.ym||s.month||'').slice(0,7); if(!mo)return;
+      if(!byMonth[mo])byMonth[mo]={cnt:0,revenue:0,driverPay:0,profit:0};
+      byMonth[mo].cnt++;
+      byMonth[mo].revenue += (s.totalRevenue||s.revenue||s.totalAmt||0);
+      byMonth[mo].driverPay += (s.totalDriverPay||s.driverPay||s.driverAmt||0);
+    });
+
+    // 경비 반영
+    Object.keys(byMonth).forEach(function(mo){
+      var exp=(expByMonth[mo]||0)+fixedTotal;
+      byMonth[mo].profit = byMonth[mo].revenue - byMonth[mo].driverPay - exp;
+      byMonth[mo].expense = exp;
+    });
+
+    var months=Object.keys(byMonth).sort().reverse();
+    var fmt=function(n){return Math.round(n||0).toLocaleString();};
+
+    el.innerHTML='<div class="card">'+
+      '<div style="font-size:14px;font-weight:800;margin-bottom:12px">📅 월별 배달대행 통계</div>'+
+      '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
+      '<thead><tr style="background:var(--bg3)">'+
+        '<th style="padding:8px 6px">월</th>'+
+        '<th style="padding:8px 6px;text-align:right">정산건수</th>'+
+        '<th style="padding:8px 6px;text-align:right">총매출</th>'+
+        '<th style="padding:8px 6px;text-align:right">기사지급</th>'+
+        '<th style="padding:8px 6px;text-align:right">경비</th>'+
+        '<th style="padding:8px 6px;text-align:right;color:#059669">순수익</th>'+
+      '</tr></thead><tbody>'+
+      months.map(function(mo,i){
+        var d=byMonth[mo]; var isFirst=(i===0);
+        return '<tr style="border-bottom:1px solid var(--border);'+(isFirst?'background:rgba(16,185,129,.05)':'')+'">'+
+          '<td style="padding:8px 6px"><b style="color:'+(isFirst?'#059669':'var(--text)')+'">'+mo+'</b>'+
+            (isFirst?'<span style="margin-left:4px;background:#d1fae5;color:#065f46;padding:0 4px;border-radius:8px;font-size:9px">최신</span>':'')+
+          '</td>'+
+          '<td style="padding:8px 6px;text-align:right">'+d.cnt+'건</td>'+
+          '<td style="padding:8px 6px;text-align:right;font-weight:700;color:var(--green)">₩'+fmt(d.revenue)+'</td>'+
+          '<td style="padding:8px 6px;text-align:right;color:var(--blue)">-₩'+fmt(d.driverPay)+'</td>'+
+          '<td style="padding:8px 6px;text-align:right;color:#dc2626">-₩'+fmt(d.expense)+'</td>'+
+          '<td style="padding:8px 6px;text-align:right">'+
+            '<div style="background:'+(d.profit>=0?'#059669':'#dc2626')+';color:#fff;font-weight:900;font-size:13px;padding:4px 8px;border-radius:6px;text-align:right">'+
+              (d.profit>=0?'':'▼')+' ₩'+fmt(Math.abs(d.profit))+'</div>'+
+          '</td>'+
+        '</tr>';
+      }).join('')+
+      '</tbody></table></div></div>';
+
+  }).catch(function(e){
+    el.innerHTML='<div class="empty">오류: '+e.message+'</div>';
+  });
 }
 
 // ══ 통계 ══
