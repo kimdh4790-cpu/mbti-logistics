@@ -526,6 +526,9 @@ function _loadSubs(did, cb){
   }).catch(function(){cb({});});
 }
 function _subActive(product){
+  // ★ 슈퍼어드민 바이패스
+  var _SA=['kimdh4790@gmail.com','soungkyekim@naver.com'];
+  if(firebase.auth().currentUser && _SA.indexOf(firebase.auth().currentUser.email||'')>=0) return true;
   var s=_subData[product]||{};
   var today=new Date().toISOString().slice(0,10);
   return !!(s.active && (!s.expiry || s.expiry >= today));
