@@ -27709,7 +27709,24 @@ function _saveSECurrent(){
   var driver=(document.getElementById('se-driver')||{value:''}).value.trim();
   var month=(document.getElementById('se-month')||{value:''}).value.trim();
   if(!_db||!_CU){toast('❌ 로그인 필요');return;}
-  if(!id){toast('❌ ID 없음');return;}
+  // id 없으면 driver+month로 Firestore 조회
+  if(!id){
+    if(!driver||!month){toast('❌ 기사/월 정보를 입력하세요');return;}
+    _db.collection('settlements')
+      .where('dealerId','==',_CU.dealerId)
+      .where('driver','==',driver)
+      .where('month','==',month)
+      .limit(1).get().then(function(snap){
+        if(!snap.empty){
+          var docId=snap.docs[0].id;
+          document.getElementById('se-id')&&(document.getElementById('se-id').value=docId);
+          _saveSECurrent(); // id 세팅 후 재호출
+        } else {
+          toast('❌ 정산 데이터 없음 — 먼저 엑셀 업로드하세요');
+        }
+      }).catch(function(e){toast('❌ '+e.message);});
+    return;
+  }
   var cached=(_settleCache||[]).find(function(x){return x.id===id||x.fbId===id;})||null;
   if(!driver&&cached)driver=cached.driver||cached.driverName||cached.userId||'';
   if(!month&&cached)month=cached.month||'';
