@@ -7301,12 +7301,31 @@ function _saveCpDriver(camp,dm,name,month,cb){
     nocont:dm.nocontAmt||0,nocontCnt:dm.nocontCnt||0,etcPlus:0,etcMinus:0,dmg:0,adv:0,
     totalAmt:income,income:income,supplyAmt:sa,monthlyWage:wage,emp:emp,work:work,deduct:emp+work,net:income-(emp+work),
     routeDetails:routeDetails,status:'정산예정'};
-  // ★ drivers에서 priceOverride 조회 후 routeDetails 단가 적용하여 저장
-  window._db.collection('drivers')
-    .where('userId','==',uid).where('dealerId','==',dealerId)
-    .limit(1).get().then(function(drvSnap){
-      var _ov={};
-      if(!drvSnap.empty) _ov=(drvSnap.docs[0].data().priceOverride)||{};
+  // ★ drivers에서 priceOverride 조회 (userId 또는 name으로 매칭)
+  var _cleanUid=uid.replace(/@df$/i,'').trim();
+  var _drvName=name&&name.trim();
+  // fbDrivers 캐시 우선 사용, 없으면 Firestore 조회
+  var _fbDrvList=window._drvCache||[];
+  var _foundDrv=_fbDrvList.find(function(dv){
+    return (dv.userId||'').replace(/@df$/i,'').trim()===_cleanUid||
+           (dv.name||'').trim()===_drvName;
+  });
+  var _ovPromise=_foundDrv
+    ?Promise.resolve(_foundDrv.priceOverride||{})
+    :window._db.collection('drivers').where('dealerId','==',dealerId).get()
+        .then(function(snap){
+          var found=null;
+          snap.forEach(function(dd){
+            var ddata=dd.data();
+            if(!found&&((ddata.userId||'').replace(/@df$/i,'').trim()===_cleanUid||
+                        (ddata.name||'').trim()===_drvName))
+              found=ddata.priceOverride||{};
+          });
+          return found||{};
+        }).catch(function(){return {};});
+  _ovPromise.then(function(_ov){
+      var _ov2=_ov;
+      if(true){
       // priceOverride 있으면 routeDetails 단가 재계산
       if(Object.keys(_ov).length){
         var newD=0,newR=0;
@@ -7332,7 +7351,7 @@ function _saveCpDriver(camp,dm,name,month,cb){
             ?window._db.collection('settlements').add(Object.assign({},payload,{createdAt:firebase.firestore.FieldValue.serverTimestamp()}))
             :snap.docs[0].ref.update(Object.assign({},payload,{updatedAt:firebase.firestore.FieldValue.serverTimestamp()}));
         });
-    }).then(function(){
+    }}).then(function(){
       if(name){
         return window._db.collection('drivers')
           .where('userId','==',uid).where('dealerId','==',dealerId).get()
