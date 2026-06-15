@@ -7301,13 +7301,37 @@ function _saveCpDriver(camp,dm,name,month,cb){
     nocont:dm.nocontAmt||0,nocontCnt:dm.nocontCnt||0,etcPlus:0,etcMinus:0,dmg:0,adv:0,
     totalAmt:income,income:income,supplyAmt:sa,monthlyWage:wage,emp:emp,work:work,deduct:emp+work,net:income-(emp+work),
     routeDetails:routeDetails,status:'정산예정'};
-  window._db.collection('settlements')
-    .where('dealerId','==',dealerId).where('driver','==',uid).where('month','==',month).get()
-    .then(function(snap){
-      var prom=snap.empty
-        ?window._db.collection('settlements').add(Object.assign({},payload,{createdAt:firebase.firestore.FieldValue.serverTimestamp()}))
-        :snap.docs[0].ref.update(Object.assign({},payload,{updatedAt:firebase.firestore.FieldValue.serverTimestamp()}));
-      return prom;
+  // ★ drivers에서 priceOverride 조회 후 routeDetails 단가 적용하여 저장
+  window._db.collection('drivers')
+    .where('userId','==',uid).where('dealerId','==',dealerId)
+    .limit(1).get().then(function(drvSnap){
+      var _ov={};
+      if(!drvSnap.empty) _ov=(drvSnap.docs[0].data().priceOverride)||{};
+      // priceOverride 있으면 routeDetails 단가 재계산
+      if(Object.keys(_ov).length){
+        var newD=0,newR=0;
+        payload.routeDetails=(payload.routeDetails||[]).map(function(rd){
+          var unit=_ov[rd.route]||RPRICE[rd.route]||rd.unitPrice||0;
+          newD+=(rd.cnt||0)*unit; newR+=(rd.ret||0)*unit;
+          return Object.assign({},rd,{unitPrice:unit,amt:(rd.cnt||0)*unit,retAmt:(rd.ret||0)*unit});
+        });
+        payload.damt=newD; payload.ramt=newR;
+        var newInc=newD+newR+(payload.fresh||0)+(payload.finc||0)+(payload.nocont||0);
+        var newSa=Math.round(newInc/1.1),newWage=Math.round(newSa*0.654);
+        var newEmp=newWage>=800000?Math.floor(newWage*0.008/10)*10:0;
+        var newWork=Math.floor(newWage*0.0088/10)*10;
+        payload.totalAmt=newInc;payload.income=newInc;payload.supplyAmt=newSa;
+        payload.monthlyWage=newWage;payload.emp=newEmp;payload.work=newWork;
+        payload.deduct=newEmp+newWork;payload.net=newInc-(newEmp+newWork);
+        payload.priceOverride=_ov;
+      }
+      return window._db.collection('settlements')
+        .where('dealerId','==',dealerId).where('driver','==',uid).where('month','==',month).get()
+        .then(function(snap){
+          return snap.empty
+            ?window._db.collection('settlements').add(Object.assign({},payload,{createdAt:firebase.firestore.FieldValue.serverTimestamp()}))
+            :snap.docs[0].ref.update(Object.assign({},payload,{updatedAt:firebase.firestore.FieldValue.serverTimestamp()}));
+        });
     }).then(function(){
       if(name){
         return window._db.collection('drivers')
