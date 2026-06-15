@@ -22721,7 +22721,7 @@ var MENUS_DELIVERY = [
   {s:'🛵 배달대행 정산', items:[
     {ic:'📊',l:'정산 현황',        p:'delivery_settle',  plan_key:'delivery'},
     {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',   plan_key:'delivery'},
-    {ic:'📈',l:'통계',             p:'delivery_stats',   plan_key:'delivery'},
+    {ic:'📈',l:'통계',             p:'stats',            plan_key:'delivery'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
     {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'delivery'}
   ]},
@@ -25369,12 +25369,18 @@ function goPage(page){
       parent.classList.add('open');
       var hdr=parent.previousElementSibling;
       if(hdr&&hdr.classList.contains('ns'))hdr.classList.add('open');
+      // ★ 섹션에서 업종 자동 감지
+      if(hdr){
+        var secText=hdr.textContent||'';
+        if(secText.indexOf('배달대행')>=0) window._CU_INDUSTRY='delivery';
+        else if(secText.indexOf('AI 정산')>=0||secText.indexOf('정산 관리')>=0) window._CU_INDUSTRY='settle';
+      }
     }
   }
   document.getElementById('topbar-right').innerHTML='';
   document.getElementById('sidebar').classList.remove('open');
   var _bd=document.getElementById('sb-backdrop');if(_bd)_bd.style.display='none';
-  var pages={settle:pageSettle,delivery_settle:pageDeliverySettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,delivery_stats:pageDeliveryStats,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,my_roster:pageMyRoster,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,payout:pagePayout,ind_rules:pageIndustryRules,
+  var pages={settle:pageSettle,delivery_settle:pageDeliverySettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,my_roster:pageMyRoster,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,payout:pagePayout,ind_rules:pageIndustryRules,
   ind_construction_rules:function(){pageIndRules('construction','🏗️ 건설·일용직');},
   ind_insurance_rules:function(){pageIndRules('insurance','🛡️ 보험설계사');},
   ind_beauty_rules:function(){pageIndRules('beauty','💄 뷰티·미용');},
@@ -32380,11 +32386,6 @@ function _statBuildTotal(byMonth,settles){
 }
 
 
-// ══ 배달대행 통계 ══
-function pageDeliveryStats(){
-  window._CU_INDUSTRY='delivery';
-  pageStats();
-}
 
 // ══ 통계 ══
 function pageStats(){
