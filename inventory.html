@@ -338,7 +338,10 @@ _auth.onAuthStateChanged(function(user){
     var inv=subs.inventory||{};
     var today=new Date().toISOString().slice(0,10);
     var isActive=!!(inv.active && (!inv.expiry || inv.expiry >= today));
-    if(!isActive){
+    // ★ 슈퍼어드민 바이패스
+    var _SA_EMAILS=['kimdh4790@gmail.com','soungkyekim@naver.com'];
+    var _isSA=_SA_EMAILS.indexOf(user.email||'')>=0;
+    if(!isActive && !_isSA){
       _showSubGate('inventory');
       return;
     }
