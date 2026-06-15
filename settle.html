@@ -25658,10 +25658,11 @@ function pageSettle(){
       drvSnap.docs.forEach(function(dd){
         var ddata=dd.data();
         if(ddata.priceOverride&&Object.keys(ddata.priceOverride).length){
-          // userId, name, id 모든 키로 등록 (settlement 필드명 불일치 대비)
-          if(ddata.userId) _drvPriceMap[ddata.userId]=ddata.priceOverride;
-          if(ddata.name)   _drvPriceMap[ddata.name]=ddata.priceOverride;
-          if(dd.id)        _drvPriceMap[dd.id]=ddata.priceOverride;
+          var ov=ddata.priceOverride;
+          // 모든 가능한 키로 등록
+          if(ddata.userId&&ddata.userId.trim()) _drvPriceMap[ddata.userId.trim()]=ov;
+          if(ddata.name&&ddata.name.trim())     _drvPriceMap[ddata.name.trim()]=ov;
+          if(dd.id)                             _drvPriceMap[dd.id]=ov;
         }
       });
       // _drvCache 갱신
@@ -25688,9 +25689,12 @@ function pageSettle(){
     var settles=allDocs.map(function(d){
       var sd=Object.assign({id:d.id},d.data());
       // ★ 기사별 priceOverride 주입 (calcNet에서 우선 적용)
-      // userId, driver, driverName, name 모두 시도
-      var _ov=_drvPriceMap[sd.userId]||_drvPriceMap[sd.driver]||
-              _drvPriceMap[sd.driverName]||_drvPriceMap[sd.name]||null;
+      // 모든 가능한 필드로 매칭
+      var _u1=sd.userId&&sd.userId.trim();
+      var _u2=sd.driver&&sd.driver.trim();
+      var _u3=sd.driverName&&sd.driverName.trim();
+      var _ov=(_u1&&_drvPriceMap[_u1])||(_u2&&_drvPriceMap[_u2])||
+              (_u3&&_drvPriceMap[_u3])||null;
       if(_ov) sd.priceOverride=_ov;
       return sd;
     });
