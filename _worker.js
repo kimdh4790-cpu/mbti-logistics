@@ -1412,7 +1412,34 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
           updatedAt:  { timestampValue: now.toISOString() }
         });
 
-        // 4. 결제 내역 기록
+        // 4. companies/{uid}.subscriptions.donway 동기화
+        //    → inventory.html / kiosk.html / qrpos.html이 이 필드로 구독 체크
+        try {
+          const expireStr = newExpire.toISOString().slice(0, 10); // YYYY-MM-DD
+          await fsPatch(token, `${FS_BASE}/companies/${uid}`, {
+            'subscriptions': {
+              mapValue: {
+                fields: {
+                  donway: {
+                    mapValue: {
+                      fields: {
+                        active:    { booleanValue: true },
+                        plan:      { stringValue: plan },
+                        expiry:    { stringValue: expireStr },
+                        updatedAt: { stringValue: now.toISOString() }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          });
+        } catch (e2) {
+          console.error('[toss-confirm] companies 동기화 실패:', e2.message);
+          // 실패해도 결제 자체는 성공이므로 계속 진행
+        }
+
+        // 5. 결제 내역 기록
         await fsAdd(token, 'payments', {
           dealerId:   { stringValue: uid },
           type:       { stringValue: 'toss' },
