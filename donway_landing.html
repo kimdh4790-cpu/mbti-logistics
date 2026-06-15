@@ -148,6 +148,10 @@ body{font-family:'Noto Sans KR',sans-serif;color:var(--text)}
 .step-name{font-size:12px;font-weight:800;margin-bottom:4px}
 .step-desc{font-size:10px;color:var(--text3)}
 .step-arrow{font-size:20px;color:var(--text3)}
+
+.dot-nav{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:100}
+.dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.3);cursor:pointer;transition:all .2s}
+.dot.active{background:var(--acc);width:20px;border-radius:4px}
 </style>
 </head>
 <body>
@@ -447,7 +451,56 @@ body{font-family:'Noto Sans KR',sans-serif;color:var(--text)}
   </div>
 </div>
 
+
+<button class="arrow prev" id="btnPrev" onclick="_slide(-1)">←</button>
+<button class="arrow next" id="btnNext" onclick="_slide(1)">→</button>
+<div class="slide-counter"><span id="cur">1</span> / <span id="tot">10</span></div>
+<div class="dot-nav" id="dot-nav"></div>
+
 <script>
+
+// ━━━ 슬라이드 ━━━
+var _cur=0;
+var _slides=document.querySelectorAll('.slide');
+var _tot=_slides.length;
+document.getElementById('tot').textContent=_tot;
+
+// 도트 생성
+var dotNav=document.getElementById('dot-nav');
+for(var i=0;i<_tot;i++){
+  var dot=document.createElement('div');
+  dot.className='dot'+(i===0?' active':'');
+  dot.dataset.i=i;
+  dot.onclick=function(){_goSlide(parseInt(this.dataset.i));};
+  dotNav.appendChild(dot);
+}
+
+function _goSlide(n){
+  _slides[_cur].classList.remove('active');
+  document.querySelectorAll('.dot')[_cur].classList.remove('active');
+  _cur=Math.max(0,Math.min(_tot-1,n));
+  _slides[_cur].classList.add('active');
+  document.querySelectorAll('.dot')[_cur].classList.add('active');
+  document.getElementById('cur').textContent=_cur+1;
+  document.getElementById('btnPrev').classList.toggle('disabled',_cur===0);
+  document.getElementById('btnNext').classList.toggle('disabled',_cur===_tot-1);
+}
+function _slide(d){_goSlide(_cur+d);}
+
+// 키보드
+document.addEventListener('keydown',function(e){
+  if(e.key==='ArrowRight'||e.key==='ArrowDown')_slide(1);
+  if(e.key==='ArrowLeft'||e.key==='ArrowUp')_slide(-1);
+});
+
+// 터치 스와이프
+var _tx=0;
+document.getElementById('slides').addEventListener('touchstart',function(e){_tx=e.touches[0].clientX;},{passive:true});
+document.getElementById('slides').addEventListener('touchend',function(e){
+  var dx=e.changedTouches[0].clientX-_tx;
+  if(Math.abs(dx)>50){_slide(dx<0?1:-1);}
+});
+
 // 오픈기념 카운터 실시간 로드
 (function(){
   function loadCounter(){
