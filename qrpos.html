@@ -515,6 +515,39 @@ function _renderPage(page){
   }
 }
 
+// ━━━ 구독 체크 헬퍼 ━━━
+var _subData={};
+function _loadSubs(did, cb){
+  if(!did){cb({});return;}
+  _db.collection('companies').doc(did).get()
+  .then(function(doc){
+    if(doc.exists){_subData=(doc.data().subscriptions)||{};}
+    cb(_subData);
+  }).catch(function(){cb({});});
+}
+function _subActive(product){
+  var s=_subData[product]||{};
+  var today=new Date().toISOString().slice(0,10);
+  return !!(s.active && (!s.expiry || s.expiry >= today));
+}
+function _showSubRequired(product, container){
+  var labels={qr:'QR 패키지',inventory:'재고관리',kiosk:'키오스크·POS'};
+  var prices={qr:'1,500원/인/월',inventory:'130,000원/월',kiosk:'50,000원/월'};
+  if(!container) container=document.getElementById('main-content');
+  if(!container) return;
+  container.innerHTML=
+    '<div style="display:flex;align-items:center;justify-content:center;min-height:60vh;padding:20px">'+
+    '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:40px 32px;max-width:380px;width:100%;text-align:center">'+
+      '<div style="font-size:48px;margin-bottom:16px">🔒</div>'+
+      '<div style="font-size:18px;font-weight:900;margin-bottom:8px">구독이 필요합니다</div>'+
+      '<div style="font-size:13px;color:var(--text3);line-height:1.7;margin-bottom:24px">'+
+        (labels[product]||product)+' 기능을 이용하려면<br>mbtico.kr 구독이 필요합니다.<br>'+
+        '<b style="color:var(--acc)">'+(prices[product]||'문의')+'</b> (VAT별도)'+
+      '</div>'+
+      '<a href="tel:051-711-3103" style="display:block;padding:14px;background:linear-gradient(90deg,var(--acc),#00a8cc);color:#000;border-radius:12px;font-size:14px;font-weight:900;text-decoration:none;margin-bottom:10px">📞 051-711-3103 도입 문의</a>'+
+      '<a href="https://donway.ai.kr/join" style="display:block;padding:12px;background:var(--bg3);color:var(--text2);border-radius:12px;font-size:13px;font-weight:700;text-decoration:none">온라인 신청하기 →</a>'+
+    '</div></div>';
+}
 function _initApp(){
   var did=_dealer?_dealer.id:(_cu?_cu.uid:'');
   _loadSubs(did,function(subs){
