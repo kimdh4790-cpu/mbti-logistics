@@ -13349,6 +13349,7 @@ function _dwCheckTierNotifications(prevCount, newCount, opts){
 
 // ══ 배달대행 정산 현황 ══
 function pageDeliverySettle(){
+  window._CU_INDUSTRY='delivery';
   document.getElementById('page-title').textContent='🛵 배달대행 정산 현황';
   document.getElementById('topbar-right').innerHTML='';
   var c=document.getElementById('content');
