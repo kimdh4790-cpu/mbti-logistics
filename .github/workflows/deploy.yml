@@ -1,8 +1,8 @@
 name: Deploy
 
 on:
-  workflow_dispatch:
-    # push 트리거 임시 비활성화 — JS 수정 작업 중
+  push:
+    branches: [main]
 
 jobs:
 
