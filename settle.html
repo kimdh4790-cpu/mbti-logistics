@@ -25658,7 +25658,10 @@ function pageSettle(){
       drvSnap.docs.forEach(function(dd){
         var ddata=dd.data();
         if(ddata.priceOverride&&Object.keys(ddata.priceOverride).length){
-          _drvPriceMap[ddata.userId||'']=ddata.priceOverride;
+          // userId, name, id 모든 키로 등록 (settlement 필드명 불일치 대비)
+          if(ddata.userId) _drvPriceMap[ddata.userId]=ddata.priceOverride;
+          if(ddata.name)   _drvPriceMap[ddata.name]=ddata.priceOverride;
+          if(dd.id)        _drvPriceMap[dd.id]=ddata.priceOverride;
         }
       });
       // _drvCache 갱신
@@ -25685,8 +25688,10 @@ function pageSettle(){
     var settles=allDocs.map(function(d){
       var sd=Object.assign({id:d.id},d.data());
       // ★ 기사별 priceOverride 주입 (calcNet에서 우선 적용)
-      var uid=sd.userId||sd.driver||'';
-      if(uid&&_drvPriceMap[uid]) sd.priceOverride=_drvPriceMap[uid];
+      // userId, driver, driverName, name 모두 시도
+      var _ov=_drvPriceMap[sd.userId]||_drvPriceMap[sd.driver]||
+              _drvPriceMap[sd.driverName]||_drvPriceMap[sd.name]||null;
+      if(_ov) sd.priceOverride=_ov;
       return sd;
     });
     // 경비 월별 집계 (expenses + tax_docs 경비류)
