@@ -32527,7 +32527,7 @@ function pageStats(){
             +'<td style="padding:8px;text-align:right;color:var(--blue);font-weight:700">₩'+fmt(d.net)+'</td>'
             +'<td style="padding:8px;text-align:right;color:#dc2626;font-weight:700">-₩'+fmt(d.insComp)+(d.expense>0?'<br><span style="font-size:10px;color:#f97316">경비 -₩'+fmt(d.expense)+'</span>':'')+'</td>'
             +'<td style="padding:8px;text-align:right">'
-            +'<td style="padding:8px;text-align:right"><div style="background:'+(d.profit>=0?'#059669':'#dc2626')+';color:#fff;font-weight:900;font-size:14px;padding:6px 10px;border-radius:8px;display:inline-block">₩'+fmt(Math.abs(d.profit))+'</div>'+(d.expense>0?'<div style="font-size:9px;color:var(--text3);margin-top:3px">경비 반영</div>':'')+'</td>'
+            +'<td style="padding:8px;text-align:right"><div style="background:'+(d.profit>=0?'#059669':'#dc2626')+';color:#fff;font-weight:900;font-size:14px;padding:6px 10px;border-radius:8px;display:inline-block">'+(d.profit<0?'-':'')+'₩'+fmt(Math.abs(d.profit))+'</div>'+(d.expense>0?'<div style="font-size:9px;color:var(--text3);margin-top:3px">경비 반영</div>':'')+'</td>'
             +'</td>'
             +'</tr>';
         }).join('')+'</tbody></table></div>';
