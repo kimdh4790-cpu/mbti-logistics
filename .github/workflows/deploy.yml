@@ -20,20 +20,24 @@ jobs:
           ACCOUNT="02709cbec18d848913b4246015b9148f"
           SCRIPT_NAME="mbti-logistics"
 
-          # multipart/form-data 방식으로 Worker 스크립트 업로드
+          # metadata.json 파일 생성 (따옴표 충돌 회피)
+          cat > /tmp/metadata.json << 'METAEOF'
+          {"main_module":"_worker.js","compatibility_date":"2025-11-01","usage_model":"bundled"}
+          METAEOF
+
           RESULT=$(curl -s -X PUT \
             "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/workers/scripts/$SCRIPT_NAME" \
             -H "Authorization: Bearer $CF_API_TOKEN" \
-            -F "metadata={"main_module":"_worker.js","compatibility_date":"2025-11-01","usage_model":"bundled"};type=application/json" \
+            -F "metadata=</tmp/metadata.json;type=application/json" \
             -F "_worker.js=@_worker.js;type=application/javascript+module")
 
           echo "$RESULT" | python3 -c "
 import json,sys
 d=json.load(sys.stdin)
 if d.get('success'):
-    print('✅ Worker 배포 성공:', d['result']['id'])
+    print('Worker 배포 성공')
 else:
-    print('❌ Worker 배포 실패:', json.dumps(d.get('errors',''), ensure_ascii=False))
+    print('Worker 배포 실패:', d.get('errors',''))
     sys.exit(1)
 "
 
@@ -54,7 +58,7 @@ else:
             "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/settle.html" \
             -H "X-Auth-Email: $CF_EMAIL" -H "X-Auth-Key: $CF_KEY" \
             --data-binary @/tmp/settle.html)
-          echo "$RESULT" | grep -q '"success":true' && echo "✅ settle.html KV 완료" || echo "❌ FAIL: $RESULT"
+          echo "$RESULT" | grep -q '"success":true' && echo "settle.html KV OK" || echo "FAIL: $RESULT"
 
       - name: Upload backup/settle_latest.html to KV
         env:
@@ -69,7 +73,7 @@ else:
             "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/backup/settle_latest.html" \
             -H "X-Auth-Email: $CF_EMAIL" -H "X-Auth-Key: $CF_KEY" \
             --data-binary @/tmp/settle_latest.html | grep -q '"success":true' \
-            && echo "✅ backup/settle_latest.html 완료" || echo "❌ backup FAIL"
+            && echo "backup settle_latest OK" || echo "backup FAIL"
 
   # ── 3. settle.html → Pages 배포 ──────────────────────────────
   deploy-settle-pages:
@@ -121,8 +125,8 @@ else:
                 "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/$FILE" \
                 -H "X-Auth-Email: $CF_EMAIL" -H "X-Auth-Key: $CF_KEY" \
                 --data-binary @"/tmp/$FILE")
-              echo "$RESULT" | grep -q '"success":true' && echo "✅ $FILE" || echo "❌ $FILE"
+              echo "$RESULT" | grep -q '"success":true' && echo "OK: $FILE" || echo "FAIL: $FILE"
             else
-              echo "⏭️  SKIP: $FILE"
+              echo "SKIP: $FILE"
             fi
           done
