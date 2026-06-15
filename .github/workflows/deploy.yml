@@ -16,9 +16,10 @@ jobs:
       - name: Deploy Worker via Wrangler
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 02709cbec18d848913b4246015b9148f
         run: |
-          npm install -g wrangler@4
-          npx wrangler deploy
+          npm install -g wrangler@3
+          npx wrangler deploy --name mbti-logistics 2>&1
 
   # ── 2. settle.html → KV 업로드 ───────────────────────────────
   deploy-settle-kv:
@@ -68,9 +69,10 @@ jobs:
       - name: Deploy to Cloudflare Pages
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 02709cbec18d848913b4246015b9148f
         run: |
-          npm install -g wrangler@4
-          npx wrangler pages deploy settle-pages --project-name donway-settle --branch production
+          npm install -g wrangler@3
+          npx wrangler pages deploy settle-pages --project-name donway-settle --branch production 2>&1
 
   # ── 4. HTML 파일들 → KV 업로드 ──────────────────────────────
   deploy-kv-assets:
