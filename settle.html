@@ -1304,8 +1304,20 @@ function calcNet(x){
   //          정책: 엑셀 단가 = 회사 단가(매출), 기사 단가 = 앱 관리자 RPRICE
   var _xRoutes = x.routeDetails || [];
   // ★ RPRICE(라우트단가표) 절대 우선 → routeDetails.unitPrice(업로드 시 이미 RPRICE 반영) 순
-  // ★ 기사별 단가 오버라이드 (settlement.priceOverride 우선)
-  var _prOv=x.priceOverride||{};
+  // ★ 기사별 단가 오버라이드 — priceOverride 또는 _drvCache에서 실시간 참조
+  var _prOv=(function(){
+    if(x.priceOverride&&Object.keys(x.priceOverride).length) return x.priceOverride;
+    var _uid=(x.userId||x.driver||x.driverName||'').trim();
+    if(_uid&&window._drvCache){
+      var _drv=window._drvCache.find(function(dv){
+        return (dv.userId||'').trim()===_uid||
+               (dv.name||'').trim()===_uid||
+               dv.id===_uid;
+      });
+      if(_drv&&_drv.priceOverride&&Object.keys(_drv.priceOverride).length) return _drv.priceOverride;
+    }
+    return {};
+  })();
   var _damtRP = _xRoutes.reduce(function(s,rd){
     var unit=_prOv[rd.route]||RPRICE[rd.route]||rd.unitPrice||0;
     return s+(rd.cnt||0)*unit;
@@ -7455,6 +7467,10 @@ _auth.onAuthStateChanged(function(user){
         window._CU=_CU;
 
         _db.doc('settings/prices_'+_CU.dealerId).get().then(function(ps){if(ps.exists)Object.assign(G_PRICES,ps.data());}).catch(function(){});
+        // ★ drivers 미리 로드 — calcNet priceOverride 적용을 위해
+        _db.collection('drivers').where('dealerId','==',_CU.dealerId).get().then(function(dSnap){
+          window._drvCache=dSnap.docs.map(function(dd){return Object.assign({id:dd.id},dd.data());});
+        }).catch(function(){});
         _db.collection('settings').doc(_CU.dealerId+'_campConfig').get().then(function(cs){
           if(cs.exists){_campConfig=cs.data()||{};_syncCampColors();}
         }).catch(function(){});
