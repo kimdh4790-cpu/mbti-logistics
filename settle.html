@@ -7255,24 +7255,7 @@ function _saveCpDriver(camp,dm,name,month,cb){
   // settle.html은 drivers 컬렉션에 직접 쓰지 않음
   // 기사 등록은 물류앱v9에서만 관리
   var _did=_CU&&_CU.dealerId||'';
-  // ★ 기사별 priceOverride — drivers 캐시에서 참조
-  var _prOvSave={};
-  if(window._drvCache){
-    var _dsv=window._drvCache.find(function(dv){
-      return (dv.userId||'').trim()===(uid||'').trim()||(dv.name||'').trim()===(uid||'').trim();
-    });
-    if(_dsv&&_dsv.priceOverride) _prOvSave=_dsv.priceOverride;
-  }
-  var _hasOv=Object.keys(_prOvSave).length>0;
-  var damt=0,ramt=0;
-  if(_hasOv){
-    Object.keys(dm.routes||{}).forEach(function(r){
-      var rv=dm.routes[r];
-      var unit=_prOvSave[r]||RPRICE[r]||rv.unitPrc||0;
-      damt+=(rv.cnt||0)*unit; ramt+=(rv.ret||0)*unit;
-    });
-  } else { damt=dm.delAmt||0; ramt=dm.retAmt||0; }
-  var freshRaw=dm.freshAmt||0;
+  var damt=dm.delAmt||0,ramt=dm.retAmt||0,freshRaw=dm.freshAmt||0;
   // ★ finc: 엑셀 col10×건수(addIncAmt) 우선 → 기사별 설정(_getIncSetting) → 글로벌
   var finc=0;
   // ★ 인센 ON/OFF 설정 먼저 확인
@@ -7309,11 +7292,8 @@ function _saveCpDriver(camp,dm,name,month,cb){
   var emp=wage>=800000?Math.floor(wage*0.008/10)*10:0,work=Math.floor(wage*0.0088/10)*10;
   var routeDetails=[];
   Object.keys(dm.routes).forEach(function(r){
-    var rv=dm.routes[r];
-    var unit=_prOvSave[r]||RPRICE[r]||rv.unitPrc||0;
-    routeDetails.push({route:r,cnt:rv.cnt||0,ret:rv.ret||0,
-      unitPrice:unit,amt:(rv.cnt||0)*unit,retAmt:(rv.ret||0)*unit,
-      excelUnitPrice:rv.unitPrc||0});
+    routeDetails.push({route:r,cnt:dm.routes[r].cnt||0,ret:dm.routes[r].ret||0,
+      unitPrice:dm.routes[r].unitPrc||0,amt:dm.routes[r].delAmt||0});
   });
   var dealerId=window._CU?window._CU.dealerId:'';
   var payload={dealerId:dealerId,driverName:name,driver:uid,camp:camp,month:month,jobsub:'쿠팡',
@@ -7475,10 +7455,11 @@ _auth.onAuthStateChanged(function(user){
         window._CU=_CU;
 
         _db.doc('settings/prices_'+_CU.dealerId).get().then(function(ps){if(ps.exists)Object.assign(G_PRICES,ps.data());}).catch(function(){});
-        // ★ drivers 미리 로드 — priceOverride 적용을 위해
+        // ★ drivers 미리 로드 — 기사별 priceOverride 적용을 위해 (로그인 즉시)
         _db.collection('drivers').where('dealerId','==',_CU.dealerId).get()
-          .then(function(dSnap){window._drvCache=dSnap.docs.map(function(dd){return Object.assign({id:dd.id},dd.data());});})
-          .catch(function(){});
+          .then(function(dSnap){
+            window._drvCache=dSnap.docs.map(function(dd){return Object.assign({id:dd.id},dd.data());});
+          }).catch(function(){});
         _db.collection('settings').doc(_CU.dealerId+'_campConfig').get().then(function(cs){
           if(cs.exists){_campConfig=cs.data()||{};_syncCampColors();}
         }).catch(function(){});
