@@ -7087,62 +7087,9 @@ function saveAllCp_orig(){
         // ── 저장 완료 후 세무사 연동 자동 실행
         _autoTaxSyncAfterSave(savedPayloads, p.month, function(){
           goPage('settlements');
-          // ★ 업로드 완료 후 priceOverride 자동 적용
           setTimeout(function(){
-            _db.collection('drivers').where('dealerId','==',_CU.dealerId).get()
-              .then(function(dSnap){
-                var _ovMap={};
-                dSnap.docs.forEach(function(dd){
-                  var ddata=dd.data();
-                  if(!ddata.priceOverride||!Object.keys(ddata.priceOverride).length) return;
-                  var ov=ddata.priceOverride;
-                  var uid2=(ddata.userId||'').replace(/@df$/i,'').trim();
-                  var nm2=(ddata.name||'').trim();
-                  if(uid2) _ovMap[uid2]=ov;
-                  if(nm2)  _ovMap[nm2]=ov;
-                });
-                if(!Object.keys(_ovMap).length) return; // 단가 설정 없으면 스킵
-                // 해당 월 settlements에 priceOverride 적용
-                var _did=_CU.dealerId;
-                var _mo=p.month;
-                _db.collection('settlements')
-                  .where('dealerId','==',_did).where('month','==',_mo).get()
-                  .then(function(sSnap){
-                    if(sSnap.empty) return;
-                    var batch=_db.batch();
-                    var cnt=0;
-                    sSnap.docs.forEach(function(sd){
-                      var sdata=sd.data();
-                      var _uid3=(sdata.userId||sdata.driver||sdata.driverName||'').replace(/@df$/i,'').trim();
-                      var _xOv=_ovMap[_uid3]||{};
-                      if(!Object.keys(_xOv).length) return;
-                      var rds=sdata.routeDetails||[];
-                      var newD=0,newR=0;
-                      var newRds=rds.map(function(rd){
-                        var unit=_xOv[rd.route]||RPRICE[rd.route]||rd.unitPrice||0;
-                        newD+=(rd.cnt||0)*unit; newR+=(rd.ret||0)*unit;
-                        return Object.assign({},rd,{unitPrice:unit,amt:(rd.cnt||0)*unit,retAmt:(rd.ret||0)*unit});
-                      });
-                      var newInc=newD+newR+(sdata.fresh||0)+(sdata.finc||0)+(sdata.nocont||0);
-                      var newSa=Math.round(newInc/1.1),newWage=Math.round(newSa*0.654);
-                      var newEmp=newWage>=800000?Math.floor(newWage*0.008/10)*10:0;
-                      var newWork=Math.floor(newWage*0.0088/10)*10;
-                      batch.update(sd.ref,{
-                        routeDetails:newRds,damt:newD,ramt:newR,
-                        totalAmt:newInc,income:newInc,supplyAmt:newSa,
-                        monthlyWage:newWage,emp:newEmp,work:newWork,
-                        deduct:newEmp+newWork,net:newInc-(newEmp+newWork),
-                        priceOverride:_xOv,updatedAt:new Date().toISOString()
-                      });
-                      cnt++;
-                    });
-                    if(cnt>0) batch.commit().then(function(){
-                      toast('✅ 기사별 단가 자동 적용 ('+cnt+'건)');
-                      _reloadSettlePage();
-                    }).catch(function(){});
-                  });
-              }).catch(function(){});
-          }, 1500); // settlements 페이지 로드 후 실행
+            if(typeof recalcAllSettlements_silent==='function') recalcAllSettlements_silent();
+          }, 2000);
         });
       }
     });
@@ -28108,53 +28055,6 @@ function _saveSE(id){
    .catch(function(e){toast('❌ '+e.message);});
 }
 // ══ 자동화 액션 함수 ══
-
-// ★ 엑셀 업로드 후 자동 priceOverride 재계산 (confirm 없이)
-function recalcAllSettlements_silent(){
-  if(!_settleCache||!_settleCache.length) return;
-  var _did=_CU&&_CU.dealerId||'';
-  _db.collection('drivers').where('dealerId','==',_did).get().then(function(dSnap){
-    var _ovMap={};
-    dSnap.docs.forEach(function(dd){
-      var ddata=dd.data();
-      if(!ddata.priceOverride||!Object.keys(ddata.priceOverride).length) return;
-      var ov=ddata.priceOverride;
-      var uid2=(ddata.userId||'').replace(/@df$/i,'').trim();
-      var nm2=(ddata.name||'').trim();
-      if(uid2) _ovMap[uid2]=ov;
-      if(nm2)  _ovMap[nm2]=ov;
-    });
-    if(!Object.keys(_ovMap).length) return;
-    var batch=_db.batch(); var cnt=0;
-    (_settleCache||[]).forEach(function(x){
-      if(!x.id) return;
-      var _uid=(x.userId||x.driver||x.driverName||'').replace(/@df$/i,'').trim();
-      var _xOv=_ovMap[_uid]||{};
-      if(!Object.keys(_xOv).length) return;
-      var rds=x.routeDetails||[]; var newD=0,newR=0;
-      var newRds=rds.map(function(rd){
-        var unit=_xOv[rd.route]||RPRICE[rd.route]||rd.unitPrice||0;
-        newD+=(rd.cnt||0)*unit; newR+=(rd.ret||0)*unit;
-        return Object.assign({},rd,{unitPrice:unit,amt:(rd.cnt||0)*unit,retAmt:(rd.ret||0)*unit});
-      });
-      var newInc=newD+newR+(x.fresh||0)+(x.finc||0)+(x.nocont||0);
-      var newSa=Math.round(newInc/1.1),newWage=Math.round(newSa*0.654);
-      var newEmp=newWage>=800000?Math.floor(newWage*0.008/10)*10:0;
-      var newWork=Math.floor(newWage*0.0088/10)*10;
-      var update={routeDetails:newRds,damt:newD,ramt:newR,
-        totalAmt:newInc,income:newInc,supplyAmt:newSa,
-        monthlyWage:newWage,emp:newEmp,work:newWork,
-        deduct:newEmp+newWork,net:newInc-(newEmp+newWork),
-        priceOverride:_xOv,updatedAt:new Date().toISOString()};
-      batch.update(_db.collection('settlements').doc(x.id),update);
-      Object.assign(x,update); cnt++;
-    });
-    if(cnt>0) batch.commit().then(function(){
-      toast('✅ 기사별 단가 자동 적용 ('+cnt+'건)');
-      _reloadSettlePage();
-    }).catch(function(){});
-  }).catch(function(){});
-}
 function recalcAllSettlements(){
   if(!_settleCache||!_settleCache.length){toast('❌ 정산 데이터 없음');return;}
   var unset=Object.keys(RPRICE).length===0;
