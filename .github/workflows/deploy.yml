@@ -6,10 +6,9 @@ on:
 
 jobs:
 
-  # ── 1. Worker 배포 — CF API 직접 업로드 ──────────────────────
   deploy-worker:
     runs-on: ubuntu-latest
-    name: 🚀 Worker 배포
+    name: "🚀 Worker 배포"
     steps:
       - uses: actions/checkout@v4
 
@@ -19,32 +18,13 @@ jobs:
         run: |
           ACCOUNT="02709cbec18d848913b4246015b9148f"
           SCRIPT_NAME="mbti-logistics"
+          printf '%s' '{"main_module":"_worker.js","compatibility_date":"2025-11-01","usage_model":"bundled"}' > /tmp/metadata.json
+          RESULT=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/workers/scripts/$SCRIPT_NAME" -H "Authorization: Bearer $CF_API_TOKEN" -F "metadata=</tmp/metadata.json;type=application/json" -F "_worker.js=@_worker.js;type=application/javascript+module")
+          echo "$RESULT" | grep -q '"success":true' && echo "Worker OK" || { echo "Worker FAIL: $RESULT"; exit 1; }
 
-          # metadata.json 파일 생성 (따옴표 충돌 회피)
-          cat > /tmp/metadata.json << 'METAEOF'
-          {"main_module":"_worker.js","compatibility_date":"2025-11-01","usage_model":"bundled"}
-          METAEOF
-
-          RESULT=$(curl -s -X PUT \
-            "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/workers/scripts/$SCRIPT_NAME" \
-            -H "Authorization: Bearer $CF_API_TOKEN" \
-            -F "metadata=</tmp/metadata.json;type=application/json" \
-            -F "_worker.js=@_worker.js;type=application/javascript+module")
-
-          echo "$RESULT" | python3 -c "
-import json,sys
-d=json.load(sys.stdin)
-if d.get('success'):
-    print('Worker 배포 성공')
-else:
-    print('Worker 배포 실패:', d.get('errors',''))
-    sys.exit(1)
-"
-
-  # ── 2. settle.html → KV 업로드 ───────────────────────────────
   deploy-settle-kv:
     runs-on: ubuntu-latest
-    name: 📦 settle.html → KV
+    name: "📦 settle.html → KV"
     steps:
       - name: Upload settle.html to KV
         env:
@@ -54,12 +34,8 @@ else:
           ACCOUNT="02709cbec18d848913b4246015b9148f"
           NS_ID="7f0e90efaea64f3ab08ff00f8970b28b"
           curl -sL "https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/settle.html" -o /tmp/settle.html
-          RESULT=$(curl -s -X PUT \
-            "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/settle.html" \
-            -H "X-Auth-Email: $CF_EMAIL" -H "X-Auth-Key: $CF_KEY" \
-            --data-binary @/tmp/settle.html)
+          RESULT=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/settle.html" -H "X-Auth-Email: $CF_EMAIL" -H "X-Auth-Key: $CF_KEY" --data-binary @/tmp/settle.html)
           echo "$RESULT" | grep -q '"success":true' && echo "settle.html KV OK" || echo "FAIL: $RESULT"
-
       - name: Upload backup/settle_latest.html to KV
         env:
           CF_EMAIL: kimdh4790@gmail.com
@@ -67,25 +43,18 @@ else:
         run: |
           ACCOUNT="02709cbec18d848913b4246015b9148f"
           NS_ID="7f0e90efaea64f3ab08ff00f8970b28b"
-          curl -sL "https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/backup/settle_latest.html" -o /tmp/settle_latest.html
-          [ -s /tmp/settle_latest.html ] && \
-          curl -s -X PUT \
-            "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/backup/settle_latest.html" \
-            -H "X-Auth-Email: $CF_EMAIL" -H "X-Auth-Key: $CF_KEY" \
-            --data-binary @/tmp/settle_latest.html | grep -q '"success":true' \
-            && echo "backup settle_latest OK" || echo "backup FAIL"
+          curl -sL "https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/backup/settle_latest.html" -o /tmp/sl.html
+          [ -s /tmp/sl.html ] && curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/backup/settle_latest.html" -H "X-Auth-Email: $CF_EMAIL" -H "X-Auth-Key: $CF_KEY" --data-binary @/tmp/sl.html | grep -q '"success":true' && echo "backup OK" || echo "backup FAIL"
 
-  # ── 3. settle.html → Pages 배포 ──────────────────────────────
   deploy-settle-pages:
     runs-on: ubuntu-latest
-    name: 🌐 settle.html → Pages
+    name: "🌐 settle.html → Pages"
     steps:
       - name: Prepare settle-pages dir
         run: |
           mkdir -p settle-pages
           curl -sL "https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/settle.html" -o settle-pages/index.html
-          echo "Size: $(wc -c < settle-pages/index.html) bytes"
-
+          echo "Size $(wc -c < settle-pages/index.html) bytes"
       - name: Deploy to Cloudflare Pages
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
@@ -94,10 +63,9 @@ else:
           npm install -g wrangler@3
           npx wrangler pages deploy settle-pages --project-name donway-settle --branch production 2>&1
 
-  # ── 4. HTML 파일들 → KV 업로드 ──────────────────────────────
   deploy-kv-assets:
     runs-on: ubuntu-latest
-    name: 📂 HTML 파일들 → KV
+    name: "📂 HTML 파일들 → KV"
     steps:
       - name: Upload HTML assets to KV
         env:
@@ -107,26 +75,12 @@ else:
           ACCOUNT="02709cbec18d848913b4246015b9148f"
           NS_ID="7f0e90efaea64f3ab08ff00f8970b28b"
           BASE="https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main"
-
-          FILES=(
-            kiosk.html inventory.html qrpos.html mbtico_hub.html
-            join.html admin_sub.html order.html donway_landing.html
-            emergency.html label.html scan.html universal_settle.html
-            mbetco.html admin.html portal.html my.html notice.html
-            drivers.html dashboard.html delivery.html contract.html
-            checkin.html attendance.html report.html schedule.html
-            settings.html visitor.html
-          )
-
-          for FILE in "${FILES[@]}"; do
+          for FILE in kiosk.html inventory.html qrpos.html mbtico_hub.html join.html admin_sub.html order.html donway_landing.html emergency.html label.html scan.html universal_settle.html mbetco.html admin.html portal.html my.html notice.html drivers.html dashboard.html delivery.html contract.html checkin.html attendance.html report.html schedule.html settings.html visitor.html; do
             curl -sL "$BASE/$FILE" -o "/tmp/$FILE"
             if [ -s "/tmp/$FILE" ]; then
-              RESULT=$(curl -s -X PUT \
-                "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/$FILE" \
-                -H "X-Auth-Email: $CF_EMAIL" -H "X-Auth-Key: $CF_KEY" \
-                --data-binary @"/tmp/$FILE")
-              echo "$RESULT" | grep -q '"success":true' && echo "OK: $FILE" || echo "FAIL: $FILE"
+              RESULT=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/$FILE" -H "X-Auth-Email: $CF_EMAIL" -H "X-Auth-Key: $CF_KEY" --data-binary @"/tmp/$FILE")
+              echo "$RESULT" | grep -q '"success":true' && echo "OK $FILE" || echo "FAIL $FILE"
             else
-              echo "SKIP: $FILE"
+              echo "SKIP $FILE"
             fi
           done
