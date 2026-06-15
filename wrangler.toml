@@ -12,3 +12,7 @@ zone_name = "mbtico.kr"
 
 [triggers]
 crons = ["* * * * *"]
+
+
+[pages]
+pages_build_output_dir = "settle-pages"
