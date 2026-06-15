@@ -1304,8 +1304,16 @@ function calcNet(x){
   //          정책: 엑셀 단가 = 회사 단가(매출), 기사 단가 = 앱 관리자 RPRICE
   var _xRoutes = x.routeDetails || [];
   // ★ RPRICE(라우트단가표) 절대 우선 → routeDetails.unitPrice(업로드 시 이미 RPRICE 반영) 순
-  var _damtRP = _xRoutes.reduce(function(s,rd){return s+(rd.cnt||0)*(RPRICE[rd.route]||rd.unitPrice||0);},0);
-  var _ramtRP = _xRoutes.reduce(function(s,rd){return s+(rd.ret||0)*(RPRICE[rd.route]||rd.unitPrice||0);},0);
+  // ★ 기사별 단가 오버라이드 적용 (priceOverride 있으면 우선)
+  var _prOv=x.priceOverride||{};
+  var _damtRP = _xRoutes.reduce(function(s,rd){
+    var unit=_prOv[rd.route]||RPRICE[rd.route]||rd.unitPrice||0;
+    return s+(rd.cnt||0)*unit;
+  },0);
+  var _ramtRP = _xRoutes.reduce(function(s,rd){
+    var unit=_prOv[rd.route]||RPRICE[rd.route]||rd.unitPrice||0;
+    return s+(rd.ret||0)*unit;
+  },0);
   var damt=isYong ? dcnt*yDel : (_xRoutes.length ? _damtRP : (+x.damt||+x.delivAmt||+x.base||0));
   var ramt=isYong ? rcnt*yRet : (_xRoutes.length ? _ramtRP : (+x.ramt||+x.retAmt||0));
   // ★ fresh/inc: 정산총괄에서 VAT제외로 파싱됨 → income 계산 시 VAT포함 변환
@@ -28507,117 +28515,70 @@ function editDriver(id){
   _db.collection('drivers').doc(id).get().then(function(snap){
     if(!snap.exists)return;
     var d=snap.data();
-    var old=document.getElementById('mo-edit-dr');if(old)old.remove();
     var mo=document.createElement('div');mo.className='mo show';mo.id='mo-edit-dr';
-    var md=document.createElement('div');md.className='md';
-
-    // 헤더
-    var hdr=document.createElement('div');hdr.className='mdt';
-    hdr.innerHTML='✏️ 기사 수정';
-    var xBtn=document.createElement('button');
-    xBtn.style.cssText='background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3);float:right';
-    xBtn.textContent='✕';xBtn.onclick=function(){mo.remove();};
-    hdr.appendChild(xBtn);
-    md.appendChild(hdr);
-
-    // 기본 정보 HTML — 입력 필드는 innerHTML 안전 (onclick 없음)
-    var body=document.createElement('div');body.style.cssText='padding:0 4px';
-    var campOptions=(_drvCache&&_drvCache.length
-      ?[...new Set(_drvCache.map(function(dv){return dv.camp||'';}).filter(Boolean))].sort()
-      :['기타']);
-
-    body.innerHTML=
-      '<div class="gr"><div class="fg"><label>성함</label><input id="edr-name" value="'+esc(d.name||'')+'"></div>'+
-      '<div class="fg"><label>쿠팡 ID</label><input id="edr-uid" value="'+esc(d.userId||'')+'" style="font-family:monospace"></div></div>'+
-      '<div class="gr"><div class="fg"><label>캠프</label><select id="edr-camp">'+
-        campOptions.map(function(cc){return '<option '+(d.camp===cc?'selected':'')+'>'+esc(cc)+'</option>';}).join('')+
-      '</select></div>'+
-      '<div class="fg"><label>상태</label><select id="edr-active">'+
-        '<option value="true" '+(d.is_active!==false?'selected':'')+'>재직</option>'+
-        '<option value="false" '+(d.is_active===false?'selected':'')+'>퇴직</option>'+
-      '</select></div></div>'+
-      '<div class="gr"><div class="fg"><label>연락처</label><input id="edr-phone" value="'+esc(d.phone||'')+'"></div>'+
-      '<div class="fg"><label>이메일</label><input id="edr-email" type="email" value="'+esc(d.email||d.driverEmail||'')+'"></div></div>'+
-      // 급여 설정
-      '<div style="border-top:1px dashed var(--border);margin:8px 0;padding-top:8px">'+
-      '<div style="font-size:11px;font-weight:800;color:var(--text2);margin-bottom:8px">💼 급여 설정</div>'+
-      '<div class="fg"><label>근무 타입</label>'+
-      '<select id="edr-worktype" onchange="_hwToggleRateFields(this.value)">'+
-        '<option value="coupang" '+((!d.workType||d.workType==='coupang')?'selected':'')+'>📦 쿠팡 기사 (건당)</option>'+
-        '<option value="hourly" '+(d.workType==='hourly'?'selected':'')+'>⏰ 시급제</option>'+
-        '<option value="weekly_fixed" '+(d.workType==='weekly_fixed'?'selected':'')+'>📅 주급제</option>'+
-        '<option value="monthly_fixed" '+(d.workType==='monthly_fixed'?'selected':'')+'>💼 월급제</option>'+
-        '<option value="daily" '+(d.workType==='daily'?'selected':'')+'>📅 일급제</option>'+
-        '<option value="commission" '+(d.workType==='commission'?'selected':'')+'>💰 수수료제</option>'+
-        '<option value="monthly" '+(d.workType==='monthly'?'selected':'')+'>💼 월급제</option>'+
-      '</select></div>'+
-      '<div class="gr" id="edr-rate-fields" style="'+((!d.workType||d.workType==='coupang')?'display:none':'')+'">' +
-        '<div class="fg" id="edr-hourly-f" style="'+(d.workType!=='hourly'?'display:none':'')+'"><label>시급 (원)</label><input id="edr-hourlyrate" type="number" value="'+(d.hourlyRate||10320)+'" min="10320"></div>'+
-        '<div class="fg" id="edr-daily-f" style="'+(d.workType!=='daily'?'display:none':'')+'"><label>일급 (원)</label><input id="edr-dailyrate" type="number" value="'+(d.dailyRate||82560)+'"></div>'+
-        '<div class="fg" id="edr-comm-f" style="'+(d.workType!=='commission'?'display:none':'')+'"><label>수수료율 (%)</label><input id="edr-commrate" type="number" value="'+(d.commissionRate||10)+'" step="0.1" min="0" max="100"></div>'+
-        '<div class="fg" id="edr-monthly-f" style="'+(d.workType!=='monthly'?'display:none':'')+'"><label>월 기본급 (원)</label><input id="edr-monthlyrate" type="number" value="'+(d.monthlyRate||2156880)+'"></div>'+
-        '<div class="fg" id="edr-guarantee-f" style="'+(d.workType!=='commission'?'display:none':'')+'"><label>최저보장액 (원)</label><input id="edr-guarantee" type="number" value="'+(d.baseGuarantee||0)+'"></div>'+
-      '</div>'+
-      '<div class="fg" style="margin-top:8px">'+
-        '<label style="font-size:12px;font-weight:700"><span style="background:#fef3c7;color:#d97706;font-size:10px;padding:2px 8px;border-radius:10px">보장</span> 세금계산서 정산 보장금액 (원)</label>'+
-        '<input id="edr-settle-guarantee" type="number" placeholder="예: 6500000" value="'+(d.settleGuarantee||0)+'" style="width:100%;padding:7px;border:1.5px solid #f59e0b;border-radius:8px">'+
-        '<div style="font-size:10px;color:var(--text3);margin-top:3px">부족분 자동 기타(+) 채움 — 비워두면 미적용</div>'+
-      '</div></div>'+
-      // 라우트 개별 단가
-      '<div style="border-top:1px dashed var(--border);margin:8px 0;padding-top:8px">'+
-      '<div style="font-size:11px;font-weight:800;color:var(--text2);margin-bottom:8px">💰 라우트 개별 단가 <span style="font-size:10px;font-weight:400;color:var(--text3)">(비워두면 공용 단가표 적용)</span></div>'+
-      (function(){
-        var routes=Object.keys(RPRICE).filter(function(k){return k&&k!=='nocont_w1'&&k!=='nocont_w2';}).sort();
-        var ov=d.priceOverride||{};
-        if(!routes.length) return '<div style="font-size:11px;color:var(--text3)">단가표 미설정</div>';
-        return '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">'+
-          routes.map(function(r){
-            return '<div><label style="font-size:10px;color:var(--text3)">'+esc(r)+'<br><span style="color:var(--text2)">(기본 ₩'+fmt(RPRICE[r])+')</span></label>'+
-              '<input id="edr-pr-'+esc(r)+'" type="number" placeholder="기본" value="'+(ov[r]||'')+'" style="width:100%;padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px"></div>';
-          }).join('')+
-        '</div>';
-      })()+
-      '</div>'+
-      // 사업자 정보
-      '<div style="border-top:1px dashed var(--border);margin:8px 0;padding-top:8px">'+
-      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'+
-        '<span style="font-size:11px;font-weight:800;color:var(--text2)">📋 사업자 정보 (세금계산서용)</span>'+
-        '<button id="edr-ocr-btn" style="cursor:pointer;background:linear-gradient(135deg,#3b82f6,#06b6d4);color:#fff;padding:4px 12px;border-radius:8px;font-size:10px;font-weight:700;border:none">📷 OCR 자동입력</button>'+
-        '<span id="edr-ocr-status" style="font-size:10px;color:var(--cyan)"></span>'+
-      '</div>'+
-      '<div class="gr"><div class="fg"><label>주민번호</label><input id="edr-ssn" value="'+esc(d.ssn||'')+'" placeholder="000000-0000000" style="font-family:monospace"></div></div>'+
-      '<div class="gr"><div class="fg"><label>사업자번호</label><input id="edr-biznum" value="'+esc(d.bizNum||'')+'" placeholder="000-00-00000"></div>'+
-        '<div class="fg"><label>상호명</label><input id="edr-bizname" value="'+esc(d.bizName||'')+'"></div></div>'+
-      '<div class="gr"><div class="fg"><label>대표자</label><input id="edr-bizrep" value="'+esc(d.bizRep||d.name||'')+'"></div>'+
-        '<div class="fg"><label>사업장주소</label><input id="edr-bizaddr" value="'+esc(d.bizAddr||'')+'"></div></div>'+
-      '<div class="gr"><div class="fg"><label>업태</label><input id="edr-biztype" value="'+esc(d.bizType||'')+'" placeholder="서비스업"></div>'+
-        '<div class="fg"><label>종목</label><input id="edr-bizitem" value="'+esc(d.bizItem||d.bizKind||'')+'" placeholder="기타물품운반원"></div></div>'+
-      '</div>';
-
-    md.appendChild(body);
-
-    // 푸터 버튼 — DOM 방식 (onclick 충돌 없음)
-    var ftr=document.createElement('div');ftr.className='mdf';
-    var delBtn=document.createElement('button');delBtn.className='btn btn-red btn-sm';
-    delBtn.style.marginRight='auto';delBtn.textContent='삭제';
-    delBtn.onclick=function(){delDriver(id);};
-    var cancelBtn=document.createElement('button');cancelBtn.className='btn';
-    cancelBtn.textContent='취소';cancelBtn.onclick=function(){mo.remove();};
-    var saveBtn=document.createElement('button');saveBtn.className='btn btn-blue';
-    saveBtn.textContent='저장';saveBtn.onclick=function(){saveDriver(id);};
-    ftr.appendChild(delBtn);ftr.appendChild(cancelBtn);ftr.appendChild(saveBtn);
-    md.appendChild(ftr);
-
-    mo.appendChild(md);
-    mo.onclick=function(e){if(e.target===mo)mo.remove();};
+    mo.innerHTML='<div class="md"><div class="mdt">✏️ 기사 수정 <button onclick="this.closest(\'.mo\').remove()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3)">✕</button></div>'
+      +'<div class="gr"><div class="fg"><label>성함</label><input id="edr-name" value="'+esc(d.name||'')+'"></div>'
+      +'<div class="fg"><label>쿠팡 ID</label><input id="edr-uid" value="'+esc(d.userId||'')+'" style="font-family:monospace"></div></div>'
+      +'<div class="gr"><div class="fg"><label>캠프</label><select id="edr-camp">'
+      +(_drvCache&&_drvCache.length?[...new Set(_drvCache.map(function(dv){return dv.camp||''}).filter(Boolean))].sort():['기타']).map(function(cc){return '<option '+(d.camp===cc?'selected':'')+'>'+cc+'</option>';}).join('')+'<option '+(d.camp==='기타'||!d.camp?'selected':'')+'>기타</option></select></div>'
+      +'<div class="fg"><label>상태</label><select id="edr-active"><option value="true" '+(d.is_active!==false?'selected':'')+'>재직</option><option value="false" '+(d.is_active===false?'selected':'')+'>퇴직</option></select></div></div>'
+      +'<div class="gr"><div class="fg"><label>연락처</label><input id="edr-phone" value="'+esc(d.phone||'')+'"></div>'
+      +'<div class="fg"><label>이메일</label><input id="edr-email" type="email" value="'+esc(d.email||d.driverEmail||'')+'"></div></div>'
+      // ── 근무 타입 (시급/일급/수수료/쿠팡)
+      +'<div style="border-top:1px dashed var(--border);margin:8px 0;padding-top:8px">'
+      +'<div style="font-size:11px;font-weight:800;color:var(--text2);margin-bottom:8px">💼 급여 설정</div>'
+      +'<div class="fg"><label>근무 타입</label>'
+      +'<select id="edr-worktype" onchange="_hwToggleRateFields(this.value)">'
+      +'<option value="coupang" '+((!d.workType||d.workType==="coupang")?"selected":"")+'>📦 쿠팡 기사 (건당)</option>'
+      +'<option value="hourly" '+(d.workType==="hourly"?"selected":"")+'>⏰ 시급제</option>'
+      +'<option value="weekly_fixed" '+(d.workType==="weekly_fixed"?"selected":"")+'>📅 주급제</option>'
+      +'<option value="monthly_fixed" '+(d.workType==="monthly_fixed"?"selected":"")+'>💼 월급제</option>'
+      +'<option value="daily" '+(d.workType==="daily"?"selected":"")+'>📅 일급제</option>'
+      +'<option value="commission" '+(d.workType==="commission"?"selected":"")+'>💰 수수료제</option>'
+      +'<option value="monthly" '+(d.workType==="monthly"?"selected":"")+'>💼 월급제</option>'
+      +'</select></div>'
+      +'<div class="gr" id="edr-rate-fields" style="'+((!d.workType||d.workType==="coupang")?"display:none":"")+'">'
+      +'<div class="fg" id="edr-hourly-f" style="'+(d.workType!=="hourly"?"display:none":"")+'">'
+      +'<label>시급 (원)</label><input id="edr-hourlyrate" type="number" value="'+(d.hourlyRate||10320)+'" min="10320"></div>'
+      +'<div class="fg" id="edr-daily-f" style="'+(d.workType!=="daily"?"display:none":"")+'">'
+      +'<label>일급 (원)</label><input id="edr-dailyrate" type="number" value="'+(d.dailyRate||82560)+'"></div>'
+      +'<div class="fg" id="edr-comm-f" style="'+(d.workType!=="commission"?"display:none":"")+'">'
+      +'<label>수수료율 (%)</label><input id="edr-commrate" type="number" value="'+(d.commissionRate||10)+'" step="0.1" min="0" max="100"></div>'
+      +'<div class="fg" id="edr-monthly-f" style="'+(d.workType!=="monthly"?"display:none":"")+'">'
+      +'<label>월 기본급 (원)</label><input id="edr-monthlyrate" type="number" value="'+(d.monthlyRate||2156880)+'"></div>'
+      +'<div class="fg" id="edr-guarantee-f" style="'+(d.workType!=="commission"?"display:none":"")+'">'
+      +'<label>최저보장액 (원)</label><input id="edr-guarantee" type="number" value="'+(d.baseGuarantee||0)+'"></div>'
+      +'</div>'
+      +'<div class="fg" style="margin-top:8px">'
+      +'<label style="font-size:12px;font-weight:700"><span style="background:#fef3c7;color:#d97706;font-size:10px;padding:2px 8px;border-radius:10px">보장</span> 세금계산서 정산 보장금액 (원)</label>'
+      +'<input id="edr-settle-guarantee" type="number" placeholder="예: 6500000" value="'+(d.settleGuarantee||0)+'" style="width:100%;padding:7px;border:1.5px solid #f59e0b;border-radius:8px;font-size:13px;background:var(--bg)">'
+      +'<div style="font-size:10px;color:var(--text3);margin-top:3px">부족분 자동 기타(+) 채움 — 비워두면 미적용</div>'
+      +'</div>'
+      +'</div>'
+      +'<div style="border-top:1px dashed var(--border);margin:8px 0;padding-top:8px">'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+      +'<span style="font-size:11px;font-weight:800;color:var(--text2)">📋 사업자 정보 (세금계산서용)</span>'
+      +'<button onclick="_openOcrModal()" style="cursor:pointer;background:linear-gradient(135deg,#3b82f6,#06b6d4);color:#fff;padding:4px 12px;border-radius:8px;font-size:10px;font-weight:700;border:none;display:flex;align-items:center;gap:5px">'
+      +'<span>📷</span><span>OCR 자동입력</span>'
+      +'</button>'
+      +'<span id="edr-ocr-status" style="font-size:10px;color:var(--cyan)"></span>'
+      +'<div class="gr">'      +'<div class="fg"><label>주민번호</label><input id="edr-ssn" value="'+esc(d.ssn||'')+'" placeholder="000000-0000000" style="font-family:monospace"></div>'      +'<div class="fg"><label>입사일</label><input id="edr-joindate" type="date" value="'+(d.joinDate||'')+'"></div>'      +'</div>'
+      +'</div>'
+      +'<div class="gr"><div class="fg"><label>사업자번호</label><input id="edr-biznum" value="'+esc(d.bizNum||'')+'" placeholder="000-00-00000"></div>'
+      +'<div class="fg"><label>상호명</label><input id="edr-bizname" value="'+esc(d.bizName||'')+'"></div></div>'
+      +'<div class="gr"><div class="fg"><label>대표자</label><input id="edr-bizrep" value="'+esc(d.bizRep||d.name||'')+'"></div>'
+      +'<div class="fg"><label>사업장주소</label><input id="edr-bizaddr" value="'+esc(d.bizAddr||'')+'"></div></div>'
+      +'<div class="gr"><div class="fg"><label>업태</label><input id="edr-biztype" value="'+esc(d.bizType||'')+'" placeholder="서비스업"></div>'
+      +'<div class="fg"><label>종목</label><input id="edr-bizitem" value="'+esc(d.bizItem||d.bizKind||'')+'" placeholder="기타물품운반원"></div></div>'
+      +'</div>'
+      +'<div class="mdf"><button class="btn btn-red btn-sm" style="margin-right:auto" onclick="delDriver(\''+id+'\')">삭제</button>'
+      +'<button class="btn" onclick="this.closest(\'.mo\').remove()">취소</button>'
+      +'<button class="btn btn-blue" onclick="saveDriver(\''+id+'\')">저장</button></div></div>';
     document.getElementById('modals').appendChild(mo);
-
-    // OCR 버튼 이벤트
-    var ocrBtn=document.getElementById('edr-ocr-btn');
-    if(ocrBtn)ocrBtn.onclick=function(){_openOcrModal();};
   });
 }
 
+// ── 사업자등록증 OCR (드래그앤드롭 + 카메라 + 클린 모달)
 function _openOcrModal(){
   var old=document.getElementById('mo-ocr-upload');if(old)old.remove();
   var mo=document.createElement('div');mo.className='mo show';mo.id='mo-ocr-upload';
@@ -29029,6 +28990,14 @@ function saveDriver(id){
     baseGuarantee:parseFloat(gvs('edr-guarantee'))||0,
     settleGuarantee:parseFloat(gvs('edr-settle-guarantee'))||0
   };
+  // ★ 라우트 개별 단가 수집
+  var priceOverride={};
+  Object.keys(RPRICE).filter(function(k){return k&&k!=='nocont_w1'&&k!=='nocont_w2';}).forEach(function(r){
+    var el=document.getElementById('edr-pr-'+r);
+    if(el&&el.value.trim()){var v=parseFloat(el.value.trim());if(v>0)priceOverride[r]=v;}
+  });
+  if(Object.keys(priceOverride).length>0) payload.priceOverride=priceOverride;
+  else payload.priceOverride={};
   _db.collection('drivers').doc(id).update(payload).then(function(){
     var mo=document.getElementById('mo-edit-dr');if(mo)mo.remove();
     _drvCache=null;
