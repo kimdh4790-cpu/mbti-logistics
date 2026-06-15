@@ -1412,20 +1412,55 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
           updatedAt:  { timestampValue: now.toISOString() }
         });
 
-        // 4. companies/{uid}.subscriptions.donway 동기화
-        //    → inventory.html / kiosk.html / qrpos.html이 이 필드로 구독 체크
+        // 4. orderId에서 product 파싱 → companies 필드 자동 활성화
+        // orderId 형식: DW-{uid8}-{timestamp}-{planType}-{hc}
+        const planType = parts.length >= 4 ? parts[3] : 'settle';
+        const headcount = parts.length >= 5 ? parseInt(parts[4]) || 0 : 0;
+
+        // product → companies 필드 매핑
+        const PRODUCT_MAP = {
+          settle:     { field: 'settlePaid' },
+          delivery:   { field: 'deliveryPaid' },
+          qr:         { field: 'qrPaid' },
+          payroll:    { field: 'payrollPaid' },
+          qr_payroll: { fields: ['qrPaid','payrollPaid'] },
+          universal:  { field: 'universalPaid' },
+          premium:    { field: 'premiumPaid' },
+          // mbtico 크로스 연동 (subscriptions 서브필드)
+          inventory:  { subField: 'inventory' },
+          kiosk:      { subField: 'kiosk' },
+          qr_mbtico:  { subField: 'qr' },
+        };
+        const pm = PRODUCT_MAP[planType] || { field: planType+'Paid' };
+        const expireStr = newExpire.toISOString().slice(0, 10);
+
         try {
-          const expireStr = newExpire.toISOString().slice(0, 10); // YYYY-MM-DD
+          // companies 직접 필드 업데이트 (DONWAY 상품)
+          if (pm.field || pm.fields) {
+            const updateFields = {};
+            const fieldList = pm.fields || [pm.field];
+            fieldList.forEach(f => {
+              updateFields[f] = { booleanValue: true };
+            });
+            updateFields['planExpiry'] = { stringValue: expireStr };
+            updateFields['planUpdatedAt'] = { stringValue: now.toISOString() };
+            if (headcount > 0) updateFields['personCount'] = { integerValue: String(headcount) };
+            await fsPatch(token, `${FS_BASE}/companies/${uid}`, updateFields);
+          }
+
+          // subscriptions 서브필드 업데이트 (MBTICO 상품 or donway 기본)
+          const subProduct = pm.subField || 'donway';
           await fsPatch(token, `${FS_BASE}/companies/${uid}`, {
             'subscriptions': {
               mapValue: {
                 fields: {
-                  donway: {
+                  [subProduct]: {
                     mapValue: {
                       fields: {
                         active:    { booleanValue: true },
-                        plan:      { stringValue: plan },
+                        plan:      { stringValue: planType },
                         expiry:    { stringValue: expireStr },
+                        headcount: { integerValue: String(headcount) },
                         updatedAt: { stringValue: now.toISOString() }
                       }
                     }
@@ -1436,7 +1471,6 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
           });
         } catch (e2) {
           console.error('[toss-confirm] companies 동기화 실패:', e2.message);
-          // 실패해도 결제 자체는 성공이므로 계속 진행
         }
 
         // 5. 어드민 이메일 + 알림톡 큐 발송
