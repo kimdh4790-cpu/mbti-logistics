@@ -1,6 +1,7 @@
 name = "mbti-logistics"
 main = "_worker.js"
 compatibility_date = "2025-11-01"
+account_id = "02709cbec18d848913b4246015b9148f"
 
 [[routes]]
 pattern = "donway.ai.kr/*"
@@ -12,4 +13,3 @@ zone_name = "mbtico.kr"
 
 [triggers]
 crons = ["* * * * *"]
-
