@@ -2,7 +2,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ━━━ 기본 함수 ━━━
+    // ── 기본 인증 헬퍼 ─────────────────────────────────────────
     function isAuth() {
       return request.auth != null;
     }
@@ -39,12 +39,8 @@ service cloud.firestore {
         isSuperAdmin()
       );
     }
-    // 공개 생성 허용 (고객 QR 예약 등)
-    function ownsDocOrPublic() {
-      return ownsDoc() || !isAuth();
-    }
 
-    // ━━━ 슈퍼어드민 전용 ━━━
+    // ── 관리/로그/시스템 ──────────────────────────────────────
     match /admins/{docId} {
       allow read: if isAuth();
       allow write: if isSuperAdmin();
@@ -63,30 +59,29 @@ service cloud.firestore {
     match /admin_notifications/{docId} {
       allow read, write: if isSuperAdmin();
     }
+    match /admin_tokens/{docId} {
+      // FCM 토큰 등록용 — 본인 토큰만 쓰기 허용
+      allow read: if isAuth() && resource.data.uid == myUid() || isSuperAdmin();
+      allow write: if isAuth();
+    }
     match /cron_logs/{docId} {
       allow read: if isSuperAdmin();
-      allow create: if false; // Worker에서만 생성
+      allow create: if false; // Worker 서버사이드에서만 작성
     }
     match /subscription_logs/{docId} {
-      allow read: if isSuperAdmin();
-      allow create: if isSuperAdmin();
+      allow read, write: if isSuperAdmin();
     }
-
-    // ━━━ 가입 신청 ━━━
+    match /alimtalk_queue/{docId} {
+      allow create: if isAuth();
+      allow read, update: if isSuperAdmin();
+    }
     match /join_requests/{docId} {
-      allow create: if true; // 누구나 신청 가능
+      allow create: if true; // 비로그인 신청 허용
       allow read, update, delete: if isSuperAdmin();
     }
 
-    // ━━━ 알림톡 큐 ━━━
-    match /alimtalk_queue/{docId} {
-      allow create: if isAuth() || true; // Worker + 앱 모두
-      allow read, update: if isSuperAdmin();
-    }
-
-    // ━━━ 회사 ━━━
+    // ── 회사/사용자 ────────────────────────────────────────────
     match /companies/{dealerId} {
-      // read: 본인 회사만 (기존: 전체 공개 → 강화)
       allow read: if isAuth() && (
         isMyDealer(dealerId) || isSuperAdmin()
       );
@@ -94,8 +89,6 @@ service cloud.firestore {
       allow update: if isMyDealer(dealerId) || isSuperAdmin();
       allow delete: if isSuperAdmin();
     }
-
-    // ━━━ 사용자 ━━━
     match /users/{userId} {
       allow read: if isAuth() && (
         myUid() == userId ||
@@ -108,39 +101,60 @@ service cloud.firestore {
       );
     }
 
-    // ━━━ 구독/결제 ━━━
+    // ── 구독/결제 ─────────────────────────────────────────────
+    // subscriptions: 클라이언트 읽기 허용 (subscribe.html에서 직접 체크)
+    // 쓰기는 Worker(서버사이드)에서만 → 클라이언트 write 차단
     match /subscriptions/{docId} {
-      allow read: if ownsDoc() || isSuperAdmin();
-      allow write: if isSuperAdmin();
+      allow read: if isAuth() && (
+        docId == myUid() || isSuperAdmin()
+      );
+      allow write: if isSuperAdmin(); // Worker는 Admin SDK → rules 우회
+    }
+    // payments: 본인 결제내역 읽기 + 슈퍼어드민 전체
+    match /payments/{docId} {
+      allow read: if isAuth() && (
+        resource.data.dealerId == myUid() ||
+        resource.data.dealerId == myDealerId() ||
+        isSuperAdmin()
+      );
+      allow create: if false; // Worker에서만 생성
+      allow update, delete: if isSuperAdmin();
     }
     match /payment_requests/{docId} {
       allow read: if ownsDoc();
       allow create: if ownsNewDoc();
       allow update, delete: if isSuperAdmin();
     }
+    match /plan_guards/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+    }
+    match /plan_guard_alerts/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+    }
 
-    // ━━━ 핵심 정산 데이터 (dealerId 완전 격리) ━━━
+    // ── 정산/배송/근태 ────────────────────────────────────────
     match /settlements/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
-      allow create: if ownsNewDoc();
     }
     match /drivers/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
-      allow create: if ownsNewDoc();
     }
     match /members/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
-      allow create: if ownsNewDoc();
     }
     match /tax_docs/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
-      allow create: if ownsNewDoc();
     }
     match /attendance/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
-      allow create: if ownsNewDoc();
     }
     match /driver_settlements/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+    }
+    match /delivery_sessions/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+    }
+    match /dispatch_results/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
     }
     match /hourly_settlements/{docId} {
@@ -152,6 +166,12 @@ service cloud.firestore {
     match /leaves/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
     }
+    match /absences/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+    }
+    match /leave_payments/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+    }
     match /overtimes/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
     }
@@ -161,16 +181,19 @@ service cloud.firestore {
     match /notices/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
     }
-    match /payout_sessions/{docId} {
+    match /driver_notifications/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
     }
-    match /ind_workers/{docId} {
+    match /devices/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
     }
-    match /settings/{docId} {
+    match /biometrics/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
     }
-    match /cal_memos/{docId} {
+    match /lunch/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+    }
+    match /lunch_alerts/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
     }
     match /roster_week/{docId} {
@@ -179,75 +202,87 @@ service cloud.firestore {
     match /vehicles/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
     }
+    match /maintenance/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+    }
     match /expenses/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
     }
     match /documents/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
     }
-    match /delivery_sessions/{docId} {
+    match /signatures/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
     }
-    match /dispatch_results/{docId} {
+    match /driverDocs/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
     }
-    match /driver_notifications/{docId} {
+    match /ind_workers/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
     }
-    match /devices/{docId} {
+    match /payout_sessions/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
     }
+    match /settings/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+    }
+    match /cal_memos/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+    }
+    match /idSupport/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+    }
+
+    // ── 청소/위탁 ────────────────────────────────────────────
     match /clean_orders/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+    }
+    match /clean_dispatch/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
     }
     match /clean_workers/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
     }
 
-    // ━━━ 재고관리 (dealerId 완전 격리) ━━━
+    // ── 재고관리 (mbtico) ─────────────────────────────────────
     match /inventory/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
-      allow create: if ownsNewDoc();
     }
     match /inventory_in/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
-      allow create: if ownsNewDoc();
     }
     match /inventory_out/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
-      allow create: if ownsNewDoc();
     }
     match /inv_edit_log/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
     }
+    match /inv_change_log/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+    }
 
-    // ━━━ mbetco (키오스크·QR·예약) dealerId 격리 ━━━
+    // ── mbtico 공통 (예약·매출·고객·서비스·리뷰·쿠폰) ─────────
     match /mbetco_bookings/{docId} {
-      // 고객이 예약 생성 가능 (비로그인)
-      allow create: if true;
-      allow read, update: if ownsDoc() || isSuperAdmin();
-      allow delete: if ownsDoc() || isSuperAdmin();
+      allow create: if true; // 고객 예약 비로그인 허용
+      allow read, update, delete: if ownsDoc() || isSuperAdmin();
     }
     match /mbetco_sales/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
-      allow create: if ownsNewDoc();
     }
     match /mbetco_customers/{docId} {
+      allow create: if true; // 고객 자기등록 허용
       allow read, write: if ownsDoc() || ownsNewDoc();
-      allow create: if true; // 고객 자동 등록
     }
     match /mbetco_services/{docId} {
-      allow read: if true; // 고객이 서비스 목록 조회
+      allow read: if true; // QR 결제 페이지에서 비로그인 조회
       allow write: if ownsDoc() || ownsNewDoc();
-      allow create: if ownsNewDoc();
     }
     match /mbetco_reviews/{docId} {
-      allow create: if true; // 고객이 리뷰 작성
-      allow read: if true;
+      allow create, read: if true; // 고객 리뷰 등록·조회
       allow update, delete: if ownsDoc() || isSuperAdmin();
     }
     match /mbetco_coupons/{docId} {
-      allow read: if true; // 고객이 쿠폰 확인
+      allow read: if true;
       allow write: if ownsDoc() || ownsNewDoc();
     }
     match /mbetco_mappings/{docId} {
@@ -256,17 +291,24 @@ service cloud.firestore {
     match /mbetco_settles/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
     }
+    match /mbetco_settle_details/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+    }
     match /mbetco_workers/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
     }
-
-    // ━━━ beauty_sales (키오스크 매출) ━━━
+    match /mbetco_companies/{docId} {
+      allow read: if isAuth() && (
+        resource.data.email == request.auth.token.email || isSuperAdmin()
+      );
+      allow create: if isSuperAdmin();
+      allow update, delete: if isSuperAdmin();
+    }
     match /beauty_sales/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
-      allow create: if ownsNewDoc();
     }
 
-    // ━━━ 세무사 공유 (토큰 기반) ━━━
+    // ── 세금/공유 ────────────────────────────────────────────
     match /taxShares/{docId} {
       allow read: if true;
       allow write: if isAuth();
@@ -276,9 +318,25 @@ service cloud.firestore {
       }
     }
 
-    // ━━━ 방문자/고객 공개 ━━━
+    // ── 방문자/고객프로필 ─────────────────────────────────────
     match /visitors/{docId} {
       allow create: if true;
+      allow read, write: if isAuth();
+    }
+    match /customer_profiles/{docId} {
+      allow create: if true;
+      allow read, write: if isAuth();
+    }
+    match /customer_invites/{docId} {
+      allow read, write: if isAuth();
+    }
+    match /customer_notifications/{docId} {
+      allow read, write: if isAuth();
+    }
+    match /customer_push_queue/{docId} {
+      allow read, write: if isAuth();
+    }
+    match /sms_queue/{docId} {
       allow read, write: if isAuth();
     }
     match /open_event/{docId} {
@@ -286,7 +344,7 @@ service cloud.firestore {
       allow write: if isAuth();
     }
 
-    // ━━━ 나머지 미분류 (로그인 필요) ━━━
+    // ── 폴백: 슈퍼어드민 전체 접근 ───────────────────────────
     match /{document=**} {
       allow read, write: if isSuperAdmin();
     }
