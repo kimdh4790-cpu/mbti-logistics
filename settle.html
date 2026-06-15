@@ -29156,16 +29156,7 @@ function saveDriver(id){
   payload.priceOverride=priceOverride;
   _db.collection('drivers').doc(id).update(payload).then(function(){
     var mo=document.getElementById('mo-edit-dr');if(mo)mo.remove();
-    // ★ _drvCache 업데이트 (null 초기화 대신 해당 기사만 갱신)
-    if(window._drvCache){
-      var idx=window._drvCache.findIndex(function(dv){return dv.id===id;});
-      if(idx>=0) window._drvCache[idx]=Object.assign({},window._drvCache[idx],payload,{id:id});
-      else window._drvCache.push(Object.assign({},payload,{id:id}));
-    } else {
-      // 캐시 없으면 재로드
-      _db.collection('drivers').where('dealerId','==',_CU.dealerId).get()
-        .then(function(dSnap){window._drvCache=dSnap.docs.map(function(dd){return Object.assign({id:dd.id},dd.data());});});
-    }
+    _drvCache=null;
     toast('✅ 저장됨');
     // ★ settlements 사업자 정보 동기화 (calcNet 재계산에 반영)
     if(payload.bizNum!==undefined && _db && _CU){
@@ -29183,6 +29174,47 @@ function saveDriver(id){
             });
           });
           batch.commit().catch(function(){});
+        }).catch(function(){});
+    }
+    // ★ priceOverride 있으면 settlements.routeDetails 단가 직접 업데이트
+    if(payload.priceOverride&&Object.keys(payload.priceOverride).length&&_db&&_CU){
+      var _ov=payload.priceOverride;
+      var _uid=payload.userId||'';
+      _db.collection('settlements')
+        .where('dealerId','==',_CU.dealerId)
+        .where('driver','==',_uid)
+        .get().then(function(sSnap){
+          if(sSnap.empty) return;
+          var batch=_db.batch();
+          sSnap.docs.forEach(function(sd){
+            var sdata=sd.data();
+            var rds=sdata.routeDetails||[];
+            if(!rds.length) return;
+            var newDamt=0,newRamt=0;
+            var newRds=rds.map(function(rd){
+              var unit=_ov[rd.route]||RPRICE[rd.route]||rd.unitPrice||0;
+              var dAmt=(rd.cnt||0)*unit;
+              var rAmt=(rd.ret||0)*unit;
+              newDamt+=dAmt; newRamt+=rAmt;
+              return Object.assign({},rd,{unitPrice:unit,amt:dAmt,retAmt:rAmt});
+            });
+            var newIncome=newDamt+newRamt+(sdata.fresh||0)+(sdata.finc||0)+(sdata.nocont||0)+(sdata.etcPlus||0);
+            var newSa=Math.round(newIncome/1.1);
+            var newWage=Math.round(newSa*0.654);
+            var newEmp=newWage>=800000?Math.floor(newWage*0.008/10)*10:0;
+            var newWork=Math.floor(newWage*0.0088/10)*10;
+            var newDeduct=(sdata.dmg||0)+newEmp+newWork+(sdata.adv||0)+(sdata.eq||0)+(sdata.etcMinus||0);
+            var newNet=newIncome-newDeduct;
+            batch.update(sd.ref,{
+              routeDetails:newRds,damt:newDamt,ramt:newRamt,
+              totalAmt:newIncome,income:newIncome,supplyAmt:newSa,
+              monthlyWage:newWage,emp:newEmp,work:newWork,
+              deduct:newDeduct,net:newNet,
+              priceOverride:_ov,
+              updatedAt:new Date().toISOString()
+            });
+          });
+          batch.commit().then(function(){toast('✅ 저장 완료 — 단가 적용됨');}).catch(function(){});
         }).catch(function(){});
     }
     // ★ users 컬렉션도 동기화 (직원 앱에서 반영되도록)
