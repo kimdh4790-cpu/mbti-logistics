@@ -1638,6 +1638,8 @@ function parseCoupangExcel(inp){
       .catch(function(){return[];})
     :Promise.resolve([]);
   fbPromise.then(function(fbDrivers){
+    // ★ fbDrivers를 _drvCache에 저장 — _saveCpDriver에서 priceOverride 참조용
+    if(fbDrivers&&fbDrivers.length) window._drvCache=fbDrivers;
     _parseCoupangExcelInner(file,fbDrivers,month);
   });
 }
