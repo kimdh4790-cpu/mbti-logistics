@@ -1439,7 +1439,43 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
           // 실패해도 결제 자체는 성공이므로 계속 진행
         }
 
-        // 5. 결제 내역 기록
+        // 5. 어드민 이메일 + 알림톡 큐 발송
+        try {
+          const planLabel = { starter: 'Starter', basic: 'Basic', pro: 'Pro' }[plan] || plan;
+          const compDoc = await fsGet(token, 'companies', uid);
+          const companyName = compDoc.fields?.companyName?.stringValue || compDoc.fields?.name?.stringValue || uid;
+          const adminEmail  = compDoc.fields?.adminEmail?.stringValue || compDoc.fields?.email?.stringValue || '';
+          const expireStr   = newExpire.toISOString().slice(0, 10);
+          if (env.EMAIL_API_KEY) {
+            const html = '<div style="font-family:sans-serif;padding:24px"><b style="color:#0066ff;font-size:18px">💰 신규 결제</b><br><br>'
+              + '회사: ' + companyName + '<br>이메일: ' + adminEmail
+              + '<br>플랜: ' + planLabel + '<br>금액: ' + Number(amount).toLocaleString() + '원'
+              + '<br>만료: ' + expireStr + '<br>주문: ' + orderId + '</div>';
+            await fetch('https://api.resend.com/emails', {
+              method: 'POST',
+              headers: { 'Authorization': 'Bearer ' + env.EMAIL_API_KEY, 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                from: 'DONWAY <all@donway.ai.kr>',
+                to: ['kimdh4790@gmail.com', 'soungkyekim@naver.com'],
+                subject: '[DONWAY] 신규결제 ' + companyName + ' / ' + planLabel + ' / ' + Number(amount).toLocaleString() + '원',
+                html
+              })
+            });
+          }
+          await fsAdd(token, 'alimtalk_queue', {
+            type:        { stringValue: 'new_payment' },
+            companyId:   { stringValue: uid },
+            companyName: { stringValue: companyName },
+            plan:        { stringValue: planLabel },
+            amount:      { integerValue: String(amount) },
+            expireDate:  { stringValue: expireStr },
+            createdAt:   { timestampValue: now.toISOString() }
+          });
+        } catch (e3) {
+          console.error('[toss-confirm] 알림 실패:', e3.message);
+        }
+
+        // 6. 결제 내역 기록
         await fsAdd(token, 'payments', {
           dealerId:   { stringValue: uid },
           type:       { stringValue: 'toss' },
