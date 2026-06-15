@@ -29874,15 +29874,16 @@ function _subPayClick(btn){
   var mo=document.createElement('div');
   mo.id='pay-method-modal';
   mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px';
-  var box=document.createElement('div');box.style.cssText='background:var(--bg2);border-radius:20px;padding:24px;max-width:320px;width:100%';
-  var ttl=document.createElement('div');ttl.style.cssText='font-size:15px;font-weight:900;margin-bottom:4px';ttl.textContent='💳 결제 수단 선택';
-  var dsc=document.createElement('div');dsc.style.cssText='font-size:12px;color:var(--text3);margin-bottom:18px';dsc.innerHTML=pname+' · ~'+hc+'명 · <b style="color:var(--acc)">₩'+amt.toLocaleString()+'</b>/월 (VAT포함)';
-  var b1=document.createElement('button');b1.style.cssText='width:100%;padding:14px;background:#0066ff;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px';b1.textContent='💳 카드 결제 (토스페이먼츠)';b1.onclick=(function(k,a,h){return function(){_subTossPay(k,a,h);};})(key,amt,hc);
-  var b2=document.createElement('button');b2.style.cssText='width:100%;padding:14px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px';b2.textContent='🏦 계좌이체 (3% 할인)';b2.onclick=(function(k,a,h){return function(){_subTransfer(k,a,h);};})(key,amt,hc);
-  var b3=document.createElement('button');b3.style.cssText='width:100%;padding:10px;background:none;border:none;color:var(--text3);font-size:13px;cursor:pointer';b3.textContent='취소';b3.onclick=function(){mo.remove();};
-  box.appendChild(ttl);box.appendChild(dsc);box.appendChild(b1);box.appendChild(b2);box.appendChild(b3);mo.appendChild(box);
+  mo.innerHTML='<div style="background:var(--bg2);border-radius:20px;padding:24px;max-width:320px;width:100%">'
+    +'<div style="font-size:15px;font-weight:900;margin-bottom:4px">💳 결제 수단 선택</div>'
+    +'<div style="font-size:12px;color:var(--text3);margin-bottom:18px">'+pname+' · ~'+hc+'명 · <b style="color:var(--acc)">₩'+amt.toLocaleString()+'</b>/월 (VAT포함)</div>'
+    +'<button onclick="_subTossPay(''+key+'','+amt+','+hc+')" style="width:100%;padding:14px;background:#0066ff;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px">💳 카드 결제 (토스페이먼츠)</button>'
+    +'<button onclick="_subTransfer(''+key+'','+amt+','+hc+')" style="width:100%;padding:14px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px">🏦 계좌이체 (3% 할인)</button>'
+    +'<button onclick="this.closest("#pay-method-modal")||document.getElementById('pay-method-modal').remove()" style="width:100%;padding:10px;background:none;border:none;color:var(--text3);font-size:13px;cursor:pointer">취소</button>'
+    +'</div>';
   mo.onclick=function(e){if(e.target===mo)mo.remove();};
   document.body.appendChild(mo);
+}
 
 function _subTossPay(planKey, amt, hc){
   document.getElementById('pay-method-modal')&&document.getElementById('pay-method-modal').remove();
@@ -34808,7 +34809,7 @@ function openAdminPanel(){
           '<div style="font-size:10px;color:var(--text3)">'+item.desc+'</div>'+
         '</div>'+
         '<button class="sa-sim-btn" id="sa-sim-'+item.key+'" data-label="'+item.label+'" '+
-          'onclick="window._saSimToggle(''+item.key+'')" '+
+          'data-simkey="'+item.key+'" onclick="window._saSimToggle(this.dataset.simkey)" '+
           'style="padding:7px 14px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;'+
           'background:'+(isOn?'#22c55e':'var(--bg3)')+';color:'+(isOn?'#fff':'var(--text)')+';min-width:80px">'+
           (isOn?'✅ ':'○ ')+item.label+
