@@ -32777,7 +32777,7 @@ function pageStats(){
             +'<td style="padding:8px;text-align:right;color:#dc2626">-₩'+fmt(d.insComp)+'</td>'
             +'<td style="padding:8px;text-align:right;color:#f97316">-₩'+fmt(d.payVat||0)+'</td>'
             +'<td style="padding:8px;text-align:right">'
-              +'<div style="background:'+(d.profit>=0?'#059669':'#dc2626')+';color:#fff;font-weight:900;font-size:13px;padding:5px 8px;border-radius:8px;display:inline-block">'+(d.profit<0?'▼ -₩':'₩')+fmt(Math.abs(d.profit))+'</div>'
+              +'<div style="background:'+(d.profit>=0?'#059669':'#dc2626')+';color:#fff;font-weight:900;font-size:13px;padding:5px 8px;border-radius:8px;display:inline-block">₩'+fmt(Math.abs(d.profit))+'</div>'
               +'<div style="font-size:10px;color:var(--text3);margin-top:2px">마진율 '+marginRate+'%</div>'
             +'</td>'
             +'</tr>';
