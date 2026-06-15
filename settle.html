@@ -22721,7 +22721,7 @@ var MENUS_DELIVERY = [
   {s:'🛵 배달대행 정산', items:[
     {ic:'📊',l:'정산 현황',        p:'delivery_settle',  plan_key:'delivery'},
     {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',   plan_key:'delivery'},
-    {ic:'📈',l:'통계',             p:'delivery_stats',   plan_key:'delivery'},
+    {ic:'📈',l:'통계',             p:'stats',            plan_key:'delivery'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
     {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'delivery'}
   ]},
@@ -25369,18 +25369,12 @@ function goPage(page){
       parent.classList.add('open');
       var hdr=parent.previousElementSibling;
       if(hdr&&hdr.classList.contains('ns'))hdr.classList.add('open');
-      // ★ 섹션에서 업종 자동 감지
-      if(hdr){
-        var secText=hdr.textContent||'';
-        if(secText.indexOf('배달대행')>=0) window._CU_INDUSTRY='delivery';
-        else if(secText.indexOf('AI 정산')>=0||secText.indexOf('정산 관리')>=0) window._CU_INDUSTRY='settle';
-      }
     }
   }
   document.getElementById('topbar-right').innerHTML='';
   document.getElementById('sidebar').classList.remove('open');
   var _bd=document.getElementById('sb-backdrop');if(_bd)_bd.style.display='none';
-  var pages={settle:pageSettle,delivery_settle:pageDeliverySettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,delivery_stats:pageDeliveryStatsNew,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,my_roster:pageMyRoster,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,payout:pagePayout,ind_rules:pageIndustryRules,
+  var pages={settle:pageSettle,delivery_settle:pageDeliverySettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,my_roster:pageMyRoster,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,payout:pagePayout,ind_rules:pageIndustryRules,
   ind_construction_rules:function(){pageIndRules('construction','🏗️ 건설·일용직');},
   ind_insurance_rules:function(){pageIndRules('insurance','🛡️ 보험설계사');},
   ind_beauty_rules:function(){pageIndRules('beauty','💄 뷰티·미용');},
@@ -32385,104 +32379,6 @@ function _statBuildTotal(byMonth,settles){
   return card;
 }
 
-
-
-
-// ══ 배달대행 전용 통계 ══
-function pageDeliveryStatsNew(){
-  document.getElementById('page-title').textContent='🛵 배달대행 통계';
-  document.getElementById('topbar-right').innerHTML='';
-  var el=document.getElementById('content');
-  if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
-
-  var did=_CU.dealerId||_CU.uid;
-  el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">⏳ 로딩 중...</div>';
-
-  _db.collection('delivery_settlements').where('dealerId','==',did).get()
-  .then(function(snap){
-    if(snap.empty){
-      el.innerHTML='<div class="empty">배달대행 정산 데이터 없음</div>';
-      return;
-    }
-    var byMonth={};
-    snap.forEach(function(d){
-      var v=d.data();
-      var mo=v.month||v.ym||'';
-      if(!byMonth[mo])byMonth[mo]={cnt:0,revenue:0,cost:0,count:0};
-      byMonth[mo].cnt+=(v.dcnt||v.count||0);
-      byMonth[mo].revenue+=(v.totalVat||v.revenue||0);
-      byMonth[mo].cost+=(v.net||v.driverPay||0);
-      byMonth[mo].count++;
-    });
-    var months=Object.keys(byMonth).sort().reverse();
-    var html='<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">'+
-      '<button class="btn btn-blue" onclick="_dwStatTab('month')">📅 월별</button>'+
-      '<button class="btn" onclick="_dwStatTab('camp')">🏕 캠프별</button>'+
-      '</div>'+
-      '<div id="dw-stat-content"></div>';
-    el.innerHTML=html;
-
-    // 월별 기본 표시
-    window._dwStatByMonth=byMonth;
-    window._dwStatSnap=snap;
-    _dwStatTab('month');
-  }).catch(function(e){el.innerHTML='<div class="empty">'+e.message+'</div>';});
-}
-
-window._dwStatTab=function(tab){
-  var sc=document.getElementById('dw-stat-content');if(!sc)return;
-  var byMonth=window._dwStatByMonth||{};
-  var months=Object.keys(byMonth).sort().reverse();
-
-  if(tab==='month'){
-    var html='<div class="table-wrap"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
-      '<tr style="background:var(--bg3)"><th style="padding:8px">월</th><th style="padding:8px;text-align:right">배송건수</th><th style="padding:8px;text-align:right">매출</th><th style="padding:8px;text-align:right">라이더지급</th><th style="padding:8px;text-align:right">순수익</th></tr>'+
-      months.map(function(mo){
-        var d=byMonth[mo];
-        var profit=d.revenue-d.cost;
-        return '<tr style="border-bottom:1px solid var(--border)">'+
-          '<td style="padding:8px;font-weight:700">'+mo+'</td>'+
-          '<td style="padding:8px;text-align:right">'+d.cnt.toLocaleString()+'건</td>'+
-          '<td style="padding:8px;text-align:right;color:var(--green)">₩'+(d.revenue||0).toLocaleString()+'</td>'+
-          '<td style="padding:8px;text-align:right;color:var(--red)">-₩'+(d.cost||0).toLocaleString()+'</td>'+
-          '<td style="padding:8px;text-align:right;font-weight:700;color:'+(profit>=0?'var(--green)':'var(--red)')+'">'+
-            (profit<0?'-':'')+'₩'+Math.abs(profit).toLocaleString()+
-          '</td>'+
-        '</tr>';
-      }).join('')+
-    '</table></div>';
-    sc.innerHTML=html;
-  } else if(tab==='camp'){
-    var byCamp={};
-    (window._dwStatSnap||{docs:[]}).docs.forEach(function(d){
-      var v=d.data();
-      var cc=v.camp||v.campName||'기타';
-      if(!byCamp[cc])byCamp[cc]={cnt:0,revenue:0,cost:0};
-      byCamp[cc].cnt+=(v.dcnt||v.count||0);
-      byCamp[cc].revenue+=(v.totalVat||v.revenue||0);
-      byCamp[cc].cost+=(v.net||v.driverPay||0);
-    });
-    var camps=Object.keys(byCamp).sort();
-    var html='<div class="table-wrap"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
-      '<tr style="background:var(--bg3)"><th style="padding:8px">캠프</th><th style="padding:8px;text-align:right">배송건수</th><th style="padding:8px;text-align:right">매출</th><th style="padding:8px;text-align:right">지급</th><th style="padding:8px;text-align:right">순수익</th></tr>'+
-      camps.map(function(cc){
-        var d=byCamp[cc];
-        var profit=d.revenue-d.cost;
-        return '<tr style="border-bottom:1px solid var(--border)">'+
-          '<td style="padding:8px;font-weight:700">'+cc+'</td>'+
-          '<td style="padding:8px;text-align:right">'+d.cnt.toLocaleString()+'건</td>'+
-          '<td style="padding:8px;text-align:right;color:var(--green)">₩'+(d.revenue||0).toLocaleString()+'</td>'+
-          '<td style="padding:8px;text-align:right;color:var(--red)">-₩'+(d.cost||0).toLocaleString()+'</td>'+
-          '<td style="padding:8px;text-align:right;font-weight:700;color:'+(profit>=0?'var(--green)':'var(--red)')+'">'+
-            (profit<0?'-':'')+'₩'+Math.abs(profit).toLocaleString()+
-          '</td>'+
-        '</tr>';
-      }).join('')+
-    '</table></div>';
-    sc.innerHTML=html;
-  }
-};
-
 // ══ 통계 ══
 function pageStats(){
   document.getElementById('page-title').textContent='통계';
@@ -32615,7 +32511,7 @@ function pageStats(){
             +'<td style="padding:8px;text-align:right;color:var(--blue);font-weight:700">₩'+fmt(d.net)+'</td>'
             +'<td style="padding:8px;text-align:right;color:#dc2626;font-weight:700">-₩'+fmt(d.insComp)+(d.expense>0?'<br><span style="font-size:10px;color:#f97316">경비 -₩'+fmt(d.expense)+'</span>':'')+'</td>'
             +'<td style="padding:8px;text-align:right">'
-            +'<td style="padding:8px;text-align:right"><div style="background:'+(d.profit>=0?'#059669':'#dc2626')+';color:#fff;font-weight:900;font-size:14px;padding:6px 10px;border-radius:8px;display:inline-block">₩'+fmt(Math.abs(d.profit))+'</div>'+(d.expense>0?'<div style="font-size:9px;color:var(--text3);margin-top:3px">경비 반영</div>':'')+'</td>'
+            +'<td style="padding:8px;text-align:right"><div style="background:'+(d.profit>=0?'#059669':'#dc2626')+';color:#fff;font-weight:900;font-size:14px;padding:6px 10px;border-radius:8px;display:inline-block">'+(d.profit<0?'-':'')+'₩'+fmt(Math.abs(d.profit))+'</div>'+(d.expense>0?'<div style="font-size:9px;color:var(--text3);margin-top:3px">경비 반영</div>':'')+'</td>'
             +'</td>'
             +'</tr>';
         }).join('')+'</tbody></table></div>';
