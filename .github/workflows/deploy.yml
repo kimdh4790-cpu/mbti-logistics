@@ -5,46 +5,39 @@ on:
     branches: [main]
 
 jobs:
-  deploy-pages:
+  deploy-settle-pages:
     runs-on: ubuntu-latest
-    name: Deploy settle.html to Pages
+    name: Deploy settle to Pages
     steps:
-      - name: Download settle.html
+      - name: Setup settle-pages
         run: |
-          curl -sL -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/settle.html" \
-            -o index.html
           mkdir -p settle-pages
-          cp index.html settle-pages/index.html
-          echo "Size: $(wc -c < settle-pages/index.html) bytes"
+          curl -sL "https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/settle.html" -o settle-pages/index.html
+          echo "Size: $(wc -c < settle-pages/index.html)"
 
-      - name: Deploy to Cloudflare Pages
+      - name: Deploy via CF API
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: 02709cbec18d848913b4246015b9148f
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
         run: |
-          npm install -g wrangler
-          wrangler pages deploy settle-pages --project-name donway-settle --branch production
+          npm install -g wrangler@latest
+          cd settle-pages
+          npx wrangler pages deploy . --project-name donway-settle --branch production
 
   deploy-kv:
     runs-on: ubuntu-latest
-    name: Upload HTML files to KV
+    name: Upload to KV
     steps:
-      - name: Upload HTML files
+      - name: Upload HTML to KV
         env:
           CF_EMAIL: kimdh4790@gmail.com
           CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
         run: |
-          NS_ID="7f0e90efaea64f3ab08ff00f8970b28b"
           ACCOUNT="02709cbec18d848913b4246015b9148f"
-          FILES="kiosk.html inventory.html qrpos.html mbtico_hub.html join.html admin_sub.html order.html donway_landing.html"
-          for FILE in $FILES; do
+          NS_ID="7f0e90efaea64f3ab08ff00f8970b28b"
+          for FILE in kiosk.html inventory.html qrpos.html mbtico_hub.html join.html admin_sub.html order.html donway_landing.html; do
             curl -sL "https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/$FILE" -o "/tmp/$FILE"
-            if [ -s "/tmp/$FILE" ]; then
-              RESP=$(curl -s -w "\nHTTP:%{http_code}" -X PUT \
-                "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/$FILE" \
-                -H "X-Auth-Email: $CF_EMAIL" -H "X-Auth-Key: $CF_KEY" \
-                --data-binary @"/tmp/$FILE")
-              echo "$FILE: $(echo $RESP | tail -1)"
-            fi
+            [ -s "/tmp/$FILE" ] && curl -s -X PUT \
+              "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/$FILE" \
+              -H "X-Auth-Email: $CF_EMAIL" -H "X-Auth-Key: $CF_KEY" \
+              --data-binary @"/tmp/$FILE" | grep -q "success" && echo "OK: $FILE" || echo "FAIL: $FILE"
           done
