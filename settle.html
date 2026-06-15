@@ -7255,29 +7255,7 @@ function _saveCpDriver(camp,dm,name,month,cb){
   // settle.html은 drivers 컬렉션에 직접 쓰지 않음
   // 기사 등록은 물류앱v9에서만 관리
   var _did=_CU&&_CU.dealerId||'';
-  // ★ 기사별 priceOverride 확인 — 개별 단가 설정 시 우선 적용
-  var _prOvSave={};
-  if(uid&&window._drvCache){
-    var _drvSave=window._drvCache.find(function(dv){
-      return (dv.userId||'').trim()===uid.trim()||(dv.name||'').trim()===uid.trim();
-    });
-    if(_drvSave&&_drvSave.priceOverride) _prOvSave=_drvSave.priceOverride;
-  }
-  // priceOverride 있으면 damt/ramt 재계산
-  var damt=0,ramt=0;
-  var _hasOv=Object.keys(_prOvSave).length>0;
-  if(_hasOv){
-    Object.keys(dm.routes||{}).forEach(function(r){
-      var rv=dm.routes[r];
-      var unit=_prOvSave[r]||RPRICE[r]||rv.unitPrc||0;
-      damt+=(rv.cnt||0)*unit;
-      ramt+=(rv.ret||0)*unit;
-    });
-  } else {
-    damt=dm.delAmt||0;
-    ramt=dm.retAmt||0;
-  }
-  var freshRaw=dm.freshAmt||0;
+  var damt=dm.delAmt||0,ramt=dm.retAmt||0,freshRaw=dm.freshAmt||0;
   // ★ finc: 엑셀 col10×건수(addIncAmt) 우선 → 기사별 설정(_getIncSetting) → 글로벌
   var finc=0;
   // ★ 인센 ON/OFF 설정 먼저 확인
@@ -7314,11 +7292,8 @@ function _saveCpDriver(camp,dm,name,month,cb){
   var emp=wage>=800000?Math.floor(wage*0.008/10)*10:0,work=Math.floor(wage*0.0088/10)*10;
   var routeDetails=[];
   Object.keys(dm.routes).forEach(function(r){
-    var rv=dm.routes[r];
-    var unit=_prOvSave[r]||RPRICE[r]||rv.unitPrc||0;
-    routeDetails.push({route:r,cnt:rv.cnt||0,ret:rv.ret||0,
-      unitPrice:unit,amt:(rv.cnt||0)*unit,retAmt:(rv.ret||0)*unit,
-      excelUnitPrice:rv.unitPrc||0});  // 엑셀 원본 단가 보존
+    routeDetails.push({route:r,cnt:dm.routes[r].cnt||0,ret:dm.routes[r].ret||0,
+      unitPrice:dm.routes[r].unitPrc||0,amt:dm.routes[r].delAmt||0});
   });
   var dealerId=window._CU?window._CU.dealerId:'';
   var payload={dealerId:dealerId,driverName:name,driver:uid,camp:camp,month:month,jobsub:'쿠팡',
@@ -27356,6 +27331,18 @@ function openSE(id){
 function _showSEModal(s){
   window._currentSEData=s; // ★ 인센 재계산용
   if(!s){toast('❌ 정산 데이터를 불러올 수 없습니다');return;}
+  // ★ priceOverride 주입 — _drvCache에서 기사별 단가 가져오기
+  var _seUid=(s.userId||s.driver||s.driverName||'').trim();
+  if(_seUid&&window._drvCache){
+    var _seDrv=window._drvCache.find(function(dv){
+      return (dv.userId||'').trim()===_seUid||
+             (dv.name||'').trim()===_seUid||
+             dv.id===_seUid;
+    });
+    if(_seDrv&&_seDrv.priceOverride&&Object.keys(_seDrv.priceOverride).length){
+      s=Object.assign({},s,{priceOverride:_seDrv.priceOverride});
+    }
+  }
   // ★ calcNet으로 RPRICE 기반 실시간 재계산 (저장값 override)
   var _cn=calcNet(s);
   if(_cn){
