@@ -285,6 +285,46 @@ function _submit(){
       status:'pending',
       createdAt:new Date().toISOString(),
     }).catch(function(){});
+
+    // FCM 푸시 — 대표 폰 즉시 알림
+    _db.collection('admins').get().then(function(snap){
+      snap.forEach(function(d){
+        var tokens=d.data().fcmTokens||[];
+        tokens.forEach(function(token){
+          fetch('/fcm/notify-drivers',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({
+              token:token,
+              title:'🚀 새 도입 신청!',
+              body:(_state.companyName||'')+'·'+(_state.repName||'')+' 신청 접수',
+              type:'join_request'
+            })
+          }).catch(function(){});
+        });
+      });
+    }).catch(function(){});
+
+    // 이메일 알림
+    fetch('/api/send-email',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        to:'kimdh4790@gmail.com',
+        subject:'[DONWAY] 새 도입 신청 — '+(_state.companyName||''),
+        html:'<h2>새 도입 신청 접수!</h2>'+
+          '<table style="border-collapse:collapse;width:100%">'+
+          '<tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold">회사명</td><td style="padding:8px;border:1px solid #ddd">'+(_state.companyName||'')+'</td></tr>'+
+          '<tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold">담당자</td><td style="padding:8px;border:1px solid #ddd">'+(_state.repName||'')+'</td></tr>'+
+          '<tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold">이메일</td><td style="padding:8px;border:1px solid #ddd">'+(_state.email||'')+'</td></tr>'+
+          '<tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold">연락처</td><td style="padding:8px;border:1px solid #ddd">'+(_state.phone||'')+'</td></tr>'+
+          '<tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold">업종</td><td style="padding:8px;border:1px solid #ddd">'+(_state.industry||'')+'</td></tr>'+
+          '<tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold">인원</td><td style="padding:8px;border:1px solid #ddd">'+(_state.personCount||'')+'명</td></tr>'+
+          '</table>'+
+          '<p><a href="https://donway.ai.kr/admin_sub" style="background:#f59e0b;color:#000;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:bold">어드민에서 확인 →</a></p>'
+      })
+    }).catch(function(){});
+
     _showSuccess();
   }).catch(function(e){
     toast('❌ '+e.message);
