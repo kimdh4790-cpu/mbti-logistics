@@ -29156,7 +29156,16 @@ function saveDriver(id){
   payload.priceOverride=priceOverride;
   _db.collection('drivers').doc(id).update(payload).then(function(){
     var mo=document.getElementById('mo-edit-dr');if(mo)mo.remove();
-    _drvCache=null;
+    // ★ _drvCache 업데이트 (null 초기화 대신 해당 기사만 갱신)
+    if(window._drvCache){
+      var idx=window._drvCache.findIndex(function(dv){return dv.id===id;});
+      if(idx>=0) window._drvCache[idx]=Object.assign({},window._drvCache[idx],payload,{id:id});
+      else window._drvCache.push(Object.assign({},payload,{id:id}));
+    } else {
+      // 캐시 없으면 재로드
+      _db.collection('drivers').where('dealerId','==',_CU.dealerId).get()
+        .then(function(dSnap){window._drvCache=dSnap.docs.map(function(dd){return Object.assign({id:dd.id},dd.data());});});
+    }
     toast('✅ 저장됨');
     // ★ settlements 사업자 정보 동기화 (calcNet 재계산에 반영)
     if(payload.bizNum!==undefined && _db && _CU){
