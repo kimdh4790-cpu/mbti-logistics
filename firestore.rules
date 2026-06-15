@@ -2,7 +2,6 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── 기본 인증 헬퍼 ─────────────────────────────────────────
     function isAuth() {
       return request.auth != null;
     }
@@ -40,7 +39,6 @@ service cloud.firestore {
       );
     }
 
-    // ── 관리/로그/시스템 ──────────────────────────────────────
     match /admins/{docId} {
       allow read: if isAuth();
       allow write: if isSuperAdmin();
@@ -60,27 +58,24 @@ service cloud.firestore {
       allow read, write: if isSuperAdmin();
     }
     match /admin_tokens/{docId} {
-      // FCM 토큰 등록용 — 본인 토큰만 쓰기 허용
-      allow read: if isAuth() && resource.data.uid == myUid() || isSuperAdmin();
-      allow write: if isAuth();
+      allow read, write: if isAuth();
     }
     match /cron_logs/{docId} {
       allow read: if isSuperAdmin();
-      allow create: if false; // Worker 서버사이드에서만 작성
+      allow write: if false;
     }
     match /subscription_logs/{docId} {
-      allow read, write: if isSuperAdmin();
+      allow read: if isSuperAdmin();
+      allow create: if isSuperAdmin();
     }
     match /alimtalk_queue/{docId} {
-      allow create: if isAuth();
+      allow create: if true;
       allow read, update: if isSuperAdmin();
     }
     match /join_requests/{docId} {
-      allow create: if true; // 비로그인 신청 허용
+      allow create: if true;
       allow read, update, delete: if isSuperAdmin();
     }
-
-    // ── 회사/사용자 ────────────────────────────────────────────
     match /companies/{dealerId} {
       allow read: if isAuth() && (
         isMyDealer(dealerId) || isSuperAdmin()
@@ -100,39 +95,37 @@ service cloud.firestore {
         myUid() == userId || isSuperAdmin()
       );
     }
-
-    // ── 구독/결제 ─────────────────────────────────────────────
-    // subscriptions: 클라이언트 읽기 허용 (subscribe.html에서 직접 체크)
-    // 쓰기는 Worker(서버사이드)에서만 → 클라이언트 write 차단
-    match /subscriptions/{docId} {
+    match /subscriptions/{uid} {
       allow read: if isAuth() && (
-        docId == myUid() || isSuperAdmin()
+        myUid() == uid || myDealerId() == uid || isSuperAdmin()
       );
-      allow write: if isSuperAdmin(); // Worker는 Admin SDK → rules 우회
+      allow write: if isSuperAdmin();
     }
-    // payments: 본인 결제내역 읽기 + 슈퍼어드민 전체
     match /payments/{docId} {
-      allow read: if isAuth() && (
-        resource.data.dealerId == myUid() ||
-        resource.data.dealerId == myDealerId() ||
-        isSuperAdmin()
-      );
-      allow create: if false; // Worker에서만 생성
-      allow update, delete: if isSuperAdmin();
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow write: if isSuperAdmin();
     }
     match /payment_requests/{docId} {
-      allow read: if ownsDoc();
+      allow read: if ownsDoc() || isSuperAdmin();
       allow create: if ownsNewDoc();
       allow update, delete: if isSuperAdmin();
     }
+    match /mbetco_subscriptions/{docId} {
+      allow read: if isAuth() && (
+        resource.data.email == request.auth.token.email || isSuperAdmin()
+      );
+      allow write: if isSuperAdmin();
+    }
     match /plan_guards/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
     }
     match /plan_guard_alerts/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
     }
-
-    // ── 정산/배송/근태 ────────────────────────────────────────
     match /settlements/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
     }
@@ -232,8 +225,6 @@ service cloud.firestore {
     match /idSupport/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
     }
-
-    // ── 청소/위탁 ────────────────────────────────────────────
     match /clean_orders/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
     }
@@ -243,8 +234,6 @@ service cloud.firestore {
     match /clean_workers/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
     }
-
-    // ── 재고관리 (mbtico) ─────────────────────────────────────
     match /inventory/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
     }
@@ -260,25 +249,23 @@ service cloud.firestore {
     match /inv_change_log/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
     }
-
-    // ── mbtico 공통 (예약·매출·고객·서비스·리뷰·쿠폰) ─────────
     match /mbetco_bookings/{docId} {
-      allow create: if true; // 고객 예약 비로그인 허용
+      allow create: if true;
       allow read, update, delete: if ownsDoc() || isSuperAdmin();
     }
     match /mbetco_sales/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
     }
     match /mbetco_customers/{docId} {
-      allow create: if true; // 고객 자기등록 허용
+      allow create: if true;
       allow read, write: if ownsDoc() || ownsNewDoc();
     }
     match /mbetco_services/{docId} {
-      allow read: if true; // QR 결제 페이지에서 비로그인 조회
+      allow read: if true;
       allow write: if ownsDoc() || ownsNewDoc();
     }
     match /mbetco_reviews/{docId} {
-      allow create, read: if true; // 고객 리뷰 등록·조회
+      allow create, read: if true;
       allow update, delete: if ownsDoc() || isSuperAdmin();
     }
     match /mbetco_coupons/{docId} {
@@ -301,14 +288,15 @@ service cloud.firestore {
       allow read: if isAuth() && (
         resource.data.email == request.auth.token.email || isSuperAdmin()
       );
-      allow create: if isSuperAdmin();
-      allow update, delete: if isSuperAdmin();
+      allow create: if isAuth();
+      allow update: if isAuth() && (
+        resource.data.email == request.auth.token.email || isSuperAdmin()
+      );
+      allow delete: if isSuperAdmin();
     }
     match /beauty_sales/{docId} {
       allow read, write: if ownsDoc() || ownsNewDoc();
     }
-
-    // ── 세금/공유 ────────────────────────────────────────────
     match /taxShares/{docId} {
       allow read: if true;
       allow write: if isAuth();
@@ -317,8 +305,6 @@ service cloud.firestore {
         allow write: if isAuth();
       }
     }
-
-    // ── 방문자/고객프로필 ─────────────────────────────────────
     match /visitors/{docId} {
       allow create: if true;
       allow read, write: if isAuth();
@@ -343,8 +329,6 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAuth();
     }
-
-    // ── 폴백: 슈퍼어드민 전체 접근 ───────────────────────────
     match /{document=**} {
       allow read, write: if isSuperAdmin();
     }
