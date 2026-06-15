@@ -6,20 +6,36 @@ on:
 
 jobs:
 
-  # ── 1. Worker 배포 (_worker.js) ──────────────────────────────
+  # ── 1. Worker 배포 — CF API 직접 업로드 ──────────────────────
   deploy-worker:
     runs-on: ubuntu-latest
     name: 🚀 Worker 배포
     steps:
       - uses: actions/checkout@v4
 
-      - name: Deploy Worker via Wrangler
+      - name: Upload Worker via Cloudflare API
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: 02709cbec18d848913b4246015b9148f
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
         run: |
-          npm install -g wrangler@3
-          npx wrangler deploy --name mbti-logistics 2>&1
+          ACCOUNT="02709cbec18d848913b4246015b9148f"
+          SCRIPT_NAME="mbti-logistics"
+
+          # multipart/form-data 방식으로 Worker 스크립트 업로드
+          RESULT=$(curl -s -X PUT \
+            "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/workers/scripts/$SCRIPT_NAME" \
+            -H "Authorization: Bearer $CF_API_TOKEN" \
+            -F "metadata={"main_module":"_worker.js","compatibility_date":"2025-11-01","usage_model":"bundled"};type=application/json" \
+            -F "_worker.js=@_worker.js;type=application/javascript+module")
+
+          echo "$RESULT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+if d.get('success'):
+    print('✅ Worker 배포 성공:', d['result']['id'])
+else:
+    print('❌ Worker 배포 실패:', json.dumps(d.get('errors',''), ensure_ascii=False))
+    sys.exit(1)
+"
 
   # ── 2. settle.html → KV 업로드 ───────────────────────────────
   deploy-settle-kv:
@@ -89,33 +105,13 @@ jobs:
           BASE="https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main"
 
           FILES=(
-            kiosk.html
-            inventory.html
-            qrpos.html
-            mbtico_hub.html
-            join.html
-            admin_sub.html
-            order.html
-            donway_landing.html
-            emergency.html
-            label.html
-            scan.html
-            universal_settle.html
-            mbetco.html
-            admin.html
-            portal.html
-            my.html
-            notice.html
-            drivers.html
-            dashboard.html
-            delivery.html
-            contract.html
-            checkin.html
-            attendance.html
-            report.html
-            schedule.html
-            settings.html
-            visitor.html
+            kiosk.html inventory.html qrpos.html mbtico_hub.html
+            join.html admin_sub.html order.html donway_landing.html
+            emergency.html label.html scan.html universal_settle.html
+            mbetco.html admin.html portal.html my.html notice.html
+            drivers.html dashboard.html delivery.html contract.html
+            checkin.html attendance.html report.html schedule.html
+            settings.html visitor.html
           )
 
           for FILE in "${FILES[@]}"; do
@@ -125,8 +121,8 @@ jobs:
                 "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/$FILE" \
                 -H "X-Auth-Email: $CF_EMAIL" -H "X-Auth-Key: $CF_KEY" \
                 --data-binary @"/tmp/$FILE")
-              echo "$RESULT" | grep -q '"success":true' && echo "✅ $FILE" || echo "❌ $FILE: $RESULT"
+              echo "$RESULT" | grep -q '"success":true' && echo "✅ $FILE" || echo "❌ $FILE"
             else
-              echo "⏭️  SKIP: $FILE (없음)"
+              echo "⏭️  SKIP: $FILE"
             fi
           done
