@@ -1304,18 +1304,8 @@ function calcNet(x){
   //          정책: 엑셀 단가 = 회사 단가(매출), 기사 단가 = 앱 관리자 RPRICE
   var _xRoutes = x.routeDetails || [];
   // ★ RPRICE(라우트단가표) 절대 우선 → routeDetails.unitPrice(업로드 시 이미 RPRICE 반영) 순
-  // ★ 기사별 단가 오버라이드 — drivers 캐시 또는 x.priceOverride 에서 우선 적용
-  var _prOv=(function(){
-    var uid=x.userId||x.driver||x.id||'';
-    // x에 직접 있으면 우선
-    if(x.priceOverride&&Object.keys(x.priceOverride).length) return x.priceOverride;
-    // _drvCache에서 찾기
-    if(window._drvCache&&uid){
-      var drv=window._drvCache.find(function(dv){return (dv.userId||dv.id)===uid;});
-      if(drv&&drv.priceOverride) return drv.priceOverride;
-    }
-    return {};
-  })();
+  // ★ 기사별 단가 오버라이드 (settlement.priceOverride 우선)
+  var _prOv=x.priceOverride||{};
   var _damtRP = _xRoutes.reduce(function(s,rd){
     var unit=_prOv[rd.route]||RPRICE[rd.route]||rd.unitPrice||0;
     return s+(rd.cnt||0)*unit;
@@ -25658,9 +25648,24 @@ function pageSettle(){
     _db.collection('settlements').where('dealerId','==',_did).get(),
     _db.collection('expenses').where('dealerId','==',_did).get(),
     _db.collection('settings').doc(_did+'_fixedExpenses').get(),
-    _db.collection('tax_docs').where('dealerId','==',_did).get()
+    _db.collection('tax_docs').where('dealerId','==',_did).get(),
+    _db.collection('drivers').where('dealerId','==',_did).get()
   ]).then(function(results){
-    var snap=results[0],expSnap=results[1],fixSnap=results[2],taxDocSnap=results[3];
+    var snap=results[0],expSnap=results[1],fixSnap=results[2],taxDocSnap=results[3],drvSnap=results[4];
+    // ★ 기사별 priceOverride 맵 구성
+    var _drvPriceMap={};
+    if(drvSnap&&!drvSnap.empty){
+      drvSnap.docs.forEach(function(dd){
+        var ddata=dd.data();
+        if(ddata.priceOverride&&Object.keys(ddata.priceOverride).length){
+          _drvPriceMap[ddata.userId||'']=ddata.priceOverride;
+        }
+      });
+      // _drvCache 갱신
+      if(!window._drvCache||!window._drvCache.length){
+        window._drvCache=drvSnap.docs.map(function(dd){return Object.assign({id:dd.id},dd.data());});
+      }
+    }
     // ★ 쿠팡 정산만 표시 — 업종별 정산(청소/건설 등) 제외
     var allDocs=(snap.docs||[]).filter(function(d){
       var data=d.data();
@@ -25677,7 +25682,13 @@ function pageSettle(){
         +'<div style="font-size:13px;color:var(--text3)">우측 상단의 엑셀을 업로드하면 자동으로 정렬됩니다</div></div>';
       return;
     }
-    var settles=allDocs.map(function(d){return Object.assign({id:d.id},d.data());});
+    var settles=allDocs.map(function(d){
+      var sd=Object.assign({id:d.id},d.data());
+      // ★ 기사별 priceOverride 주입 (calcNet에서 우선 적용)
+      var uid=sd.userId||sd.driver||'';
+      if(uid&&_drvPriceMap[uid]) sd.priceOverride=_drvPriceMap[uid];
+      return sd;
+    });
     // 경비 월별 집계 (expenses + tax_docs 경비류)
     var expByMonth={};
     expSnap.forEach(function(d){
