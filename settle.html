@@ -1304,8 +1304,26 @@ function calcNet(x){
   //          정책: 엑셀 단가 = 회사 단가(매출), 기사 단가 = 앱 관리자 RPRICE
   var _xRoutes = x.routeDetails || [];
   // ★ RPRICE(라우트단가표) 절대 우선 → routeDetails.unitPrice(업로드 시 이미 RPRICE 반영) 순
-  var _damtRP = _xRoutes.reduce(function(s,rd){return s+(rd.cnt||0)*(RPRICE[rd.route]||rd.unitPrice||0);},0);
-  var _ramtRP = _xRoutes.reduce(function(s,rd){return s+(rd.ret||0)*(RPRICE[rd.route]||rd.unitPrice||0);},0);
+  // ★ 기사별 단가 오버라이드 — drivers 캐시 또는 x.priceOverride 에서 우선 적용
+  var _prOv=(function(){
+    var uid=x.userId||x.driver||x.id||'';
+    // x에 직접 있으면 우선
+    if(x.priceOverride&&Object.keys(x.priceOverride).length) return x.priceOverride;
+    // _drvCache에서 찾기
+    if(window._drvCache&&uid){
+      var drv=window._drvCache.find(function(dv){return (dv.userId||dv.id)===uid;});
+      if(drv&&drv.priceOverride) return drv.priceOverride;
+    }
+    return {};
+  })();
+  var _damtRP = _xRoutes.reduce(function(s,rd){
+    var unit=_prOv[rd.route]||RPRICE[rd.route]||rd.unitPrice||0;
+    return s+(rd.cnt||0)*unit;
+  },0);
+  var _ramtRP = _xRoutes.reduce(function(s,rd){
+    var unit=_prOv[rd.route]||RPRICE[rd.route]||rd.unitPrice||0;
+    return s+(rd.ret||0)*unit;
+  },0);
   var damt=isYong ? dcnt*yDel : (_xRoutes.length ? _damtRP : (+x.damt||+x.delivAmt||+x.base||0));
   var ramt=isYong ? rcnt*yRet : (_xRoutes.length ? _ramtRP : (+x.ramt||+x.retAmt||0));
   // ★ fresh/inc: 정산총괄에서 VAT제외로 파싱됨 → income 계산 시 VAT포함 변환
