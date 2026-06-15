@@ -448,13 +448,14 @@ function _pageIn(c){
 }
 
 function _loadInList(did){
-  _db.collection('inventory_in').where('dealerId','==',did).orderBy('createdAt','desc').limit(50).get()
+  _db.collection('inventory_in').where('dealerId','==',did).get()
   .then(function(snap){
     var el=document.getElementById('in-list'); if(!el)return;
     if(snap.empty){el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">입고 내역 없음</div>';return;}
+    var docs=snap.docs.slice().sort(function(a,b){return (b.data().date||'').localeCompare(a.data().date||'');});
     var html='<div class="table-wrap"><table>'+
       '<tr><th>날짜</th><th>품목</th><th>수량</th><th>단가</th><th>금액</th><th>등록자</th><th></th></tr>'+
-      snap.docs.map(function(d){
+      docs.map(function(d){
         var v=d.data();
         return '<tr>'+
           '<td>'+esc(v.date||'')+'</td>'+
@@ -700,8 +701,7 @@ function _pageOut(c){
     '<div id="out-list"><div style="text-align:center;padding:20px;color:var(--text3)">⏳ 로딩 중...</div></div>';
 
   _db.collection('inventory_out').where('dealerId','==',did)
-  .where('returnFlag','==',false)
-  .orderBy('createdAt','desc').limit(50).get()
+  .where('returnFlag','==',false).get()
   .then(function(snap){
     var el=document.getElementById('out-list'); if(!el)return;
     if(snap.empty){el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">출고 내역 없음</div>';return;}
@@ -961,8 +961,7 @@ function _pageReturn(c){
     '<div id="return-list"><div style="text-align:center;padding:20px;color:var(--text3)">⏳ 로딩 중...</div></div>';
 
   _db.collection('inventory_out').where('dealerId','==',did)
-  .where('returnFlag','==',true)
-  .orderBy('createdAt','desc').limit(50).get()
+  .where('returnFlag','==',true).get()
   .then(function(snap){
     var el=document.getElementById('return-list'); if(!el)return;
     if(snap.empty){el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">반품 내역 없음</div>';return;}
@@ -1247,7 +1246,7 @@ function _pageLog(c){
     '<div id="log-list"><div style="text-align:center;padding:20px;color:var(--text3)">⏳ 로딩 중...</div></div>';
 
   _db.collection('inv_edit_log').where('dealerId','==',did)
-  .orderBy('editAt','desc').limit(50).get()
+  .limit(50).get()
   .then(function(snap){
     var el=document.getElementById('log-list'); if(!el)return;
     if(snap.empty){el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">수정 이력 없음</div>';return;}
