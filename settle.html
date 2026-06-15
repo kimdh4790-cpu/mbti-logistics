@@ -7084,11 +7084,13 @@ function saveAllCp_orig(){
       if(n===total){
         toast('✅ 전체 '+n+'명 저장 완료!');
         window._cpPending=null;
+        var _savedMonth=p.month;
         // ── 저장 완료 후 세무사 연동 자동 실행
         _autoTaxSyncAfterSave(savedPayloads, p.month, function(){
           goPage('settlements');
-          // ★ 업로드 완료 후 priceOverride 자동 적용
+          // ★ 업로드 완료 후 priceOverride 자동 적용 (2초 후)
           setTimeout(function(){
+            var _applyMonth=_savedMonth;
             _db.collection('drivers').where('dealerId','==',_CU.dealerId).get()
               .then(function(dSnap){
                 var _ovMap={};
@@ -7104,9 +7106,8 @@ function saveAllCp_orig(){
                 if(!Object.keys(_ovMap).length) return; // 단가 설정 없으면 스킵
                 // 해당 월 settlements에 priceOverride 적용
                 var _did=_CU.dealerId;
-                var _mo=p.month;
                 _db.collection('settlements')
-                  .where('dealerId','==',_did).where('month','==',_mo).get()
+                  .where('dealerId','==',_did).where('month','==',_applyMonth).get()
                   .then(function(sSnap){
                     if(sSnap.empty) return;
                     var batch=_db.batch();
