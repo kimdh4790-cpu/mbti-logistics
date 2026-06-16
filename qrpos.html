@@ -480,30 +480,39 @@ function _genAttendQR(){
   },1000);
 }
 
+var _attendUnsubscribe=null;
 function _loadAttendToday(){
   var did=_dealer?_dealer.id:'';
   var today=new Date().toISOString().slice(0,10);
   var el=document.getElementById('attend-today');
   if(!el)return;
-  el.innerHTML='<div style="font-size:12px;font-weight:800;margin-bottom:8px">오늘 출퇴근 현황 ('+today+')</div>';
-  _db.collection('attendance').where('dealerId','==',did).where('date','==',today)
-  .orderBy('checkIn','desc').get()
-  .then(function(snap){
-    if(snap.empty){el.innerHTML+='<div style="color:var(--text3);font-size:12px">오늘 기록 없음</div>';return;}
-    var html='<div style="display:flex;flex-direction:column;gap:6px">';
-    snap.forEach(function(d){
-      var v=d.data();
-      html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg3);border-radius:8px;font-size:12px">'+
-        '<div style="font-weight:700">'+esc(v.name||v.driverId||'')+'</div>'+
-        '<div style="color:var(--text3)">'+
-          '출근 '+(v.checkIn?v.checkIn.slice(11,16):'-')+
-          ' / 퇴근 '+(v.checkOut?v.checkOut.slice(11,16):'-')+
-        '</div>'+
-      '</div>';
-    });
-    html+='</div>';
-    el.innerHTML+=html;
-  }).catch(function(){});
+  el.innerHTML='<div style="font-size:12px;font-weight:800;margin-bottom:8px">⏰ 출퇴근 현황 · '+today+' <span style="font-size:10px;color:#22c55e">● 실시간</span></div>';
+  // 기존 리스너 해제
+  if(_attendUnsubscribe){_attendUnsubscribe();_attendUnsubscribe=null;}
+  // onSnapshot 실시간
+  _attendUnsubscribe=_db.collection('attendance')
+    .where('dealerId','==',did).where('date','==',today)
+    .orderBy('checkIn','desc')
+    .onSnapshot(function(snap){
+      var el2=document.getElementById('attend-today');
+      if(!el2)return;
+      var header='<div style="font-size:12px;font-weight:800;margin-bottom:8px">⏰ 출퇴근 현황 · '+today+' <span style="font-size:10px;color:#22c55e">● 실시간</span></div>';
+      if(snap.empty){el2.innerHTML=header+'<div style="color:var(--text3);font-size:12px;padding:10px">오늘 기록 없음</div>';return;}
+      var html=header+'<div style="display:flex;flex-direction:column;gap:6px">';
+      snap.forEach(function(d){
+        var v=d.data();
+        var inT=v.checkIn?v.checkIn.slice(11,16):'-';
+        var outT=v.checkOut?v.checkOut.slice(11,16):'-';
+        var isOut=!!v.checkOut;
+        html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg3);border-radius:8px;font-size:12px">'+
+          '<div style="font-weight:700">'+esc(v.name||v.driverId||'')+'</div>'+
+          '<div style="color:var(--text3)">출근 '+inT+' / 퇴근 '+outT+'</div>'+
+          '<div style="font-size:10px;padding:3px 8px;border-radius:10px;background:'+(isOut?'rgba(34,197,94,.15)':'rgba(251,191,36,.15)')+';color:'+(isOut?'#22c55e':'#fbbf24')+'">'+( isOut?'퇴근':'근무중')+'</div>'+
+          '</div>';
+      });
+      html+='</div>';
+      el2.innerHTML=html;
+    },function(e){console.warn('attend snap err',e.message);});
 }
 
 
