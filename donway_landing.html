@@ -513,6 +513,36 @@ body{font-family:'Noto Sans KR',sans-serif;color:var(--text)}
   </div>
 </div>
 
+<!-- S_QR: QR결제·출퇴근 -->
+<div class="slide" id="s5q">
+<div class="slide-bg">
+<div class="glow" style="width:500px;height:500px;background:#3b82f6;top:-100px;left:-100px;opacity:.12"></div>
+<div class="glow" style="width:400px;height:400px;background:var(--acc2);bottom:-100px;right:-100px;opacity:.1"></div>
+<div class="grid-bg"></div>
+</div>
+<div class="slide-inner">
+<div class="sec-label anim-1">DONWAY · QR 결제·출퇴근</div>
+<h2 class="sec-title anim-2">QR 하나로<br><span style="background:linear-gradient(90deg,#3b82f6,var(--acc2));-webkit-background-clip:text;-webkit-text-fill-color:transparent">결제·출퇴근 동시 해결</span></h2>
+<div class="card-grid g2 anim-3" style="margin-top:20px">
+  <div class="card" style="border:1px solid rgba(59,130,246,.3)">
+    <div style="font-size:28px;margin-bottom:8px">🔲</div>
+    <div style="font-size:13px;font-weight:800;margin-bottom:6px">QR 결제</div>
+    <div style="font-size:11px;color:var(--text2);line-height:1.7">태블릿·폰으로 즉시 결제<br>시술·상품 메뉴 선택<br>직원별 매출 자동 집계<br>월말 정산 자동 연동</div>
+    <div style="font-size:10px;color:var(--text3);margin-top:8px">mbtico.kr</div>
+  </div>
+  <div class="card" style="border:1px solid rgba(99,102,241,.3)">
+    <div style="font-size:28px;margin-bottom:8px">✅</div>
+    <div style="font-size:13px;font-weight:800;margin-bottom:6px">QR 출퇴근</div>
+    <div style="font-size:11px;color:var(--text2);line-height:1.7">30초 갱신 동적 QR<br>캡처 재사용 원천 차단<br>출퇴근 기록 자동 저장<br>급여 계산 자동 연동</div>
+    <div style="font-size:10px;color:var(--text3);margin-top:8px">1,500원/인/월</div>
+  </div>
+</div>
+<div style="text-align:center;margin-top:20px" class="anim-4">
+  <a href="https://mbtico.kr" target="_blank" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#3b82f6,var(--acc2));color:#fff;border-radius:12px;font-size:13px;font-weight:700;text-decoration:none">🔲 QR 무료 체험</a>
+</div>
+</div>
+</div>
+
 <!-- S5: 지원 업종 -->
 <div class="slide" id="s4">
   <div class="slide-bg">
@@ -662,7 +692,7 @@ body{font-family:'Noto Sans KR',sans-serif;color:var(--text)}
     </div>
 
     <div style="display:flex;gap:8px">
-      <a href="https://donway.ai.kr/settle" style="flex:1;display:block;text-align:center;padding:13px;background:linear-gradient(90deg,#f59e0b,#ef4444);color:#fff;border-radius:12px;font-size:13px;font-weight:900;text-decoration:none">
+      <a href="/join" style="flex:1;display:block;text-align:center;padding:13px;background:linear-gradient(90deg,#f59e0b,#ef4444);color:#fff;border-radius:12px;font-size:13px;font-weight:900;text-decoration:none">
         재고관리 도입 신청 →
       </a>
       <a href="https://mbtico.kr/inventory" target="_blank" style="padding:13px 16px;background:var(--bg2);border:1px solid var(--border);color:var(--text2);border-radius:12px;font-size:12px;text-decoration:none;white-space:nowrap">
@@ -751,7 +781,7 @@ body{font-family:'Noto Sans KR',sans-serif;color:var(--text)}
     <!-- 업종별 고민 설명 -->
     <div id="ind-detail" style="display:none;margin-top:20px;background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.2);border-radius:16px;padding:20px;transition:all .3s">
       <div id="ind-detail-content"></div>
-      <a href="https://donway.ai.kr/settle" style="display:block;margin-top:16px;padding:13px;background:linear-gradient(90deg,var(--acc),var(--pink));color:#fff;border-radius:12px;font-size:14px;font-weight:900;text-align:center;text-decoration:none">
+      <a href="/join" style="display:block;margin-top:16px;padding:13px;background:linear-gradient(90deg,var(--acc),var(--pink));color:#fff;border-radius:12px;font-size:14px;font-weight:900;text-align:center;text-decoration:none">
         이 고민 해결하기 →
       </a>
     </div>
@@ -897,7 +927,7 @@ function _selInd(el, key){
 
 
 <!-- S8: CTA -->
-<div class="slide" id="s8">
+<div class="slide" id="s7">
   <div class="slide-bg">
     <div class="grid-bg"></div>
     <div class="glow" style="width:500px;height:500px;background:var(--acc);top:-150px;right:-150px"></div>
@@ -935,7 +965,7 @@ function _selInd(el, key){
 <!-- 네비 -->
 <div class="nav-dots" id="navDots"></div>
 <button class="arrow prev" id="btnPrev" onclick="move(-1)">←</button>
-<div class="slide-counter" id="counter">1 / 8</div>
+<div class="slide-counter" id="counter">1 / 9</div>
 <button class="arrow next" id="btnNext" onclick="move(1)">→</button>
 
 <script>
