@@ -1333,25 +1333,13 @@ function calcNet(x){
   }
   if(!_fincStored&&isCoupang&&dcnt>0){
     if(_xRoutes.length&&typeof _getIncSetting==='function'){
-      // ★ 라우트별 단가 각각 계산 (ON 라우트만) — 평균 아닌 합계 직접 사용
+      // ★ 라우트별 단가 계산 (ON 라우트만)
       var _fincVal=0;
-      var _fincDetail=[]; // 명세서 표시용
       _xRoutes.forEach(function(rd){
         var _s=_getIncSetting(uid,rd.route||'');
-        if(_s.on&&_s.rate>0){
-          var _ra=(rd.cnt||0)*_s.rate;
-          _fincVal+=_ra;
-          _fincDetail.push(rd.route+':'+_s.rate+'원×'+(rd.cnt||0)+'건='+_ra);
-        }
+        if(_s.on&&_s.rate>0) _fincVal+=(rd.cnt||0)*_s.rate;
       });
-      _fincRate=0; // 평균 단가 사용 안 함
-      // finc를 직접 _fincVal로 세팅
-      if(!_fincStored&&isCoupang) {
-        var finc=Math.round(_fincVal);
-        var _fincPerUnit=dcnt>0?Math.round(finc/dcnt):0;
-        // 아래 중복 선언 방지용 플래그
-        window._fincOverride={finc:finc,_fincPerUnit:_fincPerUnit};
-      }
+      _fincRate=dcnt>0?_fincVal/dcnt:0;
     } else {
       // ★ 라우트 없을 때만 __all__ fallback
       _fincRate=typeof _getIncSetting==='function'
@@ -1359,11 +1347,7 @@ function calcNet(x){
         :(G_PRICES&&G_PRICES.freshbag_inc||0);
     }
   }
-  var finc=isCoupang?(
-    _fincStored>0?_fincStored:
-    (window._fincOverride?window._fincOverride.finc:Math.round(dcnt*_fincRate))
-  ):0;
-  window._fincOverride=null; // 초기화
+  var finc=isCoupang?(_fincStored>0?_fincStored:Math.round(dcnt*_fincRate)):0;
   var _fincPerUnit=dcnt>0?Math.round(finc/dcnt):_fincRate; // 건당 단가 (명세서 표시용)
   var inc=+x.inc||0;
   // ★ 미계약건: 항상 RPRICE['nocont_w1/w2'] × 건수 재계산 (저장값·엑셀금액 무시)
