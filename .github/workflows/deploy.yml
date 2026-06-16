@@ -76,15 +76,3 @@ jobs:
             curl -sL "$BASE/$FILE" -o "/tmp/$FILE"
             [ -s "/tmp/$FILE" ] && curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/$FILE" -H "X-Auth-Email: $CF_EMAIL" -H "X-Auth-Key: $CF_KEY" --data-binary @"/tmp/$FILE" | grep -q '"success":true' && echo "OK $FILE" || echo "FAIL/SKIP $FILE"
           done
-
-  deploy-firestore-rules:
-    runs-on: ubuntu-latest
-    name: "Firestore Rules Deploy"
-    steps:
-      - uses: actions/checkout@v4
-      - name: Deploy Firestore Rules
-        env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-        run: |
-          npm install -g firebase-tools --silent
-          firebase deploy --only firestore:rules --token "$FIREBASE_TOKEN" --project mbti-logistics
