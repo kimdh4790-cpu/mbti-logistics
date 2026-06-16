@@ -1147,8 +1147,11 @@ function getCampByRoute(route){
 // _getIncSetting 간단 대체 (settle.html용)
 function _getIncSetting(driver,route){
   var k=_incKey(driver,route);
+  // localStorage 우선
   var stored=localStorage.getItem(k);
-  if(stored){try{return JSON.parse(stored);}catch(e){}}
+  if(stored){try{var p=JSON.parse(stored);if(p&&typeof p.rate!=='undefined')return p;}catch(e){}}
+  // window._incSettingsCache (FB 로드 캐시)
+  if(window._incSettingsCache&&window._incSettingsCache[k])return window._incSettingsCache[k];
   return{on:true,rate:G_PRICES&&G_PRICES.freshbag_inc||25};
 }
 
@@ -7505,6 +7508,8 @@ _auth.onAuthStateChanged(function(user){
           .then(function(dSnap){
             window._drvCache=dSnap.docs.map(function(dd){return Object.assign({id:dd.id},dd.data());});
           }).catch(function(){});
+        // ★ 인센 설정 미리 로드 (Firestore → localStorage + 메모리 캐시)
+        if(typeof loadIncSettingsFromFB==='function') loadIncSettingsFromFB();
         _db.collection('settings').doc(_CU.dealerId+'_campConfig').get().then(function(cs){
           if(cs.exists){_campConfig=cs.data()||{};_syncCampColors();}
         }).catch(function(){});
@@ -33327,9 +33332,14 @@ function _renderStats(settles,c){
 // ══ 인센 설정 ══
 function _incKey(drv,route){return 'inc_'+drv.replace(/\s/g,'_')+'_'+route;}
 function _setIncSetting(drv,route,on,rate){
-  localStorage.setItem(_incKey(drv,route),JSON.stringify({on:on,rate:rate}));
+  var key=_incKey(drv,route);
+  var val={on:on,rate:rate};
+  localStorage.setItem(key,JSON.stringify(val));
+  // 메모리 캐시도 즉시 갱신
+  if(!window._incSettingsCache) window._incSettingsCache={};
+  window._incSettingsCache[key]=val;
   if(_db){
-    var key=_incKey(drv,route);var obj={};obj[key]={on:on,rate:rate};
+    var obj={};obj[key]=val;
     _db.collection('settings').doc((_CU&&_CU.dealerId?_CU.dealerId:'shared')+'_incSettings').set(obj,{merge:true}).catch(function(){});
   }
 }
@@ -33338,8 +33348,12 @@ function loadIncSettingsFromFB(){
   _db.collection('settings').doc((_CU&&_CU.dealerId?_CU.dealerId:'shared')+'_incSettings').get().then(function(doc){
     if(!doc.exists)return;
     var data=doc.data();
+    if(!window._incSettingsCache) window._incSettingsCache={};
     Object.keys(data).forEach(function(k){
-      if(k.startsWith('inc_'))localStorage.setItem(k,JSON.stringify(data[k]));
+      if(k.startsWith('inc_')){
+        localStorage.setItem(k,JSON.stringify(data[k]));
+        window._incSettingsCache[k]=data[k]; // 메모리 캐시도 갱신
+      }
     });
   }).catch(function(){});
 }
