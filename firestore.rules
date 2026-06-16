@@ -329,6 +329,24 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAuth();
     }
+    match /managers/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+    }
+    match /settlements_universal/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+    }
+    match /universal_employees/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+    }
+    match /universal_rules/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+    }
+    match /universal_settlements/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+    }
+    match /mbetco_settlements/{docId} {
+      allow read, write: if ownsDoc() || ownsNewDoc();
+    }
     match /{document=**} {
       allow read, write: if isSuperAdmin();
     }
