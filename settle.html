@@ -7299,10 +7299,14 @@ function _saveCpDriver(camp,dm,name,month,cb){
   var income=damt+ramt+freshRaw+finc+(dm.nocontAmt||0);  // 모두 VAT포함가nocontAmt||0);
   var sa=Math.round(income/1.1),wage=Math.round(sa*(1-0.346));
   var emp=wage>=800000?Math.floor(wage*0.008/10)*10:0,work=Math.floor(wage*0.0088/10)*10;
+  // ★ routeDetails: priceOverride 있으면 우선 적용, 없으면 엑셀 단가
   var routeDetails=[];
   Object.keys(dm.routes).forEach(function(r){
-    routeDetails.push({route:r,cnt:dm.routes[r].cnt||0,ret:dm.routes[r].ret||0,
-      unitPrice:dm.routes[r].unitPrc||0,amt:dm.routes[r].delAmt||0});
+    var rv=dm.routes[r];
+    var unit=(_preOv&&_preOv[r])||RPRICE[r]||rv.unitPrc||0;
+    routeDetails.push({route:r,cnt:rv.cnt||0,ret:rv.ret||0,
+      unitPrice:unit,amt:(rv.cnt||0)*unit,retAmt:(rv.ret||0)*unit,
+      excelUnitPrice:rv.unitPrc||0});
   });
   var dealerId=window._CU?window._CU.dealerId:'';
   var payload={dealerId:dealerId,driverName:name,driver:uid,camp:camp,month:month,jobsub:'쿠팡',
@@ -7310,15 +7314,17 @@ function _saveCpDriver(camp,dm,name,month,cb){
     nocont:dm.nocontAmt||0,nocontCnt:dm.nocontCnt||0,etcPlus:0,etcMinus:0,dmg:0,adv:0,
     totalAmt:income,income:income,supplyAmt:sa,monthlyWage:wage,emp:emp,work:work,deduct:emp+work,net:income-(emp+work),
     routeDetails:routeDetails,status:'정산예정'};
-  // ★ drivers에서 priceOverride 조회 (userId 또는 name으로 매칭)
-  var _cleanUid=uid.replace(/@df$/i,'').trim();
-  var _drvName=name&&name.trim();
-  // fbDrivers 캐시 우선 사용, 없으면 Firestore 조회
+  // ★ drivers에서 priceOverride 조회 — 동기 캐시 우선
+  var _cleanUid=(uid||'').replace(/@df$/i,'').trim();
+  var _drvName=(name||'').trim();
   var _fbDrvList=window._drvCache||[];
   var _foundDrv=_fbDrvList.find(function(dv){
     return (dv.userId||'').replace(/@df$/i,'').trim()===_cleanUid||
            (dv.name||'').trim()===_drvName;
   });
+  // ★ 동기적으로 먼저 사용 가능한 priceOverride (캐시에서)
+  var _preOv=(_foundDrv&&_foundDrv.priceOverride&&Object.keys(_foundDrv.priceOverride).length)
+    ?_foundDrv.priceOverride:null;
   var _ovPromise=_foundDrv
     ?Promise.resolve(_foundDrv.priceOverride||{})
     :window._db.collection('drivers').where('dealerId','==',dealerId).get()
