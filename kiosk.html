@@ -126,6 +126,7 @@ tr:hover td{background:var(--bg3)}
       <div class="sb-user">
         <div id="sb-company" style="font-weight:700;color:var(--text2);margin-bottom:1px"></div>
         <div id="sb-email" style="font-size:10px"></div>
+<div id="sb-expiry" style="font-size:10px;margin-top:3px;color:var(--text3)"></div>
       </div>
       <div class="nav">
         <div class="nav-section">매출</div>
@@ -222,7 +223,12 @@ _auth.onAuthStateChanged(function(user){
     var isActive=!!(ks.active && (!ks.expiry || ks.expiry >= today));
     var _SA_EMAILS=['kimdh4790@gmail.com','soungkyekim@naver.com'];
     var _isSA=_SA_EMAILS.indexOf((user&&user.email)||'')>=0;
-    if(!isActive && !_isSA){_showSubGate();return;}
+    var _kExp=document.getElementById('sb-expiry');
+      if(_kExp){
+        if(_isSA){_kExp.textContent='슈퍼어드민';_kExp.style.color='var(--blue)';}
+        else{_kExp.textContent=ks.expiry?'만료: '+ks.expiry:'구독 활성';_kExp.style.color=(ks.expiry&&ks.expiry<today)?'#ef4444':'#059669';}
+      }
+      if(!isActive && !_isSA){_showSubGate();return;}
     document.getElementById('login-screen').style.display='none';
     document.getElementById('app-screen').style.display='block';
     _loadMeta();
