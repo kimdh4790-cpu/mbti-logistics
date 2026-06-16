@@ -406,12 +406,23 @@ function _qrExportWorker(workerName){
     });
     var tax33=Math.round(total*0.033);if(tax33<1000)tax33=0;
     var net=total-tax33;
-    _db.collection('mbetco_settlements').add({
+    var _sid=did+'_'+ym+'_qr';
+    var _batch=_db.batch();
+    _batch.set(_db.collection('mbetco_settlements').doc(_sid+'_'+Date.now()),{
       dealerId:did,month:ym,name:workerName,
       gross:total,tax33:tax33,net:net,
       items:items,itemCount:items.length,
       source:'qr_pos',createdAt:new Date().toISOString(),status:'READY'
-    }).then(function(){toast('✅ '+workerName+' 정산 생성 완료!');})
+    });
+    _batch.set(_db.collection('mbetco_settles').doc(_sid),{
+      dealerId:did,ym:ym,count:1,totalNet:net,
+      source:'qr_pos',createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    _batch.set(_db.collection('mbetco_settle_details').doc(_sid+'_'+workerName.slice(0,20)),{
+      settleId:_sid,dealerId:did,ym:ym,
+      name:workerName,gross:total,deduct:tax33,net:net,source:'qr_pos'
+    });
+    _batch.commit().then(function(){toast('✅ '+workerName+' 정산 생성 완료');})
     .catch(function(e){toast('❌ '+e.message);});
   });
 }
