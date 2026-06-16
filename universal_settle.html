@@ -32,9 +32,9 @@ function _pageQrPos(){
     '</div>'+
     // 탭
     '<div style="display:flex;gap:6px;margin-bottom:16px">'+
-      '<button id="qr-tab-gen" onclick="_qrTab(&quot;gen&quot;)" style="flex:1;padding:10px;background:var(--acc);color:#000;border:none;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer">🔲 QR 생성</button>'+
-      '<button id="qr-tab-today" onclick="_qrTab(&quot;today&quot;)" style="flex:1;padding:10px;background:var(--bg3);color:var(--text2);border:1px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📊 오늘 매출</button>'+
-      '<button id="qr-tab-history" onclick="_qrTab(&quot;history&quot;)" style="flex:1;padding:10px;background:var(--bg3);color:var(--text2);border:1px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📋 내역</button>'+
+      '<button id="qr-tab-gen" onclick="_qrTab('gen')" style="flex:1;padding:10px;background:var(--acc);color:#000;border:none;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer">🔲 QR 생성</button>'+
+      '<button id="qr-tab-today" onclick="_qrTab('today')" style="flex:1;padding:10px;background:var(--bg3);color:var(--text2);border:1px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📊 오늘 매출</button>'+
+      '<button id="qr-tab-history" onclick="_qrTab('history')" style="flex:1;padding:10px;background:var(--bg3);color:var(--text2);border:1px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📋 내역</button>'+
     '</div>'+
     '<div id="qr-content"></div>'+
     '</div>';
@@ -187,7 +187,7 @@ function _qrGenerate(){
     '<div style="font-size:11px;color:var(--text3);margin-bottom:8px">'+_esc(label)+'</div>'+
     '<div style="display:flex;gap:8px;justify-content:center">'+
       '<button onclick="_qrPrint()" style="padding:8px 16px;background:var(--acc);color:#000;border:none;border-radius:8px;font-size:11px;font-weight:800;cursor:pointer">🖨️ 인쇄</button>'+
-      '<button onclick="navigator.clipboard&&navigator.clipboard.writeText(qrUrl).then(function(){toast("링크 복사됨");})" '+
+      '<button onclick="navigator.clipboard.writeText(''+qrUrl+'').then(function(){toast('링크 복사됨');})" '+
         'style="padding:8px 16px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:11px;cursor:pointer">🔗 링크 복사</button>'+
     '</div>';
 
@@ -228,8 +228,28 @@ function _qrPrint(){
     (imgSrc?'<img src="'+imgSrc+'" />':'<p>'+url+'</p>')+
     '<p style="font-size:11px;color:#666;margin-top:8px">'+url+'</p>'+
     '<br><button onclick="window.print()">🖨️ 인쇄</button>'+
-    '\n</body></html>';
-
+    '
+<script>
+// 보안: F12/우클릭/소스보기 차단 (슈퍼어드민 제외)
+(function(){
+  var SA=['kimdh4790@gmail.com','soungkyekim@naver.com'];
+  function _isSA(){
+    try{
+      if(window._CU&&window._CU.email) return SA.indexOf(window._CU.email)>=0;
+      var u=firebase&&firebase.auth&&firebase.auth().currentUser;
+      return u&&SA.indexOf(u.email)>=0;
+    }catch(e){return false;}
+  }
+  document.addEventListener('contextmenu',function(e){if(!_isSA())e.preventDefault();});
+  document.addEventListener('keydown',function(e){
+    if(_isSA())return;
+    if(e.keyCode===123){e.preventDefault();return false;}
+    if(e.ctrlKey&&e.shiftKey&&(e.keyCode===73||e.keyCode===74||e.keyCode===67)){e.preventDefault();return false;}
+    if(e.ctrlKey&&e.keyCode===85){e.preventDefault();return false;}
+  });
+})();
+</script>
+</body></html>';
   var win=window.open('','_blank','width=320,height=400');
   if(win){win.document.write(html);win.document.close();}
 }
@@ -282,7 +302,7 @@ function _qrRenderToday(c){
           '</div>';
         }).join('')+
         '</div>'+
-        '<button onclick="_qrExportWorker(''+_esc(w)+'')" '+
+        '<button data-wname="'+_esc(w)+'" onclick="_qrExportWorker(this.dataset.wname)" '+
           'style="width:100%;margin-top:8px;padding:7px;background:rgba(0,212,255,.1);color:var(--acc);'+
           'border:1px solid rgba(0,212,255,.2);border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">'+
           '📊 정산으로 내보내기</button>'+
