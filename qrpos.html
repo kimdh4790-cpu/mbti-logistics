@@ -295,27 +295,7 @@ function _qrPrint(){
     (imgSrc?'<img src="'+imgSrc+'" />':'<p>'+url+'</p>')+
     '<p style="font-size:11px;color:#666;margin-top:8px">'+url+'</p>'+
     '<br><button onclick="window.print()">🖨️ 인쇄</button>'+
-    '
-<script>
-// 보안: F12/우클릭/소스보기 차단 (슈퍼어드민 제외)
-(function(){
-  var SA=['kimdh4790@gmail.com','soungkyekim@naver.com'];
-  function _isSA(){
-    try{
-      if(window._CU&&window._CU.email) return SA.indexOf(window._CU.email)>=0;
-      var u=firebase&&firebase.auth&&firebase.auth().currentUser;
-      return u&&SA.indexOf(u.email)>=0;
-    }catch(e){return false;}
-  }
-  document.addEventListener('contextmenu',function(e){if(!_isSA())e.preventDefault();});
-  document.addEventListener('keydown',function(e){
-    if(_isSA())return;
-    if(e.keyCode===123){e.preventDefault();return false;}
-    if(e.ctrlKey&&e.shiftKey&&(e.keyCode===73||e.keyCode===74||e.keyCode===67)){e.preventDefault();return false;}
-    if(e.ctrlKey&&e.keyCode===85){e.preventDefault();return false;}
-  });
-})();
-</script>
+    '\n
 </body></html>';
   var win=window.open('','_blank','width=320,height=400');
   if(win){win.document.write(html);win.document.close();}
@@ -656,4 +636,14 @@ window.addEventListener('resize',function(){
   if(btn)btn.style.display=window.innerWidth<=768?'block':'none';
 });
 </script>
-</body></html>
+
+<script>
+(function(){
+  var SA=['kimdh4790@gmail.com','soungkyekim@naver.com'];
+  function _isSA(){try{if(window._CU&&window._CU.email)return SA.indexOf(window._CU.email)>=0;var u=firebase&&firebase.auth&&firebase.auth().currentUser;return u&&SA.indexOf(u.email)>=0;}catch(e){return false;}}
+  document.addEventListener('contextmenu',function(e){if(!_isSA())e.preventDefault();});
+  document.addEventListener('keydown',function(e){if(_isSA())return;if(e.keyCode===123){e.preventDefault();return false;}if(e.ctrlKey&&e.shiftKey&&(e.keyCode===73||e.keyCode===74||e.keyCode===67)){e.preventDefault();return false;}if(e.ctrlKey&&e.keyCode===85){e.preventDefault();return false;}});
+})();
+</script>
+</body>
+</html>
