@@ -7260,11 +7260,28 @@ function cancelCp(){window._cpPending=null;goPage('settlements');}
 function _saveCpDriver(camp,dm,name,month,cb){
   if(!window._db){if(cb)cb();return;}
   var uid=dm.uid;
-  // ★ 기사 자동등록 비활성화 (물류앱v9와 drivers 컬렉션 공유 → 중복 방지)
-  // settle.html은 drivers 컬렉션에 직접 쓰지 않음
-  // 기사 등록은 물류앱v9에서만 관리
   var _did=_CU&&_CU.dealerId||'';
-  var damt=dm.delAmt||0,ramt=dm.retAmt||0,freshRaw=dm.freshAmt||0;
+  // ★ priceOverride 먼저 동기 조회 (damt 계산에 사용)
+  var _cleanUid0=(uid||'').replace(/@df$/i,'').trim();
+  var _drvName0=(name||'').trim();
+  var _cache0=window._drvCache||[];
+  var _foundDrv0=_cache0.find(function(dv){
+    return (dv.userId||'').replace(/@df$/i,'').trim()===_cleanUid0||
+           (dv.name||'').trim()===_drvName0;
+  });
+  var _preOv0=(_foundDrv0&&_foundDrv0.priceOverride&&Object.keys(_foundDrv0.priceOverride).length)
+    ?_foundDrv0.priceOverride:null;
+  // damt/ramt: priceOverride 있으면 우선 계산
+  var damt=0,ramt=0,freshRaw=dm.freshAmt||0;
+  if(_preOv0&&Object.keys(_preOv0).length){
+    Object.keys(dm.routes||{}).forEach(function(r){
+      var rv=dm.routes[r];
+      var unit=_preOv0[r]||RPRICE[r]||rv.unitPrc||0;
+      damt+=(rv.cnt||0)*unit; ramt+=(rv.ret||0)*unit;
+    });
+  } else {
+    damt=dm.delAmt||0; ramt=dm.retAmt||0;
+  }
   // ★ finc: 엑셀 col10×건수(addIncAmt) 우선 → 기사별 설정(_getIncSetting) → 글로벌
   var finc=0;
   // ★ 인센 ON/OFF 설정 먼저 확인
@@ -7299,11 +7316,10 @@ function _saveCpDriver(camp,dm,name,month,cb){
   var income=damt+ramt+freshRaw+finc+(dm.nocontAmt||0);  // 모두 VAT포함가nocontAmt||0);
   var sa=Math.round(income/1.1),wage=Math.round(sa*(1-0.346));
   var emp=wage>=800000?Math.floor(wage*0.008/10)*10:0,work=Math.floor(wage*0.0088/10)*10;
-  // ★ routeDetails: priceOverride 있으면 우선 적용, 없으면 엑셀 단가
   var routeDetails=[];
   Object.keys(dm.routes).forEach(function(r){
     var rv=dm.routes[r];
-    var unit=(_preOv&&_preOv[r])||RPRICE[r]||rv.unitPrc||0;
+    var unit=(_preOv0&&_preOv0[r])||RPRICE[r]||rv.unitPrc||0;
     routeDetails.push({route:r,cnt:rv.cnt||0,ret:rv.ret||0,
       unitPrice:unit,amt:(rv.cnt||0)*unit,retAmt:(rv.ret||0)*unit,
       excelUnitPrice:rv.unitPrc||0});
@@ -7322,9 +7338,7 @@ function _saveCpDriver(camp,dm,name,month,cb){
     return (dv.userId||'').replace(/@df$/i,'').trim()===_cleanUid||
            (dv.name||'').trim()===_drvName;
   });
-  // ★ 동기적으로 먼저 사용 가능한 priceOverride (캐시에서)
-  var _preOv=(_foundDrv&&_foundDrv.priceOverride&&Object.keys(_foundDrv.priceOverride).length)
-    ?_foundDrv.priceOverride:null;
+  var _preOv=_preOv0; // _preOv0와 동일
   var _ovPromise=_foundDrv
     ?Promise.resolve(_foundDrv.priceOverride||{})
     :window._db.collection('drivers').where('dealerId','==',dealerId).get()
