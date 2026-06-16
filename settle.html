@@ -27523,8 +27523,8 @@ function _showSEModal(s){
   // ── 항목별 입력
   var items=[
     {ic:'🧊',n:'③ 프레시백 회수금액',id:'se-fresh',val:s.fresh||0,sign:'+',editable:true,note:''},
-    {ic:'⭐',n:'④ 프레시백 인센티브',id:'se-finc',val:(_cn&&_cn.finc>0?_cn.finc:s.finc)||0,sign:'+',editable:false,note:(s.dcnt||0)+'건 × '+(s._fincPerUnit||Math.round((s.finc||0)/(s.dcnt||1)))+'원'},,
-    {ic:'💰',n:'④-1 추가 인센티브',id:'se-add-inc',val:(_cn&&_cn.addInc)||0,sign:'+',editable:false,note:(_cn&&_cn._addIncNote)||''}
+    {ic:'⭐',n:'④ 프레시백 인센티브',id:'se-finc',val:(_cn&&_cn.finc>0?_cn.finc:s.finc)||0,sign:'+',editable:false,note:(s.dcnt||0)+'건 × '+(s._fincPerUnit||Math.round((s.finc||0)/(s.dcnt||1)))+'원'},
+   {ic:'💰',n:'④-1 추가 인센티브',id:'se-add-inc',val:(_cn&&_cn.addInc)||0,sign:'+',editable:false,note:(_cn&&_cn._addIncNote)||''},
     {ic:'➕',n:'⑤ 미계약건',id:'se-nocont',
       val:(function(){
         // RPRICE 기반 재계산 우선, 없으면 저장값
