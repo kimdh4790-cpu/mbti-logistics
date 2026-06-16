@@ -7372,7 +7372,34 @@ function _saveCpDriver(camp,dm,name,month,cb){
               :drSnap.docs[0].ref.update({name:name});
           });
       }
-    }).then(function(){if(cb)cb();}).catch(function(e){toast('❌ '+e.message);});
+    }).then(function(){
+      // ★ 저장 직후 priceOverride 즉시 적용
+      if(Object.keys(_ov||{}).length){
+        _db.collection('settlements')
+          .where('dealerId','==',dealerId).where('driver','==',uid).where('month','==',month)
+          .limit(1).get().then(function(snap){
+            if(!snap.empty){
+              var sd=snap.docs[0],x=sd.data(),rds=x.routeDetails||[];
+              var nd=0,nr=0;
+              var nrds=rds.map(function(rd){
+                var u2=_ov[rd.route]||RPRICE[rd.route]||rd.unitPrice||0;
+                nd+=(rd.cnt||0)*u2;nr+=(rd.ret||0)*u2;
+                return Object.assign({},rd,{unitPrice:u2,amt:(rd.cnt||0)*u2,retAmt:(rd.ret||0)*u2});
+              });
+              var ni=nd+nr+(x.fresh||0)+(x.finc||0)+(x.nocont||0);
+              var sa=Math.round(ni/1.1),wg=Math.round(sa*0.654);
+              var em=wg>=800000?Math.floor(wg*0.008/10)*10:0,wk=Math.floor(wg*0.0088/10)*10;
+              sd.ref.update({routeDetails:nrds,damt:nd,ramt:nr,totalAmt:ni,income:ni,
+                supplyAmt:sa,monthlyWage:wg,emp:em,work:wk,deduct:em+wk,net:ni-(em+wk),
+                priceOverride:_ov,updatedAt:new Date().toISOString()
+              }).catch(function(){});
+            }
+            if(cb)cb();
+          }).catch(function(){if(cb)cb();});
+      } else {
+        if(cb)cb();
+      }
+    }).catch(function(e){toast('❌ '+e.message);});
 }
 
 // ══ Firebase + 앱 로직 ══
