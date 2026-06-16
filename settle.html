@@ -1334,24 +1334,28 @@ function calcNet(x){
       if(!_getIncSetting(uid,_xRoutes[_ri].route||'').on){_cnetAnyOff=true;break;}
     }
   }
-  var _fincCalc=0; // 라우트별 합산 인센 금액
-  if(!_fincStored&&isCoupang&&dcnt>0){
-    if(_xRoutes.length&&typeof _getIncSetting==='function'){
-      // ★ 라우트별 단가 각각 계산 — 10원 라우트는 10원, 15원 라우트는 15원
+  // ★ 추가 인센 (건수×설정단가) — 항상 계산 (finc 엑셀값과 무관)
+  var addInc=0,_addIncNote='';
+  if(isCoupang&&dcnt>0&&typeof _getIncSetting==='function'){
+    if(_xRoutes.length){
+      var _addParts=[];
       _xRoutes.forEach(function(rd){
         var _s=_getIncSetting(uid,rd.route||'');
-        if(_s.on&&_s.rate>0) _fincCalc+=(rd.cnt||0)*_s.rate;
+        if(_s.on&&_s.rate>0){
+          var _a=(rd.cnt||0)*_s.rate;
+          addInc+=_a;
+          _addParts.push(rd.route+' '+(rd.cnt||0)+'건×'+_s.rate+'원');
+        }
       });
+      if(_addParts.length)_addIncNote=_addParts.join(' / ');
     } else {
-      // 라우트 없을 때 __all__ fallback
-      var _allRate=typeof _getIncSetting==='function'
-        ?(_getIncSetting(uid,'__all__').rate||0)
-        :(G_PRICES&&G_PRICES.freshbag_inc||0);
-      _fincCalc=dcnt*_allRate;
+      var _ar=_getIncSetting(uid,'__all__').rate||0;
+      if(_ar>0){addInc=dcnt*_ar;_addIncNote=dcnt+'건×'+_ar+'원';}
     }
   }
-  var finc=isCoupang?(_fincStored>0?_fincStored:Math.round(_fincCalc)):0;
-  var _fincPerUnit=dcnt>0?Math.round(finc/dcnt):0; // 표시용 평균단가
+  addInc=Math.round(addInc);
+  var finc=isCoupang?(_fincStored>0?_fincStored:0):0; // 프레시백 인센: 엑셀값만
+  var _fincPerUnit=dcnt>0?Math.round(finc/dcnt):0;
   var inc=+x.inc||0;
   // ★ 미계약건: 항상 RPRICE['nocont_w1/w2'] × 건수 재계산 (저장값·엑셀금액 무시)
   var _nocontCnt=+x.nocontCnt||0;
