@@ -1357,5 +1357,26 @@ function _addDefaults(){
   }).catch(function(e){toast('❌ '+e.message);});
 }
 </script>
+
+<script>
+// 보안: F12/우클릭/소스보기 차단 (슈퍼어드민 제외)
+(function(){
+  var SA=['kimdh4790@gmail.com','soungkyekim@naver.com'];
+  function _isSA(){
+    try{
+      if(window._CU&&window._CU.email) return SA.indexOf(window._CU.email)>=0;
+      var u=firebase&&firebase.auth&&firebase.auth().currentUser;
+      return u&&SA.indexOf(u.email)>=0;
+    }catch(e){return false;}
+  }
+  document.addEventListener('contextmenu',function(e){if(!_isSA())e.preventDefault();});
+  document.addEventListener('keydown',function(e){
+    if(_isSA())return;
+    if(e.keyCode===123){e.preventDefault();return false;}
+    if(e.ctrlKey&&e.shiftKey&&(e.keyCode===73||e.keyCode===74||e.keyCode===67)){e.preventDefault();return false;}
+    if(e.ctrlKey&&e.keyCode===85){e.preventDefault();return false;}
+  });
+})();
+</script>
 </body>
 </html>
