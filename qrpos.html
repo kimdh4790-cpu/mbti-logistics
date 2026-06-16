@@ -480,39 +480,30 @@ function _genAttendQR(){
   },1000);
 }
 
-var _attendUnsubscribe=null;
 function _loadAttendToday(){
   var did=_dealer?_dealer.id:'';
   var today=new Date().toISOString().slice(0,10);
   var el=document.getElementById('attend-today');
   if(!el)return;
-  el.innerHTML='<div style="font-size:12px;font-weight:800;margin-bottom:8px">⏰ 출퇴근 현황 · '+today+' <span style="font-size:10px;color:#22c55e">● 실시간</span></div>';
-  // 기존 리스너 해제
-  if(_attendUnsubscribe){_attendUnsubscribe();_attendUnsubscribe=null;}
-  // onSnapshot 실시간
-  _attendUnsubscribe=_db.collection('attendance')
-    .where('dealerId','==',did).where('date','==',today)
-    .orderBy('checkIn','desc')
-    .onSnapshot(function(snap){
-      var el2=document.getElementById('attend-today');
-      if(!el2)return;
-      var header='<div style="font-size:12px;font-weight:800;margin-bottom:8px">⏰ 출퇴근 현황 · '+today+' <span style="font-size:10px;color:#22c55e">● 실시간</span></div>';
-      if(snap.empty){el2.innerHTML=header+'<div style="color:var(--text3);font-size:12px;padding:10px">오늘 기록 없음</div>';return;}
-      var html=header+'<div style="display:flex;flex-direction:column;gap:6px">';
-      snap.forEach(function(d){
-        var v=d.data();
-        var inT=v.checkIn?v.checkIn.slice(11,16):'-';
-        var outT=v.checkOut?v.checkOut.slice(11,16):'-';
-        var isOut=!!v.checkOut;
-        html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg3);border-radius:8px;font-size:12px">'+
-          '<div style="font-weight:700">'+esc(v.name||v.driverId||'')+'</div>'+
-          '<div style="color:var(--text3)">출근 '+inT+' / 퇴근 '+outT+'</div>'+
-          '<div style="font-size:10px;padding:3px 8px;border-radius:10px;background:'+(isOut?'rgba(34,197,94,.15)':'rgba(251,191,36,.15)')+';color:'+(isOut?'#22c55e':'#fbbf24')+'">'+( isOut?'퇴근':'근무중')+'</div>'+
-          '</div>';
-      });
-      html+='</div>';
-      el2.innerHTML=html;
-    },function(e){console.warn('attend snap err',e.message);});
+  el.innerHTML='<div style="font-size:12px;font-weight:800;margin-bottom:8px">오늘 출퇴근 현황 ('+today+')</div>';
+  _db.collection('attendance').where('dealerId','==',did).where('date','==',today)
+  .orderBy('checkIn','desc').get()
+  .then(function(snap){
+    if(snap.empty){el.innerHTML+='<div style="color:var(--text3);font-size:12px">오늘 기록 없음</div>';return;}
+    var html='<div style="display:flex;flex-direction:column;gap:6px">';
+    snap.forEach(function(d){
+      var v=d.data();
+      html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg3);border-radius:8px;font-size:12px">'+
+        '<div style="font-weight:700">'+esc(v.name||v.driverId||'')+'</div>'+
+        '<div style="color:var(--text3)">'+
+          '출근 '+(v.checkIn?v.checkIn.slice(11,16):'-')+
+          ' / 퇴근 '+(v.checkOut?v.checkOut.slice(11,16):'-')+
+        '</div>'+
+      '</div>';
+    });
+    html+='</div>';
+    el.innerHTML+=html;
+  }).catch(function(){});
 }
 
 
@@ -532,9 +523,9 @@ function _renderPage(page){
   else if(page==='attend')  _pageAttend(c);
   else if(page==='today')   _qrTab('today');
   else if(page==='history') _qrTab('history');
-  else if(page==='booking') {
-    c.innerHTML='<div class="empty"><div class="empty-icon">📅</div>예약 현황<br><small style="color:var(--text3)">order.html 연동</small></div>';
-  }
+  else if(page==='booking') { _pageQrBooking(c); }
+
+}
 }
 
 // ━━━ 구독 체크 헬퍼 ━━━
@@ -666,5 +657,39 @@ window.addEventListener('resize',function(){
   document.addEventListener('keydown',function(e){if(_isSA())return;if(e.keyCode===123){e.preventDefault();return false;}if(e.ctrlKey&&e.shiftKey&&(e.keyCode===73||e.keyCode===74||e.keyCode===67)){e.preventDefault();return false;}if(e.ctrlKey&&e.keyCode===85){e.preventDefault();return false;}});
 })();
 </script>
+
+function _pageQrBooking(c){
+  if(!c)c=document.getElementById('main-content');
+  var did=_dealer?_dealer.id:'';
+  var today=new Date().toISOString().slice(0,10);
+  c.innerHTML='<div style="font-size:13px;font-weight:800;margin-bottom:12px">📅 예약 현황 · '+today+' <span style="font-size:10px;color:#22c55e">● 실시간</span></div>'+
+    '<div id="qr-booking-list"><div style="text-align:center;padding:20px;color:var(--text3)">⏳</div></div>';
+  if(window._qrBkUnsub){window._qrBkUnsub();window._qrBkUnsub=null;}
+  window._qrBkUnsub=_db.collection('mbetco_bookings')
+    .where('dealerId','==',did).where('date','==',today)
+    .orderBy('time','asc')
+    .onSnapshot(function(snap){
+      var el=document.getElementById('qr-booking-list');if(!el)return;
+      if(snap.empty){el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)"><div style="font-size:28px">📅</div><div>오늘 예약 없음</div></div>';return;}
+      var cl={waiting:'#fbbf24',done:'#22c55e',cancel:'#ef4444'};
+      var lb={waiting:'대기',done:'완료',cancel:'취소'};
+      el.innerHTML=snap.docs.map(function(d){
+        var v=d.data();var id=d.id;var st=v.status||'waiting';
+        return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px">'+
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
+            '<span style="font-size:14px;font-weight:900">'+esc(v.time||'')+'</span>'+
+            '<span style="font-size:11px;padding:3px 8px;border-radius:10px;background:rgba(0,0,0,.15);color:'+cl[st]+'">'+lb[st]+'</span>'+
+          '</div>'+
+          '<div style="font-size:13px;font-weight:700">'+esc(v.custName||'이름없음')+'</div>'+
+          '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+esc(v.custPhone||'')+' · '+esc(v.designerName||'미배정')+' · '+esc(v.serviceName||'')+'</div>'+
+          (st==='waiting'?'<div style="display:flex;gap:6px;margin-top:8px">'+
+            '<button onclick="_qrBkDone(''+id+'')" style="flex:1;padding:7px;background:#22c55e;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">✅ 완료</button>'+
+            '<button onclick="_qrBkCancel(''+id+'')" style="flex:1;padding:7px;background:#ef4444;color:#fff;border:none;border-radius:7px;font-size:12px;cursor:pointer">취소</button></div>':'')+'</div>';
+      }).join('');
+    },function(e){var el=document.getElementById('qr-booking-list');if(el)el.innerHTML='<div style="color:#ef4444;padding:12px">오류: '+e.message+'</div>';});
+}
+function _qrBkDone(id){_db.collection('mbetco_bookings').doc(id).update({status:'done',doneAt:new Date().toISOString()}).then(function(){toast('✅ 완료');}).catch(function(e){toast('❌ '+e.message);});}
+function _qrBkCancel(id){if(!confirm('예약을 취소하시겠습니까?'))return;_db.collection('mbetco_bookings').doc(id).update({status:'cancel',cancelAt:new Date().toISOString()}).then(function(){toast('취소됨');}).catch(function(e){toast('❌ '+e.message);});}
+
 </body>
 </html>
