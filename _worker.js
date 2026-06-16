@@ -84,14 +84,11 @@ function getPlanUrl(planType, slug) {
   const base = 'https://donway.ai.kr';
   const slugPath = slug ? ('/' + slug) : '/settle';
   const urls = {
-    settle:    slugPath,
-    full:      slugPath,
-    contract:  slugPath,
-    roster:    slugPath,
-    qr:        'https://mbtico.kr/qr',
-    inventory: 'https://mbtico.kr/inventory',
-    kiosk:     'https://mbtico.kr/kiosk',
-    universal: 'https://mbtico.kr'
+    settle:   slugPath,
+    full:     slugPath,
+    contract: slugPath,
+    roster:   slugPath,
+    qr:       base + '/attendance'
   };
   return base + (urls[planType] || slugPath);
 }
@@ -1797,37 +1794,14 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         const planType = fields.planType?.stringValue;
 
         // 3. 플랜별 활성화 필드 매핑
-        // 플랜별 companies 필드 매핑
         const PLAN_FIELDS = {
-          contract:  { contractPaid:  { booleanValue: true } },
-          roster:    { rosterPaid:    { booleanValue: true } },
-          qr:        { qrPaid:        { booleanValue: true } },
-          inventory: { inventoryPaid: { booleanValue: true } },
-          kiosk:     { kioskPaid:     { booleanValue: true } },
-          universal: { universalPaid: { booleanValue: true } },
-          settle:    { settlePaid:    { booleanValue: true } },
-          full: {
-            contractPaid:  { booleanValue: true },
-            rosterPaid:    { booleanValue: true },
-            qrPaid:        { booleanValue: true },
-            settlePaid:    { booleanValue: true },
-            inventoryPaid: { booleanValue: true },
-            kioskPaid:     { booleanValue: true }
-          }
-        };
-        // 플랜별 subscriptions 모듈 매핑
-        const PLAN_SUBS = {
-          settle:    ['settle'],
-          qr:        ['qrpos'],
-          inventory: ['inventory'],
-          kiosk:     ['kiosk'],
-          universal: ['settle','qrpos','inventory','kiosk'],
-          full:      ['settle','qrpos','inventory','kiosk'],
-          contract:  ['contract'],
-          roster:    ['roster']
+          contract: { contractPaid: { booleanValue: true } },
+          roster:   { rosterPaid:   { booleanValue: true } },
+          qr:       { qrPaid:       { booleanValue: true } },
+          full:     { contractPaid: { booleanValue: true }, rosterPaid: { booleanValue: true }, qrPaid: { booleanValue: true }, settlePaid: { booleanValue: true } },
+          settle:   { settlePaid:   { booleanValue: true } }
         };
         const planFields = PLAN_FIELDS[planType] || {};
-        const planSubModules = PLAN_SUBS[planType] || [];
 
         // 4. Firestore companies 문서 업데이트 (기능 즉시 활성화)
         if (dealerId && Object.keys(planFields).length) {
@@ -1844,83 +1818,6 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
             headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ fields: updateFields })
           });
-        }
-
-        // 4-1. subscriptions 컬렉션 업데이트 (inventory/qrpos/kiosk 구독체크용)
-        if (dealerId && planSubModules.length) {
-          const today = new Date();
-          const expiry = new Date(today);
-          expiry.setMonth(expiry.getMonth() + 1); // 1개월 구독
-          const expiryStr = expiry.toISOString().slice(0,10);
-          const subFields = {};
-          planSubModules.forEach(mod => {
-            subFields[mod] = {
-              mapValue: { fields: {
-                active:  { booleanValue: true },
-                expiry:  { stringValue: expiryStr },
-                plan:    { stringValue: planType },
-                paidAt:  { timestampValue: new Date().toISOString() }
-              }}
-            };
-          });
-          await fetch(`${FS_BASE}/companies/${dealerId}?${Object.keys(subFields).map(k=>`updateMask.fieldPaths=subscriptions.${k}`).join('&')}`, {
-            method: 'PATCH',
-            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fields: {
-              subscriptions: { mapValue: { fields: subFields } }
-            }})
-          }).catch(()=>{});
-        }
-
-        // 4-2. Firebase Auth 자동 계정 생성 (이메일로 로그인 가능)
-        const emailForAuth = email || fields.email?.stringValue || '';
-        if (emailForAuth && dealerId) {
-          try {
-            const webKey = env.FIREBASE_WEB_API_KEY || 'AIzaSyDQmEFfLczgCuPQidunbBXqaH7f01MoWko';
-            // 기존 계정 확인
-            const lookupR = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${webKey}`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: emailForAuth })
-            });
-            const lookupD = await lookupR.json();
-            let authUid = lookupD.users?.[0]?.localId || null;
-            if (!authUid) {
-              // 신규 계정 생성
-              const createR = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${webKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: emailForAuth, password: tempPassword, displayName: companyName })
-              });
-              const createD = await createR.json();
-              authUid = createD.localId || null;
-            }
-            // companies에 uid 저장
-            if (authUid) {
-              await fetch(`${FS_BASE}/companies/${dealerId}?updateMask.fieldPaths=uid&updateMask.fieldPaths=authUid`, {
-                method: 'PATCH',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ fields: {
-                  uid:     { stringValue: authUid },
-                  authUid: { stringValue: authUid }
-                }})
-              }).catch(()=>{});
-              // users 컬렉션에도 등록
-              await fetch(`${FS_BASE}/users/${authUid}`, {
-                method: 'PATCH',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ fields: {
-                  uid:         { stringValue: authUid },
-                  email:       { stringValue: emailForAuth },
-                  dealerId:    { stringValue: dealerId },
-                  companyName: { stringValue: companyName },
-                  role:        { stringValue: 'admin' },
-                  plan:        { stringValue: planType },
-                  createdAt:   { timestampValue: new Date().toISOString() }
-                }})
-              }).catch(()=>{});
-            }
-          } catch(authErr) { /* Auth 생성 실패해도 결제는 성공 */ }
         }
 
         // 5. 주문 상태 완료로 업데이트
@@ -2132,7 +2029,6 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         if (event.eventType === 'PAYMENT_STATUS_CHANGED' && event.data?.status === 'DONE') {
           const orderId = event.data.orderId;
           const paymentKey = event.data.paymentKey;
-          // 위 confirm 로직과 동일하게 처리 (이중 안전장치)
           const token = await getAccessToken(env);
           const orderResp = await fetch(`${FS_BASE}/toss_orders/${orderId}`, {
             headers: { Authorization: `Bearer ${token}` }
@@ -2142,27 +2038,102 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
             const f = orderDoc.fields || {};
             const dealerId = f.dealerId?.stringValue;
             const planType = f.planType?.stringValue;
-            const PLAN_FIELDS = {
-              contract: { contractPaid: { booleanValue: true } },
-              roster:   { rosterPaid:   { booleanValue: true } },
-              qr:       { qrPaid:       { booleanValue: true } },
-              full:     { contractPaid: { booleanValue: true }, rosterPaid: { booleanValue: true }, qrPaid: { booleanValue: true }, settlePaid: { booleanValue: true } },
-              settle:   { settlePaid:   { booleanValue: true } }
+            const email = f.email?.stringValue || '';
+            const companyName = f.companyName?.stringValue || '';
+            // confirm과 동일한 PLAN_FIELDS 사용
+            const PLAN_FIELDS_WH = {
+              contract:  { contractPaid:  { booleanValue: true } },
+              roster:    { rosterPaid:    { booleanValue: true } },
+              qr:        { qrPaid:        { booleanValue: true } },
+              inventory: { inventoryPaid: { booleanValue: true } },
+              kiosk:     { kioskPaid:     { booleanValue: true } },
+              universal: { universalPaid: { booleanValue: true } },
+              settle:    { settlePaid:    { booleanValue: true } },
+              full: { contractPaid:{booleanValue:true}, rosterPaid:{booleanValue:true}, qrPaid:{booleanValue:true}, settlePaid:{booleanValue:true}, inventoryPaid:{booleanValue:true}, kioskPaid:{booleanValue:true} }
             };
-            const planFields = PLAN_FIELDS[planType] || {};
+            const PLAN_SUBS_WH = {
+              settle:['settle'], qr:['qrpos'], inventory:['inventory'],
+              kiosk:['kiosk'], universal:['settle','qrpos','inventory','kiosk'],
+              full:['settle','qrpos','inventory','kiosk'], contract:['contract'], roster:['roster']
+            };
+            const planFields = PLAN_FIELDS_WH[planType] || {};
+            const planSubModules = PLAN_SUBS_WH[planType] || [];
             if (dealerId && Object.keys(planFields).length) {
+              // companies 업데이트
               const updateFields = {
                 ...planFields,
                 plan: { stringValue: 'paid' },
                 lastPaymentKey: { stringValue: paymentKey || '' },
                 lastPaidAt: { timestampValue: new Date().toISOString() }
               };
-              const mask = Object.keys(updateFields).map(k => `updateMask.fieldPaths=${k}`).join('&');
+              const mask = Object.keys(updateFields).map(k=>`updateMask.fieldPaths=${k}`).join('&');
               await fetch(`${FS_BASE}/companies/${dealerId}?${mask}`, {
                 method: 'PATCH',
                 headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ fields: updateFields })
               });
+              // subscriptions 업데이트
+              if (planSubModules.length) {
+                const today = new Date();
+                const expiry = new Date(today); expiry.setMonth(expiry.getMonth()+1);
+                const expiryStr = expiry.toISOString().slice(0,10);
+                const subFields = {};
+                planSubModules.forEach(mod => {
+                  subFields[mod] = { mapValue: { fields: {
+                    active:  { booleanValue: true },
+                    expiry:  { stringValue: expiryStr },
+                    plan:    { stringValue: planType },
+                    paidAt:  { timestampValue: new Date().toISOString() }
+                  }}};
+                });
+                await fetch(`${FS_BASE}/companies/${dealerId}?${planSubModules.map(m=>`updateMask.fieldPaths=subscriptions.${m}`).join('&')}`, {
+                  method: 'PATCH',
+                  headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ fields: { subscriptions: { mapValue: { fields: subFields } } } })
+                }).catch(()=>{});
+              }
+              // Auth 자동 생성
+              if (email) {
+                try {
+                  const webKey = env.FIREBASE_WEB_API_KEY || 'AIzaSyDQmEFfLczgCuPQidunbBXqaH7f01MoWko';
+                  const tempPw = 'Donway' + Math.floor(1000+Math.random()*9000) + '!';
+                  const lookupR = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${webKey}`, {
+                    method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({ email })
+                  });
+                  const lookupD = await lookupR.json();
+                  let authUid = lookupD.users?.[0]?.localId || null;
+                  if (!authUid) {
+                    const createR = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${webKey}`, {
+                      method:'POST', headers:{'Content-Type':'application/json'},
+                      body: JSON.stringify({ email, password: tempPw, displayName: companyName })
+                    });
+                    const createD = await createR.json();
+                    authUid = createD.localId || null;
+                  }
+                  if (authUid) {
+                    await fetch(`${FS_BASE}/companies/${dealerId}?updateMask.fieldPaths=uid&updateMask.fieldPaths=authUid`, {
+                      method:'PATCH', headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
+                      body: JSON.stringify({ fields: { uid:{stringValue:authUid}, authUid:{stringValue:authUid} } })
+                    }).catch(()=>{});
+                    await fetch(`${FS_BASE}/users/${authUid}`, {
+                      method:'PATCH', headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
+                      body: JSON.stringify({ fields: {
+                        uid:{stringValue:authUid}, email:{stringValue:email},
+                        dealerId:{stringValue:dealerId}, companyName:{stringValue:companyName},
+                        role:{stringValue:'admin'}, plan:{stringValue:planType},
+                        createdAt:{timestampValue:new Date().toISOString()}
+                      }})
+                    }).catch(()=>{});
+                    // 환영 이메일 (계좌이체 완료)
+                    const loginUrl = getPlanUrl(planType, '');
+                    await sendWelcomeEmail(env, { email, companyName, tempPassword:tempPw, planType, loginUrl,
+                      planLabel: planType+' 플랜 (계좌이체 완료)' });
+                    // 관리자 알림
+                    await notifyAdmins(env, token, { title:'💳 계좌이체 완료!', body:`${companyName} · ${planType}`, type:'pay' });
+                  }
+                } catch(authErr) { /* 실패해도 계속 */ }
+              }
             }
           }
         }
