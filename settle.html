@@ -27527,8 +27527,7 @@ function _showSEModal(s){
   // ── 항목별 입력
   var items=[
     {ic:'🧊',n:'③ 프레시백 회수금액',id:'se-fresh',val:s.fresh||0,sign:'+',editable:true,note:''},
-    {ic:'⭐',n:'④ 프레시백 인센티브',id:'se-finc',val:(_cn&&_cn.finc>0?_cn.finc:s.finc)||0,sign:'+',editable:false,note:(s.dcnt||0)+'건 × '+(s._fincPerUnit||Math.round((s.finc||0)/(s.dcnt||1)))+'원'},
-   {ic:'💰',n:'④-1 추가 인센티브',id:'se-add-inc',val:(_cn&&_cn.addInc)||0,sign:'+',editable:false,note:(_cn&&_cn._addIncNote)||''},
+    {ic:'⭐',n:'④ 프레시백 인센티브',id:'se-finc',val:(_cn&&_cn.finc>0?_cn.finc:s.finc)||0,sign:'+',editable:false,note:(_cn&&_cn._addIncNote)||((s.dcnt||0)+'건 × '+(s._fincPerUnit||Math.round((s.finc||0)/(s.dcnt||1)))+'원')},
     {ic:'➕',n:'⑤ 미계약건',id:'se-nocont',
       val:(function(){
         // RPRICE 기반 재계산 우선, 없으면 저장값
@@ -27673,7 +27672,7 @@ function updSECalc(){
   if(vD)vD.textContent='₩'+fmt(totalDamt);
   if(vR)vR.textContent='₩'+fmt(totalRamt);
   // 항목별 합산
-  var fresh=gv('se-fresh'),finc=gv('se-finc'),addInc2=gv('se-add-inc')||0,inc=gv('se-inc'),nocont=gv('se-nocont');
+  var fresh=gv('se-fresh'),finc=gv('se-finc'),inc=gv('se-inc'),nocont=gv('se-nocont');
   var dmg=gv('se-dmg'),etcP=gv('se-etc-plus'),etcM=gv('se-etc-minus'),adv=gv('se-adv');
   var taxBase=totalDamt+totalRamt+fresh+finc+nocont+etcP;  // ★ inc 제외 (세금계산서 base 아님)
   var supplyAmt=Math.round(taxBase/1.1);
@@ -33595,7 +33594,7 @@ function _refreshOpenSEFinc(){
     var noteEl=fincEl.closest('.se-row');
     if(noteEl){
       var noteSpan=noteEl.querySelector('.se-note');
-      if(noteSpan) noteSpan.textContent=(cached.dcnt||0)+'건 × '+(net._fincPerUnit||0)+'원';
+      if(noteSpan) noteSpan.textContent=net._addIncNote||((cached.dcnt||0)+'건 × '+(net._fincPerUnit||0)+'원');
     }
   }
   // 합계 재계산
