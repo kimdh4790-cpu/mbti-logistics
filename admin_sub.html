@@ -73,6 +73,7 @@ body{background:var(--bg);color:var(--text);font-family:"Apple SD Gothic Neo","N
   <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
     <div id="admin-email" style="font-size:11px;color:var(--text3)"></div>
     <button class="btn btn-gray" onclick="_logout()" style="padding:7px 14px;font-size:11px">로그아웃</button>
+<button onclick="_toggleManualActivate()" style="padding:7px 14px;font-size:11px;background:linear-gradient(135deg,#00d4ff,#7b2fff);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700">⚡ 수동활성화</button>
   </div>
 </div>
 
@@ -648,5 +649,92 @@ function _loadLogs(){
   }).catch(function(){});
 }
 </script>
+
+<!-- ★ 수동 즉시 활성화 섹션 -->
+<div id="manual-activate-section" style="background:#0d1b3e;border:1px solid rgba(0,212,255,.2);border-radius:16px;padding:20px;margin:16px 0;display:none">
+  <div style="font-size:14px;font-weight:800;color:#fff;margin-bottom:4px">⚡ 수동 즉시 활성화</div>
+  <div style="font-size:11px;color:#94a3b8;margin-bottom:16px">계좌이체·현장결제 후 수동으로 구독 활성화</div>
+  <div style="display:grid;gap:10px">
+    <div>
+      <label style="font-size:11px;color:#94a3b8;display:block;margin-bottom:4px">고객 이메일</label>
+      <input id="ma-email" type="email" placeholder="customer@email.com"
+        style="width:100%;padding:10px;background:#1e3a5f;border:1px solid rgba(0,212,255,.3);border-radius:8px;color:#fff;font-size:13px;box-sizing:border-box">
+    </div>
+    <div>
+      <label style="font-size:11px;color:#94a3b8;display:block;margin-bottom:4px">플랜</label>
+      <select id="ma-plan"
+        style="width:100%;padding:10px;background:#1e3a5f;border:1px solid rgba(0,212,255,.3);border-radius:8px;color:#fff;font-size:13px">
+        <option value="settle">🤖 AI정산 (donway.ai.kr)</option>
+        <option value="inventory">📦 재고관리 (mbtico.kr)</option>
+        <option value="qr">🔲 QR 출퇴근 (mbtico.kr)</option>
+        <option value="kiosk">🖥️ 키오스크POS (mbtico.kr)</option>
+        <option value="universal">🌐 통합 (mbtico.kr 전체)</option>
+        <option value="full">💎 풀패키지 (전체)</option>
+      </select>
+    </div>
+    <div>
+      <label style="font-size:11px;color:#94a3b8;display:block;margin-bottom:4px">구독 개월 수</label>
+      <select id="ma-months"
+        style="width:100%;padding:10px;background:#1e3a5f;border:1px solid rgba(0,212,255,.3);border-radius:8px;color:#fff;font-size:13px">
+        <option value="1">1개월</option>
+        <option value="3">3개월</option>
+        <option value="6">6개월</option>
+        <option value="12">12개월</option>
+      </select>
+    </div>
+    <div>
+      <label style="font-size:11px;color:#94a3b8;display:block;margin-bottom:4px">결제 메모 (선택)</label>
+      <input id="ma-memo" placeholder="하나은행 이체 확인 / 현장결제 등"
+        style="width:100%;padding:10px;background:#1e3a5f;border:1px solid rgba(0,212,255,.3);border-radius:8px;color:#fff;font-size:13px;box-sizing:border-box">
+    </div>
+    <button onclick="_manualActivate()"
+      style="width:100%;padding:14px;background:linear-gradient(135deg,#00d4ff,#7b2fff);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">
+      ⚡ 즉시 활성화
+    </button>
+    <div id="ma-result" style="font-size:12px;color:#94a3b8;text-align:center;min-height:16px"></div>
+  </div>
+</div>
+
+<script>
+// ★ 수동 활성화 토글
+function _toggleManualActivate(){
+  var s=document.getElementById('manual-activate-section');
+  if(s) s.style.display=s.style.display==='none'?'block':'none';
+}
+
+// ★ 수동 즉시 활성화
+async function _manualActivate(){
+  var email=(document.getElementById('ma-email')||{}).value.trim();
+  var plan=(document.getElementById('ma-plan')||{}).value;
+  var months=parseInt((document.getElementById('ma-months')||{}).value||'1');
+  var memo=(document.getElementById('ma-memo')||{}).value.trim();
+  var result=document.getElementById('ma-result');
+  if(!email){result.textContent='❌ 이메일을 입력하세요';result.style.color='#ef4444';return;}
+  if(!confirm(email+'
+'+plan+' 플랜 '+months+'개월 즉시 활성화할까요?'))return;
+  result.textContent='처리 중...';result.style.color='#94a3b8';
+  try{
+    var resp=await fetch('/sa/manual-activate',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email,plan,months,memo})
+    });
+    var data=await resp.json();
+    if(data.ok){
+      result.textContent='✅ 활성화 완료! '+data.companyName+' (만료: '+data.expiry+')';
+      result.style.color='#22c55e';
+      document.getElementById('ma-email').value='';
+      document.getElementById('ma-memo').value='';
+    } else {
+      result.textContent='❌ '+( data.reason||data.error||'실패');
+      result.style.color='#ef4444';
+    }
+  }catch(e){
+    result.textContent='❌ '+e.message;
+    result.style.color='#ef4444';
+  }
+}
+</script>
+
 </body>
 </html>
