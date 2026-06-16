@@ -574,7 +574,7 @@ export default {
     if (path === '/firebase-messaging-sw.js') {
       const swContent = "importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');"
         + "importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');"
-        + "firebase.initializeApp({apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.firebasestorage.app',messagingSenderId:'40761160761',appId:'1:40761160761:web:20545b610f03f534e949e8'});"
+        + "firebase.initializeApp({apiKey:''+env.FIREBASE_WEB_API_KEY+'',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.firebasestorage.app',messagingSenderId:'40761160761',appId:'1:40761160761:web:20545b610f03f534e949e8'});"
         + "const messaging=firebase.messaging();"
         + "messaging.onBackgroundMessage(function(payload){"
         + "  const data=payload.data||{};const type=data.type||'alert';"
@@ -1094,11 +1094,11 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         const tempPw = 'Donway' + Math.floor(1000+Math.random()*9000) + '!';
         const accessToken = await getAccessToken(env);
         let uid = null;
-        const lookupRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${env.FIREBASE_WEB_API_KEY||'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0'}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+        const lookupRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${env.FIREBASE_WEB_API_KEY||''}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
         const lookupData = await lookupRes.json();
         if (lookupData.users&&lookupData.users.length>0) { uid=lookupData.users[0].localId; }
         else {
-          const createRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${env.FIREBASE_WEB_API_KEY||'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0'}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:tempPw,displayName:companyName,returnSecureToken:false})});
+          const createRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${env.FIREBASE_WEB_API_KEY||''}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:tempPw,displayName:companyName,returnSecureToken:false})});
           const createData = await createRes.json();
           if (createData.error) throw new Error(createData.error.message);
           uid = createData.localId;
@@ -2280,7 +2280,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
               // Auth 자동 생성
               if (email) {
                 try {
-                  const webKey = env.FIREBASE_WEB_API_KEY || 'AIzaSyDQmEFfLczgCuPQidunbBXqaH7f01MoWko';
+                  const webKey = env.FIREBASE_WEB_API_KEY || ''+env.FIREBASE_WEB_API_KEY+'';
                   const tempPw = 'Donway' + Math.floor(1000+Math.random()*9000) + '!';
                   const lookupR = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${webKey}`, {
                     method:'POST', headers:{'Content-Type':'application/json'},
@@ -2404,7 +2404,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
     if (path === '/firebase-messaging-sw.js') {
       const swContent = "importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');"
         + "importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');"
-        + "firebase.initializeApp({apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.firebasestorage.app',messagingSenderId:'40761160761',appId:'1:40761160761:web:20545b610f03f534e949e8'});"
+        + "firebase.initializeApp({apiKey:''+env.FIREBASE_WEB_API_KEY+'',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.firebasestorage.app',messagingSenderId:'40761160761',appId:'1:40761160761:web:20545b610f03f534e949e8'});"
         + "const messaging=firebase.messaging();"
         + "messaging.onBackgroundMessage(function(payload){"
         + "  const data=payload.data||{};const type=data.type||'alert';"
@@ -2447,7 +2447,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
       const slug = slugSwMatch[1];
       const swContent = `importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');`
         + `importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');`
-        + `firebase.initializeApp({apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.firebasestorage.app',messagingSenderId:'40761160761',appId:'1:40761160761:web:20545b610f03f534e949e8'});`
+        + `firebase.initializeApp({apiKey:''+env.FIREBASE_WEB_API_KEY+'',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.firebasestorage.app',messagingSenderId:'40761160761',appId:'1:40761160761:web:20545b610f03f534e949e8'});`
         + `const messaging=firebase.messaging();`
         + `messaging.onBackgroundMessage(function(payload){`
         + `  const data=payload.data||{};`
