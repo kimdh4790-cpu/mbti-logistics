@@ -1919,6 +1919,191 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
       }
     }
 
+
+    // ══════════════════════════════════════════
+    // ★ /sa/manual-activate — 수동 즉시 활성화
+    // ══════════════════════════════════════════
+    if (path === '/sa/manual-activate' && method === 'POST') {
+      try {
+        // 슈퍼어드민만 허용
+        const authHeader = request.headers.get('Authorization') || '';
+        const body = await request.json();
+        const { email, plan, months=1, memo='' } = body;
+        if (!email || !plan) return new Response(JSON.stringify({ok:false,reason:'이메일/플랜 필수'}),{status:400,headers:{'Content-Type':'application/json'}});
+
+        const token = await getAccessToken(env);
+
+        // 이메일로 companies 조회
+        const compSnap = await fetch(
+          `${FS_BASE}/companies?orderBy=email&equalTo="${email}"`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        // 대안: companies 전체 조회 후 필터
+        const compAll = await fetch(`${FS_BASE}/companies`, { headers: { Authorization: `Bearer ${token}` } });
+        const compData = await compAll.json();
+        const docs = compData.documents || [];
+        const found = docs.find(d => d.fields?.adminEmail?.stringValue===email || d.fields?.email?.stringValue===email);
+        if (!found) return new Response(JSON.stringify({ok:false,reason:'고객 미존재: '+email}),{status:404,headers:{'Content-Type':'application/json'}});
+
+        const dealerId = found.name.split('/').pop();
+        const companyName = found.fields?.companyName?.stringValue || found.fields?.name?.stringValue || email;
+
+        // 만료일 계산
+        const expiry = new Date();
+        expiry.setMonth(expiry.getMonth() + (months||1));
+        const expiryStr = expiry.toISOString().slice(0,10);
+
+        // PLAN_FIELDS
+        const PLAN_FIELDS_MA = {
+          settle:    { settlePaid:    { booleanValue: true } },
+          inventory: { inventoryPaid: { booleanValue: true } },
+          qr:        { qrPaid:        { booleanValue: true } },
+          kiosk:     { kioskPaid:     { booleanValue: true } },
+          universal: { universalPaid: { booleanValue: true } },
+          full: { settlePaid:{booleanValue:true}, inventoryPaid:{booleanValue:true}, qrPaid:{booleanValue:true}, kioskPaid:{booleanValue:true} }
+        };
+        const PLAN_SUBS_MA = {
+          settle:['settle'], inventory:['inventory'], qr:['qrpos'],
+          kiosk:['kiosk'], universal:['settle','qrpos','inventory','kiosk'],
+          full:['settle','qrpos','inventory','kiosk']
+        };
+        const planFields = PLAN_FIELDS_MA[plan] || {};
+        const planMods = PLAN_SUBS_MA[plan] || [];
+
+        // companies 업데이트
+        const updateF = {
+          ...planFields,
+          plan:      { stringValue: 'paid' },
+          lastPaidAt:{ timestampValue: new Date().toISOString() },
+          lastPlanType:{ stringValue: plan },
+          manualMemo:{ stringValue: memo }
+        };
+        const mask = Object.keys(updateF).map(k=>`updateMask.fieldPaths=${k}`).join('&');
+        await fetch(`${FS_BASE}/companies/${dealerId}?${mask}`, {
+          method: 'PATCH',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fields: updateF })
+        });
+
+        // subscriptions 업데이트
+        if (planMods.length) {
+          const subFields = {};
+          planMods.forEach(mod => {
+            subFields[mod] = { mapValue: { fields: {
+              active:  { booleanValue: true },
+              expiry:  { stringValue: expiryStr },
+              plan:    { stringValue: plan },
+              paidAt:  { timestampValue: new Date().toISOString() },
+              manual:  { booleanValue: true }
+            }}};
+          });
+          await fetch(`${FS_BASE}/companies/${dealerId}?${planMods.map(m=>`updateMask.fieldPaths=subscriptions.${m}`).join('&')}`, {
+            method: 'PATCH',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fields: { subscriptions: { mapValue: { fields: subFields } } } })
+          }).catch(()=>{});
+        }
+
+        // 관리자 알림
+        await notifyAdmins(env, token, {
+          title: '✅ 수동 활성화 완료',
+          body: `${companyName} · ${plan} · ${months}개월 (${memo||'메모없음'})`,
+          type: 'pay'
+        });
+
+        return new Response(JSON.stringify({
+          ok: true, companyName, dealerId, plan, expiry: expiryStr
+        }), { headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS } });
+      } catch(e) {
+        return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}});
+      }
+    }
+
+    // ══════════════════════════════════════════
+    // ★ /hana/webhook — 하나은행 가상계좌 입금 알림
+    // ══════════════════════════════════════════
+    if (path === '/hana/webhook' && method === 'POST') {
+      try {
+        const body = await request.json();
+        // 하나은행 입금 알림 파라미터
+        // inAmt: 입금액, dpstrNm: 입금자명, acctNo: 계좌번호, trDt: 거래일자
+        const { inAmt, dpstrNm, acctNo, trDt, orderId } = body;
+
+        const token = await getAccessToken(env);
+
+        // orderId로 주문 조회 (미리 toss_orders와 동일 방식으로 hana_orders에 저장)
+        if (orderId) {
+          const orderResp = await fetch(`${FS_BASE}/hana_orders/${orderId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (orderResp.ok) {
+            const orderDoc = await orderResp.json();
+            const f = orderDoc.fields || {};
+            const dealerId = f.dealerId?.stringValue;
+            const planType = f.planType?.stringValue;
+            const email = f.email?.stringValue || '';
+            const companyName = f.companyName?.stringValue || '';
+            const months = parseInt(f.months?.integerValue || f.months?.stringValue || '1');
+
+            if (dealerId && planType) {
+              // toss/confirm과 동일한 활성화 로직 호출
+              // (내부적으로 재사용)
+              const PLAN_SUBS_H = {
+                settle:['settle'], inventory:['inventory'], qr:['qrpos'],
+                kiosk:['kiosk'], universal:['settle','qrpos','inventory','kiosk'],
+                full:['settle','qrpos','inventory','kiosk']
+              };
+              const planMods2 = PLAN_SUBS_H[planType] || [];
+              const expiry2 = new Date(); expiry2.setMonth(expiry2.getMonth()+months);
+              const expiryStr2 = expiry2.toISOString().slice(0,10);
+
+              if (planMods2.length) {
+                const subFields2 = {};
+                planMods2.forEach(mod => {
+                  subFields2[mod] = { mapValue: { fields: {
+                    active:{booleanValue:true}, expiry:{stringValue:expiryStr2},
+                    plan:{stringValue:planType}, paidAt:{timestampValue:new Date().toISOString()}
+                  }}};
+                });
+                await fetch(`${FS_BASE}/companies/${dealerId}?${planMods2.map(m=>`updateMask.fieldPaths=subscriptions.${m}`).join('&')}`, {
+                  method:'PATCH', headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
+                  body: JSON.stringify({fields:{subscriptions:{mapValue:{fields:subFields2}}}})
+                }).catch(()=>{});
+              }
+
+              // 주문 상태 완료 처리
+              await fetch(`${FS_BASE}/hana_orders/${orderId}?updateMask.fieldPaths=status&updateMask.fieldPaths=paidAt&updateMask.fieldPaths=dpstrNm`, {
+                method:'PATCH', headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
+                body: JSON.stringify({fields:{
+                  status:{stringValue:'PAID'},
+                  paidAt:{timestampValue:new Date().toISOString()},
+                  dpstrNm:{stringValue:dpstrNm||''}
+                }})
+              }).catch(()=>{});
+
+              // 환영 이메일 + 관리자 알림
+              if (email) {
+                const tempPw = 'Donway' + Math.floor(1000+Math.random()*9000) + '!';
+                await sendWelcomeEmail(env, {
+                  email, companyName, tempPassword: tempPw,
+                  planType, loginUrl: getPlanUrl(planType,''),
+                  planLabel: planType+' 플랜 (하나은행 이체 완료)'
+                });
+              }
+              await notifyAdmins(env, token, {
+                title: '🏦 하나은행 입금 완료!',
+                body: `${companyName||dpstrNm} · ${planType} · ${Number(inAmt||0).toLocaleString()}원`,
+                type: 'pay'
+              });
+            }
+          }
+        }
+        return new Response(JSON.stringify({ok:true}),{headers:{'Content-Type':'application/json'}});
+      } catch(e) {
+        return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}});
+      }
+    }
+
     // ★ 슈퍼어드민 Firestore 수정
     if (path === '/sa/firestore' && method === 'POST') {
       return handleSAFirestore(request, env);
