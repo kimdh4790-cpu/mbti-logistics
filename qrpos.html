@@ -295,8 +295,8 @@ function _qrPrint(){
     (imgSrc?'<img src="'+imgSrc+'" />':'<p>'+url+'</p>')+
     '<p style="font-size:11px;color:#666;margin-top:8px">'+url+'</p>'+
     '<br><button onclick="window.print()">🖨️ 인쇄</button>'+
-    '\n
-</body></html>';
+    '\n</body></html>';
+
   var win=window.open('','_blank','width=320,height=400');
   if(win){win.document.write(html);win.document.close();}
 }
