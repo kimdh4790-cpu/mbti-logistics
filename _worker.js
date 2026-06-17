@@ -533,13 +533,13 @@ export default {
     // ★ mbtico.kr → 엠비티아이 배송앱
     if (hostname === 'mbtico.kr' || hostname === 'www.mbtico.kr') {
       if (path === '/settle' || path === '/settle.html') return Response.redirect('https://donway.ai.kr/settle', 302);
-      if (path === '/' || path === '') return serveKVFile(env, 'mbtico_hub.html', 'text/html');
-      if (path === '/landing') return serveKVFile(env, 'mbti_landing.html', 'text/html');
+      if (path === '/' || path === '') return serveKVFile(env, 'mbti_landing.html', 'text/html');
+      if (path === '/app' || path === '/hub') return serveKVFile(env, 'mbtico_hub.html', 'text/html');
       if (path === '/label' || path === '/label.html') return serveKVFile(env, 'label.html', 'text/html');
       if (path === '/delivery' || path === '/delivery.html') return serveKVFile(env, 'delivery.html', 'text/html');
       if (path === '/emergency' || path === '/emergency.html') return serveKVFile(env, 'emergency.html', 'text/html');
       if (path === '/checkin' || path === '/checkin.html') return serveKVFile(env, 'checkin.html', 'text/html');
-      if (path === '/app' || path === '/v9') return serveKVFile(env, 'index.html', 'text/html');
+      if (path === '/v9') return serveKVFile(env, 'index.html', 'text/html');
       if (path === '/admin' || path === '/admin.html') return serveKVFile(env, 'admin.html', 'text/html');
       if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
       if (path === '/drivers' || path === '/drivers.html') return serveKVFile(env, 'drivers.html', 'text/html');
