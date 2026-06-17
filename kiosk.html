@@ -145,7 +145,8 @@ tr:hover td{background:var(--bg3)}
           <span id="booking-count" style="display:none;margin-left:auto;background:var(--red);color:#fff;border-radius:20px;padding:1px 6px;font-size:10px;font-weight:700"></span>
         </div>
         <div class="nav-item" id="nav-menu" onclick="_nav(this,'menu')"><span class="nav-icon">💆</span>서비스 메뉴</div>
-        <div class="nav-item" id="nav-customer" onclick="_nav(this,'customer')"><span class="nav-icon">🗂</span>고객 DB</div>
+        <div class="nav-item" id="nav-stats" onclick="_nav(this,'stats')"><span class="nav-icon">📈</span>매출 통계</div>
+    <div class="nav-item" id="nav-customer" onclick="_nav(this,'customer')"><span class="nav-icon">🗂</span>고객 DB</div>
         <div class="nav-section">연결</div>
         <div class="nav-item" onclick="window.open('https://donway.ai.kr/settle','_blank')"><span class="nav-icon">💰</span>DONWAY 정산</div>
         <div class="nav-item" onclick="window.open('https://filo.ai.kr/inventory','_blank')"><span class="nav-icon">📦</span>재고관리</div>
@@ -276,6 +277,7 @@ function _nav(el,page){
   else if(page==='bookings') _pageBookings(c);
   else if(page==='menu') _pageMenu(c);
   else if(page==='customer') _pageCustomer(c);
+  else if(page==='stats') _statsPage(c,_getDid(),'mbetco_sales','date','finalPrice','💰 매출');
 }
 
 // ━━━ 시술 입력 ━━━
