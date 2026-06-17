@@ -534,7 +534,6 @@ export default {
     if (hostname === 'mbtico.kr' || hostname === 'www.mbtico.kr') {
       if (path === '/' || path === '') return serveKVFile(env, 'mbtico_hub.html', 'text/html');
       if (path === '/landing') return serveKVFile(env, 'mbti_landing.html', 'text/html');
-      if (path === '/scan' || path === '/scan.html') return serveKVFile(env, 'scan.html', 'text/html');
       if (path === '/label' || path === '/label.html') return serveKVFile(env, 'label.html', 'text/html');
       if (path === '/delivery' || path === '/delivery.html') return serveKVFile(env, 'delivery.html', 'text/html');
       if (path === '/emergency' || path === '/emergency.html') return serveKVFile(env, 'emergency.html', 'text/html');
@@ -594,7 +593,7 @@ export default {
     if (path === '/firebase-messaging-sw.js') {
       const swContent = "importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');"
         + "importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');"
-        + "firebase.initializeApp({apiKey:''+env.FIREBASE_WEB_API_KEY+'',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.firebasestorage.app',messagingSenderId:'40761160761',appId:'1:40761160761:web:20545b610f03f534e949e8'});"
+        + "firebase.initializeApp({apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.firebasestorage.app',messagingSenderId:'40761160761',appId:'1:40761160761:web:20545b610f03f534e949e8'});"
         + "const messaging=firebase.messaging();"
         + "messaging.onBackgroundMessage(function(payload){"
         + "  const data=payload.data||{};const type=data.type||'alert';"
@@ -616,10 +615,9 @@ export default {
       });
     }
 
-    // ★ 루트 접속 → 랜딩페이지 리라이트 (mbtico.kr 제외)
+    // ★ 루트 접속 → 랜딩페이지 리라이트 (URL 유지, workers.dev 제외)
     // ── 루트 경로 처리 ──
-    if (!['mbtico.kr','www.mbtico.kr','filo.ai.kr','www.filo.ai.kr'].includes(hostname) &&
-        (path === '/' || path === '' || path === '/donway_landing' || path === '/donway_landing/')) {
+    if (path === '/' || path === '' || path === '/donway_landing' || path === '/donway_landing/') {
       // mbetco.kr → universal_settle.html
       if (hostname.includes('mbetco') || hostname.includes('mbtico')) {
         // mbtico.kr 루트 → 허브 페이지
@@ -1157,6 +1155,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
       }
       return new Response(out.join('\n'),{headers:{'Content-Type':'text/plain;charset=utf-8'}});
     }
+    if (!['mbtico.kr','www.mbtico.kr'].includes(hostname)) {
     const slugMatch = path.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/?$/);
     if (slugMatch && !knownPaths.has(slugMatch[0].replace(/\/$/,'')) && method === 'GET') {
       const companySlug = slugMatch[1];
@@ -1180,6 +1179,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         return new Response('Not found', { status: 404 });
       }
     }
+    } // end mbtico.kr slug 제외
 
     if (path === '/settle.html' || path === '/settle' || path === '/settle/') {
       const resp = await fetchAsset('/settle.html', request, env);
