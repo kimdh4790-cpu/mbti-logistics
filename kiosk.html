@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<link rel="manifest" href="/BICO-manifest.json">
+<link rel="manifest" href="/FILO-manifest.json">
 <meta name="theme-color" content="#7b2fff">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="BICO 키오스크">
+<meta name="apple-mobile-web-app-title" content="FILO 키오스크">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<title>키오스크·POS — bico.kr</title>
+<title>키오스크·POS — filo.ai.kr</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -99,7 +99,7 @@ tr:hover td{background:var(--bg3)}
     <div style="text-align:center;margin-bottom:22px">
       <div style="font-size:30px;margin-bottom:6px">🖥️</div>
       <div style="font-size:18px;font-weight:900;color:var(--pink)">키오스크·POS</div>
-      <div style="font-size:11px;color:var(--text3);margin-top:4px">bico.kr</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">filo.ai.kr</div>
     </div>
     <div class="field">
       <label class="field-label">이메일</label>
@@ -126,7 +126,7 @@ tr:hover td{background:var(--bg3)}
   <div class="app">
     <div class="sidebar" id="sidebar">
       <div class="sb-logo">
-        <div class="sb-logo-title">🖥️ BICO POS</div>
+        <div class="sb-logo-title">🖥️ FILO POS</div>
         <div class="sb-logo-sub">키오스크·매출·예약</div>
       </div>
       <div class="sb-user">
@@ -148,8 +148,8 @@ tr:hover td{background:var(--bg3)}
         <div class="nav-item" id="nav-customer" onclick="_nav(this,'customer')"><span class="nav-icon">🗂</span>고객 DB</div>
         <div class="nav-section">연결</div>
         <div class="nav-item" onclick="window.open('https://donway.ai.kr/settle','_blank')"><span class="nav-icon">💰</span>DONWAY 정산</div>
-        <div class="nav-item" onclick="window.open('https://bico.kr/inventory','_blank')"><span class="nav-icon">📦</span>재고관리</div>
-        <div class="nav-item" onclick="window.open('https://bico.kr/qr','_blank')"><span class="nav-icon">🔲</span>QR 관리</div>
+        <div class="nav-item" onclick="window.open('https://filo.ai.kr/inventory','_blank')"><span class="nav-icon">📦</span>재고관리</div>
+        <div class="nav-item" onclick="window.open('https://filo.ai.kr/qr','_blank')"><span class="nav-icon">🔲</span>QR 관리</div>
       </div>
       <div class="sb-footer">
         <button class="btn btn-gray" style="width:100%;font-size:11px" onclick="_logout()">로그아웃</button>
@@ -199,7 +199,7 @@ function _showSubGate(){
       '<div style="font-size:48px;margin-bottom:16px">🔒</div>'+
       '<div style="font-size:18px;font-weight:900;margin-bottom:8px">구독이 필요합니다</div>'+
       '<div style="font-size:13px;color:var(--text3);line-height:1.7;margin-bottom:24px">'+
-        '키오스크·POS 기능을 이용하려면<br>bico.kr 구독이 필요합니다.<br>'+
+        '키오스크·POS 기능을 이용하려면<br>filo.ai.kr 구독이 필요합니다.<br>'+
         '<b style="color:#7b2fff">월 50,000원</b> (VAT별도)'+
       '</div>'+
       '<a href="tel:051-711-3103" style="display:block;padding:14px;background:linear-gradient(90deg,#7b2fff,#a855f7);color:#fff;border-radius:12px;font-size:14px;font-weight:900;text-decoration:none;margin-bottom:10px">📞 051-711-3103 도입 문의</a>'+
