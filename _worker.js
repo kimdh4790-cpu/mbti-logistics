@@ -691,13 +691,8 @@ export default {
       }
       // workers.dev = 물류앱, 그 외 = DONWAY 랜딩
       if (hostname.includes('workers.dev') || hostname.includes('kimdh4790')) {
-        // ★ 물류앱 메인 HTML 서빙
-        const logisticsResp = await fetchAsset('/엠비티아이_물류관리_v9.html', request, env);
-        const lh = new Headers();
-        lh.set('Content-Type', 'text/html; charset=utf-8');
-        lh.set('Cache-Control', 'no-cache');
-        Object.entries(SECURITY_HEADERS).forEach(([k,v]) => lh.set(k,v));
-        return new Response(logisticsResp.body, { status: logisticsResp.status, headers: lh });
+        // ★ workers.dev → 배송앱 허브
+        return serveKVFile(env, 'mbtico_hub.html', 'text/html');
       } else {
         const landingResp = await fetchAsset('/donway_landing.html', request, env);
         const landingHeaders = new Headers();
