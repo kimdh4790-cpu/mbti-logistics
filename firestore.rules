@@ -350,5 +350,29 @@ service cloud.firestore {
     match /{document=**} {
       allow read, write: if isSuperAdmin();
     }
+ 
+    // ★ 배송앱 — 기사 비인증 접근 허용
+    // driver + dealerId 조건으로 데이터 분리
+    match /emergency_deliveries/{docId} {
+      // 읽기: 인증된 사용자 (ownsDoc) 또는 비인증 기사 (driver 필드로 구분)
+      allow read: if ownsDoc() || isSuperAdmin() ||
+        // 비인증 기사: 자신의 driver명 데이터만 읽기
+        (request.auth == null && resource.data.driver != null);
+      // 쓰기: 인증된 사용자 또는 비인증 기사 (driver 필드 필수)
+      allow create: if ownsNewDoc() || isSuperAdmin() ||
+        (request.auth == null && request.resource.data.driver != null);
+      allow update: if ownsDoc() || isSuperAdmin() ||
+        (request.auth == null && resource.data.driver == request.resource.data.driver);
+      allow delete: if ownsDoc() || isSuperAdmin();
+    }
+    // scan_results (배송 스캔 통계)
+    match /scan_results/{docId} {
+      allow read, write: if ownsDoc() || isSuperAdmin() ||
+        (request.auth == null && request.resource.data.dealerId != null);
+    }
+    // ★ mbtico.kr 배송앱 전용
+    match /delivery_sessions/{docId} {
+      allow read, write: if true; // 공개 (기사 비인증)
+    }
   }
 }
