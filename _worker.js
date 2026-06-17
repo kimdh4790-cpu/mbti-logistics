@@ -529,7 +529,13 @@ export default {
         if (kv) return new Response(kv, {headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache'}});
       }
       // admin_sub
-      if (path === '/register' || path === '/register.html') {
+      // ★ filo.ai.kr 루트 → FILO 랜딩
+    const isFilo = request.headers.get('host')?.includes('filo.ai.kr');
+    if (isFilo && (path === '/' || path === '')) {
+      return serveKVFile(env, 'filo_landing.html', 'text/html');
+    }
+
+    if (path === '/register' || path === '/register.html') {
       return serveKVFile(env, 'register.html', 'text/html');
     }
 
