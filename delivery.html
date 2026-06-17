@@ -610,14 +610,30 @@ async function loadTodayList(){
     var lat=r.gps&&r.gps.lat||0; var lng=r.gps&&r.gps.lng||0;
       var t=(r.time||r.savedAt||'').slice(0,16);
       var isDone=r.status==='완료';
-      return '<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">'+
-        '<div style="flex-shrink:0;width:28px;height:28px;border-radius:99px;background:'+(isDone?'var(--green)':'var(--blue)')+';display:flex;align-items:center;justify-content:center;font-size:12px">'+(isDone?'✓':'📦')+'</div>'+
-        '<div style="flex:1;min-width:0">'+
-          '<div style="font-size:12px;font-weight:700;font-family:monospace;color:var(--text)">'+escH(tn)+'</div>'+
-          '<div style="font-size:11px;color:var(--text3);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escH(addr)+'</div>'+
-        '</div>'+
-        '<div style="font-size:10px;color:var(--text3);flex-shrink:0">'+escH(t.slice(-5))+'</div>'+
-      '</div>';
+      // 지도 버튼 포함 카드 DOM 생성
+      var _cDiv = document.createElement('div');
+      _cDiv.style.cssText = 'padding:8px 0;border-bottom:1px solid var(--border)';
+      var _r1 = document.createElement('div');
+      _r1.style.cssText = 'display:flex;align-items:center;gap:10px';
+      var _ic = document.createElement('div');
+      _ic.style.cssText = 'flex-shrink:0;width:28px;height:28px;border-radius:99px;background:'+(isDone?'var(--green)':'var(--blue)')+';display:flex;align-items:center;justify-content:center;font-size:12px';
+      _ic.textContent = isDone ? '\u2705' : '\ud83d\ude9a';
+      var _info = document.createElement('div'); _info.style.cssText='flex:1;min-width:0';
+      var _tnEl = document.createElement('div'); _tnEl.style.cssText='font-size:12px;font-weight:700;font-family:monospace;color:var(--text)'; _tnEl.textContent=tn;
+      var _adEl = document.createElement('div'); _adEl.style.cssText='font-size:11px;color:var(--text3);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'; _adEl.textContent=addr;
+      _info.appendChild(_tnEl); _info.appendChild(_adEl);
+      var _tEl = document.createElement('div'); _tEl.style.cssText='font-size:10px;color:var(--text3);flex-shrink:0'; _tEl.textContent=t.slice(-5);
+      _r1.appendChild(_ic); _r1.appendChild(_info); _r1.appendChild(_tEl);
+      _cDiv.appendChild(_r1);
+      if(addrFull || (lat&&lng)) {
+        var _mr = document.createElement('div'); _mr.style.cssText='display:flex;gap:6px;margin-top:5px';
+        var _mb = document.createElement('button'); _mb.style.cssText='padding:4px 10px;background:rgba(0,102,255,.12);color:var(--blue);border:none;border-radius:6px;font-size:11px;cursor:pointer'; _mb.textContent='\ud83d\uddfa\ufe0f \uce74\uce74\uc624';
+        (function(a,la,ln){ _mb.onclick=function(){ _openAddressMap(a,la,ln); }; })(addrFull,lat,lng);
+        var _nb = document.createElement('button'); _nb.style.cssText='padding:4px 10px;background:rgba(34,197,94,.12);color:var(--green);border:none;border-radius:6px;font-size:11px;cursor:pointer'; _nb.textContent='\ud83d\uddfa\ufe0f \ub124\uc774\ubc84';
+        (function(a,la,ln){ _nb.onclick=function(){ _openNaverMap(a,la,ln); }; })(addrFull,lat,lng);
+        _mr.appendChild(_mb); _mr.appendChild(_nb); _cDiv.appendChild(_mr);
+      }
+      return _cDiv.outerHTML;
     }).join('');
   }catch(e){
     el.innerHTML='<div style="color:var(--text3);font-size:12px">로드 실패: '+e.message+'</div>';
