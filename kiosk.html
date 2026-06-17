@@ -217,6 +217,7 @@ _auth.onAuthStateChanged(function(user){
     return;
   }
   _cu=user;
+    _linkAccount(user.email);
   document.getElementById('sb-email').textContent=user.email||'';
 
   _db.collection('companies').where('adminEmail','==',user.email).limit(1).get()
@@ -666,6 +667,16 @@ function _installPWA(){
   if(!_deferredPrompt)return;
   _deferredPrompt.prompt();
   _deferredPrompt.userChoice.then(function(){_deferredPrompt=null;});
+}
+</script>
+<script>
+// ★ 3도메인 통합 계정 자동 연결
+function _linkAccount(email){
+  fetch('/api/link-account',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({email:email,fromDomain:location.hostname})
+  }).catch(function(){});
 }
 </script>
 </body>
