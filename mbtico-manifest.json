@@ -1,7 +1,7 @@
 {
-  "name": "BICO - 재고·QR·키오스크",
-  "short_name": "BICO",
-  "description": "재고관리 · QR출퇴근 · 키오스크POS | bico.kr",
+  "name": "FILO - 재고·QR·키오스크",
+  "short_name": "FILO",
+  "description": "재고관리 · QR출퇴근 · 키오스크POS | filo.ai.kr",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
