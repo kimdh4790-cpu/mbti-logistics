@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>회사 등록 · DONWAY / bico.kr</title>
+<title>회사 등록 · DONWAY / filo.ai.kr</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,'Segoe UI',sans-serif;background:#0a0f1e;color:#e2e8f0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
@@ -38,7 +38,7 @@ body{font-family:-apple-system,'Segoe UI',sans-serif;background:#0a0f1e;color:#e
 
 <div class="wrap">
   <div class="logo">
-    <h1>DONWAY · bico.kr</h1>
+    <h1>DONWAY · filo.ai.kr</h1>
     <p>통합 정산·재고·QR·키오스크 플랫폼</p>
   </div>
 
@@ -85,17 +85,17 @@ body{font-family:-apple-system,'Segoe UI',sans-serif;background:#0a0f1e;color:#e
       <div class="plan-card" data-plan="inventory" onclick="_togglePlan(this)">
         <div class="icon">📦</div>
         <div class="name">재고관리</div>
-        <div class="desc">bico.kr</div>
+        <div class="desc">filo.ai.kr</div>
       </div>
       <div class="plan-card" data-plan="qr" onclick="_togglePlan(this)">
         <div class="icon">🔲</div>
         <div class="name">QR 출퇴근</div>
-        <div class="desc">bico.kr</div>
+        <div class="desc">filo.ai.kr</div>
       </div>
       <div class="plan-card" data-plan="kiosk" onclick="_togglePlan(this)">
         <div class="icon">🖥️</div>
         <div class="name">키오스크 POS</div>
-        <div class="desc">bico.kr</div>
+        <div class="desc">filo.ai.kr</div>
       </div>
     </div>
 
@@ -104,7 +104,7 @@ body{font-family:-apple-system,'Segoe UI',sans-serif;background:#0a0f1e;color:#e
     <div class="login-link">
       이미 계정이 있으신가요?
       <a href="https://donway.ai.kr/settle">AI정산 로그인</a> ·
-      <a href="https://bico.kr">BICO 로그인</a>
+      <a href="https://filo.ai.kr">FILO 로그인</a>
     </div>
   </div>
 </div>
@@ -159,7 +159,7 @@ function _doRegister(){
   var btn = document.getElementById('reg-btn');
   btn.disabled = true; btn.textContent = '등록 중...';
 
-  // ★ 이메일로 기존 companies 검색 (BICO ↔ donway 통합)
+  // ★ 이메일로 기존 companies 검색 (FILO ↔ donway 통합)
   _db.collection('companies').where('email','==',email).limit(1).get()
   .then(function(snap){
     if(!snap.empty){
@@ -232,7 +232,7 @@ function _doRegister(){
         if(_selectedPlans.includes('settle')){
           location.href = 'https://donway.ai.kr/settle';
         } else {
-          location.href = 'https://bico.kr';
+          location.href = 'https://filo.ai.kr';
         }
       }, 3000);
     })
