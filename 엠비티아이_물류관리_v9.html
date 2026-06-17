@@ -10757,7 +10757,7 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
     <div class="sidebar">
       <div class="sl">
         <img class="sl-logo" id="admin-logo" src="" alt="">
-        <div><div class="sl-text">엠비티아이(유)</div><div class="sl-ver" id="sl-ver">v5.7 · 데모</div></div>
+        <div><div class="sl-text" id="sl-company-name">엠비티아이(유)</div><div class="sl-ver" id="sl-ver">v5.7 · 데모</div></div>
         <button id="admin-logout-btn" onclick="if(confirm('로그아웃 하시겠습니까?'))goLogout()" style="margin-left:auto;padding:4px 10px;background:rgba(220,50,50,.15);color:#e55;border:1px solid rgba(220,50,50,.3);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">🚪 로그아웃</button>
       </div>
       <div class="su">
@@ -28597,6 +28597,73 @@ var tx=0;
 ts.addEventListener('touchstart',function(e){tx=e.touches[0].clientX;});
 ts.addEventListener('touchend',function(e){var d=tx-e.changedTouches[0].clientX;if(Math.abs(d)>50)goStep(d>0?1:-1);});
 <\/script>
+<script>
+// ════════════════════════════════════════════════════════
+// ★ 멀티테넌시 패치 (v9 SaaS) — ?did=회사ID 로 회사 분리
+// ════════════════════════════════════════════════════════
+(function(){
+  var _params = new URLSearchParams(location.search);
+  var _did = _params.get('did') || localStorage.getItem('mbti_v9_dealerId') || '';
+  window._DID = _did;
+  if(_did) localStorage.setItem('mbti_v9_dealerId', _did);
+
+  function _applyCoName(name){
+    var sl = document.querySelector('.sl-text');
+    if(sl) sl.textContent = name;
+    document.title = name + ' 물류관리';
+    var lh = document.getElementById('lh');
+    if(lh){ lh.textContent = name; lh.style.display='block'; }
+    var sp = document.getElementById('splash-coname');
+    if(sp) sp.textContent = name;
+  }
+
+  function _loadCompany(){
+    if(!_did) return;
+    var saved = localStorage.getItem('mbti_v9_coname_'+_did);
+    if(saved) _applyCoName(saved);
+    var _t = setInterval(function(){
+      if(!window._db) return;
+      clearInterval(_t);
+      window._db.collection('companies').doc(_did).get().then(function(snap){
+        if(!snap.exists) return;
+        var co = snap.data();
+        var name = co.companyName || co.company || '';
+        if(!name) return;
+        localStorage.setItem('mbti_v9_coname_'+_did, name);
+        _applyCoName(name);
+        if(co.camps && co.camps.length && typeof CAMPS !== 'undefined'){
+          CAMPS.length = 0;
+          co.camps.forEach(function(c){ CAMPS.push(c); });
+        }
+      }).catch(function(){});
+    }, 500);
+  }
+
+  // companies/{did}/settings/adminInfo 우선 로드
+  window._getAdminInfo = function(){
+    return new Promise(function(resolve){
+      if(!_did || !window._db){ resolve(null); return; }
+      window._db.collection('companies').doc(_did)
+        .collection('settings').doc('adminInfo').get()
+        .then(function(snap){
+          resolve(snap.exists ? snap.data() : null);
+        }).catch(function(){ resolve(null); });
+    });
+  };
+
+  document.addEventListener('DOMContentLoaded', function(){
+    _loadCompany();
+    // splash 화면 회사명 span 추가
+    var splashBox = document.querySelector('.splash-box');
+    if(splashBox && !document.getElementById('splash-coname')){
+      var coDiv = document.createElement('div');
+      coDiv.id = 'splash-coname';
+      coDiv.style.cssText = 'font-size:15px;font-weight:700;color:var(--teal);margin-top:6px;text-align:center';
+      splashBox.insertBefore(coDiv, splashBox.children[1] || null);
+    }
+  });
+})();
+</script>
 </body>
 </html>`;
   var blob = new Blob([html], {type:'text/html;charset=utf-8'});
