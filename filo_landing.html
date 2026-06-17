@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>FILO — 현장의 흐름</title>
+<meta name="description" content="재고·QR·키오스크 통합 현장 관리 플랫폼 FILO">
+<meta property="og:title" content="FILO — 현장의 흐름">
+<meta property="og:description" content="뷰티·청소·요식업 소상공인을 위한 현장 관리 플랫폼">
+<meta property="og:url" content="https://filo.ai.kr">
+<link rel="manifest" href="/filo-manifest.json">
+<meta name="theme-color" content="#7b2fff">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0f1e;--bg2:#0d1527;--text:#e2e8f0;--text2:#94a3b8;--text3:#475569;
+  --brand:#7b2fff;--acc:#00d4ff;--green:#22c55e;--border:rgba(123,47,255,.2);
+}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:-apple-system,'Segoe UI',sans-serif}
+/* 슬라이드 */
+.slides{width:100%;height:100vh;overflow-y:scroll;scroll-snap-type:y mandatory;scrollbar-width:none}
+.slides::-webkit-scrollbar{display:none}
+.slide{width:100%;height:100vh;scroll-snap-align:start;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 20px;overflow:hidden}
+/* 배경 */
+.glow{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none}
+.grid-bg{position:absolute;inset:0;background-image:linear-gradient(rgba(123,47,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(123,47,255,.05) 1px,transparent 1px);background-size:40px 40px}
+/* 네비 */
+.nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:rgba(10,15,30,.8);backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
+.nav-logo{font-size:18px;font-weight:900;background:linear-gradient(90deg,var(--brand),var(--acc));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.nav-btns{display:flex;gap:8px}
+.btn{padding:8px 16px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none;border:none}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}
+.btn-primary{background:linear-gradient(135deg,var(--brand),var(--acc));color:#fff}
+/* 카운터 */
+.counter{position:fixed;top:16px;right:20px;font-size:11px;color:var(--text3);z-index:101;background:rgba(10,15,30,.6);padding:4px 8px;border-radius:6px}
+/* 텍스트 */
+.sec-label{font-size:11px;font-weight:700;color:var(--acc);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px}
+.sec-title{font-size:28px;font-weight:900;line-height:1.2;margin-bottom:16px;text-align:center}
+.sec-sub{font-size:13px;color:var(--text2);line-height:1.7;text-align:center;max-width:320px}
+/* 카드 */
+.card-grid{display:grid;gap:10px;width:100%;max-width:360px;margin-top:16px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:1fr 1fr 1fr}
+.card{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;padding:14px}
+/* 애니 */
+.anim-1{animation:fadeUp .6s .1s both}
+.anim-2{animation:fadeUp .6s .2s both}
+.anim-3{animation:fadeUp .6s .3s both}
+.anim-4{animation:fadeUp .6s .4s both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+/* 점 */
+.dots{position:fixed;right:12px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:6px;z-index:100}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--text3);transition:.3s;cursor:pointer}
+.dot.active{background:var(--brand);transform:scale(1.4)}
+</style>
+</head>
+<body>
+
+<!-- 네비 -->
+<nav class="nav">
+  <div class="nav-logo">FILO</div>
+  <div class="nav-btns">
+    <a href="/register" class="btn btn-outline">회사 등록</a>
+    <a href="/inventory" class="btn btn-primary">시작하기</a>
+  </div>
+</nav>
+
+<!-- 카운터 -->
+<div class="counter" id="counter">1 / 6</div>
+
+<!-- 점 네비 -->
+<div class="dots" id="dots"></div>
+
+<!-- 슬라이드 컨테이너 -->
+<div class="slides" id="slides">
+
+<!-- S0: 히어로 -->
+<div class="slide" id="s0">
+  <div class="glow" style="width:400px;height:400px;background:var(--brand);top:-100px;right:-100px;opacity:.15"></div>
+  <div class="glow" style="width:300px;height:300px;background:var(--acc);bottom:-80px;left:-80px;opacity:.1"></div>
+  <div class="grid-bg"></div>
+  <div style="text-align:center;position:relative">
+    <div class="sec-label anim-1">현장의 흐름</div>
+    <h1 class="sec-title anim-2" style="font-size:42px">
+      <span style="background:linear-gradient(90deg,var(--brand),var(--acc));-webkit-background-clip:text;-webkit-text-fill-color:transparent">FILO</span>
+    </h1>
+    <p class="sec-sub anim-3">뷰티·청소·요식업 소상공인을 위한<br>재고·QR·키오스크 통합 현장 관리</p>
+    <div class="anim-4" style="margin-top:24px;display:flex;gap:10px;justify-content:center">
+      <a href="/register" style="padding:12px 24px;background:linear-gradient(135deg,var(--brand),var(--acc));color:#fff;border-radius:10px;font-size:13px;font-weight:800;text-decoration:none">🚀 7일 무료체험</a>
+      <a href="#" onclick="document.getElementById('slides').scrollBy(0,window.innerHeight)" style="padding:12px 24px;background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border);border-radius:10px;font-size:13px;font-weight:700;text-decoration:none">더 보기 ↓</a>
+    </div>
+  </div>
+</div>
+
+<!-- S1: 문제 -->
+<div class="slide" id="s1">
+  <div class="glow" style="width:350px;height:350px;background:#ef4444;top:-80px;left:-80px;opacity:.1"></div>
+  <div class="grid-bg"></div>
+  <div style="position:relative;width:100%;max-width:360px">
+    <div class="sec-label anim-1" style="color:#ef4444">PROBLEM</div>
+    <h2 class="sec-title anim-2" style="text-align:left;font-size:24px">지금 이런 상황<br>아닌가요?</h2>
+    <div class="anim-3" style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
+      <div class="card" style="border-color:rgba(239,68,68,.2)">
+        <div style="font-size:13px;font-weight:700;margin-bottom:4px">📦 재고 파악이 안 됨</div>
+        <div style="font-size:11px;color:var(--text2)">엑셀로 관리하다 오류 발생, 실재고와 장부재고 불일치</div>
+      </div>
+      <div class="card" style="border-color:rgba(239,68,68,.2)">
+        <div style="font-size:13px;font-weight:700;margin-bottom:4px">⏰ 출퇴근 관리 번거로움</div>
+        <div style="font-size:11px;color:var(--text2)">종이 서명, 카톡 보고, 수기 집계로 매달 급여 계산이 지옥</div>
+      </div>
+      <div class="card" style="border-color:rgba(239,68,68,.2)">
+        <div style="font-size:13px;font-weight:700;margin-bottom:4px">🖥️ POS 비용이 너무 높음</div>
+        <div style="font-size:11px;color:var(--text2)">월 수십만원 POS 비용, 예약·결제·매출관리 따로따로</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S2: 솔루션 -->
+<div class="slide" id="s2">
+  <div class="glow" style="width:400px;height:400px;background:var(--brand);top:-100px;right:-100px;opacity:.12"></div>
+  <div class="grid-bg"></div>
+  <div style="position:relative;width:100%;max-width:360px">
+    <div class="sec-label anim-1">SOLUTION</div>
+    <h2 class="sec-title anim-2" style="text-align:left;font-size:24px">FILO 하나로<br>현장이 흐릅니다</h2>
+    <div class="anim-3" style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:24px">📦</span>
+          <div>
+            <div style="font-size:13px;font-weight:700">재고관리</div>
+            <div style="font-size:11px;color:var(--text2)">입출고 실시간 추적 · 바코드 스캔 · 재고 알림</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:24px">🔲</span>
+          <div>
+            <div style="font-size:13px;font-weight:700">QR 출퇴근</div>
+            <div style="font-size:11px;color:var(--text2)">30초 갱신 동적 QR · 캡처 재사용 차단 · 급여 자동 연동</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:24px">🖥️</span>
+          <div>
+            <div style="font-size:13px;font-weight:700">키오스크 POS</div>
+            <div style="font-size:11px;color:var(--text2)">예약·결제·매출·고객관리 올인원 · 태블릿으로 운영</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S3: 업종별 -->
+<div class="slide" id="s3">
+  <div class="glow" style="width:300px;height:300px;background:var(--acc);bottom:-80px;right:-80px;opacity:.1"></div>
+  <div class="grid-bg"></div>
+  <div style="position:relative;width:100%;max-width:360px">
+    <div class="sec-label anim-1">INDUSTRIES</div>
+    <h2 class="sec-title anim-2" style="font-size:22px">어떤 업종이든<br>현장에 맞게</h2>
+    <div class="card-grid g2 anim-3">
+      <div class="card" style="text-align:center">
+        <div style="font-size:24px;margin-bottom:6px">💆</div>
+        <div style="font-size:12px;font-weight:700">뷰티샵</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:3px">예약·시술·재고</div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div style="font-size:24px;margin-bottom:6px">🧹</div>
+        <div style="font-size:12px;font-weight:700">청소업체</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:3px">직원·출퇴근·정산</div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div style="font-size:24px;margin-bottom:6px">🍽️</div>
+        <div style="font-size:12px;font-weight:700">요식업</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:3px">재고·매출·POS</div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div style="font-size:24px;margin-bottom:6px">🏪</div>
+        <div style="font-size:12px;font-weight:700">소매점</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:3px">재고·QR결제</div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div style="font-size:24px;margin-bottom:6px">🏋️</div>
+        <div style="font-size:12px;font-weight:700">헬스·운동</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:3px">회원·출석·결제</div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div style="font-size:24px;margin-bottom:6px">🏢</div>
+        <div style="font-size:12px;font-weight:700">기타업종</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:3px">맞춤 설정</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S4: 가격 -->
+<div class="slide" id="s4">
+  <div class="glow" style="width:350px;height:350px;background:var(--green);top:-80px;left:-80px;opacity:.08"></div>
+  <div class="grid-bg"></div>
+  <div style="position:relative;width:100%;max-width:360px">
+    <div class="sec-label anim-1">PRICING</div>
+    <h2 class="sec-title anim-2" style="font-size:22px">합리적인 가격<br>VAT 별도</h2>
+    <div class="anim-3" style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+      <div class="card" style="border-color:rgba(34,197,94,.3)">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-size:13px;font-weight:800">📦 재고관리</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:2px">입출고·현황·대시보드</div>
+          </div>
+          <div style="font-size:15px;font-weight:900;color:var(--green)">₩130,000<span style="font-size:10px;color:var(--text3)">/월</span></div>
+        </div>
+      </div>
+      <div class="card" style="border-color:rgba(34,197,94,.3)">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-size:13px;font-weight:800">🖥️ 키오스크 POS</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:2px">예약·결제·고객관리</div>
+          </div>
+          <div style="font-size:15px;font-weight:900;color:var(--green)">₩50,000<span style="font-size:10px;color:var(--text3)">/월</span></div>
+        </div>
+      </div>
+      <div class="card" style="border-color:rgba(34,197,94,.3)">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-size:13px;font-weight:800">🔲 QR 출퇴근</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:2px">동적QR·출퇴근·급여연동</div>
+          </div>
+          <div style="font-size:15px;font-weight:900;color:var(--green)">₩1,500<span style="font-size:10px;color:var(--text3)">/인/월</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="anim-4" style="margin-top:10px;padding:10px;background:rgba(123,47,255,.1);border-radius:10px;text-align:center;font-size:11px;color:var(--text2)">
+      🎁 7일 무료체험 · 신용카드 불필요
+    </div>
+  </div>
+</div>
+
+<!-- S5: CTA -->
+<div class="slide" id="s5">
+  <div class="glow" style="width:400px;height:400px;background:var(--brand);top:-100px;right:-100px;opacity:.15"></div>
+  <div class="glow" style="width:300px;height:300px;background:var(--acc);bottom:-80px;left:-80px;opacity:.1"></div>
+  <div class="grid-bg"></div>
+  <div style="text-align:center;position:relative">
+    <div class="sec-label anim-1">시작하기</div>
+    <h2 class="sec-title anim-2" style="font-size:26px">현장의 흐름을<br>FILO에 맡기세요</h2>
+    <p class="sec-sub anim-3">지금 바로 7일 무료체험<br>설치 불필요 · 앱으로 설치 가능</p>
+    <div class="anim-4" style="margin-top:24px;display:flex;flex-direction:column;gap:10px;align-items:center">
+      <a href="/register" style="width:280px;padding:14px;background:linear-gradient(135deg,var(--brand),var(--acc));color:#fff;border-radius:12px;font-size:14px;font-weight:800;text-decoration:none;text-align:center">🚀 무료로 시작하기</a>
+      <a href="https://pf.kakao.com/_xkuxabX/chat" target="_blank" style="width:280px;padding:14px;background:#FEE500;color:#3C1E1E;border-radius:12px;font-size:14px;font-weight:800;text-decoration:none;text-align:center">💬 카카오로 문의하기</a>
+      <a href="https://donway.ai.kr" style="font-size:12px;color:var(--text3);text-decoration:none;margin-top:8px">정산 자동화는 DONWAY →</a>
+    </div>
+    <div style="margin-top:20px;font-size:11px;color:var(--text3)">
+      엠비티아이 · 부산시 수영구 수영로 668, 607호<br>
+      051-711-3103 · Fax 070-7507-3102
+    </div>
+  </div>
+</div>
+
+</div><!-- /slides -->
+
+<script>
+var total = 6;
+var dotsEl = document.getElementById('dots');
+var counterEl = document.getElementById('counter');
+var slidesEl = document.getElementById('slides');
+
+// 점 생성
+for(var i=0;i<total;i++){
+  var d=document.createElement('div');
+  d.className='dot'+(i===0?' active':'');
+  d.dataset.i=i;
+  d.onclick=(function(idx){return function(){slidesEl.scrollTo({top:idx*window.innerHeight,behavior:'smooth'});};})(i);
+  dotsEl.appendChild(d);
+}
+
+// 스크롤 감지
+slidesEl.addEventListener('scroll',function(){
+  var idx=Math.round(slidesEl.scrollTop/window.innerHeight);
+  counterEl.textContent=(idx+1)+' / '+total;
+  document.querySelectorAll('.dot').forEach(function(d,i){
+    d.classList.toggle('active',i===idx);
+  });
+},{passive:true});
+
+// SW
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/sw.js').catch(function(){});
+}
+</script>
+</body>
+</html>
