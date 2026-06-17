@@ -76,10 +76,51 @@ body{font-family:-apple-system,'Segoe UI',sans-serif;background:#0a0f1e;color:#e
     <div class="field">
       <label>관심 서비스 선택 <span class="badge">복수 선택 가능</span></label>
     </div>
-    <div class="plans" id="plan-grid">
-      <div class="plan-card" data-plan="settle" onclick="_togglePlan(this)">
-        <div class="icon">🤖</div>
-        <div class="name">AI 정산</div>
+<div style="margin-bottom:16px">
+  <div style="font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:8px">서비스 선택 (복수 선택 가능)</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="plan-grid">
+    <div class="plan-card" onclick="_togglePlan(this,'settle')" data-plan="settle"
+      style="padding:12px;background:#1e3a5f;border:1px solid rgba(0,102,255,.2);border-radius:10px;cursor:pointer;text-align:center">
+      <div style="font-size:20px;margin-bottom:4px">🤖</div>
+      <div style="font-size:12px;font-weight:800">DONWAY 정산</div>
+      <div style="font-size:10px;color:#94a3b8;margin-top:2px">쿠팡 자동정산</div>
+    </div>
+    <div class="plan-card" onclick="_togglePlan(this,'filo')" data-plan="filo"
+      style="padding:12px;background:#1e3a5f;border:1px solid rgba(0,102,255,.2);border-radius:10px;cursor:pointer;text-align:center">
+      <div style="font-size:20px;margin-bottom:4px">🌊</div>
+      <div style="font-size:12px;font-weight:800">FILO 현장관리</div>
+      <div style="font-size:10px;color:#94a3b8;margin-top:2px">재고·QR·키오스크</div>
+    </div>
+    <div class="plan-card" onclick="_togglePlan(this,'mbtico')" data-plan="mbtico"
+      style="padding:12px;background:#1e3a5f;border:1px solid rgba(0,102,255,.2);border-radius:10px;cursor:pointer;text-align:center">
+      <div style="font-size:20px;margin-bottom:4px">🚚</div>
+      <div style="font-size:12px;font-weight:800">배송앱</div>
+      <div style="font-size:10px;color:#94a3b8;margin-top:2px">스캔·라벨·긴급배송</div>
+    </div>
+    <div class="plan-card" onclick="_togglePlan(this,'all')" data-plan="all"
+      style="padding:12px;background:rgba(0,102,255,.1);border:1px solid rgba(0,212,255,.3);border-radius:10px;cursor:pointer;text-align:center">
+      <div style="font-size:20px;margin-bottom:4px">⭐</div>
+      <div style="font-size:12px;font-weight:800;color:#00d4ff">전체 통합</div>
+      <div style="font-size:10px;color:#94a3b8;margin-top:2px">첫달 무료</div>
+    </div>
+  </div>
+</div>
+<!-- 업종 선택 (FILO 선택 시) -->
+<div id="industry-select" style="display:none;margin-bottom:16px">
+  <div style="font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:8px">업종 선택 (FILO)</div>
+  <select id="r-industry" style="width:100%;padding:11px 14px;background:#1e3a5f;border:1px solid rgba(0,102,255,.2);border-radius:8px;color:#e2e8f0;font-size:13px">
+    <option value="">업종 선택</option>
+    <option value="beauty">💇 뷰티·미용</option>
+    <option value="nail">💅 네일·피부관리</option>
+    <option value="food">🍽️ 음식점·카페</option>
+    <option value="health">💪 헬스·요가·필라테스</option>
+    <option value="academy">📚 학원·교습소</option>
+    <option value="laundry">👕 세탁</option>
+    <option value="stay">🏨 숙박·게스트하우스</option>
+    <option value="retail">🛍️ 소매·잡화</option>
+    <option value="other">기타</option>
+  </select>
+</div>
         <div class="desc">donway.ai.kr</div>
       </div>
       <div class="plan-card" data-plan="inventory" onclick="_togglePlan(this)">
@@ -127,6 +168,31 @@ var _db = firebase.firestore();
 var _auth = firebase.auth();
 
 var _selectedPlans = [];
+function _togglePlan(el, plan) {
+  if(plan === 'all') {
+    _selectedPlans = ['settle','filo','mbtico'];
+    document.querySelectorAll('.plan-card').forEach(function(c){
+      c.style.borderColor = c.getAttribute('data-plan')==='all' ? '#00d4ff' : 'rgba(0,102,255,.4)';
+      c.style.background = 'rgba(0,102,255,.15)';
+    });
+    var indSel = document.getElementById('industry-select');
+    if(indSel) indSel.style.display = 'block';
+    return;
+  }
+  var idx = _selectedPlans.indexOf(plan);
+  if(idx >= 0) {
+    _selectedPlans.splice(idx, 1);
+    el.style.borderColor = 'rgba(0,102,255,.2)';
+    el.style.background = '#1e3a5f';
+  } else {
+    _selectedPlans.push(plan);
+    el.style.borderColor = '#00d4ff';
+    el.style.background = 'rgba(0,212,255,.1)';
+  }
+  // FILO 선택 시 업종 표시
+  var indSel = document.getElementById('industry-select');
+  if(indSel) indSel.style.display = _selectedPlans.indexOf('filo')>=0 ? 'block' : 'none';
+}
 
 function _togglePlan(el){
   var plan = el.dataset.plan;
@@ -179,6 +245,7 @@ function _doRegister(){
     .then(function(cred){
       var uid = cred.user.uid;
       var services = _selectedPlans.length ? _selectedPlans : ['settle'];
+  var industry = (document.getElementById('r-industry')||{}).value||'';
       var companyDoc = {
         companyName: company,
         name: company,
@@ -186,6 +253,7 @@ function _doRegister(){
         phone: phone,
         plan: 'trial',
         services: services,
+      industry: industry,
         companyCode: companyCode,
         slug: emailPrefix || uid.slice(0,8),
         trialStart: now.toISOString().slice(0,10),
