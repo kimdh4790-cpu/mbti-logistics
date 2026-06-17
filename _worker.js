@@ -488,6 +488,19 @@ export default {
     const path     = url.pathname;
     const method   = request.method;
     const hostname = url.hostname;
+    // ★ filo.ai.kr 라우팅
+    if (hostname === 'filo.ai.kr' || hostname === 'www.filo.ai.kr') {
+      const e = env || _env_ref;
+      if (path === '/' || path === '') return serveKVFile(env, 'filo_landing.html', 'text/html');
+      if (path === '/inventory' || path === '/inventory.html') return serveKVFile(env, 'inventory.html', 'text/html');
+      if (path === '/qr' || path === '/qrpos' || path === '/qrpos.html') return serveKVFile(env, 'qrpos.html', 'text/html');
+      if (path === '/kiosk' || path === '/kiosk.html') return serveKVFile(env, 'kiosk.html', 'text/html');
+      if (path === '/universal' || path === '/universal.html') return serveKVFile(env, 'universal_settle.html', 'text/html');
+      if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
+      if (path === '/filo-manifest.json' || path === '/mbtico-manifest.json') return serveKVFile(env, 'filo-manifest.json', 'application/manifest+json');
+      if (path === '/admin_sub' || path === '/admin_sub.html') return serveKVFile(env, 'admin_sub.html', 'text/html');
+    }
+
     // ★ mbtico.kr 최우선 처리 (slugMatch 오인식 방지)
     if (hostname === 'bico.kr' || hostname === 'www.mbtico.kr' ||
         hostname === 'mbetco.kr' || hostname === 'www.mbetco.kr') {
@@ -529,13 +542,7 @@ export default {
         if (kv) return new Response(kv, {headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache'}});
       }
       // admin_sub
-      // ★ filo.ai.kr 루트 → FILO 랜딩
-    const isFilo = request.headers.get('host')?.includes('filo.ai.kr');
-    if (isFilo && (path === '/' || path === '')) {
-      return serveKVFile(env, 'filo_landing.html', 'text/html');
-    }
-
-    if (path === '/register' || path === '/register.html') {
+      if (path === '/register' || path === '/register.html') {
       return serveKVFile(env, 'register.html', 'text/html');
     }
 
@@ -2125,6 +2132,50 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
           type: body.type || 'join'
         });
         return new Response(JSON.stringify({ok:true}),{headers:{'Content-Type':'application/json',...SECURITY_HEADERS}});
+      } catch(e) {
+        return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}});
+      }
+    }
+
+    // ★ /api/link-account — 3도메인 통합 계정 연결
+    // 같은 이메일로 donway/filo/mbti 가입 시 companies 통합
+    if (path === '/api/link-account' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const { email, fromDomain } = body;
+        if (!email) return new Response(JSON.stringify({ok:false,reason:'이메일 필수'}),{status:400,headers:{'Content-Type':'application/json'}});
+        const token = await getAccessToken(env);
+        // 이메일로 모든 companies 조회
+        const snap = await fetch(
+          `${FS_BASE}/companies?pageSize=10`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const data = await snap.json();
+        const docs = (data.documents || []).filter(d =>
+          d.fields?.email?.stringValue === email ||
+          d.fields?.adminEmail?.stringValue === email
+        );
+        if (docs.length <= 1) return new Response(JSON.stringify({ok:true,linked:false,msg:'단일 계정'}),{headers:{'Content-Type':'application/json'}});
+        // 첫번째를 master로, 나머지 구독 병합
+        const master = docs[0];
+        const masterId = master.name.split('/').pop();
+        const masterSubs = master.fields?.subscriptions?.mapValue?.fields || {};
+        const mergedSubs = {...masterSubs};
+        docs.slice(1).forEach(d => {
+          const subs = d.fields?.subscriptions?.mapValue?.fields || {};
+          Object.assign(mergedSubs, subs);
+        });
+        // master에 병합 구독 저장
+        await fetch(`${FS_BASE}/companies/${masterId}?updateMask.fieldPaths=subscriptions&updateMask.fieldPaths=linkedDomains`, {
+          method: 'PATCH',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fields: {
+            subscriptions: { mapValue: { fields: mergedSubs } },
+            linkedDomains: { arrayValue: { values: ['donway.ai.kr','filo.ai.kr','mbti-logistics'].map(d=>({stringValue:d})) } }
+          }})
+        }).catch(()=>{});
+        return new Response(JSON.stringify({ok:true,linked:true,masterId,mergedModules:Object.keys(mergedSubs)}),
+          {headers:{'Content-Type':'application/json',...SECURITY_HEADERS}});
       } catch(e) {
         return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}});
       }
