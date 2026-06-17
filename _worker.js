@@ -507,6 +507,19 @@ async function syncKVFromGitHub(env) {
   return { ok: true, results };
 }
 
+
+/* ══════════════════════════════════════════════════════
+   ★ companies 컬렉션 subscriptions 구조 (v2)
+   
+   subscriptions: {
+     donway: { active, plan, expiry, modules:[] },
+     filo:   { active, expiry, modules:['kiosk','inventory','qr','crm','points','membership','payroll','industry'], industry:'beauty' },
+     mbtico: { active, expiry, modules:['scan','label','checkin','emergency','delivery'] }
+   }
+   
+   메뉴 제어: modules 배열에 포함된 기능만 표시
+   SA: 전체 접근 가능, 단 dealerId는 선택한 회사 기준
+   ══════════════════════════════════════════════════════ */
 export default {
   async scheduled(event, env, ctx) {
     ctx.waitUntil(syncKVFromGitHub(env));
@@ -517,6 +530,15 @@ export default {
     const path     = url.pathname;
     const method   = request.method;
     const hostname = url.hostname;
+    // ★ donway.ai.kr 라우팅 (명시적)
+    if (hostname === 'donway.ai.kr' || hostname === 'www.donway.ai.kr') {
+      if (path === '/' || path === '') return serveKVFile(env, 'donway_landing.html', 'text/html');
+      if (path === '/settle' || path === '/settle.html') return serveKVFile(env, 'settle.html', 'text/html');
+      if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
+      if (path === '/admin' || path === '/admin.html') return serveKVFile(env, 'admin.html', 'text/html');
+      if (path === '/admin-sub' || path === '/admin_sub.html') return serveKVFile(env, 'admin_sub.html', 'text/html');
+    }
+
     // ★ filo.ai.kr 라우팅
     if (hostname === 'filo.ai.kr' || hostname === 'www.filo.ai.kr') {
       const e = env || _env_ref;
