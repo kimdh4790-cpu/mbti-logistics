@@ -124,8 +124,8 @@ body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
 <!-- ══════════════ 로그인 ══════════════ -->
 <div id="login-screen">
   <div class="login-logo">🚛</div>
-  <div class="login-title">엠비티아이 배송앱</div>
-  <div class="login-sub">엠비티아이(유) 기사 전용</div>
+  <div class="login-title" id="co-name">배송앱</div>
+  <div class="login-sub" id="co-sub">기사 전용</div>
   <div class="login-card">
     <div class="login-label">기사 선택</div>
     <div class="driver-list" id="driver-list">
@@ -463,6 +463,7 @@ function doLogin(){
   if(!_selDriver) return;
   window._APP.driver = _selDriver;
   window._APP.camp   = _selCamp;
+  window._APP.dealerId = localStorage.getItem('mbti_delivery_dealerId') || '';
   localStorage.setItem('mbti_delivery_driver', _selDriver);
   localStorage.setItem('mbti_delivery_camp',   _selCamp);
   // 오늘 근무표에서 노선 조회
@@ -488,6 +489,8 @@ function showApp(){
   var _coName = localStorage.getItem('mbti_delivery_coname') || '배송앱';
   var _tbCo = document.getElementById('tb-company');
   if(_tbCo) _tbCo.textContent = _coName;
+  var _ftCo = document.getElementById('footer-coname');
+  if(_ftCo) _ftCo.textContent = _coName;
   refreshCounters();
   loadRouteInfo();
   loadTodayList();
@@ -612,10 +615,10 @@ async function loadTodayList(){
     return;
   }
   try{
-    var snap = await _db.collection('emergency_deliveries')
-      .where('driver','==',window._APP.driver)
-      .where('date','==',today())
-      .orderBy('savedAt','desc').limit(30).get();
+  var _did = window._APP.dealerId || localStorage.getItem('mbti_delivery_dealerId') || '';
+  var _qry = _db.collection('emergency_deliveries').where('driver','==',window._APP.driver).where('date','==',today());
+  if(_did) _qry = _qry.where('dealerId','==',_did);
+  var snap = await _qry.orderBy('savedAt','desc').limit(30).get();
     var items=[];
     snap.forEach(function(d){ items.push(Object.assign({_id:d.id},d.data())); });
     window._APP.doneCount = items.length;
@@ -4156,7 +4159,7 @@ async function _checkDelivPhotoHo(photoBase64, expectedHo){
 
 </script>
 <div style="position:fixed;bottom:0;left:0;right:0;padding:8px 16px;background:rgba(10,15,30,.9);border-top:1px solid rgba(0,102,255,.2);display:flex;justify-content:space-between;align-items:center;z-index:50">
-  <div style="font-size:10px;color:#475569">엠비티아이 배송앱</div>
+  <div style="font-size:10px;color:#475569" id="footer-coname">배송앱</div>
   <a href="https://donway.ai.kr/settle" style="font-size:11px;color:#00d4ff;text-decoration:none">🤖 DONWAY 정산 →</a>
 </div>
 <script>
