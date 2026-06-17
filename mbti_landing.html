@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>엠비티아이 — 배송의 흐름</title>
+<meta name="description" content="배송기사 전용 앱 — 출퇴근·배송·라벨·스캔·정산">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0066ff">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0f1e;--bg2:#0d1527;--text:#e2e8f0;--text2:#94a3b8;--text3:#475569;--brand:#0066ff;--acc:#00d4ff;--green:#22c55e;--border:rgba(0,102,255,.2)}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:-apple-system,'Segoe UI',sans-serif}
+.slides{width:100%;height:100vh;overflow-y:scroll;scroll-snap-type:y mandatory;scrollbar-width:none}
+.slides::-webkit-scrollbar{display:none}
+.slide{width:100%;height:100vh;scroll-snap-align:start;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 20px;overflow:hidden}
+.glow{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none}
+.grid-bg{position:absolute;inset:0;background-image:linear-gradient(rgba(0,102,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(0,102,255,.05) 1px,transparent 1px);background-size:40px 40px}
+.nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:rgba(10,15,30,.8);backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
+.nav-logo{font-size:16px;font-weight:900;background:linear-gradient(90deg,var(--brand),var(--acc));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.btn{padding:8px 16px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none;border:none}
+.btn-primary{background:linear-gradient(135deg,var(--brand),var(--acc));color:#fff}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}
+.counter{position:fixed;top:16px;right:20px;font-size:11px;color:var(--text3);z-index:101;background:rgba(10,15,30,.6);padding:4px 8px;border-radius:6px}
+.dots{position:fixed;right:12px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:6px;z-index:100}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--text3);transition:.3s;cursor:pointer}
+.dot.active{background:var(--brand);transform:scale(1.4)}
+.sec-label{font-size:11px;font-weight:700;color:var(--acc);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px}
+.sec-title{font-size:28px;font-weight:900;line-height:1.2;margin-bottom:16px;text-align:center}
+.sec-sub{font-size:13px;color:var(--text2);line-height:1.7;text-align:center;max-width:320px}
+.card{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;padding:14px}
+.card-grid{display:grid;gap:10px;width:100%;max-width:360px;margin-top:16px}
+.g2{grid-template-columns:1fr 1fr}
+.anim-1{animation:fadeUp .6s .1s both}
+.anim-2{animation:fadeUp .6s .2s both}
+.anim-3{animation:fadeUp .6s .3s both}
+.anim-4{animation:fadeUp .6s .4s both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-logo">엠비티아이</div>
+  <div style="display:flex;gap:8px">
+    <a href="https://donway.ai.kr/settle" class="btn btn-outline" style="font-size:11px">정산 로그인</a>
+    <a href="https://mbti-logistics.kimdh4790.workers.dev" class="btn btn-primary" style="font-size:11px">앱 실행</a>
+  </div>
+</nav>
+
+<div class="counter" id="counter">1 / 6</div>
+<div class="dots" id="dots"></div>
+
+<div class="slides" id="slides">
+
+<!-- S0 히어로 -->
+<div class="slide" id="s0">
+  <div class="glow" style="width:400px;height:400px;background:var(--brand);top:-100px;right:-100px;opacity:.15"></div>
+  <div class="glow" style="width:300px;height:300px;background:var(--acc);bottom:-80px;left:-80px;opacity:.1"></div>
+  <div class="grid-bg"></div>
+  <div style="text-align:center;position:relative">
+    <div class="sec-label anim-1">배송의 흐름</div>
+    <h1 class="sec-title anim-2" style="font-size:36px">
+      <span style="background:linear-gradient(90deg,var(--brand),var(--acc));-webkit-background-clip:text;-webkit-text-fill-color:transparent">엠비티아이</span>
+    </h1>
+    <p class="sec-sub anim-3">배송기사 전용 통합 앱<br>출퇴근 · 배송 · 라벨 · 스캔 · 정산</p>
+    <div class="anim-4" style="margin-top:24px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <a href="https://mbti-logistics.kimdh4790.workers.dev" style="padding:12px 24px;background:linear-gradient(135deg,var(--brand),var(--acc));color:#fff;border-radius:10px;font-size:13px;font-weight:800;text-decoration:none">🚀 앱 실행</a>
+      <a href="#" onclick="document.getElementById('slides').scrollBy(0,window.innerHeight);return false" style="padding:12px 24px;background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border);border-radius:10px;font-size:13px;font-weight:700;text-decoration:none">더 보기 ↓</a>
+    </div>
+  </div>
+</div>
+
+<!-- S1 출퇴근 -->
+<div class="slide" id="s1">
+  <div class="glow" style="width:350px;height:350px;background:var(--green);top:-80px;right:-80px;opacity:.1"></div>
+  <div class="grid-bg"></div>
+  <div style="position:relative;width:100%;max-width:360px">
+    <div class="sec-label anim-1" style="color:var(--green)">출퇴근 관리</div>
+    <h2 class="sec-title anim-2" style="text-align:left;font-size:24px">QR 출퇴근<br>실시간 기록</h2>
+    <div class="anim-3" style="display:flex;flex-direction:column;gap:10px">
+      <div class="card">
+        <div style="font-size:13px;font-weight:700;margin-bottom:4px">⏰ 동적 QR 출근체크</div>
+        <div style="font-size:11px;color:var(--text2)">30초 갱신 QR · 캡처 재사용 차단 · GPS 위치 자동 기록</div>
+      </div>
+      <div class="card">
+        <div style="font-size:13px;font-weight:700;margin-bottom:4px">📍 캠프별 GPS 관리</div>
+        <div style="font-size:11px;color:var(--text2)">부산·대구·진주 5개 캠프 · 실시간 위치 확인</div>
+      </div>
+      <div class="card">
+        <div style="font-size:13px;font-weight:700;margin-bottom:4px">💰 급여 자동 연동</div>
+        <div style="font-size:11px;color:var(--text2)">출퇴근 기록 → DONWAY 정산 자동 반영</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S2 배송·스캔 -->
+<div class="slide" id="s2">
+  <div class="glow" style="width:350px;height:350px;background:var(--brand);bottom:-80px;left:-80px;opacity:.12"></div>
+  <div class="grid-bg"></div>
+  <div style="position:relative;width:100%;max-width:360px">
+    <div class="sec-label anim-1">배송 · 스캔</div>
+    <h2 class="sec-title anim-2" style="text-align:left;font-size:24px">간선차 스캔<br>자동 집계</h2>
+    <div class="anim-3" style="display:flex;flex-direction:column;gap:10px">
+      <div class="card">
+        <div style="font-size:13px;font-weight:700;margin-bottom:4px">📷 바코드 자동 스캔</div>
+        <div style="font-size:11px;color:var(--text2)">카메라로 바코드 연속 스캔 · 라우트별 자동 분류</div>
+      </div>
+      <div class="card">
+        <div style="font-size:13px;font-weight:700;margin-bottom:4px">🚚 간선차 상하차 기록</div>
+        <div style="font-size:11px;color:var(--text2)">상차·하차 수량 실시간 집계 · 공유 링크 생성</div>
+      </div>
+      <div class="card">
+        <div style="font-size:13px;font-weight:700;margin-bottom:4px">📊 라우트별 건수 통계</div>
+        <div style="font-size:11px;color:var(--text2)">일별·월별 배송건수 자동 집계 · 정산 연동</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S3 라벨·번역 -->
+<div class="slide" id="s3">
+  <div class="glow" style="width:350px;height:350px;background:var(--acc);top:-80px;right:-80px;opacity:.1"></div>
+  <div class="grid-bg"></div>
+  <div style="position:relative;width:100%;max-width:360px">
+    <div class="sec-label anim-1" style="color:var(--acc)">라벨 · AI번역</div>
+    <h2 class="sec-title anim-2" style="text-align:left;font-size:24px">다국어 라벨<br>AI 자동 번역</h2>
+    <div class="anim-3" style="display:flex;flex-direction:column;gap:10px">
+      <div class="card">
+        <div style="font-size:13px;font-weight:700;margin-bottom:4px">🏷️ 배송 라벨 출력</div>
+        <div style="font-size:11px;color:var(--text2)">QR코드 포함 라벨 자동 생성 · 프린터 연동</div>
+      </div>
+      <div class="card">
+        <div style="font-size:13px;font-weight:700;margin-bottom:4px">🌏 AI 다국어 번역</div>
+        <div style="font-size:11px;color:var(--text2)">한국어 주소 → 영어·중국어·베트남어 자동 번역<br>외국인 기사 지원</div>
+      </div>
+      <div class="card">
+        <div style="font-size:13px;font-weight:700;margin-bottom:4px">📋 OCR 자동 인식</div>
+        <div style="font-size:11px;color:var(--text2)">송장 촬영 → 텍스트 자동 추출 · 데이터 입력 불필요</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S4 긴급배송·정산 -->
+<div class="slide" id="s4">
+  <div class="glow" style="width:350px;height:350px;background:#f59e0b;bottom:-80px;right:-80px;opacity:.08"></div>
+  <div class="grid-bg"></div>
+  <div style="position:relative;width:100%;max-width:360px">
+    <div class="sec-label anim-1" style="color:#f59e0b">긴급배송 · 정산</div>
+    <h2 class="sec-title anim-2" style="text-align:left;font-size:24px">긴급 상황도<br>자동 처리</h2>
+    <div class="card-grid g2 anim-3">
+      <div class="card" style="text-align:center">
+        <div style="font-size:24px;margin-bottom:6px">🚨</div>
+        <div style="font-size:12px;font-weight:700">긴급배송</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:3px">즉시 배차·기록</div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div style="font-size:24px;margin-bottom:6px">💰</div>
+        <div style="font-size:12px;font-weight:700">정산 자동화</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:3px">DONWAY 연동</div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div style="font-size:24px;margin-bottom:6px">📱</div>
+        <div style="font-size:12px;font-weight:700">FCM 푸시</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:3px">실시간 알림</div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div style="font-size:24px;margin-bottom:6px">📄</div>
+        <div style="font-size:12px;font-weight:700">명세서 발송</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:3px">카카오·이메일</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S5 CTA -->
+<div class="slide" id="s5">
+  <div class="glow" style="width:400px;height:400px;background:var(--brand);top:-100px;right:-100px;opacity:.15"></div>
+  <div class="glow" style="width:300px;height:300px;background:var(--acc);bottom:-80px;left:-80px;opacity:.1"></div>
+  <div class="grid-bg"></div>
+  <div style="text-align:center;position:relative">
+    <div class="sec-label anim-1">3개 플랫폼 통합</div>
+    <h2 class="sec-title anim-2" style="font-size:22px">하나의 계정으로<br>모든 서비스 연동</h2>
+    <div class="anim-3" style="display:flex;flex-direction:column;gap:8px;max-width:320px;margin:16px auto 0">
+      <div style="background:rgba(0,102,255,.08);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:left">
+        <div style="font-size:12px;font-weight:800;margin-bottom:4px">🤖 DONWAY <span style="font-size:10px;color:var(--text3)">donway.ai.kr</span></div>
+        <div style="font-size:11px;color:var(--text2)">AI정산 · 쿠팡 자동화 · 세무사 연동</div>
+      </div>
+      <div style="background:rgba(123,47,255,.08);border:1px solid rgba(123,47,255,.2);border-radius:10px;padding:12px;text-align:left">
+        <div style="font-size:12px;font-weight:800;margin-bottom:4px">🌊 FILO <span style="font-size:10px;color:var(--text3)">filo.ai.kr</span></div>
+        <div style="font-size:11px;color:var(--text2)">재고·QR·키오스크 현장 관리</div>
+      </div>
+      <div style="background:rgba(0,102,255,.08);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:left">
+        <div style="font-size:12px;font-weight:800;margin-bottom:4px">🚚 엠비티아이 <span style="font-size:10px;color:var(--text3)">배송앱</span></div>
+        <div style="font-size:11px;color:var(--text2)">출퇴근·스캔·라벨·긴급배송</div>
+      </div>
+    </div>
+    <div class="anim-4" style="margin-top:16px">
+      <a href="https://pf.kakao.com/_xkuxabX/chat" target="_blank" style="display:inline-block;padding:12px 28px;background:#FEE500;color:#3C1E1E;border-radius:12px;font-size:13px;font-weight:800;text-decoration:none">💬 도입 문의</a>
+    </div>
+    <div style="margin-top:16px;font-size:11px;color:var(--text3)">
+      엠비티아이 · 051-711-3103<br>부산시 수영구 수영로 668, 607호
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+var total=6;
+var dotsEl=document.getElementById('dots');
+var counterEl=document.getElementById('counter');
+var slidesEl=document.getElementById('slides');
+for(var i=0;i<total;i++){
+  var d=document.createElement('div');
+  d.className='dot'+(i===0?' active':'');
+  (function(idx){d.onclick=function(){slidesEl.scrollTo({top:idx*window.innerHeight,behavior:'smooth'});};})(i);
+  dotsEl.appendChild(d);
+}
+slidesEl.addEventListener('scroll',function(){
+  var idx=Math.round(slidesEl.scrollTop/window.innerHeight);
+  counterEl.textContent=(idx+1)+' / '+total;
+  document.querySelectorAll('.dot').forEach(function(d,i){d.classList.toggle('active',i===idx);});
+},{passive:true});
+if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(function(){});}
+</script>
+</body>
+</html>
