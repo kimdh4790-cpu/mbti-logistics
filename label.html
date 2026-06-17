@@ -1087,15 +1087,14 @@ function _showTemplateSelector() {
         {id:'intl',     icon:'✈️', name:'국제 배송', desc:'해외 배송용 · 영문 주소'},
         {id:'internal', icon:'🏭', name:'내부 이동표', desc:'캠프 간 이동 · 간단 형식'},
         {id:'return',   icon:'↩️', name:'반품 라벨',  desc:'반품 처리용 · 반송 주소 포함'},
-      ].map(function(t) {
-        return '<div onclick="_setTemplate('' + t.id + '')" style="display:flex;align-items:center;gap:12px;padding:12px;border:2px solid '+(t.active?'#185FA5':'#dde3ed')+';border-radius:10px;margin-bottom:8px;cursor:pointer">' +
-          '<div style="font-size:24px">' + t.icon + '</div>' +
-          '<div>' +
-            '<div style="font-size:13px;font-weight:700">' + t.name + '</div>' +
-            '<div style="font-size:11px;color:#888">' + t.desc + '</div>' +
-          '</div>' +
-        '</div>';
-      }).join('') +
+      ].forEach(function(t) {
+        var row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:12px;border:2px solid '+(t.id===_currentTemplate?'#185FA5':'#dde3ed')+';border-radius:10px;margin-bottom:8px;cursor:pointer';
+        row.innerHTML = '<div style="font-size:24px">'+t.icon+'</div><div><div style="font-size:13px;font-weight:700">'+t.name+'</div><div style="font-size:11px;color:#888">'+t.desc+'</div></div>';
+        row.setAttribute('data-tpl', t.id);
+        row.onclick = function(){ _setTemplate(this.getAttribute('data-tpl')); };
+        inner.appendChild(row);
+      });
     '</div>';
   document.body.appendChild(modal);
 }
