@@ -529,7 +529,11 @@ export default {
         if (kv) return new Response(kv, {headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache'}});
       }
       // admin_sub
-      if (path === '/admin_sub' || path === '/admin_sub.html') {
+      if (path === '/register' || path === '/register.html') {
+      return serveKVFile(env, 'register.html', 'text/html');
+    }
+
+    if (path === '/admin_sub' || path === '/admin_sub.html') {
         const kv = e && e.DONWAY_ASSETS ? await e.DONWAY_ASSETS.get('admin_sub.html',{type:'text'}) : null;
         if (kv) return new Response(kv, {headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache'}});
       }
@@ -2099,6 +2103,22 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
           }
         }
         return new Response(JSON.stringify({ok:true}),{headers:{'Content-Type':'application/json'}});
+      } catch(e) {
+        return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}});
+      }
+    }
+
+    // ★ /sa/notify-admin — 신규 가입 알림
+    if (path === '/sa/notify-admin' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const token = await getAccessToken(env);
+        await notifyAdmins(env, token, {
+          title: body.title || '🎉 신규 등록',
+          body: body.body || '',
+          type: body.type || 'join'
+        });
+        return new Response(JSON.stringify({ok:true}),{headers:{'Content-Type':'application/json',...SECURITY_HEADERS}});
       } catch(e) {
         return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}});
       }
