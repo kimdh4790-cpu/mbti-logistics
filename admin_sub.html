@@ -3,7 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>구독 관리 — DONWAY 어드민</title>
+<title>DONWAY 어드민</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0a0f1e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DONWAY 어드민">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -72,7 +78,8 @@ body{background:var(--bg);color:var(--text);font-family:"Apple SD Gothic Neo","N
   </div>
   <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
     <div id="admin-email" style="font-size:11px;color:var(--text3)"></div>
-    <button class="btn btn-gray" onclick="_logout()" style="padding:7px 14px;font-size:11px">로그아웃</button>
+    <button id="install-btn" onclick="_installPWA()" style="display:none;padding:7px 14px;font-size:11px;background:linear-gradient(135deg,#00d4ff,#7b2fff);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;align-items:center;gap:4px">📲 앱 설치</button>
+<button class="btn btn-gray" onclick="_logout()" style="padding:7px 14px;font-size:11px">로그아웃</button>
   </div>
 </div>
 
@@ -648,5 +655,25 @@ function _loadLogs(){
   }).catch(function(){});
 }
 </script>
+
+<script>
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/sw.js').catch(function(){});
+}
+// ★ PWA 설치 배너
+var _deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',function(e){
+  e.preventDefault();
+  _deferredPrompt=e;
+  var btn=document.getElementById('install-btn');
+  if(btn)btn.style.display='flex';
+});
+function _installPWA(){
+  if(!_deferredPrompt)return;
+  _deferredPrompt.prompt();
+  _deferredPrompt.userChoice.then(function(){_deferredPrompt=null;});
+}
+</script>
+
 </body>
 </html>
