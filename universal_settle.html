@@ -173,8 +173,8 @@ function _qrDeleteService(id){
 function _qrGenerate(){
   var label=(document.getElementById('qr-label')||{}).value||'주문';
   var did=window._qrDid;
-  // QR URL: bico.kr/order?d=dealerId&l=label
-  var baseUrl='https://bico.kr/order';
+  // QR URL: filo.ai.kr/order?d=dealerId&l=label
+  var baseUrl='https://filo.ai.kr/order';
   var qrUrl=baseUrl+'?d='+encodeURIComponent(did)+'&l='+encodeURIComponent(label);
   var out=document.getElementById('qr-output');
   if(!out)return;
