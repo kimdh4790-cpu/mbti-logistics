@@ -140,7 +140,7 @@ body{font-family:-apple-system,'Segoe UI',sans-serif;background:#0a0f1e;color:#e
       </div>
     </div>
 
-    <button class="btn" id="reg-btn" onclick="_doRegister()">🚀 무료 체험 시작 (7일)</button>
+    <button class="btn" id="reg-btn" onclick="_doRegister()">🚀 지금 바로 시작 (24시간 무료)</button>
 
     <div class="login-link">
       이미 계정이 있으신가요?
@@ -231,13 +231,13 @@ function _doRegister(){
     if(!snap.empty){
       // 기존 계정 존재 → 로그인 후 서비스만 추가
       _showErr('이미 등록된 이메일입니다. 로그인 후 서비스를 추가해주세요.');
-      btn.disabled=false; btn.textContent='🚀 무료 체험 시작 (7일)';
+      btn.disabled=false; btn.textContent='🚀 1일 무료 체험 시작';
       return;
     }
 
     // 신규 가입
     var now = new Date();
-    var trialEnd = new Date(now.getTime() + 7*24*60*60*1000);
+    var trialEnd = new Date(now.getTime() + 1*24*60*60*1000); // 1일 체험
     var companyCode = Math.random().toString(36).slice(2,8).toUpperCase();
     var emailPrefix = email.split('@')[0].replace(/[^a-zA-Z0-9]/g,'').toLowerCase();
 
@@ -259,6 +259,23 @@ function _doRegister(){
         trialStart: now.toISOString().slice(0,10),
         trialEnd: trialEnd.toISOString().slice(0,10),
         trialUsed: true,
+  trialEndISO: trialEnd.toISOString(),
+  subscriptions: {
+    donway: {
+      active: true,
+      plan: 'trial',
+      expiry: trialEnd.toISOString().slice(0,10),
+      expiryISO: trialEnd.toISOString(),
+      months: 0
+    },
+    mbtico: {
+      active: true,
+      plan: 'trial',
+      expiry: trialEnd.toISOString().slice(0,10),
+      expiryISO: trialEnd.toISOString(),
+      modules: ['scan','label','checkin','emergency','delivery','app']
+    }
+  },
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         uid: uid,
         dealerId: uid,
@@ -306,7 +323,7 @@ function _doRegister(){
       }).catch(function(){});
 
       var _appUrl = 'https://mbtico.kr/app?did=' + uid;
-        var _msg = '✅ 등록 완료! 7일 무료 체험이 시작됩니다.\n\n' +
+        var _msg = '✅ 등록 완료! 지금 바로 사용 가능합니다 (24시간 무료)\n\n' +
           '📱 배송앱 URL:\n' + _appUrl + '\n\n' +
           '🔑 관리자 초기 아이디: ' + (window._regAdminId||'') + '\n' +
           '🔑 관리자 초기 비번: ' + (window._regAdminPw||'') + '\n\n' +
@@ -337,7 +354,7 @@ function _doRegister(){
       }, 3000);
     })
     .catch(function(e){
-      btn.disabled=false; btn.textContent='🚀 무료 체험 시작 (7일)';
+      btn.disabled=false; btn.textContent='🚀 1일 무료 체험 시작';
       if(e.code === 'auth/email-already-in-use'){
         _showErr('이미 가입된 이메일입니다. 로그인해주세요.');
       } else if(e.code === 'auth/weak-password'){
@@ -348,7 +365,7 @@ function _doRegister(){
     });
   })
   .catch(function(e){
-    btn.disabled=false; btn.textContent='🚀 무료 체험 시작 (7일)';
+    btn.disabled=false; btn.textContent='🚀 1일 무료 체험 시작';
     _showErr('오류: ' + e.message);
   });
 }
