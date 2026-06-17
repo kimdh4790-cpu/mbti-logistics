@@ -301,8 +301,11 @@ function toast(msg,dur){
 }
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function comma(n){return Number(n||0).toLocaleString();}
-function _getDid(){return _dealer?_dealer.id:(_cu?_cu.uid:'');}
-function _isAdmin(){return _role==='admin';}
+function _getDid(){
+  if(typeof _isSA !== 'undefined' && _isSA && typeof _saCompanyId !== 'undefined' && _saCompanyId) return _saCompanyId;
+  return _dealer?_dealer.id:(_cu?_cu.uid:'');
+}
+
 function _toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');}
 
 // ━━━ 인증 + 구독 게이트 ━━━
@@ -1517,6 +1520,224 @@ function _processScan(mode){
       _stopScan();
     }).catch(function(e){ toast('❌ '+e.message); });
   });
+}
+</script>
+<script>// ════════════════════════════════════════════════════════
+// ★ FILO 접근 제어 엔진 v2
+// ① modules 기반 메뉴 제어 (결제한 것만)
+// ② 업종별 메뉴 필터
+// ③ SA 데이터 분리 (회사 선택 후 dealerId 고정)
+// ④ DONWAY 연동 버튼
+// ════════════════════════════════════════════════════════
+
+var _SA_EMAILS = ['kimdh4790@gmail.com','soungkyekim@naver.com'];
+var _isSA = false;
+var _activeSub = {};     // 현재 구독 정보
+var _activeIndustry = ''; // 현재 업종
+var _saCompanyId = '';    // SA가 선택한 회사 ID
+
+// ─── 구독 모듈 정의 ───
+var MODULE_DEF = {
+  // kiosk 모듈별 메뉴
+  kiosk: {
+    base:    ['nav-input','nav-today','nav-staff','nav-bookings','nav-menu','nav-customer','nav-stats','nav-monthly','nav-link'],
+    crm:     ['nav-crm'],
+    points:  ['nav-points'],
+    membership: ['nav-membership'],
+    payroll: ['nav-payroll','nav-payslip'],
+    industry:['nav-industry'],
+  },
+  // 업종별 추가 메뉴
+  industry: {
+    beauty:  ['nav-beauty','nav-consent'],
+    nail:    ['nav-beauty','nav-consent'],
+    health:  ['nav-schedule'],
+    academy: ['nav-schedule'],
+    laundry: ['nav-laundry'],
+    stay:    ['nav-rooms'],
+  }
+};
+
+// ─── 메뉴 접근 제어 핵심 함수 ───
+function _applyAccessControl(coData, isSA) {
+  _isSA = isSA;
+  _activeSub = coData ? (coData.subscriptions || {}) : {};
+  _activeIndustry = coData ? (coData.industry || '') : '';
+
+  var filoSub = _activeSub.filo || _activeSub.kiosk || {};
+  var modules = isSA ? ['base','crm','points','membership','payroll','industry'] : (filoSub.modules || ['base']);
+  var today = new Date().toISOString().slice(0,10);
+  var isActive = isSA || (filoSub.active && (!filoSub.expiry || filoSub.expiry >= today));
+
+  // 모든 nav-item 숨기기
+  document.querySelectorAll('.nav-item[id]').forEach(function(el) {
+    el.style.display = 'none';
+  });
+
+  // base 모듈 항상 표시
+  MODULE_DEF.kiosk.base.forEach(function(id) {
+    var el = document.getElementById(id);
+    if(el) el.style.display = '';
+  });
+
+  // 구독한 모듈만 표시
+  modules.forEach(function(mod) {
+    var ids = MODULE_DEF.kiosk[mod] || [];
+    ids.forEach(function(id) {
+      var el = document.getElementById(id);
+      if(el) el.style.display = '';
+    });
+  });
+
+  // 업종별 추가 메뉴
+  if(_activeIndustry && MODULE_DEF.industry[_activeIndustry]) {
+    MODULE_DEF.industry[_activeIndustry].forEach(function(id) {
+      var el = document.getElementById(id);
+      if(el) el.style.display = '';
+    });
+  }
+
+  // 잠긴 메뉴에 자물쇠 표시
+  document.querySelectorAll('.nav-item[id]').forEach(function(el) {
+    if(el.style.display === 'none') {
+      el.style.display = '';
+      el.style.opacity = '0.35';
+      el.style.pointerEvents = 'none';
+      el.setAttribute('data-locked', '1');
+      // 잠금 아이콘
+      if(!el.querySelector('.lock-icon')) {
+        var lock = document.createElement('span');
+        lock.className = 'lock-icon';
+        lock.style.cssText = 'font-size:10px;margin-left:4px;color:#475569';
+        lock.textContent = '🔒';
+        el.appendChild(lock);
+      }
+    } else {
+      el.style.opacity = '';
+      el.style.pointerEvents = '';
+      el.removeAttribute('data-locked');
+      var lock = el.querySelector('.lock-icon');
+      if(lock) lock.remove();
+    }
+  });
+
+  // DONWAY 연동 배너 추가 (정산 모듈 미구독 시)
+  if(!isSA && !modules.includes('payroll')) {
+    _showDonwayBanner();
+  }
+
+  return isActive;
+}
+
+// ─── DONWAY 연동 배너 ───
+function _showDonwayBanner() {
+  var existing = document.getElementById('donway-banner');
+  if(existing) return;
+  var banner = document.createElement('div');
+  banner.id = 'donway-banner';
+  banner.style.cssText = 'margin:8px 12px;padding:10px 14px;background:rgba(0,102,255,.08);border:1px solid rgba(0,102,255,.2);border-radius:10px;display:flex;justify-content:space-between;align-items:center;cursor:pointer';
+  banner.innerHTML =
+    '<div>' +
+      '<div style="font-size:12px;font-weight:700">🤖 DONWAY AI정산</div>' +
+      '<div style="font-size:10px;color:#94a3b8;margin-top:2px">급여정산·명세서는 DONWAY에서</div>' +
+    '</div>' +
+    '<a href="https://donway.ai.kr/settle" target="_blank" style="padding:6px 12px;background:#0066ff;color:#fff;border-radius:8px;font-size:11px;font-weight:700;text-decoration:none">이동 →</a>';
+  var nav = document.getElementById('snav') || document.querySelector('.sidebar nav') || document.querySelector('nav');
+  if(nav) nav.parentNode.insertBefore(banner, nav.nextSibling);
+}
+
+// ─── SA 회사 선택 UI ───
+function _saCompanySelector() {
+  if(!_isSA) return;
+  var existing = document.getElementById('sa-company-sel');
+  if(existing) return;
+
+  var wrap = document.createElement('div');
+  wrap.id = 'sa-company-sel';
+  wrap.style.cssText = 'margin:8px 12px;padding:10px;background:rgba(123,47,255,.1);border:1px solid rgba(123,47,255,.3);border-radius:10px';
+  wrap.innerHTML =
+    '<div style="font-size:11px;color:#7b2fff;font-weight:700;margin-bottom:6px">👑 SA — 회사 선택</div>' +
+    '<select id="sa-co-select" onchange="_saSelectCompany(this.value)" style="width:100%;padding:7px;border-radius:6px;border:1px solid rgba(123,47,255,.3);background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:12px">' +
+      '<option value="">전체 (내 데이터)</option>' +
+    '</select>';
+
+  // 회사 목록 로드
+  _db.collection('companies').orderBy('companyName').limit(50).get().then(function(snap) {
+    var sel = document.getElementById('sa-co-select');
+    if(!sel) return;
+    snap.forEach(function(d) {
+      var v = d.data();
+      var opt = document.createElement('option');
+      opt.value = d.id;
+      opt.textContent = (v.companyName||v.company||d.id) + ' (' + (v.adminEmail||'') + ')';
+      sel.appendChild(opt);
+    });
+  });
+
+  var sidebar = document.querySelector('.sidebar') || document.querySelector('[id*="side"]');
+  if(sidebar) sidebar.insertBefore(wrap, sidebar.firstChild);
+}
+
+function _saSelectCompany(companyId) {
+  _saCompanyId = companyId;
+  if(!companyId) {
+    toast('전체 데이터 모드 (내 dealerId)');
+    return;
+  }
+  // 선택한 회사 정보 로드
+  _db.collection('companies').doc(companyId).get().then(function(snap) {
+    if(!snap.exists) return;
+    var co = snap.data();
+    co.id = companyId;
+    _dealer = co;
+    _activeIndustry = co.industry || '';
+    toast('✅ ' + (co.companyName||co.company||companyId) + ' 데이터로 전환');
+    // 현재 페이지 리로드
+    var active = document.querySelector('.nav-item.active');
+    if(active) active.click();
+  });
+}
+
+// ─── getDid SA 분리 반영 ───
+function _getDidSafe() {
+  if(_isSA && _saCompanyId) return _saCompanyId;
+  return _dealer ? _dealer.id : (_cu ? _cu.uid : '');
+}
+
+// ─── 구독 모달 ───
+function _showModuleStore() {
+  var did = _getDidSafe();
+  var html = '<div id="module-store" style="position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;display:flex;align-items:flex-end" onclick="document.getElementById(\'module-store\').remove()">' +
+    '<div style="background:var(--bg2,#0d1b3e);border-radius:16px 16px 0 0;padding:20px;width:100%;max-height:80vh;overflow-y:auto" onclick="event.stopPropagation()">' +
+      '<div style="font-size:14px;font-weight:800;margin-bottom:4px">💳 기능 추가 구독</div>' +
+      '<div style="font-size:11px;color:#94a3b8;margin-bottom:14px">추가 기능을 구독하면 즉시 활성화됩니다</div>' +
+      [
+        {key:'crm',     icon:'🗂',  name:'고객 CRM',    desc:'고객관리·알림발송',    price:'문의'},
+        {key:'points',  icon:'🎁',  name:'포인트',       desc:'적립·사용·현황',       price:'문의'},
+        {key:'membership',icon:'💳',name:'회원권',       desc:'금액·횟수·기간권',     price:'문의'},
+        {key:'payroll', icon:'💰',  name:'급여 정산',    desc:'4대보험·명세서',        price:'DONWAY 연동'},
+        {key:'industry',icon:'🏢',  name:'업종 특화',    desc:'뷰티·헬스·세탁·숙박', price:'문의'},
+      ].map(function(m) {
+        var has = (_activeSub.filo&&(_activeSub.filo.modules||[]).indexOf(m.key)>=0)||_isSA;
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--bg3,#1e3a5f);border-radius:10px;margin-bottom:8px">' +
+          '<div>' +
+            '<div style="font-size:13px;font-weight:800">' + m.icon + ' ' + m.name + '</div>' +
+            '<div style="font-size:11px;color:#94a3b8;margin-top:2px">' + m.desc + '</div>' +
+          '</div>' +
+          '<div>' +
+            (has ?
+              '<span style="padding:4px 10px;background:rgba(34,197,94,.15);color:#22c55e;border-radius:6px;font-size:11px;font-weight:700">사용중</span>' :
+              (m.key==='payroll' ?
+                '<a href="https://donway.ai.kr/settle" target="_blank" style="padding:6px 12px;background:#0066ff;color:#fff;border-radius:8px;font-size:11px;font-weight:700;text-decoration:none">DONWAY →</a>' :
+                '<a href="https://pf.kakao.com/_xkuxabX/chat" target="_blank" style="padding:6px 12px;background:#FEE500;color:#3C1E1E;border-radius:8px;font-size:11px;font-weight:700;text-decoration:none">문의</a>'
+              )
+            ) +
+          '</div>' +
+        '</div>';
+      }).join('') +
+    '</div>' +
+  '</div>';
+  document.body.insertAdjacentHTML('beforeend', html);
 }
 </script>
 </body>
