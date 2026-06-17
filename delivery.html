@@ -7,10 +7,11 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>MBTI 배송앱</title>
+<title>엠비티아이 배송앱</title>
 
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
@@ -123,7 +124,7 @@ body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
 <!-- ══════════════ 로그인 ══════════════ -->
 <div id="login-screen">
   <div class="login-logo">🚛</div>
-  <div class="login-title">MBTI 배송앱</div>
+  <div class="login-title">엠비티아이 배송앱</div>
   <div class="login-sub">엠비티아이(유) 기사 전용</div>
   <div class="login-card">
     <div class="login-label">기사 선택</div>
@@ -4014,5 +4015,9 @@ async function _checkDelivPhotoHo(photoBase64, expectedHo){
 }
 
 </script>
+<div style="position:fixed;bottom:0;left:0;right:0;padding:8px 16px;background:rgba(10,15,30,.9);border-top:1px solid rgba(0,102,255,.2);display:flex;justify-content:space-between;align-items:center;z-index:50">
+  <div style="font-size:10px;color:#475569">엠비티아이 배송앱</div>
+  <a href="https://donway.ai.kr/settle" style="font-size:11px;color:#00d4ff;text-decoration:none">🤖 DONWAY 정산 →</a>
+</div>
 </body>
 </html>
