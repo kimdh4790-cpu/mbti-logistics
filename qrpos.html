@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<link rel="manifest" href="/mbtico-manifest.json">
+<link rel="manifest" href="/BICO-manifest.json">
 <meta name="theme-color" content="#7b2fff">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="mbtico QR">
+<meta name="apple-mobile-web-app-title" content="BICO QR">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<title>QR POS — mbtico.kr</title>
+<title>QR POS — bico.kr</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -58,7 +58,7 @@ body{background:var(--bg);color:var(--text);font-family:"Apple SD Gothic Neo","N
 <body>
 <div class="sidebar" id="sidebar">
   <div class="logo">
-    <div class="logo-title">🏢 mbtico.kr</div>
+    <div class="logo-title">🏢 bico.kr</div>
     <div class="logo-sub" id="company-name">로딩 중...</div>
   </div>
   <div class="nav" id="nav-menu">
@@ -247,8 +247,8 @@ function _qrDeleteService(id){
 function _qrGenerate(){
   var label=(document.getElementById('qr-label')||{}).value||'주문';
   var did=window._qrDid;
-  // QR URL: mbtico.kr/order?d=dealerId&l=label
-  var baseUrl='https://mbtico.kr/order';
+  // QR URL: bico.kr/order?d=dealerId&l=label
+  var baseUrl='https://bico.kr/order';
   var qrUrl=baseUrl+'?d='+encodeURIComponent(did)+'&l='+encodeURIComponent(label);
   var out=document.getElementById('qr-output');
   if(!out)return;
@@ -562,7 +562,7 @@ function _showSubRequired(product, container){
       '<div style="font-size:48px;margin-bottom:16px">🔒</div>'+
       '<div style="font-size:18px;font-weight:900;margin-bottom:8px">구독이 필요합니다</div>'+
       '<div style="font-size:13px;color:var(--text3);line-height:1.7;margin-bottom:24px">'+
-        (labels[product]||product)+' 기능을 이용하려면<br>mbtico.kr 구독이 필요합니다.<br>'+
+        (labels[product]||product)+' 기능을 이용하려면<br>bico.kr 구독이 필요합니다.<br>'+
         '<b style="color:var(--acc)">'+(prices[product]||'문의')+'</b> (VAT별도)'+
       '</div>'+
       '<a href="tel:051-711-3103" style="display:block;padding:14px;background:linear-gradient(90deg,var(--acc),#00a8cc);color:#000;border-radius:12px;font-size:14px;font-weight:900;text-decoration:none;margin-bottom:10px">📞 051-711-3103 도입 문의</a>'+
@@ -627,7 +627,7 @@ function _showLogin(){
     '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:32px;width:320px">'+
       '<div style="text-align:center;margin-bottom:24px">'+
         '<div style="font-size:28px;margin-bottom:8px">🏢</div>'+
-        '<div style="font-size:18px;font-weight:900;color:var(--acc)">mbtico.kr</div>'+
+        '<div style="font-size:18px;font-weight:900;color:var(--acc)">bico.kr</div>'+
       '</div>'+
       '<input id="login-email" type="email" placeholder="이메일" style="width:100%;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;margin-bottom:8px">'+
       '<input id="login-pw" type="password" placeholder="비밀번호" style="width:100%;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;margin-bottom:16px">'+
