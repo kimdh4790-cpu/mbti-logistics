@@ -508,18 +508,7 @@ async function syncKVFromGitHub(env) {
 }
 
 
-/* ══════════════════════════════════════════════════════
-   ★ companies 컬렉션 subscriptions 구조 (v2)
-   
-   subscriptions: {
-     donway: { active, plan, expiry, modules:[] },
-     filo:   { active, expiry, modules:['kiosk','inventory','qr','crm','points','membership','payroll','industry'], industry:'beauty' },
-     mbtico: { active, expiry, modules:['scan','label','checkin','emergency','delivery'] }
-   }
-   
-   메뉴 제어: modules 배열에 포함된 기능만 표시
-   SA: 전체 접근 가능, 단 dealerId는 선택한 회사 기준
-   ══════════════════════════════════════════════════════ */
+// subscriptions 구조: donway/filo/mbtico modules 배열로 메뉴 제어
 export default {
   async scheduled(event, env, ctx) {
     ctx.waitUntil(syncKVFromGitHub(env));
