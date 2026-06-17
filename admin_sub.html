@@ -114,9 +114,9 @@ var PRODUCTS=[
     id:'donway', icon:'💰', name:'DONWAY 정산',
     fields:[
       {id:'plan',label:'요금제',type:'select',opts:[
-        {v:'individual_50',  l:'개인 ~50명  (390,000원/월)'},
-        {v:'individual_150', l:'개인 ~150명 (650,000원/월)'},
-        {v:'individual_300', l:'개인 ~300명 (975,000원/월)'},
+        {v:'individual_50',  l:'개인 ~50명  (490,000원/월)'},
+        {v:'individual_150', l:'개인 ~150명 (900,000원/월)'},
+        {v:'individual_300', l:'개인 ~300명 (1,350,000원/월)'},
         {v:'individual_500', l:'개인 ~500명 (1,625,000원/월)'},
         {v:'individual_700', l:'개인 ~700명 (2,275,000원/월)'},
         {v:'individual_1000',l:'개인 ~1000명 (2,600,000원/월)'},
@@ -177,6 +177,44 @@ var PRODUCTS=[
       {id:'kiosk_tax',     icon:'🧾', name:'세무사 연동'},
     ]
   },
+,
+{
+id:'filo', icon:'🌊', name:'FILO 현장관리',
+fields:[
+  {id:'expiry',label:'만료일',type:'date'},
+  {id:'industry',label:'업종',type:'select',opts:[
+    {v:'beauty',l:'💇 뷰티·미용'},
+    {v:'nail',l:'💅 네일·피부'},
+    {v:'food',l:'🍽️ 음식점·카페'},
+    {v:'health',l:'💪 헬스·요가'},
+    {v:'academy',l:'📚 학원·교습소'},
+    {v:'laundry',l:'👕 세탁'},
+    {v:'stay',l:'🏨 숙박'},
+    {v:'retail',l:'🛍️ 소매·잡화'},
+  ]},
+],
+subs:[
+  {id:'base',      icon:'🖥️', name:'기본 (매출·통계)'},
+  {id:'crm',       icon:'🗂',  name:'고객 CRM'},
+  {id:'points',    icon:'🎁',  name:'포인트'},
+  {id:'membership',icon:'💳',  name:'회원권'},
+  {id:'industry',  icon:'🏢',  name:'업종특화 (동의서·스케줄 등)'},
+]
+},
+{
+id:'mbtico', icon:'🚚', name:'엠비티아이 배송앱',
+fields:[
+  {id:'maxPerson',label:'기사인원',type:'number',placeholder:'예) 30'},
+  {id:'expiry',label:'만료일',type:'date'},
+],
+subs:[
+  {id:'scan',      icon:'📷',  name:'스캔'},
+  {id:'label',     icon:'🏷️',  name:'라벨·AI번역'},
+  {id:'emergency', icon:'🚨',  name:'배송앱'},
+  {id:'checkin',   icon:'⏰',  name:'출퇴근 QR'},
+  {id:'drivers',   icon:'👤',  name:'기사관리'},
+]
+}
 ];
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
