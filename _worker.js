@@ -488,8 +488,8 @@ export default {
     const path     = url.pathname;
     const method   = request.method;
     const hostname = url.hostname;
-    // ★ mbtico.kr 최우선 처리 (slugMatch 오인식 방지)
-    if (hostname === 'bico.kr' || hostname === 'www.mbtico.kr' ||
+    // ★ filo.ai.kr 최우선 처리 (slugMatch 오인식 방지)
+    if (hostname === 'filo.ai.kr' || hostname === 'www.filo.ai.kr' ||
         hostname === 'mbetco.kr' || hostname === 'www.mbetco.kr') {
       const e = env || _env_ref;
       // 루트 → 허브
@@ -605,7 +605,7 @@ export default {
     if (path === '/' || path === '' || path === '/donway_landing' || path === '/donway_landing/') {
       // mbetco.kr → universal_settle.html
       if (hostname.includes('mbetco') || hostname.includes('mbtico')) {
-        // mbtico.kr 루트 → 허브 페이지
+        // filo.ai.kr 루트 → 허브 페이지
         if (url.pathname === '/' || url.pathname === '' || url.pathname === '/index.html') {
           const hubResp = await fetchAsset('/mbtico_hub.html', request, env);
           const h = new Headers();
@@ -2489,12 +2489,12 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
       });
     }
 
-    if (path === '/mbtico-manifest.json') {
-      return serveKVFile(env, 'mbtico-manifest.json', 'application/manifest+json');
+    if (path === '/filo-manifest.json') {
+      return serveKVFile(env, 'filo-manifest.json', 'application/manifest+json');
     }
 
     if (path === '/manifest.json') {
-      // mbtico.kr → mbtico manifest 서빙
+      // filo.ai.kr → mbtico manifest 서빙
       if (hostname.includes('mbetco') || hostname.includes('mbtico')) {
         const mResp = await fetchAsset('/mbtico_manifest.json', request, env);
         const mH = new Headers();
