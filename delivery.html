@@ -263,10 +263,81 @@ function _initFirebase(){
     _st=FB.storage();
     _fbReady=true;
     console.log('[FB] 초기화 완료');
+    setTimeout(_tryFirebaseAuth, 200);
   }catch(e){
     console.warn('[FB] 초기화 오류:', e.message);
     _showFbFallback();
   }
+}
+
+// ★ Firebase Auth 로그인 (DONWAY 계정)
+function _tryFirebaseAuth() {
+  if(!FB) { _showFbFallback(); return; }
+  var auth = FB.auth ? FB.auth() : null;
+  if(!auth) { _showFbFallback(); return; }
+
+  // 기존 로그인 상태 확인
+  auth.onAuthStateChanged(function(user) {
+    if(user) {
+      // Firebase 로그인된 경우 → drivers에서 정보 조회
+      _db.collection('drivers').where('email','==',user.email).limit(1).get()
+      .then(function(snap) {
+        if(!snap.empty) {
+          var drv = snap.docs[0].data();
+          _selDriver = drv.name || user.displayName || user.email.split('@')[0];
+          _selCamp = drv.camp || localStorage.getItem('mbti_delivery_camp') || '';
+          document.getElementById('driver-list').innerHTML =
+            '<div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:10px;padding:12px;margin-bottom:12px">' +
+            '<div style="font-size:13px;font-weight:800;color:#22c55e">✅ ' + _selDriver + '</div>' +
+            '<div style="font-size:11px;color:#94a3b8;margin-top:2px">캠프: ' + (_selCamp||'미지정') + '</div>' +
+            '</div>' +
+            '<div style="display:flex;gap:6px;margin-top:8px">'+
+            ['부산1','부산2','부산3','대구2','진주M'].map(function(c){
+              return '<button type="button" data-camp="'+c+'" onclick="_selCamp_btn(this,''+c+'')" style="flex:1;padding:8px 2px;background:'+(_selCamp===c?'#1e3a5f':'var(--bg3)')+';border:1.5px solid '+(_selCamp===c?'var(--blue)':'var(--border2)')+';border-radius:8px;color:'+(_selCamp===c?'var(--blue)':'var(--text3)')+';font-size:11px;font-weight:700;cursor:pointer">'+c+'</button>';
+            }).join('') +
+            '</div>';
+          var btn = document.getElementById('login-btn');
+          if(btn) { btn.disabled=false; btn.onclick=doLogin; }
+        } else {
+          _showFbFallback();
+        }
+      }).catch(function() { _showFbFallback(); });
+    } else {
+      // 로그인 안 된 경우 → 이메일/비번 폼 + 폴백
+      _showAuthForm();
+    }
+  });
+}
+
+function _showAuthForm() {
+  var el = document.getElementById('driver-list');
+  if(!el) return;
+  el.innerHTML =
+    '<div style="margin-bottom:10px">' +
+      '<div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.1em;margin-bottom:5px">📧 DONWAY 이메일</div>' +
+      '<input id="auth-email" type="email" placeholder="company@email.com" style="width:100%;padding:11px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);font-size:14px;outline:none">' +
+    '</div>' +
+    '<div style="margin-bottom:12px">' +
+      '<div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.1em;margin-bottom:5px">🔑 비밀번호</div>' +
+      '<input id="auth-pw" type="password" placeholder="비밀번호" style="width:100%;padding:11px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);font-size:14px;outline:none">' +
+    '</div>' +
+    '<button onclick="_doEmailLogin()" style="width:100%;padding:12px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px">🔑 로그인</button>' +
+    '<div style="text-align:center;font-size:11px;color:var(--text3);margin-bottom:8px">또는</div>';
+  // 폴백 추가
+  _showFbFallback();
+}
+
+function _doEmailLogin() {
+  var email = (document.getElementById('auth-email')||{}).value.trim();
+  var pw = (document.getElementById('auth-pw')||{}).value;
+  if(!email||!pw){ toast('❌ 이메일과 비밀번호를 입력하세요'); return; }
+  if(!FB||!FB.auth) { toast('❌ 연결 오류'); return; }
+  FB.auth().signInWithEmailAndPassword(email, pw)
+    .then(function(cred) {
+      toast('✅ 로그인 완료');
+    }).catch(function(e) {
+      toast('❌ 로그인 실패: ' + (e.code==='auth/wrong-password'?'비밀번호 오류':e.code==='auth/user-not-found'?'이메일 없음':e.message));
+    });
 }
 
 // 로그인 UI — Firebase 없어도 항상 동작 (캠프 버튼 + 이름 입력)
@@ -527,6 +598,7 @@ async function loadTodayList(){
     el.innerHTML = items.map(function(r){
       var tn=(r.trackings&&r.trackings.length?r.trackings[0]:r.tracking)||'운송장 미상';
       var addr=(r.addr||'').slice(0,35);
+    var lat=r.gps&&r.gps.lat||0; var lng=r.gps&&r.gps.lng||0;
       var t=(r.time||r.savedAt||'').slice(0,16);
       var isDone=r.status==='완료';
       return '<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">'+
@@ -1325,9 +1397,11 @@ function openEmergencyDelivery(){
 
       <!-- 통합 송장 촬영 -->
       <input type="file" id="emer-unified-cam" accept="image/*" capture="environment" style="display:none" onchange="emerUnifiedScan(this)">
+    <input type="file" id="emer-gallery-input" accept="image/*" style="display:none" onchange="emerUnifiedScan(this)">
       <button onclick="document.getElementById('emer-unified-cam').click()" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:20px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;border-radius:14px;font-size:18px;font-weight:900;cursor:pointer;box-shadow:0 3px 14px rgba(124,58,237,.4);margin-bottom:8px">
         <span style="font-size:26px">📸</span> 촬영
       </button>
+    <button onclick="document.getElementById('emer-gallery-input').click()" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 14px;background:rgba(123,47,255,.15);color:#7b2fff;border:1px solid rgba(123,47,255,.3);border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">🖼️ 갤러리</button>
       <div id="emer-unified-status" style="font-size:13px;color:var(--teal);text-align:center;margin-bottom:10px;min-height:18px"></div>
 
       <!-- 라이브 스캔 (보조) -->
@@ -2871,7 +2945,27 @@ function _emerHandleScan(raw, statusEl){
           var gEl=document.getElementById('emer-gps-status');
           var _srcL = {kakao_kw_dong:'카카오키워드(동)',kakao_kw_apt:'카카오키워드(단지)',kakao_addr:'카카오주소',google:'Google',cache:'캐시',stored_reuse:'재사용',QR:'QR'}[_kr.src]||_kr.src;
           if(gEl) gEl.innerHTML='<span style="color:var(--teal)">📍 '+_srcL+' GPS ✅</span>';
-          // 지도 핀 생성
+          // ★ 지도 열기 헬퍼
+function _openAddressMap(addr, lat, lng) {
+  if(lat && lng) {
+    // 카카오맵 직접 핀
+    window.open('https://map.kakao.com/link/map/배송지,' + lat + ',' + lng);
+  } else if(addr) {
+    // 주소 검색
+    window.open('https://map.kakao.com/link/search/' + encodeURIComponent(addr));
+  }
+}
+
+// ★ 네이버 지도 열기
+function _openNaverMap(addr, lat, lng) {
+  if(lat && lng) {
+    window.open('https://map.naver.com/v5/?c=' + lng + ',' + lat + ',15,0,0,0,dh');
+  } else if(addr) {
+    window.open('https://map.naver.com/v5/search/' + encodeURIComponent(addr));
+  }
+}
+
+// 지도 핀 생성
           if(window._activeDriverMapAddPin){
             var pr={fbId:'_preview_qr_'+Date.now(),driver:window._APP.driver||'',trackings:window._emerTrackings.slice(),tracking:window._emerTrackings[0]||'',order_id:(document.getElementById('emer-orderid')||{}).value||'',recipient:qp.recipient||'',addr:_gcAddr,gps:{lat:_kr.lat,lng:_kr.lng},time:new Date().toTimeString().slice(0,5),status:'저장대기'};
             window._activeDriverMapAddPin(pr);
