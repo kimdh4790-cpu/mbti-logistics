@@ -330,5 +330,55 @@ document.addEventListener('keydown',function(e){
 
 if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(function(){});}
 </script>
+<script>
+// ★ mbtico.kr modules 기반 메뉴 제어
+var SA_EMAILS_HUB = ['kimdh4790@gmail.com','soungkyekim@naver.com'];
+
+function _applyMbticoModules(co, isSA) {
+  var subs = (co&&co.subscriptions)||{};
+  var mbSub = subs.mbtico||subs.delivery||{};
+  var modules = isSA ? ['scan','label','emergency','checkin','drivers'] : (mbSub.modules || []);
+
+  // 모든 data-module 카드 처리
+  document.querySelectorAll('.menu-card[data-module]').forEach(function(card) {
+    var mod = card.getAttribute('data-module');
+    var hasAccess = isSA || modules.indexOf(mod) >= 0;
+    if(!hasAccess) {
+      // 잠금 표시
+      card.style.opacity = '0.4';
+      card.style.pointerEvents = 'none';
+      card.href = '#';
+      if(!card.querySelector('.lock-badge')) {
+        var lb = document.createElement('div');
+        lb.className = 'lock-badge';
+        lb.style.cssText = 'position:absolute;top:6px;right:6px;background:rgba(239,68,68,.8);color:#fff;font-size:9px;padding:2px 5px;border-radius:4px;font-weight:700';
+        lb.textContent = '🔒 미구독';
+        card.style.position = 'relative';
+        card.appendChild(lb);
+      }
+    } else {
+      card.style.opacity = '';
+      card.style.pointerEvents = '';
+      var lb = card.querySelector('.lock-badge');
+      if(lb) lb.remove();
+    }
+  });
+
+  // 구독 추가 안내 배너
+  var unsubCount = document.querySelectorAll('.menu-card[data-module][style*="0.4"]').length;
+  if(unsubCount > 0 && !isSA) {
+    var existing = document.getElementById('unsub-banner');
+    if(!existing) {
+      var banner = document.createElement('div');
+      banner.id = 'unsub-banner';
+      banner.style.cssText = 'margin:0 16px 10px;padding:10px 14px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:10px;display:flex;justify-content:space-between;align-items:center;font-size:12px';
+      banner.innerHTML = '<span style="color:#f59e0b">🔒 ' + unsubCount + '개 기능 미구독</span>' +
+        '<a href="https://pf.kakao.com/_xkuxabX/chat" target="_blank" style="padding:5px 10px;background:#FEE500;color:#3C1E1E;border-radius:6px;font-size:11px;font-weight:700;text-decoration:none">구독 추가</a>';
+      var grid = document.getElementById('menu-grid');
+      if(grid) grid.parentNode.insertBefore(banner, grid);
+    }
+  }
+}
+</script>
 </body>
 </html>
