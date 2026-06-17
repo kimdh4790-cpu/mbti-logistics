@@ -191,10 +191,16 @@ body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
       <input type="file" id="scan-input" accept="image/*" capture="environment" style="display:none" onchange="emerUnifiedScan(this)">
     </label>
 
-    <div style="display:flex;gap:8px;margin-top:8px">
-      <button class="btn-sm btn-outline" onclick="emerStartScan()">🎥 라이브 스캔</button>
-      <button class="btn-sm btn-outline" onclick="showManualEntry()">✏️ 직접입력</button>
-    </div>
+<!-- 카메라 + 갤러리 버튼 -->
+<input type="file" id="gallery-input-main" accept="image/*" style="display:none" onchange="emerUnifiedScan(this)">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+  <button style="padding:11px;background:rgba(59,130,246,.15);color:var(--blue);border:1.5px solid var(--blue);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer" onclick="document.getElementById('scan-input').click()">📷 카메라</button>
+  <button style="padding:11px;background:rgba(123,47,255,.12);color:#7b2fff;border:1.5px solid #7b2fff;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer" onclick="document.getElementById('gallery-input-main').click()">🖼️ 갤러리</button>
+</div>
+<div style="display:flex;gap:8px;margin-top:6px">
+  <button class="btn-sm btn-outline" onclick="emerStartScan()">🎥 라이브 스캔</button>
+  <button class="btn-sm btn-outline" onclick="showManualEntry()">✏️ 직접입력</button>
+</div>
   </div>
 
   <!-- 예상 건수 카드 (캠프 수령 데이터) -->
@@ -660,7 +666,38 @@ async function loadTodayList(){
       return _cDiv.outerHTML;
     }).join('');
   }catch(e){
-    el.innerHTML='<div style="color:var(--text3);font-size:12px">로드 실패: '+e.message+'</div>';
+    if(e.code === 'permission-denied' || e.message.indexOf('permissions') >= 0) {
+      // dealerId 없이 driver+date만으로 재시도
+      try {
+        var snap2 = await _db.collection('emergency_deliveries')
+          .where('driver','==',window._APP.driver)
+          .where('date','==',today())
+          .orderBy('savedAt','desc').limit(30).get();
+        var items2=[];
+        snap2.forEach(function(doc){ items2.push(Object.assign({_id:doc.id},doc.data())); });
+        window._APP.doneCount = items2.length;
+        badge.textContent = items2.length+'건';
+        refreshCounters();
+        if(!items2.length){
+          el.innerHTML='<div style="color:var(--text3);font-size:12px;padding:8px 0;text-align:center">아직 저장된 배송이 없습니다</div>';
+          return;
+        }
+        // 렌더
+        el.innerHTML = items2.map(function(r){
+          var tn=(r.trackings&&r.trackings.length?r.trackings[0]:r.tracking)||'운송장 미상';
+          var addr=(r.addr||'').slice(0,35); var addrFull=r.addr||'';
+          var lat=r.gps&&r.gps.lat||0; var lng=r.gps&&r.gps.lng||0;
+          var t=(r.time||r.savedAt||'').slice(0,16); var isDone=r.status==='완료';
+          var card=document.createElement('div'); card.style.cssText='padding:8px 0;border-bottom:1px solid var(--border)';
+          card.innerHTML='<div style="display:flex;align-items:center;gap:10px"><div style="flex-shrink:0;width:28px;height:28px;border-radius:99px;background:'+(isDone?'var(--green)':'var(--blue)')+';display:flex;align-items:center;justify-content:center;font-size:12px">'+(isDone?'✅':'🚚')+'</div><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;font-family:monospace">'+tn+'</div><div style="font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+addr+'</div></div><div style="font-size:10px;color:var(--text3)">'+t.slice(-5)+'</div></div>';
+          return card.outerHTML;
+        }).join('');
+      } catch(e2) {
+        el.innerHTML='<div style="color:var(--text3);font-size:12px">배송 기록 없음</div>';
+      }
+    } else {
+      el.innerHTML='<div style="color:var(--text3);font-size:12px">로드 실패: '+e.message+'</div>';
+    }
   }
 }
 
