@@ -66,6 +66,17 @@
           "sizes": "192x192"
         }
       ]
+    },
+    {
+      "name": "어드민",
+      "short_name": "어드민",
+      "url": "/admin_sub",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }
