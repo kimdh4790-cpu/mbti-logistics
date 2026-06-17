@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>엠비티아이 배송앱</title>
+<title id="page-title">배송앱</title>
 
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -263,6 +263,7 @@ function _initFirebase(){
     _st=FB.storage();
     _fbReady=true;
     console.log('[FB] 초기화 완료');
+    _loadCompanyName();
     setTimeout(_tryFirebaseAuth, 200);
   }catch(e){
     console.warn('[FB] 초기화 오류:', e.message);
@@ -483,6 +484,10 @@ function showApp(){
   document.getElementById('app-screen').style.display='block';
   document.getElementById('bottom-bar').style.display='flex';
   document.getElementById('tb-name').textContent = window._APP.driver;
+  // 상단 회사명 표시
+  var _coName = localStorage.getItem('mbti_delivery_coname') || '배송앱';
+  var _tbCo = document.getElementById('tb-company');
+  if(_tbCo) _tbCo.textContent = _coName;
   refreshCounters();
   loadRouteInfo();
   loadTodayList();
@@ -4154,5 +4159,40 @@ async function _checkDelivPhotoHo(photoBase64, expectedHo){
   <div style="font-size:10px;color:#475569">엠비티아이 배송앱</div>
   <a href="https://donway.ai.kr/settle" style="font-size:11px;color:#00d4ff;text-decoration:none">🤖 DONWAY 정산 →</a>
 </div>
+<script>
+// ★ URL ?did= 또는 localStorage dealerId로 회사명 로드
+function _loadCompanyName() {
+  var did = new URLSearchParams(location.search).get('did')
+         || localStorage.getItem('mbti_delivery_dealerId') || '';
+  if(!did || !_db) return;
+  _db.collection('companies').doc(did).get().then(function(snap) {
+    if(!snap.exists) return;
+    var co = snap.data();
+    var name = co.companyName || co.company || '배송앱';
+    var sub  = name + ' 기사 전용';
+    // 저장
+    localStorage.setItem('mbti_delivery_dealerId', did);
+    localStorage.setItem('mbti_delivery_coname', name);
+    // 로그인 화면
+    var t = document.getElementById('co-name');
+    var s = document.getElementById('co-sub');
+    if(t) t.textContent = name;
+    if(s) s.textContent = sub;
+    // 타이틀
+    document.title = name + ' 배송앱';
+    // 캠프 목록도 회사 캠프로 교체
+    if(co.camps && co.camps.length) window._CO_CAMPS = co.camps;
+  }).catch(function(){});
+  // 저장된 회사명으로 즉시 표시
+  var saved = localStorage.getItem('mbti_delivery_coname');
+  if(saved) {
+    var t2 = document.getElementById('co-name');
+    var s2 = document.getElementById('co-sub');
+    if(t2) t2.textContent = saved;
+    if(s2) s2.textContent = saved + ' 기사 전용';
+    document.title = saved + ' 배송앱';
+  }
+}
+</script>
 </body>
 </html>
