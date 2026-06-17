@@ -1370,8 +1370,7 @@ function _openBatchMode() {
   modal.appendChild(inner);
   document.body.appendChild(modal);
   document.getElementById('batch-input').addEventListener('input', function(){
-    var cnt = this.value.split('
-').filter(function(l){return l.trim();}).length;
+    var cnt = this.value.split(String.fromCharCode(10)).filter(function(l){return l.trim();}).length;
     document.getElementById('batch-cnt').textContent = cnt;
   });
 }
@@ -1379,8 +1378,7 @@ function _openBatchMode() {
 function _startBatch() {
   var ta = document.getElementById('batch-input');
   if(!ta) return;
-  var tracks = ta.value.split('
-').map(function(l){return l.trim();}).filter(Boolean);
+  var tracks = ta.value.split(String.fromCharCode(10)).map(function(l){return l.trim();}).filter(Boolean);
   if(!tracks.length){ toast('운송장 번호를 입력하세요'); return; }
   _batchQueue = tracks.slice();
   document.getElementById('batch-modal').remove();
