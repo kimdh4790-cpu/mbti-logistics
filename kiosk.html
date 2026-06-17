@@ -145,9 +145,7 @@ tr:hover td{background:var(--bg3)}
           <span id="booking-count" style="display:none;margin-left:auto;background:var(--red);color:#fff;border-radius:20px;padding:1px 6px;font-size:10px;font-weight:700"></span>
         </div>
         <div class="nav-item" id="nav-menu" onclick="_nav(this,'menu')"><span class="nav-icon">💆</span>서비스 메뉴</div>
-        <div class="nav-item" id="nav-monthly" onclick="_nav(this,'monthly')"><span class="nav-icon">📆</span>월별 통계</div>
-    <div class="nav-item" id="nav-link" onclick="_nav(this,'link')"><span class="nav-icon">🔗</span>온라인 예약링크</div>
-    <div class="nav-item" id="nav-stats" onclick="_nav(this,'stats')"><span class="nav-icon">📈</span>매출 통계</div>
+        <div class="nav-item" id="nav-stats" onclick="_nav(this,'stats')"><span class="nav-icon">📈</span>매출 통계</div>
     <div class="nav-item" id="nav-customer" onclick="_nav(this,'customer')"><span class="nav-icon">🗂</span>고객 DB</div>
         <div class="nav-section">연결</div>
         <div class="nav-item" onclick="window.open('https://donway.ai.kr/settle','_blank')"><span class="nav-icon">💰</span>DONWAY 정산</div>
@@ -279,8 +277,6 @@ function _nav(el,page){
   else if(page==='bookings') _pageBookings(c);
   else if(page==='menu') _pageMenu(c);
   else if(page==='customer') _pageCustomer(c);
-  else if(page==='monthly') _pageMonthly(c);
-  else if(page==='link') _pageOnlineLink(c);
   else if(page==='stats') _statsPage(c,_getDid(),'mbetco_sales','date','finalPrice','💰 매출');
 }
 
@@ -684,147 +680,16 @@ function _linkAccount(email){
     body:JSON.stringify({email:email,fromDomain:location.hostname})
   }).catch(function(){});
 }
-</script>
-<script>
-// ★ 월별 매출 통계
-function _pageMonthly(c){
-  if(!c) c = document.getElementById('main-content');
-  var did = _getDid();
-  var now = new Date();
-  var ym = now.toISOString().slice(0,7);
 
-  c.innerHTML =
-    '<div style="font-size:14px;font-weight:800;margin-bottom:12px">📆 월별 통계</div>' +
-    // 월 선택
-    '<div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">' +
-      '<button onclick="_monthShift(-1)" style="padding:8px 12px;background:var(--bg3,#1e3a5f);color:#e2e8f0;border:none;border-radius:8px;cursor:pointer;font-size:16px">‹</button>' +
-      '<div id="month-label" style="flex:1;text-align:center;font-size:14px;font-weight:700">' + ym + '</div>' +
-      '<button onclick="_monthShift(1)" style="padding:8px 12px;background:var(--bg3,#1e3a5f);color:#e2e8f0;border:none;border-radius:8px;cursor:pointer;font-size:16px">›</button>' +
-    '</div>' +
-    '<div id="monthly-summary" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"></div>' +
-    '<div style="background:var(--bg2,#0d1b3e);border:1px solid var(--border,rgba(0,102,255,.2));border-radius:10px;padding:12px;margin-bottom:10px">' +
-      '<div style="font-size:11px;color:#475569;margin-bottom:6px" id="monthly-chart-title">일별 매출</div>' +
-      '<canvas id="monthly-chart" style="width:100%;display:block"></canvas>' +
-    '</div>' +
-    // 서비스별 분류
-    '<div style="font-size:12px;font-weight:700;margin-bottom:8px;color:#00d4ff">서비스별 매출</div>' +
-    '<div id="monthly-service"></div>' +
-    // 결제수단
-    '<div style="font-size:12px;font-weight:700;margin:10px 0 8px;color:#00d4ff">결제수단별</div>' +
-    '<div id="monthly-pay"></div>';
-
-  window._curYm = ym;
-  _loadMonthly(did, ym);
+function _copyLink(){
+  var el = document.getElementById('online-link');
+  if(!el) return;
+  navigator.clipboard.writeText(el.textContent).then(function(){ toast('✅ 복사됨'); });
 }
-
-function _monthShift(dir){
-  var ym = window._curYm || new Date().toISOString().slice(0,7);
-  var d = new Date(ym + '-01');
-  d.setMonth(d.getMonth() + dir);
-  var newYm = d.toISOString().slice(0,7);
-  window._curYm = newYm;
-  var lbl = document.getElementById('month-label');
-  if(lbl) lbl.textContent = newYm;
-  _loadMonthly(_getDid(), newYm);
-}
-
-function _loadMonthly(did, ym){
-  _db.collection('mbetco_sales').where('dealerId','==',did).where('ym','==',ym).get()
-  .then(function(snap){
-    var total=0, cnt=0, byDay={}, bySvc={}, byPay={};
-    snap.forEach(function(d){
-      var v = d.data();
-      var amt = v.finalPrice||0;
-      var date = (v.date||'').slice(0,10);
-      total += amt; cnt++;
-      if(!byDay[date]) byDay[date]={amt:0,cnt:0};
-      byDay[date].amt += amt; byDay[date].cnt++;
-      var svc = v.serviceNames||'기타';
-      byPay[v.payMethod||'기타'] = (byPay[v.payMethod||'기타']||0) + amt;
-      svc.split(',').forEach(function(s){
-        s = s.trim();
-        if(s){ bySvc[s] = (bySvc[s]||0) + amt; }
-      });
-    });
-
-    // 요약
-    var sumEl = document.getElementById('monthly-summary');
-    if(sumEl) sumEl.innerHTML =
-      '<div style="background:var(--bg3,#1e3a5f);border-radius:8px;padding:12px;text-align:center">' +
-        '<div style="font-size:18px;font-weight:900;color:#0066ff">₩' + Math.round(total).toLocaleString() + '</div>' +
-        '<div style="font-size:10px;color:#475569;margin-top:2px">총 매출</div>' +
-      '</div>' +
-      '<div style="background:var(--bg3,#1e3a5f);border-radius:8px;padding:12px;text-align:center">' +
-        '<div style="font-size:18px;font-weight:900;color:#f59e0b">' + cnt + '건</div>' +
-        '<div style="font-size:10px;color:#475569;margin-top:2px">총 건수</div>' +
-      '</div>';
-
-    // 차트
-    var days=[]; var y=parseInt(ym.slice(0,4)); var m=parseInt(ym.slice(5,7));
-    var daysInMonth = new Date(y,m,0).getDate();
-    for(var i=1;i<=daysInMonth;i++){
-      days.push(ym+'-'+(i<10?'0':'')+i);
-    }
-    var labels = days.map(function(d){ return d.slice(8); });
-    var values = days.map(function(d){ return byDay[d] ? byDay[d].amt : 0; });
-    var ct = document.getElementById('monthly-chart-title');
-    if(ct) ct.textContent = ym + ' 일별 매출';
-    setTimeout(function(){ _drawBarChart('monthly-chart', labels, values, '#7b2fff'); }, 50);
-
-    // 서비스별
-    var svcEl = document.getElementById('monthly-service');
-    if(svcEl){
-      var sorted = Object.entries(bySvc).sort(function(a,b){return b[1]-a[1];});
-      if(!sorted.length){ svcEl.innerHTML='<div style="color:#475569;font-size:12px;padding:8px">데이터 없음</div>'; }
-      else svcEl.innerHTML = sorted.map(function(e){
-        var pct = total ? Math.round(e[1]/total*100) : 0;
-        return '<div style="margin-bottom:8px">' +
-          '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">' +
-            '<span>' + e[0] + '</span><span style="font-weight:700">₩' + Math.round(e[1]).toLocaleString() + ' (' + pct + '%)</span>' +
-          '</div>' +
-          '<div style="height:6px;background:var(--bg3,#1e3a5f);border-radius:3px">' +
-            '<div style="height:100%;width:' + pct + '%;background:linear-gradient(90deg,#0066ff,#00d4ff);border-radius:3px"></div>' +
-          '</div></div>';
-      }).join('');
-    }
-
-    // 결제수단
-    var payEl = document.getElementById('monthly-pay');
-    if(payEl){
-      var psorted = Object.entries(byPay).sort(function(a,b){return b[1]-a[1];});
-      if(!psorted.length){ payEl.innerHTML='<div style="color:#475569;font-size:12px;padding:8px">데이터 없음</div>'; }
-      else payEl.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
-        psorted.map(function(e){
-          return '<div style="background:var(--bg3,#1e3a5f);border-radius:8px;padding:10px;text-align:center">' +
-            '<div style="font-size:13px;font-weight:700">₩' + Math.round(e[1]).toLocaleString() + '</div>' +
-            '<div style="font-size:10px;color:#475569;margin-top:2px">' + e[0] + '</div>' +
-          '</div>';
-        }).join('') + '</div>';
-    }
-  });
-}
-
-// ★ 예약 온라인 링크 생성
-function _pageOnlineLink(c){
-  if(!c) c = document.getElementById('main-content');
-  var did = _getDid();
-  var link = 'https://filo.ai.kr/order?did=' + did;
-
-  c.innerHTML =
-    '<div style="font-size:14px;font-weight:800;margin-bottom:12px">🔗 온라인 예약 링크</div>' +
-    '<div style="background:var(--bg2,#0d1b3e);border:1px solid var(--border,rgba(0,102,255,.2));border-radius:12px;padding:16px;margin-bottom:12px">' +
-      '<div style="font-size:12px;color:#94a3b8;margin-bottom:8px">고객에게 공유할 예약 링크</div>' +
-      '<div style="padding:12px;background:var(--bg3,#1e3a5f);border-radius:8px;font-size:12px;color:#00d4ff;word-break:break-all;margin-bottom:10px" id="online-link">' + link + '</div>' +
-      '<div style="display:flex;gap:8px">' +
-        '<button onclick="navigator.clipboard.writeText(document.getElementById('online-link').textContent).then(function(){toast('✅ 복사됨')})" style="flex:1;padding:11px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">📋 링크 복사</button>' +
-        '<button onclick="window.open('https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='+encodeURIComponent(document.getElementById('online-link').textContent))" style="flex:1;padding:11px;background:rgba(123,47,255,.2);color:#7b2fff;border:1px solid rgba(123,47,255,.3);border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">🔲 QR 생성</button>' +
-      '</div>' +
-    '</div>' +
-    '<div style="background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.15);border-radius:10px;padding:12px;font-size:12px;color:#94a3b8;line-height:1.7">' +
-      '✅ 카카오톡, 인스타그램, 문자로 공유<br>' +
-      '✅ 고객이 직접 서비스 선택 후 예약<br>' +
-      '✅ 예약 즉시 관리자에게 알림' +
-    '</div>';
+function _openQR(){
+  var el = document.getElementById('online-link');
+  if(!el) return;
+  window.open('https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(el.textContent));
 }
 </script>
 </body>
