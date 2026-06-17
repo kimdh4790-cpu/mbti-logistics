@@ -504,8 +504,7 @@ export default {
     // ★ mbtico.kr → 엠비티아이 배송앱
     if (hostname === 'mbtico.kr' || hostname === 'www.mbtico.kr') {
       if (path === '/' || path === '') return serveKVFile(env, 'mbtico_hub.html', 'text/html');
-      if (path === '/landing' || path === '/mbti-landing') return serveKVFile(env, 'mbti_landing.html', 'text/html');
-      if (path === '/scan' || path === '/scan.html') return serveKVFile(env, 'scan.html', 'text/html');
+      if (path === '/landing') return serveKVFile(env, 'mbti_landing.html', 'text/html');
       if (path === '/label' || path === '/label.html') return serveKVFile(env, 'label.html', 'text/html');
       if (path === '/delivery' || path === '/delivery.html') return serveKVFile(env, 'delivery.html', 'text/html');
       if (path === '/emergency' || path === '/emergency.html') return serveKVFile(env, 'emergency.html', 'text/html');
@@ -516,7 +515,6 @@ export default {
       if (path === '/drivers' || path === '/drivers.html') return serveKVFile(env, 'drivers.html', 'text/html');
       if (path === '/notice' || path === '/notice.html') return serveKVFile(env, 'notice.html', 'text/html');
       if (path === '/schedule' || path === '/schedule.html') return serveKVFile(env, 'schedule.html', 'text/html');
-      if (path === '/admin' || path === '/admin.html') return serveKVFile(env, 'admin.html', 'text/html');
     }
     // ★ mbetco.kr / bico.kr → FILO 구버전 호환
     if (hostname === 'bico.kr' || hostname === 'mbetco.kr' || hostname === 'www.mbetco.kr') {
