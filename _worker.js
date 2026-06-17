@@ -547,7 +547,11 @@ export default {
       if (path === '/' || path === '') return serveKVFile(env, 'mbti_landing.html', 'text/html');
       if (path === '/app' || path === '/hub') return serveKVFile(env, 'mbtico_hub.html', 'text/html');
       if (path === '/label' || path === '/label.html') return serveKVFile(env, 'label.html', 'text/html');
-      if (path === '/delivery' || path === '/delivery.html') return serveKVFile(env, 'delivery.html', 'text/html');
+      // /delivery → /drivers 리다이렉트 (drivers.html로 통합)
+      if (path === '/delivery' || path === '/delivery.html') {
+        var did = new URL(request.url).searchParams.get('did') || '';
+        return Response.redirect('https://mbtico.kr/drivers' + (did ? '?did=' + did : ''), 302);
+      }
       if (path === '/emergency' || path === '/emergency.html') return serveKVFile(env, 'emergency.html', 'text/html');
       if (path === '/checkin' || path === '/checkin.html') return serveKVFile(env, 'checkin.html', 'text/html');
       if (path === '/v9') return serveKVFile(env, 'index.html', 'text/html');
