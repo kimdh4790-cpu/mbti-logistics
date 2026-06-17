@@ -545,7 +545,8 @@ export default {
     if (hostname === 'mbtico.kr' || hostname === 'www.mbtico.kr') {
       if (path === '/settle' || path === '/settle.html') return Response.redirect('https://donway.ai.kr/settle', 302);
       if (path === '/' || path === '') return serveKVFile(env, 'mbti_landing.html', 'text/html');
-      if (path === '/app' || path === '/hub') return serveKVFile(env, 'mbtico_hub.html', 'text/html');
+      if (path === '/app') return serveKVFile(env, '엠비티아이_물류관리_v9.html', 'text/html');
+      if (path === '/hub') return serveKVFile(env, 'mbtico_hub.html', 'text/html');
       if (path === '/label' || path === '/label.html') return serveKVFile(env, 'label.html', 'text/html');
       // /delivery → /drivers 리다이렉트 (drivers.html로 통합)
       if (path === '/delivery' || path === '/delivery.html') {
