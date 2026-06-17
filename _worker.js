@@ -2489,6 +2489,10 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
       });
     }
 
+    if (path === '/mbtico-manifest.json') {
+      return serveKVFile(env, 'mbtico-manifest.json', 'application/manifest+json');
+    }
+
     if (path === '/manifest.json') {
       // mbtico.kr → mbtico manifest 서빙
       if (hostname.includes('mbetco') || hostname.includes('mbtico')) {
