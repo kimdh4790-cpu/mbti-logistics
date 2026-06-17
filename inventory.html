@@ -1452,12 +1452,13 @@ function _showLowStock(){
         '<div style="font-size:16px;font-weight:900;color:#ef4444">' + it.qty + '개</div>' +
       '</div>';
     }).join('') +
-    '<button onclick="var lo=document.getElementById('low-overlay');if(lo)lo.remove()" style="width:100%;padding:10px;background:#ef4444;color:#fff;border:none;border-radius:8px;margin-top:8px;cursor:pointer;font-size:13px;font-weight:700">닫기</button>' +
+    '<button id="low-close-btn" style="width:100%;padding:10px;background:#ef4444;color:#fff;border:none;border-radius:8px;margin-top:8px;cursor:pointer;font-size:13px;font-weight:700">닫기</button>' +
     '</div></div>';
   var el = document.createElement('div');
   el.id = 'low-overlay';
   el.innerHTML = html;
   document.body.appendChild(el);
+  var cb=document.getElementById('low-close-btn');if(cb)cb.onclick=function(){var lo=document.getElementById('low-overlay');if(lo)lo.remove();};
 }
 
 function _scanBarcode(mode){
