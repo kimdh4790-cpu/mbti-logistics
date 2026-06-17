@@ -489,7 +489,7 @@ export default {
     const method   = request.method;
     const hostname = url.hostname;
     // ★ mbtico.kr 최우선 처리 (slugMatch 오인식 방지)
-    if (hostname === 'mbtico.kr' || hostname === 'www.mbtico.kr' ||
+    if (hostname === 'bico.kr' || hostname === 'www.mbtico.kr' ||
         hostname === 'mbetco.kr' || hostname === 'www.mbetco.kr') {
       const e = env || _env_ref;
       // 루트 → 허브
