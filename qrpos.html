@@ -2156,7 +2156,7 @@ function _loadWorkers(did){
             '<div style="font-size:11px;color:#94a3b8;margin-top:2px">' + (v.role||'') + (v.commissionRate?' · 수수료'+v.commissionRate+'%':'') + '</div>' +
           '</div>' +
           '<div style="display:flex;gap:6px">' +
-            '<button data-wid="' + doc.id + '" data-act="' + (v.active!==false) + '" onclick="var b=this;_toggleWorker(b.dataset.wid,b.dataset.act==='true')" style="padding:5px 8px;background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3);border-radius:6px;font-size:10px;cursor:pointer">' + (v.active!==false?'비활성':'활성') + '</button>' +
+            '<button data-wid="' + doc.id + '" data-act="' + (v.active!==false) + '" onclick="var b=this;_toggleWorker(b.getAttribute(\'data-wid\'),b.getAttribute(\'data-act\')==='true')" style="padding:5px 8px;background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3);border-radius:6px;font-size:10px;cursor:pointer">' + (v.active!==false?'비활성':'활성') + '</button>' +
             '<button data-wid2="' + doc.id + '" onclick="_delWorkerById(this)" style="padding:5px 8px;background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:6px;font-size:10px;cursor:pointer">삭제</button>' +
           '</div>' +
         '</div>';
