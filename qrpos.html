@@ -2105,5 +2105,104 @@ function _saveRoom() {
   }).then(function(){ toast('✅ 객실 추가'); _roomSetup(document.getElementById('rm-content')); });
 }
 </script>
+<script>
+function _pageWorkers(c){
+  if(!c) c = document.getElementById('main-content');
+  var did = _dealer ? _dealer.id : '';
+  c.innerHTML =
+    '<div style="font-size:14px;font-weight:800;margin-bottom:12px">👤 직원 관리</div>' +
+    '<div style="background:var(--bg2,#0d1b3e);border:1px solid var(--border,rgba(0,102,255,.2));border-radius:12px;padding:14px;margin-bottom:12px">' +
+      '<div style="font-size:12px;font-weight:700;margin-bottom:10px;color:#00d4ff">+ 직원 등록</div>' +
+      '<div style="display:flex;flex-direction:column;gap:8px">' +
+        '<input id="w-name" placeholder="이름 *" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+        '<input id="w-role" placeholder="직책 (예: 원장, 디자이너)" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+        '<select id="w-etype" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+          '<option value="employee">직원 (4대보험)</option>' +
+          '<option value="contractor">사업자 (고용·산재)</option>' +
+          '<option value="freelancer">프리랜서 (3.3%)</option>' +
+        '</select>' +
+        '<input id="w-basepay" placeholder="기본급" type="number" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+        '<div style="display:flex;gap:6px;align-items:center">' +
+          '<input id="w-commission" placeholder="수수료율 %" type="number" min="0" max="100" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+          '<span style="font-size:12px;color:#94a3b8">% 수수료</span>' +
+        '</div>' +
+        '<input id="w-phone" placeholder="연락처 (선택)" type="tel" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+        '<button onclick="_saveWorker()" style="padding:11px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">등록</button>' +
+      '</div>' +
+    '</div>' +
+    '<div id="worker-list"><div style="text-align:center;padding:20px;color:var(--text3,#475569)">⏳</div></div>';
+  _loadWorkers(did);
+}
+
+function _loadWorkers(did){
+  _db.collection('mbetco_workers').where('dealerId','==',did)
+    .orderBy('createdAt','desc').get()
+    .then(function(snap){
+      var el = document.getElementById('worker-list');
+      if(!el) return;
+      if(snap.empty){
+        el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3,#475569)">등록된 직원 없음</div>';
+        return;
+      }
+      var typeLabel = {employee:'직원',contractor:'사업자',freelancer:'프리랜서'};
+      var typeColor = {employee:'#22c55e',contractor:'#f59e0b',freelancer:'#7b2fff'};
+      el.innerHTML = snap.docs.map(function(doc){
+        var v = doc.data();
+        var tl = typeLabel[v.employType||'employee']||'직원';
+        var tc = typeColor[v.employType||'employee']||'#22c55e';
+        return '<div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg2,#0d1b3e);border:1px solid var(--border,rgba(0,102,255,.2));border-radius:10px;padding:12px 14px;margin-bottom:8px">' +
+          '<div>' +
+            '<div style="font-size:13px;font-weight:800">' + (v.name||'') + ' <span style="font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(34,197,94,.1);color:' + tc + '">' + tl + '</span></div>' +
+            '<div style="font-size:11px;color:#94a3b8;margin-top:2px">' + (v.role||'') + (v.commissionRate?' · 수수료'+v.commissionRate+'%':'') + '</div>' +
+          '</div>' +
+          '<div style="display:flex;gap:6px">' +
+            '<button data-wid="' + doc.id + '" data-act="' + (v.active!==false) + '" onclick="var b=this;_toggleWorker(b.dataset.wid,b.dataset.act==='true')" style="padding:5px 8px;background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3);border-radius:6px;font-size:10px;cursor:pointer">' + (v.active!==false?'비활성':'활성') + '</button>' +
+            '<button data-wid2="' + doc.id + '" onclick="_delWorkerById(this)" style="padding:5px 8px;background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:6px;font-size:10px;cursor:pointer">삭제</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }).catch(function(){});
+}
+
+function _saveWorker(){
+  var did = _dealer ? _dealer.id : '';
+  var name = (document.getElementById('w-name')||{}).value.trim();
+  var role = (document.getElementById('w-role')||{}).value.trim();
+  var etype = (document.getElementById('w-etype')||{}).value||'employee';
+  var basePay = parseInt((document.getElementById('w-basepay')||{}).value||'0');
+  var commission = parseInt((document.getElementById('w-commission')||{}).value||'0');
+  var phone = (document.getElementById('w-phone')||{}).value.trim();
+  if(!name){ toast('이름을 입력하세요'); return; }
+  _db.collection('mbetco_workers').add({
+    dealerId:did, name:name, role:role||'직원',
+    employType:etype, basePay:basePay, commissionRate:commission,
+    payType:commission>0?(basePay>0?'mixed':'commission'):'fixed',
+    phone:phone, active:true, createdAt:new Date().toISOString()
+  }).then(function(){
+    toast('✅ ' + name + ' 등록');
+    ['w-name','w-role','w-basepay','w-commission','w-phone'].forEach(function(id){
+      var el=document.getElementById(id); if(el) el.value='';
+    });
+    _loadWorkers(did);
+  }).catch(function(e){ toast('❌ '+e.message); });
+}
+
+function _toggleWorker(id, isActive){
+  _db.collection('mbetco_workers').doc(id).update({active:!isActive})
+    .then(function(){ toast(isActive?'비활성 처리':'활성 처리'); _pageWorkers(); });
+}
+
+function _deleteWorker(id){
+  if(!confirm('삭제하시겠습니까?')) return;
+  _db.collection('mbetco_workers').doc(id).delete()
+    .then(function(){ toast('삭제 완료'); _pageWorkers(); });
+}
+
+function _delWorkerById(btn){
+  var id = btn.getAttribute('data-wid2');
+  if(!id) return;
+  _deleteWorker(id);
+}
+</script>
 </body>
 </html>
