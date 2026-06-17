@@ -72,6 +72,35 @@ async function fetchAsset(path, request, env) {
   });
 }
 
+// ★ serveKVFile — fetchAsset 래퍼 (도메인별 라우팅용)
+async function serveKVFile(env, fileName, contentType) {
+  const e = env || _env_ref;
+  try {
+    // KV 먼저 시도
+    if (e && e.DONWAY_ASSETS) {
+      const val = await e.DONWAY_ASSETS.get(fileName, { type: 'text' });
+      if (val) return new Response(val, {
+        headers: { 'Content-Type': contentType+'; charset=utf-8', 'Cache-Control': 'no-cache', ...SECURITY_HEADERS }
+      });
+    }
+    // GitHub Raw 폴백
+    const GITHUB_RAW = 'https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main';
+    const encoded = encodeURIComponent(fileName);
+    const resp = await fetch(GITHUB_RAW + '/' + encoded + '?bust=' + Date.now(), {
+      headers: { 'Cache-Control': 'no-cache' }
+    });
+    if (resp.ok) {
+      const text = await resp.text();
+      return new Response(text, {
+        headers: { 'Content-Type': contentType+'; charset=utf-8', 'Cache-Control': 'no-cache', ...SECURITY_HEADERS }
+      });
+    }
+    return new Response(fileName + ' not found', { status: 404 });
+  } catch(e2) {
+    return new Response('Error: ' + e2.message, { status: 500 });
+  }
+}
+
 // ── 임시 비밀번호 생성 (영문+숫자 8자리) ──
 function generateTempPassword() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
