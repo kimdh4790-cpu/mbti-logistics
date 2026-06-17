@@ -711,5 +711,994 @@ function _openQR(){
   window.open('https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(el.textContent));
 }
 </script>
+<script>// ════════════════════════════════════════════
+// ★ FILO 공통 기능 모듈
+// ① 포인트 적립·사용
+// ② 회원권 관리 (금액권·기간권·횟수권)
+// ③ 법정 급여명세서
+// ════════════════════════════════════════════
+
+// ─── 포인트 설정 기본값 ───
+var _POINT_RATE = 3; // 기본 3% 적립
+
+// ─── 포인트 페이지 ───
+function _pagePoints(c) {
+  if(!c) c = document.getElementById('main-content');
+  var did = _getDid ? _getDid() : (_dealer?_dealer.id:'');
+  c.innerHTML =
+    '<div style="font-size:14px;font-weight:800;margin-bottom:12px">🎁 포인트 관리</div>' +
+    // 설정
+    '<div style="background:var(--bg2,#0d1b3e);border:1px solid var(--border,rgba(0,102,255,.2));border-radius:12px;padding:14px;margin-bottom:12px">' +
+      '<div style="font-size:12px;font-weight:700;color:#00d4ff;margin-bottom:10px">⚙️ 포인트 설정</div>' +
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">' +
+        '<div style="font-size:12px;color:#94a3b8;flex:1">결제금액 대비 적립률</div>' +
+        '<input id="pt-rate" type="number" value="3" min="0" max="20" style="width:60px;padding:6px;border-radius:6px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px;text-align:center">'+
+        '<span style="font-size:12px;color:#94a3b8">%</span>' +
+      '</div>' +
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">' +
+        '<div style="font-size:12px;color:#94a3b8;flex:1">최소 사용 포인트</div>' +
+        '<input id="pt-min" type="number" value="1000" style="width:80px;padding:6px;border-radius:6px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px;text-align:center">' +
+        '<span style="font-size:12px;color:#94a3b8">P</span>' +
+      '</div>' +
+      '<button onclick="_savePointSettings()" style="width:100%;padding:10px;background:#0066ff;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">저장</button>' +
+    '</div>' +
+    // 고객 포인트 조회
+    '<div style="font-size:12px;font-weight:700;color:#00d4ff;margin-bottom:8px">👤 고객 포인트 조회·적립·사용</div>' +
+    '<div style="display:flex;gap:8px;margin-bottom:10px">' +
+      '<input id="pt-phone" placeholder="연락처 입력" type="tel" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+      '<button onclick="_searchPoint()" style="padding:10px 14px;background:#0066ff;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">조회</button>' +
+    '</div>' +
+    '<div id="pt-result"></div>' +
+    // 전체 포인트 현황
+    '<div style="font-size:12px;font-weight:700;color:#00d4ff;margin:12px 0 8px">📊 전체 현황</div>' +
+    '<div id="pt-summary"><div style="text-align:center;padding:16px;color:#475569">⏳</div></div>';
+
+  _loadPointSummary(did);
+  _loadPointSettings(did);
+}
+
+function _loadPointSettings(did) {
+  _db.collection('mbetco_settings').doc(did).get().then(function(snap) {
+    if(!snap.exists) return;
+    var v = snap.data();
+    if(v.pointRate !== undefined) {
+      var el = document.getElementById('pt-rate');
+      if(el) el.value = v.pointRate;
+      _POINT_RATE = v.pointRate;
+    }
+    if(v.pointMin !== undefined) {
+      var el2 = document.getElementById('pt-min');
+      if(el2) el2.value = v.pointMin;
+    }
+  });
+}
+
+function _savePointSettings() {
+  var did = _getDid ? _getDid() : (_dealer?_dealer.id:'');
+  var rate = parseInt((document.getElementById('pt-rate')||{}).value||'3');
+  var min = parseInt((document.getElementById('pt-min')||{}).value||'1000');
+  _db.collection('mbetco_settings').doc(did).set({
+    pointRate: rate, pointMin: min
+  }, {merge:true}).then(function() {
+    _POINT_RATE = rate;
+    toast('✅ 포인트 설정 저장');
+  });
+}
+
+function _searchPoint() {
+  var did = _getDid ? _getDid() : (_dealer?_dealer.id:'');
+  var phone = (document.getElementById('pt-phone')||{}).value.replace(/\D/g,'');
+  if(!phone) { toast('연락처를 입력하세요'); return; }
+  var el = document.getElementById('pt-result');
+  if(el) el.innerHTML = '<div style="text-align:center;padding:12px;color:#475569">⏳</div>';
+
+  _db.collection('mbetco_customers').doc(did+'_'+phone).get().then(function(snap) {
+    if(!snap.exists) {
+      el.innerHTML = '<div style="padding:12px;color:#ef4444;font-size:12px">등록된 고객이 아닙니다</div>';
+      return;
+    }
+    var v = snap.data();
+    var pts = v.points || 0;
+    el.innerHTML =
+      '<div style="background:rgba(0,102,255,.08);border:1px solid rgba(0,102,255,.2);border-radius:10px;padding:12px;margin-bottom:8px">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+          '<div>' +
+            '<div style="font-size:13px;font-weight:800">' + (v.name||'') + '</div>' +
+            '<div style="font-size:11px;color:#94a3b8">' + (v.phone||'') + '</div>' +
+          '</div>' +
+          '<div style="font-size:20px;font-weight:900;color:#f59e0b">' + pts.toLocaleString() + 'P</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:6px">' +
+          '<input id="pt-add-amt" placeholder="적립 금액" type="number" style="flex:1;padding:8px;border-radius:6px;border:1px solid rgba(0,102,255,.2);background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:12px">' +
+          '<button onclick="_addPoint(\'' + did+'_'+phone + '\')" style="padding:8px 12px;background:#22c55e;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">적립</button>' +
+        '</div>' +
+        '<div style="display:flex;gap:6px;margin-top:6px">' +
+          '<input id="pt-use-amt" placeholder="사용 포인트" type="number" style="flex:1;padding:8px;border-radius:6px;border:1px solid rgba(239,68,68,.2);background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:12px">' +
+          '<button onclick="_usePoint(\'' + did+'_'+phone + '\',' + pts + ')" style="padding:8px 12px;background:#ef4444;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">사용</button>' +
+        '</div>' +
+      '</div>';
+  });
+}
+
+function _addPoint(custId) {
+  var amt = parseInt((document.getElementById('pt-add-amt')||{}).value||'0');
+  if(!amt) { toast('금액을 입력하세요'); return; }
+  var pts = Math.floor(amt * (_POINT_RATE/100));
+  var ref = _db.collection('mbetco_customers').doc(custId);
+  ref.update({ points: firebase.firestore.FieldValue.increment(pts) })
+    .then(function() {
+      toast('✅ ' + pts.toLocaleString() + 'P 적립');
+      _db.collection('mbetco_point_log').add({
+        custId: custId, type: 'add', pts: pts, amt: amt,
+        at: new Date().toISOString()
+      });
+      _searchPoint();
+    });
+}
+
+function _usePoint(custId, curPts) {
+  var use = parseInt((document.getElementById('pt-use-amt')||{}).value||'0');
+  if(!use) { toast('사용 포인트를 입력하세요'); return; }
+  if(use > curPts) { toast('포인트가 부족합니다 (보유: '+curPts+'P)'); return; }
+  _db.collection('mbetco_customers').doc(custId).update({
+    points: firebase.firestore.FieldValue.increment(-use)
+  }).then(function() {
+    toast('✅ ' + use.toLocaleString() + 'P 사용');
+    _db.collection('mbetco_point_log').add({
+      custId: custId, type: 'use', pts: -use, at: new Date().toISOString()
+    });
+    _searchPoint();
+  });
+}
+
+function _loadPointSummary(did) {
+  _db.collection('mbetco_customers').where('dealerId','==',did)
+    .where('points','>',0).get().then(function(snap) {
+      var el = document.getElementById('pt-summary');
+      if(!el) return;
+      var total = 0;
+      snap.forEach(function(d){ total += d.data().points||0; });
+      el.innerHTML =
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+          '<div style="background:var(--bg3,#1e3a5f);border-radius:8px;padding:10px;text-align:center">' +
+            '<div style="font-size:16px;font-weight:900;color:#f59e0b">' + snap.size + '명</div>' +
+            '<div style="font-size:10px;color:#475569;margin-top:2px">포인트 보유 고객</div>' +
+          '</div>' +
+          '<div style="background:var(--bg3,#1e3a5f);border-radius:8px;padding:10px;text-align:center">' +
+            '<div style="font-size:16px;font-weight:900;color:#f59e0b">' + total.toLocaleString() + 'P</div>' +
+            '<div style="font-size:10px;color:#475569;margin-top:2px">총 발행 포인트</div>' +
+          '</div>' +
+        '</div>';
+    });
+}
+
+// ─── 회원권 관리 ───
+function _pageMembership(c) {
+  if(!c) c = document.getElementById('main-content');
+  var did = _getDid ? _getDid() : (_dealer?_dealer.id:'');
+  c.innerHTML =
+    '<div style="font-size:14px;font-weight:800;margin-bottom:12px">💳 회원권 관리</div>' +
+    '<div style="display:flex;gap:6px;margin-bottom:12px">' +
+      '<button onclick="_mbTab(\'sell\')" id="mb-tab-sell" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:#0066ff;color:#fff">발급</button>' +
+      '<button onclick="_mbTab(\'list\')" id="mb-tab-list" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:var(--bg3,#1e3a5f);color:#94a3b8">현황</button>' +
+      '<button onclick="_mbTab(\'type\')" id="mb-tab-type" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:var(--bg3,#1e3a5f);color:#94a3b8">상품</button>' +
+    '</div>' +
+    '<div id="mb-content"></div>';
+  window._mbDid = did;
+  _mbTab('sell');
+}
+
+function _mbTab(tab) {
+  ['sell','list','type'].forEach(function(t) {
+    var btn = document.getElementById('mb-tab-'+t);
+    if(btn){ btn.style.background = t===tab?'#0066ff':'var(--bg3,#1e3a5f)'; btn.style.color = t===tab?'#fff':'#94a3b8'; }
+  });
+  var c = document.getElementById('mb-content');
+  if(!c) return;
+  if(tab === 'sell') _mbSellForm(c);
+  else if(tab === 'list') _mbList(c);
+  else if(tab === 'type') _mbTypeForm(c);
+}
+
+function _mbTypeForm(c) {
+  var did = window._mbDid;
+  c.innerHTML =
+    '<div style="font-size:12px;font-weight:700;color:#00d4ff;margin-bottom:10px">+ 회원권 상품 등록</div>' +
+    '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">' +
+      '<input id="mbt-name" placeholder="상품명 (예: 헤어케어 10회권)" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+      '<select id="mbt-type" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+        '<option value="amount">금액권 (충전식)</option>' +
+        '<option value="count">횟수권 (N회)</option>' +
+        '<option value="period">기간권 (N일)</option>' +
+      '</select>' +
+      '<input id="mbt-price" placeholder="판매가격" type="number" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+      '<input id="mbt-value" placeholder="충전금액 / 횟수 / 유효일수" type="number" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+      '<button onclick="_saveMbType()" style="padding:11px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">등록</button>' +
+    '</div>' +
+    '<div id="mbt-list"><div style="text-align:center;padding:12px;color:#475569">⏳</div></div>';
+  _loadMbTypes(did);
+}
+
+function _saveMbType() {
+  var did = window._mbDid;
+  var name = (document.getElementById('mbt-name')||{}).value.trim();
+  var type = (document.getElementById('mbt-type')||{}).value;
+  var price = parseInt((document.getElementById('mbt-price')||{}).value||'0');
+  var value = parseInt((document.getElementById('mbt-value')||{}).value||'0');
+  if(!name||!price||!value){ toast('모든 항목을 입력하세요'); return; }
+  _db.collection('mbetco_mb_types').add({
+    dealerId:did, name:name, mbType:type, price:price, value:value,
+    active:true, createdAt:new Date().toISOString()
+  }).then(function(){ toast('✅ 회원권 상품 등록'); _loadMbTypes(did); });
+}
+
+function _loadMbTypes(did) {
+  _db.collection('mbetco_mb_types').where('dealerId','==',did).where('active','==',true).get()
+  .then(function(snap) {
+    var el = document.getElementById('mbt-list');
+    if(!el) return;
+    if(snap.empty){ el.innerHTML='<div style="color:#475569;font-size:12px;text-align:center;padding:12px">등록된 상품 없음</div>'; return; }
+    var typeLabel = {amount:'금액권',count:'횟수권',period:'기간권'};
+    el.innerHTML = snap.docs.map(function(d){
+      var v = d.data();
+      return '<div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg2,#0d1b3e);border:1px solid var(--border,rgba(0,102,255,.2));border-radius:8px;padding:10px 12px;margin-bottom:6px">' +
+        '<div>' +
+          '<div style="font-size:12px;font-weight:700">' + v.name + '</div>' +
+          '<div style="font-size:10px;color:#94a3b8">' + (typeLabel[v.mbType]||v.mbType) + ' · ₩' + v.price.toLocaleString() + ' · ' + v.value + (v.mbType==='amount'?'원':v.mbType==='count'?'회':'일') + '</div>' +
+        '</div>' +
+        '<button onclick="_db.collection(\'mbetco_mb_types\').doc(\'' + d.id + '\').update({active:false}).then(function(){toast(\'삭제됨\');_loadMbTypes(\'' + did + '\')})" style="padding:4px 8px;background:rgba(239,68,68,.12);color:#ef4444;border:none;border-radius:6px;font-size:10px;cursor:pointer">삭제</button>' +
+      '</div>';
+    }).join('');
+    window._mbTypes = snap.docs.map(function(d){ return Object.assign({id:d.id},d.data()); });
+  });
+}
+
+function _mbSellForm(c) {
+  var did = window._mbDid;
+  _db.collection('mbetco_mb_types').where('dealerId','==',did).where('active','==',true).get()
+  .then(function(snap) {
+    var opts = snap.empty ? '<option value="">상품 없음</option>' :
+      snap.docs.map(function(d){
+        var v = d.data();
+        var tl = {amount:'금액권',count:'횟수권',period:'기간권'};
+        return '<option value="' + d.id + '">' + v.name + ' (₩' + v.price.toLocaleString() + ')</option>';
+      }).join('');
+    c.innerHTML =
+      '<div style="font-size:12px;font-weight:700;color:#00d4ff;margin-bottom:10px">💳 회원권 발급</div>' +
+      '<div style="display:flex;flex-direction:column;gap:8px">' +
+        '<input id="mb-phone" placeholder="고객 연락처" type="tel" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+        '<input id="mb-cname" placeholder="고객명" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+        '<select id="mb-type-sel" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' + opts + '</select>' +
+        '<select id="mb-pay" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+          '<option value="card">카드</option><option value="cash">현금</option><option value="transfer">계좌이체</option>' +
+        '</select>' +
+        '<button onclick="_issueMembership()" style="padding:12px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">💳 발급</button>' +
+      '</div>';
+    window._mbTypeDocs = snap.docs.map(function(d){ return Object.assign({id:d.id},d.data()); });
+  });
+}
+
+function _issueMembership() {
+  var did = window._mbDid;
+  var phone = (document.getElementById('mb-phone')||{}).value.replace(/\D/g,'');
+  var cname = (document.getElementById('mb-cname')||{}).value.trim();
+  var typeId = (document.getElementById('mb-type-sel')||{}).value;
+  var pay = (document.getElementById('mb-pay')||{}).value;
+  if(!phone||!cname||!typeId){ toast('모든 항목을 입력하세요'); return; }
+  var mbType = (window._mbTypeDocs||[]).find(function(t){ return t.id===typeId; });
+  if(!mbType){ toast('상품을 선택하세요'); return; }
+
+  var now = new Date();
+  var startDate = now.toISOString().slice(0,10);
+  var endDate = '';
+  if(mbType.mbType === 'period') {
+    var exp = new Date(now);
+    exp.setDate(exp.getDate() + mbType.value);
+    endDate = exp.toISOString().slice(0,10);
+  }
+
+  _db.collection('mbetco_memberships').add({
+    dealerId:did, custPhone:phone, custName:cname,
+    mbTypeId:typeId, mbTypeName:mbType.name,
+    mbType:mbType.mbType, price:mbType.price,
+    totalValue:mbType.value, remainValue:mbType.value,
+    payMethod:pay, startDate:startDate, endDate:endDate,
+    active:true, createdAt:now.toISOString()
+  }).then(function(){
+    // 매출에도 기록
+    _db.collection('mbetco_sales').add({
+      dealerId:did, custName:cname, custPhone:phone,
+      serviceNames:'회원권: '+mbType.name,
+      finalPrice:mbType.price, payMethod:pay,
+      date:startDate, ym:startDate.slice(0,7),
+      isMembership:true, createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    toast('✅ 회원권 발급 완료');
+    _mbSellForm(document.getElementById('mb-content'));
+  });
+}
+
+function _mbList(c) {
+  var did = window._mbDid;
+  c.innerHTML = '<div style="text-align:center;padding:16px;color:#475569">⏳</div>';
+  _db.collection('mbetco_memberships').where('dealerId','==',did)
+    .where('active','==',true).orderBy('createdAt','desc').limit(30).get()
+    .then(function(snap) {
+      if(snap.empty){ c.innerHTML='<div style="text-align:center;padding:16px;color:#475569">발급된 회원권 없음</div>'; return; }
+      var today = new Date().toISOString().slice(0,10);
+      var tl = {amount:'금액권',count:'횟수권',period:'기간권'};
+      c.innerHTML = snap.docs.map(function(doc){
+        var v = doc.data();
+        var expired = v.mbType==='period' && v.endDate && v.endDate < today;
+        var remaining = v.mbType==='amount' ? '₩'+v.remainValue.toLocaleString()+'원 잔액' :
+                        v.mbType==='count' ? v.remainValue+'회 남음' :
+                        expired ? '만료' : v.endDate+'까지';
+        return '<div style="background:var(--bg2,#0d1b3e);border:1px solid '+(expired?'rgba(239,68,68,.3)':'var(--border,rgba(0,102,255,.2))')+';border-radius:10px;padding:12px;margin-bottom:8px">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center">' +
+            '<div>' +
+              '<div style="font-size:13px;font-weight:800">' + v.custName + ' <span style="font-size:10px;color:#94a3b8">' + v.custPhone + '</span></div>' +
+              '<div style="font-size:11px;color:#00d4ff;margin-top:2px">' + v.mbTypeName + ' · ' + (tl[v.mbType]||'') + '</div>' +
+            '</div>' +
+            '<div style="text-align:right">' +
+              '<div style="font-size:13px;font-weight:800;color:'+(expired?'#ef4444':'#22c55e')+'">' + remaining + '</div>' +
+              (v.mbType!=='period' ? '<button onclick="_useMembership(\'' + doc.id + '\',\'' + v.mbType + '\',' + v.remainValue + ')" style="margin-top:4px;padding:4px 8px;background:rgba(0,102,255,.15);color:#0066ff;border:none;border-radius:6px;font-size:10px;cursor:pointer">사용</button>' : '') +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    });
+}
+
+function _useMembership(id, mbType, remain) {
+  var use = parseInt(prompt(mbType==='amount'?'사용 금액 입력':'사용 횟수 입력 (남은: '+remain+'회)', mbType==='count'?'1':'') || '0');
+  if(!use||use<=0) return;
+  if(use > remain){ toast('잔여량 초과'); return; }
+  var newRemain = remain - use;
+  _db.collection('mbetco_memberships').doc(id).update({
+    remainValue: newRemain,
+    active: newRemain > 0
+  }).then(function(){
+    toast('✅ 사용 처리 완료 (잔여: ' + newRemain + ')');
+    _mbList(document.getElementById('mb-content'));
+  });
+}
+
+// ─── 법정 급여명세서 (근로기준법 제48조) ───
+function _pagePayslip(c) {
+  if(!c) c = document.getElementById('main-content');
+  var did = _getDid ? _getDid() : (_dealer?_dealer.id:'');
+  c.innerHTML =
+    '<div style="font-size:14px;font-weight:800;margin-bottom:4px">📄 급여명세서 발급</div>' +
+    '<div style="font-size:11px;color:#f59e0b;margin-bottom:12px">근로기준법 제48조 — 미교부 시 500만원 이하 벌금</div>' +
+    '<div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">' +
+      '<button onclick="_slipShift(-1)" style="padding:8px 12px;background:var(--bg3,#1e3a5f);color:#e2e8f0;border:none;border-radius:8px;cursor:pointer;font-size:16px">‹</button>' +
+      '<div id="slip-ym" style="flex:1;text-align:center;font-size:14px;font-weight:700">' + new Date().toISOString().slice(0,7) + '</div>' +
+      '<button onclick="_slipShift(1)" style="padding:8px 12px;background:var(--bg3,#1e3a5f);color:#e2e8f0;border:none;border-radius:8px;cursor:pointer;font-size:16px">›</button>' +
+    '</div>' +
+    '<div id="slip-list"><div style="text-align:center;padding:16px;color:#475569">⏳</div></div>';
+
+  window._slipYm = new Date().toISOString().slice(0,7);
+  _loadPayslips(did, window._slipYm);
+}
+
+function _slipShift(dir) {
+  var ym = window._slipYm;
+  var d = new Date(ym+'-01'); d.setMonth(d.getMonth()+dir);
+  window._slipYm = d.toISOString().slice(0,7);
+  var lbl = document.getElementById('slip-ym');
+  if(lbl) lbl.textContent = window._slipYm;
+  var did = _getDid ? _getDid() : (_dealer?_dealer.id:'');
+  _loadPayslips(did, window._slipYm);
+}
+
+function _loadPayslips(did, ym) {
+  Promise.all([
+    _db.collection('mbetco_workers').where('dealerId','==',did).where('active','==',true).get(),
+    _db.collection('mbetco_sales').where('dealerId','==',did).where('ym','==',ym).get(),
+    _db.collection('attendance').where('dealerId','==',did).where('ym','==',ym).get()
+  ]).then(function(results) {
+    var workers=[]; results[0].forEach(function(d){ workers.push(Object.assign({id:d.id},d.data())); });
+    var sales=[]; results[1].forEach(function(d){ sales.push(d.data()); });
+    var attends=[]; results[2].forEach(function(d){ attends.push(d.data()); });
+
+    var el = document.getElementById('slip-list');
+    if(!el) return;
+    if(!workers.length){ el.innerHTML='<div style="text-align:center;padding:16px;color:#475569">등록된 직원 없음</div>'; return; }
+
+    // 직원별 출퇴근 집계
+    var workerAttend = {};
+    attends.forEach(function(a) {
+      var wid = a.workerId||a.workerName||'';
+      if(!workerAttend[wid]) workerAttend[wid]={days:0,hours:0,overtime:0,night:0,holiday:0};
+      workerAttend[wid].days++;
+      var hrs = parseFloat(a.workHours||a.hours||8);
+      workerAttend[wid].hours += hrs;
+      if(hrs > 8) workerAttend[wid].overtime += (hrs-8);
+    });
+
+    // 직원별 매출
+    var workerSales={};
+    sales.forEach(function(s){
+      var wid=s.designerId||s.workerIds&&s.workerIds[0]||s.designerName||'';
+      if(!workerSales[wid]) workerSales[wid]=0;
+      workerSales[wid]+=s.finalPrice||0;
+    });
+
+    el.innerHTML = workers.map(function(w) {
+      var att = workerAttend[w.id]||workerAttend[w.name]||{days:0,hours:0,overtime:0,night:0,holiday:0};
+      var salesAmt = workerSales[w.id]||workerSales[w.name]||0;
+      var base = w.basePay||0;
+      var commission = (w.payType==='commission'||w.payType==='mixed') ? Math.round(salesAmt*((w.commissionRate||0)/100)) : 0;
+      var overtime = Math.round((base/209)*(att.overtime||0)*1.5);
+      var night = Math.round((base/209)*(att.night||0)*0.5);
+      var gross = base + commission + overtime + night;
+      var calc = _calcInsurance(gross, w.employType||'employee');
+      var payDate = ym + '-25'; // 기본 25일
+      var tl = {employee:'직원',contractor:'사업자',freelancer:'프리랜서'};
+
+      return '<div style="background:var(--bg2,#0d1b3e);border:1px solid var(--border,rgba(0,102,255,.2));border-radius:12px;padding:14px;margin-bottom:10px">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">' +
+          '<div>' +
+            '<div style="font-size:13px;font-weight:800">' + w.name + '</div>' +
+            '<div style="font-size:10px;color:#94a3b8">' + (tl[w.employType]||'직원') + ' · ' + (w.role||'') + '</div>' +
+          '</div>' +
+          '<button onclick="_printPayslip(\'' + w.id + '\',\'' + w.name + '\',' + gross + ',' + calc.netPay + ',\'' + ym + '\',\'' + payDate + '\','+ att.days + ',' + att.hours + ',' + (att.overtime||0) + ',' + commission + ',' + overtime + '," + JSON.stringify(calc.deductions) + ")" style="padding:6px 10px;background:rgba(0,102,255,.15);color:#0066ff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">📄 명세서</button>' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px">' +
+          '<div style="background:rgba(0,0,0,.2);border-radius:6px;padding:8px"><div style="color:#475569">근무일수</div><div style="font-weight:700;margin-top:2px">' + att.days + '일</div></div>' +
+          '<div style="background:rgba(0,0,0,.2);border-radius:6px;padding:8px"><div style="color:#475569">총 근무시간</div><div style="font-weight:700;margin-top:2px">' + att.hours.toFixed(1) + 'h</div></div>' +
+          '<div style="background:rgba(0,0,0,.2);border-radius:6px;padding:8px"><div style="color:#475569">총 지급액</div><div style="font-weight:700;color:#0066ff;margin-top:2px">₩' + gross.toLocaleString() + '</div></div>' +
+          '<div style="background:rgba(0,0,0,.2);border-radius:6px;padding:8px"><div style="color:#475569">실수령액</div><div style="font-weight:700;color:#22c55e;margin-top:2px">₩' + calc.netPay.toLocaleString() + '</div></div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  });
+}
+
+function _printPayslip(wid, wname, gross, net, ym, payDate, days, hours, overtime, commission, overtimePay, deductions) {
+  if(typeof deductions === 'string') { try{ deductions=JSON.parse(deductions); }catch(e){ deductions={}; } }
+  var dLabels = {pension:'국민연금',health:'건강보험',longterm:'장기요양보험',employment:'고용보험',incomeTax:'소득세',localTax:'지방소득세',incomeTax33:'원천세(3.3%)'};
+  var totalDed = Object.values(deductions).reduce(function(a,b){return a+(b||0);},0);
+
+  var html = '<div style="position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;overflow-y:auto;padding:16px" onclick="this.remove()">' +
+    '<div style="background:#fff;border-radius:12px;padding:20px;max-width:400px;margin:0 auto;color:#1e293b" onclick="event.stopPropagation()">' +
+      // 헤더
+      '<div style="text-align:center;border-bottom:2px solid #0066ff;padding-bottom:12px;margin-bottom:14px">' +
+        '<div style="font-size:16px;font-weight:900;color:#0066ff">임금명세서</div>' +
+        '<div style="font-size:11px;color:#64748b;margin-top:2px">근로기준법 제48조 · ' + ym + '</div>' +
+      '</div>' +
+      // 근로자 정보
+      '<div style="background:#f8fafc;border-radius:8px;padding:10px;margin-bottom:12px;font-size:12px">' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">' +
+          '<div><span style="color:#64748b">성명</span><br><strong>' + wname + '</strong></div>' +
+          '<div><span style="color:#64748b">임금지급일</span><br><strong>' + payDate + '</strong></div>' +
+          '<div><span style="color:#64748b">근로일수</span><br><strong>' + days + '일</strong></div>' +
+          '<div><span style="color:#64748b">총 근무시간</span><br><strong>' + hours + 'h</strong></div>' +
+          (overtime > 0 ? '<div><span style="color:#64748b">연장근로</span><br><strong>' + overtime + 'h</strong></div>' : '') +
+        '</div>' +
+      '</div>' +
+      // 지급 내역
+      '<div style="margin-bottom:12px">' +
+        '<div style="font-size:12px;font-weight:700;color:#0066ff;margin-bottom:6px">지급 내역</div>' +
+        _payslipRow('기본급', gross - commission - overtimePay) +
+        (commission>0 ? _payslipRow('수수료', commission) : '') +
+        (overtimePay>0 ? _payslipRow('연장근로수당', overtimePay) : '') +
+        '<div style="border-top:1px solid #e2e8f0;margin-top:6px;padding-top:6px">' +
+          _payslipRow('임금 합계', gross, true) +
+        '</div>' +
+      '</div>' +
+      // 공제 내역
+      '<div style="margin-bottom:12px">' +
+        '<div style="font-size:12px;font-weight:700;color:#ef4444;margin-bottom:6px">공제 내역</div>' +
+        Object.entries(deductions).map(function(e){ return _payslipRow(dLabels[e[0]]||e[0], e[1]); }).join('') +
+        '<div style="border-top:1px solid #e2e8f0;margin-top:6px;padding-top:6px">' +
+          _payslipRow('공제 합계', totalDed, true, '#ef4444') +
+        '</div>' +
+      '</div>' +
+      // 실수령액
+      '<div style="background:linear-gradient(135deg,#0066ff,#00d4ff);border-radius:10px;padding:14px;text-align:center;color:#fff;margin-bottom:14px">' +
+        '<div style="font-size:11px;opacity:.8">실수령액</div>' +
+        '<div style="font-size:24px;font-weight:900">₩' + net.toLocaleString() + '</div>' +
+      '</div>' +
+      '<div style="font-size:10px;color:#94a3b8;text-align:center;margin-bottom:12px">' +
+        '이 명세서는 근로기준법 제48조에 따라 발급됩니다' +
+      '</div>' +
+      '<div style="display:flex;gap:8px">' +
+        '<button onclick="window.print()" style="flex:1;padding:10px;background:#0066ff;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🖨️ 인쇄</button>' +
+        '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="flex:1;padding:10px;background:#f1f5f9;color:#475569;border:none;border-radius:8px;font-size:12px;cursor:pointer">닫기</button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function _payslipRow(label, amt, bold, color) {
+  return '<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;' + (bold?'font-weight:800;':'') + '">' +
+    '<span style="color:#475569">' + label + '</span>' +
+    '<span style="' + (color?'color:'+color+';':'') + '">' + (typeof amt==='number'?'₩'+amt.toLocaleString():amt) + '</span>' +
+  '</div>';
+}
+
+// ─── 업종별 특화 기능 설정 ───
+function _pageIndustry(c) {
+  if(!c) c = document.getElementById('main-content');
+  var did = _getDid ? _getDid() : (_dealer?_dealer.id:'');
+  c.innerHTML =
+    '<div style="font-size:14px;font-weight:800;margin-bottom:12px">🏢 업종 설정</div>' +
+    '<div style="font-size:12px;color:#94a3b8;margin-bottom:12px">업종 선택 시 맞춤 기능이 활성화됩니다</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+    [
+      {key:'beauty',icon:'💇',name:'뷰티·미용',desc:'시술관리·동의서·재방문알림'},
+      {key:'nail',icon:'💅',name:'네일·피부',desc:'시술히스토리·전후사진'},
+      {key:'food',icon:'🍽️',name:'음식점·카페',desc:'테이블·주문·배달연동'},
+      {key:'health',icon:'💪',name:'헬스·요가',desc:'기간권·출입QR·PT스케줄'},
+      {key:'academy',icon:'📚',name:'학원·교습소',desc:'수강권·출석·학부모알림'},
+      {key:'laundry',icon:'👕',name:'세탁',desc:'접수·완료알림·픽업'},
+      {key:'stay',icon:'🏨',name:'숙박',desc:'객실·체크인·예약캘린더'},
+      {key:'retail',icon:'🛍️',name:'소매·잡화',desc:'재고·바코드·발주'},
+    ].map(function(ind) {
+      return '<div onclick="_setIndustry(\'' + ind.key + '\',\'' + did + '\')" style="background:var(--bg2,#0d1b3e);border:1px solid var(--border,rgba(0,102,255,.2));border-radius:10px;padding:14px;text-align:center;cursor:pointer" id="ind-'+ind.key+'">' +
+        '<div style="font-size:28px;margin-bottom:6px">' + ind.icon + '</div>' +
+        '<div style="font-size:12px;font-weight:800">' + ind.name + '</div>' +
+        '<div style="font-size:10px;color:#475569;margin-top:3px;line-height:1.4">' + ind.desc + '</div>' +
+      '</div>';
+    }).join('') +
+    '</div>';
+
+  // 현재 설정 불러오기
+  _db.collection('mbetco_settings').doc(did).get().then(function(snap){
+    if(!snap.exists) return;
+    var ind = snap.data().industry;
+    if(ind){
+      var el = document.getElementById('ind-'+ind);
+      if(el){ el.style.border='2px solid #0066ff'; el.style.background='rgba(0,102,255,.1)'; }
+    }
+  });
+}
+
+function _setIndustry(key, did) {
+  _db.collection('mbetco_settings').doc(did).set({industry:key},{merge:true}).then(function(){
+    // 이전 선택 초기화
+    ['beauty','nail','food','health','academy','laundry','stay','retail'].forEach(function(k){
+      var el=document.getElementById('ind-'+k);
+      if(el){ el.style.border='1px solid var(--border,rgba(0,102,255,.2))'; el.style.background='var(--bg2,#0d1b3e)'; }
+    });
+    var sel = document.getElementById('ind-'+key);
+    if(sel){ sel.style.border='2px solid #0066ff'; sel.style.background='rgba(0,102,255,.1)'; }
+    toast('✅ 업종 설정: ' + key);
+  });
+}
+
+// ════════════════════════════════════════════
+// ★ 업종별 특화 기능
+// ════════════════════════════════════════════
+
+// ─── 뷰티·미용 특화 ───
+function _pageBeautyRecord(c) {
+  if(!c) c = document.getElementById('main-content');
+  var did = _getDid ? _getDid() : (_dealer?_dealer.id:'');
+  c.innerHTML =
+    '<div style="font-size:14px;font-weight:800;margin-bottom:12px">💇 시술 기록</div>' +
+    '<div style="display:flex;gap:8px;margin-bottom:12px">' +
+      '<input id="br-phone" placeholder="고객 연락처" type="tel" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+      '<button onclick="_loadBeautyRecord()" style="padding:10px 14px;background:#0066ff;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">조회</button>' +
+    '</div>' +
+    '<div id="br-content"></div>';
+}
+
+function _loadBeautyRecord() {
+  var did = _getDid ? _getDid() : (_dealer?_dealer.id:'');
+  var phone = (document.getElementById('br-phone')||{}).value.replace(/\D/g,'');
+  if(!phone){ toast('연락처를 입력하세요'); return; }
+  var c = document.getElementById('br-content');
+  if(c) c.innerHTML = '<div style="text-align:center;padding:12px;color:#475569">⏳</div>';
+
+  _db.collection('mbetco_sales').where('dealerId','==',did)
+    .where('custPhone','==',phone).orderBy('date','desc').limit(20).get()
+    .then(function(snap) {
+      var el = document.getElementById('br-content');
+      if(!el) return;
+      if(snap.empty){ el.innerHTML='<div style="text-align:center;padding:16px;color:#475569">시술 기록 없음</div>'; return; }
+      el.innerHTML =
+        '<div style="font-size:12px;font-weight:700;color:#00d4ff;margin-bottom:8px">시술 히스토리</div>' +
+        snap.docs.map(function(doc){
+          var v = doc.data();
+          return '<div style="background:var(--bg2,#0d1b3e);border-left:3px solid #0066ff;border-radius:0 8px 8px 0;padding:10px 12px;margin-bottom:6px">' +
+            '<div style="display:flex;justify-content:space-between;font-size:12px">' +
+              '<div>' +
+                '<div style="font-weight:700">' + (v.serviceNames||'') + '</div>' +
+                '<div style="color:#94a3b8;margin-top:2px">' + (v.designerName?v.designerName+' · ':'') + v.date + '</div>' +
+              '</div>' +
+              '<div style="font-weight:800;color:#0066ff">₩' + (v.finalPrice||0).toLocaleString() + '</div>' +
+            '</div>' +
+            (v.beautyNote ? '<div style="font-size:11px;color:#f59e0b;margin-top:6px;padding:6px 8px;background:rgba(245,158,11,.08);border-radius:6px">📝 ' + v.beautyNote + '</div>' : '') +
+            (v.photos&&v.photos.length ? '<div style="font-size:10px;color:#22c55e;margin-top:4px">📸 사진 ' + v.photos.length + '장</div>' : '') +
+          '</div>';
+        }).join('') +
+        // 메모 추가
+        '<div style="margin-top:10px">' +
+          '<input id="br-note" placeholder="시술 메모 추가 (모발상태, 색상코드 등)" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:12px;margin-bottom:6px">' +
+          '<button onclick="_addBeautyNote(\'' + phone + '\')" style="width:100%;padding:9px;background:#7b2fff;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">메모 저장</button>' +
+        '</div>';
+    });
+}
+
+function _addBeautyNote(phone) {
+  var did = _getDid ? _getDid() : (_dealer?_dealer.id:'');
+  var note = (document.getElementById('br-note')||{}).value.trim();
+  if(!note){ toast('메모를 입력하세요'); return; }
+  _db.collection('mbetco_beauty_notes').add({
+    dealerId:did, custPhone:phone, note:note, at:new Date().toISOString()
+  }).then(function(){ toast('✅ 메모 저장'); _loadBeautyRecord(); });
+}
+
+// 고객 동의서
+function _pageConsent(c) {
+  if(!c) c = document.getElementById('main-content');
+  c.innerHTML =
+    '<div style="font-size:14px;font-weight:800;margin-bottom:12px">📋 시술 동의서</div>' +
+    '<div style="background:var(--bg2,#0d1b3e);border:1px solid var(--border,rgba(0,102,255,.2));border-radius:12px;padding:16px;margin-bottom:12px">' +
+      '<div style="font-size:12px;font-weight:700;margin-bottom:10px">고객 정보</div>' +
+      '<div style="display:flex;flex-direction:column;gap:8px">' +
+        '<input id="cs-name" placeholder="고객명" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+        '<input id="cs-phone" placeholder="연락처" type="tel" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+        '<input id="cs-service" placeholder="시술 내용" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+        '<textarea id="cs-allergy" placeholder="알러지·특이사항 (없으면 없음)" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px;height:70px;resize:none"></textarea>' +
+      '</div>' +
+    '</div>' +
+    '<div style="background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:12px;margin-bottom:12px;font-size:11px;color:#94a3b8;line-height:1.7">' +
+      '본인은 시술 전 충분한 상담을 받았으며, 위에 기재한 알러지 및 특이사항 외에 해당 시술에 영향을 미칠 수 있는 의학적 사항이 없음을 확인합니다. 시술 중 발생할 수 있는 일반적인 부작용(두피 자극, 색상 편차 등)에 대해 안내받았으며 이에 동의합니다.' +
+    '</div>' +
+    '<div style="font-size:12px;font-weight:700;margin-bottom:8px">서명</div>' +
+    '<canvas id="sig-canvas" style="width:100%;height:120px;background:#fff;border-radius:8px;touch-action:none;border:1px solid rgba(0,102,255,.2)"></canvas>' +
+    '<div style="display:flex;gap:8px;margin-top:8px">' +
+      '<button onclick="_clearSig()" style="padding:9px 14px;background:rgba(239,68,68,.12);color:#ef4444;border:none;border-radius:8px;font-size:12px;cursor:pointer">지우기</button>' +
+      '<button onclick="_saveConsent()" style="flex:1;padding:9px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">✅ 동의서 저장</button>' +
+    '</div>';
+
+  // 서명 캔버스
+  setTimeout(function() {
+    var canvas = document.getElementById('sig-canvas');
+    if(!canvas) return;
+    canvas.width = canvas.offsetWidth;
+    canvas.height = 120;
+    var ctx = canvas.getContext('2d');
+    var drawing = false;
+    function getPos(e) {
+      var rect = canvas.getBoundingClientRect();
+      var src = e.touches ? e.touches[0] : e;
+      return {x:(src.clientX-rect.left)*(canvas.width/rect.width), y:(src.clientY-rect.top)*(canvas.height/rect.height)};
+    }
+    canvas.addEventListener('mousedown', function(e){ drawing=true; var p=getPos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); });
+    canvas.addEventListener('mousemove', function(e){ if(!drawing)return; var p=getPos(e); ctx.lineTo(p.x,p.y); ctx.strokeStyle='#1e293b'; ctx.lineWidth=2; ctx.stroke(); });
+    canvas.addEventListener('mouseup', function(){ drawing=false; });
+    canvas.addEventListener('touchstart', function(e){ e.preventDefault(); drawing=true; var p=getPos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); });
+    canvas.addEventListener('touchmove', function(e){ e.preventDefault(); if(!drawing)return; var p=getPos(e); ctx.lineTo(p.x,p.y); ctx.strokeStyle='#1e293b'; ctx.lineWidth=2; ctx.stroke(); });
+    canvas.addEventListener('touchend', function(){ drawing=false; });
+  }, 100);
+}
+
+function _clearSig() {
+  var canvas = document.getElementById('sig-canvas');
+  if(!canvas) return;
+  canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
+}
+
+function _saveConsent() {
+  var did = _getDid ? _getDid() : (_dealer?_dealer.id:'');
+  var name = (document.getElementById('cs-name')||{}).value.trim();
+  var phone = (document.getElementById('cs-phone')||{}).value.trim();
+  var service = (document.getElementById('cs-service')||{}).value.trim();
+  var allergy = (document.getElementById('cs-allergy')||{}).value.trim();
+  var canvas = document.getElementById('sig-canvas');
+  var sig = canvas ? canvas.toDataURL() : '';
+  if(!name||!phone||!service){ toast('필수 항목을 입력하세요'); return; }
+  _db.collection('mbetco_consents').add({
+    dealerId:did, custName:name, custPhone:phone,
+    service:service, allergy:allergy, signature:sig,
+    agreedAt:new Date().toISOString()
+  }).then(function(){ toast('✅ 동의서 저장 완료'); });
+}
+
+// ─── 헬스·요가 특화 ───
+function _pageSchedule(c) {
+  if(!c) c = document.getElementById('main-content');
+  var did = _getDid ? _getDid() : (_dealer?_dealer.id:'');
+  var today = new Date().toISOString().slice(0,10);
+  c.innerHTML =
+    '<div style="font-size:14px;font-weight:800;margin-bottom:12px">📅 수업 스케줄</div>' +
+    // 수업 등록
+    '<div style="background:var(--bg2,#0d1b3e);border:1px solid var(--border,rgba(0,102,255,.2));border-radius:12px;padding:14px;margin-bottom:12px">' +
+      '<div style="font-size:12px;font-weight:700;color:#00d4ff;margin-bottom:10px">+ 수업 등록</div>' +
+      '<div style="display:flex;flex-direction:column;gap:8px">' +
+        '<input id="sch-title" placeholder="수업명 (예: 요가 기초반)" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+        '<input id="sch-trainer" placeholder="강사명" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+        '<div style="display:flex;gap:6px">' +
+          '<input id="sch-date" type="date" value="' + today + '" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+          '<input id="sch-time" type="time" value="10:00" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+        '</div>' +
+        '<input id="sch-maxcap" type="number" placeholder="최대 수강인원" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+        '<button onclick="_saveSchedule()" style="padding:11px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">등록</button>' +
+      '</div>' +
+    '</div>' +
+    // 오늘 스케줄
+    '<div style="font-size:12px;font-weight:700;color:#00d4ff;margin-bottom:8px">📆 오늘 수업 — ' + today + '</div>' +
+    '<div id="sch-list"><div style="text-align:center;padding:12px;color:#475569">⏳</div></div>';
+
+  _loadSchedules(did, today);
+}
+
+function _saveSchedule() {
+  var did = _getDid ? _getDid() : (_dealer?_dealer.id:'');
+  var title = (document.getElementById('sch-title')||{}).value.trim();
+  var trainer = (document.getElementById('sch-trainer')||{}).value.trim();
+  var date = (document.getElementById('sch-date')||{}).value;
+  var time = (document.getElementById('sch-time')||{}).value;
+  var maxcap = parseInt((document.getElementById('sch-maxcap')||{}).value||'10');
+  if(!title||!date){ toast('수업명과 날짜를 입력하세요'); return; }
+  _db.collection('mbetco_schedules').add({
+    dealerId:did, title:title, trainer:trainer,
+    date:date, time:time, maxCapacity:maxcap,
+    currentCount:0, ym:date.slice(0,7),
+    createdAt:new Date().toISOString()
+  }).then(function(){ toast('✅ 수업 등록'); _loadSchedules(did, date); });
+}
+
+function _loadSchedules(did, date) {
+  _db.collection('mbetco_schedules').where('dealerId','==',did).where('date','==',date)
+    .orderBy('time','asc').get().then(function(snap) {
+      var el = document.getElementById('sch-list');
+      if(!el) return;
+      if(snap.empty){ el.innerHTML='<div style="text-align:center;padding:12px;color:#475569">등록된 수업 없음</div>'; return; }
+      el.innerHTML = snap.docs.map(function(doc){
+        var v = doc.data();
+        var full = v.currentCount >= v.maxCapacity;
+        return '<div style="background:var(--bg2,#0d1b3e);border:1px solid '+(full?'rgba(239,68,68,.3)':'var(--border,rgba(0,102,255,.2))')+';border-radius:10px;padding:12px;margin-bottom:8px">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center">' +
+            '<div>' +
+              '<div style="font-size:13px;font-weight:800">' + v.time + ' ' + v.title + '</div>' +
+              '<div style="font-size:11px;color:#94a3b8;margin-top:2px">' + (v.trainer||'') + '</div>' +
+            '</div>' +
+            '<div style="text-align:right">' +
+              '<div style="font-size:12px;font-weight:700;color:'+(full?'#ef4444':'#22c55e')+'">' + v.currentCount + '/' + v.maxCapacity + '명</div>' +
+              '<button onclick="_checkInSchedule(\'' + doc.id + '\',' + v.currentCount + ',' + v.maxCapacity + ')" style="margin-top:4px;padding:4px 8px;background:rgba(0,102,255,.15);color:#0066ff;border:none;border-radius:6px;font-size:10px;cursor:pointer"' + (full?' disabled':'') + '>출석</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    });
+}
+
+function _checkInSchedule(id, cur, max) {
+  if(cur >= max){ toast('정원이 찼습니다'); return; }
+  _db.collection('mbetco_schedules').doc(id).update({
+    currentCount: firebase.firestore.FieldValue.increment(1)
+  }).then(function(){
+    toast('✅ 출석 처리');
+    var today = new Date().toISOString().slice(0,10);
+    var did = _getDid ? _getDid() : (_dealer?_dealer.id:'');
+    _loadSchedules(did, today);
+  });
+}
+
+// ─── 세탁 특화 ───
+function _pageLaundry(c) {
+  if(!c) c = document.getElementById('main-content');
+  var did = _getDid ? _getDid() : (_dealer?_dealer.id:'');
+  var today = new Date().toISOString().slice(0,10);
+  c.innerHTML =
+    '<div style="font-size:14px;font-weight:800;margin-bottom:12px">👕 세탁 접수</div>' +
+    '<div style="background:var(--bg2,#0d1b3e);border:1px solid var(--border,rgba(0,102,255,.2));border-radius:12px;padding:14px;margin-bottom:12px">' +
+      '<div style="display:flex;flex-direction:column;gap:8px">' +
+        '<input id="lnd-name" placeholder="고객명" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+        '<input id="lnd-phone" placeholder="연락처" type="tel" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+        '<textarea id="lnd-items" placeholder="세탁물 목록 (예: 셔츠 2장, 바지 1장)" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px;height:70px;resize:none"></textarea>' +
+        '<input id="lnd-due" type="date" value="' + today + '" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+        '<input id="lnd-price" placeholder="요금" type="number" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+        '<button onclick="_saveLaundry()" style="padding:11px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">접수</button>' +
+      '</div>' +
+    '</div>' +
+    '<div style="font-size:12px;font-weight:700;color:#00d4ff;margin-bottom:8px">📋 접수 현황</div>' +
+    '<div id="lnd-list"><div style="text-align:center;padding:12px;color:#475569">⏳</div></div>';
+  _loadLaundry(did);
+}
+
+function _saveLaundry() {
+  var did = _getDid ? _getDid() : (_dealer?_dealer.id:'');
+  var name=(document.getElementById('lnd-name')||{}).value.trim();
+  var phone=(document.getElementById('lnd-phone')||{}).value.trim();
+  var items=(document.getElementById('lnd-items')||{}).value.trim();
+  var due=(document.getElementById('lnd-due')||{}).value;
+  var price=parseInt((document.getElementById('lnd-price')||{}).value||'0');
+  if(!name||!phone||!items){ toast('필수 항목을 입력하세요'); return; }
+  var recNo = 'LND-' + Date.now().toString().slice(-6);
+  _db.collection('mbetco_laundry').add({
+    dealerId:did, recNo:recNo, custName:name, custPhone:phone,
+    items:items, dueDate:due, price:price,
+    status:'접수', recDate:new Date().toISOString().slice(0,10),
+    createdAt:new Date().toISOString()
+  }).then(function(){ toast('✅ 접수 완료 (' + recNo + ')'); _loadLaundry(did); });
+}
+
+function _loadLaundry(did) {
+  _db.collection('mbetco_laundry').where('dealerId','==',did)
+    .where('status','!=','완료').orderBy('status').orderBy('dueDate','asc').limit(20).get()
+    .then(function(snap) {
+      var el = document.getElementById('lnd-list');
+      if(!el) return;
+      if(snap.empty){ el.innerHTML='<div style="text-align:center;padding:12px;color:#475569">접수 내역 없음</div>'; return; }
+      var statusColor={접수:'#f59e0b',세탁중:'#0066ff',완료:'#22c55e'};
+      el.innerHTML = snap.docs.map(function(doc){
+        var v = doc.data();
+        return '<div style="background:var(--bg2,#0d1b3e);border:1px solid var(--border,rgba(0,102,255,.2));border-radius:10px;padding:12px;margin-bottom:8px">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
+            '<div>' +
+              '<div style="font-size:12px;font-weight:800">' + v.custName + ' <span style="color:#475569;font-size:10px">' + v.recNo + '</span></div>' +
+              '<div style="font-size:11px;color:#94a3b8;margin-top:1px">' + v.custPhone + ' · 완료예정: ' + v.dueDate + '</div>' +
+            '</div>' +
+            '<span style="padding:3px 8px;border-radius:6px;font-size:10px;font-weight:700;background:rgba(245,158,11,.12);color:' + (statusColor[v.status]||'#94a3b8') + '">' + v.status + '</span>' +
+          '</div>' +
+          '<div style="font-size:11px;color:#94a3b8;margin-bottom:6px">' + v.items + '</div>' +
+          '<div style="display:flex;gap:6px">' +
+            '<button onclick="_updateLaundryStatus(\'' + doc.id + '\',\'세탁중\')" style="flex:1;padding:6px;background:rgba(0,102,255,.12);color:#0066ff;border:none;border-radius:6px;font-size:11px;cursor:pointer">세탁중</button>' +
+            '<button onclick="_updateLaundryStatus(\'' + doc.id + '\',\'완료\')" style="flex:1;padding:6px;background:rgba(34,197,94,.12);color:#22c55e;border:none;border-radius:6px;font-size:11px;cursor:pointer">완료·연락</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    });
+}
+
+function _updateLaundryStatus(id, status) {
+  var did = _getDid ? _getDid() : (_dealer?_dealer.id:'');
+  _db.collection('mbetco_laundry').doc(id).update({status:status}).then(function(){
+    toast('✅ ' + status + ' 처리');
+    if(status==='완료') toast('고객 연락 후 찾아가도록 안내하세요 📞');
+    _loadLaundry(did);
+  });
+}
+
+// ─── 숙박 특화 ───
+function _pageRooms(c) {
+  if(!c) c = document.getElementById('main-content');
+  var did = _getDid ? _getDid() : (_dealer?_dealer.id:'');
+  var today = new Date().toISOString().slice(0,10);
+  c.innerHTML =
+    '<div style="font-size:14px;font-weight:800;margin-bottom:12px">🏨 객실 관리</div>' +
+    '<div style="display:flex;gap:6px;margin-bottom:12px">' +
+      '<button onclick="_roomTab(\'status\')" id="rm-tab-status" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;background:#0066ff;color:#fff">현황</button>' +
+      '<button onclick="_roomTab(\'checkin\')" id="rm-tab-checkin" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;background:var(--bg3,#1e3a5f);color:#94a3b8">체크인</button>' +
+      '<button onclick="_roomTab(\'setup\')" id="rm-tab-setup" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;background:var(--bg3,#1e3a5f);color:#94a3b8">객실설정</button>' +
+    '</div>' +
+    '<div id="rm-content"></div>';
+  window._rmDid = did;
+  window._rmToday = today;
+  _roomTab('status');
+}
+
+function _roomTab(tab) {
+  ['status','checkin','setup'].forEach(function(t){
+    var btn=document.getElementById('rm-tab-'+t);
+    if(btn){ btn.style.background=t===tab?'#0066ff':'var(--bg3,#1e3a5f)'; btn.style.color=t===tab?'#fff':'#94a3b8'; }
+  });
+  var c = document.getElementById('rm-content');
+  if(!c) return;
+  if(tab==='status') _roomStatus(c);
+  else if(tab==='checkin') _roomCheckin(c);
+  else if(tab==='setup') _roomSetup(c);
+}
+
+function _roomStatus(c) {
+  var did = window._rmDid;
+  var today = window._rmToday;
+  _db.collection('mbetco_rooms').where('dealerId','==',did).get()
+  .then(function(snap){
+    if(snap.empty){ c.innerHTML='<div style="text-align:center;padding:16px;color:#475569">객실 없음 — 객실설정에서 추가하세요</div>'; return; }
+    var rooms=[]; snap.forEach(function(d){ rooms.push(Object.assign({id:d.id},d.data())); });
+    // 오늘 체크인 현황
+    _db.collection('mbetco_checkins').where('dealerId','==',did)
+      .where('checkIn','<=',today).where('checkOut','>',today).get()
+      .then(function(ciSnap){
+        var occupied={};
+        ciSnap.forEach(function(d){ occupied[d.data().roomId]=d.data(); });
+        c.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+          rooms.map(function(r){
+            var occ = occupied[r.id];
+            return '<div style="background:var(--bg2,#0d1b3e);border:1px solid '+(occ?'rgba(239,68,68,.3)':'rgba(34,197,94,.3)')+';border-radius:10px;padding:12px;text-align:center">' +
+              '<div style="font-size:16px;margin-bottom:4px">🛏️</div>' +
+              '<div style="font-size:13px;font-weight:800">' + r.name + '</div>' +
+              '<div style="font-size:10px;color:'+(occ?'#ef4444':'#22c55e')+';margin-top:4px">' + (occ?'사용중 · '+occ.custName:'공실') + '</div>' +
+              (occ?'<div style="font-size:10px;color:#94a3b8;margin-top:2px">~' + occ.checkOut + '</div>':'') +
+            '</div>';
+          }).join('') +
+        '</div>';
+      });
+  });
+}
+
+function _roomCheckin(c) {
+  var did = window._rmDid;
+  var today = window._rmToday;
+  c.innerHTML =
+    '<div style="font-size:12px;font-weight:700;color:#00d4ff;margin-bottom:10px">🔑 체크인 등록</div>' +
+    '<div style="display:flex;flex-direction:column;gap:8px">' +
+      '<input id="ci-name" placeholder="고객명" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+      '<input id="ci-phone" placeholder="연락처" type="tel" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+      '<select id="ci-room" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px"><option value="">객실 선택</option></select>' +
+      '<div style="display:flex;gap:6px">' +
+        '<div style="flex:1"><div style="font-size:10px;color:#94a3b8;margin-bottom:4px">체크인</div><input id="ci-in" type="date" value="' + today + '" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px"></div>' +
+        '<div style="flex:1"><div style="font-size:10px;color:#94a3b8;margin-bottom:4px">체크아웃</div><input id="ci-out" type="date" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px"></div>' +
+      '</div>' +
+      '<input id="ci-price" placeholder="숙박요금" type="number" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+      '<button onclick="_saveCheckin()" style="padding:11px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">🔑 체크인</button>' +
+    '</div>';
+
+  // 객실 목록 로드
+  _db.collection('mbetco_rooms').where('dealerId','==',did).get().then(function(snap){
+    var sel = document.getElementById('ci-room');
+    if(!sel) return;
+    snap.forEach(function(d){ sel.innerHTML += '<option value="'+d.id+'">'+d.data().name+'</option>'; });
+  });
+}
+
+function _saveCheckin() {
+  var did = window._rmDid;
+  var name=(document.getElementById('ci-name')||{}).value.trim();
+  var phone=(document.getElementById('ci-phone')||{}).value.trim();
+  var roomId=(document.getElementById('ci-room')||{}).value;
+  var inDate=(document.getElementById('ci-in')||{}).value;
+  var outDate=(document.getElementById('ci-out')||{}).value;
+  var price=parseInt((document.getElementById('ci-price')||{}).value||'0');
+  if(!name||!roomId||!inDate||!outDate){ toast('필수 항목을 입력하세요'); return; }
+  _db.collection('mbetco_checkins').add({
+    dealerId:did, custName:name, custPhone:phone,
+    roomId:roomId, checkIn:inDate, checkOut:outDate, price:price,
+    status:'체크인', createdAt:new Date().toISOString()
+  }).then(function(){
+    _db.collection('mbetco_sales').add({
+      dealerId:did, custName:name, custPhone:phone,
+      serviceNames:'숙박: '+inDate+'~'+outDate,
+      finalPrice:price, payMethod:'card',
+      date:inDate, ym:inDate.slice(0,7),
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    toast('✅ 체크인 완료'); _roomTab('status');
+  });
+}
+
+function _roomSetup(c) {
+  var did = window._rmDid;
+  c.innerHTML =
+    '<div style="font-size:12px;font-weight:700;color:#00d4ff;margin-bottom:10px">+ 객실 등록</div>' +
+    '<div style="display:flex;gap:8px;margin-bottom:14px">' +
+      '<input id="rm-name" placeholder="객실명 (예: 101호, 특실A)" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+      '<input id="rm-price" placeholder="기본요금" type="number" style="width:100px;padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+      '<button onclick="_saveRoom()" style="padding:10px 14px;background:#0066ff;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">추가</button>' +
+    '</div>' +
+    '<div id="rm-setup-list"><div style="text-align:center;padding:12px;color:#475569">⏳</div></div>';
+
+  _db.collection('mbetco_rooms').where('dealerId','==',did).get().then(function(snap){
+    var el = document.getElementById('rm-setup-list');
+    if(!el) return;
+    if(snap.empty){ el.innerHTML='<div style="color:#475569;font-size:12px;text-align:center;padding:8px">등록된 객실 없음</div>'; return; }
+    el.innerHTML = snap.docs.map(function(d){
+      var v = d.data();
+      return '<div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg2,#0d1b3e);border:1px solid var(--border,rgba(0,102,255,.2));border-radius:8px;padding:10px 12px;margin-bottom:6px">' +
+        '<div><div style="font-size:12px;font-weight:700">' + v.name + '</div><div style="font-size:10px;color:#94a3b8">₩' + (v.price||0).toLocaleString() + '/박</div></div>' +
+        '<button onclick="_db.collection(\'mbetco_rooms\').doc(\'' + d.id + '\').delete().then(function(){toast(\'삭제됨\');_roomSetup(document.getElementById(\'rm-content\'))})" style="padding:4px 8px;background:rgba(239,68,68,.12);color:#ef4444;border:none;border-radius:6px;font-size:10px;cursor:pointer">삭제</button>' +
+      '</div>';
+    }).join('');
+  });
+}
+
+function _saveRoom() {
+  var did = window._rmDid;
+  var name=(document.getElementById('rm-name')||{}).value.trim();
+  var price=parseInt((document.getElementById('rm-price')||{}).value||'0');
+  if(!name){ toast('객실명을 입력하세요'); return; }
+  _db.collection('mbetco_rooms').add({
+    dealerId:did, name:name, price:price, active:true
+  }).then(function(){ toast('✅ 객실 추가'); _roomSetup(document.getElementById('rm-content')); });
+}
+</script>
 </body>
 </html>
