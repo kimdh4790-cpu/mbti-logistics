@@ -275,38 +275,47 @@ function _tryFirebaseAuth() {
   if(!FB) { _showFbFallback(); return; }
   var auth = FB.auth ? FB.auth() : null;
   if(!auth) { _showFbFallback(); return; }
-
-  // 기존 로그인 상태 확인
   auth.onAuthStateChanged(function(user) {
     if(user) {
-      // Firebase 로그인된 경우 → drivers에서 정보 조회
       _db.collection('drivers').where('email','==',user.email).limit(1).get()
       .then(function(snap) {
         if(!snap.empty) {
           var drv = snap.docs[0].data();
           _selDriver = drv.name || user.displayName || user.email.split('@')[0];
           _selCamp = drv.camp || localStorage.getItem('mbti_delivery_camp') || '';
-          document.getElementById('driver-list').innerHTML =
-            '<div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:10px;padding:12px;margin-bottom:12px">' +
-            '<div style="font-size:13px;font-weight:800;color:#22c55e">✅ ' + _selDriver + '</div>' +
-            '<div style="font-size:11px;color:#94a3b8;margin-top:2px">캠프: ' + (_selCamp||'미지정') + '</div>' +
-            '</div>' +
-            '<div style="display:flex;gap:6px;margin-top:8px">'+
-            ['부산1','부산2','부산3','대구2','진주M'].map(function(c){
-              return '<button type="button" data-camp="'+c+'" onclick="_selCamp_btn(this,''+c+'')" style="flex:1;padding:8px 2px;background:'+(_selCamp===c?'#1e3a5f':'var(--bg3)')+';border:1.5px solid '+(_selCamp===c?'var(--blue)':'var(--border2)')+';border-radius:8px;color:'+(_selCamp===c?'var(--blue)':'var(--text3)')+';font-size:11px;font-weight:700;cursor:pointer">'+c+'</button>';
-            }).join('') +
-            '</div>';
-          var btn = document.getElementById('login-btn');
-          if(btn) { btn.disabled=false; btn.onclick=doLogin; }
+          _renderDriverPanel();
         } else {
           _showFbFallback();
         }
       }).catch(function() { _showFbFallback(); });
     } else {
-      // 로그인 안 된 경우 → 이메일/비번 폼 + 폴백
       _showAuthForm();
     }
   });
+}
+
+function _renderDriverPanel() {
+  var el = document.getElementById('driver-list');
+  if(!el) return;
+  var info = document.createElement('div');
+  info.style.cssText = 'background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:10px;padding:12px;margin-bottom:12px';
+  info.innerHTML = '<div style="font-size:13px;font-weight:800;color:#22c55e">✅ ' + _selDriver + '</div><div style="font-size:11px;color:#94a3b8;margin-top:2px">캠프: ' + (_selCamp||'미지정') + '</div>';
+  el.innerHTML = '';
+  el.appendChild(info);
+  var row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:6px;margin-top:8px';
+  ['부산1','부산2','부산3','대구2','진주M'].forEach(function(c) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.setAttribute('data-camp', c);
+    btn.style.cssText = 'flex:1;padding:8px 2px;background:'+(_selCamp===c?'#1e3a5f':'var(--bg3)')+';border:1.5px solid '+(_selCamp===c?'var(--blue)':'var(--border2)')+';border-radius:8px;color:'+(_selCamp===c?'var(--blue)':'var(--text3)')+';font-size:11px;font-weight:700;cursor:pointer';
+    btn.textContent = c;
+    btn.onclick = function(){ _selCamp_btn(this, this.getAttribute('data-camp')); };
+    row.appendChild(btn);
+  });
+  el.appendChild(row);
+  var loginBtn = document.getElementById('login-btn');
+  if(loginBtn) { loginBtn.disabled = false; loginBtn.onclick = doLogin; }
 }
 
 function _showAuthForm() {
