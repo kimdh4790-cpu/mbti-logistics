@@ -4060,6 +4060,16 @@ if(document.readyState==="loading"){
   _initFirebase();
 }
 </script>
+<script>
+// ★ 3도메인 통합 계정 자동 연결
+function _linkAccount(email){
+  fetch('/api/link-account',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({email:email,fromDomain:location.hostname})
+  }).catch(function(){});
+}
+</script>
 </body>
 </html>
 <script>
