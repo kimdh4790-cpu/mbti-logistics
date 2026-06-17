@@ -14002,7 +14002,7 @@ function _openApiSettings() {
       '<div style="display:flex;gap:6px">' +
         '<input id="api-kakao-inp" type="password" value="' + savedKakao + '" placeholder="카카오 REST API 키" ' +
           'style="flex:1;padding:10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:12px">' +
-        '<button onclick="_saveApiKey('kakao')" style="padding:10px 14px;background:#FEE500;color:#3C1E1E;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">저장</button>' +
+        '<button onclick="_saveKakaoKey()" style="padding:10px 14px;background:#FEE500;color:#3C1E1E;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">저장</button>' +
       '</div>' +
     '</div>' +
     // Google
@@ -14011,7 +14011,7 @@ function _openApiSettings() {
       '<div style="display:flex;gap:6px">' +
         '<input id="api-google-inp" type="password" value="' + savedGoogle + '" placeholder="Google Cloud API 키" ' +
           'style="flex:1;padding:10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:12px">' +
-        '<button onclick="_saveApiKey('google')" style="padding:10px 14px;background:rgba(0,102,255,.8);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">저장</button>' +
+        '<button onclick="_saveGoogleKey()" style="padding:10px 14px;background:rgba(0,102,255,.8);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">저장</button>' +
       '</div>' +
     '</div>' +
     '<div style="font-size:10px;color:rgba(255,255,255,.3);text-align:center">키는 localStorage에만 저장 · 서버 전송 없음</div>';
@@ -14020,6 +14020,9 @@ function _openApiSettings() {
   document.body.appendChild(modal);
 }
 
+
+function _saveKakaoKey(){ _saveApiKey('kakao'); }
+function _saveGoogleKey(){ _saveApiKey('google'); }
 function _saveApiKey(type) {
   if(type === 'kakao') {
     var val = (document.getElementById('api-kakao-inp')||{}).value.trim();
