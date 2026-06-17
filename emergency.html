@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>긴급배송 — DONWAY</title>
+<title>배송 — DONWAY</title>
 <style>
 :root{--bg:#f8f7f4;--bg2:#fff;--bg3:#f0efe9;--text:#2C2C2A;--text2:#5F5E5A;--text3:#888780;--border:rgba(0,0,0,.1);--r:10px;--rl:14px;--blue:#185FA5;--blue-l:#E6F1FB;--red:#A32D2D;--red-l:#FCEBEB;--green:#3B6D11;--green-l:#EAF3DE;--teal:#0F6E56;--teal-l:#E1F5EE;--amber:#854F0B;--amber-l:#FAEEDA;--gray:#5F5E5A;--gray-l:#F1EFE8;--gray-m:#D3D1C7;}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -43,7 +43,7 @@ label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bot
 
 <div id="login-screen" class="login-wrap">
   <div class="login-box">
-    <div class="login-logo"><div class="logo-text">DONWAY</div><div class="sub">긴급배송 시스템</div></div>
+    <div class="login-logo"><div class="logo-text">DONWAY</div><div class="sub">배송 시스템</div></div>
     <div class="form-group"><label>이메일</label><input type="email" id="login-email" placeholder="이메일 입력"></div>
     <div class="form-group"><label>비밀번호</label><input type="password" id="login-pw" placeholder="비밀번호 입력" onkeydown="if(event.key==='Enter')doLogin()"></div>
     <button class="btn btn-blue" style="width:100%;justify-content:center;padding:12px;font-size:15px;margin-top:8px" onclick="doLogin()">로그인</button>
@@ -53,7 +53,7 @@ label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bot
 <div id="main-screen" style="display:none">
   <div class="top-bar">
     <div class="top-logo">DONWAY</div>
-    <div class="top-title">🚨 긴급배송</div>
+    <div class="top-title">🚚 배송</div>
     <button class="btn" onclick="doLogout()" style="font-size:11px;padding:5px 10px">로그아웃</button>
   </div>
   <div class="main-area">
@@ -63,7 +63,7 @@ label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bot
       <div class="stat-box"><div class="stat-num" id="cnt-today">0</div><div class="stat-label">오늘 처리</div></div>
     </div>
     <div class="action-btns">
-      <button class="btn btn-blue" onclick="openEmergencyDelivery()">📷 긴급배송 스캔</button>
+      <button class="btn btn-blue" onclick="openEmergencyDelivery()">📷 배송 스캔</button>
       <button class="btn btn-teal" onclick="openEmergencyAdmin()">📋 처리 기록</button>
     </div>
     <!-- ⚙️ API 설정 버튼 (팝업으로 이동) -->
@@ -10392,11 +10392,17 @@ function openEmergencyDelivery(){
         </div>
       </div>
 
-      <!-- 통합 송장 촬영 -->
-      <input type="file" id="emer-unified-cam" accept="image/*" capture="environment" style="display:none" onchange="emerUnifiedScan(this)">
-      <button onclick="document.getElementById('emer-unified-cam').click()" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:20px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;border-radius:14px;font-size:18px;font-weight:900;cursor:pointer;box-shadow:0 3px 14px rgba(124,58,237,.4);margin-bottom:8px">
-        <span style="font-size:26px">📸</span> 촬영
-      </button>
+<!-- 통합 송장 촬영 (카메라 + 갤러리) -->
+<input type="file" id="emer-unified-cam" accept="image/*" capture="environment" style="display:none" onchange="emerUnifiedScan(this)">
+<input type="file" id="emer-gallery-inp" accept="image/*" style="display:none" onchange="emerUnifiedScan(this)">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+  <button onclick="document.getElementById('emer-unified-cam').click()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:16px;background:var(--bg2);border:1.5px solid var(--blue);border-radius:12px;color:var(--blue);font-size:14px;font-weight:700;cursor:pointer;width:100%">
+    <span style="font-size:26px">📸</span> 촬영
+  </button>
+  <button onclick="document.getElementById('emer-gallery-inp').click()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:16px;background:var(--bg2);border:1.5px solid rgba(123,47,255,.6);border-radius:12px;color:#7b2fff;font-size:14px;font-weight:700;cursor:pointer;width:100%">
+    <span style="font-size:26px">🖼️</span> 갤러리
+  </button>
+</div>
       <div id="emer-unified-status" style="font-size:13px;color:var(--teal);text-align:center;margin-bottom:10px;min-height:18px"></div>
 
       <!-- 라이브 스캔 (보조) -->
@@ -11266,7 +11272,7 @@ async function emerOcrScan(file, _statusOverride){
       window._activeDriverMapAddPin(previewRecord);
       // 카운터 업데이트
       var ce=document.getElementById('driver-map-count');
-      if(ce){ var cn=parseInt(ce.textContent)||0; ce.textContent='오늘 긴급배송 '+(cn+1)+'건 핀 표시'; }
+      if(ce){ var cn=parseInt(ce.textContent)||0; ce.textContent='오늘 배송 '+(cn+1)+'건 핀 표시'; }
       window._activeDriverMap&&window._activeDriverMap.panTo({lat:pinGps.lat,lng:pinGps.lng});
     }
 
@@ -12413,7 +12419,7 @@ function rEmergencyLog(){
   var totalLabel=isAdmin?'전체 기사':'내 기록';
   return '<div style="padding:12px 10px">'
     +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:6px">'
-    +'<div><div style="font-size:16px;font-weight:800">🚨 긴급배송 기록</div>'
+    +'<div><div style="font-size:16px;font-weight:800">📋 배송 기록</div>'
     +'<div style="font-size:11px;color:var(--text3)">최근 60일 · '+totalLabel+' · 🔴실시간</div></div>'
     +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
     +(isAdmin?'<button onclick="emerLogExportExcel()" style="padding:5px 10px;background:#16a34a;border:1px solid #16a34a;border-radius:6px;font-size:11px;color:#fff;font-weight:700;cursor:pointer">📊 엑셀</button>':'')
