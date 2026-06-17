@@ -13971,6 +13971,8 @@ async function _emerVerifyWithClaude(file, googleOcrAddr){
 }
 
 // ★ API 설정 팝업 (보안: 로그인 후에만 접근)
+
+function _closeApiSettings(){ var m=document.getElementById('api-settings-modal'); if(m)m.remove(); }
 function _openApiSettings() {
   var existing = document.getElementById('api-settings-modal');
   if(existing){ existing.remove(); return; }
@@ -13991,7 +13993,7 @@ function _openApiSettings() {
   box.innerHTML =
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">' +
       '<div style="font-size:14px;font-weight:800">⚙️ API 키 설정</div>' +
-      '<button onclick="document.getElementById('api-settings-modal').remove()" style="background:none;border:none;color:rgba(255,255,255,.5);font-size:18px;cursor:pointer">✕</button>' +
+      '<button onclick="_closeApiSettings()" style="background:none;border:none;color:rgba(255,255,255,.5);font-size:18px;cursor:pointer">✕</button>' +
     '</div>' +
     '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px;line-height:1.6">키는 기기에만 저장됩니다. 서버에 전송되지 않습니다.</div>' +
     // 카카오
