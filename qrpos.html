@@ -2138,29 +2138,34 @@ function _loadWorkers(did){
   _db.collection('mbetco_workers').where('dealerId','==',did)
     .orderBy('createdAt','desc').get()
     .then(function(snap){
-      var el = document.getElementById('worker-list');
+      var el=document.getElementById('worker-list');
       if(!el) return;
-      if(snap.empty){
-        el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3,#475569)">등록된 직원 없음</div>';
-        return;
-      }
-      var typeLabel = {employee:'직원',contractor:'사업자',freelancer:'프리랜서'};
-      var typeColor = {employee:'#22c55e',contractor:'#f59e0b',freelancer:'#7b2fff'};
-      el.innerHTML = snap.docs.map(function(doc){
-        var v = doc.data();
-        var tl = typeLabel[v.employType||'employee']||'직원';
-        var tc = typeColor[v.employType||'employee']||'#22c55e';
-        return '<div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg2,#0d1b3e);border:1px solid var(--border,rgba(0,102,255,.2));border-radius:10px;padding:12px 14px;margin-bottom:8px">' +
-          '<div>' +
-            '<div style="font-size:13px;font-weight:800">' + (v.name||'') + ' <span style="font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(34,197,94,.1);color:' + tc + '">' + tl + '</span></div>' +
-            '<div style="font-size:11px;color:#94a3b8;margin-top:2px">' + (v.role||'') + (v.commissionRate?' · 수수료'+v.commissionRate+'%':'') + '</div>' +
-          '</div>' +
-          '<div style="display:flex;gap:6px">' +
-            '<button data-wid="' + doc.id + '" data-act="' + (v.active!==false) + '" onclick="var b=this;_toggleWorker(b.getAttribute(\'data-wid\'),b.getAttribute(\'data-act\')==='true')" style="padding:5px 8px;background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3);border-radius:6px;font-size:10px;cursor:pointer">' + (v.active!==false?'비활성':'활성') + '</button>' +
-            '<button data-wid2="' + doc.id + '" onclick="_delWorkerById(this)" style="padding:5px 8px;background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:6px;font-size:10px;cursor:pointer">삭제</button>' +
-          '</div>' +
+      if(snap.empty){el.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3,#475569)">등록된 직원 없음</div>';return;}
+      var tl={employee:'직원',contractor:'사업자',freelancer:'프리랜서'};
+      var tc={employee:'#22c55e',contractor:'#f59e0b',freelancer:'#7b2fff'};
+      el.innerHTML='';
+      snap.docs.forEach(function(doc){
+        var v=doc.data();
+        var row=document.createElement('div');
+        row.style.cssText='display:flex;justify-content:space-between;align-items:center;background:var(--bg2,#0d1b3e);border:1px solid var(--border,rgba(0,102,255,.2));border-radius:10px;padding:12px 14px;margin-bottom:8px';
+        row.innerHTML='<div>'+
+          '<div style="font-size:13px;font-weight:800">'+v.name+' <span style="font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(34,197,94,.1);color:'+(tc[v.employType||'employee']||'#22c55e')+'">'+(tl[v.employType||'employee']||'직원')+'</span></div>'+
+          '<div style="font-size:11px;color:#94a3b8;margin-top:2px">'+(v.role||'')+(v.commissionRate?' · 수수료'+v.commissionRate+'%':'')+'</div>'+
         '</div>';
-      }).join('');
+        var btns=document.createElement('div');
+        btns.style.display='flex'; btns.style.gap='6px';
+        var btn1=document.createElement('button');
+        btn1.textContent=v.active!==false?'비활성':'활성';
+        btn1.style.cssText='padding:5px 8px;background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3);border-radius:6px;font-size:10px;cursor:pointer';
+        (function(id,act){btn1.onclick=function(){_toggleWorker(id,act);};})(doc.id,v.active!==false);
+        var btn2=document.createElement('button');
+        btn2.textContent='삭제';
+        btn2.style.cssText='padding:5px 8px;background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:6px;font-size:10px;cursor:pointer';
+        (function(id){btn2.onclick=function(){_deleteWorker(id);};})(doc.id);
+        btns.appendChild(btn1); btns.appendChild(btn2);
+        row.appendChild(btns);
+        el.appendChild(row);
+      });
     }).catch(function(){});
 }
 
