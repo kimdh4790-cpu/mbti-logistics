@@ -66,15 +66,8 @@ label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bot
       <button class="btn btn-blue" onclick="openEmergencyDelivery()">📷 긴급배송 스캔</button>
       <button class="btn btn-teal" onclick="openEmergencyAdmin()">📋 처리 기록</button>
     </div>
-    <div class="card">
-      <div class="card-title">⚙️ API 키 설정</div>
-      <div class="form-group"><label>카카오 REST API 키</label>
-        <div style="display:flex;gap:6px"><input type="text" id="kakao-key-input" placeholder="카카오 REST API 키"><button class="btn btn-blue" onclick="saveKakaoKey()">저장</button></div>
-      </div>
-      <div class="form-group"><label>Google Cloud API 키</label>
-        <div style="display:flex;gap:6px"><input type="text" id="google-key-input" placeholder="Google Cloud API 키"><button class="btn btn-blue" onclick="saveGoogleKey()">저장</button></div>
-      </div>
-    </div>
+    <!-- ⚙️ API 설정 버튼 (팝업으로 이동) -->
+    <button onclick="_openApiSettings()" style="width:100%;padding:10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:rgba(255,255,255,.6);font-size:12px;cursor:pointer;margin-top:6px">⚙️ API 키 설정</button>
   </div>
 </div>
 
@@ -13976,6 +13969,78 @@ async function _emerVerifyWithClaude(file, googleOcrAddr){
     return null;
   }
 }
+
+// ★ API 설정 팝업 (보안: 로그인 후에만 접근)
+function _openApiSettings() {
+  var existing = document.getElementById('api-settings-modal');
+  if(existing){ existing.remove(); return; }
+
+  // 저장된 키 로드
+  var savedKakao = localStorage.getItem('mbti_kakao_api_key') || '';
+  var savedGoogle = localStorage.getItem('mbti_google_api_key') || '';
+
+  var modal = document.createElement('div');
+  modal.id = 'api-settings-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;display:flex;align-items:flex-end';
+  modal.onclick = function(e){ if(e.target===modal) modal.remove(); };
+
+  var box = document.createElement('div');
+  box.style.cssText = 'background:#0d1117;border-radius:16px 16px 0 0;padding:20px;width:100%;border-top:1px solid rgba(255,255,255,.1)';
+  box.onclick = function(e){ e.stopPropagation(); };
+
+  box.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">' +
+      '<div style="font-size:14px;font-weight:800">⚙️ API 키 설정</div>' +
+      '<button onclick="document.getElementById('api-settings-modal').remove()" style="background:none;border:none;color:rgba(255,255,255,.5);font-size:18px;cursor:pointer">✕</button>' +
+    '</div>' +
+    '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px;line-height:1.6">키는 기기에만 저장됩니다. 서버에 전송되지 않습니다.</div>' +
+    // 카카오
+    '<div style="margin-bottom:12px">' +
+      '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.6);margin-bottom:6px">카카오 REST API 키</div>' +
+      '<div style="display:flex;gap:6px">' +
+        '<input id="api-kakao-inp" type="password" value="' + savedKakao + '" placeholder="카카오 REST API 키" ' +
+          'style="flex:1;padding:10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:12px">' +
+        '<button onclick="_saveApiKey('kakao')" style="padding:10px 14px;background:#FEE500;color:#3C1E1E;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">저장</button>' +
+      '</div>' +
+    '</div>' +
+    // Google
+    '<div style="margin-bottom:16px">' +
+      '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.6);margin-bottom:6px">Google Cloud API 키</div>' +
+      '<div style="display:flex;gap:6px">' +
+        '<input id="api-google-inp" type="password" value="' + savedGoogle + '" placeholder="Google Cloud API 키" ' +
+          'style="flex:1;padding:10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:12px">' +
+        '<button onclick="_saveApiKey('google')" style="padding:10px 14px;background:rgba(0,102,255,.8);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">저장</button>' +
+      '</div>' +
+    '</div>' +
+    '<div style="font-size:10px;color:rgba(255,255,255,.3);text-align:center">키는 localStorage에만 저장 · 서버 전송 없음</div>';
+
+  modal.appendChild(box);
+  document.body.appendChild(modal);
+}
+
+function _saveApiKey(type) {
+  if(type === 'kakao') {
+    var val = (document.getElementById('api-kakao-inp')||{}).value.trim();
+    if(!val){ toast('카카오 API 키를 입력하세요'); return; }
+    localStorage.setItem('mbti_kakao_api_key', val);
+    window._cachedKakaoApiKey = val;
+    // Firestore에도 저장 (SA/관리자 전용)
+    if(_db && isSuperAdmin && isSuperAdmin()) {
+      _db.collection('settings').doc('claude_config').set({kakaoApiKey:val},{merge:true});
+    }
+    toast('✅ 카카오 키 저장');
+  } else if(type === 'google') {
+    var gval = (document.getElementById('api-google-inp')||{}).value.trim();
+    if(!gval){ toast('Google API 키를 입력하세요'); return; }
+    localStorage.setItem('mbti_google_api_key', gval);
+    window._googleApiKey = gval;
+    toast('✅ Google 키 저장');
+  }
+  // 입력값 마스킹
+  var inp = document.getElementById('api-' + type + '-inp');
+  if(inp) inp.type = 'password';
+}
+
 </script>
 </body>
 </html>
